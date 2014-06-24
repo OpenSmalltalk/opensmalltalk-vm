@@ -27,7 +27,23 @@
  *   DEALINGS IN THE SOFTWARE.
  */
 
-/* Note:
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+
+#include "sq.h"
+#include "sqMemoryAccess.h"
+#include "config.h"
+#include "debug.h"
+
+void *uxAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
+#if SPURVM
+# include "sqUnixSpurMemory.c"
+#else /* SPURVM */
+/* Note: 
  * 
  *   The code allows memory to be overallocated; i.e., the initial
  *   block is reserved via mmap() and then the unused portion
@@ -45,19 +61,6 @@
  *   option to allocate a fixed size heap.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/mman.h>
-
-#include "sq.h"
-#include "sqMemoryAccess.h"
-#include "config.h"
-#include "debug.h"
-
-void *uxAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
 char *uxGrowMemoryBy(char *oldLimit, sqInt delta);
 char *uxShrinkMemoryBy(char *oldLimit, sqInt delta);
 sqInt uxMemoryExtraBytesLeft(sqInt includingSwap);
@@ -109,12 +112,23 @@ static int max(int x, int y) { return (x > y) ? x : y; }
 
 /* answer the address of (minHeapSize <= N <= desiredHeapSize) bytes of memory. */
 
+#if SPURVM
+void *
+uxAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
+{
+	if (heap) {
+		fprintf(stderr, "uxAllocateMemory: already called\n");
+		exit(1);
+	}
+	pageSize= getpagesize();
+	pageMask= ~(pageSize - 1);
+#else /* SPURVM */
 void *uxAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 {
-#if !ALWAYS_USE_MMAP
+# if !ALWAYS_USE_MMAP
   if (!useMmap)
     return malloc(desiredHeapSize);
-#endif
+# endif
 
   if (heap) {
       fprintf(stderr, "uxAllocateMemory: already called\n");
@@ -125,12 +139,12 @@ void *uxAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 
   DPRINTF(("uxAllocateMemory: pageSize 0x%x (%d), mask 0x%x\n", pageSize, pageSize, pageMask));
 
-#if (!MAP_ANON)
+# if (!MAP_ANON)
   if ((devZero= open("/dev/zero", O_RDWR)) < 0) {
       perror("uxAllocateMemory: /dev/zero");
       return 0;
   }
-#endif
+# endif
 
   DPRINTF(("uxAllocateMemory: /dev/zero descriptor %d\n", devZero));
   DPRINTF(("uxAllocateMemory: min heap %d, desired %d\n", minHeapSize, desiredHeapSize));
@@ -158,6 +172,7 @@ void *uxAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 
   return heap;
 }
+#endif /* SPURVM */
 
 
 static int log_mem_delta = 0;
@@ -253,7 +268,11 @@ uxAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize)
 	}
 	pageSize = getpagesize();
 	pageMask = ~(pageSize - 1);
+#	if SPURVM
 	return malloc(desiredHeapSize);
+#	else
+	return malloc(desiredHeapSize);
+#	endif
 }
 # else /* COG */
 void *uxAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize)	{ return malloc(desiredHeapSize); }
@@ -330,101 +349,9 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 }
 #endif /* COGVM */
 
-#if SPURVM
-/* Answer if any of the memory in the range [address, address + bytes) is used
- * so as to make sure the MAP_FIXED below doesn't damage any existing mappings.
- *
- * See http://stackoverflow.com/questions/14943990
- *
- * One must do this separately for each page, because for regions larger than a
- * single page, ENOMEM means that the region was not fully mapped and it might
- * still be partially mapped.
- *
- * It seems to me (eem 6/18/2014 16:00) that madvise could be called, which
- * would be cheaper.  But it would have side-effects when applied to an
- * existing mapping.
- */
-static long
-address_space_used(char *address, long bytes)
-{
-	long offset = 0;
-	char pagestate;
+# if defined(TEST_MEMORY)
 
-	while (offset < bytes) {
-		do {
-			if (mincore(address+offset, pageSize, &pagestate) >= 0)
-				return 1;
-		} while (errno == EAGAIN);
-		assert(errno == ENOMEM);
-		offset += pageSize;
-	}
-	return 0;
-}
-
-/* Allocate a region of memory of al least size bytes, at or above minAddress.
- *  If the attempt fails, answer null.  If the attempt succeeds, answer the
- * start of the region and assign its size through allocatedSizePointer.
- */
-void *
-sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress, sqInt *allocatedSizePointer)
-{
-	void *alloc;
-	char *address;
-	long bytes;
-
-	if (!pageSize) {
-		pageSize = getpagesize();
-		pageMask = pageSize - 1;
-	}
-	address = (char *)roundUpToPage((unsigned long)minAddress);
-	bytes = roundUpToPage(size);
-	*allocatedSizePointer = bytes;
-	while ((unsigned long)(address + bytes) > (unsigned long)address) {
-#if 0
-		alloc = mmap(address, bytes, PROT_READ | PROT_WRITE,
-					 MAP_ANON | MAP_PRIVATE, -1, 0);
-#else
-		/* This is a mess.  To be able to allocate lots of segments it appears
-		 * we have to use MAP_FIXED, but MAP_FIXED will blow away any existing
-		 * mappings, so we have to use mincore to scan the pages in the region
-		 * to check there is no existing mapping there.
-		 */
-		if (address_space_used(address, bytes)) {
-			address += bytes;
-			continue;
-		}
-		alloc = mmap(address, bytes, PROT_READ | PROT_WRITE,
-					 MAP_ANON | MAP_FIXED | MAP_PRIVATE, -1, 0);
-#endif
-		if (alloc == MAP_FAILED) {
-			mmapErrno = errno;
-			perror("sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto mmap");
-			return 0;
-		}
-		if ((char *)alloc >= address)
-			return alloc;
-		if (munmap(alloc, bytes) != 0)
-			perror("sqAllocateMemorySegment... munmap");
-		address += bytes;
-	}
-	return 0;
-}
-
-/* Deallocate a region of memory previously allocated by
- * sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto.  Cannot fail.
- */
-void
-sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
-{
-	if (munmap(addr, sz) != 0)
-		perror("sqDeallocateMemorySegment... munmap");
-}
-#endif /* SPURVM */
-
-
-#if defined(TEST_MEMORY)
-
-#define MBytes	*1024*1024
+# define MBytes	*1024*1024
 
 int main()
 {
@@ -439,4 +366,5 @@ int main()
   return 0;
 }
 
-#endif /* defined(TEST_MEMORY) */
+# endif /* defined(TEST_MEMORY) */
+#endif /* SPURVM */

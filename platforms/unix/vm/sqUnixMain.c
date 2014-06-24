@@ -1754,10 +1754,6 @@ void imgInit(void)
 	{ off_t size = (long)sb.st_size;
 
 	  size = 1 << highBit(size-1);
-	  size = size + size / 4;
-#    ifdef DEBUG_IMAGE
-      printf("image size %ld + heap size %ld (useMmap = %d)\n", (long)sb.st_size, size, useMmap);
-#    endif
 	  readImageFromFileHeapSizeStartingAt(f, size + size / 4, 0);
 	}
 #else

@@ -73,6 +73,8 @@ sqNamedPrims$o : $(blddir)/sqNamedPrims.h
 
 sqUnixExternalPrims$o sqUnixMain$o : ../config.h $(topdir)/platforms/unix/vm/dlfcn-dyld.c
 
+sqUnixMemory$o : $(topdir)/platforms/unix/vm/sqUnixSpurMemory.c
+
 [make_targets]
 
 # Ensure the heartbeat is compiled with less aggressive optimization.  At
