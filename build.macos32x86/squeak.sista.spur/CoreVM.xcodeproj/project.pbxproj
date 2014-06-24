@@ -73,7 +73,6 @@
 		941A3B5909AA144000C9D25A /* UUIDPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFD902EB4E0A0100013C /* UUIDPlugin.h */; };
 		941A3B5A09AA144000C9D25A /* sq.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFDC02EB4E0A0100013C /* sq.h */; };
 		941A3B5B09AA144000C9D25A /* sqVirtualMachine.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFDF02EB4E0A0100013C /* sqVirtualMachine.h */; };
-		941A3B5C09AA144000C9D25A /* sqMacMemory.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AEF702EB4E0A0100013C /* sqMacMemory.h */; };
 		941A3B5D09AA144000C9D25A /* sqGnu.h in Headers */ = {isa = PBXBuildFile; fileRef = 66A8FED80300824600A80109 /* sqGnu.h */; };
 		941A3B5E09AA144000C9D25A /* sqMacEncoding.h in Headers */ = {isa = PBXBuildFile; fileRef = 9405366D057BC0EB0080D7FF /* sqMacEncoding.h */; };
 		941A3B6209AA144000C9D25A /* MacMenubarPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = 940AFA4206DFD0280062E19F /* MacMenubarPlugin.h */; };
@@ -103,7 +102,7 @@
 		941A3B9B09AA144000C9D25A /* sqMacJoystickAndTablet.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AE3F02EB4E090100013C /* sqMacJoystickAndTablet.c */; };
 		941A3B9C09AA144000C9D25A /* sqMacMIDI.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AE4302EB4E090100013C /* sqMacMIDI.c */; };
 		941A3B9E09AA144000C9D25A /* sqMacUUID.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AE6A02EB4E0A0100013C /* sqMacUUID.c */; };
-		941A3BA109AA144000C9D25A /* sqMacMemory.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEF602EB4E0A0100013C /* sqMacMemory.c */; };
+		941A3BA109AA144000C9D25A /* sqUnixSpurMemory.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEF602EB4E0A0100013C /* sqUnixSpurMemory.c */; };
 		941A3BA209AA144000C9D25A /* sqMacTime.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEFA02EB4E0A0100013C /* sqMacTime.c */; };
 		941A3BA309AA144000C9D25A /* sqMacUIAppleEvents.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEFC02EB4E0A0100013C /* sqMacUIAppleEvents.c */; };
 		941A3BA409AA144000C9D25A /* sqMacUIClipBoard.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEFE02EB4E0A0100013C /* sqMacUIClipBoard.c */; };
@@ -409,8 +408,7 @@
 		F5F8AEED02EB4E0A0100013C /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqConfig.h; sourceTree = "<group>"; };
 		F5F8AEF402EB4E0A0100013C /* sqMacMain.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacMain.c; sourceTree = "<group>"; };
 		F5F8AEF502EB4E0A0100013C /* sqMacMain.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacMain.h; sourceTree = "<group>"; };
-		F5F8AEF602EB4E0A0100013C /* sqMacMemory.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacMemory.c; sourceTree = "<group>"; };
-		F5F8AEF702EB4E0A0100013C /* sqMacMemory.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacMemory.h; sourceTree = "<group>"; };
+		F5F8AEF602EB4E0A0100013C /* sqUnixSpurMemory.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixSpurMemory.c; path = ../../platforms/unix/vm/sqUnixSpurMemory.c; sourceTree = SOURCE_ROOT; };
 		F5F8AEFA02EB4E0A0100013C /* sqMacTime.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacTime.c; sourceTree = "<group>"; };
 		F5F8AEFB02EB4E0A0100013C /* sqMacTime.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacTime.h; sourceTree = "<group>"; };
 		F5F8AEFC02EB4E0A0100013C /* sqMacUIAppleEvents.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacUIAppleEvents.c; sourceTree = "<group>"; };
@@ -957,8 +955,7 @@
 				F5F8AEF502EB4E0A0100013C /* sqMacMain.h */,
 				946DD91C099015C5006BBA1E /* sqMacImageIO.c */,
 				946DD91D099015C5006BBA1E /* sqMacImageIO.h */,
-				F5F8AEF602EB4E0A0100013C /* sqMacMemory.c */,
-				F5F8AEF702EB4E0A0100013C /* sqMacMemory.h */,
+				F5F8AEF602EB4E0A0100013C /* sqUnixSpurMemory.c */,
 				9454DFE603E1C93E00DA393B /* sqMacNSPlugin.c */,
 				9481DDB309B38AE3005C4088 /* sqMacNSPluginUILogic.c */,
 				F5F8AEFA02EB4E0A0100013C /* sqMacTime.c */,
@@ -1316,7 +1313,6 @@
 				941A3B5909AA144000C9D25A /* UUIDPlugin.h in Headers */,
 				941A3B5A09AA144000C9D25A /* sq.h in Headers */,
 				941A3B5B09AA144000C9D25A /* sqVirtualMachine.h in Headers */,
-				941A3B5C09AA144000C9D25A /* sqMacMemory.h in Headers */,
 				941A3B5D09AA144000C9D25A /* sqGnu.h in Headers */,
 				941A3B5E09AA144000C9D25A /* sqMacEncoding.h in Headers */,
 				941A3B6209AA144000C9D25A /* MacMenubarPlugin.h in Headers */,
@@ -1434,7 +1430,7 @@
 		733AC8E70FEAAE29007C6206 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
-			comments = "Script deletes version.o to ensure vmBuildString is up-to-date.";
+			comments = "Script creates sqNamedPrims.h.";
 			files = (
 			);
 			inputPaths = (
@@ -1443,7 +1439,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "rm -f \"$TARGET_BUILD_DIR/version.o\" \"$BUILT_PRODUCTS_DIR/version.o\" \"$TEMP_FILES_DIR/version.o\"\n$SRCROOT/mkNamedPrims.sh $SRCROOT/plugins.int >$SRCROOT/sqNamedPrims.h\n";
+			shellScript = "$SRCROOT/mkNamedPrims.sh $SRCROOT/plugins.int >$SRCROOT/sqNamedPrims.h\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -1456,7 +1452,7 @@
 				941A3B9B09AA144000C9D25A /* sqMacJoystickAndTablet.c in Sources */,
 				941A3B9C09AA144000C9D25A /* sqMacMIDI.c in Sources */,
 				941A3B9E09AA144000C9D25A /* sqMacUUID.c in Sources */,
-				941A3BA109AA144000C9D25A /* sqMacMemory.c in Sources */,
+				941A3BA109AA144000C9D25A /* sqUnixSpurMemory.c in Sources */,
 				941A3BA209AA144000C9D25A /* sqMacTime.c in Sources */,
 				941A3BA309AA144000C9D25A /* sqMacUIAppleEvents.c in Sources */,
 				941A3BA409AA144000C9D25A /* sqMacUIClipBoard.c in Sources */,

@@ -72,12 +72,18 @@ size_t      sqImageFileRead(void *ptr, size_t elementSize, size_t count, sqImage
 void        sqImageFileSeek(sqImageFile f, squeakFileOffsetType pos);
 sqInt       sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f);
 
-#define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
+#if SPURVM
+extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
+# define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
+	sqAllocateMemory(minimumMemory, heapSize)
+# define sqMacMemoryFree() 0
+#else
+extern usqInt sqAllocateMemoryMac(usqInt desiredHeapSize, usqInt minHeapSize);
+# define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
 	sqAllocateMemoryMac(heapSize, minimumMemory)
-usqInt sqAllocateMemoryMac(usqInt desiredHeapSize, usqInt minHeapSize);
 
-
-#define sqAllocateMemory(x,y) sqAllocateMemoryMac(&y,x)
+# define sqAllocateMemory(x,y) sqAllocateMemoryMac(&y,x)
+#endif
 
 /* override reserveExtraCHeapBytes() macro to reduce Squeak object heap size on Mac */
 #undef reserveExtraCHeapBytes

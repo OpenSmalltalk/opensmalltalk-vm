@@ -39,10 +39,9 @@
 #include "config.h"
 #include "debug.h"
 
+#!if SPURVM /* Spur uses sqUnixSpurMemory.c */
 void *uxAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
-#if SPURVM
-# include "sqUnixSpurMemory.c"
-#else /* SPURVM */
+
 /* Note: 
  * 
  *   The code allows memory to be overallocated; i.e., the initial
@@ -367,4 +366,4 @@ int main()
 }
 
 # endif /* defined(TEST_MEMORY) */
-#endif /* SPURVM */
+#endif /* !SPURVM */

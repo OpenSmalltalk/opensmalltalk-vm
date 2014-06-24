@@ -1415,7 +1415,7 @@
 		733AC8E70FEAAE29007C6206 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
-			comments = "Script deletes version.o to ensure vmBuildString is up-to-date.";
+			comments = "Script creates sqNamedPrims.h.";
 			files = (
 			);
 			inputPaths = (
@@ -1424,7 +1424,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "rm -f \"$TARGET_BUILD_DIR/version.o\" \"$BUILT_PRODUCTS_DIR/version.o\" \"$TEMP_FILES_DIR/version.o\"\n$SRCROOT/mkNamedPrims.sh $SRCROOT/plugins.int >$SRCROOT/sqNamedPrims.h\n";
+			shellScript = "$SRCROOT/mkNamedPrims.sh $SRCROOT/plugins.int >$SRCROOT/sqNamedPrims.h\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

@@ -1,4 +1,4 @@
-/* sqUnixSpurMemory.c -- dynamic memory management for Spur on unix
+/* sqUnixSpurMemory.c -- dynamic memory management for Spur on unix & Mac OS X.
  * 
  * Author: eliot.miranda@gmail.com
  * 
@@ -23,28 +23,30 @@
  *   DEALINGS IN THE SOFTWARE.
  */
 
-#if !SPURVM
-# error "this should only be used with the Spur VM, included from sqUnixMemory.c
-#endif
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/mman.h>
 
-/* Spur uses a segmented heap; it can add or remove segments, provided they are
- * above the first segment, without impacting other users of mmap.  For this to
- * work well on linux (i.e. to be able to allocate lots of memory) we need the
- * first alloc to be at as low an address as possible.
+#include "sq.h"
+#include "sqMemoryAccess.h"
+#include "config.h"
+#include "debug.h"
+
+#if SPURVM
+
+/* Spur uses a segmented heap; it can add or remove segments, provided they
+ * are above the first segment.  For this scheme to be able to allocate lots
+ * of memory the first alloc to be at as low an address as possible.
  *
- * We would like subsequent mmaps to be at ascending addresses.  But on linux
- * 2.6.x the address parameter is only observed if either there is no existing
- * overlapping mapping in the [address, address + size) range or if MAP_FIXED
- * is used.  If MAP_FIXED is not used and there is an existing mapping mmap
- * answers a mapping at a high address (not to be confused with a mapping in
- * high memory).  One approach would then be to search for the first gap in the
- * address space above the end of the last segment.  MAP_FIXED is unnecessary
- * since, given the address would be at the start of a suitable gap, mmap would
- * map at the requested address.  But how to probe for the gap?  Some have
- * advocated using mincore (2), but mincore (at least in pre 2013 kernels)
- * *only works* for non MAP_ANON mappings (file mappings).  And so one cannot
- * use it to probe for e.g. the AMP_ANON mappings made by the malloc library in
- * e.g. glibc 2.5.  Of course, mmap itself can be used.
+ * We would like subsequent mmaps to be at ascending addresses, without
+ * impacting other users of mmap.  On the systems we have tested the address
+ * parameter is only observed if either there is no existing overlapping
+ * mapping in the [address, address + size) range or if MAP_FIXED is used.
+ * If MAP_FIXED is not used and there is an existing mapping, mmap answers a
+ * mapping at a high address.
  *
  * mmap obeys the address hint if it can.  So if mmap answers a mapping at other
  * than the hint we can infer there is an extant mapping in [hint, hint+bytes).
@@ -54,30 +56,30 @@
  * via sbrk, and then using the hint passed from the Spur memory manager for
  * subsequent mappings.  When there is an existing mapping we search for the
  * next available gap in e.g. 1 Mb increments.  This effectively allocates at
- * the the nearest address above that requested, something one might expect
- * mmap would do anyway.
+ * the the nearest address above that requested (something one might expect
+ * mmap would do anyway).
  */
 
 static long          pageSize = 0;
 static unsigned long pageMask = 0;
 
-#define roundDownToPage(v) ((v)&pageMask)
-#define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
+# define roundDownToPage(v) ((v)&pageMask)
+# define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
 
 int mmapErrno = 0;
 
-#if !defined(HAVE_MMAP)
-# error "Spur requires mmap"
-#endif
-#if !defined(MAP_ANON) && !defined(MAP_ANONYMOUS)
-# error "Spur assumes MAP_ANON or MAP_ANONYMOUS"
-# error "You're going to have to add a file descriptor."
-# error "You can cpy the code in sqUnixMemory.c"
-#endif
+# if !defined(HAVE_MMAP)
+#	error "Spur requires mmap"
+# endif
+# if !defined(MAP_ANON) && !defined(MAP_ANONYMOUS)
+#	error "Spur assumes MAP_ANON or MAP_ANONYMOUS"
+#	error "You're going to have to add a file descriptor."
+#	error "You can cpy the code in sqUnixMemory.c"
+# endif
 
-#if !defined(MAP_ANON)
-# define MAP_ANON MAP_ANONYMOUS
-#endif
+# if !defined(MAP_ANON)
+#	define MAP_ANON MAP_ANONYMOUS
+# endif
 
 static int min(int x, int y) { return (x < y) ? x : y; }
 static int max(int x, int y) { return (x > y) ? x : y; }
@@ -103,14 +105,14 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 	address = (char *)(((usqInt)hint + bytes - 1) & ~(bytes - 1));
 	allocBytes = roundUpToPage(desiredHeapSize);
 
-#if TEST_MEMORY
+# if TEST_MEMORY
 	printf("hint at %p\n", hint);
 	alloc = mmap(0, allocBytes, PROT_READ | PROT_WRITE,
 					 MAP_ANON | MAP_PRIVATE, -1, 0);
 	printf("mmap at %p\n", alloc);
 	if (alloc != MAP_FAILED)
 		(void)munmap(alloc, allocBytes);
-#endif
+# endif
 
 	alloc = mmap(address, allocBytes, PROT_READ | PROT_WRITE,
 				 MAP_ANON | MAP_FIXED | MAP_PRIVATE, -1, 0);
@@ -170,7 +172,7 @@ sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
 		perror("sqDeallocateMemorySegment... munmap");
 }
 
-#if COGVM
+# if COGVM
 void
 sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
@@ -184,7 +186,7 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 void
 sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
-# if 0
+#	if 0
 	unsigned long firstPage = roundDownToPage(startAddr);
 	/* Arguably this is pointless since allocated memory always includes write
 	 * permission by default.  Annoyingly the mprotect call fails on both linux
@@ -194,13 +196,13 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 				 endAddr - firstPage + 1,
 				 PROT_READ | PROT_WRITE) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
-# endif
+#	endif
 }
-#endif /* COGVM */
+# endif /* COGVM */
 
-#if TEST_MEMORY
+# if TEST_MEMORY
 
-#define MBytes	*1024UL*1024UL
+#	define MBytes	*1024UL*1024UL
 
 int main()
 {
@@ -224,4 +226,5 @@ int main()
 	}
 	return 0;
 }
-#endif /* TEST_MEMORY */
+# endif /* TEST_MEMORY */
+#endif /* SPURVM */

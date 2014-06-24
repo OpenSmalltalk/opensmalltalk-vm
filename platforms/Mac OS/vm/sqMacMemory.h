@@ -13,7 +13,9 @@
 *  Mar 1st, 2002, JMM cleanup a bit. 
 ****************************************************************************/
 
-    #include <Carbon/Carbon.h>
+#if !SPURVM
+# include <Carbon/Carbon.h>
 
 usqInt	sqGetAvailableMemory(void);
 void sqMacMemoryFree(void);
+#endif

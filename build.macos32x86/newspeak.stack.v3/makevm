@@ -7,6 +7,7 @@ BUILD_CONFIGURATION=Deployment
 NSD_BUILD_CONFIGURATION=Deployment
 XCD_BUILD_CONFIGURATION=Release
 DEST="Newspeak Virtual Machine.app"
+OBJDIR="Newspeak Virtual Machine.build/Objects-normal/i386"
 CONF=FAST
 KEEP=
 
@@ -52,7 +53,9 @@ fi
 test "$KEEP" = 1 || rm -rf "$DEST"/* "$DEST"/.??*
 
 # Build CoreVM using xcode
-echo
+echo # maddeningly xcode has no equivalent of .FORCE and if you use an Xcode script to nuke this file the build fails
+echo rm \"build/CoreVM.build/$BUILD_CONFIGURATION/$OBJDIR/version.o\"
+rm "build/CoreVM.build/$BUILD_CONFIGURATION/$OBJDIR/version.o"
 echo CoreVM xcodebuild -project CoreVM.xcodeproj -configuration $BUILD_CONFIGURATION
 xcodebuild -project CoreVM.xcodeproj -configuration $BUILD_CONFIGURATION
 if [ -d "$DEST" ]; then

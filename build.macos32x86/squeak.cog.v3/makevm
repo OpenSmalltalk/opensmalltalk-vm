@@ -7,6 +7,7 @@ BUILD_CONFIGURATION=Deployment
 NSD_BUILD_CONFIGURATION=Deployment
 XCD_BUILD_CONFIGURATION=Release
 APP=Squeak.app
+OBJDIR=Squeak.build/Objects-normal/i386
 VMAPP=".app"
 DEST="Squeak"
 VMXCP=CoreVM
@@ -58,7 +59,9 @@ fi
 test "$KEEP" = 1 || rm -rf "$DEST"/* "$DEST"/.??*
 
 # Build CoreVM/CoreMTVM using xcode
-echo
+echo # maddeningly xcode has no equivalent of .FORCE and if you use an Xcode script to nuke this file the build fails
+echo rm \"build/$VMXCP.build/$BUILD_CONFIGURATION/$OBJDIR/version.o\"
+rm "build/$VMXCP.build/$BUILD_CONFIGURATION/$OBJDIR/version.o"
 echo $VMXCP xcodebuild -project $VMXCP.xcodeproj -configuration $BUILD_CONFIGURATION
 xcodebuild -project $VMXCP.xcodeproj -configuration $BUILD_CONFIGURATION
 if [ -d "$DEST" ]; then
@@ -116,12 +119,6 @@ echo BochsIA32Plugin xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project
 xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project BochsIA32Plugin/BochsIA32Plugin.xcodeproj
 rm -rf "$DEST/Contents/Resources/BochsIA32Plugin.bundle"
 cp -R BochsIA32Plugin/build/$XCD_BUILD_CONFIGURATION/BochsIA32Plugin.bundle "$DEST/Contents/Resources"
-
-# Build the UnixOSProcessPlugin
-echo UnixOSProcessPlugin xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project UnixOSProcessPlugin/UnixOSProcessPlugin.xcodeproj
-xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project UnixOSProcessPlugin/UnixOSProcessPlugin.xcodeproj
-rm -rf "$DEST/Contents/Resources/UnixOSProcessPlugin.bundle"
-cp -R UnixOSProcessPlugin/build/$XCD_BUILD_CONFIGURATION/UnixOSProcessPlugin.bundle "$DEST/Contents/Resources"
 
 # Build the UnixOSProcessPlugin
 echo UnixOSProcessPlugin xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project UnixOSProcessPlugin/UnixOSProcessPlugin.xcodeproj
