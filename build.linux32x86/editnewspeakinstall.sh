@@ -10,7 +10,7 @@ if [ -f squeak ]; then
 fi
 if [ -f bin/squeak ]; then
 	mv bin/squeak bin/nsvm
-	ex -u NONE "+g/squeak/s/squeak/nsvm/g" +w +q bin/nsvm
+	ex -u NONE "+g/squeak/s/squeak/nsvm/g" "+/nsvm vm-dev/s//squeak vm-dev/" +w +q bin/nsvm
 fi
 rm -rf man doc
 LIBDIR="`echo lib/squeak/[0-9.-]*`"

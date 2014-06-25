@@ -117,11 +117,13 @@ N.B. For Squeak/Pharo/Croquet please use the archives whose names begin with
 *       soft    rtprio  2
 
      e.g.
+
 sudo cat >/etc/security/limits.d/squeak.conf <<END
 *       hard    rtprio  2
 *       soft    rtprio  2
 END
 sudo cp /etc/security/limits.d/squeak.conf /etc/security/limits.d/nsvm.conf
+
      Only new processes will have the new security settings. Users must log
      out and log back in for the limits to take effect.  Services must stop
      and then restart for the changes to take effect.
