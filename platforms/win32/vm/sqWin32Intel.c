@@ -63,6 +63,7 @@ static int clargc; /* the Unix-style command line, saved for GetImageOption */
 static char **clargv;
 
 /* console buffer */
+BOOL fIsConsole = 0;
 TCHAR consoleBuffer[4096];
 
 /* stderr and stdout names */
@@ -231,8 +232,10 @@ int __cdecl DPRINTF(const char *fmt, ...)
 { va_list al;
 
   va_start(al, fmt);
-  wvsprintf(consoleBuffer, fmt, al);
-  OutputDebugString(consoleBuffer);
+  if (!fIsConsole) {
+	wvsprintf(consoleBuffer, fmt, al);
+	OutputDebugString(consoleBuffer);
+  }
   vfprintf(stdout, fmt, al);
   va_end(al);
   return 1;
@@ -248,10 +251,12 @@ printf(const char *fmt, ...)
   int result;
 
   va_start(al, fmt);
-  wvsprintf(consoleBuffer, fmt, al);
-  OutputLogMessage(consoleBuffer);
-  if(IsWindow(stWindow)) /* not running as service? */
-    OutputConsoleString(consoleBuffer);
+  if (!fIsConsole) {
+	wvsprintf(consoleBuffer, fmt, al);
+	OutputLogMessage(consoleBuffer);
+	if(IsWindow(stWindow)) /* not running as service? */
+	  OutputConsoleString(consoleBuffer);
+  }
   result = vfprintf(stdout, fmt, al);
   va_end(al);
   return result;
@@ -263,7 +268,7 @@ fprintf(FILE *fp, const char *fmt, ...)
   int result;
 
   va_start(al, fmt);
-  if(fp == stdout || fp == stderr)
+  if(!fIsConsole && (fp == stdout || fp == stderr))
     {
       wvsprintf(consoleBuffer, fmt, al);
       OutputLogMessage(consoleBuffer);
@@ -277,10 +282,7 @@ fprintf(FILE *fp, const char *fmt, ...)
 
 
 int __cdecl
-putchar(int c)
-{
-  return printf("%c",c);
-}
+putchar(int c) { return printf("%c",c); }
 
 #endif /* !defined(_MSC_VER) && !defined(NODBGPRINT) */
 
@@ -1510,11 +1512,18 @@ sqMain(int argc, char *argv[])
 int WINAPI
 WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+  DWORD mode;
+
   /* a few things which need to be done first */
   gatherSystemInfo();
 
   /* check if we're running NT or 95 */
   fWindows95 = (GetVersion() & 0x80000000) != 0;
+  /* Determine if we're running as a console application  We can't report
+   * allocation failures unless running as a console app because doing so
+   * via a MessageBox will make the system unusable.
+   */
+  fIsConsole = GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &mode);
 
   /* fetch us a copy of the command line */
   initialCmdLine = _strdup(lpCmdLine);

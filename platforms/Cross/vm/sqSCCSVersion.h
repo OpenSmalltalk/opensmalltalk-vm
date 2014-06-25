@@ -33,7 +33,7 @@ static char SvnRawRevisionDate[] = "$Date$";
 static char SvnRawRepositoryURL[] = "$URL$";
 # define URL_START (SvnRawRepositoryURL + 6)
 
-char *
+static char *
 revisionAsString()
 {
 	char *maybe_space = strchr(REV_START,' ');

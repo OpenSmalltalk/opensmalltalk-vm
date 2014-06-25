@@ -283,6 +283,7 @@ extern BITMAPINFO *bmi8;	     /*	8 bit depth bitmap info */
 extern BITMAPINFO *bmi16;	     /*	16 bit depth bitmap info */
 extern BITMAPINFO *bmi32;	     /*	32 bit depth bitmap info */
 extern BOOL fWindows95;          /* Are we running on Win95 or NT? */
+extern BOOL fIsConsole;          /* Are we running as a console app? */
 
 /* Startup options */
 extern BOOL  fHeadlessImage; /* Do we run headless? */

@@ -54,8 +54,8 @@ static DWORD_PTR defaultAffinity;
  * entire address space.
  */
 
-extern  void btext(void);
-extern  void etext(void);
+extern  void *btext(void);
+extern  void *etext(void);
 
 void
 ioProfileTextRange(void **startpc, void **endpc)

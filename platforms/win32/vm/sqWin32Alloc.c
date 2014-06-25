@@ -13,7 +13,7 @@
 #include <windows.h>
 #include "sq.h"
 
-#ifndef NO_VIRTUAL_MEMORY
+#if !defined(NO_VIRTUAL_MEMORY) && !SPURVM /* Spur uses sqWin32SpurAlloc.c */
 
 /* For Qwaq Forums: Disallow memory shrinking to avoid crashes
    due to GC/OpenGL relocation problems within glDrawElements.
@@ -176,12 +176,11 @@ int sqMemoryExtraBytesLeft(int includingSwap) {
   }
   return bytesLeft;
 }
-#endif /* NO_VIRTUAL_MEMORY */
 
 #define roundDownToPage(v) ((v)&pageMask)
 #define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
 
-#if COGVM
+# if COGVM
 void
 sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
@@ -205,70 +204,5 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 						&previous))
 		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
 }
-#endif /* COGVM */
-
-#if SPURVM
-/* Allocate a region of memory of at least size bytes, at or above minAddress.
- *  If the attempt fails, answer null.  If the attempt succeeds, answer the
- * start of the region and assign its size through allocatedSizePointer.
- *
- * This from the VirtualFree doc is rather scary:
-	dwSize [in]
-
-		The size of the region of memory to be freed, in bytes.
-
-		If the dwFreeType parameter is MEM_RELEASE, this parameter must be 0
-		(zero). The function frees the entire region that is reserved in the
-		initial allocation call to VirtualAlloc.
- *
- * So we rely on the SpurMemoryManager to free exactly the segments that were
- * allocated.
- */
-#define SizeForRelease(bytes) 0
-void *
-sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress, sqInt *allocatedSizePointer)
-{
-	void *alloc;
-	long bytes = roundUpToPage(size);
-
-	*allocatedSizePointer = bytes;
-#if 0 /* It appears VirtualAlloc answers low memory by default. */
-	alloc = VirtualAlloc(0, bytes, MEM_COMMIT, PAGE_READWRITE);
-	if (!alloc) {
-		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-					"Unable to VirtualAlloc committed memory (%d bytes requested), Error: %ul",
-					bytes, GetLastError());
-		return NULL;
-	}
-	if ((unsigned long)alloc >= (unsigned long)minAddress)
-		return alloc;
-	if (!VirtualFree(alloc, SizeForRelease(bytes), MEM_RELEASE))
-		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-					"Unable to VirtualFree committed memory (%d bytes requested), Error: %ul",
-					bytes, GetLastError());
-#endif /* 0 */
-	alloc = VirtualAlloc(0, bytes, MEM_COMMIT+MEM_TOP_DOWN, PAGE_READWRITE);
-	if ((unsigned long)alloc >= (unsigned long)minAddress)
-		return alloc;
-	if (alloc && !VirtualFree(alloc, SizeForRelease(bytes), MEM_RELEASE))
-		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-					"Unable to VirtualFree committed memory (%d bytes requested), Error: %ul",
-					bytes, GetLastError());
-	sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-				"Unable to VirtualAlloc committed memory at desired address (%d bytes requested at or above %p), Error: %ul",
-				bytes, minAddress, GetLastError());
-	return NULL;
-}
-
-/* Deallocate a region of memory previously allocated by
- * sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto.  Cannot fail.
- */
-void
-sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
-{
-	if (!VirtualFree(addr, SizeForRelease(sz), MEM_RELEASE))
-		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-					"Unable to VirtualFree committed memory (%d bytes requested), Error: %ul",
-					sz, GetLastError());
-}
-#endif /* SPURVM */
+# endif /* COGVM */
+#endif /* !defined(NO_VIRTUAL_MEMORY) && !SPURVM */

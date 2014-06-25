@@ -26,6 +26,7 @@
 #include "sq.h"
 #include "sqAssert.h"
 #include "sqMemoryFence.h"
+#include "sqSCCSVersion.h"
 #include <errno.h>
 #include <pthread.h>
 #include <stdio.h> /* for fprintf */
