@@ -4,6 +4,8 @@ A class to configure the Event-driven Stack Cog for Android. This configuration 
 Requires AndroidPlugin
 
 Ported from pharo to squeak. 
+
+tty: a lot of 'build' methods are included in this class in order to let the testing framework work consistently. They are not used.
 "
 Class {
 	#name : #SqueakAndroidStackEvtConfig,
@@ -344,6 +346,46 @@ SqueakAndroidStackEvtConfig >> executableName [
 	^ self vmStackExecutableName
 ]
 
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> externalPluginsBuildAssert [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> externalPluginsBuildAssertITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> externalPluginsBuildDebug [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> externalPluginsBuildDebugITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> externalPluginsBuildITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> externalPluginsBuildMultiThreaded [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> externalPluginsBuildMultiThreadedAssert [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> externalPluginsBuildMultiThreadedDebug [
+	^ self externalPluginsBuild
+]
+
 { #category : #'source generation' }
 SqueakAndroidStackEvtConfig >> extraVMSettings: maker [
 	| versionC |
@@ -368,6 +410,59 @@ SqueakAndroidStackEvtConfig >> generate [
 	^ CMakeAndroidGenerator generate: self 	
 
 
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> internalPluginsBuild [
+	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> internalPluginsBuildAssert [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> internalPluginsBuildAssertITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> internalPluginsBuildDebug [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> internalPluginsBuildDebugITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> internalPluginsBuildITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> internalPluginsBuildMultiThreaded [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> internalPluginsBuildMultiThreadedAssert [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> internalPluginsBuildMultiThreadedDebug [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
 ]
 
 { #category : #'source generation' }
@@ -464,6 +559,119 @@ SqueakAndroidStackEvtConfig >> prepareForGeneration [
 	CrLfFileStream defaultToLF.
 
 	^ self prepareForStackVMGeneration
+
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
+	"do nothing (so far) on Unix.
+	
+	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild:'
+	"
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsAfterDetermineSystemBuildDebugITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'as yet unclassified' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsBuild: aMaker [
+	"does nothing. included for framework consistency/testing 
+	
+	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsBuild'
+	"
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsBuildAssert: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsBuildAssertITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsBuildDebug: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsBuildDebugITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsBuildITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsBuildMultiThreaded: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsBuildMultiThreadedAssert: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> setGlobalOptionsBuildMultiThreadedDebug: aMaker [
+	^self setGlobalOptionsBuild: aMaker
 
 ]
 

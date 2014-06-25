@@ -20,11 +20,6 @@ Class {
 	#category : #'CMakeVMMakerSqueak-IOS'
 }
 
-{ #category : #settings }
-SqueakCocoaIOSSqueakStackV3Config >> commonCompilerFlags [ 
-	^ super commonCompilerFlags
-]
-
 { #category : #'source files' }
 SqueakCocoaIOSSqueakStackV3Config >> coreSources [ 
 	^ #(
@@ -57,13 +52,6 @@ SqueakCocoaIOSSqueakStackV3Config >> interpreterClass [
 { #category : #accessing }
 SqueakCocoaIOSSqueakStackV3Config >> pluginsDir [ 
 	^'${srcDir}/plugins'
-]
-
-{ #category : #settings }
-SqueakCocoaIOSSqueakStackV3Config >> setGlobalOptions: maker [
-   super setGlobalOptions: maker.
-   maker set: 'CMAKE_C_COMPILER' to: 'clang'.
-   maker set: 'CMAKE_CXX_COMPILER' to: 'clang++'.
 ]
 
 { #category : #plugins }

@@ -3075,16 +3075,16 @@ CPlatformConfigForSqueak >> thirdPartyLibs [
 	|d |
 	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	d 
-		at: #build put: [self thirdPartyLibsBuild];
-		at: #buildAssert  put: [self thirdPartyLibsBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self thirdPartyLibsBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self thirdPartyLibsBuildDebug];   
-		at: #buildDebugITimerHeartbeat  put: [self thirdPartyLibsBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self thirdPartyLibsBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self thirdPartyLibsBuildMultiThreaded];
-		at: #buildMultiThreadedAssert  put: [self thirdPartyLibsBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self thirdPartyLibsBuildMultiThreadedDebug ];
-		at: #buildNone put:[self thirdPartyLibsNoBuildType].
+		at: #build put: [self thirdpartyLibsBuild];
+		at: #buildAssert  put: [self thirdpartyLibsBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self thirdpartyLibsBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self thirdpartyLibsBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self thirdpartyLibsBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self thirdpartyLibsBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self thirdpartyLibsBuildMultiThreaded];
+		at: #buildMultiThreadedAssert  put: [self thirdpartyLibsBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self thirdpartyLibsBuildMultiThreadedDebug ];
+		at: #buildNone put:[self thirdpartyLibsBuildNone].
 	^(d at: buildType) value
 
 ]
