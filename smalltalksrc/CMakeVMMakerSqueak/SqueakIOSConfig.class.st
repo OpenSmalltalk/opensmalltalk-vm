@@ -405,6 +405,51 @@ SqueakIOSConfig >> executableName [
 	^ self vmIShouldNotBeHereExecutableName
 ]
 
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> externalPluginsBuild [
+	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> externalPluginsBuildAssert [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> externalPluginsBuildAssertITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> externalPluginsBuildDebug [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> externalPluginsBuildDebugITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> externalPluginsBuildITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> externalPluginsBuildMultiThreaded [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> externalPluginsBuildMultiThreadedAssert [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> externalPluginsBuildMultiThreadedDebug [
+	^ self externalPluginsBuild
+]
+
 { #category : #'source files' }
 SqueakIOSConfig >> extraSources [
 	" mac VM using some unix sources"
@@ -473,8 +518,61 @@ endforeach(lib)
 
 ]
 
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> internalPluginsBuild [
+	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> internalPluginsBuildAssert [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> internalPluginsBuildAssertITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> internalPluginsBuildDebug [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> internalPluginsBuildDebugITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> internalPluginsBuildITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> internalPluginsBuildMultiThreaded [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> internalPluginsBuildMultiThreadedAssert [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> internalPluginsBuildMultiThreadedDebug [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
 { #category : #utils }
-SqueakIOSConfig >> postBuildActions: gen [
+SqueakIOSConfig >> postBuildActionsBuild: gen [
 
 	" override to add custom rules after all targets is defined "
 	
@@ -497,6 +595,46 @@ SqueakIOSConfig >> postBuildActions: gen [
 			
 "					FILE(GLOB_RECURSE bLibs /${externalModulesDir}/*.*)
 "
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> postBuildActionsBuildAssert: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> postBuildActionsBuildAssertITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> postBuildActionsBuildDebug: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> postBuildActionsBuildDebugITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> postBuildActionsBuildITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> postBuildActionsBuildMultiThreaded: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> postBuildActionsBuildMultiThreadedAssert: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> postBuildActionsBuildMultiThreadedDebug: aMaker [
+	^self postBuildActionsBuild: aMaker
 ]
 
 { #category : #'source files' }
@@ -552,6 +690,123 @@ SqueakIOSConfig >> preferredIncludesBuildMultiThreadedAssert [
 { #category : #'source files' }
 SqueakIOSConfig >> preferredIncludesBuildMultiThreadedDebug [
 	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
+	self flag: 'tty'. "I do not know if this is appropriate for MacOSX32x86. It is in IOS, so I figured what the heck.
+	
+	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild:'
+	"
+	aMaker set: 'CMAKE_OSX_DEPLOYMENT_TARGET' to: '10.5'.
+	aMaker 
+		set: 'CMAKE_OSX_SYSROOT' 
+		to: '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX', self sdkVersion, '.sdk'
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsAfterDetermineSystemBuildDebugITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsBuild: aMaker [
+	"does nothing. included for framework consistency/testing 
+	
+	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsBuild'
+	"
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsBuildAssert: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsBuildAssertITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsBuildDebug: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsBuildDebugITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsBuildITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsBuildMultiThreaded: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsBuildMultiThreadedAssert: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> setGlobalOptionsBuildMultiThreadedDebug: aMaker [
+	^self setGlobalOptionsBuild: aMaker
 
 ]
 

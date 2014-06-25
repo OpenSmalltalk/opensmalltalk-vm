@@ -372,6 +372,51 @@ Linux64x86w32BitConfig >> executableName [
 	^ self vmIShouldNotBeHereExecutableName
 ]
 
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> externalPluginsBuild [
+	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> externalPluginsBuildAssert [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> externalPluginsBuildAssertITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> externalPluginsBuildDebug [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> externalPluginsBuildDebugITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> externalPluginsBuildITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> externalPluginsBuildMultiThreaded [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> externalPluginsBuildMultiThreadedAssert [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> externalPluginsBuildMultiThreadedDebug [
+	^ self externalPluginsBuild
+]
+
 { #category : #'plugin extra rules' }
 Linux64x86w32BitConfig >> extraPluginSettings: maker [
 	super extraPluginSettings: maker.  
@@ -396,12 +441,105 @@ Linux64x86w32BitConfig >> extraVMSettings: maker [
 	
 ]
 
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> internalPluginsBuild [
+	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> internalPluginsBuildAssert [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> internalPluginsBuildAssertITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> internalPluginsBuildDebug [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> internalPluginsBuildDebugITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> internalPluginsBuildITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> internalPluginsBuildMultiThreaded [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> internalPluginsBuildMultiThreadedAssert [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> internalPluginsBuildMultiThreadedDebug [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
 { #category : #accessing }
 Linux64x86w32BitConfig >> linkFlags [
 "	^ super linkFlags , ' -luuid -lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'"
 	^ super linkFlags , ' -luuid -lSM -lICE -ldl  -lpthread -lm -lnsl -lX11'
 
 
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> postBuildActionsBuild: gen [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> postBuildActionsBuildAssert: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> postBuildActionsBuildAssertITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> postBuildActionsBuildDebug: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> postBuildActionsBuildDebugITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> postBuildActionsBuildITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> postBuildActionsBuildMultiThreaded: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> postBuildActionsBuildMultiThreadedDebug: aMaker [
+	^self postBuildActionsBuild: aMaker
 ]
 
 { #category : #'source files' }
@@ -491,43 +629,184 @@ Linux64x86w32BitConfig >> preferredIncludesBuildMultiThreadedDebug [
 
 ]
 
-{ #category : #utils }
-Linux64x86w32BitConfig >> setExtraTargetProperties: maker [
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setExtraTargetPropertiesBuild: aMaker [
 	self flag:'tty'. "I am nervous about this method up here in this class, but pharo has it in CogUnixConfig, so using as is for now"
 
-	maker setTargetProperties: 'LINK_FLAGS "-m32"'.
+	aMaker setTargetProperties: 'LINK_FLAGS "-m32"'.
 		
-	maker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
+	aMaker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
 		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-rtd -mno-accumulate-outgoing-args")'.
 		
 	
-	maker 
+	aMaker 
 		cmd: 'set_source_files_properties'
 		params: ' ${targetPlatform}/vm/sqUnixHeartbeat.c PROPERTIES 
 		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -mno-rtd -mno-accumulate-outgoing-args"'.
 	
-	maker addExternalLibraries: 
+	aMaker addExternalLibraries: 
 		#(
 			'uuid'  ""
 			'ssl'  ""
 			'crypto' ""
 		).
 					
-	super setExtraTargetProperties: maker.
 
 ]
 
-{ #category : #utils }
-Linux64x86w32BitConfig >> setGlobalOptions: maker [
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildAssert: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
 
-	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc'.
-	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildAssertITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildDebug: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildDebugITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildMultiThreaded: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildMultiThreadedAssert: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildMultiThreadedDebug: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
+	"
+	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild:'"
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildDebugITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsBuild: aMaker [
+	aMaker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc'.
+	aMaker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.
 "	maker set: 'CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH}' to: ' /usr/lib/gcc/x86_64-slackware-linux/4.8.2/'. 
 set any CMake global options, before declaring a project in cmake file
 	
 	set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /opt/local/lib)
 	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions:'
 "
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsBuildAssert: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsBuildAssertITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsBuildDebug: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsBuildDebugITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsBuildITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsBuildMultiThreaded: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsBuildMultiThreadedAssert: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> setGlobalOptionsBuildMultiThreadedDebug: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
 ]
 
 { #category : #'cmake buildType redirects' }

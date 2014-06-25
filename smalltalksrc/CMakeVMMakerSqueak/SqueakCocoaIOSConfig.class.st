@@ -1059,8 +1059,8 @@ SqueakCocoaIOSConfig >> resources [
 
 ]
 
-{ #category : #settings }
-SqueakCocoaIOSConfig >> setExtraTargetProperties: maker [
+{ #category : #'cmake buildType redirects' }
+SqueakCocoaIOSConfig >> setExtraTargetPropertiesBuild: maker [
 	| plist precompiledHeaders |
 
 	" generated and add Info.plist file "
@@ -1104,6 +1104,54 @@ SqueakCocoaIOSConfig >> setExtraTargetProperties: maker [
 		addXCodeProperty: 'ICC_OPT_USE_ARCH_IA32' value: 'SSE41';
 		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-finline-functions -mfpmath=sse -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -DLSB_FIRST';
 		addXCodeProperty: 'PER_ARCH_CFLAGS_ppc' value: '-fast -mtune=7450 -mcpu=7450 -D_BSD_SOCKLEN_T_=int'
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakCocoaIOSConfig >> setExtraTargetPropertiesBuildAssert: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakCocoaIOSConfig >> setExtraTargetPropertiesBuildAssertITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakCocoaIOSConfig >> setExtraTargetPropertiesBuildDebug: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakCocoaIOSConfig >> setExtraTargetPropertiesBuildDebugITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakCocoaIOSConfig >> setExtraTargetPropertiesBuildITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakCocoaIOSConfig >> setExtraTargetPropertiesBuildMultiThreaded: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakCocoaIOSConfig >> setExtraTargetPropertiesBuildMultiThreadedAssert: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakCocoaIOSConfig >> setExtraTargetPropertiesBuildMultiThreadedDebug: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakCocoaIOSConfig >> setGlobalOptionsAfterDetermineSystem:  maker [
+	maker set: 'CMAKE_OSX_DEPLOYMENT_TARGET' to: '10.5'.
+	maker 
+		set: 'CMAKE_OSX_SYSROOT' 
+		to: '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX', self sdkVersion, '.sdk'
 ]
 
 { #category : #accessing }
