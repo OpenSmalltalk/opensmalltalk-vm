@@ -43,12 +43,14 @@
 TARGET		= vm$a
 COBJS		= $(INTERP)$o cogit$o sqNamedPrims$o sqVirtualMachine$o sqHeapMap$o\
 			sqExternalSemaphores$o sqTicker$o aio$o debug$o osExports$o \
-			sqUnixExternalPrims$o sqUnixMemory$o sqUnixCharConv$o sqUnixMain$o \
+			sqUnixExternalPrims$o sqUnixMemory$o sqUnixSpurMemory$o \
+			sqUnixCharConv$o sqUnixMain$o \
 			sqUnixVMProfile$o sqUnixHeartbeat$o sqUnixThreads$o
 
 IOBJS		= $(INTERP)$o sqNamedPrims$o sqVirtualMachine$o sqHeapMap$o\
 			sqExternalSemaphores$o sqTicker$o aio$o debug$o osExports$o \
-			sqUnixExternalPrims$o sqUnixMemory$o sqUnixCharConv$o sqUnixMain$o \
+			sqUnixExternalPrims$o sqUnixMemory$o sqUnixSpurMemory$o \
+			sqUnixCharConv$o sqUnixMain$o \
 			sqUnixVMProfile$o sqUnixHeartbeat$o sqUnixThreads$o
 
 OBJS		= [COBJS_OR_IOBJS] # see mkmf
