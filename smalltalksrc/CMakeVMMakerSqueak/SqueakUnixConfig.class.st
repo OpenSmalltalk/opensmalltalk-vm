@@ -269,3 +269,48 @@ SqueakUnixConfig >> setupDirectories: gen [
 	super setupDirectories: gen.
 	gen set: #externalModulesDir toString: self externalModulesDir.
 ]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> thirdpartyLibsBuild [
+	^ thirdpartyLibs ifNil: [ thirdpartyLibs := OrderedCollection new ].
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> thirdpartyLibsBuildAssert [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> thirdpartyLibsBuildAssertITimerHeartbeat [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> thirdpartyLibsBuildDebug [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> thirdpartyLibsBuildDebugITimerHeartbeat [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> thirdpartyLibsBuildITimerHeartbeat [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> thirdpartyLibsBuildMultiThreaded [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> thirdpartyLibsBuildMultiThreadedAssert [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> thirdpartyLibsBuildMultiThreadedDebug [
+	^ self thirdpartyLibs 
+]

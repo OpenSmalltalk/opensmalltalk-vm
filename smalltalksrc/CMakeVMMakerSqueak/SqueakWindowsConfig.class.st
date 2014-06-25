@@ -127,6 +127,51 @@ SqueakWindowsConfig >> platformSources [
 	)
 ]
 
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> thirdpartyLibsBuild [
+	^ thirdpartyLibs ifNil: [ thirdpartyLibs := OrderedCollection new ].
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> thirdpartyLibsBuildAssert [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> thirdpartyLibsBuildAssertITimerHeartbeat [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> thirdpartyLibsBuildDebug [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> thirdpartyLibsBuildDebugITimerHeartbeat [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> thirdpartyLibsBuildITimerHeartbeat [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> thirdpartyLibsBuildMultiThreaded [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> thirdpartyLibsBuildMultiThreadedAssert [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> thirdpartyLibsBuildMultiThreadedDebug [
+	^ self thirdpartyLibs 
+]
+
 { #category : #accessing }
 SqueakWindowsConfig >> winVer [
 	"Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)"

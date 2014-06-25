@@ -59,9 +59,152 @@ SqueakIA32BochsConfig >> executableName [
 	^ self vmIShouldNotBeHereExecutableName
 ]
 
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> externalPluginsBuild [
+	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> externalPluginsBuildAssert [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> externalPluginsBuildAssertITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> externalPluginsBuildDebug [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> externalPluginsBuildDebugITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> externalPluginsBuildITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> externalPluginsBuildMultiThreaded [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> externalPluginsBuildMultiThreadedAssert [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> externalPluginsBuildMultiThreadedDebug [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> internalPluginsBuild [
+	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> internalPluginsBuildAssert [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> internalPluginsBuildAssertITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> internalPluginsBuildDebug [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> internalPluginsBuildDebugITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> internalPluginsBuildITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> internalPluginsBuildMultiThreaded [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> internalPluginsBuildMultiThreadedAssert [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> internalPluginsBuildMultiThreadedDebug [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
 { #category : #testing }
 SqueakIA32BochsConfig >> isAbstractBaseClass [
 	^true
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> postBuildActionsBuild: gen [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> postBuildActionsBuildAssert: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> postBuildActionsBuildAssertITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> postBuildActionsBuildDebug: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> postBuildActionsBuildDebugITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> postBuildActionsBuildITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> postBuildActionsBuildMultiThreaded: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> postBuildActionsBuildMultiThreadedAssert: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> postBuildActionsBuildMultiThreadedDebug: aMaker [
+	^self postBuildActionsBuild: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -118,6 +261,119 @@ SqueakIA32BochsConfig >> preferredIncludesBuildMultiThreadedAssert [
 { #category : #'cmake buildType redirects' }
 SqueakIA32BochsConfig >> preferredIncludesBuildMultiThreadedDebug [
 	^self preferredIncludesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
+	"do nothing (so far) on Unix.
+	
+	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild:'
+	"
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsAfterDetermineSystemBuildDebugITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsBuild: aMaker [
+	"does nothing. included for framework consistency/testing 
+	
+	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsBuild'
+	"
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsBuildAssert: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsBuildAssertITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsBuildDebug: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsBuildDebugITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsBuildITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsBuildMultiThreaded: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsBuildMultiThreadedAssert: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> setGlobalOptionsBuildMultiThreadedDebug: aMaker [
+	^self setGlobalOptionsBuild: aMaker
 
 ]
 

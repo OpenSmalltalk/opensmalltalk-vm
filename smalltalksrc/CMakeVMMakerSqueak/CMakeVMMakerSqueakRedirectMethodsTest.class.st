@@ -68,6 +68,54 @@ CMakeVMMakerSqueakRedirectMethodsTest >> testCompilerFlags [
 ]
 
 { #category : #'as yet unclassified' }
+CMakeVMMakerSqueakRedirectMethodsTest >> testExternalPlugins [
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				allSubclassesDo:[:configuration | | o buildTypes|
+					o:= configuration new.
+					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
+						ifTrue:[
+							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
+							buildTypes do:[:buildType |
+								o configureForBuildType: buildType.
+								self assert:(o  externalPlugins isArray).
+								]]]].
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakRedirectMethodsTest >> testInternalPlugins [
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				allSubclassesDo:[:configuration | | o buildTypes|
+					o:= configuration new.
+					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
+						ifTrue:[
+							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
+							buildTypes do:[:buildType |
+								o configureForBuildType: buildType.
+								self assert:(o  externalPlugins isArray).
+								]]]].
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakRedirectMethodsTest >> testLinkFlags [
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
 		do:[:each | 
@@ -111,5 +159,29 @@ CMakeVMMakerSqueakRedirectMethodsTest >> testStandardIncludes [
 							buildTypes do:[:buildType |
 								o configureForBuildType: buildType.
 								self assert:(o  standardIncludes isKindOf: Collection)]]]].
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakRedirectMethodsTest >> testThirdPartyLibs [
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				allSubclassesDo:[:configuration | | o buildTypes|
+					o:= configuration new.
+					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
+						ifTrue:[
+							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
+							buildTypes do:[:buildType |
+								o configureForBuildType: buildType.
+								self assert:(o  thirdPartyLibs isKindOf: Collection).
+								]]]].
+
+
+
+
+
+
+
 
 ]

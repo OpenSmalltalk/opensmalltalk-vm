@@ -537,75 +537,57 @@ SqueakIPhoneSqueakStackV3Config >> setCommonProperties: maker [
 ]
 
 { #category : #settings }
-SqueakIPhoneSqueakStackV3Config >> setExtraTargetProperties: maker [
+SqueakIPhoneSqueakStackV3Config >> setExtraTargetPropertiesBuild: aMaker [
 	"super setExtraTargetProperties: maker."
 
 	| precompiledHeaders plist |
 	
 	precompiledHeaders := (self executableName, '_Prefix.pch').
-	(FileStream forceNewFileNamed: (maker buildDir / precompiledHeaders) fullName) 
+	(FileStream forceNewFileNamed: (aMaker buildDir / precompiledHeaders) fullName) 
 		nextPutAll: self precompiledHeaders;
 		close.
 	
-	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/', precompiledHeaders.
+	aMaker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/', precompiledHeaders.
 	
-	self setCommonProperties: maker.
+	self setCommonProperties: aMaker.
 
 	" generated and add Info.plist file "
 	plist := self plistFile.
-	(FileStream forceNewFileNamed: (maker buildDir / 'Info.plist') fullName) 
+	(FileStream forceNewFileNamed: (aMaker buildDir / 'Info.plist') fullName) 
 		nextPutAll: plist; 
 		close.
 
-	maker addProperty: 'MACOSX_BUNDLE_INFO_PLIST' value: '${buildDir}/Info.plist'.  
-	maker 
+	aMaker addProperty: 'MACOSX_BUNDLE_INFO_PLIST' value: '${buildDir}/Info.plist'.  
+	aMaker 
 		cmd: 'set_target_properties' 
 		params: self executableName, ' PROPERTIES COMPILE_FLAGS "-include \"', (self buildDir / self prefixHeaderFileName) fullName, '\""'. 
 
-	maker 
+	aMaker 
 		set: 'CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY' 
 		toString: self codeSignIdentity.
-	maker 
+	aMaker 
 		set: 'CMAKE_XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY' 
 		toString: self targetedDeviceFamilyAsString.
-	maker 
+	aMaker 
 		set: 'CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET' 
 		to: self deploymentTargetVersion.
-	maker 
+	aMaker 
 		set: 'CMAKE_XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR' 
 		toString: '$(BUILD_DIR)/$(CONFIGURATION)'.
-	maker 
+	aMaker 
 		set: 'CMAKE_XCODE_ATTRIBUTE_CONFIGURATION_TEMP_DIR' 
 		toString: '$(BUILD_DIR)/$(CONFIGURATION)'.
 
-	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
+	aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
 	
-	maker puts: 'set_source_files_properties(${srcVMDir}/gcc3x-cointerp.c PROPERTIES COMPILE_FLAGS -O0)'.
+	aMaker puts: 'set_source_files_properties(${srcVMDir}/gcc3x-cointerp.c PROPERTIES COMPILE_FLAGS -O0)'.
 
 
 
-]
-
-{ #category : #settings }
-SqueakIPhoneSqueakStackV3Config >> setGlobalOptions: maker [
-	"set any CMake global options, before declaring a project in cmake file"
-	
-"	maker 
-		set: 'CMAKE_C_COMPILER' 
-		to: ('/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer/usr/bin/gcc'
-			nameFormat: {'target' -> self targetDevice} asDictionary).
-	maker 
-		set: 'CMAKE_CXX_COMPILER' 
-		to: ('/Applications/Xcode.app/Contents/Developer/Platforms/{target}.platform/Developer/usr/bin/g++'
-			nameFormat: {'target' -> self targetDevice } asDictionary).	
-	self architecture ifNotNil: [
-		maker set: 'CMAKE_OSX_ARCHITECTURES' to: self architecture ]."
-	
 ]
 
 { #category : #utils }
 SqueakIPhoneSqueakStackV3Config >> setGlobalOptionsAfterDetermineSystem: maker [
-	self setGlobalOptions: maker.	
 	maker 
 		set: 'CMAKE_OSX_SYSROOT' 
 		to: ('/Applications/Xcode.app/Contents/Developer/Platforms/{1}.platform/Developer/SDKs/{1}{2}.sdk'

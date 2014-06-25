@@ -21,6 +21,12 @@ CMakeVMGeneratorForSqueak class >> generate: aConfigOrClass [
 		yourself  
 ]
 
+{ #category : #accessing }
+CMakeVMGeneratorForSqueak >> config: aCPlatformConfigForSqueak [
+	config:=aCPlatformConfigForSqueak
+	"accessor method needed for testing"
+]
+
 { #category : #'as yet unclassified' }
 CMakeVMGeneratorForSqueak >> configurationName [
 	^ config class name
@@ -97,4 +103,18 @@ CMakeVMGeneratorForSqueak >> generatePlugin: aPlugin internal: aBoolean extraRul
 	" this method called back from plugin"
 	^ CMakePluginGeneratorForSqueak new
 		generate: aPlugin for: self internal: aBoolean extraRules: aBlock
+]
+
+{ #category : #accessing }
+CMakeVMGeneratorForSqueak >> moduleName [ 
+	^config executableName
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMGeneratorForSqueak >> processThirdpartyLibraries [
+
+	config thirdpartyLibs do: [:each |
+		each generateFor: self ]
+
+
 ]
