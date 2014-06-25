@@ -402,42 +402,42 @@ Linux32x86Config >> externalPluginsBuild [
 
 { #category : #'cmake buildType redirects' }
 Linux32x86Config >> externalPluginsBuildAssert [
-	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+	^ self externalPluginsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 Linux32x86Config >> externalPluginsBuildAssertITimerHeartbeat [
-	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+	^ self externalPluginsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 Linux32x86Config >> externalPluginsBuildDebug [
-	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+	^ self externalPluginsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 Linux32x86Config >> externalPluginsBuildDebugITimerHeartbeat [
-	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+	^ self externalPluginsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 Linux32x86Config >> externalPluginsBuildITimerHeartbeat [
-	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+	^ self externalPluginsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 Linux32x86Config >> externalPluginsBuildMultiThreaded [
-	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+	^ self externalPluginsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 Linux32x86Config >> externalPluginsBuildMultiThreadedAssert [
-	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+	^ self externalPluginsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 Linux32x86Config >> externalPluginsBuildMultiThreadedDebug [
-	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+	^ self externalPluginsBuild
 ]
 
 { #category : #'plugin extra rules' }
@@ -626,6 +626,51 @@ Linux32x86Config >> libsBuildMultiThreadedDebug [
 	^self libsBuild
 ]
 
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> postBuildActionsBuild: gen [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> postBuildActionsBuildAssert: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> postBuildActionsBuildAssertITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> postBuildActionsBuildDebug: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> postBuildActionsBuildDebugITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> postBuildActionsBuildITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> postBuildActionsBuildMultiThreaded: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> postBuildActionsBuildMultiThreadedAssert: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> postBuildActionsBuildMultiThreadedDebug: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
 { #category : #'source files' }
 Linux32x86Config >> preferredIncludesBuild [
 	self flag:'tty'. "pharo does not support newspeak or sista., yet sets this in CogUnixConfig. Is this appropriate here? Revisit when coding newspeak etc"
@@ -716,29 +761,124 @@ Linux32x86Config >> preferredIncludesBuildMultiThreadedDebug [
 ]
 
 { #category : #utils }
-Linux32x86Config >> setExtraTargetProperties: maker [
+Linux32x86Config >> setExtraTargetPropertiesBuild: aMaker [
 	self flag:'tty'. "I am nervous about this method up here in this class, but pharo has it in CogUnixConfig, so using as is for now"
 
-	maker setTargetProperties: 'LINK_FLAGS "-m32"'.
+	aMaker setTargetProperties: 'LINK_FLAGS "-m32"'.
 		
-	maker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
+	aMaker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
 		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-rtd -mno-accumulate-outgoing-args")'.
 		
 	
-	maker 
+	aMaker 
 		cmd: 'set_source_files_properties'
 		params: ' ${targetPlatform}/vm/sqUnixHeartbeat.c PROPERTIES 
 		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -mno-rtd -mno-accumulate-outgoing-args"'.
 	
-	maker addExternalLibraries: 
+	aMaker addExternalLibraries: 
 		#(
 			'uuid'  ""
 			'ssl'  ""
 			'crypto' ""
 		).
 					
-	super setExtraTargetProperties: maker.
 
+]
+
+{ #category : #utils }
+Linux32x86Config >> setExtraTargetPropertiesBuildAssert: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #utils }
+Linux32x86Config >> setExtraTargetPropertiesBuildAssertITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #utils }
+Linux32x86Config >> setExtraTargetPropertiesBuildDebug: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #utils }
+Linux32x86Config >> setExtraTargetPropertiesBuildDebugITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #utils }
+Linux32x86Config >> setExtraTargetPropertiesBuildITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #utils }
+Linux32x86Config >> setExtraTargetPropertiesBuildMultiThreaded: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #utils }
+Linux32x86Config >> setExtraTargetPropertiesBuildMultiThreadedAssert: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #utils }
+Linux32x86Config >> setExtraTargetPropertiesBuildMultiThreadedDebug: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
+	"do nothing (so far) on Unix.
+	
+	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild:'
+	"
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsAfterDetermineSystemBuildDebugITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #utils }
+Linux32x86Config >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
 ]
 
 { #category : #utils }

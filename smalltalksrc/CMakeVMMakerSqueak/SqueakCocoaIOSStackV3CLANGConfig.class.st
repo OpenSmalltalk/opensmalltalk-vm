@@ -47,16 +47,10 @@ SqueakCocoaIOSStackV3CLANGConfig >> executableName [
 ]
 
 { #category : #settings }
-SqueakCocoaIOSStackV3CLANGConfig >> setExtraTargetProperties: maker [
+SqueakCocoaIOSStackV3CLANGConfig >> setExtraTargetPropertiesBuild: aMaker [
 
 
-	maker set: 'CMAKE_C_COMPILER' to: 'clang'.
+	aMaker set: 'CMAKE_C_COMPILER' to: 'clang'.
 	
-	super setExtraTargetProperties: maker
-]
-
-{ #category : #settings }
-SqueakCocoaIOSStackV3CLANGConfig >> setGlobalOptions: maker [
-	maker set: 'CMAKE_C_COMPILER' to: '/usr/bin/clang'.
-	maker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/clang++'.
+	super setExtraTargetPropertiesBuild: aMaker
 ]

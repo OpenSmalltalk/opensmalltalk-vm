@@ -290,28 +290,68 @@ Linux32ARMv6StackV3RaspbianConfig >> linkFlags [
 	 ^ '-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'
 ]
 
-{ #category : #utils }
-Linux32ARMv6StackV3RaspbianConfig >> setExtraTargetProperties: maker [
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3RaspbianConfig >> setExtraTargetPropertiesBuild: aMaker [
 
 	"maker setTargetProperties: 'LINK_FLAGS ""'."
 		
-	maker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
+	aMaker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
 		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer")'.
 		
 	
-	maker 
+	aMaker 
 		cmd: 'set_source_files_properties'
 		params: ' ${targetPlatform}/vm/sqUnixHeartbeat.c PROPERTIES 
 		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer"'.
 						
 	
-	maker addExternalLibraries: 
+	aMaker addExternalLibraries: 
 		#(
 			'm'  "math lib"
 			'dl'  "dynamic loader"
 			'pthread' "posix threads" 
 		).
 		
-	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
-	self addVMDrivers: maker.
+	aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
+	self addVMDrivers: aMaker.
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3RaspbianConfig >> setExtraTargetPropertiesBuildAssert: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3RaspbianConfig >> setExtraTargetPropertiesBuildAssertITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3RaspbianConfig >> setExtraTargetPropertiesBuildDebug: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3RaspbianConfig >> setExtraTargetPropertiesBuildDebugITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3RaspbianConfig >> setExtraTargetPropertiesBuildITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3RaspbianConfig >> setExtraTargetPropertiesBuildMultiThreaded: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3RaspbianConfig >> setExtraTargetPropertiesBuildMultiThreadedAssert: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3RaspbianConfig >> setExtraTargetPropertiesBuildMultiThreadedDebug: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
 ]

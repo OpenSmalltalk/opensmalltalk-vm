@@ -71,15 +71,19 @@ SqueakMacintoshConfig >> compilerFlagsRelease [
 { #category : #'cmake configuration' }
 SqueakMacintoshConfig >> configureForBuildType: aSymbol [
 	"Set my internal state appropriate for my build type".
+	self flag:'tty'. 
 	self configureNoBuildType.                "reset all internal flags"
 	buildType:= aSymbol.                       "error checking was handled previously"
 	self 	
 		preferredIncludes;
 		standardIncludes;
-		cC;                         " CC=''gcc -m32 -v''"
-		cXX;                        "CXX=''g++ -m32'"
-		lDFlags;                    " LDFLAGS=-Wl,-z,now"
-		libs;                         " LIBS=''-lpthread -luuid''"
+"
+Cog/build.macos32x86/squeak.cog.v3/mvm makes no reference (that I can see) of these variables. 
+		cC;                       
+		cXX;                      
+		lDFlags;                  
+		libs;                     
+"
 		internalPlugins;
 		externalPlugins.
 
@@ -177,4 +181,49 @@ SqueakMacintoshConfig >> resourcesDir: anObject [
 SqueakMacintoshConfig >> resourcesDirName [
 	^self dirBuild, FileDirectory slash,'resources'.
 "	^ 'macbuild/resources'"
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> thirdpartyLibsBuild [
+	^ thirdpartyLibs ifNil: [ thirdpartyLibs := OrderedCollection new ].
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> thirdpartyLibsBuildAssert [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> thirdpartyLibsBuildAssertITimerHeartbeat [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> thirdpartyLibsBuildDebug [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> thirdpartyLibsBuildDebugITimerHeartbeat [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> thirdpartyLibsBuildITimerHeartbeat [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> thirdpartyLibsBuildMultiThreaded [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> thirdpartyLibsBuildMultiThreadedAssert [
+	^ self thirdpartyLibs 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> thirdpartyLibsBuildMultiThreadedDebug [
+	^ self thirdpartyLibs 
 ]

@@ -312,29 +312,69 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> preferredIncludesBuild [
 	
 ]
 
-{ #category : #utils }
-Linux32ARMv6StackV3CrossRaspbianConfig >> setExtraTargetProperties: maker [
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3CrossRaspbianConfig >> setExtraTargetPropertiesBuild: aMaker [
 
 	"maker setTargetProperties: 'LINK_FLAGS ""'."
 		
-	maker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
+	aMaker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
 		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer")'.
 		
 		
-	maker 
+	aMaker 
 		cmd: 'set_source_files_properties'
 		params: ' ${targetPlatform}/vm/sqUnixHeartbeat.c PROPERTIES 
 		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer"'.
 						
-	maker linkDirectories: '${CMAKE_FIND_ROOT_PATH}/usr/lib/arm-linux-gnueabihf/'.
+	aMaker linkDirectories: '${CMAKE_FIND_ROOT_PATH}/usr/lib/arm-linux-gnueabihf/'.
 	
-	maker addExternalLibraries: 
+	aMaker addExternalLibraries: 
 		#(
 			'm'  "math lib"
 			'dl'  "dynamic loader"
 			'pthread' "posix threads" 
 		).
 		
-	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
-	self addVMDrivers: maker.
+	aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
+	self addVMDrivers: aMaker.
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3CrossRaspbianConfig >> setExtraTargetPropertiesBuildAssert: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3CrossRaspbianConfig >> setExtraTargetPropertiesBuildAssertITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3CrossRaspbianConfig >> setExtraTargetPropertiesBuildDebug: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3CrossRaspbianConfig >> setExtraTargetPropertiesBuildDebugITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3CrossRaspbianConfig >> setExtraTargetPropertiesBuildITimerHeartbeat: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3CrossRaspbianConfig >> setExtraTargetPropertiesBuildMultiThreaded: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3CrossRaspbianConfig >> setExtraTargetPropertiesBuildMultiThreadedAssert: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3CrossRaspbianConfig >> setExtraTargetPropertiesBuildMultiThreadedDebug: aMaker [
+	^self setExtraTargetPropertiesBuild: aMaker
 ]

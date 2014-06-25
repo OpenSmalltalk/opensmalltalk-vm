@@ -304,6 +304,149 @@ SqueakBSDConfig >> executableName [
 ]
 
 { #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> externalPluginsBuild [
+	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> externalPluginsBuildAssert [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> externalPluginsBuildAssertITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> externalPluginsBuildDebug [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> externalPluginsBuildDebugITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> externalPluginsBuildITimerHeartbeat [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> externalPluginsBuildMultiThreaded [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> externalPluginsBuildMultiThreadedAssert [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> externalPluginsBuildMultiThreadedDebug [
+	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> internalPluginsBuild [
+	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> internalPluginsBuildAssert [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> internalPluginsBuildAssertITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> internalPluginsBuildDebug [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> internalPluginsBuildDebugITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> internalPluginsBuildITimerHeartbeat [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> internalPluginsBuildMultiThreaded [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> internalPluginsBuildMultiThreadedAssert [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> internalPluginsBuildMultiThreadedDebug [
+   "	 internalPlugins := self defaultInternalPlugins"
+	^self internalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> postBuildActionsBuild: gen [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> postBuildActionsBuildAssert: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> postBuildActionsBuildAssertITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> postBuildActionsBuildDebug: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> postBuildActionsBuildDebugITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> postBuildActionsBuildITimerHeartbeat: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> postBuildActionsBuildMultiThreaded: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> postBuildActionsBuildMultiThreadedAssert: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> postBuildActionsBuildMultiThreadedDebug: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
 SqueakBSDConfig >> preferredIncludesBuild [
 "SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
 	^ #( )
@@ -360,47 +503,159 @@ SqueakBSDConfig >> preferredIncludesBuildMultiThreadedDebug [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
+	"do nothing (so far) on Unix.
+	
+	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild:'
+	"
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsAfterDetermineSystemBuildDebugITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker [
+	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsBuild: aMaker [
+	self flag:'tty'. "assume this is correct for BSD. it may not be"
+	aMaker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc'.
+	aMaker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsBuildAssert: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsBuildAssertITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsBuildDebug: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsBuildDebugITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsBuildITimerHeartbeat: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsBuildMultiThreaded: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsBuildMultiThreadedAssert: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> setGlobalOptionsBuildMultiThreadedDebug: aMaker [
+	^self setGlobalOptionsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
 SqueakBSDConfig >> standardIncludesBuild [ 
 	^#()
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'cmake buildType redirects' }
 SqueakBSDConfig >> standardIncludesBuildAssert [ 
 	^ self standardIncludesBuild
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'cmake buildType redirects' }
 SqueakBSDConfig >> standardIncludesBuildAssertITimerHeartbeat [ 
 	^ self standardIncludesBuild
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'cmake buildType redirects' }
 SqueakBSDConfig >> standardIncludesBuildDebug [ 
 	^ self standardIncludesBuild
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'cmake buildType redirects' }
 SqueakBSDConfig >> standardIncludesBuildDebugITimerHeartbeat [ 
 	^ self standardIncludesBuild
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'cmake buildType redirects' }
 SqueakBSDConfig >> standardIncludesBuildITimerHeartbeat [ 
 	^ self standardIncludesBuild
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'cmake buildType redirects' }
 SqueakBSDConfig >> standardIncludesBuildMultiThreaded [ 
 	^ self standardIncludesBuild
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'cmake buildType redirects' }
 SqueakBSDConfig >> standardIncludesBuildMultiThreadedAssert [ 
 	^ self standardIncludesBuild
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'cmake buildType redirects' }
 SqueakBSDConfig >> standardIncludesBuildMultiThreadedDebug [ 
 	^ self standardIncludesBuild
 ]
