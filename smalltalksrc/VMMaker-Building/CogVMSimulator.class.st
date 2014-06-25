@@ -1693,6 +1693,7 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString [
 									with: fnSymbol
 									with: [plugin perform: fnSymbol. self]).
 	"Transcript show: ' ... okay'."
+	transcript cr.
 	^ mappedPluginEntries size
 ]
 
@@ -1728,6 +1729,7 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString AccessorDept
 			 accessorDepthPtr at: 0 put: (pluginAndName at: 4).
 			 ^index]].
 	firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
+	transcript cr.
 	^0
 ]
 
