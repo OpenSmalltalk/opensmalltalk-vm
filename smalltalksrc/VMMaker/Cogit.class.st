@@ -4891,10 +4891,6 @@ Cogit >> genMethodAbortTrampoline [
 	opcodeIndex := 0.
 	self CmpCq: 0 R: ReceiverResultReg.
 	jumpSICMiss := self JumpNonZero: 0.
-	"on machines with a link register, pop the stack if the ReceiverResultReg = 0,
-	 i.e. if coming through the stack check abort; frame build has already pushed it."
-	backEnd hasLinkRegister ifTrue:
-		[self AddCq: BytesPerWord R: SPReg].
 
 	self compileTrampolineFor: #ceStackOverflow:
 		numArgs: 1
