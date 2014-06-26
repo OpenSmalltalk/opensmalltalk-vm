@@ -303,18 +303,9 @@ SpurBootstrapMonticelloPackagePatcher >> patchPackage: packageFileName with: pat
 	self storeVersion: newVersion
 ]
 
-{ #category : #'repository population' }
-SpurBootstrapMonticelloPackagePatcher >> spur [
-	| url |
-	url := 'http://source.squeak.org/spur'.
-	^MCRepositoryGroup default repositories 
-		detect: [:r| r description = url]
-		ifNone:
-			[MCHttpRepository fillInTheBlankConfigure:
-				(MCHttpRepository
-					creationTemplateLocation: url
-					user: 'user with write permission'
-					password: 'password')]
+{ #category : #patching }
+SpurBootstrapMonticelloPackagePatcher >> spurBranchNameForInfo: versionInfo package: package [
+	^versionInfo name copyReplaceAll: package name with: package name, '.spur'
 ]
 
 { #category : #patching }
@@ -337,14 +328,17 @@ SpurBootstrapMonticelloPackagePatcher >> trunk [
 ]
 
 { #category : #'repository population' }
-SpurBootstrapMonticelloPackagePatcher >> updateSpurRepository [
-	"self new from: 'trunkpackages' to: 'spurpackages'; updateSpurRepository"
+SpurBootstrapMonticelloPackagePatcher >> updateTrunkRepository [
+	"Download all the Collections, Kernel and System packages from trunk into srcDir,
+	 patch them into destDir,
+	 upload the patched and branched files that aren't already in trunk to trunk."
+	"self new from: 'trunkpackages' to: 'spurpackages'; updateTrunkRepository"
 	"AndreasSystemProfiler spyOn: [self new from: 'trunkpackages' to: 'spurpackages'; updateSpurRepository]"
 	sourceDir assureExistence.
 	self download: self class squeak45baseline from: self trunk.
 	destDir assureExistence.
 	self patchAsNeeded.
-	self uploadFrom: (MCDirectoryRepository directory: destDir) to: self spur
+	self uploadFrom: (MCDirectoryRepository directory: destDir) to: self trunk
 ]
 
 { #category : #'repository population' }
@@ -365,7 +359,7 @@ SpurBootstrapMonticelloPackagePatcher >> version: version withPatches: patches f
 	^MCVersion
 		package: version package
 		info: (ancestry
-				infoWithName: version info name
+				infoWithName: (self spurBranchNameForInfo: version info package: package)
 				message:	version info name,
 							' patched for Spur by ',
 							(CCodeGenerator shortMonticelloDescriptionForClass: self class),
