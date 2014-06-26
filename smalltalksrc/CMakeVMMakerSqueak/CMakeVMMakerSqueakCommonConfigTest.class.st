@@ -138,28 +138,6 @@ the return array embeds 'self executableName' which does not exist in an Abstrac
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakCommonConfigTest >> testConfigH [
-	"for each builder, make sure all its configurations provides defaultExternalPlugins"
-	SqueakCMakeVMMakerAbstractBuilder 
-		subclassesDo:[:builder | | o |
-			SqueakUnixConfig 
-				allSubclassesDo:[:configuration |
-					(configuration isAbstractBaseClass not)
-						ifTrue:[o:= configuration new.
-							    self assert:(o  configH isString)]]]
-
-
-
-
-
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testCoreSources [
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
 		do:[:each | 

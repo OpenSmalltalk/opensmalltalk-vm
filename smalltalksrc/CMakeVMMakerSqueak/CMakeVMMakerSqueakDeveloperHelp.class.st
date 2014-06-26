@@ -4,198 +4,15 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Help'
 }
 
-{ #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> availableBuildTypes [
-	^HelpTopic
-		title:'configuring available build types'
-		contents:
-'The purpose of this method is to present the end user with the avaiable buildTypes for a configuration category. when they invoke a Builder like so:
-
-	SqueakLinux32X86Builder availableBuildTypesFor: #Linux32x86SqueakStackV3Config
-
-Since builds are sometimes not available and/or under development  a developer may wish to restrict what build types are avaiable for a configurations Builder by modifying the configuration''s "availableBuilds" method.
-
-The default is all buildTypes: 
-	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations
-
-You can display no buildTypes with:
-	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations.
-
-or you can customize it like so:
-	^(SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations 
-			copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))  
-
-
-'
-]
-
 { #category : #accessing }
 CMakeVMMakerSqueakDeveloperHelp class >> bookName [ 
 	^'Developer Guide'
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> cMakeMacros [
+CMakeVMMakerSqueakDeveloperHelp class >> buildersAndConfigs [
 	^HelpTopic
-		title:'configuring cmake macros'
-		contents:
-'
-SystemNavigation default browseMethodsWhoseNamesContain: ''cMakeMacros''
-'
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> configH [
-	^HelpTopic
-		title:'configuring configH'
-		contents:
-'
-Use AConcreteBuilder>>configH to tell your plugins where to find its libraries etc.
-
-The version of this is platform dependent.
-
-You may also need to edit your oscogvm/platforms/YOUR PLATFORM/plugins/ThePLuginDirectory/acinclude.m4 file so that it conforms to your system.
-
- 
-
-based on my work getting the oscogvm/platforms/unix/plugins/UUIDPlugin/sqUnixUUID.c... to compile.
-Working from the C source up to configuration then to Squeak....we start with the source code for sqUnixUUID.c
-
-#include "config.h"
-
-#if defined(HAVE_SYS_UUID_H)
-# include <sys/types.h>
-# include <sys/uuid.h>
-#elif defined(HAVE_UUID_UUID_H)
-# include <uuid/uuid.h>
-#elif defined(HAVE_UUID_H)
-# include <uuid.h>
-#else
-# error cannot find a uuid.h to include
-#endif
-
-On my platform, I needed that HAVE_UUID_H define set. 
-To do that, I modified the acinclude.m4 file to check for the <uuid.h> (my changes in Bold--I emailed you this previously)
-
-
-AC_MSG_CHECKING([for UUID support uuid/uuid.h] and uuid_generate)
-AC_TRY_COMPILE([#include <uuid/uuid.h>],[uuid_generate;],[
- AC_MSG_RESULT(yes)
- AC_CHECK_LIB(uuid, uuid_generate, LIB_UUID="-luuid")],[
- AC_MSG_RESULT(no)
-AC_MSG_CHECKING([for UUID support uuid and uuidgen] )
- AC_TRY_COMPILE([#include <uuid.h>],[uuidgen;],[
- AC_MSG_RESULT(yes)
- AC_CHECK_LIB(uuid, uuidgen, LIB_UUID="-luuid" )],[
- AC_MSG_RESULT(no)
-AC_PLUGIN_DISABLE
- ])
-])
-
-AC_SUBST(LIB_UUID)
-
- 
-
-
-For the source code to see it, the config.h file needs to be in place with that HAVE_UUID_H  flag*, so in Squeak, I over-ride the configH method to include that define flag:
-
-
-configH
-
-
-#define HAVE_UUID_H 1 
-#define HAVE_UUIDGEN 1
-
-#ifndef __sq_config_h
-
-The CMakeVMMakerSqueak ''generate'' message to a builder dumps that config.h to the build directory.
-running the build.sh generated script invokes
-cmake .
-
- command which looks in the specified source/config directory to configure the GNU-Makefile to look for that source code and pairs it with the generated config.h
-
-The CMake generate GNU-Make system then uses those source/build artifacts to put the output in the oscogvm/products directory.
-
-
-So, let me summarize.
-
-1. We know that the plugins depend on config.h
-2. Ideally, that config.h should be incrementally build by the Squeak plugins themselves or the CMakeVMMaker configurations. How? I don''t know yet. Looking at it, the UUIDPlugin class would have to contribute its configuration information.
-    this is non-trivial.
-3. So, in the meantime, CMakeVMMakerSqueak configurations are classes that encapsulate a <drum roll please> Configuration.
-4. It seems reasonable to make this part of the configuration setup process.
-5. I will/have documented in in the HelpBrowser HelpTopic for the system.
-
-My apologies for the long-winded explanation. 
-
-
-'
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> excludeFromBuild [
-	^HelpTopic
-		title:'Excluding a Configuration From Builds'
-		contents:
-' The "excludeFromBuild" method in a concrete configuration can be manually toggled to exclude or include a configuration from being built by a builder.
-
-	excludeFromBuild
-		"over-ride to exclude yourself from a build"
-		^false
-
-
-  Be careful witht he logic. True excludes the configuration. False includes the configuration
-'
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> executableName [
-	^HelpTopic
-		title:'set executable name'
-		contents:
-'
-In your concrete configuration, set the exectuable name in method "executableName"
-
-SystemNavigation default browseMethodsWhoseNamesContain: ''executableName''
-
-
-'
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> extraPluginSettings [
-	^HelpTopic
-		title:'set extra plugin settings'
-		contents:
-'In your concrete configuration configure "extraPluginSettings"
-
-SystemNavigation default browseMethodsWhoseNamesContain: ''extraPluginSettings''
-
-
-look at the differences in the concrete implementations, especially by platform type.	
-
-'
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> igorStasenkoDesign [
-	^HelpTopic
-		title:'Igor Stasenko''s CMakeVMMaker Design for pharo'
-		contents:
-'CMakeVMMakerSqueak extends Igor Stasenko''s pharo work in CMMakeVMMaker. 
-
-For this reason, a discussion of the Pharo design is apropos as it will support later discussion about CMakeVMMakerSqueak
-
-TODO: finish me
-
-
-'
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> organizationOfBuildersConfigs [
-	^HelpTopic
-		title:'Organization Of Builder and Configuration Classes'
+		title:'Organization'
 		contents:
 '
 The CMakeVMMakerSqueak Builders and Configurations are organized to mirror  Eliot''s GNU build system organization.
@@ -226,11 +43,29 @@ Builders manage Configurations and Builds for a particular [Language][VM][Memory
 THERE IS A ONE-TO-ONE CORRESPONEDENCE between aConcreteBuilder>configurationsCategory and the Smalltalk Category name. 
 If you change one, you must change the other in order for the Builder to manage that configuration.
 
-example: SqueakMacOSBuilder configurationsCategory
+example: SqueakMacOSX32x86Builder configurationsCategory
 
 
 
-Semi-Kludgey--yes, but an acceptable kludge in my estimation.
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> igorStasenkoDesign [
+	^HelpTopic
+		title:'Design Patterns'
+		contents:
+'CMakeVMMakerSqueak extends Igor Stasenko''s pharo work in CMMakeVMMaker. 
+
+The system employs the Visitor design pattern in two places.
+
+1. When a CPlatformConfigForSqueak subclass invokes CMakeVMGeneratorForSqueak>>generate passing itself as the visitor.
+2. In SqueakCMakeVMMakerAbstractBuilder when Configuration information is cached in a CMakeVMakerConfigurationInfo.
+
+The CPlatformConfigForSqueak makes heavy use of a Template pattern. This pattern is used extensively in the protocol ''cmake buildType redirects''.
+This is used to force correct implementation of configurations. It also extends the pharo system to support the build types required for the 
+
+Fairly extensive Tests are written to ensure correct implementation of Configurations.
 
 '
 ]
@@ -238,600 +73,80 @@ Semi-Kludgey--yes, but an acceptable kludge in my estimation.
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> overview [
 	^HelpTopic
-		title:'CMakeVMMaker in a couple of sentences.'
+		title:'Overview'
 		contents:
-'The heart of the package is CMakeGenerator and its two subclasses CMakeVMGenerator and CMakePluginGenerator.
+'
+The heart of the package is CMakeGeneratorForSqueak and its two subclasses CMakeVMGeneratorForSqueak and CMakePluginGeneratorForSqueak.
 
-CMakeGenerator collects information from CPlatformConf, CMThirdpartyLibrary and InterpreterPlugins and writes it out to CMake files and associated directories. 
+
+CMakeVMGeneratorForSqueak collects information from subclasses of CPlatformConfigForSqueak, CMThirdpartyLibrary and InterpreterPlugins and writes it out to CMake files and associated directories. 
 
 From there, the user invokes cmake and make using a generated build.sh script.
 
 The programmer directs the flow of the generator by coding a subclass of CPlatformConf, setting it up correctly and asking it to generate itself. 
 
-The configuration then invokes the CMakeVMGenerator passing itself as an argument. 
+The configuration then invokes the CMakeGeneratorForSqueak passing itself as an argument. 
 
 The VMGeneratator extracts the information and utilizes VMPluginGenerator to generate plugin stuff, the CPlatformConf to generate other stuff and CMThirdPartyLibrary''s to generate other stuff. 
 
 The end result is a CMake evironment that is set up to correctly build a VM
+
+Concrete implementations of SqueakCMakeVMMakerAbstractBuilder provide an invokation facade and configuration query capabilities.
+
+
 '
 ]
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(overview prerequisites igorStasenkoDesign plugins organizationOfBuildersConfigs availableBuildTypes excludeFromBuild executableName extraPluginSettings preferredIncludes setExtraTargetProperties cMakeMacros configH scratch)
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> plugins [
-	^HelpTopic
-		title:'setting up defaultInternalPlugins and defaultExternalPlugins'
-		contents:
-'
-bad mojo with plugins.int plugins.ext in GNU and plugin names in CMakeVMMaker(Squeak)
-
-|s|
-Transcript clear.
-s:=SortedCollection new.
-InterpreterPlugin allSubclassesDo:[:p|
-	p moduleName = ''SqueakSSL''                    "<-------Text from plugins.int or plugins.ext"
-		ifTrue:[Transcript show:p name;cr].
-	s add: (p moduleName)].
-
-
-'
-
-
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> preferredIncludes [
-	^HelpTopic
-		title:'configuring preferred includes'
-		contents:
-'
-SystemNavigation default browseMethodsWhoseNamesContain: ''preferredIncludes'' 
-'
+	^#(overview prerequisites igorStasenkoDesign  buildersAndConfigs terms )
 ]
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> prerequisites [
 	^HelpTopic
-		title:'Pre-requisits'
+		title:'Prerequisites'
 		contents:
-'TODO: write me
+'The CMakeVMMakerSqueak depends on CMakeVMMaker (a pharo implementation)
 
+CMake from  http://www.cmake.org/ is required to process the output of this package.
 
+This package was written using cmake version 2.8.12
 '
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> protocols [
+CMakeVMMakerSqueakDeveloperHelp class >> terms [
 	^HelpTopic
-		title:'An Explanation of Protocols in TCPaltformConfigForSqueak'
-		contents:
-'TCPlatformConfigForSqueak browse
-
-The purpose of the Trait is to force Abstract Base Class like behavior for pharo''s CMakeVMMaker CPlatformConfig base class. 
-
-Since I do not have access to modify the base class, I used the Trait TCPlatformConfigForSqueak to squeeze in that behavior ''from the side'' if you will.
-
-The following protocols conform to those in the CPlatformConfig:
-
-accessing
-compiler flags
-headers generation
-plugin extra rules
-settings
-source files
-source generation
-utils
-
-
-For methods in the CMakeVMaker CPlatformConfig that where not portable to Squeak, I overrode those.
-They reside in the protocol:
-
-squeak compatability
-
-
-The pharo CMakeVMMaker does not have the functionality to support the naming conventions and buildTypes that CMakeVMMakerSqueak requires. To that end, extra ''cmake-ish'' behavior is placed that is unique to CMakeVMMakerSqueak is placed in the following protocols:
-
-cmake configuration
-cmake config buid type
-cmake directory
-cmake executable names
-
-
-
-
-'
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> scratch [
-	^HelpTopic
-		title:'Program Flow'
+		title:'Terms'
 		contents:
 '
-Create a new configuration
-add external/internal plugins
-generateSources
-	verifies Sources file in place
-	prepares CogRTLOpcodes/CogIA32Compiler/StackInterpreter depending on configuration used
-	initializes/prepares VMMaker
-	asks VMMaker to generateEntire while intercepting notifications and deprecation warnings.
+AbstractBaseClass:   
+	Typically the topmost class in a [OS][VMWordSize][Processor][ETC]  class category. Example: CPlatformConfigForSqueak. Most of the configuration action happens at this level and lower.
 
-generate 
-	a Configuration passes itself to a CMakeVMGeneratorForSqueak
-	an output  writeStream is opened
-	ask the config to set global options on the Generator. Stuff like (maker set: ''CMAKE_C_COMPILER'' to: ''/usr/bin/gcc'')
-	"We are setting up a file here"
-	print the header
-	set project name
-	set system specific global options after system is known (all existing implementations are XCode CMAKE_OSX_SYSROOT etc)
-        set up  directories.cmake  content with all the topDir,srcDir etc in the Generator
-	9. is troubling. set''s CMAKECONFIGURATIONTYPES to Release
-	set up preferedIncludes. This one is important as it is config specific
-	set up standardIncludes. This one is important as it is config specific
-	add CompilerFlag Definitions. This is where customization among release, debug, assert flags are set.
-	extraVMSettings             . more custom stuff for the VM. The generateConfigH issue resides here
-        put this string  ''add_executable(Squeak  ${coreSources} ${crossVMSources} ${platformVMSources} ${extraSources})''
-	generate and store internally  the internal/external plugin CMakePluginGeneratorForSqueak . Each of these has its own Stream etc.for CMake
-        processThirdPartyLibraries This loops through the CMakeVMMaker-Libs that are associated with this config. these libs generate their own spiel
-	                           libraries can be downloaded here?
-	processPlugins   pretty complicated as well.
-	setExtraTargetProperties   <---this is important. It is used by "most" configs and sets compile flags, etc. This will be messed up for cut-n-paste I did .
-	self cmd: ''target_link_libraries'' params: self moduleName , '' ${LINKLIBS}''.  just puts in doc
-        postBuildActions  <--used by Mac configs need to clean this up.
-	saveFile  "Writes CMakeLists.txt"
-	generateBuildScript "this is config specific"
-	
+Builder:                      
+	A concrete subclass of SqueakCMakeVMMakerAbstractBuilder. Builders act as a facade for invoking the configurations.They also provide query tools for the configurations that a builder manages. There is a one-to-one correspondence between a Builder''s configurationsCategory and the configurations it manages. example:    SqueakBSDx86Builder configurationsCategory
 
-----------------------------------------------------------------------------------
-SqeuakCogMTBuilder buildUnix32
-		self new buildUnix32
->>>		     SqueakCogMTUnixConfig new.   (CPlatformConfig initialize
-		     			   	  		   super initialize
-								   generateForRelease = true.
-				addExternalPlugins#();
-				addInternalPlugins#();
-1.				generateSources;
-2. 				generate.
+buildType:
+	One of SqueakCMakeVMMakerAbstractBuilder  allBuildTypes 
+                                 
 
+CMakeLists.txt:
+	The instructions that CMake uses to build build systems.  One output of a configuration
 
+Configuration:            
+	CPlatformConfigForSqueak  and its subclasses. These maintain the definitions that are rendered into CMakeLists.txt files
 
 
+Generator:                 
+	CMakeGeneratorForSqueak and its subclasses
 
 
+Redirect Methods:      
+	Given a method X, it is a redirect method if a call to it redirects to xBuildType based on the state of the configurations buildType  buildType variable.  See CPlatformConfigForSqueak protocol ''cmake buildType redirects''
 
-1 SqueakCogMTUnixConfig generateSources
- CPlatformConfig generateSources
-	"Generate whole VM + plugins sources"
-	| maker |
 
-	self validateSourcesPresent.  
-	self prepareForGeneration.
-	
-	"suppress questions and deprecation warnings during generation "
-	[[
-		
-		maker := self prepareVMMaker.
-	
-		maker interpreterClass: self interpreterClass.
-		self cogitClass ifNotNil: [:cg | 
-			maker cogitClass: cg.
-			cg initializeWithOptions: (maker instVarNamed: ''optionsDictionary'')
-		].
-		
-		maker generateEntire
 
-	] on: ProvideAnswerNotification do: [:ex | ex resume: true ]]
-	on: Deprecation do: [:ex | ex resume ].
-	
-	
-
-2. generate 
-	self generatePluginsList. writes PLUGINS.txt file from pluginsTemplate
-	self generateLicense.     writes LICENSE.txt file from licenseTemplate
-3.->	^CMakeVMGeneratorForSqueak generate:self    pass myself (a config) to a VMGenerator
-
-CMakeVMGenerator generate
-3. generate
-	| intPlugins extPlugins |
-			
-	output := String new writeStream.
-	
-4.	config setGlobalOptions: self.
-	
-	self 
-5		printHeader;
-6		project: config executableName.
-
-7.	config setGlobalOptionsAfterDetermineSystem: self.
-
-8.	config setupDirectories: self.
-	
-9.	self message: ''${CMAKE_MODULE_PATH}''.
-	self set: ''CMAKE_CONFIGURATION_TYPES'' to: ''Release''.
-
-10.	config preferredIncludes 
-		do: [ :each | self includeDirectories: each ].
-	self includeDirectories: self includeDirs.	
-11	config standardIncludes 
-		do: [:each | self includeDirectories: each ].
-
-12	self addDefinitions: config compilerFlags.
-
-13.	config extraVMSettings: self.
-	
-14	self puts: ''add_executable('' , config executableName, '' '', config executableType, '' '' , self sources , '')''.
-	
-15	intPlugins := self generatePluginConfigs: config internalPlugins internal: true.  <---this area is complicated, but it generates Plugin files
-	extPlugins := self generatePluginConfigs: config externalPlugins internal: false.
-
-16	self processThirdpartyLibraries.
-	
-17	self processPlugins:  intPlugins, extPlugins.
-
-18.	config setExtraTargetProperties: self.    <---this is very important
-	
-	self cmd: ''target_link_libraries''
-		params: self moduleName , '' ${LINKLIBS}''.
-
-19.	config postBuildActions: self.
-	
-20	self saveFile.
-	self generateBuildScript. build.sh
-
-
-
-
-4. setGlobalOptions: maker
-
-	"set any CMake global options, before declaring a project in cmake file"
-	
-	maker set: ''CMAKE_C_COMPILER'' to: ''/usr/bin/gcc''.
-	maker set: ''CMAKE_CXX_COMPILER'' to: ''/usr/bin/g++''.
-
-5. printHeader
-	
-	self puts: ''# This is automatically generated file using '', self configurationName, '' on '',
-		Date current asString, '' '' , Time current asString;
-		puts: ''cmake_minimum_required(VERSION 2.6.2)''
-
-
-
-6 project: aProjectName
-	self cmd: ''project'' qparams: aProjectName{
-
-	     cmd: cmdName qparams: aString
-	     	"quoted params"
-		output nextPutAll: cmdName;
-		nextPutAll: ''("'';
-		nextPutAll: aString;
-		nextPutAll: ''")'';
-		cr
-        }
-
-7.SqueakIPhoneSqueakStackV3Config setGlobalOptionsAfterDetermineSystem: maker   <---here is a representative example
-	self setGlobalOptions: maker.	
-	maker 
-		set: ''CMAKE_OSX_SYSROOT'' 
-		to: (''/Applications/Xcode.app/Contents/Developer/Platforms/{1}.platform/Developer/SDKs/{1}{2}.sdk''
-			format: { self targetDevice. self sdkVersion })
-
-8. config setupDirectories:self
-   this creates directories.cmake with all the top/build/etc directories
-
-9. this is troubling, sets CMAKE_CONFIGURATION_TYPES to ''Release''.
-
-
-
-10. preferredIncludes
-	^ #(
-	''${buildDir}/''
-	''${platformsDir}/iOS/vm/iPhone'' "config.h is here. Why???"
-	)
-
-	this gets put int CMakeGenerator{
-
-	     includeDirectories: aString
-	     	 ^self cmd: ''include_directories'' params: aString
-
-
-11. standardIncludes <---this one is important
-
-
-12. addDefinitions:config compilerFlags
-    compilerFlags 
-	| releaseFlags |
-	
-	releaseFlags := self isGenerateForRelease 
-		ifTrue: [ self compilerFlagsRelease ]
-		ifFalse: [ self compilerFlagsDebug ].
-		
-	^ String streamContents: [ :stream |
-		((self commonCompilerFlags, releaseFlags)
-			asStringOn: stream 
-			delimiter: '' '' )]
-
-
-13. extraVMSettings: maker    very customizable method. 
-	| versionC |
-	self generateConfigH.  <---the issue Eliot raised. 
-	
-	
-	"output a fake version.c file"
-	
-	self write:
-''int vm_serial= 1;
-char *vm_date= "<HERE IS SUPPOSED TO BE THE DATE>";
-char *cc_version= "<HERE IS SUPPOSED TO BE gcc VERSION>";
-char *ux_version= "<FAKE FROZEN VERSION FOR DEBUGGING PURPOSES>";
-''
-	toFile: ''version.c''.
-
-
-14.  ''add_executable(Squeak  ${coreSources} ${crossVMSources} ${platformVMSources} ${extraSources})''
-
-
-
-15. generatePluginConfigs: plugins internal: bool
-	"Answers a collection of CMakePluginGenerator instances"
-	
-	^ plugins collect: [:each | | plugin |
-		plugin := Smalltalk at: each.
-		plugin generateFor: self internal: bool.   <---InterpreterPlugin method added by CMakeVMMaker 
-	].
-
-	generateFor: aCMakeVMGenerator internal: aBoolean 
-		^ aCMakeVMGenerator 
-			generatePlugin: self 
-			internal: aBoolean
-			extraRules: nil
-	
-	so, for each plugin in the generator, invoke my generator method generatePlugin: internal:extraRules:
-	    THIS invokes CMakePluginGeneratorForSqueak new
-	     	    generate: aPlugin for: aCMakeVMGenerator internal: aBoolean extraRules: aBlock
-		    	    doNotGenerate := false.
-			    internal := aBoolean.
-			    plugin := aPlugin.
-			    vmGen := aCMakeVMGenerator.
-			    extraRules := aBlock.
-		            ^ self generate{
-
-						| name |
-						output := String new writeStream.
-
-						name := plugin moduleName.
-					#(	vmGen config setGlobalOptions: self.
-
-						self 
-							printHeader;
-							project: name;
-							"include directories generated for build"
-							include: ''../directories.cmake''.
-
-						self set: ''CMAKE_CONFIGURATION_TYPES'' to: ''Release''.
-					).
-
-						self message: (internal ifTrue: [ ''Adding internal plugin: ''] ifFalse: [''Adding external plugin: ''])  , name.
-
-						self 
-							set: #pluginName toString: name;
-							set: #pluginSrc toString: ''${srcPluginsDir}/'', name;
-							set: #pluginCross toString: ''${crossDir}/plugins/'', name;
-							set: #pluginPlatform toString: ''${targetPlatform}/plugins/'', name.
-
-						"clear LINKLIBS variable"
-						self set: #LINKLIBS to: ''.		
-
-						internal 
-							ifTrue: [ self puts: ''add_definitions(-DSQUEAK_BUILTIN_PLUGIN)''].
-
-						self addSources: { name , ''.c'' } prefixed: ''${pluginSrc}/''.
-
-						" default include directories for plugin "
-						self includeDirectories: ''${pluginSrc} ${pluginCross} ${targetPlatform}/plugins/${pluginName}''.
-
-						"Not needed because there are already there (inherited from main configuration)"
-						"self addDefinitions: vmGen config compilerFlags."
-
-						" perform config''s configureXYZ: message to apply per-plugin custom rules, if any "
-
-						vmGen config configurePlugin: plugin with: self.
-
-						extraRules ifNotNil: [ extraRules value: self ].
-
-						" generate a static lib for internal plugin, or shared for external"
-						internal ifTrue: [
-							self cmd: ''add_library'' params:  name , '' STATIC ${sources}''.
-						] ifFalse: [
-							self cmd: ''add_library'' params: name , '' SHARED ${sources}''.
-
-						"	self cmd: ''set_property'' params: ''TARGET '' , name , ''PROPERTY LINK_FLAGS -bundle''"
-						].
-
-						vmGen config extraPluginSettings: self.
-
-						self isExternal ifTrue: [
-							self cmd: ''target_link_libraries''
-								params: self moduleName , ''${LINKLIBS}''.
-							].
-
-						" see senders of #linkFlags "
-						self 
-							cmd: ''set_property'' 
-							params: ''TARGET'', name, ''PROPERTY LINK_FLAGS "${linkFlags}''.
-
-						"set dependencies"
-						self puts: ''IF ('',self moduleName , ''_dependencies)''.
-
-						self cmd: ''add_dependencies''
-							params: name , ''${'', self moduleName , ''_dependencies}''.
-
-						self puts: ''ENDIF ('',self moduleName , ''_dependencies)''.
-						self saveFile.
-
-
-}
-		 	    
-
-
-
-
-
-16. processThirdpartyLibraries
-
-	config thirdpartyLibs do: [:each |
-		each generateFor: self ]{
-			      generateFor: aVMGenerator
-
-				      | libDir stream contents |
-
-				      vmGen := aVMGenerator.
-
-				      gen := CMakeGenerator new
-					      output: (String new writeStream).
-
-				      libDir := (aVMGenerator thirdpartyDir / self canonicalName) ensureDirectory.
-
-				      stream := String new writeStream.
-
-				      self generate.
-
-				      stream nextPutAll: (vmGen config fixLineEndsOf: gen output contents).
-
-				      contents := stream contents. 
-
-				      (self isFile: (libDir asFileReference / gen outputFileName) fullName hasContents: contents) ifFalse: [
-					      "contents changed, update the file. Because fucking cmake will force rebuild everything if we change its modification date
-					      without changing its contents"
-					      (FileStream forceNewFileNamed: (libDir asFileReference / gen outputFileName)) nextPutAll: contents; close.
-					      ].
-
-
-				      vmGen addSubdirectory:  vmGen thirdpartyDirName , ''/'' , self canonicalName.
-				      self defineGlobalTargets.
-
-
-			      }
-
-
-
-17 processPlugins: pluginGenerators
-	| libs libDeps |
-
-	libs := OrderedCollection new.
-	libDeps := Dictionary new.
-	pluginGenerators do: [:gen |
-		gen doNotGenerate ifFalse: [
-			gen isInternal 
-				ifTrue: [
-					libs add: gen plugin moduleName ]
-				ifFalse: [
-					"make main module to depend on external plugin, just to make sure it is built 
-					 before main module built"
-					self 
-						cmd: ''add_dependencies'' 
-						params: config executableName, '' '' , gen plugin moduleName ].
-				gen externalDependencies 
-					ifNotEmpty: [ :deps |
-						libDeps 
-							at: gen plugin moduleName
-							put: (deps fold: [ :a :b | a, '' '', b ]) ].
-			self addSubdirectory: gen plugin moduleName ] ].
-
-	self cmd: ''target_link_libraries'' params:  config executableName , '' '' ,
-		(libs inject: '' into: [:res :ea | res, '' '' , ea ]).
-
-	libDeps keysAndValuesDo: [ :moduleName :dependencies |
-		self 
-			cmd: ''add_dependencies'' 
-			params: moduleName, '' '', dependencies ].  
-
-	self generateExportsH: libs.
-
-
-18 setExtraTargetProperties: maker
-
-	"maker setTargetProperties: ''LINK_FLAGS ""''."
-		
-	maker puts: ''set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
-		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer")''.
-		
-		
-	maker 
-		cmd: ''set_source_files_properties''
-		params: ''${targetPlatform}/vm/sqUnixHeartbeat.c PROPERTIES 
-		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer"''.
-						
-	maker linkDirectories: ''${CMAKE_FIND_ROOT_PATH}/usr/lib/arm-linux-gnueabihf/''.
-	
-	maker addExternalLibraries: 
-		#(
-			''m''  "math lib"
-			''dl''  "dynamic loader"
-			''pthread'' "posix threads" 
-		).
-		
-	maker set: ''EXECUTABLE_OUTPUT_PATH'' toString: self outputDir fullName.
-	self addVMDrivers: maker.
-
-
-19. postBuildActions: gen
-
-	" override to add custom rules after all targets is defined "
-	
-	self write: self fixLibsTemplate toFile: ''fix_libs.cmake''.
-	
-	
-	gen
-		set: #bundlePath toString: ''${outputDir}/'', self executableName, ''.app'';
-		set: #pluginsRelPath toString: ''@executable_path/Plugins''.
-
-	gen
-		puts: ''
-		INSTALL(CODE "
-			set(externalModulesDir \"${externalModulesDir}\")
-			set(bundlePath \"${bundlePath}\")
-			set(pluginsRelPath \"${pluginsRelPath}\")
-			
-			include(fix_libs.cmake)
-		")''
-			
-"					FILE(GLOB_RECURSE bLibs /${externalModulesDir}/*.*)
-"
-
-
-
-
-'
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> setExtraTargetProperties [
-	^HelpTopic
-		title:'set extra target properties'
-		contents:
-'
-SystemNavigation default browseMethodsWhoseNamesContain: ''setExtraTargetProperties'' 
-'
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> settingCompilerFlags [
-	^HelpTopic
-		title:'Setting Compiler Flags for a build'
-		contents:
-'Each buildType (SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo) may require custom compiler flags.
-
-Trait TCPlatformConfigForSqueak compilerFlags method provides a method lookup that is invoked for a specific buildType.
-These methods are named compilerFlagsXYZ corresponding to the buildTypes displayed above.
-
-In the compilerFlagsXYZ method for your concrete configuration, you set the internal state of your configuration.
-
-Note: there are two legacy internal states from CPlatformConfig in CMakeVMMaker for pharo "compilerFlagsDebug" and "compilerFlagsRelease" that are invoked
-for backwards compatibility.
 
 '
 ]
