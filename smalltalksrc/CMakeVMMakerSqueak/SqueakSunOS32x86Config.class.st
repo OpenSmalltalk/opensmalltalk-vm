@@ -27,8 +27,8 @@ SqueakSunOS32x86Config >> availableBuildTypes [
 
 ]
 
-{ #category : #'headers generation' }
-SqueakSunOS32x86Config >> configH [
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> configHBuild [
 	self flag:'tty'. "This needs to be customized"
 	^ '
 #ifndef __sq_config_h
@@ -185,6 +185,46 @@ SqueakSunOS32x86Config >> configH [
 																																																																				'
 ]
 
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> configHBuildAssert [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> configHBuildAssertITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> configHBuildDebug [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> configHBuildDebugITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> configHBuildITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> configHBuildMultiThreaded [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> configHBuildMultiThreadedAssert [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> configHBuildMultiThreadedDebug [
+	^ self configHBuild
+]
+
 { #category : #'source files' }
 SqueakSunOS32x86Config >> coreSources [
 	self flag:'tty'. "Is this correct for this platform?"
@@ -265,6 +305,46 @@ SqueakSunOS32x86Config >> externalPluginsBuildMultiThreadedAssert [
 { #category : #'cmake buildType redirects' }
 SqueakSunOS32x86Config >> externalPluginsBuildMultiThreadedDebug [
 	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraVMSettingsBuild: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'extraVMSettingsBuild:'"
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraVMSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraVMSettingsBuildDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraVMSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraVMSettingsBuildITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraVMSettingsBuildMultiThreaded: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraVMSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraVMSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }

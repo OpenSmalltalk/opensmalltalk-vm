@@ -106,8 +106,8 @@ Linux64x86w32BitConfig >> commonCompilerFlags [
 
 ]
 
-{ #category : #'headers generation' }
-Linux64x86w32BitConfig >> configH [
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> configHBuild [
 	self flag:'tty'. "This needs to be customized"
 	^ '
 #ifndef __sq_config_h
@@ -262,6 +262,46 @@ Linux64x86w32BitConfig >> configH [
 #endif /* __sq_config_h */
 																																																																					
 																																																																				'
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> configHBuildAssert [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> configHBuildAssertITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> configHBuildDebug [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> configHBuildDebugITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> configHBuildITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> configHBuildMultiThreaded [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> configHBuildMultiThreadedAssert [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> configHBuildMultiThreadedDebug [
+	^ self configHBuild
 ]
 
 { #category : #sources }
@@ -423,8 +463,10 @@ Linux64x86w32BitConfig >> extraPluginSettings: maker [
 	maker set: #linkFlags toString: '${linkFlags} -m32'
 ]
 
-{ #category : #settings }
-Linux64x86w32BitConfig >> extraVMSettings: maker [
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraVMSettingsBuild: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'extraVMSettingsBuild:'"
+
 	| versionC |
 	self generateConfigH.
 	
@@ -432,13 +474,53 @@ Linux64x86w32BitConfig >> extraVMSettings: maker [
 	
 	versionC := 'version.c'.
 	
-	maker cmd: 'add_custom_command' params: 'OUTPUT ',
+	aMaker cmd: 'add_custom_command' params: 'OUTPUT ',
 		versionC , '
 		COMMAND ${platformsDir}/unix/config/verstamp ',versionC,' gcc
 		COMMENT "Generating version.c"
 	'.
 	
 	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraVMSettingsBuildAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraVMSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraVMSettingsBuildDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraVMSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraVMSettingsBuildITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraVMSettingsBuildMultiThreaded: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraVMSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraVMSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }

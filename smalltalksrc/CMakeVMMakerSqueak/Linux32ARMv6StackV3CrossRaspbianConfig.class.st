@@ -32,8 +32,8 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> cogitClass [
 
 ]
 
-{ #category : #'headers generation' }
-Linux32ARMv6StackV3CrossRaspbianConfig >> configH [
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3CrossRaspbianConfig >> configHBuild [
 	self flag:'tty'. "This needs to be customized"
 	^ '
 #ifndef __sq_config_h

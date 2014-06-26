@@ -285,8 +285,8 @@ ${platformsDir}/unix/vm/aio.c
 '
 ]
 
-{ #category : #accessing }
-SqueakIPhoneSqueakStackV3Config >> frameworks [
+{ #category : #'cmake buildType redirects' }
+SqueakIPhoneSqueakStackV3Config >> frameworksBuild [
 	^ #(
 	CoreAudio
 	CoreGraphics
@@ -586,9 +586,9 @@ SqueakIPhoneSqueakStackV3Config >> setExtraTargetPropertiesBuild: aMaker [
 
 ]
 
-{ #category : #utils }
-SqueakIPhoneSqueakStackV3Config >> setGlobalOptionsAfterDetermineSystem: maker [
-	maker 
+{ #category : #'cmake buildType redirects' }
+SqueakIPhoneSqueakStackV3Config >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
+	aMaker 
 		set: 'CMAKE_OSX_SYSROOT' 
 		to: ('/Applications/Xcode.app/Contents/Developer/Platforms/{1}.platform/Developer/SDKs/{1}{2}.sdk'
 			format: { self targetDevice. self sdkVersion })
@@ -624,8 +624,8 @@ SqueakIPhoneSqueakStackV3Config >> setResourceProperties: maker [
 
 ]
 
-{ #category : #'source files' }
-SqueakIPhoneSqueakStackV3Config >> standardIncludes [
+{ #category : #'cmake buildType redirects' }
+SqueakIPhoneSqueakStackV3Config >> standardIncludesBuild [
 	^#(
 	'${srcDir}/vm'
 	'${platformsDir}/iOS/vm/iPhone'

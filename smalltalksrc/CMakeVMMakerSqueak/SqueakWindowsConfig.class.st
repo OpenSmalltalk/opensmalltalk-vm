@@ -78,10 +78,50 @@ SqueakWindowsConfig >> extraSources [
 	'${resources}'
 ]
 
-{ #category : #accessing }
-SqueakWindowsConfig >> frameworks [
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> frameworksBuild [
 	"leave empty for all platforms but Mac OS"
 	^ #()
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> frameworksBuildAssert [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> frameworksBuildAssertITimerHeartbeat [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> frameworksBuildDebug [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> frameworksBuildDebugITimerHeartbeat [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> frameworksBuildITimerHeartbeat [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> frameworksBuildMultiThreaded [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> frameworksBuildMultiThreadedAssert [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> frameworksBuildMultiThreadedDebug [
+	^ self frameworksBuild
 ]
 
 { #category : #accessing }

@@ -67,8 +67,8 @@ SqueakBSDConfig >> compilerFlagsDebug [
 		'-DDEBUGVM=1' }
 ]
 
-{ #category : #'headers generation' }
-SqueakBSDConfig >> configH [
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> configHBuild [
 	self flag:'tty'. "This needs to be customized"
 	^ '
 #ifndef __sq_config_h
@@ -220,6 +220,46 @@ SqueakBSDConfig >> configH [
 																																																																				'
 ]
 
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> configHBuildAssert [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> configHBuildAssertITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> configHBuildDebug [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> configHBuildDebugITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> configHBuildITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> configHBuildMultiThreaded [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> configHBuildMultiThreadedAssert [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> configHBuildMultiThreadedDebug [
+	^ self configHBuild
+]
+
 { #category : #plugins }
 SqueakBSDConfig >> defaultExternalPlugins [
 " tty 2014.06.10  cut-n-paste from Cog/build.linux32x86/newspeak.cog.spur/build/plugins.ext"
@@ -346,6 +386,51 @@ SqueakBSDConfig >> externalPluginsBuildMultiThreadedAssert [
 { #category : #'cmake buildType redirects' }
 SqueakBSDConfig >> externalPluginsBuildMultiThreadedDebug [
 	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraVMSettingsBuild: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'extraVMSettingsBuild:'"
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraVMSettingsBuildAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraVMSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraVMSettingsBuildDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraVMSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraVMSettingsBuildITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraVMSettingsBuildMultiThreaded: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraVMSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraVMSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }

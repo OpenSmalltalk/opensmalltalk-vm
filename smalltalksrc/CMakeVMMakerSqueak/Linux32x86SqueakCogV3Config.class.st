@@ -37,7 +37,7 @@ Linux32x86SqueakCogV3Config >> cFlagsBuildAssertITimerHeartbeat [
 
 { #category : #'cmake buildType redirects' }
 Linux32x86SqueakCogV3Config >> cFlagsBuildDebug [
-	^'-g3 -O0  -DDEBUGVM=1 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0'
+	^'-g3 -O0 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=1'
 ]
 
 { #category : #'cmake buildType redirects' }

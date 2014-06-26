@@ -447,6 +447,68 @@ SqueakMacOSX32x86Config >> externalPluginsBuildMultiThreadedDebug [
 	^ self externalPluginsBuild
 ]
 
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraVMSettingsBuild: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'extraVMSettingsBuild:'"
+
+	"Cog currently runs only in 32 bit mode" 
+	aMaker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
+
+	aMaker set: 'resourceDir' toString: ((self resourcesDir pathName), FileDirectory slash, 'ProjectBuilder').
+	aMaker set: 'resources' to: 
+		'"${resourceDir}/Squeak VM.r"
+		"${resourceDir}/Cog.icns"
+		"${resourceDir}/Squeak.icns"
+		"${resourceDir}/SqueakChanges.icns"
+		"${resourceDir}/SqueakImage.icns"
+		"${resourceDir}/SqueakPlugin.icns"
+		"${resourceDir}/SqueakScript.icns"
+		"${resourceDir}/SqueakGeneric.icns"
+		"${resourceDir}/SqueakProject.icns"
+		"${resourceDir}/SqueakSources.icns"'
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraVMSettingsBuildAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraVMSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraVMSettingsBuildDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraVMSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraVMSettingsBuildITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraVMSettingsBuildMultiThreaded: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraVMSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraVMSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
 { #category : #utils }
 SqueakMacOSX32x86Config >> fixLibsTemplate [
 
