@@ -319,15 +319,15 @@ SqueakCocoaIOSConfig >> extraSources [
 ]
 
 { #category : #settings }
-SqueakCocoaIOSConfig >> extraVMSettings: maker [
+SqueakCocoaIOSConfig >> extraVMSettingsBuild: aMaker [
 	self architecture
-		ifNotNil: [ :arch | maker set: 'CMAKE_OSX_ARCHITECTURES' toString: arch ].
-	self setResourceProperties: maker.
+		ifNotNil: [ :arch | aMaker set: 'CMAKE_OSX_ARCHITECTURES' toString: arch ].
+	self setResourceProperties: aMaker.
 
 ]
 
-{ #category : #accessing }
-SqueakCocoaIOSConfig >> frameworks [
+{ #category : #'cmake buildType redirects' }
+SqueakCocoaIOSConfig >> frameworksBuild [
 	^ #(
 	Cocoa
 	Foundation
@@ -1030,7 +1030,7 @@ SqueakCocoaIOSConfig >> precompiledImports [
 	^#('Cocoa/Cocoa.h')
 ]
 
-{ #category : #'source files' }
+{ #category : #'cmake buildType redirects' }
 SqueakCocoaIOSConfig >> preferredIncludesBuild [
 	^ #(
 	'${buildDir}/'
@@ -1147,9 +1147,9 @@ SqueakCocoaIOSConfig >> setExtraTargetPropertiesBuildMultiThreadedDebug: aMaker 
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakCocoaIOSConfig >> setGlobalOptionsAfterDetermineSystem:  maker [
-	maker set: 'CMAKE_OSX_DEPLOYMENT_TARGET' to: '10.5'.
-	maker 
+SqueakCocoaIOSConfig >> setGlobalOptionsAfterDetermineSystemBuild:  aMaker [
+	aMaker set: 'CMAKE_OSX_DEPLOYMENT_TARGET' to: '10.5'.
+	aMaker 
 		set: 'CMAKE_OSX_SYSROOT' 
 		to: '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX', self sdkVersion, '.sdk'
 ]
@@ -1160,8 +1160,8 @@ SqueakCocoaIOSConfig >> srcDir [
 
 ]
 
-{ #category : #'source files' }
-SqueakCocoaIOSConfig >> standardIncludes [
+{ #category : #'cmake buildType redirects' }
+SqueakCocoaIOSConfig >> standardIncludesBuild [
 	^ #(
 	'${crossDir}/plugins/SerialPlugin'   
 	'${targetPlatform}/plugins/FilePlugin'

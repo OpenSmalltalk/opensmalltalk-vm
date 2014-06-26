@@ -1,16 +1,41 @@
 Class {
-	#name : #CMakeVMMakerSqueakEndUserHelp,
+	#name : #CMakeVMMakerSqueakBuildersHelp,
 	#superclass : #CMakeVMMakerSqueakHelp,
 	#category : #'CMakeVMMakerSqueak-Help'
 }
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakEndUserHelp class >> bookName [ 
-	^'End User Guide'
+CMakeVMMakerSqueakBuildersHelp class >> bookName [ 
+	^'Builders'
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakEndUserHelp class >> builders [
+CMakeVMMakerSqueakBuildersHelp class >> buildTypes [
+	^HelpTopic
+		title:'build types'
+		contents:
+'The purpose of this method is to present the end user with the avaiable buildTypes for a configuration category. when they invoke a Builder like so:
+
+	SqueakLinux32X86Builder availableBuildTypesFor: #Linux32x86SqueakStackV3Config
+
+Since builds are sometimes not available and/or under development  a developer may wish to restrict what build types are avaiable for a configurations Builder by modifying the configuration''s "availableBuilds" method.
+
+The default is all buildTypes: 
+	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations
+
+You can display no buildTypes with:
+	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations.
+
+or you can customize it like so:
+	^(SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations 
+			copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))  
+
+
+'
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakBuildersHelp class >> builders [
 	^HelpTopic
 		title: 'Builders'
 		contents:
@@ -36,12 +61,12 @@ Information on creating your own is available via HelpBrowser openOn: CMakeVMMak
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakEndUserHelp class >> pages [
-	^#(builders queryingBuilders scratch)
+CMakeVMMakerSqueakBuildersHelp class >> pages [
+	^#(builders queryingBuilders buildTypes scratch)
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakEndUserHelp class >> queryingBuilders [
+CMakeVMMakerSqueakBuildersHelp class >> queryingBuilders [
 	^HelpTopic
 		title: 'Querying Builders'
 		contents:
@@ -139,7 +164,7 @@ SqueakWin32x86Builder sourceDirectoryFor:(SqueakWin32x86Builder availableBuilds 
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakEndUserHelp class >> scratch [
+CMakeVMMakerSqueakBuildersHelp class >> scratch [
 	^HelpTopic
 		title: 'Scratch Notes To Be Organized'
 		contents:

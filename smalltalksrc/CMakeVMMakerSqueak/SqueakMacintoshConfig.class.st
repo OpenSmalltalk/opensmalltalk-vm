@@ -133,6 +133,51 @@ SqueakMacintoshConfig >> extraSources [
 	self subclassResponsibility
 ]
 
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> frameworksBuild [
+	^ #()
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> frameworksBuildAssert [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> frameworksBuildAssertITimerHeartbeat [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> frameworksBuildDebug [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> frameworksBuildDebugITimerHeartbeat [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> frameworksBuildITimerHeartbeat [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> frameworksBuildMultiThreaded [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> frameworksBuildMultiThreadedAssert [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> frameworksBuildMultiThreadedDebug [
+	^ self frameworksBuild
+]
+
 { #category : #accessing }
 SqueakMacintoshConfig >> platformName [
 	^self macOSPlatformName

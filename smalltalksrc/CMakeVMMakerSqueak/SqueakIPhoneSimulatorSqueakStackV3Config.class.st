@@ -104,9 +104,9 @@ SqueakIPhoneSimulatorSqueakStackV3Config >> setCommonProperties: maker [
 	maker addFrameworks: self frameworks.
 ]
 
-{ #category : #'source files' }
-SqueakIPhoneSimulatorSqueakStackV3Config >> standardIncludes [ 
-	^super standardIncludes, {
+{ #category : #'cmake buildType redirects' }
+SqueakIPhoneSimulatorSqueakStackV3Config >> standardIncludesBuild [ 
+	^super standardIncludesBuild, {
 		'/Applications/Xcode.app/Contents/Developer/Platforms/{1}.platform/Developer/SDKs/{1}{2}.sdk/usr/include/'
 			format: { 
 				self targetDevice. 

@@ -98,8 +98,8 @@ Linux64Config >> availableBuildTypes [
 
 ]
 
-{ #category : #'headers generation' }
-Linux64Config >> configH [
+{ #category : #'as yet unclassified' }
+Linux64Config >> configHBuild [
 	self flag:'tty'. "This needs to be customized"
 	^ '
 #ifndef __sq_config_h
@@ -256,6 +256,46 @@ Linux64Config >> configH [
 																																																																				'
 ]
 
+{ #category : #'as yet unclassified' }
+Linux64Config >> configHBuildAssert [
+	^ self configHBuild
+]
+
+{ #category : #'as yet unclassified' }
+Linux64Config >> configHBuildAssertITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'as yet unclassified' }
+Linux64Config >> configHBuildDebug [
+	^ self configHBuild
+]
+
+{ #category : #'as yet unclassified' }
+Linux64Config >> configHBuildDebugITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'as yet unclassified' }
+Linux64Config >> configHBuildITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'as yet unclassified' }
+Linux64Config >> configHBuildMultiThreaded [
+	^ self configHBuild
+]
+
+{ #category : #'as yet unclassified' }
+Linux64Config >> configHBuildMultiThreadedAssert [
+	^ self configHBuild
+]
+
+{ #category : #'as yet unclassified' }
+Linux64Config >> configHBuildMultiThreadedDebug [
+	^ self configHBuild
+]
+
 { #category : #'source files' }
 Linux64Config >> coreSources [
 	"files to include from src/vm dir"
@@ -372,6 +412,51 @@ Linux64Config >> externalPluginsBuildMultiThreadedAssert [
 { #category : #'as yet unclassified' }
 Linux64Config >> externalPluginsBuildMultiThreadedDebug [
 	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> extraVMSettingsBuild: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'extraVMSettingsBuild:'"
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> extraVMSettingsBuildAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> extraVMSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> extraVMSettingsBuildDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> extraVMSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> extraVMSettingsBuildITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> extraVMSettingsBuildMultiThreaded: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> extraVMSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> extraVMSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
 ]
 
 { #category : #'as yet unclassified' }

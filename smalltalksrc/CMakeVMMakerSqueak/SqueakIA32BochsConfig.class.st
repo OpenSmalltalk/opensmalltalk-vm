@@ -32,6 +32,55 @@ SqueakIA32BochsConfig >> availableBuildTypes [
 
 ]
 
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> configHBuild [
+	"does nothing. included for framework consistency/testing 
+	
+	SystemNavigation default browseMethodsWhoseNamesContain: 'configHBuild'
+	"
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> configHBuildAssert [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> configHBuildAssertITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> configHBuildDebug [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> configHBuildDebugITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> configHBuildITimerHeartbeat [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> configHBuildMultiThreaded [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> configHBuildMultiThreadedAssert [
+	^ self configHBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> configHBuildMultiThreadedDebug [
+	^ self configHBuild
+]
+
 { #category : #plugins }
 SqueakIA32BochsConfig >> defaultExternalPlugins [
 	^ #()
@@ -105,6 +154,51 @@ SqueakIA32BochsConfig >> externalPluginsBuildMultiThreadedDebug [
 ]
 
 { #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> extraVMSettingsBuild: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'extraVMSettingsBuild:'"
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> extraVMSettingsBuildAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> extraVMSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> extraVMSettingsBuildDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> extraVMSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> extraVMSettingsBuildITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> extraVMSettingsBuildMultiThreaded: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> extraVMSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIA32BochsConfig >> extraVMSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
 SqueakIA32BochsConfig >> internalPluginsBuild [
 	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
 ]
@@ -155,11 +249,6 @@ SqueakIA32BochsConfig >> internalPluginsBuildMultiThreadedAssert [
 SqueakIA32BochsConfig >> internalPluginsBuildMultiThreadedDebug [
    "	 internalPlugins := self defaultInternalPlugins"
 	^self internalPluginsBuild
-]
-
-{ #category : #testing }
-SqueakIA32BochsConfig >> isAbstractBaseClass [
-	^true
 ]
 
 { #category : #'cmake buildType redirects' }

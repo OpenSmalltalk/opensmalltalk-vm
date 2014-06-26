@@ -350,8 +350,8 @@ SqueakCocoaIOSCogV3FamilyConfig >> setResourceProperties: maker [
 
 ]
 
-{ #category : #'source files' }
-SqueakCocoaIOSCogV3FamilyConfig >> standardIncludes [
+{ #category : #'cmake buildType redirects' }
+SqueakCocoaIOSCogV3FamilyConfig >> standardIncludesBuild [
 	^#(
 	'${srcDir}/vm'
 	'${platformsDir}/iOS/vm/OSX'

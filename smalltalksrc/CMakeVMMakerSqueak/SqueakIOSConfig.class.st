@@ -464,6 +464,51 @@ SqueakIOSConfig >> extraSources [
 	${resources}'
 ]
 
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraVMSettingsBuild: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'extraVMSettingsBuild:'"
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraVMSettingsBuildAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraVMSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraVMSettingsBuildDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraVMSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraVMSettingsBuildITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraVMSettingsBuildMultiThreaded: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraVMSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraVMSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
 { #category : #utils }
 SqueakIOSConfig >> fixLibsTemplate [
 
