@@ -16,11 +16,28 @@ SqueakUnixConfig >> commonCompilerFlags [
 
 ]
 
-{ #category : #'headers generation' }
+{ #category : #'cmake buildType redirects' }
 SqueakUnixConfig >> configH [
+	"Route this message send to the message appropriate for my buildType "
+	|d |
+	self flag:'tty'. "this should be replaced by cC cXX lDFlags libs "
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self configHBuild];
+		at: #buildAssert  put: [self configHBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self configHBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self cFlagsBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self configHBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self configHBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self configHBuildMultiThreaded];
+		at: #buildMultiThreadedAssert  put: [self configHBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self configHBuildMultiThreadedDebug ];
+		at: #buildNone put:[self configHNoBuildType].
+	^(d at: buildType) value
+
+
 "ONLY USED ON UNIX CONFIGS included here for completeness and consistency CogUnixConfig browse.
-"
-"
+
 Use  configH to tell your plugins where to find its libraries etc.
 The version of this is platform dependent.
 You may also need to edit your oscogvm/platforms/YOUR PLATFORM/plugins/ThePLuginDirectory/acinclude.m4 file so that it conforms to your system.
@@ -35,158 +52,88 @@ NOTE: CPlatformConfig contains a useable version of this that you can modify.
 I reproduce it here, but with double quotes changed to two single quotes so that the commenting will hold.
 I provide a <---N.B quotes need changing at each place they have been modified.
 
-Again. it is easier to copy the one in CPlatformConfig.
+Again. it is easier to copy the one in CPlatformConfig."
 
 
-	^ '
-#ifndef __sq_config_h
-#define __sq_config_h
 
-/* explicit image width */
+]
 
-#define HAVE_INTERP_H 1
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> configHBuild [
+	"convenience method to customize configH for this buildType. default is self configH
+	^self configH"
+	self subclassResponsibility
 
-/* package options */
+]
 
-#define USE_X11 1
-#define USE_X11_GLX 1
-/* #undef       USE_QUARTZ */
-/* #undef       USE_QUARTZ_CGL */
-/* #undef       USE_RFB */
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> configHBuildAssert [
+	"convenience method to customize configH for this buildType. default is self configH
+	^self configH"
+	self subclassResponsibility
 
-/* libraries */
+]
 
-/* #undef       HAVE_LIBX11 */
-#define HAVE_LIBXEXT 1
-#define HAVE_LIBDL 1
-/* #undef       HAVE_DYLD */
-/* #undef       HAVE_LIBFFI */
-/* #undef       HAVE_ICONV */
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> configHBuildAssertITimerHeartbeat [
+	"convenience method to customize configH for this buildType. default is self configH
+	^self configH"
+	self subclassResponsibility
 
-/* #undef       USE_AUDIO_NONE */
-/* #undef       USE_AUDIO_SUN */
-/* #undef       USE_AUDIO_NAS */
-/* #undef       USE_AUDIO_OSS */
-/* #undef       USE_AUDIO_MACOSX */
-/* #undef       OSS_DEVICE */
+]
 
-/* header files */
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> configHBuildDebug [
+	"convenience method to customize configH for this buildType. default is self configH
+	^self configH"
+	self subclassResponsibility
 
-#define HAVE_UNISTD_H 1
-/* #undef       NEED_GETHOSTNAME_P */
+]
 
-#define HAVE_DIRENT_H 1
-/* #undef       HAVE_SYS_NDIR_H */
-/* #undef       HAVE_SYS_DIR_H */
-/* #undef       HAVE_NDIR_H */
-#define HAVE_DLFCN_H 1
-/* #undef       HAVE_ICONV_H */
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> configHBuildDebugITimerHeartbeat [
+	"convenience method to customize configH for this buildType. default is self configH
+	^self configH"
+	self subclassResponsibility
 
-#define HAVE_SYS_TIME_H 1
-#define TIME_WITH_SYS_TIME 1
+]
 
-#define HAVE_SYS_FILIO_H 1
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> configHBuildITimerHeartbeat [
+	"convenience method to customize configH for this buildType. default is self configH
+	^self configH"
+	self subclassResponsibility
 
-/* #undef       HAVE_SYS_AUDIOIO_H */
-/* #undef       HAVE_SUN_AUDIOIO_H */
+]
 
-/* #undef       HAVE_PTY_H */
-/* #undef       HAVE_UTIL_H */
-#define HAVE_LIBUTIL_H 1
-/* #undef       HAVE_STROPTS_H */
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> configHBuildMultiThreaded [
+	"convenience method to customize configH for this buildType. default is self configH
+	^self configH"
+	self subclassResponsibility
 
-#define HAVE_GL_GL_H 1
-/* #undef       HAVE_OPENGL_GL_H */
+]
 
-/* #undef       NEED_SUNOS_H */
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> configHBuildMultiThreadedAssert [
+	"convenience method to customize configH for this buildType. default is self configH
+	^self configH"
+	self subclassResponsibility
 
+]
 
-#define HAVE_UUID_H
-/* system calls/library functions */
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> configHBuildMultiThreadedDebug [
+	"convenience method to customize configH for this buildType. default is self configH
+	^self configH"
+	self subclassResponsibility
 
-#define AT_EXIT atexit
+]
 
-#define HAVE_TZSET 1
-
-#define HAVE_OPENPTY 1
-/* #undef       HAVE_UNIX98_PTYS */
-
-#define HAVE_SNPRINTF 1
-/* #undef       HAVE___SNPRINTF */
-
-#define HAVE_MMAP 1
-
-/* #undef       HAVE_DYLD */
-
-#define HAVE_LANGINFO_CODESET 1
-
-#define HAVE_ALLOCA 1
-/* #undef       HAVE_ALLOCA_H */
-
-#define HAVE_UNSETENV 1
-
-#define HAVE_NANOSLEEP 1
-
-/* widths of primitive types */
-
-#define SIZEOF_INT 4
-#define SIZEOF_LONG 4
-#define SIZEOF_LONG_LONG 8
-#define SIZEOF_VOID_P 4
-
-/* structures */
-
-#define HAVE_TM_GMTOFF 1
-#define HAVE_TIMEZONE 1
-
-/* typedefs */
-
-/* #undef       size_t */
-/* #undef       socklen_t */
-
-#define squeakInt64 long long
-
-/* architecture */
-
-#define OS_TYPE ''unix''    <---N.B quotes need changing at each place they have been modifying.
-
-#define VM_HOST ''i386-freebsd8.2''    <---N.B quotes need changing at each place they have been modifying.
-#define VM_HOST_CPU ''i386''    <---N.B quotes need changing at each place they have been modifying.
-/* #undef       VM_HOST_VENDOR */
-#define VM_HOST_OS ''freebsd8.2''   <---N.B quotes need changing at each place they have been modifying.
-#define VM_BUILD_STRING ''Unix built on ''__DATE__ '' ''__TIME__'' Compiler: ''__VERSION__          <---N.B quotes need changing at each place they have been modifying.
-
-/* #undef       WORDS_BIGENDIAN */
-/* #undef       DOUBLE_WORD_ALIGNMENT */
-
-/* damage containment */
-
-/* #undef       DARWIN */
-
-#ifdef NEED_SUNOS_H
-# include ''sunos.h''    <---N.B quotes need changing at each place they have been modifying.
-#endif
-
-/* other configured variables */
-
-#define SQ_VERSION ''3.9a-7024''    <---N.B quotes need changing at each place they have been modifying.
-#define VM_VERSION ''3.9-7''    <---N.B quotes need changing at each place they have been modifying.
-#define VM_MODULE_PREFIX ''    <---N.B quotes need changing at each place they have been modifying.
-/* #undef VM_DLSYM_PREFIX */    
-#define VM_X11DIR '/usr/X11R6/lib'    <---N.B quotes need changing at each place they have been modifying.
-
-/* avoid dependencies on glibc2.3 */
-
-/* #undef HAVE_FEATURES_H */
-
-#if defined(HAVE_FEATURES_H)
-# include ''glibc.h''    <---N.B quotes need changing at each place they have been modifying.
-#endif
-
-#endif /* __sq_config_h */
-																																																																					
-																																																																				'
-"
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> configHNoBuildType [
+	"SHOULD NOT GET HERE"	
+	self shouldNotImplement
 ]
 
 { #category : #'cmake configuration' }
@@ -227,10 +174,50 @@ SqueakUnixConfig >> extraSources [
 	^ 'version.c'
 ]
 
-{ #category : #accessing }
-SqueakUnixConfig >> frameworks [
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> frameworksBuild [
 	"leave empty for all platforms but Mac OS"
 	^ #()
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> frameworksBuildAssert [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> frameworksBuildAssertITimerHeartbeat [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> frameworksBuildDebug [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> frameworksBuildDebugITimerHeartbeat [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> frameworksBuildITimerHeartbeat [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> frameworksBuildMultiThreaded [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> frameworksBuildMultiThreadedAssert [
+	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> frameworksBuildMultiThreadedDebug [
+	^ self frameworksBuild
 ]
 
 { #category : #'headers generation' }

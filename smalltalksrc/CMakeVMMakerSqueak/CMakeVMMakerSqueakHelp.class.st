@@ -14,5 +14,5 @@ CMakeVMMakerSqueakHelp class >> bookName [
 
 { #category : #accessing }
 CMakeVMMakerSqueakHelp class >> pages [
-	^#(CMakeVMMakerSqueakDeveloperHelp CMakeVMMakerSqueakEndUserHelp CMakeVMMakerSqueakHowToCreateNewConfiguration)
+	^#(CMakeVMMakerSqueakDeveloperHelp CMakeVMMakerSqueakBuildersHelp CMakeVMMakerSqueakHowToCreateNewConfigurationHelp)
 ]

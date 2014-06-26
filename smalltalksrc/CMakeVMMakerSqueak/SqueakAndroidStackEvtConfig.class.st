@@ -36,158 +36,53 @@ SqueakAndroidStackEvtConfig >> compilerFlags [
 	^  ' -DDEBUG=22 '
 ]
 
-{ #category : #'source files' }
-SqueakAndroidStackEvtConfig >> configH [
-	" right now its borrowed directly from unix, but likely will change"
-	^ '
-#ifndef __sq_config_h
-#define __sq_config_h
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> configHBuild [
+	"does nothing. included for framework consistency/testing 
+	
+	SystemNavigation default browseMethodsWhoseNamesContain: 'configHBuild'
+	"
+	
+]
 
-/* explicit image width */
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> configHBuildAssert [
+	^ self configHBuild
+]
 
-#define	HAVE_INTERP_H 1
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> configHBuildAssertITimerHeartbeat [
+	^ self configHBuild
+]
 
-/* package options */
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> configHBuildDebug [
+	^ self configHBuild
+]
 
-#define	USE_X11 1
-#define	USE_X11_GLX 1
-/* #undef	USE_QUARTZ */
-/* #undef	USE_QUARTZ_CGL */
-/* #undef	USE_RFB */
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> configHBuildDebugITimerHeartbeat [
+	^ self configHBuild
+]
 
-/* libraries */
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> configHBuildITimerHeartbeat [
+	^ self configHBuild
+]
 
-/* #undef	HAVE_LIBX11 */
-/* #undef	HAVE_LIBXEXT */
-#define	HAVE_LIBDL 1
-/* #undef	HAVE_DYLD */
-/* #undef	HAVE_LIBFFI */
-/* #undef	HAVE_ICONV */
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> configHBuildMultiThreaded [
+	^ self configHBuild
+]
 
-/* #undef	USE_AUDIO_NONE */
-/* #undef	USE_AUDIO_SUN */
-/* #undef	USE_AUDIO_NAS */
-/* #undef	USE_AUDIO_OSS */
-/* #undef	USE_AUDIO_MACOSX */
-/* #undef	OSS_DEVICE */
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> configHBuildMultiThreadedAssert [
+	^ self configHBuild
+]
 
-/* header files */
-
-#define	HAVE_UNISTD_H 1
-/* #undef	NEED_GETHOSTNAME_P */
-
-#define	HAVE_DIRENT_H 1
-/* #undef	HAVE_SYS_NDIR_H */
-/* #undef	HAVE_SYS_DIR_H */
-/* #undef	HAVE_NDIR_H */
-
-#define	HAVE_SYS_TIME_H 1
-#define	TIME_WITH_SYS_TIME 1
-
-/* #undef	HAVE_SYS_FILIO_H */
-
-/* #undef	HAVE_SYS_AUDIOIO_H */
-/* #undef	HAVE_SUN_AUDIOIO_H */
-
-#define	HAVE_PTY_H 1
-/* #undef	HAVE_UTIL_H */
-/* #undef	HAVE_LIBUTIL_H */
-#define	HAVE_STROPTS_H 1
-
-#define	HAVE_GL_GL_H 1
-/* #undef	HAVE_OPENGL_GL_H */
-
-/* #undef	NEED_SUNOS_H */
-
-/* system calls/library functions */
-
-#define	AT_EXIT atexit
-
-#define	HAVE_TZSET 1
-
-#define	HAVE_OPENPTY 1
-/* #undef	HAVE_UNIX98_PTYS */
-
-#define	HAVE_SNPRINTF 1
-/* #undef	HAVE___SNPRINTF */
-
-#define	HAVE_MMAP 1
-
-/* #undef	HAVE_DYLD */
-
-#define	HAVE_LANGINFO_CODESET 1
-
-#define	HAVE_ALLOCA 1
-#define	HAVE_ALLOCA_H 1
-
-#define	HAVE_UNSETENV 1
-
-#define	HAVE_NANOSLEEP 1
-
-/* widths of primitive types */
-
-#define	SIZEOF_INT 4
-#define	SIZEOF_LONG 4
-#define	SIZEOF_LONG_LONG 8
-#define	SIZEOF_VOID_P 4
-
-/* structures */
-
-#define	HAVE_TM_GMTOFF 1
-#define	HAVE_TIMEZONE 1
-
-/* typedefs */
-
-/* #undef	size_t */
-/* #undef	socklen_t */
-
-#define	squeakInt64 long long
-
-/* architecture */
-
-#define	OS_TYPE "unix"
-
-#define	VM_HOST "i686-pc-linux-gnu"
-#define	VM_HOST_CPU "i686"
-/* #undef	VM_HOST_VENDOR */
-#define	VM_HOST_OS "linux-gnu"
-#define	VM_BUILD_STRING "Unix built on "__DATE__ " "__TIME__" Compiler: "__VERSION__
-
-/* #undef	WORDS_BIGENDIAN */
-/* #undef	DOUBLE_WORD_ALIGNMENT */
-
-/* damage containment */
-
-/* #undef	DARWIN */
-
-#ifdef NEED_SUNOS_H
-# include "sunos.h"
-#endif
-
-/* other configured variables */
-
-#define SQ_VERSION "3.9a-7024"
-#define VM_VERSION "3.9-7"
-#define VM_MODULE_PREFIX ""
-/* #undef VM_DLSYM_PREFIX */
-#define VM_X11DIR ""
-
-/* avoid dependencies on glibc2.3 */
-
-#define HAVE_FEATURES_H 1
-
-#if defined(HAVE_FEATURES_H)
-# include "glibc.h"
-#endif
-
-
-/* used by UUID plugin: */
-
-#define HAVE_UUID_H 1
-
-#endif /* __sq_config_h */
-																																																																					
-																																																																				'
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> configHBuildMultiThreadedDebug [
+	^ self configHBuild
 ]
 
 { #category : #'plugin extra rules' }
@@ -386,8 +281,8 @@ SqueakAndroidStackEvtConfig >> externalPluginsBuildMultiThreadedDebug [
 	^ self externalPluginsBuild
 ]
 
-{ #category : #'source generation' }
-SqueakAndroidStackEvtConfig >> extraVMSettings: maker [
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> extraVMSettingsBuild: aMaker [
 	| versionC |
 	self generateConfigH.
 	
@@ -395,7 +290,7 @@ SqueakAndroidStackEvtConfig >> extraVMSettings: maker [
 	
 	versionC := 'version.c'.
 
-	maker 
+	aMaker 
 		puts: '$(buildDir)/',versionC, ':' ;
 		puts: ({Character tab}, '$(platformsDir)/android/config/verstamp ', '$(buildDir)/', versionC,' gcc');
 		puts: {Character cr};
@@ -403,6 +298,46 @@ SqueakAndroidStackEvtConfig >> extraVMSettings: maker [
 		puts: {Character cr}.
 	.
 	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> extraVMSettingsBuildAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> extraVMSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> extraVMSettingsBuildDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> extraVMSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> extraVMSettingsBuildITimerHeartbeat: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> extraVMSettingsBuildMultiThreaded: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> extraVMSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraVMSettingsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakAndroidStackEvtConfig >> extraVMSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraVMSettingsBuild: aMaker
 ]
 
 { #category : #'source generation' }
