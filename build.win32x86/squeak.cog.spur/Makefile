@@ -145,10 +145,11 @@ INCLUDES:= -I. -I$(VMDIR) -I$(WIN32DIR) -I$(CROSSDIR) -I$(DXDIR) $(XINC)
 #		Newer cygwins want --export-all-symbols in place of --export-dynamic.
 #
 LD:=	 gcc
-LDFLAGS:= -mno-cygwin -mwindows -mthreads -Wl,--export-dynamic -L/usr/lib/mingw
-CONSOLELDFLAGS:= -mno-cygwin -mconsole -mthreads -Wl,--export-dynamic -L/usr/lib/mingw
-#LDFLAGS:= -mno-cygwin -mwindows -mthreads -Wl,--export-all-symbols -L/usr/lib/mingw
-#CONSOLELDFLAGS:= -mno-cygwin -mconsole -mthreads -Wl,--export-all-symbols -L/usr/lib/mingw
+EXPORT:=--export-dynamic
+#EXPORT:=--export-all-symbols
+BASELDFLAGS:=-mno-cygwin -mthreads -Wl,--large-address-aware,$(EXPORT) -L/usr/lib/mingw
+LDFLAGS:= -mwindows $(BASELDFLAGS)
+CONSOLELDFLAGS:= -mconsole $(BASELDFLAGS)
 STDLIBS:= -lddraw -ldinput -lopengl32 -lwsock32 -lcomdlg32 -lole32 -lwinmm \
 	-lversion -lwininet -luser32 -lgdi32 -lpsapi -lkernel32 -lcrtdll \
 	-ldsound -lsecur32
