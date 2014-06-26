@@ -1277,9 +1277,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		1 arg:	return the indicated VM parameter;
 		2 args:	set the VM indicated parameter.
 	VM parameters are numbered as follows:
-		1	end/size of old-space (0-based, read-only)
-		2	end/size of young/new-space (read-only)
-		3	end/size of heap (read-only)
+		1	end (v3)/size(Spur) of old-space (0-based, read-only)
+		2	end (v3)/size(Spur) of young/new-space (read-only)
+		3	end (v3)/size(Spur) of heap (read-only)
 		4	nil (was allocationCount (read-only))
 		5	nil (was allocations between GCs (read-write)
 		6	survivor count tenuring threshold (read-write)
@@ -1318,7 +1318,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		47	desired machine code zone size (Cog only; otherwise nil)
 		48	various header flags.  See getCogVMFlags.
 		49	max size the image promises to grow the external semaphore table to (0 sets to default, which is 256 as of writing)
-		50-54 nil; reserved for VM parameters that persist in the image (such as eden above)
+		50-53 nil; reserved for VM parameters that persist in the image (such as eden above)
+		54	total size of free old space (Spur only, otherwise nil)
 		55	ratio of growth and image size at or above which a GC will be performed post scavenge
 		56	number of process switches since startup (read-only)
 		57	number of ioProcessEvents calls since startup (read-only)
@@ -1340,8 +1341,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 	paramsArraySize := 71.
 	argumentCount = 0 ifTrue:
 		[result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: paramsArraySize.
-		objectMemory storePointerUnchecked: 0	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory newSpaceSize).
-		objectMemory storePointerUnchecked: 1	ofObject: result withValue: (self positive64BitIntegerFor: objectMemory oldSpaceSize).
+		objectMemory storePointerUnchecked: 0	ofObject: result withValue: (self positive64BitIntegerFor: objectMemory oldSpaceSize).
+		objectMemory storePointerUnchecked: 1	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory newSpaceSize).
 		objectMemory storePointerUnchecked: 2	ofObject: result withValue: (self positive64BitIntegerFor: objectMemory totalMemorySize).
 		objectMemory storePointerUnchecked: 3	ofObject: result withValue: objectMemory nilObject "was allocationCount".
 		objectMemory storePointerUnchecked: 4	ofObject: result withValue: objectMemory nilObject "allocationsBetweenGCs".
@@ -1435,8 +1436,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg := objectMemory integerValueOf: arg.
 		(arg < 1 or: [arg > paramsArraySize]) ifTrue: [^self primitiveFailFor: PrimErrBadIndex].
 		result := objectMemory nilObject.
-		arg = 1		ifTrue: [result := objectMemory integerObjectOf: objectMemory newSpaceSize].
-		arg = 2		ifTrue: [result := self positive64BitIntegerFor: objectMemory oldSpaceSize].
+		arg = 1		ifTrue: [result := self positive64BitIntegerFor: objectMemory oldSpaceSize].
+		arg = 2		ifTrue: [result := objectMemory integerObjectOf: objectMemory newSpaceSize].
 		arg = 3		ifTrue: [result := self positive64BitIntegerFor: objectMemory totalMemorySize].
 		arg = 4		ifTrue: [result := objectMemory nilObject "was allocationCount"].
 		arg = 5		ifTrue: [result := objectMemory nilObject "was allocationsBetweenGCs"].
