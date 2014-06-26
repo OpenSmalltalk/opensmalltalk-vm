@@ -437,6 +437,18 @@ GdbARMAlien >> initializeStackFor: aCogit [
 ]
 
 { #category : #testing }
+GdbARMAlien >> instructionIsAddSP: instr [
+"is this aadd sp, sp, #? -  instruction?"
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rFFFFF00)) = (16r28DD000)]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsAlignSP: instr [
+"is this a bics sp, sp, #7 -  instruction?"
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rFFFFFFF)) = (16r3DDD007)]
+]
+
+{ #category : #testing }
 GdbARMAlien >> instructionIsB: instr [
 "is this a B <offset> instruction?"
 	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rF<<24)) = (16rA<<24)]
@@ -1110,21 +1122,29 @@ GdbARMAlien >> vflag [
 ]
 
 { #category : #printing }
-GdbARMAlien >> writePopPushDetailsIn:  memory in: transcript for: aCogit [
-"if the next instruction is a pop or push, or a ldr/str that touches the SP, write the details ontranscript"
+GdbARMAlien >> writePopPushDetailsIn: memory in: transcript for: aCogit [ 
+	"if the next instruction is a pop or push, or a ldr/str that touches the
+	SP, write the details ontranscript"
 	| instr |
-
-	[ instr := memory unsignedLongAt: self pc + 1 bigEndian: false] on: Error do:[:ex| ^self].
-	(self instructionIsPop: instr) ifTrue:[transcript tab; nextPutAll: 'pop ', (memory unsignedLongAt: self sp + 1 bigEndian: false) hex , ' from ', (self sp hex); cr].
-	(self instructionIsPush: instr) ifTrue:[transcript tab; nextPutAll: 'push ', (self register: ((instr bitAnd: 16rF000) >>12)) hex , ' to ', (self sp -4) hex; cr].
-
-	(self instructionIsLDRSP: instr)  ifTrue:[| val|
-		val := self r10 > memory size
-			ifTrue:[aCogit simulatedVariableAt: self r10]
-			ifFalse:[memory unsignedLongAt: self r10 + 1 bigEndian: false].
-		transcript tab; nextPutAll: 'load SP', val hex , ' from ', (self r10) hex; cr].
-
-	(self instructionIsSTRSP: instr)  ifTrue:[transcript tab; nextPutAll: 'store SP', (self sp) hex , ' to ', (self r10) hex; cr].
+	[instr := memory unsignedLongAt: self pc + 1 bigEndian: false]
+		on: Error
+		do: [:ex | ^ self].
+	(self instructionIsPop: instr)
+		ifTrue: [^transcript tab; nextPutAll: 'POP ' , (memory unsignedLongAt: self sp + 1 bigEndian: false) hex , ' from ' , self sp hex; cr].
+	(self instructionIsPush: instr)
+		ifTrue: [^transcript tab; nextPutAll: 'PUSH ' , (self register: (instr bitAnd: 61440)
+							>> 12) hex , ' to ' , (self sp - 4) hex; cr].
+	(self instructionIsLDRSP: instr)
+		ifTrue: [| val |
+			val := self r10 > memory size
+						ifTrue: [aCogit simulatedVariableAt: self r10]
+						ifFalse: [memory unsignedLongAt: self r10 + 1 bigEndian: false].
+			^transcript tab; nextPutAll: 'LOAD SP ' , val hex , ' from ' , self r10 hex; cr].
+	(self instructionIsSTRSP: instr)
+		ifTrue: [^transcript tab; nextPutAll: 'STORE SP ' , self sp hex , ' to ' , self r10 hex; cr].
+	(self instructionIsAlignSP: instr)
+		ifTrue: [^transcript tab; nextPutAll: 'ALIGN SP ' , self sp hex; cr].
+	(self instructionIsAddSP: instr) ifTrue:[^transcript tab; nextPutAll: 'ADD ', (instr bitAnd: 16rFF) asString,' to SP = ' , self sp hex; cr]
 ]
 
 { #category : #accessing }
