@@ -22,7 +22,9 @@ Class {
 { #category : #'cmake buildType redirects' }
 Linux32x86SqueakCogV3Config >> cFlagsBuild [
 	"Some gcc versions (3.4*) create a broken VM using -O2, so try -O1 if you have problems"
-	^'-g -O2 -DDEBUGVM=0   -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG '
+	^'-g -O2  -m32   -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DLSB_FIRST=1
+		-DUSE_GLOBAL_STRUCT=0  -DDEBUGVM=0  
+		-DCOGMTVM=0'
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -32,7 +34,8 @@ Linux32x86SqueakCogV3Config >> cFlagsBuildAssert [
 
 { #category : #'cmake buildType redirects' }
 Linux32x86SqueakCogV3Config >> cFlagsBuildAssertITimerHeartbeat [
-	^'-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1'
+	^'-g3 -O1 -m32 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -msse2 
+         -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0  -DITIMER_HEARTBEAT=1  -DLSB_FIRST=1 -DUSE_GLOBAL_STRUCT=0  -DDEBUGVM=0 '
 ]
 
 { #category : #'cmake buildType redirects' }
