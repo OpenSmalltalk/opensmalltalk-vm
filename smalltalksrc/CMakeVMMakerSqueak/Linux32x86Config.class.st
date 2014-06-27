@@ -83,11 +83,6 @@ Linux32x86Config >> cCBuildMultiThreadedDebug [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> cFlagsBuildDebug [
-	^ self configHBuild
-]
-
-{ #category : #'cmake buildType redirects' }
 Linux32x86Config >> cXXBuild [
 	^{ 'g++ -m32'}
 ]
@@ -135,7 +130,10 @@ Linux32x86Config >> cXXBuildMultiThreadedDebug [
 { #category : #'compiler flags' }
 Linux32x86Config >> commonCompilerFlags [
 	"avoid premature optimization. push this decision down lower if it is needed at all"
-	^{'-m32'}
+	^{	'-DLSB_FIRST=1'. 
+		'-DUSE_GLOBAL_STRUCT=0'. 
+		'-DCOGMTVM=1'. 
+		'-m32'}
 
 ]
 
@@ -759,36 +757,7 @@ Linux32x86Config >> postBuildActionsBuildMultiThreadedDebug: aMaker [
 { #category : #'source files' }
 Linux32x86Config >> preferredIncludesBuild [
 	self flag:'tty'. "pharo does not support newspeak or sista., yet sets this in CogUnixConfig. Is this appropriate here? Revisit when coding newspeak etc"
-	^ #(  '${targetPlatform}/plugins/AioPlugin'
- '${targetPlatform}/plugins/B3DAcceleratorPlugin'
- '${targetPlatform}/plugins/DropPlugin'
- '${targetPlatform}/plugins/FilePlugin'
- '${targetPlatform}/plugins/HostWindowPlugin'
- '${targetPlatform}/plugins/JPEGReadWriter2Plugin'
- '${targetPlatform}/plugins/LocalePlugin'
- '${targetPlatform}/plugins/Mpeg3Plugin'
- '${targetPlatform}/plugins/PseudoTTYPlugin'
- '${targetPlatform}/plugins/SerialPlugin'
- '${targetPlatform}/plugins/SoundPlugin'
- '${crossDir}/plugins/SoundGenerationPlugin'
- '${targetPlatform}/plugins/SqueakSSL'
- '${targetPlatform}/plugins/UnixOSProcessPlugin'
- '${targetPlatform}/plugins/AsynchFilePlugin'
- '${targetPlatform}/plugins/BochsIA32Plugin'
- '${targetPlatform}/plugins/FileCopyPlugin'
- '${targetPlatform}/plugins/FloatMathPlugin'
- '${targetPlatform}/plugins/InternetConfigPlugin'
- '${targetPlatform}/plugins/JoystickTabletPlugin'
- '${targetPlatform}/plugins/MIDIPlugin'
- '${targetPlatform}/plugins/PrintJobPlugin'
- '${targetPlatform}/plugins/SecurityPlugin'
- '${targetPlatform}/plugins/SocketPlugin'
- '${targetPlatform}/plugins/SqueakFFIPrims'
- '${targetPlatform}/plugins/UUIDPlugin'    
- '${targetPlatform}/plugins/XDisplayControlPlugin'
-
-)
-
+	^ #( '${targetPlatform}/plugins/B3DAcceleratorPlugin')
 
 	
 
@@ -865,9 +834,13 @@ Linux32x86Config >> setExtraTargetPropertiesBuild: aMaker [
 			'uuid'  ""
 			'ssl'  ""
 			'crypto' ""
+			'm'  "math lib"
+			'dl'  "dynamic loader"
+			'pthread' "posix threads" 
 		).
 					
-
+	aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
+	self addVMDrivers: aMaker.
 ]
 
 { #category : #utils }
@@ -912,10 +885,11 @@ Linux32x86Config >> setExtraTargetPropertiesBuildMultiThreadedDebug: aMaker [
 
 { #category : #utils }
 Linux32x86Config >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
-	"do nothing (so far) on Unix.
-	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild:'
-	"
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild:'"
+"
+	aMaker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc'.
+	aMaker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.
+"
 ]
 
 { #category : #utils }
@@ -968,9 +942,10 @@ Linux32x86Config >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug:
 
 { #category : #utils }
 Linux32x86Config >> setGlobalOptionsBuild: aMaker [
-
-	aMaker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc'.
-	aMaker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.
+	"do nothing (so far) on Unix.
+	
+	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsBuild:'
+	"
 
 ]
 

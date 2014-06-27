@@ -99,7 +99,32 @@ Concrete implementations of SqueakCMakeVMMakerAbstractBuilder provide an invokat
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(overview prerequisites igorStasenkoDesign  buildersAndConfigs terms )
+	^#(overview prerequisites  terms igorStasenkoDesign  buildersAndConfigs plugins )
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> plugins [
+	^HelpTopic
+		title:'Plugins'
+		contents:'
+
+TODO explain the design and methodology of the ''plugin extra rules'' protocol in
+
+
+provide example of mapping from plugins.int to defaultInternalPlugins
+
+|s|
+Transcript clear.
+s:=SortedCollection new.
+InterpreterPlugin allSubclassesDo:[:p|
+	p moduleName = ''B2DPlugin''
+		ifTrue:[Transcript show:p name].
+	s add: (p moduleName)].
+
+Transcript show: s.
+
+SqueakUnixConfig browse
+'
 ]
 
 { #category : #pages }

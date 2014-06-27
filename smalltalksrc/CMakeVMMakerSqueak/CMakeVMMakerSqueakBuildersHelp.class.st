@@ -62,7 +62,7 @@ Information on creating your own is available via HelpBrowser openOn: CMakeVMMak
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakBuildersHelp class >> pages [
-	^#(builders queryingBuilders buildTypes scratch)
+	^#(builders queryingBuilders buildTypes  scratch)
 ]
 
 { #category : #'as yet unclassified' }
