@@ -1045,12 +1045,12 @@ SpurMemoryManager >> addToFreeTree: freeChunk bytes: chunkBytes [
 	child := freeLists at: 0.
 	[child ~= 0] whileTrue:
 		[childBytes := self bytesInObject: child.
-		 self assert: ((self oop: freeChunk + chunkBytes isLessThan: child)
+		 self assert: ((self oop: freeChunk + chunkBytes isLessThanOrEqualTo: child)
 						or: [self oop: freeChunk isGreaterThanOrEqualTo: child + childBytes]).
 		 childBytes = chunkBytes ifTrue: "size match; add to list at node."
 			[self storePointer: self freeChunkNextIndex
 					ofFreeChunk: freeChunk
-						withValue: (self fetchPointer: self freeChunkNextIndex ofObject: child);
+						withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: child);
 				storePointer: self freeChunkNextIndex
 					ofFreeChunk: child
 						withValue: freeChunk.
@@ -1558,6 +1558,7 @@ SpurMemoryManager >> allocateBytes: numBytes classIndex: classIndex [
 	"Allocate an object of numBytes.  Answer nil if no available memory.
 	 classIndex must be that of a byte class (e.g. ByteString).
 	 The object is *NOT FILLED*."
+	<var: #numBytes type: #usqInt>
 	self assert: (coInterpreter addressCouldBeClassObj: (self classAtIndex: classIndex)).
 	self assert: (self instSpecOfClass: (self classAtIndex: classIndex)) = self firstByteFormat.
 	^self
@@ -1657,6 +1658,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 	 otherwise answer nil.  Break up a larger chunk if one of the
 	 exact size does not exist.  N.B.  the chunk is simply a pointer, it
 	 has no valid header.  The caller *must* fill in the header correctly."
+	<var: #chunkBytes type: #usqInt>
 	| initialIndex chunk index nodeBytes parent child |
 	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
 	totalFreeOldSpace := totalFreeOldSpace - chunkBytes. "be optimistic (& don't wait for the write)"
@@ -1774,6 +1776,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 	 if available, otherwise answer nil.  Break up a larger chunk if one of the exact
 	 size cannot be found.  N.B.  the chunk is simply a pointer, it has no valid header.
 	 The caller *must* fill in the header correctly."
+	<var: #chunkBytes type: #usqInt>
 	| initialIndex node next prev index child childBytes acceptedChunk acceptedNode |
 	<inline: true> "must inline for acceptanceBlock"
 	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
@@ -1934,6 +1937,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes [
 	"Answer a chunk of oldSpace from the free lists, if one of this size
 	 is available, otherwise answer nil.  N.B.  the chunk is simply a pointer,
 	 it has no valid header.  The caller *must* fill in the header correctly."
+	<var: #chunkBytes type: #usqInt>
 	| index node child |
 	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
 
@@ -1987,6 +1991,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes suchThat: a
 	"Answer a chunk of oldSpace from the free lists that satisfies acceptanceBlock,
 	 if one of this size is available, otherwise answer nil.  N.B.  the chunk is simply a
 	 pointer, it has no valid header.  The caller *must* fill in the header correctly."
+	<var: #chunkBytes type: #usqInt>
 	| index node next prev child childBytes |
 	<inline: true> "must inline for acceptanceBlock"
 	"for debugging:" "totalFreeOldSpace := self totalFreeListBytes"
@@ -2092,9 +2097,19 @@ SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: cla
 ]
 
 { #category : #allocation }
+SpurMemoryManager >> allocateSlotsForPinningInOldSpace: numSlots bytes: totalBytes format: formatField classIndex: classIndex [
+	"Answer the oop of a chunk of space in oldSpace with numSlots slots.  Try and
+	 allocate in a segment that already includes pinned objects.  The header of the
+	 result will have been filled-in but not the contents."
+	<var: #totalBytes type: #usqInt>
+	^self subclassResponsibility
+]
+
+{ #category : #allocation }
 SpurMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes format: formatField classIndex: classIndex [
 	"Answer the oop of a chunk of space in oldSpace with numSlots slots.  The header
 	 will have been filled-in but not the contents."
+	<var: #totalBytes type: #usqInt>
 	^self subclassResponsibility
 ]
 
@@ -2394,18 +2409,18 @@ SpurMemoryManager >> byteSizeOf: oop [
 ]
 
 { #category : #'indexing primitive support' }
-SpurMemoryManager >> byteSizeOfInstanceOf: classObj [
+SpurMemoryManager >> byteSizeOfInstanceOf: classObj errInto: errBlock [
 	| instSpec classFormat numSlots |
 	classFormat := self formatOfClass: classObj.
 	instSpec := self instSpecOfClassFormat: classFormat.
 	(self isFixedSizePointerFormat: instSpec) ifFalse:
-		[^PrimErrBadReceiver negated]. "indexable"
+		[^errBlock value: PrimErrBadReceiver]. "indexable"
 	numSlots := self fixedFieldsOfClassFormat: classFormat.
 	^self objectBytesForSlots: numSlots
 ]
 
 { #category : #'indexing primitive support' }
-SpurMemoryManager >> byteSizeOfInstanceOf: classObj withIndexableSlots: nElements [
+SpurMemoryManager >> byteSizeOfInstanceOf: classObj withIndexableSlots: nElements errInto: errorBlock [
 	| instSpec classFormat numSlots |
 	<var: 'numSlots' type: #usqInt>
 	classFormat := self formatOfClass: classObj.
@@ -2427,9 +2442,9 @@ SpurMemoryManager >> byteSizeOfInstanceOf: classObj withIndexableSlots: nElement
 			[numSlots := nElements + (self bytesPerSlot - 1) // self bytesPerSlot].
 		[self firstCompiledMethodFormat]	-> "Assume nElements is derived from CompiledMethod>>basicSize."
 			[numSlots := nElements + (self bytesPerSlot - 1) // self bytesPerSlot] }
-		otherwise: [^PrimErrBadReceiver negated]. "non-indexable"
+		otherwise: [^errorBlock value: PrimErrBadReceiver negated]. "non-indexable"
 	numSlots >= (1 << (self bytesPerSlot * 8 - self logBytesPerSlot)) ifTrue:
-		[^PrimErrLimitExceeded negated].
+		[^errorBlock value: PrimErrLimitExceeded].
 	^self objectBytesForSlots: numSlots
 ]
 
@@ -5071,7 +5086,7 @@ SpurMemoryManager >> inFreeTreeReplace: treeNode with: newNode [
 	"copy parent, smaller, larger"
 	self freeChunkParentIndex to: self freeChunkLargerIndex do:
 		[:i|
-		relative := self fetchPointer: i ofObject: treeNode.
+		relative := self fetchPointer: i ofFreeChunk: treeNode.
 		i = self freeChunkParentIndex
 			ifTrue:
 				[relative = 0
@@ -5079,14 +5094,14 @@ SpurMemoryManager >> inFreeTreeReplace: treeNode with: newNode [
 						[self assert: (freeLists at: 0) = treeNode.
 						 freeLists at: 0 put: newNode]
 					ifFalse: "replace link from parent to treeNode with link to newNode."
-						[self storePointer: (treeNode = (self fetchPointer: self freeChunkSmallerIndex ofObject: relative)
+						[self storePointer: (treeNode = (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: relative)
 												ifTrue: [self freeChunkSmallerIndex]
 												ifFalse: [self freeChunkLargerIndex])
 							ofFreeChunk: relative
 							withValue: newNode]]
 			ifFalse:
 				[relative ~= 0 ifTrue:
-					[self assert: (self fetchPointer: self freeChunkParentIndex ofObject: relative) = treeNode.
+					[self assert: (self fetchPointer: self freeChunkParentIndex ofFreeChunk: relative) = treeNode.
 					 self storePointer: self freeChunkParentIndex ofFreeChunk: relative withValue: newNode]].
 		self storePointer: i ofFreeChunk: newNode withValue: relative.
 		self storePointer: i ofFreeChunk: treeNode withValue: 0]
@@ -5097,15 +5112,15 @@ SpurMemoryManager >> inOrderPrintFreeTree: freeChunk printList: printNextList [
 	"print free chunks in freeTree in order."
 	<api>
 	| next |
-	(next := self fetchPointer: self freeChunkSmallerIndex ofObject: freeChunk) ~= 0 ifTrue:
+	(next := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: freeChunk) ~= 0 ifTrue:
 		[self inOrderPrintFreeTree: next printList: printNextList].
 	self printFreeChunk: freeChunk isNextChunk: false.
 	printNextList ifTrue:
 		[next := freeChunk.
-		 [(next := self fetchPointer: self freeChunkNextIndex ofObject: next) ~= 0] whileTrue:
+		 [(next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: next) ~= 0] whileTrue:
 			[coInterpreter tab.
 			 self printFreeChunk: next isNextChunk: true]].
-	(next := self fetchPointer: self freeChunkLargerIndex ofObject: freeChunk) ~= 0 ifTrue:
+	(next := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: freeChunk) ~= 0 ifTrue:
 		[self inOrderPrintFreeTree: next printList: printNextList]
 ]
 
@@ -5298,17 +5313,17 @@ SpurMemoryManager >> initializeNewSpaceVariables [
 
 { #category : #initialization }
 SpurMemoryManager >> initializeObjectMemory: bytesToShift [
-	"Initialize object memory variables at startup time. Assume endOfMemory is initially set (by the image-reading code) to the end of the last object in the image. Initialization redefines endOfMemory to be the end of the object allocation area based on the total available memory, but reserving some space for forwarding blocks."
-	"Assume: image reader initializes the following variables:
-		memory
-		memoryLimit
+	"Initialize object memory variables at startup time. Assume endOfMemory at al are
+	 initialised by the image-reading code via setHeapBase:memoryLimit:endOfMemory:.
+	 endOfMemory is assumed to point to the end of the last object in the image.
+	 Assume: image reader also initializes the following variables:
 		specialObjectsOop
-		lastHash
-	"
+		lastHash"
 	<inline: false>
 	| freeListObj |
 	"Catch mis-initializations leading to bad translations to C"
 	self assert: BaseHeaderSize = self baseHeaderSize.
+	self assert: (self maxSlotsForAlloc * BytesPerWord) asInteger > 0.
 	self bootstrapping ifFalse:
 		[self
 			initSegmentBridgeWithBytes: self bridgeSize
@@ -5530,6 +5545,7 @@ SpurMemoryManager >> instantiateClass: classObj [
 
 { #category : #instantiation }
 SpurMemoryManager >> instantiateClass: classObj indexableSize: nElements [
+	<var: #nElements type: #usqInt>
 	^self subclassResponsibility
 ]
 
@@ -6323,6 +6339,7 @@ SpurMemoryManager >> largeFreeChunkDistribution [
 { #category : #allocation }
 SpurMemoryManager >> largeObjectBytesForSlots: numSlots [
 	"Answer the total number of bytes in an object with an overflow header, including header bytes."
+	<returnTypeC: #usqInt>
 	^self subclassResponsibility
 ]
 
@@ -6928,6 +6945,13 @@ SpurMemoryManager >> markedBitHalfShift [
 { #category : #accessing }
 SpurMemoryManager >> maxIdentityHash [
 	^self identityHashHalfWordMask
+]
+
+{ #category : #instantiation }
+SpurMemoryManager >> maxSlotsForAlloc [
+	"Answer the maximum number of slots we are willing to attempt to allocate in an object.
+	 Must fit in 32-bits; c.f. bytesInObject:"
+	^self subclassResponsibility
 ]
 
 { #category : #instantiation }
@@ -7573,6 +7597,7 @@ SpurMemoryManager >> objectBefore: objOop [
 SpurMemoryManager >> objectBytesForSlots: numSlots [
 	"Answer the total number of bytes in an object with the given
 	 number of slots, including header and possible overflow size header."
+	<returnTypeC: #usqInt>
 	self subclassResponsibility
 ]
 
@@ -8347,7 +8372,7 @@ SpurMemoryManager >> rebuildFreeTreeFrom: sortedFreeChunks [
 		 totalBytes := totalBytes + bytes.
 		 self addToFreeTree: freeChunk bytes: bytes.
 		 freeChunk := self fetchPointer: self freeChunkNextAddressIndex
-							ofObject: freeChunk].
+							ofFreeChunk: freeChunk].
 	"now reorder the lists to ensure they're in address order, apart from the list head, which should be highest."
 	self freeTreeNodesDo:
 		[:treeNode| | newTreeNode |
@@ -8425,16 +8450,16 @@ SpurMemoryManager >> reorderReversedTreeList: treeNode [
 	 node the first, as this will be allocated from last."
 	| first next node prev |
 	"first becomes the new head, as this is the last one we want to allocate and we allocate from the list first."
-	first := self fetchPointer: self freeChunkNextIndex ofObject: treeNode.
+	first := self fetchPointer: self freeChunkNextIndex ofFreeChunk: treeNode.
 	"no next node, so no change"
 	first = 0 ifTrue:
 		[^treeNode].
-	node := self fetchPointer: self freeChunkNextIndex ofObject: first.
+	node := self fetchPointer: self freeChunkNextIndex ofFreeChunk: first.
 	self storePointer: self freeChunkNextIndex ofFreeChunk: first withValue: treeNode.
 	self inFreeTreeReplace: treeNode with: first.
 	prev := 0.
 	[node ~= 0] whileTrue:
-		[next := self fetchPointer: self freeChunkNextIndex ofObject: node.
+		[next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
 		 self storePointer: self freeChunkNextIndex ofFreeChunk: node withValue: prev.
 		 prev := node.
 		 node := next].
@@ -8480,7 +8505,7 @@ SpurMemoryManager >> reverseSmallListHeads [
 			 freeListsMask := freeListsMask + (1 << i).
 			 prev := 0.
 			 [node ~= 0] whileTrue:
-				[next := self fetchPointer: self freeChunkNextIndex ofObject: node.
+				[next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
 				 self storePointer: self freeChunkNextIndex ofFreeChunk: node withValue: prev.
 				 prev := node.
 				 node := next.
@@ -8995,6 +9020,7 @@ SpurMemoryManager >> slotSizeOf: oop [
 { #category : #allocation }
 SpurMemoryManager >> smallObjectBytesForSlots: numSlots [
 	"Answer the total number of bytes in an object without an overflow header, including header bytes."
+	<returnTypeC: #usqInt>
 	^self subclassResponsibility
 ]
 
@@ -9009,7 +9035,7 @@ SpurMemoryManager >> sortFreeListAt: i [
 		[^self].
 	head := list.
 	"scan list to find find first out-of-order element"
-	[(next := self fetchPointer: self freeChunkNextIndex ofObject: list) > list]
+	[(next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: list) > list]
 		whileTrue:
 			[list := next].
 	"no out-of-order elements; list was already sorted; we're done"
@@ -9021,14 +9047,14 @@ SpurMemoryManager >> sortFreeListAt: i [
 	[list ~= 0] whileTrue:
 		[| node prev |
 		 "grab next node to be inserted"
-		 next := self fetchPointer: self freeChunkNextIndex ofObject: list.
+		 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: list.
 		 "search sorted list for insertion point"
 		 prev := 0. "prev node for insertion sort"
 		 node := head. "current node for insertion sort"
 		 [node ~= 0
 		  and: [self oop: node isLessThan: list]] whileTrue:
 			[prev := node.
-			 node := self fetchPointer: self freeChunkNextIndex ofObject: node].
+			 node := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node].
 		 "insert the node into the sorted list"
 		 self assert: (node = 0 or: [node > list]).
 		 prev = 0
