@@ -1029,12 +1029,13 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 											...
 							stackPointer	->	argN
 											return pc
-			In either case we can push the instructionPointer to reestablish the return pc"
-			self MoveAw: coInterpreter instructionPointerAddress R: ClassReg.
+			In either case we can push the instructionPointer or load it into the LinkRegister to reestablish the return pc"
+			self MoveAw: coInterpreter instructionPointerAddress
+				R: (backEnd hasLinkRegister ifTrue: [LinkReg] ifFalse: [ClassReg]).
 			backEnd genLoadStackPointers.
 			"Test primitive failure"
 			self MoveAw: coInterpreter primFailCodeAddress R: TempReg.
-			self PushR: ClassReg. "Restore return pc"
+			backEnd hasLinkRegister ifFalse: [self PushR: ClassReg]. "Restore return pc on CISCs"
 			self flag: 'ask concrete code gen if move sets condition codes?'.
 			self CmpCq: 0 R: TempReg.
 			jmp := self JumpNonZero: 0.
@@ -1066,8 +1067,10 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 	jmp notNil ifTrue:
 		["Jump to restore of receiver reg and proceed to frame build for failure."
 		 jmp jmpTarget: self Label.
-		 "Restore receiver reg from stack."
-		 self MoveMw: BytesPerWord * (methodOrBlockNumArgs + 1) r: SPReg R: ReceiverResultReg].
+		 "Restore receiver reg from stack.  If on RISCs ret pc is in LinkReg, if on CISCs ret pc is on stack."
+		 self MoveMw: BytesPerWord * (methodOrBlockNumArgs + (backEnd hasLinkRegister ifTrue: [0] ifFalse: [1]))
+			r: SPReg
+			R: ReceiverResultReg].
 	^0
 ]
 
