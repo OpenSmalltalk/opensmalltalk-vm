@@ -201,7 +201,7 @@ Spur32BitMMLECoSimulator >> intAt: byteAddress put: a32BitValue [
 Spur32BitMMLECoSimulator >> isIntegerObject: oop [
 	"This list records the valid senders of isIntegerObject: as we replace uses of
 	  isIntegerObject: by isImmediate: where appropriate."
-	| sel |
+	"| sel |
 	sel := thisContext sender method selector.
 	(#(	DoIt
 		DoItIn:
@@ -246,7 +246,7 @@ Spur32BitMMLECoSimulator >> isIntegerObject: oop [
 		makeBaseFrameFor:
 		numPointerSlotsOf:
 		objCouldBeClassObj:
-		on:do: "from the debugger"
+		on:do: ""from the debugger""
 		positive32BitValueOf:
 		positive64BitValueOf:
 		primDigitAdd:
@@ -278,8 +278,9 @@ Spur32BitMMLECoSimulator >> isIntegerObject: oop [
 		signed64BitValueOf:
 		subscript:with:storing:format:
 		unlockSurfaces
-		establishFrameForContextToReturnTo:) includes: sel) ifFalse:
-		[self halt].
+		establishFrameForContextToReturnTo:
+		positiveMachineIntegerValueOf:) includes: sel) ifFalse:
+		[self halt]."
 	^super isIntegerObject: oop
 ]
 
@@ -287,11 +288,11 @@ Spur32BitMMLECoSimulator >> isIntegerObject: oop [
 Spur32BitMMLECoSimulator >> isNonIntegerObject: oop [
 	"This list records the valid senders of isNonIntegerObject: as we replace uses of
 	  isNonIntegerObject: by isNonImmediate: where appropriate."
-	(#(	on:do: "from the dbeugger"
+	"(#(	on:do: ""from the debugger""
 		reverseDisplayFrom:to:
 		primitiveObjectAtPut
 		isCogMethodReference:) includes: thisContext sender method selector) ifFalse:
-		[self halt].
+		[self halt]."
 	^super isNonIntegerObject: oop
 ]
 
