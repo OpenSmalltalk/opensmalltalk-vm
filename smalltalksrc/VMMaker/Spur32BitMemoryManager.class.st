@@ -36,6 +36,7 @@ Spur32BitMemoryManager >> allocateSlotsForPinningInOldSpace: numSlots bytes: tot
 	"Answer the oop of a chunk of space in oldSpace with numSlots slots.  Try and
 	 allocate in a segment that already includes pinned objects.  The header of the
 	 result will have been filled-in but not the contents."
+	<var: #totalBytes type: #usqInt>
 	<inline: false>
 	| chunk |
 	chunk := self allocateOldSpaceChunkOfBytes: totalBytes
@@ -62,6 +63,7 @@ Spur32BitMemoryManager >> allocateSlotsForPinningInOldSpace: numSlots bytes: tot
 Spur32BitMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes format: formatField classIndex: classIndex [
 	"Answer the oop of a chunk of space in oldSpace with numSlots slots.  The header
 	 will have been filled-in but not the contents."
+	<var: #totalBytes type: #usqInt>
 	<inline: false>
 	| chunk |
 	chunk := self allocateOldSpaceChunkOfBytes: totalBytes.
@@ -304,32 +306,49 @@ Spur32BitMemoryManager >> initSegmentBridgeWithBytes: numBytes at: address [
 
 { #category : #instantiation }
 Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
+	<var: #nElements type: #usqInt>
 	| instSpec classFormat numSlots classIndex newObj fillValue |
 	classFormat := self formatOfClass: classObj.
 	instSpec := self instSpecOfClassFormat: classFormat.
 	fillValue := 0.
 	instSpec caseOf: {
 		[self arrayFormat]	->
-			[numSlots := nElements.
+			[nElements > self maxSlotsForAlloc ifTrue:
+				[^nil].
+			 numSlots := nElements.
 			 fillValue := nilObj].
 		[self indexablePointersFormat]	->
-			[numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements.
+			[nElements > (self maxSlotsForAlloc - (self fixedFieldsOfClassFormat: classFormat)) ifTrue:
+				[^nil].
+			 numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements.
 			 fillValue := nilObj].
 		[self weakArrayFormat]	->
-			[numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements.
+			[nElements > (self maxSlotsForAlloc - (self fixedFieldsOfClassFormat: classFormat)) ifTrue:
+				[^nil].
+			 numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements.
 			 fillValue := nilObj].
 		[self sixtyFourBitIndexableFormat]	->
-			[numSlots := nElements * 2].
+			[nElements > (self maxSlotsForAlloc / 2) ifTrue:
+				[^nil].
+			 numSlots := nElements * 2].
 		[self firstLongFormat]	->
-			[numSlots := nElements].
+			[nElements > self maxSlotsForAlloc ifTrue:
+				[^nil].
+			 numSlots := nElements].
 		[self firstShortFormat]	->
 			[numSlots := nElements + 1 // 2.
+			 numSlots > self maxSlotsForAlloc ifTrue:
+				[^nil].
 			 instSpec := instSpec + (nElements bitAnd: 1)].
 		[self firstByteFormat]	->
 			[numSlots := nElements + 3 // 4.
+			 numSlots > self maxSlotsForAlloc ifTrue:
+				[^nil].
 			 instSpec := instSpec + (4 - nElements bitAnd: 3)].
 		[self firstCompiledMethodFormat]	->
 			[numSlots := nElements + 3 // 4.
+			 numSlots > self maxSlotsForAlloc ifTrue:
+				[^nil].
 			 instSpec := instSpec + (4 - nElements bitAnd: 3)] }
 		otherwise: ["some Squeak images include funky fixed subclasses of abstract variable
 					 superclasses. e.g. DirectoryEntry as a subclass of ArrayedCollection.
@@ -401,6 +420,7 @@ Spur32BitMemoryManager >> isWordsNonImm: objOop [
 { #category : #allocation }
 Spur32BitMemoryManager >> largeObjectBytesForSlots: numSlots [
 	"Answer the total number of bytes in an object with an overflow header, including header bytes."
+	<returnTypeC: #usqInt>
 	^self baseHeaderSize + self baseHeaderSize "double header"
 	+ (numSlots + (numSlots bitAnd: 1) * self bytesPerSlot) "roundTo allocationUnit"
 ]
@@ -408,6 +428,13 @@ Spur32BitMemoryManager >> largeObjectBytesForSlots: numSlots [
 { #category : #'header format' }
 Spur32BitMemoryManager >> logBytesPerSlot [
 	^2
+]
+
+{ #category : #instantiation }
+Spur32BitMemoryManager >> maxSlotsForAlloc [
+	"Answer the maximum number of slots we are willing to attempt to allocate in an object.
+	 Must fit in 32-bits; c.f. bytesInObject:. Chosen so that maxSlotsForAlloc * self bytesPerWord is +ve."
+	^512*1024*1024-1
 ]
 
 { #category : #'free space' }
@@ -446,6 +473,7 @@ Spur32BitMemoryManager >> objectAfter: objOop limit: limit [
 Spur32BitMemoryManager >> objectBytesForSlots: numSlots [
 	"Answer the total number of bytes in an object with the given
 	 number of slots, including header and possible overflow size header."
+	<returnTypeC: #usqInt>
 	^(numSlots = 0
 		ifTrue: [self allocationUnit] "always at least one slot for forwarding pointer"
 		ifFalse: [numSlots + (numSlots bitAnd: 1) << self shiftForWord])
@@ -600,6 +628,7 @@ Spur32BitMemoryManager >> shiftForWord [
 Spur32BitMemoryManager >> smallObjectBytesForSlots: numSlots [
 	"Answer the total number of bytes in an object without an overflow header, including header bytes."
 	<api>
+	<returnTypeC: #usqInt>
 	^self baseHeaderSize "single header"
 	+ (numSlots <= 1
 		ifTrue: [self allocationUnit] "at least one slot for the forwarding pointer"
