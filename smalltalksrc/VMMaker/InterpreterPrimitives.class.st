@@ -302,7 +302,7 @@ InterpreterPrimitives >> magnitude64BitValueOf: oop [
 InterpreterPrimitives >> positive32BitValueOf: oop [
 	"Convert the given object into an integer value.
 	The object may be either a positive SmallInteger or a four-byte LargePositiveInteger."
-
+	<returnTypeC: #usqInt>
 	| value ok |
 	(objectMemory isIntegerObject: oop)
 		ifTrue:
@@ -332,13 +332,13 @@ InterpreterPrimitives >> positive64BitValueOf: oop [
 	"Convert the given object into an integer value.
 	The object may be either a positive SmallInteger or an eight-byte LargePositiveInteger."
 
-	<returnTypeC: #sqLong>
+	<returnTypeC: #usqLong>
 	| sz value ok |
-	<var: #value type: #sqLong>
+	<var: #value type: #usqLong>
 	(objectMemory isIntegerObject: oop) ifTrue:
-		[value := objectMemory integerValueOf: oop.
-		 value < 0 ifTrue: [^self primitiveFail].
-		 ^value].
+		[(objectMemory integerValueOf: oop) < 0 ifTrue:
+			[^self primitiveFail].
+		 ^objectMemory integerValueOf: oop].
 
 	ok := objectMemory
 			isClassOfNonImm: oop
@@ -349,7 +349,7 @@ InterpreterPrimitives >> positive64BitValueOf: oop [
 
 	value := 0.
 	0 to: sz - 1 do: [:i |
-		value := value + ((self cCoerce: (objectMemory fetchByte: i ofObject: oop) to: #sqLong) <<  (i*8))].
+		value := value + ((self cCoerce: (objectMemory fetchByte: i ofObject: oop) to: #usqLong) <<  (i*8))].
 	^value
 ]
 
@@ -2498,7 +2498,7 @@ InterpreterPrimitives >> primitiveNewWithArg [
 			[(argumentCount < 2
 			  or: [self addressCouldBeClassObj: (self stackValue: 1)]) ifFalse:
 				[self primitiveFailFor: PrimErrBadArgument]].
-	(self successful and: [size >= 0])
+	self successful "positive32BitValueOf: succeds only for non-negative integers < 2^32"
 		ifTrue:
 			[objectMemory hasSpurMemoryManagerAPI
 				ifTrue:
@@ -3296,8 +3296,10 @@ InterpreterPrimitives >> primitiveSize [
 { #category : #'memory space primitives' }
 InterpreterPrimitives >> primitiveSizeInBytes [
 	<option: #SpurObjectMemory>
+	| byteSize |
+	byteSize := objectMemory totalByteSizeOf: self stackTop.
 	self pop: argumentCount + 1
-		 thenPushInteger: (objectMemory totalByteSizeOf: self stackTop)
+		 thenPush: (self positive64BitIntegerFor: byteSize)
 ]
 
 { #category : #'memory space primitives' }
@@ -3306,7 +3308,7 @@ InterpreterPrimitives >> primitiveSizeInBytesOfInstance [
 	 then the last argument is a variable size and the size answered is the
 	 size of an instance of the receiver with that many indexable elements."
 	<option: #SpurObjectMemory>
-	| byteSizeOrErr |
+	| byteSize err |
 	self cppIf: NewspeakVM
 		ifTrue: "Support VMMirror>>byteSizeOfInstanceOf:WithIndexableVariables:"
 			[argumentCount > 2 ifTrue:
@@ -3314,19 +3316,23 @@ InterpreterPrimitives >> primitiveSizeInBytesOfInstance [
 		ifFalse:
 			[argumentCount > 1 ifTrue:
 				[^self primitiveFailFor: PrimErrBadNumArgs]].
+	err := -1.
 	argumentCount >= 1 ifTrue:
 		[(objectMemory isIntegerObject: self stackTop) ifFalse:
 			[^self primitiveFailFor: PrimErrBadArgument].
-		 byteSizeOrErr := objectMemory
-								byteSizeOfInstanceOf: (self stackValue: 1)
-								withIndexableSlots: (objectMemory integerValueOf: self stackTop).
-		 byteSizeOrErr < 0 ifTrue:
-			[^self primitiveFailFor: byteSizeOrErr negated].
-		 ^self pop: argumentCount + 1 thenPushInteger: byteSizeOrErr].
-	byteSizeOrErr := objectMemory byteSizeOfInstanceOf: (self stackValue: 0).
-	byteSizeOrErr < 0 ifTrue:
-		[^self primitiveFailFor: byteSizeOrErr negated].
-	self pop: 1 thenPushInteger: byteSizeOrErr
+		 byteSize := objectMemory
+						byteSizeOfInstanceOf: (self stackValue: 1)
+						withIndexableSlots: (objectMemory integerValueOf: self stackTop)
+						errInto: [:code| err := code].
+		 err >= 0 ifTrue:
+			[^self primitiveFailFor: err].
+		 ^self pop: argumentCount + 1 thenPush: (self positive64BitIntegerFor: byteSize)].
+	byteSize := objectMemory
+						byteSizeOfInstanceOf: (self stackValue: 0)
+						errInto: [:code| err := code].
+	err >= 0 ifTrue:
+		[^self primitiveFailFor: err].
+	self pop: 1 thenPushInteger: byteSize
 ]
 
 { #category : #'system control primitives' }
