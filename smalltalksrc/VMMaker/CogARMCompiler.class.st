@@ -370,13 +370,13 @@ CogARMCompiler >> concretizeAddCqR [
 	self rotateable8bitImmediate: (operands at: 0)
 		ifTrue: [ :rot :immediate | | reg |
 			reg := self concreteRegister: (operands at: 1).
-			self machineCodeAt: 0 put: (self adds: reg rn: reg imm: immediate ror: rot<<1).
+			self machineCodeAt: 0 put: (self adds: reg rn: reg imm: immediate ror: rot).
 			^machineCodeSize := 4]
 		ifFalse: [
 			self rotateable8bitImmediate: (operands at: 0) negated
 				ifTrue: [ :rot :immediate | |reg|
 					reg := self concreteRegister: (operands at: 1).
-					self machineCodeAt: 0 put: (self subs: reg rn: reg imm: immediate ror: rot<<1).
+					self machineCodeAt: 0 put: (self subs: reg rn: reg imm: immediate ror: rot).
 					^machineCodeSize := 4]
 				ifFalse: [^self concretizeDataOperationCwR: 4]]
 ]
@@ -401,7 +401,7 @@ CogARMCompiler >> concretizeAndCqR [
 	self rotateable8bitImmediate: (operands at: 0)
 		ifTrue: [ :rot :immediate | | reg |
 			reg := self concreteRegister: (operands at: 1).
-			self machineCodeAt: 0 put: (self ands: reg rn: reg imm: immediate ror: rot<<1).
+			self machineCodeAt: 0 put: (self ands: reg rn: reg imm: immediate ror: rot).
 			^machineCodeSize := 4]
 		ifFalse: [
 			"see if the constant bit-inverted makes a quick value and if so BIC it instead
@@ -412,7 +412,7 @@ CogARMCompiler >> concretizeAndCqR [
 			self rotateable8bitImmediate: val
 				ifTrue: [ :rot :immediate | |reg|
 					reg := self concreteRegister: (operands at: 1).
-					self machineCodeAt: 0 put: (self bics: reg rn: reg imm: immediate ror: rot<<1).
+					self machineCodeAt: 0 put: (self bics: reg rn: reg imm: immediate ror: rot).
 					^machineCodeSize := 4]
 				ifFalse: [^self concretizeDataOperationCwR: 0]]
 ]
@@ -541,7 +541,7 @@ CogARMCompiler >> concretizeConditionalJumpLong: conditionCode [
 	jumpTarget := self longJumpTargetAddress.
 	instrOffset := self at: 0 moveCw: jumpTarget intoR: RISCTempReg.
 	"bx RISCTempReg"
-	self machineCodeAt: instrOffset put: (self bx: RISCTempReg).
+	self machineCodeAt: instrOffset put: (self cond: conditionCode bx: 0 target: RISCTempReg).
 	^machineCodeSize := instrOffset + 4
 ]
 
@@ -554,7 +554,7 @@ CogARMCompiler >> concretizeDataOperationCqR: opcode [
 		rotateable8bitImmediate: (operands at: 0) 
 		ifTrue: [:rot :immediate | | reg |
 			reg := self concreteRegister: (operands at: 1).
-			self machineCodeAt: 0 put: (self type: 1 op: opcode set: 1 rn: reg rd: reg shifterOperand: (rot << 8 bitOr: immediate)).
+			self machineCodeAt: 0 put: (self type: 1 op: opcode set: 1 rn: reg rd: reg shifterOperand: ((rot>>1)"in this usage we have to halve the rot value" << 8 bitOr: immediate)).
 			^machineCodeSize := 4]
 		ifFalse: [^self concretizeDataOperationCwR: opcode].
 	
@@ -755,7 +755,7 @@ CogARMCompiler >> concretizeMoveCqR [
 		rotateable8bitImmediate: (operands at: 0) 
 		ifTrue: [:rot :immediate | | reg |
 			reg := self concreteRegister: (operands at: 1).
-			self machineCodeAt: 0 put: (self type: 1 op: 16rD set: 0 rn: 0 rd: reg shifterOperand: (rot << 8 bitOr: immediate)).
+			self machineCodeAt: 0 put: (self mov: reg imm: immediate ror: rot).
 			^machineCodeSize := 4]
 		ifFalse: [^self concretizeMoveCwR].
 	
@@ -880,7 +880,7 @@ CogARMCompiler >> concretizeMoveRR [
 	srcReg := self concreteRegister: (operands at: 0).
 	destReg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest 0000 0000 srcR"
-	self machineCodeAt: 0 put: (self type: 0 op: 16rD set: 0 rn: 0 rd: destReg shifterOperand: srcReg).
+	self machineCodeAt: 0 put: (self mov: destReg rn: srcReg).
 	^machineCodeSize := 4
 ]
 
@@ -893,9 +893,9 @@ CogARMCompiler >> concretizeMoveRXbrR [
 	src := self concreteRegister: (operands at: 0).
 	index := self concreteRegister: (operands at: 1).
 	base := self concreteRegister: (operands at: 2).
-	"str		src, [base, +index, LSL #0]"
-	"cond 011 1100 0 base srcR 00000 00 0 inde"
-	self machineCodeAt: 0 put: (self type: 3 op: 16rC set: 0 rn: base rd: src shifterOperand: index).
+	"str	b	src, [base, +index, LSL #0]"
+	"cond 011 1100 0 base srcR 00000 00 0 index"
+	self machineCodeAt: 0 put: (self strb: src rn: base rm: index).
 	^machineCodeSize := 4
 ]
 
@@ -906,11 +906,11 @@ CogARMCompiler >> concretizeMoveRXwrR [
 	<inline: true>
 	| index base src |
 	src := self concreteRegister: (operands at: 0).
-	index := self concreteRegister: (operands at: 1).
+	index := self concreteRegister: (operands at: 1). "index is number of *words* = 4* bytes"
 	base := self concreteRegister: (operands at: 2).
 	"str		src, [base, +index, LSL #2]"
 	"cond 011 1100 0 base srcR 00010 00 0 inde"
-	self machineCodeAt: 0 put: (self type: 3 op: 16rC set: 0 rn: base rd: src shifterOperand: (16r100 bitOr: index)).
+	self machineCodeAt: 0 put: (self str: src rn: base rm: (16r100 bitOr: index)).
 	^machineCodeSize := 4
 ]
 
@@ -920,12 +920,12 @@ CogARMCompiler >> concretizeMoveXbrRR [
 	
 	<inline: true>
 	| index base dest |
-	index := self concreteRegister: (operands at: 0).
+	index := self concreteRegister: (operands at: 0). "index is number of *bytes*"
 	base := self concreteRegister: (operands at: 1).
 	dest := self concreteRegister: (operands at: 2).
-	"LDR	dest, [base, +index, LSL #0]"
+	"LDRB	dest, [base, +index, LSL #0]"
 	"cond 011 1100 1 base dest 00000 00 0 inde"
-	self machineCodeAt: 0 put: (self type: 3 op: 16rC set: 1 rn: base rd: dest shifterOperand: index).
+	self machineCodeAt: 0 put: (self ldrb: dest rn: base rm: index).
 	^machineCodeSize := 4
 ]
 
@@ -940,7 +940,7 @@ CogARMCompiler >> concretizeMoveXwrRR [
 	dest := self concreteRegister: (operands at: 2).
 	"LDR	dest, [base, +index, LSL #2]"
 	"cond 011 1100 1 base dest 00010 00 0 inde"
-	self machineCodeAt: 0 put: (self type: 3 op: 16rC set: 1 rn: base rd: dest shifterOperand: (16r100 bitOr: index)).
+	self machineCodeAt: 0 put: (self ldr: dest rn: base rm: (16r100 bitOr: index)).
 	^machineCodeSize := 4
 ]
 
@@ -1034,14 +1034,14 @@ CogARMCompiler >> concretizeSubCqR [
 	self rotateable8bitImmediate: (operands at: 0)
 		ifTrue: [ :rot :immediate | | reg |
 			reg := self concreteRegister: (operands at: 1).
-			self machineCodeAt: 0 put: (self subs: reg rn: reg imm: immediate ror: rot<<1).
+			self machineCodeAt: 0 put: (self subs: reg rn: reg imm: immediate ror: rot).
 			^machineCodeSize := 4]
 		ifFalse: [
 			"before building a full load of a big cinstant, see if we can do an add of the constant negated"
 			self rotateable8bitImmediate: (operands at: 0) negated
 				ifTrue: [ :rot :immediate | | reg |
 					reg := self concreteRegister: (operands at: 1).
-					self machineCodeAt: 0 put: (self adds: reg rn: reg imm: immediate ror: rot<<1).
+					self machineCodeAt: 0 put: (self adds: reg rn: reg imm: immediate ror: rot).
 					^machineCodeSize := 4]
 				ifFalse: [^self concretizeDataOperationCwR: 2]]
 ]
@@ -1813,9 +1813,9 @@ CogARMCompiler >> rotateable8bitImmediate: constant ifTrue: trueAlternativeBlock
 	This is only suitable for quick constant(Cq), which don't change."
 	
 	(constant bitAnd: 16rFF) = constant ifTrue: [ ^trueAlternativeBlock value: 0 value: constant].
-	1 to: 15 do: [:i |
-		(constant bitAnd: 16rFF << (i<<1)) = constant 
-			ifTrue: [ ^trueAlternativeBlock value: 16 - i value: constant >> (i << 1)]].
+	2 to: 30 do: [:i |
+		(constant bitAnd: 16rFF << i) = constant 
+			ifTrue: [ ^trueAlternativeBlock value: 32 - i value: constant >> i ]].
 	^falseAlternativeBlock value
 ]
 
