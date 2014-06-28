@@ -358,6 +358,7 @@ InterpreterPrimitives >> positiveMachineIntegerValueOf: oop [
 	"Answer a value of an integer in address range, i.e up to the size of a machine word.
 	The object may be either a positive SmallInteger or a LargePositiveInteger of size <= word size."
 	<returnTypeC: #'unsigned long'>
+	<inline: true> "only two callers & one is primitiveNewWithArg"
 	| value bs ok |
 	(objectMemory isIntegerObject: oop) ifTrue:
 		[value := objectMemory integerValueOf: oop.
@@ -2492,13 +2493,13 @@ InterpreterPrimitives >> primitiveNewMethod [
 InterpreterPrimitives >> primitiveNewWithArg [
 	"Allocate a new indexable instance. Fail if the allocation would leave less than lowSpaceThreshold bytes free. May cause a GC."
 	| size spaceOkay |
-	size := self positive32BitValueOf: self stackTop.
+	size := self positiveMachineIntegerValueOf: self stackTop.
 	self cppIf: NewspeakVM
 		ifTrue: "For the mirror prims check that the class obj is actually a valid class."
 			[(argumentCount < 2
 			  or: [self addressCouldBeClassObj: (self stackValue: 1)]) ifFalse:
 				[self primitiveFailFor: PrimErrBadArgument]].
-	self successful "positive32BitValueOf: succeds only for non-negative integers < 2^32"
+	self successful "positiveMachineIntegerValueOf: succeeds only for non-negative integers."
 		ifTrue:
 			[objectMemory hasSpurMemoryManagerAPI
 				ifTrue:
