@@ -681,7 +681,7 @@ CoInterpreter >> actuallyFollowNecessaryForwardingInMethod: methodObj [
 	(self isCogMethodReference: header) ifTrue:
 		[cogMethod := self cCoerceSimple: header to: #'CogMethod *'.
 		 "If the method class is not used we can avoid the forwarding
-		  check for both the cogMehod and the bytecoded method."
+		  check for both the cogMethod and the bytecoded method."
 		 cogMethod cmUsesMethodClass ifFalse:
 			[^self].
 		 cogit followForwardedLiteralsIn: cogMethod.
