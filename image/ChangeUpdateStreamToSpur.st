@@ -1,1 +1,0 @@
-"Change the update stream to spur but don't update."MCMcmUpdater defaultUpdateURL: 'http://source.squeak.org/spur'.Smalltalk snapshot: true andQuit: true

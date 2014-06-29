@@ -1,7 +1,7 @@
 #!/bin/sh
 . ./envvars.sh
 ./getsqueak45.sh
-. ./get2897vm.sh
+. ./get3021vm.sh
 
 cp -p $SQUEAK45.image trunk46forspur.image
 cp -p $SQUEAK45.changes trunk46forspur.changes
@@ -9,8 +9,6 @@ cp -p $SQUEAK45.changes trunk46forspur.changes
 rm -f temp-spur-repository/* temp-v3-repository/*
 echo $VM trunk46forspur.image BuildSqueakTrunkImage.st
 $VM trunk46forspur.image BuildSqueakTrunkImage.st
-echo $VM trunk46forspur.image ChangeUpdateStreamToSpur.st
-$VM trunk46forspur.image ChangeUpdateStreamToSpur.st
 echo $VM trunk46forspur.image WriteSpurPackagesToTempDir.st
 $VM trunk46forspur.image WriteSpurPackagesToTempDir.st
 
@@ -22,7 +20,7 @@ while true; do
 	for f in *VMMaker*spur.image; do
 		if test -f "$f"; then
 			IMAGE="$f"
-.			./get2897spurvm.sh
+.			./get3021spurvm.sh
 			break 2
 		fi
 	done
@@ -30,7 +28,7 @@ while true; do
 		for f in *VMMaker*.image; do
 			if test -f "$f"; then
 				IMAGE="$f"
-.				./get2897vm.sh
+.				./get3021vm.sh
 				break 2
 			fi
 		done
@@ -50,6 +48,6 @@ mv trunk46forspur-spur.image trunk46-spur.image
 mv trunk46forspur-spur.changes trunk46-spur.changes
 
 # Now load the modified packages
-. ./get2897spurvm.sh
+. ./get3021spurvm.sh
 echo $VM trunk46-spur.image LoadSpurPackagesFromTempDir.st
 $VM trunk46-spur.image LoadSpurPackagesFromTempDir.st

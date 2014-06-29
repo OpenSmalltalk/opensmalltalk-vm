@@ -21,3 +21,47 @@ fi
 
 test "$OS" = Darwin && function quietmd5 () { /sbin/md5 -q "$1"; }
 test "$OS" = Darwin || function quietmd5 () { /usr/bin/md5sum "$1" | sed 's/ .*$//'; }
+
+function get_vm_from_tar() # VM VMHASH VMARC VMARCHASH
+{	VM="$1"
+	VMDIR=`echo $VM | sed 's/\/.*//'`
+	VMHASH="$2"
+	if [ ! -d $VMDIR -o "`quietmd5 "$VM"`" != $VMHASH ]; then
+		VMARC="$3"
+		ARCHASH="$4"
+		if [ ! -f "$VMARC" -o "`quietmd5 "$VMARC"`" != $ARCHASH ]; then
+			wget -c "$URL/$VMARC"
+			if [ ! -f "$VMARC" -o "`quietmd5 "$VMARC"`" != $ARCHASH ]; then
+				echo failed to get $VMARC \; file corrupted\? 1>&2
+				exit 2
+			fi
+		fi
+		tar xzf "$VMARC"
+		if [ ! -d $VMDIR -o "`quietmd5 "$VM"`" != $VMHASH ]; then
+			echo failed to correctly extract $VMDIR from $VMARC 1>&2
+			exit 3
+		fi
+	fi
+}
+
+function get_vm_from_zip() # VM VMHASH VMARC VMARCHASH
+{	VM="$1"
+	VMDIR=`echo $VM | sed 's/\/.*//'`
+	VMHASH="$2"
+	VMARC="$3"
+	ARCHASH="$4"
+	if [ ! -d "$VMDIR" -o "`quietmd5 "$VM"`" != $VMHASH ]; then
+		if [ ! -f "$VMARC" -o "`quietmd5 "$VMARC"`" != $ARCHASH ]; then
+			wget -c "$URL/$VMARC"
+			if [ ! -f "$VMARC" -o "`quietmd5 "$VMARC"`" != $ARCHASH ]; then
+				echo failed to get $VMARC \; file corrupted\? 1>&2
+				exit 2
+			fi
+		fi
+		unzip -q "$VMARC"
+		if [ ! -d "$VMDIR" -o "`quietmd5 "$VM"`" != $VMHASH ]; then
+			echo failed to correctly extract "`dirname $VM`" from $VMARC 1>&2
+			exit 3
+		fi
+	fi
+}
