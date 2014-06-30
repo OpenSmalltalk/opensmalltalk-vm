@@ -941,8 +941,9 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 	 usual stack-switching dance, test the primFailCode and then either
 	 return on success or continue to the method body."
 	<var: #primitiveRoutine declareC: 'void (*primitiveRoutine)(void)'>
-	| flags jmp jmpSamplePrim continuePostSamplePrim jmpSampleNonPrim continuePostSampleNonPrim |
+	| flags jmp jmpSamplePrim retry continuePostSamplePrim jmpSampleNonPrim continuePostSampleNonPrim |
 	<var: #jmp type: #'AbstractInstruction *'>
+	<var: #retry type: #'AbstractInstruction *'>
 	<var: #jmpSamplePrim type: #'AbstractInstruction *'>
 	<var: #continuePostSamplePrim type: #'AbstractInstruction *'>
 	<var: #jmpSampleNonPrim type: #'AbstractInstruction *'>
@@ -954,7 +955,10 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 	self genLoadCStackPointersForPrimCall.
 
 	flags := coInterpreter primitivePropertyFlags: primitiveIndex.
-	(flags bitAnd: PrimCallCollectsProfileSamples) ~= 0 ifTrue:
+	(flags anyMask: PrimCallDoNotJIT) ifTrue:
+		[^ShouldNotJIT].
+ 
+	(flags anyMask: PrimCallCollectsProfileSamples) ifTrue:
 		["Test nextProfileTick for being non-zero and call checkProfileTick if so"
 		BytesPerWord = 4
 			ifTrue:
@@ -968,32 +972,37 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 		jmpSampleNonPrim := self JumpNonZero: 0.
 		continuePostSampleNonPrim := self Label].
 
+	"Old full prim trace is in VMMaker-eem.550 and prior"
+	self recordPrimTrace ifTrue:
+		[self genFastPrimTraceUsing: ClassReg and: SendNumArgsReg].
+
 	"Clear the primFailCode and set argumentCount"
-	self MoveCq: 0 R: TempReg.
+	retry := self MoveCq: 0 R: TempReg.
 	self MoveR: TempReg Aw: coInterpreter primFailCodeAddress.
 	methodOrBlockNumArgs ~= 0 ifTrue:
 		[self MoveCq: methodOrBlockNumArgs R: TempReg].
 	self MoveR: TempReg Aw: coInterpreter argumentCountAddress.
-	(flags bitAnd: PrimCallNeedsPrimitiveFunction) ~= 0 ifTrue:
+
+	"If required, set primitiveFunctionPointer and newMethod"
+	(flags anyMask: PrimCallNeedsPrimitiveFunction) ifTrue:
 		[self MoveCw: primitiveRoutine asInteger R: TempReg.
 		 self MoveR: TempReg Aw: coInterpreter primitiveFunctionPointerAddress].
-	"Old full prim trace is in VMMaker-eem.550 and prior"
-	self recordPrimTrace ifTrue:
-		[self genFastPrimTraceUsing: ClassReg and: SendNumArgsReg].
-	((flags bitAnd: PrimCallNeedsNewMethod+PrimCallMayCallBack) ~= 0) ifTrue:
+	(flags anyMask: PrimCallNeedsNewMethod+PrimCallMayCallBack) ifTrue:
 		["The ceActivateFailingPrimitiveMethod: machinery can't handle framelessness."
-		 (flags bitAnd: PrimCallMayCallBack) ~= 0 ifTrue:
+		 (flags anyMask: PrimCallMayCallBack) ifTrue:
 			[needsFrame := true].
 		 methodLabel addDependent:
 			(self annotateAbsolutePCRef:
 				(self MoveCw: methodLabel asInteger R: ClassReg)).
 		 self MoveMw: (self offset: CogMethod of: #methodObject) r: ClassReg R: TempReg.
 		 self MoveR: TempReg Aw: coInterpreter newMethodAddress].
+
+	"Invoke the primitive"
 	self PrefetchAw: coInterpreter primFailCodeAddress.
-	(flags bitAnd: PrimCallMayCallBack) ~= 0
+	(flags anyMask: PrimCallMayCallBack)
 		ifTrue: "Sideways call the C primitive routine so that we return through cePrimReturnEnterCogCode."
 			[backEnd genSubstituteReturnAddress:
-				((flags bitAnd: PrimCallCollectsProfileSamples) ~= 0
+				((flags anyMask: PrimCallCollectsProfileSamples)
 					ifTrue: [cePrimReturnEnterCogCodeProfiling]
 					ifFalse: [cePrimReturnEnterCogCode]).
 			 self JumpRT: primitiveRoutine asInteger.
@@ -1003,8 +1012,8 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 			["Call the C primitive routine."
 			self CallRT: primitiveRoutine asInteger.
 			primInvokeLabel := self Label.
-			(flags bitAnd: PrimCallCollectsProfileSamples) ~= 0 ifTrue:
-				[self assert: (flags bitAnd: PrimCallNeedsNewMethod) ~= 0.
+			(flags anyMask: PrimCallCollectsProfileSamples) ifTrue:
+				[self assert: (flags anyMask: PrimCallNeedsNewMethod).
 				"Test nextProfileTick for being non-zero and call checkProfileTick if so"
 				BytesPerWord = 4
 					ifTrue:
@@ -1017,6 +1026,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 				"If set, jump to record sample call."
 				jmpSamplePrim := self JumpNonZero: 0.
 				continuePostSamplePrim := self Label].
+			objectRepresentation maybeCompileRetry: retry onPrimitiveFail: primitiveIndex.
 			self maybeCompileAllocFillerCheck.
 			"Switch back to the Smalltalk stack.  Stack better be in either of these two states:
 				success:	stackPointer	->	result (was receiver)
@@ -1044,13 +1054,13 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 			self flag: 'currently caller pushes result'.
 			self RetN: BytesPerWord].
 
-	(flags bitAnd: PrimCallCollectsProfileSamples) ~= 0 ifTrue:
+	(flags anyMask: PrimCallCollectsProfileSamples) ifTrue:
 		["The sample is collected by cePrimReturnEnterCogCode for external calls"
 		jmpSamplePrim notNil ifTrue:
 			["Call ceCheckProfileTick: to record sample and then continue."
 			jmpSamplePrim jmpTarget: self Label.
-			self assert: (flags bitAnd: PrimCallNeedsNewMethod) ~= 0.
-			self CallRT: (self cCode: '(unsigned long)ceCheckProfileTick'
+			self assert: (flags anyMask: PrimCallNeedsNewMethod).
+			self CallRT: (self cCode: [#ceCheckProfileTick asUnsignedLong]
 							   inSmalltalk: [self simulatedTrampolineFor: #ceCheckProfileTick]).
 			"reenter the post-primitive call flow"
 			self Jump: continuePostSamplePrim].
@@ -1059,7 +1069,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 		jmpSampleNonPrim jmpTarget: self Label.
 		self MoveCq: 0 R: TempReg.
 		self MoveR: TempReg Aw: coInterpreter newMethodAddress.
-		self CallRT: (self cCode: '(unsigned long)ceCheckProfileTick'
+		self CallRT: (self cCode: [#ceCheckProfileTick asUnsignedLong]
 						   inSmalltalk: [self simulatedTrampolineFor: #ceCheckProfileTick]).
 		"reenter the post-primitive call flow"
 		self Jump: continuePostSampleNonPrim].
@@ -1078,7 +1088,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	"Compile the code for an open PIC.  Perform a probe of the first-level method
 	 lookup cache followed by a call of ceSendFromInLineCacheMiss: if the probe fails."
-	| jumpSelectorMiss jumpClassMiss itsAHit jumpBCMethod routine |
+	| jumpSelectorMiss jumpClassMiss itsAHit jumpBCMethod |
 	<var: #jumpSelectorMiss type: #'AbstractInstruction *'>
 	<var: #jumpClassMiss type: #'AbstractInstruction *'>
 	<var: #itsAHit type: #'AbstractInstruction *'>
@@ -1160,15 +1170,15 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	self genSaveStackPointers.
 	self genLoadCStackPointers.
 	methodLabel addDependent: (self annotateAbsolutePCRef: (self MoveCw: methodLabel asInteger R: SendNumArgsReg)).
-	cStackAlignment > BytesPerWord ifTrue:
-		[backEnd
-			genAlignCStackSavingRegisters: false
-			numArgs: 1
-			wordAlignment: cStackAlignment / BytesPerWord].
-	backEnd genPassReg: SendNumArgsReg asArgument: 0.
-	routine := self cCode: '(sqInt)ceSendFromInLineCacheMiss'
-					inSmalltalk: [self simulatedAddressFor: #ceSendFromInLineCacheMiss:].
-	self annotateCall: (self Call: routine)
+	self 
+		compileCallFor: #ceSendFromInLineCacheMiss:
+		numArgs: 1
+		arg: SendNumArgsReg
+		arg: nil
+		arg: nil
+		arg: nil
+		resultReg: nil
+		saveRegs: false
 	"Note that this call does not return."
 ]
 
@@ -1871,14 +1881,15 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 	jmpFail jmpTarget: (self MoveAw: coInterpreter newMethodAddress R: SendNumArgsReg).
 	"Reload sp with CStackPointer; easier than popping args of checkProfileTick."
 	self MoveAw: self cStackPointerAddress R: SPReg.
-	cStackAlignment > BytesPerWord ifTrue:
-		[backEnd
-			genAlignCStackSavingRegisters: false
-			numArgs: 1
-			wordAlignment: cStackAlignment / BytesPerWord].
-	backEnd genPassReg: SendNumArgsReg asArgument: 0.
-	self CallRT: (self cCode: '(unsigned long)ceActivateFailingPrimitiveMethod'
-					inSmalltalk: [self simulatedTrampolineFor: #ceActivateFailingPrimitiveMethod:]).
+	self 
+		compileCallFor: #ceActivateFailingPrimitiveMethod:
+		numArgs: 1
+		arg: SendNumArgsReg
+		arg: nil
+		arg: nil
+		arg: nil
+		resultReg: nil
+		saveRegs: false.
 
 	profiling ifTrue:
 		["Call ceCheckProfileTick: to record sample and then continue.  newMethod
@@ -3317,11 +3328,7 @@ SimpleStackBasedCogit >> generateMissAbortTrampolines [
 	ceCPICMissTrampoline := self genTrampolineFor: #ceCPICMiss:receiver:
 								called: 'ceCPICMissTrampoline'
 								arg: ClassReg
-								arg: ReceiverResultReg.
-	self cCode: '' inSmalltalk:
-		[simulatedTrampolines
-			at: (self simulatedAddressFor: #ceSendFromInLineCacheMiss:)
-			put: #ceSendFromInLineCacheMiss:]
+								arg: ReceiverResultReg
 ]
 
 { #category : #initialization }

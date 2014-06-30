@@ -14,6 +14,7 @@ Class {
 		'MaxNumArgs',
 		'MaxStackCheckOffset',
 		'PrimCallCollectsProfileSamples',
+		'PrimCallDoNotJIT',
 		'PrimCallMayCallBack',
 		'PrimCallNeedsNewMethod',
 		'PrimCallNeedsPrimitiveFunction'

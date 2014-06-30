@@ -276,6 +276,7 @@ Class {
 		'NumSendTrampolines',
 		'NumTrampolines',
 		'ProcessorClass',
+		'ShouldNotJIT',
 		'UnimplementedPrimitive',
 		'YoungSelectorInPIC'
 	],
@@ -777,7 +778,8 @@ Cogit class >> initializeErrorCodes [
 	YoungSelectorInPIC := -5.
 	EncounteredUnknownBytecode := -6.
 	UnimplementedPrimitive := -7.
-	MaxNegativeErrorCode := UnimplementedPrimitive.
+	ShouldNotJIT := -8.
+	MaxNegativeErrorCode := ShouldNotJIT.
 	"Internal errors returned by generator routines to other generator routines"
 	BadRegisterSet := 1
 ]
@@ -3713,6 +3715,49 @@ Cogit >> compileCPICEntry [
 	^self JumpNonZero: 0
 ]
 
+{ #category : #initialization }
+Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 resultReg: resultRegOrNil saveRegs: saveRegs [
+	"Generate a call to aRoutine with up to 4 arguments.  If resultRegOrNil is
+	 non-zero assign the C result to resultRegOrNil.  If saveRegs, save all registers.
+	 Hack: a negative arg value indicates an abstract register, a non-negative value
+	 indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<inline: false>
+	cStackAlignment > BytesPerWord ifTrue:
+		[backEnd
+			genAlignCStackSavingRegisters: saveRegs
+			numArgs: numArgs
+			wordAlignment: cStackAlignment / BytesPerWord].
+	saveRegs ifTrue:
+		[backEnd genSaveRegisters].
+	numArgs > 0 ifTrue:
+		[numArgs > 1 ifTrue:
+			[numArgs > 2 ifTrue:
+				[numArgs > 3 ifTrue:
+					[regOrConst3 < 0
+						ifTrue: [backEnd genPassReg: regOrConst3 asArgument: 3]
+						ifFalse: [backEnd genPassConst: regOrConst3 asArgument: 3]].
+				 regOrConst2 < 0
+					ifTrue: [backEnd genPassReg: regOrConst2 asArgument: 2]
+					ifFalse: [backEnd genPassConst: regOrConst2 asArgument: 2]].
+			regOrConst1 < 0
+				ifTrue: [backEnd genPassReg: regOrConst1 asArgument: 1]
+				ifFalse: [backEnd genPassConst: regOrConst1 asArgument: 1]].
+		regOrConst0 < 0
+			ifTrue: [backEnd genPassReg: regOrConst0 asArgument: 0]
+			ifFalse: [backEnd genPassConst: regOrConst0 asArgument: 0]].
+	self CallRT: (self cCode: [aRoutine asUnsignedInteger]
+					   inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
+	resultRegOrNil ifNotNil:
+		[backEnd genWriteCResultIntoReg: resultRegOrNil].
+	 saveRegs ifTrue:
+		[numArgs > 0 ifTrue:
+			[backEnd genRemoveNArgsFromStack: numArgs].
+		resultRegOrNil
+			ifNotNil: [backEnd genRestoreRegsExcept: resultRegOrNil]
+			ifNil: [backEnd genRestoreRegs]]
+]
+
 { #category : #'in-line cacheing' }
 Cogit >> compileClosedPICPrototype [
 	"Compile the abstract instructions for a full closed PIC used to initialize closedPICSize.
@@ -3918,39 +3963,15 @@ Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: r
 	(pushLinkReg and: [backEnd hasLinkRegister]) ifTrue:
 		[self PushR: LinkReg].
 	self genSmalltalkToCStackSwitch.
-	cStackAlignment > BytesPerWord ifTrue:
-		[backEnd
-			genAlignCStackSavingRegisters: saveRegs
-			numArgs: numArgs
-			wordAlignment: cStackAlignment / BytesPerWord].
-	saveRegs ifTrue:
-		[backEnd genSaveRegisters].
-	numArgs > 0 ifTrue:
-		[numArgs > 1 ifTrue:
-			[numArgs > 2 ifTrue:
-				[numArgs > 3 ifTrue:
-					[regOrConst3 < 0
-						ifTrue: [backEnd genPassReg: regOrConst3 asArgument: 3]
-						ifFalse: [backEnd genPassConst: regOrConst3 asArgument: 3]].
-				 regOrConst2 < 0
-					ifTrue: [backEnd genPassReg: regOrConst2 asArgument: 2]
-					ifFalse: [backEnd genPassConst: regOrConst2 asArgument: 2]].
-			regOrConst1 < 0
-				ifTrue: [backEnd genPassReg: regOrConst1 asArgument: 1]
-				ifFalse: [backEnd genPassConst: regOrConst1 asArgument: 1]].
-		regOrConst0 < 0
-			ifTrue: [backEnd genPassReg: regOrConst0 asArgument: 0]
-			ifFalse: [backEnd genPassConst: regOrConst0 asArgument: 0]].
-	self Call: (self cCode: [aRoutine asUnsignedInteger]
-					   inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
-	resultRegOrNil ifNotNil:
-		[backEnd genWriteCResultIntoReg: resultRegOrNil].
-	 saveRegs ifTrue:
-		[numArgs > 0 ifTrue:
-			[backEnd genRemoveNArgsFromStack: numArgs].
-		resultRegOrNil
-			ifNotNil: [backEnd genRestoreRegsExcept: resultRegOrNil]
-			ifNil: [backEnd genRestoreRegs]].
+	self
+		compileCallFor: aRoutine
+		numArgs: numArgs
+		arg: regOrConst0
+		arg: regOrConst1
+		arg: regOrConst2
+		arg: regOrConst3
+		resultReg: resultRegOrNil
+		saveRegs: saveRegs.
 	backEnd genLoadStackPointers.
 	backEnd hasLinkRegister ifTrue:
 		[self PopR: LinkReg].
@@ -5638,23 +5659,7 @@ Cogit >> generateTrampolines [
 
 	"finish up"
 	self recordGeneratedRunTime: 'methodZoneBase' address: methodZoneBase.
-	processor flushICacheFrom: methodZoneStart to: methodZoneBase.
-	self cCode: ''
-		inSmalltalk:
-			[simulatedTrampolines keysAndValuesDo:
-				[:addr :selector|
-				simulatedTrampolines
-					at: addr
-					put: (MessageSend
-							receiver: ((self respondsTo: selector)
-										ifTrue: [self]
-										ifFalse: [(coInterpreter respondsTo: selector)
-													ifTrue: [coInterpreter]
-													ifFalse: [(objectMemory respondsTo: selector)
-														ifTrue: [objectMemory]
-														ifFalse: [self notify: 'cannot find receiver for ', selector]]])
-							selector: selector
-							arguments: (1 to: selector numArgs) asArray)]]
+	processor flushICacheFrom: methodZoneStart to: methodZoneBase
 ]
 
 { #category : #initialization }
@@ -8476,7 +8481,19 @@ Cogit >> simulatedTrampolineFor: selectorOrAddress [
 		 ^selectorOrAddress].
 	self assert: selectorOrAddress isSymbol.
 	address := self simulatedAddressFor: selectorOrAddress.
-	simulatedTrampolines at: address ifAbsentPut: [selectorOrAddress].
+	simulatedTrampolines
+		at: address
+		ifAbsentPut:
+			[MessageSend
+				receiver: ((self respondsTo: selectorOrAddress)
+							ifTrue: [self]
+							ifFalse: [(coInterpreter respondsTo: selectorOrAddress)
+										ifTrue: [coInterpreter]
+										ifFalse: [(objectMemory respondsTo: selectorOrAddress)
+											ifTrue: [objectMemory]
+											ifFalse: [self notify: 'cannot find receiver for ', selectorOrAddress]]])
+				selector: selectorOrAddress
+				arguments: (1 to: selectorOrAddress numArgs) asArray].
 	^address
 ]
 

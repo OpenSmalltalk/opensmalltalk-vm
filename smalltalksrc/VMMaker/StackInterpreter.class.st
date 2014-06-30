@@ -1519,7 +1519,7 @@ StackInterpreter class >> primitiveAccessorDepthTable [
 		[:thing| |class  method |
 		(thing isInteger "quick prims, 0 for fast primitve fail"
 		 or: [thing == #primitiveFail
-		 or: [(class := self whichClassIncludesSelector: thing) isNil]])
+		 or: [(class := self primitivesClass whichClassIncludesSelector: thing) isNil]])
 			ifTrue: [-1]
 			ifFalse:
 				[method := (class >> thing) methodNode asTranslationMethodOfClass: TMethod.
@@ -1558,6 +1558,11 @@ StackInterpreter class >> primitiveTableStringFor: table [
 								ifFalse: ['(void (*)(void))', primSpec printString]);
 				nextPut: $,].
 			s cr; nextPutAll: ' 0 }']
+]
+
+{ #category : #translation }
+StackInterpreter class >> primitivesClass [
+	^StackInterpreterPrimitives
 ]
 
 { #category : #miscellaneous }
@@ -1837,6 +1842,7 @@ StackInterpreter >> addFirstLink: proc toList: aList [
 	"Add the given process to the front of the given linked list
 	 and set the backpointer of process to its new list."
 	| firstLink |
+	self assert: (objectMemory isForwarded: aList) not.
 	self assert: (objectMemory fetchPointer: NextLinkIndex ofObject: proc) = objectMemory nilObject.
 	firstLink := objectMemory fetchPointer: FirstLinkIndex ofObject: aList.
 	self assert: firstLink ~= proc.
@@ -1852,6 +1858,7 @@ StackInterpreter >> addLastLink: proc toList: aList [
 	"Add the given process to the end of the given linked list
 	 and set the backpointer of process to its new list."
 	| lastLink |
+	self assert: (objectMemory isForwarded: aList) not.
 	self assert: (objectMemory fetchPointer: NextLinkIndex ofObject: proc) = objectMemory nilObject.
 	(self isEmptyList: aList)
 		ifTrue: [objectMemory storePointer: FirstLinkIndex ofObject: aList withValue: proc]
@@ -3156,10 +3163,19 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
 	 if non-negative scan the args to the depth, following any
 	 forwarders.  Answer if any are found so the prim can be retried."
 	<option: #SpurObjectMemory>
-	| primIndex accessorDepth found |
+	^self checkForAndFollowForwardedPrimitiveStateFor: (self primitiveIndexOf: newMethod)
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> checkForAndFollowForwardedPrimitiveStateFor: primIndex [
+	"In Spur a primitive may fail due to encountering a forwarder.
+	 On failure check the accessorDepth for the primitive and
+	 if non-negative scan the args to the depth, following any
+	 forwarders.  Answer if any are found so the prim can be retried."
+	<option: #SpurObjectMemory>
+	| accessorDepth found |
 	self assert: self successful not.
 	found := false.
-	primIndex := self primitiveIndexOf: newMethod.
 	accessorDepth := primitiveAccessorDepthTable at: primIndex.
 	"For the method-executing primitives, failure could have been in those primitives or the
 	 primitives of the methods they execute.  find out which failed by seeing what is in effect."
@@ -3175,8 +3191,10 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
 				[accessorDepth := self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod].
 			 self assert: argumentCount = (self argumentCountOf: newMethod)]. }
 		otherwise:
-			[self assert: primitiveFunctionPointer = (self functionPointerFor: primIndex inClass: objectMemory nilObject).
-			 self assert: argumentCount = (self argumentCountOf: newMethod)].
+			["functionPointer should have been set, unless we're in machine code"
+			 instructionPointer > objectMemory nilObject ifTrue:
+				[self assert: primitiveFunctionPointer = (self functionPointerFor: primIndex inClass: objectMemory nilObject).
+				 self assert: argumentCount = (self argumentCountOf: newMethod)]].
 	accessorDepth >= 0 ifTrue:
 		[0 to: argumentCount do:
 			[:index| | oop |
@@ -3224,17 +3242,17 @@ StackInterpreter >> checkForEventsMayContextSwitch: mayContextSwitch [
 
 	(profileProcess ~= objectMemory nilObject
 	 or: [nextProfileTick > 0 and:[self ioHighResClock >= nextProfileTick]]) ifTrue:
-		["Take a sample (if not already done so) for the profiler if it is active.  This
+		[nextProfileTick := 0.
+		 "Take a sample (if not already done so) for the profiler if it is active.  This
 		  must be done before any of the synchronousSignals below or else we will
 		  attribute a pause in ioRelinquishProcessor to the newly activated process."
-		profileProcess = objectMemory nilObject ifTrue:
+		 profileProcess = objectMemory nilObject ifTrue:
 			[profileProcess := self activeProcess.
 			 profileMethod := objectMemory nilObject].
-		"and signal the profiler semaphore if it is present"
-		(profileSemaphore ~= objectMemory nilObject 
-		 and: [self synchronousSignal: profileSemaphore]) ifTrue:
-			[switched := true].
-		nextProfileTick := 0].
+		 "and signal the profiler semaphore if it is present"
+		 (profileSemaphore ~= objectMemory nilObject
+		  and: [self synchronousSignal: profileSemaphore]) ifTrue:
+			[switched := true]].
 
 	self checkDeliveryOfLongRunningPrimitiveSignal ifTrue:
 		[switched := true].
@@ -3242,7 +3260,7 @@ StackInterpreter >> checkForEventsMayContextSwitch: mayContextSwitch [
 	objectMemory signalLowSpace ifTrue:
 		[objectMemory signalLowSpace: false. "reset flag"
 		 sema := objectMemory splObj: TheLowSpaceSemaphore.
-		 (sema ~= objectMemory nilObject 
+		 (sema ~= objectMemory nilObject
 		  and: [self synchronousSignal: sema]) ifTrue:
 			[switched := true]].
 
@@ -3275,7 +3293,7 @@ StackInterpreter >> checkForEventsMayContextSwitch: mayContextSwitch [
 		[interruptPending := false.
 		 "reset interrupt flag"
 		 sema := objectMemory splObj: TheInterruptSemaphore.
-		 (sema ~= objectMemory nilObject 
+		 (sema ~= objectMemory nilObject
 		  and: [self synchronousSignal: sema]) ifTrue:
 			[switched := true]].
 
@@ -3284,17 +3302,17 @@ StackInterpreter >> checkForEventsMayContextSwitch: mayContextSwitch [
 			[nextWakeupUsecs := 0.
 			 "set timer interrupt to 0 for 'no timer'"
 			 sema := objectMemory splObj: TheTimerSemaphore.
-			 (sema ~= objectMemory nilObject 
+			 (sema ~= objectMemory nilObject
 			  and: [self synchronousSignal: sema]) ifTrue:
 				[switched := true]]].
 
 	"signal any pending finalizations"
 	pendingFinalizationSignals > 0 ifTrue:
-		[sema := objectMemory splObj: TheFinalizationSemaphore.
-		 ((objectMemory isClassOfNonImm: sema equalTo: (objectMemory splObj: ClassSemaphore))
+		[pendingFinalizationSignals := 0.
+		 sema := objectMemory splObj: TheFinalizationSemaphore.
+		 (sema ~= objectMemory nilObject
 		  and: [self synchronousSignal: sema]) ifTrue:
-			[switched := true].
-		pendingFinalizationSignals := 0].
+			[switched := true]].
 
 	"signal all semaphores in semaphoresToSignal"
 	self signalExternalSemaphores ifTrue:
@@ -3746,7 +3764,7 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 { #category : #'primitive support' }
 StackInterpreter >> codeGeneratorToComputeAccessorDepth [
 	^VMMaker new
-		buildCodeGeneratorForInterpreter: StackInterpreterPrimitives
+		buildCodeGeneratorForInterpreter: self primitivesClass
 		includeAPIMethods: false
 		initializeClasses: false
 ]
@@ -4429,13 +4447,12 @@ StackInterpreter >> doSignalSemaphoreWithIndex: index [
 	"Signal the external semaphore with the given index.  Answer if a context switch
 	 occurs as a result.  Do not bounds check.  This has been done in the caller."
 	<api>
-	| xArray semaphoreClass sema |
+	| xArray sema |
 	xArray := objectMemory splObj: ExternalObjectsArray.
-	semaphoreClass := objectMemory splObj: ClassSemaphore.
 	sema := objectMemory fetchPointer: index - 1 ofObject: xArray. "Note: semaphore indices are 1-based"
-	^(objectMemory isNonIntegerObject: sema)
-	   and: [(objectMemory fetchClassOfNonImm: sema) = semaphoreClass
-	   and: [self synchronousSignal: sema]]
+	self assert: (objectMemory isOopForwarded: sema) not.
+	^(objectMemory isSemaphoreOop: sema)
+	  and: [self synchronousSignal: sema]
 ]
 
 { #category : #'send bytecodes' }
@@ -5792,6 +5809,16 @@ StackInterpreter >> followForwardedMethodsInMethodZone [
 ]
 
 { #category : #'object memory support' }
+StackInterpreter >> followForwardingPointersInProfileState [
+	(objectMemory isForwarded: profileProcess) ifTrue:
+		[profileProcess := objectMemory followForwarded: profileProcess].
+	(objectMemory isForwarded: profileMethod) ifTrue:
+		[profileMethod := objectMemory followForwarded: profileMethod].
+	(objectMemory isForwarded: profileProcess) ifTrue:
+		[profileSemaphore := objectMemory followForwarded: profileSemaphore].
+]
+
+{ #category : #'object memory support' }
 StackInterpreter >> followForwardingPointersInScheduler [
 	| schedAssoc sched procLists |
 	schedAssoc := objectMemory splObj: SchedulerAssociation.
@@ -5811,6 +5838,29 @@ StackInterpreter >> followForwardingPointersInScheduler [
 			[next := objectMemory followNonImmediateField: NextLinkIndex ofObject: first.
 			 first := next]]
 
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> followForwardingPointersInSpecialObjectsArray [
+	"Various semaphores in the specialObjectsArray are signalled in checkForEventsMayContextSwitch:.
+	 These must be followed post become to avoid a read barrier in checkForEventsMayContextSwitch:,
+	 or worse still in synchronousSignal."
+	| xArray |
+	self followSemaphoreIn: objectMemory specialObjectsOop
+		at: TheLowSpaceSemaphore.
+	self followSemaphoreIn: objectMemory specialObjectsOop
+		at: TheInterruptSemaphore.
+	self followSemaphoreIn: objectMemory specialObjectsOop
+		at: TheTimerSemaphore.
+	self followSemaphoreIn: objectMemory specialObjectsOop
+		at: TheFinalizationSemaphore.
+	xArray := objectMemory splObj: ExternalObjectsArray.
+	(objectMemory isForwarded: xArray) ifTrue:
+		[xArray := objectMemory followForwarded: xArray.
+		 objectMemory splObj: ExternalObjectsArray put: xArray].
+	0 to: (objectMemory numSlotsOf: xArray) - 1 do:
+		[:i|
+		self followSemaphoreIn: xArray at: i]
 ]
 
 { #category : #'object memory support' }
@@ -5896,6 +5946,18 @@ StackInterpreter >> followNecessaryForwardingInMethod: methodObj [
 	<inline: false>
 	objectMemory hasSpurMemoryManagerAPI ifTrue:
 		[self actuallyFollowNecessaryForwardingInMethod: methodObj]
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> followSemaphoreIn: anArray at: index [
+	"Only follow the reference to the semaphore.  synchronousSignal
+	 checks the chain to the suspendedContext."
+	 
+	| obj |
+	obj := objectMemory fetchPointer: index ofObject: anArray.
+	(objectMemory isForwarded: obj) ifTrue:
+		[obj := objectMemory followForwarded: obj.
+		 objectMemory storePointer: index ofObject: anArray withValue: obj]
 ]
 
 { #category : #'process primitive support' }
@@ -7313,7 +7375,7 @@ StackInterpreter >> isCog [
 
 { #category : #'process primitive support' }
 StackInterpreter >> isEmptyList: aLinkedList [
-
+	self assert: (objectMemory isForwarded: aLinkedList) not.
 	^ (objectMemory fetchPointer: FirstLinkIndex ofObject: aLinkedList) = objectMemory nilObject
 ]
 
@@ -9121,7 +9183,9 @@ StackInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 		[(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 			[self followForwardedMethodsInMethodCache.
 			 self followForwardedMethodsInMethodZone]. "for CoInterpreter"
-		 self followForwardingPointersInScheduler]
+		 self followForwardingPointersInScheduler.
+		 self followForwardingPointersInSpecialObjectsArray.
+		 self followForwardingPointersInProfileState]
 ]
 
 { #category : #'object memory support' }
@@ -10980,6 +11044,7 @@ StackInterpreter >> remapCallbackState [
 StackInterpreter >> removeFirstLinkOfList: aList [ 
 	"Remove the first process from the given linked list."
 	| first last next |
+	self assert: (objectMemory isForwarded: aList) not.
 	first := objectMemory fetchPointer: FirstLinkIndex ofObject: aList.
 	last := objectMemory fetchPointer: LastLinkIndex ofObject: aList.
 	first = last
@@ -10995,6 +11060,7 @@ StackInterpreter >> removeFirstLinkOfList: aList [
 StackInterpreter >> removeProcess: aProcess fromList: aList [ 
 	"Remove a given process from a linked list. May fail if aProcess is not on the list."
 	| firstLink lastLink nextLink tempLink |
+	self assert: (objectMemory isForwarded: aList) not.
 	firstLink := objectMemory fetchPointer: FirstLinkIndex ofObject: aList.
 	lastLink := objectMemory fetchPointer: LastLinkIndex ofObject: aList.
 	aProcess  = firstLink ifTrue:[
@@ -11821,7 +11887,7 @@ StackInterpreter >> signalExternalSemaphores [
 	"Signal all requested semaphores.  Answer if a context switch has occurred."
 	| xArray |
 	xArray := objectMemory splObj: ExternalObjectsArray.
-	^self doSignalExternalSemaphores: (self stSizeOf: xArray)
+	^self doSignalExternalSemaphores: (objectMemory numSlotsOf: xArray)
 ]
 
 { #category : #'process primitive support' }
@@ -12623,6 +12689,15 @@ StackInterpreter >> synchronousSignal: aSemaphore [
 			ofObject: aSemaphore
 			withValue: excessSignals + 1.
 		 ^false].
+
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[| firstLink |
+		 firstLink := objectMemory fetchPointer: FirstLinkIndex ofObject: aSemaphore.
+		 (objectMemory isForwarded: firstLink) ifTrue:
+			["0 = aSemaphore, 1 = aProcess. Hence reference to suspendedContext will /not/ be forwarded."
+			 objectMemory followForwardedObjectFields: aSemaphore toDepth: 1].
+		 self assert: (objectMemory isForwarded: (objectMemory fetchPointer: SuspendedContextIndex ofObject: firstLink)) not].
+
 	^self resume: (self removeFirstLinkOfList: aSemaphore)
 		preemptedYieldingIf: preemptionYields
 ]
@@ -12681,6 +12756,8 @@ StackInterpreter >> temporaryLocation: offset in: theFP numArgs: numArgs [
 
 { #category : #'object memory support' }
 StackInterpreter >> traceProfileState [
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[self followForwardingPointersInProfileState].
 	objectMemory markAndTrace: profileProcess.
 	objectMemory markAndTrace: profileMethod.
 	objectMemory markAndTrace: profileSemaphore.
@@ -12692,9 +12769,13 @@ StackInterpreter >> traceProfileState [
 	self sqLowLevelMFence.
 	(longRunningPrimitiveCheckMethod ~= nil
 	 and: [longRunningPrimitiveCheckSequenceNumber ~= statCheckForEvents]) ifTrue:
-		[objectMemory markAndTrace: longRunningPrimitiveCheckMethod].
+		[(objectMemory isForwarded: longRunningPrimitiveCheckMethod) ifTrue:
+			[longRunningPrimitiveCheckMethod := objectMemory followForwarded: longRunningPrimitiveCheckMethod].
+	objectMemory markAndTrace: longRunningPrimitiveCheckMethod].
 	longRunningPrimitiveCheckSemaphore ~= nil ifTrue:
-		[objectMemory markAndTrace: longRunningPrimitiveCheckSemaphore]
+		[(objectMemory isForwarded: longRunningPrimitiveCheckSemaphore) ifTrue:
+			[longRunningPrimitiveCheckSemaphore := objectMemory followForwarded: longRunningPrimitiveCheckSemaphore].
+		 objectMemory markAndTrace: longRunningPrimitiveCheckSemaphore]
 ]
 
 { #category : #'process primitive support' }
