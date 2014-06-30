@@ -8,6 +8,7 @@ Class {
 		'cogit',
 		'methodZone',
 		'objectMemory',
+		'coInterpreter',
 		'ceStoreCheckTrampoline'
 	],
 	#pools : [
@@ -221,6 +222,14 @@ CogObjectRepresentation >> markAndTraceLiteralIfYoung: literal [
 	self subclassResponsibility
 ]
 
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> maybeCompileRetry: retryInst onPrimitiveFail: primIndex [
+	<var: #retry type: #'AbstractInstruction *'>
+	"Object representations with lazy forwarding will want to check for
+	 forwarding pointers on primitive failure and retry the primitive if found.
+	 By default do nothing."
+]
+
 { #category : #'calling convention' }
 CogObjectRepresentation >> numRegArgs [
 	"Define how many register arguments a StackToRegisterMappingCogit can and should use
@@ -240,9 +249,10 @@ CogObjectRepresentation >> setCogit: aCogit methodZone: aMethodZone [
 	<doNotGenerate>
 	cogit := aCogit.
 	methodZone := aMethodZone.
-	objectMemory := (aCogit coInterpreter isKindOf: StackInterpreter)
-						ifTrue: [aCogit coInterpreter objectMemory]
-						ifFalse: [aCogit coInterpreter]
+	coInterpreter := aCogit coInterpreter.
+	objectMemory := (coInterpreter isKindOf: StackInterpreter)
+						ifTrue: [coInterpreter objectMemory]
+						ifFalse: [coInterpreter]
 ]
 
 { #category : #testing }

@@ -3210,6 +3210,17 @@ ObjectMemory >> isPointersNonImm: oop [
 	^(self formatOf: oop) <= self lastPointerFormat
 ]
 
+{ #category : #'interpreter access' }
+ObjectMemory >> isSemaphoreObj: anObj [
+	^(self fetchClassOfNonImm: anObj) = (self splObj: ClassSemaphore)
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> isSemaphoreOop: anOop [
+	^(self isNonImmediate: anOop)
+	 and: [self isSemaphoreObj: anOop]
+]
+
 { #category : #'header access' }
 ObjectMemory >> isWeak: oop [
 	"Answer true if the argument has only weak fields that can hold oops. See comment in formatOf:"
