@@ -1907,10 +1907,13 @@ InterpreterPrimitives >> primitiveInputSemaphore [
 	"old code for compatibility"
 	TheInputSemaphore = nil ifTrue:
 		[^self primitiveFail].
-	arg := self popStack.
-	(objectMemory fetchClassOf: arg) = (objectMemory splObj: ClassSemaphore) ifFalse:
-		[arg := objectMemory nilObject].
-	objectMemory splObj: TheInputSemaphore put: arg
+	(arg = objectMemory nilObject
+	 or: [objectMemory isSemaphoreOop: arg])
+		ifTrue:
+			[objectMemory splObj: TheInputSemaphore put: arg.
+			 self pop: 1]
+		ifFalse:
+			[self primitiveFailFor: PrimErrBadArgument]
 ]
 
 { #category : #'I/O primitives' }
@@ -2020,10 +2023,14 @@ InterpreterPrimitives >> primitiveInterruptSemaphore [
 	not a Semaphore, unregister the current interrupt 
 	semaphore. "
 	| arg |
-	arg := self popStack.
-	(objectMemory fetchClassOf: arg) = (objectMemory splObj: ClassSemaphore)
-		ifTrue: [objectMemory splObj: TheInterruptSemaphore put: arg]
-		ifFalse: [objectMemory splObj: TheInterruptSemaphore put: objectMemory nilObject]
+	arg := self stackTop.
+	(arg = objectMemory nilObject
+	 or: [objectMemory isSemaphoreOop: arg])
+		ifTrue:
+			[objectMemory splObj: TheInterruptSemaphore put: arg.
+			 self pop: 1]
+		ifFalse:
+			[self primitiveFailFor: PrimErrBadArgument]
 ]
 
 { #category : #'control primitives' }
@@ -2271,12 +2278,16 @@ InterpreterPrimitives >> primitiveLogN [
 { #category : #'memory space primitives' }
 InterpreterPrimitives >> primitiveLowSpaceSemaphore [
 	"Register the low-space semaphore. If the argument is not a 
-	Semaphore, unregister the current low-space Semaphore."
+	 Semaphore, unregister the current low-space Semaphore."
 	| arg |
-	arg := self popStack.
-	(objectMemory fetchClassOf: arg) = (objectMemory splObj: ClassSemaphore)
-		ifTrue: [objectMemory splObj: TheLowSpaceSemaphore put: arg]
-		ifFalse: [objectMemory splObj: TheLowSpaceSemaphore put: objectMemory nilObject]
+	arg := self stackTop.
+	(arg = objectMemory nilObject
+	 or: [objectMemory isSemaphoreOop: arg])
+		ifTrue:
+			[objectMemory splObj: TheLowSpaceSemaphore put: arg.
+			 self pop: 1]
+		ifFalse:
+			[self primitiveFailFor: PrimErrBadArgument]
 ]
 
 { #category : #'arithmetic integer primitives' }
@@ -2788,14 +2799,15 @@ InterpreterPrimitives >> primitiveProfileSemaphore [
 	See also primitiveProfileStart."
 	| sema |
 	<export: true>
-	self methodArgumentCount = 1 ifFalse:[^self success: false].
+	self methodArgumentCount = 1 ifFalse:
+		[^self primitiveFailFor: PrimErrBadNumArgs].
 	sema := self stackValue: 0.
-	sema = objectMemory nilObject ifFalse:[
-		(objectMemory fetchClassOf: sema) = (objectMemory splObj: ClassSemaphore) 
-			ifFalse:[^self success: false]].
+	(sema = objectMemory nilObject
+	 or: [objectMemory isSemaphoreOop: sema]) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
 	profileSemaphore := sema.
 	profileProcess := profileMethod := objectMemory nilObject.
-	self pop: 1.
+	self pop: 1
 ]
 
 { #category : #'process primitives' }
@@ -3586,20 +3598,22 @@ InterpreterPrimitives >> primitiveSuspend [
 	its corresponding list. The primitive returns the list the receiver was previously on."
 	| process myList |
 	process := self stackTop.
-	process = self activeProcess ifTrue:[
-		self pop: 1 thenPush: objectMemory nilObject.
-		self transferTo: self wakeHighestPriority.
-	] ifFalse:[
-		myList := objectMemory fetchPointer: MyListIndex ofObject: process.
-		"XXXX Fixme. We should really check whether myList is a kind of LinkedList or not
-		but we can't easily so just do a quick check for nil which is the most common case."
-		myList = objectMemory nilObject ifTrue:[^self primitiveFail].
-		self removeProcess: process fromList: myList.
-		self successful ifTrue:[
-			objectMemory storePointer: MyListIndex ofObject: process withValue: objectMemory nilObject.
-			self pop: 1 thenPush: myList.
-		].
-	]
+	process = self activeProcess ifTrue:
+		[self pop: 1 thenPush: objectMemory nilObject.
+		 ^self transferTo: self wakeHighestPriority].
+	myList := objectMemory fetchPointer: MyListIndex ofObject: process.
+	"XXXX Fixme. We should really check whether myList is a kind of LinkedList or not
+	but we can't easily so just do a quick check for nil which is the most common case."
+	myList = objectMemory nilObject ifTrue:
+		[^self primitiveFailFor: PrimErrBadReceiver].
+	"Alas in Spur we need a read barrier"
+	(objectMemory isForwarded: myList) ifTrue:
+		[myList := objectMemory followForwarded: myList.
+		 objectMemory storePointer: MyListIndex ofObject: process withValue: myList].
+	self removeProcess: process fromList: myList.
+	self successful ifTrue:
+		[objectMemory storePointer: MyListIndex ofObject: process withValue: objectMemory nilObject.
+		 self pop: 1 thenPush: myList]
 ]
 
 { #category : #'process primitives' }

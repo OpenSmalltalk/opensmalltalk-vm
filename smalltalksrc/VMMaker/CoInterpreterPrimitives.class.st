@@ -317,18 +317,17 @@ CoInterpreterPrimitives >> primitiveLongRunningPrimitiveSemaphore [
 	 or nil if no semaphore should be used."
 	| sema flushState activeContext |
 	<export: true>
+	self methodArgumentCount ~= 1 ifTrue:
+		[^self primitiveFailFor: PrimErrBadNumArgs].
 	sema := self stackValue: 0.
-	((objectMemory isIntegerObject: sema)
-	or: [self methodArgumentCount ~= 1]) ifTrue:
-		[^self primitiveFail].
 	sema = objectMemory nilObject
 		ifTrue:
 			[flushState := longRunningPrimitiveCheckSemaphore notNil.
 			 longRunningPrimitiveCheckSemaphore := nil]
 		ifFalse:
 			[flushState := longRunningPrimitiveCheckSemaphore isNil.
-			 (objectMemory fetchClassOfNonImm: sema) = (objectMemory splObj: ClassSemaphore) ifFalse:
-				[^self primitiveFail].
+			 (objectMemory isSemaphoreOop: sema) ifFalse:
+				[^self primitiveFailFor: PrimErrBadArgument].
 			 longRunningPrimitiveCheckSemaphore := sema].
 	"If we've switched checking on or off we must void machine code
 	 (and machine code pcs in contexts) since we will start or stop setting
@@ -340,7 +339,7 @@ CoInterpreterPrimitives >> primitiveLongRunningPrimitiveSemaphore [
 		 self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
 		 self assert: (((self stackValue: 0) = objectMemory nilObject and: [longRunningPrimitiveCheckSemaphore isNil])
 				  or: [(self stackValue: 0) = longRunningPrimitiveCheckSemaphore
-					  and: [(objectMemory fetchClassOfNonImm: sema) = (objectMemory splObj: ClassSemaphore)]])].
+					  and: [objectMemory isSemaphoreOop: sema]])].
 	self voidLongRunningPrimitive: 'install'.
 	self pop: 1.
 	flushState ifTrue:
@@ -433,17 +432,16 @@ CoInterpreterPrimitives >> primitiveProfileSemaphore [
 	See also primitiveProfileStart."
 	| sema flushState activeContext |
 	<export: true>
+	self methodArgumentCount ~= 1 ifTrue:
+		[^self primitiveFailFor: PrimErrBadNumArgs].
 	sema := self stackValue: 0.
-	((objectMemory isIntegerObject: sema)
-	or: [self methodArgumentCount ~= 1]) ifTrue:
-		[^self primitiveFail].
 	sema = objectMemory nilObject
 		ifTrue:
 			[flushState := profileSemaphore ~= objectMemory nilObject]
 		ifFalse:
 			[flushState := profileSemaphore = objectMemory nilObject.
-			 (objectMemory fetchClassOfNonImm: sema) = (objectMemory splObj: ClassSemaphore) ifFalse:
-				[^self primitiveFail]].
+			 (objectMemory isSemaphoreOop: sema) ifFalse:
+				[^self primitiveFailFor: PrimErrBadArgument]].
 	profileSemaphore := sema.
 	"If we've switched profiling on or off we must void machine code
 	 (and machine code pcs in contexts) since we will start or stop
@@ -455,7 +453,7 @@ CoInterpreterPrimitives >> primitiveProfileSemaphore [
 		 self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
 		 self assert: (((self stackValue: 0) = objectMemory nilObject and: [profileSemaphore = objectMemory nilObject])
 				  or: [(self stackValue: 0) = profileSemaphore
-					  and: [(objectMemory fetchClassOfNonImm: sema) = (objectMemory splObj: ClassSemaphore)]])].
+					  and: [objectMemory isSemaphoreOop: sema]])].
 	profileProcess := profileMethod := objectMemory nilObject.
 	self pop: 1.
 	flushState ifTrue:
@@ -599,7 +597,12 @@ CoInterpreterPrimitives >> primitiveSuspend [
 	myList := objectMemory fetchPointer: MyListIndex ofObject: process.
 	"XXXX Fixme. We should really check whether myList is a kind of LinkedList or not
 	but we can't easily so just do a quick check for nil which is the most common case."
-	myList = objectMemory nilObject ifTrue:[^self primitiveFail].
+	myList = objectMemory nilObject ifTrue:
+		[^self primitiveFailFor: PrimErrBadReceiver].
+	"Alas in Spur we need a read barrier"
+	(objectMemory isForwarded: myList) ifTrue:
+		[myList := objectMemory followForwarded: myList.
+		 objectMemory storePointer: MyListIndex ofObject: process withValue: myList].
 	self removeProcess: process fromList: myList.
 	self successful ifTrue:
 		[objectMemory storePointer: MyListIndex ofObject: process withValue: objectMemory nilObject.

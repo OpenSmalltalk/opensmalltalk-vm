@@ -1271,7 +1271,7 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	"Compile the code for an open PIC.  Perform a probe of the first-level method
 	 lookup cache followed by a call of ceSendFromInLineCacheMiss: if the probe fails.
 	 Override to push the register args when calling ceSendFromInLineCacheMiss:"
-	| jumpSelectorMiss jumpClassMiss itsAHit jumpBCMethod routine |
+	| jumpSelectorMiss jumpClassMiss itsAHit jumpBCMethod |
 	<var: #jumpSelectorMiss type: #'AbstractInstruction *'>
 	<var: #jumpClassMiss type: #'AbstractInstruction *'>
 	<var: #itsAHit type: #'AbstractInstruction *'>
@@ -1353,15 +1353,15 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	backEnd genPushRegisterArgsForNumArgs: numArgs.
 	self genSmalltalkToCStackSwitch.
 	methodLabel addDependent: (self annotateAbsolutePCRef: (self MoveCw: methodLabel asInteger R: SendNumArgsReg)).
-	cStackAlignment > BytesPerWord ifTrue:
-		[backEnd
-			genAlignCStackSavingRegisters: false
-			numArgs: 1
-			wordAlignment: cStackAlignment / BytesPerWord].
-	backEnd genPassReg: SendNumArgsReg asArgument: 0.
-	routine := self cCode: '(sqInt)ceSendFromInLineCacheMiss'
-					inSmalltalk: [self simulatedAddressFor: #ceSendFromInLineCacheMiss:].
-	self annotateCall: (self Call: routine)
+	self 
+		compileCallFor: #ceSendFromInLineCacheMiss:
+		numArgs: 1
+		arg: SendNumArgsReg
+		arg: nil
+		arg: nil
+		arg: nil
+		resultReg: nil
+		saveRegs: false
 	"Note that this call does not return."
 ]
 
@@ -3439,11 +3439,7 @@ StackToRegisterMappingCogit >> generateMissAbortTrampolines [
 		[:numArgs|
 		picMissTrampolines
 			at: numArgs
-			put: (self genPICMissTrampolineFor: numArgs)].
-	self cCode: '' inSmalltalk:
-		[simulatedTrampolines
-			at: (self simulatedAddressFor: #ceSendFromInLineCacheMiss:)
-			put: #ceSendFromInLineCacheMiss:]
+			put: (self genPICMissTrampolineFor: numArgs)]
 ]
 
 { #category : #initialization }
