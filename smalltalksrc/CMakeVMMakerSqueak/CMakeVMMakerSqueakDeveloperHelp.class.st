@@ -99,7 +99,7 @@ Concrete implementations of SqueakCMakeVMMakerAbstractBuilder provide an invokat
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(overview prerequisites  terms igorStasenkoDesign  buildersAndConfigs plugins )
+	^#(overview prerequisites  terms igorStasenkoDesign  buildersAndConfigs plugins pthreads)
 ]
 
 { #category : #pages }
@@ -137,6 +137,60 @@ CMakeVMMakerSqueakDeveloperHelp class >> prerequisites [
 CMake from  http://www.cmake.org/ is required to process the output of this package.
 
 This package was written using cmake version 2.8.12
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> pthreads [
+	^HelpTopic
+		title:'PThreads'
+		contents:'
+
+http://www.mirandabanda.org/files/Cog/VM/VM.r3006/README.3006
+
+N.B. For Squeak/Pharo/Croquet please use the archives whose names begin with
+     Cog or cog.  The archives whose names begin with nsvm or Newspeak are
+     for Newspeak and are missing plugins required by Squeak/Pharo/Croquet.
+     VMs with "mt" or "MT" in the name are multi-threaded VMs which support
+     non-blocking FFI calls.  The archives containing "Spur" or "spur" are
+     VMs using the new Spur object representation and garbage collector and
+     should be used with Spur-format Squeak/Pharo/Croquet or Newspeak images.
+
+     There are two variants of the Linux VMs; those ending in "ht" have a
+     heartbeat thread, while those that don''t, use an interval timer for the
+     heartbeat (the Windows and Mac VMs have a threaded heartbeat).  The
+     threaded heartbeat is better (for example, signals from the interval timer
+     interfere with system calls, etc), but to use it one must have a kernel
+     later than 2.6.12 and configure linux to allow the VM to use multiple
+     thread priorities.  To do so, create a file called VM.conf where VM is
+     the name of the vm executable ("squeak" for the Squeak vm, "nsvm" for
+     the Newspeak vm) in /etc/security/limits.d/ with contents:
+*       hard    rtprio  2
+*       soft    rtprio  2
+
+     e.g.
+sudo cat >/etc/security/limits.d/squeak.conf <<END
+*       hard    rtprio  2
+*       soft    rtprio  2
+END
+sudo cp /etc/security/limits.d/squeak.conf /etc/security/limits.d/nsvm.conf
+     Then log out and log back in for the limits to take effect.
+
+
+On Slackware linux 14.0  
+bash$ man limits
+
+From the man page, the O (oh) option is:   O: max real time priority
+
+create a file /etc/limits file and add an entry
+
+tty O100
+
+where tty is the login name, and the O option is set to 100.
+
+Logout and re-login.
+
+
 '
 ]
 

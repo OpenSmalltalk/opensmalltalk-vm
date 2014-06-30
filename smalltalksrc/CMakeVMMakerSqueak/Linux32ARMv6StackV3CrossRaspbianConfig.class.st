@@ -300,11 +300,6 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> interpreterClass [
 	^ StackInterpreter
 ]
 
-{ #category : #accessing }
-Linux32ARMv6StackV3CrossRaspbianConfig >> linkFlags [
-	 ^ '-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'
-]
-
 { #category : #'source files' }
 Linux32ARMv6StackV3CrossRaspbianConfig >> preferredIncludesBuild [
 	^ #('${CMAKE_FIND_ROOT_PATH}/usr/include/'

@@ -138,26 +138,6 @@ the return array embeds 'self executableName' which does not exist in an Abstrac
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakCommonConfigTest >> testCoreSources [
-	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
-		do:[:each | 
-			(Smalltalk at:each) 
-				allSubclassesDo:[:configuration | | o |
-					configuration isAbstractBaseClass not
-						ifTrue:[	o:= configuration new.
-								o excludeFromBuild not
-									ifTrue:[self assert:(o  coreSources isArray)]]]]
-
-
-
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testCrossSources [
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
 		do:[:each | 

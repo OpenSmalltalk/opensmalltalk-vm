@@ -365,13 +365,61 @@ SqueakWin32x86Config >> configureWin32OSProcessPlugin: maker [
 ]
 
 { #category : #'source files' }
-SqueakWin32x86Config >> coreSources [
+SqueakWin32x86Config >> coreSourcesBuild [
 	"files to include from src/vm dir"
 	
 	^ #(
 		'cogit.c'
 		'gcc3x-cointerp.c'
 		)
+]
+
+{ #category : #'source files' }
+SqueakWin32x86Config >> coreSourcesBuildAssert [
+	^self coreSourcesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakWin32x86Config >> coreSourcesBuildAssertITimerHeartbeat [
+	^self coreSourcesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakWin32x86Config >> coreSourcesBuildDebug [
+	^self coreSourcesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakWin32x86Config >> coreSourcesBuildDebugITimerHeartbeat [
+	^self coreSourcesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakWin32x86Config >> coreSourcesBuildITimerHeartbeat [
+	^self coreSourcesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakWin32x86Config >> coreSourcesBuildMultiThreaded [
+	^self coreSourcesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakWin32x86Config >> coreSourcesBuildMultiThreadedAssert [
+	^self coreSourcesBuild
+
+]
+
+{ #category : #'source files' }
+SqueakWin32x86Config >> coreSourcesBuildMultiThreadedDebug [
+	^self coreSourcesBuild
+
 ]
 
 { #category : #plugins }
