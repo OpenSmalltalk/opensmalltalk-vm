@@ -296,13 +296,57 @@ Linux64Config >> configHBuildMultiThreadedDebug [
 	^ self configHBuild
 ]
 
-{ #category : #'source files' }
-Linux64Config >> coreSources [
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> coreSourcesBuild [
 	"files to include from src/vm dir"
 	^ #(
 		'cogit.c'
 		'gcc3x-cointerp.c'
 		)
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> coreSourcesBuildAssert [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> coreSourcesBuildAssertITimerHeartbeat [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> coreSourcesBuildDebug [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> coreSourcesBuildDebugITimerHeartbeat [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> coreSourcesBuildITimerHeartbeat [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> coreSourcesBuildMultiThreaded [
+	"files to include from src/vm dir"
+	^ #(
+		'cogit.c'
+		'cointerpmt.c'
+		)
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> coreSourcesBuildMultiThreadedAssert [
+	^self coreSourcesBuildMultiThreaded	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> coreSourcesBuildMultiThreadedDebug [
+	^self coreSourcesBuildMultiThreaded	
 ]
 
 { #category : #'source files' }

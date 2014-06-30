@@ -50,7 +50,6 @@ CMakeVMGeneratorForSqueak >> configurationName [
 
 { #category : #'code generation' }
 CMakeVMGeneratorForSqueak >> generate [
-	"overriding CMakeVMGenerator to provide additional method calls"
 	| intPlugins extPlugins |
 			
 	output := String new writeStream.
@@ -67,26 +66,13 @@ CMakeVMGeneratorForSqueak >> generate [
 	self message: '${CMAKE_MODULE_PATH}'.
 	self set: 'CMAKE_CONFIGURATION_TYPES' to: 'Release'.
 
-	config preferredIncludes 	do: [ :each | self includeDirectories: each ].
+	config preferredIncludes 
+		do: [ :each | self includeDirectories: each ].
 	self includeDirectories: self includeDirs.	
-	config standardIncludes 	do: [:each | self includeDirectories: each ].
+	config standardIncludes 
+		do: [:each | self includeDirectories: each ].
 
-	"tty. 
-	we replace the catchAll compilerFlags with methods that reflect the 'mvm' file used in the gnu-build system
-	i.e. oscogvm/build.linux32x86/squeak.cog.v3/build/mvm
-	My intent is to make setup of a new configuration easier for somebody coming from GNU-land"
-
-"	self addDefinitions: config compilerFlags.
-
-	config configureFlags do:[:each | self configureFlags: each].
-	config cC do:[:each | self cC: each].
-	config cXX do:[:each | self cXX: each].
-	config lDFlags do:[:each | self lDFlags: each].
-	config libs do:[:each | self libs: each].
-"
-	self flag:'tty'. "This should be replaced with judicious use of above"
-	 self addDefinitions: config cFlags.   
-	self flag:'tty'. "end this should be replaced"
+	self addDefinitions: config compilerFlags.
 
 	config extraVMSettings: self.
 	
@@ -105,11 +91,9 @@ CMakeVMGeneratorForSqueak >> generate [
 		params: self moduleName , ' ${LINKLIBS}'.
 
 	config postBuildActions: self.
-
+	
 	self saveFile.
 	self generateBuildScript.
-
-
 ]
 
 { #category : #'as yet unclassified' }

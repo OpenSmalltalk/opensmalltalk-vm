@@ -77,13 +77,7 @@ SqueakMacintoshConfig >> configureForBuildType: aSymbol [
 	self 	
 		preferredIncludes;
 		standardIncludes;
-"
-Cog/build.macos32x86/squeak.cog.v3/mvm makes no reference (that I can see) of these variables. 
-		cC;                       
-		cXX;                      
-		lDFlags;                  
-		libs;                     
-"
+
 		internalPlugins;
 		externalPlugins.
 

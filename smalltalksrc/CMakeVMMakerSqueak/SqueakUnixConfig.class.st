@@ -113,7 +113,7 @@ SqueakUnixConfig >> configH [
 		at: #build put: [self configHBuild];
 		at: #buildAssert  put: [self configHBuildAssert];
 		at: #buildAssertITimerHeartbeat  put: [self configHBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self cFlagsBuildDebug];   
+            at:#buildDebug  put: [self configHBuildDebug];   
 		at: #buildDebugITimerHeartbeat  put: [self configHBuildDebugITimerHeartbeat ];
 		at: #buildITimerHeartbeat  put: [self configHBuildITimerHeartbeat];
 		at: #buildMultiThreaded  put: [self configHBuildMultiThreaded];
@@ -295,10 +295,8 @@ SqueakUnixConfig >> configureForBuildType: aSymbol [
 		preferredIncludes;
 		standardIncludes;
 		configureFlags;     "  configure --without-npsqueak --with-src=stacksrc --with-plugins=src/plugins --disable-cogi --without-vm-display-fbdev  --x-libraries=/usr/lib --without-gl "
-		cC;                         " CC=''gcc -m32 -v''"
-		cXX;                        "CXX=''g++ -m32'"
-		lDFlags;                    " LDFLAGS=-Wl,-z,now"
-		libs;                         " LIBS=''-lpthread -luuid''"
+		compilerFlags;
+		linkFlags;                         " LIBS=''-lpthread -luuid''"
 		internalPlugins;
 		externalPlugins.
 

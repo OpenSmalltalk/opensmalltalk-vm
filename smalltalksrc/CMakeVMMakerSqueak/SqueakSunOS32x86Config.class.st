@@ -225,13 +225,61 @@ SqueakSunOS32x86Config >> configHBuildMultiThreadedDebug [
 	^ self configHBuild
 ]
 
-{ #category : #'source files' }
-SqueakSunOS32x86Config >> coreSources [
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> coreSourcesBuild [
 	self flag:'tty'. "Is this correct for this platform?"
 	^ #(
 		'cogit.c'
 		'gcc3x-cointerp.c'
 		)
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> coreSourcesBuildAssert [
+	^self coreSourcesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> coreSourcesBuildAssertITimerHeartbeat [
+	^self coreSourcesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> coreSourcesBuildDebug [
+	^self coreSourcesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> coreSourcesBuildDebugITimerHeartbeat [
+	^self coreSourcesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> coreSourcesBuildITimerHeartbeat [
+	^self coreSourcesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> coreSourcesBuildMultiThreaded [
+	^self coreSourcesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> coreSourcesBuildMultiThreadedAssert [
+	^self coreSourcesBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> coreSourcesBuildMultiThreadedDebug [
+	^self coreSourcesBuild
+
 ]
 
 { #category : #plugins }

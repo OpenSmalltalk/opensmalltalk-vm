@@ -127,11 +127,6 @@ Linux32ARMv6StackV3RaspbianConfig >> interpreterClass [
 	^ StackInterpreter
 ]
 
-{ #category : #accessing }
-Linux32ARMv6StackV3RaspbianConfig >> linkFlags [
-	 ^ '-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'
-]
-
 { #category : #'cmake buildType redirects' }
 Linux32ARMv6StackV3RaspbianConfig >> setExtraTargetPropertiesBuild: aMaker [
 

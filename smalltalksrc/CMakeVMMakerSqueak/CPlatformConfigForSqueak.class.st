@@ -301,291 +301,6 @@ CPlatformConfigForSqueak >> buildType: aSymbol [
 	buildType:= aSymbol
 ]
 
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cC [
-	"Route this message send to the message appropriate for my buildType "
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self cCBuild];
-		at: #buildAssert  put: [self cCBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self cCBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self cCBuildDebug];   
-		at: #buildDebugITimerHeartbeat  put: [self cCBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self cCBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self cCBuildMultiThreaded];
-		at: #buildMultiThreadedAssert  put: [self cCBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self cCBuildMultiThreadedDebug ];
-		at: #buildNone put:[self cCNoBuildType].
-	^(d at: buildType) value
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cCBuild [
-	"example:
-	^{ '-m32'}"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cCBuildAssert [
-	"examples:
-	^{ '-m32'}
-	^self ccBuild"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cCBuildAssertITimerHeartbeat [
-	"examples:
-	^{ '-m32'}
-	^self ccBuild"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cCBuildDebug [
-	"examples:
-	^{ '-m32'}
-	^self ccBuild"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cCBuildDebugITimerHeartbeat [
-	"examples
-	^{ '-m32'}
-	^self ccBuild"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cCBuildITimerHeartbeat [
-	"examples
-	^{ '-m32'}
-	^self ccBuild"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cCBuildMultiThreaded [
-	"examples
-	^{ '-m32'}
-	^self ccBuild"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cCBuildMultiThreadedAssert [
-	"examples
-	^{ '-m32'}
-	^self ccBuild"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cCBuildMultiThreadedDebug [
-	"examples
-	^{ '-m32'}
-	^self ccBuild"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cCNoBuildType [
-	"SHOULD NOT GET HERE"
-	self shouldNotImplement.
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cFlags [
-	"Route this message send to the message appropriate for my buildType "
-	|d |
-	self flag:'tty'. "this should be replaced by cC cXX lDFlags libs "
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self cFlagsBuild];
-		at: #buildAssert  put: [self cFlagsBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self cFlagsBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self cFlagsBuildDebug];   
-		at: #buildDebugITimerHeartbeat  put: [self cFlagsBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self cFlagsBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self cFlagsBuildMultiThreaded];
-		at: #buildMultiThreadedAssert  put: [self cFlagsBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self cFlagsBuildMultiThreadedDebug ];
-		at: #buildNone put:[self cFlagsNoBuildType].
-	^(d at: buildType) value
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cFlagsBuild [
-	 "This will be going away in place of cC, cXX, lDFlags, libs methods 
-	   currently, it answers a string like this:
-	^'-msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0' 
-"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cFlagsBuildAssert [
-	 "This will be going away in place of cC, cXX, lDFlags, libs methods 
-	^self cFlagsBuild
-"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cFlagsBuildAssertITimerHeartbeat [
-	 "This will be going away in place of cC, cXX, lDFlags, libs methods 
-	^self cFlagsBuild
-"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cFlagsBuildDebug [
-	 "This will be going away in place of cC, cXX, lDFlags, libs methods 
-	^self cFlagsBuild
-"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cFlagsBuildDebugITimerHeartbeat [
-	 "This will be going away in place of cC, cXX, lDFlags, libs methods 
-	^self cFlagsBuild
-"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cFlagsBuildITimerHeartbeat [
-	 "This will be going away in place of cC, cXX, lDFlags, libs methods 
-	^self cFlagsBuild
-"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cFlagsBuildMultiThreaded [
-	 "This will be going away in place of cC, cXX, lDFlags, libs methods 
-	^self cFlagsBuild
-"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cFlagsBuildMultiThreadedAssert [
-	 "This will be going away in place of cC, cXX, lDFlags, libs methods 
-	^self cFlagsBuild
-"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cFlagsBuildMultiThreadedDebug [
-	 "This will be going away in place of cC, cXX, lDFlags, libs methods 
-	^self cFlagsBuild
-"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cFlagsNoBuildType [
-	"SHOULD NOT GET HERE"
-	self shouldNotImplement.
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cXX [
-	"Route this message send to the message appropriate for my buildType "
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self cXXBuild];
-		at: #buildAssert  put: [self cXXBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self cXXBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self cXXBuildDebug];   
-		at: #buildDebugITimerHeartbeat  put: [self cXXBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self cXXBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self cXXBuildMultiThreaded];
-		at: #buildMultiThreadedAssert  put: [self cXXBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self cXXBuildMultiThreadedDebug ];
-		at: #buildNone put:[self cXXNoBuildType].
-	^(d at: buildType) value
-
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cXXBuild [
-	"example:
-	^{ 'g++ -m32'}"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cXXBuildAssert [
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cXXBuildAssertITimerHeartbeat [
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cXXBuildDebug [
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cXXBuildDebugITimerHeartbeat [
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cXXBuildITimerHeartbeat [
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cXXBuildMultiThreaded [
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cXXBuildMultiThreadedAssert [
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cXXBuildMultiThreadedDebug [
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cXXNoBuildType [
-	"SHOULD NOT GET HERE"
-	self shouldNotImplement.
-
-]
-
 { #category : #'source generation' }
 CPlatformConfigForSqueak >> cogitClass [
 	self subclassResponsibility
@@ -603,6 +318,15 @@ CPlatformConfigForSqueak >> cogitClass [
 
 ]
 
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> comilerFlagsBuildAssertITimerHeartbeat [
+	 "This will be going away in place of cC, cXX, lDFlags, libs methods 
+	^self cFlagsBuild
+"
+
+	self subclassResponsibility
+]
+
 { #category : #'compiler flags' }
 CPlatformConfigForSqueak >> commonCompilerFlags [
 	self	subclassResponsibility
@@ -610,24 +334,85 @@ CPlatformConfigForSqueak >> commonCompilerFlags [
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> compilerFlags [
-	"compilerFlags routes to cFlagsXYZ in Squeak implementation.  
-	This represents the CFLAGS line in the GNU system's mvm file that reads like CFLAGS=''$OPT -msse2 -D_GNU_SOURCE..'' "
-	|d |
-	self flag:'tty'. "figure out what from cC, cXX, lDFlags, libs to pipe into here once system is functioning"
+	|d flags|
 	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	d 		
-		at: #build put: [self cFlagsBuild];
-		at: #buildAssert  put: [self cFlagsBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self cFlagsBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self cFlagsBuildDebug];   
-		at: #buildDebugITimerHeartbeat  put: [self cFlagsBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self cFlagsBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self cFlagsBuildMultiThreaded];
-		at: #buildMultiThreadedAssert  put: [self cFlagsBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self cFlagsBuildMultiThreadedDebug ];
-		at: #buildNone put:[self cFlagsNoBuildType].
-	^(d at: buildType) value
+		at: #build put: [self compilerFlagsBuild];
+		at: #buildAssert  put: [self compilerFlagsBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self compilerFlagsBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self compilerFlagsBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self compilerFlagsBuildMultiThreaded];
+		at: #buildMultiThreadedAssert  put: [self compilerFlagsBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self compilerFlagsBuildMultiThreadedDebug ];
+		at: #buildNone put:[self compilerFlagsNoBuildType].
+	flags := String
+				streamContents: [:stream | ((d at: buildType) value collect: #withBlanksTrimmed as: Set)
+						asStringOn: stream
+						delimiter: ' '].
+	^flags.
 
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> compilerFlagsBuild [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> compilerFlagsBuildAssert [
+	 "^self comilerFlagsBuild
+"
+
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> compilerFlagsBuildDebug [
+	 "^self compilerFlagsBuild"
+
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> compilerFlagsBuildDebugITimerHeartbeat [
+	 "	^self compilerFlagsBuild"
+
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> compilerFlagsBuildITimerHeartbeat [
+	 "^self comilerFlagsBuild
+"
+
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> compilerFlagsBuildMultiThreaded [
+	 "^self comilerFlagsBuild
+"
+
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> compilerFlagsBuildMultiThreadedAssert [
+	 "^self comilerFlagsBuild
+"
+
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> compilerFlagsBuildMultiThreadedDebug [
+	 "^self comilerFlagsBuild
+"
+
+	self subclassResponsibility
 ]
 
 { #category : #'gnu build system mvm file' }
@@ -839,16 +624,74 @@ CPlatformConfigForSqueak >> configureNoBuildType [
 		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
 ]
 
-{ #category : #'source files' }
+{ #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> coreSources [
-"
-	SystemNavigation default browseMethodsWhoseNamesContain: 'coreSources'
-	^ #(
-		'cogit.c'
-		'gcc3x-cointerp.c'
-		)
-"
+	"Route this message send to the message appropriate for my buildType "
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self coreSourcesBuild];
+		at: #buildAssert  put: [self coreSourcesBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self coreSourcesBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self coreSourcesBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self coreSourcesBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self coreSourcesBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self coreSourcesBuildMultiThreaded];
+		at: #buildMultiThreadedAssert  put: [self coreSourcesBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self coreSourcesBuildMultiThreadedDebug ];
+		at: #buildNone put:[self coreSourcesNoBuildType].
+	^(d at: buildType) value
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> coreSourcesBuild [
 	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> coreSourcesBuildAssert [
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> coreSourcesBuildAssertITimerHeartbeat [
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> coreSourcesBuildDebug [
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> coreSourcesBuildDebugITimerHeartbeat [
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> coreSourcesBuildITimerHeartbeat [
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> coreSourcesBuildMultiThreaded [
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> coreSourcesBuildMultiThreadedAssert [
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> coreSourcesBuildMultiThreadedDebug [
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> coreSourcesNoBuildType [
+	"SHOULD NOT GET HERE"
+	self shouldNotImplement.
 
 ]
 
@@ -1932,210 +1775,138 @@ CPlatformConfigForSqueak >> lDFlagsNoBuildType [
 
 ]
 
-{ #category : #'gnu build system mvm file' }
-CPlatformConfigForSqueak >> libs [
-	"Route this message send to the message appropriate for my buildType "
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self libsBuild];
-		at: #buildAssert  put: [self libsBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self libsBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self libsBuildDebug];   
-		at: #buildDebugITimerHeartbeat  put: [self libsBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self libsBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self libsBuildMultiThreaded];
-		at: #buildMultiThreadedAssert  put: [self libsBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self libsBuildMultiThreadedDebug ];
-		at: #buildNone put:[self libsNoBuildType].
-	^(d at: buildType) value
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> libsBuild [
-	"Answer array of flags like the 	LIBS=''-lpthread -luuid''  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'
-
-	^ { 
-		'-lpthread'
-           . '-luuid'
-	   }
-	"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> libsBuildAssert [
-	"Answer array of flags like the 	LIBS=''-lpthread -luuid''  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'
-
-	^ { 
-		'-lpthread'
-           . '-luuid'
-	   }
-	
-	^self libsBuild
-	"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> libsBuildAssertITimerHeartbeat [
-	"Answer array of flags like the 	LIBS=''-lpthread -luuid''  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'
-
-	^ { 
-		'-lpthread'
-           . '-luuid'
-	   }
-	
-	^self libsBuild
-	"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> libsBuildDebug [
-	"Answer array of flags like the 	LIBS=''-lpthread -luuid''  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'
-
-	^ { 
-		'-lpthread'
-           . '-luuid'
-	   }
-	
-	^self libsBuild
-	"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> libsBuildDebugITimerHeartbeat [
-	"Answer array of flags like the 	LIBS=''-lpthread -luuid''  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'
-
-	^ { 
-		'-lpthread'
-           . '-luuid'
-	   }
-	
-	^self libsBuild
-	"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> libsBuildITimerHeartbeat [
-	"Answer array of flags like the 	LIBS=''-lpthread -luuid''  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'
-
-	^ { 
-		'-lpthread'
-           . '-luuid'
-	   }
-	
-	^self libsBuild
-	"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> libsBuildMultiThreaded [
-	"Answer array of flags like the 	LIBS=''-lpthread -luuid''  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'
-
-	^ { 
-		'-lpthread'
-           . '-luuid'
-	   }
-	
-	^self libsBuild
-	"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> libsBuildMultiThreadedAssert [
-	"Answer array of flags like the 	LIBS=''-lpthread -luuid''  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'
-
-	^ { 
-		'-lpthread'
-           . '-luuid'
-	   }
-	
-	^self libsBuild
-	"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> libsBuildMultiThreadedDebug [
-	"Answer array of flags like the 	LIBS=''-lpthread -luuid''  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'
-
-	^ { 
-		'-lpthread'
-           . '-luuid'
-	   }
-	
-	^self libsBuild
-	"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> libsNoBuildType [
-	"SHOULD NOT GET HERE"
-	self shouldNotImplement.
-
-
-]
-
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> linkFlags [
-	"Depracated Re-route this to the new libs method"
+	" '-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11' -L/usr/lib32 etc..."
 	|d |
-	self flag:'tty'. "Get rid of this method as 'libs' is the better method name for what we are doing"
-	self deprecated: ' use ''libs'' method instead'.
 	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	d 
-		at: #build put: [self libsBuild];
-		at: #buildAssert  put: [self libsBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self libsBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self libsBuildDebug];   
-		at: #buildDebugITimerHeartbeat  put: [self libsBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self libsBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self libsBuildMultiThreaded ];
-		at: #buildMultiThreadedAssert  put: [self libsBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self libsBuildMultiThreadedDebug ];
-		at: #buildNone put:[self libsNoBuildType].
+		at: #build put: [self linkFlagsBuild];
+		at: #buildAssert  put: [self linkFlagsBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self linkFlagsBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self linkFlagsBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self linkFlagsBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self linkFlagsBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self linkFlagsBuildMultiThreaded ];
+		at: #buildMultiThreadedAssert  put: [self linkFlagsBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self linkFlagsBuildMultiThreadedDebug ];
+		at: #buildNone put:[self linkFlagsNoBuildType].
 	^(d at: buildType) value
+
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> linkFlagsBuild [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'linkFlagsBuild'
+
+	^ { 
+		'-lpthread'
+           . '-luuid'
+	   }
+	"
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> linkFlagsBuildAssert [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'linkFlagsBuildAssert'
+
+	^ { 
+		'-lpthread'
+           . '-luuid'
+	   }
+	"
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> linkFlagsBuildAssertITimerHeartbeat [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'linkFlagsBuildAssertITimerHeartbeat'
+
+	^ { 
+		'-lpthread'
+           . '-luuid'
+	   }
+	"
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> linkFlagsBuildDebug [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'linkFlagsBuildDebug'
+
+	^ { 
+		'-lpthread'
+           . '-luuid'
+	   }
+	"
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> linkFlagsBuildDebugITimerHeartbeat [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'linkFlagsBuildDebugITimerHeartbeat'
+
+	^ { 
+		'-lpthread'
+           . '-luuid'
+	   }
+	"
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> linkFlagsBuildITimerHeartbeat [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'linkFlagsBuildITimerHeartbeat'
+
+	^ { 
+		'-lpthread'
+           . '-luuid'
+	   }
+	"
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> linkFlagsBuildMultiThreaded [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'linkFlagsBuildMultiThreaded'
+
+	^ { 
+		'-lpthread'
+           . '-luuid'
+	   }
+	"
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> linkFlagsBuildMultiThreadedAssert [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'linkFlagsBuildMultiThreadedAssert'
+
+	^ { 
+		'-lpthread'
+           . '-luuid'
+	   }
+	"
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> linkFlagsBuildMultiThreadedDebug [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'linkFlagsBuildMultiThreadedDebug'
+
+	^ { 
+		'-lpthread'
+           . '-luuid'
+	   }
+	"
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> linkFlagsNoBuildType [
+	"SHOULD NOT GET HERE"
+	self shouldNotImplement.
 
 ]
 

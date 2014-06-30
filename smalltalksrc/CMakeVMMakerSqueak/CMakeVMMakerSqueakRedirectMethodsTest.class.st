@@ -55,7 +55,7 @@ CMakeVMMakerSqueakRedirectMethodsTest >> testCompilerFlags [
 							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
 							buildTypes do:[:buildType |
 								o configureForBuildType: buildType.
-								self assert:(o  compilerFlags isString).
+								self assert:(o  compilerFlags isKindOf: Collection).
 								self assert:(o  compilerFlags size > 0)]]]].
 
 
@@ -82,6 +82,30 @@ CMakeVMMakerSqueakRedirectMethodsTest >> testConfigH [
 								o configureForBuildType: buildType.
 								self assert:(o  configH isString).
 								self assert:(o  configH size > 0)]]]].
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakRedirectMethodsTest >> testCoreSources [
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				allSubclassesDo:[:configuration | | o buildTypes|
+					o:= configuration new.
+					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
+						ifTrue:[
+							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
+							buildTypes do:[:buildType |
+								o configureForBuildType: buildType.
+								self assert:(o  coreSources isKindOf:Collection).
+								self assert:(o  coreSources size > 0)]]]].
 
 
 
