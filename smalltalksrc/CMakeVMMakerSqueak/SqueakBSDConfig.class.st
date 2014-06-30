@@ -260,6 +260,59 @@ SqueakBSDConfig >> configHBuildMultiThreadedDebug [
 	^ self configHBuild
 ]
 
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> coreSourcesBuild [
+	"files to include from src/vm dir"
+	^ #(
+		'cogit.c'
+		'cointerp.c'
+		)
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> coreSourcesBuildAssert [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> coreSourcesBuildAssertITimerHeartbeat [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> coreSourcesBuildDebug [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> coreSourcesBuildDebugITimerHeartbeat [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> coreSourcesBuildITimerHeartbeat [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> coreSourcesBuildMultiThreaded [
+	"files to include from src/vm dir"
+	^ #(
+		'cogit.c'
+		'cointerpmt.c'
+		)
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> coreSourcesBuildMultiThreadedAssert [
+	^self coreSourcesBuildMultiThreaded	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> coreSourcesBuildMultiThreadedDebug [
+	^self coreSourcesBuildMultiThreaded	
+]
+
 { #category : #plugins }
 SqueakBSDConfig >> defaultExternalPlugins [
 " tty 2014.06.10  cut-n-paste from Cog/build.linux32x86/newspeak.cog.spur/build/plugins.ext"
