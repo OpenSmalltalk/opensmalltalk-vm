@@ -37,103 +37,9 @@ Linux32x86Config >> availableBuildTypes [
 
 ]
 
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cCBuild [
-	^{ 'gcc -m32'}
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cCBuildAssert [
-	^self cCBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cCBuildAssertITimerHeartbeat [
-	^self cCBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cCBuildDebug [
-	^self cCBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cCBuildDebugITimerHeartbeat [
-	^self cCBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cCBuildITimerHeartbeat [
-	^self cCBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cCBuildMultiThreaded [
-	^self cCBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cCBuildMultiThreadedAssert [
-	^self cCBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cCBuildMultiThreadedDebug [
-	^self cCBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cXXBuild [
-	^{ 'g++ -m32'}
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cXXBuildAssert [
-	^self cXXBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cXXBuildAssertITimerHeartbeat [
-	^self cXXBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cXXBuildDebug [
-	^self cXXBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cXXBuildDebugITimerHeartbeat [
-	^self cXXBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cXXBuildITimerHeartbeat [
-	^self cXXBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cXXBuildMultiThreaded [
-	^self cXXBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cXXBuildMultiThreadedAssert [
-	^self cXXBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> cXXBuildMultiThreadedDebug [
-	^self cXXBuild
-]
-
 { #category : #'compiler flags' }
 Linux32x86Config >> commonCompilerFlags [
-	"avoid premature optimization. push this decision down lower if it is needed at all"
-	^{	'-DLSB_FIRST=1'. 
-		'-DUSE_GLOBAL_STRUCT=0'. 
-		'-DCOGMTVM=1'. 
-		'-m32'}
+	^{	}
 
 ]
 
@@ -335,13 +241,57 @@ Linux32x86Config >> configHBuildMultiThreadedDebug [
 	^ self configHBuild
 ]
 
-{ #category : #sources }
-Linux32x86Config >> coreSources [
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> coreSourcesBuild [
 	"files to include from src/vm dir"
 	^ #(
 		'cogit.c'
-		'gcc3x-cointerp.c'
+		'cointerp.c'
 		)
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> coreSourcesBuildAssert [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> coreSourcesBuildAssertITimerHeartbeat [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> coreSourcesBuildDebug [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> coreSourcesBuildDebugITimerHeartbeat [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> coreSourcesBuildITimerHeartbeat [
+	^self coreSourcesBuild	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> coreSourcesBuildMultiThreaded [
+	"files to include from src/vm dir"
+	^ #(
+		'cogit.c'
+		'cointerpmt.c'
+		)
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> coreSourcesBuildMultiThreadedAssert [
+	^self coreSourcesBuildMultiThreaded	
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> coreSourcesBuildMultiThreadedDebug [
+	^self coreSourcesBuildMultiThreaded	
 ]
 
 { #category : #sources }
@@ -607,6 +557,7 @@ Linux32x86Config >> lDFlagsBuild [
 		'-Wl'
            . '-z'
            . 'now'
+
 	   }
 
 ]
@@ -660,7 +611,7 @@ Linux32x86Config >> lDFlagsBuildMultiThreadedDebug [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> libsBuild [
+Linux32x86Config >> linkFlagsBuild [
 	"Answer array of flags like the 	LIBS=''-lpthread -luuid''  line in the GNU system's mvm file
 	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm 	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'"
 	^ { 
@@ -670,43 +621,43 @@ Linux32x86Config >> libsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> libsBuildAssert [
-	^self libsBuild
+Linux32x86Config >> linkFlagsBuildAssert [
+	^self linkFlagsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> libsBuildAssertITimerHeartbeat [
-	^self libsBuild
+Linux32x86Config >> linkFlagsBuildAssertITimerHeartbeat [
+	^self linkFlagsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> libsBuildDebug [
-	^self libsBuild
+Linux32x86Config >> linkFlagsBuildDebug [
+	^self linkFlagsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> libsBuildDebugITimerHeartbeat [
-	^self libsBuild
+Linux32x86Config >> linkFlagsBuildDebugITimerHeartbeat [
+	^self linkFlagsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> libsBuildITimerHeartbeat [
-	^self libsBuild
+Linux32x86Config >> linkFlagsBuildITimerHeartbeat [
+	^self linkFlagsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> libsBuildMultiThreaded [
-	^self libsBuild
+Linux32x86Config >> linkFlagsBuildMultiThreaded [
+	^self linkFlagsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> libsBuildMultiThreadedAssert [
-	^self libsBuild
+Linux32x86Config >> linkFlagsBuildMultiThreadedAssert [
+	^self linkFlagsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> libsBuildMultiThreadedDebug [
-	^self libsBuild
+Linux32x86Config >> linkFlagsBuildMultiThreadedDebug [
+	^self linkFlagsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -828,17 +779,22 @@ Linux32x86Config >> setExtraTargetPropertiesBuild: aMaker [
 		cmd: 'set_source_files_properties'
 		params: ' ${targetPlatform}/vm/sqUnixHeartbeat.c PROPERTIES 
 		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -mno-rtd -mno-accumulate-outgoing-args"'.
-	
+	aMaker
+		cmd:'set_target_properties'
+		params: '${_name} PROPERTIES LINK_FLAGS "-undefined gl"'.
+
+
 	aMaker addExternalLibraries: 
 		#(
 			'uuid'  ""
 			'ssl'  ""
 			'crypto' ""
-			'm'  "math lib"
-			'dl'  "dynamic loader"
-			'pthread' "posix threads" 
+			'm'  
+			'dl' 
+			'pthread' 
 		).
 					
+
 	aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
 	self addVMDrivers: aMaker.
 ]

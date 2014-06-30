@@ -5,7 +5,7 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakUnixConfigTest >> testCC [
+CMakeVMMakerSqueakUnixConfigTest >> testCompilerFlags [
 	#( #SqueakUnixConfig)
 		do:[:each | 
 			(Smalltalk at:each) 
@@ -16,27 +16,7 @@ CMakeVMMakerSqueakUnixConfigTest >> testCC [
 							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
 							buildTypes do:[:buildType |
 								o configureForBuildType: buildType.
-								self assert:(o  cC isArray)]]]].
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
-CMakeVMMakerSqueakUnixConfigTest >> testCXX [
-	#( #SqueakUnixConfig)
-		do:[:each | 
-			(Smalltalk at:each) 
-				allSubclassesDo:[:configuration | | o buildTypes|
-					o:= configuration new.
-					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
-						ifTrue:[
-							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
-							buildTypes do:[:buildType |
-								o configureForBuildType: buildType.
-								self assert:(o  cXX isArray)]]]].
+								self assert:(o  compilerFlags isKindOf: Collection)]]]].
 
 
 
@@ -71,26 +51,6 @@ CMakeVMMakerSqueakUnixConfigTest >> testLDFlags [
 							buildTypes do:[:buildType |
 								o configureForBuildType: buildType.
 								self assert:(o  lDFlags isArray)]]]].
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
-CMakeVMMakerSqueakUnixConfigTest >> testLibs [
-	#( #SqueakUnixConfig)
-		do:[:each | 
-			(Smalltalk at:each) 
-				allSubclassesDo:[:configuration | | o buildTypes|
-					o:= configuration new.
-					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
-						ifTrue:[
-							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
-							buildTypes do:[:buildType |
-								o configureForBuildType: buildType.
-								self assert:(o  libs isArray)]]]].
 
 
 
