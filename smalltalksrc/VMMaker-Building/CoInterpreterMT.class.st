@@ -300,17 +300,17 @@ CoInterpreterMT >> checkForEventsMayContextSwitch: mayContextSwitch [
 
 	(profileProcess ~= objectMemory nilObject
 	 or: [nextProfileTick > 0 and:[self ioHighResClock >= nextProfileTick]]) ifTrue:
-		["Take a sample (if not already done so) for the profiler if it is active.  This
+		[nextProfileTick := 0.
+		 "Take a sample (if not already done so) for the profiler if it is active.  This
 		  must be done before any of the synchronousSignals below or else we will
 		  attribute a pause in ioRelinquishProcessor to the newly activated process."
-		profileProcess = objectMemory nilObject ifTrue:
+		 profileProcess = objectMemory nilObject ifTrue:
 			[profileProcess := self activeProcess.
 			 profileMethod := objectMemory nilObject].
-		"and signal the profiler semaphore if it is present"
-		(profileSemaphore ~= objectMemory nilObject 
-		 and: [self synchronousSignal: profileSemaphore]) ifTrue:
-			[switched := true].
-		nextProfileTick := 0].
+		 "and signal the profiler semaphore if it is present"
+		 (profileSemaphore ~= objectMemory nilObject
+		  and: [self synchronousSignal: profileSemaphore]) ifTrue:
+			[switched := true]].
 
 	self checkDeliveryOfLongRunningPrimitiveSignal ifTrue:
 		[switched := true].
@@ -318,7 +318,7 @@ CoInterpreterMT >> checkForEventsMayContextSwitch: mayContextSwitch [
 	objectMemory signalLowSpace ifTrue:
 		[objectMemory signalLowSpace: false. "reset flag"
 		 sema := objectMemory splObj: TheLowSpaceSemaphore.
-		 (sema ~= objectMemory nilObject 
+		 (sema ~= objectMemory nilObject
 		  and: [self synchronousSignal: sema]) ifTrue:
 			[switched := true]].
 
@@ -351,7 +351,7 @@ CoInterpreterMT >> checkForEventsMayContextSwitch: mayContextSwitch [
 		[interruptPending := false.
 		 "reset interrupt flag"
 		 sema := objectMemory splObj: TheInterruptSemaphore.
-		 (sema ~= objectMemory nilObject 
+		 (sema ~= objectMemory nilObject
 		  and: [self synchronousSignal: sema]) ifTrue:
 			[switched := true]].
 
@@ -360,17 +360,17 @@ CoInterpreterMT >> checkForEventsMayContextSwitch: mayContextSwitch [
 			[nextWakeupUsecs := 0.
 			 "set timer interrupt to 0 for 'no timer'"
 			 sema := objectMemory splObj: TheTimerSemaphore.
-			 (sema ~= objectMemory nilObject 
+			 (sema ~= objectMemory nilObject
 			  and: [self synchronousSignal: sema]) ifTrue:
 				[switched := true]]].
 
 	"signal any pending finalizations"
 	pendingFinalizationSignals > 0 ifTrue:
-		[sema := objectMemory splObj: TheFinalizationSemaphore.
-		 ((objectMemory isClassOfNonImm: sema equalTo: (objectMemory splObj: ClassSemaphore))
+		[pendingFinalizationSignals := 0.
+		 sema := objectMemory splObj: TheFinalizationSemaphore.
+		 (sema ~= objectMemory nilObject
 		  and: [self synchronousSignal: sema]) ifTrue:
-			[switched := true].
-		pendingFinalizationSignals := 0].
+			[switched := true]].
 
 	"signal all semaphores in semaphoresToSignal"
 	self signalExternalSemaphores ifTrue:

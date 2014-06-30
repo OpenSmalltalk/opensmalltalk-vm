@@ -250,6 +250,7 @@ CoInterpreter class >> initializeMiscConstants [
 	PrimCallMayCallBack := 4.
 	PrimCallCollectsProfileSamples := 8.
 	CheckAllocationFillerAfterPrimCall := 16.
+	PrimCallDoNotJIT := 32.
 
 	ReturnToInterpreter := 1. "setjmp/longjmp code."
 
@@ -299,60 +300,6 @@ CoInterpreter class >> initializePrimitiveTable [
 	PrimitiveTable at: 253 + 1 put: #primitiveCollectCogCodeConstituents.
 	self assert: (PrimitiveTable at: 215 + 1) = #primitiveFlushCacheByMethod.
 	PrimitiveTable at: 215 + 1 put: #primitiveVoidVMStateForMethod
-]
-
-{ #category : #initialization }
-CoInterpreter class >> initializeWithOptions: optionsDictionary [
-
-	super initializeWithOptions: optionsDictionary.
-	COGVM := true.
-
-	MinBackwardJumpCountForCompile := 10.
-
-	MaxNumArgs := 15.
-	PrimCallNeedsNewMethod := 1.
-	PrimCallNeedsPrimitiveFunction := 2.
-	PrimCallMayCallBack := 4.
-	PrimCallCollectsProfileSamples := 8.
-
-	ReturnToInterpreter := 1. "setjmp/longjmp code."
-
-	PrimTraceLogSize := 256. "Room for 256 selectors.  Must be 256 because we use a byte to hold the index"
-	TraceBufferSize := 256 * 3. "Room for 256 events"
-	TraceContextSwitch := self objectMemoryClass basicNew integerObjectOf: 1.
-	TraceBlockActivation := self objectMemoryClass basicNew integerObjectOf: 2.
-	TraceBlockCreation := self objectMemoryClass basicNew integerObjectOf: 3.
-	TraceIncrementalGC := self objectMemoryClass basicNew integerObjectOf: 4.
-	TraceFullGC := self objectMemoryClass basicNew integerObjectOf: 5.
-	TraceCodeCompaction := self objectMemoryClass basicNew integerObjectOf: 6.
-	TraceOwnVM := self objectMemoryClass basicNew integerObjectOf: 7.
-	TraceDisownVM := self objectMemoryClass basicNew integerObjectOf: 8.
-	TraceThreadSwitch := self objectMemoryClass basicNew integerObjectOf: 9.
-	TracePreemptDisowningThread := self objectMemoryClass basicNew integerObjectOf: 10.
-	TraceVMCallback := self objectMemoryClass basicNew integerObjectOf: 11.
-	TraceVMCallbackReturn := self objectMemoryClass basicNew integerObjectOf: 12.
-
-	TraceIsFromMachineCode := 1.
-	TraceIsFromInterpreter := 2.
-	CSCallbackEnter := 3.
-	CSCallbackLeave := 4.
-	CSEnterCriticalSection := 5.
-	CSExitCriticalSection := 6.
-	CSResume := 7.
-	CSSignal := 8.
-	CSSuspend := 9.
-	CSWait := 10.
-	CSYield := 11.
-	CSCheckEvents := 12.
-	CSThreadSchedulingLoop := 13.
-	CSOwnVM := 14.
-	CSThreadBind := 15.
-	CSSwitchIfNeccessary := 16.
-
-	TraceSources := CArrayAccessor on: #('?' 'm' 'i' 'callbackEnter' 'callbackLeave' 'enterCritical' 'exitCritical' 'resume' 'signal'  'suspend' 'wait' 'yield' 'eventcheck' 'threadsched' 'ownVM' 'bindToThread' 'switchIfNecessary').
-
-	"this is simulation only"
-	RumpCStackSize := 4096
 ]
 
 { #category : #documentation }
@@ -436,6 +383,11 @@ CoInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 ]
 
 { #category : #translation }
+CoInterpreter class >> primitivesClass [
+	^CoInterpreterPrimitives
+]
+
+{ #category : #translation }
 CoInterpreter class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around multiple definitions.  Sometimes a type has been defined in an include."
 	^(super shouldGenerateTypedefFor: aStructClass)
@@ -466,6 +418,12 @@ CoInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
 		nextPutAll: '#if !defined(COGMTVM)'; cr;
 		nextPutAll: '#	define COGMTVM 0'; cr;
 		nextPutAll: '#endif'; cr
+]
+
+{ #category : #'cog jit support' }
+CoInterpreter >> accessorDepthForPrimitiveIndex: primIndex [
+	<api>
+	^primitiveAccessorDepthTable at: primIndex
 ]
 
 { #category : #'message sending' }
@@ -985,7 +943,10 @@ CoInterpreter >> bytecodePCFor: theIP cogMethod: cogMethod startBcpc: startBcpc 
 		ifFalse:
 			[cogMethodForIP := self cCoerceSimple: cogMethod to: #'CogBlockMethod *'.
 			 self assert: cogMethodForIP cmType = CMMethod.
-			 mcpc := cogMethod asInteger - theIP].
+			 mcpc := cogMethod asInteger - theIP.
+			 "map any pcs in primitive code (i.e. return addresses for interpreter primitive calls) to the initial pc"
+			 mcpc asUnsignedInteger < cogMethod stackCheckOffset ifTrue:
+				[^startBcpc]].
 	self assert: (mcpc between: cogMethod asInteger and: cogMethod asInteger + cogMethod blockSize).
 	^cogit bytecodePCFor: mcpc startBcpc: startBcpc in: cogMethodForIP
 ]
@@ -1221,6 +1182,20 @@ CoInterpreter >> ceCannotResume [
 		ceSendAbort: (objectMemory splObj: SelectorCannotReturn)
 		to: (self frameContext: framePointer)
 		numArgs: 1
+]
+
+{ #category : #'cog jit support' }
+CoInterpreter >> ceCheckForAndFollowForwardedPrimitiveStateFor: primIndex [
+	"In Spur a primitive may fail due to encountering a forwarder.
+	 On failure check the accessorDepth for the primitive and
+	 if non-negative scan the args to the depth, following any
+	 forwarders.  Answer if any are found so the prim can be retried."
+	<api>
+	<option: #SpurObjectMemory>
+	^self cCode: [self checkForAndFollowForwardedPrimitiveStateFor: primIndex]
+		inSmalltalk: [(self checkForAndFollowForwardedPrimitiveStateFor: primIndex)
+						ifTrue: [1]
+						ifFalse: [0]]
 ]
 
 { #category : #trampolines }
@@ -5298,6 +5273,13 @@ CoInterpreter >> primitivePropertyFlags: primIndex [
 	<var: #functionPointer declareC: 'void (*functionPointer)(void)'>
 	functionPointer := self functionPointerFor: primIndex inClass: nil.
 
+	"The complications of following forwarding pointers in machine code on failures
+	 of primitives called indirectly through primitiveDoNamedPrimitiveWithArgs are not
+	 worth dealing with, as primitiveDoNamedPrimitiveWithArgs is used only in debugging."
+	(objectMemory hasSpurMemoryManagerAPI
+	 and: [functionPointer = #primitiveDoNamedPrimitiveWithArgs]) ifTrue:
+		[^PrimCallDoNotJIT].
+
 	baseFlags := profileSemaphore ~= objectMemory nilObject
 					ifTrue: [PrimCallNeedsNewMethod + PrimCallCollectsProfileSamples]
 					ifFalse: [0].
@@ -6437,6 +6419,15 @@ CoInterpreter >> synchronousSignal: aSemaphore [
 			ofObject: aSemaphore
 			withValue: excessSignals + 1.
 		 ^false].
+
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[| firstLink |
+		 firstLink := objectMemory fetchPointer: FirstLinkIndex ofObject: aSemaphore.
+		 (objectMemory isForwarded: firstLink) ifTrue:
+			["0 = aSemaphore, 1 = aProcess. Hence reference to suspendedContext will /not/ be forwarded."
+			 objectMemory followForwardedObjectFields: aSemaphore toDepth: 1].
+		 self assert: (objectMemory isForwarded: (objectMemory fetchPointer: SuspendedContextIndex ofObject: firstLink)) not].
+
 	^self resume: (self removeFirstLinkOfList: aSemaphore)
 		preemptedYieldingIf: preemptionYields
 		from: CSSignal
@@ -6620,8 +6611,18 @@ CoInterpreter >> updateStateOfSpouseContextForFrame: theFP WithSP: theSP [
 	self assert: (self frameHasContext: theFP).
 	theContext := self frameContext: theFP.
 	self assert: (objectMemory isContext: theContext).
-	self assert: (self frameReceiver: theFP)
-				= (objectMemory fetchPointer: ReceiverIndex ofObject: theContext).
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			["We do not need to follow forwarding pointer to the receiver; makeBaseFrameFor: does that.
+			  In any case the assignments below updating the non-argument stack contents will do so."
+			self assert: ((self frameReceiver: theFP)
+						= (objectMemory fetchPointer: ReceiverIndex ofObject: theContext)
+						or: [(objectMemory isOopForwarded: (objectMemory fetchPointer: ReceiverIndex ofObject: theContext))
+							and: [(objectMemory followForwarded: (objectMemory fetchPointer: ReceiverIndex ofObject: theContext))
+								= (self frameReceiver: theFP)]])]
+		ifFalse:
+			[self assert: (self frameReceiver: theFP)
+						= (objectMemory fetchPointer: ReceiverIndex ofObject: theContext)].
 	(self isMachineCodeFrame: theFP)
 		ifTrue:
 			[tempIndex := self mframeNumArgs: theFP.

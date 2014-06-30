@@ -1280,7 +1280,7 @@ SpurMemoryManager >> allInstancesOf: aClass [
 		 smallObj := self allocateSlots: count format: self arrayFormat classIndex: ClassArrayCompactIndex.
 		 0 to: count - 1 do:
 			[:i|
-			self storePointerUnchecked: i ofObject: smallObj withValue: (self fetchPointer: i ofObject: freeChunk)].
+			self storePointerUnchecked: i ofObject: smallObj withValue: (self fetchPointer: i ofFreeChunk: freeChunk)].
 		 self freeChunkWithBytes: (self bytesInObject: freeChunk) at: (self startOfObject: freeChunk).
 		 self beRootIfOld: smallObj.
 		 self checkFreeSpace.
@@ -3992,8 +3992,12 @@ SpurMemoryManager >> fetchClassOf: oop [
 SpurMemoryManager >> fetchClassOfNonImm: objOop [
 	| classIndex |
 	classIndex := self classIndexOf: objOop.
-	classIndex = self classIsItselfClassIndexPun ifTrue:
-		[^objOop].
+	classIndex <= self classIsItselfClassIndexPun ifTrue:
+		[classIndex = self classIsItselfClassIndexPun ifTrue:
+			[^objOop].
+		 "Answer nil to avoid the assert failure in classOrNilAtIndex:"
+		 classIndex = self isForwardedObjectClassIndexPun ifTrue:
+			[^nilObj]].
 	self assert: classIndex >= self arrayClassIndexPun.
 	^self classOrNilAtIndex: classIndex
 ]
@@ -4468,7 +4472,8 @@ SpurMemoryManager >> followObjField: fieldIndex ofObject: anObject [
 { #category : #'become implementation' }
 SpurMemoryManager >> followSpecialObjectsOop [
 	(self isForwarded: specialObjectsOop) ifTrue:
-		[specialObjectsOop := self followForwarded: specialObjectsOop]
+		[specialObjectsOop := self followForwarded: specialObjectsOop].
+	self followForwardedObjectFields: specialObjectsOop toDepth: 0.
 ]
 
 { #category : #'header format' }
@@ -6108,6 +6113,17 @@ SpurMemoryManager >> isScavengeSurvivor: oop [
 SpurMemoryManager >> isSegmentBridge: objOop [
 	"Maybe this should be in SpurSegmentManager only"
 	^(self classIndexOf: objOop) = self segmentBridgePun
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isSemaphoreObj: anObj [
+	^(self classIndexOf: anObj) = (self rawHashBitsOf: (self splObj: ClassSemaphore))
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isSemaphoreOop: anOop [
+	^(self isNonImmediate: anOop)
+	 and: [self isSemaphoreObj: anOop]
 ]
 
 { #category : #'class table' }
