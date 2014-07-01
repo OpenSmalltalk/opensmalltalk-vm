@@ -149,8 +149,6 @@ for r in $THEM; do
 		echo >>ChangeHistory
 	fi
 done
-RemoteUser=eliotmiranda@highland-park.dreamhost.com
-RemoteRoot=mirandabanda.org/files/Cog/VM
 ssh -x $RemoteUser mkdir $RemoteRoot/VM.r$REV
 echo scp -p ChangeHistory ../history/README.$REV $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
 scp -p ChangeHistory ../history/README.$REV $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
