@@ -142,7 +142,7 @@ extern sqExport os_exports[];
 { #category : #'as yet unclassified' }
 CMakeVMGeneratorForSqueak >> generatePlugin: aPlugin internal: aBoolean extraRules: aBlock [
 	" this method called back from plugin"
-	^ CMakePluginGenerator new
+	^ CMakePluginGeneratorForSqueak new
 		generate: aPlugin for: self internal: aBoolean extraRules: aBlock
 ]
 
