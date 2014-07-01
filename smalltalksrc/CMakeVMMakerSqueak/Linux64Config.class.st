@@ -88,6 +88,77 @@ External:
 '
 ]
 
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> addVMDriversBuild: aMaker [
+	aMaker message: 'addVMDrivers: aMaker'.
+	 self 
+		addDriver: 'vm-display-null' 
+		sources: #( 
+			'${targetPlatform}/vm-display-null/sqUnixDisplayNull' )
+		generator: aMaker
+		externalLibs: #();
+		
+		addDriver: 'vm-display-X11' 
+		sources: #( 
+			'${targetPlatform}/vm-display-X11/sqUnixX11'
+			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
+		generator: aMaker
+		externalLibs: (self linkFlags);
+
+		addDriver: 'vm-sound-ALSA' 
+		sources: #( 
+			'${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' )
+		generator: aMaker
+		externalLibs: #();
+
+		addDriver: 'vm-sound-null' 
+		sources: #( 
+			'${targetPlatform}/vm-sound-null/sqUnixSoundNull' )
+		generator: aMaker
+		externalLibs: #().
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> addVMDriversBuildAssert: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> addVMDriversBuildAssertITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> addVMDriversBuildDebug: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> addVMDriversBuildDebugITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> addVMDriversBuildITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> addVMDriversBuildMultiThreaded: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> addVMDriversBuildMultiThreadedAssert: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64Config >> addVMDriversBuildMultiThreadedDebug: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
 { #category : #'cmake configuration' }
 Linux64Config >> availableBuildTypes [
 	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes

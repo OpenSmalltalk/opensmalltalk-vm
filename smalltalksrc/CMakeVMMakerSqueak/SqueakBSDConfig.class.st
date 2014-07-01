@@ -24,6 +24,77 @@ SqueakBSDConfig class >> initialize [
 	isAbstractBaseClass:=true
 ]
 
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> addVMDriversBuild: aMaker [
+	aMaker message: 'addVMDrivers: aMaker'.
+	 self 
+		addDriver: 'vm-display-null' 
+		sources: #( 
+			'${targetPlatform}/vm-display-null/sqUnixDisplayNull' )
+		generator: aMaker
+		externalLibs: #();
+		
+		addDriver: 'vm-display-X11' 
+		sources: #( 
+			'${targetPlatform}/vm-display-X11/sqUnixX11'
+			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
+		generator: aMaker
+		externalLibs: (self linkFlags);
+
+		addDriver: 'vm-sound-ALSA' 
+		sources: #( 
+			'${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' )
+		generator: aMaker
+		externalLibs: #();
+
+		addDriver: 'vm-sound-null' 
+		sources: #( 
+			'${targetPlatform}/vm-sound-null/sqUnixSoundNull' )
+		generator: aMaker
+		externalLibs: #().
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> addVMDriversBuildAssert: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> addVMDriversBuildAssertITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> addVMDriversBuildDebug: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> addVMDriversBuildDebugITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> addVMDriversBuildITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> addVMDriversBuildMultiThreaded: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> addVMDriversBuildMultiThreadedAssert: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> addVMDriversBuildMultiThreadedDebug: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
 { #category : #'cmake configuration' }
 SqueakBSDConfig >> availableBuildTypes [
 	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
