@@ -30,19 +30,20 @@ Linux32x86SqueakCogV3Config >> cogitClass [
 Linux32x86SqueakCogV3Config >> compilerFlagsBuild [
 	"Some gcc versions (3.4*) create a broken VM using -O2, so try -O1 if you have problems"
 	^{ 
-'-g0'
-.'-O2'
+'-g3'                                               "more debugging"
+.'-O1'                                              "low optiomization level"
 .'-m32'
 .'-msse2'
 .'-D_GNU_SOURCE'
 .'-D_FILE_OFFSET_BITS=64'
-.'-DNDEBUG'
-.'-DLSB_FIRST=1'
+.'-DNDEBUG'                                      "disable assertions"
+.'-DLSB_FIRST=1'                               ""
 .'-DUSE_GLOBAL_STRUCT=0'
 .'-DDEBUGVM=0'
 .'-DCOGMTVM=0'
 .'-fno-tree-pre	'
-.'-fno-caller-saves'}
+.'-fno-caller-saves'
+}
 
 
 
@@ -96,7 +97,7 @@ Linux32x86SqueakCogV3Config >> compilerFlagsBuildMultiThreadedDebug [
 
 { #category : #'cmake buildType redirects' }
 Linux32x86SqueakCogV3Config >> configureFlagsBuild [
-	^{'-without-npsqueak' }
+	^{'-without-npsqueak' . ''}
 ]
 
 { #category : #'cmake buildType redirects' }

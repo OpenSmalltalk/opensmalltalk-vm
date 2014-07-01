@@ -27,6 +27,77 @@ Linux32x86Config class >> initialize [
 	isAbstractBaseClass:=true
 ]
 
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> addVMDriversBuild: aMaker [
+	aMaker message: 'addVMDrivers: aMaker'.
+	 self 
+		addDriver: 'vm-display-null' 
+		sources: #( 
+			'${targetPlatform}/vm-display-null/sqUnixDisplayNull' )
+		generator: aMaker
+		externalLibs: #();
+		
+		addDriver: 'vm-display-X11' 
+		sources: #( 
+			'${targetPlatform}/vm-display-X11/sqUnixX11'
+			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
+		generator: aMaker
+		externalLibs: (self linkFlags);
+
+		addDriver: 'vm-sound-ALSA' 
+		sources: #( 
+			'${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' )
+		generator: aMaker
+		externalLibs: #();
+
+		addDriver: 'vm-sound-null' 
+		sources: #( 
+			'${targetPlatform}/vm-sound-null/sqUnixSoundNull' )
+		generator: aMaker
+		externalLibs: #().
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> addVMDriversBuildAssert: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> addVMDriversBuildAssertITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> addVMDriversBuildDebug: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> addVMDriversBuildDebugITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> addVMDriversBuildITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> addVMDriversBuildMultiThreaded: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> addVMDriversBuildMultiThreadedAssert: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86Config >> addVMDriversBuildMultiThreadedDebug: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
 { #category : #'cmake configuration' }
 Linux32x86Config >> availableBuildTypes [
 	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
@@ -241,12 +312,12 @@ Linux32x86Config >> configHBuildMultiThreadedDebug [
 	^ self configHBuild
 ]
 
-{ #category : #'cmake buildType redirects' }
+{ #category : #sources }
 Linux32x86Config >> coreSourcesBuild [
 	"files to include from src/vm dir"
 	^ #(
 		'cogit.c'
-		'cointerp.c'
+		'gcc3x-cointerp.c'
 		)
 ]
 
@@ -612,8 +683,8 @@ Linux32x86Config >> lDFlagsBuildMultiThreadedDebug [
 
 { #category : #'cmake buildType redirects' }
 Linux32x86Config >> linkFlagsBuild [
-	"Answer array of flags like the 	LIBS=''-lpthread -luuid''  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm 	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'"
+	"Answer array of libraries to link to
+	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'"
 	^ { 
 		'-lpthread'
            . '-luuid'

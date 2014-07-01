@@ -1778,7 +1778,7 @@ CPlatformConfigForSqueak >> lDFlagsNoBuildType [
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> linkFlags [
 	" '-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11' -L/usr/lib32 etc..."
-	|d |
+	|d flags|
 	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	d 
 		at: #build put: [self linkFlagsBuild];
@@ -1791,7 +1791,13 @@ CPlatformConfigForSqueak >> linkFlags [
 		at: #buildMultiThreadedAssert  put: [self linkFlagsBuildMultiThreadedAssert];
 		at: #buildMultiThreadedDebug   put: [self linkFlagsBuildMultiThreadedDebug ];
 		at: #buildNone put:[self linkFlagsNoBuildType].
-	^(d at: buildType) value
+	flags := String
+				streamContents: [:stream | ((d at: buildType) value collect: #withBlanksTrimmed as: Set)
+						asStringOn: stream
+						delimiter: ' '].
+	^flags.
+
+
 
 ]
 
@@ -2524,7 +2530,6 @@ CPlatformConfigForSqueak >> setGlobalOptionsBuild: aMaker [
 	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'
 
 	usually do nothing"
-
 	self subclassResponsibility
 ]
 
