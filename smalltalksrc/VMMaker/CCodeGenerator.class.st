@@ -2448,23 +2448,15 @@ CCodeGenerator >> generateShiftLeft: msgNode on: aStream indent: level [
 CCodeGenerator >> generateShiftRight: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	| decl |
+	| type |
 	"If the variable is a 64-bit type then don't cast it to usqInt (typically a 32-bit type)"
-	(msgNode receiver isVariable
-	 and: [(decl := self typeOfVariable: msgNode receiver name) notNil
-	 and: [#('usqLong' 'sqLong' 'unsigned long long' 'long long' 'unsigned __int64' '__int64')
-			anySatisfy: [:type| decl beginsWith: type]]])
+	(self is64BitIntegralVariable: msgNode receiver typeInto: [:t| type := t])
 		ifTrue:
 			["If not unsigned cast it to unsigned."
-			 (decl first = $u) ifFalse:
-				[aStream
-					nextPutAll: '((unsigned ';
-					nextPutAll: ((decl endsWith: msgNode receiver name)
-									ifTrue: [decl allButLast: msgNode receiver name size]
-									ifFalse: [decl]);
-					nextPut: $)].
+			 type first ~= $u ifTrue:
+				[aStream nextPutAll: '((unsigned '; nextPutAll: type; nextPut: $)].
 			 self emitCExpression: msgNode receiver on: aStream.
-			 (decl first = $u) ifFalse:
+			 type first ~= $u ifTrue:
 				[aStream nextPut: $)]]
 		ifFalse:
 			[aStream nextPutAll: '((usqInt) '.
@@ -2478,23 +2470,27 @@ CCodeGenerator >> generateShiftRight: msgNode on: aStream indent: level [
 CCodeGenerator >> generateSignedBitShift: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	| arg |
+	| cast type arg |
+	"since ``signed'' is a synonym for ``signed int'' do not cast 64-bit values to signed if at all possible."
+	cast := (self is64BitIntegralVariable: msgNode receiver typeInto: [:t| type := t])
+				ifTrue: ['(', (type first = $u ifTrue: [type allButFirst: (type second = $n ifTrue: [2] ifFalse: [1])] ifFalse: [type]), ')']
+				ifFalse: ['(signed)'].
 	(arg := msgNode args first) isConstant
 		ifTrue: "bit shift amount is a constant"
-			[aStream nextPut: $(; nextPutAll: '(signed)'.
+			[aStream nextPut: $(; nextPutAll: cast.
 			self emitCExpression: msgNode receiver on: aStream.
 			arg value < 0
-				ifTrue: [aStream nextPutAll: ' >> ', arg value negated printString]
-				ifFalse: [aStream nextPutAll: ' << ', arg value printString].
+				ifTrue: [aStream nextPutAll: ' >> '; print: arg value negated]
+				ifFalse: [aStream nextPutAll: ' << '; print: arg value].
 			aStream nextPut: $)]
 		ifFalse: "bit shift amount is an expression"
 			[aStream nextPutAll: '(('.
 			self emitCExpression: arg on: aStream.
-			aStream nextPutAll: ' < 0) ? ('; nextPutAll: '(signed)'.
+			aStream nextPutAll: ' < 0) ? ('; nextPutAll: cast.
 			self emitCExpression: msgNode receiver on: aStream.
 			aStream nextPutAll: ' >> -'.
 			self emitCExpression: arg on: aStream.
-			aStream nextPutAll: ') : ('; nextPutAll: '(signed)'.
+			aStream nextPutAll: ') : ('; nextPutAll: cast.
 			self emitCExpression: msgNode receiver on: aStream.
 			aStream nextPutAll: ' << '.
 			self emitCExpression: arg on: aStream.
@@ -3080,6 +3076,19 @@ CCodeGenerator >> instVarNamesForClass: aClass [
 		ifNil: [aClass instVarNames]
 		ifNotNil: [aClass instVarNames reject:
 					[:ivn| vmClass isNonArgumentImplicitReceiverVariableName: ivn]]
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> is64BitIntegralVariable: node typeInto: aBlock [
+	| decl |
+	^node isVariable
+	  and: [(decl := self typeOfVariable: node name) notNil
+	  and: [(#('usqLong' 'sqLong' 'unsigned long long' 'long long' 'unsigned __int64' '__int64')
+			anySatisfy: [:type| decl beginsWith: type])
+	  and: [aBlock value: ((decl endsWith: node name)
+							ifTrue: [decl allButLast: node name size + 1]
+							ifFalse: [decl]).
+			true]]]
 ]
 
 { #category : #inlining }

@@ -423,6 +423,7 @@ CoInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
 { #category : #'cog jit support' }
 CoInterpreter >> accessorDepthForPrimitiveIndex: primIndex [
 	<api>
+	<option: #SpurObjectMemory>
 	^primitiveAccessorDepthTable at: primIndex
 ]
 
