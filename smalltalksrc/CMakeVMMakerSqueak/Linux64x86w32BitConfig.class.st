@@ -774,35 +774,7 @@ Linux64x86w32BitConfig >> postBuildActionsBuildMultiThreadedDebug: aMaker [
 
 { #category : #'source files' }
 Linux64x86w32BitConfig >> preferredIncludesBuild [
-	^ #(  '${targetPlatform}/plugins/AioPlugin'
- '${targetPlatform}/plugins/B3DAcceleratorPlugin'
- '${targetPlatform}/plugins/DropPlugin'
- '${targetPlatform}/plugins/FilePlugin'
- '${targetPlatform}/plugins/HostWindowPlugin'
- '${targetPlatform}/plugins/JPEGReadWriter2Plugin'
- '${targetPlatform}/plugins/LocalePlugin'
- '${targetPlatform}/plugins/Mpeg3Plugin'
- '${targetPlatform}/plugins/PseudoTTYPlugin'
- '${targetPlatform}/plugins/SerialPlugin'
- '${targetPlatform}/plugins/SoundPlugin'
- '${crossDir}/plugins/SoundGenerationPlugin'
- '${targetPlatform}/plugins/SqueakSSL'
- '${targetPlatform}/plugins/UnixOSProcessPlugin'
- '${targetPlatform}/plugins/AsynchFilePlugin'
- '${targetPlatform}/plugins/BochsIA32Plugin'
- '${targetPlatform}/plugins/FileCopyPlugin'
- '${targetPlatform}/plugins/FloatMathPlugin'
- '${targetPlatform}/plugins/InternetConfigPlugin'
- '${targetPlatform}/plugins/JoystickTabletPlugin'
- '${targetPlatform}/plugins/MIDIPlugin'
- '${targetPlatform}/plugins/PrintJobPlugin'
- '${targetPlatform}/plugins/SecurityPlugin'
- '${crossDir}/plugins/SocketPlugin'
- '${targetPlatform}/plugins/SqueakFFIPrims'
- '${targetPlatform}/plugins/UUIDPlugin'    
- '${targetPlatform}/plugins/XDisplayControlPlugin'
-
-)
+	^ #(  '${targetPlatform}/plugins/B3DAcceleratorPlugin')
 
 
 	
@@ -864,8 +836,10 @@ Linux64x86w32BitConfig >> setExtraTargetPropertiesBuild: aMaker [
 	self flag:'tty'. "I am nervous about this method up here in this class, but pharo has it in CogUnixConfig, so using as is for now"
 
 
+
 	aMaker message: 'setExtraTargetPropertiesBuild: aMaker'.		
 
+	aMaker setTargetProperties: 'LINK_FLAGS "-m32"'.
 	aMaker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
 		COMPILE_FLAGS "' , self compilerFlags , '")'.
 		
@@ -874,7 +848,7 @@ Linux64x86w32BitConfig >> setExtraTargetPropertiesBuild: aMaker [
 		cmd: 'set_source_files_properties'
 		params: ' ${targetPlatform}/vm/sqUnixHeartbeat.c PROPERTIES 
 		COMPILE_FLAGS "' , self compilerFlags , '"'.
-	"
+	
 	aMaker addExternalLibraries: 
 		#(
 			'uuid'  ""
@@ -885,7 +859,7 @@ Linux64x86w32BitConfig >> setExtraTargetPropertiesBuild: aMaker [
 			'pthread' 
 		).
 				
-"
+
 	aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
 	self addVMDrivers: aMaker.
 ]
@@ -934,7 +908,8 @@ Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildMultiThreadedDebug: aMake
 Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
 	"
 	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild:'"
-	aMaker message: 'setGlobalOptionsAfterDetermineSystemBuild: aMaker'.		
+	aMaker message: 'setGlobalOptionsAfterDetermineSystemBuild: aMaker'.	
+"	aMaker set: 'CMAKE_FIND_ROOT_PATH' to: '/usr/lib  ' "	
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -988,12 +963,9 @@ Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreaded
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfig >> setGlobalOptionsBuild: aMaker [
 	aMaker message: 'setGlobalOptionsBuild: aMaker'.
-"	maker set: 'CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH}' to: ' /usr/lib/gcc/x86_64-slackware-linux/4.8.2/'. 
-set any CMake global options, before declaring a project in cmake file
-	
-	set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /opt/local/lib)
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions:'
-"
+	aMaker linkDirectories: '/usr/lib'.
+
+"	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions:'  "
 ]
 
 { #category : #'cmake buildType redirects' }

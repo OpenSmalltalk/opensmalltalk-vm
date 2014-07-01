@@ -62,19 +62,20 @@ Linux64x86w32BitSqueakCogV3Config >> cogitClass [
 Linux64x86w32BitSqueakCogV3Config >> compilerFlagsBuild [
 	"Some gcc versions (3.4*) create a broken VM using -O2, so try -O1 if you have problems"
 	^{ 
-'-g3'                                               "more debugging"
-.'-O1'                                              "low optimization level"
-.'-m32'
-.'-msse2'
-.'-D_GNU_SOURCE'
-.'-D_FILE_OFFSET_BITS=64'
-.'-DNDEBUG'                                      "disable assertions"
-.'-DLSB_FIRST=1'                               ""
-.'-DUSE_GLOBAL_STRUCT=0'
-.'-DDEBUGVM=0'
-.'-DCOGMTVM=0'
-.'-fno-tree-pre	'
-.'-fno-caller-saves'
+  '-g3'                                               "more debugging"
+ . '-O1'                                              "low optimization level"
+ . '-m32'
+ . '-msse2'
+ . '-D_GNU_SOURCE'
+ . '-D_FILE_OFFSET_BITS=64'
+ . '-DNDEBUG'                                      "disable assertions"
+ . '-DLSB_FIRST=1'                               ""
+ . '-DUSE_GLOBAL_STRUCT=0'
+ . '-DDEBUGVM=0'
+ . '-DCOGMTVM=0'
+ . '-fno-tree-pre	'
+ . '-fno-caller-saves'
+ . '-L/usr/lib'
 }
 
 
@@ -331,7 +332,12 @@ Linux64x86w32BitSqueakCogV3Config >> configureFlagsBuildMultiThreadedDebug [
 { #category : #plugins }
 Linux64x86w32BitSqueakCogV3Config >> defaultExternalPlugins [
 	""
-	^ (super defaultExternalPlugins copyWithoutAll: #(BochsIA32Plugin #UUIDPlugin))
+	^ #()
+]
+
+{ #category : #plugins }
+Linux64x86w32BitSqueakCogV3Config >> defaultInternalPlugins [
+	^super defaultInternalPlugins copyWithoutAll:#(#FloatMathPlugin)
 ]
 
 { #category : #'cmake directory ' }
@@ -344,7 +350,7 @@ Linux64x86w32BitSqueakCogV3Config >> dirInstall [
 	"the directory of the finished product.. the place where 'make install' puts stuff.
 	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
       "
-	^self squeakCogV3 , '.noGL'
+	^self squeakCogV3
 ]
 
 { #category : #cmake }
@@ -428,8 +434,9 @@ Linux64x86w32BitSqueakCogV3Config >> lDFlagsBuildMultiThreadedDebug [
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitSqueakCogV3Config >> linkFlagsBuild [
 	"Answer array of libraries to link to"
-	^ { 
-            '-luuid'
+	^ { '-L/usr/lib'
+	     . '-L/usr/lib/X11'
+           . '-luuid'
            . 'lSM' 
            . '-lICE'
            . '-ldl' 
@@ -438,7 +445,7 @@ Linux64x86w32BitSqueakCogV3Config >> linkFlagsBuild [
            . '-lm' 
            . '-lnsl'
            . '-lX11'
-	   }
+	   } addAll: (self lDFlagsBuild)
 
 ]
 
