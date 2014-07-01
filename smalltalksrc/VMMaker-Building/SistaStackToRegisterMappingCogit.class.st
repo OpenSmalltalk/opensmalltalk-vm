@@ -327,21 +327,32 @@ SistaStackToRegisterMappingCogit >> genMustBeBooleanTrampolineFor: boolean calle
 	opcodeIndex := 0.
 	self CmpCq: 0 R: SendNumArgsReg.
 	jumpMBB := self JumpZero: 0.
-	self compileTrampolineFor: #ceCounterTripped:
+	"Open-code self compileTrampolineFor: #ceCounterTripped: numArgs: 1 arg: TempReg ...
+	 so we can restore ResultReceiverReg."
+	backEnd hasLinkRegister ifTrue:
+		[self PushR: LinkReg].
+	self genSmalltalkToCStackSwitch.
+	self
+		compileCallFor: #ceCounterTripped:
 		numArgs: 1
 		arg: TempReg
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
-		pushLinkReg: true
-		resultReg: nil.
-	"For the case where the ceCounterTripped: call returns (e.g. because there's no callback selector
+		resultReg: TempReg "(*)"
+		saveRegs: false.
+	"(*) For the case where the ceCounterTripped: call returns (e.g. because there's no callback selector
 	 installed), the call to the ceSendMustBeBooleanAddTrue/FalseTrampoline is followed by a jump
 	 back to the start of the counter/condition test sequence.  For this case copy the C result to
 	 TempReg (the register that is tested), to reload it with the boolean to be tested."
-	backEnd cResultRegister ~= TempReg ifTrue:
-		[self MoveR: backEnd cResultRegister R: TempReg].
+	backEnd genLoadStackPointers.
+	backEnd hasLinkRegister ifTrue:
+		[self PopR: LinkReg].
+	"To keep ResultReceiverReg live if optStatus thiught it was, simply reload it
+	 from the frame pointer.  This avoids having to reload it in the common case
+	 (counter does not trip) if it was live."
+	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
+	self RetN: 0.
 	"If the objectRepresentation does want true & false to be mobile then we need to record these addresses."
 	self assert: (objectRepresentation shouldAnnotateObjectReference: boolean) not.
 	jumpMBB jmpTarget: (self AddCq: boolean R: TempReg).
