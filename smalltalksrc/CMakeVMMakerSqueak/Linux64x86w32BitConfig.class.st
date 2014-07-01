@@ -89,6 +89,124 @@ External:
 '
 ]
 
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> addVMDrivers: maker [
+"
+libICE
+ICE is the Inter Client Exchange protocol, part of X11
+
+libSM
+session management library for X11
+
+"
+	 self 
+		addDriver: 'vm-display-null' 
+		sources: #( 
+			'${targetPlatform}/vm-display-null/sqUnixDisplayNull' )
+		generator: maker
+		externalLibs: #();
+		
+		
+		addDriver: 'vm-display-X11' 
+		sources: #( 
+			'${targetPlatform}/vm-display-X11/sqUnixX11'
+			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
+		generator: maker
+		
+		"-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'"
+		externalLibs: #( SM ICE GL X11 nsl dl);
+		
+
+		addDriver: 'vm-sound-ALSA' 
+		sources: #( 
+			'${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' )
+		generator: maker
+		externalLibs: #();
+
+		addDriver: 'vm-sound-null' 
+		sources: #( 
+			'${targetPlatform}/vm-sound-null/sqUnixSoundNull' )
+		generator: maker
+		externalLibs: #().
+	
+"
+vm-display-null
+	vm-display-X11
+	vm-sound-ALSA
+	vm-sound-null"
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> addVMDriversBuild: aMaker [
+	aMaker message: 'addVMDrivers: aMaker'.
+	 self 
+		addDriver: 'vm-display-null' 
+		sources: #( 
+			'${targetPlatform}/vm-display-null/sqUnixDisplayNull' )
+		generator: aMaker
+		externalLibs: #();
+		
+		addDriver: 'vm-display-X11' 
+		sources: #( 
+			'${targetPlatform}/vm-display-X11/sqUnixX11'
+			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
+		generator: aMaker
+		externalLibs: #( SM ICE GL X11 nsl dl);  "(self linkFlags);"
+
+		addDriver: 'vm-sound-ALSA' 
+		sources: #( 
+			'${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' )
+		generator: aMaker
+		externalLibs: #();
+
+		addDriver: 'vm-sound-null' 
+		sources: #( 
+			'${targetPlatform}/vm-sound-null/sqUnixSoundNull' )
+		generator: aMaker
+		externalLibs: #().
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> addVMDriversBuildAssert: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> addVMDriversBuildAssertITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> addVMDriversBuildDebug: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> addVMDriversBuildDebugITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> addVMDriversBuildITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> addVMDriversBuildMultiThreaded: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> addVMDriversBuildMultiThreadedAssert: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> addVMDriversBuildMultiThreadedDebug: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
 { #category : #'cmake configuration' }
 Linux64x86w32BitConfig >> availableBuildTypes [
 	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
@@ -96,13 +214,6 @@ Linux64x86w32BitConfig >> availableBuildTypes [
 
   ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
 	
-
-]
-
-{ #category : #'compiler flags' }
-Linux64x86w32BitConfig >> commonCompilerFlags [
-	"avoid premature optimization. push this decision down lower if it is needed at all"
-	^{'-m32'}
 
 ]
 
@@ -501,17 +612,12 @@ Linux64x86w32BitConfig >> externalPluginsBuildMultiThreadedDebug [
 	^ self externalPluginsBuild
 ]
 
-{ #category : #'plugin extra rules' }
-Linux64x86w32BitConfig >> extraPluginSettings: maker [
-	super extraPluginSettings: maker.  
-	maker set: #linkFlags toString: '${linkFlags} -m32'
-]
-
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfig >> extraVMSettingsBuild: aMaker [
 	"SystemNavigation default browseMethodsWhoseNamesContain: 'extraVMSettingsBuild:'"
 
 	| versionC |
+	aMaker message: 'extraVMSettingsBuild: aMaker'.
 	self generateConfigH.
 	
 	"add a generated version.c"
@@ -620,17 +726,10 @@ Linux64x86w32BitConfig >> internalPluginsBuildMultiThreadedDebug [
 	^self internalPluginsBuild
 ]
 
-{ #category : #accessing }
-Linux64x86w32BitConfig >> linkFlags [
-"	^ super linkFlags , ' -luuid -lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'"
-	^ super linkFlags , ' -luuid -lSM -lICE -ldl  -lpthread -lm -lnsl -lX11'
-
-
-]
-
 { #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> postBuildActionsBuild: gen [
+Linux64x86w32BitConfig >> postBuildActionsBuild: aMaker [
 	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
+	aMaker message: 'postBuildActionsBuild: aMaker'.
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -660,6 +759,11 @@ Linux64x86w32BitConfig >> postBuildActionsBuildITimerHeartbeat: aMaker [
 
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfig >> postBuildActionsBuildMultiThreaded: aMaker [
+	^self postBuildActionsBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> postBuildActionsBuildMultiThreadedAssert: aMaker [
 	^self postBuildActionsBuild: aMaker
 ]
 
@@ -759,25 +863,31 @@ Linux64x86w32BitConfig >> preferredIncludesBuildMultiThreadedDebug [
 Linux64x86w32BitConfig >> setExtraTargetPropertiesBuild: aMaker [
 	self flag:'tty'. "I am nervous about this method up here in this class, but pharo has it in CogUnixConfig, so using as is for now"
 
-	aMaker setTargetProperties: 'LINK_FLAGS "-m32"'.
-		
+
+	aMaker message: 'setExtraTargetPropertiesBuild: aMaker'.		
+
 	aMaker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
-		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-rtd -mno-accumulate-outgoing-args")'.
+		COMPILE_FLAGS "' , self compilerFlags , '")'.
 		
 	
 	aMaker 
 		cmd: 'set_source_files_properties'
 		params: ' ${targetPlatform}/vm/sqUnixHeartbeat.c PROPERTIES 
-		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -mno-rtd -mno-accumulate-outgoing-args"'.
-	
+		COMPILE_FLAGS "' , self compilerFlags , '"'.
+	"
 	aMaker addExternalLibraries: 
 		#(
 			'uuid'  ""
 			'ssl'  ""
 			'crypto' ""
+			'm'  
+			'dl' 
+			'pthread' 
 		).
-					
-
+				
+"
+	aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
+	self addVMDrivers: aMaker.
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -824,7 +934,7 @@ Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildMultiThreadedDebug: aMake
 Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
 	"
 	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild:'"
-
+	aMaker message: 'setGlobalOptionsAfterDetermineSystemBuild: aMaker'.		
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -877,8 +987,7 @@ Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreaded
 
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfig >> setGlobalOptionsBuild: aMaker [
-	aMaker set: 'CMAKE_C_COMPILER' to: '/usr/bin/gcc'.
-	aMaker set: 'CMAKE_CXX_COMPILER' to: '/usr/bin/g++'.
+	aMaker message: 'setGlobalOptionsBuild: aMaker'.
 "	maker set: 'CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH}' to: ' /usr/lib/gcc/x86_64-slackware-linux/4.8.2/'. 
 set any CMake global options, before declaring a project in cmake file
 	

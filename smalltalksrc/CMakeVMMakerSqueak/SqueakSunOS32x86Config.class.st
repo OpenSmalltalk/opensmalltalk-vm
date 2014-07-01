@@ -17,6 +17,77 @@ Class {
 	#category : #'CMakeVMMakerSqueak-SunOS32x86'
 }
 
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> addVMDriversBuild: aMaker [
+	aMaker message: 'addVMDrivers: aMaker'.
+	 self 
+		addDriver: 'vm-display-null' 
+		sources: #( 
+			'${targetPlatform}/vm-display-null/sqUnixDisplayNull' )
+		generator: aMaker
+		externalLibs: #();
+		
+		addDriver: 'vm-display-X11' 
+		sources: #( 
+			'${targetPlatform}/vm-display-X11/sqUnixX11'
+			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
+		generator: aMaker
+		externalLibs: (self linkFlags);
+
+		addDriver: 'vm-sound-ALSA' 
+		sources: #( 
+			'${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' )
+		generator: aMaker
+		externalLibs: #();
+
+		addDriver: 'vm-sound-null' 
+		sources: #( 
+			'${targetPlatform}/vm-sound-null/sqUnixSoundNull' )
+		generator: aMaker
+		externalLibs: #().
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> addVMDriversBuildAssert: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> addVMDriversBuildAssertITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> addVMDriversBuildDebug: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> addVMDriversBuildDebugITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> addVMDriversBuildITimerHeartbeat: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> addVMDriversBuildMultiThreaded: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> addVMDriversBuildMultiThreadedAssert: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> addVMDriversBuildMultiThreadedDebug: aMaker [
+	^self addVMDriversBuild: aMaker
+]
+
 { #category : #'cmake configuration' }
 SqueakSunOS32x86Config >> availableBuildTypes [
 	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes

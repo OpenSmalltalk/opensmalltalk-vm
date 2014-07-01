@@ -8,96 +8,10 @@ Class {
 	#category : #CMakeVMMakerSqueak
 }
 
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> addVMDriversBuild: aMaker [
-"
-libICE
-ICE is the Inter Client Exchange protocol, part of X11
-
-libSM
-session management library for X11
-
-"
-	 self 
-		addDriver: 'vm-display-null' 
-		sources: #( 
-			'${targetPlatform}/vm-display-null/sqUnixDisplayNull' )
-		generator: aMaker
-		externalLibs: #();
-		
-		
-		addDriver: 'vm-display-X11' 
-		sources: #( 
-			'${targetPlatform}/vm-display-X11/sqUnixX11'
-			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
-		generator: aMaker
-		
-		"-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'"
-		externalLibs: #( SM ICE GL X11 nsl dl);
-		
-
-		addDriver: 'vm-sound-ALSA' 
-		sources: #( 
-			'${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' )
-		generator: aMaker
-		externalLibs: #();
-
-		addDriver: 'vm-sound-null' 
-		sources: #( 
-			'${targetPlatform}/vm-sound-null/sqUnixSoundNull' )
-		generator: aMaker
-		externalLibs: #().
-	
-"
-vm-display-null
-	vm-display-X11
-	vm-sound-ALSA
-	vm-sound-null"
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> addVMDriversBuildAssert: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> addVMDriversBuildAssertITimerHeartbeat: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> addVMDriversBuildDebug: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> addVMDriversBuildDebugITimerHeartbeat: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> addVMDriversBuildITimerHeartbeat: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #utils }
-SqueakUnixConfig >> addVMDriversBuildMultiThreaded: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> addVMDriversBuildMultiThreadedAssert: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> addVMDriversBuildMultiThreadedDebug: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
 { #category : #'compiler flags' }
 SqueakUnixConfig >> commonCompilerFlags [
 	"avoid premature optimization. push this decision down lower if it is needed at all"
+	self deprecated: ' its much easier to have all the flags in your configuration class.  '.
 	^{}
 
 
