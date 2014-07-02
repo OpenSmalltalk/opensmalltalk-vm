@@ -1067,7 +1067,7 @@ CoInterpreter >> ceActivateFailingPrimitiveMethod: aPrimitiveMethod [
 	(objectMemory hasSpurMemoryManagerAPI
 	 and: [(objectMemory isOopCompiledMethod: newMethod)
 	 and: [self checkForAndFollowForwardedPrimitiveState]]) ifTrue:
-		[self halt; initPrimCall.
+		[self initPrimCall.
 		 self cCode: [self dispatchFunctionPointer: primitiveFunctionPointer]
 			inSmalltalk:
 				[| evaluable |
