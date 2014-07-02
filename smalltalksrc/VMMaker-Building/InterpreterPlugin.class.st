@@ -261,6 +261,7 @@ InterpreterPlugin >> isInterpreterPlugin [
 
 { #category : #accessing }
 InterpreterPlugin >> isSmartSyntaxPluginSimulator [
+	<doNotGenerate>
 	^false
 ]
 
