@@ -1647,7 +1647,7 @@ CogObjectRepresentationFor32BitSpur >> getInlineCacheClassTagFrom: sourceReg int
 			movl 0(%edx), rDest
 			andl $0x3fffff, rDest
 		Lcmp:
-	 But we expect most SMallInteger arithmetic to be performwd in-line and so prefer the
+	 But we expect most SmallInteger arithmetic to be performed in-line and so prefer the
 	 version that is faster for non-immediates (because it branches for immediates only)."
 	| immLabel jumpNotImm entryLabel jumpCompare |
 	<var: #immLabel type: #'AbstractInstruction *'>
@@ -1685,6 +1685,14 @@ CogObjectRepresentationFor32BitSpur >> getInlineCacheClassTagFrom: sourceReg int
 			 cogit AndCq: objectMemory classIndexMask R: destReg.
 			 jumpCompare jmpTarget: cogit Label].
 	^entryLabel
+]
+
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationFor32BitSpur >> inlineCacheTagForInstance: oop [
+	"c.f. getInlineCacheClassTagFrom:into:"
+	^(objectMemory isImmediate: oop)
+		ifTrue: [oop bitAnd: 1]
+		ifFalse: [objectMemory classIndexOf: oop]
 ]
 
 { #category : #'primitive generators' }
