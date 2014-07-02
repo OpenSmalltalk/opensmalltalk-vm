@@ -12800,7 +12800,7 @@ StackInterpreter >> transferTo: newProc [
 StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries [
 	"Load the plugin and if on Spur, populate pluginEntries with the prmitives in the plugin."
 	<doNotGenerate>
-	| plugin plugins simulatorClasses |
+	| plugin realPluginClass plugins simulatorClasses |
 	self transcript cr; show: 'Looking for module ', pluginString.
 	"Defeat loading of the FloatArrayPlugin & Matrix2x3Plugin since complications with 32-bit
 	 float support prevent simulation.  If you feel up to tackling this start by implementing
@@ -12824,7 +12824,8 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 			simulatorClasses size > 1 ifTrue: [^self error: 'This won''t work...'].
 			plugins size > 1 ifTrue:
 				[self transcript show: '...multiple plugin classes; choosing ', plugins last name].
-			plugin := simulatorClasses anyOne newFor: plugins last. "hopefully lowest in the hierarchy..."
+			realPluginClass := plugins last. "hopefully lowest in the hierarchy..."
+			plugin := simulatorClasses anyOne newFor: realPluginClass.
 			plugin setInterpreter: objectMemory. "Ignore return value from setInterpreter"
 			(plugin respondsTo: #initialiseModule) ifTrue:
 				[plugin initialiseModule ifFalse:
@@ -12835,7 +12836,10 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 		 self transcript show: '...computing accessor depths'.
 		 plugin class isPluginClass
 			ifTrue:
-				[realPlugin := plugin class withAllSuperclasses detect: [:class| class shouldBeTranslated].
+				[realPlugin := (plugin isSmartSyntaxPluginSimulator
+									ifTrue: [realPluginClass]
+									ifFalse: [plugin class])
+								 withAllSuperclasses detect: [:class| class shouldBeTranslated].
 				 cg := realPlugin buildCodeGeneratorUpTo: realPlugin]
 			ifFalse:
 				[cg := self codeGeneratorToComputeAccessorDepth.

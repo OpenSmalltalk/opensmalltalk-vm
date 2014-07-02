@@ -160,6 +160,17 @@ SmartSyntaxPluginSimulator >> initialiseModule [
 ]
 
 { #category : #simulation }
+SmartSyntaxPluginSimulator >> isPluginClass [
+	"This stands in for SmartSyntaxInterpreterPlugin classes during simulation."
+	^true
+]
+
+{ #category : #accessing }
+SmartSyntaxPluginSimulator >> isSmartSyntaxPluginSimulator [
+	^true
+]
+
+{ #category : #simulation }
 SmartSyntaxPluginSimulator >> primitive: primNameString parameters: argumentClassNames [
 	"If initializing, pass back the type signature.  If executing, answer nil."
 	^self primitive: primNameString parameters: argumentClassNames receiver: nil

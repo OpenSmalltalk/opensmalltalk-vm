@@ -4555,7 +4555,10 @@ SpurMemoryManager >> formatShift [
 { #category : #'become implementation' }
 SpurMemoryManager >> forward: obj1 to: obj2 [
 	self set: obj1 classIndexTo: self isForwardedObjectClassIndexPun formatTo: self forwardedFormat.
-	self storePointer: 0 ofForwarder: obj1 withValue: obj2
+	self storePointer: 0 ofForwarder: obj1 withValue: obj2.
+	"For safety make sure the forwarder has a slot count that includes its contents."
+	(self rawNumSlotsOf: obj1) = 0 ifTrue:
+		[self setRawNumSlotsOf: obj1 to: 1]
 ]
 
 { #category : #'become implementation' }
@@ -6485,7 +6488,7 @@ SpurMemoryManager >> lengthOf: objOop format: fmt [
 	| numSlots |
 	<inline: true>
 	<asmLabel: false> 
-	numSlots := self numSlotsOf: objOop.
+	numSlots := self numSlotsOfAny: objOop. "don't let forwarders freak us out..."
 	fmt <= self sixtyFourBitIndexableFormat ifTrue:
 		[^numSlots].
 	fmt >= self firstByteFormat ifTrue: "bytes, including CompiledMethod"
