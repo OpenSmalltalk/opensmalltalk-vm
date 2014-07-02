@@ -424,16 +424,16 @@ LargeIntegersPlugin >> cCoreBytesRshiftCount: count n: n f: f bytes: b from: pFr
 { #category : #'C core' }
 LargeIntegersPlugin >> cCoreDigitDivDiv: pDiv len: divLen rem: pRem len: remLen quo: pQuo len: quoLen [ 
 	| dl ql dh dnh j t hi lo r3 l a cond q r1r2 mul |
-	<var: #pDiv type: 'unsigned char * '>
-	<var: #pRem type: 'unsigned char * '>
-	<var: #pQuo type: 'unsigned char * '>
+	<var: #pDiv type: #'unsigned char *'>
+	<var: #pRem type: #'unsigned char *'>
+	<var: #pQuo type: #'unsigned char *'>
 	dl := divLen - 1.
 	"Last actual byte of data (ST ix)"
 	ql := quoLen.
 	dh := pDiv at: dl - 1.
-	dl = 1
-		ifTrue: [dnh := 0]
-		ifFalse: [dnh := pDiv at: dl - 2].
+	dnh := dl = 1
+			ifTrue: [0]
+			ifFalse: [pDiv at: dl - 2].
 	1 to: ql do: 
 		[:k | 
 		"maintain quo*arg+rem=self"
@@ -443,8 +443,7 @@ LargeIntegersPlugin >> cCoreDigitDivDiv: pDiv len: divLen rem: pRem len: remLen 
 		the year 2000 ;-) [sr]"
 		j := remLen + 1 - k.
 		"r1 := rem digitAt: j."
-		(pRem at: j - 1)
-			= dh
+		(pRem at: j - 1) = dh
 			ifTrue: [q := 255]
 			ifFalse: 
 				["Compute q = (r1,r2)//dh, t = (r1,r2)\\dh.                
@@ -452,9 +451,7 @@ LargeIntegersPlugin >> cCoreDigitDivDiv: pDiv len: divLen rem: pRem len: remLen 
 				Be careful not to generate intermediate results exceeding 13  
 				            bits."
 				"r2 := (rem digitAt: j - 2)."
-				r1r2 := ((pRem at: j - 1)
-							bitShift: 8)
-							+ (pRem at: j - 2).
+				r1r2 := ((pRem at: j - 1) bitShift: 8) + (pRem at: j - 2).
 				t := r1r2 \\ dh.
 				q := r1r2 // dh.
 				"Next compute (hi,lo) := q*dnh"
@@ -486,28 +483,20 @@ LargeIntegersPlugin >> cCoreDigitDivDiv: pDiv len: divLen rem: pRem len: remLen 
 		a := 0.
 		1 to: divLen do: 
 			[:i | 
-			hi := (pDiv at: i - 1)
-						* (q bitShift: -8).
-			lo := a + (pRem at: l - 1) - ((pDiv at: i - 1)
-							* (q bitAnd: 255)).
-			"pRem at: l - 1 put: lo - (lo // 256 * 256)."
-			"sign-tolerant form of (lo bitAnd: 255) -> obsolete..."
-			pRem at: l - 1 put: (lo bitAnd: 255).
-			"... is sign-tolerant! [sr]"
-			a := lo // 256 - hi.
+			hi := (pDiv at: i - 1) * (q bitShift: -8).
+			lo := a + (pRem at: l - 1) - ((pDiv at: i - 1) * (q bitAnd: 255)).
+			pRem at: l - 1 put: (self cCode: [lo] inSmalltalk: [lo bitAnd: 255]).
+			a := (lo signedBitShift: -8) - hi.
 			l := l + 1].
-		a < 0
-			ifTrue: 
-				["Add div back into rem, decrease q by 1"
-				q := q - 1.
-				l := j - dl.
-				a := 0.
-				1 to: divLen do: 
-					[:i | 
-					a := (a bitShift: -8)
-								+ (pRem at: l - 1) + (pDiv at: i - 1).
-					pRem at: l - 1 put: (a bitAnd: 255).
-					l := l + 1]].
+		a < 0 ifTrue: "Add div back into rem, decrease q by 1"
+			[q := q - 1.
+			l := j - dl.
+			a := 0.
+			1 to: divLen do: 
+				[:i | 
+				a := (a bitShift: -8) + (pRem at: l - 1) + (pDiv at: i - 1).
+				pRem at: l - 1 put: (self cCode: [a] inSmalltalk: [a bitAnd: 255]).
+				l := l + 1]].
 		pQuo at: quoLen - k put: q]
 ]
 
@@ -621,20 +610,20 @@ LargeIntegersPlugin >> cDigitOfCSI: csi at: ix [
 { #category : #'C core' }
 LargeIntegersPlugin >> cDigitSub: pByteSmall len: smallLen with: pByteLarge len: largeLen into: pByteRes [
 	| z |
-	<var: #pByteSmall type: 'unsigned char * '>
-	<var: #pByteLarge type: 'unsigned char * '>
-	<var: #pByteRes type: 'unsigned char * '>
+	<var: #pByteSmall type: #'unsigned char *'>
+	<var: #pByteLarge type: #'unsigned char *'>
+	<var: #pByteRes type: #'unsigned char *'>
 
 	z := 0. "Loop invariant is -1<=z<=1"
 	0 to: smallLen - 1 do: 
 		[:i | 
 		z := z + (pByteLarge at: i) - (pByteSmall at: i).
-		pByteRes at: i put: z - (z // 256 * 256). "sign-tolerant form of (z bitAnd: 255)"
+		pByteRes at: i put: (self cCode: [z] inSmalltalk: [z bitAnd: 255]).
 		z := z signedBitShift: -8].
 	smallLen to: largeLen - 1 do: 
 		[:i | 
 		z := z + (pByteLarge at: i) .
-		pByteRes at: i put: z - (z // 256 * 256). "sign-tolerant form of (z bitAnd: 255)"
+		pByteRes at: i put: (self cCode: [z] inSmalltalk: [z bitAnd: 255]).
 		z := z signedBitShift: -8].
 
 ]
@@ -679,13 +668,13 @@ LargeIntegersPlugin >> cdigitMontgomery: pBytesFirst
 				into: pBytesRes [
 				
 	| u limit1 limit2 limit3 accum lastByte |
-	<var: #pBytesFirst type: 'unsigned char * '>
-	<var: #pBytesSecond type: 'unsigned char * '>
-	<var: #pBytesThird type: 'unsigned char * '>
-	<var: #pBytesRes type: 'unsigned char * '>
-	<var: #accum type: 'usqInt '>
-	<var: #u type: 'unsigned char  '>
-	<var: #lastByte type: 'unsigned char  '>
+	<var: #pBytesFirst type: #'unsigned char *'>
+	<var: #pBytesSecond type: #'unsigned char *'>
+	<var: #pBytesThird type: #'unsigned char *'>
+	<var: #pBytesRes type: #'unsigned char *'>
+	<var: #accum type: #usqInt>
+	<var: #u type: #'unsigned char'>
+	<var: #lastByte type: #'unsigned char'>
 	limit1 := firstLen - 1.
 	limit2 := secondLen - 1.
 	limit3 := thirdLen - 1.
@@ -721,9 +710,8 @@ LargeIntegersPlugin >> cdigitMontgomery: pBytesFirst
 		0 to: limit3 do: 
 			[:i | 
 			accum := accum + (pBytesRes at: i) - (pBytesThird at: i).
-			pBytesRes at: i put: accum - (accum // 256 * 256).
-			"sign-tolerant form of (z bitAnd: 255)"
-			accum := accum // 256]].
+			pBytesRes at: i put: (self cCode: [accum] inSmalltalk: [accum bitAnd: 255]).
+			accum := accum signedBitShift: -8]].
 ]
 
 { #category : #'oop util' }
