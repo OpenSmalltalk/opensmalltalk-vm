@@ -167,6 +167,7 @@ SmartSyntaxPluginSimulator >> isPluginClass [
 
 { #category : #accessing }
 SmartSyntaxPluginSimulator >> isSmartSyntaxPluginSimulator [
+	<doNotGenerate>
 	^true
 ]
 
