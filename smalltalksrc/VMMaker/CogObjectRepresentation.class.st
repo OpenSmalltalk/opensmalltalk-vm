@@ -224,7 +224,7 @@ CogObjectRepresentation >> markAndTraceLiteralIfYoung: literal [
 
 { #category : #'primitive generators' }
 CogObjectRepresentation >> maybeCompileRetry: retryInst onPrimitiveFail: primIndex [
-	<var: #retry type: #'AbstractInstruction *'>
+	<var: #retryInst type: #'AbstractInstruction *'>
 	"Object representations with lazy forwarding will want to check for
 	 forwarding pointers on primitive failure and retry the primitive if found.
 	 By default do nothing."

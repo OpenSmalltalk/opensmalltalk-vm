@@ -76,8 +76,13 @@ SmartSyntaxInterpreterPlugin >> primitive: primName parameters: anArray receiver
 
 { #category : #simulation }
 SmartSyntaxInterpreterPlugin >> remapOop: oopOrList in: aBlock [
+	"Call remapOop: for the variable oopOrList (or all of the variables in oopOrList) before evaluating
+	 aBlock, and restore them after.  If this is Spur, do nothing, since Spur does not GC on allocation
+	 and the  SmartSyntaxPluginCodeGenerator generates null code for this op in Spur."
 	<doNotGenerate>
 	| ctxt tempNames tempIndices |
+	interpreterProxy hasSpurMemoryManagerAPI ifTrue:
+		[^aBlock value].
 	ctxt := thisContext sender.
 	tempNames := ctxt tempNames.
 	oopOrList isArray

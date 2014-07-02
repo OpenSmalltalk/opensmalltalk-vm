@@ -629,7 +629,7 @@ CogObjectRepresentationForSpur >> markAndTraceLiteralIfYoung: literal [
 
 { #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> maybeCompileRetry: retryInst onPrimitiveFail: primIndex [
-	<var: #retry type: #'AbstractInstruction *'>
+	<var: #retryInst type: #'AbstractInstruction *'>
 	"If primIndex has an accessorDepth, check for primitive failure and call
 	 ceCheckForAndFollowForwardedPrimitiveStateFor:.  If ceCheck.... answers
 	 true, retry the primitive."
