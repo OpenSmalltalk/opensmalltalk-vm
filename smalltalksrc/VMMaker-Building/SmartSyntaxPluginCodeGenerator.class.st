@@ -655,26 +655,18 @@ SmartSyntaxPluginCodeGenerator >> generateNext: msgNode on: aStream indent: leve
 SmartSyntaxPluginCodeGenerator >> generateRemapOopIn: aNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	| idList |
-	pluginFunctionsUsed add: #pushRemappableOop:; add: #popRemappableOop.
-	idList := aNode args first nameOrValue.
-	idList class == Array ifFalse: [idList := Array with: idList].
-	idList do:
-		[:each | 
-		 aStream 
-			nextPutAll: 'pushRemappableOop(';
-			nextPutAll: each asString;
-			nextPutAll: ');']
-		separatedBy: [aStream crtab: level].
-	aStream cr.
-	aNode args second emitCCodeOn: aStream level: level generator: self.
-	level timesRepeat: [aStream tab].
-	idList reversed do:
-		[:each |
-		 aStream 
-			nextPutAll: each asString;
-			nextPutAll: ' = popRemappableOop()']
-		separatedBy: [aStream nextPut: $;; crtab: level].
+	aStream cr; nextPutAll: '#if SPURVM'; cr.
+	self generateSpurRemapOopIn: aNode on: aStream indent: level.
+	aStream cr; nextPutAll: '#else /* SPURVM */'; cr.
+	self generateV3RemapOopIn: aNode on: aStream indent: level.
+	aStream cr; nextPutAll: '#endif /* SPURVM */'; cr
+]
+
+{ #category : #'translating builtins' }
+SmartSyntaxPluginCodeGenerator >> generateSpurRemapOopIn: aNode on: aStream indent: level [
+	"Generate just the block argument for this message as Spur does not GC on allocation."
+
+	aNode args second emitCCodeOn: aStream level: level generator: self
 ]
 
 { #category : #'translating builtins' }
@@ -694,6 +686,34 @@ SmartSyntaxPluginCodeGenerator >> generateStAtPut: aNode on: aStream indent: anI
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateStSize: aNode on: aStream indent: anInteger [
 	self genCallOf: #stSizeOf: with: aNode receiver on: aStream
+]
+
+{ #category : #'translating builtins' }
+SmartSyntaxPluginCodeGenerator >> generateV3RemapOopIn: aNode on: aStream indent: level [
+	"Generate call on remapOop: for the variable oopOrList (or all of the
+	 variables in oopOrList) before evaluating aBlock, and restore them after.
+	 This keeps the oops valid if, as V3 will, there is a GC on allocation."
+
+	| idList |
+	pluginFunctionsUsed add: #pushRemappableOop:; add: #popRemappableOop.
+	idList := aNode args first nameOrValue.
+	idList class == Array ifFalse: [idList := Array with: idList].
+	idList do:
+		[:each | 
+		 aStream 
+			nextPutAll: 'pushRemappableOop(';
+			nextPutAll: each asString;
+			nextPutAll: ');']
+		separatedBy: [aStream crtab: level].
+	aStream cr.
+	aNode args second emitCCodeOn: aStream level: level generator: self.
+	level timesRepeat: [aStream tab].
+	idList reversed do:
+		[:each |
+		 aStream 
+			nextPutAll: each asString;
+			nextPutAll: ' = popRemappableOop()']
+		separatedBy: [aStream nextPut: $;; crtab: level]
 ]
 
 { #category : #initialize }
