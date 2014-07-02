@@ -259,6 +259,11 @@ InterpreterPlugin >> isInterpreterPlugin [
 	^true
 ]
 
+{ #category : #accessing }
+InterpreterPlugin >> isSmartSyntaxPluginSimulator [
+	^false
+]
+
 { #category : #'simulation support' }
 InterpreterPlugin >> majorVersion [
 	"This is implemented in sqVirtualMachine.c, so this form is for simulation only."

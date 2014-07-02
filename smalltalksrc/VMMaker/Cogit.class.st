@@ -8498,6 +8498,12 @@ Cogit >> simulatedTrampolineFor: selectorOrAddress [
 ]
 
 { #category : #initialization }
+Cogit >> simulatedTrampolines [
+	<doNotGenerate>
+	^simulatedTrampolines
+]
+
+{ #category : #initialization }
 Cogit >> simulatedVariableAddress: getter in: receiver [
 	"Answer a simulated variable.  This is a variable whose value can be read
 	 by generated machine code."

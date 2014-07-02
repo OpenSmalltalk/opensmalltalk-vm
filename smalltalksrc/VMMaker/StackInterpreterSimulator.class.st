@@ -989,9 +989,9 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString A
 		cr;
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
-	breakSelector ifNotNil:
-		[(self str: functionString n: breakSelector cmp: functionString size) = 0 ifTrue:
-			[self halt: functionString]].
+	(breakSelector notNil
+	 and: [(self str: functionString n: breakSelector cmp: functionString size) = 0]) ifTrue:
+		[self halt: functionString].
 	plugin := pluginList 
 				detect: [:any| any key = pluginString asString]
 				ifNone:
@@ -1001,7 +1001,6 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString A
 		[firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
 		 ^0].
 	plugin := plugin value.
-	"mappedPluginEntries select: [:tuple| tuple first = plugin] an OrderedCollection({an UnixOSProcessPlugin . #getModuleName . [closure] in [] in StackInterpreterSimulatorLSB(StackInterpreter)>>tryLoadNewPlugin:pluginEntries: . nil} {an UnixOSProcessPlugin . #setInterpreter . [closure] in [] in StackInterpreterSimulatorLSB(StackInterpreter)>>tryLoadNewPlugin:pluginEntries: . nil})"
 	mappedPluginEntries doWithIndex:
 		[:pluginAndName :index|
 		 ((pluginAndName at: 1) == plugin 
@@ -1010,6 +1009,7 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString A
 			 accessorDepthPtr at: 0 put: (pluginAndName at: 4).
 			 ^index]].
 	firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
+	transcript cr.
 	^0
 ]
 

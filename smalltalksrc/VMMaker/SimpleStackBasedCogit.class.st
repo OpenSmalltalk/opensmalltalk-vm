@@ -1001,7 +1001,10 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 	self PrefetchAw: coInterpreter primFailCodeAddress.
 	(flags anyMask: PrimCallMayCallBack)
 		ifTrue: "Sideways call the C primitive routine so that we return through cePrimReturnEnterCogCode."
-			[backEnd genSubstituteReturnAddress:
+			["On Spur ceActivateFailingPrimitiveMethod: would like to retry if forwarders
+			  are found. So insist on PrimCallNeedsPrimitiveFunction being set too."
+			 self assert: (flags anyMask: PrimCallNeedsPrimitiveFunction).
+			 backEnd genSubstituteReturnAddress:
 				((flags anyMask: PrimCallCollectsProfileSamples)
 					ifTrue: [cePrimReturnEnterCogCodeProfiling]
 					ifFalse: [cePrimReturnEnterCogCode]).
@@ -1029,7 +1032,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 			objectRepresentation maybeCompileRetry: retry onPrimitiveFail: primitiveIndex.
 			self maybeCompileAllocFillerCheck.
 			"Switch back to the Smalltalk stack.  Stack better be in either of these two states:
-				success:	stackPointer	->	result (was receiver)
+				success:	stackPointer ->	result (was receiver)
 											arg1
 											...
 											argN
@@ -1037,7 +1040,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 				failure:						receiver
 											arg1
 											...
-							stackPointer	->	argN
+							stackPointer ->	argN
 											return pc
 			In either case we can push the instructionPointer or load it into the LinkRegister to reestablish the return pc"
 			self MoveAw: coInterpreter instructionPointerAddress
@@ -1052,7 +1055,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 			"Fetch result from stack"
 			self MoveMw: BytesPerWord r: SPReg R: ReceiverResultReg.
 			self flag: 'currently caller pushes result'.
-			self RetN: BytesPerWord].
+			self RetN: BytesPerWord].	"return to caller, popping receiver"
 
 	(flags anyMask: PrimCallCollectsProfileSamples) ifTrue:
 		["The sample is collected by cePrimReturnEnterCogCode for external calls"
@@ -1890,6 +1893,27 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 		arg: nil
 		resultReg: nil
 		saveRegs: false.
+
+	"On Spur ceActivateFailingPrimitiveMethod: may retry the primitive and return if successful.
+	 So continue by returning to the caller.
+	 Switch back to the Smalltalk stack.  Stack should be in this state:
+				success:	stackPointer ->	result (was receiver)
+											arg1
+											...
+											argN
+											return pc
+	 We can push the instructionPointer or load it into the LinkRegister to reestablish the return pc"
+	self MoveAw: coInterpreter instructionPointerAddress
+		R: (backEnd hasLinkRegister ifTrue: [LinkReg] ifFalse: [ClassReg]).
+	backEnd genLoadStackPointers.
+	backEnd hasLinkRegister
+		ifTrue:
+			[self MoveMw: 0 r: SPReg R: ReceiverResultReg]	"Fetch result from stack"
+		ifFalse:
+			[self MoveMw: BytesPerWord r: SPReg R: ReceiverResultReg.	"Fetch result from stack"
+			 self PushR: ClassReg].											"Restore return pc on CISCs"
+	self flag: 'currently caller pushes result'.
+	self RetN: BytesPerWord.	"return to caller, popping receiver"
 
 	profiling ifTrue:
 		["Call ceCheckProfileTick: to record sample and then continue.  newMethod
