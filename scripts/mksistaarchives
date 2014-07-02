@@ -5,7 +5,8 @@ IFS="
 "
 cd `dirname $0`/../products
 NSB=newspeak.sista.spur
-SQB=squeak.sista.spur
+SQCB=squeak.sista.v3
+SQSB=squeak.sista.spur
 if [ $# = 0 ]; then
 CL=1
 CM=1
@@ -44,6 +45,8 @@ REV=`grep 'SvnRawRevisionString.*Rev:' ../platforms/Cross/vm/sqSCCSVersion.h \
 TAG=`date +%g.%U.`$REV
 echo REV=$REV TAG=$TAG
 if [ -n "$CL" ]; then
+	echo not yet implemented 1>&2
+	exit 1
 	for archive in sistaspurlinuxht; do
 		rm -rf $archive-$TAG.tgz
 		echo $archive '=>' $archive-$TAG.tgz
@@ -52,6 +55,8 @@ if [ -n "$CL" ]; then
 	done
 fi
 if [ -n "$NL" ]; then
+	echo not yet implemented 1>&2
+	exit 1
 	set -- nssistaspurlinuxht
 	for archive in nsvmspurlinuxht; do
 		rm -rf $archive-$TAG.tgz
@@ -63,22 +68,39 @@ if [ -n "$NL" ]; then
 fi
 if [ -n "$CM" ]; then
 	set -- Fast.app
-	for app in SistaSpur.app; do
+	for app in Sista.app; do
 		test -d $app || mkdir $app
-		if [ -d ../build.macos32x86/$SQB/$1 ]; then
+		if [ -d ../build.macos32x86/$SQCB/$1 ]; then
 			rm -rf $app/* $app-$TAG.tgz
-			echo build.macos32x86/$SQB/$1 '=>' $app '=>' $app-$TAG.tgz
-			(cd ../build.macos32x86/$SQB/$1 >/dev/null;tar cf - *) \
+			echo build.macos32x86/$SQCB/$1 '=>' $app '=>' $app-$TAG.tgz
+			(cd ../build.macos32x86/$SQCB/$1 >/dev/null;tar cf - *) \
 			| (cd $app;tar xf -)
 			tar czf $app-$TAG.tgz $app
 			EXES="$EXES	$app/Contents/MacOS/Squeak"
 		else
-			echo build.macos32x86/$SQB/$1 is missing
+			echo build.macos32x86/$SQCB/$1 is missing
+		fi
+		shift
+	done
+	set -- Fast.app
+	for app in SistaSpur.app; do
+		test -d $app || mkdir $app
+		if [ -d ../build.macos32x86/$SQSB/$1 ]; then
+			rm -rf $app/* $app-$TAG.tgz
+			echo build.macos32x86/$SQSB/$1 '=>' $app '=>' $app-$TAG.tgz
+			(cd ../build.macos32x86/$SQSB/$1 >/dev/null;tar cf - *) \
+			| (cd $app;tar xf -)
+			tar czf $app-$TAG.tgz $app
+			EXES="$EXES	$app/Contents/MacOS/Squeak"
+		else
+			echo build.macos32x86/$SQSB/$1 is missing
 		fi
 		shift
 	done
 fi
 if [ -n "$NM" ]; then
+	echo not yet implemented 1>&2
+	exit 1
 	set -- Fast.app
 	for app in Newspeak\ Spur\ Virtual\ Machine.app; do
 		test -d $app || mkdir $app
@@ -96,25 +118,29 @@ if [ -n "$NM" ]; then
 	done
 fi
 if [ -n "$CW" ]; then
+	echo not yet implemented 1>&2
+	exit 1
 	set -- build/vm
 	for dir in sistaspurwin; do
 		test -d $dir || mkdir $dir
-		if [ -d ../build.win32x86/$SQB/$1 ]; then
+		if [ -d ../build.win32x86/$SQSB/$1 ]; then
 			rm -rf $dir/* $dir-$TAG.zip
-			echo build.win32x86/$SQB/$1 '=>' $dir '=>' $dir-$TAG.zip
-			(cd ../build.win32x86/$SQB/$1 >/dev/null; \
+			echo build.win32x86/$SQSB/$1 '=>' $dir '=>' $dir-$TAG.zip
+			(cd ../build.win32x86/$SQSB/$1 >/dev/null; \
 			 tar cf - Squeak.exe Squeak.map Squeak.exe.manifest \
 						SqueakConsole.exe SqueakConsole.map *.dll) \
 			| (cd $dir;tar xf -)
 			zip -qr $dir-$TAG.zip $dir
 			EXES="$EXES	$dir/Squeak.exe	$dir/SqueakConsole.exe"
 		else
-			echo build.win32x86/$SQB/$1 is missing
+			echo build.win32x86/$SQSB/$1 is missing
 		fi
 		shift
 	done
 fi
 if [ -n "$NW" ]; then
+	echo not yet implemented 1>&2
+	exit 1
 	set -- build/vm
 	for dir in nsvmspurwin; do
 		test -d $dir || mkdir $dir
