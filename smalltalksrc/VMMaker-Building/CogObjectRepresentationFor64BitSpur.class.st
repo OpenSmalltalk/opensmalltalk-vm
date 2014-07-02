@@ -21,6 +21,14 @@ CogObjectRepresentationFor64BitSpur >> genFetchIndexRegister: indexReg from: tab
 	^0
 ]
 
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationFor64BitSpur >> inlineCacheTagForInstance: oop [
+	"c.f. getInlineCacheClassTagFrom:into:"
+	^(objectMemory isImmediate: oop)
+		ifTrue: [oop bitAnd: objectMemory tagMask]
+		ifFalse: [objectMemory classIndexOf: oop]
+]
+
 { #category : #initialization }
 CogObjectRepresentationFor64BitSpur >> log2BytesPerWord [
 	^3
