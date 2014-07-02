@@ -1060,7 +1060,26 @@ CoInterpreter >> ceActivateFailingPrimitiveMethod: aPrimitiveMethod [
 	 of executing machine code if it is available."
 	<api>
 	| methodHeader |
+	self assert: primFailCode ~= 0.
 	self assert: newMethod = aPrimitiveMethod.
+	"If we're on Spur, check for forwarders and retry,
+	 returning if successful the second time around."
+	(objectMemory hasSpurMemoryManagerAPI
+	 and: [(objectMemory isOopCompiledMethod: newMethod)
+	 and: [self checkForAndFollowForwardedPrimitiveState]]) ifTrue:
+		[self halt; initPrimCall.
+		 self cCode: [self dispatchFunctionPointer: primitiveFunctionPointer]
+			inSmalltalk:
+				[| evaluable |
+				 evaluable := primitiveFunctionPointer isInteger
+								ifTrue: [cogit simulatedTrampolines at: primitiveFunctionPointer]
+								ifFalse: [primitiveFunctionPointer].
+				 evaluable isMessageSend
+					ifTrue: [self assert: evaluable receiver == self]
+					ifFalse: [self assert: evaluable isBlock].
+				 evaluable value].
+		 self successful ifTrue:
+			[^self]].
 	methodHeader := self rawHeaderOf: aPrimitiveMethod.
 	(self isCogMethodReference: methodHeader)
 		ifTrue: [self activateCoggedNewMethod: false]
