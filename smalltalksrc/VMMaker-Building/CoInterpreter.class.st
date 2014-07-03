@@ -444,10 +444,10 @@ CoInterpreter >> activateCoggedNewMethod: inInterpreter [
 		["frameless method; nothing to activate..."
 		 cogit numRegArgs > 0 ifTrue: "dont use and: so as to get Slang to inline cogit numRegArgs > 0"
 			[cogMethod cmNumArgs <= cogit numRegArgs ifTrue:
-				[self enterRegisterArgCogMethod: cogMethod at: cogit noCheckEntryOffset receiver: rcvr]].
+				[self callRegisterArgCogMethod: cogMethod at: cogit noCheckEntryOffset receiver: rcvr]].
 		 self push: cogMethod asInteger + cogit noCheckEntryOffset.
 		 self push: rcvr.
-		 cogit ceEnterCogCodePopReceiverReg.
+		 cogit ceCallCogCodePopReceiverReg.
 		 self error: 'should not be reached'].
 	self push: framePointer.
 	framePointer := stackPointer.
@@ -475,7 +475,7 @@ CoInterpreter >> activateCoggedNewMethod: inInterpreter [
 		[self assert: cogMethod stackCheckOffset > cogit noCheckEntryOffset.
 		 self push: cogMethod asInteger + cogMethod stackCheckOffset.
 		 self push: rcvr.
-		 cogit ceEnterCogCodePopReceiverReg.
+		 cogit ceCallCogCodePopReceiverReg.
 		 self error: 'should not be reached'].
 	instructionPointer := cogMethod asInteger + cogMethod stackCheckOffset.
 	switched := self handleStackOverflowOrEventAllowContextSwitch: (self canContextSwitchIfActivating: newMethod header: methodHeader).
@@ -957,6 +957,43 @@ CoInterpreter >> callForCogCompiledCodeCompaction [
 	<api>
 	cogCompiledCodeCompactionCalledFor := true.
 	self forceInterruptCheck
+]
+
+{ #category : #enilopmarts }
+CoInterpreter >> callRegisterArgCogMethod: cogMethod at: entryOffset receiver: rcvr [
+	"convert
+	 		rcvr	base
+			arg(s)
+			retpc	<- sp
+	 to
+			retpc	base
+			entrypc
+			rcvr
+			arg(s)	<- sp
+	 and then enter at either the checked or the unchecked entry-point."
+	<var: #cogMethod type: #'CogMethod *'>
+	self assert: (cogit numRegArgs > 0 and: [cogit numRegArgs <= 2 and: [cogMethod cmNumArgs <= cogit numRegArgs]]).
+	cogMethod cmNumArgs = 2 ifTrue:
+		[self stackValue: 3 put: self stackTop. "retpc"
+		 self push: (self stackValue: 1). "last arg"
+		 self stackValue: 1 put: (self stackValue: 3). "first arg"
+		 self stackValue: 2 put: rcvr.
+		 self stackValue: 3 put: cogMethod asInteger + entryOffset.
+		 cogit ceCallCogCodePopReceiverArg1Arg0Regs
+		"NOTREACHED"].
+	cogMethod cmNumArgs = 1 ifTrue:
+		[self stackValue: 2 put: self stackTop. "retpc"
+		 self push: (self stackValue: 1). "arg"
+		 self stackValue: 1 put: rcvr.
+		 self stackValue: 2 put: cogMethod asInteger + entryOffset.
+		 cogit ceCallCogCodePopReceiverArg0Regs
+		"NOTREACHED"].
+	self assert: cogMethod cmNumArgs = 0.
+	self stackValue: 1 put: self stackTop. "retpc"
+	self stackValue: 0 put: cogMethod asInteger + entryOffset.
+	self push: rcvr.
+	cogit ceCallCogCodePopReceiverReg
+	"NOTREACHED"
 ]
 
 { #category : #'callback support' }
@@ -2700,43 +2737,6 @@ CoInterpreter >> ensurePushedInstructionPointer [
 			 self push: instructionPointer]
 ]
 
-{ #category : #enilopmarts }
-CoInterpreter >> enterRegisterArgCogMethod: cogMethod at: entryOffset receiver: rcvr [
-	"convert
-	 		rcvr	base
-			arg(s)
-			retpc	<- sp
-	 to
-			retpc	base
-			entrypc
-			rcvr
-			arg(s)	<- sp
-	 and then enter at either the checked or the unchecked entry-point."
-	<var: #cogMethod type: #'CogMethod *'>
-	self assert: (cogit numRegArgs > 0 and: [cogit numRegArgs <= 2 and: [cogMethod cmNumArgs <= cogit numRegArgs]]).
-	cogMethod cmNumArgs = 2 ifTrue:
-		[self stackValue: 3 put: self stackTop. "retpc"
-		 self push: (self stackValue: 1). "last arg"
-		 self stackValue: 1 put: (self stackValue: 3). "first arg"
-		 self stackValue: 2 put: rcvr.
-		 self stackValue: 3 put: cogMethod asInteger + entryOffset.
-		 cogit ceEnterCogCodePopReceiverArg1Arg0Regs
-		"NOTREACHED"].
-	cogMethod cmNumArgs = 1 ifTrue:
-		[self stackValue: 2 put: self stackTop. "retpc"
-		 self push: (self stackValue: 1). "arg"
-		 self stackValue: 1 put: rcvr.
-		 self stackValue: 2 put: cogMethod asInteger + entryOffset.
-		 cogit ceEnterCogCodePopReceiverArg0Regs
-		"NOTREACHED"].
-	self assert: cogMethod cmNumArgs = 0.
-	self stackValue: 1 put: self stackTop. "retpc"
-	self stackValue: 0 put: cogMethod asInteger + entryOffset.
-	self push: rcvr.
-	cogit ceEnterCogCodePopReceiverReg
-	"NOTREACHED"
-]
-
 { #category : #initialization }
 CoInterpreter >> enterSmalltalkExecutive [
 	"Main entry-point into the interpreter at each execution level, where an
@@ -2802,7 +2802,7 @@ CoInterpreter >> executeCogBlock: cogMethod closure: closure mayContextSwitch: m
 				ifTrue: [cogMethod blockEntryOffset]
 				ifFalse: [cogMethod blockEntryOffset - cogit noContextSwitchBlockEntryOffset]).
 	self push: closure.
-	cogit ceEnterCogCodePopReceiverReg
+	cogit ceCallCogCodePopReceiverReg
 	"NOTREACHED"
 ]
 
@@ -2823,11 +2823,11 @@ CoInterpreter >> executeCogMethod: cogMethod fromLinkedSendWithReceiver: rcvr [
 	self assertValidExecutionPointe: self stackTop r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
 	cogit numRegArgs > 0 ifTrue: "dont use and: so as to get Slang to inline cogit numRegArgs > 0"
 		[cogMethod cmNumArgs <= cogit numRegArgs ifTrue:
-			[self enterRegisterArgCogMethod: cogMethod at: cogit entryOffset receiver: rcvr]].
+			[self callRegisterArgCogMethod: cogMethod at: cogit entryOffset receiver: rcvr]].
 	self
 		push: cogMethod asInteger + cogit entryOffset;
 		push: rcvr.
-	cogit ceEnterCogCodePopReceiverReg
+	cogit ceCallCogCodePopReceiverReg
 	"NOTREACHED"
 ]
 
@@ -2851,16 +2851,16 @@ CoInterpreter >> executeCogMethod: cogMethod fromLinkedSendWithReceiver: rcvr an
 		[cogMethod cmNumArgs <= cogit numRegArgs ifTrue:
 			[self push: cacheTag.
 			 cogMethod cmNumArgs caseOf: {
-				[0]	->	[cogit ceEnter0ArgsPIC].
-				[1]	->	[cogit ceEnter1ArgsPIC].
-				[2]	->	[cogit ceEnter2ArgsPIC]
+				[0]	->	[cogit ceCall0ArgsPIC].
+				[1]	->	[cogit ceCall1ArgsPIC].
+				[2]	->	[cogit ceCall2ArgsPIC]
 			 	}
 				otherwise: [].
 			 self error: 'not reached']].
 	self
 		push: rcvr;
 		push: cacheTag.
-	cogit ceEnterCogCodePopReceiverAndClassRegs
+	cogit ceCallCogCodePopReceiverAndClassRegs
 	"NOTREACHED"
 ]
 
@@ -2880,11 +2880,11 @@ CoInterpreter >> executeCogMethod: cogMethod fromUnlinkedSendWithReceiver: rcvr 
 	self assertValidExecutionPointe: self stackTop r: framePointer s: stackPointer imbar: false line: #'__LINE__'.
 	cogit numRegArgs > 0 ifTrue: "dont use and: so as to get Slang to inline cogit numRegArgs > 0"
 		[cogMethod cmNumArgs <= cogit numRegArgs ifTrue:
-			[self enterRegisterArgCogMethod: cogMethod at: cogit noCheckEntryOffset receiver: rcvr]].
+			[self callRegisterArgCogMethod: cogMethod at: cogit noCheckEntryOffset receiver: rcvr]].
 	self
 		push: cogMethod asInteger + cogit noCheckEntryOffset;
 		push: rcvr.
-	cogit ceEnterCogCodePopReceiverReg
+	cogit ceCallCogCodePopReceiverReg
 	"NOTREACHED"
 ]
 

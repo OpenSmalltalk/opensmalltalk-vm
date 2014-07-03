@@ -95,17 +95,19 @@ Class {
 		'optStatus',
 		'ceEnterCogCodePopReceiverArg0Regs',
 		'ceEnterCogCodePopReceiverArg1Arg0Regs',
+		'ceCallCogCodePopReceiverArg0Regs',
+		'ceCallCogCodePopReceiverArg1Arg0Regs',
 		'methodAbortTrampolines',
 		'picAbortTrampolines',
 		'picMissTrampolines',
-		'ceEnter0ArgsPIC',
-		'ceEnter1ArgsPIC',
-		'ceEnter2ArgsPIC',
+		'ceCall0ArgsPIC',
+		'ceCall1ArgsPIC',
+		'ceCall2ArgsPIC',
 		'debugStackPointers',
 		'debugFixupBreaks',
 		'debugBytecodePointers',
-		'realCEEnterCogCodePopReceiverArg0Regs',
-		'realCEEnterCogCodePopReceiverArg1Arg0Regs',
+		'realCECallCogCodePopReceiverArg0Regs',
+		'realCECallCogCodePopReceiverArg1Arg0Regs',
 		'deadCode'
 	],
 	#pools : [
@@ -190,20 +192,20 @@ StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 			declareC: 'sqInt picAbortTrampolines[4]';
 		var: #picMissTrampolines
 			declareC: 'sqInt picMissTrampolines[4]';
-		var: 'ceEnter0ArgsPIC'
-			declareC: 'void (*ceEnter0ArgsPIC)(void)';
-		var: 'ceEnter1ArgsPIC'
-			declareC: 'void (*ceEnter1ArgsPIC)(void)';
-		var: 'ceEnter2ArgsPIC'
-			declareC: 'void (*ceEnter2ArgsPIC)(void)';
-		var: #ceEnterCogCodePopReceiverArg0Regs
-			declareC: 'void (*ceEnterCogCodePopReceiverArg0Regs)(void)';
-		var: #realCEEnterCogCodePopReceiverArg0Regs
-			declareC: 'void (*realCEEnterCogCodePopReceiverArg0Regs)(void)';
-		var: #ceEnterCogCodePopReceiverArg1Arg0Regs
-			declareC: 'void (*ceEnterCogCodePopReceiverArg1Arg0Regs)(void)';
-		var: #realCEEnterCogCodePopReceiverArg1Arg0Regs
-			declareC: 'void (*realCEEnterCogCodePopReceiverArg1Arg0Regs)(void)';
+		var: 'ceCall0ArgsPIC'
+			declareC: 'void (*ceCall0ArgsPIC)(void)';
+		var: 'ceCall1ArgsPIC'
+			declareC: 'void (*ceCall1ArgsPIC)(void)';
+		var: 'ceCall2ArgsPIC'
+			declareC: 'void (*ceCall2ArgsPIC)(void)';
+		var: #ceCallCogCodePopReceiverArg0Regs
+			declareC: 'void (*ceCallCogCodePopReceiverArg0Regs)(void)';
+		var: #realCECallCogCodePopReceiverArg0Regs
+			declareC: 'void (*realCECallCogCodePopReceiverArg0Regs)(void)';
+		var: #ceCallCogCodePopReceiverArg1Arg0Regs
+			declareC: 'void (*ceCallCogCodePopReceiverArg1Arg0Regs)(void)';
+		var: #realCECallCogCodePopReceiverArg1Arg0Regs
+			declareC: 'void (*realCECallCogCodePopReceiverArg1Arg0Regs)(void)';
 		var: 'simStack'
 			declareC: 'CogSimStackEntry simStack[', ((CoInterpreter bindingOf: #LargeContextSize) value * 5 / 4 // BytesPerWord) asString, ']';
 		var: 'simSelf'
@@ -1055,25 +1057,61 @@ StackToRegisterMappingCogit >> cPICMissTrampolineFor: numArgs [
 	^picMissTrampolines at: (numArgs min: self numRegArgs + 1)
 ]
 
-{ #category : #'simulation only' }
-StackToRegisterMappingCogit >> ceEnter0ArgsPIC [
-	<api: 'extern void (*ceEnter0ArgsPIC)()'>
-	<doNotGenerate>
-	self simulateEnilopmart: ceEnter0ArgsPIC numArgs: 1
+{ #category : #debugging }
+StackToRegisterMappingCogit >> callCogCodePopReceiverArg0Regs [
+	"This is a static version of ceCallCogCodePopReceiverArg0Regs
+	 for break-pointing when debugging in C."
+	<api>
+	<inline: false>
+	"This exists only for break-pointing."
+	self cCode: [self realCECallCogCodePopReceiverArg0Regs]
+		inSmalltalk: [self ceCallCogCodePopReceiverArg0Regs]
+]
+
+{ #category : #debugging }
+StackToRegisterMappingCogit >> callCogCodePopReceiverArg1Arg0Regs [
+	"This is a static version of ceCallCogCodePopReceiverArg1Arg0Regs
+	 for break-pointing when debugging in C."
+	<api>
+	<inline: false>
+	"This exists only for break-pointing."
+	self cCode: [self realCECallCogCodePopReceiverArg1Arg0Regs]
+		inSmalltalk: [self ceCallCogCodePopReceiverArg1Arg0Regs]
 ]
 
 { #category : #'simulation only' }
-StackToRegisterMappingCogit >> ceEnter1ArgsPIC [
-	<api: 'extern void (*ceEnter1ArgsPIC)()'>
+StackToRegisterMappingCogit >> ceCall0ArgsPIC [
+	<api: 'extern void (*ceCall0ArgsPIC)()'>
 	<doNotGenerate>
-	self simulateEnilopmart: ceEnter1ArgsPIC numArgs: 1
+	self simulateEnilopmart: ceCall0ArgsPIC numArgs: 1
 ]
 
 { #category : #'simulation only' }
-StackToRegisterMappingCogit >> ceEnter2ArgsPIC [
-	<api: 'extern void (*ceEnter2ArgsPIC)()'>
+StackToRegisterMappingCogit >> ceCall1ArgsPIC [
+	<api: 'extern void (*ceCall1ArgsPIC)()'>
 	<doNotGenerate>
-	self simulateEnilopmart: ceEnter2ArgsPIC numArgs: 1
+	self simulateEnilopmart: ceCall1ArgsPIC numArgs: 1
+]
+
+{ #category : #'simulation only' }
+StackToRegisterMappingCogit >> ceCall2ArgsPIC [
+	<api: 'extern void (*ceCall2ArgsPIC)()'>
+	<doNotGenerate>
+	self simulateEnilopmart: ceCall2ArgsPIC numArgs: 1
+]
+
+{ #category : #'simulation only' }
+StackToRegisterMappingCogit >> ceCallCogCodePopReceiverArg0Regs [
+	<api: 'extern void (*ceCallCogCodePopReceiverArg0Regs)()'>
+	<doNotGenerate>
+	self simulateEnilopmart: ceCallCogCodePopReceiverArg0Regs numArgs: 2
+]
+
+{ #category : #'simulation only' }
+StackToRegisterMappingCogit >> ceCallCogCodePopReceiverArg1Arg0Regs [
+	<api: 'extern void (*ceCallCogCodePopReceiverArg1Arg0Regs)()'>
+	<doNotGenerate>
+	self simulateEnilopmart: ceCallCogCodePopReceiverArg1Arg0Regs numArgs: 3
 ]
 
 { #category : #'simulation only' }
@@ -1521,6 +1559,37 @@ StackToRegisterMappingCogit >> fixupAt: index [
 	^self addressOf: (fixups at: index)
 ]
 
+{ #category : #initialization }
+StackToRegisterMappingCogit >> genCallPICEnilopmartNumArgs: numArgs [
+	"Generate special versions of the ceCallCogCodePopReceiverAndClassRegs
+	 enilopmart that also pop register args from the stack to undo the pushing of
+	 register args in the abort/miss trampolines."
+	<returnTypeC: 'void (*genCallPICEnilopmartNumArgs(sqInt numArgs))(void)'>
+	| size endAddress enilopmart |
+	opcodeIndex := 0.
+	backEnd genLoadStackPointers.
+	self PopR: ClassReg. "cacheTag"
+	self PopR: TempReg. "entry-point"
+	self PopR: (backEnd hasLinkRegister ifTrue: [LinkReg] ifFalse: [SendNumArgsReg]). "retpc"
+	numArgs > 0 ifTrue:
+		[numArgs > 1 ifTrue:
+			[self PopR: Arg1Reg.
+			 self assert: self numRegArgs = 2].
+		 self PopR: Arg0Reg].
+	self PopR: ReceiverResultReg.
+	backEnd hasLinkRegister ifFalse: [self PushR: SendNumArgsReg]. "retpc"
+	self JumpR: TempReg.
+	self computeMaximumSizes.
+	size := self generateInstructionsAt: methodZoneBase.
+	endAddress := self outputInstructionsAt: methodZoneBase.
+	self assert: methodZoneBase + size = endAddress.
+	enilopmart := methodZoneBase.
+	methodZoneBase := self alignUptoRoutineBoundary: endAddress.
+	backEnd nopsFrom: endAddress to: methodZoneBase - 1.
+	self recordGeneratedRunTime: (self trampolineName: 'ceCallPIC' numArgs: numArgs) address: enilopmart.
+	^self cCoerceSimple: enilopmart to: #'void (*)(void)'
+]
+
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: preOpCheckOrNil [
 	"Receiver and arg in registers.
@@ -1614,37 +1683,6 @@ StackToRegisterMappingCogit >> genDoubleComparison: jumpOpcodeGenerator invert: 
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt jmpTarget: jumpFail getJmpTarget].
 	^0
-]
-
-{ #category : #initialization }
-StackToRegisterMappingCogit >> genEnterPICEnilopmartNumArgs: numArgs [
-	"Generate special versions of the ceEnterCogCodePopReceiverAndClassRegs
-	 enilopmart that also pop register args from the stack to undo the pushing of
-	 register args in the abort/miss trampolines."
-	<returnTypeC: 'void (*genEnterPICEnilopmartNumArgs(sqInt numArgs))(void)'>
-	| size endAddress enilopmart |
-	opcodeIndex := 0.
-	backEnd genLoadStackPointers.
-	self PopR: ClassReg. "cacheTag"
-	self PopR: TempReg. "entry-point"
-	self PopR: SendNumArgsReg. "retpc"
-	numArgs > 0 ifTrue:
-		[numArgs > 1 ifTrue:
-			[self PopR: Arg1Reg.
-			 self assert: self numRegArgs = 2].
-		 self PopR: Arg0Reg].
-	self PopR: ReceiverResultReg.
-	self PushR: SendNumArgsReg. "retpc"
-	self JumpR: TempReg.
-	self computeMaximumSizes.
-	size := self generateInstructionsAt: methodZoneBase.
-	endAddress := self outputInstructionsAt: methodZoneBase.
-	self assert: methodZoneBase + size = endAddress.
-	enilopmart := methodZoneBase.
-	methodZoneBase := self alignUptoRoutineBoundary: endAddress.
-	backEnd nopsFrom: endAddress to: methodZoneBase - 1.
-	self recordGeneratedRunTime: (self trampolineName: 'ceEnterPIC' numArgs: numArgs) address: enilopmart.
-	^self cCoerceSimple: enilopmart to: #'void (*)(void)'
 ]
 
 { #category : #'bytecode generators' }
@@ -3387,35 +3425,35 @@ StackToRegisterMappingCogit >> generateEnilopmarts [
 
 	self cppIf: Debug
 		ifTrue:
-			[realCEEnterCogCodePopReceiverArg0Regs :=
+			[realCECallCogCodePopReceiverArg0Regs :=
 				self genEnilopmartFor: ReceiverResultReg
 					and: Arg0Reg
-					called: 'realCEEnterCogCodePopReceiverArg0Regs'.
-			 ceEnterCogCodePopReceiverArg0Regs := #enterCogCodePopReceiverArg0Regs.
-			 realCEEnterCogCodePopReceiverArg1Arg0Regs :=
+					called: 'realCECallCogCodePopReceiverArg0Regs'.
+			 ceCallCogCodePopReceiverArg0Regs := #callCogCodePopReceiverArg0Regs.
+			 realCECallCogCodePopReceiverArg1Arg0Regs :=
 				self genEnilopmartFor: ReceiverResultReg
 					and: Arg0Reg							
 					and: Arg1Reg
-					called: 'realCEEnterCogCodePopReceiverArg1Arg0Regs'.
-			 ceEnterCogCodePopReceiverArg1Arg0Regs := #enterCogCodePopReceiverArg1Arg0Regs]
+					called: 'realCECallCogCodePopReceiverArg1Arg0Regs'.
+			 ceCallCogCodePopReceiverArg1Arg0Regs := #callCogCodePopReceiverArg1Arg0Regs]
 		ifFalse:
-			[ceEnterCogCodePopReceiverArg0Regs :=
+			[ceCallCogCodePopReceiverArg0Regs :=
 				self genEnilopmartFor: ReceiverResultReg
 					and: Arg0Reg
-					called: 'ceEnterCogCodePopReceiverArg0Regs'.
-			 ceEnterCogCodePopReceiverArg1Arg0Regs :=
+					called: 'ceCallCogCodePopReceiverArg0Regs'.
+			 ceCallCogCodePopReceiverArg1Arg0Regs :=
 				self genEnilopmartFor: ReceiverResultReg
 					and: Arg0Reg							
 					and: Arg1Reg
-					called: 'ceEnterCogCodePopReceiverArg1Arg0Regs'].
+					called: 'ceCallCogCodePopReceiverArg1Arg0Regs'].
 
-	"These are special versions of the ceEnterCogCodePopReceiverAndClassRegs enilopmart that also
-	 pop register argsfrom the stack to undo the pushing of register args in the abort/miss trampolines."
-	ceEnter0ArgsPIC := self genEnterPICEnilopmartNumArgs: 0.
+	"These are special versions of the ceCallCogCodePopReceiverAndClassRegs enilopmart that also
+	 pop register args from the stack to undo the pushing of register args in the abort/miss trampolines."
+	ceCall0ArgsPIC := self genCallPICEnilopmartNumArgs: 0.
 	self numRegArgs >= 1 ifTrue:
-		[ceEnter1ArgsPIC := self genEnterPICEnilopmartNumArgs: 1.
+		[ceCall1ArgsPIC := self genCallPICEnilopmartNumArgs: 1.
 		 self numRegArgs >= 2 ifTrue:
-			[ceEnter2ArgsPIC := self genEnterPICEnilopmartNumArgs: 2.
+			[ceCall2ArgsPIC := self genCallPICEnilopmartNumArgs: 2.
 			 self assert: self numRegArgs = 2]]
 ]
 
