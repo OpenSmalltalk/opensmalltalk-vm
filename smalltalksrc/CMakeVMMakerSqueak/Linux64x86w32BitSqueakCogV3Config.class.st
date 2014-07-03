@@ -75,7 +75,7 @@ Linux64x86w32BitSqueakCogV3Config >> compilerFlagsBuild [
  . '-DCOGMTVM=0'
  . '-fno-tree-pre	'
  . '-fno-caller-saves'
- . '-L/usr/lib'
+" . '-L/usr/lib'"
 }
 
 
@@ -332,12 +332,15 @@ Linux64x86w32BitSqueakCogV3Config >> configureFlagsBuildMultiThreadedDebug [
 { #category : #plugins }
 Linux64x86w32BitSqueakCogV3Config >> defaultExternalPlugins [
 	""
-	^ #()
-]
-
-{ #category : #plugins }
-Linux64x86w32BitSqueakCogV3Config >> defaultInternalPlugins [
-	^super defaultInternalPlugins copyWithoutAll:#(#FloatMathPlugin)
+		^ #(
+		
+		ThreadedFFIPlugin "SqueakFFIPrims"
+		"UUIDPlugin"
+		"UnixOSProcessPlugin ?? "	
+		JPEGReaderPlugin 
+		JPEGReadWriter2Plugin 			
+		RePlugin
+	)
 ]
 
 { #category : #'cmake directory ' }
@@ -364,6 +367,75 @@ Linux64x86w32BitSqueakCogV3Config >> excludeFromBuild [
 { #category : #cmake }
 Linux64x86w32BitSqueakCogV3Config >> executableName [
 	^ self vmCogExecutableName
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitSqueakCogV3Config >> externalLibsBuild [
+	self flag:'tty'. "this is dependent on plugins? what if I don't have SqueakSSLPlugin?"
+	^#(
+			'uuid'  ""
+			'ssl'  ""
+			'crypto' ""
+			'm'      	"C math library"
+			'dl'      "dynamic linking library"
+			'pthread' "POSIX threads library"
+			'SM'   "session management library for X11"
+			'ICE'   "ICE is the Inter Client Exchange protocol, part of X11"
+			'GL'    "libGL implements the GLX interface as well as the main OpenGL API entrypoints"
+			'X11'
+			'nsl'    "network services library"
+		).
+				
+
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitSqueakCogV3Config >> externalLibsBuildAssert [
+		^ self externalLibsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitSqueakCogV3Config >> externalLibsBuildAssertITimerHeartbeat [
+		^ self externalLibsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitSqueakCogV3Config >> externalLibsBuildDebug [
+		^ self externalLibsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitSqueakCogV3Config >> externalLibsBuildDebugITimerHeartbeat [
+		^ self externalLibsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitSqueakCogV3Config >> externalLibsBuildITimerHeartbeat [
+		^ self externalLibsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitSqueakCogV3Config >> externalLibsBuildMultiThreaded [
+		^ self externalLibsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitSqueakCogV3Config >> externalLibsBuildMultiThreadedAssert [
+		^ self externalLibsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitSqueakCogV3Config >> externalLibsBuildMultiThreadedDebug [
+		^ self externalLibsBuild
+
 ]
 
 { #category : #'source generation' }
@@ -445,7 +517,7 @@ Linux64x86w32BitSqueakCogV3Config >> linkFlagsBuild [
            . '-lm' 
            . '-lnsl'
            . '-lX11'
-	   } addAll: (self lDFlagsBuild)
+	   } 
 
 ]
 

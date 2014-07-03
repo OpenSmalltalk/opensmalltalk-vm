@@ -447,6 +447,60 @@ SqueakMacOSXPowerPCConfig >> externalPluginsBuildMultiThreadedDebug [
 ]
 
 { #category : #'cmake buildType redirects' }
+SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuild: aMaker [
+	"default browseMethodsWhoseNamesContain: 'extraPluginSettingsBuild' "
+	self subclassResponsibility.
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildAssert: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildDebug: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildMultiThreaded: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
 SqueakMacOSXPowerPCConfig >> extraVMSettingsBuild: aMaker [
 	"SystemNavigation default browseMethodsWhoseNamesContain: 'extraVMSettingsBuild:'"
 

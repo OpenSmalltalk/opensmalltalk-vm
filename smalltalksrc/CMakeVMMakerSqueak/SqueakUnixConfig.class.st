@@ -334,16 +334,6 @@ SqueakUnixConfig >> externalModulesDir [
 	^ '${outputDir}'
 ]
 
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> extraPluginSettings: maker [
-
-	maker isExternal ifTrue: [
-		"copy lib to results dir "
-		maker set: 'LIBRARY_OUTPUT_PATH' to: '${outputDir}' 
-	].
-
-]
-
 { #category : #'source files' }
 SqueakUnixConfig >> extraSources [	
 	self flag:'tty'. "?"

@@ -165,6 +165,75 @@ Linux32x86SqueakCogV3Config >> executableName [
 	^ self vmCogExecutableName
 ]
 
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> externalLibsBuild [
+	self flag:'tty'. "this is dependent on plugins? what if I don't have SqueakSSLPlugin?"
+	^#(
+			'uuid'  ""
+			'ssl'  ""
+			'crypto' ""
+			'm'      	"C math library"
+			'dl'      "dynamic linking library"
+			'pthread' "POSIX threads library"
+			'SM'   "session management library for X11"
+			'ICE'   "ICE is the Inter Client Exchange protocol, part of X11"
+			'GL'    "libGL implements the GLX interface as well as the main OpenGL API entrypoints"
+			'X11'
+			'nsl'    "network services library"
+		).
+				
+
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> externalLibsBuildAssert [
+		^ self externalLibsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> externalLibsBuildAssertITimerHeartbeat [
+		^ self externalLibsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> externalLibsBuildDebug [
+		^ self externalLibsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> externalLibsBuildDebugITimerHeartbeat [
+		^ self externalLibsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> externalLibsBuildITimerHeartbeat [
+		^ self externalLibsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> externalLibsBuildMultiThreaded [
+		^ self externalLibsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> externalLibsBuildMultiThreadedAssert [
+		^ self externalLibsBuild
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> externalLibsBuildMultiThreadedDebug [
+		^ self externalLibsBuild
+
+]
+
 { #category : #'source generation' }
 Linux32x86SqueakCogV3Config >> interpreterClass [
 	^ CoInterpreter
