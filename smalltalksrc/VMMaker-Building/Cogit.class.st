@@ -860,7 +860,7 @@ Cogit class >> mustBeGlobal: var [
 		'ceEnterCogCodePopReceiverAndClassRegs' 'realCEEnterCogCodePopReceiverAndClassRegs'
 		'ceReturnToInterpreterTrampoline' 'ceCannotResumeTrampoline'
 		'ceTryLockVMOwner' 'ceUnlockVMOwner'
-		'cmEntryOffset' 'cmNoCheckEntryOffset' 'cmDynSuperEntryOffset'
+		'cmEntryOffset' 'cmNoCheckEntryOffset' 'cmDynSuperEntryOffset' 'missOffset'
 		'blockNoContextSwitchOffset' 'breakPC'
 		'CFramePointer' 'CStackPointer' 'cFramePointerInUse' 'ceGetSP'
 		'traceFlags' 'traceStores' 'debugPrimCallStackOffset')
@@ -5994,6 +5994,7 @@ Cogit >> innermostSubMethodFor: bcpc in: subMethods startingAt: index [
 { #category : #'in-line cacheing' }
 Cogit >> interpretOffset [
 	<api>
+	<cmacro: '() missOffset'>
 	^missOffset
 ]
 
