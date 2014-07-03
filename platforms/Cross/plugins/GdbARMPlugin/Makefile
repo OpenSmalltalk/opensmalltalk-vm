@@ -1,4 +1,6 @@
-GDBBUILDFOLDER = /d/build/gdb-7.4
+# edit this to suit your system; it really ought to use relative paths
+# or some other convenience
+GDBBUILDFOLDER = /home/tim/Documents/Raspbian-Cog/gdb-arm/gdb-7.6
 
 CC      = gcc
 CFLAGS  = -I$(GBDBUILDFOLDER)/bfd 

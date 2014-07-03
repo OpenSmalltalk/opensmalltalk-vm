@@ -1,7 +1,9 @@
 /*
   This file is a compy of armvirt.c, which is part of the ARMulator distributed e.g. with gdb and skyeye.
-  In order to overwrite GetWord and PutWord, I had to copy the whole file.
+  In order to overwrite GetWord and PutWord, I (lars wasserman) had to copy the whole file and alter the Make to use it instead of the default ARM armvirt.c.
   Also changed: ReLoadInstr.
+  TPR - changed the errors returned in PutWord & GetWord to discriminate between read & write bounds errors for better simulation
+  TPR - changed Get/PutWord to ensure address used is an actual word address ie bottom two bits are zeros. Without that, fetching bytes becomes... fun
 */
 #include "GdbARMPlugin.h"
 
@@ -71,14 +73,14 @@ GetWord (ARMul_State * state, ARMword address, int check)
   if(address < minReadAddress || address + 4 > (state->MemSize))
   {
     //raise memory access error
-    state->EndCondition = MemoryBoundsError;
+    state->EndCondition = MemoryLoadBoundsError;
     state->Emulate = FALSE;
     gdb_log_printf(NULL, "Illegal memory read at %#p. ", address);
     return 0;
   }
   else
   {
-    return *((ARMword*) (state->MemDataPtr + address));
+    return *((ARMword*) (state->MemDataPtr + (address & ~3)));
   }
 }
 
@@ -92,12 +94,12 @@ PutWord (ARMul_State * state, ARMword address, ARMword data, int check)
   if(address < minWriteAddress || address + 4 > (state->MemSize))
   {
     state->Emulate = FALSE;
-    state->EndCondition = MemoryBoundsError;
+    state->EndCondition = MemoryWriteBoundsError;
     gdb_log_printf(NULL, "Illegal memory write at %#p. ", address);
   } 
   else
   {
-    *((ARMword*) (state->MemDataPtr + address)) = data;
+    *((ARMword*) (state->MemDataPtr + (address & ~3))) = data;
   }
 }
 

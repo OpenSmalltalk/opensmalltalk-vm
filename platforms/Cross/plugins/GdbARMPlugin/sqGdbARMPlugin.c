@@ -2,8 +2,8 @@
 #define FOR_COG_PLUGIN 1
 
 #include "GdbARMPlugin.h"
-
 //disassembler
+#include <gdbconfig.h> /*  TPR - <---- this is actually a *link* to the gdb gdb-7.6/bfd/config.h because it otherwise clashes with the Squeak one also in the assorted include paths. Must be a proper way to handle this case; it must happen elsewhere */
 #include <bfd.h>
 #include <dis-asm.h>
 
@@ -45,6 +45,7 @@ newCPU()
 {
 	if(lastCPU == NULL) ARMul_EmulateInit();
 	lastCPU = ARMul_NewState();
+	ARMul_SelectProcessor (lastCPU, ARM_v5_Prop | ARM_v5e_Prop | ARM_XScale_Prop | ARM_v6_Prop);
 	return lastCPU;
 }
 
@@ -165,6 +166,8 @@ disassembleForAtInSize(void *cpu, ulong laddr,
 	dis->buffer = memory;
 	dis->buffer_length = byteSize;
 	
+	// first print the address
+	gdb_log_printf( NULL, "%08lx: ", laddr);
 	//other possible functions are listed in opcodes/dissassemble.c
 	unsigned int size = print_insn_little_arm((bfd_vma) laddr, dis);
 	
@@ -202,7 +205,7 @@ __wrap_ARMul_OSHandleSWI (ARMul_State * state, ARMword number)
 			// This is the SWI number which is returned by our memory interface 
 			// if there is an instruction fetch for an illegal address.
 			state->Emulate = STOP;
-			state->EndCondition = MemoryBoundsError;
+			state->EndCondition = InstructionPrefetchError;
 			
 			// during execution, the pc points the next fetch address, which is 8 byte after the current instruction.
 			gdb_log_printf(NULL, "Illegal Instruction fetch address (%#p).", state->Reg[15]-8);

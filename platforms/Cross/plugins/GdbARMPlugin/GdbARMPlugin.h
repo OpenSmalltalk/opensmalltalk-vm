@@ -2,15 +2,19 @@
 /* Bochs seems to use error code 1 for execution errors.
  * So we use > 1 for various errors
  */
+
+/* TPR - added MemoryWriteBoundsError */
 #define NoError 0
 #define ExecutionError 1
 #define BadCPUInstance 2
-#define MemoryBoundsError 3
-#define PanicError 4
-#define UnsupportedOperationError 5
-#define SomethingLoggedError 6
+#define MemoryLoadBoundsError 3
+#define MemoryWriteBoundsError 4
+#define InstructionPrefetchError 5
+#define PanicError 6
+#define UnsupportedOperationError 7
+#define SomethingLoggedError 8
 
-// The library is compiled with TFlag, therefore, we also need to set it.
+// TPR - The library is compiled with TFlag, therefore, we also need to set it.
 #define MODET
 
 #if !defined(ulong)
