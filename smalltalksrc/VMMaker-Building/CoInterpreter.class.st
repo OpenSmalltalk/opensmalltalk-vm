@@ -475,7 +475,7 @@ CoInterpreter >> activateCoggedNewMethod: inInterpreter [
 		[self assert: cogMethod stackCheckOffset > cogit noCheckEntryOffset.
 		 self push: cogMethod asInteger + cogMethod stackCheckOffset.
 		 self push: rcvr.
-		 cogit ceCallCogCodePopReceiverReg.
+		 cogit ceEnterCogCodePopReceiverReg.
 		 self error: 'should not be reached'].
 	instructionPointer := cogMethod asInteger + cogMethod stackCheckOffset.
 	switched := self handleStackOverflowOrEventAllowContextSwitch: (self canContextSwitchIfActivating: newMethod header: methodHeader).

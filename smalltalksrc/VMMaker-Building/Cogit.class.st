@@ -3594,7 +3594,9 @@ Cogit >> compileAbort [
 	stackOverflowCall := self MoveCq: 0 R: ReceiverResultReg.
 	backEnd hasLinkRegister
 		ifTrue:
-			[sendMiss := self PushR: LinkReg.
+			["if we have a link register we will assume that it does not get automatically pushed onto the stack
+			and thus needs to be manually handled here"
+			sendMiss := self PushR: LinkReg.
 			 sendMissCall := self Call: (self methodAbortTrampolineFor: methodOrBlockNumArgs)]
 		ifFalse:
 			[sendMiss :=
@@ -3948,7 +3950,9 @@ Cogit >> compilePICProlog: numArgs [
 	mnuCall := self MoveCq: 0 R: ClassReg.
 	backEnd hasLinkRegister
 		ifTrue:
-			[interpretLabel := self PushR: LinkReg.
+			["if we have a link register we will assume that it does not get automatically pushed onto the stack
+			and thus needs to be manually handled here"
+			 interpretLabel := self PushR: LinkReg.
 			 interpretCall := self Call: (self picAbortTrampolineFor: numArgs)]
 		ifFalse:
 			[interpretLabel :=
@@ -4876,6 +4880,8 @@ Cogit >> genCallEnilopmartFor: regArg1 called: trampolineName [
 { #category : #initialization }
 Cogit >> genCheckForInterruptsTrampoline [
 	opcodeIndex := 0.
+	"if we have a link register we will assume that it does not get automatically pushed onto the stack
+	and thus there is no need to pop it before saving to instructionPointerAddress"
 	backEnd hasLinkRegister
 		ifTrue:
 			[self MoveR: LinkReg Aw: coInterpreter instructionPointerAddress]
@@ -4920,7 +4926,7 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 and: regArg3 called: trampolineN
 	self PopR: regArg1.
 	backEnd hasLinkRegister
 		ifTrue: [backEnd hasPCRegister
-					ifTrue: [self PopR: LinkReg]
+					ifTrue: [self PopR: PCReg]
 					ifFalse: [self PopR: LinkReg; RetN: 0]]
 		ifFalse: [self RetN: 0].
 	self computeMaximumSizes.
@@ -4957,7 +4963,7 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 called: trampolineName [
 	self PopR: regArg1.
 	backEnd hasLinkRegister
 		ifTrue: [backEnd hasPCRegister
-					ifTrue: [self PopR: LinkReg]
+					ifTrue: [self PopR: PCReg]
 					ifFalse: [self PopR: LinkReg; RetN: 0]]
 		ifFalse: [self RetN: 0].
 	self computeMaximumSizes.
@@ -4992,7 +4998,7 @@ Cogit >> genEnilopmartFor: regArg1 called: trampolineName [
 	self PopR: regArg1.
 	backEnd hasLinkRegister
 		ifTrue: [backEnd hasPCRegister
-					ifTrue: [self PopR: LinkReg]
+					ifTrue: [self PopR: PCReg]
 					ifFalse: [self PopR: LinkReg; RetN: 0]]
 		ifFalse: [self RetN: 0].
 	self computeMaximumSizes.
