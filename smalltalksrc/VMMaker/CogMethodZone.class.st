@@ -246,6 +246,7 @@ CogMethodZone >> freeMethod: cogMethod [
 				[self assert: (cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject.
 				 self cppIf: NewspeakVM ifTrue:
 					[self removeFromUnpairedMethodList: cogMethod]].
+		 cogit maybeFreeCountersOf: cogMethod.
 		 cogMethod cmRefersToYoung: false].
 	cogMethod cmType = CMOpenPIC ifTrue:
 		[self removeFromOpenPICList: cogMethod.

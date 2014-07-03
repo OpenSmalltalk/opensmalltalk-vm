@@ -663,6 +663,13 @@ SistaStackToRegisterMappingCogit >> maybeAllocAndInitCounters [
 	self allocateCounters; initializeCounters
 ]
 
+{ #category : #compaction }
+SistaStackToRegisterMappingCogit >> maybeFreeCountersOf: aCogMethod [
+	"Free any counters in the method."
+	<inline: true>
+	self shouldBeImplemented
+]
+
 { #category : #'method map' }
 SistaStackToRegisterMappingCogit >> maybeRememberPrevMap: annotation absPCMcpc: mcpc [
 	"Remember the previous IsAbsPCReference's mcpc for collecting send and branch data."
