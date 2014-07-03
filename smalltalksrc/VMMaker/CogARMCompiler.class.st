@@ -1237,7 +1237,6 @@ CogARMCompiler >> genAlignCStackSavingRegisters: saveRegs numArgs: numArgs wordA
 	 a simple bitAnd to effectively round-down the SP - except the vagaries of the ARM
 	 instruction set means we actually need a BIC sp, sp, $7"
 
-	cogit gen: BICCqR operand: 2r111 operand: SPReg.
 	^0
 ]
 
@@ -1332,12 +1331,13 @@ CogARMCompiler >> genPushRegisterArgsForNumArgs: numArgs [
 	"Ensure that the register args are pushed before the retpc for arity <= self numRegArgs."
 	"This is easy on a RISC like ARM because the return address is in the link register.  Putting
 	 the receiver and args above the return address means the CoInterpreter has a single
-	 machine-code frame format which saves us a lot of work."
+	 machine-code frame format which saves us a lot of work
+	NOTA BENE: we do NOT push the return address here, which means it must be dealt with later."
 	numArgs <= cogit numRegArgs ifTrue:
 		[self assert: cogit numRegArgs <= 2.
-		 numArgs > 0 ifTrue:
-			[cogit PushR: ReceiverResultReg.
-			 cogit PushR: Arg0Reg.
+		 cogit PushR: ReceiverResultReg.
+		numArgs > 0 ifTrue:
+			[cogit PushR: Arg0Reg.
 			 numArgs > 1 ifTrue:
 				[cogit PushR: Arg1Reg]]]
 ]
@@ -1372,7 +1372,14 @@ CogARMCompiler >> genSaveStackPointers [
 CogARMCompiler >> genSubstituteReturnAddress: retpc [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^cogit MoveCw: retpc R: LR
+	"This code needs to be tightly correlated across:-
+		GdbARMAlien>simulateJumpCallOf:memory:
+		GdbARMAlien>simulateCallOf:nextpc:memory:
+		GdbARMAlien>simulateReturnIn:
+		GdbARMAlien>retpcIn:
+		CogARMCompiler>genSubstituteReturnAddress:
+	Getting any one of them doing something different will cause much pain"
+	^cogit  PushCw: retpc
 ]
 
 { #category : #disassembly }
