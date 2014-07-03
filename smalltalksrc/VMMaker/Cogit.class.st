@@ -207,7 +207,8 @@ Class {
 		'ceSendMustBeBooleanAddFalseTrampoline',
 		'ceCannotResumeTrampoline',
 		'ceEnterCogCodePopReceiverReg',
-		'ceEnterCogCodePopReceiverAndClassRegs',
+		'ceCallCogCodePopReceiverReg',
+		'ceCallCogCodePopReceiverAndClassRegs',
 		'cePrimReturnEnterCogCode',
 		'cePrimReturnEnterCogCodeProfiling',
 		'ceNonLocalReturnTrampoline',
@@ -228,7 +229,8 @@ Class {
 		'firstSend',
 		'lastSend',
 		'realCEEnterCogCodePopReceiverReg',
-		'realCEEnterCogCodePopReceiverAndClassRegs',
+		'realCECallCogCodePopReceiverReg',
+		'realCECallCogCodePopReceiverAndClassRegs',
 		'trampolineTableIndex',
 		'trampolineAddresses',
 		'objectReferencesInRuntime',
@@ -487,10 +489,14 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			declareC: 'void (*ceEnterCogCodePopReceiverReg)(void)';
 		var: #realCEEnterCogCodePopReceiverReg
 			declareC: 'void (*realCEEnterCogCodePopReceiverReg)(void)';
-		var: #ceEnterCogCodePopReceiverAndClassRegs
-			declareC: 'void (*ceEnterCogCodePopReceiverAndClassRegs)(void)';
-		var: #realCEEnterCogCodePopReceiverAndClassRegs
-			declareC: 'void (*realCEEnterCogCodePopReceiverAndClassRegs)(void)';
+		var: #ceCallCogCodePopReceiverReg
+			declareC: 'void (*ceCallCogCodePopReceiverReg)(void)';
+		var: #realCECallCogCodePopReceiverReg
+			declareC: 'void (*realCECallCogCodePopReceiverReg)(void)';
+		var: #ceCallCogCodePopReceiverAndClassRegs
+			declareC: 'void (*ceCallCogCodePopReceiverAndClassRegs)(void)';
+		var: #realCECallCogCodePopReceiverAndClassRegs
+			declareC: 'void (*realCECallCogCodePopReceiverAndClassRegs)(void)';
 		var: #ceFlushICache
 			declareC: 'static void (*ceFlushICache)(unsigned long from, unsigned long to)';
 		var: #ceCheckFeaturesFunction
@@ -2509,6 +2515,30 @@ Cogit >> cStackPointerAddress [
 	^coInterpreter inMemoryCStackPointerAddress
 ]
 
+{ #category : #debugging }
+Cogit >> callCogCodePopReceiver [
+	"This is a static version of ceCallCogCodePopReceiverReg
+	 for break-pointing when debugging in C."
+	<api>
+	<inline: false>
+	"This exists only for break-pointing."
+	self cCode: [self realCECallCogCodePopReceiverReg]
+		inSmalltalk: [self ceCallCogCodePopReceiverReg].
+	"(and this exists only to reference Debug)"
+	Debug ifFalse: [self error: 'what??']
+]
+
+{ #category : #debugging }
+Cogit >> callCogCodePopReceiverAndClassRegs [
+	"This is a static version of ceCallCogCodePopReceiverAndClassRegs
+	 for break-pointing when debugging in C."
+	<api>
+	<inline: false>
+	"This exists only for break-pointing."
+	self cCode: [self realCECallCogCodePopReceiverAndClassRegs]
+		inSmalltalk: [self ceCallCogCodePopReceiverAndClassRegs]
+]
+
 { #category : #accessing }
 Cogit >> callerSavedRegMask [
 	<cmacro: '() callerSavedRegMask'>
@@ -2583,6 +2613,20 @@ Cogit >> ceCPICMiss: cPIC receiver: receiver [
 	^nil
 ]
 
+{ #category : #'simulation only' }
+Cogit >> ceCallCogCodePopReceiverAndClassRegs [
+	<api: 'extern void (*ceCallCogCodePopReceiverAndClassRegs)()'>
+	<doNotGenerate>
+	self simulateEnilopmart: ceCallCogCodePopReceiverAndClassRegs numArgs: 2
+]
+
+{ #category : #'simulation only' }
+Cogit >> ceCallCogCodePopReceiverReg [
+	<api: 'extern void (*ceCallCogCodePopReceiverReg)()'>
+	<doNotGenerate>
+	self simulateEnilopmart: ceCallCogCodePopReceiverReg numArgs: 1
+]
+
 { #category : #accessing }
 Cogit >> ceCannotResumePC [
 	<api>
@@ -2612,13 +2656,6 @@ Cogit >> ceCaptureCStackPointers [
 Cogit >> ceCheckFeatures [
 	<cmacro: '() ceCheckFeaturesFunction()'>
 	^self simulateLeafCallOf: ceCheckFeaturesFunction
-]
-
-{ #category : #'simulation only' }
-Cogit >> ceEnterCogCodePopReceiverAndClassRegs [
-	<api: 'extern void (*ceEnterCogCodePopReceiverAndClassRegs)()'>
-	<doNotGenerate>
-	self simulateEnilopmart: ceEnterCogCodePopReceiverAndClassRegs numArgs: 2
 ]
 
 { #category : #'simulation only' }
@@ -4277,17 +4314,6 @@ Cogit >> enterCogCodePopReceiver [
 	Debug ifFalse: [self error: 'what??']
 ]
 
-{ #category : #debugging }
-Cogit >> enterCogCodePopReceiverAndClassRegs [
-	"This is a static version of ceEnterCogCodePopReceiverAndClassRegs
-	 for break-pointing when debugging in C."
-	<api>
-	<inline: false>
-	"This exists only for break-pointing."
-	self cCode: [self realCEEnterCogCodePopReceiverAndClassRegs]
-		inSmalltalk: [self ceEnterCogCodePopReceiverAndClassRegs]
-]
-
 { #category : #accessing }
 Cogit >> entryOffset [
 	<api>
@@ -4716,6 +4742,138 @@ Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstru
 ]
 
 { #category : #initialization }
+Cogit >> genCallEnilopmartFor: regArg1 and: regArg2 and: regArg3 called: trampolineName [
+	"An enilopmart (the reverse of a trampoline) is a piece of code that makes
+	 the system-call-like transition from the C runtime into generated machine
+	 code.  This version is for entering code as if from a call.  The desired
+	 arguments and entry-point are pushed on a stackPage's stack, and beneath
+	 them is the call's return address.  The enilopmart pops off the values to be
+	 loaded into registers, and on CISCs then executes a return instruction to pop
+	 off the entry-point and jump to it.  On RISCs the enilopmart pops off the values
+	 to be loaded into registers, pops the entry-point into a scratch register, pops
+	 the return address into the LinkReg and then jumps to the entry point.
+
+						BEFORE				AFTER			(stacks grow down)
+						whatever			stackPointer ->	whatever
+						call return pc
+						target address =>
+						reg1val				reg1 = reg1val, etc
+						reg2val				LinkReg = call return pc
+		stackPointer ->	reg3val				pc = target address
+
+	 C.F. genEnilopmartFor:and:and:called:"
+	<returnTypeC: 'void (*genCallEnilopmartForandandcalled(sqInt regArg1, sqInt regArg2, sqInt regArg3, char *trampolineName))(void)'>
+	| size endAddress enilopmart |
+	opcodeIndex := 0.
+	backEnd genLoadStackPointers.
+	self PopR: regArg3.
+	self PopR: regArg2.
+	self PopR: regArg1.
+	backEnd hasLinkRegister
+		ifTrue:
+			[self PopR: TempReg.
+			 self PopR: LinkReg.
+			 self JumpR: TempReg]
+		ifFalse:
+			[self RetN: 0].
+	self computeMaximumSizes.
+	size := self generateInstructionsAt: methodZoneBase.
+	endAddress := self outputInstructionsAt: methodZoneBase.
+	self assert: methodZoneBase + size = endAddress.
+	enilopmart := methodZoneBase.
+	methodZoneBase := self alignUptoRoutineBoundary: endAddress.
+	backEnd nopsFrom: endAddress to: methodZoneBase - 1.
+	self recordGeneratedRunTime: trampolineName address: enilopmart.
+	^self cCoerceSimple: enilopmart to: #'void (*)(void)'
+]
+
+{ #category : #initialization }
+Cogit >> genCallEnilopmartFor: regArg1 and: regArg2 called: trampolineName [
+	"An enilopmart (the reverse of a trampoline) is a piece of code that makes
+	 the system-call-like transition from the C runtime into generated machine
+	 code.  This version is for entering code as if from a call.  The desired
+	 arguments and entry-point are pushed on a stackPage's stack, and beneath
+	 them is the call's return address.  The enilopmart pops off the values to be
+	 loaded into registers, and on CISCs then executes a return instruction to pop
+	 off the entry-point and jump to it.  On RISCs the enilopmart pops off the values
+	 to be loaded into registers, pops the entry-point into a scratch register, pops
+	 the return address into the LinkReg and then jumps to the entry point.
+
+						BEFORE				AFTER			(stacks grow down)
+						whatever			stackPointer ->	whatever
+						call return pc
+						target address =>	reg1 = reg1val, etc
+						reg1val				LinkReg = call return pc
+		stackPointer ->	reg2val				pc = target address
+
+	 C.F. genEnilopmartFor:and:and:called:"
+	<returnTypeC: 'void (*genCallEnilopmartForandandcalled(sqInt regArg1, sqInt regArg2, char *trampolineName))(void)'>
+	| size endAddress enilopmart |
+	opcodeIndex := 0.
+	backEnd genLoadStackPointers.
+	self PopR: regArg2.
+	self PopR: regArg1.
+	backEnd hasLinkRegister
+		ifTrue:
+			[self PopR: TempReg.
+			 self PopR: LinkReg.
+			 self JumpR: TempReg]
+		ifFalse:
+			[self RetN: 0].
+	self computeMaximumSizes.
+	size := self generateInstructionsAt: methodZoneBase.
+	endAddress := self outputInstructionsAt: methodZoneBase.
+	self assert: methodZoneBase + size = endAddress.
+	enilopmart := methodZoneBase.
+	methodZoneBase := self alignUptoRoutineBoundary: endAddress.
+	backEnd nopsFrom: endAddress to: methodZoneBase - 1.
+	self recordGeneratedRunTime: trampolineName address: enilopmart.
+	^self cCoerceSimple: enilopmart to: #'void (*)(void)'
+]
+
+{ #category : #initialization }
+Cogit >> genCallEnilopmartFor: regArg1 called: trampolineName [
+	"An enilopmart (the reverse of a trampoline) is a piece of code that makes
+	 the system-call-like transition from the C runtime into generated machine
+	 code.  This version is for entering code as if from a call.  The desired
+	 arguments and entry-point are pushed on a stackPage's stack, and beneath
+	 them is the call's return address.  The enilopmart pops off the values to be
+	 loaded into registers, and on CISCs then executes a return instruction to pop
+	 off the entry-point and jump to it.  On RISCs the enilopmart pops off the values
+	 to be loaded into registers, pops the entry-point into a scratch register, pops
+	 the return address into the LinkReg and then jumps to the entry point.
+
+						BEFORE				AFTER			(stacks grow down)
+						whatever			stackPointer ->	whatever
+						call return pc		reg1 = reg1val
+						target address =>	LinkReg = call return pc
+		stackPointer ->	reg1val				pc = target address
+
+	 C.F. genEnilopmartFor:and:and:called:"
+	<returnTypeC: 'void (*genCallEnilopmartForandandcalled(sqInt regArg1, char *trampolineName))(void)'>
+	| size endAddress enilopmart |
+	opcodeIndex := 0.
+	backEnd genLoadStackPointers.
+	self PopR: regArg1.
+	backEnd hasLinkRegister
+		ifTrue:
+			[self PopR: TempReg.
+			 self PopR: LinkReg.
+			 self JumpR: TempReg]
+		ifFalse:
+			[self RetN: 0].
+	self computeMaximumSizes.
+	size := self generateInstructionsAt: methodZoneBase.
+	endAddress := self outputInstructionsAt: methodZoneBase.
+	self assert: methodZoneBase + size = endAddress.
+	enilopmart := methodZoneBase.
+	methodZoneBase := self alignUptoRoutineBoundary: endAddress.
+	backEnd nopsFrom: endAddress to: methodZoneBase - 1.
+	self recordGeneratedRunTime: trampolineName address: enilopmart.
+	^self cCoerceSimple: enilopmart to: #'void (*)(void)'
+]
+
+{ #category : #initialization }
 Cogit >> genCheckForInterruptsTrampoline [
 	opcodeIndex := 0.
 	backEnd hasLinkRegister
@@ -4743,7 +4901,16 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 and: regArg3 called: trampolineN
 	 the system-call-like transition from the C runtime into generated machine
 	 code.  The desired arguments and entry-point are pushed on a stackPage's
 	 stack.  The enilopmart pops off the values to be loaded into registers and
-	 then executes a return instruction to pop off the entry-point and jump to it."
+	 then executes a return instruction to pop off the entry-point and jump to it.
+
+						BEFORE				AFTER			(stacks grow down)
+						whatever			stackPointer ->	whatever
+						target address =>	reg1 = reg1val, etc
+						reg1val				pc = target address
+						reg2val
+		stackPointer ->	reg3val
+
+	C.F. genCallEnilopmartFor:and:and:called:"
 	<returnTypeC: 'void (*genEnilopmartForandandcalled(sqInt regArg1, sqInt regArg2, sqInt regArg3, char *trampolineName))(void)'>
 	| size endAddress enilopmart |
 	opcodeIndex := 0.
@@ -4751,9 +4918,11 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 and: regArg3 called: trampolineN
 	self PopR: regArg3.
 	self PopR: regArg2.
 	self PopR: regArg1.
-	backEnd hasLinkRegister ifTrue:
-		[self PopR: LinkReg].
-	self RetN: 0.
+	backEnd hasLinkRegister
+		ifTrue: [backEnd hasPCRegister
+					ifTrue: [self PopR: LinkReg]
+					ifFalse: [self PopR: LinkReg; RetN: 0]]
+		ifFalse: [self RetN: 0].
 	self computeMaximumSizes.
 	size := self generateInstructionsAt: methodZoneBase.
 	endAddress := self outputInstructionsAt: methodZoneBase.
@@ -4771,16 +4940,26 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 called: trampolineName [
 	 the system-call-like transition from the C runtime into generated machine
 	 code.  The desired arguments and entry-point are pushed on a stackPage's
 	 stack.  The enilopmart pops off the values to be loaded into registers and
-	 then executes a return instruction to pop off the entry-point and jump to it."
-	<returnTypeC: 'void (*genEnilopmartForandcalled(sqInt regArg1, sqInt regArg2, char *trampolineName))(void)'>
+	 then executes a return instruction to pop off the entry-point and jump to it.
+
+						BEFORE				AFTER			(stacks grow down)
+						whatever			stackPointer ->	whatever
+						target address =>	reg1 = reg1val, etc
+						reg1val				pc = target address
+		stackPointer ->	reg2val
+
+	C.F. genCallEnilopmartFor:and:and:called:"
+	<returnTypeC: 'void (*genEnilopmartForandandcalled(sqInt regArg1, sqInt regArg2, char *trampolineName))(void)'>
 	| size endAddress enilopmart |
 	opcodeIndex := 0.
 	backEnd genLoadStackPointers.
 	self PopR: regArg2.
 	self PopR: regArg1.
-	backEnd hasLinkRegister ifTrue:
-		[self PopR: LinkReg].
-	self RetN: 0.
+	backEnd hasLinkRegister
+		ifTrue: [backEnd hasPCRegister
+					ifTrue: [self PopR: LinkReg]
+					ifFalse: [self PopR: LinkReg; RetN: 0]]
+		ifFalse: [self RetN: 0].
 	self computeMaximumSizes.
 	size := self generateInstructionsAt: methodZoneBase.
 	endAddress := self outputInstructionsAt: methodZoneBase.
@@ -4793,20 +4972,29 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 called: trampolineName [
 ]
 
 { #category : #initialization }
-Cogit >> genEnilopmartFor: regArg called: trampolineName [
+Cogit >> genEnilopmartFor: regArg1 called: trampolineName [
 	"An enilopmart (the reverse of a trampoline) is a piece of code that makes
 	 the system-call-like transition from the C runtime into generated machine
 	 code.  The desired arguments and entry-point are pushed on a stackPage's
 	 stack.  The enilopmart pops off the values to be loaded into registers and
-	 then executes a return instruction to pop off the entry-point and jump to it."
-	<returnTypeC: 'void (*genEnilopmartForcalled(sqInt regArg, char *trampolineName))(void)'>
+	 then executes a return instruction to pop off the entry-point and jump to it.
+
+						BEFORE				AFTER			(stacks grow down)
+						whatever			stackPointer ->	whatever
+						target address =>	reg1 = reg1val
+		stackPointer ->	reg1val				pc = target address
+
+	C.F. genCallEnilopmartFor:and:and:called:"
+	<returnTypeC: 'void (*genEnilopmartForandandcalled(sqInt regArg1, char *trampolineName))(void)'>
 	| size endAddress enilopmart |
 	opcodeIndex := 0.
 	backEnd genLoadStackPointers.
-	self PopR: regArg.
-	backEnd hasLinkRegister ifTrue:
-		[self PopR: LinkReg].
-	self RetN: 0.
+	self PopR: regArg1.
+	backEnd hasLinkRegister
+		ifTrue: [backEnd hasPCRegister
+					ifTrue: [self PopR: LinkReg]
+					ifFalse: [self PopR: LinkReg; RetN: 0]]
+		ifFalse: [self RetN: 0].
 	self computeMaximumSizes.
 	size := self generateInstructionsAt: methodZoneBase.
 	endAddress := self outputInstructionsAt: methodZoneBase.
@@ -5331,18 +5519,24 @@ Cogit >> generateEnilopmarts [
 				self genEnilopmartFor: ReceiverResultReg
 					called: 'realCEEnterCogCodePopReceiverReg'.
 			 ceEnterCogCodePopReceiverReg := #enterCogCodePopReceiver.
-			 realCEEnterCogCodePopReceiverAndClassRegs :=
-				self genEnilopmartFor: ReceiverResultReg
+			 realCECallCogCodePopReceiverReg :=
+				self genCallEnilopmartFor: ReceiverResultReg
+					called: 'realCEEnterCogCodePopReceiverReg'.
+			 ceEnterCogCodePopReceiverReg := #callCogCodePopReceiver.
+			 realCECallCogCodePopReceiverAndClassRegs :=
+				self genCallEnilopmartFor: ReceiverResultReg
 					and: ClassReg
-					called: 'realCEEnterCogCodePopReceiverAndClassRegs'.
-			 ceEnterCogCodePopReceiverAndClassRegs := #enterCogCodePopReceiverAndClassRegs]
+					called: 'realCECallCogCodePopReceiverAndClassRegs'.
+			 ceCallCogCodePopReceiverAndClassRegs := #callCogCodePopReceiverAndClassRegs]
 		ifFalse:
 			[ceEnterCogCodePopReceiverReg := self genEnilopmartFor: ReceiverResultReg
 				called: 'ceEnterCogCodePopReceiverReg'.
-			 ceEnterCogCodePopReceiverAndClassRegs :=
-				self genEnilopmartFor: ReceiverResultReg
+			 ceCallCogCodePopReceiverReg := self genCallEnilopmartFor: ReceiverResultReg
+				called: 'ceCallCogCodePopReceiverReg'.
+			 ceCallCogCodePopReceiverAndClassRegs :=
+				self genCallEnilopmartFor: ReceiverResultReg
 					and: ClassReg
-					called: 'ceEnterCogCodePopReceiverAndClassRegs'].
+					called: 'ceCallCogCodePopReceiverAndClassRegs'].
 
 	self genPrimReturnEnterCogCodeEnilopmart: false.
 	cePrimReturnEnterCogCode := methodZoneBase.
@@ -7013,6 +7207,13 @@ Cogit >> maybeFreeCogMethodDoesntLookKosher: cogMethod [
 	| result |
 	result := self cogMethodDoesntLookKosher: cogMethod.
 	^result = 2 ifTrue: [0] ifFalse: [result]
+]
+
+{ #category : #compaction }
+Cogit >> maybeFreeCountersOf: aCogMethod [
+	"Sista allocates counters out-of-line that need to be freed later on.
+	 This is the hook Sista uses.  By default do nothing."
+	<inline: true>
 ]
 
 { #category : #initialization }

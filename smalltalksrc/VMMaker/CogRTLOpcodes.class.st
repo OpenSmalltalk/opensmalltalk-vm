@@ -120,6 +120,7 @@ Class {
 		'OrCqR',
 		'OrCwR',
 		'OrRR',
+		'PCReg',
 		'PopR',
 		'PrefetchAw',
 		'PushCw',
@@ -202,6 +203,7 @@ CogRTLOpcodes class >> initialize [
 	DPFPReg7 := -16.
 	
 	LinkReg := -17.
+	PCReg := -18.
 
 	opcodeNames := #("Noops & Pseudo Ops"
 						Label
@@ -319,7 +321,7 @@ CogRTLOpcodes class >> nameForOpcode: opcode [ "<Integer>"
 { #category : #'debug printing' }
 CogRTLOpcodes class >> nameForRegister: reg [ "<Integer>"
 	^#(Arg0Reg Arg1Reg ClassReg FPReg ReceiverResultReg SPReg SendNumArgsReg TempReg
-		DPFPReg0 DPFPReg1 DPFPReg2 DPFPReg3 DPFPReg4 DPFPReg5 DPFPReg6 DPFPReg7 LinkReg)
+		DPFPReg0 DPFPReg1 DPFPReg2 DPFPReg3 DPFPReg4 DPFPReg5 DPFPReg6 DPFPReg7 LinkReg PCReg)
 			detect: [:sym| (classPool at: sym) = reg]
 ]
 
