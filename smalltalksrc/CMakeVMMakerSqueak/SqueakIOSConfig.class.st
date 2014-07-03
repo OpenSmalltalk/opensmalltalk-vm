@@ -450,6 +450,75 @@ SqueakIOSConfig >> externalPluginsBuildMultiThreadedDebug [
 	^ self externalPluginsBuild
 ]
 
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraPluginSettingsBuild: aMaker [	
+	aMaker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
+	
+	aMaker 
+		setTargetProperty: 'COMPILE_FLAGS' 
+		to: '"-include \"', (self buildDir / self prefixHeaderFileName) fullName, '\""'.  
+
+	aMaker isExternal ifTrue: [
+		"copy result to results dir "
+		
+		aMaker set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir fullName.
+		aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
+		aMaker puts: 'list(APPEND linkFlags "-undefined dynamic_lookup")' ].
+	
+	"maker addXCodeProperty: 'GCC_VERSION' value: '4.3'."
+	aMaker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/' , self executableName , '_Prefix.pch'.
+	
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraPluginSettingsBuildAssert: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraPluginSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraPluginSettingsBuildDebug: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraPluginSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraPluginSettingsBuildITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraPluginSettingsBuildMultiThreaded: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraPluginSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> extraPluginSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
 { #category : #'source files' }
 SqueakIOSConfig >> extraSources [
 	" mac VM using some unix sources"

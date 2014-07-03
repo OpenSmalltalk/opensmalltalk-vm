@@ -548,6 +548,67 @@ SqueakWin32x86Config >> externalPluginsBuildMultiThreadedDebug [
 ]
 
 { #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> extraPluginSettingsBuild: aMaker [
+
+	self flag:'tty'. "cut-n-paste from pharo code in CogWindowsConfig. caveat emptor"
+	self subclassResponsibility.
+"	
+	aMaker isExternal ifTrue: [
+		aMaker set: 'LIBRARY_OUTPUT_PATH' toString: '${outputDir}'.
+		
+		aMaker cmd: 'set_target_properties' params:  aMaker moduleName , ' PROPERTIES PREFIX "" '
+	]"
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> extraPluginSettingsBuildAssert: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> extraPluginSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> extraPluginSettingsBuildDebug: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> extraPluginSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> extraPluginSettingsBuildITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> extraPluginSettingsBuildMultiThreaded: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> extraPluginSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakWin32x86Config >> extraPluginSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
 SqueakWin32x86Config >> extraVMSettingsBuildAssert: aMaker [
 	^self extraVMSettingsBuild: aMaker
 ]

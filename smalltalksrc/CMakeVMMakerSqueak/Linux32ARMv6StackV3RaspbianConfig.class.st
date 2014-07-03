@@ -110,15 +110,15 @@ Linux32ARMv6StackV3RaspbianConfig >> executableName [
 	^ self vmStackExecutableName
 ]
 
-{ #category : #'plugin extra rules' }
-Linux32ARMv6StackV3RaspbianConfig >> extraPluginSettings: maker [
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3RaspbianConfig >> extraPluginSettingsBuild: aMaker [
 
-	maker isExternal ifTrue: [
+	aMaker isExternal ifTrue: [
 		"copy lib to results dir "
-		maker set: 'LIBRARY_OUTPUT_PATH' to: '${outputDir}' 
+		aMaker set: 'LIBRARY_OUTPUT_PATH' to: '${outputDir}' 
 	].	
 	
-	maker set: #linkFlags toString: '${linkFlags}'
+	aMaker set: #linkFlags toString: '${linkFlags}'
 
 ]
 

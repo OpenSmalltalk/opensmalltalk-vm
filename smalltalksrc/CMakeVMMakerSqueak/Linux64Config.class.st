@@ -103,7 +103,7 @@ Linux64Config >> addVMDriversBuild: aMaker [
 			'${targetPlatform}/vm-display-X11/sqUnixX11'
 			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
 		generator: aMaker
-		externalLibs: (self linkFlags);
+		externalLibs: (self externalLibs);
 
 		addDriver: 'vm-sound-ALSA' 
 		sources: #( 

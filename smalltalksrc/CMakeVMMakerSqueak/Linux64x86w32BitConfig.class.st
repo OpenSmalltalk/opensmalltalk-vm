@@ -90,53 +90,6 @@ External:
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> addVMDrivers: maker [
-"
-libICE
-ICE is the Inter Client Exchange protocol, part of X11
-
-libSM
-session management library for X11
-
-"
-	 self 
-		addDriver: 'vm-display-null' 
-		sources: #( 
-			'${targetPlatform}/vm-display-null/sqUnixDisplayNull' )
-		generator: maker
-		externalLibs: #();
-		
-		
-		addDriver: 'vm-display-X11' 
-		sources: #( 
-			'${targetPlatform}/vm-display-X11/sqUnixX11'
-			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
-		generator: maker
-		
-		"-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'"
-		externalLibs: #( SM ICE GL X11 nsl dl);
-		
-
-		addDriver: 'vm-sound-ALSA' 
-		sources: #( 
-			'${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' )
-		generator: maker
-		externalLibs: #();
-
-		addDriver: 'vm-sound-null' 
-		sources: #( 
-			'${targetPlatform}/vm-sound-null/sqUnixSoundNull' )
-		generator: maker
-		externalLibs: #().
-	
-"
-vm-display-null
-	vm-display-X11
-	vm-sound-ALSA
-	vm-sound-null"
-]
-
-{ #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfig >> addVMDriversBuild: aMaker [
 	aMaker message: 'addVMDrivers: aMaker'.
 	 self 
@@ -151,7 +104,7 @@ Linux64x86w32BitConfig >> addVMDriversBuild: aMaker [
 			'${targetPlatform}/vm-display-X11/sqUnixX11'
 			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
 		generator: aMaker
-		externalLibs: #( SM ICE GL X11 nsl dl);  "(self linkFlags);"
+		externalLibs: (self externalLibs);  "#( SM ICE GL X11 nsl dl); "
 
 		addDriver: 'vm-sound-ALSA' 
 		sources: #( 
@@ -481,72 +434,55 @@ Linux64x86w32BitConfig >> crossSources [
 
 { #category : #plugins }
 Linux64x86w32BitConfig >> defaultExternalPlugins [
-" tty 2014.06.10  cut-n-paste from Cog/build.linux32x86/newspeak.cog.spur/build/plugins.ext"
-	^ #(B3DAcceleratorPlugin 
-		BochsIA32Plugin 
-	      ThreadedFFIPlugin    "moduleName->SqueakFFIPrims "
-		"FFIPlugin"                   "moduleName->SqueakFFIPrims "
-		SqueakSSLPlugin       "moduleName->SqueakSSL" 
-		LocalePlugin 
-		UnixOSProcessPlugin 
-		UUIDPlugin)
+	^ #(
+		B3DAcceleratorPlugin
+		ThreadedIA32FFIPlugin "SqueakFFIPrims"
+		"UUIDPlugin"
+		"UnixOSProcessPlugin ?? "	
+		JPEGReaderPlugin 
+		JPEGReadWriter2Plugin 			
+		RePlugin
+		InternetConfigPlugin
+	)
 
-
-"N.B. Regarding ThreadedFFIPlugin and FFIPlugin from eem:
-
-Use  ThreadedFFIPlugin.  The FFIPlugin is obsolete (it requires assembler support files, and is non-reentrant).  
-This should generate in src/plugins/SqueakFFIPrims/{SqueakFFIPrims.c,ARM32FFIPlugin.c,IA32FFIPlugin.c} and 
-you should compile only src/plugins/SqueakFFIPrims/SqueakFFIPrims.c.  
-src/plugins/SqueakFFIPrims/SqueakFFIPrims.c is a simple wrapper that includes 
-ARM32FFIPlugin.c or IA32FFIPlugin.c as appropriate 
-(and others can be added as they are developed).
-
-
-"
+"debug"
 ]
 
 { #category : #plugins }
 Linux64x86w32BitConfig >> defaultInternalPlugins [
-" tty 2014.06.10  cut-n-paste from Cog/build.linux32x86/newspeak.cog.spur/build/plugins.int
-   N.B. moduleName->XYZ means XYZ appears in the GNU-Build's plugins.int/ext. However, Smalltalk requires the class name.
-                                 XYZSmalltalkClass  moduleName->XYZ as it appears in plugins.int/ext
-"
+" took from unixbuild/bld/plugins.int"
 	^ #(
-	    ADPCMCodecPlugin
-    AsynchFilePlugin
-    BalloonEnginePlugin "moduleName -->B2DPlugin"
-    BitBltSimulation        "moduleName->BitBltPlugin"
-    BMPReadWriterPlugin
-    CroquetPlugin
-    DeflatePlugin               "moduleName->ZipPlugin"
-    DropPlugin
-    DSAPlugin                    "moduleName->DSAPrims"
-    FFTPlugin
-    FileCopyPlugin
-    FilePlugin
-    FloatArrayPlugin
-    FloatMathPlugin
-    IA32ABIPlugin             "moduleName->IA32ABI"
-   " InflatePlugin"               "moduleName->ZipPlugin"   "already included with the DeflatePlugin"
-    JoystickTabletPlugin
-    JPEGReaderPlugin
-    JPEGReadWriter2Plugin
-    KlattSynthesizerPlugin  "moduleName->Klatt"
-    LargeIntegersPlugin      "moduleName->LargeIntegers"
-    Matrix2x3Plugin
-    MIDIPlugin
-    MiscPrimitivePlugin
-    Mpeg3Plugin
-    RePlugin
-    SecurityPlugin
-    SerialPlugin
-    SocketPlugin
-    SoundCodecPlugin        "moduleName->SoundCodecPrims"
-    SoundGenerationPlugin
-    SoundPlugin
-    StarSqueakPlugin
-    SurfacePlugin
-    VMProfileLinuxSupportPlugin)
+		ADPCMCodecPlugin 
+		AsynchFilePlugin 
+		BalloonEnginePlugin "B2DPlugin" 
+		BitBltSimulation "BitBltPlugin"
+		BMPReadWriterPlugin 
+		CroquetPlugin 
+		DeflatePlugin  "ZipPlugin"
+		DropPlugin 
+		DSAPlugin "DSAPrims" 
+		FFTPlugin 
+		FileCopyPlugin 
+		FilePlugin 
+		FloatArrayPlugin 
+		FloatMathPlugin 
+		JoystickTabletPlugin 
+		KlattSynthesizerPlugin "Klatt"
+		LargeIntegersPlugin "LargeIntegers"
+		Matrix2x3Plugin 
+		MIDIPlugin 
+		MiscPrimitivePlugin 
+		Mpeg3Plugin  	
+		SecurityPlugin 
+		SerialPlugin 
+		SocketPlugin 
+		SoundCodecPlugin "SoundCodecPrims"
+		SoundGenerationPlugin 
+		SoundPlugin 
+		StarSqueakPlugin 
+		SurfacePlugin	
+		LocalePlugin
+		)
 ]
 
 { #category : #cmake }
@@ -610,6 +546,70 @@ Linux64x86w32BitConfig >> externalPluginsBuildMultiThreadedAssert [
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfig >> externalPluginsBuildMultiThreadedDebug [
 	^ self externalPluginsBuild
+]
+
+{ #category : #'plugin extra rules' }
+Linux64x86w32BitConfig >> extraPluginSettings: maker [
+	super extraPluginSettings: maker.  
+	maker set: #linkFlags toString: '${linkFlags} -m32'
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraPluginSettingsBuild: maker [
+	self flag:'tty'. "this dumps the libs into the executable's directory. This breaks the distribution convention squeak has had for a while. However, we probably should handle that in a packaging/redistribution step and not worry about it now" 
+	maker isExternal ifTrue: [
+		"copy lib to outputDir "
+		maker set: 'LIBRARY_OUTPUT_PATH' to: '${outputDir}' 
+	].
+	maker set: #linkFlags toString: '${linkFlags} -m32'
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraPluginSettingsBuildAssert: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraPluginSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraPluginSettingsBuildDebug: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraPluginSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraPluginSettingsBuildITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraPluginSettingsBuildMultiThreaded: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraPluginSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfig >> extraPluginSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -835,10 +835,6 @@ Linux64x86w32BitConfig >> preferredIncludesBuildMultiThreadedDebug [
 Linux64x86w32BitConfig >> setExtraTargetPropertiesBuild: aMaker [
 	self flag:'tty'. "I am nervous about this method up here in this class, but pharo has it in CogUnixConfig, so using as is for now"
 
-
-
-	aMaker message: 'setExtraTargetPropertiesBuild: aMaker'.		
-
 	aMaker setTargetProperties: 'LINK_FLAGS "-m32"'.
 	aMaker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
 		COMPILE_FLAGS "' , self compilerFlags , '")'.
@@ -849,16 +845,7 @@ Linux64x86w32BitConfig >> setExtraTargetPropertiesBuild: aMaker [
 		params: ' ${targetPlatform}/vm/sqUnixHeartbeat.c PROPERTIES 
 		COMPILE_FLAGS "' , self compilerFlags , '"'.
 	
-	aMaker addExternalLibraries: 
-		#(
-			'uuid'  ""
-			'ssl'  ""
-			'crypto' ""
-			'm'  
-			'dl' 
-			'pthread' 
-		).
-				
+	aMaker addExternalLibraries: (self externalLibs).
 
 	aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
 	self addVMDrivers: aMaker.
@@ -963,7 +950,7 @@ Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreaded
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfig >> setGlobalOptionsBuild: aMaker [
 	aMaker message: 'setGlobalOptionsBuild: aMaker'.
-	aMaker linkDirectories: '/usr/lib'.
+"	aMaker linkDirectories: '/usr/lib'."
 
 "	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions:'  "
 ]
