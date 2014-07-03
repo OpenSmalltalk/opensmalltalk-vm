@@ -39,7 +39,7 @@ SqueakBSDConfig >> addVMDriversBuild: aMaker [
 			'${targetPlatform}/vm-display-X11/sqUnixX11'
 			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
 		generator: aMaker
-		externalLibs: (self linkFlags);
+		externalLibs: (self externalLibs);
 
 		addDriver: 'vm-sound-ALSA' 
 		sources: #( 
@@ -510,6 +510,63 @@ SqueakBSDConfig >> externalPluginsBuildMultiThreadedAssert [
 { #category : #'cmake buildType redirects' }
 SqueakBSDConfig >> externalPluginsBuildMultiThreadedDebug [
 	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraPluginSettingsBuild: maker [
+	maker isExternal ifTrue: [
+		"copy lib to results dir "
+		maker set: 'LIBRARY_OUTPUT_PATH' to: '${outputDir}' 
+	].
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraPluginSettingsBuildAssert: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraPluginSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraPluginSettingsBuildDebug: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraPluginSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraPluginSettingsBuildITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraPluginSettingsBuildMultiThreaded: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraPluginSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakBSDConfig >> extraPluginSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
 ]
 
 { #category : #'cmake buildType redirects' }

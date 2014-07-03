@@ -448,6 +448,61 @@ SqueakMacOSX32x86Config >> externalPluginsBuildMultiThreadedDebug [
 ]
 
 { #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraPluginSettingsBuild: aMaker [
+	"Cog currently runs only in 32 bit mode" 
+	self flag: 'tty'. "cut-n-paste from pharo code. I have no idea if this is appropriate for this platform"
+	aMaker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraPluginSettingsBuildAssert: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraPluginSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraPluginSettingsBuildDebug: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraPluginSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraPluginSettingsBuildITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraPluginSettingsBuildMultiThreaded: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraPluginSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacOSX32x86Config >> extraPluginSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
 SqueakMacOSX32x86Config >> extraVMSettingsBuild: aMaker [
 	"SystemNavigation default browseMethodsWhoseNamesContain: 'extraVMSettingsBuild:'"
 

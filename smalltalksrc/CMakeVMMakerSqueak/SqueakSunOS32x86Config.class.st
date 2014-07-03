@@ -32,7 +32,7 @@ SqueakSunOS32x86Config >> addVMDriversBuild: aMaker [
 			'${targetPlatform}/vm-display-X11/sqUnixX11'
 			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
 		generator: aMaker
-		externalLibs: (self linkFlags);
+		externalLibs: (self externalLibs);
 
 		addDriver: 'vm-sound-ALSA' 
 		sources: #( 
@@ -424,6 +424,60 @@ SqueakSunOS32x86Config >> externalPluginsBuildMultiThreadedAssert [
 { #category : #'cmake buildType redirects' }
 SqueakSunOS32x86Config >> externalPluginsBuildMultiThreadedDebug [
 	^ self externalPluginsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraPluginSettingsBuild: aMaker [
+	"default browseMethodsWhoseNamesContain: 'extraPluginSettingsBuild' "
+	self subclassResponsibility.
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraPluginSettingsBuildAssert: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraPluginSettingsBuildAssertITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraPluginSettingsBuildDebug: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraPluginSettingsBuildDebugITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraPluginSettingsBuildITimerHeartbeat: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraPluginSettingsBuildMultiThreaded: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraPluginSettingsBuildMultiThreadedAssert: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakSunOS32x86Config >> extraPluginSettingsBuildMultiThreadedDebug: aMaker [
+	^self extraPluginSettingsBuild: aMaker
+
 ]
 
 { #category : #'cmake buildType redirects' }

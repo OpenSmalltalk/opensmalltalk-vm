@@ -283,8 +283,8 @@ Linux32ARMv6StackV3CrossRaspbianConfig >> executableName [
 	^ self vmStackExecutableName
 ]
 
-{ #category : #'plugin extra rules' }
-Linux32ARMv6StackV3CrossRaspbianConfig >> extraPluginSettings: maker [
+{ #category : #'cmake buildType redirects' }
+Linux32ARMv6StackV3CrossRaspbianConfig >> extraPluginSettingsBuild: maker [
 
 	maker isExternal ifTrue: [
 		"copy lib to results dir "
