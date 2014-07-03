@@ -19,8 +19,8 @@ else
 	OSREL=`uname -r | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*$/\1.\2.\3/'`
 fi
 
-test "$OS" = Darwin && function quietmd5 () { /sbin/md5 -q "$1"; }
-test "$OS" = Darwin || function quietmd5 () { /usr/bin/md5sum "$1" | sed 's/ .*$//'; }
+test "$OS" = Darwin && function quietmd5 () { /sbin/md5 -q "$1" 2>/dev/null; }
+test "$OS" = Darwin || function quietmd5 () { /usr/bin/md5sum "$1" | sed 's/ .*$//' 2>/dev/null; }
 
 function get_vm_from_tar() # VM VMHASH VMARC VMARCHASH
 {	VM="$1"

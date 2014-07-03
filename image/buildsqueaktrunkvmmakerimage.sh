@@ -1,7 +1,7 @@
 #!/bin/bash
 . ./envvars.sh
 ./getsqueak45.sh
-. ./get3021vm.sh
+. ./getGoodCogVM.sh
 
 cp -p $SQUEAK45.image CogVMMaker.image
 cp -p $SQUEAK45.changes CogVMMaker.changes

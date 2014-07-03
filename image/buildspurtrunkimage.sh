@@ -1,7 +1,7 @@
 #!/bin/sh
 . ./envvars.sh
 ./getsqueak45.sh
-. ./get3021vm.sh
+. ./getGoodCogVM.sh
 
 cp -p $SQUEAK45.image trunk46forspur.image
 cp -p $SQUEAK45.changes trunk46forspur.changes
@@ -20,7 +20,7 @@ while true; do
 	for f in *VMMaker*spur.image; do
 		if test -f "$f"; then
 			IMAGE="$f"
-.			./get3021spurvm.sh
+.			./getGoodSpurVM.sh
 			break 2
 		fi
 	done
@@ -28,7 +28,7 @@ while true; do
 		for f in *VMMaker*.image; do
 			if test -f "$f"; then
 				IMAGE="$f"
-.				./get3021vm.sh
+.				./getGoodCogVM.sh
 				break 2
 			fi
 		done
@@ -48,6 +48,6 @@ mv trunk46forspur-spur.image trunk46-spur.image
 mv trunk46forspur-spur.changes trunk46-spur.changes
 
 # Now load the modified packages
-. ./get3021spurvm.sh
+. ./getGoodSpurVM.sh
 echo $VM trunk46-spur.image LoadSpurPackagesFromTempDir.st
 $VM trunk46-spur.image LoadSpurPackagesFromTempDir.st
