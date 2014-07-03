@@ -72,7 +72,7 @@ CogARMCompilerTests >> testAdd [
 				In: inst machineCode object
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'mov	sl, #', (n bitAnd: 16rFF << 8) asString.
+					herIntended := 'mov	sl, #', (n bitAnd: 16rFF << 24) asString.
 					self assert: (plainJane match: herIntended)].
 			self processor
 				disassembleInstructionAt: 4
@@ -86,7 +86,7 @@ CogARMCompilerTests >> testAdd [
 				In: inst machineCode object
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'orr	sl, sl, #', (n bitAnd: 16rFF << 24) signedIntFromLong asString.
+					herIntended := 'orr	sl, sl, #', (n bitAnd: 16rFF << 8) signedIntFromLong asString.
 					self assert: (plainJane match: herIntended)].
 			self processor
 				disassembleInstructionAt: 12
