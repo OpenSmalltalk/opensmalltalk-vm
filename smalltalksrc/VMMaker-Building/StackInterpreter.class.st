@@ -6098,11 +6098,11 @@ StackInterpreter >> frameNumArgs: theFP [
 
 { #category : #'frame access' }
 StackInterpreter >> frameOfMarriedContext: aContext [ 
-	| value |
+	| senderOop |
 	<inline: true>
 	<returnTypeC: 'char *'>
-	value := objectMemory fetchPointer: SenderIndex ofObject: aContext.
-	^self withoutSmallIntegerTags: value
+	senderOop := objectMemory fetchPointer: SenderIndex ofObject: aContext.
+	^self withoutSmallIntegerTags: senderOop
 ]
 
 { #category : #'frame access' }
