@@ -184,9 +184,14 @@ CMakePluginGeneratorForSqueak >> isExternal [
 	^ internal not
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMakePluginGeneratorForSqueak >> isInternal [
 	^ internal
+]
+
+{ #category : #accessing }
+CMakePluginGeneratorForSqueak >> isInternal: aBoolean [
+	internal:= aBoolean
 ]
 
 { #category : #accessing }
@@ -211,8 +216,14 @@ CMakePluginGeneratorForSqueak >> saveFile [
 
 ]
 
-{ #category : #'squeak compatibility' }
+{ #category : #accessing }
 CMakePluginGeneratorForSqueak >> vmGenerator [
 	"Make it accessible from plugin generator side"
 	^ vmGen
+]
+
+{ #category : #accessing }
+CMakePluginGeneratorForSqueak >> vmGenerator: aCMakeVMGeneratorForSqueak [
+	"needed for tests"
+	vmGen := aCMakeVMGeneratorForSqueak
 ]

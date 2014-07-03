@@ -907,6 +907,86 @@ SystemNavigation default browseMethodsWhoseNamesContain: ''executableType''
 "
 ]
 
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> externalLibs [
+	"Route this message send to the message appropriate for my buildType "
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self externalLibsBuild];
+		at: #buildAssert  put: [self externalLibsBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self externalLibsBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self externalLibsBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self externalLibsBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self externalLibsBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self externalLibsBuildMultiThreaded];
+		at: #buildMultiThreadedAssert  put: [self externalLibsBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self externalLibsBuildMultiThreadedDebug ];
+		at: #buildNone put:[self externalLibsNoBuildType].
+	^(d at: buildType) value
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> externalLibsBuild [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> externalLibsBuildAssert [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> externalLibsBuildAssertITimerHeartbeat [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> externalLibsBuildDebug [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> externalLibsBuildDebugITimerHeartbeat [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> externalLibsBuildITimerHeartbeat [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> externalLibsBuildMultiThreaded [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> externalLibsBuildMultiThreadedAssert [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> externalLibsBuildMultiThreadedDebug [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> externalLibsNoBuildType [
+	"SHOULD NOT GET HERE"
+	self shouldNotImplement.
+
+]
+
 { #category : #accessing }
 CPlatformConfigForSqueak >> externalModulesDir [
 	"answer the location in VM bundle, where plugins and rest of dynamic libs will be copied,
@@ -1012,14 +1092,23 @@ CPlatformConfigForSqueak >> externalPluginsNoBuildType [
 
 ]
 
-{ #category : #plugins }
-CPlatformConfigForSqueak >> extraPluginSettings: maker [
-	super extraPluginSettings: maker.  
-"	This is a very active method depending on Platform 
-
-	CPlatformConfig browse.
-	
-"
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> extraPluginSettings: aMaker [
+	"Route this message send to the message appropriate for my buildType "
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self extraPluginSettingsBuild: aMaker];
+		at: #buildAssert  put: [self extraPluginSettingsBuildAssert: aMaker];
+		at: #buildAssertITimerHeartbeat  put: [self extraPluginSettingsBuildAssertITimerHeartbeat: aMaker];
+            at:#buildDebug  put: [self extraPluginSettingsBuildDebug: aMaker];   
+		at: #buildDebugITimerHeartbeat  put: [self extraPluginSettingsBuildDebugITimerHeartbeat: aMaker ];
+		at: #buildITimerHeartbeat  put: [self extraPluginSettingsBuildITimerHeartbeat: aMaker];
+		at: #buildMultiThreaded  put: [self extraPluginSettingsBuildMultiThreaded: aMaker];
+		at: #buildMultiThreadedAssert  put: [self extraPluginSettingsBuildMultiThreadedAssert: aMaker];
+		at: #buildMultiThreadedDebug   put: [self extraPluginSettingsBuildMultiThreadedDebug: aMaker ];
+		at: #buildNone put:[self extraPluginSettingsNoBuildType: aMaker].
+	^(d at: buildType) value
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -1034,95 +1123,68 @@ CPlatformConfigForSqueak >> extraPluginSettingsBuild: maker [
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> extraPluginSettingsBuildAssert: maker [
-	"convenience method to customize plugin settings for this buildType. 
-	Most configurations do nothing.
-	SystemNavigation default browseMethodsWhoseNamesContain: 'extraPluginSettings'
-	"
+CPlatformConfigForSqueak >> extraPluginSettingsBuildAssert: aMaker [
+	"^self extraPluginSettingsBuild: aMaker'"
 	self subclassResponsibility
 
 
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> extraPluginSettingsBuildAssertITimerHeartbeat: maker [
-	"convenience method to customize plugin settings for this buildType. 
-	Most configurations do nothing.
-	SystemNavigation default browseMethodsWhoseNamesContain: 'extraPluginSettings'
-	"
+CPlatformConfigForSqueak >> extraPluginSettingsBuildAssertITimerHeartbeat: aMaker [
+	"^self extraPluginSettingsBuild: aMaker'"	
 	self subclassResponsibility
 
 
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> extraPluginSettingsBuildDebug: maker [
-	"convenience method to customize plugin settings for this buildType. 
-	Most configurations do nothing.
-	SystemNavigation default browseMethodsWhoseNamesContain: 'extraPluginSettings'
-	"
+CPlatformConfigForSqueak >> extraPluginSettingsBuildDebug: aMaker [
+	"^self extraPluginSettingsBuild: aMaker'"	
 	self subclassResponsibility
 
 
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> extraPluginSettingsBuildDebugITimerHeartbeat: maker [
-	"convenience method to customize plugin settings for this buildType. 
-	Most configurations do nothing.
-	SystemNavigation default browseMethodsWhoseNamesContain: 'extraPluginSettings'
-	"
+CPlatformConfigForSqueak >> extraPluginSettingsBuildDebugITimerHeartbeat: aMaker [
+	"^self extraPluginSettingsBuild: aMaker'"	
+	self subclassResponsibility
+
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> extraPluginSettingsBuildITimerHeartbeat: aMaker [
+	"^self extraPluginSettingsBuild: aMaker'"	
 	self subclassResponsibility
 
 
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> extraPluginSettingsBuildITimerHeartbeat: maker [
-	"convenience method to customize plugin settings for this buildType. 
-	Most configurations do nothing.
-	SystemNavigation default browseMethodsWhoseNamesContain: 'extraPluginSettings'
-	"
+CPlatformConfigForSqueak >> extraPluginSettingsBuildMultiThreaded: aMaker [
+	"^self extraPluginSettingsBuild: aMaker'"	
+	self subclassResponsibility
+
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> extraPluginSettingsBuildMultiThreadedAssert: aMaker [
+	"^self extraPluginSettingsBuild: aMaker'"	
 	self subclassResponsibility
 
 
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> extraPluginSettingsBuildMultiThreaded: maker [
-	"convenience method to customize plugin settings for this buildType. 
-	Most configurations do nothing.
-	SystemNavigation default browseMethodsWhoseNamesContain: 'extraPluginSettings'
-	"
+CPlatformConfigForSqueak >> extraPluginSettingsBuildMultiThreadedDebug: aMaker [
+	"^self extraPluginSettingsBuild: aMaker'"	
 	self subclassResponsibility
-
 
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> extraPluginSettingsBuildMultiThreadedAssert: maker [
-	"convenience method to customize plugin settings for this buildType. 
-	Most configurations do nothing.
-	SystemNavigation default browseMethodsWhoseNamesContain: 'extraPluginSettings'
-	"
-	self subclassResponsibility
-
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> extraPluginSettingsBuildMultiThreadedDebug: maker [
-	"convenience method to customize plugin settings for this buildType. 
-	Most configurations do nothing.
-	SystemNavigation default browseMethodsWhoseNamesContain: 'extraPluginSettings'
-	"
-	self subclassResponsibility
-
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> extraPluginSettingsNoBuildType: maker [
+CPlatformConfigForSqueak >> extraPluginSettingsNoBuildType: aMaker [
 	"SHOULD NOT GET HERE"
 	self shouldNotImplement.
 

@@ -248,25 +248,25 @@ SqueakIPhoneSqueakStackV3Config >> executableName [
 	^ self vmStackExecutableName
 ]
 
-{ #category : #'plugin extra rules' }
-SqueakIPhoneSqueakStackV3Config >> extraPluginSettings: maker [	
+{ #category : #'cmake buildType redirects' }
+SqueakIPhoneSqueakStackV3Config >> extraPluginSettingsBuild: aMaker [	
 	self architecture
-		ifNotNil: [ :arch | maker set: 'CMAKE_OSX_ARCHITECTURES' toString: arch ].
+		ifNotNil: [ :arch | aMaker set: 'CMAKE_OSX_ARCHITECTURES' toString: arch ].
 		
-	self setCommonProperties: maker.
+	self setCommonProperties: aMaker.
 
-	maker 
+	aMaker 
 		setTargetProperty: 'COMPILE_FLAGS' 
 		to: '"-include \"', (self buildDir / self prefixHeaderFileName) fullName, '\""'.  
 
-	maker isExternal ifTrue: [
+	aMaker isExternal ifTrue: [
 		"copy result to results dir "
-		maker set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir.
-		maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
-		maker puts: 'list(APPEND linkFlags "-undefined dynamic_lookup")' ].
+		aMaker set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir.
+		aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
+		aMaker puts: 'list(APPEND linkFlags "-undefined dynamic_lookup")' ].
 	
 	"maker addXCodeProperty: 'GCC_VERSION' value: '4.3'."
-	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/' , self executableName , '_Prefix.pch'.
+	aMaker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/' , self executableName , '_Prefix.pch'.
 	
 
 ]
