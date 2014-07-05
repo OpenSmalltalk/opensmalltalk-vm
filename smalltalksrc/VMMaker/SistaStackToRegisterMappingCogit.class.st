@@ -52,7 +52,6 @@ Class {
 		'counters',
 		'counterIndex',
 		'initialCounterValue',
-		'counterMethodCache',
 		'prevMapAbsPCMcpc'
 	],
 	#classVars : [
@@ -81,9 +80,7 @@ SistaStackToRegisterMappingCogit class >> ancilliaryClasses: options [
 
 { #category : #translation }
 SistaStackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
-	aCodeGen
-		var: 'counters'
-			type: #'AbstractInstruction *'
+	aCodeGen var: 'counters' type: #usqInt
 ]
 
 { #category : #'class initialization' }
@@ -107,30 +104,6 @@ SistaStackToRegisterMappingCogit class >> initializeWithOptions: optionsDictiona
 	super initializeWithOptions: optionsDictionary.
 	CounterBytes := 4.
 	MaxCounterValue := (1 << 16) - 1
-]
-
-{ #category : #testing }
-SistaStackToRegisterMappingCogit >> addressIsInInstructions: address [
-	<var: #address type: #'AbstractInstruction *'>
-	^self cCode:
-			'address >= &abstractOpcodes[0] && address < &abstractOpcodes[opcodeIndex]
-			|| address >= &counters[0] && address < &counters[counterIndex]'
-		inSmalltalk:
-			[((abstractOpcodes object identityIndexOf: address) between: 1 and: opcodeIndex)
-			or: [(counters object identityIndexOf: address) between: 1 and: counterIndex]]
-]
-
-{ #category : #initialization }
-SistaStackToRegisterMappingCogit >> allocateCounters [
-	"Allocate the structures used to manage counting conditional branch
-	 compilation.  This  needs to be a macro since the structures are alloca'ed
-	 (stack allocated) to ensure their being freed when compilation is done."
-	<cmacro: '() do { \
-		counters = numCounters ? alloca(sizeof(AbstractInstruction) * numCounters) : 0; \
-} while (0)'>
-	counters := CArrayAccessor on:
-					((1 to: numCounters) collect:
-						[:ign| backEnd class new])
 ]
 
 { #category : #'compile abstract instructions' }
@@ -169,7 +142,6 @@ SistaStackToRegisterMappingCogit >> compileBlockBodies [
 				 blockStart fakeHeader dependent: nil.
 				 self reinitializeFixupsFrom: blockStart startpc + blockStart numInitialNils
 					through: blockStart startpc + blockStart span - 1.
-				 self reinitializeCountersFrom: initialCounterIndex to: counterIndex - 1.
 				 self cCode: 'bzero(abstractOpcodes + initialOpcodeIndex,
 									(opcodeIndex - initialOpcodeIndex) * sizeof(AbstractInstruction))'
 					inSmalltalk: [initialOpcodeIndex to: opcodeIndex - 1 do:
@@ -187,39 +159,35 @@ SistaStackToRegisterMappingCogit >> compileBlockBodies [
 	^0
 ]
 
-{ #category : #'method introspection' }
-SistaStackToRegisterMappingCogit >> counterAt: index in: cogMethod [
-	<var: #cogMethod type: #'CogMethod *'>
-	"zero-relative counter access"
-	^objectMemory longAt: cogMethod asUnsignedInteger + cogMethod blockSize - (cogMethod numCounters - index * CounterBytes)
-]
-
-{ #category : #'method introspection' }
-SistaStackToRegisterMappingCogit >> counterAt: index put: aValue in: cogMethod [
-	<var: #cogMethod type: #'CogMethod *'>
-	"zero-relative counter access"
-	^objectMemory
-		longAt: cogMethod asUnsignedInteger + cogMethod blockSize - (cogMethod numCounters - index * CounterBytes)
-		put: aValue
+{ #category : #'compile abstract instructions' }
+SistaStackToRegisterMappingCogit >> compileCogMethod: selector [
+	counters := 0.
+	^super compileCogMethod: selector
 ]
 
 { #category : #disassembly }
 SistaStackToRegisterMappingCogit >> disassembleMethod: surrogateOrAddress on: aStream [
 	<doNotGenerate>
-	| cogMethod firstCounter |
+	| cogMethod |
 	cogMethod := super disassembleMethod: surrogateOrAddress on: aStream.
 	(cogMethod cmType = CMMethod
-	 and: [cogMethod numCounters > 0]) ifTrue:
+	 and: [cogMethod counters ~= 0]) ifTrue:
 		[aStream nextPutAll: 'counters:'; cr.
-		 firstCounter := cogMethod address + cogMethod blockSize - (cogMethod numCounters * CounterBytes).
-		 0 to: cogMethod numCounters - 1 do:
+		 numCounters := objectRepresentation numCountersFor: counters.
+		 0 to: numCounters - 1 do:
 			[:i| | addr |
-			 addr := i * CounterBytes + firstCounter.
+			 addr := i * CounterBytes + counters.
 			 addr printOn: aStream base: 16.
 			 aStream nextPut: $:; space.
 			 (objectMemory longAt: addr) printOn: aStream base: 16.
 			 aStream cr].
 		 aStream flush]
+]
+
+{ #category : #'generate machine code' }
+SistaStackToRegisterMappingCogit >> fillInCPICHeader: pic size: size numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector [
+	pic counters: 0.
+	^super fillInCPICHeader: pic size: size numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector
 ]
 
 { #category : #'generate machine code' }
@@ -234,15 +202,27 @@ SistaStackToRegisterMappingCogit >> fillInCounters: nCounters atEndAddress: endA
 ]
 
 { #category : #'generate machine code' }
+SistaStackToRegisterMappingCogit >> fillInCounters: nCounters atStartAddress: startAddress [
+	startAddress
+		to: startAddress + (nCounters - 1 * CounterBytes)
+		by: CounterBytes
+		do: [:address|
+			objectMemory
+				long32At: address
+				put: (initialCounterValue << 16 + initialCounterValue)]
+]
+
+{ #category : #'generate machine code' }
 SistaStackToRegisterMappingCogit >> fillInMethodHeader: method size: size selector: selector [
 	super fillInMethodHeader: method size: size selector: selector.
-	method numCounters: counterIndex.
+	self fillInCounters: numCounters atStartAddress: counters.
+	method counters: counters.
 	^method
 ]
 
 { #category : #'generate machine code' }
 SistaStackToRegisterMappingCogit >> fillInOPICHeader: pic size: size numArgs: numArgs selector: selector [
-	pic numCounters: 0.
+	pic counters: 0.
 	^super fillInOPICHeader: pic size: size numArgs: numArgs selector: selector
 ]
 
@@ -256,11 +236,10 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 decrements the lower half.  N.B. We *do not* eliminate dead branches (true ifTrue:/true ifFalse:)
 	 so that scanning for send and branch data is simplified and that branch data is correct."
 	<inline: false>
-	| desc ok counter countTripped retry |
-	<var: #desc type: #'CogSimStackEntry *'>
+	| desc ok counterAddress countTripped retry |
 	<var: #ok type: #'AbstractInstruction *'>
+	<var: #desc type: #'CogSimStackEntry *'>
 	<var: #retry type: #'AbstractInstruction *'>
-	<var: #counter type: #'AbstractInstruction *'>
 	<var: #countTripped type: #'AbstractInstruction *'>
 	self ssFlushTo: simStackPtr - 1.
 	desc := self ssTop.
@@ -268,17 +247,15 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	desc popToReg: TempReg.
 
 	self ssAllocateRequiredReg: SendNumArgsReg. "Use this as the count reg."
-	counter := self addressOf: (counters at: counterIndex).
+	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	counterIndex := counterIndex + 1.
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
 	self assert: BytesPerWord = CounterBytes.
-	retry := self MoveAw: counter asUnsignedInteger R: SendNumArgsReg.
-	counter addDependent: (self annotateAbsolutePCRef: retry).
+	retry := self MoveAw: counterAddress R: SendNumArgsReg.
 	self SubCq: 16r10000 R: SendNumArgsReg. "Count executed"
 	"Don't write back if we trip; avoids wrapping count back to initial value, and if we trip we don't execute."
 	countTripped := self JumpCarry: 0.
-	counter addDependent: (self annotateAbsolutePCRef:
-		(self MoveR: SendNumArgsReg Aw: counter asUnsignedInteger)). "write back"
+	self MoveR: SendNumArgsReg Aw: counterAddress. "write back"
 
 	"Cunning trick by LPD.  If true and false are contiguous subtract the smaller.
 	 Correct result is either 0 or the distance between them.  If result is not 0 or
@@ -288,8 +265,7 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
 
 	self SubCq: 1 R: SendNumArgsReg. "Count untaken"
-	counter addDependent: (self annotateAbsolutePCRef:
-		(self MoveR: SendNumArgsReg Aw: counter asUnsignedInteger)). "write back"
+	self MoveR: SendNumArgsReg Aw: counterAddress. "write back"
 
 	self CmpCq: (boolean == objectMemory falseObject
 					ifTrue: [objectMemory trueObject - objectMemory falseObject]
@@ -377,12 +353,12 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	 and if it trips simply abort the inlining, falling back to the normal send which
 	 will then continue to the conditional branch which will trip and enter the abort."
 	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor nExts
-	  rcvrIsInt argIsInt rcvrInt argInt result jumpNotSmallInts inlineCAB annotateInst counter countTripped |
-	<var: #primDescriptor type: #'BytecodeDescriptor *'>
-	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
-	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
-	<var: #counter type: #'AbstractInstruction *'>
+	  rcvrIsInt argIsInt rcvrInt argInt result jumpNotSmallInts inlineCAB annotateInst
+	  counterAddress countTripped |
 	<var: #countTripped type: #'AbstractInstruction *'>
+	<var: #primDescriptor type: #'BytecodeDescriptor *'>
+	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
+	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	self ssFlushTo: simStackPtr - 2.
 	primDescriptor := self generatorAt: byte0.
 	argIsInt := self ssTop type = SSConstant
@@ -446,17 +422,15 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	jumpNotSmallInts := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 
 	self ssAllocateRequiredReg: SendNumArgsReg. "Use this as the count reg."
-	counter := self addressOf: (counters at: counterIndex).
+	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
 	self assert: BytesPerWord = CounterBytes.
-	counter addDependent: (self annotateAbsolutePCRef:
-		(self MoveAw: counter asUnsignedInteger R: SendNumArgsReg)).
+	self MoveAw: counterAddress R: SendNumArgsReg.
 	self SubCq: 16r10000 R: SendNumArgsReg. "Count executed"
 	"If counter trips simply abort the inlined comparison and send continuing to the following
 	 branch *without* writing back.  A double decrement will not trip the second time."
 	countTripped := self JumpCarry: 0.
-	counter addDependent: (self annotateAbsolutePCRef:
-		(self MoveR: SendNumArgsReg Aw: counter asUnsignedInteger)). "write back"
+	self MoveR: SendNumArgsReg Aw: counterAddress. "write back"
 
 	argIsInt
 		ifTrue: [annotateInst
@@ -470,8 +444,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 				ifFalse: [self inverseBranchFor: primDescriptor opcode])
 		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
 	self SubCq: 1 R: SendNumArgsReg. "Count untaken"
-	counter addDependent: (self annotateAbsolutePCRef:
-		(self MoveR: SendNumArgsReg Aw: counter asUnsignedInteger)). "write back"
+	self MoveR: SendNumArgsReg Aw: counterAddress. "write back"
 	self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
 	countTripped jmpTarget: (jumpNotSmallInts jmpTarget: self Label).
 	argIsInt ifTrue:
@@ -488,11 +461,10 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	 and if it trips simply abort the inlining, falling back to the normal send which
 	 will then continue to the conditional branch which will trip and enter the abort."
 	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor nExts
-	  counter countTripped unforwardArg unforwardRcvr |
+	  counterAddress countTripped unforwardArg unforwardRcvr |
+	<var: #countTripped type: #'AbstractInstruction *'>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
-	<var: #counter type: #'AbstractInstruction *'>
-	<var: #countTripped type: #'AbstractInstruction *'>
 	self ssFlushTo: simStackPtr - 2.
 	primDescriptor := self generatorAt: byte0.
 
@@ -517,17 +489,15 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	self marshallSendArguments: 1.
 
 	self ssAllocateRequiredReg: SendNumArgsReg. "Use this as the count reg."
-	counter := self addressOf: (counters at: counterIndex).
+	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
 	self assert: BytesPerWord = CounterBytes.
-	counter addDependent: (self annotateAbsolutePCRef:
-		(self MoveAw: counter asUnsignedInteger R: SendNumArgsReg)).
+	self MoveAw: counterAddress R: SendNumArgsReg.
 	self SubCq: 16r10000 R: SendNumArgsReg. "Count executed"
 	"If counter trips simply abort the inlined comparison and send continuing to the following
 	 branch *without* writing back.  A double decrement will not trip the second time."
 	countTripped := self JumpCarry: 0.
-	counter addDependent: (self annotateAbsolutePCRef:
-		(self MoveR: SendNumArgsReg Aw: counter asUnsignedInteger)). "write back"
+	self MoveR: SendNumArgsReg Aw: counterAddress. "write back"
 	unforwardRcvr ifTrue:
 		[objectRepresentation genEnsureOopInRegNotForwarded: ReceiverResultReg scratchReg: TempReg].
 	unforwardArg ifTrue:
@@ -538,83 +508,17 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	self gen: (branchDescriptor isBranchTrue ifTrue: [JumpZero] ifFalse: [JumpNonZero])
 		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
 	self SubCq: 1 R: SendNumArgsReg. "Count untaken"
-	counter addDependent: (self annotateAbsolutePCRef:
-		(self MoveR: SendNumArgsReg Aw: counter asUnsignedInteger)). "write back"
+	self MoveR: SendNumArgsReg Aw: counterAddress. "write back"
 	self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
 	countTripped jmpTarget: self Label.
 	^self genMarshalledSend: (coInterpreter specialSelector: byte0 - self firstSpecialSelectorBytecodeOffset)
 		numArgs: 1
 ]
 
-{ #category : #'generate machine code' }
-SistaStackToRegisterMappingCogit >> generateCogMethod: selector [
-	"We handle jump sizing simply.  First we make a pass that asks each
-	 instruction to compute its maximum size.  Then we make a pass that
-	 sizes jumps based on the maxmimum sizes.  Then we make a pass
-	 that fixes up jumps.  When fixing up a jump the jump is not allowed to
-	 choose a smaller offset but must stick to the size set in the second pass.
-
-	 Override to add counters"
-	<returnTypeC: #'CogMethod *'>
-	| codeSize headerSize mapSize countersSize totalSize startAddress result method |
-	<var: #method type: #'CogMethod *'>
-	headerSize := self sizeof: CogMethod.
-	methodLabel address: headerSize negated.
-	self computeMaximumSizes.
-	methodLabel concretizeAt: (methodZone allocate: 0).
-	codeSize := self generateInstructionsAt: methodLabel address + headerSize.
-	mapSize := self generateMapAt: 0 start: methodLabel address + cmNoCheckEntryOffset.
-	countersSize := counterIndex * CounterBytes.
-	totalSize := methodZone roundUpLength: headerSize + codeSize + mapSize + countersSize.
-	totalSize > MaxMethodSize ifTrue:
-		[^self cCoerceSimple: MethodTooBig to: #'CogMethod *'].
-	startAddress := methodZone allocate: totalSize.
-	startAddress = 0 ifTrue:
-		[^self cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
-	self assert: startAddress + cmEntryOffset = entry address.
-	self assert: startAddress + cmNoCheckEntryOffset = noCheckEntry address.
-	self regenerateCounterReferences: startAddress + totalSize.
-	result := self outputInstructionsAt: startAddress + headerSize.
-	self assert: startAddress + headerSize + codeSize = result.
-	backEnd nopsFrom: result to: startAddress + totalSize - mapSize.
-	self generateMapAt: startAddress + totalSize - countersSize - 1 start: startAddress + cmNoCheckEntryOffset.
-	self fillInBlockHeadersAt: startAddress.
-	self fillInCounters: counterIndex atEndAddress: startAddress + totalSize.
-	method := self fillInMethodHeader: (self cCoerceSimple: startAddress to: #'CogMethod *')
-					size: totalSize
-					selector: selector.
-	postCompileHook notNil ifTrue:
-		[self perform: postCompileHook with: method with: primInvokeLabel.
-		 postCompileHook := nil].
-	processor flushICacheFrom: startAddress to: startAddress + headerSize + codeSize.
-	^method
-]
-
 { #category : #'method introspection' }
 SistaStackToRegisterMappingCogit >> getJumpTargetPCAt: pc [
 	<api>
 	^backEnd jumpTargetPCAt: pc
-]
-
-{ #category : #'simulation only' }
-SistaStackToRegisterMappingCogit >> handleWriteSimulationTrap: aProcessorSimulationTrap [
-	<doNotGenerate>
-	| address end |
-	address := aProcessorSimulationTrap address.
-	(address >= methodZone freeStart
-	or: [address <= methodZoneBase]) ifTrue:
-		[^super handleWriteSimulationTrap: aProcessorSimulationTrap].
-
-	(counterMethodCache isNil
-	 or: [address < counterMethodCache
-	 or: [counterMethodCache address + counterMethodCache blockSize < address]]) ifTrue:
-		[counterMethodCache := methodZone methodFor: address].
-	end := counterMethodCache address + counterMethodCache blockSize.
-	self assert: (address
-					between: end - (CounterBytes * counterMethodCache numCounters)
-					and: end).
-	objectMemory longAt: address put: (processor perform: aProcessorSimulationTrap registerAccessor).
-	processor pc: aProcessorSimulationTrap nextpc
 ]
 
 { #category : #initialization }
@@ -628,18 +532,7 @@ SistaStackToRegisterMappingCogit >> initialize [
 { #category : #initialization }
 SistaStackToRegisterMappingCogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	initialCounterValue := MaxCounterValue.
-	numCounters := 0.
-	self allocateCounters.
 	super initializeCodeZoneFrom: startAddress upTo: endAddress
-]
-
-{ #category : #initialization }
-SistaStackToRegisterMappingCogit >> initializeCounters [
-	"Initialize the counter labels for the current compilation.  We give them bogus
-	 addresses since we can't determine their address until after the map is generated.
-	 So we have to regenerate their dependent instructions after map generation."
-	self reinitializeCountersFrom: 0 to: numCounters - 1.
-	counterIndex := 0
 ]
 
 { #category : #'method map' }
@@ -649,25 +542,38 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUnt
 	^super mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 ]
 
-{ #category : #'method map' }
-SistaStackToRegisterMappingCogit >> mapStartFor: cogMethod [
-	"Answer the address of the first byte of the method map."
-	<var: #cogMethod type: #'CogMethod *'>
-	<inline: true>
-	^cogMethod asUnsignedInteger + cogMethod blockSize - (cogMethod numCounters * CounterBytes) - 1
-]
-
 { #category : #'compile abstract instructions' }
 SistaStackToRegisterMappingCogit >> maybeAllocAndInitCounters [
 	<inline: true>
-	self allocateCounters; initializeCounters
+	self assert: counters = 0.
+	counterIndex := 0.
+	numCounters = 0 ifTrue:
+		[^true].
+	counters := objectRepresentation allocateCounters: numCounters.
+	^counters ~= 0
+]
+
+{ #category : #'compile abstract instructions' }
+SistaStackToRegisterMappingCogit >> maybeFreeCounters [
+	<inline: true>
+	counters ~= 0 ifTrue:
+		[objectMemory freeCounters: counters]
 ]
 
 { #category : #compaction }
 SistaStackToRegisterMappingCogit >> maybeFreeCountersOf: aCogMethod [
 	"Free any counters in the method."
 	<inline: true>
-	self shouldBeImplemented
+	objectRepresentation freeCounters: aCogMethod counters
+]
+
+{ #category : #'garbage collection' }
+SistaStackToRegisterMappingCogit >> maybeMarkCountersIn: cogMethod [
+	"In SIsta Spur counters are held on the heap in pinned objects which must be marked
+	 to avoid them being garbage collected.  This is the hook through which that happens."
+	<var: #cogMethod type: #'CogMethod *'>
+	<inline: true>
+	objectRepresentation maybeMarkCounters: cogMethod counters
 ]
 
 { #category : #'method map' }
@@ -855,19 +761,6 @@ SistaStackToRegisterMappingCogit >> populate: tuple withPICInfoFor: cPIC firstCa
 		pc := pc + cPICCaseSize]
 ]
 
-{ #category : #'simulation only' }
-SistaStackToRegisterMappingCogit >> printCountersFor: cogMethod on: aStream [
-	| firstCounter |
-	firstCounter := cogMethod address + cogMethod blockSize - (cogMethod numCounters * CounterBytes).
-	0 to: cogMethod numCounters - 1 do:
-		[:i| | addr |
-		addr := i * CounterBytes + firstCounter.
-		addr printOn: aStream base: 16.
-		aStream nextPut: $:; space.
-		(objectMemory longAt: addr) printOn: aStream base: 16.
-		aStream cr]
-]
-
 { #category : #'method map' }
 SistaStackToRegisterMappingCogit >> printMcpc: mcpc Bcpc: bcpc on: aStream [
 	<doNotGenerate>
@@ -885,44 +778,10 @@ SistaStackToRegisterMappingCogit >> printPICDataForMethods [
 				coInterpreter printOop: thePicData]]]
 ]
 
-{ #category : #'generate machine code' }
-SistaStackToRegisterMappingCogit >> regenerateCounterReferences: methodEndAddress [
-	<var: #label type: #'AbstractInstruction *'>
-	<var: #dependentInstruction type: #'AbstractInstruction *'>
-	0 to: counterIndex - 1 do:
-		[:i| | label dependentInstruction |
-		label := self addressOf: (counters at: i).
-		label address: methodEndAddress - ((counterIndex - i) * CounterBytes).
-		dependentInstruction := label dependent.
-		[dependentInstruction concretizeAt: dependentInstruction address.
-		 dependentInstruction := dependentInstruction dependent.
-		 dependentInstruction ~= nil] whileTrue]
-]
-
-{ #category : #initialization }
-SistaStackToRegisterMappingCogit >> reinitializeCountersFrom: start to: stop [
-	"Reinitialize the counter labels in the given range.  We give them bogus
-	 addresses since we can't determine their address until after the map
-	 is generated.  So we have to regenerate their dependent instructions
-	 after map generation."
-	| label |
-	<var: #label type: #'AbstractInstruction *'>
-	start to: stop do:
-		[:i|
-		label := self addressOf: (counters at: i).
-		label
-			opcode: Label;
-			dependent: nil;
-			address: methodZone zoneEnd - (numCounters + i * CounterBytes)]
-]
-
 { #category : #'sista callbacks' }
 SistaStackToRegisterMappingCogit >> resetCountersIn: cogMethod [
-	<var: #cogMethod type: #'CogMethod *'>
-	<api>
-	self
-		fillInCounters: cogMethod numCounters
-		atEndAddress: cogMethod asUnsignedInteger + cogMethod blockSize
+	<doNotGenerate>
+	objectRepresentation resetCountersIn: cogMethod
 ]
 
 { #category : #'compile abstract instructions' }

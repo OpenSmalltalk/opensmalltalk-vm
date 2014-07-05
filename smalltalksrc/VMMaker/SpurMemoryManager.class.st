@@ -4647,6 +4647,7 @@ SpurMemoryManager >> freeListsObject [
 
 { #category : #'free space' }
 SpurMemoryManager >> freeObject: objOop [
+	<api>
 	| bytes |
 	bytes := self bytesInObject: objOop.
 	totalFreeOldSpace := totalFreeOldSpace + bytes.
@@ -7431,6 +7432,7 @@ SpurMemoryManager >> numSlotsMask [
 { #category : #'object access' }
 SpurMemoryManager >> numSlotsOf: objOop [
 	<returnTypeC: #usqInt>
+	<api>
 	| numSlots |
 	self flag: #endianness.
 	"numSlotsOf: should not be applied to free or forwarded objects."
