@@ -42,6 +42,11 @@ CogObjectRepresentation >> allYoungObjectsAgeInFullGC [
 	^self subclassResponsibility
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentation >> allocateCounters: nCounters [
+	self subclassResponsibility
+]
+
 { #category : #'in-line cacheing' }
 CogObjectRepresentation >> canLinkToYoungClasses [
 	^self subclassResponsibility
@@ -74,6 +79,12 @@ CogObjectRepresentation >> ensureNoForwardedLiteralsIn: aMethodObj [
 	"Ensure there are no forwarded literals in the argument.
 	 By default this is a noop.  Subclasses redefine as necessary."
 	<inline: true>
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentation >> freeCounters: theCounters [
+	<var: #theCounters type: #usqInt>
+	self subclassResponsibility
 ]
 
 { #category : #'bytecode generator support' }
@@ -230,6 +241,21 @@ CogObjectRepresentation >> maybeCompileRetry: retryInst onPrimitiveFail: primInd
 	 By default do nothing."
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentation >> maybeMarkCounters: theCounters [
+	"In SIsta Spur counters are held on the heap in pinned objects which must be marked
+	 to avoid them being garbage collected.  This is the hook through which that happens.
+	 By default, do nothing."
+	<var: #counters type: #usqInt>
+	<inline: true>
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentation >> numCountersFor: theCounters [
+	<var: #counters type: #usqInt>
+	self subclassResponsibility
+]
+
 { #category : #'calling convention' }
 CogObjectRepresentation >> numRegArgs [
 	"Define how many register arguments a StackToRegisterMappingCogit can and should use
@@ -241,6 +267,13 @@ CogObjectRepresentation >> numRegArgs [
 	<api>
 	<option: #StackToRegisterMappingCogit>
 	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentation >> resetCountersIn: cogMethod [
+	<var: #cogMethod type: #'CogMethod *'>
+	<api>
 	self subclassResponsibility
 ]
 

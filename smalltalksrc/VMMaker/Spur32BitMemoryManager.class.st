@@ -53,9 +53,12 @@ Spur32BitMemoryManager >> allocateSlotsForPinningInOldSpace: numSlots bytes: tot
 		 self longAt: chunk put: numSlots.
 		 self longAt: chunk + 4 put: self numSlotsMask << self numSlotsHalfShift.
 		 self long64At: chunk + self baseHeaderSize
-			put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex).
+			 put: ((self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex)
+					bitOr: 1 << self pinnedBitShift).
 		 ^chunk + self baseHeaderSize].
-	self long64At: chunk put: (self headerForSlots: numSlots format: formatField classIndex: classIndex).
+	self long64At: chunk
+		put: ((self headerForSlots: numSlots format: formatField classIndex: classIndex)
+					bitOr: 1 << self pinnedBitShift).
 	^chunk
 ]
 

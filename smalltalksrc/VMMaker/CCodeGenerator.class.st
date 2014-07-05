@@ -1669,7 +1669,9 @@ CCodeGenerator >> generateDivide: msgNode on: aStream indent: level [
 				and: [divisor > 0
 				and: [divisor <= (1 bitShift: 31)]]]]].
 	check ifTrue:
-		[aStream nextPut: $(; nextPutAll: 'assert(((sqInt) '.
+		[(headerFiles includes: '"sqAssert.h"') ifFalse:
+			[self addHeaderFile: '"sqAssert.h"'].
+		aStream nextPut: $(; nextPutAll: 'assert(((sqInt) '.
 		 self emitCExpression: rcvr on: aStream.
 		 aStream nextPutAll: ' >> ', (divisor log: 2) asInteger printString.
 		 aStream nextPutAll: ') == ('.
