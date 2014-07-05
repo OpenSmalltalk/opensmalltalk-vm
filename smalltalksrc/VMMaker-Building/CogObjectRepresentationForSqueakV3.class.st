@@ -37,6 +37,18 @@ CogObjectRepresentationForSqueakV3 >> allYoungObjectsAgeInFullGC [
 	^true
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentationForSqueakV3 >> allocateCounters: nCounters [
+	"Malloc the counter space.  Fill the first slot with the number of counters for resetCountersIn:"
+	| theCounters |
+	<var: #theCounters type: #usqInt>
+	theCounters := self malloc: nCounters + 1 * (self sizeof: #sqInt).
+	theCounters = 0 ifTrue:
+		[^theCounters].
+	self longAt: theCounters put: nCounters.
+	^theCounters + (self sizeof: #sqInt)
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> assertIsValidOop: anOop [
 	<doNotGenerate>
@@ -96,6 +108,13 @@ CogObjectRepresentationForSqueakV3 >> couldBeObject: oop [
 	"Note this version filters-out compact class indices via the >= nilObj clause"
 	^(objectMemory isNonIntegerObject: oop)
 	  and: [self oop: oop isGreaterThanOrEqualTo: objectMemory nilObject]
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSqueakV3 >> freeCounters: theCounters [
+	<var: #theCounters type: #usqInt>
+	theCounters ~= 0 ifTrue:
+		[self free: theCounters - (self sizeof: #sqInt)]
 ]
 
 { #category : #initialization }
@@ -826,6 +845,12 @@ CogObjectRepresentationForSqueakV3 >> markAndTraceLiteralIfYoung: literal [
 		 objectMemory markAndTrace: literal]
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentationForSqueakV3 >> numCountersFor: theCounters [
+	<var: #theCounters type: #usqInt>
+	^objectMemory longAt: theCounters - (self sizeof: #sqInt)
+]
+
 { #category : #'calling convention' }
 CogObjectRepresentationForSqueakV3 >> numRegArgs [
 	"Define how many register arguments a StackToRegisterMappingCogit can
@@ -870,6 +895,15 @@ CogObjectRepresentationForSqueakV3 >> remapOop: oop [
 	^(objectMemory isIntegerObject: oop)
 		ifTrue: [oop]
 		ifFalse: [objectMemory remap: oop]
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSqueakV3 >> resetCountersIn: cogMethod [
+	<var: #cogMethod type: #'CogMethod *'>
+	<api>
+	cogit
+		fillInCounters: (self numCountersFor: cogMethod counters)
+		atStartAddress: cogMethod counters
 ]
 
 { #category : #'garbage collection' }

@@ -3088,8 +3088,8 @@ BalloonEnginePlugin >> stepToNextBezierForward: updateData at: yValue [
 	Note: The test for fwDy should not be necessary in theory
 		but is a good insurance in practice."
 	[minY > lastY and:[fwDy >= 0]] whileTrue:[
-		lastX := lastX + ((fwDx + 16r8000) // 16r10000).
-		lastY := lastY + ((fwDy + 16r8000) // 16r10000).
+		lastX := lastX + ((fwDx + 16r8000) signedBitShift: -16).
+		lastY := lastY + ((fwDy + 16r8000) signedBitShift: -16).
 		fwDx := fwDx + ((self cCoerce: updateData to: 'int*') at: GBUpdateDDX).
 		fwDy := fwDy + ((self cCoerce: updateData to: 'int*') at: GBUpdateDDY).
 	].
@@ -3097,7 +3097,7 @@ BalloonEnginePlugin >> stepToNextBezierForward: updateData at: yValue [
 	(self cCoerce: updateData to: 'int*') at: GBUpdateY put: lastY.
 	(self cCoerce: updateData to: 'int*') at: GBUpdateDX put: fwDx.
 	(self cCoerce: updateData to: 'int*') at: GBUpdateDY put: fwDy.
-	^lastX // 256
+	^lastX signedBitShift: -8
 
 ]
 

@@ -6,25 +6,25 @@ Class {
 
 { #category : #accessing }
 CogSistaMethodSurrogate64 class >> alignedByteSize [
-	^48
+	^40 + self baseHeaderSize
 ]
 
 { #category : #accessing }
 CogSistaMethodSurrogate64 class >> offsetOf: aByteSymbol [
 	"These should be generated!!"
 	self assert: self objectMemoryClass baseHeaderSize = BaseHeaderSize.
-	^aByteSymbol == #numCounters
+	^aByteSymbol == #counters
 		ifTrue: [32 + BaseHeaderSize]
 		ifFalse: [super offsetOf: aByteSymbol]
 ]
 
 { #category : #accessing }
-CogSistaMethodSurrogate64 >> numCounters [
+CogSistaMethodSurrogate64 >> counters [
 	^memory unsignedLongLongAt: address + 33 + baseHeaderSize
 ]
 
 { #category : #accessing }
-CogSistaMethodSurrogate64 >> numCounters: aValue [
+CogSistaMethodSurrogate64 >> counters: aValue [
 	^memory
 		unsignedLongLongAt: address + 33 + baseHeaderSize
 		put: aValue

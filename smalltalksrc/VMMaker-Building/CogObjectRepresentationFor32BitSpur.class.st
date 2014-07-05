@@ -1711,6 +1711,16 @@ CogObjectRepresentationFor32BitSpur >> numCharacterBits [
 	^30
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentationFor32BitSpur >> numCountersFor: theCounters [
+	<var: #theCounters type: #usqInt>
+	| objOop |
+	theCounters = 0 ifTrue:
+		[^0].
+	objOop := theCounters - objectMemory baseHeaderSize.
+	^objectMemory numSlotsOf: objOop
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> numSmallIntegerBits [
 	^31

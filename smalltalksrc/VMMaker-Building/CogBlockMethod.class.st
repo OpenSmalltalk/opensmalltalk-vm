@@ -95,21 +95,22 @@ CogBlockMethod class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 								['objectHeader']			-> [self objectMemoryClass baseHeaderSize = 8
 																ifTrue: [#sqLong]
 																ifFalse: [#sqInt]].
-								['cmNumArgs']				-> [#(unsigned ' : 8')]. "SqueakV3 needs only 5 bits"
+								['cmNumArgs']				-> [#(unsigned ' : 8')].		"SqueakV3 needs only 5 bits"
 								['cmType']					-> [#(unsigned ' : 3')].
 								['cmRefersToYoung']		-> [#(unsigned #Boolean ' : 1')].
 								['cpicHasMNUCase']		-> [#(unsigned #Boolean ' : 1')].
-								['cmUsageCount']			-> [#(unsigned ' : 3')]. "see CMMaxUsageCount in initialize"
+								['cmUsageCount']			-> [#(unsigned ' : 3')].		"See CMMaxUsageCount in initialize"
 								['cmUsesPenultimateLit']	-> [#(unsigned #Boolean ' : 1')].
 								['cmUsesMethodClass']		-> [#(unsigned #Boolean ' : 1')].
 								['cmUnusedFlags']			-> [#(unsigned ' : 2')].
-								['stackCheckOffset']		-> [#(unsigned ' : 12')]. "See MaxStackCheckOffset in initialize. a.k.a. cPICNumCases"
-								['blockSize']				-> [#'unsigned short']. "See MaxMethodSize in initialize"
+								['stackCheckOffset']		-> [#(unsigned ' : 12')].		"See MaxStackCheckOffset in initialize. a.k.a. cPICNumCases"
+								['blockSize']				-> [#'unsigned short'].		"See MaxMethodSize in initialize"
 								['blockEntryOffset']			-> [#'unsigned short'].
 								['homeOffset']				-> [#'unsigned short'].
 								['startpc']					-> [#'unsigned short'].
 								['padToWord']				-> [#(#BaseHeaderSize 8 'unsigned int')].
-								['nextMethod']				-> ['struct _CogMethod *']} "see NewspeakCogMethod"
+								['nextMethod']				-> ['struct _CogMethod *'].	"See NewspeakCogMethod"
+								['counters']					-> [#usqInt]}				"See SistaCogMethod"
 							otherwise:
 								[#sqInt])]]
 ]

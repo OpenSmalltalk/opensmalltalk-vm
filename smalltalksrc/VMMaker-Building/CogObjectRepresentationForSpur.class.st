@@ -21,6 +21,18 @@ CogObjectRepresentationForSpur >> allYoungObjectsAgeInFullGC [
 	^false
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> allocateCounters: nCounters [
+	"On Spur allocate the counters on the heap as pinned objects.  The
+	 number of counters can be derived from the nbumber of slots in the obj."
+	<inline: true>
+	| objOop |
+	objOop := objectMemory allocatePinnedCounters: nCounters.
+	^objOop
+		ifNil: [0]
+		ifNotNil: [objOop + objectMemory baseHeaderSize]
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> cacheTagIsMarked: cacheTag [
 	"Answer if the cacheTag is not unmarked, i.e. answer true for compact class
@@ -82,6 +94,14 @@ CogObjectRepresentationForSpur >> ensureNoForwardedLiteralsIn: aMethodObj [
 	objectMemory
 		followForwardedObjectFields: aMethodObj
 		toDepth: 0
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> freeCounters: theCounters [
+	<var: #theCounters type: #usqInt>
+	<inline: true>
+	theCounters ~= 0 ifTrue:
+		[objectMemory freeObject: theCounters - objectMemory baseHeaderSize]
 ]
 
 { #category : #initialization }
@@ -656,6 +676,16 @@ CogObjectRepresentationForSpur >> maybeCompileRetry: retryInst onPrimitiveFail: 
 	^0
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> maybeMarkCounters: theCounters [
+	"In SIsta Spur counters are held on the heap in pinned objects which must be marked
+	 to avoid them being garbage collected.  This is the hook through which that happens."
+	<var: #counters type: #usqInt>
+	<inline: true>
+	theCounters ~= 0 ifTrue:
+		[objectMemory markAndTrace: theCounters - objectMemory baseHeaderSize]
+]
+
 { #category : #'calling convention' }
 CogObjectRepresentationForSpur >> numRegArgs [
 	"Define how many register arguments a StackToRegisterMappingCogit can
@@ -684,6 +714,13 @@ CogObjectRepresentationForSpur >> remapOop: objOop [
 	^(objectMemory shouldRemapOop: objOop)
 		ifTrue: [objectMemory remapObj: objOop]
 		ifFalse: [objOop]
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> resetCountersIn: cogMethod [
+	<var: #cogMethod type: #'CogMethod *'>
+	<api>
+	cogit fillInCounters: (self numCountersFor: cogMethod counters) atStartAddress: cogMethod counters
 ]
 
 { #category : #'garbage collection' }

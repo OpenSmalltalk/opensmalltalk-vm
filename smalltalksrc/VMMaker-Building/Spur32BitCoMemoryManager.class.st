@@ -46,6 +46,16 @@ Spur32BitCoMemoryManager class >> simulatorClass [
 	^Spur32BitMMLECoSimulator
 ]
 
+{ #category : #'sista support' }
+Spur32BitCoMemoryManager >> allocatePinnedCounters: nCounters [
+	<api>
+	<option: #SistaStackToRegisterMappingCogit>
+	^self allocateSlotsForPinningInOldSpace: nCounters
+			bytes: (self objectBytesForSlots: nCounters)
+			format: self firstLongFormat
+			classIndex: 	self thirtyTwoBitLongsClassIndexPun
+]
+
 { #category : #'growing/shrinking memory' }
 Spur32BitCoMemoryManager >> assimilateNewSegment: segInfo [
 	"Update after adding a segment.

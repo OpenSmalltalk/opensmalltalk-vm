@@ -93,8 +93,6 @@ Class {
 		'simStackPtr',
 		'simSpillBase',
 		'optStatus',
-		'ceEnterCogCodePopReceiverArg0Regs',
-		'ceEnterCogCodePopReceiverArg1Arg0Regs',
 		'ceCallCogCodePopReceiverArg0Regs',
 		'ceCallCogCodePopReceiverArg1Arg0Regs',
 		'methodAbortTrampolines',
@@ -559,9 +557,9 @@ StackToRegisterMappingCogit class >> mustBeGlobal: var [
 	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM support code."
 
 	^(super mustBeGlobal: var)
-	   or: [#('ceEnterCogCodePopReceiverArg0Regs' 'ceEnterCogCodePopReceiverArg1Arg0Regs'
-			'realCEEnterCogCodePopReceiverArg0Regs' 'realCEEnterCogCodePopReceiverArg1Arg0Regs'
-			'ceEnter0ArgsPIC' 'ceEnter1ArgsPIC' 'ceEnter2ArgsPIC') includes: var]
+	   or: [#('ceCallCogCodePopReceiverArg0Regs' 'ceCallCogCodePopReceiverArg1Arg0Regs'
+			'realCECallCogCodePopReceiverArg0Regs' 'realCECallCogCodePopReceiverArg1Arg0Regs'
+			'ceCall0ArgsPIC' 'ceCall1ArgsPIC' 'ceCall2ArgsPIC') includes: var]
 ]
 
 { #category : #'class initialization' }
@@ -1115,20 +1113,6 @@ StackToRegisterMappingCogit >> ceCallCogCodePopReceiverArg1Arg0Regs [
 ]
 
 { #category : #'simulation only' }
-StackToRegisterMappingCogit >> ceEnterCogCodePopReceiverArg0Regs [
-	<api: 'extern void (*ceEnterCogCodePopReceiverArg0Regs)()'>
-	<doNotGenerate>
-	self simulateEnilopmart: ceEnterCogCodePopReceiverArg0Regs numArgs: 2
-]
-
-{ #category : #'simulation only' }
-StackToRegisterMappingCogit >> ceEnterCogCodePopReceiverArg1Arg0Regs [
-	<api: 'extern void (*ceEnterCogCodePopReceiverArg1Arg0Regs)()'>
-	<doNotGenerate>
-	self simulateEnilopmart: ceEnterCogCodePopReceiverArg1Arg0Regs numArgs: 3
-]
-
-{ #category : #'simulation only' }
 StackToRegisterMappingCogit >> ceShortCutTraceStore: aProcessorSimulationTrap [
 	<doNotGenerate>
 	self shortcutTrampoline: aProcessorSimulationTrap
@@ -1517,28 +1501,6 @@ StackToRegisterMappingCogit >> ensureReceiverResultRegContainsSelf [
 						  and: [simSelf register = ReceiverResultReg]).
 			self assert: (optStatus isReceiverResultRegLive
 						  and: [optStatus ssEntry = (self addressOf: simSelf)])]
-]
-
-{ #category : #debugging }
-StackToRegisterMappingCogit >> enterCogCodePopReceiverArg0Regs [
-	"This is a static version of ceEnterCogCodePopReceiverArg0Regs
-	 for break-pointing when debugging in C."
-	<api>
-	<inline: false>
-	"This exists only for break-pointing."
-	self cCode: [self realCEEnterCogCodePopReceiverArg0Regs]
-		inSmalltalk: [self ceEnterCogCodePopReceiverArg0Regs]
-]
-
-{ #category : #debugging }
-StackToRegisterMappingCogit >> enterCogCodePopReceiverArg1Arg0Regs [
-	"This is a static version of ceEnterCogCodePopReceiverArg1Arg0Regs
-	 for break-pointing when debugging in C."
-	<api>
-	<inline: false>
-	"This exists only for break-pointing."
-	self cCode: [self realCEEnterCogCodePopReceiverArg1Arg0Regs]
-		inSmalltalk: [self ceEnterCogCodePopReceiverArg1Arg0Regs]
 ]
 
 { #category : #'peephole optimizations' }
