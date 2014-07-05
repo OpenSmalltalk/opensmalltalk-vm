@@ -33,3 +33,13 @@ CogObjectRepresentationFor64BitSpur >> inlineCacheTagForInstance: oop [
 CogObjectRepresentationFor64BitSpur >> log2BytesPerWord [
 	^3
 ]
+
+{ #category : #'sista support' }
+CogObjectRepresentationFor64BitSpur >> numCountersFor: theCounters [
+	<var: #theCounters type: #usqInt>
+	| objOop |
+	theCounters = 0 ifTrue:
+		[^0].
+	objOop := theCounters - objectMemory baseHeaderSize.
+	^2 * (objectMemory numSlotsOf: objOop)
+]

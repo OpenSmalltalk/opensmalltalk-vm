@@ -195,7 +195,6 @@ Class {
 		'expectedSPAlignment',
 		'expectedFPAlignment',
 		'codeModified',
-		'maxMethodBefore',
 		'maxLitIndex',
 		'ceMethodAbortTrampoline',
 		'cePICAbortTrampoline',
@@ -863,7 +862,8 @@ Cogit class >> mustBeGlobal: var [
 	 a hack to get them declared at all."
 	^#('ceBaseFrameReturnTrampoline' 'ceCaptureCStackPointers' 'ceCheckForInterruptTrampoline'
 		'ceEnterCogCodePopReceiverReg' 'realCEEnterCogCodePopReceiverReg'
-		'ceEnterCogCodePopReceiverAndClassRegs' 'realCEEnterCogCodePopReceiverAndClassRegs'
+		'ceCallCogCodePopReceiverReg' 'realCECallCogCodePopReceiverReg'
+		'ceCallCogCodePopReceiverAndClassRegs' 'realCECallCogCodePopReceiverAndClassRegs'
 		'ceReturnToInterpreterTrampoline' 'ceCannotResumeTrampoline'
 		'ceTryLockVMOwner' 'ceUnlockVMOwner'
 		'cmEntryOffset' 'cmNoCheckEntryOffset' 'cmDynSuperEntryOffset' 'missOffset'
@@ -3172,8 +3172,9 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	(cogMethod asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
 		[cogMethod asInteger = InsufficientCodeSpace ifTrue:
 			[coInterpreter callForCogCompiledCodeCompaction].
-		"Right now no errors should be reported, so nothing more to do."
-		"self reportError: (self cCoerceSimple: cogMethod to: #sqInt)."
+		 self maybeFreeCounters.
+		 "Right now no errors should be reported, so nothing more to do."
+		 "self reportError: (self cCoerceSimple: cogMethod to: #sqInt)."
 		 ^nil].
 	"self cCode: ''
 		inSmalltalk:
@@ -3854,7 +3855,8 @@ Cogit >> compileCogMethod: selector [
 	blockCount := 0.
 	numCleanBlocks > 0 ifTrue:
 		[self addCleanBlockStarts].
-	self maybeAllocAndInitCounters.
+	self maybeAllocAndInitCounters ifFalse: "Inaccurate error code, but it'll do.  This will likely never fail."
+		[^coInterpreter cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
 	blockEntryLabel := nil.
 	methodLabel dependent: nil.
 	(result := self compileEntireMethod) < 0 ifTrue:
@@ -4811,7 +4813,7 @@ Cogit >> genCallEnilopmartFor: regArg1 and: regArg2 called: trampolineName [
 		stackPointer ->	reg2val				pc = target address
 
 	 C.F. genEnilopmartFor:and:and:called:"
-	<returnTypeC: 'void (*genCallEnilopmartForandandcalled(sqInt regArg1, sqInt regArg2, char *trampolineName))(void)'>
+	<returnTypeC: 'void (*genCallEnilopmartForandcalled(sqInt regArg1, sqInt regArg2, char *trampolineName))(void)'>
 	| size endAddress enilopmart |
 	opcodeIndex := 0.
 	backEnd genLoadStackPointers.
@@ -4854,7 +4856,7 @@ Cogit >> genCallEnilopmartFor: regArg1 called: trampolineName [
 		stackPointer ->	reg1val				pc = target address
 
 	 C.F. genEnilopmartFor:and:and:called:"
-	<returnTypeC: 'void (*genCallEnilopmartForandandcalled(sqInt regArg1, char *trampolineName))(void)'>
+	<returnTypeC: 'void (*genCallEnilopmartForcalled(sqInt regArg1, char *trampolineName))(void)'>
 	| size endAddress enilopmart |
 	opcodeIndex := 0.
 	backEnd genLoadStackPointers.
@@ -4955,7 +4957,7 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 called: trampolineName [
 		stackPointer ->	reg2val
 
 	C.F. genCallEnilopmartFor:and:and:called:"
-	<returnTypeC: 'void (*genEnilopmartForandandcalled(sqInt regArg1, sqInt regArg2, char *trampolineName))(void)'>
+	<returnTypeC: 'void (*genEnilopmartForandcalled(sqInt regArg1, sqInt regArg2, char *trampolineName))(void)'>
 	| size endAddress enilopmart |
 	opcodeIndex := 0.
 	backEnd genLoadStackPointers.
@@ -4991,7 +4993,7 @@ Cogit >> genEnilopmartFor: regArg1 called: trampolineName [
 		stackPointer ->	reg1val				pc = target address
 
 	C.F. genCallEnilopmartFor:and:and:called:"
-	<returnTypeC: 'void (*genEnilopmartForandandcalled(sqInt regArg1, char *trampolineName))(void)'>
+	<returnTypeC: 'void (*genEnilopmartForcalled(sqInt regArg1, char *trampolineName))(void)'>
 	| size endAddress enilopmart |
 	opcodeIndex := 0.
 	backEnd genLoadStackPointers.
@@ -5528,7 +5530,7 @@ Cogit >> generateEnilopmarts [
 			 realCECallCogCodePopReceiverReg :=
 				self genCallEnilopmartFor: ReceiverResultReg
 					called: 'realCEEnterCogCodePopReceiverReg'.
-			 ceEnterCogCodePopReceiverReg := #callCogCodePopReceiver.
+			 ceCallCogCodePopReceiverReg := #callCogCodePopReceiver.
 			 realCECallCogCodePopReceiverAndClassRegs :=
 				self genCallEnilopmartFor: ReceiverResultReg
 					and: ClassReg
@@ -6889,6 +6891,7 @@ Cogit >> markAndTraceLiteralsIn: cogMethod [
 				 and: [(objectMemory isImmediate: cogMethod selector)
 					or: [objectMemory isMarked: cogMethod selector]]]).
 	objectRepresentation markAndTraceLiteral: cogMethod selector.
+	self maybeMarkCountersIn: cogMethod.
 	self mapFor: cogMethod
 		 performUntil: #markLiterals:pc:method:
 		 arg: cogMethod asInteger
@@ -7130,6 +7133,7 @@ Cogit >> markLiteralsAndUnlinkUnmarkedSendsIn: cogMethod [
 	self assert: cogMethod cmType = CMMethod.
 	self assert: (objectMemory isMarked: cogMethod methodObject).
 	objectRepresentation markAndTraceLiteral: cogMethod selector.
+	self maybeMarkCountersIn: cogMethod.
 	self mapFor: cogMethod
 		 performUntil: #markLiteralsAndUnlinkIfUnmarkedSend:pc:method:
 		 arg: cogMethod asInteger
@@ -7203,6 +7207,7 @@ Cogit >> maxCogMethodAddress [
 Cogit >> maybeAllocAndInitCounters [
 	"No-op in the non-Sista Cogits..."
 	<inline: true>
+	^true
 ]
 
 { #category : #debugging }
@@ -7213,6 +7218,12 @@ Cogit >> maybeFreeCogMethodDoesntLookKosher: cogMethod [
 	| result |
 	result := self cogMethodDoesntLookKosher: cogMethod.
 	^result = 2 ifTrue: [0] ifFalse: [result]
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> maybeFreeCounters [
+	"No-op in the non-Sista Cogits..."
+	<inline: true>
 ]
 
 { #category : #compaction }
@@ -7252,6 +7263,13 @@ Cogit >> maybeGenerateICacheFlush [
 	self outputInstructionsForGeneratedRuntimeAt: startAddress.
 	self recordGeneratedRunTime: 'ceFlushICache' address: startAddress.
 	ceFlushICache := self cCoerceSimple: startAddress to: #'void (*)(unsigned long,unsigned long)'
+]
+
+{ #category : #'garbage collection' }
+Cogit >> maybeMarkCountersIn: cogMethod [
+	"In SIsta Spur counters are held on the heap in pinned objects which must be marked
+	 to avoid them being garbage collected.  This is the hook through which that happens."
+	<var: #cogMethod type: #'CogMethod *'>
 ]
 
 { #category : #'method map' }
@@ -7776,8 +7794,9 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 					nextPutAll: 'cmRefersToYoung: ';
 					nextPutAll: (cogMethod cmRefersToYoung ifTrue: ['yes'] ifFalse: ['no'])].
 			cogMethod cmType = CMMethod ifTrue:
-				[([cogMethod numCounters] on: MessageNotUnderstood do: [:ex| nil]) ifNotNil:
-					[:nc| aStream crtab; nextPutAll: 'numCounters: '; print: nc]]].
+				[([cogMethod counters] on: MessageNotUnderstood do: [:ex| nil]) ifNotNil:
+					[:cntrs| aStream crtab; nextPutAll: 'counters: '.
+						cntrs = 0 ifTrue: [aStream print: cntrs] ifFalse: [self printHex: cntrs]]]].
 	aStream cr; flush
 ]
 

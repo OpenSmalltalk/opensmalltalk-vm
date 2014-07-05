@@ -28,6 +28,18 @@ Spur64BitMemoryManager >> addressAfter: objOop [
 	^objOop + self baseHeaderSize + slotBytes
 ]
 
+{ #category : #'sista support' }
+Spur64BitMemoryManager >> allocatePinnedCounters: nCounters [
+	<api>
+	<option: #SistaStackToRegisterMappingCogit>
+	| numSlots |
+	numSlots := nCounters + 1 // 2.
+	^self allocateSlotsForPinningInOldSpace: numSlots
+			bytes: (self objectBytesForSlots: numSlots)
+			format: self firstLongFormat + (nCounters bitAnd: 1)
+			classIndex: 	self thirtyTwoBitLongsClassIndexPun
+]
+
 { #category : #allocation }
 Spur64BitMemoryManager >> allocateSlotsForPinningInOldSpace: numSlots bytes: totalBytes format: formatField classIndex: classIndex [
 	"Answer the oop of a chunk of space in oldSpace with numSlots slots.  Try and
@@ -47,10 +59,12 @@ Spur64BitMemoryManager >> allocateSlotsForPinningInOldSpace: numSlots bytes: tot
 		[self longAt: chunk
 			put: numSlots + (self numSlotsMask << self numSlotsFullShift).
 		 self longAt: chunk + self baseHeaderSize
-			put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex).
+			put: ((self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex)
+					bitOr: 1 << self pinnedBitShift).
 		 ^chunk + self baseHeaderSize].
 	self longAt: chunk
-		put: (self headerForSlots: numSlots format: formatField classIndex: classIndex).
+		put: ((self headerForSlots: numSlots format: formatField classIndex: classIndex)
+				bitOr: 1 << self pinnedBitShift).
 	^chunk
 ]
 

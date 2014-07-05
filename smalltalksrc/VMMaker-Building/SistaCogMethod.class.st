@@ -1,8 +1,18 @@
+"
+A SistaCogMethod is a CogMethod with a pointer to memory holding the Sista performance counters decremented in conditional branches.
+
+Instance Variables
+	counters:		<pointer>
+
+counters
+	- counters points to the first field of either a pinned object on the Spur heap or malloced memory.
+
+"
 Class {
 	#name : #SistaCogMethod,
 	#superclass : #CogMethod,
 	#instVars : [
-		'numCounters'
+		'counters'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -14,15 +24,15 @@ SistaCogMethod class >> structTypeName [
 ]
 
 { #category : #accessing }
-SistaCogMethod >> numCounters [
-	"Answer the value of numCounters"
+SistaCogMethod >> counters [
+	"Answer the value of counters"
 
-	^ numCounters
+	^ counters
 ]
 
 { #category : #accessing }
-SistaCogMethod >> numCounters: anObject [
-	"Set the value of numCounters"
+SistaCogMethod >> counters: anObject [
+	"Set the value of counters"
 
-	^numCounters := anObject
+	^counters := anObject
 ]
