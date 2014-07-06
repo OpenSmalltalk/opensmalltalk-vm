@@ -336,8 +336,8 @@ SqueakUnixConfig >> externalModulesDir [
 
 { #category : #'source files' }
 SqueakUnixConfig >> extraSources [	
-	self flag:'tty'. "?"
-	^ 'version.c'
+	self flag:'tty'. "okey-dokey. the testXYZ are from Ian's config.cmake. I don't know where version.c comes from"
+	^ 'testDoubleWordAlignment.c testDoubleWordOrder.c  testLanginfoCodeset.c'
 ]
 
 { #category : #'cmake buildType redirects' }
