@@ -36,6 +36,7 @@ function get_vm_from_tar() # VM VMHASH VMARC VMARCHASH
 				exit 2
 			fi
 		fi
+		rm -rf $VMDIR
 		tar xzf "$VMARC"
 		if [ ! -d $VMDIR -o "`quietmd5 "$VM"`" != $VMHASH ]; then
 			echo failed to correctly extract $VMDIR from $VMARC 1>&2
@@ -58,6 +59,7 @@ function get_vm_from_zip() # VM VMHASH VMARC VMARCHASH
 				exit 2
 			fi
 		fi
+		rm -rf $VMDIR
 		unzip -q "$VMARC"
 		if [ ! -d "$VMDIR" -o "`quietmd5 "$VM"`" != $VMHASH ]; then
 			echo failed to correctly extract "`dirname $VM`" from $VMARC 1>&2
