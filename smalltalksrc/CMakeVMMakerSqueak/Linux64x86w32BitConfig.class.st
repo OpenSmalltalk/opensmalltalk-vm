@@ -618,7 +618,7 @@ Linux64x86w32BitConfig >> extraVMSettingsBuild: aMaker [
 
 	| versionC |
 	aMaker message: 'extraVMSettingsBuild: aMaker'.
-	self generateConfigH.
+	"self generateConfigH.   supplanted by new auto generate of config"
 	
 	"add a generated version.c"
 	
@@ -730,6 +730,7 @@ Linux64x86w32BitConfig >> internalPluginsBuildMultiThreadedDebug [
 Linux64x86w32BitConfig >> postBuildActionsBuild: aMaker [
 	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
 	aMaker message: 'postBuildActionsBuild: aMaker'.
+	aMaker  include: 'config.cmake'.
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -896,6 +897,9 @@ Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
 	"
 	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild:'"
 	aMaker message: 'setGlobalOptionsAfterDetermineSystemBuild: aMaker'.	
+	aMaker  include: 'Utils.cmake'.
+	aMaker  include: 'Plugins.cmake'
+
 "	aMaker set: 'CMAKE_FIND_ROOT_PATH' to: '/usr/lib  ' "	
 ]
 
