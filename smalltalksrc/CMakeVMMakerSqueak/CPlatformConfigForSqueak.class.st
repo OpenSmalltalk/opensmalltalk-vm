@@ -138,6 +138,276 @@ interpreter.
 ]
 
 { #category : #'as yet unclassified' }
+CPlatformConfigForSqueak class >> pluginsCMake [
+	^'# Figure out which plugins to build and create a configuration for each.
+# 
+# Last edited: 2013-11-18 15:12:57 by piumarta on emilia
+#
+# Modified by tty to only include the macros. Hopefully, I can transform this to create the config.h for all the plugins on unix
+#
+#IF (EXISTS ${bld}/plugins.int)
+#  FILE (STRINGS ${bld}/plugins.int plugins_int)
+#ELSEIF (EXISTS ${config}/plugins.int)
+#  FILE (STRINGS ${config}/plugins.int plugins_int)
+#ELSEIF (EXISTS ${src}/plugins.int)
+#  FILE (STRINGS ${src}/plugins.int plugins_int)
+#ELSE (EXISTS ${src}/plugins.int)
+#  MESSAGE (FATAL_ERROR "Cannot find plugins.int in ${bld}, ${config} or ${src}")
+#ENDIF (EXISTS ${bld}/plugins.int)
+#
+#STRING (REGEX REPLACE ".*= *(.*)" "\\1" plugins_int ${plugins_int})
+#STRING (REPLACE " " ";" plugins_int "${plugins_int}")
+#
+#IF (EXISTS ${bld}/plugins.ext)
+#  FILE (STRINGS ${bld}/plugins.ext plugins_ext)
+#ELSEIF (EXISTS ${config}/plugins.ext)
+#  FILE (STRINGS ${config}/plugins.ext plugins_ext)
+#ELSEIF (EXISTS ${src}/plugins.ext)
+#  FILE (STRINGS ${src}/plugins.ext plugins_ext)
+#ELSE (EXISTS ${src}/plugins.ext)
+#  MESSAGE (FATAL_ERROR "Cannot find plugins.ext in ${bld}, ${config} or ${src}")
+#ENDIF (EXISTS ${bld}/plugins.ext)
+#
+#STRING (REGEX REPLACE ".*= *(.*)" "\\1" plugins_ext ${plugins_ext})
+#STRING (REPLACE " " ";" plugins_ext "${plugins_ext}")
+#
+#IF (EXISTS ${bld}/plugins.exc)
+#  FILE (STRINGS ${bld}/plugins.exc plugins_exc)
+#ELSEIF (EXISTS ${config}/plugins.exc)
+#  FILE (STRINGS ${config}/plugins.exc plugins_exc)
+#ELSEIF (EXISTS ${src}/plugins.exc)
+#  FILE (STRINGS ${src}/plugins.exc plugins_exc)
+#ENDIF (EXISTS ${bld}/plugins.exc)
+#
+#IF (DEFINED plugins_exc)
+#  STRING (REGEX REPLACE ".*= *(.*)" "\\1" plugins_exc ${plugins_exc})
+#  STRING (REPLACE " " ";" plugins_exc "${plugins_exc}")
+#  FOREACH (plugin ${plugins_exc})
+#    MESSAGE ("!! excluding plugin ${plugin}")
+#    LIST (REMOVE_ITEM plugins_int ${plugin})
+#    LIST (REMOVE_ITEM plugins_ext ${plugin})
+#  ENDFOREACH (plugin)
+#ENDIF (DEFINED plugins_exc)
+#
+#FILE (GLOB plugins_vm RELATIVE ${unix} ${unix}/vm-*)
+#
+## copy generated headers to ${bld} to eliminate ${src} from the include search path
+#
+#FILE_COPY (${bld}/interp.h ${src}/vm/interp.h)
+
+MACRO (INTERNAL_PLUGIN plugin)
+  SET (plugin_sources "")
+  IF (DEFINED ${plugin}_sources)
+    SET (plugin_sources ${${plugin}_sources})
+  ELSE (DEFINED ${plugin}_sources)
+    FOREACH (dir ${src}/plugins ${cross}/plugins ${unix}/plugins)
+      SET (tmp "")
+      AUX_SOURCE_DIRECTORY (${dir}/${plugin} tmp)
+      STRING_APPEND (plugin_sources "${tmp}")
+    ENDFOREACH (dir)
+  ENDIF (DEFINED ${plugin}_sources)
+  IF (DEFINED ${plugin}_extra_sources)
+    STRING_APPEND (plugin_sources "${${plugin}_extra_sources}")
+  ENDIF (DEFINED ${plugin}_extra_sources)
+  FILE (WRITE ${bld}/${plugin}/CMakeLists.in "")
+  FOREACH (dir ${unix}/plugins ${unix})
+    FILE_APPEND (${bld}/${plugin}/CMakeLists.in ${dir}/${plugin}/build.cmake)
+  ENDFOREACH (dir)
+  FILE_APPEND (${bld}/${plugin}/CMakeLists.in ${config}/PluginInternal.cmake)
+  CONFIGURE_FILE (${bld}/${plugin}/CMakeLists.in ${bld}/${plugin}/CMakeLists.txt @ONLY)
+  ADD_SUBDIRECTORY (${bld}/${plugin} ${bld}/${plugin})
+ENDMACRO (INTERNAL_PLUGIN)
+
+MACRO (EXTERNAL_PLUGIN plugin)
+  SET (plugin_sources)
+  IF (DEFINED ${plugin}_sources)
+    SET (plugin_sources ${${plugin}_sources})
+  ELSE (DEFINED ${plugin}_sources)
+    FOREACH (dir ${src}/plugins ${cross}/plugins ${unix}/plugins ${unix})
+      SET (tmp "")
+      AUX_SOURCE_DIRECTORY (${dir}/${plugin} tmp)
+      STRING_APPEND (plugin_sources "${tmp}")
+    ENDFOREACH (dir)
+  ENDIF (DEFINED ${plugin}_sources)
+  IF (DEFINED ${plugin}_extra_sources)
+    STRING_APPEND (plugin_sources "${${plugin}_extra_sources}")
+  ENDIF (DEFINED ${plugin}_extra_sources)
+  FILE (WRITE ${bld}/${plugin}/CMakeLists.in "")
+  FOREACH (dir ${unix}/plugins ${unix})
+    FILE_APPEND (${bld}/${plugin}/CMakeLists.in ${dir}/${plugin}/build.cmake)
+  ENDFOREACH (dir)
+  FILE_APPEND (${bld}/${plugin}/CMakeLists.in ${config}/PluginExternal.cmake)
+  CONFIGURE_FILE (${bld}/${plugin}/CMakeLists.in ${bld}/${plugin}/CMakeLists.txt @ONLY)
+  ADD_SUBDIRECTORY (${bld}/${plugin} ${bld}/${plugin})
+ENDMACRO (EXTERNAL_PLUGIN)
+
+MACRO (PLUGIN_DISABLE)
+  SET (plugin_disabled 1)
+ENDMACRO (PLUGIN_DISABLE)
+
+MACRO (PLUGIN_SOURCES)
+  SET (${plugin}_sources ${ARGV})
+ENDMACRO (PLUGIN_SOURCES)
+
+MACRO (PLUGIN_DEFINITIONS)
+  LIST_APPEND (${plugin}_definitions ${ARGV})
+ENDMACRO (PLUGIN_DEFINITIONS)
+
+MACRO (PLUGIN_INCLUDE_DIRECTORIES)
+  LIST_APPEND (${plugin}_include_directories ${ARGV})
+ENDMACRO (PLUGIN_INCLUDE_DIRECTORIES)
+
+MACRO (PLUGIN_LINK_DIRECTORIES)
+  LIST_APPEND (${plugin_target}_link_directories ${ARGV})
+ENDMACRO (PLUGIN_LINK_DIRECTORIES)
+
+MACRO (PLUGIN_LINK_LIBRARIES)
+  LIST_APPEND (${plugin_target}_link_libraries ${ARGV})
+ENDMACRO (PLUGIN_LINK_LIBRARIES)
+
+MACRO (CONFIGURE_PLUGIN_LIST plugins_list)
+  SET (plugins ${${plugins_list}})
+  FOREACH (plugin ${plugins})
+    FILE (MAKE_DIRECTORY ${bld}/${plugin})
+    FILE (WRITE ${bld}/${plugin}/config.cmake "")
+    FOREACH (dir ${unix}/plugins ${unix})
+      FILE_APPEND (${bld}/${plugin}/config.cmake ${dir}/${plugin}/config.cmake)
+    ENDFOREACH (dir)
+    #MESSAGE ("-- plugin ${plugin}")
+    IF (${plugins_list} STREQUAL "plugins_int")
+      SET (plugin_target "vm")
+      SET (${plugin}_source_dir "${src}/plugins/${plugin}")
+    ELSE ()
+      SET (plugin_target "${plugin}")
+      SET (${plugin}_source_dir "${src}/plugins/${plugin}")
+    ENDIF (${plugins_list} STREQUAL "plugins_int")
+    SET (plugin_disabled)
+    INCLUDE (${bld}/${plugin}/config.cmake)
+    IF (without-${plugin})
+      SET (plugin_disabled 1)
+    ENDIF ()
+    IF (DEFINED plugin_disabled)
+      LIST (REMOVE_ITEM ${plugins_list} ${plugin})
+      MESSAGE ("!! ${plugin} disabled")
+      SET (${plugin}_disabled 1)
+    ELSE (DEFINED plugin_disabled)
+      IF (${plugins_list} STREQUAL "plugins_int")
+        USE_LIBRARY (${plugin})
+      ENDIF (${plugins_list} STREQUAL "plugins_int")
+      SET (${plugin}_disabled)
+    ENDIF (DEFINED plugin_disabled)
+  ENDFOREACH (plugin)
+ENDMACRO (CONFIGURE_PLUGIN_LIST)
+
+MACRO (CONFIGURE_PLUGINS)
+  CONFIGURE_PLUGIN_LIST (plugins_int)
+  CONFIGURE_PLUGIN_LIST (plugins_ext)
+  CONFIGURE_PLUGIN_LIST (plugins_vm)
+ENDMACRO (CONFIGURE_PLUGINS)
+
+MACRO (BUILD_PLUGINS)
+  FOREACH (plugin ${plugins_int})
+    INTERNAL_PLUGIN (${plugin})
+  ENDFOREACH (plugin)
+  FOREACH (plugin ${plugins_ext})
+    EXTERNAL_PLUGIN (${plugin})
+  ENDFOREACH (plugin)
+  FOREACH (plugin ${plugins_vm})
+    EXTERNAL_PLUGIN (${plugin})
+  ENDFOREACH (plugin)
+  # create sqNamedPrims.h containing a list of exports for all configured internal plugins
+  SET (exports_h "${bld}/sqNamedPrims.h")
+  FILE (WRITE ${exports_h} "/* Automatically generated by Plugins.cmake from plugins.int */\n")
+  FILE (APPEND ${exports_h} "extern sqExport vm_exports[];\n")
+  FILE (APPEND ${exports_h} "extern sqExport os_exports[];\n")
+  FOREACH (plugin ${plugins_int})
+    FILE (APPEND ${exports_h} "extern sqExport ")
+    FILE (APPEND ${exports_h} ${plugin})
+    FILE (APPEND ${exports_h} "_exports[];\n")
+  ENDFOREACH (plugin)
+  FILE (APPEND ${exports_h} "\n")
+  FILE (APPEND ${exports_h} "sqExport *pluginExports[] = {\n")
+  FILE (APPEND ${exports_h} "\tvm_exports,\n")
+  FILE (APPEND ${exports_h} "\tos_exports,\n")
+  FOREACH (plugin ${plugins_int})
+    FILE (APPEND ${exports_h} "\t")
+    FILE (APPEND ${exports_h} ${plugin})
+    FILE (APPEND ${exports_h} "_exports,\n")
+  ENDFOREACH (plugin)
+  FILE (APPEND ${exports_h} "\tNULL\n")
+  FILE (APPEND ${exports_h} "};\n")
+ENDMACRO (BUILD_PLUGINS)
+
+MACRO (PLUGIN_MESSAGE msg)
+  MESSAGE (STATUS "${plugin}: ${msg}")
+ENDMACRO (PLUGIN_MESSAGE)
+
+MACRO (PLUGIN_FIND_INCLUDE VAR NAME)
+  FIND_PATH (${VAR}_H ${NAME} ${${plugin_target}_include_directories} ${ARGN})
+  IF (${VAR}_H)
+    PLUGIN_MESSAGE ("${${VAR}_H}/${NAME}")
+    SET (HAVE_${VAR}_H 1)
+    PLUGIN_INCLUDE_DIRECTORIES (${${VAR}_H})
+  ELSE ()
+    PLUGIN_MESSAGE ("${NAME} not found")
+  ENDIF ()
+ENDMACRO ()
+
+MACRO (PLUGIN_REQUIRE_INCLUDE VAR NAME)
+  PLUGIN_FIND_INCLUDE(${VAR} ${NAME} ${ARGN})
+  IF (NOT ${VAR}_H)
+    PLUGIN_DISABLE ()
+  ENDIF ()
+ENDMACRO ()
+
+MACRO (PLUGIN_FIND_LIBRARY VAR NAME)
+  FIND_LIBRARY (LIB${VAR} ${NAME})
+  IF (LIB${VAR})
+    PLUGIN_MESSAGE ("${LIB${VAR}}")
+    SET (HAVE_LIB${VAR} 1)
+    PLUGIN_LINK_LIBRARIES (${LIB${VAR}})
+  ELSE ()
+    PLUGIN_MESSAGE ("lib${NAME} not found")
+  ENDIF ()
+ENDMACRO ()
+
+MACRO (PLUGIN_REQUIRE_LIBRARY VAR NAME)
+  PLUGIN_FIND_LIBRARY(${VAR} ${NAME})
+  if (NOT LIB${VAR})
+    PLUGIN_DISABLE ()
+  ENDIF ()
+ENDMACRO ()
+
+MACRO (PLUGIN_FIND_PACKAGE VAR NAME)
+  IF (PKG_CONFIG_FOUND)
+    PKG_CHECK_MODULES (${VAR} ${NAME})
+    IF (${VAR}_FOUND)
+      PLUGIN_MESSAGE ("${NAME} found")
+      SET (HAVE_${VAR} 1)
+      PLUGIN_INCLUDE_DIRECTORIES (${${VAR}_INCLUDE_DIRS})
+      PLUGIN_LINK_DIRECTORIES (${${VAR}_LIBRARY_DIRS})
+      PLUGIN_LINK_LIBRARIES (${${VAR}_LIBRARIES})
+    ENDIF ()
+  ENDIF ()
+ENDMACRO ()
+
+MACRO (PLUGIN_REQUIRE_PACKAGE VAR NAME)
+  PLUGIN_FIND_PACKAGE(${VAR} ${NAME})
+  IF (NOT ${VAR}_FOUND)
+    PLUGIN_DISABLE ()
+  ENDIF ()
+ENDMACRO ()
+
+MACRO (EXPECT_UNDEFINED_SYMBOLS)
+  IF (APPLE)
+    SET (CMAKE_SHARED_MODULE_CREATE_C_FLAGS "${CMAKE_SHARED_MODULE_CREATE_C_FLAGS} -flat_namespace -undefined suppress")
+    SET (CMAKE_SHARED_MODULE_CREATE_CXX_FLAGS "${CMAKE_SHARED_MODULE_CREATE_CXX_FLAGS} -flat_namespace -undefined suppress")
+  ENDIF (APPLE)
+ENDMACRO (EXPECT_UNDEFINED_SYMBOLS)
+'
+]
+
+{ #category : #'as yet unclassified' }
 CPlatformConfigForSqueak class >> pluginsTemplate [
 	^'{4} {1} ships with this plugins already built:
 		
@@ -150,6 +420,495 @@ External:
 {3}
 
 '
+]
+
+{ #category : #'as yet unclassified' }
+CPlatformConfigForSqueak class >> testDoubleWordAlignmentC [
+	"used in config.cmake"
+	^' 
+int f(void *i)
+{
+  *(double *)i= *(double *)(i + 4);
+  return *(char *)i;
+}
+
+int main()
+{
+  char b[12];
+  b[0]=1; b[1]=2; b[2]=3; b[3]=4; b[4]=0; b[5]=0; b[6]=0; b[7]=0; b[8]=0; b[9]=0; b[10]=0; b[11]=0;
+  return f(b);
+}
+'
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CPlatformConfigForSqueak class >> testDoubleWordOrderC [ 
+	"used by config.cmake"
+	^'
+union { double d; int i[2]; } d;
+
+int main(void)
+{
+  d.d= 1.0;
+  return d.i[0] == 0;
+}
+'
+]
+
+{ #category : #'as yet unclassified' }
+CPlatformConfigForSqueak class >> testLanginfoCodesetC [
+	^'
+#include <langinfo.h>
+
+int main(int argc, char **argv)
+{
+  char *cs= nl_langinfo(CODESET);
+  return 0;
+}
+'
+]
+
+{ #category : #'as yet unclassified' }
+CPlatformConfigForSqueak class >> utilsCMake [
+	^'# Some random useful things to avoid repetition
+# 
+# Last edited: 2009-08-26 10:41:32 by piumarta on ubuntu.piumarta.com
+
+MACRO (STRING_APPEND var str)
+  IF (DEFINED ${var})
+    SET (${var} "${${var}} ${str}")
+  ELSE (DEFINED ${var})
+    SET (${var} "${str}")
+  ENDIF (DEFINED ${var})
+ENDMACRO (STRING_APPEND)
+
+MACRO (LIST_APPEND list)
+  LIST (APPEND ${list} "${ARGN}")
+  LIST (REMOVE_DUPLICATES ${list})
+ENDMACRO (LIST_APPEND)
+
+MACRO (FILE_APPEND to from)
+  IF (EXISTS ${from})
+    FILE (READ ${from} tmp)
+    FILE (APPEND ${to} "${tmp}")
+  ENDIF (EXISTS ${from})
+ENDMACRO (FILE_APPEND)
+
+MACRO (FILE_COPY to from)
+  IF (EXISTS ${from})
+    FILE (READ ${from} tmp)
+    FILE (WRITE ${to} "${tmp}")
+  ENDIF (EXISTS ${from})
+ENDMACRO (FILE_COPY)
+
+
+##added by tty. cut-n-paste from ian CMakeLists.txt
+MACRO (USE_LIBRARY lib)
+  LIST (APPEND squeak_libs "${lib}")
+ENDMACRO (USE_LIBRARY)
+
+MACRO (USE_FRAMEWORK fwk)
+  USE_LIBRARY ("-framework ${fwk}")
+ENDMACRO (USE_FRAMEWORK)
+
+MACRO (CONFIG_DEFINE var)
+  LIST (APPEND config_vars "${var}")
+ENDMACRO (CONFIG_DEFINE var)
+
+##End tty additions
+
+
+'
+]
+
+{ #category : #'as yet unclassified' }
+CPlatformConfigForSqueak class >> vmBuildCmake [
+	self flag: 'tty'. "I probably do not want this as this is what we currently do in Squeak. Ian appears to have farmed it out to its own file"
+	^'
+LINK_DIRECTORIES (${vm_link_directories})
+
+ADD_EXECUTABLE (squeakvm${scriptsuffix}
+  ${bld}/${interp}.c
+  ${unix}/vm/aio.c
+  ${unix}/vm/debug.c
+  ${unix}/vm/osExports.c
+  ${unix}/vm/sqUnixCharConv.c
+  ${unix}/vm/sqUnixExternalPrims.c
+  ${unix}/vm/sqUnixMain.c
+  ${unix}/vm/sqUnixMemory.c
+  ${cross}/vm/sqNamedPrims.c
+  ${cross}/vm/sqVirtualMachine.c
+  ${bld}/version.c
+)
+
+ADD_CUSTOM_COMMAND (
+  OUTPUT  version.c
+  COMMAND ${config}/verstamp ${bld}/version.c ${CMAKE_C_COMPILER}
+)
+
+ADD_CUSTOM_COMMAND (
+  DEPENDS ${src}/vm/interp.c
+  OUTPUT  ${bld}/interp.c
+  COMMAND tr ''\\015'' ''\\012'' < ${src}/vm/interp.c > ${bld}/interp.c
+)
+
+ADD_CUSTOM_COMMAND (
+  DEPENDS ${bld}/interp.c
+  OUTPUT  ${bld}/gnu-interp.c
+  COMMAND ${config}/gnuify ${config}/gnuify.awk ${bld}/interp.c ${bld}/gnu-interp.c
+)
+
+INCLUDE_DIRECTORIES (
+  ${bld}
+# ${src}/vm # files are now copied/generated in ${bld}
+  ${unix}/vm
+  ${cross}/vm
+  ${unix}/plugins/B3DAcceleratorPlugin	# for sqUnixOpenGL.h
+  ${X11_INCLUDE_DIR}
+  ${OPENGL_INCLUDE_DIR}
+  ${vm_include_directories}
+)
+
+SET_TARGET_PROPERTIES (squeakvm${scriptsuffix} PROPERTIES LINK_FLAGS "${CMAKE_EXE_EXPORTS_C_FLAG}")
+
+TARGET_LINK_LIBRARIES (squeakvm${scriptsuffix} m ${squeak_libs} ${vm_link_libraries})
+
+INSTALL (PROGRAMS ${bld}/squeakvm${scriptsuffix} DESTINATION ${plgdir})
+
+IF (vm-sound-OSS_disabled)
+  SET (useoss "false")
+ELSE ()
+  SET (useoss "true")
+ENDIF ()
+
+CONFIGURE_FILE (${config}/config.in ${bld}/config @ONLY)
+
+# launcher scripts
+
+ADD_CUSTOM_TARGET (squeak
+  DEPENDS ${config}/squeak.in
+  COMMAND sh ${bld}/config ${config}/squeak.in ${bld}/squeak
+  COMMAND chmod +x ${bld}/squeak
+)
+
+INSTALL (PROGRAMS ${bld}/squeak DESTINATION bin)
+
+ADD_CUSTOM_TARGET (squeak.sh
+  DEPENDS ${config}/squeak.sh.in
+  COMMAND sh ${bld}/config ${config}/squeak.sh.in ${bld}/squeak.sh
+  COMMAND chmod +x ${bld}/squeak.sh
+)
+
+INSTALL (PROGRAMS ${bld}/squeak.sh DESTINATION bin)
+
+ADD_EXECUTABLE (ckformat
+  ${src}/ckformat.c
+)
+
+INSTALL (PROGRAMS ${bld}/ckformat DESTINATION ${plgdir})
+
+ADD_DEPENDENCIES (squeakvm${scriptsuffix} squeak squeak.sh ckformat)
+
+# manual page
+
+ADD_CUSTOM_TARGET (squeak.1
+  DEPENDS ${unix}/doc/squeak.1
+  COMMAND sh ${bld}/config ${unix}/doc/squeak.1 ${bld}/squeak.1
+)
+ADD_DEPENDENCIES (squeakvm${scriptsuffix} squeak.1)
+INSTALL (FILES ${bld}/squeak.1 DESTINATION share/man/man1)
+'
+]
+
+{ #category : #'as yet unclassified' }
+CPlatformConfigForSqueak class >> vmConfigCmake [
+	self flag:'tty'. "parse me. look at that set(interp...) command and others"
+	"${version} was generated in Ian's script from interp.h and svn stuff. I fake it here. Address later"
+	^'SET (OS_TYPE \"unix\")
+
+CONFIG_DEFINE (OS_TYPE)
+SET (version  \"1.2.3.4\")
+MESSAGE("FIX ME: version is a bogus number: ${version}")
+
+STRING (REGEX REPLACE "(.*)\\.(.*)\\.(.*)-(.*)" "\\1" major   ${version})
+STRING (REGEX REPLACE "(.*)\\.(.*)\\.(.*)-(.*)" "\\2" minor   ${version})
+STRING (REGEX REPLACE "(.*)\\.(.*)\\.(.*)-(.*)" "\\3" patch   ${version})
+STRING (REGEX REPLACE "(.*)\\.(.*)\\.(.*)-(.*)" "\\4" release ${version})
+
+IF (APPLE)
+  SET (DARWIN 1)
+  STRING_APPEND (CMAKE_C_FLAGS -DMACOSX)		# ffi.h
+  USE_FRAMEWORK (CoreFoundation)
+  USE_FRAMEWORK (CoreServices)
+ENDIF (APPLE)
+
+CONFIG_DEFINE (DARWIN)
+
+IF (CMAKE_COMPILER_IS_GNUCC)
+  SET (interp gnu-interp)
+ELSE ()
+  SET (interp interp)
+  MESSAGE ("!! Cannot optimise interpreter performance for GCC")
+ENDIF (CMAKE_COMPILER_IS_GNUCC)
+
+INCLUDE (TestBigEndian)
+INCLUDE (CheckIncludeFile)
+INCLUDE (CheckLibraryExists)
+INCLUDE (CheckTypeSize)
+INCLUDE (CheckFunctionExists)
+INCLUDE (CheckVariableExists)
+INCLUDE (CheckStructHasMember)
+INCLUDE (FindPkgConfig)
+
+FIND_PACKAGE (X11)
+IF (X11_FOUND)
+  LIST (REMOVE_DUPLICATES X11_INCLUDE_DIR)
+ENDIF ()
+
+IF (NOT without-gl)
+  FIND_PACKAGE (OpenGL)
+  LIST (REMOVE_DUPLICATES OPENGL_INCLUDE_DIR)
+ENDIF ()
+
+IF (APPLE AND NOT without-gl)
+  SET (AGL_FOUND	${OPENGL_FOUND})
+  SET (AGL_INCLUDE_DIR	${OPENGL_INCLUDE_DIR})
+  SET (AGL_LIBRARIES	${OPENGL_LIBRARIES})
+  IF (X11_FOUND)
+    FIND_PATH    (GLX_INCLUDE_DIR GL/gl.h /usr/X11/include /usr/X11R6/include)
+    FIND_LIBRARY (GLX_LIBRARIES   GL      /usr/X11/lib /usr/X11R6/lib)
+    IF (GLX_INCLUDE_DIR AND GLX_LIBRARIES)
+      SET (OPENGL_INCLUDE_DIR	${GLX_INCLUDE_DIR})
+      SET (OPENGL_LIBRARIES	${GLX_LIBRARIES})
+    ELSE ()
+      SET (OPENGL_FOUND)
+    ENDIF ()
+  ELSE (X11_FOUND)
+    SET (OPENGL_FOUND)
+  ENDIF (X11_FOUND)
+ENDIF (APPLE AND NOT without-gl)
+
+IF (NOT OPENGL_FOUND)
+  SET (OPENGL_INCLUDE_DIR "")
+ENDIF ()
+
+# FOREACH (var AGL_FOUND AGL_INCLUDE_DIR AGL_LIBRARIES OPENGL_FOUND OPENGL_INCLUDE_DIR OPENGL_LIBRARIES)
+#   MESSAGE ("${var} = ${${var}}")
+# ENDFOREACH ()
+
+TEST_BIG_ENDIAN (WORDS_BIGENDIAN)
+IF (WORDS_BIGENDIAN)
+  SET (MSB_FIRST 1)
+ELSE ()
+  SET (LSB_FIRST 1)
+ENDIF ()
+
+CONFIG_DEFINE (WORDS_BIGENDIAN)
+CONFIG_DEFINE (LSB_FIRST)
+CONFIG_DEFINE (MSB_FIRST)
+
+CHECK_FUNCTION_EXISTS (atexit		HAVE_ATEXIT)
+CHECK_FUNCTION_EXISTS (on_exit		HAVE_ON_EXIT)
+
+IF (HAVE_ATEXIT)
+  SET (AT_EXIT atexit)
+ELSEIF (HAVE_ON_EXIT)
+  SET (AT_EXIT on_exit)
+ENDIF ()
+
+CONFIG_DEFINE (AT_EXIT)
+
+# sqMemoryAccess.h
+
+# tty. set in outer CMakeLists.txt as well. oy vey./src/vm/interp.h
+CHECK_INCLUDE_FILE (interp.h HAVE_INTERP_H -I${srcVMDir})
+CONFIG_DEFINE (HAVE_INTERP_H)
+
+CHECK_TYPE_SIZE (int SIZEOF_INT)
+CHECK_TYPE_SIZE (long SIZEOF_LONG)
+CHECK_TYPE_SIZE ("long long" SIZEOF_LONG_LONG)
+CHECK_TYPE_SIZE ("void *" SIZEOF_VOID_P)
+
+CONFIG_DEFINE (SIZEOF_INT)
+CONFIG_DEFINE (SIZEOF_LONG)
+CONFIG_DEFINE (SIZEOF_LONG_LONG)
+CONFIG_DEFINE (SIZEOF_VOID_P)
+MESSAGE("CMAKE_BINARY_DIR ${CMAKE_BINARY_DIR} ")
+MESSAGE("CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR} ")
+TRY_RUN (DOUBLE_WORD_ALIGNMENT tmp ${CMAKE_BINARY_DIR}  ${CMAKE_BINARY_DIR}/testDoubleWordAlignment.c)
+TRY_RUN (DOUBLE_WORD_ORDER tmp ${CMAKE_BINARY_DIR}  ${CMAKE_BINARY_DIR}/testDoubleWordOrder.c)
+
+CONFIG_DEFINE (DOUBLE_WORD_ALIGNMENT)
+CONFIG_DEFINE (DOUBLE_WORD_ORDER)
+
+# sqPlatformSpecific.h
+
+CHECK_INCLUDE_FILE (alloca.h HAVE_ALLOCA_H)
+
+CONFIG_DEFINE (HAVE_ALLOCA_H)
+
+IF (HAVE_ALLOCA_H)
+  SET (HAVE_ALLOCA 1)
+ELSE ()
+  CHECK_FUNCTION_EXISTS (alloca HAVE_ALLOCA)
+ENDIF ()
+
+CONFIG_DEFINE (HAVE_ALLOCA)
+
+# aio.c
+
+CHECK_INCLUDE_FILE (sys/time.h HAVE_SYS_TIME_H)
+CHECK_INCLUDE_FILE (sys/filio.h HAVE_SYS_FILIO_H)
+
+CONFIG_DEFINE (HAVE_SYS_TIME_H)
+CONFIG_DEFINE (HAVE_SYS_FILIO_H)
+
+CHECK_FUNCTION_EXISTS (nanosleep HAVE_NANOSLEEP)
+
+CONFIG_DEFINE (HAVE_NANOSLEEP)
+
+# sqUnixCharConv.c
+
+CHECK_INCLUDE_FILE (iconv.h HAVE_ICONV_H)
+CHECK_INCLUDE_FILE (langinfo.h HAVE_LANGINFO_H)
+
+IF (HAVE_LANGINFO_H)
+  TRY_COMPILE (HAVE_LANGINFO_CODESET ${CMAKE_BINARY_DIR}  ${CMAKE_BINARY_DIR}/testLanginfoCodeset.c)
+ENDIF (HAVE_LANGINFO_H)
+
+CHECK_LIBRARY_EXISTS (iconv libiconv_open "" HAVE_LIBICONV)
+IF (HAVE_LIBICONV)
+  USE_LIBRARY (iconv)
+ENDIF (HAVE_LIBICONV)
+
+CONFIG_DEFINE (HAVE_ICONV_H)
+CONFIG_DEFINE (HAVE_LANGINFO_CODESET)
+
+# sqUnixExternalPrims.c
+
+CHECK_INCLUDE_FILE (dlfcn.h HAVE_DLFCN_H)
+
+CHECK_LIBRARY_EXISTS (dl dlopen "" HAVE_LIBDL)
+IF (HAVE_LIBDL)
+  USE_LIBRARY (dl)
+ENDIF (HAVE_LIBDL)
+IF (HAVE_LIBDL)
+  SET (HAVE_DLOPEN 1)
+ELSE ()
+  CHECK_FUNCTION_EXISTS (dlopen HAVE_DLOPEN)
+ENDIF (HAVE_LIBDL)
+
+CHECK_FUNCTION_EXISTS (_dyld_present HAVE_DYLD)
+CHECK_FUNCTION_EXISTS (snprintf HAVE_SNPRINTF)
+CHECK_FUNCTION_EXISTS (__snprintf HAVE___SNPRINTF)
+
+CONFIG_DEFINE (HAVE_DLFCN_H)
+CONFIG_DEFINE (HAVE_DLOPEN)
+CONFIG_DEFINE (HAVE_DYLD)
+CONFIG_DEFINE (HAVE_SNPRINTF)
+CONFIG_DEFINE (HAVE___SNPRINTF)
+
+SET (VM_X11DIR \"${X11_LIBRARY_DIR}\")
+
+CONFIG_DEFINE (VM_X11DIR)
+
+SET (VM_MODULE_PREFIX \"${CMAKE_SHARED_MODULE_PREFIX}\")
+
+CONFIG_DEFINE (VM_MODULE_PREFIX)
+
+SET (CMAKE_SHARED_MODULE_PREFIX "so.")
+SET (CMAKE_SHARED_MODULE_SUFFIX "")
+
+SET (MODULE_PREFIX  \"${CMAKE_SHARED_MODULE_PREFIX}\")
+SET (MODULE_SUFFIX  \"${CMAKE_SHARED_MODULE_SUFFIX}\")
+SET (LIBRARY_PREFIX \"${CMAKE_SHARED_LIBRARY_PREFIX}\")
+SET (LIBRARY_SUFFIX \"${CMAKE_SHARED_LIBRARY_SUFFIX}\")
+
+CONFIG_DEFINE (MODULE_PREFIX)
+CONFIG_DEFINE (MODULE_SUFFIX)
+CONFIG_DEFINE (LIBRARY_PREFIX)
+CONFIG_DEFINE (LIBRARY_SUFFIX)
+
+# sqUnixMain.c
+
+SET (VM_BUILD_STRING "\"Unix built on \"__DATE__ \" \"__TIME__\" Compiler: \"__VERSION__")
+
+CONFIG_DEFINE (VM_BUILD_STRING)
+
+SET (VM_LIBDIR "\"${prefix}/${plgdir}\"")
+
+CONFIG_DEFINE (VM_LIBDIR)
+
+SET (VM_HOST        \"${VM_HOST}\")
+SET (VM_HOST_CPU    \"${VM_HOST_CPU}\")
+SET (VM_HOST_VENDOR \"${VM_HOST_VENDOR}\")
+SET (VM_HOST_OS     \"${VM_HOST_OS}\")
+
+CONFIG_DEFINE (VM_HOST)
+CONFIG_DEFINE (VM_HOST_CPU)
+CONFIG_DEFINE (VM_HOST_VENDOR)
+CONFIG_DEFINE (VM_HOST_OS)
+
+SET (VM_VERSION_INFO \"${VM_VERSION}${versionsuffix}\")
+SET (VM_VERSION \"${VM_VERSION}\")
+SET (PLATFORM_SOURCE_VERSION \"${PLATFORM_SOURCE_VERSION}\")
+
+CONFIG_DEFINE (VM_VERSION)
+CONFIG_DEFINE (VM_VERSION_INFO)
+CONFIG_DEFINE (PLATFORM_SOURCE_VERSION)
+CONFIG_DEFINE (SQ_VERSION)
+
+CHECK_FUNCTION_EXISTS (tzset	HAVE_TZSET)
+CHECK_VARIABLE_EXISTS (timezone	HAVE_TIMEZONE)
+CHECK_STRUCT_HAS_MEMBER ("struct tm" tm_gmtoff time.h HAVE_TM_GMTOFF)
+
+CONFIG_DEFINE (HAVE_TZSET)
+CONFIG_DEFINE (HAVE_TIMEZONE)
+CONFIG_DEFINE (HAVE_TM_GMTOFF)
+
+CONFIG_DEFINE (IMAGE_DUMP)
+
+# sqUnixMemory.c
+
+CHECK_FUNCTION_EXISTS (mmap HAVE_MMAP)
+
+CONFIG_DEFINE (HAVE_MMAP)
+
+# OLPC
+
+IF (NOT without-SUGAR)
+  SET (SUGAR 1)
+ENDIF ()
+
+CONFIG_DEFINE (SUGAR)
+
+IF (DEFINED SQ_VI_BYTES_PER_WORD)
+  CONFIG_DEFINE (SQ_VI_BYTES_PER_WORD)
+ENDIF (DEFINED SQ_VI_BYTES_PER_WORD)
+'
+]
+
+{ #category : #'as yet unclassified' }
+CPlatformConfigForSqueak class >> vmConfigIn [
+	"used in build.cmake"
+	^'#!/bin/sh
+
+# echo "Configuring `basename $1` -> `basename $2`" >&2
+
+sed "
+s%\[version\]%@version@%g
+s%\[major\]%@major@%g
+s%\[minor\]%@minor@%g
+s%\[patch\]%@patch@%g
+s%\[bindir\]%@prefix@/@bindir@%g
+s%\[imgdir\]%@prefix@/@imgdir@%g
+s%\[plgdir\]%@prefix@/@plgdir@%g
+s%\[mandir\]%@prefix@/@mandir@%g
+s%\[docdir\]%@prefix@/@docdir@%g
+s%\[useoss\]%@useoss@%g
+" < $1 > $2'
 ]
 
 { #category : #'squeak compatability' }
@@ -1399,14 +2158,23 @@ CPlatformConfigForSqueak >> frameworksBuildMultiThreadedDebug [
 
 ]
 
-{ #category : #'squeak compatability' }
+{ #category : #'source generation' }
 CPlatformConfigForSqueak >> generate [
-	self generatePluginsList. 
-	self generateLicense. 
+	self 
+		generatePluginsList;
+		generateLicense;
+		generateUtilsCmake;
+		generatePluginsCmake;
+		generateVmBuildCmake;
+		generateVmConfigCmake;
+		generateVmConfigIn;
+		generateTestDoubleWordAlignmentC;
+		generateTestDoubleWordOrderC;
+		generateTestLanginfoCodesetC.
 	^ CMakeVMGeneratorForSqueak generate: self 
 ]
 
-{ #category : #'headers generation' }
+{ #category : #'source generation' }
 CPlatformConfigForSqueak >> generateConfigH [
 	"	
 	used to be: 	
@@ -1417,7 +2185,7 @@ CPlatformConfigForSqueak >> generateConfigH [
 
 ]
 
-{ #category : #'headers generation' }
+{ #category : #'source generation' }
 CPlatformConfigForSqueak >> generateConfigH: aBuildType [
 	"self write: self configH toFile: 'config.h'"
 
@@ -1443,7 +2211,7 @@ CPlatformConfigForSqueak >> generateConfigH: aBuildType [
 
 ]
 
-{ #category : #accessing }
+{ #category : #'source generation' }
 CPlatformConfigForSqueak >> generateLicense [ 
 	self 
 		write:  (self class licenseTemplate 
@@ -1452,7 +2220,15 @@ CPlatformConfigForSqueak >> generateLicense [
 	
 ]
 
-{ #category : #accessing }
+{ #category : #'source generation' }
+CPlatformConfigForSqueak >> generatePluginsCmake [
+	self 
+		write:  (self class pluginsCMake)
+		toFile: 'Plugins.cmake'
+	
+]
+
+{ #category : #'source generation' }
 CPlatformConfigForSqueak >> generatePluginsList [ 
 	self 
 		write:  (self class pluginsTemplate 
@@ -1462,6 +2238,62 @@ CPlatformConfigForSqueak >> generatePluginsList [
 				String streamContents: [ :stream | self externalPlugins asStringOn: stream delimiter: String cr ].
 				self executableName })
 		toFile: 'PLUGINS.txt'
+	
+]
+
+{ #category : #'source generation' }
+CPlatformConfigForSqueak >> generateTestDoubleWordAlignmentC [
+	self 
+		write:  (self class testDoubleWordAlignmentC)
+		toFile: 'testDoubleWordAlignment.c'
+	
+]
+
+{ #category : #'source generation' }
+CPlatformConfigForSqueak >> generateTestDoubleWordOrderC [
+	self 
+		write:  (self class testDoubleWordOrderC)
+		toFile: 'testDoubleWordOrder.c'
+	
+]
+
+{ #category : #'source generation' }
+CPlatformConfigForSqueak >> generateTestLanginfoCodesetC [
+	self 
+		write:  (self class testLanginfoCodesetC)
+		toFile: 'testLanginfoCodeset.c'
+	
+]
+
+{ #category : #'source generation' }
+CPlatformConfigForSqueak >> generateUtilsCmake [
+	self 
+		write:  (self class utilsCMake)
+		toFile: 'Utils.cmake'
+	
+]
+
+{ #category : #'source generation' }
+CPlatformConfigForSqueak >> generateVmBuildCmake [
+	self 
+		write:  (self class vmBuildCmake)
+		toFile: 'build.cmake'
+	
+]
+
+{ #category : #'source generation' }
+CPlatformConfigForSqueak >> generateVmConfigCmake [
+	self 
+		write:  (self class vmConfigCmake)
+		toFile: 'config.cmake'
+	
+]
+
+{ #category : #'source generation' }
+CPlatformConfigForSqueak >> generateVmConfigIn [
+	self 
+		write:  (self class vmConfigIn)
+		toFile: 'config.in'
 	
 ]
 
