@@ -564,7 +564,7 @@ Linux32x86Config >> extraPluginSettingsBuildMultiThreadedDebug: aMaker [
 { #category : #'cmake buildType redirects' }
 Linux32x86Config >> extraVMSettingsBuild: aMaker [
 	| versionC |
-	self generateConfigH.
+	"self generateConfigH.   supplanted by new auto generate of config"
 	
 	"add a generated version.c"
 	
