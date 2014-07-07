@@ -8,12 +8,6 @@ Class {
 	#category : #'VMMaker-Support'
 }
 
-{ #category : #decoding }
-StackDepthFinder >> alternateInterpretNextInstructionFor: client [
-	joins at: pc put: stackp.
-	^super alternateInterpretNextInstructionFor: client
-]
-
 { #category : #'instruction decoding' }
 StackDepthFinder >> blockReturnTop [
 	"Return Top Of Stack bytecode."
@@ -216,6 +210,12 @@ StackDepthFinder >> pushConstant: value [
 ]
 
 { #category : #'instruction decoding' }
+StackDepthFinder >> pushExplicitOuter: level [
+	"Push receiver for explcit outer, on Top Of Stack bytecode."
+	self push
+]
+
+{ #category : #'instruction decoding' }
 StackDepthFinder >> pushLiteralVariable: anAssociation [
 	"Push Contents Of anAssociation On Top Of Stack bytecode."
 	self push
@@ -276,6 +276,18 @@ StackDepthFinder >> send: selector super: supered numArgs: numArgs [
 	the top numArguments locations on the stack and the receiver just 
 	below them."
 	self drop: numArgs
+]
+
+{ #category : #'instruction decoding' }
+StackDepthFinder >> sendToAbsentDynamicSuperclass: selector numArgs: numArgs [
+	"Dynamic Superclass Send Message With Selector, selector, to absent implicit receiver bytecode."
+	self drop: numArgs - 1 "e.g. if no args pushes a result"
+]
+
+{ #category : #'instruction decoding' }
+StackDepthFinder >> sendToAbsentImplicitReceiver: selector numArgs: numArgs [
+	"Send Message With Selector, selector, to absent implicit receiver bytecode."
+	self drop: numArgs - 1 "e.g. if no args pushes a result"
 ]
 
 { #category : #accessing }

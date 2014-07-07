@@ -649,13 +649,6 @@ NewObjectMemory >> clone: obj [
 ]
 
 { #category : #'cog jit support' }
-NewObjectMemory >> compactClassFieldLSB [
-	<api>
-	<cmacro: '() 12'>
-	^12
-]
-
-{ #category : #'cog jit support' }
 NewObjectMemory >> compactClassFieldWidth [
 	<api>
 	<cmacro: '() 5'>
