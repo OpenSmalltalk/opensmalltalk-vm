@@ -589,24 +589,11 @@ CogObjectRepresentationForSpur >> getActiveContextAllocatesInMachineCode [
 	^true
 ]
 
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> getInlineCacheClassTagFrom: sourceReg into: destReg [
-	"Extract the inline cache tag for the object in sourceReg into destReg. The inline cache tag
-	 for a given object is the value loaded in inline caches to distinguish objects of different
-	 classes.  In Spur this is either the tags for immediates, or the receiver's classIndex."
-	^self subclassResponsibility
-]
-
 { #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> hasValidHeaderPostGC: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	<inline: true>
 	^cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod
-]
-
-{ #category : #'in-line cacheing' }
-CogObjectRepresentationForSpur >> inlineCacheTagForInstance: oop [
-	self subclassResponsibility
 ]
 
 { #category : #'garbage collection' }

@@ -136,6 +136,12 @@ NewCoObjectMemory >> memoryBaseForImageRead [
 	^coInterpreter heapBase
 ]
 
+{ #category : #'cog jit support' }
+NewCoObjectMemory >> noShiftCompactClassIndexOf: oop [
+	<api>
+	^(self baseHeader: oop) bitAnd: 16r1F << self compactClassFieldLSB
+]
+
 { #category : #'gc -- compaction' }
 NewCoObjectMemory >> nullHeaderForMachineCodeMethod [
 	<api>

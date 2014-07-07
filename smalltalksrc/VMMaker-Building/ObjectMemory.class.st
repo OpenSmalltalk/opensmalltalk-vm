@@ -324,7 +324,7 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 	TrueObject := 2.
 	SchedulerAssociation := 3.
 	ClassBitmap := 4.
-	ClassInteger := 5.
+	ClassSmallInteger := 5.
 	ClassByteString := ClassString := 6. "N.B.  Actually class ByteString"
 	ClassArray := 7.
 	"SmalltalkDictionary := 8."  "Do not delete!"
@@ -1544,7 +1544,7 @@ ObjectMemory >> classSemaphore [
 { #category : #'plugin support' }
 ObjectMemory >> classSmallInteger [
 	<api>
-	^self splObj: ClassInteger
+	^self splObj: ClassSmallInteger
 ]
 
 { #category : #'plugin support' }
@@ -1631,18 +1631,25 @@ ObjectMemory >> compactClassAt: ccIndex [
 	^self fetchPointer: ccIndex - 1 ofObject: (self splObj: CompactClasses)
 ]
 
+{ #category : #'cog jit support' }
+ObjectMemory >> compactClassFieldLSB [
+	<api>
+	<cmacro: '() 12'>
+	^12
+]
+
 { #category : #'header access' }
 ObjectMemory >> compactClassIndexOf: oop [
 	<api>
 	<inline: true>
-	^((self baseHeader: oop) >> 12) bitAnd: 16r1F
+	^((self baseHeader: oop) >> self compactClassFieldLSB) bitAnd: 16r1F
 ]
 
 { #category : #'header access' }
 ObjectMemory >> compactClassIndexOfHeader: header [
 	<api>
 	<inline: true>
-	^(header >> 12) bitAnd: 16r1F
+	^(header >> self compactClassFieldLSB) bitAnd: 16r1F
 ]
 
 { #category : #initialization }
@@ -1796,7 +1803,7 @@ ObjectMemory >> fetchClassOf: oop [
 	<inline: true>
 	<asmLabel: false>
 	^(self isIntegerObject: oop)
-		ifTrue: [self splObj: ClassInteger]
+		ifTrue: [self splObj: ClassSmallInteger]
 		ifFalse:
 			[(ccIndex := (self compactClassIndexOf: oop)) = 0
 				ifTrue: [(self classHeader: oop) bitAnd: AllButTypeMask]
@@ -3734,6 +3741,13 @@ ObjectMemory >> nilObject [
 	<api>
 	"For access from BitBlt module & Cogit"
 	^ nilObj
+]
+
+{ #category : #'header access' }
+ObjectMemory >> noShiftCompactClassIndexOfHeader: header [
+	<api>
+	<inline: true>
+	^header bitAnd: 16r1F << self compactClassFieldLSB
 ]
 
 { #category : #'object format' }

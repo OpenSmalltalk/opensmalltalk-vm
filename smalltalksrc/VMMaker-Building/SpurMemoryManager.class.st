@@ -748,7 +748,7 @@ SpurMemoryManager class >> initializeSpecialObjectIndices [
 	TrueObject := 2.
 	SchedulerAssociation := 3.
 	ClassBitmap := 4.
-	ClassInteger := 5.
+	ClassSmallInteger := 5.
 	ClassByteString := ClassString := 6. "N.B.  Actually class ByteString"
 	ClassArray := 7.
 	"SmalltalkDictionary := 8."  "Do not delete!"
@@ -3117,7 +3117,7 @@ SpurMemoryManager >> classSemaphore [
 
 { #category : #accessing }
 SpurMemoryManager >> classSmallInteger [
-	^self splObj: ClassInteger
+	^self splObj: ClassSmallInteger
 ]
 
 { #category : #accessing }
@@ -3776,6 +3776,7 @@ SpurMemoryManager >> ensureAllMarkBitsAreZero [
 { #category : #'class table' }
 SpurMemoryManager >> ensureBehaviorHash: aBehavior [
 	| newHash err |
+	<api>
 	<inline: true>
 	self assert: (coInterpreter addressCouldBeClassObj: aBehavior).
 	(newHash := self rawHashBitsOf: aBehavior) = 0 ifTrue:

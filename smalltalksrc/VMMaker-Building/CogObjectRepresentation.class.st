@@ -115,6 +115,16 @@ CogObjectRepresentation >> genGetActiveContextNumArgs: numArgs large: isLargeCon
 	self subclassResponsibility
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genGetInlineCacheClassTagFrom: sourceReg into: destReg forEntry: forEntry [
+	"Extract the inline cache tag for the object in sourceReg into destReg. The inline cache tag
+	 for a given object is the value loaded in inline caches to distinguish objects of different
+	 classes. If forEntry is true answer the entry label at which control is to enter (cmEntryOffset).
+	 If forEntry is false, control enters at the start."
+	<returnTypeC: #'AbstractInstruction *'>
+	self subclassResponsibility
+]
+
 { #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveAsCharacter: retNOffset inReg: reg [
 	"subclasses override if they can"
@@ -197,8 +207,16 @@ CogObjectRepresentation >> getActiveContextAllocatesInMachineCode [
 ]
 
 { #category : #'in-line cacheing' }
+CogObjectRepresentation >> inlineCacheTagForClass: classOop [
+	"Answer the relevant inline cache tag for a class.
+	 c.f. inlineCacheTagForInstance:"
+	self subclassResponsibility
+]
+
+{ #category : #'in-line cacheing' }
 CogObjectRepresentation >> inlineCacheTagForInstance: oop [
-	"c.f. getInlineCacheClassTagFrom:into:"
+	"Answer the relevant inline cache tag for an instance.
+	 c.f. getInlineCacheClassTagFrom:into: & inlineCacheTagForClass:"
 	^self subclassResponsibility
 ]
 
