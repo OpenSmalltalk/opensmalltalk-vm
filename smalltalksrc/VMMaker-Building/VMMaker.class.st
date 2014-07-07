@@ -1101,10 +1101,10 @@ VMMaker >> generateCogitFile [
 	self needsToRegenerateCogitFile ifFalse: [^nil].
 	cogitClass := self cogitClass.
 	cg removeUnneededBuiltins.
-	cg vmClass preGenerationHook: cg.
 
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
 
+	cg vmClass preGenerationHook: cg.
 	cg storeCodeOnFile: (self sourceFilePathFor: cogitClass sourceFileName) doInlining: cogitClass doInlining.
 	cg vmClass additionalHeadersDo:
 		[:headerName :headerContents| | filePath |
@@ -1249,10 +1249,10 @@ VMMaker >> generateInterpreterFile [
 								ifFalse: [ex pass]]].
 	self needsToRegenerateInterpreterFile ifFalse: [^nil].
 	cg removeUnneededBuiltins.
-	self interpreterClass preGenerationHook: cg.
 
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
 
+	self interpreterClass preGenerationHook: cg.
 	vmHeaderContents := cg vmHeaderContentsWithBytesPerWord: self wordSize.
 	(cg needToGenerateHeader: self interpreterHeaderName file: self interpreterHeaderPath contents: vmHeaderContents) ifTrue:
 		[cg storeHeaderOnFile: self interpreterHeaderPath contents: vmHeaderContents].

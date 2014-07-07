@@ -165,6 +165,14 @@ SistaStackToRegisterMappingCogit >> compileCogMethod: selector [
 	^super compileCogMethod: selector
 ]
 
+{ #category : #'compile abstract instructions' }
+SistaStackToRegisterMappingCogit >> compileFrameBuild [
+	"Override to prefetch counters, if any."
+	super compileFrameBuild.
+	counters ~= 0 ifTrue:
+		[self PrefetchAw: counters]
+]
+
 { #category : #disassembly }
 SistaStackToRegisterMappingCogit >> disassembleMethod: surrogateOrAddress on: aStream [
 	<doNotGenerate>
