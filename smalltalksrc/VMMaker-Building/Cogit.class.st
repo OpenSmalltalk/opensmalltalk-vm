@@ -5661,7 +5661,7 @@ Cogit >> generateMissAbortTrampolines [
 { #category : #initialization }
 Cogit >> generateNewspeakRuntime [
 	<option: #NewspeakVM>
-	| jumpMiss jumpItsTheReceiverStupid |
+	| jumpMiss jumpItsTheReceiverStupid retpcReg |
 	<var: #jumpMiss type: #'AbstractInstruction *'>
 	<var: #jumpItsTheReceiverStupid type: #'AbstractInstruction *'>
 	"Generate the non-send runtime support for Newspeak, explicit outer and implicit receiver.
@@ -5687,11 +5687,15 @@ Cogit >> generateNewspeakRuntime [
 		genGetInlineCacheClassTagFrom: ReceiverResultReg
 		into: ClassReg
 		forEntry: false.
-	self MoveMw: 0 r: SPReg R: TempReg.
-	self MoveMw: backEnd jumpShortByteSize r: TempReg R: Arg1Reg.
+	backEnd hasLinkRegister
+		ifTrue: [retpcReg := LinkReg]
+		ifFalse: [self MoveMw: 0 r: SPReg R: (retpcReg := TempReg)].
+
+	self MoveMw: 0 r: SPReg R: retpcReg.
+	self MoveMw: backEnd jumpShortByteSize r: retpcReg R: Arg1Reg.
 	self CmpR: ClassReg R: Arg1Reg.
 	jumpMiss := self JumpNonZero: 0.
-	self MoveMw: backEnd jumpShortByteSize + BytesPerOop r: TempReg R: ClassReg.
+	self MoveMw: backEnd jumpShortByteSize + BytesPerOop r: retpcReg R: ClassReg.
 	self CmpCq: 0 R: ClassReg.
 	jumpItsTheReceiverStupid := self JumpZero: 0.
 	self MoveR: ClassReg R: ReceiverResultReg.
