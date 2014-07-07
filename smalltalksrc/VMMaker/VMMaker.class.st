@@ -313,6 +313,12 @@ VMMaker class >> generateAllConfigurationsUnderVersionControl [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateAllNewspeakConfigurationsUnderVersionControl [
+	self generateNewspeakCogVM;
+		generateNewspeakSpurCogVM
+]
+
+{ #category : #configurations }
 VMMaker class >> generateAllNonSpurConfigurationsUnderVersionControl [
 	self generateNewspeakCogVM;
 		generateSqueakCogVM;
