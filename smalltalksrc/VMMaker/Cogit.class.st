@@ -2666,7 +2666,7 @@ Cogit >> ceEnterCogCodePopReceiverReg [
 ]
 
 { #category : #'in-line cacheing' }
-Cogit >> ceImplicitReceiverFor: selector receiver: receiver class: rcvrClass [
+Cogit >> ceImplicitReceiverFor: selector receiver: receiver [
 	"Cached implicit receiver implementation.  Caller looks like
 		mov selector, ClassReg
 				call ceImplicitReceiver
@@ -2676,30 +2676,34 @@ Cogit >> ceImplicitReceiverFor: selector receiver: receiver class: rcvrClass [
 		continue:
 	 The trampoline has already fetched the class and probed the cache and found
 	 that the cache missed.  Compute the implicit receiver for the receiver's class
-	 and reload the class.  If either the class or the mixin are young the method needs
-	 to be added to the youngReferrers list to ensure correct GC."
+	 and reload the class tag.  If either the class tag or the mixin are young then the
+	 method needs to be added to the youngReferrers list to ensure correct GC."
 
-	| retpc classpc mixinpc mixin cogMethod |
+	| rcvrClass retpc classpc mixinpc mixin cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	retpc := coInterpreter stackTop.
 	classpc := retpc + backEnd jumpShortByteSize.
 	mixinpc := retpc + backEnd jumpShortByteSize + BytesPerOop.
-	self assert: rcvrClass ~= (backEnd unalignedLongAt: classpc).
 	mixin := coInterpreter
 				implicitReceiverFor: receiver
 				mixin: coInterpreter mMethodClass
 				implementing: selector.
+	rcvrClass := objectMemory fetchClassOf: receiver.
 	cogMethod := coInterpreter mframeHomeMethodExport.
 	cogMethod cmRefersToYoung ifFalse:
-		[((objectMemory isYoung: rcvrClass)
+		[((objectRepresentation inlineCacheTagsMayBeObjects
+		   and: [objectMemory isYoung: rcvrClass])
 		  or: [mixin ~= receiver and: [objectMemory isYoung: mixin]]) ifTrue:
 			[methodZone roomOnYoungReferrersList ifFalse:
 				[coInterpreter callForCogCompiledCodeCompaction.
 				 ^mixin].
 			 cogMethod cmRefersToYoung: true.
 			 methodZone addToYoungReferrers: cogMethod]].
-	backEnd unalignedLongAt: classpc put: rcvrClass.
-	backEnd unalignedLongAt: mixinpc put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
+	backEnd
+		unalignedLongAt: classpc
+			put: (objectRepresentation inlineCacheTagForClass: rcvrClass);
+		unalignedLongAt: mixinpc
+			put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
 	^mixin
 ]
 
@@ -3750,7 +3754,7 @@ Cogit >> compileCPICEntry [
 	self cppIf: NewspeakVM ifTrue:
 		[self Nop. "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
 		 dynSuperEntry := self Nop].
-	entry := objectRepresentation getInlineCacheClassTagFrom: ReceiverResultReg into: TempReg.
+	entry := objectRepresentation genGetInlineCacheClassTagFrom: ReceiverResultReg into: TempReg forEntry: true.
 	self CmpR: ClassReg R: TempReg.
 	^self JumpNonZero: 0
 ]
@@ -3894,7 +3898,7 @@ Cogit >> compileEntry [
 	self cppIf: NewspeakVM ifTrue:
 		[self Nop. "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
 		 dynSuperEntry := self Nop].
-	entry := objectRepresentation getInlineCacheClassTagFrom: ReceiverResultReg into: TempReg.
+	entry := objectRepresentation genGetInlineCacheClassTagFrom: ReceiverResultReg into: TempReg forEntry: true.
 	self CmpR: ClassReg R: TempReg.
 	self JumpNonZero: sendMiss.
 	noCheckEntry := self Label.
@@ -5673,16 +5677,16 @@ Cogit >> generateNewspeakRuntime [
 		Lclass:	.word
 		Lmixin::	.word
 		continue:
-	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
+	 If class tag matches class of receiver then mixin contains either 0 or the implicit receiver.
 	 If 0, answer the actual receiver, otherwise the mixin.
-	 Generate the class fetch and cache probe inline for speed. Smashes Arg0Reg and caller-saved regs."
+	 Generate the class fetch and cache probe inline for speed.
+	 Smashes Arg1Reg, RegClass and caller-saved regs."
 	opcodeIndex := 0.
 	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
 	objectRepresentation
-		genGetClassObjectOf: ReceiverResultReg
+		genGetInlineCacheClassTagFrom: ReceiverResultReg
 		into: ClassReg
-		scratchReg: TempReg
-		instRegIsReceiver: true. "don't follow forwarding pointer here"
+		forEntry: false.
 	self MoveMw: 0 r: SPReg R: TempReg.
 	self MoveMw: backEnd jumpShortByteSize r: TempReg R: Arg1Reg.
 	self CmpR: ClassReg R: Arg1Reg.
@@ -5694,12 +5698,12 @@ Cogit >> generateNewspeakRuntime [
 	jumpItsTheReceiverStupid jmpTarget: (self RetN: 0).
 	jumpMiss jmpTarget: self Label.
 	ceImplicitReceiverTrampoline := self
-										genTrampolineFor: #ceImplicitReceiverFor:receiver:class:
+										genTrampolineFor: #ceImplicitReceiverFor:receiver:
 										called: 'ceImplicitReceiverTrampoline'
-										numArgs: 3
+										numArgs: 2
 										arg: SendNumArgsReg
 										arg: ReceiverResultReg
-										arg: ClassReg
+										arg: nil
 										arg: nil
 										saveRegs: false
 										pushLinkReg: true
@@ -7053,8 +7057,7 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 					 class := backEnd unalignedLongAt: classpc.
 					 class ~= 0
 						ifTrue:
-							[self assert: (objectMemory addressCouldBeObj: class).
-							 (objectRepresentation cacheTagIsMarked: class)
+							[(objectRepresentation cacheTagIsMarked: class)
 								ifTrue:
 									[(mixin := backEnd unalignedLongAt: mixinpc) ~= 0 ifTrue:
 										[objectRepresentation markAndTraceLiteral: mixin]]
@@ -7106,8 +7109,7 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 							 class := backEnd unalignedLongAt: classpc.
 							 class ~= 0
 								ifTrue:
-									[self assert: (objectMemory addressCouldBeObj: class).
-									 (objectRepresentation cacheTagIsMarked: class)
+									[(objectRepresentation cacheTagIsMarked: class)
 										ifTrue:
 											[(mixin := backEnd unalignedLongAt: mixinpc) ~= 0 ifTrue:
 												[objectRepresentation markAndTraceLiteral: mixin]]
@@ -7173,7 +7175,8 @@ Cogit >> markYoungObjects: annotation pc: mcpc method: cogMethod [
 					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
 						[| class mixin |
 						 (class := backEnd unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize) ~= 0 ifTrue:
-							[objectRepresentation markAndTraceLiteralIfYoung: class.
+							[objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
+								[objectRepresentation markAndTraceLiteralIfYoung: class].
 							 mixin := backEnd unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
 							 objectRepresentation markAndTraceLiteralIfYoung: mixin]]]]].
 	^0 "keep scanning"
@@ -8163,24 +8166,28 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 			 (self cppIf: NewspeakVM
 					ifTrue: [entryPoint = ceImplicitReceiverTrampoline]
 					ifFalse: [false])
-				ifTrue:
+				ifTrue: "Examine an implicit receiver cache."
 					[| pc oop mappedOop |
 					 pc := mcpc asInteger + backEnd jumpShortByteSize.
 					 (oop := backEnd unalignedLongAt: pc) ~= 0 ifTrue:
-						[mappedOop := objectRepresentation remapOop: oop.
-						 mappedOop ~= oop ifTrue:
-							[backEnd unalignedLongAt: pc put: mappedOop].
-						 (hasYoungPtr ~= 0
-						  and: [objectMemory isYoung: mappedOop]) ifTrue:
-							[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true].
+						["First look at the classTag entry.  This is an inline cache tag and so might not be an object."
+						 (objectRepresentation inlineCacheTagsMayBeObjects
+						  and: [objectRepresentation couldBeObject: oop]) ifTrue:
+							[mappedOop := objectRepresentation remapOop: oop.
+							 mappedOop ~= oop ifTrue:
+								[backEnd unalignedLongAt: pc put: mappedOop].
+							 (hasYoungPtr ~= 0
+							  and: [objectMemory isYoung: mappedOop]) ifTrue:
+								[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]].
+						 "Second look at the mixin entry. this must be 0 or an objct."
 						 pc := mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
 						 (oop := backEnd unalignedLongAt: pc) ~= 0 ifTrue:
 							[mappedOop := objectRepresentation remapOop: oop.
 							 mappedOop ~= oop ifTrue:
 								[backEnd unalignedLongAt: pc put: mappedOop].
-						 (hasYoungPtr ~= 0
-						  and: [objectMemory isYoung: mappedOop]) ifTrue:
-							[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]]]
+							 (hasYoungPtr ~= 0
+							  and: [objectMemory isYoung: mappedOop]) ifTrue:
+								[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]]]
 				ifFalse:
 					[hasYoungPtr ~= 0 ifTrue:
 						["Since the unlinking routines may rewrite the cacheTag to the send's selector, and
