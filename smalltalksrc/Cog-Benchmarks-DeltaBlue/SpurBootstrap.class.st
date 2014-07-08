@@ -69,7 +69,8 @@ Class {
 		'installedPrototypes',
 		'sizeSym',
 		'rehashSym',
-		'classMetaclass'
+		'classMetaclass',
+		'imageType'
 	],
 	#classVars : [
 		'ImageHeaderFlags',
@@ -466,6 +467,22 @@ SpurBootstrap class >> BehaviorPROTOTYPEkindOfSubclass [
 						ifFalse: [' subclass: ']]]
 ]
 
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> BehaviorPROTOTYPElargeIdentityHash [
+	"Answer a SmallInteger whose value is related to the receiver's identity.
+	 Behavior implements identityHash to allow the VM to use an object representation which
+	 does not include a direct reference to an object's class in an object.  If the VM is using
+	 this implementation then classes are held in a class table and instances contain the index
+	 of their class in the table.  A class's class table index is its identityHash so that an instance
+	 can be created without searching the table for a class's index.  The VM uses this primitive
+	 to enter the class into the class table, assigning its identityHash with an as yet unused
+	 class table index. If this primitive fails it means that the class table is full.  In Spur as of
+	 2014 there are 22 bits of classTable index and 22 bits of identityHash per object."
+
+	<primitive: 175>
+	self primitiveFailed
+]
+
 { #category : #'method prototypes' }
 SpurBootstrap class >> BehaviorPROTOTYPEshouldNotBeRedefined [
 	"Answer if the receiver should not be redefined.
@@ -525,6 +542,12 @@ SpurBootstrap class >> CharacterPROTOTYPEclone [
 	^self
 ]
 
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> CharacterPROTOTYPEcodePoint [
+	"Just for ANSI Compliance"	
+	^self
+]
+
 { #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEcopy [
 	"Answer the receiver, because Characters are unique."
@@ -575,13 +598,20 @@ SpurBootstrap class >> CharacterclassPROTOTYPEdigitValue: x [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> CharacterclassPROTOTYPEinitialize [
+	"Create the DigitsValues table."
+	"Character initialize"
+	self initializeDigitValues
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> CharacterclassPROTOTYPEvalue: anInteger [
 	"Answer the Character whose value is anInteger."
 	<primitive: 170>
 	^self primitiveFailed
 ]
 
-{ #category : #'method prototypes' }
+{ #category : #'method prototypes squeak' }
 SpurBootstrap class >> ClassBuilderPROTOTYPEcomputeFormat: type instSize: newInstSize forSuper: newSuper ccIndex: ccIndex [
 	"Compute the new format for making oldClass a subclass of newSuper.
 	 Answer the format or nil if there is any problem."
@@ -608,7 +638,7 @@ SpurBootstrap class >> ClassBuilderPROTOTYPEcomputeFormat: type instSize: newIns
 	^self format: instSize variable: isVar words: isWords pointers: isPointers weak: isWeak
 ]
 
-{ #category : #'method prototypes' }
+{ #category : #'method prototypes squeak' }
 SpurBootstrap class >> ClassBuilderPROTOTYPEformat: nInstVars variable: isVar words: isWords pointers: isPointers weak: isWeak [
 	"Compute the format for the given instance specfication.
 	 Above Cog Spur the class format is
@@ -647,7 +677,7 @@ SpurBootstrap class >> ClassBuilderPROTOTYPEformat: nInstVars variable: isVar wo
 	^(instSpec bitShift: 16) + nInstVars
 ]
 
-{ #category : #'method prototypes' }
+{ #category : #'method prototypes squeak' }
 SpurBootstrap class >> ClassBuilderPROTOTYPEsuperclass: aClass
 	immediateSubclass: t instanceVariableNames: f 
 	classVariableNames: d poolDictionaries: s category: cat [
@@ -675,7 +705,7 @@ SpurBootstrap class >> ClassBuilderPROTOTYPEsuperclass: aClass
 		category: cat
 ]
 
-{ #category : #'method prototypes' }
+{ #category : #'method prototypes squeak' }
 SpurBootstrap class >> ClassBuilderPROTOTYPEupdate: oldClass to: newClass [
 	"Convert oldClass, all its instances and possibly its meta class into newClass,
 	 instances of newClass and possibly its meta class. The process is surprisingly
@@ -736,13 +766,13 @@ SpurBootstrap class >> ClassBuilderPROTOTYPEupdate: oldClass to: newClass [
 			valueUnpreemptively
 ]
 
-{ #category : #'method prototypes' }
+{ #category : #'method prototypes squeak' }
 SpurBootstrap class >> ClassDescriptionPROTOTYPEupdateMethodBindingsTo: aBinding [
 	"ClassBuilder support for maintaining valid method bindings."
 	methodDict do: [:method| method methodClassAssociation: aBinding]
 ]
 
-{ #category : #'method prototypes' }
+{ #category : #'method prototypes squeak' }
 SpurBootstrap class >> ClassPROTOTYPEimmediateSubclass: t instanceVariableNames: f classVariableNames: d poolDictionaries: s category: cat [ 
 	"This is the standard initialization message for creating a new
 	 immediate class as a subclass of an existing class (the receiver)."
@@ -755,7 +785,46 @@ SpurBootstrap class >> ClassPROTOTYPEimmediateSubclass: t instanceVariableNames:
 		category: cat
 ]
 
-{ #category : #'method prototypes' }
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> ContextPROTOTYPEallInstances [
+	"Answer all instances of the receiver."
+	<primitive: 177>
+	"The primitive can fail because memory is low.  If so, fall back on the old
+	 enumeration code, which gives the system a chance to GC and/or grow.
+	 Because aBlock might change the class of inst (for example, using become:),
+	 it is essential to compute next before aBlock value: inst.
+	 Only count until thisContext since this context has been created only to
+	 compute the existing instances."
+	| inst insts next |
+	insts := WriteStream on: (Array new: 64).
+	inst := self someInstance.
+	[inst == thisContext or: [inst == nil]] whileFalse:
+		[next := inst nextInstance.
+		 insts nextPut: inst.
+		 inst := next].
+	^insts contents
+]
+
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> ContextPROTOTYPEallInstancesDo: aBlock [
+	"Evaluate aBlock with each of the current instances of the receiver."
+	| instances inst next |
+	instances := self allInstancesOrNil.
+	instances ifNotNil:
+		[instances do: aBlock.
+		 ^self].
+	"allInstancesOrNil can fail because memory is low.  If so, fall back on the old
+	 enumeration code.  Because aBlock might change the class of inst (for example,
+	 using become:), it is essential to compute next before aBlock value: inst.
+	 Only count until thisContext since evaluation of aBlock will create new contexts."
+	inst := self someInstance.
+	[inst == thisContext or: [inst == nil]] whileFalse:
+		[next := inst nextInstance.
+		 aBlock value: inst.
+		 inst := next]
+]
+
+{ #category : #'method prototypes squeak' }
 SpurBootstrap class >> MethodContextPROTOTYPEallInstances [
 	"Answer all instances of the receiver."
 	<primitive: 177>
@@ -775,7 +844,7 @@ SpurBootstrap class >> MethodContextPROTOTYPEallInstances [
 	^insts contents
 ]
 
-{ #category : #'method prototypes' }
+{ #category : #'method prototypes squeak' }
 SpurBootstrap class >> MethodContextPROTOTYPEallInstancesDo: aBlock [
 	"Evaluate aBlock with each of the current instances of the receiver."
 	| instances inst next |
@@ -794,13 +863,168 @@ SpurBootstrap class >> MethodContextPROTOTYPEallInstancesDo: aBlock [
 		 inst := next]
 ]
 
-{ #category : #'method prototypes' }
+{ #category : #'method prototypes squeak' }
 SpurBootstrap class >> ProtoObjectPROTOTYPEscaledIdentityHash [
 	"For identityHash values returned by primitive 75, answer
 	 such values times 2^8.  Otherwise, match the existing
 	 identityHash implementation"
 
 	^self identityHash * 256 "bitShift: 8"
+]
+
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> SlotClassBuilderPROTOTYPEcomputeFormat: type instSize: newInstSize forSuper: newSuper ccIndex: ccIndex [
+	"Compute the new format for making oldClass a subclass of newSuper.
+	 Answer the format or nil if there is any problem."
+	| instSize isVar isWords isPointers isWeak |
+	type == #compiledMethod ifTrue:
+		[newInstSize > 0 ifTrue:
+			[self error: 'A compiled method class cannot have named instance variables'.
+			^nil].
+		^CompiledMethod format].
+	instSize := newInstSize + (newSuper ifNil:[0] ifNotNil:[newSuper instSize]).
+	instSize > 65535 ifTrue:
+		[self error: 'Class has too many instance variables (', instSize printString,')'.
+		^nil].
+	type == #normal ifTrue:[isVar := isWeak := false. isWords := isPointers := true].
+	type == #bytes ifTrue:[isVar := true. isWords := isPointers := isWeak := false].
+	type == #words ifTrue:[isVar := isWords := true. isPointers := isWeak := false].
+	type == #variable ifTrue:[isVar := isPointers := isWords := true. isWeak := false].
+	type == #weak ifTrue:[isVar := isWeak := isWords := isPointers := true].
+	type == #ephemeron ifTrue:[isVar := false. isWeak := isWords := isPointers := true].
+	type == #immediate ifTrue:[isVar := isWeak := isPointers := false. isWords := true].
+	(isPointers not and: [instSize > 0]) ifTrue:
+		[self error: 'A non-pointer class cannot have named instance variables'.
+		^nil].
+	^self format: instSize variable: isVar words: isWords pointers: isPointers weak: isWeak
+]
+
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> SlotClassBuilderPROTOTYPEformat: nInstVars variable: isVar words: isWords pointers: isPointers weak: isWeak [
+	"Compute the format for the given instance specfication.
+	 Above Cog Spur the class format is
+		<5 bits inst spec><16 bits inst size>
+	 where the 5-bit inst spec is
+			0	= 0 sized objects (UndefinedObject True False et al)
+			1	= non-indexable objects with inst vars (Point et al)
+			2	= indexable objects with no inst vars (Array et al)
+			3	= indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+			4	= weak indexable objects with inst vars (WeakArray et al)
+			5	= weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+			6	= unused
+			7	= immediates (SmallInteger, Character)
+			8	= unused
+			9	= reserved for 64-bit indexable
+		10-11	= 32-bit indexable (Bitmap)
+		12-15	= 16-bit indexable
+		16-23	= 8-bit indexable
+		24-31	= compiled methods (CompiledMethod)"
+	| instSpec |
+	instSpec := isWeak
+					ifTrue:
+						[isVar
+							ifTrue: [4]
+							ifFalse: [5]]
+					ifFalse:
+						[isPointers
+							ifTrue:
+								[isVar
+									ifTrue: [nInstVars > 0 ifTrue: [3] ifFalse: [2]]
+									ifFalse: [nInstVars > 0 ifTrue: [1] ifFalse: [0]]]
+							ifFalse:
+								[isVar
+									ifTrue: [isWords ifTrue: [12] ifFalse: [16]]
+									ifFalse: [7]]].
+	^(instSpec bitShift: 16) + nInstVars
+]
+
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> SlotClassBuilderPROTOTYPEsuperclass: aClass
+	immediateSubclass: t instanceVariableNames: f 
+	classVariableNames: d poolDictionaries: s category: cat [
+	"This is the standard initialization message for creating a
+	 new immediate class as a subclass of an existing class."
+	| env |
+	aClass instSize > 0
+		ifTrue: [^self error: 'cannot make an immediate subclass of a class with named fields'].
+	aClass isVariable
+		ifTrue: [^self error: 'cannot make an immediate subclass of a class with indexed instance variables'].
+	aClass isPointers
+		ifFalse: [^self error: 'cannot make an immediate subclass of a class without pointer fields'].
+	"Cope with pre-environment and environment versions. Simplify asap."
+	env := (Smalltalk classNamed: #EnvironmentRequest)
+				ifNil: [aClass environment]
+				ifNotNil: [:erc| erc signal ifNil: [aClass environment]].
+	^self 
+		name: t
+		inEnvironment: env
+		subclassOf: aClass
+		type: #immediate
+		instanceVariableNames: f
+		classVariableNames: d
+		poolDictionaries: s
+		category: cat
+]
+
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> SlotClassBuilderPROTOTYPEupdate: oldClass to: newClass [
+	"Convert oldClass, all its instances and possibly its meta class into newClass,
+	 instances of newClass and possibly its meta class. The process is surprisingly
+	 simple in its implementation and surprisingly complex in its nuances and potentially
+	 bad side effects.
+	 We can rely on two assumptions (which are critical):
+		#1: The method #updateInstancesFrom: will not create any lasting pointers to
+			 'old' instances ('old' is quote on quote since #updateInstancesFrom: will do
+			 a become of the old vs. the new instances and therefore it will not create
+			 pointers to *new* instances before the #become: which are *old* afterwards)
+		#2: The non-preemptive execution of the critical piece of code guarantees that
+			 nobody can get a hold by 'other means' (such as process interruption and
+			 reflection) on the old instances.
+	 Given the above two, we know that after #updateInstancesFrom: there are no pointers
+	 to any old instances. After the forwarding become there will be no pointers to the old
+	 class or meta class either.
+	 Andreas Raab, 2/27/2003 23:42"
+	| meta |
+	meta := oldClass isMeta.
+	"Note: Everything from here on will run without the ability to get interrupted
+	to prevent any other process to create new instances of the old class."
+	["Note: The following removal may look somewhat obscure and needs an explanation.
+	  When we mutate the class hierarchy we create new classes for any existing subclass.
+	  So it may look as if we don't have to remove the old class from its superclass. However,
+	  at the top of the hierarchy (the first class we reshape) that superclass itself is not newly
+	  created so therefore it will hold both the oldClass and newClass in its (obsolete or not)
+	  subclasses. Since the #become: below will transparently replace the pointers to oldClass
+	  with newClass the superclass would have newClass in its subclasses TWICE. With rather
+	  unclear effects if we consider that we may convert the meta-class hierarchy itself (which
+	  is derived from the non-meta class hierarchy).
+	  Due to this problem ALL classes are removed from their superclass just prior to converting
+	  them. Here, breaking the superclass/subclass invariant really doesn't matter since we will
+	  effectively remove the oldClass (becomeForward:) just a few lines below."
+
+		oldClass superclass removeSubclass: oldClass.
+		oldClass superclass removeObsoleteSubclass: oldClass.
+
+		"make sure that the VM cache is clean"
+		oldClass methodDict do: [:cm | cm flushCache].
+		
+		"Convert the instances of oldClass into instances of newClass"
+		newClass updateInstancesFrom: oldClass.
+
+		meta
+			ifTrue:
+				[oldClass becomeForward: newClass.
+				 oldClass updateMethodBindingsTo: oldClass binding]
+			ifFalse:
+				[{oldClass. oldClass class} elementsForwardIdentityTo: {newClass. newClass class}.
+				 oldClass updateMethodBindingsTo: oldClass binding.
+				 oldClass class updateMethodBindingsTo: oldClass class binding].
+
+		"eem 5/31/2014 07:22 At this point there used to be a garbage collect whose purpose was
+		 to ensure no old instances existed after the becomeForward:.  Without the GC it was possible
+		 to resurrect old instances using e.g. allInstancesDo:.  This was because the becomeForward:
+		 updated references from the old objects to new objects but didn't destroy the old objects.
+		 But as of late 2013/early 2014 becomeForward: has been modified to free all the old objects."]
+			valueUnpreemptively
 ]
 
 { #category : #'method prototypes' }
@@ -833,7 +1057,7 @@ SpurBootstrap class >> SmalltalkImagePROTOTYPEmaxIdentityHash [
 	^self primitiveFailed
 ]
 
-{ #category : #'method prototypes' }
+{ #category : #'method prototypes squeak' }
 SpurBootstrap class >> SmalltalkImagePROTOTYPEsetGCParameters [
 	"Adjust the VM's default GC parameters to avoid too much tenuring.
 	 Maybe this should be left to the VM?"
@@ -882,7 +1106,7 @@ SpurBootstrap class >> SystemDictionaryPROTOTYPEmaxIdentityHash [
 	^self primitiveFailed
 ]
 
-{ #category : #'method prototypes' }
+{ #category : #'method prototypes squeak' }
 SpurBootstrap class >> SystemDictionaryPROTOTYPEsetGCParameters [
 	"Adjust the VM's default GC parameters to avoid too much tenuring.
 	 Maybe this should be left to the VM?"
@@ -932,6 +1156,176 @@ SpurBootstrap class >> SystemNavigationPROTOTYPEallObjectsOrNil [
 	^nil
 ]
 
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> TraitBehaviorPROTOTYPEallInstances [
+	"Answer all instances of the receiver."
+	self error: 'Traits does not have instances.'
+]
+
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> TraitBehaviorPROTOTYPEallInstancesDo: aBlock [
+	"Evaluate aBlock with each of the current instances of the receiver."
+	self error: 'Traits does not have instances.'
+]
+
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> TraitBehaviorPROTOTYPEinstSpec [
+	"Answer the instance specification part of the format that defines what kind of object
+	 an instance of the receiver is.  The formats are
+			0	= 0 sized objects (UndefinedObject True False et al)
+			1	= non-indexable objects with inst vars (Point et al)
+			2	= indexable objects with no inst vars (Array et al)
+			3	= indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+			4	= weak indexable objects with inst vars (WeakArray et al)
+			5	= weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+			6	= unused
+			7	= immediates (SmallInteger, Character)
+			8	= unused
+			9	= 64-bit indexable
+		10-11	= 32-bit indexable (Bitmap)
+		12-15	= 16-bit indexable
+		16-23	= 8-bit indexable
+		24-31	= compiled methods (CompiledMethod)"
+	^(format bitShift: -16) bitAnd: 16r1F
+]
+
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> TraitBehaviorPROTOTYPEisBits [
+	"Answer whether the receiver contains just bits (not pointers).
+	 Above Cog Spur the class format is
+		<5 bits inst spec><16 bits inst size>
+	 where the 5-bit inst spec is
+			0	= 0 sized objects (UndefinedObject True False et al)
+			1	= non-indexable objects with inst vars (Point et al)
+			2	= indexable objects with no inst vars (Array et al)
+			3	= indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+			4	= weak indexable objects with inst vars (WeakArray et al)
+			5	= weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+			6	= unused
+			7	= immediates (SmallInteger, Character)
+			8	= unused
+			9	= 64-bit indexable
+		10-11	= 32-bit indexable (Bitmap)
+		12-15	= 16-bit indexable
+		16-23	= 8-bit indexable
+		24-31	= compiled methods (CompiledMethod)"
+	^self instSpec >= 7
+]
+
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> TraitBehaviorPROTOTYPEisBytes [
+	"Answer whether the receiver has 8-bit instance variables.
+	 Above Cog Spur the class format is
+		<5 bits inst spec><16 bits inst size>
+	 where the 5-bit inst spec is
+			0	= 0 sized objects (UndefinedObject True False et al)
+			1	= non-indexable objects with inst vars (Point et al)
+			2	= indexable objects with no inst vars (Array et al)
+			3	= indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+			4	= weak indexable objects with inst vars (WeakArray et al)
+			5	= weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+			6	= unused
+			7	= immediates (SmallInteger, Character)
+			8	= unused
+			9	= 64-bit indexable
+		10-11	= 32-bit indexable (Bitmap)
+		12-15	= 16-bit indexable
+		16-23	= 8-bit indexable
+		24-31	= compiled methods (CompiledMethod)"
+	^self instSpec >= 16
+]
+
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> TraitBehaviorPROTOTYPEisEphemeronClass [
+	"Answer whether the receiver has ephemeral instance variables.  The garbage collector will
+	 fire (queue for finalization) any ephemeron whose first instance variable is not referenced
+	 other than from the transitive closure of references from ephemerons. Hence referring to
+	 an object from the first inst var of an ephemeron will cause the ephemeron to fire when
+	 the rest of the system does not refer to the object and that object is ready to be collected.
+	 Since references from the remaining inst vars of an ephemeron will not prevent the ephemeron
+	 from firing, ephemerons may act as the associations in weak dictionaries such that the value
+	 (e.g. properties attached to the key) will not prevent firing when the key is no longer referenced
+	 other than from ephemerons.  Ephemerons can therefore be used to implement instance-based
+	 pre-mortem finalization."
+	^self instSpec = 5
+]
+
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> TraitBehaviorPROTOTYPEisImmediateClass [
+	"Answer whether the receiver has immediate instances.  Immediate instances
+	 store their value in their object pointer, not in an object body.  Hence immediates
+	 take no space and are immutable.  The immediates are distinguished by tag bits
+	 in the pointer. They include SmallIntegers and Characters.  Hence in the 32-bit
+	 system SmallIntegers are 31-bit signed integers and Characters are 30-bit
+	 unsigned character codes."
+	^self instSpec = 7
+]
+
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> TraitBehaviorPROTOTYPEisVariable [
+	"Answer whether the receiver has indexable variables.
+	 Above Cog Spur the class format is
+		<5 bits inst spec><16 bits inst size>
+	 where the 5-bit inst spec is
+			0	= 0 sized objects (UndefinedObject True False et al)
+			1	= non-indexable objects with inst vars (Point et al)
+			2	= indexable objects with no inst vars (Array et al)
+			3	= indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+			4	= weak indexable objects with inst vars (WeakArray et al)
+			5	= weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+			6	= unused
+			7	= immediates (SmallInteger, Character)
+			8	= unused
+			9	= 64-bit indexable
+		10-11	= 32-bit indexable (Bitmap)
+		12-15	= 16-bit indexable
+		16-23	= 8-bit indexable
+		24-31	= compiled methods (CompiledMethod)"
+	| instSpec |
+	instSpec := self instSpec.
+	^instSpec >= 2 and: [instSpec <= 4 or: [instSpec >= 9]]
+]
+
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> TraitBehaviorPROTOTYPEkindOfSubclass [
+	"Answer a String that is the keyword that describes the receiver's kind of subclass,
+	 either a regular subclass, a variableSubclass, a variableByteSubclass,
+	 a variableWordSubclass, a weakSubclass, an ephemeronSubclass or an immediateSubclass.
+	 c.f. typeOfClass"
+	^self isVariable
+		ifTrue:
+			[self isBits
+				ifTrue:
+					[self isBytes
+						ifTrue: [' variableByteSubclass: ']
+						ifFalse: [' variableWordSubclass: ']]
+				ifFalse:
+					[self isWeak
+						ifTrue: [' weakSubclass: ']
+						ifFalse: [' variableSubclass: ']]]
+		ifFalse:
+			[self isImmediateClass
+				ifTrue: [' immediateSubclass: ']
+				ifFalse:
+					[self isEphemeronClass
+						ifTrue: [' ephemeronSubclass: ']
+						ifFalse: [' subclass: ']]]
+]
+
+{ #category : #'method prototypes pharo' }
+SpurBootstrap class >> VirtualMachinePROTOTYPEsetGCParameters [
+	"Adjust the VM's default GC parameters to avoid too much tenuring.
+	 Maybe this should be left to the VM?"
+
+	| proportion edenSize survivorSize averageObjectSize numObjects |
+	proportion := 0.9. "tenure when 90% of pastSpace is full"
+	edenSize := self parameterAt: 44.
+	survivorSize := edenSize / 5.0. "David's paper uses 140Kb eden + 2 x 28kb survivor spaces; Spur uses the same ratios :-)"
+	averageObjectSize := 8 * self wordSize. "a good approximation"
+	numObjects := (proportion * survivorSize / averageObjectSize) rounded.
+	self tenuringThreshold: numObjects  "tenure when more than this many objects survive the GC"
+]
+
 { #category : #'method prototypes' }
 SpurBootstrap class >> WideStringPROTOTYPEat: index [
 	"Answer the Character stored in the field of the receiver indexed by the
@@ -965,7 +1359,7 @@ SpurBootstrap class >> WideStringPROTOTYPEat: index put: aCharacter [
 ]
 
 { #category : #utilities }
-SpurBootstrap class >> bootstrapImage: imageFileBaseName [
+SpurBootstrap class >> bootstrapImage: imageFileBaseName type: typeName [
 	"SpurBootstrap bootstrapImage: '/Users/eliot/Squeak/Squeak4.5/Squeak4.5-13680'"
 	| imageFormat |
 	imageFormat := ImageFormat fromFile: imageFileBaseName, '.image'.
@@ -974,8 +1368,18 @@ SpurBootstrap class >> bootstrapImage: imageFileBaseName [
 	imageFormat requiresSpurSupport ifTrue:
 		[self error: 'This image is already in Spur format.'].
 	imageFormat is32Bit ifTrue:
-		[^SpurBootstrap32 new bootstrapImage: imageFileBaseName].
+		[^ SpurBootstrap32 new bootstrapImage: imageFileBaseName type: typeName ].
 	self error: '64-bit support and 64-bit generation as-yet-unimplemented'
+]
+
+{ #category : #utilities }
+SpurBootstrap class >> bootstrapPharoImage: imageFileBaseName [
+	self bootstrapImage: imageFileBaseName type: 'pharo'
+]
+
+{ #category : #utilities }
+SpurBootstrap class >> bootstrapSqueakImage: imageFileBaseName [
+	self bootstrapImage: imageFileBaseName type: 'squeak'
 ]
 
 { #category : #tests }
@@ -1072,6 +1476,12 @@ SpurBootstrap >> allPrototypeMethodSymbols [
 	^symbols
 ]
 
+{ #category : #'method prototypes' }
+SpurBootstrap >> allPrototypeMethods [
+	^ (SpurBootstrap class organization listAtCategoryNamed: #'method prototypes'),
+	(SpurBootstrap class organization listAtCategoryNamed: #'method prototypes ', imageType)
+]
+
 { #category : #'bootstrap image' }
 SpurBootstrap >> allocateClassTable [
 	"Allocate the root of the classTable plus enough pages to accomodate all classes in
@@ -1156,6 +1566,26 @@ SpurBootstrap >> bootstrapImage [
 
 { #category : #'public access' }
 SpurBootstrap >> bootstrapImage: imageName [
+	(Smalltalk classNamed: #FileReference) ifNotNil:
+		[^self bootstrapImageUsingFileReference: imageName].
+	(Smalltalk classNamed: #FileDirectory) ifNotNil:
+		[^self bootstrapImageUsingFileDirectory: imageName].
+	self error: 'at a loss as to what file system support to use'
+]
+
+{ #category : #'public access' }
+SpurBootstrap >> bootstrapImage: imageName type: typeName [
+	"type can be: 
+		- 'squeak' 
+		- 'pharo'
+		- it might be 'newspeak', if needed (but is not implemented)"
+	imageType := typeName.
+	self bootstrapImage: imageName
+	
+]
+
+{ #category : #'public access' }
+SpurBootstrap >> bootstrapImageUsingFileDirectory: imageName [
 	| dirName baseName dir |
 	dirName := FileDirectory dirPathFor: imageName.
 	baseName := (imageName endsWith: '.image')
@@ -1176,6 +1606,29 @@ SpurBootstrap >> bootstrapImage: imageName [
 		screenSize: oldInterpreter savedWindowSize.
 	dir copyFileNamed: (dir fullNameFor: baseName, '.changes')
 		toFileNamed: (dir fullNameFor: baseName, '-spur.changes')
+]
+
+{ #category : #'public access' }
+SpurBootstrap >> bootstrapImageUsingFileReference: imageName [
+	| dirName baseName dir |
+	dirName := imageName asFileReference parent fullName.
+	baseName := (imageName endsWith: '.image')
+		ifTrue: [ imageName asFileReference base ]
+		ifFalse: [ (imageName, '.image') asFileReference base ].
+	dir := dirName asFileReference.
+	self on: (dir / (baseName, '.image')) fullName.
+	[self transform]
+		on: Halt
+		do: [:ex|
+			"suppress halts from the usual suspects (development time halts)"
+			(#(fullGC compactImage) includes: ex signalerContext sender selector)
+				ifTrue: [ex resume]
+				ifFalse: [ex pass]].
+	self writeSnapshot: (dir / (baseName, '-spur.image')) fullName
+		ofTransformedImage: newHeap
+		headerFlags: oldInterpreter getImageHeaderFlags
+		screenSize: oldInterpreter savedWindowSize.
+	(dir / (baseName, '.changes')) copyTo: (dir / (baseName, '-spur.changes'))
 ]
 
 { #category : #'bootstrap image' }
@@ -1617,6 +2070,12 @@ SpurBootstrap >> initMaps [
 	sizeSym := rehashSym := classMetaclass := nil
 ]
 
+{ #category : #'initialize-release' }
+SpurBootstrap >> initialize [
+	super initialize.
+	imageType := 'squeak'. "By default, image is Squeak (so Eliot does not kick me :P)"
+]
+
 { #category : #'bootstrap methods' }
 SpurBootstrap >> installModifiedMethods [
 	"Install all the methods in the class-side method prototypes protocol in the relevant classes
@@ -1972,7 +2431,7 @@ SpurBootstrap >> prototypeClassNameMetaSelectorMethodDo: quaternaryBlock [
 	 For now find methods in class-side category #'method prototypes'.
 	 Scheme could be extended to have different protocols for different
 	 Squeak/Pharo versions."
-	(SpurBootstrap class organization listAtCategoryNamed: #'method prototypes') do:
+	self allPrototypeMethods do:
 		[:protoSelector| | method className isMeta |
 		method := SpurBootstrap class >> protoSelector.
 		className := self classNameForPrototypeMethod: method.
@@ -1992,6 +2451,7 @@ SpurBootstrap >> rehashImage [
 	 Enumerate all objects, rehashing those whose class has a bit set in rehashFlags."
 	| n sim rehashFlags |
 	sim := StackInterpreterSimulator onObjectMemory: newHeap.
+	sim imageName: 'spur image'.
 	newHeap coInterpreter: sim.
 	sim bootstrapping: true.
 	sim initializeInterpreter: 0.
@@ -2258,7 +2718,9 @@ SpurBootstrap >> validate [
 		p := o].
 	newHeap setEndOfMemory: savedEndOfMemory.
 	self touch: p.
-	self assert: (n between: map size and: map size + 6). "+ 6 is room for freelists & classTable"
+	self assert: (n between: map size and: map size + (imageType = 'squeak'
+														ifTrue: [6]
+														ifFalse: [8])). "+ 6 or 8 is room for freelists & classTable"
 
 	"check some class properties to ensure the format changes are correct"
 	self assert: (newHeap fixedFieldsOfClassFormat: (newHeap formatOfClass: newHeap classArray)) = 0.
