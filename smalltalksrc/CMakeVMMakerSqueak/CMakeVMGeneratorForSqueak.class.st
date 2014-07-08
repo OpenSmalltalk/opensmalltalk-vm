@@ -74,7 +74,7 @@ CMakeVMGeneratorForSqueak >> generate [
 	config extraVMSettings: self.
 
 	self puts: 'add_executable(' , config executableName, ' ', config executableType, ' ' , self sources , ')'.
-
+self break.
 	intPlugins := self generatePluginConfigs: config internalPlugins internal: true.
 	extPlugins := self generatePluginConfigs: config externalPlugins internal: false.
 
@@ -172,11 +172,11 @@ CMakeVMGeneratorForSqueak >> moduleName [
 { #category : #'as yet unclassified' }
 CMakeVMGeneratorForSqueak >> processPlugins: pluginGenerators [
 	| libs libDeps |
-
 	libs := OrderedCollection new.
 	libDeps := Dictionary new.
 	pluginGenerators do: [:gen |
 		gen doNotGenerate ifFalse: [
+			self  puts: (gen configDotCMake at: (gen plugin name) ifAbsent:[gen configDotCmakeEmpty]).  "plugin injects its config.cmake info"
 			gen isInternal 
 				ifTrue: [
 					libs add: gen plugin moduleName ]
