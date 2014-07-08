@@ -110,6 +110,8 @@ CMakeVMMakerSqueakDeveloperHelp class >> plugins [
 
 TODO explain the design and methodology of the ''plugin extra rules'' protocol in
 
+Explain CMakePluginGeneratorSqueak containing the config.cmake files
+
 
 provide example of mapping from plugins.int to defaultInternalPlugins
 

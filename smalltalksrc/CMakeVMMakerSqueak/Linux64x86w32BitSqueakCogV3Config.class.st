@@ -332,15 +332,7 @@ Linux64x86w32BitSqueakCogV3Config >> configureFlagsBuildMultiThreadedDebug [
 { #category : #plugins }
 Linux64x86w32BitSqueakCogV3Config >> defaultExternalPlugins [
 	""
-		^ #(
-		
-		ThreadedFFIPlugin "SqueakFFIPrims"
-		"UUIDPlugin"
-		"UnixOSProcessPlugin ?? "	
-		JPEGReaderPlugin 
-		JPEGReadWriter2Plugin 			
-		RePlugin
-	)
+	^#()
 ]
 
 { #category : #'cmake directory ' }
