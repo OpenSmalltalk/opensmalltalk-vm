@@ -4364,7 +4364,7 @@ SpurMemoryManager >> followForwarded: objOop [
 		&a -> &b -> c"
 	<api>
 	| referent |
-	self assert: (self isForwarded: objOop).
+	self assert: (self isReallyForwarded: objOop).
 	referent := self fetchPointer: 0 ofMaybeForwardedObject: objOop.
 	[(self isOopForwarded: referent)] whileTrue:
 		[referent := self fetchPointer: 0 ofMaybeForwardedObject: referent].
@@ -6081,6 +6081,14 @@ SpurMemoryManager >> isPureBitsFormat: format [
 ]
 
 { #category : #'object testing' }
+SpurMemoryManager >> isReallyForwarded: objOop [
+	"This version is for asserts.  It does not take advantage of the power-of0two optimization
+	 in isForwarded:."
+	<api>
+	^(self classIndexOf: objOop) = self isForwardedObjectClassIndexPun
+]
+
+{ #category : #'object testing' }
 SpurMemoryManager >> isReallyYoung: oop [
 	<api>
 	"Answer if oop is young."
@@ -7321,7 +7329,8 @@ SpurMemoryManager >> nilUnmarkedWeaklingSlotsIn: aWeakling [
 		[:i| | referent |
 		referent := self fetchPointer: i ofObject: aWeakling.
 		((self isNonImmediate: referent)
-		 and: [self isForwarded: referent]) ifTrue:
+		 and: [(self isFreeObject: referent) not
+		 and: [self isForwarded: referent]]) ifTrue:
 			[referent := self fixFollowedField: i ofObject: aWeakling withInitialValue: referent].
 		((self isImmediate: referent) or: [self isMarked: referent]) ifFalse:
 			[self storePointerUnchecked: i ofObject: aWeakling withValue: nilObj.
