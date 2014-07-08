@@ -548,12 +548,6 @@ Linux64x86w32BitConfig >> externalPluginsBuildMultiThreadedDebug [
 	^ self externalPluginsBuild
 ]
 
-{ #category : #'plugin extra rules' }
-Linux64x86w32BitConfig >> extraPluginSettings: maker [
-	super extraPluginSettings: maker.  
-	maker set: #linkFlags toString: '${linkFlags} -m32'
-]
-
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfig >> extraPluginSettingsBuild: maker [
 	self flag:'tty'. "this dumps the libs into the executable's directory. This breaks the distribution convention squeak has had for a while. However, we probably should handle that in a packaging/redistribution step and not worry about it now" 
@@ -731,6 +725,33 @@ Linux64x86w32BitConfig >> postBuildActionsBuild: aMaker [
 	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
 	aMaker message: 'postBuildActionsBuild: aMaker'.
 	aMaker  include: 'config.cmake'.
+	"# CONFIGURE_PLUGINS"
+	aMaker cmd: 'LIST' params:'REMOVE_DUPLICATES config_vars'.
+	aMaker cmd: 'FILE' params: 'WRITE ${CMAKE_BINARY_DIR}/config.h.in ""'.
+	aMaker puts:'
+FOREACH (var ${config_vars})
+  FILE (APPEND ${CMAKE_BINARY_DIR}/config.h.in "#cmakedefine ${var} @${var}@\n")
+ENDFOREACH (var)'.
+	aMaker cmd: 'CONFIGURE_FILE' params:'${CMAKE_BINARY_DIR}/config.h.in ${CMAKE_BINARY_DIR}/config.h'.
+	"# INCLUDE(build.cmake) <--this tells me the config needs to be up higher
+	# BUILD PLUGINS
+	#ADD_SUBDIRECTORY (${unix}/npsqueak)
+	#SET (cmake ${unix}/../../cmake)
+	#IF (EXISTS ${cmake}/Packages.cmake)
+	#  INCLUDE (${cmake}/Packages.cmake)
+	#ENDIF ()
+	"
+	aMaker cmd: 'GET_CMAKE_PROPERTY' params: 'tmp VARIABLES'.
+	aMaker cmd: 'LIST' params: 'REMOVE_ITEM tmp tmp'.
+	aMaker cmd: 'LIST' params: 'SORT tmp'.
+	aMaker cmd: 'FILE' params: 'WRITE ${CMAKE_BINARY_DIR}/config.h.status ""'.
+	aMaker puts:'
+FILE (WRITE ${CMAKE_BINARY_DIR}/config.status "")
+FOREACH (var ${tmp})
+  FILE (APPEND ${CMAKE_BINARY_DIR}/config.status "${var}=${${var}}\n")
+ENDFOREACH ()'
+
+
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -897,10 +918,19 @@ Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
 	"
 	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild:'"
 	aMaker message: 'setGlobalOptionsAfterDetermineSystemBuild: aMaker'.	
-	aMaker  include: 'Utils.cmake'.
-	aMaker  include: 'Plugins.cmake'
+	aMaker  
+		include: 'Utils.cmake';
+	      include: 'Plugins.cmake';
+		include:	'TestBigEndian';
+		include:	'CheckIncludeFile';
+		include:	'CheckLibraryExists';
+		include:	'CheckTypeSize';
+		include:	'CheckFunctionExists';
+		include:	'CheckVariableExists';
+		include:	'CheckStructHasMember';
+		include:	'FindPkgConfig'.
 
-"	aMaker set: 'CMAKE_FIND_ROOT_PATH' to: '/usr/lib  ' "	
+
 ]
 
 { #category : #'cmake buildType redirects' }

@@ -263,7 +263,7 @@ CMakeVMMakerSqueakRedirectMethodsTest >> testThirdPartyLibs [
 							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
 							buildTypes do:[:buildType |
 								o configureForBuildType: buildType.
-								self assert:(o  thirdPartyLibs isKindOf: Collection).
+								self assert:(o  thirdpartyLibs isKindOf: Collection).
 								]]]].
 
 
