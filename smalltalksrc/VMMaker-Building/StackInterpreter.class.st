@@ -10237,8 +10237,10 @@ StackInterpreter >> printOopShortInner: oop [
 		[^self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 						ifTrue: [' is misaligned']
 						ifFalse: [self whereIs: oop])].
-	(objectMemory isOopForwarded: oop) ifTrue:
-		[^self printHex: oop; print: ' is a forwarder to '; printHex: (objectMemory followForwarded: oop)].
+	(objectMemory isFreeObject: oop) ifTrue:
+		[^self print: ' is a free chunk'].
+	(objectMemory isForwarded: oop) ifTrue:
+		[^self print: ' is a forwarder to '; printHex: (objectMemory followForwarded: oop)].
 	(self isFloatObject: oop) ifTrue:
 		[^self printFloat: (self dbgFloatValueOf: oop)].
 	classOop := objectMemory fetchClassOfNonImm: oop.
