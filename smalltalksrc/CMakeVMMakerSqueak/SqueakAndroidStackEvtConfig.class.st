@@ -338,10 +338,7 @@ SqueakAndroidStackEvtConfig >> extraPluginSettingsBuildMultiThreadedDebug: aMake
 { #category : #'cmake buildType redirects' }
 SqueakAndroidStackEvtConfig >> extraVMSettingsBuild: aMaker [
 	| versionC |
-	self generateConfigH.
-	
-	"add a generated version.c"
-	
+
 	versionC := 'version.c'.
 
 	aMaker 

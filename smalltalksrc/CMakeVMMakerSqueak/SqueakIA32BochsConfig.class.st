@@ -32,55 +32,6 @@ SqueakIA32BochsConfig >> availableBuildTypes [
 
 ]
 
-{ #category : #'cmake buildType redirects' }
-SqueakIA32BochsConfig >> configHBuild [
-	"does nothing. included for framework consistency/testing 
-	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'configHBuild'
-	"
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakIA32BochsConfig >> configHBuildAssert [
-	^ self configHBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakIA32BochsConfig >> configHBuildAssertITimerHeartbeat [
-	^ self configHBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakIA32BochsConfig >> configHBuildDebug [
-	^ self configHBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakIA32BochsConfig >> configHBuildDebugITimerHeartbeat [
-	^ self configHBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakIA32BochsConfig >> configHBuildITimerHeartbeat [
-	^ self configHBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakIA32BochsConfig >> configHBuildMultiThreaded [
-	^ self configHBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakIA32BochsConfig >> configHBuildMultiThreadedAssert [
-	^ self configHBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakIA32BochsConfig >> configHBuildMultiThreadedDebug [
-	^ self configHBuild
-]
-
 { #category : #plugins }
 SqueakIA32BochsConfig >> defaultExternalPlugins [
 	^ #()
