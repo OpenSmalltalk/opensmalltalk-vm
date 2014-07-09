@@ -1421,7 +1421,7 @@ CogARMCompiler >> hasPCRegister [
 { #category : #'inline cacheing' }
 CogARMCompiler >> inlineCacheTagAt: callSiteReturnAddress [
 	"Answer the inline cache tag for the return address of a send."
-	^self literalBeforeFollowingAddress: callSiteReturnAddress -4  
+	^self literalBeforeFollowingAddress: callSiteReturnAddress - 4
 ]
 
 { #category : #'inline cacheing' }

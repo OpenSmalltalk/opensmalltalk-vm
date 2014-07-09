@@ -5672,7 +5672,7 @@ Cogit >> generateNewspeakRuntime [
 										arg: SendNumArgsReg
 										result: ReceiverResultReg.
 	"Cached push implicit receiver implementation.  Caller looks like
-				mov selector, ClassReg
+				mov selector, SendNumArgsReg
 				call ceImplicitReceiver
 				br continue
 		Lclass:	.word
