@@ -376,7 +376,7 @@ CogObjectRepresentationForSqueakV3 >> genGetInlineCacheClassTagFrom: sourceReg i
 	"Get header word in destReg"
 	cogit MoveMw: 0 r: sourceReg R: destReg.
 	"Extract the compact class field, and if non-zero use it as the tag.."
-	self assert: self compactClassFieldMask << objectMemory compactClassFieldLSB < objectMemory nilObject.
+	self assert: self compactClassFieldMask << objectMemory compactClassFieldLSB < objectMemory nilObject asUnsignedInteger.
 	cogit AndCq: self compactClassFieldMask << objectMemory compactClassFieldLSB R: destReg.
 	jumpCompact := cogit JumpNonZero: 0.
 	cogit MoveMw: objectMemory classFieldOffset r: sourceReg R: destReg.
