@@ -2676,7 +2676,12 @@ CCodeGenerator >> generateValue: aTSendNode on: aStream indent: level [
 	substitutionDict := Dictionary new: aTSendNode args size * 2.
 	aTSendNode receiver args with: aTSendNode args do:
 		[ :argName :exprNode |
-		substitutionDict at: argName put: exprNode].
+		exprNode isLeaf
+			ifTrue: [substitutionDict at: argName put: exprNode]
+			ifFalse:
+				[aStream nextPutAll: argName; nextPutAll: ' = '.
+				 exprNode emitCCodeAsExpressionOn: aStream level: level generator: self.
+				 aStream nextPut: $; ; crtab: level]].
 	substitution
 		bindVariablesIn: substitutionDict;
 		emitCCodeOn: aStream level: level generator: self.

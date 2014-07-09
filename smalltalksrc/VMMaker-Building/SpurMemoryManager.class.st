@@ -1270,7 +1270,9 @@ SpurMemoryManager >> allInstancesOf: aClass [
 							[self setIsMarkedOf: obj to: false]]]]].
 	self assert: self allObjectsUnmarked.
 	self assert: (self isEmptyObjStack: markStack).
-	self emptyObjStack: weaklingStack.
+	MarkObjectsForEnumerationPrimitives
+		ifTrue: [self emptyObjStack: weaklingStack]
+		ifFalse: [self assert: (self isEmptyObjStack: weaklingStack)].
 	(count > (ptr - start / self bytesPerSlot) "not enough room"
 	 or: [limit ~= ptr and: [limit - ptr <= self allocationUnit]]) ifTrue: "can't split a single word"
 		[self freeObject: freeChunk.
@@ -1368,7 +1370,9 @@ SpurMemoryManager >> allObjects [
 							[self setIsMarkedOf: obj to: false]]]]].
 	self assert: self allObjectsUnmarked.
 	self assert: (self isEmptyObjStack: markStack).
-	self emptyObjStack: weaklingStack.
+	MarkObjectsForEnumerationPrimitives
+		ifTrue: [self emptyObjStack: weaklingStack]
+		ifFalse: [self assert: (self isEmptyObjStack: weaklingStack)].
 	self assert: count >= self numSlotsMask.
 	(count > (ptr - start / self bytesPerSlot) "not enough room"
 	 or: [limit ~= ptr and: [limit - ptr <= self allocationUnit]]) ifTrue: "can't split a single word"
@@ -1541,6 +1545,18 @@ SpurMemoryManager >> allPastSpaceObjectsDo: aBlock [
 		[:objOop|
 		 self assert: (self isEnumerableObjectNoAssert: objOop).
 		 aBlock value: objOop]
+]
+
+{ #category : #'weakness and ephemerality' }
+SpurMemoryManager >> allStrongSlotsOfWeaklingAreMarked: aWeakling [
+	"N.B. generateToByDoLimitExpression:negative:on: guards against (unsigned)0 - 1 going +ve"
+	0 to: (self numStrongSlotsOfWeakling: aWeakling) - 1 do:
+		[:i| | referent |
+		referent := self fetchPointer: i ofObject: aWeakling.
+		(self isNonImmediate: referent) ifTrue:
+			[(self isMarked: referent) ifFalse:
+				[^false]]].
+	^true
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -3725,7 +3741,7 @@ SpurMemoryManager >> emptyObjStack: objStack [
 	objStack = nilObj ifTrue:
 		[^self].
 	self assert: (self isValidObjStack: objStack).
-	self storePointer: ObjStackTopx ofObject: objStack withValue: 0.
+	self storePointer: ObjStackTopx ofObjStack: objStack withValue: 0.
 	nextPage := self fetchPointer: ObjStackNextx ofObject: objStack.
 	[nextPage ~= 0] whileTrue:
 		[nextNextPage := self fetchPointer: ObjStackNextx ofObject: nextPage.
@@ -4364,7 +4380,7 @@ SpurMemoryManager >> followForwarded: objOop [
 		&a -> &b -> c"
 	<api>
 	| referent |
-	self assert: (self isReallyForwarded: objOop).
+	self assert: (self isUnambiguouslyForwarder: objOop).
 	referent := self fetchPointer: 0 ofMaybeForwardedObject: objOop.
 	[(self isOopForwarded: referent)] whileTrue:
 		[referent := self fetchPointer: 0 ofMaybeForwardedObject: referent].
@@ -5815,6 +5831,7 @@ SpurMemoryManager >> isForwarded: objOop [
 	 at the cost of this being ambiguous with free chunks.  So either never apply this to free chunks
 	 or guard with (self isFreeObject: foo) not.  So far the idiom has been to guard with isFreeObject:"
 	<api>
+	self assert: (self isFreeObject: objOop) not.
 	^(self longAt: objOop) noMask: self classIndexMask - self isForwardedObjectClassIndexPun
 ]
 
@@ -6081,14 +6098,6 @@ SpurMemoryManager >> isPureBitsFormat: format [
 ]
 
 { #category : #'object testing' }
-SpurMemoryManager >> isReallyForwarded: objOop [
-	"This version is for asserts.  It does not take advantage of the power-of0two optimization
-	 in isForwarded:."
-	<api>
-	^(self classIndexOf: objOop) = self isForwardedObjectClassIndexPun
-]
-
-{ #category : #'object testing' }
 SpurMemoryManager >> isReallyYoung: oop [
 	<api>
 	"Answer if oop is young."
@@ -6137,6 +6146,14 @@ SpurMemoryManager >> isSemaphoreObj: anObj [
 SpurMemoryManager >> isSemaphoreOop: anOop [
 	^(self isNonImmediate: anOop)
 	 and: [self isSemaphoreObj: anOop]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isUnambiguouslyForwarder: objOop [
+	"This version is private to SpurMemoryManager (for asserts, etc).  It does not
+	 take advantage of the power-of0two optimization in isForwarded:."
+	<api>
+	^(self classIndexOf: objOop) = self isForwardedObjectClassIndexPun
 ]
 
 { #category : #'class table' }
@@ -6883,6 +6900,7 @@ SpurMemoryManager >> markAndTraceWeaklingsFrom: startIndex [
 	^self objStack: weaklingStack from: startIndex do:
 		[:weakling|
 		 self markAndTraceClassOf: weakling.
+		"N.B. generateToByDoLimitExpression:negative:on: guards against (unsigned)0 - 1 going +ve"
 		 0 to: (self numStrongSlotsOfWeakling: weakling) - 1 do:
 			[:i| | field |
 			field := self fetchPointer: i ofObject: weakling.
@@ -6945,7 +6963,9 @@ SpurMemoryManager >> markWeaklingsAndMarkAndFireEphemerons [
 	numTracedWeaklings := 0.
 	[coInterpreter markAndTraceUntracedReachableStackPages.
 	 coInterpreter markAndTraceMachineCodeOfMarkedMethods.
-	 numTracedWeaklings := self markAndTraceWeaklingsFrom: numTracedWeaklings.
+	 "Make sure all reached weaklings have their string slots traced before firing ephemerons..."
+	 [numTracedWeaklings := self markAndTraceWeaklingsFrom: numTracedWeaklings.
+	  (self sizeOfObjStack: weaklingStack) > numTracedWeaklings] whileTrue.
 	 self noUnscannedEphemerons ifTrue:
 		[coInterpreter
 			markAndTraceUntracedReachableStackPages;
@@ -7313,8 +7333,9 @@ SpurMemoryManager >> nilUnmarkedWeaklingSlots [
 	weaklingStack = nilObj ifTrue:
 		[^self].
 	self objStack: weaklingStack from: 0 do:
-		[:weakling|
-		(self nilUnmarkedWeaklingSlotsIn: weakling) ifTrue:
+		[:weakling| | anyUnmarked |
+		anyUnmarked := self nilUnmarkedWeaklingSlotsIn: weakling.
+		anyUnmarked ifTrue:
 			[coInterpreter signalFinalization: weakling]].
 	self emptyObjStack: weaklingStack
 ]
@@ -7323,18 +7344,20 @@ SpurMemoryManager >> nilUnmarkedWeaklingSlots [
 SpurMemoryManager >> nilUnmarkedWeaklingSlotsIn: aWeakling [
 	"Nil the unmarked slots in aWeakling and
 	 answer if any unmarked slots were found."
+	<inline: true>
 	| anyUnmarked |
 	anyUnmarked := false.
+	self assert: (self allStrongSlotsOfWeaklingAreMarked: aWeakling).
+	"N.B. generateToByDoLimitExpression:negative:on: guards against (unsigned)0 - 1 going +ve"
 	(self numStrongSlotsOfWeakling: aWeakling) to: (self numSlotsOf: aWeakling) - 1 do:
 		[:i| | referent |
 		referent := self fetchPointer: i ofObject: aWeakling.
-		((self isNonImmediate: referent)
-		 and: [(self isFreeObject: referent) not
-		 and: [self isForwarded: referent]]) ifTrue:
-			[referent := self fixFollowedField: i ofObject: aWeakling withInitialValue: referent].
-		((self isImmediate: referent) or: [self isMarked: referent]) ifFalse:
-			[self storePointerUnchecked: i ofObject: aWeakling withValue: nilObj.
-			 anyUnmarked := true]].
+		(self isNonImmediate: referent) ifTrue:
+			[(self isUnambiguouslyForwarder: referent) ifTrue:
+				[referent := self fixFollowedField: i ofObject: aWeakling withInitialValue: referent].
+			 ((self isImmediate: referent) or: [self isMarked: referent]) ifFalse:
+				[self storePointerUnchecked: i ofObject: aWeakling withValue: nilObj.
+				 anyUnmarked := true]]].
 	^anyUnmarked
 ]
 
@@ -7537,7 +7560,7 @@ SpurMemoryManager >> numberOfForwarders [
 	n := 0.
 	self allHeapEntitiesDo:
 		[:o|
-		((self isForwarded: o) and: [(self isFreeObject: o) not]) ifTrue:
+		(self isUnambiguouslyForwarder: o) ifTrue:
 			[n := n + 1]].
 	^n
 ]
@@ -7822,7 +7845,7 @@ SpurMemoryManager >> popObjStack: objStack [
 					[(MarkStackRecord last first = #push and: [MarkStackRecord last last = top])
 						ifTrue: [MarkStackRecord removeLast]
 						ifFalse: [MarkStackRecord addLast: {#pop. top}]]]].
-	self storePointer: ObjStackTopx ofObject: objStack withValue: topx.
+	self storePointer: ObjStackTopx ofObjStack: objStack withValue: topx.
 	(topx = 0
 	 and: [(nextPage := self fetchPointer: ObjStackNextx ofObject: objStack) ~= 0])
 		ifTrue:
@@ -9035,6 +9058,19 @@ SpurMemoryManager >> sizeOfFree: objOop [
 	 Do *not* use internally."
 	self assert: (self isFreeObject: objOop).
 	^self bytesInObject: objOop
+]
+
+{ #category : #'obj stacks' }
+SpurMemoryManager >> sizeOfObjStack: objStack [
+	| total objStackPage |
+	objStack = nilObj ifTrue: [^0].
+	total := self fetchPointer: ObjStackTopx ofObject: objStack.
+	objStackPage := objStack.
+	[objStackPage := self fetchPointer: ObjStackNextx ofObject: objStackPage.
+	 objStackPage ~= 0] whileTrue:
+		[total := total + ObjStackLimit.
+		 self assert: (self fetchPointer: ObjStackTopx ofObject: objStackPage) = ObjStackLimit].
+	^total
 ]
 
 { #category : #'object access' }
