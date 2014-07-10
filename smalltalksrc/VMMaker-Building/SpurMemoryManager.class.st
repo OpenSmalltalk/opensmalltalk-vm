@@ -2074,6 +2074,21 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes suchThat: a
 	^nil
 ]
 
+{ #category : #'sista support' }
+SpurMemoryManager >> allocatePinnedSlots: nSlots [
+	<api>
+	<option: #NewspeakVM>
+	<option: #SistaStackToRegisterMappingCogit>
+	| obj |
+	obj := self allocateSlotsForPinningInOldSpace: nSlots
+				bytes: (self objectBytesForSlots: nSlots)
+				format: self wordIndexableFormat
+				classIndex: 	self wordSizeClassIndexPun.
+	obj ifNotNil:
+		[self fillObj: obj numSlots: nSlots with: 0].
+	^obj
+]
+
 { #category : #allocation }
 SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex [
 	"Allocate an object with numSlots space.  If there is room beneath scavengeThreshold
@@ -2686,7 +2701,7 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs classIndice
 					[classOop := self classOrNilAtIndex: (classIndex := self classIndexOf: obj).
 					 (classIndicesShouldBeValid
 					  and: [classOop = nilObj
-					  and: [(self isHiddenObj: obj) not]]) ifTrue:
+					  and: [classIndex > self lastClassIndexPun]]) ifTrue:
 						[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; print: (classOop ifNil: ['nil'] ifNotNil: ['nilObj']); cr.
 						 self eek.
 						 ok := false].

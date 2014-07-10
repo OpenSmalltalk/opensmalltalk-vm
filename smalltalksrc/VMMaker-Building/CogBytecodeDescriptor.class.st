@@ -17,7 +17,8 @@ Class {
 		'isBlockCreation',
 		'isMapped',
 		'isMappedInBlock',
-		'isExtension'
+		'isExtension',
+		'hasIRC'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -57,6 +58,20 @@ CogBytecodeDescriptor >> generator: anObject [
 	"Set the value of generator"
 
 	^generator := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> hasIRC [
+	"Answer the value of hasIRC"
+
+	^ hasIRC
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> hasIRC: anObject [
+	"Set the value of hasIRC"
+
+	^hasIRC := anObject
 ]
 
 { #category : #accessing }
