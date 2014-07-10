@@ -28,18 +28,6 @@ Spur64BitMemoryManager >> addressAfter: objOop [
 	^objOop + self baseHeaderSize + slotBytes
 ]
 
-{ #category : #'sista support' }
-Spur64BitMemoryManager >> allocatePinnedCounters: nCounters [
-	<api>
-	<option: #SistaStackToRegisterMappingCogit>
-	| numSlots |
-	numSlots := nCounters + 1 // 2.
-	^self allocateSlotsForPinningInOldSpace: numSlots
-			bytes: (self objectBytesForSlots: numSlots)
-			format: self firstLongFormat + (nCounters bitAnd: 1)
-			classIndex: 	self thirtyTwoBitLongsClassIndexPun
-]
-
 { #category : #allocation }
 Spur64BitMemoryManager >> allocateSlotsForPinningInOldSpace: numSlots bytes: totalBytes format: formatField classIndex: classIndex [
 	"Answer the oop of a chunk of space in oldSpace with numSlots slots.  Try and

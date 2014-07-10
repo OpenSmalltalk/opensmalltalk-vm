@@ -81,8 +81,8 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures 
 		(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: isMappedInBlock -1)
 		(1 125 125 genReturnTopFromBlock		return needsFrameNever: -1)
 
-		(3 126 126 genDynamicSuperSendBytecode isMapped)		"Newspeak"
-		(2 127 127 genPushImplicitReceiverBytecode isMapped)	"Newspeak"
+		(3 126 126 genDynamicSuperSendBytecode isMapped)			"Newspeak"
+		(2 127 127 genPushImplicitReceiverBytecode isMapped hasIRC)	"Newspeak"
 
 		(2 128 128 extendedPushBytecode needsFrameNever: 1)
 		(2 129 129 extendedStoreBytecode)
@@ -155,7 +155,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(1 112 127 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 128 143 genSendLiteralSelector1ArgBytecode isMapped)
 		(1 144 159 genSendLiteralSelector2ArgsBytecode isMapped)
-		(1 160 175	genSendAbsentImplicit0ArgsBytecode isMapped)
+		(1 160 175	genSendAbsentImplicit0ArgsBytecode isMapped hasIRC)
 
 		(1 176 183 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
 		(1 184 191 genStoreAndPopTemporaryVariableBytecode)
@@ -193,7 +193,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 
 		(2 238 238 genExtSendBytecode isMapped)
 		(2 239 239 genExtSendSuperBytecode isMapped)
-		(2 240 240 genExtSendAbsentImplicitBytecode isMapped)
+		(2 240 240 genExtSendAbsentImplicitBytecode isMapped hasIRC)
 		(2 241 241 genExtSendAbsentDynamicSuperBytecode isMapped)
 
 		(2 242 242 genExtUnconditionalJump	branch isMapped "because of interrupt check" v4:Long:Branch:Distance:)
@@ -900,7 +900,10 @@ SimpleStackBasedCogit >> compileFrameBuild [
 			 self MoveCq: 0 R: SendNumArgsReg.
 			 self Jump: stackOverflowCall.
 			 jumpSkip jmpTarget: (stackCheckLabel := self Label)].
-	self annotateBytecode: stackCheckLabel
+	self annotateBytecode: stackCheckLabel.
+	self cppIf: #NewspeakVM ifTrue:
+		[numIRCs > 0 ifTrue:
+		 	[self PrefetchAw: theIRCs]]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -1664,13 +1667,20 @@ SimpleStackBasedCogit >> genFastPrimTraceUsing: r1 and: r2 [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genGetImplicitReceiverFor: selector forPush: forPushSendBar [
-	"Cached implicit receiver implementation.  Caller looks like
-		mov selector, ClassReg
+	"Cached implicit receiver implementation.  If objectRepresentation doesn't support
+	 pinning then caller looks like
+				mov selector, ClassReg
 				call ceImplicitReceiverTrampoline
 				br continue
 		Lclass	.word
 		Lmixin:	.word
 		continue:
+	 If objectRepresentation supports pinning then caller looks like
+				mov Lclass, Arg1Reg
+				mov selector, SendNumArgsReg
+				call ceImplicitReceiver
+	 and Lclass: .word; Lmixin: .word is somewhere on the heap.
+
 	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
 	 If 0, answer the actual receiver.  This is done in the trampoline.
 	 See generateNewspeakRuntime."
@@ -1682,9 +1692,16 @@ SimpleStackBasedCogit >> genGetImplicitReceiverFor: selector forPush: forPushSen
 	 or PushImplicitReceiver.  See isPCMappedAnnotation:alternateInstructionSet:"
 	self assert: forPushSendBar = (self isPCMappedAnnotation: IsNSSendCall
 										alternateInstructionSet: bytecodeSetOffset > 0).
+	self assert: (self noAssertMethodClassAssociationOf: methodObj) ~= objectMemory nilObject.
+	self assert: needsFrame.
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
-	self assert: needsFrame.
+	objectRepresentation canPinObjects ifTrue:
+		[self MoveCw: theIRCs + (2 * BytesPerOop * indexOfIRC) R: Arg1Reg.
+		 self MoveCw: selector R: SendNumArgsReg.
+		 self CallNewspeakSend: ceImplicitReceiverTrampoline.
+		 indexOfIRC := indexOfIRC + 1.
+		 ^0].
 	self MoveCw: selector R: SendNumArgsReg.
 	self CallNewspeakSend: ceImplicitReceiverTrampoline.
 	skip := self Jump: 0.

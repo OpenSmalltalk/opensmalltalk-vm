@@ -10,6 +10,19 @@ CogObjectRepresentationFor32BitSpur class >> defaultObjectMemoryClass [
 	^Spur32BitCoMemoryManager
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentationFor32BitSpur >> allocateCounters: nCounters [
+	"On Spur allocate the counters on the heap as pinned objects.
+	 Each counter occupies 32-bits.  The number of counters can
+	 be derived from the number of slots in the obj."
+	<inline: true>
+	| objOop |
+	objOop := objectMemory allocatePinnedSlots: nCounters.
+	^objOop
+		ifNil: [0]
+		ifNotNil: [objOop + objectMemory baseHeaderSize]
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genAddSmallIntegerTagsTo: aRegister [
 	cogit AddCq: 1 R: aRegister.

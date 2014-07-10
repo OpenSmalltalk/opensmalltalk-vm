@@ -2,7 +2,7 @@ Class {
 	#name : #NewspeakCogMethod,
 	#superclass : #CogMethod,
 	#instVars : [
-		'nextMethod'
+		'nextMethodOrIRCs'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -24,15 +24,15 @@ NewspeakCogMethod class >> structTypeName [
 ]
 
 { #category : #accessing }
-NewspeakCogMethod >> nextMethod [
-	"Answer the value of nextMethod"
+NewspeakCogMethod >> nextMethodOrIRCs [
+	"Answer the value of nextMethodOrIRCs"
 
-	^ nextMethod
+	^ nextMethodOrIRCs
 ]
 
 { #category : #accessing }
-NewspeakCogMethod >> nextMethod: anObject [
-	"Set the value of nextMethod"
+NewspeakCogMethod >> nextMethodOrIRCs: anObject [
+	"Set the value of nextMethodOrIRCs"
 
-	^nextMethod := anObject
+	^nextMethodOrIRCs := anObject
 ]

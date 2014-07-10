@@ -10,15 +10,13 @@ NewspeakCogMethodSurrogate64 class >> alignedByteSize [
 ]
 
 { #category : #accessing }
-NewspeakCogMethodSurrogate64 >> nextMethod [
-	| v |
-	^(v := memory unsignedLongLongAt: address + 33 + baseHeaderSize) ~= 0 ifTrue:
-		[cogit cCoerceSimple: v to: #'CogMethod *']
+NewspeakCogMethodSurrogate64 >> nextMethodOrIRCs [
+	^memory unsignedLongLongAt: address + 33 + baseHeaderSize
 ]
 
 { #category : #accessing }
-NewspeakCogMethodSurrogate64 >> nextMethod: aValue [
+NewspeakCogMethodSurrogate64 >> nextMethodOrIRCs: aValue [
 	^memory
 		unsignedLongLongAt: address + baseHeaderSize + 33
-		put: ((aValue ifNotNil: [aValue asUnsignedInteger] ifNil: [0]))
+		put: aValue
 ]

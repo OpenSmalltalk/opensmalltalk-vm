@@ -580,6 +580,14 @@ CogAbstractInstruction >> hasPCRegister [
 	^false
 ]
 
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> implicitReceiveCacheAt: callSiteReturnAddress [
+	"Answer the implicit receiver cache for the return address
+	 of a call to the ceImplicitReceiverTrampoline."
+	<option: #NewspeakVM>
+	^self subclassResponsibility
+]
+
 { #category : #initialization }
 CogAbstractInstruction >> initialize [
 	"This method intializes the Smalltalk instance.  The C instance is merely a struct and doesn't need initialization."

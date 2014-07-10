@@ -259,8 +259,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV3PlusClo
 		(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: isMappedInBlock -1)
 		(1 125 125 genReturnTopFromBlock		return needsFrameNever: -1)
 
-		(3 126 126 genDynamicSuperSendBytecode isMapped)		"Newspeak"
-		(2 127 127 genPushImplicitReceiverBytecode isMapped)	"Newspeak"
+		(3 126 126 genDynamicSuperSendBytecode isMapped)			"Newspeak"
+		(2 127 127 genPushImplicitReceiverBytecode isMapped hasIRC)	"Newspeak"
 
 		(2 128 128 extendedPushBytecode needsFrameNever: 1)
 		(2 129 129 extendedStoreBytecode)
@@ -366,7 +366,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(1 112 127 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 128 143 genSendLiteralSelector1ArgBytecode isMapped)
 		(1 144 159 genSendLiteralSelector2ArgsBytecode isMapped)
-		(1 160 175	genSendAbsentImplicit0ArgsBytecode isMapped)
+		(1 160 175	genSendAbsentImplicit0ArgsBytecode isMapped hasIRC)
 
 		(1 176 183 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
 		(1 184 191 genStoreAndPopTemporaryVariableBytecode)
@@ -404,7 +404,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 
 		(2 238 238 genExtSendBytecode isMapped)
 		(2 239 239 genExtSendSuperBytecode isMapped)
-		(2 240 240 genExtSendAbsentImplicitBytecode isMapped)
+		(2 240 240 genExtSendAbsentImplicitBytecode isMapped hasIRC)
 		(2 241 241 genExtSendAbsentDynamicSuperBytecode isMapped)
 
 		(2 242 242 genExtUnconditionalJump	branch isMapped "because of interrupt check" v4:Long:Branch:Distance:)
@@ -560,103 +560,6 @@ StackToRegisterMappingCogit class >> mustBeGlobal: var [
 	   or: [#('ceCallCogCodePopReceiverArg0Regs' 'ceCallCogCodePopReceiverArg1Arg0Regs'
 			'realCECallCogCodePopReceiverArg0Regs' 'realCECallCogCodePopReceiverArg1Arg0Regs'
 			'ceCall0ArgsPIC' 'ceCall1ArgsPIC' 'ceCall2ArgsPIC') includes: var]
-]
-
-{ #category : #'class initialization' }
-StackToRegisterMappingCogit class >> newInitializeBytecodeTableForNewspeakV3PlusClosures [
-	"StackToRegisterMappingCogit newInitializeBytecodeTableForNewspeakV3PlusClosures"
-
-	isPushNilFunction := #v3:Is:Push:Nil:.
-	pushNilSizeFunction := #v3PushNilSize:.
-	NSSendIsPCAnnotated := true. "IsNSSendCall used by PushImplicitReceiver"
-	self flag:
-'Special selector send class must be inlined to agree with the interpreter, which
- inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
- class is inlined there will be an MNU.  It must be that the Cointerpreter and Cogit
- have identical semantics.  We get away with not hardwiring the other special
- selectors either because in the Cointerpreter they are not inlined or because they
- are inlined only to instances of classes for which there will always be a method.'.
-	self generatorTableFrom: #(
-		(1    0   15 genPushReceiverVariableBytecode needsFrameNever: 1)
-		(1  16   31 genPushTemporaryVariableBytecode needsFrameIfMod16GENumArgs: 1)
-		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
-		(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1)
-		(1  96 103 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
-		(1 104 111 genStoreAndPopTemporaryVariableBytecode)
-		(1 112 112 genPushReceiverBytecode needsFrameNever: 1)
-		(1 113 113 genPushConstantTrueBytecode needsFrameNever: 1)
-		(1 114 114 genPushConstantFalseBytecode needsFrameNever: 1)
-		(1 115 115 genPushConstantNilBytecode needsFrameNever: 1)
-		(1 116 119 genPushQuickIntegerConstantBytecode needsFrameNever: 1)
-		"method returns in blocks need a frame because of nonlocalReturn:through:"
-		(1 120 120 genReturnReceiver				return needsFrameIfInBlock: isMappedInBlock 0)
-		(1 121 121 genReturnTrue					return needsFrameIfInBlock: isMappedInBlock 0)
-		(1 122 122 genReturnFalse					return needsFrameIfInBlock: isMappedInBlock 0)
-		(1 123 123 genReturnNil					return needsFrameIfInBlock: isMappedInBlock 0)
-		(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: isMappedInBlock -1)
-		(1 125 125 genReturnTopFromBlock		return needsFrameNever: -1)
-
-		(3 126 126 genDynamicSuperSendBytecode isMapped)		"Newspeak"
-		(2 127 127 genPushImplicitReceiverBytecode isMapped)	"Newspeak"
-
-		(2 128 128 extendedPushBytecode needsFrameNever: 1)
-		(2 129 129 extendedStoreBytecode)
-		(2 130 130 extendedStoreAndPopBytecode)
-		(2 131 131 genExtendedSendBytecode isMapped)
-		(3 132 132 doubleExtendedDoAnythingBytecode isMapped)
-		(2 133 133 genExtendedSuperBytecode isMapped)
-		(2 134 134 genSecondExtendedSendBytecode isMapped)
-		(1 135 135 genPopStackBytecode needsFrameNever: -1)
-		(1 136 136 duplicateTopBytecode needsFrameNever: 1)
-
-		(1 137 137 genPushActiveContextBytecode)
-		(2 138 138 genPushNewArrayBytecode)
-
-		(2 139 139 genPushExplicitOuterReceiverBytecode isMapped)	"Newspeak"
-
-		(3 140 140 genPushRemoteTempLongBytecode)
-		(3 141 141 genStoreRemoteTempLongBytecode)
-		(3 142 142 genStoreAndPopRemoteTempLongBytecode)
-		(4 143 143 genPushClosureCopyCopiedValuesBytecode block v3:Block:Code:Size:)
-
-		(1 144 151 genShortUnconditionalJump			branch v3:ShortForward:Branch:Distance:)
-		(1 152 159 genShortJumpIfFalse					branch isBranchFalse isMapped "because of mustBeBoolean"
-															v3:ShortForward:Branch:Distance:)
-		(2 160 163 genLongUnconditionalBackwardJump	branch isMapped "because of interrupt check"
-															v3:Long:Branch:Distance:)
-		(2 164 167 genLongUnconditionalForwardJump		branch v3:Long:Branch:Distance:)
-		(2 168 171 genLongJumpIfTrue					branch isBranchTrue isMapped "because of mustBeBoolean"
-															v3:LongForward:Branch:Distance:)
-		(2 172 175 genLongJumpIfFalse					branch isBranchFalse isMapped "because of mustBeBoolean"
-															v3:LongForward:Branch:Distance:)
-
-		(1 176 176 genSpecialSelectorArithmetic isMapped AddRR)
-		(1 177 177 genSpecialSelectorArithmetic isMapped SubRR)
-		(1 178 178 genSpecialSelectorComparison isMapped JumpLess)
-		(1 179 179 genSpecialSelectorComparison isMapped JumpGreater)
-		(1 180 180 genSpecialSelectorComparison isMapped JumpLessOrEqual)
-		(1 181 181 genSpecialSelectorComparison isMapped JumpGreaterOrEqual)
-		(1 182 182 genSpecialSelectorComparison isMapped JumpZero)
-		(1 183 183 genSpecialSelectorComparison isMapped JumpNonZero)
-		(1 184 189 genSpecialSelectorSend isMapped)	 " #* #/ #\\ #@ #bitShift: //"
-		(1 190 190 genSpecialSelectorArithmetic isMapped AndRR)
-		(1 191 191 genSpecialSelectorArithmetic isMapped OrRR)
-		(1 192 197 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 199 199 genSpecialSelectorClass needsFrameIfStackGreaterThanOne: notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 200 207 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
-		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
-		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
-		(1 240 255 genSendLiteralSelector2ArgsBytecode isMapped))
-]
-
-{ #category : #'class initialization' }
-StackToRegisterMappingCogit class >> newInitializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid [
-	"StackToRegisterMappingCogit newInitializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid"
-
-	super newInitializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid.
-	isPushNilFunction := #v3or4:Is:Push:Nil:.
-	pushNilSizeFunction := #v3or4PushNilSize:
 ]
 
 { #category : #'class initialization' }
@@ -1182,7 +1085,7 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 StackToRegisterMappingCogit >> compileBlockBodies [
 	<inline: false>
 	| result compiledBlocksCount blockStart savedNeedsFrame savedNumArgs savedNumTemps
-	  initialStackPtr initialOpcodeIndex initialAnnotationIndex |
+	  initialStackPtr initialOpcodeIndex initialAnnotationIndex initialIndexOfIRC |
 	<var: #blockStart type: #'BlockStart *'>
 	self assert: blockCount > 0.
 	"scanBlock: in compileBlockEntry: sets both of these appropriately for each block."
@@ -1196,6 +1099,8 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 		 self scanBlock: blockStart.
 		 initialOpcodeIndex := opcodeIndex.
 		 initialAnnotationIndex := annotationIndex.
+		 self cppIf: #NewspeakVM ifTrue:
+			[initialIndexOfIRC := indexOfIRC].
 		 [self compileBlockEntry: blockStart.
 		  initialStackPtr := simStackPtr.
 		  (result := self compileAbstractInstructionsFrom: blockStart startpc + ((self pushNilSize: methodObj) * blockStart numInitialNils)
@@ -1220,7 +1125,9 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 										at: i
 										put: (processor abstractInstructionCompilerClass for: self)]].
 				 opcodeIndex := initialOpcodeIndex.
-				 annotationIndex := initialAnnotationIndex].
+				 annotationIndex := initialAnnotationIndex.
+				 self cppIf: #NewspeakVM ifTrue:
+					[indexOfIRC := initialIndexOfIRC]].
 		compiledBlocksCount := compiledBlocksCount + 1].
 	needsFrame := savedNeedsFrame.
 	methodOrBlockNumArgs := savedNumArgs.
@@ -4042,6 +3949,8 @@ StackToRegisterMappingCogit >> scanMethod [
 		[^0].
 	pc := latestContinuation := initialPC.
 	numBlocks := framelessStackDelta := nExts := 0.
+	self cppIf: #NewspeakVM ifTrue:
+		[numIRCs := 0].
 	[pc <= endPC] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		descriptor := self generatorAt: byte0.
@@ -4064,6 +3973,9 @@ StackToRegisterMappingCogit >> scanMethod [
 			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 latestContinuation := latestContinuation max: targetPC].
+		self cppIf: #NewspeakVM ifTrue:
+			[descriptor hasIRC ifTrue:
+				[numIRCs := numIRCs + 1]].
 		pc := pc + descriptor numBytes.
 		nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0].
 		prevBCDescriptor := descriptor].

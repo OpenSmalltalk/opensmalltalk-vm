@@ -52,6 +52,12 @@ CogObjectRepresentation >> canLinkToYoungClasses [
 	^self subclassResponsibility
 ]
 
+{ #category : #testing }
+CogObjectRepresentation >> canPinObjects [
+	"Answer if the memory manager supports pinned objects."
+	^false
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentation >> checkValidObjectReference: anOop [
 	^(objectMemory isImmediate: anOop) not

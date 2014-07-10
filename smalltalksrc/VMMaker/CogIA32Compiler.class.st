@@ -2570,6 +2570,15 @@ CogIA32Compiler >> hasSSEInstructions [
 ]
 
 { #category : #'inline cacheing' }
+CogIA32Compiler >> implicitReceiveCacheAt: callSiteReturnAddress [
+	"Answer the implicit receiver cache for the return address
+	 of a call to the ceImplicitReceiverTrampoline."
+	<option: #NewspeakVM>
+	<inline: false>
+	^self literalBeforeFollowingAddress: callSiteReturnAddress - 10
+]
+
+{ #category : #'inline cacheing' }
 CogIA32Compiler >> inlineCacheTagAt: callSiteReturnAddress [
 	"Answer the inline cache tag for the return address of a send."
 	^self literalBeforeFollowingAddress: callSiteReturnAddress - 5

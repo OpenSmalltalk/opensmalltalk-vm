@@ -21,13 +21,13 @@ CogObjectRepresentationForSpur >> allYoungObjectsAgeInFullGC [
 	^false
 ]
 
-{ #category : #'sista support' }
-CogObjectRepresentationForSpur >> allocateCounters: nCounters [
-	"On Spur allocate the counters on the heap as pinned objects.  The
-	 number of counters can be derived from the nbumber of slots in the obj."
+{ #category : #'newspeak support' }
+CogObjectRepresentationForSpur >> allocateNPinnedSlots: nSlots [
+	"On Newspeak allocate the implicit receiver caches on the heap as pinned objects."
 	<inline: true>
+	<option: #NewspeakVM>
 	| objOop |
-	objOop := objectMemory allocatePinnedCounters: nCounters.
+	objOop := objectMemory allocatePinnedSlots: nSlots.
 	^objOop
 		ifNil: [0]
 		ifNotNil: [objOop + objectMemory baseHeaderSize]
@@ -45,6 +45,12 @@ CogObjectRepresentationForSpur >> cacheTagIsMarked: cacheTag [
 CogObjectRepresentationForSpur >> canLinkToYoungClasses [
 	<api>
 	<cmacro: '() true'>
+	^true
+]
+
+{ #category : #testing }
+CogObjectRepresentationForSpur >> canPinObjects [
+	"Answer if the memory manager supports pinned objects."
 	^true
 ]
 
@@ -100,8 +106,18 @@ CogObjectRepresentationForSpur >> ensureNoForwardedLiteralsIn: aMethodObj [
 CogObjectRepresentationForSpur >> freeCounters: theCounters [
 	<var: #theCounters type: #usqInt>
 	<inline: true>
+	<option: #SistaStackToRegisterMappingCogit>
 	theCounters ~= 0 ifTrue:
 		[objectMemory freeObject: theCounters - objectMemory baseHeaderSize]
+]
+
+{ #category : #'newspeak support' }
+CogObjectRepresentationForSpur >> freeIRCs: maybeIRCs [
+	<var: #maybeIRCs type: #usqInt>
+	<option: #NewspeakVM>
+	<inline: true>
+	(self oop: maybeIRCs isGreaterThan: objectMemory nilObject) ifTrue:
+		[objectMemory freeObject: maybeIRCs - objectMemory baseHeaderSize]
 ]
 
 { #category : #initialization }
@@ -634,6 +650,17 @@ CogObjectRepresentationForSpur >> markAndTraceLiteralIfYoung: literal [
 		 objectMemory markAndTrace: literal]
 ]
 
+{ #category : #'newspeak support' }
+CogObjectRepresentationForSpur >> markIfIRC: maybeIRCs [
+	"If maybeIRCs (from some cogMehtod's nextMethodOrIRCs) is in old space it is
+	 a pointer to the first field of a pinned object in old space holding the implicit
+	 receiver caches for a method.  If so, map it back to an oop and mark it."
+	<var: #maybeIRCs type: #usqInt>
+	<option: #NewspeakVM>
+	(self oop: maybeIRCs isGreaterThan: objectMemory nilObject) ifTrue:
+		[objectMemory markAndTrace: maybeIRCs - objectMemory baseHeaderSize]
+]
+
 { #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> maybeCompileRetry: retryInst onPrimitiveFail: primIndex [
 	<var: #retryInst type: #'AbstractInstruction *'>
@@ -667,7 +694,8 @@ CogObjectRepresentationForSpur >> maybeCompileRetry: retryInst onPrimitiveFail: 
 CogObjectRepresentationForSpur >> maybeMarkCounters: theCounters [
 	"In SIsta Spur counters are held on the heap in pinned objects which must be marked
 	 to avoid them being garbage collected.  This is the hook through which that happens."
-	<var: #counters type: #usqInt>
+	<var: #theCounters type: #usqInt>
+	<option: #SistaStackToRegisterMappingCogit>
 	<inline: true>
 	theCounters ~= 0 ifTrue:
 		[objectMemory markAndTrace: theCounters - objectMemory baseHeaderSize]
