@@ -241,7 +241,10 @@ Class {
 		'cogMethodSurrogateClass',
 		'cogBlockMethodSurrogateClass',
 		'extA',
-		'extB'
+		'extB',
+		'numIRCs',
+		'indexOfIRC',
+		'theIRCs'
 	],
 	#classVars : [
 		'AltBlockCreationBytecodeSize',
@@ -274,6 +277,7 @@ Class {
 		'NSSendIsPCAnnotated',
 		'NotFullyInitialized',
 		'NumObjRefsInRuntime',
+		'NumOopsPerIRC',
 		'NumSendTrampolines',
 		'NumTrampolines',
 		'ProcessorClass',
@@ -464,7 +468,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			aCCodeGenerator removeVariable: simulationVariableNotNeededForRealVM].
 	NewspeakVM ifFalse:
 		[#(	'dynSuperEntry' 'dynSuperEntryAlignment' 'dynamicSuperSendTrampolines'
-			'ceImplicitReceiverTrampoline' 'ceExplicitReceiverTrampoline' 'cmDynSuperEntryOffset') do:
+			'ceImplicitReceiverTrampoline' 'ceExplicitReceiverTrampoline' 'cmDynSuperEntryOffset'
+			'numIRCs' 'indexOfIRC' 'theIRCs') do:
 				[:variableNotNeededInNormalVM|
 				aCCodeGenerator removeVariable: variableNotNeededInNormalVM]].
 	aCCodeGenerator removeConstant: #COGMTVM. "this should be defined at compile time"
@@ -628,6 +633,7 @@ Cogit class >> generatorTableFrom: anArray [
 						isBranchTrue: (tuple includes: #isBranchTrue);
 						isBranchFalse: (tuple includes: #isBranchFalse);
 						isExtension: (tuple includes: #extension);
+						hasIRC: (tuple includes: #hasIRC);
 						yourself.
 		descriptor isBlockCreation ifTrue:
 			[blockCreationBytecodeSize
@@ -805,8 +811,10 @@ Cogit class >> initializeMiscConstants [
 							[#ARMv5]	->	[GdbARMAlien]. }.
 	"we special-case 0, 1 & 2 argument sends, N is numArgs >= 3"
 	NumSendTrampolines := 4.
-	"Currently only the ceImplicitReceiverTrampoline contains object references."
-	NumObjRefsInRuntime := 2.
+	"Currently not even the ceImplicitReceiverTrampoline contains object references."
+	NumObjRefsInRuntime := 0.
+	"The implicit receiver cache has two entries, class and mixin oops."
+	NumOopsPerIRC := 2.
 	"Max size to alloca when compiling.
 	 Mac OS X 10.6.8 segfaults approaching 8Mb.
 	 Linux 2.6.9 segfaults above 11Mb.
@@ -876,22 +884,6 @@ Cogit class >> mustBeGlobal: var [
 { #category : #translation }
 Cogit class >> namesOfVariablesToLocalize [
 	^#()
-]
-
-{ #category : #'class initialization' }
-Cogit class >> newInitializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid [
-	"SimpleStackBasedCogit newInitializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid"
-	"StackToRegisterMappingCogit newInitializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid"
-
-	| v3Table v4Table |
-	"N.B. Must do it backwards to evaluate AltBlockCreationBytecodeSize & BlockCreationBytecodeSize correctly."
-	self newInitializeBytecodeTableForNewspeakV4.
-	v4Table := generatorTable.
-	AltBlockCreationBytecodeSize := BlockCreationBytecodeSize.
-	AltNSSendIsPCAnnotated := NSSendIsPCAnnotated.
-	self newInitializeBytecodeTableForNewspeakV3PlusClosures.
-	v3Table := generatorTable.
-	generatorTable := CArrayAccessor on: v3Table object, v4Table object
 ]
 
 { #category : #documentation }
@@ -2679,6 +2671,7 @@ Cogit >> ceImplicitReceiverFor: selector receiver: receiver [
 	 and reload the class tag.  If either the class tag or the mixin are young then the
 	 method needs to be added to the youngReferrers list to ensure correct GC."
 
+	<option: #SqueakV3ObjectMemory>
 	| rcvrClass retpc classpc mixinpc mixin cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	retpc := coInterpreter stackTop.
@@ -2703,6 +2696,45 @@ Cogit >> ceImplicitReceiverFor: selector receiver: receiver [
 		unalignedLongAt: classpc
 			put: (objectRepresentation inlineCacheTagForClass: rcvrClass);
 		unalignedLongAt: mixinpc
+			put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
+	^mixin
+]
+
+{ #category : #'in-line cacheing' }
+Cogit >> ceImplicitReceiverFor: selector receiver: receiver cache: cacheAddress [
+	"Cached implicit receiver implementation.  Caller looks like
+				mov Lclass, Arg1Reg
+				mov selector, SendNumArgsReg
+				call ceImplicitReceiver
+	 and Lclass: .word; Lmixin: .word is somewhere on the heap.
+	 The trampoline has already fetched the class and probed the cache and found
+	 that the cache missed.  Compute the implicit receiver for the receiver's class
+	 and reload the class tag.  If either the class tag or the mixin are young then the
+	 method needs to be added to the youngReferrers list to ensure correct GC."
+
+	<option: #SpurMemoryManager>
+	<var: #cacheAddress type: #usqInt>
+	| rcvrClass mixin cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	mixin := coInterpreter
+				implicitReceiverFor: receiver
+				mixin: coInterpreter mMethodClass
+				implementing: selector.
+	rcvrClass := objectMemory fetchClassOf: receiver.
+	cogMethod := coInterpreter mframeHomeMethodExport.
+	cogMethod cmRefersToYoung ifFalse:
+		[((objectRepresentation inlineCacheTagsMayBeObjects
+		   and: [objectMemory isYoung: rcvrClass])
+		  or: [mixin ~= receiver and: [objectMemory isYoung: mixin]]) ifTrue:
+			[methodZone roomOnYoungReferrersList ifFalse:
+				[coInterpreter callForCogCompiledCodeCompaction.
+				 ^mixin].
+			 cogMethod cmRefersToYoung: true.
+			 methodZone addToYoungReferrers: cogMethod]].
+	backEnd
+		unalignedLongAt: cacheAddress
+			put: (objectRepresentation inlineCacheTagForClass: rcvrClass);
+		unalignedLongAt: cacheAddress + BytesPerOop
 			put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
 	^mixin
 ]
@@ -3859,8 +3891,10 @@ Cogit >> compileCogMethod: selector [
 	blockCount := 0.
 	numCleanBlocks > 0 ifTrue:
 		[self addCleanBlockStarts].
-	self maybeAllocAndInitCounters ifFalse: "Inaccurate error code, but it'll do.  This will likely never fail."
+	(self maybeAllocAndInitCounters
+	 and: [self maybeAllocAndInitIRCs]) ifFalse: "Inaccurate error code, but it'll do.  This will likely never fail."
 		[^coInterpreter cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
+	
 	blockEntryLabel := nil.
 	methodLabel dependent: nil.
 	(result := self compileEntireMethod) < 0 ifTrue:
@@ -4172,14 +4206,15 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 
 	self cppIf: NewspeakVM
 		ifTrue:
-			[mapEntries keys do:
-				[:a|
-				(mapEntries at: a) = #IsNSSendCall ifTrue:
-					[mapEntries
-						at: a + backEnd jumpShortByteSize
-							put: {'Class'. #disassembleCachedOop:. BytesPerWord};
-						at: a + backEnd jumpShortByteSize + BytesPerOop
-							put: {'ImplicitReceiver'. #disassembleCachedOop:. BytesPerWord}]]].
+			[objectRepresentation canPinObjects ifFalse:
+				[mapEntries keys do:
+					[:a|
+					(mapEntries at: a) = #IsNSSendCall ifTrue:
+						[mapEntries
+							at: a + backEnd jumpShortByteSize
+								put: {'Class'. #disassembleCachedOop:. BytesPerWord};
+							at: a + backEnd jumpShortByteSize + BytesPerOop
+								put: {'ImplicitReceiver'. #disassembleCachedOop:. BytesPerWord}]]]].
 
 	"This would all be far more elegant and simple if we used blocks.
 	 But there are no blocks in C and the basic enumerators here need
@@ -4419,9 +4454,12 @@ Cogit >> fillInMethodHeader: method size: size selector: selector [
 			[originalMethod := self cCoerceSimple: methodHeader to: #'CogMethod *'.
 			self assert: originalMethod blockSize = size.
 			methodHeader := originalMethod methodHeader.
-			self cppIf: NewspeakVM ifTrue: [methodZone addToUnpairedMethodList: method]]
+			self cppIf: NewspeakVM ifTrue:
+				[methodZone addToUnpairedMethodList: method]]
 		ifFalse:
-			[coInterpreter rawHeaderOf: methodObj put: method asInteger].
+			[coInterpreter rawHeaderOf: methodObj put: method asInteger.
+			self cppIf: NewspeakVM ifTrue:
+				[method nextMethodOrIRCs: theIRCs]].
 	method methodHeader: methodHeader.
 	method selector: selector.
 	method cmNumArgs: (coInterpreter argumentCountOfMethodHeader: methodHeader).
@@ -5671,13 +5709,20 @@ Cogit >> generateNewspeakRuntime [
 										called: 'ceExplicitReceiverTrampoline'
 										arg: SendNumArgsReg
 										result: ReceiverResultReg.
-	"Cached push implicit receiver implementation.  Caller looks like
+	"Cached push implicit receiver implementation.  If objectRepresentation doesn't support
+	 pinning then caller looks like
 				mov selector, SendNumArgsReg
 				call ceImplicitReceiver
 				br continue
 		Lclass:	.word
 		Lmixin::	.word
 		continue:
+	 If objectRepresentation supports pinning then caller looks like
+				mov Lclass, Arg1Reg
+				mov selector, SendNumArgsReg
+				call ceImplicitReceiver
+	 and Lclass: .word; Lmixin: .word is somewhere on the heap.
+
 	 If class tag matches class of receiver then mixin contains either 0 or the implicit receiver.
 	 If 0, answer the actual receiver, otherwise the mixin.
 	 Generate the class fetch and cache probe inline for speed.
@@ -5688,32 +5733,55 @@ Cogit >> generateNewspeakRuntime [
 		genGetInlineCacheClassTagFrom: ReceiverResultReg
 		into: ClassReg
 		forEntry: false.
-	backEnd hasLinkRegister
-		ifTrue: [retpcReg := LinkReg]
-		ifFalse: [self MoveMw: 0 r: SPReg R: (retpcReg := TempReg)].
-
-	self MoveMw: 0 r: SPReg R: retpcReg.
-	self MoveMw: backEnd jumpShortByteSize r: retpcReg R: Arg1Reg.
-	self CmpR: ClassReg R: Arg1Reg.
-	jumpMiss := self JumpNonZero: 0.
-	self MoveMw: backEnd jumpShortByteSize + BytesPerOop r: retpcReg R: ClassReg.
-	self CmpCq: 0 R: ClassReg.
-	jumpItsTheReceiverStupid := self JumpZero: 0.
-	self MoveR: ClassReg R: ReceiverResultReg.
-	jumpItsTheReceiverStupid jmpTarget: (self RetN: 0).
-	jumpMiss jmpTarget: self Label.
-	ceImplicitReceiverTrampoline := self
-										genTrampolineFor: #ceImplicitReceiverFor:receiver:
-										called: 'ceImplicitReceiverTrampoline'
-										numArgs: 2
-										arg: SendNumArgsReg
-										arg: ReceiverResultReg
-										arg: nil
-										arg: nil
-										saveRegs: false
-										pushLinkReg: true
-										resultReg: ReceiverResultReg
-										appendOpcodes: true
+	objectRepresentation canPinObjects
+		ifTrue:
+			[self MoveMw: 0 r: Arg1Reg R: TempReg.
+			 self CmpR: ClassReg R: TempReg.
+			 jumpMiss := self JumpNonZero: 0.
+			 self MoveMw: BytesPerOop r: Arg1Reg R: TempReg.
+			 self CmpCq: 0 R: TempReg.
+			 jumpItsTheReceiverStupid := self JumpZero: 0.
+			 self MoveR: TempReg R: ReceiverResultReg.
+			 jumpItsTheReceiverStupid jmpTarget: (self RetN: 0).
+			 jumpMiss jmpTarget: self Label.
+			 ceImplicitReceiverTrampoline := self
+												genTrampolineFor: #ceImplicitReceiverFor:receiver:cache:
+												called: 'ceImplicitReceiverTrampoline'
+												numArgs: 3
+												arg: SendNumArgsReg
+												arg: ReceiverResultReg
+												arg: Arg1Reg
+												arg: nil
+												saveRegs: false
+												pushLinkReg: true
+												resultReg: ReceiverResultReg
+												appendOpcodes: true]
+		ifFalse:
+			[backEnd hasLinkRegister
+				ifTrue: [retpcReg := LinkReg]
+				ifFalse: [self MoveMw: 0 r: SPReg R: (retpcReg := TempReg)].
+			 self MoveMw: 0 r: SPReg R: retpcReg.
+			 self MoveMw: backEnd jumpShortByteSize r: retpcReg R: Arg1Reg.
+			 self CmpR: ClassReg R: Arg1Reg.
+			 jumpMiss := self JumpNonZero: 0.
+			 self MoveMw: backEnd jumpShortByteSize + BytesPerOop r: retpcReg R: ClassReg.
+			 self CmpCq: 0 R: ClassReg.
+			 jumpItsTheReceiverStupid := self JumpZero: 0.
+			 self MoveR: ClassReg R: ReceiverResultReg.
+			 jumpItsTheReceiverStupid jmpTarget: (self RetN: 0).
+			 jumpMiss jmpTarget: self Label.
+			 ceImplicitReceiverTrampoline := self
+												genTrampolineFor: #ceImplicitReceiverFor:receiver:
+												called: 'ceImplicitReceiverTrampoline'
+												numArgs: 2
+												arg: SendNumArgsReg
+												arg: ReceiverResultReg
+												arg: nil
+												arg: nil
+												saveRegs: false
+												pushLinkReg: true
+												resultReg: ReceiverResultReg
+												appendOpcodes: true]
 ]
 
 { #category : #initialization }
@@ -6049,6 +6117,29 @@ Cogit >> handleWriteSimulationTrap: aProcessorSimulationTrap [
 	variableValue := processor perform: aProcessorSimulationTrap registerAccessor.
 	(simulatedVariableSetters at: aProcessorSimulationTrap address) value: variableValue.
 	processor pc: aProcessorSimulationTrap nextpc
+]
+
+{ #category : #'newspeak support' }
+Cogit >> implicitReceiverCacheAddressAt: mcpc [
+	"Cached push implicit receiver implementation.  If objectRepresentation doesn't support
+	 pinning then caller looks like
+				mov selector, SendNumArgsReg
+				call ceImplicitReceiver
+				br continue
+		Lclass:	.word
+		Lmixin::	.word
+		continue:
+	 If objectRepresentation supports pinning then caller looks like
+				mov Lclass, Arg1Reg
+				mov selector, SendNumArgsReg
+				call ceImplicitReceiver
+	 and Lclass: .word; Lmixin: .word is somewhere on the heap."
+	<inline: true>
+	^objectRepresentation canPinObjects
+		ifTrue:
+			[backEnd implicitReceiveCacheAt: mcpc]
+		ifFalse:
+			[mcpc asUnsignedInteger + backEnd jumpShortByteSize]
 ]
 
 { #category : #compaction }
@@ -6901,6 +6992,7 @@ Cogit >> markAndTraceLiteralsIn: cogMethod [
 					or: [objectMemory isMarked: cogMethod selector]]]).
 	objectRepresentation markAndTraceLiteral: cogMethod selector.
 	self maybeMarkCountersIn: cogMethod.
+	self maybeMarkIRCsIn: cogMethod.
 	self mapFor: cogMethod
 		 performUntil: #markLiterals:pc:method:
 		 arg: cogMethod asInteger
@@ -7056,23 +7148,23 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 				[objectRepresentation markAndTraceLiteral: cacheTag].  "cacheTag is selector"
 			  self cppIf: NewspeakVM ifTrue:
 				[entryPoint = ceImplicitReceiverTrampoline ifTrue:
-					[| classpc mixinpc class mixin |
-					 classpc := mcpc asInteger + backEnd jumpShortByteSize.
-					 mixinpc := mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
-					 class := backEnd unalignedLongAt: classpc.
+					[| cacheAddress class mixin |
+					 self assert: NumOopsPerIRC = 2.
+					 cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
+					 class := backEnd unalignedLongAt: cacheAddress.
 					 class ~= 0
 						ifTrue:
 							[(objectRepresentation cacheTagIsMarked: class)
 								ifTrue:
-									[(mixin := backEnd unalignedLongAt: mixinpc) ~= 0 ifTrue:
+									[(mixin := backEnd unalignedLongAt: cacheAddress + BytesPerOop) ~= 0 ifTrue:
 										[objectRepresentation markAndTraceLiteral: mixin]]
 								ifFalse:
 									[backEnd
-										unalignedLongAt: classpc put: 0;
-										unalignedLongAt: mixinpc put: 0.
+										unalignedLongAt: cacheAddress put: 0;
+										unalignedLongAt: cacheAddress + BytesPerOop put: 0.
 									 codeModified := true]]
 						ifFalse:
-							[self assert: (backEnd unalignedLongAt: mixinpc) = 0]]]]].
+							[self assert: (backEnd unalignedLongAt: cacheAddress + BytesPerOop) = 0]]]]].
 	^0 "keep scanning"
 ]
 
@@ -7107,24 +7199,24 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 					[objectRepresentation markAndTraceLiteral: cacheTag.  "cacheTag is selector"
 					 self cppIf: NewspeakVM ifTrue:
 						[entryPoint = ceImplicitReceiverTrampoline ifTrue:
-							[| classpc mixinpc class mixin |
+							[| cacheAddress class mixin |
 							 objectRepresentation markAndTraceLiteral: cacheTag.  "cacheTag is selector"
-							 classpc := mcpc asInteger + backEnd jumpShortByteSize.
-							 mixinpc := mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
-							 class := backEnd unalignedLongAt: classpc.
+							 self assert: NumOopsPerIRC = 2.
+							 cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
+							 class := backEnd unalignedLongAt: cacheAddress.
 							 class ~= 0
 								ifTrue:
 									[(objectRepresentation cacheTagIsMarked: class)
 										ifTrue:
-											[(mixin := backEnd unalignedLongAt: mixinpc) ~= 0 ifTrue:
+											[(mixin := backEnd unalignedLongAt: cacheAddress + BytesPerOop) ~= 0 ifTrue:
 												[objectRepresentation markAndTraceLiteral: mixin]]
 										ifFalse:
 											[backEnd
-												unalignedLongAt: classpc put: 0;
-												unalignedLongAt: mixinpc put: 0.
+												unalignedLongAt: cacheAddress put: 0;
+												unalignedLongAt: cacheAddress + BytesPerOop put: 0.
 											 codeModified := true]]
 								ifFalse:
-									[self assert: (backEnd unalignedLongAt: mixinpc) = 0]]]]]].
+									[self assert: (backEnd unalignedLongAt: cacheAddress + BytesPerOop) = 0]]]]]].
 	^0 "keep scanning"
 ]
 
@@ -7141,6 +7233,7 @@ Cogit >> markLiteralsAndUnlinkUnmarkedSendsIn: cogMethod [
 	self assert: (objectMemory isMarked: cogMethod methodObject).
 	objectRepresentation markAndTraceLiteral: cogMethod selector.
 	self maybeMarkCountersIn: cogMethod.
+	self maybeMarkIRCsIn: cogMethod.
 	self mapFor: cogMethod
 		 performUntil: #markLiteralsAndUnlinkIfUnmarkedSend:pc:method:
 		 arg: cogMethod asInteger
@@ -7178,11 +7271,14 @@ Cogit >> markYoungObjects: annotation pc: mcpc method: cogMethod [
 				[objectRepresentation markAndTraceLiteralIfYoung: cacheTag].
 				 self cppIf: NewspeakVM ifTrue:
 					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
-						[| class mixin |
-						 (class := backEnd unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize) ~= 0 ifTrue:
+						[| cacheAddress class mixin |
+						 self assert: NumOopsPerIRC = 2.
+						 cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
+						 class := backEnd unalignedLongAt: cacheAddress.
+						 class ~= 0 ifTrue:
 							[objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
 								[objectRepresentation markAndTraceLiteralIfYoung: class].
-							 mixin := backEnd unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
+							 mixin := backEnd unalignedLongAt: cacheAddress + BytesPerOop.
 							 objectRepresentation markAndTraceLiteralIfYoung: mixin]]]]].
 	^0 "keep scanning"
 ]
@@ -7216,6 +7312,22 @@ Cogit >> maybeAllocAndInitCounters [
 	"No-op in the non-Sista Cogits..."
 	<inline: true>
 	^true
+]
+
+{ #category : #'newspeak support' }
+Cogit >> maybeAllocAndInitIRCs [
+	"If this is the Newspeak VM and the objectRepresentation supports pinning
+	 then allocate space for the implicit receiver caches on the heap."
+	self cppIf: #NewspeakVM
+		ifTrue:
+			[indexOfIRC := theIRCs := 0.
+			 (objectRepresentation canPinObjects and: [numIRCs > 0]) ifTrue:
+				[self assert: (self noAssertMethodClassAssociationOf: methodObj) ~= objectMemory nilObject.
+				 theIRCs := objectRepresentation allocateNPinnedSlots: numIRCs * NumOopsPerIRC.
+				 ^theIRCs ~= 0].
+			 ^true]
+		ifFalse:
+			[^true]
 ]
 
 { #category : #debugging }
@@ -7278,6 +7390,14 @@ Cogit >> maybeMarkCountersIn: cogMethod [
 	"In SIsta Spur counters are held on the heap in pinned objects which must be marked
 	 to avoid them being garbage collected.  This is the hook through which that happens."
 	<var: #cogMethod type: #'CogMethod *'>
+]
+
+{ #category : #'newspeak support' }
+Cogit >> maybeMarkIRCsIn: cogMethod [
+	<inline: true>
+	self cppIf: #NewspeakVM ifTrue:
+		[objectRepresentation canPinObjects ifTrue:
+			[objectRepresentation markIfIRC: cogMethod nextMethodOrIRCs]]
 ]
 
 { #category : #'method map' }
@@ -7802,7 +7922,10 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 					nextPutAll: 'cmRefersToYoung: ';
 					nextPutAll: (cogMethod cmRefersToYoung ifTrue: ['yes'] ifFalse: ['no'])].
 			cogMethod cmType = CMMethod ifTrue:
-				[([cogMethod counters] on: MessageNotUnderstood do: [:ex| nil]) ifNotNil:
+				[([cogMethod nextMethodOrIRCs] on: MessageNotUnderstood do: [:ex| nil]) ifNotNil:
+					[:nmoircs| aStream crtab; nextPutAll: 'nextMethodOrIRCs: '.
+						nmoircs = 0 ifTrue: [aStream print: nmoircs] ifFalse: [self printHex: nmoircs]].
+				 ([cogMethod counters] on: MessageNotUnderstood do: [:ex| nil]) ifNotNil:
 					[:cntrs| aStream crtab; nextPutAll: 'counters: '.
 						cntrs = 0 ifTrue: [aStream print: cntrs] ifFalse: [self printHex: cntrs]]]].
 	aStream cr; flush
@@ -8172,24 +8295,24 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 					ifTrue: [entryPoint = ceImplicitReceiverTrampoline]
 					ifFalse: [false])
 				ifTrue: "Examine an implicit receiver cache."
-					[| pc oop mappedOop |
-					 pc := mcpc asInteger + backEnd jumpShortByteSize.
-					 (oop := backEnd unalignedLongAt: pc) ~= 0 ifTrue:
+					[| cacheAddress oop mappedOop |
+					 self assert: NumOopsPerIRC = 2.
+					 cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
+					 (oop := backEnd unalignedLongAt: cacheAddress) ~= 0 ifTrue:
 						["First look at the classTag entry.  This is an inline cache tag and so might not be an object."
 						 (objectRepresentation inlineCacheTagsMayBeObjects
 						  and: [objectRepresentation couldBeObject: oop]) ifTrue:
 							[mappedOop := objectRepresentation remapOop: oop.
 							 mappedOop ~= oop ifTrue:
-								[backEnd unalignedLongAt: pc put: mappedOop].
+								[backEnd unalignedLongAt: cacheAddress put: mappedOop].
 							 (hasYoungPtr ~= 0
 							  and: [objectMemory isYoung: mappedOop]) ifTrue:
 								[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]].
-						 "Second look at the mixin entry. this must be 0 or an objct."
-						 pc := mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop.
-						 (oop := backEnd unalignedLongAt: pc) ~= 0 ifTrue:
+						 "Second look at the mixin entry. this must be 0 or an object."
+						 (oop := backEnd unalignedLongAt: cacheAddress + BytesPerOop) ~= 0 ifTrue:
 							[mappedOop := objectRepresentation remapOop: oop.
 							 mappedOop ~= oop ifTrue:
-								[backEnd unalignedLongAt: pc put: mappedOop].
+								[backEnd unalignedLongAt: cacheAddress + BytesPerOop put: mappedOop].
 							 (hasYoungPtr ~= 0
 							  and: [objectMemory isYoung: mappedOop]) ifTrue:
 								[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]]]
@@ -8324,6 +8447,8 @@ Cogit >> scanMethod [
 		[^0].
 	pc := latestContinuation := initialPC.
 	numBlocks := framelessStackDelta := nExts := 0.
+	self cppIf: #NewspeakVM ifTrue:
+		[numIRCs := 0].
 	[pc <= endPC] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		descriptor := self generatorAt: byte0.
@@ -8346,6 +8471,9 @@ Cogit >> scanMethod [
 			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 latestContinuation := latestContinuation max: targetPC].
+		self cppIf: #NewspeakVM ifTrue:
+			[descriptor hasIRC ifTrue:
+				[numIRCs := numIRCs + 1]].
 		pc := pc + descriptor numBytes.
 		nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
 	^numBlocks
@@ -9098,9 +9226,7 @@ Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
 				[self cppIf: NewspeakVM ifTrue:
 					[(entryPoint = ceImplicitReceiverTrampoline
 					 and: [(backEnd inlineCacheTagAt: mcpc asInteger) = theSelector]) ifTrue:
-					 	[backEnd
-							unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize put: 0;
-							unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop put: 0]]]].
+					 	[self voidImplicitReceiverCacheAt: mcpc]]]].
 	^0 "keep scanning"
 ]
 
@@ -9122,9 +9248,7 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc ignored: superfluity [
 			ifFalse:
 				[self cppIf: NewspeakVM ifTrue:
 					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
-						[backEnd
-							unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize put: 0;
-							unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop put: 0]]]].
+						[self voidImplicitReceiverCacheAt: mcpc]]]].
 	^0 "keep scanning"
 ]
 
@@ -9149,9 +9273,7 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc of: theSelector [
 				[self cppIf: NewspeakVM ifTrue:
 					[(entryPoint = ceImplicitReceiverTrampoline
 					  and: [(backEnd inlineCacheTagAt: mcpc asInteger) = theSelector]) ifTrue:
-						[backEnd
-							unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize put: 0;
-							unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop put: 0]]]].
+						[self voidImplicitReceiverCacheAt: mcpc]]]].
 	^0 "keep scanning"
 ]
 
@@ -9175,9 +9297,7 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc to: theCogMethod [
 			ifFalse: "Can't tell the target with PushReciver/SendImplicit so flush anyway."
 				[self cppIf: NewspeakVM ifTrue:
 					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
-						[backEnd
-							unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize put: 0;
-							unalignedLongAt: mcpc asInteger + backEnd jumpShortByteSize + BytesPerOop put: 0]]]].
+						[self voidImplicitReceiverCacheAt: mcpc]]]].
 	^0 "keep scanning"
 ]
 
@@ -9336,6 +9456,30 @@ Cogit >> updateMaybeObjRefAt: mcpc [
 Cogit >> voidCogCompiledCode [
 	<api>
 	methodZone clearCogCompiledCode
+]
+
+{ #category : #'newspeak support' }
+Cogit >> voidImplicitReceiverCacheAt: mcpc [
+	"Cached push implicit receiver implementation.  If objectRepresentation doesn't support
+	 pinning then caller looks like
+				mov selector, SendNumArgsReg
+				call ceImplicitReceiver
+				br continue
+		Lclass:	.word
+		Lmixin::	.word
+		continue:
+	 If objectRepresentation supports pinning then caller looks like
+				mov Lclass, Arg1Reg
+				mov selector, SendNumArgsReg
+				call ceImplicitReceiver
+	 and Lclass: .word; Lmixin: .word is somewhere on the heap."
+
+	| cacheAddress |
+	self assert: NumOopsPerIRC = 2.
+	cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
+	backEnd
+		unalignedLongAt: cacheAddress put: 0;
+		unalignedLongAt: cacheAddress + BytesPerOop put: 0
 ]
 
 { #category : #'debug printing' }
