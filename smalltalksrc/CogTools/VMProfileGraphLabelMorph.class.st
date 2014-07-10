@@ -66,7 +66,7 @@ VMProfileGraphLabelMorph >> drawClippedOn: clippedCanvas [
 			p := pt - rect center.
 			((labelForm width / 2.0) + (p x asFloat*degCos) + (p y asFloat*degSin)) @
 			((labelForm height / 2.0) - (p x asFloat*degSin) + (p y asFloat*degCos))].
-	minDelta := font height / 1.75. "1.6 a little greater than 2 sqrt"
+	minDelta := font height / 1.5.
 	lastX := font height negated.
 	margin := model graphMargin.
 	range := self width - margin - margin.

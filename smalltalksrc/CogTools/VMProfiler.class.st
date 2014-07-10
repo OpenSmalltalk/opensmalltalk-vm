@@ -88,6 +88,24 @@ VMProfiler class >> default [
 ]
 
 { #category : #'class initialization' }
+VMProfiler class >> fixTabs [
+	"Make sure the DefaultTabsArray and DefaultMarginTabsArray are adequately sized for modern displays."
+	| defaultTab tempArray width |
+	(Smalltalk bindingOf: #TextConstants) ifNil: [^self].
+	width := 2000.
+	(TextConstants at: #DefaultTabsArray) last < width ifTrue:
+		[defaultTab := TextConstants at: #DefaultTab.
+		 tempArray := Array new: 2000 // defaultTab.
+		 1 to: tempArray size do:
+			[:i | tempArray at: i put: defaultTab * i].
+		 TextConstants at: #defaultTabsArray put: tempArray.
+		 tempArray := Array new: (width // defaultTab) // 2.
+		 1 to: tempArray size do:
+			[:i | tempArray at: i put: (Array with: (defaultTab*i) with: (defaultTab*i))].
+		 TextConstants at: #DefaultMarginTabsArray put: tempArray]
+]
+
+{ #category : #'class initialization' }
 VMProfiler class >> initialize [
 
 	CannedBenchmarkStrings := OrderedCollection new.
@@ -97,7 +115,8 @@ VMProfiler class >> initialize [
 		addBooleanPreference: #vmProfilerFillInIntegral 
 		category: #vmProfiler 
 		default: false
-		balloonHelp: 'If enabled, the profiler will fill in the area under the integral.'
+		balloonHelp: 'If enabled, the profiler will fill in the area under the integral.'.
+	self fixTabs
 ]
 
 { #category : #'instance creation' }
@@ -534,6 +553,15 @@ VMProfiler >> highAddressText: aText [
 	self selectSymbolsInRange
 ]
 
+{ #category : #accessing }
+VMProfiler >> highResSamplesFor: sym [
+	| samples |
+	samples := 0.
+	sym address to: sym limit - 1 do:
+			[:a| samples := samples + (highResSamples at: a)].
+	^samples
+]
+
 { #category : #opening }
 VMProfiler >> historyButtonMorph: getLabelMessage help: help set: setter enable: enabler color: colorGetter [
 	| pbm |
@@ -888,9 +916,11 @@ VMProfiler >> plotGraph [
 { #category : #accessing }
 VMProfiler >> positionedLabels [
 	"Compute the set of labels to be displayed for the given address range.
-	 Try and display no more than 25 labels.  The result is a dictionary of
-	 fractional position in the range to string."
-	| counts types symbolsInRange positionedLabels index count range |
+	 Try and display no more than maxLabels labels.  The result is a dictionary
+	 of fractional position in the range to string.  If there are lots of labels, try
+	 and favour those that have samples."
+	| maxLabels counts types symbolsInRange positionedLabels index count range significantSymbolsInRange |
+	maxLabels := 50.
 	minSelectionIndex isZero ifTrue:
 		[^Dictionary new].
 	"count how many labels of each type there are in the range."
@@ -899,14 +929,20 @@ VMProfiler >> positionedLabels [
 		[:type| counts at: type put: 0].
 	types := types select: [:type| symbolTypes includes: type].
 	symbolsInRange := symbolManager symbolsSelect: [:sym| sym address <= highAddress and: [sym limit >= lowAddress and: [(symbolTypes includes: sym type)]]].
+	"If there are kots if klabels then choose to display only those with samples"
+	symbolsInRange size > (maxLabels / 2) ifTrue:
+		[significantSymbolsInRange := symbolsInRange select: [:s| (self symHasLowResSamples: s) and: [(self highResSamplesFor: s) > 0]]].
+	(symbolsInRange size > maxLabels
+	 and: [significantSymbolsInRange size >= (maxLabels / 2)]) ifTrue:
+		[symbolsInRange := significantSymbolsInRange].
 	symbolsInRange do:
 		[:s| counts at: s type put: (counts at: s type) + 1].
 	"Find out what types give us at least one label but no more
-	 than 25 unless necessary to have at least one."
+	 than maxLabels unless necessary to have at least one."
 	index := 1.
 	count := counts at: (types at: index).
 	[index <= types size
-	 and: [count + (counts at: (types at: index)) < 25]] whileTrue:
+	 and: [count + (counts at: (types at: index)) < maxLabels]] whileTrue:
 		[count := count + (counts at: (types at: index)).
 		 index := index + 1].
 	"add labels to positionedLabels indexed by their fractional position in the range, filtering by type."
@@ -1231,7 +1267,9 @@ VMProfiler >> spyOn: aBlock [
 							   sem wait.
 							   fr]]
 						ifFalse: [aBlock].
-	self selectBenchmark: aBlock sourceString.
+	[self selectBenchmark: aBlock sourceString]
+		on: Error
+		do: [:ex|].
 	self startProfiling.
 	r := blockToProfile ensure: [self stopProfiling].
 	WorldState addDeferredUIMessage:
@@ -1302,6 +1340,13 @@ VMProfiler >> stopProfiling [
 VMProfiler >> stopVMProfile [
 	"Stop profiling the virtual machine."
 	^self primitiveControlVMProfile: false size: self profileSize
+]
+
+{ #category : #accessing }
+VMProfiler >> symHasLowResSamples: sym [
+	^(sym address // lowResolution to: sym limit // lowResolution)
+		anySatisfy:
+			[:pc| (lowResSamples at: pc + 1) > 0]
 ]
 
 { #category : #accessing }
@@ -1467,22 +1512,16 @@ VMProfiler >> totalsDo: septuaryBlock [
 	samplesInVM := samplesInCog := samplesInNonVMModules := 0.
 	(symbolManager symbolsInModule: symbolManager vmModule) do:
 		[:sym| | samples |
-		(#(publicFunction privateFunction) includes: sym type) ifTrue:
-			[samples := 0.
-			 sym address to: sym limit - 1 do:
-				[:a| samples := samples + (highResSamples at: a)].
-			 samples > 0 ifTrue:
-				[vmTotals at: sym put: samples.
-				 samplesInVM := samplesInVM + samples]]].
+		((#(publicFunction privateFunction) includes: sym type)
+		 and: [(samples := self highResSamplesFor: sym) > 0]) ifTrue:
+			[vmTotals at: sym put: samples.
+			 samplesInVM := samplesInVM + samples]].
 	 (symbolManager symbolsInModule: symbolManager cogModule) do:
 		[:sym| | samples |
-		(#(publicFunction privateFunction) includes: sym type) ifTrue:
-			[samples := 0.
-			 sym address to: sym limit - 1 do:
-				[:a| samples := samples + (highResSamples at: a)].
-			 samples > 0 ifTrue:
-				[cogTotals at: sym put: samples.
-				 samplesInCog := samplesInCog + samples]]].
+		((#(publicFunction privateFunction) includes: sym type)
+		 and: [(samples := self highResSamplesFor: sym) > 0]) ifTrue:
+			[cogTotals at: sym put: samples.
+			 samplesInCog := samplesInCog + samples]].
 	 ((symbolManager modules
 			copyWithout: symbolManager vmModule)
 				copyWithout: symbolManager cogModule) do:
@@ -1490,14 +1529,10 @@ VMProfiler >> totalsDo: septuaryBlock [
 		(symbolManager symbolsInModule: module) do:
 			[:sym| | samples |
 			((#(publicFunction privateFunction) includes: sym type)
-			and: [(sym address // lowResolution to: sym limit // lowResolution) anySatisfy:
-					[:pc| (lowResSamples at: pc + 1) > 0]]) ifTrue:
-				[samples := 0.
-				 sym address to: sym limit - 1 do:
-					[:a| samples := samples + (highResSamples at: a)].
-				 samples > 0 ifTrue:
-					[nonVMTotals at: sym put: samples.
-					 samplesInNonVMModules := samplesInNonVMModules + samples]]]].
+			and: [(self symHasLowResSamples: sym)
+			and: [(samples := self highResSamplesFor: sym) > 0]]) ifTrue:
+				[nonVMTotals at: sym put: samples.
+				 samplesInNonVMModules := samplesInNonVMModules + samples]]].
 	samplesInNonVM := total - samplesInVM - samplesInCog.
 	nonVMTotals
 		at: 'Samples Not In Any Function'
