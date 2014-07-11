@@ -55,6 +55,7 @@ CogObjectRepresentation >> canLinkToYoungClasses [
 { #category : #testing }
 CogObjectRepresentation >> canPinObjects [
 	"Answer if the memory manager supports pinned objects."
+	<inline: true>
 	^false
 ]
 

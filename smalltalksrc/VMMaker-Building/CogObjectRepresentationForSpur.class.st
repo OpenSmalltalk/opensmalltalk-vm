@@ -51,6 +51,7 @@ CogObjectRepresentationForSpur >> canLinkToYoungClasses [
 { #category : #testing }
 CogObjectRepresentationForSpur >> canPinObjects [
 	"Answer if the memory manager supports pinned objects."
+	<inline: true>
 	^true
 ]
 
