@@ -775,7 +775,7 @@ CogObjectRepresentationForSqueakV3 >> generateObjectRepresentationTrampolines [
 											called: 'ceCreateNewArrayTrampoline'
 											arg: SendNumArgsReg
 											result: ReceiverResultReg.
-	cePositive32BitIntegerTrampoline := cogit genTrampolineFor: #cePositive32BitIntegerFor:
+	cePositive32BitIntegerTrampoline := cogit genTrampolineFor: #positive32BitIntegerFor:
 												called: 'cePositive32BitIntegerTrampoline'
 												arg: ReceiverResultReg
 												result: TempReg.

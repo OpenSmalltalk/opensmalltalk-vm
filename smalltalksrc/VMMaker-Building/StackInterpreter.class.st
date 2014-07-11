@@ -103,7 +103,13 @@ Class {
 		'statCheckForEvents',
 		'statProcessSwitch',
 		'statIOProcessEvents',
-		'statPendingFinalizationSignals'
+		'statPendingFinalizationSignals',
+		'statFollowCurrentMethod',
+		'statFollowForSendFault',
+		'statFollowForSignal',
+		'statFollowForPrimFail',
+		'statFollowForSelectorFault',
+		'statFollowForSpecialSelector'
 	],
 	#classVars : [
 		'AltBytecodeEncoderClassName',
@@ -219,6 +225,8 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 			removeVariable: 'extA';
 			removeVariable: 'extB';
 			removeVariable: 'bytecodeSetSelector'].
+	(self objectMemoryClass classPool at: #GatherForwardingStatistics ifAbsent: [false]) ifFalse:
+		[self instVarNames do: [:iv| (iv beginsWith: 'statFollow') ifTrue: [aCCodeGenerator removeVariable: iv]]].
 	aCCodeGenerator
 		var: #methodCache
 		declareC: 'long methodCache[MethodCacheSize + 1 /* ', (MethodCacheSize + 1) printString, ' */]'.
@@ -3207,7 +3215,8 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveStateFor: primIndex [
 					 self stackValue: index put: oop].
 				((objectMemory hasPointerFields: oop)
 				 and: [objectMemory followForwardedObjectFields: oop toDepth: accessorDepth]) ifTrue:
-					[found := true]]]].
+					[objectMemory forwardingCount: [statFollowForPrimFail := statFollowForPrimFail + 1].
+					 found := true]]]].
 	^found
 ]
 
@@ -5758,6 +5767,7 @@ StackInterpreter >> flushMethodCacheFrom: memStart to: memEnd [
 
 { #category : #'message sending' }
 StackInterpreter >> followForwardedFieldsInCurrentMethod [
+	objectMemory forwardingCount: [statFollowCurrentMethod := statFollowCurrentMethod + 1].
 	objectMemory
 		followForwardedObjectFields: method
 		toDepth: 0
@@ -6367,6 +6377,7 @@ StackInterpreter >> handleForwardedSelectorFaultFor: selectorOop [
 	<inline: false>
 	self assert: (objectMemory isOopForwarded: selectorOop).
 	self followForwardedFieldsInCurrentMethod.
+	objectMemory forwardingCount: [statFollowForSelectorFault := statFollowForSelectorFault + 1].
 	objectMemory
 		followForwardedObjectFields: (objectMemory splObj: SpecialSelectors)
 		toDepth: 0.
@@ -6390,7 +6401,8 @@ StackInterpreter >> handleForwardedSendFaultForTag: classTag [
 	self followForwardedFrameContents: framePointer
 		stackPointer: stackPointer + (argumentCount + 1 * BytesPerWord). "don't repeat effort"
 	(objectMemory isPointers: (self frameReceiver: framePointer)) ifTrue:
-		[objectMemory
+		[objectMemory forwardingCount: [statFollowForSendFault := statFollowForSendFault + 1].
+		 objectMemory
 			followForwardedObjectFields: (self frameReceiver: framePointer)
 			toDepth: 0].
 	^objectMemory fetchClassTagOf: rcvr
@@ -6415,7 +6427,8 @@ StackInterpreter >> handleSpecialSelectorSendFaultFor: obj fp: theFP sp: theSP [
 
 	self followForwardedFrameContents: theFP stackPointer: theSP.
 	(objectMemory isPointers: (self frameReceiver: theFP)) ifTrue:
-		[objectMemory
+		[objectMemory forwardingCount: [statFollowForSpecialSelector := statFollowForSpecialSelector + 1].
+		 objectMemory
 			followForwardedObjectFields: (self frameReceiver: theFP)
 			toDepth: 0].
 	^objectMemory followForwarded: obj
@@ -6789,6 +6802,36 @@ StackInterpreter >> initialPCForHeader: methodHeader method: theMethod [
 ]
 
 { #category : #initialization }
+StackInterpreter >> initialize [
+	"Here we can initialize the variables C initializes to zero.  #initialize methods do /not/ get translated."
+	checkAllocFiller := false. "must preceed initializeObjectMemory:"
+	primFailCode := 0.
+	stackLimit := 0. "This is also the initialization flag for the stack system."
+	stackPage := overflowedPage := 0.
+	extraFramesToMoveOnOverflow := 0.
+	bytecodeSetSelector := 0.
+	highestRunnableProcessPriority := 0.
+	nextProfileTick := 0.
+	nextPollUsecs := 0.
+	nextWakeupUsecs := 0.
+	tempOop := theUnknownShort := 0.
+	interruptPending := false.
+	inIOProcessEvents := 0.
+	fullScreenFlag := 0.
+	deferDisplayUpdates := false.
+	pendingFinalizationSignals := statPendingFinalizationSignals := 0.
+	globalSessionID := 0.
+	jmpDepth := 0.
+	longRunningPrimitiveStartUsecs := longRunningPrimitiveStopUsecs := 0.
+	maxExtSemTabSizeSet := false.
+	statForceInterruptCheck := statStackOverflow := statCheckForEvents :=
+	statProcessSwitch := statIOProcessEvents := statStackPageDivorce := 0.
+	statFollowCurrentMethod := statFollowForSendFault := statFollowForSignal :=
+	statFollowForPrimFail := statFollowForSelectorFault := statFollowForSpecialSelector := 0
+
+]
+
+{ #category : #initialization }
 StackInterpreter >> initializeExtraClassInstVarIndices [
 	"Initialize metaclassNumSlots and thisClassIndex which are used in debug printing, and
 	 classNameIndex which is used not only for debug printing but for is:KindOf: & is:MemberOf:
@@ -6813,54 +6856,24 @@ StackInterpreter >> initializeExtraClassInstVarIndices [
 ]
 
 { #category : #initialization }
-StackInterpreter >> initializeInterpreter: bytesToShift [ 
+StackInterpreter >> initializeInterpreter: bytesToShift [
 	"Initialize Interpreter state before starting execution of a new image."
 	interpreterProxy := self sqGetInterpreterProxy.
 	self dummyReferToProxy.
-	checkAllocFiller := false. "must preceed initializeObjectMemory:"
 	objectMemory initializeObjectMemory: bytesToShift.
 	self checkAssumedCompactClasses.
-	primFailCode := 0.
 	self initializeExtraClassInstVarIndices.
-	stackLimit := 0. "This is also the initialization flag for the stack system."
-	stackPage := overflowedPage := 0.
-	extraFramesToMoveOnOverflow := 0.
 	method := newMethod := objectMemory nilObject.
-	self cCode: [self cppIf: MULTIPLEBYTECODESETS ifTrue: [bytecodeSetSelector := 0]]
-		inSmalltalk: [bytecodeSetSelector := 0].
 	methodDictLinearSearchLimit := 8.
 	self flushMethodCache.
 	self flushAtCache.
 	self initialCleanup.
-	highestRunnableProcessPriority := 0.
-	nextProfileTick := 0.
-	profileSemaphore := objectMemory nilObject.
-	profileProcess := objectMemory nilObject.
-	profileMethod := objectMemory nilObject.
-	nextPollUsecs := 0.
-	nextWakeupUsecs := 0.
-	tempOop := theUnknownShort := 0.
+	profileSemaphore := profileProcess := profileMethod := objectMemory nilObject.
 	interruptKeycode := 2094. "cmd-. as used for Mac but no other OS"
-	interruptPending := false.
-	inIOProcessEvents := 0.
-	fullScreenFlag := 0.
-	deferDisplayUpdates := false.
-	pendingFinalizationSignals := statPendingFinalizationSignals := 0.
-	globalSessionID := 0.
 	[globalSessionID = 0] whileTrue:
 		[globalSessionID := self
-							cCode: [(self time: #NULL) + self ioMSecs]
-							inSmalltalk: [(Random new next * SmallInteger maxVal) asInteger]].
-	jmpDepth := 0.
-	longRunningPrimitiveStartUsecs :=
-	longRunningPrimitiveStopUsecs := 0.
-	maxExtSemTabSizeSet := false.
-	statForceInterruptCheck := 0.
-	statStackOverflow := 0.
-	statCheckForEvents := 0.
-	statProcessSwitch := 0.
-	statIOProcessEvents := 0.
-	statStackPageDivorce := 0
+								cCode: [(self time: #NULL) + self ioMSecs]
+								inSmalltalk: [(Random new next * SmallInteger maxVal) asInteger]]
 ]
 
 { #category : #'stack pages' }
@@ -7881,6 +7894,9 @@ StackInterpreter >> lookupMethodFor: selector InDictionary: dictionary [
 		[nextSelector := objectMemory fetchPointer: index ofObject: dictionary.
 		 nextSelector = objectMemory nilObject ifTrue:
 			[^nil].
+		 objectMemory
+			followMaybeForwardedSelector: nextSelector
+			into: [:followed| nextSelector := followed].
 		 nextSelector = selector ifTrue:
 			[methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dictionary.
 			 ^objectMemory fetchPointer: index - SelectorStart ofObject: methodArray].
@@ -7942,6 +7958,9 @@ StackInterpreter >> lookupMethodInDictionary: dictionary [
 		[index := 0.
 		 [index <= mask] whileTrue:
 			[nextSelector := objectMemory fetchPointer: index + SelectorStart ofObject: dictionary.
+			 objectMemory
+				followMaybeForwardedSelector: nextSelector
+				into: [:followed| nextSelector := followed].
 			 nextSelector = messageSelector ifTrue:
 				[methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dictionary.
 				 newMethod := objectMemory followField: index ofObject: methodArray.
@@ -7959,6 +7978,9 @@ StackInterpreter >> lookupMethodInDictionary: dictionary [
 	[true] whileTrue:
 		[nextSelector := objectMemory fetchPointer: index ofObject: dictionary.
 		 nextSelector = objectMemory nilObject ifTrue: [^false].
+		 objectMemory
+			followMaybeForwardedSelector: nextSelector
+			into: [:followed| nextSelector := followed].
 		 nextSelector = messageSelector ifTrue:
 			[methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dictionary.
 			 newMethod := objectMemory followField: index - SelectorStart ofObject: methodArray.
@@ -12553,23 +12575,6 @@ StackInterpreter >> storeStackPointerValue: value inContext: aContext [
 		withValue: (objectMemory integerObjectOf: value)
 ]
 
-{ #category : #'primitive support' }
-StackInterpreter >> stringForCString: aCString [
-	"Answer a new String copied from a null-terminated C string,
-	 or nil if out of memory.
-	 Caution: This may invoke the garbage collector."
-	<api>
-	<var: 'aCString' type: 'const char *'>
-	| len newString |
-	len := self strlen: aCString.
-	newString := objectMemory instantiateClass: objectMemory classString indexableSize: len.
-	newString isNil ifFalse:
-		[self st: (self arrayValueOf: newString)
-			rn: aCString
-			cpy: len]. "(char *)strncpy()"
-	^newString
-]
-
 { #category : #'debug support' }
 StackInterpreter >> stringOf: oop [
 	<doNotGenerate>
@@ -12697,6 +12702,7 @@ StackInterpreter >> synchronousSignal: aSemaphore [
 		 firstLink := objectMemory fetchPointer: FirstLinkIndex ofObject: aSemaphore.
 		 (objectMemory isForwarded: firstLink) ifTrue:
 			["0 = aSemaphore, 1 = aProcess. Hence reference to suspendedContext will /not/ be forwarded."
+			 objectMemory forwardingCount: [statFollowForSignal := statFollowForSignal + 1].
 			 objectMemory followForwardedObjectFields: aSemaphore toDepth: 1].
 		 self assert: (objectMemory isForwarded: (objectMemory fetchPointer: SuspendedContextIndex ofObject: firstLink)) not].
 

@@ -3939,13 +3939,15 @@ CCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
 				((vmClass
 					ifNotNil: [vmClass initializationOptions]
 					ifNil: [vmMaker options]) at: key ifAbsent: [false]) ifNotNil:
-					[:option| option ~~ false ifTrue: [^true]].
-			 (aClass bindingOf: key) ifNotNil:
-				[:binding|
-				binding value ~~ false ifTrue: [^true]].
-			 (VMBasicConstants bindingOf: key) ifNotNil:
-				[:binding|
-				binding value ~~ false ifTrue: [^true]]]].
+					[:option| option ~~ false ifTrue: [^true]]].
+			 "Lookup options in class variables of the defining class, VMMaker, the interpreterClass and the objectMemoryClass"
+			 ((vmMaker notNil and: [vmMaker interpreterClass notNil])
+					ifTrue: [{aClass. VMBasicConstants. vmMaker interpreterClass. vmMaker interpreterClass objectMemoryClass}]
+					ifFalse: [{aClass. VMBasicConstants}]) do:
+				[:scope|
+				 (scope bindingOf: key) ifNotNil:
+					[:binding|
+					binding value ~~ false ifTrue: [^true]]]].
 		^false].
 	^(aClass >> selector pragmaAt: #doNotGenerate) isNil
 ]

@@ -126,6 +126,13 @@ Spur32BitCoMemoryManager >> clearLeakMapAndMapAccessibleObjects [
 ]
 
 { #category : #'cog jit support' }
+Spur32BitCoMemoryManager >> ensureNoForwardedLiteralsIn: aMethodObj [
+	"Ensure there are no forwarded literals in the argument."
+	<api>
+	self followForwardedObjectFields: aMethodObj toDepth: 0
+]
+
+{ #category : #'cog jit support' }
 Spur32BitCoMemoryManager >> freeStart: aValue [
 	self assert: (aValue >= scavenger eden start and: [aValue < (scavengeThreshold + 1024)]).
 	self assert: (scavengeThreshold max: aValue) + coInterpreter interpreterAllocationReserveBytes <= scavenger eden limit.

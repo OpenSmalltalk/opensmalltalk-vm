@@ -1652,13 +1652,6 @@ CoInterpreter >> ceNonLocalReturn: returnValue [
 ]
 
 { #category : #trampolines }
-CoInterpreter >> cePositive32BitIntegerFor: anInteger [
-	<api>
-	<var: #anInteger type: #usqInt>
-	^self positive32BitIntegerFor: anInteger
-]
-
-{ #category : #trampolines }
 CoInterpreter >> ceReturnToInterpreter: anOop [
 	"Perform a return from a machine code frame to an interpreted frame.
 	 The machine code has executed a return instruction when the return address
@@ -3120,6 +3113,7 @@ CoInterpreter >> followForwardedFieldsInCurrentMethod [
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	<inline: false>
+	objectMemory forwardingCount: [statFollowCurrentMethod := statFollowCurrentMethod + 1].
 	(self isMachineCodeFrame: framePointer)
 		ifTrue:
 			[cogMethod := self mframeHomeMethod: framePointer.
@@ -3516,7 +3510,8 @@ CoInterpreter >> handleForwardedSendFaultForReceiver: forwardedReceiver stackDel
 	self followForwardedFrameContents: framePointer
 		stackPointer: stackPointer + (rcvrStackIndex + 1 * BytesPerWord). "don't repeat effort"
 	(objectMemory isPointers: (self frameReceiver: framePointer)) ifTrue:
-		[objectMemory
+		[objectMemory forwardingCount: [statFollowForSendFault := statFollowForSendFault + 1].
+		 objectMemory
 			followForwardedObjectFields: (self frameReceiver: framePointer)
 			toDepth: 0].
 	self followForwardedFieldsInCurrentMethod.
@@ -5169,6 +5164,12 @@ CoInterpreter >> noAssertHeaderOf: methodPointer [
 		ifFalse: [methodHeader]
 ]
 
+{ #category : #trampolines }
+CoInterpreter >> positive32BitIntegerFor: integerValue [
+	<api>
+	^super positive32BitIntegerFor: integerValue
+]
+
 { #category : #'object memory support' }
 CoInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 	"Clear the gcMode var and let the Cogit do its post GC checks."
@@ -6453,6 +6454,7 @@ CoInterpreter >> synchronousSignal: aSemaphore [
 		 firstLink := objectMemory fetchPointer: FirstLinkIndex ofObject: aSemaphore.
 		 (objectMemory isForwarded: firstLink) ifTrue:
 			["0 = aSemaphore, 1 = aProcess. Hence reference to suspendedContext will /not/ be forwarded."
+			 objectMemory forwardingCount: [statFollowForSignal := statFollowForSignal + 1].
 			 objectMemory followForwardedObjectFields: aSemaphore toDepth: 1].
 		 self assert: (objectMemory isForwarded: (objectMemory fetchPointer: SuspendedContextIndex ofObject: firstLink)) not].
 
