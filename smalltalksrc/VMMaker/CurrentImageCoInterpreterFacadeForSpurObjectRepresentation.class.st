@@ -51,7 +51,7 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> classTableRootObj 
 ]
 
 { #category : #forwarding }
-CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> followForwardedObjectFields: methodObh toDepth: depth [ 
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> followForwardedObjectFields: objOop toDepth: depth [ 
 	"This is a noop in the facade"
 ]
 
