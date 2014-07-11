@@ -54,8 +54,8 @@ test "$KEEP" = 1 || rm -rf "$DEST"/* "$DEST"/.??*
 
 # Build CoreVM using xcode
 echo # maddeningly xcode has no equivalent of .FORCE and if you use an Xcode script to nuke this file the build fails
-echo rm \"build/$VMXCP.build/$BUILD_CONFIGURATION/$OBJDIR/version.o\"
-rm "build/$VMXCP.build/$BUILD_CONFIGURATION/$OBJDIR/version.o"
+echo rm \"build/CoreVM.build/$BUILD_CONFIGURATION/$OBJDIR/version.o\"
+rm "build/CoreVM.build/$BUILD_CONFIGURATION/$OBJDIR/version.o"
 echo CoreVM xcodebuild -project CoreVM.xcodeproj -configuration $BUILD_CONFIGURATION
 xcodebuild -project CoreVM.xcodeproj -configuration $BUILD_CONFIGURATION
 if [ -d "$DEST" ]; then
