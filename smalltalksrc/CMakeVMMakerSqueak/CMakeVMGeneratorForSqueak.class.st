@@ -59,7 +59,7 @@ CMakeVMGeneratorForSqueak >> generate [
 		project: config executableName.
 
 	config setGlobalOptionsAfterDetermineSystem: self.
-
+"I NEED COMPILER FLAGS, DEFINITIONS, LINKS, INCLUDES HERE"
 	config setupDirectories: self.
 
 	self message: '${CMAKE_MODULE_PATH}'.
