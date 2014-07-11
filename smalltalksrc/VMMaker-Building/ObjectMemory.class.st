@@ -2002,6 +2002,19 @@ ObjectMemory >> followForwardedObjectFields: objOop toDepth: depth [
 	self shouldNotImplement
 ]
 
+{ #category : #'interpreter access' }
+ObjectMemory >> followMaybeForwardedSelector: oop [
+	"Spur compatibility; in V3 this is just a noop"
+	<inline: true>
+	^oop
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> followMaybeForwardedSelector: oop into: aBlock [
+	"Spur compatibility; in V3 this is just a noop"
+	<inline: true>
+]
+
 { #category : #'forward compatibility' }
 ObjectMemory >> followNonImmediateField: fieldIndex ofObject: anObject [
 	^self fetchPointer: fieldIndex ofObject: anObject
@@ -2087,6 +2100,12 @@ ObjectMemory >> forward: oop to: newOop savingOopAt: oopPtr andHeaderAt: hdrPtr 
 
 	"Put a forwarding pointer in the old object, flagged with forbidden header type"
 	self longAt: oop put: newOop + HeaderTypeFree
+]
+
+{ #category : #'spur compatibility' }
+ObjectMemory >> forwardingCount: aBlock [
+	"Hook for turning on and off statistics gathering on forwarding.  Off here-in."
+	<inline: true>
 ]
 
 { #category : #'gc -- compaction' }
@@ -5139,6 +5158,24 @@ ObjectMemory >> storeWord: fieldIndex ofObject: oop withValue: valueWord [
 	"This message is deprecated.  Use storeLong32, storeLong64 or storePointer"
 
 	self abort
+]
+
+{ #category : #'primitive support' }
+ObjectMemory >> stringForCString: aCString [
+	"Answer a new String copied from a null-terminated C string,
+	 or nil if out of memory.
+	 Caution: This may invoke the garbage collector."
+	<api>
+	<var: 'aCString' type: 'const char *'>
+	<inline: false>
+	| len newString |
+	len := self strlen: aCString.
+	newString := self instantiateClass: (self splObj: ClassByteString) indexableSize: len.
+	newString ifNotNil:
+		[self st: newString + self baseHeaderSize
+			rn: aCString
+			cpy: len]. "(char *)strncpy()"
+	^newString
 ]
 
 { #category : #allocation }
