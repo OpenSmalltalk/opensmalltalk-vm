@@ -8744,9 +8744,9 @@ SpurMemoryManager >> scanClassPostBecome: startClassObj effects: becomeEffects [
 	classObj := startClassObj.
 
 	["e.g. the Newspeak bootstrap creates fake classes that contain bogus superclasses.
-	  Hence be cautious."
+	  Hence be cautious.  Also need to terminate at nilObject."
 	 ((self isPointers: classObj)
-	   and: [(self numSlotsOf: classObj) > MethodDictionaryIndex]) ifFalse:
+	   and: [(self rawNumSlotsOf: classObj) > MethodDictionaryIndex]) ifFalse:
 		[^self].
 	 obj := self followObjField: MethodDictionaryIndex ofObject: classObj.
 	 "Solving the becommed method stored into a method dictionary object issue is easy;
@@ -8757,7 +8757,9 @@ SpurMemoryManager >> scanClassPostBecome: startClassObj effects: becomeEffects [
 	 self forwardingCount: [statFollowForBecome := statFollowForBecome + 1].
 	 FollowMethodDictionariesOnBecome
 		ifTrue: [self followForwardedObjectFields: obj toDepth: 0]
-		ifFalse: [self followObjField: MethodArrayIndex ofObject: obj].
+		ifFalse:
+			[(self rawNumSlotsOf: obj) > MethodArrayIndex ifTrue:
+				[self followObjField: MethodArrayIndex ofObject: obj]].
 	 obj := self followObjField: SuperclassIndex ofObject: classObj.
 	 "If the superclass has an identityHash then either it is nil, or is in the class table.
 	  Tail recurse."
