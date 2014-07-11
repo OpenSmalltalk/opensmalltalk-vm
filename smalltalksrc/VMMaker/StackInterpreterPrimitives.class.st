@@ -780,6 +780,23 @@ StackInterpreterPrimitives >> primitiveFlushCacheBySelector [
 		[self flushAtCache]
 ]
 
+{ #category : #'system control primitives' }
+StackInterpreterPrimitives >> primitiveForwardingStats [
+	<export: true>
+	<option: #GatherForwardingStatistics>
+	| stats |
+	stats := objectMemory
+				forwardingStatsWith: statFollowCurrentMethod
+				with: statFollowForPrimFail
+				with: statFollowForSelectorFault
+				with: statFollowForSendFault
+				with: statFollowForSignal
+				with: statFollowForSpecialSelector.
+	stats ifNil:
+		[^self primitiveFailFor: PrimErrNoMemory].
+	self methodReturnValue: stats
+]
+
 { #category : #'memory space primitives' }
 StackInterpreterPrimitives >> primitiveFullGC [
 	"Do a full garbage collection.  In SqueakV3ObjectMemory, answer the number

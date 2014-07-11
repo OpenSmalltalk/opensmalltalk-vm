@@ -3202,7 +3202,7 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 		ifFalse:
 			[bytecodeSetOffset := 0].
 	extA := extB := 0.
-	objectRepresentation ensureNoForwardedLiteralsIn: aMethodObj.
+	objectMemory ensureNoForwardedLiteralsIn: aMethodObj.
 	methodObj := aMethodObj.
 	cogMethod := self compileCogMethod: aSelectorOop.
 	(cogMethod asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
@@ -3262,16 +3262,16 @@ Cogit >> cogCodeConstituents [
 	constituents isNil ifTrue:
 		[^constituents].
 	coInterpreter pushRemappableOop: constituents.
-	((label := coInterpreter stringForCString: 'CogCode') isNil
-	 or: [(value := coInterpreter cePositive32BitIntegerFor: codeBase) isNil]) ifTrue:
+	((label := objectMemory stringForCString: 'CogCode') isNil
+	 or: [(value := coInterpreter positive32BitIntegerFor: codeBase) isNil]) ifTrue:
 		[^nil].
 	coInterpreter
 		storePointerUnchecked: 0 ofObject: coInterpreter topRemappableOop withValue: label;
 		storePointerUnchecked: 1 ofObject: coInterpreter topRemappableOop withValue: value.
 	0 to: trampolineTableIndex - 1 by: 2 do:
 		[:i|
-		((label := coInterpreter stringForCString: (trampolineAddresses at: i)) isNil
-		 or: [(value := coInterpreter cePositive32BitIntegerFor: (trampolineAddresses at: i + 1) asUnsignedInteger) isNil]) ifTrue:
+		((label := objectMemory stringForCString: (trampolineAddresses at: i)) isNil
+		 or: [(value := coInterpreter positive32BitIntegerFor: (trampolineAddresses at: i + 1) asUnsignedInteger) isNil]) ifTrue:
 			[coInterpreter popRemappableOop.
 			 ^nil].
 		coInterpreter
@@ -3287,7 +3287,7 @@ Cogit >> cogCodeConstituents [
 				withValue: (cogMethod cmType = CMMethod
 								ifTrue: [cogMethod methodObject]
 								ifFalse: [cogMethod selector]).
-			 (value := coInterpreter cePositive32BitIntegerFor: cogMethod asUnsignedInteger) isNil ifTrue:
+			 (value := coInterpreter positive32BitIntegerFor: cogMethod asUnsignedInteger) isNil ifTrue:
 				[coInterpreter popRemappableOop.
 				 ^nil].
 			 coInterpreter
@@ -3296,15 +3296,15 @@ Cogit >> cogCodeConstituents [
 				withValue: value.
 			 count := count + 2].
 		cogMethod := methodZone methodAfter: cogMethod].
-	((label := coInterpreter stringForCString: 'CCFree') isNil
-	 or: [(value := coInterpreter cePositive32BitIntegerFor: methodZone freeStart) isNil]) ifTrue:
+	((label := objectMemory stringForCString: 'CCFree') isNil
+	 or: [(value := coInterpreter positive32BitIntegerFor: methodZone freeStart) isNil]) ifTrue:
 		[coInterpreter popRemappableOop.
 		 ^nil].
 	coInterpreter
 		storePointerUnchecked: count ofObject: coInterpreter topRemappableOop withValue: label;
 		storePointerUnchecked: count + 1 ofObject: coInterpreter topRemappableOop withValue: value.
-	((label := coInterpreter stringForCString: 'CCEnd') isNil
-	 or: [(value := coInterpreter cePositive32BitIntegerFor: methodZone zoneEnd) isNil]) ifTrue:
+	((label := objectMemory stringForCString: 'CCEnd') isNil
+	 or: [(value := coInterpreter positive32BitIntegerFor: methodZone zoneEnd) isNil]) ifTrue:
 		[coInterpreter popRemappableOop.
 		 ^nil].
 	coInterpreter
@@ -6134,6 +6134,7 @@ Cogit >> implicitReceiverCacheAddressAt: mcpc [
 				mov selector, SendNumArgsReg
 				call ceImplicitReceiver
 	 and Lclass: .word; Lmixin: .word is somewhere on the heap."
+	<option: #NewspeakVM>
 	<inline: true>
 	^objectRepresentation canPinObjects
 		ifTrue:
@@ -9473,7 +9474,7 @@ Cogit >> voidImplicitReceiverCacheAt: mcpc [
 				mov selector, SendNumArgsReg
 				call ceImplicitReceiver
 	 and Lclass: .word; Lmixin: .word is somewhere on the heap."
-
+	<option: #NewspeakVM>
 	| cacheAddress |
 	self assert: NumOopsPerIRC = 2.
 	cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
