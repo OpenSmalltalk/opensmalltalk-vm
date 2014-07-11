@@ -60,6 +60,7 @@ Linux64x86w32BitSqueakCogV3Config >> cogitClass [
 
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitSqueakCogV3Config >> compilerFlagsBuild [
+	"this is stupid. We have C_FLAGS, compilerflags, link flags, ld flags definitions."
 	"Some gcc versions (3.4*) create a broken VM using -O2, so try -O1 if you have problems"
 	^{ 
   '-g3'                                               "more debugging"
