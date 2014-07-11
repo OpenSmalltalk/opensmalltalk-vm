@@ -440,6 +440,16 @@ Spur32BitMemoryManager >> maxSlotsForAlloc [
 	^512*1024*1024-1
 ]
 
+{ #category : #'interpreter access' }
+Spur32BitMemoryManager >> methodDictionaryHash: oop mask: mask [
+	<inline: true>
+	^mask bitAnd: ((self isImmediate: oop)
+						ifTrue: [(self isIntegerObject: oop)
+									ifTrue: [self integerValueOf: oop]
+									ifFalse: [self characterValueOf: oop]]
+						ifFalse: [self hashBitsOf: oop])
+]
+
 { #category : #'free space' }
 Spur32BitMemoryManager >> numFreeLists [
 	"Answer the number of free lists.  We use freeListsMask, a bitmap, to avoid
