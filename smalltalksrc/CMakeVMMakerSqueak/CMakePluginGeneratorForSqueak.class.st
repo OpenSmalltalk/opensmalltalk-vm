@@ -291,7 +291,8 @@ CMakePluginGeneratorForSqueak >> configDotSqueakSSL [
 
 { #category : #'cmake commands' }
 CMakePluginGeneratorForSqueak >> configDotUUIDPlugin [
-	^'PLUGIN_FIND_INCLUDE (UUID uuid.h)
+	^'
+PLUGIN_FIND_INCLUDE (UUID uuid.h)
 CONFIG_DEFINE (HAVE_UUID_H)
 
 PLUGIN_FIND_INCLUDE (SYS_UUID sys/uuid.h)
