@@ -1985,6 +1985,7 @@ ObjectMemory >> fixedFieldsOf: oop format: fmt length: wordLength [
 
 { #category : #'forward compatibility' }
 ObjectMemory >> followField: fieldIndex ofObject: anObject [
+	"Spur compatibility; in V3 this is a synonym for fetchPointer:ofObject:"
 	<inline: true>
 	^self fetchPointer: fieldIndex ofObject: anObject
 ]
@@ -2007,17 +2008,6 @@ ObjectMemory >> followMaybeForwardedSelector: oop [
 	"Spur compatibility; in V3 this is just a noop"
 	<inline: true>
 	^oop
-]
-
-{ #category : #'interpreter access' }
-ObjectMemory >> followMaybeForwardedSelector: oop into: aBlock [
-	"Spur compatibility; in V3 this is just a noop"
-	<inline: true>
-]
-
-{ #category : #'forward compatibility' }
-ObjectMemory >> followNonImmediateField: fieldIndex ofObject: anObject [
-	^self fetchPointer: fieldIndex ofObject: anObject
 ]
 
 { #category : #'forward compatibility' }
@@ -3733,6 +3723,14 @@ ObjectMemory >> memoryBaseForImageRead [
 { #category : #accessing }
 ObjectMemory >> memoryLimit [
 	^memoryLimit
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> methodDictionaryHash: oop mask: mask [
+	<inline: true>
+	^mask bitAnd: ((self isImmediate: oop)
+						ifTrue: [self integerValueOf: oop]
+						ifFalse: [self hashBitsOf: oop])
 ]
 
 { #category : #allocation }

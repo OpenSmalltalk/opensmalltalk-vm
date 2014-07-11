@@ -138,7 +138,6 @@ Class {
 		'inBlock',
 		'needsFrame',
 		'hasYoungReferent',
-		'usesMethodClass',
 		'primitiveIndex',
 		'backEnd',
 		'callerSavedRegMask',
@@ -3870,7 +3869,6 @@ Cogit >> compileCogMethod: selector [
 	primInvokeLabel := nil.
 	postCompileHook := nil.
 	maxLitIndex := -1.
-	usesMethodClass := false.
 	extra := ((primitiveIndex := coInterpreter primitiveIndexOf: methodObj) > 0
 			and: [(coInterpreter isQuickPrimitiveIndex: primitiveIndex) not])
 				ifTrue: [30]
@@ -4468,7 +4466,6 @@ Cogit >> fillInMethodHeader: method size: size selector: selector [
 	method cmUsageCount: self initialMethodUsageCount.
 	method cpicHasMNUCase: false.
 	method cmUsesPenultimateLit: maxLitIndex >= ((coInterpreter literalCountOfHeader: methodHeader) - 2).
-	method cmUsesMethodClass: usesMethodClass.
 	method blockEntryOffset: (blockEntryLabel notNil
 								ifTrue: [blockEntryLabel address - method asInteger]
 								ifFalse: [0]).

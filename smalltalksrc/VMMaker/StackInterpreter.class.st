@@ -1812,39 +1812,6 @@ StackInterpreter >> activeProcess [
 	^objectMemory fetchPointer: ActiveProcessIndex ofObject: self schedulerPointer
 ]
 
-{ #category : #'lazy become' }
-StackInterpreter >> actuallyFollowNecessaryForwardingInMethod: methodObj [
-	"To avoid any chance of a forwarded object during super sends we follow the
-	 methodClassAssociation.  The forwarded object send fault only copes with
-	 normal sends to instances."
-	<option: #SpurObjectMemory>
-	<inline: true>
-	self actuallyFollowNecessaryForwardingInMethod: methodObj
-		literalCount: (self literalCountOf: methodObj)
-]
-
-{ #category : #'lazy become' }
-StackInterpreter >> actuallyFollowNecessaryForwardingInMethod: methodObj literalCount: litCount [
-	"To avoid any chance of a forwarded object during super sends we follow the
-	 methodClassAssociation.  The forwarded object send fault only copes with
-	 normal sends to instances.  Inline methodClassAssociation access for speed."
-	| assoc classObj |
-	<option: #SpurObjectMemory>
-	<inline: true>
-	assoc := self literal: litCount - 1 ofMethod: methodObj.
-	(objectMemory isForwarded: assoc) ifTrue:
-		[assoc := objectMemory followForwarded: assoc.
-		 objectMemory
-			storePointer: litCount + LiteralStart - 1
-			ofObject: methodObj
-			withValue: assoc].
-	(objectMemory numSlotsOf: assoc) >= (ValueIndex + 1) ifTrue:
-		[classObj := objectMemory fetchPointer: ValueIndex ofObject: assoc.
-		 (objectMemory isForwarded: classObj) ifTrue:
-			[classObj := objectMemory followForwarded: classObj.
-			 objectMemory storePointer: ValueIndex ofObject: assoc withValue: classObj]]
-]
-
 { #category : #'process primitive support' }
 StackInterpreter >> addFirstLink: proc toList: aList [ 
 	"Add the given process to the front of the given linked list
@@ -5835,17 +5802,17 @@ StackInterpreter >> followForwardingPointersInScheduler [
 	"the GC follows pointers in the special objects array for us."
 	self assert: (objectMemory isForwarded: schedAssoc) not.
 
-	sched := objectMemory followNonImmediateField: ValueIndex ofObject: schedAssoc.
+	sched := objectMemory followObjField: ValueIndex ofObject: schedAssoc.
 
-	procLists := objectMemory followNonImmediateField: ProcessListsIndex ofObject: sched.
+	procLists := objectMemory followObjField: ProcessListsIndex ofObject: sched.
 
 	0 to: (objectMemory numSlotsOf: procLists) - 1 do:
 		[:i| | list first last next |
-		list := objectMemory followNonImmediateField: i ofObject: procLists.
-		first := objectMemory followNonImmediateField: FirstLinkIndex ofObject: list.
-		last := objectMemory followNonImmediateField: LastLinkIndex ofObject: list.
+		list := objectMemory followObjField: i ofObject: procLists.
+		first := objectMemory followObjField: FirstLinkIndex ofObject: list.
+		last := objectMemory followObjField: LastLinkIndex ofObject: list.
 		[first ~= last] whileTrue:
-			[next := objectMemory followNonImmediateField: NextLinkIndex ofObject: first.
+			[next := objectMemory followObjField: NextLinkIndex ofObject: first.
 			 first := next]]
 
 ]
@@ -5942,20 +5909,16 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 				stackPages
 					longAt: theFP + FoxMethod
 					put: (oop := newOop)].
-			  self followNecessaryForwardingInMethod: oop.
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := (theFP + FoxCallerSavedIP) asUnsignedInteger.
 				 theFP := callerFP]]]
 ]
 
-{ #category : #'lazy become' }
-StackInterpreter >> followNecessaryForwardingInMethod: methodObj [
-	"To avoid any chance of a forwarded object during super sends we follow the
-	 methodClassAssociation.  The forwarded object send fault only copes with
-	 normal sends to instances."
-	<inline: false>
-	objectMemory hasSpurMemoryManagerAPI ifTrue:
-		[self actuallyFollowNecessaryForwardingInMethod: methodObj]
+{ #category : #'compiled methods' }
+StackInterpreter >> followLiteral: offset ofMethod: methodPointer [
+	<api>
+	^objectMemory followField: offset + LiteralStart ofObject: methodPointer
+
 ]
 
 { #category : #'object memory support' }
@@ -6804,6 +6767,8 @@ StackInterpreter >> initialPCForHeader: methodHeader method: theMethod [
 { #category : #initialization }
 StackInterpreter >> initialize [
 	"Here we can initialize the variables C initializes to zero.  #initialize methods do /not/ get translated."
+	super initialize.
+
 	checkAllocFiller := false. "must preceed initializeObjectMemory:"
 	primFailCode := 0.
 	stackLimit := 0. "This is also the initialization flag for the stack system."
@@ -7882,9 +7847,7 @@ StackInterpreter >> lookupMethodFor: selector InDictionary: dictionary [
 	<asmLabel: false>
 	length := objectMemory fetchWordLengthOf: dictionary.
 	mask := length - SelectorStart - 1.
-	index := SelectorStart + (mask bitAnd: ((objectMemory isImmediate: selector)
-												ifTrue: [objectMemory integerValueOf: selector]
-												ifFalse: [objectMemory hashBitsOf: selector])).
+	index := SelectorStart + (objectMemory methodDictionaryHash: selector mask: mask).
 
 	"It is assumed that there are some nils in this dictionary, and search will 
 	 stop when one is encountered. However, if there are no nils, then wrapAround 
@@ -7894,12 +7857,14 @@ StackInterpreter >> lookupMethodFor: selector InDictionary: dictionary [
 		[nextSelector := objectMemory fetchPointer: index ofObject: dictionary.
 		 nextSelector = objectMemory nilObject ifTrue:
 			[^nil].
-		 objectMemory
-			followMaybeForwardedSelector: nextSelector
-			into: [:followed| nextSelector := followed].
+		 (objectMemory isOopForwarded: nextSelector) ifTrue:
+			[nextSelector := objectMemory
+								fixFollowedField: index + SelectorStart
+								ofObject: dictionary
+								withInitialValue: nextSelector].
 		 nextSelector = selector ifTrue:
-			[methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dictionary.
-			 ^objectMemory fetchPointer: index - SelectorStart ofObject: methodArray].
+			[methodArray := objectMemory followObjField: MethodArrayIndex ofObject: dictionary.
+			 ^objectMemory followField: index - SelectorStart ofObject: methodArray].
 		 index := index + 1.
 		 index = length ifTrue:
 			[wrapAround ifTrue: [^nil].
@@ -7958,18 +7923,18 @@ StackInterpreter >> lookupMethodInDictionary: dictionary [
 		[index := 0.
 		 [index <= mask] whileTrue:
 			[nextSelector := objectMemory fetchPointer: index + SelectorStart ofObject: dictionary.
-			 objectMemory
-				followMaybeForwardedSelector: nextSelector
-				into: [:followed| nextSelector := followed].
+			 (objectMemory isOopForwarded: nextSelector) ifTrue:
+				[nextSelector := objectMemory
+									fixFollowedField: index + SelectorStart
+									ofObject: dictionary
+									withInitialValue: nextSelector].
 			 nextSelector = messageSelector ifTrue:
-				[methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dictionary.
+				[methodArray := objectMemory followObjField: MethodArrayIndex ofObject: dictionary.
 				 newMethod := objectMemory followField: index ofObject: methodArray.
 				^true].
 		 index := index + 1].
 		 ^false].
-	index := SelectorStart + (mask bitAnd: ((objectMemory isImmediate: messageSelector)
-												ifTrue: [objectMemory integerValueOf: messageSelector]
-												ifFalse: [objectMemory hashBitsOf: messageSelector])).
+	index := SelectorStart + (objectMemory methodDictionaryHash: messageSelector mask: mask).
 
 	"It is assumed that there are some nils in this dictionary, and search will 
 	 stop when one is encountered. However, if there are no nils, then wrapAround 
@@ -7978,11 +7943,13 @@ StackInterpreter >> lookupMethodInDictionary: dictionary [
 	[true] whileTrue:
 		[nextSelector := objectMemory fetchPointer: index ofObject: dictionary.
 		 nextSelector = objectMemory nilObject ifTrue: [^false].
-		 objectMemory
-			followMaybeForwardedSelector: nextSelector
-			into: [:followed| nextSelector := followed].
+		 (objectMemory isOopForwarded: nextSelector) ifTrue:
+			[nextSelector := objectMemory
+								fixFollowedField: index + SelectorStart
+								ofObject: dictionary
+								withInitialValue: nextSelector].
 		 nextSelector = messageSelector ifTrue:
-			[methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dictionary.
+			[methodArray := objectMemory followObjField: MethodArrayIndex ofObject: dictionary.
 			 newMethod := objectMemory followField: index - SelectorStart ofObject: methodArray.
 			^true].
 		 index := index + 1.
@@ -8029,8 +7996,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	page := self newStackPage.
 	pointer := page baseAddress.
 	theIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
-	theMethod := objectMemory followNonImmediateField: MethodIndex ofObject: aContext.
-	self followNecessaryForwardingInMethod: theMethod.
+	theMethod := objectMemory followObjField: MethodIndex ofObject: aContext.
 	(objectMemory isIntegerObject: theIP) ifFalse:
 		[self error: 'context is not resumable'].
 	theIP := objectMemory integerValueOf: theIP.
@@ -8642,19 +8608,19 @@ StackInterpreter >> methodClassAssociationOf: methodPointer [
 { #category : #'compiled methods' }
 StackInterpreter >> methodClassOf: methodPointer [
 	<api>
+	"Using a read barrier here simplifies the become implementation and costs very little
+	 because the class index and ValueIndex of the association almost certainly share a cache line."
 	^self cppIf: NewspeakVM
 		ifTrue:
 			[| literal |
-			 literal := self literal: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
-			 self assert: (objectMemory isForwarded: literal) not.
+			 literal := self followLiteral: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
 			 literal = objectMemory nilObject
 				ifTrue: [literal]
-				ifFalse: [objectMemory fetchPointer: ValueIndex ofObject: literal]]
+				ifFalse: [objectMemory followField: ValueIndex ofObject: literal]]
 		ifFalse:
 			[| literal |
-			 literal := self literal: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
-			 self assert: (objectMemory isForwarded: literal) not.
-			 objectMemory fetchPointer: ValueIndex ofObject: literal]
+			 literal := self followLiteral: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
+			 objectMemory followField: ValueIndex ofObject: literal]
 ]
 
 { #category : #'compiled methods' }
@@ -12642,8 +12608,10 @@ StackInterpreter >> subscript: array with: index storing: oopToStore format: fmt
 
 { #category : #'message sending' }
 StackInterpreter >> superclassOf: classPointer [
+	"Using a read barrier here simplifies the become implementation and costs very
+	 little because the class index and superclass almost certainly share a cache line."
 	<inline: true>
-	^objectMemory fetchPointer: SuperclassIndex ofObject: classPointer
+	^objectMemory followField: SuperclassIndex ofObject: classPointer
 ]
 
 { #category : #'send bytecodes' }

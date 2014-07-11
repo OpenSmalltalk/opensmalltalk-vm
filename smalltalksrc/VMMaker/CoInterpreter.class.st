@@ -637,28 +637,6 @@ CoInterpreter >> activateNewMethod [
 	self returnToExecutive: inInterpreter postContextSwitch: switched
 ]
 
-{ #category : #'lazy become' }
-CoInterpreter >> actuallyFollowNecessaryForwardingInMethod: methodObj [
-	"To avoid any chance of a forwarded object during super sends
-	 we follow the methodClassAssociation.  The forwarded object
-	 send fault only copes with normal sends to instances."
-	| cogMethod header litCount |
-	<var: #cogMethod type: #'CogMethod *'>
-	header := self rawHeaderOf: methodObj.
-	(self isCogMethodReference: header) ifTrue:
-		[cogMethod := self cCoerceSimple: header to: #'CogMethod *'.
-		 "If the method class is not used we can avoid the forwarding
-		  check for both the cogMethod and the bytecoded method."
-		 cogMethod cmUsesMethodClass ifFalse:
-			[^self].
-		 cogit followForwardedLiteralsIn: cogMethod.
-		 header := cogMethod methodHeader].
-	litCount := self literalCountOfHeader: header. "Slang super expansion limitation"
-	super
-		actuallyFollowNecessaryForwardingInMethod: methodObj
-		literalCount: litCount
-]
-
 { #category : #'method lookup cache' }
 CoInterpreter >> addNewMethodToCache: classObj [
 	"Override to refuse to cache other than compiled methods.
@@ -3139,9 +3117,8 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 	 The read-barrier is minimised by arranging that forwarding pointers will fail a method cache
 	 probe, since notionally objects' internals are accessed only via sending messages to them,
 	 the exception is primitives that access the internals of the non-receiver argument(s).
-	 To avoid a read barrier on bytecode, literal and inst var fetch we scan the receivers and
-	 methods in the stack zone and follow any forwarded ones.  This is of course way cheaper
-	 than scanning all of memory as in the old become."
+	 To avoid a read barrier on inst var fetch we scan the receivers in the stack zone and follow
+	 any forwarded ones.  This is way cheaper than scanning all of memory as in the old become."
 	| theIPPtr |
 	<inline: false>
 	<var: #thePage type: #'StackPage *'>
@@ -3215,7 +3192,6 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 						stackPages
 							longAt: theFP + FoxMethod
 							put: (oop := newOop)]].
-			  self followNecessaryForwardingInMethod: oop.
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := (theFP + FoxCallerSavedIP) asUnsignedInteger.
 				 theFP := callerFP]]]
@@ -4238,8 +4214,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	theIP := (objectMemory isIntegerObject: theIP)
 				ifTrue: [objectMemory integerValueOf: theIP]
 				ifFalse: [HasBeenReturnedFromMCPC].
-	theMethod := objectMemory followNonImmediateField: MethodIndex ofObject: aContext.
-	self followNecessaryForwardingInMethod: theMethod.
+	theMethod := objectMemory followObjField: MethodIndex ofObject: aContext.
 	page := self newStackPage.
 	"first word on stack is caller context of base frame"
 	stackPages

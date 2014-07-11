@@ -689,10 +689,6 @@ SpurMemoryManager class >> initialize [
 	"SpurMemoryManager initialize"
 	BitsPerByte := 8.
 
-	"A major policy issue for become is whether to follow selectors in method
-	 dictionaries eagerly immediately post become, or whether to follow selectors
-	 lazily during lookup."
-	FollowMethodDictionariesOnBecome := false.
 	GatherForwardingStatistics := false.
 
 	"An obj stack is a stack of objects stored in a hidden root slot, such as
@@ -2318,7 +2314,7 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 			[self innerBecomeObjectsIn: array1 and: array2 copyHash: copyHashFlag]
 		ifFalse:
 			[self innerBecomeObjectsIn: array1 to: array2 copyHash: copyHashFlag].
-	self postBecomeScanClassTable.
+	self postBecomeOrCompactScanClassTable: becomeEffectsFlags.
 	self followSpecialObjectsOop.
 	coInterpreter postBecomeAction: becomeEffectsFlags.
 	becomeEffectsFlags := 0.
@@ -3912,9 +3908,6 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 				withValue: aBehavior.
 			 self setHashBitsOf: aBehavior to: classTableIndex.
 			 self assert: (self classAtIndex: (self rawHashBitsOf: aBehavior)) = aBehavior.
-			 "now fault-in method lookup chain."
-			 self scanClassPostBecome: aBehavior
-				effects: BecamePointerObjectFlag+BecameCompiledMethodFlag.
 			 self ensureAdequateClassTableBitmap.
 			 ^0]].
 	 majorIndex := (majorIndex + 1 bitAnd: self classIndexMask) max: 1.
@@ -4497,33 +4490,6 @@ SpurMemoryManager >> followMaybeForwarded: objOop [
 	^(self isForwarded: objOop)
 		ifTrue: [self followForwarded: objOop]
 		ifFalse: [objOop]
-]
-
-{ #category : #'object access' }
-SpurMemoryManager >> followMaybeForwardedSelector: oop into: aBlock [
-	"Policy switch for selector access in method dictionaries.
-	 If FollowMethodDictionariesOnBecome then selectors have
-	 already been followed. If not, follow lazily."
-	<inline: true>
-	FollowMethodDictionariesOnBecome ifFalse:
-		[| field |
-		 field := oop.
-		 [self isOopForwarded: field] whileTrue:
-			[field := self fetchPointer: 0 ofMaybeForwardedObject: field].
-		 aBlock value: field]
-]
-
-{ #category : #forwarding }
-SpurMemoryManager >> followNonImmediateField: fieldIndex ofObject: anObject [
-	"Make sure the oop at fieldIndex in anObject is not forwarded (follow the
-	 forwarder there-in if so).  Answer the (possibly followed) oop at fieldIndex.
-	 N.B. the oop is assumed to be non-immediate."
-	| objOop |
-	objOop := self fetchPointer: fieldIndex ofObject: anObject.
-	self assert: (self isNonImmediate: objOop).
-	(self isForwarded: objOop) ifTrue:
-		[objOop := self fixFollowedField: fieldIndex ofObject: anObject withInitialValue: objOop].
-	^objOop
 ]
 
 { #category : #forwarding }
@@ -8034,8 +8000,8 @@ SpurMemoryManager >> postBecomeOrCompactScanClassTable: effectsFlags [
 	 We can somehow avoid following classes from the classTable until after this mark phase."
 	self assert: self validClassTableRootPages.
 
-	(effectsFlags anyMask: BecamePointerObjectFlag"+BecameCompiledMethodFlag") ifFalse: [^self].
-	
+	(effectsFlags anyMask: BecamePointerObjectFlag) ifFalse: [^self].
+
 	0 to: numClassTablePages - 1 do:
 		[:i| | page |
 		page := self fetchPointer: i ofObject: hiddenRootsObj.
@@ -8046,39 +8012,7 @@ SpurMemoryManager >> postBecomeOrCompactScanClassTable: effectsFlags [
 			classOrNil ~= nilObj ifTrue:
 				[(self isForwarded: classOrNil) ifTrue:
 					[classOrNil := self followForwarded: classOrNil.
-					 self storePointer: j ofObject: page withValue: classOrNil].
-				 self scanClassPostBecome: classOrNil effects: effectsFlags]]]
-]
-
-{ #category : #'become implementation' }
-SpurMemoryManager >> postBecomeScanClassTable [
-	"Scan the class table post-become (iff a pointer object or compiled method was becommed).
-	 Note that one-way become can cause duplications in the class table.
-	 When can these be eliminated?  We use the classtableBitmap to mark  classTable entries
-	 (not the classes themselves, since marking a class doesn't help in knowing if its index is used).
-	 On image load, and during incrememtal scan-mark and full GC, classIndices are marked.
-	 We can somehow avoid following classes from the classTable until after this mark phase."
-
-	self assert: self validClassTableRootPages.
-
-	(becomeEffectsFlags anyMask: BecamePointerObjectFlag+BecameCompiledMethodFlag) ifFalse: [^self].
-	
-	self postBecomeOrCompactScanClassTable: becomeEffectsFlags
-]
-
-{ #category : #'become implementation' }
-SpurMemoryManager >> postCompactScanClassTable [
-	"Scan the class table post-compact.  Ensure all pages and
-	 all classes are not forwarded."
-
-	0 to: numClassTablePages - 1 do:
-		[:i| | page |
-		page := self fetchPointer: i ofObject: hiddenRootsObj.
-		(self isForwarded: page) ifTrue: "this check is for eliminateAndFreeForwarders"
-			[page := self followForwarded: page.
-			 self storePointer: i ofObject: hiddenRootsObj withValue: page]].
-	self assert: self validClassTableRootPages.	
-	self postBecomeOrCompactScanClassTable: BecamePointerObjectFlag+BecameCompiledMethodFlag
+					 self storePointer: j ofObject: page withValue: classOrNil]]]]
 ]
 
 { #category : #snapshot }
@@ -8723,49 +8657,6 @@ SpurMemoryManager >> safePrintStringOf: oop [
 		ifTrue: [target := self followForwarded: oop]
 		ifFalse: [target := oop].
 	^coInterpreter printStringOf: target
-]
-
-{ #category : #'become implementation' }
-SpurMemoryManager >> scanClassPostBecome: startClassObj effects: becomeEffects [
-	"Scan a class in the class table post-become.  Make sure the superclass
-	 chain contains no forwarding pointers, and that the method dictionaries
-	 are not forwarded either.  N.B. we don't follow methods or their
-	 methodClassAssociations since we can't guarantee that forwarders
-	 to compiled methods are not stored in method dictionaries via at:put:
-	 and so have to cope with forwarding pointers to compiled methods
-	 in method dictionaries anyway.  Instead the [Co]Interpreter must
-	 follow forwarders when fetching from method dictionaries and follow
-	 forwarders on become in the method cache and method zone."
-
-	| classObj obj |
-	"Algorithm depends on this to terminate loop at root of superclass chain."
-	self assert: (self rawHashBitsOf: nilObj) ~= 0.
-	self assert: (becomeEffects anyMask: BecamePointerObjectFlag). "otherwise why bother?"
-	classObj := startClassObj.
-
-	["e.g. the Newspeak bootstrap creates fake classes that contain bogus superclasses.
-	  Hence be cautious.  Also need to terminate at nilObject."
-	 ((self isPointers: classObj)
-	   and: [(self rawNumSlotsOf: classObj) > MethodDictionaryIndex]) ifFalse:
-		[^self].
-	 obj := self followObjField: MethodDictionaryIndex ofObject: classObj.
-	 "Solving the becommed method stored into a method dictionary object issue is easy;
-	  just have a read barrier on fetching the method.  But solving the read barrier for
-	  selectors is more difficult (because selectors are currently not read, just their oops).
-	  For now provide a policy switch that either follows on become or lazily on lookup."
-	 self flag: 'need to fix the selector and methodDictionary issue'.
-	 self forwardingCount: [statFollowForBecome := statFollowForBecome + 1].
-	 FollowMethodDictionariesOnBecome
-		ifTrue: [self followForwardedObjectFields: obj toDepth: 0]
-		ifFalse:
-			[(self rawNumSlotsOf: obj) > MethodArrayIndex ifTrue:
-				[self followObjField: MethodArrayIndex ofObject: obj]].
-	 obj := self followObjField: SuperclassIndex ofObject: classObj.
-	 "If the superclass has an identityHash then either it is nil, or is in the class table.
-	  Tail recurse."
-	 (self rawHashBitsOf: obj) = 0] whileTrue:
-		["effectively self scanClassPostBecome: obj"
-		 classObj := obj]
 ]
 
 { #category : #accessing }
