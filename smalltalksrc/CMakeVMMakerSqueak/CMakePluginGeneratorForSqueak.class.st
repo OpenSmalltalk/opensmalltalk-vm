@@ -8,7 +8,7 @@ Instance Variables
 "
 Class {
 	#name : #CMakePluginGeneratorForSqueak,
-	#superclass : #CMakeGeneratorForSqueak,
+	#superclass : #CMakeGenerator,
 	#instVars : [
 		'plugin',
 		'vmGen',
