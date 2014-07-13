@@ -5,7 +5,7 @@ A CMakeVMGeneratorForSqueak overides some CMakeVMGenerator methos for squeak com
 "
 Class {
 	#name : #CMakeVMGeneratorForSqueak,
-	#superclass : #CMakeGeneratorForSqueak,
+	#superclass : #CMakeGenerator,
 	#instVars : [
 		'internalPlugins',
 		'externalPlugins',
@@ -74,7 +74,6 @@ CMakeVMGeneratorForSqueak >> generate [
 	config extraVMSettings: self.
 
 	self puts: 'add_executable(' , config executableName, ' ', config executableType, ' ' , self sources , ')'.
-self break.
 	intPlugins := self generatePluginConfigs: config internalPlugins internal: true.
 	extPlugins := self generatePluginConfigs: config externalPlugins internal: false.
 
