@@ -59,6 +59,29 @@ CMakeVMMakerSqueakUnixConfigTest >> testExecutableType [
 ]
 
 { #category : #'as yet unclassified' }
+CMakeVMMakerSqueakUnixConfigTest >> testGenerateVmConfigCmake [
+	"config.cmake returns a string"
+	#( #SqueakUnixConfig)
+		do:[:each | 
+			(Smalltalk at:each) 
+				allSubclassesDo:[:configuration | | o buildTypes|
+					o:= configuration new.
+					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
+						ifTrue:[
+							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
+							buildTypes do:[:buildType |
+								o configureForBuildType: buildType.
+								self shouldnt: [o  generateVmConfigCmake] raise: Error]]]].
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakUnixConfigTest >> testLDFlags [
 	#( #SqueakUnixConfig)
 		do:[:each | 

@@ -51,6 +51,37 @@ example: SqueakMacOSX32x86Builder configurationsCategory
 ]
 
 { #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> configDotCmake [
+	^HelpTopic
+		title:'config.cmake'
+		contents:
+'The config.cmake file is included in CMakeLists.txt. 
+
+It contains CMake code to generate a config.h file on unix systems.
+
+You can view a Configurations config.cmake with this code:
+
+Transcript clear.
+Transcript show: ((Linux64x86w32BitSqueakCogV3Config new) configureForBuildType: #build) contentForVmConfigCmake
+
+or print it in place with:
+
+((Linux64x86w32BitSqueakCogV3Config new) configureForBuildType: #build) contentForVmConfigCmake   
+
+The config.cmake file is generated with the usual Builder expressions.
+
+SqueakLinux64x86w32CompatBuilder
+	configureA: #Linux64x86w32BitSqueakCogV3Config forBuildType:#build;
+	generate.
+
+
+A config.cmake is created from CMake Templates (wrappers) in the CmakeVMMakerSqueak-CMakeTemplates  and CmakeVMMakerSqueak-CMakeCustomTemplates categories.
+
+
+'
+]
+
+{ #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> igorStasenkoDesign [
 	^HelpTopic
 		title:'Design Patterns'
@@ -99,7 +130,7 @@ Concrete implementations of SqueakCMakeVMMakerAbstractBuilder provide an invokat
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(overview prerequisites  terms igorStasenkoDesign  buildersAndConfigs plugins pthreads)
+	^#(overview prerequisites  terms igorStasenkoDesign  buildersAndConfigs plugins pthreads configDotCmake)
 ]
 
 { #category : #pages }
