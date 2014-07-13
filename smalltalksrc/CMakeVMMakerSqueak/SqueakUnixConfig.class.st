@@ -5,6 +5,9 @@ A SqueakUnixConfig is a top level configuration for *nix configuratons.
 Class {
 	#name : #SqueakUnixConfig,
 	#superclass : #CPlatformConfigForSqueak,
+	#instVars : [
+		'configtemplates'
+	],
 	#category : #CMakeVMMakerSqueak
 }
 
@@ -16,22 +19,7 @@ SqueakUnixConfig class >> vmConfigCmake [
 
 IF (NOT DEFINED __sq_config_h)
 
-	  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wall -m32")
-	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall -m32")
-	  SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}  -Wall -m32")
-	  SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}  -Wall -m32")
-	  SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}  -Wall -m32")
-	  SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -m32")
-	  MESSAGE("CMAKE_C_FLAGS=${CMAKE_C_FLAGS}")
-	  MESSAGE("CMAKE_C_FLAGS_RELEASE=${CMAKE_C_FLAGS_RELEASE}")
-	  MESSAGE("CMAKE_C_FLAGS_DEBUG=${CMAKE_C_FLAGS_DEBUG}")
-	  MESSAGE("CMAKE_CXX_FLAGS_RELEASE=${CMAKE_CXX_FLAGS_RELEASE}")
-	  MESSAGE("CMAKE_CXX_FLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG}")
-	  GET_DIRECTORY_PROPERTY( DirDefs DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS )
-	  FOREACH( d ${DirDefs} )
-	      MESSAGE( STATUS "Found Define: " ${d} )
-	  ENDFOREACH()
-	  MESSAGE( STATUS "DirDefs: " ${DirDefs} )
+
 
 	SET(__sq_config_h 1)
 	CONFIG_DEFINE(__sq_config_h)
@@ -58,7 +46,7 @@ IF (NOT DEFINED __sq_config_h)
 #LIBRARIES
 #define HAVE_LANGINFO_CODESET 1
 #define	TIME_WITH_SYS_TIME 1
-#define	HAVE_LIBDL 1
+
 	CHECK_LIBRARY_EXISTS (dl dlopen "" HAVE_LIBDL)
 	IF (HAVE_LIBDL)
  	 CONFIG_DEFINE(HAVE_LIBDL)
@@ -311,6 +299,206 @@ SqueakUnixConfig >> commonCompilerFlags [
 
 ]
 
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configAioC [
+	"holdover from Ian's work"
+	|templates|
+	templates:= OrderedCollection new.
+	templates 
+		addLast:((CMakeMessage new) message:'#aio.c');
+		addLast: ((CMakeCheckIncludeFile new) include:'sys/time.h' variable:'HAVE_SYS_TIME_H');		
+		addLast: ((CMakeCheckIncludeFile new) include:'sys/filio.h' variable:'HAVE_SYS_FILIO_H');		
+		addLast:((CMakeCheckFunctionExists new) function: 'nanosleep' variable: 'HAVE_NANOSLEEP').
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configCheckIncludeFileTemplates [
+	|templates|
+	templates:= OrderedCollection new.
+	templates 
+		addLast: ((CMakeMessage new) message: 'CHECK_INCLUDE_FILES');
+		addLast: ((CMakeCheckIncludeFile new) include:'unistd.h' variable:'HAVE_UNISTD_H');
+		addLast: ((CMakeCheckIncludeFile new) include:'dirent.h' variable:'HAVE_DIRENT_H');
+		addLast: ((CMakeCheckIncludeFile new) include:'pty.h' variable:'HAVE_PTY_H');
+		addLast: ((CMakeCheckIncludeFile new) include:'stropts.h' variable:'HAVE_STROPTS_H').
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configCheckLibraryExistsTemplates [
+	|templates|
+	templates:= OrderedCollection new.
+	templates 
+		addLast: ((CMakeMessage new) message: 'CHECK_LIBRARY_EXISTS');
+		addLast: ((CMakeCheckLibraryExists new) library: 'dl' function: 'dlopen' location:'' variable: 'HAVE_LIBDL' ).
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configFindPackageTemplates [
+	|templates|
+	templates:= OrderedCollection new.
+	templates 
+		addLast: ((CMakeMessage new) message: 'FIND_PACKAGE');
+		addLast: ((CMakeFindPackage new) packagename: 'X11');
+		addLast: (CMakeFindPackageOpenGL new).
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configOLPC [
+	"holdover from Ian's work"
+	|templates|
+	templates:= OrderedCollection new.
+	templates 
+		addLast:((CMakeMessage new) message:'# OLPC');
+		addLast:((CMakeIfNotFlagSetConfigDefine new)  flag: 'without-SUGAR' variable:'SUGAR');
+		addLast:((CMakeIfDefinedConfigDefine new)  variable:'SQ_VI_BYTES_PER_WORD').
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configPlatformSpecific [
+	"holdover from Ian's work"
+	|templates|
+	templates:= OrderedCollection new.
+	templates 
+		addLast:((CMakeMessage new) message:'# sqPlatformSpecific.h');
+		addLast:(CMakeCheckAlloca new).
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configSqExternalPrims [
+	"holdover from Ian's work"
+	|templates|
+	templates:= OrderedCollection new.
+	templates 
+		addLast:((CMakeMessage new) message:'#sqUnixExternalPrims.c');
+		addLast: ((CMakeCheckIncludeFile new) include:'dlfcn.h' variable:'HAVE_DLFCN_H' );		
+		addLast: (CMakeCheckLibDL new);
+		addLast:((CMakeCheckFunctionExists new) function:'_dyld_present' variable:'HAVE_DYLD');
+		addLast:((CMakeCheckFunctionExists new) function:'snprintf' variable:'HAVE_SNPRINTF');
+		addLast:((CMakeCheckFunctionExists new) function:'__snprintf' variable:'HAVE___SNPRINTF');
+		addLast:((CMakeSetConfigDefine new) variable: 'VM_X11DIR' value:'\"${X11_LIBRARY_DIR}\"');
+		addLast:((CMakeSetConfigDefine new) variable: 'VM_MODULE_PREFIX' value:'\"${CMAKE_SHARED_MODULE_PREFIX}\"');
+		addLast:((CMakeSet new) variable:'CMAKE_SHARED_MODULE_PREFIX' value:'so.');
+		addLast:((CMakeSet new) variable:'CMAKE_SHARED_MODULE_SUFFIX' value:'');
+		addLast:((CMakeSetConfigDefine new) variable:'MODULE_PREFIX' value:'\"${CMAKE_SHARED_MODULE_PREFIX}\"');
+		addLast:((CMakeSetConfigDefine new) variable:'MODULE_SUFFIX' value:'\"${CMAKE_SHARED_MODULE_SUFFIX}\"');
+		addLast:((CMakeSetConfigDefine new) variable:'LIBRARY_PREFIX' value:'\"${CMAKE_SHARED_LIBRARY_PREFIX}\"');
+		addLast:((CMakeSetConfigDefine new) variable:'LIBRARY_SUFFIX' value:'\"${CMAKE_SHARED_LIBRARY_SUFFIX}\"').
+
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configSqMemoryAccess [
+	"holdover from Ian's work"
+	|templates|
+	templates:= OrderedCollection new.
+	templates 
+		addLast:((CMakeMessage new) message:'#sqMemoryAccess.h');
+		addLast: ((CMakeCheckIncludeFile new) include:'interp.h' variable:'HAVE_INTERP_H' path: '-I',(self srcDir pathName));		
+		addLast:(CMakeCheckTypeSize new);
+		addLast:(CMakeCheckTryRunDoubleWordAlignmentOrder new).
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configSqUnixCharConv [
+	"holdover from Ian's work"
+	|templates|
+	templates:= OrderedCollection new.
+	templates 
+		addLast:((CMakeMessage new) message:'#sqUnixCharConv.c');
+		addLast: ((CMakeCheckIncludeFile new) include:'iconv.h' variable:'HAVE_ICONV_H' );		
+		addLast: ((CMakeCheckIncludeFile new) include:'langinfo.h' variable:'HAVE_LANGINFO_H' );		
+		addLast:(CMakeCheckTryCompileHaveLangInfoCodeset new);
+		addLast:((CMakeCheckLibraryExists new) library:'iconv' function:'libiconv_open' location:'' variable:'HAVE_LIBICONV').
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configSqUnixMMemoryC [
+	"holdover from Ian's work"
+	|templates|
+	templates:= OrderedCollection new.
+	templates 
+		addLast:((CMakeMessage new) message:'# sqUnixMain.c');
+		addLast:((CMakeCheckFunctionExists new) function:'mmap' variable:'HAVE_MMAP').
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configSqUnixMainC [
+	"holdover from Ian's work"
+	|templates|
+	templates:= OrderedCollection new.
+	templates 
+		addLast:((CMakeMessage new) message:'# sqUnixMain.c');
+		addLast:((CMakeSetConfigDefine new) variable:'VM_BUILD_STRING' value:'"\"Unix built on \"__DATE__ \" \"__TIME__\" Compiler: \"__VERSION__"');
+		addLast:((CMakeSetConfigDefine new) variable:'VM_LIBDIR' value:'"\"${prefix}/${plgdir}\""');
+		addLast:((CMakeSetConfigDefine new) variable:'VM_HOST' value:'\"${VM_HOST}\"');
+		addLast:((CMakeSetConfigDefine new) variable:'VM_HOST_CPU' value:'\"${VM_HOST_CPU}\"');
+		addLast:((CMakeSetConfigDefine new) variable:'VM_HOST_VENDOR' value:' \"${VM_HOST_VENDOR}\"');
+		addLast:((CMakeSetConfigDefine new) variable:'VM_HOST_OS' value:' \"${VM_HOST_OS}\"');
+		addLast:((CMakeSetConfigDefine new) variable:'VM_VERSION' value: '\"${VM_VERSION}\"');
+		addLast:((CMakeSetConfigDefine new) variable:'VM_VERSION_INFO' value: '\"${VM_VERSION}${versionsuffix}\"');
+		addLast:((CMakeSetConfigDefine new) variable:'PLATFORM_SOURCE_VERSION' value: '\"${PLATFORM_SOURCE_VERSION}\"');
+		addLast:((CMakeConfigDefine new) variable:'SQ_VERSION');
+		addLast:((CMakeCheckFunctionExists new) function:'tzset' variable:'HAVE_TZSET');
+		addLast:((CMakeCheckVariableExists new) var:'timezone' variable:'HAVE_TIMEZONE');
+		addLast:((CMakeCheckStructHasMember new)struct: '"struct tm"' member: 'tm_gmtoff' header: 'time.h' variable: 'HAVE_TM_GMTOFF');
+		addLast:((CMakeConfigDefine new) variable:'IMAGE_DUMP').
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configTemplates [
+	|templates|
+	self flag:'tty'. "fix this version stuff. get ostype from elsewhere.  does the without-gl flag need to be here?"
+	templates:= OrderedCollection new.
+	templates 
+		addLast:((CMakeMessage new) message:'DebugTemplate');
+		addLast: (CMakeDebug new);
+		addLast:((CMakeMessage new) message:'Global Configs');
+		addLast: ((CMakeSetConfigDefine new) variable: 'OS_TYPE' value:'\"unix\"');
+		addLast: ((CMakeVersion new) version: '1.2.3.4');
+		addLast: ((CMakeSet new) variable:'without-gl' value: ''); 
+		addLast: ((CMakeCompilerIsGNUCC new));
+		addLast:((CMakeMessage new) message:'Tests');
+		addLast:(CMakeTestBigEndian new);
+		addLast:(CMakeCheckFunctionAtExitOnExit new);
+		addAllLast: self configCheckIncludeFileTemplates;
+		addAllLast: self configCheckLibraryExistsTemplates;
+		addAllLast: self configFindPackageTemplates;
+		addAllLast: self configSqMemoryAccess;
+		addAllLast: self configPlatformSpecific;
+		addAllLast: self configAioC;
+		addAllLast: self configSqUnixCharConv;
+		addAllLast: self configSqExternalPrims;
+		addAllLast: self configSqUnixMainC;
+		addAllLast: self configSqUnixMMemoryC;
+		addAllLast: self configOLPC.
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configsqUnixCharConv [
+	"holdover from Ian's work"
+	|templates|
+	templates:= OrderedCollection new.
+	templates 
+		addLast:((CMakeMessage new) message:'#sqUnixCharConv.c');
+		addLast: ((CMakeCheckIncludeFile new) include:'iconv.h' variable:'HAVE_ICONV_H' );		
+		addLast: ((CMakeCheckIncludeFile new) include:'langinfo.h' variable:'HAVE_LANGINFO_H' );		
+		addLast:(CMakeCheckTryCompileHaveLangInfoCodesetTemplate new);
+		addLast:((CMakeCheckLibraryExists new) library:'iconv' function:'libiconv_open' location:'' variable:'HAVE_LIBICONV').
+	^ templates
+]
+
 { #category : #'plugin extra rules' }
 SqueakUnixConfig >> configureAsynchFilePlugin: maker [
 
@@ -495,6 +683,14 @@ SqueakUnixConfig >> configureUnixOSProcessPlugin: maker [
 
 ]
 
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> contentForVmConfigCmake [
+	|template |
+	template:= CMakeSqConfigH new.
+	template templates:  self configTemplates.
+	^template contentFor: self
+]
+
 { #category : #accessing }
 SqueakUnixConfig >> executableType [
 	^ ''
@@ -558,6 +754,14 @@ SqueakUnixConfig >> frameworksBuildMultiThreadedAssert [
 { #category : #'cmake buildType redirects' }
 SqueakUnixConfig >> frameworksBuildMultiThreadedDebug [
 	^ self frameworksBuild
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> generateVmConfigCmake [
+	|template |
+	template:= CMakeSqConfigH new.
+	template templates:  self configTemplates.
+	template generate: self
 ]
 
 { #category : #accessing }

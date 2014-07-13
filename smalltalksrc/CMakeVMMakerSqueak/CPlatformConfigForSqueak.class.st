@@ -1920,43 +1920,6 @@ CPlatformConfigForSqueak >> generate [
 ]
 
 { #category : #'source generation' }
-CPlatformConfigForSqueak >> generateConfigH [
-	"	
-	used to be: 	
-		self write: self configH toFile: 'config.h'
-"
-	self subclassResponsibility
-
-
-]
-
-{ #category : #'source generation' }
-CPlatformConfigForSqueak >> generateConfigH: aBuildType [
-	"self write: self configH toFile: 'config.h'"
-
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self configHBuild];
-		at: #buildAssert  put: [self configHBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self configHBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self configHBuildDebug];   "located in CMakeVMMaker CPlatformConfig"
-		at: #buildDebugITimerHeartbeat  put: [self configHBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self configHBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self configHBuildMultiThreaded ];
-		at: #buildMultiThreadedAssert  put: [self configHBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self configHBuildMultiThreadedDebug ];
-		at: #buildNone put:[self configHNoBuildType].
-
-
-	 ^(d at: ( aBuildType)) value
-
-
-
-
-]
-
-{ #category : #'source generation' }
 CPlatformConfigForSqueak >> generateLicense [ 
 	self 
 		write:  (self class licenseTemplate 
@@ -2028,10 +1991,7 @@ CPlatformConfigForSqueak >> generateVmBuildCmake [
 
 { #category : #'source generation' }
 CPlatformConfigForSqueak >> generateVmConfigCmake [
-	self 
-		write:  (self class vmConfigCmake)
-		toFile: 'config.cmake'
-	
+	self subclassResponsibility
 ]
 
 { #category : #'source generation' }

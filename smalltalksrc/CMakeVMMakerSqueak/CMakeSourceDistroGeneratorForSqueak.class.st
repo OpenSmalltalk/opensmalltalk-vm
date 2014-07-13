@@ -23,6 +23,6 @@ tty
 "
 Class {
 	#name : #CMakeSourceDistroGeneratorForSqueak,
-	#superclass : #CMakeGeneratorForSqueak,
+	#superclass : #CMakeGenerator,
 	#category : #CMakeVMMakerSqueak
 }
