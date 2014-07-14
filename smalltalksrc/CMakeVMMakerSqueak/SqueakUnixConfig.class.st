@@ -336,6 +336,16 @@ SqueakUnixConfig >> configCheckLibraryExistsTemplates [
 ]
 
 { #category : #'cmake configuration' }
+SqueakUnixConfig >> configExplicitImageWidth [
+	|templates|
+	templates:= OrderedCollection new.
+	templates 
+		addLast:((CMakeMessage new) message:'# explicit image width');
+		addLast: ((CMakeCheckIncludeFile new) include:'unistd.h' variable:'HAVE_UNISTD_H').
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
 SqueakUnixConfig >> configFindPackageTemplates [
 	|templates|
 	templates:= OrderedCollection new.
@@ -343,6 +353,36 @@ SqueakUnixConfig >> configFindPackageTemplates [
 		addLast: ((CMakeMessage new) message: 'FIND_PACKAGE');
 		addLast: ((CMakeFindPackage new) packagename: 'X11');
 		addLast: (CMakeFindPackageOpenGL new).
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configIanPiumartasTemplates [
+	|templates|
+	self flag:'tty'. "fix this version stuff. get ostype from elsewhere.  does the without-gl flag need to be here?"
+	templates:= OrderedCollection new.
+	templates 
+		addLast:((CMakeMessage new) message:'DebugTemplate');
+		addLast: (CMakeDebug new);
+		addLast:((CMakeMessage new) message:'Global Configs');
+		addLast: ((CMakeSetConfigDefine new) variable: 'OS_TYPE' value:'\"${platformName}\"');  "defined in INCLUDE(directories.cmake) in CMakeLists.txt"
+		addLast: ((CMakeVersion new) version: '1.2.3.4');
+		addLast: ((CMakeSet new) variable:'without-gl' value: ''); 
+		addLast: ((CMakeCompilerIsGNUCC new));
+		addLast:((CMakeMessage new) message:'Tests');
+		addLast:(CMakeTestBigEndian new);
+		addLast:(CMakeCheckFunctionAtExitOnExit new);
+		addAllLast: self configCheckIncludeFileTemplates;
+		addAllLast: self configCheckLibraryExistsTemplates;
+		addAllLast: self configFindPackageTemplates;
+		addAllLast: self configSqMemoryAccess;
+		addAllLast: self configPlatformSpecific;
+		addAllLast: self configAioC;
+		addAllLast: self configSqUnixCharConv;
+		addAllLast: self configSqExternalPrims;
+		addAllLast: self configSqUnixMainC;
+		addAllLast: self configSqUnixMMemoryC;
+		addAllLast: self configOLPC.
 	^ templates
 ]
 
@@ -355,6 +395,20 @@ SqueakUnixConfig >> configOLPC [
 		addLast:((CMakeMessage new) message:'# OLPC');
 		addLast:((CMakeIfNotFlagSetConfigDefine new)  flag: 'without-SUGAR' variable:'SUGAR');
 		addLast:((CMakeIfDefinedConfigDefine new)  variable:'SQ_VI_BYTES_PER_WORD').
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configPackageOptions [
+	|templates|
+	templates:= OrderedCollection new.
+	templates 
+		addLast:((CMakeMessage new) message:'# package options');
+		addLast: ((CMakeFindPackage new) packagename: 'X11');
+		addLast: ((CMakeFindPackage new) packagename: 'X11_GLX');
+		addLast: ((CMakeFindPackage new) packagename: 'QUARTZ');
+		addLast: ((CMakeFindPackage new) packagename: 'QUARTZ_CGL');
+		addLast: ((CMakeFindPackage new) packagename: 'RFB').
 	^ templates
 ]
 
@@ -461,27 +515,123 @@ SqueakUnixConfig >> configTemplates [
 	self flag:'tty'. "fix this version stuff. get ostype from elsewhere.  does the without-gl flag need to be here?"
 	templates:= OrderedCollection new.
 	templates 
-		addLast:((CMakeMessage new) message:'DebugTemplate');
-		addLast: (CMakeDebug new);
-		addLast:((CMakeMessage new) message:'Global Configs');
-		addLast: ((CMakeSetConfigDefine new) variable: 'OS_TYPE' value:'\"unix\"');
-		addLast: ((CMakeVersion new) version: '1.2.3.4');
-		addLast: ((CMakeSet new) variable:'without-gl' value: ''); 
-		addLast: ((CMakeCompilerIsGNUCC new));
-		addLast:((CMakeMessage new) message:'Tests');
-		addLast:(CMakeTestBigEndian new);
-		addLast:(CMakeCheckFunctionAtExitOnExit new);
-		addAllLast: self configCheckIncludeFileTemplates;
-		addAllLast: self configCheckLibraryExistsTemplates;
-		addAllLast: self configFindPackageTemplates;
-		addAllLast: self configSqMemoryAccess;
-		addAllLast: self configPlatformSpecific;
-		addAllLast: self configAioC;
-		addAllLast: self configSqUnixCharConv;
-		addAllLast: self configSqExternalPrims;
-		addAllLast: self configSqUnixMainC;
-		addAllLast: self configSqUnixMMemoryC;
-		addAllLast: self configOLPC.
+		addAllLast: self configUnDefineAll;
+		addAllLast: self configExplicitImageWidth;
+		addAllLast: self configPackageOptions;
+		addLast:((CMakeMessage new) message:'/* libraries */');
+		addLast:((CMakeMessage new) message:'/* header files */');
+		addLast:((CMakeMessage new) message:'/* system calls/library functions */');
+		addLast:((CMakeMessage new) message:'/* widths of primitive types */');
+		addLast:((CMakeMessage new) message:'/* typedefs */');
+		addLast:((CMakeMessage new) message:'/* architecture */');
+		addLast:((CMakeMessage new) message:'/* damage containment */');
+		addLast:((CMakeMessage new) message:'/* avoid dependencies on glibc2.3 */').
+	^ templates
+]
+
+{ #category : #'cmake configuration' }
+SqueakUnixConfig >> configUnDefineAll [
+	|templates|
+	self flag: 'tty'. "I don't think this is needed, but I am playing it safe. It may become useful in automated builds. or unicorns may fly"
+	templates:= OrderedCollection new.
+	templates 
+		addLast:((CMakeMessage new) message:'# undef explicit image width');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_INTERP_H');
+		addLast:((CMakeMessage new) message:'# undef package options');
+		addLast: ((CMakeConfigUnDefine new) variable: 'USE_X11');
+		addLast: ((CMakeConfigUnDefine new) variable: 'USE_X11_GLX');
+		addLast: ((CMakeConfigUnDefine new) variable: 'USE_QUARTZ');
+		addLast: ((CMakeConfigUnDefine new) variable: 'USE_QUARTZ_CGL');
+		addLast: ((CMakeConfigUnDefine new) variable: 'USE_RFB');
+
+		addLast:((CMakeMessage new) message:'# undef libraries');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_LIBX11');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_LIBXEXT');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_LIBDL');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_DYLD');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_LIBFFI');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_ICONV');
+		addLast: ((CMakeConfigUnDefine new) variable: 'USE_AUDIO_NONE');
+		addLast: ((CMakeConfigUnDefine new) variable: 'USE_AUDIO_SUN');
+		addLast: ((CMakeConfigUnDefine new) variable: 'USE_AUDIO_NAS');
+		addLast: ((CMakeConfigUnDefine new) variable: 'USE_AUDIO_OSS');
+		addLast: ((CMakeConfigUnDefine new) variable: 'USE_AUDIO_MACOSX');
+		addLast: ((CMakeConfigUnDefine new) variable: 'OSS_DEVICE');
+
+		addLast:((CMakeMessage new) message:'# undef header files');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_UNISTD_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'NEED_GETHOSTNAME_P');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_DIRENT_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_SYS_NDIR_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_SYS_DIR_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_NDIR_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_DLFCN_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_ICONV_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_SYS_TIME_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'TIME_WITH_SYS_TIME');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_SYS_FILIO_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_SYS_AUDIOIO_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_SUN_AUDIOIO_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_PTY_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_UTIL_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_LIBUTIL_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_STROPTS_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_GL_GL_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_OPENGL_GL_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'NEED_SUNOS_H');
+
+		addLast:((CMakeMessage new) message:'# undef system calls/library functions ');
+		addLast: ((CMakeConfigUnDefine new) variable: 'AT_EXIT');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_TZSET');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_OPENPTY');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_UNIX98_PTYS');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_SNPRINTF');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE___SNPRINTF');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_MMAP');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_DYLD');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_LANGINFO_CODESET');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_ALLOCA');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_ALLOCA_H');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_UNSETENV');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_NANOSLEEP');
+
+		addLast:((CMakeMessage new) message:'# undef widths of primitive types');
+		addLast: ((CMakeConfigUnDefine new) variable: 'SIZEOF_INT');
+		addLast: ((CMakeConfigUnDefine new) variable: 'SIZEOF_LONG');
+		addLast: ((CMakeConfigUnDefine new) variable: 'SIZEOF_LONG_LONG');
+		addLast: ((CMakeConfigUnDefine new) variable: 'SIZEOF_VOID_P');
+
+		addLast:((CMakeMessage new) message:'# undef structures');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_TM_GMTOFF');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_TIMEZONE');
+
+		addLast:((CMakeMessage new) message:'# undef typedefs');
+		addLast: ((CMakeConfigUnDefine new) variable: 'size_t');
+		addLast: ((CMakeConfigUnDefine new) variable: 'socklen_t');
+		addLast: ((CMakeConfigUnDefine new) variable: 'squeakInt64');
+
+		addLast:((CMakeMessage new) message:'# undef architecture');
+		addLast: ((CMakeConfigUnDefine new) variable: 'OS_TYPE');
+		addLast: ((CMakeConfigUnDefine new) variable: 'VM_HOST');
+		addLast: ((CMakeConfigUnDefine new) variable: 'VM_HOST_CPU');
+		addLast: ((CMakeConfigUnDefine new) variable: 'VM_HOST_VENDOR');
+		addLast: ((CMakeConfigUnDefine new) variable: 'VM_HOST_OS');
+		addLast: ((CMakeConfigUnDefine new) variable: 'VM_BUILD_STRING');
+		addLast: ((CMakeConfigUnDefine new) variable: 'WORDS_BIGENDIAN');
+		addLast: ((CMakeConfigUnDefine new) variable: 'DOUBLE_WORD_ALIGNMENT');
+
+		addLast:((CMakeMessage new) message:'# undef damage containment');
+		addLast: ((CMakeConfigUnDefine new) variable: 'DARWIN');
+
+		addLast:((CMakeMessage new) message:'# undef other configured variables');
+		addLast: ((CMakeConfigUnDefine new) variable: 'SQ_VERSION');
+		addLast: ((CMakeConfigUnDefine new) variable: 'VM_VERSION');
+		addLast: ((CMakeConfigUnDefine new) variable: 'VM_MODULE_PREFIX');
+		addLast: ((CMakeConfigUnDefine new) variable: 'VM_DLSYM_PREFIX');
+		addLast: ((CMakeConfigUnDefine new) variable: 'VM_X11DIR');
+
+		addLast:((CMakeMessage new) message:'# undef avoid dependencies on glibc2.3');
+		addLast: ((CMakeConfigUnDefine new) variable: 'HAVE_FEATURES_H').
 	^ templates
 ]
 
@@ -687,7 +837,8 @@ SqueakUnixConfig >> configureUnixOSProcessPlugin: maker [
 SqueakUnixConfig >> contentForVmConfigCmake [
 	|template |
 	template:= CMakeSqConfigH new.
-	template templates:  self configTemplates.
+	template templates: self configIanPiumartasTemplates.
+"	template templates:  self configTemplates."
 	^template contentFor: self
 ]
 
@@ -760,7 +911,8 @@ SqueakUnixConfig >> frameworksBuildMultiThreadedDebug [
 SqueakUnixConfig >> generateVmConfigCmake [
 	|template |
 	template:= CMakeSqConfigH new.
-	template templates:  self configTemplates.
+      template templates: self configIanPiumartasTemplates.
+"	template templates:  self configTemplates."
 	template generate: self
 ]
 

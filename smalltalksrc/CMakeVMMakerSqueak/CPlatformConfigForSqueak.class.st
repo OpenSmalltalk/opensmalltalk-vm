@@ -518,6 +518,12 @@ MACRO (CONFIG_DEFINE var)
   LIST (APPEND config_vars "${var}")
 ENDMACRO (CONFIG_DEFINE var)
 
+MACRO (CONFIG_UNDEFINE var)
+  LIST (REMOVE_ITEM config_vars "${var}")
+ENDMACRO (CONFIG_UNDEFINE var)
+
+
+
 ##End tty additions
 
 
@@ -3222,8 +3228,7 @@ CPlatformConfigForSqueak >> setGlobalOptionsNoBuildType: aMaker [
 { #category : #'squeak compatability' }
 CPlatformConfigForSqueak >> setupDirectories: aMaker [
 	| dirsInclude |
-	" write the directories in separate include file. "
-	self flag: 'tty'. "This message send is not re-routed per build type. My reasoning is that each variable here is set at configure time."
+	"These are  CMakeLists.txt variables. They are made available via INCLUDE(directories.cmake) in CMakeLists.txt "
 	dirsInclude := aMaker captureOutputDuring: [
 		aMaker
 			set: #topDir toString: (self topDir fullName); 

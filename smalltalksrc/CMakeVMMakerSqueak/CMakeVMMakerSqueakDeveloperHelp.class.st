@@ -130,7 +130,7 @@ Concrete implementations of SqueakCMakeVMMakerAbstractBuilder provide an invokat
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(overview prerequisites  terms igorStasenkoDesign  buildersAndConfigs plugins pthreads configDotCmake)
+	^#(overview prerequisites  terms igorStasenkoDesign  buildersAndConfigs plugins pthreads configDotCmake templates)
 ]
 
 { #category : #pages }
@@ -224,6 +224,21 @@ where tty is the login name, and the O option is set to 100.
 Logout and re-login.
 
 
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> templates [
+	^HelpTopic
+		title:'CPlatformConfigForSqueak class templates'
+		contents:
+'explain:
+utilsCMake
+vmBUildCMake
+vmConfigCMake
+vmConfiIn
+testDouble*
+pluginsCMake
 '
 ]
 
