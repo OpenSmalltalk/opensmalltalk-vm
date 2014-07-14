@@ -69,7 +69,7 @@ CMakeVMGeneratorForSqueak >> generate [
 	self includeDirectories: self includeDirs.	
 	config standardIncludes 	do: [:each | self includeDirectories: each ].
 
-	self addDefinitions: config compilerFlags.
+	self addDefinitions: config compilerFlags. "<--- this needs to be definitions, not compiler flags"
 
 	config extraVMSettings: self.
 
@@ -175,7 +175,7 @@ CMakeVMGeneratorForSqueak >> processPlugins: pluginGenerators [
 	libDeps := Dictionary new.
 	pluginGenerators do: [:gen |
 		gen doNotGenerate ifFalse: [
-			self  puts: (gen configDotCMake at: (gen plugin name) ifAbsent:[gen configDotCmakeEmpty]).  "plugin injects its config.cmake info"
+			self  puts: (gen configDotCMake at: (gen plugin name) ifAbsent:[gen configDotCmakeEmpty]). 
 			gen isInternal 
 				ifTrue: [
 					libs add: gen plugin moduleName ]
