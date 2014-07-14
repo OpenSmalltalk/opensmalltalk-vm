@@ -355,8 +355,6 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 	 or nil if it shouldn't be translated."
 
 	| method tmethod |
-	selector == #initialize ifTrue:
-		[^nil].
 	method := aClass compiledMethodAt: selector.
 	(method pragmaAt: #doNotGenerate) ifNotNil:
 		["only remove a previous method if this one overrides it, i.e. this is a subclass method.
@@ -372,7 +370,13 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 	(self shouldIncludeMethodFor: aClass selector: selector) ifFalse:
 		[methods removeKey: selector ifAbsent: [].
 		 ^nil].
-	tmethod := self addMethod: (self compileToTMethodSelector: selector in: aClass).
+	tmethod := self compileToTMethodSelector: selector in: aClass.
+	"Even thoug we exclude initialize methods, we must consider their
+	 global variable usage, otherwise globals may be incorrectly localized."
+	selector == #initialize ifTrue:
+		[self checkForGlobalUsage: tmethod allReferencedVariables in: tmethod.
+		 ^nil].
+	self addMethod: tmethod.
 	"If the method has a macro then add the macro.  But keep the method
 	 for analysis purposes (e.g. its variable accesses)."
 	(method pragmaAt: #cmacro:) ifNotNil:
@@ -3239,20 +3243,21 @@ CCodeGenerator >> localizeGlobalVariables [
 	candidates keysAndValuesDo:
 		[:key :targets |
 		targets do:
-			[:name | | procedure newDeclaration |
-			procedure := methods at: name.
-			procedure isRealMethod ifTrue:
-				[(localized at: name ifAbsentPut: [SortedCollection new]) add: key.
-				elected add: (procedure locals add: key).
-				newDeclaration := variableDeclarations at: key ifAbsent: ['sqInt ', key].
-				(self initializerForInstVar: key inStartClass: procedure definingClass) ifNotNil:
-					[:initializerNode|
-					newDeclaration := String streamContents:
-											[:s|
-											 s nextPutAll: newDeclaration; nextPutAll: ' = '.
-											 initializerNode emitCCodeOn: s level: 0 generator: self]].
-				procedure declarationAt: key put: newDeclaration.
-				variableDeclarations removeKey: key ifAbsent: []]]].
+			[:name |
+			(methods at: name ifAbsent: []) ifNotNil:
+				[:procedure | | newDeclaration |
+				procedure isRealMethod ifTrue:
+					[(localized at: name ifAbsentPut: [SortedCollection new]) add: key.
+					elected add: (procedure locals add: key).
+					newDeclaration := variableDeclarations at: key ifAbsent: ['sqInt ', key].
+					(self initializerForInstVar: key inStartClass: procedure definingClass) ifNotNil:
+						[:initializerNode|
+						newDeclaration := String streamContents:
+												[:s|
+												 s nextPutAll: newDeclaration; nextPutAll: ' = '.
+												 initializerNode emitCCodeOn: s level: 0 generator: self]].
+					procedure declarationAt: key put: newDeclaration.
+					variableDeclarations removeKey: key ifAbsent: []]]]].
 	logger ifNotNil:
 		[localized keys asSortedCollection do:
 			[:name|

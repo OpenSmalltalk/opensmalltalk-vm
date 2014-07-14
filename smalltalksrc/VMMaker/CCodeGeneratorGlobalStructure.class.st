@@ -24,13 +24,14 @@ CCodeGeneratorGlobalStructure >> buildSortedVariablesCollection [
 		[:k :v | | count |
 		count := 0.
 		v do:
-			[:methodName| | method |
-			method := methods at: methodName.
-			method parseTree nodesDo:
-				[:n|
-				(n isVariable
-				 and: [n name hasEqualElements: k]) ifTrue:
-					[count := count + 1]]].
+			[:methodName|
+			(methods at: methodName ifAbsent: []) ifNotNil:
+				[:method|
+				 method parseTree nodesDo:
+					[:n|
+					(n isVariable
+					 and: [n name hasEqualElements: k]) ifTrue:
+						[count := count + 1]]]].
 		globalNames
 			add: k		"move arrays (e.g. methodCache) to end of struct"
 			withOccurrences: (((variableDeclarations at: k ifAbsent: ['']) includes: $[)
