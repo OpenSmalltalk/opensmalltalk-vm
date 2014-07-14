@@ -132,6 +132,21 @@ TMethod >> allLocals [
 		addAll: locals; yourself
 ]
 
+{ #category : #accessing }
+TMethod >> allReferencedVariables [
+	"Answer the set of all variables referenced in the receiver."
+	| refs |
+	refs := Set new.
+	"find all the variable names referenced in this method"
+	parseTree nodesDo:
+		[:node|
+		node isVariable ifTrue: [refs add: node name asString].
+		node isStmtList ifTrue: [refs addAll: node args]].
+	"add all the non-arg declarations (might be variables used only in cCode sections)"
+	refs addAll: (declarations keys reject: [:e | self args includes: e]).
+	^refs
+]
+
 { #category : #inlining }
 TMethod >> argAssignmentsFor: meth args: argList in: aCodeGen [
 	"Return a collection of assignment nodes that assign the given argument expressions to the formal parameter variables of the given method."
@@ -1915,21 +1930,15 @@ TMethod >> removeFinalSelfReturnIn: aCodeGenOrNil [
 
 { #category : #utilities }
 TMethod >> removeUnusedTemps [
-	"Remove all of the unused temps in this method. Answer a bag (why the hell a bag???) with the references."
-	"After inlining some variable references are now obsolete, we could fix them there but the 
-	code seems a bit complicated, the other choice to to rebuild the locals before extruding. This is done here"
+	"Remove all of the unused temps in this method. Answer a set of the references."
+	"After inlining some variable references are now obsolete, we could fix them there
+	 but the code seems a bit complicated, the other choice to to rebuild the locals
+	 before extruding. This is done here"
 	| refs |
-	refs := Bag new.
-	"find all the variable names referenced in this method"
-	parseTree nodesDo: [ :node |
-		node isVariable ifTrue: [ refs add: node name asString ].
-		node isStmtList ifTrue: [refs addAll: node args]].
-	"add all the non-arg declarations (might be variables used only in cCode sections)"
-	refs addAll: (declarations keys reject: [:e | self args includes: e]).
+	refs := self allReferencedVariables.
 	"reset the locals to be only those still referred to"
-	locals := locals select: [:e | refs includes: e].
+	locals := locals select: [:e| refs includes: e].
 	^refs
-
 ]
 
 { #category : #'inlining support' }
