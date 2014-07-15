@@ -826,7 +826,7 @@ CoInterpreter >> assertValidStackedInstructionPointersIn: aStackPage line: ln [
 { #category : #'jump bytecodes' }
 CoInterpreter >> attemptToSwitchToMachineCode: bcpc [
 	| cogMethod pc |
-	<inline: #false>
+	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
 	(self methodHasCogMethod: method) ifFalse:
 		[cogit cog: method selector: objectMemory nilObject].
@@ -3578,7 +3578,6 @@ CoInterpreter >> ifBackwardsCheckForEvents: offset [
 					[(self methodWithHeaderShouldBeCogged: (self headerOf: method))
 						ifTrue:
 							[self externalizeFPandSP.
-							 self resetBackwardJumpVariables. "only to force variables to be global"
 							 self attemptToSwitchToMachineCode: (self oopForPointer: localIP) - offset - method - BaseHeaderSize - 1]
 						ifFalse: "don't ask if one should compile a second time..."
 							[backwardJumpCount := 1 << (BytesPerWord * 8 - 2)]]]
@@ -3717,6 +3716,13 @@ CoInterpreter >> initialEnterSmalltalkExecutive [
 	[([self enterSmalltalkExecutiveImplementation]
 		on: ReenterInterpreter
 		do: [:ex| ex return: ex returnValue]) = ReturnToInterpreter] whileTrue
+]
+
+{ #category : #initialization }
+CoInterpreter >> initialize [
+	super initialize.
+	"Assign to these two to avoid them being inlined into #interpret"
+	lastBackwardJumpMethod := backwardJumpCount := 0
 ]
 
 { #category : #initialization }
@@ -5928,16 +5934,6 @@ CoInterpreter >> reportMinimumUnusedHeadroom [
 				print: ' available headroom '; printNum: self stackPageByteSize - self stackLimitBytes - self stackLimitOffset;
 				print: ' minimum unused headroom '; printNum: self minimumUnusedHeadroom;
 				cr]
-]
-
-{ #category : #'jump bytecodes' }
-CoInterpreter >> resetBackwardJumpVariables [
-	"Reference these variables from outside interpret to avoid them being localised to interpret.
-	 Oh the hacks we commit for Slang..."
-	<cmacro: '() /* nada */'>
-	<inline: #false>
-	lastBackwardJumpMethod := lastBackwardJumpMethod.
-	backwardJumpCount := backwardJumpCount
 ]
 
 { #category : #'callback support' }
