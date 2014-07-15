@@ -14,6 +14,7 @@ Class {
 		'complete',
 		'export',
 		'static',
+		'inline',
 		'sharedLabel',
 		'sharedCase',
 		'comment',
@@ -800,16 +801,17 @@ TMethod >> extractExportDirective [
 
 { #category : #'inlining support' }
 TMethod >> extractInlineDirective [
-	"Scan the top-level statements for an inlining directive of the form:
+	"Scan the pragmas (or top-level statements) for an inlining directive of the form:
 
-		self inline: <boolean>
+		<inline: <boolean|#never|#dontCare|#asSpecified>
 
-	 and remove the directive from the method body. Return the argument of the directive or #dontCare if there is no inlining directive."
+	 Answer a boolean equivalent to the argument of the directive or #dontCare if there is no inlining directive."
 
 	sharedCase ifNotNil: [^false]. "don't auto-inline shared code; it gets handled specially"
 	^self
 		extractDirective: #inline:
-		valueBlock: [:sendNode| sendNode args first value = true]
+		valueBlock:
+			[:sendNode| (inline := sendNode args first value) = true]
 		default: #dontCare
 ]
 
@@ -1064,6 +1066,11 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 					put: ((type includes: $:) ifTrue: [#usqInt] ifFalse: [type]), ' ', var.
 				 effectiveNodes at: var put: { declarations at: var. node }]]].
 	^effectiveNodes
+]
+
+{ #category : #accessing }
+TMethod >> inline [
+	^inline
 ]
 
 { #category : #inlining }
