@@ -2003,13 +2003,6 @@ ObjectMemory >> followForwardedObjectFields: objOop toDepth: depth [
 	self shouldNotImplement
 ]
 
-{ #category : #'interpreter access' }
-ObjectMemory >> followMaybeForwardedSelector: oop [
-	"Spur compatibility; in V3 this is just a noop"
-	<inline: true>
-	^oop
-]
-
 { #category : #'forward compatibility' }
 ObjectMemory >> followObjField: fieldIndex ofObject: anObject [
 	<inline: true>
@@ -2090,12 +2083,6 @@ ObjectMemory >> forward: oop to: newOop savingOopAt: oopPtr andHeaderAt: hdrPtr 
 
 	"Put a forwarding pointer in the old object, flagged with forbidden header type"
 	self longAt: oop put: newOop + HeaderTypeFree
-]
-
-{ #category : #'spur compatibility' }
-ObjectMemory >> forwardingCount: aBlock [
-	"Hook for turning on and off statistics gathering on forwarding.  Off here-in."
-	<inline: true>
 ]
 
 { #category : #'gc -- compaction' }
