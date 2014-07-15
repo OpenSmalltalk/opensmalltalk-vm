@@ -524,19 +524,13 @@ Class {
 		'statScavenges',
 		'statShrinkMemory',
 		'statSpecialMarkCount',
-		'statSurvivorCount',
-		'statFollowForJIT',
-		'statFollowForBecome',
-		'statFollowForClassTable',
-		'statFollowSpecialObjects'
+		'statSurvivorCount'
 	],
 	#classVars : [
 		'BitsPerByte',
 		'EphemeronQueueRootIndex',
 		'ExtraRootsSize',
 		'FirstValidClassIndex',
-		'FollowMethodDictionariesOnBecome',
-		'GatherForwardingStatistics',
 		'MarkObjectsForEnumerationPrimitives',
 		'MarkStackRecord',
 		'MarkStackRootIndex',
@@ -629,9 +623,7 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 		declareC: 'sqInt remapBuffer[RemapBufferSize + 1 /* ', (RemapBufferSize + 1) printString, ' */]'.
 	aCCodeGenerator
 		var: #extraRoots
-		declareC: 'sqInt *extraRoots[ExtraRootsSize + 1 /* ', (ExtraRootsSize + 1) printString, ' */]'.
-	GatherForwardingStatistics ifFalse:
-		[self instVarNames do: [:iv| (iv beginsWith: 'statFollow') ifTrue: [aCCodeGenerator removeVariable: iv]]]
+		declareC: 'sqInt *extraRoots[ExtraRootsSize + 1 /* ', (ExtraRootsSize + 1) printString, ' */]'
 ]
 
 { #category : #'api characterization' }
@@ -688,8 +680,6 @@ SpurMemoryManager class >> initBytesPerWord: nBytes [
 SpurMemoryManager class >> initialize [
 	"SpurMemoryManager initialize"
 	BitsPerByte := 8.
-
-	GatherForwardingStatistics := false.
 
 	"An obj stack is a stack of objects stored in a hidden root slot, such as
 	 the markStack or the ephemeronQueue.  It is a linked list of segments,
@@ -2303,8 +2293,7 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 		ifTrue:
 			[ec := self containsOnlyValidBecomeObjects: array1 and: array2]
 		ifFalse:
-			[self forwardingCount: [statFollowForBecome := statFollowForBecome + 1].
-			 self followForwardedObjectFields: array2 toDepth: 0.
+			[self followForwardedObjectFields: array2 toDepth: 0.
 			ec := self containsOnlyValidBecomeObjects: array1].
 	ec ~= 0 ifTrue: [^ec].
 
@@ -2314,8 +2303,8 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 			[self innerBecomeObjectsIn: array1 and: array2 copyHash: copyHashFlag]
 		ifFalse:
 			[self innerBecomeObjectsIn: array1 to: array2 copyHash: copyHashFlag].
-	self postBecomeOrCompactScanClassTable: becomeEffectsFlags.
 	self followSpecialObjectsOop.
+	self postBecomeOrCompactScanClassTable: becomeEffectsFlags.
 	coInterpreter postBecomeAction: becomeEffectsFlags.
 	becomeEffectsFlags := 0.
 
@@ -3287,33 +3276,32 @@ SpurMemoryManager >> clone: objOop [
 					withValue: oop].
 			(hasYoung
 			 and: [(self isYoungObject: newObj) not]) ifTrue:
-				[scavenger remember: newObj.
-				 self setIsRememberedOf: newObj to: true]]
+				[scavenger remember: newObj]]
 		ifFalse:
 			[0 to: numSlots - 1 do:
 				[:i|
 				self storePointerUnchecked: i
 					ofObject: newObj
 					withValue: (self fetchPointer: i ofObject: objOop)].
-			"N.B. primitiveClone takes care of making sure the method's header is correct"
-			 (fmt >= self firstCompiledMethodFormat
-			  and: [(self isOldObject: newObj)
-			  and: [(self isYoungObject: objOop) or: [self isRemembered: objOop]]]) ifTrue:
-				[scavenger remember: newObj.
-				 self setIsRememberedOf: newObj to: true]].
+			 fmt >= self firstCompiledMethodFormat ifTrue:
+				[coInterpreter maybeFixClonedCompiledMethod: newObj.
+				 ((self isOldObject: newObj)
+				  and: [(self isYoungObject: objOop) or: [self isRemembered: objOop]]) ifTrue:
+					[scavenger remember: newObj]]].
 	^newObj
 ]
 
 { #category : #allocation }
 SpurMemoryManager >> cloneInOldSpaceForPinning: objOop [
-	| numSlots newObj |
+	| numSlots fmt newObj |
 	numSlots := self numSlotsOf: objOop.
+	fmt := self formatOf: objOop.
 	
 	newObj := self allocateSlotsForPinningInOldSpace: numSlots
 					bytes: (self objectBytesForSlots: numSlots)
-					format: (self formatOf: objOop)
+					format: fmt
 					classIndex: (self classIndexOf: objOop).
-	(self isPointersNonImm: objOop)
+	(self isPointersFormat: fmt)
 		ifTrue:
 			[| hasYoung |
 			 hasYoung := false.
@@ -3331,14 +3319,18 @@ SpurMemoryManager >> cloneInOldSpaceForPinning: objOop [
 					withValue: oop].
 			(hasYoung
 			 and: [(self isYoungObject: newObj) not]) ifTrue:
-				[scavenger remember: newObj.
-				 self setIsRememberedOf: newObj to: true]]
+				[scavenger remember: newObj]]
 		ifFalse:
 			[0 to: numSlots - 1 do:
 				[:i|
 				self storePointerUnchecked: i
 					ofObject: newObj
-					withValue: (self fetchPointer: i ofObject: objOop)]].
+					withValue: (self fetchPointer: i ofObject: objOop)].
+			 fmt >= self firstCompiledMethodFormat ifTrue:
+				[coInterpreter maybeFixClonedCompiledMethod: newObj.
+				 ((self isOldObject: newObj)
+				  and: [(self isYoungObject: objOop) or: [self isRemembered: objOop]]) ifTrue:
+					[scavenger remember: newObj]]].
 	^newObj
 ]
 
@@ -4467,6 +4459,7 @@ SpurMemoryManager >> followForwardedObjectFields: objOop toDepth: depth [
 	 Answer if any forwarders were found.
 	 How to avoid cyclic structures?? A temproary mark bit?"
 	<api>
+	<inline: false>
 	| oop found |
 	found := false.
 	self assert: ((self isPointers: objOop) or: [self isOopCompiledMethod: objOop]).
@@ -4506,7 +4499,6 @@ SpurMemoryManager >> followObjField: fieldIndex ofObject: anObject [
 
 { #category : #'become implementation' }
 SpurMemoryManager >> followSpecialObjectsOop [
-	self forwardingCount: [statFollowSpecialObjects := statFollowSpecialObjects + 1].
 	(self isForwarded: specialObjectsOop) ifTrue:
 		[specialObjectsOop := self followForwarded: specialObjectsOop].
 	self followForwardedObjectFields: specialObjectsOop toDepth: 0.
@@ -4618,62 +4610,6 @@ SpurMemoryManager >> forwardUnchecked: obj1 to: obj2 [
 SpurMemoryManager >> forwardedFormat [
 	"A special format used by the GC to follow only the first pointer."
 	^7
-]
-
-{ #category : #forwarding }
-SpurMemoryManager >> forwardingCount: aBlock [
-	"Hook for turning on and off statistics gathering on forwarding"
-	<inline: true>
-	GatherForwardingStatistics ifTrue: [aBlock value]
-]
-
-{ #category : #'primitive support' }
-SpurMemoryManager >> forwardingStatsWith: statFollowCurrentMethodArg with: statFollowForPrimFailArg with: statFollowForSelectorFaultArg with: statFollowForSendFaultArg with: statFollowForSignalArg with: statFollowForSpecialSelectorArg [
-	<option: #GatherForwardingStatistics>
-	| stats name |
-	stats := self allocateSlots: 20 format: self arrayFormat classIndex: ClassArrayCompactIndex.
-	stats ifNil: [^nil].
-	name := self stringForCString: 'statFollowCurrentMethod'.
-	name ifNil: [^nil].
-	self storePointer: 0 ofObject: stats withValue: name.
-	self storePointerUnchecked: 1 ofObject: stats withValue: (self integerObjectOf: statFollowCurrentMethodArg).
-	name := self stringForCString: 'statFollowForBecome'.
-	name ifNil: [^nil].
-	self storePointer: 2 ofObject: stats withValue: name.
-	self storePointerUnchecked: 3 ofObject: stats withValue: (self integerObjectOf: statFollowForBecome).
-	name := self stringForCString: 'statFollowForClassTable'.
-	name ifNil: [^nil].
-	self storePointer: 4 ofObject: stats withValue: name.
-	self storePointerUnchecked: 5 ofObject: stats withValue: (self integerObjectOf: statFollowForClassTable).
-	name := self stringForCString: 'statFollowForJIT'.
-	name ifNil: [^nil].
-	self storePointer: 6 ofObject: stats withValue: name.
-	self storePointerUnchecked: 7 ofObject: stats withValue: (self integerObjectOf: statFollowForJIT).
-	name := self stringForCString: 'statFollowForPrimFail'.
-	name ifNil: [^nil].
-	self storePointer: 8 ofObject: stats withValue: name.
-	self storePointerUnchecked: 9 ofObject: stats withValue: (self integerObjectOf: statFollowForPrimFailArg).
-	name := self stringForCString: 'statFollowForSelectorFault'.
-	name ifNil: [^nil].
-	self storePointer: 10 ofObject: stats withValue: name.
-	self storePointerUnchecked: 11 ofObject: stats withValue: (self integerObjectOf: statFollowForSelectorFaultArg).
-	name := self stringForCString: 'statFollowForSendFault'.
-	name ifNil: [^nil].
-	self storePointer: 12 ofObject: stats withValue: name.
-	self storePointerUnchecked: 13 ofObject: stats withValue: (self integerObjectOf: statFollowForSendFaultArg).
-	name := self stringForCString: 'statFollowForSignal'.
-	name ifNil: [^nil].
-	self storePointer: 14 ofObject: stats withValue: name.
-	self storePointerUnchecked: 15 ofObject: stats withValue: (self integerObjectOf: statFollowForSignalArg).
-	name := self stringForCString: 'statFollowForSpecialSelector'.
-	name ifNil: [^nil].
-	self storePointer: 16 ofObject: stats withValue: name.
-	self storePointerUnchecked: 17 ofObject: stats withValue: (self integerObjectOf: statFollowForSpecialSelectorArg).
-	name := self stringForCString: 'statFollowSpecialObjects'.
-	name ifNil: [^nil].
-	self storePointer: 18 ofObject: stats withValue: name.
-	self storePointerUnchecked: 19 ofObject: stats withValue: (self integerObjectOf: statFollowSpecialObjects).
-	^stats
 ]
 
 { #category : #'free space' }
@@ -5362,7 +5298,6 @@ SpurMemoryManager >> initialize [
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
 	statGrowMemory := statShrinkMemory := statRootTableCount := statSurvivorCount := 0.
 	statRootTableOverflows := statMarkCount := statSpecialMarkCount := statCompactPassCount := statCoalesces := 0.
-	statFollowForJIT := statFollowForBecome := statFollowForClassTable := statFollowSpecialObjects := 0.
 
 	"We can initialize things that are allocated but are lazily initialized."
 	unscannedEphemerons := SpurContiguousObjStack new.
@@ -7983,10 +7918,9 @@ SpurMemoryManager >> positive64BitValueOf: oop [
 
 { #category : #'store check' }
 SpurMemoryManager >> possibleRootStoreInto: destObj [
-	<inline: false>
+	<inline: true>
 	(self isRemembered: destObj) ifFalse:
-		[scavenger remember: destObj.
-		 self setIsRememberedOf: destObj to: true]
+		[scavenger remember: destObj]
 ]
 
 { #category : #'become implementation' }

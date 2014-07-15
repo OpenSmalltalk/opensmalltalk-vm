@@ -3091,7 +3091,6 @@ CoInterpreter >> followForwardedFieldsInCurrentMethod [
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	<inline: false>
-	objectMemory forwardingCount: [statFollowCurrentMethod := statFollowCurrentMethod + 1].
 	(self isMachineCodeFrame: framePointer)
 		ifTrue:
 			[cogMethod := self mframeHomeMethod: framePointer.
@@ -3486,8 +3485,7 @@ CoInterpreter >> handleForwardedSendFaultForReceiver: forwardedReceiver stackDel
 	self followForwardedFrameContents: framePointer
 		stackPointer: stackPointer + (rcvrStackIndex + 1 * BytesPerWord). "don't repeat effort"
 	(objectMemory isPointers: (self frameReceiver: framePointer)) ifTrue:
-		[objectMemory forwardingCount: [statFollowForSendFault := statFollowForSendFault + 1].
-		 objectMemory
+		[objectMemory
 			followForwardedObjectFields: (self frameReceiver: framePointer)
 			toDepth: 0].
 	self followForwardedFieldsInCurrentMethod.
@@ -4764,6 +4762,18 @@ CoInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 CoInterpreter >> maxLookupNoMNUErrorCode [
 	<api>
 	^SelectorCannotInterpret max: SelectorDoesNotUnderstand
+]
+
+{ #category : #'cog jit support' }
+CoInterpreter >> maybeFixClonedCompiledMethod: objOop [
+	"Make sure a cloned method doesn't reference its originals Cog method, if any."
+	| rawHeader |
+	self assert: (objectMemory isOopCompiledMethod: objOop).
+	rawHeader := self rawHeaderOf: objOop.
+	(self isCogMethodReference: rawHeader) ifTrue:
+		[self
+			rawHeaderOf: objOop
+			put: (self cCoerceSimple: rawHeader to: #'CogMethod *') methodHeader]
 ]
 
 { #category : #'compiled methods' }
@@ -6429,7 +6439,6 @@ CoInterpreter >> synchronousSignal: aSemaphore [
 		 firstLink := objectMemory fetchPointer: FirstLinkIndex ofObject: aSemaphore.
 		 (objectMemory isForwarded: firstLink) ifTrue:
 			["0 = aSemaphore, 1 = aProcess. Hence reference to suspendedContext will /not/ be forwarded."
-			 objectMemory forwardingCount: [statFollowForSignal := statFollowForSignal + 1].
 			 objectMemory followForwardedObjectFields: aSemaphore toDepth: 1].
 		 self assert: (objectMemory isForwarded: (objectMemory fetchPointer: SuspendedContextIndex ofObject: firstLink)) not].
 

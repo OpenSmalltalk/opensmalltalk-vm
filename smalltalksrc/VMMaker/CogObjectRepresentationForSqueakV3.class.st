@@ -770,7 +770,14 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 
 { #category : #initialization }
 CogObjectRepresentationForSqueakV3 >> generateObjectRepresentationTrampolines [
-	super generateObjectRepresentationTrampolines.
+	"Do the store check.  Answer the argument for the benefit of the code generator;
+	 ReceiverResultReg may be caller-saved and hence smashed by this call.  Answering
+	 it allows the code generator to reload ReceiverResultReg cheaply."
+	ceStoreCheckTrampoline := cogit
+									genTrampolineFor: #ceStoreCheck:
+									called: 'ceStoreCheckTrampoline'
+									arg: ReceiverResultReg
+									result: cogit returnRegForStoreCheck.
 	ceCreateNewArrayTrampoline := cogit genTrampolineFor: #ceNewArraySlotSize:
 											called: 'ceCreateNewArrayTrampoline'
 											arg: SendNumArgsReg

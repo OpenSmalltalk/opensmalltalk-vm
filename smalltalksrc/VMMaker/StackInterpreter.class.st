@@ -103,13 +103,7 @@ Class {
 		'statCheckForEvents',
 		'statProcessSwitch',
 		'statIOProcessEvents',
-		'statPendingFinalizationSignals',
-		'statFollowCurrentMethod',
-		'statFollowForSendFault',
-		'statFollowForSignal',
-		'statFollowForPrimFail',
-		'statFollowForSelectorFault',
-		'statFollowForSpecialSelector'
+		'statPendingFinalizationSignals'
 	],
 	#classVars : [
 		'AltBytecodeEncoderClassName',
@@ -225,8 +219,6 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 			removeVariable: 'extA';
 			removeVariable: 'extB';
 			removeVariable: 'bytecodeSetSelector'].
-	(self objectMemoryClass classPool at: #GatherForwardingStatistics ifAbsent: [false]) ifFalse:
-		[self instVarNames do: [:iv| (iv beginsWith: 'statFollow') ifTrue: [aCCodeGenerator removeVariable: iv]]].
 	aCCodeGenerator
 		var: #methodCache
 		declareC: 'long methodCache[MethodCacheSize + 1 /* ', (MethodCacheSize + 1) printString, ' */]'.
@@ -3182,8 +3174,7 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveStateFor: primIndex [
 					 self stackValue: index put: oop].
 				((objectMemory hasPointerFields: oop)
 				 and: [objectMemory followForwardedObjectFields: oop toDepth: accessorDepth]) ifTrue:
-					[objectMemory forwardingCount: [statFollowForPrimFail := statFollowForPrimFail + 1].
-					 found := true]]]].
+					[found := true]]]].
 	^found
 ]
 
@@ -5734,7 +5725,7 @@ StackInterpreter >> flushMethodCacheFrom: memStart to: memEnd [
 
 { #category : #'message sending' }
 StackInterpreter >> followForwardedFieldsInCurrentMethod [
-	objectMemory forwardingCount: [statFollowCurrentMethod := statFollowCurrentMethod + 1].
+	<inline: true>
 	objectMemory
 		followForwardedObjectFields: method
 		toDepth: 0
@@ -6340,7 +6331,6 @@ StackInterpreter >> handleForwardedSelectorFaultFor: selectorOop [
 	<inline: false>
 	self assert: (objectMemory isOopForwarded: selectorOop).
 	self followForwardedFieldsInCurrentMethod.
-	objectMemory forwardingCount: [statFollowForSelectorFault := statFollowForSelectorFault + 1].
 	objectMemory
 		followForwardedObjectFields: (objectMemory splObj: SpecialSelectors)
 		toDepth: 0.
@@ -6364,8 +6354,7 @@ StackInterpreter >> handleForwardedSendFaultForTag: classTag [
 	self followForwardedFrameContents: framePointer
 		stackPointer: stackPointer + (argumentCount + 1 * BytesPerWord). "don't repeat effort"
 	(objectMemory isPointers: (self frameReceiver: framePointer)) ifTrue:
-		[objectMemory forwardingCount: [statFollowForSendFault := statFollowForSendFault + 1].
-		 objectMemory
+		[objectMemory
 			followForwardedObjectFields: (self frameReceiver: framePointer)
 			toDepth: 0].
 	^objectMemory fetchClassTagOf: rcvr
@@ -6390,8 +6379,7 @@ StackInterpreter >> handleSpecialSelectorSendFaultFor: obj fp: theFP sp: theSP [
 
 	self followForwardedFrameContents: theFP stackPointer: theSP.
 	(objectMemory isPointers: (self frameReceiver: theFP)) ifTrue:
-		[objectMemory forwardingCount: [statFollowForSpecialSelector := statFollowForSpecialSelector + 1].
-		 objectMemory
+		[objectMemory
 			followForwardedObjectFields: (self frameReceiver: theFP)
 			toDepth: 0].
 	^objectMemory followForwarded: obj
@@ -6767,8 +6755,6 @@ StackInterpreter >> initialPCForHeader: methodHeader method: theMethod [
 { #category : #initialization }
 StackInterpreter >> initialize [
 	"Here we can initialize the variables C initializes to zero.  #initialize methods do /not/ get translated."
-	super initialize.
-
 	checkAllocFiller := false. "must preceed initializeObjectMemory:"
 	primFailCode := 0.
 	stackLimit := 0. "This is also the initialization flag for the stack system."
@@ -6790,10 +6776,7 @@ StackInterpreter >> initialize [
 	longRunningPrimitiveStartUsecs := longRunningPrimitiveStopUsecs := 0.
 	maxExtSemTabSizeSet := false.
 	statForceInterruptCheck := statStackOverflow := statCheckForEvents :=
-	statProcessSwitch := statIOProcessEvents := statStackPageDivorce := 0.
-	statFollowCurrentMethod := statFollowForSendFault := statFollowForSignal :=
-	statFollowForPrimFail := statFollowForSelectorFault := statFollowForSpecialSelector := 0
-
+	statProcessSwitch := statIOProcessEvents := statStackPageDivorce := 0
 ]
 
 { #category : #initialization }
@@ -8571,6 +8554,12 @@ StackInterpreter >> maybeFailForLastObjectOverwrite [
 		[(objectMemory freeStart < objectMemory scavengeThreshold
 		  and: [(objectMemory longAt: objectMemory freeStart) ~= objectMemory freeStart]) ifTrue:
 			[self primitiveFailFor: PrimErrWritePastObject]]
+]
+
+{ #category : #'cog jit support' }
+StackInterpreter >> maybeFixClonedCompiledMethod: objOop [
+	"This is a noop in the Stack VM"
+	<inline: true>
 ]
 
 { #category : #'compiled methods' }
@@ -12670,7 +12659,6 @@ StackInterpreter >> synchronousSignal: aSemaphore [
 		 firstLink := objectMemory fetchPointer: FirstLinkIndex ofObject: aSemaphore.
 		 (objectMemory isForwarded: firstLink) ifTrue:
 			["0 = aSemaphore, 1 = aProcess. Hence reference to suspendedContext will /not/ be forwarded."
-			 objectMemory forwardingCount: [statFollowForSignal := statFollowForSignal + 1].
 			 objectMemory followForwardedObjectFields: aSemaphore toDepth: 1].
 		 self assert: (objectMemory isForwarded: (objectMemory fetchPointer: SuspendedContextIndex ofObject: firstLink)) not].
 
