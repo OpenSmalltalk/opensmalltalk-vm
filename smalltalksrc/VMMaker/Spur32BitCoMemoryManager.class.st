@@ -36,6 +36,13 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #translation }
+Spur32BitCoMemoryManager class >> exportAPISelectors: options [
+	^(Set withAll: (self exportAPISelectorsFor: self))
+		addAll: (SpurGenerationScavenger exportAPISelectors: options);
+		yourself
+]
+
 { #category : #'accessing class hierarchy' }
 Spur32BitCoMemoryManager class >> objectRepresentationClass [
 	^CogObjectRepresentationFor32BitSpur
@@ -69,20 +76,6 @@ Spur32BitCoMemoryManager >> ceSheduleScavenge [
 	<api>
 	self assert: freeStart >= scavengeThreshold.
 	self scheduleScavenge
-]
-
-{ #category : #trampolines }
-Spur32BitCoMemoryManager >> ceStoreCheck: anOop [
-	<api>
-	"Do the store check.  Answer the argument for the benefit of the code generator;
-	 ReceiverResultReg may be caller-saved and hence smashed by this call.  Answering
-	 it allows the code generator to reload ReceiverResultReg cheaply."
-	self assert: (self isNonImmediate: anOop).
-	self assert: (self oop: anOop isGreaterThanOrEqualTo: oldSpaceStart).
-	self assert: (self isRemembered: anOop) not.
-	scavenger remember: anOop.
-	self setIsRememberedOf: anOop to: true.
-	^anOop
 ]
 
 { #category : #accessing }

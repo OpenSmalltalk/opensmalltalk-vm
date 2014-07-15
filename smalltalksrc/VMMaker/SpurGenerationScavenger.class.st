@@ -301,8 +301,7 @@ SpurGenerationScavenger >> copyToOldSpace: survivor [
 		cp: (survivor + manager baseHeaderSize) asVoidPointer
 		y: numSlots * manager wordSize.
 	(manager hasPointerFields: survivor) ifTrue:
-		[self remember: newOop.
-		 manager setIsRememberedOf: newOop to: true].
+		[self remember: newOop].
 	hash ~= 0 ifTrue:
 		[manager setHashBitsOf: newOop to: hash].
 	statTenures := nTenures + 1.
@@ -326,8 +325,7 @@ SpurGenerationScavenger >> copyToOldSpace: survivor bytes: bytesInObject [
 	manager mem: newStart asVoidPointer cp: startOfSurvivor asVoidPointer y: bytesInObject.
 	newOop := newStart + (survivor - startOfSurvivor).
 	(manager hasPointerFields: survivor) ifTrue:
-		[self remember: newOop.
-		 manager setIsRememberedOf: newOop to: true].
+		[self remember: newOop].
 	statTenures := nTenures + 1.
 	^newOop
 ]
@@ -353,8 +351,7 @@ SpurGenerationScavenger >> copyToOldSpace: survivor bytes: bytesInObject format:
 	manager mem: newStart asVoidPointer cp: startOfSurvivor asVoidPointer y: bytesInObject.
 	newOop := newStart + (survivor - startOfSurvivor).
 	(manager isAnyPointerFormat: formatOfSurvivor) ifTrue:
-		[self remember: newOop.
-		 manager setIsRememberedOf: newOop to: true].
+		[self remember: newOop].
 	tenureCriterion = MarkOnTenure ifTrue:
 		[manager setIsMarkedOf: newOop to: true].
 	statTenures := nTenures + 1.
@@ -822,23 +819,29 @@ SpurGenerationScavenger >> processWeaklings [
 			 "weakObj may have been tenured..."
 			 ((self processWeakSurvivor: weakObj)
 			  and: [manager isOldObject: weakObj]) ifTrue:
-				[self remember: weakObj.
-				 manager setIsRememberedOf: weakObj to: true].
+				[self remember: weakObj].
 			 weakCorpse := self nextCorpseOrNil: weakCorpse].
 		weakList := nil]
 ]
 
 { #category : #'store check' }
 SpurGenerationScavenger >> remember: objOop [
+	"Add the argument to the remembered set and set its isRemembered bit to true.
+	 Answer the argument for the benefit of the Cogit."
+	<api>
 	<inline: false>
-	self assert: (manager isYoung: objOop) not.
+	self assert: (manager isNonImmediate: objOop).
+	self assert: (manager isYoungObject: objOop) not.
+	self assert: (manager isRemembered: objOop) not.
+	manager setIsRememberedOf: objOop to: true.
 	rememberedSetSize < RememberedSetLimit
 		ifTrue:
 			[rememberedSet at: rememberedSetSize put: objOop.
 			 (rememberedSetSize := rememberedSetSize + 1) >= RememberedSetRedZone ifTrue:
 				[manager scheduleScavenge]]
 		ifFalse:
-			[self error: 'remembered set overflow' "for now"]
+			[self error: 'remembered set overflow' "for now"].
+	^objOop
 ]
 
 { #category : #accessing }
