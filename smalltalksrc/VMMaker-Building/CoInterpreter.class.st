@@ -12,8 +12,6 @@ Class {
 		'desiredCogCodeSize',
 		'heapBase',
 		'lastCoggableInterpretedBlockMethod',
-		'lastBackwardJumpMethod',
-		'backwardJumpCount',
 		'reenterInterpreter',
 		'deferSmash',
 		'deferredSmash',
@@ -181,6 +179,7 @@ CoInterpreter class >> initializeFrameIndices [
 
 	In an interpreter frame
 		frame flags holds
+			the backward jump count (see ifBackwardsCheckForEvents)
 			the number of arguments (since argument temporaries are above the frame)
 			the flag for a block activation
 			and the flag indicating if the context field is valid (whether the frame is married).
@@ -3563,7 +3562,7 @@ CoInterpreter >> ifBackwardsCheckForEvents: offset [
 	"Backward jump means we're in a loop.
 		- check for possible interrupts.
 		- check for long-running loops and JIT if appropriate."
-	| switched |
+	| switched backwardJumpCountByte |
 	<inline: true>
 	offset < 0 ifTrue:
 		[localSP < stackLimit ifTrue:
@@ -3572,18 +3571,25 @@ CoInterpreter >> ifBackwardsCheckForEvents: offset [
 			 self returnToExecutive: true postContextSwitch: switched.
 			 self browserPluginReturnIfNeeded.
 			 self internalizeIPandSP].
-		method = lastBackwardJumpMethod
-			ifTrue:
-				[(backwardJumpCount := backwardJumpCount - 1) <= 0 ifTrue:
+		 "We use the least significant byte of the flags word (which is marked as an immediate) and subtract two each time
+		  to avoid disturbing the least significant tag bit.  Since the byte is initialized to 1 (on frame build), on first decrement
+		  it will become -1.  We trip when it becomes 1 again."
+		 backwardJumpCountByte := stackPages byteAt: localFP + (VMBIGENDIAN ifTrue: [FoxIFrameFlags + BytesPerWord - 1] ifFalse: [FoxIFrameFlags]).
+		 (backwardJumpCountByte := backwardJumpCountByte - 2) <= 1 ifTrue:
+			[backwardJumpCountByte = -1
+				ifTrue: "initialize the count"
+					[self assert: minBackwardJumpCountForCompile <= 128.
+					 backwardJumpCountByte := minBackwardJumpCountForCompile - 1 << 1 + 1]
+				ifFalse:
 					[(self methodWithHeaderShouldBeCogged: (self headerOf: method))
 						ifTrue:
 							[self externalizeFPandSP.
 							 self attemptToSwitchToMachineCode: (self oopForPointer: localIP) - offset - method - BaseHeaderSize - 1]
-						ifFalse: "don't ask if one should compile a second time..."
-							[backwardJumpCount := 1 << (BytesPerWord * 8 - 2)]]]
-			ifFalse:
-				[lastBackwardJumpMethod := method.
-				backwardJumpCount := minBackwardJumpCountForCompile]]
+						ifFalse: "avoid asking for as long as possible"
+							[backwardJumpCountByte := 16rFF]]].
+		 stackPages
+			byteAt: localFP + (VMBIGENDIAN ifTrue: [FoxIFrameFlags + BytesPerWord - 1] ifFalse: [FoxIFrameFlags])
+			put: backwardJumpCountByte]
 ]
 
 { #category : #'debug support' }
@@ -3716,13 +3722,6 @@ CoInterpreter >> initialEnterSmalltalkExecutive [
 	[([self enterSmalltalkExecutiveImplementation]
 		on: ReenterInterpreter
 		do: [:ex| ex return: ex returnValue]) = ReturnToInterpreter] whileTrue
-]
-
-{ #category : #initialization }
-CoInterpreter >> initialize [
-	super initialize.
-	"Assign to these two to avoid them being inlined into #interpret"
-	lastBackwardJumpMethod := backwardJumpCount := 0
 ]
 
 { #category : #initialization }
