@@ -3376,7 +3376,7 @@ SpurMemoryManager >> compact [
 	"We'd like to use exact fit followed by best or first fit, but it doesn't work
 	 well enough in practice.  So use pig compact.  Fill large free objects starting
 	 from low memory with objects taken from the end of memory."
-	<inline: false>
+	<inline: #never> "for profiling"
 	statCompactPassCount := statCompactPassCount + 1.
 	self assert: (firstFreeChunk = 0 or: [self isFreeObject: firstFreeChunk]).
 	1 to: 3 do:
@@ -4790,7 +4790,7 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact
 	 Let the segmentManager mark which segments contain pinned objects via notePinned:."
 
 	| prevPrevFree prevFree |
-	<inline: false>
+	<inline: #never> "for profiling"
 	self checkFreeSpace.
 	scavenger forgetUnmarkedRememberedObjects.
 	self doScavenge: MarkOnTenure.
@@ -4835,7 +4835,7 @@ SpurMemoryManager >> fullDisplayUpdate [
 SpurMemoryManager >> fullGC [
 	"Perform a full lazy compacting GC.  Answer the size of the largest free chunk."
 	<returnTypeC: #usqLong>
-	<inline: false>
+	<inline: #never> "for profiling"
 	needGCFlag := false.
 	gcStartUsecs := self ioUTCMicrosecondsNow.
 	statMarkCount := 0.
@@ -4884,6 +4884,7 @@ SpurMemoryManager >> getThisSessionID [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> globalGarbageCollect [
+	<inline: true> "inline into fullGC"
 	self cCode: [] inSmalltalk: [self halt: 'GC number ', statFullGCs printString].
 
 	self assert: self validObjStacks.
@@ -6949,7 +6950,7 @@ SpurMemoryManager >> markInactiveEphemerons [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> markObjects [
-	<inline: false>
+	<inline: #never> "for profiling"
 	"Mark all accessible objects."
 	"If the incremental collector is running mark bits may be set; stop it and clear them if necessary."
 	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: 'marking...'; flush].
@@ -7339,7 +7340,7 @@ SpurMemoryManager >> nilUnmarkedWeaklingSlots [
 	"Nil the unmarked slots in the weaklings on the
 	 weakling stack, finalizing those that lost references.
 	 Finally, empty the weaklingStack."
-	<inline: false>
+	<inline: #never> "for profiling"
 	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: 'nilling...'; flush].
 	self assert: self allOldMarkedWeakObjectsOnWeaklingStack.
 	weaklingStack = nilObj ifTrue:

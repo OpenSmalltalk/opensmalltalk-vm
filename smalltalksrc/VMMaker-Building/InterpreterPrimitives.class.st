@@ -1646,7 +1646,8 @@ InterpreterPrimitives >> primitiveFullGC [
 	 supported).  In Spur, answer the size of the largest free chunk."
 
 	objectMemory hasSpurMemoryManagerAPI ifTrue:
-		[^self pop: 1 thenPushInteger: objectMemory fullGC].
+		[self pop: 1 thenPushInteger: objectMemory fullGC.
+		 ^self].
 	objectMemory fullGCLock > 0 ifTrue:
 		[^self primitiveFailFor: PrimErrInappropriate].
 	objectMemory incrementalGC.  "maximimize space for forwarding table"
