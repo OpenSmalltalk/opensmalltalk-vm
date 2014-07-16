@@ -1,0 +1,13 @@
+GDBBUILDFOLDER = /d/Programming/cog/gdb
+
+LINK_WITH_GPP := yes
+EXTRALIBS:= -L$(GDBBUILDFOLDER)/opcodes \
+			-L$(GDBBUILDFOLDER)/sim/arm \
+			-lsim -lopcodes -lbfd -lintl -liberty -Wl,-wrap,ARMul_OSHandleSWI
+
+include ../../Makefile.plugin
+
+INCLUDES:= $(INCLUDES) -I$(GDBBUILDFOLDER)/sim/arm
+
+# Copy libgcc_s_dw2-1.dll, libiconv-2.dll and libintl-8.dll from your MinGW/bin 
+# folder to the VM folder, to make it work on other Windows (7?) systems
