@@ -1,0 +1,32 @@
+#!/bin/bash
+# Stack VM with VM profiler and threaded heartbeat
+INSTALLDIR=stklinuxhtARM
+# Some gcc versions create a broken VM using -O2
+case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
+3.4.*)	OPT="-g -O1 -DNDEBUG -DDEBUGVM=0 -DNO_VM_PROFILE=1";;
+*)		OPT="-g -O3 -DNDEBUG -DDEBUGVM=0 -DNO_VM_PROFILE=1";;
+esac
+
+if [ $# -ge 1 ]; then
+	INSTALLDIR="$1"; shift
+fi
+
+echo -n "clean? "
+read a
+case $a in
+n|no|N|NO)	echo "ok but this isn't safe!!";;
+*)			rm config.h; test -f Makefile && make reallyclean
+esac
+test -f config.h || ../../../platforms/unix/config/configure \
+	--with-src=stacksrc --with-plugins=src/plugins --disable-cogit \
+	--without-vm-display-fbdev --without-npsqueak \
+	CC="gcc " \
+	CXX="g++ " \
+	CFLAGS="$OPT  -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64  -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS" \
+	LIBS="-lpthread -luuid" \
+	LDFLAGS=-Wl,-z,now
+rm -f vm/sqUnixMain.o # nuke version info
+rm -rf ../../../products/$INSTALLDIR
+# prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
+# but older linux readlinks lack the -f flag and Raspbian lacks `readlinks`
+make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG

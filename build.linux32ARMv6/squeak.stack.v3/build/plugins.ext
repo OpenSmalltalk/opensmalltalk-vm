@@ -1,0 +1,7 @@
+# Copied, perhaps edited, from ../../src/examplePlugins.ext
+EXTERNAL_PLUGINS = \
+LocalePlugin \
+UnixOSProcessPlugin \
+UUIDPlugin \
+UnicodePlugin \
+XDisplayControlPlugin
