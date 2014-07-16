@@ -210,6 +210,10 @@ CurrentImageCoInterpreterFacade >> endPCOf: methodOop [
 	^(objectMap keyAtValue: methodOop) endPC - 1
 ]
 
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacade >> ensureNoForwardedLiteralsIn: methodOop [
+]
+
 { #category : #'object map' }
 CurrentImageCoInterpreterFacade >> falseObject [
 	^objectMap at: false
