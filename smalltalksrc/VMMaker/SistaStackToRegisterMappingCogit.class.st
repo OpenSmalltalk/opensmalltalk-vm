@@ -811,13 +811,13 @@ SistaStackToRegisterMappingCogit >> scanMethod [
 	inBlock := false.
 	prevBCDescriptor := nil.
 	numCounters := 0.
+	self cppIf: #NewspeakVM ifTrue:
+		[numIRCs := 0].
 	(primitiveIndex > 0
 	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
 		[^0].
 	pc := latestContinuation := initialPC.
 	numBlocks := framelessStackDelta := nExts := 0.
-	self cppIf: #NewspeakVM ifTrue:
-		[numIRCs := 0].
 	[pc <= endPC] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		descriptor := self generatorAt: byte0.
