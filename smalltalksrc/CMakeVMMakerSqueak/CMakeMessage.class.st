@@ -62,6 +62,5 @@ CMakeMessage >> message: mString [
 CMakeMessage >> optionalkeyword: oString message: mString [
 	optionalkeyword:=oString.
 	message := mString.
-	self content:'
-MESSAGE(', optionalkeyword, ' "', message,'")'
+	self content:'  message(', optionalkeyword, ' "', message,'")'
 ]

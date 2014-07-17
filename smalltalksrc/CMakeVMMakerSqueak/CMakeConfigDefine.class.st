@@ -29,8 +29,7 @@ Class {
 CMakeConfigDefine >> initialize [
 	variable:='foo'.
 	value:='bar'.
-	self content:'
-  CONFIG_DEFINE(',variable,' ',value,')'
+	self content:' config_define(',variable,' ',value,')'
 ]
 
 { #category : #accessing }

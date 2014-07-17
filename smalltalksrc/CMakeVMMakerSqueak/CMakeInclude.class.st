@@ -14,8 +14,7 @@ Class {
 { #category : #accessing }
 CMakeInclude >> file: fString [ 
 	file := fString.
-	self content:'
-  INCLUDE(',file,')'
+	self content:'  include (',file,')'
 ]
 
 { #category : #'initialize-release' }

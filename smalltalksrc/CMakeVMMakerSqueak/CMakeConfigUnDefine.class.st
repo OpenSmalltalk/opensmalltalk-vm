@@ -28,7 +28,7 @@ Class {
 CMakeConfigUnDefine >> initialize [
 	variable:='foo'.
 	self content:'
-  CONFIG_UNDEFINE(',variable,')'
+  config_undefine(',variable,')'
 ]
 
 { #category : #accessing }
@@ -37,13 +37,4 @@ CMakeConfigUnDefine >> variable: aString [
 	variable := aString.
 	self content:'
   CONFIG_UNDEFINE(',variable,')'
-]
-
-{ #category : #accessing }
-CMakeConfigUnDefine >> variable: aString value: vString [
-
-	variable := aString.
-	value := vString.
-	self content:'
-  CONFIG_DEFINE(',variable,' ',value,')'
 ]

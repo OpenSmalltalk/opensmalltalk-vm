@@ -70,16 +70,15 @@ CMakeCheckLibraryExists >> library: anObject [
 	library := anObject
 ]
 
-{ #category : #'initialize-release' }
+{ #category : #accessing }
 CMakeCheckLibraryExists >> library: lString function: fString location: locString variable: vString [
 	library:= lString.
 	function:=fString.
 	location:=locString.
 	variable:=vString.
-	content:='
-  CHECK_LIBRARY_EXISTS (', library, ' ', function, '  "', location ,'" ', variable ,')
+	content:='  check_library_exists(', library, ' ', function, '  "', location ,'" ', variable ,')
   IF (', variable, ')
-      CONFIG_DEFINE(', variable, ')
+      config_define(', variable, ')
    ENDIF (', variable, ')'
 
 ]

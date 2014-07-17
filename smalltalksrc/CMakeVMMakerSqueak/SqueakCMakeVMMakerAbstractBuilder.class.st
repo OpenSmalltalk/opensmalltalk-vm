@@ -153,13 +153,7 @@ SqueakCMakeVMMakerAbstractBuilder class >> configureA: aSqueakCMakeConfiguration
 	SqueakLinux64x86w32CompatBuilder
 		configureA: #Linux64x86w32BitSqueakCogV3SlackwareNoGLConfig forBuildType: #build.itimerheartbeat  "
 	default ifNil:[default:= self new].
-	^default configureABuildFor: aSqueakCMakeConfiguration forBuildType: aSymbol
-]
-
-{ #category : #building }
-SqueakCMakeVMMakerAbstractBuilder class >> configureABuildFor: aSqueakCMakeConfiguration forBuildType: aSymbol [
-	default ifNil:[default:= self new].
-	^default configureABuildFor: aSqueakCMakeConfiguration forBuildType: aSymbol
+	^default configureA: aSqueakCMakeConfiguration forBuildType: aSymbol
 ]
 
 { #category : #'initialize-release' }
@@ -173,10 +167,22 @@ SqueakCMakeVMMakerAbstractBuilder class >> dirBuildPlatform [
 	^default dirBuildPlatform
 ]
 
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder class >> enableMessageTracking: aBoolean [
+	default ifNil:[default:= self new].
+	^default enableMessageTracking: aBoolean
+]
+
 { #category : #building }
 SqueakCMakeVMMakerAbstractBuilder class >> generate [
 	default ifNil:[default:= self new].
 	^default  generate
+]
+
+{ #category : #building }
+SqueakCMakeVMMakerAbstractBuilder class >> generateByTemplate [
+	default ifNil:[default:= self new].
+	^default  generateByTemplate
 ]
 
 { #category : #building }
@@ -309,7 +315,7 @@ SqueakCMakeVMMakerAbstractBuilder >> configurationsCategory [
 ]
 
 { #category : #building }
-SqueakCMakeVMMakerAbstractBuilder >> configureABuildFor: configSymbol forBuildType: typeSymbol [
+SqueakCMakeVMMakerAbstractBuilder >> configureA: configSymbol forBuildType: typeSymbol [
 	| i |
 	self flag:'tty'. "excludeFromBuild returning True does not exit gracefully"
 	"Do some sanity checks, then set the internal state of a Configuration for a particular build type. "
@@ -352,9 +358,23 @@ SqueakCMakeVMMakerAbstractBuilder >> dirBuildPlatform: aCategoryName [
 ]
 
 { #category : #building }
+SqueakCMakeVMMakerAbstractBuilder >> enableMessageTracking: aBoolean [
+	(config isKindOf: CPlatformConfig)
+		ifTrue:[config enabledebugmessages: aBoolean]
+		
+]
+
+{ #category : #building }
 SqueakCMakeVMMakerAbstractBuilder >> generate [
 	(config isKindOf: CPlatformConfig)
 		ifTrue:[config generate]
+		
+]
+
+{ #category : #building }
+SqueakCMakeVMMakerAbstractBuilder >> generateByTemplate [
+	(config isKindOf: CPlatformConfig)
+		ifTrue:[config generateByTemplate]
 		
 ]
 

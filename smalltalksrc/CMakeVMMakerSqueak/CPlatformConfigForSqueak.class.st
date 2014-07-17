@@ -63,7 +63,10 @@ Class {
 		'generateBuildIHeartbeatTimer',
 		'generateBuildMultiThreaded',
 		'generateBuildMultiThreadedAssert',
-		'generateBuildMultiThreadedDebug'
+		'generateBuildMultiThreadedDebug',
+		'templates',
+		'enabledebugmessages',
+		'vmdrivers'
 	],
 	#classInstVars : [
 		'isAbstractBaseClass'
@@ -750,6 +753,12 @@ CPlatformConfigForSqueak >> addVMDriversBuildITimerHeartbeat: aMaker [
 ]
 
 { #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> addVMDriversBuildMultiThreaded: aMaker [
+	"SqueakUnixConfig browse"
+	self subclassResponsibility.
+]
+
+{ #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> addVMDriversBuildMultiThreadedAssert: aMaker [
 	"SqueakUnixConfig browse"
 	self subclassResponsibility.
@@ -773,7 +782,7 @@ CPlatformConfigForSqueak >> androidPlatformName [
 	^'android'
 ]
 
-{ #category : #'cmake configuration' }
+{ #category : #cmake }
 CPlatformConfigForSqueak >> availableBuildTypes [
 	self subclassResponsibility.
 
@@ -811,6 +820,756 @@ CPlatformConfigForSqueak >> buildType: aSymbol [
 	buildType:= aSymbol
 ]
 
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeAddDefinitions [
+	"Route this message send to the message appropriate for my buildType "
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self cmakeAddDefinitionsBuild];
+		at: #buildAssert  put: [self cmakeAddDefinitionsBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self cmakeAddDefinitionsBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self cmakeAddDefinitionsPathBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self cmakeAddDefinitionsBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self cmakeAddDefinitionsBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self cmakeAddDefinitionsBuildMultiThreaded];
+		at: #buildMultiThreadedAssert  put: [self cmakeAddDefinitionsBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self cmakeAddDefinitionsBuildMultiThreadedDebug ];
+		at: #buildNone put:[self cmakeAddDefinitionsNoBuildType].
+	^(d at: buildType) value
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeAddDefinitionsBuild [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildAssert [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildAssertITimerHeartbeat [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildDebug [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildDebugITimerHeartbeat [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildITimerHeartbeat [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildMultiThreaded [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildMultiThreadedAssert [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildMultiThreadedDebug [
+	 ""
+	self subclassResponsibility
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeAddDefinitionsNoBuildType [
+	"SHOULD NOT GET HERE"
+	self shouldNotImplement.
+
+]
+
+{ #category : #cmake }
+CPlatformConfigForSqueak >> cmakeAddExecutableNameOptionSource: aMaker [
+	(enabledebugmessages)
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: (self class name) , 'cmakeAddExecutableNameOptionSource: aMaker')
+	].
+	templates
+		addLast:((CMakeAddExecutableNameOptionSource new)
+			executableName: (self executableName)
+			optionalproperty: (self executableType)
+			sources: (OrderedCollection with: aMaker sources)).
+
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeCFlags [
+	"Route this message send to the message appropriate for my buildType "
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self cmakeCFlagsBuild];
+		at: #buildAssert  put: [self cmakeCFlagsBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self cmakeCFlagsBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self cmakeCFlagsPathBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self cmakeCFlagsBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self cmakeCFlagsBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self cmakeCFlagsBuildMultiThreaded];
+		at: #buildMultiThreadedAssert  put: [self cmakeCFlagsBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self cmakeCFlagsBuildMultiThreadedDebug ];
+		at: #buildNone put:[self cmakeCFlagsNoBuildType].
+	^(d at: buildType) value
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeCFlagsBuild [
+"
+convenience method for customizing CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG  variables based on #buildType.
+ 
+cmake --help-variable   CMAKE_C_FLAGS  
+cmake --help-variable   CMAKE_C_FLAGS_DEBUG 
+cmake --help-variable   CMAKE_C_FLAGS_RELEASE
+
+cmake --help-variable   CMAKE_CXX_FLAGS  
+cmake --help-variable   CMAKE_CXX_FLAGS_DEBUG 
+cmake --help-variable   CMAKE_CXX_FLAGS_RELEASE
+
+NOTE: be careful not to clobber existing flags unless you intend to.
+You can avoid that with this form:  set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}  -Wall -m32) which is created via cmake templates with
+	templates
+		addLast:((CMakeSet new) variable:'CMAKE_CXX_FLAGS' value: '${CMAKE_CXX_FLAGS}  -Wall -m32');
+
+
+
+
+SystemNavigation default browseMethodsWhoseNamesContain: 'cmakeCFlagsBuild'
+"
+	self subclassResponsibility.
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeCFlagsBuildAssert [
+	"convenience method for customizing CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG  variables based on #buildType."
+	^self cmakeCFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeCFlagsBuildAssertITimerHeartbeat [
+	"convenience method for customizing CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG  variables based on #buildType."
+	^self cmakeCFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeCFlagsBuildDebugITimerHeartbeat [
+	"convenience method for customizing CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG  variables based on #buildType."
+	^self cmakeCFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeCFlagsBuildITimerHeartbeat [
+	"convenience method for customizing CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG  variables based on #buildType."
+	^self cmakeCFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeCFlagsBuildMultiThreaded [
+	"convenience method for customizing CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG  variables based on #buildType."
+	^self cmakeCFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeCFlagsBuildMultiThreadedAssert [
+	"convenience method for customizing CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG  variables based on #buildType."
+	^self cmakeCFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeCFlagsBuildMultiThreadedDebug [
+	"convenience method for customizing CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG  variables based on #buildType."
+	^self cmakeCFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeCFlagsNoBuildType [
+	"SHOULD NOT GET HERE"
+	self shouldNotImplement.
+
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeCFlagsPathBuildDebug [
+	"convenience method for customizing CMAKE_C_FLAGS CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEBUG  variables based on #buildType."
+	^self cmakeCFlagsBuild
+]
+
+{ #category : #cmake }
+CPlatformConfigForSqueak >> cmakeIncludeDirectories: aMaker [
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: (self class name), ' includeDirs: aMaker' )
+	].
+	templates
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: (aMaker includeDirs))).
+
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludeModules [
+	"Route this message send to the message appropriate for my buildType "
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self cmakeIncludeModulesBuild];
+		at: #buildAssert  put: [self cmakeIncludeModulesBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self cmakeIncludeModulesBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self cmakeIncludeModulesBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self cmakeIncludeModulesBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self cmakeIncludeModulesBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self cmakeIncludeModulesMultiThreaded];
+		at: #buildMultiThreadedAssert  put: [self cmakeIncludeModulesBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self cmakeIncludeModulesBuildMultiThreadedDebug ];
+		at: #buildNone put:[self cmakeIncludeModulesNoBuildType].
+	^(d at: buildType) value
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludeModulesBuild [
+"cmake Modules to include"
+	self subclassResponsibility.
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludeModulesBuildAssert [
+	"convenience method for including different CMake Modules for different buildType default #build "
+	^self cmakeIncludeModulesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludeModulesBuildAssertITimerHeartbeat [
+	"convenience method for including different CMake Modules for different buildType default #build "
+	^self cmakeIncludeModulesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludeModulesBuildDebug [
+	"convenience method for including different CMake Modules for different buildType default #build "
+	^self cmakeIncludeModulesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludeModulesBuildDebugITimerHeartbeat [
+	"convenience method for including different CMake Modules for different buildType default #build "
+	^self cmakeIncludeModulesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludeModulesBuildITimerHeartbeat [
+	"convenience method for including different CMake Modules for different buildType default #build "
+	^self cmakeIncludeModulesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludeModulesBuildMultiThreadedAssert [
+	"convenience method for including different CMake Modules for different buildType default #build "
+	^self cmakeIncludeModulesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludeModulesBuildMultiThreadedDebug [
+	"convenience method for including different CMake Modules for different buildType default #build "
+	^self cmakeIncludeModulesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludeModulesMultiThreaded [
+	"convenience method for including different CMake Modules for different buildType default #build "
+	^self cmakeIncludeModulesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludeModulesNoBuildType [
+	"SHOULD NOT GET HERE"
+	self shouldNotImplement.
+
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludePath [
+	"Route this message send to the message appropriate for my buildType "
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self cmakeIncludePathBuild];
+		at: #buildAssert  put: [self cmakeIncludePathBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self cmakeIncludePathBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self cmakeIncludePathBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self cmakeIncludePathBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self cmakeIncludePathBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self cmakeIncludePathBuildMultiThreaded];
+		at: #buildMultiThreadedAssert  put: [self cmakeIncludePathBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self cmakeIncludePathBuildMultiThreadedDebug ];
+		at: #buildNone put:[self cmakeIncludePathNoBuildType].
+	^(d at: buildType) value
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludePathBuild [
+	"
+cmake --help-variable  CMAKE_INCLUDE_PATH 
+ This is used when searching for include files e.g. using the FIND_PATH() command. If you have headers in non-standard locations, it may be useful to set this variable to this directory (e.g. /sw/include on Mac OS X). If you need several directories, separate them by the platform specific separators (e.g. ':' on UNIX) "
+	self subclassResponsibility.
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludePathBuildAssert [
+	"convenience method for cusomizing CMAKE_INCLUDE_PATH for different buildType "
+	^self cmakeIncludePathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludePathBuildAssertITimerHeartbeat [
+	"convenience method for cusomizing CMAKE_INCLUDE_PATH for different buildType "
+	^self cmakeIncludePathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludePathBuildDebug [
+	"convenience method for cusomizing CMAKE_INCLUDE_PATH for different buildType "
+	^self cmakeIncludePathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludePathBuildDebugITimerHeartbeat [
+	"convenience method for cusomizing CMAKE_INCLUDE_PATH for different buildType "
+	^self cmakeIncludePathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludePathBuildITimerHeartbeat [
+	"convenience method for cusomizing CMAKE_INCLUDE_PATH for different buildType "
+	^self cmakeIncludePathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludePathBuildMultiThreaded [
+	"convenience method for cusomizing CMAKE_INCLUDE_PATH for different buildType "
+	^self cmakeIncludePathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludePathBuildMultiThreadedAssert [
+	"convenience method for cusomizing CMAKE_INCLUDE_PATH for different buildType "
+	^self cmakeIncludePathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludePathBuildMultiThreadedDebug [
+	"convenience method for cusomizing CMAKE_INCLUDE_PATH for different buildType "
+	^self cmakeIncludePathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeIncludePathNoBuildType [
+	"SHOULD NOT GET HERE"
+	self shouldNotImplement.
+
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeLibraryPath [
+	"Route this message send to the message appropriate for my buildType "
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self cmakeLibraryPathBuild];
+		at: #buildAssert  put: [self cmakeLibraryPathBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self cmakeLibraryPathBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self cmakeLibraryPathBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self cmakeLibraryPathBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self cmakeLibraryPathBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self cmakeLibraryPathBuildMultiThreaded];
+		at: #buildMultiThreadedAssert  put: [self cmakeLibraryPathBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self cmakeLibraryPathBuildMultiThreadedDebug ];
+		at: #buildNone put:[self cmakeLibraryPathNoBuildType].
+	^(d at: buildType) value
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeLibraryPathBuild [
+	"
+cmake --help-variable   CMAKE_LIBRARY_PATH 
+ This is used when searching for libraries e.g. using the FIND_LIBRARY() command. If you have libraries in non-standard locations, it may be useful to set this variable to this directory (e.g. /sw/lib on Mac OS X). If you need several directories, separate them by the platform specific separators (e.g. '':'' on UNIX)  "
+	self subclassResponsibility.
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeLibraryPathBuildAssert [
+	"convenience method for cusomizing CMAKE_LIBRARY_PATH for different buildType "
+	^self cmakeLibraryPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeLibraryPathBuildAssertITimerHeartbeat [
+	"convenience method for cusomizing CMAKE_LIBRARY_PATH for different buildType "
+	^self cmakeLibraryPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeLibraryPathBuildDebug [
+	"convenience method for cusomizing CMAKE_LIBRARY_PATH for different buildType "
+	^self cmakeLibraryPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeLibraryPathBuildDebugITimerHeartbeat [
+	"convenience method for cusomizing CMAKE_LIBRARY_PATH for different buildType "
+	^self cmakeLibraryPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeLibraryPathBuildITimerHeartbeat [
+	"convenience method for cusomizing CMAKE_LIBRARY_PATH for different buildType "
+	^self cmakeLibraryPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeLibraryPathBuildMultiThreaded [
+	"convenience method for cusomizing CMAKE_LIBRARY_PATH for different buildType "
+	^self cmakeLibraryPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeLibraryPathBuildMultiThreadedAssert [
+	"convenience method for cusomizing CMAKE_LIBRARY_PATH for different buildType "
+	^self cmakeLibraryPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeLibraryPathBuildMultiThreadedDebug [
+	"convenience method for cusomizing CMAKE_LIBRARY_PATH for different buildType "
+	^self cmakeLibraryPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeLibraryPathNoBuildType [
+	"SHOULD NOT GET HERE"
+	self shouldNotImplement.
+
+]
+
+{ #category : #cmake }
+CPlatformConfigForSqueak >> cmakeListAppend: listString elements: anOrderedCollection [
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: (self class name), ' cmakeListAppend: listString elements: eString' )
+	].
+	templates
+		addLast: ((CMakeListAppend new) list: listString elements: anOrderedCollection).
+
+
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakePrefixPath [
+	"Route this message send to the message appropriate for my buildType "
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self cmakePrefixPathBuild];
+		at: #buildAssert  put: [self cmakePrefixPathBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self cmakePrefixPathBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self cmakePrefixPathBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self cmakePrefixPathBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self cmakePrefixPathBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self cmakePrefixPathBuildMultiThreaded];
+		at: #buildMultiThreadedAssert  put: [self cmakePrefixPathBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self cmakePrefixPathBuildMultiThreadedDebug ];
+		at: #buildNone put:[self cmakePrefixPathNoBuildType].
+	^(d at: buildType) value
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakePrefixPathBuild [
+"
+cmake --help-variable   CMAKE_PREFIX_PATH 
+ (since CMake 2.6.0) This is used when searching for include files, binaries, or libraries using either the FIND_PACKAGE(), FIND_PATH(), FIND_PROGRAM(), or FIND_LIBRARY() commands. For each path in the CMAKE_PREFIX_PATH list, CMake will check ''PATH/include'' and ''PATH'' when FIND_PATH() is called, ''PATH/bin'' and ''PATH'' when FIND_PROGRAM() is called, and ''PATH/lib'' and ''PATH'' when FIND_LIBRARY() is called. See the documentation for FIND_PACKAGE(), FIND_LIBRARY(), FIND_PATH(), and FIND_PROGRAM() for more details."
+
+	self subclassResponsibility.
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakePrefixPathBuildAssert [
+	"convenience method for cusomizing CMAKE_PREFIX_PATH for different buildType "
+	^self cmakePrefixPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakePrefixPathBuildAssertITimerHeartbeat [
+	"convenience method for cusomizing CMAKE_PREFIX_PATH for different buildType "
+	^self cmakePrefixPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakePrefixPathBuildDebug [
+	"convenience method for cusomizing CMAKE_PREFIX_PATH for different buildType "
+	^self cmakePrefixPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakePrefixPathBuildDebugITimerHeartbeat [
+	"convenience method for cusomizing CMAKE_PREFIX_PATH for different buildType "
+	^self cmakePrefixPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakePrefixPathBuildITimerHeartbeat [
+	"convenience method for cusomizing CMAKE_PREFIX_PATH for different buildType "
+	^self cmakePrefixPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakePrefixPathBuildMultiThreaded [
+	"convenience method for cusomizing CMAKE_PREFIX_PATH for different buildType "
+	^self cmakePrefixPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakePrefixPathBuildMultiThreadedAssert [
+	"convenience method for cusomizing CMAKE_PREFIX_PATH for different buildType "
+	^self cmakePrefixPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakePrefixPathBuildMultiThreadedDebug [
+	"convenience method for cusomizing CMAKE_PREFIX_PATH for different buildType "
+	^self cmakePrefixPathBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakePrefixPathNoBuildType [
+	"SHOULD NOT GET HERE"
+	self shouldNotImplement.
+
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSetSourceFilesProperties [
+	"Route this message send to the message appropriate for my buildType "
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self cmakeSetSourceFilesPropertiesBuild];
+		at: #buildAssert  put: [self cmakeSetSourceFilesPropertiesBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self cmakeSetSourceFilesPropertiesBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self cmakeSetSourceFilesPropertiesBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self cmakeSetSourceFilesPropertiesBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self cmakeSetSourceFilesPropertiesBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self cmakeSetSourceFilesPropertiesBuildMultiThreaded];
+		at: #buildMultiThreadedAssert  put: [self cmakeSetSourceFilesPropertiesBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self cmakeSetSourceFilesPropertiesBuildMultiThreadedDebug ];
+		at: #buildNone put:[self cmakeSetSourceFilesPropertiesNoBuildType].
+	^(d at: buildType) value
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSetSourceFilesPropertiesBuild [
+"
+ cmake --help-command set_source_files_properties
+set_source_files_properties
+---------------------------
+
+Source files can have properties that affect how they are built.
+
+::
+
+ set_source_files_properties([file1 [file2 [...]]]
+                             PROPERTIES prop1 value1
+                             [prop2 value2 [...]])
+
+Set properties associated with source files using a key/value paired
+list.  See properties documentation for those known to CMake.
+Unrecognized properties are ignored.  Source file properties are
+visible only to targets added in the same directory (CMakeLists.txt).
+
+."
+
+	self subclassResponsibility.
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSetSourceFilesPropertiesBuildAssert [
+	"convenience method for cusomizing  for different buildType "
+	^self cmakeSetSourceFilesPropertiesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSetSourceFilesPropertiesBuildAssertITimerHeartbeat [
+	"convenience method for cusomizing  for different buildType "
+	^self cmakeSetSourceFilesPropertiesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSetSourceFilesPropertiesBuildDebug [
+	"convenience method for cusomizing  for different buildType "
+	^self cmakeSetSourceFilesPropertiesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSetSourceFilesPropertiesBuildDebugITimerHeartbeat [
+	"convenience method for cusomizing  for different buildType "
+	^self cmakeSetSourceFilesPropertiesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSetSourceFilesPropertiesBuildITimerHeartbeat [
+	"convenience method for cusomizing  for different buildType "
+	^self cmakeSetSourceFilesPropertiesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSetSourceFilesPropertiesBuildMultiThreaded [
+	"convenience method for cusomizing  for different buildType "
+	^self cmakeSetSourceFilesPropertiesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSetSourceFilesPropertiesBuildMultiThreadedAssert [
+	"convenience method for cusomizing  for different buildType "
+	^self cmakeSetSourceFilesPropertiesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSetSourceFilesPropertiesBuildMultiThreadedDebug [
+	"convenience method for cusomizing  for different buildType "
+	^self cmakeSetSourceFilesPropertiesBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSetSourceFilesPropertiesNoBuildType [
+	"SHOULD NOT GET HERE"
+	self shouldNotImplement.
+
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSharedLinkerFlags [
+	"Route this message send to the message appropriate for my buildType "
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self cmakeSharedLinkerFlagsBuild];
+		at: #buildAssert  put: [self cmakeSharedLinkerFlagsBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self cmakeSharedLinkerFlagsBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self cmakeSharedLinkerFlagsBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self cmakeSharedLinkerFlagsBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self cmakeSharedLinkerFlagsBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self cmakeSharedLinkerFlagsBuildMultiThreaded];
+		at: #buildMultiThreadedAssert  put: [self cmakeSharedLinkerFlagsBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self cmakeSharedLinkerFlagsBuildMultiThreadedDebug ];
+		at: #buildNone put:[self cmakeSharedLinkerFlagsNoBuildType].
+	^(d at: buildType) value
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuild [
+"
+cmake --help-variable CMAKE_SHARED_LINKER_FLAGS
+CMAKE_SHARED_LINKER_FLAGS
+-------------------------
+
+Linker flags to be used to create shared libraries.
+
+We want a command like this:
+
+  set(CMAKE_SHARED_LINKER_FLAGS ''-Wl -z now'')
+
+using the template system, it looks like this:
+
+	|flags|
+	flags := { 
+		'-Wl'
+           . '-z'
+           . 'now'
+	   } asOrderedCollection .
+	templates
+		addLast:((CMakeSet new) 
+			variable:'CMAKE_SHARED_LINKER_FLAGS' 
+			quotedValue:'${CMAKE_SHARED_LINKER_FLAGS} ', (String streamContents: [:stream | flags asStringOn: stream delimiter: ' ' ])).
+
+."
+	self subclassResponsibility.
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildAssert [
+	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
+	^self cmakeSharedLinkerFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildAssertITimerHeartbeat [
+	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
+	^self cmakeSharedLinkerFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildDebug [
+	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
+	^self cmakeSharedLinkerFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildDebugITimerHeartbeat [
+	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
+	^self cmakeSharedLinkerFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildITimerHeartbeat [
+	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
+	^self cmakeSharedLinkerFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildMultiThreaded [
+	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
+	^self cmakeSharedLinkerFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildMultiThreadedAssert [
+	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
+	^self cmakeSharedLinkerFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildMultiThreadedDebug [
+	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
+	^self cmakeSharedLinkerFlagsBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsNoBuildType [
+	"SHOULD NOT GET HERE"
+	self shouldNotImplement.
+
+]
+
 { #category : #'source generation' }
 CPlatformConfigForSqueak >> cogitClass [
 	self subclassResponsibility
@@ -828,308 +1587,26 @@ CPlatformConfigForSqueak >> cogitClass [
 
 ]
 
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> comilerFlagsBuildAssertITimerHeartbeat [
-	 "This will be going away in place of cC, cXX, lDFlags, libs methods 
-	^self cFlagsBuild
-"
-
-	self subclassResponsibility
-]
-
-{ #category : #'compiler flags' }
-CPlatformConfigForSqueak >> commonCompilerFlags [
+{ #category : #compiling }
+CPlatformConfigForSqueak >> compilerDefinitions [
+	"-DNDEBUG -DGNU_SOURCE...etc feed these into cmakeAddDefinitions"
 	self	subclassResponsibility
 ]
 
-{ #category : #'cmake buildType redirects' }
+{ #category : #compiling }
 CPlatformConfigForSqueak >> compilerFlags [
-	|d flags|
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 		
-		at: #build put: [self compilerFlagsBuild];
-		at: #buildAssert  put: [self compilerFlagsBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self compilerFlagsBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self compilerFlagsBuildDebug];   
-		at: #buildDebugITimerHeartbeat  put: [self compilerFlagsBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self compilerFlagsBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self compilerFlagsBuildMultiThreaded];
-		at: #buildMultiThreadedAssert  put: [self compilerFlagsBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self compilerFlagsBuildMultiThreadedDebug ];
-		at: #buildNone put:[self compilerFlagsNoBuildType].
-	flags := String
-				streamContents: [:stream | ((d at: buildType) value collect: #withBlanksTrimmed as: Set)
-						asStringOn: stream
-						delimiter: ' '].
-	^flags.
-
+	"-g -O1 -m32...define these in your concrete CPlatformConfigForSqueak and feed them to cmakeCFlags"
+	self	subclassResponsibility
 ]
 
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> compilerFlagsBuild [
-	 ""
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> compilerFlagsBuildAssert [
-	 "^self comilerFlagsBuild
-"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> compilerFlagsBuildDebug [
-	 "^self compilerFlagsBuild"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> compilerFlagsBuildDebugITimerHeartbeat [
-	 "	^self compilerFlagsBuild"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> compilerFlagsBuildITimerHeartbeat [
-	 "^self comilerFlagsBuild
-"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> compilerFlagsBuildMultiThreaded [
-	 "^self comilerFlagsBuild
-"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> compilerFlagsBuildMultiThreadedAssert [
-	 "^self comilerFlagsBuild
-"
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> compilerFlagsBuildMultiThreadedDebug [
-	 "^self comilerFlagsBuild
-"
-
-	self subclassResponsibility
-]
-
-{ #category : #'gnu build system mvm file' }
-CPlatformConfigForSqueak >> configureFlags [
-	"Route this message send to the message appropriate for my buildType "
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self configureFlagsBuild];
-		at: #buildAssert  put: [self configureFlagsBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self configureFlagsBuildAssertITimerHeartbeat];
-                at:#buildDebug  put: [self configureFlagsBuildDebug];   
-		at: #buildDebugITimerHeartbeat  put: [self configureFlagsBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self configureFlagsBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self configureFlagsBuildMultiThreaded];
-		at: #buildMultiThreadedAssert  put: [self configureFlagsBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self configureFlagsBuildMultiThreadedDebug ];
-		at: #buildNone put:[self configureFlagsNoBuildType].
-	^(d at: buildType) value
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> configureFlagsBuild [
-	"flags to feed to a configure command in GNU
-	configure --without-npsqueak --with-src=stacksrc --with-plugins=src/plugins --disable-cogi --without-vm-display-fbdev  --x-libraries=/usr/lib --without-gl 
-
-	^{
-		'-without-npsqueak' 
-		. '--with-src=stacksrc' 
-		. '--with-plugins=src/plugins' 
-		. '--disable-cogit'
-		. '--without-vm-display-fbdev'
-		. '--x-libraries=/usr/lib'
-		. '--without-gl'
-		}"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> configureFlagsBuildAssert [
-	"flags to feed to a configure command in GNU
-	configure --without-npsqueak --with-src=stacksrc --with-plugins=src/plugins --disable-cogi --without-vm-display-fbdev  --x-libraries=/usr/lib --without-gl 
-
-	^{
-		'-without-npsqueak' 
-		. '--with-src=stacksrc' 
-		. '--with-plugins=src/plugins' 
-		. '--disable-cogit'
-		. '--without-vm-display-fbdev'
-		. '--x-libraries=/usr/lib'
-		. '--without-gl'
-		}
-
-	^self configureFlagsBuild
-	"
-
-	
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> configureFlagsBuildAssertITimerHeartbeat [
-	"flags to feed to a configure command in GNU
-	configure --without-npsqueak --with-src=stacksrc --with-plugins=src/plugins --disable-cogi --without-vm-display-fbdev  --x-libraries=/usr/lib --without-gl 
-
-	^{
-		'-without-npsqueak' 
-		. '--with-src=stacksrc' 
-		. '--with-plugins=src/plugins' 
-		. '--disable-cogit'
-		. '--without-vm-display-fbdev'
-		. '--x-libraries=/usr/lib'
-		. '--without-gl'
-		}
-
-	^self configureFlagsBuild
-	"
-
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> configureFlagsBuildDebug [
-	"flags to feed to a configure command in GNU
-	configure --without-npsqueak --with-src=stacksrc --with-plugins=src/plugins --disable-cogi --without-vm-display-fbdev  --x-libraries=/usr/lib --without-gl 
-
-	^{
-		'-without-npsqueak' 
-		. '--with-src=stacksrc' 
-		. '--with-plugins=src/plugins' 
-		. '--disable-cogit'
-		. '--without-vm-display-fbdev'
-		. '--x-libraries=/usr/lib'
-		. '--without-gl'
-		}
-
-	^self configureFlagsBuild
-	"
-
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> configureFlagsBuildDebugITimerHeartbeat [
-	"flags to feed to a configure command in GNU
-	configure --without-npsqueak --with-src=stacksrc --with-plugins=src/plugins --disable-cogi --without-vm-display-fbdev  --x-libraries=/usr/lib --without-gl 
-
-	^{
-		'-without-npsqueak' 
-		. '--with-src=stacksrc' 
-		. '--with-plugins=src/plugins' 
-		. '--disable-cogit'
-		. '--without-vm-display-fbdev'
-		. '--x-libraries=/usr/lib'
-		. '--without-gl'
-		}
-
-	^self configureFlagsBuild
-	"
-
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> configureFlagsBuildITimerHeartbeat [
-	"flags to feed to a configure command in GNU
-	configure --without-npsqueak --with-src=stacksrc --with-plugins=src/plugins --disable-cogi --without-vm-display-fbdev  --x-libraries=/usr/lib --without-gl 
-
-	^{
-		'-without-npsqueak' 
-		. '--with-src=stacksrc' 
-		. '--with-plugins=src/plugins' 
-		. '--disable-cogit'
-		. '--without-vm-display-fbdev'
-		. '--x-libraries=/usr/lib'
-		. '--without-gl'
-		}
-
-	^self configureFlagsBuild
-	"
-
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> configureFlagsBuildMultiThreaded [
-	"flags to feed to a configure command in GNU
-	configure --without-npsqueak --with-src=stacksrc --with-plugins=src/plugins --disable-cogi --without-vm-display-fbdev  --x-libraries=/usr/lib --without-gl 
-
-	^{
-		'-without-npsqueak' 
-		. '--with-src=stacksrc' 
-		. '--with-plugins=src/plugins' 
-		. '--disable-cogit'
-		. '--without-vm-display-fbdev'
-		. '--x-libraries=/usr/lib'
-		. '--without-gl'
-		}
-
-	^self configureFlagsBuild
-	"
-
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> configureFlagsBuildMultiThreadedAssert [
-	"flags to feed to a configure command in GNU
-	configure --without-npsqueak --with-src=stacksrc --with-plugins=src/plugins --disable-cogi --without-vm-display-fbdev  --x-libraries=/usr/lib --without-gl 
-
-	^{
-		'-without-npsqueak' 
-		. '--with-src=stacksrc' 
-		. '--with-plugins=src/plugins' 
-		. '--disable-cogit'
-		. '--without-vm-display-fbdev'
-		. '--x-libraries=/usr/lib'
-		. '--without-gl'
-		}
-
-	^self configureFlagsBuild
-	"
-
-
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> configureFlagsNoBuildType [
-	"SHOULD NOT GET HERE"
-	self shouldNotImplement.
-
-]
-
-{ #category : #'cmake configuration' }
+{ #category : #cmake }
 CPlatformConfigForSqueak >> configureForBuildType: aSymbol [
 	"Set my internal state appropriate for my build type".
 	self subclassResponsibility.
 
 ]
 
-{ #category : #'cmake configuration' }
+{ #category : #cmake }
 CPlatformConfigForSqueak >> configureNoBuildType [
 		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
 ]
@@ -1379,13 +1856,23 @@ CPlatformConfigForSqueak >> dirWin32x86 [
 	^'cmake.build.win32x86'
 ]
 
+{ #category : #accessing }
+CPlatformConfigForSqueak >> enabledebugmessages [
+	^enabledebugmessages
+]
+
+{ #category : #accessing }
+CPlatformConfigForSqueak >> enabledebugmessages: aBoolean [
+	enabledebugmessages := aBoolean
+]
+
 { #category : #'cmake executable names' }
 CPlatformConfigForSqueak >> eventStackV3 [
 
 	^'do not build'
 ]
 
-{ #category : #'cmake configuration' }
+{ #category : #cmake }
 CPlatformConfigForSqueak >> excludeFromBuild [
 "	^false"   "build this configuration"
 "	^true"   "do not build this configuration"
@@ -1393,7 +1880,7 @@ CPlatformConfigForSqueak >> excludeFromBuild [
 
 ]
 
-{ #category : #accessing }
+{ #category : #'cmake executable names' }
 CPlatformConfigForSqueak >> executableName [
 	self subclassResponsibility
 "
@@ -1405,7 +1892,7 @@ executableName
 
 ]
 
-{ #category : #accessing }
+{ #category : #'cmake executable names' }
 CPlatformConfigForSqueak >> executableType [
 	self subclassResponsibility.
 
@@ -1415,6 +1902,12 @@ SystemNavigation default browseMethodsWhoseNamesContain: ''executableType''
 	^ 'WIN32'\
 	^ ''
 "
+]
+
+{ #category : #compiling }
+CPlatformConfigForSqueak >> externalLibraries [
+	"-lX11 -luuid -lssl -lcrypto  define these in your concrete CPlatformConfigForSqueak and feed them to cmakeListAppendLinkLibs"
+	self	subclassResponsibility
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -1497,7 +1990,7 @@ CPlatformConfigForSqueak >> externalLibsNoBuildType [
 
 ]
 
-{ #category : #accessing }
+{ #category : #'cmake directory ' }
 CPlatformConfigForSqueak >> externalModulesDir [
 	"answer the location in VM bundle, where plugins and rest of dynamic libs will be copied,
 	"
@@ -1728,10 +2221,11 @@ CPlatformConfigForSqueak >> extraVMSettings: aMaker [
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> extraVMSettingsBuild: maker [
 	"convenience method to customize plugin settings for this buildType. 
-	Most configurations do nothing.
+	on unix writes out version.c custom command.
+	on mac/windows, I don't know.
 	SystemNavigation default browseMethodsWhoseNamesContain: 'extraVMSettings'
 	"
-
+	self flag:'tty'. "move self setResourceProperties: aMaker. from extraVMSettingsBuild?"
 	self subclassResponsibility
 ]
 
@@ -1926,6 +2420,23 @@ CPlatformConfigForSqueak >> generate [
 ]
 
 { #category : #'source generation' }
+CPlatformConfigForSqueak >> generateByTemplate [
+
+	self 
+		generatePluginsList;                                        "informative list of plugins for end user"
+		generateLicense;                                             "Squeak license"
+		generateUtilsCmake;                                       "Ian's useful CMake macros. used extensivelly."
+		generatePluginsCmake;                                   "Ian's CMake Plugins Processing"
+		generateVmBuildCmake;                                  "Ian's CMake Build script"
+		generateVmConfigCmake;                               "Ian's config.cmake file used to generate gnu config.h"
+		generateVmConfigIn;                                       "Ian's code, not sure what it does yet"
+		generateTestDoubleWordAlignmentC;             "Ian's platform tests used in configuration"
+		generateTestDoubleWordOrderC;
+		generateTestLanginfoCodesetC.
+	^ CMakeVMGeneratorForSqueak generateByTemplate: self 
+]
+
+{ #category : #'source generation' }
 CPlatformConfigForSqueak >> generateLicense [ 
 	self 
 		write:  (self class licenseTemplate 
@@ -2006,6 +2517,32 @@ CPlatformConfigForSqueak >> generateVmConfigIn [
 		write:  (self class vmConfigIn)
 		toFile: 'config.in'
 	
+]
+
+{ #category : #'initialize-release' }
+CPlatformConfigForSqueak >> initialize [
+	enabledebugmessages := false.
+	self initializeVMDrivers.
+	self customizeVMDrivers.
+]
+
+{ #category : #'initialize-release' }
+CPlatformConfigForSqueak >> initializeVMDrivers [
+	vmdrivers := OrderedCollection new.
+	vmdrivers 
+		addLast:(CMakeVMDisplayCustom new);
+		addLast:(CMakeVMDisplayFbdev new);
+		addLast:(CMakeVMDisplayNull new);
+		addLast:(CMakeVMDisplayQuartz new);
+		addLast:(CMakeVMDisplayX11 new);
+		addLast:(CMakeVMSoundALSA new);
+		addLast:(CMakeVMSoundCustom new);
+		addLast:(CMakeVMSoundMacOSX new);
+		addLast:(CMakeVMSoundNAS new);
+		addLast:(CMakeVMSoundNull new);
+		addLast:(CMakeVMSoundOSS new);
+		addLast:(CMakeVMSoundSun new).
+
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -2218,172 +2755,21 @@ CPlatformConfigForSqueak >> iosPlatformName [
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> lDFlags [
-	"Route this message send to the message appropriate for my buildType "
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self lDFlagsBuild];
-		at: #buildAssert  put: [self lDFlagsBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self lDFlagsBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self lDFlagsBuildDebug];   
-		at: #buildDebugITimerHeartbeat  put: [self lDFlagsBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self lDFlagsBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self lDFlagsBuildMultiThreaded];
-		at: #buildMultiThreadedAssert  put: [self lDFlagsBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self lDFlagsBuildMultiThreadedDebug ];
-		at: #buildNone put:[self lDFlagsNoBuildType].
-	^(d at: buildType) value
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> lDFlagsBuild [
-	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	^ { 
-		'-Wl'
-           . '-z'
-           . 'now'
-	   }
-
-	"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> lDFlagsBuildAssert [
-	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	^ { 
-		'-Wl'
-           . '-z'
-           . 'now'
-	   }
-
-	^self lDFlagsBuild
-	"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> lDFlagsBuildAssertITimerHeartbeat [
-	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	^ { 
-		'-Wl'
-           . '-z'
-           . 'now'
-	   }
-
-	^self lDFlagsBuild
-	"
-	self subclassResponsibility
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> lDFlagsBuildDebug [
-	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	^ { 
-		'-Wl'
-           . '-z'
-           . 'now'
-	   }
-
-	^self lDFlagsBuild
-	"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> lDFlagsBuildDebugITimerHeartbeat [
-	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	^ { 
-		'-Wl'
-           . '-z'
-           . 'now'
-	   }
-
-	^self lDFlagsBuild
-	"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> lDFlagsBuildITimerHeartbeat [
-	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	^ { 
-		'-Wl'
-           . '-z'
-           . 'now'
-	   }
-
-	^self lDFlagsBuild
-	"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> lDFlagsBuildMultiThreaded [
-	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	^ { 
-		'-Wl'
-           . '-z'
-           . 'now'
-	   }
-
-	^self lDFlagsBuild
-	"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> lDFlagsBuildMultiThreadedAssert [
-	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	^ { 
-		'-Wl'
-           . '-z'
-           . 'now'
-	   }
-
-	^self lDFlagsBuild
-	"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> lDFlagsBuildMultiThreadedDebug [
-	"Answer array of flags like the  LDFLAGS=-Wl,-z,now  line in the GNU system's mvm file
-	 cat Cog/build.linux32x86/squeak.cog.v3/build/mvm
-	^ { 
-		'-Wl'
-           . '-z'
-           . 'now'
-	   }
-
-	^self lDFlagsBuild
-	"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> lDFlagsNoBuildType [
-	"SHOULD NOT GET HERE"
-	self shouldNotImplement.
-
-
-]
-
-{ #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> linkFlags [
-	" '-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11' -L/usr/lib32 etc..."
+	" 
+cmake --help-property LINK_FLAGS            
+LINK_FLAGS
+----------
+
+Additional flags to use when linking this target.
+
+The LINK_FLAGS property can be used to add extra flags to the link
+step of a target.  LINK_FLAGS_<CONFIG> will add to the configuration
+<CONFIG>, for example, DEBUG, RELEASE, MINSIZEREL, RELWITHDEBINFO.
+
+'-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11' -L/usr/lib32 etc..."
 	|d flags|
+	self flag:'tty'. "is a link_flag really something like -lX11 or is it something else?"
 	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	d 
 		at: #build put: [self linkFlagsBuild];
@@ -2519,6 +2905,12 @@ CPlatformConfigForSqueak >> linkFlagsNoBuildType [
 	"SHOULD NOT GET HERE"
 	self shouldNotImplement.
 
+]
+
+{ #category : #compiling }
+CPlatformConfigForSqueak >> linkerFlags [
+	"-Wl -z now define these in your concrete CPlatformConfigForSqueak and feed them to cmakeSharedLinkerFlags"
+	self	subclassResponsibility
 ]
 
 { #category : #'cmake executable names' }
@@ -2730,10 +3122,8 @@ CPlatformConfigForSqueak >> preferredIncludes [
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> preferredIncludesBuild [	
 	"convencience method to customize for this build.
+	SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
 
-	SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'
-
-	^self preferredIncludes"
 	self subclassResponsibility
 
 
@@ -2741,90 +3131,43 @@ CPlatformConfigForSqueak >> preferredIncludesBuild [
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> preferredIncludesBuildAssert [
-	"convencience method to customize for this build.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'
-
-	^self preferredIncludes"
-
-	self subclassResponsibility
-
+	^ self preferredIncludesBuild.
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> preferredIncludesBuildAssertITimerHeartbeat [
-	"convencience method to customize for this build.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'
-
-	^self preferredIncludes"
-	self subclassResponsibility
-
+	^ self preferredIncludesBuild.
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> preferredIncludesBuildDebug [
-	"convencience method to customize for this build.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'
-
-	^self preferredIncludes"
-	self subclassResponsibility
-
+	^ self preferredIncludesBuild.
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> preferredIncludesBuildDebugITimerHeartbeat [
-	"convencience method to customize for this build.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'
-
-	^self preferredIncludes"
-	self subclassResponsibility
+	^ self preferredIncludesBuild.
 
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> preferredIncludesBuildITimerHeartbeat [
-	"convencience method to customize for this build.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'
-
-	^self preferredIncludes"
-	self subclassResponsibility
-
+	^ self preferredIncludesBuild.
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> preferredIncludesBuildMultiThreaded [
-	"convencience method to customize for this build.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'
-
-	^self preferredIncludes"
-	self subclassResponsibility
-
+	^ self preferredIncludesBuild.
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> preferredIncludesBuildMultiThreadedAssert [
-	"convencience method to customize for this build.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'
-
-	^self preferredIncludes"
-	self subclassResponsibility
-
+	^ self preferredIncludesBuild.
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> preferredIncludesBuildMultiThreadedDebug [
-	"convencience method to customize for this build.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'
-
-	^self preferredIncludes"
-	self subclassResponsibility
+	^ self preferredIncludesBuild.
 
 ]
 
@@ -2870,6 +3213,64 @@ CPlatformConfigForSqueak >> prepareVMMaker [
 	maker externalModules addAll:  allPlugins.
 	
 	^ maker
+]
+
+{ #category : #cmake }
+CPlatformConfigForSqueak >> setCoreSources: aMaker [
+	|core |
+	(enabledebugmessages)
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: (self class name) , 'setCoreSources: aMaker')
+	].
+	core := aMaker append: '${srcVMDir}/' toAll: (self coreSources).
+	templates
+		addLast:((CMakeSet new) variable:'coreSources' value: core).
+
+	
+]
+
+{ #category : #cmake }
+CPlatformConfigForSqueak >> setCrossSources: aMaker [
+	|cross |
+	(enabledebugmessages)
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: (self class name) , 'setCrossSources: aMaker')
+	].
+	cross := aMaker append: '${crossDir}/vm/' toAll: (self crossSources).
+	templates
+		addLast:((CMakeSet new) variable:'crossVMSources' value: cross)
+
+	
+]
+
+{ #category : #cmake }
+CPlatformConfigForSqueak >> setDirectories: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setupDirectories:'"
+	self subclassResponsibility
+]
+
+{ #category : #cmake }
+CPlatformConfigForSqueak >> setExecutableOutputPath [
+	(enabledebugmessages)
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: (self class name) , 'setExecutableOutputPath: aMaker')
+	].
+	templates
+		addLast:((CMakeSet new) variable:'EXECUTABLE_OUTPUT_PATH' quotedValue: (self outputDir fullName)).
+
+	
+]
+
+{ #category : #cmake }
+CPlatformConfigForSqueak >> setExtraSources [
+	(enabledebugmessages)
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: (self class name) , 'setExtraSources')
+	].
+	templates
+		addLast:((CMakeSet new) variable:'extraSources' value: (self extraSources))
+
+	
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -3039,87 +3440,55 @@ CPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystem: aMaker [
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
-	"convenience method to customize for this build type. 
+	"If you need some extra CMake Commands generated for your platform, put them here.
 
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystem'
+	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild'
 
-	usually do nothing"
+"
 	self subclassResponsibility
 
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker [
-	"convenience method to customize for this build type. 
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystem'
-
-	usually do nothing"
-	self subclassResponsibility
-
+	"convenience method to customize for this build type. "
+		^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker [
-	"convenience method to customize for this build type. 
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystem'
-
-	usually do nothing"
-	self subclassResponsibility
+	"convenience method to customize for this build type. "
+		^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker [
-	"convenience method to customize for this build type. 
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystem'
-
-	usually do nothing"
-	self subclassResponsibility
-
+	"convenience method to customize for this build type. "
+		^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildDebugITimerHeartbeat: aMaker [
-	"convenience method to customize for this build type. 
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystem'
-
-	usually do nothing"
-	self subclassResponsibility
- 
-
+	"convenience method to customize for this build type. "
+		^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker [
-	"convenience method to customize for this build type. 
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystem'
-
-	usually do nothing"
-	self subclassResponsibility.
+	"convenience method to customize for this build type. "
+		^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker [
-	"convenience method to customize for this build type. 
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystem'
-
-	usually do nothing"
-	self subclassResponsibility.
+	"convenience method to customize for this build type. "
+		^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker [
-	"convenience method to customize for this build type. 
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystem'
-
-	usually do nothing"
-	self subclassResponsibility.
+	"convenience method to customize for this build type. "
+		^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -3130,93 +3499,81 @@ CPlatformConfigForSqueak >> setGlobalOptionsAfterDetermineSystemNoBuildType: aMa
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsBuild: aMaker [
-	"convenience method to customize for this build type. 
+	"These are CMakeLists.txt commands that span all platforms. Extend me as needed.
+	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'"
+	(enabledebugmessages)
+		ifTrue:[	templates 
+			addLast: ((CMakeMessage new) message: (self class name), '  setGlobalOptionsBuild: aMaker')
+	].
+	templates 
+		addLast: ((CMakeHeader new)  configurationName:  self class name );
+		addLast: ((CMakeProject new)variable: self executableName  );
+		addLast: ((CMakeMinimumRequired new) version: '3.0.0');
+		addLast: ((CMakeSet new) variable: 'CMAKE_CONFIGURATION_TYPES' value: 'Release').
 
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'
-
-	usually do nothing"
-	self subclassResponsibility
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsBuildAssert: aMaker [
-	"convenience method to customize for this build type. 
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'"
 
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'
-
-	usually do nothing"
-
-	self subclassResponsibility
+	^self setGlobalOptionsBuildDebug: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsBuildAssertITimerHeartbeat: aMaker [
-	"convenience method to customize for this build type. 
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'"
 
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'
-
-	usually do nothing"
-	self subclassResponsibility
+	^self setGlobalOptionsBuildDebug: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsBuildDebug: aMaker [
-	"convenience method to customize for this build type. 
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'"
+	self flag: 'tty'. "study up on CMAKE_CONFIGURATION TYPES"
+	templates 
+		addLast: ((CMakeMessage new) message: (self class name), '  setGlobalOptionsBuild: aMaker');
+		addLast: ((CMakeHeader new)  configurationName:  self class name );
+		addLast: ((CMakeProject new)variable: self executableName  );
+		addLast: ((CMakeMinimumRequired new) version: '3.0.0');
+		addLast: ((CMakeMessage new) message: 'CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}');
+		addLast: ((CMakeSet new) variable: 'CMAKE_CONFIGURATION_TYPES' value: 'Debug').
 
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'
-
-	usually do nothing"
-	self subclassResponsibility
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsBuildDebugITimerHeartbeat: aMaker [
-	"convenience method to customize for this build type. 
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'"
 
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'
-
-	usually do nothing"
-	self subclassResponsibility
+	^self setGlobalOptionsBuildDebug: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsBuildITimerHeartbeat: aMaker [
-	"convenience method to customize for this build type. 
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'"
 
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'
-
-	usually do nothing"
-	self subclassResponsibility
+	^self setGlobalOptionsBuild: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsBuildMultiThreaded: aMaker [
-	"convenience method to customize for this build type. 
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'"
 
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'
-
-	usually do nothing"
-	self subclassResponsibility
+	^self setGlobalOptionsBuild: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsBuildMultiThreadedAssert: aMaker [
-	"convenience method to customize for this build type. 
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'"
 
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'
-
-	usually do nothing"
-	self subclassResponsibility
+	^self setGlobalOptionsBuild: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptionsBuildMultiThreadedDebug: aMaker [
-	"convenience method to customize for this build type. 
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'"
 
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions'
-
-	usually do nothing"
-	self subclassResponsibility
+	^self setGlobalOptionsBuildDebug: aMaker
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -3225,30 +3582,24 @@ CPlatformConfigForSqueak >> setGlobalOptionsNoBuildType: aMaker [
 	self shouldNotImplement.
 ]
 
-{ #category : #'squeak compatability' }
-CPlatformConfigForSqueak >> setupDirectories: aMaker [
-	| dirsInclude |
-	"These are  CMakeLists.txt variables. They are made available via INCLUDE(directories.cmake) in CMakeLists.txt "
-	dirsInclude := aMaker captureOutputDuring: [
-		aMaker
-			set: #topDir toString: (self topDir fullName); 
-			set: #buildDir toString: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName] );
-			set: #thirdpartyDir toString: '${buildDir}/thirdParty';
-			set: #platformsDir toString: self platformsDir;
-			set: #srcDir toString: self srcDir pathName;
-			set: #srcPluginsDir toString: (pluginsDir ifNil: [ '${srcDir}/plugins' ]);
-			set: #srcVMDir toString: '${srcDir}/vm';
-			set: #platformName toString: self platformName;
-			set: #targetPlatform to: '${platformsDir}/${platformName}';
-			set: #crossDir toString: '${platformsDir}/Cross';
-			set: #platformVMDir toString: '${targetPlatform}/vm';
-			set: #outputDir toString: self outputDir fullName.
+{ #category : #cmake }
+CPlatformConfigForSqueak >> setPlatformSources: aMaker [
+	|platform |
+	(enabledebugmessages)
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: (self class name) , 'setPlatformSources: aMaker')
 	].
+	platform := aMaker append: '${targetPlatform}/vm/' toAll: (self platformSources).
+	templates
+		addLast:((CMakeSet new) variable:'platformVMSources' value: platform)
 
-	self write: dirsInclude toFile: 'directories.cmake'.
 	
-	aMaker include: 'directories.cmake'.
+]
 
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> setResourceProperties: maker [
+	"only on mac? tty"
+	self subclassResponsibility
 ]
 
 { #category : #'cmake directory ' }
@@ -3312,42 +3663,42 @@ CPlatformConfigForSqueak >> standardIncludesBuild [
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> standardIncludesBuildAssert [ 
-	self subclassResponsibility
+	^self  standardIncludesBuild.
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> standardIncludesBuildAssertITimerHeartbeat [ 
-	self subclassResponsibility
+	^self  standardIncludesBuild.
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> standardIncludesBuildDebug [ 
-	self subclassResponsibility
+	^self  standardIncludesBuild.
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> standardIncludesBuildDebugITimerHeartbeat [ 
-	self subclassResponsibility
+	^self  standardIncludesBuild.
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> standardIncludesBuildITimerHeartbeat [ 
-	self subclassResponsibility
+	^self  standardIncludesBuild.
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> standardIncludesBuildMultiThreaded [ 
-	self subclassResponsibility
+	^self  standardIncludesBuild.
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> standardIncludesBuildMultiThreadedAssert [ 
-	self subclassResponsibility
+	^self  standardIncludesBuild.
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> standardIncludesBuildMultiThreadedDebug [ 
-	self subclassResponsibility
+	^self  standardIncludesBuild.
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -3355,6 +3706,16 @@ CPlatformConfigForSqueak >> standardIncludesNoBuildType [
 	"SHOULD NOT GET HERE"
 	self shouldNotImplement.
 
+]
+
+{ #category : #accessing }
+CPlatformConfigForSqueak >> templates [
+	^ templates
+]
+
+{ #category : #accessing }
+CPlatformConfigForSqueak >> templates: anObject [
+	templates := anObject
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -3541,7 +3902,7 @@ CPlatformConfigForSqueak >> validateSourcesPresent [
 		ifTrue: [	self error: 'VM source code cannot be generated without .sources file'.]		
 ]
 
-{ #category : #accessing }
+{ #category : #'cmake executable names' }
 CPlatformConfigForSqueak >> version [
 	^ ''
 ]
@@ -3550,6 +3911,13 @@ CPlatformConfigForSqueak >> version [
 CPlatformConfigForSqueak >> vmCogExecutableName [
 
 	^'cog'
+]
+
+{ #category : #plugins }
+CPlatformConfigForSqueak >> vmDrivers [
+"SystemNavigation default browseMethodsWhoseNamesContain: 'vmDrivers'
+"
+	self subclassResponsibility
 ]
 
 { #category : #'cmake executable names' }
@@ -3570,6 +3938,11 @@ CPlatformConfigForSqueak >> vmStackExecutableName [
 	^'squeak'
 ]
 
+{ #category : #accessing }
+CPlatformConfigForSqueak >> vmdrivers [
+	^vmdrivers
+]
+
 { #category : #'cmake executable names' }
 CPlatformConfigForSqueak >> win32PlatformName [
 	^'win32'
@@ -3588,7 +3961,26 @@ CPlatformConfigForSqueak >> write: aContents toFile: aFileName [
 	bldDir
 		forceNewFileNamed: aFileName
 		do: [:s | s
-				nextPutAll: (self fixLineEndsOf: aContents)]
+				nextPutAll: (self fixLineEndsOf: aContents)] 
 
 
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> x [
+	"Route this message send to the message appropriate for my buildType "
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self xBuild];
+		at: #buildAssert  put: [self xBuildAssert];
+		at: #buildAssertITimerHeartbeat  put: [self xBuildAssertITimerHeartbeat];
+            at:#buildDebug  put: [self xBuildDebug];   
+		at: #buildDebugITimerHeartbeat  put: [self xBuildDebugITimerHeartbeat ];
+		at: #buildITimerHeartbeat  put: [self xBuildITimerHeartbeat];
+		at: #buildMultiThreaded  put: [self xBuildMultiThreaded];
+		at: #buildMultiThreadedAssert  put: [self xBuildMultiThreadedAssert];
+		at: #buildMultiThreadedDebug   put: [self xBuildMultiThreadedDebug ];
+		at: #buildNone put:[self xNoBuildType].
+	^(d at: buildType) value
 ]

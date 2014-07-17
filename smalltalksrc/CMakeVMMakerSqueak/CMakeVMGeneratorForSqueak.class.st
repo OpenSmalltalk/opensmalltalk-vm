@@ -22,6 +22,13 @@ CMakeVMGeneratorForSqueak class >> generate: aConfigOrClass [
 ]
 
 { #category : #'as yet unclassified' }
+CMakeVMGeneratorForSqueak class >> generateByTemplate: aConfigOrClass [  
+	^self new 
+		generateByTemplate: aConfigOrClass;
+		yourself  
+]
+
+{ #category : #'as yet unclassified' }
 CMakeVMGeneratorForSqueak >> append: aString toAll: list [
 	"flatten the list, adding prefix for each element"
 	^ list inject: '' into: [:result :each | result, ' ', aString, each ].
@@ -104,6 +111,63 @@ CMakeVMGeneratorForSqueak >> generateBuildScript [
 
 	(FileStream forceNewFileNamed: (self buildDir / 'build.sh') fullName) nextPutAll: (config fixLineEndsOf: config buildScript); close.
 	
+]
+
+{ #category : #'code generation' }
+CMakeVMGeneratorForSqueak >> generateByTemplate [
+	"attempt to move way from string based writing to  template based. Think Seaside renderOn composition"
+	| extPlugins intPlugins |
+	self flag: 'tty'. "refactor so that the cascade reflects CMake terminilogy"
+	output := String new writeStream.
+	config templates: OrderedCollection new. 
+	config 
+		setGlobalOptions: self;    
+		cmakePrefixPath;
+		cmakeIncludePath;
+		cmakeLibraryPath;
+		cmakeIncludeModules;          
+		cmakeCFlags;          
+		cmakeAddDefinitions;
+		cmakeSharedLinkerFlags;
+		setGlobalOptionsAfterDetermineSystem: self;    
+		setDirectories:  self;
+		cmakeIncludeDirectories:  self;
+		preferredIncludes;
+		standardIncludes;
+		extraVMSettings: self;
+		setCoreSources: self;
+		setPlatformSources: self;
+		setCrossSources: self;
+		setExtraSources;
+		cmakeSetSourceFilesProperties;
+		cmakeListAppend:'LINKLIBS' elements: (config externalLibs);
+		cmakeAddExecutableNameOptionSource: self;
+	      setExecutableOutputPath;
+		addVMDrivers: self.
+	
+"
+	self addVMDrivers: aMaker.
+"
+	config templates do: [:each | self puts: each content].
+
+	extPlugins := self generatePluginConfigs: config internalPlugins internal: true.
+	 intPlugins := self generatePluginConfigs: config externalPlugins internal: false.
+	self processThirdpartyLibraries.
+	self processPlugins:  intPlugins, extPlugins.
+
+"	config setExtraTargetProperties: self."
+	self cmd: 'target_link_libraries'
+		params: self moduleName , ' ${LINKLIBS}'.
+	config postBuildActions: self..
+	self saveFile.
+	self generateBuildScript
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMGeneratorForSqueak >> generateByTemplate: aConfigOrClass [
+	
+	config := aConfigOrClass isBehavior ifTrue: [ aConfigOrClass new ] ifFalse: [aConfigOrClass].
+	^ self generateByTemplate
 ]
 
 { #category : #'as yet unclassified' }
@@ -206,7 +270,7 @@ CMakeVMGeneratorForSqueak >> processPlugins: pluginGenerators [
 { #category : #'as yet unclassified' }
 CMakeVMGeneratorForSqueak >> processThirdpartyLibraries [
 
-	config thirdpartyLibs do: [:each |
+	config thirdpartyLibs do: [:each | 
 		each generateFor: self ]
 
 
@@ -221,18 +285,10 @@ CMakeVMGeneratorForSqueak >> saveFile [
 
 { #category : #'as yet unclassified' }
 CMakeVMGeneratorForSqueak >> sources [
-
-	self set: #coreSources to: 
-		(self append: '${srcVMDir}/' toAll: config coreSources).
-		
-	self set: #platformVMSources to: 
-		(self append: '${targetPlatform}/vm/' toAll: config platformSources).
-	
-	
-	self set: #crossVMSources to: 
-		(self append: '${crossDir}/vm/' toAll: config crossSources).
-		
-	self set: #extraSources to: config extraSources.
-	
+	self flag: 'tty'. "code smell. I have moved the 'self set:' stuff to addCMakeExectuableTemplate: aMaker"
+"	self set: #coreSources to: 	(self append: '${srcVMDir}/' toAll: config coreSources).
+	self set: #platformVMSources to: (self append: '${targetPlatform}/vm/' toAll: config platformSources).
+	self set: #crossVMSources to: 	(self append: '${crossDir}/vm/' toAll: config crossSources).
+	self set: #extraSources to: config extraSources."	
 	^ '${coreSources} ${crossVMSources} ${platformVMSources} ${extraSources}'
 ]

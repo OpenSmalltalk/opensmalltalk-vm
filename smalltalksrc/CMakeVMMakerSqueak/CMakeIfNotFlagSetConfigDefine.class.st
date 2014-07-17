@@ -22,11 +22,10 @@ Class {
 CMakeIfNotFlagSetConfigDefine >> flag: fString variable: vString [
 	flag:= fString.
 	variable:= vString.
-	self content:'
-  IF(NOT ', flag ,')
-	SET (',variable,' 1)
-  ENDIF(NOT ', flag ,')
- CONFIG_DEFINE(', variable,')'
+	self content:'  if(NOT ', flag ,')
+	set (',variable,' 1)
+  endif(NOT ', flag ,')
+ config_define(', variable,')'
 ]
 
 { #category : #'initialize-release' }

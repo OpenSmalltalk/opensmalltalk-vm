@@ -42,10 +42,9 @@ Class {
 CMakeCheckIncludeFile >> include: iString variable: vString [
 	include:=iString.
 	variable:=vString.
-	self content:'
-  CHECK_INCLUDE_FILE("', include  ,'" ', variable,')
+	self content:'  check_include_file("', include  ,'" ', variable,')
   IF(', variable ,')
-    CONFIG_DEFINE(', variable,')
+    config_define(', variable,')
   ENDIF(', variable ,')'
 
 
@@ -56,10 +55,9 @@ CMakeCheckIncludeFile >> include: iString variable: vString path: pString [
 	include:=iString.
 	variable:=vString.
 	path:= pString.
-	self content:'
-  CHECK_INCLUDE_FILE("', include  ,'" ', variable,' ',  path ,')
+	self content:'  check_include_file("', include  ,'" ', variable,' ',  path ,')
   IF(', variable ,')
-    CONFIG_DEFINE(', variable,')
+    config_define(', variable,')
   ENDIF(', variable ,')'
 
 

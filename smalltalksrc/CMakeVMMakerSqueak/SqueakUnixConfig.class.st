@@ -5,9 +5,6 @@ A SqueakUnixConfig is a top level configuration for *nix configuratons.
 Class {
 	#name : #SqueakUnixConfig,
 	#superclass : #CPlatformConfigForSqueak,
-	#instVars : [
-		'configtemplates'
-	],
 	#category : #CMakeVMMakerSqueak
 }
 
@@ -290,11 +287,86 @@ ENDIF (NOT DEFINED __sq_config_h)
 '
 ]
 
-{ #category : #'compiler flags' }
-SqueakUnixConfig >> commonCompilerFlags [
-	"avoid premature optimization. push this decision down lower if it is needed at all"
-	self deprecated: ' its much easier to have all the flags in your configuration class.  '.
-	^{}
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> cmakeIncludeModulesBuild [
+	"include CMake Modules. on my system they are in /usr/local/share/cmake-3.0/Modules/"
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+	addLast: ((CMakeMessage new) message: (self class name), '  cmakeIncludeModulesBuild: aMaker')
+	].
+	templates
+		addLast: ((CMakeInclude new) file:'Utils.cmake');
+  	    	addLast: ((CMakeInclude new) file:'Plugins.cmake');
+		addLast: ((CMakeInclude new) file:'TestBigEndian');
+		addLast: ((CMakeInclude new) file:'CheckIncludeFile');
+		addLast: ((CMakeInclude new) file:'CheckLibraryExists');
+		addLast: ((CMakeInclude new) file:'CheckTypeSize');
+		addLast: ((CMakeInclude new) file:'CheckFunctionExists');
+		addLast: ((CMakeInclude new) file:'CheckVariableExists');
+		addLast: ((CMakeInclude new) file:'CheckStructHasMember');
+		addLast: ((CMakeInclude new) file:'FindPkgConfig').
+
+
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> cmakeIncludePathBuild [
+	"
+cmake --help-variable  CMAKE_INCLUDE_PATH 
+ This is used when searching for include files e.g. using the FIND_PATH() command. If you have headers in non-standard locations, it may be useful to set this variable to this directory (e.g. /sw/include on Mac OS X). If you need several directories, separate them by the platform specific separators (e.g. ':' on UNIX) "
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: (self class name), '  cmakeIncludePathBuild');
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_PATH=${CMAKE_INCLUDE_PATH}')
+	].
+
+"override me if necessary"
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> cmakeLibraryPathBuild [
+	"
+cmake --help-variable   CMAKE_LIBRARY_PATH 
+ This is used when searching for libraries e.g. using the FIND_LIBRARY() command. If you have libraries in non-standard locations, it may be useful to set this variable to this directory (e.g. /sw/lib on Mac OS X). If you need several directories, separate them by the platform specific separators (e.g. '':'' on UNIX)  "	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: (self class name), '  cmakeLibraryPathBuild');
+		addLast: ((CMakeMessage new) message: 'CMAKE_LIBRARY_PATH=${CMAKE_LIBRARY_PATH}')
+	].
+
+"override me if necessary"
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> cmakeModulePathBuild [
+	"
+cmake --help-variable   CMAKE_LIBRARY_PATH 
+ This is used when searching for libraries e.g. using the FIND_LIBRARY() command. If you have libraries in non-standard locations, it may be useful to set this variable to this directory (e.g. /sw/lib on Mac OS X). If you need several directories, separate them by the platform specific separators (e.g. '':'' on UNIX)  "	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: (self class name), '  cmakeModulePathBuild');
+		addLast: ((CMakeMessage new) message: 'CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}')
+	].
+
+"override me if necessary"
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> cmakePrefixPathBuild [
+"
+cmake --help-variable   CMAKE_PREFIX_PATH 
+ (since CMake 2.6.0) This is used when searching for include files, binaries, or libraries using either the FIND_PACKAGE(), FIND_PATH(), FIND_PROGRAM(), or FIND_LIBRARY() commands. For each path in the CMAKE_PREFIX_PATH list, CMake will check ''PATH/include'' and ''PATH'' when FIND_PATH() is called, ''PATH/bin'' and ''PATH'' when FIND_PROGRAM() is called, and ''PATH/lib'' and ''PATH'' when FIND_LIBRARY() is called. See the documentation for FIND_PACKAGE(), FIND_LIBRARY(), FIND_PATH(), and FIND_PROGRAM() for more details."
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: (self class name), '  cmakePrefixPathBuild');
+		addLast: ((CMakeMessage new) message: 'CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}')
+	].
+
+"override me if necessary"
 
 
 ]
@@ -717,15 +789,6 @@ SqueakUnixConfig >> configureForBuildType: aSymbol [
 	"Set my internal state appropriate for my build type".
 	self configureNoBuildType.                "reset all internal flags"
 	buildType:= aSymbol.                       "error checking was handled previously"
-	self
-		preferredIncludes;
-		standardIncludes;
-		configureFlags;     "  configure --without-npsqueak --with-src=stacksrc --with-plugins=src/plugins --disable-cogi --without-vm-display-fbdev  --x-libraries=/usr/lib --without-gl "
-		compilerFlags;
-		linkFlags;                         " LIBS=''-lpthread -luuid''"
-		internalPlugins;
-		externalPlugins.
-
 
 ]
 
@@ -842,6 +905,42 @@ SqueakUnixConfig >> contentForVmConfigCmake [
 	^template contentFor: self
 ]
 
+{ #category : #'source files' }
+SqueakUnixConfig >> crossSources [ 
+	^#(
+			'sqHeapMap.c'
+			'sqTicker.c'
+			'sqExternalSemaphores.c'
+			'sqNamedPrims.c'
+			'sqVirtualMachine.c'
+		)
+]
+
+{ #category : #'initialize-release' }
+SqueakUnixConfig >> customizeVMDrivers [
+	"
+	SystemNavigation default browseMethodsWhoseNamesContain:'customizeVMDrivers'
+
+	force platform level or lower customization of vm-display-X11 vm-sound-ALSA, etc. 
+	The configurations can select what subset they want using something like this.
+
+	|subset iwantonly|
+	iwantonly :=	 #(#CMakeVMDisplayNull  #CMakeVMDisplayX11  #CMakeVMSoundALSA  #CMakeVMSoundNull ).
+	subset := vmdrivers select: [:vmd | 0 < (iwantonly occurrencesOf: (vmd class name) asSymbol)]. 
+	vmdrivers := subset.
+
+	self 
+		customizeCMakeVMDisplayNull;
+		customizeCMakeVMDisplayX11;
+		customizeCMakeVMSoundALSA;
+		customizeCMakeVMSoundNull
+
+
+"
+	self flag:'tty'. "revisit this design strategy"
+	self subclassResponsibility
+]
+
 { #category : #accessing }
 SqueakUnixConfig >> executableType [
 	^ ''
@@ -862,49 +961,26 @@ SqueakUnixConfig >> extraSources [
 ]
 
 { #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> extraVMSettingsBuild: aMaker [
+	"add a generated version.c"
+	self flag: 'tty'. "Figure out how other's generated version info"
+	(enabledebugmessages)
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: (self class name) , 'extraVMSettingsBuild: aMaker')
+	] .
+	templates
+		addLast:((CMakeAddCustomCommandOutput new) 
+						output:(OrderedCollection with: 'version.c')
+						commandsandargs: (OrderedCollection with: 'COMMAND ${platformsDir}/unix/config/verstamp version.c gcc' )
+						comment: 'Generating version.c').
+
+
+]
+
+{ #category : #'cmake buildType redirects' }
 SqueakUnixConfig >> frameworksBuild [
 	"leave empty for all platforms but Mac OS"
 	^ #()
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> frameworksBuildAssert [
-	^ self frameworksBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> frameworksBuildAssertITimerHeartbeat [
-	^ self frameworksBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> frameworksBuildDebug [
-	^ self frameworksBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> frameworksBuildDebugITimerHeartbeat [
-	^ self frameworksBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> frameworksBuildITimerHeartbeat [
-	^ self frameworksBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> frameworksBuildMultiThreaded [
-	^ self frameworksBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> frameworksBuildMultiThreadedAssert [
-	^ self frameworksBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> frameworksBuildMultiThreadedDebug [
-	^ self frameworksBuild
 ]
 
 { #category : #'cmake configuration' }
@@ -941,10 +1017,73 @@ SqueakUnixConfig >> platformSources [
 	)
 ]
 
-{ #category : #'squeak compatability' }
-SqueakUnixConfig >> setupDirectories: gen [
-	super setupDirectories: gen.
-	gen set: #externalModulesDir toString: self externalModulesDir.
+{ #category : #cmake }
+SqueakUnixConfig >> setDirectories: aMaker [
+	|temp o|
+	"We could put these inline, but other components include the directories.cmake file. So, we continue that convention"
+	o := String new writeStream.
+	temp := OrderedCollection new.
+	temp
+		addLast: ((CMakeSet new) variable: 'topDir' quotedValue: (self topDir fullName));
+		addLast: ((CMakeSet new) variable: 'buildDir' quotedValue: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName]));
+		addLast: ((CMakeSet new) variable: 'thirdpartyDir' quotedValue: '${buildDir}/thirdParty');
+		addLast: ((CMakeSet new) variable: 'platformsDir' quotedValue: (self platformsDir));
+		addLast: ((CMakeSet new) variable: 'srcDir' quotedValue: (self srcDir pathName));
+		addLast: ((CMakeSet new) variable: 'srcPluginsDir' quotedValue: (pluginsDir ifNil: [ '${srcDir}/plugins' ]));
+		addLast: ((CMakeSet new) variable: 'srcVMDir' quotedValue: '${srcDir}/vm');
+		addLast: ((CMakeSet new) variable: 'platformName' quotedValue: (self platformName));
+		addLast: ((CMakeSet new) variable: 'targetPlatform' quotedValue: '${platformsDir}/${platformName}');
+		addLast: ((CMakeSet new) variable: 'crossDir' quotedValue: '${platformsDir}/Cross');
+		addLast: ((CMakeSet new) variable: 'platformVMDir' quotedValue: '${targetPlatform}/vm}');
+		addLast: ((CMakeSet new) variable: 'outputDir' quotedValue: (self outputDir fullName));
+		addLast: ((CMakeSet new) variable: 'externalModulesDir' quotedValue: (self externalModulesDir)).
+	temp do: [:each |  o nextPutAll: (each content); cr].
+	self write: (o contents) toFile: 'directories.cmake'.
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast:((CMakeMessage new) message: (self class name), ' setDirectories: aMaker' )
+	].
+	templates addLast: ((CMakeInclude new) file: 'directories.cmake').
+
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
+	"	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild'"
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+	addLast: ((CMakeMessage new) message: (self class name), '  setGlobalOptionsAfterDetermineSystemBuild: aMaker')
+	].
+	templates addLast:((CMakeSet new) variable:'CMAKE_C_COMPILER' value: 'gcc')
+
+	
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> standardIncludesBuild [
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: (self class name), ' standardIncludesBuild' )
+	].
+
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_PATH =  ${CMAKE_INCLUDE_PATH}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_SYSTEM_INCLUDE_PATH =  ${CMAKE_SYSTEM_INCLUDE_PATH}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES = ${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES =  ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_FIND_ROOT_PATH_MODE_INCLUDE =  ${CMAKE_FIND_ROOT_PATH_MODE_INCLUDE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_FIND_ROOT_PATH_MODE_INCLUDE =  ${CMAKE_INCLUDE_CURRENT_DIR}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE =  ${CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_BEFORE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE}' )
+	].
+
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -952,42 +1091,23 @@ SqueakUnixConfig >> thirdpartyLibsBuild [
 	^ thirdpartyLibs ifNil: [ thirdpartyLibs := OrderedCollection new ].
 ]
 
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> thirdpartyLibsBuildAssert [
-	^ self thirdpartyLibsBuild 
-]
+{ #category : #plugins }
+SqueakUnixConfig >> vmDrivers [
+"SystemNavigation default browseMethodsWhoseNamesContain: 'vmDrivers'
+"
+	^#(
+'vm-display-Quartz' 
+'vm-display-X11'  
+'vm-display-custom'  
+'vm-display-fbdev'  
+'vm-display-null'  
+'vm-sound-ALSA'  
+'vm-sound-MacOSX'  
+'vm-sound-NAS'  
+'vm-sound-OSS'  
+'vm-sound-Sun'  
+'vm-sound-custom'
+'vm-sound-null'
+)
 
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> thirdpartyLibsBuildAssertITimerHeartbeat [
-	^ self thirdpartyLibsBuild 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> thirdpartyLibsBuildDebug [
-	^ self thirdpartyLibsBuild 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> thirdpartyLibsBuildDebugITimerHeartbeat [
-	^ self thirdpartyLibsBuild 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> thirdpartyLibsBuildITimerHeartbeat [
-	^ self thirdpartyLibsBuild 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> thirdpartyLibsBuildMultiThreaded [
-	^ self thirdpartyLibsBuild 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> thirdpartyLibsBuildMultiThreadedAssert [
-	^ self thirdpartyLibsBuild 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> thirdpartyLibsBuildMultiThreadedDebug [
-	^ self thirdpartyLibsBuild 
 ]

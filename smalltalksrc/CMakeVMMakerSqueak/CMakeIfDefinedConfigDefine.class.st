@@ -28,10 +28,9 @@ CMakeIfDefinedConfigDefine >> initialize [
 { #category : #accessing }
 CMakeIfDefinedConfigDefine >> variable: vString [
 	variable:=vString.
-	self content:'
-  IF(DEFINED ', variable ,')
-	 CONFIG_DEFINE(', variable,')
-  ENDIF(DEFINED ', variable ,')'
+	self content:'  if (DEFINED ', variable ,')
+	 config_define(', variable,')
+  endif (DEFINED ', variable ,')'
 
 	
 

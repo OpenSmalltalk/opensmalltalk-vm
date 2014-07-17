@@ -95,7 +95,7 @@ External:
 '
 ]
 
-{ #category : #'cmake configuration' }
+{ #category : #cmake }
 SqueakMacOSXPowerPCConfig >> availableBuildTypes [
 	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
 "	subclasses should use
@@ -103,23 +103,6 @@ SqueakMacOSXPowerPCConfig >> availableBuildTypes [
   ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
 	
 
-]
-
-{ #category : #accessing }
-SqueakMacOSXPowerPCConfig >> cMakeMacros [ 
-	^'macro(add_framework appname fwname)
-    find_library(FRAMEWORK_${fwname}
-        NAMES ${fwname}
-        PATHS ${CMAKE_OSX_SYSROOT}/System/Library
-        PATH_SUFFIXES Frameworks
-        NO_DEFAULT_PATH)
-    if( ${FRAMEWORK_${fwname}} STREQUAL FRAMEWORK_${fwname}-NOTFOUND)
-        message(ERROR ": Framework ${fwname} not found")
-    else()
-	  include_directories(SYSTEM /System/Library/Frameworks/${fwname}.framework/Headers)
-	  target_link_libraries(${appname} ${FRAMEWORK_${fwname}})
-    endif()
-endmacro(add_framework)'  
 ]
 
 { #category : #'plugin extra rules' }
@@ -384,7 +367,7 @@ SqueakMacOSXPowerPCConfig >> defaultInternalPlugins [
 		)
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #cmake }
 SqueakMacOSXPowerPCConfig >> dirBuildPlatform [	
 	^self dirMacOSPowerPC
 ]
@@ -407,109 +390,18 @@ SqueakMacOSXPowerPCConfig >> externalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> externalPluginsBuildAssert [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> externalPluginsBuildAssertITimerHeartbeat [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> externalPluginsBuildDebug [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> externalPluginsBuildDebugITimerHeartbeat [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> externalPluginsBuildITimerHeartbeat [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> externalPluginsBuildMultiThreaded [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> externalPluginsBuildMultiThreadedAssert [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> externalPluginsBuildMultiThreadedDebug [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuild: aMaker [
-	"default browseMethodsWhoseNamesContain: 'extraPluginSettingsBuild' "
-	self subclassResponsibility.
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildAssert: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildAssertITimerHeartbeat: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildDebug: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildDebugITimerHeartbeat: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildITimerHeartbeat: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildMultiThreaded: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildMultiThreadedAssert: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraPluginSettingsBuildMultiThreadedDebug: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
 SqueakMacOSXPowerPCConfig >> extraVMSettingsBuild: aMaker [
 	"SystemNavigation default browseMethodsWhoseNamesContain: 'extraVMSettingsBuild:'"
-
-	"Cog currently runs only in 32 bit mode" 
-	aMaker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
-
-	aMaker set: 'resourceDir' toString: ((self resourcesDir pathName), FileDirectory slash, 'ProjectBuilder').
-	aMaker set: 'resources' to: 
-		'"${resourceDir}/Squeak VM.r"
+	(enabledebugmessages)
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: (self class name) , 'extraVMSettingsBuild: aMaker')
+	] .
+	templates
+		addLast:((CMakeSet new) variable: 'CMAKE_OSX_ARCHITECTURES' value: 'i386');
+		addLast:((CMakeSet new) variable: 'resourceDir' quotedValue: ((self resourcesDir pathName), FileDirectory slash, 'ProjectBuilder'));
+		addLast:((CMakeSet new) 
+			variable: 'resources' 
+			value:'"${resourceDir}/Squeak VM.r"
 		"${resourceDir}/Cog.icns"
 		"${resourceDir}/Squeak.icns"
 		"${resourceDir}/SqueakChanges.icns"
@@ -518,48 +410,10 @@ SqueakMacOSXPowerPCConfig >> extraVMSettingsBuild: aMaker [
 		"${resourceDir}/SqueakScript.icns"
 		"${resourceDir}/SqueakGeneric.icns"
 		"${resourceDir}/SqueakProject.icns"
-		"${resourceDir}/SqueakSources.icns"'
+		"${resourceDir}/SqueakSources.icns"').
 
-]
 
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraVMSettingsBuildAssert: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
 
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraVMSettingsBuildAssertITimerHeartbeat: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraVMSettingsBuildDebug: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraVMSettingsBuildDebugITimerHeartbeat: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraVMSettingsBuildITimerHeartbeat: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraVMSettingsBuildMultiThreaded: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraVMSettingsBuildMultiThreadedAssert: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> extraVMSettingsBuildMultiThreadedDebug: aMaker [
-	^self extraVMSettingsBuild: aMaker
 ]
 
 { #category : #utils }
@@ -622,331 +476,41 @@ SqueakMacOSXPowerPCConfig >> internalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> internalPluginsBuildAssert [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> internalPluginsBuildAssertITimerHeartbeat [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> internalPluginsBuildDebug [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> internalPluginsBuildDebugITimerHeartbeat [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> internalPluginsBuildITimerHeartbeat [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> internalPluginsBuildMultiThreaded [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> internalPluginsBuildMultiThreadedAssert [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> internalPluginsBuildMultiThreadedDebug [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> postBuildActionsBuild: gen [
-	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> postBuildActionsBuildAssert: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> postBuildActionsBuildAssertITimerHeartbeat: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> postBuildActionsBuildDebug: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> postBuildActionsBuildDebugITimerHeartbeat: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> postBuildActionsBuildITimerHeartbeat: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> postBuildActionsBuildMultiThreaded: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> postBuildActionsBuildMultiThreadedAssert: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> postBuildActionsBuildMultiThreadedDebug: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> preferredIncludesBuild [
-"SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
-	^ #( )
-
-	
-
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> preferredIncludesBuildAssert [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> preferredIncludesBuildAssertITimerHeartbeat [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> preferredIncludesBuildDebug [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> preferredIncludesBuildDebugITimerHeartbeat [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> preferredIncludesBuildITimerHeartbeat [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> preferredIncludesBuildMultiThreaded [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> preferredIncludesBuildMultiThreadedAssert [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> preferredIncludesBuildMultiThreadedDebug [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
-	self flag: 'tty'. "I do not know if this is appropriate for MacOSX32x86. It is in IOS, so I figured what the heck.
-	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild:'
-	"
-	aMaker set: 'CMAKE_OSX_DEPLOYMENT_TARGET' to: '10.5'.
-	aMaker 
-		set: 'CMAKE_OSX_SYSROOT' 
-		to: '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX', self sdkVersion, '.sdk'
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsAfterDetermineSystemBuildDebugITimerHeartbeat: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsBuild: aMaker [
-	"does nothing. included for framework consistency/testing 
-	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsBuild'
-	"
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsBuildAssert: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsBuildAssertITimerHeartbeat: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsBuildDebug: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsBuildDebugITimerHeartbeat: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsBuildITimerHeartbeat: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsBuildMultiThreaded: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsBuildMultiThreadedAssert: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacOSXPowerPCConfig >> setGlobalOptionsBuildMultiThreadedDebug: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'source files' }
 SqueakMacOSXPowerPCConfig >> standardIncludesBuild [ 
-	^ #(
-	'${crossDir}/plugins/SerialPlugin'   
-	'${targetPlatform}/plugins/FilePlugin'
-	'${crossDir}/plugins/FilePlugin'
-	'${targetPlatform}/plugins/HostWindowPlugin'
-	'${platformsDir}/iOS/vm/iPhone/plugins/HostWindowPlugin' 
-	'${crossDir}/plugins/HostWindowPlugin'
-	'${crossDir}/plugins/DropPlugin'
-	'${crossDir}/plugins/SocketPlugin'
-	'${crossDir}/plugins/SoundPlugin'
-	'${crossDir}/plugins/AsynchFilePlugin'
-	'${platformsDir}/unix/vm'
-	'${platformsDir}/iOS/plugins/SoundPlugin'
-	'${platformsDir}/iOS/vm/OSX/plugins/SoundPlugin'
-	'${platformsDir}/iOS/vm/Common/Classes'
-	'${platformsDir}/iOS/vm/OSX'
-)
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: (self class name), ' standardIncludesBuild' )
+	].
+	templates
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${crossDir}/plugins/SerialPlugin'   ));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${targetPlatform}/plugins/FilePlugin'));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${crossDir}/plugins/FilePlugin'));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${targetPlatform}/plugins/HostWindowPlugin'));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${platformsDir}/iOS/vm/iPhone/plugins/HostWindowPlugin' ));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with:  '${crossDir}/plugins/HostWindowPlugin'));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${crossDir}/plugins/DropPlugin'));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${crossDir}/plugins/SocketPlugin'));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${crossDir}/plugins/SoundPlugin'));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${crossDir}/plugins/AsynchFilePlugin'));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${platformsDir}/unix/vm'));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${platformsDir}/iOS/plugins/SoundPlugin'));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${platformsDir}/iOS/vm/OSX/plugins/SoundPlugin'));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${platformsDir}/iOS/vm/Common/Classes'));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${platformsDir}/iOS/vm/OSX')).
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_PATH =  ${CMAKE_INCLUDE_PATH}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_SYSTEM_INCLUDE_PATH =  ${CMAKE_SYSTEM_INCLUDE_PATH}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES = ${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES =  ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_FIND_ROOT_PATH_MODE_INCLUDE =  ${CMAKE_FIND_ROOT_PATH_MODE_INCLUDE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_FIND_ROOT_PATH_MODE_INCLUDE =  ${CMAKE_INCLUDE_CURRENT_DIR}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE =  ${CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_BEFORE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE}' )
+	].
+
 	
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> standardIncludesBuildAssert [ 
-	^ self standardIncludesBuild
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> standardIncludesBuildAssertITimerHeartbeat [ 
-	^ self standardIncludesBuild
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> standardIncludesBuildDebug [ 
-	^ self standardIncludesBuild
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> standardIncludesBuildDebugITimerHeartbeat [
-	^self standardIncludesBuild
-
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> standardIncludesBuildITimerHeartbeat [ 
-	^ self standardIncludesBuild
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> standardIncludesBuildMultiThreaded [ 
-	^ self standardIncludesBuild
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> standardIncludesBuildMultiThreadedAssert [ 
-	^ self standardIncludesBuild
-]
-
-{ #category : #'source files' }
-SqueakMacOSXPowerPCConfig >> standardIncludesBuildMultiThreadedDebug [ 
-	^ self standardIncludesBuild
 ]
