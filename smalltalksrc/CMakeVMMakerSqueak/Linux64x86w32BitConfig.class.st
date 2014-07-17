@@ -90,7 +90,7 @@ External:
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> addVMDriversBuild: aMaker [
+Linux64x86w32BitConfig >> addVMPluginsBuild: aMaker [
 	|temp o|
 	self flag:'tty'. "I am writing sub-directory CMakeLists.txt here. Should I also write the config.cmake files?"
 	enabledebugmessages
@@ -107,7 +107,7 @@ Linux64x86w32BitConfig >> addVMDriversBuild: aMaker [
 					sources: (vmd sources)
 					includedirectories: (vmd includedirectories)).
 		temp do: [:each |  o nextPutAll: (each content); cr].
-
+	"need a check exists here"
 		(self buildDir) createDirectory: (vmd driver).
 "		(FileDirectory default) createDirectory: (self buildDir) , FileDirectory slash , vmd driver."
 		self write: (o contents) toFile: vmd driver , FileDirectory slash , aMaker outputFileName.
@@ -399,7 +399,7 @@ Linux64x86w32BitConfig >> setExtraTargetPropertiesBuild: aMaker [
 	aMaker addExternalLibraries: (self externalLibs).
 
 	aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
-	self addVMDrivers: aMaker.
+	self addVMPlugins: aMaker.
 ]
 
 { #category : #'cmake buildType redirects' }
