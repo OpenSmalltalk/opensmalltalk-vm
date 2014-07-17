@@ -5,21 +5,6 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakMacintoshConfigTest >> testCMakeMacros [
-	#( SqueakMacintoshConfig)
-		do:[:each | 
-			(Smalltalk at:each) 
-				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
-							(o excludeFromBuild not)
-								ifTrue:[self assert:(o  cMakeMacros isString)]]]
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakMacintoshConfigTest >> testExecutableType [
 	#(#SqueakMacintoshConfig) 
 		do:[:each | 

@@ -91,76 +91,42 @@ External:
 
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfig >> addVMDriversBuild: aMaker [
-	aMaker message: 'addVMDrivers: aMaker'.
-	 self 
-		addDriver: 'vm-display-null' 
-		sources: #( 
-			'${targetPlatform}/vm-display-null/sqUnixDisplayNull' )
-		generator: aMaker
-		externalLibs: #();
-		
-		addDriver: 'vm-display-X11' 
-		sources: #( 
-			'${targetPlatform}/vm-display-X11/sqUnixX11'
-			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
-		generator: aMaker
-		externalLibs: (self externalLibs);  "#( SM ICE GL X11 nsl dl); "
+	|temp o|
+	self flag:'tty'. "I am writing sub-directory CMakeLists.txt here. Should I also write the config.cmake files?"
+	enabledebugmessages
+		ifTrue: [templates  "this message will go to the top level CMakeLists.txt file"
+				addLast: (CMakeMessage new message: self class name , 'addVMDriversBuild:')].
+	vmdrivers do:[ :vmd |                    
+		o := String new writeStream.   "each VMDriver gets its own CMakeLists.txt file."
+		temp := OrderedCollection new.	
+		temp
+			addAllLast:((CMakeVMDriver new)     "<--confusing name. This is a CompositTemplate, not the CMakeVMDriverWrapper class"
+					config: self 
+					definitions: (vmd compilerdefinitions)
+					driver: (vmd driver)
+					sources: (vmd sources)
+					includedirectories: (vmd includedirectories)).
+		temp do: [:each |  o nextPutAll: (each content); cr].
 
-		addDriver: 'vm-sound-ALSA' 
-		sources: #( 
-			'${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' )
-		generator: aMaker
-		externalLibs: #();
+		(self buildDir) createDirectory: (vmd driver).
+"		(FileDirectory default) createDirectory: (self buildDir) , FileDirectory slash , vmd driver."
+		self write: (o contents) toFile: vmd driver , FileDirectory slash , aMaker outputFileName.
+		templates   "this will go to the top level CMakeLists.txt file"
+			addLast: ((CMakeAddSubDirectory new) sourcedir: (vmd driver)) 
+	].
 
-		addDriver: 'vm-sound-null' 
-		sources: #( 
-			'${targetPlatform}/vm-sound-null/sqUnixSoundNull' )
-		generator: aMaker
-		externalLibs: #().
+
+
+
+
+
+
+
+
 
 ]
 
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> addVMDriversBuildAssert: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> addVMDriversBuildAssertITimerHeartbeat: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> addVMDriversBuildDebug: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> addVMDriversBuildDebugITimerHeartbeat: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> addVMDriversBuildITimerHeartbeat: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> addVMDriversBuildMultiThreaded: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> addVMDriversBuildMultiThreadedAssert: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> addVMDriversBuildMultiThreadedDebug: aMaker [
-	^self addVMDriversBuild: aMaker
-]
-
-{ #category : #'cmake configuration' }
+{ #category : #cmake }
 Linux64x86w32BitConfig >> availableBuildTypes [
 	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
 "	subclasses should use
@@ -180,31 +146,6 @@ Linux64x86w32BitConfig >> coreSourcesBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> coreSourcesBuildAssert [
-	^self coreSourcesBuild	
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> coreSourcesBuildAssertITimerHeartbeat [
-	^self coreSourcesBuild	
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> coreSourcesBuildDebug [
-	^self coreSourcesBuild	
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> coreSourcesBuildDebugITimerHeartbeat [
-	^self coreSourcesBuild	
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> coreSourcesBuildITimerHeartbeat [
-	^self coreSourcesBuild	
-]
-
-{ #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfig >> coreSourcesBuildMultiThreaded [
 	"files to include from src/vm dir"
 	^ #(
@@ -213,25 +154,92 @@ Linux64x86w32BitConfig >> coreSourcesBuildMultiThreaded [
 		)
 ]
 
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> coreSourcesBuildMultiThreadedAssert [
-	^self coreSourcesBuildMultiThreaded	
+{ #category : #plugins }
+Linux64x86w32BitConfig >> customizeCMakeVMDisplayNull [
+	|vmdriver|
+	vmdriver := vmdrivers detect: [:vmd | #CMakeVMDisplayNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	vmdriver 
+		sources: #('${targetPlatform}/vm-display-null/sqUnixDisplayNull') ;
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: #();
+		linkerflags: (self linkerFlags);
+		includedirectories:(OrderedCollection 
+										with:'${crossDir}/plugins/FilePlugin' 
+										with: '${targetPlatform}/plugins/B3DAcceleratorPlugin'  
+ 									     with: '${crossDir}/plugins/B3DAcceleratorPlugin').
+	self flag:'tty'. "I don't think includedirectories is correct. revisit"
+
+
+
+
+
+
+
 ]
 
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> coreSourcesBuildMultiThreadedDebug [
-	^self coreSourcesBuildMultiThreaded	
+{ #category : #plugins }
+Linux64x86w32BitConfig >> customizeCMakeVMDisplayX11 [
+	|vmdriver|
+	vmdriver := vmdrivers detect: [:vmd | #CMakeVMDisplayX11 = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	vmdriver 
+		sources: #( '${targetPlatform}/vm-display-X11/sqUnixX11'	'${targetPlatform}/vm-display-X11/sqUnixMozilla' );
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: (self externalLibraries);
+		linkerflags: (self linkerFlags);
+		includedirectories:(OrderedCollection 
+										with:'${crossDir}/plugins/FilePlugin' 
+										with: '${targetPlatform}/plugins/B3DAcceleratorPlugin'  
+ 									     with: '${crossDir}/plugins/B3DAcceleratorPlugin').
+
 ]
 
-{ #category : #sources }
-Linux64x86w32BitConfig >> crossSources [ 
-	^#(
-			'sqHeapMap.c'
-			'sqTicker.c'
-			'sqExternalSemaphores.c'
-			'sqNamedPrims.c'
-			'sqVirtualMachine.c'
-		)
+{ #category : #plugins }
+Linux64x86w32BitConfig >> customizeCMakeVMSoundALSA [
+	|vmdriver|
+	vmdriver := vmdrivers detect: [:vmd | #CMakeVMSoundALSA = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	vmdriver 
+		sources: #( '${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' );
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: (self externalLibraries);
+		linkerflags: (self linkerFlags);
+		includedirectories: #().
+	
+]
+
+{ #category : #plugins }
+Linux64x86w32BitConfig >> customizeCMakeVMSoundNull [
+	|vmdriver|
+	vmdriver := vmdrivers detect: [:vmd | #CMakeVMSoundNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	vmdriver 
+		sources: #( '${targetPlatform}/vm-sound-null/sqUnixSoundNull' );
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: (self externalLibraries);
+		linkerflags: (self linkerFlags);
+		includedirectories:#()
+
+
+]
+
+{ #category : #plugins }
+Linux64x86w32BitConfig >> customizeVMDrivers [
+	|subset iwantonly|
+	"trim the vmdrivers ordered collection of CMakeVMDriver subclasses to only those I want. then customize them for use"
+	iwantonly :=	 #(#CMakeVMDisplayNull  #CMakeVMDisplayX11  #CMakeVMSoundALSA  #CMakeVMSoundNull ).
+	subset := vmdrivers select: [:vmd | 0 < (iwantonly occurrencesOf: (vmd class name) asSymbol)]. 
+	vmdrivers := subset.
+	self 
+		customizeCMakeVMDisplayNull;
+		customizeCMakeVMDisplayX11;
+		customizeCMakeVMSoundALSA;
+		customizeCMakeVMSoundNull.
+
+
+
+
 ]
 
 { #category : #plugins }
@@ -311,46 +319,6 @@ Linux64x86w32BitConfig >> externalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> externalPluginsBuildAssert [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> externalPluginsBuildAssertITimerHeartbeat [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> externalPluginsBuildDebug [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> externalPluginsBuildDebugITimerHeartbeat [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> externalPluginsBuildITimerHeartbeat [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> externalPluginsBuildMultiThreaded [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> externalPluginsBuildMultiThreadedAssert [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> externalPluginsBuildMultiThreadedDebug [
-	^ self externalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfig >> extraPluginSettingsBuild: maker [
 	self flag:'tty'. "this dumps the libs into the executable's directory. This breaks the distribution convention squeak has had for a while. However, we probably should handle that in a packaging/redistribution step and not worry about it now" 
 	maker isExternal ifTrue: [
@@ -361,165 +329,8 @@ Linux64x86w32BitConfig >> extraPluginSettingsBuild: maker [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraPluginSettingsBuildAssert: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraPluginSettingsBuildAssertITimerHeartbeat: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraPluginSettingsBuildDebug: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraPluginSettingsBuildDebugITimerHeartbeat: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraPluginSettingsBuildITimerHeartbeat: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraPluginSettingsBuildMultiThreaded: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraPluginSettingsBuildMultiThreadedAssert: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraPluginSettingsBuildMultiThreadedDebug: aMaker [
-	^self extraPluginSettingsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraVMSettingsBuild: aMaker [
-	"SystemNavigation default browseMethodsWhoseNamesContain: 'extraVMSettingsBuild:'"
-
-	| versionC |
-	aMaker message: 'extraVMSettingsBuild: aMaker'.
-	"self generateConfigH.   supplanted by new auto generate of config"
-	
-	"add a generated version.c"
-	
-	versionC := 'version.c'.
-	
-	aMaker cmd: 'add_custom_command' params: 'OUTPUT ',
-		versionC , '
-		COMMAND ${platformsDir}/unix/config/verstamp ',versionC,' gcc
-		COMMENT "Generating version.c"
-	'.
-	
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraVMSettingsBuildAssert: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraVMSettingsBuildAssertITimerHeartbeat: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraVMSettingsBuildDebug: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraVMSettingsBuildDebugITimerHeartbeat: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraVMSettingsBuildITimerHeartbeat: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraVMSettingsBuildMultiThreaded: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraVMSettingsBuildMultiThreadedAssert: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraVMSettingsBuildMultiThreadedDebug: aMaker [
-	^self extraVMSettingsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfig >> internalPluginsBuild [
 	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> internalPluginsBuildAssert [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> internalPluginsBuildAssertITimerHeartbeat [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> internalPluginsBuildDebug [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> internalPluginsBuildDebugITimerHeartbeat [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> internalPluginsBuildITimerHeartbeat [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> internalPluginsBuildMultiThreaded [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> internalPluginsBuildMultiThreadedAssert [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> internalPluginsBuildMultiThreadedDebug [
-   "	 internalPlugins := self defaultInternalPlugins"
-	^self internalPluginsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -557,117 +368,33 @@ ENDFOREACH ()'
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> postBuildActionsBuildAssert: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> postBuildActionsBuildAssertITimerHeartbeat: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> postBuildActionsBuildDebug: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> postBuildActionsBuildDebugITimerHeartbeat: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> postBuildActionsBuildITimerHeartbeat: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> postBuildActionsBuildMultiThreaded: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> postBuildActionsBuildMultiThreadedAssert: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> postBuildActionsBuildMultiThreadedDebug: aMaker [
-	^self postBuildActionsBuild: aMaker
-]
-
-{ #category : #'source files' }
 Linux64x86w32BitConfig >> preferredIncludesBuild [
-	^ #(  '${targetPlatform}/plugins/B3DAcceleratorPlugin')
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: (self class name), ' preferredIncludesBuild' )
+	].
+	templates
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${targetPlatform}/plugins/B3DAcceleratorPlugin')).
 
-
-	
-
-"SystemNavigation default browseMethodsWhoseNamesContain: 'preferredIncludes'"
-	
-]
-
-{ #category : #'source files' }
-Linux64x86w32BitConfig >> preferredIncludesBuildAssert [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'source files' }
-Linux64x86w32BitConfig >> preferredIncludesBuildAssertITimerHeartbeat [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'source files' }
-Linux64x86w32BitConfig >> preferredIncludesBuildDebug [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'source files' }
-Linux64x86w32BitConfig >> preferredIncludesBuildDebugITimerHeartbeat [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'source files' }
-Linux64x86w32BitConfig >> preferredIncludesBuildITimerHeartbeat [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'source files' }
-Linux64x86w32BitConfig >> preferredIncludesBuildMultiThreaded [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'source files' }
-Linux64x86w32BitConfig >> preferredIncludesBuildMultiThreadedAssert [
-	^self preferredIncludesBuild
-
-]
-
-{ #category : #'source files' }
-Linux64x86w32BitConfig >> preferredIncludesBuildMultiThreadedDebug [
-	^self preferredIncludesBuild
-
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_PATH =  ${CMAKE_INCLUDE_PATH}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_SYSTEM_INCLUDE_PATH =  ${CMAKE_SYSTEM_INCLUDE_PATH}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES = ${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES =  ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_FIND_ROOT_PATH_MODE_INCLUDE =  ${CMAKE_FIND_ROOT_PATH_MODE_INCLUDE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_FIND_ROOT_PATH_MODE_INCLUDE =  ${CMAKE_INCLUDE_CURRENT_DIR}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE =  ${CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_BEFORE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE}' )
+	].
 ]
 
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfig >> setExtraTargetPropertiesBuild: aMaker [
-	self flag:'tty'. "I am nervous about this method up here in this class, but pharo has it in CogUnixConfig, so using as is for now"
 
-	aMaker setTargetProperties: 'LINK_FLAGS "-m32"'.
-	aMaker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
-		COMPILE_FLAGS "' , self compilerFlags , '")'.
-		
-	
-	aMaker 
-		cmd: 'set_source_files_properties'
-		params: ' ${targetPlatform}/vm/sqUnixHeartbeat.c PROPERTIES 
-		COMPILE_FLAGS "' , self compilerFlags , '"'.
 	
 	aMaker addExternalLibraries: (self externalLibs).
 
@@ -676,229 +403,74 @@ Linux64x86w32BitConfig >> setExtraTargetPropertiesBuild: aMaker [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildAssert: aMaker [
-	^self setExtraTargetPropertiesBuild: aMaker
-]
+Linux64x86w32BitConfig >> zaddVMDriversBuild: aMaker [
+	|temp o|
+	"We could put these inline, but other components include the directories.cmake file. So, we continue that convention"
+	o := String new writeStream.
+	temp := OrderedCollection new.
+	(enabledebugmessages)
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: (self class name) , 'addVMDriversBuild:')
+	] .
+	temp
+"			cmakeGen printHeader;
+			project: name;
+			include: '../directories.cmake';"
+		addLast: ((CMakeHeader new)  configurationName:  self class name );
+		addLast: ((CMakeProject new)variable: self executableName  );
+		addLast: ((CMakeInclude new) file: ((self buildDirName), FileDirectory slash, 'directories.cmake')); "??"
+		addLast:((CMakeAddDefinitions new) definitions: self compilerFlags asOrderedCollection);
+		addLast:((CMakeAddDefinitions new) definitions: (OrderedCollection with:'-fPIC' with:'-DPIC' ));
+		addLast:((CMakeSet new) variable:'sources' quotedValue: '${targetPlatform}/vm-display-null/sqUnixDisplayNull');
+		addLast:((CMakeAddLibrary new) 
+			library: 'vm-display-null' 
+			type: 'SHARED' 
+			sources:  #('${targetPlatform}/vm-display-null/sqUnixDisplayNull'));
+		addLast: ((CMakeIncludeDirectories new) 
+				dirs: (OrderedCollection 
+				with: #('${crossDir}/plugins/FilePlugin' '${targetPlatform}/plugins/B3DAcceleratorPlugin' '${crossDir}/plugins/B3DAcceleratorPlugin')));
+		addLast:((CMakeSet new) variable: 'LIBRARY_OUTPUT_PATH' quotedValue:'self outputDir fullName');
+		addLast:((CMakeListAppend new) list: 'LINKLIBS' elements: (self externalLibs));
+		addLast:((CMakeTargetLinkLibraries new) target: 'vm-display-null'  items: (OrderedCollection with: '${LINKLIBS}'));
+		addLast:((CMakeSetTargetProperties new) 
+			target: 'vm-display-null' 
+			propertiesandvalues: (OrderedCollection with: 'PREFIX "" '  with: 'SUFFIX "" ' with: 'LINK_FLAGS ' , (self compilerFlags))).
 
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildAssertITimerHeartbeat: aMaker [
-	^self setExtraTargetPropertiesBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildDebug: aMaker [
-	^self setExtraTargetPropertiesBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildDebugITimerHeartbeat: aMaker [
-	^self setExtraTargetPropertiesBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildITimerHeartbeat: aMaker [
-	^self setExtraTargetPropertiesBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildMultiThreaded: aMaker [
-	^self setExtraTargetPropertiesBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildMultiThreadedAssert: aMaker [
-	^self setExtraTargetPropertiesBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setExtraTargetPropertiesBuildMultiThreadedDebug: aMaker [
-	^self setExtraTargetPropertiesBuild: aMaker
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
-	"
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptionsAfterDetermineSystemBuild:'"
-	aMaker message: 'setGlobalOptionsAfterDetermineSystemBuild: aMaker'.	
-	aMaker puts: ' 
-	  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wall -m32")
-	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall -m32")
-	  SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}  -Wall -m32")
-	  SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}  -Wall -m32")
-	  SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}  -Wall -m32")
-	  SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -m32")
-	  MESSAGE("CMAKE_C_FLAGS=${CMAKE_C_FLAGS}")
-	  MESSAGE("CMAKE_C_FLAGS_RELEASE=${CMAKE_C_FLAGS_RELEASE}")
-	  MESSAGE("CMAKE_C_FLAGS_DEBUG=${CMAKE_C_FLAGS_DEBUG}")
-	  MESSAGE("CMAKE_CXX_FLAGS_RELEASE=${CMAKE_CXX_FLAGS_RELEASE}")
-	  MESSAGE("CMAKE_CXX_FLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG}")
-	  GET_DIRECTORY_PROPERTY( DirDefs DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS )
-	  FOREACH( d ${DirDefs} )
-	      MESSAGE( STATUS "Found Define: " ${d} )
-	  ENDFOREACH()
-	  MESSAGE( STATUS "DirDefs: " ${DirDefs} )'.
-	aMaker  
-		include: 'Utils.cmake';
-	      include: 'Plugins.cmake';
-		include:	'TestBigEndian';
-		include:	'CheckIncludeFile';
-		include:	'CheckLibraryExists';
-		include:	'CheckTypeSize';
-		include:	'CheckFunctionExists';
-		include:	'CheckVariableExists';
-		include:	'CheckStructHasMember';
-		include:	'FindPkgConfig'.
+	temp do: [:each |  o nextPutAll: (each content); cr].
+	self write: (o contents) toFile: 'directories.cmake'.
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast:((CMakeMessage new) message: (self class name), ' setDirectories: aMaker' )
+	].
+	templates addLast: ((CMakeInclude new) file: 'directories.cmake').
 
 
-]
+	aMaker message: 'addVMDrivers: aMaker'.
+	 self 
+		addDriver: 'vm-display-null' 
+		sources: #( 
+			'${targetPlatform}/vm-display-null/sqUnixDisplayNull' )
+		generator: aMaker
+		externalLibs: #();
+		
+		addDriver: 'vm-display-X11' 
+		sources: #( 
+			'${targetPlatform}/vm-display-X11/sqUnixX11'
+			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
+		generator: aMaker
+		externalLibs: (self externalLibs);  "#( SM ICE GL X11 nsl dl); "
 
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildAssert: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
+		addDriver: 'vm-sound-ALSA' 
+		sources: #( 
+			'${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' )
+		generator: aMaker
+		externalLibs: #();
 
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildAssertITimerHeartbeat: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
+		addDriver: 'vm-sound-null' 
+		sources: #( 
+			'${targetPlatform}/vm-sound-null/sqUnixSoundNull' )
+		generator: aMaker
+		externalLibs: #().
 
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildDebug: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildDebugITimerHeartbeat: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildITimerHeartbeat: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreaded: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedAssert: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsAfterDetermineSystemBuildMultiThreadedDebug: aMaker [
-	^self setGlobalOptionsAfterDetermineSystemBuild: aMaker
-	
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuild: aMaker [
-	aMaker message: 'setGlobalOptionsBuild: aMaker'.
-"	aMaker linkDirectories: '/usr/lib'."
-
-"	SystemNavigation default browseMethodsWhoseNamesContain: 'setGlobalOptions:'  "
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildAssert: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildAssertITimerHeartbeat: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildDebug: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildDebugITimerHeartbeat: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildITimerHeartbeat: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildMultiThreaded: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildMultiThreadedAssert: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setGlobalOptionsBuildMultiThreadedDebug: aMaker [
-	^self setGlobalOptionsBuild: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> standardIncludesBuild [ 
-	^#()
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> standardIncludesBuildAssert [ 
-	^ self standardIncludesBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> standardIncludesBuildAssertITimerHeartbeat [
-	^self standardIncludesBuild
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> standardIncludesBuildDebug [ 
-	^ self standardIncludesBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> standardIncludesBuildDebugITimerHeartbeat [
-	^self standardIncludesBuild
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> standardIncludesBuildITimerHeartbeat [ 
-	^ self standardIncludesBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> standardIncludesBuildMultiThreaded [ 
-	^ self standardIncludesBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> standardIncludesBuildMultiThreadedAssert [ 
-	^ self standardIncludesBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> standardIncludesBuildMultiThreadedDebug [ 
-	^ self standardIncludesBuild
 ]

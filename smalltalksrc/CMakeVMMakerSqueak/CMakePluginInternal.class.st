@@ -38,7 +38,7 @@ Class {
 		'plugin',
 		'pluginsources'
 	],
-	#category : #'CMakeVMMakerSqueak-CMakeCustomTemplates'
+	#category : #'CMakeVMMakerSqueak-CMakeCompositeTemplates'
 }
 
 { #category : #'as yet unclassified' }

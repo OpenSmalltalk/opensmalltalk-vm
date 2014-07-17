@@ -130,7 +130,7 @@ Concrete implementations of SqueakCMakeVMMakerAbstractBuilder provide an invokat
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(overview prerequisites  terms igorStasenkoDesign  buildersAndConfigs plugins pthreads configDotCmake templates)
+	^#(overview prerequisites  terms igorStasenkoDesign  buildersAndConfigs plugins pthreads configDotCmake templates vmdrivers)
 ]
 
 { #category : #pages }
@@ -276,4 +276,13 @@ Redirect Methods:
 
 
 '
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> vmdrivers [
+	^HelpTopic
+		title:'VMDrivers'
+		contents:'
+
+TODO CMakeVMMakerSqueak-VMDriver purpose, configuration and use'
 ]

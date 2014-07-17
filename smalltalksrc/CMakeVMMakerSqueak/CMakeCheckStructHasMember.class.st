@@ -83,9 +83,8 @@ CMakeCheckStructHasMember >> struct: sString member: mString header: hString var
 	member:= mString.
 	header := hString.
 	variable:= vString.
-	content:='
-  CHECK_STRUCT_HAS_MEMBER (', struct, ' ', member,' ', header,' ', variable, ')
-  CONFIG_DEFINE(', variable,')'
+	content:='  check_struct_has_member(', struct, ' ', member,' ', header,' ', variable, ')
+  config_define(', variable,')'
 
 ]
 

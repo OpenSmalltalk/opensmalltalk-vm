@@ -42,7 +42,7 @@ Class {
 		'plunklinklibraries',
 		'plgdir'
 	],
-	#category : #'CMakeVMMakerSqueak-CMakeCustomTemplates'
+	#category : #'CMakeVMMakerSqueak-CMakeCompositeTemplates'
 }
 
 { #category : #'as yet unclassified' }
