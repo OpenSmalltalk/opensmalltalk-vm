@@ -7,8 +7,20 @@ Class {
 	#category : #CMakeVMMakerSqueak
 }
 
-{ #category : #'compiler flags' }
-SqueakMacintoshConfig >> commonCompilerFlags [
+{ #category : #compiling }
+SqueakMacintoshConfig >> compilerDefinitions [
+	self flag:'tty'. "cut-n-paste from representative pharo macOS configs"
+	^ { 
+		'-DCOGMTVM=0'. 
+		'-DUSE_GLOBAL_STRUCT=0'. 
+		'-DTARGET_API_MAC_CARBON'. 
+		'-DBUILD_FOR_OSX'. 
+		'-DHAVE_SYS_TIME_H'}	
+
+]
+
+{ #category : #compiling }
+SqueakMacintoshConfig >> compilerFlags [
 	"Macintosh Common compiler flags"
 	self flag:'tty'. "cut-n-paste from representative pharo macOS configs"
 	^ { 
@@ -16,56 +28,8 @@ SqueakMacintoshConfig >> commonCompilerFlags [
 		'-Wno-trigraphs'. 
 		'-fpascal-strings'. 
 		'-fasm-blocks'. 
-		'-DCOGMTVM=0'. 
-		'-DUSE_GLOBAL_STRUCT=0'. 
-		'-DTARGET_API_MAC_CARBON'. 
-		'-DBUILD_FOR_OSX'. 
-		'-DHAVE_SYS_TIME_H'. 
 		'-mmacosx-version-min=10.5' }	
 
-]
-
-{ #category : #'compiler flags' }
-SqueakMacintoshConfig >> compilerFlagsDebug [
-
-	^ {
-		'-g3'. 
-		'-O0'. 
-		'-Wmissing-prototypes'. 
-		'-Wmissing-braces'. 
-		'-Wparentheses'. 
-		'-Wunused-function'. 
-		'-Wunused-label'. 
-		'-Wunused-parameter'. 
-		'-Wunused-variable'. 
-		'-Wunused-value'. 
-		'-Wsign-compare'. 
-		'-DDEBUGVM=1'. 
-		'-DEXTERNALPRIMSDEBUG=1'. 
-		'-gdwarf-2' }
-]
-
-{ #category : #'compiler flags' }
-SqueakMacintoshConfig >> compilerFlagsRelease [
-" -mdynamic-no-pic "
-	^ {
-		'-gdwarf-2'. 
-		'-O3'. 
-		'-funroll-loops'. 
-		'-ftree-vectorize'. 
-		'-msse3'. 
-		'-DDEBUGVM=0'. 
-		'-DNDEBUG'. 
-		'-Wunused-value'. 
-		'-Wuninitialized'. 
-		'-falign-functions=16'. 
-		'-fno-gcse'. 
-		'-mtune=prescott'. 
-		'-march=pentium-m'. 
-		'-mfpmath=sse'. 
-		'-finline-functions'. 
-		'-Wall'. 
-		'-DUSE_INLINE_MEMORY_ACCESSORS' }
 ]
 
 { #category : #'cmake configuration' }
@@ -82,6 +46,31 @@ SqueakMacintoshConfig >> configureForBuildType: aSymbol [
 		externalPlugins.
 
 
+]
+
+{ #category : #'initialize-release' }
+SqueakMacintoshConfig >> customizeVMDrivers [
+	"
+	SystemNavigation default browseMethodsWhoseNamesContain:'customizeVMDrivers'
+	
+	force platform level or lower customization of vm-display-X11 vm-sound-ALSA, etc. 
+	The configurations can select what subset they want using something like this.
+
+	|subset iwantonly|
+	iwantonly :=	 #(#CMakeVMDisplayNull  #CMakeVMDisplayX11  #CMakeVMSoundALSA  #CMakeVMSoundNull ).
+	subset := vmdrivers select: [:vmd | 0 < (iwantonly occurrencesOf: (vmd class name) asSymbol)]. 
+	vmdrivers := subset.
+
+	self 
+		customizeCMakeVMDisplayNull;
+		customizeCMakeVMDisplayX11;
+		customizeCMakeVMSoundALSA;
+		customizeCMakeVMSoundNull
+
+
+"
+	self flag:'tty'. "revisit this design strategy"
+	self subclassResponsibility
 ]
 
 { #category : #accessing }
@@ -220,6 +209,84 @@ SqueakMacintoshConfig >> resourcesDir: anObject [
 SqueakMacintoshConfig >> resourcesDirName [
 	^self dirBuild, FileDirectory slash,'resources'.
 "	^ 'macbuild/resources'"
+]
+
+{ #category : #cmake }
+SqueakMacintoshConfig >> setDirectories: aMaker [
+	|temp o|
+	"We could put these inline, but other components include the directories.cmake file. So, we continue that convention"
+	o := String new writeStream.
+	temp := OrderedCollection new.
+	temp
+		addLast: ((CMakeSet new) variable: 'topDir' quotedValue: (self topDir fullName));
+		addLast: ((CMakeSet new) variable: 'buildDir' quotedValue: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName]));
+		addLast: ((CMakeSet new) variable: 'thirdpartyDir' quotedValue: '${buildDir}/thirdParty');
+		addLast: ((CMakeSet new) variable: 'platformsDir' quotedValue: (self platformsDir));
+		addLast: ((CMakeSet new) variable: 'srcDir' quotedValue: (self srcDir pathName));
+		addLast: ((CMakeSet new) variable: 'srcPluginsDir' quotedValue: (pluginsDir ifNil: [ '${srcDir}/plugins' ]));
+		addLast: ((CMakeSet new) variable: 'srcVMDir' quotedValue: '${srcDir}/vm');
+		addLast: ((CMakeSet new) variable: 'platformName' quotedValue: (self platformName));
+		addLast: ((CMakeSet new) variable: 'targetPlatform' quotedValue: '${platformsDir}/${platformName}');
+		addLast: ((CMakeSet new) variable: 'crossDir' quotedValue: '${platformsDir}/Cross');
+		addLast: ((CMakeSet new) variable: 'platformVMDir' quotedValue: '${targetPlatform}/vm}');
+		addLast: ((CMakeSet new) variable: 'outputDir' quotedValue: (self outputDir fullName));
+		addLast: ((CMakeSet new) variable: 'externalModulesDir' quotedValue: (self externalModulesDir)).
+	temp do: [:each |  o nextPutAll: (each content); cr].
+	self write: (o contents) toFile: 'directories.cmake'.
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast:((CMakeMessage new) message: (self class name), ' setDirectories: aMaker' )
+	].
+	templates addLast: ((CMakeInclude new) file: 'directories.cmake').
+
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
+	"Set CMake commands that are common for a this platform'"
+	(enabledebugmessages)
+		ifTrue:[			
+	templates 
+		addLast: ((CMakeMessage new) message: (self class name), '  setGlobalOptionsAfterDetermineSystemBuild: aMaker')].
+
+
+
+
+	
+
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> setResourceProperties: maker [
+	templates
+		addLast:((CMakeMessage new) message: (self class name), ' setResourceProperties: maker' )
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> standardIncludesBuild [
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: (self class name), ' standardIncludesBuild' )
+	].
+
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_PATH =  ${CMAKE_INCLUDE_PATH}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_SYSTEM_INCLUDE_PATH =  ${CMAKE_SYSTEM_INCLUDE_PATH}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES = ${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES =  ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_FIND_ROOT_PATH_MODE_INCLUDE =  ${CMAKE_FIND_ROOT_PATH_MODE_INCLUDE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_FIND_ROOT_PATH_MODE_INCLUDE =  ${CMAKE_INCLUDE_CURRENT_DIR}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE =  ${CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_BEFORE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE}' )
+	].
+
 ]
 
 { #category : #'cmake buildType redirects' }

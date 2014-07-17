@@ -46,10 +46,9 @@ CMakeCheckFunctionExists >> function: fString [
 CMakeCheckFunctionExists >> function: fString variable: vString [
 	function := fString.
 	variable:= vString.
-	content:='
-  CHECK_FUNCTION_EXISTS(', function ,' ', variable,')
+	content:='  check_function_exists(', function ,' ', variable,')
   IF(', variable ,')
-    CONFIG_DEFINE(', variable,')
+    config_define(', variable,')
   ENDIF(', variable ,')'
 ]
 

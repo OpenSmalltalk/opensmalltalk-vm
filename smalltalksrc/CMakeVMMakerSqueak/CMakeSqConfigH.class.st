@@ -15,7 +15,7 @@ Class {
 		'config',
 		'templates'
 	],
-	#category : #'CMakeVMMakerSqueak-CMakeCustomTemplates'
+	#category : #'CMakeVMMakerSqueak-CMakeCompositeTemplates'
 }
 
 { #category : #accessing }
