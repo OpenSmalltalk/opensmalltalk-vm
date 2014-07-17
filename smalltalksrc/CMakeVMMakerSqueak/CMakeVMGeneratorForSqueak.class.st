@@ -143,7 +143,7 @@ CMakeVMGeneratorForSqueak >> generateByTemplate [
 		cmakeListAppend:'LINKLIBS' elements: (config externalLibs);
 		cmakeAddExecutableNameOptionSource: self;
 	      setExecutableOutputPath;
-		addVMDrivers: self.
+		addVMPlugins: self.
 	
 "
 	self addVMDrivers: aMaker.

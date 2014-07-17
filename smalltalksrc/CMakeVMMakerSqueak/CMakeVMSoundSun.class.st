@@ -1,7 +1,7 @@
 Class {
 	#name : #CMakeVMSoundSun,
-	#superclass : #CMakeVMDriverWrapper,
-	#category : #'CMakeVMMakerSqueak-VMDriver'
+	#superclass : #CMakeVMPlugin,
+	#category : #'CMakeVMMakerSqueak-VMPlugins'
 }
 
 { #category : #'initialize-release' }

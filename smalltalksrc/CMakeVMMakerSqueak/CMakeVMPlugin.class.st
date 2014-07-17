@@ -1,5 +1,5 @@
 "
-A CMakeVMDriverWrapper is a data bucket for things like:
+A CMakeVMPlugin is a  data bucket for things like:
 
 'vm-display-Quartz' 
 'vm-display-X11'  
@@ -16,9 +16,11 @@ A CMakeVMDriverWrapper is a data bucket for things like:
 
 
 
+
+
 "
 Class {
-	#name : #CMakeVMDriverWrapper,
+	#name : #CMakeVMPlugin,
 	#superclass : #Object,
 	#instVars : [
 		'driver',
@@ -29,47 +31,47 @@ Class {
 		'linkerflags',
 		'includedirectories'
 	],
-	#category : #'CMakeVMMakerSqueak-VMDriver'
+	#category : #'CMakeVMMakerSqueak-VMPlugins'
 }
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> compilerdefinitions [
+CMakeVMPlugin >> compilerdefinitions [
 
 	^ compilerdefinitions
 ]
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> compilerdefinitions: anObject [
+CMakeVMPlugin >> compilerdefinitions: anObject [
 
 	compilerdefinitions := anObject
 ]
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> compilerflags [
+CMakeVMPlugin >> compilerflags [
 
 	^ compilerflags
 ]
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> compilerflags: anObject [
+CMakeVMPlugin >> compilerflags: anObject [
 
 	compilerflags := anObject
 ]
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> driver [
+CMakeVMPlugin >> driver [
 
 	^ driver
 ]
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> driver: anObject [
+CMakeVMPlugin >> driver: anObject [
 
 	driver := anObject
 ]
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> driver:dString sources:sCollection compilerdefinitions: cdCollection compilerflags: cfCollection externallibraries:elCollection linkerflags: lfCollection includedirectories: idCollection [
+CMakeVMPlugin >> driver:dString sources:sCollection compilerdefinitions: cdCollection compilerflags: cfCollection externallibraries:elCollection linkerflags: lfCollection includedirectories: idCollection [
 	driver:= dString.
 	sources:= sCollection.
 	compilerdefinitions:= cdCollection.
@@ -80,31 +82,31 @@ CMakeVMDriverWrapper >> driver:dString sources:sCollection compilerdefinitions: 
 ]
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> externallibraries [
+CMakeVMPlugin >> externallibraries [
 
 	^ externallibraries
 ]
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> externallibraries: anObject [
+CMakeVMPlugin >> externallibraries: anObject [
 
 	externallibraries := anObject
 ]
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> includedirectories [
+CMakeVMPlugin >> includedirectories [
 
 	^ includedirectories
 ]
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> includedirectories: anObject [
+CMakeVMPlugin >> includedirectories: anObject [
 
 	includedirectories := anObject
 ]
 
 { #category : #'initialize-release' }
-CMakeVMDriverWrapper >> initialize [
+CMakeVMPlugin >> initialize [
 "force CPlatformConfigurations to set my internal state explicitly by filling me with initial nonsense values"
 	sources := OrderedCollection with: 'sources' with: 'paths'.
 	compilerdefinitions := OrderedCollection with:'-DCompiler' with: '-DDefinitions'.
@@ -115,25 +117,25 @@ CMakeVMDriverWrapper >> initialize [
 ]
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> linkerflags [
+CMakeVMPlugin >> linkerflags [
 
 	^ linkerflags
 ]
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> linkerflags: anObject [
+CMakeVMPlugin >> linkerflags: anObject [
 
 	linkerflags := anObject
 ]
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> sources [
+CMakeVMPlugin >> sources [
 
 	^ sources
 ]
 
 { #category : #accessing }
-CMakeVMDriverWrapper >> sources: anObject [
+CMakeVMPlugin >> sources: anObject [
 
 	sources := anObject
 ]

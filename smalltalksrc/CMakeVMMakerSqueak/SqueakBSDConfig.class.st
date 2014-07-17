@@ -25,7 +25,7 @@ SqueakBSDConfig class >> initialize [
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakBSDConfig >> addVMDriversBuild: aMaker [
+SqueakBSDConfig >> addVMPluginsBuild: aMaker [
 	aMaker message: 'addVMDrivers: aMaker'.
 	 self 
 		addDriver: 'vm-display-null' 

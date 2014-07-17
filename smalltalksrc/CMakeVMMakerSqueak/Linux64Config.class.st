@@ -89,7 +89,7 @@ External:
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux64Config >> addVMDriversBuild: aMaker [
+Linux64Config >> addVMPluginsBuild: aMaker [
 	aMaker message: 'addVMDrivers: aMaker'.
 	 self 
 		addDriver: 'vm-display-null' 

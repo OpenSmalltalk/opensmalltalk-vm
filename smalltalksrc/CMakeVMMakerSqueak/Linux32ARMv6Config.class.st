@@ -28,7 +28,7 @@ Linux32ARMv6Config class >> initialize [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32ARMv6Config >> addVMDriversBuild: aMaker [
+Linux32ARMv6Config >> addVMPluginsBuild: aMaker [
 	aMaker message: 'addVMDrivers: aMaker'.
 	 self 
 		addDriver: 'vm-display-null' 
@@ -262,5 +262,5 @@ Linux32ARMv6Config >> setExtraTargetPropertiesBuild: aMaker [
 					
 
 	aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
-	self addVMDrivers: aMaker.
+	self addVMPlugins: aMaker.
 ]

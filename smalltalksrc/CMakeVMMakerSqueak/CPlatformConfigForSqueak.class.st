@@ -698,80 +698,80 @@ CPlatformConfigForSqueak >> addDriver: name sources: aSources generator: cmakeGe
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> addVMDrivers: aMaker [
+	"CMakeVMMaker compat"
+	self deprecated:'CMakeVMMaker holdover from pharo. use addVMPlugins: aMaker'.
+	^self addVMPlugins: aMaker
+
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> addVMPlugins: aMaker [
 	"Route this message send to the message appropriate for my buildType "
 	|d |
 	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
 	d 
-		at: #build put: [self addVMDriversBuild: aMaker];
-		at: #buildAssert  put: [self addVMDriversBuildAssert: aMaker];
-		at: #buildAssertITimerHeartbeat  put: [self addVMDriversBuildAssertITimerHeartbeat: aMaker];
-            at:#buildDebug  put: [self addVMDriversBuildDebug: aMaker];   
-		at: #buildDebugITimerHeartbeat  put: [self addVMDriversBuildDebugITimerHeartbeat: aMaker ];
-		at: #buildITimerHeartbeat  put: [self addVMDriversBuildITimerHeartbeat: aMaker];
-		at: #buildMultiThreaded  put: [self addVMDriversBuildMultiThreaded: aMaker ];
-		at: #buildMultiThreadedAssert  put: [self addVMDriversBuildMultiThreadedAssert: aMaker];
-		at: #buildMultiThreadedDebug   put: [self addVMDriversBuildMultiThreadedDebug: aMaker ];
-		at: #buildNone put:[self addVMDriversNoBuildType:  aMaker].
+		at: #build put: [self addVMPluginsBuild: aMaker];
+		at: #buildAssert  put: [self addVMPluginsBuildAssert: aMaker];
+		at: #buildAssertITimerHeartbeat  put: [self addVMPluginsBuildAssertITimerHeartbeat: aMaker];
+            at:#buildDebug  put: [self addVMPluginsBuildDebug: aMaker];   
+		at: #buildDebugITimerHeartbeat  put: [self addVMPluginsBuildDebugITimerHeartbeat: aMaker ];
+		at: #buildITimerHeartbeat  put: [self addVMPluginsBuildITimerHeartbeat: aMaker];
+		at: #buildMultiThreaded  put: [self addVMPluginsBuildMultiThreaded: aMaker ];
+		at: #buildMultiThreadedAssert  put: [self addVMPluginsBuildMultiThreadedAssert: aMaker];
+		at: #buildMultiThreadedDebug   put: [self addVMPluginsBuildMultiThreadedDebug: aMaker ];
+		at: #buildNone put:[self addVMPluginsNoBuildType:  aMaker].
 	^(d at: buildType) value
 
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> addVMDriversBuild: aMaker [
+CPlatformConfigForSqueak >> addVMPluginsBuild: aMaker [
+	self subclassResponsibility.
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> addVMPluginsBuildAssert: aMaker [
+	self subclassResponsibility.
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> addVMPluginsBuildAssertITimerHeartbeat: aMaker [
+	self subclassResponsibility.
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> addVMPluginsBuildDebug: aMaker [
+	self subclassResponsibility.
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> addVMPluginsBuildDebugITimerHeartbeat: aMaker [
 	"SqueakUnixConfig browse"
 	self subclassResponsibility.
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> addVMDriversBuildAssert: aMaker [
-	"SqueakUnixConfig browse"
+CPlatformConfigForSqueak >> addVMPluginsBuildITimerHeartbeat: aMaker [
 	self subclassResponsibility.
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> addVMDriversBuildAssertITimerHeartbeat: aMaker [
-	"SqueakUnixConfig browse"
+CPlatformConfigForSqueak >> addVMPluginsBuildMultiThreaded: aMaker [
 	self subclassResponsibility.
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> addVMDriversBuildDebug: aMaker [
-	"SqueakUnixConfig browse"
+CPlatformConfigForSqueak >> addVMPluginsBuildMultiThreadedAssert: aMaker [
 	self subclassResponsibility.
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> addVMDriversBuildDebugITimerHeartbeat: aMaker [
-	"SqueakUnixConfig browse"
+CPlatformConfigForSqueak >> addVMPluginsBuildMultiThreadedDebug: aMaker [
 	self subclassResponsibility.
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> addVMDriversBuildITimerHeartbeat: aMaker [
-	"SqueakUnixConfig browse"
-	self subclassResponsibility.
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> addVMDriversBuildMultiThreaded: aMaker [
-	"SqueakUnixConfig browse"
-	self subclassResponsibility.
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> addVMDriversBuildMultiThreadedAssert: aMaker [
-	"SqueakUnixConfig browse"
-	self subclassResponsibility.
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> addVMDriversBuildMultiThreadedDebug: aMaker [
-	"SqueakUnixConfig browse"
-	self subclassResponsibility.
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> addVMDriversNoBuildType: aMaker [
+CPlatformConfigForSqueak >> addVMPluginsNoBuildType: aMaker [
 	"SHOULD NOT GET HERE"
 	self shouldNotImplement.
 
