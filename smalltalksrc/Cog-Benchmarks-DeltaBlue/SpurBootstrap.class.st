@@ -842,6 +842,12 @@ SpurBootstrap class >> ContextPROTOTYPEallInstancesDo: aBlock [
 		 inst := next]
 ]
 
+{ #category : #'method prototypes' }
+SpurBootstrap class >> IntegerclassPROTOTYPEinitialize [
+	"Integer initialize"	
+	self initializeLowBitPerByteTable
+]
+
 { #category : #'method prototypes squeak' }
 SpurBootstrap class >> MethodContextPROTOTYPEallInstances [
 	"Answer all instances of the receiver."
@@ -1085,6 +1091,114 @@ SpurBootstrap class >> SmalltalkImagePROTOTYPEmaxIdentityHash [
 	"Answer the maximum identityHash value supported by the VM."
 	<primitive: 176>
 	^self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> SmalltalkImagePROTOTYPErecreateSpecialObjectsArray [
+	"Smalltalk recreateSpecialObjectsArray"
+	
+	"To external package developers:
+	**** DO NOT OVERRIDE THIS METHOD.  *****
+	If you are writing a plugin and need additional special object(s) for your own use, 
+	use addGCRoot() function and use own, separate special objects registry "
+	
+	"The Special Objects Array is an array of objects used by the Squeak virtual machine.
+	 Its contents are critical and accesses to it by the VM are unchecked, so don't even
+	 think of playing here unless you know what you are doing."
+	| newArray |
+	newArray := Array new: 58.
+	"Nil false and true get used throughout the interpreter"
+	newArray at: 1 put: nil.
+	newArray at: 2 put: false.
+	newArray at: 3 put: true.
+	"This association holds the active process (a ProcessScheduler)"
+	newArray at: 4 put: (self specialObjectsArray at: 4) "(self bindingOf: #Processor) but it answers an Alias".
+	"Numerous classes below used for type checking and instantiation"
+	newArray at: 5 put: Bitmap.
+	newArray at: 6 put: SmallInteger.
+	newArray at: 7 put: ByteString.
+	newArray at: 8 put: Array.
+	newArray at: 9 put: Smalltalk.
+	newArray at: 10 put: Float.
+	newArray at: 11 put: MethodContext.
+	newArray at: 12 put: BlockContext.
+	newArray at: 13 put: Point.
+	newArray at: 14 put: LargePositiveInteger.
+	newArray at: 15 put: Display.
+	newArray at: 16 put: Message.
+	newArray at: 17 put: CompiledMethod.
+	newArray at: 18 put: (self specialObjectsArray at: 18). "(low space Semaphore)"
+	newArray at: 19 put: Semaphore.
+	newArray at: 20 put: Character.
+	newArray at: 21 put: #doesNotUnderstand:.
+	newArray at: 22 put: #cannotReturn:.
+	newArray at: 23 put: nil. "This is the process signalling low space."
+	"An array of the 32 selectors that are compiled as special bytecodes,
+	 paired alternately with the number of arguments each takes."
+	newArray at: 24 put: #(	#+ 1 #- 1 #< 1 #> 1 #<= 1 #>= 1 #= 1 #~= 1
+							#* 1 #/ 1 #\\ 1 #@ 1 #bitShift: 1 #// 1 #bitAnd: 1 #bitOr: 1
+							#at: 1 #at:put: 2 #size 0 #next 0 #nextPut: 1 #atEnd 0 #== 1 #class 0
+							#blockCopy: 1 #value 0 #value: 1 #do: 1 #new 0 #new: 1 #x 0 #y 0 ).
+	"An array of the 255 Characters in ascii order.
+	 Cog inlines table into machine code at: prim so do not regenerate it.
+	 This is nil in Spur, which has immediate Characters."
+	newArray at: 25 put: (self specialObjectsArray at: 25).
+	newArray at: 26 put: #mustBeBoolean.
+	newArray at: 27 put: ByteArray.
+	newArray at: 28 put: Process.
+	"An array of up to 31 classes whose instances will have compact headers; an empty array in Spur"
+	newArray at: 29 put: self compactClassesArray.
+	newArray at: 30 put: (self specialObjectsArray at: 30). "(delay Semaphore)"
+	newArray at: 31 put: (self specialObjectsArray at: 31). "(user interrupt Semaphore)"
+	"Entries 32 - 34 unreferenced. Previously these contained prototype instances to be copied for fast initialization"
+	newArray at: 32 put: nil. "was the prototype Float"
+	newArray at: 33 put: nil. "was the prototype 4-byte LargePositiveInteger"
+	newArray at: 34 put: nil. "was the prototype Point"
+	newArray at: 35 put: #cannotInterpret:.
+	newArray at: 36 put: nil. "was the prototype MethodContext"
+	newArray at: 37 put: BlockClosure.
+	newArray at: 38 put: nil. "was the prototype BlockContext"
+	"array of objects referred to by external code"
+	newArray at: 39 put: (self specialObjectsArray at: 39).	"external semaphores"
+	newArray at: 40 put: nil. "Reserved for Mutex in Cog VMs"
+	newArray at: 41 put: ((self specialObjectsArray at: 39) ifNil: [LinkedList new]). "Reserved for a LinkedList instance for overlapped calls in CogMT"
+	newArray at: 42 put: ((self specialObjectsArray at: 42) ifNil: [Semaphore new]). "finalization Semaphore"
+	newArray at: 43 put: LargeNegativeInteger.
+	"External objects for callout.
+	 Note: Written so that one can actually completely remove the FFI."
+	newArray at: 44 put: (self at: #ExternalAddress ifAbsent: []).
+	newArray at: 45 put: (self at: #ExternalStructure ifAbsent: []).
+	newArray at: 46 put: (self at: #ExternalData ifAbsent: []).
+	newArray at: 47 put: (self at: #ExternalFunction ifAbsent: []).
+	newArray at: 48 put: (self at: #ExternalLibrary ifAbsent: []).
+	newArray at: 49 put: #aboutToReturn:through:.
+	newArray at: 50 put: #run:with:in:.
+	"51 reserved for immutability message"
+	newArray at: 51 put: #attemptToAssign:withIndex:.
+	newArray at: 52 put: #(nil "nil => generic error" #'bad receiver'
+							#'bad argument' #'bad index'
+							#'bad number of arguments'
+							#'inappropriate operation'  #'unsupported operation'
+							#'no modification' #'insufficient object memory'
+							#'insufficient C memory' #'not found' #'bad method'
+							#'internal error in named primitive machinery'
+							#'object may move' #'resource limit exceeded'
+							#'object is pinned' #'primitive write beyond end of object').
+	"53 to 55 are for Alien"
+	newArray at: 53 put: (self at: #Alien ifAbsent: []).
+	newArray at: 54 put: #invokeCallbackContext::. "use invokeCallback:stack:registers:jmpbuf: for old Alien callbacks."
+	newArray at: 55 put: (self at: #UnsafeAlien ifAbsent: []).
+
+	"Used to be WeakFinalizationList for WeakFinalizationList hasNewFinalization, obsoleted by ephemeron support."
+	newArray at: 56 put: nil.
+
+	"reserved for foreign callback process"
+	newArray at: 57 put: (self specialObjectsArray at: 57 ifAbsent: []).
+
+	newArray at: 58 put: #unusedBytecode.
+
+	"Now replace the interpreter's reference in one atomic operation"
+	self specialObjectsArray becomeForward: newArray
 ]
 
 { #category : #'method prototypes squeak' }
@@ -1498,11 +1612,14 @@ SpurBootstrap >> allPrototypeMethodSymbols [
 	| symbols |
 	symbols := Set new.
 	self prototypeClassNameMetaSelectorMethodDo:
-		[:className :isMeta :selector :method |
+		[:className :isMeta :selector :method | | adder |
 		symbols
 			add: className;
-			add: selector;
-			addAll: (method literals select: [:l| l isSymbol and: [l ~~ method selector]])].
+			add: selector.	
+		adder := [:lit|
+				   (lit isSymbol and: [lit ~~ method selector]) ifTrue: [symbols add: lit].
+				   lit isArray ifTrue: [lit do: adder]].
+		method literals do: adder].
 	^symbols
 ]
 
@@ -1621,7 +1738,7 @@ SpurBootstrap >> bootstrapImageUsingFileDirectory: imageName [
 	baseName := (imageName endsWith: '.image')
 					ifTrue: [FileDirectory baseNameFor: imageName]
 					ifFalse: [FileDirectory localNameFor: imageName].
-	dir := FileDirectory on: dirName.
+	dir := dirName isEmpty ifTrue: [FileDirectory default] ifFalse: [FileDirectory on: dirName].
 	self on: (dir fullNameFor: baseName, '.image').
 	[self transform]
 		on: Halt
@@ -1714,7 +1831,15 @@ SpurBootstrap >> cloneArrayLiteral: anArray [
 			[SmallInteger] -> [oldHeap
 									storePointerUnchecked: i - 1
 									ofObject: array
-									withValue: (oldHeap integerObjectOf: lit)] }].
+									withValue: (oldHeap integerObjectOf: lit)].
+			[ByteSymbol] -> [oldHeap
+									storePointer: i - 1
+									ofObject: array
+									withValue: (self findSymbol: lit)].
+			[UndefinedObject] -> [oldHeap
+									storePointerUnchecked: i - 1
+									ofObject: array
+									withValue: oldHeap nilObject] }].
 	^array
 
 ]
@@ -1768,16 +1893,20 @@ SpurBootstrap >> cloneNilTrueAndFalse [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> cloneObjects [
-	| characterClass characterTable compactClasses oldObj oldClass |
+	| specialObjectsArray characterClass characterTable compactClasses oldObj oldClass |
+	specialObjectsArray := oldHeap specialObjectsOop.
 	characterClass := oldHeap classCharacter.
 	characterTable := oldHeap characterTable.
 	compactClasses := oldHeap splObj: CompactClasses.
+	self clone: specialObjectsArray
+		classIndex: (classToIndex at: (oldHeap fetchClassOfNonImm: specialObjectsArray)).
 	oldObj := oldHeap objectAfter: oldHeap trueObject.
 	[oldObj < oldHeap freeStart] whileTrue:
 		[oldClass := oldHeap fetchClassOfNonImm: oldObj.
 		 (oldObj ~= characterTable
+		 and: [oldObj ~= specialObjectsArray
 		 and: [oldObj ~= compactClasses
-		 and: [oldClass ~= characterClass]]) ifTrue:
+		 and: [oldClass ~= characterClass]]]) ifTrue:
 			[self clone: oldObj classIndex: (classToIndex at: oldClass)].
 		 oldObj := oldHeap objectAfter: oldObj].
 	newHeap
@@ -2028,13 +2157,15 @@ SpurBootstrap >> findRequiredGlobals [
 SpurBootstrap >> findSymbol: aString [
 	"Find the Symbol equal to aString in oldHeap."
 	| symbolClass |
+	(literalMap at: aString ifAbsent: nil) ifNotNil:
+		[:oop| ^oop].
 	symbolClass := self symbolClass.
 	oldHeap allObjectsDo:
-		[:o|
-		(symbolClass = (oldHeap fetchClassOfNonImm: o)
-		 and: [(oldHeap byteLengthOf: o) = aString size
-		 and: [aString = (oldHeap stringOf: o)]]) ifTrue:
-			[^o]].
+		[:obj|
+		(symbolClass = (oldHeap fetchClassOfNonImm: obj)
+		 and: [(oldHeap byteLengthOf: obj) = aString size
+		 and: [aString = (oldHeap stringOf: obj)]]) ifTrue:
+			[^obj]].
 	^nil
 ]
 
@@ -2205,7 +2336,9 @@ SpurBootstrap >> interpreter: sim object: receiver perform: selector withArgumen
 	"sim byteCount = 66849 ifTrue: [self halt]."
 	sim normalSend.
 	sim incrementByteCount. "otherwise, send is not counted"
-	["sim byteCount = 66849 ifTrue: [self halt]."
+	["sim printFrame: sim localFP WithSP: sim localSP"
+	 "sim setBreakSelector: #elementsForwardIdentityTo:"
+	 "sim byteCount = 66849 ifTrue: [self halt]."
 	 "(sim byteCount > 7508930 and: [sim localFP = -16r27894]) ifTrue:
 		[self halt]."
 	 fp = sim localFP] whileFalse:
@@ -2475,6 +2608,24 @@ SpurBootstrap >> prototypeClassNameMetaSelectorMethodDo: quaternaryBlock [
 ]
 
 { #category : #'bootstrap image' }
+SpurBootstrap >> recreateSpecialObjectsArray [
+	"This is tricky.  We want to recreate the specialObjectsArray according to
+	 the class side SmalltalkImagePROTOTYPErecreateSpecialObjectsArray.
+	 But that version destroys the CompactClassesArray upon which the V3
+	 image depends.  The bootstrap will get rid of it later.  So save it before
+	 the recreation and restore it."
+	self withExecutableInterpreter: oldInterpreter
+		do: [| compactClassesArray |
+			compactClassesArray := oldHeap splObj: CompactClasses.
+			self
+				interpreter: oldInterpreter
+				object: (oldHeap splObj: 8)
+				perform: (self findSymbol: #recreateSpecialObjectsArray)
+				withArguments: #().
+			oldHeap splObj: CompactClasses put: compactClassesArray]
+]
+
+{ #category : #'bootstrap image' }
 SpurBootstrap >> rehashImage [
 	"Rehash all collections in newHeap.
 	 Find out which classes implement rehash, entering a 1 against their classIndex in rehashFlags.
@@ -2696,6 +2847,7 @@ SpurBootstrap >> transform [
 	self rememberRehashSymbol.
 	self findRequiredGlobals.
 	self installModifiedMethods.
+	self recreateSpecialObjectsArray.
 	self bootstrapImage.
 	self validate.
 	self rememberRehashSymbol.
