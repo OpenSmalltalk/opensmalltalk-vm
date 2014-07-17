@@ -28,8 +28,7 @@ CMakeSetConfigDefine >> variable: aString value: vString [
 
 	variable := aString.
 	value := vString.
-	self content:'
-  SET(',variable,' ',value,')
-  CONFIG_DEFINE (',variable,')'.
+	self content:'  set(',variable,' ',value,')
+  config_define (',variable,')'.
 
 ]

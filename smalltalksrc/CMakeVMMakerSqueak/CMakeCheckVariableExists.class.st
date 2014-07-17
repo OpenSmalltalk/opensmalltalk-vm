@@ -38,10 +38,9 @@ Class {
 CMakeCheckVariableExists >> initialize [
 	var:='var'.
 	variable:= 'HAVE_',(var asUppercase).
-	content:='
-  CHECK_VARIABLE_EXISTS(', var ,' ', variable,')
+	content:='  check_variable_exists(', var ,' ', variable,')
   IF(', variable ,')
-    CONFIG_DEFINE(', variable,')
+    config_define(', variable,')
   ENDIF(', variable ,')'
 ]
 

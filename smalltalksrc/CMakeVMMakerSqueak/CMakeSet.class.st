@@ -21,10 +21,17 @@ CMakeSet >> initialize [
 ]
 
 { #category : #accessing }
+CMakeSet >> variable: aString quotedValue: vString [
+
+	variable := aString.
+	value :=  '"', (vString copyReplaceAll: '"' with: '\"'), '"'.
+	self content:'  set(',variable,' ',value,')'
+]
+
+{ #category : #accessing }
 CMakeSet >> variable: aString value: vString [
 
 	variable := aString.
 	value := vString.
-	self content:'
-  SET(',variable,' ',value,')'
+	self content:'  set(',variable,' ',value,')'
 ]
