@@ -18,7 +18,7 @@ Class {
 }
 
 { #category : #'cmake buildType redirects' }
-SqueakSunOS32x86Config >> addVMDriversBuild: aMaker [
+SqueakSunOS32x86Config >> addVMPluginsBuild: aMaker [
 	aMaker message: 'addVMDrivers: aMaker'.
 	 self 
 		addDriver: 'vm-display-null' 

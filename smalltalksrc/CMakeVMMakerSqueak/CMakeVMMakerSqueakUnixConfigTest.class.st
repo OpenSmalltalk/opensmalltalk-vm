@@ -20,7 +20,7 @@ CMakeVMMakerSqueakUnixConfigTest >> testAddVMDrivers [
 								vmGenerator:=CMakeVMGeneratorForSqueak new.
 								vmGenerator config: o.
 								vmGenerator output:(String new writeStream).
-								self shouldnt: [o addVMDrivers: vmGenerator] raise: Error]]]].
+								self shouldnt: [o addVMPlugins: vmGenerator] raise: Error]]]].
 
 ]
 
