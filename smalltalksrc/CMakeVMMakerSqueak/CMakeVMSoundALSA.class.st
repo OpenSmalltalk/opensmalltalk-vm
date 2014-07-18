@@ -7,5 +7,5 @@ Class {
 { #category : #'initialize-release' }
 CMakeVMSoundALSA >> initialize [
 	super initialize.
-	driver:='vm-sound-ALSA'
+	module :='vm-sound-ALSA'
 ]

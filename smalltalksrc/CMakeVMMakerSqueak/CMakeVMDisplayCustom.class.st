@@ -7,5 +7,5 @@ Class {
 { #category : #'initialize-release' }
 CMakeVMDisplayCustom >> initialize [
 	super initialize.
-	driver:='vm-display-custom'
+	module :='vm-display-custom'
 ]

@@ -95,24 +95,23 @@ Linux64x86w32BitConfig >> addVMPluginsBuild: aMaker [
 	self flag:'tty'. "I am writing sub-directory CMakeLists.txt here. Should I also write the config.cmake files?"
 	enabledebugmessages
 		ifTrue: [templates  "this message will go to the top level CMakeLists.txt file"
-				addLast: (CMakeMessage new message: self class name , 'addVMDriversBuild:')].
-	vmdrivers do:[ :vmd |                    
-		o := String new writeStream.   "each VMDriver gets its own CMakeLists.txt file."
+				addLast: (CMakeMessage new message: self class name , 'addVMPluginsBuild: aMaker')].
+	vmplugins do:[ :vmp |                    
+		o := String new writeStream.   "each VMPlugin gets its own CMakeLists.txt file in its own directory"
 		temp := OrderedCollection new.	
 		temp
-			addAllLast:((CMakeVMDriver new)     "<--confusing name. This is a CompositTemplate, not the CMakeVMDriverWrapper class"
+			addAllLast:((CMakePluginVm new)    "this is the CMakeCompositTemplate"
 					config: self 
-					definitions: (vmd compilerdefinitions)
-					driver: (vmd driver)
-					sources: (vmd sources)
-					includedirectories: (vmd includedirectories)).
+					definitions: (vmp compilerdefinitions)
+					module: (vmp module)
+					sources: (vmp sources)
+					includedirectories: (vmp includedirectories)).
 		temp do: [:each |  o nextPutAll: (each content); cr].
-	"need a check exists here"
-		(self buildDir) createDirectory: (vmd driver).
-"		(FileDirectory default) createDirectory: (self buildDir) , FileDirectory slash , vmd driver."
-		self write: (o contents) toFile: vmd driver , FileDirectory slash , aMaker outputFileName.
+	((self buildDir) directoryExists: (vmp module))
+		ifFalse:[	(self buildDir) createDirectory: (vmp module)].
+		self write: (o contents) toFile: vmp module , FileDirectory slash , aMaker outputFileName.
 		templates   "this will go to the top level CMakeLists.txt file"
-			addLast: ((CMakeAddSubDirectory new) sourcedir: (vmd driver)) 
+			addLast: ((CMakeAddSubDirectory new) sourcedir: (vmp module)) 
 	].
 
 
@@ -156,9 +155,9 @@ Linux64x86w32BitConfig >> coreSourcesBuildMultiThreaded [
 
 { #category : #plugins }
 Linux64x86w32BitConfig >> customizeCMakeVMDisplayNull [
-	|vmdriver|
-	vmdriver := vmdrivers detect: [:vmd | #CMakeVMDisplayNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
-	vmdriver 
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMDisplayNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
 		sources: #('${targetPlatform}/vm-display-null/sqUnixDisplayNull') ;
 		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
 		compilerflags: (self compilerFlags);
@@ -180,9 +179,9 @@ Linux64x86w32BitConfig >> customizeCMakeVMDisplayNull [
 
 { #category : #plugins }
 Linux64x86w32BitConfig >> customizeCMakeVMDisplayX11 [
-	|vmdriver|
-	vmdriver := vmdrivers detect: [:vmd | #CMakeVMDisplayX11 = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
-	vmdriver 
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMDisplayX11 = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
 		sources: #( '${targetPlatform}/vm-display-X11/sqUnixX11'	'${targetPlatform}/vm-display-X11/sqUnixMozilla' );
 		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
 		compilerflags: (self compilerFlags);
@@ -197,9 +196,9 @@ Linux64x86w32BitConfig >> customizeCMakeVMDisplayX11 [
 
 { #category : #plugins }
 Linux64x86w32BitConfig >> customizeCMakeVMSoundALSA [
-	|vmdriver|
-	vmdriver := vmdrivers detect: [:vmd | #CMakeVMSoundALSA = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
-	vmdriver 
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMSoundALSA = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
 		sources: #( '${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' );
 		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
 		compilerflags: (self compilerFlags);
@@ -211,9 +210,9 @@ Linux64x86w32BitConfig >> customizeCMakeVMSoundALSA [
 
 { #category : #plugins }
 Linux64x86w32BitConfig >> customizeCMakeVMSoundNull [
-	|vmdriver|
-	vmdriver := vmdrivers detect: [:vmd | #CMakeVMSoundNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
-	vmdriver 
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMSoundNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
 		sources: #( '${targetPlatform}/vm-sound-null/sqUnixSoundNull' );
 		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
 		compilerflags: (self compilerFlags);
@@ -225,12 +224,12 @@ Linux64x86w32BitConfig >> customizeCMakeVMSoundNull [
 ]
 
 { #category : #plugins }
-Linux64x86w32BitConfig >> customizeVMDrivers [
-	|subset iwantonly|
-	"trim the vmdrivers ordered collection of CMakeVMDriver subclasses to only those I want. then customize them for use"
+Linux64x86w32BitConfig >> customizeVMPlugins [
+	|mysubset iwantonly|
+	"trim the vmdrivers ordered collection of CMakeVMDriver subclasses to only those I want. then customize them for use on this OS/platform"
 	iwantonly :=	 #(#CMakeVMDisplayNull  #CMakeVMDisplayX11  #CMakeVMSoundALSA  #CMakeVMSoundNull ).
-	subset := vmdrivers select: [:vmd | 0 < (iwantonly occurrencesOf: (vmd class name) asSymbol)]. 
-	vmdrivers := subset.
+	mysubset := vmplugins select: [:vmd | 0 < (iwantonly occurrencesOf: (vmd class name) asSymbol)]. 
+	vmplugins := mysubset.
 	self 
 		customizeCMakeVMDisplayNull;
 		customizeCMakeVMDisplayX11;
@@ -390,16 +389,6 @@ Linux64x86w32BitConfig >> preferredIncludesBuild [
 		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_BEFORE}' );
 		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE}' )
 	].
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> setExtraTargetPropertiesBuild: aMaker [
-
-	
-	aMaker addExternalLibraries: (self externalLibs).
-
-	aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
-	self addVMPlugins: aMaker.
 ]
 
 { #category : #'cmake buildType redirects' }

@@ -66,7 +66,7 @@ Class {
 		'generateBuildMultiThreadedDebug',
 		'templates',
 		'enabledebugmessages',
-		'vmdrivers'
+		'vmplugins'
 	],
 	#classInstVars : [
 		'isAbstractBaseClass'
@@ -2311,6 +2311,7 @@ CPlatformConfigForSqueak >> extraVMSettingsNoBuildType: maker [
 
 { #category : #'squeak compatability' }
 CPlatformConfigForSqueak >> fixLineEndsOf: string [
+	self flag:'tty'. "does FileStream handle this cleanly?"
 	^ string copyReplaceAll: String cr with: String crlf
 ]
 
@@ -2523,13 +2524,13 @@ CPlatformConfigForSqueak >> generateVmConfigIn [
 CPlatformConfigForSqueak >> initialize [
 	enabledebugmessages := false.
 	self initializeVMDrivers.
-	self customizeVMDrivers.
+	self customizeVMPlugins
 ]
 
 { #category : #'initialize-release' }
 CPlatformConfigForSqueak >> initializeVMDrivers [
-	vmdrivers := OrderedCollection new.
-	vmdrivers 
+	vmplugins := OrderedCollection new.
+	vmplugins 
 		addLast:(CMakeVMDisplayCustom new);
 		addLast:(CMakeVMDisplayFbdev new);
 		addLast:(CMakeVMDisplayNull new);
@@ -3274,133 +3275,6 @@ CPlatformConfigForSqueak >> setExtraSources [
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> setExtraTargetProperties: aMaker [
-	"Route this message send to the message appropriate for my buildType "
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self setExtraTargetPropertiesBuild: aMaker];
-		at: #buildAssert  put: [self setExtraTargetPropertiesBuildAssert: aMaker];
-		at: #buildAssertITimerHeartbeat  put: [self setExtraTargetPropertiesBuildAssertITimerHeartbeat: aMaker];
-            at:#buildDebug  put: [self setExtraTargetPropertiesBuildDebug: aMaker];   
-		at: #buildDebugITimerHeartbeat  put: [self setExtraTargetPropertiesBuildDebugITimerHeartbeat: aMaker ];
-		at: #buildITimerHeartbeat  put: [self setExtraTargetPropertiesBuildITimerHeartbeat: aMaker];
-		at: #buildMultiThreaded  put: [self setExtraTargetPropertiesBuildMultiThreaded: aMaker ];
-		at: #buildMultiThreadedAssert  put: [self setExtraTargetPropertiesBuildMultiThreadedAssert: aMaker];
-		at: #buildMultiThreadedDebug   put: [self setExtraTargetPropertiesBuildMultiThreadedDebug: aMaker ];
-		at: #buildNone put:[self setExtraTargetPropertiesNoBuildType:  aMaker].
-	^(d at: buildType) value
-
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> setExtraTargetPropertiesBuild: aMaker [
-	"convenience method for this buildType.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setExtraTargetProperties'
-
-	do nothing is an option"
-	self subclassResponsibility
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> setExtraTargetPropertiesBuildAssert: aMaker [ 
-	"convenience method for this buildType.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setExtraTargetProperties'
-
-	do nothing is an option"
-	self subclassResponsibility
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> setExtraTargetPropertiesBuildAssertITimerHeartbeat: aMaker [
-	"convenience method for this buildType.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setExtraTargetProperties'
-
-	do nothing is an option"
-	self subclassResponsibility
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> setExtraTargetPropertiesBuildDebug: aMaker [
-	"convenience method for this buildType.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setExtraTargetProperties'
-
-	do nothing is an option"
-	self subclassResponsibility
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> setExtraTargetPropertiesBuildDebugITimerHeartbeat: aMaker [
-	"convenience method for this buildType.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setExtraTargetProperties'
-
-	do nothing is an option"
-	self subclassResponsibility
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> setExtraTargetPropertiesBuildITimerHeartbeat: aMaker [
-	"convenience method for this buildType.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setExtraTargetProperties'
-
-	do nothing is an option"
-	self subclassResponsibility
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> setExtraTargetPropertiesBuildMultiThreaded: aMaker [
-	"convenience method for this buildType.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setExtraTargetProperties'
-
-	do nothing is an option"
-	self subclassResponsibility
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> setExtraTargetPropertiesBuildMultiThreadedAssert: aMaker [
-	"convenience method for this buildType.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setExtraTargetProperties'
-
-	do nothing is an option"
-	self subclassResponsibility
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> setExtraTargetPropertiesBuildMultiThreadedDebug: aMaker [
-	"convenience method for this buildType.
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'setExtraTargetProperties'
-
-	do nothing is an option"
-	self subclassResponsibility
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> setExtraTargetPropertiesNoBuildType: aMaker [
-	"SHOULD NOT GET HERE"
-	self shouldNotImplement.
-
-]
-
-{ #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setGlobalOptions: aMaker [
 	"Route this message send to the message appropriate for my buildType "
 	|d |
@@ -3952,7 +3826,6 @@ CPlatformConfigForSqueak >> win32PlatformName [
 CPlatformConfigForSqueak >> write: aContents toFile: aFileName [
 	"write a file to current output directory (buildDir).
 	use line end convention appropriate for config platform"
-
 	| bldDir |
 	bldDir := self buildDir.
 	bldDir isString
@@ -3961,7 +3834,7 @@ CPlatformConfigForSqueak >> write: aContents toFile: aFileName [
 	bldDir
 		forceNewFileNamed: aFileName
 		do: [:s | s
-				nextPutAll: (self fixLineEndsOf: aContents)] 
+				nextPutAll: (self fixLineEndsOf: aContents)]
 
 
 ]
