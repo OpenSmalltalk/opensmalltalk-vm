@@ -7,5 +7,5 @@ Class {
 { #category : #'initialize-release' }
 CMakeVMSoundMacOSX >> initialize [
 	super initialize.
-	driver:='vm-sound-MacOSX'
+	module :='vm-sound-MacOSX'
 ]

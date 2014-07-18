@@ -7,5 +7,5 @@ Class {
 { #category : #'initialize-release' }
 CMakeVMSoundNAS >> initialize [
 	super initialize.
-	driver:='vm-sound-NAS'
+	module :='vm-sound-NAS'
 ]

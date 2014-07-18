@@ -97,7 +97,9 @@ Linux64x86w32BitSqueakCogV3Config >> cmakeCFlagsBuild [
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitSqueakCogV3Config >> cmakeSetSourceFilesPropertiesBuild [
 	|cflags|
-	cflags:=String streamContents: [:stream | (self compilerFlags) asStringOn: stream delimiter: ' ' ].
+	cflags:=String streamContents: [:stream | (self compilerFlags) asStringOn: stream 
+delimiter: ' ' ].
+	cflags := '"' , cflags , '"'.
 	(enabledebugmessages)
 		ifTrue:[	templates 
 		addLast:((CMakeMessage new) message: (self class name) , 'cmakeSetSourceFilesPropertiesBuild')
@@ -157,21 +159,24 @@ Linux64x86w32BitSqueakCogV3Config >> compilerDefinitions [
 	^#(
 	 '-DNDEBUG'                                   
  	 '-DDEBUGVM=0'
+	 ' -DLSB_FIRST=1'
 	 '-D_GNU_SOURCE'
  	 '-D_FILE_OFFSET_BITS=64'
 	  '-DUSE_GLOBAL_STRUCT=0'
  	 '-DCOGMTVM=0')
-	
+
 ]
 
 { #category : #compiling }
 Linux64x86w32BitSqueakCogV3Config >> compilerFlags [
-	^#('-Wall'
-	    '-m32'
-	    '-msse2'
-	    '-g'
-	   '-O1')
-	
+	^#("'-Wall'"
+		'-m32'
+		'-msse2'
+		'-g3'                      "extra debugging info"
+		'-O1'
+	 	'-fno-caller-saves'
+		'-fno-tree-pre')
+
 ]
 
 { #category : #plugins }
@@ -261,4 +266,5 @@ Linux64x86w32BitSqueakCogV3Config >> linkerFlags [
             '-z'
             'now'
 	   )
+
 ]
