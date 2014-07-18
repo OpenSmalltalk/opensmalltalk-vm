@@ -24,7 +24,8 @@ Class {
 		'zipExtraLengthBits',
 		'zipExtraDistanceBits',
 		'zipBaseLength',
-		'zipBaseDistance'
+		'zipBaseDistance',
+		'writeStreamInstSize'
 	],
 	#classVars : [
 		'DeflateHashBits',
@@ -164,6 +165,22 @@ DeflatePlugin >> deflateBlock: lastIndex chainLength: chainLength goodMatch: goo
 	^false
 ]
 
+{ #category : #'primitive support' }
+DeflatePlugin >> determineSizeOfWriteStream: rcvr [
+	"Determine the inst size of the class above DeflateStream or
+	 ZipEncoder by looking for the first class whose inst size is less than 7."
+	| class |
+	class := interpreterProxy fetchClassOf: rcvr.
+	[class ~= interpreterProxy nilObject
+	 and: [(interpreterProxy instanceSizeOf: class) >= 7]] whileTrue:
+		[class := interpreterProxy superclassOf: class].
+	class = interpreterProxy nilObject ifTrue:
+		[^false].
+	writeStreamInstSize := interpreterProxy instanceSizeOf: class.
+	^true
+
+]
+
 { #category : #encoding }
 DeflatePlugin >> encodeLiteral: lit [
 	"Encode the given literal"
@@ -252,6 +269,11 @@ DeflatePlugin >> findMatch: here lastLength: lastLength lastMatch: lastMatch cha
 	].
 ]
 
+{ #category : #'initialize-release' }
+DeflatePlugin >> initialize [
+	writeStreamInstSize := 0
+]
+
 { #category : #deflating }
 DeflatePlugin >> insertStringAt: here [
 	"Insert the string at the given start position into the hash table.
@@ -276,6 +298,13 @@ DeflatePlugin >> loadDeflateStreamFrom: rcvr [
 	oop := interpreterProxy fetchPointer: 0 ofObject: rcvr.
 	(interpreterProxy isBytes: oop) ifFalse:
 		[^false].
+	writeStreamInstSize = 0 ifTrue:
+		[(self determineSizeOfWriteStream: rcvr) ifFalse:
+			[^false].
+		 "If the receiver wasn't valid then we derived writeStreamInstSize from an invalid source.  discard it."
+		 (interpreterProxy slotSizeOf: rcvr) < (writeStreamInstSize + 5) ifTrue:
+			[writeStreamInstSize := 0.
+			 ^false]].
 	zipCollection := interpreterProxy firstIndexableField: oop.
 	zipCollectionSize := interpreterProxy byteSizeOf: oop.
 
@@ -283,45 +312,45 @@ DeflatePlugin >> loadDeflateStreamFrom: rcvr [
 	zipReadLimit := interpreterProxy fetchInteger: 2 ofObject: rcvr.
 	"zipWriteLimit := interpreterProxy fetchInteger: 3 ofObject: rcvr."
 
-	oop := interpreterProxy fetchPointer: 4 ofObject: rcvr.
+	oop := interpreterProxy fetchPointer: writeStreamInstSize + 0 ofObject: rcvr.
 	((interpreterProxy isWords: oop)
 	 and: [(interpreterProxy slotSizeOf: oop) = DeflateHashTableSize]) ifFalse:
 		[^false].
 	zipHashHead := interpreterProxy firstIndexableField: oop.
-	oop := interpreterProxy fetchPointer: 5 ofObject: rcvr.
+	oop := interpreterProxy fetchPointer: writeStreamInstSize + 1 ofObject: rcvr.
 	((interpreterProxy isWords: oop)
 	 and: [(interpreterProxy slotSizeOf: oop) = DeflateWindowSize]) ifFalse:
 		[^false].
 	zipHashTail := interpreterProxy firstIndexableField: oop.
-	zipHashValue := interpreterProxy fetchInteger: 6 ofObject: rcvr.
-	zipBlockPos := interpreterProxy fetchInteger: 7 ofObject: rcvr.
-	"zipBlockStart := interpreterProxy fetchInteger: 8 ofObject: rcvr."
-	oop := interpreterProxy fetchPointer: 9 ofObject: rcvr.
+	zipHashValue := interpreterProxy fetchInteger: writeStreamInstSize + 2 ofObject: rcvr.
+	zipBlockPos := interpreterProxy fetchInteger: writeStreamInstSize + 3 ofObject: rcvr.
+	"zipBlockStart := interpreterProxy fetchInteger: writeStreamInstSize + 4 ofObject: rcvr."
+	oop := interpreterProxy fetchPointer: writeStreamInstSize + 5 ofObject: rcvr.
 	(interpreterProxy isBytes: oop) ifFalse:
 		[^false].
 	zipLiteralSize := interpreterProxy slotSizeOf: oop.
 	zipLiterals := interpreterProxy firstIndexableField: oop.
 
-	oop := interpreterProxy fetchPointer: 10 ofObject: rcvr.
+	oop := interpreterProxy fetchPointer: writeStreamInstSize + 6 ofObject: rcvr.
 	((interpreterProxy isWords: oop)
 	 and: [(interpreterProxy slotSizeOf: oop) >= zipLiteralSize]) ifFalse:
 		[^false].
 	zipDistances := interpreterProxy firstIndexableField: oop.
 
-	oop := interpreterProxy fetchPointer: 11 ofObject: rcvr.
+	oop := interpreterProxy fetchPointer: writeStreamInstSize + 7 ofObject: rcvr.
 	((interpreterProxy isWords: oop)
 	 and: [(interpreterProxy slotSizeOf: oop) = DeflateMaxLiteralCodes]) ifFalse:
 		[^false].
 	zipLiteralFreq := interpreterProxy firstIndexableField: oop.
 
-	oop := interpreterProxy fetchPointer: 12 ofObject: rcvr.
+	oop := interpreterProxy fetchPointer: writeStreamInstSize + 8 ofObject: rcvr.
 	((interpreterProxy isWords: oop)
 	 and: [(interpreterProxy slotSizeOf: oop) = DeflateMaxDistanceCodes]) ifFalse:
 		[^false].
 	zipDistanceFreq := interpreterProxy firstIndexableField: oop.
 
-	zipLiteralCount := interpreterProxy fetchInteger: 13 ofObject: rcvr.
-	zipMatchCount := interpreterProxy fetchInteger: 14 ofObject: rcvr.
+	zipLiteralCount := interpreterProxy fetchInteger: writeStreamInstSize + 9 ofObject: rcvr.
+	zipMatchCount := interpreterProxy fetchInteger: writeStreamInstSize + 10 ofObject: rcvr.
 
 	^interpreterProxy failed not
 ]
@@ -330,8 +359,15 @@ DeflatePlugin >> loadDeflateStreamFrom: rcvr [
 DeflatePlugin >> loadZipEncoderFrom: rcvr [
 	| oop |
 	<inline: false>
+	writeStreamInstSize = 0 ifTrue:
+		[(self determineSizeOfWriteStream: rcvr) ifFalse:
+			[^false].
+		 "If the receiver wasn't valid then we derived writeStreamInstSize from an invalid source.  discard it."
+		 (interpreterProxy slotSizeOf: rcvr) < (writeStreamInstSize + 3) ifTrue:
+			[writeStreamInstSize := 0.
+			 ^false]].
 	((interpreterProxy isPointers: rcvr)
-	 and: [(interpreterProxy slotSizeOf: rcvr) >= 6]) ifFalse:
+	 and: [(interpreterProxy slotSizeOf: rcvr) >= (writeStreamInstSize + 3)]) ifFalse:
 		[^false].
 	oop := interpreterProxy fetchPointer: 0 ofObject: rcvr.
 	(interpreterProxy isBytes: oop) ifFalse:
@@ -342,8 +378,8 @@ DeflatePlugin >> loadZipEncoderFrom: rcvr [
 	zipPosition := interpreterProxy fetchInteger: 1 ofObject: rcvr.
 	zipReadLimit := interpreterProxy fetchInteger: 2 ofObject: rcvr.
 	"zipWriteLimit := interpreterProxy fetchInteger: 3 ofObject: rcvr."
-	zipBitBuf := interpreterProxy fetchInteger: 4 ofObject: rcvr.
-	zipBitPos := interpreterProxy fetchInteger: 5 ofObject: rcvr.
+	zipBitBuf := interpreterProxy fetchInteger: writeStreamInstSize + 1 ofObject: rcvr.
+	zipBitPos := interpreterProxy fetchInteger: writeStreamInstSize + 2 ofObject: rcvr.
 
 	^interpreterProxy failed not
 ]
@@ -388,10 +424,10 @@ DeflatePlugin >> primitiveDeflateBlock [
 	result := self deflateBlock: lastIndex chainLength: chainLength goodMatch: goodMatch.
 	interpreterProxy failed ifFalse:[
 		"Store back modified values"
-		interpreterProxy storeInteger: 6 ofObject: rcvr withValue: zipHashValue.
-		interpreterProxy storeInteger: 7 ofObject: rcvr withValue: zipBlockPos.
-		interpreterProxy storeInteger: 13 ofObject: rcvr withValue: zipLiteralCount.
-		interpreterProxy storeInteger: 14 ofObject: rcvr withValue: zipMatchCount].
+		interpreterProxy storeInteger: writeStreamInstSize + 2 ofObject: rcvr withValue: zipHashValue.
+		interpreterProxy storeInteger: writeStreamInstSize + 3 ofObject: rcvr withValue: zipBlockPos.
+		interpreterProxy storeInteger: writeStreamInstSize + 9 ofObject: rcvr withValue: zipLiteralCount.
+		interpreterProxy storeInteger: writeStreamInstSize + 10 ofObject: rcvr withValue: zipMatchCount].
 	interpreterProxy failed ifFalse:[
 		interpreterProxy pop: 4.
 		interpreterProxy pushBool: result.
@@ -450,8 +486,9 @@ DeflatePlugin >> primitiveUpdateAdler32 [
 		s2 := (s2 + s1) \\ 65521.
 	].
 	adler32 := (s2 bitShift: 16) + s1.
-	interpreterProxy pop: 5. "args + rcvr"
-	interpreterProxy push: (interpreterProxy positive32BitIntegerFor: adler32).
+	interpreterProxy
+		pop: 5 "args + rcvr"
+		thenPush: (interpreterProxy positive32BitIntegerFor: adler32)
 ]
 
 { #category : #primitives }
@@ -519,8 +556,8 @@ DeflatePlugin >> primitiveZipSendBlock [
 	result := self sendBlock: litStream with: distStream with: litTree with: distTree.
 	interpreterProxy failed ifFalse:[
 		interpreterProxy storeInteger: 1 ofObject: rcvr withValue: zipPosition.
-		interpreterProxy storeInteger: 4 ofObject: rcvr withValue: zipBitBuf.
-		interpreterProxy storeInteger: 5 ofObject: rcvr withValue: zipBitPos.
+		interpreterProxy storeInteger: readStreamInstSize + 1 ofObject: rcvr withValue: zipBitBuf.
+		interpreterProxy storeInteger: readStreamInstSize + 2 ofObject: rcvr withValue: zipBitPos.
 	].
 	interpreterProxy failed ifFalse:[
 		interpreterProxy pop: 5. "rcvr + args"
