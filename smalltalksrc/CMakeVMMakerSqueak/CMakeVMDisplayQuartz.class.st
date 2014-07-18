@@ -7,5 +7,5 @@ Class {
 { #category : #'initialize-release' }
 CMakeVMDisplayQuartz >> initialize [
 	super initialize.
-	driver:='vm-display-Quartz'
+	module :='vm-display-Quartz'
 ]

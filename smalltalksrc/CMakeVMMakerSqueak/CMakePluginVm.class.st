@@ -14,12 +14,12 @@ CogFamilyUnixConfig addDriver: name sources: aSources generator: cmakeGen extern
 		
 "
 Class {
-	#name : #CMakeVMDriver,
+	#name : #CMakePluginVm,
 	#superclass : #CMakeTemplate,
 	#instVars : [
 		'config',
 		'definitions',
-		'driver',
+		'module',
 		'sources',
 		'includedirectories'
 	],
@@ -27,16 +27,16 @@ Class {
 }
 
 { #category : #accessing }
-CMakeVMDriver >> config [
+CMakePluginVm >> config [
 
 	^ config
 ]
 
 { #category : #accessing }
-CMakeVMDriver >> config: anObject definitions: dOrderedCollection driver: dString sources: sOrderedCollection  includedirectories: iOrderedCollection [
+CMakePluginVm >> config: anObject definitions: dOrderedCollection module: mString sources: sOrderedCollection  includedirectories: iOrderedCollection [
 	config:= anObject.
 	definitions:= dOrderedCollection.
-	driver:=dString.
+	module := mString.
 	sources :=sOrderedCollection.
 	includedirectories := iOrderedCollection.
 	^self template
@@ -45,50 +45,53 @@ CMakeVMDriver >> config: anObject definitions: dOrderedCollection driver: dStrin
 ]
 
 { #category : #accessing }
-CMakeVMDriver >> definitions [
+CMakePluginVm >> definitions [
 	^ definitions
 ]
 
 { #category : #accessing }
-CMakeVMDriver >> driver [
-
-	^ driver
-]
-
-{ #category : #accessing }
-CMakeVMDriver >> includedirectories [
+CMakePluginVm >> includedirectories [
 
 	^ includedirectories
 ]
 
 { #category : #accessing }
-CMakeVMDriver >> sources [
+CMakePluginVm >> module [
+
+	^ module
+]
+
+{ #category : #accessing }
+CMakePluginVm >> sources [
 
 	^ sources
 ]
 
 { #category : #accessing }
-CMakeVMDriver >> template [
-	|temp sourcesString|
+CMakePluginVm >> template [
+	|temp sourcesString cflags|
+	cflags:= String streamContents: [:stream | config compilerFlags asStringOn: stream delimiter: ' ' ].
+	cflags := '"' , cflags , '"'.
 	sourcesString := String streamContents: [:stream | sources asStringOn: stream delimiter: ' ' ].
 	temp := OrderedCollection new.
 	temp
 		addLast: ((CMakeHeader new)  configurationName:  config class name );
-		addLast: ((CMakeProject new)variable:  config executableName  );
-		addLast: ((CMakeInclude new) file: ((config buildDirName), FileDirectory slash, 'directories.cmake')); "??"
+"		addLast: ((CMakeProject new)variable:  module  ); Ian does not have this. Igor does."
+		addLast: ((CMakeMinimumRequired new) version: '3.0.0');
+		addLast: ((CMakeInclude new) file: ((config buildDir fullName), FileDirectory slash, 'directories.cmake')) ; 
 		addLast:((CMakeAddDefinitions new) definitions: config compilerFlags asOrderedCollection);
 		addLast:((CMakeAddDefinitions new) definitions: definitions); 
 		addLast:((CMakeSet new) variable:'sources' quotedValue: sourcesString);
 		addLast:((CMakeAddLibrary new) 
-			library: driver
+			library: module
 			type: 'SHARED' 
 			sources:  sources);
 		addLast: ((CMakeIncludeDirectories new) dirs: includedirectories);
 		addLast:((CMakeSet new) variable: 'LIBRARY_OUTPUT_PATH' quotedValue: (config outputDir fullName));
 		addLast:((CMakeListAppend new) list: 'LINKLIBS' elements: (config externalLibs));
-		addLast:((CMakeTargetLinkLibraries new) target: driver  items: (OrderedCollection with: '${LINKLIBS}'));
+		addLast:((CMakeTargetLinkLibraries new) target: module  items: (OrderedCollection with: '${LINKLIBS}'));
 		addLast:((CMakeSetTargetProperties new) 
-			target: driver 
-			propertiesandvalues: (OrderedCollection with: 'PREFIX "" '  with: 'SUFFIX "" ' with: 'LINK_FLAGS ' , (config compilerFlags))).
+			target: module 
+			propertiesandvalues: (OrderedCollection with: 'PREFIX "" '  with: 'SUFFIX "" ' with: 'LINK_FLAGS ' , cflags)) .
 	^temp
 ]

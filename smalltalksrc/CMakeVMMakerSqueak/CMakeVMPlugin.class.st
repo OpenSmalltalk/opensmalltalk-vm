@@ -23,7 +23,7 @@ Class {
 	#name : #CMakeVMPlugin,
 	#superclass : #Object,
 	#instVars : [
-		'driver',
+		'module',
 		'sources',
 		'compilerdefinitions',
 		'compilerflags',
@@ -56,29 +56,6 @@ CMakeVMPlugin >> compilerflags [
 CMakeVMPlugin >> compilerflags: anObject [
 
 	compilerflags := anObject
-]
-
-{ #category : #accessing }
-CMakeVMPlugin >> driver [
-
-	^ driver
-]
-
-{ #category : #accessing }
-CMakeVMPlugin >> driver: anObject [
-
-	driver := anObject
-]
-
-{ #category : #accessing }
-CMakeVMPlugin >> driver:dString sources:sCollection compilerdefinitions: cdCollection compilerflags: cfCollection externallibraries:elCollection linkerflags: lfCollection includedirectories: idCollection [
-	driver:= dString.
-	sources:= sCollection.
-	compilerdefinitions:= cdCollection.
-	compilerflags:= cfCollection.
-	externallibraries := elCollection.
-	linkerflags:= lfCollection.
-	includedirectories := idCollection.
 ]
 
 { #category : #accessing }
@@ -126,6 +103,28 @@ CMakeVMPlugin >> linkerflags [
 CMakeVMPlugin >> linkerflags: anObject [
 
 	linkerflags := anObject
+]
+
+{ #category : #accessing }
+CMakeVMPlugin >> module [
+	^module
+]
+
+{ #category : #accessing }
+CMakeVMPlugin >> module: anObject [
+
+	module := anObject
+]
+
+{ #category : #accessing }
+CMakeVMPlugin >> module:mString sources:sCollection compilerdefinitions: cdCollection compilerflags: cfCollection externallibraries:elCollection linkerflags: lfCollection includedirectories: idCollection [
+	module:= mString.
+	sources:= sCollection.
+	compilerdefinitions:= cdCollection.
+	compilerflags:= cfCollection.
+	externallibraries := elCollection.
+	linkerflags:= lfCollection.
+	includedirectories := idCollection.
 ]
 
 { #category : #accessing }

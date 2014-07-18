@@ -230,37 +230,3 @@ Linux32x86Config >> preferredIncludesBuild [
 	
 
 ]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> setExtraTargetPropertiesBuild: aMaker [
-	self flag:'tty'. "I am nervous about this method up here in this class, but pharo has it in CogUnixConfig, so using as is for now"
-
-	aMaker setTargetProperties: 'LINK_FLAGS "-m32"'.
-		
-	aMaker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
-		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-rtd -mno-accumulate-outgoing-args")'.
-		
-	
-	aMaker 
-		cmd: 'set_source_files_properties'
-		params: ' ${targetPlatform}/vm/sqUnixHeartbeat.c PROPERTIES 
-		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -mno-rtd -mno-accumulate-outgoing-args"'.
-	aMaker
-		cmd:'set_target_properties'
-		params: '${_name} PROPERTIES LINK_FLAGS "-undefined gl"'.
-
-
-	aMaker addExternalLibraries: 
-		#(
-			'uuid'  ""
-			'ssl'  ""
-			'crypto' ""
-			'm'  
-			'dl' 
-			'pthread' 
-		).
-					
-
-	aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
-	self addVMPlugins: aMaker.
-]

@@ -144,10 +144,6 @@ CMakeVMGeneratorForSqueak >> generateByTemplate [
 		cmakeAddExecutableNameOptionSource: self;
 	      setExecutableOutputPath;
 		addVMPlugins: self.
-	
-"
-	self addVMDrivers: aMaker.
-"
 	config templates do: [:each | self puts: each content].
 
 	extPlugins := self generatePluginConfigs: config internalPlugins internal: true.
