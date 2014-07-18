@@ -7,5 +7,5 @@ Class {
 { #category : #'initialize-release' }
 CMakeVMDisplayX11 >> initialize [
 	super initialize.
-	driver:='vm-display-X11'
+	module :='vm-display-X11'
 ]

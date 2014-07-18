@@ -7,5 +7,5 @@ Class {
 { #category : #'initialize-release' }
 CMakeVMSoundOSS >> initialize [
 	super initialize.
-	driver:='vm-sound-OSS'
+	module :='vm-sound-OSS'
 ]

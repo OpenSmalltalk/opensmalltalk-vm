@@ -7,5 +7,5 @@ Class {
 { #category : #'initialize-release' }
 CMakeVMSoundNull >> initialize [
 	super initialize.
-	driver:='vm-sound-null'
+	module :='vm-sound-null'
 ]

@@ -7,5 +7,5 @@ Class {
 { #category : #'initialize-release' }
 CMakeVMSoundSun >> initialize [
 	super initialize.
-	driver:='vm-sound-Sun'
+	module :='vm-sound-Sun'
 ]

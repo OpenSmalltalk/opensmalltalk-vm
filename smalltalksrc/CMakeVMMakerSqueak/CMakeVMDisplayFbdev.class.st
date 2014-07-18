@@ -7,5 +7,5 @@ Class {
 { #category : #'initialize-release' }
 CMakeVMDisplayFbdev >> initialize [
 	super initialize.
-	driver:='vm-display-fbdev'
+	module :='vm-display-fbdev'
 ]

@@ -7,5 +7,5 @@ Class {
 { #category : #'initialize-release' }
 CMakeVMSoundCustom >> initialize [
 	super initialize.
-	driver:='vm-sound-custom'
+	module :='vm-sound-custom'
 ]
