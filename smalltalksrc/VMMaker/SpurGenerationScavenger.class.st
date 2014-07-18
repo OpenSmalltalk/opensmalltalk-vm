@@ -818,7 +818,8 @@ SpurGenerationScavenger >> processWeaklings [
 			 weakObj := manager followForwarded: weakCorpse.
 			 "weakObj may have been tenured..."
 			 ((self processWeakSurvivor: weakObj)
-			  and: [manager isOldObject: weakObj]) ifTrue:
+			  and: [(manager isOldObject: weakObj)
+			  and: [(manager isRemembered: weakObj) not]]) ifTrue:
 				[self remember: weakObj].
 			 weakCorpse := self nextCorpseOrNil: weakCorpse].
 		weakList := nil]
@@ -833,6 +834,7 @@ SpurGenerationScavenger >> remember: objOop [
 	self assert: (manager isNonImmediate: objOop).
 	self assert: (manager isYoungObject: objOop) not.
 	self assert: (manager isRemembered: objOop) not.
+	self assert: (manager isInRememberedSet: objOop) not.
 	manager setIsRememberedOf: objOop to: true.
 	rememberedSetSize < RememberedSetLimit
 		ifTrue:
