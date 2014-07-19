@@ -1319,7 +1319,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		47	desired machine code zone size (Cog only; otherwise nil)
 		48	various header flags.  See getCogVMFlags.
 		49	max size the image promises to grow the external semaphore table to (0 sets to default, which is 256 as of writing)
-		50-53 nil; reserved for VM parameters that persist in the image (such as eden above)
+		50-52 nil; reserved for VM parameters that persist in the image (such as eden above)
+		53	number of segments (Spur only; otherwise nil)
 		54	total size of free old space (Spur only, otherwise nil)
 		55	ratio of growth and image size at or above which a GC will be performed post scavenge
 		56	number of process switches since startup (read-only)
@@ -1397,9 +1398,10 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 48	ofObject: result withValue: (objectMemory integerObjectOf: self ioGetMaxExtSemTableSize).
 		objectMemory hasSpurMemoryManagerAPI
 			ifTrue:
-				[49 to: 52 do:
+				[49 to: 51 do:
 					[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject].
 				 objectMemory
+					storePointerUnchecked: 52 ofObject: result withValue: (objectMemory integerObjectOf: objectMemory numSegments);
 					storePointerUnchecked: 53 ofObject: result withValue: (objectMemory integerObjectOf: objectMemory freeSize);
 					storePointer: 54	ofObject: result withValue: (self floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio)]
 			ifFalse:
@@ -1483,6 +1485,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 48	ifTrue: [result := self getCogVMFlags].
 		arg = 49	ifTrue: [result := objectMemory integerObjectOf: self ioGetMaxExtSemTableSize].
 		"(arg between: 50 and: 55) ifTrue: [result := objectMemory nilObject]."
+		(arg = 53
+		 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
+			[result := objectMemory integerObjectOf: objectMemory numSegments].
 		(arg = 54
 		 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
 			[result := objectMemory integerObjectOf: objectMemory freeSize].

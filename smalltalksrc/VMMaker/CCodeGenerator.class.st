@@ -1665,6 +1665,15 @@ CCodeGenerator >> generateDeadCode: aBool [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateDeny: denyMsgNode on: aStream indent: level [
+	"Generate the C code for a deny: expr onto the given stream."
+
+	aStream nextPutAll: 'assert(!('.
+	self emitCExpression: denyMsgNode args first on: aStream.
+	aStream nextPutAll: '))'
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateDivide: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
@@ -3008,6 +3017,8 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#value:value:						#generateValue:on:indent:
 	#value:value:value:					#generateValue:on:indent:
 
+	#deny:								#generateDeny:on:indent:
+
 	#shouldNotImplement				#generateSmalltalkMetaError:on:indent:
 	#shouldBeImplemented			#generateSmalltalkMetaError:on:indent:
 	#subclassResponsibility			#generateSmalltalkMetaError:on:indent:
@@ -3129,7 +3140,7 @@ CCodeGenerator >> is64BitIntegralVariable: node typeInto: aBlock [
 
 { #category : #inlining }
 CCodeGenerator >> isAssertSelector: selector [
-	^#(assert: asserta: assert:l: asserta:l:) includes: selector
+	^#(assert: asserta: assert:l: asserta:l: deny:) includes: selector
 ]
 
 { #category : #utilities }
