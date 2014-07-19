@@ -1319,7 +1319,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		47	desired machine code zone size (Cog only; otherwise nil)
 		48	various header flags.  See getCogVMFlags.
 		49	max size the image promises to grow the external semaphore table to (0 sets to default, which is 256 as of writing)
-		50-52 nil; reserved for VM parameters that persist in the image (such as eden above)
+		50-51 nil; reserved for VM parameters that persist in the image (such as eden above)
+		52	root table capacity
 		53	number of segments (Spur only; otherwise nil)
 		54	total size of free old space (Spur only, otherwise nil)
 		55	ratio of growth and image size at or above which a GC will be performed post scavenge
@@ -1343,11 +1344,11 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 	paramsArraySize := 71.
 	argumentCount = 0 ifTrue:
 		[result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: paramsArraySize.
-		objectMemory storePointerUnchecked: 0	ofObject: result withValue: (self positive64BitIntegerFor: objectMemory oldSpaceSize).
+		objectMemory storePointer:			 0	ofObject: result withValue: (self positive64BitIntegerFor: objectMemory oldSpaceSize).
 		objectMemory storePointerUnchecked: 1	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory newSpaceSize).
-		objectMemory storePointerUnchecked: 2	ofObject: result withValue: (self positive64BitIntegerFor: objectMemory totalMemorySize).
-		objectMemory storePointerUnchecked: 3	ofObject: result withValue: objectMemory nilObject "was allocationCount".
-		objectMemory storePointerUnchecked: 4	ofObject: result withValue: objectMemory nilObject "allocationsBetweenGCs".
+		objectMemory storePointer:			 2	ofObject: result withValue: (self positive64BitIntegerFor: objectMemory totalMemorySize).
+		"objectMemory storePointerUnchecked: 3	ofObject: result withValue: objectMemory nilObject was allocationCount".
+		"objectMemory storePointerUnchecked: 4	ofObject: result withValue: objectMemory nilObject allocationsBetweenGCs".
 		objectMemory storePointerUnchecked: 5	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory tenuringThreshold).
 		objectMemory storePointerUnchecked: 6	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statFullGCs).
 		objectMemory storePointerUnchecked: 7	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statFullGCUsecs + 500 // 1000).
@@ -1380,7 +1381,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 30	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statGrowMemory).
 		objectMemory storePointerUnchecked: 31	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statShrinkMemory).
 		objectMemory storePointerUnchecked: 32	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statRootTableCount).
-		objectMemory storePointerUnchecked: 33	ofObject: result withValue: objectMemory nilObject "was statAllocationCount".
+		"objectMemory storePointerUnchecked: 33	ofObject: result withValue: objectMemory nilObject was statAllocationCount".
 		objectMemory storePointerUnchecked: 34	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statSurvivorCount).
 		objectMemory storePointerUnchecked: 35	ofObject: result withValue: (objectMemory integerObjectOf: (self microsecondsToMilliseconds: objectMemory statGCEndUsecs)).
 		objectMemory storePointerUnchecked: 36	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statSpecialMarkCount).
@@ -1396,30 +1397,25 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 46	ofObject: result withValue: self getDesiredCogCodeSize.
 		objectMemory storePointerUnchecked: 47	ofObject: result withValue: self getCogVMFlags.
 		objectMemory storePointerUnchecked: 48	ofObject: result withValue: (objectMemory integerObjectOf: self ioGetMaxExtSemTableSize).
-		objectMemory hasSpurMemoryManagerAPI
-			ifTrue:
-				[49 to: 51 do:
-					[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject].
-				 objectMemory
-					storePointerUnchecked: 52 ofObject: result withValue: (objectMemory integerObjectOf: objectMemory numSegments);
-					storePointerUnchecked: 53 ofObject: result withValue: (objectMemory integerObjectOf: objectMemory freeSize);
-					storePointer: 54	ofObject: result withValue: (self floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio)]
-			ifFalse:
-				[49 to: 54 do:
-					[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject]].
-		objectMemory storePointerUnchecked: 55	ofObject: result withValue: (self positive64BitIntegerFor: statProcessSwitch).
-		objectMemory storePointerUnchecked: 56	ofObject: result withValue: (self positive64BitIntegerFor: statIOProcessEvents).
-		objectMemory storePointerUnchecked: 57	ofObject: result withValue: (self positive64BitIntegerFor: statForceInterruptCheck).
-		objectMemory storePointerUnchecked: 58	ofObject: result withValue: (self positive64BitIntegerFor: statCheckForEvents).
-		objectMemory storePointerUnchecked: 59	ofObject: result withValue: (self positive64BitIntegerFor: statStackOverflow).
-		objectMemory storePointerUnchecked: 60	ofObject: result withValue: (self positive64BitIntegerFor: statStackPageDivorce).
+		"50 & 51 (49 & 50) reserved for parameters that persist in the image"
+		objectMemory storePointerUnchecked: 51	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory rootTableCapacity).
+		objectMemory hasSpurMemoryManagerAPI ifTrue:
+			[objectMemory
+				storePointerUnchecked: 52 ofObject: result withValue: (objectMemory integerObjectOf: objectMemory numSegments);
+				storePointerUnchecked: 53 ofObject: result withValue: (objectMemory integerObjectOf: objectMemory freeSize);
+				storePointer: 54 ofObject: result withValue: (self floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio)].
+		objectMemory storePointer: 55	ofObject: result withValue: (self positive64BitIntegerFor: statProcessSwitch).
+		objectMemory storePointer: 56	ofObject: result withValue: (self positive64BitIntegerFor: statIOProcessEvents).
+		objectMemory storePointer: 57	ofObject: result withValue: (self positive64BitIntegerFor: statForceInterruptCheck).
+		objectMemory storePointer: 58	ofObject: result withValue: (self positive64BitIntegerFor: statCheckForEvents).
+		objectMemory storePointer: 59	ofObject: result withValue: (self positive64BitIntegerFor: statStackOverflow).
+		objectMemory storePointer: 60	ofObject: result withValue: (self positive64BitIntegerFor: statStackPageDivorce).
 		objectMemory storePointerUnchecked: 61	ofObject: result withValue: self getCodeCompactionCount.
 		objectMemory storePointerUnchecked: 62	ofObject: result withValue: self getCodeCompactionMSecs.
 		objectMemory storePointerUnchecked: 63	ofObject: result withValue: self getCogMethodCount.
 		objectMemory storePointerUnchecked: 64	ofObject: result withValue: (objectMemory booleanObjectOf: MULTIPLEBYTECODESETS).
 		objectMemory storePointerUnchecked: 65	ofObject: result withValue: (objectMemory integerObjectOf: self stackPageByteSize).
-		66 to: 68 do: "reserved for more Cog-related info"
-			[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject].
+		"67 to 69 (66 to: 68) reserved for more Cog-related info"
 		objectMemory
 			storePointerUnchecked: 69
 			ofObject: result
@@ -1484,7 +1480,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 47	ifTrue: [result := self getDesiredCogCodeSize].
 		arg = 48	ifTrue: [result := self getCogVMFlags].
 		arg = 49	ifTrue: [result := objectMemory integerObjectOf: self ioGetMaxExtSemTableSize].
-		"(arg between: 50 and: 55) ifTrue: [result := objectMemory nilObject]."
+		arg = 52	ifTrue: [result := objectMemory integerObjectOf: objectMemory rootTableCapacity].
 		(arg = 53
 		 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
 			[result := objectMemory integerObjectOf: objectMemory numSegments].

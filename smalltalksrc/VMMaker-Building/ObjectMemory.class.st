@@ -4512,6 +4512,11 @@ ObjectMemory >> rootTable [
 	^rootTable
 ]
 
+{ #category : #'interpreter access' }
+ObjectMemory >> rootTableCapacity [
+	^RootTableSize
+]
+
 { #category : #accessing }
 ObjectMemory >> rootTableCount [
 	^rootTableCount
