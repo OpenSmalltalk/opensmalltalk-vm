@@ -1057,7 +1057,7 @@ SqueakUnixConfig >> setGlobalOptionsAfterDetermineSystemBuild: aMaker [
 	templates 
 	addLast: ((CMakeMessage new) message: (self class name), '  setGlobalOptionsAfterDetermineSystemBuild: aMaker')
 	].
-	templates addLast:((CMakeSet new) variable:'CMAKE_C_COMPILER' value: 'gcc')
+	"templates addLast:((CMakeSet new) variable:'CMAKE_C_COMPILER' value: 'gcc')"
 
 	
 ]
