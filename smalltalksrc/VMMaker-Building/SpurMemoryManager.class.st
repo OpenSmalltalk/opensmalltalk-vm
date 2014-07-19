@@ -515,6 +515,7 @@ Class {
 		'totalFreeOldSpace',
 		'firstFreeChunk',
 		'lastFreeChunk',
+		'numCompactionPasses',
 		'statCoalesces',
 		'statCompactPassCount',
 		'statFGCDeltaUsecs',
@@ -537,6 +538,8 @@ Class {
 	],
 	#classVars : [
 		'BitsPerByte',
+		'CompactionPassesForGC',
+		'CompactionPassesForSnapshot',
 		'EphemeronQueueRootIndex',
 		'ExtraRootsSize',
 		'FirstValidClassIndex',
@@ -551,6 +554,7 @@ Class {
 		'ObjStackPageSlots',
 		'ObjStackTopx',
 		'RemapBufferSize',
+		'RememberedSetRootIndex',
 		'WeaklingStackRootIndex'
 	],
 	#pools : [
@@ -690,6 +694,11 @@ SpurMemoryManager class >> initialize [
 	"SpurMemoryManager initialize"
 	BitsPerByte := 8.
 
+	"Pig compact can be repeated to compact better.  Experience shows that 3 times
+	 compacts very well, desirable for snapshots.  But this is overkill for normal GCs."
+	CompactionPassesForGC := 2.
+	CompactionPassesForSnapshot := 3.
+
 	"An obj stack is a stack of objects stored in a hidden root slot, such as
 	 the markStack or the ephemeronQueue.  It is a linked list of segments,
 	 with the hot end at the head of the list.  It is a word object.  The stack
@@ -705,10 +714,13 @@ SpurMemoryManager class >> initialize [
 	ObjStackNextx := 3.
 	ObjStackFixedSlots := 4.
 	ObjStackLimit := ObjStackPageSlots - ObjStackFixedSlots.
-	"There are currently three obj stacks, the mark stack, the weaklings and the ephemeron queue."
+	"The hiddenHootsObject contains the classTable pages and up to 8 additional objects.
+	 Currently we use four; the three objStacks, the mark stack, the weaklings and the
+	 ephemeron queue, and the rememberedSet."
 	MarkStackRootIndex := self basicNew classTableRootSlots.
 	WeaklingStackRootIndex := MarkStackRootIndex + 1.
 	EphemeronQueueRootIndex := MarkStackRootIndex + 2.
+	RememberedSetRootIndex := MarkStackRootIndex + 3.
 
 	MarkObjectsForEnumerationPrimitives := false.
 
@@ -2087,8 +2099,6 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes suchThat: a
 { #category : #'sista support' }
 SpurMemoryManager >> allocatePinnedSlots: nSlots [
 	<api>
-	<option: #NewspeakVM>
-	<option: #SistaStackToRegisterMappingCogit>
 	| obj |
 	obj := self allocateSlotsForPinningInOldSpace: nSlots
 				bytes: (self objectBytesForSlots: nSlots)
@@ -3389,7 +3399,7 @@ SpurMemoryManager >> compact [
 	<inline: #never> "for profiling"
 	statCompactPassCount := statCompactPassCount + 1.
 	self assert: (firstFreeChunk = 0 or: [self isFreeObject: firstFreeChunk]).
-	1 to: 3 do:
+	1 to: numCompactionPasses do:
 		[:i|
 		 self pigCompact.
 		 self eliminateAndFreeForwardersForPigCompact].
@@ -4869,7 +4879,10 @@ SpurMemoryManager >> fullGCLock [
 { #category : #snapshot }
 SpurMemoryManager >> garbageCollectForSnapshot [
 	self flushNewSpace. "There is no place to put newSpace in the snapshot file."
+	self flag: 'If we wanted to shrink the rememberedSet prior to snapshot this is the place to do it.'.
+	numCompactionPasses := CompactionPassesForSnapshot.
 	self fullGC.
+	numCompactionPasses := CompactionPassesForGC.
 	segmentManager prepareForSnapshot.
 	self checkFreeSpace
 ]
@@ -5405,9 +5418,12 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	segmentManager collapseSegmentsPostSwizzle.
 	self computeFreeSpacePostSwizzle.
 	self bootstrapping ifFalse:
-		[self initializeNewSpaceVariables].
+		[self initializeNewSpaceVariables.
+		 scavenger initializeRememberedSet].
 	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart"
 	segmentManager checkSegments.
+
+	numCompactionPasses := CompactionPassesForGC.
 
 	"These defaults should depend on machine size; e.g. too small on a powerful laptop, too big on a Pi."
 	growHeadroom := 16*1024*1024.		"headroom when growing"
@@ -6872,6 +6888,7 @@ SpurMemoryManager >> markAndTraceHiddenRoots [
 	self markAndTraceObjStack: weaklingStack andContents: false.
 	self markAndTraceObjStack: ephemeronQueue andContents: true.
 
+	self setIsMarkedOf: self rememberedSetObj to: true.
 	self setIsMarkedOf: self freeListsObj to: true.
 
 	(self isWeakNonImm: classTableFirstPage) ifTrue:
@@ -7463,6 +7480,12 @@ SpurMemoryManager >> numPointerSlotsOf: objOop [
 	"CompiledMethod: contains both pointers and bytes"
 	numLiterals := coInterpreter literalCountOf: objOop.
 	^numLiterals + LiteralStart
+]
+
+{ #category : #segments }
+SpurMemoryManager >> numSegments [
+	<doNotGenerate>
+	^segmentManager numSegments
 ]
 
 { #category : #'header format' }
@@ -8475,6 +8498,17 @@ SpurMemoryManager >> rememberedBitShift [
 	<api>
 	"bit 0 of 3-bit field above format (little endian)"
 	^29
+]
+
+{ #category : #scavenger }
+SpurMemoryManager >> rememberedSetObj [
+	^self fetchPointer: RememberedSetRootIndex ofObject: hiddenRootsObj
+]
+
+{ #category : #scavenger }
+SpurMemoryManager >> rememberedSetObj: anObj [
+	self assert: (self isOldObject: anObj).
+	self storePointerUnchecked: RememberedSetRootIndex ofObject: hiddenRootsObj withValue: anObj
 ]
 
 { #category : #'plugin support' }
