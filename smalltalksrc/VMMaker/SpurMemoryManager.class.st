@@ -8599,6 +8599,11 @@ SpurMemoryManager >> reverseSmallListHeads [
 	^total
 ]
 
+{ #category : #scavenger }
+SpurMemoryManager >> rootTableCapacity [
+	^self numSlotsOf: self rememberedSetObj
+]
+
 { #category : #accessing }
 SpurMemoryManager >> rootTableCount [
 	^scavenger rememberedSetSize
