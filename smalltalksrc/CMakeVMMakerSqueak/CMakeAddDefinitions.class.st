@@ -47,7 +47,7 @@ CMakeAddDefinitions >> definitions [
 { #category : #accessing }
 CMakeAddDefinitions >> definitions: anObject [
 	definitions := anObject.
-	self content:'  add_definitions(',self definitions,')'
+	self content:'  add_definitions(',self definitions,')'.
 
 ]
 

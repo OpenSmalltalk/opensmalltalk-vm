@@ -128,7 +128,6 @@ CMakeVMGeneratorForSqueak >> generateByTemplate [
 		cmakeIncludeModules;          
 		cmakeCFlags;          
 		cmakeAddDefinitions;
-		cmakeSharedLinkerFlags;
 		setGlobalOptionsAfterDetermineSystem: self;    
 		setDirectories:  self;
 		cmakeIncludeDirectories:  self;
@@ -145,13 +144,10 @@ CMakeVMGeneratorForSqueak >> generateByTemplate [
 	      setExecutableOutputPath;
 		addVMPlugins: self.
 	config templates do: [:each | self puts: each content].
-
 	extPlugins := self generatePluginConfigs: config internalPlugins internal: true.
 	 intPlugins := self generatePluginConfigs: config externalPlugins internal: false.
 	self processThirdpartyLibraries.
 	self processPlugins:  intPlugins, extPlugins.
-
-"	config setExtraTargetProperties: self."
 	self cmd: 'target_link_libraries'
 		params: self moduleName , ' ${LINKLIBS}'.
 	config postBuildActions: self..

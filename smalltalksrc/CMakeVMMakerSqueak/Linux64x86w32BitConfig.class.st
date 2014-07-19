@@ -182,7 +182,7 @@ Linux64x86w32BitConfig >> customizeCMakeVMDisplayX11 [
 	|module|
 	module := vmplugins detect: [:vmd | #CMakeVMDisplayX11 = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
 	module 
-		sources: #( '${targetPlatform}/vm-display-X11/sqUnixX11'	'${targetPlatform}/vm-display-X11/sqUnixMozilla' );
+		sources: #( '${targetPlatform}/vm-display-X11/sqUnixX11' '${targetPlatform}/vm-display-X11/sqUnixMozilla' );
 		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
 		compilerflags: (self compilerFlags);
 		externallibraries: (self externalLibraries);
