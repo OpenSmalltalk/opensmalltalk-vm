@@ -52664,7 +52664,7 @@ primitiveContextAt(void)
 
 	index = longAt(GIV(stackPointer));
 	if (!((index & 1))) {
-		GIV(primFailCode) = PrimErrBadArgument;
+		(GIV(primFailCode) = PrimErrBadArgument);
 		return;
 	}
 	index = (index >> 1);
@@ -52829,7 +52829,7 @@ primitiveContextAt(void)
 		stSize = (sp1 >> 1);
 	l2:	/* end fetchStackPointerOf: */;
 		if (!(((index >= 1) && (index <= stSize)))) {
-			GIV(primFailCode) = PrimErrBadIndex;
+			(GIV(primFailCode) = PrimErrBadIndex);
 			return;
 		}
 		/* begin subscript:with:format: */
@@ -52854,7 +52854,7 @@ primitiveContextAt(void)
 	assert((senderOop & 1));
 	spouseFP = pointerForOop(senderOop - 1);
 	if (!(((index >= 1) && (index <= (stackPointerIndexForFrame(spouseFP)))))) {
-		GIV(primFailCode) = PrimErrBadIndex;
+		(GIV(primFailCode) = PrimErrBadIndex);
 		return;
 	}
 	value = ((((usqInt)(longAt(spouseFP + FoxMethod)))) < (startOfMemory())
