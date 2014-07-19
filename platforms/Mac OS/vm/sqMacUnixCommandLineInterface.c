@@ -206,6 +206,10 @@ static int parseArgument(int argc, char **argv)
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;
 		return 1; }
+      else if (!strcmp(argv[0], "-warnpid")) { 
+		extern sqInt warnpid;
+		warnpid = getpid();
+		return 1; }
       else if (!strcmp(argv[0], "-pollpip")) { 
 		extern sqInt pollpip;
 		pollpip = atoi(argv[1]);	 
@@ -305,6 +309,7 @@ static void printUsage(void)
 # else
   printf("  -sendtrace            enable send tracing\n");
 # endif
+  printf("  -warnpid              print pid in warnings\n");
 #endif
 #if COGVM
   printf("  -codesize <size>[mk]  set machine code memory to bytes\n");

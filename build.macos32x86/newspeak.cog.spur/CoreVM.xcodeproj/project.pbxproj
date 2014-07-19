@@ -1455,6 +1455,8 @@
 				ARCHS = i386;
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
+				GCC_DYNAMIC_NO_PIC = YES;
+				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 1;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -1482,7 +1484,7 @@
 				ICC_PREDEFINE_GCC = gcc;
 				INFOPLIST_FILE = CoreVM.plist;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "-Wl,-no_pie,-sectalign,__TEXT,__text,2000";
 				OTHER_REZFLAGS = "";
 				PRODUCT_NAME = "Newspeak Virtual Machine";
 				SECTORDER_FLAGS = "";
@@ -1497,6 +1499,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = i386;
+				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUGVM=0",
 					"USE_GLOBAL_STRUCT=0",
@@ -1513,6 +1516,7 @@
 				ICC_FP_MODEL = src;
 				ICC_OPTLEVEL = size;
 				ICC_OPT_INLINE = dir;
+				OTHER_LDFLAGS = "-Wl,-no_pie,-sectalign,__TEXT,__text,2000";
 				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 			};
 			name = Assert;
@@ -1561,7 +1565,7 @@
 				ICC_PREDEFINE_GCC = gcc;
 				INFOPLIST_FILE = CoreVM.plist;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "-Wl,-no_pie,-sectalign,__TEXT,__text,2000";
 				OTHER_REZFLAGS = "";
 				PER_ARCH_CFLAGS_i386 = "";
 				PRODUCT_NAME = "Newspeak Virtual Machine";
@@ -1576,6 +1580,7 @@
 			buildSettings = {
 				ARCHS = i386;
 				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_AUTO_VECTORIZATION = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_ENABLE_SSE3_EXTENSIONS = YES;
@@ -1613,7 +1618,7 @@
 				ICC_PREDEFINE_GCC = gcc;
 				INFOPLIST_FILE = CoreVM.plist;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "-Wl,-sectalign,__TEXT,__text,2000";
 				OTHER_REZFLAGS = "";
 				PER_ARCH_CFLAGS_i386 = "-O3  -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium4  -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS";
 				PRODUCT_NAME = "Newspeak Virtual Machine";
@@ -1630,6 +1635,7 @@
 				ARCHS = i386;
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
+				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 2;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -1658,7 +1664,7 @@
 				ICC_PREDEFINE_GCC = gcc;
 				INFOPLIST_FILE = CoreVM.plist;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "-Wl,-sectalign,__TEXT,__text,2000";
 				OTHER_REZFLAGS = "";
 				PRODUCT_NAME = "Newspeak Virtual Machine";
 				SECTORDER_FLAGS = "";
@@ -1673,6 +1679,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = i386;
+				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUGVM=1",
 					"USE_GLOBAL_STRUCT=0",
@@ -1688,6 +1695,7 @@
 					$SRCROOT,
 				);
 				ICC_FP_MODEL = src;
+				OTHER_LDFLAGS = "-Wl,-no_pie,-sectalign,__TEXT,__text,2000";
 				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 			};
 			name = Development;
@@ -1696,6 +1704,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = i386;
+				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
 					"DEBUGVM=0",
@@ -1717,6 +1726,7 @@
 				ICC_OPT_IPO_FOR_SINGLE_FILE_COMPILATION = YES;
 				ICC_OPT_USE_ARCH_IA32 = archT;
 				ICC_PREDEFINE_GCC = gcc;
+				OTHER_LDFLAGS = "-Wl,-sectalign,__TEXT,__text,2000";
 				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 			};
 			name = Deployment;
@@ -1725,6 +1735,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = i386;
+				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
 					"USE_GLOBAL_STRUCT=0",
@@ -1740,6 +1751,7 @@
 				);
 				ICC_FP_MODEL = src;
 				ICC_OPTLEVEL = speed;
+				OTHER_LDFLAGS = "-Wl,-sectalign,__TEXT,__text,2000";
 				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 			};
 			name = DeploymentSymbols;

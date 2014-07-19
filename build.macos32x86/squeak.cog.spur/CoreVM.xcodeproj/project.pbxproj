@@ -7,14 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		73BC1BBB0F576864003412C5 /* cogit.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB60F576864003412C5 /* cogit.c */; settings = {COMPILER_FLAGS = "-fno-inline"; }; };
-		73BC1BBC0F576864003412C5 /* cogit.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BB70F576864003412C5 /* cogit.h */; };
-		73BC1BBD0F576864003412C5 /* cogmethod.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BB80F576864003412C5 /* cogmethod.h */; };
-		73BC1BBE0F576864003412C5 /* gcc3x-cointerp.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB90F576864003412C5 /* gcc3x-cointerp.c */; };
-		73BC1BBF0F576864003412C5 /* cointerp.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BBA0F576864003412C5 /* cointerp.h */; };
 		733AC8DB0FEAAC4F007C6206 /* version.c in Sources */ = {isa = PBXBuildFile; fileRef = 733AC8DA0FEAAC4F007C6206 /* version.c */; };
 		733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */ = {isa = PBXBuildFile; fileRef = 733B2C36106AB74B004652BE /* sqExternalSemaphores.c */; };
 		7351A09B100963670035A878 /* sqUnixThreads.c in Sources */ = {isa = PBXBuildFile; fileRef = 7351A09A100963670035A878 /* sqUnixThreads.c */; };
+		735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */; };
 		737888E713D0DE6500C5E1AD /* sqMemoryFence.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E513D0DE6500C5E1AD /* sqMemoryFence.h */; };
 		737888E813D0DE6500C5E1AD /* sqSCCSVersion.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */; };
 		738FB1EA0EE4CF94004BEE42 /* ia32abicc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738FB1E90EE4CF94004BEE42 /* ia32abicc.c */; };
@@ -24,6 +20,11 @@
 		739C6EDA112DCBD10049B7D3 /* sqAssert.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C6ED8112DCBD10049B7D3 /* sqAssert.h */; };
 		73B54C530E55EFED00FE780C /* sqUnixVMProfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 73B54C520E55EFED00FE780C /* sqUnixVMProfile.c */; };
 		73B96E490E47D7A10079C51B /* sqUnixHeartbeat.c in Sources */ = {isa = PBXBuildFile; fileRef = 73B96E480E47D7A10079C51B /* sqUnixHeartbeat.c */; };
+		73BC1BBB0F576864003412C5 /* cogit.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB60F576864003412C5 /* cogit.c */; settings = {COMPILER_FLAGS = "-fno-inline"; }; };
+		73BC1BBC0F576864003412C5 /* cogit.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BB70F576864003412C5 /* cogit.h */; };
+		73BC1BBD0F576864003412C5 /* cogmethod.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BB80F576864003412C5 /* cogmethod.h */; };
+		73BC1BBE0F576864003412C5 /* gcc3x-cointerp.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB90F576864003412C5 /* gcc3x-cointerp.c */; };
+		73BC1BBF0F576864003412C5 /* cointerp.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BBA0F576864003412C5 /* cointerp.h */; };
 		73BC1BC70F57699F003412C5 /* sqCogStackAlignment.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BC60F57699F003412C5 /* sqCogStackAlignment.h */; };
 		73DFFAC018D380C200C3C543 /* AioPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 73DFFABF18D380C200C3C543 /* AioPlugin.c */; };
 		94002C4409EB18EF003C4BF2 /* sqMemoryAccess.h in Headers */ = {isa = PBXBuildFile; fileRef = 94002C4209EB18EF003C4BF2 /* sqMemoryAccess.h */; };
@@ -240,7 +241,6 @@
 		A27729590CE7A8D300ABAFCA /* SoundPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277292E0CE7A8D300ABAFCA /* SoundPlugin.c */; };
 		A277295A0CE7A8D300ABAFCA /* StarSqueakPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729300CE7A8D300ABAFCA /* StarSqueakPlugin.c */; };
 		A277295B0CE7A8D300ABAFCA /* UUIDPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729330CE7A8D300ABAFCA /* UUIDPlugin.c */; };
-		735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */; };
 		A277295D0CE7A8D300ABAFCA /* ZipPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729370CE7A8D300ABAFCA /* ZipPlugin.c */; };
 		A27729770CE7A9AE00ABAFCA /* sqMacHostWindow.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729750CE7A9AE00ABAFCA /* sqMacHostWindow.c */; };
 		A27729780CE7A9AE00ABAFCA /* sqMacHostWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = A27729760CE7A9AE00ABAFCA /* sqMacHostWindow.h */; };
@@ -274,6 +274,7 @@
 		733AC8DA0FEAAC4F007C6206 /* version.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = version.c; sourceTree = "<group>"; };
 		733B2C36106AB74B004652BE /* sqExternalSemaphores.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqExternalSemaphores.c; sourceTree = "<group>"; };
 		7351A09A100963670035A878 /* sqUnixThreads.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixThreads.c; path = vm/sqUnixThreads.c; sourceTree = "<group>"; };
+		735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = VMProfileMacSupportPlugin.c; path = VMProfileMacSupportPlugin/VMProfileMacSupportPlugin.c; sourceTree = "<group>"; };
 		737888E513D0DE6500C5E1AD /* sqMemoryFence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMemoryFence.h; sourceTree = "<group>"; };
 		737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSCCSVersion.h; sourceTree = "<group>"; };
 		738FB1E90EE4CF94004BEE42 /* ia32abicc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = ia32abicc.c; path = IA32ABI/ia32abicc.c; sourceTree = "<group>"; };
@@ -383,7 +384,6 @@
 		A277292E0CE7A8D300ABAFCA /* SoundPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SoundPlugin.c; path = SoundPlugin/SoundPlugin.c; sourceTree = "<group>"; };
 		A27729300CE7A8D300ABAFCA /* StarSqueakPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = StarSqueakPlugin.c; path = StarSqueakPlugin/StarSqueakPlugin.c; sourceTree = "<group>"; };
 		A27729330CE7A8D300ABAFCA /* UUIDPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = UUIDPlugin.c; path = UUIDPlugin/UUIDPlugin.c; sourceTree = "<group>"; };
-		735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = VMProfileMacSupportPlugin.c; path = VMProfileMacSupportPlugin/VMProfileMacSupportPlugin.c; sourceTree = "<group>"; };
 		A27729370CE7A8D300ABAFCA /* ZipPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ZipPlugin.c; path = ZipPlugin/ZipPlugin.c; sourceTree = "<group>"; };
 		A27729750CE7A9AE00ABAFCA /* sqMacHostWindow.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacHostWindow.c; sourceTree = "<group>"; };
 		A27729760CE7A9AE00ABAFCA /* sqMacHostWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacHostWindow.h; sourceTree = "<group>"; };
@@ -1366,6 +1366,8 @@
 				941A3BFA09AA144000C9D25A /* Frameworks */,
 				941A3C0409AA144000C9D25A /* Rez */,
 			);
+			buildRules = (
+			);
 			name = Squeak;
 			productInstallPath = "$(USER_APPS_DIR)";
 			productName = "Squeak VM OPT";
@@ -1634,7 +1636,7 @@
 				ICC_PREDEFINE_GCC = gcc;
 				INFOPLIST_FILE = CoreVM.plist;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "-Wl,-no_pie,-sectalign,__TEXT,__text,2000";
 				OTHER_REZFLAGS = "";
 				PRODUCT_NAME = Squeak;
 				SECTORDER_FLAGS = "";
@@ -1649,6 +1651,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = i386;
+				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"COGMTVM=0",
 					"DEBUGVM=0",
@@ -1664,6 +1667,7 @@
 				ICC_FP_MODEL = src;
 				ICC_OPTLEVEL = size;
 				ICC_OPT_INLINE = dir;
+				OTHER_LDFLAGS = "-Wl,-no_pie,-sectalign,__TEXT,__text,2000";
 				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 			};
 			name = Assert;
@@ -1711,7 +1715,7 @@
 				ICC_PREDEFINE_GCC = gcc;
 				INFOPLIST_FILE = CoreVM.plist;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "-Wl,-no_pie,-sectalign,__TEXT,__text,2000";
 				OTHER_REZFLAGS = "";
 				PER_ARCH_CFLAGS_i386 = "";
 				PRODUCT_NAME = Squeak;
@@ -1730,7 +1734,6 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_ENABLE_SSE3_EXTENSIONS = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
-				GCC_MODEL_TUNING = "";
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
@@ -1764,7 +1767,7 @@
 				ICC_PREDEFINE_GCC = gcc;
 				INFOPLIST_FILE = CoreVM.plist;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "-Wl,-sectalign,__TEXT,__text,2000";
 				OTHER_REZFLAGS = "";
 				PER_ARCH_CFLAGS_i386 = "-O3  -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium4  -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS";
 				PRODUCT_NAME = Squeak;
@@ -1809,7 +1812,7 @@
 				ICC_PREDEFINE_GCC = gcc;
 				INFOPLIST_FILE = CoreVM.plist;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "-Wl,-sectalign,__TEXT,__text,2000";
 				OTHER_REZFLAGS = "";
 				PRODUCT_NAME = Squeak;
 				SECTORDER_FLAGS = "";
@@ -1824,6 +1827,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = i386;
+				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"COGMTVM=0",
 					"DEBUGVM=1",
@@ -1838,6 +1842,7 @@
 					$SRCROOT,
 				);
 				ICC_FP_MODEL = src;
+				OTHER_LDFLAGS = "-Wl,-no_pie,-sectalign,__TEXT,__text,2000";
 				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 			};
 			name = Development;
@@ -1846,6 +1851,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = i386;
+				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
 					"COGMTVM=0",
@@ -1867,6 +1873,7 @@
 				ICC_OPT_IPO_FOR_SINGLE_FILE_COMPILATION = YES;
 				ICC_OPT_USE_ARCH_IA32 = archT;
 				ICC_PREDEFINE_GCC = gcc;
+				OTHER_LDFLAGS = "-Wl,-sectalign,__TEXT,__text,2000";
 				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 			};
 			name = Deployment;
@@ -1875,6 +1882,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = i386;
+				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
 					"COGMTVM=0",
@@ -1889,6 +1897,7 @@
 				);
 				ICC_FP_MODEL = src;
 				ICC_OPTLEVEL = speed;
+				OTHER_LDFLAGS = "-Wl,-sectalign,__TEXT,__text,2000";
 				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 			};
 			name = DeploymentSymbols;

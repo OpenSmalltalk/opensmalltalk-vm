@@ -1711,6 +1711,10 @@ parseVMArgument(int argc, char *argv[])
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;
 		return 1; }
+	else if (!strcmp(argv[0], "-warnpid")) { 
+		extern sqInt warnpid;
+		warnpid = getpid();
+		return 1; }
 #endif /* STACKVM */
 #if COGVM
 	else if (!strcmp(argv[0], "-codesize")) { 

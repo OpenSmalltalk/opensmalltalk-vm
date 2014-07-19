@@ -3206,6 +3206,7 @@ int printUsage(int level)
 # else
                    TEXT("\n\t-sendtrace \t(trace sends to stdout for debug)")
 # endif
+                   TEXT("\n\t-warnpid   \t(print pid in warnings)")
 #endif
 #if COGVM
                    TEXT("\n\t-codesize: bytes \t(set machine-code memory size to bytes)")
