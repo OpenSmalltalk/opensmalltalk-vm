@@ -634,6 +634,12 @@ VMClass >> cppIf: conditionBlockOrSymbolValue ifTrue: trueExpressionOrBlock ifFa
 ]
 
 { #category : #'simulation support' }
+VMClass >> deny: aBooleanOrBlock [
+	<doNotGenerate>
+	self assert: aBooleanOrBlock value not
+]
+
+{ #category : #'simulation support' }
 VMClass >> doOrDefer: aBlock [
 	<doNotGenerate>
 	"Either evaluate aBlock immediately if in the uiProcess or defer aBlock as a UI message"
