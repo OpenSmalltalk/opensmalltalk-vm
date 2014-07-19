@@ -107,6 +107,8 @@ Class {
 		'rememberedSet',
 		'rememberedSetSize',
 		'previousRememberedSetSize',
+		'rememberedSetRedZone',
+		'rememberedSetLimit',
 		'weakList',
 		'ephemeronList',
 		'tenureCriterion',
@@ -115,10 +117,6 @@ Class {
 		'tenuringProportion',
 		'numRememberedEphemerons',
 		'statTenures'
-	],
-	#classVars : [
-		'RememberedSetLimit',
-		'RememberedSetRedZone'
 	],
 	#pools : [
 		'SpurMemoryManagementConstants'
@@ -130,9 +128,7 @@ Class {
 SpurGenerationScavenger class >> declareCVarsIn: aCCodeGenerator [
 	#(eden futureSpace pastSpace) do:
 		[:var| aCCodeGenerator var: var type: #SpurNewSpaceSpace].
-	aCCodeGenerator
-		var: #rememberedSet
-		declareC: 'sqInt rememberedSet[RememberedSetLimit + 1 /* ', (RememberedSetLimit + 1) printString, ' */]'
+	aCCodeGenerator var: #rememberedSet type: #'sqInt *'
 ]
 
 { #category : #translation }
@@ -144,9 +140,6 @@ SpurGenerationScavenger class >> implicitReturnTypeFor: aSelector [
 { #category : #'class initialization' }
 SpurGenerationScavenger class >> initialize [
 	"SpurGenerationScavenger initialize"
-	RememberedSetLimit := 64 * 1024. "temporary; must move to heap"
-	RememberedSetRedZone := RememberedSetLimit - (RememberedSetLimit // 2).
-
 	TenureByAge := 1.
 	TenureByClass := 2.
 	DontTenure := 3.
@@ -556,6 +549,30 @@ SpurGenerationScavenger >> getRawTenuringThreshold [
 	^tenureThreshold
 ]
 
+{ #category : #'store check' }
+SpurGenerationScavenger >> growRememberedSet [
+	| obj numSlots newObj base |
+	<inline: false> "Don't ruin locality in remember:"
+	<var: #base type: #'sqInt *'>
+	obj := manager rememberedSetObj.
+	numSlots := manager numSlotsOf: obj.
+	self assert: numSlots >= 1024.
+	newObj := manager allocatePinnedSlots: numSlots * 2.
+	manager rememberedSetObj: newObj.
+	base := manager firstIndexableField: newObj.
+	0 to: rememberedSetSize - 1 do:
+		[:i| base at: i put: (rememberedSet at: i)].
+	"if growing in the middle of a GC, need to preserve marked status."
+	(manager isMarked: obj) ifTrue:
+		[manager
+			setIsMarkedOf: newObj to: true;
+			setIsMarkedOf: obj to: false].
+	manager freeObject: obj.
+	rememberedSet := base.
+	rememberedSetLimit := numSlots * 2.
+	rememberedSetRedZone := rememberedSetLimit * 3 + 3 // 4
+]
+
 { #category : #initialization }
 SpurGenerationScavenger >> initFutureSpaceStart [
 	| oldStart |
@@ -569,10 +586,22 @@ SpurGenerationScavenger >> initialize [
 	pastSpace := SpurNewSpaceSpace new.
 	futureSpace := SpurNewSpaceSpace new.
 	eden := SpurNewSpaceSpace new.
-	rememberedSet := CArrayAccessor on: (Array new: RememberedSetLimit).
 	rememberedSetSize := 0.
 	tenureThreshold := 0.
 	statTenures := 0
+]
+
+{ #category : #initialization }
+SpurGenerationScavenger >> initializeRememberedSet [
+	| obj |
+	obj := manager rememberedSetObj.
+	obj = manager nilObject ifTrue:
+		[obj := manager allocatePinnedSlots: 1024.
+		 manager rememberedSetObj: obj].
+	rememberedSet := manager firstIndexableField: obj.
+	rememberedSetSize := 0.
+	rememberedSetLimit := manager numSlotsOf: obj.
+	rememberedSetRedZone := rememberedSetLimit * 3 + 3 // 4
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -832,17 +861,15 @@ SpurGenerationScavenger >> remember: objOop [
 	<api>
 	<inline: false>
 	self assert: (manager isNonImmediate: objOop).
-	self assert: (manager isYoungObject: objOop) not.
-	self assert: (manager isRemembered: objOop) not.
-	self assert: (manager isInRememberedSet: objOop) not.
+	self deny: (manager isYoungObject: objOop).
+	self deny: (manager isRemembered: objOop).
+	self deny: (self isInRememberedSet: objOop).
 	manager setIsRememberedOf: objOop to: true.
-	rememberedSetSize < RememberedSetLimit
-		ifTrue:
-			[rememberedSet at: rememberedSetSize put: objOop.
-			 (rememberedSetSize := rememberedSetSize + 1) >= RememberedSetRedZone ifTrue:
-				[manager scheduleScavenge]]
-		ifFalse:
-			[self error: 'remembered set overflow' "for now"].
+	rememberedSetSize >= rememberedSetLimit ifTrue:
+		[self growRememberedSet].
+	rememberedSet at: rememberedSetSize put: objOop.
+	(rememberedSetSize := rememberedSetSize + 1) >= rememberedSetRedZone ifTrue:
+		[manager scheduleScavenge].
 	^objOop
 ]
 
