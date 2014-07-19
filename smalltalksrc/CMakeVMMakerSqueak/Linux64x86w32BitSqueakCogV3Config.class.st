@@ -54,13 +54,17 @@ Class {
 
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitSqueakCogV3Config >> cmakeAddDefinitionsBuild [
-	"from oscogvm/build.linux32x86/squeak.cog.v3/build/mvm"
+	|c d  o|
 	(enabledebugmessages)
 		ifTrue:[	templates 
 		addLast:((CMakeMessage new) message: (self class name) , 'cmakeAddDefinitionsBuild')
 	] .
+	c := self compilerFlags asOrderedCollection.
+	d := self compilerDefinitions asOrderedCollection.
+	o:= OrderedCollection new.
+	o addAllLast: c; addAllLast: d.
 	templates
-		addLast:((CMakeAddDefinitions new) definitions: (self compilerDefinitions asOrderedCollection)).
+		addLast:((CMakeAddDefinitions new) definitions: (self compilerDefinitions asOrderedCollection)). "see my self flag below"
 
 ]
 
@@ -75,8 +79,10 @@ Linux64x86w32BitSqueakCogV3Config >> cmakeCFlagsBuild [
 		addLast:((CMakeMessage new) message: (self class name) , 'cmakeCFlagsBuild')
 	] .
 	templates
-		addLast:((CMakeSet new) variable:'CMAKE_CXX_FLAGS' value: '${CMAKE_CXX_FLAGS} ', cflags );
 		addLast:((CMakeSet new) variable:'CMAKE_C_FLAGS' value: '${CMAKE_C_FLAGS} ', cflags );
+		addLast:((CMakeSet new) variable:'CMAKE_C_FLAGS_RELEASE' value: '${CMAKE_CXX_FLAGS_RELEASE} ', cflags );
+		addLast:((CMakeSet new) variable:'CMAKE_C_FLAGS_DEBUG' value: '${CMAKE_CXX_FLAGS_DEBUG} ',cflags);		
+		addLast:((CMakeSet new) variable:'CMAKE_CXX_FLAGS' value: '${CMAKE_CXX_FLAGS} ', cflags );
 		addLast:((CMakeSet new) variable:'CMAKE_CXX_FLAGS_RELEASE' value: '${CMAKE_CXX_FLAGS_RELEASE} ', cflags );
 		addLast:((CMakeSet new) variable:'CMAKE_CXX_FLAGS_DEBUG' value: '${CMAKE_CXX_FLAGS_DEBUG} ', cflags ).
 
@@ -113,41 +119,6 @@ delimiter: ' ' ].
 			propertiesandvalues:{'COMPILE_FLAGS' . cflags}).
 ]
 
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitSqueakCogV3Config >> cmakeSharedLinkerFlagsBuild [
-
-	(enabledebugmessages)
-		ifTrue:[	templates 
-		addLast:((CMakeMessage new) message: (self class name) , 'cmakeSharedLinkerFlagsBuild')
-	] .
-	templates
-		addLast:((CMakeSet new) 
-			variable:'CMAKE_SHARED_LINKER_FLAGS' 
-			quotedValue:'${CMAKE_SHARED_LINKER_FLAGS} ', (String streamContents: [:stream | (self linkerFlags ) asStringOn: stream delimiter: ' ' ])).
-
-	(enabledebugmessages)
-		ifTrue:[	templates 
-			addLast:((CMakeMessage new) message: 'CMAKE_C_LINKER_PREFERENCE = ${CMAKE_C_LINKER_PREFERENCE}');
-			addLast:((CMakeMessage new) message: 'CMAKE_C_LINKER_PREFERENCE_PROPAGATES = ${CMAKE_C_LINKER_PREFERENCE_PROPAGATES}');
-			addLast:((CMakeMessage new) message: 'CMAKE_CXX_LINKER_PREFERENCE = ${CMAKE_CXX_LINKER_PREFERENCE}');
-			addLast:((CMakeMessage new) message: 'CMAKE_CXX_LINKER_PREFERENCE_PROPAGATES = ${CMAKE_CXX_LINKER_PREFERENCE_PROPAGATES}');
-			addLast:((CMakeMessage new) message: 'CMAKE_EXE_LINKER_FLAGS = ${CMAKE_EXE_LINKER_FLAGS}');
-			addLast:((CMakeMessage new) message: 'CMAKE_EXE_LINKER_FLAGS_DEBUG = ${CMAKE_EXE_LINKER_FLAGS_DEBUG}');
-			addLast:((CMakeMessage new) message: 'CMAKE_EXE_LINKER_FLAGS_RELEASE = ${CMAKE_EXE_LINKER_FLAGS_RELEASE}');
-			addLast:((CMakeMessage new) message: 'CMAKE_MODULE_LINKER_FLAGS = ${CMAKE_MODULE_LINKER_FLAGS}');
-			addLast:((CMakeMessage new) message: 'CMAKE_MODULE_LINKER_FLAGS_DEBUG = ${CMAKE_MODULE_LINKER_FLAGS_DEBUG}');
-			addLast:((CMakeMessage new) message: 'CMAKE_MODULE_LINKER_FLAGS_ RELEASE= ${CMAKE_MODULE_LINKER_FLAGS_RELEASE}');
-			addLast:((CMakeMessage new) message: 'CMAKE_SHARED_LINKER_FLAGS = ${CMAKE_SHARED_LINKER_FLAGS}');
-			addLast:((CMakeMessage new) message: 'CMAKE_SHARED_LINKER_FLAGS_DEBUG = ${CMAKE_SHARED_LINKER_FLAGS_DEBUG}');
-			addLast:((CMakeMessage new) message: 'CMAKE_SHARED_LINKER_FLAGS_RELEASE = ${CMAKE_SHARED_LINKER_FLAGS_RELEASE}');
-			addLast:((CMakeMessage new) message: 'CMAKE_STATIC_LINKER_FLAGS = ${CMAKE_STATIC_LINKER_FLAGS}');
-			addLast:((CMakeMessage new) message: 'CMAKE_STATIC_LINKER_FLAGS_DEBUG= ${CMAKE_STATIC_LINKER_FLAGS_DEBUG}');
-			addLast:((CMakeMessage new) message: ' CMAKE_STATIC_LINKER_FLAGS_RELEASE= ${CMAKE_STATIC_LINKER_FLAGS_RELEASE}')		
-
-	] .
-
-]
-
 { #category : #'source generation' }
 Linux64x86w32BitSqueakCogV3Config >> cogitClass [
 	^ StackToRegisterMappingCogit 
@@ -157,25 +128,26 @@ Linux64x86w32BitSqueakCogV3Config >> cogitClass [
 { #category : #compiling }
 Linux64x86w32BitSqueakCogV3Config >> compilerDefinitions [
 	^#(
-	 '-DNDEBUG'                                   
+	 '-DNDEBUG'          
  	 '-DDEBUGVM=0'
 	 ' -DLSB_FIRST=1'
 	 '-D_GNU_SOURCE'
  	 '-D_FILE_OFFSET_BITS=64'
 	  '-DUSE_GLOBAL_STRUCT=0'
- 	 '-DCOGMTVM=0')
+ 	 '-DCOGMTVM=0') 
 
 ]
 
 { #category : #compiling }
 Linux64x86w32BitSqueakCogV3Config >> compilerFlags [
 	^#("'-Wall'"
+		'-w'
 		'-m32'
 		'-msse2'
 		'-g3'                      "extra debugging info"
 		'-O1'
 	 	'-fno-caller-saves'
-		'-fno-tree-pre')
+		'-fno-tree-pre') 
 
 ]
 
@@ -214,6 +186,8 @@ Linux64x86w32BitSqueakCogV3Config >> executableName [
 { #category : #compiling }
 Linux64x86w32BitSqueakCogV3Config >> externalLibraries [
 	^#(
+		     '-L/usr/lib'
+		     '-L/usr/lib/X11'
 			'uuid'  ""
 			 'ssl'  ""
 			 'crypto' ""
@@ -265,6 +239,6 @@ Linux64x86w32BitSqueakCogV3Config >> linkerFlags [
 	^#(	'-Wl'
             '-z'
             'now'
-	   )
+	   ) 
 
 ]

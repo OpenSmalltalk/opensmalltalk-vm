@@ -808,6 +808,8 @@ CPlatformConfigForSqueak >> buildDirName [
 CPlatformConfigForSqueak >> buildScript [
 	"see standardVM/platforms/unix/cmake/configure"
 	^ '#!/usr/bin/env bash
+export CC=gcc
+export CXX=g++
 cmake .
 make'
 
@@ -1461,110 +1463,6 @@ CPlatformConfigForSqueak >> cmakeSetSourceFilesPropertiesBuildMultiThreadedDebug
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> cmakeSetSourceFilesPropertiesNoBuildType [
-	"SHOULD NOT GET HERE"
-	self shouldNotImplement.
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cmakeSharedLinkerFlags [
-	"Route this message send to the message appropriate for my buildType "
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self cmakeSharedLinkerFlagsBuild];
-		at: #buildAssert  put: [self cmakeSharedLinkerFlagsBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self cmakeSharedLinkerFlagsBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self cmakeSharedLinkerFlagsBuildDebug];   
-		at: #buildDebugITimerHeartbeat  put: [self cmakeSharedLinkerFlagsBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self cmakeSharedLinkerFlagsBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self cmakeSharedLinkerFlagsBuildMultiThreaded];
-		at: #buildMultiThreadedAssert  put: [self cmakeSharedLinkerFlagsBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self cmakeSharedLinkerFlagsBuildMultiThreadedDebug ];
-		at: #buildNone put:[self cmakeSharedLinkerFlagsNoBuildType].
-	^(d at: buildType) value
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuild [
-"
-cmake --help-variable CMAKE_SHARED_LINKER_FLAGS
-CMAKE_SHARED_LINKER_FLAGS
--------------------------
-
-Linker flags to be used to create shared libraries.
-
-We want a command like this:
-
-  set(CMAKE_SHARED_LINKER_FLAGS ''-Wl -z now'')
-
-using the template system, it looks like this:
-
-	|flags|
-	flags := { 
-		'-Wl'
-           . '-z'
-           . 'now'
-	   } asOrderedCollection .
-	templates
-		addLast:((CMakeSet new) 
-			variable:'CMAKE_SHARED_LINKER_FLAGS' 
-			quotedValue:'${CMAKE_SHARED_LINKER_FLAGS} ', (String streamContents: [:stream | flags asStringOn: stream delimiter: ' ' ])).
-
-."
-	self subclassResponsibility.
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildAssert [
-	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
-	^self cmakeSharedLinkerFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildAssertITimerHeartbeat [
-	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
-	^self cmakeSharedLinkerFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildDebug [
-	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
-	^self cmakeSharedLinkerFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildDebugITimerHeartbeat [
-	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
-	^self cmakeSharedLinkerFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildITimerHeartbeat [
-	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
-	^self cmakeSharedLinkerFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildMultiThreaded [
-	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
-	^self cmakeSharedLinkerFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildMultiThreadedAssert [
-	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
-	^self cmakeSharedLinkerFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsBuildMultiThreadedDebug [
-	"convenience method for customizing CMAKE_SHARED_LINKER_FLAGS for different buildType "
-	^self cmakeSharedLinkerFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> cmakeSharedLinkerFlagsNoBuildType [
 	"SHOULD NOT GET HERE"
 	self shouldNotImplement.
 

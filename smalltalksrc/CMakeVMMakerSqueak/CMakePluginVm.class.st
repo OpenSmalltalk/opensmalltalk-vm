@@ -76,19 +76,21 @@ CMakePluginVm >> template [
 	temp := OrderedCollection new.
 	temp
 		addLast: ((CMakeHeader new)  configurationName:  config class name );
-"		addLast: ((CMakeProject new)variable:  module  ); Ian does not have this. Igor does."
+		addLast: ((CMakeProject new)variable:  module  );
 		addLast: ((CMakeMinimumRequired new) version: '3.0.0');
 		addLast: ((CMakeInclude new) file: ((config buildDir fullName), FileDirectory slash, 'directories.cmake')) ; 
+		addLast:((CMakeAddDefinitions new) definitions: config compilerDefinitions asOrderedCollection);
 		addLast:((CMakeAddDefinitions new) definitions: config compilerFlags asOrderedCollection);
 		addLast:((CMakeAddDefinitions new) definitions: definitions); 
-		addLast:((CMakeSet new) variable:'sources' quotedValue: sourcesString);
+"		addLast:((CMakeSet new) variable:'sources' quotedValue: sourcesString);"
+		addLast:((CMakeSet new) variable:'sources' value: sourcesString);
 		addLast:((CMakeAddLibrary new) 
 			library: module
 			type: 'SHARED' 
-			sources:  sources);
+			sources: (OrderedCollection with: '${sources}'));
 		addLast: ((CMakeIncludeDirectories new) dirs: includedirectories);
 		addLast:((CMakeSet new) variable: 'LIBRARY_OUTPUT_PATH' quotedValue: (config outputDir fullName));
-		addLast:((CMakeListAppend new) list: 'LINKLIBS' elements: (config externalLibs));
+"		addLast:((CMakeListAppend new) list: 'LINKLIBS' elements: (config externalLibs));"
 		addLast:((CMakeTargetLinkLibraries new) target: module  items: (OrderedCollection with: '${LINKLIBS}'));
 		addLast:((CMakeSetTargetProperties new) 
 			target: module 
