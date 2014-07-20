@@ -153,6 +153,15 @@ ShootoutTests class >> runAllToDummyStreamVs: referenceTimes [
 	 self runAllToDummyStreamVs: self referenceTimesForClosureInterpreter"
 	"Transcript clear.
 	 self runAllToDummyStreamVs: self referenceTimesForSqueakVM"
+	^self runAllToDummyStreamVs: referenceTimes reportTo: Transcript
+]
+
+{ #category : #'benchmark scripts' }
+ShootoutTests class >> runAllToDummyStreamVs: referenceTimes reportTo: aStream [
+	"Transcript clear.
+	 self runAllToDummyStreamVs: self referenceTimesForClosureInterpreter"
+	"Transcript clear.
+	 self runAllToDummyStreamVs: self referenceTimesForSqueakVM"
 	| times ratios geometricMean |
 	times := Array new writeStream.
 	ratios := Array new writeStream.
@@ -163,9 +172,9 @@ ShootoutTests class >> runAllToDummyStreamVs: referenceTimes [
 		Smalltalk garbageCollect.
 		times nextPut: (t := Time millisecondsToRun: block).
 		ratios nextPut: t asFloat / reference.
-		self report: block decompile printString time: t reference: reference on: Transcript].
+		self report: block decompile printString time: t reference: reference on: aStream].
 	geometricMean := (ratios contents inject: 1 into: [:m :n| m * n]) raisedTo: 1 / ratios position.
-	Transcript
+	aStream
 		nextPutAll: 'geometric mean '; print: (geometricMean roundTo: 0.001);
 		nextPutAll: '   average speedup '; print: ((geometricMean - 1 * 100) roundTo: 0.01); nextPut: $%; cr; cr; flush.
 	^times contents
@@ -273,7 +282,7 @@ ShootoutTests class >> stdin [
 
 { #category : #platform }
 ShootoutTests class >> stdout [
-   ^StandardFileStream stdOut
+   ^StandardFileStream stdout
 ]
 
 { #category : #benchmarking }
