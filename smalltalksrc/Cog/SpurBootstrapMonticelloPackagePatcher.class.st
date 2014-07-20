@@ -16,7 +16,8 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'sourceDir',
-		'destDir'
+		'destDir',
+		'packagesAndPatches'
 	],
 	#category : #'Cog-Bootstrapping'
 }
@@ -192,7 +193,8 @@ SpurBootstrapMonticelloPackagePatcher >> packages [
 { #category : #'private-accessing' }
 SpurBootstrapMonticelloPackagePatcher >> packagesAndPatches [
 	"SpurBootstrapMonticelloPackagePatcher new packagesAndPatches"
-	| packagesAndPatches |
+	packagesAndPatches ifNotNil:
+		[^packagesAndPatches].
 	packagesAndPatches := Dictionary new.
 	SpurBootstrap new prototypeClassNameMetaSelectorMethodDo:
 		[:className :isMeta :selector :method| | class methodReference source |
@@ -240,6 +242,31 @@ SpurBootstrapMonticelloPackagePatcher >> patch [
 		 (self filesForPackage: package in: sourceDir) do:
 			[:packageFile|
 			 self patchPackage: packageFile with: patches for: package]]
+]
+
+{ #category : #patching }
+SpurBootstrapMonticelloPackagePatcher >> patchAndUploadNewer [
+	"Look for unbranched versions on the default repository that are newer than the
+	 image''s versions. Download and patch them and upload the patched versions."
+	"(SpurBootstrapMonticelloPackagePatcher new
+		from: 'spurpackages'
+		to: 'trunkpackages')
+			patchAndUploadNewer"
+	| repo sourceRepo |
+	sourceDir deleteLocalFiles.
+	destDir deleteLocalFiles.
+	repo := self repositoryForUrl: MCMcmUpdater defaultUpdateURL.
+	sourceRepo := MCDirectoryRepository directory: sourceDir.
+	repo cacheAllFileNamesDuring:
+		[self packagesAndPatches keys do:
+			[:package| | workingCopy |
+			workingCopy := MCWorkingCopy allManagers detect: [:pkg| pkg packageName = package packageName].
+			(workingCopy possiblyNewerVersionsIn: repo) do:
+				[:newerVersion | 
+				(sourceRepo includesVersionNamed: newerVersion) ifFalse:
+					[sourceRepo storeVersion: (repo versionNamed: newerVersion)]]].
+		 self patchAsNeeded.
+		 self uploadFrom: (MCDirectoryRepository directory: destDir) to: self trunk]
 ]
 
 { #category : #patching }
@@ -320,6 +347,16 @@ SpurBootstrapMonticelloPackagePatcher >> patchPackage: packageFileName with: pat
 	self storeVersion: newVersion
 ]
 
+{ #category : #'repository population' }
+SpurBootstrapMonticelloPackagePatcher >> repositoryForUrl: url [
+	^MCRepositoryGroup default repositories 
+		detect: [:r| r description = url]
+		ifNone: [MCHttpRepository
+					location: url
+					user: 'squeak'
+					password: 'squeak']
+]
+
 { #category : #patching }
 SpurBootstrapMonticelloPackagePatcher >> spurBranchNameForInfo: versionInfo package: package [
 	^versionInfo name copyReplaceAll: package name with: package name, '.spur'
@@ -334,14 +371,7 @@ SpurBootstrapMonticelloPackagePatcher >> storeVersion: newVersion [
 
 { #category : #'repository population' }
 SpurBootstrapMonticelloPackagePatcher >> trunk [
-	| url |
-	url := 'http://source.squeak.org/trunk'.
-	^MCRepositoryGroup default repositories 
-		detect: [:r| r description = url]
-		ifNone: [MCHttpRepository
-					location: url
-					user: 'squeak'
-					password: 'squeak']
+	^self repositoryForUrl: 'http://source.squeak.org/trunk'
 ]
 
 { #category : #'repository population' }
