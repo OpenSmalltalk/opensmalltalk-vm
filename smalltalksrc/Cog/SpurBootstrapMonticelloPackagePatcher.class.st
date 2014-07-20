@@ -262,11 +262,12 @@ SpurBootstrapMonticelloPackagePatcher >> patchAndUploadNewer [
 			[:package| | workingCopy |
 			workingCopy := MCWorkingCopy allManagers detect: [:pkg| pkg packageName = package packageName].
 			(workingCopy possiblyNewerVersionsIn: repo) do:
-				[:newerVersion | 
-				(sourceRepo includesVersionNamed: newerVersion) ifFalse:
-					[sourceRepo storeVersion: (repo versionNamed: newerVersion)]]].
+				[:newerVersion|
+				 newerVersion packageAndBranchName = package packageName ifTrue: "Don't patch already patched packages!!"
+					[(sourceRepo includesVersionNamed: newerVersion) ifFalse:
+						[sourceRepo storeVersion: (repo versionNamed: newerVersion)]]]].
 		 self patchAsNeeded.
-		 self uploadFrom: (MCDirectoryRepository directory: destDir) to: self trunk]
+		 self uploadFrom: (MCDirectoryRepository directory: destDir) to: repo]
 ]
 
 { #category : #patching }
