@@ -3898,7 +3898,7 @@ CoInterpreter >> internalFindNewMethod [
 	 sent to the given class, setting the values of newMethod and primitiveIndex."
 	| ok |
 	<inline: true>
-	ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
+	ok := self inlineLookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
 	ok	ifTrue:
 			[self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]
 		ifFalse:
@@ -3909,8 +3909,7 @@ CoInterpreter >> internalFindNewMethod [
 					[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
 				 (objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
 					[lkupClassTag := self handleForwardedSendFaultForTag: lkupClassTag].
-				ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
-				ok ifTrue:
+				(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifTrue:
 					[^self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]].
 			 lkupClass := objectMemory classForClassTag: lkupClassTag.
 			self lookupMethodInClass: lkupClass.
