@@ -6835,6 +6835,51 @@ StackInterpreter >> initializePageTraceToInvalid: aPage [
 	aPage trace: StackPageTraceInvalid "for assert checking of the page tracing flags"
 ]
 
+{ #category : #'method lookup cache' }
+StackInterpreter >> inlineLookupInMethodCacheSel: selector classTag: classTag [
+	"This method implements a simple method lookup cache.  If an entry for the given selector and classTag is
+	 found in the cache, set the values of 'newMethod' and 'primitiveFunctionPointer' and answer true. Otherwise,
+	 answer false."
+	"About the re-probe scheme: The hash is the low bits of the XOR of two large addresses, minus their useless
+	 lowest two bits. If a probe doesn't get a hit, the hash is shifted right one bit to compute the next probe,
+	 introducing a new randomish bit. The cache is probed CacheProbeMax times before giving up."
+	"WARNING: Since the hash computation is based on the object addresses of the class and selector, we must
+	 rehash or flush when compacting storage. We've chosen to flush, since that also saves the trouble of updating
+	 the addresses of the objects in the cache."
+	"classTag is either a class object, if using NewObjectMemory, or a classIndex, if using SpurMemoryManager."
+
+	| hash probe |
+	<inline: true>
+	<asmLabel: false>
+	hash := selector bitXor: classTag.  "shift drops two low-order zeros from addresses"
+
+	probe := hash bitAnd: MethodCacheMask.  "first probe"
+	(((methodCache at: probe + MethodCacheSelector) = selector) and:
+		 [(methodCache at: probe + MethodCacheClass) = classTag]) ifTrue:
+			[newMethod := methodCache at: probe + MethodCacheMethod.
+			primitiveFunctionPointer := self cCoerceSimple: (methodCache at: probe + MethodCachePrimFunction)
+											to: #'void (*)()'.
+			^true	"found entry in cache; done"].
+
+	probe := (hash >> 1) bitAnd: MethodCacheMask.  "second probe"
+	(((methodCache at: probe + MethodCacheSelector) = selector) and:
+		 [(methodCache at: probe + MethodCacheClass) = classTag]) ifTrue:
+			[newMethod := methodCache at: probe + MethodCacheMethod.
+			primitiveFunctionPointer := self cCoerceSimple: (methodCache at: probe + MethodCachePrimFunction)
+											to: #'void (*)()'.
+			^true	"found entry in cache; done"].
+
+	probe := (hash >> 2) bitAnd: MethodCacheMask.
+	(((methodCache at: probe + MethodCacheSelector) = selector) and:
+		 [(methodCache at: probe + MethodCacheClass) = classTag]) ifTrue:
+			[newMethod := methodCache at: probe + MethodCacheMethod.
+			primitiveFunctionPointer := self cCoerceSimple: (methodCache at: probe + MethodCachePrimFunction)
+											to: #'void (*)()'.
+			^true	"found entry in cache; done"].
+
+	^false
+]
+
 { #category : #'frame access' }
 StackInterpreter >> instVar: offset ofContext: aContext [
 	"Fetch an instance variable from a maybe married context.
@@ -7051,19 +7096,17 @@ StackInterpreter >> internalExecuteNewMethod [
 { #category : #'message sending' }
 StackInterpreter >> internalFindNewMethod [
 	"Find the compiled method to be run when the current messageSelector is sent to the class 'lkupClass', setting the values of 'newMethod' and 'primitiveIndex'."
-	| ok | 
 	<inline: true>
-	ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
-	ok ifFalse: "entry was not found in the cache; look it up the hard way"
-		[self externalizeIPandSP.
+	(self inlineLookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
+		["entry was not found in the cache; look it up the hard way"
+		 self externalizeIPandSP.
 		 ((objectMemory isOopForwarded: messageSelector)
 		  or: [objectMemory isForwardedClassTag: lkupClassTag]) ifTrue:
 			[(objectMemory isOopForwarded: messageSelector) ifTrue:
 				[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
 			 (objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
 				[lkupClassTag := self handleForwardedSendFaultForTag: lkupClassTag].
-			ok := self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag.
-			ok ifTrue:
+			(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifTrue:
 				[^nil]].
 		 lkupClass := objectMemory classForClassTag: lkupClassTag.
 		 self lookupMethodInClass: lkupClass.
@@ -7781,47 +7824,11 @@ StackInterpreter >> longUnconditionalJump [
 
 { #category : #'method lookup cache' }
 StackInterpreter >> lookupInMethodCacheSel: selector classTag: classTag [
-	"This method implements a simple method lookup cache.  If an entry for the given selector and classTag is
-	 found in the cache, set the values of 'newMethod' and 'primitiveFunctionPointer' and answer true. Otherwise,
-	 answer false."
-	"About the re-probe scheme: The hash is the low bits of the XOR of two large addresses, minus their useless
-	 lowest two bits. If a probe doesn't get a hit, the hash is shifted right one bit to compute the next probe,
-	 introducing a new randomish bit. The cache is probed CacheProbeMax times before giving up."
-	"WARNING: Since the hash computation is based on the object addresses of the class and selector, we must
-	 rehash or flush when compacting storage. We've chosen to flush, since that also saves the trouble of updating
-	 the addresses of the objects in the cache."
-	"classTag is either a class object, if using NewObjectMemory, or a classIndex, if using SpurMemoryManager."
-
-	| hash probe |
-	<inline: true>
-	<asmLabel: false>
-	hash := selector bitXor: classTag.  "shift drops two low-order zeros from addresses"
-
-	probe := hash bitAnd: MethodCacheMask.  "first probe"
-	(((methodCache at: probe + MethodCacheSelector) = selector) and:
-		 [(methodCache at: probe + MethodCacheClass) = classTag]) ifTrue:
-			[newMethod := methodCache at: probe + MethodCacheMethod.
-			primitiveFunctionPointer := self cCoerceSimple: (methodCache at: probe + MethodCachePrimFunction)
-											to: #'void (*)()'.
-			^true	"found entry in cache; done"].
-
-	probe := (hash >> 1) bitAnd: MethodCacheMask.  "second probe"
-	(((methodCache at: probe + MethodCacheSelector) = selector) and:
-		 [(methodCache at: probe + MethodCacheClass) = classTag]) ifTrue:
-			[newMethod := methodCache at: probe + MethodCacheMethod.
-			primitiveFunctionPointer := self cCoerceSimple: (methodCache at: probe + MethodCachePrimFunction)
-											to: #'void (*)()'.
-			^true	"found entry in cache; done"].
-
-	probe := (hash >> 2) bitAnd: MethodCacheMask.
-	(((methodCache at: probe + MethodCacheSelector) = selector) and:
-		 [(methodCache at: probe + MethodCacheClass) = classTag]) ifTrue:
-			[newMethod := methodCache at: probe + MethodCacheMethod.
-			primitiveFunctionPointer := self cCoerceSimple: (methodCache at: probe + MethodCachePrimFunction)
-											to: #'void (*)()'.
-			^true	"found entry in cache; done"].
-
-	^false
+	"This method implements a simple method lookup cache.  If an entry for the given
+	 selector and classTag is found in the cache, set the values of 'newMethod' and
+	 'primitiveFunctionPointer' and answer true. Otherwise, answer false."
+	<inline: false>
+	^self inlineLookupInMethodCacheSel: selector classTag: classTag
 ]
 
 { #category : #'message sending' }
@@ -7954,7 +7961,7 @@ StackInterpreter >> lookupMethodNoMNUEtcInClass: class [
 	"Lookup messageSelector in class.  Answer 0 on success. Answer the splObj: index
 	 for the error selector to use on failure rather than performing MNU processing etc."
 	| currentClass dictionary |
-	<inline: true>
+	<inline: false>
 
 	currentClass := class.
 	[currentClass ~= objectMemory nilObject] whileTrue:

@@ -978,6 +978,19 @@ SpurMemoryManager >> accessibleObjectAfter: objOop [
 		[^objAfter]] repeat
 ]
 
+{ #category : #'weakness and ephemerality' }
+SpurMemoryManager >> activeAndDeferredScan: anEphemeron [
+	"Answer whether an ephemeron is active (has an unmarked
+	 key) and was pushed on the unscanned ephemerons stack."
+	| key |
+	<inline: #never>
+	self assert: (self isEphemeron: anEphemeron).
+	((self isImmediate: (key := self keyOfEphemeron: anEphemeron))
+	 or: [self isMarked: key]) ifTrue:
+		[^false].
+	^self pushOnUnscannedEphemeronsStack: anEphemeron
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> addFreeChunkWithBytes: bytes at: address [
 	self freeChunkWithBytes: bytes at: address.
@@ -4314,7 +4327,7 @@ SpurMemoryManager >> firstValidIndexOfIndexableObject: obj withFormat: fmt [
 { #category : #forwarding }
 SpurMemoryManager >> fixFollowedField: fieldIndex ofObject: anObject withInitialValue: initialValue [
 	"Private helper for followField:ofObject: to avoid code duplication for rare case."
-	<inline: false>
+	<inline: #never>
 	| objOop |
 	self assert: (self isOopForwarded: initialValue).
 	objOop := self followForwarded: initialValue.
@@ -6756,15 +6769,19 @@ SpurMemoryManager >> markAllUnscannedEphemerons [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> markAndShouldScan: objOop [
-	"Mark the argument, and answer if its fields should be scanned now.
+	"Helper for markAndTrace:.
+	 Mark the argument, and answer if its fields should be scanned now.
 	 Immediate objects don't need to be marked.
 	 Already marked objects have already been processed.
 	 Pure bits objects don't need scanning, although their class does.
 	 Weak objects should be pushed on the weakling stack.
 	 Anything else need scanning."
 	| format |
+	<inline: true>
 	(self isImmediate: objOop) ifTrue:
 		[^false].
+	"if markAndTrace: is to follow and eliminate forwarding pointers
+	 in its scan it cannot be handed an r-value which is forwarded."
 	self assert: (self isForwarded: objOop) not.
 	(self isMarked: objOop) ifTrue:
 		[^false].
@@ -6776,6 +6793,9 @@ SpurMemoryManager >> markAndShouldScan: objOop [
 	format = self weakArrayFormat ifTrue: "push weaklings on the weakling stack to scan later"
 		[self push: objOop onObjStack: weaklingStack.
 		 ^false].
+	(format = self ephemeronFormat
+	 and: [self activeAndDeferredScan: objOop]) ifTrue:
+		[^false].
 	^true
 ]
 
@@ -6784,20 +6804,23 @@ SpurMemoryManager >> markAndTrace: objOop [
 	"Mark the argument, and all objects reachable from it, and any remaining objects
 	 on the mark stack. Follow forwarding pointers in the scan."
 	<api>
-	| objToScan numStrongSlots index field |
+	| objToScan scanLargeObject numStrongSlots index field |
+	"if markAndTrace: is to follow and eliminate forwarding pointers
+	 in its scan it cannot be handed an r-value which is forwarded.
+	 The assert for this is in markAndShouldScan:"
 	(self markAndShouldScan: objOop) ifFalse:
 		[^self].
-	"if markAndTrace: is to follow and eliminate forwarding pointers
-	 in its scan it cannot be handed an r-value which is forwarded."
-	self assert: (self isForwarded: objOop) not.
 
 	"Now scan the object, and any remaining objects on the mark stack."
 	objToScan := objOop.
 	"To avoid overflowing the mark stack when we encounter large objects, we
 	 push the obj, then its numStrongSlots, and then index the object from the stack."
-	[((self isImmediate: objToScan)
-	  or: [numStrongSlots := self numStrongSlotsOf: objToScan ephemeronInactiveIf: #inactiveOrFailedToDeferScan:.
-		 numStrongSlots > self traceImmediatelySlotLimit])
+	[(self isImmediate: objToScan)
+		ifTrue: [scanLargeObject := true]
+		ifFalse:
+			[numStrongSlots := self numStrongSlotsOfInephemeral: objToScan.
+			 scanLargeObject := numStrongSlots > self traceImmediatelySlotLimit].
+	 scanLargeObject
 		ifTrue: "scanning a large object. scan until hitting an unmarked object, then switch to it, if any."
 			[(self isImmediate: objToScan)
 				ifTrue:
@@ -6809,16 +6832,16 @@ SpurMemoryManager >> markAndTrace: objOop [
 			 [index > 0] whileTrue:
 				[index := index - 1.
 				 field := self fetchPointer: index ofObject: objToScan.
-				 (self isOopForwarded: field) ifTrue:
-					[field := self followForwarded: field.
-					 self storePointer: index ofObject: objToScan withValue: field].
-				 (self markAndShouldScan: field) ifTrue:
-					[index > 0 ifTrue:
-						[(self topOfObjStack: markStack) ~= objToScan ifTrue: 
-							[self push: objToScan onObjStack: markStack].
-						 self push: (self integerObjectOf: index) onObjStack: markStack].
-					 objToScan := field.
-					 index := -1]].
+				 (self isNonImmediate: field) ifTrue:
+					[(self isForwarded: field) ifTrue: "fixFollowedField: is /not/ inlined"
+						[field := self fixFollowedField: index ofObject: objToScan withInitialValue: field].
+					 (self markAndShouldScan: field) ifTrue:
+						[index > 0 ifTrue:
+							[(self topOfObjStack: markStack) ~= objToScan ifTrue: 
+								[self push: objToScan onObjStack: markStack].
+							 self push: (self integerObjectOf: index) onObjStack: markStack].
+						 objToScan := field.
+						 index := -1]]].
 			 index >= 0 ifTrue: "if loop terminated without finding an unmarked referent, switch to top of stack."
 				[objToScan := self popObjStack: markStack.
 				 objToScan = objOop ifTrue:
@@ -6829,14 +6852,14 @@ SpurMemoryManager >> markAndTrace: objOop [
 			 [index > 0] whileTrue:
 				[index := index - 1.
 				 field := self fetchPointer: index ofObject: objToScan.
-				 (self isOopForwarded: field) ifTrue:
-					[field := self followForwarded: field.
-					 self storePointer: index ofObject: objToScan withValue: field].
-				 (self markAndShouldScan: field) ifTrue:
-					[self push: field onObjStack: markStack.
-					 numStrongSlots := self numStrongSlotsOf: field ephemeronInactiveIf: #inactiveOrFailedToDeferScan:.
-					 numStrongSlots > self traceImmediatelySlotLimit ifTrue:
-						[self push: (self integerObjectOf: numStrongSlots) onObjStack: markStack]]].
+				 (self isNonImmediate: field) ifTrue:
+					[(self isForwarded: field) ifTrue: "fixFollowedField: is /not/ inlined"
+						[field := self fixFollowedField: index ofObject: objToScan withInitialValue: field].
+					 (self markAndShouldScan: field) ifTrue:
+						[self push: field onObjStack: markStack.
+						 ((self rawNumSlotsOf: field) > self traceImmediatelySlotLimit
+						  and: [(numStrongSlots := self numStrongSlotsOfInephemeral: field) > self traceImmediatelySlotLimit]) ifTrue:
+							[self push: (self integerObjectOf: numStrongSlots) onObjStack: markStack]]]].
 			 objToScan := self popObjStack: markStack].
 	 objToScan notNil] whileTrue
 ]
@@ -7540,18 +7563,6 @@ SpurMemoryManager >> numSlotsOfAny: objOop [
 ]
 
 { #category : #'object access' }
-SpurMemoryManager >> numStrongSlotsOf: objOop ephemeronInactiveIf: criterion [
-	"Answer the number of strong pointer fields in the given object.
-	 Works with CompiledMethods, as well as ordinary objects."
-	<var: 'criterion' declareC: 'int (*criterion)(sqInt key)'>
-	<inline: true>
-	<asmLabel: false>
-	| fmt |
-	fmt := self formatOf: objOop.
-	^self numStrongSlotsOf: objOop format: (self formatOf: objOop) ephemeronInactiveIf: criterion
-]
-
-{ #category : #'object access' }
 SpurMemoryManager >> numStrongSlotsOf: objOop format: fmt ephemeronInactiveIf: criterion [
 	"Answer the number of strong pointer fields in the given object.
 	 Works with CompiledMethods, as well as ordinary objects."
@@ -7576,6 +7587,37 @@ SpurMemoryManager >> numStrongSlotsOf: objOop format: fmt ephemeronInactiveIf: c
 		 ^(self perform: criterion with: (self keyOfEphemeron: objOop))
 			ifTrue: [numSlots]
 			ifFalse: [0]].
+	fmt = self forwardedFormat ifTrue: [^1].
+	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
+
+	"CompiledMethod: contains both pointers and bytes"
+	numLiterals := coInterpreter literalCountOf: objOop.
+	^numLiterals + LiteralStart
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> numStrongSlotsOfInephemeral: objOop [
+	"Answer the number of strong pointer fields in the given object,
+	 which is .expected not to be an active ephemeron.
+	 Works with CompiledMethods, as well as ordinary objects."
+	<inline: true>
+	<asmLabel: false>
+	| fmt numSlots  contextSize numLiterals |
+	fmt := self formatOf: objOop.
+	self assert: (fmt ~= self ephemeronFormat or: [self isMarked: (self keyOfEphemeron: objOop)]).
+	fmt <= self lastPointerFormat ifTrue:
+		[numSlots := self numSlotsOf: objOop.
+		 fmt <= self arrayFormat ifTrue:
+			[^numSlots].
+		 fmt = self indexablePointersFormat ifTrue:
+			[(self isContextNonImm: objOop) ifTrue:
+				[coInterpreter setTraceFlagOnContextsFramesPageIfNeeded: objOop.
+				 "contexts end at the stack pointer"
+				 contextSize := coInterpreter fetchStackPointerOf: objOop.
+				 ^CtxtTempFrameStart + contextSize].
+			 ^numSlots].
+		 fmt = self weakArrayFormat ifTrue:
+			[^self fixedFieldsOfClass: (self fetchClassOfNonImm: objOop)]].
 	fmt = self forwardedFormat ifTrue: [^1].
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
@@ -9906,8 +9948,9 @@ SpurMemoryManager >> totalMemorySize [
 { #category : #'gc - global' }
 SpurMemoryManager >> traceImmediatelySlotLimit [
 	"Arbitrary level at which to defer tracing large objects until later.
-	 The average slot size of Smalltalk objects is typically near 8."
-	^16
+	 The average slot size of Smalltalk objects is typically near 8.
+	 We do require traceImmediatelySlotLimit to be < numSlotsMask."
+	^64
 ]
 
 { #category : #'simulation only' }
