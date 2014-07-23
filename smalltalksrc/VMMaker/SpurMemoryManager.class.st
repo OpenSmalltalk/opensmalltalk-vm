@@ -2337,10 +2337,10 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 		ifFalse:
 			[self innerBecomeObjectsIn: array1 to: array2 copyHash: copyHashFlag].
 	self followSpecialObjectsOop.
-	self postBecomeOrCompactScanClassTable: becomeEffectsFlags.
 	coInterpreter postBecomeAction: becomeEffectsFlags.
 	becomeEffectsFlags := 0.
 
+	self assert: self validClassTableHashes.
 	self leakCheckBecome ifTrue:
 		[self runLeakCheckerForFullGC: true].
 
@@ -3023,7 +3023,8 @@ SpurMemoryManager >> classAtIndex: classIndex put: objOop [
 	| classTablePage |
 	self assert: (classIndex <= self tagMask or: [classIndex >= self arrayClassIndexPun]).
 	self assert: (objOop = nilObj
-				 or: [(self rawHashBitsOf: objOop) = classIndex
+				 or: [((self rawHashBitsOf: objOop) = classIndex						"normal entry"
+					  or: [(self classAtIndex: (self rawHashBitsOf: objOop)) = objOop])	"become forces duplicate entry"
 					and: [coInterpreter objCouldBeClassObj: objOop]]).
 	classTablePage := self fetchPointer: classIndex >> self classTableMajorIndexShift
 							ofObject: hiddenRootsObj.
@@ -3619,7 +3620,8 @@ SpurMemoryManager >> displayObject [
 
 { #category : #'become implementation' }
 SpurMemoryManager >> doBecome: obj1 and: obj2 copyHash: copyHashFlag [
-	"Inner dispatch for two-way become"
+	"Inner dispatch for two-way become.
+	 N.B. At least in current two-way become use copyHashFlag is false."
 	| o1ClassIndex o2ClassIndex |
 	copyHashFlag ifFalse:
 		["in-lined
@@ -3631,11 +3633,14 @@ SpurMemoryManager >> doBecome: obj1 and: obj2 copyHash: copyHashFlag [
 		 o2ClassIndex := self rawHashBitsOf: obj2.
 		 (o2ClassIndex ~= 0 and: [(self classAtIndex: o2ClassIndex) ~= obj2]) ifTrue:
 			[o2ClassIndex := 0]].
-	(self numSlotsOf: obj1) = (self numSlotsOf: obj2)
-		ifTrue:
-			[self inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag]
-		ifFalse:
-			[self outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag].
+	(self numSlotsOf: obj1) = (self numSlotsOf: obj2) ifTrue:
+		[self inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag.
+		 self assert: (o1ClassIndex = 0
+					or: [(self rawHashBitsOf: (self classAtIndex: o1ClassIndex)) = o1ClassIndex]).
+		 self assert: (o2ClassIndex = 0
+					or: [(self rawHashBitsOf: (self classAtIndex: o2ClassIndex)) = o2ClassIndex]).
+		 ^self].
+	self outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag.
 	"if copyHashFlag then nothing changes, since hashes were also swapped."
 	copyHashFlag ifTrue:
 		[^self].
@@ -3650,18 +3655,14 @@ SpurMemoryManager >> doBecome: obj1 and: obj2 copyHash: copyHashFlag [
 					 self classAtIndex: o2ClassIndex put: tmp]
 				ifFalse: "o2 wasn't in the table; put it there"
 					[| newObj2 |
-					 (self isForwarded: obj1)
-						ifTrue: [newObj2 := self followForwarded: obj1]
-						ifFalse: [newObj2 := obj1].
+					 newObj2 := self followForwarded: obj1.
 					 self assert: (self rawHashBitsOf: newObj2) = 0.
 					 self setHashBitsOf: newObj2 to: o1ClassIndex.
 					 self classAtIndex: o1ClassIndex put: newObj2]]
 		ifFalse:
 			[o2ClassIndex ~= 0 ifTrue:
 				[| newObj1 |
-				 (self isForwarded: obj2)
-					ifTrue: [newObj1 := self followForwarded: obj2]
-					ifFalse: [newObj1 := obj2].
+				 newObj1 := self followForwarded: obj2.
 				 self assert: (self rawHashBitsOf: newObj1) = 0.
 				 self setHashBitsOf: newObj1 to: o2ClassIndex.
 				 self classAtIndex: o2ClassIndex put: newObj1]]
@@ -3669,14 +3670,22 @@ SpurMemoryManager >> doBecome: obj1 and: obj2 copyHash: copyHashFlag [
 
 { #category : #'become implementation' }
 SpurMemoryManager >> doBecome: obj1 to: obj2 copyHash: copyHashFlag [
-	| hashBits |
+	| o1HashBits o2HashBits |
+	o1HashBits := self rawHashBitsOf: obj1.
+	o2HashBits := self rawHashBitsOf: obj2.
 	self forward: obj1 to: obj2.
-	copyHashFlag ifTrue:
-		[hashBits := self rawHashBitsOf: obj2.
-		 "silently refuse to change the hash of classes; this shouldn't happen anyway."
-		 (self classAtIndex: hashBits) ~= obj2 ifTrue:
-			[hashBits := self rawHashBitsOf: obj1.
-			 self setHashBitsOf: obj2 to: hashBits]]
+	copyHashFlag ifTrue: [self setHashBitsOf: obj2 to: o1HashBits].
+	"obj1 is on its way out.  Remove it from the classTable"
+	(o1HashBits ~= 0 and: [(self classAtIndex: o1HashBits) = obj1])
+		ifTrue: [self expungeFromClassTable: obj1]
+		ifFalse: [o1HashBits := 0]. "= 0 implies was not in class table"
+	self deny: (self isForwarded: obj2).
+	"o1HashBits ~= 0 implies obj1 was in class table and hence may have had instances.
+	 Therefore o1HashBits needs to refer to obj2 (put obj2 in table at o1HashBits)."
+	o1HashBits ~= 0 ifTrue:
+		[o2HashBits = 0 ifTrue: "obj2 has no hash; we're free to assign one"
+			[self setHashBitsOf: obj2 to: o1HashBits].
+		 self classAtIndex: o1HashBits put: obj2]
 ]
 
 { #category : #'gc - scavenging' }
@@ -5518,7 +5527,7 @@ SpurMemoryManager >> innerBecomeObjectsIn: array1 and: array2 copyHash: copyHash
 		[:i| | obj1 obj2 |
 		"At first blush it would appear unnecessary to use followField: here since
 		 the validation in become:with:twoWay:copyHash: follows forwarders.  But
-		 there's nothing to ensure all elements of each array is unique and doesn't
+		 there's nothing to ensure all elements of each array are unique and don't
 		 appear in the other array.  So the enumeration could encounter an object
 		 already becommed earlier in the same enumeration."
 		obj1 := self followField: i ofObject: array1.
@@ -5949,9 +5958,8 @@ SpurMemoryManager >> isImmutable: objOop [
 SpurMemoryManager >> isInClassTable: objOop [
 	| hash |
 	hash := self rawHashBitsOf: objOop.
-	hash = 0 ifTrue:
-		[false].
-	^(self classAtIndex: hash) = objOop
+	^hash ~= 0
+	 and: [(self classAtIndex: hash) = objOop]
 ]
 
 { #category : #'object testing' }
@@ -7429,6 +7437,18 @@ SpurMemoryManager >> nilUnmarkedWeaklingSlotsIn: aWeakling [
 	^anyUnmarked
 ]
 
+{ #category : #'class table' }
+SpurMemoryManager >> noCheckClassAtIndex: classIndex [
+	| classTablePage |
+	classTablePage := self fetchPointer: classIndex >> self classTableMajorIndexShift
+							ofObject: hiddenRootsObj.
+	classTablePage = nilObj ifTrue:
+		[^nil].
+	^self
+		fetchPointer: (classIndex bitAnd: self classTableMinorIndexMask)
+		ofObject: classTablePage
+]
+
 { #category : #'obj stacks' }
 SpurMemoryManager >> noCheckPush: objOop onObjStack: objStack [
 	"Push an element on an objStack.  Split from push:onObjStack: for testing."
@@ -8004,32 +8024,6 @@ SpurMemoryManager >> possibleRootStoreInto: destObj [
 		[scavenger remember: destObj]
 ]
 
-{ #category : #'become implementation' }
-SpurMemoryManager >> postBecomeOrCompactScanClassTable: effectsFlags [
-	"Scan the class table post-become (iff a pointer object or compiled method was becommed),
-	 or post-compact.
-	 Note that one-way become can cause duplications in the class table.
-	 When can these be eliminated?  We use the classTableBitmap to mark classTable entries
-	 (not the classes themselves, since marking a class doesn't help in knowing if its index is used).
-	 On image load, and during incrememtal scan-mark and full GC, classIndices are marked.
-	 We can somehow avoid following classes from the classTable until after this mark phase."
-	self assert: self validClassTableRootPages.
-
-	(effectsFlags anyMask: BecamePointerObjectFlag) ifFalse: [^self].
-
-	0 to: numClassTablePages - 1 do:
-		[:i| | page |
-		page := self fetchPointer: i ofObject: hiddenRootsObj.
-		self assert: (self isForwarded: page) not.
-		0 to: (self numSlotsOf: page) - 1 do:
-			[:j| | classOrNil |
-			classOrNil := self fetchPointer: j ofObject: page.
-			classOrNil ~= nilObj ifTrue:
-				[(self isForwarded: classOrNil) ifTrue:
-					[classOrNil := self followForwarded: classOrNil.
-					 self storePointer: j ofObject: page withValue: classOrNil]]]]
-]
-
 { #category : #snapshot }
 SpurMemoryManager >> postSnapshot [
 	<doNotGenerate>
@@ -8197,6 +8191,31 @@ SpurMemoryManager >> printInstancesWithClassIndex: classIndex [
 		[:obj|
 		 (self classIndexOf: obj) = classIndex ifTrue:
 			[coInterpreter printHex: obj; cr]]
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> printInvalidClassTableEntries [
+	"Print the objects in the classTable that have bad hashes."
+	<api>
+	self validClassTableRootPages ifFalse:
+		[coInterpreter print: 'class table invalid; cannot print'; cr.
+		 ^self].
+
+	0 to: numClassTablePages - 1 do:
+		[:i| | page |
+		 page := self fetchPointer: i ofObject: hiddenRootsObj.
+		 0 to: self classTablePageSize - 1 do:
+			[:j| | classOrNil hash |
+			classOrNil := self fetchPointer: j ofObject: page.
+			classOrNil ~= nilObj ifTrue:
+				[((self isForwarded: classOrNil)
+				  or: [(hash := self rawHashBitsOf: classOrNil) = 0
+				  or: [(self noCheckClassAtIndex: hash) ~= classOrNil]]) ifTrue:
+					[coInterpreter
+						print: 'entry '; printHex: i * self classTablePageSize + j;
+						print: ' oop '; printHex: classOrNil;
+						print: ' hash '; printHex: hash; print: ' => '; printHex: (self classAtIndex: hash);
+						cr]]]]
 ]
 
 { #category : #'debug printing' }
@@ -8879,7 +8898,8 @@ SpurMemoryManager >> setHeapBase: baseOfHeap memoryLimit: memLimit endOfMemory: 
 { #category : #accessing }
 SpurMemoryManager >> setHeapGrowthToSizeGCRatio: aDouble [
 	<var: #aDouble type: #double>
-	heapGrowthToSizeGCRatio := aDouble
+	heapGrowthToSizeGCRatio := aDouble.
+	^0
 ]
 
 { #category : #'gc - global' }
@@ -9719,28 +9739,6 @@ SpurMemoryManager >> sweepToCoallesceFreeSpaceForPigCompactFrom: lowestForwarder
 ]
 
 { #category : #compaction }
-SpurMemoryManager >> sweepToFollowForwarders [
-	"sweep, following forwarders in all live objects, and answering the first forwarder or free object."
-	| lowestFree |
-	lowestFree := 0.
-	self allOldSpaceEntitiesDo:
-		[:o|
-		((self isFreeObject: o) or: [self isForwarded: o])
-			ifTrue:
-				[lowestFree = 0 ifTrue:
-					[lowestFree := o]]
-			ifFalse:
-				[0 to: (self numPointerSlotsOf: o) - 1 do:
-					[:i| | f |
-					f := self fetchPointer: i ofObject: o.
-					(self isOopForwarded: f) ifTrue:
-						[f := self followForwarded: f.
-						 self storePointer: i ofObject: o withValue: f]]]].
-	^lowestFree
-
-]
-
-{ #category : #compaction }
 SpurMemoryManager >> sweepToFollowForwardersForPigCompact [
 	"Sweep, following forwarders in all live objects.
 	 Answer the lowest forwarder in oldSpace."
@@ -10150,6 +10148,32 @@ SpurMemoryManager >> updateRootOfObjStackAt: objStackRootIndex with: newRootPage
 		[WeaklingStackRootIndex]		->	[weaklingStack := newRootPage].
 		[EphemeronQueueRootIndex]	->	[ephemeronQueue := newRootPage] }.
 	^newRootPage
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> validClassTableHashes [
+	"Check the hashes of classes in the table.  The tricky thing here is that classes may be duplicated
+	 in the table.  So each entry ,ust be in the table at its hash, even if it is elsewhere in the table."
+
+	self validClassTableRootPages ifFalse:
+		[^false].
+
+	0 to: numClassTablePages - 1 do:
+		[:i| | page |
+		 page := self fetchPointer: i ofObject: hiddenRootsObj.
+		 0 to: self classTablePageSize - 1 do:
+			[:j| | classOrNil hash |
+			classOrNil := self fetchPointer: j ofObject: page.
+			classOrNil ~= nilObj ifTrue:
+				[(self isForwarded: classOrNil) ifTrue:
+					[^0].
+				 hash := self rawHashBitsOf: classOrNil.
+				 hash = 0 ifTrue:
+					[^false].
+				 (self noCheckClassAtIndex: hash) ~= classOrNil ifTrue:
+					[^false]]]].
+
+	^true
 ]
 
 { #category : #'class table' }
