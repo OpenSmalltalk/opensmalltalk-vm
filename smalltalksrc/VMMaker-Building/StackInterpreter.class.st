@@ -308,6 +308,9 @@ StackInterpreter class >> initializeAssociationIndex [
 StackInterpreter class >> initializeBytecodeTable [
 	"StackInterpreter initializeBytecodeTable"
 
+	(initializationOptions at: #bytecodeTableInitializer ifAbsent: nil) ifNotNil:
+		[:initalizer| ^self perform: initalizer].
+
 	NewspeakVM ifTrue:
 		[^MULTIPLEBYTECODESETS
 			ifTrue: [self initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid]
@@ -770,6 +773,20 @@ StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosures [
 		(224 239 sendLiteralSelector1ArgBytecode)
 		(240 255 sendLiteralSelector2ArgsBytecode)
 	)
+]
+
+{ #category : #initialization }
+StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid [
+	"StackInterpreter initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid"
+
+	| v3Table v1Table |
+	self initializeBytecodeTableForSistaV1.
+	v1Table := BytecodeTable.
+	AltBytecodeEncoderClassName := BytecodeEncoderClassName.
+	AltLongStoreBytecode := LongStoreBytecode.
+	self initializeBytecodeTableForSqueakV3PlusClosures.
+	v3Table := BytecodeTable.
+	BytecodeTable := v3Table, v1Table
 ]
 
 { #category : #initialization }
