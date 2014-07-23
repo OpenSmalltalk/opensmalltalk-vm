@@ -16,6 +16,7 @@ Win32VMMaker >> createCodeGenerator [
 		structDefDefine: '0';
 		"structDefDefine: 'defined(PPC) || defined(_POWER) || defined(__powerpc__) || defined(__ppc__)';"
 		logger: logger;
+		options: optionsDictionary;
 		yourself
 ]
 

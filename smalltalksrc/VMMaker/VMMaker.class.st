@@ -86,7 +86,8 @@ Class {
 		'interpreterClassName',
 		'cogitClassName',
 		'is64BitVM',
-		'optionsDictionary'
+		'optionsDictionary',
+		'abortBlock'
 	],
 	#classVars : [
 		'DirNames'
@@ -457,6 +458,8 @@ VMMaker class >> generateSqueakCogSistaVM [
 	^VMMaker
 		generate: CoInterpreter
 		and: SistaStackToRegisterMappingCogit
+		with: #(	MULTIPLEBYTECODESETS true
+				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/sistasrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including: #()
@@ -498,7 +501,9 @@ VMMaker class >> generateSqueakSpurCogSistaVM [
 	^VMMaker
 		generate: CoInterpreter
 		and: SistaStackToRegisterMappingCogit
-		with: #(ObjectMemory Spur32BitCoMemoryManager)
+		with: #(	ObjectMemory Spur32BitCoMemoryManager
+				MULTIPLEBYTECODESETS true
+				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/spursistasrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#()
@@ -698,6 +703,11 @@ VMMaker class >> versionString [
 	"VMMaker versionString"
 
 	^'4.7.0 (Cog)'
+]
+
+{ #category : #accessing }
+VMMaker >> abortBlock [
+	^abortBlock
 ]
 
 { #category : #'plugin lists' }
@@ -1126,6 +1136,7 @@ VMMaker >> generateCogitFile [
 VMMaker >> generateEntire [
 	"Generate the interp, internal plugins and exports as well as the external plugins.
 	 If this comes from a generator, log it for convenience."
+	abortBlock := [^self].
 	self configurationGeneratorNameOrNil ifNotNil:
 		[:generator|
 		 logger cr; nextPutAll: (generator selector copyReplaceAll: 'generate' with: '').
