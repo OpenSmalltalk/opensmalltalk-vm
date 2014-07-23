@@ -85,6 +85,11 @@ CCodeGenerator class >> shortMonticelloDescriptionForClass: aClass [
 	^mdesc copyFrom: 1 to: (mdesc indexOfSubCollection: ' uuid:') - 1
 ]
 
+{ #category : #accessing }
+CCodeGenerator >> abortBlock [
+	^vmMaker ifNotNil: [:vmm| vmm abortBlock]
+]
+
 { #category : #'spur primitive compilation' }
 CCodeGenerator >> accessorChainsForMethod: method interpreterClass: interpreterClass [
 	"Answer a set of access paths from arguments through objects, in the method, assuming

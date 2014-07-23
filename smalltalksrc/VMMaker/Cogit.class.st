@@ -775,6 +775,21 @@ Cogit class >> initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid 
 ]
 
 { #category : #'class initialization' }
+Cogit class >> initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid [
+	"SimpleStackBasedCogit initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid"
+	"StackToRegisterMappingCogit initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid"
+
+	| v3Table v1Table |
+	"N.B. Must do it backwards to evaluate AltBlockCreationBytecodeSize & BlockCreationBytecodeSize correctly."
+	self initializeBytecodeTableForSistaV1.
+	v1Table := generatorTable.
+	AltBlockCreationBytecodeSize := BlockCreationBytecodeSize.
+	self initializeBytecodeTableForSqueakV3PlusClosures.
+	v3Table := generatorTable.
+	generatorTable := CArrayAccessor on: v3Table object, v1Table object
+]
+
+{ #category : #'class initialization' }
 Cogit class >> initializeCogMethodConstants [
 	CMOpenPIC := 1 + (CMClosedPIC := 1 + (CMBlock := 1 + (CMMethod := 1 + (CMFree := 1))))
 ]
