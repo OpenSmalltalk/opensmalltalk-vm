@@ -275,15 +275,23 @@ TMethod >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: c
 ]
 
 { #category : #transformations }
-TMethod >> buildCaseStmt: aSendNode [
+TMethod >> buildCaseStmt: aSendNode in: aCodeGen [
 	"Build a case statement node for the given send of dispatchOn:in:."
 	"Note: the first argument is the variable to be dispatched on. The second argument is a constant node holding an array of unary selectors, which will be turned into sends to self."
 
+	| unimplemented errorMessage |
 	((aSendNode args size >= 2) and:
 	 [aSendNode args second isConstant and:
-	 [aSendNode args second value class = Array]]) ifFalse: [
-		self error: 'wrong node structure for a case statement'.
-	].
+	 [aSendNode args second value class = Array]]) ifFalse:
+		[self error: 'wrong node structure for a case statement'].
+
+	unimplemented := aSendNode args second value reject: [:s| self definingClass includesSelector: s].
+	unimplemented isEmpty ifFalse:
+		[errorMessage := 'The following selectors are unimplemented: ',
+							(String streamContents: [:s| unimplemented do: [:sel| s crtab; store: sel]]).
+		 (self confirm: errorMessage
+			orCancel: aCodeGen abortBlock) ifFalse:
+				[self halt]].
 
 	^TCaseStmtNode new
 		setExpression: aSendNode args first
@@ -1803,7 +1811,7 @@ TMethod >> prepareMethodIn: aCodeGen [
 										[node arguments: node args allButLast]]]
 						ifFalse:
 							[(CaseStatements includes: node selector) ifTrue:
-								[parent replaceNodesIn: (Dictionary newFromPairs: { node. self buildCaseStmt: node})].
+								[parent replaceNodesIn: (Dictionary newFromPairs: { node. self buildCaseStmt: node in: aCodeGen})].
 							 (#(caseOf: #caseOf:otherwise:) includes: node selector) ifTrue:
 								[parent replaceNodesIn: (Dictionary newFromPairs: { node. self buildSwitchStmt: node parent: parent })]]]]]
 ]
