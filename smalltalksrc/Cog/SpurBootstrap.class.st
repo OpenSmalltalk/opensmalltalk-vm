@@ -804,7 +804,7 @@ SpurBootstrap class >> ClassPROTOTYPEimmediateSubclass: t instanceVariableNames:
 ]
 
 { #category : #'method prototypes pharo' }
-SpurBootstrap class >> ContextPROTOTYPEallInstances [
+SpurBootstrap class >> ContextclassPROTOTYPEallInstances [
 	"Answer all instances of the receiver."
 	<primitive: 177>
 	"The primitive can fail because memory is low.  If so, fall back on the old
@@ -824,7 +824,7 @@ SpurBootstrap class >> ContextPROTOTYPEallInstances [
 ]
 
 { #category : #'method prototypes pharo' }
-SpurBootstrap class >> ContextPROTOTYPEallInstancesDo: aBlock [
+SpurBootstrap class >> ContextclassPROTOTYPEallInstancesDo: aBlock [
 	"Evaluate aBlock with each of the current instances of the receiver."
 	| instances inst next |
 	instances := self allInstancesOrNil.
@@ -849,7 +849,7 @@ SpurBootstrap class >> IntegerclassPROTOTYPEinitialize [
 ]
 
 { #category : #'method prototypes squeak' }
-SpurBootstrap class >> MethodContextPROTOTYPEallInstances [
+SpurBootstrap class >> MethodContextclassPROTOTYPEallInstances [
 	"Answer all instances of the receiver."
 	<primitive: 177>
 	"The primitive can fail because memory is low.  If so, fall back on the old
@@ -869,7 +869,7 @@ SpurBootstrap class >> MethodContextPROTOTYPEallInstances [
 ]
 
 { #category : #'method prototypes squeak' }
-SpurBootstrap class >> MethodContextPROTOTYPEallInstancesDo: aBlock [
+SpurBootstrap class >> MethodContextclassPROTOTYPEallInstancesDo: aBlock [
 	"Evaluate aBlock with each of the current instances of the receiver."
 	| instances inst next |
 	instances := self allInstancesOrNil.
@@ -1524,6 +1524,39 @@ SpurBootstrap class >> bootstrapPharoImage: imageFileBaseName [
 { #category : #utilities }
 SpurBootstrap class >> bootstrapSqueakImage: imageFileBaseName [
 	self bootstrapImage: imageFileBaseName type: 'squeak'
+]
+
+{ #category : #'method prototype categorization' }
+SpurBootstrap class >> categoryForClass: className meta: isMeta selector: selector [ 
+	^(isMeta
+			ifTrue: [{ className. #class. selector }]
+			ifFalse: [{ className. selector }])
+		caseOf: {
+			[#(Behavior allInstancesOrNil)]				-> [#enumerating].
+			[#(Behavior byteSizeOfInstance)]			-> [#'accessing instances and variables'].
+			[#(Behavior byteSizeOfInstanceOfSize:)]	-> [#'accessing instances and variables'].
+			[#(Behavior elementSize)]					-> [#'accessing instances and variables'].
+			[#(Behavior handleFailingBasicNew)]		-> [#private].
+			[#(Behavior handleFailingBasicNew:)]		-> [#private].
+			[#(Behavior handleFailingFailingBasicNew)]	-> [#private].
+			[#(Behavior handleFailingFailingBasicNew:)]	-> [#private].
+			[#(Behavior identityHash)]					-> [#comparing].
+			[#(Behavior isEphemeronClass)]			-> [#testing].
+			[#(Behavior isImmediateClass)]				-> [#testing].
+			[#(Character identityHash)]					-> [#comparing].
+			[#(ClassBuilder superclass:immediateSubclass:instanceVariableNames:classVariableNames:poolDictionaries:category:)]
+														-> [#public].
+			[#(Context class allInstances)]				-> [#enumerating].
+			[#(Context class allInstancesDo:)]			-> [#enumerating].
+			[#(MethodContext class allInstances)]		-> [#enumerating].
+			[#(MethodContext class allInstancesDo:)]	-> [#enumerating].
+			[#(SmallInteger asCharacter)]				-> [#converting].
+			 }
+		otherwise:
+			[Transcript nextPutAll: className.
+			 isMeta ifTrue: [Transcript nextPutAll: ' class'].
+			 Transcript nextPutAll: '>>'; store: selector; nextPutAll: ' is unclassified'; cr.
+			 ^Categorizer default]
 ]
 
 { #category : #tests }
