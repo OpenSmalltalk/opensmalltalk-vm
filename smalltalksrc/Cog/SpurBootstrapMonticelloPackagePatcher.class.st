@@ -203,7 +203,8 @@ SpurBootstrapMonticelloPackagePatcher >> packagesAndPatches [
 			[class := class class].
 		 methodReference := (class includesSelector: selector) ifTrue:
 								[(class >> selector) methodReference].
-		 methodReference category = Categorizer default ifTrue:
+		 (methodReference notNil
+		  and: [methodReference category = Categorizer default]) ifTrue:
 			[methodReference := nil].
 		 source := method getSourceFromFile asString allButFirst: method selector size - selector size.
 		 source first ~= selector first ifTrue:
