@@ -63,6 +63,7 @@ echo # maddeningly xcode has no equivalent of .FORCE and if you use an Xcode scr
 echo rm \"build/$VMXCP.build/$BUILD_CONFIGURATION/$OBJDIR/version.o\"
 rm "build/$VMXCP.build/$BUILD_CONFIGURATION/$OBJDIR/version.o"
 echo $VMXCP xcodebuild -project $VMXCP.xcodeproj -configuration $BUILD_CONFIGURATION
+export TZ="`date +%Z`"
 xcodebuild -project $VMXCP.xcodeproj -configuration $BUILD_CONFIGURATION
 if [ -d "$DEST" ]; then
 	mv build/$BUILD_CONFIGURATION/$APP/* "$DEST"

@@ -127,8 +127,9 @@ INCLUDEPATH:= -isystem/usr/include/mingw -I/usr/include/w32api
 NOBUILTIN:= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
 CFLAGS:= $(INCLUDEPATH) -msse2 -ggdb2 -mwindows -mthreads -mno-cygwin -mwin32 \
 	-mno-rtd -mms-bitfields -mno-accumulate-outgoing-args $(OFLAGS) $(NOBUILTIN)
+TZ:=$(shell date +%Z)
 DEFS:=	-D'VM_NAME="$(VM_NAME)"' -DDEBUGVM=$(DEBUGVM) \
-		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
+		-DNO_SERVICE -DNO_STD_FILE_SUPPORT -D'TZ="$(TZ)"' \
 		$(WINDEFS) -DNO_ISNAN -DNO_SERVICE $(NDEBUG) -DLSB_FIRST -DX86 $(XDEFS)
 XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
 INCLUDES:= -I. -I$(VMDIR) -I$(WIN32DIR) -I$(CROSSDIR) -I$(DXDIR) $(XINC)

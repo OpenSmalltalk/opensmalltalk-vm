@@ -57,6 +57,7 @@ echo # maddeningly xcode has no equivalent of .FORCE and if you use an Xcode scr
 echo rm \"build/CoreVM.build/$BUILD_CONFIGURATION/$OBJDIR/version.o\"
 rm "build/CoreVM.build/$BUILD_CONFIGURATION/$OBJDIR/version.o"
 echo CoreVM xcodebuild -project CoreVM.xcodeproj -configuration $BUILD_CONFIGURATION
+export TZ="`date +%Z`"
 xcodebuild -project CoreVM.xcodeproj -configuration $BUILD_CONFIGURATION
 if [ -d "$DEST" ]; then
 	mv build/$BUILD_CONFIGURATION/Newspeak\ Virtual\ Machine.app/* "$DEST"
