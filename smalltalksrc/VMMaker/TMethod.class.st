@@ -287,8 +287,9 @@ TMethod >> buildCaseStmt: aSendNode in: aCodeGen [
 
 	unimplemented := aSendNode args second value reject: [:s| self definingClass includesSelector: s].
 	unimplemented isEmpty ifFalse:
-		[errorMessage := 'The following selectors are unimplemented: ',
+		[errorMessage := 'The following selectors in case statement "', (aSendNode printString copyUpTo: $#), '..." are unimplemented: ',
 							(String streamContents: [:s| unimplemented do: [:sel| s crtab; store: sel]]).
+		 aCodeGen logger nextPutAll: errorMessage; cr; flush.
 		 (self confirm: errorMessage
 			orCancel: aCodeGen abortBlock) ifFalse:
 				[self halt]].
