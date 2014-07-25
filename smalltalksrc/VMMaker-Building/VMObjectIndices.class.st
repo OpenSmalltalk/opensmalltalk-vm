@@ -80,6 +80,7 @@ Class {
 		'SelectorAttemptToAssign',
 		'SelectorCannotInterpret',
 		'SelectorCannotReturn',
+		'SelectorClassTrap',
 		'SelectorCounterTripped',
 		'SelectorDoesNotUnderstand',
 		'SelectorInvokeCallback',
