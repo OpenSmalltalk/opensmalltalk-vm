@@ -826,7 +826,8 @@ SpurMemoryManager class >> initializeSpecialObjectIndices [
 	ForeignCallbackProcess := 56.
 
 	SelectorUnknownBytecode := 57.
-	SelectorCounterTripped := 58
+	SelectorCounterTripped := 58.
+	SelectorClassTrap := 59
 ]
 
 { #category : #'class initialization' }
