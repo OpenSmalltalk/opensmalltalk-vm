@@ -1106,7 +1106,7 @@ SpurBootstrap class >> SmalltalkImagePROTOTYPErecreateSpecialObjectsArray [
 	 Its contents are critical and accesses to it by the VM are unchecked, so don't even
 	 think of playing here unless you know what you are doing."
 	| newArray |
-	newArray := Array new: 58.
+	newArray := Array new: 60.
 	"Nil false and true get used throughout the interpreter"
 	newArray at: 1 put: nil.
 	newArray at: 2 put: false.
@@ -1196,6 +1196,10 @@ SpurBootstrap class >> SmalltalkImagePROTOTYPErecreateSpecialObjectsArray [
 	newArray at: 57 put: (self specialObjectsArray at: 57 ifAbsent: []).
 
 	newArray at: 58 put: #unusedBytecode.
+	"59 reserved for Sista counter tripped message"
+	newArray at: 59 put: #conditionalBranchCounterTrippedOn:.
+	"60 reserved for Sista class trap message"
+	newArray at: 60 put: #classTrapFor:.
 
 	"Now replace the interpreter's reference in one atomic operation"
 	self specialObjectsArray becomeForward: newArray
@@ -1555,7 +1559,7 @@ SpurBootstrap class >> categoryForClass: className meta: isMeta selector: select
 		otherwise:
 			[Transcript nextPutAll: className.
 			 isMeta ifTrue: [Transcript nextPutAll: ' class'].
-			 Transcript nextPutAll: '>>'; store: selector; nextPutAll: ' is unclassified'; cr.
+			 Transcript nextPutAll: '>>'; store: selector; nextPutAll: ' is unclassified'; cr; flush.
 			 ^Categorizer default]
 ]
 
