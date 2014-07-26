@@ -2887,6 +2887,18 @@ ObjectMemory >> ioLoadModule: moduleNameIndex OfLength: moduleLength [
 ]
 
 { #category : #'header access' }
+ObjectMemory >> is: oop instanceOf: classOop [
+	"Answer if oop is an instance of the given class. If the class has a (non-zero)
+	 compactClassIndex use that to speed up the check."
+
+	<inline: true>
+	(self isIntegerObject: oop) ifTrue:
+		[^classOop = (self splObj: ClassSmallInteger)].
+
+	^self isClassOfNonImm: oop equalTo: classOop
+]
+
+{ #category : #'header access' }
 ObjectMemory >> is: oop instanceOf: classOop compactClassIndex: compactClassIndex [
 	"Answer if oop is an instance of the given class. If the class has a (non-zero)
 	 compactClassIndex use that to speed up the check.  N.B. Inlining should

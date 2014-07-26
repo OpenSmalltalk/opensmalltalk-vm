@@ -204,6 +204,14 @@ Spur64BitMemoryManager >> changeClassOf: rcvr to: argClass [
 	^0
 ]
 
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> fetchClassTagOf: oop [
+	| tagBits |
+	^(tagBits := oop bitAnd: self tagMask) ~= 0
+		ifTrue: [tagBits]
+		ifFalse: [self classIndexOf: oop]
+]
+
 { #category : #instantiation }
 Spur64BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 	<inline: true>

@@ -2435,6 +2435,13 @@ NewObjectMemory >> printWronglySizedContexts: printContexts [
 		 oop := self accessibleObjectAfter: oop]
 ]
 
+{ #category : #'interpreter access' }
+NewObjectMemory >> rawClassTagForClass: classObj [
+	"Compatibility with SpurObjectMemory.  In ObjectMemory there is no distinction between a
+	 classTag in the first-level method cache and a class itself."
+	^classObj
+]
+
 { #category : #'header access' }
 NewObjectMemory >> rawHashBitsOf: objOop [
 	"Compatibility with Spur."
