@@ -4092,10 +4092,7 @@ SpurMemoryManager >> fetchClassOfNonImm: objOop [
 
 { #category : #'interpreter access' }
 SpurMemoryManager >> fetchClassTagOf: oop [
-	| tagBits |
-	(tagBits := oop bitAnd: self tagMask) ~= 0 ifTrue:
-		[^(tagBits bitAnd: 1) ~= 0 ifTrue: [1] ifFalse: [tagBits]].
-	^self classIndexOf: oop
+	self subclassResponsibility
 ]
 
 { #category : #'interpreter access' }
@@ -5697,6 +5694,16 @@ SpurMemoryManager >> is: oop KindOf: classNameString [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
 	^coInterpreter is: oop KindOf: classNameString
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> is: oop instanceOf: classOop [
+	"Answer if oop is an instance of the given class."
+
+	<inline: true>
+	| tag |
+	tag := self fetchClassTagOf: oop.
+	^tag = (self rawHashBitsOf: classOop)
 ]
 
 { #category : #'object access' }
@@ -8434,6 +8441,12 @@ SpurMemoryManager >> queueEphemeron: anEphemeron [
 	self assert: ((self isNonImmediate: anEphemeron)
 				and: [(self formatOf: anEphemeron) = self ephemeronFormat]).
 	self push: anEphemeron onObjStack: ephemeronQueue
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> rawClassTagForClass: classObj [
+	"Answer the classObj's identityHash to use as a tag in a class comparison."
+	^self rawHashBitsOf: classObj
 ]
 
 { #category : #'header access' }

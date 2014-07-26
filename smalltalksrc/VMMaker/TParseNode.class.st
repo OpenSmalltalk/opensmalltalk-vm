@@ -255,6 +255,11 @@ TParseNode >> isSwitch [
 ]
 
 { #category : #testing }
+TParseNode >> isTMethod [
+	^false
+]
+
+{ #category : #testing }
 TParseNode >> isTParseNode [
 	^true
 ]

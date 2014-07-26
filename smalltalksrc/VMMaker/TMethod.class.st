@@ -38,6 +38,11 @@ TMethod class >> initialize [
 	CaseStatements addAll: #(dispatchOn:in: dispatchOn:in:with: dispatchOn:in:with:with:).
 ]
 
+{ #category : #accessing }
+TMethod >> addLabelsTo: aTMethod [
+	aTMethod labels addAll: labels
+]
+
 { #category : #utilities }
 TMethod >> addTypeForSelf [
 	"If self should be typed then add a suitable type declaration.
@@ -841,17 +846,26 @@ TMethod >> extractLabelDirective [
 
 { #category : #transformations }
 TMethod >> extractSharedCase [
-	"Scan the top-level statements for an shared case directive of the form:
-
-		self sharedCodeNamed: <sharedLabel> inCase: <sharedCase>.
-
-	and remove the directive from the method body."
+	"Scan the pragmas for an shared case directive of the form:
+		<sharedCodeNamed: 'sharedLabel' inCase: 'sharedCase'.>
+		<sharedCodeInCase: 'sharedCase'.>
+	or the older top-level statements for the form
+		self sharedCodeNamed: 'sharedLabel' inCase: 'sharedCase'.
+		self sharedCodeInCase: 'sharedCase'.
+	in which case remove the directive from the method body."
 
 	self extractDirective: #sharedCodeNamed:inCase:
 		valueBlock: [:sendNode|
 			args isEmpty ifFalse:
 				[self error: 'Cannot share code sections in methods with arguments'].
 			sharedLabel := sendNode args first value.
+			sharedCase := sendNode args last value]
+		default: nil.
+	self extractDirective: #sharedCodeInCase:
+		valueBlock: [:sendNode|
+			args isEmpty ifFalse:
+				[self error: 'Cannot share code sections in methods with arguments'].
+			sharedLabel := selector.
 			sharedCase := sendNode args last value]
 		default: nil
 ]
@@ -1628,6 +1642,11 @@ TMethod >> isSubstitutableNode: aNode intoMethod: targetMeth in: aCodeGen [
 	].
 
 	^ true
+]
+
+{ #category : #testing }
+TMethod >> isTMethod [
+	^true
 ]
 
 { #category : #accessing }

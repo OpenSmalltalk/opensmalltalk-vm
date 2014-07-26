@@ -647,7 +647,7 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 		(234		extSendBytecode)
 		(235		extSendSuperBytecode)
 
-		(236		extTrapOnBehaviorsBytecode)
+		(236		extTrapIfNotInstanceOfBehaviorsBytecode)
 
 		(237		extUnconditionalJump)
 		(238		extJumpIfTrue)
@@ -1496,7 +1496,7 @@ sqInt warnpid;
 void
 warning(char *s) { /* Print an error message but don''t exit. */
 	if (warnpid)
-		printf("\n%s pid %ld\n", s, warnpid);
+		printf("\n%s pid %ld\n", s, (long)warnpid);
 	else
 		printf("\n%s\n", s);
 }
@@ -2174,7 +2174,7 @@ StackInterpreter >> booleanCheat: cond [
 { #category : #utilities }
 StackInterpreter >> booleanCheatFalse [
 	"cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
-	<sharedCodeNamed: 'booleanCheatFalse' inCase: #bytecodePrimGreaterThan>
+	<sharedCodeInCase: #bytecodePrimGreaterThan>
 	| bytecode offset |
 
 	bytecode := self fetchByte.  "assume next bytecode is jumpIfFalse (99%)"
@@ -2196,7 +2196,7 @@ StackInterpreter >> booleanCheatFalse [
 { #category : #utilities }
 StackInterpreter >> booleanCheatFalseSistaV1 [
 	"cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
-	<sharedCodeNamed: 'booleanCheatFalseSistaV1' inCase: #bytecodePrimGreaterThanSistaV1>
+	<sharedCodeInCase: #bytecodePrimGreaterThanSistaV1>
 	| bytecode offset |
 
 	bytecode := self fetchByte.  "assume next bytecode is jumpIfFalse (99%)"
@@ -2218,7 +2218,7 @@ StackInterpreter >> booleanCheatFalseSistaV1 [
 { #category : #utilities }
 StackInterpreter >> booleanCheatFalseV4 [
 	"cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
-	<sharedCodeNamed: 'booleanCheatFalseV4' inCase: #bytecodePrimGreaterThanV4>
+	<sharedCodeInCase: #bytecodePrimGreaterThanV4>
 	| bytecode offset |
 
 	bytecode := self fetchByte.  "assume next bytecode is jumpIfFalse (99%)"
@@ -2250,7 +2250,7 @@ StackInterpreter >> booleanCheatSistaV1: cond [
 { #category : #utilities }
 StackInterpreter >> booleanCheatTrue [
 	"cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
-	<sharedCodeNamed: 'booleanCheatTrue' inCase: #bytecodePrimLessThan>
+	<sharedCodeInCase: #bytecodePrimLessThan>
 	| bytecode offset |
 
 	bytecode := self fetchByte.  "assume next bytecode is jumpIfFalse (99%)"
@@ -2275,7 +2275,7 @@ StackInterpreter >> booleanCheatTrue [
 { #category : #utilities }
 StackInterpreter >> booleanCheatTrueSistaV1 [
 	"cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
-	<sharedCodeNamed: 'booleanCheatTrueSistaV1' inCase: #bytecodePrimLessThanSistaV1>
+	<sharedCodeInCase: #bytecodePrimLessThanSistaV1>
 	| bytecode offset |
 
 	bytecode := self fetchByte.  "assume next bytecode is jumpIfFalse (99%)"
@@ -2300,7 +2300,7 @@ StackInterpreter >> booleanCheatTrueSistaV1 [
 { #category : #utilities }
 StackInterpreter >> booleanCheatTrueV4 [
 	"cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
-	<sharedCodeNamed: 'booleanCheatTrueV4' inCase: #bytecodePrimLessThanV4>
+	<sharedCodeInCase: #bytecodePrimLessThanV4>
 	| bytecode offset |
 
 	bytecode := self fetchByte.  "assume next bytecode is jumpIfFalse (99%)"
@@ -3992,7 +3992,7 @@ StackInterpreter >> commonAtPut: stringy [
 { #category : #'return bytecodes' }
 StackInterpreter >> commonCallerReturn [
 	"Return to the previous context/frame (sender for method activations, caller for block activations)."
-	<sharedCodeNamed: 'commonCallerReturn' inCase: #returnTopFromBlock>
+	<sharedCodeInCase: #returnTopFromBlock>
 	| callersFPOrNull |
 	<var: #callersFPOrNull type: #'char *'>
 
@@ -4014,7 +4014,7 @@ StackInterpreter >> commonReturn [
 	"Do an ^-return (return form method), perhaps checking for unwinds if this is a block activation.
 	 Note: Assumed to be inlined into the dispatch loop."
 
-	<sharedCodeNamed: 'commonReturn' inCase: #returnReceiver>
+	<sharedCodeInCase: #returnReceiver>
 	| closure home unwindContextOrNilOrZero frameToReturnTo contextToReturnTo theFP callerFP newPage |
 	<var: #frameToReturnTo type: #'char *'>
 	<var: #theFP type: #'char *'>
@@ -4130,7 +4130,7 @@ StackInterpreter >> commonSend [
 	"Assume: messageSelector and argumentCount have been set, and that 
 	the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
-	<sharedCodeNamed: 'commonSend' inCase: #singleExtendedSendBytecode>
+	<sharedCodeInCase: #singleExtendedSendBytecode>
 	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
 	self printSends ifTrue:
 		[self printActivationNameForSelector: messageSelector startClass: (objectMemory classForClassTag: lkupClassTag); cr].
@@ -4147,7 +4147,7 @@ StackInterpreter >> commonSendAbsentImplicit [
 	"Note: This method is inlined into the interpreter dispatch loop."
 	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments"
 	"240		11110000	i i i i i j j j	Send To Absent Implicit Receiver Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	<sharedCodeNamed: 'commonSendAbsentImplicit' inCase: #extSendAbsentImplicitBytecode>
+	<sharedCodeInCase: #extSendAbsentImplicitBytecode>
 	| implicitReceiver |
 	implicitReceiver := self
 							implicitReceiverFor: self receiver
@@ -5112,6 +5112,28 @@ StackInterpreter >> extStoreReceiverVariableBytecode [
 	self fetchNextBytecode.
 	extA := 0.
 	self storeMaybeContextReceiverVariable: variableIndex withValue: self internalStackTop
+]
+
+{ #category : #'sista bytecodes' }
+StackInterpreter >> extTrapIfNotInstanceOfBehaviorsBytecode [
+	"SistaV1: *	236		11101100	iiiiiiii		Trap If Not Instance Of Behavior/Array Of Behavior #iiiiiiii (+ Extend A * 256, where Extend A >= 0)"
+	| tos tosClassTag literal |
+	tos := self stackTop.
+	tosClassTag := objectMemory fetchClassTagOf: tos.
+	literal := self literal: extA << 8 + self fetchByte.
+	extA := 0.
+	(objectMemory isArrayNonImm: literal)
+		ifTrue:
+			[| i |
+			 i := (objectMemory numSlotsOf: literal) asInteger.
+			 [(i := i -1) < 0
+			  or: [tosClassTag = (objectMemory rawClassTagForClass: (objectMemory fetchPointer: i ofObject: literal))]] whileTrue.
+			 i < 0 ifTrue:
+				[^self respondToClassTrap]]
+		ifFalse:
+			[tosClassTag ~= (objectMemory rawClassTagForClass: literal) ifTrue:
+				[^self respondToClassTrap]].
+	self fetchNextBytecode
 ]
 
 { #category : #'jump bytecodes' }
@@ -9086,7 +9108,7 @@ StackInterpreter >> normalSend [
 	"Assume: messageSelector and argumentCount have been set, and that 
 	the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
-	<sharedCodeNamed: 'normalSend' inCase: #singleExtendedSendBytecode>
+	<sharedCodeInCase: #singleExtendedSendBytecode>
 	| rcvr |
 	rcvr := self internalStackValue: argumentCount.
 	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
@@ -11314,10 +11336,25 @@ StackInterpreter >> removeProcess: aProcess fromList: aList [
 	objectMemory storePointer: NextLinkIndex ofObject: aProcess withValue: objectMemory nilObject
 ]
 
+{ #category : #'sista bytecodes' }
+StackInterpreter >> respondToClassTrap [
+	| ourContext tos |
+	<sharedCodeInCase: #extTrapIfNotInstanceOfBehaviorsBytecode>
+	messageSelector := objectMemory splObj: SelectorClassTrap.
+	tos := self internalStackTop.
+	ourContext := self ensureFrameIsMarried: localFP SP: localSP.
+	messageSelector = objectMemory nilObject ifTrue:
+		[self error: 'class trap'].
+	self internalPush: ourContext.
+	self internalPush: tos.
+	argumentCount := 1.
+	self normalSend
+]
+
 { #category : #'miscellaneous bytecodes' }
 StackInterpreter >> respondToUnknownBytecode [
 	"If an error selector is available then send it to the activeContext, otherwise abort."
-	<sharedCodeNamed: #respondToUnknownBytecode inCase: #unknownBytecode>
+	<sharedCodeInCase: #unknownBytecode>
 	| ourContext |
 	messageSelector := objectMemory maybeSplObj: SelectorUnknownBytecode.
 	(messageSelector isNil
@@ -12867,7 +12904,7 @@ StackInterpreter >> superclassSend [
 	"Assume: messageSelector and argumentCount have been set, and that
 	 the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
-	<sharedCodeNamed: 'commonSupersend' inCase: #singleExtendedSuperBytecode>
+	<sharedCodeInCase: #singleExtendedSuperBytecode>
 	| superclass |
 	superclass := self superclassOf: (self methodClassOf: method).
 	objectMemory ensureBehaviorHash: superclass.
