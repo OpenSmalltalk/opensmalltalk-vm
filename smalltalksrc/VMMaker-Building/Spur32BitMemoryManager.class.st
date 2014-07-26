@@ -244,6 +244,14 @@ Spur32BitMemoryManager >> coalesce: obj1 and: obj2 [
 	^obj1 + self baseHeaderSize
 ]
 
+{ #category : #'interpreter access' }
+Spur32BitMemoryManager >> fetchClassTagOf: oop [
+	| tagBits |
+	(tagBits := oop bitAnd: self tagMask) ~= 0 ifTrue:
+		[^(tagBits bitAnd: 1) ~= 0 ifTrue: [1] ifFalse: [tagBits]].
+	^self classIndexOf: oop
+]
+
 { #category : #instantiation }
 Spur32BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 	<inline: true>
