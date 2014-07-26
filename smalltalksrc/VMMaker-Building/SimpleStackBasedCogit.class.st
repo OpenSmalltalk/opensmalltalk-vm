@@ -147,7 +147,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(1  78   78 genPushConstantZeroBytecode)
 		(1  79   79 genPushConstantOneBytecode)
 
-		(1   80 101 genSpecialSelectorSend isMapped) "#+ #- #< #> #<= #>= #= #~= #at: #at:put: #size #next #nextPut: #atEnd"
+		(1   80 101 genSpecialSelectorSend isMapped) "#+ #- #< #> #<= #>= #= #~= #* #/ #\\ #@ #bitShift: #// #bitAnd: #bitOr: #at: #at:put: #size #next #nextPut: #atEnd"
 		(1 102 102 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
 		(1 103 103 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
 		(1 104 111 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
@@ -208,6 +208,118 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(3 251 251 genStoreRemoteTempLongBytecode)
 		(3 252 252 genStoreAndPopRemoteTempLongBytecode)
 		(3 253 253 genExtPushClosureBytecode block v4:Block:Code:Size:)
+
+		(3 254 255	unknownBytecode))
+]
+
+{ #category : #'class initialization' }
+SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
+	"SimpleStackBasedCogit initializeBytecodeTableForSistaV1"
+
+	self flag:
+'Special selector send class must be inlined to agree with the interpreter, which
+ inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
+ class is inlined there will be an MNU.  It must be that the Cointerpreter and Cogit
+ have identical semantics.  We get away with not hardwiring the other special
+ selectors either because in the Cointerpreter they are not inlined or because they
+ are inlined only to instances of classes for which there will always be a method.'.
+	self generatorTableFrom: #(
+		"1 byte bytecodes"
+		"pushes"
+		(1    0   15 genPushReceiverVariableBytecode)
+		(1  16   31 genPushLiteralVariable16CasesBytecode	needsFrameNever: 1)
+		(1  32   63 genPushLiteralConstantBytecode			needsFrameNever: 1)
+		(1  64   75 genPushTemporaryVariableBytecode)
+		(1  76   76 genPushReceiverBytecode)
+		(1  77   77 pushConstantTrueBytecode					needsFrameNever: 1)
+		(1  78   78 pushConstantFalseBytecode				needsFrameNever: 1)
+		(1  79   79 pushConstantNilBytecode					needsFrameNever: 1)
+		(1  80   80 genPushConstantZeroBytecode				needsFrameNever: 1)
+		(1  81   81 genPushConstantOneBytecode				needsFrameNever: 1)
+		(1  82   82 genExtPushPseudoVariable)
+		(1  83   83 duplicateTopBytecode						needsFrameNever: 1)
+
+		(1  84   87 unknownBytecode)
+
+		"returns"
+		(1  88   88 genReturnReceiver				return needsFrameIfInBlock: isMappedInBlock 0)
+		(1  89   89 genReturnTrue					return needsFrameIfInBlock: isMappedInBlock 0)
+		(1  90   90 genReturnFalse					return needsFrameIfInBlock: isMappedInBlock 0)
+		(1  91   91 genReturnNil					return needsFrameIfInBlock: isMappedInBlock 0)
+		(1  92   92 genReturnTopFromMethod		return needsFrameIfInBlock: isMappedInBlock -1)
+		(1  93   93 genReturnNilFromBlock			return needsFrameNever: -1)
+		(1  94   94 genReturnTopFromBlock		return needsFrameNever: -1)
+		(1  95   95 genExtNop						needsFrameNever: 0)
+
+		"sends"
+		(1   96 117 genSpecialSelectorSend isMapped) "#+ #- #< #> #<= #>= #= #~= #* #/ #\\ #@ #bitShift: #// #bitAnd: #bitOr: #at: #at:put: #size #next #nextPut: #atEnd"
+		(1 118 118 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 119 119 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 120 127 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
+
+		(1 128 143 genSendLiteralSelector0ArgsBytecode isMapped)
+		(1 144 159 genSendLiteralSelector1ArgBytecode isMapped)
+		(1 160 175 genSendLiteralSelector2ArgsBytecode isMapped)
+
+		"jumps"
+		(1 176 183 genShortUnconditionalJump	branch v3:ShortForward:Branch:Distance:)
+		(1 184 191 genShortJumpIfTrue			branch isBranchTrue isMapped "because of mustBeBoolean"
+													v3:ShortForward:Branch:Distance:)
+		(1 192 199 genShortJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean"
+													v3:ShortForward:Branch:Distance:)
+
+		"stores"
+		(1 200 207 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
+		(1 208 215 genStoreAndPopTemporaryVariableBytecode)
+
+		(1 216 216 genPopStackBytecode needsFrameNever: -1)
+
+		(1 217 223 unknownBytecode)
+
+		"2 byte bytecodes"
+		(2 224 224 extABytecode extension)
+		(2 225 225 extBBytecode extension)
+
+		"pushes"
+		(2 226 226 genExtPushReceiverVariableBytecode)
+		(2 227 227 genExtPushLiteralVariableBytecode		needsFrameNever: 1)
+		(2 228 228 genExtPushLiteralBytecode					needsFrameNever: 1)
+		(2 229 229 genLongPushTemporaryVariableBytecode)
+		(2 230 230 genPushClosureTempsBytecode)
+		(2 231 231 genPushNewArrayBytecode)
+		(2 232 232 genExtPushIntegerBytecode				needsFrameNever: 1)
+		(2 233 233 genExtPushCharacterBytecode				needsFrameNever: 1)
+
+		"returns"
+		"sends"
+		(2 234 234 genExtSendBytecode isMapped)
+		(2 235 235 genExtSendSuperBytecode isMapped)
+
+		"sista bytecodes"
+		(2 236 236 genExtTrapIfNotInstanceOfBehaviorsBytecode isMapped)
+
+		"jumps"
+		(2 237 237 genExtUnconditionalJump	branch isMapped "because of interrupt check" v4:Long:Branch:Distance:)
+		(2 238 238 genExtJumpIfTrue			branch isBranchTrue isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
+		(2 239 239 genExtJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
+
+		"stores"
+		(2 240 240 genExtStoreAndPopReceiverVariableBytecode)
+		(2 241 241 genExtStoreAndPopLiteralVariableBytecode)
+		(2 242 242 genLongStoreAndPopTemporaryVariableBytecode)
+		(2 243 243 genExtStoreReceiverVariableBytecode)
+		(2 244 244 genExtStoreLiteralVariableBytecode)
+		(2 245 245 genLongStoreTemporaryVariableBytecode)
+
+		(2 246 247	unknownBytecode)
+
+		"3 byte bytecodes"
+		(3 248 248 callPrimitiveBytecode)
+		(3 249 249 unknownBytecode) "reserved for Push Float"
+		(3 250 250 genExtPushClosureBytecode block sistaV1:Block:Code:Size:)
+		(3 251 251 genPushRemoteTempLongBytecode)
+		(3 252 252 genStoreRemoteTempLongBytecode)
+		(3 253 253 genStoreAndPopRemoteTempLongBytecode)
 
 		(3 254 255	unknownBytecode))
 ]
