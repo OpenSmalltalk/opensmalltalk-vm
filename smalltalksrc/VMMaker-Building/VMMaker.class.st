@@ -458,7 +458,8 @@ VMMaker class >> generateSqueakCogSistaVM [
 	^VMMaker
 		generate: CoInterpreter
 		and: SistaStackToRegisterMappingCogit
-		with: #(	MULTIPLEBYTECODESETS true
+		with: #(	SistaVM true
+				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/sistasrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
@@ -501,7 +502,8 @@ VMMaker class >> generateSqueakSpurCogSistaVM [
 	^VMMaker
 		generate: CoInterpreter
 		and: SistaStackToRegisterMappingCogit
-		with: #(	ObjectMemory Spur32BitCoMemoryManager
+		with: #(	SistaVM true
+				ObjectMemory Spur32BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/spursistasrc')

@@ -2239,7 +2239,7 @@ Cogit >> bcpcsAndDescriptorsFor: aMethod do: trinaryBlock [
 	trinaryBlock value: pc value: nil value: nil. "stackCheck/entry pc"
 	bsOffset := self bytecodeSetOffsetFor: aMethod.
 	nExts := 0.
-	endpc := objectMemory byteLengthOf: aMethod.
+	endpc := objectMemory numBytesOf: aMethod.
 	[pc <= endpc] whileTrue:
 		[byte := objectMemory fetchByte: pc ofObject: aMethod.
 		descriptor := self generatorAt: byte + bsOffset.
@@ -2352,7 +2352,7 @@ Cogit >> blockStartPcsIn: aMethod [
 	<doNotGenerate>
 	startpcs := OrderedCollection new.
 	startpcs add: (pc := latestContinuation := coInterpreter startPCOfMethod: aMethod).
-	end := objectMemory byteLengthOf: aMethod.
+	end := objectMemory numBytesOf: aMethod.
 	bsOffset := self bytecodeSetOffsetFor: aMethod.
 	nExts := 0.
 	[pc <= end] whileTrue:
@@ -3892,7 +3892,7 @@ Cogit >> compileCogMethod: selector [
 	"initial estimate.  Actual endPC is determined in scanMethod."
 	endPC := (coInterpreter isQuickPrimitiveIndex: primitiveIndex)
 					ifTrue: [initialPC - 1]
-					ifFalse: [objectMemory byteLengthOf: methodObj].
+					ifFalse: [objectMemory numBytesOf: methodObj].
 	numBytecodes := endPC - initialPC + 1.
 	self allocateOpcodes: (numBytecodes + extra) * 10
 		bytecodes: numBytecodes
@@ -4329,7 +4329,7 @@ Cogit >> endPCOf: aMethod [
 			[^pc - 1]].
 	bsOffset := self bytecodeSetOffsetFor: aMethod.
 	nExts := 0.
-	end := objectMemory byteLengthOf: aMethod.
+	end := objectMemory numBytesOf: aMethod.
 	[pc <= end] whileTrue:
 		[byte := objectMemory fetchByte: pc ofObject: aMethod.
 		descriptor := self generatorAt: byte + bsOffset.
@@ -6649,7 +6649,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsDisplacementX2N]]]).
 			 latestContinuation := startbcpc.
 			 aMethodObj := homeMethod methodObject.
-			 endbcpc := (objectMemory byteLengthOf: aMethodObj) - 1.
+			 endbcpc := (objectMemory numBytesOf: aMethodObj) - 1.
 			 bsOffset := self bytecodeSetOffsetForHeader: homeMethod methodHeader]
 		ifFalse:
 			[isInBlock := true.
@@ -7462,7 +7462,7 @@ Cogit >> method: methodA hasSameCodeAs: methodB [
 	 or: [(coInterpreter temporaryCountOfMethodHeader: headerA) ~= (coInterpreter temporaryCountOfMethodHeader: headerB)
 	 or: [(coInterpreter primitiveIndexOfMethod: methodA header: headerA) ~= (coInterpreter primitiveIndexOfMethod: methodB header: headerB)
 	 or: [numLitsA ~= (coInterpreter literalCountOfHeader: headerB)
-	 or: [endPCA > (objectMemory byteLengthOf: methodB)]]]]) ifTrue:
+	 or: [endPCA > (objectMemory numBytesOf: methodB)]]]]) ifTrue:
 		[^false].
 	 1 to: numLitsA - 1 do:
 		[:li|
@@ -7490,7 +7490,7 @@ Cogit >> method: methodA hasSameCodeAs: methodB checkPenultimate: comparePenulti
 	 or: [(coInterpreter temporaryCountOfMethodHeader: headerA) ~= (coInterpreter temporaryCountOfMethodHeader: headerB)
 	 or: [(coInterpreter primitiveIndexOfMethod: methodA header: headerA) ~= (coInterpreter primitiveIndexOfMethod: methodB header: headerB)
 	 or: [numLitsA ~= (coInterpreter literalCountOfHeader: headerB)
-	 or: [endPCA > (objectMemory byteLengthOf: methodB)]]]]) ifTrue:
+	 or: [endPCA > (objectMemory numBytesOf: methodB)]]]]) ifTrue:
 		[^false].
 	 1 to: numLitsA - 1 do:
 		[:li|
@@ -8935,7 +8935,7 @@ Cogit >> spanForCleanBlockStartingAt: startPC [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	| pc end descriptor |
 	pc := startPC.
-	end := objectMemory byteLengthOf: methodObj.
+	end := objectMemory numBytesOf: methodObj.
 	[pc <= end] whileTrue:
 		[descriptor := self generatorAt: (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 pc := pc + descriptor numBytes.

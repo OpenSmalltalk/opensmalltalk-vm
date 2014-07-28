@@ -3141,8 +3141,22 @@ StackInterpreter >> callExternalPrimitive: functionID [
 
 { #category : #'miscellaneous bytecodes' }
 StackInterpreter >> callPrimitiveBytecode [
-	"249		11111001	i i i i i i i i	jjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjjj * 256)"
-	self error: 'should not be evaluated. method activation should step beyond this bytecode.'
+	"V4:			249		11111001	i i i i i i i i	jjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjjj * 256)
+	 SistaV1:	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution."
+	self cppIf: SistaVM
+		ifTrue:
+			[| byte1 byte2 |
+			 byte1 := self fetchByte.
+			 byte2 := self fetchByte.
+			 self fetchNextBytecode.
+			 byte2 > 127
+				ifTrue:
+					[self inlinePrimitiveBytecode: (byte2 bitAnd: 16r7F) << 8 + byte1]
+				ifFalse:
+					[self error: 'non-inlined callPrimitiveBytecode should not be evaluated. method activation should step beyond this bytecode.']]
+		ifFalse:
+			[self error: 'callPrimitiveBytecode should not be evaluated. method activation should step beyond this bytecode.']
+
 	"We could make it a noop and not skip it in {foo}ActivateMethod, as in:
 
 	localIP := localIP + 3.
@@ -3886,7 +3900,7 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 	| newClosure numCopied |
 	<inline: true>
 	"numCopied should be zero for nil"
-	numCopied := objectMemory fetchWordLengthOf: copiedValues.
+	numCopied := objectMemory numSlotsOf: copiedValues.
 	ClassBlockClosureCompactIndex ~= 0
 		ifTrue:
 			[newClosure := objectMemory
@@ -4322,7 +4336,7 @@ StackInterpreter >> convertFloatsToPlatformOrder [
 { #category : #'internal interpreter access' }
 StackInterpreter >> copiedValueCountOfClosure: closurePointer [
 	<api> "for Cogit"
-	^(objectMemory fetchWordLengthOf: closurePointer) - ClosureFirstCopiedValueIndex
+	^(objectMemory numSlotsOf: closurePointer) - ClosureFirstCopiedValueIndex
 ]
 
 { #category : #'bitblt support' }
@@ -5553,7 +5567,7 @@ StackInterpreter >> findClassContainingMethod: meth startingAt: classObj [
 	[self assert: (objectMemory isForwarded: currClass) not.
 	 classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currClass.
 	 self assert: (objectMemory isForwarded: classDict) not.
-	 classDictSize := objectMemory fetchWordLengthOf: classDict.
+	 classDictSize := objectMemory numSlotsOf: classDict.
 	 methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
 	 self assert: (objectMemory isForwarded: methodArray) not.
 	 i := 0.
@@ -5573,7 +5587,7 @@ StackInterpreter >> findClassForSelector: aSelector lookupClass: startClass do: 
 	| currClass classDict classDictSize i |
 	currClass := startClass.
 	[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currClass.
-	 classDictSize := objectMemory fetchWordLengthOf: classDict.
+	 classDictSize := objectMemory numSlotsOf: classDict.
 	 i := SelectorStart.
 	 [i < classDictSize] whileTrue:
 		[aSelector = (objectMemory fetchPointer: i ofObject: classDict) ifTrue:
@@ -5776,7 +5790,7 @@ StackInterpreter >> findSelectorAndClassForMethod: meth lookupClass: startClass 
 	| currClass classDict classDictSize methodArray i |
 	currClass := startClass.
 	[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currClass.
-	 classDictSize := objectMemory fetchWordLengthOf: classDict.
+	 classDictSize := objectMemory numSlotsOf: classDict.
 	 methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
 	 i := 0.
 	 [i <= (classDictSize - SelectorStart)] whileTrue:
@@ -5805,7 +5819,7 @@ StackInterpreter >> findSelectorOfMethod: methArg [
 	classObj := self methodClassOf: meth.
 	(self addressCouldBeClassObj: classObj) ifTrue:
 		[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: classObj.
-		 classDictSize := objectMemory fetchWordLengthOf: classDict.
+		 classDictSize := objectMemory numSlotsOf: classDict.
 		 methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
 		 i := 0.
 		 [i < (classDictSize - SelectorStart)] whileTrue:
@@ -6772,7 +6786,7 @@ StackInterpreter >> highestPriorityProcess [
 	<inline: false>
 	schedLists := objectMemory fetchPointer: ProcessListsIndex ofObject: self schedulerPointer.
 	p := highestRunnableProcessPriority = 0
-			ifTrue: [objectMemory fetchWordLengthOf: schedLists]
+			ifTrue: [objectMemory numSlotsOf: schedLists]
 			ifFalse: [highestRunnableProcessPriority].
 	p := p - 1.
 	"index of last indexable field"
@@ -7123,6 +7137,143 @@ StackInterpreter >> inlineLookupInMethodCacheSel: selector classTag: classTag [
 			^true	"found entry in cache; done"].
 
 	^false
+]
+
+{ #category : #'miscellaneous bytecodes' }
+StackInterpreter >> inlinePrimitiveBytecode: primIndex [
+	"SistaV1:	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution."
+	<option: #SistaVM>
+	| result result64 |
+	primIndex caseOf: {
+		"0	unchecked SmallInteger #+.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
+		[0]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: self internalStackTop)
+															+ (objectMemory integerValueOf: (self internalStackValue: 1))).
+				 self internalPop: 1; internalStackTopPut: result].
+		"1	unchecked SmallInteger #-.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
+		[1]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: self internalStackTop)
+															- (objectMemory integerValueOf: (self internalStackValue: 1))).
+				 self internalPop: 1; internalStackTopPut: result].
+		"2	unchecked SmallInteger #*.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
+		[2]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: self internalStackTop)
+															* (objectMemory integerValueOf: (self internalStackValue: 1))).
+				 self internalPop: 1; internalStackTopPut: result].
+		"3	unchecked SmallInteger #/.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
+		[3]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: self internalStackTop)
+															/ (objectMemory integerValueOf: (self internalStackValue: 1))).
+				 self internalPop: 1; internalStackTopPut: result].
+		"4	unchecked SmallInteger #//.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
+		[4]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: self internalStackTop)
+															// (objectMemory integerValueOf: (self internalStackValue: 1))).
+				 self internalPop: 1; internalStackTopPut: result].
+		"5	unchecked SmallInteger #\\.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
+		[5]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: self internalStackTop)
+															\\ (objectMemory integerValueOf: (self internalStackValue: 1))).
+				 self internalPop: 1; internalStackTopPut: result].
+		"6	unchecked SmallInteger #quo:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
+		[6]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: self internalStackTop)
+															quo: (objectMemory integerValueOf: (self internalStackValue: 1))).
+				 self internalPop: 1; internalStackTopPut: result].
+
+		"16	unchecked SmallInteger #bitAnd:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
+		[16]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: self internalStackTop)
+															bitAnd: (objectMemory integerValueOf: (self internalStackValue: 1))).
+					 self internalPop: 1; internalStackTopPut: result].
+		"17	unchecked SmallInteger #bitOr:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
+		[17]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: self internalStackTop)
+															bitOr: (objectMemory integerValueOf: (self internalStackValue: 1))).
+					 self internalPop: 1; internalStackTopPut: result].
+		"18	unchecked SmallInteger #bitXor:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
+		[18]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: self internalStackTop)
+															bitXor: (objectMemory integerValueOf: (self internalStackValue: 1))).
+					 self internalPop: 1; internalStackTopPut: result].
+		"19	unchecked SmallInteger #bitShift:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
+		[19]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: self internalStackTop)
+															bitShift: (objectMemory integerValueOf: (self internalStackValue: 1))).
+					 self internalPop: 1; internalStackTopPut: result].
+
+		"32	unchecked SmallInteger #>.  Both arguments are SmallIntegers"
+		[32]	->	[result := objectMemory booleanObjectOf: (self internalStackTop > (self internalStackValue: 1)).
+					 self internalPop: 1; internalStackTopPut: result].
+		"33	unchecked SmallInteger #<.  Both arguments are SmallIntegers"
+		[33]	->	[result := objectMemory booleanObjectOf: (self internalStackTop < (self internalStackValue: 1)).
+					 self internalPop: 1; internalStackTopPut: result].
+		"34	unchecked SmallInteger #>=.  Both arguments are SmallIntegers"
+		[34]	->	[result := objectMemory booleanObjectOf: (self internalStackTop >= (self internalStackValue: 1)).
+					 self internalPop: 1; internalStackTopPut: result].
+		"35	unchecked SmallInteger #<=.  Both arguments are SmallIntegers"
+		[35]	->	[result := objectMemory booleanObjectOf: (self internalStackTop <= (self internalStackValue: 1)).
+					 self internalPop: 1; internalStackTopPut: result].
+		"36	unchecked SmallInteger #=.  Both arguments are SmallIntegers"
+		[36]	->	[result := objectMemory booleanObjectOf: (self internalStackTop = (self internalStackValue: 1)).
+					 self internalPop: 1; internalStackTopPut: result].
+		"37	unchecked SmallInteger #~=.  Both arguments are SmallIntegers"
+		[37]	->	[result := objectMemory booleanObjectOf: (self internalStackTop ~= (self internalStackValue: 1)).
+					 self internalPop: 1; internalStackTopPut: result].
+
+		"64	unchecked Pointer Object>>at:.		The receiver is guaranteed to be a pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger"
+		[64]	->	[result := objectMemory
+									fetchPointer: (objectMemory integerValueOf: self internalStackTop)
+									ofObject: (self internalStackValue: 1).
+					 self internalPop: 1; internalStackTopPut: result].
+		"65	unchecked Byte Object>>at:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The result is a SmallInteger."
+		[65]	->	[result := objectMemory
+									fetchByte: (objectMemory integerValueOf: self internalStackTop)
+									ofObject: (self internalStackValue: 1).
+					 self internalPop: 1; internalStackTopPut: (objectMemory integerObjectOf: result)].
+		"66	unchecked Word Object>>at:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The result is a SmallInteger."
+		[66]	->	[result := objectMemory
+									fetchShort: (objectMemory integerValueOf: self internalStackTop)
+									ofObject: (self internalStackValue: 1).
+					 self internalPop: 1; internalStackTopPut: (objectMemory integerObjectOf: result)].
+		"67	unchecked DoubleWord Object>>at:.	The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The result is a SmallInteger or a LargePositiveInteger."
+		[67]	->	[result := objectMemory
+									fetchLong32: (objectMemory integerValueOf: self internalStackTop)
+									ofObject: (self internalStackValue: 1).
+					 self internalPop: 1; internalStackTopPut: (self signed64BitValueOf: result)].
+		"68	unchecked QuadWord Object>>at:.		The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The result is a SmallInteger or a LargePositiveInteger."
+		[68]	->	[result64 := objectMemory
+									fetchLong64: (objectMemory integerValueOf: self internalStackTop)
+									ofObject: (self internalStackValue: 1).
+					 self internalPop: 1; internalStackTopPut: (self signed64BitValueOf: result)].
+
+		"80	unchecked Pointer Object>>at:put:.			The receiver is guaranteed to be a pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger"
+		[80]	->	[result := self internalStackTop.
+					 objectMemory
+						storePointer: (objectMemory integerValueOf: (self internalStackValue: 1))
+						ofObject: (self internalStackValue: 1)
+						withValue: result.
+					 self internalPop: 2; internalStackTopPut: result].
+		"81	unchecked Byte Object>>at:put:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 8 bits."
+		[81]	->	[result := self internalStackTop.
+					 objectMemory
+						storeByte: (objectMemory integerValueOf: (self internalStackValue: 1))
+						ofObject: (self internalStackValue: 1)
+						withValue: (objectMemory integerValueOf: result).
+					 self internalPop: 2; internalStackTopPut: result].
+		"82	unchecked Word Object>>at:put:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 16 bits."
+		[82]	->	[result := self internalStackTop.
+					 objectMemory
+						storeShort: (objectMemory integerValueOf: (self internalStackValue: 1))
+						ofObject: (self internalStackValue: 1)
+						withValue: (objectMemory integerValueOf: result).
+					 self internalPop: 2; internalStackTopPut: result].
+		"83	unchecked DoubleWord Object>>at:put:.	The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 32 bits."
+		[83]	->	[result := self internalStackTop.
+					 objectMemory
+						storeLong32: (objectMemory integerValueOf: (self internalStackValue: 1))
+						ofObject: (self internalStackValue: 1)
+						withValue: (objectMemory integerValueOf: result).
+					 self internalPop: 2; internalStackTopPut: result].
+		"84	unchecked QuadWord Object>>at:put:.		The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 64 bits."
+		[84]	->	[result := self internalStackTop.
+					 objectMemory
+						storeLong64: (objectMemory integerValueOf: (self internalStackValue: 1))
+						ofObject: (self internalStackValue: 1)
+						withValue: (objectMemory integerValueOf: result).
+					 self internalPop: 2; internalStackTopPut: result] }
+	otherwise:
+		[localIP := localIP - 3.
+		 self respondToUnknownBytecode]
 ]
 
 { #category : #'frame access' }
@@ -7969,7 +8120,7 @@ StackInterpreter >> longPrintOop: oop [
 	fmt := objectMemory formatOf: oop.
 	self print: ' format '; printHexnp: fmt.
 	fmt > objectMemory lastPointerFormat
-		ifTrue: [self print: ' nbytes '; printNum: (objectMemory byteLengthOf: oop)]
+		ifTrue: [self print: ' nbytes '; printNum: (objectMemory numBytesOf: oop)]
 		ifFalse: [(objectMemory isIndexableFormat: fmt) ifTrue:
 					[| len |
 					len := objectMemory lengthOf: oop.
@@ -8085,7 +8236,7 @@ StackInterpreter >> lookupMethodFor: selector InDictionary: dictionary [
 	| length index mask wrapAround nextSelector methodArray |
 	<inline: true>
 	<asmLabel: false>
-	length := objectMemory fetchWordLengthOf: dictionary.
+	length := objectMemory numSlotsOf: dictionary.
 	mask := length - SelectorStart - 1.
 	index := SelectorStart + (objectMemory methodDictionaryHash: selector mask: mask).
 
@@ -8153,7 +8304,7 @@ StackInterpreter >> lookupMethodInDictionary: dictionary [
 	| length index mask wrapAround nextSelector methodArray |
 	<inline: true>
 	<asmLabel: false>
-	length := objectMemory fetchWordLengthOf: dictionary.
+	length := objectMemory numSlotsOf: dictionary.
 	mask := length - SelectorStart - 1.
 	"Use linear search on small dictionaries; its cheaper.
 	 Also the limit can be set to force linear search of all dictionaries, which supports the
@@ -9645,7 +9796,7 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 
 	"Check if number of arguments is reasonable; MaxNumArgs isn't available
 	 so just use LargeContextSize"
-	arraySize := objectMemory fetchWordLengthOf: argumentArray.
+	arraySize := objectMemory numSlotsOf: argumentArray.
 	arraySize > LargeContextSlots ifTrue:
 		[^self primitiveFailFor: PrimErrBadNumArgs].
 
@@ -9777,7 +9928,7 @@ StackInterpreter >> printAllStacks [
 	schedLists := objectMemory fetchPointer: ProcessListsIndex ofObject: self schedulerPointer.
 	"then the runnable processes"
 	p := highestRunnableProcessPriority = 0
-			ifTrue: [objectMemory fetchWordLengthOf: schedLists]
+			ifTrue: [objectMemory numSlotsOf: schedLists]
 			ifFalse: [highestRunnableProcessPriority].
 	p - 1 to: 0 by: -1 do:
 		[:pri|
@@ -10272,7 +10423,7 @@ StackInterpreter >> printMethodCacheFor: thing [
 			[self cCode: [] inSmalltalk: [self transcript ensureCr].
 			 self printNum: i; cr; tab.
 			 (objectMemory isBytesNonImm: s)
-				ifTrue: [self cCode: 'printf("%x %.*s\n", s, byteLengthOf(s), (char *)firstIndexableField(s))'
+				ifTrue: [self cCode: 'printf("%x %.*s\n", s, numBytesOf(s), (char *)firstIndexableField(s))'
 						inSmalltalk: [self printHex: s; space; print: (self stringOf: s); cr]]
 				ifFalse: [self shortPrintOop: s].
 			 self tab.
@@ -10294,7 +10445,7 @@ StackInterpreter >> printMethodDictionary: dictionary [
 	<api>
 	| methodArray |
 	methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dictionary.
-	SelectorStart to: (objectMemory fetchWordLengthOf: dictionary) - 1 do:
+	SelectorStart to: (objectMemory numSlotsOf: dictionary) - 1 do:
 		[:index | | selector meth |
 		 selector := objectMemory fetchPointer: index ofObject: dictionary.
 		 selector ~= objectMemory nilObject ifTrue:
@@ -10377,7 +10528,7 @@ StackInterpreter >> printOop: oop [
 		[^self cr; printFloat: (self dbgFloatValueOf: oop); cr].
 	fmt := objectMemory formatOf: oop.
 	fmt > objectMemory lastPointerFormat ifTrue:
-		[self print: ' nbytes '; printNum: (objectMemory byteLengthOf: oop)].
+		[self print: ' nbytes '; printNum: (objectMemory numBytesOf: oop)].
 	self cr.
 	(fmt between: objectMemory firstLongFormat and: objectMemory firstCompiledMethodFormat - 1) ifTrue:
 		["This will answer false if splObj: ClassAlien is nilObject"
@@ -10391,7 +10542,7 @@ StackInterpreter >> printOop: oop [
 									ifFalse: [' direct @ ']]).
 			 ^self printHex: (self startOfAlienData: oop) asUnsignedInteger; cr].
 		 (objectMemory isWords: oop) ifTrue:
-			[lastIndex := 64 min: ((objectMemory byteLengthOf: oop) / BytesPerWord).
+			[lastIndex := 64 min: ((objectMemory numBytesOf: oop) / BytesPerWord).
 			 lastIndex > 0 ifTrue:
 				[1 to: lastIndex do:
 					[:index|
@@ -13236,7 +13387,7 @@ StackInterpreter >> validInstructionPointer: theInstrPointer inMethod: aMethod f
 			[| methodHeader |
 			 methodHeader := self noAssertHeaderOf: aMethod. "-1 for pre-increment in fetchNextBytecode"
 			 theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BytesPerOop - 1)
-			 and: [theInstrPointer < (aMethod + (objectMemory byteLengthOf: aMethod) + BaseHeaderSize - 1)
+			 and: [theInstrPointer < (aMethod + (objectMemory numBytesOf: aMethod) + BaseHeaderSize - 1)
 			 and: ["If the method starts with a CallPrimitive opcode the instruction pointer should be past it."
 				((self headerIndicatesAlternateBytecodeSet: methodHeader)
 				  and: [(self alternateHeaderHasPrimitiveFlag: methodHeader)
@@ -13247,7 +13398,7 @@ StackInterpreter >> validInstructionPointer: theInstrPointer inMethod: aMethod f
 					not]]]
 		ifFalse: "-1 for pre-increment in fetchNextBytecode"
 			[theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BytesPerOop - 1)
-			 and: [theInstrPointer < (aMethod + (objectMemory byteLengthOf: aMethod) + objectMemory baseHeaderSize - 1)]]
+			 and: [theInstrPointer < (aMethod + (objectMemory numBytesOf: aMethod) + objectMemory baseHeaderSize - 1)]]
 ]
 
 { #category : #'stack pages' }
@@ -13319,7 +13470,7 @@ StackInterpreter >> wakeHighestPriority [
 	self externalWriteBackHeadFramePointers.
 	schedLists := objectMemory fetchPointer: ProcessListsIndex ofObject: self schedulerPointer.
 	p := highestRunnableProcessPriority = 0
-			ifTrue: [objectMemory fetchWordLengthOf: schedLists]
+			ifTrue: [objectMemory numSlotsOf: schedLists]
 			ifFalse: [highestRunnableProcessPriority].
 	[(p := p - 1) >= 0] whileTrue:
 		[processList := objectMemory fetchPointer: p ofObject: schedLists.

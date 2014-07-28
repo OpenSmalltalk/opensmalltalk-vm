@@ -853,8 +853,8 @@ ObjectMemory >> arrayFormat [
 
 { #category : #contexts }
 ObjectMemory >> badContextSize: oop [
-	^(self byteLengthOf: oop) ~= (SmallContextSize-BaseHeaderSize)
-	   and: [(self byteLengthOf: oop) ~= (LargeContextSize-BaseHeaderSize)]
+	^(self numBytesOf: oop) ~= (SmallContextSize-BaseHeaderSize)
+	   and: [(self numBytesOf: oop) ~= (LargeContextSize-BaseHeaderSize)]
 ]
 
 { #category : #'header access' }
@@ -983,37 +983,11 @@ ObjectMemory >> byteFormatMask [
 	^16rC
 ]
 
-{ #category : #'indexing primitive support' }
-ObjectMemory >> byteLengthOf: obj [
-	"Return the number of indexable bytes in the given object.
-	 This is basically a special copy of lengthOf: for BitBlt. But it is also
-	 whoorishly used for the Cogit."
-	<api>
-	| header sz fmt |
-	header := self baseHeader: obj.
-	sz := (header bitAnd: TypeMask) = HeaderTypeSizeAndClass
-			ifTrue: [(self sizeHeader: obj) bitAnd: AllButTypeMask]
-			ifFalse: [header bitAnd: SizeMask].
-	fmt := self formatOfHeader: header.
-	^fmt < self firstByteFormat
-		ifTrue: [(sz - BaseHeaderSize)]  "words"
-		ifFalse: [(sz - BaseHeaderSize) - (fmt bitAnd: 3)]  "bytes"
-]
-
-{ #category : #'object format' }
+{ #category : #'object access' }
 ObjectMemory >> byteSizeOf: oop [
 	<api>
-	| header format size |
 	(self isIntegerObject: oop) ifTrue:[^0].
-	header := self baseHeader: oop.
-	format := self formatOfHeader: header.
-	size := (header bitAnd: TypeMask) = HeaderTypeSizeAndClass
-				ifTrue: [(self sizeHeader: oop) bitAnd: LongSizeMask]
-				ifFalse: [header bitAnd: SizeMask].
-	size := size - (header bitAnd: Size4Bit).
-	^format < self firstByteFormat
-		ifTrue: [ size - BaseHeaderSize "32-bit longs"]
-		ifFalse: [ (size - BaseHeaderSize) - (format bitAnd: 3) "bytes"]
+	^self numBytesOf: oop
 ]
 
 { #category : #'image segment in/out' }
@@ -1110,11 +1084,11 @@ ObjectMemory >> changeClassOf: rcvr to: argClass [
 	Note: argClassInstByteSize-4 because base header is included in class size."
 	argFormat < self arrayFormat
 		ifTrue:
-			[(argClassInstByteSize - BaseHeaderSize) ~= (self byteLengthOf: rcvr) ifTrue:
+			[(argClassInstByteSize - BaseHeaderSize) ~= (self numBytesOf: rcvr) ifTrue:
 				[^PrimErrBadReceiver]]
 		ifFalse:
 			[argFormat = self indexablePointersFormat ifTrue: "For indexable plus fixed fields the receiver must be at least big enough."
-				[(argClassInstByteSize - BaseHeaderSize) > (self byteLengthOf: rcvr) ifTrue:
+				[(argClassInstByteSize - BaseHeaderSize) > (self numBytesOf: rcvr) ifTrue:
 					[^PrimErrBadReceiver]]].
 
 	(self headerTypeOfHeader: rcvrHdr) = HeaderTypeShort
@@ -1142,7 +1116,7 @@ ObjectMemory >> changeClassOf: rcvr to: argClass [
 	^0
 ]
 
-{ #category : #'primitive support' }
+{ #category : #'object access' }
 ObjectMemory >> characterObjectOf: characterCode [
 	<api>
 	^(characterCode between: 0 and: 255)
@@ -1639,7 +1613,7 @@ ObjectMemory >> compactClassFieldLSB [
 	^12
 ]
 
-{ #category : #'header access' }
+{ #category : #'object access' }
 ObjectMemory >> compactClassIndexOf: oop [
 	<api>
 	<inline: true>
@@ -1792,13 +1766,13 @@ ObjectMemory >> falseObject [
 	^falseObj
 ]
 
-{ #category : #'interpreter access' }
+{ #category : #'object access' }
 ObjectMemory >> fetchByte: byteIndex ofObject: oop [
 	<api>
 	^self byteAt: oop + BaseHeaderSize + byteIndex
 ]
 
-{ #category : #'interpreter access' }
+{ #category : #'object access' }
 ObjectMemory >> fetchClassOf: oop [ 
 	| ccIndex |
 	<inline: true>
@@ -1811,7 +1785,7 @@ ObjectMemory >> fetchClassOf: oop [
 				ifFalse: [self compactClassAt: ccIndex]]
 ]
 
-{ #category : #'interpreter access' }
+{ #category : #'object access' }
 ObjectMemory >> fetchClassOfNonImm: oop [ 
 	| ccIndex |
 	<inline: true>
@@ -1821,36 +1795,29 @@ ObjectMemory >> fetchClassOfNonImm: oop [
 		ifFalse: [self compactClassAt: ccIndex]
 ]
 
-{ #category : #'interpreter access' }
+{ #category : #'object access' }
 ObjectMemory >> fetchLong32: fieldIndex ofObject: oop [
 	" index by 32-bit units, and return a 32-bit value. Intended to replace fetchWord:ofObject:"
 
 	^ self long32At: oop + BaseHeaderSize + (fieldIndex << 2)
 ]
 
-{ #category : #'interpreter access' }
-ObjectMemory >> fetchLong32LengthOf: objectPointer [
-	"Gives size appropriate for, eg, fetchLong32"
-
-	| sz |
-	sz := self sizeBitsOf: objectPointer.
-	^ (sz - BaseHeaderSize) >> 2
+{ #category : #'object access' }
+ObjectMemory >> fetchLong64: longIndex ofObject: oop [
+	<returnTypeC: #sqLong>
+	^self long64At: oop + BaseHeaderSize + (8 * (longIndex - 1))
 ]
 
-{ #category : #'interpreter access' }
+{ #category : #'object access' }
 ObjectMemory >> fetchPointer: fieldIndex ofObject: oop [
 	"index by word size, and return a pointer as long as the word size"
 	<api>
 	^self longAt: oop + BaseHeaderSize + (fieldIndex << ShiftForWord)
 ]
 
-{ #category : #'interpreter access' }
-ObjectMemory >> fetchWordLengthOf: objectPointer [
-	"NOTE: this gives size appropriate for fetchPointer: n, but not in general for, eg, fetchLong32, etc."
-
-	| sz |
-	sz := self sizeBitsOf: objectPointer.
-	^ (sz - BaseHeaderSize) >> ShiftForWord
+{ #category : #'object access' }
+ObjectMemory >> fetchShort16: shortIndex ofObject: oop [
+	^self shortAt: oop + BaseHeaderSize + (2 * (shortIndex - 1))
 ]
 
 { #category : #finalization }
@@ -1909,7 +1876,7 @@ ObjectMemory >> firstCompiledMethodFormat [
 	^12
 ]
 
-{ #category : #'object format' }
+{ #category : #'object access' }
 ObjectMemory >> firstFixedField: oop [
 
 	<returnTypeC: #'void *'>
@@ -2020,7 +1987,7 @@ ObjectMemory >> forceTenureFlag: aValue [
 	^forceTenureFlag := aValue
 ]
 
-{ #category : #'header access' }
+{ #category : #'object access' }
 ObjectMemory >> formatOf: oop [
 "       0      no fields
         1      fixed fields only (all containing pointers)
@@ -2054,7 +2021,7 @@ ObjectMemory >> formatOfClass: classPointer [
 	^(self fetchPointer: InstanceSpecificationIndex ofObject: classPointer) - 1
 ]
 
-{ #category : #'header access' }
+{ #category : #'object access' }
 ObjectMemory >> formatOfHeader: header [
 "       0      no fields
         1      fixed fields only (all containing pointers)
@@ -2278,8 +2245,9 @@ ObjectMemory >> gcStartUsecs [
 
 { #category : #contexts }
 ObjectMemory >> goodContextSize: oop [
-	^(self byteLengthOf: oop) = (SmallContextSize-BaseHeaderSize)
-	   or: [(self byteLengthOf: oop) = (LargeContextSize-BaseHeaderSize)]
+	| numSlots |
+	numSlots := self numSlotsOf: oop.
+	^numSlots = SmallContextSlots or: [numSlots = LargeContextSlots]
 ]
 
 { #category : #accessing }
@@ -2886,7 +2854,7 @@ ObjectMemory >> ioLoadModule: moduleNameIndex OfLength: moduleLength [
 	^0
 ]
 
-{ #category : #'header access' }
+{ #category : #'object access' }
 ObjectMemory >> is: oop instanceOf: classOop [
 	"Answer if oop is an instance of the given class. If the class has a (non-zero)
 	 compactClassIndex use that to speed up the check."
@@ -2898,7 +2866,7 @@ ObjectMemory >> is: oop instanceOf: classOop [
 	^self isClassOfNonImm: oop equalTo: classOop
 ]
 
-{ #category : #'header access' }
+{ #category : #'object access' }
 ObjectMemory >> is: oop instanceOf: classOop compactClassIndex: compactClassIndex [
 	"Answer if oop is an instance of the given class. If the class has a (non-zero)
 	 compactClassIndex use that to speed up the check.  N.B. Inlining should
@@ -2974,7 +2942,7 @@ ObjectMemory >> isClassOfNonImm: oop equalTo: classOop [
 	^cl = classOop
 ]
 
-{ #category : #'header access' }
+{ #category : #'object access' }
 ObjectMemory >> isClassOfNonImm: oop equalTo: classOop compactClassIndex: compactClassIndex [
 	"Answer if the given (non-immediate) object is an instance of the given class
 	 that may have a compactClassIndex (if compactClassIndex is non-zero).
@@ -3403,7 +3371,7 @@ ObjectMemory >> lastPointerWhileForwarding: oop [
 	^(self literalCountOfHeader: methodHeader) * BytesPerWord + BaseHeaderSize
 ]
 
-{ #category : #'indexing primitive support' }
+{ #category : #'object access' }
 ObjectMemory >> lengthOf: oop [
 	"Return the number of indexable bytes or words in the given object. Assume the argument is not an integer. For a CompiledMethod, the size of the method header (in bytes) should be subtracted from the result."
 
@@ -3415,7 +3383,7 @@ ObjectMemory >> lengthOf: oop [
 	^self lengthOf: oop baseHeader: header format: (self formatOfHeader: header)
 ]
 
-{ #category : #'indexing primitive support' }
+{ #category : #'object access' }
 ObjectMemory >> lengthOf: oop baseHeader: hdr format: fmt [
 	"Return the number of fixed and indexable bytes, words, or object pointers in the
 	given object. Assume the given oop is not an integer. For a CompiledMethod, the size
@@ -3807,6 +3775,60 @@ ObjectMemory >> noteAsRoot: oop headerLoc: headerLoc [
 					[allocationCount := allocationsBetweenGCs + 1]]
 			ifFalse: "note overflow; will need to do a fullGC instead of an incremental."
 				[rootTableOverflowed := true]]
+]
+
+{ #category : #'object access' }
+ObjectMemory >> num16BitUnitsOf: objOop [ 
+	"Answer the number of 16-bit units in the given non-immediate object.
+	 N..B. Rounds down 8-bit units, so a 5 byte object has 2 16-bit units.
+	 Does not adjust the size of contexts by stackPointer."
+	^(self numBytesOf: objOop) >> 1
+]
+
+{ #category : #'object access' }
+ObjectMemory >> num32BitUnitsOf: objOop [ 
+	"Answer the number of 16-bit units in the given non-immediate object.
+	 N..B. Rounds down 8-bit units, so a 7 byte object has 1 32-bit unit.
+	 Does not adjust the size of contexts by stackPointer."
+	^(self numBytesOf: objOop) >> 2
+]
+
+{ #category : #'object access' }
+ObjectMemory >> num64BitUnitsOf: objOop [ 
+	"Answer the number of 16-bit units in the given non-immediate object.
+	 N..B. Rounds down 8-bit units, so a 15 byte object has 1 64-bit unit.
+	 Does not adjust the size of contexts by stackPointer."
+	^(self numBytesOf: objOop) >> 3
+]
+
+{ #category : #'object access' }
+ObjectMemory >> numBytesOf: objOop [ 
+	"Answer the number of indexable bytes in the given non-immediate object.
+	 Does not adjust the size of contexts by stackPointer."
+	<api>
+	| header sz fmt |
+	header := self baseHeader: objOop.
+	sz := (header bitAnd: TypeMask) = HeaderTypeSizeAndClass
+			ifTrue: [(self sizeHeader: objOop) bitAnd: AllButTypeMask]
+			ifFalse: [header bitAnd: SizeMask].
+	fmt := self formatOfHeader: header.
+	^fmt < self firstByteFormat
+		ifTrue: [(sz - BaseHeaderSize)]  "words"
+		ifFalse: [(sz - BaseHeaderSize) - (fmt bitAnd: 3)]  "bytes"
+]
+
+{ #category : #'object access' }
+ObjectMemory >> numSlotsOf: obj [
+	"Answer the number of oop-sized elements in the given object.
+	 Unlike lengthOf: this does not adjust the length of a context
+	 by the stackPointer and so can be used e.g. by cloneContext:"
+	<api>
+	| header sz |
+	header := self baseHeader: obj.
+	sz := (header bitAnd: TypeMask) = HeaderTypeSizeAndClass
+			ifTrue: [(self sizeHeader: obj) bitAnd: AllButTypeMask]
+			ifFalse: [header bitAnd: SizeMask].
+	^sz - BaseHeaderSize >> ShiftForWord
 ]
 
 { #category : #'object enumeration' }
@@ -4216,7 +4238,7 @@ ObjectMemory >> printWronglySizedContexts [
 	[oop = nil] whileFalse:
 		[((self isContextNonImm: oop)
 		   and: [self badContextSize: oop]) ifTrue:
-			[self printHex: oop; space; printNum: (self byteLengthOf: oop); cr].
+			[self printHex: oop; space; printNum: (self numBytesOf: oop); cr].
 		 oop := self accessibleObjectAfter: oop]
 ]
 
@@ -4709,7 +4731,7 @@ ObjectMemory >> signalLowSpace: aValue [
 	^signalLowSpace := aValue
 ]
 
-{ #category : #'header access' }
+{ #category : #'object access' }
 ObjectMemory >> sizeBitsOf: oop [
 	"Answer the number of bytes in the given object, including its base header, rounded up to an integral number of words."
 	"Note: byte indexable objects need to have low bits subtracted from this size."
@@ -4721,7 +4743,7 @@ ObjectMemory >> sizeBitsOf: oop [
 		ifFalse: [ ^ header bitAnd: SizeMask ].
 ]
 
-{ #category : #'header access' }
+{ #category : #'object access' }
 ObjectMemory >> sizeBitsOfSafe: oop [
 	"Compute the size of the given object from the cc and size fields in its header. This works even if its type bits are not correct."
 
@@ -4746,7 +4768,7 @@ ObjectMemory >> sizeOfFree: oop [
 	^ (self longAt: oop) bitAnd: AllButTypeMask
 ]
 
-{ #category : #'object format' }
+{ #category : #'object access' }
 ObjectMemory >> slotSizeOf: oop [
 	"Returns the number of slots in the receiver.
 	If the receiver is a byte object, return the number of bytes.
@@ -4935,7 +4957,7 @@ ObjectMemory >> statTenures [
 	^statTenures
 ]
 
-{ #category : #'interpreter access' }
+{ #category : #'object access' }
 ObjectMemory >> storeByte: byteIndex ofObject: oop withValue: valueByte [
 
 	^ self byteAt: oop + BaseHeaderSize + byteIndex
@@ -5126,14 +5148,20 @@ In case of either success or failure, the headers must be restored.  In the even
 	^PrimNoErr
 ]
 
-{ #category : #'interpreter access' }
+{ #category : #'object access' }
 ObjectMemory >> storeLong32: fieldIndex ofObject: oop withValue: valueWord [
 
 	^ self long32At: oop + BaseHeaderSize + (fieldIndex << 2)
 		put: valueWord
 ]
 
-{ #category : #'interpreter access' }
+{ #category : #'object access' }
+ObjectMemory >> storeLong64: longIndex ofObject: oop withValue: value [
+	<var: #value type: #sqLong>
+	^self long64At: oop + BaseHeaderSize + (8 * (longIndex - 1)) put: value
+]
+
+{ #category : #'object access' }
 ObjectMemory >> storePointer: fieldIndex ofObject: oop withValue: valuePointer [
 	"Note must check here for stores of young objects into old ones."
 
@@ -5145,7 +5173,7 @@ ObjectMemory >> storePointer: fieldIndex ofObject: oop withValue: valuePointer [
 		put: valuePointer
 ]
 
-{ #category : #'interpreter access' }
+{ #category : #'object access' }
 ObjectMemory >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
 	"Like storePointer:ofObject:withValue:, but the caller guarantees that the
 	 object being stored into is a young object or is already marked as a root."
@@ -5154,6 +5182,11 @@ ObjectMemory >> storePointerUnchecked: fieldIndex ofObject: oop withValue: value
 	^self
 		longAt: oop + BaseHeaderSize + (fieldIndex << ShiftForWord)
 		put: valuePointer
+]
+
+{ #category : #'object access' }
+ObjectMemory >> storeShort16: shortIndex ofObject: oop withValue: value [
+	^self shortAt: oop + BaseHeaderSize + (2 * (shortIndex - 1)) put: value
 ]
 
 { #category : #'interpreter access' }

@@ -69,6 +69,7 @@ Class {
 		'PrimNoErr',
 		'STACKVM',
 		'ShiftForWord',
+		'SistaVM',
 		'VMBIGENDIAN'
 	],
 	#category : #'VMMaker-Interpreter'

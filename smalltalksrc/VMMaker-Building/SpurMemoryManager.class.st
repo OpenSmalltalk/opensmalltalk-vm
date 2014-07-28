@@ -2435,42 +2435,10 @@ SpurMemoryManager >> byteFormatMask [
 ]
 
 { #category : #'object access' }
-SpurMemoryManager >> byteLengthOf: objOop [ 
-	"Answer the number of indexable bytes in the given object.
-	 Does not adjust contexts by stackPointer.
-	 This is basically a special copy of lengthOf: for BitBlt. But it is also
-	 whoorishly used for the Cogit."
-	<api>
-	| fmt numBytes |
-	<inline: true>
-	<asmLabel: false>
-	fmt := self formatOf: objOop.
-	numBytes := (self numSlotsOf: objOop) << self shiftForWord.
-	fmt <= self sixtyFourBitIndexableFormat ifTrue:
-		[^numBytes].
-	fmt >= self firstByteFormat ifTrue: "bytes, including CompiledMethod"
-		[^numBytes - (fmt bitAnd: 7)].
-	fmt >= self firstShortFormat ifTrue:
-		[^numBytes - ((fmt bitAnd: 3) << 1)].
-	"fmt >= self firstLongFormat"
-	^numBytes - ((fmt bitAnd: 1) << 2)
-]
-
-{ #category : #'object access' }
 SpurMemoryManager >> byteSizeOf: oop [
 	<api>
-	| format |
 	(self isImmediate: oop) ifTrue: [^0].
-	format := self formatOf: oop.
-	format < self sixtyFourBitIndexableFormat ifTrue:
-		[^(self numSlotsOf: oop) << self shiftForWord].
-	format >= self firstByteFormat ifTrue:
-		[^(self numSlotsOf: oop) << self shiftForWord - (format bitAnd: 7)].
-	format >= self firstShortFormat ifTrue:
-		[^(self numSlotsOf: oop) << self shiftForWord - ((format bitAnd: 3) << 1)].
-	format >= self firstLongFormat ifTrue:
-		[^(self numSlotsOf: oop) << self shiftForWord - ((format bitAnd: 1) << 2)].
-	^(self numSlotsOf: oop) << self shiftForWord
+	^self numBytesOf: oop
 ]
 
 { #category : #'indexing primitive support' }
@@ -4115,6 +4083,12 @@ SpurMemoryManager >> fetchLong32: fieldIndex ofObject: oop [
 	^self long32At: oop + self baseHeaderSize + (fieldIndex << 2)
 ]
 
+{ #category : #'object access' }
+SpurMemoryManager >> fetchLong64: longIndex ofObject: objOop [
+	<returnTypeC: #sqLong>
+	^self long64At: objOop + self baseHeaderSize + (8 * (longIndex - 1))
+]
+
 { #category : #'heap management' }
 SpurMemoryManager >> fetchPointer: fieldIndex ofFreeChunk: objOop [
 	^self longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
@@ -4131,11 +4105,8 @@ SpurMemoryManager >> fetchPointer: fieldIndex ofObject: objOop [
 ]
 
 { #category : #'object access' }
-SpurMemoryManager >> fetchWordLengthOf: objOop [
-	"NOTE: this gives size appropriate for fetchPointer: n, but not in general for, eg, fetchLong32, etc.
-	 Unlike lengthOf: this does not adjust the length of a context
-	 by the stackPointer and so can be used e.g. by cloneContext:"
-	^self numSlotsOf: objOop
+SpurMemoryManager >> fetchShort16: shortIndex ofObject: objOop [
+	^self shortAt: objOop + self baseHeaderSize + (2 * (shortIndex - 1))
 ]
 
 { #category : #instantiation }
@@ -7499,6 +7470,51 @@ SpurMemoryManager >> nonIndexablePointerFormat [
 	^1
 ]
 
+{ #category : #'object access' }
+SpurMemoryManager >> num16BitUnitsOf: objOop [ 
+	"Answer the number of 16-bit units in the given non-immediate object.
+	 N..B. Rounds down 8-bit units, so a 5 byte object has 2 16-bit units.
+	 Does not adjust the size of contexts by stackPointer."
+	^(self numBytesOf: objOop) >> 1
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> num32BitUnitsOf: objOop [ 
+	"Answer the number of 16-bit units in the given non-immediate object.
+	 N..B. Rounds down 8-bit units, so a 7 byte object has 1 32-bit unit.
+	 Does not adjust the size of contexts by stackPointer."
+	^(self numBytesOf: objOop) >> 2
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> num64BitUnitsOf: objOop [ 
+	"Answer the number of 16-bit units in the given non-immediate object.
+	 N..B. Rounds down 8-bit units, so a 15 byte object has 1 64-bit unit.
+	 Does not adjust the size of contexts by stackPointer."
+	^(self numBytesOf: objOop) >> 3
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> numBytesOf: objOop [ 
+	"Answer the number of indexable bytes in the given non-immediate object.
+	 Does not adjust the size of contexts by stackPointer."
+	<api>
+	| fmt numBytes |
+	<inline: true>
+	<asmLabel: false>
+	fmt := self formatOf: objOop.
+	numBytes := self numSlotsOf: objOop.
+	numBytes := numBytes << self shiftForWord.
+	fmt <= self sixtyFourBitIndexableFormat ifTrue:
+		[^numBytes].
+	fmt >= self firstByteFormat ifTrue: "bytes, including CompiledMethod"
+		[^numBytes - (fmt bitAnd: 7)].
+	fmt >= self firstShortFormat ifTrue:
+		[^numBytes - ((fmt bitAnd: 3) << 1)].
+	"fmt >= self firstLongFormat"
+	^numBytes - ((fmt bitAnd: 1) << 2)
+]
+
 { #category : #'object format' }
 SpurMemoryManager >> numFixedSlotsOf: objOop [
 	<inline: true>
@@ -9553,6 +9569,12 @@ SpurMemoryManager >> storeLong32: fieldIndex ofObject: obj withValue: valueWord 
 	^self long32At: obj + self baseHeaderSize + (fieldIndex << 2) put: valueWord
 ]
 
+{ #category : #'object access' }
+SpurMemoryManager >> storeLong64: longIndex ofObject: objOop withValue: value [
+	<var: #value type: #sqLong>
+	^self long64At: objOop + self baseHeaderSize + (8 * (longIndex - 1)) put: value
+]
+
 { #category : #'heap management' }
 SpurMemoryManager >> storePointer: fieldIndex ofForwarder: objOop withValue: valuePointer [
 
@@ -9646,6 +9668,11 @@ SpurMemoryManager >> storePointerUnchecked: fieldIndex ofObject: objOop withValu
 	^self
 		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 		put: valuePointer
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> storeShort16: shortIndex ofObject: objOop withValue: value [
+	^self shortAt: objOop + self baseHeaderSize + (2 * (shortIndex - 1)) put: value
 ]
 
 { #category : #'primitive support' }
@@ -10150,6 +10177,13 @@ SpurMemoryManager >> unmarkSurvivingObjectsForPigCompact [
 		[:objOop|
 		(self isMarked: objOop) ifTrue:
 			[self setIsMarkedOf: objOop to: false]]
+]
+
+{ #category : #'primitive support' }
+SpurMemoryManager >> unpinObject: objOop [
+	self assert: (self isNonImmediate: objOop).
+	self setIsPinnedOf: objOop to: false.
+	^0
 ]
 
 { #category : #'obj stacks' }

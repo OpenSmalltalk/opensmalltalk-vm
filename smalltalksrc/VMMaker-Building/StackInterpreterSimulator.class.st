@@ -244,7 +244,7 @@ StackInterpreterSimulator >> classAndSelectorOfMethod: meth forReceiver: rcvr [
 	| mClass dict length methodArray |
 	mClass := objectMemory fetchClassOf: rcvr.
 	[dict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: mClass.
-	length := objectMemory fetchWordLengthOf: dict.
+	length := objectMemory numSlotsOf: dict.
 	methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dict.
 	0 to: length-SelectorStart-1 do: 
 		[:index | 
