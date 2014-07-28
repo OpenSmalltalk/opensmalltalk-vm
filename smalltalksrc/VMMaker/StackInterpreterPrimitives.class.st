@@ -423,7 +423,7 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 	((objectMemory isArray: argumentArray)
 	 and: [objectMemory isOopCompiledMethod: methodArg]) ifFalse:
 		[^self primitiveFailFor: -2]. "invalid args"
-	arraySize := objectMemory fetchWordLengthOf: argumentArray.
+	arraySize := objectMemory numSlotsOf: argumentArray.
 	(self roomToPushNArgs: arraySize) ifFalse:
 		[^self primitiveFailFor: -2]. "invalid args"
 
@@ -494,7 +494,7 @@ StackInterpreterPrimitives >> primitiveDoPrimitiveWithArgs [
 	| argumentArray arraySize index primIdx |
 	argumentArray := self stackTop.
 	(objectMemory isArray: argumentArray) ifFalse: [^self primitiveFail].
-	arraySize := objectMemory fetchWordLengthOf: argumentArray.
+	arraySize := objectMemory numSlotsOf: argumentArray.
 	self success: (self roomToPushNArgs: arraySize).
 
 	primIdx := self stackIntegerValue: 1.
@@ -565,7 +565,7 @@ StackInterpreterPrimitives >> primitiveExecuteMethodArgsArray [
 	 and: [objectMemory isArray: argumentArray]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	argCnt := self argumentCountOf: methodArgument.
-	argCnt = (objectMemory fetchWordLengthOf: argumentArray) ifFalse:
+	argCnt = (objectMemory numSlotsOf: argumentArray) ifFalse:
 		[^self primitiveFailFor: PrimErrBadNumArgs].
 	argumentCount > 2 ifTrue: "CompiledMethod class>>receiver:withArguments:executeMethod:
 								SqueakObjectPrimitives class >> receiver:withArguments:apply:

@@ -1039,6 +1039,12 @@ InterpreterProxy >> trueObject [
 	^true
 ]
 
+{ #category : #'object access' }
+InterpreterProxy >> unpinObject: anObject [
+	<option: #(atLeastVMProxyMajor:minor: 1 13)>
+	^self shouldBeImplemented
+]
+
 { #category : #other }
 InterpreterProxy >> vmEndianness [
 	"return 0 for little endian, 1 for big endian"

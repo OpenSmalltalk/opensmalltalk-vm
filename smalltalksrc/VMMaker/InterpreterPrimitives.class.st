@@ -911,7 +911,7 @@ InterpreterPrimitives >> primitiveClipboardText [
 			[s := self stackTop.
 			 (objectMemory isBytes: s) ifFalse: [^ self primitiveFail].
 			 self successful ifTrue:
-				[sz := objectMemory byteLengthOf: s.
+				[sz := objectMemory numBytesOf: s.
 				 self clipboardWrite: sz From: s + objectMemory baseHeaderSize At: 0.
 				 self pop: 1]]
 		ifFalse:
@@ -1034,7 +1034,7 @@ InterpreterPrimitives >> primitiveClosureValueWithArgs [
 		[^self primitiveFail].
 
 	"Check for enough space in thisContext to push all args"
-	arraySize := objectMemory fetchWordLengthOf: argumentArray.
+	arraySize := objectMemory numSlotsOf: argumentArray.
 	(self roomToPushNArgs: arraySize) ifFalse:
 		[^self primitiveFail].
 
@@ -1616,7 +1616,7 @@ InterpreterPrimitives >> primitiveFormPrint [
 		wordsPerLine := (w + (pixelsPerWord - 1)) // pixelsPerWord.
 		(objectMemory isWordsOrBytes: bitsArray)
 			ifTrue:
-				[bitsArraySize := objectMemory byteLengthOf: bitsArray.
+				[bitsArraySize := objectMemory numBytesOf: bitsArray.
 				self success: (bitsArraySize = (wordsPerLine * h * 4))]
 			ifFalse: [self success: false]].	
 	self successful ifTrue:
@@ -3204,39 +3204,40 @@ InterpreterPrimitives >> primitiveSetWindowSize [
 InterpreterPrimitives >> primitiveShortAt [
 	"Treat the receiver, which can be indexible by either bytes or words, as an array of signed 16-bit values. Return the contents of the given index. Note that the index specifies the i-th 16-bit entry, not the i-th byte or word."
 
-	| index rcvr sz addr value |
-	index := self stackIntegerValue: 0.
-	self successful ifFalse:
+	| index rcvr value |
+	index := self stackTop..
+	(objectMemory isIntegerObject: index) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	rcvr := self stackValue: 1.
 	(objectMemory isWordsOrBytes: rcvr) ifFalse:
 		[^self primitiveFailFor: PrimErrInappropriate].
-	sz := (objectMemory numSlotsOf: rcvr) * objectMemory bytesPerOop // 2.  "number of 16-bit fields"
-	((index >= 1) and: [index <= sz]) ifFalse:
+	((index >= 1) and: [index <= (objectMemory num16BitUnitsOf: rcvr)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
-	addr := rcvr + objectMemory baseHeaderSize + (2 * (index - 1)).
-	value := objectMemory shortAt: addr.
+	value := objectMemory fetchShort16: index - 1 ofObject: rcvr.
 	self pop: 2 thenPushInteger: value
 ]
 
 { #category : #'sound primitives' }
 InterpreterPrimitives >> primitiveShortAtPut [
-	"Treat the receiver, which can be indexible by either bytes or words, as an array of signed 16-bit values. Set the contents of the given index to the given value. Note that the index specifies the i-th 16-bit entry, not the i-th byte or word."
+	"Treat the receiver, which can be indexible by either bytes or words, as an array
+	 of signed 16-bit values. Set the contents of the given index to the given value.
+	 Note that the index specifies the i-th 16-bit entry, not the i-th byte or word."
 
-	| index rcvr sz addr value |
-	value := self stackIntegerValue: 0.
-	index := self stackIntegerValue: 1.
-	(self successful and: [(value >= -32768) and: [value <= 32767]]) ifFalse:
+	| index rcvr value |
+	value := self stackTop.
+	index := self stackValue: 1.
+	((objectMemory isIntegerObject: value)
+	 and: [(objectMemory isIntegerObject: index)
+	 and: [value := objectMemory integerValueOf: value.
+		  (value >= -32768) and: [value <= 32767]]]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	rcvr := self stackValue: 2.
 	(objectMemory isWordsOrBytes: rcvr) ifFalse:
 		[^self primitiveFailFor: PrimErrInappropriate].
-	sz := ((objectMemory sizeBitsOf: rcvr) - BaseHeaderSize) // 2.  "number of 16-bit fields"
-	(index >= 1 and: [index <= sz]) ifFalse:
+	(index >= 1 and: [index <= (objectMemory num16BitUnitsOf: rcvr)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
-	addr := rcvr + BaseHeaderSize + (2 * (index - 1)).
-	objectMemory shortAt: addr put: value.
-	self pop: 3 thenPush: (objectMemory integerObjectOf: value) "pop all; return value"
+	objectMemory storeShort16: index - 1 ofObject: rcvr withValue: value.
+	self pop: 3 thenPush: (objectMemory integerObjectOf: value)
 ]
 
 { #category : #'I/O primitives' }
@@ -3428,8 +3429,8 @@ InterpreterPrimitives >> primitiveStopVMProfiling [
 	self cCode: 'ioControlProfile(0,&vmHist,&vmBins,&easHist,&easBins)'
 		inSmalltalk: [vmHist := vmBins := easHist := easBins := 0].
 	vmHistArrayOrNil ~= objectMemory nilObject ifTrue:
-		[((objectMemory fetchWordLengthOf: vmHistArrayOrNil) = vmBins
-		  and: [(objectMemory fetchWordLengthOf: easHistArrayOrNil) = easBins]) ifFalse:
+		[((objectMemory numSlotsOf: vmHistArrayOrNil) = vmBins
+		  and: [(objectMemory numSlotsOf: easHistArrayOrNil) = easBins]) ifFalse:
 			[^self primitiveFail].
 		0 to: vmBins - 1 do:
 			[:i|
@@ -3789,7 +3790,7 @@ InterpreterPrimitives >> primitiveVMProfileInfoInto [
 		[info := self stackObjectValue: 0.
 		 info ~= objectMemory nilObject ifTrue:
 			[self assertClassOf: info is: (objectMemory splObj: ClassArray).
-			 self success: (objectMemory fetchWordLengthOf: info) >= 4]].
+			 self success: (objectMemory numSlotsOf: info) >= 4]].
 	self successful ifFalse:
 		[^nil].
 	
@@ -3828,7 +3829,7 @@ InterpreterPrimitives >> primitiveVMProfileSamplesInto [
 	self successful ifTrue:
 		[sampleBuffer := self stackObjectValue: 0.
 		 self assertClassOf: sampleBuffer is: (objectMemory splObj: ClassBitmap).
-		 self success: (objectMemory fetchWordLengthOf: sampleBuffer) >= bufferSize].
+		 self success: (objectMemory numSlotsOf: sampleBuffer) >= bufferSize].
 	self successful ifFalse:
 		[^nil].
 	sampleBufferAddress := objectMemory firstFixedField: sampleBuffer.

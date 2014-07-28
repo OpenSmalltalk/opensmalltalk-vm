@@ -6,7 +6,7 @@ Class {
 
 { #category : #accessing }
 VMCompiledMethodProxy >> at: index [
-	^(index between: 1 and: (objectMemory byteLengthOf: oop))
+	^(index between: 1 and: (objectMemory numBytesOf: oop))
 		ifTrue: [objectMemory fetchByte: index - 1 ofObject: oop]
 		ifFalse: [self errorSubscriptBounds: index]
 ]
@@ -66,7 +66,7 @@ VMCompiledMethodProxy >> numTemps [
 
 { #category : #accessing }
 VMCompiledMethodProxy >> size [
-	^objectMemory byteLengthOf: oop
+	^objectMemory numBytesOf: oop
 ]
 
 { #category : #accessing }
