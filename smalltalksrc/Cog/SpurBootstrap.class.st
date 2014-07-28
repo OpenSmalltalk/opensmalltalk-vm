@@ -1849,7 +1849,7 @@ SpurBootstrap >> classTableSize [
 SpurBootstrap >> clone: oldObj classIndex: classIndex [
 	| newObj |
 	newObj := newHeap
-				allocateSlots: (oldHeap fetchWordLengthOf: oldObj)
+				allocateSlots: (oldHeap numSlotsOf: oldObj)
 				format: (self newFormatFor: oldObj)
 				classIndex: classIndex.
 	reverseMap at: newObj put: oldObj.
@@ -2147,7 +2147,7 @@ SpurBootstrap >> findLiteral: aLiteral [
 	smalltalk := oldHeap splObj: 8.
 	array := oldHeap fetchPointer: 1 ofObject: smalltalk.
 	self assert: (oldHeap isArray: array).
-	0 to: (oldHeap fetchWordLengthOf: array) - 1 do:
+	0 to: (oldHeap numSlotsOf: array) - 1 do:
 		[:i| | bindingOrNil |
 		bindingOrNil := oldHeap fetchPointer: i ofObject: array.
 		(bindingOrNil ~= oldHeap nilObject
@@ -2200,7 +2200,7 @@ SpurBootstrap >> findSymbol: aString [
 	oldHeap allObjectsDo:
 		[:obj|
 		(symbolClass = (oldHeap fetchClassOfNonImm: obj)
-		 and: [(oldHeap byteLengthOf: obj) = aString size
+		 and: [(oldHeap numBytesOf: obj) = aString size
 		 and: [aString = (oldHeap stringOf: obj)]]) ifTrue:
 			[^obj]].
 	^nil
@@ -2250,7 +2250,7 @@ SpurBootstrap >> freeForwarders [
 
 { #category : #'bootstrap methods' }
 SpurBootstrap >> indexOfSelector: selectorOop in: methodDict [
-	SelectorStart to: (oldHeap fetchWordLengthOf: methodDict) - 1 do:
+	SelectorStart to: (oldHeap numSlotsOf: methodDict) - 1 do:
 		[:i|
 		(oldHeap fetchPointer: i ofObject: methodDict) = selectorOop ifTrue:
 			[^i]].
@@ -2527,7 +2527,7 @@ SpurBootstrap >> modifyCharacterMethods [
 	cc := oldHeap classCharacter.
 	md := oldHeap fetchPointer: MethodDictionaryIndex ofObject: cc.
 	mda := oldHeap fetchPointer: MethodArrayIndex ofObject: md..
-	0 to: (oldHeap fetchWordLengthOf: mda) - 1 do:
+	0 to: (oldHeap numSlotsOf: mda) - 1 do:
 		[:i| | method |
 		method := oldHeap fetchPointer: i ofObject: mda.
 		method ~= oldHeap nilObject ifTrue:
@@ -2597,11 +2597,11 @@ SpurBootstrap >> newFormatFor: oldObj [
 	oldFormat <= 4 ifTrue:
 		[^oldFormat].
 	oldFormat >= 12 ifTrue: "CompiledMethod"
-		[^24 + (self wordSize - (oldHeap byteLengthOf: oldObj) bitAnd: self wordSizeMask)].
+		[^24 + (self wordSize - (oldHeap numBytesOf: oldObj) bitAnd: self wordSizeMask)].
 	oldFormat >= 8 ifTrue: "ByteArray et al"
-		[^16 + (self wordSize - (oldHeap byteLengthOf: oldObj) bitAnd: self wordSizeMask)].
+		[^16 + (self wordSize - (oldHeap numBytesOf: oldObj) bitAnd: self wordSizeMask)].
 	oldFormat = 6 ifTrue: "32-bit indexable"
-		[^10 + ((oldHeap byteLengthOf: oldObj) bitAnd: self wordSizeMask) sign].
+		[^10 + ((oldHeap numBytesOf: oldObj) bitAnd: self wordSizeMask) sign].
 	oldFormat = 7 ifTrue: "64-bit indexable"
 		[^9].
 	self error: 'illegal old format'
