@@ -1121,7 +1121,7 @@ NewspeakInterpreter >> activateNewClosureMethod: blockClosure [
 	"allocateOrRecycleContext: may cause a GC; restore blockClosure and refetch outerContext et al"
 	theBlockClosure := self popRemappableOop.
 	outerContext := self fetchPointer: ClosureOuterContextIndex ofObject: theBlockClosure.
-	numCopied := (self fetchWordLengthOf: theBlockClosure) - ClosureFirstCopiedValueIndex.
+	numCopied := (self numSlotsOf: theBlockClosure) - ClosureFirstCopiedValueIndex.
 
 	"Assume: newContext will be recorded as a root if necessary by the
 	 call to newActiveContext: below, so we can use unchecked stores."
@@ -3209,7 +3209,7 @@ NewspeakInterpreter >> findClassOfMethod: meth forReceiver: rcvr [
 	done := false.
 	[done] whileFalse: [
 		classDict := self fetchPointer: MessageDictionaryIndex ofObject: currClass.
-		classDictSize := self fetchWordLengthOf: classDict.
+		classDictSize := self numSlotsOf: classDict.
 		methodArray := self fetchPointer: MethodArrayIndex ofObject: classDict.
 		i := 0.
 		[i < (classDictSize - SelectorStart)] whileTrue: [
@@ -3257,7 +3257,7 @@ NewspeakInterpreter >> findSelectorOfMethod: meth forReceiver: rcvr [
 	done := false.
 	[done] whileFalse: [
 		classDict := self fetchPointer: MessageDictionaryIndex ofObject: currClass.
-		classDictSize := self fetchWordLengthOf: classDict.
+		classDictSize := self numSlotsOf: classDict.
 		methodArray := self fetchPointer: MethodArrayIndex ofObject: classDict.
 		i := 0.
 		[i <= (classDictSize - SelectorStart)] whileTrue: [
@@ -4421,7 +4421,7 @@ NewspeakInterpreter >> lookupMethodInDictionary: dictionary [
 	compacted out"
 	| length index mask wrapAround nextSelector methodArray |
 	<inline: true>
-	length := self fetchWordLengthOf: dictionary.
+	length := self numSlotsOf: dictionary.
 	mask := length - SelectorStart - 1.
 	(self isIntegerObject: messageSelector)
 		ifTrue: [index := (mask bitAnd: (self integerValueOf: messageSelector)) + SelectorStart]
@@ -5684,7 +5684,7 @@ NewspeakInterpreter >> primitiveClosureCopyWithCopiedValues [
 	copiedValues := self stackTop.
 	(self fetchClassOf: copiedValues) = (self splObj: ClassArray) ifFalse:
 		[^self primitiveFail].
-	numCopiedValues := self fetchWordLengthOf: copiedValues.
+	numCopiedValues := self numSlotsOf: copiedValues.
 	newClosure := self
 					closureNumArgs: numArgs
 									"greater by 1 due to preIncrement of localIP"
@@ -5758,8 +5758,8 @@ NewspeakInterpreter >> primitiveClosureValueWithArgs [
 		[^self primitiveFail].
 
 	"Check for enough space in thisContext to push all args"
-	arraySize := self fetchWordLengthOf: argumentArray.
-	cntxSize := self fetchWordLengthOf: activeContext.
+	arraySize := self numSlotsOf: argumentArray.
+	cntxSize := self numSlotsOf: activeContext.
 	(self stackPointerIndex + arraySize) < cntxSize ifFalse:
 		[^self primitiveFail].
 
@@ -5924,7 +5924,7 @@ NewspeakInterpreter >> primitiveDoNamedPrimitiveWithArgs [
 	argumentArray := self stackTop.
 	(self isArray: argumentArray) ifFalse:
 		[^self primitiveFail]. "invalid args"
-	arraySize := self fetchWordLengthOf: argumentArray.
+	arraySize := self numSlotsOf: argumentArray.
 	self success: (self roomToPushNArgs: arraySize).
 
 	methodArg := self stackObjectValue: 2.
@@ -5991,8 +5991,8 @@ NewspeakInterpreter >> primitiveDoNamedPrimitiveWithArgs [
 NewspeakInterpreter >> primitiveDoPrimitiveWithArgs [
 	| argumentArray arraySize index cntxSize primIdx |
 	argumentArray := self stackTop.
-	arraySize := self fetchWordLengthOf: argumentArray.
-	cntxSize := self fetchWordLengthOf: activeContext.
+	arraySize := self numSlotsOf: argumentArray.
+	cntxSize := self numSlotsOf: activeContext.
 	self success: self stackPointerIndex + arraySize < cntxSize.
 	(self isArray: argumentArray) ifFalse: [^ self primitiveFail].
 
@@ -6105,7 +6105,7 @@ NewspeakInterpreter >> primitiveExecuteMethodArgsArray [
 	 and: [self isArray: argumentArray]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	argCnt := self argumentCountOf: methodArgument.
-	argCnt = (self fetchWordLengthOf: argumentArray) ifFalse:
+	argCnt = (self numSlotsOf: argumentArray) ifFalse:
 		[^self primitiveFailFor: PrimErrBadNumArgs].
 	argumentCount > 2 ifTrue: "CompiledMethod class>>receiver:withArguments:executeMethod:
 								SqueakObjectPrimitives class >> receiver:withArguments:apply:
@@ -6600,7 +6600,7 @@ NewspeakInterpreter >> primitiveFormPrint [
 		wordsPerLine := (w + (pixelsPerWord - 1)) // pixelsPerWord.
 		((rcvr isIntegerObject: rcvr) not and: [self isWordsOrBytes: bitsArray])
 			ifTrue: [
-				bitsArraySize := self byteLengthOf: bitsArray.
+				bitsArraySize := self numBytesOf: bitsArray.
 				self success: (bitsArraySize = (wordsPerLine * h * 4))]
 			ifFalse: [self success: false]].	
 	self successful ifTrue: [
@@ -7541,8 +7541,8 @@ NewspeakInterpreter >> primitivePerformAt: lookupClass [
 
 	self successful ifTrue:
 		["Check for enough space in thisContext to push all args"
-		arraySize := self fetchWordLengthOf: argumentArray.
-		cntxSize := self fetchWordLengthOf: activeContext.
+		arraySize := self numSlotsOf: argumentArray.
+		cntxSize := self numSlotsOf: activeContext.
 		self success: (self stackPointerIndex + arraySize) < cntxSize].
 	self successful ifFalse: [^nil].
 
@@ -8608,7 +8608,7 @@ NewspeakInterpreter >> primitiveVMProfileSamplesInto [
 	self successful ifTrue:
 		[sampleBuffer := self stackObjectValue: 0.
 		 self assertClassOf: sampleBuffer is: (self splObj: ClassBitmap).
-		 self success: (self fetchWordLengthOf: sampleBuffer) >= bufferSize].
+		 self success: (self numSlotsOf: sampleBuffer) >= bufferSize].
 	self successful ifFalse:
 		[^nil].
 	sampleBufferAddress := self firstFixedField: sampleBuffer.
@@ -8650,7 +8650,7 @@ NewspeakInterpreter >> primitiveValueWithArgs [
 	"If the argArray isnt actually an Array we ahve to unpop the above two"
 	(self isArray: argumentArray) ifFalse: [self unPop:2. ^self primitiveFail].
 
-	self successful ifTrue: [arrayArgumentCount := self fetchWordLengthOf: argumentArray.
+	self successful ifTrue: [arrayArgumentCount := self numSlotsOf: argumentArray.
 			self success: (arrayArgumentCount = blockArgumentCount
 						and: [(self fetchPointer: CallerIndex ofObject: blockContext) = nilObj])].
 	self successful
@@ -8770,7 +8770,7 @@ NewspeakInterpreter >> printAllStacks [
 			[self printProcsOnList: oop].
 		 oop := self objectAfter: oop].
 	schedLists := self fetchPointer: ProcessListsIndex ofObject: self schedulerPointer.
-	(self fetchWordLengthOf: schedLists) - 1 to: 0 by: -1 do:
+	(self numSlotsOf: schedLists) - 1 to: 0 by: -1 do:
 		[:pri|
 		processList := self fetchPointer: pri ofObject: schedLists.
 		(self isEmptyList: processList) ifFalse:
@@ -10892,7 +10892,7 @@ NewspeakInterpreter >> unknownBytecode [
 { #category : #'debug support' }
 NewspeakInterpreter >> validInstructionPointer: anInstrPointer inMethod: aMethod [
 	^anInstrPointer >= (aMethod + (self lastPointerOf: aMethod) + 1)
-	  and: [anInstrPointer < (aMethod + (self byteLengthOf: aMethod))]
+	  and: [anInstrPointer < (aMethod + (self numBytesOf: aMethod))]
 ]
 
 { #category : #'process primitive support' }
@@ -10901,7 +10901,7 @@ NewspeakInterpreter >> wakeHighestPriority [
 	"Note: It is a fatal VM error if there is no runnable process."
 	| schedLists p processList |
 	schedLists := self fetchPointer: ProcessListsIndex ofObject: self schedulerPointer.
-	p := self fetchWordLengthOf: schedLists.
+	p := self numSlotsOf: schedLists.
 	p := p - 1.
 	"index of last indexable field"
 	processList := self fetchPointer: p ofObject: schedLists.

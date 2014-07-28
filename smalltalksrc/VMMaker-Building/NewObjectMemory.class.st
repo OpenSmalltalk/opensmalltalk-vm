@@ -1261,13 +1261,6 @@ NewObjectMemory >> fwdTableSize: blkSize [
 	^ (fwdLast - fwdFirst) // blkSize  "round down"
 ]
 
-{ #category : #contexts }
-NewObjectMemory >> goodContextSize: oop [
-	| numSlots |
-	numSlots := self numSlotsOf: oop.
-	^numSlots = SmallContextSlots or: [numSlots = LargeContextSlots]
-]
-
 { #category : #allocation }
 NewObjectMemory >> growObjectMemory: delta [ 
 	"Attempt to grow the object memory by the given delta amount."
@@ -2147,20 +2140,6 @@ NewObjectMemory >> numReferencesTo: anOop [
 	^n
 ]
 
-{ #category : #'interpreter access' }
-NewObjectMemory >> numSlotsOf: obj [
-	"Answer the number of oop-sized elements in the given object.
-	 Unlike lengthOf: this does not adjust the length of a context
-	 by the stackPointer and so can be used e.g. by cloneContext:"
-	<api>
-	| header sz |
-	header := self baseHeader: obj.
-	sz := (header bitAnd: TypeMask) = HeaderTypeSizeAndClass
-			ifTrue: [(self sizeHeader: obj) bitAnd: AllButTypeMask]
-			ifFalse: [header bitAnd: SizeMask].
-	^sz - BaseHeaderSize >> ShiftForWord
-]
-
 { #category : #'object enumeration' }
 NewObjectMemory >> objectAfter: oop [ 
 	"Return the object or free chunk immediately following the 
@@ -2429,7 +2408,7 @@ NewObjectMemory >> printWronglySizedContexts: printContexts [
 	[oop = nil] whileFalse:
 		[((self isContextNonImm: oop)
 		   and: [self badContextSize: oop]) ifTrue:
-			[self printHex: oop; space; printNum: (self byteLengthOf: oop); cr.
+			[self printHex: oop; space; printNum: (self numBytesOf: oop); cr.
 			 printContexts ifTrue:
 				[coInterpreter printContext: oop]].
 		 oop := self accessibleObjectAfter: oop]
@@ -2633,7 +2612,7 @@ NewObjectMemory >> shrinkObjectMemory: delta [
 		 self initializeMemoryFirstFree: freeStart]
 ]
 
-{ #category : #'header access' }
+{ #category : #'object access' }
 NewObjectMemory >> sizeBitsOf: oop [
 	"Answer the number of bytes in the given object, including its base header, rounded up to an integral number of words."
 	"Note: byte indexable objects need to have low bits subtracted from this size."
@@ -2645,7 +2624,7 @@ NewObjectMemory >> sizeBitsOf: oop [
 		ifFalse: [header bitAnd: SizeMask]
 ]
 
-{ #category : #'header access' }
+{ #category : #'object access' }
 NewObjectMemory >> sizeBitsOfSafe: oop [
 	"Compute the size of the given object from the cc and size fields in its header.
 	 This works even if its type bits are not correct."
@@ -3068,6 +3047,13 @@ NewObjectMemory >> unmarkAllObjects [
 			 (hdr bitAnd: MarkBit) ~= 0 ifTrue:
 				[self baseHeader: oop put: (hdr bitAnd: AllButMarkBit)]].
 		 oop := self objectAfter: oop]
+]
+
+{ #category : #'primitive support' }
+NewObjectMemory >> unpinObject: objOop [
+	"For forward-compatibility with Spur.  Fail; ObjectMemory does not support pinning."
+	<api>
+	coInterpreter primitiveFailFor: PrimErrUnsupported
 ]
 
 { #category : #simulation }

@@ -150,7 +150,7 @@ Spur64BitMemoryManager >> changeClassOf: rcvr to: argClass [
 					 newFormat := classFormat]
 				ifFalse:
 					[| instBytes |
-					instBytes := self byteLengthOf: rcvr.
+					instBytes := self numBytesOf: rcvr.
 					normalizedInstFormat caseOf: {
 						[self sixtyFourBitIndexableFormat] ->
 							[(classFormat < self sixtyFourBitIndexableFormat
