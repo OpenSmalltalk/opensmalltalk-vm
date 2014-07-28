@@ -148,7 +148,7 @@ InterpreterSimulator >> classAndSelectorOfMethod: meth forReceiver: rcvr [
 	| mClass dict length methodArray |
 	mClass := self fetchClassOf: rcvr.
 	[dict := self fetchPointer: MethodDictionaryIndex ofObject: mClass.
-	length := self fetchWordLengthOf: dict.
+	length := self numSlotsOf: dict.
 	methodArray := self fetchPointer: MethodArrayIndex ofObject: dict.
 	0 to: length-SelectorStart-1 do: 
 		[:index | 

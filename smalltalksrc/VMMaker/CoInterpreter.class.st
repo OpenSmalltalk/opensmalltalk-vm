@@ -703,7 +703,7 @@ CoInterpreter >> assertValidExecutionPointe: lip r: lifp s: lisp imbar: inInterp
 							ifTrue: [self iframeSavedIP: lifp]
 							ifFalse: [lip].
 				 self assert: (theIP >= (methodField + (objectMemory lastPointerOf: methodField))
-							  and: [theIP < (methodField + (objectMemory byteLengthOf: methodField) + objectMemory baseHeaderSize - 1)])
+							  and: [theIP < (methodField + (objectMemory numBytesOf: methodField) + objectMemory baseHeaderSize - 1)])
 					l: ln].
 			 self assert: ((self iframeIsBlockActivation: lifp)
 					or: [(self pushedReceiverOrClosureOfFrame: lifp) = (self iframeReceiver: lifp)])
@@ -812,7 +812,7 @@ CoInterpreter >> assertValidStackedInstructionPointersIn: aStackPage line: ln [
 			 theIP = cogit ceReturnToInterpreterPC ifTrue:
 				[theIP := self iframeSavedIP: theFP].
 			 self assert: (theIP >= (methodObj + (objectMemory lastPointerOf: methodObj))
-						  and: [theIP < (methodObj + (objectMemory byteLengthOf: methodObj) + objectMemory baseHeaderSize - 1)])
+						  and: [theIP < (methodObj + (objectMemory numBytesOf: methodObj) + objectMemory baseHeaderSize - 1)])
 				l: ln.
 			 prevFrameWasCogged := false].
 	 theIP := (stackPages longAt: theFP + FoxCallerSavedIP) asUnsignedInteger.
@@ -5633,7 +5633,7 @@ CoInterpreter >> printMethodCacheFor: thing [
 			[self cCode: [] inSmalltalk: [self transcript ensureCr].
 			 self printNum: i; cr; tab.
 			 (objectMemory isBytesNonImm: s)
-				ifTrue: [self cCode: 'printf("%x %.*s\n", s, byteLengthOf(s), (char *)firstIndexableField(s))'
+				ifTrue: [self cCode: 'printf("%x %.*s\n", s, numBytesOf(s), (char *)firstIndexableField(s))'
 						inSmalltalk: [self printHex: s; space; print: (self stringOf: s); cr]]
 				ifFalse: [self shortPrintOop: s].
 			 self tab.

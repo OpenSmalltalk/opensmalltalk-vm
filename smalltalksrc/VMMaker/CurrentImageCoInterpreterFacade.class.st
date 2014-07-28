@@ -96,17 +96,18 @@ CurrentImageCoInterpreterFacade >> byteAt: index put: value [
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> byteLengthOf: anOop [
-	| obj |
-	obj := self objectForOop: anOop.
-	obj class isBytes ifTrue:
-		[^obj basicSize].
-	self error: 'cannot determine byte size of argument'
-]
-
-{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> byteSizeOf: anOop [
-	^(self objectForOop: anOop) basicSize
+	| obj elementSize |
+	obj := self objectForOop: anOop.
+	([obj class isImmediateClass]
+		on: MessageNotUnderstood
+		do: [:ex| obj class == SmallInteger]) ifTrue:
+		[^0].
+	elementSize := 
+		[obj class elementSize]
+			on: MessageNotUnderstood
+			do: [:ex| obj class isBytes ifTrue: [1] ifFalse: [Smalltalk wordSize]].
+	^obj basicSize * elementSize
 ]
 
 { #category : #'debug support' }
@@ -559,6 +560,22 @@ CurrentImageCoInterpreterFacade >> noAssertHeaderOf: aMethodOop [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> nullHeaderForMachineCodeMethod [
 	^objectMemory nullHeaderForMachineCodeMethod
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> numBytesOf: objOop [ 
+	"Answer the number of indexable bytes in the given non-immediate object.
+	 Does not adjust the size of contexts by stackPointer."
+	| obj elementSize |
+	obj := self objectForOop: objOop.
+	self deny: ([obj class isImmediateClass]
+				on: MessageNotUnderstood
+				do: [:ex| obj class == SmallInteger]).
+	elementSize := 
+		[obj class elementSize]
+			on: MessageNotUnderstood
+			do: [:ex| obj class isBytes ifTrue: [1] ifFalse: [Smalltalk wordSize]].
+	^obj basicSize * elementSize
 ]
 
 { #category : #accessing }

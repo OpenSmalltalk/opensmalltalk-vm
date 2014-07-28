@@ -201,6 +201,7 @@ VMClass class >> initializeMiscConstants [
 	"Use ifAbsentPut: so that they will get copied back to the
 	 VMMaker's options and dead code will likely be eliminated."
 	NewspeakVM := initializationOptions at: #NewspeakVM ifAbsentPut: [false].
+	SistaVM := initializationOptions at: #SistaVM ifAbsentPut: [false].
 	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsentPut: [false].
 	"N.B.  Not yet implemented."
 	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsentPut: [false].
