@@ -3202,7 +3202,9 @@ InterpreterPrimitives >> primitiveSetWindowSize [
 
 { #category : #'sound primitives' }
 InterpreterPrimitives >> primitiveShortAt [
-	"Treat the receiver, which can be indexible by either bytes or words, as an array of signed 16-bit values. Return the contents of the given index. Note that the index specifies the i-th 16-bit entry, not the i-th byte or word."
+	"Treat the receiver, which can be indexible by either bytes or words, as
+	 an array of signed 16-bit values. Answer the contents of the given index.
+	 Note that the index specifies the i-th 16-bit entry, not the i-th byte or word."
 
 	| index rcvr value |
 	index := self stackTop..
@@ -3211,9 +3213,12 @@ InterpreterPrimitives >> primitiveShortAt [
 	rcvr := self stackValue: 1.
 	(objectMemory isWordsOrBytes: rcvr) ifFalse:
 		[^self primitiveFailFor: PrimErrInappropriate].
+	index := objectMemory integerValueOf: index.
 	((index >= 1) and: [index <= (objectMemory num16BitUnitsOf: rcvr)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	value := objectMemory fetchShort16: index - 1 ofObject: rcvr.
+	self cCode: []
+		inSmalltalk: [value > 32767 ifTrue: [value := value - 65536]].
 	self pop: 2 thenPushInteger: value
 ]
 
@@ -3234,6 +3239,7 @@ InterpreterPrimitives >> primitiveShortAtPut [
 	rcvr := self stackValue: 2.
 	(objectMemory isWordsOrBytes: rcvr) ifFalse:
 		[^self primitiveFailFor: PrimErrInappropriate].
+	index := objectMemory integerValueOf: index.
 	(index >= 1 and: [index <= (objectMemory num16BitUnitsOf: rcvr)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	objectMemory storeShort16: index - 1 ofObject: rcvr withValue: value.

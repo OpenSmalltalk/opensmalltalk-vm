@@ -1805,7 +1805,7 @@ ObjectMemory >> fetchLong32: fieldIndex ofObject: oop [
 { #category : #'object access' }
 ObjectMemory >> fetchLong64: longIndex ofObject: oop [
 	<returnTypeC: #sqLong>
-	^self long64At: oop + BaseHeaderSize + (8 * (longIndex - 1))
+	^self long64At: oop + BaseHeaderSize + (longIndex << 3)
 ]
 
 { #category : #'object access' }
@@ -1817,7 +1817,7 @@ ObjectMemory >> fetchPointer: fieldIndex ofObject: oop [
 
 { #category : #'object access' }
 ObjectMemory >> fetchShort16: shortIndex ofObject: oop [
-	^self shortAt: oop + BaseHeaderSize + (2 * (shortIndex - 1))
+	^self shortAt: oop + BaseHeaderSize + (shortIndex << 1)
 ]
 
 { #category : #finalization }
@@ -5158,7 +5158,7 @@ ObjectMemory >> storeLong32: fieldIndex ofObject: oop withValue: valueWord [
 { #category : #'object access' }
 ObjectMemory >> storeLong64: longIndex ofObject: oop withValue: value [
 	<var: #value type: #sqLong>
-	^self long64At: oop + BaseHeaderSize + (8 * (longIndex - 1)) put: value
+	^self long64At: oop + BaseHeaderSize + (longIndex << 3) put: value
 ]
 
 { #category : #'object access' }
@@ -5186,7 +5186,7 @@ ObjectMemory >> storePointerUnchecked: fieldIndex ofObject: oop withValue: value
 
 { #category : #'object access' }
 ObjectMemory >> storeShort16: shortIndex ofObject: oop withValue: value [
-	^self shortAt: oop + BaseHeaderSize + (2 * (shortIndex - 1)) put: value
+	^self shortAt: oop + BaseHeaderSize + (shortIndex << 1) put: value
 ]
 
 { #category : #'interpreter access' }
