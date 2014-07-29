@@ -4086,7 +4086,7 @@ SpurMemoryManager >> fetchLong32: fieldIndex ofObject: oop [
 { #category : #'object access' }
 SpurMemoryManager >> fetchLong64: longIndex ofObject: objOop [
 	<returnTypeC: #sqLong>
-	^self long64At: objOop + self baseHeaderSize + (8 * (longIndex - 1))
+	^self long64At: objOop + self baseHeaderSize + (longIndex << 3)
 ]
 
 { #category : #'heap management' }
@@ -4106,7 +4106,7 @@ SpurMemoryManager >> fetchPointer: fieldIndex ofObject: objOop [
 
 { #category : #'object access' }
 SpurMemoryManager >> fetchShort16: shortIndex ofObject: objOop [
-	^self shortAt: objOop + self baseHeaderSize + (2 * (shortIndex - 1))
+	^self shortAt: objOop + self baseHeaderSize + (shortIndex << 1)
 ]
 
 { #category : #instantiation }
@@ -9572,7 +9572,7 @@ SpurMemoryManager >> storeLong32: fieldIndex ofObject: obj withValue: valueWord 
 { #category : #'object access' }
 SpurMemoryManager >> storeLong64: longIndex ofObject: objOop withValue: value [
 	<var: #value type: #sqLong>
-	^self long64At: objOop + self baseHeaderSize + (8 * (longIndex - 1)) put: value
+	^self long64At: objOop + self baseHeaderSize + (longIndex << 3) put: value
 ]
 
 { #category : #'heap management' }
@@ -9672,7 +9672,7 @@ SpurMemoryManager >> storePointerUnchecked: fieldIndex ofObject: objOop withValu
 
 { #category : #'object access' }
 SpurMemoryManager >> storeShort16: shortIndex ofObject: objOop withValue: value [
-	^self shortAt: objOop + self baseHeaderSize + (2 * (shortIndex - 1)) put: value
+	^self shortAt: objOop + self baseHeaderSize + (shortIndex << 1) put: value
 ]
 
 { #category : #'primitive support' }
