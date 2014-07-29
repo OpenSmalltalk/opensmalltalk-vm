@@ -84,7 +84,7 @@ Class {
 	#superclass : #SimpleStackBasedCogit,
 	#instVars : [
 		'prevBCDescriptor',
-		'isPushNilFunction',
+		'numPushNilsFunction',
 		'pushNilSizeFunction',
 		'methodOrBlockNumTemps',
 		'regArgsHaveBeenPushed',
@@ -115,7 +115,7 @@ Class {
 		'VMStackFrameOffsets'
 	],
 	#classInstVars : [
-		'isPushNilFunction',
+		'numPushNilsFunction',
 		'pushNilSizeFunction'
 	],
 	#category : #'VMMaker-JIT'
@@ -213,10 +213,10 @@ StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 		var: 'prevBCDescriptor'
 			type: #'BytecodeDescriptor *'.
 
-	self isPushNilFunction ifNotNil:
+	self numPushNilsFunction ifNotNil:
 		[aCodeGen
-			var: 'isPushNilFunction'
-				declareC: 'sqInt (* const isPushNilFunction)(struct _BytecodeDescriptor *,sqInt,sqInt,sqInt) = ', (aCodeGen cFunctionNameFor: self isPushNilFunction);
+			var: 'numPushNilsFunction'
+				declareC: 'sqInt (* const numPushNilsFunction)(struct _BytecodeDescriptor *,sqInt,sqInt,sqInt) = ', (aCodeGen cFunctionNameFor: self numPushNilsFunction);
 			var: 'pushNilSizeFunction'
 				declareC: 'sqInt (* const pushNilSizeFunction)(sqInt) = ', (aCodeGen cFunctionNameFor: self pushNilSizeFunction)].
 
@@ -229,7 +229,7 @@ StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures [
 	"StackToRegisterMappingCogit initializeBytecodeTableForNewspeakV3PlusClosures"
 
-	isPushNilFunction := #v3:Is:Push:Nil:.
+	numPushNilsFunction := #v3:Num:Push:Nils:.
 	pushNilSizeFunction := #v3PushNilSize:.
 	NSSendIsPCAnnotated := true. "IsNSSendCall used by PushImplicitReceiver"
 	self flag:
@@ -318,7 +318,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV3PlusClo
 	"StackToRegisterMappingCogit initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid"
 
 	super initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid.
-	isPushNilFunction := #v3or4:Is:Push:Nil:.
+	numPushNilsFunction := #v3or4:Num:Push:Nils:.
 	pushNilSizeFunction := #v3or4PushNilSize:
 ]
 
@@ -326,7 +326,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV3PlusClo
 StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 	"StackToRegisterMappingCogit initializeBytecodeTableForNewspeakV4"
 
-	isPushNilFunction := #v4:Is:Push:Nil:.
+	numPushNilsFunction := #v4:Num:Push:Nils:.
 	pushNilSizeFunction := #v4PushNilSize:.
 	NSSendIsPCAnnotated := false. "IsNSSendCall used by SendAbsentImplicit"
 	self flag:
@@ -427,7 +427,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 	"StackToRegisterMappingCogit initializeBytecodeTableForSistaV1"
 
-	isPushNilFunction := #sistaV1:Is:Push:Nil:.
+	numPushNilsFunction := #sistaV1:Num:Push:Nils:.
 	pushNilSizeFunction := #sistaV1PushNilSize:.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
@@ -444,9 +444,9 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(1  32   63 genPushLiteralConstantBytecode			needsFrameNever: 1)
 		(1  64   75 genPushTemporaryVariableBytecode		needsFrameIfMod16GENumArgs: 1)
 		(1  76   76 genPushReceiverBytecode					needsFrameNever: 1)
-		(1  77   77 pushConstantTrueBytecode					needsFrameNever: 1)
-		(1  78   78 pushConstantFalseBytecode				needsFrameNever: 1)
-		(1  79   79 pushConstantNilBytecode					needsFrameNever: 1)
+		(1  77   77 genPushConstantTrueBytecode				needsFrameNever: 1)
+		(1  78   78 genPushConstantFalseBytecode			needsFrameNever: 1)
+		(1  79   79 genPushConstantNilBytecode				needsFrameNever: 1)
 		(1  80   80 genPushConstantZeroBytecode				needsFrameNever: 1)
 		(1  81   81 genPushConstantOneBytecode				needsFrameNever: 1)
 		(1  82   82 genExtPushPseudoVariable)
@@ -462,7 +462,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(1  92   92 genReturnTopFromMethod		return needsFrameIfInBlock: isMappedInBlock -1)
 		(1  93   93 genReturnNilFromBlock			return needsFrameNever: -1)
 		(1  94   94 genReturnTopFromBlock		return needsFrameNever: -1)
-		(1  95   95 genExtNop						needsFrameNever: 0)
+		(1  95   95 genExtNopBytecode			needsFrameNever: 0)
 
 		"sends"
 		(1  96   96 genSpecialSelectorArithmetic isMapped AddRR)
@@ -540,7 +540,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		"3 byte bytecodes"
 		(3 248 248 callPrimitiveBytecode)
 		(3 249 249 unknownBytecode) "reserved for Push Float"
-		(3 250 250 genExtPushClosureBytecode block sistaV1:Block:Code:Size:)
+		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
 		(3 251 251 genPushRemoteTempLongBytecode)
 		(3 252 252 genStoreRemoteTempLongBytecode)
 		(3 253 253 genStoreAndPopRemoteTempLongBytecode)
@@ -552,7 +552,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosures [
 	"StackToRegisterMappingCogit initializeBytecodeTableForSqueakV3PlusClosures"
 
-	isPushNilFunction := #v3:Is:Push:Nil:.
+	numPushNilsFunction := #v3:Num:Push:Nils:.
 	pushNilSizeFunction := #v3PushNilSize:.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
@@ -639,7 +639,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 	"StackToRegisterMappingCogit initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid"
 
 	super initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid.
-	isPushNilFunction := #squeakV3orSistaV1:Is:Push:Nil:.
+	numPushNilsFunction := #squeakV3orSistaV1:Num:Push:Nils:.
 	pushNilSizeFunction := #squeakV3orSistaV1PushNilSize:
 ]
 
@@ -679,13 +679,6 @@ StackToRegisterMappingCogit class >> isAcceptableAncilliaryClass: aClass [
 	^true
 ]
 
-{ #category : #accessing }
-StackToRegisterMappingCogit class >> isPushNilFunction [
-	"Answer the value of isPushNilFunction"
-
-	^ isPushNilFunction
-]
-
 { #category : #translation }
 StackToRegisterMappingCogit class >> mustBeGlobal: var [
 	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM support code."
@@ -694,6 +687,13 @@ StackToRegisterMappingCogit class >> mustBeGlobal: var [
 	   or: [#('ceCallCogCodePopReceiverArg0Regs' 'ceCallCogCodePopReceiverArg1Arg0Regs'
 			'realCECallCogCodePopReceiverArg0Regs' 'realCECallCogCodePopReceiverArg1Arg0Regs'
 			'ceCall0ArgsPIC' 'ceCall1ArgsPIC' 'ceCall2ArgsPIC') includes: var]
+]
+
+{ #category : #accessing }
+StackToRegisterMappingCogit class >> numPushNilsFunction [
+	"Answer the value of numPushNilsFunction"
+
+	^numPushNilsFunction
 ]
 
 { #category : #accessing }
@@ -706,7 +706,7 @@ StackToRegisterMappingCogit class >> pushNilSizeFunction [
 { #category : #translation }
 StackToRegisterMappingCogit class >> requiredMethodNames: options [
 	^(super requiredMethodNames: options)
-		add: self isPushNilFunction;
+		add: self numPushNilsFunction;
 		add: self pushNilSizeFunction;
 		yourself
 ]
@@ -2537,13 +2537,7 @@ StackToRegisterMappingCogit >> genReturnTopFromBlock [
 	self assert: inBlock.
 	self ssTop popToReg: ReceiverResultReg.
 	self ssPop: 1.
-	needsFrame ifTrue:
-		[self MoveR: FPReg R: SPReg.
-		 self PopR: FPReg].
-	backEnd hasLinkRegister ifTrue:
-		[self PopR: LinkReg].
-	self RetN: methodOrBlockNumArgs + 1 * BytesPerWord.
-	^0
+	^self genBlockReturn
 ]
 
 { #category : #'bytecode generators' }
@@ -3535,7 +3529,7 @@ StackToRegisterMappingCogit >> initializeFixupAt: targetIndex [
 StackToRegisterMappingCogit >> isPushNil: descriptor pc: pc nExts: nExts method: aMethodObj [
 	<inline: true>
 	<var: #descriptor type: #'BytecodeDescriptor *'>
-	^self perform: isPushNilFunction
+	^self perform: numPushNilsFunction
 		with: descriptor
 		with: pc
 		with: nExts
@@ -3727,6 +3721,17 @@ StackToRegisterMappingCogit >> needsFrameIfStackGreaterThanOne: stackDelta [
 	^stackDelta > 1
 ]
 
+{ #category : #'span functions' }
+StackToRegisterMappingCogit >> numPushNils: descriptor pc: pc nExts: nExts method: aMethodObj [
+	<inline: true>
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	^self perform: numPushNilsFunction
+		with: descriptor
+		with: pc
+		with: nExts
+		with: aMethodObj
+]
+
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> numRegArgs [
 	<doNotGenerate>
@@ -3835,7 +3840,7 @@ StackToRegisterMappingCogit >> returnRegForStoreCheck [
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> scanBlock: blockStart [
 	"Scan the block to determine if the block needs a frame or not"
-	| descriptor pc end framelessStackDelta nExts pushingNils |
+	| descriptor pc end framelessStackDelta nExts pushingNils numPushNils |
 	<var: #blockStart type: #'BlockStart *'>
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
@@ -3858,13 +3863,22 @@ StackToRegisterMappingCogit >> scanBlock: blockStart [
 		  and: [descriptor isExtension not]) ifTrue:
 			["Count the initial number of pushed nils acting as temp initializers.  We can't tell
 			  whether an initial pushNil is an operand reference or a temp initializer, except
-			  when the pushNil is a jump target (has a fixup) in which case it is definitely an
-			  operand reference.  So rarely we may end up over-estimating.  We will correct
-			  by checking the stack depth at the end of the block in compileBlockBodies."
-			 (pushingNils := (self isPushNil: descriptor pc: pc nExts: nExts method: methodObj)
-							  and: [(self fixupAt: pc - initialPC) targetInstruction = 0]) ifTrue:
-				[self assert: descriptor numBytes = 1. "see compileMethodBody"
-				 blockStart numInitialNils: blockStart numInitialNils + 1]].
+			  when the pushNil is a jump target (has a fixup), which never happens:
+					self systemNavigation browseAllSelect:
+						[:m| | ebc |
+						(ebc := m embeddedBlockClosures
+									select: [:ea| ea decompile statements first isMessage]
+									thenCollect: [:ea| ea decompile statements first selector]) notEmpty
+						and: [(#(whileTrue whileFalse whileTrue: whileFalse:) intersection: ebc) notEmpty]]
+			  or if the bytecode set has a push multiple nils bytecode.  We simply count initial nils.
+			  Rarely we may end up over-estimating.  We will correct by checking the stack depth
+			  at the end of the block in compileBlockBodies."
+			 (numPushNils := self numPushNils: descriptor pc: pc nExts: nExts method: methodObj) > 0
+				ifTrue:
+					[self assert: descriptor numBytes = 1. "see compileMethodBody"
+					 blockStart numInitialNils: blockStart numInitialNils + numPushNils]
+				ifFalse:
+					[pushingNils := false]].
 		 pc := self nextBytecodePCFor: descriptor at: pc exts: nExts in: methodObj.
 		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0].
 		 prevBCDescriptor := descriptor].
@@ -3946,8 +3960,8 @@ StackToRegisterMappingCogit >> setInterpreter: aCoInterpreter [
 	debugFixupBreaks := Set new.
 	debugBytecodePointers := Set new.
 
-	isPushNilFunction := self class isPushNilFunction.
-	pushNilSizeFunction := self class pushNilSizeFunction.
+	numPushNilsFunction := self class numPushNilsFunction.
+	pushNilSizeFunction := self class pushNilSizeFunction
 ]
 
 { #category : #'simulation stack' }
@@ -3955,6 +3969,25 @@ StackToRegisterMappingCogit >> simStackAt: index [
 	<cmacro: '(index) (simStack + (index))'>
 	<returnTypeC: #'CogSimStackEntry *'>
 	^self addressOf: (simStack at: index)
+]
+
+{ #category : #'span functions' }
+StackToRegisterMappingCogit >> sistaV1: descriptor Num: pc Push: nExts Nils: aMethodObj [
+	"230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii"
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	<inline: true>
+	^descriptor generator == #genPushClosureTempsBytecode
+		ifTrue: [objectMemory fetchByte: pc + 1 ofObject: aMethodObj]
+		ifFalse: [0]
+]
+
+{ #category : #'span functions' }
+StackToRegisterMappingCogit >> squeakV3orSistaV1: descriptor Num: pc Push: nExts Nils: aMethodObj [
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	| numNils |
+	(numNils := self v3: descriptor Num: pc Push: nExts Nils: aMethodObj) > 0 ifTrue:
+		[^numNils].
+	^self sistaV1: descriptor Num: pc Push: nExts Nils: aMethodObj
 ]
 
 { #category : #'simulation stack' }
@@ -4374,10 +4407,12 @@ StackToRegisterMappingCogit >> tryCollapseTempVectorInitializationOfSize: slots 
 ]
 
 { #category : #'span functions' }
-StackToRegisterMappingCogit >> v3: descriptor Is: pc Push: nExts Nil: aMethodObj [
+StackToRegisterMappingCogit >> v3: descriptor Num: pc Push: nExts Nils: aMethodObj [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<inline: true>
 	^descriptor generator == #genPushConstantNilBytecode
+		ifTrue: [1]
+		ifFalse: [0]
 ]
 
 { #category : #'span functions' }
@@ -4387,10 +4422,12 @@ StackToRegisterMappingCogit >> v3PushNilSize: aMethodObj [
 ]
 
 { #category : #'span functions' }
-StackToRegisterMappingCogit >> v3or4: descriptor Is: pc Push: nExts Nil: aMethodObj [
+StackToRegisterMappingCogit >> v3or4: descriptor Num: pc Push: nExts Nils: aMethodObj [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
-	^(self v3: descriptor Is: pc Push: nExts Nil: aMethodObj)
-	  or: [self v4: descriptor Is: pc Push: nExts Nil: aMethodObj]
+	| numNils |
+	(numNils := self v3: descriptor Num: pc Push: nExts Nils: aMethodObj) > 0 ifTrue:
+		[^numNils].
+	^self v4: descriptor Num: pc Push: nExts Nils: aMethodObj
 ]
 
 { #category : #'span functions' }
@@ -4401,13 +4438,16 @@ StackToRegisterMappingCogit >> v3or4PushNilSize: aMethodObj [
 ]
 
 { #category : #'span functions' }
-StackToRegisterMappingCogit >> v4: descriptor Is: pc Push: nExts Nil: aMethodObj [
+StackToRegisterMappingCogit >> v4: descriptor Num: pc Push: nExts Nils: aMethodObj [
+	"*	77			01001101		Push false [* 1:true, 2:nil, 3:thisContext, ..., -N: pushExplicitOuter: N, N = Extend B]"
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<inline: true>
-	^descriptor generator == #genExtPushPseudoVariableOrOuterBytecode
-	  and: [self assert: (objectMemory fetchByte: pc ofObject: aMethodObj) = 77.
+	^(descriptor generator == #genExtPushPseudoVariableOrOuterBytecode
+	   and: [self assert: (objectMemory fetchByte: pc ofObject: aMethodObj) = 77.
 			nExts = 1
-	  and: [(objectMemory fetchByte: pc - 1 ofObject: aMethodObj) = 2]]
+	   and: [(objectMemory fetchByte: pc - 1 ofObject: aMethodObj) = 2]])
+		ifTrue: [1]
+		ifFalse: [0]
 ]
 
 { #category : #'span functions' }

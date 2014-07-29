@@ -231,9 +231,9 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(1  32   63 genPushLiteralConstantBytecode			needsFrameNever: 1)
 		(1  64   75 genPushTemporaryVariableBytecode)
 		(1  76   76 genPushReceiverBytecode)
-		(1  77   77 pushConstantTrueBytecode					needsFrameNever: 1)
-		(1  78   78 pushConstantFalseBytecode				needsFrameNever: 1)
-		(1  79   79 pushConstantNilBytecode					needsFrameNever: 1)
+		(1  77   77 genPushConstantTrueBytecode				needsFrameNever: 1)
+		(1  78   78 genPushConstantFalseBytecode			needsFrameNever: 1)
+		(1  79   79 genPushConstantNilBytecode				needsFrameNever: 1)
 		(1  80   80 genPushConstantZeroBytecode				needsFrameNever: 1)
 		(1  81   81 genPushConstantOneBytecode				needsFrameNever: 1)
 		(1  82   82 genExtPushPseudoVariable)
@@ -249,7 +249,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(1  92   92 genReturnTopFromMethod		return needsFrameIfInBlock: isMappedInBlock -1)
 		(1  93   93 genReturnNilFromBlock			return needsFrameNever: -1)
 		(1  94   94 genReturnTopFromBlock		return needsFrameNever: -1)
-		(1  95   95 genExtNop						needsFrameNever: 0)
+		(1  95   95 genExtNopBytecode			needsFrameNever: 0)
 
 		"sends"
 		(1   96 117 genSpecialSelectorSend isMapped) "#+ #- #< #> #<= #>= #= #~= #* #/ #\\ #@ #bitShift: #// #bitAnd: #bitOr: #at: #at:put: #size #next #nextPut: #atEnd"
@@ -316,7 +316,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		"3 byte bytecodes"
 		(3 248 248 callPrimitiveBytecode)
 		(3 249 249 unknownBytecode) "reserved for Push Float"
-		(3 250 250 genExtPushClosureBytecode block sistaV1:Block:Code:Size:)
+		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
 		(3 251 251 genPushRemoteTempLongBytecode)
 		(3 252 252 genStoreRemoteTempLongBytecode)
 		(3 253 253 genStoreAndPopRemoteTempLongBytecode)
@@ -1397,6 +1397,21 @@ SimpleStackBasedCogit >> frameOffsetOfTemporary: index [
 		ifFalse: [FoxMFReceiver - BytesPerWord + ((methodOrBlockNumArgs - index) * BytesPerWord)]
 ]
 
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genBlockReturn [
+	"Return from block, assuming result already loaded into ReceiverResultReg."
+	needsFrame ifTrue:
+		[self MoveR: FPReg R: SPReg.
+		 self PopR: FPReg].
+	"Tim, I disagree; link reg should only be popped if frameful.
+	 Frameless methods should /not/ push the link reg except around trampolines.
+	 Eliot"
+	backEnd hasLinkRegister ifTrue:
+		[self PopR: LinkReg].
+	self RetN: methodOrBlockNumArgs + 1 * BytesPerWord.
+	^0
+]
+
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: preOpCheckOrNil [
 	"Stack looks like
@@ -1538,9 +1553,19 @@ SimpleStackBasedCogit >> genExtJumpIfTrue [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtNopBytecode [
-	"221		11011101		Nop"
+	"NewspeakV4: 221		11011101		Nop"
+	"SistaV1:		 91		01011011'		Nop"
 	extA := extB := 0.
 	^0
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtPushCharacterBytecode [
+	"SistaV1:		233		11101001	iiiiiiii		Push Character #iiiiiiii (+ Extend B * 256)"
+	| value |
+	value := byte1 + (extB << 8).
+	extB := 0.
+	^self genPushLiteral: (objectMemory characterObjectOf: value)
 ]
 
 { #category : #'bytecode generators' }
@@ -1569,7 +1594,8 @@ SimpleStackBasedCogit >> genExtPushClosureBytecode [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtPushIntegerBytecode [
-	"229		11100101	i i i i i i i i	Push Integer #iiiiiiii (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)"
+	"NewsqueakV4:	229		11100101	iiiiiiii	Push Integer #iiiiiiii (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)
+	SistaV1:		232		11101000	iiiiiiii	Push Integer #iiiiiiii (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)"
 	| value |
 	value := byte1 + (extB << 8).
 	extB := 0.
@@ -1592,6 +1618,20 @@ SimpleStackBasedCogit >> genExtPushLiteralVariableBytecode [
 	index := byte1 + (extA << 8).
 	extA := 0.
 	^self genPushLiteralVariable: index
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtPushPseudoVariable [
+	"SistaV1: *	82			01010010			Push thisContext, (then Extend B = 1 => push thisProcess)"
+	| ext |
+	ext := extB.
+	extB := 0.
+	ext caseOf: {
+		[0]	->	[^self genPushActiveContextBytecode].
+		}
+		otherwise:
+			[^self unknownBytecode].
+	^0
 ]
 
 { #category : #'bytecode generators' }
@@ -2986,6 +3026,15 @@ SimpleStackBasedCogit >> genReturnNil [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genReturnNilFromBlock [
+	self assert: inBlock.
+	self flag: 'currently caller pushes result'.
+	self annotate: (self MoveCw: objectMemory nilObject R: ReceiverResultReg)
+		objRef: objectMemory nilObject.
+	^self genBlockReturn
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genReturnReceiver [
 	"Frameless method activation looks like
 				receiver
@@ -3003,13 +3052,7 @@ SimpleStackBasedCogit >> genReturnTopFromBlock [
 	self assert: inBlock.
 	self flag: 'currently caller pushes result'.
 	self PopR: ReceiverResultReg.
-	needsFrame ifTrue:
-		[self MoveR: FPReg R: SPReg.
-		 self PopR: FPReg].
-	backEnd hasLinkRegister ifTrue:
-		[self PopR: LinkReg].
-	self RetN: methodOrBlockNumArgs + 1 * BytesPerWord.
-	^0
+	^self genBlockReturn
 ]
 
 { #category : #'bytecode generators' }

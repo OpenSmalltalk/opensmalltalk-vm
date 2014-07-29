@@ -174,6 +174,12 @@ Spur32BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 	+ ClassBitmapCompactIndex
 ]
 
+{ #category : #'cog jit support' }
+Spur32BitCoMemoryManager >> remember: objOop [
+	<doNotGenerate>
+	^scavenger remember: objOop
+]
+
 { #category : #'trampoline support' }
 Spur32BitCoMemoryManager >> scavengeThresholdAddress [
 	<api>

@@ -4976,15 +4976,15 @@ StackInterpreter >> extPushLiteralVariableBytecode [
 
 { #category : #'stack bytecodes' }
 StackInterpreter >> extPushPseudoVariable [
-	"SistaV1:	*	82			01010010			Push thisContext, (then e.g. Extend 1 = push thisProcess)"
-	extA
+	"SistaV1:	*	82			01010010			Push thisContext, (then e.g. Extend B 1 = push thisProcess)"
+	extB
 		caseOf: {
 			[0]	->	[self pushActiveContextBytecode].
 			[1]	->	[self internalPush: self activeProcess] }
 		otherwise:
 			[self respondToUnknownBytecode].
 	self fetchNextBytecode.
-	extA := 0
+	extB := 0
 ]
 
 { #category : #'stack bytecodes' }
