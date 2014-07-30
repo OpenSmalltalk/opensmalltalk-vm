@@ -314,7 +314,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(2 246 247	unknownBytecode)
 
 		"3 byte bytecodes"
-		(3 248 248 callPrimitiveBytecode)
+		(3 248 248 genCallPrimitiveBytecode)
 		(3 249 249 unknownBytecode) "reserved for Push Float"
 		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
 		(3 251 251 genPushRemoteTempLongBytecode)
@@ -1762,6 +1762,13 @@ SimpleStackBasedCogit >> genExtStoreReceiverVariableBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtTrapIfNotInstanceOfBehaviorsBytecode [
+	"SistaV1: *	236		11101100	iiiiiiii		Trap If Not Instance Of Behavior/Array Of Behavior #iiiiiiii (+ Extend A * 256, where Extend A >= 0)"
+	"THis realy makes sense only for the optimizing JITs"
+	^EncounteredUnknownBytecode
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtUnconditionalJump [
 	"242		11110010	i i i i i i i i	Jump i i i i i i i i (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)"
 	| distance target |
@@ -2766,6 +2773,13 @@ SimpleStackBasedCogit >> genPushClosureCopyCopiedValuesBytecode [
 		inBlock: inBlock.
 	self PushR: ReceiverResultReg.
 	^0
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genPushClosureTempsBytecode [
+	"SistaV1: 230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii"
+	1 to: byte1 do:
+		[:i| self genPushLiteral: objectMemory nilObject]
 ]
 
 { #category : #'bytecode generators' }
