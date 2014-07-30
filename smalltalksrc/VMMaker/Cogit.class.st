@@ -5945,6 +5945,7 @@ Cogit >> generateTrampolines [
 	objectRepresentation generateObjectRepresentationTrampolines.
 	self generateRunTimeTrampolines.
 	self cppIf: NewspeakVM ifTrue: 	[self generateNewspeakRuntime].
+	self cppIf: SistaVM ifTrue: [self generateSistaRuntime].
 	self generateEnilopmarts.
 	self generateTracingTrampolines.
 

@@ -5413,10 +5413,10 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	self initializeFreeSpacePostLoad: freeListObj.
 	segmentManager collapseSegmentsPostSwizzle.
 	self computeFreeSpacePostSwizzle.
+	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart, free space"
 	self bootstrapping ifFalse:
 		[self initializeNewSpaceVariables.
 		 scavenger initializeRememberedSet].
-	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart"
 	segmentManager checkSegments.
 
 	numCompactionPasses := CompactionPassesForGC.
@@ -5725,7 +5725,8 @@ SpurMemoryManager >> isArray: oop [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isArrayNonImm: oop [
-	"Answer true if this is an indexable object with pointer elements, e.g., an array"
+	<api>
+	"Answer if this is an indexable object with pointer elements, e.g., an array"
 	^ (self formatOf: oop) = self arrayFormat
 ]
 

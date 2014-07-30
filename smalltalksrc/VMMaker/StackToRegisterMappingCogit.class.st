@@ -538,7 +538,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(2 246 247	unknownBytecode)
 
 		"3 byte bytecodes"
-		(3 248 248 callPrimitiveBytecode)
+		(3 248 248 genCallPrimitiveBytecode)
 		(3 249 249 unknownBytecode) "reserved for Push Float"
 		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
 		(3 251 251 genPushRemoteTempLongBytecode)
@@ -3982,12 +3982,26 @@ StackToRegisterMappingCogit >> sistaV1: descriptor Num: pc Push: nExts Nils: aMe
 ]
 
 { #category : #'span functions' }
+StackToRegisterMappingCogit >> sistaV1PushNilSize: aMethodObj [
+	"230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii"
+	<inline: true>
+	^2
+]
+
+{ #category : #'span functions' }
 StackToRegisterMappingCogit >> squeakV3orSistaV1: descriptor Num: pc Push: nExts Nils: aMethodObj [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	| numNils |
 	(numNils := self v3: descriptor Num: pc Push: nExts Nils: aMethodObj) > 0 ifTrue:
 		[^numNils].
 	^self sistaV1: descriptor Num: pc Push: nExts Nils: aMethodObj
+]
+
+{ #category : #'span functions' }
+StackToRegisterMappingCogit >> squeakV3orSistaV1PushNilSize: aMethodObj [
+	^(coInterpreter methodUsesAlternateBytecodeSet: aMethodObj)
+		ifTrue: [self sistaV1PushNilSize: aMethodObj]
+		ifFalse: [self v3PushNilSize: aMethodObj]
 ]
 
 { #category : #'simulation stack' }
