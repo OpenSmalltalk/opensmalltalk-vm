@@ -519,6 +519,12 @@ VMClass >> alloca: size [
 	^ByteArray new: size
 ]
 
+{ #category : #'C library extensions' }
+VMClass >> alloca: numElements type: elementType [
+	<cmacro: '(numElements, elementType) alloca((numElements)*sizeof(elementType))'>
+	^CArrayAccessor on: ((1 to: numElements) collect: [:ign| elementType new])
+]
+
 { #category : #'C library simulation' }
 VMClass >> asString: aStringOrStringIndex [
 	"aStringOrStringIndex is either a string or an address in the heap.

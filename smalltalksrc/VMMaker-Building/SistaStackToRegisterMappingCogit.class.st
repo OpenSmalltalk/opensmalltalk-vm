@@ -52,7 +52,8 @@ Class {
 		'counters',
 		'counterIndex',
 		'initialCounterValue',
-		'prevMapAbsPCMcpc'
+		'prevMapAbsPCMcpc',
+		'ceClassTrapTrampoline'
 	],
 	#classVars : [
 		'CounterBytes',
@@ -236,6 +237,33 @@ SistaStackToRegisterMappingCogit >> fillInMethodHeader: method size: size select
 SistaStackToRegisterMappingCogit >> fillInOPICHeader: pic size: size numArgs: numArgs selector: selector [
 	pic counters: 0.
 	^super fillInOPICHeader: pic size: size numArgs: numArgs selector: selector
+]
+
+{ #category : #'bytecode generators' }
+SistaStackToRegisterMappingCogit >> genExtTrapIfNotInstanceOfBehaviorsBytecode [
+	"SistaV1: *	236		11101100	iiiiiiii		Trap If Not Instance Of Behavior/Array Of Behavior #iiiiiiii (+ Extend A * 256, where Extend A >= 0)"
+	| litIndex literal branches label numBranches |
+	<var: #branches type: #'AbstractInstruction **'>
+	self ssStorePop: false toPreferredReg: ReceiverResultReg.
+	litIndex := extA * 256 + byte1.
+	extA := 0.
+	literal := self getLiteral: litIndex.
+	numBranches := (objectMemory isArrayNonImm: literal)
+						ifTrue: [objectMemory numSlotsOf: literal]
+						ifFalse: [1].
+	branches := self alloca: numBranches type: (self cCoerceSimple: CogAbstractInstruction to: #'AbstractInstruction *').
+	(objectMemory isArrayNonImm: literal)
+		ifTrue: [objectRepresentation branchIfInstanceOfBehaviors: literal branches: branches]
+		ifFalse: [objectRepresentation branchIfInstanceOfBehavior: literal branches: branches].
+	"Only flush teh stack if the class trap traps.  Use ssFlushNoUpdateTo: so we continue compiling as if
+	 the stack had not been fliushed.  Control does not return after the ceClassTrapTrampoline call."
+	self ssFlushNoUpdateTo: simStackPtr.
+	self CallRT: ceClassTrapTrampoline.
+	label := self Label.
+	0 to: numBranches - 1 do:
+		[:i|
+		(branches at: i) jmpTarget: label].
+	^0
 ]
 
 { #category : #'bytecode generators' }
@@ -525,6 +553,13 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	countTripped jmpTarget: self Label.
 	^self genMarshalledSend: (coInterpreter specialSelector: byte0 - self firstSpecialSelectorBytecodeOffset)
 		numArgs: 1
+]
+
+{ #category : #initialization }
+SistaStackToRegisterMappingCogit >> generateSistaRuntime [
+	"Class trap sends class trap message to context with top of stack, so we on't need any arguments..."
+	ceClassTrapTrampoline := self genTrampolineFor: #ceClassTrap
+									called: 'ceClassTrapTrampoline'
 ]
 
 { #category : #'method introspection' }
@@ -850,4 +885,23 @@ SistaStackToRegisterMappingCogit >> scanMethod [
 		nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0].
 		prevBCDescriptor := descriptor].
 	^numBlocks
+]
+
+{ #category : #'simulation stack' }
+SistaStackToRegisterMappingCogit >> ssFlushNoUpdateTo: index [
+	"This version of ssFlushTo: does /not/ update the simulation stack; it merely h=generates the spill code.
+	 It is used to spill all valiues to teh stack on a rare failing branch (the class trap) when we don't want to
+	 flush the stack on the main path and hence mustn't update the simulation stack if there is no spill."
+	<var: 'copiedEntry' type: #CogSimStackEntry>
+	self assert: needsFrame.
+	methodOrBlockNumTemps to: simSpillBase - 1 do:
+		[:i| self assert: (self simStackAt: i) spilled].
+	simSpillBase <= index ifTrue:
+		[(simSpillBase max: 0) to: index do:
+			[:i| | copiedEntry |
+			copiedEntry := self cCode: [simStack at: index]
+								inSmalltalk: [(simStack at: index) copy].
+			copiedEntry
+				ensureSpilledAt: (self frameOffsetOfTemporary: i)
+				from: FPReg]]
 ]
