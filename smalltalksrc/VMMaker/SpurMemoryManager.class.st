@@ -1344,7 +1344,7 @@ SpurMemoryManager >> allNewSpaceEntitiesDo: aBlock [
 	prevPrevObj := prevObj := nil.
 	"After a scavenge eden is empty, futureSpace is empty, and all newSpace objects are
 	  in pastSpace.  Objects are allocated in eden.  So enumerate only pastSpace and eden."
-	self assert: (self bootstrapping or: [scavenger pastSpace start < scavenger eden start]).
+	self assert: (scavenger pastSpace start < scavenger eden start).
 	objOop := self objectStartingAt: scavenger pastSpace start.
 	limit := pastSpaceStart.
 	[self oop: objOop isLessThan: limit] whileTrue:
@@ -5414,9 +5414,9 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	segmentManager collapseSegmentsPostSwizzle.
 	self computeFreeSpacePostSwizzle.
 	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart, free space"
-	self bootstrapping ifFalse:
-		[self initializeNewSpaceVariables.
-		 scavenger initializeRememberedSet].
+	"self bootstrapping ifFalse:
+		["self initializeNewSpaceVariables.
+		 scavenger initializeRememberedSet"]".
 	segmentManager checkSegments.
 
 	numCompactionPasses := CompactionPassesForGC.

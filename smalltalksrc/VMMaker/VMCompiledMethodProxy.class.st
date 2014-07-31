@@ -14,9 +14,7 @@ VMCompiledMethodProxy >> at: index [
 { #category : #accessing }
 VMCompiledMethodProxy >> encoderClass [
 
-	^(coInterpreter headerIndicatesAlternateBytecodeSet: self header)
-		ifTrue: [EncoderForNewsqueakV4]
-		ifFalse: [EncoderForV3PlusClosures]
+	^coInterpreter encoderClassForHeader: self header
 ]
 
 { #category : #accessing }
