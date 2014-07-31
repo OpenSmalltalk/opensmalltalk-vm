@@ -1630,16 +1630,19 @@ SpurBootstrap class >> WideStringPROTOTYPEat: index put: aCharacter [
 ]
 
 { #category : #utilities }
-SpurBootstrap class >> bootstrapImage: imageFileBaseName type: typeName [
+SpurBootstrap class >> bootstrapImage: imageFileNameOrBaseName type: typeName [
 	"SpurBootstrap bootstrapImage: '/Users/eliot/Squeak/Squeak4.5/Squeak4.5-13680'"
-	| imageFormat |
+	| imageFileBaseName imageFormat |
+	imageFileBaseName := (imageFileNameOrBaseName endsWith: '.image')
+								ifTrue: [imageFileNameOrBaseName allButLast: 6]
+								ifFalse: [imageFileNameOrBaseName].
 	imageFormat := ImageFormat fromFile: imageFileBaseName, '.image'.
 	imageFormat requiresClosureSupport ifFalse:
 		[self error: 'Can''t bootstrap this image since Spur assumes closure support.'].
 	imageFormat requiresSpurSupport ifTrue:
 		[self error: 'This image is already in Spur format.'].
 	imageFormat is32Bit ifTrue:
-		[^ SpurBootstrap32 new bootstrapImage: imageFileBaseName type: typeName ].
+		[^SpurBootstrap32 new bootstrapImage: imageFileBaseName type: typeName].
 	self error: '64-bit support and 64-bit generation as-yet-unimplemented'
 ]
 
@@ -1686,6 +1689,11 @@ SpurBootstrap class >> categoryForClass: className meta: isMeta selector: select
 			 ^Categorizer default]
 ]
 
+{ #category : #debugger }
+SpurBootstrap class >> defaultIntegerBaseInDebugger [
+	^16
+]
+
 { #category : #tests }
 SpurBootstrap class >> testComputeFormat [
 	"self testComputeFormat"
@@ -1720,39 +1728,47 @@ SpurBootstrap >> addNewMethods [
 	basSym ifNil:
 		[basSym := self findSymbol: #addSelectorSilently:withMethod:].
 	self allPrototypeClassNamesDo:
-		[:sym :symIsMeta| | class |
-		class := self findClassNamed: (literalMap at: sym).
-		symIsMeta ifTrue: [class := oldHeap fetchClassOfNonImm: class].
-		self prototypeClassNameMetaSelectorMethodDo:
-			[:className :isMeta :selector :method| | methodOrNil |
-			(className = sym
-			 and: [symIsMeta = isMeta]) ifTrue:
-				["probe method dictionary of the class for each method, installing a dummy if not found."
-				 "Transcript cr; nextPutAll: 'checking for '; nextPutAll: selector; flush."
-				 methodOrNil := self interpreter: oldInterpreter
+		[:sym :symIsMeta|
+		(self findClassNamed: (literalMap at: sym))
+			ifNil: [Transcript
+					cr;
+					nextPutAll: 'not installing any methods for ';
+					nextPutAll: sym;
+					nextPutAll: '; class not found in image';
+					flush.]
+			ifNotNil:
+				[:class|
+				symIsMeta ifTrue: [class := oldHeap fetchClassOfNonImm: class].
+				self prototypeClassNameMetaSelectorMethodDo:
+					[:className :isMeta :selector :method| | methodOrNil |
+					(className = sym
+					 and: [symIsMeta = isMeta]) ifTrue:
+						["probe method dictionary of the class for each method, installing a dummy if not found."
+						 "Transcript cr; nextPutAll: 'checking for '; nextPutAll: selector; flush."
+						 methodOrNil := self interpreter: oldInterpreter
+											object: class
+											perform: cmaiaSym
+											withArguments: {literalMap at: selector. oldHeap nilObject}.
+						 methodOrNil = oldHeap nilObject
+							ifTrue: "no method.  install the real thing now"
+								[Transcript
+									cr;
+									nextPutAll: 'installing ';
+									nextPutAll: className;
+									nextPutAll: (isMeta ifTrue: [' class>>'] ifFalse: ['>>']);
+									store: selector;
+									flush.
+								 self interpreter: oldInterpreter
 									object: class
-									perform: cmaiaSym
-									withArguments: {literalMap at: selector. oldHeap nilObject}.
-				 methodOrNil = oldHeap nilObject
-					ifTrue: "no method.  install the real thing now"
-						[Transcript
-							cr;
-							nextPutAll: 'installing ';
-							nextPutAll: className;
-							nextPutAll: (isMeta ifTrue: [' class>>'] ifFalse: ['>>']);
-							store: selector;
-							flush.
-						 self interpreter: oldInterpreter
-							object: class
-							perform: basSym
-							withArguments: { literalMap at: selector.
-											   self installableMethodFor: method
-												selector: selector
-												className: className
-												isMeta: isMeta}.
-						installedPrototypes add: method selector]
-					ifFalse: "existing method; collect the methodClassAssociation; its needed later"
-						[methodClasses add: (oldInterpreter methodClassAssociationOf: methodOrNil)]]]]
+									perform: basSym
+									withArguments: { literalMap at: selector.
+													   self installableMethodFor: method
+														selector: selector
+														className: className
+														isMeta: isMeta}.
+								installedPrototypes add: method selector]
+							ifFalse: "existing method; collect the methodClassAssociation; its needed later"
+								[methodClasses add: (oldInterpreter methodClassAssociationOf: methodOrNil)]]]]]
 ]
 
 { #category : #'method prototypes' }
@@ -2488,6 +2504,8 @@ SpurBootstrap >> interpreter: sim object: receiver perform: selector withArgumen
 	"Interpret an expression in oldHeap using oldInterpreter.
 	 Answer the result."
 	| fp savedpc savedsp result startByteCount |
+	self assert: ({receiver. selector}, arguments allSatisfy:
+					[:oop| oop isInteger and: [sim objectMemory addressCouldBeOop: oop]]).
 	savedpc := sim localIP.
 	savedsp := sim localSP.
 	sim internalPush: receiver.
@@ -2744,8 +2762,8 @@ SpurBootstrap >> on: imageName [
 	newHeap := Spur32BitMMLESimulator new.
 	newHeap
 		allocateMemoryOfSize: (oldHeap youngStart * 3 / 2 roundUpTo: 1024 * 1024)
-		newSpaceSize: 2 * 1024 * 1024
-		stackSize: 1024 * 1024
+		newSpaceSize: 4 * 1024 * 1024
+		stackSize: 16 * 1024
 		codeSize: 0.
 	newHeap setCheckForLeaks: 15 - 6. "don't check become; or newSpace; soooo many rehashes in bootstrap"
 	newHeap bootstrapping: true.
@@ -2798,7 +2816,8 @@ SpurBootstrap >> rehashImage [
 	sim := StackInterpreterSimulator onObjectMemory: newHeap.
 	sim 
 		setImageHeaderFlagsFrom: oldInterpreter getImageHeaderFlags;
-		imageName: 'spur image'.
+		imageName: 'spur image';
+		assertValidExecutionPointersAtEachStep: false..
 	newHeap coInterpreter: sim.
 	sim bootstrapping: true.
 	sim initializeInterpreter: 0.
@@ -2832,7 +2851,7 @@ SpurBootstrap >> rehashImage [
 				[:o| | classIndex |
 				classIndex := newHeap classIndexOf: o.
 				((rehashFlags at: classIndex >> 3 + 1) anyMask: 1 << (classIndex bitAnd: 7)) ifTrue:
-					[(n := n + 1) \\ 8 = 0 ifTrue:
+					[(n := n + 1) \\ 16 = 0 ifTrue:
 					 	[Transcript nextPut: $.; flush].
 					 "2845 = n ifTrue: [self halt]."
 					 "Rehash an object if its size is > 0.
@@ -2860,33 +2879,41 @@ SpurBootstrap >> rememberRehashSymbol [
 SpurBootstrap >> replaceMethods [
 	"Replace all the modified method prototypes."
 	self allPrototypeClassNamesDo:
-		[:sym :symIsMeta| | class |
-		class := self findClassNamed: (literalMap at: sym).
-		symIsMeta ifTrue: [class := oldHeap fetchClassOfNonImm: class].
-		self prototypeClassNameMetaSelectorMethodDo:
-			[:className :isMeta :selector :method| | replacement methodDict index |
-			(className = sym
-			 and: [symIsMeta = isMeta]) ifTrue:
-				[(installedPrototypes includes: method selector) ifFalse:
-					["probe method dictionary of the class for each method, installing a dummy if not found."
-					Transcript
-						cr;
-						nextPutAll: 'replacing ';
-						nextPutAll: className;
-						nextPutAll: (isMeta ifTrue: [' class>>'] ifFalse: ['>>']);
-						store: selector;
-						flush.
-					replacement := self installableMethodFor: method
-										selector: selector
-										className: className
-										isMeta: isMeta.
-					methodDict := oldHeap fetchPointer: MethodDictionaryIndex ofObject: class.
-					index := self indexOfSelector: (literalMap at: selector) in: methodDict.
-					oldHeap
-						storePointer: index - SelectorStart
-						ofObject: (oldHeap fetchPointer: MethodArrayIndex ofObject: methodDict)
-						withValue: replacement.
-					installedPrototypes add: method selector]]]]
+		[:sym :symIsMeta|
+		(self findClassNamed: (literalMap at: sym))
+			ifNil: [Transcript
+					cr;
+					nextPutAll: 'not replacing any methods for ';
+					nextPutAll: sym;
+					nextPutAll: '; class not found in image';
+					flush.]
+			ifNotNil:
+				[:class|
+				symIsMeta ifTrue: [class := oldHeap fetchClassOfNonImm: class].
+				self prototypeClassNameMetaSelectorMethodDo:
+					[:className :isMeta :selector :method| | replacement methodDict index |
+					(className = sym
+					 and: [symIsMeta = isMeta]) ifTrue:
+						[(installedPrototypes includes: method selector) ifFalse:
+							["probe method dictionary of the class for each method, installing a dummy if not found."
+							Transcript
+								cr;
+								nextPutAll: 'replacing ';
+								nextPutAll: className;
+								nextPutAll: (isMeta ifTrue: [' class>>'] ifFalse: ['>>']);
+								store: selector;
+								flush.
+							replacement := self installableMethodFor: method
+												selector: selector
+												className: className
+												isMeta: isMeta.
+							methodDict := oldHeap fetchPointer: MethodDictionaryIndex ofObject: class.
+							index := self indexOfSelector: (literalMap at: selector) in: methodDict.
+							oldHeap
+								storePointer: index - SelectorStart
+								ofObject: (oldHeap fetchPointer: MethodArrayIndex ofObject: methodDict)
+								withValue: replacement.
+							installedPrototypes add: method selector]]]]]
 ]
 
 { #category : #'bootstrap methods' }
@@ -2944,10 +2971,10 @@ SpurBootstrap >> reportSizes [
 	oldAvgBytes := oldHeapSize asFloat / oldHeapNumObjs.
 	Transcript
 		nextPutAll: 'done.'; cr;
-		nextPutAll: 'old heap size: '; print: oldHeapSize; tab;
-		nextPutAll: ' (avg obj bytes '; print: (oldAvgBytes roundTo: 0.01); nextPutAll: ' words '; print: (oldAvgBytes / self wordSize roundTo: 0.01); nextPut: $); cr;
-		nextPutAll: 'initial new heap size: '; print: newHeapSize; cr;
-		nextPutAll: 'change: '; print: (change * 100.0 roundTo: 0.01); nextPut: $%; cr;
+		nextPutAll: 'old heap size: '; nextPutAll: oldHeapSize asStringWithCommas; tab;
+		nextPutAll: ' (avg obj bytes '; print: oldAvgBytes maxDecimalPlaces: 2; nextPutAll: ' words '; print: oldAvgBytes / self wordSize maxDecimalPlaces: 2; nextPut: $); cr;
+		nextPutAll: 'initial new heap size: '; nextPutAll: newHeapSize asStringWithCommas; cr;
+		nextPutAll: 'change: '; print: change * 100.0 maxDecimalPlaces: 2; nextPut: $%; cr;
 		flush.
 	newHeapSize := newHeap endOfMemory
 					- newHeap scavenger eden limit
@@ -2955,9 +2982,9 @@ SpurBootstrap >> reportSizes [
 	change := newHeapSize - oldHeapSize / oldHeapSize.
 	newAvgBytes := newHeapSize asFloat / newHeapNumObjs.
 	Transcript
-		nextPutAll: 'final new heap size: '; print: newHeapSize; tab;
-		nextPutAll: ' (avg obj bytes '; print: (newAvgBytes roundTo: 0.01); nextPutAll: ' words '; print: (newAvgBytes / self wordSize roundTo: 0.01); nextPut: $); cr;
-		nextPutAll: 'change: '; print: (change * 100.0 roundTo: 0.01); nextPut: $%; cr;
+		nextPutAll: 'final new heap size: '; nextPutAll: newHeapSize asStringWithCommas; tab;
+		nextPutAll: ' (avg obj bytes '; print: newAvgBytes maxDecimalPlaces: 2; nextPutAll: ' words '; print: newAvgBytes / self wordSize maxDecimalPlaces: 2; nextPut: $); cr;
+		nextPutAll: 'change: '; print: change * 100.0 maxDecimalPlaces: 2; nextPut: $%; cr;
 		flush
 ]
 
