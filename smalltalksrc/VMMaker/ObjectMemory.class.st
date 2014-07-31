@@ -1620,6 +1620,12 @@ ObjectMemory >> compactClassIndexOf: oop [
 	^((self baseHeader: oop) >> self compactClassFieldLSB) bitAnd: 16r1F
 ]
 
+{ #category : #'object format' }
+ObjectMemory >> compactClassIndexOfClass: classObj [
+	<api>
+	^self compactClassIndexOfHeader: (self formatOfClass: classObj)
+]
+
 { #category : #'header access' }
 ObjectMemory >> compactClassIndexOfHeader: header [
 	<api>

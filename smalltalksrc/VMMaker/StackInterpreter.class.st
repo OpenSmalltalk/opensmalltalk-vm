@@ -4753,6 +4753,13 @@ StackInterpreter >> encodeFrameFieldHasContext: hasContext "<Boolean>" isBlock: 
 				+  (isBlock ifTrue: [1 << 24] ifFalse: [0])]
 ]
 
+{ #category : #simulation }
+StackInterpreter >> encoderClassForHeader: headerInteger [
+	^Smalltalk classNamed: ((self headerIndicatesAlternateBytecodeSet: headerInteger)
+								ifTrue: [AltBytecodeEncoderClassName]
+								ifFalse: [BytecodeEncoderClassName])
+]
+
 { #category : #'frame access' }
 StackInterpreter >> ensureCallerContext: theFP [
 	"Answerr the caller context for a frame.  If the frame has a caller

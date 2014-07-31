@@ -118,6 +118,12 @@ StackInterpreterSimulator >> argumentCount: n [
 	argumentCount := n
 ]
 
+{ #category : #'debug support' }
+StackInterpreterSimulator >> assertValidExecutionPointers [
+	assertVEPAES ifTrue:
+		[super assertValidExecutionPointers]
+]
+
 { #category : #accessing }
 StackInterpreterSimulator >> assertValidExecutionPointersAtEachStep [
 	^assertVEPAES
@@ -790,7 +796,7 @@ StackInterpreterSimulator >> initialize [
 	systemAttributes := Dictionary new.
 	extSemTabSize := 256.
 	disableBooleanCheat := false.
-	assertVEPAES := true. "a flag so the assertValidExecutionPointers in run can be turned off for simulation speed"
+	assertVEPAES := true. "a flag so the assertValidExecutionPointers can be disabled for simulation speed"
 ]
 
 { #category : #'frame access' }
@@ -2135,7 +2141,7 @@ StackInterpreterSimulator >> run [
 	self internalizeIPandSP.
 	self fetchNextBytecode.
 	[true] whileTrue:
-		[assertVEPAES ifTrue: [self assertValidExecutionPointers].
+		[self assertValidExecutionPointers.
 		 atEachStepBlock value. "N.B. may be nil"
 		 self dispatchOn: currentBytecode in: BytecodeTable.
 		 self incrementByteCount].

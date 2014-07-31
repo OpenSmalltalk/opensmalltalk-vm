@@ -57,6 +57,29 @@ CogObjectRepresentationForSqueakV3 >> assertIsValidOop: anOop [
 	^objectMemory addressCouldBeObj: anOop
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentationForSqueakV3 >> branchIfInstanceOfBehavior: classObj branches: branches [
+	<var: #branches type: #'AbstractInstruction *'>
+	| jmpImmediate compactClassIndex |
+	<var: #jmpImmediate type: #'AbstractInstruction *'>
+	cogit MoveR: ReceiverResultReg R: TempReg.
+	jmpImmediate := self genJumpSmallIntegerInScratchReg: TempReg.
+	classObj = (objectMemory splObj: ClassSmallInteger) ifTrue:
+		[branches at: 0 put: jmpImmediate.
+		 ^0].
+	(compactClassIndex := objectMemory compactClassIndexOfClass: classObj) ~= 0
+		ifTrue:
+			[self genGetCompactClassIndexNonImmOf: ReceiverResultReg into: TempReg.
+			 cogit CmpCq: compactClassIndex R: TempReg]
+		ifFalse:
+			[self genGetClassObjectOfNonCompact: ReceiverResultReg into: TempReg.
+			 cogit
+				annotate: (cogit CmpCw: classObj R: TempReg)
+				objRef: classObj].
+	branches at: 0 put: (cogit JumpZero: 0).
+	^0
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> cacheTagIsMarked: cacheTag [
 	"Answer if the cacheTag is not unmarked, i.e. answer true for compact
@@ -292,6 +315,14 @@ CogObjectRepresentationForSqueakV3 >> genGetClassObjectOf: instReg into: destReg
 			objRef: (objectMemory splObj: CompactClasses)).
 	jumpGotClass jmpTarget:
 	(jumpGotClass2 jmpTarget: cogit Label).
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genGetClassObjectOfNonCompact: instReg into: destReg [
+	cogit
+		MoveMw: objectMemory classFieldOffset r: instReg R: destReg;
+		AndCq: AllButTypeMask signedIntFromLong R: destReg.
 	^0
 ]
 
