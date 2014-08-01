@@ -1737,8 +1737,8 @@ SpurBootstrap >> addNewMethods [
 					nextPutAll: '; class not found in image';
 					flush.]
 			ifNotNil:
-				[:class|
-				symIsMeta ifTrue: [class := oldHeap fetchClassOfNonImm: class].
+				[:theClass| | class |
+				class := symIsMeta ifTrue: [oldHeap fetchClassOfNonImm: theClass] ifFalse: [theClass].
 				self prototypeClassNameMetaSelectorMethodDo:
 					[:className :isMeta :selector :method| | methodOrNil |
 					(className = sym
@@ -2888,8 +2888,8 @@ SpurBootstrap >> replaceMethods [
 					nextPutAll: '; class not found in image';
 					flush.]
 			ifNotNil:
-				[:class|
-				symIsMeta ifTrue: [class := oldHeap fetchClassOfNonImm: class].
+				[:theClass| | class |
+				class := symIsMeta ifTrue: [oldHeap fetchClassOfNonImm: theClass] ifFalse: [theClass].
 				self prototypeClassNameMetaSelectorMethodDo:
 					[:className :isMeta :selector :method| | replacement methodDict index |
 					(className = sym
