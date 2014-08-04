@@ -52,6 +52,20 @@ CogMethodZone class >> typeForSelf [
 	^#implicit
 ]
 
+{ #category : #'young referers' }
+CogMethodZone >> addAllToYoungReferrers [
+	<api>
+	<returnTypeC: #void>
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[(cogMethod cmType = CMMethod
+		  or: [cogMethod cmType = CMOpenPIC]) ifTrue:
+			[self ensureInYoungReferrers: cogMethod].
+		 cogMethod := self methodAfter: cogMethod]
+]
+
 { #category : #accessing }
 CogMethodZone >> addToOpenPICList: anOpenPIC [
 	<var: #anOpenPIC type: #'CogMethod *'>
@@ -80,7 +94,9 @@ CogMethodZone >> addToYoungReferrers: cogMethod [
 	self assert: youngReferrers <= limitAddress.
 	self assert: (self occurrencesInYoungReferrers: cogMethod) = 0.
 	self assert: cogMethod cmRefersToYoung.
-	(self asserta: self roomOnYoungReferrersList) ifFalse:
+	self assert: (youngReferrers <= limitAddress
+				and: [youngReferrers >= (limitAddress - (methodCount * BytesPerWord))]).
+	(self asserta: limitAddress - (methodCount * BytesPerWord) >= mzFreeStart) ifFalse:
 		[self error: 'no room on youngReferrers list'].
 	youngReferrers := youngReferrers - BytesPerWord.
 	objectMemory longAt: youngReferrers put: cogMethod asUnsignedInteger
@@ -95,7 +111,6 @@ CogMethodZone >> allocate: numBytes [
 	allocation := mzFreeStart.
 	mzFreeStart := mzFreeStart + roundedBytes.
 	methodCount := methodCount + 1.
-	self assert: self roomOnYoungReferrersList.
 	self cCode: '' inSmalltalk:
 		[(cogit breakPC isInteger
 		   and: [cogit breakPC between: allocation and: mzFreeStart]) ifTrue:
@@ -200,6 +215,15 @@ CogMethodZone >> compactCompiledCode [
 							to: #'CogMethod *'].
 	mzFreeStart := dest asUnsignedInteger.
 	methodBytesFreedSinceLastCompaction := 0
+]
+
+{ #category : #'young referers' }
+CogMethodZone >> ensureInYoungReferrers: cogMethod [
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod cmRefersToYoung ifFalse:
+		[self assert: (self occurrencesInYoungReferrers: cogMethod) = 0.
+		 cogMethod cmRefersToYoung: true.
+		 self addToYoungReferrers: cogMethod]
 ]
 
 { #category : #accessing }
@@ -676,19 +700,6 @@ CogMethodZone >> removeFromUnpairedMethodList: aCogMethod [
 			[prevMethod nextMethodOrIRCs: aCogMethod nextMethodOrIRCs.
 			 ^nil].
 		  prevMethod := self cCoerceSimple: prevMethod nextMethodOrIRCs to: #'CogMethod *']
-]
-
-{ #category : #'young referers' }
-CogMethodZone >> roomOnYoungReferrersList [
-	"The youngReferrers list holds methods that may contain a reference to a young
-	 object and hence need to be visited during young-space garbage collection.  The
-	 list saves walking through all of code space to do so, as in typical circumstances
-	 there are no methods that refer to young objects.However, events like become:
-	 can potentially cause every method to refer to a new object (becomming true for
-	 example).  So there needs to be room on the list for as many methods as exist."
-	self assert: (youngReferrers <= limitAddress
-				and: [youngReferrers >= (limitAddress - (methodCount * BytesPerWord))]).
-	^limitAddress - (methodCount * BytesPerWord) >= mzFreeStart
 ]
 
 { #category : #accessing }

@@ -835,7 +835,8 @@ SpurMemoryManager class >> initializeSpurObjectRepresentationConstants [
 	"SpurMemoryManager initializeSpurObjectRepresentationConstants"
 	BecamePointerObjectFlag := 1.
 	BecameCompiledMethodFlag := 2.
-	"BecameClassFlag := 4" "this turns out not to be actionable"
+	OldBecameNewFlag := 4.
+	"BecameClassFlag := 8" "this turns out not to be actionable"
 
 ]
 
@@ -1011,7 +1012,7 @@ SpurMemoryManager >> addFreeSubTree: freeTree [
 	treeNode := freeLists at: 0.
 	self assert: treeNode ~= 0.
 	[bytesInNode := self bytesInObject: treeNode.
-	 self assert: ((self oop: freeTree + bytesInArg isLessThan: treeNode)
+	 self assert: ((self oop: freeTree + bytesInArg isLessThanOrEqualTo: treeNode)
 					or: [self oop: freeTree isGreaterThanOrEqualTo: treeNode + bytesInNode]).
 	 self assert: bytesInNode >= (self numFreeLists * self allocationUnit).
 	 self assert: bytesInArg ~= bytesInNode.
@@ -2338,6 +2339,7 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 		ifFalse:
 			[self innerBecomeObjectsIn: array1 to: array2 copyHash: copyHashFlag].
 	self followSpecialObjectsOop.
+	self postBecomeScanClassTable: becomeEffectsFlags.
 	coInterpreter postBecomeAction: becomeEffectsFlags.
 	becomeEffectsFlags := 0.
 
@@ -3643,6 +3645,9 @@ SpurMemoryManager >> doBecome: obj1 to: obj2 copyHash: copyHashFlag [
 	o1HashBits := self rawHashBitsOf: obj1.
 	o2HashBits := self rawHashBitsOf: obj2.
 	self forward: obj1 to: obj2.
+	((self isOldObject: obj1)
+	 and: [self isYoungObject: obj2]) ifTrue:
+		[becomeEffectsFlags := becomeEffectsFlags bitOr: OldBecameNewFlag].
 	copyHashFlag ifTrue: [self setHashBitsOf: obj2 to: o1HashBits].
 	"obj1 is on its way out.  Remove it from the classTable"
 	(o1HashBits ~= 0 and: [(self classAtIndex: o1HashBits) = obj1])
@@ -7900,7 +7905,10 @@ SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag
 			 self setHashBitsOf: clone2 to: (self rawHashBitsOf: obj2)].
 	self
 		forward: obj1 to: clone2;
-		forward: obj2 to: clone1
+		forward: obj2 to: clone1.
+	((self isYoungObject: obj1) ~= (self isYoungObject: clone2)
+	 or: [(self isYoungObject: obj2) ~= (self isYoungObject: clone1)]) ifTrue:
+		[becomeEffectsFlags := becomeEffectsFlags bitOr: OldBecameNewFlag]
 ]
 
 { #category : #compaction }
@@ -8047,6 +8055,32 @@ SpurMemoryManager >> possibleRootStoreInto: destObj [
 	<inline: true>
 	(self isRemembered: destObj) ifFalse:
 		[scavenger remember: destObj]
+]
+
+{ #category : #'become implementation' }
+SpurMemoryManager >> postBecomeScanClassTable: effectsFlags [
+	"Scan the class table post-become (iff a pointer object was becommed) to ensure no forwarding
+	 pointers exist in the class table.
+	 Note that one-way become can cause duplications in the class table.
+	 When can these be eliminated?  We use the classTableBitmap to mark classTable entries
+	 (not the classes themselves, since marking a class doesn't help in knowing if its index is used).
+	 On image load, and during incrememtal scan-mark and full GC, classIndices are marked.
+	 We can somehow avoid following classes from the classTable until after this mark phase."
+	self assert: self validClassTableRootPages.
+
+	(effectsFlags anyMask: BecamePointerObjectFlag) ifFalse: [^self].
+
+	0 to: numClassTablePages - 1 do:
+		[:i| | page |
+		page := self fetchPointer: i ofObject: hiddenRootsObj.
+		self assert: (self isForwarded: page) not.
+		0 to: (self numSlotsOf: page) - 1 do:
+			[:j| | classOrNil |
+			classOrNil := self fetchPointer: j ofObject: page.
+			(classOrNil ~= nilObj
+			 and: [self isForwarded: classOrNil]) ifTrue:
+				[classOrNil := self followForwarded: classOrNil.
+				 self storePointer: j ofObject: page withValue: classOrNil]]]
 ]
 
 { #category : #snapshot }

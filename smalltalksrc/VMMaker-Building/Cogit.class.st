@@ -1904,6 +1904,12 @@ Cogit >> abstractOpcodes [
 	^abstractOpcodes
 ]
 
+{ #category : #'jit - api' }
+Cogit >> addAllToYoungReferrers [
+	<doNotGenerate>
+	methodZone addAllToYoungReferrers
+]
+
 { #category : #'compile abstract instructions' }
 Cogit >> addBlockStartAt: bcpc numArgs: numArgs numCopied: numCopied span: span [
 	"Add a blockStart for an embedded block.  For a binary tree walk block dispatch
@@ -2551,12 +2557,6 @@ Cogit >> callerSavedRegMask [
 	^callerSavedRegMask
 ]
 
-{ #category : #'jit - api' }
-Cogit >> canLinkToYoungClasses [
-	<doNotGenerate>
-	^objectRepresentation canLinkToYoungClasses
-]
-
 { #category : #accessing }
 Cogit >> ceBaseFrameReturnPC [
 	<api>
@@ -2701,11 +2701,7 @@ Cogit >> ceImplicitReceiverFor: selector receiver: receiver [
 		[((objectRepresentation inlineCacheTagsMayBeObjects
 		   and: [objectMemory isYoung: rcvrClass])
 		  or: [mixin ~= receiver and: [objectMemory isYoung: mixin]]) ifTrue:
-			[methodZone roomOnYoungReferrersList ifFalse:
-				[coInterpreter callForCogCompiledCodeCompaction.
-				 ^mixin].
-			 cogMethod cmRefersToYoung: true.
-			 methodZone addToYoungReferrers: cogMethod]].
+			[methodZone ensureInYoungReferrers: cogMethod]].
 	backEnd
 		unalignedLongAt: classpc
 			put: (objectRepresentation inlineCacheTagForClass: rcvrClass);
@@ -2740,11 +2736,7 @@ Cogit >> ceImplicitReceiverFor: selector receiver: receiver cache: cacheAddress 
 		[((objectRepresentation inlineCacheTagsMayBeObjects
 		   and: [objectMemory isYoung: rcvrClass])
 		  or: [mixin ~= receiver and: [objectMemory isYoung: mixin]]) ifTrue:
-			[methodZone roomOnYoungReferrersList ifFalse:
-				[coInterpreter callForCogCompiledCodeCompaction.
-				 ^mixin].
-			 cogMethod cmRefersToYoung: true.
-			 methodZone addToYoungReferrers: cogMethod]].
+			[methodZone ensureInYoungReferrers: cogMethod]].
 	backEnd
 		unalignedLongAt: cacheAddress
 			put: (objectRepresentation inlineCacheTagForClass: rcvrClass);
@@ -4622,9 +4614,11 @@ Cogit >> followForwardedLiteralsIn: cogMethod [
 	<api>
 	<option: #SpurObjectMemory>
 	<var: #cogMethod type: #'CogMethod *'>
-	self assert: (objectMemory shouldRemapOop: cogMethod methodObject) not.
+	self assert: (objectMemory isForwarded: cogMethod methodObject) not.
 	(objectMemory shouldRemapOop: cogMethod selector) ifTrue:
-		[cogMethod selector: (objectMemory remapObj: cogMethod selector)].
+		[cogMethod selector: (objectMemory remapObj: cogMethod selector).
+		 (objectMemory isYoung: cogMethod selector) ifTrue:
+			[methodZone ensureInYoungReferrers: cogMethod]].
 	self mapFor: cogMethod
 		performUntil: #remapIfObjectRef:pc:hasYoung:
 		arg: 0
@@ -4643,9 +4637,8 @@ Cogit >> followForwardedMethods [
 		[cogMethod cmType = CMMethod ifTrue:
 			[(objectMemory isForwarded: cogMethod methodObject) ifTrue:
 				[cogMethod methodObject: (objectMemory followForwarded: cogMethod methodObject).
-				 (cogMethod cmRefersToYoung not
-				  and: [objectMemory isYoungObject: cogMethod methodObject]) ifTrue:
-					[methodZone addToYoungReferrers: cogMethod]]].
+				 (objectMemory isYoungObject: cogMethod methodObject) ifTrue:
+					[methodZone ensureInYoungReferrers: cogMethod]]].
 		 cogMethod cmType = CMClosedPIC ifTrue:
 			[(self followMethodReferencesInClosedPIC: cogMethod) ifTrue:
 				[freedPIC := true.
@@ -6487,11 +6480,8 @@ Cogit >> linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod of
 	inlineCacheTag := theEntryOffset = cmNoCheckEntryOffset
 						ifTrue: [targetMethod selector "i.e. no change"]
 						ifFalse: [objectRepresentation inlineCacheTagForInstance: receiver].
-	(sendingMethod cmRefersToYoung not
-	 and: [(objectRepresentation inlineCacheTagIsYoung: inlineCacheTag)]) ifTrue:
-		[self assert: (methodZone occurrencesInYoungReferrers: sendingMethod) = 0.
-		 sendingMethod cmRefersToYoung: true.
-		 methodZone addToYoungReferrers: sendingMethod].
+	(objectRepresentation inlineCacheTagIsYoung: inlineCacheTag) ifTrue:
+		[methodZone ensureInYoungReferrers: sendingMethod].
 	address := targetMethod asInteger + theEntryOffset.
 	extent := backEnd
 				rewriteInlineCacheAt: callSiteReturnAddress
@@ -6864,7 +6854,7 @@ Cogit >> mapObjectReferencesInMachineCodeForBecome [
 										rawHeaderOf: remappedMethod
 										put: cogMethod asInteger]
 								ifFalse:
-									[ self assert: (self noAssertMethodClassAssociationOf: cogMethod methodObject)
+									[self assert: (self noAssertMethodClassAssociationOf: cogMethod methodObject)
 													= objectMemory nilObject.
 									 cogMethod
 										methodHeader: (coInterpreter rawHeaderOf: remappedMethod);
@@ -6876,11 +6866,10 @@ Cogit >> mapObjectReferencesInMachineCodeForBecome [
 						 arg: hasYoungObjPtr.
 					 hasYoungObj
 						ifTrue:
-							[cogMethod cmRefersToYoung ifFalse:
-								[cogMethod cmRefersToYoung: true.
-								 methodZone addToYoungReferrers: cogMethod].
+							[methodZone ensureInYoungReferrers: cogMethod.
 							hasYoungObj := false]
-						ifFalse: [cogMethod cmRefersToYoung: false]]].
+						ifFalse:
+							[cogMethod cmRefersToYoung: false]]].
 		cogMethod := methodZone methodAfter: cogMethod].
 	methodZone pruneYoungReferrers.
 	freedPIC ifTrue:
@@ -7004,7 +6993,10 @@ Cogit >> markAndTraceLiteralsIn: cogMethod [
 				 or: [cogMethod cmType = CMOpenPIC
 				 and: [(objectMemory isImmediate: cogMethod selector)
 					or: [objectMemory isMarked: cogMethod selector]]]).
-	objectRepresentation markAndTraceLiteral: cogMethod selector.
+	objectRepresentation
+		markAndTraceLiteral: cogMethod selector
+		in: cogMethod
+		at: (self addressOf: cogMethod selector put: [:val| cogMethod selector: val]).
 	self maybeMarkCountersIn: cogMethod.
 	self maybeMarkIRCsIn: cogMethod.
 	self mapFor: cogMethod
@@ -7073,8 +7065,11 @@ Cogit >> markAndTraceObjectReferencesInGeneratedRuntime [
 	0 to: runtimeObjectRefIndex - 1 do:
 		[:i| | mcpc literal |
 		 mcpc := objectReferencesInRuntime at: i.
-		 literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
-		 objectRepresentation markAndTraceLiteral: literal]
+		 literal := backEnd literalBeforeFollowingAddress: mcpc asUnsignedInteger.
+		 objectRepresentation
+			markAndTraceLiteral: literal
+			in: (self cCoerceSimple: nil to: #'CogMethod *')
+			atpc: mcpc asUnsignedInteger]
 ]
 
 { #category : #'jit - api' }
@@ -7153,25 +7148,36 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 	<var: #mcpc type: #'char *'>
 	| literal |
 	annotation = IsObjectReference ifTrue:
-		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
-		 objectRepresentation markAndTraceLiteral: literal].
+		[literal := backEnd literalBeforeFollowingAddress: mcpc asUnsignedInteger.
+		 (objectRepresentation
+				markAndTraceLiteral: literal
+				in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
+				atpc: mcpc asUnsignedInteger) ifTrue:
+			[codeModified := true]].
 	(self isSendAnnotation: annotation) ifTrue:
 		[self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
 			[:entryPoint :cacheTag :tagCouldBeObj |
 			 tagCouldBeObj ifTrue:
-				[objectRepresentation markAndTraceLiteral: cacheTag].  "cacheTag is selector"
+				[(objectRepresentation
+						markAndTraceCacheTagLiteral: cacheTag
+						in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
+						atpc: mcpc asUnsignedInteger) ifTrue:
+					[codeModified := true]].  "cacheTag is selector"
 			  self cppIf: NewspeakVM ifTrue:
 				[entryPoint = ceImplicitReceiverTrampoline ifTrue:
 					[| cacheAddress class mixin |
 					 self assert: NumOopsPerIRC = 2.
 					 cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
-					 class := backEnd unalignedLongAt: cacheAddress.
-					 class ~= 0
+					 (class := backEnd unalignedLongAt: cacheAddress) ~= 0
 						ifTrue:
 							[(objectRepresentation cacheTagIsMarked: class)
 								ifTrue:
 									[(mixin := backEnd unalignedLongAt: cacheAddress + BytesPerOop) ~= 0 ifTrue:
-										[objectRepresentation markAndTraceLiteral: mixin]]
+										[objectRepresentation
+											markAndTraceLiteral: mixin
+											in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
+											at: (self asAddress: cacheAddress + BytesPerOop
+													put: [:val| backEnd unalignedLongAt: cacheAddress + BytesPerOop put: val])]]
 								ifFalse:
 									[backEnd
 										unalignedLongAt: cacheAddress put: 0;
@@ -7188,8 +7194,12 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 	<var: #mcpc type: #'char *'>
 	| literal |
 	annotation = IsObjectReference ifTrue:
-		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
-		 objectRepresentation markAndTraceLiteral: literal].
+		[literal := backEnd literalBeforeFollowingAddress: mcpc asUnsignedInteger.
+		 (objectRepresentation
+				markAndTraceLiteral: literal
+				in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
+				atpc: mcpc asUnsignedInteger) ifTrue:
+			[codeModified := true]].
 	(self isSendAnnotation: annotation) ifTrue:
 		[self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
 			[:entryPoint :cacheTag :tagCouldBeObj | | cacheTagMarked |
@@ -7199,7 +7209,8 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 					[self targetMethodAndSendTableFor: entryPoint into:
 						[:targetMethod :sendTable| | unlinkedRoutine |
 						 (cacheTagMarked not
-						  or: [self markAndTraceOrFreeCogMethod: targetMethod firstVisit: targetMethod asUnsignedInteger > mcpc asUnsignedInteger]) ifTrue:
+						  or: [self markAndTraceOrFreeCogMethod: targetMethod
+								firstVisit: targetMethod asUnsignedInteger > mcpc asUnsignedInteger]) ifTrue:
 							["Either the cacheTag is unmarked (e.g. new class) or the target
 							  has been freed (because it is unmarked), so unlink the send."
 							 unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
@@ -7208,22 +7219,36 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 								tag: targetMethod selector
 								target: unlinkedRoutine.
 							 codeModified := true.
-							 objectRepresentation markAndTraceLiteral: targetMethod selector]]]
-				ifFalse:
-					[objectRepresentation markAndTraceLiteral: cacheTag.  "cacheTag is selector"
+							 objectRepresentation
+								markAndTraceLiteral: targetMethod selector
+								in: targetMethod
+								at: (self addressOf: targetMethod selector put: [:val| targetMethod selector: val])]]]
+				ifFalse:  "cacheTag is selector"
+					[(objectRepresentation
+							markAndTraceCacheTagLiteral: cacheTag
+							in: cogMethod
+							atpc: mcpc asUnsignedInteger) ifTrue:
+						[codeModified := true].
 					 self cppIf: NewspeakVM ifTrue:
 						[entryPoint = ceImplicitReceiverTrampoline ifTrue:
 							[| cacheAddress class mixin |
-							 objectRepresentation markAndTraceLiteral: cacheTag.  "cacheTag is selector"
+							 (objectRepresentation
+									markAndTraceCacheTagLiteral: cacheTag
+									in: cogMethod
+									atpc: mcpc asUnsignedInteger) ifTrue:
+								[codeModified := true].  "cacheTag is selector"
 							 self assert: NumOopsPerIRC = 2.
 							 cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
-							 class := backEnd unalignedLongAt: cacheAddress.
-							 class ~= 0
+							 (class := backEnd unalignedLongAt: cacheAddress) ~= 0
 								ifTrue:
 									[(objectRepresentation cacheTagIsMarked: class)
 										ifTrue:
 											[(mixin := backEnd unalignedLongAt: cacheAddress + BytesPerOop) ~= 0 ifTrue:
-												[objectRepresentation markAndTraceLiteral: mixin]]
+												[objectRepresentation
+													markAndTraceLiteral: mixin
+													in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
+													at: (self asAddress: cacheAddress + BytesPerOop
+															put: [:val| backEnd unalignedLongAt: cacheAddress + BytesPerOop put: val])]]
 										ifFalse:
 											[backEnd
 												unalignedLongAt: cacheAddress put: 0;
@@ -7245,7 +7270,10 @@ Cogit >> markLiteralsAndUnlinkUnmarkedSendsIn: cogMethod [
 	<inline: true>
 	self assert: cogMethod cmType = CMMethod.
 	self assert: (objectMemory isMarked: cogMethod methodObject).
-	objectRepresentation markAndTraceLiteral: cogMethod selector.
+	objectRepresentation
+		markAndTraceLiteral: cogMethod selector
+		in: cogMethod
+		at: (self addressOf: cogMethod selector put: [:val| cogMethod selector: val]).
 	self maybeMarkCountersIn: cogMethod.
 	self maybeMarkIRCsIn: cogMethod.
 	self mapFor: cogMethod
@@ -8644,11 +8672,8 @@ Cogit >> setSelectorOf: cogMethod to: aSelectorOop [
 		point: (objectMemory lengthOf: aSelectorOop).
 	self assert: cogMethod cmType = CMMethod.
 	cogMethod selector: aSelectorOop.
-	(cogMethod cmRefersToYoung not
-	 and: [objectMemory isYoung: aSelectorOop]) ifTrue:
-		[self assert: (methodZone occurrencesInYoungReferrers: cogMethod) = 0.
-		 cogMethod cmRefersToYoung: true.
-		 methodZone addToYoungReferrers: cogMethod]
+	(objectMemory isYoung: aSelectorOop) ifTrue:
+		[methodZone ensureInYoungReferrers: cogMethod]
 ]
 
 { #category : #initialization }

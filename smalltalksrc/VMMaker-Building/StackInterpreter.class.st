@@ -558,6 +558,7 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 	"Note: This table will be used to generate a C switch statement."
 
 	BytecodeTable := Array new: 256.
+	BytecodeEncoderClassName := #EncoderForSistaV1.
 	self table: BytecodeTable from:
 	#(	"1 byte bytecodes"
 		(   0  15 pushReceiverVariableBytecode)
@@ -8032,10 +8033,11 @@ StackInterpreter >> literalCountOfAlternateHeader: headerPointer [
 { #category : #'compiled methods' }
 StackInterpreter >> literalCountOfHeader: headerPointer [
 	<api>
-	^self cppIf: MULTIPLEBYTECODESETS
-		ifTrue: [(self headerIndicatesAlternateBytecodeSet: headerPointer)
-					ifTrue: [self literalCountOfAlternateHeader: headerPointer]
-					ifFalse: [self literalCountOfOriginalHeader: headerPointer]]
+	"We support two method header formats, as selected by the sign flag.  Even if the VM only
+	 has one bytecode set, supporting teh two formats here allows for instantiating methods in
+	 the other format for testing, etc."
+	^(self headerIndicatesAlternateBytecodeSet: headerPointer)
+		ifTrue: [self literalCountOfAlternateHeader: headerPointer]
 		ifFalse: [self literalCountOfOriginalHeader: headerPointer]
 ]
 
@@ -10659,13 +10661,20 @@ StackInterpreter >> printOopShortInner: oop [
 				ifTrue: [self print: name]
 				ifFalse: [0 to: nameLen - 1 do: [:i| self printChar: (name at: i)]]].
 	"Try to spot association-like things; they're all subclasses of LookupKey"
-	((objectMemory instanceSizeOf: classOop) = (ValueIndex + 1)
-	 and: [(self superclassOf: classOop) = (self superclassOf: (objectMemory fetchClassOfNonImm: (objectMemory splObj: SchedulerAssociation)))
-	 and: [objectMemory isBytes: (objectMemory fetchPointer: KeyIndex ofObject: oop)]]) ifTrue:
-		[self space;
-			printOopShort: (objectMemory fetchPointer: KeyIndex ofObject: oop);
-			print: ' -> ';
-			printHex: (objectMemory fetchPointer: ValueIndex ofObject: oop)]
+	((objectMemory isPointersNonImm: oop)
+	 and: [(objectMemory instanceSizeOf: classOop) = (ValueIndex + 1)
+	 and: [(objectMemory isBytes: (objectMemory fetchPointer: KeyIndex ofObject: oop))]]) ifTrue:
+		[| classLookupKey |
+		 classLookupKey := objectMemory fetchClassOfNonImm: (objectMemory splObj: SchedulerAssociation).
+		 [classLookupKey = objectMemory nilObject ifTrue:
+			[^self].
+		  (objectMemory instanceSizeOf: classLookupKey) = (KeyIndex + 1)] whileFalse:
+			[classLookupKey := self superclassOf: classLookupKey].
+		 (self includesBehavior: classOop ThatOf: classLookupKey) ifTrue:
+			[self space;
+				printOopShort: (objectMemory fetchPointer: KeyIndex ofObject: oop);
+				print: ' -> ';
+				printHex: (objectMemory fetchPointer: ValueIndex ofObject: oop)]]
 ]
 
 { #category : #'debug printing' }
