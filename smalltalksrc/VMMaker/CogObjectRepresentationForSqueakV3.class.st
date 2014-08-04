@@ -89,12 +89,6 @@ CogObjectRepresentationForSqueakV3 >> cacheTagIsMarked: cacheTag [
 	^objectMemory isMarked: cacheTag
 ]
 
-{ #category : #'in-line cacheing' }
-CogObjectRepresentationForSqueakV3 >> canLinkToYoungClasses [
-	<api>
-	^methodZone roomOnYoungReferrersList
-]
-
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> checkValidInlineCacheTag: cacheTag [
 	^((cacheTag bitAnd: 1 << ShiftForWord - 1) = 0
@@ -886,10 +880,41 @@ CogObjectRepresentationForSqueakV3 >> isSmallIntegerTagNonZero [
 ]
 
 { #category : #'garbage collection' }
+CogObjectRepresentationForSqueakV3 >> markAndTraceCacheTagLiteral: literal in: cogMethodOrNil atpc: address [
+	"Mark and trace a literal in an inline cache preceeding address in cogMethodOrNil.
+	 Answer if code was modified."
+	<var: #cogMethodOrNil type: #'CogMethod *'>
+	<var: #address type: #usqInt>
+	<inline: true>
+	self markAndTraceLiteral: literal.
+	^false
+]
+
+{ #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> markAndTraceLiteral: literal [
 	(self couldBeObject: literal) ifTrue:
 		[self assert: (objectMemory addressCouldBeObj: literal).
 		 objectMemory markAndTrace: literal]
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSqueakV3 >> markAndTraceLiteral: literal in: cogMethod at: address [
+	"Mark and trace a literal in a sqInt variable of cogMethod."
+	<var: #cogMethod type: #'CogMethod *'>
+	<var: #address type: #'sqInt *'>
+	<inline: true>
+	self markAndTraceLiteral: literal
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSqueakV3 >> markAndTraceLiteral: literal in: cogMethodOrNil atpc: address [
+	"Mark and trace a literal in a machine code instruction preceeding address in cogMethodOrNil.
+	 Answer if code was modified."
+	<var: #cogMethodOrNil type: #'CogMethod *'>
+	<var: #address type: #usqInt>
+	<inline: true>
+	self markAndTraceLiteral: literal.
+	^false
 ]
 
 { #category : #'garbage collection' }

@@ -1436,6 +1436,13 @@ CCodeGenerator >> generateAnd: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateAsAddress: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	self emitCExpression: msgNode args first on: aStream
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateAsFloat: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
@@ -2985,6 +2992,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#cCoerceSimple:to:			#generateCCoercion:on:indent:
 	#addressOf:				#generateAddressOf:on:indent:
 	#addressOf:put:			#generateAddressOf:on:indent:
+	#aaAddress:put:			#generateAsAddress:on:indent:
 	#signedIntFromLong		#generateSignedIntFromLong:on:indent:
 	#signedIntToLong			#generateSignedIntToLong:on:indent:
 	#signedIntFromShort		#generateSignedIntFromShort:on:indent:

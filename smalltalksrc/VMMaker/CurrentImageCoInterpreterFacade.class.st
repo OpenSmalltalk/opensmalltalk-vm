@@ -197,8 +197,9 @@ CurrentImageCoInterpreterFacade >> compilationBreak: aString point: length [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> debugStackPointersFor: anOop [
 	^CArrayAccessor on:
-		(StackDepthFinder on: (objectMap keyAtValue: anOop))
-			stackPointers
+		((StackDepthFinder on: (objectMap keyAtValue: anOop))
+			encoderClass: (coInterpreter encoderClassForHeader: (objectMap keyAtValue: anOop) header);
+			stackPointers)
 ]
 
 { #category : #accessing }
@@ -369,6 +370,11 @@ CurrentImageCoInterpreterFacade >> integerValueOf: anInteger [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> interpretAddress [
 	^self addressForLabel: #interpret
+]
+
+{ #category : #testing }
+CurrentImageCoInterpreterFacade >> isArrayNonImm: anOop [
+	^(self objectForOop: anOop) class instSpec = Array instSpec
 ]
 
 { #category : #'cog jit support' }

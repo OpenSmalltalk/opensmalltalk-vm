@@ -3,10 +3,17 @@ Class {
 	#superclass : #InstructionStream,
 	#instVars : [
 		'stackp',
-		'joins'
+		'joins',
+		'encoderClass'
 	],
 	#category : #'VMMaker-Support'
 }
+
+{ #category : #'instruction decoding' }
+StackDepthFinder >> blockReturnConstant: value [
+	"Return Constant From Block bytecode."
+	self resetStackAfterBranchOrReturn
+]
 
 { #category : #'instruction decoding' }
 StackDepthFinder >> blockReturnTop [
@@ -95,10 +102,24 @@ StackDepthFinder >> drop: n [
 	stackp := stackp - n
 ]
 
+{ #category : #accessing }
+StackDepthFinder >> encoderClass [
+
+	^encoderClass
+]
+
+{ #category : #accessing }
+StackDepthFinder >> encoderClass: anObject [
+
+	encoderClass := anObject
+]
+
 { #category : #decoding }
 StackDepthFinder >> interpretNextInstructionFor: client [
 	joins at: pc put: stackp.
-	^super interpretNextInstructionFor: client
+	^encoderClass
+		ifNil: [super interpretNextInstructionFor: client]
+		ifNotNil: [encoderClass interpretNextInstructionFor: client in: self]
 ]
 
 { #category : #accessing }
@@ -302,9 +323,9 @@ StackDepthFinder >> stackPointers [
 	"Collect the stack depth for each bytecode in the method.
 	 For the convenience of clients, write the stack depth for extended bytecodes
 	 to the bytecode pc, as well as the bytecocdes' extensions' pcs."
-	| method encoderClass stackPointers end |
+	| method stackPointers end |
 	stackPointers :=  Array new: (end := (method := self method) endPC).
-	encoderClass := method encoderClass.
+	encoderClass ifNil: [encoderClass := method encoderClass].
 	[pc <= end] whileTrue:
 		[stackPointers at: pc put: stackp.
 		 encoderClass extensionsAt: pc in: method into:
@@ -341,4 +362,11 @@ StackDepthFinder >> storeIntoRemoteTemp: remoteTempIndex inVectorAt: tempVectorI
 StackDepthFinder >> storeIntoTemporaryVariable: offset [ 
 	"Store Top Of Stack Into Temporary Variable Of Method bytecode."
 
+]
+
+{ #category : #'instruction decoding' }
+StackDepthFinder >> trapIfNotInstanceOf: behaviorOrArrayOfBehavior [
+	"If the top of stack is not an instance of either the argument, or, if the argument is an Array,
+	  any of the elements of the argument, send the class trap message to the current context."
+	self drop
 ]

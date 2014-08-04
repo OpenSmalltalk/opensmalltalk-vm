@@ -41,13 +41,6 @@ CogObjectRepresentationForSpur >> cacheTagIsMarked: cacheTag [
 	^true
 ]
 
-{ #category : #'in-line cacheing' }
-CogObjectRepresentationForSpur >> canLinkToYoungClasses [
-	<api>
-	<cmacro: '() true'>
-	^true
-]
-
 { #category : #testing }
 CogObjectRepresentationForSpur >> canPinObjects [
 	"Answer if the memory manager supports pinned objects."
@@ -644,10 +637,65 @@ CogObjectRepresentationForSpur >> jumpNotCharacterUnsignedValueInRegister: reg [
 ]
 
 { #category : #'garbage collection' }
+CogObjectRepresentationForSpur >> markAndTraceCacheTagLiteral: literal in: cogMethodOrNil atpc: address [
+	"Mark and trace a literal in an inline cache preceeding address in cogMethodOrNil.
+	 Answer if code was modified."
+	<var: #cogMethodOrNil type: #'CogMethod *'>
+	<var: #address type: #usqInt>
+	| objOop |
+	(self couldBeObject: literal) ifFalse:
+		[^false].
+	self assert: (objectMemory addressCouldBeObj: literal).
+	(objectMemory isForwarded: literal) ifFalse:
+		[objectMemory markAndTrace: literal.
+		 ^false].
+	objOop := objectMemory followForwarded: literal.
+	cogit backEnd rewriteInlineCacheTag: objOop at: address.
+	self markAndTraceUpdatedLiteral: objOop in: cogMethodOrNil.
+	^true
+]
+
+{ #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> markAndTraceLiteral: literal [
 	(self couldBeObject: literal) ifTrue:
 		[self assert: (objectMemory addressCouldBeObj: literal).
 		 objectMemory markAndTrace: literal]
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSpur >> markAndTraceLiteral: literal in: cogMethod at: address [
+	"Mark and trace a literal in a sqInt variable of cogMethod."
+	<var: #cogMethod type: #'CogMethod *'>
+	<var: #address type: #'sqInt *'>
+	| objOop |
+	(self couldBeObject: literal) ifFalse:
+		[^self].
+	self assert: (objectMemory addressCouldBeObj: literal).
+	(objectMemory isForwarded: literal) ifFalse:
+		[objectMemory markAndTrace: literal.
+		 ^self].
+	objOop := objectMemory followForwarded: literal.
+	address at: 0 put: objOop.
+	self markAndTraceUpdatedLiteral: objOop in: cogMethod
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSpur >> markAndTraceLiteral: literal in: cogMethodOrNil atpc: address [
+	"Mark and trace a literal in a machine code instruction preceeding address in cogMethodOrNil.
+	 Answer if code was modified."
+	<var: #cogMethodOrNil type: #'CogMethod *'>
+	<var: #address type: #usqInt>
+	| objOop |
+	(self couldBeObject: literal) ifFalse:
+		[^false].
+	self assert: (objectMemory addressCouldBeObj: literal).
+	(objectMemory isForwarded: literal) ifFalse:
+		[objectMemory markAndTrace: literal.
+		 ^false].
+	objOop := objectMemory followForwarded: literal.
+	cogit backEnd storeLiteral: objOop beforeFollowingAddress: address.
+	self markAndTraceUpdatedLiteral: objOop in: cogMethodOrNil.
+	^true
 ]
 
 { #category : #'garbage collection' }
@@ -656,6 +704,18 @@ CogObjectRepresentationForSpur >> markAndTraceLiteralIfYoung: literal [
 	 and: [objectMemory isYoungObject: literal]) ifTrue:
 		[self assert: (objectMemory addressCouldBeObj: literal).
 		 objectMemory markAndTrace: literal]
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSpur >> markAndTraceUpdatedLiteral: objOop in: cogMethodOrNil [
+	"Common code to mark a literal in cogMethod and add
+	 the cogMethod to youngReferrers if the literal is young."
+	<var: #cogMethodOrNil type: #'CogMethod *'>
+	(objectMemory isNonImmediate: objOop) ifTrue:
+		[(cogMethodOrNil notNil
+		  and: [objectMemory isYoungObject: objOop]) ifTrue:
+			[methodZone ensureInYoungReferrers: cogMethodOrNil].
+		 objectMemory markAndTrace: objOop]
 ]
 
 { #category : #'newspeak support' }
