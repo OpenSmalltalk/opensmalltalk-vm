@@ -47,11 +47,6 @@ CogObjectRepresentation >> allocateCounters: nCounters [
 	self subclassResponsibility
 ]
 
-{ #category : #'in-line cacheing' }
-CogObjectRepresentation >> canLinkToYoungClasses [
-	^self subclassResponsibility
-]
-
 { #category : #testing }
 CogObjectRepresentation >> canPinObjects [
 	"Answer if the memory manager supports pinned objects."
@@ -248,7 +243,33 @@ CogObjectRepresentation >> isSmallIntegerTagNonZero [
 ]
 
 { #category : #'garbage collection' }
+CogObjectRepresentation >> markAndTraceCacheTagLiteral: literal in: cogMethodOrNil atpc: address [
+	"Mark and trace a literal in an inline cache preceeding address in cogMethodOrNil.
+	 Answer if code was modified."
+	<var: #cogMethodOrNil type: #'CogMethod *'>
+	<var: #address type: #usqInt>
+	self subclassResponsibility
+]
+
+{ #category : #'garbage collection' }
 CogObjectRepresentation >> markAndTraceLiteral: literal [
+	self subclassResponsibility
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentation >> markAndTraceLiteral: literal in: cogMethod at: address [
+	"Mark and trace a literal in a sqInt variable of cogMethod."
+	<var: #cogMethod type: #'CogMethod *'>
+	<var: #address type: #'sqInt *'>
+	self subclassResponsibility
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentation >> markAndTraceLiteral: literal in: cogMethodOrNil atpc: address [
+	"Mark and trace a literal in a machine code instruction preceeding address in cogMethodOrNil.
+	 Answer if code was modified."
+	<var: #cogMethodOrNil type: #'CogMethod *'>
+	<var: #address type: #usqInt>
 	self subclassResponsibility
 ]
 

@@ -1359,7 +1359,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 	depending on whether the target method is cogged or not."
 	<api>
 	<option: #NewspeakVM>
-	| class classTag canLinkCacheTag errSelIdx cogMethod mClassMixin mixinApplication |
+	| classTag errSelIdx cogMethod mClassMixin mixinApplication |
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #newCogMethod type: #'CogMethod *'>
@@ -1374,8 +1374,6 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 							startingAtBehavior: (objectMemory fetchClassOf: rcvr).
 	self assert: (objectMemory lengthOf: mixinApplication) > (InstanceSpecificationIndex + 1).
 	classTag := objectMemory classTagForClass: (self superclassOf: mixinApplication).
-	class := objectMemory fetchClassOf: rcvr. "what about the read barrier??"
-	canLinkCacheTag := (objectMemory isYoungObject: class) not or: [cogit canLinkToYoungClasses].
 	argumentCount := numArgs.
 	(self lookupInMethodCacheSel: selector classTag: classTag)
 		ifTrue:"check for coggability because method is in the cache"
@@ -1408,8 +1406,7 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 				 cogMethod selector ~= selector ifTrue:
 					[(cogit cog: newMethod selector: selector) ifNotNil:
 						[:newCogMethod| cogMethod := newCogMethod]]].
-		 (cogMethod selector = selector
-		 and: [canLinkCacheTag]) ifTrue:
+		 cogMethod selector = selector ifTrue:
 			[cogit
 				linkSendAt: (stackPages longAt: stackPointer)
 				in: (self mframeHomeMethod: framePointer)
@@ -1668,7 +1665,7 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 	Continue execution via either executeMethod or interpretMethodFromMachineCode:
 	depending on whether the target method is cogged or not."
 	<api>
-	| classTag canLinkCacheTag errSelIdx cogMethod |
+	| classTag errSelIdx cogMethod |
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #newCogMethod type: #'CogMethod *'>
@@ -1680,7 +1677,6 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 	superNormalBar = 0
 		ifTrue: [classTag := objectMemory fetchClassTagOf: rcvr]
 		ifFalse: [classTag := objectMemory classTagForClass: (self superclassOf: (self methodClassOf: (self frameMethodObject: framePointer)))].
-	canLinkCacheTag := cogit canLinkToYoungClasses or: [(objectMemory isYoungObject: classTag) not].
 	argumentCount := numArgs.
 	(self lookupInMethodCacheSel: selector classTag: classTag)
 		ifTrue:"check for coggability because method is in the cache"
@@ -1703,12 +1699,11 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 					numArgs: numArgs].
 			 messageSelector := selector.
 			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
-				[(canLinkCacheTag
-				  and: [errSelIdx = SelectorDoesNotUnderstand
+				[(errSelIdx = SelectorDoesNotUnderstand
 				  and: [(cogMethod := cogit cogMNUPICSelector: messageSelector
 											methodOperand: (self mnuMethodOrNilFor: rcvr)
 											numArgs: argumentCount) asUnsignedInteger
-						> cogit minCogMethodAddress]]) ifTrue:
+						> cogit minCogMethodAddress]) ifTrue:
 						[cogit
 							linkSendAt: (stackPages longAt: stackPointer)
 							in: (self mframeHomeMethod: framePointer)
@@ -1733,8 +1728,7 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 				 cogMethod selector ~= selector ifTrue:
 					[(cogit cog: newMethod selector: selector) ifNotNil:
 						[:newCogMethod| cogMethod := newCogMethod]]].
-		 (cogMethod selector = selector
-		  and: [canLinkCacheTag])
+		 cogMethod selector = selector
 			ifTrue:
 				[cogit
 					linkSendAt: (stackPages longAt: stackPointer)
@@ -5164,6 +5158,9 @@ CoInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 	"Clear the gcMode var and let the Cogit do its post GC checks."
 	super postBecomeAction: theBecomeEffectsFlags.
 
+	(objectMemory hasSpurMemoryManagerAPI
+	 and: [theBecomeEffectsFlags anyMask: OldBecameNewFlag]) ifTrue:
+		[cogit addAllToYoungReferrers].
 	cogit cogitPostGCAction: gcMode.
 
 	lastCoggableInterpretedBlockMethod := lastUncoggableInterpretedBlockMethod := nil.

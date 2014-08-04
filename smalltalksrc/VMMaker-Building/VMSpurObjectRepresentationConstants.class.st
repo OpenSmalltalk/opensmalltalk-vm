@@ -3,7 +3,8 @@ Class {
 	#superclass : #VMBasicConstants,
 	#classVars : [
 		'BecameCompiledMethodFlag',
-		'BecamePointerObjectFlag'
+		'BecamePointerObjectFlag',
+		'OldBecameNewFlag'
 	],
 	#category : #'VMMaker-Interpreter'
 }

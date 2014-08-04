@@ -525,6 +525,17 @@ VMClass >> alloca: numElements type: elementType [
 	^CArrayAccessor on: ((1 to: numElements) collect: [:ign| elementType new])
 ]
 
+{ #category : #'translation support' }
+VMClass >> asAddress: address put: aBlock [
+	<doNotGenerate>
+	"Simulate a C pointer.  Translates into address in C. Provides something
+	 that evaluates aBlock with the new value in response to at:put:"
+	^CPluggableAccessor new
+		setObject: nil;
+		atBlock: [:obj :idx| self error: 'cannot dereference pseudo-pointers']
+		atPutBlock: [:obj :idx :val| aBlock value: val]
+]
+
 { #category : #'C library simulation' }
 VMClass >> asString: aStringOrStringIndex [
 	"aStringOrStringIndex is either a string or an address in the heap.
