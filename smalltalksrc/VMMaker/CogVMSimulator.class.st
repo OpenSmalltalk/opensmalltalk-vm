@@ -3321,11 +3321,21 @@ CogVMSimulator >> shortPrint: oop [
 	name = 'False' ifTrue: [^ 'false'].
 	name = 'True' ifTrue: [^ 'true'].
 	name = 'Float' ifTrue: [^ '=' , (self dbgFloatValueOf: oop) printString].
-	(#('Association' 'ReadOnlyVariableBinding' 'VariableBinding') includes: name) ifTrue:
-		[^ '(' ,
-		(self shortPrint: (self longAt: oop + BaseHeaderSize)) ,
-		' -> ' ,
-		(self longAt: oop + BaseHeaderSize + BytesPerWord) hex8 , ')'].
+	"Try to spot association-like things; they're all subclasses of LookupKey"
+	((objectMemory isPointersNonImm: oop)
+	 and: [((objectMemory instanceSizeOf: classOop) between: ValueIndex + 1 and: ValueIndex + 2)
+	 and: [(objectMemory isBytes: (objectMemory fetchPointer: KeyIndex ofObject: oop))]]) ifTrue:
+		[| classLookupKey |
+		 classLookupKey := objectMemory fetchClassOfNonImm: (objectMemory splObj: SchedulerAssociation).
+		 [classLookupKey = objectMemory nilObject ifTrue:
+			[^(('AEIOU' includes: name first) ifTrue: ['an '] ifFalse: ['a ']), name].
+		  (objectMemory instanceSizeOf: classLookupKey) = (KeyIndex + 1)] whileFalse:
+			[classLookupKey := self superclassOf: classLookupKey].
+		 (self includesBehavior: classOop ThatOf: classLookupKey) ifTrue:
+			[^(('AEIOU' includes: name first) ifTrue: ['an '] ifFalse: ['a ']), name,
+				' ', (self shortPrint: (objectMemory fetchPointer: KeyIndex ofObject: oop)),
+				' -> ',
+				(objectMemory fetchPointer: ValueIndex ofObject: oop) hex8]].
 	^(('AEIOU' includes: name first) ifTrue: ['an '] ifFalse: ['a ']), name
 ]
 
