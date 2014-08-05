@@ -165,6 +165,11 @@ static int parseArgument(int argc, char **argv)
 	extern int blockOnError;
 	blockOnError = true;
 	return 1; }
+  else if (!strcmp(argv[0], "-blockonwarn")) {
+	extern int blockOnError;
+	extern sqInt erroronwarn;
+	erroronwarn = blockOnError = true;
+	return 1; }
   else if (!strcmp(argv[0], "-timephases")) {
 	extern void printPhaseTime(int);
 	printPhaseTime(1);
@@ -329,6 +334,7 @@ static void printUsage(void)
   printf("  -version              print version information, then exit\n");
 
   printf("  -blockonerror         on error or segv block, not exit.  useful for attaching gdb\n");
+  printf("  -blockonwarning       on warning block, don't warn.  useful for attaching gdb\n");
 }
 
 static void printUsageNotes(void)

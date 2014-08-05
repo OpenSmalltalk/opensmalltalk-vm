@@ -904,6 +904,7 @@ printRegisterState(ucontext_t *uap)
 }
 
 int blockOnError = 0; /* to allow attaching gdb on fatal error */
+extern sqInt erroronwarn;
 
 static void
 block()
@@ -1355,6 +1356,7 @@ static int vm_parseArgument(int argc, char **argv)
   else if (!strcmp(argv[0], "-notimer"))	{ useItimer	= 0;	return 1; }
   else if (!strcmp(argv[0], "-nohandlers"))	{ installHandlers= 0;	return 1; }
   else if (!strcmp(argv[0], "-blockonerror")) { blockOnError = 1; return 1; }
+  else if (!strcmp(argv[0], "-blockonwarn")) { erroronwarn = blockOnError = 1; return 1; }
   else if (!strcmp(argv[0], "-timephases")) {
 	printPhaseTime(1);
 	return 1; }
@@ -1518,6 +1520,7 @@ static void vm_printUsage(void)
   printf("  -reportheadroom       report unused stack headroom on exit\n");
 #endif
   printf("  -blockonerror         on error or segv block, not exit.  useful for attaching gdb\n");
+  printf("  -blockonwarning       on warning block, don't warn.  useful for attaching gdb\n");
 #if 1
   printf("Deprecated:\n");
 # if !STACKVM
