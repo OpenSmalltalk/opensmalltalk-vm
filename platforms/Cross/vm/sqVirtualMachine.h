@@ -331,6 +331,7 @@ typedef struct VirtualMachine {
   sqInt (*isCharacterValue)(int charCode);
   sqInt (*isPinned)(sqInt objOop);
   sqInt (*pinObject)(sqInt objOop);
+  sqInt (*unpinObject)(sqInt objOop);
 #endif
 } VirtualMachine;
 

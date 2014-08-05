@@ -10,6 +10,7 @@ Contents:
 	- Building the Bochs Support Libraries
 	- Building an MSI installer (Newspeak)
 	- Optimization level and gcc version (please read!)
+	- Debugging with gdb
 
 
 Overview
@@ -144,3 +145,14 @@ There are issues with gcc version > 4.2.1.  Any of the following flags may break
 -fcaller-saves
 
 See http://smallissimo.blogspot.fr/2013/02/compiling-squeak-cog-virtual-machine-on.html
+
+Debugging with gdb
+------------------
+
+Note that even the stripped production VM can be used for debug using the
+unstripped VM to provide symbols, e.g.
+	U:\ gdb bin/Squeak.exe
+	...
+	(no debugging symbols found)
+	(gdb) file SqueakUnstripped.exe
+	(gdb) run trunk.image

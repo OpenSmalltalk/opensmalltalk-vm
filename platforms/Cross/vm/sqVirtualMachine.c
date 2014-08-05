@@ -189,6 +189,7 @@ sqInt characterObjectOf(int charCode);
 sqInt characterValueOf(sqInt oop);
 sqInt isPinned(sqInt objOop);
 sqInt pinObject(sqInt objOop);
+sqInt unpinObject(sqInt objOop);
 #endif
 char *cStringOrNullFor(sqInt);
 
@@ -505,6 +506,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->isCharacterValue = isCharacterValue;
 	VM->isPinned = isPinned;
 	VM->pinObject = pinObject;
+	VM->unpinObject = unpinObject;
 #endif
 
 	return VM;
