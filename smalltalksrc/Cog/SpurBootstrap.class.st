@@ -1688,8 +1688,8 @@ SpurBootstrap class >> categoryForClass: className meta: isMeta selector: select
 			[#(SystemDictionary growMemoryByAtLeast:)]	-> [#'memory space'].
 			[#(SystemDictionary maxIdentityHash)]			-> [#'system attributes'].
 			[#(SystemDictionary setGCParameters)]		-> [#'snapshot and quit'].
-			[#(SystemNavigation>>#allObjects)]			-> [#query].
-			[#(SystemNavigation>>#allObjectsOrNil)]		-> [#query].
+			[#(SystemNavigation allObjects)]				-> [#query].
+			[#(SystemNavigation allObjectsOrNil)]			-> [#query].
 			 }
 		otherwise:
 			[Transcript nextPutAll: className.
