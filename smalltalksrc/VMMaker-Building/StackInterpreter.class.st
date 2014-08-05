@@ -1493,9 +1493,10 @@ StackInterpreter class >> preambleCCode [
 	^	
 '/* Disable Intel compiler inlining of warning which is used for breakpoints */
 #pragma auto_inline off
-sqInt warnpid;
+sqInt warnpid, erroronwarn;
 void
-warning(char *s) { /* Print an error message but don''t exit. */
+warning(char *s) { /* Print an error message but don''t necessarily exit. */
+	if (erroronwarn) error(s);
 	if (warnpid)
 		printf("\n%s pid %ld\n", s, (long)warnpid);
 	else
