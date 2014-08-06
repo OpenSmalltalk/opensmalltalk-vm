@@ -5139,9 +5139,9 @@ StackInterpreter >> extStoreReceiverVariableBytecode [
 
 { #category : #'sista bytecodes' }
 StackInterpreter >> extTrapIfNotInstanceOfBehaviorsBytecode [
-	"SistaV1: *	236		11101100	iiiiiiii		Trap If Not Instance Of Behavior/Array Of Behavior #iiiiiiii (+ Extend A * 256, where Extend A >= 0)"
+	"SistaV1: *	236	11101100	iiiiiiii	Trap If Not Instance Of Behavior/Array Of Behavior #iiiiiiii (+ Extend A * 256, where Extend A >= 0)"
 	| tos tosClassTag literal |
-	tos := self stackTop.
+	tos := self internalStackTop.
 	tosClassTag := objectMemory fetchClassTagOf: tos.
 	literal := self literal: extA << 8 + self fetchByte.
 	extA := 0.
@@ -5156,6 +5156,7 @@ StackInterpreter >> extTrapIfNotInstanceOfBehaviorsBytecode [
 		ifFalse:
 			[tosClassTag ~= (objectMemory rawClassTagForClass: literal) ifTrue:
 				[^self respondToClassTrap]].
+	self internalPopStack.
 	self fetchNextBytecode
 ]
 
@@ -11509,7 +11510,7 @@ StackInterpreter >> respondToClassTrap [
 	| ourContext tos |
 	<sharedCodeInCase: #extTrapIfNotInstanceOfBehaviorsBytecode>
 	messageSelector := objectMemory splObj: SelectorClassTrap.
-	tos := self internalStackTop.
+	tos := self internalPopStack.
 	ourContext := self ensureFrameIsMarried: localFP SP: localSP.
 	messageSelector = objectMemory nilObject ifTrue:
 		[self error: 'class trap'].

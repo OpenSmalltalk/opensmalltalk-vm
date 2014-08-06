@@ -47,6 +47,22 @@ CogObjectRepresentation >> allocateCounters: nCounters [
 	self subclassResponsibility
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentation >> branchIfInstanceOfBehavior: classObj branches: branches [
+	"Generate a branch if ReceiverResultReg is an instance of classObj, otherwise fall-
+	 through. Store the branch in branches and answer the number of branches generated."
+	self subclassResponsibility
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentation >> branchIfInstanceOfBehaviors: arrayObj branches: branches [
+	"Generate a branch if ReceiverResultReg is an instance of any of the classes in arrayObj,
+	 otherwise fall-through. Store the branch in branches and answer the number of branches
+	 generated."
+
+	self subclassResponsibility
+]
+
 { #category : #testing }
 CogObjectRepresentation >> canPinObjects [
 	"Answer if the memory manager supports pinned objects."

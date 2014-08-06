@@ -241,7 +241,7 @@ CoInterpreter class >> initializeMiscConstants [
 	super initializeMiscConstants.
 	COGVM := true.
 
-	MinBackwardJumpCountForCompile := 10.
+	MinBackwardJumpCountForCompile := 40.
 
 	MaxNumArgs := 15.
 	PrimCallNeedsNewMethod := 1.
@@ -824,6 +824,9 @@ CoInterpreter >> assertValidStackedInstructionPointersIn: aStackPage line: ln [
 
 { #category : #'jump bytecodes' }
 CoInterpreter >> attemptToSwitchToMachineCode: bcpc [
+	"Attempt to convert the current interpreted activation into a machine code
+	 activation, and if this is popssible, jump into machine code.  bcpc is the
+	 0-relative pc of the backward branch bytecode (not any preceeding extension)."
 	| cogMethod pc |
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
@@ -2399,7 +2402,7 @@ CoInterpreter >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
 				 stackPages
 					longAt: framePointer + FoxCallerSavedIP
 					put: cogit ceReturnToInterpreterPC]].
-	"Set the cog method field"
+	"Compute the cog method field"
 	(self iframeIsBlockActivation: framePointer)
 		ifTrue:
 			[closure := self pushedReceiverOrClosureOfFrame: framePointer.
@@ -2412,6 +2415,11 @@ CoInterpreter >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
 			[startBcpc := self startPCOfMethodHeader: cogHomeMethod methodHeader.
 			 cogMethod := self cCoerceSimple: cogHomeMethod to: #'CogBlockMethod *'.
 			 methodField := cogHomeMethod asInteger].
+	"compute the pc before converting the frame to help with debugging."
+	pc := cogit mcPCForBackwardBranch: bcpc startBcpc: startBcpc in: cogMethod.
+	self assert: pc > (cogMethod asUnsignedInteger + cogit noCheckEntryOffset).
+	self assert: bcpc = (self bytecodePCFor: pc startBcpc: startBcpc in: cogMethod).
+	"now convert to a machine code frame"
 	stackPages
 		longAt: framePointer + FoxMethod
 		put: methodField
@@ -2422,8 +2430,6 @@ CoInterpreter >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
 		[:p|
 		stackPages longAt: p + FoxMFReceiver - FoxIFReceiver put: (stackPages longAt: p)].
 	stackPointer := stackPointer + FoxMFReceiver - FoxIFReceiver.
-	pc := cogit mcPCForBackwardBranch: bcpc startBcpc: startBcpc in: cogMethod.
-	self assert: pc > (cogMethod asUnsignedInteger + cogit noCheckEntryOffset).
 	^pc
 ]
 
@@ -3558,32 +3564,35 @@ CoInterpreter >> ifBackwardsCheckForEvents: offset [
 		- check for long-running loops and JIT if appropriate."
 	| switched backwardJumpCountByte |
 	<inline: true>
-	offset < 0 ifTrue:
-		[localSP < stackLimit ifTrue:
-			[self externalizeIPandSP.
-			 switched := self checkForEventsMayContextSwitch: true.
-			 self returnToExecutive: true postContextSwitch: switched.
-			 self browserPluginReturnIfNeeded.
-			 self internalizeIPandSP].
-		 "We use the least significant byte of the flags word (which is marked as an immediate) and subtract two each time
-		  to avoid disturbing the least significant tag bit.  Since the byte is initialized to 1 (on frame build), on first decrement
-		  it will become -1.  We trip when it becomes 1 again."
-		 backwardJumpCountByte := stackPages byteAt: localFP + (VMBIGENDIAN ifTrue: [FoxIFrameFlags + BytesPerWord - 1] ifFalse: [FoxIFrameFlags]).
-		 (backwardJumpCountByte := backwardJumpCountByte - 2) <= 1 ifTrue:
-			[backwardJumpCountByte = -1
-				ifTrue: "initialize the count"
-					[self assert: minBackwardJumpCountForCompile <= 128.
-					 backwardJumpCountByte := minBackwardJumpCountForCompile - 1 << 1 + 1]
-				ifFalse:
-					[(self methodWithHeaderShouldBeCogged: (self headerOf: method))
-						ifTrue:
-							[self externalizeFPandSP.
-							 self attemptToSwitchToMachineCode: (self oopForPointer: localIP) - offset - method - BaseHeaderSize - 1]
-						ifFalse: "avoid asking for as long as possible"
-							[backwardJumpCountByte := 16rFF]]].
-		 stackPages
-			byteAt: localFP + (VMBIGENDIAN ifTrue: [FoxIFrameFlags + BytesPerWord - 1] ifFalse: [FoxIFrameFlags])
-			put: backwardJumpCountByte]
+	offset >= 0 ifTrue:
+		[^self].
+
+	localSP < stackLimit ifTrue:
+		[self externalizeIPandSP.
+		 switched := self checkForEventsMayContextSwitch: true.
+		 self returnToExecutive: true postContextSwitch: switched.
+		 self browserPluginReturnIfNeeded.
+		 self internalizeIPandSP.
+		 switched ifTrue:
+			[^self]].
+
+	"We use the least significant byte of the flags word (which is marked as an immediate) and
+	 subtract two each time to avoid disturbing the least significant tag bit.  Since the byte is
+	 initialized to 1 (on frame build), on first decrement it will become -1.  Trip when it reaches 1 again."
+	backwardJumpCountByte := self iframeBackwardBranchByte: localFP.
+	(backwardJumpCountByte := backwardJumpCountByte - 2) = 1
+		ifTrue:
+			[(self methodWithHeaderShouldBeCogged: (self headerOf: method)) ifTrue:
+				[self externalizeIPandSP.
+				 self attemptToSwitchToMachineCode: (self oopForPointer: localIP) - offset - method - BaseHeaderSize - 1
+				 "If attemptToSwitchToMachineCode: returns the method could not be cogged, hence..."].
+			 "can't cog method; avoid asking to cog it again for the longest possible time."
+			 backwardJumpCountByte := 16r7F]
+		ifFalse:
+			[backwardJumpCountByte = -1 ifTrue: "initialize the count"
+				[self assert: minBackwardJumpCountForCompile <= 128.
+				 backwardJumpCountByte := minBackwardJumpCountForCompile - 1 << 1 + 1]].
+	self iframeBackwardBranchByte: localFP put: backwardJumpCountByte
 ]
 
 { #category : #'debug support' }
@@ -3606,6 +3615,24 @@ CoInterpreter >> ifValidWriteBackStack: theCFP Pointers: theCSP Save: savedFPP T
 		[framePointer := theCFP].
 	(self couldBeFramePointer: theCSP) ifTrue:
 		[stackPointer := theCSP]
+]
+
+{ #category : #'frame access' }
+CoInterpreter >> iframeBackwardBranchByte: theFP [
+	"See encodeFrameFieldHasContext:numArgs: and ifBackwardsCheckForEvents:"
+	<inline: true>
+	<var: #theFP type: #'char *'>
+	^stackPages byteAt: theFP + (VMBIGENDIAN ifTrue: [FoxIFrameFlags + BytesPerWord - 1] ifFalse: [FoxIFrameFlags])
+]
+
+{ #category : #'frame access' }
+CoInterpreter >> iframeBackwardBranchByte: theFP put: aByte [
+	"See encodeFrameFieldHasContext:numArgs: and ifBackwardsCheckForEvents:"
+	<inline: true>
+	<var: #theFP type: #'char *'>
+	stackPages
+		byteAt: theFP + (VMBIGENDIAN ifTrue: [FoxIFrameFlags + BytesPerWord - 1] ifFalse: [FoxIFrameFlags])
+		put: aByte
 ]
 
 { #category : #'frame access' }

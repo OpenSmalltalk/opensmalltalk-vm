@@ -2,7 +2,8 @@ Class {
 	#name : #DetailedInstructionPrinter,
 	#superclass : #InstructionPrinter,
 	#instVars : [
-		'stackHeightComputer'
+		'stackHeightComputer',
+		'encoderClass'
 	],
 	#category : #'VMMaker-Support'
 }
@@ -12,6 +13,25 @@ DetailedInstructionPrinter class >> on: method [
 	"Answer an instance of me on the argument, method."
 
 	^self new method: method pc: method initialPC
+]
+
+{ #category : #accessing }
+DetailedInstructionPrinter >> encoderClass [
+
+	^encoderClass
+]
+
+{ #category : #accessing }
+DetailedInstructionPrinter >> encoderClass: anObject [
+
+	encoderClass := anObject
+]
+
+{ #category : #decoding }
+DetailedInstructionPrinter >> interpretNextInstructionFor: client [
+	^encoderClass
+		ifNil: [super interpretNextInstructionFor: client]
+		ifNotNil: [encoderClass interpretNextInstructionFor: client in: self]
 ]
 
 { #category : #'initialize-release' }
@@ -43,6 +63,24 @@ DetailedInstructionPrinter >> print: instruction [
 		nextPut: $);
 		cr;
 		flush
+]
+
+{ #category : #printing }
+DetailedInstructionPrinter >> printInstructionsOn: aStream [
+	"Append to the stream, aStream, a description of each bytecode in the
+	 instruction stream."
+	
+	| end |
+	encoderClass ifNil:
+		[^super printInstructionsOn: aStream].
+	stackHeightComputer encoderClass: encoderClass.
+	stream := aStream.
+	scanner := InstructionStream on: method.
+	end := method endPC.
+	oldPC := scanner pc.
+	innerIndents := Array new: end withAll: 0.
+	[scanner pc <= end] whileTrue:
+		[encoderClass interpretNextInstructionFor: self in: scanner]
 ]
 
 { #category : #accessing }
