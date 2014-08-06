@@ -1026,7 +1026,7 @@ Cogit class >> testPCMappingFor: aCompiledMethod [
 Cogit class >> testPCMappingFor: aCompiledMethod options: optionsDictionaryOrArray [
 	| tuple |
 	tuple := self cog: aCompiledMethod selector: aCompiledMethod selector options: optionsDictionaryOrArray.
-	tuple second testPCMappingForMethod: tuple last
+	tuple second testPCMappingForCompiledMethod: aCompiledMethod cogMethod: tuple last
 ]
 
 { #category : #tests }
@@ -1037,7 +1037,7 @@ Cogit class >> testPCMappingSelect: aBlock [
 
 { #category : #tests }
 Cogit class >> testPCMappingSelect: aBlock options: optionsDictionaryOrArray [
-	"Test pc mapping both ways using the methods in the current image"
+	"Test pc mapping both ways using a selection of the methods in the current image."
 	| cogit coInterpreter |
 	self initializeWithOptions: (self asOptionsDictionary: optionsDictionaryOrArray).
 	cogit := self new.
@@ -1062,7 +1062,7 @@ Cogit class >> testPCMappingSelect: aBlock options: optionsDictionaryOrArray [
 				[cogit methodZone clearCogCompiledCode.
 				 coInterpreter clearCogCompiledCodeCompactionCalledFor.
 				 coInterpreter initializeObjectMap].
-			 cogit testPCMappingForMethod: cm].
+			 cogit testPCMappingForCompiledMethod: m cogMethod: cm].
 		 false]
 ]
 
@@ -2235,21 +2235,24 @@ Cogit >> backEnd [
 ]
 
 { #category : #'tests-method map' }
-Cogit >> bcpcsAndDescriptorsFor: aMethod do: trinaryBlock [
+Cogit >> bcpcsAndDescriptorsFor: aMethod bsOffset: bsOffset do: quaternaryBlock [
+	"Evaluate quaternaryBlock with the pc, byte, descriptor and numExtensions for
+	 all the bytecodes in aMethod.  Evaluate with byte, descriptor and numExtensions
+	 nil for the initialPC of the mehtod and any blocks within it."
 	<doNotGenerate>
-	| bsOffset nExts byte descriptor endpc latestContinuation pc primIdx |
+	| nExts byte descriptor endpc latestContinuation pc primIdx |
 	((primIdx := coInterpreter primitiveIndexOf: aMethod) > 0
 	and: [coInterpreter isQuickPrimitiveIndex: primIdx]) ifTrue:
 		[^self].
 	latestContinuation := pc := coInterpreter startPCOfMethod: aMethod.
-	trinaryBlock value: pc value: nil value: nil. "stackCheck/entry pc"
-	bsOffset := self bytecodeSetOffsetFor: aMethod.
+	quaternaryBlock value: pc value: nil value: nil value: 0. "stackCheck/entry pc"
 	nExts := 0.
 	endpc := objectMemory numBytesOf: aMethod.
 	[pc <= endpc] whileTrue:
 		[byte := objectMemory fetchByte: pc ofObject: aMethod.
 		descriptor := self generatorAt: byte + bsOffset.
-		trinaryBlock value: pc value: byte value: descriptor.
+		descriptor isExtension ifFalse:
+			[quaternaryBlock value: pc value: byte value: descriptor value: nExts].
 		(descriptor isReturn
 		 and: [pc >= latestContinuation]) ifTrue:
 			[endpc := pc].
@@ -2257,12 +2260,12 @@ Cogit >> bcpcsAndDescriptorsFor: aMethod do: trinaryBlock [
 		 or: [descriptor isBlockCreation]) ifTrue:
 			[| targetPC |
 			 descriptor isBlockCreation ifTrue:
-				[trinaryBlock value: pc + descriptor numBytes value: nil value: nil]. "stackCheck/entry pc"
+				[quaternaryBlock value: pc + descriptor numBytes value: nil value: nil value: 0]. "stackCheck/entry pc"
 			 targetPC := self latestContinuationPCFor: descriptor at: pc exts: nExts in: aMethod.
 			 self assert: targetPC < endpc.
 			 latestContinuation := latestContinuation max: targetPC].
 		pc := pc + descriptor numBytes.
-		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]]
+		nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]]
 ]
 
 { #category : #accessing }
@@ -2477,6 +2480,9 @@ Cogit >> cCoerceSimple: value to: cTypeString [
 			ifFalse: [self cogMethodSurrogateAt: value asUnsignedInteger]].
 	cTypeString == #'CogBlockMethod *' ifTrue:
 		[^self cogBlockMethodSurrogateAt: value asUnsignedInteger].
+	(cTypeString == #'AbstractInstruction *'
+	 and: [value isBehavior]) ifTrue:
+		[^processor abstractInstructionCompilerClass].
 	^super cCoerceSimple: value to: cTypeString
 ]
 
@@ -7564,18 +7570,6 @@ Cogit >> mnuOffset [
 	^missOffset
 ]
 
-{ #category : #'simulation only' }
-Cogit >> nExtensionsFor: bcpc in: aMethodObj [
-	(coInterpreter methodUsesAlternateBytecodeSet: aMethodObj) ifFalse:
-		[^0].
-	^(InstructionStream on: (VMCompiledMethodProxy new
-								for: aMethodObj
-								coInterpreter: coInterpreter
-								objectMemory: objectMemory))
-		extensionsForBytecodeAt: bcpc + 1
-		into: [:extAValue :extBValue| (extAValue ~= 0 ifTrue: [1] ifFalse: [0]) + (extBValue ~= 0 ifTrue: [1] ifFalse: [0])]
-]
-
 { #category : #'compile abstract instructions' }
 Cogit >> needsFrameIfInBlock: stackDelta [
 	^inBlock
@@ -9046,17 +9040,18 @@ Cogit >> targetMethodAndSendTableFor: entryPoint into: binaryBlock [
 ]
 
 { #category : #'tests-method map' }
-Cogit >> testBcToMcPcMappingForMethod: cogMethod [
+Cogit >> testBcToMcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cogMethod [
 	<doNotGenerate>
 	"self disassembleMethod: cogMethod"
 	"self printPCMapPairsFor: cogMethod on: Transcript"
-	| aMethodObj currentSubMethod subMethods |
+	| aMethodObj currentSubMethod subMethods bsOffset |
 	aMethodObj := cogMethod methodObject.
 	subMethods := self subMethodsAsRangesFor: cogMethod.
 	currentSubMethod := subMethods first.
 	currentSubMethod endPC: (self endPCOf: aMethodObj).
-	self bcpcsAndDescriptorsFor: aMethodObj do:
-		[:bcpc :byte :desc| | subMethod |
+	bsOffset := self bytecodeSetOffsetFor: aMethodObj.
+	self bcpcsAndDescriptorsFor: aMethodObj bsOffset: bsOffset do:
+		[:bcpc :byte :desc :nExts| | subMethod |
 		(desc notNil and: [desc isBlockCreation]) ifTrue:
 			[subMethod := subMethods detect: [:sm| sm startpc = (bcpc + desc numBytes)].
 			 subMethod endPC: bcpc + desc numBytes + (self spanFor: desc at: bcpc exts: -1 in: aMethodObj) - 1]].
@@ -9066,22 +9061,28 @@ Cogit >> testBcToMcPcMappingForMethod: cogMethod [
 								findMethodForStartBcpc: blockSubMethod startpc
 								inHomeMethod: cogMethod.
 		self assert: cogBlockMethod address = (blockSubMethod first - (self sizeof: CogBlockMethod))].
-	self bcpcsAndDescriptorsFor: aMethodObj do:
-		[:bcpc :byte :desc| | absMcpc mappedBcpc |
+	self bcpcsAndDescriptorsFor: aMethodObj bsOffset: bsOffset do:
+		[:bcpc :byte :desc :nExts| | absMcpc mappedBcpc |
 		currentSubMethod := self innermostSubMethodFor: bcpc in: subMethods startingAt: 1.
 		(currentSubMethod cogMethod stackCheckOffset > 0
 		 and: [desc isNil or: [desc isMapped]]) ifTrue:
 			["The first bytecode and backward branch bytecodes are mapped to their pc.
 			  Other bytecodes map to their following pc."
-			mappedBcpc := (desc isNil
-							   or: [desc isBranch
-								   and: [(self isBackwardBranch: desc at: bcpc exts: (self nExtensionsFor: bcpc in: aMethodObj) in: aMethodObj)]])
-								ifTrue: [bcpc]
-								ifFalse: [bcpc + desc numBytes].
-			 absMcpc := self
-							mcPCFor: mappedBcpc
-							startBcpc: currentSubMethod startpc
-							in: currentSubMethod cogMethod.
+			 absMcpc := (desc notNil
+						   and: [desc isBranch
+						   and: [self isBackwardBranch: desc at: bcpc exts: nExts in: aMethodObj]])
+							ifTrue: "Backward branches have a special mapper"
+								[mappedBcpc := bcpc.
+								 self
+									mcPCForBackwardBranch: mappedBcpc
+									startBcpc: currentSubMethod startpc
+									in: currentSubMethod cogMethod]
+							ifFalse: "All others use the generic mapper"
+								[mappedBcpc := desc ifNil: [bcpc] ifNotNil: [bcpc + desc numBytes].
+								 self
+									mcPCFor: mappedBcpc
+									startBcpc: currentSubMethod startpc
+									in: currentSubMethod cogMethod].
 			 self assert: absMcpc > (currentSubMethod cogMethod asInteger + self noCheckEntryOffset).
 			 self assert: (self
 							bytecodePCFor: absMcpc
@@ -9090,7 +9091,7 @@ Cogit >> testBcToMcPcMappingForMethod: cogMethod [
 ]
 
 { #category : #'tests-method map' }
-Cogit >> testMcToBcPcMappingForMethod: cogMethod [
+Cogit >> testMcToBcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cogMethod [
 	<doNotGenerate>
 	| bcMethod subMethods prevMcpc isAltInstSet |
 	"self disassembleMethod: cogMethod"
@@ -9123,14 +9124,12 @@ Cogit >> testMcToBcPcMappingForMethod: cogMethod [
 				self assert: bcpc ~= 0.
 				mappedpc := self mcPCFor: bcpc startBcpc: subMethod startpc in: subMethod cogMethod.
 				self assert: mappedpc > (subMethod cogMethod address + self noCheckEntryOffset).
-				"mcpc = mappedpc is obviously what we want and expect.  PrevMcpc = mappedpc hacks
+				"mcpc = mappedpc is obviously what we want and expect.  prevMcpc = mappedpc hacks
 				 around frame building accessors where the first bytecode is mapped twice, once for the
 				 stack check and once for the context inst var access.  The bytecode pc can only map
 				 back to a single mcpc, the first, so the second map entry will fail without this hack."
 				self assert: (mcpc = mappedpc or: [prevMcpc = mappedpc]).
-				"IsNSSendCall is used only for pushImplicitReceiver:.  This isn't a send bytecode.
-				 So filter-out these annotations."
-				((self isSendAnnotation: annotation) and: [annotation ~= IsNSSendCall]) ifTrue:
+				(self isSendAnnotation: annotation) ifTrue:
 					[| mcSelector bcSelector |
 					mcSelector := self selectorForSendAt: mcpc annotation: annotation.
 					"sends map to the following pc.  need to find the selector for the previous pc"
@@ -9141,12 +9140,12 @@ Cogit >> testMcToBcPcMappingForMethod: cogMethod [
 ]
 
 { #category : #'tests-method map' }
-Cogit >> testPCMappingForMethod: cm [
+Cogit >> testPCMappingForCompiledMethod: aCompiledMethod cogMethod: cm [
 	<doNotGenerate>
 	methodObj := nil.
 	self
-		testMcToBcPcMappingForMethod: cm;
-		testBcToMcPcMappingForMethod: cm
+		testMcToBcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cm;
+		testBcToMcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cm
 ]
 
 { #category : #debugging }
