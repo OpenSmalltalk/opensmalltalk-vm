@@ -1,3 +1,45 @@
+"
+A CurrentImageCoInterpreterFacade is a stand-in for an object memory (ObjectMemory, SpurMemoryManager, etc) that allows the Cogits to access image objects as if they were in the simulator VM's heap.  hence it allows the Cogits to generate code for methdos in the current image, for testing, etc.
+
+Instance Variables
+	cachedObject:			<Object>
+	cachedOop:			<Integer>
+	coInterpreter:			<CoInterpreter>
+	cogit:					<Cogit>
+	headerToMethodMap:	<Dictionary>
+	memory:				<ByteArray>
+	objectMap:				<IdentityDictionary>
+	objectMemory:			<NewObjectMemory|SpurMemoryManager>
+	variables:				<Dictionary>
+
+cachedObject
+	- the object matching cachedOop, to speed-up oop to obejct mapping
+
+cachedOop
+	- the last used oop
+
+coInterpreter
+	- the CoInterpreter simulator used by the cogit.
+
+cogit
+	- the code egnerator in use
+
+headerToMethodMap
+	- a map from header to CompiledMethod
+
+memory
+	- a rump memory for holding various interpreter variables (e.g. stackLimit) that are accessed as memory locations by generated code
+
+objectMap
+	- map from objects to their oops
+
+objectMemory
+	- the object memory used to encode various values, answer queries, etc
+
+variables
+	- a map from the names of variables to their addresses in memory
+
+"
 Class {
 	#name : #CurrentImageCoInterpreterFacade,
 	#superclass : #CogClass,
@@ -208,6 +250,11 @@ CurrentImageCoInterpreterFacade >> eeInstantiateClass: classOop indexableSize: n
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> encoderClassForHeader: headerInteger [
+	^coInterpreter encoderClassForHeader: headerInteger
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> endPCOf: methodOop [
 	^(objectMap keyAtValue: methodOop) endPC - 1
 ]
@@ -238,9 +285,9 @@ CurrentImageCoInterpreterFacade >> fetchByte: index ofObject: anOop [
 CurrentImageCoInterpreterFacade >> fetchPointer: index ofObject: anOop [
 	| obj |
 	obj := (objectMap keyAtValue: anOop).
-	^obj isCompiledMethod
-		ifTrue: [obj objectAt: index + 1]
-		ifFalse: [obj instVarAt: index + 1]
+	^self oopForObject: (obj isCompiledMethod
+							ifTrue: [obj objectAt: index + 1]
+							ifFalse: [obj instVarAt: index + 1])
 ]
 
 { #category : #accessing }
@@ -726,8 +773,12 @@ CurrentImageCoInterpreterFacade >> specialSelectorNumArgs: index [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> splObj: splObjIndex [
 	^splObjIndex caseOf: {
-		[ClassArray]		-> [self oopForObject: Array].
-		[CompactClasses]	-> [self oopForObject: Smalltalk compactClassesArray]
+		[ClassArray]					-> [self oopForObject: Array].
+		[ClassCharacter]				-> [self oopForObject: Character].
+		[ClassLargeNegativeInteger]	-> [self oopForObject: LargeNegativeInteger].
+		[ClassLargePositiveInteger]	-> [self oopForObject: LargePositiveInteger].
+		[ClassSmallInteger]				-> [self oopForObject: SmallInteger].
+		[CompactClasses]				-> [self oopForObject: Smalltalk compactClassesArray]
 		}
 ]
 
