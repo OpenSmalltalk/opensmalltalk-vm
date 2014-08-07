@@ -156,6 +156,12 @@ Spur32BitCoMemoryManager >> headerWhileForwardingOf: aCompiledMethodObjOop [
 	^self baseHeader: aCompiledMethodObjOop
 ]
 
+{ #category : #'cog jit support' }
+Spur32BitCoMemoryManager >> isImmediateClass: classObj [
+	<api>
+	^(self instSpecOfClass: classObj) = self instSpecForImmediateClasses
+]
+
 { #category : #'object testing' }
 Spur32BitCoMemoryManager >> isReallyYoungObject: objOop [
 	<api>
@@ -186,6 +192,13 @@ Spur32BitCoMemoryManager >> scavengeThresholdAddress [
 	<returnTypeC: #usqInt>
 	^self cCode: [(self addressOf: scavengeThreshold) asUnsignedInteger]
 		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #getScavengeThreshold in: self]
+]
+
+{ #category : #'cog jit support' }
+Spur32BitCoMemoryManager >> smallIntegerTag [
+	"Beware, SmallInetger tags are 1 or 3.  But SmallInteger's identityHash is 1."
+	<api>
+	^1
 ]
 
 { #category : #accessing }

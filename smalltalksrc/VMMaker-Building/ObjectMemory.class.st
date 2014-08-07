@@ -2689,7 +2689,7 @@ ObjectMemory >> initializeObjectMemory: bytesToShift [
 
 { #category : #'object format' }
 ObjectMemory >> instSpecOfClass: classPointer [
-	"This is the same as the field stored in every object header"
+	"This field in a class's format inst var corresponds to the 4-bit format field stored in every object header"
 
 	^self formatOfHeader: (self formatOfClass: classPointer)
 ]

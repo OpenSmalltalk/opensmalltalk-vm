@@ -16,6 +16,7 @@ Class {
 		'CogRTLOpcodes',
 		'VMBasicConstants',
 		'VMObjectIndices',
+		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
 	#category : #'VMMaker-JIT'
@@ -103,6 +104,11 @@ CogObjectRepresentation >> ensureNoForwardedLiteralsIn: aMethodObj [
 CogObjectRepresentation >> freeCounters: theCounters [
 	<var: #theCounters type: #usqInt>
 	self subclassResponsibility
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genCmpClassFloatCompactIndexR: reg [
+	^cogit CmpCq: ClassFloatCompactIndex R: SendNumArgsReg.
 ]
 
 { #category : #'bytecode generator support' }
