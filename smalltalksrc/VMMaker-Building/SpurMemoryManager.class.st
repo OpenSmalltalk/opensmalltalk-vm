@@ -3057,12 +3057,6 @@ SpurMemoryManager >> classFloat [
 	^self splObj: ClassFloat
 ]
 
-{ #category : #'cog jit support' }
-SpurMemoryManager >> classFloatCompactIndex [
-	<api>
-	^ClassFloatCompactIndex
-]
-
 { #category : #'interpreter access' }
 SpurMemoryManager >> classForClassTag: classIndex [
 	self assert: classIndex ~= self isForwardedObjectClassIndexPun.
@@ -3208,6 +3202,7 @@ SpurMemoryManager >> classTableObjectsDo: aBlock [
 SpurMemoryManager >> classTablePageSize [
 	"1024 entries per page (2^10); 22 bit classIndex implies 2^12 pages"
 	"self basicNew classTablePageSize"
+	<api>
 	^1 << self classTableMajorIndexShift
 ]
 
@@ -3227,6 +3222,7 @@ SpurMemoryManager >> classTableRootSlots [
 { #category : #'interpreter access' }
 SpurMemoryManager >> classTagForClass: classObj [
 	"Answer the classObj's identityHash to use as a tag in the first-level method lookup cache."
+	<api>
 	self assert: (coInterpreter addressCouldBeClassObj: classObj).
 	^self ensureBehaviorHash: classObj
 ]
@@ -3843,7 +3839,6 @@ SpurMemoryManager >> ensureAllMarkBitsAreZero [
 { #category : #'class table' }
 SpurMemoryManager >> ensureBehaviorHash: aBehavior [
 	| newHash err |
-	<api>
 	<inline: true>
 	self assert: (coInterpreter addressCouldBeClassObj: aBehavior).
 	(newHash := self rawHashBitsOf: aBehavior) = 0 ifTrue:
@@ -5545,7 +5540,7 @@ SpurMemoryManager >> instSpecForImmediateClasses [
 
 { #category : #'object format' }
 SpurMemoryManager >> instSpecOfClass: classPointer [
-	"This is the same as the field stored in every object header"
+	"This field in a class's format inst var corresponds to the 5-bit format field stored in every object header"
 
 	^self instSpecOfClassFormat: (self formatOfClass: classPointer)
 ]

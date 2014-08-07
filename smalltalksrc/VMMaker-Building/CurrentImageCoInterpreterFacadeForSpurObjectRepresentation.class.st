@@ -29,6 +29,11 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> baseHeaderSize [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> characterTag [
+	^objectMemory characterTag
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> classIndexMask [
 	^self memMgr classIndexMask
 ]
@@ -44,10 +49,20 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> classTableMinorInd
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> classTablePageSize [
+	^objectMemory classTablePageSize
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> classTableRootObj [
 	hiddenRoots ifNil:
 		[hiddenRoots := Array new: self memMgr classTableRootSlots + self memMgr hiddenRootSlots].
 	^self oopForObject: hiddenRoots
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> classTagForClass: classOop [
+	^(self objectForOop: classOop) identityHash
 ]
 
 { #category : #forwarding }
@@ -68,6 +83,12 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> headerForSlots: nu
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> isForwardedObjectClassIndexPun [
 	^objectMemory isForwardedObjectClassIndexPun
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> isImmediateClass: classOop [
+	"Can't rely on the host image; may be running on SqueakV3.  hence..."
+	^#(Character SmallInteger SmallFloat) includes: (self objectForOop: classOop) name
 ]
 
 { #category : #accessing }
@@ -94,6 +115,11 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> rememberedBitShift
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> shiftForWord [
 	^objectMemory shiftForWord
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> smallIntegerTag [
+	^objectMemory smallIntegerTag
 ]
 
 { #category : #accessing }

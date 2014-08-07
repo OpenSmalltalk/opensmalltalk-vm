@@ -137,7 +137,7 @@ CogObjectRepresentationForSpur >> genAllocFloatValue: dpreg into: resultReg scra
 	newFloatHeader := objectMemory
 							headerForSlots: (self sizeof: #double) / objectMemory wordSize
 							format: objectMemory firstLongFormat
-							classIndex: objectMemory classFloatCompactIndex.
+							classIndex: ClassFloatCompactIndex.
 	cogit MoveAw: objectMemory freeStartAddress R: resultReg.
 	cogit LoadEffectiveAddressMw: allocSize r: resultReg R: scratch1.
 	cogit CmpCq: objectMemory getScavengeThreshold R: scratch1.
@@ -461,6 +461,13 @@ CogObjectRepresentationForSpur >> genInnerPrimitiveSize: retNoffset [
 	cogit RetN: retNoffset.
 	jumpImm jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).
 	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genJumpCharacterInScratchReg: reg [ 
+	cogit AndCq: objectMemory tagMask R: reg.
+	cogit CmpCq: objectMemory characterTag R: reg.
+	^cogit JumpZero: 0
 ]
 
 { #category : #'compile abstract instructions' }
