@@ -61,7 +61,7 @@ CogObjectRepresentationForSqueakV3 >> assertIsValidOop: anOop [
 CogObjectRepresentationForSqueakV3 >> branchIfInstanceOfBehavior: classObj branches: branches [
 	"Generate a branch if ReceiverResultReg is an instance of classObj, otherwise fall-
 	 through. Store the branch in branches and answer the number of branches generated."
-	<var: #branches type: #'AbstractInstruction *'>
+	<var: #branches type: #'AbstractInstruction **'>
 	| jmpImmediate compactClassIndex |
 	<var: #jmpImmediate type: #'AbstractInstruction *'>
 	cogit MoveR: ReceiverResultReg R: TempReg.
@@ -87,8 +87,7 @@ CogObjectRepresentationForSqueakV3 >> branchIfInstanceOfBehaviors: arrayObj bran
 	"Generate a branch if ReceiverResultReg is an instance of any of the classes in arrayObj,
 	 otherwise fall-through. Store the branch in branches and answer the number of branches
 	 generated."
-
-	<var: #branches type: #'AbstractInstruction *'>
+	<var: #branches type: #'AbstractInstruction **'>
 	| anImmediate allCompact noneCompact classObj jmpImmediate jmpCompact branchIndex |
 	<var: #jmpCompact type: #'AbstractInstruction *'>
 	<var: #jmpImmediate type: #'AbstractInstruction *'>

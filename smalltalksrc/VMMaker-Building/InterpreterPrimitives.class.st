@@ -2839,20 +2839,8 @@ InterpreterPrimitives >> primitiveQuo [
 	integerRcvr := self stackIntegerValue: 1.
 	integerArg := self stackIntegerValue: 0.
 	self success: integerArg ~= 0.
-	self successful ifTrue: [
-		integerRcvr > 0 ifTrue: [
-			integerArg > 0 ifTrue: [
-				integerResult := integerRcvr // integerArg.
-			] ifFalse: [
-				integerResult := 0 - (integerRcvr // (0 - integerArg)).
-			].
-		] ifFalse: [
-			integerArg > 0 ifTrue: [
-				integerResult := 0 - ((0 - integerRcvr) // integerArg).
-			] ifFalse: [
-				integerResult := (0 - integerRcvr) // (0 - integerArg).
-			].
-		]].
+	self successful ifTrue:
+		[integerResult := self quot: integerRcvr ient: integerArg].
 	self pop2AndPushIntegerIfOK: integerResult
 ]
 
@@ -3870,6 +3858,21 @@ InterpreterPrimitives >> primitiveYield [
 	(self isEmptyList: processList) ifFalse:[
 		self addLastLink: activeProc toList: processList.
 		self transferTo: self wakeHighestPriority]
+]
+
+{ #category : #'arithmetic integer primitives' }
+InterpreterPrimitives >> quot: integerRcvr ient: integerArg [
+	"See Number>>#quo:.  Rounds results towards zero."
+	<inline: true>
+	^integerRcvr > 0
+		ifTrue:
+			[integerArg > 0
+				ifTrue: [integerRcvr // integerArg]
+				ifFalse: [0 - (integerRcvr // (0 - integerArg))]]
+		ifFalse:
+			[integerArg > 0
+				ifTrue: [0 - ((0 - integerRcvr) // integerArg)]
+				ifFalse: [(0 - integerRcvr) // (0 - integerArg)]]
 ]
 
 { #category : #'primitive support' }
