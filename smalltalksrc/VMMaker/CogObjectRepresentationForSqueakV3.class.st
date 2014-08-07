@@ -237,7 +237,7 @@ CogObjectRepresentationForSqueakV3 >> genAllocFloatValue: dpreg into: resultReg 
 	| allocSize newFloatHeaderSansHash jumpFail |
 	<var: #jumpFail type: #'AbstractInstruction *'>
 	allocSize := BaseHeaderSize + (objectMemory sizeof: #double).
-	newFloatHeaderSansHash := ((objectMemory classFloatCompactIndex << objectMemory compactClassFieldLSB
+	newFloatHeaderSansHash := ((ClassFloatCompactIndex << objectMemory compactClassFieldLSB
 									bitOr: (objectMemory formatOfClass: objectMemory classFloat))
 									bitOr: allocSize)
 									 bitOr: HeaderTypeShort.
