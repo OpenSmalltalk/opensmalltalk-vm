@@ -4,10 +4,25 @@
 cd `dirname $0`
 REV=`grep 'SvnRawRevisionString.*Rev:' ../platforms/Cross/vm/sqSCCSVersion.h \
 	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
+
+if [ "$1" = "-r" -a -n "$2" ]; then
+	REV="$2"
+	shift;shift
+fi
+
 TAG=`date +%g.%U.`$REV
 echo REV=$REV TAG=$TAG
 
 . ./envvars.sh
+
+ABORT=
+for a in Cog.app-$TAG.tgz coglinuxht-$TAG.tgz coglinux-$TAG.tgz cogwin-$TAG.zip\
+		CogSpur.app-$TAG.tgz cogspurlinuxht-$TAG.tgz cogspurwin-$TAG.zip
+do
+	test -f ../products/$a || echo $a does not exist
+	ABORT=true
+done
+test -n "$ABORT" || exit 1
 
 cat >getGoodCogVM.sh <<END
 #!/bin/sh
