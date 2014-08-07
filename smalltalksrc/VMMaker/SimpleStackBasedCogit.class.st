@@ -1432,7 +1432,7 @@ SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: pre
 	self MoveR: TempReg R: ClassReg.
 	jumpImmediate := objectRepresentation genJumpImmediateInScratchReg: TempReg.
 	objectRepresentation genGetCompactClassIndexNonImmOf: ClassReg into: SendNumArgsReg.
-	self CmpCq: objectMemory classFloatCompactIndex R: SendNumArgsReg.
+	objectRepresentation genCmpClassFloatCompactIndexR: SendNumArgsReg.
 	jumpFailClass := self JumpNonZero: 0.
 	objectRepresentation genGetDoubleValueOf: ClassReg into: DPFPReg1.
 	doOp := self Label.
@@ -1483,7 +1483,7 @@ SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator invert: invert
 	self MoveR: TempReg R: ClassReg.
 	jumpImmediate := objectRepresentation genJumpImmediateInScratchReg: TempReg.
 	objectRepresentation genGetCompactClassIndexNonImmOf: ClassReg into: SendNumArgsReg.
-	self CmpCq: objectMemory classFloatCompactIndex R: SendNumArgsReg.
+	objectRepresentation genCmpClassFloatCompactIndexR: SendNumArgsReg.
 	jumpFail := self JumpNonZero: 0.
 	objectRepresentation genGetDoubleValueOf: ClassReg into: DPFPReg1.
 	invertComparison "May need to invert for NaNs"
@@ -3301,7 +3301,7 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCompariso
 		[self MoveR: ClassReg R: TempReg.
 		 jumpNonInt := objectRepresentation genJumpImmediateInScratchReg: TempReg].
 	objectRepresentation genGetCompactClassIndexNonImmOf: ClassReg into: SendNumArgsReg.
-	self CmpCq: objectMemory classFloatCompactIndex R: SendNumArgsReg.
+	objectRepresentation genCmpClassFloatCompactIndexR: SendNumArgsReg.
 	jumpFail := self JumpNonZero: 0.
 
 	"It was a Float, so convert the receiver to double and perform the operation"

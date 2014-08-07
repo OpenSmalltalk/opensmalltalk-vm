@@ -590,12 +590,6 @@ NewObjectMemory >> classFieldOffset [
 	^0 - BaseHeaderSize
 ]
 
-{ #category : #'cog jit support' }
-NewObjectMemory >> classFloatCompactIndex [
-	<api>
-	^ClassFloatCompactIndex
-]
-
 { #category : #'interpreter access' }
 NewObjectMemory >> classForClassTag: classObj [
 	"Compatibility with SpurObjectMemory.  In ObjectMemory there is no distinction between a
