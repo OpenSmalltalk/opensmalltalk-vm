@@ -1412,6 +1412,13 @@ SimpleStackBasedCogit >> genBlockReturn [
 	^0
 ]
 
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genCallPrimitiveBytecode [
+	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution."
+	"This makes sense only for the optimizing JITs"
+	^EncounteredUnknownBytecode
+]
+
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: preOpCheckOrNil [
 	"Stack looks like
@@ -1764,7 +1771,7 @@ SimpleStackBasedCogit >> genExtStoreReceiverVariableBytecode [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtTrapIfNotInstanceOfBehaviorsBytecode [
 	"SistaV1: *	236		11101100	iiiiiiii		Trap If Not Instance Of Behavior/Array Of Behavior #iiiiiiii (+ Extend A * 256, where Extend A >= 0)"
-	"THis realy makes sense only for the optimizing JITs"
+	"This really only makes sense for the optimizing JITs"
 	^EncounteredUnknownBytecode
 ]
 

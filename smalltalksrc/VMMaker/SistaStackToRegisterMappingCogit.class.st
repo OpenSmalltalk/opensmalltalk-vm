@@ -255,7 +255,7 @@ SistaStackToRegisterMappingCogit >> genExtTrapIfNotInstanceOfBehaviorsBytecode [
 	numBranches := (objectMemory isArrayNonImm: literal)
 						ifTrue: [(objectMemory numSlotsOf: literal) + 1]
 						ifFalse: [2].
-	branches := self alloca: numBranches type: (self cCoerceSimple: CogAbstractInstruction to: #'AbstractInstruction *').
+	branches := self alloca: numBranches type: (self cCode: [#'AbstractInstruction *'] inSmalltalk: [backEnd class]).
 	numBranches := (objectMemory isArrayNonImm: literal)
 						ifTrue: [objectRepresentation branchIfInstanceOfBehaviors: literal branches: branches]
 						ifFalse: [objectRepresentation branchIfInstanceOfBehavior: literal branches: branches].

@@ -27,7 +27,7 @@ CogObjectRepresentationFor32BitSpur >> allocateCounters: nCounters [
 CogObjectRepresentationFor32BitSpur >> branchIfInstanceOfBehavior: classObj branches: branches [
 	"Generate a branch if ReceiverResultReg is an instance of classObj, otherwise fall-
 	 through. Store the branch in branches and answer the number of branches generated."
-	<var: #branches type: #'AbstractInstruction *'>
+	<var: #branches type: #'AbstractInstruction **'>
 	| jmpImmediate classIndex |
 	<var: #jmpImmediate type: #'AbstractInstruction *'>
 	classIndex := objectMemory classTagForClass: classObj.
@@ -53,8 +53,7 @@ CogObjectRepresentationFor32BitSpur >> branchIfInstanceOfBehaviors: arrayObj bra
 	"Generate a branch if ReceiverResultReg is an instance of any of the classes in arrayObj,
 	 otherwise fall-through. Store the branch in branches and answer the number of branches
 	 generated."
-
-	<var: #branches type: #'AbstractInstruction *'>
+	<var: #branches type: #'AbstractInstruction **'>
 	| allImmediate noneImmediate immediateMask numNonImmediates classObj jmpNoMatch jmpImmediate branchIndex classIndex |
 	<var: #jmpNoMatch type: #'AbstractInstruction *'>
 	<var: #jmpImmediate type: #'AbstractInstruction *'>
