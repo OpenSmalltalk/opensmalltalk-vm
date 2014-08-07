@@ -3436,30 +3436,23 @@ CCodeGenerator >> methodsThatCanInvoke: aSelectorList [
 CCodeGenerator >> needToGenerateHeader: headerName file: interpHdrPath contents: newContentsArg [
 	"Check if we need to regenerate a header file.  We always need to if the contents have changed.
 	 But if not we can avoid needless recompilations by not regenerating.  So only regenerate if the
-	 package is clean (version doesn't include a '*').  If we can't find a package version ask the user."
-	| newContents oldContents makerStamp vmMakerIndex |
+	 package stamp is dirty and the monticello stamp is clean."
+	| newContents oldContents dirtyStamp |
 	(FileDirectory default fileExists: interpHdrPath) ifFalse:
 		[^true].
 	newContents := newContentsArg.
 	oldContents := (FileDirectory default oldFileNamed: interpHdrPath) contentsOfEntireFile.
 	oldContents := oldContents copyReplaceAll: {Character cr. Character lf} with: {Character cr}.
 	oldContents replaceAll: Character lf with: Character cr.
-	makerStamp := (vmMakerIndex := oldContents indexOfSubCollection: 'VMMaker') ~= 0
-						ifTrue:
-							[oldContents
-								copyFrom: vmMakerIndex
-								to: (oldContents indexOf: Character cr startingAt: vmMakerIndex) - 1]
-						ifFalse: ['XXX'].
+	dirtyStamp := (oldContents indexOfSubCollection: '* VMMaker') ~= 0.
 	(newContents beginsWith: '/*') = (oldContents beginsWith: '/*') ifFalse:
 		[(newContents beginsWith: '/*') ifTrue:
 			[newContents := newContents readStream upToAll: '*/'; skipSeparators; upToEnd].
 		 (oldContents beginsWith: '/*') ifTrue:
 			[oldContents := oldContents readStream upToAll: '*/'; skipSeparators; upToEnd]].
 	^oldContents ~= newContents
-	 or: [([((self class monticelloDescriptionFor: vmClass) includes: $*) not
-		 and: [((self class monticelloDescriptionFor: vmClass) includesSubString: makerStamp) not]]
-			on: Error
-			do: [:ex| true])
+	 or: [(dirtyStamp and: [[((self class monticelloDescriptionFor: vmClass) includes: $*) not]
+							on: Error do: [:ex| false]]) "If no stamp don't worry"
 	 or: [self confirm: headerName, ' contents are unchanged.\Writing the file may cause recompilation of support files.\Do you want to write the header file?' withCRs]]
 ]
 
