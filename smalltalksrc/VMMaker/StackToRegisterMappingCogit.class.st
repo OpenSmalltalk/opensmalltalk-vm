@@ -598,10 +598,13 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 		(1 136 136 duplicateTopBytecode needsFrameNever: 1)
 
 		(1 137 137 genPushActiveContextBytecode)
-		(2 138 138 genPushNewArrayBytecode)
+		(2 138 138 genPushNewArrayBytecode)),
 
-		(1 139 139 unknownBytecode)
+		((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
+			ifTrue: [#((3 139 139 callPrimitiveBytecode))]
+			ifFalse: [#((1 139 139 unknownBytecode))]),
 
+	   #(
 		(3 140 140 genPushRemoteTempLongBytecode)
 		(3 141 141 genStoreRemoteTempLongBytecode)
 		(3 142 142 genStoreAndPopRemoteTempLongBytecode)
@@ -1356,7 +1359,7 @@ StackToRegisterMappingCogit >> fixupAt: index [
 	^self addressOf: (fixups at: index)
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'inline primitive generators' }
 StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#inlinePrimitiveBytecode:"
@@ -1439,15 +1442,18 @@ StackToRegisterMappingCogit >> genCallPrimitiveBytecode [
 		[^EncounteredUnknownBytecode].
 	prim := byte2 - 128 << 8 + byte1.
 
-	prim < 80 ifTrue:
+	prim < 1000 ifTrue:
+		[^self genUnaryInlinePrimitive: prim].
+		
+	prim < 2000 ifTrue:
 		[self ssTop type = SSConstant ifTrue:
-			[^self genBinaryVarOpConstInlinePrimitive: prim].
+			[^self genBinaryVarOpConstInlinePrimitive: prim - 1000].
 		 (self ssValue: 1) type = SSConstant ifTrue:
-			[^self genBinaryConstOpVarInlinePrimitive: prim].
-		 ^self genBinaryVarOpVarInlinePrimitive: prim].
+			[^self genBinaryConstOpVarInlinePrimitive: prim - 1000].
+		 ^self genBinaryVarOpVarInlinePrimitive: prim - 1000].
 
-	prim < 100 ifTrue:
-		[^self genTrinaryInlinePrimitive: prim].
+	prim < 3000 ifTrue:
+		[^self genTrinaryInlinePrimitive: prim - 2000].
 
 	^EncounteredUnknownBytecode
 ]
