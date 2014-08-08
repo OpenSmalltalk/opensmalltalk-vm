@@ -329,11 +329,6 @@ CurrentImageCoInterpreterFacade >> headerIndicatesAlternateBytecodeSet: methodHe
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> headerOf: aMethodOop [
-	^self rawHeaderOf: aMethodOop
-]
-
-{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> inMemoryCFramePointerAddress [
 	^self addressForLabel: #CFramePointer
 ]
@@ -512,11 +507,6 @@ CurrentImageCoInterpreterFacade >> literal: index ofMethod: anOop [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> literalCountOf: anOop [
 	^(objectMap keyAtValue: anOop) numLiterals
-]
-
-{ #category : #accessing }
-CurrentImageCoInterpreterFacade >> literalCountOfHeader: methodHeader [
-	^(headerToMethodMap at: methodHeader) numLiterals
 ]
 
 { #category : #accessing }

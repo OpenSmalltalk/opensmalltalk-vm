@@ -1735,6 +1735,8 @@ StackInterpreter class >> wantsLabels [
 { #category : #translation }
 StackInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
 	super writeVMHeaderTo: aStream bytesPerWord: bytesPerWord.
+	SistaVM ifTrue:
+		[aStream nextPutAll: '#define SistaVM 1'; cr].
 	NewspeakVM ifTrue:
 		[aStream nextPutAll: '#define NewspeakVM 1'; cr].
 	MULTIPLEBYTECODESETS ifTrue:
@@ -1979,7 +1981,7 @@ StackInterpreter >> areIntegers: oop1 and: oop2 [
 { #category : #'compiled methods' }
 StackInterpreter >> argumentCountOf: methodPointer [
 	<api>
-	^self argumentCountOfMethodHeader: (self headerOf: methodPointer)
+	^self argumentCountOfMethodHeader: (objectMemory methodHeaderOf: methodPointer)
 ]
 
 { #category : #'internal interpreter access' }
@@ -3676,7 +3678,7 @@ StackInterpreter >> checkOkayFields: oop [
 				  and: [objectMemory isYoung: (objectMemory fetchClassOfNonImm: oop)].
 	(objectMemory isCompiledMethod: oop)
 		ifTrue:
-			[i := (self literalCountOf: oop) + LiteralStart - 1]
+			[i := (objectMemory literalCountOf: oop) + LiteralStart - 1]
 		ifFalse:
 			[(objectMemory isContext: oop)
 				ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop) - 1]
@@ -4299,13 +4301,14 @@ StackInterpreter >> context: aContext hasValidInversePCMappingOf: theIP in: theF
 	<var: #theFP type: #'char *'>
 	pc := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
 	encodedip := self contextInstructionPointer: theIP frame: theFP.
-	^self cppIf: MULTIPLEBYTECODESETS
-		ifTrue: [pc = encodedip
-				or: [| methodHeader |
-					methodHeader := self headerOf: (objectMemory fetchPointer: MethodIndex ofObject: aContext).
-					(self methodHeaderHasPrimitive: methodHeader)
-					and: [(objectMemory integerValueOf: encodedip) - (objectMemory integerValueOf: pc)
-						= (self sizeOfCallPrimitiveBytecode: methodHeader)]]]
+	^(objectMemory hasSpurMemoryManagerAPI or: [MULTIPLEBYTECODESETS])
+		ifTrue:
+			[pc = encodedip
+			or: [| methodHeader |
+				methodHeader := objectMemory methodHeaderOf: (objectMemory fetchPointer: MethodIndex ofObject: aContext).
+				(self methodHeaderHasPrimitive: methodHeader)
+				and: [(objectMemory integerValueOf: encodedip) - (objectMemory integerValueOf: pc)
+					= (self sizeOfCallPrimitiveBytecode: methodHeader)]]]
 		ifFalse: [pc = encodedip]
 ]
 
@@ -5866,12 +5869,14 @@ StackInterpreter >> fireEphemeron: ephemeron [
 StackInterpreter >> firstByteIndexOfMethod: methodObj [
 	"Answer the one-relative index of the first bytecode in methodObj.
 	 Used for safer bounds-checking on methods."
-	^(self literalCountOf: methodObj) + LiteralStart * BytesPerOop + 1
+	^(objectMemory literalCountOf: methodObj) + LiteralStart * BytesPerOop + 1
 ]
 
 { #category : #'compiled methods' }
 StackInterpreter >> firstBytecodeOfAlternateHeader: methodHeader method: theMethod [
-	^theMethod + ((LiteralStart + (self literalCountOfAlternateHeader: methodHeader)) * BytesPerWord) + BaseHeaderSize
+	^theMethod
+	 + ((LiteralStart + (self literalCountOfAlternateHeader: methodHeader)) * objectMemory bytesPerOop)
+	 + objectMemory baseHeaderSize
 ]
 
 { #category : #'plugin primitive support' }
@@ -5932,7 +5937,7 @@ StackInterpreter >> flushAtCache [
 StackInterpreter >> flushExternalPrimitiveOf: methodObj [
 	"methodObj is a CompiledMethod containing an external primitive. Flush the function address and session ID of the CM"
 	| lit |
-	(self literalCountOf: methodObj) > 0 ifFalse:
+	(objectMemory literalCountOf: methodObj) > 0 ifFalse:
 		[^nil]. "Something's broken"
 	lit := self literal: 0 ofMethod: methodObj.
 	((objectMemory isArray: lit) and:[(objectMemory lengthOf: lit) = 4]) ifFalse:
@@ -6743,11 +6748,6 @@ StackInterpreter >> headerIndicatesAlternateBytecodeSet: methodHeader [
 	^methodHeader signedIntFromLong < 0
 ]
 
-{ #category : #'compiled methods' }
-StackInterpreter >> headerOf: methodPointer [
-	^objectMemory fetchPointer: HeaderIndex ofObject: methodPointer
-]
-
 { #category : #'stack pages' }
 StackInterpreter >> highBit: anUnsignedValue [ 
 	"This is a C implementation needed by ioSetMaxExtSemTableSize
@@ -6845,7 +6845,7 @@ StackInterpreter >> ifValidWriteBackStack: theCFP Pointers: theCSP Save: savedFP
 { #category : #'frame access' }
 StackInterpreter >> iframeInstructionPointerForIndex: ip method: aMethod [
 	"Answer the instruction pointer for use in an interpreter frame (a pointer to a bytecode)."
-	self assert: (ip between: (((LiteralStart + (self literalCountOf: aMethod)) * BytesPerOop)) + 1
+	self assert: (ip between: (((LiteralStart + (objectMemory literalCountOf: aMethod)) * BytesPerOop)) + 1
 					and: (objectMemory lengthOf: aMethod)).
 	^aMethod + ip + objectMemory baseHeaderSize - 2
 ]
@@ -7022,7 +7022,7 @@ StackInterpreter >> initialCleanup [
 StackInterpreter >> initialPCForHeader: methodHeader method: theMethod [
 	<api>
 	^theMethod
-	+ ((LiteralStart + (self literalCountOfHeader: methodHeader)) * BytesPerOop)
+	+ ((LiteralStart + (objectMemory literalCountOfMethodHeader: methodHeader)) * BytesPerOop)
 	+ objectMemory baseHeaderSize
 ]
 
@@ -7425,7 +7425,7 @@ StackInterpreter >> internalActivateNewMethod [
 	| methodHeader numTemps rcvr errorCode |
 	<inline: true>
 
-	methodHeader := self headerOf: newMethod.
+	methodHeader := objectMemory methodHeaderOf: newMethod.
 	numTemps := self temporaryCountOfMethodHeader: methodHeader.
 
 	rcvr := self internalStackValue: argumentCount. "could new rcvr be set at point of send?"
@@ -7832,7 +7832,7 @@ StackInterpreter >> isNullExternalPrimitiveCall: aMethodObj [
 	 This is just for an assert in the CoInterpreter."
 	| lit |
 	((self primitiveIndexOf: aMethodObj) = 117
-	and: [(self literalCountOf: aMethodObj) > 0]) ifFalse:
+	and: [(objectMemory literalCountOf: aMethodObj) > 0]) ifFalse:
 		[^false].
 
 	lit := self literal: 0 ofMethod: aMethodObj.
@@ -7962,7 +7962,7 @@ StackInterpreter >> jumplfTrueBy: offset [
 StackInterpreter >> justActivateNewMethod [
 	| methodHeader numArgs numTemps rcvr errorCode |
 	<inline: true>
-	methodHeader := self headerOf: newMethod.
+	methodHeader := objectMemory methodHeaderOf: newMethod.
 	numTemps := self temporaryCountOfMethodHeader: methodHeader.
 	numArgs := self argumentCountOfMethodHeader: methodHeader.
 
@@ -8024,25 +8024,9 @@ StackInterpreter >> literal: offset ofMethod: methodPointer [
 ]
 
 { #category : #'compiled methods' }
-StackInterpreter >> literalCountOf: methodPointer [
-	^self literalCountOfHeader: (self headerOf: methodPointer)
-]
-
-{ #category : #'compiled methods' }
 StackInterpreter >> literalCountOfAlternateHeader: headerPointer [
 	<inline: true>
 	^(headerPointer >> 1) bitAnd: 16rFFFF
-]
-
-{ #category : #'compiled methods' }
-StackInterpreter >> literalCountOfHeader: headerPointer [
-	<api>
-	"We support two method header formats, as selected by the sign flag.  Even if the VM only
-	 has one bytecode set, supporting teh two formats here allows for instantiating methods in
-	 the other format for testing, etc."
-	^(self headerIndicatesAlternateBytecodeSet: headerPointer)
-		ifTrue: [self literalCountOfAlternateHeader: headerPointer]
-		ifFalse: [self literalCountOfOriginalHeader: headerPointer]
 ]
 
 { #category : #'compiled methods' }
@@ -8283,8 +8267,7 @@ StackInterpreter >> lookupMethodInClass: class [
 	<inline: false>
 	self assert: (self addressCouldBeClassObj: class).
 	currentClass := class.
-	[currentClass ~= objectMemory nilObject]
-		whileTrue:
+	[currentClass ~= objectMemory nilObject] whileTrue:
 		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
 		dictionary = objectMemory nilObject ifTrue:
 			["MethodDict pointer is nil (hopefully due a swapped out stub)
@@ -8415,14 +8398,13 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 			 stackPages longAt: pointer put: maybeClosure]
 		ifFalse:
 			[| header |
-			 header := self headerOf: theMethod.
+			 header := objectMemory methodHeaderOf: theMethod.
 			 numArgs := self argumentCountOfMethodHeader: header.
-			 self cppIf: MULTIPLEBYTECODESETS
-				ifTrue: "If this is a synthetic context its IP could be pointing at the CallPrimitive opcode.  If so, skip it."
-					[(theIP signedIntFromLong > 0
-					  and: [(self methodHeaderHasPrimitive: header)
-					  and: [theIP = (1 + (objectMemory lastPointerOf: theMethod))]]) ifTrue:
-						[theIP := theIP + (self sizeOfCallPrimitiveBytecode: header)]].
+			 "If this is a synthetic context its IP could be pointing at the CallPrimitive opcode.  If so, skip it."
+			 (theIP signedIntFromLong > 0
+			  and: [(self methodHeaderHasPrimitive: header)
+			  and: [theIP = (1 + (objectMemory lastPointerOf: theMethod))]]) ifTrue:
+				[theIP := theIP + (self sizeOfCallPrimitiveBytecode: header)].
 			 stackPages longAt: pointer put: rcvr].
 	"Put the arguments on the stack"
 	1 to: numArgs do:
@@ -8895,7 +8877,7 @@ StackInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 	"The SP is expected to be pointing at the last oop on the stack, not at the pc"
 	self assert: (objectMemory addressCouldBeOop: (stackPages longAt: theSP)).
 
-	methodHeader := self headerOf: (self frameMethod: theFP).
+	methodHeader := objectMemory methodHeaderOf: (self frameMethod: theFP).
 	"Decide how much of the stack to preserve in widowed contexts.  Preserving too much
 	 state will potentially hold onto garbage.  Holding onto too little may mean that a dead
 	 context isn't informative enough in a debugging situation.  If copyTemps is false (as it
@@ -8909,7 +8891,7 @@ StackInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 						ifTrue: [self pushedReceiverOrClosureOfFrame: theFP]
 						ifFalse: [objectMemory nilObject].
 
-	numSlots := (methodHeader bitAnd: LargeContextBit) ~= 0
+	numSlots := (self methodHeaderIndicatesLargeFrame: methodHeader)
 					ifTrue: [LargeContextSlots]
 					ifFalse: [SmallContextSlots].
 	theContext := objectMemory eeInstantiateMethodContextSlots: numSlots.
@@ -9012,7 +8994,7 @@ StackInterpreter >> methodArgumentCount [
 { #category : #'compiled methods' }
 StackInterpreter >> methodClassAssociationOf: methodPointer [
 	<api>
-	^self literal: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer
+	^self literal: (objectMemory literalCountOf: methodPointer) - 1 ofMethod: methodPointer
 ]
 
 { #category : #'compiled methods' }
@@ -9023,13 +9005,13 @@ StackInterpreter >> methodClassOf: methodPointer [
 	^self cppIf: NewspeakVM
 		ifTrue:
 			[| literal |
-			 literal := self followLiteral: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
+			 literal := self followLiteral: (objectMemory literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
 			 literal = objectMemory nilObject
 				ifTrue: [literal]
 				ifFalse: [objectMemory followField: ValueIndex ofObject: literal]]
 		ifFalse:
 			[| literal |
-			 literal := self followLiteral: (self literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
+			 literal := self followLiteral: (objectMemory literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
 			 objectMemory followField: ValueIndex ofObject: literal]
 ]
 
@@ -9038,12 +9020,22 @@ StackInterpreter >> methodHeaderHasPrimitive: methodHeader [
 	"Note: We now have 10 bits of primitive index, but they are in two places
 	 for temporary backward compatibility.  The time to unpack is negligible,
 	 since the derived primitive function pointer is stored in the method cache."
-	^self
-		cppIf: MULTIPLEBYTECODESETS
-		ifTrue: [(self headerIndicatesAlternateBytecodeSet: methodHeader)
-				ifTrue: [self alternateHeaderHasPrimitiveFlag: methodHeader]
-				ifFalse: [(methodHeader bitAnd: 16r200003FE) ~= 0]]
-		ifFalse: [(methodHeader bitAnd: 16r200003FE) ~= 0]
+	^objectMemory hasSpurMemoryManagerAPI
+		ifTrue: [self alternateHeaderHasPrimitiveFlag: methodHeader]
+		ifFalse:
+			[MULTIPLEBYTECODESETS
+				ifTrue:
+					[(self headerIndicatesAlternateBytecodeSet: methodHeader)
+						ifTrue: [self alternateHeaderHasPrimitiveFlag: methodHeader]
+						ifFalse: [(methodHeader bitAnd: 16r200003FE) ~= 0]]
+				ifFalse:
+					[(methodHeader bitAnd: 16r200003FE) ~= 0]]
+]
+
+{ #category : #'frame access' }
+StackInterpreter >> methodHeaderIndicatesLargeFrame: methodHeader [
+	<inline: true>
+	^(methodHeader bitAnd: LargeContextBit) ~= 0
 ]
 
 { #category : #'plugin primitive support' }
@@ -9068,7 +9060,7 @@ StackInterpreter >> methodUsesAlternateBytecodeSet: aMethodObj [
 	<api>
 	<inline: true>
 	"A negative header selects the alternate bytecode set."
-	^self headerIndicatesAlternateBytecodeSet: (self headerOf: aMethodObj)
+	^self headerIndicatesAlternateBytecodeSet: (objectMemory methodHeaderOf: aMethodObj)
 ]
 
 { #category : #'frame access' }
@@ -9342,7 +9334,7 @@ StackInterpreter >> okayFields: oop [
 	((objectMemory isPointersNonImm: oop) or: [objectMemory isCompiledMethod: oop]) ifFalse: [ ^true ].
 	(objectMemory isCompiledMethod: oop)
 		ifTrue:
-			[i := (self literalCountOf: oop) + LiteralStart - 1]
+			[i := (objectMemory literalCountOf: oop) + LiteralStart - 1]
 		ifFalse:
 			[(objectMemory isContext: oop)
 				ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop) - 1]
@@ -9404,7 +9396,7 @@ StackInterpreter >> openOn: fileName [
 StackInterpreter >> penultimateLiteralOf: aMethodOop [
 	<api>
 	self assert: (objectMemory isOopCompiledMethod: aMethodOop).
-	^self literal: (self literalCountOf: aMethodOop) - 2 ofMethod: aMethodOop
+	^self literal: (objectMemory literalCountOf: aMethodOop) - 2 ofMethod: aMethodOop
 ]
 
 { #category : #'internal interpreter access' }
@@ -9755,7 +9747,7 @@ StackInterpreter >> primitiveFloatSubtract: rcvrOop fromArg: argOop [
 { #category : #'compiled methods' }
 StackInterpreter >> primitiveIndexOf: methodPointer [
 	<api>
-	^self primitiveIndexOfMethod: methodPointer header: (self headerOf: methodPointer)
+	^self primitiveIndexOfMethod: methodPointer header: (objectMemory methodHeaderOf: methodPointer)
 ]
 
 { #category : #'compiled methods' }
@@ -9766,25 +9758,34 @@ StackInterpreter >> primitiveIndexOfMethod: theMethod header: methodHeader [
 	 format we assume a 3-byte CallPrimitive with a little-endian 16-bit primitive index."
 	<api>
 	<inline: true>
-	^self cppIf: MULTIPLEBYTECODESETS
+	| firstBytecode |
+	^objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
-			[(self headerIndicatesAlternateBytecodeSet: methodHeader)
+			[(self alternateHeaderHasPrimitiveFlag: methodHeader)
 				ifTrue:
-					[(self alternateHeaderHasPrimitiveFlag: methodHeader)
+					[firstBytecode := self firstBytecodeOfAlternateHeader: methodHeader method: theMethod.
+					 (objectMemory byteAt: firstBytecode + 1) + ((objectMemory byteAt: firstBytecode + 2) << 8)]
+				ifFalse:
+					[0]]
+		ifFalse:
+			[MULTIPLEBYTECODESETS
+				ifTrue:
+					[(self headerIndicatesAlternateBytecodeSet: methodHeader)
 						ifTrue:
-							[| firstBytecode |
-							 firstBytecode := self firstBytecodeOfAlternateHeader: methodHeader method: theMethod.
-							 (objectMemory byteAt: firstBytecode + 1) + ((objectMemory byteAt: firstBytecode + 2) << 8)]
+							[(self alternateHeaderHasPrimitiveFlag: methodHeader)
+								ifTrue:
+									[firstBytecode := self firstBytecodeOfAlternateHeader: methodHeader method: theMethod.
+									 (objectMemory byteAt: firstBytecode + 1) + ((objectMemory byteAt: firstBytecode + 2) << 8)]
+								ifFalse:
+									[0]]
 						ifFalse:
-							[0]]
+							[| primBits |
+							 primBits := objectMemory integerValueOf: methodHeader.
+							 (primBits bitAnd: 16r1FF) + (primBits >> 19 bitAnd: 16r200)]]
 				ifFalse:
 					[| primBits |
-					 primBits := methodHeader >> 1.
+					 primBits := objectMemory integerValueOf: methodHeader.
 					 (primBits bitAnd: 16r1FF) + (primBits >> 19 bitAnd: 16r200)]]
-		ifFalse:
-			[| primBits |
-			primBits := methodHeader >> 1.
-			(primBits bitAnd: 16r1FF) + (primBits >> 19 bitAnd: 16r200)]
 ]
 
 { #category : #'control primitives' }
@@ -11761,7 +11762,7 @@ StackInterpreter >> roomToPushNArgs: n [
 		ifTrue: "old code that checked size of context..."
 			[| cntxSize |
 			 self assert: method = (stackPages longAt: framePointer + FoxMethod).
-			 cntxSize := ((self headerOf: method) bitAnd: LargeContextBit) ~= 0
+			 cntxSize := (self methodHeaderIndicatesLargeFrame: (objectMemory methodHeaderOf: method))
 							ifTrue: [LargeContextSlots - CtxtTempFrameStart]
 							ifFalse: [SmallContextSlots - CtxtTempFrameStart].
 			 ^self stackPointerIndex + n <= cntxSize]
@@ -12060,7 +12061,7 @@ StackInterpreter >> setMethod: aMethodObj methodHeader: methodHeader [
 	<inline: true>
 	method := aMethodObj.
 	self assert: (objectMemory isOopCompiledMethod: method).
-	self assert: (self headerOf: method) = methodHeader.
+	self assert: (objectMemory methodHeaderOf: method) = methodHeader.
 	self cppIf: MULTIPLEBYTECODESETS
 		ifTrue: [bytecodeSetSelector := (self headerIndicatesAlternateBytecodeSet: methodHeader)
 											ifTrue: [256]
@@ -12070,7 +12071,7 @@ StackInterpreter >> setMethod: aMethodObj methodHeader: methodHeader [
 { #category : #'compiled methods' }
 StackInterpreter >> setMethodClassAssociationOf: methodPointer to: anObject [
 	objectMemory
-		storePointer: (self literalCountOf: methodPointer) + LiteralStart - 1
+		storePointer: (objectMemory literalCountOf: methodPointer) + LiteralStart - 1
 		ofObject: methodPointer
 		withValue: anObject
 ]
@@ -12447,12 +12448,14 @@ StackInterpreter >> sizeOfCallPrimitiveBytecode: methodHeader [
 	"249		11111001	i i i i i i i i	jjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjjj * 256)"
 	<api>
 	<inline: true>
-	^self
-		cppIf: MULTIPLEBYTECODESETS
-		ifTrue: [(self headerIndicatesAlternateBytecodeSet: methodHeader)
-					ifTrue: [3]
-					ifFalse: [0]]
-		ifFalse: [0]
+	^objectMemory hasSpurMemoryManagerAPI
+		ifTrue: [3]
+		ifFalse:
+			[MULTIPLEBYTECODESETS
+				ifTrue: [(self headerIndicatesAlternateBytecodeSet: methodHeader)
+							ifTrue: [3]
+							ifFalse: [0]]
+				ifFalse: [0]]
 ]
 
 { #category : #'compiled methods' }
@@ -12859,7 +12862,7 @@ StackInterpreter >> stackValue: offset put: oop [
 StackInterpreter >> startPCOfMethod: aCompiledMethod [
 	<api>
 	"Zero-relative version of CompiledMethod>>startpc."
-	^(self literalCountOf: aCompiledMethod) + LiteralStart * objectMemory bytesPerOop
+	^(objectMemory literalCountOf: aCompiledMethod) + LiteralStart * objectMemory bytesPerOop
 ]
 
 { #category : #'stack bytecodes' }
@@ -13140,7 +13143,7 @@ StackInterpreter >> tab [
 { #category : #'compiled methods' }
 StackInterpreter >> tempCountOf: methodPointer [
 	<api>
-	^self temporaryCountOfMethodHeader: (self headerOf: methodPointer)
+	^self temporaryCountOfMethodHeader: (objectMemory methodHeaderOf: methodPointer)
 ]
 
 { #category : #'internal interpreter access' }
@@ -13330,7 +13333,7 @@ StackInterpreter >> updateObjectsPostByteSwap [
 			[wordAddr := oop + BaseHeaderSize.
 			fmt >= self firstCompiledMethodFormat ifTrue: "compiled method; start after methodHeader and literals"
 				[methodHeader := self longAt: oop + BaseHeaderSize.
-				 wordAddr := wordAddr + (((self literalCountOfHeader: methodHeader) + LiteralStart) * BytesPerWord)].
+				 wordAddr := wordAddr + (((objectMemory literalCountOfMethodHeader: methodHeader) + LiteralStart) * BytesPerOop)].
 			objectMemory reverseBytesFrom: wordAddr to: oop + (objectMemory sizeBitsOf: oop)].
 		 fmt = self firstLongFormat ifTrue: "Bitmap, Float etc"
 			[(swapFloatWords
@@ -13401,24 +13404,33 @@ StackInterpreter >> validInstructionPointer: theInstrPointer inMethod: aMethod f
 	<var: #theInstrPointer type: #usqInt>
 	<var: #aMethod type: #usqInt>
 	<var: #fp type: #'char *'>
-	^self
-		cppIf: MULTIPLEBYTECODESETS
-		ifTrue:
-			[| methodHeader |
-			 methodHeader := self noAssertHeaderOf: aMethod. "-1 for pre-increment in fetchNextBytecode"
-			 theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BytesPerOop - 1)
-			 and: [theInstrPointer < (aMethod + (objectMemory numBytesOf: aMethod) + BaseHeaderSize - 1)
-			 and: ["If the method starts with a CallPrimitive opcode the instruction pointer should be past it."
-				((self headerIndicatesAlternateBytecodeSet: methodHeader)
-				  and: [(self alternateHeaderHasPrimitiveFlag: methodHeader)
-				  and: [theInstrPointer < (aMethod
-										+ BytesPerOop - 1
-										+ (objectMemory lastPointerOf: aMethod)
-										+ (self sizeOfCallPrimitiveBytecode: methodHeader))]])
-					not]]]
-		ifFalse: "-1 for pre-increment in fetchNextBytecode"
-			[theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BytesPerOop - 1)
-			 and: [theInstrPointer < (aMethod + (objectMemory numBytesOf: aMethod) + objectMemory baseHeaderSize - 1)]]
+	| methodHeader |
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[methodHeader := self noAssertHeaderOf: aMethod. "-1 for pre-increment in fetchNextBytecode"
+		 ^theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BytesPerOop - 1)
+		   and: [theInstrPointer < (aMethod + (objectMemory numBytesOf: aMethod) + BaseHeaderSize - 1)
+		   and: ["If the method starts with a CallPrimitive opcode the instruction pointer should be past it."
+			((self alternateHeaderHasPrimitiveFlag: methodHeader)
+			 and: [theInstrPointer < (aMethod
+									+ BytesPerOop - 1
+									+ (objectMemory lastPointerOf: aMethod)
+									+ (self sizeOfCallPrimitiveBytecode: methodHeader))])
+				not]]].
+	MULTIPLEBYTECODESETS ifTrue:
+		[methodHeader := self noAssertHeaderOf: aMethod. "-1 for pre-increment in fetchNextBytecode"
+		 theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BytesPerOop - 1)
+		 and: [theInstrPointer < (aMethod + (objectMemory numBytesOf: aMethod) + BaseHeaderSize - 1)
+		 and: ["If the method starts with a CallPrimitive opcode the instruction pointer should be past it."
+			^((self headerIndicatesAlternateBytecodeSet: methodHeader)
+			  and: [(self alternateHeaderHasPrimitiveFlag: methodHeader)
+			  and: [theInstrPointer < (aMethod
+									+ BytesPerOop - 1
+									+ (objectMemory lastPointerOf: aMethod)
+									+ (self sizeOfCallPrimitiveBytecode: methodHeader))]])
+				not]]].
+	"-1 for pre-increment in fetchNextBytecode"
+	^theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + objectMemory bytesPerOop - 1)
+	  and: [theInstrPointer < (aMethod + (objectMemory numBytesOf: aMethod) + objectMemory baseHeaderSize - 1)]
 ]
 
 { #category : #'stack pages' }
