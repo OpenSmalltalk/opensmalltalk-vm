@@ -355,7 +355,8 @@ StackInterpreterSimulator >> cr [
 
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> createActualMessageTo: class [
-
+	objectMemory bootstrapping ifTrue:
+		[self halt].
 	"false
 		ifTrue:
 			[(self stringOf: messageSelector) = 'run:with:in:' ifTrue:

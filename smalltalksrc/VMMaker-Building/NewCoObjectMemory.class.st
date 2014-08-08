@@ -84,7 +84,7 @@ NewCoObjectMemory >> copyObj: oop toSegment: segmentWordArray addr: lastSeg stop
 	"Make sure Cogged methods have their true header field written to the segment."
 	((self isCompiledMethod: oop)
 	and: [coInterpreter methodHasCogMethod: oop]) ifTrue:
-		[self longAt: hdrAddr+BaseHeaderSize put: (coInterpreter headerOf: oop)].
+		[self longAt: hdrAddr+BaseHeaderSize put: (self methodHeaderOf: oop)].
 
 	self forward: oop to: (lastSeg+BytesPerWord + extraSize - segmentWordArray)
 		savingOopAt: oopPtr
@@ -134,6 +134,41 @@ NewCoObjectMemory >> isReallyYoungObject: obj [
 NewCoObjectMemory >> memoryBaseForImageRead [
 	"Answer the address to read the image into."
 	^coInterpreter heapBase
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemory >> methodHeaderOf: methodObj [
+	"Answer the method header of a CompiledMethod object.
+	 If the method has been cogged then the header is a pointer to
+	 the CogMethod and the real header will be stored in the CogMethod."
+	<inline: true>
+	| header |
+	self assert: (self isCompiledMethod: methodObj).
+	header := self fetchPointer: HeaderIndex ofObject: methodObj.
+	^(self isIntegerObject: header)
+		ifTrue: [header]
+		ifFalse:
+			[self assert: header asUnsignedInteger < coInterpreter heapBase.
+			 self assert: (coInterpreter cCoerceSimple: header to: #'CogMethod *') objectHeader
+						= self nullHeaderForMachineCodeMethod..
+			(coInterpreter cCoerceSimple: header to: #'CogMethod *') methodHeader]
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemory >> noCheckMethodHeaderOf: methodObj [
+	"Answer the method header of a CompiledMethod object.
+	 If the method has been cogged then the header is a pointer to
+	 the CogMethod and the real header will be stored in the CogMethod."
+	<inline: true>
+	| header |
+	header := self fetchPointer: HeaderIndex ofObject: methodObj.
+	^(self isIntegerObject: header)
+		ifTrue: [header]
+		ifFalse:
+			[self assert: header asUnsignedInteger < coInterpreter heapBase.
+			 self assert: (self cCoerceSimple: header to: #'CogMethod *') objectHeader
+						= self nullHeaderForMachineCodeMethod..
+			(self cCoerceSimple: header to: #'CogMethod *') methodHeader]
 ]
 
 { #category : #'cog jit support' }

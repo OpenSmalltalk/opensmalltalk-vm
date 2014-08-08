@@ -973,6 +973,11 @@ ObjectMemory >> booleanObjectOf: bool [
 	^bool ifTrue: [trueObj] ifFalse: [falseObj]
 ]
 
+{ #category : #accessing }
+ObjectMemory >> bootstrapping [
+	^false
+]
+
 { #category : #'header access' }
 ObjectMemory >> byteFormatForNumBytes: numBytes [
 	^self firstByteFormat + (4 - numBytes bitAnd: 3)
@@ -3294,40 +3299,40 @@ ObjectMemory >> lastPointerFormat [
 ]
 
 { #category : #'object enumeration' }
-ObjectMemory >> lastPointerOf: oop [ 
+ObjectMemory >> lastPointerOf: objOop [ 
 	"Return the byte offset of the last pointer field of the given object.  
 	Works with CompiledMethods, as well as ordinary objects. 
 	Can be used even when the type bits are not correct."
 	<api>
 	<inline: true>
 	<asmLabel: false>
-	| fmt sz methodHeader header contextSize |
-	header := self baseHeader: oop.
+	| fmt sz header contextSize |
+	header := self baseHeader: objOop.
 	fmt := self formatOfHeader: header.
 	fmt <= self lastPointerFormat ifTrue:
 		[(fmt = self indexablePointersFormat
 		  and: [self isContextHeader: header])
 					ifTrue: ["contexts end at the stack pointer"
-						contextSize := self fetchStackPointerOf: oop.
+						contextSize := self fetchStackPointerOf: objOop.
 						^ CtxtTempFrameStart + contextSize * BytesPerWord].
-				sz := self sizeBitsOfSafe: oop.
+				sz := self sizeBitsOfSafe: objOop.
 				^sz - BaseHeaderSize "all pointers"].
-	fmt < self firstCompiledMethodFormat ifTrue: [^ 0]. "no pointers"
+	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes:"
-	methodHeader := self longAt: oop + BaseHeaderSize.
-	^(methodHeader >> 10 bitAnd: 255) + LiteralStart * BytesPerWord
+	header := self methodHeaderOf: objOop.
+	^self lastPointerOfMethodHeader: header
 ]
 
 { #category : #'gc -- mark and sweep' }
-ObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean>"
+ObjectMemory >> lastPointerOf: objOop recordWeakRoot: recordWeakRoot [ "<Boolean>"
 	"Return the byte offset of the last pointer field of the given object.  
 	 Works with CompiledMethods, as well as ordinary objects. 
 	 Can be used even when the type bits are not correct.
 	 This is a version of lastPointerOf: for markAndTrace:."
-	| fmt sz header contextSize numLiterals |
+	| fmt sz header contextSize |
 	<inline: true>
-	header := self baseHeader: oop.
+	header := self baseHeader: objOop.
 	fmt := self formatOfHeader: header.
 	fmt <= self lastPointerFormat ifTrue:
 		[fmt >= self indexablePointersFormat ifTrue:
@@ -3336,46 +3341,58 @@ ObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean>"
 					["And remember as weak root"
 					 (weakRootCount := weakRootCount + 1) <= WeakRootTableSize ifFalse:
 						[self error: 'weakRoots table overflow'].
-					 weakRoots at: weakRootCount put: oop].
+					 weakRoots at: weakRootCount put: objOop].
 				"Do not trace the object's indexed fields if it's a weak class"
-				^(self nonWeakFieldsOf: oop) * BytesPerOop].
+				^(self nonWeakFieldsOf: objOop) * BytesPerOop].
 			"So fmt is 3"
 			(self isContextHeader: header) ifTrue:
 				["contexts end at the stack pointer avoiding having to init fields beyond it"
-				 contextSize := self fetchStackPointerOf: oop.
+				 contextSize := self fetchStackPointerOf: objOop.
 				 ^CtxtTempFrameStart + contextSize * BytesPerOop]].
-		 sz := self sizeBitsOfSafe: oop.
+		 sz := self sizeBitsOfSafe: objOop.
 		 ^sz - BaseHeaderSize  "all pointers"].
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes:"
-	numLiterals := self literalCountOf: oop.
-	^numLiterals + LiteralStart * BytesPerOop
+	header := self methodHeaderOf: objOop.
+	^self lastPointerOfMethodHeader: header
+]
+
+{ #category : #'object enumeration' }
+ObjectMemory >> lastPointerOfMethodHeader: methodHeader [ 
+	"Answer the byte offset of the last pointer field of a
+	 CompiledMethod with the given header."
+	<inline: true>
+	<asmLabel: false>
+	^(self literalCountOfMethodHeader: methodHeader)
+	  + LiteralStart - 1 * BytesPerOop + BaseHeaderSize
 ]
 
 { #category : #'gc -- compaction' }
-ObjectMemory >> lastPointerWhileForwarding: oop [ 
+ObjectMemory >> lastPointerWhileForwarding: objOop [ 
 	"The given object may have its header word in a forwarding block. Find  
 	the offset of the last pointer in the object in spite of this obstacle. "
-	| header fmt size methodHeader contextSize |
+	| header fmt size contextSize |
 	<inline: true>
-	header := self headerWhileForwardingOf: oop.
+	header := self headerWhileForwardingOf: objOop.
 	fmt := self formatOfHeader: header.
 	fmt <= self lastPointerFormat ifTrue:
 		[(fmt = self indexablePointersFormat
 		  and: [self isContextHeader: header]) ifTrue:
 			["contexts end at the stack pointer"
-			contextSize := self nacFetchStackPointerOf: oop.
-			self assert: ReceiverIndex + contextSize < (self lengthOf: oop baseHeader: header format: fmt).
+			contextSize := self nacFetchStackPointerOf: objOop.
+			self assert: ReceiverIndex + contextSize < (self lengthOf: objOop baseHeader: header format: fmt).
 			^CtxtTempFrameStart + contextSize * BytesPerWord].
 		"do sizeBitsOf: using the header we obtained"
 		(header bitAnd: TypeMask) = HeaderTypeSizeAndClass
-			ifTrue: [size := (self sizeHeader: oop) bitAnd: AllButTypeMask]
+			ifTrue: [size := (self sizeHeader: objOop) bitAnd: AllButTypeMask]
 			ifFalse: [size := header bitAnd: SizeMask].
 		^size - BaseHeaderSize].
-	fmt < self firstCompiledMethodFormat ifTrue: [^ 0]. "no pointers"
-	methodHeader := self longAt: oop + BaseHeaderSize.
-	^(self literalCountOfHeader: methodHeader) * BytesPerWord + BaseHeaderSize
+	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
+	"CompiledMethod: contains both pointers and bytes"
+	self assert: (self isCompiledMethodHeader: header).
+	header := self noCheckMethodHeaderOf: objOop.
+	^self lastPointerOfMethodHeader: header
 ]
 
 { #category : #'object access' }
@@ -3416,6 +3433,19 @@ ObjectMemory >> lengthOfMaybeImmediate: oop [
 	<inline: false>
 	(self isImmediate: oop) ifTrue: [^0].
 	^self lengthOf: oop
+]
+
+{ #category : #'method access' }
+ObjectMemory >> literalCountOf: methodPointer [
+	<api>
+	^self literalCountOfMethodHeader: (self methodHeaderOf: methodPointer)
+]
+
+{ #category : #'memory access' }
+ObjectMemory >> literalCountOfMethodHeader: header [
+	<inline: true>
+	self assert: (self isIntegerObject: header).
+	^header >> 10 bitAnd: 16rFF
 ]
 
 { #category : #'image segment in/out' }
@@ -3708,6 +3738,13 @@ ObjectMemory >> methodDictionaryHash: oop mask: mask [
 						ifFalse: [self hashBitsOf: oop])
 ]
 
+{ #category : #'method access' }
+ObjectMemory >> methodHeaderOf: methodObj [
+	"Answer the method header of a CompiledMethod object."
+	self assert: (self isCompiledMethod: methodObj).
+	^self fetchPointer: HeaderIndex ofObject: methodObj
+]
+
 { #category : #allocation }
 ObjectMemory >> minSlotsForShortening [
 	"HeaderTypeFree free chunks require 1 word of header"
@@ -3733,6 +3770,12 @@ ObjectMemory >> nilObject [
 	<api>
 	"For access from BitBlt module & Cogit"
 	^ nilObj
+]
+
+{ #category : #'method access' }
+ObjectMemory >> noCheckMethodHeaderOf: methodObj [
+	"Answer the method header of a CompiledMethod object."
+	^self fetchPointer: HeaderIndex ofObject: methodObj
 ]
 
 { #category : #'header access' }

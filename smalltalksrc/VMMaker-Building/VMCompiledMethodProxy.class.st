@@ -28,7 +28,7 @@ VMCompiledMethodProxy >> endPC [
 
 { #category : #literals }
 VMCompiledMethodProxy >> header [
-	^objectMemory integerValueOf: (coInterpreter headerOf: oop)
+	^objectMemory integerValueOf: (objectMemory methodHeaderOf: oop)
 ]
 
 { #category : #accessing }
@@ -57,7 +57,7 @@ VMCompiledMethodProxy >> numArgs [
 VMCompiledMethodProxy >> numLiterals [
 	"Answer the number of literals used by the receiver."
 	
-	^coInterpreter literalCountOf: oop
+	^objectMemory literalCountOf: oop
 ]
 
 { #category : #accessing }

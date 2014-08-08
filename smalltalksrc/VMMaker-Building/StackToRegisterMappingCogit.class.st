@@ -232,6 +232,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV3PlusClo
 	numPushNilsFunction := #v3:Num:Push:Nils:.
 	pushNilSizeFunction := #v3PushNilSize:.
 	NSSendIsPCAnnotated := true. "IsNSSendCall used by PushImplicitReceiver"
+	FirstSpecialSelector := 176.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -329,6 +330,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 	numPushNilsFunction := #v4:Num:Push:Nils:.
 	pushNilSizeFunction := #v4PushNilSize:.
 	NSSendIsPCAnnotated := false. "IsNSSendCall used by SendAbsentImplicit"
+	FirstSpecialSelector := 80.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -429,6 +431,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 
 	numPushNilsFunction := #sistaV1:Num:Push:Nils:.
 	pushNilSizeFunction := #sistaV1PushNilSize:.
+	FirstSpecialSelector := 96.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -554,6 +557,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 
 	numPushNilsFunction := #v3:Num:Push:Nils:.
 	pushNilSizeFunction := #v3PushNilSize:.
+	FirstSpecialSelector := 176.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -860,38 +864,15 @@ StackToRegisterMappingCogit >> anyReferencesToRegister: reg inTopNItems: n [
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> availableRegister [
-	| liveRegs |
-	liveRegs := self liveRegisters.
-	(liveRegs anyMask: (self registerMaskFor: Arg0Reg)) ifFalse:
-		[^Arg0Reg].
-	(liveRegs anyMask: (self registerMaskFor: Arg1Reg)) ifFalse:
-		[^Arg1Reg].
-	(liveRegs anyMask: (self registerMaskFor: ClassReg)) ifFalse:
-		[^ClassReg].
-	(liveRegs anyMask: (self registerMaskFor: ReceiverResultReg)) ifFalse:
-		[^ReceiverResultReg].
-	(liveRegs anyMask: (self registerMaskFor: SendNumArgsReg)) ifFalse:
-		[^SendNumArgsReg].
-	self error: 'no available register'.
-	^0
+	| reg |
+	reg := self availableRegisterOrNil.
+	reg ifNil: [self error: 'no available register'].
+	^reg
 ]
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> availableRegisterOrNil [
-	<returnTypeC: #sqInt>
-	| liveRegs |
-	liveRegs := self liveRegisters.
-	(liveRegs anyMask: (self registerMaskFor: Arg1Reg)) ifFalse:
-		[^Arg1Reg].
-	(liveRegs anyMask: (self registerMaskFor: Arg0Reg)) ifFalse:
-		[^Arg0Reg].
-	(liveRegs anyMask: (self registerMaskFor: SendNumArgsReg)) ifFalse:
-		[^SendNumArgsReg].
-	(liveRegs anyMask: (self registerMaskFor: ClassReg)) ifFalse:
-		[^ClassReg].
-	(liveRegs anyMask: (self registerMaskFor: ReceiverResultReg)) ifFalse:
-		[^ReceiverResultReg].
-	^nil
+	^backEnd availableRegisterOrNilFor: self liveRegisters
 ]
 
 { #category : #'simulation only' }
@@ -1375,6 +1356,49 @@ StackToRegisterMappingCogit >> fixupAt: index [
 	^self addressOf: (fixups at: index)
 ]
 
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
+	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
+	 See EncoderForSistaV1's class comment and StackInterpreter>>#inlinePrimitiveBytecode:"
+	| ra rr |
+	rr := (backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
+			[self ssAllocateRequiredReg:
+				(optStatus isReceiverResultRegLive
+					ifTrue: [Arg0Reg]
+					ifFalse: [ReceiverResultReg])].
+	ra := (backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: rr))) ifNil:
+			[self ssAllocateRequiredReg: Arg1Reg].
+	(rr = ReceiverResultReg or: [ra = ReceiverResultReg]) ifTrue:
+		[optStatus isReceiverResultRegLive: false].
+	self ssTop popToReg: ra.
+	self ssPop: 1.
+	self ssTop popToReg: rr.
+	self ssPop: 1.
+	prim caseOf: {
+		"0 through 6, +, -, *, /, //, \\, quo:, SmallInteger op SmallInteger => SmallInteger, no overflow"
+		[0]	->	[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ra.
+				 self AddR: ra R: rr].
+		[1]	->	[self SubR: ra R: rr.
+				 objectRepresentation genAddSmallIntegerTagsTo: rr].
+		[2]	->	[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: rr.
+				 objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ra.
+				 self MulR: ra R: rr.
+				 objectRepresentation genAddSmallIntegerTagsTo: rr].
+
+		"16 through 19, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
+
+		"32	through 37, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
+
+		"64	through 68, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
+
+		"80	through 84, Pointer Object>>at:put:, Byte Object>>at:put:, Short16 Word Object>>at:put: LongWord32 Object>>at:put: Quad64Word Object>>at:put:. obj op 0-rel SmallInteger => oop"
+
+	}
+	otherwise: [^EncounteredUnknownBytecode].
+	self ssPushRegister: rr.
+	^0
+]
+
 { #category : #initialization }
 StackToRegisterMappingCogit >> genCallPICEnilopmartNumArgs: numArgs [
 	"Generate special versions of the ceCallCogCodePopReceiverAndClassRegs
@@ -1404,6 +1428,28 @@ StackToRegisterMappingCogit >> genCallPICEnilopmartNumArgs: numArgs [
 	backEnd nopsFrom: endAddress to: methodZoneBase - 1.
 	self recordGeneratedRunTime: (self trampolineName: 'ceCallPIC' numArgs: numArgs) address: enilopmart.
 	^self cCoerceSimple: enilopmart to: #'void (*)(void)'
+]
+
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genCallPrimitiveBytecode [
+	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
+	 See EncoderForSistaV1's class comment and StackInterpreter>>#inlinePrimitiveBytecode:"
+	| prim |
+	byte2 < 128 ifTrue:
+		[^EncounteredUnknownBytecode].
+	prim := byte2 - 128 << 8 + byte1.
+
+	prim < 80 ifTrue:
+		[self ssTop type = SSConstant ifTrue:
+			[^self genBinaryVarOpConstInlinePrimitive: prim].
+		 (self ssValue: 1) type = SSConstant ifTrue:
+			[^self genBinaryConstOpVarInlinePrimitive: prim].
+		 ^self genBinaryVarOpVarInlinePrimitive: prim].
+
+	prim < 100 ifTrue:
+		[^self genTrinaryInlinePrimitive: prim].
+
+	^EncounteredUnknownBytecode
 ]
 
 { #category : #'primitive generators' }

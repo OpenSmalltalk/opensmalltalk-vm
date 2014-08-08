@@ -247,6 +247,7 @@ Class {
 	],
 	#classVars : [
 		'AltBlockCreationBytecodeSize',
+		'AltFirstSpecialSelector',
 		'AltNSSendIsPCAnnotated',
 		'AnnotationConstantNames',
 		'AnnotationShift',
@@ -257,6 +258,7 @@ Class {
 		'EagerInstructionDecoration',
 		'EncounteredUnknownBytecode',
 		'FirstAnnotation',
+		'FirstSpecialSelector',
 		'HasBytecodePC',
 		'InsufficientCodeSpace',
 		'IsAbsPCReference',
@@ -764,11 +766,12 @@ Cogit class >> initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid 
 	"StackToRegisterMappingCogit initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid"
 
 	| v3Table v4Table |
-	"N.B. Must do it backwards to evaluate AltBlockCreationBytecodeSize & BlockCreationBytecodeSize correctly."
+	"N.B. Must do it backwards to evaluate AltBlockCreationBytecodeSize & BlockCreationBytecodeSize et al correctly."
 	self initializeBytecodeTableForNewspeakV4.
 	v4Table := generatorTable.
 	AltBlockCreationBytecodeSize := BlockCreationBytecodeSize.
 	AltNSSendIsPCAnnotated := NSSendIsPCAnnotated.
+	AltFirstSpecialSelector := FirstSpecialSelector.
 	self initializeBytecodeTableForNewspeakV3PlusClosures.
 	v3Table := generatorTable.
 	generatorTable := CArrayAccessor on: v3Table object, v4Table object
@@ -780,10 +783,11 @@ Cogit class >> initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid [
 	"StackToRegisterMappingCogit initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid"
 
 	| v3Table v1Table |
-	"N.B. Must do it backwards to evaluate AltBlockCreationBytecodeSize & BlockCreationBytecodeSize correctly."
+	"N.B. Must do it backwards to evaluate AltBlockCreationBytecodeSize & BlockCreationBytecodeSize et al correctly."
 	self initializeBytecodeTableForSistaV1.
 	v1Table := generatorTable.
 	AltBlockCreationBytecodeSize := BlockCreationBytecodeSize.
+	AltFirstSpecialSelector := FirstSpecialSelector.
 	self initializeBytecodeTableForSqueakV3PlusClosures.
 	v3Table := generatorTable.
 	generatorTable := CArrayAccessor on: v3Table object, v1Table object
@@ -1946,7 +1950,7 @@ Cogit >> addBlockStartAt: bcpc numArgs: numArgs numCopied: numCopied span: span 
 
 { #category : #'compile abstract instructions' }
 Cogit >> addCleanBlockStarts [
-	1 to: (coInterpreter literalCountOf: methodObj) do:
+	1 to: (objectMemory literalCountOf: methodObj) do:
 		[:i| | lit |
 		lit := coInterpreter fetchPointer: i ofObject: methodObj.
 		(coInterpreter startPCOrNilOfLiteral: lit in: methodObj) ifNotNil:
@@ -4478,7 +4482,7 @@ Cogit >> fillInMethodHeader: method size: size selector: selector [
 		[methodZone addToYoungReferrers: method].
 	method cmUsageCount: self initialMethodUsageCount.
 	method cpicHasMNUCase: false.
-	method cmUsesPenultimateLit: maxLitIndex >= ((coInterpreter literalCountOfHeader: methodHeader) - 2).
+	method cmUsesPenultimateLit: maxLitIndex >= ((objectMemory literalCountOfMethodHeader: methodHeader) - 2).
 	method blockEntryOffset: (blockEntryLabel notNil
 								ifTrue: [blockEntryLabel address - method asInteger]
 								ifFalse: [0]).
@@ -6444,7 +6448,7 @@ Cogit >> lastBytecodePCForBlockAt: startbcpc in: aMethodObj [
 	"Answer the 0-relative pc of the last bytecode in the block starting at the 0-relative startbcpc in aMethodObj."
 	| methodHeader bcpc bsOffset byte descriptor |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
-	methodHeader := coInterpreter headerOf: aMethodObj.
+	methodHeader := objectMemory methodHeaderOf: aMethodObj.
 	bcpc := startbcpc - (self blockCreationBytecodeSizeForHeader: methodHeader).
 	bsOffset := self bytecodeSetOffsetForHeader: methodHeader.
 	byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
@@ -7489,14 +7493,14 @@ Cogit >> method: methodA hasSameCodeAs: methodB [
 	  flags can differ."
 	<inline: false>
 	| headerA headerB numLitsA endPCA |
-	headerA := coInterpreter headerOf: methodA.
-	headerB := coInterpreter headerOf: methodB.
-	numLitsA := coInterpreter literalCountOfHeader: headerA.
+	headerA := objectMemory methodHeaderOf: methodA.
+	headerB := objectMemory methodHeaderOf: methodB.
+	numLitsA := objectMemory literalCountOfMethodHeader: headerA.
 	endPCA := self endPCOf: methodA.
 	((coInterpreter argumentCountOfMethodHeader: headerA) ~= (coInterpreter argumentCountOfMethodHeader: headerB)
 	 or: [(coInterpreter temporaryCountOfMethodHeader: headerA) ~= (coInterpreter temporaryCountOfMethodHeader: headerB)
 	 or: [(coInterpreter primitiveIndexOfMethod: methodA header: headerA) ~= (coInterpreter primitiveIndexOfMethod: methodB header: headerB)
-	 or: [numLitsA ~= (coInterpreter literalCountOfHeader: headerB)
+	 or: [numLitsA ~= (objectMemory literalCountOfMethodHeader: headerB)
 	 or: [endPCA > (objectMemory numBytesOf: methodB)]]]]) ifTrue:
 		[^false].
 	 1 to: numLitsA - 1 do:
@@ -7517,14 +7521,14 @@ Cogit >> method: methodA hasSameCodeAs: methodB checkPenultimate: comparePenulti
 	  flags can differ."
 	<inline: false>
 	| headerA headerB numLitsA endPCA |
-	headerA := coInterpreter headerOf: methodA.
-	headerB := coInterpreter headerOf: methodB.
-	numLitsA := coInterpreter literalCountOfHeader: headerA.
+	headerA := objectMemory methodHeaderOf: methodA.
+	headerB := objectMemory methodHeaderOf: methodB.
+	numLitsA := objectMemory literalCountOfMethodHeader: headerA.
 	endPCA := self endPCOf: methodA.
 	((coInterpreter argumentCountOfMethodHeader: headerA) ~= (coInterpreter argumentCountOfMethodHeader: headerB)
 	 or: [(coInterpreter temporaryCountOfMethodHeader: headerA) ~= (coInterpreter temporaryCountOfMethodHeader: headerB)
 	 or: [(coInterpreter primitiveIndexOfMethod: methodA header: headerA) ~= (coInterpreter primitiveIndexOfMethod: methodB header: headerB)
-	 or: [numLitsA ~= (coInterpreter literalCountOfHeader: headerB)
+	 or: [numLitsA ~= (objectMemory literalCountOfMethodHeader: headerB)
 	 or: [endPCA > (objectMemory numBytesOf: methodB)]]]]) ifTrue:
 		[^false].
 	 1 to: numLitsA - 1 do:
@@ -7595,7 +7599,7 @@ Cogit >> nextBytecodePCFor: descriptor at: pc exts: nExts in: aMethodObj [
 { #category : #debugging }
 Cogit >> noAssertMethodClassAssociationOf: methodPointer [
 	^coInterpreter
-		literal: (coInterpreter literalCountOfHeader: (coInterpreter noAssertHeaderOf: methodPointer)) - 1
+		literal: (objectMemory literalCountOfMethodHeader: (coInterpreter noAssertHeaderOf: methodPointer)) - 1
 		ofMethod: methodPointer
 ]
 
@@ -8458,9 +8462,9 @@ Cogit >> scanForCleanBlocks [
 	"Answer the number of clean blocks found in the literal frame"
 	| numCleanBlocks |
 	numCleanBlocks := 0.
-	1 to: (coInterpreter literalCountOf: methodObj) do:
+	1 to: (objectMemory literalCountOf: methodObj) do:
 		[:i| | lit |
-		lit := coInterpreter fetchPointer: i ofObject: methodObj.
+		lit := objectMemory fetchPointer: i ofObject: methodObj.
 		(coInterpreter startPCOrNilOfLiteral: lit in: methodObj) ifNotNil:
 			[:startPCOrNil| numCleanBlocks := numCleanBlocks + 1]].
 	^numCleanBlocks
@@ -9173,7 +9177,7 @@ Cogit >> traceMap: annotation byte: byte at: address for: mcpc [
 			 annotation instruction printStateOn: s.
 			 s space.
 			 bytecode := objectMemory fetchByte: annotation instruction bcpc ofObject: methodObj.
-			 bytecode := bytecode + (self bytecodeSetOffsetForHeader: (coInterpreter headerOf: methodObj)).
+			 bytecode := bytecode + (self bytecodeSetOffsetForHeader: (objectMemory methodHeaderOf: methodObj)).
 			 (self generatorAt: bytecode) printStateOn: s.
 			 s cr; flush]]
 ]

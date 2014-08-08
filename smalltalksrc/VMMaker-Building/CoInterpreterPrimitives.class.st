@@ -100,7 +100,7 @@ CoInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 					ifFalse:
 						[objectMemory mark: next.
 						 (objectMemory isCompiledMethod: next)
-							ifTrue: [index := (self literalCountOf: next) + LiteralStart]
+							ifTrue: [index := (objectMemory literalCountOf: next) + LiteralStart]
 							ifFalse: [index := objectMemory lengthOf: next]].
 				 current := next]].
 		 current = objectMemory specialObjectsOop ifTrue:
@@ -362,7 +362,7 @@ CoInterpreterPrimitives >> primitiveObjectAt [
 					ifTrue: [(self cCoerceSimple: rawHeader to: #'CogMethod *') methodHeader]
 					ifFalse: [rawHeader].
 	(index > 0
-	 and: [index <= ((self literalCountOfHeader: realHeader) + LiteralStart)]) ifFalse:
+	 and: [index <= ((objectMemory literalCountOfMethodHeader: realHeader) + LiteralStart)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	self pop: 2
 		thenPush: (index = 1
@@ -385,12 +385,12 @@ CoInterpreterPrimitives >> primitiveObjectAtPut [
 					ifTrue: [(self cCoerceSimple: rawHeader to: #'CogMethod *') methodHeader]
 					ifFalse: [rawHeader].
 	(index > 0
-	 and: [index <= ((self literalCountOfHeader: realHeader) + LiteralStart)]) ifFalse:
+	 and: [index <= ((objectMemory literalCountOfMethodHeader: realHeader) + LiteralStart)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	index = 1
 		ifTrue:
 			[((objectMemory isNonIntegerObject: newValue)
-			 or: [(self literalCountOfHeader: newValue) ~= (self literalCountOfHeader: realHeader)]) ifTrue:
+			 or: [(objectMemory literalCountOfMethodHeader: newValue) ~= (objectMemory literalCountOfMethodHeader: realHeader)]) ifTrue:
 				[^self primitiveFailFor: PrimErrBadArgument].
 			 (self isCogMethodReference: rawHeader)
 				ifTrue: [(self cCoerceSimple: rawHeader to: #'CogMethod *') methodHeader: newValue]

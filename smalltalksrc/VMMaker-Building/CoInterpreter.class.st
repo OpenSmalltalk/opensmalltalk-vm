@@ -424,7 +424,14 @@ CoInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
 		nextPutAll: '#define COGVM 1'; cr;
 		nextPutAll: '#if !defined(COGMTVM)'; cr;
 		nextPutAll: '#	define COGMTVM 0'; cr;
-		nextPutAll: '#endif'; cr
+		nextPutAll: '#endif'; cr; cr.
+	"This constant is a hack for the MT VM on SqueakV3.  Eventually it will disappear.
+	 But having it here rather than in CoInterpreterMT means that the interp.h header
+	 doesn't  get regenerated every time the sources are, which means less recompilation."
+	((VMBasicConstants classPool associations select: [:a| a key beginsWith: 'DisownVM'])
+		asSortedCollection: [:a1 :a2| a1 value <= a2 value])
+		do: [:a|
+			aStream nextPutAll: '#define '; nextPutAll: a key; space; print: a value; cr]
 ]
 
 { #category : #'cog jit support' }
@@ -582,7 +589,7 @@ CoInterpreter >> activateNewClosureMethod: blockClosure numArgs: numArgs mayCont
 CoInterpreter >> activateNewMethod [
 	| methodHeader numArgs numTemps rcvr errorCode inInterpreter switched |
 
-	methodHeader := self headerOf: newMethod.
+	methodHeader := objectMemory methodHeaderOf: newMethod.
 	numTemps := self temporaryCountOfMethodHeader: methodHeader.
 	numArgs := self argumentCountOfMethodHeader: methodHeader.
 
@@ -2000,7 +2007,7 @@ CoInterpreter >> checkOkayFields: oop [
 				  and: [objectMemory isYoungObject: (objectMemory fetchClassOfNonImm: oop)].
 	(objectMemory isCompiledMethod: oop)
 		ifTrue:
-			[i := (self literalCountOf: oop) + LiteralStart - 1]
+			[i := (objectMemory literalCountOf: oop) + LiteralStart - 1]
 		ifFalse:
 			[(objectMemory isContext: oop)
 				ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop) - 1]
@@ -2437,7 +2444,7 @@ CoInterpreter >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
 	"compute the pc before converting the frame to help with debugging."
 	pc := cogit mcPCForBackwardBranch: bcpc startBcpc: startBcpc in: cogMethod.
 	self assert: pc > (cogMethod asUnsignedInteger + cogit noCheckEntryOffset).
-	self assert: bcpc = (self bytecodePCFor: pc startBcpc: startBcpc in: cogMethod).
+	self assert: bcpc = (cogit bytecodePCFor: pc startBcpc: startBcpc in: cogMethod).
 	"now convert to a machine code frame"
 	stackPages
 		longAt: framePointer + FoxMethod
@@ -3375,7 +3382,7 @@ CoInterpreter >> functionForPrimitiveExternalCall: methodObj [
 	| lit index functionPointer |
 	<var: #functionPointer declareC: #'void (*functionPointer)(void)'>
 	cogit setPostCompileHook: #recordCallOffsetIn:of:.
-	(self literalCountOf: methodObj) > 0 ifFalse:
+	(objectMemory literalCountOf: methodObj) > 0 ifFalse:
 		[^#primitiveExternalCall].
 	lit := self literal: 0 ofMethod: methodObj. 
 	"Check if it's an array of length 4"
@@ -3542,18 +3549,6 @@ CoInterpreter >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage:
 	"NOTREACHED"
 ]
 
-{ #category : #'compiled methods' }
-CoInterpreter >> headerOf: methodPointer [
-	<api>
-	| methodHeader |
-	methodHeader := self rawHeaderOf: methodPointer.
-	^(self isCogMethodReference: methodHeader)
-		ifTrue:
-			[self assert: (self cCoerceSimple: methodHeader to: #'CogMethod *') objectHeader = objectMemory nullHeaderForMachineCodeMethod.
-			(self cCoerceSimple: methodHeader to: #'CogMethod *') methodHeader]
-		ifFalse: [methodHeader]
-]
-
 { #category : #accessing }
 CoInterpreter >> heapBase [
 	^heapBase
@@ -3601,7 +3596,7 @@ CoInterpreter >> ifBackwardsCheckForEvents: offset [
 	backwardJumpCountByte := self iframeBackwardBranchByte: localFP.
 	(backwardJumpCountByte := backwardJumpCountByte - 2) = 1
 		ifTrue:
-			[(self methodWithHeaderShouldBeCogged: (self headerOf: method)) ifTrue:
+			[(self methodWithHeaderShouldBeCogged: (objectMemory methodHeaderOf: method)) ifTrue:
 				[self externalizeIPandSP.
 				 self attemptToSwitchToMachineCode: (self oopForPointer: localIP) - offset - method - BaseHeaderSize - 1
 				 "If attemptToSwitchToMachineCode: returns the method could not be cogged, hence..."].
@@ -4279,14 +4274,13 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 				put: maybeClosure]
 		ifFalse:
 			[| header |
-			 header := self headerOf: theMethod.
+			 header := objectMemory methodHeaderOf: theMethod.
 			 numArgs := self argumentCountOfMethodHeader: header.
-			 self cppIf: MULTIPLEBYTECODESETS
-				ifTrue: "If this is a synthetic context its IP could be pointing at the CallPrimitive opcode.  If so, skip it."
-					[(theIP signedIntFromLong > 0
-					  and: [(self methodHeaderHasPrimitive: header)
-					  and: [theIP = (1 + (objectMemory lastPointerOf: theMethod))]]) ifTrue:
-						[theIP := theIP + (self sizeOfCallPrimitiveBytecode: header)]].
+			 "If this is a synthetic context its IP could be pointing at the CallPrimitive opcode.  If so, skip it."
+			 (theIP signedIntFromLong > 0
+			  and: [(self methodHeaderHasPrimitive: header)
+			  and: [theIP = (1 + (objectMemory lastPointerOf: theMethod))]]) ifTrue:
+				[theIP := theIP + (self sizeOfCallPrimitiveBytecode: header)].
 			 stackPages
 				longAt: (pointer := pointer - BytesPerWord)
 				put: rcvr].
@@ -4737,7 +4731,7 @@ CoInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 				ifFalse:
 					[cogMethod := (self cCoerceSimple: cogMethod to: #'CogBlockMethod *') cmHomeMethod.
 					 closureOrNil := self frameStackedReceiver: theFP numArgs: numArgs].
-			 numSlots := (cogMethod methodHeader bitAnd: LargeContextBit) ~= 0
+			 numSlots := (self methodHeaderIndicatesLargeFrame: cogMethod methodHeader)
 							ifTrue: [LargeContextSlots]
 							ifFalse: [SmallContextSlots].
 			 methodFieldOrObj := cogMethod methodObject.
@@ -4746,7 +4740,7 @@ CoInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 		ifFalse:
 			[self setIFrameHasContext: theFP.
 			 numArgs := self iframeNumArgs: theFP.
-			 numSlots := ((self headerOf: methodFieldOrObj) bitAnd: LargeContextBit) ~= 0
+			 numSlots := (self methodHeaderIndicatesLargeFrame: (objectMemory methodHeaderOf: methodFieldOrObj))
 							ifTrue: [LargeContextSlots]
 							ifFalse: [SmallContextSlots].
 			 closureOrNil := (self iframeIsBlockActivation: theFP)
@@ -4868,13 +4862,13 @@ CoInterpreter >> methodHasCogMethod: aMethodOop [
 { #category : #'cog jit support' }
 CoInterpreter >> methodNeedsLargeContext: methodObj [
 	<api>
-	^(self headerOf: methodObj) anyMask: LargeContextBit
+	^self methodHeaderIndicatesLargeFrame: (objectMemory methodHeaderOf: methodObj)
 ]
 
 { #category : #'compiled methods' }
 CoInterpreter >> methodShouldBeCogged: aMethodObj [
 	<api>
-	(self methodWithHeaderShouldBeCogged: (self headerOf: aMethodObj)) ifTrue:
+	(self methodWithHeaderShouldBeCogged: (objectMemory methodHeaderOf: aMethodObj)) ifTrue:
 		[^true].
 	self maybeFlagMethodAsInterpreted: aMethodObj.
 	^false
@@ -4899,7 +4893,7 @@ CoInterpreter >> methodWithHeaderShouldBeCogged: methodHeader [
 				50->2 51->1 53->1 55->1 56->1
 				87->1 108->1 171->1)
 	 literalCountOfHeader: does not include the header word."
-	^(self literalCountOfHeader: methodHeader) <= maxLiteralCountForCompile
+	^(objectMemory literalCountOfMethodHeader: methodHeader) <= maxLiteralCountForCompile
 ]
 
 { #category : #'frame access' }
@@ -5120,12 +5114,11 @@ CoInterpreter >> mustMapMachineCodePC: theIP context: aOnceMarriedContext [
 	cogMethod := self ensureMethodIsCogged: methodObj.
 	bcpc := self bytecodePCFor: theIP cogMethod: cogMethod startBcpc: startBcpc.
 	self assert: bcpc >= (self startPCOfMethod: methodObj).
-	self cppIf: MULTIPLEBYTECODESETS
-		ifTrue: "If there's a CallPrimitive we need to skip it."
-			[(bcpc = startBcpc
-			 and: [maybeClosure = objectMemory nilObject
-			 and: [self methodHeaderHasPrimitive: cogMethod methodHeader]]) ifTrue:
-				[bcpc := bcpc + (self sizeOfCallPrimitiveBytecode: cogMethod methodHeader)]].
+	"If there's a CallPrimitive we need to skip it."
+	(bcpc = startBcpc
+	 and: [maybeClosure = objectMemory nilObject
+	 and: [self methodHeaderHasPrimitive: cogMethod methodHeader]]) ifTrue:
+		[bcpc := bcpc + (self sizeOfCallPrimitiveBytecode: cogMethod methodHeader)].
 	^objectMemory integerObjectOf: bcpc + 1
 ]
 
@@ -6160,8 +6153,8 @@ CoInterpreter >> roomToPushNArgs: n [
 			[| methodHeader cntxSize |
 			(self isMachineCodeFrame: framePointer)
 				ifTrue: [methodHeader := (self mframeHomeMethod: framePointer) methodHeader]
-				ifFalse: [methodHeader := self headerOf: (self iframeMethod: framePointer)].
-			cntxSize := (methodHeader bitAnd: LargeContextBit) ~= 0
+				ifFalse: [methodHeader := objectMemory methodHeaderOf: (self iframeMethod: framePointer)].
+			cntxSize := (self methodHeaderIndicatesLargeFrame: methodHeader)
 							ifTrue: [LargeContextSlots - CtxtTempFrameStart]
 							ifFalse: [SmallContextSlots - CtxtTempFrameStart].
 			^self stackPointerIndex + n <= cntxSize]
@@ -6414,7 +6407,7 @@ CoInterpreter >> startPCOfClosure: aBlockClosure [
 CoInterpreter >> startPCOfMethodHeader: aCompiledMethodHeader [
 	<api>
 	"Zero-relative version of CompiledMethod>>startpc."
-	^(self literalCountOfHeader: aCompiledMethodHeader) + LiteralStart * objectMemory bytesPerOop
+	^(objectMemory literalCountOfMethodHeader: aCompiledMethodHeader) + LiteralStart * objectMemory bytesPerOop
 ]
 
 { #category : #'cog jit support' }

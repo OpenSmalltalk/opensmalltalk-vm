@@ -24,7 +24,8 @@ StackDepthFinder >> blockReturnTop [
 
 { #category : #'instruction decoding' }
 StackDepthFinder >> callPrimitive: primitiveIndex [
-	"Call Primitive bytecode.  Effectively a no-op."
+	"Call Primitive bytecode."
+	self drop: (encoderClass stackDeltaForPrimitive: primitiveIndex in: self method) negated
 ]
 
 { #category : #accessing }
