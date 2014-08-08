@@ -510,6 +510,11 @@ CurrentImageCoInterpreterFacade >> literalCountOf: anOop [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> literalCountOfMethodHeader: headerIntegerOop [
+	^objectMemory literalCountOfMethodHeader: headerIntegerOop
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> long32At: index put: value [
 	^memory longAt: index + 1 put: value bigEndian: false
 ]
@@ -562,6 +567,11 @@ CurrentImageCoInterpreterFacade >> methodCacheAddress [
 { #category : #testing }
 CurrentImageCoInterpreterFacade >> methodHasCogMethod: aCompiledMethod [ 
 	^false
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> methodHeaderOf: oop [
+	^(self objectForOop: oop) header
 ]
 
 { #category : #accessing }

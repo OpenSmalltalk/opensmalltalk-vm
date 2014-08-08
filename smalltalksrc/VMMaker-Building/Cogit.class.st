@@ -3488,7 +3488,7 @@ Cogit >> cogMethodOrBlockSurrogateAt: address [
 { #category : #'simulation only' }
 Cogit >> cogMethodSurrogateAt: address [
 	<doNotGenerate>
-	self assert: (address bitAnd: BytesPerWord - 1) = 0.
+	self assert: (address < 0 or: [(address bitAnd: BytesPerWord - 1) = 0]).
 	^cogMethodSurrogateClass new
 		at: address
 		objectMemory: objectMemory
