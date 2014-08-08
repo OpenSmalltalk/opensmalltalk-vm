@@ -191,7 +191,7 @@ StackInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 					ifFalse:
 						[objectMemory mark: next.
 						 (objectMemory isCompiledMethod: next)
-							ifTrue: [index := (self literalCountOf: next) + LiteralStart]
+							ifTrue: [index := (objectMemory literalCountOf: next) + LiteralStart]
 							ifFalse: [index := objectMemory lengthOf: next]].
 				 current := next]].
 		 current = objectMemory specialObjectsOop ifTrue:
@@ -427,8 +427,8 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 	(self roomToPushNArgs: arraySize) ifFalse:
 		[^self primitiveFailFor: -2]. "invalid args"
 
-	methodHeader := self headerOf: methodArg.
-	(self literalCountOfHeader: methodHeader) > 2 ifFalse:
+	methodHeader := objectMemory methodHeaderOf: methodArg.
+	(objectMemory literalCountOfMethodHeader: methodHeader) > 2 ifFalse:
 		[^self primitiveFailFor: -3]. "invalid methodArg state"
 	spec := objectMemory fetchPointer: 1 "first literal" ofObject: methodArg.
 	isArray := self isInstanceOfClassArray: spec.
@@ -608,7 +608,7 @@ StackInterpreterPrimitives >> primitiveExternalCall [
 	<var: #addr declareC: 'void (*addr)()'>
 	
 	"Fetch the first literal of the method"
-	(self literalCountOf: newMethod) > 0 ifFalse:
+	(objectMemory literalCountOf: newMethod) > 0 ifFalse:
 		[^self primitiveFailFor: PrimErrBadMethod].
 
 	lit := self literal: 0 ofMethod: newMethod. 
@@ -917,8 +917,7 @@ StackInterpreterPrimitives >> primitiveMakeEphemeron [
 { #category : #'object access primitives' }
 StackInterpreterPrimitives >> primitiveObjectPointsTo [
 	"This primitive is assumed to be fast (see e.g. MethodDictionary>>includesKey:) so make it so.
-	 N.B.  Written to use literalHeaderOf: so that in Cog subclasses cogged methods (whose headers
-	 point to the machine code method) are still correctly scanned, for the header as well as literals."
+	 N.B.  Works forrectly for cogged methods too."
 	| rcvr thang header fmt numSlots methodHeader |
 	thang := self stackTop.
 	rcvr := self stackValue: 1.
@@ -948,9 +947,9 @@ StackInterpreterPrimitives >> primitiveObjectPointsTo [
 			[fmt < objectMemory firstCompiledMethodFormat "no pointers" ifTrue:
 				[^self pop: 2 thenPushBool: false].
 			"CompiledMethod: contains both pointers and bytes:"
-			methodHeader := self headerOf: rcvr.
+			methodHeader := objectMemory methodHeaderOf: rcvr.
 			methodHeader = thang ifTrue: [^self pop: 2 thenPushBool: true].
-			numSlots := (self literalCountOfHeader: methodHeader) + 1].
+			numSlots := (objectMemory literalCountOfMethodHeader: methodHeader) + LiteralStart].
 
 	self assert: numSlots - 1 * BytesPerOop + objectMemory baseHeaderSize = (objectMemory lastPointerOf: rcvr).
 	objectMemory baseHeaderSize

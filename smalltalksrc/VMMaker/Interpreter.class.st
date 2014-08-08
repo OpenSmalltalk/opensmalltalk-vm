@@ -1059,7 +1059,7 @@ Interpreter >> activateNewClosureMethod: blockClosure [
 	DoAssertionChecks ifTrue:
 		[self okayOop: outerContext].
 	closureMethod := self fetchPointer: MethodIndex ofObject: outerContext.
-	methodHeader := self headerOf: closureMethod.
+	methodHeader := self methodHeaderOf: closureMethod.
 	self pushRemappableOop: blockClosure.
 	newContext := self allocateOrRecycleContext: (methodHeader bitAnd: LargeContextBit). "All for one, and one for all!"
 
@@ -1106,10 +1106,10 @@ Interpreter >> activateNewClosureMethod: blockClosure [
 Interpreter >> activateNewMethod [
 	| newContext methodHeader initialIP tempCount nilOop where |
 
-	methodHeader := self headerOf: newMethod.
+	methodHeader := self methodHeaderOf: newMethod.
 	newContext := self allocateOrRecycleContext: (methodHeader bitAnd: LargeContextBit).
 
-	initialIP := ((LiteralStart + (self literalCountOfHeader: methodHeader)) * BytesPerWord) + 1.
+	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * BytesPerWord) + 1.
 	tempCount := (methodHeader >> 19) bitAnd: 16r3F.
 
 	"Assume: newContext will be recorded as a root if necessary by the
@@ -1269,7 +1269,7 @@ Interpreter >> areIntegers: oop1 and: oop2 [
 
 { #category : #'compiled methods' }
 Interpreter >> argumentCountOf: methodPointer [
-	^ ((self headerOf: methodPointer) >> 25) bitAnd: 16r0F
+	^((self methodHeaderOf: methodPointer) >> 25) bitAnd: 16r0F
 ]
 
 { #category : #contexts }
@@ -3270,11 +3270,6 @@ Interpreter >> getThisSessionID [
 	^globalSessionID
 ]
 
-{ #category : #'compiled methods' }
-Interpreter >> headerOf: methodPointer [
-	^self fetchPointer: HeaderIndex ofObject: methodPointer
-]
-
 { #category : #'image save/restore' }
 Interpreter >> imageFormatCompatibilityVersion [
 	"This VM is backward-compatible with the immediately preceeding non-closure version."
@@ -3433,7 +3428,7 @@ Interpreter >> internalActivateNewMethod [
 	| methodHeader newContext tempCount argCount2 needsLarge where |
 	<inline: true>
 
-	methodHeader := self headerOf: newMethod.
+	methodHeader := self methodHeaderOf: newMethod.
 	needsLarge := methodHeader bitAnd: LargeContextBit.
 	(needsLarge = 0 and: [freeContexts ~= NilContext])
 		ifTrue: [newContext := freeContexts.
@@ -3449,7 +3444,7 @@ Interpreter >> internalActivateNewMethod [
 	where :=   newContext + BaseHeaderSize.
 	self longAt: where + (SenderIndex << ShiftForWord) put: activeContext.
 	self longAt: where + (InstructionPointerIndex << ShiftForWord)
-		put: (self integerObjectOf: (((LiteralStart + (self literalCountOfHeader: methodHeader)) * BytesPerWord) + 1)).
+		put: (self integerObjectOf: (((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * BytesPerWord) + 1)).
 	self longAt: where + (StackPointerIndex << ShiftForWord) put: (self integerObjectOf: tempCount).
 	self longAt: where + (MethodIndex << ShiftForWord) put: newMethod.
 	self longAt: where + (ClosureIndex << ShiftForWord) put: nilObj.
@@ -3859,14 +3854,14 @@ Interpreter >> justActivateNewMethod [
 	| methodHeader initialIP newContext tempCount needsLarge where |
 	<inline: true>
 
-	methodHeader := self headerOf: newMethod.
+	methodHeader := self methodHeaderOf: newMethod.
 	needsLarge := methodHeader bitAnd: LargeContextBit.
 	(needsLarge = 0 and: [freeContexts ~= NilContext])
 		ifTrue: [newContext := freeContexts.
 				freeContexts := self fetchPointer: 0 ofObject: newContext]
 		ifFalse: ["Slower call for large contexts or empty free list"
 				newContext := self allocateOrRecycleContext: needsLarge].
-	initialIP := ((LiteralStart + (self literalCountOfHeader: methodHeader)) * BytesPerWord) + 1.
+	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * BytesPerWord) + 1.
 	tempCount := (methodHeader >> 19) bitAnd: 16r3F.
 
 	"Assume: newContext will be recorded as a root if necessary by the
@@ -3902,16 +3897,6 @@ Interpreter >> literal: offset ofMethod: methodPointer [
 
 	^ self fetchPointer: offset + LiteralStart ofObject: methodPointer
 
-]
-
-{ #category : #'compiled methods' }
-Interpreter >> literalCountOf: methodPointer [
-	^self literalCountOfHeader: (self headerOf: methodPointer)
-]
-
-{ #category : #'compiled methods' }
-Interpreter >> literalCountOfHeader: headerPointer [
-	^ (headerPointer >> 10) bitAnd: 16rFF
 ]
 
 { #category : #'bitblt support' }
@@ -6200,10 +6185,9 @@ Interpreter >> primitiveIndexOf: methodPointer [
 	for temporary backward compatibility.  The time to unpack is negligible,
 	since the reconstituted full index is stored in the method cache."
 	| primBits |
-	primBits := ((self headerOf: methodPointer) >> 1) bitAnd: 16r100001FF.
+	primBits := ((self methodHeaderOf: methodPointer) >> 1) bitAnd: 16r100001FF.
 	
-	^ (primBits bitAnd: 16r1FF) + (primBits >> 19)
-
+	^(primBits bitAnd: 16r1FF) + (primBits >> 19)
 ]
 
 { #category : #'I/O primitives' }
@@ -6876,10 +6860,10 @@ Interpreter >> primitiveNewMethod [
 	successFlag ifFalse:
 		[self unPop: 2. ^nil].
 	class := self popStack.
-	size := (self literalCountOfHeader: header) + 1 * BytesPerWord + bytecodeCount.
+	size := (self literalCountOfMethodHeader: header) + 1 * BytesPerWord + bytecodeCount.
 	theMethod := self instantiateClass: class indexableSize: size.
 	self storePointerUnchecked: HeaderIndex ofObject: theMethod withValue: header.
-	literalCount := self literalCountOfHeader: header.
+	literalCount := self literalCountOfMethodHeader: header.
 	1 to: literalCount do:
 		[:i | self storePointer: i ofObject: theMethod withValue: nilObj].
 	self push: theMethod
@@ -9981,7 +9965,7 @@ Interpreter >> synchronousSignal: aSemaphore [
 
 { #category : #'compiled methods' }
 Interpreter >> tempCountOf: methodPointer [
-	^ ((self headerOf: methodPointer) >> 19) bitAnd: 16r3F
+	^((self methodHeaderOf: methodPointer) >> 19) bitAnd: 16r3F
 ]
 
 { #category : #contexts }

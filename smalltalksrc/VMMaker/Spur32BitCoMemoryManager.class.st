@@ -171,6 +171,24 @@ Spur32BitCoMemoryManager >> isReallyYoungObject: objOop [
 	  and: [self oop: objOop isGreaterThanOrEqualTo: newSpaceStart]
 ]
 
+{ #category : #'growing/shrinking memory' }
+Spur32BitCoMemoryManager >> methodHeaderOf: methodObj [
+	"Answer the method header of a CompiledMethod object.
+	 If the method has been cogged then the header is a pointer to
+	 the CogMethod and the real header will be stored in the CogMethod."
+	<inline: true>
+	| header |
+	self assert: (self isCompiledMethod: methodObj).
+	header := self fetchPointer: HeaderIndex ofObject: methodObj.
+	^(self isIntegerObject: header)
+		ifTrue: [header]
+		ifFalse:
+			[self assert: header asUnsignedInteger < newSpaceStart.
+			 self assert: (self cCoerceSimple: header to: #'CogMethod *') objectHeader
+						= self nullHeaderForMachineCodeMethod..
+			(self cCoerceSimple: header to: #'CogMethod *') methodHeader]
+]
+
 { #category : #'garbage collection' }
 Spur32BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 	<api>
@@ -196,7 +214,7 @@ Spur32BitCoMemoryManager >> scavengeThresholdAddress [
 
 { #category : #'cog jit support' }
 Spur32BitCoMemoryManager >> smallIntegerTag [
-	"Beware, SmallInetger tags are 1 or 3.  But SmallInteger's identityHash is 1."
+	"Beware, SmallInteger tags are 1 or 3.  But SmallInteger's identityHash is 1."
 	<api>
 	^1
 ]

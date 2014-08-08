@@ -2492,8 +2492,8 @@ InterpreterPrimitives >> primitiveNewMethod [
 	self success: (objectMemory isIntegerObject: header).
 	self successful ifFalse: [^nil].
 	class := self stackValue: 2.
-	literalCount := self literalCountOfHeader: header.
-	size := literalCount + 1 * BytesPerWord + bytecodeCount.
+	literalCount := objectMemory literalCountOfMethodHeader: header.
+	size := literalCount + LiteralStart * BytesPerOop + bytecodeCount.
 	theMethod := objectMemory instantiateClass: class indexableSize: size.
 	objectMemory storePointerUnchecked: HeaderIndex ofObject: theMethod withValue: header.
 	1 to: literalCount do:
@@ -2608,7 +2608,7 @@ InterpreterPrimitives >> primitiveObjectAt [
 	self successful ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	thisReceiver := self stackValue: 1.
-	(index > 0 and: [index <= ((self literalCountOf: thisReceiver) + LiteralStart)]) ifFalse:
+	(index > 0 and: [index <= ((objectMemory literalCountOf: thisReceiver) + LiteralStart)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	self pop: 2 thenPush: (objectMemory fetchPointer: index - 1 ofObject: thisReceiver)
 ]
@@ -2624,7 +2624,7 @@ InterpreterPrimitives >> primitiveObjectAtPut [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	thisReceiver := self stackValue: 2.
-	(index > 0 and: [index <= ((self literalCountOf: thisReceiver) + LiteralStart)]) ifFalse:
+	(index > 0 and: [index <= ((objectMemory literalCountOf: thisReceiver) + LiteralStart)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	objectMemory storePointer: index - 1 ofObject: thisReceiver withValue: newValue.
 	self pop: 3 thenPush: newValue

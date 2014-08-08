@@ -654,7 +654,7 @@ VMClass >> cppIf: conditionBlockOrSymbolValue ifTrue: trueExpressionOrBlock ifFa
 { #category : #'simulation support' }
 VMClass >> deny: aBooleanOrBlock [
 	<doNotGenerate>
-	self assert: aBooleanOrBlock value not
+	aBooleanOrBlock value ifTrue: [AssertionFailure signal: 'Assertion failed']
 ]
 
 { #category : #'simulation support' }

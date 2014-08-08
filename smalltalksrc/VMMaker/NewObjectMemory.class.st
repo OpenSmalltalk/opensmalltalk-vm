@@ -1656,42 +1656,42 @@ NewObjectMemory >> isYoungObject: obj [
 ]
 
 { #category : #'object enumeration' }
-NewObjectMemory >> lastPointerOf: oop [ 
+NewObjectMemory >> lastPointerOf: objOop [ 
 	"Return the byte offset of the last pointer field of the given object.  
 	 Can be used even when the type bits are not correct.
 	 Works with CompiledMethods, as well as ordinary objects."
 	<api>
 	<inline: true>
 	<asmLabel: false>
-	| fmt header contextSize numLiterals |
-	header := self baseHeader: oop.
+	| fmt header contextSize |
+	header := self baseHeader: objOop.
 	fmt := self formatOfHeader: header.
 	fmt <= self lastPointerFormat ifTrue:
 		[(fmt = self indexablePointersFormat
 		  and: [self isContextHeader: header]) ifTrue:
 			["contexts end at the stack pointer"
-			contextSize := coInterpreter fetchStackPointerOf: oop.
+			contextSize := coInterpreter fetchStackPointerOf: objOop.
 			^CtxtTempFrameStart + contextSize * BytesPerOop].
-		^(self sizeBitsOfSafe: oop) - BaseHeaderSize  "all pointers"].
+		^(self sizeBitsOfSafe: objOop) - BaseHeaderSize  "all pointers"].
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
-	numLiterals := coInterpreter literalCountOf: oop.
-	^numLiterals + LiteralStart * BytesPerOop
+	header := self methodHeaderOf: objOop.
+	^self lastPointerOfMethodHeader: header
 ]
 
 { #category : #'object enumeration' }
-NewObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean>"
+NewObjectMemory >> lastPointerOf: objOop recordWeakRoot: recordWeakRoot [ "<Boolean>"
 	"Return the byte offset of the last pointer field of the given object.  
 	 Works with CompiledMethods, as well as ordinary objects. 
 	 Can be used even when the type bits are not correct.
 	 This is a version of lastPointerOf: for markAndTrace:.
 	 Already overridden to trace stack pages for the StackInterpreter.
 	 Override to ask coInterpreter to determine literalCount of methods."
-	| fmt sz header contextSize numFields |
+	| fmt sz header contextSize numOops |
 	<inline: true>
 	<asmLabel: false>
-	header := self baseHeader: oop.
+	header := self baseHeader: objOop.
 	fmt := self formatOfHeader: header.
 	fmt <= self lastPointerFormat ifTrue:
 		[fmt >= self indexablePointersFormat ifTrue:
@@ -1700,51 +1700,63 @@ NewObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean
 					["And remember as weak root"
 					 (weakRootCount := weakRootCount + 1) <= WeakRootTableSize ifFalse:
 						[self error: 'weakRoots table overflow'].
-					 weakRoots at: weakRootCount put: oop].
+					 weakRoots at: weakRootCount put: objOop].
 				"Do not trace the object's indexed fields if it's a weak class"
-				numFields := self nonWeakFieldsOf: oop. "so nonWeakFieldsOf: may be inlined"
-				^numFields * BytesPerWord].
+				numOops := self nonWeakFieldsOf: objOop. "so nonWeakFieldsOf: may be inlined"
+				^numOops * BytesPerWord].
 			"So fmt is 3"
 			(self isContextHeader: header) ifTrue:
-				[coInterpreter setTraceFlagOnContextsFramesPageIfNeeded: oop.
+				[coInterpreter setTraceFlagOnContextsFramesPageIfNeeded: objOop.
 				 "contexts end at the stack pointer avoiding having to init fields beyond it"
-				 contextSize := coInterpreter fetchStackPointerOf: oop.
-				 self assert: ReceiverIndex + contextSize < (self lengthOf: oop baseHeader: header format: fmt).
+				 contextSize := coInterpreter fetchStackPointerOf: objOop.
+				 self assert: ReceiverIndex + contextSize < (self lengthOf: objOop baseHeader: header format: fmt).
 				 ^CtxtTempFrameStart + contextSize * BytesPerOop]].
-		 sz := self sizeBitsOfSafe: oop.
+		 sz := self sizeBitsOfSafe: objOop.
 		 ^sz - BaseHeaderSize  "all pointers" ].
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
-	numFields := coInterpreter literalCountOf: oop. "so literalCountOf: may be inlined"
-	^numFields + LiteralStart * BytesPerOop
+	header := self methodHeaderOf: objOop.
+	^self lastPointerOfMethodHeader: header
+]
+
+{ #category : #'object enumeration' }
+NewObjectMemory >> lastPointerOfMethodHeader: methodHeader [ 
+	"Answer the byte offset of the last pointer field of a
+	 CompiledMethod with the given header.  Use a temp to
+	 allow inlining given MULTIPLEBYTECODESETS complications."
+	<inline: true>
+	<asmLabel: false>
+	| numLiterals |
+	numLiterals := self literalCountOfMethodHeader: methodHeader.
+	^numLiterals + LiteralStart - 1 * BytesPerOop + BaseHeaderSize
 ]
 
 { #category : #'gc -- compaction' }
-NewObjectMemory >> lastPointerWhileForwarding: oop [ 
+NewObjectMemory >> lastPointerWhileForwarding: objOop [ 
 	"The given object may have its header word in a forwarding block. Find  
 	 the offset of the last pointer in the object in spite of this obstacle."
-	| header fmt size contextSize numLiterals |
+	| header fmt size contextSize |
 	<inline: true>
-	header := self headerWhileForwardingOf: oop.
+	header := self headerWhileForwardingOf: objOop.
 	fmt := self formatOfHeader: header.
 	fmt <= self lastPointerFormat ifTrue:
 		[(fmt = self indexablePointersFormat
 		  and: [self isContextHeader: header]) ifTrue:
 			["contexts end at the stack pointer"
-			 contextSize := coInterpreter nacFetchStackPointerOf: oop.
-			 self assert: ReceiverIndex + contextSize < (self lengthOf: oop baseHeader: header format: fmt).
+			 contextSize := coInterpreter nacFetchStackPointerOf: objOop.
+			 self assert: ReceiverIndex + contextSize < (self lengthOf: objOop baseHeader: header format: fmt).
 			 ^CtxtTempFrameStart + contextSize * BytesPerOop].
 		 "do sizeBitsOf: using the header we obtained"
 		 size := (header bitAnd: TypeMask) = HeaderTypeSizeAndClass
-					ifTrue: [(self sizeHeader: oop) bitAnd: AllButTypeMask]
+					ifTrue: [(self sizeHeader: objOop) bitAnd: AllButTypeMask]
 					ifFalse: [header bitAnd: SizeMask].
 		 ^size - BaseHeaderSize].
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 	"CompiledMethod: contains both pointers and bytes"
-	self assert: (header bitAnd: MarkBit) = 0.
-	numLiterals := coInterpreter literalCountOf: oop.
-	^numLiterals + LiteralStart * BytesPerOop
+	self assert: (self isCompiledMethodHeader: header).
+	header := self noCheckMethodHeaderOf: objOop.
+	^self lastPointerOfMethodHeader: header
 ]
 
 { #category : #'debug support' }
@@ -1769,6 +1781,15 @@ NewObjectMemory >> leakCheckIncrementalGC [
 NewObjectMemory >> leakCheckNewSpaceGC [
 	<api>
 	^(checkForLeaks bitAnd: 2) ~= 0
+]
+
+{ #category : #'memory access' }
+NewObjectMemory >> literalCountOfMethodHeader: header [
+	<inline: true>
+	self assert: (self isIntegerObject: header).
+	^(coInterpreter headerIndicatesAlternateBytecodeSet: header)
+		ifTrue: [coInterpreter literalCountOfAlternateHeader: header]
+		ifFalse: [coInterpreter literalCountOfOriginalHeader: header]
 ]
 
 { #category : #'image segment in/out' }
