@@ -184,9 +184,9 @@ Spur32BitCoMemoryManager >> methodHeaderOf: methodObj [
 		ifTrue: [header]
 		ifFalse:
 			[self assert: header asUnsignedInteger < newSpaceStart.
-			 self assert: (self cCoerceSimple: header to: #'CogMethod *') objectHeader
+			 self assert: (coInterpreter cCoerceSimple: header to: #'CogMethod *') objectHeader
 						= self nullHeaderForMachineCodeMethod..
-			(self cCoerceSimple: header to: #'CogMethod *') methodHeader]
+			(coInterpreter cCoerceSimple: header to: #'CogMethod *') methodHeader]
 ]
 
 { #category : #'garbage collection' }
