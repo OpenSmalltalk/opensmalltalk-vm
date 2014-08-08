@@ -204,11 +204,6 @@ NewObjectMemorySimulator >> isFloatObject: oop [
 	^coInterpreter isFloatObject: oop
 ]
 
-{ #category : #'simulation only' }
-NewObjectMemorySimulator >> literalCountOf: anObj [
-	^coInterpreter literalCountOf: anObj
-]
-
 { #category : #'memory access' }
 NewObjectMemorySimulator >> long32At: byteAddress [
 	"Return the 32-bit word at byteAddress which must be 0 mod 4."

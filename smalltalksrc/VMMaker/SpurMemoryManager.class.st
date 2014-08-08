@@ -6470,7 +6470,7 @@ SpurMemoryManager >> lastPointerOf: objOop [
 	<api>
 	<inline: true>
 	<asmLabel: false>
-	| fmt contextSize numLiterals |
+	| fmt contextSize header |
 	fmt := self formatOf: objOop.
 	self assert: fmt ~= self forwardedFormat.
 	fmt <= self lastPointerFormat ifTrue:
@@ -6483,8 +6483,18 @@ SpurMemoryManager >> lastPointerOf: objOop [
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
-	numLiterals := coInterpreter literalCountOf: objOop.
-	^numLiterals + LiteralStart - 1 * BytesPerOop + self baseHeaderSize
+	header := self methodHeaderOf: objOop.
+	^self lastPointerOfMethodHeader: header
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> lastPointerOfMethodHeader: methodHeader [ 
+	"Answer the byte offset of the last pointer field of a
+	 CompiledMethod with the given header."
+	<inline: true>
+	<asmLabel: false>
+	^(self literalCountOfMethodHeader: methodHeader)
+	  + LiteralStart - 1 * BytesPerOop + self baseHeaderSize
 ]
 
 { #category : #snapshot }
@@ -6498,16 +6508,16 @@ SpurMemoryManager >> lastPointerOfWhileSwizzling: objOop [
 	<api>
 	<inline: true>
 	<asmLabel: false>
-	| fmt numLiterals |
+	| fmt header |
 	fmt := self formatOf: objOop.
 	self assert: fmt ~= self forwardedFormat.
 	fmt <= self lastPointerFormat ifTrue:
-		[^(self numSlotsOf: objOop) - 1 * BytesPerOop + self baseHeaderSize  "all pointers"].
+		[^(self numSlotsOf: objOop) - 1 * self bytesPerOop + self baseHeaderSize  "all pointers"].
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
-	numLiterals := coInterpreter literalCountOf: objOop.
-	^numLiterals + LiteralStart - 1 * BytesPerOop + self baseHeaderSize
+	header := self methodHeaderOf: objOop.
+	^self lastPointerOfMethodHeader: header
 ]
 
 { #category : #'debug support' }
@@ -6583,6 +6593,19 @@ SpurMemoryManager >> lengthOfMaybeImmediate: oop [
 	^self lengthOf: oop
 ]
 
+{ #category : #'method access' }
+SpurMemoryManager >> literalCountOf: methodPointer [
+	<api>
+	^self literalCountOfMethodHeader: (self methodHeaderOf: methodPointer)
+]
+
+{ #category : #'method access' }
+SpurMemoryManager >> literalCountOfMethodHeader: header [
+	<inline: true>
+	self assert: (self isIntegerObject: header).
+	^(self integerValueOf: header) bitAnd: 16rFFFF
+]
+
 { #category : #'primitive support' }
 SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray [
 	"This primitive is called from Squeak as...
@@ -6625,7 +6648,7 @@ SpurMemoryManager >> longPrintReferencesTo: anOop [
 		((self isPointersNonImm: obj) or: [self isCompiledMethod: obj]) ifTrue:
 			[(self isCompiledMethod: obj)
 				ifTrue:
-					[i := (coInterpreter literalCountOf: obj) + LiteralStart]
+					[i := (self literalCountOf: obj) + LiteralStart]
 				ifFalse:
 					[(self isContextNonImm: obj)
 						ifTrue: [i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: obj)]
@@ -7115,6 +7138,13 @@ SpurMemoryManager >> methodArgumentCount [
 	^coInterpreter methodArgumentCount
 ]
 
+{ #category : #'memory access' }
+SpurMemoryManager >> methodHeaderOf: methodObj [
+	"Answer the method header of a CompiledMethod object."
+	self assert: (self isCompiledMethod: methodObj).
+	^self fetchPointer: HeaderIndex ofObject: methodObj
+]
+
 { #category : #'simulation only' }
 SpurMemoryManager >> methodReturnValue: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -7542,7 +7572,7 @@ SpurMemoryManager >> numPointerSlotsOf: objOop [
 	<api>
 	<inline: true>
 	<asmLabel: false>
-	| fmt contextSize numLiterals |
+	| fmt contextSize numLiterals header |
 	fmt := self formatOf: objOop.
 	fmt <= self lastPointerFormat ifTrue:
 		[(fmt = self indexablePointersFormat
@@ -7555,7 +7585,8 @@ SpurMemoryManager >> numPointerSlotsOf: objOop [
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
-	numLiterals := coInterpreter literalCountOf: objOop.
+	header := self methodHeaderOf: objOop.
+	numLiterals := self literalCountOfMethodHeader: header.
 	^numLiterals + LiteralStart
 ]
 
@@ -7622,7 +7653,7 @@ SpurMemoryManager >> numStrongSlotsOf: objOop format: fmt ephemeronInactiveIf: c
 	<var: 'criterion' declareC: 'int (*criterion)(sqInt key)'>
 	<inline: true>
 	<asmLabel: false>
-	| numSlots  contextSize numLiterals |
+	| numSlots  contextSize numLiterals header |
 	fmt <= self lastPointerFormat ifTrue:
 		[numSlots := self numSlotsOf: objOop.
 		 fmt <= self arrayFormat ifTrue:
@@ -7644,7 +7675,8 @@ SpurMemoryManager >> numStrongSlotsOf: objOop format: fmt ephemeronInactiveIf: c
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
-	numLiterals := coInterpreter literalCountOf: objOop.
+	header := self methodHeaderOf: objOop.
+	numLiterals := self literalCountOfMethodHeader: header.
 	^numLiterals + LiteralStart
 ]
 
@@ -7655,7 +7687,7 @@ SpurMemoryManager >> numStrongSlotsOfInephemeral: objOop [
 	 Works with CompiledMethods, as well as ordinary objects."
 	<inline: true>
 	<asmLabel: false>
-	| fmt numSlots  contextSize numLiterals |
+	| fmt numSlots  contextSize numLiterals header |
 	fmt := self formatOf: objOop.
 	self assert: (fmt ~= self ephemeronFormat or: [self isMarked: (self keyOfEphemeron: objOop)]).
 	fmt <= self lastPointerFormat ifTrue:
@@ -7675,7 +7707,8 @@ SpurMemoryManager >> numStrongSlotsOfInephemeral: objOop [
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
-	numLiterals := coInterpreter literalCountOf: objOop.
+	header := self methodHeaderOf: objOop.
+	numLiterals := self literalCountOfMethodHeader: header.
 	^numLiterals + LiteralStart
 ]
 

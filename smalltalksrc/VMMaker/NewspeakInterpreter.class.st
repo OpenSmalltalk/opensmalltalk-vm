@@ -1114,7 +1114,7 @@ NewspeakInterpreter >> activateNewClosureMethod: blockClosure [
 	DoAssertionChecks ifTrue:
 		[self okayOop: outerContext].
 	closureMethod := self fetchPointer: MethodIndex ofObject: outerContext.
-	methodHeader := self headerOf: closureMethod.
+	methodHeader := self methodHeaderOf: closureMethod.
 	self pushRemappableOop: blockClosure.
 	newContext := self allocateOrRecycleContext: (methodHeader bitAnd: LargeContextBit). "All for one, and one for all!"
 
@@ -1161,10 +1161,10 @@ NewspeakInterpreter >> activateNewClosureMethod: blockClosure [
 NewspeakInterpreter >> activateNewMethod [
 	| newContext methodHeader initialIP tempCount nilOop where errorCode |
 
-	methodHeader := self headerOf: newMethod.
+	methodHeader := self methodHeaderOf: newMethod.
 	newContext := self allocateOrRecycleContext: (methodHeader bitAnd: LargeContextBit).
 
-	initialIP := ((LiteralStart + (self literalCountOfHeader: methodHeader)) * BytesPerWord) + 1.
+	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * BytesPerWord) + 1.
 	tempCount := (methodHeader >> 19) bitAnd: 16r3F.
 
 	"Assume: newContext will be recorded as a root if necessary by the
@@ -1360,7 +1360,7 @@ NewspeakInterpreter >> areIntegers: oop1 and: oop2 [
 
 { #category : #'compiled methods' }
 NewspeakInterpreter >> argumentCountOf: methodPointer [
-	^ ((self headerOf: methodPointer) >> 25) bitAnd: 16r0F
+	^((self methodHeaderOf: methodPointer) >> 25) bitAnd: 16r0F
 ]
 
 { #category : #contexts }
@@ -3497,11 +3497,6 @@ NewspeakInterpreter >> getThisSessionID [
 	^globalSessionID
 ]
 
-{ #category : #'compiled methods' }
-NewspeakInterpreter >> headerOf: methodPointer [
-	^self fetchPointer: HeaderIndex ofObject: methodPointer
-]
-
 { #category : #'process primitive support' }
 NewspeakInterpreter >> highBit: anUnsignedValue [ 
 	"This is a C implementation needed by ioSetMaxExtSemTableSize."
@@ -3764,7 +3759,7 @@ NewspeakInterpreter >> internalActivateNewMethod [
 	| methodHeader initialIP newContext tempCount argCount2 needsLarge where |
 	<inline: true>
 
-	methodHeader := self headerOf: newMethod.
+	methodHeader := self methodHeaderOf: newMethod.
 	needsLarge := methodHeader bitAnd: LargeContextBit.
 	(needsLarge = 0 and: [freeContexts ~= NilContext])
 		ifTrue: [newContext := freeContexts.
@@ -3773,7 +3768,7 @@ NewspeakInterpreter >> internalActivateNewMethod [
 				self externalizeIPandSP.
 				newContext := self allocateOrRecycleContext: needsLarge.
 				self internalizeIPandSP].
-	initialIP := ((LiteralStart + (self literalCountOfHeader: methodHeader)) * BytesPerWord) + 1.
+	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * BytesPerWord) + 1.
 	tempCount := (methodHeader >> 19) bitAnd: 16r3F.
 
 	"Assume: newContext will be recorded as a root if necessary by the
@@ -4206,14 +4201,14 @@ NewspeakInterpreter >> justActivateNewMethod [
 	| methodHeader initialIP newContext tempCount needsLarge where |
 	<inline: true>
 
-	methodHeader := self headerOf: newMethod.
+	methodHeader := self methodHeaderOf: newMethod.
 	needsLarge := methodHeader bitAnd: LargeContextBit.
 	(needsLarge = 0 and: [freeContexts ~= NilContext])
 		ifTrue: [newContext := freeContexts.
 				freeContexts := self fetchPointer: 0 ofObject: newContext]
 		ifFalse: ["Slower call for large contexts or empty free list"
 				newContext := self allocateOrRecycleContext: needsLarge].
-	initialIP := ((LiteralStart + (self literalCountOfHeader: methodHeader)) * BytesPerWord) + 1.
+	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * BytesPerWord) + 1.
 	tempCount := (methodHeader >> 19) bitAnd: 16r3F.
 
 	"Assume: newContext will be recorded as a root if necessary by the
@@ -4257,16 +4252,6 @@ NewspeakInterpreter >> literal: offset ofMethod: methodPointer [
 
 	^ self fetchPointer: offset + LiteralStart ofObject: methodPointer
 
-]
-
-{ #category : #'compiled methods' }
-NewspeakInterpreter >> literalCountOf: methodPointer [
-	^self literalCountOfHeader: (self headerOf: methodPointer)
-]
-
-{ #category : #'compiled methods' }
-NewspeakInterpreter >> literalCountOfHeader: headerPointer [
-	^ (headerPointer >> 10) bitAnd: 16rFF
 ]
 
 { #category : #'bitblt support' }
@@ -5934,9 +5919,9 @@ NewspeakInterpreter >> primitiveDoNamedPrimitiveWithArgs [
 	(self isCompiledMethod: methodArg) ifFalse:
 		[^self primitiveFail]. "invalid args"
 
-	methodHeader := self headerOf: methodArg.
+	methodHeader := self methodHeaderOf: methodArg.
 
-	(self literalCountOfHeader: methodHeader) > 2 ifFalse:
+	(self literalCountOfMethodHeader: methodHeader) > 2 ifFalse:
 		[^self primitiveFail]. "invalid methodArg state"
 	self assertClassOf: (spec := self fetchPointer: 1 "first literal" ofObject: methodArg)
 		is: (self splObj: ClassArray).
@@ -6785,10 +6770,9 @@ NewspeakInterpreter >> primitiveIndexOf: methodPointer [
 	for temporary backward compatibility.  The time to unpack is negligible,
 	since the reconstituted full index is stored in the method cache."
 	| primBits |
-	primBits := ((self headerOf: methodPointer) >> 1) bitAnd: 16r100001FF.
+	primBits := ((self methodHeaderOf: methodPointer) >> 1) bitAnd: 16r100001FF.
 	
-	^ (primBits bitAnd: 16r1FF) + (primBits >> 19)
-
+	^(primBits bitAnd: 16r1FF) + (primBits >> 19)
 ]
 
 { #category : #'compiled methods' }
@@ -7304,10 +7288,10 @@ NewspeakInterpreter >> primitiveNewMethod [
 	self successful ifFalse:
 		[self unPop: 2. ^nil].
 	class := self popStack.
-	size := (self literalCountOfHeader: header) + 1 * BytesPerWord + bytecodeCount.
+	size := (self literalCountOfMethodHeader: header) + 1 * BytesPerWord + bytecodeCount.
 	theMethod := self instantiateClass: class indexableSize: size.
 	self storePointerUnchecked: HeaderIndex ofObject: theMethod withValue: header.
-	literalCount := self literalCountOfHeader: header.
+	literalCount := self literalCountOfMethodHeader: header.
 	1 to: literalCount do:
 		[:i | self storePointerUnchecked: i ofObject: theMethod withValue: nilObj].
 	self push: theMethod
@@ -9764,7 +9748,7 @@ NewspeakInterpreter >> roomToPushNArgs: n [
 	 There may be room in this stackPage but there may not be room if
 	 the frame were converted into a context."
 	| cntxSize |
-	((self headerOf: method) bitAnd: LargeContextBit) ~= 0
+	((self methodHeaderOf: method) bitAnd: LargeContextBit) ~= 0
 		ifTrue: [cntxSize := LargeContextSize / BytesPerWord - ReceiverIndex]
 		ifFalse: [cntxSize := SmallContextSize / BytesPerWord - ReceiverIndex].
 	^self stackPointerIndex + n <= cntxSize
@@ -10828,7 +10812,7 @@ NewspeakInterpreter >> tab [
 
 { #category : #'compiled methods' }
 NewspeakInterpreter >> tempCountOf: methodPointer [
-	^ ((self headerOf: methodPointer) >> 19) bitAnd: 16r3F
+	^((self methodHeaderOf: methodPointer) >> 19) bitAnd: 16r3F
 ]
 
 { #category : #contexts }

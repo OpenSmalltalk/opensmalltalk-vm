@@ -54,6 +54,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures 
 	"SimpleStackBasedCogit initializeBytecodeTableForNewspeakV3PlusClosures"
 
 	NSSendIsPCAnnotated := true. "IsNSSendCall used by PushImplicitReceiver"
+	FirstSpecialSelector := 176.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -129,6 +130,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 	"SimpleStackBasedCogit initializeBytecodeTableForNewspeakV4"
 
 	NSSendIsPCAnnotated := false. "IsNSSendCall used by SendAbsentImplicit"
+	FirstSpecialSelector := 80.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -216,6 +218,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 	"SimpleStackBasedCogit initializeBytecodeTableForSistaV1"
 
+	FirstSpecialSelector := 96.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -328,6 +331,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 SimpleStackBasedCogit class >> initializeBytecodeTableForSqueakV3PlusClosures [
 	"SimpleStackBasedCogit initializeBytecodeTableForSqueakV3PlusClosures"
 
+	FirstSpecialSelector := 176.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -977,7 +981,7 @@ SimpleStackBasedCogit >> compileFrameBuild [
 	<inline: false>
 	<var: #jumpSkip type: #'AbstractInstruction *'>
 	needsFrame ifFalse: [^0].
-	methodHeader := coInterpreter headerOf: methodObj.
+	methodHeader := objectMemory methodHeaderOf: methodObj.
 	backEnd hasLinkRegister ifTrue: [self PushR: LinkReg].
 	self PushR: FPReg.
 	self MoveR: SPReg R: FPReg.
@@ -1386,8 +1390,8 @@ SimpleStackBasedCogit >> extendedStoreBytecode [
 SimpleStackBasedCogit >> firstSpecialSelectorBytecodeOffset [
 	<inline: true>
 	^self cppIf: MULTIPLEBYTECODESETS
-		ifTrue: [bytecodeSetOffset = 256 ifTrue: [80 + 256] ifFalse: [176]]
-		ifFalse: [176]
+		ifTrue: [bytecodeSetOffset = 256 ifTrue: [AltFirstSpecialSelector + 256] ifFalse: [FirstSpecialSelector]]
+		ifFalse: [FirstSpecialSelector]
 ]
 
 { #category : #'bytecode generators' }
