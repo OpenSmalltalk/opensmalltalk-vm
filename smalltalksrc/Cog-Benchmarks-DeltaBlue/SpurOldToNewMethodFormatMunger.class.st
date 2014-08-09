@@ -73,14 +73,15 @@ SpurOldToNewMethodFormatMunger >> indexOfSelector: selectorOop in: methodDict [
 ]
 
 { #category : #munging }
-SpurOldToNewMethodFormatMunger >> installableMethodFor: method selector: selectorOop siblingMethod: sibling [ 
-	| classOop clone delta numBytes |
+SpurOldToNewMethodFormatMunger >> installableMethodFor: methodWithSource selector: selectorOop siblingMethod: sibling [ 
+	| method classOop clone delta numBytes |
+	method := methodWithSource copyWithTempsFromMethodNode: methodWithSource methodNode.
 	delta := (method primitive > 0
 			  and: [(method at: method initialPC) ~= method methodClass callPrimitiveCode])
 				ifTrue: [3]
 				ifFalse: [0].
 	clone := heap
-				allocateSlots: ((numBytes := heap numSlotsForBytes: method endPC + 1) + delta)
+				allocateSlots: (heap numSlotsForBytes: (numBytes := method size) + delta)
 				format: (heap compiledMethodFormatForNumBytes: numBytes + delta)
 				classIndex: (heap classIndexOf: sibling).
 	classOop := interpreter methodClassOf: sibling.
@@ -107,7 +108,7 @@ SpurOldToNewMethodFormatMunger >> installableMethodFor: method selector: selecto
 			storeByte: method initialPC - 1 ofObject: clone 	withValue: 139;
 			storeByte: method initialPC + 0 ofObject: clone withValue: (method primitive bitAnd: 255);
 			storeByte: method initialPC + 1 ofObject: clone withValue: (method primitive bitShift: -8)].
-	method initialPC to: method endPC do:
+	method initialPC to: method size do:
 		[:i|
 		 heap storeByte: i - 1 + delta ofObject: clone withValue: (method at: i)].
 
@@ -260,7 +261,7 @@ SpurOldToNewMethodFormatMunger >> prototypeClassNameMetaSelectorMethodDo: quater
 ]
 
 { #category : #munging }
-SpurOldToNewMethodFormatMunger >> replaceMethodsAddingThemTo: replacedSet [
+SpurOldToNewMethodFormatMunger >> replaceMethods [
 	| byteSymbolClassIndex symbols symbolSizes |
 	byteSymbolClassIndex := heap classIndexOf: (heap splObj: SelectorDoesNotUnderstand).
 	symbols := Set with: #bindingOf:.
@@ -297,8 +298,7 @@ SpurOldToNewMethodFormatMunger >> replaceMethodsAddingThemTo: replacedSet [
 		heap
 			storePointer: index - SelectorStart
 			ofObject: methodArray
-			withValue: replacement.
-		replacedSet add: replacement] valueWithArguments: tuple]
+			withValue: replacement] valueWithArguments: tuple]
 ]
 
 { #category : #saving }
@@ -340,5 +340,5 @@ SpurOldToNewMethodFormatMunger >> updateAndForwardMethods [
 						withValue: (self convertOldMethodHeader: header)]]].
 	Spur32BitMMLESimulator adoptInstance: interpreter objectMemory.
 	self withExecutableInterpreter: interpreter
-		do: [self replaceMethodsAddingThemTo: new]
+		do: [self replaceMethods]
 ]
