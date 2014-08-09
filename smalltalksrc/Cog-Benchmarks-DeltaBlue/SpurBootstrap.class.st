@@ -51,7 +51,7 @@ symbolMap
 "
 Class {
 	#name : #SpurBootstrap,
-	#superclass : #Object,
+	#superclass : #SimulatorHarness,
 	#instVars : [
 		'oldHeap',
 		'newHeap',
@@ -2711,39 +2711,6 @@ SpurBootstrap >> internAllSymbols [
 			[self assert: symOrGlobal = (oldHeap stringOf: imageSymOrGlobal)]]
 ]
 
-{ #category : #'bootstrap methods' }
-SpurBootstrap >> interpreter: sim object: receiver perform: selector withArguments: arguments [
-	"Interpret an expression in oldHeap using oldInterpreter.
-	 Answer the result."
-	| fp savedpc savedsp result startByteCount |
-	self assert: ({receiver. selector}, arguments allSatisfy:
-					[:oop| oop isInteger and: [sim objectMemory addressCouldBeOop: oop]]).
-	savedpc := sim localIP.
-	savedsp := sim localSP.
-	sim internalPush: receiver.
-	arguments do: [:arg| sim internalPush: arg].
-	sim
-		argumentCount: arguments size;
-		messageSelector: selector.
-	fp := sim localFP.
-	startByteCount := sim byteCount.
-	"sim byteCount = 66849 ifTrue: [self halt]."
-	sim normalSend.
-	sim incrementByteCount. "otherwise, send is not counted"
-	["sim printFrame: sim localFP WithSP: sim localSP"
-	 "sim setBreakSelector: #elementsForwardIdentityTo:"
-	 "sim byteCount = 66849 ifTrue: [self halt]."
-	 "(sim byteCount > 7508930 and: [sim localFP = -16r27894]) ifTrue:
-		[self halt]."
-	 fp = sim localFP] whileFalse:
-		[sim singleStep].
-	result := sim internalPopStack.
-	self assert: savedsp = sim localSP.
-	self assert: sim localIP - 1 = savedpc.
-	sim localIP: savedpc.
-	^result
-]
-
 { #category : #'bootstrap image' }
 SpurBootstrap >> isOldObjABehavior: oldObj [
 	| oldObjClass oldObjClassClass |
@@ -3312,33 +3279,6 @@ SpurBootstrap >> validate [
 	self assert: (newHeap instSpecOfClassFormat: (newHeap formatOfClass: newHeap classArray)) = newHeap arrayFormat
 ]
 
-{ #category : #'bootstrap methods' }
-SpurBootstrap >> withExecutableInterpreter: sim do: aBlock [
-	"With the oldInterpreter ready to execute code, evaluate aBlock,
-	 then return the interpreter (and the heap) to the ``just snapshotted'' state."
-	| savedpc initialContext finalContext |
-	sim
-		initStackPages;
-		loadInitialContext;
-		internalizeIPandSP.
-	initialContext := sim frameContext: sim localFP.
-	savedpc := sim localIP.
-	"sim printHeadFrame."
-	aBlock value.
-	"sim printHeadFrame."
-	sim
-		internalPush: sim localIP;
-		externalizeIPandSP.
-	"now undo the execution state"
-	finalContext := sim voidVMStateForSnapshotFlushingExternalPrimitivesIf: false.
-	self assert: initialContext = finalContext.
-	self assert: sim localIP = savedpc.
-	sim objectMemory
-		storePointer: SuspendedContextIndex
-		ofObject: sim activeProcess
-		withValue: finalContext
-]
-
 { #category : #'word size' }
 SpurBootstrap >> wordSize [
 	^self subclassResponsibility
@@ -3362,7 +3302,7 @@ SpurBootstrap >> writeSnapshot: imageFileName ofTransformedImage: spurHeap heade
 		setEndOfMemory: spurHeap endOfMemory + spurHeap bridgeSize. "hack; initializeInterpreter: cuts it back by bridgeSize"
 	sim initializeInterpreter: 0;
 		setImageHeaderFlagsFrom: headerFlags;
-		setDisplayForm: (Form extent: screenSizeInteger >> 16 @ (screenSizeInteger bitAnd: 16rFFFF)).
+		setDisplayForm: nil.
 	spurHeap allOldSpaceEntitiesDo: [:e| penultimate := ultimate. ultimate := e].
 	(spurHeap isFreeObject: penultimate) ifTrue: "old, pre-pigCompact segmented save"
 		[self assert: (spurHeap isSegmentBridge: ultimate).
@@ -3414,7 +3354,8 @@ SpurBootstrap >> writeSnapshotOfTransformedImageAs: imageFileName [
 	heap coInterpreter: sim.
 	sim initializeInterpreter: 0;
 		setImageHeaderFlagsFrom: ImageHeaderFlags;
-		setDisplayForm: (Form extent: ImageScreenSize >> 16 @ (ImageScreenSize bitAnd: 16rFFFF)).
+		setDisplayForm: nil;
+		setSavedWindowSize: ImageScreenSize >> 16 @ (ImageScreenSize bitAnd: 16rFFFF).
 	heap allOldSpaceEntitiesDo: [:e| penultimate := ultimate. ultimate := e].
 	self assert: (heap isFreeObject: penultimate).
 	self assert: (heap isSegmentBridge: ultimate).
