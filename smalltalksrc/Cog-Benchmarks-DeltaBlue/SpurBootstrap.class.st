@@ -70,7 +70,9 @@ Class {
 		'sizeSym',
 		'rehashSym',
 		'classMetaclass',
-		'imageTypes'
+		'imageTypes',
+		'classMethodContextIndex',
+		'classBlockClosureIndex'
 	],
 	#classVars : [
 		'ImageHeaderFlags',
@@ -2271,8 +2273,8 @@ SpurBootstrap >> defineKnownClassIndices [
 		at: oldHeap classFloat put: 34;
 
 		at: "oldHeap" classMessage put: 35;
-		at: "oldHeap" classMethodContext put: 36;
-		at: "oldHeap" classBlockClosure put: 37;
+		at: "oldHeap" classMethodContext put: (classMethodContextIndex := 36);
+		at: "oldHeap" classBlockClosure put: (classBlockClosureIndex := 37);
 
 		at: oldHeap classSemaphore put: 48;
 		"at: oldHeap classMutex put: 49; see below"
@@ -2402,12 +2404,18 @@ SpurBootstrap >> fillInObjects [
 	oldHeap allObjectsDo:
 		[:oldObj|
 		(map at: oldObj ifAbsent: nil) ifNotNil:
-			[:newObj|
-			(newHeap isCompiledMethod: newObj)
-				ifTrue: [self fillInCompiledMethod: newObj from: oldObj]
+			[:newObj| | format classIndex |
+			format := newHeap formatOf: newObj.
+			(newHeap isPointersFormat: format)
+				ifTrue:
+					[((newHeap isIndexableFormat: format)
+						and: [(classIndex := newHeap classIndexOf: newObj) <= classBlockClosureIndex
+						and: [classIndex >= classMethodContextIndex]])
+						ifTrue: [self fillInPointerObjectWithPC: newObj from: oldObj]
+						ifFalse: [self fillInPointerObject: newObj from: oldObj]]
 				ifFalse:
-					[(newHeap isPointersNonImm: newObj)
-						ifTrue: [self fillInPointerObject: newObj from: oldObj]
+					[(newHeap isCompiledMethodFormat: format)
+						ifTrue: [self fillInCompiledMethod: newObj from: oldObj]
 						ifFalse: [self fillInBitsObject: newObj from: oldObj]]]]
 ]
 
@@ -2437,6 +2445,29 @@ SpurBootstrap >> fillInPointerObject: newObj from: oldObj [
 			withValue: newValue].
 	(self isOldObjABehavior: oldObj) ifTrue:
 		[self mapOldBehavior: oldObj toNewBehavior: newObj]
+]
+
+{ #category : #'bootstrap image' }
+SpurBootstrap >> fillInPointerObjectWithPC: newObj from: oldObj [
+	"Fill-in a newObj with appropriately mapped contents from oldObj.
+	 If the object has a pc and its method has a primitive, increment the
+	 pc by the size of the callPrimitive: bytecode."
+	| method |
+	self fillInPointerObject: newObj from: oldObj.
+	(newHeap classIndexOf: newObj) = classBlockClosureIndex ifTrue:
+		[method := oldHeap
+						fetchPointer: MethodIndex
+						ofObject: (oldHeap
+									fetchPointer: ClosureOuterContextIndex
+									ofObject: oldObj).
+		 (oldInterpreter primitiveIndexOf: method) > 0 ifTrue:
+			[self incrementPCField: ClosureStartPCIndex ofObject: newObj by: 3]].
+	(newHeap classIndexOf: newObj) = classMethodContextIndex ifTrue:
+		[method := oldHeap
+						fetchPointer: MethodIndex
+						ofObject: oldObj.
+		 (oldInterpreter primitiveIndexOf: method) > 0 ifTrue:
+			[self incrementPCField: InstructionPointerIndex ofObject: newObj by: 3]].
 ]
 
 { #category : #'bootstrap methods' }
@@ -2552,6 +2583,20 @@ SpurBootstrap >> freeForwarders [
 			[numFreed := numFreed + 1.
 			 newHeap freeObject: o]].
 	self assert: numFreed = numForwarders
+]
+
+{ #category : #'bootstrap image' }
+SpurBootstrap >> incrementPCField: fieldIndex ofObject: newObj by: n [
+	| value |
+	value := newHeap fetchPointer: fieldIndex ofObject: newObj.
+	(newHeap isIntegerObject: value)
+		ifTrue:
+			[newHeap
+				storePointerUnchecked: fieldIndex
+				ofObject: newObj
+				withValue: (newHeap integerObjectOf: n + (newHeap integerValueOf: value))]
+		ifFalse:
+			[self assert: value = newHeap nilObject]
 ]
 
 { #category : #'bootstrap methods' }
