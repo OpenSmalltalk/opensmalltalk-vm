@@ -1,15 +1,43 @@
 Class {
 	#name : #SpurOldToNewMethodFormatMunger,
-	#superclass : #Object,
+	#superclass : #SimulatorHarness,
 	#instVars : [
 		'interpreter',
-		'heap'
+		'heap',
+		'prototypes',
+		'replacements',
+		'symbolOops'
 	],
 	#pools : [
 		'VMObjectIndices'
 	],
 	#category : #'Cog-Bootstrapping'
 }
+
+{ #category : #munging }
+SpurOldToNewMethodFormatMunger >> cloneArrayLiteral: anArray [
+	"Currently serves only to clone the #(0 0) literal in SpaceTallyPROTOTYPEspaceForInstancesOf:"
+	| array |
+	array := heap instantiateClass: (heap splObj: ClassArray) indexableSize: anArray size.
+	1 to: anArray size do:
+		[:i| | lit |
+		lit := anArray at: i.
+		lit class caseOf: {
+			[SmallInteger] -> [heap
+									storePointerUnchecked: i - 1
+									ofObject: array
+									withValue: (heap integerObjectOf: lit)].
+			[ByteSymbol] -> [heap
+									storePointer: i - 1
+									ofObject: array
+									withValue: (symbolOops at: lit)].
+			[UndefinedObject] -> [heap
+									storePointerUnchecked: i - 1
+									ofObject: array
+									withValue: heap nilObject] }].
+	^array
+
+]
 
 { #category : #munging }
 SpurOldToNewMethodFormatMunger >> convertOldMethodHeader: methodHeader [
@@ -36,6 +64,84 @@ SpurOldToNewMethodFormatMunger >> incrementPCField: fieldIndex ofObject: newObj 
 ]
 
 { #category : #munging }
+SpurOldToNewMethodFormatMunger >> indexOfSelector: selectorOop in: methodDict [
+	SelectorStart to: (heap numSlotsOf: methodDict) - 1 do:
+		[:i|
+		(heap fetchPointer: i ofObject: methodDict) = selectorOop ifTrue:
+			[^i]].
+	self error: 'could not find selector in method dict'
+]
+
+{ #category : #munging }
+SpurOldToNewMethodFormatMunger >> installableMethodFor: method selector: selectorOop siblingMethod: sibling [ 
+	| classOop clone delta numBytes |
+	delta := (method primitive > 0
+			  and: [(method at: method initialPC) ~= method methodClass callPrimitiveCode])
+				ifTrue: [3]
+				ifFalse: [0].
+	clone := heap
+				allocateSlots: ((numBytes := heap numSlotsForBytes: method endPC + 1) + delta)
+				format: (heap compiledMethodFormatForNumBytes: numBytes + delta)
+				classIndex: (heap classIndexOf: sibling).
+	classOop := interpreter methodClassOf: sibling.
+	method methodClass isMeta ifTrue:
+		[classOop := heap fetchPointer: interpreter thisClassIndex ofObject: classOop].
+	heap storePointer: 0
+		ofObject: clone
+		withValue: (self methodHeaderForMethod: method).
+	1 to: method numLiterals - 2 do:
+		[:i|
+		heap storePointer: i
+			ofObject: clone
+			withValue: (self literalFor: (method literalAt: i) inClass: classOop)].
+	heap
+		storePointer: method numLiterals - 1
+			ofObject: clone
+				withValue: selectorOop;
+		storePointer: method numLiterals
+			ofObject: clone
+				withValue: (interpreter methodClassAssociationOf: sibling).
+
+	delta > 0 ifTrue:
+		[heap
+			storeByte: method initialPC - 1 ofObject: clone 	withValue: 139;
+			storeByte: method initialPC + 0 ofObject: clone withValue: (method primitive bitAnd: 255);
+			storeByte: method initialPC + 1 ofObject: clone withValue: (method primitive bitShift: -8)].
+	method initialPC to: method endPC do:
+		[:i|
+		 heap storeByte: i - 1 + delta ofObject: clone withValue: (method at: i)].
+
+	^clone
+]
+
+{ #category : #munging }
+SpurOldToNewMethodFormatMunger >> literalFor: aLiteral inClass: classOop [
+	| bindingOrNil |
+	aLiteral isSymbol ifTrue:
+		[^symbolOops at: aLiteral].
+	aLiteral isString ifTrue:
+		[^heap stringForCString: aLiteral].
+	(aLiteral isInteger and: [aLiteral class == SmallInteger]) ifTrue:
+		[^heap integerObjectOf: aLiteral].
+	aLiteral isFloat ifTrue:
+		[^interpreter floatObjectOf: aLiteral].
+	aLiteral isArray ifTrue:
+		[^self cloneArrayLiteral: aLiteral].
+	self assert: aLiteral isVariableBinding.
+	"interpreter
+		ensureDebugAtEachStepBlock;
+		instVarNamed: 'printBytecodeAtEachStep' put: true;
+		instVarNamed: 'printFrameAtEachStep' put: true."
+	bindingOrNil := self interpreter: interpreter
+						object: classOop
+						perform: (symbolOops at: #bindingOf:)
+						withArguments: {symbolOops at: aLiteral key}.
+	bindingOrNil ~= heap nilObject ifTrue:
+		[^bindingOrNil].
+	self error: 'couldn''t find literal ', aLiteral printString
+]
+
+{ #category : #munging }
 SpurOldToNewMethodFormatMunger >> mapPCs [
 	| cbc cmc |
 	cmc := 36.
@@ -48,6 +154,16 @@ SpurOldToNewMethodFormatMunger >> mapPCs [
 			 ci = 36 ifTrue: [self mungeContext: obj]]]
 ]
 
+{ #category : #munging }
+SpurOldToNewMethodFormatMunger >> methodHeaderForMethod: method [
+	^heap integerObjectOf:
+		   (method numArgs << 24)
+		+ (method numTemps << 18)
+		+ (method frameSize > method class smallFrameSize ifTrue: [1 << 17] ifFalse: [0])
+		+ (method primitive > 0 ifTrue: [1 << 16] ifFalse: [0])
+		+ method numLiterals
+]
+
 { #category : #'public access' }
 SpurOldToNewMethodFormatMunger >> munge: imageName [
 	interpreter := StackInterpreterSimulator newWithOptions: #(ObjectMemory Spur32BitMemoryManager).
@@ -57,6 +173,7 @@ SpurOldToNewMethodFormatMunger >> munge: imageName [
 	SpurOldFormat32BitMMLESimulator adoptInstance: heap.
 	interpreter openOn: imageName extraMemory: 0.
 	self mapPCs.
+	self preparePrototypes.
 	self updateAndForwardMethods.
 	self snapshot
 ]
@@ -112,18 +229,92 @@ SpurOldToNewMethodFormatMunger >> mungePrimitiveMethod: obj [
 	^copy
 ]
 
+{ #category : #munging }
+SpurOldToNewMethodFormatMunger >> preparePrototypes [
+	replacements := OrderedCollection new.
+	heap classTableObjectsDo:
+		[:class| | name isMeta |
+		name := heap
+					fetchPointer: interpreter classNameIndex
+					ofObject: ((isMeta := (heap numSlotsOf: class) = interpreter metaclassNumSlots)
+								ifTrue: [heap fetchPointer: interpreter thisClassIndex ofObject: class]
+								ifFalse: [class]).
+		name := interpreter stringOf: name.
+		self prototypeClassNameMetaSelectorMethodDo:
+			[:protoClassName :protoIsMeta :selector :method|
+			 (protoClassName = name
+			  and: [protoIsMeta = isMeta]) ifTrue:
+				[replacements addLast: {class. selector. method}]]]
+]
+
+{ #category : #munging }
+SpurOldToNewMethodFormatMunger >> prototypeClassNameMetaSelectorMethodDo: quaternaryBlock [
+	prototypes ifNil:
+		[prototypes := OrderedCollection new.
+		SpurBootstrap new prototypeClassNameMetaSelectorMethodDo:
+			[:className :isMeta :selector :method| 
+			(#(BytecodeEncoder CompiledMethod EncoderForSqueakV4PlusClosures
+				InstructionClient InstructionStream MethodNode) includes: className) ifTrue:
+					[prototypes addLast: {className. isMeta. selector. method}]]].
+	prototypes do: [:tuple| quaternaryBlock valueWithArguments: tuple]
+]
+
+{ #category : #munging }
+SpurOldToNewMethodFormatMunger >> replaceMethodsAddingThemTo: replacedSet [
+	| byteSymbolClassIndex symbols symbolSizes |
+	byteSymbolClassIndex := heap classIndexOf: (heap splObj: SelectorDoesNotUnderstand).
+	symbols := Set with: #bindingOf:.
+	replacements do:
+		[:tuple| | method adder |
+		symbols add: tuple second.
+		method := tuple last.
+		adder := [:lit|
+				   (lit isSymbol and: [lit ~~ method selector]) ifTrue: [symbols add: lit].
+				   (lit isVariableBinding and: [lit key isSymbol]) ifTrue: [symbols add: lit key].
+				   lit isArray ifTrue: [lit do: adder]].
+		method literals do: adder].
+	symbolSizes := symbols collect: [:ea| ea size].
+	symbolOops := Dictionary new.
+	heap allObjectsDo:
+		[:obj| | sz |
+		((heap classIndexOf: obj) = byteSymbolClassIndex
+		 and: [symbolSizes includes: (sz := heap numBytesOf: obj)]) ifTrue:
+			[symbols do:
+				[:s|
+				 (sz = s size
+				  and: [(interpreter stringOf: obj) = s]) ifTrue:
+					[symbolOops at: s put: obj]]]].
+	replacements do:
+		[:tuple|
+		[:classOop :selector :method| | replacement methodDict methodArray index |
+		methodDict := heap fetchPointer: MethodDictionaryIndex ofObject: classOop.
+		methodArray := heap fetchPointer: MethodArrayIndex ofObject: methodDict.
+		index := (0 to: (heap numSlotsOf: methodArray) - 1) detect: [:i| (heap fetchPointer: i ofObject: methodArray) ~= heap nilObject].
+		replacement := self installableMethodFor: method
+							selector: (symbolOops at: selector)
+							siblingMethod: (heap fetchPointer: index ofObject: methodArray).
+		index := self indexOfSelector: (symbolOops at: selector) in: methodDict.
+		heap
+			storePointer: index - SelectorStart
+			ofObject: methodArray
+			withValue: replacement.
+		replacedSet add: replacement] valueWithArguments: tuple]
+]
+
 { #category : #saving }
 SpurOldToNewMethodFormatMunger >> snapshot [
 	Spur32BitMMLESimulator adoptInstance: heap.
 	interpreter imageName: 'munged-', (FileDirectory default localNameFor: interpreter imageName).
-	[heap parent: heap; setCheckForLeaks: 15; fullGC; fullGC]
+	[heap parent: heap; setCheckForLeaks: 15; garbageCollectForSnapshot]
 		on: Halt
 		do: [:ex|
 			"suppress halts from the usual suspects (development time halts)"
 			(#(fullGC globalGarbageCollect) includes: ex signalerContext sender selector)
 				ifTrue: [ex resume]
 				ifFalse: [ex pass]].
-	interpreter halt; writeImageFileIO
+	interpreter
+		setDisplayForm: nil; "gets it to use savedWindowSize"
+		writeImageFileIO
 ]
 
 { #category : #munging }
@@ -133,7 +324,6 @@ SpurOldToNewMethodFormatMunger >> updateAndForwardMethods [
 	lastDotTime := Time now asSeconds.
 	heap allObjectsDo:
 		[:obj|
-		obj = 16rAC9A30 ifTrue: [self halt].
 		((heap isCompiledMethod: obj)
 		 and: [(new includes: obj) not]) ifTrue:
 			[| header |
@@ -147,5 +337,8 @@ SpurOldToNewMethodFormatMunger >> updateAndForwardMethods [
 					[heap
 						storePointerUnchecked: 0
 						ofObject: obj
-						withValue: (self convertOldMethodHeader: header)]]]
+						withValue: (self convertOldMethodHeader: header)]]].
+	Spur32BitMMLESimulator adoptInstance: interpreter objectMemory.
+	self withExecutableInterpreter: interpreter
+		do: [self replaceMethodsAddingThemTo: new]
 ]
