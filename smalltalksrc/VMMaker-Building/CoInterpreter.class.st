@@ -6552,12 +6552,6 @@ CoInterpreter >> temporaryLocation: offset in: theFP numArgs: numArgs [
 ]
 
 { #category : #simulation }
-CoInterpreter >> thisClassIndex [
-	<doNotGenerate>
-	^thisClassIndex
-]
-
-{ #category : #simulation }
 CoInterpreter >> threadManager [
 	<doNotGenerate>
 	^nil

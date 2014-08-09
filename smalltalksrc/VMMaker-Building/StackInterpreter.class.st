@@ -8975,6 +8975,12 @@ StackInterpreter >> maybeTraceStackOverflow [
 	"nop in the stack interpreter"
 ]
 
+{ #category : #simulation }
+StackInterpreter >> metaclassNumSlots [
+	<doNotGenerate>
+	^metaclassNumSlots
+]
+
 { #category : #'plugin primitive support' }
 StackInterpreter >> methodArg: index [
 	"Like #stackValue: but access method arguments left-to-right"
@@ -13184,6 +13190,12 @@ StackInterpreter >> temporaryLocation: offset in: theFP numArgs: numArgs [
 	^offset < numArgs
 		ifTrue: [theFP + FoxCallerSavedIP + ((numArgs - offset) * BytesPerWord)]
 		ifFalse: [theFP + FoxReceiver - BytesPerWord + ((numArgs - offset) * BytesPerWord)]
+]
+
+{ #category : #simulation }
+StackInterpreter >> thisClassIndex [
+	<doNotGenerate>
+	^thisClassIndex
 ]
 
 { #category : #'object memory support' }
