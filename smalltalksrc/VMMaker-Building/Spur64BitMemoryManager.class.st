@@ -515,11 +515,11 @@ Spur64BitMemoryManager >> setFormatOf: objOop to: format [
 { #category : #'header access' }
 Spur64BitMemoryManager >> setHashBitsOf: objOop to: hash [
 	self assert: (hash bitAnd: self identityHashFullWordMask) = hash.
-	self cCode: [self deny: ((self classAtIndex: hash) ~= objOop
+	self cCode: [self deny: ((self noCheckClassAtIndex: hash) ~= objOop
 							and: [coInterpreter addressCouldBeClassObj: objOop])]
 		inSmalltalk:
 			[coInterpreter ifNotNil:
-				[self deny: ((self classAtIndex: hash) ~= objOop
+				[self deny: ((self noCheckClassAtIndex: hash) ~= objOop
 							and: [coInterpreter addressCouldBeClassObj: objOop])]].
 	self longAt: objOop
 		put: ((self longAt: objOop) bitClear: self identityHashFullWordMask) + hash

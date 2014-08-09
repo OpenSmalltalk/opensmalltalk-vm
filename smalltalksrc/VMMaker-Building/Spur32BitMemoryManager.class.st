@@ -589,11 +589,11 @@ Spur32BitMemoryManager >> setFormatOf: objOop to: format [
 Spur32BitMemoryManager >> setHashBitsOf: objOop to: hash [
 	self flag: #endianness.
 	self assert: (hash bitAnd: self identityHashHalfWordMask) = hash.
-	self cCode: [self deny: ((self classAtIndex: hash) ~= objOop
+	self cCode: [self deny: ((self noCheckClassAtIndex: hash) ~= objOop
 							and: [coInterpreter addressCouldBeClassObj: objOop])]
 		inSmalltalk:
 			[coInterpreter ifNotNil:
-				[self deny: ((self classAtIndex: hash) ~= objOop
+				[self deny: ((self noCheckClassAtIndex: hash) ~= objOop
 							and: [coInterpreter addressCouldBeClassObj: objOop])]].
 	self longAt: objOop + 4
 		put: ((self longAt: objOop + 4) bitClear: self identityHashHalfWordMask) + hash
