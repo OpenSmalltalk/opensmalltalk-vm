@@ -5791,6 +5791,11 @@ SpurMemoryManager >> isCompiledMethod: objOop [
     ^(self formatOf: objOop) >= 24
 ]
 
+{ #category : #'header formats' }
+SpurMemoryManager >> isCompiledMethodFormat: format [
+	^format >= self firstCompiledMethodFormat
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isCompiledMethodHeader: objHeader [
     "Answer whether the argument header has compiled method format"
@@ -6601,6 +6606,7 @@ SpurMemoryManager >> literalCountOf: methodPointer [
 
 { #category : #'method access' }
 SpurMemoryManager >> literalCountOfMethodHeader: header [
+	<api>
 	<inline: true>
 	self assert: (self isIntegerObject: header).
 	^(self integerValueOf: header) bitAnd: 16rFFFF

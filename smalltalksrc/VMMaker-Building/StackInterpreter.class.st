@@ -13418,10 +13418,10 @@ StackInterpreter >> validInstructionPointer: theInstrPointer inMethod: aMethod f
 				not]]].
 	MULTIPLEBYTECODESETS ifTrue:
 		[methodHeader := self noAssertHeaderOf: aMethod. "-1 for pre-increment in fetchNextBytecode"
-		 theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BytesPerOop - 1)
-		 and: [theInstrPointer < (aMethod + (objectMemory numBytesOf: aMethod) + BaseHeaderSize - 1)
-		 and: ["If the method starts with a CallPrimitive opcode the instruction pointer should be past it."
-			^((self headerIndicatesAlternateBytecodeSet: methodHeader)
+		 ^theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BytesPerOop - 1)
+		   and: [theInstrPointer < (aMethod + (objectMemory numBytesOf: aMethod) + BaseHeaderSize - 1)
+		   and: ["If the method starts with a CallPrimitive opcode the instruction pointer should be past it."
+			((self headerIndicatesAlternateBytecodeSet: methodHeader)
 			  and: [(self alternateHeaderHasPrimitiveFlag: methodHeader)
 			  and: [theInstrPointer < (aMethod
 									+ BytesPerOop - 1
