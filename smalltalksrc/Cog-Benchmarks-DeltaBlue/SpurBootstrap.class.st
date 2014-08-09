@@ -2377,7 +2377,7 @@ SpurBootstrap >> fillInClassTable [
 SpurBootstrap >> fillInCompiledMethod: newObj from: oldObj [
 	| firstByteIndex primIndex |
 	self fillInPointerObject: newObj from: oldObj.
-	"Now convert the COmpiledMethod's format.  First write the header in tye new format"
+	"Now convert the CompiledMethod's format.  First write the header in the new format"
 	newHeap
 		storePointerUnchecked: 0
 		ofObject: newObj
