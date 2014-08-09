@@ -3441,6 +3441,11 @@ SpurMemoryManager >> compactionIssues [
 	 low pig of 2061864 bytes."
 ]
 
+{ #category : #'header format' }
+SpurMemoryManager >> compiledMethodFormatForNumBytes: numBytes [
+	^self firstCompiledMethodFormat + (8 - numBytes bitAnd: self wordSize - 1)
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> computeFreeSpacePostSwizzle [
 	totalFreeOldSpace := self totalFreeListBytes.
@@ -7604,7 +7609,7 @@ SpurMemoryManager >> numSegments [
 
 { #category : #'header format' }
 SpurMemoryManager >> numSlotsForBytes: numBytes [
-	^numBytes + (self wordSize - 1) / self wordSize
+	^numBytes + (self wordSize - 1) // self wordSize
 ]
 
 { #category : #'header format' }
