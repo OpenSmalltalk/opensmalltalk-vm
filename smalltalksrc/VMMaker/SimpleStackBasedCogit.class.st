@@ -96,10 +96,13 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures 
 		(1 136 136 duplicateTopBytecode needsFrameNever: 1)
 
 		(1 137 137 genPushActiveContextBytecode)
-		(2 138 138 genPushNewArrayBytecode)
+		(2 138 138 genPushNewArrayBytecode)),
 
-		(2 139 139 genPushExplicitOuterReceiverBytecode isMapped)	"Newspeak"
+		((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
+			ifTrue: [#((3 139 139 callPrimitiveBytecode))]									"V3PlusClosures on Spur"
+			ifFalse: [#((2 139 139 genPushExplicitOuterReceiverBytecode isMapped))]),	"Newspeak"
 
+	  #(
 		(3 140 140 genPushRemoteTempLongBytecode)
 		(3 141 141 genStoreRemoteTempLongBytecode)
 		(3 142 142 genStoreAndPopRemoteTempLongBytecode)
