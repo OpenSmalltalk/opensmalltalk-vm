@@ -1785,6 +1785,7 @@ NewObjectMemory >> leakCheckNewSpaceGC [
 
 { #category : #'memory access' }
 NewObjectMemory >> literalCountOfMethodHeader: header [
+	<api>
 	<inline: true>
 	self assert: (self isIntegerObject: header).
 	^(coInterpreter headerIndicatesAlternateBytecodeSet: header)
