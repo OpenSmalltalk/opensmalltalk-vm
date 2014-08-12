@@ -354,13 +354,7 @@ Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 		[self firstByteFormat]	->
 			[numSlots := nElements + 3 // 4.
 			 numSlots > self maxSlotsForAlloc ifTrue:
-				[^nil].
-			 instSpec := instSpec + (4 - nElements bitAnd: 3)].
-		[self firstCompiledMethodFormat]	->
-			[numSlots := nElements + 3 // 4.
-			 numSlots > self maxSlotsForAlloc ifTrue:
-				[^nil].
-			 instSpec := instSpec + (4 - nElements bitAnd: 3)] }
+				[^nil]] }
 		otherwise: ["some Squeak images include funky fixed subclasses of abstract variable
 					 superclasses. e.g. DirectoryEntry as a subclass of ArrayedCollection.
 					 Allow fixed classes to be instantiated here iff nElements = 0."
