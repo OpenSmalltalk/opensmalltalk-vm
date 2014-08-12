@@ -67,12 +67,11 @@ Class {
 		'literalMap',
 		'methodClasses',
 		'installedPrototypes',
-		'sizeSym',
-		'rehashSym',
 		'classMetaclass',
 		'imageTypes',
 		'classMethodContextIndex',
-		'classBlockClosureIndex'
+		'classBlockClosureIndex',
+		'toBeInitialized'
 	],
 	#classVars : [
 		'ImageHeaderFlags',
@@ -539,6 +538,27 @@ SpurBootstrap class >> BehaviorPROTOTYPEtypeOfClass [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> BlockClosurePROTOTYPEsimulateValueWithArguments: anArray caller: aContext [
+	<indirect>
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> BytecodeEncoderPROTOTYPEcomputeMethodHeaderForNumArgs: numArgs numTemps: numTemps numLits: numLits primitive: primitiveIndex [
+	numArgs > 15 ifTrue:
+		[^self error: 'Cannot compile -- too many arguments'].
+	numTemps > 63 ifTrue:
+		[^self error: 'Cannot compile -- too many temporary variables'].	
+	numLits > 65535 ifTrue:
+		[^self error: 'Cannot compile -- too many literals'].
+	^(CompiledMethod headerFlagForEncoder: self)
+	+ (numArgs bitShift: 24)
+	+ (numTemps bitShift: 18)
+	"+ (largeBit bitShift: 17)" "largeBit gets filled in later"
+	+ (primitiveIndex > 0 ifTrue: [1 bitShift: 16] ifFalse: [0])
+	+ numLits
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> BytecodeEncoderPROTOTYPEsizeCallPrimitive: primitiveIndex [
 	^self sizeOpcodeSelector: #genCallPrimitive: withArguments: {primitiveIndex}
 ]
@@ -822,6 +842,11 @@ SpurBootstrap class >> ClassPROTOTYPEimmediateSubclass: t instanceVariableNames:
 		category: cat
 ]
 
+{ #category : #'method prototypes squeak 4.3' }
+SpurBootstrap class >> CompiledMethodPROTOTYPEencoderClass [
+	<indirect>
+]
+
 { #category : #'method prototypes' }
 SpurBootstrap class >> CompiledMethodPROTOTYPEnumLiterals [
 	"Answer the number of literals used by the receiver."
@@ -838,17 +863,13 @@ SpurBootstrap class >> CompiledMethodPROTOTYPEprimitive [
 		ifFalse: [0]
 ]
 
-{ #category : #'method prototypes old squeak' }
-SpurBootstrap class >> CompiledMethodclassOLDSQUEAKPROTOTYPEnewBytes: numberOfBytes trailerBytes: trailer nArgs: nArgs nTemps: nTemps nStack: stackSize nLits: nLits primitive: primitiveIndex [
-	"Since this method refers to ClassVariables things are easier if it lives in the actual class."
-
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CompiledMethodclassPROTOTYPEheaderFlagForEncoder: anEncoder [
 	<indirect>
 ]
 
-{ #category : #'method prototypes old squeak' }
-SpurBootstrap class >> CompiledMethodclassOLDSQUEAKPROTOTYPEnewBytes: numberOfBytes trailerBytes: trailer nArgs: nArgs nTemps: nTemps nStack: stackSize nLits: nLits primitive: primitiveIndex flag: flag [
-	"Since this method refers to ClassVariables things are easier if it lives in the actual class."
-
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CompiledMethodclassPROTOTYPEinitialize [    "CompiledMethod initialize"
 	<indirect>
 ]
 
@@ -864,6 +885,106 @@ SpurBootstrap class >> CompiledMethodclassPROTOTYPEnewBytes: numberOfBytes trail
 	"Since this method refers to ClassVariables things are easier if it lives in the actual class."
 
 	<indirect>
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CompiledMethodclassPROTOTYPEtoReturnConstant: index trailerBytes: trailer [
+	"Answer an instance of me that is a quick return of the constant
+	indexed in (true false nil -1 0 1 2)."
+
+	^self newBytes: 3 trailerBytes: trailer nArgs: 0 nTemps: 0 nStack: 0 nLits: 2 primitive: 256 + index
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CompiledMethodclassPROTOTYPEtoReturnField: field trailerBytes: trailer [
+	"Answer an instance of me that is a quick return of the instance variable 
+	indexed by the argument, field."
+
+	^self newBytes: 3 trailerBytes: trailer nArgs: 0 nTemps: 0 nStack: 0 nLits: 2 primitive: 264 + field
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CompiledMethodclassPROTOTYPEtoReturnSelfTrailerBytes: trailer [
+	"Answer an instance of me that is a quick return of the instance (^self)."
+
+	^self newBytes: 3 trailerBytes: trailer nArgs: 0 nTemps: 0 nStack: 0 nLits: 2 primitive: 256
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> ContextPartPROTOTYPEactivateReturn: aContext value: value [
+	"Activate 'aContext return: value' in place of self, so execution will return to aContext's sender"
+
+	^MethodContext 
+		sender: self
+		receiver: aContext
+		method: MethodContext theReturnMethod
+		arguments: {value}
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> ContextPartPROTOTYPEdoPrimitive: primitiveIndex method: meth receiver: receiver args: arguments [ 
+	<indirect>
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> ContextPartPROTOTYPEisPrimFailToken: anObject [
+	<indirect>
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> ContextPartPROTOTYPEsend: selector to: rcvr with: arguments lookupIn: lookupClass [
+	"Simulate the action of sending a message with selector and arguments
+	 to rcvr. The argument, lookupClass, is the class in which to lookup the
+	 message.  This is the receiver's class for normal messages, but for super
+	 messages it will be some specific class related to the source method."
+
+	| meth primIndex val ctxt |
+	(meth := lookupClass lookupSelector: selector) ifNil:
+		[^self send: #doesNotUnderstand:
+				to: rcvr
+				with: {Message selector: selector arguments: arguments}
+				lookupIn: lookupClass].
+	(primIndex := meth primitive) > 0 ifTrue:
+		[val := self doPrimitive: primIndex method: meth receiver: rcvr args: arguments.
+		 (self isPrimFailToken: val) ifFalse:
+			[^val]].
+	(selector == #doesNotUnderstand: and: [lookupClass == ProtoObject]) ifTrue:
+		[^self error: 'Simulated message ', arguments first selector, ' not understood'].
+	ctxt := MethodContext sender: self receiver: rcvr method: meth arguments: arguments.
+	primIndex > 0 ifTrue:
+		[ctxt failPrimitiveWith: val].
+	^ctxt
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> ContextPartPROTOTYPEsend: selector to: rcvr with: arguments super: superFlag [ 
+	"Simulate the action of sending a message with selector arguments
+	 to rcvr. The argument, superFlag, tells whether the receiver of the
+	 message was specified with 'super' in the source method."
+
+	^self send: selector
+		to: rcvr
+		with: arguments
+		lookupIn: (superFlag
+					ifTrue: [self method methodClassAssociation value superclass]
+					ifFalse: [self objectClass: rcvr])
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> ContextPartPROTOTYPEtryNamedPrimitiveIn: aCompiledMethod for: aReceiver withArgs: arguments [
+	"Invoke the named primitive for aCompiledMethod, answering its result, or,
+	 if the primiitve fails, answering the error code."
+	<primitive: 218 error: ec>
+	ec ifNotNil:
+		["If ec is an integer other than -1 there was a problem with primitive 218,
+		  not with the external primitive itself.  -1 indicates a generic failure (where
+		  ec should be nil) but ec = nil means primitive 218 is not implemented.  So
+		  interpret -1 to mean the external primitive failed with a nil error code."
+		 ec isInteger ifTrue:
+			[ec = -1
+				ifTrue: [ec := nil]
+				ifFalse: [self primitiveFailed]]].
+	^self class primitiveFailTokenFor: ec
 ]
 
 { #category : #'method prototypes pharo' }
@@ -905,6 +1026,11 @@ SpurBootstrap class >> ContextclassPROTOTYPEallInstancesDo: aBlock [
 		 inst := next]
 ]
 
+{ #category : #'method prototypes squeak 4.3' }
+SpurBootstrap class >> DecompilerPROTOTYPEdecompile: aSelector in: aClass method: aMethod using: aConstructor [
+	<indirect>
+]
+
 { #category : #'method prototypes' }
 SpurBootstrap class >> EncoderForV3PlusClosuresPROTOTYPEgenCallPrimitive: primitiveIndex [
 	"Since this method has inst var refs the prototype must live in the actual class."
@@ -944,9 +1070,31 @@ SpurBootstrap class >> InstructionClientPROTOTYPEcallPrimitive: pimIndex [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> InstructionPrinterPROTOTYPEcallPrimitive: index [
+	"Print the callPrimitive."
+
+	self print: 'callPrimtive: ' , index printString
+]
+
+{ #category : #'method prototypes squeak 4.3' }
+SpurBootstrap class >> InstructionStreamPROTOTYPEinterpretExtension: offset in: method for: client [
+	^self interpretV3ClosuresExtension: offset in: method for: client
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> InstructionStreamPROTOTYPEinterpretV3ClosuresExtension: offset in: method for: client [
 	"Since this method has inst var refs the prototype must live in the actual class."
 
+	<indirect>
+]
+
+{ #category : #'method prototypes squeak 4.3' }
+SpurBootstrap class >> InstructionStreamPROTOTYPEnextPc: currentByte [
+	<indirect>
+]
+
+{ #category : #'method prototypes squeak 4.3' }
+SpurBootstrap class >> InstructionStreamPROTOTYPEskipCallPrimitive [
 	<indirect>
 ]
 
@@ -954,6 +1102,21 @@ SpurBootstrap class >> InstructionStreamPROTOTYPEinterpretV3ClosuresExtension: o
 SpurBootstrap class >> IntegerclassPROTOTYPEinitialize [
 	"Integer initialize"	
 	self initializeLowBitPerByteTable
+]
+
+{ #category : #'method prototypes squeak 4.3' }
+SpurBootstrap class >> MCClassDefinitionPROTOTYPEkindOfSubclass [
+	<indirect>
+]
+
+{ #category : #'method prototypes squeak 4.3' }
+SpurBootstrap class >> MCMethodDefinitionPROTOTYPEinitializeWithClassName: classString classIsMeta: metaBoolean selector: selectorString category: catString timeStamp: timeString source: sourceString [
+	<indirect>
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> MethodContextPROTOTYPEfailPrimitiveWith: maybePrimFailToken [
+	<indirect>
 ]
 
 { #category : #'method prototypes squeak' }
@@ -995,11 +1158,14 @@ SpurBootstrap class >> MethodContextclassPROTOTYPEallInstancesDo: aBlock [
 		 inst := next]
 ]
 
-{ #category : #'method prototypes old squeak' }
-SpurBootstrap class >> MethodNodeOLDSQUEAKPROTOTYPEgenerate: trailerBytes [
-	"Since this method has inst var refs the prototype must live in the actual class."
+{ #category : #'method prototypes' }
+SpurBootstrap class >> MethodNodeOLDSQUEAKPROTOTYPEgenerate: trailer [ 
+	"The receiver is the root of a parse tree. Answer a CompiledMethod.
+	 The argument, trailer, is arbitrary but is typically either the reference
+	 to the source code that is stored with every CompiledMethod, or an
+	 encoding of the method's temporary names."
 
-	<indirect>
+	^self generate: trailer using: CompiledMethod
 ]
 
 { #category : #'method prototypes' }
@@ -1819,6 +1985,30 @@ SpurBootstrap class >> defaultIntegerBaseInDebugger [
 	^16
 ]
 
+{ #category : #utilities }
+SpurBootstrap class >> isolatedPrototypes [
+	"SpurBootstrap isolatedPrototypes"
+	| prototypes |
+	prototypes := (self systemNavigation allMethodsSelect:
+						[:m| m selector includesSubString: 'PROTOTYPE'])
+							collect: [:mr| mr compiledMethod].
+	^prototypes select:
+		[:m|
+		m methodClass == self class
+			ifTrue:
+				[(m pragmaAt: #indirect) notNil
+				  and: [prototypes noneSatisfy:
+						[:p|
+						p selector == m selector
+						and: [p methodClass ~~ m methodClass]]]]
+			ifFalse:
+				[prototypes noneSatisfy:
+					[:p|
+					p selector == m selector
+					and: [p methodClass == self class
+					and: [(p pragmaAt: #indirect) notNil]]]]]
+]
+
 { #category : #tests }
 SpurBootstrap class >> testComputeFormat [
 	"self testComputeFormat"
@@ -1842,6 +2032,31 @@ SpurBootstrap class >> testComputeFormat [
 		   self assert: (fmt >> 16 = instSpec
 						or: [type = #compiledMethod and: [fmt = CompiledMethod format]]).
 		 ] valueWithArguments: tuple]
+]
+
+{ #category : #'bootstrap image' }
+SpurBootstrap >> addMissingClassVars: classVars [
+	"Add any missing class vars given classVars, a Dictionary from nonMetaClass to binding.
+	 Initialize any classes that get inst vars added."
+	| addClassVarNameSym bindingOfSym |
+	classVars isEmpty ifTrue:
+		[^self].
+	addClassVarNameSym := self findSymbol: #addClassVarName:.
+	bindingOfSym := self findSymbol: #bindingOf:.
+	classVars keysAndValuesDo:
+		[:binding :class| 
+		Transcript cr;  nextPutAll: 'ADDING CLASS VAR '; store: binding key; nextPutAll: ' TO '; print: class; flush.
+		self interpreter: oldInterpreter
+			object: (self oldClassOopFor: class)
+			perform: addClassVarNameSym
+			withArguments: {oldHeap stringForCString: binding key}.
+		literalMap
+			at: binding
+			put: (self interpreter: oldInterpreter
+					object: (self oldClassOopFor: class)
+					perform: bindingOfSym
+					withArguments: {self findSymbol: binding key})].
+	toBeInitialized := classVars asSet
 ]
 
 { #category : #'bootstrap methods' }
@@ -1911,6 +2126,7 @@ SpurBootstrap >> allPrototypeClassNamesDo: aBlock [
 SpurBootstrap >> allPrototypeMethodSymbols [
 	"self basicNew allPrototypeMethodSymbols"
 	| symbols |
+	self assert: SpurBootstrap isolatedPrototypes isEmpty.
 	symbols := Set new.
 	self prototypeClassNameMetaSelectorMethodDo:
 		[:className :isMeta :selector :method | | adder |
@@ -2057,8 +2273,8 @@ SpurBootstrap >> bootstrapImageUsingFileDirectory: imageName [
 		ofTransformedImage: newHeap
 		headerFlags: oldInterpreter getImageHeaderFlags
 		screenSize: oldInterpreter savedWindowSize.
-	dir copyFileNamed: (dir fullNameFor: baseName, '.changes')
-		toFileNamed: (dir fullNameFor: baseName, '-spur.changes')
+	dir deleteFileNamed: baseName, '-spur.changes';
+		copyFileNamed: baseName, '.changes' toFileNamed: baseName, '-spur.changes'
 ]
 
 { #category : #'public access' }
@@ -2102,6 +2318,33 @@ SpurBootstrap >> buildClassMap [
 			 classToIndex at: oldClass put: (classTableIndex := classTableIndex + 1)]]
 ]
 
+{ #category : #'bootstrap image' }
+SpurBootstrap >> checkReshapeOf: ourMethodClasses [
+	"Check the shape of all our method classes match the shape of those in the image to be bootstrapped.
+	 Use the simulator to redefine any that need it.  Does /not/ reshape metaclasses; these we assume are ok."
+	| toReshape |
+	toReshape := Set new.
+	ourMethodClasses do:
+		[:mc| | binding |
+		binding := literalMap at: mc binding.
+		(mc ~~ Character "Character will reshape anyway"
+		 and: [mc instSize ~= (oldHeap instanceSizeOf: (oldHeap fetchPointer: ValueIndex ofObject: binding))]) ifTrue:
+			[toReshape add: mc]].
+	toReshape isEmpty ifTrue:
+		[^self].
+	"Assume only one class in any subtree needs reshaping.  Fast and loose but gets us there for now."
+	toReshape copy do:
+		[:class|
+		toReshape removeAll: (toReshape select: [:ea| ea inheritsFrom: class])].
+	toReshape do:
+		[:class|
+		Transcript cr;  nextPutAll: 'RESHAPING '; print: class; flush.
+		self interpreter: oldInterpreter
+			object: (self oldClassOopFor: Compiler)
+			perform: (self findSymbol: #evaluate:)
+			withArguments: {oldHeap stringForCString: class definition}]
+]
+
 { #category : #'method prototypes' }
 SpurBootstrap >> classNameForPrototypeMethod: protoMethod [
 	| protoSelector |
@@ -2120,12 +2363,17 @@ SpurBootstrap >> classTableSize [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> clone: oldObj classIndex: classIndex [
-	| newObj |
+	| newObj format numBytes |
+	((format := oldHeap formatOf: oldObj) >= oldHeap firstLongFormat
+	 and: [numBytes := oldHeap numBytesOf: oldObj.
+		format >= oldHeap firstCompiledMethodFormat
+		and: [(oldInterpreter primitiveIndexOf: oldObj) > 0]]) ifTrue:
+			[numBytes := numBytes + 3].
 	newObj := newHeap
-				allocateSlots: (((oldHeap isCompiledMethod: oldObj) and: [(oldInterpreter primitiveIndexOf: oldObj) > 0])
-								ifTrue: [(oldHeap byteSizeOf: oldObj) + 3 + self wordSize - 1 // self wordSize]
+				allocateSlots: (format >= oldHeap firstLongFormat
+								ifTrue: [newHeap numSlotsForBytes: numBytes]
 								ifFalse: [oldHeap numSlotsOf: oldObj])
-				format: (self newFormatFor: oldObj)
+				format: (self newFormatFor: oldObj numBytes: numBytes)
 				classIndex: classIndex.
 	reverseMap at: newObj put: oldObj.
 	^map at: oldObj put: newObj
@@ -2158,18 +2406,26 @@ SpurBootstrap >> cloneArrayLiteral: anArray [
 
 { #category : #'bootstrap methods' }
 SpurBootstrap >> cloneMethodProxy: proxy [ "<VMCompiledMethodProxy>"
-	| bytes newMethod |
+	| bytes newMethod delta |
 	bytes := proxy size - proxy initialPC + 1.
+	delta := proxy primitive > 0
+				ifTrue: [3]
+				ifFalse: [0].
 	newMethod := CompiledMethod
-						newMethod: bytes
-						header: proxy header.
+						newMethod: bytes + delta
+						header: (self convertOldMethodHeader: (oldHeap integerObjectOf: proxy header)).
 	1 to: proxy numLiterals - 1 do:
 		[:i| newMethod literalAt: i put: (proxy literalAt: i)].
 	newMethod
 		literalAt: proxy numLiterals
 		put: (Smalltalk bindingOf: #Character).
+	delta > 0 ifTrue:
+		[newMethod
+			at: newMethod initialPC + 0 put: 139;
+			at: newMethod initialPC + 1 put: (proxy primitive bitAnd: 16rFF);
+			at: newMethod initialPC + 2 put: (proxy primitive bitShift: -8)].
 	proxy initialPC to: proxy size do:
-		[:i| newMethod at: i put: (proxy at: i)].
+		[:i| newMethod at: i + delta put: (proxy at: i)].
 	^newMethod
 ]
 
@@ -2237,12 +2493,11 @@ SpurBootstrap >> compactImage [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> convertOldMethodHeader: methodHeader [
-	^newHeap integerObjectOf:
-		   ((oldInterpreter argumentCountOfMethodHeader: methodHeader) << 24)
-		+ ((oldInterpreter temporaryCountOfMethodHeader: methodHeader) << 18)
-		+ ((oldInterpreter methodHeaderIndicatesLargeFrame: methodHeader) ifTrue: [1 << 17] ifFalse: [0])
-		+ ((oldInterpreter methodHeaderHasPrimitive: methodHeader) ifTrue: [1 << 16] ifFalse: [0])
-		+ (oldHeap literalCountOfMethodHeader: methodHeader)
+	^((oldInterpreter argumentCountOfMethodHeader: methodHeader) << 24)
+	 + ((oldInterpreter temporaryCountOfMethodHeader: methodHeader) << 18)
+	 + ((oldInterpreter methodHeaderIndicatesLargeFrame: methodHeader) ifTrue: [1 << 17] ifFalse: [0])
+	 + ((oldInterpreter methodHeaderHasPrimitive: methodHeader) ifTrue: [1 << 16] ifFalse: [0])
+	 + (oldHeap literalCountOfMethodHeader: methodHeader)
 ]
 
 { #category : #'class indices' }
@@ -2322,6 +2577,8 @@ SpurBootstrap >> fileOutPrototypesFor: imageTypeOrArrayOfTypes [
 		internalStream nextPut: $!; nextChunkPut: preamble; cr.
 		source := method getSourceFromFile asString.
 		source := source copyFrom: (source indexOfSubCollection: 'PROTOTYPE') + 9 to: source size.
+		(self selectorForPrototypeMethod: method) isBinary ifTrue:
+			[source := (self selectorForPrototypeMethod: method), (source copyFrom: (source indexOf: Character space) to: source size)].
 		internalStream nextChunkPut: source; space; nextPut: $!; cr; cr].
 	internalStream trailer.
 
@@ -2381,7 +2638,7 @@ SpurBootstrap >> fillInCompiledMethod: newObj from: oldObj [
 	newHeap
 		storePointerUnchecked: 0
 		ofObject: newObj
-		withValue: (self convertOldMethodHeader: (oldHeap fetchPointer: 0 ofObject: oldObj)).
+		withValue: (newHeap integerObjectOf: (self convertOldMethodHeader: (oldHeap fetchPointer: 0 ofObject: oldObj))).
 	"Then if necessary prepend the callPrimitive: bytecode"
 	(primIndex := oldInterpreter primitiveIndexOf: oldObj) > 0
 		ifTrue:
@@ -2503,27 +2760,56 @@ SpurBootstrap >> findLiteral: aLiteral inClass: classOop [
 { #category : #'bootstrap image' }
 SpurBootstrap >> findRequiredGlobals [
 	"Look for the necessary gobal bindings in the prototype methods in the old image.
-	 This has to be done early by sending bindingOf: to Smalltalk.  Also find out
-	 Metaclass, needed for identofying classes."
-	| globals bindingOf |
+	 This has to be done early by sending bindingOf: to Smalltalk.  Collect the class
+	 hierarchy of all prototypes that access inst vars (non-local prototypes) to check
+	 their shapes.  Also find out Metaclass, needed for identifying classes."
+	| globals ourMethodClasses classVars bindingOfSym |
 	globals := Set new.
+	ourMethodClasses := Set new.
+	classVars := Dictionary new.
 	self prototypeClassNameMetaSelectorMethodDo:
-		[:c :m :s :method|
-		globals addAll: (method literals select: [:l|
-										l isVariableBinding
-										and: [l key isSymbol
-										and: [(Smalltalk bindingOf: l key) == l]]])].
-	bindingOf := self findSymbol: #bindingOf:.
+		[:c :m :s :method| | nonMetaClass allNonMetaSupers |
+		allNonMetaSupers := (nonMetaClass := Smalltalk classNamed: c) withAllSuperclasses.
+		method methodClass ~= SpurBootstrap class ifTrue:
+			[ourMethodClasses addAll: allNonMetaSupers].
+		globals addAll: (allNonMetaSupers collect: [:sc| sc binding]).
+		method literals do:
+			[:l|
+			(l isVariableBinding and: [l key isSymbol]) ifTrue:
+				[(Smalltalk bindingOf: l key) == l
+					ifTrue: [globals add: l]
+					ifFalse:
+						[self assert: (nonMetaClass bindingOf: l key) == l.
+						classVars at: l put: nonMetaClass]]]].
+	globals add: Compiler binding. "For potential reshaping in checkReshapeOf:"
+	bindingOfSym := self findSymbol: #bindingOf:.
 	self withExecutableInterpreter: oldInterpreter
-		do:	[globals do:
+		do:	[| toBeAdded |
+			globals do:
 				[:global|
 				literalMap
 					at: global
 					put: (self interpreter: oldInterpreter
 							object: (oldHeap splObj: 8) "Smalltalk"
-							perform: bindingOf
-							withArguments: {self findSymbol: global key})]].
-
+							perform: bindingOfSym
+							withArguments: {self findSymbol: global key})].
+			 toBeAdded := Dictionary new.
+			 classVars keysAndValuesDo:
+				[:var :class| | val |
+				(self findSymbol: var key) "New class inst vars may not yet be interned."
+					ifNil: [toBeAdded at: var put: class]
+					ifNotNil:
+						[:varName|
+						val := self interpreter: oldInterpreter
+									object: (self oldClassOopFor: class)
+									perform: bindingOfSym
+									withArguments: {varName}.
+						val ~= oldHeap nilObject
+							ifTrue: [literalMap at: var put: val]
+							ifFalse: [toBeAdded at: var put: class]]].
+			"May have to redefine to add missing inst vars and/or add any missing class vars."
+			self checkReshapeOf: ourMethodClasses.
+			self addMissingClassVars: toBeAdded].
 	classMetaclass := oldHeap fetchClassOfNonImm: (oldHeap fetchClassOfNonImm: oldHeap classArray)
 ]
 
@@ -2539,7 +2825,10 @@ SpurBootstrap >> findSymbol: aString [
 		(symbolClass = (oldHeap fetchClassOfNonImm: obj)
 		 and: [(oldHeap numBytesOf: obj) = aString size
 		 and: [aString = (oldHeap stringOf: obj)]]) ifTrue:
-			[^obj]].
+			[aString isSymbol ifTrue:
+				[literalMap at: aString asSymbol put: obj].
+			 ^obj]].
+	Transcript cr; nextPutAll: 'Warning, could not find '; store: aString; flush.
 	^nil
 ]
 
@@ -2586,6 +2875,11 @@ SpurBootstrap >> freeForwarders [
 ]
 
 { #category : #'bootstrap image' }
+SpurBootstrap >> imageTypes: anArray [
+	imageTypes := anArray
+]
+
+{ #category : #'bootstrap image' }
 SpurBootstrap >> incrementPCField: fieldIndex ofObject: newObj by: n [
 	| value |
 	value := newHeap fetchPointer: fieldIndex ofObject: newObj.
@@ -2616,13 +2910,24 @@ SpurBootstrap >> initMaps [
 	literalMap := IdentityDictionary new.
 	methodClasses := Set new.
 	installedPrototypes := Set new.
-	sizeSym := rehashSym := classMetaclass := nil
+	classMetaclass := nil
 ]
 
 { #category : #'initialize-release' }
 SpurBootstrap >> initialize [
 	super initialize.
 	imageTypes := {'squeak'}. "By default, image is Squeak (so Eliot does not kick me :P)"
+]
+
+{ #category : #'bootstrap image' }
+SpurBootstrap >> initializeClasses [
+	self withExecutableInterpreter: oldInterpreter
+		do: [toBeInitialized do:
+				[:class|
+				self interpreter: oldInterpreter
+					object: (self oldClassOopFor: class)
+					perform: (self findSymbol: #initialize)
+					withArguments: #()]]
 ]
 
 { #category : #'bootstrap methods' }
@@ -2642,7 +2947,7 @@ SpurBootstrap >> installModifiedMethods [
 SpurBootstrap >> installableMethodFor: aCompiledMethod selector: selector className: className isMeta: isMeta [
 	"Create a sourceless method to install in the bootstrapped image.  It will allow the
 	 bootstrap to limp along until the relevant transformed Monticello package is loaded."
-	| compiledMethodClass methodClassBinding methodClass sourcelessMethod bytes newMethod |
+	| compiledMethodClass methodClassBinding methodClass sourcelessMethod bytes newMethod delta initialPC |
 	compiledMethodClass := self findClassNamed: (self findSymbol: #CompiledMethod).
 	methodClassBinding := self methodClassBindingForClassName: className isMeta: isMeta.
 	methodClass := oldHeap fetchPointer: ValueIndex ofObject: methodClassBinding.
@@ -2650,13 +2955,20 @@ SpurBootstrap >> installableMethodFor: aCompiledMethod selector: selector classN
 	sourcelessMethod := aCompiledMethod trailer hasSourcePointer
 							ifTrue: [aCompiledMethod copyWithTempsFromMethodNode: aCompiledMethod methodNode]
 							ifFalse: [aCompiledMethod].
-	bytes := sourcelessMethod size - sourcelessMethod initialPC + 1.
+	initialPC := sourcelessMethod initialPC.
+	bytes := sourcelessMethod size - initialPC + 1.
+	"Ugh, this is complicated.  We could be running on Spur with the new method format
+	 or on non-Spur with the old format.  Make both work."
+	delta := (sourcelessMethod primitive > 0
+			 and: [(sourcelessMethod at: initialPC) = sourcelessMethod encoderClass callPrimitiveCode])
+				ifTrue: [3]
+				ifFalse: [0].
 	newMethod := self
 					interpreter: oldInterpreter
 					object: compiledMethodClass
 					perform: (self findSymbol: #newMethod:header:)
-					withArguments: { oldHeap integerObjectOf: bytes.
-									   oldHeap integerObjectOf: sourcelessMethod header }.
+					withArguments: { oldHeap integerObjectOf: bytes - delta.
+									   oldHeap integerObjectOf: (self oldFormatHeaderFor: sourcelessMethod) }.
 	1 to: sourcelessMethod numLiterals - 2 do:
 		[:i| | literal oop |
 		literal := sourcelessMethod literalAt: i.
@@ -2679,10 +2991,10 @@ SpurBootstrap >> installableMethodFor: aCompiledMethod selector: selector classN
 						ifFalse: [selector oop]);
 		storePointer: sourcelessMethod numLiterals
 		ofObject: newMethod
-		withValue: methodClass.
-	sourcelessMethod initialPC to: sourcelessMethod size do:
+		withValue: methodClassBinding.
+	initialPC to: sourcelessMethod size - delta do:
 		[:i|
-		oldHeap storeByte: i - 1 ofObject: newMethod withValue: (sourcelessMethod byteAt: i)].
+		oldHeap storeByte: i - 1 ofObject: newMethod withValue: (sourcelessMethod byteAt: i + delta)].
 	^newMethod
 ]
 
@@ -2691,10 +3003,20 @@ SpurBootstrap >> internAllSymbols [
 	"Ensure that all symbols in the method prototypes are interned so that later we can install them.
 	 Enter them into the map, this system's symbol -> oldHeap's version.
 	 Do this by interpreting Symbol intern: 'aSymbol' for each symbol."
-	| internSym |
+	| internSym all symbolClass |
 	internSym := self findSymbol: #intern:.
-	self allPrototypeMethodSymbols do:
-		[:sym|
+	symbolClass := self symbolClass.
+	all := self allPrototypeMethodSymbols.
+	oldHeap allObjectsDo:
+		[:objOop| | sz |
+		symbolClass = (oldHeap fetchClassOfNonImm: objOop) ifTrue:
+			[sz := oldHeap numBytesOf: objOop.
+			 (all detect: [:sym| sym size = sz and: [sym = (oldHeap stringOf: objOop)]]
+				ifNone: nil) ifNotNil:
+					[:sym|
+					literalMap at: sym put: objOop.
+					all remove: sym]]].
+	all do: [:sym|
 		(self findSymbol: sym)
 			ifNotNil: [:imageSym| literalMap at: sym put: imageSym]
 			ifNil:[Transcript cr; nextPutAll: 'interning '; nextPutAll: sym; flush.
@@ -2876,7 +3198,7 @@ SpurBootstrap >> newClassFormatFor: oldClassObj [
 ]
 
 { #category : #'bootstrap image' }
-SpurBootstrap >> newFormatFor: oldObj [
+SpurBootstrap >> newFormatFor: oldObj numBytes: numBytesIfBits [
 	"OLD:
 	 0	no fields
 	 1	fixed fields only (all containing pointers)
@@ -2900,10 +3222,9 @@ SpurBootstrap >> newFormatFor: oldObj [
 	 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
 	 4 = weak indexable objects with inst vars (WeakArray et al)
 	 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
-
-	 and here it gets messy, we need 8 CompiledMethod values, 8 byte values, 4 16-bit values, 2 32-bit values and a 64-bit value, = 23 values, 23 + 5 = 30, so there may be room.
-
-	 9 (?) 64-bit indexable
+	 6 = reserved
+	 7 = forwarder format (also immediate class format)
+	 9          64-bit indexable
 	 10 - 11 32-bit indexable
 	 12 - 15 16-bit indexable
 	 16 - 23 byte indexable
@@ -2913,14 +3234,33 @@ SpurBootstrap >> newFormatFor: oldObj [
 	oldFormat <= 4 ifTrue:
 		[^oldFormat].
 	oldFormat >= 12 ifTrue: "CompiledMethod"
-		[^24 + (self wordSize - (oldHeap numBytesOf: oldObj) bitAnd: self wordSizeMask)].
+		[^24 + (self wordSize - numBytesIfBits bitAnd: self wordSizeMask)].
 	oldFormat >= 8 ifTrue: "ByteArray et al"
-		[^16 + (self wordSize - (oldHeap numBytesOf: oldObj) bitAnd: self wordSizeMask)].
+		[^16 + (self wordSize - numBytesIfBits bitAnd: self wordSizeMask)].
 	oldFormat = 6 ifTrue: "32-bit indexable"
-		[^10 + ((oldHeap numBytesOf: oldObj) bitAnd: self wordSizeMask) sign].
+		[^10 + (numBytesIfBits bitAnd: self wordSizeMask) sign].
 	oldFormat = 7 ifTrue: "64-bit indexable"
 		[^9].
 	self error: 'illegal old format'
+]
+
+{ #category : #'bootstrap image' }
+SpurBootstrap >> oldClassOopFor: aClass [
+	^oldHeap fetchPointer: ValueIndex ofObject: (literalMap at: aClass binding).
+]
+
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> oldFormatHeaderFor: method [
+	| primBits primitive |
+	primitive := method primitive.
+	primBits := primitive <= 16r1FF
+					ifTrue: [primitive]
+					ifFalse: [(primitive bitAnd: 16r1FF) + ((primitive bitAnd: 16r200) bitShift: 19)].
+	^(method numArgs bitShift: 24)
+	+ (method numTemps bitShift: 18)
+	+ (method frameSize > method class smallFrameSize ifTrue: [1 << 17] ifFalse: [0])
+	+ (method numLiterals bitShift: 9)
+	+ primBits
 ]
 
 { #category : #'initialize-release' }
@@ -2987,7 +3327,9 @@ SpurBootstrap >> rehashImage [
 	"Rehash all collections in newHeap.
 	 Find out which classes implement rehash, entering a 1 against their classIndex in rehashFlags.
 	 Enumerate all objects, rehashing those whose class has a bit set in rehashFlags."
-	| n sim rehashFlags dotDate |
+	| n sim rehashFlags dotDate rehashSym sizeSym |
+	rehashSym := map at: (self findSymbol: #rehash).
+	sizeSym := map at: (self findSymbol: #size).
 	sim := StackInterpreterSimulator onObjectMemory: newHeap.
 	sim 
 		setImageHeaderFlagsFrom: oldInterpreter getImageHeaderFlags;
@@ -3007,7 +3349,7 @@ SpurBootstrap >> rehashImage [
 	n := 0.
 	newHeap classTableObjectsDo:
 		[:class| | classIndex |
-		sim messageSelector: (map at: rehashSym).
+		sim messageSelector: rehashSym.
 		"Lookup rehash but don't be fooled by ProtoObject>>rehash, which is just ^self."
 		((sim lookupMethodNoMNUEtcInClass: class) = 0
 		 and: [(sim isQuickPrimitiveIndex: (sim primitiveIndexOf: (sim instVarNamed: 'newMethod'))) not]) ifTrue:
@@ -3038,18 +3380,12 @@ SpurBootstrap >> rehashImage [
 					 ((sim addressCouldBeClassObj: o)
 					   or: [(self interpreter: sim
 							object: o
-							perform: (map at: sizeSym)
+							perform: sizeSym
 							withArguments: #()) = (newHeap integerObjectOf: 0)]) ifFalse:
 						[self interpreter: sim
 							object: o
-							perform: (map at: rehashSym)
+							perform: rehashSym
 							withArguments: #()]]]]
-]
-
-{ #category : #'bootstrap image' }
-SpurBootstrap >> rememberRehashSymbol [
-	rehashSym := self findSymbol: #rehash.
-	sizeSym := self findSymbol: #size
 ]
 
 { #category : #'bootstrap methods' }
@@ -3104,7 +3440,9 @@ SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 				for: characterMethodOop
 				coInterpreter: oldInterpreter
 				objectMemory: oldHeap.
+	self assert: (oldHeap literalCountOf: characterMethodOop) = proxy numLiterals.
 	clone := self cloneMethodProxy: proxy.
+	self assert: proxy numLiterals = clone numLiterals.
 	"Quick methods accessing value should have been replaced.  The halt will fire if there
 	 is a missing prototype for such a method on the class side of SpurBootstrap.  The
 	 relevant Character prototypes there so far are Character>>asInteger, Character>>
@@ -3134,6 +3472,7 @@ SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 				 b].
 	assembly instructions: newInsts.
 	newMethod := assembly assemble.
+	self assert: clone numLiterals + 1 = newMethod numLiterals.
 	^self
 		installableMethodFor: newMethod
 		selector: clone selector
@@ -3214,13 +3553,12 @@ SpurBootstrap >> symbolClass [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> transform [
-	self rememberRehashSymbol.
 	self findRequiredGlobals.
 	self installModifiedMethods.
 	self recreateSpecialObjectsArray.
+	self initializeClasses.
 	self bootstrapImage.
 	self validate.
-	self rememberRehashSymbol.
 	self rehashImage.
 	self followForwardingPointers.
 	self scavengeImage.
@@ -3334,7 +3672,8 @@ SpurBootstrap >> writeSnapshot: imageFileName ofTransformedImage: spurHeap heade
 	spurHeap runLeakCheckerForFullGC: true.
 	sim bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf: true.
 	sim imageName: imageFileName.
-	sim writeImageFileIO
+	sim writeImageFileIO.
+	Transcript cr; show: 'Done!'
 ]
 
 { #category : #testing }

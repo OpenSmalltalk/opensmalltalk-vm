@@ -1,5 +1,15 @@
 Extension { #name : #MethodContext }
 
+{ #category : #'*Cog-method prototypes' }
+MethodContext >> MethodContextPROTOTYPEfailPrimitiveWith: maybePrimFailToken [
+	"The receiver is a freshly-created context on a primitive method.  Skip the callPrimitive:
+	 bytecode and store the primitive fail code if there is one and the method consumes it."
+	self skipCallPrimitive.
+	((self isPrimFailToken: maybePrimFailToken)
+	  and: [method encoderClass isStoreAt: pc in: method]) ifTrue:
+		[self at: stackp put: maybePrimFailToken last]
+]
+
 { #category : #'*Cog-Tests-xrays' }
 MethodContext >> xray [
 	"Lift the veil from a context and answer an integer describing its interior state.
