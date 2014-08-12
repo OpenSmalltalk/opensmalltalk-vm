@@ -17,7 +17,8 @@ Class {
 	#instVars : [
 		'sourceDir',
 		'destDir',
-		'packagesAndPatches'
+		'packagesAndPatches',
+		'imageTypes'
 	],
 	#category : #'Cog-Bootstrapping'
 }
@@ -103,6 +104,51 @@ SpurBootstrapMonticelloPackagePatcher class >> squeak45baseline [
 		)
 ]
 
+{ #category : #'private-accessing' }
+SpurBootstrapMonticelloPackagePatcher >> compiledMethodClassDefinition [
+	^MCAddition of: 
+		(MCClassDefinition name: #CompiledMethod
+			superclassName: #ByteArray
+			category: #'Kernel-Methods'
+			instVarNames: #()
+			classVarNames: #(LargeFrame PrimaryBytecodeSetEncoderClass SecondaryBytecodeSetEncoderClass SmallFrame)
+			poolDictionaryNames: #()
+			classInstVarNames: #()
+			type: #compiledMethod
+			comment:
+'CompiledMethod instances are methods suitable for interpretation by the virtual machine.  Instances of CompiledMethod and its subclasses are the only objects in the system that have both indexable pointer fields and indexable 8-bit integer fields.  The first part of a CompiledMethod is pointers, the second part is bytes.  CompiledMethod inherits from ByteArray to avoid duplicating some of ByteArray''s methods, not because a CompiledMethod is-a ByteArray.
+
+Class variables:
+SmallFrame								- the number of stack slots in a small frame Context
+LargeFrame							- the number of stack slots in a large frame Context
+PrimaryBytecodeSetEncoderClass		- the encoder class that defines the primary instruction set
+SecondaryBytecodeSetEncoderClass	- the encoder class that defines the secondary instruction set
+
+The current format of a CompiledMethod is as follows:
+
+	header (4 or 8 bytes, SmallInteger)
+	literals (4 or 8 bytes each, Object, see "The last literal..." below)
+	bytecodes  (variable, bytes)
+	trailer (variable, bytes)
+
+The header is a 31-bit signed integer (a SmallInteger) in the following format:
+
+	(index 0)		16 bits:	number of literals (#numLiterals)
+	(index 16)		  1 bit:	has primitive
+	(index 17)		  1 bit:	whether a large frame size is needed (#frameSize => either SmallFrame or LargeFrame)
+	(index 18)		  6 bits:	number of temporary variables (#numTemps)
+	(index 24)		  4 bits:	number of arguments to the method (#numArgs)
+	(index 28)		  2 bits:	reserved for an access modifier (00-unused, 01-private, 10-protected, 11-public), although accessors for bit 29 exist (see #flag).
+	(index 30/63)	sign bit: 1 selects the Secondary instruction set (e.g. NewsqueakV4, 0 selects the primary instruction set, e.g. SqueakV3PlusClosures) (#signFlag)
+
+If the method has a primitive then the first bytecode of the method must be a callPrimitive: bytecode that encodes the primitive index.
+
+The trailer is an encoding of an instance of CompiledMethodTrailer.  It is typically used to encode the index into the source files array of the method''s source, but may be used to encode other values, e.g. tempNames, source as a string, etc.  See the class CompiledMethodTrailer.
+
+The last literal in a CompiledMethod must be its methodClassAssociation, a binding whose value is the class the method is installed in.  The methodClassAssociation is used to implement super sends.  If a method contains no super send then its methodClassAssociation may be left nil (as would be the case for example of methods providing a pool of inst var accessors).  By convention the penultimate literal of a method is either its selector or an instance of AdditionalMethodState.  AdditionalMethodState holds any pragmas and properties of a method, but may also be used to add instance variables to a method, albeit ones held in the method''s AdditionalMethodState.  Subclasses of CompiledMethod that want to add state should subclass AdditionalMethodState to add the state they want, and implement methodPropertiesClass on the class side of the CompiledMethod subclass to answer the specialized subclass of AdditionalMethodState.'
+			commentStamp: 'eem 8/12/2014 14:45')
+]
+
 { #category : #initialization }
 SpurBootstrapMonticelloPackagePatcher >> directoryFrom: dirName [
 	^FileDirectory on: (dirName first = $/
@@ -141,7 +187,8 @@ SpurBootstrapMonticelloPackagePatcher >> filesForPackage: package in: aDirectory
 	^aDirectory fileNames select:
 		[:fileName|
 		(fileName beginsWith: package name)
-		 and: [(fileName at: package name size + 1) isLetter not]]
+		 and: [(fileName at: package name size + 1) isLetter not
+		 and: [(fileName copyFrom: package name size + 2 to: package name size + 5) ~= 'spur']]]
 ]
 
 { #category : #initialization }
@@ -150,14 +197,22 @@ SpurBootstrapMonticelloPackagePatcher >> from: sourceDirName to: destDirName [
 	destDir := self directoryFrom: destDirName
 ]
 
+{ #category : #initialization }
+SpurBootstrapMonticelloPackagePatcher >> imageTypes: typeArray [
+	imageTypes := typeArray
+]
+
 { #category : #'private-accessing' }
-SpurBootstrapMonticelloPackagePatcher >> immediateClassDefinitionFor: className from: definitions [
+SpurBootstrapMonticelloPackagePatcher >> immediateClassDefinitionFor: className from: definitions comment: commentString stamp: stampString [
 	| classDef |
 	classDef := definitions detect: [:d| d isClassDefinition and: [d className = className]].
 	classDef variables removeAllSuchThat:
 		[:varDef|
 		 varDef isInstanceVariable and: [varDef name = 'value']].
-	classDef instVarNamed: 'type' put: #immediate.
+	classDef
+		instVarNamed: 'type' put: #immediate;
+		instVarNamed: 'comment' put: commentString;
+		instVarNamed: 'commentStamp' put: stampString.
 	^MCAddition of: classDef
 ]
 
@@ -175,28 +230,16 @@ SpurBootstrapMonticelloPackagePatcher >> modifiedCharacterDefinitionsIn: definit
 ]
 
 { #category : #'private-accessing' }
-SpurBootstrapMonticelloPackagePatcher >> packages [
-	"SpurBootstrapMonticelloPackagePatcher new packages"
-	| packages |
-	packages := Set new.
-	SpurBootstrap new prototypeClassNameMetaSelectorMethodDo:
-		[:className :isMeta :selector :method| | class |
-		 class := Smalltalk classNamed: className.
-		 isMeta ifTrue:
-			[class := class class].
-		 packages add: ((class includesSelector: selector)
-							ifTrue: [PackageOrganizer default packageOfMethod: (class >> selector) methodReference]
-							ifFalse: [PackageOrganizer default  packageOfClass: class])].
-	^packages
-]
-
-{ #category : #'private-accessing' }
 SpurBootstrapMonticelloPackagePatcher >> packagesAndPatches [
 	"SpurBootstrapMonticelloPackagePatcher new packagesAndPatches"
+	| spurBootstrap |
 	packagesAndPatches ifNotNil:
 		[^packagesAndPatches].
 	packagesAndPatches := Dictionary new.
-	SpurBootstrap new prototypeClassNameMetaSelectorMethodDo:
+	spurBootstrap := SpurBootstrap new.
+	imageTypes ifNotNil:
+		[spurBootstrap imageTypes: imageTypes].
+	spurBootstrap prototypeClassNameMetaSelectorMethodDo:
 		[:className :isMeta :selector :method| | class methodReference source |
 		 class := Smalltalk classNamed: className.
 		 isMeta ifTrue:
@@ -339,10 +382,24 @@ SpurBootstrapMonticelloPackagePatcher >> patchForPackage: package withPatches: p
 							 ((def source includesSubString: 'DELETEME')
 								ifTrue: [MCRemoval]
 								ifFalse: [MCAddition]) of: def]);
-			add: (self immediateClassDefinitionFor: #Character from: snapshot definitions)].
+			add: (self immediateClassDefinitionFor: #Character
+					from: snapshot definitions
+					comment: 'I represent a character by storing its associated Unicode as an unsigned 30-bit value.  Characters are created uniquely, so that all instances of a particular Unicode are identical.  My instances are encoded in tagged pointers in the VM, so called immediates, and therefore are pure immutable values.
+
+	The code point is based on Unicode.  Since Unicode is 21-bit wide character set, we have several bits available for other information.  As the Unicode Standard  states, a Unicode code point doesn''t carry the language information.  This is going to be a problem with the languages so called CJK (Chinese, Japanese, Korean.  Or often CJKV including Vietnamese).  Since the characters of those languages are unified and given the same code point, it is impossible to display a bare Unicode code point in an inspector or such tools.  To utilize the extra available bits, we use them for identifying the languages.  Since the old implementation uses the bits to identify the character encoding, the bits are sometimes called "encoding tag" or neutrally "leading char", but the bits rigidly denotes the concept of languages.
+
+	The other languages can have the language tag if you like.  This will help to break the large default font (font set) into separately loadable chunk of fonts.  However, it is open to the each native speakers and writers to decide how to define the character equality, since the same Unicode code point may have different language tag thus simple #= comparison may return false.'
+					stamp: 'eem 8/12/2014 14:53')].
 	(package includesClass: SmallInteger) ifTrue:
 		[patches
-			add: (self immediateClassDefinitionFor: #SmallInteger from: snapshot definitions)].
+			add: (self
+					immediateClassDefinitionFor: #SmallInteger
+					from: snapshot definitions
+					comment: 'My instances are 31-bit numbers, stored in twos complement form. The allowable range is approximately +- 1 billion (see SmallInteger minVal, maxVal).  My instances are encoded in tagged pointers in the VM, so called immediates, and therefore are pure immutable values.'
+					stamp: 'eem 8/12/2014 14:54')].
+	(package includesClass: CompiledMethod) ifTrue:
+		[patches
+			add: (self compiledMethodClassDefinition)].
 	^MCPatch operations: patches
 ]
 
