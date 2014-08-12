@@ -3551,6 +3551,7 @@ CoInterpreter >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage:
 
 { #category : #accessing }
 CoInterpreter >> heapBase [
+	<cmacro: '() heapBase'>
 	^heapBase
 ]
 
