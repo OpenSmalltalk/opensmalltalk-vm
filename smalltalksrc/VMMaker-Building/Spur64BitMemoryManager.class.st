@@ -297,9 +297,6 @@ Spur64BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 			 instSpec := instSpec + (4 - nElements bitAnd: 3)].
 		[self firstByteFormat]	->
 			[numSlots := nElements + 7 // 8.
-			 instSpec := instSpec + (8 - nElements bitAnd: 7)].
-		[self firstCompiledMethodFormat]	->
-			[numSlots := nElements + 7 // 8.
 			 instSpec := instSpec + (8 - nElements bitAnd: 7)] }
 		otherwise: ["some Squeak images include funky fixed subclasses of abstract variable
 					 superclasses. e.g. DirectoryEntry as a subclass of ArrayedCollection.
