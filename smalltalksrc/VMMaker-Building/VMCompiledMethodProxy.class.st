@@ -66,6 +66,13 @@ VMCompiledMethodProxy >> numTemps [
 ]
 
 { #category : #accessing }
+VMCompiledMethodProxy >> primitive [
+	"Answer the receiver's primitive."
+	
+	^coInterpreter primitiveIndexOf: oop
+]
+
+{ #category : #accessing }
 VMCompiledMethodProxy >> size [
 	^objectMemory numBytesOf: oop
 ]

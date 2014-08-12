@@ -1057,6 +1057,12 @@ ObjectMemory >> bytesLeft: includingSwap [
 		+ (self sqMemoryExtraBytesLeft: includingSwap).
 ]
 
+{ #category : #'simulation support' }
+ObjectMemory >> cCoerceSimple: value to: cTypeString [
+	^cTypeString caseOf:
+	   {	[#'char *']	->	[value] }
+]
+
 { #category : #'interpreter access' }
 ObjectMemory >> changeClassOf: rcvr to: argClass [
 	"Attempt to change the class of the receiver to the argument given that the
