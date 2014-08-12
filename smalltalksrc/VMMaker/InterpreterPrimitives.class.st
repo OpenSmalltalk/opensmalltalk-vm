@@ -2465,7 +2465,9 @@ InterpreterPrimitives >> primitiveNew [
 			  less than lowSpaceThreshold bytes free. This *will not* cause a GC :-)"
 			(objectMemory instantiateClass: self stackTop)
 				ifNotNil: [:obj| self pop: argumentCount + 1 thenPush: obj]
-				ifNil: [self primitiveFailFor: PrimErrNoMemory]]
+				ifNil: [self primitiveFailFor: ((objectMemory isFixedSizePointerFormat: (objectMemory instSpecOfClass: self stackTop))
+											ifTrue: [PrimErrNoMemory]
+											ifFalse: [PrimErrBadReceiver])]]
 		ifFalse:
 			["Allocate a new fixed-size instance. Fail if the allocation would leave
 			  less than lowSpaceThreshold bytes free. May cause a GC."
@@ -2488,13 +2490,25 @@ InterpreterPrimitives >> primitiveNew [
 InterpreterPrimitives >> primitiveNewMethod [
 	| header bytecodeCount class size theMethod literalCount |
 	header := self stackTop.
-	bytecodeCount := self stackIntegerValue: 1.
-	self success: (objectMemory isIntegerObject: header).
-	self successful ifFalse: [^nil].
+	bytecodeCount := self stackValue: 1.
+	((objectMemory isIntegerObject: header)
+	 and: [(objectMemory isIntegerObject: bytecodeCount)
+	 and: [(bytecodeCount := objectMemory integerValueOf: bytecodeCount) >= 0]]) ifFalse:
+		[self primitiveFailFor: PrimErrBadArgument.
+		 ^self].
 	class := self stackValue: 2.
 	literalCount := objectMemory literalCountOfMethodHeader: header.
 	size := literalCount + LiteralStart * BytesPerOop + bytecodeCount.
-	theMethod := objectMemory instantiateClass: class indexableSize: size.
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[theMethod := objectMemory instantiateCompiledMethodClass: class indexableSize: size.
+			 theMethod ifNil:
+				[self primitiveFailFor: ((objectMemory isCompiledMethodFormat: (objectMemory instSpecOfClass: class))
+										ifTrue: [PrimErrNoMemory]
+										ifFalse: [PrimErrBadReceiver]).
+				 ^self]]
+		ifFalse:
+			[theMethod := objectMemory instantiateClass: class indexableSize: size].
 	objectMemory storePointerUnchecked: HeaderIndex ofObject: theMethod withValue: header.
 	1 to: literalCount do:
 		[:i | objectMemory storePointer: i ofObject: theMethod withValue: objectMemory nilObject].
@@ -2517,7 +2531,9 @@ InterpreterPrimitives >> primitiveNewWithArg [
 				ifTrue:
 					[(objectMemory instantiateClass: (self stackValue: 1) indexableSize: size)
 						ifNotNil: [:obj| self pop: argumentCount + 1 thenPush: obj]
-						ifNil: [self primitiveFailFor: PrimErrNoMemory]]
+						ifNil: [self primitiveFailFor: ((objectMemory isCompiledMethodFormat: (objectMemory instSpecOfClass: (self stackValue: 1)))
+														ifTrue: [PrimErrBadReceiver]
+														ifFalse: [PrimErrNoMemory])]]
 				ifFalse:
 					[spaceOkay := objectMemory sufficientSpaceToInstantiate: (self stackValue: 1) indexableSize: size.
 					 spaceOkay

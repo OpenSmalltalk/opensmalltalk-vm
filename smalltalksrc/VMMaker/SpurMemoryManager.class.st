@@ -5615,6 +5615,14 @@ SpurMemoryManager >> instantiateClass: classObj [
 { #category : #instantiation }
 SpurMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 	<var: #nElements type: #usqInt>
+	"Allocate an instance of a variable class, excepting CompiledMethod."
+	^self subclassResponsibility
+]
+
+{ #category : #instantiation }
+SpurMemoryManager >> instantiateCompiledMethodClass: classObj indexableSize: nElements [
+	<var: #nElements type: #usqInt>
+	"Allocate an instance of a CompiledMethod class."
 	^self subclassResponsibility
 ]
 
