@@ -915,6 +915,16 @@ SpurBootstrap class >> CompiledMethodclassPROTOTYPEinitialize [    "CompiledMeth
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> CompiledMethodclassPROTOTYPEinstallPrimaryBytecodeSet: aBytecodeEncoderSubclass [
+	<indirect>
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CompiledMethodclassPROTOTYPEinstallSecondaryBytecodeSet: aBytecodeEncoderSubclass [
+	<indirect>
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> CompiledMethodclassPROTOTYPEnewBytes: numberOfBytes trailerBytes: trailer nArgs: nArgs nTemps: nTemps nStack: stackSize nLits: nLits primitive: primitiveIndex [
 	"Since this method refers to ClassVariables things are easier if it lives in the actual class."
 
