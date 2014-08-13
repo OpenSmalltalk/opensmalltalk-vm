@@ -846,7 +846,23 @@ SpurBootstrap class >> CompiledMethodPROTOTYPEencoderClass [
 ]
 
 { #category : #'method prototypes' }
-SpurBootstrap class >> CompiledMethodPROTOTYPEhandleFailingFailingNewMethod: numberOfBytes header: headerWord [
+SpurBootstrap class >> CompiledMethodPROTOTYPEnumLiterals [
+	"Answer the number of literals used by the receiver."
+	^self header bitAnd: 65535
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CompiledMethodPROTOTYPEprimitive [
+	"Answer the primitive index associated with the receiver.
+	 Zero indicates that this is not a primitive method."
+	| initialPC |
+	^(self header anyMask: 65536) "Is the hasPrimitive? flag set?"
+		ifTrue: [(self at: (initialPC := self initialPC) + 1) + ((self at: initialPC + 2) bitShift: 8)]
+		ifFalse: [0]
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CompiledMethodclassPROTOTYPEhandleFailingFailingNewMethod: numberOfBytes header: headerWord [
 	"This newMethod:header: gets sent after handleFailingBasicNew: has done a full
 	 garbage collection and possibly grown memory.  If this basicNew: fails then the
 	 system really is low on space, so raise the OutOfMemory signal.
@@ -865,7 +881,7 @@ SpurBootstrap class >> CompiledMethodPROTOTYPEhandleFailingFailingNewMethod: num
 ]
 
 { #category : #'method prototypes' }
-SpurBootstrap class >> CompiledMethodPROTOTYPEhandleFailingNewMethod: numberOfBytes header: headerWord [
+SpurBootstrap class >> CompiledMethodclassPROTOTYPEhandleFailingNewMethod: numberOfBytes header: headerWord [
 	"This newMethod:header: gets sent after newMethod:header: has failed
 	 and allowed a scavenging garbage collection to occur.  The scavenging
 	 collection will have happened as the VM is activating the (failing) basicNew:.
@@ -886,38 +902,6 @@ SpurBootstrap class >> CompiledMethodPROTOTYPEhandleFailingNewMethod: numberOfBy
 		[Smalltalk growMemoryByAtLeast: bytesRequested].
 	"retry after global garbage collect and possible grow"
 	^self handleFailingFailingNewMethod: numberOfBytes header: headerWord
-]
-
-{ #category : #'method prototypes' }
-SpurBootstrap class >> CompiledMethodPROTOTYPEnewMethod: numberOfBytes header: headerWord [
-	"Primitive. Answer an instance of me. The number of literals (and other 
-	 information) is specified by the headerWord (see my class comment).
-	 The first argument specifies the number of fields for bytecodes in the
-	 method. Fail if either argument is not a SmallInteger, or if numberOfBytes
-	 is negative, or if memory is low. Once the header of a method is set by
-	 this primitive, it cannot be changed to change the number of literals.
-	 Essential. See Object documentation whatIsAPrimitive."
-
-	<primitive: 79 error: ec>
-	ec == #'insufficient object memory' ifTrue:
-		[^self handleFailingNewMethod: numberOfBytes header: headerWord].
-	^self primitiveFailed
-]
-
-{ #category : #'method prototypes' }
-SpurBootstrap class >> CompiledMethodPROTOTYPEnumLiterals [
-	"Answer the number of literals used by the receiver."
-	^self header bitAnd: 65535
-]
-
-{ #category : #'method prototypes' }
-SpurBootstrap class >> CompiledMethodPROTOTYPEprimitive [
-	"Answer the primitive index associated with the receiver.
-	 Zero indicates that this is not a primitive method."
-	| initialPC |
-	^(self header anyMask: 65536) "Is the hasPrimitive? flag set?"
-		ifTrue: [(self at: (initialPC := self initialPC) + 1) + ((self at: initialPC + 2) bitShift: 8)]
-		ifFalse: [0]
 ]
 
 { #category : #'method prototypes' }
@@ -942,6 +926,22 @@ SpurBootstrap class >> CompiledMethodclassPROTOTYPEnewBytes: numberOfBytes trail
 	"Since this method refers to ClassVariables things are easier if it lives in the actual class."
 
 	<indirect>
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CompiledMethodclassPROTOTYPEnewMethod: numberOfBytes header: headerWord [
+	"Primitive. Answer an instance of me. The number of literals (and other 
+	 information) is specified by the headerWord (see my class comment).
+	 The first argument specifies the number of fields for bytecodes in the
+	 method. Fail if either argument is not a SmallInteger, or if numberOfBytes
+	 is negative, or if memory is low. Once the header of a method is set by
+	 this primitive, it cannot be changed to change the number of literals.
+	 Essential. See Object documentation whatIsAPrimitive."
+
+	<primitive: 79 error: ec>
+	ec == #'insufficient object memory' ifTrue:
+		[^self handleFailingNewMethod: numberOfBytes header: headerWord].
+	^self primitiveFailed
 ]
 
 { #category : #'method prototypes' }
