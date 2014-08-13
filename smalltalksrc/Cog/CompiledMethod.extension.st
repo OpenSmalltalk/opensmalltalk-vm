@@ -40,6 +40,32 @@ CompiledMethod class >> CompiledMethodclassPROTOTYPEinitialize [    "CompiledMet
 ]
 
 { #category : #'*Cog-method prototypes' }
+CompiledMethod class >> CompiledMethodclassPROTOTYPEinstallPrimaryBytecodeSet: aBytecodeEncoderSubclass [
+	PrimaryBytecodeSetEncoderClass == aBytecodeEncoderSubclass ifTrue:
+		[^self].
+	(aBytecodeEncoderSubclass inheritsFrom: BytecodeEncoder) ifFalse:
+		[self error: 'A bytecode set encoder is expected to be a subclass of BytecodeEncoder'].
+	(self allSubInstances
+			detect: [:m| m header >= 0 and: [m encoderClass ~~ aBytecodeEncoderSubclass]]
+			ifNone: []) ifNotNil:
+		[Warning signal: 'There are existing CompiledMethods with a different encoderClass.'].
+	PrimaryBytecodeSetEncoderClass := aBytecodeEncoderSubclass
+]
+
+{ #category : #'*Cog-method prototypes' }
+CompiledMethod class >> CompiledMethodclassPROTOTYPEinstallSecondaryBytecodeSet: aBytecodeEncoderSubclass [
+	PrimaryBytecodeSetEncoderClass == aBytecodeEncoderSubclass ifTrue:
+		[^self].
+	(aBytecodeEncoderSubclass inheritsFrom: BytecodeEncoder) ifFalse:
+		[self error: 'A bytecode set encoder is expected to be a subclass of BytecodeEncoder'].
+	(self allSubInstances
+			detect: [:m| m header < 0 and: [m encoderClass ~~ aBytecodeEncoderSubclass]]
+			ifNone: []) ifNotNil:
+		[Warning signal: 'There are existing CompiledMethods with a different encoderClass.'].
+	SecondaryBytecodeSetEncoderClass := aBytecodeEncoderSubclass
+]
+
+{ #category : #'*Cog-method prototypes' }
 CompiledMethod class >> CompiledMethodclassPROTOTYPEnewBytes: numberOfBytes trailerBytes: trailer nArgs: nArgs nTemps: nTemps nStack: stackSize nLits: nLits primitive: primitiveIndex [
 	"Answer an instance of me. The header is specified by the message 
 	 arguments. The remaining parts are not as yet determined."
