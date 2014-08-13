@@ -1796,7 +1796,16 @@ CCodeGenerator >> generateIfFalse: msgNode on: aStream indent: level [
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
-			[aStream nextPutAll: 'if (!'.
+			["Eliminate double-negatives"
+			 (msgNode receiver isSend and: [msgNode receiver selector == #not]) ifTrue:
+				[^self generateIfTrue: (TSendNode new
+											setSelector: msgNode selector
+											receiver: msgNode receiver receiver
+											arguments: msgNode args
+											isBuiltInOp: msgNode isBuiltinOperator)
+					on: aStream
+					indent: level].
+			aStream nextPutAll: 'if (!'.
 			msgNode receiver isLeaf ifFalse: [aStream nextPut: $(]. "grrrrr"
 			msgNode receiver emitCCodeAsExpressionOn: aStream level: level + 1 generator: self.
 			msgNode receiver isLeaf ifFalse: [aStream nextPut: $)]. "grrrrr"
@@ -1816,8 +1825,17 @@ CCodeGenerator >> generateIfFalseAsArgument: msgNode on: aStream indent: level [
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
-			[aStream nextPutAll: '(!('.
-			 msgNode receiver emitCCodeAsArgumentOn: aStream level: 0 generator: self.
+			["Eliminate double-negatives"
+			 (msgNode receiver isSend and: [msgNode receiver selector == #not]) ifTrue:
+				[^self generateIfTrueAsArgument: (TSendNode new
+														setSelector: msgNode selector
+														receiver: msgNode receiver receiver
+														arguments: msgNode args
+														isBuiltInOp: msgNode isBuiltinOperator)
+					on: aStream
+					indent: level].
+			aStream nextPutAll: '(!('.
+			msgNode receiver emitCCodeAsArgumentOn: aStream level: 0 generator: self.
 			aStream nextPut: $); crtab: level + 1; nextPut: $?; space.
 			msgNode args last emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
 			aStream crtab: level + 1; nextPutAll: ': 0)']

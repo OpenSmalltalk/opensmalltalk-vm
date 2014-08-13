@@ -2498,7 +2498,7 @@ InterpreterPrimitives >> primitiveNewMethod [
 		 ^self].
 	class := self stackValue: 2.
 	literalCount := objectMemory literalCountOfMethodHeader: header.
-	size := literalCount + LiteralStart * BytesPerOop + bytecodeCount.
+	size := literalCount + LiteralStart * objectMemory bytesPerOop + bytecodeCount.
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
 			[theMethod := objectMemory instantiateCompiledMethodClass: class indexableSize: size.
