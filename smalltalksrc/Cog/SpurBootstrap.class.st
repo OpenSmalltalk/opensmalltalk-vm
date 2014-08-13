@@ -154,18 +154,18 @@ SpurBootstrap class >> BehaviorPROTOTYPEbasicNew [
 	 documentation whatIsAPrimitive.
 	
 	 If the primitive fails because space is low then the scavenger
-	 will run before the method is activated.  Check arguments and
-	 retry via handleFailingBasicNew if they're OK."
+	 will run before the method is activated.  Check that space was low and
+	 retry via handleFailingBasicNew if so."
 
-	<primitive: 70>
+	<primitive: 70 error: ec>
+	ec == #'insufficient object memory' ifTrue:
+		[^self handleFailingBasicNew].
 	self isVariable ifTrue: [^self basicNew: 0].
-	"space must have been low, and the scavenger must have run.
-	 retry after the scavenge."
-	^self handleFailingBasicNew
+	self primitiveFailed
 ]
 
 { #category : #'method prototypes' }
-SpurBootstrap class >> BehaviorPROTOTYPEbasicNew: sizeRequested [ 
+SpurBootstrap class >> BehaviorPROTOTYPEbasicNew: sizeRequested [
 	"Primitive. Answer an instance of this class with the number of indexable
 	 variables specified by the argument, sizeRequested.  Fail if this class is not
 	 indexable or if the argument is not a positive Integer, or if there is not
@@ -174,13 +174,11 @@ SpurBootstrap class >> BehaviorPROTOTYPEbasicNew: sizeRequested [
 	 If the primitive fails because space is low then the scavenger will run before the
 	 method is activated.  Check args and retry via handleFailingBasicNew: if they're OK."
 
-	<primitive: 71>
+	<primitive: 71 error: ec>
+	ec == #'insufficient object memory' ifTrue:
+		[^self handleFailingBasicNew: sizeRequested].
 	self isVariable ifFalse:
 		[self error: self printString, ' cannot have variable sized instances'].
-	(sizeRequested isInteger and: [sizeRequested >= 0]) ifTrue:
-		["arg okay; space must have been low, and the scavenger must have run.
-		  retry after the scavenge"
-		^self handleFailingBasicNew: sizeRequested].
 	self primitiveFailed
 ]
 
@@ -845,6 +843,65 @@ SpurBootstrap class >> ClassPROTOTYPEimmediateSubclass: t instanceVariableNames:
 { #category : #'method prototypes squeak 4.3' }
 SpurBootstrap class >> CompiledMethodPROTOTYPEencoderClass [
 	<indirect>
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CompiledMethodPROTOTYPEhandleFailingFailingNewMethod: numberOfBytes header: headerWord [
+	"This newMethod:header: gets sent after handleFailingBasicNew: has done a full
+	 garbage collection and possibly grown memory.  If this basicNew: fails then the
+	 system really is low on space, so raise the OutOfMemory signal.
+
+	 Primitive. Answer an instance of this class with the number of indexable variables
+	 specified by the argument, headerWord, and the number of bytecodes specified
+	 by numberOfBytes.  Fail if this if the arguments are not Integers, or if numberOfBytes
+	 is negative, or if the receiver is not a CompiledMethod class, or if there is not enough
+	 memory available. Essential. See Object documentation whatIsAPrimitive."
+
+	<primitive: 79>
+	"space must be low."
+	OutOfMemory signal.
+	"retry if user proceeds"
+	^self newMethod: numberOfBytes header: headerWord
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CompiledMethodPROTOTYPEhandleFailingNewMethod: numberOfBytes header: headerWord [
+	"This newMethod:header: gets sent after newMethod:header: has failed
+	 and allowed a scavenging garbage collection to occur.  The scavenging
+	 collection will have happened as the VM is activating the (failing) basicNew:.
+	 If handleFailingBasicNew: fails then the scavenge failed to reclaim sufficient
+	 space and a global garbage collection is required.  Retry after garbage
+	 collecting and growing memory if necessary.
+
+	 Primitive. Answer an instance of this class with the number of indexable variables
+	 specified by the argument, headerWord, and the number of bytecodes specified
+	 by numberOfBytes.  Fail if this if the arguments are not Integers, or if numberOfBytes
+	 is negative, or if the receiver is not a CompiledMethod class, or if there is not enough
+	 memory available. Essential. See Object documentation whatIsAPrimitive."
+
+	<primitive: 79>
+	| bytesRequested |
+	bytesRequested := (headerWord bitAnd: 16rFFFF) + 1 * Smalltalk wordSize + numberOfBytes + 16.
+	Smalltalk garbageCollect < bytesRequested ifTrue:
+		[Smalltalk growMemoryByAtLeast: bytesRequested].
+	"retry after global garbage collect and possible grow"
+	^self handleFailingFailingNewMethod: numberOfBytes header: headerWord
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrap class >> CompiledMethodPROTOTYPEnewMethod: numberOfBytes header: headerWord [
+	"Primitive. Answer an instance of me. The number of literals (and other 
+	 information) is specified by the headerWord (see my class comment).
+	 The first argument specifies the number of fields for bytecodes in the
+	 method. Fail if either argument is not a SmallInteger, or if numberOfBytes
+	 is negative, or if memory is low. Once the header of a method is set by
+	 this primitive, it cannot be changed to change the number of literals.
+	 Essential. See Object documentation whatIsAPrimitive."
+
+	<primitive: 79 error: ec>
+	ec == #'insufficient object memory' ifTrue:
+		[^self handleFailingNewMethod: numberOfBytes header: headerWord].
+	^self primitiveFailed
 ]
 
 { #category : #'method prototypes' }
