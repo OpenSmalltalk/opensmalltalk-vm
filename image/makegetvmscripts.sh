@@ -1,16 +1,26 @@
 #!/bin/sh
 # Create the getGoodCogVM.sh & getGoodSpurVM.sh scripts.
+GetCogScript=getGoodCogVM.sh
+GetSpurScript=getGoodSpurVM.sh
 
 cd `dirname $0`
-REV=`grep 'SvnRawRevisionString.*Rev:' ../platforms/Cross/vm/sqSCCSVersion.h \
+
+REV=
+TAG=
+while getopts 'r:t:?' opt "$@"; do
+	case "$opt" in
+	r)	REV="$OPTARG";;
+	t)	TAG="$OPTARG";;
+	h|\?|*)	echo usage: $0 [-r SVNREV] [-t YR.WK.SVNREV]
+			exit 0;;
+	esac
+done
+shift `expr $OPTIND - 1`
+
+test -n "$REV" || REV=`grep 'SvnRawRevisionString.*Rev:' ../platforms/Cross/vm/sqSCCSVersion.h \
 	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
+test -n "$TAG" || TAG=`date +%g.%U.`$REV
 
-if [ "$1" = "-r" -a -n "$2" ]; then
-	REV="$2"
-	shift;shift
-fi
-
-TAG=`date +%g.%U.`$REV
 echo REV=$REV TAG=$TAG
 
 . ./envvars.sh
@@ -24,7 +34,7 @@ do
 done
 test -n "$ABORT" || exit 1
 
-cat >getGoodCogVM.sh <<END
+cat >$GetCogScript <<END
 #!/bin/sh
 # Sets the VM env var to the r$REV Cog VM for the current platform.
 # will download and install the VM in this directory if necessary.
@@ -35,66 +45,59 @@ URL=http://www.mirandabanda.org/files/Cog/VM/VM.r\$REV/
 
 . ./envvars.sh
 
-if wget --help >/dev/null ; then
-    true
-else
-    echo 'could not find wget.  you can find instructions on how to install it on google.' 1>&2
-     exit 1
-fi
-
 case "\$OS" in
 Darwin) get_vm_from_tar \\
 END
 
-echo -n '            Cog.app/Contents/MacOS/Squeak ' >>getGoodCogVM.sh
-echo -n `quietmd5 ../products/Cog.app/Contents/MacOS/Squeak` >>getGoodCogVM.sh
-echo ' \' >>getGoodCogVM.sh
-echo -n '            Cog.app-$TAG.tgz ' >>getGoodCogVM.sh
-quietmd5 ../products/Cog.app-$TAG.tgz >>getGoodCogVM.sh
+echo -n '            Cog.app/Contents/MacOS/Squeak ' >>$GetCogScript
+echo -n `quietmd5 ../products/Cog.app/Contents/MacOS/Squeak` >>$GetCogScript
+echo ' \' >>$GetCogScript
+echo -n '            Cog.app-$TAG.tgz ' >>$GetCogScript
+quietmd5 ../products/Cog.app-$TAG.tgz >>$GetCogScript
 
-cat >>getGoodCogVM.sh <<END
+cat >>$GetCogScript <<END
         VM=Cog.app/Contents/MacOS/Squeak;;
 Linux)
     if expr \$OSREL \\> 2.6.12; then
         get_vm_from_tar \\
 END
 
-echo -n '        coglinuxht/lib/squeak/4.0-$REV/squeak ' >>getGoodCogVM.sh
-echo -n `quietmd5 ../products/coglinuxht/lib/squeak/4.0-$REV/squeak` >>getGoodCogVM.sh
-echo ' \' >>getGoodCogVM.sh
-echo -n '        coglinuxht-$TAG.tgz ' >>getGoodCogVM.sh
-quietmd5 ../products/coglinuxht-$TAG.tgz >>getGoodCogVM.sh
+echo -n '        coglinuxht/lib/squeak/4.0-$REV/squeak ' >>$GetCogScript
+echo -n `quietmd5 ../products/coglinuxht/lib/squeak/4.0-$REV/squeak` >>$GetCogScript
+echo ' \' >>$GetCogScript
+echo -n '        coglinuxht-$TAG.tgz ' >>$GetCogScript
+quietmd5 ../products/coglinuxht-$TAG.tgz >>$GetCogScript
 
-cat >>getGoodCogVM.sh <<END
+cat >>$GetCogScript <<END
     else
         get_vm_from_tar \\
 END
 
-echo -n '        coglinux/lib/squeak/4.0-$REV/squeak ' >>getGoodCogVM.sh
-echo -n `quietmd5 ../products/coglinux/lib/squeak/4.0-$REV/squeak` >>getGoodCogVM.sh
-echo ' \' >>getGoodCogVM.sh
-echo -n '        coglinux-$TAG.tgz ' >>getGoodCogVM.sh
-quietmd5 ../products/coglinux-$TAG.tgz >>getGoodCogVM.sh
-cat >>getGoodCogVM.sh <<END
+echo -n '        coglinux/lib/squeak/4.0-$REV/squeak ' >>$GetCogScript
+echo -n `quietmd5 ../products/coglinux/lib/squeak/4.0-$REV/squeak` >>$GetCogScript
+echo ' \' >>$GetCogScript
+echo -n '        coglinux-$TAG.tgz ' >>$GetCogScript
+quietmd5 ../products/coglinux-$TAG.tgz >>$GetCogScript
+cat >>$GetCogScript <<END
     fi;;
 CYGWIN*) get_vm_from_zip \\
 END
 
-echo -n '            cogwin/SqueakConsole.exe ' >>getGoodCogVM.sh
-echo -n `quietmd5 ../products/cogwin/SqueakConsole.exe` >>getGoodCogVM.sh
-echo ' \' >>getGoodCogVM.sh
-echo -n '            cogwin-$TAG.zip ' >>getGoodCogVM.sh
-quietmd5 ../products/cogwin-$TAG.zip >>getGoodCogVM.sh
+echo -n '            cogwin/SqueakConsole.exe ' >>$GetCogScript
+echo -n `quietmd5 ../products/cogwin/SqueakConsole.exe` >>$GetCogScript
+echo ' \' >>$GetCogScript
+echo -n '            cogwin-$TAG.zip ' >>$GetCogScript
+quietmd5 ../products/cogwin-$TAG.zip >>$GetCogScript
 
-cat >>getGoodCogVM.sh <<END
+cat >>$GetCogScript <<END
     VM=cogwin/SqueakConsole.exe;;
 *)  echo "don't know how to run Squeak on your system.  bailing out." 1>&2; exit 2
 esac
 END
 
-chmod a+x getGoodCogVM.sh
+chmod a+x $GetCogScript
 
-cat >getGoodSpurVM.sh <<END
+cat >$GetSpurScript <<END
 #!/bin/sh
 # Sets the VM env var to the r$REV Cog Spur VM for the current platform.
 # will download and install the VM in this directory if necessary.
@@ -105,49 +108,42 @@ URL=http://www.mirandabanda.org/files/Cog/VM/VM.r\$REV/
 
 . ./envvars.sh
 
-if wget --help >/dev/null ; then
-    true
-else
-    echo 'could not find wget.  you can find instructions on how to install it on google.' 1>&2
-     exit 1
-fi
-
 case "\$OS" in
 Darwin) get_vm_from_tar \\
 END
 
-echo -n '            CogSpur.app/Contents/MacOS/Squeak ' >>getGoodSpurVM.sh
-echo -n `quietmd5 ../products/CogSpur.app/Contents/MacOS/Squeak` >>getGoodSpurVM.sh
-echo ' \' >>getGoodSpurVM.sh
-echo -n '            CogSpur.app-$TAG.tgz ' >>getGoodSpurVM.sh
-quietmd5 ../products/CogSpur.app-$TAG.tgz >>getGoodSpurVM.sh
+echo -n '            CogSpur.app/Contents/MacOS/Squeak ' >>$GetSpurScript
+echo -n `quietmd5 ../products/CogSpur.app/Contents/MacOS/Squeak` >>$GetSpurScript
+echo ' \' >>$GetSpurScript
+echo -n '            CogSpur.app-$TAG.tgz ' >>$GetSpurScript
+quietmd5 ../products/CogSpur.app-$TAG.tgz >>$GetSpurScript
 
-cat >>getGoodSpurVM.sh <<END
+cat >>$GetSpurScript <<END
         VM=CogSpur.app/Contents/MacOS/Squeak;;
 Linux) get_vm_from_tar \\
 END
 
-echo -n '        cogspurlinuxht/lib/squeak/4.0-$REV/squeak ' >>getGoodSpurVM.sh
-echo -n `quietmd5 ../products/cogspurlinuxht/lib/squeak/4.0-$REV/squeak` >>getGoodSpurVM.sh
-echo ' \' >>getGoodSpurVM.sh
-echo -n '        cogspurlinuxht-$TAG.tgz ' >>getGoodSpurVM.sh
-quietmd5 ../products/cogspurlinuxht-$TAG.tgz >>getGoodSpurVM.sh
+echo -n '        cogspurlinuxht/lib/squeak/4.0-$REV/squeak ' >>$GetSpurScript
+echo -n `quietmd5 ../products/cogspurlinuxht/lib/squeak/4.0-$REV/squeak` >>$GetSpurScript
+echo ' \' >>$GetSpurScript
+echo -n '        cogspurlinuxht-$TAG.tgz ' >>$GetSpurScript
+quietmd5 ../products/cogspurlinuxht-$TAG.tgz >>$GetSpurScript
 
-cat >>getGoodSpurVM.sh <<END
+cat >>$GetSpurScript <<END
     VM=cogspurlinuxht/squeak;;
 CYGWIN*) get_vm_from_zip \\
 END
 
-echo -n '            cogspurwin/SqueakConsole.exe ' >>getGoodSpurVM.sh
-echo -n `quietmd5 ../products/cogspurwin/SqueakConsole.exe` >>getGoodSpurVM.sh
-echo ' \' >>getGoodSpurVM.sh
-echo -n '            cogspurwin-$TAG.zip ' >>getGoodSpurVM.sh
-quietmd5 ../products/cogspurwin-$TAG.zip >>getGoodSpurVM.sh
+echo -n '            cogspurwin/SqueakConsole.exe ' >>$GetSpurScript
+echo -n `quietmd5 ../products/cogspurwin/SqueakConsole.exe` >>$GetSpurScript
+echo ' \' >>$GetSpurScript
+echo -n '            cogspurwin-$TAG.zip ' >>$GetSpurScript
+quietmd5 ../products/cogspurwin-$TAG.zip >>$GetSpurScript
 
-cat >>getGoodSpurVM.sh <<END
+cat >>$GetSpurScript <<END
     VM=cogspurwin/SqueakConsole.exe;;
 *)  echo "don't know how to run Squeak on your system.  bailing out." 1>&2; exit 2
 esac
 END
 
-chmod a+x getGoodSpurVM.sh
+chmod a+x $GetSpurScript

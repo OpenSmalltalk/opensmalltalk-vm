@@ -6,29 +6,37 @@ IFS="
 "
 cd `dirname $0`/../products
 VERBOSE=
-REV="`svnversion .. | sed 's/^.*://'`"
-case $REV in
-*M)	echo -n "source tree is modified, are you sure you want to continue? "
-	read a
-	case $a in
-	y|Y)	;;
-	*)		exit 1
+
+while getopts 'r:t:?' opt "$@"; do
+	case "$opt" in
+	r)	REV=$OPTARG;;
+	t)	TAG=$OPTARG;;
 	esac
-	REV="`svnversion | sed 's/^.*://' | sed 's/M//'`";;
-esac
-if [ "$1" = "-r" -a -n "$2" ]; then
-	REV="$2"
-	shift;shift
+done
+
+if [ -z "$REV" ]; then
+	REV="`svnversion .. | sed 's/^.*://'`"
+	case $REV in
+	*M)	echo -n "source tree is modified, are you sure you want to continue? "
+		read a
+		case $a in
+		y|Y)	;;
+		*)		exit 1
+		esac
+		REV="`svnversion | sed 's/^.*://' | sed 's/M//'`";;
+	esac
 fi
-TAG=`date +%g.%U.`$REV
+
+if [ -z "$TAG" ]; then
+	TAG=`date +%g.%U.`$REV
+fi
 echo REV=$REV TAG=$TAG
 
 CSARCS="Cog.app-$TAG.tgz	coglinux-$TAG.tgz	coglinuxht-$TAG.tgz	cogwin-$TAG.zip"
 CSARCS="$CSARCS	CogSpur.app-$TAG.tgz	cogspurlinuxht-$TAG.tgz	cogspurwin-$TAG.zip"
 CMARCS="CogMT.app-$TAG.tgz	cogmtlinuxht-$TAG.tgz	cogmtwin-$TAG.zip"
-NSARCS="Newspeak Virtual Machine-$TAG.dmg	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz	nsvm-$TAG.msi"
-NSARCS="$NSARCS	Newspeak Spur Virtual Machine-$TAG.dmg	nsvmspurlinuxht-$TAG.tgz	nsvm-$TAG.msi"
-#NMARCS="Newspeak Virtual MachineMT-$TAG.dmg	nsvmmtlinux-$TAG.tgz	nsvmmtlinuxht-$TAG.tgz	nsvmmt-spur-$TAG.msi"
+NSARCS="Newspeak Virtual Machine-$TAG.dmg	Newspeak Virtual Machine.app-$TAG.tgz	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz	nsvm-$TAG.msi"
+NSARCS="$NSARCS	Newspeak Spur Virtual Machine-$TAG.dmg	Newspeak Virtual Machine.app-$TAG.tgz	nsvmspurlinuxht-$TAG.tgz	nsvmwin-$TAG.msi	nsvmspurwin$TAG.msi"
 if [ $# = 0 ]; then
 	ARCHIVES="$CSARCS	$CMARCS		$NSARCS"
 	CheckDMG=1
@@ -50,9 +58,9 @@ else
 		-ctm)	ARCHIVES="$ARCHIVES	CogMT.app-$TAG.tgz";;
 		-ctw)	ARCHIVES="$ARCHIVES	cogmtwin-$TAG.zip";;
 		-nl)	ARCHIVES="$ARCHIVES	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz";;
-		-nm)	ARCHIVES="$ARCHIVES	Newspeak Virtual Machine-$TAG.dmg"
+		-nm)	ARCHIVES="$ARCHIVES	Newspeak Virtual Machine-$TAG.dmg	Newspeak Virtual Machine.app-$TAG.tgz	Newspeak Spur Virtual Machine-$TAG.dmg	Newspeak Virtual Machine.app-$TAG.tgz"
 				CheckDMG=1;;
-		-nw)	ARCHIVES="$ARCHIVES	nsvm-$TAG.msi"
+		-nw)	ARCHIVES="$ARCHIVES	nsvmwin-$TAG.msi	nsvmspurnsvm-$TAG.msi"
 				CheckMSI=1;;
 		-n)		ARCHIVES="$ARCHIVES		$NSARCS";;
 		-l)		ARCHIVES="$ARCHIVES	coglinux-$TAG.tgz	coglinuxht-$TAG.tgz	cogmtlinux-$TAG.tgz	cogmtlinuxht-$TAG.tgz	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz";;

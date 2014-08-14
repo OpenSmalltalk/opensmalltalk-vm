@@ -368,11 +368,11 @@
 	<key>CFBundleExecutable</key>
 	<string>Squeak</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak Cog Stack 4.0.0 http://www.mirandabanda.org</string><!--version-->
+	<string>Squeak Stack 5.0.0 http://www.mirandabanda.org</string><!--version-->
 	<key>CFBundleShortVersionString</key>
-	<string>Squeak Cog Stack 4.0.0</string><!--version-->
+	<string>Squeak Stack 5.0.0</string><!--version-->
 	<key>CFBundleVersion</key>
-	<string>4.0.0</string><!--version-->
+	<string>5.0.0</string><!--version-->
 	<key>CFBundleIconFile</key>
 	<string>GreenCogSqueak.icns</string>
 	<key>CFBundleIdentifier</key>

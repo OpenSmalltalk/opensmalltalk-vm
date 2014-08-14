@@ -14,7 +14,7 @@ CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "nsvm.exe.manifest"
 
 1 VERSIONINFO
  FILEVERSION FILEVERSIONVALUES
- PRODUCTVERSION 4,0,0,0
+ PRODUCTVERSION 5,0,0,0
  FILEFLAGSMASK 0x3fL
  FILEFLAGS 0xaL
  FILEOS 0x10001L
@@ -29,7 +29,7 @@ BEGIN
             VALUE "FileDescription", "Newsqueak Cog Spur Virtual Machine\0"
             VALUE "FileVersion", FILEVERSIONSTRING
             VALUE "ProductName", "Newsqueak Cog Spur\0"
-            VALUE "ProductVersion", "4.0\0"
+            VALUE "ProductVersion", "5.0\0"
         END
     END
     BLOCK "VarFileInfo"

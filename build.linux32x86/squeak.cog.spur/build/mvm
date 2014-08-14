@@ -18,6 +18,7 @@ n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			test -f Makefile && make reallyclean
 esac
 test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
+		--with-vmversion=5.0 \
 		--with-src=spursrc --with-plugins=src/plugins \
 	CC="gcc -m32" \
 	CXX="g++ -m32" \

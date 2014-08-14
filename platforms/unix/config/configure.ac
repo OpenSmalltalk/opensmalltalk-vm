@@ -34,20 +34,33 @@ AC_INIT([config.h.in])
 
 SVNREV=`grep '\$Rev: ' ${srcdir}/../../../platforms/Cross/vm/sqSCCSVersion.h \
 		| sed 's/.*$Rev: \([[0-9]][[0-9]]*\).*/\1/'`
-AC_VM_VERSION(4,0,${SVNREV},4,2,0)
+AC_ARG_WITH(vmversion,
+[  --with-vmversion=M.N	vm version number [default = 4.0]],
+[ vmversion="${with_vmversion}"],
+[ vmversion="4.0"])
+vmmajor=`echo ${vmversion} | sed 's/\..*//'`
+vmminor=`echo ${vmversion} | sed 's/^.*\.//'`
+AC_ARG_WITH(sqversion,
+[  --with-sqversion=M.N	squeak version number [default = 4.5]],
+[ sqversion="${with_sqversion}"],
+[ sqversion="4.5"])
+sqmajor=`echo ${sqversion} | sed 's/\..*//'`
+sqminor=`echo ${sqversion} | sed 's/^.*\.//'`
+
+AC_VM_VERSION(${vmmajor},${vmminor},${SVNREV},${sqmajor},${sqminor},0)
 
 topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`
 
 AC_ARG_WITH(src,
-[  --with-src=dir          generated src directory [default=src]],
+[  --with-src=dir	generated src directory [default=src]],
 [ vmmsrc="${with_src}"],
 [ vmmsrc="src"])
 
 vmmdir="${topdir}/${vmmsrc}"
 
 AC_ARG_WITH(plugins,
-[  --with-plugins=dir          generated plugins directory [default=${vmmdir}/plugins]],
+[  --with-plugins=dir	generated plugins directory [default=${vmmdir}/plugins]],
 [ vmpsrc="${topdir}/${with_plugins}"],
 [ vmpsrc="${vmmdir}/plugins"])
 
@@ -73,14 +86,14 @@ AC_MSG_RESULT(${vmpdir})
 blddir=`pwd`
 
 AC_ARG_WITH(vmmcfg,
-[  --with-vmmcfg=dir        vm configuration directory containing plugins.int and plugins.ext [default=.]],
+[  --with-vmmcfg=dir	vm configuration directory containing plugins.int and plugins.ext [default=.]],
 [ vmmcfg="${with-vmmcfg}"],
 [ vmmcfg="${blddir}"])
 
 # Compiling a Cogit VM or not?  If so, need a cogit$o, cointerp, etc.
 
 AC_ARG_ENABLE(cogit,
-[  --enable-cogit            compile a cogit VM [default=yes]],
+[  --enable-cogit			compile a cogit VM [default=yes]],
 cogit="no", cogit="yes")
 AC_SUBST(cogit)
 

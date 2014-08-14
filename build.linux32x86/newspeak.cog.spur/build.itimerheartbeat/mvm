@@ -21,6 +21,7 @@ n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			rm config.h; test -f Makefile && make reallyclean
 esac
 test -f config.h || ../../../platforms/unix/config/configure \
+		--with-vmversion=5.0 \
 		--with-src=nsspursrc --with-plugins=nscogsrc/plugins \
 		--without-vm-display-fbdev --without-npsqueak \
 	CC="gcc -m32" \

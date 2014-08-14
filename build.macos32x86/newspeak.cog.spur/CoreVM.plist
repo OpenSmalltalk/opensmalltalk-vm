@@ -122,11 +122,11 @@
 	<key>CFBundleExecutable</key>
 	<string>Newspeak Virtual Machine</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Newspeak Virtual Machine 4.0.0 http://newspeaklanguage.org</string><!--version-->
+	<string>Newspeak Cog Spur Virtual Machine 5.0.0 http://newspeaklanguage.org</string><!--version-->
 	<key>CFBundleShortVersionString</key>
-	<string>Newspeak Virtual Machine 4.0.0</string><!--version-->
+	<string>Newspeak Cog Spur Virtual Machine 5.0.0</string><!--version-->
 	<key>CFBundleVersion</key>
-	<string>4.0.0</string><!--version-->
+	<string>5.0.0</string><!--version-->
 	<key>CFBundleIconFile</key>
 	<string>Newspeak Virtual Machine.icns</string>
 	<key>CFBundleIdentifier</key>

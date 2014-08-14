@@ -6,6 +6,10 @@ IFS="
 cd `dirname $0`/../products
 NSB=newspeak.cog.v3
 SQB=squeak.cog.v3
+REV=
+TAG=
+EXES=
+
 if [ $# = 0 ]; then
 CL=1
 CM=1
@@ -13,7 +17,9 @@ CW=1
 NL=1
 NM=1
 NW=1
+
 else
+
 CL=
 CM=
 CW=
@@ -33,16 +39,19 @@ NW=
 		-l)		CL=1;NL=1;;
 		-m)		CM=1;NM=1;;
 		-w)		CW=1;NW=1;;
-		-?|-h)  echo usage: $0 [-c -n -l -m -w -c[lmw] -n[lmw]]; exit 0
+		-r)		shift;REV="$1";;
+		-t)		shift;TAG="$1";;
+		-?|-h)  echo usage: $0 [-c -n -l -m -w -c[lmw] -n[lmw] -r REV -t TAG]
+				exit 0
 		esac
 		shift
 	done
 fi
-EXES=
-REV=`grep 'SvnRawRevisionString.*Rev:' ../platforms/Cross/vm/sqSCCSVersion.h \
+test -n "$REV" || REV=`grep 'SvnRawRevisionString.*Rev:' ../platforms/Cross/vm/sqSCCSVersion.h \
 	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
-TAG=`date +%g.%U.`$REV
+test -n "$TAG" || TAG=`date +%g.%U.`$REV
 echo REV=$REV TAG=$TAG
+
 if [ -n "$CL" ]; then
 	for archive in coglinux coglinuxht cogmtlinuxht; do
 		rm -rf $archive-$TAG.tgz

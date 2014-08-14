@@ -3,12 +3,15 @@
 ./getsqueak45.sh
 . ./getGoodCogVM.sh
 
-cp -p $SQUEAK45.image trunk46forspur.image
-cp -p $SQUEAK45.changes trunk46forspur.changes
+if [ "$1" -ne -skiptrunkbuild ]; then
+	cp -p $SQUEAK45.image trunk46forspur.image
+	cp -p $SQUEAK45.changes trunk46forspur.changes
+
+	echo $VM trunk46forspur.image BuildSqueakTrunkImage.st
+	$VM trunk46forspur.image BuildSqueakTrunkImage.st
+fi
 
 rm -f temp-spur-repository/* temp-v3-repository/*
-echo $VM trunk46forspur.image BuildSqueakTrunkImage.st
-$VM trunk46forspur.image BuildSqueakTrunkImage.st
 echo $VM trunk46forspur.image WriteSpurPackagesToTempDir.st
 $VM trunk46forspur.image WriteSpurPackagesToTempDir.st
 

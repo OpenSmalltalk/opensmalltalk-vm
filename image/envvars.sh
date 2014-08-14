@@ -22,23 +22,33 @@ fi
 test "$OS" = Darwin && function quietmd5 () { /sbin/md5 -q "$1" 2>/dev/null; }
 test "$OS" = Darwin || function quietmd5 () { /usr/bin/md5sum "$1" | sed 's/ .*$//' 2>/dev/null; }
 
+test "$OS" = Darwin && function geturl () { FILE=`basename "$1"`; curl -C - "`echo $1 | sed 's/ /%20/g'`" -o "$FILE"; }
+test "$OS" = Darwin || function geturl () { wget -c "$1"; }
+
+if unzip --help >/dev/null; then
+	true
+else
+	echo 'could not find unzip.  you can find instructions on how to install it on google.' 1>&2;
+	exit 1
+fi
+
 function get_vm_from_tar() # VM VMHASH VMARC VMARCHASH
 {	VM="$1"
 	VMDIR=`echo $VM | sed 's/\/.*//'`
 	VMHASH="$2"
-	if [ ! -d $VMDIR -o "`quietmd5 "$VM"`" != $VMHASH ]; then
+	if [ ! -d "$VMDIR" -o "`quietmd5 "$VM"`" != $VMHASH ]; then
 		VMARC="$3"
 		ARCHASH="$4"
 		if [ ! -f "$VMARC" -o "`quietmd5 "$VMARC"`" != $ARCHASH ]; then
-			wget -c "$URL/$VMARC"
+			geturl "$URL/$VMARC"
 			if [ ! -f "$VMARC" -o "`quietmd5 "$VMARC"`" != $ARCHASH ]; then
 				echo failed to get $VMARC \; file corrupted\? 1>&2
 				exit 2
 			fi
 		fi
-		rm -rf $VMDIR
+		rm -rf "$VMDIR"
 		tar xzf "$VMARC"
-		if [ ! -d $VMDIR -o "`quietmd5 "$VM"`" != $VMHASH ]; then
+		if [ ! -d "$VMDIR" -o "`quietmd5 "$VM"`" != $VMHASH ]; then
 			echo failed to correctly extract $VMDIR from $VMARC 1>&2
 			exit 3
 		fi
@@ -53,13 +63,13 @@ function get_vm_from_zip() # VM VMHASH VMARC VMARCHASH
 	ARCHASH="$4"
 	if [ ! -d "$VMDIR" -o "`quietmd5 "$VM"`" != $VMHASH ]; then
 		if [ ! -f "$VMARC" -o "`quietmd5 "$VMARC"`" != $ARCHASH ]; then
-			wget -c "$URL/$VMARC"
+			geturl "$URL/$VMARC"
 			if [ ! -f "$VMARC" -o "`quietmd5 "$VMARC"`" != $ARCHASH ]; then
 				echo failed to get $VMARC \; file corrupted\? 1>&2
 				exit 2
 			fi
 		fi
-		rm -rf $VMDIR
+		rm -rf "$VMDIR"
 		unzip -q "$VMARC"
 		if [ ! -d "$VMDIR" -o "`quietmd5 "$VM"`" != $VMHASH ]; then
 			echo failed to correctly extract "`dirname $VM`" from $VMARC 1>&2

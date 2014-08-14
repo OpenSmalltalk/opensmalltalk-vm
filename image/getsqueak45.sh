@@ -8,13 +8,7 @@ if [ "`quietmd5 \"$SQUEAK45\".image`" != $IMAGEHASH ]; then
 	ZIP=Squeak-4.5-All-in-One.zip
 	if [ "`quietmd5 $ZIP`" != $ZIPHASH ]
 	then
-		if wget --help >/dev/null; then
-			true
-		else
-			echo 'could not find wget.  you can find instructions on how to install it on google.' 1>&2
-			exit 1
-		fi
-		wget -c http://ftp.squeak.org/4.5/$ZIP
+		geturl http://ftp.squeak.org/4.5/$ZIP
 	fi
 	if unzip --help >/dev/null; then
 		true

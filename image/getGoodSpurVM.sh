@@ -8,13 +8,6 @@ URL=http://www.mirandabanda.org/files/Cog/VM/VM.r$REV/
 
 . ./envvars.sh
 
-if wget --help >/dev/null ; then
-    true
-else
-    echo 'could not find wget.  you can find instructions on how to install it on google.' 1>&2
-     exit 1
-fi
-
 case "$OS" in
 Darwin) get_vm_from_tar \
             CogSpur.app/Contents/MacOS/Squeak d71657f3596108f1ee26ddde98d2a6e1 \
