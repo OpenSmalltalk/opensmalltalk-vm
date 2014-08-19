@@ -694,6 +694,10 @@ SpurMemoryManager class >> initialize [
 	"SpurMemoryManager initialize"
 	BitsPerByte := 8.
 
+	"Initialize at least the become constants for the Spur bootstrap where the
+	 old ObjectMemory simulator is used before a Spur simulator is created.."
+	self initializeSpurObjectRepresentationConstants.
+
 	"Pig compact can be repeated to compact better.  Experience shows that 3 times
 	 compacts very well, desirable for snapshots.  But this is overkill for normal GCs."
 	CompactionPassesForGC := 2.

@@ -47,6 +47,7 @@ Class {
 		'lastPollCount',
 		'lastExtPC',
 		'sendCount',
+		'lookupCount',
 		'printSends',
 		'traceOn',
 		'myBitBlt',
@@ -1416,7 +1417,7 @@ CogVMSimulator >> initialize [
 	flagInterpretedMethods := false.
 
 	"initialize InterpreterSimulator variables used for debugging"
-	byteCount := lastPollCount := sendCount := 0.
+	byteCount := lastPollCount := sendCount := lookupCount := 0.
 	quitBlock := [^ self].
 	traceOn := true.
 	printSends := printFrameAtEachStep := printBytecodeAtEachStep := false.
@@ -2090,6 +2091,18 @@ CogVMSimulator >> longAt: byteAddress [
 { #category : #'memory access' }
 CogVMSimulator >> longAt: byteAddress put: a32BitValue [
 	^objectMemory longAt: byteAddress put: a32BitValue
+]
+
+{ #category : #'message sending' }
+CogVMSimulator >> lookupMethodInClass: class [
+	lookupCount := lookupCount + 1.
+	^super lookupMethodInClass: class
+]
+
+{ #category : #'callback support' }
+CogVMSimulator >> lookupMethodNoMNUEtcInClass: class [
+	lookupCount := lookupCount + 1.
+	^super lookupMethodNoMNUEtcInClass: class
 ]
 
 { #category : #'frame access' }

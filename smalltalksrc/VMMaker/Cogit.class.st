@@ -3952,7 +3952,7 @@ Cogit >> compileEntry [
 	self CmpR: ClassReg R: TempReg.
 	self JumpNonZero: sendMiss.
 	noCheckEntry := self Label.
-	self recordSendTrace ifTrue:
+	self compileSendTrace ifTrue:
 		[self CallRT: ceTraceLinkedSendTrampoline]
 ]
 
@@ -4045,6 +4045,14 @@ Cogit >> compilePrimitive [
 		[^self genFastPrimFail].
 	minValidCallAddress := minValidCallAddress min: primitiveRoutine asUnsignedInteger.
 	^self compileInterpreterPrimitive: primitiveRoutine
+]
+
+{ #category : #debugging }
+Cogit >> compileSendTrace [
+	<api>
+	<cmacro: '() (traceFlags & 2)'>
+	"256 = count sends, which is simulation only"
+	^(traceFlags bitAnd: 256 + 2) ~= 0
 ]
 
 { #category : #initialization }
@@ -8575,7 +8583,8 @@ Cogit >> sendTrace: aBooleanOrInteger [
 	 16 => trace events (context switches, GCs, etc)
 	 32 => trace stack overflow
 	 64 => send breakpoint on implicit receiver (Newspeak VM only)
-	128 => check stack depth on send (simulation only)"
+	128 => check stack depth on send (simulation only)
+	256 => count sends (simulation only)"
 	traceFlags := aBooleanOrInteger isInteger
 							ifTrue: [aBooleanOrInteger]
 							ifFalse: [aBooleanOrInteger ifTrue: [6] ifFalse: [0]]
