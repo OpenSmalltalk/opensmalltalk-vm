@@ -3423,21 +3423,13 @@ StackToRegisterMappingCogit >> generateTracingTrampolines [
 						called: 'ceTraceLinkedSendTrampoline'
 						arg: ReceiverResultReg]
 				inSmalltalk:
-					[| a |
-					 simulatedTrampolines
-						at: (a := self simulatedAddressFor: #ceShortCutTraceLinkedSend:)
-						put: #ceShortCutTraceLinkedSend:.
-					 a].
+					[self simulatedTrampolineFor: #ceShortCutTraceLinkedSend:].
 	ceTraceBlockActivationTrampoline
 		:= self cCode:
 					[self genTrampolineFor: #ceTraceBlockActivation
 						called: 'ceTraceBlockActivationTrampoline']
 				inSmalltalk:
-					[| a |
-					 simulatedTrampolines
-						at: (a := self simulatedAddressFor: #ceShortCutTraceBlockActivation:)
-						put: #ceShortCutTraceBlockActivation:.
-					 a].
+					[self simulatedTrampolineFor: #ceShortCutTraceBlockActivation:].
 	ceTraceStoreTrampoline
 		:= self cCode:
 					[self genSafeTrampolineFor: #ceTraceStoreOf:into:
@@ -3445,11 +3437,7 @@ StackToRegisterMappingCogit >> generateTracingTrampolines [
 						arg: TempReg
 						arg: ReceiverResultReg]
 				inSmalltalk:
-					[| a |
-					simulatedTrampolines
-						at: (a := self simulatedAddressFor: #ceShortCutTraceStore:)
-						put: #ceShortCutTraceStore:.
-					 a]
+					[self simulatedTrampolineFor: #ceShortCutTraceStore:]
 ]
 
 { #category : #'simulation stack' }
