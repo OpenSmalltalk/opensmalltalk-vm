@@ -2480,7 +2480,7 @@ SpurBootstrap >> cloneMethodProxy: proxy [ "<VMCompiledMethodProxy>"
 				ifFalse: [0].
 	newMethod := CompiledMethod
 						newMethod: bytes + delta
-						header: (self convertOldMethodHeader: (oldHeap integerObjectOf: proxy header)).
+						header: (self headerForOldMethodHeader: (oldHeap integerObjectOf: proxy header)).
 	1 to: proxy numLiterals - 1 do:
 		[:i| newMethod literalAt: i put: (proxy literalAt: i)].
 	newMethod
@@ -2942,6 +2942,13 @@ SpurBootstrap >> freeForwarders [
 ]
 
 { #category : #'bootstrap image' }
+SpurBootstrap >> headerForOldMethodHeader: methodHeaderOop [
+	^self isOnSpur
+		ifTrue: [self convertOldMethodHeader: methodHeaderOop]
+		ifFalse: [oldHeap integerValueOf: methodHeaderOop]
+]
+
+{ #category : #'bootstrap image' }
 SpurBootstrap >> imageTypes: anArray [
 	imageTypes := anArray
 ]
@@ -3108,6 +3115,11 @@ SpurBootstrap >> isOldObjABehavior: oldObj [
 		oldObjClassClass := oldHeap fetchClassOfNonImm: oldObjClass.
 		oldObjClass = classMetaclass
 		or: [oldObjClassClass = classMetaclass]]
+]
+
+{ #category : #testing }
+SpurBootstrap >> isOnSpur [
+	^$c class instSize = 0
 ]
 
 { #category : #testing }
