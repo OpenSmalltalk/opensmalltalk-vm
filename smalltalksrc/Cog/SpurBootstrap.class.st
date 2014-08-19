@@ -2995,6 +2995,7 @@ SpurBootstrap >> initialize [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> initializeClasses [
+	toBeInitialized ifNil: [^self].
 	self withExecutableInterpreter: oldInterpreter
 		do: [toBeInitialized do:
 				[:class|
