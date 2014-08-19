@@ -27,6 +27,7 @@ Class {
 		'byteCount',
 		'breakCount',
 		'sendCount',
+		'lookupCount',
 		'printSends',
 		'printReturns',
 		'traceOn',
@@ -785,8 +786,7 @@ StackInterpreterSimulator >> initialize [
 	startMicroseconds := Time totalSeconds * 1000000.
 
 	"initialize InterpreterSimulator variables used for debugging"
-	byteCount := 0.
-	sendCount := 0.
+	byteCount := sendCount := lookupCount := 0.
 	quitBlock := [^self].
 	traceOn := true.
 	printSends := printReturns := printFrameAtEachStep := printBytecodeAtEachStep := false.
@@ -1328,6 +1328,18 @@ StackInterpreterSimulator >> longAt: byteAddress put: a32BitValue [
 	^objectMemory longAt: byteAddress put: a32BitValue
 ]
 
+{ #category : #'message sending' }
+StackInterpreterSimulator >> lookupMethodInClass: class [
+	lookupCount := lookupCount + 1.
+	^super lookupMethodInClass: class
+]
+
+{ #category : #'callback support' }
+StackInterpreterSimulator >> lookupMethodNoMNUEtcInClass: class [
+	lookupCount := lookupCount + 1.
+	^super lookupMethodNoMNUEtcInClass: class
+]
+
 { #category : #'file primitives' }
 StackInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 	createDate: createDate modDate: modifiedDate
@@ -1385,6 +1397,12 @@ StackInterpreterSimulator >> nameOfClass: classOop [
 	numSlots <= classNameIndex ifTrue:
 		[^'bad class'].
 	^self stringOf: (objectMemory fetchPointer: classNameIndex ofObject: classOop)
+]
+
+{ #category : #'newspeak bytecode support' }
+StackInterpreterSimulator >> nextImplicitReceiverFor: anObject withMixin: mixin [
+	lookupCount := lookupCount + 1.
+	^super nextImplicitReceiverFor: anObject withMixin: mixin
 ]
 
 { #category : #initialization }

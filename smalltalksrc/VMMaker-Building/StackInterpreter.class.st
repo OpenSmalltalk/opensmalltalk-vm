@@ -1392,8 +1392,7 @@ StackInterpreter class >> isObjectAccessor: selector [
 
 { #category : #'spur compilation support' }
 StackInterpreter class >> isStackAccessor: selector [
-	^#( stackTop stackValue: stackTopPut: stackValue:put:
-		stackFloatValue: stackIntegerValue: stackObjectValue:) includes: selector
+	^(StackInterpreter whichCategoryIncludesSelector: selector) = #'stack access'
 ]
 
 { #category : #benchmarks }
@@ -9570,7 +9569,7 @@ StackInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 	 Methods must be unfollowed since bytecode access is direct with no read barrier.
 	 But this only needs to be done if the becomeEffectsFlags indicate that a
 	 CompiledMethod was becommed.
-	 The sceduler state must be followed, but only if the becomeEffectsFlags indicate
+	 The scheduler state must be followed, but only if the becomeEffectsFlags indicate
 	 that a pointer object was becommed."
 	self followForwardingPointersInStackZone: theBecomeEffectsFlags.
 	theBecomeEffectsFlags ~= 0 ifTrue:
@@ -12676,14 +12675,14 @@ StackInterpreter >> stSizeOf: oop [
 	^totalLength - fixedFields
 ]
 
-{ #category : #'internal interpreter access' }
+{ #category : #'stack access' }
 StackInterpreter >> stackFloatValue: offset [
 	"In the StackInterpreter stacks grow down."
 	<returnTypeC: #double>
 	^self floatValueOf: (stackPages longAt: stackPointer + (offset*BytesPerWord))
 ]
 
-{ #category : #'internal interpreter access' }
+{ #category : #'stack access' }
 StackInterpreter >> stackIntegerValue: offset [
 	"In the StackInterpreter stacks grow down."
 	| integerPointer |
@@ -12723,7 +12722,7 @@ StackInterpreter >> stackLimitOffset [
 	^(FrameSlots + 64) * BytesPerWord
 ]
 
-{ #category : #'internal interpreter access' }
+{ #category : #'stack access' }
 StackInterpreter >> stackObjectValue: offset [
 	"Ensures that the given object is a real object, not a SmallInteger."
 	"In the StackInterpreter stacks grow down."
@@ -12819,7 +12818,7 @@ StackInterpreter >> stackPointerIndexForFrame: theFP WithSP: theSP [
 	^(((theFP + FoxReceiver) - theSP) >> ShiftForWord) + (self frameNumArgs: theFP)
 ]
 
-{ #category : #'internal interpreter access' }
+{ #category : #'stack access' }
 StackInterpreter >> stackPositiveMachineIntegerValue: offset [
 	<api>
 	"In the StackInterpreter stacks grow down."
@@ -12828,7 +12827,7 @@ StackInterpreter >> stackPositiveMachineIntegerValue: offset [
 	^self positiveMachineIntegerValueOf: integerPointer
 ]
 
-{ #category : #'internal interpreter access' }
+{ #category : #'stack access' }
 StackInterpreter >> stackSignedMachineIntegerValue: offset [
 	<api>
 	"In the StackInterpreter stacks grow down."
@@ -12837,26 +12836,26 @@ StackInterpreter >> stackSignedMachineIntegerValue: offset [
 	^self signedMachineIntegerValueOf: integerPointer
 ]
 
-{ #category : #'internal interpreter access' }
+{ #category : #'stack access' }
 StackInterpreter >> stackTop [
 	<api>
 	^stackPages longAt: stackPointer
 ]
 
-{ #category : #'internal interpreter access' }
+{ #category : #'stack access' }
 StackInterpreter >> stackTopPut: aValue [
 
 	^stackPages longAtPointer: stackPointer put: aValue
 ]
 
-{ #category : #'internal interpreter access' }
+{ #category : #'stack access' }
 StackInterpreter >> stackValue: offset [
 	<api>
 	"In the StackInterpreter stacks grow down."
 	^stackPages longAt: stackPointer + (offset*BytesPerWord)
 ]
 
-{ #category : #'internal interpreter access' }
+{ #category : #'stack access' }
 StackInterpreter >> stackValue: offset put: oop [
 	"In the StackInterpreter stacks grow down."
 	^stackPages
