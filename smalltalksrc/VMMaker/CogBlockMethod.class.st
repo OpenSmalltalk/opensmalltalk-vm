@@ -1,5 +1,5 @@
 "
-I am the rump method header for a block method embedded in a full CogMethod.  I am the superclass of CogMethod, which is a Cog method header proper.  Instances of both classes have the same second word.  The homeOffset abd startpc fields are overlaid on the objectHeader in a CogMethod.  In C I look like
+I am the rump method header for a block method embedded in a full CogMethod.  I am the superclass of CogMethod, which is a Cog method header proper.  Instances of both classes have the same second word.  The homeOffset and startpc fields are overlaid on the objectHeader in a CogMethod.  See Cogit class>>structureOfACogMethod for more information.  In C I look like
 
 	typedef struct {
 		unsigned short	homeOffset;
