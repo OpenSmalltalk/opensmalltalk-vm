@@ -2283,7 +2283,6 @@ SpurBootstrap >> bootstrapImage [
 	oldHeap fullGC.
 	self measureOldHeapPostGC.
 	self initMaps.
-	self findRequiredGlobals.
 	Transcript cr; nextPutAll: 'transforming image...'; flush.
 	self cloneNilTrueAndFalse.
 	self allocateFreeLists.
@@ -2394,6 +2393,7 @@ SpurBootstrap >> checkReshapeOf: ourMethodClasses [
 	ourMethodClasses do:
 		[:mc| | binding |
 		binding := literalMap at: mc binding.
+		self assert: binding ~= oldHeap nilObject.
 		(mc ~~ Character "Character will reshape anyway"
 		 and: [mc instSize ~= (oldHeap instanceSizeOf: (oldHeap fetchPointer: ValueIndex ofObject: binding))]) ifTrue:
 			[toReshape add: mc]].
@@ -2410,6 +2410,12 @@ SpurBootstrap >> checkReshapeOf: ourMethodClasses [
 			object: (self oldClassOopFor: Compiler)
 			perform: (self findSymbol: #evaluate:)
 			withArguments: {oldHeap stringForCString: class definition}]
+]
+
+{ #category : #'bootstrap image' }
+SpurBootstrap >> classMetaclass [
+	^classMetaclass ifNil:
+		[classMetaclass := oldHeap fetchClassOfNonImm: (oldHeap fetchClassOfNonImm: oldHeap classArray)]
 ]
 
 { #category : #'method prototypes' }
@@ -2853,13 +2859,13 @@ SpurBootstrap >> findRequiredGlobals [
 	self withExecutableInterpreter: oldInterpreter
 		do:	[| toBeAdded |
 			globals do:
-				[:global|
-				literalMap
-					at: global
-					put: (self interpreter: oldInterpreter
-							object: (oldHeap splObj: 8) "Smalltalk"
-							perform: bindingOfSym
-							withArguments: {self findSymbol: global key})].
+				[:global| | bindingOop |
+				bindingOop := self interpreter: oldInterpreter
+									object: (oldHeap splObj: 8) "Smalltalk"
+									perform: bindingOfSym
+									withArguments: {self findSymbol: global key}.
+				self assert: bindingOop ~= oldHeap nilObject.
+				literalMap at: global put: bindingOop].
 			 toBeAdded := Dictionary new.
 			 classVars keysAndValuesDo:
 				[:var :class| | val |
@@ -2876,8 +2882,7 @@ SpurBootstrap >> findRequiredGlobals [
 							ifFalse: [toBeAdded at: var put: class]]].
 			"May have to redefine to add missing inst vars and/or add any missing class vars."
 			self checkReshapeOf: ourMethodClasses.
-			self addMissingClassVars: toBeAdded].
-	classMetaclass := oldHeap fetchClassOfNonImm: (oldHeap fetchClassOfNonImm: oldHeap classArray)
+			self addMissingClassVars: toBeAdded]
 ]
 
 { #category : #'bootstrap methods' }
@@ -3110,12 +3115,10 @@ SpurBootstrap >> internAllSymbols [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> isOldObjABehavior: oldObj [
-	| oldObjClass oldObjClassClass |
+	| oldObjClass |
 	^(classToIndex includesKey: oldObj)
-	or: [oldObjClass := oldHeap fetchClassOfNonImm: oldObj.
-		oldObjClassClass := oldHeap fetchClassOfNonImm: oldObjClass.
-		oldObjClass = classMetaclass
-		or: [oldObjClassClass = classMetaclass]]
+	or: [(oldObjClass := oldHeap fetchClassOfNonImm: oldObj) = self classMetaclass
+	or: [(oldHeap fetchClassOfNonImm: oldObjClass) = classMetaclass]]
 ]
 
 { #category : #testing }
