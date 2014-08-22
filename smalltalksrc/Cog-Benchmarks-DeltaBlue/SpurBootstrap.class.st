@@ -1099,6 +1099,11 @@ SpurBootstrap class >> DecompilerPROTOTYPEdecompile: aSelector in: aClass method
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap class >> EncoderForV3PROTOTYPEcomputeMethodHeaderForNumArgs: numArgs numTemps: numTemps numLits: numLits primitive: primitiveIndex [
+	<remove>
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap class >> EncoderForV3PlusClosuresPROTOTYPEgenCallPrimitive: primitiveIndex [
 	"Since this method has inst var refs the prototype must live in the actual class."
 
@@ -2027,8 +2032,28 @@ SpurBootstrap class >> categoryForClass: className meta: isMeta selector: select
 															-> [#'subclass creation'].
 			[#(ClassBuilder superclass:immediateSubclass:instanceVariableNames:classVariableNames:poolDictionaries:category:)]
 															-> [#public].
+			[#(CompiledMethod class handleFailingFailingNewMethod:header:)]
+															-> [#private].
+			[#(CompiledMethod class handleFailingNewMethod:header:)]
+															-> [#private].
 			[#(Context class allInstances)]					-> [#enumerating].
 			[#(Context class allInstancesDo:)]				-> [#enumerating].
+			[#(Context failPrimitiveWith:)]					-> [#'system simulation'].
+			[#(Context isPrimFailToken:)]					-> [#private].
+			[#(Context send:to:with:lookupIn:)]				-> [#controlling].
+			[#(ContextPart isPrimFailToken:)]				-> [#private].
+			[#(ContextPart send:to:with:lookupIn:)]			-> [#controlling].
+			[#(CompiledMethod class headerFlagForEncoder:)]
+															-> [#'method encoding'].
+			[#(CompiledMethod class installPrimaryBytecodeSet:)]
+															-> [#'class initialization'].
+			[#(CompiledMethod class installSecondaryBytecodeSet:)]
+															-> [#'class initialization'].
+			[#(EncoderForV3PlusClosures genCallPrimitive:)]
+															-> [#'bytecode generation'].
+			[#(EncoderForV3PlusClosures class callPrimitiveCode)]
+															-> [#'bytecode decoding'].
+			[#(MethodContext failPrimitiveWith:)]			-> [#'system simulation'].
 			[#(MethodContext class allInstances)]			-> [#enumerating].
 			[#(MethodContext class allInstancesDo:)]		-> [#enumerating].
 			[#(SmallInteger asCharacter)]					-> [#converting].
@@ -2209,10 +2234,11 @@ SpurBootstrap >> allPrototypeMethodSymbols [
 
 { #category : #'method prototypes' }
 SpurBootstrap >> allPrototypeMethods [
-	^imageTypes
+	^(imageTypes
 		inject: (SpurBootstrap class organization listAtCategoryNamed: #'method prototypes')
 		into: [:prototypes :type|
-			prototypes, (SpurBootstrap class organization listAtCategoryNamed: #'method prototypes ', type)]
+				prototypes, (SpurBootstrap class organization listAtCategoryNamed: #'method prototypes ', type)]) reject:
+			[:sel| ((SpurBootstrap class >> sel) pragmaAt: #remove) notNil]
 ]
 
 { #category : #'bootstrap image' }
@@ -3019,6 +3045,7 @@ SpurBootstrap >> installModifiedMethods [
 	self withExecutableInterpreter: oldInterpreter
 		do: [self internAllSymbols.
 			 self addNewMethods.
+			 self removeMethods.
 			 self replaceMethods.
 			 self modifyCharacterMethods]
 ]
@@ -3469,6 +3496,25 @@ SpurBootstrap >> rehashImage [
 							object: o
 							perform: rehashSym
 							withArguments: #()]]]]
+]
+
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> removeMethods [
+	"Get the simulator to remove any methods marked with <remove>."
+	| removeSym |
+	removeSym := self findSymbol: #removeSelectorSilently:.
+	removeSym ifNil:
+		[removeSym := self findSymbol: #removeSelector:].
+	self prototypeClassNameMetaSelectorMethodDo:
+		[:className :isMeta :selector :method| | class |
+		(method pragmaAt: #remove) ifNotNil:
+			[(self findClassNamed: (literalMap at: className)) ifNotNil:
+				[:theClass|
+				 class := isMeta ifTrue: [oldHeap fetchClassOfNonImm: theClass] ifFalse: [theClass].
+				 self interpreter: oldInterpreter
+					object: class
+					perform: removeSym
+					withArguments: {literalMap at: selector}]]]
 ]
 
 { #category : #'bootstrap methods' }
