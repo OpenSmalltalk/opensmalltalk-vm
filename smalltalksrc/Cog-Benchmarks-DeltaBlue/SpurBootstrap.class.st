@@ -2174,7 +2174,8 @@ SpurBootstrap >> addNewMethods [
 				self prototypeClassNameMetaSelectorMethodDo:
 					[:className :isMeta :selector :method| | methodOrNil |
 					(className = sym
-					 and: [symIsMeta = isMeta]) ifTrue:
+					 and: [symIsMeta = isMeta
+					 and: [(method pragmaAt: #remove) isNil]]) ifTrue:
 						["probe method dictionary of the class for each method, installing a dummy if not found."
 						 "Transcript cr; nextPutAll: 'checking for '; nextPutAll: selector; flush."
 						 methodOrNil := self interpreter: oldInterpreter
@@ -2212,16 +2213,6 @@ SpurBootstrap >> allPrototypeClassNamesDo: aBlock [
 		[:className :isMeta :selector :method |
 		pairs add: {className. isMeta}].
 	pairs do: [:pair| aBlock value: pair first value: pair last]
-]
-
-{ #category : #'method prototypes' }
-SpurBootstrap >> allPrototypeMethodSelectors [
-	"Answer all prototype selectors except those marked <remove>"
-	^(imageTypes
-		inject: (SpurBootstrap class organization listAtCategoryNamed: #'method prototypes')
-		into: [:prototypes :type|
-				prototypes, (SpurBootstrap class organization listAtCategoryNamed: #'method prototypes ', type)]) reject:
-			[:sel| ((SpurBootstrap class >> sel) pragmaAt: #remove) notNil]
 ]
 
 { #category : #'method prototypes' }
@@ -2680,15 +2671,20 @@ SpurBootstrap >> fileOutPrototypesFor: imageTypeOrArrayOfTypes [
 		[:className :isMeta :selector :method| | class category preamble source |
 		class := Smalltalk classNamed: className.
 		isMeta ifTrue: [class := class class].
-		category := (class organization categoryOfElement: selector) ifNil:
-						[self class categoryForClass: className meta: isMeta selector: selector].
-		preamble := class name, ' methodsFor: ' , category asString printString, ' stamp: ''', method timeStamp, ''''.
-		internalStream nextPut: $!; nextChunkPut: preamble; cr.
-		source := method getSourceFromFile asString.
-		source := source copyFrom: (source indexOfSubCollection: 'PROTOTYPE') + 9 to: source size.
-		(self selectorForPrototypeMethod: method) isBinary ifTrue:
-			[source := (self selectorForPrototypeMethod: method), (source copyFrom: (source indexOf: Character space) to: source size)].
-		internalStream nextChunkPut: source; space; nextPut: $!; cr; cr].
+		(method pragmaAt: #remove)
+			ifNil:
+				[category := (class organization categoryOfElement: selector) ifNil:
+								[self class categoryForClass: className meta: isMeta selector: selector].
+				preamble := class name, ' methodsFor: ' , category asString printString, ' stamp: ''', method timeStamp, ''''.
+				internalStream nextPut: $!; nextChunkPut: preamble; cr.
+				source := method getSourceFromFile asString.
+				source := source copyFrom: (source indexOfSubCollection: 'PROTOTYPE') + 9 to: source size.
+				(self selectorForPrototypeMethod: method) isBinary ifTrue:
+					[source := (self selectorForPrototypeMethod: method), (source copyFrom: (source indexOf: Character space) to: source size)].
+				internalStream nextChunkPut: source; space; nextPut: $!; cr; cr]
+			ifNotNil:
+				[source := class name, ' removeSelector: ', selector storeString.
+				 internalStream nextChunkPut: source; cr; cr]].
 	internalStream trailer.
 
 	FileStream
@@ -3407,7 +3403,7 @@ SpurBootstrap >> prototypeClassNameMetaSelectorMethodDo: quaternaryBlock [
 	 For now find methods in class-side category #'method prototypes'.
 	 Scheme could be extended to have different protocols for different
 	 Squeak/Pharo versions."
-	self allPrototypeMethodSelectors do:
+	self allPrototypeSelectors do:
 		[:protoSelector| | method className isMeta |
 		method := SpurBootstrap class >> protoSelector.
 		className := self classNameForPrototypeMethod: method.
@@ -3508,23 +3504,6 @@ SpurBootstrap >> rehashImage [
 							withArguments: #()]]]]
 ]
 
-{ #category : #'method prototypes' }
-SpurBootstrap >> removalClassNameMetaSelectorDo: quaternaryBlock [
-	"Evaluate aBlock with class name, class is meta, and selector for
-	 all prototypes marked <remove>."
-	self allPrototypeSelectors do:
-		[:protoSelector| | method className isMeta |
-		method := SpurBootstrap class >> protoSelector.
-		className := self classNameForPrototypeMethod: method.
-		(isMeta := className endsWith: 'class') ifTrue:
-			[className := (className allButLast: 5) asSymbol].
-		(method pragmaAt: #remove) ifNotNil:
-			[quaternaryBlock
-				value: className
-				value: isMeta
-				value: (self selectorForPrototypeMethod: method)]]
-]
-
 { #category : #'bootstrap methods' }
 SpurBootstrap >> removeMethods [
 	"Get the simulator to remove any methods marked with <remove>."
@@ -3532,22 +3511,23 @@ SpurBootstrap >> removeMethods [
 	removeSym := self findSymbol: #removeSelectorSilently:.
 	removeSym ifNil:
 		[removeSym := self findSymbol: #removeSelector:].
-	self removalClassNameMetaSelectorDo:
-		[:className :isMeta :selector| | class |
-		(self findClassNamed: (literalMap at: className)) ifNotNil:
-			[:theClass|
-			 class := isMeta ifTrue: [oldHeap fetchClassOfNonImm: theClass] ifFalse: [theClass].
-			 Transcript
-				cr;
-				nextPutAll: 'removing ';
-				nextPutAll: className;
-				nextPutAll: (isMeta ifTrue: [' class>>'] ifFalse: ['>>']);
-				store: selector;
-				flush.
-			 self interpreter: oldInterpreter
-				object: class
-				perform: removeSym
-				withArguments: {literalMap at: selector}]]
+	self prototypeClassNameMetaSelectorMethodDo:
+		[:className :isMeta :selector :method| | class |
+		(method pragmaAt: #remove) ifNotNil:
+			[(self findClassNamed: (literalMap at: className)) ifNotNil:
+				[:theClass|
+				 class := isMeta ifTrue: [oldHeap fetchClassOfNonImm: theClass] ifFalse: [theClass].
+				 Transcript
+					cr;
+					nextPutAll: 'removing ';
+					nextPutAll: className;
+					nextPutAll: (isMeta ifTrue: [' class>>'] ifFalse: ['>>']);
+					store: selector;
+					flush.
+				 self interpreter: oldInterpreter
+					object: class
+					perform: removeSym
+					withArguments: {literalMap at: selector}]]]
 ]
 
 { #category : #'bootstrap methods' }
@@ -3568,7 +3548,8 @@ SpurBootstrap >> replaceMethods [
 				self prototypeClassNameMetaSelectorMethodDo:
 					[:className :isMeta :selector :method| | replacement methodDict index |
 					(className = sym
-					 and: [symIsMeta = isMeta]) ifTrue:
+					 and: [symIsMeta = isMeta
+					 and: [(method pragmaAt: #remove) isNil]]) ifTrue:
 						[(installedPrototypes includes: method selector) ifFalse:
 							["probe method dictionary of the class for each method, installing a dummy if not found."
 							Transcript
