@@ -3784,6 +3784,13 @@ ObjectMemory >> noCheckMethodHeaderOf: methodObj [
 	^self fetchPointer: HeaderIndex ofObject: methodObj
 ]
 
+{ #category : #'forward compatibility' }
+ObjectMemory >> noFixupFollowField: fieldIndex ofObject: anObject [
+	"Spur compatibility; in V3 this is a synonym for fetchPointer:ofObject:"
+	<inline: true>
+	^self fetchPointer: fieldIndex ofObject: anObject
+]
+
 { #category : #'header access' }
 ObjectMemory >> noShiftCompactClassIndexOfHeader: header [
 	<api>
