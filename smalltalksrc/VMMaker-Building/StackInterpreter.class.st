@@ -5575,19 +5575,21 @@ StackInterpreter >> findApplicationOfTargetMixin: targetMixin startingAtNonMetaC
 { #category : #'debug support' }
 StackInterpreter >> findClassContainingMethod: meth startingAt: classObj [
 	| currClass classDict classDictSize methodArray i |
-	currClass := classObj.
+	(objectMemory isOopForwarded: classObj)
+		ifTrue: [currClass := objectMemory followForwarded: classObj]
+		ifFalse: [currClass := classObj].
 	[self assert: (objectMemory isForwarded: currClass) not.
-	 classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currClass.
+	 classDict := objectMemory noFixupFollowField: MethodDictionaryIndex ofObject: currClass.
 	 self assert: (objectMemory isForwarded: classDict) not.
 	 classDictSize := objectMemory numSlotsOf: classDict.
-	 methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
+	 methodArray := objectMemory noFixupFollowField: MethodArrayIndex ofObject: classDict.
 	 self assert: (objectMemory isForwarded: methodArray) not.
 	 i := 0.
 	 [i < (classDictSize - SelectorStart)] whileTrue:
-		[meth = (objectMemory fetchPointer: i ofObject: methodArray) ifTrue:
+		[meth = (objectMemory noFixupFollowField: i ofObject: methodArray) ifTrue:
 			[^currClass].
 		 i := i + 1].
-	 currClass := self superclassOf: currClass.
+	 currClass := self noFixupSuperclassOf: currClass.
 	 currClass = objectMemory nilObject] whileFalse.
 	^currClass		"method not found in superclass chain"
 ]
@@ -5613,7 +5615,7 @@ StackInterpreter >> findClassForSelector: aSelector lookupClass: startClass do: 
 
 { #category : #'debug support' }
 StackInterpreter >> findClassOfMethod: meth forReceiver: rcvr [
-	| rclass |
+	| rclass mclass |
 	((objectMemory addressCouldBeOop: rcvr)
 	and: [(objectMemory isOopForwarded: rcvr) not]) ifTrue:
 		[rclass := objectMemory fetchClassOf: rcvr.
@@ -5624,7 +5626,10 @@ StackInterpreter >> findClassOfMethod: meth forReceiver: rcvr [
 	((objectMemory addressCouldBeObj: meth)
 	 and: [objectMemory isCompiledMethod: meth]) ifFalse:
 		[^objectMemory nilObject].
-	^self findClassContainingMethod: meth startingAt: (self methodClassOf: meth)
+	mclass := self safeMethodClassOf: meth.
+	(self addressCouldBeClassObj: mclass) ifTrue:
+		[^objectMemory nilObject].
+	^self findClassContainingMethod: meth startingAt: (self safeMethodClassOf: meth)
 ]
 
 { #category : #'frame access' }
@@ -5828,7 +5833,7 @@ StackInterpreter >> findSelectorOfMethod: methArg [
 		ifFalse: [meth := methArg].
 	 (objectMemory isOopCompiledMethod: meth) ifFalse:
 		[^objectMemory nilObject].
-	classObj := self methodClassOf: meth.
+	classObj := self safeMethodClassOf: meth.
 	(self addressCouldBeClassObj: classObj) ifTrue:
 		[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: classObj.
 		 classDictSize := objectMemory numSlotsOf: classDict.
@@ -7019,7 +7024,11 @@ StackInterpreter >> initialCleanup [
 
 { #category : #'compiled methods' }
 StackInterpreter >> initialPCForHeader: methodHeader method: theMethod [
-	<api>
+	"Answer the initial PC for a method; used only in methods that build a frame.
+	 Hence add an assert to check that there's a sane methodClassAssociation."
+	<inline: true>
+	self assert: (self saneMethodClassAssociationIn: theMethod
+					numLiterals: (objectMemory literalCountOfMethodHeader: methodHeader)).
 	^theMethod
 	+ ((LiteralStart + (objectMemory literalCountOfMethodHeader: methodHeader)) * BytesPerOop)
 	+ objectMemory baseHeaderSize
@@ -9017,6 +9026,7 @@ StackInterpreter >> methodClassOf: methodPointer [
 		ifFalse:
 			[| literal |
 			 literal := self followLiteral: (objectMemory literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
+			 self assert: ((objectMemory isPointers: literal) and: [(objectMemory numSlotsOf: literal) > ValueIndex]).
 			 objectMemory followField: ValueIndex ofObject: literal]
 ]
 
@@ -9235,6 +9245,13 @@ StackInterpreter >> nextImplicitReceiverFor: anObject withMixin: mixin [
 { #category : #'compiled methods' }
 StackInterpreter >> noAssertHeaderOf: methodPointer [
 	^objectMemory fetchPointer: HeaderIndex ofObject: methodPointer
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> noFixupSuperclassOf: classPointer [
+	"No fixup version of superclassOf: that should not create heisenbugs"
+	<inline: true>
+	^objectMemory noFixupFollowField: SuperclassIndex ofObject: classPointer
 ]
 
 { #category : #'internal interpreter access' }
@@ -11778,6 +11795,33 @@ StackInterpreter >> roomToPushNArgs: n [
 			 ^self stackPointerIndex + n <= cntxSize]
 		ifFalse: "simpler code that simply insists args are <= max arg count"
 			[^n <= (LargeContextSlots - CtxtTempFrameStart)]
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> safeMethodClassOf: methodPointer [
+	"Safe version of methodClassOf: that deals with malformed compiled methods,
+	 etc, and does not fixup forwarding pointers.."
+	| literal maybeClass |
+	literal := self literal: (objectMemory literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
+	(objectMemory isOopForwarded: literal) ifTrue:
+		[literal := objectMemory followForwarded: literal].
+	((objectMemory isPointers: literal) and: [(objectMemory numSlotsOf: literal) > ValueIndex]) ifFalse:
+		[^objectMemory nilObject].
+	maybeClass := objectMemory fetchPointer: ValueIndex ofObject: literal.
+	(objectMemory isOopForwarded: maybeClass) ifTrue:
+		[maybeClass := objectMemory followForwarded: maybeClass].
+	^maybeClass
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> saneMethodClassAssociationIn: methodObj numLiterals: numLiterals [
+	| shouldBeAssoc |
+	shouldBeAssoc := self literal: numLiterals - 1 ofMethod: methodObj.
+	(objectMemory isForwarded: shouldBeAssoc) ifTrue:
+		[shouldBeAssoc := objectMemory followForwarded: shouldBeAssoc].
+	^(objectMemory isPointers: shouldBeAssoc)
+	 and: [(objectMemory numSlotsOf: shouldBeAssoc) > ValueIndex
+	 and: [self addressCouldBeClassObj: (objectMemory noFixupFollowField: ValueIndex ofObject: shouldBeAssoc)]]
 ]
 
 { #category : #'callback support' }
