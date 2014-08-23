@@ -2215,6 +2215,16 @@ SpurBootstrap >> allPrototypeClassNamesDo: aBlock [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrap >> allPrototypeMethodSelectors [
+	"Answer all prototype selectors except those marked <remove>"
+	^(imageTypes
+		inject: (SpurBootstrap class organization listAtCategoryNamed: #'method prototypes')
+		into: [:prototypes :type|
+				prototypes, (SpurBootstrap class organization listAtCategoryNamed: #'method prototypes ', type)]) reject:
+			[:sel| ((SpurBootstrap class >> sel) pragmaAt: #remove) notNil]
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrap >> allPrototypeMethodSymbols [
 	"self basicNew allPrototypeMethodSymbols"
 	| symbols |
@@ -2233,12 +2243,12 @@ SpurBootstrap >> allPrototypeMethodSymbols [
 ]
 
 { #category : #'method prototypes' }
-SpurBootstrap >> allPrototypeMethods [
-	^(imageTypes
+SpurBootstrap >> allPrototypeSelectors [
+	"Answer all prototype selectors, including those marked <remove>"
+	^imageTypes
 		inject: (SpurBootstrap class organization listAtCategoryNamed: #'method prototypes')
 		into: [:prototypes :type|
-				prototypes, (SpurBootstrap class organization listAtCategoryNamed: #'method prototypes ', type)]) reject:
-			[:sel| ((SpurBootstrap class >> sel) pragmaAt: #remove) notNil]
+				prototypes, (SpurBootstrap class organization listAtCategoryNamed: #'method prototypes ', type)]
 ]
 
 { #category : #'bootstrap image' }
@@ -3397,7 +3407,7 @@ SpurBootstrap >> prototypeClassNameMetaSelectorMethodDo: quaternaryBlock [
 	 For now find methods in class-side category #'method prototypes'.
 	 Scheme could be extended to have different protocols for different
 	 Squeak/Pharo versions."
-	self allPrototypeMethods do:
+	self allPrototypeMethodSelectors do:
 		[:protoSelector| | method className isMeta |
 		method := SpurBootstrap class >> protoSelector.
 		className := self classNameForPrototypeMethod: method.
@@ -3498,6 +3508,23 @@ SpurBootstrap >> rehashImage [
 							withArguments: #()]]]]
 ]
 
+{ #category : #'method prototypes' }
+SpurBootstrap >> removalClassNameMetaSelectorDo: quaternaryBlock [
+	"Evaluate aBlock with class name, class is meta, and selector for
+	 all prototypes marked <remove>."
+	self allPrototypeSelectors do:
+		[:protoSelector| | method className isMeta |
+		method := SpurBootstrap class >> protoSelector.
+		className := self classNameForPrototypeMethod: method.
+		(isMeta := className endsWith: 'class') ifTrue:
+			[className := (className allButLast: 5) asSymbol].
+		(method pragmaAt: #remove) ifNotNil:
+			[quaternaryBlock
+				value: className
+				value: isMeta
+				value: (self selectorForPrototypeMethod: method)]]
+]
+
 { #category : #'bootstrap methods' }
 SpurBootstrap >> removeMethods [
 	"Get the simulator to remove any methods marked with <remove>."
@@ -3505,16 +3532,22 @@ SpurBootstrap >> removeMethods [
 	removeSym := self findSymbol: #removeSelectorSilently:.
 	removeSym ifNil:
 		[removeSym := self findSymbol: #removeSelector:].
-	self prototypeClassNameMetaSelectorMethodDo:
-		[:className :isMeta :selector :method| | class |
-		(method pragmaAt: #remove) ifNotNil:
-			[(self findClassNamed: (literalMap at: className)) ifNotNil:
-				[:theClass|
-				 class := isMeta ifTrue: [oldHeap fetchClassOfNonImm: theClass] ifFalse: [theClass].
-				 self interpreter: oldInterpreter
-					object: class
-					perform: removeSym
-					withArguments: {literalMap at: selector}]]]
+	self removalClassNameMetaSelectorDo:
+		[:className :isMeta :selector| | class |
+		(self findClassNamed: (literalMap at: className)) ifNotNil:
+			[:theClass|
+			 class := isMeta ifTrue: [oldHeap fetchClassOfNonImm: theClass] ifFalse: [theClass].
+			 Transcript
+				cr;
+				nextPutAll: 'removing ';
+				nextPutAll: className;
+				nextPutAll: (isMeta ifTrue: [' class>>'] ifFalse: ['>>']);
+				store: selector;
+				flush.
+			 self interpreter: oldInterpreter
+				object: class
+				perform: removeSym
+				withArguments: {literalMap at: selector}]]
 ]
 
 { #category : #'bootstrap methods' }
