@@ -3,7 +3,7 @@
 ./getsqueak45.sh
 . ./getGoodCogVM.sh
 
-if [ "$1" -ne -skiptrunkbuild ]; then
+if [ "$1" != -skiptrunkbuild ]; then
 	cp -p $SQUEAK45.image trunk46forspur.image
 	cp -p $SQUEAK45.changes trunk46forspur.changes
 
@@ -52,5 +52,5 @@ mv trunk46forspur-spur.changes trunk46-spur.changes
 
 # Now load the modified packages
 . ./getGoodSpurVM.sh
-echo $VM trunk46-spur.image LoadSpurPackagesFromTempDir.st
-$VM trunk46-spur.image LoadSpurPackagesFromTempDir.st
+echo $VM -blockonerror trunk46-spur.image LoadSpurPackagesFromTempDir.st
+$VM -blockonerror trunk46-spur.image LoadSpurPackagesFromTempDir.st

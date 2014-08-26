@@ -4,15 +4,80 @@ RemoteUser=eliotmiranda@highland-park.dreamhost.com
 RemoteRoot=mirandabanda.org/files/Cog/VM
 IFS="	
 "
+REV=
+TAG=
+LCOG=
+LTCOG=
+LSPUR=
+LTSPUR=
+MCOG=
+MTCOG=
+MSPUR=
+MTSPUR=
+WCOG=
+WTCOG=
+WSPUR=
+WTSPUR=
+LNSCOG=
+LNSSPUR=
+MNSCOG=
+MNSSPUR=
+WNSCOG=
+WNSSPUR=
 cd `dirname $0`/../products
 VERBOSE=
 
-while getopts 'r:t:?' opt "$@"; do
-	case "$opt" in
-	r)	REV=$OPTARG;;
-	t)	TAG=$OPTARG;;
-	esac
-done
+if [ $# = 0 ]; then
+	CheckDMG=1
+	CheckMSI=1
+	LCOG=1
+	LTCOG=1
+	LSPUR=1
+	MCOG=1
+	MTCOG=1
+	MSPUR=1
+	WCOG=1
+	WSPUR=1
+	LNSCOG=1
+	LNSSPUR=1
+	MNSCOG=1
+	MNSSPUR=1
+	WNSCOG=1
+	WNSSPUR=1
+else
+	CheckDMG=
+	CheckMSI=
+	while [ -n "$1" ]; do
+		case $1 in
+		-c)		LCOG=1;LTCOG=1;MCOG=1;MTCOG=1;WCOG=1;WMTCOG=1;
+				LSPUR=1;MSPUR=1;WSPUR=1;;
+		-cl)	LCOG=1;LTCOG=1;LSPUR=1;;
+		-cm)	MCOG=1;MTCOG=1;MSPUR=1;;
+		-cw)	WCOG=1;WTCOG=1;WSPUR=1;;
+		-ctl)	LTCOG=1;;
+		-ctm)	MTCOG=1;;
+		-ctw)	WTCOG=1;;
+		-nl)	LNSCOG=1;LNSSPUR=1;;
+		-nm)	WNSCOG=1;WNSSPUR=1;
+				CheckDMG=1;;
+		-nw)	WNSCOG=1;WNSSPUR=1;
+				CheckMSI=1;;
+		-n)		LNSCOG=1;LNSSPUR=1;WNSCOG=1;WNSSPUR=1;WNSCOG=1;WNSSPUR=1;
+				CheckDMG=1;CheckMSI=1;;
+		-l)		LCOG=1;LTCOG=1;LSPUR=1;LNSCOG=1;LNSSPUR=1;;
+		-m)		MCOG=1;MTCOG=1;MSPUR=1;WNSCOG=1;WNSSPUR=1;
+				CheckDMG=1;;
+		-w)		WCOG=1;WTCOG=1;WSPUR=1;WNSCOG=1;WNSSPUR=1;
+				CheckMSI=1;CheckDMG=1;;
+		-v)		VERBOSE=1;;
+		-r)		shift;REV="$1";;
+		-t)		shift;TAG="$1";;
+		-?|-h)  echo usage: $0 [-r REV -l -m -w -c -n -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw -r REV - t TAG]; exit 0;;
+		*)	break
+		esac
+		shift
+	done
+fi
 
 if [ -z "$REV" ]; then
 	REV="`svnversion .. | sed 's/^.*://'`"
@@ -32,49 +97,27 @@ if [ -z "$TAG" ]; then
 fi
 echo REV=$REV TAG=$TAG
 
-CSARCS="Cog.app-$TAG.tgz	coglinux-$TAG.tgz	coglinuxht-$TAG.tgz	cogwin-$TAG.zip"
-CSARCS="$CSARCS	CogSpur.app-$TAG.tgz	cogspurlinuxht-$TAG.tgz	cogspurwin-$TAG.zip"
-CMARCS="CogMT.app-$TAG.tgz	cogmtlinuxht-$TAG.tgz	cogmtwin-$TAG.zip"
-NSARCS="Newspeak Virtual Machine-$TAG.dmg	Newspeak Virtual Machine.app-$TAG.tgz	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz	nsvm-$TAG.msi"
-NSARCS="$NSARCS	Newspeak Spur Virtual Machine-$TAG.dmg	Newspeak Virtual Machine.app-$TAG.tgz	nsvmspurlinuxht-$TAG.tgz	nsvmwin-$TAG.msi	nsvmspurwin$TAG.msi"
-if [ $# = 0 ]; then
-	ARCHIVES="$CSARCS	$CMARCS		$NSARCS"
-	CheckDMG=1
-	CheckMSI=1
-else
-	echo not yet changed
-	exit 1
-	ARCHIVES=
-	CheckDMG=
-	CheckMSI=
-	while [ -n "$1" ]; do
-		case $1 in
-		-r)		REV=$1;;
-		-c)		ARCHIVES="$ARCHIVES		$CSARCS		$CMARCS";;
-		-cl)	ARCHIVES="$ARCHIVES	coglinux-$TAG.tgz	coglinuxht-$TAG.tgz";;
-		-cm)	ARCHIVES="$ARCHIVES	Cog.app-$TAG.tgz";;
-		-cw)	ARCHIVES="$ARCHIVES	cogwin-$TAG.zip";;
-		-ctl)	ARCHIVES="$ARCHIVES	cogmtlinux-$TAG.tgz	cogmtlinuxht-$TAG.tgz";;
-		-ctm)	ARCHIVES="$ARCHIVES	CogMT.app-$TAG.tgz";;
-		-ctw)	ARCHIVES="$ARCHIVES	cogmtwin-$TAG.zip";;
-		-nl)	ARCHIVES="$ARCHIVES	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz";;
-		-nm)	ARCHIVES="$ARCHIVES	Newspeak Virtual Machine-$TAG.dmg	Newspeak Virtual Machine.app-$TAG.tgz	Newspeak Spur Virtual Machine-$TAG.dmg	Newspeak Virtual Machine.app-$TAG.tgz"
-				CheckDMG=1;;
-		-nw)	ARCHIVES="$ARCHIVES	nsvmwin-$TAG.msi	nsvmspurnsvm-$TAG.msi"
-				CheckMSI=1;;
-		-n)		ARCHIVES="$ARCHIVES		$NSARCS";;
-		-l)		ARCHIVES="$ARCHIVES	coglinux-$TAG.tgz	coglinuxht-$TAG.tgz	cogmtlinux-$TAG.tgz	cogmtlinuxht-$TAG.tgz	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz";;
-		-m)		ARCHIVES="$ARCHIVES	Cog.app-$TAG.tgz	CogMT.app-$TAG.tgz	Newspeak Virtual Machine-$TAG.dmg"
-				CheckDMG=1;;
-		-v)		VERBOSE=1;;
-		-w)		ARCHIVES="$ARCHIVES	cogwin-$TAG.tgz	cogmtwin-$TAG.zip	nsvm-$TAG.msi"
-				CheckMSI=1;;
-		-?|-h)  echo usage: $0 [-r REV -l -m -w -c -n -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw]; exit 0;;
-		*)	break
-		esac
-		shift
-	done
-fi
+ARCHIVES=
+test -n "$LCOG" && ARCHIVES="$ARCHIVES	coglinux-$TAG.tgz	coglinuxht-$TAG.tgz"
+test -n "$LTCOG" && ARCHIVES="$ARCHIVES	cogmtlinuxht-$TAG.tgz"
+test -n "$LSPUR" && ARCHIVES="$ARCHIVES	cogspurlinuxht-$TAG.tgz"
+test -n "$LTSPUR" && ARCHIVES="$ARCHIVES	cogspurmtlinuxht-$TAG.tgz"
+test -n "$MCOG" && ARCHIVES="$ARCHIVES	Cog.app-$TAG.tgz	CogSpur.app-$TAG.tgz"
+test -n "$MTCOG" && ARCHIVES="$ARCHIVES	CogMT.app-$TAG.tgz"
+test -n "$MSPUR" && ARCHIVES="$ARCHIVES	CogSpur.app-$TAG.tgz"
+test -n "$MTSPUR" && ARCHIVES="$ARCHIVES	CogMTSpur.app-$TAG.tgz"
+test -n "$WCOG" && ARCHIVES="$ARCHIVES	cogwin-$TAG.zip"
+test -n "$WTCOG" && ARCHIVES="$ARCHIVES	cogmtwin-$TAG.zip"
+test -n "$WSPUR" && ARCHIVES="$ARCHIVES	cogspurwin-$TAG.zip"
+test -n "$WTSPUR" && ARCHIVES="$ARCHIVES	cogspurmtwin-$TAG.zip"
+
+test -n "$LNSCOG" && ARCHIVES="$ARCHIVES	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz"
+test -n "$LNSSPUR" && ARCHIVES="$ARCHIVES	nsvmspurlinuxht-$TAG.tgz"
+test -n "$MNSCOG" && ARCHIVES="$ARCHIVES	Cog.app-$TAG.tgz	CogSpur.app-$TAG.tgz"
+test -n "$MNSSPUR" && ARCHIVES="$ARCHIVES	CogSpur.app-$TAG.tgz"
+test -n "$WNSCOG" && ARCHIVES="$ARCHIVES	nsvmwin-$TAG.zip"
+test -n "$WNSSPUR" && ARCHIVES="$ARCHIVES	nsvmspurwin-$TAG.zip"
+
 if [ -n "$VERBOSE" ]; then
 	for a in $ARCHIVES; do
 		echo upload $a
@@ -146,7 +189,7 @@ THEM="`ls ../history/README.* | sort -n -t. -k2 -r`"
 >ChangeHistory
 for r in $THEM; do
 	m="`echo $r | sed 's/..\/history\/README.//'`"
-	if [ $REV -ge $m ]; then
+	if [ "$REV" -ge "$m" ]; then
 		test $REV -ne $m && echo "-------------------------------" >>ChangeHistory
 		ls -lT $r | awk '{ print $6, $7, $9; }' >>ChangeHistory
 		if grep -s "^------------" $r >/dev/null; then
@@ -160,7 +203,7 @@ done
 ssh -x $RemoteUser mkdir $RemoteRoot/VM.r$REV
 echo scp -p ChangeHistory ../history/README.$REV $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
 scp -p ChangeHistory ../history/README.$REV $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
-echo ssh $RemoteUser $RemoteRoot/VM.r$REV/* \\\; ls -al $RemoteRoot/VM.r$REV
+echo ssh $RemoteUser chmod a-w $RemoteRoot/VM.r$REV/* \\\; ls -al $RemoteRoot/VM.r$REV
 ssh $RemoteUser chmod a-w $RemoteRoot/VM.r$REV/* \; ls -al $RemoteRoot/VM.r$REV
 
 test -x image/makegetvmscripts.sh && (image/makegetvmscripts.sh)
