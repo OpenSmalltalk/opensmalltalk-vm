@@ -296,6 +296,7 @@ SpurSegmentManager >> initForBootstrap [
 
 { #category : #simulation }
 SpurSegmentManager >> initSegmentForInImageCompilationFrom: base to: limit [
+	<doNotGenerate>
 	| bridge |
 	self allocateOrExtendSegmentInfos.
 	numSegments := 1.
