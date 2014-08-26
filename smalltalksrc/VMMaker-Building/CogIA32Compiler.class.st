@@ -2061,12 +2061,6 @@ CogIA32Compiler >> concretizeXorRR [
 	^machineCodeSize := 2
 ]
 
-{ #category : #'sista counters' }
-CogIA32Compiler >> counterTargetFromFollowingAddress: nextInstructionAddress [
-	"Answer the address of the MoveAw:R or MoveR:Aw: instruction preceeding nextInstructionAddress"
-	^self literalBeforeFollowingAddress: nextInstructionAddress
-]
-
 { #category : #'generate machine code' }
 CogIA32Compiler >> dispatchConcretize [
 	"Attempt to generate concrete machine code for the instruction at address.

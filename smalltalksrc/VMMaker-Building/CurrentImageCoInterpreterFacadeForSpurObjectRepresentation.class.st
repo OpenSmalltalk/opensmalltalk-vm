@@ -2,7 +2,6 @@ Class {
 	#name : #CurrentImageCoInterpreterFacadeForSpurObjectRepresentation,
 	#superclass : #CurrentImageCoInterpreterFacade,
 	#instVars : [
-		'memMgr',
 		'hiddenRoots'
 	],
 	#category : #'VMMaker-Support'
@@ -16,6 +15,15 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation class >> objectMemory
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation class >> objectRepresentationClass [
 	^CogObjectRepresentationFor32BitSpur
+]
+
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> allocatePinnedSlots: nSlots [
+	^(objectMemory allocatePinnedSlots: nSlots)
+		ifNil: [nil]
+		ifNotNil:
+			[:objOop |
+			 objectMap at: objOop put: objOop]
 ]
 
 { #category : #accessing }
@@ -35,7 +43,7 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> characterTag [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> classIndexMask [
-	^self memMgr classIndexMask
+	^objectMemory classIndexMask
 ]
 
 { #category : #accessing }
@@ -56,13 +64,19 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> classTablePageSize
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> classTableRootObj [
 	hiddenRoots ifNil:
-		[hiddenRoots := Array new: self memMgr classTableRootSlots + self memMgr hiddenRootSlots].
+		[hiddenRoots := Array new: objectMemory classTableRootSlots + objectMemory hiddenRootSlots].
 	^self oopForObject: hiddenRoots
 ]
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> classTagForClass: classOop [
 	^(self objectForOop: classOop) identityHash
+]
+
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> eeInstantiateClassIndex: knownClassIndex format: objFormat numSlots: numSlots [
+	self assert: knownClassIndex = ClassArrayCompactIndex.
+	^self oopForObject: (Array new: numSlots)
 ]
 
 { #category : #forwarding }
@@ -80,6 +94,14 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> headerForSlots: nu
 	^objectMemory headerForSlots: numSlots format: formatField classIndex: classIndex
 ]
 
+{ #category : #'initialize-release' }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> initialize [
+	super initialize.
+	objectMemory
+		initializeFreeSpaceForFacadeFrom: self startOfMemory
+		to: self variablesBase
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> isForwardedObjectClassIndexPun [
 	^objectMemory isForwardedObjectClassIndexPun
@@ -89,17 +111,6 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> isForwardedObjectC
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> isImmediateClass: classOop [
 	"Can't rely on the host image; may be running on SqueakV3.  hence..."
 	^#(Character SmallInteger SmallFloat) includes: (self objectForOop: classOop) name
-]
-
-{ #category : #accessing }
-CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> memMgr [
-	^memMgr ifNil:
-		[memMgr := Spur32BitCoMemoryManager new]
-]
-
-{ #category : #accessing }
-CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> memMgr: aSpurMemoryManagerSubclassInstance [
-	memMgr := aSpurMemoryManagerSubclassInstance
 ]
 
 { #category : #accessing }
@@ -134,5 +145,5 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> storeCheckBoundary
 
 { #category : #testing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> tagMask [
-	^self memMgr tagMask
+	^objectMemory tagMask
 ]

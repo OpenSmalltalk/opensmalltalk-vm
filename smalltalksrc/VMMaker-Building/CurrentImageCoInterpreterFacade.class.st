@@ -56,7 +56,8 @@ Class {
 	],
 	#pools : [
 		'VMBasicConstants',
-		'VMObjectIndices'
+		'VMObjectIndices',
+		'VMSqueakClassIndices'
 	],
 	#category : #'VMMaker-Support'
 }
@@ -104,7 +105,7 @@ CurrentImageCoInterpreterFacade >> addressCouldBeOop: anOop [
 
 { #category : #labels }
 CurrentImageCoInterpreterFacade >> addressForLabel: l [
-	^variables at: l ifAbsentPut: [variables size * 4 + 131072]
+	^variables at: l ifAbsentPut: [variables size * 4 + self variablesBase]
 ]
 
 { #category : #accessing }
@@ -129,12 +130,12 @@ CurrentImageCoInterpreterFacade >> baseHeaderSize [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> byteAt: index [
-	^memory at: index + 1
+	^objectMemory byteAt: index
 ]
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> byteAt: index put: value [
-	^memory at: index + 1 put: value
+	^objectMemory byteAt: index put: value
 ]
 
 { #category : #accessing }
@@ -200,7 +201,7 @@ CurrentImageCoInterpreterFacade >> clearCogCompiledCodeCompactionCalledFor [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> cogCodeSize [
-	^memory size / 2
+	^memory byteSize / 4
 ]
 
 { #category : #'initialize-release' }
@@ -213,7 +214,9 @@ CurrentImageCoInterpreterFacade >> cogit: aCogit [
 	cogit := aCogit.
 	coInterpreter cogit: aCogit.
 	(objectMemory respondsTo: #cogit:) ifTrue:
-		[objectMemory cogit: aCogit]
+		[objectMemory cogit: aCogit].
+	(objectMemory respondsTo: #coInterpreter:) ifTrue:
+		[objectMemory coInterpreter: coInterpreter]
 ]
 
 { #category : #accessing }
@@ -351,8 +354,11 @@ CurrentImageCoInterpreterFacade >> initialPCForHeader: methodHeaderOop method: a
 
 { #category : #'initialize-release' }
 CurrentImageCoInterpreterFacade >> initialize [
-	memory := ByteArray new: 262144.
-	objectMemory := self class objectMemoryClass new.
+	memory := (VMBIGENDIAN
+					ifTrue: [Bitmap]
+					ifFalse: [LittleEndianBitmap]) new: 1024*1024/4.
+	objectMemory := self class objectMemoryClass simulatorClass new.
+	objectMemory memory: memory.
 	coInterpreter := CoInterpreter new.
 	coInterpreter
 		instVarNamed: 'objectMemory'
@@ -515,18 +521,23 @@ CurrentImageCoInterpreterFacade >> literalCountOfMethodHeader: headerIntegerOop 
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> long32At: index put: value [
-	^memory longAt: index + 1 put: value bigEndian: false
+CurrentImageCoInterpreterFacade >> long32At: index [
+	^objectMemory long32At: index
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> longAt: index [ 
-	^memory unsignedLongAt: index + 1
+CurrentImageCoInterpreterFacade >> long32At: index put: value [
+	^objectMemory long32At: index put: value
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> longAt: index [
+	^objectMemory longAt: index
 ]
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> longAt: index put: value [
-	^memory longAt: index + 1 put: value bigEndian: false
+	^objectMemory longAt: index put: value
 ]
 
 { #category : #accessing }
@@ -561,7 +572,15 @@ CurrentImageCoInterpreterFacade >> memory [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> methodCacheAddress [
-	^memory size * 3 / 4
+	"Use the top half of memory for variables, methodcache and rumpCStack,
+	 and the bottom half for allocating code and objects:
+
+		0 - 256k:			code zone
+		256k to 512k		object zone
+		512k to 768k		variables
+		768k to 1023k		method cache
+		 1023k to 1024k	rump C stack"
+	^memory byteSize * 3 / 4
 ]
 
 { #category : #testing }
@@ -627,11 +646,13 @@ CurrentImageCoInterpreterFacade >> numBytesOf: objOop [
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> numSlotsOf: objOop [ 
+CurrentImageCoInterpreterFacade >> numSlotsOf: objOop [
 	"Answer the number of slots in the given non-immediate object.
 	 Does not adjust the size of contexts by stackPointer."
 	| obj elementSize wordSize |
 	obj := self objectForOop: objOop.
+	obj = objOop ifTrue:
+		[^objectMemory numSlotsOf: objOop].
 	self deny: ([obj class isImmediateClass]
 				on: MessageNotUnderstood
 				do: [:ex| obj class == SmallInteger]).
@@ -732,6 +753,11 @@ CurrentImageCoInterpreterFacade >> primitivePropertyFlags: primIndex [
 	^coInterpreter primitivePropertyFlags: primIndex
 ]
 
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> printHex: anInteger [
+	coInterpreter printHex: anInteger
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> quickPrimitiveConstantFor: aQuickPrimitiveIndex [
 	^self oopForObject: (coInterpreter quickPrimitiveConstantFor: aQuickPrimitiveIndex)
@@ -763,7 +789,15 @@ CurrentImageCoInterpreterFacade >> rawHeaderOf: anOop put: aCogMethodSurrogate [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> rumpCStackAddress [
-	^memory size / 4 * 3 + 1024
+	"Use the top half of memory for variables, methodcache and rumpCStack,
+	 and the bottom half for allocating code and objects:
+
+		0 - 256k:			code zone
+		256k to 512k		object zone
+		512k to 768k		variables
+		768k to 1023k		method cache
+		 1023k to 1024k	rump C stack"
+	^memory byteSize - 1024
 ]
 
 { #category : #accessing }
@@ -815,7 +849,15 @@ CurrentImageCoInterpreterFacade >> stackPointerAddress [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> startOfMemory [
-	^memory size
+	"Use the top half of memory for variables, methodcache and rumpCStack,
+	 and the bottom half for allocating code and objects:
+
+		0 - 256k:			code zone
+		256k to 512k		object zone
+		512k to 768k		variables
+		768k to 1023k		method cache
+		 1023k to 1024k	rump C stack"
+	^memory byteSize / 4
 ]
 
 { #category : #accessing }
@@ -889,14 +931,21 @@ CurrentImageCoInterpreterFacade >> trueObject [
 	^objectMap at: true
 ]
 
-{ #category : #accessing }
-CurrentImageCoInterpreterFacade >> unalignedLongAt: index [ 
-	^memory unsignedLongAt: index + 1
+{ #category : #private }
+CurrentImageCoInterpreterFacade >> variablesBase [
+	"Use the top half of memory for variables, methodcache and rumpCStack, and the bottom half for allocating code and objects:
+
+		0 - 256k:			code zone
+		256k to 512k		object zone
+		512k to 768k		variables
+		768k to 1023k		method cache
+		 1023k to 1024k	rump C stack"
+	^memory byteSize / 2
 ]
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> wordSize [
-	^self memMgr wordSize
+	^objectMemory wordSize
 ]
 
 { #category : #accessing }

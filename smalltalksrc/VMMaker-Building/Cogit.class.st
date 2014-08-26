@@ -2507,6 +2507,15 @@ Cogit >> bytecodeSetOffsetForHeader: methodHeader [
 		ifFalse: [0]
 ]
 
+{ #category : #'simulation only' }
+Cogit >> cCoerce: value to: cTypeString [
+	"Type coercion for translation only; just return the value when running in Smalltalk."
+	<doNotGenerate>
+	^value == nil
+		ifTrue: [value]
+		ifFalse: [value coerceTo: cTypeString sim: objectMemory]
+]
+
 { #category : #'translation support' }
 Cogit >> cCoerceSimple: value to: cTypeString [
 	<doNotGenerate>
@@ -6759,8 +6768,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 					 result ~= 0 ifTrue:
 						[^result].
 					 bcpc := nextBcpc.
-					 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
-				self maybeRememberPrevMap: annotation absPCMcpc: mcpc]
+					 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]]]
 			ifFalse:
 				[mcpc := mcpc + (mapByte >= DisplacementX2N
 									ifTrue: [mapByte - DisplacementX2N << AnnotationShift]
@@ -8004,10 +8012,10 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 			cogMethod cmType = CMMethod ifTrue:
 				[([cogMethod nextMethodOrIRCs] on: MessageNotUnderstood do: [:ex| nil]) ifNotNil:
 					[:nmoircs| aStream crtab; nextPutAll: 'nextMethodOrIRCs: '.
-						nmoircs = 0 ifTrue: [aStream print: nmoircs] ifFalse: [self printHex: nmoircs]].
+						nmoircs = 0 ifTrue: [aStream print: nmoircs] ifFalse: [coInterpreter printHex: nmoircs]].
 				 ([cogMethod counters] on: MessageNotUnderstood do: [:ex| nil]) ifNotNil:
 					[:cntrs| aStream crtab; nextPutAll: 'counters: '.
-						cntrs = 0 ifTrue: [aStream print: cntrs] ifFalse: [self printHex: cntrs]]]].
+						cntrs = 0 ifTrue: [aStream print: cntrs] ifFalse: [coInterpreter printHex: cntrs]]]].
 	aStream cr; flush
 ]
 

@@ -1474,10 +1474,9 @@ NewObjectMemory >> incrementalGC [
 ]
 
 { #category : #'gc -- compaction' }
-NewObjectMemory >> initForwardBlock: fwdBlock mapping: oop to: newOop withBackPtr: backFlag [ 
+NewObjectMemory >> initForwardBlock: fwdBlock mapping: objOop to: newOop withBackPtr: backFlag [
 	"Initialize the given forwarding block to map oop to newOop, 
-	and replace oop's header with a pointer to the fowarding 
-	block. "
+	and replace oop's header with a pointer to the fowarding block."
 	"Details: The mark bit is used to indicate that an oop is 
 	forwarded. When an oop is forwarded, its header (minus the 
 	mark bit) contains the address of its forwarding block. (The 
@@ -1494,15 +1493,15 @@ NewObjectMemory >> initForwardBlock: fwdBlock mapping: oop to: newOop withBackPt
 	header. "
 	| originalHeader originalHeaderType |
 	<inline: true>
-	<asmLabel: false> 
-	originalHeader := self longAt: oop.
+	<asmLabel: false>
 	self assert: fwdBlock ~= nil. "ran out of forwarding blocks in become"
-	self assert: (originalHeader bitAnd: MarkBit) = 0. "'object already has a forwarding table entry"
+	self deny: (self hasForwardingBlock: objOop). "'object already has a forwarding table entry"
+	originalHeader := self longAt: objOop.
 	originalHeaderType := originalHeader bitAnd: TypeMask.
 	self longAt: fwdBlock put: newOop.
 	self longAt: fwdBlock + BytesPerWord put: originalHeader.
-	backFlag ifTrue: [self longAt: fwdBlock + (BytesPerWord*2) put: oop].
-	self longAt: oop put: (fwdBlock >> 1 bitOr: (MarkBit bitOr: originalHeaderType))
+	backFlag ifTrue: [self longAt: fwdBlock + (BytesPerWord*2) put: objOop].
+	self longAt: objOop put: (fwdBlock >> 1 bitOr: (MarkBit bitOr: originalHeaderType))
 ]
 
 { #category : #initialization }
@@ -2310,20 +2309,23 @@ NewObjectMemory >> prepareForwardingTableForBecoming: array1 with: array2 twoWay
 		 oop2 := self longAt: array2 + fieldOffset.
 		 "if oop1 == oop2, no need to do any work for this pair.
 		  May still be other entries in the arrays though so keep looking"
-		 oop1 = oop2 ifFalse:
-			[fwdBlock := self fwdBlockGet: fwdBlkSize.
-			 self
-				initForwardBlock: fwdBlock
-				mapping: oop1
-				to: oop2
-				withBackPtr: twoWayFlag not.
-			twoWayFlag ifTrue: "Second block maps oop2 back to oop1 for two-way become"
+		 oop1 ~= oop2 ifTrue:
+			[(self hasForwardingBlock: oop1) ifFalse: "Don't allocate multiple forwarding entries for duplicates."
 				[fwdBlock := self fwdBlockGet: fwdBlkSize.
 				 self
 					initForwardBlock: fwdBlock
-					mapping: oop2
-					to: oop1
-					withBackPtr: twoWayFlag not]].
+					mapping: oop1
+					to: oop2
+					withBackPtr: twoWayFlag not].
+			 (twoWayFlag
+			  and: [(self hasForwardingBlock: oop2) not]) ifTrue: "Again don't get confused by duplicates"
+				["Second block maps oop2 back to oop1 for two-way become"
+						fwdBlock := self fwdBlockGet: fwdBlkSize.
+						self
+							initForwardBlock: fwdBlock
+							mapping: oop2
+							to: oop1
+							withBackPtr: twoWayFlag not]].
 		fieldOffset := fieldOffset - BytesPerWord].
 	^true
 ]
