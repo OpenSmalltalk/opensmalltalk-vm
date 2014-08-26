@@ -2301,6 +2301,11 @@ ObjectMemory >> growToAccomodateContainerWithNumSlots: numSlots [
 	self growObjectMemory: (growHeadroom max: delta)
 ]
 
+{ #category : #'header access' }
+ObjectMemory >> hasForwardingBlock: objOop [
+	^self isMarked: objOop
+]
+
 { #category : #'api characterization' }
 ObjectMemory >> hasSpurMemoryManagerAPI [
 	^false
@@ -4201,15 +4206,17 @@ ObjectMemory >> prepareForwardingTableForBecoming: array1 with: array2 twoWay: t
 			oop2 := self longAt: array2 + fieldOffset.
 			"if oop1 == oop2, no need to do any work for this pair.
 			May still be other entries in the arrays though so keep looking"
-			oop1 = oop2
-				ifFalse: [fwdBlock := self fwdBlockGet: fwdBlkSize.
-					self
+			oop1 ~= oop2 ifTrue:
+				[(self hasForwardingBlock: oop1) ifFalse: "Don't allocate multiple forwarding entries for duplicates."
+					[fwdBlock := self fwdBlockGet: fwdBlkSize.
+					 self
 						initForwardBlock: fwdBlock
 						mapping: oop1
 						to: oop2
-						withBackPtr: twoWayFlag not.
-					twoWayFlag
-						ifTrue: ["Second block maps oop2 back to oop1 for two-way become"
+						withBackPtr: twoWayFlag not].
+				 (twoWayFlag
+				  and: [(self hasForwardingBlock: oop2) not]) ifTrue: "Again don't get confused by duplicates"
+					["Second block maps oop2 back to oop1 for two-way become"
 							fwdBlock := self fwdBlockGet: fwdBlkSize.
 							self
 								initForwardBlock: fwdBlock

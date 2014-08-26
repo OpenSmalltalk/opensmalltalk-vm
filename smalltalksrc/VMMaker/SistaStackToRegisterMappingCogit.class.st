@@ -52,7 +52,6 @@ Class {
 		'counters',
 		'counterIndex',
 		'initialCounterValue',
-		'prevMapAbsPCMcpc',
 		'ceClassTrapTrampoline'
 	],
 	#classVars : [
@@ -587,13 +586,6 @@ SistaStackToRegisterMappingCogit >> initializeCodeZoneFrom: startAddress upTo: e
 	super initializeCodeZoneFrom: startAddress upTo: endAddress
 ]
 
-{ #category : #'method map' }
-SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg [
-	"as a hack for collecting counters, remember the prev mcpc in a static variable."
-	prevMapAbsPCMcpc := 0.
-	^super mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
-]
-
 { #category : #'compile abstract instructions' }
 SistaStackToRegisterMappingCogit >> maybeAllocAndInitCounters [
 	<inline: true>
@@ -628,30 +620,30 @@ SistaStackToRegisterMappingCogit >> maybeMarkCountersIn: cogMethod [
 	objectRepresentation maybeMarkCounters: cogMethod counters
 ]
 
-{ #category : #'method map' }
-SistaStackToRegisterMappingCogit >> maybeRememberPrevMap: annotation absPCMcpc: mcpc [
-	"Remember the previous IsAbsPCReference's mcpc for collecting send and branch data."
-	<inline: true>
-	annotation = IsAbsPCReference ifTrue:
-		[self assert: mcpc ~= 0.
-		 prevMapAbsPCMcpc := mcpc]
-]
-
 { #category : #'method introspection' }
 SistaStackToRegisterMappingCogit >> picDataFor: descriptor IsBackwardBranch: IsBackwardBranch Mcpc: mcpc Bcpc: bcpc Method: cogMethodArg [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #mcpc type: #'char *'>
 	<var: #cogMethodArg type: #'void *'>
-	| entryPoint tuple |
+	| entryPoint tuple counter |
+	<var: #counter type: #'unsigned long'>
+
 	descriptor isNil ifTrue:
 		[^0].
 	descriptor isBranch ifTrue:
 		["it's a branch; conditional?"
 		 (descriptor isBranchTrue or: [descriptor isBranchFalse]) ifTrue:
-			[tuple := self picDataForConditionalBranch: prevMapAbsPCMcpc at: bcpc + descriptor numBytes.
+			[counter := (self
+							cCoerce: ((self
+											cCoerceSimple: cogMethodArg
+											to: #'CogMethod *') counters)
+							to: #'unsigned long *')
+								at: counterIndex.
+			 tuple := self picDataForCounter: counter at: bcpc + 1.
 			 tuple = 0 ifTrue: [^PrimErrNoMemory].
 			 objectMemory storePointer: picDataIndex ofObject: picData withValue: tuple.
-			 picDataIndex := picDataIndex + 1].
+			 picDataIndex := picDataIndex + 1.
+			 counterIndex := counterIndex + 1].
 		 ^0].
 	"infer it's a send; alas we can't just test the descriptor because of the bloody
 	 doubleExtendedDoAnythingBytecode which does sends as well as other things."
@@ -682,7 +674,7 @@ SistaStackToRegisterMappingCogit >> picDataFor: cogMethod into: arrayObj [
 	| errCode |
 	cogMethod stackCheckOffset = 0 ifTrue:
 		[^0].
-	picDataIndex := 0.
+	picDataIndex := counterIndex := 0.
 	picData := arrayObj.
 	errCode := self
 					mapFor: (self cCoerceSimple: cogMethod to: #'CogBlockMethod *')
@@ -720,8 +712,8 @@ SistaStackToRegisterMappingCogit >> picDataForBlockEntry: blockEntryMcpc Method:
 ]
 
 { #category : #'method introspection' }
-SistaStackToRegisterMappingCogit >> picDataForConditionalBranch: counterReferenceMcpc at: bcpc [
-	| address counter executedCount tuple untakenCount |
+SistaStackToRegisterMappingCogit >> picDataForCounter: counter at: bcpc [
+	| executedCount tuple untakenCount |
 	<var: #counter type: #'unsigned long'>
 	tuple := objectMemory
 				eeInstantiateClassIndex: ClassArrayCompactIndex
@@ -730,8 +722,6 @@ SistaStackToRegisterMappingCogit >> picDataForConditionalBranch: counterReferenc
 	tuple = 0 ifTrue:
 		[^0].
 	self assert: CounterBytes = 4.
-	address := backEnd counterTargetFromFollowingAddress: counterReferenceMcpc.
-	counter := objectMemory longAt: address.
 	executedCount := initialCounterValue - (counter >> 16).
 	untakenCount := initialCounterValue - (counter bitAnd: 16rFFFF).
 	objectMemory

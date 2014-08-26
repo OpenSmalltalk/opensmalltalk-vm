@@ -1472,6 +1472,11 @@ CogARMCompiler >> is12BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: f
 ]
 
 { #category : #testing }
+CogARMCompiler >> isBigEndian [
+	^false
+]
+
+{ #category : #testing }
 CogARMCompiler >> isBranch: anInstruction [
 
 	^ (anInstruction >> 24 bitAnd: 16r0E) = 16rA
