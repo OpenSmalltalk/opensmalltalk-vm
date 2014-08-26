@@ -49,6 +49,18 @@ NewCoObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 ]
 
 { #category : #accessing }
+NewCoObjectMemory >> coInterpreter [
+	<doNotGenerate>
+	^coInterpreter
+]
+
+{ #category : #accessing }
+NewCoObjectMemory >> coInterpreter: aCoInterpreter [
+	<doNotGenerate>
+	coInterpreter := aCoInterpreter
+]
+
+{ #category : #accessing }
 NewCoObjectMemory >> cogit [
 	<doNotGenerate>
 	^cogit
@@ -120,6 +132,14 @@ NewCoObjectMemory >> growObjectMemory: delta [
 		[self setMemoryLimit: limit - 24. "remove a tad for safety"
 		 self initializeMemoryFirstFree: freeStart.
 		 coInterpreter sqMakeMemoryNotExecutableFrom: self startOfMemory To: memoryLimit]
+]
+
+{ #category : #simulation }
+NewCoObjectMemory >> headerIndicatesAlternateBytecodeSet: methodHeader [
+	"this is here only for in-image compilation"
+	<doNotGenerate>
+	"A negative header selects the alternate bytecode set."
+	^methodHeader signedIntFromLong < 0
 ]
 
 { #category : #'cog jit support' }
@@ -199,6 +219,12 @@ NewCoObjectMemory >> scavengeThresholdAddress [
 	<returnTypeC: #usqInt>
 	^self cCode: [(self addressOf: scavengeThreshold) asUnsignedInteger]
 		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #scavengeThreshold in: self]
+]
+
+{ #category : #'cog jit support' }
+NewCoObjectMemory >> smallIntegerTag [
+	<api>
+	^1
 ]
 
 { #category : #accessing }

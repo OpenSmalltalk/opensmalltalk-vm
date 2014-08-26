@@ -294,6 +294,19 @@ SpurSegmentManager >> initForBootstrap [
 		[self allocateOrExtendSegmentInfos]
 ]
 
+{ #category : #simulation }
+SpurSegmentManager >> initSegmentForInImageCompilationFrom: base to: limit [
+	| bridge |
+	self allocateOrExtendSegmentInfos.
+	numSegments := 1.
+	bridge := manager initSegmentBridgeWithBytes: manager memory byteSize - limit at: limit - manager bridgeSize.
+	segments := {SpurSegmentInfo new
+						segStart: base;
+						segSize: limit - base;
+						yourself}.
+	segments := CArrayAccessor on: segments
+]
+
 { #category : #initialization }
 SpurSegmentManager >> initialize [
 	numSegments := numSegInfos := 0.
