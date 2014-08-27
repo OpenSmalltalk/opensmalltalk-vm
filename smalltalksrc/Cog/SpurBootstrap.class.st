@@ -67,6 +67,7 @@ Class {
 		'literalMap',
 		'methodClasses',
 		'installedPrototypes',
+		'installedMethodOops',
 		'classMetaclass',
 		'imageTypes',
 		'classMethodContextIndex',
@@ -2134,6 +2135,8 @@ SpurBootstrap >> addMissingClassVars: classVars [
 	classVars isEmpty ifTrue:
 		[^self].
 	addClassVarNameSym := self findSymbol: #addClassVarName:.
+	addClassVarNameSym ifNil: 
+		[addClassVarNameSym := self findSymbol: #addClassVarNamed:].
 	bindingOfSym := self findSymbol: #bindingOf:.
 	classVars keysAndValuesDo:
 		[:binding :class| 
@@ -2418,12 +2421,12 @@ SpurBootstrap >> checkReshapeOf: ourMethodClasses [
 	| toReshape |
 	toReshape := Set new.
 	ourMethodClasses do:
-		[:mc| | binding |
-		binding := literalMap at: mc binding.
-		self assert: binding ~= oldHeap nilObject.
-		(mc ~~ Character "Character will reshape anyway"
-		 and: [mc instSize ~= (oldHeap instanceSizeOf: (oldHeap fetchPointer: ValueIndex ofObject: binding))]) ifTrue:
-			[toReshape add: mc]].
+		[:mc|
+		(literalMap at: mc binding ifAbsent: []) ifNotNil:
+			[:binding|
+			(mc ~~ Character "Character will reshape anyway"
+			 and: [mc instSize ~= (oldHeap instanceSizeOf: (oldHeap fetchPointer: ValueIndex ofObject: binding))]) ifTrue:
+				[toReshape add: mc]]].
 	toReshape isEmpty ifTrue:
 		[^self].
 	"Assume only one class in any subtree needs reshaping.  Fast and loose but gets us there for now."
@@ -2873,19 +2876,21 @@ SpurBootstrap >> findRequiredGlobals [
 	ourMethodClasses := Set new.
 	classVars := Dictionary new.
 	self prototypeClassNameMetaSelectorMethodDo:
-		[:c :m :s :method| | nonMetaClass allNonMetaSupers |
-		allNonMetaSupers := (nonMetaClass := Smalltalk classNamed: c) withAllSuperclasses.
-		method methodClass ~= SpurBootstrap class ifTrue:
-			[ourMethodClasses addAll: allNonMetaSupers].
-		globals addAll: (allNonMetaSupers collect: [:sc| sc binding]).
-		method literals do:
-			[:l|
-			(l isVariableBinding and: [l key isSymbol]) ifTrue:
-				[(Smalltalk bindingOf: l key) == l
-					ifTrue: [globals add: l]
-					ifFalse:
-						[self assert: (nonMetaClass bindingOf: l key) == l.
-						classVars at: l put: nonMetaClass]]]].
+		[:c :m :s :method| | allNonMetaSupers |
+		(Smalltalk classNamed: c) ifNotNil:
+			[ :nonMetaClass|
+			allNonMetaSupers := nonMetaClass withAllSuperclasses.
+			method methodClass ~= SpurBootstrap class ifTrue:
+				[ourMethodClasses addAll: allNonMetaSupers].
+			globals addAll: (allNonMetaSupers collect: [:sc| sc binding]).
+			method literals do:
+				[:l|
+				(l isVariableBinding and: [l key isSymbol]) ifTrue:
+					[(Smalltalk bindingOf: l key) == l
+						ifTrue: [globals add: l]
+						ifFalse:
+							[self assert: (nonMetaClass bindingOf: l key) == l.
+							classVars at: l put: nonMetaClass]]]]].
 	globals add: Compiler binding. "For potential reshaping in checkReshapeOf:"
 	bindingOfSym := self findSymbol: #bindingOf:.
 	self withExecutableInterpreter: oldInterpreter
@@ -2896,8 +2901,8 @@ SpurBootstrap >> findRequiredGlobals [
 									object: (oldHeap splObj: 8) "Smalltalk"
 									perform: bindingOfSym
 									withArguments: {self findSymbol: global key}.
-				self assert: bindingOop ~= oldHeap nilObject.
-				literalMap at: global put: bindingOop].
+				bindingOop ~= oldHeap nilObject ifTrue:
+					[literalMap at: global put: bindingOop]].
 			 toBeAdded := Dictionary new.
 			 classVars keysAndValuesDo:
 				[:var :class| | val |
@@ -3021,6 +3026,7 @@ SpurBootstrap >> initMaps [
 	literalMap := IdentityDictionary new.
 	methodClasses := Set new.
 	installedPrototypes := Set new.
+	installedMethodOops := Set new.
 	classMetaclass := nil
 ]
 
@@ -3108,6 +3114,7 @@ SpurBootstrap >> installableMethodFor: aCompiledMethod selector: selector classN
 	initialPC to: sourcelessMethod size - delta do:
 		[:i|
 		oldHeap storeByte: i - 1 ofObject: newMethod withValue: (sourcelessMethod byteAt: i + delta)].
+	installedMethodOops add: newMethod.
 	^newMethod
 ]
 
@@ -3579,6 +3586,9 @@ SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 	| proxy asIntegerProxy clone assembly newInsts newMethod |
 	"(oldHeap stringOf: (oldHeap longAt: characterMethodOop + (oldHeap lastPointerOf: characterMethodOop) - 4)) = 'isOctetCharacter' ifTrue:
 		[self halt]."
+	"Don't replace something already installed."
+	(installedMethodOops includes: characterMethodOop) ifTrue:
+		[^nil].
 	proxy := VMCompiledMethodProxy new
 				for: characterMethodOop
 				coInterpreter: oldInterpreter
@@ -3586,6 +3596,8 @@ SpurBootstrap >> replacementForCharacterMethod: characterMethodOop [
 	self assert: (oldHeap literalCountOf: characterMethodOop) = proxy numLiterals.
 	clone := self cloneMethodProxy: proxy.
 	self assert: proxy numLiterals = clone numLiterals.
+	clone isReturnSpecial ifTrue:
+		[^nil].
 	"Quick methods accessing value should have been replaced.  The halt will fire if there
 	 is a missing prototype for such a method on the class side of SpurBootstrap.  The
 	 relevant Character prototypes there so far are Character>>asInteger, Character>>
