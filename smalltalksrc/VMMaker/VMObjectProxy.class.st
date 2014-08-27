@@ -63,3 +63,10 @@ VMObjectProxy >> printOn: aStream [
 		[shortPrint := shortPrint allButFirst].
 	aStream nextPutAll: ' for '; nextPutAll: shortPrint
 ]
+
+{ #category : #printing }
+VMObjectProxy >> storeOn: aStream [
+	"We don't care about storing these things properly.  Doing so involves printing an entire VM.
+	 So simply print and hence get debuggable CompiledMethods whose literals are VMObjectProxys."
+	^self printOn: aStream
+]
