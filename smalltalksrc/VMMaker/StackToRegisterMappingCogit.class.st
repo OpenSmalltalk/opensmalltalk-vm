@@ -1457,7 +1457,7 @@ StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 					ifTrue: [Arg0Reg]
 					ifFalse: [ReceiverResultReg])].
 	(ra := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: rr))) ifNil:
-		[self ssAllocateRequiredReg: (rr := Arg1Reg)].
+		[self ssAllocateRequiredReg: (ra := Arg1Reg)].
 	(rr = ReceiverResultReg or: [ra = ReceiverResultReg]) ifTrue:
 		[optStatus isReceiverResultRegLive: false].
 	self ssTop popToReg: ra.
@@ -3349,8 +3349,31 @@ StackToRegisterMappingCogit >> genUnaryInlinePrimitive: prim [
 	"Unary inline primitives."
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#inlinePrimitiveBytecode:"
-	"not yet implemented"
-	^EncounteredUnknownBytecode
+	| rcvrReg resultReg |
+	self ssTop type = SSRegister
+		ifTrue: [rcvrReg := self ssTop register]
+		ifFalse:
+			[(rcvrReg := backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
+				[self ssAllocateRequiredReg:
+					(rcvrReg := optStatus isReceiverResultRegLive
+							ifTrue: [Arg0Reg]
+							ifFalse: [ReceiverResultReg])]].
+	self ssTop popToReg: rcvrReg.
+	self ssPop: 1.
+	(resultReg := backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
+		[self ssFlushUpThroughRegister: rcvrReg].
+	prim
+		caseOf: {
+			[1] ->	"01		unchecked pointer numSlots"
+				[resultReg ifNil: [resultReg := rcvrReg].
+				 objectRepresentation
+					genGetNumSlotsOf: rcvrReg into: resultReg;
+					genConvertIntegerToSmallIntegerInScratchReg: resultReg.
+				 self ssPushRegister: resultReg].
+				  }
+		otherwise:
+			[^EncounteredUnknownBytecode].
+	^0
 ]
 
 { #category : #'bytecode generators' }
@@ -4277,6 +4300,20 @@ StackToRegisterMappingCogit >> ssFlushUpThroughReceiverVariable: slotIndex [
 		(desc type = SSBaseOffset
 		 and: [desc register = ReceiverResultReg
 		 and: [desc offset = (objectRepresentation slotOffsetOfInstVarIndex: slotIndex)]]) ifTrue:
+			[self ssFlushTo: index.
+			 ^self]]
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> ssFlushUpThroughRegister: reg [
+	"Any occurrences on the stack of the register must be
+	 flushed, and hence any values colder than them stack."
+	<var: #desc type: #'CogSimStackEntry *'>
+	simStackPtr - 1 to: (simSpillBase max: 0) by: -1 do:
+		[:index| | desc |
+		desc := self simStackAt: index.
+		(desc type = SSRegister
+		 and: [desc register = reg]) ifTrue:
 			[self ssFlushTo: index.
 			 ^self]]
 ]
