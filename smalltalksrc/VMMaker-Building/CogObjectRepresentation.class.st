@@ -150,6 +150,13 @@ CogObjectRepresentation >> genGetInlineCacheClassTagFrom: sourceReg into: destRe
 	self subclassResponsibility
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genGetNumSlotsOf: srcReg into: destReg [
+	"Get the size in word-sized slots of the object in srcReg into destReg.
+	 srcReg may equal destReg."
+	self subclassResponsibility
+]
+
 { #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveAsCharacter: retNOffset inReg: reg [
 	"subclasses override if they can"
