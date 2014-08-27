@@ -1290,12 +1290,28 @@ StackInterpreter class >> initializePrimitiveTable [
 		(521 529 primitiveFail)
 		(530 539 primitiveFail)  "reserved for extended MIDI primitives"
 
-		"Experimental Asynchrous File Primitives - NO LONGER INDEXED"
-		"Pen Tablet Primitives - NO LONGER INDEXED"
-		(540 549 primitiveFail)
+		(540 primitiveFail)
+		(541 primitiveSmallFloatAdd)
+		(542 primitiveSmallFloatSubtract)
+		(543 primitiveSmallFloatLessThan)
+		(544 primitiveSmallFloatGreaterThan)
+		(545 primitiveSmallFloatLessOrEqual)
+		(546 primitiveSmallFloatGreaterOrEqual)
+		(547 primitiveSmallFloatEqual)
+		(548 primitiveSmallFloatNotEqual)
+		(549 primitiveSmallFloatMultiply)
+		(550 primitiveSmallFloatDivide)
+		(551 primitiveSmallFloatTruncated)
+		(552 primitiveSmallFloatFractionalPart)
+		(553 primitiveSmallFloatExponent)
+		(554 primitiveSmallFloatTimesTwoPower)
+		(555 primitiveSmallFloatSquareRoot)
+		(556 primitiveSmallFloatSine)
+		(557 primitiveSmallFloatArctan)
+		(558 primitiveSmallFloatLogN)
+		(559 primitiveSmallFloatExp)
 
-		"Sound Codec Primitives - NO LONGER INDEXED"
-		(550 569 primitiveFail)
+		(560 569 primitiveFail)
 
 		"External primitive support primitives"
 		(570 primitiveFlushExternalPrimitives)
@@ -1538,7 +1554,7 @@ StackInterpreter class >> primitiveAccessorDepthTable [
 	| cg |
 	cg := CCodeGenerator new.
 	cg vmClass: StackInterpreter.
-	^PrimitiveTable collect:
+	^self primitiveTable collect:
 		[:thing| |class  method |
 		(thing isInteger "quick prims, 0 for fast primitve fail"
 		 or: [thing == #primitiveFail
@@ -1551,8 +1567,22 @@ StackInterpreter class >> primitiveAccessorDepthTable [
 
 { #category : #constants }
 StackInterpreter class >> primitiveTable [
-
-	^ PrimitiveTable
+	| cg |
+	cg := CCodeGenerator new.
+	cg vmClass: StackInterpreter.
+	^PrimitiveTable collect:
+		[:thing|
+		(thing isInteger "quick prims, 0 for fast primitve fail"
+		 or: [thing == #primitiveFail])
+			ifTrue: [thing]
+			ifFalse:
+				[(self primitivesClass whichClassIncludesSelector: thing)
+					ifNil: [#primitiveFail]
+					ifNotNil:
+						[:class|
+						 (cg shouldIncludeMethodFor: class selector: thing)
+							ifTrue: [thing]
+							ifFalse: [#primitiveFail]]]]
 ]
 
 { #category : #initialization }
@@ -13339,7 +13369,7 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 					[:prim :index| | depth |
 					 prim isSymbol ifTrue:
 						[depth := cg accessorDepthForSelector: prim.
-						 self assert: depth isInteger.
+						 self assert: (depth isInteger or: [depth isNil and: [(plugin class whichClassIncludesSelector: prim) isNil]]).
 						 primitiveAccessorDepthTable at: index - 1 put: depth]]].
 		 cg exportedPrimitiveNames do:
 			[:primName| | fnSymbol |
