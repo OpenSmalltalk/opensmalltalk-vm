@@ -4,6 +4,7 @@
 
 TAG=14.32.3063
 REV=3063
+LCBINDIR=4.0-3063
 URL=http://www.mirandabanda.org/files/Cog/VM/VM.r$REV/
 
 . ./envvars.sh

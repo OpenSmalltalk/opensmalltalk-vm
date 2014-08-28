@@ -43,6 +43,7 @@ cat >$GetCogScript <<END
 
 TAG=$TAG
 REV=$REV
+LCBINDIR=4.0-$REV
 URL=http://www.mirandabanda.org/files/Cog/VM/VM.r\$REV/
 
 . ./envvars.sh
@@ -106,6 +107,7 @@ cat >$GetSpurScript <<END
 
 TAG=$TAG
 REV=$REV
+LSBINDIR=5.0-$REV
 URL=http://www.mirandabanda.org/files/Cog/VM/VM.r\$REV/
 
 . ./envvars.sh
