@@ -94,14 +94,6 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> headerForSlots: nu
 	^objectMemory headerForSlots: numSlots format: formatField classIndex: classIndex
 ]
 
-{ #category : #'initialize-release' }
-CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> initialize [
-	super initialize.
-	objectMemory
-		initializeFreeSpaceForFacadeFrom: self startOfMemory
-		to: self variablesBase
-]
-
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> isForwardedObjectClassIndexPun [
 	^objectMemory isForwardedObjectClassIndexPun

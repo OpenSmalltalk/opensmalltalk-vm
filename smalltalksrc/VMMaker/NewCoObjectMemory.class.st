@@ -142,6 +142,12 @@ NewCoObjectMemory >> headerIndicatesAlternateBytecodeSet: methodHeader [
 	^methodHeader signedIntFromLong < 0
 ]
 
+{ #category : #simulation }
+NewCoObjectMemory >> initializeFreeSpaceForFacadeFrom: base to: limit [
+	freeStart := base.
+	endOfMemory := scavengeThreshold := limit
+]
+
 { #category : #'cog jit support' }
 NewCoObjectMemory >> isReallyYoungObject: obj [
 	<api>
