@@ -21,6 +21,8 @@ test -n "$REV" || REV=`grep 'SvnRawRevisionString.*Rev:' ../platforms/Cross/vm/s
 	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
 test -n "$TAG" || TAG=`date +%g.%U.`$REV
 
+LCBINDIR=4.0-$REV
+LSBINDIR=5.0-$REV
 echo REV=$REV TAG=$TAG
 
 . ./envvars.sh
@@ -62,8 +64,8 @@ Linux)
         get_vm_from_tar \\
 END
 
-echo -n '        nsvmlinuxht/lib/nsvm/4.0-$REV/nsvm ' >>$GetCogScript
-echo -n `quietmd5 ../products/nsvmlinuxht/lib/nsvm/4.0-$REV/nsvm` >>$GetCogScript
+echo -n '        nsvmlinuxht/lib/nsvm/$LCBINDIR/nsvm ' >>$GetCogScript
+echo -n `quietmd5 ../products/nsvmlinuxht/lib/nsvm/$LCBINDIR/nsvm` >>$GetCogScript
 echo ' \' >>$GetCogScript
 echo -n '        nsvmlinuxht-$TAG.tgz ' >>$GetCogScript
 quietmd5 ../products/nsvmlinuxht-$TAG.tgz >>$GetCogScript
@@ -73,8 +75,8 @@ cat >>$GetCogScript <<END
         get_vm_from_tar \\
 END
 
-echo -n '        nsvmlinux/lib/nsvm/4.0-$REV/nsvm ' >>$GetCogScript
-echo -n `quietmd5 ../products/nsvmlinux/lib/nsvm/4.0-$REV/nsvm` >>$GetCogScript
+echo -n '        nsvmlinux/lib/nsvm/$LCBINDIR/nsvm ' >>$GetCogScript
+echo -n `quietmd5 ../products/nsvmlinux/lib/nsvm/$LCBINDIR/nsvm` >>$GetCogScript
 echo ' \' >>$GetCogScript
 echo -n '        nsvmlinux-$TAG.tgz ' >>$GetCogScript
 quietmd5 ../products/nsvmlinux-$TAG.tgz >>$GetCogScript
@@ -123,8 +125,8 @@ cat >>$GetSpurScript <<END
 Linux) get_vm_from_tar \\
 END
 
-echo -n '        nsvmspurlinuxht/lib/nsvm/4.0-$REV/nsvm ' >>$GetSpurScript
-echo -n `quietmd5 ../products/nsvmspurlinuxht/lib/nsvm/4.0-$REV/nsvm` >>$GetSpurScript
+echo -n '        nsvmspurlinuxht/lib/nsvm/$LSBINDIR/nsvm ' >>$GetSpurScript
+echo -n `quietmd5 ../products/nsvmspurlinuxht/lib/nsvm/$LSBINDIR/nsvm` >>$GetSpurScript
 echo ' \' >>$GetSpurScript
 echo -n '        nsvmspurlinuxht-$TAG.tgz ' >>$GetSpurScript
 quietmd5 ../products/nsvmspurlinuxht-$TAG.tgz >>$GetSpurScript

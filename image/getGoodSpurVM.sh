@@ -14,8 +14,9 @@ Darwin) get_vm_from_tar \
             CogSpur.app-$TAG.tgz 741a5355c22f20cda33db969bb5e3d7a
         VM=CogSpur.app/Contents/MacOS/Squeak;;
 Linux) get_vm_from_tar \
-        cogspurlinuxht/lib/squeak/4.0-$REV/squeak  \
-        cogspurlinuxht-$TAG.tgz af8988545c1042a9813e3166390af6cb    VM=cogspurlinuxht/squeak;;
+        cogspurlinuxht/lib/squeak/$LSBINDIR/squeak 22e8dfc3409a79155f79b2943c834572 \
+        cogspurlinuxht-$TAG.tgz af8988545c1042a9813e3166390af6cb
+    VM=cogspurlinuxht/squeak;;
 CYGWIN*) get_vm_from_zip \
             cogspurwin/SqueakConsole.exe a7bc32115050dab7e9060e8391025c4e \
             cogspurwin-$TAG.zip 6945ef0ff89bc5c1da00f6076868f3e6

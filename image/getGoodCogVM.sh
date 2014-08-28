@@ -16,11 +16,11 @@ Darwin) get_vm_from_tar \
 Linux)
     if expr $OSREL \> 2.6.12; then
         get_vm_from_tar \
-        coglinuxht/lib/squeak/4.0-$REV/squeak badd6e33775c1176e478b2262cffe177 \
+        coglinuxht/lib/squeak/$LCBINDIR/squeak badd6e33775c1176e478b2262cffe177 \
         coglinuxht-$TAG.tgz 1b58e26c4c6c92ca8b141e94c04b0ed9
     else
         get_vm_from_tar \
-        coglinux/lib/squeak/4.0-$REV/squeak 817f87fa0cf4b7d90ef9599d7b762fe5 \
+        coglinux/lib/squeak/$LCBINDIR/squeak 817f87fa0cf4b7d90ef9599d7b762fe5 \
         coglinux-$TAG.tgz 1394d1bfd1749b711a2266621dc8ff5b
     fi;;
 CYGWIN*) get_vm_from_zip \

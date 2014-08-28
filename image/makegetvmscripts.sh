@@ -21,6 +21,8 @@ test -n "$REV" || REV=`grep 'SvnRawRevisionString.*Rev:' ../platforms/Cross/vm/s
 	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
 test -n "$TAG" || TAG=`date +%g.%U.`$REV
 
+LCBINDIR=4.0-$REV
+LSBINDIR=5.0-$REV
 echo REV=$REV TAG=$TAG
 
 . ./envvars.sh
@@ -62,8 +64,8 @@ Linux)
         get_vm_from_tar \\
 END
 
-echo -n '        coglinuxht/lib/squeak/4.0-$REV/squeak ' >>$GetCogScript
-echo -n `quietmd5 ../products/coglinuxht/lib/squeak/4.0-$REV/squeak` >>$GetCogScript
+echo -n '        coglinuxht/lib/squeak/$LCBINDIR/squeak ' >>$GetCogScript
+echo -n `quietmd5 ../products/coglinuxht/lib/squeak/$LCBINDIR/squeak` >>$GetCogScript
 echo ' \' >>$GetCogScript
 echo -n '        coglinuxht-$TAG.tgz ' >>$GetCogScript
 quietmd5 ../products/coglinuxht-$TAG.tgz >>$GetCogScript
@@ -73,8 +75,8 @@ cat >>$GetCogScript <<END
         get_vm_from_tar \\
 END
 
-echo -n '        coglinux/lib/squeak/4.0-$REV/squeak ' >>$GetCogScript
-echo -n `quietmd5 ../products/coglinux/lib/squeak/4.0-$REV/squeak` >>$GetCogScript
+echo -n '        coglinux/lib/squeak/$LCBINDIR/squeak ' >>$GetCogScript
+echo -n `quietmd5 ../products/coglinux/lib/squeak/$LCBINDIR/squeak` >>$GetCogScript
 echo ' \' >>$GetCogScript
 echo -n '        coglinux-$TAG.tgz ' >>$GetCogScript
 quietmd5 ../products/coglinux-$TAG.tgz >>$GetCogScript
@@ -123,11 +125,11 @@ cat >>$GetSpurScript <<END
 Linux) get_vm_from_tar \\
 END
 
-echo -n '        cogspurlinuxht/lib/squeak/4.0-$REV/squeak ' >>$GetSpurScript
-echo -n `quietmd5 ../products/cogspurlinuxht/lib/squeak/4.0-$REV/squeak` >>$GetSpurScript
+echo -n '        cogspurlinuxht/lib/squeak/$LSBINDIR/squeak ' >>$GetSpurScript
+echo -n `quietmd5 ../products/cogspurlinuxht/lib/squeak/$LSBINDIR/squeak` >>$GetSpurScript
 echo ' \' >>$GetSpurScript
 echo -n '        cogspurlinuxht-$TAG.tgz ' >>$GetSpurScript
-echo -n `quietmd5 ../products/cogspurlinuxht-$TAG.tgz` >>$GetSpurScript
+quietmd5 ../products/cogspurlinuxht-$TAG.tgz >>$GetSpurScript
 
 cat >>$GetSpurScript <<END
     VM=cogspurlinuxht/squeak;;
