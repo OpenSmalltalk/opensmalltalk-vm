@@ -41,7 +41,7 @@ while true; do
 		exit 1
 	fi
 	if [ -z "$IMAGE" ]; then
-		buildsqueaktrunkvmmakerimage.sh
+		./buildsqueaktrunkvmmakerimage.sh
 		GOTIMAGE=1
 	fi
 done

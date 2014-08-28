@@ -127,7 +127,7 @@ echo -n '        cogspurlinuxht/lib/squeak/4.0-$REV/squeak ' >>$GetSpurScript
 echo -n `quietmd5 ../products/cogspurlinuxht/lib/squeak/4.0-$REV/squeak` >>$GetSpurScript
 echo ' \' >>$GetSpurScript
 echo -n '        cogspurlinuxht-$TAG.tgz ' >>$GetSpurScript
-quietmd5 ../products/cogspurlinuxht-$TAG.tgz >>$GetSpurScript
+echo -n `quietmd5 ../products/cogspurlinuxht-$TAG.tgz` >>$GetSpurScript
 
 cat >>$GetSpurScript <<END
     VM=cogspurlinuxht/squeak;;
