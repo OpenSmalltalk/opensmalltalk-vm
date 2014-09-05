@@ -637,6 +637,12 @@ SpurBootstrap class >> CharacterPROTOTYPEshallowCopy [
 	^self
 ]
 
+{ #category : #'method prototypes squeak 4.3' }
+SpurBootstrap class >> CharacterPROTOTYPEshouldBePrintedAsLiteral [
+
+	^(self asInteger between: 33 and: 255) and: [self asInteger ~= 127]
+]
+
 { #category : #'method prototypes' }
 SpurBootstrap class >> CharacterPROTOTYPEveryDeepCopyWith: deepCopier [
 	"Answer the receiver, because Characters are unique."
