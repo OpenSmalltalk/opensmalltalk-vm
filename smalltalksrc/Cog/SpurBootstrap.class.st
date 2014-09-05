@@ -2056,6 +2056,8 @@ SpurBootstrap class >> categoryForClass: className meta: isMeta selector: select
 															-> [#'class initialization'].
 			[#(CompiledMethod class installSecondaryBytecodeSet:)]
 															-> [#'class initialization'].
+			[#(EncoderForV3 computeMethodHeaderForNumArgs:numTemps:numLits:primitive:)]
+															-> [#'method encoding'].
 			[#(EncoderForV3PlusClosures genCallPrimitive:)]
 															-> [#'bytecode generation'].
 			[#(EncoderForV3PlusClosures class callPrimitiveCode)]
@@ -2435,6 +2437,10 @@ SpurBootstrap >> checkReshapeOf: ourMethodClasses [
 				[toReshape add: mc]]].
 	toReshape isEmpty ifTrue:
 		[^self].
+	self interpreter: oldInterpreter
+			object: (self oldClassOopFor: ClassBuilder)
+			perform: (self findSymbol: #beSilent:)
+			withArguments: {oldHeap trueObject}.
 	"Assume only one class in any subtree needs reshaping.  Fast and loose but gets us there for now."
 	toReshape copy do:
 		[:class|
