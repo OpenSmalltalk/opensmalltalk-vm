@@ -35,7 +35,7 @@ SimulatorHarness >> interpreter: sim object: receiver perform: selector withArgu
 	 fp = sim localFP] whileFalse:
 		[sim singleStep.
 		 (savedStackPages includes: sim stackPage) ifFalse: "If the stack gets deep something has probably gone wrong..."
-			[savedStackPages size > 3 ifTrue: [self halt].
+			[savedStackPages size > 20 ifTrue: [self halt].
 			 savedStackPages add: sim stackPage]].
 	result := sim internalPopStack.
 	self assert: savedsp = sim localSP.
