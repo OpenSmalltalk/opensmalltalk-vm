@@ -112,7 +112,8 @@ if [ -n "$CW" ]; then
 			echo build.win32x86/$SQB/$1 '=>' $dir '=>' $dir-$TAG.zip
 			(cd ../build.win32x86/$SQB/$1 >/dev/null; \
 			 tar cf - Squeak.exe Squeak.map Squeak.exe.manifest \
-						SqueakConsole.exe SqueakConsole.map *.dll) \
+				SqueakConsole.exe SqueakConsole.map SqueakConsole.exe.manifest \
+				*.dll) \
 			| (cd $dir;tar xf -)
 			zip -qr $dir-$TAG.zip $dir
 			EXES="$EXES	$dir/Squeak.exe	$dir/SqueakConsole.exe"

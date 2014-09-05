@@ -317,6 +317,7 @@ $(OBJDIR)/%.o: %.c $(wildcard $(CROSSDIR)/*.h) $(wildcard $(WIN32DIR)/*.h) $(wil
 $(VMRES): $(BASEDIR)/$(VM).rc
 	$(RC) $(RCFLAGS) -i $(BASEDIR)/$(VM).rc -o $(OBJDIR)/$@
 	$(CP) $(VM).exe.manifest $(OBJDIR)
+	$(CP) $(VM).exe.manifest $(OBJDIR)/$(VM)Console.exe.manifest
 
 resource.o:	$(VMRES)
 	$(RC) $(RCFLAGS) -i $(OBJDIR)/$< -o $(OBJDIR)/$@
