@@ -185,15 +185,16 @@ StackInterpreter class >> bytecodeTable [
 
 { #category : #translation }
 StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
+	| vmClass |
 	self class == thisContext methodClass ifFalse: [^self]. "Don't duplicate decls in subclasses"
+	vmClass := aCCodeGenerator vmClass. "Generate primitiveTable etc based on vmClass, not just StackInterpreter"
 	aCCodeGenerator
 		addHeaderFile:'<stddef.h> /* for e.g. alloca */';
 		addHeaderFile:'<setjmp.h>';
 		addHeaderFile:'"vmCallback.h"';
 		addHeaderFile:'"sqMemoryFence.h"';
 		addHeaderFile:'"dispdbg.h"'.
-	self declareInterpreterVersionIn: aCCodeGenerator
-		defaultName: 'Stack'.
+	vmClass declareInterpreterVersionIn: aCCodeGenerator defaultName: 'Stack'.
 	aCCodeGenerator
 		var: #interpreterProxy  type: #'struct VirtualMachine*'.
 	aCCodeGenerator
@@ -227,20 +228,20 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		declareC: 'sqInt atCache[AtCacheTotalSize + 1 /* ', (AtCacheTotalSize + 1) printString, ' */]'.
 	aCCodeGenerator
 		var: #primitiveTable
-		declareC: 'void (*primitiveTable[MaxPrimitiveIndex + 2 /* ', (MaxPrimitiveIndex + 2) printString, ' */])(void) = ', self primitiveTableString.
-	self primitiveTable do:
+		declareC: 'void (*primitiveTable[MaxPrimitiveIndex + 2 /* ', (MaxPrimitiveIndex + 2) printString, ' */])(void) = ', vmClass primitiveTableString.
+	vmClass primitiveTable do:
 		[:symbolOrNot|
 		(symbolOrNot isSymbol
 		 and: [symbolOrNot ~~ #primitiveFail]) ifTrue:
 			[(aCCodeGenerator methodNamed: symbolOrNot) ifNotNil:
 				[:tMethod| tMethod returnType: #void]]].
-	self objectMemoryClass hasSpurMemoryManagerAPI
+	vmClass objectMemoryClass hasSpurMemoryManagerAPI
 		ifTrue:
 			[aCCodeGenerator
 				var: #primitiveAccessorDepthTable
 				type: 'signed char'
 				sizeString: 'MaxPrimitiveIndex + 2 /* ', (MaxPrimitiveIndex + 2) printString, ' */'
-				array: self primitiveAccessorDepthTable]
+				array: vmClass primitiveAccessorDepthTable]
 		ifFalse:
 			[aCCodeGenerator removeVariable: #primitiveAccessorDepthTable].
 	aCCodeGenerator
