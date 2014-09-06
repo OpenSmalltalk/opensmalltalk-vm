@@ -118,6 +118,11 @@ CoInterpreterMT class >> mustBeGlobal: var [
 ]
 
 { #category : #translation }
+CoInterpreterMT class >> primitivesClass [
+	^CoInterpreterMT
+]
+
+{ #category : #translation }
 CoInterpreterMT class >> sourceFileName [
 	"Answer the filename for the core interpreter"
 
