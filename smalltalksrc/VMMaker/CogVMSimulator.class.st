@@ -75,21 +75,11 @@ Class {
 	#category : #'VMMaker-JITSimulation'
 }
 
-{ #category : #'instance creation' }
-CogVMSimulator class >> chooseAndInitCogitClassWithOpts: opts [
-	| classOrSymbol |
-	classOrSymbol := opts at: #Cogit ifAbsent: [Cogit chooseCogitClass].
-	classOrSymbol isSymbol ifTrue:
-		[classOrSymbol := Smalltalk classNamed: classOrSymbol].
-	(CoInterpreter classPool at: #CogitClass put: (classOrSymbol)) initializeWithOptions: opts
-]
-
 { #category : #'class initialization' }
 CogVMSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMemoryClass: objectMemoryClassOrNil [
 	"The relevant ObjectMemory, Interpreter and Cogit classes must be initialized in order.
 	 This happens notionally every time we start the simulator,
 	 but in fact happens when ever we instantiate a simulator."
-	| cogitClassOrName |
 	initializationOptions := optionsDictionaryOrArray isArray
 							ifTrue: [Dictionary newFromPairs: optionsDictionaryOrArray]
 							ifFalse: [optionsDictionaryOrArray].
@@ -102,12 +92,6 @@ CogVMSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMe
 			ifTrue: [CoInterpreterMT]
 			ifFalse: [CoInterpreter])
 		initializeWithOptions: initializationOptions.
-
-	(initializationOptions includesKey: #Cogit) ifTrue:
-		[cogitClassOrName := initializationOptions at: #Cogit.
-		 cogitClassOrName isSymbol ifTrue:
-			[cogitClassOrName := Smalltalk classNamed: cogitClassOrName].
-		CoInterpreter classPool at: #CogitClass put: cogitClassOrName].
 
 	(self cogitClass withAllSuperclasses copyUpTo: Cogit) reverseDo:
 		[:c| c initializeWithOptions: initializationOptions]
@@ -600,9 +584,7 @@ CogVMSimulator >> close [  "close any files that ST may have opened"
 { #category : #'primitive support' }
 CogVMSimulator >> codeGeneratorToComputeAccessorDepth [
 	^VMMaker new
-		cogitClass: (Smalltalk classNamed: (self class initializationOptions
-												at: #Cogit
-												ifAbsent: [self class cogitClass name]));
+		cogitClass: self class cogitClass;
 		buildCodeGeneratorForInterpreter: CoInterpreterPrimitives
 		includeAPIMethods: false
 		initializeClasses: false
