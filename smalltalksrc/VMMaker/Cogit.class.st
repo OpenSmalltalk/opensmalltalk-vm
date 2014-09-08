@@ -1018,8 +1018,7 @@ Cogit class >> table: primArray from: specArray [
 { #category : #translation }
 Cogit class >> tableFunctions [
 	"self tableFunctions"
-	self getVMMaker ifNotNil:
-		[:vmMaker| vmMaker cogitClass ~= self ifTrue: [^Set new]].
+	self cogitClass ~= self ifTrue: [^Set new].
 	generatorTable ifNil:
 		[^Set new].
 	^Set new
