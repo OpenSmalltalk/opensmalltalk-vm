@@ -117,7 +117,7 @@ CoInterpreterMT class >> mustBeGlobal: var [
 	   or: [ #('disownCount' 'willNotThreadWarnCount') includes: var]
 ]
 
-{ #category : #translation }
+{ #category : #'accessing class hierarchy' }
 CoInterpreterMT class >> primitivesClass [
 	^CoInterpreterMT
 ]

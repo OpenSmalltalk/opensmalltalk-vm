@@ -37,6 +37,11 @@ VMClass class >> cogMethodClass: options [
 		ifFalse: [CogMethod]
 ]
 
+{ #category : #'accessing class hierarchy' }
+VMClass class >> cogitClass [
+	^nil
+]
+
 { #category : #initialization }
 VMClass class >> copyOptionsBackTo: optionsDictionary [
 	"Ugh.  Copy back those options that the CCodeGenerator will do
@@ -52,7 +57,7 @@ VMClass class >> copyOptionsBackTo: optionsDictionary [
 			[optionsDictionary at: option put: (initializationOptions at: option)]]
 ]
 
-{ #category : #translation }
+{ #category : #'accessing class hierarchy' }
 VMClass class >> coreInterpreterClass [
 	"While the interpreterClass/vmClass for translation may be
 	 a subclass that holds a few primitives we want the actual
@@ -262,6 +267,11 @@ VMClass class >> initializeWithOptions: optionsDictionaryOrArray [
 	(self withAllSuperclasses copyUpThrough: VMClass) do:
 		[:class|
 		class initializationOptions: optionsDictionary]
+]
+
+{ #category : #'accessing class hierarchy' }
+VMClass class >> interpreterClass [
+	^self isInterpreterClass ifTrue: [self]
 ]
 
 { #category : #translation }

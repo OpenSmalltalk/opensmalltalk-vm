@@ -4,7 +4,7 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
-{ #category : #accessing }
+{ #category : #'accessing class hierarchy' }
 CogObjectRepresentationFor32BitSpur class >> defaultObjectMemoryClass [
 	"For in-image compilation."
 	^Spur32BitCoMemoryManager

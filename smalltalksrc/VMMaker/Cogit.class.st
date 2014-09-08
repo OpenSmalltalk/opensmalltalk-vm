@@ -397,7 +397,7 @@ Cogit class >> bytecodeTable [
 	^selectors
 ]
 
-{ #category : #accessing }
+{ #category : #'accessing class hierarchy' }
 Cogit class >> chooseCogitClass [
 	^Smalltalk at: ([:choices| choices at: (UIManager default chooseFrom: choices) ifAbsent: [^nil]]
 						value: (Cogit allSubclasses collect: [:ea| ea  name]) sorted)
@@ -571,7 +571,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator addSelectorTranslation: #halt: to: 'haltmsg'
 ]
 
-{ #category : #accessing }
+{ #category : #'accessing class hierarchy' }
 Cogit class >> defaultObjectMemoryClass [
 	^NewCoObjectMemory
 ]

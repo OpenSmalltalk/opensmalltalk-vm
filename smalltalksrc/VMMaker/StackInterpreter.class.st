@@ -1570,7 +1570,7 @@ StackInterpreter class >> primitiveAccessorDepthTable [
 StackInterpreter class >> primitiveTable [
 	| cg |
 	cg := CCodeGenerator new.
-	cg vmClass: StackInterpreter.
+	cg vmClass: self.
 	^PrimitiveTable collect:
 		[:thing|
 		(thing isInteger "quick prims, 0 for fast primitve fail"
@@ -1614,7 +1614,7 @@ StackInterpreter class >> primitiveTableStringFor: table [
 			s cr; nextPutAll: ' 0 }']
 ]
 
-{ #category : #translation }
+{ #category : #'accessing class hierarchy' }
 StackInterpreter class >> primitivesClass [
 	^StackInterpreterPrimitives
 ]

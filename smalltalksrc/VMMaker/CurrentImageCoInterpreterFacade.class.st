@@ -73,12 +73,12 @@ CurrentImageCoInterpreterFacade class >> forCogit: aCogit [
 		yourself
 ]
 
-{ #category : #accessing }
+{ #category : #'accessing class hierarchy' }
 CurrentImageCoInterpreterFacade class >> objectMemoryClass [
 	^self subclassResponsibility
 ]
 
-{ #category : #accessing }
+{ #category : #'accessing class hierarchy' }
 CurrentImageCoInterpreterFacade class >> objectRepresentationClass [
 	^self subclassResponsibility
 ]
