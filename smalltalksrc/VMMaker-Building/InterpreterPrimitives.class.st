@@ -743,8 +743,6 @@ InterpreterPrimitives >> primitiveBitOrLargeIntegers [
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveBitShift [ 
 	| integerReceiver integerArgument shifted |
-	<var: #shifted type: 'unsigned'>
-
 	integerArgument := self popInteger.
 	integerReceiver := self popPos32BitInteger.
 	self successful ifTrue: [

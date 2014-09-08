@@ -20,7 +20,7 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
-{ #category : #accessing }
+{ #category : #'accessing class hierarchy' }
 CogObjectRepresentationForSqueakV3 class >> defaultObjectMemoryClass [
 	"For in-image compilation."
 	^NewCoObjectMemory

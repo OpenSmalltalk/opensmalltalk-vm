@@ -45,7 +45,6 @@ Class {
 		'CSThreadSchedulingLoop',
 		'CSWait',
 		'CSYield',
-		'CogitClass',
 		'HasBeenReturnedFromMCPC',
 		'MFMethodFlagFrameIsMarkedFlag',
 		'MinBackwardJumpCountForCompile',
@@ -91,12 +90,11 @@ CoInterpreter class >> apiExportHeaderName [
 	^'cointerp.h'
 ]
 
-{ #category : #translation }
+{ #category : #'accessing class hierarchy' }
 CoInterpreter class >> cogitClass [
-	"CogitClass := SimpleStackBasedCogit"
-	"CogitClass := StackToRegisterMappingCogit"
-	CogitClass isNil ifTrue: [CogitClass := SimpleStackBasedCogit].
-	^CogitClass
+	^Smalltalk classNamed: (initializationOptions
+								at: #Cogit
+								ifAbsent: [#SimpleStackBasedCogit])
 ]
 
 { #category : #translation }
@@ -390,7 +388,7 @@ CoInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 	aCodeGen retainMethods: #(enterSmalltalkExecutiveImplementation)
 ]
 
-{ #category : #translation }
+{ #category : #'accessing class hierarchy' }
 CoInterpreter class >> primitivesClass [
 	^CoInterpreterPrimitives
 ]

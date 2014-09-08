@@ -7,12 +7,12 @@ Class {
 	#category : #'VMMaker-Support'
 }
 
-{ #category : #accessing }
+{ #category : #'accessing class hierarchy' }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation class >> objectMemoryClass [
 	^Spur32BitCoMemoryManager
 ]
 
-{ #category : #accessing }
+{ #category : #'accessing class hierarchy' }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation class >> objectRepresentationClass [
 	^CogObjectRepresentationFor32BitSpur
 ]

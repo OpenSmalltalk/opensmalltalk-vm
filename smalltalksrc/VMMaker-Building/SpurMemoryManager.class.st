@@ -898,7 +898,7 @@ SpurMemoryManager class >> objectFormatsMap [
 		{ n. map at: n }]
 ]
 
-{ #category : #accessing }
+{ #category : #'accessing class hierarchy' }
 SpurMemoryManager class >> objectRepresentationClass [
 	^self subclassResponsibility
 ]

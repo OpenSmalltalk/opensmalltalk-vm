@@ -745,7 +745,7 @@ VMMaker >> buildCodeGeneratorForCogit [
 VMMaker >> buildCodeGeneratorForCogit: cogitClass includeAPIMethods: getAPIMethods initializeClasses: initializeClasses [
 	"Answer the code generator for translating the cogit."
 
-	| cg aClass cogitClasses apicg |
+	| cg cogitClasses apicg |
 	cg := self createCogitCodeGenerator.
 
 	cg vmClass: cogitClass.
@@ -756,13 +756,7 @@ VMMaker >> buildCodeGeneratorForCogit: cogitClass includeAPIMethods: getAPIMetho
 				ifTrue: [cgc initializeWithOptions: optionsDictionary]
 				ifFalse: [cgc initialize]]].
 
-	cogitClasses := OrderedCollection new.
-	aClass := cogitClass.
-	[cogitClasses addFirst: aClass.
-	 aClass ~~ Cogit
-	 and: [aClass inheritsFrom: Cogit]] whileTrue:
-		[aClass := aClass superclass].
-	cogitClasses addFirst: VMClass.
+	cogitClasses := OrderedCollection withAll: (cogitClass withAllSuperclasses copyUpThrough: VMClass) reverse.
 	cogitClasses addAllLast: ((cogitClass ancilliaryClasses: optionsDictionary) reject: [:class| class isStructClass]).
 	cogitClasses do: [:cgc| cg addClass: cgc].
 	cg addStructClasses: (cg structClassesForTranslationClasses: cogitClasses).
@@ -793,28 +787,24 @@ VMMaker >> buildCodeGeneratorForInterpreter [
 VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods: getAPIMethods initializeClasses: initializeClasses [
 	"Answer the code generator for translating the interpreter."
 
-	| cg theClass interpreterClasses apicg |
-	interpreterClasses := OrderedCollection new.
-
+	| cg interpreterClasses apicg |
 	initializeClasses ifTrue:
 		[interpreterClass initializeWithOptions: optionsDictionary].
 
 	(cg := self createCodeGenerator) vmClass: interpreterClass.
 
-	theClass := interpreterClass.
-	[theClass ~~ VMClass] whileTrue:
-		[interpreterClasses addFirst: theClass.
-		 theClass := theClass superclass].
-	
-	cg vmClass objectMemoryClass ifNotNil:
-		[:objectMemoryClass|
-		theClass := objectMemoryClass.
-		[theClass ~~ VMClass] whileTrue:
+	"Construct interpreterClasses as all classes from interpreterClass &
+	 objectMemoryClass up to VMClass in superclass to subclass order."
+	interpreterClasses := OrderedCollection new.
+	{interpreterClass. interpreterClass objectMemoryClass} do:
+		[:vmClass| | theClass |
+		 theClass := vmClass.
+		 [theClass ~~ VMClass] whileTrue:
 			[interpreterClasses addFirst: theClass.
 			 theClass := theClass superclass]].
-
-	interpreterClasses addFirst: VMClass.
-	interpreterClasses addAllLast: (cg nonStructClassesForTranslationClasses: interpreterClasses).
+	interpreterClasses
+		addFirst: VMClass;
+		addAllLast: (cg nonStructClassesForTranslationClasses: interpreterClasses).
 
 	initializeClasses ifTrue:
 		[interpreterClasses do:
@@ -830,7 +820,7 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 	interpreterClasses do: [:ic| cg addClass: ic].
 
 	(getAPIMethods
-	and: [self interpreterClass needsCogit]) ifTrue:
+	 and: [self interpreterClass needsCogit]) ifTrue:
 		[apicg := self
 					buildCodeGeneratorForCogit: self cogitClass
 					includeAPIMethods: false
@@ -1620,7 +1610,7 @@ VMMaker >> needsToRegenerateInterpreterFile [
 	classes := self interpreterClass withAllSuperclasses copyUpTo: VMClass.
 	self interpreterClass objectMemoryClass ifNotNil:
 		[:objectMemoryClass|
-		classes addAllLast: (objectMemoryClass  withAllSuperclasses copyUpTo: VMClass)].
+		classes addAllLast: (objectMemoryClass withAllSuperclasses copyUpTo: VMClass)].
 	classes copy do:
 		[:class| classes addAllLast: (class ancilliaryClasses: self options)].
 	tStamp := classes inject: 0 into: [:tS :cl| tS max: cl timeStamp].
