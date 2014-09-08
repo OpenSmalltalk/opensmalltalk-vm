@@ -4,12 +4,12 @@ Class {
 	#category : #'VMMaker-Support'
 }
 
-{ #category : #accessing }
+{ #category : #'accessing class hierarchy' }
 CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation class >> objectMemoryClass [
 	^NewCoObjectMemory
 ]
 
-{ #category : #accessing }
+{ #category : #'accessing class hierarchy' }
 CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation class >> objectRepresentationClass [
 	^CogObjectRepresentationForSqueakV3
 ]
