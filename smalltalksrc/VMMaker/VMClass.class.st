@@ -197,11 +197,11 @@ VMClass class >> initializeMiscConstants [
 		at: #SqueakV3ObjectMemory	"the good ole default"
 			put: (omc
 					ifNil: [true]
-					ifNotNil: [(Smalltalk at: omc) inheritsFrom: ObjectMemory]);
+					ifNotNil: [(Smalltalk at: omc) includesBehavior: ObjectMemory]);
 		at: #SpurObjectMemory		"the new condender"
 			put: (omc
 					ifNil: [false]
-					ifNotNil: [(Smalltalk at: omc) inheritsFrom: SpurMemoryManager]).
+					ifNotNil: [(Smalltalk at: omc) includesBehavior: SpurMemoryManager]).
 
 	"Use ifAbsentPut: so that they will get copied back to the
 	 VMMaker's options and dead code will likely be eliminated."
