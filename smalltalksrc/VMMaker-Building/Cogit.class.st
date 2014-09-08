@@ -2778,7 +2778,7 @@ Cogit >> ceImplicitReceiverFor: selector receiver: receiver cache: cacheAddress 
 	 and reload the class tag.  If either the class tag or the mixin are young then the
 	 method needs to be added to the youngReferrers list to ensure correct GC."
 
-	<option: #SpurMemoryManager>
+	<option: #SpurObjectMemory>
 	<var: #cacheAddress type: #usqInt>
 	| rcvrClass mixin cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
@@ -4775,7 +4775,7 @@ Cogit >> freeUnmarkedMachineCode [
 	"Free machine-code methods whose compiled methods are unmarked
 	 and open PICs whose selectors are not marked."
 	<api>
-	<option: #SpurMemoryManager>
+	<option: #SpurObjectMemory>
 	| cogMethod freedMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	freedMethod := false.
@@ -7043,7 +7043,7 @@ Cogit >> mapStartFor: cogMethod [
 
 { #category : #'garbage collection' }
 Cogit >> markAndTraceLiteralsIn: cogMethod [
-	<option: #SpurMemoryManager>
+	<option: #SpurObjectMemory>
 	"Unlink sends that have unmarked classes in inline caches or freed/freeable targets.
 	 Nil-out inline caches linked to open PICs.
 	 Assert that any selectors are marked.  We can do this since
@@ -7099,7 +7099,7 @@ Cogit >> markAndTraceMachineCodeForNewSpaceGC [
 Cogit >> markAndTraceMachineCodeOfMarkedMethods [
 	"Mark objects in machine-code of marked methods (or open PICs with marked selectors)."
 	<api>
-	<option: #SpurMemoryManager>
+	<option: #SpurObjectMemory>
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	objectMemory leakCheckFullGC ifTrue:
