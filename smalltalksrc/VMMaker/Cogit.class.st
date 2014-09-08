@@ -458,6 +458,13 @@ Cogit class >> cogToBytecodeMethodMapping [
 	to reset the bytecoded method's header if it is referring to the freed CogMethod."
 ]
 
+{ #category : #'accessing class hierarchy' }
+Cogit class >> cogitClass [
+	^Smalltalk classNamed: (initializationOptions
+								at: #Cogit
+								ifAbsent: [#SimpleStackBasedCogit])
+]
+
 { #category : #translation }
 Cogit class >> declareCVarsIn: aCCodeGenerator [
 	#(	'coInterpreter' 'objectMemory' 'methodZone' 'objectRepresentation'
@@ -849,11 +856,10 @@ Cogit class >> initializePrimitiveTable [
 
 { #category : #'class initialization' }
 Cogit class >> initializeWithOptions: optionsDictionary [
-	self withAllSubclasses,
-	CogMethod withAllSubclasses,
-	CogMethodSurrogate withAllSubclasses
-		do: [:class|
-			class initializationOptions: optionsDictionary].
+	{ self. CogMethod. CogMethodSurrogate. CogObjectRepresentation } do:
+		[:superclass|
+		 superclass withAllSubclasses do:
+			[:class| class initializationOptions: optionsDictionary]].
 	super initializeWithOptions: optionsDictionary.
 	self initializeMiscConstants. "must preceed other initialization."
 	self initializeErrorCodes.

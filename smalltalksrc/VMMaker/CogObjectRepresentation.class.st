@@ -22,6 +22,14 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #'accessing class hierarchy' }
+CogObjectRepresentation class >> cogitClass [
+	^initializationOptions ifNotNil:
+		[Smalltalk classNamed: (initializationOptions
+									at: #Cogit
+									ifAbsent: [#SimpleStackBasedCogit])]
+]
+
 { #category : #'instance creation' }
 CogObjectRepresentation class >> forCogit: aCogit methodZone: methodZone [
 	^self new setCogit: aCogit methodZone: methodZone
