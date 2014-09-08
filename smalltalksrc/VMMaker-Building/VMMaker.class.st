@@ -84,7 +84,6 @@ Class {
 		'platformRootDirName',
 		'logger',
 		'interpreterClassName',
-		'cogitClassName',
 		'is64BitVM',
 		'optionsDictionary',
 		'abortBlock'
@@ -614,7 +613,7 @@ VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil to: srcDirName 
 ]
 
 { #category : #utilities }
-VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil with: optionsPairsArray to: srcDirName platformDir: platDirName [
+VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil with: optionsPairsArrayArg to: srcDirName platformDir: platDirName [
 	"Initialize a VMMaker to generate the VM to the given target directory. Include plugins in pluginList.
 	Example:
 		(VMMaker
@@ -625,12 +624,14 @@ VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil with: optionsPa
 						BMPReadWriterPlugin IA32ABI SocketPlugin BitBltPlugin JPEGReadWriter2Plugin SurfacePlugin
 						DSAPrims JPEGReaderPlugin UUIDPlugin DropPlugin LargeIntegers UnixOSProcessPlugin
 						FileCopyPlugin Matrix2x3Plugin Win32OSProcessPlugin FilePlugin MiscPrimitivePlugin ZipPlugin))"
-	| maker |
+	| maker optionsPairsArray |
 	maker := self forPlatform: 'Cross'.
 	maker sourceDirectoryName: srcDirName.
 	maker platformRootDirectoryName: platDirName.
 	maker interpreterClass: interpreterClass.
-	cogitClassOrNil ifNotNil: [maker cogitClass: cogitClassOrNil].
+	optionsPairsArray := (cogitClassOrNil isNil or: [optionsPairsArrayArg includes: #Cogit])
+							ifNil: [optionsPairsArrayArg]
+							ifNotNil: [optionsPairsArrayArg, { #Cogit. cogitClassOrNil name }].
 	maker options: optionsPairsArray.
 	^maker
 
@@ -736,7 +737,7 @@ VMMaker >> buildCodeGeneratorForCogit [
 	"Answer the code generator for translating the cogit."
 
 	^self
-		buildCodeGeneratorForCogit: self cogitClass
+		buildCodeGeneratorForCogit: self interpreterClass cogitClass
 		includeAPIMethods: true
 		initializeClasses: true
 ]
@@ -819,13 +820,14 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 
 	interpreterClasses do: [:ic| cg addClass: ic].
 
-	(getAPIMethods
-	 and: [self interpreterClass needsCogit]) ifTrue:
-		[apicg := self
-					buildCodeGeneratorForCogit: self cogitClass
-					includeAPIMethods: false
-					initializeClasses: false.
-		 cg apiMethods: apicg selectAPIMethods].
+	getAPIMethods ifTrue:
+		[interpreterClass cogitClass ifNotNil:
+			[:cogitClass|
+			 apicg := self
+						buildCodeGeneratorForCogit: cogitClass
+						includeAPIMethods: false
+						initializeClasses: false.
+			 cg apiMethods: apicg selectAPIMethods]].
 
 	cg removeConstant: #VMBIGENDIAN. "this should be defined in platforms/??/vm/sqConfig.h"
 
@@ -840,24 +842,6 @@ VMMaker >> canSupportPlugin: pluginClassName [
 		on: VMMakerException
 		do: [^ false].
 	^ true
-]
-
-{ #category : #'generate sources' }
-VMMaker >> cogitClass [
-	^(cogitClassName
-		ifNil: [self interpreterClass cogitClass]
-		ifNotNil: [Smalltalk classNamed: cogitClassName]) translationClass
-]
-
-{ #category : #'generate sources' }
-VMMaker >> cogitClass: aClass [
-
-	cogitClassName := aClass name asString
-]
-
-{ #category : #'generate sources' }
-VMMaker >> cogitClassName [
-	^cogitClassName
 ]
 
 { #category : #'generate sources' }
@@ -1097,7 +1081,7 @@ VMMaker >> generateCogitFile [
 	"Translate the Smalltalk description of the virtual machine into C.  If 'self doInlining' is true, small method bodies are inlined to reduce procedure call overhead.  On the PPC, this results in a factor of three speedup with only 30% increase in code size.  Subclasses can use specialised versions of CCodeGenerator and interpreterClass."
 
 	| cg cogitClass |
-	self interpreterClass needsCogit ifFalse: [^nil].
+	(cogitClass := self interpreterClass cogitClass) ifNil: [^nil].
 	cg := [self buildCodeGeneratorForCogit]
 			on: Notification
 			do: [:ex|
@@ -1107,7 +1091,6 @@ VMMaker >> generateCogitFile [
 								ifTrue: [ex rearmHandlerDuring: [ex pass]]
 								ifFalse: [ex pass]]].
 	self needsToRegenerateCogitFile ifFalse: [^nil].
-	cogitClass := self cogitClass.
 	cg removeUnneededBuiltins.
 
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
@@ -1588,7 +1571,7 @@ VMMaker >> needsToRegenerateCogitFile [
 	 file if it already exists. Answer if the file needs regenerating."
 
 	| cogitClass cogitClasses tStamp |
-	cogitClasses := (cogitClass := self cogitClass) withAllSuperclasses copyUpThrough: Cogit.
+	cogitClasses := (cogitClass := self interpreterClass cogitClass) withAllSuperclasses copyUpThrough: Cogit.
 	cogitClasses addAllLast: (cogitClass ancilliaryClasses: self options).
 	tStamp := cogitClasses inject: 0 into: [:tS :cl| tS max: cl timeStamp].
 
