@@ -88,7 +88,7 @@ if [ -n "$NM" ]; then
 	set -- Fast.app Assert.app Debug.app
 	for app in Newspeak\ Spur\ Virtual\ Machine.app \
 				assert/Newspeak\ Spur\ Virtual\ Machine.app\
-				debug\Newspeak\ Spur\ Virtual\ Machine.app; do
+				debug/Newspeak\ Spur\ Virtual\ Machine.app; do
 		test -d $app || mkdir $app
 		if [ -d ../build.macos32x86/$NSB/$1 ]; then
 			rm -rf $app/* $app-$TAG.tgz

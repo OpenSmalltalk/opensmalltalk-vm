@@ -26,6 +26,7 @@ WNSCOG=
 WNSSPUR=
 cd `dirname $0`/../products
 VERBOSE=
+JustUpload=
 
 if [ $# = 0 ]; then
 	CheckDMG=1
@@ -49,6 +50,7 @@ else
 	CheckMSI=
 	while [ -n "$1" ]; do
 		case $1 in
+		-archives)	JustUpload=JustUpload;;
 		-c)		LCOG=1;LTCOG=1;MCOG=1;MTCOG=1;WCOG=1;WMTCOG=1;
 				LSPUR=1;MSPUR=1;WSPUR=1;;
 		-cl)	LCOG=1;LTCOG=1;LSPUR=1;;
@@ -58,21 +60,21 @@ else
 		-ctm)	MTCOG=1;;
 		-ctw)	WTCOG=1;;
 		-nl)	LNSCOG=1;LNSSPUR=1;;
-		-nm)	WNSCOG=1;WNSSPUR=1;
+		-nm)	MNSCOG=1;MNSSPUR=1;
 				CheckDMG=1;;
 		-nw)	WNSCOG=1;WNSSPUR=1;
 				CheckMSI=1;;
-		-n)		LNSCOG=1;LNSSPUR=1;WNSCOG=1;WNSSPUR=1;WNSCOG=1;WNSSPUR=1;
+		-n)		LNSCOG=1;LNSSPUR=1;MNSCOG=1;MNSSPUR=1;WNSCOG=1;WNSSPUR=1;
 				CheckDMG=1;CheckMSI=1;;
 		-l)		LCOG=1;LTCOG=1;LSPUR=1;LNSCOG=1;LNSSPUR=1;;
-		-m)		MCOG=1;MTCOG=1;MSPUR=1;WNSCOG=1;WNSSPUR=1;
+		-m)		MCOG=1;MTCOG=1;MSPUR=1;MNSCOG=1;MNSSPUR=1;
 				CheckDMG=1;;
 		-w)		WCOG=1;WTCOG=1;WSPUR=1;WNSCOG=1;WNSSPUR=1;
 				CheckMSI=1;CheckDMG=1;;
 		-v)		VERBOSE=1;;
 		-r)		shift;REV="$1";;
 		-t)		shift;TAG="$1";;
-		-?|-h)  echo usage: $0 [-r REV -l -m -w -c -n -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw -r REV - t TAG]; exit 0;;
+		-?|-h)  echo usage: $0 [-l -m -w -c -n -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw -archives -r REV -t TAG]; exit 0;;
 		*)	break
 		esac
 		shift
@@ -113,10 +115,10 @@ test -n "$WTSPUR" && ARCHIVES="$ARCHIVES	cogspurmtwin-$TAG.zip"
 
 test -n "$LNSCOG" && ARCHIVES="$ARCHIVES	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz"
 test -n "$LNSSPUR" && ARCHIVES="$ARCHIVES	nsvmspurlinuxht-$TAG.tgz"
-test -n "$MNSCOG" && ARCHIVES="$ARCHIVES	Cog.app-$TAG.tgz	CogSpur.app-$TAG.tgz"
+test -n "$MNSCOG" && ARCHIVES="$ARCHIVES	Newspeak Virtual Machine-$TAG.dmg	Newspeak Spur Virtual Machine-$TAG.dmg"
 test -n "$MNSSPUR" && ARCHIVES="$ARCHIVES	CogSpur.app-$TAG.tgz"
-test -n "$WNSCOG" && ARCHIVES="$ARCHIVES	nsvmwin-$TAG.zip"
-test -n "$WNSSPUR" && ARCHIVES="$ARCHIVES	nsvmspurwin-$TAG.zip"
+test -n "$WNSCOG" && ARCHIVES="$ARCHIVES	nsvmwin-$TAG.zip	nsvm-$TAG.msi"
+test -n "$WNSSPUR" && ARCHIVES="$ARCHIVES	nsvmspurwin-$TAG.zip	nsvm-spur-$TAG.msi"
 
 if [ -n "$VERBOSE" ]; then
 	for a in $ARCHIVES; do
@@ -124,7 +126,7 @@ if [ -n "$VERBOSE" ]; then
 	done
 fi
 if [ -n "$CheckDMG" -a ! -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
-	NMID=nscogbuild/macbuild/installer
+	NMID=../build.macos32x86/newspeak.cog.v3/installer
 	if [ -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
 		true
 	elif [ -f "$NMID/Newspeak Virtual Machine-$TAG.dmg" ]; then
@@ -134,8 +136,19 @@ if [ -n "$CheckDMG" -a ! -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
 		exit 1
 	fi
 fi
+if [ -n "$CheckDMG" -a ! -f "Newspeak Spur Virtual Machine-$TAG.dmg" ]; then
+	NMID=../build.macos32x86/newspeak.cog.spur/installer
+	if [ -f "Newspeak Virtual Spur Machine-$TAG.dmg" ]; then
+		true
+	elif [ -f "$NMID/Newspeak Virtual Spur Machine-$TAG.dmg" ]; then
+		ln "$NMID/Newspeak Virtual Spur Machine-$TAG.dmg" .
+	else
+		echo Newspeak Virtual Spur Machine-$TAG.dmg is missing 1>&2
+		exit 1
+	fi
+fi
 if [ -n "$CheckMSI" -a ! -f nsvm-$TAG.msi ]; then
-	NWID=nscogbuild/cygwinbuild/installer
+	NMID=../build.win32x86/newspeak.cog.v3/installer
 	if [ -f nsvm-$TAG.msi ]; then
 		true
 	elif [ -f "$NWID/nsvm-$TAG.msi" ]; then
@@ -145,7 +158,19 @@ if [ -n "$CheckMSI" -a ! -f nsvm-$TAG.msi ]; then
 		exit 1
 	fi
 fi
-if [ ! -f ../history/README.$REV ]; then
+if [ -n "$CheckMSI" -a ! -f nsvm-spur-$TAG.msi ]; then
+	NMID=../build.win32x86/newspeak.cog.spur/installer
+	if [ -f nsvm-spur-$TAG.msi ]; then
+		true
+	elif [ -f "$NWID/nsvm-spur-$TAG.msi" ]; then
+		ln "$NWID/nsvm-spur-$TAG.msi" .
+	else
+		echo nsvm-spur-$TAG.msi is missing 1>&2
+		exit 1
+	fi
+fi
+if [ -z "$JustUpload" ]; then
+  if [ ! -f ../history/README.$REV ]; then
 	cat <<THEEND >../history/README.$REV
 N.B. For Squeak/Pharo/Croquet please use the archives whose names begin with
      Cog or cog.  The archives whose names begin with nsvm or Newspeak are
@@ -183,11 +208,11 @@ THEEND
 	echo getting svn log
 	svn log ../platforms/Cross/vm/sqSCCSVersion.h >>../history/README.$REV
 	vi ../history/README.$REV
-fi
-echo compiling ChangeHistory
-THEM="`ls ../history/README.* | sort -n -t. -k2 -r`"
->ChangeHistory
-for r in $THEM; do
+  fi
+  echo compiling ChangeHistory
+  THEM="`ls ../history/README.* | sort -n -t. -k2 -r`"
+  >ChangeHistory
+  for r in $THEM; do
 	m="`echo $r | sed 's/..\/history\/README.//'`"
 	if [ "$REV" -ge "$m" ]; then
 		test $REV -ne $m && echo "-------------------------------" >>ChangeHistory
@@ -199,10 +224,15 @@ for r in $THEM; do
 		fi
 		echo >>ChangeHistory
 	fi
-done
+  done
+fi
 ssh -x $RemoteUser mkdir $RemoteRoot/VM.r$REV
-echo scp -p ChangeHistory ../history/README.$REV $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
-scp -p ChangeHistory ../history/README.$REV $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
+if [ -z "$JustUpload" ]; then
+	echo scp -p ChangeHistory ../history/README.$REV $RemoteUser:$RemoteRoot/VM.r$REV
+	scp -p ChangeHistory ../history/README.$REV $RemoteUser:$RemoteRoot/VM.r$REV
+fi
+echo scp -p $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
+scp -p $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
 echo ssh $RemoteUser chmod a-w $RemoteRoot/VM.r$REV/* \\\; ls -al $RemoteRoot/VM.r$REV
 ssh $RemoteUser chmod a-w $RemoteRoot/VM.r$REV/* \; ls -al $RemoteRoot/VM.r$REV
 
