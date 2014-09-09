@@ -5,8 +5,44 @@ Class {
 	#name : #CogProcessorAlien,
 	#superclass : #Alien,
 	#type : #bytes,
+	#classVars : [
+		'SavedState'
+	],
 	#category : #'Cog-Processors'
 }
+
+{ #category : #'class initialization' }
+CogProcessorAlien class >> initialize [
+	SavedState := WeakIdentityKeyDictionary new.
+	Smalltalk
+		addToStartUpList: self;
+		addToShutDownList: self
+]
+
+{ #category : #'instance creation' }
+CogProcessorAlien class >> new [
+	^(self atAddress: self primitiveNewCPU) reset
+]
+
+{ #category : #'system startup' }
+CogProcessorAlien class >> shutDown: quitting [
+	self allSubInstancesDo:
+		[:processor|
+		SavedState at: processor put: processor registerState]
+]
+
+{ #category : #'system startup' }
+CogProcessorAlien class >> startUp: resuming [
+	resuming ifTrue:
+		[SavedState keysAndValuesDo:
+			[:processorOrNil :state|
+			 processorOrNil ifNotNil:
+				[processorOrNil addressFieldPut: processorOrNil class primitiveNewCPU.
+				 state with: processorOrNil registerStateSetters do:
+					[:value :setter|
+					processorOrNil perform: setter with: value]]]].
+	SavedState removeAll
+]
 
 { #category : #'Cog API' }
 CogProcessorAlien >> abstractInstructionCompilerClass [
@@ -137,7 +173,7 @@ CogProcessorAlien >> disassembleNextInstructionIn: memory for: aSymbolManager [ 
 	| string |
 	string := self pc < memory size 
 				ifTrue: [(self primitiveDisassembleAt: self pc inMemory: memory) last.]
-				ifFalse: ['Invalid address (', (self pc hex allButFirst: 3), ')'].
+				ifFalse: [^self pc hex, ' : Invalid address'].
 	^aSymbolManager
 		ifNil: [string]
 		ifNotNil: [self decorateDisassembly: string for: aSymbolManager]
@@ -188,6 +224,7 @@ CogProcessorAlien >> runInMemory: aMemory [
 
 { #category : #execution }
 CogProcessorAlien >> runInMemory: aMemory minimumAddress: minimumAddress readOnlyBelow: minimumWritableAddress [
+"Note that minimumWritableAddress is both the minimum writeable address AND the maximum executable address"
 	| result |
 	result := self primitiveRunInMemory: aMemory
 				minimumAddress: minimumAddress
@@ -241,4 +278,9 @@ CogProcessorAlien >> smashRegistersWithValuesFrom: base by: step [
 	   withIndexDo:
 		[:accessor :index|
 		self perform: accessor with: index - 1 * step + base]
+]
+
+{ #category : #printing }
+CogProcessorAlien >> writePopPushDetailsIn:  memory in: transcript for: aCogit [
+	"This is for debugging the ARM.  By default do nothing.  GdbARMAlien overrides."
 ]
