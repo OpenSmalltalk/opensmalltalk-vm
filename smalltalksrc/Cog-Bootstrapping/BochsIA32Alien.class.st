@@ -77,22 +77,17 @@ BochsIA32Alien class >> defaultIntegerBaseInDebugger [
 BochsIA32Alien class >> initialize [
 	"BochsIA32Alien initialize"
 	PostBuildStackDelta := 0.
-	OpcodeExceptionMap := Array new: 256 withAll: #handleExecutionPrimitiveFailureAt:in:readOnlyBelow:.
+	OpcodeExceptionMap := Array new: 256 withAll: #handleExecutionPrimitiveFailureAt:in:.
 	OpcodeExceptionMap
-		at: 1 + self basicNew callOpcode			put: #handleCallFailureAt:in:readOnlyBelow:;
-		at: 1 + self basicNew jmpOpcode			put: #handleJmpFailureAt:in:readOnlyBelow:;
-		at: 1 + self basicNew retOpcode			put: #handleRetFailureAt:in:readOnlyBelow:;
-		at: 1 + self basicNew movALObOpcode	put: #handleMovALObFailureAt:in:readOnlyBelow:;
-		at: 1 + self basicNew movObALOpcode	put: #handleMovObALFailureAt:in:readOnlyBelow:;
-		at: 1 + self basicNew movGvEvOpcode	put: #handleMovGvEvFailureAt:in:readOnlyBelow:;
-		at: 1 + self basicNew movEvGvOpcode	put: #handleMovEvGvFailureAt:in:readOnlyBelow:;
-		at: 1 + self basicNew movGbEbOpcode	put: #handleMovGbEbFailureAt:in:readOnlyBelow:;
-		at: 1 + self basicNew movEbGbOpcode	put: #handleMovEbGbFailureAt:in:readOnlyBelow:
-]
-
-{ #category : #'instance creation' }
-BochsIA32Alien class >> new [
-	^(self atAddress: self primitiveNewCPU) reset
+		at: 1 + self basicNew callOpcode			put: #handleCallFailureAt:in:;
+		at: 1 + self basicNew jmpOpcode			put: #handleJmpFailureAt:in:;
+		at: 1 + self basicNew retOpcode			put: #handleRetFailureAt:in:;
+		at: 1 + self basicNew movALObOpcode	put: #handleMovALObFailureAt:in:;
+		at: 1 + self basicNew movObALOpcode	put: #handleMovObALFailureAt:in:;
+		at: 1 + self basicNew movGvEvOpcode	put: #handleMovGvEvFailureAt:in:;
+		at: 1 + self basicNew movEvGvOpcode	put: #handleMovEvGvFailureAt:in:;
+		at: 1 + self basicNew movGbEbOpcode	put: #handleMovGbEbFailureAt:in:;
+		at: 1 + self basicNew movEbGbOpcode	put: #handleMovEbGbFailureAt:in:
 ]
 
 { #category : #primitives }
@@ -100,14 +95,6 @@ BochsIA32Alien class >> primitiveNewCPU [
 	"Answer the address of a new Bochs C++ class bx_cpu_c/BX_CPU_C x86 CPU emulator instance."
 	<primitive: 'primitiveNewCPU' module: 'BochsIA32Plugin'>
 	^self primitiveFailed
-]
-
-{ #category : #accessing }
-BochsIA32Alien class >> setStackAlignmentDelta: 	stackAlignmentDelta [
-	self assert: stackAlignmentDelta isPowerOfTwo.
-	PostBuildStackDelta :=  stackAlignmentDelta > 8
-								ifTrue: [stackAlignmentDelta - 8]
-								ifFalse: [0]
 ]
 
 { #category : #'Cog API' }
@@ -359,7 +346,7 @@ BochsIA32Alien >> frameBuildDeltaBytes [
 ]
 
 { #category : #'error handling' }
-BochsIA32Alien >> handleCallFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+BochsIA32Alien >> handleCallFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a call into a ProcessorSimulationTrap signal."
 	|  relativeJump |
 	relativeJump := memoryArray longAt: pc + 2 bigEndian: false.
@@ -372,13 +359,13 @@ BochsIA32Alien >> handleCallFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|B
 ]
 
 { #category : #'error handling' }
-BochsIA32Alien >> handleExecutionPrimitiveFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+BochsIA32Alien >> handleExecutionPrimitiveFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Handle an execution primitive failure for an unhandled opcode."
 	^self reportPrimitiveFailure
 ]
 
 { #category : #'error handling' }
-BochsIA32Alien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray>" minimumAddress: minimumAddress "<Integer>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+BochsIA32Alien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray>" minimumAddress: minimumAddress [
 	"Handle an execution primitive failure.  Convert out-of-range call and absolute
 	 memory read into register instructions into ProcessorSimulationTrap signals."
 	"self printIntegerRegistersOn: Transcript"
@@ -389,13 +376,12 @@ BochsIA32Alien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteAr
 		^self
 			perform: (OpcodeExceptionMap at: opcode + 1)
 			with: pc
-			with: memoryArray
-			with: minimumWritableAddress].
+			with: memoryArray].
 	^self reportPrimitiveFailure
 ]
 
 { #category : #'error handling' }
-BochsIA32Alien >> handleJmpFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+BochsIA32Alien >> handleJmpFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a jmp into a ProcessorSimulationTrap signal."
 	|  relativeJump |
 	relativeJump := memoryArray longAt: pc + 2 bigEndian: false.
@@ -408,7 +394,7 @@ BochsIA32Alien >> handleJmpFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|By
 ]
 
 { #category : #'error handling' }
-BochsIA32Alien >> handleMovALObFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+BochsIA32Alien >> handleMovALObFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a read into eax into a ProcessorSimulationTrap signal."
 	^(ProcessorSimulationTrap
 			pc: pc
@@ -420,7 +406,7 @@ BochsIA32Alien >> handleMovALObFailureAt: pc "<Integer>" in: memoryArray "<Bitma
 ]
 
 { #category : #'error handling' }
-BochsIA32Alien >> handleMovEbGbFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+BochsIA32Alien >> handleMovEbGbFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a byte register write into a ProcessorSimulationTrap signal."
 	| modrmByte |
 	^(((modrmByte := memoryArray byteAt: pc + 2) bitAnd: 16rC0) = 16r80) "ModRegRegDisp32"
@@ -439,7 +425,7 @@ BochsIA32Alien >> handleMovEbGbFailureAt: pc "<Integer>" in: memoryArray "<Bitma
 ]
 
 { #category : #'error handling' }
-BochsIA32Alien >> handleMovEvGvFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+BochsIA32Alien >> handleMovEvGvFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a register write into a ProcessorSimulationTrap signal."
 	| modrmByte |
 	^((modrmByte := memoryArray byteAt: pc + 2) bitAnd: 16rC7) = 16r5 "ModRegInd & disp32"
@@ -456,7 +442,7 @@ BochsIA32Alien >> handleMovEvGvFailureAt: pc "<Integer>" in: memoryArray "<Bitma
 ]
 
 { #category : #'error handling' }
-BochsIA32Alien >> handleMovGbEbFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+BochsIA32Alien >> handleMovGbEbFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a byte register load into a ProcessorSimulationTrap signal."
 	| modrmByte |
 	^(((modrmByte := memoryArray byteAt: pc + 2) bitAnd: 16rC0) = 16r80) "ModRegRegDisp32"
@@ -475,7 +461,7 @@ BochsIA32Alien >> handleMovGbEbFailureAt: pc "<Integer>" in: memoryArray "<Bitma
 ]
 
 { #category : #'error handling' }
-BochsIA32Alien >> handleMovGvEvFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+BochsIA32Alien >> handleMovGvEvFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a register load into a ProcessorSimulationTrap signal."
 	| modrmByte |
 	^(((modrmByte := memoryArray byteAt: pc + 2) bitAnd: 16rC7) = 16r5) "ModRegInd & disp32"
@@ -492,7 +478,7 @@ BochsIA32Alien >> handleMovGvEvFailureAt: pc "<Integer>" in: memoryArray "<Bitma
 ]
 
 { #category : #'error handling' }
-BochsIA32Alien >> handleMovObALFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+BochsIA32Alien >> handleMovObALFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a write of eax into a ProcessorSimulationTrap signal."
 	^(ProcessorSimulationTrap
 			pc: pc
@@ -504,7 +490,7 @@ BochsIA32Alien >> handleMovObALFailureAt: pc "<Integer>" in: memoryArray "<Bitma
 ]
 
 { #category : #'error handling' }
-BochsIA32Alien >> handleRetFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" readOnlyBelow: minimumWritableAddress [ "<Integer>"
+BochsIA32Alien >> handleRetFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a ret into a ProcessorSimulationTrap signal."
 	^(ProcessorSimulationTrap
 			pc: pc
@@ -513,6 +499,20 @@ BochsIA32Alien >> handleRetFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|By
 			type: #return
 			accessor: #eip:)
 		signal
+]
+
+{ #category : #'processor setup' }
+BochsIA32Alien >> initializeStackFor: aCogit [
+"Different cpus need different stack alignment etc, so handle the details here."
+	"This is for testing.  On many OS's the stack must remain aligned;
+	 e.g. IA32 using SSE requires 16 byte alignment."
+	| stackAlignment |
+	stackAlignment := 16.
+	aCogit setStackAlignment: stackAlignment expectedSPOffset: 0 expectedFPOffset: 8.
+	self assert: stackAlignment isPowerOfTwo.
+	PostBuildStackDelta :=  stackAlignment > 8
+								ifTrue: [stackAlignment - 8]
+								ifFalse: [0]
 ]
 
 { #category : #'accessing-abstract' }
@@ -652,8 +652,7 @@ BochsIA32Alien >> primitiveRunInMemory: memoryArray "<Bitmap|ByteArray>" minimum
 	<primitive: 'primitiveRunInMemoryMinAddressMaxAddressReadWrite' module: 'BochsIA32Plugin' error: ec>
 	^ec == #'inappropriate operation'
 		ifTrue: [self handleExecutionPrimitiveFailureIn: memoryArray
-					minimumAddress: minimumAddress
-					readOnlyBelow: minimumWritableAddress]
+					minimumAddress: minimumAddress]
 		ifFalse: [self reportPrimitiveFailure]
 
 	"self printRegistersOn: Transcript"
@@ -667,8 +666,7 @@ BochsIA32Alien >> primitiveRunInMemory: memoryArray "<Bitmap|ByteArray>" minimum
 	<primitive: 'primitiveRunInMemoryMinimumAddressReadWrite' module: 'BochsIA32Plugin' error: ec>
 	^ec == #'inappropriate operation'
 		ifTrue: [self handleExecutionPrimitiveFailureIn: memoryArray
-					minimumAddress: minimumAddress
-					readOnlyBelow: minimumWritableAddress]
+					minimumAddress: minimumAddress]
 		ifFalse: [self reportPrimitiveFailure]
 
 	"self printRegistersOn: Transcript"
@@ -682,8 +680,7 @@ BochsIA32Alien >> primitiveSingleStepInMemory: memoryArray "<Bitmap|ByteArray>" 
 	<primitive: 'primitiveSingleStepInMemoryMinAddressMaxAddressReadWrite' module: 'BochsIA32Plugin' error: ec>
 	^ec == #'inappropriate operation'
 		ifTrue: [self handleExecutionPrimitiveFailureIn: memoryArray
-					minimumAddress: minimumAddress
-					readOnlyBelow: minimumWritableAddress]
+					minimumAddress: minimumAddress]
 		ifFalse: [self reportPrimitiveFailure]
 ]
 
@@ -695,36 +692,15 @@ BochsIA32Alien >> primitiveSingleStepInMemory: memoryArray "<Bitmap|ByteArray>" 
 	<primitive: 'primitiveSingleStepInMemoryMinimumAddressReadWrite' module: 'BochsIA32Plugin' error: ec>
 	^ec == #'inappropriate operation'
 		ifTrue: [self handleExecutionPrimitiveFailureIn: memoryArray
-					minimumAddress: minimumAddress
-					readOnlyBelow: minimumWritableAddress]
+					minimumAddress: minimumAddress]
 		ifFalse: [self reportPrimitiveFailure]
 ]
 
 { #category : #printing }
-BochsIA32Alien >> printIntegerRegistersOn: aStream [
-	self printRegisterState: self integerRegisterState on: aStream.
-	aStream flush
-]
-
-{ #category : #printing }
-BochsIA32Alien >> printRegisterState: registerStateVector on: aStream [
-	| rsvs fields|
+BochsIA32Alien >> printFields: fields inRegisterState: registerStateVector on: aStream [
+	| rsvs |
 	aStream ensureCr.
 	rsvs := registerStateVector readStream.
-	fields := (registerStateVector size < 18
-			   or: [(11 to: 18) allSatisfy: [:i| (registerStateVector at: i) isZero]])
-				ifTrue:
-					[#(	eax ebx ecx edx cr
-						esp ebp esi edi cr
-						eip eflags cr )]
-				ifFalse:
-					[#(	eax ebx ecx edx cr
-						esp ebp esi edi cr
-						eip eflags cr
-						xmm0low xmm1low cr
-						xmm2low xmm3low cr
-						xmm4low xmm5low cr
-						xmm6low xmm7low cr )].
 	fields withIndexDo:
 		[:sym :index| | val |
 		sym = #cr
@@ -762,6 +738,52 @@ BochsIA32Alien >> printRegisterState: registerStateVector on: aStream [
 							[aStream tab]]]
 ]
 
+{ #category : #printing }
+BochsIA32Alien >> printIntegerRegistersOn: aStream [
+	self printRegisterState: self integerRegisterState on: aStream.
+	aStream flush
+]
+
+{ #category : #printing }
+BochsIA32Alien >> printRegisterState: registerStateVector on: aStream [
+	self printFields:
+			((registerStateVector size < 18
+			  or: [(11 to: 18) allSatisfy: [:i| (registerStateVector at: i) isZero]])
+				ifTrue:
+					[#(	eax ebx ecx edx cr
+						esp ebp esi edi cr
+						eip eflags cr )]
+				ifFalse:
+					[#(	eax ebx ecx edx cr
+						esp ebp esi edi cr
+						eip eflags cr
+						xmm0low xmm1low cr
+						xmm2low xmm3low cr
+						xmm4low xmm5low cr
+						xmm6low xmm7low cr )])
+		inRegisterState: registerStateVector
+		on: aStream
+]
+
+{ #category : #printing }
+BochsIA32Alien >> printRegisterStateExceptPC: registerStateVector on: aStream [
+	self printFields:
+			((registerStateVector size < 18
+			  or: [(11 to: 18) allSatisfy: [:i| (registerStateVector at: i) isZero]])
+				ifTrue:
+					[#(	eax ebx ecx edx cr
+						esp ebp esi edi cr)]
+				ifFalse:
+					[#(	eax ebx ecx edx cr
+						esp ebp esi edi cr
+						xmm0low xmm1low cr
+						xmm2low xmm3low cr
+						xmm4low xmm5low cr
+						xmm6low xmm7low cr )])
+		inRegisterState: registerStateVector
+		on: aStream
+]
+
 { #category : #execution }
 BochsIA32Alien >> pushWord: aValue in: aMemory [
 	| sp |
@@ -783,8 +805,22 @@ BochsIA32Alien >> registerState [
 ]
 
 { #category : #'accessing-abstract' }
+BochsIA32Alien >> registerStateGetters [
+	^#(	eax ebx ecx edx esp ebp esi edi eip eflags
+		xmm0low xmm1low xmm2low xmm3low
+		xmm4low xmm5low xmm6low xmm7low )
+]
+
+{ #category : #'accessing-abstract' }
 BochsIA32Alien >> registerStatePCIndex [
 	^9
+]
+
+{ #category : #'accessing-abstract' }
+BochsIA32Alien >> registerStateSetters [
+	^#(	eax: ebx: ecx: edx: esp: ebp: esi: edi: eip: eflags:
+		xmm0low: xmm1low: xmm2low: xmm3low:
+		xmm4low: xmm5low: xmm6low: xmm7low: )
 ]
 
 { #category : #execution }

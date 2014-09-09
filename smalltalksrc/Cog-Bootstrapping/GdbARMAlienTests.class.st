@@ -8,6 +8,26 @@ Class {
 }
 
 { #category : #accessing }
+GdbARMAlienTests >> integerRegisterGetters [
+	^#(r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 fp r12 lr sp pc)
+]
+
+{ #category : #accessing }
+GdbARMAlienTests >> integerRegisterSetters [
+	^#(r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: r10: fp: r12: lr: sp: pc:)
+]
+
+{ #category : #accessing }
+GdbARMAlienTests >> memory [ 
+"build a memory for this test; a ByteArray of 1024 bytes, filled with NOPs"
+	| mem |
+	mem := ByteArray new: 1024.
+	1 to: 1024  by: 4do:[:i|
+		mem unsignedLongAt: i put: 16rE1A00000 bigEndian: false].
+	^mem
+]
+
+{ #category : #accessing }
 GdbARMAlienTests >> nfib [
 	"long fib(long n) { return n <= 1 ? 1 : fib(n-1) + fib(n-2) + 1; }
 	 as compiled by arm-elf-gnuabi-gcc fib.c -c -marm
@@ -53,16 +73,6 @@ GdbARMAlienTests >> processor [
 	processor ifNil:
 		[processor := GdbARMAlien new].
 	^processor
-]
-
-{ #category : #accessing }
-GdbARMAlienTests >> registerGetters [
-	^#(r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 lr sp pc)
-]
-
-{ #category : #accessing }
-GdbARMAlienTests >> registerSetters [
-	^#(r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: r10: r11: r12: lr: sp: pc:)
 ]
 
 { #category : #execution }
@@ -115,13 +125,57 @@ GdbARMAlienTests >> singleStepNFib: n disassemble: disassemble printRegisters: p
 ]
 
 { #category : #tests }
+GdbARMAlienTests >> testCall [
+	"Call a function that is in-range."
+	
+	"self new testCall"
+	| memory |
+	memory := self memory.
+	self processor reset.
+
+	memory unsignedLongAt: 5 put: (CogARMCompiler new mov: 10 imm: 0 ror: 0)  bigEndian: false. 
+	memory unsignedLongAt: 9 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 13 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false. 
+	memory unsignedLongAt: 17 put: (CogARMCompiler new orr: 10 imm: 40 ror: 0) bigEndian: false. 
+
+	memory unsignedLongAt: 21 put: (CogARMCompiler new bl: 12) bigEndian: false.
+
+	memory unsignedLongAt: 25 put: (CogARMCompiler new mov:5imm: 99 ror:0 ) bigEndian: false.
+	memory unsignedLongAt: 41 put: (CogARMCompiler new mov: 4 imm: 42 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 45 put: (CogARMCompiler new bx: 14) bigEndian: false.
+	
+	"processor disassembleFrom: 0 to: 60 in: memory on: Transcript cr"
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			singleStepIn: memory.
+			"We have to step several times, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	self processor singleStepIn: memory.
+	self processor singleStepIn: memory.
+	self processor singleStepIn: memory.
+	self assert: processor pc = 16r14.
+	self processor singleStepIn: memory.
+	self assert: processor pc = 16r28 "check the call".
+	self processor singleStepIn: memory.
+	self assert: processor r4 = 42.
+	self processor singleStepIn: memory.
+	self processor singleStepIn: memory.
+
+	self assert: self processor pc = 16r1C.
+	self assert: self processor lr = 16r18.
+	self assert: self processor r5 = 99
+
+]
+
+{ #category : #tests }
 GdbARMAlienTests >> testCallTrap [
 	"Call a function that is out-of-range.  Ensure the call is trapped."
 	"self new testCallTrap"
 	| memory |
-	memory := Bitmap new: 256 withAll: self processor nopOpcode.
-	memory longAt: 5 put: (self processor branchAndLinkOpcodeWithOffset: 1020) bigEndian: false.
-	memory := memory asByteArray.
+	memory := self memory.
+	memory unsignedLongAt: 5 put: (CogARMCompiler new bl: 1020) bigEndian: false.
+	"Can't do this diassemble until after the #asByteArray - "
+	"processor disassembleFrom: 0 to:16 in: memory on: Transcript cr"
 	self processor
 			pc: 4;
 			sp: (memory size - 4); "Room for return address"
@@ -131,27 +185,82 @@ GdbARMAlienTests >> testCallTrap [
 		raise: ProcessorSimulationTrap
 		withExceptionDo:
 			[:pst|
-			self assert: self processor pc = 1024.
+			self assert: self processor pc = 4.
 			self assert: self processor lr = 8.
 			self assert: pst pc = 4.
 			self assert: pst nextpc = 8.
-			self assert: pst address = 1024.
+			self assert: pst address = 1032.
+			self assert: pst type = #call].
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testCallTrap2 [
+	"Call a function that is out-of-range.  Ensure the call is trapped
+	This version calls well outside the memory array."
+	"self new testCallTrap2"
+	| memory |
+	memory := self memory.
+	memory unsignedLongAt: 5 put: (CogARMCompiler new bl: 16rFF00) bigEndian: false.
+	"Can't do this diassemble until after the #asByteArray - "
+	"processor disassembleFrom: 0 to:16 in: memory on: Transcript cr"
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			singleStepIn: memory.
+			"We have to step twice, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	self should: [self processor singleStepIn: memory]
+		raise: ProcessorSimulationTrap
+		withExceptionDo:
+			[:pst|
+			self assert: self processor pc = 16r4.
+			self assert: self processor lr = 8.
+			self assert: pst pc = 4.
+			self assert: pst nextpc = 8.
+			self assert: pst address  = 16rFF0C.
+			self assert: pst type = #call].
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testCallTrap3 [
+	"Call a function that is out-of-range.  Ensure the call is trapped
+	This version calls well outside the memory array negatively"
+	"self new testCallTrap3"
+	| memory |
+	memory := self memory.
+	memory unsignedLongAt: 5 put: (CogARMCompiler new bl: -16rFF00) bigEndian: false.
+	"Can't do this diassemble until after the #asByteArray - "
+	"processor disassembleFrom: 0 to:16 in: memory on: Transcript cr"
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			singleStepIn: memory.
+			"We have to step twice, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	self should: [self processor singleStepIn: memory]
+		raise: ProcessorSimulationTrap
+		withExceptionDo:
+			[:pst|
+			self assert: self processor pc = 16r4.
+			self assert: self processor lr = 8.
+			self assert: pst pc = 4.
+			self assert: pst nextpc = 8.
+			self assert: pst address  = 16rFFFF010C.
 			self assert: pst type = #call].
 ]
 
 { #category : #tests }
 GdbARMAlienTests >> testDisassembling [
+	"self new testDisassembling"
 
 	| memory result |
 	memory := WordArray new: 2.
-	memory at: 1 put: 16rEF200000.
+	memory at: 1 put: 3800756324.
 	result := self processor
 		disassembleInstructionAt: 0 
 		In: memory 
 		into: [:str :len | 
 			self 
 				assert: len = 4;
-				assert: str = '0x00000000: svc	0x00200000'].
+				assert: str = '00000000: add	pc, sl, #100	; 0x64'].
 ]
 
 { #category : #tests }
@@ -159,7 +268,7 @@ GdbARMAlienTests >> testExecutionTrap [
 	"Execute a run of nops.  test executing beyond the executable limit is trapped."
 	"self new testExecutionTrap"
 	| memory |
-	 "The address is out of range of memory every which way (whether relative or absolute and whether big-endian or little."
+	 "Run through NOPs until we hit the limit set by readOnlyBelow: "
 	memory := (Bitmap new: 1024 * 2 withAll: self processor nopOpcode) asByteArray.
 	self processor
 			pc: 0;
@@ -168,24 +277,28 @@ GdbARMAlienTests >> testExecutionTrap [
 		raise: Error
 		withExceptionDo:
 			[:err|
-			self assert: self processor pc = (memory size / 2).
+			self assert: self processor pc = (memory size / 2-4).
 			self assert: ('Error 0: Illegal Instruction fetch address (0x1000).' match: err messageText)].
-	self processor pc: 0.
+	self processor reset;  pc: 0.
 	self should: [[self processor singleStepIn: memory minimumAddress: 0 readOnlyBelow: memory size / 2] repeat]
 		raise: Error
 		withExceptionDo:
 			[:err|
-			self assert: self processor pc = (memory size / 2).
+			self assert: self processor pc = (memory size / 2- 4).
 			self assert: ('Error 0: Illegal Instruction fetch address (0x1000).' match: err messageText)]
 ]
 
 { #category : #tests }
 GdbARMAlienTests >> testFlags [
+"test the processor flag state reading and setting"
 	"self new testFlags"
 	| memory |
-	memory := Bitmap new: 3.
+	memory := Bitmap new: 5.
+	self processor reset.
 	memory longAt: 1 put: 16rE3A03001 bigEndian: false. "MOV r3, #1"
 	memory longAt: 5 put: 16rE3530001 bigEndian: false. "CMP r3, #1"
+	memory longAt: 9 put: 16r13A00003 bigEndian: false. "MOVNE r0, #3"
+	memory longAt: 13 put: 16r03A00005 bigEndian: false. "MOVEQ r0, #5"
 	memory := memory asByteArray.
 	self processor
 		disassembleInstructionAt: 0 
@@ -193,27 +306,565 @@ GdbARMAlienTests >> testFlags [
 		into: [:str :len | 
 			self 
 				assert: len = 4;
-				assert: str equals: '0x00000000: mov	r3, #1'].
+				assert: str equals: '00000000: mov	r3, #1'].
 	self processor
 		disassembleInstructionAt: 4 
 		In: memory 
 		into: [:str :len | 
 			self 
 				assert: len = 4;
-				assert: str equals: '0x00000004: cmp	r3, #1'].
+				assert: str equals: '00000004: cmp	r3, #1'].
+	self processor
+		disassembleInstructionAt: 8 
+		In: memory 
+		into: [:str :len | 
+			self 
+				assert: len = 4;
+				assert: str equals: '00000008: movne	r0, #3'].
+	self processor
+		disassembleInstructionAt: 12 
+		In: memory 
+		into: [:str :len | 
+			self 
+				assert: len = 4;
+				assert: str equals: '0000000c: moveq	r0, #5'].
 	self processor
 		pc: 0;
 		singleStepIn: memory;
+		singleStepIn: memory;
+		singleStepIn: memory;
+		assert: self processor r0 = 0;
 		singleStepIn: memory.
 	self 
-		assert: self processor pc = 16r8;
+		assert: self processor pc = 16;
 		assert: self processor r3 = 1;
+		assert: self processor r0 = 5;
 		assert: self processor zflag = 1;
 		assert: self processor cflag = 1;
 		assert: self processor vflag = 0;
 		assert: self processor nflag = 0.
 	self processor reset.
 	self assert: self processor eflags = 3. "IFFlags are both set."
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testJump [
+	"Jump in-range."
+	
+	"self new testJump"
+	| memory |
+	memory := self memory.
+	self processor reset.
+
+	memory unsignedLongAt: 5 put: (CogARMCompiler new mov: 10 imm: 0 ror: 0)  bigEndian: false. 
+	memory unsignedLongAt: 9 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 13 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false. 
+	memory unsignedLongAt: 17 put: (CogARMCompiler new orr: 10 imm: 40 ror: 0) bigEndian: false. 
+
+	memory unsignedLongAt: 21 put: (CogARMCompiler new b: 12) bigEndian: false.
+
+	memory unsignedLongAt: 25 put: (CogARMCompiler new mov:5imm: 99 ror:0 ) bigEndian: false.
+	memory unsignedLongAt: 41 put: (CogARMCompiler new mov: 4 imm: 42 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 45 put: (CogARMCompiler new bx: 14) bigEndian: false.
+	
+	"processor disassembleFrom: 0 to: 60 in: memory on: Transcript cr"
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			singleStepIn: memory.
+			"We have to step several times, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	self processor singleStepIn: memory.
+	self processor singleStepIn: memory.
+	self processor singleStepIn: memory.
+	self assert: processor pc = 16r14.
+	self processor singleStepIn: memory.
+	self assert: processor pc = 16r28 "check the call".
+	self processor singleStepIn: memory.
+	self assert: processor r4= 42.
+
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testJumpTrap [
+	"Jump a function that is out-of-range.  Ensure the call is trapped."
+	"self new testJumpTrap"
+	| memory |
+	memory := self memory.
+	memory unsignedLongAt: 5 put: (CogARMCompiler new b: 1020) bigEndian: false.
+	"Can't do this diassemble until after the #asByteArray - "
+	"processor disassembleFrom: 0 to:16 in: memory on: Transcript cr"
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			singleStepIn: memory.
+			"We have to step twice, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	self should: [self processor singleStepIn: memory]
+		raise: ProcessorSimulationTrap
+		withExceptionDo:
+			[:pst|
+			self assert: self processor pc = 4.
+			self assert: self processor lr = 0.
+			self assert: pst pc = 4.
+			self assert: pst nextpc = 8.
+			self assert: pst address = 1032.
+			self assert: pst type = #jump].
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testLongCall [
+	"Long-Call a function that is in-range."
+	
+	"self new testLongCall"
+	| memory |
+	memory := self memory.
+	self processor reset.
+
+	memory unsignedLongAt: 5 put: (CogARMCompiler new mov: 10 imm: 0 ror: 0)  bigEndian: false. 
+	memory unsignedLongAt: 9 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 13 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false. 
+	memory unsignedLongAt: 17 put: (CogARMCompiler new orr: 10 imm: 40 ror: 0) bigEndian: false. 
+
+	memory unsignedLongAt: 21 put: (CogARMCompiler new blx: 10) bigEndian: false.
+
+	memory unsignedLongAt: 25 put: (CogARMCompiler new mov:5imm: 99 ror:0 ) bigEndian: false.
+	memory unsignedLongAt: 41 put: (CogARMCompiler new mov: 4 imm: 42 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 45 put: (CogARMCompiler new bx: 14) bigEndian: false.
+	
+	"processor disassembleFrom: 0 to: 60 in: memory on: Transcript cr"
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			singleStepIn: memory.
+			"We have to step several times, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	self processor singleStepIn: memory.
+	self processor singleStepIn: memory.
+	self processor singleStepIn: memory.
+	self assert: processor pc = 16r14.
+	self processor singleStepIn: memory.
+	self assert: processor pc = 16r28 "check the call".
+	self processor singleStepIn: memory.
+	self assert: processor r4 = 42.
+	self processor singleStepIn: memory.
+	self processor singleStepIn: memory.
+
+	self assert: self processor pc = 16r1C.
+	self assert: self processor lr = 16r18.
+	self assert: self processor r5 = 99
+
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testLongCallTrap [
+	"Long-Call a function that is above-range."
+	
+	"self new testLongCallTrap"
+	| memory |
+	memory := self memory.
+	self processor reset.
+
+	memory unsignedLongAt: 5 put: (CogARMCompiler new mov: 10 imm: 0 ror: 0)  bigEndian: false. 
+	memory unsignedLongAt: 9 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 13 put: (CogARMCompiler new orr: 10 imm: 4 ror: 24) bigEndian: false. 
+	memory unsignedLongAt: 17 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false. 
+
+	memory unsignedLongAt: 21 put: (CogARMCompiler new blx: 10) bigEndian: false.
+
+	memory unsignedLongAt: 25 put: (CogARMCompiler new mov:5imm: 99 ror:0 ) bigEndian: false.
+	memory unsignedLongAt: 41 put: (CogARMCompiler new mov: 4 imm: 42 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 45 put: (CogARMCompiler new bx: 14) bigEndian: false.
+	
+	"processor disassembleFrom: 0 to: 60 in: memory on: Transcript cr"
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			singleStepIn: memory.
+			"We have to step several times, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	self should: [self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory]
+		raise: ProcessorSimulationTrap
+		withExceptionDo:
+			[:pst|
+			self assert: self processor pc = 16r14.
+			self assert: self processor lr = 16r18.
+			self assert: pst pc = 16r14.
+			self assert: pst nextpc = 16r18.
+			self assert: pst address = 1024.
+			self assert: pst type = #call].
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testLongCallTrap2 [
+	"Long-Call a function that is way outside range."
+	
+	"self new testLongCallTrap2"
+	| memory |
+	memory := self memory.
+	self processor reset.
+
+	memory unsignedLongAt: 5 put: (CogARMCompiler new mov: 10 imm: 16rFF ror: 8)  bigEndian: false. 
+	memory unsignedLongAt: 9 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 13 put: (CogARMCompiler new orr: 10 imm: 4 ror: 24) bigEndian: false. 
+	memory unsignedLongAt: 17 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false. 
+
+	memory unsignedLongAt: 21 put: (CogARMCompiler new blx: 10) bigEndian: false.
+
+	memory unsignedLongAt: 25 put: (CogARMCompiler new mov:5imm: 99 ror:0 ) bigEndian: false.
+	memory unsignedLongAt: 41 put: (CogARMCompiler new mov: 4 imm: 42 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 45 put: (CogARMCompiler new bx: 14) bigEndian: false.
+	
+	"processor disassembleFrom: 0 to: 60 in: memory on: Transcript cr"
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			singleStepIn: memory.
+			"We have to step several times, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	self should: [self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory]
+		raise: ProcessorSimulationTrap
+		withExceptionDo:
+			[:pst|
+			self assert: self processor pc = 16r14.
+			self assert: self processor lr = 16r18.
+			self assert: pst pc = 16r14.
+			self assert: pst nextpc = 16r18.
+			self assert: pst address = 16rFF000400.
+			self assert: pst type = #call].
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testLongJump [
+	"Jump in-range."
+	
+	"self new testLongJump"
+	| memory |
+	memory := self memory.
+	self processor reset.
+
+	memory unsignedLongAt: 5 put: (CogARMCompiler new mov: 10 imm: 0 ror: 0)  bigEndian: false. 
+	memory unsignedLongAt: 9 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 13 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false. 
+	memory unsignedLongAt: 17 put: (CogARMCompiler new orr: 10 imm: 40 ror: 0) bigEndian: false. 
+
+	memory unsignedLongAt: 21 put: (CogARMCompiler new bx: 10) bigEndian: false.
+
+	memory unsignedLongAt: 25 put: (CogARMCompiler new mov:5imm: 99 ror:0 ) bigEndian: false.
+	memory unsignedLongAt: 41 put: (CogARMCompiler new mov: 4 imm: 42 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 45 put: (CogARMCompiler new bx: 14) bigEndian: false.
+	
+	"processor disassembleFrom: 0 to: 60 in: memory on: Transcript cr"
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			singleStepIn: memory.
+			"We have to step several times, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	self processor singleStepIn: memory.
+	self processor singleStepIn: memory.
+	self processor singleStepIn: memory.
+	self assert: processor pc = 16r14.
+	self processor singleStepIn: memory.
+	self assert: processor pc = 16r28 "check the call".
+	self processor singleStepIn: memory.
+	self assert: processor r4= 42.
+
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testLongJumpAddressForming [
+	"self new testLongJumpAddressForming"
+	"test of the somewhat loopy code used in CogARMCompiler>concretizeConditionalJumpLong: to generate the oading of a long address for jumps"
+	| memory |
+	memory := self memory.
+	self processor reset.
+	memory unsignedLongAt: 1 put: (CogARMCompiler new mov: 10 imm: 16r7F ror: 8)  bigEndian: false. 
+	memory unsignedLongAt: 5 put: (CogARMCompiler new orr: 10 imm: 16rFF ror: 16) bigEndian: false.
+	memory unsignedLongAt: 9 put: (CogARMCompiler new orr: 10 imm: 16rFE ror: 24) bigEndian: false. 
+	memory unsignedLongAt: 13 put: (CogARMCompiler new orr: 10 imm: 16r68 ror: 0) bigEndian: false. 
+
+	self processor
+		disassembleInstructionAt: 0 
+		In: memory 
+		into: [:str :len | 
+			self 
+				assert: len = 4;
+				assert: str equals: '00000000: mov	sl, #2130706432	; 0x7f000000'].
+	self processor
+		disassembleInstructionAt: 4 
+		In: memory 
+		into: [:str :len | 
+			self 
+				assert: len = 4;
+				assert: str equals: '00000004: orr	sl, sl, #16711680	; 0xff0000'].
+	self processor
+		disassembleInstructionAt: 8 
+		In: memory 
+		into: [:str :len | 
+			self 
+				assert: len = 4;
+				assert: str equals: '00000008: orr	sl, sl, #65024	; 0xfe00'].
+	self processor
+		disassembleInstructionAt: 12 
+		In: memory 
+		into: [:str :len | 
+			self 
+				assert: len = 4;
+				assert: str equals: '0000000c: orr	sl, sl, #104	; 0x68'].
+	self processor
+		pc: 0;
+		singleStepIn: memory;
+		singleStepIn: memory;
+		singleStepIn: memory;
+		singleStepIn: memory.
+	self 
+		assert: self processor pc = 16;
+		assert: self processor r10 = 16r7FFFFE68;
+		assert: self processor zflag = 0;
+		assert: self processor cflag = 0;
+		assert: self processor vflag = 0;
+		assert: self processor nflag = 0.
+
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testLongJumpTrap [
+	"Long-Jump a function that is above-range."
+	
+	"self new testLongJumpTrap"
+	| memory |
+	memory := self memory.
+	self processor reset.
+
+	memory unsignedLongAt: 5 put: (CogARMCompiler new mov: 10 imm: 0 ror: 0)  bigEndian: false. 
+	memory unsignedLongAt: 9 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 13 put: (CogARMCompiler new orr: 10 imm: 4 ror: 24) bigEndian: false. 
+	memory unsignedLongAt: 17 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false. 
+
+	memory unsignedLongAt: 21 put: (CogARMCompiler new bx: 10) bigEndian: false.
+
+	memory unsignedLongAt: 25 put: (CogARMCompiler new mov:5imm: 99 ror:0 ) bigEndian: false.
+	memory unsignedLongAt: 41 put: (CogARMCompiler new mov: 4 imm: 42 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 45 put: (CogARMCompiler new bx: 14) bigEndian: false.
+	
+	"processor disassembleFrom: 0 to: 60 in: memory on: Transcript cr"
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			singleStepIn: memory.
+			"We have to step several times, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	self should: [self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory.
+				self processor singleStepIn: memory]
+		raise: ProcessorSimulationTrap
+		withExceptionDo:
+			[:pst|
+			self assert: self processor pc = 16r14.
+			self assert: pst pc = 16r14.
+			self assert: pst nextpc = 16r18.
+			self assert: pst address = 1024.
+			self assert: pst type =  #jump].
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testMoveAwR [
+	"Read a register from a constant address that is in-range."
+	
+	"self new testMoveAwR"
+	| memory |
+	memory := self memory.
+	self processor reset.
+
+	"LEA sl, #16r228"
+	memory unsignedLongAt: 5 put: (CogARMCompiler new mov: 10 imm: 0 ror: 0)  bigEndian: false. 
+	memory unsignedLongAt: 9 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 13 put: (CogARMCompiler new orr: 10 imm: 2 ror: 24) bigEndian: false. 
+	memory unsignedLongAt: 17 put: (CogARMCompiler new orr: 10 imm: 40 ror: 0) bigEndian: false. 
+	"LDR R5, [sl]"
+	memory unsignedLongAt: 21 put: (CogARMCompiler new ldr: 5 rn: 10 plusImm: 0) bigEndian: false.
+
+	
+	"processor disassembleFrom: 0 to: 60 in: memory on: Transcript cr"
+	memory unsignedLongAt: 16r228 + 1 put: 99.
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+			"We have to step several times, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+	self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+	self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+	self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+	self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+	self assert:[processor r5 = 99]
+
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testMoveAwRTrap1 [
+	"Read from a register at a constant address that is out-of--range."
+	
+	"self new testMoveAwRTrap1"
+	| memory |
+	memory := self memory.
+	self processor reset.
+
+	"LEA sl, #16rFF00001FC"
+	memory unsignedLongAt: 5 put: (CogARMCompiler new mov: 10 imm: 16rFF ror: 8)  bigEndian: false. 
+	memory unsignedLongAt: 9 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 13 put: (CogARMCompiler new orr: 10 imm: 1 ror: 24) bigEndian: false. 
+	memory unsignedLongAt: 17 put: (CogARMCompiler new orr: 10 imm: 16rFC ror: 0) bigEndian: false. 
+	"STR R5, [sl]"
+	memory unsignedLongAt: 21 put: (CogARMCompiler new ldr: 5 rn: 10 plusImm: 0) bigEndian: false.
+
+	
+	"processor disassembleFrom: 0 to: 60 in: memory on: Transcript cr"
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+			"We have to step several times, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	
+	self should: [self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2]
+		raise: ProcessorSimulationTrap
+		withExceptionDo:
+			[:pst|
+			self assert: self processor pc = 16r14.
+			self assert: pst pc = 16r14.
+			self assert: pst nextpc = 16r18.
+			self assert: pst address = 16rFF0001FC.
+			self assert: pst type = #read]
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testMoveRAw [
+	"Write a register to a constant address that is in-range."
+	
+	"self new testMoveRAw"
+	| memory |
+	memory := self memory.
+	self processor reset.
+
+	"LEA sl, #16r3FC"
+	memory unsignedLongAt: 5 put: (CogARMCompiler new mov: 10 imm: 0 ror: 0)  bigEndian: false. 
+	memory unsignedLongAt: 9 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 13 put: (CogARMCompiler new orr: 10 imm: 2 ror: 24) bigEndian: false. 
+	memory unsignedLongAt: 17 put: (CogARMCompiler new orr: 10 imm: 40 ror: 0) bigEndian: false. 
+	"STR R5, [sl]"
+	memory unsignedLongAt: 21 put: (CogARMCompiler new str: 5 rn: 10 plusImm: 0) bigEndian: false.
+
+	
+	"processor disassembleFrom: 0 to: 60 in: memory on: Transcript cr"
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			r5: 99;
+			singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+			"We have to step several times, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+	self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+	self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+	self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+	self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+	self assert:[(memory unsignedLongAt: (processor r10) + 1) = processor r5]
+
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testMoveRAwTrap1 [
+	"Write a register to a constant address that is below-range."
+	
+	"self new testMoveRAwTrap1"
+	| memory |
+	memory := self memory.
+	self processor reset.
+
+	"LEA sl, #16r1FC"
+	memory unsignedLongAt: 5 put: (CogARMCompiler new mov: 10 imm: 0 ror: 0)  bigEndian: false. 
+	memory unsignedLongAt: 9 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 13 put: (CogARMCompiler new orr: 10 imm: 1 ror: 24) bigEndian: false. 
+	memory unsignedLongAt: 17 put: (CogARMCompiler new orr: 10 imm: 16rFC ror: 0) bigEndian: false. 
+	"STR R5, [sl]"
+	memory unsignedLongAt: 21 put: (CogARMCompiler new str: 5 rn: 10 plusImm: 0) bigEndian: false.
+
+	
+	"processor disassembleFrom: 0 to: 60 in: memory on: Transcript cr"
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			r5: 99;
+			singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+			"We have to step several times, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	
+	self should: [self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2]
+		raise: ProcessorSimulationTrap
+		withExceptionDo:
+			[:pst|
+			self assert: self processor pc = 16r14.
+			self assert: pst pc = 16r14.
+			self assert: pst nextpc = 16r18.
+			self assert: pst address = 16r1FC.
+			self assert: pst type = #write]
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testMoveRAwTrap2 [
+	"Write a register to a constant address that is below-range."
+	
+	"self new testMoveRAwTrap2"
+	| memory |
+	memory := self memory.
+	self processor reset.
+
+	"LEA sl, #16r1FC"
+	memory unsignedLongAt: 5 put: (CogARMCompiler new mov: 10 imm: 0 ror: 0)  bigEndian: false. 
+	memory unsignedLongAt: 9 put: (CogARMCompiler new orr: 10 imm: 0 ror: 0) bigEndian: false.
+	memory unsignedLongAt: 13 put: (CogARMCompiler new orr: 10 imm: 16rFF ror: 24) bigEndian: false. 
+	memory unsignedLongAt: 17 put: (CogARMCompiler new orr: 10 imm: 16rFC ror: 0) bigEndian: false. 
+	"STR R5, [sl]"
+	memory unsignedLongAt: 21 put: (CogARMCompiler new str: 5 rn: 10 plusImm: 0) bigEndian: false.
+
+	
+	"processor disassembleFrom: 0 to: 60 in: memory on: Transcript cr"
+	self processor
+			pc: 4;
+			sp: (memory size - 4); "Room for return address"
+			r5: 99;
+			singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+			"We have to step several times, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	
+	self should: [self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2]
+		raise: ProcessorSimulationTrap
+		withExceptionDo:
+			[:pst|
+			self assert: self processor pc = 16r14.
+			self assert: pst pc = 16r14.
+			self assert: pst nextpc = 16r18.
+			self assert: pst address = 16rFFFC.
+			self assert: pst type = #write]
 ]
 
 { #category : #tests }
@@ -255,18 +906,122 @@ GdbARMAlienTests >> testNfib4 [
 ]
 
 { #category : #tests }
+GdbARMAlienTests >> testQuickDisassemby [
+	"self new testQuickDisassemby"
+
+	| memory result |
+	memory := WordArray new: 2.
+	memory at: 1 put: 3858758348.
+	result := self processor
+		disassembleInstructionAt: 0 
+		In: memory 
+		into: [:str :len | 
+			^str].
+]
+
+{ #category : #execution }
+GdbARMAlienTests >> testQuickDisassembyOf: word [
+	"self new testQuickDisassembyOf: 3858758348"
+
+	| memory result |
+	memory := WordArray new: 2.
+	memory at: 1 put: word.
+	result := self processor
+		disassembleInstructionAt: 0 
+		In: memory 
+		into: [:str :len | 
+			^str].
+]
+
+{ #category : #execution }
 GdbARMAlienTests >> testResetCPU [
 	"self new testResetCPU"
-	self registerSetters do:
+	self integerRegisterSetters do:
 		[:setter|
 		self processor perform: setter with: 16r55555555].
-	self registerGetters do:
+	self integerRegisterGetters do:
 		[:getter|
 		self assert: 16r55555555 = (self processor perform: getter)].
 	self processor reset.
-	self registerGetters do:
+	self integerRegisterGetters do:
 		[:getter|
 		self assert: 0 = (self processor perform: getter)]
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testReturnTrap [
+	"return above-range with a bad address"
+	
+	"self new testReturnTrap"
+	| memory badAddress|
+	badAddress := 16r1E000000. 
+	memory := self memory.
+	self processor reset.
+
+	"pop the stack into pc to emulate a return via stack as generated in  various trampoline code"	
+	memory unsignedLongAt: 1 put: (CogARMCompiler new mov: 15 rn: 14) bigEndian: false.
+
+	
+	"processor disassembleFrom: 0 to: 60 in: memory on: Transcript cr"
+	self processor
+			pc: 0;
+			sp: (memory size - 4); "Room for return address"
+			lr: badAddress;
+			singleStepIn: memory readExecuteOnlyBelow: memory size /2 .
+			"We have to step several times, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	self should: [self processor singleStepIn: memory readExecuteOnlyBelow: memory size /2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size /2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size /2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size /2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size /2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size /2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size /2]
+		raise: ProcessorSimulationTrap
+		withExceptionDo:
+			[:pst|
+			self assert: self processor pc = 0.
+			self assert: pst pc = 0.
+			self assert: pst nextpc = 4.
+			self assert: pst address = badAddress.
+			self assert: pst type = #return].
+]
+
+{ #category : #tests }
+GdbARMAlienTests >> testReturnTrapWithThumbBug [
+	"return above-range with a bad address that ends in 1 - which triggers an ARM sim bug"
+	
+	"self new testReturnTrapWithThumbBug"
+	| memory badAddress|
+	badAddress := 16r1E000001. "this will try to set thumb mode"
+	memory := self memory.
+	self processor reset.
+
+	"pop the stack into pc to emulate a return via stack as generated in  various trampoline code"	
+	memory unsignedLongAt: 1 put: (CogARMCompiler new mov: 15 rn: 14) bigEndian: false.
+
+	
+	"processor disassembleFrom: 0 to: 60 in: memory on: Transcript cr"
+	self processor
+			pc: 0;
+			sp: (memory size - 4); "Room for return address"
+			lr: badAddress;
+			singleStepIn: memory readExecuteOnlyBelow: memory size /2 .
+			"We have to step several times, because the first step only changes the pc, but does not fetch anything from the address it points to."
+	self should: [self processor singleStepIn: memory readExecuteOnlyBelow: memory size /2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size /2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size /2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size /2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size /2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size /2.
+				self processor singleStepIn: memory readExecuteOnlyBelow: memory size /2]
+		raise: ProcessorSimulationTrap
+		withExceptionDo:
+			[:pst|
+			self assert: self processor pc = 0.
+			self assert: pst pc = 0.
+			self assert: pst nextpc = 4.
+			self assert: pst address = badAddress.
+			self assert: pst type = #return].
 ]
 
 { #category : #tests }
