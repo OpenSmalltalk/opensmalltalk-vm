@@ -1015,7 +1015,7 @@ SpurBootstrap >> findRequiredGlobals [
 				[:l|
 				(l isVariableBinding
 				 and: [l key isSymbol
-				 and: [SpurBootstrapPrototypes noneSatisfy: [:sbpc| sbpc name == l key]]]) ifTrue:
+				 and: [SpurBootstrapPrototypes withAllSubclasses noneSatisfy: [:sbpc| sbpc name == l key]]]) ifTrue:
 					[(Smalltalk bindingOf: l key) == l
 						ifTrue: [globals add: l]
 						ifFalse:
