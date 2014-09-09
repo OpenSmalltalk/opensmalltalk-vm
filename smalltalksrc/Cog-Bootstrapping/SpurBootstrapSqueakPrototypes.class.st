@@ -39,6 +39,11 @@ SpurBootstrapSqueakPrototypes >> CharacterPROTOTYPEclone [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrapSqueakPrototypes >> CharacterPROTOTYPEsetValue: v [
+	<remove>
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrapSqueakPrototypes >> ClassDescriptionPROTOTYPEupdateMethodBindingsTo: aBinding [
 	<indirect>
 ]
