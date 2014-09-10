@@ -28,13 +28,16 @@ echo REV=$REV TAG=$TAG
 . ./envvars.sh
 
 ABORT=
-for a in "Newspeak Virtual Machine.app-$TAG.tgz" "Newspeak Virtual Machine-$TAG..dmg" nsvmlinuxht-$TAG.tgz nsvmlinux-$TAG.tgz nsvmwin-$TAG.zip\
-		"Newspeak Spur Virtual Machine.app-$TAG.tgz" "Newspeak Spur Virtual Machine-$TAG.dmg"nsvmspurlinuxht-$TAG.tgz nsvmspurwin-$TAG.zip
+for a in "Newspeak Virtual Machine.app-$TAG.tgz" "Newspeak Virtual Machine-$TAG.dmg" nsvmlinuxht-$TAG.tgz nsvmlinux-$TAG.tgz nsvmwin-$TAG.zip\
+		"Newspeak Spur Virtual Machine.app-$TAG.tgz" "Newspeak Spur Virtual Machine-$TAG.dmg" nsvmspurlinuxht-$TAG.tgz nsvmspurwin-$TAG.zip
 do
 	test -f "../products/$a" || echo $a does not exist
 	ABORT=true
 done
 test -n "$ABORT" || exit 1
+
+
+echo $GetCogScript $GetSpurScript
 
 cat >$GetCogScript <<END
 #!/bin/sh
