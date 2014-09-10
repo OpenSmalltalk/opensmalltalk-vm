@@ -135,6 +135,11 @@ StackInterpreterSimulator >> assertValidExecutionPointersAtEachStep: aBoolean [
 	assertVEPAES := aBoolean
 ]
 
+{ #category : #testing }
+StackInterpreterSimulator >> atEachStepBlock: aBlock [
+	atEachStepBlock := aBlock
+]
+
 { #category : #'return bytecodes' }
 StackInterpreterSimulator >> baseFrameReturn [
 	| contextToReturnTo |
@@ -301,7 +306,8 @@ StackInterpreterSimulator >> clipboardWrite: sz From: actualDataAddress At: igno
 
 { #category : #'debug support' }
 StackInterpreterSimulator >> cloneSimulation [
-	| savedDisplayView savedDisplayForm savedQuitBlock savedTranscript |
+	| savedAtEachStepBlock savedDisplayView savedDisplayForm savedQuitBlock savedTranscript |
+	savedAtEachStepBlock := atEachStepBlock. atEachStepBlock := nil.
 	savedDisplayView := displayView. displayView := nil.
 	savedDisplayForm := displayForm. displayForm = nil.
 	savedQuitBlock := quitBlock. quitBlock := nil.
@@ -314,7 +320,8 @@ StackInterpreterSimulator >> cloneSimulation [
 	 theClone objectMemory parent: objectMemory.
 	 theClone]
 		ensure:
-			[displayView := savedDisplayView.
+			[atEachStepBlock := savedAtEachStepBlock.
+			 displayView := savedDisplayView.
 			 displayForm = savedDisplayForm.
 			 quitBlock := savedQuitBlock.
 			 transcript := savedTranscript]
