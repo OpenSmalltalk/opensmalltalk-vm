@@ -17,6 +17,6 @@ echo ssh $RemoteUser chmod a-w $DIR/* \\\; ls -al $DIR
 ssh $RemoteUser chmod a-w $DIR/* \; ls -al $DIR
 echo ssh $RemoteUser rm $RemoteRoot/{$BASENAME.image,$BASENAME.changes}
 ssh $RemoteUser rm $RemoteRoot/{$BASENAME.image,$BASENAME.changes}
-echo ssh $RemoteUser ln -s $DIR/{$BASENAME.image,$BASENAME.changes} $RemoteRoot
-ssh $RemoteUser ln -s $DIR/{$BASENAME.image,$BASENAME.changes} $RemoteRoot
+echo ssh $RemoteUser cd $RemoteRoot \\\; ln -s $DATE/{$BASENAME.image,$BASENAME.changes} .
+ssh $RemoteUser cd $RemoteRoot \; ln -s $DATE/{$BASENAME.image,$BASENAME.changes} .
 ssh $RemoteUser ls -l $RemoteRoot

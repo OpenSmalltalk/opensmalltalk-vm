@@ -115,7 +115,7 @@ test -n "$WTSPUR" && ARCHIVES="$ARCHIVES	cogspurmtwin-$TAG.zip"
 
 test -n "$LNSCOG" && ARCHIVES="$ARCHIVES	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz"
 test -n "$LNSSPUR" && ARCHIVES="$ARCHIVES	nsvmspurlinuxht-$TAG.tgz"
-test -n "$MNSCOG" && ARCHIVES="$ARCHIVES	Newspeak Virtual Machine-$TAG.dmg	Newspeak Spur Virtual Machine-$TAG.dmg"
+test -n "$MNSCOG" && ARCHIVES="$ARCHIVES	Newspeak Virtual Machine-$TAG.dmg	Newspeak Virtual Machine.app-$TAG.tgz	Newspeak Spur Virtual Machine-$TAG.dmg	Newspeak Spur Virtual Machine.app-$TAG.tgz"
 test -n "$MNSSPUR" && ARCHIVES="$ARCHIVES	CogSpur.app-$TAG.tgz"
 test -n "$WNSCOG" && ARCHIVES="$ARCHIVES	nsvmwin-$TAG.zip	nsvm-$TAG.msi"
 test -n "$WNSSPUR" && ARCHIVES="$ARCHIVES	nsvmspurwin-$TAG.zip	nsvm-spur-$TAG.msi"
