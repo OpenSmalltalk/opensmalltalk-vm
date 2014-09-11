@@ -59,3 +59,8 @@ timeStamp: timeString
 source: sourceString [
 	<indirect>
 ]
+
+{ #category : #'method prototypes' }
+SpurBootstrapSqueak43Prototypes >> MethodNodePROTOTYPEprintPropertiesOn: aStream [
+	<indirect>
+]
