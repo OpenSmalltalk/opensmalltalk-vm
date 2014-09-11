@@ -148,10 +148,17 @@ SpurBootstrap class >> categoryForClass: className meta: isMeta selector: select
 															-> [#'subclass creation'].
 			[#(ClassBuilder superclass:immediateSubclass:instanceVariableNames:classVariableNames:poolDictionaries:category:)]
 															-> [#public].
+			[#(CompiledMethod bytecodeSetName)]		-> [#accessing].
 			[#(CompiledMethod class handleFailingFailingNewMethod:header:)]
 															-> [#private].
 			[#(CompiledMethod class handleFailingNewMethod:header:)]
 															-> [#private].
+			[#(CompiledMethod class headerFlagForEncoder:)]
+															-> [#'method encoding'].
+			[#(CompiledMethod class installPrimaryBytecodeSet:)]
+															-> [#'class initialization'].
+			[#(CompiledMethod class installSecondaryBytecodeSet:)]
+															-> [#'class initialization'].
 			[#(Context class allInstances)]					-> [#enumerating].
 			[#(Context class allInstancesDo:)]				-> [#enumerating].
 			[#(Context failPrimitiveWith:)]					-> [#'system simulation'].
@@ -159,12 +166,6 @@ SpurBootstrap class >> categoryForClass: className meta: isMeta selector: select
 			[#(Context send:to:with:lookupIn:)]				-> [#controlling].
 			[#(ContextPart isPrimFailToken:)]				-> [#private].
 			[#(ContextPart send:to:with:lookupIn:)]			-> [#controlling].
-			[#(CompiledMethod class headerFlagForEncoder:)]
-															-> [#'method encoding'].
-			[#(CompiledMethod class installPrimaryBytecodeSet:)]
-															-> [#'class initialization'].
-			[#(CompiledMethod class installSecondaryBytecodeSet:)]
-															-> [#'class initialization'].
 			[#(EncoderForV3 computeMethodHeaderForNumArgs:numTemps:numLits:primitive:)]
 															-> [#'method encoding'].
 			[#(EncoderForV3PlusClosures genCallPrimitive:)]
