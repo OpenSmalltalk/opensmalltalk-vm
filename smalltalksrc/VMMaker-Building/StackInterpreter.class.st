@@ -7055,13 +7055,10 @@ StackInterpreter >> initialCleanup [
 
 { #category : #'compiled methods' }
 StackInterpreter >> initialPCForHeader: methodHeader method: theMethod [
-	"Answer the initial PC for a method; used only in methods that build a frame.
-	 Hence add an assert to check that there's a sane methodClassAssociation."
+	"Answer the initial PC for a method; used only in methods that build a frame."
 	<inline: true>
-	self assert: (self saneMethodClassAssociationIn: theMethod
-					numLiterals: (objectMemory literalCountOfMethodHeader: methodHeader)).
 	^theMethod
-	+ ((LiteralStart + (objectMemory literalCountOfMethodHeader: methodHeader)) * BytesPerOop)
+	+ ((LiteralStart + (objectMemory literalCountOfMethodHeader: methodHeader)) * objectMemory bytesPerOop)
 	+ objectMemory baseHeaderSize
 ]
 
