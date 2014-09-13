@@ -562,11 +562,11 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		[:bytecodeGenTable|
 		aCCodeGenerator
 			var: #generatorTable
-				declareC: 'BytecodeDescriptor generatorTable[', bytecodeGenTable size, ']',
+				declareC: 'static BytecodeDescriptor generatorTable[', bytecodeGenTable size, ']',
 							(self tableInitializerFor: bytecodeGenTable
 								in: aCCodeGenerator);
 			var: #primitiveGeneratorTable
-				declareC: 'PrimitiveDescriptor primitiveGeneratorTable[MaxCompiledPrimitiveIndex+1]',
+				declareC: 'static PrimitiveDescriptor primitiveGeneratorTable[MaxCompiledPrimitiveIndex+1]',
 							(self tableInitializerFor: aCCodeGenerator vmClass primitiveTable
 								in: aCCodeGenerator)].
 	"In C the abstract opcode names clash with the Smalltak generator syntactic sugar.
@@ -3066,19 +3066,6 @@ Cogit >> checkMaybeObjRefAt: mcpc [
 	^objectRepresentation checkValidObjectReference: maybeObject
 ]
 
-{ #category : #initialization }
-Cogit >> checkPrimitiveTableEnablers [
-	"Disable primitive generators with enablers that answer false."
-	| primitiveDescriptor |
-	<var: #primitiveDescriptor type: #'PrimitiveDescriptor *'>
-	1 to: MaxCompiledPrimitiveIndex do:
-		[:i|
-		primitiveDescriptor := self addressOf: (primitiveGeneratorTable at: i).
-		primitiveDescriptor enabled notNil ifTrue:
-			[(self perform: primitiveDescriptor enabled with: i) ifFalse:
-				[primitiveDescriptor primitiveGenerator: nil]]]
-]
-
 { #category : #debugging }
 Cogit >> checkStackDepthOnSend [
 	<doNotGenerate>
@@ -4074,16 +4061,18 @@ Cogit >> compilePrimitive [
 	<var: #primitiveDescriptor type: #'PrimitiveDescriptor *'>
 	<var: #primitiveRoutine declareC: 'void (*primitiveRoutine)(void)'>
 	primitiveIndex = 0 ifTrue: [^0].
+	"If a descriptor specifies an argument count (by numArgs >= 0) then it must match
+	 for the generated code to be correct.  For example for speed many primitives use
+	 ResultReceiverReg instead of accessing the stack, so the receiver better be at
+	 numArgs down the stack.  Use the interpreter version if not.  Likewise if it has an
+	 enabled function that must answer true for the generated code to be correct."
 	((primitiveDescriptor := self primitiveGeneratorOrNil) notNil
-	 and: [primitiveDescriptor primitiveGenerator notNil]) ifTrue:
-		["If a descriptor specifies an argument count (by numArgs >= 0)
-		  then it must match for the generated code to be correct.  For
-		  example for speed many primitives use ResultReceiverReg
-		  instead of accessing the stack, so the receiver better be at
-		  numArgs down the stack.  Use the interpreter version if not."
-		 (primitiveDescriptor primNumArgs < 0 "means don't care"
-		  or: [primitiveDescriptor primNumArgs = (coInterpreter argumentCountOf: methodObj)]) ifTrue:
-			[^self perform: primitiveDescriptor primitiveGenerator]].
+	 and: [primitiveDescriptor primitiveGenerator notNil
+	 and: [(primitiveDescriptor primNumArgs < 0 "means don't care"
+		   or: [primitiveDescriptor primNumArgs = (coInterpreter argumentCountOf: methodObj)])
+	 and: [primitiveDescriptor enabled isNil
+		   or: [self perform: primitiveDescriptor enabled with: primitiveIndex]]]]) ifTrue:
+		[^self perform: primitiveDescriptor primitiveGenerator].
 	((primitiveRoutine := coInterpreter
 							functionPointerForCompiledMethod: methodObj
 							primitiveIndex: primitiveIndex) isNil "no primitive"
@@ -6295,7 +6284,6 @@ Cogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	self generateStackPointerCapture.
 	self generateTrampolines.
 	self cCode: '' inSmalltalk: [methodZone zoneEnd: endAddress]. "so that simulator works"
-	self checkPrimitiveTableEnablers.
 	methodZone manageFrom: methodZoneBase to: endAddress.
 	self computeEntryOffsets.
 	self generateClosedPICPrototype.
@@ -7539,6 +7527,11 @@ Cogit >> mcPCForBackwardBranch: bcpc startBcpc: startbcpc in: cogMethod [
 		arg: bcpc asVoidPointer
 ]
 
+{ #category : #initialization }
+Cogit >> mclassIsSmallInteger: ignoredPrimIndex [ 
+	^(coInterpreter methodClassOf: methodObj) = objectMemory classSmallInteger
+]
+
 { #category : #'garbage collection' }
 Cogit >> method: methodA hasSameCodeAs: methodB [
 	"For the purposes of become: see if the two methods are similar, i.e. can be safely becommed.
@@ -8096,6 +8089,12 @@ Cogit >> processorHasDivQuoRem: ignoredPrimIndex [
 ]
 
 { #category : #initialization }
+Cogit >> processorHasDivQuoRemAndMClassIsSmallInteger: ignoredPrimIndex [
+	^(self processorHasDivQuoRem: ignoredPrimIndex)
+	   and: [self mclassIsSmallInteger: ignoredPrimIndex]
+]
+
+{ #category : #initialization }
 Cogit >> processorHasDoublePrecisionFloatingPointSupport: ignoredPrimIndex [ 
 	^backEnd hasDoublePrecisionFloatingPointSupport
 ]
@@ -8103,6 +8102,12 @@ Cogit >> processorHasDoublePrecisionFloatingPointSupport: ignoredPrimIndex [
 { #category : #initialization }
 Cogit >> processorHasMultiply: ignoredPrimIndex [ 
 	^backEnd canMulRR
+]
+
+{ #category : #initialization }
+Cogit >> processorHasMultiplyAndMClassIsSmallInteger: ignoredPrimIndex [
+	^(self processorHasMultiply: ignoredPrimIndex)
+	   and: [self mclassIsSmallInteger: ignoredPrimIndex]
 ]
 
 { #category : #debugging }

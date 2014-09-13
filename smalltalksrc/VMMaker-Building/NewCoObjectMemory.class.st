@@ -193,9 +193,9 @@ NewCoObjectMemory >> noCheckMethodHeaderOf: methodObj [
 		ifTrue: [header]
 		ifFalse:
 			[self assert: header asUnsignedInteger < coInterpreter heapBase.
-			 self assert: (self cCoerceSimple: header to: #'CogMethod *') objectHeader
+			 self assert: (coInterpreter cCoerceSimple: header to: #'CogMethod *') objectHeader
 						= self nullHeaderForMachineCodeMethod..
-			(self cCoerceSimple: header to: #'CogMethod *') methodHeader]
+			(coInterpreter cCoerceSimple: header to: #'CogMethod *') methodHeader]
 ]
 
 { #category : #'cog jit support' }
