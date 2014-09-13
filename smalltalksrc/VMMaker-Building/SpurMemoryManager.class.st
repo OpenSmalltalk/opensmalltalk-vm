@@ -3155,6 +3155,7 @@ SpurMemoryManager >> classSemaphore [
 
 { #category : #accessing }
 SpurMemoryManager >> classSmallInteger [
+	<api>
 	^self splObj: ClassSmallInteger
 ]
 
@@ -3522,6 +3523,34 @@ SpurMemoryManager >> copyAndForward: objOop withBytes: bytes toFreeChunk: freeCh
 	"(self isRemembered: objOop) ifTrue:
 		[scavenger remember: freeObj]."
 	self forward: objOop to: freeObj
+]
+
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> copyObj: objOop toSegment: segmentWordArray addr: limitSeg stopAt: stopAddr saveOopAt: oopPtr [
+	"Copy objOop into the segment beginning at limitSeg, and forward it to the copy.
+	 Fail if out of space.  Answer the next segmentAddr if successful."
+
+	"Copy the object..."
+	| bodySize copy |
+	<inline: false>
+	bodySize := self bytesInObject: objOop.
+	(self oop: limitSeg + bodySize isGreaterThanOrEqualTo: stopAddr) ifTrue:
+		[^0]. "failure"
+	self mem: limitSeg cp: (self startOfObject: objOop) y: bodySize.
+	copy := self objectStartingAt: limitSeg.
+
+	"Clear remebered pinned and mark bits of all headers copied into the segment"
+	self
+		setIsRememberedOf: copy to: false;
+		setIsPinnedOf: copy to: false;
+		setIsMarkedOf: copy to: false.
+
+	"Remember the oop for undoing in case of prim failure."
+	self longAt: oopPtr put: objOop.	
+	self forward: objOop to: copy.
+
+	"Return new end of segment"
+	^limitSeg + bodySize
 ]
 
 { #category : #'debug support' }
@@ -8763,6 +8792,21 @@ SpurMemoryManager >> resetFreeListHeads [
 		[:i| freeLists at: i put: 0]
 ]
 
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> restoreObjectsFrom: firstIn to: lastIn from: firstSeg to: limitSeg [
+	"Unforward objects"
+	| originalPtr originalObj copyPtr copyObj |
+	originalPtr := firstIn.
+	copyPtr := firstSeg.
+	[self oop: originalPtr isLessThanOrEqualTo: lastIn] whileTrue:
+		[originalObj := self longAt: originalPtr.
+		 copyObj := self objectStartingAt: copyPtr.
+		 self unforward: originalObj from: copyObj.
+		 originalPtr := originalPtr + self bytesPerOop.
+		 copyPtr := self addressAfter: copyObj].
+	self assert: copyPtr = limitSeg
+]
+
 { #category : #snapshot }
 SpurMemoryManager >> reverseBytesFrom: startAddr to: stopAddr [
 	"Byte-swap the given range of memory (not inclusive of stopAddr!)."
@@ -9649,7 +9693,7 @@ SpurMemoryManager >> storeCheckBoundary [
 	^newSpaceLimit
 ]
 
-{ #category : #'primitive support' }
+{ #category : #'image segment in/out' }
 SpurMemoryManager >> storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots [
 	"This primitive is called from Squeak as...
 		<imageSegment> storeSegmentFor: arrayOfRoots into: aWordArray outPointers: anArray."
@@ -9658,43 +9702,52 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArray outPointers: outPoi
 
 "The primitive expects the array and wordArray to be more than adequately long.  In this case it returns normally, and truncates the two arrays to exactly the right size.  To simplify truncation, both incoming arrays are required to have large headers (i.e. be 256 words long or larger).  If either array is too small, the primitive will fail, but in no other case.
 
-During operation of the primitive, it is necessary to convert from both internal and external oops to their mapped values.  To make this fast, the headers of the original objects in question are replaced by the mapped values (and this is noted by adding the forbidden XX header type).  Tables are kept of both kinds of oops, as well as of the original headers for restoration.
+During operation of the primitive, it is necessary to convert from both internal and external oops to their mapped values.  To make this fast, the original objects in question are forwarded to the mapped values.  Tables are kept of both kinds of oops.  Note that markObjects eliminates forwarding pointers, so there will be no forwarding pointers in the object graph once objects have been marked.
 
-To be specific, there are two similar two-part tables, the outpointer array, and one in the upper fifth of the segmentWordArray.  Each grows oops from the bottom up, and preserved headers from halfway up.
+To be specific, there are two similar tables, the outPointer array, and one in the upper eight of the segmentWordArray.  Each grows oops from the bottom up.
 
-In case of either success or failure, the headers must be restored.  In the event of primitive failure, the table of outpointers must also be nilled out (since the garbage in the high half will not have been discarded."
+In case of either success or failure, the headers must be restored.  In the event of primitive failure, the table of outPointers must also be nilled out (since the garbage in the high half will not have been discarded."
 
-	| endSeg firstIn firstOut hdrBaseIn hdrBaseOut lastIn lastOut lastSeg versionOffset |
+	| endSeg firstIn firstOut lastIn lastOut limitSeg newSegLimit |
 	true ifTrue: [^PrimErrUnsupported] ifFalse: [
 
 	((self hasOverflowHeader: outPointerArray)						"Must have 128-bit header"
 	and: [self hasOverflowHeader: segmentWordArray]) ifFalse:		"Must have 128-bit header"
 		[^PrimErrGenericFailure].
 
-	"Use the top half of outPointers for saved headers."
 	firstOut := outPointerArray + self baseHeaderSize.
 	lastOut := firstOut - self bytesPerOop.
-	hdrBaseOut := firstOut + ((self numSlotsOf: outPointerArray) // 2 * self bytesPerOop). "top half"
 
-	lastSeg := segmentWordArray.
-	endSeg := segmentWordArray + (self addressAfter: segmentWordArray) - self bytesPerOop.
+	limitSeg := segmentWordArray + self baseHeaderSize.
+	endSeg := segmentWordArray + (self addressAfter: segmentWordArray).
 
 	"Write a version number for byte order and version check"
-	versionOffset := self bytesPerOop.
-	lastSeg := lastSeg + versionOffset.
-	lastSeg > endSeg ifTrue: [^PrimErrGenericFailure].
-	self longAt: lastSeg put: self imageSegmentVersion.
+	limitSeg >= endSeg ifTrue: [^PrimErrGenericFailure].
+	self longAt: limitSeg put: self imageSegmentVersion.
+	limitSeg := limitSeg + self bytesPerOop.
 
-	"Allocate top 1/8 of segment for table of internal oops and saved headers"
+	"Allocate top 1/8 of segment for table of internal oops"
 	firstIn := endSeg - ((self numSlotsOf: segmentWordArray) // 8).  "Take 1/8 of seg"
 	lastIn := firstIn - self bytesPerOop.
-	hdrBaseIn := firstIn + ((self numSlotsOf: segmentWordArray) // 16). "top half of that"
 
 	self assert: self allObjectsUnmarked.
 	self markObjectsIn: arrayOfRoots.
 	self markObjects.
 	self unmarkObjectsIn: arrayOfRoots.
 
+	"All external objects, and only they, are now marked.
+	 Copy the array of roots into the segment, and forward its oop."
+	((lastIn := lastIn + self bytesPerOop) >= endSeg
+	 or: [0 = (newSegLimit := self copyObj: arrayOfRoots toSegment: segmentWordArray addr: limitSeg stopAt: firstIn saveOopAt: lastIn)]) ifTrue:
+		[lastIn := lastIn - self bytesPerWord.
+		self restoreObjectsFrom: firstIn to: lastIn from: segmentWordArray + self baseHeaderSize to: limitSeg.
+		self fillObj: outPointerArray numSlots: (self numSlotsOf: outPointerArray) with: nilObj.
+		^PrimErrGenericFailure].
+	limitSeg := newSegLimit.
+
+	"Now traverse arrayOfRoots, copying unmarked objects into the segment"
+
+	"Now the primitive can not fail; traverse the objects in the segment, unforwarding the originals and mapping external oops."
 	self flag: 'you are here']
 ]
 
@@ -10194,6 +10247,15 @@ SpurMemoryManager >> tryToMovePig: pigObj at: pigStart end: pigEnd [
 		 prevFree := freeChunk.
 		 freeChunk := next].
 	^0
+]
+
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> unforward: obj1 from: obj2 [
+	"Undo a forward: obj1 to: obj2 given that obj2 is a copy of obj1"
+	self set: obj1 classIndexTo: (self classIndexOf: obj2) formatTo: (self formatOf: obj2).
+	self storePointer: 0 ofForwarder: obj1 withValue: (self fetchPointer: 0 ofObject: obj2).
+	(self rawNumSlotsOf: obj2) = 0 ifTrue:
+		[self setRawNumSlotsOf: obj1 to: 0]
 ]
 
 { #category : #'free space' }
