@@ -251,7 +251,8 @@ StackInterpreterPrimitives >> primitiveContextAt [
 	<var: #spouseFP type: #'char *'>
 	index := self stackTop.
 	(objectMemory isIntegerObject: index) ifFalse:
-		[^self primitiveFailFor: PrimErrBadArgument].
+		[self primitiveFailFor: PrimErrBadArgument.
+		 ^self].
 	index := objectMemory integerValueOf: index.
 	aContext := self stackValue: 1.
 	"Duplicating much of stObject:at:put: here allows stObject:at:put: to omit tests for contexts."
@@ -268,13 +269,15 @@ StackInterpreterPrimitives >> primitiveContextAt [
 		 fixedFields := objectMemory fixedFieldsOf: aContext format: fmt length: totalLength.
 		 stSize := self fetchStackPointerOf: aContext.
 		 (index between: 1 and: stSize) ifFalse:
-			[^self primitiveFailFor: PrimErrBadIndex].			
+			[self primitiveFailFor: PrimErrBadIndex.
+			 ^self].			
 		value := self subscript: aContext with: (index + fixedFields) format: fmt.
 		self pop: argumentCount + 1 thenPush: value.
 		^self].
 	spouseFP := self frameOfMarriedContext: aContext.
 	(index between: 1 and: (self stackPointerIndexForFrame: spouseFP)) ifFalse:
-		[^self primitiveFailFor: PrimErrBadIndex].
+		[self primitiveFailFor: PrimErrBadIndex.
+		 ^self].
 	value := self temporary: index - 1 in: spouseFP.
 	self pop: argumentCount + 1 thenPush: value
 ]
@@ -290,7 +293,8 @@ StackInterpreterPrimitives >> primitiveContextAtPut [
 	index := self stackValue: 1.
 	aContext := self stackValue: 2.
 	(objectMemory isIntegerObject: index) ifFalse:
-		[^self primitiveFailFor: PrimErrBadArgument].
+		[self primitiveFailFor: PrimErrBadArgument.
+		 ^self].
 	"Duplicating much of stObject:at:put: here allows stObject:at:put: to omit tests for contexts."
 	hdr := objectMemory baseHeader: aContext.
 	index := objectMemory integerValueOf: index.
@@ -306,13 +310,15 @@ StackInterpreterPrimitives >> primitiveContextAtPut [
 		 fixedFields := objectMemory fixedFieldsOf: aContext format: fmt length: totalLength.
 		 stSize := self fetchStackPointerOf: aContext.
 		 (index between: 1 and: stSize) ifFalse:
-			[^self primitiveFailFor: PrimErrBadIndex].			
+			[self primitiveFailFor: PrimErrBadIndex.
+			 ^self].
 		self subscript: aContext with: (index + fixedFields) storing: value format: fmt.
 		self pop: argumentCount + 1 thenPush: value.
 		^self].
 	spouseFP := self frameOfMarriedContext: aContext.
 	(index between: 1 and: (self stackPointerIndexForFrame: spouseFP)) ifFalse:
-		[^self primitiveFailFor: PrimErrBadIndex].
+		[self primitiveFailFor: PrimErrBadIndex.
+		 ^self].
 	self temporary: index - 1 in: spouseFP put: value.
 	self pop: argumentCount + 1 thenPush: value
 ]
