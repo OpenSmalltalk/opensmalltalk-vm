@@ -1649,7 +1649,8 @@ InterpreterPrimitives >> primitiveFullGC [
 		[self pop: 1 thenPushInteger: objectMemory fullGC.
 		 ^self].
 	objectMemory fullGCLock > 0 ifTrue:
-		[^self primitiveFailFor: PrimErrInappropriate].
+		[self primitiveFailFor: PrimErrInappropriate.
+		 ^self].
 	objectMemory incrementalGC.  "maximimize space for forwarding table"
 	objectMemory fullGC.
 	self pop: 1 thenPushInteger: (objectMemory bytesLeft: true)
