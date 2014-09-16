@@ -1,0 +1,1 @@
+PLIBS=-lpulse-simple
