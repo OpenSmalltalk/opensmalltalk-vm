@@ -375,6 +375,13 @@ EncoderForSistaV1 class >> isReturnAt: pc in: method [
 ]
 
 { #category : #'instruction stream support' }
+EncoderForSistaV1 class >> isReturnTopFromMethodAt: pc in: method [
+	"Answer whether the bytecode at pc is a return stack top from method."
+
+	^(method at: pc) = 92
+]
+
+{ #category : #'instruction stream support' }
 EncoderForSistaV1 class >> isSendAt: pc in: method [
 	"Answer whether the bytecode at pc is a message-send."
 
@@ -552,7 +559,7 @@ EncoderForSistaV1 class >> pushClosureBytecodeSize [
 	^3
 ]
 
-{ #category : #'*BytecodeSets-bytecode decoding' }
+{ #category : #'bytecode decoding' }
 EncoderForSistaV1 class >> stackDeltaForPrimitive: primitiveIndex in: method [
 	"Answer the stack delta for the callPrimitive: bytecode (see my class comment).
 	 There is no delta for non-inlined primitives (its implicitly 0 - method numArgs).
