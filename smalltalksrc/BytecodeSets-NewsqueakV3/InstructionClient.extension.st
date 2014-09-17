@@ -8,10 +8,8 @@ InstructionClient >> blockReturnConstant: value [
 ]
 
 { #category : #'*BytecodeSets-NewsqueakV3-decoding' }
-InstructionClient >> pushExplicitOuter: n [
-	"Push the Active Context's Receiver for an outer send at level n."
-
-	self subclassResponsibility
+InstructionClient >> pushExplicitOuter: n [ "<Integer>"
+	"Push the enclosing object at level n."
 ]
 
 { #category : #'*BytecodeSets-NewsqueakV4-decoding' }

@@ -310,6 +310,13 @@ EncoderForNewsqueakV4 class >> isReturnAt: pc in: method [
 ]
 
 { #category : #'instruction stream support' }
+EncoderForNewsqueakV4 class >> isReturnTopFromMethodAt: pc in: method [
+	"Answer whether the bytecode at pc is a return stack top from method."
+
+	^(method at: pc) = 217
+]
+
+{ #category : #'instruction stream support' }
 EncoderForNewsqueakV4 class >> isSendAt: pc in: method [
 	"Answer whether the bytecode at pc is a message-send."
 
