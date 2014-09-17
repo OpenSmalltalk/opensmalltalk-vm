@@ -441,7 +441,7 @@ Context >> basicSize [
 
 	<primitive: 212>
 	"The number of indexable fields of fixed-length objects is 0"
-	^self primitiveFail
+	^self primitiveFailed
 ]
 
 { #category : #'instruction decoding (closures)' }
@@ -1997,7 +1997,7 @@ Context >> size [
 
 	<primitive: 212>
 	"The number of indexable fields of fixed-length objects is 0"
-	^self primitiveFail
+	^self primitiveFailed
 ]
 
 { #category : #'debugger access' }
