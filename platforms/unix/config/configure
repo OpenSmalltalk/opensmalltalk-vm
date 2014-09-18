@@ -27480,6 +27480,76 @@ if test "${plibs}"; then
   done
   echo ${llibs} > ${plugin}.lib
 fi
+plugin="vm-sound-pulse"
+plibs=""
+rm -f vm-sound-pulse.sub vm-sound-pulse.lib
+# -*- sh -*-
+
+echo "$as_me:$LINENO: checking for PulseAudio" >&5
+echo $ECHO_N "checking for PulseAudio... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <pulse/simple.h>
+int
+main ()
+{
+(void)pa_simple_new;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+
+  echo "$as_me:$LINENO: result: yes" >&5
+echo "${ECHO_T}yes" >&6
+
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+
+
+  echo "$as_me:$LINENO: result: ******** disabling ${plugin}" >&5
+echo "${ECHO_T}******** disabling ${plugin}" >&6
+  disabled_plugins="${disabled_plugins} ${plugin}"
+
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+if test "${plibs}"; then
+  llibs="${LIBS}"
+  for l in ${plibs}; do
+  llibs="${llibs} -l${l}"
+  done
+  echo ${llibs} > ${plugin}.lib
+fi
 plugin="vm-sound-Sun"
 plibs=""
 rm -f vm-sound-Sun.sub vm-sound-Sun.lib
