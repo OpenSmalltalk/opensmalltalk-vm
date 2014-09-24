@@ -2558,6 +2558,22 @@ Cogit >> cPIC: cPIC HasTarget: targetMethod [
 ]
 
 { #category : #'in-line cacheing' }
+Cogit >> cPICHasForwardedClass: cPIC [
+	<var: #cPIC type: #'CogMethod *'>
+	| pc |
+	pc := cPIC asInteger + firstCPICCaseOffset.
+	1 to: cPIC cPICNumCases do:
+		[:i| | classIndex |
+		classIndex := backEnd inlineCacheTagAt: pc
+												- backEnd jumpLongConditionalByteSize
+												- backEnd loadLiteralByteSize.
+		(objectMemory isForwardedClassIndex: classIndex) ifTrue:
+			[^true].
+		pc := pc + cPICCaseSize].
+	^false
+]
+
+{ #category : #'in-line cacheing' }
 Cogit >> cPICHasFreedTargets: cPIC [
 	<var: #cPIC type: #'CogMethod *'>
 	| pc entryPoint targetMethod |
@@ -6466,6 +6482,12 @@ Cogit >> isSendReturnPC: retpc [
 	   or: [target between: methodZoneBase and: methodZone freeStart]
 ]
 
+{ #category : #'in-line cacheing' }
+Cogit >> isSuperSend: entryPoint [
+	<inline: true>
+	^(entryPoint bitAnd: entryPointMask) ~= checkedEntryAlignment
+]
+
 { #category : #disassembly }
 Cogit >> labelForPC: address [
 	<doNotGenerate>
@@ -9297,6 +9319,29 @@ Cogit >> unlinkAllSends [
 ]
 
 { #category : #'in-line cacheing' }
+Cogit >> unlinkIfForwardedSend: annotation pc: mcpc ignored: superfluity [
+	<var: #mcpc type: #'char *'>
+	| entryPoint cacheAddress |
+	(self isSendAnnotation: annotation) ifTrue:
+		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+		 entryPoint > methodZoneBase
+			ifTrue: "It's a linked send, but maybe a super send or linked to an OpenPIC, in which case the cache tag will be a selector...."
+				[(objectMemory isForwardedClassIndex: (backEnd inlineCacheTagAt: mcpc)) ifTrue:
+					[self targetMethodAndSendTableFor: entryPoint into:
+						[:targetMethod :sendTable|
+						 self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]
+			ifFalse:
+				[self cppIf: NewspeakVM ifTrue:
+					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
+						[self assert: NumOopsPerIRC = 2.
+						 cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
+						 ((objectMemory isForwardedClassIndex: (backEnd unalignedLongAt: cacheAddress))
+						 or: [objectMemory isForwardedClassIndex: (backEnd unalignedLongAt: cacheAddress + BytesPerOop)]) ifTrue:
+							[self voidImplicitReceiverCacheAt: mcpc]]]]].
+	^0 "keep scanning"
+]
+
+{ #category : #'in-line cacheing' }
 Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
 	<var: #mcpc type: #'char *'>
 	| entryPoint |
@@ -9479,6 +9524,35 @@ Cogit >> unlinkSendsTo: targetMethodObject andFreeIf: freeIfTrue [
 					 freedPIC := true]].
 		cogMethod := methodZone methodAfter: cogMethod].
 	freeIfTrue ifTrue: [self freeMethod: targetMethod].
+	freedPIC
+		ifTrue: [self unlinkSendsToFree]
+		ifFalse:
+			[codeModified ifTrue: "After possibly updating inline caches we need to flush the icache."
+				[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]]
+]
+
+{ #category : #'jit - api' }
+Cogit >> unlinkSendsToForwardedClasses [
+	<api>
+	<option: #SpurObjectMemory>
+	"Unlink all sends in cog methods whose class tag is that of a forwarded class."
+	| cogMethod freedPIC |
+	<var: #cogMethod type: #'CogMethod *'>
+	methodZoneBase ifNil: [^self].
+	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
+	codeModified := freedPIC := false.
+	[cogMethod < methodZone limitZony] whileTrue:
+		[cogMethod cmType = CMMethod
+			ifTrue:
+				[self mapFor: cogMethod
+					 performUntil: #unlinkIfForwardedSend:pc:ignored:
+					 arg: 0]
+			ifFalse:
+				[(cogMethod cmType = CMClosedPIC
+				  and: [self cPICHasForwardedClass: cogMethod]) ifTrue:
+					[methodZone freeMethod: cogMethod.
+					 freedPIC := true]].
+		cogMethod := methodZone methodAfter: cogMethod].
 	freedPIC
 		ifTrue: [self unlinkSendsToFree]
 		ifFalse:

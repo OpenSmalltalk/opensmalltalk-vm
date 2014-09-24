@@ -6084,6 +6084,26 @@ StackInterpreter >> flushAtCache [
 	1 to: AtCacheTotalSize do: [ :i | atCache at: i put: 0 ]
 ]
 
+{ #category : #'object memory support' }
+StackInterpreter >> flushBecommedClassesInMethodCache [
+	"Flush any entries in the cache which refer to a forwarded (becommed) class."
+	0 to: MethodCacheSize - 1 by: MethodCacheEntrySize do:
+		[:i | | c s |
+		c := methodCache at: i + MethodCacheClass.
+		s := methodCache at: i + MethodCacheSelector.
+		(c ~= 0 and: [s ~= 0
+		 and: [objectMemory isForwarded: (objectMemory classOrNilAtIndex: c)]]) ifTrue:
+			[methodCache
+				at: i + MethodCacheClass put: 0;
+				at: i + MethodCacheSelector put: 0]].
+	self flushAtCache
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> flushBecommedClassesInMethodZone [
+	"This is just a stub for the CoInterpreter"
+]
+
 { #category : #'plugin primitive support' }
 StackInterpreter >> flushExternalPrimitiveOf: methodObj [
 	"methodObj is a CompiledMethod containing an external primitive. Flush the function address and session ID of the CM"
@@ -9750,6 +9770,9 @@ StackInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 		[(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 			[self followForwardedMethodsInMethodCache.
 			 self followForwardedMethodsInMethodZone]. "for CoInterpreter"
+		 (theBecomeEffectsFlags anyMask: BecameActiveClassFlag) ifTrue:
+			[self flushBecommedClassesInMethodCache.
+			 self flushBecommedClassesInMethodZone]. "for CoInterpreter"
 		 self followForwardingPointersInScheduler.
 		 self followForwardingPointersInSpecialObjectsArray.
 		 self followForwardingPointersInProfileState]
