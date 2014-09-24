@@ -52,7 +52,7 @@ Class {
 		'counters',
 		'counterIndex',
 		'initialCounterValue',
-		'ceClassTrapTrampoline'
+		'ceTrapTrampoline'
 	],
 	#classVars : [
 		'CounterBytes',
@@ -261,7 +261,7 @@ SistaStackToRegisterMappingCogit >> genExtTrapIfNotInstanceOfBehaviorsBytecode [
 	"Only flush the stack if the class trap traps.  Use ssFlushNoUpdateTo: so we continue compiling as if
 	 the stack had not been flushed.  Control does not return after the ceClassTrapTrampoline call."
 	self ssFlushNoUpdateTo: simStackPtr.
-	self CallRT: ceClassTrapTrampoline.
+	self CallRT: ceTrapTrampoline.
 	label := self Label.
 	0 to: numBranches - 1 do:
 		[:i|
@@ -560,9 +560,9 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 
 { #category : #initialization }
 SistaStackToRegisterMappingCogit >> generateSistaRuntime [
-	"Class trap sends class trap message to context with top of stack, so we on't need any arguments..."
-	ceClassTrapTrampoline := self genTrampolineFor: #ceClassTrap:
-									called: 'ceClassTrapTrampoline'
+	"Trap sends Sista trap message to context with top of stack, so we don't need any arguments..."
+	ceTrapTrampoline := self genTrampolineFor: #ceSistaTrap:
+									called: 'ceSistaTrapTrampoline'
 									arg: ReceiverResultReg
 ]
 

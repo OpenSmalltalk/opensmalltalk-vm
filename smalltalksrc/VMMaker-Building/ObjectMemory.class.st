@@ -382,7 +382,7 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 
 	SelectorUnknownBytecode := 57.
 	SelectorCounterTripped := 58.
-	SelectorClassTrap := 59
+	SelectorSistaTrap := 59
 
 ]
 
@@ -1741,6 +1741,12 @@ ObjectMemory >> endOfMemory [
 ObjectMemory >> ensureBehaviorHash: oop [
 
 	^self hashBitsOf: oop
+]
+
+{ #category : #'forward compatibility' }
+ObjectMemory >> ensureSemaphoreForwardedThroughContext: aSemaphore [
+	"Compatibility with SpurMemoryManager"
+	<inline: true>
 ]
 
 { #category : #'gc -- compaction' }
