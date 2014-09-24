@@ -3633,7 +3633,9 @@ Cogit >> cogitPostGCAction: gcMode [
 		[methodZone voidYoungReferrersPostTenureAll].
 	"Post-GC update every full method's objectHeader to whatever it needs to be"
 	self assert: self allMethodsHaveCorrectHeader.
-	self assert: methodZone kosherYoungReferrers
+	"The youngReferrers should be correct after a GC since that is the point at which it is
+	 pruned.  But at other times false positives or free methods on the list are acceptable."
+	self assert: (gcMode = GCModeBecome or: [methodZone kosherYoungReferrers])
 ]
 
 { #category : #disassembly }
@@ -4698,9 +4700,7 @@ Cogit >> followForwardedMethods [
 				 methodZone freeMethod: cogMethod]].
 		 cogMethod := methodZone methodAfter: cogMethod].
 	freedPIC ifTrue:
-		[self unlinkSendsToFree.
-		 methodZone pruneYoungReferrers.
-		 processor flushICacheFrom: codeBase to: methodZone limitZony asInteger]
+		[self unlinkSendsToFree]
 ]
 
 { #category : #'garbage collection' }
@@ -4781,9 +4781,7 @@ Cogit >> freeUnmarkedMachineCode [
 			 methodZone freeMethod: cogMethod].
 		 cogMethod := methodZone methodAfter: cogMethod].
 	freedMethod ifTrue:
-		[self unlinkSendsToFree.
-		 methodZone pruneYoungReferrers.
-		 processor flushICacheFrom: codeBase to: methodZone limitZony asInteger]
+		[self unlinkSendsToFree]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -6922,10 +6920,8 @@ Cogit >> mapObjectReferencesInMachineCodeForBecome [
 						ifFalse:
 							[cogMethod cmRefersToYoung: false]]].
 		cogMethod := methodZone methodAfter: cogMethod].
-	methodZone pruneYoungReferrers.
 	freedPIC ifTrue:
-		[self unlinkSendsToFree.
-		 codeModified := true].
+		[self unlinkSendsToFree].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
 		[processor flushICacheFrom: codeBase to: methodZone limitZony asInteger]
 ]
@@ -7258,18 +7254,13 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 			 entryPoint > methodZoneBase
 				ifTrue: "It's a linked send."
 					[self targetMethodAndSendTableFor: entryPoint into:
-						[:targetMethod :sendTable| | unlinkedRoutine |
+						[:targetMethod :sendTable| 
 						 (cacheTagMarked not
 						  or: [self markAndTraceOrFreeCogMethod: targetMethod
 								firstVisit: targetMethod asUnsignedInteger > mcpc asUnsignedInteger]) ifTrue:
 							["Either the cacheTag is unmarked (e.g. new class) or the target
 							  has been freed (because it is unmarked), so unlink the send."
-							 unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
-							 backEnd
-								rewriteInlineCacheAt: mcpc asInteger
-								tag: targetMethod selector
-								target: unlinkedRoutine.
-							 codeModified := true.
+							 self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable.
 							 objectRepresentation
 								markAndTraceLiteral: targetMethod selector
 								in: targetMethod
@@ -9314,15 +9305,10 @@ Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
 		 entryPoint > methodZoneBase
 			ifTrue: "It's a linked send."
 				[self targetMethodAndSendTableFor: entryPoint into:
-					[:targetMethod :sendTable| | unlinkedRoutine |
+					[:targetMethod :sendTable| 
 					 (targetMethod cmType = CMFree
 					  or: [targetMethod selector = theSelector]) ifTrue:
-						[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
-						 backEnd
-							rewriteInlineCacheAt: mcpc asInteger
-							tag: targetMethod selector
-							target: unlinkedRoutine.
-						 codeModified := true]]]
+						[self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]
 			ifFalse:
 				[self cppIf: NewspeakVM ifTrue:
 					[(entryPoint = ceImplicitReceiverTrampoline
@@ -9340,12 +9326,8 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc ignored: superfluity [
 		 entryPoint > methodZoneBase
 			ifTrue: "It's a linked send."
 				[self targetMethodAndSendTableFor: entryPoint into:
-					[:targetMethod :sendTable| | unlinkedRoutine |
-					 unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
-					 backEnd
-						rewriteInlineCacheAt: mcpc asInteger
-						tag: targetMethod selector
-						target: unlinkedRoutine]]
+					[:targetMethod :sendTable| 
+					 self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]
 			ifFalse:
 				[self cppIf: NewspeakVM ifTrue:
 					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
@@ -9362,14 +9344,9 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc of: theSelector [
 		 entryPoint > methodZoneBase
 			ifTrue: "It's a linked send."
 				[self targetMethodAndSendTableFor: entryPoint into:
-					[:targetMethod :sendTable| | unlinkedRoutine |
+					[:targetMethod :sendTable| 
 					 targetMethod selector = theSelector ifTrue:
-						[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
-						 backEnd
-							rewriteInlineCacheAt: mcpc asInteger
-							tag: targetMethod selector
-							target: unlinkedRoutine.
-						 codeModified := true]]]
+						[self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]
 			ifFalse:
 				[self cppIf: NewspeakVM ifTrue:
 					[(entryPoint = ceImplicitReceiverTrampoline
@@ -9387,14 +9364,9 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc to: theCogMethod [
 		 entryPoint > methodZoneBase
 			ifTrue: "It's a linked send."
 				[self targetMethodAndSendTableFor: entryPoint into:
-					[:targetMethod :sendTable| | unlinkedRoutine |
+					[:targetMethod :sendTable| 
 					 targetMethod asInteger = theCogMethod ifTrue:
-						[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
-						 backEnd
-							rewriteInlineCacheAt: mcpc asInteger
-							tag: targetMethod selector
-							target: unlinkedRoutine.
-						 codeModified := true]]]
+						[self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]
 			ifFalse: "Can't tell the target with PushReciver/SendImplicit so flush anyway."
 				[self cppIf: NewspeakVM ifTrue:
 					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
@@ -9410,15 +9382,22 @@ Cogit >> unlinkIfLinkedSendToFree: annotation pc: mcpc ignored: superfluity [
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
 			[self targetMethodAndSendTableFor: entryPoint into:
-				[:targetMethod :sendTable| | unlinkedRoutine |
+				[:targetMethod :sendTable| 
 				 targetMethod cmType = CMFree ifTrue:
-					[unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
-					 backEnd
-						rewriteInlineCacheAt: mcpc asInteger
-						tag: targetMethod selector
-						target: unlinkedRoutine.
-					 codeModified := true]]]].
+					[self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]].
 	^0 "keep scanning"
+]
+
+{ #category : #'in-line cacheing' }
+Cogit >> unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable [
+	<inline: true>
+	| unlinkedRoutine |
+	unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
+	backEnd
+		rewriteInlineCacheAt: mcpc asInteger
+		tag: targetMethod selector
+		target: unlinkedRoutine.
+	codeModified := true
 ]
 
 { #category : #'jit - api' }
@@ -9580,7 +9559,9 @@ Cogit >> voidImplicitReceiverCacheAt: mcpc [
 	cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
 	backEnd
 		unalignedLongAt: cacheAddress put: 0;
-		unalignedLongAt: cacheAddress + BytesPerOop put: 0
+		unalignedLongAt: cacheAddress + BytesPerOop put: 0.
+	objectRepresentation canPinObjects ifFalse:
+		[codeModified := true]
 ]
 
 { #category : #'debug printing' }

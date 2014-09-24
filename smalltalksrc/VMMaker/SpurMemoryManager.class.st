@@ -34,6 +34,8 @@ Instance Variables
 	growHeadroom				<Integer>
 	heapMap					<CogCheck32BitHeapMap>
 	hiddenRootsObj			<Integer oop>
+	heapGrowthToSizeGCRatio	<Float>
+	heapSizeAtPreviousGC		<Integer>
 	invalidObjStackPage		<Integer oop|nil>
 	lastFreeChunk				<Integer oop|nil>
 	lastHash					<Integer>
@@ -46,6 +48,7 @@ Instance Variables
 	newSpaceStart				<Integer address>
 	nilObj						<Integer oop>
 	numClassTablePages		<Integer>
+	numCompactionPasses		<Integer>
 	objStackInvalidBecause	<String|nil>
 	oldSpaceStart				<Integer address>
 	pastSpaceStart				<Integer address>
@@ -131,7 +134,7 @@ freeListsMask
 
 freeOldSpaceStart
 	- the last used address in oldSpace.  The space between freeOldSpaceStart and endOfMemory can be used for oldSpace allocations.
-	  Given freeLists this probably isn't useful and shoud be discarded in favouf of endOfMemory.
+	  Given freeLists this probably isn't useful and shoud be discarded in favour of endOfMemory.
 
 freeStart
 	- the last used address in eden.  this is where new objects are allocated if there is room in eden.
@@ -144,6 +147,12 @@ growHeadroom
 
 heapMap
 	- a bitmap used to check for leaks. a bit is set in the map at each object's header.  every pointer in the heap should point to the header of an object
+
+heapGrowthToSizeGCRatio
+	- determines how much heap growth since heapSizeAtPreviousGC at which a full GC will be performed after a scavenge.  This is a stop gap measure running the full GC occasionally until we have implemented an incremental scan-mark-compact GC.
+
+heapSizeAtPreviousGC
+	- the size of the heap at the most recent GC, used to decide if a full GC is needed after a scavenge.  See heapGrowthToSizeGCRatio.
 
 hiddenRootsObj
 	- the root page of the class table and some other toos (e.g. the ephemeron queue). its first
@@ -179,6 +188,9 @@ newSpaceStart
 
 newSpaceLimit
 	- the last address in newSpace (the last address in eden)
+	
+numCompactionPasses
+	- controls the number of pig compaction passes done in a full GC.  When snapshotting this is set to 3 to reduce the free space in the snapshot file.  In normal use it is set to two.
 
 nilObj
 	- the oop of the nil object; must be the first object in oldSpace
@@ -225,7 +237,7 @@ signalLowSpace
 specialObjectsOop
 	- the oop of the specialObjectsArray object
 
-statFGCDeltaUsecs statFullGCUsecs statFullGCs statGCEndUsecs statGrowMemory statIGCDeltaUsecs statIncrGCUsecs statIncrGCs statMarkCount statMkFwdCount statRootTableCount statRootTableOverflows statSGCDeltaUsecs statScavengeGCUsecs statScavenges statShrinkMemory statSpecialMarkCount statSurvivorCount statSweepCount
+statCoalesces statCompactPassCount statFGCDeltaUsecs statFullGCUsecs statFullGCs statGCEndUsecs statGrowMemory statIGCDeltaUsecs statIncrGCUsecs statIncrGCs statMarkCount statRootTableCount statRootTableOverflows statSGCDeltaUsecs statScavengeGCUsecs statScavenges statShrinkMemory statSpecialMarkCount statSurvivorCount
 	- various statistics
 
 totalFreeOldSpace
@@ -264,53 +276,88 @@ The design objectives for the Spur memory manager are
 			enter replacement in class table
 behaviorHash is a special version of identityHash that must be implemented in the image by any object that can function as a class (i.e. Behavior).
 
-- more immediate classes.  An immediate Character class would speed up String accessing, especially for WideString, since no instatiation needs to be done on at:put: and no dereference need be done on at:.  In a 32-bit system tag checking is complex since it is thought important to retain 31-bit SmallIntegers.  Hence, as in current Squeak, the least significant bit set implies a SmallInteger, but Characters would likely have a tag pattern of xxx10.  Hence masking with 11 results in two values for SmallInteger, xxx01 and xxx11 (for details see In-line cache probe for immediates below).  30-bit characters are more than adequate for Unicode.  In a 64-bit system we can use the full three bits and usefully implement an immediate Float.  As in VisualWorks a functional representation takes three bits away from the exponent.  Rotating to put the sign bit in the least significant non-tag bit makes expanding and contracting the 8-bit exponent to the 11-bit IEEE double exponent easy and makes comparing negative and positive zero easier (an immediate Float is zero if its unsigned 64-bits are < 16).  So the representation looks like
+The object representaion must also be simple enough to allow more operations (especially array at:put: and object instantiation to be implemented by the JIT in machine code.  The current Squea object representtion with three different header sizes and two different size formats has discouraged this.
+
+- substantial commonality between 32-bit and 64-bit Implemetations
+While the 32-bit and 64-bit implementations are different (32-bits per slot vs 64-bits per slot), the fact that the object header is 64-bit and common between them and that object lengths are rounded up to 64-bits means that most of the memory manager code is common.  As of 9/18/2014:
+
+	SpurMemoryManager selectors size 765
+	(SpurMemoryManager selectors reject: [:s| (SpurMemoryManager >> s) messages asArray = #(subclassResponsibility)]) size 721
+	Spur32BitMemoryManager selectors size 46
+	Spur64BitMemoryManager selectors size 44 (two selectors remaining to be implemented)
+
+In fact the object header looks like
+
+	 MSB:	| 8: numSlots		| (on a byte boundary)
+			| 2 bits				|	(msb,lsb = {isMarked,?})
+			| 22: identityHash	| (on a word boundary)
+			| 3 bits				|	(msb <-> lsb = {isGrey,isPinned,isRemembered}
+			| 5: format			| (on a byte boundary)
+			| 2 bits				|	(msb,lsb = {isImmutable,?})
+			| 22: classIndex		| (on a word boundary) : LSB
+					
+with the two unused bits being next to the 22-bit classIndex and identityHash fields, allowing expansion there-of.
+
+
+- more immediate classes.  An immediate Character class would speed up String accessing, especially for WideString, since no instantiation needs to be done on at:put: and no dereference need be done on at:.  In a 32-bit system tag checking is complex since it is thought important to retain 31-bit SmallIntegers.  Hence, as in current Squeak, the least significant bit set implies a SmallInteger, but Characters would likely have a tag pattern of xxx10.  Hence masking with 11 results in two values for SmallInteger, xxx01 and xxx11 (for details see In-line cache probe for immediates below).  30-bit characters are more than adequate for Unicode.  In a 64-bit system we can use the full three bits and usefully implement an immediate Float.  As in VisualWorks a functional representation takes three bits away from the exponent.  Rotating to put the sign bit in the least significant non-tag bit makes expanding and contracting the 8-bit exponent to the 11-bit IEEE double exponent easy and makes comparing negative and positive zero easier (an immediate Float is zero if its unsigned 64-bits are < 16).  So the representation looks like
 	| 8 bit exponent | 52 bit mantissa | sign bit | 3 tag bits |
 For details see ""60-bit immediate Floats"" below.
 
 
 - efficient scavenging.  The current Squeak GC uses a slow pointer-reversal collector that writes every field in live objects three times in each collection, twice in the pointer-reversing heap traversal to mark live objects and once to update the pointer to its new location.  A scavenger writes every field of live data twice in each collection, once as it does a block copy of the object when copying to to space, once as it traverses the live pointers in the to space objects.  Of course the block copy is a relatively cheap write.
 
-- lazy become.  The JIT's use of inline cacheing provides a cheap way of avoiding scanning the heap as part of a become (which is the simple approach to implementing become in a system with direct pointers).  A becomeForward: on a (set of) non-zero-sized object(s) turns the object into a ""corpse"" or ""forwarding object"" whose first (non-header) word/slot is replaced by a pointer to the target of the becomeForward:.  The corpse's class index is set to one that identifies corpses (let's say classIndex 1), and, because it is a special, hidden class index, will always fail an inline cache test.  The inline cache failure code is then responsible for following the forwarding pointer chain (these are Iliffe vectors :) ) and resolving to the actual target.  (In the interpreter there needs to be a similar check when probing the method cache).   It has yet to be determined exactly how this is done (e.g. change the receiver register and/or stack contents and retry the send, perhaps scanning the current activation).  See become read barrier below on how we deal with becomes on objects with named inst vars.  We insist that objects are at least 16 bytes in size (see 8-byte alignment below) so that there will always be space for a forwarding pointer.  Since none of the immediate classes can have non-immediate instances and since we allocate the immediate class indices corresponding to their tag pattern (SmallInteger = 1 & 3, Character = 2, SmallFloat = 5?) we can use all the class indices from 0 to 7 for special uses, 0 = free, and e.g. 1 = isForwarded.  In general what's going on here is the implemention of a partial read barrier. Certain operations require a read barrier to ensure access of the target of the forwarding corpse, not the corpse itself.  Read barriers stink (have poor performance), so we must restrict the read barrier to as few places as possible.  See become read barrier below.  See http://www.mirandabanda.org/cogblog/2013/09/13/lazy-become-and-a-partial-read-barrier/ & http://www.mirandabanda.org/cogblog/2014/02/08/primitives-and-the-partial-read-barrier/.
+- lazy become.  Squeak uses direct pointers and Spur retains them.  The JIT's use of inline cacheing provides a cheap way of avoiding scanning the heap as part of a become (which is the simple approach to implementing become in a system with direct pointers).  A becomeForward: on a (set of) non-zero-sized object(s) turns the object into a ""forwarder"" whose first (non-header) word/slot is replaced by a pointer to the target of the becomeForward:.  The forwarder's class index is set to one that identifies fowarders (in fact classIndex 8), and, because it is a special, hidden class index, will always fail an inline cache test.  The inline cache failure code is then responsible for following the forwarding pointer chain (these are Iliffe vectors :) ) and resolving to the actual target.  (In the interpreter there needs to be a similar check when probing the method cache).   It has yet to be determined exactly how this is done (e.g. change the receiver register and/or stack contents and retry the send, perhaps scanning the current activation).  See become read barrier below on how we deal with becomes on objects with named inst vars.  We insist that objects are at least 16 bytes in size (see 8-byte alignment below) so that there will always be space for a forwarding pointer.  Since none of the immediate classes can have non-immediate instances and since we allocate the immediate class indices corresponding to their tag pattern (SmallInteger = 1 & 3, Character = 2, SmallFloat = 5?) we can use all the class indices from 0 to 7 for special uses, 0 = free, and e.g. 1 = isForwarded.  In general what's going on here is the implemention of a partial read barrier. Certain operations require a read barrier to ensure access of the target of the forwarder, not the forwarder itself.  Read barriers stink (have poor performance), so we must restrict the read barrier to as few places as possible.  See become read barrier below.  See http://www.mirandabanda.org/cogblog/2013/09/13/lazy-become-and-a-partial-read-barrier/ & http://www.mirandabanda.org/cogblog/2014/02/08/primitives-and-the-partial-read-barrier/.
 
-- pinning.  To support a robust and easy-to-use FFI the memory manager must support temporary pinning where individual objects can be prevented from being moved by the GC for as long as required, either by being one of an in-progress FFI call's arguments, or by having pinning asserted by a primitive (allowing objects to be passed to external code that retains a reference to the object after returning).  Pinning probably implies a per-object ""is-pinned"" bit in the object header.  Pinning will be done via lazy become; i..e an object in new space will be becommed into a pinned object in old space.  We will only support pinning in old space.
+- pinning.  To support a robust and easy-to-use FFI the memory manager must support temporary pinning where individual objects can be prevented from being moved by the GC for as long as required, either by being one of an in-progress FFI call's arguments, or by having pinning asserted by a primitive (allowing objects to be passed to external code that retains a reference to the object after returning).  Pinning probably implies a per-object ""is-pinned"" bit in the object header.  Objects are only pinnable in old space.  Pinning of new space objects is done via lazy become; i..e an object in new space is forwarded to a pinned copy of the object in old space.
 
-- efficient old space collection.  An incremental collector (a la Dijkstra's three colour algorithm) collects old space, e.g. via an amount of tracing being hung off scavenges and/or old space allocations at an adaptive rate that keeps full garbage collections to a minimum.  It may also be possible to provide cheap compaction by using lazy become: and best-fit (see free space/free list below).
+- efficient old space collection.  An incremental collector (a la Dijkstra's three colour algorithm) collects old space, e.g. via an amount of tracing being hung off scavenges and/or old space allocations at an adaptive rate that keeps full garbage collections to a minimum.  It may also be possible to provide cheap compaction by using lazy become: and best-fit (see free space/free list below). [This remains to be implemented].
 
 - 8-byte alignment.  It is advantageous for the FFI, for floating-point access, for object movement and for 32/64-bit compatibility to keep object sizes in units of 8 bytes.  For the FFI, 8-byte alignment means passing objects to code that expects that requirement (such as modern x86 numeric processing instructions).  This implies that
 	- the starts of all spaces are aligned on 8-byte boundaries
 	- object allocation rounds up the requested size to a multiple of 8 bytes
 	- the overflow size field is also 8 bytes
-We shall probably keep the minimum object size at 16 bytes so that there is always room for a forwarding pointer.  But this implies either that we round object lengths up to units of 16 bytes (current choice) or that we need to implement an 8-byte filler to fill holes between objects > 16 bytes whose length mod 16 bytes is 8 bytes and following pinned objects.  We can do this using a special class index, e.g. 1, so that the method that answers the size of an object looks like, e.g.
-	chunkSizeOf: oop
-		<var: #oop type: #'object *'>
-		^object classIndex = 1
-			ifTrue: [BaseHeaderSize]
-			ifFalse: [BaseHeaderSize
-				  + (object slotSize = OverflowSlotSize
-						ifTrue: [OverflowSizeBytes]
-						ifFalse: [0])
-				  + (object slotSize * BytesPerSlot)]
 
-	chunkStartOf: oop
-		<var: #oop type: #'object *'>
-		^(self cCoerceSimple: oop to: #'char *')
-			- ((object classIndex = 1
-			    or: [object slotSize ~= OverflowSlotSize])
-					ifTrue: [0]
-					ifFalse: [OverflowSizeBytes])
+- heap segmentation. This allows incremental heap growth (the current Squeak VM requires a contiguous chunk of memory, meaning an unfortunate trade off between space for objects and space for external code), and returning memory to the OS after GC. 
+	
 
-Note that the size field of an object (its slot size) reflects the logical size of the object e.g. 0-element array => 0 slot size, 1-element array => 1 slot size). The memory manager rounds up the slot size as appropriate, e.g. (self roundUp: (self slotSizeOf: obj) * 4 to: 8) min: 8.
+Object Size
+We keep the minimum object size at 16 bytes so that there is always room for a forwarding pointer.  This implies we cannot support free chunks of 8 bytes in length and that the memory manager refuses to split objects when doing so would leave an 8-byte sliver.  We can do this using a special class index, e.g. 1, so that the method that answers the size of an object looks like
 
-Heap growth and shrinkage will be handled by allocating and deallocating heap segments from/to the OS via e.g. memory-mapping.  This technique allows space to be released back to the OS by unmapping empty segments.  See ""Segmented Old Space"" below).
+	rawNumSlotsOf: objOop
+		^self byteAt: objOop + 7
 
-The basic approach is to use a fixed size new space and a growable old space.  The new space is a classic three-space nursery a la Ungar's Generation Scavenging, a large eden for new objects and two smaller survivor spaces that exchange roles on each collection, one being the to space to which surviving objects are copied, the other being the from space of the survivors of the previous collection, i.e. the previous to space.  (This basic algorithm is extended to handle weak arrays and ephemerons).
+	rawOverflowSlotsOf: objOop
+		^self long32At: objOop - self baseHeaderSize
 
-To provide apparent pinning in new space we rely on lazy become.  Since most pinned objects will be byte data and these do not require stack zone activation scanning, the overhead is simply an old space allocation and corpsing.
+	numSlotsOf: objOop
+		| numSlots |
+		numSlots := self rawNumSlotsOf: objOop..
+		^numSlots = self numSlotsMask	""overflow slots; (2^32)-1 slots are plenty""
+			ifTrue: [self rawOverflowSlotsOf: objOop]
+			ifFalse: [numSlots]
 
-To provide pinning in old space, objects are pinned by setting the pin bit in the object header, which will be set automaticaly when allocating a large object.  Compaction moves objects from high memory down to low memory using forwarders, and stepping over pinned objects (see Pig Compact below).
+Note that the size field of an object (its slot size) reflects the logical size of the object e.g. 0-element array => 0 slot size, 1-element array => 1 slot size). The memory manager rounds up the slot size as appropriate, e.g. (self roundUp: (self slotSizeOf: obj) * 4 to: 8) min: 8 to obtain a byte size.
 
-Free space in old space is organized by a number of free lists and a free tree .  There are 32 or 64 free lists, depending on word size, indices 1 through wordSize - 1 holding blocks of space of the index * allocationUnit, index 0 holding a semi-balanced ordered tree of free blocks, each node being the head of the list of free blocks of that size.  At the start of the mark phase the free list is thrown away and the sweep phase coalesces free space and steps over pinned objects as it proceeds.  We can reuse the forwarding pointer compaction scheme used in the old collector.  Incremental collections merely move unmarked objects to the free lists (as well as nilling weak pointers in weak arrays and scheduling them for finalization).  The occupancy of the free lists is represented by a bitmap in an integer so that an allocation of size wordSize - 1 or less can know whether there exists a free chunk of that size, but more importantly can know whether a free chunk larger than it exists in the fixed size free lists without having to search all larger free list heads.
+	bytesInObject: objOop
+		| headerNumSlots numSlots |
+		headerNumSlots := self rawNumSlotsOf: objOop.
+		numSlots := headerNumSlots = self numSlotsMask
+						ifTrue: [self rawOverflowSlotsOf: objOop]
+						ifFalse: [headerNumSlots = 0 ifTrue: [1] ifFalse: [headerNumSlots]].
+		^numSlots + (numSlots bitAnd: 1) << self shiftForWord
+		+ (headerNumSlots = self numSlotsMask
+			ifTrue: [self baseHeaderSize + self baseHeaderSize]
+			ifFalse: [self baseHeaderSize])
+
+Heap growth and shrinkage is handled by allocating and deallocating heap segments from/to the OS via e.g. memory-mapping.  This technique allows space to be released back to the OS by unmapping empty segments.  See ""Segmented Old Space"" below).
+
+The basic approach is to use a fixed size new space and a segmented, growable old space.  The new space is a classic three-space nursery a la Ungar's Generation Scavenging, a large eden for new objects and two smaller survivor spaces that exchange roles on each collection, one being the to space to which surviving objects are copied, the other being the from space of the survivors of the previous collection, i.e. the previous to space.  (This basic algorithm is extended to handle weak arrays and ephemerons).
+
+To provide apparent pinning in new space we rely on lazy become.  Since most pinned objects will be byte data and these do not require stack zone activation scanning, the overhead is simply an old space allocation and forwarding.
+
+To provide pinning in old space, objects hav their ""is pinned"" bit set in the object header (which could be set automaticaly when allocating a large object).  Compaction moves objects from high memory down to low memory using forwarders, and stepping over pinned objects (see Pig Compact below).
+
+Free space in old space is organized by a number of free lists and a free tree.  There are 32 or 64 free lists, depending on word size, indices 1 through wordSize - 1 holding blocks of space of the index * allocationUnit, index 0 holding a semi-balanced ordered tree of free blocks, each node being the head of the list of free blocks of that size.  At the start of the mark phase the free list is thrown away and the sweep phase coalesces free space and reclaimed forwarders, stepping over pinned objects as it proceeds.  We can reuse the forwarding pointer compaction scheme used in the old collector for incremental collections.  Incremental collections merely move unmarked objects to the free lists (as well as nilling weak pointers in weak arrays and scheduling them for finalization).  The occupancy of the free lists is represented by a bitmap in an integer so that an allocation of size wordSize - 1 or less can know whether there exists a free chunk of that size, but more importantly can know whether a free chunk larger than it exists in the fixed size free lists without having to search all larger free list heads.
 
 Incremental Old Space Collection
 The (as yet unimplemented) incremental collector (a la Dijkstra's three colour algorithm) collects old space via an amount of tracing being hung off scavenges and/or old space allocations at an adaptive rate that keeps full garbage collections to a minimum.  [N.B. Not sure how to do this yet.  The incremental collector needs to complete a pass often enough to reclaim objects, but infrequent enough not to waste time.  So some form of feedback should work.  In VisualWorks tracing is broken into quanta or work where image-level code determines the size of a quantum based on how fast the machine is, and how big the heap is.  This code could easily live in the VM, controllable through vmParameterAt:put:.  An alternative would be to use the heartbeat to bound quanta by time.  But in any case some amount of incremental collection would be done on old space allocation and scavenging, the ammount being chosen to keep pause times acceptably short, and at a rate to reclaim old space before a full GC is required, i.e. at a rate proportional to the growth in old space]. The incemental collector is a state machine, being either marking, nilling weak pointers, or freeing.  If nilling weak pointers is not done atomically then there must be a read barrier in weak array at: so that reading from an old space weak array that is holding stale un-nilled references to unmarked objects.  Tricks such as including the weak bit in bounds calculations can make this cheap for non-weak arrays.  Alternatively nilling weak pointers can be made an atomic part of incremental collection, which can be made cheaper by maintaining the set of weak arrays (e.g. on a list).  Note that the incremental collector also follows (and eliminates) forwarding pointers as it scans.
@@ -329,6 +376,7 @@ The incremental collector implies a more complex write barrier.  Objects are of 
 The incremental collector does not detect already marked objects all of whose references have been overwritten by other stores (e.g. in the above if newValue overwrites the sole remaining reference to a marked object).  So the incremental collector only guarantees to collect all garbage created in cycle N at the end of cycle N + 1.  The cost is hence slightly worse memory density but the benefit, provided the IGC works hard enough, is the elimination of long pauses due to full garbage collections, which become actions of last resort or programmer desire.
 
 Incremental Best-Fit Compaction
+[This does not work; see Pig Compact below]
 The free list also looks like it allows efficient incremental compaction.  Currently in the 32-bit implementation, but easily affordable in the 64-bit implementation, objects have at least two fields, the first one being a forwarding pointer, the second one rounding up to 8-byte object alignment.  On the free list the first field is used to link the list of free chunks of a given size.  The second field could be used to link free chunks in memory order.  And of course the last free chunk is the chunk before the last run of non-free objects.  We compact by
 
 a) keeping each free list in memory order (including the lists of free chunks off each node in the large free chunk tree)
@@ -339,41 +387,48 @@ b) the incremental collector's following of forwarding pointers reclaims the cor
 c) the rounding of objects to an 8-byte alignment improves the chances of finding a best fit.
 Note that this incremental collection is easily amenable to leave pinned objects where they are; they are simply filtered out when looking for a best fit.
 
-Segmented Old Space
-A segmented oldSpace is useful.  It allows growing oldSpace incrementally, adding a segment at a time, and freeing empty segments.  But such a scheme is likely to introduces complexity in object enumeration, and compaction (enumeration would apear to require visiting each segment, compaction must be wthin a segment, etc). One idea that might fly to allow a segmented old space that appears to be a single contiguous spece is to use fake pinned objects to bridge the gaps between segments.  The last two words of each segment can be used to hold the header of a pinned object whose size is the distance to the next segment.  The pinned object's classIndex can be one of the puns so that it doesn't show up in allInstances; this can perhaps also indicate to the incremental collector that it is not to reclaim the object, etc.  However, free objects would need a large enough size field to stretch across large gaps in the address space.  The current design limits the overflow size field to a 32-bit slot count, which wouldn't be large enough in a 64-bit implementation.  The overflow size field is at most 7 bytes since the overflow size word also contains a maxed-out 8-bit slot count (for object parsing).  A byte can be stolen from e.g. the identityHash field to beef up the size to a full 64-bits.
+Pig Compact
+Our first attempt at best fit compaction failed miserably.  Instead we use an eager algorithm that moves as many objects for the top of memory to the bottom of memory as possible.  We call this ""Pig"" compact, and it is used as the compactor for global mark/sweep, used at least on snapshot.  Free memory is linked in memory ascending order through the first field, using the xor pointer trick to implement a doubly-linked list through a single field.  [Note this design is chosen for the benefit of the 64-bit image where there really is only one spare field.  In the 32-bit system there are at least two fields and th code could be simplified.  Volunteers are welcome.].  With the doubly-linked list we can access objects at the top of memory by scanning up from the end of the list, and can move objects down into the free space at the front of the list, forwarding objects to their new locations.  Pinned objecvts are simply left where they are.  After a single pass there will be many forwarders at the top of memory and it will not have been compacted very much.  Memory is then swept to follow forwarders, and then again to free forwarders and coallesce free space.  The entire process is repeated (currently 3 times) to effectively compact memory.
+
+Segmented Old Space via Bridges
+A segmented oldSpace is useful.  It allows growing oldSpace incrementally, adding a segment at a time, and freeing empty segments.  But such a scheme is likely to introduce complexity in object enumeration, and compaction (enumeration would apear to require visiting each segment, compaction must be wthin a segment, etc). Spur turns segmented old space into one that appears to be a single contiguous space by using fake pinned objects to bridge the gaps between segments.  We call these ""bridges"".  The last two words of each segment can be used to hold the header of a pinned object whose overflow size is the distance to the next segment.  The pinned object's classIndex is one of the puns so that it doesn't show up in allInstances or allObjects; this can perhaps also indicate to the incremental collector that it is not to reclaim the object, etc.  Bridge objects need a large enough overflow size field to stretch across large gaps in the address space.  This is no problem in the 32-bit system which has a 32-bit overflow slot coult, 4 times larger than necessary.  But the 64-bit sytsem only has a 56 bit overflow slot count, 5 bits short of spanning a full 64-bit address space.  We expect that this is adequate if we preferrentially allocate segments at one end of the address space or the other (in fact we try and allocate low).
 
 
-Lazy become & the become read barrier (see http://www.mirandabanda.org/cogblog/2013/09/13/lazy-become-and-a-partial-read-barrier/ & http://www.mirandabanda.org/cogblog/2014/02/08/primitives-and-the-partial-read-barrier/).
+Lazy Become & the Partial Read Barrier
+see http://www.mirandabanda.org/cogblog/2013/09/13/lazy-become-and-a-partial-read-barrier/ & http://www.mirandabanda.org/cogblog/2014/02/08/primitives-and-the-partial-read-barrier/.
 
-As described earlier the basic idea behind lazy become is to use corpses (forwarding objects) that are followed lazily during GC and inline cache miss.  However, a lazy scheme would appear to require a read barrier to avoid accessing the coirpse and mak sure wel follow the forwarding pointer.  Without hardware support read barriers have poor performance, so we must restrict the read barrier as much as possible.  The main goal is to avoid having to scan all of the heap to fix up pointers, as is done with ObjectMemory.  We're happy to do some scanning of a small subset oif the heap, but become: cannot scale to large heaps if it must scan the entire heap.  Objects with named inst vars and CompiledMethods are accessed extensively by the interpreter and jitted code.  We must avoid as much checking of such accesses as possible; We judge an explicit read barrier on all accesses far too expensive.  The accesses the VM makes which notionally require a read barrier are:
+As described earlier the basic idea behind lazy become is to use forwarding objects that are followed lazily during GC and inline cache miss (message send).  However, a lazy scheme would appear to require a read barrier to avoid accessing the forwarder and make sure the forwarding pointer is followed.  Without hardware support read barriers have poor performance (at least in code density), so we try and avoid the read barrier as much as possible.  The main goals are a) to avoid having to scan all of the heap to fix up pointers, as is done with ObjectMemory, and b) to avoid a read barrier on inst var read, class access, etc.  We're happy to do some scanning of a small subset of the heap, but become: cannot scale to large heaps if it must scan the entire heap.  Objects with named inst vars and CompiledMethods are accessed extensively by the interpreter and jitted code.  We must avoid as much checking of such accesses as possible; We judge an explicit read barrier on all accesses far too expensive.  The accesses the VM makes which notionally require a read barrier are:
 - inst vars of thisContext, including stack contents (the receiver of a message and its arguments), which in Cog are the fields of the current stack frame, and the sender chain during (possibly non-local) return
 - named inst vars of the receiver
 - literals of the current method, in particular variable bindings (a.k.a. literal variables which are global associations), including the methodClass association.
 - in primitives, the receiver and arguments, including possible sub-structure.
 We have already discussed that we will catch an attempt to create a new activation on a forwarded object through method lookup failing for forwarded objects.  This would occur when e.g. some object referenced by the receiver via its inst vars is pushed on the stack as a message receiver, or e.g. answered as the result of some primitive which accesses object state such as primtive at:  So there is no need for a read barrier when accessing a new receiver or returning its state.  But there is a read barrier in primitives that inspect that sub-state.
 
-We can easily avoid read barriers in direct literal access, and class hierarchy walking and message dictionary searching in message lookup (but we do not do so, see next paragraph).  Whenever the become operation becomes one or more pointer objects (and it can e.g. cheaply know if it has becommed a CompiledMethod) both the class table and the stack zone are scanned.  In the class table we can follow the forwarding pointers in all classes in the table, and we can follow their superclasses.  But we would like to avoid scanning classes many times.  Any superclass that has a non-zero hash must be in the table and will be encountered during the scan of the class table.  Any superclass with a zero hash can be entered into the table at a point subsequent to the current index and hence scanned.  The class scan can also scan method dictionary selectors and follow the methiod dictionary's array reference (so that dictionaries are valid for lookup) and scan the dictionary's method array iff a CompiledMethod was becommed. (Note that support for object-as-method implies an explicit read barrier in primitiveObjectAsMethod, which is a small overhead there-in).
+We avoid a read barrier on access to receiver inst vars by scanning the stack zone (*) after a become and following pointers to the receiver. (* the Cog VM, following Peter Deutsch's PS Smalltalk VM, lazily maps stack frames to context objects, creating contexts as needed and using stack frames for all method activations.  The stack zone is small (320k default, of which at most half is used to execute Smalltalk, half being reserved for interrupt handlers running on the native stack) and organized as pages.  Context objects serve as proxy objects for stack frames in teh stack zone, or as fully fledged activations when activations on a stack page are evicted to the heap as contexts to make room for new activations).
+
+We can easily avoid read barriers in direct literal access, and class hierarchy walking and message dictionary searching in message lookup (but we do not do so, see next paragraph).  Whenever the become operation becomes one or more pointer objects (and it can e.g. cheaply know if it has becommed a CompiledMethod) both the class table and the stack zone could be scanned.  In the class table we can follow the forwarding pointers in all classes in the table, and we can follow their superclasses.  But we would like to avoid scanning classes many times.  Any superclass that has a non-zero hash must be in the table and will be encountered during the scan of the class table.  Any superclass with a zero hash can be entered into the table at a point subsequent to the current index and hence scanned.  The class scan can also scan method dictionary selectors and follow the method dictionary's array reference (so that dictionaries are valid for lookup) and scan the dictionary's method array iff a CompiledMethod was becommed. (Note that support for object-as-method implies an explicit read barrier in primitiveObjectAsMethod, which is a small overhead there-in).
 
 In fact, scanning the class table is much more expensive than having a read barrier on message lookup, since
 - becomes can be frequent (e.g. growing method dictionaries) and so the class table scanning becomes a significant cost in some circumstances
 - method cacheing makes lookups rare and hence a small overhead
-- the read barriers on fetching the superclass and mehtod dictionary et al on lookup are very cheap because the class indexes likely share cache lines with the state beiung fetched.
-- since lookups are rare (and since nil is never forwarded and explicitly tested for on method dictionary search) the read barrier on fetching selectors in method dictionaries has a small overhead
+- the read barriers on fetching the superclass and method dictionary et al on lookup are very cheap because
+	a) lookups are rare, in the interpreter at most 4% of message sends are looked up and in the JIT at most 1%
+	b) the class indexes likely share cache lines with the state being fetched, and
+	c) forwarding is rare so most of the time the VM accesses the class index, finds the object is not forwarded and then fetches the superclass or method dictionary from the same cache line as the class index.
+- since lookups are rare (and since nil is never forwarded and explicitly tested for on method dictionary search) the read barrier on fetching selectors in method dictionaries has a small overhead.
 
 Accessing possibly forwarded method literals is fine; these forwarding objects will be pushed on the stack and caught either by the message lookup trap or explicitly in primitives that access arguments.  However, push/store/pop literal variable cannot avoid an explicit check without requiring we scan all methods, which is far too expensive.  So accessing associations form methods (including the method class association for super sends) requires a read barrier.
-
-We avoid a read barrier on access to receiver inst vars by scanning the stack zone after a become and following pointers to the receiver.
 
 And of course, all of the scavenger, the incremental scan-mark-compactor and the global garbage collector follow and eliminate forwarding pointers as part of their object graph traversals.
 
 This means explicit read barriers in
 - push/store/pop literal variable
-- return (accessing the sender context, its inst vars, and the method class association of its method)
-- primitives that inspect the class and/or state of their arguments, excepting immediates.  e.g. in at:put: (almost) no checks are required because the receiver will have been caught by the message send trap, the index is a SmallInteger and the argument is either an immediate Character (in String>>at:put:) or a possibly forwarded object stored into an array; i.e. the argument's state is inspected only if it is an immediate (the exception is 64-bit indexable and 32-bit indexable floats & bitmaps which could take LargeIntegers whose contents are copied into the relevant field).  But e.g. in beCursor extensive checks are required because the primitive inspects a couple of form instances, and a point that are sub-state of the Cursor object.
+- base frame return (accessing the sender context, its inst vars, and the method class association of its method)
 
-Since primitives check their arguments for validity, and fail without side effects if validation fails, they fail if encountering a forwarding object, and can be retried.  There were a few exceptions to this in the Semaphore installation primitives that assumed a non-Semaphore argument was nil, hence being fooled by forwarders to Semaphores.  These primitives were easily fixed.  So all primitives that examine state fail if they encounter a forwarder amongst that state.  Slang is used to analyse the parse trees of primitives and compute an ""accessor depth"", the depth to which a primitive traverses the object graph of its input arguments.  If a primitive fails then the primitive failure code retrieves the accessor depth for the primitive and, if >= 0, traverses the state to that depth, following (and ixing) any forwarders found.  If any are found the primitive is retried.
 
-61-bit immediate Floats
+This leaves primitives where explicit access to object state is done without message sending.  Since primitives check their arguments for validity, and fail without side effects if validation fails, they fail if encountering a forwarding object, and can be retried.  There were a few exceptions to this in the Semaphore installation primitives that assumed a non-Semaphore argument was nil, hence being fooled by forwarders to Semaphores.  These primitives were easily fixed.  So all primitives that examine state fail if they encounter a forwarder amongst that state.  Slang is used to analyse the parse trees of primitives and compute an ""accessor depth"", the depth to which a primitive traverses the object graph of its input arguments.  If a primitive fails then the primitive failure code retrieves the accessor depth for the primitive and, if >= 0, traverses the state to that depth, following (and fixing) any forwarders found.  If any are found the primitive is retried.
+
+61-bit Immediate Floats
 Representation for immediate doubles, only used in the 64-bit implementation. Immediate doubles have the same 52 bit mantissa as IEEE double-precision  floating-point, but only have 8 bits of exponent.  So they occupy just less than the middle 1/8th of the double range.  They overlap the normal single-precision floats which also have 8 bit exponents, but exclude the single-precision denormals (exponent-127) and the single-precsion NaNs (exponent +127).  +/- zero is just a pair of values with both exponent and mantissa 0. 
 So the non-zero immediate doubles range from 
         +/- 0x3800,0000,0000,0001 / 5.8774717541114d-39 
@@ -405,26 +460,26 @@ b) raw conversion between double and quadword must (at least in the source) move
 Heap Walking
 In heap walking the memory manager needs to be able to detect the start of the next object.  This is complicated by the short and long header formats, short being for objects with 254 slots or less, long being for objects with 255 slots or more.  Since an object that has an overflow header must have 255 as its header slot count we can use this as the marker.  The overflow header word also has a numSlots field, set to 255.  The remainder of the overflow size field is used for the object's slot size, the least significant word in 32-bits (for 2^34 bytes, more than the address space), the remaining 56 bits in 64-bits (for 2^59 bytes, which we hope is big enough for bridge objects).  So if the word following an object contains 255 in its numSlots field, it must be the overflow size word of an object with a double header, and the word after that is the header, also with a saturated numSlots field.
 
-Pig Compact
 
-Our first attempt at best fit compaction failed miserably.  Instead we use an eager algorithm that moves as many objects for the top of memory to the bottom of memory as possible.  We call this ""Pig"" compact, and it is used as the compactor for global mark/sweep, used at least on snapshot.  Free memory is linked in memory ascending order through the first field, using the xor pointer trick to implement a doubly-linked list throguh a single field.  [Note this design is chosen for the benefit of the 64-bit image where there really is only one spare field.  In the 32-bit system there are at least two fields and th code could be simplified.  Volunteers are welcome.].  With the doubly-linked list we can access objects at the top of memory by scanning up from the end of the list, and can move objects down into the free space at the front of the list, forwarding objects to their new locations.  Pinned objecvts are simply left where they are.  After a single pass there will be many forwarders at the top of memory and it will not have been compacted very much.  Memory is then swept to follow forwarders, and then again to free forwarders and coallesce free space.  The entire process is repeated (currently 3 times) to effectively compact memory.
 
 Total Number of Classes and Instance-specific Behaviours
 While the class index header field has advantages (saving significant header space, especially in 64-bits, providing a non-moving cache tag for inline caches, small constants for instantiating well-known classes instead of having to fetch them from a table such as the specialObjectsArray) it has the downside of limiting the number of classes.  For Smalltalk programs 2^20 to 2^24 classes is adequate for some time to come, but for prototype languages such as JavaScript this is clearly inadequate, and we woud like to support the ability to host prototype languages within Squeak. There is a solution in the form of ""auto-instances"", an idea of Claus Gittinger's.  The idea is to represent prototypes as behaviors that are instances of themselves.  In a classical Smalltalk system a Behavior is an object with the minimal amount of state to function as a class, and in Smalltalk-80 this state is the three instance variables of Behavior, superclass, methodDict and format, which are the only fields in a Behavior that are known to the virtual machine.  A prototype can therefore have its own behavior and inherit from other prototypes or classes, and have sub-prototypes derived from it if a) its first three instance variables are also superclass, methodDict, and format, and b) it is an instance of itself (one can create such objects in a normal Smalltalk system by creating an Array with the desired layout and using a change class primitive to change the class of the Array to itself).  The same effect can be achieved in a VM with class indexes by reserving one class index to indicate that the object is an instance of itself, hence not requiring the object be entered into the class table and in the code that derives the class of an object, requiring one simple test answering the object itself instead of indexing the class table.  There would probably need to be an auto-instantiation primitive that takes a behavior (or prototype) and an instance variable count and answers a new auto-instance with as many instance variables as the sum of the behavior (or prototype) and the instance variable count.  Using this scheme there can be as many auto-instances as available address space allows while retaining the benefits of class indices.
 
 This scheme has obvious implications for the inline cache since all prototypes end up having the same inline cache tag.  Either the inline cache check checks for the auto-instance class tag and substitutes the receiver, or the cacheing machinery refuses to add the auto-instance class tag to any inline cache and failure path code checks for the special case.  Note that in V8 failing monomorphic sends are patched to open PICs (megamorphic sends); V8 does not use closed PICs due to the rationale that polymorphism is high in JavaScript.
 
-Miscellanea
-In-line cache probe for immediates
+Miscellanea:
+
+In-line Cache Probe for Immediates
 We would like to keep 31-bit SmallIntegers for the 32-bit system.  Lots of code could be impacted by a change to 30-bit SmallIntegers.  If so, then 
 	isImmediate: oop	^(oop bitAnd: 3) ~= 0
 	isSmallInteger: oop	^(oop bitAnd: 1) ~= 0
 	isCharacter: oop	^(oop bitAnd: 2) = 2
 If the in-line cache contains 0 for Characters then the in-line cache code (in x86 machine code) reads as follows, for a branch-free common-case:
-	Limm:
+	Limm: (aligned)
 		andl $0x1, %eax
 		j Lcmp
-	Lentry:
+		nops...
+	Lentry: (aligned)
 		movl %edx, %eax
 		andl $0x3, %eax
 		jnz Limm
@@ -433,9 +488,11 @@ If the in-line cache contains 0 for Characters then the in-line cache code (in x
 	Lcmp:
 		cmpl %ecx, %eax
 		jnz Lmiss
+	LuncheckedEntry:
 
-64-Bit sizes:
-We extend the original Squeak 4-bit format field to 5 bits, providing space for 3 odd bits for byte objects (2 for short objects & 1 for 32-bit long objects).  Object sizes are slots, and byte (and short and 32-bit) lengths are computed by subtracting the odd bits from the shifted slot length.  Keeping the format field saves bits because it subsumes the isWeak,isEphemeron,isPointer bits that would be necessary otherwise.  The format field is organized as follows:
+
+64-Bit Sizes
+We extend the original Squeak 4-bit per-object format field to 5 bits, providing space for 3 odd bits for byte objects (2 for short objects & 1 for 32-bit long objects).  Object sizes are slots, and byte (and short and 32-bit) lengths are computed by subtracting the odd bits from the shifted slot length.  Keeping the format field saves bits because it subsumes the isWeak,isEphemeron,isPointer bits that would be necessary otherwise.  The format field is organized as follows:
 	 0 = 0 sized objects (UndefinedObject True False et al)
 	 1 = non-indexable objects with inst vars (Point et al)
 	 2 = indexable objects with no inst vars (Array et al)
@@ -453,6 +510,10 @@ We extend the original Squeak 4-bit format field to 5 bits, providing space for 
 
 
 One obvious optimization to images is to add image (de)compression to image loading and snapshot.  The image header remains unchanged but its contents could be compressed, compressing either on snapshot, if requested, or off-line via a special-purpose tool.
+
+Simple Object Representation Impoving Code Quality
+Given that the Spur obejct representation is quite regular and simple it has been possible to implement many more performance-critcal operations in machine code.  The exsting VM allocated only Float results in the floating-point primitives, deferring to Interpreter primitives (in the Interpreter's C run-time, invoked by a system-call like stack-switching call) for object instantiation, and closure, indirection vector and context creation.  The Spur JIT now generates machine code for the object instantiation primitives, and closure, indirection vector and context creation.  It also implements the at:put: primitive in machine code and implements both at: and at:put: on WideString in machine code (the previous VM needs to instantiate characters with codes > 255 in at:).  As a result, Spur is substantially faster executing Smalltalk.  The scavenger also has a significant impact on GC-intensive benchmarks.
+
 
 Issues:
 Are class indices in inline caches strong references to classes or weak references?
@@ -831,7 +892,7 @@ SpurMemoryManager class >> initializeSpecialObjectIndices [
 
 	SelectorUnknownBytecode := 57.
 	SelectorCounterTripped := 58.
-	SelectorClassTrap := 59
+	SelectorSistaTrap := 59
 ]
 
 { #category : #'class initialization' }
@@ -2252,6 +2313,29 @@ SpurMemoryManager >> arrayFormat [
 	^2
 ]
 
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> arrayOfUnmarkedClasses [
+	| nClasses classes i |
+	nClasses := 0.
+	self classTableEntriesDo:
+		[:class :ignored|
+		 (self isMarked: class) ifFalse:
+			[nClasses := nClasses + 1]].
+	nClasses = 0 ifTrue:
+		[^nilObj].
+	classes := self allocateSlots: nClasses format: self arrayFormat classIndex: ClassArrayCompactIndex.
+	classes ifNil:
+		[^self integerObjectOf: PrimErrNoMemory].
+	i := 0.
+	self classTableEntriesDo:
+		[:class :ignored|
+		 (self isMarked: class) ifFalse:
+			[self storePointer: i ofObject: classes withValue: class.
+			 i := i + 1]].
+	self assert: nClasses = i.
+	^classes
+]
+
 { #category : #'simulation only' }
 SpurMemoryManager >> arrayValueOf: arrayOop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -3164,6 +3248,22 @@ SpurMemoryManager >> classString [
 	^self splObj: ClassByteString
 ]
 
+{ #category : #'class table' }
+SpurMemoryManager >> classTableEntriesDo: binaryBlock [
+	"Evaluate binaryBlock with all non-nil entries in the classTable and their index."
+	<inline: true>
+	0 to: numClassTablePages - 1 do:
+		[:i| | page |
+		 page := self fetchPointer: i ofObject: hiddenRootsObj.
+		 0 to: self classTablePageSize - 1 do:
+			[:j| | classOrNil |
+			classOrNil := self fetchPointer: j ofObject: page.
+			classOrNil ~= nilObj ifTrue:
+				[binaryBlock
+					value: classOrNil
+					value: i << self classTableMajorIndexShift + j]]]
+]
+
 { #category : #accessing }
 SpurMemoryManager >> classTableIndex [
 	^classTableIndex
@@ -3923,6 +4023,18 @@ SpurMemoryManager >> ensureRoomOnObjStackAt: objStackRootIndex [
 		 stackOrNil := self updateRootOfObjStackAt: objStackRootIndex with: freeOrNewPage].
 	self assert: (self isValidObjStackAt: objStackRootIndex).
 	^stackOrNil
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> ensureSemaphoreForwardedThroughContext: aSemaphore [
+	"Make sure that the aSemaphore is forwarded through to the suspendedContext of the first link."
+	<inline: true>
+	(self isForwarded: (self fetchPointer: FirstLinkIndex ofObject: aSemaphore)) ifTrue:
+		["0 = aSemaphore, 1 = aProcess. Hence references to suspendedContext will /not/ be forwarded."
+		 self followForwardedObjectFields: aSemaphore toDepth: 1].
+	self deny: (self isForwarded: (self
+									fetchPointer: SuspendedContextIndex
+									ofObject: (self fetchPointer: FirstLinkIndex ofObject: aSemaphore)))
 ]
 
 { #category : #'class table' }
@@ -8163,8 +8275,9 @@ SpurMemoryManager >> possibleRootStoreInto: destObj [
 
 { #category : #'become implementation' }
 SpurMemoryManager >> postBecomeScanClassTable: effectsFlags [
-	"Scan the class table post-become (iff a pointer object was becommed) to ensure no forwarding
-	 pointers exist in the class table.
+	"Scan the class table post-become (iff an active class object was becommed) to ensure no
+	 forwarding pointers, and no unhashed classes exist in the class table.
+
 	 Note that one-way become can cause duplications in the class table.
 	 When can these be eliminated?  We use the classTableBitmap to mark classTable entries
 	 (not the classes themselves, since marking a class doesn't help in knowing if its index is used).
@@ -8181,10 +8294,16 @@ SpurMemoryManager >> postBecomeScanClassTable: effectsFlags [
 		0 to: (self numSlotsOf: page) - 1 do:
 			[:j| | classOrNil |
 			classOrNil := self fetchPointer: j ofObject: page.
-			(classOrNil ~= nilObj
-			 and: [self isForwarded: classOrNil]) ifTrue:
-				[classOrNil := self followForwarded: classOrNil.
-				 self storePointer: j ofObject: page withValue: classOrNil]]]
+			classOrNil ~= nilObj ifTrue:
+				[(self isForwarded: classOrNil) ifTrue:
+					[classOrNil := self followForwarded: classOrNil.
+					 self storePointer: j ofObject: page withValue: classOrNil].
+				 (self rawHashBitsOf: classOrNil) = 0 ifTrue:
+					[self storePointerUnchecked: j ofObject: page withValue: nilObj.
+					 "If the removed class is before the classTableIndex, set the
+					  classTableIndex to point to the empty slot so as to reuse it asap."
+					 (i << self classTableMajorIndexShift + j) < classTableIndex ifTrue:
+						[classTableIndex := i << self classTableMajorIndexShift + j]]]]]
 ]
 
 { #category : #snapshot }
@@ -8243,7 +8362,7 @@ SpurMemoryManager >> printForwarders [
 	<api>
 	self allHeapEntitiesDo:
 		[:objOop|
-		 ((self isForwarded: objOop) and: [(self isFreeObject: objOop) not]) ifTrue:
+		 (self isUnambiguouslyForwarder: objOop) ifTrue:
 			[coInterpreter printHex: objOop; cr]]
 ]
 
@@ -9706,9 +9825,9 @@ During operation of the primitive, it is necessary to convert from both internal
 
 To be specific, there are two similar tables, the outPointer array, and one in the upper eight of the segmentWordArray.  Each grows oops from the bottom up.
 
-In case of either success or failure, the headers must be restored.  In the event of primitive failure, the table of outPointers must also be nilled out (since the garbage in the high half will not have been discarded."
+In case of either success or failure, the headers must be restored.  In the event of primitive failure, the table of outPointers must also be nilled out (since the garbage in the high half will not have been discarded)."
 
-	| endSeg firstIn firstOut lastIn lastOut limitSeg newSegLimit |
+	| endSeg firstIn firstOut lastIn lastOut limitSeg newSegLimit unmarkedClasses |
 	true ifTrue: [^PrimErrUnsupported] ifFalse: [
 
 	((self hasOverflowHeader: outPointerArray)						"Must have 128-bit header"
@@ -9721,11 +9840,6 @@ In case of either success or failure, the headers must be restored.  In the even
 	limitSeg := segmentWordArray + self baseHeaderSize.
 	endSeg := segmentWordArray + (self addressAfter: segmentWordArray).
 
-	"Write a version number for byte order and version check"
-	limitSeg >= endSeg ifTrue: [^PrimErrGenericFailure].
-	self longAt: limitSeg put: self imageSegmentVersion.
-	limitSeg := limitSeg + self bytesPerOop.
-
 	"Allocate top 1/8 of segment for table of internal oops"
 	firstIn := endSeg - ((self numSlotsOf: segmentWordArray) // 8).  "Take 1/8 of seg"
 	lastIn := firstIn - self bytesPerOop.
@@ -9735,8 +9849,28 @@ In case of either success or failure, the headers must be restored.  In the even
 	self markObjects.
 	self unmarkObjectsIn: arrayOfRoots.
 
-	"All external objects, and only they, are now marked.
-	 Copy the array of roots into the segment, and forward its oop."
+	"All external objects, and only they, are now marked."
+	unmarkedClasses := self arrayOfUnmarkedClasses.
+	(self isImmediate: unmarkedClasses) ifTrue:
+		[^PrimErrGenericFailure].
+
+	"Write a version number for byte order and version check, followed by the number of classes."
+	limitSeg >= endSeg ifTrue: [^PrimErrGenericFailure].
+	self long32At: limitSeg put: self imageSegmentVersion.
+	self long32At: limitSeg + 4 put: (self numSlotsOf: unmarkedClasses).
+	limitSeg := limitSeg + 8.
+
+	"If there are any classes then copy them into the segment, and forward their oop."
+	(self numSlotsOf: unmarkedClasses) > 0 ifTrue:
+		[((lastIn := lastIn + self bytesPerOop) >= endSeg
+		 or: [0 = (newSegLimit := self copyObj: arrayOfRoots toSegment: segmentWordArray addr: limitSeg stopAt: firstIn saveOopAt: lastIn)]) ifTrue:
+			[lastIn := lastIn - self bytesPerWord.
+			self restoreObjectsFrom: firstIn to: lastIn from: segmentWordArray + self baseHeaderSize to: limitSeg.
+			self fillObj: outPointerArray numSlots: (self numSlotsOf: outPointerArray) with: nilObj.
+			^PrimErrGenericFailure].
+		limitSeg := newSegLimit].
+
+	"Copy the array of roots into the segment, and forward its oop."
 	((lastIn := lastIn + self bytesPerOop) >= endSeg
 	 or: [0 = (newSegLimit := self copyObj: arrayOfRoots toSegment: segmentWordArray addr: limitSeg stopAt: firstIn saveOopAt: lastIn)]) ifTrue:
 		[lastIn := lastIn - self bytesPerWord.
@@ -9996,7 +10130,7 @@ SpurMemoryManager >> sweepToFollowForwardersForPigCompact [
 		(self isForwarded: o)
 			ifTrue:
 				[lowestForwarder = 0 ifTrue:
-					[lowestForwarder := 0]]
+					[lowestForwarder := o]]
 			ifFalse:
 				[0 to: (self numPointerSlotsOf: o) - 1 do:
 					[:i| | f |
@@ -10404,25 +10538,20 @@ SpurMemoryManager >> updateRootOfObjStackAt: objStackRootIndex with: newRootPage
 { #category : #'class table' }
 SpurMemoryManager >> validClassTableHashes [
 	"Check the hashes of classes in the table.  The tricky thing here is that classes may be duplicated
-	 in the table.  So each entry ,ust be in the table at its hash, even if it is elsewhere in the table."
+	 in the table.  So each entry must be in the table at its hash, even if it is elsewhere in the table."
 
 	self validClassTableRootPages ifFalse:
 		[^false].
 
-	0 to: numClassTablePages - 1 do:
-		[:i| | page |
-		 page := self fetchPointer: i ofObject: hiddenRootsObj.
-		 0 to: self classTablePageSize - 1 do:
-			[:j| | classOrNil hash |
-			classOrNil := self fetchPointer: j ofObject: page.
-			classOrNil ~= nilObj ifTrue:
-				[(self isForwarded: classOrNil) ifTrue:
-					[^0].
-				 hash := self rawHashBitsOf: classOrNil.
-				 hash = 0 ifTrue:
-					[^false].
-				 (self noCheckClassAtIndex: hash) ~= classOrNil ifTrue:
-					[^false]]]].
+	self classTableEntriesDo:
+		[:classOrNil :ignored| | hash |
+		 (self isForwarded: classOrNil) ifTrue:
+			[^0].
+		  hash := self rawHashBitsOf: classOrNil.
+		  hash = 0 ifTrue:
+			[^false].
+		  (self noCheckClassAtIndex: hash) ~= classOrNil ifTrue:
+			[^false]].
 
 	^true
 ]
