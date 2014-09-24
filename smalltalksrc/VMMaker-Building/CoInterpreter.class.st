@@ -1272,25 +1272,6 @@ CoInterpreter >> ceCheckProfileTick [
 ]
 
 { #category : #trampolines }
-CoInterpreter >> ceClassTrap: anObject [
-	<api>
-	<option: #SistaVM>
-	| context |
-	instructionPointer := self popStack.
-	context := self ensureFrameIsMarried: framePointer SP: stackPointer.
-	"If there is a class trap, the object is supposed to remain on
-	 the stack, but the cogit always removes it.  So restore it here."
-	self push: anObject.
-	self push: context.
-	self push: anObject.
-	self push: instructionPointer.
-	^self
-		ceSendAbort: (objectMemory splObj: SelectorClassTrap)
-		to: anObject
-		numArgs: 1
-]
-
-{ #category : #trampolines }
 CoInterpreter >> ceContext: maybeContext instVar: slotIndex [
 	<api>
 	| result |
@@ -1868,6 +1849,25 @@ CoInterpreter >> ceSendMustBeBoolean: anObject [
 		ceSendAbort: (objectMemory splObj: SelectorMustBeBoolean)
 		to: anObject
 		numArgs: 0
+]
+
+{ #category : #trampolines }
+CoInterpreter >> ceSistaTrap: anObject [
+	<api>
+	<option: #SistaVM>
+	| context |
+	instructionPointer := self popStack.
+	context := self ensureFrameIsMarried: framePointer SP: stackPointer.
+	"If there is a trap, the object is supposed to remain on
+	 the stack, but the cogit always removes it.  So restore it here."
+	self push: anObject.
+	self push: context.
+	self push: anObject.
+	self push: instructionPointer.
+	^self
+		ceSendAbort: (objectMemory splObj: SelectorSistaTrap)
+		to: anObject
+		numArgs: 1
 ]
 
 { #category : #trampolines }
@@ -6464,13 +6464,7 @@ CoInterpreter >> synchronousSignal: aSemaphore [
 			withValue: excessSignals + 1.
 		 ^false].
 
-	objectMemory hasSpurMemoryManagerAPI ifTrue:
-		[| firstLink |
-		 firstLink := objectMemory fetchPointer: FirstLinkIndex ofObject: aSemaphore.
-		 (objectMemory isForwarded: firstLink) ifTrue:
-			["0 = aSemaphore, 1 = aProcess. Hence reference to suspendedContext will /not/ be forwarded."
-			 objectMemory followForwardedObjectFields: aSemaphore toDepth: 1].
-		 self assert: (objectMemory isForwarded: (objectMemory fetchPointer: SuspendedContextIndex ofObject: firstLink)) not].
+	objectMemory ensureSemaphoreForwardedThroughContext: aSemaphore.
 
 	^self resume: (self removeFirstLinkOfList: aSemaphore)
 		preemptedYieldingIf: preemptionYields

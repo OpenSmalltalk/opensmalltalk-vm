@@ -103,7 +103,7 @@ Spur64BitMemoryManager >> bytesInObject: objOop [
 	header := self longAt: objOop.
 	headerNumSlots := header >> self numSlotsFullShift.
 	numSlots := headerNumSlots = self numSlotsMask
-					ifTrue: [header bitAnd: 16rFFFFFFFFFFFFFF]
+					ifTrue: [self rawOverflowSlotsOf: objOop]
 					ifFalse: [headerNumSlots = 0 ifTrue: [1] ifFalse: [headerNumSlots]].
 	^numSlots << self shiftForWord
 	+ (headerNumSlots = self numSlotsMask
