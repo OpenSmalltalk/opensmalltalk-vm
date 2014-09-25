@@ -584,7 +584,6 @@ CogVMSimulator >> close [  "close any files that ST may have opened"
 { #category : #'primitive support' }
 CogVMSimulator >> codeGeneratorToComputeAccessorDepth [
 	^VMMaker new
-		cogitClass: self class cogitClass;
 		buildCodeGeneratorForInterpreter: CoInterpreterPrimitives
 		includeAPIMethods: false
 		initializeClasses: false
