@@ -8482,12 +8482,12 @@ SpurMemoryManager >> printInvalidClassTableEntries [
 		 ^self].
 
 	self classTableEntriesDo:
-		[:classOrNil :i :j| | hash |
+		[:classOrNil :index| | hash |
 		 ((self isForwarded: classOrNil)
 		  or: [(hash := self rawHashBitsOf: classOrNil) = 0
 		  or: [(self noCheckClassAtIndex: hash) ~= classOrNil]]) ifTrue:
 			[coInterpreter
-				print: 'entry '; printHex: i * self classTablePageSize + j;
+				print: 'entry '; printHex: index;
 				print: ' oop '; printHex: classOrNil;
 				print: ' hash '; printHex: hash; print: ' => '; printHex: (self classAtIndex: hash);
 				cr]]
