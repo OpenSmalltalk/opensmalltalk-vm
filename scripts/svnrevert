@@ -1,9 +1,14 @@
 #!/bin/sh
-# Revert file(s) and touch them back to the checkin date
+# Revert file(s) or all modified files in a directory
+# and touch them back to the checkin date
 for f in "$@"
 do
-	if svn revert "$f"; then
-		changed="`svn info \"$f\" | grep 'Last Changed Date:' | sed 's/ *(.*//'`"
-		touch -t "`date -j -f 'Last Changed Date: %Y-%m-%d %H:%M:%S %z' \"$changed\" '+%Y%m%d%H%M.%S'`" "$f"
+	if [ -d "$f" ]; then
+		$0 `svn st "$f" | grep "^M" | sed 's/^M *//'`
+	else
+		if svn revert "$f"; then
+			changed="`svn info \"$f\" | grep 'Last Changed Date:' | sed 's/ *(.*//'`"
+			touch -t "`date -j -f 'Last Changed Date: %Y-%m-%d %H:%M:%S %z' \"$changed\" '+%Y%m%d%H%M.%S'`" "$f"
+		fi
 	fi
 done

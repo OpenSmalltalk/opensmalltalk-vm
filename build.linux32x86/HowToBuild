@@ -188,6 +188,8 @@ e.g.
 
 N.B. The plugin set is defined by plugins.ext and plugins.int in the build dir.
 
+Be prepared to install libuuid support.  e.g. on CentOS 6.5 use
+sudo yum -y install libuuid-devel
 
 
 Testing an external plugin has completely linked
