@@ -2561,12 +2561,13 @@ Cogit >> cPIC: cPIC HasTarget: targetMethod [
 Cogit >> cPICHasForwardedClass: cPIC [
 	<var: #cPIC type: #'CogMethod *'>
 	| pc |
-	pc := cPIC asInteger + firstCPICCaseOffset.
-	1 to: cPIC cPICNumCases do:
+	pc := cPIC asUnsignedInteger
+		+ firstCPICCaseOffset
+		+ cPICCaseSize
+		- backEnd jumpLongConditionalByteSize.
+	2 to: cPIC cPICNumCases do:
 		[:i| | classIndex |
-		classIndex := backEnd inlineCacheTagAt: pc
-												- backEnd jumpLongConditionalByteSize
-												- backEnd loadLiteralByteSize.
+		classIndex := backEnd inlineCacheTagAt: pc.
 		(objectMemory isForwardedClassIndex: classIndex) ifTrue:
 			[^true].
 		pc := pc + cPICCaseSize].
@@ -6942,6 +6943,10 @@ Cogit >> mapObjectReferencesInMachineCodeForBecome [
 						ifFalse:
 							[cogMethod cmRefersToYoung: false]]].
 		cogMethod := methodZone methodAfter: cogMethod].
+	"we /must/ prune youngReferrers here because a) the [cogMethod cmRefersToYoung: false]
+	 block could have removed a method and subsequently it could be added back, and b) we
+	 can not tolerate duplicates in the youngReferrers list."  
+	methodZone pruneYoungReferrers.
 	freedPIC ifTrue:
 		[self unlinkSendsToFree].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
