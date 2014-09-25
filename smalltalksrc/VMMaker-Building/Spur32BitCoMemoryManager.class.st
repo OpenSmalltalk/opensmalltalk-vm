@@ -213,23 +213,6 @@ Spur32BitCoMemoryManager >> initializeFreeSpaceForFacadeFrom: base to: limit [
 	totalFreeOldSpace := freeBytes
 ]
 
-{ #category : #'class table' }
-Spur32BitCoMemoryManager >> isForwardedClassIndex: maybeClassIndex [
-	"A lenient tester of forwarded class indices for inline cache management in the Cogit."
-	<api>
-	| classTablePage entry |
-	maybeClassIndex asUnsignedInteger >= self classTableRootSlots ifTrue:
-		[^false].
-	classTablePage := self fetchPointer: maybeClassIndex >> self classTableMajorIndexShift
-							ofObject: hiddenRootsObj.
-	classTablePage = nilObj ifTrue:
-		[^false].
-	entry := self
-				fetchPointer: (maybeClassIndex bitAnd: self classTableMinorIndexMask)
-				ofObject: classTablePage.
-	^self isForwarded: entry
-]
-
 { #category : #'cog jit support' }
 Spur32BitCoMemoryManager >> isImmediateClass: classObj [
 	<api>
