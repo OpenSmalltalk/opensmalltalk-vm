@@ -2,6 +2,10 @@
 # Revert the argument if its changes comprise only the generation metadata
 # such as date generated, VMMaker version etc.
 
+if [ -d "$1" ]; then
+	$0 `svn st "$1" | grep "^M" | sed 's/^M *//'`
+	exit 0
+fi
 case `svn st "$1"` in
 M*)	;;
 *)	exit 0
