@@ -3089,12 +3089,6 @@ CoInterpreter >> findNewMethodInClassTag: classTagArg [
 			 self addNewMethodToCache: class]
 ]
 
-{ #category : #'object memory support' }
-CoInterpreter >> flushBecommedClassesInMethodZone [
-	<inline: true>
-	cogit unlinkSendsToForwardedClasses
-]
-
 { #category : #'plugin primitive support' }
 CoInterpreter >> flushExternalPrimitiveOf: methodObj [
 	"methodObj is a CompiledMethod containing an external primitive.
