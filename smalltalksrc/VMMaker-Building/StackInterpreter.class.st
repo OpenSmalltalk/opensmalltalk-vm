@@ -366,11 +366,13 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV3PlusClosures [
 		(136 duplicateTopBytecode)
 
 		(137 pushActiveContextBytecode)
-		(138 pushNewArrayBytecode)
+		(138 pushNewArrayBytecode)),
 
-		"The last of 3 Newspeak bytecodes"
-		(139 pushExplicitOuterReceiverBytecode)
+	((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
+		ifTrue: [#((139 callPrimitiveBytecode))]					"V3PlusClosures on Spur"
+		ifFalse: [#((139 pushExplicitOuterReceiverBytecode))]),	"Newspeak on V3"
 
+	  #(
 		(140 pushRemoteTempLongBytecode)
 		(141 storeRemoteTempLongBytecode)
 		(142 storeAndPopRemoteTempLongBytecode)
@@ -722,8 +724,13 @@ StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosures [
 		(136 duplicateTopBytecode)
 
 		(137 pushActiveContextBytecode)
-		(138 pushNewArrayBytecode)
-		(139 unknownBytecode)
+		(138 pushNewArrayBytecode)),
+
+	((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
+		ifTrue: [#((139 callPrimitiveBytecode))]	"V3PlusClosures on Spur"
+		ifFalse: [#((139 unknownBytecode))]),	"V3PlusClosures on V3"
+
+	  #(
 		(140 pushRemoteTempLongBytecode)
 		(141 storeRemoteTempLongBytecode)
 		(142 storeAndPopRemoteTempLongBytecode)
@@ -1214,8 +1221,8 @@ StackInterpreter class >> initializePrimitiveTable [
 		(195 primitiveFindNextUnwindContext)
 		(196 primitiveTerminateTo)
 		(197 primitiveFindHandlerContext)
-		(198 primitiveMarkUnwindMethod)
-		(199 primitiveMarkHandlerMethod)
+		(198 0 "a.k.a. primitiveMarkUnwindMethod")
+		(199 0 "a.k.a. primitiveMarkHandlerMethod")
 
 		"new closure primitives (were Networking primitives)"
 		(200 primitiveClosureCopyWithCopiedValues)
@@ -3279,15 +3286,23 @@ StackInterpreter >> callExternalPrimitive: functionID [
 { #category : #'miscellaneous bytecodes' }
 StackInterpreter >> callPrimitiveBytecode [
 	"V4:			249		11111001	i i i i i i i i	jjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjjj * 256)
-	 SistaV1:	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution."
+	 SistaV1:	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
+	 V3/Spur:	139		10001011	i i i i i i i i	jjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjjj * 256)"
+	"Note that we simply skip a callPrimitiveBytecode at the start of a method
+	 that contains a primitive.  This because methods like Context(Part)>>reset
+	 have to be updated to skip the callPrimtiive bytecode otherwise."
 	self cppIf: SistaVM
 		ifTrue:
-			[| byte1 byte2 prim |
+			[| byte1 byte2 prim header |
 			 byte1 := self fetchByte.
 			 byte2 := self fetchByte.
 			 self fetchNextBytecode.
 			 byte2 < 128 ifTrue:
-				[localIP := localIP - 3.
+				[header := self methodHeaderOf: method.
+				 ((self methodHeaderHasPrimitive: header)
+				  and: [localIP = (self initialPCForHeader: header method: method) + (self sizeOfCallPrimitiveBytecode: header)]) ifTrue:
+					[^self].
+				 localIP := localIP - 3.
 				 ^self respondToUnknownBytecode].
 			 prim := byte2 - 128 << 8 + byte1.
 			 prim < 1000 ifTrue:
@@ -3305,14 +3320,15 @@ StackInterpreter >> callPrimitiveBytecode [
 			 localIP := localIP - 3.
 			 ^self respondToUnknownBytecode]
 		ifFalse:
-			[self error: 'callPrimitiveBytecode should not be evaluated. method activation should step beyond this bytecode.']
-
-	"We could make it a noop and not skip it in {foo}ActivateMethod, as in:
-
-	localIP := localIP + 3.
-	self fetchNextBytecode
-
-	 But for now, having {foo}ActivateMethod skip it makes it available for invoking embedded primitives."
+			[| header |
+			 header := self methodHeaderOf: method.
+			 ((self methodHeaderHasPrimitive: header)
+			  and: [localIP = (self initialPCForHeader: header method: method)])
+				ifTrue:
+					[localIP := localIP + (self sizeOfCallPrimitiveBytecode: header).
+					 ^self fetchNextBytecode]
+				ifFalse:
+					[^self respondToUnknownBytecode]]
 ]
 
 { #category : #'callback support' }
@@ -6082,6 +6098,26 @@ StackInterpreter >> flushAtCache [
 	"Flush the at cache. The method cache is flushed on every programming change and garbage collect."
 
 	1 to: AtCacheTotalSize do: [ :i | atCache at: i put: 0 ]
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> flushBecommedClassesInMethodCache [
+	"Flush any entries in the cache which refer to a forwarded (becommed) class."
+	0 to: MethodCacheSize - 1 by: MethodCacheEntrySize do:
+		[:i | | c s |
+		c := methodCache at: i + MethodCacheClass.
+		s := methodCache at: i + MethodCacheSelector.
+		(c ~= 0 and: [s ~= 0
+		 and: [objectMemory isForwarded: (objectMemory classOrNilAtIndex: c)]]) ifTrue:
+			[methodCache
+				at: i + MethodCacheClass put: 0;
+				at: i + MethodCacheSelector put: 0]].
+	self flushAtCache
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> flushBecommedClassesInMethodZone [
+	"This is just a stub for the CoInterpreter"
 ]
 
 { #category : #'plugin primitive support' }
@@ -9750,6 +9786,9 @@ StackInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 		[(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 			[self followForwardedMethodsInMethodCache.
 			 self followForwardedMethodsInMethodZone]. "for CoInterpreter"
+		 (theBecomeEffectsFlags anyMask: BecameActiveClassFlag) ifTrue:
+			[self flushBecommedClassesInMethodCache.
+			 self flushBecommedClassesInMethodZone]. "for CoInterpreter"
 		 self followForwardingPointersInScheduler.
 		 self followForwardingPointersInSpecialObjectsArray.
 		 self followForwardingPointersInProfileState]
@@ -13683,6 +13722,9 @@ StackInterpreter >> validInstructionPointer: anInstrPointer inFrame: fp [
 	<var: #anInstrPointer type: #usqInt>
 	<var: #fp type: #'char *'>
 	<inline: false>
+	"Note that we accept anInstrPointer pointing to a callPrimitiveBytecode
+	 at the start of a method that contains a primitive.  This because methods like
+	 Context(Part)>>reset have to be updated to skip the callPrimtiive bytecode otherwise."
 	^self validInstructionPointer: anInstrPointer inMethod: (self frameMethodObject: fp) framePointer: fp
 ]
 
@@ -13691,30 +13733,9 @@ StackInterpreter >> validInstructionPointer: theInstrPointer inMethod: aMethod f
 	<var: #theInstrPointer type: #usqInt>
 	<var: #aMethod type: #usqInt>
 	<var: #fp type: #'char *'>
-	| methodHeader |
-	objectMemory hasSpurMemoryManagerAPI ifTrue:
-		[methodHeader := self noAssertHeaderOf: aMethod. "-1 for pre-increment in fetchNextBytecode"
-		 ^theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BytesPerOop - 1)
-		   and: [theInstrPointer < (aMethod + (objectMemory numBytesOf: aMethod) + BaseHeaderSize - 1)
-		   and: ["If the method starts with a CallPrimitive opcode the instruction pointer should be past it."
-			((self alternateHeaderHasPrimitiveFlag: methodHeader)
-			 and: [theInstrPointer < (aMethod
-									+ BytesPerOop - 1
-									+ (objectMemory lastPointerOf: aMethod)
-									+ (self sizeOfCallPrimitiveBytecode: methodHeader))])
-				not]]].
-	MULTIPLEBYTECODESETS ifTrue:
-		[methodHeader := self noAssertHeaderOf: aMethod. "-1 for pre-increment in fetchNextBytecode"
-		 ^theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + BytesPerOop - 1)
-		   and: [theInstrPointer < (aMethod + (objectMemory numBytesOf: aMethod) + BaseHeaderSize - 1)
-		   and: ["If the method starts with a CallPrimitive opcode the instruction pointer should be past it."
-			((self headerIndicatesAlternateBytecodeSet: methodHeader)
-			  and: [(self alternateHeaderHasPrimitiveFlag: methodHeader)
-			  and: [theInstrPointer < (aMethod
-									+ BytesPerOop - 1
-									+ (objectMemory lastPointerOf: aMethod)
-									+ (self sizeOfCallPrimitiveBytecode: methodHeader))]])
-				not]]].
+	"Note that we accept anInstrPointer pointing to a callPrimitiveBytecode
+	 at the start of a method that contains a primitive.  This because methods like
+	 Context(Part)>>reset have to be updated to skip the callPrimtiive bytecode otherwise."
 	"-1 for pre-increment in fetchNextBytecode"
 	^theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + objectMemory bytesPerOop - 1)
 	  and: [theInstrPointer < (aMethod + (objectMemory numBytesOf: aMethod) + objectMemory baseHeaderSize - 1)]
