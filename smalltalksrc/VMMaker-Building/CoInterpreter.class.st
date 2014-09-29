@@ -1068,7 +1068,7 @@ CoInterpreter >> callbackEnter: callbackID [
 	self assert: wasInMachineCode = (self isMachineCodeFrame: framePointer).
 	calledFromMachineCode
 		ifTrue:
-			[instructionPointer >= objectMemory startOfMemory ifTrue:
+			[instructionPointer asUnsignedInteger >= objectMemory startOfMemory ifTrue:
 				[self iframeSavedIP: framePointer put: instructionPointer.
 				 instructionPointer := cogit ceReturnToInterpreterPC]]
 		ifFalse:
@@ -3089,6 +3089,12 @@ CoInterpreter >> findNewMethodInClassTag: classTagArg [
 			 self addNewMethodToCache: class]
 ]
 
+{ #category : #'object memory support' }
+CoInterpreter >> flushBecommedClassesInMethodZone [
+	<inline: true>
+	cogit unlinkSendsToForwardedClasses
+]
+
 { #category : #'plugin primitive support' }
 CoInterpreter >> flushExternalPrimitiveOf: methodObj [
 	"methodObj is a CompiledMethod containing an external primitive.
@@ -4126,7 +4132,7 @@ CoInterpreter >> justActivateNewMethod [
 	self assert: (objectMemory isOopForwarded: rcvr) not.
 
 	(activateCogMethod
-	and: [instructionPointer >= objectMemory startOfMemory]) ifTrue:
+	and: [instructionPointer asUnsignedInteger >= objectMemory startOfMemory]) ifTrue:
 		[self iframeSavedIP: framePointer put: instructionPointer.
 		 instructionPointer := cogit ceReturnToInterpreterPC].
 	self push: instructionPointer.
