@@ -1520,7 +1520,7 @@ static void vm_printUsage(void)
   printf("  -reportheadroom       report unused stack headroom on exit\n");
 #endif
   printf("  -blockonerror         on error or segv block, not exit.  useful for attaching gdb\n");
-  printf("  -blockonwarning       on warning block, don't warn.  useful for attaching gdb\n");
+  printf("  -blockonwarn          on warning block, don't warn.  useful for attaching gdb\n");
 #if 1
   printf("Deprecated:\n");
 # if !STACKVM

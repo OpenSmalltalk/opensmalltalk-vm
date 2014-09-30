@@ -334,7 +334,7 @@ static void printUsage(void)
   printf("  -version              print version information, then exit\n");
 
   printf("  -blockonerror         on error or segv block, not exit.  useful for attaching gdb\n");
-  printf("  -blockonwarning       on warning block, don't warn.  useful for attaching gdb\n");
+  printf("  -blockonwarn          on warning block, don't warn.  useful for attaching gdb\n");
 }
 
 static void printUsageNotes(void)
