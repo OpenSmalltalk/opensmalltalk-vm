@@ -6629,7 +6629,7 @@ Cogit >> lookup: selector for: receiver methodAndErrorSelectorInto: binaryBlock 
 			 ((coInterpreter methodHasCogMethod: methodOrSelectorIndex) not
 			  and: [coInterpreter methodShouldBeCogged: methodOrSelectorIndex]) ifTrue:
 				["We assume cog:selector: will *not* reclaim the method zone"
-				 self cog: methodOrSelectorIndex selector: selector].
+				 self cog: methodOrSelectorIndex selector: (objectMemory splObj: SelectorDoesNotUnderstand)].
 			^binaryBlock value: methodOrSelectorIndex value: SelectorDoesNotUnderstand].
 		^binaryBlock value: nil value: SelectorDoesNotUnderstand].
 	^binaryBlock value: nil value: methodOrSelectorIndex
