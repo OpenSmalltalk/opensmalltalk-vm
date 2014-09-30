@@ -2674,6 +2674,9 @@ StackToRegisterMappingCogit >> genPushRemoteTempLongBytecode [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genPushTemporaryVariable: index [
+	"If a frameless method (not a block), only argument temps can be accessed.
+	 This is assured by the use of needsFrameIfMod16GENumArgs: in pushTemp."
+	self assert: (inBlock or: [needsFrame or: [index < methodOrBlockNumArgs]]).
 	^self ssPushDesc: (simStack at: index)
 ]
 
@@ -3609,7 +3612,7 @@ StackToRegisterMappingCogit >> initSimStackForFramefulMethod: startpc [
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> initSimStackForFramelessBlock: startpc [
-	"The register receiver (he closure itself) and args are pushed by the closure value primitive(s)
+	"The register receiver (the closure itself) and args are pushed by the closure value primitive(s)
 	 and hence a frameless block has all arguments and copied values pushed to the stack.  However,
 	 the method receiver (self) is put in the ReceiverResultRegister by the block entry."
 	| desc |
@@ -3623,7 +3626,6 @@ StackToRegisterMappingCogit >> initSimStackForFramelessBlock: startpc [
 		isReceiverResultRegLive: true;
 		ssEntry: (self addressOf: simSelf).
 	self assert: methodOrBlockNumTemps >= methodOrBlockNumArgs.
-	self assert: self numRegArgs <= 2.
 	0 to: methodOrBlockNumTemps - 1 do:
 		[:i|
 		desc := self simStackAt: i.
@@ -3649,8 +3651,7 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 	optStatus
 		isReceiverResultRegLive: true;
 		ssEntry: (self addressOf: simSelf).
-	self assert: (methodOrBlockNumTemps = methodOrBlockNumArgs
-				or: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]).
+	self assert: methodOrBlockNumTemps >= methodOrBlockNumArgs.
 	self assert: self numRegArgs <= 2.
 	(methodOrBlockNumArgs between: 1 and: self numRegArgs)
 		ifTrue:
