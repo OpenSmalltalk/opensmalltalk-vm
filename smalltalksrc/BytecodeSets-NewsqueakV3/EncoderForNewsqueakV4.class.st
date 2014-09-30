@@ -528,11 +528,11 @@ EncoderForNewsqueakV4 class >> selectorToSendOrItselfFor: anInstructionStream in
 	byte < 238 ifTrue:
 		[(byte >= 224 and: [byte <= 225]) ifTrue:
 			[^self extensionsAt: pc in: method into:
-				[:extA :extB :delta| | byteAfter index |
-				byteAfter := method at: pc + delta.
+				[:extA :extB :nExtBytes| | byteAfter index |
+				byteAfter := method at: pc + nExtBytes.
 				(byteAfter >= 238 and: [byteAfter <= 241])
 					ifTrue:
-						[index := ((method at: pc + delta + 1) bitShift: -3) + (extA bitShift: 5).
+						[index := ((method at: pc + nExtBytes + 1) bitShift: -3) + (extA bitShift: 5).
 						 method literalAt: index + 1]
 					ifFalse: [anInstructionStream]]].
 		^anInstructionStream].
@@ -540,7 +540,7 @@ EncoderForNewsqueakV4 class >> selectorToSendOrItselfFor: anInstructionStream in
 		[^anInstructionStream].
 	"they could be extended..."
 	^self extensionsAt: pc in: method into:
-		[:extA :extB| | index |
+		[:extA :extB :nExtBytes| | index |
 		 index := ((method at: pc + 1) bitShift: -3) + (extA bitShift: 5).
 		 method literalAt: index + 1]
 ]
