@@ -28,7 +28,8 @@ cd `dirname $0`/../products
 VERBOSE=
 JustUpload=
 
-if [ $# = 0 ]; then
+
+function all () {
 	CheckDMG=1
 	CheckMSI=1
 	LCOG=1
@@ -45,12 +46,17 @@ if [ $# = 0 ]; then
 	MNSSPUR=1
 	WNSCOG=1
 	WNSSPUR=1
+}
+
+if [ $# = 0 ]; then
+	all
 else
 	CheckDMG=
 	CheckMSI=
 	while [ -n "$1" ]; do
 		case $1 in
 		-archives)	JustUpload=JustUpload;;
+		-all)	all;;
 		-c)		LCOG=1;LTCOG=1;MCOG=1;MTCOG=1;WCOG=1;WMTCOG=1;
 				LSPUR=1;MSPUR=1;WSPUR=1;;
 		-cl)	LCOG=1;LTCOG=1;LSPUR=1;;
