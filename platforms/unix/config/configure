@@ -463,7 +463,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='NM LD SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS cogit topdir cfgdir vmmdir vmpdir vmmcfg blddir SQ_MAJOR SQ_MINOR SQ_UPDATE SQ_VERSION VM_MAJOR VM_MINOR VM_RELEASE VM_VERSION imgdir expanded_relative_imgdir plgdir build build_cpu build_vendor build_os host host_cpu host_vendor host_os SET_MAKE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT WFLAGS AS RANLIB ac_ct_RANLIB INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LN CPP EGREP SED LN_S ECHO AR ac_ct_AR STRIP ac_ct_STRIP CXX CXXFLAGS ac_ct_CXX CXXCPP F77 FFLAGS ac_ct_F77 LIBTOOL INCLUDES HAVE_INTERP_H ALLOCA INTERP AWK VM_APP_ICONS npsqueak install_nps uninstall_nps SQ_LIBDIR int_modules ext_modules HAVE_LANGINFO_CODESET HAVE_NANOSLEEP X_CFLAGS X_PRE_LIBS X_LIBS X_EXTRA_LIBS X_CPPFLAGS X_INCLUDES LIBM_CFLAGS LIB_UUID int_plugins ext_plugins LIBOBJS LTLIBOBJS'
+ac_subst_vars='NM LD SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS cogit topdir cfgdir vmmdir vmpdir vmmcfg blddir SQ_MAJOR SQ_MINOR SQ_UPDATE SQ_VERSION VM_MAJOR VM_MINOR VM_RELEASE VM_VERSION imgdir expanded_relative_imgdir plgdir build build_cpu build_vendor build_os host host_cpu host_vendor host_os SET_MAKE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT WFLAGS AS RANLIB ac_ct_RANLIB INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LN CPP EGREP SED LN_S ECHO AR ac_ct_AR STRIP ac_ct_STRIP CXX CXXFLAGS ac_ct_CXX CXXCPP F77 FFLAGS ac_ct_F77 LIBTOOL INCLUDES HAVE_INTERP_H ALLOCA INTERP AWK VM_APP_ICONS npsqueak install_nps uninstall_nps SQ_LIBDIR int_modules ext_modules HAVE_LANGINFO_CODESET HAVE_NANOSLEEP X_CFLAGS X_PRE_LIBS X_LIBS X_EXTRA_LIBS X_CPPFLAGS X_INCLUDES BITBLT_OBJS LIBM_CFLAGS IA32ABI_OBJS LIB_UUID int_plugins ext_plugins LIBOBJS LTLIBOBJS'
 ac_subst_files='make_cfg make_int make_ext make_prg Makefile_install Makefile_dist Makefile_rpm Makefile_deb'
 
 # Initialize some variables set by options.
@@ -27694,6 +27694,26 @@ if test "${plibs}"; then
   done
   echo ${llibs} > ${plugin}.lib
 fi
+plugin="BitBltPlugin"
+plibs=""
+rm -f BitBltPlugin.sub BitBltPlugin.lib
+case $host_cpu in
+arm*)
+bitblt_objs="BitBltPlugin$o BitBltArm$o BitBltArmLinux$o BitBltArmOther$o BitBltArmSimd$o BitBltDispatch$o BitBltGeneric$o BitBltArmSimdAlphaBlend$o BitBltArmSimdBitLogical$o BitBltArmSimdPixPaint$o BitBltArmSimdSourceWord$o"
+;;
+*)
+bitblt_objs="BitBltPlugin.o"
+esac
+
+BITBLT_OBJS=$bitblt_objs
+
+if test "${plibs}"; then
+  llibs="${LIBS}"
+  for l in ${plibs}; do
+  llibs="${llibs} -l${l}"
+  done
+  echo ${llibs} > ${plugin}.lib
+fi
 plugin="FloatMathPlugin"
 plibs=""
 rm -f FloatMathPlugin.sub FloatMathPlugin.lib
@@ -27711,6 +27731,26 @@ if test "$GCC" = yes; then
 fi
 
 LIBM_CFLAGS=$libm_cflags
+
+if test "${plibs}"; then
+  llibs="${LIBS}"
+  for l in ${plibs}; do
+  llibs="${llibs} -l${l}"
+  done
+  echo ${llibs} > ${plugin}.lib
+fi
+plugin="IA32ABI"
+plibs=""
+rm -f IA32ABI.sub IA32ABI.lib
+ia32abi_objs="IA32ABI.o AlienSUnitTestProcedures.o ia32abicc.o"
+
+case $host_cpu in
+powerpc|ppc)
+ia32abi_objs="IA32ABI.o AlienSUnitTestProcedures.o ppcia32abicc.o"
+;;
+esac
+
+IA32ABI_OBJS=$ia32abi_objs
 
 if test "${plibs}"; then
   llibs="${LIBS}"
@@ -29475,7 +29515,9 @@ s,@X_LIBS@,$X_LIBS,;t t
 s,@X_EXTRA_LIBS@,$X_EXTRA_LIBS,;t t
 s,@X_CPPFLAGS@,$X_CPPFLAGS,;t t
 s,@X_INCLUDES@,$X_INCLUDES,;t t
+s,@BITBLT_OBJS@,$BITBLT_OBJS,;t t
 s,@LIBM_CFLAGS@,$LIBM_CFLAGS,;t t
+s,@IA32ABI_OBJS@,$IA32ABI_OBJS,;t t
 s,@LIB_UUID@,$LIB_UUID,;t t
 s,@int_plugins@,$int_plugins,;t t
 s,@ext_plugins@,$ext_plugins,;t t
