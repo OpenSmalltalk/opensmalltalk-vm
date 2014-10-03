@@ -1,0 +1,78 @@
+Extension { #name : #TSendNode }
+
+{ #category : #'*vmmakerjs' }
+TSendNode >> emitJSCodeAsArgumentOn: aStream level: level generator: aCodeGen [
+	"Emit the receiver in a form that can be passed as an argument."
+
+	"If the selector is a built-in construct, translate it and return"
+	(aCodeGen emitBuiltinConstructAsArgumentFor: self asExpression on: aStream level: level) ifFalse:
+		["If it is a pointer dereference generate it"
+		(self emitJSCodeAsPointerDereferenceOn: aStream level: level generator: aCodeGen) ifFalse:
+			["Otherwise generate the vanilla C function call."
+			 self emitJSCodeAsFunctionCallOn: aStream level: level generator: aCodeGen]]
+]
+
+{ #category : #'*vmmakerjs' }
+TSendNode >> emitJSCodeAsExpressionOn: aStream level: level generator: aCodeGen [
+	^self emitJSCodeAsArgumentOn: aStream level: level generator: aCodeGen
+]
+
+{ #category : #'*vmmakerjs' }
+TSendNode >> emitJSCodeAsFunctionCallOn: aStream level: level generator: aCodeGen [
+
+	"Translate this message send into a C function call"
+	"Special case for pluggable modules. Replace messages to interpreterProxy
+	 by interpreterProxy->message(..) if the message is not builtin"
+	(aCodeGen isGeneratingPluginCode
+	 and: [receiver isVariable
+	 and: ['interpreterProxy' = receiver name
+	 and: [self isBuiltinOperator not]]]) ifTrue:
+		[aStream nextPutAll:'interpreterProxy.'].
+	"Translate this message send into a C function call."
+	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector); nextPut: $(.
+	"Only include the receiver as the first argument in certain cases.
+	 The receiver is always included if it is an expression.
+	 If it is a variable:
+		 If the vmClass says it is an implicit variable, don't include it.
+		 If the variable is 'self' and the method being called is not in
+		 the method set (i.e. it is some external code), don't include it."
+	(self shouldIncludeReceiverAsFirstArgument: aCodeGen) ifTrue:
+		[receiver emitJSCodeOn: aStream level: level generator: aCodeGen.
+		arguments isEmpty ifFalse:
+			[aStream nextPutAll: ', ']].
+	arguments do:
+		[ :arg| arg emitJSCodeAsArgumentOn: aStream level: level generator: aCodeGen]
+		separatedBy: [aStream nextPut: $,; space].
+	aStream nextPut: $)
+]
+
+{ #category : #'*vmmakerjs' }
+TSendNode >> emitJSCodeAsPointerDereferenceOn: aStream level: level generator: aCodeGen [
+	"If appropriate, translate this message send as a pointer dereference"
+
+	(self isStructSend: aCodeGen) ifFalse:
+		[^false].
+
+	aStream nextPut: $(.
+	receiver  emitJSCodeAsExpressionOn: aStream level: 0 generator: aCodeGen.
+	aStream nextPut: $-; nextPut: $>.
+	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector).
+	arguments isEmpty ifFalse:
+		[self assert: arguments size = 1.
+		 aStream nextPutAll: ' = '.
+		 arguments first emitJSCodeAsExpressionOn: aStream level: level generator: aCodeGen].
+	aStream nextPut: $).
+	^true
+]
+
+{ #category : #'*vmmakerjs' }
+TSendNode >> emitJSCodeOn: aStream level: level generator: aCodeGen [
+	"Emit the receiver as a statement."
+
+	"If the selector is a built-in construct, translate it and return"
+	(aCodeGen emitBuiltinConstructFor: self on: aStream level: level) ifFalse:
+		["If it is a pointer dereference generate it"
+		(self emitJSCodeAsPointerDereferenceOn: aStream level: level generator: aCodeGen) ifFalse:
+			["Otherwise generate the vanilla C function call."
+			 self emitJSCodeAsFunctionCallOn: aStream level: level generator: aCodeGen]]
+]
