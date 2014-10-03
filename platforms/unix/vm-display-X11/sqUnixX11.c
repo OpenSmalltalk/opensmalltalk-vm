@@ -3493,19 +3493,19 @@ static void handleEvent(XEvent *evt)
   switch (evt->type)
     {
     case ButtonPress:
-      fprintf(stderr, "\nX ButtonPress   state 0x%x button %d\n",
+      fprintf(stderr, "\n(handleEvent)X ButtonPress   state 0x%x button %d\n",
 	      evt->xbutton.state, evt->xbutton.button);
       break;
     case ButtonRelease:
-      fprintf(stderr, "\nX ButtonRelease state 0x%x button %d\n",
+      fprintf(stderr, "\n(handleEvent)X ButtonRelease state 0x%x button %d\n",
 	      evt->xbutton.state, evt->xbutton.button);
       break;
     case KeyPress:
-      fprintf(stderr, "\nX KeyPress      state 0x%x raw keycode %d\n",
+      fprintf(stderr, "\n(handleEvent)X KeyPress      state 0x%x raw keycode %d\n",
 	      evt->xkey.state, evt->xkey.keycode);
       break;
     case KeyRelease:
-      fprintf(stderr, "\nX KeyRelease    state 0x%x raw keycode %d\n",
+      fprintf(stderr, "\n(handleEvent)X KeyRelease    state 0x%x raw keycode %d\n",
 	      evt->xkey.state, evt->xkey.keycode);
       break;
     }
@@ -6531,7 +6531,7 @@ void copyImage32To32(int *fromImageData, int *toImageData, int width, int height
       armSimdCopyImage32To32(fromImageData, toImageData, width, height, affectedL, affectedT, affectedR, affectedB);
     else
 # else
-#  error unsupported use of ENABLE_FAST_BLT
+#  error unsupported use of USE_FAST_BLT
 # endif
 #endif
   {

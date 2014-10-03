@@ -148,7 +148,7 @@ static sqInt getButtonState(void)
 	}
     }
 #if DEBUG_MOUSE_EVENTS
-  printf("BUTTONS");
+  printf("BUTTONS (getButtonState)");
   printModifiers(modifiers);
   printButtons(buttons);
   printf("\n");
@@ -179,7 +179,7 @@ static void recordMouseEvent(void)
     evt->windowIndex= 0;
   signalInputEvent();
 #if DEBUG_MOUSE_EVENTS
-  printf("EVENT: mouse (%d,%d)", mousePosition.x, mousePosition.y);
+  printf("EVENT (recordMouseEvent): time: %d  mouse (%d,%d)", evt->timeStamp, mousePosition.x, mousePosition.y);
   printModifiers(state >> 3);
   printButtons(state & 7);
   printf("\n");
@@ -199,7 +199,7 @@ static void recordKeyboardEvent(int keyCode, int pressCode, int modifiers, int u
     evt->windowIndex= 0;
   signalInputEvent();
 #if DEBUG_KEYBOARD_EVENTS
-  printf("EVENT: key");
+  printf("EVENT (recordKeyboardEvent): time: %d key", evt->timeStamp);
   switch (pressCode)
     {
     case EventKeyDown: printf(" down "); break;
@@ -226,7 +226,7 @@ static void recordDragEvent(int dragType, int numFiles)
   evt->windowIndex= 0;
   signalInputEvent();
 #if DEBUG_EVENTS
-  printf("EVENT: drag (%d,%d)", mousePosition.x, mousePosition.y);
+  printf("EVENT (recordDragEvent): drag (%d,%d)", mousePosition.x, mousePosition.y);
   printModifiers(state >> 3);
   printButtons(state & 7);
   printf("\n");
@@ -245,7 +245,7 @@ static void recordWindowEvent(int action, int v1, int v2, int v3, int v4, int wi
   evt->windowIndex= windowIndex;
   signalInputEvent();
 #if DEBUG_EVENTS
-  printf("EVENT: window (%d %d %d %d %d %d) ", action, v1, v2, v3, v4, 0);
+  printf("EVENT (recordWindowEvent): window (%d %d %d %d %d %d) ", action, v1, v2, v3, v4, 0);
   switch (action)
     {
     case WindowEventMetricChange: printf("metric change");  break;
@@ -267,8 +267,20 @@ static sqInt display_ioGetNextEvent(sqInputEvent *evt)
   if (iebEmptyP())
     ioProcessEvents();
   if (iebEmptyP())
-    return false;
+       return false;
   *evt= inputEventBuffer[iebOut];
+#if DEBUG_EVENTS
+  if (evt->type == EventTypeMouse) {
+   printf( "(ioGetNextEvent) MOUSE evt: time: %d x: %d y: %d ", evt->timeStamp, evt->unused1, evt->unused2);
+   printButtons( evt->unused3);
+   printf("\n");
+  }
+  if (evt->type == EventTypeKeyboard) {
+   printf( "(ioGetNextEvent) KEYBOARD evt: time: %d char: %d utf32: %d ", evt->timeStamp, evt->unused1, evt->unused4);
+   printf("\n");
+  }
+  
+#endif
   iebAdvance(iebOut);
   return true;
 }
