@@ -9331,7 +9331,7 @@ Cogit >> unlinkIfForwardedSend: annotation pc: mcpc ignored: superfluity [
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase
 			ifTrue: "It's a linked send, but maybe a super send or linked to an OpenPIC, in which case the cache tag will be a selector...."
-				[(objectMemory isForwardedClassIndex: (backEnd inlineCacheTagAt: mcpc)) ifTrue:
+				[(objectMemory isForwardedClassIndex: (backEnd inlineCacheTagAt: mcpc asInteger)) ifTrue:
 					[self targetMethodAndSendTableFor: entryPoint into:
 						[:targetMethod :sendTable|
 						 self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]

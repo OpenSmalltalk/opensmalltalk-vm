@@ -2,6 +2,7 @@ Class {
 	#name : #Spur32BitMMLECoSimulator,
 	#superclass : #Spur32BitCoMemoryManager,
 	#instVars : [
+		'parent',
 		'bootstrapping'
 	],
 	#category : #'VMMaker-SpurMemoryManagerSimulation'
@@ -140,6 +141,17 @@ Spur32BitMMLECoSimulator >> freeLists [
 Spur32BitMMLECoSimulator >> freeStart [
 	"freeStart = 16r1163E0 ifTrue: [self halt]."
 	^super freeStart
+]
+
+{ #category : #'gc - global' }
+Spur32BitMMLECoSimulator >> globalGarbageCollect [
+	"If we're /not/ a clone, clone the VM and push it over the cliff.
+	 If it survives, destroy the clone and continue.  We should be OK until next time."
+	parent ifNil:
+		[coInterpreter cr; print: 'GC number '; print: statFullGCs; tab; flush.
+		 coInterpreter cloneSimulation objectMemory globalGarbageCollect.
+		 Smalltalk garbageCollect].
+	^super globalGarbageCollect
 ]
 
 { #category : #'growing/shrinking memory' }
@@ -388,6 +400,18 @@ Spur32BitMMLECoSimulator >> memoryBaseForImageRead [
 { #category : #'spur bootstrap' }
 Spur32BitMMLECoSimulator >> numClassTablePages [
 	^numClassTablePages
+]
+
+{ #category : #accessing }
+Spur32BitMMLECoSimulator >> parent [
+
+	^ parent
+]
+
+{ #category : #accessing }
+Spur32BitMMLECoSimulator >> parent: anObject [
+
+	parent := anObject
 ]
 
 { #category : #'debug support' }

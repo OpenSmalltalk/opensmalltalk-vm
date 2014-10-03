@@ -15,7 +15,6 @@ The instance variable descriptions can be checked for extra and missing declarat
 Instance Variables
 	becomeEffectsFlags		<Integer>
 	checkForLeaks				<Boolean>
-	classTableBitmap			<CArrayAccessor on: ByteArray>
 	classTableFirstPage		<Integer oop>
 	classTableIndex			<Integer>
 	coInterpreter				<StackInterpreter|CoInterpreter (StackInterpreterSimulator|CogVMSimulator)>
@@ -90,9 +89,6 @@ becomeEffectsFlags
 	
 checkForLeaks
 	- a set of flags determining when to run leak checks on the heap's contents
-
-classTableBitmap
-	- a bitmap used to mark used classTable entries (i.e. marks classIndices, not class objects), used to reclaim unused entries.
 
 classTableFirstPage
 	- the first page of the class table which contains all classes known to the VM at known indices
@@ -382,7 +378,7 @@ The free list also looks like it allows efficient incremental compaction.  Curre
 a) keeping each free list in memory order (including the lists of free chunks off each node in the large free chunk tree)
 b) sorting the free chunks in memory order by merge sorting the free lists
 c) climbing the free list in memory order.  For each free chunk in the free list search memory from the last free chunk to the end (and from the previous chunk to the next chunk, and so on) looking for a best-fit live object.  That object is then copied into the free chunk, and its corpse is turned into a forwarding pointer.  This works because the compaction does not slide objects, and hence no forwarding blocks are necessary and the algorithm can be made incremental. Various optimizations are possible, e.g. using a bitmap to record the sizes of the first few free chunks on the list when looking for best fits.  The assumptions being
-a) the number fo objects on the free list is kept small because the IGC incrementally compacts, and so sorting and searching the list is not expensive
+a) the number of objects on the free list is kept small because the IGC incrementally compacts, and so sorting and searching the list is not expensive
 b) the incremental collector's following of forwarding pointers reclaims the corpses at the end of memory at a sufficient rate to keep the free list small
 c) the rounding of objects to an 8-byte alignment improves the chances of finding a best fit.
 Note that this incremental collection is easily amenable to leave pinned objects where they are; they are simply filtered out when looking for a best fit.
@@ -544,7 +540,6 @@ Class {
 		'classTableFirstPage',
 		'classTableIndex',
 		'numClassTablePages',
-		'classTableBitmap',
 		'endOfMemory',
 		'ephemeronQueue',
 		'unscannedEphemerons',
@@ -685,7 +680,6 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #freeListsMask type: #usqInt;
 		var: #freeLists type: #'sqInt *';
-		var: #classTableBitmap type: #'unsigned char *';
 		var: #objStackInvalidBecause type: #'char *';
 		var: #highestObjects type: #SpurCircularBuffer;
 		var: #unscannedEphemerons type: #SpurContiguousObjStack;
@@ -1217,32 +1211,20 @@ SpurMemoryManager >> adjustAllOopsBy: bytesToShift [
 	 set bits in the classTableBitmap corresponding to used classes."
 
 	| obj classIndex |
-	self countNumClassPagesPreSwizzle: bytesToShift;
-		ensureAdequateClassTableBitmap.
+	self assert: self newSpaceIsEmpty.
+	self countNumClassPagesPreSwizzle: bytesToShift.
 	(bytesToShift ~= 0
-	 or: [segmentManager numSegments > 1])
-		ifTrue:
-			[self assert: self newSpaceIsEmpty.
-			 obj := self objectStartingAt: oldSpaceStart.
-			 [self oop: obj isLessThan: freeOldSpaceStart] whileTrue:
-				[classIndex := self classIndexOf: obj.
-				 classIndex >= self isForwardedObjectClassIndexPun
-					ifTrue:
-						[classIndex > self lastClassIndexPun ifTrue:
-							[self inClassTableBitmapSet: classIndex].
-						 self swizzleFieldsOfObject: obj]
-					ifFalse:
-						[classIndex = self isFreeObjectClassIndexPun ifTrue:
-							[self swizzleFieldsOfFreeChunk: obj]].
-				 obj := self objectAfter: obj]]
-		ifFalse:
-			[self assert: self newSpaceIsEmpty.
-			 obj := self objectStartingAt: oldSpaceStart.
-			 [self oop: obj isLessThan: endOfMemory] whileTrue:
-				[classIndex := self classIndexOf: obj.
-				 classIndex > self lastClassIndexPun ifTrue:
-					[self inClassTableBitmapSet: classIndex].
-				 obj := self objectAfter: obj]]
+	 or: [segmentManager numSegments > 1]) ifTrue:
+		[obj := self objectStartingAt: oldSpaceStart.
+		 [self oop: obj isLessThan: freeOldSpaceStart] whileTrue:
+			[classIndex := self classIndexOf: obj.
+			 classIndex >= self isForwardedObjectClassIndexPun
+				ifTrue:
+					[self swizzleFieldsOfObject: obj]
+				ifFalse:
+					[classIndex = self isFreeObjectClassIndexPun ifTrue:
+						[self swizzleFieldsOfFreeChunk: obj]].
+			 obj := self objectAfter: obj]]
 ]
 
 { #category : #'object enumeration' }
@@ -1340,34 +1322,19 @@ SpurMemoryManager >> allInstancesOf: aClass [
 	 1/4 of the address space, the count can never overflow."
 	| classIndex freeChunk ptr start limit count bytes |
 	classIndex := self rawHashBitsOf: aClass.
-	(classIndex = 0
-	 or: [aClass ~~ (self classOrNilAtIndex: classIndex)]) ifTrue:
+	classIndex = 0 ifTrue:
 		[freeChunk := self allocateSlots: 0 format: self arrayFormat classIndex: ClassArrayCompactIndex.
 		 ^freeChunk].
 	MarkObjectsForEnumerationPrimitives ifTrue:
 		[self markObjects]. "may not want to revive objects unnecessarily; but marking is sloooow."
 	freeChunk := self allocateLargestFreeChunk.
-	ptr := start := freeChunk + self baseHeaderSize.
+	start := freeChunk + self baseHeaderSize.
 	limit := self addressAfter: freeChunk.
-	count := 0.
-	self allHeapEntitiesDo:
-		[:obj| "continue enumerating even if no room so as to unmark all objects."
-		 (MarkObjectsForEnumerationPrimitives
-				ifTrue: [self isMarked: obj]
-				ifFalse: [true]) ifTrue:
-			[(self isNormalObject: obj)
-				ifTrue:
-					[MarkObjectsForEnumerationPrimitives ifTrue:
-						[self setIsMarkedOf: obj to: false].
-					 (self classIndexOf: obj) = classIndex ifTrue:
-					 	[count := count + 1.
-						 ptr < limit ifTrue:
-							[self longAt: ptr put: obj.
-							 ptr := ptr + self bytesPerSlot]]]
-				ifFalse:
-					[MarkObjectsForEnumerationPrimitives ifTrue:
-						[(self isSegmentBridge: obj) ifFalse:
-							[self setIsMarkedOf: obj to: false]]]]].
+	(self isClassAtUniqueIndex: aClass)
+		ifTrue:
+			[self uniqueIndex: classIndex allInstancesInto: start limit: limit resultsInto: [:c :p| count := c. ptr := p]]
+		ifFalse:
+			[self ambiguousClass: aClass allInstancesInto: start limit: limit resultsInto: [:c :p| count := c. ptr := p]].
 	self assert: (self isEmptyObjStack: markStack).
 	MarkObjectsForEnumerationPrimitives
 		ifTrue:
@@ -1691,6 +1658,7 @@ SpurMemoryManager >> allocateBytes: numBytes classIndex: classIndex [
 { #category : #'free space' }
 SpurMemoryManager >> allocateLargestFreeChunk [
 	"Answer the largest free chunk in the free lists."
+	<inline: false>
 	| freeChunk next |
 	"would like to use ifNotNil: but the ^next inside the ^blah ifNotNil: confused Slang"
 	freeChunk := self findLargestFreeChunk.
@@ -1698,7 +1666,7 @@ SpurMemoryManager >> allocateLargestFreeChunk [
 	"This will be the node, not a list element.  Answer a list element in preference."
 	next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: freeChunk.
 	next ~= 0 ifTrue:
-		[self storePointer:  self freeChunkNextIndex
+		[self storePointer: self freeChunkNextIndex
 			ofFreeChunk: freeChunk
 			withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: next).
 		 ^next].
@@ -2242,7 +2210,7 @@ SpurMemoryManager >> allocateSlotsForPinningInOldSpace: numSlots bytes: totalByt
 { #category : #allocation }
 SpurMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes format: formatField classIndex: classIndex [
 	"Answer the oop of a chunk of space in oldSpace with numSlots slots.  The header
-	 will have been filled-in but not the contents."
+	 will have been filled-in but not the contents.  If no memory is available answer nil."
 	<var: #totalBytes type: #usqInt>
 	^self subclassResponsibility
 ]
@@ -2284,6 +2252,40 @@ SpurMemoryManager >> allocateSmallNewSpaceSlots: numSlots format: formatField cl
 SpurMemoryManager >> allocationUnit [
 	"All objects are a multiple of 8 bytes in length"
 	^8
+]
+
+{ #category : #'primitive support' }
+SpurMemoryManager >> ambiguousClass: aClass allInstancesInto: start limit: limit resultsInto: binaryBlock [
+	"Dea with ambiguity and normalize indices."
+	<inline: true>
+	| expectedIndex count ptr |
+	count := 0.
+	ptr := start.
+	expectedIndex := self rawHashBitsOf: aClass.
+	self allHeapEntitiesDo:
+		[:obj| | actualIndex | "continue enumerating even if no room so as to unmark all objects and/or normalize class indices."
+		 (MarkObjectsForEnumerationPrimitives
+				ifTrue: [self isMarked: obj]
+				ifFalse: [true]) ifTrue:
+			[(self isNormalObject: obj)
+				ifTrue:
+					[MarkObjectsForEnumerationPrimitives ifTrue:
+						[self setIsMarkedOf: obj to: false].
+					 actualIndex := self classIndexOf: obj.
+					 (self classOrNilAtIndex: actualIndex) = aClass ifTrue:
+					 	[actualIndex ~= expectedIndex ifTrue:
+							[self setClassIndexOf: obj to: expectedIndex].
+						 count := count + 1.
+						 ptr < limit ifTrue:
+							[self longAt: ptr put: obj.
+							 ptr := ptr + self bytesPerSlot]]]
+				ifFalse:
+					[MarkObjectsForEnumerationPrimitives ifTrue:
+						[(self isSegmentBridge: obj) ifFalse:
+							[self setIsMarkedOf: obj to: false]]]]].
+	self purgeDuplicateClassTableEntriesFor: aClass.
+	binaryBlock value: count value: ptr
+
 ]
 
 { #category : #compaction }
@@ -3631,7 +3633,7 @@ SpurMemoryManager >> copyObj: objOop toSegment: segmentWordArray addr: limitSeg 
 	bodySize := self bytesInObject: objOop.
 	(self oop: limitSeg + bodySize isGreaterThanOrEqualTo: stopAddr) ifTrue:
 		[^0]. "failure"
-	self mem: limitSeg cp: (self startOfObject: objOop) y: bodySize.
+	self mem: limitSeg asVoidPointer cp: (self startOfObject: objOop) asVoidPointer y: bodySize.
 	copy := self objectStartingAt: limitSeg.
 
 	"Clear remebered pinned and mark bits of all headers copied into the segment"
@@ -3773,25 +3775,18 @@ SpurMemoryManager >> doBecome: obj1 and: obj2 copyHash: copyHashFlag [
 
 { #category : #'become implementation' }
 SpurMemoryManager >> doBecome: obj1 to: obj2 copyHash: copyHashFlag [
-	| o1HashBits o2HashBits |
-	o1HashBits := self rawHashBitsOf: obj1.
-	o2HashBits := self rawHashBitsOf: obj2.
+	"one-way become with or without copying obj1's hash into obj2.
+	 Straight-forward, even for classes.  With classes we end up with two entries
+	 for obj2.  Which is current depends on copyHashFlag.  If copyHashFlag is true
+	 then the entry at obj1's hash is valid, otherwise the the existing one at obj2's
+	 hash.  When all the instances with the old hash have been collected, the GC will
+	 discover this and expunge obj2 at the unused index (see markAndTraceClassOf:)."
 	self forward: obj1 to: obj2.
+	copyHashFlag ifTrue: [self setHashBitsOf: obj2 to: (self rawHashBitsOf: obj1)].
 	((self isOldObject: obj1)
 	 and: [self isYoungObject: obj2]) ifTrue:
 		[becomeEffectsFlags := becomeEffectsFlags bitOr: OldBecameNewFlag].
-	copyHashFlag ifTrue: [self setHashBitsOf: obj2 to: o1HashBits].
-	"obj1 is on its way out.  Remove it from the classTable"
-	(o1HashBits ~= 0 and: [(self classAtIndex: o1HashBits) = obj1])
-		ifTrue: [self expungeFromClassTable: obj1]
-		ifFalse: [o1HashBits := 0]. "= 0 implies was not in class table"
-	self deny: (self isForwarded: obj2).
-	"o1HashBits ~= 0 implies obj1 was in class table and hence may have had instances.
-	 Therefore o1HashBits needs to refer to obj2 (put obj2 in table at o1HashBits)."
-	o1HashBits ~= 0 ifTrue:
-		[o2HashBits = 0 ifTrue: "obj2 has no hash; we're free to assign one"
-			[self setHashBitsOf: obj2 to: o1HashBits].
-		 self classAtIndex: o1HashBits put: obj2]
+	self deny: (self isForwarded: obj2)
 ]
 
 { #category : #'gc - scavenging' }
@@ -3940,27 +3935,6 @@ SpurMemoryManager >> endOfMemory [
 	^endOfMemory
 ]
 
-{ #category : #'class table' }
-SpurMemoryManager >> ensureAdequateClassTableBitmap [
-	"The classTableBitmap is used to reclaim unused and/or duplicate entries
-	 in the classTable.  As such it is notionally 2^(22 - 3) bytes big, or 512k,
-	 a little too large to be comfortable allocating statically (especially on small
-	 machines).  So make it big enough for the max classTableIndex's base 2 ceiling."
-	<inline: false>
-	| requiredSize |
-	requiredSize := (1 << numClassTablePages highBit)
-					* (self classTablePageSize / BitsPerByte).
-	self cCode:
-			[classTableBitmap ifNotNil:
-				[self free: classTableBitmap].
-			 classTableBitmap := self malloc: requiredSize.
-			 classTableBitmap ifNil:
-				[self error: 'could not allocate classTableBitmap'].
-			 self me: classTableBitmap ms: 0 et: requiredSize]
-		inSmalltalk:
-			[classTableBitmap := CArrayAccessor on: (ByteArray new: requiredSize)]
-]
-
 { #category : #'gc - incremental' }
 SpurMemoryManager >> ensureAllMarkBitsAreZero [
 	"If the incremental collector is running mark bits may be set; stop it and clear them if necessary."
@@ -4064,7 +4038,6 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 				withValue: aBehavior.
 			 self setHashBitsOf: aBehavior to: classTableIndex.
 			 self assert: (self classAtIndex: (self rawHashBitsOf: aBehavior)) = aBehavior.
-			 self ensureAdequateClassTableBitmap.
 			 ^0]].
 	 majorIndex := (majorIndex + 1 bitAnd: self classIndexMask) max: 1.
 	 majorIndex = initialMajorIndex ifTrue: "wrapped; table full"
@@ -4092,52 +4065,35 @@ SpurMemoryManager >> expungeDuplicateAndUnmarkedClasses: expungeUnmarked [
 	"Bits have been set in the classTableBitmap corresponding to
 	 used classes.  Any class in the class table that does not have a
 	 bit set has no instances with that class index.  However, becomeForward:
-	 can create duplicate entries, and these duplicate entries
-		a) won't have a bit set on load (because there are no forwarders on load),
-		b) wont match their identityHash.
-	 So expunge duplicates by eliminating unmarked entries that don't occur at
-	 their identityHash.
-	 Further, any class in the table that is unmarked will also not have a bit set so
-	 eliminate unmarked classes using the bitmap too."
+	 can create duplicate entries, and these duplicate entries wont match their
+	 identityHash. So expunge duplicates by eliminating unmarked entries that
+	 don't occur at their identityHash."
 	1 to: numClassTablePages - 1 do: "Avoid expunging the puns by not scanning the 0th page."
 		[:i| | classTablePage |
-		"optimize scan by only scanning bitmap in regions that have pages."
 		classTablePage := self fetchPointer: i ofObject: hiddenRootsObj.
-		classTablePage ~= nilObj ifTrue:
-			[i << self classTableMajorIndexShift
-				to: i << self classTableMajorIndexShift + self classTableMinorIndexMask
-				by: 8
-				do: [:majorBitIndex| | byteIndex byte classIndex classOrNil |
-					"optimize scan by scanning a byte of indices (8 indices) at a time"
-					byteIndex := majorBitIndex / BitsPerByte.
-					byte := classTableBitmap at: byteIndex.
-					byte ~= 255 ifTrue:
-						[0 to: 7 do:
-							[:minorBitIndex|
-							(byte noMask: 1 << minorBitIndex) ifTrue:
-								[classIndex := majorBitIndex + minorBitIndex.
-								 classOrNil := self fetchPointer: (classIndex bitAnd: self classTableMinorIndexMask)
-												   ofObject: classTablePage.
-								 self assert: (self classAtIndex: classIndex) = classOrNil.
-								 self assert: (classOrNil = nilObj or: [coInterpreter addressCouldBeClassObj: classOrNil]).
-								 "only remove a class if it is at a duplicate entry or it is unmarked and we're expunging unmarked classes."
-								 classOrNil = nilObj
-									ifTrue:
-										[classIndex < classTableIndex ifTrue:
-											[classTableIndex := classIndex]]
-									ifFalse:
-										[((expungeUnmarked and: [(self isMarked: classOrNil) not])
-										  or: [(self rawHashBitsOf: classOrNil) ~= classIndex]) ifTrue:
-										[self storePointerUnchecked: (classIndex bitAnd: self classTableMinorIndexMask)
-											ofObject: classTablePage
-											withValue: nilObj.
-										 "but if it is marked, it should still be in the table at its correct index."
-										 self assert: ((expungeUnmarked and: [(self isMarked: classOrNil) not])
-													or: [(self classAtIndex: (self rawHashBitsOf: classOrNil)) = classOrNil]).
-										 "If the removed class is before the classTableIndex, set the
-										  classTableIndex to point to the empty slot so as to reuse it asap."
-										 classIndex < classTableIndex ifTrue:
-											[classTableIndex := classIndex]]]]]]]]]
+		 0 to: self classTablePageSize - 1 do:
+			[:j| | classOrNil classIndex |
+			 classOrNil := self fetchPointer: j ofObject: classTablePage.
+			 classIndex := i << self classTableMajorIndexShift + j.
+			 self assert: (classOrNil = nilObj or: [coInterpreter addressCouldBeClassObj: classOrNil]).
+			 "only remove a class if it is at a duplicate entry or it is unmarked and we're expunging unmarked classes."
+			 classOrNil = nilObj
+				ifTrue:
+					[classIndex < classTableIndex ifTrue:
+						[classTableIndex := classIndex]]
+				ifFalse:
+					[((expungeUnmarked and: [(self isMarked: classOrNil) not])
+					   or: [(self rawHashBitsOf: classOrNil) ~= classIndex]) ifTrue:
+						[self storePointerUnchecked: j
+							ofObject: classTablePage
+							withValue: nilObj.
+						 "but if it is marked, it should still be in the table at its correct index."
+						 self assert: ((expungeUnmarked and: [(self isMarked: classOrNil) not])
+									or: [(self classAtIndex: (self rawHashBitsOf: classOrNil)) = classOrNil]).
+						 "If the removed class is before the classTableIndex, set the
+						  classTableIndex to point to the empty slot so as to reuse it asap."
+						 classIndex < classTableIndex ifTrue:
+							[classTableIndex := classIndex]]]]]
 ]
 
 { #category : #'class table' }
@@ -5052,8 +5008,6 @@ SpurMemoryManager >> getThisSessionID [
 { #category : #'gc - global' }
 SpurMemoryManager >> globalGarbageCollect [
 	<inline: true> "inline into fullGC"
-	self cCode: [] inSmalltalk: [self halt: 'GC number ', statFullGCs printString].
-
 	self assert: self validObjStacks.
 	self assert: (self isEmptyObjStack: markStack).
 	self assert: (self isEmptyObjStack: weaklingStack).
@@ -5280,18 +5234,6 @@ SpurMemoryManager >> imageSizeToWrite [
 SpurMemoryManager >> immutableBitShift [
 	"bit 1 of 2-bit field above classIndex (little endian)"
 	^23
-]
-
-{ #category : #'class table' }
-SpurMemoryManager >> inClassTableBitmapSet: classIndex [
-	| bit majorIndex |
-	self assert: (classIndex >= self firstClassIndexPun
-				 and: [classIndex <= self classIndexMask]).
-	majorIndex := classIndex // BitsPerByte.
-	bit := 1 << (classIndex bitAnd: BitsPerByte - 1).
-	classTableBitmap
-		at: majorIndex
-		put: ((classTableBitmap at: majorIndex) bitOr: bit)
 ]
 
 { #category : #'free space' }
@@ -5563,7 +5505,7 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	self assert: falseObj = (self objectAfter: nilObj).
 	self assert: trueObj = (self objectAfter: falseObj).
 	freeListObj := self objectAfter: trueObj.
-	self reInitializeClassTablePostLoad: (self objectAfter: freeListObj).
+	self hiddenRootsObj: (self objectAfter: freeListObj).
 	markStack := self swizzleObjStackAt: MarkStackRootIndex.
 	weaklingStack := self swizzleObjStackAt: WeaklingStackRootIndex.
 	ephemeronQueue := self swizzleObjStackAt: EphemeronQueueRootIndex.
@@ -5922,6 +5864,18 @@ SpurMemoryManager >> isCharacterObject: oop [
 SpurMemoryManager >> isCharacterValue: anInteger [
 	<api>
 	^self isInRangeCharacterCode: anInteger
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> isClassAtUniqueIndex: aClass [
+	"Answer if aClass exists at only one index in the class table."
+	| expectedIndex |
+	expectedIndex := self rawHashBitsOf: aClass.
+	self classTableEntriesDo:
+		[:entry :index|
+		 (entry = aClass and: [index ~= expectedIndex]) ifTrue:
+			[^false]].
+	^true
 ]
 
 { #category : #'object testing' }
@@ -6977,8 +6931,10 @@ SpurMemoryManager >> markAndShouldScan: objOop [
 		[^false].
 	self setIsMarkedOf: objOop to: true.
 	format := self formatOf: objOop.
-	(self isPureBitsFormat: format) ifTrue: "avoid pushing non-pointer objects on the markStack"
-		[self markAndTraceClassOf: objOop.
+	(self isPureBitsFormat: format) ifTrue: "avoid pushing non-pointer objects on the markStack."
+		["Avoid tracing classes of non-objects on the heap, e.g. IRC caches, Sista counters."
+		 (self classIndexOf: objOop) > self lastClassIndexPun ifTrue:
+			[self markAndTraceClassOf: objOop].
 		 ^false].
 	format = self weakArrayFormat ifTrue: "push weaklings on the weakling stack to scan later"
 		[self push: objOop onObjStack: weaklingStack.
@@ -7058,12 +7014,16 @@ SpurMemoryManager >> markAndTrace: objOop [
 SpurMemoryManager >> markAndTraceClassOf: objOop [
 	"Ensure the class of the argument is marked, pushing it on the markStack if not already marked.
 	 Also set the relevant bit in the classTableBitmap so that duplicate entries can be eliminated.
+	 And for one-way become, which can create duplicate entries in the class table, make sure
+	 objOop's classIndex refers to the classObj's actual classIndex.
 	 Note that this is recursive, but the metaclass chain should terminate quickly."
 	<inline: false>
-	| classIndex classObj |
+	| classIndex classObj realClassIndex |
 	classIndex := self classIndexOf: objOop.
-	self inClassTableBitmapSet: classIndex.
 	classObj := self classOrNilAtIndex: classIndex.
+	realClassIndex := self rawHashBitsOf: classObj.
+	classIndex ~= realClassIndex ifTrue:
+		[self setClassIndexOf: objOop to: realClassIndex].
 	(self isMarked: classObj) ifFalse:
 		[self setIsMarkedOf: classObj to: true.
 		 self markAndTraceClassOf: classObj.
@@ -7198,7 +7158,6 @@ SpurMemoryManager >> markObjects [
 	self runLeakCheckerForFullGC: true.
 
 	self ensureAllMarkBitsAreZero.
-	self ensureAdequateClassTableBitmap.
 	self initializeUnscannedEphemerons.
 	self initializeMarkStack.
 	self initializeWeaklingStack.
@@ -8145,6 +8104,10 @@ SpurMemoryManager >> pigCompact [
 
 { #category : #'primitive support' }
 SpurMemoryManager >> pinObject: objOop [
+	"Attempt to pin objOop, which must not be immediate.
+	 If the attempt succeeds answer objOop's (possibly moved) oop.
+	 If the attept fails, which can only occur if there is no memory, answer 0."
+	<inline: false>
 	| oldClone seg |
 	<var: #seg type: #'SpurSegmentInfo *'>
 	self assert: (self isNonImmediate: objOop).
@@ -8155,17 +8118,16 @@ SpurMemoryManager >> pinObject: objOop [
 		[seg := segmentManager segmentContainingObj: objOop.
 		 seg containsPinned ifTrue:
 			[self setIsPinnedOf: objOop to: true.
-			 ^0].
+			 ^objOop].
 		 segmentManager someSegmentContainsPinned ifFalse:
 			[self setIsPinnedOf: objOop to: true.
 			 seg containsPinned: true.
-			 ^0]].
+			 ^objOop]].
 	oldClone := self cloneInOldSpaceForPinning: objOop.
-	oldClone = 0 ifTrue:
-		[^PrimErrNoMemory].
-	self setIsPinnedOf: oldClone to: true.
-	self forward: objOop to: oldClone.
-	^0
+	oldClone ~= 0 ifTrue:
+		[self setIsPinnedOf: oldClone to: true.
+		 self forward: objOop to: oldClone].
+	^oldClone
 ]
 
 { #category : #'header format' }
@@ -8651,6 +8613,21 @@ SpurMemoryManager >> printReferencesTo: anOop [
 				 i := 0]]]
 ]
 
+{ #category : #'class table' }
+SpurMemoryManager >> purgeDuplicateClassTableEntriesFor: aClass [
+	"Given that either marking or allnstances has ensured that
+	 all instances of aClass  have the class's hash as their class
+	 index, ensure aClass is in the table only at its hash."
+	| expectedIndex |
+	expectedIndex := self rawHashBitsOf: aClass.
+	self classTableEntriesDo:
+		[:entry :index|
+		 (entry = aClass and: [index ~= expectedIndex]) ifTrue:
+			[self classAtIndex: index put: nilObj.
+			 index < classTableIndex ifTrue:
+				[classTableIndex := index]]]
+]
+
 { #category : #'simulation only' }
 SpurMemoryManager >> push: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -8770,12 +8747,6 @@ SpurMemoryManager >> rawOverflowSlotsOf: objOop [
 SpurMemoryManager >> rawOverflowSlotsOf: objOop put: numSlots [
 	<returnTypeC: #usqInt>
 	self subclassResponsibility
-]
-
-{ #category : #'class table' }
-SpurMemoryManager >> reInitializeClassTablePostLoad: hiddenRoots [
-	self hiddenRootsObj: hiddenRoots.
-	self expungeDuplicateAndUnmarkedClasses: false
 ]
 
 { #category : #snapshot }
@@ -10405,6 +10376,34 @@ SpurMemoryManager >> unforward: obj1 from: obj2 [
 	self storePointer: 0 ofForwarder: obj1 withValue: (self fetchPointer: 0 ofObject: obj2).
 	(self rawNumSlotsOf: obj2) = 0 ifTrue:
 		[self setRawNumSlotsOf: obj1 to: 0]
+]
+
+{ #category : #'primitive support' }
+SpurMemoryManager >> uniqueIndex: classIndex allInstancesInto: start limit: limit resultsInto: binaryBlock [
+	<inline: true>
+	| count ptr |
+	count := 0.
+	ptr := start.
+	self allHeapEntitiesDo:
+		[:obj| "continue enumerating even if no room so as to unmark all objects."
+		 (MarkObjectsForEnumerationPrimitives
+				ifTrue: [self isMarked: obj]
+				ifFalse: [true]) ifTrue:
+			[(self isNormalObject: obj)
+				ifTrue:
+					[MarkObjectsForEnumerationPrimitives ifTrue:
+						[self setIsMarkedOf: obj to: false].
+					 (self classIndexOf: obj) = classIndex ifTrue:
+					 	[count := count + 1.
+						 ptr < limit ifTrue:
+							[self longAt: ptr put: obj.
+							 ptr := ptr + self bytesPerSlot]]]
+				ifFalse:
+					[MarkObjectsForEnumerationPrimitives ifTrue:
+						[(self isSegmentBridge: obj) ifFalse:
+							[self setIsMarkedOf: obj to: false]]]]].
+	binaryBlock value: count value: ptr
+
 ]
 
 { #category : #'free space' }
