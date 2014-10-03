@@ -86,6 +86,7 @@ mkmf() {
       srcs="${srcs} `findFiles .cc ${dd}`"
       srcs="${srcs} `findFiles .cpp ${dd}`"
       srcs="${srcs} `findFiles .S ${dd}`"
+      srcs="${srcs} `findFiles .s ${dd}`"
       srcs="${srcs} `findFiles .m ${dd}`"
       hdrs="${hdrs} `findFiles .h ${dd}`"
       # override Makefile.in
@@ -110,15 +111,16 @@ mkmf() {
     # in the platform plugin dir)
     echo "" > ${objs}
     for c in ${srcs}; do
-      o=`basename ${c} | sed 's,\.cp*,$o,;s,\.m,$o,;s,\.S,$o,'`
+      o=`basename ${c} | sed 's,\.cp*,$o,;s,\.m,$o,;s,\.S,$o,;s,\.s,$o,'`
       grep -qs "^$o$" ${excluded} || grep -qs "^$o$" ${objs} || targets="${targets} ${o}"
       echo "$o" >>${objs}
-      echo												>> ${make_targets}
-      echo "${o} : ${c}"								>> ${make_targets}
+      echo												               >> ${make_targets}
+      echo "${o} : ${c}"								            >> ${make_targets}
       case ${c} in
         *.cpp|*.cc)	echo '	$(COMPILE.cpp) '"${o} ${c}"	>> ${make_targets}
 					makefile_plg=Makefile.cpp-plg.in;;
-        *)		echo '	$(COMPILE) '"${o} ${c}"			>> ${make_targets}
+        *.s|*.S)	   echo '	$(AS) '"${o} ${c}"	         >> ${make_targets};;
+        *)		      echo '	$(COMPILE) '"${o} ${c}"			>> ${make_targets}
       esac
     done
     rm -f ${objs} ${excluded}
