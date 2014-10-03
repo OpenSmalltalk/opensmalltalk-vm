@@ -15,7 +15,6 @@ FileCopyPlugin \
 FilePlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
-IA32ABI \
 JoystickTabletPlugin \
 JPEGReaderPlugin \
 JPEGReadWriter2Plugin \
