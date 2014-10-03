@@ -3323,7 +3323,7 @@ StackInterpreter >> callPrimitiveBytecode [
 			[| header |
 			 header := self methodHeaderOf: method.
 			 ((self methodHeaderHasPrimitive: header)
-			  and: [localIP = (self initialPCForHeader: header method: method)])
+			  and: [localIP asInteger = (self initialPCForHeader: header method: method)])
 				ifTrue:
 					[localIP := localIP + (self sizeOfCallPrimitiveBytecode: header).
 					 ^self fetchNextBytecode]
