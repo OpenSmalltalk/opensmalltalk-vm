@@ -1,7 +1,7 @@
 "
 This class is a copy of CCodeGenerator hacked to generate JavaScript instead of C for use with the SqueakJS virtual machine.
 
-C and JS semantics are pretty close except for pointers, types, and shift operations. 
+C and JS semantics are pretty close except for pointers, types, and divide/modulo/shift operations. 
 "
 Class {
 	#name : #JSCodeGenerator,
@@ -32,7 +32,8 @@ Class {
 		'pools',
 		'abstractDeclarations',
 		'uncheckedAbstractMethods',
-		'cCodeTranslationDict'
+		'cCodeTranslationDict',
+		'oneBasedArrays'
 	],
 	#classVars : [
 		'IsActive',
@@ -275,12 +276,15 @@ JSCodeGenerator >> addMethodsForPrimitives: classAndSelectorList [
 			Transcript cr].
 
 	"code generation"
-	self doInlining: true.
+	self doInlining: false.
 
 	methods do:[:m|
 		"if this method is supposed to be a primitive (rather than a helper 
 		routine), add assorted prolog and epilog items"
-		m primitive > 0 ifTrue: [m preparePrimitivePrologue]].
+		m primitive > 0 ifTrue: [m preparePrimitivePrologue].
+		"check for one-based array access"	
+		m oneBasedArrays ifNotNil: [self oneBasedArrays: true].
+	].
 ]
 
 { #category : #public }
@@ -1064,21 +1068,29 @@ self halt.
 { #category : #'JS translation' }
 JSCodeGenerator >> generateAt: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
-
-	self emitJSExpression: msgNode receiver on: aStream.
+	| arrayNode indexNode subtractOne complex |
+	arrayNode := msgNode receiver.
+	indexNode := msgNode args first.
+	subtractOne := self isOneBasedArray: arrayNode name in: currentMethod.
+	(subtractOne and: [indexNode isPlusOne]) ifTrue: [
+		subtractOne := false.
+		indexNode := indexNode receiver.	"remove + 1"
+	].
+	complex := subtractOne and: [indexNode isLeaf not].
+	self emitJSExpression: arrayNode on: aStream.
 	aStream nextPut: $[.
-	msgNode args first emitJSCodeAsExpressionOn: aStream level: level + 1 generator: self.
-	aStream nextPut: $]
+	complex ifTrue: [aStream nextPut: $(].
+	indexNode emitJSCodeAsExpressionOn: aStream level: level + 1 generator: self.
+	complex ifTrue: [aStream nextPut: $)].
+	subtractOne ifTrue: [aStream nextPutAll: ' - 1'].
+	aStream nextPut: $].
 ]
 
 { #category : #'JS translation' }
 JSCodeGenerator >> generateAtPut: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
-
-	self emitJSExpression: msgNode receiver on: aStream.
-	aStream nextPut: $[.
-	msgNode args first emitJSCodeAsExpressionOn: aStream level: level + 1 generator: self.
-	aStream nextPutAll: '] = '.
+	self generateAt: msgNode on: aStream indent: level.
+	aStream nextPutAll: ' = '.
 	self emitJSExpression: msgNode args last on: aStream
 ]
 
@@ -1154,25 +1166,18 @@ JSCodeGenerator >> generateBitShift: msgNode on: aStream indent: level [
 	rcvr := msgNode receiver.
 	arg isConstant ifTrue: [
 		"bit shift amount is a constant"
-		aStream nextPutAll: '('.
 		self emitJSExpression: rcvr on: aStream.
 		arg value < 0 ifTrue: [
 			aStream nextPutAll: ' >>> ', arg value negated printString.
 		] ifFalse: [
 			aStream nextPutAll: ' << ', arg value printString.
 		].
-		aStream nextPutAll: ')'.
 	] ifFalse: [
 		"bit shift amount is an expression"
-		aStream nextPutAll: '('.
-		self emitJSExpression: arg on: aStream.
-		aStream nextPutAll: ' < 0 ? '.
+		self error: 'need to add BITSHIFT to emitJSHeaderOn:'.
+		aStream nextPutAll: 'BITSHIFT('.
 		self emitJSExpression: rcvr on: aStream.
-		aStream nextPutAll: ' >>> (0 - '.
-		self emitJSExpression: arg on: aStream.
-		aStream nextPutAll: ') : '.
-		self emitJSExpression: rcvr on: aStream.
-		aStream nextPutAll: ' << '.
+		aStream nextPutAll: ', '.
 		self emitJSExpression: arg on: aStream.
 		aStream nextPutAll: ')'.
 	].
@@ -1233,7 +1238,6 @@ JSCodeGenerator >> generateCDigitCopy: msgNode on: aStream indent: level [
 		ifFalse: [self halt: 'not handled: ', msgNode asString].
 	aStream nextPutAll: 'function() {
 		// inlining ', msgNode asString, '
-		debugger;
 		var len = stop - start + 1;
 		for (var i = 0; i < len; i++) {
 			pTo[i + start] = pFrom[i + repStart];
@@ -1283,17 +1287,15 @@ JSCodeGenerator >> generateDivide: msgNode on: aStream indent: level [
 	 [divisor <= (1 bitShift: 31)]]]]])
 	ifTrue: [
 		"use signed (arithmetic) right shift instead of divide"
-		aStream nextPutAll: '('.
 		self emitJSExpression: rcvr on: aStream.
 		aStream nextPutAll: ' >> ', (divisor log: 2) asInteger printString.
-		aStream nextPutAll: ')'.
 	] ifFalse: [
 		"use float divide and coerce to integer"
-		aStream nextPutAll: '('.
+		aStream nextPutAll: 'DIV('.
 		self emitJSExpression: rcvr on: aStream.
-		aStream nextPutAll: ' / '.
+		aStream nextPutAll: ', '.
 		self emitJSExpression: arg on: aStream.
-		aStream nextPutAll: '|0)'.
+		aStream nextPutAll: ')'.
 	].
 
 ]
@@ -1353,6 +1355,7 @@ JSCodeGenerator >> generateFetchClassOf: msgNode on: aStream indent: level [
 { #category : #'JS hacks' }
 JSCodeGenerator >> generateFirstIndexableField: msgNode on: aStream indent: level [
 	| parent cType accessor |
+	self oneBasedArrays: false.
 	"HACK: detect cType from parent node"
 	parent := thisContext sender sender sender.
 	cType := parent method == (TAssignmentNode>>#emitJSCodeOn:level:generator:) 
@@ -1387,6 +1390,13 @@ JSCodeGenerator >> generateGreaterThanOrEqual: msgNode on: aStream indent: level
 	self emitJSExpression: msgNode receiver on: aStream.
 	aStream nextPutAll: ' >= '.
 	self emitJSExpression: msgNode args first on: aStream.
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateIdentityUnary: msgNode on: aStream indent: level [
+	"ignore this send, just use its value"
+	msgNode receiver emitJSCodeOn: aStream level: level generator: self.
+
 ]
 
 { #category : #'JS translation' }
@@ -1711,6 +1721,12 @@ JSCodeGenerator >> generateIntegerValueOf: msgNode on: aStream indent: level [
 
 ]
 
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateInterpreterProxyCall: msgNode on: aStream indent: level [
+	aStream nextPutAll: 'interpreterProxy.'.
+	^ msgNode emitJSCodeAsFunctionCallOn: aStream level: level generator: self
+]
+
 { #category : #'JS translation' }
 JSCodeGenerator >> generateIsIntegerObject: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
@@ -1795,9 +1811,12 @@ JSCodeGenerator >> generateMinus: msgNode on: aStream indent: level [
 JSCodeGenerator >> generateModulo: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
 
+	aStream nextPutAll: 'MOD('.
 	self emitJSExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ' % '.
+	aStream nextPutAll: ', '.
 	self emitJSExpression: msgNode args first on: aStream.
+	aStream nextPutAll: ')'.
+
 ]
 
 { #category : #'JS translation' }
@@ -1957,20 +1976,16 @@ JSCodeGenerator >> generateShiftLeft: msgNode on: aStream indent: level [
 	arg isConstant ifTrue: [
 		"bit shift amount is a constant"
 		arg value < 31 ifTrue: [
-			aStream nextPutAll: '('.
 			self emitJSExpression: rcvr on: aStream.
 				aStream nextPutAll: ' << ', arg value printString.
-			aStream nextPutAll: ')'.
 		] ifFalse: [
 			self error: 'cannot shift by more than 31'
 		].
 	] ifFalse: [
 		"bit shift amount is an expression"
-		aStream nextPutAll: '('.
-		self emitJSExpression: arg on: aStream.
-		aStream nextPutAll: ' > 31 ? 0 : '.
+		aStream nextPutAll: 'SHL('.
 		self emitJSExpression: rcvr on: aStream.
-		aStream nextPutAll: ' << '.
+		aStream nextPutAll: ', '.
 		self emitJSExpression: arg on: aStream.
 		aStream nextPutAll: ')'.
 	].
@@ -1986,20 +2001,16 @@ JSCodeGenerator >> generateShiftRight: msgNode on: aStream indent: level [
 	arg isConstant ifTrue: [
 		"bit shift amount is a constant"
 		arg value < 31 ifTrue: [
-			aStream nextPutAll: '('.
 			self emitJSExpression: rcvr on: aStream.
 				aStream nextPutAll: ' >>> ', arg value printString.
-			aStream nextPutAll: ')'.
 		] ifFalse: [
 			self error: 'cannot shift by more than 31'
 		].
 	] ifFalse: [
 		"bit shift amount is an expression"
-		aStream nextPutAll: '('.
-		self emitJSExpression: arg on: aStream.
-		aStream nextPutAll: ' > 31 ? 0 : '.
+		aStream nextPutAll: 'SHR('.
 		self emitJSExpression: rcvr on: aStream.
-		aStream nextPutAll: ' >>> '.
+		aStream nextPutAll: ', '.
 		self emitJSExpression: arg on: aStream.
 		aStream nextPutAll: ')'.
 	].
@@ -2007,34 +2018,21 @@ JSCodeGenerator >> generateShiftRight: msgNode on: aStream indent: level [
 
 { #category : #'JS translation' }
 JSCodeGenerator >> generateSignedBitShift: msgNode on: aStream indent: level [
-	"Generate the JS code for this message onto the given stream."
+	"Generate the JS code for signedBitShift: onto the given stream."
 
 	| arg rcvr |
 	arg := msgNode args first.
 	rcvr := msgNode receiver.
 	arg isConstant ifTrue: [
 		"bit shift amount is a constant"
-		aStream nextPutAll: '('.
 		self emitJSExpression: rcvr on: aStream.
 		arg value < 0 ifTrue: [
 			aStream nextPutAll: ' >> ', arg value negated printString.
 		] ifFalse: [
 			aStream nextPutAll: ' << ', arg value printString.
 		].
-		aStream nextPutAll: ')'.
 	] ifFalse: [
-		"bit shift amount is an expression"
-		aStream nextPutAll: '('.
-		self emitJSExpression: arg on: aStream.
-		aStream nextPutAll: ' < 0 ? '.
-		self emitJSExpression: rcvr on: aStream.
-		aStream nextPutAll: ' >> (0 - '.
-		self emitJSExpression: arg on: aStream.
-		aStream nextPutAll: ') : '.
-		self emitJSExpression: rcvr on: aStream.
-		aStream nextPutAll: ' << '.
-		self emitJSExpression: arg on: aStream.
-		aStream nextPutAll: ')'.
+		self error: 'non-constant signed shift not implemented yet'
 	].
 ]
 
@@ -2080,6 +2078,22 @@ self halt.
 	aStream nextPut: $)
 
 
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateSizeOfSTArrayFromCPrimitive: msgNode on: aStream indent: level [
+	| cType sizer |
+	cType := self typeOfVariable: msgNode args first name.
+	cType ifNotNil: [
+		sizer := (cType includesSubString: 'char *') ifTrue: ['.length'] ifFalse: [
+			(cType beginsWith: 'int *') ifTrue: ['.length'] 
+			ifFalse: [self halt: 'need to handle ', cType]]].
+		sizer ifNotNil: [msgNode args first emitJSCodeOn: aStream level: level generator: self.
+			^aStream nextPutAll: sizer].
+	self halt.
+	"generic code below, not needed ever hopefully"
+	aStream nextPutAll: 'interpreterProxy.'.
+	^ msgNode emitJSCodeAsFunctionCallOn: aStream level: level generator: self
 ]
 
 { #category : #'JS hacks' }
@@ -2138,8 +2152,10 @@ JSCodeGenerator >> generateToByDo: msgNode on: aStream indent: level [
 					and: [step receiver isConstant and: [step receiver value >= 0]]]].
 	aStream nextPutAll: (negative ifTrue: [' >= '] ifFalse: [' <= ']).
 	self emitJSExpression: limitExpr on: aStream.
-	aStream nextPutAll: '; ', iterationVar, ' += '.
-	self emitJSExpression: step on: aStream.
+	(step isConstant and: step value = 1)
+		ifTrue: [aStream nextPutAll: '; ', iterationVar, '++']
+		ifFalse: [aStream nextPutAll: '; ', iterationVar, ' += '.
+			self emitJSExpression: step on: aStream].
 	aStream nextPutAll: ') {'; cr.
 	blockExpr emitJSCodeOn: aStream level: level + 1 generator: self.
 	aStream tab: level.
@@ -2411,6 +2427,9 @@ JSCodeGenerator >> initializeCTranslationDictionary [
 	#fetchClassOf:						#generateFetchClassOf:on:indent:
 	#is:KindOf: 							#generateIsKindOf:on:indent:
 	#cDigitCopyFrom:to:len:				#generateCDigitCopy:on:indent:
+	#sizeOfSTArrayFromCPrimitive:		#generateSizeOfSTArrayFromCPrimitive:on:indent:
+	#asciiValue							#generateIdentityUnary:on:indent:
+	#primitiveFail						#generateInterpreterProxyCall:on:indent:
 	).
 
 	1 to: pairs size by: 2 do: [:i |
@@ -2505,6 +2524,13 @@ JSCodeGenerator >> isNonArgumentImplicitReceiverVariableName: aString [
 	    or: [vmClass
 			ifNil: [#('interpreterProxy' 'self') includes: aString]
 	 		ifNotNil: [vmClass isNonArgumentImplicitReceiverVariableName: aString]]
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> isOneBasedArray: varName in: method [
+	^(method isOneBasedArray: varName)
+		ifNil: [self oneBasedArrays]
+		ifNotNil: [:oneBased | self oneBasedArrays: oneBased]
 ]
 
 { #category : #private }
@@ -2730,6 +2756,20 @@ JSCodeGenerator >> nilOrBooleanConstantReceiverOf: sendNode [
 		((val == true) or: [val == false]) ifTrue: [^ val]].
 	^ nil
 
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> oneBasedArrays [
+	oneBasedArrays ifNil: [oneBasedArrays := false].
+	^oneBasedArrays
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> oneBasedArrays: aBoolean [
+	oneBasedArrays ifNil: [^oneBasedArrays := aBoolean].
+	oneBasedArrays = aBoolean ifFalse: [
+		self halt: 'mixed one-based and zero-based array access'].
+	^aBoolean
 ]
 
 { #category : #accessing }

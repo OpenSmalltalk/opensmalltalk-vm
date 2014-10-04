@@ -31,3 +31,8 @@ TParseNode >> emitJSCommentOn: aStream level: level [
 				cr].
 		aStream cr]
 ]
+
+{ #category : #'*vmmakerjs' }
+TParseNode >> isPlusOne [
+	^false
+]
