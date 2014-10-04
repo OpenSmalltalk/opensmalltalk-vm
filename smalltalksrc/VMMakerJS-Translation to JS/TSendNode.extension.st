@@ -76,3 +76,8 @@ TSendNode >> emitJSCodeOn: aStream level: level generator: aCodeGen [
 			["Otherwise generate the vanilla C function call."
 			 self emitJSCodeAsFunctionCallOn: aStream level: level generator: aCodeGen]]
 ]
+
+{ #category : #'*vmmakerjs' }
+TSendNode >> isPlusOne [
+	^ self selector = #+ and: [self args first isConstant and: [self args first value = 1]]
+]

@@ -26,7 +26,8 @@ Class {
 		'mustAsmLabel',
 		'properties',
 		'cascadeVariableNumber',
-		'extraVariableNumber'
+		'extraVariableNumber',
+		'oneBasedArrays'
 	],
 	#classVars : [
 		'CaseStatements'
@@ -90,18 +91,19 @@ JSMethod >> argConversionExprFor: varName stackIndex: stackIndex [
 	"Return the parse tree for an expression that fetches and converts the 
 	primitive argument at the given stack offset."
 	| exprList decl stmtList |
+	oneBasedArrays ifNil: [oneBasedArrays := Set new]. "only non-nil in a primitive method"
 	exprList := OrderedCollection new.
 	(declarations includesKey: varName) ifTrue:[
 		decl := declarations at: varName.
 		(decl includes: $*) ifTrue:["array"
-			(decl includesSubString: 'char') ifTrue:[ | expr |
-				expr := '(interpreterProxy isBytes: (interpreterProxy stackValue: (stackIndex))) ifFalse:[^interpreterProxy primitiveFail].'.
-				expr := expr copyReplaceAll: 'interpreterProxy' with: self vmNameString.
-				expr := expr copyReplaceAll: 'stackIndex' with: stackIndex printString.
-				exprList add: expr.
-			].
-			exprList add: varName , ' := ', self vmNameString, ' arrayValueOf: (', self vmNameString, ' stackValue: (' , stackIndex printString , '))'.
-			exprList add: varName , ' := ' , varName , ' - 1'.
+			(decl includesSubString: 'char') ifTrue:[
+				exprList add: varName , ' := ', self vmNameString, ' stackBytes: ',stackIndex printString] ifFalse: [
+			(decl beginsWith: 'unsigned short') ifTrue:[
+				exprList add: varName , ' := ', self vmNameString, ' stackUint16Array: ',stackIndex printString] ifFalse: [
+			(decl beginsWith: 'int') ifTrue:[
+				exprList add: varName , ' := ', self vmNameString, ' stackInt32Array: ',stackIndex printString]
+			ifFalse: [self halt]]].
+			self beOneBasedArray: varName.
 		] ifFalse:["must be a double"
 			(decl findString: 'double' startingAt: 1) = 0 ifTrue: [
 				self error: 'unsupported type declaration in a primitive method'
@@ -126,6 +128,12 @@ JSMethod >> args [
 { #category : #transformations }
 JSMethod >> asInlineNode [
 	^TInlineNode new method: self
+]
+
+{ #category : #'JS code generation' }
+JSMethod >> beOneBasedArray: varName [
+	oneBasedArrays add: varName.
+
 ]
 
 { #category : #transformations }
@@ -183,7 +191,7 @@ JSMethod >> checkSuccessExpr [
 	"Return the parse tree for an expression that aborts the primitive if the successFlag is not true."
 
 	| expr |
-	expr := 'successFlag ifFalse: [^ nil ]'.
+	expr := 'interpreterProxy failed ifTrue: [^ nil ]'.
 	^ self statementsFor: expr varName: ''
 
 ]
@@ -652,11 +660,10 @@ JSMethod >> fixUpReturns: argCount postlog: postlog [
 									setExpression: (TVariableNode new setName: 'null'))]
 							ifFalse: [  "normal return"
 								newStmts addAll: postlog.
-								newStmts addAll: (self popArgsExpr: argCount + 1).
 								newStmts addLast: (TSendNode new
-									setSelector: #pushInteger:
+									setSelector: #pop:thenPush:
 									receiver: (TVariableNode new setName: self vmNameString)
-									arguments: (Array with: stmt expression)).
+									arguments: {TConstantNode new setValue: argCount + 1. stmt expression}).
 								newStmts addLast: (TReturnNode new
 									setExpression: (TVariableNode new setName: 'null'))]]
 					ifFalse: [
@@ -962,6 +969,12 @@ JSMethod >> isFunctional [
 	^true
 ]
 
+{ #category : #'JS code generation' }
+JSMethod >> isOneBasedArray: varName [
+	^oneBasedArrays ifNotNil: [oneBasedArrays includes: varName].
+
+]
+
 { #category : #accessing }
 JSMethod >> isStaticIn: aCodeGen [
 	"If static has been explicitly set, honor that setting. Otherwise defer
@@ -1072,6 +1085,11 @@ JSMethod >> nodeCount [
 	cnt := 0.
 	parseTree nodesDo: [ :n | cnt := cnt + 1 ].
 	^cnt
+]
+
+{ #category : #'JS code generation' }
+JSMethod >> oneBasedArrays [
+	^oneBasedArrays
 ]
 
 { #category : #accessing }
@@ -1472,17 +1490,12 @@ JSMethod >> replaceNodesIn: map [
 JSMethod >> replaceSizeMessages [
 	"Replace sends of the message 'size' with calls to sizeOfSTArrayFromCPrimitive."
 
-	| argExpr |
 	parseTree nodesDo: [:n |
 		(n isSend and: [n selector = #size]) ifTrue: [
-			argExpr := TSendNode new
-				setSelector: #+
-				receiver: n receiver
-				arguments: (Array with: (TConstantNode new setValue: 1)).
 			n
 				setSelector: #sizeOfSTArrayFromCPrimitive:
 				receiver: (TVariableNode new setName: self vmNameString)
-				arguments: (Array with: argExpr)]].
+				arguments: (Array with: n receiver)]].
 
 ]
 
@@ -1748,5 +1761,5 @@ JSMethod >> variablesAssignedTo [
 { #category : #'primitive compilation' }
 JSMethod >> vmNameString [
 	"return the string to use as the vm name in code generated for this method"
-	^'self'
+	^'interpreterProxy'
 ]
