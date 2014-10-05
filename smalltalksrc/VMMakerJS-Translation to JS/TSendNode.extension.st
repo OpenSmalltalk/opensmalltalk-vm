@@ -78,6 +78,11 @@ TSendNode >> emitJSCodeOn: aStream level: level generator: aCodeGen [
 ]
 
 { #category : #'*vmmakerjs' }
+TSendNode >> isInterpreterProxyConstant [
+	^#(nilObject trueObject falseObject) includes: self selector
+]
+
+{ #category : #'*vmmakerjs' }
 TSendNode >> isPlusOne [
 	^ self selector = #+ and: [self args first isConstant and: [self args first value = 1]]
 ]

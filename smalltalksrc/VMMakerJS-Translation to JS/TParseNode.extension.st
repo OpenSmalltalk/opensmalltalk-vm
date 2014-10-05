@@ -33,6 +33,11 @@ TParseNode >> emitJSCommentOn: aStream level: level [
 ]
 
 { #category : #'*vmmakerjs' }
+TParseNode >> isInterpreterProxyConstant [
+	^false
+]
+
+{ #category : #'*vmmakerjs' }
 TParseNode >> isPlusOne [
 	^false
 ]

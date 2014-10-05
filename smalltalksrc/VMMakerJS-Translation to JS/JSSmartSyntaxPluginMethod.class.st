@@ -50,19 +50,6 @@ JSSmartSyntaxPluginMethod >> checkSuccessExpr [
 
 ]
 
-{ #category : #'generating JS code' }
-JSSmartSyntaxPluginMethod >> emitJSHeaderOn: aStream generator: aCodeGen [
-	"Emit a C function header for this method onto the given stream."
-
-	aStream cr. 
-	self emitJSFunctionHeader: aStream generator: aCodeGen.
-	aStream nextPutAll: ' {'; cr.
-	locals do: [ :var |
-		aStream nextPutAll: '	var ', (aCodeGen returnPrefixFromVariable: var), ';'; cr.
-	].
-	locals isEmpty ifFalse: [ aStream cr ].
-]
-
 { #category : #'specifying primitives' }
 JSSmartSyntaxPluginMethod >> extractPrimitiveDirectives [
 	"Set selectorOverride, and save args in fullArgs.  Scan top-level statements for a directive of the form:
