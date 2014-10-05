@@ -57,6 +57,8 @@ else
 		case $1 in
 		-archives)	JustUpload=JustUpload;;
 		-all)	all;;
+		-spur)	CheckDMG=1;CheckMSI=1;
+				LSPUR=1;MSPUR=1;WSPUR=1;LNSSPUR=1;MNSSPUR=1;WNSSPUR=1;;
 		-c)		LCOG=1;LTCOG=1;MCOG=1;MTCOG=1;WCOG=1;WMTCOG=1;
 				LSPUR=1;MSPUR=1;WSPUR=1;;
 		-cl)	LCOG=1;LTCOG=1;LSPUR=1;;
@@ -131,7 +133,7 @@ if [ -n "$VERBOSE" ]; then
 		echo upload $a
 	done
 fi
-if [ -n "$CheckDMG" -a ! -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
+if [ -n "$CheckDMG" -a -n "$MNSCOG" -a ! -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
 	NMID=../build.macos32x86/newspeak.cog.v3/installer
 	if [ -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
 		true
@@ -142,7 +144,7 @@ if [ -n "$CheckDMG" -a ! -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
 		exit 1
 	fi
 fi
-if [ -n "$CheckDMG" -a ! -f "Newspeak Spur Virtual Machine-$TAG.dmg" ]; then
+if [ -n "$CheckDMG" -a -n "$MNSSPUR" -a ! -f "Newspeak Spur Virtual Machine-$TAG.dmg" ]; then
 	NMID=../build.macos32x86/newspeak.cog.spur/installer
 	if [ -f "Newspeak Virtual Spur Machine-$TAG.dmg" ]; then
 		true
@@ -153,7 +155,7 @@ if [ -n "$CheckDMG" -a ! -f "Newspeak Spur Virtual Machine-$TAG.dmg" ]; then
 		exit 1
 	fi
 fi
-if [ -n "$CheckMSI" -a ! -f nsvm-$TAG.msi ]; then
+if [ -n "$CheckMSI" -a -n "$WNSCOG" -a ! -f nsvm-$TAG.msi ]; then
 	NMID=../build.win32x86/newspeak.cog.v3/installer
 	if [ -f nsvm-$TAG.msi ]; then
 		true
@@ -164,7 +166,7 @@ if [ -n "$CheckMSI" -a ! -f nsvm-$TAG.msi ]; then
 		exit 1
 	fi
 fi
-if [ -n "$CheckMSI" -a ! -f nsvm-spur-$TAG.msi ]; then
+if [ -n "$CheckMSI" -a -n "$WNSSPUR" -a ! -f nsvm-spur-$TAG.msi ]; then
 	NMID=../build.win32x86/newspeak.cog.spur/installer
 	if [ -f nsvm-spur-$TAG.msi ]; then
 		true
