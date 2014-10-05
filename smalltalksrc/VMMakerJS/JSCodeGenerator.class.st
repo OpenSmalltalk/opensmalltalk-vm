@@ -842,10 +842,11 @@ JSCodeGenerator >> emitJSConstantsOn: aStream [
 	constList asSortedCollection do: [ :varName |
 		node := constants at: varName.
 		node name isEmpty ifFalse: [
-			aStream nextPutAll: '#define '.
+			aStream nextPutAll: 'var '.
 			aStream nextPutAll: node name.
-			aStream space.
+			aStream nextPutAll: ' = '.
 			aStream nextPutAll: (self cLiteralFor: node value).
+			aStream nextPut: $;.
 			aStream cr
 		].
 	].
@@ -967,7 +968,10 @@ JSCodeGenerator >> emitJSVariablesOn: aStream [
 			aStream nextPutAll: 'var ', varString.
 			varDecl := variableDeclarations at: varString ifAbsent: [''].
 			(varDecl includes: $=)
-				ifTrue: [aStream nextPutAll: ' =', (varDecl copyAfter: $=)].
+				ifTrue: [aStream nextPutAll: ' =', (varDecl copyAfter: $=)]
+				ifFalse: [(varDecl includes: $*)
+					ifTrue: [aStream nextPutAll: ' = null']
+					ifFalse: [aStream nextPutAll: ' = 0']].
 			aStream nextPutAll: ';'; cr].
 	aStream cr.
 
@@ -980,7 +984,7 @@ JSCodeGenerator >> emitVmmVersionOn: aStream [
 	identifier for platform source code version, such the the VM can identify
 	the source code version for its platform source and matching VMMaker source."
 
-	aStream nextPutAll: '#define VMMAKER_VERSION "';
+	aStream nextPutAll: 'var VMMAKER_VERSION = "';
 		nextPutAll: VMMaker versionString;
 		nextPut: $";
 		cr
@@ -1089,9 +1093,17 @@ JSCodeGenerator >> generateAt: msgNode on: aStream indent: level [
 { #category : #'JS translation' }
 JSCodeGenerator >> generateAtPut: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
+	| putExpr incExpr |
 	self generateAt: msgNode on: aStream indent: level.
+
+	(putExpr := msgNode args last) isPlusOne ifTrue: [
+		((incExpr := putExpr receiver) isSend and: [incExpr selector = #at: and: [
+			incExpr receiver asString = msgNode receiver asString and: [
+			incExpr args first asString = msgNode args first asString]]])
+				ifTrue: [^aStream nextPutAll: '++'.]].
+
 	aStream nextPutAll: ' = '.
-	self emitJSExpression: msgNode args last on: aStream
+	self emitJSExpression: putExpr on: aStream
 ]
 
 { #category : #'JS translation' }
@@ -1193,11 +1205,10 @@ JSCodeGenerator >> generateBitXor: msgNode on: aStream indent: level [
 ]
 
 { #category : #'JS hacks' }
-JSCodeGenerator >> generateByteSizeOfBytes: msgNode on: aStream indent: level [
+JSCodeGenerator >> generateByteSizeOf: msgNode on: aStream indent: level [
+	aStream nextPutAll: 'BYTESIZEOF('.
 	msgNode args first emitJSCodeOn: aStream level: level generator: self.
-	aStream nextPutAll: '.bytes ? '.
-	msgNode args first emitJSCodeOn: aStream level: level generator: self.
-	aStream nextPutAll: '.bytes.length : 0'.
+	aStream nextPutAll: ')'.
 
 ]
 
@@ -1335,19 +1346,21 @@ JSCodeGenerator >> generateDoWhileTrue: msgNode on: aStream indent: level [
 { #category : #'JS translation' }
 JSCodeGenerator >> generateEqual: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
-
+	| argNode test |
+	argNode :=  msgNode args first.
+	argNode isInterpreterProxyConstant ifTrue: [
+		test := #(isNil isTrue isFalse) at: (#(nilObject trueObject falseObject) indexOf: argNode selector).
+		self emitJSExpression: msgNode receiver on: aStream.
+		^aStream nextPut: $.; nextPutAll: test].
 	self emitJSExpression: msgNode receiver on: aStream.
 	aStream nextPutAll: ' === '.
-	self emitJSExpression: msgNode args first on: aStream.
+	self emitJSExpression: argNode on: aStream.
 ]
 
 { #category : #'JS hacks' }
 JSCodeGenerator >> generateFetchClassOf: msgNode on: aStream indent: level [
-	aStream nextPut: $(.
+	aStream nextPutAll: 'CLASSOF('.
 	msgNode args first emitJSCodeOn: aStream level: level generator: self.
-	aStream nextPutAll: '.sqClass ? '.
-	msgNode args first emitJSCodeOn: aStream level: level generator: self.
-	aStream nextPutAll: '.sqClass : interpreterProxy.classSmallInteger()'.
 	aStream nextPut: $).
 
 ]
@@ -1364,9 +1377,12 @@ JSCodeGenerator >> generateFirstIndexableField: msgNode on: aStream indent: leve
 			ifTrue: [self typeOfArgument: (parent receiver args indexOf: msgNode) in: parent receiver selector] ifFalse: [
 		self halt]].
 	cType ifNotNil: [
-		accessor := (cType beginsWith: 'unsigned char *') ifTrue: ['.bytes']
-			ifFalse: [(cType beginsWith: 'char *') ifTrue: ['.bytes']
-			ifFalse: [self halt: 'need to handle ', cType]].
+		cType := cType copyReplaceAll: ' *' with: '* '.
+		accessor := (cType beginsWith: 'unsigned char*') ifTrue: ['.bytes']
+			ifFalse: [(cType beginsWith: 'unsigned int*') ifTrue: ['.words']
+			ifFalse: [(cType beginsWith: 'int*') ifTrue: ['.wordsAsInt32Array()']
+			ifFalse: [(cType beginsWith: 'char*') ifTrue: ['.bytes']
+			ifFalse: [self halt: 'need to handle ', cType]]]].
 		accessor ifNotNil: [msgNode args first emitJSCodeOn: aStream level: level generator: self.
 			^aStream nextPutAll: accessor]].
 	"generic code below, not needed ever hopefully"
@@ -1705,6 +1721,13 @@ JSCodeGenerator >> generateInlineDirective: msgNode on: aStream indent: level [
 
 ]
 
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateInstanceSizeOf: msgNode on: aStream indent: level [
+	msgNode args first emitJSCodeOn: aStream level: level generator: self.
+	aStream nextPutAll: '.classInstSize()'.
+
+]
+
 { #category : #'JS translation' }
 JSCodeGenerator >> generateIntegerObjectOf: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
@@ -1841,7 +1864,13 @@ JSCodeGenerator >> generateNot: msgNode on: aStream indent: level [
 { #category : #'JS translation' }
 JSCodeGenerator >> generateNotEqual: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
-
+	| argNode test |
+	argNode :=  msgNode args first.
+	argNode isInterpreterProxyConstant ifTrue: [
+		test := #(isNil isTrue isFalse) at: (#(nilObject trueObject falseObject) indexOf: argNode selector).
+		aStream nextPut: $!.
+		self emitJSExpression: msgNode receiver on: aStream.
+		^aStream nextPut: $.; nextPutAll: test].
 	self emitJSExpression: msgNode receiver on: aStream.
 	aStream nextPutAll: ' !== '.
 	self emitJSExpression: msgNode args first on: aStream.
@@ -2098,16 +2127,8 @@ JSCodeGenerator >> generateSizeOfSTArrayFromCPrimitive: msgNode on: aStream inde
 
 { #category : #'JS hacks' }
 JSCodeGenerator >> generateSlotSizeOf: msgNode on: aStream indent: level [
-	aStream nextPut: $(.
+	aStream nextPutAll: 'SLOTSIZEOF('.
 	msgNode args first emitJSCodeOn: aStream level: level generator: self.
-	aStream nextPutAll: '.bytes ? '.
-	msgNode args first emitJSCodeOn: aStream level: level generator: self.
-	aStream nextPutAll: '.bytes.length : '.
-	msgNode args first emitJSCodeOn: aStream level: level generator: self.
-	aStream nextPutAll: '.words ? '.
-	msgNode args first emitJSCodeOn: aStream level: level generator: self.
-	aStream nextPutAll: '.words.length : interpreterProxy.'.
-	msgNode emitJSCodeAsFunctionCallOn: aStream level: level generator: self.
 	aStream nextPut: $).
 
 ]
@@ -2117,6 +2138,13 @@ JSCodeGenerator >> generateSmalltalkMetaError: msgNode on: aStream indent: level
 	"Generate the JS code for this message onto the given stream."
 
 	aStream nextPutAll: 'throw Error("'; nextPutAll: msgNode selector; nextPutAll: '")'
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateSuperclassOf: msgNode on: aStream indent: level [
+	msgNode args first emitJSCodeOn: aStream level: level generator: self.
+	aStream nextPutAll: '.superclass()'.
+
 ]
 
 { #category : #'JS translation' }
@@ -2423,8 +2451,11 @@ JSCodeGenerator >> initializeCTranslationDictionary [
 	"optimized interpreterProxy calls"
 	#firstIndexableField:				#generateFirstIndexableField:on:indent:
 	#slotSizeOf:						#generateSlotSizeOf:on:indent:
-	#byteSizeOfBytes:					#generateByteSizeOfBytes:on:indent:
+	#byteSizeOfBytes:					#generateByteSizeOf:on:indent:
+	#byteSizeOf:						#generateByteSizeOf:on:indent:
 	#fetchClassOf:						#generateFetchClassOf:on:indent:
+	#superclassOf:						#generateSuperclassOf:on:indent:
+	#instanceSizeOf:					#generateInstanceSizeOf:on:indent:
 	#is:KindOf: 							#generateIsKindOf:on:indent:
 	#cDigitCopyFrom:to:len:				#generateCDigitCopy:on:indent:
 	#sizeOfSTArrayFromCPrimitive:		#generateSizeOfSTArrayFromCPrimitive:on:indent:
@@ -2850,10 +2881,7 @@ JSCodeGenerator >> printArray: array on: aStream [
 { #category : #private }
 JSCodeGenerator >> printInt: int on: aStream [
 	aStream print: int.
-	(int between: -2147483648 and: 2147483647)
-		ifFalse: [(int between: 2147483648 and: 4294967295)
-			ifTrue: [aStream nextPut: $U]
-			ifFalse: [aStream nextPut: $L]]
+
 ]
 
 { #category : #'error notification' }
@@ -3229,8 +3257,8 @@ JSCodeGenerator >> var: varName type: type [
 
 { #category : #public }
 JSCodeGenerator >> var: varName type: type array: array [
-"use this in preference to #var:declareC: when possible. This produces a C statment of the form
-int * fooArray[]={1,2,3}
+"use this in preference to #var:declareC: when possible. This produces a JS statment of the form
+var fooArray = [1,2,3]
 See also #var:type: for simple var decls" 
 	self
 		var: varName
@@ -3238,9 +3266,9 @@ See also #var:type: for simple var decls"
 			s nextPutAll: type.
 			s space.
 			s nextPutAll: varName.
-			s nextPutAll: '[] = {'.
+			s nextPutAll: ' = ['.
 			self printArray: array on: s.
-			s nextPut: $}])
+			s nextPut: $]])
 ]
 
 { #category : #public }
