@@ -154,11 +154,12 @@ CogObjectRepresentationForSqueakV3 >> cacheTagIsMarked: cacheTag [
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> checkValidInlineCacheTag: cacheTag [
-	^((cacheTag bitAnd: 1 << ShiftForWord - 1) = 0
-		and: [cacheTag
+	^cacheTag = ConstZero
+	  or: [((cacheTag bitAnd: 1 << ShiftForWord - 1) = 0
+		   and: [cacheTag
 				between: 1 << objectMemory compactClassFieldLSB
 				and: (objectMemory compactClassIndexOfHeader: -1) << objectMemory compactClassFieldLSB])
-	   or: [self checkValidObjectReference: cacheTag]
+		 or: [self checkValidObjectReference: cacheTag]]
 ]
 
 { #category : #'garbage collection' }
