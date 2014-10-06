@@ -65,7 +65,7 @@ function DIV(a, b) { return Math.floor(a / b) | 0; }   // integer division
 function MOD(a, b) { return a - DIV(a, b) * b | 0; }   // signed modulus
 function SHL(a, b) { return b > 31 ? 0 : a << b; }     // fix JS shift
 function SHR(a, b) { return b > 31 ? 0 : a >>> b; }    // fix JS shift
-function SHIFT(a, b) { return b < 0 ? (b < -31 ? 0 : a >>> (0-b) ) : (b > 31 ? 0 : b << a); }
+function SHIFT(a, b) { return b < 0 ? (b < -31 ? 0 : a >>> (0-b) ) : (b > 31 ? 0 : a << b); }
 
 '.
 ]
