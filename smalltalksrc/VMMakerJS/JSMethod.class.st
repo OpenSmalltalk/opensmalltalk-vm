@@ -362,11 +362,11 @@ JSMethod >> emitJSFunctionHeader: aStream generator: aCodeGen newlineBeforeName:
 	aStream nextPutAll: 'function'.
 	newlineBeforeName ifTrue: [aStream cr] ifFalse: [aStream space].
 	(returnType last = $)
-	and: [returnType includesSubString: (aCodeGen cFunctionNameFor: self selectorForCodeGeneration)]) ifTrue:
+	and: [returnType includesSubString: (aCodeGen jsFunctionNameFor: self selectorForCodeGeneration)]) ifTrue:
 		["Hack fix for e.g. <returnTypeC: 'void (*setInterruptCheckChain(void (*aFunction)(void)))()'>"
 		 ^self].
 	aStream
-		nextPutAll: (aCodeGen cFunctionNameFor: self selectorForCodeGeneration);
+		nextPutAll: (aCodeGen jsFunctionNameFor: self selectorForCodeGeneration);
 		nextPut: $(.
 	args
 		do: [:arg | aStream nextPutAll: (aCodeGen returnPrefixFromVariable: arg)]
@@ -382,8 +382,19 @@ JSMethod >> emitJSHeaderOn: aStream generator: aCodeGen [
 	self emitJSFunctionHeader: aStream generator: aCodeGen.
 	aStream nextPutAll: ' {'; cr.
 	self emitGlobalStructReferenceOn: aStream.
-	locals do: [ :var |
-		aStream nextPutAll: '	var ', (aCodeGen returnPrefixFromVariable: var), ';'; cr.
+	locals do: [ :var | | varDecl |
+		aStream nextPutAll: '	var ', (aCodeGen returnPrefixFromVariable: var).
+		varDecl := declarations at: var asString ifAbsent: [''].
+		(varDecl includes: $=)
+			ifTrue: [ | const |
+				const := ((varDecl copyAfter: $=) replaceAll: ${ with: $[) replaceAll: $} with: $].
+				aStream nextPutAll: ' =', const]
+			ifFalse: [(varDecl includes: $[)
+					ifTrue: [ | size |
+						size := (varDecl copyAfter: $[) copyUpTo: $].
+						size ifEmpty: [self halt].
+						aStream nextPutAll: ' = new Array(', size, ')']].
+		aStream nextPutAll: ';'; cr
 	].
 	locals isEmpty ifFalse: [ aStream cr ].
 ]
@@ -394,7 +405,7 @@ JSMethod >> emitProxyFunctionPrototype: aStream generator: aCodeGen [
 
 	| arg |
 	aStream nextPutAll: returnType; space.
-	aStream nextPutAll: '(*', (aCodeGen cFunctionNameFor: self selectorForCodeGeneration), ')('.
+	aStream nextPutAll: '(*', (aCodeGen jsFunctionNameFor: self selectorForCodeGeneration), ')('.
 	args isEmpty ifTrue: [ aStream nextPutAll: 'void' ].
 	1 to: args size do: [ :i |
 		arg := args at: i.

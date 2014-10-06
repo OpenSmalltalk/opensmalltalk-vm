@@ -4,5 +4,10 @@ Extension { #name : #TConstantNode }
 TConstantNode >> emitJSCodeOn: aStream level: level generator: aCodeGen [
 	"Emit a C literal."
 
-	aStream nextPutAll: (aCodeGen cLiteralFor: value).
+	aStream nextPutAll: (aCodeGen jsLiteralFor: value).
+]
+
+{ #category : #'*vmmakerjs' }
+TConstantNode >> isConstantZero [
+	^ value = 0
 ]
