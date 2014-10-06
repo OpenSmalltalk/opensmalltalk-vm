@@ -1037,19 +1037,16 @@ JSCodeGenerator >> generateAnd: msgNode on: aStream indent: level [
 { #category : #'JS translation' }
 JSCodeGenerator >> generateAsFloat: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
-self halt.
-	aStream nextPutAll:'((double) '.
 	self emitJSExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ' )'.
+
 ]
 
 { #category : #'JS translation' }
 JSCodeGenerator >> generateAsInteger: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
-self halt.
-	aStream nextPutAll:'((sqInt)'.
+	aStream nextPutAll:'('.
 	self emitJSExpression: msgNode receiver on: aStream.
-	aStream nextPut: $)
+	aStream nextPutAll: '|0)'
 ]
 
 { #category : #'JS translation' }
@@ -1223,18 +1220,18 @@ self halt.
 { #category : #'JS translation' }
 JSCodeGenerator >> generateCCoercion: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
-	| expr |.
+	| expr cType |.
 	expr := msgNode args first.
+	cType := msgNode args second value.
 	(expr isSend and: [expr receiver name = 'interpreterProxy' and: [expr selector = #firstIndexableField:]]) ifTrue: [
-		| cType |
-		cType := msgNode args second.
-		cType value = 'unsigned char *' ifTrue: [
-			self emitJSExpression: expr args first on: aStream.
-			^aStream nextPutAll: '.bytes'.
-		].
+		cType := msgNode args second value.
+		self emitJSExpression: expr args first on: aStream.
+		cType = 'unsigned char *' ifTrue: [^aStream nextPutAll: '.bytes'].
+		cType = 'int *' ifTrue: [^aStream nextPutAll: '.wordsAsInt32Array()'].
+		cType = 'float *' ifTrue: [^aStream nextPutAll: '.wordsAsFloat32Array()'].
 		self halt.
 	] ifFalse: [
-		self halt.
+		(#('double' 'float') includes: cType) ifFalse: [self halt].
 		self emitJSExpression: expr on: aStream.
 	]
 
@@ -1382,7 +1379,8 @@ JSCodeGenerator >> generateFirstIndexableField: msgNode on: aStream indent: leve
 			ifFalse: [(cType beginsWith: 'unsigned int*') ifTrue: ['.words']
 			ifFalse: [(cType beginsWith: 'int*') ifTrue: ['.wordsAsInt32Array()']
 			ifFalse: [(cType beginsWith: 'char*') ifTrue: ['.bytes']
-			ifFalse: [self halt: 'need to handle ', cType]]]].
+			ifFalse: [(cType beginsWith: 'float*') ifTrue: ['.wordsAsFloat32Array()']
+			ifFalse: [self halt: 'need to handle ', cType]]]]].
 		accessor ifNotNil: [msgNode args first emitJSCodeOn: aStream level: level generator: self.
 			^aStream nextPutAll: accessor]].
 	"generic code below, not needed ever hopefully"
@@ -1728,6 +1726,16 @@ JSCodeGenerator >> generateInstanceSizeOf: msgNode on: aStream indent: level [
 
 ]
 
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateIntAtPointer: msgNode on: aStream indent: level [
+	msgNode args first asString = 'self cCoerce: argPtr + i to: ''char*'''
+		ifTrue: [^aStream nextPutAll: 'argPtr[i]'].
+	self halt
+	
+
+	
+]
+
 { #category : #'JS translation' }
 JSCodeGenerator >> generateIntegerObjectOf: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
@@ -1748,6 +1756,13 @@ JSCodeGenerator >> generateIntegerValueOf: msgNode on: aStream indent: level [
 JSCodeGenerator >> generateInterpreterProxyCall: msgNode on: aStream indent: level [
 	aStream nextPutAll: 'interpreterProxy.'.
 	^ msgNode emitJSCodeAsFunctionCallOn: aStream level: level generator: self
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateIsFloatObject: msgNode on: aStream indent: level [
+	msgNode args first emitJSCodeOn: aStream level: level generator: self.
+	aStream nextPutAll: '.isFloat'.
+
 ]
 
 { #category : #'JS translation' }
@@ -2451,16 +2466,19 @@ JSCodeGenerator >> initializeCTranslationDictionary [
 	"optimized interpreterProxy calls"
 	#firstIndexableField:				#generateFirstIndexableField:on:indent:
 	#slotSizeOf:						#generateSlotSizeOf:on:indent:
+	#stSizeOf:							#generateSlotSizeOf:on:indent:
 	#byteSizeOfBytes:					#generateByteSizeOf:on:indent:
 	#byteSizeOf:						#generateByteSizeOf:on:indent:
 	#fetchClassOf:						#generateFetchClassOf:on:indent:
 	#superclassOf:						#generateSuperclassOf:on:indent:
 	#instanceSizeOf:					#generateInstanceSizeOf:on:indent:
 	#is:KindOf: 							#generateIsKindOf:on:indent:
+	#isFloatObject:						#generateIsFloatObject:on:indent:
 	#cDigitCopyFrom:to:len:				#generateCDigitCopy:on:indent:
 	#sizeOfSTArrayFromCPrimitive:		#generateSizeOfSTArrayFromCPrimitive:on:indent:
 	#asciiValue							#generateIdentityUnary:on:indent:
 	#primitiveFail						#generateInterpreterProxyCall:on:indent:
+	#intAtPointer:						#generateIntAtPointer:on:indent:
 	).
 
 	1 to: pairs size by: 2 do: [:i |
@@ -2484,6 +2502,8 @@ JSCodeGenerator >> initializeCTranslationDictionary [
 		'fprintf(stderr, "\n%s: %s", moduleName, s)'					'console.log(moduleName + ": " + s)'
 		'interpreterProxy->majorVersion() == VM_PROXY_MAJOR'	'interpreterProxy.majorVersion() == VM_PROXY_MAJOR'
 		'interpreterProxy->minorVersion() >= VM_PROXY_MINOR'	'interpreterProxy.minorVersion() >= VM_PROXY_MINOR'
+		'sqrt(result)'												'Math.sqrt(result)'
+		'sqrt(len)'													'Math.sqrt(len)'
 	).
 	1 to: pairs size by: 2 do: [:i |
 		cCodeTranslationDict at: (pairs at: i) put: (pairs at: i + 1)].
@@ -2528,6 +2548,13 @@ JSCodeGenerator >> isAssertSelector: selector [
 	^#(assert: asserta: assert:l: asserta:l:) includes: selector
 ]
 
+{ #category : #utilities }
+JSCodeGenerator >> isBuiltinSelector: sel [
+	"Answer true if the given selector is one of the builtin selectors."
+
+	^(self isKernelSelector: sel) or: [translationDict includesKey: sel]
+]
+
 { #category : #'JS code generator' }
 JSCodeGenerator >> isCLiteral: anObject [
 	(anObject isKindOf: Integer) ifTrue: [^true].
@@ -2547,6 +2574,26 @@ JSCodeGenerator >> isGeneratingPluginCode [
 { #category : #public }
 JSCodeGenerator >> isGlobalStructureBuild [
 	^false
+]
+
+{ #category : #utilities }
+JSCodeGenerator >> isKernelSelector: sel [
+	"Answer true if the given selector is one of the kernel selectors that are implemented as macros."
+
+	^(#(error:
+		 oopAt: oopAt:put: oopAtPointer: oopAtPointer:put:
+		 byteAt: byteAt:put: byteAtPointer: byteAtPointer:put:
+		 shortAt: shortAt:put: shortAtPointer: shortAtPointer:put:
+		 intAt: intAt:put: intAtPointer: intAtPointer:put:
+		 longAt: longAt:put: longAtPointer: longAtPointer:put:
+		 longLongAt: longLongAt:put: longLongAtPointer: longLongAtPointer:put:
+		 fetchFloatAt:into: storeFloatAt:from:
+				fetchFloatAtPointer:into: storeFloatAtPointer:from:
+		 fetchSingleFloatAt:into: storeSingleFloatAt:from:
+				fetchSingleFloatAtPointer:into: storeSingleFloatAtPointer:from:
+		 pointerForOop: oopForPointer:
+		 cCoerce:to: cCoerceSimple:to:)
+			includes: sel)
 ]
 
 { #category : #'JS code generator' }
