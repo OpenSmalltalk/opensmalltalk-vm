@@ -1534,7 +1534,7 @@ TMethod >> isInlineableConditional: aSendNode in: aCodeGen [
 	|method |
 	^(#(ifTrue: ifFalse:) includes: aSendNode selector)
 	  and: [aSendNode receiver isSend
-	  and: [(method := aCodeGen methodNamed: aSendNode receiver selector) notNil
+	  and: [(method := aCodeGen anyMethodNamed: aSendNode receiver selector) notNil
 	  and: [method inline == true
 	  and: [method parseTree statements last isReturn
 	  and: [method parseTree allSatisfy:
