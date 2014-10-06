@@ -295,7 +295,7 @@ JSSmartSyntaxPluginCodeGenerator >> generateAsOop: aNode on: aStream indent: anI
 { #category : #'translating builtins' }
 JSSmartSyntaxPluginCodeGenerator >> generateAsPositiveIntegerObj: aNode on: aStream indent: anInteger [
 
-	aStream nextPutAll: 'interpreterProxy->positive32BitIntegerFor('.
+	aStream nextPutAll: 'interpreterProxy.positive32BitIntegerFor('.
 	self emitJSExpression: aNode receiver on: aStream.
 	aStream nextPutAll: ')'.
 ]
@@ -566,14 +566,6 @@ JSSmartSyntaxPluginCodeGenerator >> generateIsPointers: aNode on: aStream indent
 JSSmartSyntaxPluginCodeGenerator >> generateIsWords: aNode on: aStream indent: anInteger [
 
 	aStream nextPutAll: 'interpreterProxy->isWords('.
-	self emitJSExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ')'.
-]
-
-{ #category : #'translating builtins' }
-JSSmartSyntaxPluginCodeGenerator >> generateIsWordsOrBytes: aNode on: aStream indent: anInteger [
-
-	aStream nextPutAll: 'interpreterProxy->isWordsOrBytes('.
 	self emitJSExpression: aNode receiver on: aStream.
 	aStream nextPutAll: ')'.
 ]
