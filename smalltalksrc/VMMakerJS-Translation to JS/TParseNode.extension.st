@@ -33,11 +33,36 @@ TParseNode >> emitJSCommentOn: aStream level: level [
 ]
 
 { #category : #'*vmmakerjs' }
+TParseNode >> isBitBltPtr [
+	^false
+]
+
+{ #category : #'*vmmakerjs' }
+TParseNode >> isConstantNull [
+	^false
+]
+
+{ #category : #'*vmmakerjs' }
+TParseNode >> isConstantZero [
+	^false
+]
+
+{ #category : #'*vmmakerjs' }
+TParseNode >> isEqualityTest [
+	^false
+]
+
+{ #category : #'*vmmakerjs' }
 TParseNode >> isInterpreterProxyConstant [
 	^false
 ]
 
 { #category : #'*vmmakerjs' }
 TParseNode >> isPlusOne [
+	^false
+]
+
+{ #category : #'*vmmakerjs' }
+TParseNode >> isTimesFour [
 	^false
 ]

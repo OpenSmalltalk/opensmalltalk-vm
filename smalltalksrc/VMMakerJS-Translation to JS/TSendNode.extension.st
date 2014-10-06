@@ -20,7 +20,7 @@ TSendNode >> emitJSCodeAsExpressionOn: aStream level: level generator: aCodeGen 
 { #category : #'*vmmakerjs' }
 TSendNode >> emitJSCodeAsFunctionCallOn: aStream level: level generator: aCodeGen [
 
-	"Translate this message send into a C function call"
+	"Translate this message send into a JS function call"
 	"Special case for pluggable modules. Replace messages to interpreterProxy
 	 by interpreterProxy->message(..) if the message is not builtin"
 	(aCodeGen isGeneratingPluginCode
@@ -28,8 +28,8 @@ TSendNode >> emitJSCodeAsFunctionCallOn: aStream level: level generator: aCodeGe
 	 and: ['interpreterProxy' = receiver name
 	 and: [self isBuiltinOperator not]]]) ifTrue:
 		[aStream nextPutAll:'interpreterProxy.'].
-	"Translate this message send into a C function call."
-	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector); nextPut: $(.
+	"Translate this message send into a JS function call."
+	aStream nextPutAll: (aCodeGen jsFunctionNameFor: selector); nextPut: $(.
 	"Only include the receiver as the first argument in certain cases.
 	 The receiver is always included if it is an expression.
 	 If it is a variable:
@@ -56,7 +56,7 @@ TSendNode >> emitJSCodeAsPointerDereferenceOn: aStream level: level generator: a
 	aStream nextPut: $(.
 	receiver  emitJSCodeAsExpressionOn: aStream level: 0 generator: aCodeGen.
 	aStream nextPut: $-; nextPut: $>.
-	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector).
+	aStream nextPutAll: (aCodeGen jsFunctionNameFor: selector).
 	arguments isEmpty ifFalse:
 		[self assert: arguments size = 1.
 		 aStream nextPutAll: ' = '.
@@ -78,6 +78,11 @@ TSendNode >> emitJSCodeOn: aStream level: level generator: aCodeGen [
 ]
 
 { #category : #'*vmmakerjs' }
+TSendNode >> isEqualityTest [
+	^#(= == ~= ~~) includes: self selector
+]
+
+{ #category : #'*vmmakerjs' }
 TSendNode >> isInterpreterProxyConstant [
 	^#(nilObject trueObject falseObject) includes: self selector
 ]
@@ -85,4 +90,11 @@ TSendNode >> isInterpreterProxyConstant [
 { #category : #'*vmmakerjs' }
 TSendNode >> isPlusOne [
 	^ self selector = #+ and: [self args first isConstant and: [self args first value = 1]]
+]
+
+{ #category : #'*vmmakerjs' }
+TSendNode >> isTimesFour [
+	^self args first isConstant and:
+		[(self selector = #* and: [self args first value = 4])
+		or: [self selector = #<< and: [self args first value = 2]]]
 ]

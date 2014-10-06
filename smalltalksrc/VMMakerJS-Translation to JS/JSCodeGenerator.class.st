@@ -163,7 +163,7 @@ JSCodeGenerator >> addClassVarsFor: aClass [
 	| val node |
 	aClass classPool associationsDo: [:assoc | 
 		val := assoc value.
-		(useSymbolicConstants and:[self isCLiteral: val])
+		(useSymbolicConstants and:[self isJSLiteral: val])
 			ifTrue:[node := TDefineNode new setName: assoc key asString value: assoc value]
 			ifFalse:[node := TConstantNode new setValue: assoc value].
 		constants at: assoc key asString put: node].
@@ -296,7 +296,7 @@ JSCodeGenerator >> addPoolVarsFor: aClass [
 		pools add: pool.
 		pool bindingsDo: [:assoc | | val node |
 			val := assoc value.
-			node := (useSymbolicConstants and:[self isCLiteral: val])
+			node := (useSymbolicConstants and:[self isJSLiteral: val])
 						ifTrue:[TDefineNode new setName: assoc key asString value: assoc value]
 						ifFalse:[TConstantNode new setValue: assoc value].
 			constants at: assoc key asString put: node]].
@@ -324,27 +324,6 @@ JSCodeGenerator >> cCodeForMethod: selector [
 	s := (ReadWriteStream on: '').
 	m emitJSCodeOn: s generator: self.
 	^ s contents
-]
-
-{ #category : #'JS code generator' }
-JSCodeGenerator >> cFunctionNameFor: aSelector [
-	"Create a C function name from the given selector by omitting colons
-	and prefixing with the plugin name if the method is exported."
-	^aSelector copyWithout: $:
-]
-
-{ #category : #'JS code generator' }
-JSCodeGenerator >> cLiteralFor: anObject [
-	"Return a string representing the C literal value for the given object."
-	(anObject isKindOf: Integer) ifTrue: [^ anObject printString].
-	(anObject isKindOf: String) ifTrue: [^ '"', anObject, '"' ].
-	(anObject isKindOf: Float) ifTrue: [^ anObject printString ].
-	anObject == nil ifTrue: [^ 'null' ].
-	anObject == true ifTrue: [^ 'true' ].
-	anObject == false ifTrue: [^ 'false' ].
-	self error:
-		'Warning: A Smalltalk literal could not be translated into a C constant: ', anObject printString.
-	^'"XXX UNTRANSLATABLE CONSTANT XXX"'
 ]
 
 { #category : #'error notification' }
@@ -630,70 +609,6 @@ JSCodeGenerator >> emitBuiltinConstructFor: msgNode on: aStream level: level [
 ]
 
 { #category : #'JS code generator' }
-JSCodeGenerator >> emitDefaultMacrosOn: aStream [
-	"Emit macros to provide default implementations of certain functions used by
-	the interpreter. If not previously defined in config.h they will be defined here.
-	The definitions will be available to any module that includes sqMemoryAccess.h.
-	The default macros are chosen for backward compatibility with existing platform
-	support code."
-
-	"Reduce the obscurity of these macros by flagging some selectors to
-	make this method show up as a sender."
-
-	self flag: #assert:.
-	"If assert() has not been defined e.g. by sqAssert.h, then use the standard clib version"
-	aStream cr;
-		nextPutAll: '#ifndef assert'; cr;
-		nextPutAll: ' #include <assert.h>'; cr;
-		nextPutAll: '#endif'; cr.
-
-	self flag: #allocateMemory:minimum:imageFile:headerSize:.
-	aStream cr;
-		nextPutAll: '#ifndef allocateMemoryMinimumImageFileHeaderSize'; cr;
-		nextPutAll: ' /* Called by Interpreter>>allocateMemory:minimum:imageFile:headerSize: */'; cr;
-		nextPutAll: ' /* Default definition if not previously defined in config.h */'; cr;
-		nextPutAll: ' #define allocateMemoryMinimumImageFileHeaderSize(',
-						'heapSize, minimumMemory, fileStream, headerSize) \'; cr;
-		nextPutAll: '    sqAllocateMemory(minimumMemory, heapSize)'; cr;
-		nextPutAll: '#endif'; cr.
-
-	self flag: #sqImage:read:size:length:.
-	aStream cr;
-		nextPutAll: '#ifndef sqImageFileReadEntireImage'; cr;
-		nextPutAll: ' /* Called by Interpreter>>sqImage:read:size:length: */'; cr;
-		nextPutAll: ' /* Default definition if not previously defined in config.h */'; cr;
-		nextPutAll: ' #define sqImageFileReadEntireImage(memoryAddress, ',
-						'elementSize,  length, fileStream) \'; cr;
-		nextPutAll: '    sqImageFileRead(memoryAddress, elementSize,  length, fileStream)'; cr;
-		nextPutAll: '#endif'; cr.
-
-	self flag: #error:.
-	aStream cr;
-		nextPutAll: '#ifndef error'; cr;
-		nextPutAll: ' /* error() function called from Interpreter */'; cr;
-		nextPutAll: ' /* Default definition if not previously defined in config.h */'; cr;
-		nextPutAll: ' #define error(str) defaultErrorProc(str)'; cr;
-		nextPutAll: '#endif'; cr.
-
-	self flag: #primitiveMicrosecondClock; flag: #ioMicroSecondClock.
-	aStream cr;
-		nextPutAll: '#ifndef ioMicroSecondClock'; cr;
-		nextPutAll: ' /* Called by Interpreter>>primitiveMicrosecondClock and GC methods */'; cr;
-		nextPutAll: ' /* Default definition if not previously defined in config.h */'; cr;
-		nextPutAll: ' #define ioMicroSecondClock ioMSecs'; cr;
-		nextPutAll: '#endif'; cr.
-
-	self flag: #primitiveUtcWithOffset; flag: #setMicroSeconds:andOffset:.
-	aStream cr;
-		nextPutAll: '#ifndef ioUtcWithOffset'; cr;
-		nextPutAll: ' /* Called by Interpreter>>primitiveUtcWithOffset */'; cr;
-		nextPutAll: ' /* Default definition if not previously defined in config.h */'; cr;
-		nextPutAll: ' #define ioUtcWithOffset(clock, offset) setMicroSecondsandOffset(clock, offset)'; cr;
-		nextPutAll: '#endif'; cr.
-
-]
-
-{ #category : #'JS code generator' }
 JSCodeGenerator >> emitDefineBytesPerWordOn: aStream [
 	"Define word size dependent constants. These are mirrored by class
 	variables in ObjectMemory. The macro definitions here are used at compile
@@ -845,7 +760,7 @@ JSCodeGenerator >> emitJSConstantsOn: aStream [
 			aStream nextPutAll: 'var '.
 			aStream nextPutAll: node name.
 			aStream nextPutAll: ' = '.
-			aStream nextPutAll: (self cLiteralFor: node value).
+			aStream nextPutAll: (self jsLiteralFor: node value).
 			aStream nextPut: $;.
 			aStream cr
 		].
@@ -868,77 +783,13 @@ JSCodeGenerator >> emitJSExpression: aParseNode on: aStream [
 ]
 
 { #category : #'JS code generator' }
-JSCodeGenerator >> emitJSHeaderForPrimitivesOn: aStream [
-	"Write a C file header for compiled primitives onto the given stream."
-
-	aStream
-		nextPutAll: '/* Automatically generated from Squeak (';
-		nextPutAll: VMMaker versionString;
-		nextPutAll: ') on '.
-	Time dateAndTimeNow do: [:e | aStream nextPutAll: e asString; nextPut: Character space].
-	aStream
-		nextPutAll: '*/';
-		cr; cr;
-		nextPutAll: '#include "sq.h"'; cr; cr.
-
-	"Additional header files"
-	headerFiles do:[:hdr|
-		aStream nextPutAll:'#include '; nextPutAll: hdr; cr].
-
-	aStream nextPutAll: '
-#include "sqMemoryAccess.h"
-
-/*** Imported Functions/Variables ***/
-extern sqInt stackValue(sqInt);
-extern sqInt stackIntegerValue(sqInt);
-extern sqInt successFlag;
-
-/* allows accessing Strings in both C and Smalltalk */
-#define asciiValue(c) c
-'.
-	aStream cr.
-]
-
-{ #category : #'JS code generator' }
 JSCodeGenerator >> emitJSHeaderOn: aStream [
-	"Write a C file header onto the given stream."
-
-	aStream nextPutAll: '/* '.
-	aStream nextPutAll: VMMaker headerNotice.
-	aStream nextPutAll: ' */'; cr.
-	self emitGlobalStructFlagOn: aStream.
-	aStream nextPutAll: '#include "sq.h"'; cr.
-
-	"Additional header files"
-	headerFiles do:[:hdr|
-		aStream nextPutAll:'#include '; nextPutAll: hdr; cr].
-
-	"Default definitions for optional functions, provided for backward compatibility"
-	self emitDefaultMacrosOn: aStream.
-
-	aStream nextPutAll: '
-#include "sqMemoryAccess.h"
-
-sqInt printCallStack(void);
-void defaultErrorProc(char *s) {
-	/* Print an error message and exit. */
-	static sqInt printingStack = false;
-
-	printf("\n%s\n\n", s);
-	if (!printingStack) {
-		/* flag prevents recursive error when trying to print a broken stack */
-		printingStack = true;
-		printCallStack();
-	}
-	exit(-1);
-}
-'.
-	aStream cr.
+	self halt.
 ]
 
 { #category : #'JS code generator' }
 JSCodeGenerator >> emitJSTestBlock: aBlockNode on: aStream [
-	"Emit C code for the given block node to be used as a loop test."
+	"Emit JS code for the given block node to be used as a loop test."
 
 	aBlockNode statements size > 1 ifTrue: [
 		aBlockNode emitJSCodeOn: aStream level: 0 generator: self.
@@ -968,9 +819,16 @@ JSCodeGenerator >> emitJSVariablesOn: aStream [
 			aStream nextPutAll: 'var ', varString.
 			varDecl := variableDeclarations at: varString ifAbsent: [''].
 			(varDecl includes: $=)
-				ifTrue: [aStream nextPutAll: ' =', (varDecl copyAfter: $=)]
-				ifFalse: [(varDecl includes: $*)
-					ifTrue: [aStream nextPutAll: ' = null']
+				ifTrue: [ | const |
+					const := ((varDecl copyAfter: $=) replaceAll: ${ with: $[) replaceAll: $} with: $].
+					aStream nextPutAll: ' =', const]
+				ifFalse: [(varDecl includesAnyOf: '*[')
+					ifTrue: [(varDecl includes: $[)
+						ifTrue: [ | size |
+							size := (varDecl copyAfter: $[) copyUpTo: $].
+							size ifEmpty: [self halt].
+							aStream nextPutAll: ' = new Array(', size, ')']
+						ifFalse: [aStream nextPutAll: ' = null']]
 					ifFalse: [aStream nextPutAll: ' = 0']].
 			aStream nextPutAll: ';'; cr].
 	aStream cr.
@@ -1017,6 +875,16 @@ JSCodeGenerator >> fileHeaderVersionStampForSourceClass: sourceClass [
 ]
 
 { #category : #'JS translation' }
+JSCodeGenerator >> generateAbs: msgNode on: aStream indent: level [
+	"Generate the JS code for the negated message onto the given stream."
+
+	aStream nextPutAll: 'Math.abs('.
+	self emitJSExpression: msgNode receiver on: aStream.
+	aStream nextPutAll: ')'.
+
+]
+
+{ #category : #'JS translation' }
 JSCodeGenerator >> generateAddressOf: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
 self halt.
@@ -1054,7 +922,7 @@ JSCodeGenerator >> generateAsSymbol: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream.
 	 The receiver is expected to be a JSConstantNode."
 
-	aStream nextPutAll: (self cFunctionNameFor: msgNode receiver nameOrValue)
+	aStream nextPutAll: (self jsFunctionNameFor: msgNode receiver nameOrValue)
 ]
 
 { #category : #'JS translation' }
@@ -1183,8 +1051,7 @@ JSCodeGenerator >> generateBitShift: msgNode on: aStream indent: level [
 		].
 	] ifFalse: [
 		"bit shift amount is an expression"
-		self error: 'need to add BITSHIFT to emitJSHeaderOn:'.
-		aStream nextPutAll: 'BITSHIFT('.
+		aStream nextPutAll: 'SHIFT('.
 		self emitJSExpression: rcvr on: aStream.
 		aStream nextPutAll: ', '.
 		self emitJSExpression: arg on: aStream.
@@ -1199,6 +1066,14 @@ JSCodeGenerator >> generateBitXor: msgNode on: aStream indent: level [
 	self emitJSExpression: msgNode receiver on: aStream.
 	aStream nextPutAll: ' ^ '.
 	self emitJSExpression: msgNode args first on: aStream.
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateByteAtPointer: msgNode on: aStream indent: level [
+	msgNode args first asString = 'sourcePtr + charIndex - 1'
+		ifTrue: [^aStream nextPutAll: 'sourcePtr[charIndex - 1]'].
+	self halt
+	
 ]
 
 { #category : #'JS hacks' }
@@ -1231,7 +1106,8 @@ JSCodeGenerator >> generateCCoercion: msgNode on: aStream indent: level [
 		cType = 'float *' ifTrue: [^aStream nextPutAll: '.wordsAsFloat32Array()'].
 		self halt.
 	] ifFalse: [
-		(#('double' 'float') includes: cType) ifFalse: [self halt].
+		((#('double' 'float') includes: cType) or: ['sqInt (*)(*)'match: cType])
+			ifFalse: [self halt].
 		self emitJSExpression: expr on: aStream.
 	]
 
@@ -1340,15 +1216,39 @@ JSCodeGenerator >> generateDoWhileTrue: msgNode on: aStream indent: level [
 	aStream nextPutAll: ')'.
 ]
 
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateDstLongAt: msgNode on: aStream indent: level [
+	aStream nextPutAll: 'destBits['.
+	msgNode args first emitJSCodeAsExpressionOn: aStream level: level generator: self.
+	aStream nextPutAll: ' >>> 2]'.
+	
+
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateDstLongAtPut: msgNode on: aStream indent: level [
+	aStream nextPutAll: 'destBits['.
+	msgNode args first emitJSCodeAsExpressionOn: aStream level: level generator: self.
+	aStream nextPutAll: ' >>> 2] = '.
+	msgNode args second emitJSCodeOn: aStream level: level generator: self.
+	
+
+]
+
 { #category : #'JS translation' }
 JSCodeGenerator >> generateEqual: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
 	| argNode test |
 	argNode :=  msgNode args first.
+	"quick test for nil, true, false"
 	argNode isInterpreterProxyConstant ifTrue: [
 		test := #(isNil isTrue isFalse) at: (#(nilObject trueObject falseObject) indexOf: argNode selector).
 		self emitJSExpression: msgNode receiver on: aStream.
 		^aStream nextPut: $.; nextPutAll: test].
+	"cannot compare pointers to 0"
+	(argNode isConstantNull or: [argNode isConstantZero and: [self isPointer: msgNode receiver]]) ifTrue: [
+		aStream nextPutAll: '!'.
+		^self emitJSExpression: msgNode receiver on: aStream].
 	self emitJSExpression: msgNode receiver on: aStream.
 	aStream nextPutAll: ' === '.
 	self emitJSExpression: argNode on: aStream.
@@ -1372,7 +1272,9 @@ JSCodeGenerator >> generateFirstIndexableField: msgNode on: aStream indent: leve
 			ifTrue: [self typeOfVariable: parent receiver variable name] ifFalse: [
 		parent method == (TSendNode>>#emitJSCodeAsFunctionCallOn:level:generator:)
 			ifTrue: [self typeOfArgument: (parent receiver args indexOf: msgNode) in: parent receiver selector] ifFalse: [
-		self halt]].
+		msgNode asString = 'interpreterProxy firstIndexableField: mapOop'
+			ifTrue: ['unsigned int*'] ifFalse: [
+		self halt]]].
 	cType ifNotNil: [
 		cType := cType copyReplaceAll: ' *' with: '* '.
 		accessor := (cType beginsWith: 'unsigned char*') ifTrue: ['.bytes']
@@ -1419,9 +1321,11 @@ JSCodeGenerator >> generateIfFalse: msgNode on: aStream indent: level [
 
 	(self nilOrBooleanConstantReceiverOf: msgNode)
 		ifNil:
-			[aStream nextPutAll: 'if (!('.
-			msgNode receiver emitJSCodeAsExpressionOn: aStream level: level + 1 generator: self.
-			aStream nextPutAll: ')) {'; cr.
+			[aStream nextPutAll: 'if ('.
+			self generateNot: (TSendNode new
+					setSelector: #not receiver: msgNode receiver arguments: #())
+				on: aStream indent: level + 1.
+			aStream nextPutAll: ') {'; cr.
 			msgNode args last emitJSCodeOn: aStream level: level + 1 generator: self.
 			level timesRepeat: [aStream tab].
 			aStream nextPut: $}]
@@ -1607,55 +1511,23 @@ self halt.
 JSCodeGenerator >> generateInlineCppIfDef: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	| comment |
-self halt.
-	aStream cr; nextPutAll: '# ifdef ', msgNode args first value.
-	comment := msgNode args third value.
-	(comment isKindOf: String)
-		ifTrue: [aStream nextPutAll: '  // ', comment]
-		ifFalse: ["nil argument, ignore it"].
-	aStream cr.
-	msgNode isExpression
-		ifTrue:
-			[aStream tab: level + 1; nextPut: $(.
-			msgNode args fourth asExpression
-				emitJSCodeOn: aStream level: level + 1 generator: self.
-			aStream nextPut: $); cr]
-		ifFalse:
-			[msgNode args fourth
-				emitJSCodeOn: aStream level: level generator: self].
-	aStream nextPutAll: '# endif  // ', msgNode args first value; cr; tab: level
+	aStream nextPutAll: '// skipping ifdef ', msgNode args first value
 ]
 
 { #category : #'JS translation' }
 JSCodeGenerator >> generateInlineCppIfDefElse: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	| comment alternateBlock alternateBlockIsNil |
-self halt.
-	aStream cr; nextPutAll: '# ifdef ', msgNode args first value.
-	comment := msgNode args third value.
-	(comment isKindOf: String)
-		ifTrue: [aStream nextPutAll: '  // ', comment]
-		ifFalse: ["nil argument, ignore it"].
-	aStream cr.
-	msgNode isExpression
-		ifTrue:
-			[aStream tab: level + 1; nextPut: $(.
-			msgNode args fourth asExpression
-				emitJSCodeOn: aStream level: level + 1 generator: self.
-			aStream nextPut: $); cr]
-		ifFalse:
-			[msgNode args fourth
-				emitJSCodeOn: aStream level: level generator: self].
+	| alternateBlock alternateBlockIsNil |
+	aStream nextPutAll: '// skipping ifdef ', msgNode args first value; cr.
+
 	alternateBlock := msgNode args fifth.
 	alternateBlockIsNil := true. "check for nil #else clause"
 	alternateBlock nodesDo: [:n |
 		(n ~= alternateBlock and: [n name ~= 'nil'])
 			ifTrue: [alternateBlockIsNil := false ]].
 	(alternateBlockIsNil) ifFalse:
-		[aStream nextPutAll: '# else'; cr.
-		msgNode isExpression
+		[msgNode isExpression
 			ifTrue:
 				[aStream tab: level + 1; nextPut: $(.
 				alternateBlock asExpression
@@ -1664,7 +1536,7 @@ self halt.
 			ifFalse:
 				[alternateBlock
 					emitJSCodeOn: aStream level: level generator: self]].
-	aStream nextPutAll: '# endif  // ', msgNode args first value; cr; tab: level
+
 
 ]
 
@@ -1732,8 +1604,6 @@ JSCodeGenerator >> generateIntAtPointer: msgNode on: aStream indent: level [
 		ifTrue: [^aStream nextPutAll: 'argPtr[i]'].
 	self halt
 	
-
-	
 ]
 
 { #category : #'JS translation' }
@@ -1778,17 +1648,35 @@ JSCodeGenerator >> generateIsIntegerObject: msgNode on: aStream indent: level [
 JSCodeGenerator >> generateIsNil: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
 
+	aStream nextPutAll: '!'.
 	self emitJSExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ' === '.
-	aStream nextPutAll: (self cLiteralFor: nil).
+
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateIsWordsOrBytes: msgNode on: aStream indent: level [
+	msgNode args first emitJSCodeOn: aStream level: level generator: self.
+	aStream nextPutAll: '.isWordsOrBytes()'.
+
 ]
 
 { #category : #'JS translation' }
 JSCodeGenerator >> generateJSCodeForCcode: cCode on: aStream indent: level [
 	cCode = '' ifTrue: [^self].
 	aStream nextPutAll: (cCodeTranslationDict at: cCode ifAbsent: [
+		('opTable[*] = (void *)*' match: cCode)
+			ifTrue: [cCode copyReplaceAll: '(void *)' with: ''] ifFalse: [
+		('fn(*Handle, &*Pitch, *)' match: cCode)
+			ifTrue: [(cCode copyReplaceAll: '&' with: 'function(p){') copyReplaceAll: 'Pitch' with: 'Pitch = p}'] ifFalse: [
+		(' ((*)querySurfaceFn)*(handle, &destWidth, &destHeight, &destDepth, &destMSB)' match: cCode)
+			ifTrue: [ 'querySurfaceFn(handle, function(w, h, d, m){destWidth = w; destHeight = h; destDepth = d; destMSB = m; })'] ifFalse: [
+		(' ((*)querySurfaceFn)*(handle, &sourceWidth, &sourceHeight, &sourceDepth, &sourceMSB)' match: cCode)
+			ifTrue: [ 'querySurfaceFn(handle, function(w, h, d, m){sourceWidth = w; sourceHeight = h; sourceDepth = d; sourceMSB = m; })'] ifFalse: [
+		(#('fn(destHandle, affectedL, affectedT, affectedR-affectedL, affectedB-affectedT)',
+			'fn(sourceHandle, 0, 0, 0, 0)') includes: cCode)
+			ifTrue: [cCode] ifFalse: [
 		"See initializeCTranslationDictionary"
-		self error: 'C: ' , cCode]).
+		self error: 'C: ' , cCode]]]]]])
 
 ]
 
@@ -1808,6 +1696,23 @@ JSCodeGenerator >> generateLessThanOrEqual: msgNode on: aStream indent: level [
 	self emitJSExpression: msgNode receiver on: aStream.
 	aStream nextPutAll: ' <= '.
 	self emitJSExpression: msgNode args first on: aStream.
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateLong32At: msgNode on: aStream indent: level [
+	| expr index |
+	expr := msgNode args first.
+	(expr isSend and: [expr selector = #+]) ifFalse: [self halt].
+	expr receiver emitJSCodeOn: aStream level: level generator: self.
+	index := expr args first.
+	aStream nextPut: $[.
+	index isTimesFour
+		ifTrue: [index receiver emitJSCodeOn: aStream level: level generator: self]
+		ifFalse: [
+			index emitJSCodeAsExpressionOn: aStream level: level generator: self.
+			aStream nextPutAll: ' >>> 2'].
+	aStream nextPut: $].
+
 ]
 
 { #category : #'JS translation' }
@@ -1871,9 +1776,18 @@ JSCodeGenerator >> generateNegated: msgNode on: aStream indent: level [
 { #category : #'JS translation' }
 JSCodeGenerator >> generateNot: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
-
+	| expr |
+	expr := msgNode receiver.
+	"generate (a != b) instead of !(a == b)"
+	expr isEqualityTest ifTrue: [
+		^(msgNode selector includes: $~)
+			ifTrue: [self generateEqual: expr on: aStream indent: level]
+			ifFalse: [self generateNotEqual: expr on: aStream indent: level]].
+	"eliminate not not"
+	(expr isSend and: [expr selector = #not]) ifTrue: [
+		^self emitJSExpression: expr receiver on: aStream].
 	aStream nextPutAll: '!'.
-	self emitJSExpression: msgNode receiver on: aStream.
+	self emitJSExpression: expr on: aStream.
 ]
 
 { #category : #'JS translation' }
@@ -1881,11 +1795,16 @@ JSCodeGenerator >> generateNotEqual: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
 	| argNode test |
 	argNode :=  msgNode args first.
+	"quick test for nil, true, false"
 	argNode isInterpreterProxyConstant ifTrue: [
 		test := #(isNil isTrue isFalse) at: (#(nilObject trueObject falseObject) indexOf: argNode selector).
 		aStream nextPut: $!.
 		self emitJSExpression: msgNode receiver on: aStream.
 		^aStream nextPut: $.; nextPutAll: test].
+	"cannot compare pointers to 0"
+	(argNode isConstantNull or: [argNode isConstantZero and: [self isPointer: msgNode receiver]]) ifTrue: [
+		aStream nextPutAll: '!!'.
+		^self emitJSExpression: msgNode receiver on: aStream].
 	self emitJSExpression: msgNode receiver on: aStream.
 	aStream nextPutAll: ' !== '.
 	self emitJSExpression: msgNode args first on: aStream.
@@ -1895,9 +1814,25 @@ JSCodeGenerator >> generateNotEqual: msgNode on: aStream indent: level [
 JSCodeGenerator >> generateNotNil: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
 
+	aStream nextPutAll: '!!'.
 	self emitJSExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ' !== '.
-	aStream nextPutAll: (self cLiteralFor: nil).
+
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateOopForPointer: msgNode on: aStream indent: level [
+	| arg |
+	arg := msgNode args first asString.
+	arg = 'interpreterProxy firstIndexableField: destBits'
+		ifTrue: [^aStream nextPutAll: 'destBits.wordsOrBytes()'].
+	arg = 'interpreterProxy firstIndexableField: sourceBits'
+		ifTrue: [^aStream nextPutAll: 'sourceBits.wordsOrBytes()'].
+	arg =  'interpreterProxy firstIndexableField: halftoneBits'
+		ifTrue: [^aStream nextPutAll: 'halftoneBits.wordsOrBytes()'].
+	arg =  'interpreterProxy firstIndexableField: sourceMapOop'
+		ifTrue: [^aStream nextPutAll: 'sourceMapOop.wordsOrBytes()'].
+	self halt
+
 ]
 
 { #category : #'JS translation' }
@@ -1924,10 +1859,11 @@ self halt.
 { #category : #'JS translation' }
 JSCodeGenerator >> generatePlus: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
-	self checkNonPointer: msgNode receiver op: '+'.
-	self checkNonPointer: msgNode args first op: '+'.
-	self emitJSExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ' + '.
+	msgNode receiver isBitBltPtr ifFalse: [
+		self checkNonPointer: msgNode receiver op: '+'.
+		self checkNonPointer: msgNode args first op: '+'.
+		self emitJSExpression: msgNode receiver on: aStream.
+		aStream nextPutAll: ' + '].
 	self emitJSExpression: msgNode args first on: aStream.
 ]
 
@@ -2071,8 +2007,10 @@ JSCodeGenerator >> generateSignedBitShift: msgNode on: aStream indent: level [
 		"bit shift amount is a constant"
 		self emitJSExpression: rcvr on: aStream.
 		arg value < 0 ifTrue: [
+			arg value < -31 ifTrue: [self error: 'cannot shift by more than 31']. 
 			aStream nextPutAll: ' >> ', arg value negated printString.
 		] ifFalse: [
+			arg value > 31 ifTrue: [self error: 'cannot shift by more than 31']. 
 			aStream nextPutAll: ' << ', arg value printString.
 		].
 	] ifFalse: [
@@ -2142,7 +2080,7 @@ JSCodeGenerator >> generateSizeOfSTArrayFromCPrimitive: msgNode on: aStream inde
 
 { #category : #'JS hacks' }
 JSCodeGenerator >> generateSlotSizeOf: msgNode on: aStream indent: level [
-	aStream nextPutAll: 'SLOTSIZEOF('.
+	aStream nextPutAll: 'SIZEOF('.
 	msgNode args first emitJSCodeOn: aStream level: level generator: self.
 	aStream nextPut: $).
 
@@ -2153,6 +2091,15 @@ JSCodeGenerator >> generateSmalltalkMetaError: msgNode on: aStream indent: level
 	"Generate the JS code for this message onto the given stream."
 
 	aStream nextPutAll: 'throw Error("'; nextPutAll: msgNode selector; nextPutAll: '")'
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateSrcLongAt: msgNode on: aStream indent: level [
+	aStream nextPutAll: 'sourceBits['.
+	msgNode args first emitJSCodeAsExpressionOn: aStream level: level generator: self.
+	aStream nextPutAll: ' >>> 2]'.
+	
+
 ]
 
 { #category : #'JS hacks' }
@@ -2336,6 +2283,11 @@ JSCodeGenerator >> globalsAsSet [
 ]
 
 { #category : #public }
+JSCodeGenerator >> ignoredMethods [
+	^#(dstLongAt: dstLongAt:put: srcLongAt:)
+]
+
+{ #category : #public }
 JSCodeGenerator >> initialize [
 	translationDict := Dictionary new.
 	inlineList := Array new.
@@ -2374,6 +2326,7 @@ JSCodeGenerator >> initializeCTranslationDictionary [
 	#+				#generatePlus:on:indent:
 	#-				#generateMinus:on:indent:
 	#negated		#generateNegated:on:indent:
+	#abs			#generateAbs:on:indent:
 	#*				#generateTimes:on:indent:
 	#/				#generateDivide:on:indent:
 	#//				#generateDivide:on:indent:
@@ -2474,11 +2427,18 @@ JSCodeGenerator >> initializeCTranslationDictionary [
 	#instanceSizeOf:					#generateInstanceSizeOf:on:indent:
 	#is:KindOf: 							#generateIsKindOf:on:indent:
 	#isFloatObject:						#generateIsFloatObject:on:indent:
+	#isWordsOrBytes:					#generateIsWordsOrBytes:on:indent:
 	#cDigitCopyFrom:to:len:				#generateCDigitCopy:on:indent:
 	#sizeOfSTArrayFromCPrimitive:		#generateSizeOfSTArrayFromCPrimitive:on:indent:
 	#asciiValue							#generateIdentityUnary:on:indent:
 	#primitiveFail						#generateInterpreterProxyCall:on:indent:
 	#intAtPointer:						#generateIntAtPointer:on:indent:
+	#byteAtPointer:						#generateByteAtPointer:on:indent:
+	#oopForPointer:					#generateOopForPointer:on:indent:
+	#long32At:							#generateLong32At:on:indent:
+	#srcLongAt:						#generateSrcLongAt:on:indent:
+	#dstLongAt:						#generateDstLongAt:on:indent:
+	#dstLongAt:put:					#generateDstLongAtPut:on:indent:
 	).
 
 	1 to: pairs size by: 2 do: [:i |
@@ -2555,17 +2515,6 @@ JSCodeGenerator >> isBuiltinSelector: sel [
 	^(self isKernelSelector: sel) or: [translationDict includesKey: sel]
 ]
 
-{ #category : #'JS code generator' }
-JSCodeGenerator >> isCLiteral: anObject [
-	(anObject isKindOf: Integer) ifTrue: [^true].
-	(anObject isKindOf: String) ifTrue: [^true].
-	(anObject isKindOf: Float) ifTrue: [^true].
-	anObject == nil ifTrue: [^true].
-	anObject == true ifTrue: [^true].
-	anObject == false ifTrue: [^true].
-	^false
-]
-
 { #category : #utilities }
 JSCodeGenerator >> isGeneratingPluginCode [
 	^false
@@ -2573,6 +2522,17 @@ JSCodeGenerator >> isGeneratingPluginCode [
 
 { #category : #public }
 JSCodeGenerator >> isGlobalStructureBuild [
+	^false
+]
+
+{ #category : #'JS code generator' }
+JSCodeGenerator >> isJSLiteral: anObject [
+	(anObject isKindOf: Integer) ifTrue: [^true].
+	(anObject isKindOf: String) ifTrue: [^true].
+	(anObject isKindOf: Float) ifTrue: [^true].
+	anObject == nil ifTrue: [^true].
+	anObject == true ifTrue: [^true].
+	anObject == false ifTrue: [^true].
 	^false
 ]
 
@@ -2627,6 +2587,27 @@ JSCodeGenerator >> isPointerToStructVariableName: varName [ "<String>"
 JSCodeGenerator >> isTypePointerToStruct: type [ "<String>"
 	^vmClass notNil
 	  and: [vmClass isTypePointerToStruct: type]
+]
+
+{ #category : #'JS code generator' }
+JSCodeGenerator >> jsFunctionNameFor: aSelector [
+	"Create a JS function name from the given selector by omitting colons
+	and prefixing with the plugin name if the method is exported."
+	^aSelector copyWithout: $:
+]
+
+{ #category : #'JS code generator' }
+JSCodeGenerator >> jsLiteralFor: anObject [
+	"Return a string representing theJS literal value for the given object."
+	(anObject isKindOf: Integer) ifTrue: [^ anObject printString].
+	(anObject isKindOf: String) ifTrue: [^ '"', anObject, '"' ].
+	(anObject isKindOf: Float) ifTrue: [^ anObject printString ].
+	anObject == nil ifTrue: [^ 'null' ].
+	anObject == true ifTrue: [^ 'true' ].
+	anObject == false ifTrue: [^ 'false' ].
+	self error:
+		'Warning: A Smalltalk literal could not be translated into a JS constant: ', anObject printString.
+	^'"XXX UNTRANSLATABLE CONSTANT XXX"'
 ]
 
 { #category : #utilities }
@@ -2891,6 +2872,7 @@ JSCodeGenerator >> prepareMethodsInlined: inlineFlag doAssertions: assertionFlag
 	| verbose methodList |
 	"method preparation"
 	verbose := false.
+	self pruneMethods: self ignoredMethods.
 	self prepareMethods.
 	verbose ifTrue: [
 		self printUnboundCallWarnings.
