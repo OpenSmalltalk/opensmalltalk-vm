@@ -367,14 +367,12 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 		 (methods at: selector ifAbsent: []) ifNotNil:
 			[:tm|
 			(aClass includesBehavior: tm definingClass) ifTrue:
-				[methods removeKey: selector]].
+				[self removeMethodForSelector: selector]].
 		 ^nil].
 	method isSubclassResponsibility ifTrue:
-		[methods removeKey: selector ifAbsent: [].
-		 ^nil].
+		[^nil].
 	(self shouldIncludeMethodFor: aClass selector: selector) ifFalse:
-		[methods removeKey: selector ifAbsent: [].
-		 ^nil].
+		[^nil].
 	tmethod := self compileToTMethodSelector: selector in: aClass.
 	"Even thoug we exclude initialize methods, we must consider their
 	 global variable usage, otherwise globals may be incorrectly localized."
