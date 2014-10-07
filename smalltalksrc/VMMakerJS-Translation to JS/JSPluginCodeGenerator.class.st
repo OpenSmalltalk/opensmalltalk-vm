@@ -85,6 +85,16 @@ JSPluginCodeGenerator >> generateCodeStringForPrimitives [
 
 ]
 
+{ #category : #public }
+JSPluginCodeGenerator >> ignoredMethods [
+	pluginName = 'BitBltSimulation' ifTrue: [
+		^#(dstLongAt: dstLongAt:put: srcLongAt:)].
+	pluginName = 'ScratchPlugin' ifTrue: [
+			^(ScratchPlugin organization listAtCategoryNamed: 'serial port'), 
+				(ScratchPlugin organization listAtCategoryNamed: 'os functions')].
+
+]
+
 { #category : #testing }
 JSPluginCodeGenerator >> isGeneratingPluginCode [
 	^true
@@ -102,6 +112,11 @@ JSPluginCodeGenerator >> isTypePointerToStruct: type [ "<String>"
 { #category : #public }
 JSPluginCodeGenerator >> localizeGlobalVariables [
 "TPR - we don't do this for plugins"
+]
+
+{ #category : #public }
+JSPluginCodeGenerator >> pluginName [
+	^pluginName
 ]
 
 { #category : #public }
