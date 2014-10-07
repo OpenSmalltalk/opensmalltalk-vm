@@ -1180,7 +1180,8 @@ JSCodeGenerator >> generateDivide: msgNode on: aStream indent: level [
 	| rcvr arg divisor |
 	rcvr := msgNode receiver.
 	arg := msgNode args first.
-	(msgNode selector == #/ and: [self pluginName = 'ScratchPlugin']) ifTrue: [
+	msgNode selector == #/ ifTrue: [
+		(#('Matrix2x3Plugin' 'ScratchPlugin' 'FloatArrayPlugin' 'KedamaPlugin' 'KedamaPlugin2' 'FFTPlugin' 'Klatt') includes: self pluginName) ifFalse: [self halt].
 		self emitJSExpression: rcvr on: aStream.
 		aStream nextPutAll: ' / '.
 		^self emitJSExpression: arg on: aStream].
