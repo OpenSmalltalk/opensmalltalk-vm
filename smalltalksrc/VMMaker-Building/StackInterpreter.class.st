@@ -370,7 +370,7 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV3PlusClosures [
 
 	((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
 		ifTrue: [#((139 callPrimitiveBytecode))]					"V3PlusClosures on Spur"
-		ifFalse: [#((139 pushExplicitOuterReceiverBytecode))]),	"Newspeak on V3"
+		ifFalse: [#((139 pushEnclosingObjectBytecode))]),	"Newspeak on V3"
 
 	  #(
 		(140 pushRemoteTempLongBytecode)
@@ -4899,6 +4899,30 @@ StackInterpreter >> elementsPerPrintOopLine [
 	^5
 ]
 
+{ #category : #'newspeak bytecode support' }
+StackInterpreter >> enclosingObjectAt: n withObject: anObject withMixin: mixin [ 
+	"This is used to implement the innards of the pushEnclosingObjectBytecode,
+	 used for explicit outer sends in NS2/NS3.  "
+	| enclosingObject mixinApplication targetMixin count |
+	
+	enclosingObject := anObject.
+	targetMixin := mixin.
+	count := 0.
+	[count < n] whileTrue:
+		[count := count + 1.
+		(targetMixin = objectMemory nilObject or:[enclosingObject = objectMemory nilObject]) ifTrue:
+			[^objectMemory nilObject].
+		mixinApplication := self
+								findApplicationOfTargetMixin: targetMixin
+								startingAtNonMetaClass: (objectMemory fetchClassOf: enclosingObject).
+		mixinApplication = objectMemory nilObject ifTrue:
+			[^objectMemory nilObject]. "should never happen!"
+		enclosingObject := objectMemory fetchPointer: EnclosingObjectIndex ofObject: mixinApplication.	
+		targetMixin := objectMemory fetchPointer: EnclosingMixinIndex ofObject: targetMixin].
+	
+	^enclosingObject
+]
+
 { #category : #'frame access' }
 StackInterpreter >> encodeFrameFieldHasContext: hasContext "<Boolean>" isBlock: isBlock "<Boolean>" numArgs: numArgs [
 	"For ``fast'' temporary access (ok, to mitigate slower temp access) we need
@@ -5020,30 +5044,6 @@ StackInterpreter >> expandCases [
 	"For translation only; noop when running in Smalltalk.
 	 Must not be inlined otherwise the directive will disappear!"
 	<inline: false>
-]
-
-{ #category : #'newspeak bytecode support' }
-StackInterpreter >> explicitOuterReceiver: n withObject: anObject withMixin: mixin [ 
-	"This is used to implement the innards of the pushExplicitOuterReceiverBytecode,
-	 used for explicit outer sends in NS2/NS3.  "
-	| explicitReceiver mixinApplication  targetMixin  count |
-	
-	explicitReceiver := anObject.
-	targetMixin := mixin.
-	count := 0.
-	[count < n] whileTrue:
-		[count := count + 1.
-		(targetMixin = objectMemory nilObject or:[explicitReceiver = objectMemory nilObject]) ifTrue:
-			[^objectMemory nilObject].
-		mixinApplication := self
-								findApplicationOfTargetMixin: targetMixin
-								startingAtNonMetaClass: (objectMemory fetchClassOf: explicitReceiver).
-		mixinApplication = objectMemory nilObject ifTrue:
-			[^objectMemory nilObject]. "should never happen!"
-		explicitReceiver := objectMemory fetchPointer: EnclosingObjectIndex ofObject: mixinApplication.	
-		targetMixin := objectMemory fetchPointer: EnclosingMixinIndex ofObject: targetMixin].
-	
-	^explicitReceiver
 ]
 
 { #category : #'miscellaneous bytecodes' }
@@ -5179,7 +5179,7 @@ StackInterpreter >> extPushPseudoVariableOrOuterBytecode [
 					[extB < 0
 						ifTrue:
 							[self 
-								explicitOuterReceiver: 0 - extB 
+								enclosingObjectAt: 0 - extB 
 								withObject: self receiver 
 								withMixin: (self methodClassOf: method)]
 						ifFalse:
@@ -11210,8 +11210,8 @@ StackInterpreter >> pushConstantZeroBytecode [
 ]
 
 { #category : #'stack bytecodes' }
-StackInterpreter >> pushExplicitOuterReceiverBytecode [
-	"Find the appropriate implicit receiver for outer N"
+StackInterpreter >> pushEnclosingObjectBytecode [
+	"Find the enclosing object at level N"
 	| litIndex  n anIntOop |
 	<inline: true>
 	litIndex := self fetchByte.
@@ -11221,7 +11221,7 @@ StackInterpreter >> pushExplicitOuterReceiverBytecode [
 			ifFalse: [0].
 	self fetchNextBytecode.
 	self internalPush:(self 
-						explicitOuterReceiver: n 
+						enclosingObjectAt: n 
 						withObject: self receiver 
 						withMixin: (self methodClassOf: method))
 ]
