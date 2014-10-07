@@ -965,6 +965,7 @@ CoInterpreter >> callRegisterArgCogMethod: cogMethod at: entryOffset receiver: r
 			rcvr
 			arg(s)	<- sp
 	 and then enter at either the checked or the unchecked entry-point."
+	<option: #StackToRegisterMappingCogit>
 	<var: #cogMethod type: #'CogMethod *'>
 	self assert: (cogit numRegArgs > 0 and: [cogit numRegArgs <= 2 and: [cogMethod cmNumArgs <= cogit numRegArgs]]).
 	cogMethod cmNumArgs = 2 ifTrue:
