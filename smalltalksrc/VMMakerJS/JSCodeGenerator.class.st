@@ -1676,20 +1676,6 @@ JSCodeGenerator >> generateIsNil: msgNode on: aStream indent: level [
 
 ]
 
-{ #category : #'JS hacks' }
-JSCodeGenerator >> generateIsWords: msgNode on: aStream indent: level [
-	msgNode args first emitJSCodeOn: aStream level: level generator: self.
-	aStream nextPutAll: '.isWords()'.
-
-]
-
-{ #category : #'JS hacks' }
-JSCodeGenerator >> generateIsWordsOrBytes: msgNode on: aStream indent: level [
-	msgNode args first emitJSCodeOn: aStream level: level generator: self.
-	aStream nextPutAll: '.isWordsOrBytes()'.
-
-]
-
 { #category : #'JS translation' }
 JSCodeGenerator >> generateJSCodeForCcode: cCode on: aStream indent: level [
 	cCode = '' ifTrue: [^self].
@@ -2482,8 +2468,6 @@ JSCodeGenerator >> initializeCTranslationDictionary [
 	#instanceSizeOf:					#generateInstanceSizeOf:on:indent:
 	#is:KindOf: 							#generateIsKindOf:on:indent:
 	#isFloatObject:						#generateIsFloatObject:on:indent:
-	#isWords:							#generateIsWords:on:indent:
-	#isWordsOrBytes:					#generateIsWordsOrBytes:on:indent:
 	#cDigitCopyFrom:to:len:				#generateCDigitCopy:on:indent:
 	#sizeOfSTArrayFromCPrimitive:		#generateSizeOfSTArrayFromCPrimitive:on:indent:
 	#asciiValue							#generateIdentityUnary:on:indent:
