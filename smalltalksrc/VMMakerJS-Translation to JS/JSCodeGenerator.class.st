@@ -1102,8 +1102,11 @@ JSCodeGenerator >> generateCCoercion: msgNode on: aStream indent: level [
 		cType := msgNode args second value.
 		self emitJSExpression: expr args first on: aStream.
 		cType = 'unsigned char *' ifTrue: [^aStream nextPutAll: '.bytes'].
+		cType = 'unsigned int *' ifTrue: [^aStream nextPutAll: '.words'].
 		cType = 'int *' ifTrue: [^aStream nextPutAll: '.wordsAsInt32Array()'].
+		cType = 'short *' ifTrue: [^aStream nextPutAll: '.wordsAsInt16Array()'].
 		cType = 'float *' ifTrue: [^aStream nextPutAll: '.wordsAsFloat32Array()'].
+		cType = 'double *' ifTrue: [^aStream nextPutAll: '.wordsAsFloat64Array()'].
 		self halt.
 	] ifFalse: [
 		((#('double' 'float') includes: cType) or: ['sqInt (*)(*)'match: cType])
@@ -1129,6 +1132,16 @@ JSCodeGenerator >> generateCDigitCopy: msgNode on: aStream indent: level [
 		return 0;
 	}();
 '
+]
+
+{ #category : #'JS translation' }
+JSCodeGenerator >> generateCos: msgNode on: aStream indent: level [
+	"Generate the JS code for the message onto the given stream."
+
+	aStream nextPutAll: 'Math.cos('.
+	self emitJSExpression: msgNode receiver on: aStream.
+	aStream nextPutAll: ')'.
+
 ]
 
 { #category : #accessing }
@@ -1163,6 +1176,10 @@ JSCodeGenerator >> generateDivide: msgNode on: aStream indent: level [
 	| rcvr arg divisor |
 	rcvr := msgNode receiver.
 	arg := msgNode args first.
+	(msgNode selector == #/ and: [self pluginName = 'ScratchPlugin']) ifTrue: [
+		self emitJSExpression: rcvr on: aStream.
+		aStream nextPutAll: ' / '.
+		^self emitJSExpression: arg on: aStream].
 	(arg isConstant and:
 	 [UseRightShiftForDivide and:
 	 [(divisor := arg value) isInteger and:
@@ -2062,6 +2079,16 @@ self halt.
 
 ]
 
+{ #category : #'JS translation' }
+JSCodeGenerator >> generateSin: msgNode on: aStream indent: level [
+	"Generate the JS code for the message onto the given stream."
+
+	aStream nextPutAll: 'Math.sin('.
+	self emitJSExpression: msgNode receiver on: aStream.
+	aStream nextPutAll: ')'.
+
+]
+
 { #category : #'JS hacks' }
 JSCodeGenerator >> generateSizeOfSTArrayFromCPrimitive: msgNode on: aStream indent: level [
 	| cType sizer |
@@ -2091,6 +2118,16 @@ JSCodeGenerator >> generateSmalltalkMetaError: msgNode on: aStream indent: level
 	"Generate the JS code for this message onto the given stream."
 
 	aStream nextPutAll: 'throw Error("'; nextPutAll: msgNode selector; nextPutAll: '")'
+]
+
+{ #category : #'JS translation' }
+JSCodeGenerator >> generateSqrt: msgNode on: aStream indent: level [
+	"Generate the JS code for the message onto the given stream."
+
+	aStream nextPutAll: 'Math.sqrt('.
+	self emitJSExpression: msgNode receiver on: aStream.
+	aStream nextPutAll: ')'.
+
 ]
 
 { #category : #'JS hacks' }
@@ -2284,7 +2321,7 @@ JSCodeGenerator >> globalsAsSet [
 
 { #category : #public }
 JSCodeGenerator >> ignoredMethods [
-	^#(dstLongAt: dstLongAt:put: srcLongAt:)
+	^#()
 ]
 
 { #category : #public }
@@ -2327,6 +2364,9 @@ JSCodeGenerator >> initializeCTranslationDictionary [
 	#-				#generateMinus:on:indent:
 	#negated		#generateNegated:on:indent:
 	#abs			#generateAbs:on:indent:
+	#sqrt			#generateSqrt:on:indent:
+	#sin			#generateSin:on:indent:
+	#cos			#generateCos:on:indent:
 	#*				#generateTimes:on:indent:
 	#/				#generateDivide:on:indent:
 	#//				#generateDivide:on:indent:
@@ -2464,6 +2504,13 @@ JSCodeGenerator >> initializeCTranslationDictionary [
 		'interpreterProxy->minorVersion() >= VM_PROXY_MINOR'	'interpreterProxy.minorVersion() >= VM_PROXY_MINOR'
 		'sqrt(result)'												'Math.sqrt(result)'
 		'sqrt(len)'													'Math.sqrt(len)'
+		'atan2(dy,dx)'												'Math.atan2(dy, dx)'
+		'rand()'														'Math.random()'
+		'*src++'													'src[_src++]' 	
+		'*dst++ = max'												'dst[_dst++] = max'
+		'src++'		 												'_src++'
+		'*dst++ = *src; src += 2'									'dst[_dst++] = src[_src]; _src += 2'
+
 	).
 	1 to: pairs size by: 2 do: [:i |
 		cCodeTranslationDict at: (pairs at: i) put: (pairs at: i + 1)].
@@ -3115,6 +3162,8 @@ JSCodeGenerator >> retainMethods: aListOfMethodsToKeep [
 JSCodeGenerator >> returnPrefixFromVariable: aName [
 	aName = 'class'
 		ifTrue: [^'sq_class'].
+	aName = 'in'
+		ifTrue: [^'in_'].
 	^aName
 ]
 
