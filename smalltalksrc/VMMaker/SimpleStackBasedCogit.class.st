@@ -100,7 +100,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures 
 
 		((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
 			ifTrue: [#((3 139 139 callPrimitiveBytecode))]									"V3PlusClosures on Spur"
-			ifFalse: [#((2 139 139 genPushExplicitOuterReceiverBytecode isMapped))]),	"Newspeak"
+			ifFalse: [#((2 139 139 genPushEnclosingObjectBytecode isMapped))]),	"Newspeak"
 
 	  #(
 		(3 140 140 genPushRemoteTempLongBytecode)
@@ -1656,7 +1656,7 @@ SimpleStackBasedCogit >> genExtPushPseudoVariable [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtPushPseudoVariableOrOuterBytecode [
-	"77			01001101		Push false [* 1:true, 2:nil, 3:thisContext, ..., -N: pushExplicitOuter: N, N = Extend B]"
+	"77			01001101		Push false [* 1:true, 2:nil, 3:thisContext, ..., -N: pushEnclosingObjectAt: N, N = Extend B]"
 	| ext |
 	ext := extB.
 	extB := 0.
@@ -1668,7 +1668,7 @@ SimpleStackBasedCogit >> genExtPushPseudoVariableOrOuterBytecode [
 		}
 		otherwise:
 			[ext < 0 ifTrue:
-				[^self genPushExplicitOuterReceiver: 0 - ext].
+				[^self genPushEnclosingObjectAt: 0 - ext].
 			 self warning: 'undefined extension for extPushPseudoVariableOrOuter'.
 			 ^self unknownBytecode].
 	^0
@@ -2830,22 +2830,21 @@ SimpleStackBasedCogit >> genPushConstantZeroBytecode [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genPushExplicitOuterReceiver: level [
-	"Uncached push explicit outer send receiver"
-	self assert: needsFrame. "because this should always be followed by a send"
+SimpleStackBasedCogit >> genPushEnclosingObjectAt: level [
+	"Uncached push enclosing object"
 	self MoveCq: level R: SendNumArgsReg.
-	self CallRT: ceExplicitReceiverTrampoline.
+	self CallRT: ceEnclosingObjectTrampoline.
 	self PushR: ReceiverResultReg.
 	^0
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genPushExplicitOuterReceiverBytecode [
-	"Uncached push explicit outer send receiver"
+SimpleStackBasedCogit >> genPushEnclosingObjectBytecode [
+	"Uncached push enclosing object"
 	| levelOop |
 	levelOop := self getLiteral: byte1.
 	self assert: (objectMemory isIntegerObject: levelOop).
-	^self genPushExplicitOuterReceiver: (objectMemory integerValueOf: levelOop)
+	^self genPushEnclosingObjectAt: (objectMemory integerValueOf: levelOop)
 ]
 
 { #category : #'bytecode generators' }
