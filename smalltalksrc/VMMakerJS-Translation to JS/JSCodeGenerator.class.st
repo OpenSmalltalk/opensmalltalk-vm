@@ -1109,6 +1109,10 @@ JSCodeGenerator >> generateCCoercion: msgNode on: aStream indent: level [
 		cType = 'double *' ifTrue: [^aStream nextPutAll: '.wordsAsFloat64Array()'].
 		self halt.
 	] ifFalse: [
+		(#('int' 'unsigned int') includes: cType) ifTrue: [
+			aStream nextPutAll: '('.
+			self emitJSExpression: expr on: aStream.
+			^aStream nextPutAll: '|0)'].
 		((#('double' 'float') includes: cType) or: ['sqInt (*)(*)'match: cType])
 			ifFalse: [self halt].
 		self emitJSExpression: expr on: aStream.
@@ -1291,7 +1295,9 @@ JSCodeGenerator >> generateFirstIndexableField: msgNode on: aStream indent: leve
 			ifTrue: [self typeOfArgument: (parent receiver args indexOf: msgNode) in: parent receiver selector] ifFalse: [
 		msgNode asString = 'interpreterProxy firstIndexableField: mapOop'
 			ifTrue: ['unsigned int*'] ifFalse: [
-		self halt]]].
+		msgNode asString = 'interpreterProxy firstIndexableField: blockOop'
+			ifTrue: ['int*'] ifFalse: [
+		self halt]]]].
 	cType ifNotNil: [
 		cType := cType copyReplaceAll: ' *' with: '* '.
 		accessor := (cType beginsWith: 'unsigned char*') ifTrue: ['.bytes']
@@ -1671,6 +1677,13 @@ JSCodeGenerator >> generateIsNil: msgNode on: aStream indent: level [
 ]
 
 { #category : #'JS hacks' }
+JSCodeGenerator >> generateIsWords: msgNode on: aStream indent: level [
+	msgNode args first emitJSCodeOn: aStream level: level generator: self.
+	aStream nextPutAll: '.isWords()'.
+
+]
+
+{ #category : #'JS hacks' }
 JSCodeGenerator >> generateIsWordsOrBytes: msgNode on: aStream indent: level [
 	msgNode args first emitJSCodeOn: aStream level: level generator: self.
 	aStream nextPutAll: '.isWordsOrBytes()'.
@@ -1681,6 +1694,8 @@ JSCodeGenerator >> generateIsWordsOrBytes: msgNode on: aStream indent: level [
 JSCodeGenerator >> generateJSCodeForCcode: cCode on: aStream indent: level [
 	cCode = '' ifTrue: [^self].
 	aStream nextPutAll: (cCodeTranslationDict at: cCode ifAbsent: [
+		(#('sqrt' 'sin' 'cos' 'tan' 'atan' 'atan2' 'log' 'min' 'max' 'floor') anySatisfy: [:fn | fn,'(*)' match: cCode])
+			ifTrue: ['Math.', cCode] ifFalse: [
 		('opTable[*] = (void *)*' match: cCode)
 			ifTrue: [cCode copyReplaceAll: '(void *)' with: ''] ifFalse: [
 		('fn(*Handle, &*Pitch, *)' match: cCode)
@@ -1693,7 +1708,7 @@ JSCodeGenerator >> generateJSCodeForCcode: cCode on: aStream indent: level [
 			'fn(sourceHandle, 0, 0, 0, 0)') includes: cCode)
 			ifTrue: [cCode] ifFalse: [
 		"See initializeCTranslationDictionary"
-		self error: 'C: ' , cCode]]]]]])
+		self error: 'C: ' , cCode]]]]]]])
 
 ]
 
@@ -2467,6 +2482,7 @@ JSCodeGenerator >> initializeCTranslationDictionary [
 	#instanceSizeOf:					#generateInstanceSizeOf:on:indent:
 	#is:KindOf: 							#generateIsKindOf:on:indent:
 	#isFloatObject:						#generateIsFloatObject:on:indent:
+	#isWords:							#generateIsWords:on:indent:
 	#isWordsOrBytes:					#generateIsWordsOrBytes:on:indent:
 	#cDigitCopyFrom:to:len:				#generateCDigitCopy:on:indent:
 	#sizeOfSTArrayFromCPrimitive:		#generateSizeOfSTArrayFromCPrimitive:on:indent:
@@ -2502,15 +2518,13 @@ JSCodeGenerator >> initializeCTranslationDictionary [
 		'fprintf(stderr, "\n%s: %s", moduleName, s)'					'console.log(moduleName + ": " + s)'
 		'interpreterProxy->majorVersion() == VM_PROXY_MAJOR'	'interpreterProxy.majorVersion() == VM_PROXY_MAJOR'
 		'interpreterProxy->minorVersion() >= VM_PROXY_MINOR'	'interpreterProxy.minorVersion() >= VM_PROXY_MINOR'
-		'sqrt(result)'												'Math.sqrt(result)'
-		'sqrt(len)'													'Math.sqrt(len)'
-		'atan2(dy,dx)'												'Math.atan2(dy, dx)'
 		'rand()'														'Math.random()'
 		'*src++'													'src[_src++]' 	
 		'*dst++ = max'												'dst[_dst++] = max'
 		'src++'		 												'_src++'
 		'*dst++ = *src; src += 2'									'dst[_dst++] = src[_src]; _src += 2'
-
+		'tX'															'tX'
+		'tY'															'tY'
 	).
 	1 to: pairs size by: 2 do: [:i |
 		cCodeTranslationDict at: (pairs at: i) put: (pairs at: i + 1)].
