@@ -213,7 +213,7 @@ Class {
 		'ceFetchContextInstVarTrampoline',
 		'ceStoreContextInstVarTrampoline',
 		'ceImplicitReceiverTrampoline',
-		'ceExplicitReceiverTrampoline',
+		'ceEnclosingObjectTrampoline',
 		'ceCaptureCStackPointers',
 		'ceFlushICache',
 		'ceCheckFeaturesFunction',
@@ -5778,8 +5778,8 @@ Cogit >> generateNewspeakRuntime [
 	<var: #jumpItsTheReceiverStupid type: #'AbstractInstruction *'>
 	"Generate the non-send runtime support for Newspeak, explicit outer and implicit receiver.
 	 The dynamic frequency of explicit outer is so low we merely call an interpreter routine."
-	ceExplicitReceiverTrampoline := self genTrampolineFor: #ceExplicitReceiverAt:
-										called: 'ceExplicitReceiverTrampoline'
+	ceEnclosingObjectTrampoline := self genTrampolineFor: #ceEnclosingObjectAt:
+										called: 'ceEnclosingObjectTrampoline'
 										arg: SendNumArgsReg
 										result: ReceiverResultReg.
 	"Cached push implicit receiver implementation.  If objectRepresentation doesn't support

@@ -1432,11 +1432,11 @@ CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
 ]
 
 { #category : #'stack bytecodes' }
-CoInterpreter >> ceExplicitReceiverAt: level [
+CoInterpreter >> ceEnclosingObjectAt: level [
 	<api>
 	<option: #NewspeakVM>
 	^self 
-		explicitOuterReceiver: level
+		enclosingObjectAt: level
 		withObject: (self mframeReceiver: framePointer)
 		withMixin: self mMethodClass
 ]

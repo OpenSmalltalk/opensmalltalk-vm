@@ -278,7 +278,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV3PlusClo
 
 		((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
 			ifTrue: [#((3 139 139 callPrimitiveBytecode))]									"V3PlusClosures on Spur"
-			ifFalse: [#((2 139 139 genPushExplicitOuterReceiverBytecode isMapped))]),	"Newspeak"
+			ifFalse: [#((2 139 139 genPushEnclosingObjectBytecode isMapped))]),	"Newspeak"
 
 	  #(
 		(3 140 140 genPushRemoteTempLongBytecode)
@@ -2528,13 +2528,12 @@ StackToRegisterMappingCogit >> genPushClosureCopyCopiedValuesBytecode [
 ]
 
 { #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genPushExplicitOuterReceiver: level [
-	"Uncached push explicit outer send receiver"
-	self assert: needsFrame. "because this should always be followed by a send"
+StackToRegisterMappingCogit >> genPushEnclosingObjectAt: level [
+	"Uncached push enclosing object"
 	optStatus isReceiverResultRegLive: false.
 	self ssAllocateCallReg: SendNumArgsReg.
 	self MoveCq: level R: SendNumArgsReg.
-	self CallRT: ceExplicitReceiverTrampoline.
+	self CallRT: ceEnclosingObjectTrampoline.
 	^self ssPushRegister: ReceiverResultReg
 ]
 

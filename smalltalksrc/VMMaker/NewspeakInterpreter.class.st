@@ -264,7 +264,7 @@ NewspeakInterpreter class >> initializeBytecodeTable [
 
 		"Closure & Newspeak bytecodes"
 		(138 pushNewArrayBytecode)
-		(139 pushExplicitOuterReceiverBytecode)
+		(139 pushEnclosingObjectBytecode)
 		(140 pushRemoteTempLongBytecode)
 		(141 storeRemoteTempLongBytecode)
 		(142 storeAndPopRemoteTempLongBytecode)
@@ -2895,6 +2895,30 @@ NewspeakInterpreter >> elementsPerPrintOopLine [
 	^5
 ]
 
+{ #category : #'stack bytecodes' }
+NewspeakInterpreter >> enclosingObjectAt: n withObject: anObject withMixin: mixin [ 
+	"This is used to implement the innards of the pushEnclosingObjectBytecode,
+	 used for explicit outer sends in NS2/NS3.  "
+	| enclosingObject mixinApplication targetMixin count |
+	
+	enclosingObject := anObject.
+	targetMixin := mixin.
+	count := 0.
+	[count < n] whileTrue:
+		[count := count + 1.
+		(targetMixin = nilObj or:[enclosingObject = nilObj]) ifTrue:
+			[^nilObj].
+		mixinApplication := self
+							findApplicationOfTargetMixin: targetMixin
+							startingAtNonMetaClass: (self fetchClassOf: enclosingObject).
+		mixinApplication == nilObj ifTrue:[^nilObj]. "should never happen!"
+		enclosingObject := self fetchPointer: EnclosingObjectIndex 
+								ofObject: mixinApplication.	
+		targetMixin := self fetchPointer: EnclosingMixinIndex ofObject: targetMixin].
+	
+	^enclosingObject
+]
+
 { #category : #'message sending' }
 NewspeakInterpreter >> executeNewMethod [
 	"Execute newMethod - either primitiveFunctionPointer must be set directly
@@ -2909,31 +2933,6 @@ NewspeakInterpreter >> executeNewMethod [
 	self activateNewMethod.
 	"check for possible interrupts at each real send"
 	self quickCheckForInterrupts
-]
-
-{ #category : #'stack bytecodes' }
-NewspeakInterpreter >> explicitOuterReceiver: n withObject: anObject withMixin: mixin [ 
-	"This is used to implement the innards of the pushExplicitOuterReceiverBytecode,
-	 used for explicit outer sends in NS2/NS3.  "
-	| explicitReceiver mixinApplication  targetMixin  count |
-	
-	explicitReceiver := anObject.
-	targetMixin := mixin.
-	count := 0.
-	[count < n] whileTrue:[
-		count := count + 1.
-		(targetMixin == nilObj or:[explicitReceiver == nilObj]) ifTrue:
-		[^nilObj].
-		mixinApplication := self
-							findApplicationOfTargetMixin: targetMixin
-							startingAtNonMetaClass: (self fetchClassOf: explicitReceiver).
-		mixinApplication == nilObj ifTrue:[^nilObj]. "should never happen!"
-		explicitReceiver := self fetchPointer: EnclosingObjectIndex 
-								ofObject: mixinApplication.	
-		targetMixin := self fetchPointer: EnclosingMixinIndex ofObject: targetMixin.	
-	].
-	
-	^explicitReceiver
 ]
 
 { #category : #'stack bytecodes' }
@@ -9261,20 +9260,18 @@ NewspeakInterpreter >> pushConstantZeroBytecode [
 ]
 
 { #category : #'stack bytecodes' }
-NewspeakInterpreter >> pushExplicitOuterReceiverBytecode [
-	"Find the appropriate implicit receiver for outer N"
-	|  mClassMixin  litIndex  n anInt |
+NewspeakInterpreter >> pushEnclosingObjectBytecode [
+	"Find the enclosing object at level N"
+	|  mClassMixin  litIndex  anInt |
 	<inline: true>
 	litIndex := self fetchByte.
 	anInt := self literal: litIndex.
-	n := self checkedIntegerValueOf: anInt.
 	self fetchNextBytecode.
 	mClassMixin := self methodClassOf: method.
-	self internalPush:(self 
-		explicitOuterReceiver: n 
-		withObject: receiver 
-		withMixin: mClassMixin
-		)
+	self internalPush: (self 
+						enclosingObjectAt: (self integerValueOf: anInt) 
+						withObject: receiver 
+						withMixin: mClassMixin)
 
 ]
 
