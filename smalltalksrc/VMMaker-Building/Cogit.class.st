@@ -2054,6 +2054,31 @@ Cogit >> allButTopBitOfAddressSpaceMask [
 	^((1 << (8 * BytesPerWord - 1)) - 1) bitAnd: -4
 ]
 
+{ #category : #disassembly }
+Cogit >> allCogMethodsFor: cogMethod [
+	<doNotGenerate>
+	| blockEntry end methods pc |
+	cogMethod isInteger ifTrue: [^self allCogMethodsFor: (self cogMethodSurrogateAt: cogMethod)].
+	cogMethod cmType = CMBlock ifTrue:
+		[^self allCogMethodsFor: cogMethod cmHomeMethod].
+	(cogMethod cmType ~= CMMethod
+	 or: [cogMethod blockEntryOffset = 0]) ifTrue:
+		[^{cogMethod}].
+
+	methods := OrderedCollection with: cogMethod.
+	pc := blockEntry := cogMethod blockEntryOffset + cogMethod asInteger.
+	end := (self mapEndFor: cogMethod) - 1.
+	[pc < end] whileTrue:
+		[| targetpc |
+		 targetpc := blockEntry.
+		 (backEnd isJumpAt: pc) ifTrue:
+			[targetpc := backEnd jumpTargetPCAt: pc.
+			 targetpc < blockEntry ifTrue:
+				[methods add: (self cCoerceSimple: targetpc - (self sizeof: CogBlockMethod) to: #'CogBlockMethod *')]].
+		 pc := pc + (backEnd instructionSizeAt: pc)].
+	^methods sort
+]
+
 { #category : #'garbage collection' }
 Cogit >> allMachineCodeObjectReferencesValid [
 	"Check that all methods have valid selectors, and that all linked sends are to valid targets and have valid cache tags"
@@ -3267,7 +3292,6 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 			 bytecodeSetOffset := 256]
 		ifFalse:
 			[bytecodeSetOffset := 0].
-	extA := extB := 0.
 	objectRepresentation ensureNoForwardedLiteralsIn: aMethodObj.
 	methodObj := aMethodObj.
 	cogMethod := self compileCogMethod: aSelectorOop.
@@ -6048,6 +6072,12 @@ Cogit >> generatorAt: index [
 ]
 
 { #category : #accessing }
+Cogit >> generatorTable [
+	<doNotGenerate>
+	^generatorTable
+]
+
+{ #category : #accessing }
 Cogit >> getCFramePointer [
 	<api>
 	<cmacro: '() CFramePointer'>
@@ -8509,17 +8539,22 @@ Cogit >> scanBlock: blockStart [
 	inBlock := true.
 	pc := blockStart startpc.
 	end := blockStart startpc + blockStart span.
-	framelessStackDelta := nExts := 0.
+	framelessStackDelta := nExts := extA := extB := 0.
 	[pc < end] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
+		 descriptor isExtension ifTrue:
+			[self loadSubsequentBytesForDescriptor: descriptor at: pc.
+			 self perform: descriptor generator].
 		 needsFrame ifFalse:
 			[(descriptor needsFrameFunction isNil
 			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
 				ifTrue: [needsFrame := true]
 				ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]].
 		 pc := self nextBytecodePCFor: descriptor at: pc exts: nExts in: methodObj.
-		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
+		 descriptor isExtension
+			ifTrue: [nExts := nExts + 1]
+			ifFalse: [nExts := extA := extB := 0]].
 	needsFrame ifFalse:
 		[framelessStackDelta < 0 ifTrue:
 			[self error: 'negative stack delta in block; block contains bogus code or internal error'].
@@ -8564,34 +8599,39 @@ Cogit >> scanMethod [
 	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
 		[^0].
 	pc := latestContinuation := initialPC.
-	numBlocks := framelessStackDelta := nExts := 0.
+	numBlocks := framelessStackDelta := nExts := extA := extB := 0.
 	[pc <= endPC] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
-		descriptor := self generatorAt: byte0.
-		(descriptor isReturn
-		 and: [pc >= latestContinuation]) ifTrue:
+		 descriptor := self generatorAt: byte0.
+		 descriptor isExtension ifTrue:
+			[self loadSubsequentBytesForDescriptor: descriptor at: pc.
+			 self perform: descriptor generator].
+		 (descriptor isReturn
+		  and: [pc >= latestContinuation]) ifTrue:
 			[endPC := pc].
 		 needsFrame ifFalse:
 			[(descriptor needsFrameFunction isNil
 			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
 				ifTrue: [needsFrame := true]
 				ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]].
-		descriptor isBranch ifTrue:
+		 descriptor isBranch ifTrue:
 			[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 (self isBackwardBranch: descriptor at: pc exts: nExts in: methodObj)
 				ifTrue: [self initializeFixupAt: targetPC - initialPC]
 				ifFalse: [latestContinuation := latestContinuation max: targetPC]].
-		descriptor isBlockCreation ifTrue:
+		 descriptor isBlockCreation ifTrue:
 			[numBlocks := numBlocks + 1.
 			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 latestContinuation := latestContinuation max: targetPC].
-		self cppIf: #NewspeakVM ifTrue:
+		 self cppIf: #NewspeakVM ifTrue:
 			[descriptor hasIRC ifTrue:
 				[numIRCs := numIRCs + 1]].
-		pc := pc + descriptor numBytes.
-		nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
+		 pc := pc + descriptor numBytes.
+		 descriptor isExtension
+			ifTrue: [nExts := nExts + 1]
+			ifFalse: [nExts := extA := extB := 0]].
 	^numBlocks
 ]
 
