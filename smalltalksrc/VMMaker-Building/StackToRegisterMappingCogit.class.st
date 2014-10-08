@@ -348,7 +348,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
 		(1  64   75 genPushTemporaryVariableBytecode needsFrameIfMod16GENumArgs: 1)
 		(1  76   76 genPushReceiverBytecode needsFrameNever: 1)
-		(1  77   77 genExtPushPseudoVariableOrOuterBytecode)
+		(1  77   77 genExtPushPseudoVariableOrOuterBytecode needsFrameIfExtBGT2: 1)
 		(1  78   78 genPushConstantZeroBytecode needsFrameNever: 1)
 		(1  79   79 genPushConstantOneBytecode needsFrameNever: 1)
 
@@ -3867,6 +3867,11 @@ StackToRegisterMappingCogit >> methodAbortTrampolineFor: numArgs [
 ]
 
 { #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> needsFrameIfExtBGT2: stackDelta [
+	^extB < 0 or: [extB > 2]
+]
+
+{ #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> needsFrameIfFollowsSend: stackDelta [
 	"As of August 2013, the code generator can't deal with spills in frameless methods (the
 	 issue is to do with the stack offset to get at an argument, which is changed when there's a spill).
@@ -4023,11 +4028,14 @@ StackToRegisterMappingCogit >> scanBlock: blockStart [
 	inBlock := true.
 	pc := blockStart startpc.
 	end := blockStart startpc + blockStart span.
-	framelessStackDelta := nExts := 0.
+	framelessStackDelta := nExts := extA := extB := 0.
 	pushingNils := true.
 	[pc < end] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
+		 descriptor isExtension ifTrue:
+			[self loadSubsequentBytesForDescriptor: descriptor at: pc.
+			 self perform: descriptor generator].
 		 needsFrame ifFalse:
 			[(descriptor needsFrameFunction isNil
 			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
@@ -4054,7 +4062,9 @@ StackToRegisterMappingCogit >> scanBlock: blockStart [
 				ifFalse:
 					[pushingNils := false]].
 		 pc := self nextBytecodePCFor: descriptor at: pc exts: nExts in: methodObj.
-		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0].
+		 descriptor isExtension
+			ifTrue: [nExts := nExts + 1]
+			ifFalse: [nExts := extA := extB := 0].
 		 prevBCDescriptor := descriptor].
 	"It would be nice of this wasn't necessary but alas we need to do the eager
 	 scan for frameless methods so that we don't end up popping too much off
@@ -4083,35 +4093,40 @@ StackToRegisterMappingCogit >> scanMethod [
 	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
 		[^0].
 	pc := latestContinuation := initialPC.
-	numBlocks := framelessStackDelta := nExts := 0.
+	numBlocks := framelessStackDelta := nExts := extA := extB := 0.
 	[pc <= endPC] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
-		descriptor := self generatorAt: byte0.
-		(descriptor isReturn
-		 and: [pc >= latestContinuation]) ifTrue:
+		 descriptor := self generatorAt: byte0.
+		 descriptor isExtension ifTrue:
+			[self loadSubsequentBytesForDescriptor: descriptor at: pc.
+			 self perform: descriptor generator].
+		 (descriptor isReturn
+		  and: [pc >= latestContinuation]) ifTrue:
 			[endPC := pc].
 		 needsFrame ifFalse:
 			[(descriptor needsFrameFunction isNil
 			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
 				ifTrue: [needsFrame := true]
 				ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]].
-		descriptor isBranch ifTrue:
+		 descriptor isBranch ifTrue:
 			[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 (self isBackwardBranch: descriptor at: pc exts: nExts in: methodObj)
 				ifTrue: [self initializeFixupAt: targetPC - initialPC]
 				ifFalse: [latestContinuation := latestContinuation max: targetPC]].
-		descriptor isBlockCreation ifTrue:
+		 descriptor isBlockCreation ifTrue:
 			[numBlocks := numBlocks + 1.
 			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 latestContinuation := latestContinuation max: targetPC].
-		self cppIf: #NewspeakVM ifTrue:
+		 self cppIf: #NewspeakVM ifTrue:
 			[descriptor hasIRC ifTrue:
 				[numIRCs := numIRCs + 1]].
-		pc := pc + descriptor numBytes.
-		nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0].
-		prevBCDescriptor := descriptor].
+		 pc := pc + descriptor numBytes.
+		 descriptor isExtension
+			ifTrue: [nExts := nExts + 1]
+			ifFalse: [nExts := extA := extB := 0].
+		 prevBCDescriptor := descriptor].
 	^numBlocks
 ]
 
