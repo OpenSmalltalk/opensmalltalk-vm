@@ -847,19 +847,22 @@ SistaStackToRegisterMappingCogit >> scanMethod [
 	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
 		[^0].
 	pc := latestContinuation := initialPC.
-	numBlocks := framelessStackDelta := nExts := 0.
+	numBlocks := framelessStackDelta := nExts := extA := extB := 0.
 	[pc <= endPC] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
-		descriptor := self generatorAt: byte0.
-		(descriptor isReturn
-		 and: [pc >= latestContinuation]) ifTrue:
+		 descriptor := self generatorAt: byte0.
+		 descriptor isExtension ifTrue:
+			[self loadSubsequentBytesForDescriptor: descriptor at: pc.
+			 self perform: descriptor generator].
+		 (descriptor isReturn
+		  and: [pc >= latestContinuation]) ifTrue:
 			[endPC := pc].
 		 needsFrame ifFalse:
 			[(descriptor needsFrameFunction isNil
 			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
 				ifTrue: [needsFrame := true]
 				ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]].
-		descriptor isBranch ifTrue:
+		 descriptor isBranch ifTrue:
 			[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 (self isBackwardBranch: descriptor at: pc exts: nExts in: methodObj)
@@ -868,17 +871,19 @@ SistaStackToRegisterMappingCogit >> scanMethod [
 					[latestContinuation := latestContinuation max: targetPC.
 					 (descriptor isBranchTrue or: [descriptor isBranchFalse]) ifTrue:
 						[numCounters := numCounters + 1]]].
-		descriptor isBlockCreation ifTrue:
+		 descriptor isBlockCreation ifTrue:
 			[numBlocks := numBlocks + 1.
 			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 latestContinuation := latestContinuation max: targetPC].
-		self cppIf: #NewspeakVM ifTrue:
+		 self cppIf: #NewspeakVM ifTrue:
 			[descriptor hasIRC ifTrue:
 				[numIRCs := numIRCs + 1]].
-		pc := pc + descriptor numBytes.
-		nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0].
-		prevBCDescriptor := descriptor].
+		 pc := pc + descriptor numBytes.
+		 descriptor isExtension
+			ifTrue: [nExts := nExts + 1]
+			ifFalse: [nExts := extA := extB := 0].
+		 prevBCDescriptor := descriptor].
 	^numBlocks
 ]
 
