@@ -104,6 +104,42 @@ SpurBootstrapMonticelloPackagePatcher class >> squeak45baseline [
 		)
 ]
 
+{ #category : #patching }
+SpurBootstrapMonticelloPackagePatcher >> cachedNonDiffyVersionNamed: versionName from: repo [
+	"Make sure that the cache contains a non-diffy version of versionName and  answer it."
+	| cacheRepo nonDiffyVersion |
+	self assert: (versionName endsWith: '.mcz').
+	cacheRepo := MCCacheRepository default.
+	"Make sure that at least the diffy (.mcd) version is present"
+	(cacheRepo directory includesKey: versionName) ifFalse:
+		[cacheRepo storeVersion: (repo versionNamed: versionName)].
+	"if after storeVersion there's still no .mcz we need to create one; sigh..."
+	(cacheRepo directory includesKey: versionName) ifFalse:
+		[| baseName diffyVersionName diffyVersion file delete |
+		 baseName := versionName allButLast: 4. "strip .mcz"
+		 diffyVersionName := cacheRepo directory fileNames detect: [:fn| (fn endsWith: '.mcd') and: [(fn copyUpTo: $() = baseName]].
+		 diffyVersion := cacheRepo versionNamed: diffyVersionName.
+		 file := cacheRepo directory newFileNamed: versionName.
+		 delete := false.
+		 [file binary.
+		  [MCMczWriter fileOut: diffyVersion on: file]
+			on: Error
+			do: [:ex|
+				delete := true. "don't leave half-formed .mcz files around to screw things up later on..."
+				ex pass]]
+			ensure:
+				[file close.
+				 delete ifTrue:
+					[cacheRepo directory deleteFileNamed: versionName]].
+		 "now delete the damn diffy version that caused all the pain in the first place"
+		 delete ifFalse:
+			[cacheRepo directory deleteFileNamed: diffyVersionName].
+		 cacheRepo flushCache; cacheAllFilenames].
+	nonDiffyVersion := cacheRepo versionNamed: versionName.
+	self assert: (nonDiffyVersion fileName endsWith: '.mcz').
+	^nonDiffyVersion
+]
+
 { #category : #'private-accessing' }
 SpurBootstrapMonticelloPackagePatcher >> compiledMethodClassDefinition [
 	^MCAddition of: 
@@ -297,6 +333,38 @@ SpurBootstrapMonticelloPackagePatcher >> patch [
 ]
 
 { #category : #patching }
+SpurBootstrapMonticelloPackagePatcher >> patchAndUploadAllInTrunk [
+	"Look for all versions in the default repository that have patched versions there-in.
+	 Download and patch them and upload the patched versions (overwriting the older ones)."
+	"(SpurBootstrapMonticelloPackagePatcher new
+		from: 'spurpackages'
+		to: 'trunkpackages')
+			patchAndUploadAllInTrunk"
+	| seed trunk sourceRepo cacheRepo |
+	seed := 'Are you really sure you want to do this?\It should happen only once!' withCRs.
+	3 timesRepeat:
+		[(UIManager confirm: seed) ifFalse: [^self].
+		 seed := seed copyReplaceAll: 'really ' with: 'really, really '].
+	sourceDir assureExistence; deleteLocalFiles.
+	destDir assureExistence; deleteLocalFiles.
+	sourceRepo := MCDirectoryRepository directory: sourceDir.
+	cacheRepo := MCCacheRepository default.
+	(trunk := self trunk) cacheAllFileNamesDuring:
+		[| latestBranches latestUnbranched |
+		latestBranches := self packagesAndPatches keys collect:
+							[:package|
+							(trunk versionNamesForPackageNamed: package name, '.spur') detectMin: [:vn | vn asMCVersionName versionNumber]].
+		latestUnbranched := latestBranches collect: [:verName| (trunk versionNamed: (verName copyReplaceAll: '.spur' with: '') asMCVersionName) info ancestors first versionName].
+		((trunk possiblyNewerVersionsOfAnyOf: latestUnbranched)
+			reject: [:unpatched| unpatched includesSubString: '.spur'])
+			do: [:unpatched|
+				"it is claimed that whether a repository contains a .mcz or a .mcd is irrelevant.  At least for the cache repositoriy that's not true."
+				sourceRepo storeVersion: (self cachedNonDiffyVersionNamed: unpatched from: trunk)].
+		 self patchAsNeeded.
+		 self uploadFrom: (MCDirectoryRepository directory: destDir) to: trunk]
+]
+
+{ #category : #patching }
 SpurBootstrapMonticelloPackagePatcher >> patchAndUploadNewer [
 	"Look for unbranched versions on the default repository that are newer than the
 	 image''s versions. Download and patch them and upload the patched versions."
@@ -331,19 +399,22 @@ SpurBootstrapMonticelloPackagePatcher >> patchAndUploadUnpatchedInTrunk [
 		from: 'spurpackages'
 		to: 'trunkpackages')
 			patchAndUploadUnpatchedInTrunk"
-	| trunk sourceRepo |
+	| trunk sourceRepo cacheRepo |
 	sourceDir assureExistence; deleteLocalFiles.
 	destDir assureExistence; deleteLocalFiles.
 	sourceRepo := MCDirectoryRepository directory: sourceDir.
+	cacheRepo := MCCacheRepository default.
 	(trunk := self trunk) cacheAllFileNamesDuring:
 		[| latestBranches latestUnbranched |
 		latestBranches := self packagesAndPatches keys collect:
 							[:package|
 							(trunk versionNamesForPackageNamed: package name, '.spur') detectMax: [:vn | vn asMCVersionName versionNumber]].
 		latestUnbranched := latestBranches collect: [:verName| (verName copyReplaceAll: '.spur' with: '') asMCVersionName].
-		(trunk possiblyNewerVersionsOfAnyOf: latestUnbranched) do:
-			[:unpatched|
-			sourceRepo storeVersion: (trunk versionNamed: unpatched)].
+		((trunk possiblyNewerVersionsOfAnyOf: latestUnbranched)
+			reject: [:unpatched| unpatched includesSubString: '.spur'])
+			do: [:unpatched|
+				"it is claimed that whether a repository contains a .mcz or a .mcd is irrelevant.  At least for the cache repositoriy that's not true."
+				sourceRepo storeVersion: (self cachedNonDiffyVersionNamed: unpatched from: trunk)].
 		 self patchAsNeeded.
 		 self uploadFrom: (MCDirectoryRepository directory: destDir) to: trunk]
 ]
@@ -403,9 +474,10 @@ SpurBootstrapMonticelloPackagePatcher >> patchForPackage: package withPatches: p
 							 patches noneSatisfy:
 								[:addition|
 								def isMethodDefinition
+								and: [addition definition isMethodDefinition
 								and: [addition definition selector = def selector
 								and: [addition definition className = def className
-								and: [addition definition classIsMeta = def classIsMeta]]]]]
+								and: [addition definition classIsMeta = def classIsMeta]]]]]]
 						thenCollect:
 							[:def|
 							 ((def source includesSubString: 'DELETEME')
@@ -435,7 +507,7 @@ SpurBootstrapMonticelloPackagePatcher >> patchForPackage: package withPatches: p
 { #category : #patching }
 SpurBootstrapMonticelloPackagePatcher >> patchPackage: packageFileName with: patches for: package [
 	| version newVersion |
-	version := self versionFor: packageFileName.
+	version := self versionFor: packageFileName in: sourceDir.
 	newVersion := self version: version withPatches: patches for: package.
 	self storeVersion: newVersion
 ]
@@ -468,20 +540,6 @@ SpurBootstrapMonticelloPackagePatcher >> trunk [
 ]
 
 { #category : #'repository population' }
-SpurBootstrapMonticelloPackagePatcher >> updateTrunkRepository [
-	"Download all the Collections, Kernel and System packages from trunk into srcDir,
-	 patch them into destDir,
-	 upload the patched and branched files that aren't already in trunk to trunk."
-	"self new from: 'trunkpackages' to: 'spurpackages'; updateTrunkRepository"
-	"AndreasSystemProfiler spyOn: [self new from: 'trunkpackages' to: 'spurpackages'; updateSpurRepository]"
-	sourceDir assureExistence.
-	self download: self class squeak45baseline from: self trunk.
-	destDir assureExistence.
-	self patchAsNeeded.
-	self uploadFrom: (MCDirectoryRepository directory: destDir) to: self trunk
-]
-
-{ #category : #'repository population' }
 SpurBootstrapMonticelloPackagePatcher >> uploadFrom: localRepo to: uploadRepository [
 	localRepo allVersionsDo:
 		[:version|
@@ -491,11 +549,21 @@ SpurBootstrapMonticelloPackagePatcher >> uploadFrom: localRepo to: uploadReposit
 
 { #category : #patching }
 SpurBootstrapMonticelloPackagePatcher >> version: version withPatches: patches for: package [
-	| snapshot ancestry |
+	| snapshot ancestry possibleSpurAncestor actualAncestor |
 	snapshot := MCPatcher
 					apply: (self patchForPackage: package withPatches: patches snapshot: version snapshot)
 					to: version snapshot.
 	ancestry := MCWorkingAncestry new addAncestor: version info.
+	"this is a hack; we may not be patching w.r.t. a directory or trunk"
+	possibleSpurAncestor := (self spurBranchNameForInfo: version info ancestors first package: package) , '.mcz'.
+	(destDir includesKey: possibleSpurAncestor)
+		ifTrue:
+			[actualAncestor := self versionFor: possibleSpurAncestor in: destDir]
+		ifFalse:
+			[((self trunk versionNamesForPackageNamed: package name) includes: possibleSpurAncestor) ifTrue:
+				[actualAncestor := self trunk versionNamed: possibleSpurAncestor]].
+	actualAncestor ifNotNil:
+		[ancestry addAncestor: actualAncestor info].
 	^MCVersion
 		package: version package
 		info: (ancestry
@@ -507,12 +575,11 @@ SpurBootstrapMonticelloPackagePatcher >> version: version withPatches: patches f
 							version info message)
 		snapshot: snapshot
 		dependencies: {} "punt on computing dependencies; there are't any so far"
-
 ]
 
 { #category : #patching }
-SpurBootstrapMonticelloPackagePatcher >> versionFor: packageFileName [
-	^sourceDir
+SpurBootstrapMonticelloPackagePatcher >> versionFor: packageFileName in: directory [
+	^directory
 		readOnlyFileNamed: packageFileName
 		do: [:fs|
 			((MCVersionReader readerClassForFileNamed: fs fullName)
