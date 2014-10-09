@@ -1,6 +1,7 @@
 ia32abi_objs="IA32ABI.o AlienSUnitTestProcedures.o"
 
 case $host_cpu in
+i386|i486|i586|i686)
 ia32abi_objs="IA32ABI.o AlienSUnitTestProcedures.o ia32abicc.o"
 ;;
 powerpc|ppc)
