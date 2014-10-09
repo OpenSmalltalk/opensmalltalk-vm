@@ -1,7 +1,8 @@
 # Copied, perhaps edited, from ../../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
 LocalePlugin \
+UnicodePlugin \
 UnixOSProcessPlugin \
 UUIDPlugin \
-UnicodePlugin \
+SqueakFFIPrims \
 XDisplayControlPlugin
