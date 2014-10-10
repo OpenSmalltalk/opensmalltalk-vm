@@ -529,16 +529,6 @@ EncoderForSistaV1 class >> method: method refersInBytecodeToLiteral: aLiteral sp
 	^false
 ]
 
-{ #category : #'instruction stream support' }
-EncoderForSistaV1 class >> nonExtensionBytecodeAt: pc in: method [
-	"Answer the actual bytecode at pc in method, skipping past any preceeding extensions."
-	| thePC bytecode |
-	thePC := pc.
-	[self isExtension: (bytecode := method at: thePC)] whileTrue:
-		[thePC := thePC + (self bytecodeSize: bytecode)].
-	^bytecode
-]
-
 { #category : #'bytecode decoding' }
 EncoderForSistaV1 class >> pcOfBlockCreationBytecodeForBlockStartingAt: startpc in: method [
 	"Answer the pc of the push closure bytecode whose block starts at startpc in method.
@@ -607,7 +597,11 @@ EncoderForSistaV1 class >> selectorToSendOrItselfFor: anInstructionStream in: me
 		^anInstructionStream].
 	byte > 235 ifTrue:
 		[^anInstructionStream].
-	^method literalAt: ((method at: pc + 1) bitShift: -3) + 1
+	"they could be extended..."
+	^self extensionsFor: pc in: method into:
+		[:extA :extB :nExtBytes| | index |
+		 index := ((method at: pc + 1) bitShift: -3) + (extA bitShift: 5).
+		 method literalAt: index + 1]
 ]
 
 { #category : #'bytecode decoding' }
