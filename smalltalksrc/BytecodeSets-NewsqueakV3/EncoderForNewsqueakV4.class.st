@@ -464,16 +464,6 @@ EncoderForNewsqueakV4 class >> method: method writesField: varIndex [
 				  and: [scanner followingByte + prevext = varIndexCode]]]]
 ]
 
-{ #category : #'instruction stream support' }
-EncoderForNewsqueakV4 class >> nonExtensionBytecodeAt: pc in: method [
-	"Answer the actual bytecode at pc in method, skipping past any preceeding extensions."
-	| thePC bytecode |
-	thePC := pc.
-	[self isExtension: (bytecode := method at: thePC)] whileTrue:
-		[thePC := thePC + (self bytecodeSize: bytecode)].
-	^bytecode
-]
-
 { #category : #'bytecode decoding' }
 EncoderForNewsqueakV4 class >> pcOfBlockCreationBytecodeForBlockStartingAt: startpc in: method [
 	"Answer the pc of the push closure bytecode whose block starts at startpc in method.
@@ -539,7 +529,7 @@ EncoderForNewsqueakV4 class >> selectorToSendOrItselfFor: anInstructionStream in
 	byte > 241 ifTrue:
 		[^anInstructionStream].
 	"they could be extended..."
-	^self extensionsAt: pc in: method into:
+	^self extensionsFor: pc in: method into:
 		[:extA :extB :nExtBytes| | index |
 		 index := ((method at: pc + 1) bitShift: -3) + (extA bitShift: 5).
 		 method literalAt: index + 1]
