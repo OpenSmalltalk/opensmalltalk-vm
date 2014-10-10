@@ -42,6 +42,13 @@ Class {
 	#category : #'VMMakerJS-Translation to JS'
 }
 
+{ #category : #preferences }
+JSCodeGenerator class >> beActiveDuring: aBlock [
+	| wasActive |
+	wasActive := self isActive.
+	aBlock ensure: [self isActive: wasActive].
+]
+
 { #category : #'class initialization' }
 JSCodeGenerator class >> initialize [
 	"JSCodeGenerator initialize"
@@ -75,16 +82,31 @@ JSCodeGenerator class >> monticelloDescriptionFor: aClass [
 	^aClass name, (pkg modified ifTrue: [' * '] ifFalse: [' ']), pkg ancestry ancestorString, ' uuid: ', uuid asString
 ]
 
-{ #category : #'removing from system' }
-JSCodeGenerator class >> removeCompilerMethods [
-	"Before removing the C code generator classes from the system, use this method to remove the compiler node methods that support it. This avoids leaving dangling references to C code generator classes in the compiler node classes."
-
-	ParseNode withAllSubclasses do: [ :nodeClass |
-		nodeClass removeCategory: 'C translation'.
-	].
-	Smalltalk at: #AbstractSound ifPresent: [:abstractSound |
-		 abstractSound class removeCategory: 'primitive generation'].
-
+{ #category : #utilities }
+JSCodeGenerator class >> translateAllPluginsIn: aDirectory [
+	self beActiveDuring: [
+		#(	ADPCMCodecPlugin
+			"BMPReadWriterPlugin	-- not working yet"
+			BitBltSimulation
+			DSAPlugin
+			DeflatePlugin
+			FFTPlugin
+			FloatArrayPlugin
+			"GeniePlugin		-- not working yet"
+			JPEGReaderPlugin
+			KedamaPlugin
+			KedamaPlugin2
+			KlattSynthesizerPlugin
+			LargeIntegersPlugin
+			Matrix2x3Plugin
+			MiscPrimitivePlugin
+			ScratchPlugin
+			SoundGenerationPlugin
+			StarSqueakPlugin
+		) do: [:pluginName |
+			self environment at: pluginName ifPresent: [:plugin |
+				plugin translateInDirectory: aDirectory doInlining: false]]
+		displayingProgress: 'Generating JS plugins'].
 ]
 
 { #category : #public }
