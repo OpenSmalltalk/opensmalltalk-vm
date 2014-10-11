@@ -6,7 +6,7 @@ VMMaker classSide >> buildCodeGenerator: aClass inlined: doInlining [
 
 	| cg |
 	ObjectMemory initialize; initializeConstants.
-	cg := aClass buildCodeGeneratorInlined: doInlining.
+	cg := aClass buildCodeGenerator.
 	cg prepareMethodsInlined: doInlining doAssertions: true.
 	^ cg
 
@@ -51,7 +51,7 @@ VMMaker classSide >> clearCacheEntriesFor: aClass [
 
 { #category : #'*SlangBrowser-browser support' }
 VMMaker classSide >> clearCodeGeneratorCache [
-	"Code generators used by browsers display translated C code"
+	"Code generators used by browsers to display translated C code"
 
 	"VMMaker clearCodeGeneratorCache"
 
@@ -75,7 +75,7 @@ VMMaker classSide >> codeGenerator: generatorType forClass: aClass [
 
 { #category : #'*SlangBrowser-browser support' }
 VMMaker classSide >> codeGeneratorCache [
-	"Code generators used by browsers display translated C code"
+	"Code generators used by browsers to display translated C code"
 
 	^ CodeGeneratorCache ifNil: [CodeGeneratorCache := Dictionary new]
 ]
