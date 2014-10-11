@@ -583,6 +583,16 @@ xxx"
 
 ]
 
+{ #category : #'debug support' }
+NewObjectMemory >> checkOopIntegrity: obj named: name [
+	<inline: false>
+	<var: #name type: #'char *'>
+	(heapMap heapMapAtWord: (self pointerForOop: obj)) ~= 0 ifTrue:
+		[^true].
+	coInterpreter print: name; print: ' leak '; printHex: obj; cr.
+	^false
+]
+
 { #category : #'cog jit support' }
 NewObjectMemory >> classFieldOffset [
 	<api>
@@ -1264,6 +1274,11 @@ NewObjectMemory >> growObjectMemory: delta [
 	limit = memoryLimit ifFalse:
 		[self setMemoryLimit: limit - 24. "remove a tad for safety"
 		 self initializeMemoryFirstFree: freeStart]
+]
+
+{ #category : #'debug support' }
+NewObjectMemory >> heapMap [
+	^heapMap
 ]
 
 { #category : #'image segment in/out' }
@@ -3101,14 +3116,16 @@ NewObjectMemory >> validate: oop [
 	nextChunk := oop + ((self isFreeObject: oop)
 							ifTrue: [self sizeOfFree: oop]
 							ifFalse: [self sizeBitsOf: oop]).
-	nextChunk > freeStart ifTrue:
-		[oop = freeStart ifFalse: [self halt]].
-	(self headerType: nextChunk) = 0 ifTrue:
-		[(self headerType: (nextChunk + (BytesPerWord*2))) = 0 ifFalse: [self halt]].
-	(self headerType: nextChunk) = 1 ifTrue:
-		[(self headerType: (nextChunk + BytesPerWord)) = 1 ifFalse: [self halt]].
-	type = 2 ifTrue:
-		["free block" ^ self].
+	nextChunk >= freeStart
+		ifTrue:
+			[nextChunk = freeStart ifFalse: [self halt]]
+		ifFalse:
+			[(self headerType: nextChunk) = 0 ifTrue:
+				[(self headerType: (nextChunk + (BytesPerWord*2))) = 0 ifFalse: [self halt]].
+			(self headerType: nextChunk) = 1 ifTrue:
+				[(self headerType: (nextChunk + BytesPerWord)) = 1 ifFalse: [self halt]].
+			type = 2 ifTrue:
+				["free block" ^ self]].
 	fmt := self formatOfHeader: header.
 	cc := self compactClassIndexOfHeader: header.
 	cc > 16 ifTrue: [self halt].	"up to 32 are legal, but not used"
