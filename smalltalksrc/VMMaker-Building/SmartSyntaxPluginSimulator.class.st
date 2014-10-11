@@ -136,6 +136,16 @@ SmartSyntaxPluginSimulator >> doesNotUnderstand: aMessage [
 ]
 
 { #category : #simulation }
+SmartSyntaxPluginSimulator >> generateCoerceToBooleanObjectFrom: aBoolean on: ignored [
+	^interpreterProxy booleanObjectOf: aBoolean
+]
+
+{ #category : #simulation }
+SmartSyntaxPluginSimulator >> generateCoerceToFloatObjectFrom: aNumber on: ignored [
+	^interpreterProxy floatObjectOf: aNumber
+]
+
+{ #category : #simulation }
 SmartSyntaxPluginSimulator >> generateCoerceToSmallIntegerObjectFrom: aSmallInteger on: ignored [ 
 	^interpreterProxy integerObjectOf: aSmallInteger
 ]

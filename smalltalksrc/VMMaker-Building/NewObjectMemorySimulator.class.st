@@ -1,6 +1,9 @@
 Class {
 	#name : #NewObjectMemorySimulator,
 	#superclass : #NewObjectMemory,
+	#instVars : [
+		'parent'
+	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
@@ -138,13 +141,15 @@ NewObjectMemorySimulator >> floatValueOf: obj [
 	^coInterpreter floatValueOf: obj
 ]
 
-{ #category : #'debug support' }
+{ #category : #'gc -- mark and sweep' }
 NewObjectMemorySimulator >> fullGC [
-	self halt.
-	coInterpreter transcript
-		cr; nextPutAll:'<Running full GC ('; print: coInterpreter byteCount; space; print: freeStart; nextPutAll: ')...'; flush.
-	super fullGC.
-	coInterpreter transcript show: ' done>'
+	"If we're /not/ a clone, clone the VM and push it over the cliff.
+	 If it survives, destroy the clone and continue.  We should be OK until next time."
+	parent ifNil:
+		[coInterpreter cr; print: 'GC number '; print: statFullGCs; tab; flush.
+		 coInterpreter cloneSimulation objectMemory fullGC.
+		 Smalltalk garbageCollect].
+	^super fullGC
 ]
 
 { #category : #'memory access' }
@@ -162,9 +167,15 @@ NewObjectMemorySimulator >> heapMapAtWord: address [
 	^heapMap heapMapAtWord: address
 ]
 
-{ #category : #'debug support' }
+{ #category : #'gc -- mark and sweep' }
 NewObjectMemorySimulator >> incrementalGC [
-	coInterpreter transcript cr; nextPutAll: 'incrementalGC ('; print: coInterpreter byteCount; space; print: freeStart; nextPut: $); flush.
+	"If we're /not/ a clone, clone the VM and push it over the cliff.
+	 If it survives, destroy the clone and continue.  We should be OK until next time."
+	(self leakCheckIncrementalGC
+	 and: [parent isNil]) ifTrue:
+		[coInterpreter cr; print: 'Incremental GC number '; print: statIncrGCs; tab; flush.
+		 coInterpreter cloneSimulation objectMemory incrementalGC.
+		 Smalltalk garbageCollect].
 	^super incrementalGC
 ]
 
@@ -299,6 +310,18 @@ NewObjectMemorySimulator >> objectBefore: addr [
 		oop := self objectAfter: oop.
 		oop >= addr ifTrue: [^ prev]].
 	^0
+]
+
+{ #category : #accessing }
+NewObjectMemorySimulator >> parent [
+
+	^ parent
+]
+
+{ #category : #accessing }
+NewObjectMemorySimulator >> parent: anObject [
+
+	parent := anObject
 ]
 
 { #category : #'simulation only' }

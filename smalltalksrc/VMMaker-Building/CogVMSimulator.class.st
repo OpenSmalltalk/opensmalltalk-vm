@@ -42,6 +42,7 @@ Class {
 	#name : #CogVMSimulator,
 	#superclass : #CoInterpreterMT,
 	#instVars : [
+		'parent',
 		'enableCog',
 		'byteCount',
 		'lastPollCount',
@@ -2526,6 +2527,17 @@ CogVMSimulator >> ownerIndexOfThreadId: threadId [
 	^self perform: #ownerIndexOfThreadId:
 		withArguments: {threadId}
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
+]
+
+{ #category : #accessing }
+CogVMSimulator >> parent [
+	^ parent
+]
+
+{ #category : #accessing }
+CogVMSimulator >> parent: anObject [
+
+	parent := anObject
 ]
 
 { #category : #'plugin support' }
