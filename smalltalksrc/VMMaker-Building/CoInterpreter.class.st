@@ -5495,7 +5495,7 @@ CoInterpreter >> printFrame: theFP WithSP: theSP [
 			 rcvrAddress := theFP + FoxIFReceiver].
 	self printFrameOop: 'receiver' at: rcvrAddress.
 	topThing := stackPages longAt: theSP.
-	(topThing between: theMethod and: theMethodEnd)
+	(self oop: topThing isGreaterThanOrEqualTo: theMethod andLessThan: theMethodEnd)
 		ifTrue:
 			[rcvrAddress - BytesPerWord to: theSP + BytesPerWord by: BytesPerWord negated do:
 				[:addr| | index |
