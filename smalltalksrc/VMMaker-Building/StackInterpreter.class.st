@@ -9138,7 +9138,7 @@ StackInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 
 ]
 
-{ #category : #simulation }
+{ #category : #'primitive support' }
 StackInterpreter >> maybeFailForLastObjectOverwrite [
 	<inline: true>
 	checkAllocFiller ifTrue: 
@@ -12747,12 +12747,15 @@ StackInterpreter >> slowPrimitiveResponse [
 	 On failure check the accessorDepth for the primitive and
 	 if non-negative scan the args to the depth, following any
 	 forwarders.  Retry the primitive if any are found."
-	(objectMemory hasSpurMemoryManagerAPI
-	 and: [self successful not
-	 and: [(objectMemory isOopCompiledMethod: newMethod)
-	 and: [self checkForAndFollowForwardedPrimitiveState]]]) ifTrue:
-		[self initPrimCall.
-		 self dispatchFunctionPointer: primitiveFunctionPointer].
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[(self successful not
+			  and: [(objectMemory isOopCompiledMethod: newMethod)
+			  and: [self checkForAndFollowForwardedPrimitiveState]]) ifTrue:
+				[self initPrimCall.
+				 self dispatchFunctionPointer: primitiveFunctionPointer]]
+		ifFalse:
+			[self assert: objectMemory remapBufferCount = 0].
 	self maybeFailForLastObjectOverwrite.
 	(FailImbalancedPrimitives
 	and: [self successful
