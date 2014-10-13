@@ -8808,6 +8808,7 @@ SpurMemoryManager >> remapBuffer [
 
 { #category : #accessing }
 SpurMemoryManager >> remapBufferCount [
+	<cmacro: '() GIV(remapBufferCount)'>
 	^remapBufferCount
 ]
 
