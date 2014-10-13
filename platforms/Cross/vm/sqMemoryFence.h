@@ -47,7 +47,7 @@
 #	define sqLowLevelMFence() asm volatile ("mfence")
 # endif
 #else
-# if defined(TARGET_OS_IS_IPHONE) || (defined(__arm__) && defined(__ARM_ARCH_6__))
+# if defined(TARGET_OS_IS_IPHONE) || (defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__)))
 #	define sqLowLevelMFence() __sync_synchronize()
 # elif !defined(sqLowLevelMFence)
 extern void sqLowLevelMFence(void);

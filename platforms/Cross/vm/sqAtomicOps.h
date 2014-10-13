@@ -137,7 +137,7 @@ AtomicGet(uint64_t *target)
 #  endif /* __SSE2__ */
 # else /* TARGET_OS_IS_IPHONE elif x86 variants etc */
 
-#if defined(__arm__) && defined(__ARM_ARCH_6__)
+#if defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
 /* tpr - this is code intended for the Raspberry Pi Raspbian OS 
  * We'll experimentally trust in our MMU to keep 64bit accesses atomic */
 #define get64(var)  \
@@ -177,7 +177,7 @@ AtomicGet(uint64_t *target)
 #endif
 #elif defined TARGET_OS_IS_IPHONE
 #define sqAtomicAddConst(var,n) OSAtomicAdd32(n,&var)
-#elif  defined(__arm__) && defined(__ARM_ARCH_6__)
+#elif  defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
 /* tpr - this is code intended for the Raspberry Pi Raspbian OS */
 /* We'll experimentally use the gcc inbuilt functions detailed in
  * http://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html
@@ -230,7 +230,7 @@ AtomicGet(uint64_t *target)
 # define sqCompareAndSwap(var,old,new) OSAtomicCompareAndSwap32(old, new, &var) 
 # define sqCompareAndSwapRes(var,old,new,res) res = var; OSAtomicCompareAndSwap32(old, new, &var) 
 
-#elif  defined(__arm__) && defined(__ARM_ARCH_6__)
+#elif  defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
 /* tpr - this is code intended for the Raspberry Pi Raspbian OS */
 /* We'll experimentally use the gcc inbuilt functions detailed in
  * http://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html */

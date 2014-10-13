@@ -164,7 +164,7 @@ ioHighResClock(void)
 			|| defined(i486) || defined(__i486) || defined (__i486__) \
 			|| defined(intel) || defined(x86) || defined(i86pc) )
     __asm__ __volatile__ ("rdtsc" : "=A"(value));
-#elif defined(__arm__) && defined(__ARM_ARCH_6__)
+#elif defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
 	/* tpr - do nothing for now; needs input from eliot to decide further */
 #else
 # error "no high res clock defined"
