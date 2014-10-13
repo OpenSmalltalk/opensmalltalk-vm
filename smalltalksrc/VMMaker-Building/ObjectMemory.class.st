@@ -711,7 +711,7 @@ ObjectMemory >> allObjectsDo: aBlock [
 	<inline: true>
 	| oop |
 	oop := self firstObject.
-	[oop < freeBlock] whileTrue:
+	[oop asUnsignedInteger < freeBlock] whileTrue:
 		[(self isFreeObject: oop) ifFalse:
 			[aBlock value: oop].
 		 oop := self objectAfter: oop]
@@ -722,7 +722,7 @@ ObjectMemory >> allObjectsDoSafely: aBlock [
 	<inline: true>
 	| oop |
 	oop := self firstObject.
-	[oop < freeBlock] whileTrue:
+	[oop asUnsignedInteger < freeBlock] whileTrue:
 		[(self isFreeObject: oop) ifFalse:
 			[aBlock value: oop].
 		 oop := self objectAfterWhileForwarding: oop]
@@ -4025,7 +4025,7 @@ ObjectMemory >> okayOop: signedOop [
 
 	"address and size checks"
 	(self isIntegerObject: oop) ifTrue: [ ^true ].
-	(oop >= self startOfMemory and: [oop < endOfMemory])
+	(self oop: oop isGreaterThanOrEqualTo: self startOfMemory andLessThan: endOfMemory)
 		ifFalse: [ self error: 'oop is not a valid address'. ^false ].
 	((oop \\ BytesPerWord) = 0)
 		ifFalse: [ self error: 'oop is not a word-aligned address'. ^false ].

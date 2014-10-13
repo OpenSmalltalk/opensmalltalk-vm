@@ -163,7 +163,7 @@ NewObjectMemory >> allObjectsDo: aBlock [
 	<inline: true>
 	| oop |
 	oop := self firstObject.
-	[oop < freeStart] whileTrue:
+	[oop asUnsignedInteger < freeStart] whileTrue:
 		[(self isFreeObject: oop) ifFalse:
 			[aBlock value: oop].
 		 oop := self objectAfter: oop]
@@ -174,7 +174,7 @@ NewObjectMemory >> allObjectsDoSafely: aBlock [
 	<inline: true>
 	| oop |
 	oop := self firstObject.
-	[oop < freeStart] whileTrue:
+	[oop asUnsignedInteger < freeStart] whileTrue:
 		[(self isFreeObject: oop) ifFalse:
 			[aBlock value: oop].
 		 oop := self objectAfterWhileForwarding: oop]
@@ -2539,7 +2539,7 @@ NewObjectMemory >> safeObjectAfter: oop [
 	(self isFreeObject: oop)
 		ifTrue: [sz := self sizeOfFree: oop]
 		ifFalse: [sz := self sizeBitsOf: oop].
-	^oop + sz >= freeStart
+	^(oop + sz) asUnsignedInteger >= freeStart
 		ifTrue: [freeStart]
 		ifFalse: [self oopFromChunk: oop + sz]
 ]
@@ -2551,7 +2551,7 @@ NewObjectMemory >> safePrintStringOf: oop [
 	<inline: false>
 	(self isIntegerObject: oop) ifTrue:
 		[^nil].
-	(oop between: self startOfMemory and: freeStart) ifFalse:
+	(self oop: oop isGreaterThanOrEqualTo: self startOfMemory andLessThan: freeStart) ifFalse:
 		[^nil].
 	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
 		[^nil].
@@ -3076,7 +3076,7 @@ NewObjectMemory >> trueObject: anOop [
 NewObjectMemory >> unmarkAllObjects [
 	| oop hdr |
 	oop := self firstObject.
-	[oop < freeStart] whileTrue:
+	[oop asUnsignedInteger < freeStart] whileTrue:
 		[(self isFreeObject: oop) ifFalse:
 			[hdr := self baseHeader: oop.
 			 (hdr bitAnd: MarkBit) ~= 0 ifTrue:
