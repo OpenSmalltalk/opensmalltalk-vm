@@ -700,7 +700,7 @@ JSMethod >> freeVariableReferences [
 	].
 	args do: [ :var | refs remove: var asString ifAbsent: [] ].
 	locals do: [ :var | refs remove: var asString ifAbsent: [] ].
-	#('self' 'nil' 'true' 'false') do: [ :var | refs remove: var ifAbsent: [] ].
+	#('self' 'nil' 'true' 'false' 'null') do: [ :var | refs remove: var ifAbsent: [] ].
 	^ refs asSortedCollection
 ]
 
@@ -1208,7 +1208,7 @@ JSMethod >> preparePrimitiveName [
 ]
 
 { #category : #'primitive compilation' }
-JSMethod >> preparePrimitivePrologue [
+JSMethod >> preparePrimitivePrologueShared: sharedInstVars assigned: assignedInstVars [
 	"Add a prolog and postlog to a primitive method. The prolog copies any instance variables referenced by this primitive method into local variables. The postlog copies values of assigned-to variables back into the instance. The names of the new locals are added to the local variables list.
 
 The declarations dictionary defines the types of any non-integer variables (locals, arguments, or instance variables). In particular, it may specify the types:
@@ -1232,8 +1232,8 @@ selector == #setInterpreter: ifTrue:[self halt].
 	aClass := definingClass.
 	prolog := OrderedCollection new.
 	postlog := OrderedCollection new.
-	instVarsUsed := self freeVariableReferences asSet.
-	varsAssignedTo := self variablesAssignedTo asSet.
+	instVarsUsed := self freeVariableReferences asSet union: sharedInstVars.
+	varsAssignedTo := self variablesAssignedTo asSet union: assignedInstVars.
 	instVarList := aClass allInstVarNames.
 	primArgCount := args size.
 
@@ -1251,7 +1251,7 @@ selector == #setInterpreter: ifTrue:[self halt].
 	1 to: instVarList size do: [:varIndex |
 		varName := instVarList at: varIndex.
 		(instVarsUsed includes: varName) ifTrue: [
-			locals add: varName.
+			"locals add: varName. -- since we do not inline, we cannot declare these local since they migth be used by inlined methods"
 			prolog addAll: (self instVarGetExprFor: varName offset: varIndex - 1).
 			(varsAssignedTo includes: varName) ifTrue: [
 				postlog addAll: (self instVarPutExprFor: varName offset: varIndex - 1)]]].
