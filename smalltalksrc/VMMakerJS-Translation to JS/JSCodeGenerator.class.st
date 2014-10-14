@@ -46,6 +46,7 @@ Class {
 JSCodeGenerator class >> beActiveDuring: aBlock [
 	| wasActive |
 	wasActive := self isActive.
+	self isActive: true.
 	aBlock ensure: [self isActive: wasActive].
 ]
 
@@ -254,7 +255,7 @@ JSCodeGenerator >> addMethodFor: aClass selector: selector [
 
 { #category : #public }
 JSCodeGenerator >> addMethodsForPrimitives: classAndSelectorList [ 
-	| sel aClass source verbose meth |
+	| sel aClass source verbose meth primInstVars sharedInstVars assignedInstVars |
 	classAndSelectorList do:[:classAndSelector | 
 		aClass := Smalltalk at: (classAndSelector at: 1) ifAbsent:[nil].
 		aClass ifNotNil:[
@@ -298,15 +299,40 @@ JSCodeGenerator >> addMethodsForPrimitives: classAndSelectorList [
 			Transcript cr].
 
 	"code generation"
-	self doInlining: false.
+	"self doInlining: false"
 
+	primInstVars := Set new.			"inst vars used in primitives"
+	sharedInstVars := Set new.			"inst vars used in non-primitives"
+	assignedInstVars :=  Set new.		"inst vars modified in non-primitives"
+	methods do:[:m|
+		m primitive > 0 ifTrue: [
+			primInstVars addAll: m freeVariableReferences.
+		] ifFalse: [
+			sharedInstVars addAll: m freeVariableReferences.
+			assignedInstVars addAll: m variablesAssignedTo.
+		].
+	].
 	methods do:[:m|
 		"if this method is supposed to be a primitive (rather than a helper 
 		routine), add assorted prolog and epilog items"
-		m primitive > 0 ifTrue: [m preparePrimitivePrologue].
+		m primitive > 0 ifTrue: [
+			m preparePrimitivePrologueShared: sharedInstVars assigned: assignedInstVars ].
 		"check for one-based array access"	
 		m oneBasedArrays ifNotNil: [self oneBasedArrays: true].
 	].
+	"Add declarations for inst vars used in both prims and non-prims as global"
+	((primInstVars intersection: sharedInstVars) difference: variables) do: [:var |
+		methods do:[:m|
+			m declarations at: var ifPresent: [:decl |
+				variableDeclarations at: var
+					ifPresent: [:existing |
+						decl = existing ifFalse: [self error: 'decls do not match']]
+					ifAbsent: [variableDeclarations at: var put: decl]]].
+		variables add: var].
+	"Add non-shared inst vars as local"
+	methods do:[:m|
+		m locals addAll: (m freeVariableReferences difference: sharedInstVars)].
+	
 ]
 
 { #category : #public }
