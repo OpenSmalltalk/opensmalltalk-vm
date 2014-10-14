@@ -5727,11 +5727,13 @@ StackInterpreter >> findApplicationOfTargetMixin: targetMixin startingAtNonMetaC
 	<ContextPart> findApplicationOfTargetMixin: targetMixin startingAtNonMetaClass: aClass
 	"
 	| mixinOrMixinApplication |
+	self deny: (objectMemory isForwarded: targetMixin).
+	self deny: (objectMemory isForwarded: aClass).
 	mixinOrMixinApplication := aClass.
 	[mixinOrMixinApplication = objectMemory nilObject
 	 or: [mixinOrMixinApplication = targetMixin
-	 or: [(objectMemory fetchPointer: MixinIndex ofObject: mixinOrMixinApplication) = targetMixin]]] whileFalse:
-		[mixinOrMixinApplication := objectMemory fetchPointer: SuperclassIndex ofObject: mixinOrMixinApplication].
+	 or: [(objectMemory followObjField: MixinIndex ofObject: mixinOrMixinApplication) = targetMixin]]] whileFalse:
+		[mixinOrMixinApplication := objectMemory followObjField: SuperclassIndex ofObject: mixinOrMixinApplication].
 	^mixinOrMixinApplication
 ]
 
@@ -7076,7 +7078,10 @@ StackInterpreter >> implicitReceiverFor: rcvr mixin: mixin implementing: selecto
 	<api>
 	<option: #NewspeakVM>
 	| mixinApplication dictionary found |
-	messageSelector := selector. "messageSelector is an implicit parameter of lookupMethodInDictionary:"
+	self deny: (objectMemory isOopForwarded: rcvr).
+	self deny: (objectMemory isForwarded: mixin).
+	"messageSelector is an implicit parameter of lookupMethodInDictionary:"
+	messageSelector := objectMemory followMaybeForwarded: selector.
 	mixinApplication := self
 							findApplicationOfTargetMixin: mixin
 							startingAtBehavior: (objectMemory fetchClassOf: rcvr).
@@ -7086,12 +7091,12 @@ StackInterpreter >> implicitReceiverFor: rcvr mixin: mixin implementing: selecto
 	 found := self lookupMethodInDictionary: dictionary.
 	 found ifFalse:
 		[| implicitReceiverOrNil theMixin |
-		 theMixin := objectMemory fetchPointer: MixinIndex ofObject: mixinApplication.
+		 theMixin := objectMemory followObjField: MixinIndex ofObject: mixinApplication.
 		 implicitReceiverOrNil := self nextImplicitReceiverFor: (objectMemory
-																fetchPointer: EnclosingObjectIndex
+																followObjField: EnclosingObjectIndex
 																ofObject: mixinApplication)
 									withMixin: (objectMemory
-													fetchPointer: EnclosingMixinIndex
+													followObjField: EnclosingMixinIndex
 													ofObject: theMixin).
 		 implicitReceiverOrNil ~= objectMemory nilObject ifTrue:
 			[^implicitReceiverOrNil]].
@@ -9402,6 +9407,8 @@ StackInterpreter >> nextImplicitReceiverFor: anObject withMixin: mixin [
 					withMixin: mixin <Mixin>
 					implementing: selector <Symbol> ^<Object>"
 	| implicitReceiver mixinApplication theMixin targetMixin dictionary found |
+	self deny: (objectMemory isOopForwarded: anObject).
+	self deny: (objectMemory isForwarded: mixin).
 	implicitReceiver := anObject.
 	targetMixin := mixin.
 	[(targetMixin = objectMemory nilObject "or: [implicitReceiver = objectMemory nilObject]") ifTrue:
@@ -9414,11 +9421,11 @@ StackInterpreter >> nextImplicitReceiverFor: anObject withMixin: mixin [
 	 found := self lookupMethodInDictionary: dictionary.
 	 found]
 		whileFalse:
-			[implicitReceiver := objectMemory fetchPointer: EnclosingObjectIndex ofObject: mixinApplication.
-			 theMixin := objectMemory fetchPointer: MixinIndex ofObject: mixinApplication.
+			[implicitReceiver := objectMemory followObjField: EnclosingObjectIndex ofObject: mixinApplication.
+			 theMixin := objectMemory followObjField: MixinIndex ofObject: mixinApplication.
 			 theMixin = objectMemory nilObject ifTrue:
 				[^objectMemory nilObject].
-			 targetMixin := objectMemory fetchPointer: EnclosingMixinIndex ofObject: theMixin].
+			 targetMixin := objectMemory followObjField: EnclosingMixinIndex ofObject: theMixin].
 	^implicitReceiver
 ]
 

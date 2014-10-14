@@ -4677,14 +4677,14 @@ NewspeakInterpreter >> nextImplicitReceiverFor: anObject withMixin: mixin [
 							startingAtNonMetaClass: (self fetchClassOf: implicitReceiver).
 	 mixinApplication == nilObj ifTrue:
 		[^nilObj].
-	 dictionary := self fetchPointer: MessageDictionaryIndex ofObject: mixinApplication.
+	 dictionary := self followObjField: MessageDictionaryIndex ofObject: mixinApplication.
 	 found := self lookupMethodInDictionary: dictionary.
 	 found]
 		whileFalse:
-			[implicitReceiver := self fetchPointer: EnclosingObjectIndex ofObject: mixinApplication.
-			 theMixin := self fetchPointer: MixinIndex ofObject: mixinApplication.
+			[implicitReceiver := self followObjField: EnclosingObjectIndex ofObject: mixinApplication.
+			 theMixin := self followObjField: MixinIndex ofObject: mixinApplication.
 			 theMixin == nilObj ifTrue:[^nilObj].
-			 targetMixin := self fetchPointer: EnclosingMixinIndex ofObject: theMixin].
+			 targetMixin := self followObjField: EnclosingMixinIndex ofObject: theMixin].
 	^implicitReceiver
 ]
 
