@@ -1994,6 +1994,12 @@ ObjectMemory >> followForwardedObjectFields: objOop toDepth: depth [
 	self shouldNotImplement
 ]
 
+{ #category : #'spur compatibility' }
+ObjectMemory >> followMaybeForwarded: objOop [
+	<inline: true>
+	^objOop
+]
+
 { #category : #'forward compatibility' }
 ObjectMemory >> followObjField: fieldIndex ofObject: anObject [
 	<inline: true>
