@@ -1197,7 +1197,10 @@ SpurMemoryManager >> addressCouldBeOldObj: address [
 ]
 
 { #category : #'debug support' }
-SpurMemoryManager >> addressCouldBeOop: address [ 
+SpurMemoryManager >> addressCouldBeOop: address [
+	<api>
+	"Answer if address appears to be that of either an immediate or an object.
+	 For code disassembly and assertions."
 	^(self isImmediate: address)
 	  or: [self addressCouldBeObj: address]
 ]
@@ -4598,10 +4601,11 @@ SpurMemoryManager >> followForwardedObjectFields: objOop toDepth: depth [
 	^found
 ]
 
-{ #category : #'become implementation' }
+{ #category : #forwarding }
 SpurMemoryManager >> followMaybeForwarded: objOop [
-	^(self isForwarded: objOop)
-		ifTrue: [self followForwarded: objOop]
+	<inline: true>
+	^(self isOopForwarded: objOop)
+		ifTrue: [self noInlineFollowForwarded: objOop]
 		ifFalse: [objOop]
 ]
 
@@ -7612,6 +7616,12 @@ SpurMemoryManager >> noForwardersBelowFirstFreeChunk [
 		 (self isForwarded: o) ifTrue:
 			[^false]].
 	^true
+]
+
+{ #category : #forwarding }
+SpurMemoryManager >> noInlineFollowForwarded: objOop [
+	<inline: false>
+	^self followForwarded: objOop
 ]
 
 { #category : #'weakness and ephemerality' }
