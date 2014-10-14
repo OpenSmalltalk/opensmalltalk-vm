@@ -4910,15 +4910,16 @@ StackInterpreter >> enclosingObjectAt: n withObject: anObject withMixin: mixin [
 	count := 0.
 	[count < n] whileTrue:
 		[count := count + 1.
-		(targetMixin = objectMemory nilObject or:[enclosingObject = objectMemory nilObject]) ifTrue:
+		(targetMixin = objectMemory nilObject
+		 or: [enclosingObject = objectMemory nilObject]) ifTrue:
 			[^objectMemory nilObject].
 		mixinApplication := self
 								findApplicationOfTargetMixin: targetMixin
 								startingAtNonMetaClass: (objectMemory fetchClassOf: enclosingObject).
 		mixinApplication = objectMemory nilObject ifTrue:
 			[^objectMemory nilObject]. "should never happen!"
-		enclosingObject := objectMemory fetchPointer: EnclosingObjectIndex ofObject: mixinApplication.	
-		targetMixin := objectMemory fetchPointer: EnclosingMixinIndex ofObject: targetMixin].
+		enclosingObject := objectMemory followObjField: EnclosingObjectIndex ofObject: mixinApplication.	
+		targetMixin := objectMemory followObjField: EnclosingMixinIndex ofObject: targetMixin].
 	
 	^enclosingObject
 ]
