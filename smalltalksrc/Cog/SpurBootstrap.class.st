@@ -393,7 +393,7 @@ SpurBootstrap >> allocateClassTable [
 	lastClassTablePage := page.
 	newHeap nilFieldsOf: page.
 	newHeap storePointer: 0 ofObject: tableRoot withValue: page.
-	newHeap hiddenRootsObj: tableRoot.
+	newHeap setHiddenRootsObj: tableRoot.
 	maxSize := classToIndex inject: 0 into: [:a :b| a max: b].
 	numPages := (maxSize + newHeap classTableMinorIndexMask / newHeap classTablePageSize) truncated.
 	2 to: numPages do:
@@ -411,7 +411,7 @@ SpurBootstrap >> allocateClassTable [
 		lastClassTablePage := page].
 	"and once again to recompute numClassTablePages post building the class table."
 	newHeap instVarNamed: 'numClassTablePages' put: nil.
-	newHeap hiddenRootsObj: tableRoot
+	newHeap setHiddenRootsObj: tableRoot
 ]
 
 { #category : #'bootstrap image' }
