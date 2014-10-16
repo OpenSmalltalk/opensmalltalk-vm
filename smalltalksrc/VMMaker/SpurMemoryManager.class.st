@@ -6873,6 +6873,17 @@ SpurMemoryManager >> markAccessibleObjects [
 	marking := false
 ]
 
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> markAllExceptTransitiveClosureOf: arrayOfRoots [
+	"Mark all objects in the system except those in arrayOfRoots and objects only reachable from arrayOfRoots.
+	 This is how the image segment writing primitive computes the set of objects to include in a segment."
+
+ 	self assert: self allObjectsUnmarked.
+	self markObjectsIn: arrayOfRoots.
+	self markObjects.
+	self unmarkObjectsIn: arrayOfRoots.
+]
+
 { #category : #'weakness and ephemerality' }
 SpurMemoryManager >> markAllUnscannedEphemerons [
 	"After firing the unscanned ephemerons we must scan-mark them.
@@ -9824,7 +9835,7 @@ To be specific, there are two similar tables, the outPointer array, and one in t
 
 In case of either success or failure, the headers must be restored.  In the event of primitive failure, the table of outPointers must also be nilled out (since the garbage in the high half will not have been discarded)."
 
-	| endSeg firstIn firstOut lastIn lastOut limitSeg newSegLimit unmarkedClasses |
+	| endSeg firstIn firstOut lastIn lastOut limitSeg scanned newSegLimit unmarkedClasses |
 	true ifTrue: [^PrimErrUnsupported] ifFalse: [
 
 	((self hasOverflowHeader: outPointerArray)						"Must have 128-bit header"
@@ -9841,10 +9852,9 @@ In case of either success or failure, the headers must be restored.  In the even
 	firstIn := endSeg - ((self numSlotsOf: segmentWordArray) // 8).  "Take 1/8 of seg"
 	lastIn := firstIn - self bytesPerOop.
 
-	self assert: self allObjectsUnmarked.
-	self markObjectsIn: arrayOfRoots.
-	self markObjects.
-	self unmarkObjectsIn: arrayOfRoots.
+	"N.B.  A side effect of this marking is that all forwarders are followed,
+	 so while forwarders may exist in te heap they will *not* be reachable."
+	self markAllExceptTransitiveClosureOf: arrayOfRoots.
 
 	"All external objects, and only they, are now marked."
 	unmarkedClasses := self arrayOfUnmarkedClasses.
@@ -9855,7 +9865,7 @@ In case of either success or failure, the headers must be restored.  In the even
 	limitSeg >= endSeg ifTrue: [^PrimErrGenericFailure].
 	self long32At: limitSeg put: self imageSegmentVersion.
 	self long32At: limitSeg + 4 put: (self numSlotsOf: unmarkedClasses).
-	limitSeg := limitSeg + 8.
+	scanned := limitSeg := limitSeg + 8.
 
 	"If there are any classes then copy them into the segment, and forward their oop."
 	(self numSlotsOf: unmarkedClasses) > 0 ifTrue:
@@ -9876,7 +9886,22 @@ In case of either success or failure, the headers must be restored.  In the even
 		^PrimErrGenericFailure].
 	limitSeg := newSegLimit.
 
-	"Now traverse arrayOfRoots, copying unmarked objects into the segment"
+	"Now traverse the objects copied to the segment so far, copying unmarked objects into the segment.
+	 This is essentially the same algorithm as the breadth-first copying algorithm in scavenging."
+	scanned := self objectStartingAt: scanned.
+	[scanned < limitSeg] whileTrue:	
+		[1 to: (self numPointerSlotsOf: scanned) do:
+			[:i| | oop |
+			 oop := self fetchPointer: i ofObject: scanned.
+			 ((self isImmediate: oop) or: [(self isForwarded: oop) or: [self isMarked: oop]]) ifFalse:
+				[((lastIn := lastIn + self bytesPerOop) >= endSeg
+				  or: [0 = (newSegLimit := self copyObj: oop toSegment: segmentWordArray addr: limitSeg stopAt: firstIn saveOopAt: lastIn)]) ifTrue:
+					[lastIn := lastIn - self bytesPerWord.
+					self restoreObjectsFrom: firstIn to: lastIn from: segmentWordArray + self baseHeaderSize to: limitSeg.
+					self fillObj: outPointerArray numSlots: (self numSlotsOf: outPointerArray) with: nilObj.
+					^PrimErrGenericFailure].
+				 limitSeg := newSegLimit]].
+		scanned := self objectAfter: scanned].
 
 	"Now the primitive can not fail; traverse the objects in the segment, unforwarding the originals and mapping external oops."
 	self flag: 'you are here']
