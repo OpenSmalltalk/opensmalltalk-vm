@@ -227,6 +227,24 @@ SpurBootstrapMonticelloPackagePatcher >> filesForPackage: package in: aDirectory
 		 and: [(fileName copyFrom: package name size + 2 to: package name size + 5) ~= 'spur']]]
 ]
 
+{ #category : #configurations }
+SpurBootstrapMonticelloPackagePatcher >> findOldestConfigurationFor: packageVersions inVersionNames: configurationVersionNames repository: repo [
+	| oldest |
+	oldest := configurationVersionNames first.
+	configurationVersionNames do:
+		[:cfgver| | config |
+		config := repo versionNamed: cfgver.
+		(packageVersions noneSatisfy:
+			[:pkgver| | configVersion |
+			configVersion := config dependencies detect:
+								[:dep|
+								 pkgver packageName = dep package name].
+			configVersion versionInfo versionNumber >= pkgver versionNumber]) ifTrue:
+				[^oldest].
+		oldest := cfgver].
+	self error: 'couldn''t find configuration newer than supplied versions'
+]
+
 { #category : #initialization }
 SpurBootstrapMonticelloPackagePatcher >> from: sourceDirName to: destDirName [
 	sourceDir := self directoryFrom: sourceDirName.
@@ -263,6 +281,12 @@ SpurBootstrapMonticelloPackagePatcher >> modifiedCharacterDefinitionsIn: definit
 		collect: [:d| { d. self patchDefinition: d withRewriter: rewriter} ]
 		thenSelect: [:pair| pair first source ~= pair second source])
 			collect: [:pair| pair second])
+]
+
+{ #category : #'private-accessing' }
+SpurBootstrapMonticelloPackagePatcher >> packages [
+	"Answer the packages Spur modifies."
+	^self packagesAndPatches keys
 ]
 
 { #category : #'private-accessing' }
@@ -351,7 +375,7 @@ SpurBootstrapMonticelloPackagePatcher >> patchAndUploadAllInTrunk [
 	cacheRepo := MCCacheRepository default.
 	(trunk := self trunk) cacheAllFileNamesDuring:
 		[| latestBranches latestUnbranched |
-		latestBranches := self packagesAndPatches keys collect:
+		latestBranches := self packages collect:
 							[:package|
 							(trunk versionNamesForPackageNamed: package name, '.spur') detectMin: [:vn | vn asMCVersionName versionNumber]].
 		latestUnbranched := latestBranches collect: [:verName| (trunk versionNamed: (verName copyReplaceAll: '.spur' with: '') asMCVersionName) info ancestors first versionName].
@@ -378,7 +402,7 @@ SpurBootstrapMonticelloPackagePatcher >> patchAndUploadNewer [
 	repo := self repositoryForUrl: MCMcmUpdater defaultUpdateURL.
 	sourceRepo := MCDirectoryRepository directory: sourceDir.
 	repo cacheAllFileNamesDuring:
-		[self packagesAndPatches keys do:
+		[self packages do:
 			[:package| | workingCopy |
 			workingCopy := MCWorkingCopy allManagers detect: [:pkg| pkg packageName = package packageName].
 			(workingCopy possiblyNewerVersionsIn: repo) do:
@@ -406,7 +430,7 @@ SpurBootstrapMonticelloPackagePatcher >> patchAndUploadUnpatchedInTrunk [
 	cacheRepo := MCCacheRepository default.
 	(trunk := self trunk) cacheAllFileNamesDuring:
 		[| latestBranches latestUnbranched |
-		latestBranches := self packagesAndPatches keys collect:
+		latestBranches := self packages collect:
 							[:package|
 							(trunk versionNamesForPackageNamed: package name, '.spur') detectMax: [:vn | vn asMCVersionName versionNumber]].
 		latestUnbranched := latestBranches collect: [:verName| (verName copyReplaceAll: '.spur' with: '') asMCVersionName].
@@ -527,6 +551,37 @@ SpurBootstrapMonticelloPackagePatcher >> spurBranchNameForInfo: versionInfo pack
 	^versionInfo name copyReplaceAll: package name with: package name, '.spur'
 ]
 
+{ #category : #configurations }
+SpurBootstrapMonticelloPackagePatcher >> spurConfigurationOf: anMCConfiguration forRepository: repo [
+	"Answer a copy of anMCConfiguration containing the matching Spur dependencies.
+	 If no replacements could be made (because no Spur versions exist) then answer nil."
+	| found clone |
+	found := false.
+	clone := Array streamContents:
+				[:s|
+				s nextPut: #name; nextPut: (anMCConfiguration name copyReplaceAll: 'update-' with: 'update.spur-');
+				 "no location accessor!!"
+				  nextPut: #repository; nextPut: {anMCConfiguration repositories first locationWithTrailingSlash allButLast}.
+				 anMCConfiguration dependencies do:
+					[:dep| | info pkg ver spurVersionName |
+					 info := dep versionInfo.
+					 ((pkg := self packages
+								detect: [:package| package name = dep package name]
+								ifNone: []) notNil
+					  and: [spurVersionName := (info name
+													copyReplaceAll: pkg name
+													with: pkg name, '.spur'), '.mcz'.
+						 (ver := MCCacheRepository default versionNamed: spurVersionName asMCVersionName) ifNil:
+							[ver := repo versionNamed: spurVersionName asMCVersionName].
+						 ver notNil])
+						ifTrue: [found := true. info := ver info].
+					(ver isNil and: [spurVersionName notNil]) ifTrue:
+						[Transcript nextPutAll: 'failed to get ', spurVersionName, ' in ', anMCConfiguration name; cr; flush].
+					s nextPut: #dependency; nextPut: (MCConfiguration dependencyToArray: (MCVersionDependency package: dep package info: info))]].
+	^found ifTrue:
+		[MCConfiguration fromArray: clone]
+]
+
 { #category : #patching }
 SpurBootstrapMonticelloPackagePatcher >> storeVersion: newVersion [
 	[(MCDirectoryRepository new directory: destDir) storeVersion: newVersion]
@@ -545,6 +600,40 @@ SpurBootstrapMonticelloPackagePatcher >> uploadFrom: localRepo to: uploadReposit
 		[:version|
 		(uploadRepository includesVersionNamed: version info name) ifFalse:
 			[uploadRepository storeVersion: version]]
+]
+
+{ #category : #configurations }
+SpurBootstrapMonticelloPackagePatcher >> uploadNewerSpurConfigurationsInTrunk [
+	"Make sure that update.spur configurations exist for all relevant update.* configurations."
+	"SpurBootstrapMonticelloPackagePatcher new uploadNewerSpurConfigurationsInTrunk"
+	| trunk |
+	trunk := self trunk.
+	trunk cacheAllFileNamesDuring:
+		[| configurations spurConfigurations oldestUpdate |
+		 spurConfigurations := (trunk versionNamesForPackageNamed: 'update.spur') sort: [:a :b| a versionNumber > b versionNumber].
+		 configurations := ((trunk versionNamesForPackageNamed: 'update') select: [:n| n beginsWith: 'update-']) sort: [:a :b| a versionNumber > b versionNumber].
+		 oldestUpdate := spurConfigurations isEmpty
+							ifTrue:
+								[| earliestBranches earliestUnbranched  |
+								 earliestBranches := self packages collect:
+														[:package|
+														(trunk versionNamesForPackageNamed: package name, '.spur') detectMin:
+															[:vn | vn asMCVersionName versionNumber]].
+								 earliestUnbranched := earliestBranches collect:
+															[:verName| (verName copyReplaceAll: '.spur' with: '') asMCVersionName].
+								 self
+									findOldestConfigurationFor: earliestUnbranched
+									inVersionNames: configurations
+									repository: trunk]
+							ifFalse:
+								[spurConfigurations first copyReplaceAll: '.spur' with: ''].
+		 Transcript nextPutAll: 'Oldest: ', oldestUpdate; cr; flush.
+		 (configurations copyFrom: 1 to: (configurations indexOf: oldestUpdate) - 1) reverseDo:
+			[:configName|
+			 "((configName beginsWith: 'update-eem.29') and: ['34' includes: (configName at: 14)]) ifTrue:
+				[self halt]."
+			 (self spurConfigurationOf: (trunk versionNamed: configName) forRepository: trunk) ifNotNil:
+				[:edition| trunk storeVersion: edition]]]
 ]
 
 { #category : #patching }
