@@ -480,7 +480,7 @@ SpurBootstrap >> bootstrapImageUsingFileDirectory: imageName [
 	baseName := (imageName endsWith: '.image')
 					ifTrue: [FileDirectory baseNameFor: imageName]
 					ifFalse: [FileDirectory localNameFor: imageName].
-	dir := dirName isEmpty ifTrue: [FileDirectory default] ifFalse: [FileDirectory on: dirName].
+	dir := dirName isEmpty ifTrue: [FileDirectory default] ifFalse: [FileDirectory default on: dirName].
 	self on: (dir fullNameFor: baseName, '.image').
 	[self transform]
 		on: Halt
