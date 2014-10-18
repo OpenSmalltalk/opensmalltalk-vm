@@ -938,7 +938,7 @@ CCodeGenerator >> emitBuiltinConstructAsArgumentFor: msgNode on: aStream level: 
 	"If the given selector is in the translation dictionary, translate it into a target code construct and return true. Otherwise, do nothing and return false."
 
 	| action |
-	(self messageReceiverIsInterpreterProxy: msgNode) ifTrue:
+	(self shouldGenerateAsInterpreterProxySend: msgNode) ifTrue:
 		[^false].
 	action := asArgumentTranslationDict
 				at: msgNode selector
@@ -952,7 +952,7 @@ CCodeGenerator >> emitBuiltinConstructFor: msgNode on: aStream level: level [
 	"If the given selector is in the translation dictionary, translate it into a target code construct and return true. Otherwise, do nothing and return false."
 
 	| action |
-	(self messageReceiverIsInterpreterProxy: msgNode) ifTrue:
+	(self shouldGenerateAsInterpreterProxySend: msgNode) ifTrue:
 		[^false].
 	action := translationDict at: msgNode selector ifAbsent: [ ^false ].
 	self perform: action with: msgNode with: aStream with: level.
@@ -1089,7 +1089,9 @@ CCodeGenerator >> emitCExpression: aParseNode on: aStream [
 CCodeGenerator >> emitCExpression: aParseNode on: aStream indent: level [
 	"Emit C code for the expression described by the given parse node."
 
-	aParseNode isLeaf 
+	(aParseNode isLeaf
+	 or: [aParseNode isSend
+		 and: [#(bytesPerOop bytesPerWord baseHeaderSize) includes: aParseNode selector]])
 		ifTrue: 
 			["omit parens"
 			 aParseNode emitCCodeAsExpressionOn: aStream level: level generator: self]
@@ -1625,6 +1627,14 @@ CCodeGenerator >> generateBitXor: msgNode on: aStream indent: level [
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream nextPutAll: ' ^ '.
 	self emitCExpression: msgNode args first on: aStream.
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateBytesPerOop: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream.
+	 Would prefer to use OopSize than BytesPerOop (shorter)."
+
+	aStream nextPutAll: 'BytesPerOop'
 ]
 
 { #category : #'C translation' }
@@ -3029,6 +3039,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#raisedTo:					#generateRaisedTo:on:indent:
 	#touch:						#generateTouch:on:indent:
 
+	#bytesPerOop 				#generateBytesPerOop:on:indent:
 	#bytesPerWord 			#generateBytesPerWord:on:indent:
 	#baseHeaderSize			#generateBaseHeaderSize:on:indent:
 	
@@ -3446,6 +3457,12 @@ CCodeGenerator >> methodsThatCanInvoke: aSelectorList [
 	].
 	^ out
 	
+]
+
+{ #category : #accessing }
+CCodeGenerator >> mostBasicConstantSelectors [
+	"c.f. VMBasicConstants class>>#mostBasicConstantNames"
+	^#(baseHeaderSize bytesPerOop bytesPerWord)
 ]
 
 { #category : #'C code generator' }
@@ -3966,6 +3983,12 @@ CCodeGenerator >> selectorsAndMethodsDo: aBinaryBlock [
 CCodeGenerator >> shortMonticelloDescriptionForClass: aClass [
 	"Answer a suitable Monticello package stamp to include in a moduleName."
 	^self class shortMonticelloDescriptionForClass: aClass
+]
+
+{ #category : #utilities }
+CCodeGenerator >> shouldGenerateAsInterpreterProxySend: aSendNode [
+	^(self messageReceiverIsInterpreterProxy: aSendNode)
+	  and: [(self mostBasicConstantSelectors includes: aSendNode selector) not]
 ]
 
 { #category : #utilities }

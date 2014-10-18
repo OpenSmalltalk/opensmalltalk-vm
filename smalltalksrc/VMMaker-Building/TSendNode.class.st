@@ -147,7 +147,7 @@ TSendNode >> emitCCodeAsFunctionCallOn: aStream level: level generator: aCodeGen
 	"Translate this message send into a C function call"
 	"Special case for pluggable modules. Replace messages to interpreterProxy
 	 by interpreterProxy->message(..) if the message is not builtin"
-	(aCodeGen messageReceiverIsInterpreterProxy: self) ifTrue:
+	(aCodeGen shouldGenerateAsInterpreterProxySend: self) ifTrue:
 		[(aCodeGen noteUsedPluginFunction: selector) ifTrue:
 			[aStream nextPutAll: 'interpreterProxy->']].
 

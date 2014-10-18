@@ -229,7 +229,7 @@ NewsqueakIA32ABIPlugin >> primBoxedFree [
 	<var: #sizeField type: 'long'>
 
 	rcvr := interpreterProxy stackObjectValue: 0.
-	(interpreterProxy byteSizeOf: rcvr) >= 2 * BytesPerOop ifFalse:
+	(interpreterProxy byteSizeOf: rcvr) >= (2 * interpreterProxy bytesPerOop) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	ptr := interpreterProxy firstIndexableField: rcvr.
 	sizeField := ptr at: 0.
@@ -502,14 +502,14 @@ NewsqueakIA32ABIPlugin >> primInLibraryFindSymbol [
 	functionName := interpreterProxy stackValue: 0.
 	libraryProxy := interpreterProxy stackValue: 1.
 	((self isAlien: libraryProxy)
-	 and: [(interpreterProxy byteSizeOf: libraryProxy) >= 2 * BytesPerOop
+	 and: [(interpreterProxy byteSizeOf: libraryProxy) >= (2 * interpreterProxy bytesPerOop)
 	 and: [interpreterProxy isBytes: functionName]]) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	address := interpreterProxy
 					ioLoadSymbol: (self cCoerce: (interpreterProxy firstIndexableField: functionName)
 										to: #sqInt)
 					OfLength: (interpreterProxy byteSizeOf: functionName)
-					FromModule: (self longAt: libraryProxy + BaseHeaderSize + BytesPerOop).
+					FromModule: (self longAt: libraryProxy + interpreterProxy baseHeaderSize + interpreterProxy bytesPerOop).
 	(interpreterProxy failed
 	 or: [address = 0]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNotFound].

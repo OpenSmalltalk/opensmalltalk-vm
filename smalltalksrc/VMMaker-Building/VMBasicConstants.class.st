@@ -77,5 +77,6 @@ Class {
 
 { #category : #accessing }
 VMBasicConstants class >> mostBasicConstantNames [
+	"c.f. CCodeGenerator class>>#mostBasicConstantSelectors"
 	^#(BaseHeaderSize BytesPerWord BytesPerOop)
 ]
