@@ -11,3 +11,8 @@ TConstantNode >> emitJSCodeOn: aStream level: level generator: aCodeGen [
 TConstantNode >> isConstantZero [
 	^ value = 0
 ]
+
+{ #category : #'*vmmakerjs' }
+TConstantNode >> isFloatIn: aCodeGen [
+	^value isFloat
+]
