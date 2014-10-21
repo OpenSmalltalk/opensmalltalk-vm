@@ -5748,13 +5748,14 @@ StackInterpreter >> findClassContainingMethod: meth startingAt: classObj [
 	 classDict := objectMemory noFixupFollowField: MethodDictionaryIndex ofObject: currClass.
 	 self assert: (objectMemory isForwarded: classDict) not.
 	 classDictSize := objectMemory numSlotsOf: classDict.
-	 methodArray := objectMemory noFixupFollowField: MethodArrayIndex ofObject: classDict.
-	 self assert: (objectMemory isForwarded: methodArray) not.
-	 i := 0.
-	 [i < (classDictSize - SelectorStart)] whileTrue:
-		[meth = (objectMemory noFixupFollowField: i ofObject: methodArray) ifTrue:
-			[^currClass].
-		 i := i + 1].
+	 classDictSize > MethodArrayIndex ifTrue:
+		[methodArray := objectMemory noFixupFollowField: MethodArrayIndex ofObject: classDict.
+		 self assert: (objectMemory isForwarded: methodArray) not.
+		 i := 0.
+		 [i < (classDictSize - SelectorStart)] whileTrue:
+			[meth = (objectMemory noFixupFollowField: i ofObject: methodArray) ifTrue:
+				[^currClass].
+			 i := i + 1]].
 	 currClass := self noFixupSuperclassOf: currClass.
 	 currClass = objectMemory nilObject] whileFalse.
 	^currClass		"method not found in superclass chain"
@@ -5974,14 +5975,15 @@ StackInterpreter >> findSelectorAndClassForMethod: meth lookupClass: startClass 
 	currClass := startClass.
 	[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currClass.
 	 classDictSize := objectMemory numSlotsOf: classDict.
-	 methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
-	 i := 0.
-	 [i <= (classDictSize - SelectorStart)] whileTrue:
-		[meth = (objectMemory fetchPointer: i ofObject: methodArray) ifTrue:
-			[^binaryBlock
-				value: (objectMemory fetchPointer: i + SelectorStart ofObject: classDict)
-				value: currClass].
-			i := i + 1].
+	 classDictSize > MethodArrayIndex ifTrue:
+		[methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
+		 i := 0.
+		 [i <= (classDictSize - SelectorStart)] whileTrue:
+			[meth = (objectMemory fetchPointer: i ofObject: methodArray) ifTrue:
+				[^binaryBlock
+					value: (objectMemory fetchPointer: i + SelectorStart ofObject: classDict)
+					value: currClass].
+				i := i + 1]].
 	 currClass := self superclassOf: currClass.
 	 currClass = objectMemory nilObject] whileFalse.
 	^binaryBlock    "method not found in superclass chain"
@@ -6003,12 +6005,13 @@ StackInterpreter >> findSelectorOfMethod: methArg [
 	(self addressCouldBeClassObj: classObj) ifTrue:
 		[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: classObj.
 		 classDictSize := objectMemory numSlotsOf: classDict.
-		 methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
-		 i := 0.
-		 [i < (classDictSize - SelectorStart)] whileTrue:
-			[meth = (objectMemory fetchPointer: i ofObject: methodArray) ifTrue:
-				[^(objectMemory fetchPointer: i + SelectorStart ofObject: classDict)].
-				 i := i + 1]].
+		 classDictSize > MethodArrayIndex ifTrue:
+			[methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: classDict.
+			 i := 0.
+			 [i < (classDictSize - SelectorStart)] whileTrue:
+				[meth = (objectMemory fetchPointer: i ofObject: methodArray) ifTrue:
+					[^(objectMemory fetchPointer: i + SelectorStart ofObject: classDict)].
+					 i := i + 1]]].
 	^objectMemory nilObject
 ]
 
@@ -11611,7 +11614,8 @@ StackInterpreter >> readableFormat: imageVersion [
 	 Allows a virtual machine to accept selected older image formats."
 
 	^imageVersion = self imageFormatVersion "Float words in platform-order"
-	   or: [imageVersion = self imageFormatCompatibilityVersion] "Float words in BigEndian order"
+	   or: [objectMemory hasSpurMemoryManagerAPI not "No compatibility version for Spur as yet"
+			and: [imageVersion = self imageFormatCompatibilityVersion]] "Float words in BigEndian order"
 ]
 
 { #category : #'internal interpreter access' }

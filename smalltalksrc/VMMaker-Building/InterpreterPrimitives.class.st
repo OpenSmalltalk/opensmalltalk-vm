@@ -2247,11 +2247,11 @@ InterpreterPrimitives >> primitiveLoadImageSegment [
 	 and: [objectMemory isWords: segmentWordArray])	"Must be indexable words"
 		ifFalse: [^self primitiveFail].
 
-	"the engine returns the roots array which was first in the segment, or 0 on failure"
+	"the engine returns the roots array which was first in the segment, or an error code on failure."
 	result := objectMemory loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray.
-	result = 0
-		ifTrue: [self primitiveFail]
-		ifFalse: [self pop: 3 thenPush: result]
+	(self oop: result isGreaterThan: segmentWordArray)
+		ifTrue: [self pop: 3 thenPush: result]
+		ifFalse: [self primitiveFailFor: result]
 ]
 
 { #category : #'system control primitives' }
