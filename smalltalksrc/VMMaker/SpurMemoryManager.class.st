@@ -1329,7 +1329,7 @@ SpurMemoryManager >> allInstancesOf: aClass [
 		[freeChunk := self allocateSlots: 0 format: self arrayFormat classIndex: ClassArrayCompactIndex.
 		 ^freeChunk].
 	MarkObjectsForEnumerationPrimitives ifTrue:
-		[self markObjects]. "may not want to revive objects unnecessarily; but marking is sloooow."
+		[self markObjects: true]. "may not want to revive objects unnecessarily; but marking is sloooow."
 	freeChunk := self allocateLargestFreeChunk.
 	start := freeChunk + self baseHeaderSize.
 	limit := self addressAfter: freeChunk.
@@ -1418,7 +1418,7 @@ SpurMemoryManager >> allObjects [
 	 1/4 of the address space, the count can never overflow."
 	| freeChunk ptr start limit count bytes |
 	MarkObjectsForEnumerationPrimitives ifTrue:
-		[self markObjects]. "may not want to revive objects unnecessarily; but marking is sloooow."
+		[self markObjects: true]. "may not want to revive objects unnecessarily; but marking is sloooow."
 	freeChunk := self allocateLargestFreeChunk.
 	ptr := start := freeChunk + self baseHeaderSize.
 	limit := self addressAfter: freeChunk.
@@ -2315,29 +2315,6 @@ SpurMemoryManager >> arrayClassIndexPun [
 SpurMemoryManager >> arrayFormat [
 	<api>
 	^2
-]
-
-{ #category : #'image segment in/out' }
-SpurMemoryManager >> arrayOfUnmarkedClasses [
-	| nClasses classes i |
-	nClasses := 0.
-	self classTableEntriesDo:
-		[:class :ignored|
-		 (self isMarked: class) ifFalse:
-			[nClasses := nClasses + 1]].
-	nClasses = 0 ifTrue:
-		[^nilObj].
-	classes := self allocateSlots: nClasses format: self arrayFormat classIndex: ClassArrayCompactIndex.
-	classes ifNil:
-		[^self integerObjectOf: PrimErrNoMemory].
-	i := 0.
-	self classTableEntriesDo:
-		[:class :ignored|
-		 (self isMarked: class) ifFalse:
-			[self storePointer: i ofObject: classes withValue: class.
-			 i := i + 1]].
-	self assert: nClasses = i.
-	^classes
 ]
 
 { #category : #'simulation only' }
@@ -3626,31 +3603,38 @@ SpurMemoryManager >> copyAndForward: objOop withBytes: bytes toFreeChunk: freeCh
 ]
 
 { #category : #'image segment in/out' }
-SpurMemoryManager >> copyObj: objOop toSegment: segmentWordArray addr: limitSeg stopAt: stopAddr saveOopAt: oopPtr [
-	"Copy objOop into the segment beginning at limitSeg, and forward it to the copy.
-	 Fail if out of space.  Answer the next segmentAddr if successful."
+SpurMemoryManager >> copyObj: objOop toAddr: segAddr startAt: segStart stopAt: endSeg [
+	"Copy objOop into the segment beginning at segAddr, and forward it to the copy.
+	 If it is a class in the class table, set the copy's hash to 0 for reassignment on load.
+	 Answer the next segmentAddr if successful.  Answer an appropriate error code if not"
 
 	"Copy the object..."
-	| bodySize copy |
+	| bodySize copy hash newOop |
 	<inline: false>
 	bodySize := self bytesInObject: objOop.
-	(self oop: limitSeg + bodySize isGreaterThanOrEqualTo: stopAddr) ifTrue:
-		[^0]. "failure"
-	self mem: limitSeg asVoidPointer cp: (self startOfObject: objOop) asVoidPointer y: bodySize.
-	copy := self objectStartingAt: limitSeg.
+	(self oop: segAddr + bodySize isGreaterThanOrEqualTo: endSeg) ifTrue:
+		[^PrimErrWritePastObject].
+	self mem: segAddr asVoidPointer cp: (self startOfObject: objOop) asVoidPointer y: bodySize.
+	copy := self objectStartingAt: segAddr.
 
-	"Clear remebered pinned and mark bits of all headers copied into the segment"
+	"Clear remembered, mark bits of all headers copied into the segment"
 	self
 		setIsRememberedOf: copy to: false;
-		setIsPinnedOf: copy to: false;
 		setIsMarkedOf: copy to: false.
+	"If the object is a class, zero its identityHash (which is its classIndex).
+	 The class will be assigned a new hash on load."
+	hash := self rawHashBitsOf: objOop.
+	(hash > self lastClassIndexPun and: [(self classOrNilAtIndex: hash) = objOop]) ifTrue:
+		[self setHashBitsOf: copy to: 0].
 
-	"Remember the oop for undoing in case of prim failure."
-	self longAt: oopPtr put: objOop.	
-	self forward: objOop to: copy.
+	newOop := copy - segStart / self allocationUnit.
+	newOop > self maxIdentityHash ifTrue:
+		[^PrimErrLimitExceeded].
+	self setHashBitsOf: objOop to: copy - segStart / self allocationUnit.
+	self setIsMarkedOf: objOop to: true.
 
-	"Return new end of segment"
-	^limitSeg + bodySize
+	"Answer the new end of segment"
+	^segAddr + bodySize
 ]
 
 { #category : #'debug support' }
@@ -3936,13 +3920,6 @@ SpurMemoryManager >> emptyObjStack: objStack [
 SpurMemoryManager >> endOfMemory [
 	<cmacro: '() GIV(endOfMemory)'>
 	^endOfMemory
-]
-
-{ #category : #'gc - incremental' }
-SpurMemoryManager >> ensureAllMarkBitsAreZero [
-	"If the incremental collector is running mark bits may be set; stop it and clear them if necessary."
-	self flag: 'need to implement the inc GC first...'.
-	self assert: self allObjectsUnmarked
 ]
 
 { #category : #'class table' }
@@ -4799,11 +4776,21 @@ SpurMemoryManager >> freeListsObject [
 
 { #category : #'free space' }
 SpurMemoryManager >> freeObject: objOop [
+	"Free an object in oldSpace.  Coalesce if possible to reduce fragmentation."
 	<api>
-	| bytes |
+	<inline: false>
+	| bytes start next |
+	self assert: (self isInOldSpace: objOop).
+	(self isRemembered: objOop) ifTrue:
+		[scavenger forgetObject: objOop].
 	bytes := self bytesInObject: objOop.
+	start := self startOfObject: objOop.
+	next := self objectStartingAt: start + bytes.
+	(self isFreeObject: next) ifTrue:
+		[self detachFreeObject: next.
+		 bytes := bytes + (self bytesInObject: next)].
 	totalFreeOldSpace := totalFreeOldSpace + bytes.
-	^self freeChunkWithBytes: bytes at: (self startOfObject: objOop)
+	^self freeChunkWithBytes: bytes at: start
 ]
 
 { #category : #snapshot }
@@ -4814,27 +4801,6 @@ SpurMemoryManager >> freeOldSpaceStart [
 { #category : #'free space' }
 SpurMemoryManager >> freeSize [
 	^totalFreeOldSpace
-]
-
-{ #category : #'free space' }
-SpurMemoryManager >> freeSmallObject: objOop [
-	"Free a small object.  The wrinkle here is that we don't tolerate a zero-slot
-	 count in a free object so that the (self longLongAt: objOop) ~= 0 assert in
-	 isEnumerableObject: isn't triggered."
-		 
-	| headerNumSlots bytes index |
-	headerNumSlots := self rawNumSlotsOf: objOop.
-	headerNumSlots = 0
-		ifTrue:
-			[self setRawNumSlotsOf: objOop to: 1.
-			 index := self baseHeaderSize + self allocationUnit / self allocationUnit]
-		ifFalse:
-			[bytes := self bytesInObject: objOop.
-			 index := bytes / self allocationUnit.
-			 self assert: index < self numFreeLists].
-	self setFree: objOop. 
-	self storePointer: self freeChunkNextIndex ofFreeChunk: objOop withValue: (freeLists at: index).
-	freeLists at: index put: objOop
 ]
 
 { #category : #'debug support' }
@@ -5016,9 +4982,7 @@ SpurMemoryManager >> globalGarbageCollect [
 	self assert: (self isEmptyObjStack: markStack).
 	self assert: (self isEmptyObjStack: weaklingStack).
 
-	self markObjects.
-	self expungeDuplicateAndUnmarkedClasses: true.
-	self nilUnmarkedWeaklingSlots.
+	self markObjects: true.
 	self freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact.
 
 	"Mid-way the leak check must be more lenient.  Unmarked classes will have been
@@ -6024,9 +5988,7 @@ SpurMemoryManager >> isGrey: objOop [
 
 { #category : #'debug support' }
 SpurMemoryManager >> isHiddenObj: objOop [
-	^objOop =  self freeListsObject
-	  or: [(self numSlotsOfAny: objOop) = ObjStackPageSlots
-		and: [self isValidObjStackPage: objOop myIndex: (self fetchPointer: ObjStackMyx ofObject: objOop)]]
+	^(self classIndexOf: objOop) <= self lastClassIndexPun
 ]
 
 { #category : #'object testing' }
@@ -6640,6 +6602,12 @@ SpurMemoryManager >> leakCheckFullGC [
 ]
 
 { #category : #'debug support' }
+SpurMemoryManager >> leakCheckImageSegments [
+	<api>
+	^(checkForLeaks bitAnd: 16) ~= 0
+]
+
+{ #category : #'debug support' }
 SpurMemoryManager >> leakCheckIncrementalGC [
 	<api>
 	^(checkForLeaks bitAnd: 8) ~= 0
@@ -6714,14 +6682,136 @@ SpurMemoryManager >> literalCountOfMethodHeader: header [
 	^(self integerValueOf: header) bitAnd: 16rFFFF
 ]
 
-{ #category : #'primitive support' }
-SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray [
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> loadImageSegmentFrom: segmentWordArrayArg outPointers: outPointerArray [
 	"This primitive is called from Squeak as...
 		<imageSegment> loadSegmentFrom: aWordArray outPointers: anArray."
 
-"This primitive will load a binary image segment created by primitiveStoreImageSegment.  It expects the outPointer array to be of the proper size, and the wordArray to be well formed.  It will return as its value the original array of roots, and the erstwhile segmentWordArray will have been truncated to a size of zero.  If this primitive should fail, the segmentWordArray will, sadly, have been reduced to an unrecognizable and unusable jumble.  But what more could you have done with it anyway?"
+	"This primitive will load a binary image segment created by primitiveStoreImageSegment.
+	 It expects the outPointer array to be of the proper size, and the wordArray to be well formed.
+	 It will return as its value the original array of roots, and the erstwhile segmentWordArray will
+	 have been truncated to a size of zero.  If this primitive should fail, the segmentWordArray will,
+	 sadly, have been reduced to an unrecognizable and unusable jumble.  But what more could you
+	 have done with it anyway?"
 
-	^PrimErrUnsupported
+	"First thing is to verify format.  If Spur is ever ported to big-endian machines then the segment
+	 may have to be byte/word swapped, but so far it only runs on little-endian machines, so for now
+	 just fail if endinanness is wrong."
+
+	<inline: false>
+	| segmentWordArray firstNeedingPostProcessing numOutPointers objOop segLimit segStart segVersion topHashBit topOopBit |
+	segVersion := self longAt: segmentWordArrayArg + self baseHeaderSize.
+	(coInterpreter readableFormat: (segVersion bitAnd: 16rFFFF "low 2 bytes")) ifFalse:
+		[^PrimErrBadArgument].
+
+	"If segmentWordArrayArg is too short to be truncated, clone it so that the clone is long enough."
+	(self hasOverflowHeader: segmentWordArrayArg)
+		ifTrue:
+			[segmentWordArray := segmentWordArrayArg]
+		ifFalse:
+			[segmentWordArray := self allocateSlots: self numSlotsMask + 1
+										format: (self formatOf: segmentWordArrayArg)
+										classIndex: (self classIndexOf: segmentWordArrayArg).
+			 segmentWordArray ifNil: [^PrimErrNoMemory].
+			 self mem: segmentWordArray + self baseHeaderSize
+				 cp: segmentWordArrayArg + self baseHeaderSize
+				 y: (self numSlotsOf: segmentWordArrayArg) * self bytesPerOop].
+
+	segStart := segmentWordArray + self baseHeaderSize + self allocationUnit.
+	segLimit := (self numSlotsOf: segmentWordArrayArg) * self bytesPerOop + segmentWordArray + self baseHeaderSize.
+
+	"scan through mapping oops and validating class references.
+	 Defer entering any class objects into the class table and/or
+	 pinning objects until a second pass."
+	numOutPointers := self numSlotsOf: outPointerArray.
+	firstNeedingPostProcessing := 0.
+	topHashBit := 1 bitShift: self identityHashFieldWidth - 1.
+	topOopBit := 1 bitShift: self bytesPerOop * 8 - 1.
+	objOop := self objectStartingAt: segStart.
+	[objOop < segLimit] whileTrue:
+		[| classIndex hash oop outPointer |
+		 ((self isRemembered: objOop) or: [self isMarked: objOop]) ifTrue:
+			[^PrimErrInappropriate].
+		 (firstNeedingPostProcessing = 0
+		  and: [(self isInNewSpace: objOop)
+		  and: [self isPinned: objOop]]) ifTrue:
+			[firstNeedingPostProcessing := objOop].
+		 classIndex := self classIndexOf: objOop.
+		 (classIndex anyMask: topHashBit)
+			ifTrue:
+				[classIndex - topHashBit >= numOutPointers ifTrue:
+					[^PrimErrBadIndex].
+				 outPointer := self fetchPointer: classIndex - topHashBit ofObject: outPointerArray.
+				 hash := self rawHashBitsOf: outPointer.
+				 (hash > self lastClassIndexPun and: [(self classOrNilAtIndex: hash) = outPointer]) ifFalse:
+					[^PrimErrInappropriate].
+				 self setClassIndexOf: objOop to: hash]
+			ifFalse: "The class is contained within the segment."
+				[(oop := classIndex * self allocationUnit + segStart) >= segLimit ifTrue:
+					[^PrimErrBadIndex].
+				 (self rawHashBitsOf: oop) ~= 0 ifTrue:
+					[^PrimErrInappropriate].
+				 self setIsRememberedOf: objOop to: true.
+				 "Don't populate the classTable until all oops have been mapped."
+				 firstNeedingPostProcessing = 0 ifTrue:
+					[firstNeedingPostProcessing := objOop]].
+		 0 to: (self numPointerSlotsOf: objOop) - 1 do:
+			[:i|
+			 oop := self fetchPointer: i ofObject: objOop.
+			 (self isNonImmediate: oop) ifTrue:
+				[(oop bitAnd: self allocationUnit - 1) ~= 0 ifTrue:
+					[^PrimErrInappropriate].
+				 (oop anyMask: topOopBit)
+					ifTrue:
+						[oop / self bytesPerOop >= numOutPointers ifTrue:
+							[^PrimErrBadIndex].
+						 outPointer := self fetchPointer: oop / self bytesPerOop ofObject: outPointerArray.
+						 self storePointerUnchecked: i ofObject: objOop withValue: outPointer]
+					ifFalse:
+						[oop + segStart >= segLimit ifTrue:
+							[^PrimErrBadIndex].
+						 self storePointerUnchecked: i ofObject: objOop withValue: oop + segStart]]].
+		 objOop := self objectAfter: objOop limit: segLimit].
+
+	"Scan for classes contained in the segment, entering them into
+	 the class table, and assigning the class indices of their instances."
+	firstNeedingPostProcessing ~= 0 ifTrue:
+		[objOop := firstNeedingPostProcessing.
+		 self assert: (self isRemembered: objOop).
+		 [objOop < segLimit] whileTrue:
+			[(self isRemembered: objOop) ifTrue:
+				[| classIndex hash oop errorCode |
+				 self setIsRememberedOf: objOop to: false.
+				 classIndex := self classIndexOf: objOop.
+				 self deny: (classIndex anyMask: topHashBit). "The class is contained within the segment."
+				 oop := classIndex * self allocationUnit + segStart.
+				 (hash := self rawHashBitsOf: oop) = 0 ifTrue: "The class needs to be added to the classTable"
+					[(errorCode := self enterIntoClassTable: oop) ~= 0 ifTrue:
+						[objOop := self objectStartingAt: segStart.
+						 [objOop < segLimit] whileTrue:
+							[hash := self rawHashBitsOf: objOop.
+							 hash > self lastClassIndexPun and: [(self classOrNilAtIndex: hash) = objOop ifTrue:
+								[self expungeFromClassTable: objOop].
+							 objOop := self objectAfter: objOop limit: segLimit]].
+						 ^errorCode].
+					 hash := self rawHashBitsOf: oop].
+				self setClassIndexOf: objOop to: hash].
+			 ((self isInNewSpace: objOop)
+			  and: [self isPinned: objOop]) ifTrue:
+				[| oldClone |
+				 oldClone := self cloneInOldSpaceForPinning: objOop.
+				 oldClone ~= 0 ifTrue:
+					[self setIsPinnedOf: oldClone to: true.
+					 self forward: objOop to: oldClone]].
+			 objOop := self objectAfter: objOop limit: segLimit]].
+
+	"Finally evaporate the container, leaving the newly loaded objects in place."
+	self setOverflowNumSlotsOf: segmentWordArray to: 0.
+	
+	self leakCheckImageSegments ifTrue:
+		[self runLeakCheckerForFullGC: true].
+
+	^self objectStartingAt: segStart
 ]
 
 { #category : #'debug printing' }
@@ -6845,6 +6935,18 @@ SpurMemoryManager >> mapExtraRoots [
 				[(extraRoots at: i) at: 0 put: (self remapObj: oop)]]]
 ]
 
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> mappedOopOf: objOop topHashBit: topHashBit topOopBit: topOopBit [
+	"objOop is an object whose hash has been set to its mapped oop in either the segment or the
+	 out pointers.  If its hash's top bit is set then it is in out pointers.  Answer the mapped oop."
+	<inline: true>
+	| hash |
+	hash := self rawHashBitsOf: objOop.
+	^(hash anyMask: topHashBit)
+		ifTrue: [hash - topHashBit * self bytesPerOop + topOopBit]
+		ifFalse: [hash * self allocationUnit]
+]
+
 { #category : #'primitive support' }
 SpurMemoryManager >> mark: objOop [
 	<inline: true>
@@ -6852,7 +6954,7 @@ SpurMemoryManager >> mark: objOop [
 ]
 
 { #category : #'gc - global' }
-SpurMemoryManager >> markAccessibleObjects [
+SpurMemoryManager >> markAccessibleObjectsAndFireEphemerons [
 	self assert: self validClassTableRootPages.
 	self assert: segmentManager allBridgesMarked.
 	self cCode: [] "for debugging markAndTrace: set (MarkStackRecord := OrderedCollection new)"
@@ -6871,17 +6973,6 @@ SpurMemoryManager >> markAccessibleObjects [
 	self markWeaklingsAndMarkAndFireEphemerons.
 	self assert: self validObjStacks.
 	marking := false
-]
-
-{ #category : #'image segment in/out' }
-SpurMemoryManager >> markAllExceptTransitiveClosureOf: arrayOfRoots [
-	"Mark all objects in the system except those in arrayOfRoots and objects only reachable from arrayOfRoots.
-	 This is how the image segment writing primitive computes the set of objects to include in a segment."
-
- 	self assert: self allObjectsUnmarked.
-	self markObjectsIn: arrayOfRoots.
-	self markObjects.
-	self unmarkObjectsIn: arrayOfRoots.
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -6944,7 +7035,6 @@ SpurMemoryManager >> markAndTrace: objOop [
 	"Mark the argument, and all objects reachable from it, and any remaining objects
 	 on the mark stack. Follow forwarding pointers in the scan."
 	<api>
-	| objToScan scanLargeObject numStrongSlots index field |
 	"if markAndTrace: is to follow and eliminate forwarding pointers
 	 in its scan it cannot be handed an r-value which is forwarded.
 	 The assert for this is in markAndShouldScan:"
@@ -6952,56 +7042,7 @@ SpurMemoryManager >> markAndTrace: objOop [
 		[^self].
 
 	"Now scan the object, and any remaining objects on the mark stack."
-	objToScan := objOop.
-	"To avoid overflowing the mark stack when we encounter large objects, we
-	 push the obj, then its numStrongSlots, and then index the object from the stack."
-	[(self isImmediate: objToScan)
-		ifTrue: [scanLargeObject := true]
-		ifFalse:
-			[numStrongSlots := self numStrongSlotsOfInephemeral: objToScan.
-			 scanLargeObject := numStrongSlots > self traceImmediatelySlotLimit].
-	 scanLargeObject
-		ifTrue: "scanning a large object. scan until hitting an unmarked object, then switch to it, if any."
-			[(self isImmediate: objToScan)
-				ifTrue:
-					[index := self integerValueOf: objToScan.
-					 objToScan := self topOfObjStack: markStack]
-				ifFalse:
-					[index := numStrongSlots.
-					 self markAndTraceClassOf: objToScan].
-			 [index > 0] whileTrue:
-				[index := index - 1.
-				 field := self fetchPointer: index ofObject: objToScan.
-				 (self isNonImmediate: field) ifTrue:
-					[(self isForwarded: field) ifTrue: "fixFollowedField: is /not/ inlined"
-						[field := self fixFollowedField: index ofObject: objToScan withInitialValue: field].
-					 (self markAndShouldScan: field) ifTrue:
-						[index > 0 ifTrue:
-							[(self topOfObjStack: markStack) ~= objToScan ifTrue: 
-								[self push: objToScan onObjStack: markStack].
-							 self push: (self integerObjectOf: index) onObjStack: markStack].
-						 objToScan := field.
-						 index := -1]]].
-			 index >= 0 ifTrue: "if loop terminated without finding an unmarked referent, switch to top of stack."
-				[objToScan := self popObjStack: markStack.
-				 objToScan = objOop ifTrue:
-					[objToScan := self popObjStack: markStack]]]
-		ifFalse: "scanning a small object. scan, marking, pushing unmarked referents, then switch to the top of the stack."
-			[index := numStrongSlots.
-			 self markAndTraceClassOf: objToScan.
-			 [index > 0] whileTrue:
-				[index := index - 1.
-				 field := self fetchPointer: index ofObject: objToScan.
-				 (self isNonImmediate: field) ifTrue:
-					[(self isForwarded: field) ifTrue: "fixFollowedField: is /not/ inlined"
-						[field := self fixFollowedField: index ofObject: objToScan withInitialValue: field].
-					 (self markAndShouldScan: field) ifTrue:
-						[self push: field onObjStack: markStack.
-						 ((self rawNumSlotsOf: field) > self traceImmediatelySlotLimit
-						  and: [(numStrongSlots := self numStrongSlotsOfInephemeral: field) > self traceImmediatelySlotLimit]) ifTrue:
-							[self push: (self integerObjectOf: numStrongSlots) onObjStack: markStack]]]].
-			 objToScan := self popObjStack: markStack].
-	 objToScan notNil] whileTrue
+	self markLoopFrom: objOop
 ]
 
 { #category : #'gc - global' }
@@ -7144,18 +7185,91 @@ SpurMemoryManager >> markInactiveEphemerons [
 ]
 
 { #category : #'gc - global' }
-SpurMemoryManager >> markObjects [
+SpurMemoryManager >> markLoopFrom: objOop [
+	"Scan objOop and all objects on the mark stack, until the mark stack is empty.
+	 N.B. When the incremental GC is written this will probably be refactored as
+	 markLoopFrom: objOop while: aBlock"
+	<inline: true>
+	| objToScan field index numStrongSlots scanLargeObject |
+
+	"Now scan the object, and any remaining objects on the mark stack."
+	objToScan := objOop.
+	"To avoid overflowing the mark stack when we encounter large objects, we
+	 push the obj, then its numStrongSlots, and then index the object from the stack."
+	[(self isImmediate: objToScan)
+		ifTrue: [scanLargeObject := true]
+		ifFalse:
+			[numStrongSlots := self numStrongSlotsOfInephemeral: objToScan.
+			 scanLargeObject := numStrongSlots > self traceImmediatelySlotLimit].
+	 scanLargeObject
+		ifTrue: "scanning a large object. scan until hitting an unmarked object, then switch to it, if any."
+			[(self isImmediate: objToScan)
+				ifTrue:
+					[index := self integerValueOf: objToScan.
+					 objToScan := self topOfObjStack: markStack]
+				ifFalse:
+					[index := numStrongSlots.
+					 self markAndTraceClassOf: objToScan].
+			 [index > 0] whileTrue:
+				[index := index - 1.
+				 field := self fetchPointer: index ofObject: objToScan.
+				 (self isNonImmediate: field) ifTrue:
+					[(self isForwarded: field) ifTrue: "fixFollowedField: is /not/ inlined"
+						[field := self fixFollowedField: index ofObject: objToScan withInitialValue: field].
+					 (self markAndShouldScan: field) ifTrue:
+						[index > 0 ifTrue:
+							[(self topOfObjStack: markStack) ~= objToScan ifTrue: 
+								[self push: objToScan onObjStack: markStack].
+							 self push: (self integerObjectOf: index) onObjStack: markStack].
+						 objToScan := field.
+						 index := -1]]].
+			 index >= 0 ifTrue: "if loop terminated without finding an unmarked referent, switch to top of stack."
+				[objToScan := self popObjStack: markStack.
+				 objToScan = objOop ifTrue:
+					[objToScan := self popObjStack: markStack]]]
+		ifFalse: "scanning a small object. scan, marking, pushing unmarked referents, then switch to the top of the stack."
+			[index := numStrongSlots.
+			 self markAndTraceClassOf: objToScan.
+			 [index > 0] whileTrue:
+				[index := index - 1.
+				 field := self fetchPointer: index ofObject: objToScan.
+				 (self isNonImmediate: field) ifTrue:
+					[(self isForwarded: field) ifTrue: "fixFollowedField: is /not/ inlined"
+						[field := self fixFollowedField: index ofObject: objToScan withInitialValue: field].
+					 (self markAndShouldScan: field) ifTrue:
+						[self push: field onObjStack: markStack.
+						 ((self rawNumSlotsOf: field) > self traceImmediatelySlotLimit
+						  and: [(numStrongSlots := self numStrongSlotsOfInephemeral: field) > self traceImmediatelySlotLimit]) ifTrue:
+							[self push: (self integerObjectOf: numStrongSlots) onObjStack: markStack]]]].
+			 objToScan := self popObjStack: markStack].
+	 objToScan notNil] whileTrue
+]
+
+{ #category : #'gc - global' }
+SpurMemoryManager >> markObjects: objectsShouldBeUnmarked [
 	<inline: #never> "for profiling"
-	"Mark all accessible objects."
+	"Mark all accessible objects.  "
 	"If the incremental collector is running mark bits may be set; stop it and clear them if necessary."
 	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: 'marking...'; flush].
 	self runLeakCheckerForFullGC: true.
 
-	self ensureAllMarkBitsAreZero.
+	self shutDownIncrementalGC: objectsShouldBeUnmarked.
 	self initializeUnscannedEphemerons.
 	self initializeMarkStack.
 	self initializeWeaklingStack.
-	self markAccessibleObjects
+	self markAccessibleObjectsAndFireEphemerons.
+	self expungeDuplicateAndUnmarkedClasses: true.
+	self nilUnmarkedWeaklingSlots
+]
+
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> markObjectsIn: arrayOfRoots [
+	self setIsMarkedOf: arrayOfRoots to: true.
+	0 to: (self numSlotsOf: arrayOfRoots) - 1 do:
+		[:i| | oop |
+		oop := self followField: i ofObject: arrayOfRoots.
+		(self isNonImmediate: oop) ifTrue:
+			[self setIsMarkedOf: oop to: true]]
 ]
 
 { #category : #'gc - global' }
@@ -7469,6 +7583,21 @@ SpurMemoryManager >> newObjectHash [
 #(-15 7853923 0.4681302905082702 true '16r38000001')"
 ]
 
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> newOutPointer: oop at: outIndex in: outPointerArray hashes: savedOutHashes topHashBit: topHashBit [
+	"oop is a new outPointer; allocate its oop, and answer the new outIndex.
+	 If outPointerArray is full, answer 0."
+	<inline: true>
+	outIndex >= (self rawOverflowSlotsOf: outPointerArray) ifTrue:
+						["no room in outPointers; fail"
+						 ^0].
+	self storePointer: outIndex ofObject: outPointerArray withValue: oop.
+	self storeLong32: outIndex ofObject: savedOutHashes withValue: (self rawHashBitsOf: oop).
+	self setHashBitsOf: oop to: outIndex + topHashBit.
+	self setIsMarkedOf: oop to: true.
+	^outIndex + 1
+]
+
 { #category : #accessing }
 SpurMemoryManager >> newSpaceBytes [
 	^edenBytes
@@ -7742,6 +7871,11 @@ SpurMemoryManager >> numSlotsForBytes: numBytes [
 	^numBytes + (self wordSize - 1) // self wordSize
 ]
 
+{ #category : #allocation }
+SpurMemoryManager >> numSlotsForShortening: objOop toIndexableSize: indexableSize [
+	self subclassResponsibility
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> numSlotsFullShift [
 	^56
@@ -7986,6 +8120,76 @@ SpurMemoryManager >> objectStartingAt: address [
 	^numSlots = self numSlotsMask
 		ifTrue: [address + self baseHeaderSize]
 		ifFalse: [address]
+]
+
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> objectsReachableFromRoots: arrayOfRoots [
+	"Answer an Array of all the objects only reachable from the argument, an Array of root objects,
+	 starting with arrayOfRoots.  If there is no space, answer a SmallInteger whose value is the
+	 number of slots required.  This is used to collect the objects to include in an image segment
+	 on Spur, separate from creating the segment, hence simplifying the implementation.
+	 Thanks to Igor Stasenko for this idea."
+
+	| freeChunk ptr start limit count oop objOop |
+	self assert: (self isArray: arrayOfRoots).
+	"Mark all objects except those only reachable from the arrayOfRoots by marking
+	 each object in arrayOfRoots and then marking all reachable objects (from the
+	 system roots).  This leaves unmarked only objects reachable from the arrayOfRoots.
+	 N.B. A side-effect of the marking is that all forwarders in arrayOfRoots will be followed."
+ 	self assert: self allObjectsUnmarked.
+	self setIsMarkedOf: arrayOfRoots to: true.
+	self markObjects: false.
+
+	"After the mark phase all unreachable weak slots will have been nilled
+	 and all active ephemerons fired."
+	self assert: (self isEmptyObjStack: markStack).
+	self assert: (self isEmptyObjStack: weaklingStack).
+	self assert: self noUnscannedEphemerons.
+
+	"Use the largest free chunk to answer the result."
+	freeChunk := self allocateLargestFreeChunk.
+	ptr := start := freeChunk + self baseHeaderSize.
+	limit := self addressAfter: freeChunk.
+	count := 0.
+	"First put the roots; order is important."
+	self push: arrayOfRoots onObjStack: markStack.
+
+	"Now collect the unmarked objects reachable from the roots."
+	[self isEmptyObjStack: markStack] whileFalse:
+		[objOop := self popObjStack: markStack.
+		 count := count + 1.
+		 ptr < limit ifTrue:
+			[self longAt: ptr put: objOop.
+			 ptr := ptr + self bytesPerSlot].
+		 oop := self fetchClassOfNonImm: objOop.
+		 (self isMarked: oop) ifFalse:
+			[self setIsMarkedOf: objOop to: true.
+			 self push: oop onObjStack: markStack].
+		 0 to: (self numPointerSlotsOf: objOop) - 1 do:
+			[:i|
+			 oop := self fetchPointer: i ofObject: objOop.
+			 ((self isImmediate: oop)
+			  or: [self isMarked: oop]) ifFalse:
+				[self setIsMarkedOf: objOop to: true.
+				 self push: oop onObjStack: markStack]]].
+
+	self unmarkAllObjects.
+
+	totalFreeOldSpace := totalFreeOldSpace - (self bytesInObject: freeChunk).
+	"Now try and allocate the result"
+	(count > (ptr - start / self bytesPerSlot) "not enough room"
+	 or: [limit ~= ptr and: [limit - ptr <= self allocationUnit]]) ifTrue: "can't split a single word"
+		[self freeChunkWithBytes: (self bytesInObject: freeChunk) at: (self startOfObject: freeChunk).
+		 self checkFreeSpace.
+		 ^self integerObjectOf: count].
+	"There's room; set the format, & classIndex and shorten."
+	self setFormatOf: freeChunk to: self arrayFormat.
+	self setClassIndexOf: freeChunk to: ClassArrayCompactIndex.
+	self shorten: freeChunk toIndexableSize: count.
+	self possibleRootStoreInto: freeChunk.
+	self checkFreeSpace.
+	self runLeakCheckerForFullGC: false.
+	^freeChunk
 ]
 
 { #category : #'plugin support' }
@@ -8899,18 +9103,32 @@ SpurMemoryManager >> resetFreeListHeads [
 ]
 
 { #category : #'image segment in/out' }
-SpurMemoryManager >> restoreObjectsFrom: firstIn to: lastIn from: firstSeg to: limitSeg [
-	"Unforward objects"
-	| originalPtr originalObj copyPtr copyObj |
-	originalPtr := firstIn.
-	copyPtr := firstSeg.
-	[self oop: originalPtr isLessThanOrEqualTo: lastIn] whileTrue:
-		[originalObj := self longAt: originalPtr.
-		 copyObj := self objectStartingAt: copyPtr.
-		 self unforward: originalObj from: copyObj.
-		 originalPtr := originalPtr + self bytesPerOop.
-		 copyPtr := self addressAfter: copyObj].
-	self assert: copyPtr = limitSeg
+SpurMemoryManager >> restoreObjectsIn: objArray savedHashes: savedHashes [
+	"Enumerate the objects in objArray,unmarking them and restoring their hashes
+	 from the corresponding 32-bit slots in savedHashes.  The first unused entry in
+	 objArray will have a non-hash value entry in savedHashes.  Free savedHashes."
+	<inline: false>
+	0 to: (self numSlotsOf: objArray) - 1 do:
+		[:i| | hash oop |
+		(hash := self fetchLong32: i ofObject: savedHashes) > self maxIdentityHash ifTrue:
+			[(self isInOldSpace: savedHashes) ifTrue:
+				[self freeObject: savedHashes].
+			 ^self].
+		oop := self fetchPointer: i ofObject: objArray.
+		self setHashBitsOf: oop to: hash.
+		self setIsMarkedOf: oop to: false].
+	(self isInOldSpace: savedHashes) ifTrue:
+		[self freeObject: savedHashes]
+]
+
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes [
+	self restoreObjectsIn: firstArray savedHashes: firstSavedHashes.
+	self restoreObjectsIn: secondArray savedHashes: secondSavedHashes.
+	self leakCheckImageSegments ifTrue:
+		[self runLeakCheckerForFullGC: true].
+	self assert: self allObjectsUnmarked.
+	^errCode
 ]
 
 { #category : #snapshot }
@@ -9311,22 +9529,32 @@ SpurMemoryManager >> shortPrintObjectsFrom: startAddress to: endAddress [
 { #category : #allocation }
 SpurMemoryManager >> shorten: objOop toIndexableSize: indexableSize [
 	"Reduce the number of indexable fields in objOop, a pointer object, to nSlots. Convert the
-	 unused residual to a free chunk. Word and byte indexable objects are not changed.
+	 unused residual to a free chunk. Without changes to numSlotsForShortening:toIndexableSize:
+	 this only works for arrayFormat and longFormat objects.
 	 Answer the number of bytes returned to free memory, which may be zero if no change
 	 was possible."
 	<inline: false>
-	| numSlots bytesBefore bytesAfter |
-	(self formatOf: objOop) caseOf:
-		{ [self arrayFormat]	->	[numSlots := indexableSize] }.
+	| numSlots bytesBefore delta freeChunk |
+	numSlots := self numSlotsForShortening: objOop toIndexableSize: indexableSize.
+	numSlots = (self numSlotsOf: objOop) ifTrue:
+		[^0].
 	bytesBefore := self bytesInObject: objOop.
 	(self hasOverflowHeader: objOop)
 		ifTrue: [self rawOverflowSlotsOf: objOop put: numSlots]
 		ifFalse:
 			[self assert: numSlots < self numSlotsMask.
 			 self rawNumSlotsOf: objOop put: numSlots].
-	bytesAfter := self bytesInObject: objOop.
-	self freeChunkWithBytes: bytesAfter - bytesBefore at: (self addressAfter: objOop).
-	^bytesAfter - bytesBefore
+	delta := bytesBefore - (self bytesInObject: objOop).
+	freeChunk := self initFreeChunkWithBytes: delta at: (self addressAfter: objOop).
+	(self isInOldSpace: objOop)
+		ifTrue:
+			[totalFreeOldSpace := totalFreeOldSpace + delta.
+			 self addToFreeList: freeChunk bytes: delta]
+		ifFalse:
+			[self
+				setClassIndexOf: freeChunk to: self wordSizeClassIndexPun;
+				setFormatOf: freeChunk to: self firstLongFormat].
+	^delta
 ]
 
 { #category : #'gc - scavenging' }
@@ -9370,6 +9598,14 @@ SpurMemoryManager >> shrinkThreshold [
 { #category : #'free space' }
 SpurMemoryManager >> shrinkThreshold: aValue [
 	shrinkThreshold := aValue
+]
+
+{ #category : #'gc - incremental' }
+SpurMemoryManager >> shutDownIncrementalGC: objectsShouldBeUnmarked [
+	"If the incremental collector is running mark bits may be set; stop it and clear them if necessary."
+	self flag: 'need to implement the inc GC first...'.
+	objectsShouldBeUnmarked ifTrue:
+		[self assert: self allObjectsUnmarked]
 ]
 
 { #category : #accessing }
@@ -9823,88 +10059,132 @@ SpurMemoryManager >> storeCheckBoundary [
 { #category : #'image segment in/out' }
 SpurMemoryManager >> storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots [
 	"This primitive is called from Squeak as...
-		<imageSegment> storeSegmentFor: arrayOfRoots into: aWordArray outPointers: anArray."
+		<imageSegment> storeSegmentFor: arrayOfRoots into: aWordArray outPointers: anArray.
 
-"This primitive will store a binary image segment (in the same format as the Squeak image file) of the receiver and every object in its proper tree of subParts (ie, that is not refered to from anywhere else outside the tree).  All pointers from within the tree to objects outside the tree will be copied into the array of outpointers.  In their place in the image segment will be an oop equal to the offset in the outPointer array (the first would be 4). but with the high bit set."
+	 This primitive will store a binary image segment (in the same format as objercts in the heap) of the
+	 set of objects in arrayOfObjects.  All pointers from within the set to objects outside the set will be
+	 copied into the array of outPointers.  In their place in the image segment will be an oop equal to the
+	 offset in the outPointer array (the first would be 4). but with the high bit set.
 
-"The primitive expects the array and wordArray to be more than adequately long.  In this case it returns normally, and truncates the two arrays to exactly the right size.  To simplify truncation, both incoming arrays are required to have large headers (i.e. be 256 words long or larger).  If either array is too small, the primitive will fail, but in no other case.
+	 The primitive expects the segmentWordArray and outPointerArray to be more than adequately long.
+	 In this case it returns normally, and truncates the two arrays to exactly the right size.  To simplify
+	 truncation, both incoming arrays are required to be whatever the objectMemory considers long
+	 objects.  If either array is too small, the primitive will fail.
 
-During operation of the primitive, it is necessary to convert from both internal and external oops to their mapped values.  To make this fast, the original objects in question are forwarded to the mapped values.  Tables are kept of both kinds of oops.  Note that markObjects eliminates forwarding pointers, so there will be no forwarding pointers in the object graph once objects have been marked.
+	 The primitive can fail for the following reasons with the specified failure codes:
+		PrimErrWritePastObject:	the segmentWordArray is too small
+		PrimErrBadIndex:			the outPointerArray is too small
+		PrimErrNoMemory:			additional allocations failed
+		PrimErrLimitExceeded:		there is no room in the hash field to store object oops."
+	<inline: false>
+	| arrayOfObjects savedInHashes savedOutHashes fillValue endSeg segAddr topHashBit objOop outIndex segStart topOopBit |
 
-To be specific, there are two similar tables, the outPointer array, and one in the upper eight of the segmentWordArray.  Each grows oops from the bottom up.
+	(self hasOverflowHeader: segmentWordArray) ifFalse:	"Must have 128-bit header"
+		[^PrimErrWritePastObject].
+	(self hasOverflowHeader: outPointerArray) ifFalse:		"Must have 128-bit header"
+		[^PrimErrBadIndex].
 
-In case of either success or failure, the headers must be restored.  In the event of primitive failure, the table of outPointers must also be nilled out (since the garbage in the high half will not have been discarded)."
+	self leakCheckImageSegments ifTrue:
+		[self runLeakCheckerForFullGC: true].
 
-	| endSeg firstIn firstOut lastIn lastOut limitSeg scanned newSegLimit unmarkedClasses |
-	true ifTrue: [^PrimErrUnsupported] ifFalse: [
+	"First compute the transitive closure, collecting the sequence of objects to be stored in the arrayOfObjects array."
+	arrayOfObjects := self objectsReachableFromRoots: arrayOfRoots.
+	arrayOfObjects ifNil:
+		[^PrimErrNoMemory].
 
-	((self hasOverflowHeader: outPointerArray)						"Must have 128-bit header"
-	and: [self hasOverflowHeader: segmentWordArray]) ifFalse:		"Must have 128-bit header"
-		[^PrimErrGenericFailure].
+	
+	"The scheme is to copy the objects into segmentWordArray, and then map the oops in sementWordArray.
+	 Therefore the primitive needs to both map efficiently originals to copies in segmentWordArray and
+	 be able to undo any side-effects if the primitive fails because either sementWordArray or outPointerArray
+	 is too small.  The mapping is done by having the originals (either the objects in arrayOfObjects or the
+	 objects in outPointerArray) refer to their mapped locations through their identityHash, and saving their
+	 identityHashes in two ByteArrays, one that mirrors arrayOfObjects, and one that mirrors outPointerArray.
+	 Since arrayOfObjects and its saved hashes, and outPointerArray and its saved hashes, can be enumerated
+	 side-by-side, the hashes can be restored to the originals.  So the hash of an object in arrayOfObjects
+	 is set to its offset in segmentWordArray / self allocationUnit, and the hash of an object in outPointerArray
+	 is set to its index in outPointerArray plus the top hash bit.  Oops in segmentWordArray are therefore
+	 mapped by accessing the original oop's identityHash, testing the bottom bit to distinguish between internal
+	 and external oops.  The saved hash arrays are initialized with an out-of-range hash value so that the first
+	 unused entry can be identified."
 
-	firstOut := outPointerArray + self baseHeaderSize.
-	lastOut := firstOut - self bytesPerOop.
+	savedInHashes := self allocateSlots: (self numSlotsForBytes: (self numSlotsOf: arrayOfObjects) * 4)
+							format: self firstLongFormat
+							classIndex: self thirtyTwoBitLongsClassIndexPun.
+	savedOutHashes := self allocateSlots: (self numSlotsForBytes: (self numSlotsOf: outPointerArray) * 4)
+							format: self firstLongFormat
+							classIndex: self thirtyTwoBitLongsClassIndexPun.
+	(savedInHashes isNil or: [savedOutHashes isNil]) ifTrue:
+		[^PrimErrNoMemory].
+	fillValue := self wordSize = 4 ifTrue: [self maxIdentityHash + 1] ifFalse: [self maxIdentityHash + 1 << 32 + (self maxIdentityHash + 1)].
+	self fillObj: savedInHashes numSlots: (self numSlotsOf: savedInHashes) with: fillValue.
+	self fillObj: savedOutHashes numSlots: (self numSlotsOf: savedOutHashes) with: fillValue.
 
-	limitSeg := segmentWordArray + self baseHeaderSize.
-	endSeg := segmentWordArray + (self addressAfter: segmentWordArray).
+	segAddr := segmentWordArray + self baseHeaderSize.
+	endSeg := self addressAfter: segmentWordArray.
 
-	"Allocate top 1/8 of segment for table of internal oops"
-	firstIn := endSeg - ((self numSlotsOf: segmentWordArray) // 8).  "Take 1/8 of seg"
-	lastIn := firstIn - self bytesPerOop.
+	"Write a version number for byte order and version check."
+	segAddr >= endSeg ifTrue: [^PrimErrGenericFailure].
+	self long32At: segAddr put: self imageSegmentVersion.
+	self long32At: segAddr + 4 put: self imageSegmentVersion.
+	segStart := segAddr := segAddr + self allocationUnit.
 
-	"N.B.  A side effect of this marking is that all forwarders are followed,
-	 so while forwarders may exist in te heap they will *not* be reachable."
-	self markAllExceptTransitiveClosureOf: arrayOfRoots.
+	self assert: self allObjectsUnmarked. "work to be done when the incremental GC is written"
 
-	"All external objects, and only they, are now marked."
-	unmarkedClasses := self arrayOfUnmarkedClasses.
-	(self isImmediate: unmarkedClasses) ifTrue:
-		[^PrimErrGenericFailure].
+	0 to: (self numSlotsOf: arrayOfObjects) - 1 do:
+		[:i| | newSegAddrOrError |
+		objOop := self fetchPointer: i ofObject: arrayOfObjects.
+		self deny: ((self isImmediate: objOop) or: [self isForwarded: objOop]).
+		self storeLong32: i ofObject: savedInHashes withValue: (self rawHashBitsOf: objOop).
+		newSegAddrOrError := self copyObj: objOop toAddr: segAddr startAt: segStart stopAt: endSeg.
+		newSegAddrOrError < segStart ifTrue:
+			[^self return: newSegAddrOrError
+					restoringObjectsIn: arrayOfObjects savedHashes: savedInHashes
+					and: outPointerArray savedHashes: savedOutHashes].
+		 segAddr := newSegAddrOrError].
 
-	"Write a version number for byte order and version check, followed by the number of classes."
-	limitSeg >= endSeg ifTrue: [^PrimErrGenericFailure].
-	self long32At: limitSeg put: self imageSegmentVersion.
-	self long32At: limitSeg + 4 put: (self numSlotsOf: unmarkedClasses).
-	scanned := limitSeg := limitSeg + 8.
+	(endSeg ~= segAddr
+	 and: [endSeg - segAddr < (self baseHeaderSize + self bytesPerSlot)]) ifTrue:
+		[^self return: PrimErrWritePastObject
+				restoringObjectsIn: arrayOfObjects savedHashes: savedInHashes
+				and: outPointerArray savedHashes: savedOutHashes].
 
-	"If there are any classes then copy them into the segment, and forward their oop."
-	(self numSlotsOf: unmarkedClasses) > 0 ifTrue:
-		[((lastIn := lastIn + self bytesPerOop) >= endSeg
-		 or: [0 = (newSegLimit := self copyObj: arrayOfRoots toSegment: segmentWordArray addr: limitSeg stopAt: firstIn saveOopAt: lastIn)]) ifTrue:
-			[lastIn := lastIn - self bytesPerWord.
-			self restoreObjectsFrom: firstIn to: lastIn from: segmentWordArray + self baseHeaderSize to: limitSeg.
-			self fillObj: outPointerArray numSlots: (self numSlotsOf: outPointerArray) with: nilObj.
-			^PrimErrGenericFailure].
-		limitSeg := newSegLimit].
+	"Now scan, adding out pointers to the outPointersArray; all objects in arrayOfObjects
+	 have their hashes set to point to their copies in segmentWordArray."
+	outIndex := 0.
+	self fillObj: outPointerArray numSlots: (self numSlotsOf: outPointerArray) with: nilObj.
+	topHashBit := 1 bitShift: self identityHashFieldWidth - 1.
+	topOopBit := 1 bitShift: self bytesPerOop * 8 - 1.
+	objOop := self objectStartingAt: segStart.
+	[objOop < segAddr] whileTrue:
+		[| oop hash |
+		 oop := self fetchClassOfNonImm: objOop.
+		 (self isMarked: oop) ifFalse: "oop is a new outPointer; allocate its oop"
+			[outIndex := self newOutPointer: oop at: outIndex in: outPointerArray hashes: savedOutHashes topHashBit: topHashBit.
+			 outIndex = 0 ifTrue:"no room in outPointers; fail"
+				[^self return: PrimErrBadIndex
+						restoringObjectsIn: arrayOfObjects savedHashes: savedInHashes
+						and: outPointerArray savedHashes: savedOutHashes]].
+		 hash := self rawHashBitsOf: oop.
+		 self setClassIndexOf: objOop to: hash.
+		 0 to: (self numPointerSlotsOf: objOop) - 1 do:
+			[:i|
+			 oop := self fetchPointer: i ofObject: objOop.
+			 (self isNonImmediate: oop) ifTrue:
+				[(self isMarked: oop) ifFalse: "oop is a new outPointer; allocate its oop"
+					[outIndex := self newOutPointer: oop at: outIndex in: outPointerArray hashes: savedOutHashes topHashBit: topHashBit.
+					 outIndex = 0 ifTrue: "no room in outPointers; fail"
+						[^self return: PrimErrBadIndex
+								restoringObjectsIn: arrayOfObjects savedHashes: savedInHashes
+								and: outPointerArray savedHashes: savedOutHashes]].
+				 oop := self mappedOopOf: oop topHashBit: topHashBit topOopBit: topOopBit..
+				 self storePointerUnchecked: i ofObject: objOop withValue: oop]].
+		 objOop := self objectAfter: objOop limit: segAddr].
 
-	"Copy the array of roots into the segment, and forward its oop."
-	((lastIn := lastIn + self bytesPerOop) >= endSeg
-	 or: [0 = (newSegLimit := self copyObj: arrayOfRoots toSegment: segmentWordArray addr: limitSeg stopAt: firstIn saveOopAt: lastIn)]) ifTrue:
-		[lastIn := lastIn - self bytesPerWord.
-		self restoreObjectsFrom: firstIn to: lastIn from: segmentWordArray + self baseHeaderSize to: limitSeg.
-		self fillObj: outPointerArray numSlots: (self numSlotsOf: outPointerArray) with: nilObj.
-		^PrimErrGenericFailure].
-	limitSeg := newSegLimit.
-
-	"Now traverse the objects copied to the segment so far, copying unmarked objects into the segment.
-	 This is essentially the same algorithm as the breadth-first copying algorithm in scavenging."
-	scanned := self objectStartingAt: scanned.
-	[scanned < limitSeg] whileTrue:	
-		[1 to: (self numPointerSlotsOf: scanned) do:
-			[:i| | oop |
-			 oop := self fetchPointer: i ofObject: scanned.
-			 ((self isImmediate: oop) or: [(self isForwarded: oop) or: [self isMarked: oop]]) ifFalse:
-				[((lastIn := lastIn + self bytesPerOop) >= endSeg
-				  or: [0 = (newSegLimit := self copyObj: oop toSegment: segmentWordArray addr: limitSeg stopAt: firstIn saveOopAt: lastIn)]) ifTrue:
-					[lastIn := lastIn - self bytesPerWord.
-					self restoreObjectsFrom: firstIn to: lastIn from: segmentWordArray + self baseHeaderSize to: limitSeg.
-					self fillObj: outPointerArray numSlots: (self numSlotsOf: outPointerArray) with: nilObj.
-					^PrimErrGenericFailure].
-				 limitSeg := newSegLimit]].
-		scanned := self objectAfter: scanned].
-
-	"Now the primitive can not fail; traverse the objects in the segment, unforwarding the originals and mapping external oops."
-	self flag: 'you are here']
+	self shorten: segmentWordArray toIndexableSize: segAddr - (segmentWordArray + self baseHeaderSize) / 4.
+	self shorten: outPointerArray toIndexableSize: outIndex.
+	^self return: PrimNoErr
+		restoringObjectsIn: arrayOfObjects savedHashes: savedInHashes
+		and: outPointerArray savedHashes: savedOutHashes
 ]
 
 { #category : #'simulation only' }
@@ -10403,15 +10683,6 @@ SpurMemoryManager >> tryToMovePig: pigObj at: pigStart end: pigEnd [
 		 prevFree := freeChunk.
 		 freeChunk := next].
 	^0
-]
-
-{ #category : #'image segment in/out' }
-SpurMemoryManager >> unforward: obj1 from: obj2 [
-	"Undo a forward: obj1 to: obj2 given that obj2 is a copy of obj1"
-	self set: obj1 classIndexTo: (self classIndexOf: obj2) formatTo: (self formatOf: obj2).
-	self storePointer: 0 ofForwarder: obj1 withValue: (self fetchPointer: 0 ofObject: obj2).
-	(self rawNumSlotsOf: obj2) = 0 ifTrue:
-		[self setRawNumSlotsOf: obj1 to: 0]
 ]
 
 { #category : #'primitive support' }

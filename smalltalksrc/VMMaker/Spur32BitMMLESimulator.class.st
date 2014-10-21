@@ -302,6 +302,12 @@ Spur32BitMMLESimulator >> isNonIntegerObject: oop [
 	^super isNonIntegerObject: oop
 ]
 
+{ #category : #'image segment in/out' }
+Spur32BitMMLESimulator >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray [
+	self halt.
+	^super loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray
+]
+
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> long32At: byteAddress [
 	"Answer the 32-bit word at byteAddress which must be 0 mod 4."
@@ -400,6 +406,12 @@ Spur32BitMMLESimulator >> moveARunOfObjectsStartingAt: startAddress upTo: limit 
 	result := super moveARunOfObjectsStartingAt: startAddress upTo: limit.
 	"self checkTraversableSortedFreeList."
 	^result
+]
+
+{ #category : #'object access' }
+Spur32BitMMLESimulator >> newOutPointer: oop at: outIndex in: outPointerArray hashes: savedOutHashes topHashBit: topHashBit [
+	self halt.
+	^super newOutPointer: oop at: outIndex in: outPointerArray hashes: savedOutHashes topHashBit: topHashBit
 ]
 
 { #category : #'spur bootstrap' }

@@ -490,6 +490,14 @@ Spur32BitMemoryManager >> numFreeLists [
 	^32
 ]
 
+{ #category : #allocation }
+Spur32BitMemoryManager >> numSlotsForShortening: objOop toIndexableSize: indexableSize [
+	<inline: true>
+	^(self formatOf: objOop) caseOf:
+		{ [self arrayFormat]			-> [indexableSize].
+		  [self firstLongFormat]		-> [self numSlotsForBytes: indexableSize * 4] }
+]
+
 { #category : #'object access' }
 Spur32BitMemoryManager >> numTagBits [
 	<api>
