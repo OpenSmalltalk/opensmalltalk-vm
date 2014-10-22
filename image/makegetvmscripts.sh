@@ -3,8 +3,6 @@
 GetCogScript=getGoodCogVM.sh
 GetSpurScript=getGoodSpurVM.sh
 
-cd `dirname $0`
-
 REV=
 TAG=
 while getopts 'r:t:?' opt "$@"; do
@@ -16,6 +14,11 @@ while getopts 'r:t:?' opt "$@"; do
 	esac
 done
 shift `expr $OPTIND - 1`
+
+cd `dirname $0` >/dev/null
+SD=`basename $0 .sh`.$$
+trap 'rm -rf "$SD"; exit 2' HUP INT PIPE TERM 0
+mkdir $SD
 
 test -n "$REV" || REV=`grep 'SvnRawRevisionString.*Rev:' ../platforms/Cross/vm/sqSCCSVersion.h \
 	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
@@ -32,9 +35,14 @@ for a in Cog.app-$TAG.tgz coglinuxht-$TAG.tgz coglinux-$TAG.tgz cogwin-$TAG.zip\
 		CogSpur.app-$TAG.tgz cogspurlinuxht-$TAG.tgz cogspurwin-$TAG.zip
 do
 	test -f ../products/$a || echo $a does not exist
+	test -f ../products/$a && (cd "$SD" >/dev/null; tar xzf ../../products/$a)
 	ABORT=true
 done
+test -n "$ABORT" || rm -rf "$SD"
 test -n "$ABORT" || exit 1
+
+
+echo $GetCogScript $GetSpurScript
 
 cat >$GetCogScript <<END
 #!/bin/sh
@@ -53,7 +61,7 @@ Darwin) get_vm_from_tar \\
 END
 
 echo -n '            Cog.app/Contents/MacOS/Squeak ' >>$GetCogScript
-echo -n `quietmd5 ../products/Cog.app/Contents/MacOS/Squeak` >>$GetCogScript
+echo -n `quietmd5 "$SD/Cog.app/Contents/MacOS/Squeak"` >>$GetCogScript
 echo ' \' >>$GetCogScript
 echo -n '            Cog.app-$TAG.tgz ' >>$GetCogScript
 quietmd5 ../products/Cog.app-$TAG.tgz >>$GetCogScript
@@ -66,7 +74,7 @@ Linux)
 END
 
 echo -n '        coglinuxht/lib/squeak/$LCBINDIR/squeak ' >>$GetCogScript
-echo -n `quietmd5 ../products/coglinuxht/lib/squeak/$LCBINDIR/squeak` >>$GetCogScript
+echo -n `quietmd5 $SD/coglinuxht/lib/squeak/$LCBINDIR/squeak` >>$GetCogScript
 echo ' \' >>$GetCogScript
 echo -n '        coglinuxht-$TAG.tgz ' >>$GetCogScript
 quietmd5 ../products/coglinuxht-$TAG.tgz >>$GetCogScript
@@ -77,7 +85,7 @@ cat >>$GetCogScript <<END
 END
 
 echo -n '        coglinux/lib/squeak/$LCBINDIR/squeak ' >>$GetCogScript
-echo -n `quietmd5 ../products/coglinux/lib/squeak/$LCBINDIR/squeak` >>$GetCogScript
+echo -n `quietmd5 $SD/coglinux/lib/squeak/$LCBINDIR/squeak` >>$GetCogScript
 echo ' \' >>$GetCogScript
 echo -n '        coglinux-$TAG.tgz ' >>$GetCogScript
 quietmd5 ../products/coglinux-$TAG.tgz >>$GetCogScript
@@ -87,7 +95,7 @@ CYGWIN*) get_vm_from_zip \\
 END
 
 echo -n '            cogwin/SqueakConsole.exe ' >>$GetCogScript
-echo -n `quietmd5 ../products/cogwin/SqueakConsole.exe` >>$GetCogScript
+echo -n `quietmd5 $SD/cogwin/SqueakConsole.exe` >>$GetCogScript
 echo ' \' >>$GetCogScript
 echo -n '            cogwin-$TAG.zip ' >>$GetCogScript
 quietmd5 ../products/cogwin-$TAG.zip >>$GetCogScript
@@ -117,7 +125,7 @@ Darwin) get_vm_from_tar \\
 END
 
 echo -n '            CogSpur.app/Contents/MacOS/Squeak ' >>$GetSpurScript
-echo -n `quietmd5 ../products/CogSpur.app/Contents/MacOS/Squeak` >>$GetSpurScript
+echo -n `quietmd5 $SD/CogSpur.app/Contents/MacOS/Squeak` >>$GetSpurScript
 echo ' \' >>$GetSpurScript
 echo -n '            CogSpur.app-$TAG.tgz ' >>$GetSpurScript
 quietmd5 ../products/CogSpur.app-$TAG.tgz >>$GetSpurScript
@@ -128,7 +136,7 @@ Linux) get_vm_from_tar \\
 END
 
 echo -n '        cogspurlinuxht/lib/squeak/$LSBINDIR/squeak ' >>$GetSpurScript
-echo -n `quietmd5 ../products/cogspurlinuxht/lib/squeak/$LSBINDIR/squeak` >>$GetSpurScript
+echo -n `quietmd5 $SD/cogspurlinuxht/lib/squeak/$LSBINDIR/squeak` >>$GetSpurScript
 echo ' \' >>$GetSpurScript
 echo -n '        cogspurlinuxht-$TAG.tgz ' >>$GetSpurScript
 quietmd5 ../products/cogspurlinuxht-$TAG.tgz >>$GetSpurScript
@@ -139,7 +147,7 @@ CYGWIN*) get_vm_from_zip \\
 END
 
 echo -n '            cogspurwin/SqueakConsole.exe ' >>$GetSpurScript
-echo -n `quietmd5 ../products/cogspurwin/SqueakConsole.exe` >>$GetSpurScript
+echo -n `quietmd5 $SD/cogspurwin/SqueakConsole.exe` >>$GetSpurScript
 echo ' \' >>$GetSpurScript
 echo -n '            cogspurwin-$TAG.zip ' >>$GetSpurScript
 quietmd5 ../products/cogspurwin-$TAG.zip >>$GetSpurScript
@@ -150,4 +158,5 @@ cat >>$GetSpurScript <<END
 esac
 END
 
+rm -rf "$SD"
 chmod a+x $GetSpurScript

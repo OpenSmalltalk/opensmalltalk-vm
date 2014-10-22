@@ -11,9 +11,10 @@ if [ "$1" != -skiptrunkbuild ]; then
 	$VM trunk46forspur.image BuildSqueakTrunkImage.st
 fi
 
-rm -f temp-spur-repository/* temp-v3-repository/*
-echo $VM trunk46forspur.image WriteSpurPackagesToTempDir.st
-$VM trunk46forspur.image WriteSpurPackagesToTempDir.st
+#Old code pre patchAndUploadUnpatchedInTrunk
+#rm -f temp-spur-repository/* temp-v3-repository/*
+#echo $VM trunk46forspur.image WriteSpurPackagesToTempDir.st
+#$VM trunk46forspur.image WriteSpurPackagesToTempDir.st
 
 # Now choose a suitable VMMaker image (Spur preferred) and get it to convert
 # trunk46forspur to Spur.
@@ -52,5 +53,7 @@ mv trunk46forspur-spur.changes trunk46-spur.changes
 
 # Now load the modified packages
 . ./getGoodSpurVM.sh
-echo $VM -blockonerror trunk46-spur.image LoadSpurPackagesFromTempDir.st
-$VM -blockonerror trunk46-spur.image LoadSpurPackagesFromTempDir.st
+echo $VM -blockonerror trunk46-spur.image LoadSpurPackages.st
+$VM -blockonerror trunk46-spur.image LoadSpurPackages.st
+
+./resizesqueakwindow.sh trunk46-spur.image 800 600

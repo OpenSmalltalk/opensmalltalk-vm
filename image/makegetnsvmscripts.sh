@@ -3,8 +3,6 @@
 GetCogScript=getGoodCogNsvm.sh
 GetSpurScript=getGoodSpurNsvm.sh
 
-cd `dirname $0`
-
 REV=
 TAG=
 while getopts 'r:t:?' opt "$@"; do
@@ -17,6 +15,11 @@ while getopts 'r:t:?' opt "$@"; do
 done
 shift `expr $OPTIND - 1`
 
+cd `dirname $0` >/dev/null
+SD=`basename $0 .sh`.$$
+trap 'rm -rf "$SD"; exit 2' HUP INT PIPE TERM 0
+mkdir $SD
+
 test -n "$REV" || REV=`grep 'SvnRawRevisionString.*Rev:' ../platforms/Cross/vm/sqSCCSVersion.h \
 	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
 test -n "$TAG" || TAG=`date +%g.%U.`$REV
@@ -28,12 +31,18 @@ echo REV=$REV TAG=$TAG
 . ./envvars.sh
 
 ABORT=
-for a in "Newspeak Virtual Machine.app-$TAG.tgz" "Newspeak Virtual Machine-$TAG.dmg" nsvmlinuxht-$TAG.tgz nsvmlinux-$TAG.tgz nsvmwin-$TAG.zip\
-		"Newspeak Spur Virtual Machine.app-$TAG.tgz" "Newspeak Spur Virtual Machine-$TAG.dmg" nsvmspurlinuxht-$TAG.tgz nsvmspurwin-$TAG.zip
+for a in "Newspeak Virtual Machine.app-$TAG.tgz" nsvmlinuxht-$TAG.tgz nsvmlinux-$TAG.tgz nsvmwin-$TAG.zip\
+		"Newspeak Spur Virtual Machine.app-$TAG.tgz" nsvmspurlinuxht-$TAG.tgz nsvmspurwin-$TAG.zip
 do
 	test -f "../products/$a" || echo $a does not exist
+	test -f "../products/$a" && (cd "$SD" >/dev/null;
+		case "$a" in
+		*.zip)	unzip -q "../../products/$a";;
+		*)	tar xzf "../../products/$a"
+		esac)
 	ABORT=true
 done
+test -n "$ABORT" || rm -rf "$SD"
 test -n "$ABORT" || exit 1
 
 
@@ -56,7 +65,7 @@ Darwin) get_vm_from_tar \\
 END
 
 echo -n '            "Newspeak Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine" ' >>$GetCogScript
-echo -n `quietmd5 "../products/Newspeak Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine"` >>$GetCogScript
+echo -n `quietmd5 "$SD/Newspeak Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine"` >>$GetCogScript
 echo ' \' >> $GetCogScript
 echo -n '            "Newspeak Virtual Machine.app-$TAG.tgz" ' >>$GetCogScript
 quietmd5 "../products/Newspeak Virtual Machine.app-$TAG.tgz" >>$GetCogScript
@@ -69,7 +78,7 @@ Linux)
 END
 
 echo -n '        nsvmlinuxht/lib/nsvm/$LCBINDIR/nsvm ' >>$GetCogScript
-echo -n `quietmd5 ../products/nsvmlinuxht/lib/nsvm/$LCBINDIR/nsvm` >>$GetCogScript
+echo -n `quietmd5 $SD/nsvmlinuxht/lib/nsvm/$LCBINDIR/nsvm` >>$GetCogScript
 echo ' \' >>$GetCogScript
 echo -n '        nsvmlinuxht-$TAG.tgz ' >>$GetCogScript
 quietmd5 ../products/nsvmlinuxht-$TAG.tgz >>$GetCogScript
@@ -80,7 +89,7 @@ cat >>$GetCogScript <<END
 END
 
 echo -n '        nsvmlinux/lib/nsvm/$LCBINDIR/nsvm ' >>$GetCogScript
-echo -n `quietmd5 ../products/nsvmlinux/lib/nsvm/$LCBINDIR/nsvm` >>$GetCogScript
+echo -n `quietmd5 $SD/nsvmlinux/lib/nsvm/$LCBINDIR/nsvm` >>$GetCogScript
 echo ' \' >>$GetCogScript
 echo -n '        nsvmlinux-$TAG.tgz ' >>$GetCogScript
 quietmd5 ../products/nsvmlinux-$TAG.tgz >>$GetCogScript
@@ -90,7 +99,7 @@ CYGWIN*) get_vm_from_zip \\
 END
 
 echo -n '            nsvmwin/nsvmConsole.exe ' >>$GetCogScript
-echo -n `quietmd5 ../products/nsvmwin/nsvmConsole.exe` >>$GetCogScript
+echo -n `quietmd5 $SD/nsvmwin/nsvmConsole.exe` >>$GetCogScript
 echo ' \' >>$GetCogScript
 echo -n '            nsvmwin-$TAG.zip ' >>$GetCogScript
 quietmd5 ../products/nsvmwin-$TAG.zip >>$GetCogScript
@@ -120,7 +129,7 @@ Darwin) get_vm_from_tar \\
 END
 
 echo -n '            "Newspeak Spur Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine" ' >>$GetSpurScript
-echo -n `quietmd5 ../products/"Newspeak Spur Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine"` >>$GetSpurScript
+echo -n `quietmd5 "$SD/Newspeak Spur Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine"` >>$GetSpurScript
 echo ' \' >>$GetSpurScript
 echo -n '            "Newspeak Spur Virtual Machine.app-$TAG.tgz" ' >>$GetSpurScript
 quietmd5 "../products/Newspeak Spur Virtual Machine.app-$TAG.tgz" >>$GetSpurScript
@@ -131,7 +140,7 @@ Linux) get_vm_from_tar \\
 END
 
 echo -n '        nsvmspurlinuxht/lib/nsvm/$LSBINDIR/nsvm ' >>$GetSpurScript
-echo -n `quietmd5 ../products/nsvmspurlinuxht/lib/nsvm/$LSBINDIR/nsvm` >>$GetSpurScript
+echo -n `quietmd5 $SD/nsvmspurlinuxht/lib/nsvm/$LSBINDIR/nsvm` >>$GetSpurScript
 echo ' \' >>$GetSpurScript
 echo -n '        nsvmspurlinuxht-$TAG.tgz ' >>$GetSpurScript
 quietmd5 ../products/nsvmspurlinuxht-$TAG.tgz >>$GetSpurScript
@@ -142,7 +151,7 @@ CYGWIN*) get_vm_from_zip \\
 END
 
 echo -n '            nsvmspurwin/nsvmConsole.exe ' >>$GetSpurScript
-echo -n `quietmd5 ../products/nsvmspurwin/nsvmConsole.exe` >>$GetSpurScript
+echo -n `quietmd5 $SD/nsvmspurwin/nsvmConsole.exe` >>$GetSpurScript
 echo ' \' >>$GetSpurScript
 echo -n '            nsvmspurwin-$TAG.zip ' >>$GetSpurScript
 quietmd5 ../products/nsvmspurwin-$TAG.zip >>$GetSpurScript
@@ -153,4 +162,5 @@ cat >>$GetSpurScript <<END
 esac
 END
 
+rm -rf "$SD"
 chmod a+x $GetSpurScript

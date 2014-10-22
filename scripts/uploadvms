@@ -212,6 +212,11 @@ sudo cp /etc/security/limits.d/squeak.conf /etc/security/limits.d/nsvm.conf
      out and log back in for the limits to take effect.  Services must stop
      and then restart for the changes to take effect.
 
+     The Windows VMs are "dpiAware", which means that by default the display is
+     not scaled and display pixels are mapped 1 to 1 to the screen.  If this
+     behaviour is not desired you can enable scaling by either editing the
+     relevant manifest file (e.g.  Squeak.exe.manifest), changing the "true" in
+     <dpiAware>true</dpiAware> to "false", or simply deleting the manifest file.
 THEEND
 	echo getting svn log
 	svn log ../platforms/Cross/vm/sqSCCSVersion.h >>../history/README.$REV
