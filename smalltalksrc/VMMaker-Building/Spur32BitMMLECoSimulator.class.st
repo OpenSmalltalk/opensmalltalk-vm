@@ -308,6 +308,13 @@ Spur32BitMMLECoSimulator >> isNonIntegerObject: oop [
 	^super isNonIntegerObject: oop
 ]
 
+{ #category : #'image segment in/out' }
+Spur32BitMMLECoSimulator >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray [
+	self leakCheckImageSegments ifTrue:
+		[self halt].
+	^super loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray
+]
+
 { #category : #'memory access' }
 Spur32BitMMLECoSimulator >> long32At: byteAddress [
 	"Answer the 32-bit word at byteAddress which must be 0 mod 4."
@@ -414,6 +421,13 @@ Spur32BitMMLECoSimulator >> parent: anObject [
 	parent := anObject
 ]
 
+{ #category : #'image segment in/out' }
+Spur32BitMMLECoSimulator >> return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes [
+	self leakCheckImageSegments ifTrue:
+		[self halt]..
+	^super return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes
+]
+
 { #category : #'debug support' }
 Spur32BitMMLECoSimulator >> runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
 	(coInterpreter displayView isNil
@@ -488,6 +502,13 @@ Spur32BitMMLECoSimulator >> shortAt: byteAddress put: a16BitValue [
 Spur32BitMMLECoSimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 	self long32At: floatBitsAddress put: (aFloat at: 2).
 	self long32At: floatBitsAddress+4 put: (aFloat at: 1)
+]
+
+{ #category : #'image segment in/out' }
+Spur32BitMMLECoSimulator >> storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots [
+	self leakCheckImageSegments ifTrue:
+		[self halt].
+	^super storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots
 ]
 
 { #category : #'ad-hoc tests' }

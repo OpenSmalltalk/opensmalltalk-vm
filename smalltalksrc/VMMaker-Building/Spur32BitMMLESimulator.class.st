@@ -304,7 +304,8 @@ Spur32BitMMLESimulator >> isNonIntegerObject: oop [
 
 { #category : #'image segment in/out' }
 Spur32BitMMLESimulator >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray [
-	self halt.
+	self leakCheckImageSegments ifTrue:
+		[self halt].
 	^super loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray
 ]
 
@@ -408,12 +409,6 @@ Spur32BitMMLESimulator >> moveARunOfObjectsStartingAt: startAddress upTo: limit 
 	^result
 ]
 
-{ #category : #'object access' }
-Spur32BitMMLESimulator >> newOutPointer: oop at: outIndex in: outPointerArray hashes: savedOutHashes topHashBit: topHashBit [
-	self halt.
-	^super newOutPointer: oop at: outIndex in: outPointerArray hashes: savedOutHashes topHashBit: topHashBit
-]
-
 { #category : #'spur bootstrap' }
 Spur32BitMMLESimulator >> numClassTablePages [
 	^numClassTablePages
@@ -429,6 +424,13 @@ Spur32BitMMLESimulator >> parent [
 Spur32BitMMLESimulator >> parent: anObject [
 
 	parent := anObject
+]
+
+{ #category : #'image segment in/out' }
+Spur32BitMMLESimulator >> return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes [
+	self leakCheckImageSegments ifTrue:
+		[self halt: errCode printString].
+	^super return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes
 ]
 
 { #category : #'debug support' }
@@ -502,6 +504,13 @@ Spur32BitMMLESimulator >> shortAt: byteAddress put: a16BitValue [
 Spur32BitMMLESimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 	self long32At: floatBitsAddress put: (aFloat at: 2).
 	self long32At: floatBitsAddress+4 put: (aFloat at: 1)
+]
+
+{ #category : #'image segment in/out' }
+Spur32BitMMLESimulator >> storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots [
+	self leakCheckImageSegments ifTrue:
+		[self halt].
+	^super storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots
 ]
 
 { #category : #'ad-hoc tests' }
