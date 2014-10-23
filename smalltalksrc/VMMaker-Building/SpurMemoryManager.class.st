@@ -8269,8 +8269,13 @@ SpurMemoryManager >> objectsReachableFromRoots: arrayOfRoots [
 	ptr := start := freeChunk + self baseHeaderSize.
 	limit := self addressAfter: freeChunk.
 	count := 0.
-	"First put the roots; order is important."
-	self push: arrayOfRoots onObjStack: markStack.
+
+	"First put the arrayOfRoots; order is important."
+	count := count + 1.
+	ptr < limit ifTrue:
+		[self longAt: ptr put: arrayOfRoots.
+		 ptr := ptr + self bytesPerSlot].
+
 	0 to: (self numSlotsOf: arrayOfRoots) - 1 do:
 		[:i|
 		 oop := self fetchPointer: i ofObject: arrayOfRoots.
