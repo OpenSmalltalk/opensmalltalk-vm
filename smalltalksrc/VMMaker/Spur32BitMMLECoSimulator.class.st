@@ -424,7 +424,7 @@ Spur32BitMMLECoSimulator >> parent: anObject [
 { #category : #'image segment in/out' }
 Spur32BitMMLECoSimulator >> return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes [
 	self leakCheckImageSegments ifTrue:
-		[self halt]..
+		[self halt: errCode printString].
 	^super return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes
 ]
 
