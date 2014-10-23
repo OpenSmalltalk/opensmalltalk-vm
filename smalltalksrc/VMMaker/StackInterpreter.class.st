@@ -8325,7 +8325,11 @@ StackInterpreter >> longPrintOop: oop [
 	(fmt between: objectMemory firstByteFormat and: objectMemory firstCompiledMethodFormat - 1) ifTrue:
 		[^self printStringOf: oop; cr].
 	(fmt between: objectMemory firstLongFormat and: objectMemory firstByteFormat - 1) ifTrue:
-		[^self].
+		[0 to: ((objectMemory num32BitUnitsOf: oop) min: 256) - 1 do:
+			[:i| | fieldOop |
+			fieldOop := objectMemory fetchLong32: i ofObject: oop.
+			self space; printNum: i - 1; space; printHex: fieldOop; space; cr].
+		 ^self].
 	"this is nonsense.  apologies."
 	startIP := (objectMemory lastPointerOf: oop) + BytesPerOop - objectMemory baseHeaderSize / BytesPerOop.
 	lastIndex := 256 min: startIP.
