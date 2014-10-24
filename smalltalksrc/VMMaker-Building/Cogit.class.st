@@ -643,6 +643,11 @@ Cogit class >> generatorTableFrom: anArray [
 						isExtension: (tuple includes: #extension);
 						hasIRC: (tuple includes: #hasIRC);
 						yourself.
+		"As a hack to cut down on descriptor flags, use opcode to tag unusedBytecode for
+		 scanning. Currently descriptors are exactly 16 bytes with all 8 flag bits used.  As
+		 another hack to eliminate a test in scanMethod mark unknows as extensions."
+		descriptor generator == #unknownBytecode ifTrue:
+			[descriptor opcode: Nop; isExtension: true].
 		descriptor isBlockCreation ifTrue:
 			[blockCreationBytecodeSize
 				ifNil: [blockCreationBytecodeSize := descriptor numBytes]
@@ -6240,9 +6245,10 @@ Cogit >> implicitReceiverCacheAddressAt: mcpc [
 	 and Lclass: .word; Lmixin: .word is somewhere on the heap."
 	<option: #NewspeakVM>
 	<inline: true>
+	<returnTypeC: #usqInt>
 	^objectRepresentation canPinObjects
 		ifTrue:
-			[backEnd implicitReceiveCacheAt: mcpc]
+			[(backEnd implicitReceiveCacheAt: mcpc) asUnsignedInteger]
 		ifFalse:
 			[mcpc asUnsignedInteger + backEnd jumpShortByteSize]
 ]
@@ -8588,6 +8594,7 @@ Cogit >> scanMethod [
 		- if the method needs a frame or not
 		- what are the targets of any backward branches.
 		- how many blocks it creates
+		- if it contans an unknown bytecode
 	 Answer the block count or on error a negative error code"
 	| latestContinuation nExts descriptor pc numBlocks distance targetPC framelessStackDelta |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
@@ -8604,7 +8611,9 @@ Cogit >> scanMethod [
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
 		 descriptor isExtension ifTrue:
-			[self loadSubsequentBytesForDescriptor: descriptor at: pc.
+			[descriptor opcode = Nop ifTrue: "unknown bytecode tag; see Cogit class>>#generatorTableFrom:"
+				[^EncounteredUnknownBytecode].
+			 self loadSubsequentBytesForDescriptor: descriptor at: pc.
 			 self perform: descriptor generator].
 		 (descriptor isReturn
 		  and: [pc >= latestContinuation]) ifTrue:
