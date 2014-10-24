@@ -1452,17 +1452,14 @@ CoInterpreter >> ceInterpretMethodFromPIC: aMethodObj receiver: rcvr [
 	self assert: (pic cmType = CMOpenPIC or: [pic cmType = CMClosedPIC]).
 	"If found from an open PIC then it must be an uncogged method and, since it's been found
 	 in the method cache, should be cogged if possible.  If found from a closed PIC it should
-	 be interpreted (since being reached by that route implies it is uncoggable)."
-	pic cmType = CMOpenPIC
-		ifTrue:
-			[(self methodShouldBeCogged: aMethodObj) ifTrue:
-				[cogit cog: aMethodObj selector: pic selector.
-				 (self methodHasCogMethod: aMethodObj) ifTrue:
-					[self executeCogMethod: (self cogMethodOf: aMethodObj)
-						fromUnlinkedSendWithReceiver: rcvr]]]
-		ifFalse:
-			[self assert: (cogCompiledCodeCompactionCalledFor
-						or: [(self methodShouldBeCogged: aMethodObj) not])].
+	 be interpreted (since being reached by that route implies it is uncoggable, either because
+	 there was no space, it had too many literals or it contained an illegal bytecode)."
+	pic cmType = CMOpenPIC ifTrue:
+		[(self methodShouldBeCogged: aMethodObj) ifTrue:
+			[cogit cog: aMethodObj selector: pic selector.
+			 (self methodHasCogMethod: aMethodObj) ifTrue:
+				[self executeCogMethod: (self cogMethodOf: aMethodObj)
+					fromUnlinkedSendWithReceiver: rcvr]]].
 	messageSelector := pic selector.
 	newMethod := aMethodObj.
 	primitiveIndex := self primitiveIndexOf: aMethodObj.
