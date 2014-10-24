@@ -4098,7 +4098,9 @@ StackToRegisterMappingCogit >> scanMethod [
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
 		 descriptor isExtension ifTrue:
-			[self loadSubsequentBytesForDescriptor: descriptor at: pc.
+			[descriptor opcode = Nop ifTrue: "unknown bytecode tag; see Cogit class>>#generatorTableFrom:"
+				[^EncounteredUnknownBytecode].
+			 self loadSubsequentBytesForDescriptor: descriptor at: pc.
 			 self perform: descriptor generator].
 		 (descriptor isReturn
 		  and: [pc >= latestContinuation]) ifTrue:
