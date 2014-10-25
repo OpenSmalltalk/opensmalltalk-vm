@@ -23,7 +23,6 @@
  *
  */
 
-#if ENABLE_FAST_BLT
 #include <stddef.h>
 #include<stdio.h>
 #include <stdlib.h>
@@ -436,4 +435,4 @@ void copyBitsDispatch(operation_t *op)
 	profile_record(storedCombinationRule, storedFlags, after - before);
 #endif
 }
-#endif /* ENABLE_FAST_BLT */
+

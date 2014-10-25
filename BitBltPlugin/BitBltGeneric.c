@@ -23,7 +23,6 @@
  *
  */
 
-#if ENABLE_FAST_BLT
 #include <stddef.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -461,4 +460,4 @@ void addGenericFastPaths(void)
 {
 	addFastPaths(fastPaths, sizeof fastPaths / sizeof *fastPaths);
 }
-#endif /* ENABLE_FAST_BLT */
+
