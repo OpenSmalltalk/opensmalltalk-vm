@@ -28,7 +28,6 @@
 * see BitBtArmLinux.c in this directory as an example
  */
 
-#if ENABLE_FAST_BLT
 #include "BitBltArm.h"
 
 /* There is no OS-neutral way of determining which type of ARM this is */
@@ -37,4 +36,4 @@ arm_cpu_features_t detectCpuFeatures(void)
 {
 	return 0;
 }
-#endif /* ENABLE_FAST_BLT */
+
