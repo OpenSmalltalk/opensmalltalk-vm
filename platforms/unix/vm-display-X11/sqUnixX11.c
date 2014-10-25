@@ -63,7 +63,7 @@
 #undef HAVE_OPENGL_GL_H		/* don't include Quartz OpenGL if configured */
 #include "SqDisplay.h"
 
-#if defined(USE_FAST_BLT)
+#if defined(ENABLE_FAST_BLT)
   /* XXX referring to plugin variables *requires* BitBitPlugin to be included by VMM as an internal plugin */
 # if defined(__arm__)
 #   include "../../../Cross/plugins/BitBltPlugin/BitBltArm.h"
@@ -6141,7 +6141,7 @@ void copyImage8To24(int *fromImageData, int *toImageData, int width, int height,
     }
 }
 
-#if defined(USE_FAST_BLT)
+#if defined(ENABLE_FAST_BLT)
 # if defined(__arm__)
 
     extern void armSimdConvert_x888_8_LEPacking32_8_wide(unsigned int width, unsigned int height,
@@ -6188,7 +6188,7 @@ void copyImage8To24(int *fromImageData, int *toImageData, int width, int height,
 void copyImage32To8(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
-#if defined(USE_FAST_BLT)
+#if defined(ENABLE_FAST_BLT)
 # if defined(__arm__)
     armSimdCopyImage32To8(fromImageData, toImageData, width, height, affectedL, affectedT, affectedR, affectedB, stDownGradingColors);
 # else
@@ -6227,7 +6227,7 @@ void copyImage32To8(int *fromImageData, int *toImageData, int width, int height,
     firstWord8+= scanLine8;
   }
 #undef map32To8
-#endif /* !USE_FAST_BLT */
+#endif /* !ENABLE_FAST_BLT */
 }
 
 void copyImage16To32(int *fromImageData, int *toImageData, int width, int height,
@@ -6352,7 +6352,7 @@ void copyImage16To24(int *fromImageData, int *toImageData, int width, int height
 #undef map16To24
 }
 
-#if defined(USE_FAST_BLT)
+#if defined(ENABLE_FAST_BLT)
 # if defined(__arm__)
 
     extern void armSimdConvert_x888_0565_LEPacking32_16_wide(unsigned int width, unsigned int height,
@@ -6394,7 +6394,7 @@ void copyImage16To24(int *fromImageData, int *toImageData, int width, int height
 void copyImage32To16(int *fromImageData, int *toImageData, int width, int height,
 		     int affectedL, int affectedT, int affectedR, int affectedB)
 {
-#if defined(USE_FAST_BLT)
+#if defined(ENABLE_FAST_BLT)
 # if defined(__arm__)
   if (stRNMask == 5 && stRShift == 11 && stGNMask == 6 && stGShift == 5 && stBNMask == 5 && stBShift == 0)
     armSimdCopyImage32To16(fromImageData, toImageData, width, height, affectedL, affectedT, affectedR, affectedB);
@@ -6489,7 +6489,7 @@ void copyImage16To16(int *fromImageData, int *toImageData, int width, int height
 }
 
 
-#if defined(USE_FAST_BLT)
+#if defined(ENABLE_FAST_BLT)
 # if defined(__arm__)
     extern void armSimdConvert_x888_x888BGR_LEPacking32_32_wide(unsigned int width, unsigned int height,
 								unsigned int *dst, unsigned int dstStride,
@@ -6525,13 +6525,13 @@ void copyImage16To16(int *fromImageData, int *toImageData, int width, int height
 void copyImage32To32(int *fromImageData, int *toImageData, int width, int height,
 		     int affectedL, int affectedT, int affectedR, int affectedB)
 {
-#if defined(USE_FAST_BLT)
+#if defined(ENABLE_FAST_BLT)
 # if defined(__arm__)
     if ((armCpuFeatures & ARM_V6) && stRNMask == 8 && stRShift == 0 && stGNMask == 8 && stGShift == 8 && stBNMask == 8 && stBShift == 16)
       armSimdCopyImage32To32(fromImageData, toImageData, width, height, affectedL, affectedT, affectedR, affectedB);
     else
 # else
-#  error unsupported use of USE_FAST_BLT
+#  error unsupported use of ENABLE_FAST_BLT
 # endif
 #endif
   {

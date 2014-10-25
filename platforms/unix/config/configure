@@ -463,7 +463,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='NM LD SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS cogit topdir cfgdir vmmdir vmpdir vmmcfg blddir SQ_MAJOR SQ_MINOR SQ_UPDATE SQ_VERSION VM_MAJOR VM_MINOR VM_RELEASE VM_VERSION imgdir expanded_relative_imgdir plgdir build build_cpu build_vendor build_os host host_cpu host_vendor host_os SET_MAKE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT WFLAGS AS RANLIB ac_ct_RANLIB INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LN CPP EGREP SED LN_S ECHO AR ac_ct_AR STRIP ac_ct_STRIP CXX CXXFLAGS ac_ct_CXX CXXCPP F77 FFLAGS ac_ct_F77 LIBTOOL INCLUDES HAVE_INTERP_H ALLOCA INTERP AWK VM_APP_ICONS npsqueak install_nps uninstall_nps SQ_LIBDIR int_modules ext_modules HAVE_LANGINFO_CODESET HAVE_NANOSLEEP X_CFLAGS X_PRE_LIBS X_LIBS X_EXTRA_LIBS X_CPPFLAGS X_INCLUDES BITBLT_OBJS LIBM_CFLAGS IA32ABI_OBJS LIB_UUID int_plugins ext_plugins LIBOBJS LTLIBOBJS'
+ac_subst_vars='NM LD SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS cogit topdir cfgdir vmmdir vmpdir vmmcfg blddir SQ_MAJOR SQ_MINOR SQ_UPDATE SQ_VERSION VM_MAJOR VM_MINOR VM_RELEASE VM_VERSION imgdir expanded_relative_imgdir plgdir build build_cpu build_vendor build_os host host_cpu host_vendor host_os SET_MAKE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT WFLAGS AS RANLIB ac_ct_RANLIB INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LN CPP EGREP SED LN_S ECHO AR ac_ct_AR STRIP ac_ct_STRIP CXX CXXFLAGS ac_ct_CXX CXXCPP F77 FFLAGS ac_ct_F77 LIBTOOL INCLUDES HAVE_INTERP_H ALLOCA INTERP AWK VM_APP_ICONS npsqueak install_nps uninstall_nps SQ_LIBDIR int_modules ext_modules HAVE_LANGINFO_CODESET HAVE_NANOSLEEP X_CFLAGS X_PRE_LIBS X_LIBS X_EXTRA_LIBS X_CPPFLAGS X_INCLUDES VM_DISPX11_OBJS VM_DISPX11_BITBLT_FLAGS BITBLT_OBJS BITBLT_FLAGS ARM_ARCH LIBM_CFLAGS IA32ABI_OBJS LIB_UUID int_plugins ext_plugins LIBOBJS LTLIBOBJS'
 ac_subst_files='make_cfg make_int make_ext make_prg Makefile_install Makefile_dist Makefile_rpm Makefile_deb'
 
 # Initialize some variables set by options.
@@ -1031,6 +1031,7 @@ Optional Features:
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
   --disable-iconv         disable iconv support default=enabled
+  --enable-fast-bitblt enable fast BitBlt optimizations (default=no)
   --enable-mpg-mmx        enable MMX support in Mpeg3Plugin default=no
   --enable-mpg-pthreads   enable pthread support in Mpeg3Plugin default=no
 
@@ -5922,7 +5923,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 5925 "configure"' > conftest.$ac_ext
+  echo '#line 5926 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -6939,7 +6940,7 @@ fi
 
 
 # Provide some information about the compiler.
-echo "$as_me:6942:" \
+echo "$as_me:6943:" \
      "checking for Fortran 77 compiler version" >&5
 ac_compiler=`set X $ac_compile; echo $2`
 { (eval echo "$as_me:$LINENO: \"$ac_compiler --version </dev/null >&5\"") >&5
@@ -8002,11 +8003,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8005: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8006: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8009: \$? = $ac_status" >&5
+   echo "$as_me:8010: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8270,11 +8271,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8273: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8274: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8277: \$? = $ac_status" >&5
+   echo "$as_me:8278: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8374,11 +8375,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8377: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8378: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8381: \$? = $ac_status" >&5
+   echo "$as_me:8382: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -9843,7 +9844,7 @@ linux*)
   libsuff=
   case "$host_cpu" in
   x86_64*|s390x*|powerpc64*)
-    echo '#line 9846 "configure"' > conftest.$ac_ext
+    echo '#line 9847 "configure"' > conftest.$ac_ext
     if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -10740,7 +10741,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 10743 "configure"
+#line 10744 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -10840,7 +10841,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 10843 "configure"
+#line 10844 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -13183,11 +13184,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:13186: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:13187: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:13190: \$? = $ac_status" >&5
+   echo "$as_me:13191: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -13287,11 +13288,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:13290: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:13291: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:13294: \$? = $ac_status" >&5
+   echo "$as_me:13295: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -13823,7 +13824,7 @@ linux*)
   libsuff=
   case "$host_cpu" in
   x86_64*|s390x*|powerpc64*)
-    echo '#line 13826 "configure"' > conftest.$ac_ext
+    echo '#line 13827 "configure"' > conftest.$ac_ext
     if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -14881,11 +14882,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14884: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14885: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:14888: \$? = $ac_status" >&5
+   echo "$as_me:14889: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -14985,11 +14986,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14988: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14989: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:14992: \$? = $ac_status" >&5
+   echo "$as_me:14993: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -16434,7 +16435,7 @@ linux*)
   libsuff=
   case "$host_cpu" in
   x86_64*|s390x*|powerpc64*)
-    echo '#line 16437 "configure"' > conftest.$ac_ext
+    echo '#line 16438 "configure"' > conftest.$ac_ext
     if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -17212,11 +17213,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:17215: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:17216: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:17219: \$? = $ac_status" >&5
+   echo "$as_me:17220: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -17480,11 +17481,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:17483: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:17484: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:17487: \$? = $ac_status" >&5
+   echo "$as_me:17488: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -17584,11 +17585,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:17587: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:17588: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:17591: \$? = $ac_status" >&5
+   echo "$as_me:17592: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -19053,7 +19054,7 @@ linux*)
   libsuff=
   case "$host_cpu" in
   x86_64*|s390x*|powerpc64*)
-    echo '#line 19056 "configure"' > conftest.$ac_ext
+    echo '#line 19057 "configure"' > conftest.$ac_ext
     if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -25294,6 +25295,24 @@ else
   have_gl="yes"
 fi;
 
+vm_dispx11_objs="sqUnixX11.lo sqUnixMozilla.lo"
+vm_dispx11_bitblt_flags=""
+
+case $host_cpu in
+arm*)
+# Check whether --enable-fast-bitblt or --disable-fast-bitblt was given.
+if test "${enable_fast_bitblt+set}" = set; then
+  enableval="$enable_fast_bitblt"
+   if   test "x$enableval" = "xyes" ; then
+      vm_dispx11_objs="sqUnixX11.lo sqUnixMozilla.lo sqUnixX11Arm.lo"
+      vm_dispx11_bitblt_flags="-DENABLE_FAST_BLT"
+   fi
+
+fi;
+;;
+esac
+
+
 ###xxx FIXME (AGAIN): mandrake needs explicit -lpthread
 
 VMLIBS=${LIBS}
@@ -27118,6 +27137,11 @@ LIBS=${VMLIBS}
 CFLAGS=${VMCFLAGS}
 CPPFLAGS=${VMCPPFLAGS}
 INCLUDES=${VMINCLUDES}
+
+VM_DISPX11_OBJS=$vm_dispx11_objs
+
+VM_DISPX11_BITBLT_FLAGS=$vm_dispx11_bitblt_flags
+
 if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do
@@ -27697,15 +27721,33 @@ fi
 plugin="BitBltPlugin"
 plibs=""
 rm -f BitBltPlugin.sub BitBltPlugin.lib
+bitblt_objs="BitBltPlugin.o"
+bitblt_flags=""
+arm_arch=""
+
 case $host_cpu in
 arm*)
-bitblt_objs="BitBltPlugin$o BitBltArm$o BitBltArmLinux$o BitBltArmOther$o BitBltArmSimd$o BitBltDispatch$o BitBltGeneric$o BitBltArmSimdAlphaBlend$o BitBltArmSimdBitLogical$o BitBltArmSimdPixPaint$o BitBltArmSimdSourceWord$o"
+case $host_cpu in
+  armv6*) arm_arch="6" ;;
+  armv7*) arm_arch="7-A" ;;
+esac
+# Check whether --enable-fast-bitblt or --disable-fast-bitblt was given.
+if test "${enable_fast_bitblt+set}" = set; then
+  enableval="$enable_fast_bitblt"
+   if   test "x$enableval" = "xyes" ; then
+      bitblt_objs="BitBltPlugin.o BitBltArm.o BitBltArmLinux.o BitBltArmOther.o BitBltArmSimd.o BitBltDispatch.o BitBltGeneric.o BitBltArmSimdAlphaBlend.o BitBltArmSimdBitLogical.o BitBltArmSimdPixPaint.o BitBltArmSimdSourceWord.o"
+      bitblt_flags="-DENABLE_FAST_BLT"
+   fi
+
+fi;
 ;;
-*)
-bitblt_objs="BitBltPlugin.o"
 esac
 
 BITBLT_OBJS=$bitblt_objs
+
+BITBLT_FLAGS=$bitblt_flags
+
+ARM_ARCH=$arm_arch
 
 if test "${plibs}"; then
   llibs="${LIBS}"
@@ -27742,9 +27784,12 @@ fi
 plugin="IA32ABI"
 plibs=""
 rm -f IA32ABI.sub IA32ABI.lib
-ia32abi_objs="IA32ABI.o AlienSUnitTestProcedures.o ia32abicc.o"
+ia32abi_objs="IA32ABI.o AlienSUnitTestProcedures.o"
 
 case $host_cpu in
+i386|i486|i586|i686)
+ia32abi_objs="IA32ABI.o AlienSUnitTestProcedures.o ia32abicc.o"
+;;
 powerpc|ppc)
 ia32abi_objs="IA32ABI.o AlienSUnitTestProcedures.o ppcia32abicc.o"
 ;;
@@ -29515,7 +29560,11 @@ s,@X_LIBS@,$X_LIBS,;t t
 s,@X_EXTRA_LIBS@,$X_EXTRA_LIBS,;t t
 s,@X_CPPFLAGS@,$X_CPPFLAGS,;t t
 s,@X_INCLUDES@,$X_INCLUDES,;t t
+s,@VM_DISPX11_OBJS@,$VM_DISPX11_OBJS,;t t
+s,@VM_DISPX11_BITBLT_FLAGS@,$VM_DISPX11_BITBLT_FLAGS,;t t
 s,@BITBLT_OBJS@,$BITBLT_OBJS,;t t
+s,@BITBLT_FLAGS@,$BITBLT_FLAGS,;t t
+s,@ARM_ARCH@,$ARM_ARCH,;t t
 s,@LIBM_CFLAGS@,$LIBM_CFLAGS,;t t
 s,@IA32ABI_OBJS@,$IA32ABI_OBJS,;t t
 s,@LIB_UUID@,$LIB_UUID,;t t

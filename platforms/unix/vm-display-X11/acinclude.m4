@@ -10,6 +10,23 @@ AC_ARG_WITH(gl,
   [have_gl="$withval"],
   [have_gl="yes"])
 
+vm_dispx11_objs="sqUnixX11.lo sqUnixMozilla.lo"
+vm_dispx11_bitblt_flags=""
+
+case $host_cpu in
+arm*)
+AC_ARG_ENABLE(fast-bitblt,
+ [  --enable-fast-bitblt enable fast BitBlt optimizations (default=no)],
+ [ if   test "x$enableval" = "xyes" ; then
+      vm_dispx11_objs="sqUnixX11.lo sqUnixMozilla.lo sqUnixX11Arm.lo"
+      vm_dispx11_bitblt_flags="-DENABLE_FAST_BLT"
+   fi
+ ],
+ [])
+;;
+esac
+
+
 ###xxx FIXME (AGAIN): mandrake needs explicit -lpthread
 
 VMLIBS=${LIBS}
@@ -63,3 +80,6 @@ LIBS=${VMLIBS}
 CFLAGS=${VMCFLAGS}
 CPPFLAGS=${VMCPPFLAGS}
 INCLUDES=${VMINCLUDES}
+
+AC_SUBST(VM_DISPX11_OBJS, $vm_dispx11_objs)
+AC_SUBST(VM_DISPX11_BITBLT_FLAGS, $vm_dispx11_bitblt_flags)

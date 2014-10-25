@@ -42,24 +42,17 @@
 
 TARGET		= vm-display-X11$a
 
-
-XCFLAGS		= $(X_CFLAGS)
+OBJS = $(VM_DISPX11_OBJS)
+XCFLAGS		= $(VM_DISPX11_BITBLT_FLAGS)
+ASMINCLUDES = -I$(topdir)/platforms/Cross/plugins/BitBltPlugin
+ASMFLAGS = -cpu=$(ARM_ARCH)
+AS = asasm $(ASMFLAGS) $(ASMINCLUDES) -o
 
 XINCLUDES	= [includes] $(X_INCLUDES) \
 		  -I$(topdir)/platforms/Cross/plugins/FilePlugin \
 		  -I$(topdir)/platforms/Cross/plugins/B3DAcceleratorPlugin \
 		  -I$(topdir)/platforms/unix/plugins/B3DAcceleratorPlugin \
 		  -I/usr/X11R6/include
-
-ifeq (,$(findstring ENABLE_FAST_BLT,$(CFLAGS)))
-   OBJS		= sqUnixX11$o sqUnixMozilla$o
-else
-   ASMINCLUDES = -I$(topdir)/platforms/Cross/plugins/BitBltPlugin
-   ASMFLAGS = -cpu=6
-   AS          = asasm $(ASMFLAGS) $(ASMINCLUDES) -o
-   XCFLAGS		= $(X_CFLAGS) -DUSE_FAST_BLT=1
-   OBJS		   = sqUnixX11$o sqUnixMozilla$o sqUnixX11Arm$o
-endif
 
 $(TARGET) : $(OBJS) Makefile
 	$(LINK) $(TARGET) $(OBJS) $(X_LIBS)
