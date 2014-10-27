@@ -11,6 +11,7 @@ Contents:
 	- How to configure and build a VM on Unix
 	- Testing an external plugin has completely linked
 	- Optimization level and gcc version (please read!)
+   - BitBlt optimizations on ARM
 
 
 Overview
@@ -183,7 +184,7 @@ e.g.
 
 	N.B. If you're on a 64-bit linux read 3e below!!
 	N.B. On Ubuntu *do not* supply "LIBS=-lpthread -luuid", i.e. use
-     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0"
+     ../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0"
 
 
 N.B. The plugin set is defined by plugins.ext and plugins.int in the build dir.
@@ -216,3 +217,14 @@ compiling the Newspeak VM with either of
 	gcc version 3.4.6 20060404 (Red Hat 3.4.6-10)
 using -O2 results in a VM that segfaults early in startup.  For these compilers
 it is probably wise to use -O1, even though -O3 seems to work.
+
+
+BitBlt optimizations on ARM
+---------------------------
+On ARM, BitBlt optimizations can be enbaled by including --enable-fast-bitblt as an option to ../platforms/unix/config/configure (default).
+This requires the use of the assembler asasm (cf. http://lists.squeakfoundation.org/pipermail/vm-dev/2013-May/012959.html and http://forum.world.st/commit-2774-add-instructions-for-enableFastBlt-on-arm-linux-td4704245.html). 
+However it is tricky to build from source and pre-packaged versions for Raspbian, Ubuntu, etc do not seem to be available. Therefore
+asasm is included in Cog/build.linux32ARM/ as a pre-built binary. The Makefiles for BitBltPlugin and vm-display-X11 reference it directly.
+
+
+

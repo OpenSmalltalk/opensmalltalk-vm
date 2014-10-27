@@ -6,5 +6,4 @@ SqueakSSL \
 UnicodePlugin \
 UnixOSProcessPlugin \
 UUIDPlugin \
-SqueakFFIPrims \
 XDisplayControlPlugin
