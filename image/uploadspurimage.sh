@@ -6,7 +6,9 @@ IFS="
 "
 DATE=`date +%Y-%m-%d`
 BASENAME=trunk46-spur
-cd `dirname $0`
+
+test "$1" = -here || cd `dirname $0`
+echo uploading trunk46-spur from `pwd`
 
 DIR=$RemoteRoot/$DATE
 echo ssh -x $RemoteUser mkdir $DIR
@@ -19,4 +21,4 @@ echo ssh $RemoteUser rm $RemoteRoot/{$BASENAME.image,$BASENAME.changes}
 ssh $RemoteUser rm $RemoteRoot/{$BASENAME.image,$BASENAME.changes}
 echo ssh $RemoteUser cd $RemoteRoot \\\; ln -s $DATE/{$BASENAME.image,$BASENAME.changes} .
 ssh $RemoteUser cd $RemoteRoot \; ln -s $DATE/{$BASENAME.image,$BASENAME.changes} .
-ssh $RemoteUser ls -l $RemoteRoot
+ssh $RemoteUser ls -l $RemoteRoot $RemoteRoot/$DATE
