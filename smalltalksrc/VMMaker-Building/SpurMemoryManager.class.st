@@ -1027,10 +1027,39 @@ SpurMemoryManager >> abstractPigCompaction [
 SpurMemoryManager >> accessibleObjectAfter: objOop [
 	"Answer the accessible object following the given object or 
 	free chunk in the heap. Return nil when heap is exhausted.
-	 This is for primitiveNextObject subsequent to primtiiveSomeObject."
+	 This is for primitiveNextObject subsequent to primtiiveSomeObject.
+	 It also tries to handle more general use by ordering objects as
+		eden
+		past
+		old
+	 but this is tricky becaus ethe order in memory is
+		past
+		eden
+		old"
 	<inline: false>
 	| objAfter |
 	objAfter := objOop.
+	(self oop: objAfter isLessThan: nilObj) ifTrue: "object in new space"
+		[self assert: ((self isInEden: objOop) or: [self isInPastSpace: objOop]).
+		 (self oop: objAfter isGreaterThan: pastSpaceStart) ifTrue:
+			["Obj is in eden.  Answer next normal object in eden, if there is one."
+			 [objAfter := self objectAfter: objAfter limit: freeStart.
+			  self oop: objAfter isLessThan: freeStart] whileTrue:
+				[(self isNormalObject: objAfter) ifTrue:
+					[^objAfter]].
+			 "There wasn't a next object in eden. If past space is empty answer nilObj."
+			 pastSpaceStart <= scavenger pastSpace start ifTrue:
+				[^nilObj].
+			 "If the first object in pastSpace is OK, answer it, otherwise fall through to enumerate past space."
+			 objAfter := self objectStartingAt: scavenger pastSpace start.
+			 (self isNormalObject: objAfter) ifTrue:
+				[^objAfter]].
+		 "Either objOop was in pastSpace, or enumeration exhaused eden, so enumerate past space."
+		 [objAfter := self objectAfter: objAfter limit: pastSpaceStart.
+		  self oop: objAfter isLessThan: pastSpaceStart] whileTrue:
+			[(self isNormalObject: objAfter) ifTrue:
+				[^objAfter]].
+		 ^nilObj].
 	[objAfter := self objectAfter: objAfter limit: endOfMemory.
 	 objAfter = endOfMemory ifTrue:
 		[^nil].
@@ -1186,7 +1215,7 @@ SpurMemoryManager >> addressCouldBeObj: address [
 	^(address bitAnd: self baseHeaderSize - 1) = 0
 	  and: [(self isInOldSpace: address)
 		or: [(self isInEden: address)
-		or: [(self isInSurvivorSpace: address)
+		or: [(self isInPastSpace: address)
 		or: [scavengeInProgress and: [self isInFutureSpace: address]]]]]
 ]
 
@@ -3649,6 +3678,9 @@ SpurMemoryManager >> copyObj: objOop toAddr: segAddr startAt: segStart stopAt: e
 	self
 		setIsRememberedOf: copy to: false;
 		setIsMarkedOf: copy to: false.
+
+	self ifAProxy: objOop updateCopy: copy.
+
 	"If the object is a class, zero its identityHash (which is its classIndex) and set its
 	 isRemembered bit.  It will be assigned a new hash and entered into the table on load."
 	hash := self rawHashBitsOf: objOop.
@@ -5234,6 +5266,28 @@ SpurMemoryManager >> identityHashHalfWordMask [
 ]
 
 { #category : #'image segment in/out' }
+SpurMemoryManager >> ifAProxy: objOop updateCopy: copy [
+	"If the obejct being copied to the segment is weird and has exotic state,
+	 i.e. a married context or a jitted method, update the copy with the vanilla state."
+
+	((self isContext: objOop)
+	 and: [coInterpreter isMarriedOrWidowedContext: objOop]) ifTrue:
+		[| numMediatedSlots |
+		 "Since the context is here via objectsReachableFromRoots: we know it cannot be divorced.
+		  I'd like to assert coInterpreter checkIsStillMarriedContext: objOop currentFP: framePointer,
+		  here but that requires access to framePointer."
+		 numMediatedSlots := coInterpreter numSlotsOfMarriedContext: objOop.
+		 0 to: numMediatedSlots - 1 do:
+			[:i| | oop |
+			 oop := coInterpreter fetchPointer: i ofMarriedContext: objOop.
+			 self storePointerUnchecked: i ofObject: copy withValue: oop].
+		 "And make sure to nil the slots beyond the top of stack..."
+		 numMediatedSlots to: (self numSlotsOf: objOop) - 1 do:
+			[:i|
+			self storePointerUnchecked: i ofObject: copy withValue: nilObj]]
+]
+
+{ #category : #'image segment in/out' }
 SpurMemoryManager >> imageSegmentVersion [
 	| wholeWord |
 	"a more complex version that tells both the word reversal and the endianness of the machine
@@ -5685,7 +5739,7 @@ SpurMemoryManager >> instanceAfter: objOop [
 						ifTrue: [self objectStartingAt: scavenger pastSpace start]
 						ifFalse: [nilObj]].
 
-	(self isInSurvivorSpace: actualObj) ifTrue:
+	(self isInPastSpace: actualObj) ifTrue:
 		[[actualObj := self objectAfter: actualObj limit: pastSpaceStart.
 		  self oop: actualObj isLessThan: pastSpaceStart] whileTrue:
 			[classIndex = (self classIndexOf: actualObj) ifTrue:
@@ -6108,8 +6162,11 @@ SpurMemoryManager >> isInFutureSpace: address [
 { #category : #'plugin support' }
 SpurMemoryManager >> isInMemory: address [ 
 	"Answer if the given address is in ST object memory."
-	^(self isInNewSpace: address)
-	  or: [segmentManager isInSegments: address]
+	(self isInNewSpace: address) ifTrue:
+		[^(self isInEden: address)
+			or: [(self isInPastSpace: address)
+			or: [scavengeInProgress and: [self isInFutureSpace: address]]]].
+	^segmentManager isInSegments: address
 ]
 
 { #category : #'object testing' }
@@ -6137,14 +6194,6 @@ SpurMemoryManager >> isInPastSpace: address [
 { #category : #immediates }
 SpurMemoryManager >> isInRangeCharacterCode: characterCode [
 	^characterCode between: 0 and: (1 << 30) - 1
-]
-
-{ #category : #'object testing' }
-SpurMemoryManager >> isInSurvivorSpace: address [
-	^self
-		oop: address
-		isGreaterThanOrEqualTo: scavenger pastSpace start
-		andLessThan: pastSpaceStart
 ]
 
 { #category : #'object testing' }
@@ -6621,7 +6670,7 @@ SpurMemoryManager >> lastPointerOf: objOop [
 		  and: [self isContextNonImm: objOop]) ifTrue:
 			["contexts end at the stack pointer"
 			contextSize := coInterpreter fetchStackPointerOf: objOop.
-			^CtxtTempFrameStart + contextSize * BytesPerOop].
+			^CtxtTempFrameStart - 1 + contextSize * BytesPerOop + self baseHeaderSize].
 		^(self numSlotsOf: objOop) - 1 * BytesPerOop + self baseHeaderSize  "all pointers"].
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
@@ -6764,16 +6813,20 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 	"This primitive will load a binary image segment created by primitiveStoreImageSegment.
 	 It expects the outPointer array to be of the proper size, and the wordArray to be well formed.
 	 It will return as its value the original array of roots, and the erstwhile segmentWordArray will
-	 have been truncated to a size of zero.  If this primitive should fail, the segmentWordArray will,
-	 sadly, have been reduced to an unrecognizable and unusable jumble.  But what more could you
-	 have done with it anyway?"
+	 have been truncated to a size of one word, i.e. retaining the version stamp.  If this primitive
+	 should fail, the segmentWordArray will, sadly, have been reduced to an unrecognizable and
+	 unusable jumble.  But what more could you have done with it anyway?"
 
 	<inline: false>
 	| segmentLimit segmentStart segVersion errorCode |
+
+	segmentLimit := self numSlotsOf: segmentWordArray.
+	(self objectBytesForSlots: segmentLimit) < (self allocationUnit "version info" + self baseHeaderSize "one object header") ifTrue:
+		[^PrimErrBadArgument].
+
 	"First thing is to verify format.  If Spur is ever ported to big-endian machines then the segment
 	 may have to be byte/word swapped, but so far it only runs on little-endian machines, so for now
 	 just fail if endinanness is wrong."
-
 	segVersion := self longAt: segmentWordArray + self baseHeaderSize.
 	(coInterpreter readableFormat: (segVersion bitAnd: 16rFFFF "low 2 bytes")) ifFalse:
 		[self reverseBytesFrom: segmentWordArray + self baseHeaderSize
@@ -6785,7 +6838,7 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 		^PrimErrBadArgument]].
 
 	segmentStart := segmentWordArray + self baseHeaderSize + self allocationUnit.
-	segmentLimit := (self numSlotsOf: segmentWordArray) * self bytesPerOop + segmentWordArray + self baseHeaderSize.
+	segmentLimit := segmentLimit * self bytesPerOop + segmentWordArray + self baseHeaderSize.
 
 	"Notionally reverse the Byte type objects if the data is from opposite endian machine.
 	 Test top byte.  $d on the Mac or $s on the PC.  Rest of word is equal.  If Spur is ever
@@ -6818,8 +6871,8 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 
 	"Finally evaporate the container, leaving the newly loaded objects in place."
 	(self hasOverflowHeader: segmentWordArray)
-		ifTrue: [self setOverflowNumSlotsOf: segmentWordArray to: 0]
-		ifFalse: [self setRawNumSlotsOf: segmentWordArray to: 0].
+		ifTrue: [self setOverflowNumSlotsOf: segmentWordArray to: self allocationUnit / self bytesPerSlot]
+		ifFalse: [self setRawNumSlotsOf: segmentWordArray to: self allocationUnit / self bytesPerSlot].
 	
 	self leakCheckImageSegments ifTrue:
 		[self runLeakCheckerForFullGC: true].
@@ -8184,7 +8237,7 @@ SpurMemoryManager >> objectAfter: objOop [
 	(self oop: objOop isLessThan: newSpaceLimit) ifTrue:
 		[(self isInEden: objOop) ifTrue:
 			[^self objectAfter: objOop limit: freeStart].
-		 (self isInSurvivorSpace: objOop) ifTrue:
+		 (self isInPastSpace: objOop) ifTrue:
 			[^self objectAfter: objOop limit: pastSpaceStart].
 		 ^self objectAfter: objOop limit: scavenger futureSurvivorStart].
 	^self objectAfter: objOop limit: endOfMemory
@@ -8293,13 +8346,24 @@ SpurMemoryManager >> objectsReachableFromRoots: arrayOfRoots [
 		 (self isMarked: oop) ifFalse:
 			[self setIsMarkedOf: objOop to: true.
 			 self push: oop onObjStack: markStack].
-		 0 to: (self numPointerSlotsOf: objOop) - 1 do:
-			[:i|
-			 oop := self fetchPointer: i ofObject: objOop.
-			 ((self isImmediate: oop)
-			  or: [self isMarked: oop]) ifFalse:
-				[self setIsMarkedOf: objOop to: true.
-				 self push: oop onObjStack: markStack]]].
+		 ((self isContextNonImm: objOop)
+		  and: [coInterpreter isStillMarriedContext: objOop]) "widow now, before the loop"
+			ifTrue:
+				[0 to: (coInterpreter numSlotsOfMarriedContext: objOop) - 1 do:
+					[:i|
+					 oop := coInterpreter fetchPointer: i ofMarriedContext: objOop.
+					 ((self isImmediate: oop)
+					  or: [self isMarked: oop]) ifFalse:
+						[self setIsMarkedOf: objOop to: true.
+						 self push: oop onObjStack: markStack]]]
+			ifFalse:
+				[0 to: (self numPointerSlotsOf: objOop) - 1 do:
+					[:i|
+					 oop := self fetchPointer: i ofObject: objOop.
+					 ((self isImmediate: oop)
+					  or: [self isMarked: oop]) ifFalse:
+						[self setIsMarkedOf: objOop to: true.
+						 self push: oop onObjStack: markStack]]]].
 
 	self unmarkAllObjects.
 
@@ -10420,7 +10484,9 @@ SpurMemoryManager >> storePointerUnchecked: fieldIndex ofObject: objOop withValu
 
 { #category : #'object access' }
 SpurMemoryManager >> storeShort16: shortIndex ofObject: objOop withValue: value [
-	^self shortAt: objOop + self baseHeaderSize + (shortIndex << 1) put: value
+	^self
+		shortAt: objOop + self baseHeaderSize + (shortIndex << 1)
+		put: (self cCode: [value] inSmalltalk: [value bitAnd: 16rFFFF])
 ]
 
 { #category : #'primitive support' }
