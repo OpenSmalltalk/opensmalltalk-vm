@@ -3476,7 +3476,7 @@ ObjectMemory >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerAr
 	"This primitive is called from Squeak as...
 		<imageSegment> loadSegmentFrom: aWordArray outPointers: anArray."
 
-"This primitive will load a binary image segment created by primitiveStoreImageSegment.  It expects the outPointer array to be of the proper size, and the wordArray to be well formed.  It will return as its value the original array of roots, and the erstwhile segmentWordArray will have been truncated to a size of zero.  If this primitive should fail, the segmentWordArray will, sadly, have been reduced to an unrecognizable and unusable jumble.  But what more could you have done with it anyway?"
+"This primitive will load a binary image segment created by primitiveStoreImageSegment.  It expects the outPointer array to be of the proper size, and the wordArray to be well formed.  It will return as its value the original array of roots, and the erstwhile segmentWordArray will have been truncated to a size of one word, i.e. retaining the version stamp.  If this primitive should fail, the segmentWordArray will, sadly, have been reduced to an unrecognizable and unusable jumble.  But what more could you have done with it anyway?"
 
 	| endSeg segOop fieldPtr fieldOop doingClass lastPtr extraSize mapOop lastOut outPtr hdrTypeBits header data |
 	<inline: false>
@@ -5267,8 +5267,10 @@ ObjectMemory >> storePointerUnchecked: fieldIndex ofObject: oop withValue: value
 ]
 
 { #category : #'object access' }
-ObjectMemory >> storeShort16: shortIndex ofObject: oop withValue: value [
-	^self shortAt: oop + BaseHeaderSize + (shortIndex << 1) put: value
+ObjectMemory >> storeShort16: shortIndex ofObject: objOop withValue: value [
+	^self
+		shortAt: objOop + BaseHeaderSize + (shortIndex << 1)
+		put: (self cCode: [value] inSmalltalk: [value bitAnd: 16rFFFF])
 ]
 
 { #category : #'interpreter access' }

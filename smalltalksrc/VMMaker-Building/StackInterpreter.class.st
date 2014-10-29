@@ -5471,41 +5471,17 @@ StackInterpreter >> externalInstVar: offset ofContext: aContext [
 	"Fetch an instance variable from a maybe married context.
 	 If the context is still married compute the value of the
 	 relevant inst var from the spouse frame's state."
-	| spouseFP |
-	<var: #spouseFP type: #'char *'>
-	<var: #thePage type: #'StackPage *'>
-	<var: #theFPAbove type: #'char *'>
-
 	self assert: (objectMemory isContext: aContext).
 	"method, closureOrNil & receiver need no special handling; only
 	 sender, pc & stackp have to be computed for married contexts."
-	(offset < MethodIndex 
+	((self isReadMediatedContextInstVarIndex: offset)
 	 and: [self isMarriedOrWidowedContext: aContext]) ifFalse:
 		[^objectMemory fetchPointer: offset ofObject: aContext].
 
 	self externalWriteBackHeadFramePointers.
-	(self isWidowedContext: aContext) ifTrue:
-		[^objectMemory fetchPointer: offset ofObject: aContext].
-
-	spouseFP := self frameOfMarriedContext: aContext.
-	offset = SenderIndex ifTrue:
-		[^self ensureCallerContext: spouseFP].
-	offset = StackPointerIndex ifTrue:
-		[self assert: ReceiverIndex + (self stackPointerIndexForFrame: spouseFP) < (objectMemory lengthOf: aContext).
-		^objectMemory integerObjectOf: (self stackPointerIndexForFrame: spouseFP)].
-	offset = InstructionPointerIndex ifTrue:
-		[| theIP thePage theFPAbove |
-		 spouseFP = framePointer
-			ifTrue: [theIP := self oopForPointer: instructionPointer]
-			ifFalse:
-				[thePage := stackPages stackPageFor: spouseFP.
-				 theFPAbove := self findFrameAbove: spouseFP inPage: thePage.
-				 theIP := theFPAbove == 0
-							ifTrue: [stackPages longAt: thePage headSP]
-							ifFalse:[self oopForPointer: (self frameCallerSavedIP: theFPAbove)]].
-		 ^self contextInstructionPointer: theIP frame: spouseFP].
-	self error: 'bad index'.
-	^0
+	^(self isStillMarriedContext: aContext)
+		ifTrue: [self fetchPointer: offset ofMarriedContext: aContext]
+		ifFalse: [objectMemory fetchPointer: offset ofObject: aContext]
 ]
 
 { #category : #'frame access' }
@@ -5690,6 +5666,40 @@ StackInterpreter >> fetchNextBytecode [
 	self cppIf: MULTIPLEBYTECODESETS
 		ifTrue: [currentBytecode := self fetchByte + bytecodeSetSelector]
 		ifFalse: [currentBytecode := self fetchByte]
+]
+
+{ #category : #'frame access' }
+StackInterpreter >> fetchPointer: offset ofMarriedContext: aContext [
+	"Fetch a slot from a married context.  Compute the value
+	 of the relevant inst var from the spouse frame's state.
+
+	 This method assumes frame pointers have been written back."
+	| spouseFP |
+	<inline: false>
+	<var: #spouseFP type: #'char *'>
+
+	self assert: (objectMemory isContext: aContext).
+	self assert: (stackPage headFP = framePointer and: [stackPage headSP = stackPointer]).
+	self assert: (self checkIsStillMarriedContext: aContext currentFP: framePointer).
+
+	"method, closureOrNil & receiver need no special handling; only
+	 sender, pc & stackp have to be computed for married contexts."
+	offset <= ReceiverIndex ifTrue:
+		[(self isReadMediatedContextInstVarIndex: offset) ifFalse:
+			[^objectMemory fetchPointer: offset ofObject: aContext].
+
+		 spouseFP := self frameOfMarriedContext: aContext.
+		 offset = SenderIndex ifTrue:
+			[^self ensureCallerContext: spouseFP].
+		 offset = StackPointerIndex ifTrue:
+			[^objectMemory integerObjectOf: (self stackPointerIndexForFrame: spouseFP)].
+		 offset = InstructionPointerIndex ifTrue:
+			[^self instructionPointerForFrame: spouseFP currentFP: framePointer currentIP: instructionPointer]].
+	
+	spouseFP := self frameOfMarriedContext: aContext.
+	^(offset - ReceiverIndex between: 1 and: (self stackPointerIndexForFrame: spouseFP))
+		ifTrue: [self temporary: offset - (ReceiverIndex + 1) in: spouseFP]
+		ifFalse: [objectMemory nilObject]
 ]
 
 { #category : #'internal interpreter access' }
@@ -7497,8 +7507,6 @@ StackInterpreter >> instVar: offset ofContext: aContext [
 	 relevant inst var from the spouse frame's state."
 	| spouseFP |
 	<var: #spouseFP type: #'char *'>
-	<var: #thePage type: #'StackPage *'>
-	<var: #theFPAbove type: #'char *'>
 	<inline: true>
 	self assert: offset < MethodIndex.
 	self assert: (objectMemory isContext: aContext).
@@ -7516,16 +7524,7 @@ StackInterpreter >> instVar: offset ofContext: aContext [
 		[self assert: ReceiverIndex + (self stackPointerIndexForFrame: spouseFP) < (objectMemory lengthOf: aContext).
 		^objectMemory integerObjectOf: (self stackPointerIndexForFrame: spouseFP)].
 	offset = InstructionPointerIndex ifTrue:
-		[| theIP thePage theFPAbove |
-		 spouseFP = localFP
-			ifTrue: [theIP := self oopForPointer: localIP]
-			ifFalse:
-				[thePage := stackPages stackPageFor: spouseFP.
-				 theFPAbove := self findFrameAbove: spouseFP inPage: thePage.
-				 theIP := theFPAbove == 0
-							ifTrue: [stackPages longAt: thePage headSP]
-							ifFalse:[self oopForPointer: (self frameCallerSavedIP: theFPAbove)]].
-		 ^self contextInstructionPointer: theIP frame: spouseFP].
+		[^self instructionPointerForFrame: spouseFP currentFP: localFP currentIP: localIP].
 	self error: 'bad index'.
 	^0
 ]
@@ -7534,7 +7533,7 @@ StackInterpreter >> instVar: offset ofContext: aContext [
 StackInterpreter >> instVar: index ofContext: aMarriedContext put: anOop [
 	| theFP |
 	"Assign the field of a married context.  The important case to optimize is
-	 assigning the sender.  We could also consider optimizing assiging the IP but
+	 assigning the sender.  We could also consider optimizing assigning the IP but
 	 typically that is followed by an assignment to the stack pointer and we can't
 	 efficiently assign the stack pointer because it involves moving frames around."
 	<inline: true>
@@ -7598,6 +7597,26 @@ StackInterpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 	cache at: atIx+AtCacheFixedFields put: fixedFields.
 	cache at: atIx+AtCacheSize put: totalLength - fixedFields.
 	^true
+]
+
+{ #category : #'frame access' }
+StackInterpreter >> instructionPointerForFrame: spouseFP currentFP: currentFP currentIP: instrPtr [
+	"Answer the bytecode pc object (i.e. SmallInteger) for an active frame.  The bytecode
+	 pc is derived from the frame's pc.  If the frame is the top frame on the current stack
+	 the frame pc is whatever the current instruction pointer is.  If the frame is the top
+	 frame on some other stack the frame pc is the value on top of stack.  Otherwise the
+	 frame pc is the saved pc of the frame above.  Once the frame pc is found it must be
+	 mapped to a bytecode pc."
+	| theIP thePage theFPAbove |
+	spouseFP = currentFP
+		ifTrue: [theIP := self oopForPointer: instrPtr]
+		ifFalse:
+			[thePage := stackPages stackPageFor: spouseFP.
+			 theFPAbove := self findFrameAbove: spouseFP inPage: thePage.
+			 theIP := theFPAbove == 0
+						ifTrue: [stackPages longAt: thePage headSP]
+						ifFalse:[self oopForPointer: (self frameCallerSavedIP: theFPAbove)]].
+	^self contextInstructionPointer: theIP frame: spouseFP
 ]
 
 { #category : #'plugin primitive support' }
@@ -8358,7 +8377,7 @@ StackInterpreter >> longPrintOop: oop [
 		[0 to: ((objectMemory num32BitUnitsOf: oop) min: 256) - 1 do:
 			[:i| | fieldOop |
 			fieldOop := objectMemory fetchLong32: i ofObject: oop.
-			self space; printNum: i - 1; space; printHex: fieldOop; space; cr].
+			self space; printNum: i; space; printHex: fieldOop; space; cr].
 		 ^self].
 	"this is nonsense.  apologies."
 	startIP := (objectMemory lastPointerOf: oop) + BytesPerOop - objectMemory baseHeaderSize / BytesPerOop.
@@ -9530,6 +9549,15 @@ StackInterpreter >> nullaryInlinePrimitive: primIndex [
 	<option: #SistaVM>
 	localIP := localIP - 3.
 	self respondToUnknownBytecode
+]
+
+{ #category : #'internal interpreter access' }
+StackInterpreter >> numSlotsOfMarriedContext: aContext [
+	"Answer the number of effective pointer fields in the given context."
+	<inline: true>
+	| contextSize |
+	contextSize := self stackPointerIndexForFrame: (self frameOfMarriedContext: aContext).
+	^CtxtTempFrameStart + contextSize
 ]
 
 { #category : #'stack pages' }
