@@ -2990,16 +2990,12 @@ CoInterpreter >> externalInstVar: offset ofContext: aContext [
 	 If the context is single but has a negative instruction pointer
 	 recognise that the instruction pointer is actually into machine
 	 code and convert it to the corresponding bytecode pc."
-	| value spouseFP |
-	<var: #spouseFP type: #'char *'>
-	<var: #thePage type: #'StackPage *'>
-	<var: #theFPAbove type: #'char *'>
+	| value |
 
 	self assert: (objectMemory isContext: aContext).
-	self externalWriteBackHeadFramePointers.
 	"method, closureOrNil & receiver need no special handling; only
 	 sender, pc & stackp have to be computed for married contexts."
-	(offset < MethodIndex
+	((self isReadMediatedContextInstVarIndex: offset)
 	 and: [self isMarriedOrWidowedContext: aContext]) ifFalse:
 		[value := objectMemory fetchPointer: offset ofObject: aContext.
 		 ^(offset = InstructionPointerIndex
@@ -3009,32 +3005,10 @@ CoInterpreter >> externalInstVar: offset ofContext: aContext [
 						context: aContext]
 			ifFalse: [value]].
 
-	(self isWidowedContext: aContext) ifTrue:
-		[^objectMemory fetchPointer: offset ofObject: aContext].
-
-	spouseFP := self frameOfMarriedContext: aContext.
-	offset = SenderIndex ifTrue:
-		[^self ensureCallerContext: spouseFP].
-	offset = StackPointerIndex ifTrue:
-		[self assert: ReceiverIndex + (self stackPointerIndexForFrame: spouseFP) < (objectMemory lengthOf: aContext).
-		^objectMemory integerObjectOf: (self stackPointerIndexForFrame: spouseFP)].
-	offset = InstructionPointerIndex ifTrue:
-		[| theIP thePage theFPAbove |
-		 spouseFP = framePointer
-			ifTrue: [theIP := self oopForPointer: instructionPointer]
-			ifFalse:
-				[thePage := stackPages stackPageFor: spouseFP.
-				 theFPAbove := self findFrameAbove: spouseFP inPage: thePage.
-				 theIP := theFPAbove == 0
-							ifTrue: [stackPages longAt: thePage headSP]
-							ifFalse:[self oopForPointer: (self frameCallerSavedIP: theFPAbove)]].
-		 value := self contextInstructionPointer: theIP frame: spouseFP.
-		 ^value signedIntFromLong < 0
-			ifTrue: [self mustMapMachineCodePC: (objectMemory integerValueOf: value)
-						context: aContext]
-			ifFalse: [value]].
-	self error: 'bad index'.
-	^0
+	self externalWriteBackHeadFramePointers.
+	^(self isStillMarriedContext: aContext)
+		ifTrue: [self fetchPointer: offset ofMarriedContext: aContext]
+		ifFalse: [objectMemory fetchPointer: offset ofObject: aContext]
 ]
 
 { #category : #'cog jit support' }
@@ -3784,8 +3758,6 @@ CoInterpreter >> instVar: offset ofContext: aContext [
 	 code and convert it to the corresponding bytecode pc."
 	| value spouseFP |
 	<var: #spouseFP type: #'char *'>
-	<var: #thePage type: #'StackPage *'>
-	<var: #theFPAbove type: #'char *'>
 	<inline: true>
 	self assert: offset < MethodIndex.
 	self assert: (objectMemory isContext: aContext).
@@ -3793,7 +3765,7 @@ CoInterpreter >> instVar: offset ofContext: aContext [
 	(self isMarriedOrWidowedContext: aContext) ifFalse:
 		[value := objectMemory fetchPointer: offset ofObject: aContext.
 		 (offset = InstructionPointerIndex
-		  and: ["self halt: value hex." (objectMemory isIntegerObject: value)
+		  and: [(objectMemory isIntegerObject: value)
 		  and: [value signedIntFromLong < 0]]) ifTrue:
 			[value := self internalMustMapMachineCodePC: (objectMemory integerValueOf: value)
 						context: aContext].
@@ -3809,20 +3781,7 @@ CoInterpreter >> instVar: offset ofContext: aContext [
 		[self assert: ReceiverIndex + (self stackPointerIndexForFrame: spouseFP) < (objectMemory lengthOf: aContext).
 		^objectMemory integerObjectOf: (self stackPointerIndexForFrame: spouseFP)].
 	offset = InstructionPointerIndex ifTrue:
-		[| theIP thePage theFPAbove |
-		 spouseFP = localFP
-			ifTrue: [theIP := self oopForPointer: localIP]
-			ifFalse:
-				[thePage := stackPages stackPageFor: spouseFP.
-				 theFPAbove := self findFrameAbove: spouseFP inPage: thePage.
-				 theIP := theFPAbove == 0
-							ifTrue: [stackPages longAt: thePage headSP]
-							ifFalse:[self oopForPointer: (self frameCallerSavedIP: theFPAbove)]].
-		 value := self contextInstructionPointer: theIP frame: spouseFP.
-		 value signedIntFromLong < 0 ifTrue:
-			[value := self internalMustMapMachineCodePC: (objectMemory integerValueOf: value)
-							context: aContext].
-		 ^value].
+		[^self instructionPointerForFrame: spouseFP currentFP: localFP currentIP: localIP].
 	self error: 'bad index'.
 	^0
 ]
@@ -3845,6 +3804,30 @@ CoInterpreter >> instructionPointerAddress [
 	<returnTypeC: #usqInt>
 	^self cCode: [(self addressOf: instructionPointer) asUnsignedInteger]
 		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #instructionPointer in: self]
+]
+
+{ #category : #'frame access' }
+CoInterpreter >> instructionPointerForFrame: spouseFP currentFP: currentFP currentIP: instrPtr [
+	"Answer the bytecode pc object (i.e. SmallInteger) for an active frame.  The bytecode
+	 pc is derived from the frame's pc.  If the frame is the top frame on the current stack
+	 the frame pc is whatever the current instruction pointer is.  If the frame is the top
+	 frame on some other stack the frame pc is the value on top of stack.  Otherwise the
+	 frame pc is the saved pc of the frame above.  Once the frame pc is found it must be
+	 mapped to a bytecode pc."
+	| value theIP thePage theFPAbove |
+	spouseFP = currentFP
+		ifTrue: [theIP := self oopForPointer: instrPtr]
+		ifFalse:
+			[thePage := stackPages stackPageFor: spouseFP.
+			 theFPAbove := self findFrameAbove: spouseFP inPage: thePage.
+			 theIP := theFPAbove == 0
+						ifTrue: [stackPages longAt: thePage headSP]
+						ifFalse:[self oopForPointer: (self frameCallerSavedIP: theFPAbove)]].
+	value := self contextInstructionPointer: theIP frame: spouseFP.
+	^value signedIntFromLong < 0
+		ifTrue: [self mustMapMachineCodePC: (objectMemory integerValueOf: value)
+					context: (self frameContext: spouseFP)]
+		ifFalse: [value]
 ]
 
 { #category : #'message sending' }

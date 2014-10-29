@@ -2235,7 +2235,12 @@ InterpreterPrimitives >> primitiveLoadImageSegment [
 	"This primitive is called from Squeak as...
 		<imageSegment> loadSegmentFrom: aWordArray outPointers: anArray."
 
-"This primitive will load a binary image segment created by primitiveStoreImageSegment.  It expects the outPointer array to be of the proper size, and the wordArray to be well formed.  It will return as its value the original array of roots, and the erstwhile segmentWordArray will have been truncated to a size of zero.  If this primitive should fail, the segmentWordArray will, sadly, have been reduced to an unrecognizable and unusable jumble.  But what more could you have done with it anyway?"
+	"This primitive will load a binary image segment created by primitiveStoreImageSegment.
+	 It expects the outPointer array to be of the proper size, and the wordArray to be well
+	 formed.  It will return as its value the original array of roots, and the erstwhile
+	 segmentWordArray will have been truncated to a size of one word, i.e. retaining the version
+	 stamp.  If this primitive should fail, the segmentWordArray will, sadly, have been reduced to
+	 an unrecognizable and unusable jumble.  But what more could you have done with it anyway?"
 
 	| outPointerArray segmentWordArray result |
 
@@ -2563,12 +2568,11 @@ InterpreterPrimitives >> primitiveNextInstance [
 InterpreterPrimitives >> primitiveNextObject [
 	"Return the object following the receiver in the heap. Return the SmallInteger zero when there are no more objects."
 
-	| object instance |
-	object := self stackTop.
-	instance := objectMemory accessibleObjectAfter: object.
-	instance = nil
-		ifTrue: [ self pop: argumentCount+1 thenPushInteger: 0 ]
-		ifFalse: [ self pop: argumentCount+1 thenPush: instance ].
+	(objectMemory accessibleObjectAfter: self stackTop)
+		ifNil: [self pop: argumentCount+1 thenPushInteger: 0]
+		ifNotNil: [:instance|
+			self assert: (objectMemory isInMemory: instance).
+			self pop: argumentCount+1 thenPush: instance]
 ]
 
 { #category : #'system control primitives' }
