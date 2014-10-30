@@ -809,10 +809,17 @@ SpurGenerationScavenger >> processWeakSurvivor: weakObj [
 	 which have not survived the scavenge should be nilled, and if any
 	 are, the coInterpreter should be informed via signalFinalization:..
 	 Answer if the weakObj has any young referents."
-	| weakObjShouldMourn hasYoungReferents |
+	| weakObjShouldMourn hasYoungReferents numStrongSlots  |
 	weakObjShouldMourn := hasYoungReferents := false.
 	"N.B. generateToByDoLimitExpression:negative:on: guards against (unsigned)0 - 1 going +ve"
-	(manager numFixedSlotsOf: weakObj)
+	numStrongSlots := manager numFixedSlotsOf: weakObj.
+	0 to: numStrongSlots - 1 do:
+		[:i| | referent |
+		 referent := manager fetchPointer: i ofObject: weakObj.
+		 ((manager isNonImmediate: referent)
+		  and: [manager isYoungObject: referent]) ifTrue:
+			[hasYoungReferents := true]].
+	numStrongSlots
 		to: (manager numSlotsOf: weakObj) - 1
 		do: [:i| | referent |
 			referent := manager fetchPointer: i ofObject: weakObj.
