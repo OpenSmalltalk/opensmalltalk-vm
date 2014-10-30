@@ -5760,6 +5760,8 @@ StackInterpreter >> findClassContainingMethod: meth startingAt: classObj [
 		ifTrue: [currClass := objectMemory followForwarded: classObj]
 		ifFalse: [currClass := classObj].
 	[self assert: (objectMemory isForwarded: currClass) not.
+	 (self addressCouldBeClassObj: currClass) ifFalse:
+		[^objectMemory nilObject].
 	 classDict := objectMemory noFixupFollowField: MethodDictionaryIndex ofObject: currClass.
 	 self assert: (objectMemory isForwarded: classDict) not.
 	 classDictSize := objectMemory numSlotsOf: classDict.
@@ -5797,21 +5799,20 @@ StackInterpreter >> findClassForSelector: aSelector lookupClass: startClass do: 
 
 { #category : #'debug support' }
 StackInterpreter >> findClassOfMethod: meth forReceiver: rcvr [
-	| rclass mclass |
 	((objectMemory addressCouldBeOop: rcvr)
 	and: [(objectMemory isOopForwarded: rcvr) not]) ifTrue:
-		[rclass := objectMemory fetchClassOf: rcvr.
-		 (self addressCouldBeClassObj: rclass) ifTrue:
-			[rclass := self findClassContainingMethod: meth startingAt: rclass.
-			rclass ~= objectMemory nilObject ifTrue:
-				[^rclass]]].
+		[| rclass |
+		 rclass := self
+					findClassContainingMethod: meth
+					startingAt: (objectMemory fetchClassOf: rcvr).
+		 rclass ~= objectMemory nilObject ifTrue:
+			[^rclass]].
 	((objectMemory addressCouldBeObj: meth)
 	 and: [objectMemory isCompiledMethod: meth]) ifFalse:
 		[^objectMemory nilObject].
-	mclass := self safeMethodClassOf: meth.
-	(self addressCouldBeClassObj: mclass) ifTrue:
-		[^objectMemory nilObject].
-	^self findClassContainingMethod: meth startingAt: (self safeMethodClassOf: meth)
+	^self
+		findClassContainingMethod: meth
+		startingAt: (self safeMethodClassOf: meth)
 ]
 
 { #category : #'frame access' }
