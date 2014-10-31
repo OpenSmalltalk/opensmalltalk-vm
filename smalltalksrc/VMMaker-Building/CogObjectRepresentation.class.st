@@ -324,6 +324,14 @@ CogObjectRepresentation >> maybeCompileRetry: retryInst onPrimitiveFail: primInd
 	 By default do nothing."
 ]
 
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> maybeCompileRetry: retryInst onPrimitiveFail: primIndex primPropertyFlags: flags [
+	<var: #retryInst type: #'AbstractInstruction *'>
+	"Object representations with lazy forwarding will want to check for
+	 forwarding pointers on primitive failure and retry the primitive if found.
+	 By default do nothing."
+]
+
 { #category : #'sista support' }
 CogObjectRepresentation >> maybeMarkCounters: theCounters [
 	"In SIsta Spur counters are held on the heap in pinned objects which must be marked

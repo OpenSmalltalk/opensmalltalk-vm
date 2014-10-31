@@ -343,6 +343,15 @@ VMMaker class >> generateAllSpurConfigurations [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateAllSpurConfigurationsUnderVersionControl [
+	self generateNewspeakSpurStackVM;
+		generateSqueakSpurStackVM;
+		generateNewspeakSpurCogVM;
+		generateSqueakSpurCogVM;
+		generateSqueakSpurCogSistaVM
+]
+
+{ #category : #configurations }
 VMMaker class >> generateAllStackConfigurationsUnderVersionControl [
 	self generateNewspeakSpurStackVM;
 		generateSqueakStackVM;
