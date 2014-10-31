@@ -1097,8 +1097,7 @@ CoInterpreter >> ceActivateFailingPrimitiveMethod: aPrimitiveMethod [
 	"If we're on Spur, check for forwarders and retry,
 	 returning if successful the second time around."
 	(objectMemory hasSpurMemoryManagerAPI
-	 and: [(objectMemory isOopCompiledMethod: newMethod)
-	 and: [self checkForAndFollowForwardedPrimitiveState]]) ifTrue:
+	 and: [self checkForAndFollowForwardedPrimitiveState]) ifTrue:
 		[self initPrimCall.
 		 self cCode: [self dispatchFunctionPointer: primitiveFunctionPointer]
 			inSmalltalk:
@@ -1237,15 +1236,15 @@ CoInterpreter >> ceCannotResume [
 ]
 
 { #category : #'cog jit support' }
-CoInterpreter >> ceCheckForAndFollowForwardedPrimitiveStateFor: primIndex [
+CoInterpreter >> ceCheckForAndFollowForwardedPrimitiveState [
 	"In Spur a primitive may fail due to encountering a forwarder.
 	 On failure check the accessorDepth for the primitive and
 	 if non-negative scan the args to the depth, following any
 	 forwarders.  Answer if any are found so the prim can be retried."
 	<api>
 	<option: #SpurObjectMemory>
-	^self cCode: [self checkForAndFollowForwardedPrimitiveStateFor: primIndex]
-		inSmalltalk: [(self checkForAndFollowForwardedPrimitiveStateFor: primIndex)
+	^self cCode: [self checkForAndFollowForwardedPrimitiveState]
+		inSmalltalk: [(self checkForAndFollowForwardedPrimitiveState)
 						ifTrue: [1]
 						ifFalse: [0]]
 ]
@@ -5313,29 +5312,47 @@ CoInterpreter >> primitiveFunctionPointer: oop [
 CoInterpreter >> primitivePropertyFlags: primIndex [
 	<api>
 	"Answer any special requirements of the given primitive"
-	| baseFlags functionPointer |
-	<var: #functionPointer declareC: 'void (*functionPointer)(void)'>
-	functionPointer := self functionPointerFor: primIndex inClass: nil.
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue: [^self primitivePropertyFlagsForSpur: primIndex]
+		ifFalse: [^self primitivePropertyFlagsForV3: primIndex]
+]
 
-	"The complications of following forwarding pointers in machine code on failures
-	 of primitives called indirectly through primitiveDoNamedPrimitiveWithArgs are not
-	 worth dealing with, as primitiveDoNamedPrimitiveWithArgs is used only in debugging."
-	(objectMemory hasSpurMemoryManagerAPI
-	 and: [functionPointer = #primitiveDoNamedPrimitiveWithArgs]) ifTrue:
-		[^PrimCallDoNotJIT].
+{ #category : #'cog jit support' }
+CoInterpreter >> primitivePropertyFlagsForSpur: primIndex [
+	<inline: true>
+	"Answer any special requirements of the given primitive.  Spur always needs to set
+	 primitiveFunctionPointer and newMethod so primitives can retry on failure due to forwarders."
+	| baseFlags |
+	baseFlags := PrimCallNeedsPrimitiveFunction + PrimCallNeedsNewMethod.
+	profileSemaphore ~= objectMemory nilObject ifTrue:
+		[baseFlags := baseFlags bitOr: PrimCallCollectsProfileSamples].
 
+	self cCode: [] inSmalltalk: [#(primitiveExternalCall primitiveCalloutToFFI)]. "For senders..."
+		(primIndex == 117 "#primitiveExternalCall"
+	 or: [primIndex == 120 "#primitiveCalloutToFFI"]) ifTrue: "For callbacks"
+		[baseFlags := baseFlags bitOr: PrimCallMayCallBack.
+		 checkAllocFiller ifTrue:
+			[baseFlags := baseFlags bitOr: CheckAllocationFillerAfterPrimCall]].
+
+	^baseFlags
+]
+
+{ #category : #'cog jit support' }
+CoInterpreter >> primitivePropertyFlagsForV3: primIndex [
+	<inline: true>
+	"Answer any special requirements of the given primitive"
+	| baseFlags |
 	baseFlags := profileSemaphore ~= objectMemory nilObject
 					ifTrue: [PrimCallNeedsNewMethod + PrimCallCollectsProfileSamples]
 					ifFalse: [0].
 
-	longRunningPrimitiveCheckSemaphore ~= nil ifTrue:
+	longRunningPrimitiveCheckSemaphore ifNotNil:
 		[baseFlags := baseFlags bitOr: PrimCallNeedsNewMethod].
 
-		(functionPointer == #primitiveExternalCall
-	 or: [functionPointer == #primitiveCalloutToFFI]) ifTrue: "For callbacks"
-		[baseFlags := baseFlags bitOr: PrimCallNeedsNewMethod + PrimCallNeedsPrimitiveFunction + PrimCallMayCallBack.
-		 checkAllocFiller ifTrue:
-			[baseFlags := baseFlags bitOr: CheckAllocationFillerAfterPrimCall]].
+	self cCode: [] inSmalltalk: [#(primitiveExternalCall primitiveCalloutToFFI)]. "For senders..."
+		(primIndex == 117 "#primitiveExternalCall"
+	 or: [primIndex == 120 "#primitiveCalloutToFFI"]) ifTrue: "For callbacks"
+		[baseFlags := baseFlags bitOr: PrimCallNeedsNewMethod + PrimCallNeedsPrimitiveFunction + PrimCallMayCallBack].
 
 	^baseFlags
 ]
@@ -6150,6 +6167,27 @@ CoInterpreter >> roomToPushNArgs: n [
 			^self stackPointerIndex + n <= cntxSize]
 		ifFalse: "simpler code that simply insists args are <= max arg count"
 			[^n <= (LargeContextSlots - CtxtTempFrameStart)]
+]
+
+{ #category : #'primitive support' }
+CoInterpreter >> saneFunctionPointerForFailureOfPrimIndex: primIndex [
+	^instructionPointer >= objectMemory nilObject asUnsignedInteger
+		ifTrue:
+			[super saneFunctionPointerForFailureOfPrimIndex: primIndex]
+		ifFalse:
+			[self
+				cCode:
+					[primitiveFunctionPointer = (self functionPointerFor: primIndex
+													inClass: objectMemory nilObject)]
+				inSmalltalk:
+					[(primitiveFunctionPointer isInteger
+						ifTrue:
+							[(cogit lookupAddress: primitiveFunctionPointer)
+								endsWith: (self functionPointerFor: primIndex
+												inClass: objectMemory nilObject)]
+						ifFalse:
+							[primitiveFunctionPointer = (self functionPointerFor: primIndex
+															inClass: objectMemory nilObject)])]]
 ]
 
 { #category : #'callback support' }
