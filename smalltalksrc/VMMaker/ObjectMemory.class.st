@@ -3147,6 +3147,20 @@ ObjectMemory >> isNonImmediate: anOop [
 ]
 
 { #category : #'interpreter access' }
+ObjectMemory >> isNonIntegerImmediate: oop [
+	"ObjectMemory only has integer immedates"
+	<inline: true>
+	^false
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> isNonIntegerNonImmediate: oop [
+	"ObjectMemory only has integer immedates"
+	<inline: true>
+	^true
+]
+
+{ #category : #'interpreter access' }
 ObjectMemory >> isNonIntegerObject: objectPointer [
 	<api>
 	^(objectPointer bitAnd: 1) = 0

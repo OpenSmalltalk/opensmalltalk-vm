@@ -90,6 +90,7 @@ Class {
 		'longRunningPrimitiveSignalUndelivered',
 		'checkAllocFiller',
 		'tempOop',
+		'tempOop2',
 		'theUnknownShort',
 		'the2ndUnknownShort',
 		'imageFloatsBigEndian',
@@ -3279,6 +3280,10 @@ StackInterpreter >> callExternalPrimitive: functionID [
 	 see StackInterpreterSimulator for its version."
 
 	<var: #functionID declareC: 'void (*functionID)()'>
+	"Spur needs the primitiveFunctionPointer to be set correctly
+	 for accurate following of forwarders on primitive failure."
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[primitiveFunctionPointer := functionID].
 	self dispatchFunctionPointer: functionID.
 	self maybeFailForLastObjectOverwrite.
 ]
@@ -3508,43 +3513,30 @@ StackInterpreter >> checkDeliveryOfLongRunningPrimitiveSignal [
 
 { #category : #'primitive support' }
 StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
-	"In Spur a primitive may fail due to encountering a forwarder.
-	 On failure check the accessorDepth for the primitive and
-	 if non-negative scan the args to the depth, following any
-	 forwarders.  Answer if any are found so the prim can be retried."
+	"In Spur a primitive may fail due to encountering a forwarder. On failure,
+	 check the accessorDepth for the primitive and if non-negative scan the
+	 args to the depth, following any forwarders.  Answer if any are found so
+	 the prim can be retried.  The primitive index is derived from newMethod.
+	 If the primitive is 118, then primitiveDoPrimitiveWithArgs sets newMethod
+	 to a SmallInteger whose value is the primitive it is evaluating."
 	<option: #SpurObjectMemory>
-	^self checkForAndFollowForwardedPrimitiveStateFor: (self primitiveIndexOf: newMethod)
-]
-
-{ #category : #'primitive support' }
-StackInterpreter >> checkForAndFollowForwardedPrimitiveStateFor: primIndex [
-	"In Spur a primitive may fail due to encountering a forwarder.
-	 On failure check the accessorDepth for the primitive and
-	 if non-negative scan the args to the depth, following any
-	 forwarders.  Answer if any are found so the prim can be retried."
-	<option: #SpurObjectMemory>
-	| accessorDepth found |
-	self assert: self successful not.
+	| primIndex accessorDepth found |
+	self assert: self failed.
 	found := false.
+	primIndex := (objectMemory isIntegerObject: newMethod)
+					ifTrue: [objectMemory integerValueOf: newMethod]
+					ifFalse:
+						[self assert: argumentCount = (self argumentCountOf: newMethod).
+						 self primitiveIndexOf: newMethod].
 	accessorDepth := primitiveAccessorDepthTable at: primIndex.
 	"For the method-executing primitives, failure could have been in those primitives or the
-	 primitives of the methods they execute.  find out which failed by seeing what is in effect."
-	primIndex caseOf: {
-		[117] -> 
-			[primitiveFunctionPointer ~~ #primitiveExternalCall ifTrue:
-				[accessorDepth := self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod].
-			 self assert: argumentCount = (self argumentCountOf: newMethod)].
-		[118] -> "with tryPrimitive:withArgs: the argument count has nothing to do with newMethod's, so no arg count assert."
-			[self assert: primitiveFunctionPointer = (self functionPointerFor: primIndex inClass: objectMemory nilObject)].
-		[218] ->
-			[primitiveFunctionPointer ~~ #primitiveDoNamedPrimitiveWithArgs ifTrue:
-				[accessorDepth := self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod].
-			 self assert: argumentCount = (self argumentCountOf: newMethod)]. }
-		otherwise:
-			["functionPointer should have been set, unless we're in machine code"
-			 instructionPointer > objectMemory nilObject ifTrue:
-				[self assert: primitiveFunctionPointer = (self functionPointerFor: primIndex inClass: objectMemory nilObject).
-				 self assert: argumentCount = (self argumentCountOf: newMethod)]].
+	 primitives of the methods they execute.  Find out which failed by seeing what is in effect."
+	((primIndex = 117 and: [primitiveFunctionPointer ~~ #primitiveExternalCall])
+	 or: [primIndex = 218 and: [primitiveFunctionPointer ~~ #primitiveDoNamedPrimitiveWithArgs]])
+		ifTrue:
+			[accessorDepth := self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod]
+		ifFalse:
+			[self assert: (self saneFunctionPointerForFailureOfPrimIndex: primIndex)].
 	accessorDepth >= 0 ifTrue:
 		[0 to: argumentCount do:
 			[:index| | oop |
@@ -3774,6 +3766,9 @@ StackInterpreter >> checkInterpreterIntegrity [
 	tempOop = 0 ifFalse:
 		[(objectMemory checkOopIntegrity: tempOop named: 'tempOop')ifFalse:
 			[ok := false]].
+	tempOop2 = 0 ifFalse:
+		[(objectMemory checkOopIntegrity: tempOop2 named: 'tempOop2')ifFalse:
+			[ok := false]].
 
 	"Callback support - check suspended callback list"
 	1 to: jmpDepth do:
@@ -3885,7 +3880,7 @@ StackInterpreter >> checkOkayInterpreterObjects: writeBack [
 	1 to: objectMemory remapBufferCount do:
 		[ :i |
 		oop := objectMemory remapBuffer at: i.
-		(objectMemory isIntegerObject: oop) ifFalse:
+		(objectMemory isImmediate: oop) ifFalse:
 			[ok := ok & (self checkOkayFields: oop)]].
 	ok := ok & (self checkOkayStackZone: writeBack).
 	^ok
@@ -7252,7 +7247,7 @@ StackInterpreter >> initialize [
 	nextProfileTick := 0.
 	nextPollUsecs := 0.
 	nextWakeupUsecs := 0.
-	tempOop := theUnknownShort := 0.
+	tempOop := tempOop2 := theUnknownShort := 0.
 	interruptPending := false.
 	inIOProcessEvents := 0.
 	fullScreenFlag := 0.
@@ -8739,7 +8734,10 @@ StackInterpreter >> mapInterpreterOops [
 	self remapCallbackState.
 	(tempOop ~= 0
 	 and: [objectMemory shouldRemapOop: tempOop]) ifTrue:
-		[tempOop := objectMemory remapObj: tempOop]
+		[tempOop := objectMemory remapObj: tempOop].
+	(tempOop2 ~= 0
+	 and: [objectMemory shouldRemapOop: tempOop2]) ifTrue:
+		[tempOop2 := objectMemory remapObj: tempOop2]
 ]
 
 { #category : #'object memory support' }
@@ -8887,6 +8885,7 @@ StackInterpreter >> markAndTraceInterpreterOops: fullGCFlag [
 		[objectMemory markAndTrace: newMethod].
 	self traceProfileState.
 	tempOop = 0 ifFalse: [objectMemory markAndTrace: tempOop].
+	tempOop2 = 0 ifFalse: [objectMemory markAndTrace: tempOop2].
 
 	1 to: objectMemory remapBufferCount do: [:i | 
 			oop := objectMemory remapBuffer at: i.
@@ -9219,6 +9218,19 @@ StackInterpreter >> maybeFixClonedCompiledMethod: objOop [
 { #category : #'compiled methods' }
 StackInterpreter >> maybeFlagMethodAsInterpreted: aMethod [
 	"Convenient  noop in the StackInterpreter e.g. for sendInvokeCallbackContext:"
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> maybeRetryFailureDueToForwarding [
+	"In Spur a primitive may fail due to encountering a forwarder. On failure, check
+	 the accessorDepth for the primitive and if non-negative scan the args to the
+	 depth, following any forwarders.  Retry the primitive if any are found."
+	<inline: true>
+	(objectMemory hasSpurMemoryManagerAPI
+	 and: [self failed
+	 and: [self checkForAndFollowForwardedPrimitiveState]]) ifTrue:
+		[self initPrimCall.
+		 self dispatchFunctionPointer: primitiveFunctionPointer]
 ]
 
 { #category : #'debug support' }
@@ -9593,7 +9605,7 @@ StackInterpreter >> objectArg: index [
 	| oop |
 	oop := self methodArg: index.
 	oop = 0 ifTrue:[^0]. "methodArg: failed"
-	(objectMemory isIntegerObject: oop) ifTrue: [self primitiveFail. ^ nil].
+	(objectMemory isImmediate: oop) ifTrue: [self primitiveFail. ^ nil].
 	^oop
 ]
 
@@ -9660,7 +9672,7 @@ StackInterpreter >> okayInterpreterObjects [
 	].
 	1 to: objectMemory remapBufferCount do: [ :i |
 		oop := objectMemory remapBuffer at: i.
-		(objectMemory isIntegerObject: oop) ifFalse: [
+		(objectMemory isImmediate: oop) ifFalse: [
 			self okayFields: oop.
 		].
 	].
@@ -12080,6 +12092,11 @@ StackInterpreter >> safeMethodClassOf: methodPointer [
 	^maybeClass
 ]
 
+{ #category : #'primitive support' }
+StackInterpreter >> saneFunctionPointerForFailureOfPrimIndex: primIndex [
+	^primitiveFunctionPointer = (self functionPointerFor: primIndex inClass: objectMemory nilObject)
+]
+
 { #category : #'compiled methods' }
 StackInterpreter >> saneMethodClassAssociationIn: methodObj numLiterals: numLiterals [
 	| shouldBeAssoc |
@@ -12812,25 +12829,14 @@ StackInterpreter >> slowPrimitiveResponse [
 	<var: #savedFramePointer type: #'char *'>
 	<var: #savedStackPointer type: #'char *'>
 	self assert: (objectMemory isOopForwarded: (self stackValue: argumentCount)) not.
+	self assert: objectMemory remapBufferCount = 0.
 	FailImbalancedPrimitives ifTrue:
 		[nArgs := argumentCount.
 		 savedStackPointer := stackPointer.
 		 savedFramePointer := framePointer].
 	self initPrimCall.
 	self dispatchFunctionPointer: primitiveFunctionPointer.
-	"In Spur a primitive may fail due to encountering a forwarder.
-	 On failure check the accessorDepth for the primitive and
-	 if non-negative scan the args to the depth, following any
-	 forwarders.  Retry the primitive if any are found."
-	objectMemory hasSpurMemoryManagerAPI
-		ifTrue:
-			[(self successful not
-			  and: [(objectMemory isOopCompiledMethod: newMethod)
-			  and: [self checkForAndFollowForwardedPrimitiveState]]) ifTrue:
-				[self initPrimCall.
-				 self dispatchFunctionPointer: primitiveFunctionPointer]]
-		ifFalse:
-			[self assert: objectMemory remapBufferCount = 0].
+	self maybeRetryFailureDueToForwarding.
 	self maybeFailForLastObjectOverwrite.
 	(FailImbalancedPrimitives
 	and: [self successful

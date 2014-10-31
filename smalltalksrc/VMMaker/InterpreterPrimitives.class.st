@@ -211,20 +211,20 @@ InterpreterPrimitives >> isNegativeIntegerValueOf: oop [
 	Fail if object pointed by oop i not an integer."
 	| ok smallInt |
 
-	(objectMemory isIntegerObject: oop)
-		ifTrue:
-			[smallInt := objectMemory integerValueOf: oop.
-			^smallInt < 0].
-
-	ok := objectMemory isClassOfNonImm: oop
-					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
-					compactClassIndex: ClassLargePositiveIntegerCompactIndex.
-	ok ifTrue: [^false].
-		
-	ok := objectMemory isClassOfNonImm: oop
-							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
-							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
-	ok ifTrue: [^true].
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[smallInt := objectMemory integerValueOf: oop.
+		^smallInt < 0].
+	
+	(objectMemory isNonIntegerNonImmediate: oop) ifTrue:
+		[ok := objectMemory isClassOfNonImm: oop
+						equalTo: (objectMemory splObj: ClassLargePositiveInteger)
+						compactClassIndex: ClassLargePositiveIntegerCompactIndex.
+		 ok ifTrue: [^false].
+			
+		 ok := objectMemory isClassOfNonImm: oop
+								equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
+								compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
+		 ok ifTrue: [^true]].
 	self primitiveFail.
 	^false
 ]
@@ -279,6 +279,9 @@ InterpreterPrimitives >> magnitude64BitValueOf: oop [
 		smallIntValue < 0 ifTrue: [smallIntValue := 0 - smallIntValue].
 		^self cCoerce: smallIntValue to: #usqLong].
 
+	(objectMemory isNonIntegerImmediate: oop) ifTrue:
+		[^self primitiveFail].
+
 	ok := objectMemory isClassOfNonImm: oop
 					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
 					compactClassIndex: ClassLargePositiveIntegerCompactIndex.
@@ -304,16 +307,14 @@ InterpreterPrimitives >> positive32BitValueOf: oop [
 	The object may be either a positive SmallInteger or a four-byte LargePositiveInteger."
 	<returnTypeC: #usqInt>
 	| value ok |
-	(objectMemory isIntegerObject: oop)
-		ifTrue:
-			[value := objectMemory integerValueOf: oop.
-			value < 0 ifTrue: [self primitiveFail. value := 0].
-			^value]
-		ifFalse:
-			[(objectMemory hasSpurMemoryManagerAPI
-			  and: [objectMemory isImmediate: oop]) ifTrue:
-				[self primitiveFail.
-				 ^0]].
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[value := objectMemory integerValueOf: oop.
+		value < 0 ifTrue: [self primitiveFail. value := 0].
+		^value].
+
+	(objectMemory isNonIntegerImmediate: oop) ifTrue:
+		[self primitiveFail.
+		 ^0].
 
 	ok := objectMemory isClassOfNonImm: oop
 			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
@@ -340,6 +341,10 @@ InterpreterPrimitives >> positive64BitValueOf: oop [
 			[^self primitiveFail].
 		 ^objectMemory integerValueOf: oop].
 
+	(objectMemory isNonIntegerImmediate: oop) ifTrue:
+		[self primitiveFail.
+		 ^0].
+
 	ok := objectMemory
 			isClassOfNonImm: oop
 			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
@@ -364,6 +369,9 @@ InterpreterPrimitives >> positiveMachineIntegerValueOf: oop [
 		[value := objectMemory integerValueOf: oop.
 		 value < 0 ifTrue: [^self primitiveFail].
 		^value].
+
+	(objectMemory isNonIntegerImmediate: oop) ifTrue:
+		[^self primitiveFail].
 
 	ok := objectMemory
 			isClassOfNonImm: oop
@@ -3920,6 +3928,9 @@ InterpreterPrimitives >> signed32BitValueOf: oop [
 	(objectMemory isIntegerObject: oop) ifTrue:
 		[^objectMemory integerValueOf: oop].
 
+	(objectMemory isNonIntegerImmediate: oop) ifTrue:
+		[^self primitiveFail].
+
 	ok := objectMemory isClassOfNonImm: oop
 					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
 					compactClassIndex: ClassLargePositiveIntegerCompactIndex.
@@ -3971,6 +3982,9 @@ InterpreterPrimitives >> signed64BitValueOf: oop [
 	<var: #value type: #sqLong>
 	(objectMemory isIntegerObject: oop) ifTrue:
 		[^self cCoerce: (objectMemory integerValueOf: oop) to: #sqLong].
+
+	(objectMemory isNonIntegerImmediate: oop) ifTrue:
+		[^self primitiveFail].
 
 	ok := objectMemory isClassOfNonImm: oop
 					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
@@ -4024,6 +4038,9 @@ InterpreterPrimitives >> signedMachineIntegerValueOf: oop [
 	<var: #value type: #long>
 	(objectMemory isIntegerObject: oop) ifTrue:
 		[^objectMemory integerValueOf: oop].
+
+	(objectMemory isNonIntegerImmediate: oop) ifTrue:
+		[^self primitiveFail].
 
 	ok := objectMemory isClassOfNonImm: oop
 					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
