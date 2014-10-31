@@ -729,6 +729,7 @@ CoInterpreterMT >> markAndTraceInterpreterOops: fullGCFlag [
 		[objectMemory markAndTrace: newMethod].
 	self traceProfileState.
 	tempOop = 0 ifFalse: [objectMemory markAndTrace: tempOop].
+	tempOop2 = 0 ifFalse: [objectMemory markAndTrace: tempOop2].
 
 	1 to: objectMemory remapBufferCount do:
 		[:i|

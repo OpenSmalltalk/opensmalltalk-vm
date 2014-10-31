@@ -740,20 +740,19 @@ CogObjectRepresentationForSpur >> markIfIRC: maybeIRCs [
 CogObjectRepresentationForSpur >> maybeCompileRetry: retryInst onPrimitiveFail: primIndex [
 	<var: #retryInst type: #'AbstractInstruction *'>
 	"If primIndex has an accessorDepth, check for primitive failure and call
-	 ceCheckForAndFollowForwardedPrimitiveStateFor:.  If ceCheck.... answers
+	 ceCheckForAndFollowForwardedPrimitiveState if so  If ceCheck.... answers
 	 true, retry the primitive."
-	| accessorDepth jmp |
+	| jmp |
 	<var: #jmp type: #'AbstractInstruction *'>
-	accessorDepth := coInterpreter accessorDepthForPrimitiveIndex: primIndex.
-	accessorDepth < 0 ifTrue:
+	(coInterpreter accessorDepthForPrimitiveIndex: primIndex) < 0 ifTrue:
 		[^0].
 	cogit MoveAw: coInterpreter primFailCodeAddress R: TempReg.
 	cogit CmpCq: 0 R: TempReg.
 	jmp := cogit JumpZero: 0.
 	cogit
-		compileCallFor: #ceCheckForAndFollowForwardedPrimitiveStateFor:
-		numArgs: 1
-		arg: primIndex
+		compileCallFor: #ceCheckForAndFollowForwardedPrimitiveState
+		numArgs: 0
+		arg: nil
 		arg: nil
 		arg: nil
 		arg: nil

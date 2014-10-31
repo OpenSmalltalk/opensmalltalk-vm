@@ -6261,6 +6261,18 @@ SpurMemoryManager >> isNonImmediate: oop [
 ]
 
 { #category : #'object testing' }
+SpurMemoryManager >> isNonIntegerImmediate: oop [
+	<inline: true>
+	^self isImmediate: oop
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isNonIntegerNonImmediate: oop [
+	<inline: true>
+	^self isNonImmediate: oop
+]
+
+{ #category : #'object testing' }
 SpurMemoryManager >> isNonIntegerObject: oop [
 	^(oop bitAnd: 1) = 0
 ]
