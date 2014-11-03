@@ -923,16 +923,6 @@ JSCodeGenerator >> fileHeaderVersionStampForSourceClass: sourceClass [
 ]
 
 { #category : #'JS translation' }
-JSCodeGenerator >> generateAbs: msgNode on: aStream indent: level [
-	"Generate the JS code for the negated message onto the given stream."
-
-	aStream nextPutAll: 'Math.abs('.
-	self emitJSExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ')'.
-
-]
-
-{ #category : #'JS translation' }
 JSCodeGenerator >> generateAddressOf: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
 self halt.
@@ -1184,16 +1174,6 @@ JSCodeGenerator >> generateCDigitCopy: msgNode on: aStream indent: level [
 		return 0;
 	}();
 '
-]
-
-{ #category : #'JS translation' }
-JSCodeGenerator >> generateCos: msgNode on: aStream indent: level [
-	"Generate the JS code for the message onto the given stream."
-
-	aStream nextPutAll: 'Math.cos('.
-	self emitJSExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ')'.
-
 ]
 
 { #category : #accessing }
@@ -1729,7 +1709,7 @@ JSCodeGenerator >> generateIsNil: msgNode on: aStream indent: level [
 JSCodeGenerator >> generateJSCodeForCcode: cCode on: aStream indent: level [
 	cCode = '' ifTrue: [^self].
 	aStream nextPutAll: (cCodeTranslationDict at: cCode ifAbsent: [
-		(#('sqrt' 'sin' 'cos' 'tan' 'atan' 'atan2' 'log' 'min' 'max' 'floor') anySatisfy: [:fn | fn,'(*)' match: cCode])
+		(#('sqrt' 'sin' 'cos' 'tan' 'atan' 'atan2' 'log' 'exp' 'min' 'max' 'floor') anySatisfy: [:fn | fn,'(*)' match: cCode])
 			ifTrue: ['Math.', cCode] ifFalse: [
 		('opTable[*] = (void *)*' match: cCode)
 			ifTrue: [cCode copyReplaceAll: '(void *)' with: ''] ifFalse: [
@@ -1779,6 +1759,15 @@ JSCodeGenerator >> generateLong32At: msgNode on: aStream indent: level [
 			index emitJSCodeAsExpressionOn: aStream level: level generator: self.
 			aStream nextPutAll: ' >>> 2'].
 	aStream nextPut: $].
+
+]
+
+{ #category : #'JS translation' }
+JSCodeGenerator >> generateMath: msgNode on: aStream indent: level [
+	"Generate the JS code for the message onto the given stream."
+	aStream nextPutAll: 'Math.'; nextPutAll: msgNode selector; nextPut: $(.
+	self emitJSExpression: msgNode receiver on: aStream.
+	aStream nextPut: $).
 
 ]
 
@@ -2129,16 +2118,6 @@ self halt.
 
 ]
 
-{ #category : #'JS translation' }
-JSCodeGenerator >> generateSin: msgNode on: aStream indent: level [
-	"Generate the JS code for the message onto the given stream."
-
-	aStream nextPutAll: 'Math.sin('.
-	self emitJSExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ')'.
-
-]
-
 { #category : #'JS hacks' }
 JSCodeGenerator >> generateSizeOfSTArrayFromCPrimitive: msgNode on: aStream indent: level [
 	| cType sizer |
@@ -2168,16 +2147,6 @@ JSCodeGenerator >> generateSmalltalkMetaError: msgNode on: aStream indent: level
 	"Generate the JS code for this message onto the given stream."
 
 	aStream nextPutAll: 'throw Error("'; nextPutAll: msgNode selector; nextPutAll: '")'
-]
-
-{ #category : #'JS translation' }
-JSCodeGenerator >> generateSqrt: msgNode on: aStream indent: level [
-	"Generate the JS code for the message onto the given stream."
-
-	aStream nextPutAll: 'Math.sqrt('.
-	self emitJSExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ')'.
-
 ]
 
 { #category : #'JS hacks' }
@@ -2413,10 +2382,14 @@ JSCodeGenerator >> initializeCTranslationDictionary [
 	#+				#generatePlus:on:indent:
 	#-				#generateMinus:on:indent:
 	#negated		#generateNegated:on:indent:
-	#abs			#generateAbs:on:indent:
-	#sqrt			#generateSqrt:on:indent:
-	#sin			#generateSin:on:indent:
-	#cos			#generateCos:on:indent:
+	#abs			#generateMath:on:indent:
+	#sqrt			#generateMath:on:indent:
+	#sin			#generateMath:on:indent:
+	#cos			#generateMath:on:indent:
+	#tan			#generateMath:on:indent:
+	#atan			#generateMath:on:indent:
+	#exp			#generateMath:on:indent:
+	#log			#generateMath:on:indent:
 	#*				#generateTimes:on:indent:
 	#/				#generateDivide:on:indent:
 	#//				#generateDivide:on:indent:
