@@ -4332,9 +4332,10 @@ StackInterpreter >> commonSendAbsentImplicit [
 	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments"
 	"240		11110000	i i i i i j j j	Send To Absent Implicit Receiver Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
 	<sharedCodeInCase: #extSendAbsentImplicitBytecode>
-	| implicitReceiver |
+	| followedReceiver implicitReceiver |
+	followedReceiver := self internalFollowedReceiver.
 	implicitReceiver := self
-							implicitReceiverFor: self receiver
+							implicitReceiverFor: followedReceiver
 							mixin: (self methodClassOf: method)
 							implementing: messageSelector.
 	self shuffleArgumentsAndStoreAbsentReceiver: implicitReceiver.
@@ -7758,6 +7759,17 @@ StackInterpreter >> internalFindUnwindThroughContext: homeContext [
 	 answer 0.  If homeContext is itself an unwind-protect answer the context, not 0."
 	self externalizeIPandSP.
 	^self findUnwindThroughContext: homeContext
+]
+
+{ #category : #'internal interpreter access' }
+StackInterpreter >> internalFollowedReceiver [
+	<inline: true>
+	| rcvr |
+	rcvr := stackPages longAt: localFP + FoxReceiver.
+	(objectMemory isOopForwarded: rcvr) ifTrue:
+		[rcvr := objectMemory followForwarded: rcvr.
+		 stackPages longAt: localFP + FoxReceiver put: rcvr].
+	^rcvr
 ]
 
 { #category : #'return bytecodes' }
@@ -11304,11 +11316,12 @@ StackInterpreter >> pushImplicitReceiverBytecode [
 	 effectively finds the nearest lexically-enclosing implementation of
 	 that selector by searching up the static chain of the receiver,
 	 starting at the current method."
-	| selector |
+	| selector followedReceiver |
 	selector := self literal: self fetchByte.
 	self fetchNextBytecode.
+	followedReceiver := self internalFollowedReceiver.
 	self internalPush: (self
-						implicitReceiverFor: self receiver
+						implicitReceiverFor: followedReceiver
 						mixin: (self methodClassOf: method)
 						implementing: selector)
 ]

@@ -3944,6 +3944,17 @@ CoInterpreter >> internalFindNewMethod [
 			self addNewMethodToCache: lkupClass]
 ]
 
+{ #category : #'internal interpreter access' }
+CoInterpreter >> internalFollowedReceiver [
+	<inline: true>
+	| rcvr |
+	rcvr := stackPages longAt: localFP + FoxIFReceiver.
+	(objectMemory isOopForwarded: rcvr) ifTrue:
+		[rcvr := objectMemory followForwarded: rcvr.
+		 stackPages longAt: localFP + FoxIFReceiver put: rcvr].
+	^rcvr
+]
+
 { #category : #'frame access' }
 CoInterpreter >> internalMustMapMachineCodePC: theIP context: aOnceMarriedContext [
 	"Must externalize before calling mustMapMachineCodePC:context:
