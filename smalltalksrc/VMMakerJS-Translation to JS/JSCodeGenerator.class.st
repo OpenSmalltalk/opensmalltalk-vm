@@ -820,7 +820,7 @@ JSCodeGenerator >> emitJSConstantsOn: aStream [
 JSCodeGenerator >> emitJSExpression: aParseNode on: aStream [ 
 	"Emit C code for the expression described by the given parse node."
 
-	aParseNode isLeaf 
+	aParseNode isLeafOrFunc 
 		ifTrue: 
 			["omit parens"
 			 aParseNode emitJSCodeAsExpressionOn: aStream level: 0 generator: self]
@@ -983,7 +983,7 @@ JSCodeGenerator >> generateAt: msgNode on: aStream indent: level [
 		subtractOne := false.
 		indexNode := indexNode receiver.	"remove + 1"
 	].
-	complex := subtractOne and: [indexNode isLeaf not].
+	complex := subtractOne and: [indexNode isLeafOrFunc not].
 	self emitJSExpression: arrayNode on: aStream.
 	aStream nextPut: $[.
 	complex ifTrue: [aStream nextPut: $(].
@@ -1766,7 +1766,7 @@ JSCodeGenerator >> generateLong32At: msgNode on: aStream indent: level [
 JSCodeGenerator >> generateMath: msgNode on: aStream indent: level [
 	"Generate the JS code for the message onto the given stream."
 	aStream nextPutAll: 'Math.'; nextPutAll: msgNode selector; nextPut: $(.
-	self emitJSExpression: msgNode receiver on: aStream.
+	msgNode receiver emitJSCodeAsExpressionOn: aStream level: 0 generator: self.
 	aStream nextPut: $).
 
 ]
