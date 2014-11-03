@@ -1168,8 +1168,10 @@ SpurMemoryManager >> addToFreeTree: freeChunk bytes: chunkBytes [
 	child := freeLists at: 0.
 	[child ~= 0] whileTrue:
 		[childBytes := self bytesInObject: child.
-		 self assert: ((self oop: freeChunk + chunkBytes isLessThanOrEqualTo: child)
-						or: [self oop: freeChunk isGreaterThanOrEqualTo: child + childBytes]).
+		 "check for overlap; could write this as self oop: (self objectAfter: freeChunk) isLessThanOrEqualTo: child...
+		  but that relies on headers being correct, etc.  So keep it clumsy..."
+		 self assert: ((self oop: freeChunk + chunkBytes - self baseHeaderSize isLessThanOrEqualTo: child)
+						or: [self oop: freeChunk isGreaterThanOrEqualTo: child + childBytes - self baseHeaderSize]).
 		 childBytes = chunkBytes ifTrue: "size match; add to list at node."
 			[self storePointer: self freeChunkNextIndex
 					ofFreeChunk: freeChunk
