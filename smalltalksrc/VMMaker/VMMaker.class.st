@@ -315,6 +315,7 @@ VMMaker class >> generateAllConfigurationsUnderVersionControl [
 { #category : #configurations }
 VMMaker class >> generateAllNewspeakConfigurationsUnderVersionControl [
 	self generateNewspeakCogVM;
+		generateNewspeakSpurStackVM;
 		generateNewspeakSpurCogVM
 ]
 
