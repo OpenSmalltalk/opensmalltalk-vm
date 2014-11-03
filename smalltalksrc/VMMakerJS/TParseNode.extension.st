@@ -58,6 +58,11 @@ TParseNode >> isInterpreterProxyConstant [
 ]
 
 { #category : #'*vmmakerjs' }
+TParseNode >> isLeafOrFunc [
+	^self isLeaf
+]
+
+{ #category : #'*vmmakerjs' }
 TParseNode >> isPlusOne [
 	^false
 ]

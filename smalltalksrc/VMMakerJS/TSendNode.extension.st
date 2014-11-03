@@ -95,6 +95,13 @@ TSendNode >> isInterpreterProxyConstant [
 ]
 
 { #category : #'*vmmakerjs' }
+TSendNode >> isLeafOrFunc [
+	selector precedence = 2 ifTrue: [^false].
+	(#(and: or: bitAnd: bitOr: bitXor: bitShift:) includes: selector) ifTrue: [^false].
+	^true
+]
+
+{ #category : #'*vmmakerjs' }
 TSendNode >> isPlusOne [
 	^ self selector = #+ and: [self args first isConstant and: [self args first value = 1]]
 ]
