@@ -5846,6 +5846,11 @@ Cogit >> generateNewspeakRuntime [
 			 self MoveR: TempReg R: ReceiverResultReg.
 			 jumpItsTheReceiverStupid jmpTarget: (self RetN: 0).
 			 jumpMiss jmpTarget: self Label.
+			 objectRepresentation
+				genEnsureObjInRegNotForwarded: ReceiverResultReg
+				scratchReg: TempReg
+				updatingMw: FoxMFReceiver
+				r: FPReg.
 			 ceImplicitReceiverTrampoline := self
 												genTrampolineFor: #ceImplicitReceiverFor:receiver:cache:
 												called: 'ceImplicitReceiverTrampoline'
