@@ -191,8 +191,8 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	vmClass := aCCodeGenerator vmClass. "Generate primitiveTable etc based on vmClass, not just StackInterpreter"
 	aCCodeGenerator
 		addHeaderFile:'<stddef.h> /* for e.g. alloca */';
+		addHeaderFile:'<wchar.h>';
 		addHeaderFile:'<setjmp.h>';
-		addHeaderFile:'<wchar.h> /* for wint_t */';
 		addHeaderFile:'"vmCallback.h"';
 		addHeaderFile:'"sqMemoryFence.h"';
 		addHeaderFile:'"dispdbg.h"'.
@@ -542,7 +542,9 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV4 [
 		(243		extJumpIfTrue)
 		(244		extJumpIfFalse)
 
-		(245 248	unknownBytecode)
+		(245		extSendAbsentSelfBytecode)
+
+		(246 248	unknownBytecode)
 
 		"3 byte bytecodes"
 		(249		callPrimitiveBytecode)
@@ -551,8 +553,9 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV4 [
 		(251		storeRemoteTempLongBytecode)
 		(252		storeAndPopRemoteTempLongBytecode)
 		(253		extPushClosureBytecode)
+		(254		extSendAbsentOuterBytecode)
 
-		(254 255	unknownBytecode)
+		(255		unknownBytecode)
 	)
 ]
 
@@ -4901,26 +4904,22 @@ StackInterpreter >> elementsPerPrintOopLine [
 ]
 
 { #category : #'newspeak bytecode support' }
-StackInterpreter >> enclosingObjectAt: n withObject: anObject withMixin: mixin [ 
-	"This is used to implement the innards of the pushEnclosingObjectBytecode,
-	 used for explicit outer sends in NS2/NS3.  "
+StackInterpreter >> enclosingObjectAt: depth withObject: methodReceiver withMixin: methodMixin [ 
+	"This is used to implement outer sends and outer expressions in Newspeak."
 	| enclosingObject mixinApplication targetMixin count |
 	
-	enclosingObject := anObject.
-	targetMixin := mixin.
+	enclosingObject := methodReceiver.
+	targetMixin := methodMixin.
 	count := 0.
-	[count < n] whileTrue:
+	[count < depth] whileTrue:
 		[count := count + 1.
-		(targetMixin = objectMemory nilObject
-		 or: [enclosingObject = objectMemory nilObject]) ifTrue:
-			[^objectMemory nilObject].
+		self deny: (targetMixin = objectMemory nilObject).
 		mixinApplication := self
-								findApplicationOfTargetMixin: targetMixin
-								startingAtNonMetaClass: (objectMemory fetchClassOf: enclosingObject).
-		mixinApplication = objectMemory nilObject ifTrue:
-			[^objectMemory nilObject]. "should never happen!"
-		enclosingObject := objectMemory followObjField: EnclosingObjectIndex ofObject: mixinApplication.	
-		targetMixin := objectMemory followObjField: EnclosingMixinIndex ofObject: targetMixin].
+							findApplicationOfTargetMixin: targetMixin
+							startingAtBehavior: (self fetchClassOf: enclosingObject).
+		self deny: (mixinApplication = objectMemory nilObject).
+		enclosingObject := self followObjField: EnclosingObjectIndex ofObject: mixinApplication.	
+		targetMixin := self followObjField: EnclosingMixinIndex ofObject: targetMixin].
 	
 	^enclosingObject
 ]
@@ -5241,6 +5240,39 @@ StackInterpreter >> extSendAbsentImplicitBytecode [
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
 	self commonSendAbsentImplicit
+]
+
+{ #category : #'send bytecodes' }
+StackInterpreter >> extSendAbsentOuterBytecode [
+	"254		  11111110 	i i i i i j j j	kkkkkkkk Send To Enclosing Object at Depth kkkkkkkk Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
+	| byte depth absentReceiver |
+	byte := self fetchByte.
+	messageSelector := self literal: (byte >> 3) + (extA << 5).
+	extA := 0.
+	argumentCount := (byte bitAnd: 7) + (extB << 3).
+	extB := 0.
+	depth := self fetchByte.
+	absentReceiver := self 
+							enclosingObjectAt: depth
+							withObject: self receiver 
+							withMixin: (self methodClassOf: method).
+	self shuffleArgumentsAndStoreAbsentReceiver: absentReceiver.
+	lkupClassTag := objectMemory classTagForClass: (objectMemory fetchClassOf: absentReceiver).
+	self commonSend
+]
+
+{ #category : #'send bytecodes' }
+StackInterpreter >> extSendAbsentSelfBytecode [
+	"245		 11110101 	i i i i i j j j	Send To Self Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
+	| byte |
+	byte := self fetchByte.
+	messageSelector := self literal: (byte >> 3) + (extA << 5).
+	extA := 0.
+	argumentCount := (byte bitAnd: 7) + (extB << 3).
+	extB := 0.
+	self shuffleArgumentsAndStoreAbsentReceiver: self receiver.
+	lkupClassTag := objectMemory classTagForClass: (objectMemory fetchClassOf: self receiver).
+	self commonSend
 ]
 
 { #category : #'send bytecodes' }
@@ -5714,39 +5746,19 @@ StackInterpreter >> fetchStackPointerOf: aContext [
 
 { #category : #'newspeak bytecode support' }
 StackInterpreter >> findApplicationOfTargetMixin: targetMixin startingAtBehavior: aBehavior [
-	"This is used to implement the innards of the pushImplicitReceiverBytecode,
-	 used for outer sends in NS2/NS3.  Find the MixinApplcation of which aBehavior
-	 is a subclass that is an application of targetMixin.  This is an implementation derived from
+	"This is used to implement implicit receiver and enclosing object lookup
+	 for Newspeak. Find the mixin applcation of which aClass is a subclass that
+	 is an application of targetMixin. This is an implementation derived from
 
-	<ContextPart> findApplicationOfTargetMixin: targetMixin startingAtBehavior: aBehavior
+	<ContextPart> findApplicationOf: targetMixin startingAt: aBehavior
 	"
-	| mixinOrMixinApplication mixin |
-	mixinOrMixinApplication := aBehavior.
-	[mixinOrMixinApplication = objectMemory nilObject
-	 or: [mixinOrMixinApplication = targetMixin
-	 or: [(mixin := objectMemory fetchPointer: MixinIndex ofObject: mixinOrMixinApplication) = targetMixin
-	 or: [(objectMemory fetchClassOfNonImm: mixin) = targetMixin]]]] whileFalse:
-		[mixinOrMixinApplication := objectMemory fetchPointer: SuperclassIndex ofObject: mixinOrMixinApplication].
-	^mixinOrMixinApplication
-]
-
-{ #category : #'newspeak bytecode support' }
-StackInterpreter >> findApplicationOfTargetMixin: targetMixin startingAtNonMetaClass: aClass [
-	"This is used to implement the innards of the pushImplicitReceiverBytecode,
-	 used for outer sends in NS2/NS3.  Find the MixinApplcation of which aClass
-	 is a subclass that is an application of targetMixin.  This is an implementation derived from
-
-	<ContextPart> findApplicationOfTargetMixin: targetMixin startingAtNonMetaClass: aClass
-	"
-	| mixinOrMixinApplication |
-	self deny: (objectMemory isForwarded: targetMixin).
-	self deny: (objectMemory isForwarded: aClass).
-	mixinOrMixinApplication := aClass.
-	[mixinOrMixinApplication = objectMemory nilObject
-	 or: [mixinOrMixinApplication = targetMixin
-	 or: [(objectMemory followObjField: MixinIndex ofObject: mixinOrMixinApplication) = targetMixin]]] whileFalse:
-		[mixinOrMixinApplication := objectMemory followObjField: SuperclassIndex ofObject: mixinOrMixinApplication].
-	^mixinOrMixinApplication
+	| mixinApplication mixin |
+	mixinApplication := aBehavior.
+	[mixinApplication = objectMemory nilObject
+	 or: [mixinApplication = targetMixin
+	 or: [(mixin := objectMemory fetchPointer: MixinIndex ofObject: mixinApplication) = targetMixin]]] whileFalse:
+		[mixinApplication := objectMemory fetchPointer: SuperclassIndex ofObject: mixinApplication].
+	^mixinApplication
 ]
 
 { #category : #'debug support' }
@@ -7082,41 +7094,35 @@ StackInterpreter >> imageFormatVersion [
 ]
 
 { #category : #'newspeak bytecode support' }
-StackInterpreter >> implicitReceiverFor: rcvr mixin: mixin implementing: selector [
-	"This is used to implement the innards of the pushImplicitReceiverBytecode,
-	 used for implicit receiver sends in NS2/NS3.  Find the nearest lexically-enclosing
-	 implementation of selector by searching up the static chain of anObject,
-	 starting at mixin's application.  This is an iterative implementation derived from
+StackInterpreter >> implicitReceiverFor: methodReceiver mixin: methodMixin implementing: selector [
+	"This is used to implement implicit receiver sends in Newspeak. Find the nearest
+	 lexically-enclosing implementation of selector by searching up the static chain of the
+	 method's receiver, starting at mixin's application. This implementation is derived from
 
-	<ContextPart> implicitReceiverFor: obj <Object>
-					withMixin: mixin <Mixin>
+	<ContextPart> implicitReceiverFor: methodReceiver <Object>
+					in: methodMixin <Mixin>
 					implementing: selector <Symbol> ^<Object>"
 	<api>
 	<option: #NewspeakVM>
-	| mixinApplication dictionary found |
-	self deny: (objectMemory isOopForwarded: rcvr).
-	self deny: (objectMemory isForwarded: mixin).
+	| candidateReceiver candidateMixin candidateMixinApplication dictionary found |
+	self deny: (objectMemory isOopForwarded: methodReceiver).
+	self deny: (objectMemory isForwarded: methodMixin).
 	"messageSelector is an implicit parameter of lookupMethodInDictionary:"
 	messageSelector := objectMemory followMaybeForwarded: selector.
-	mixinApplication := self
-							findApplicationOfTargetMixin: mixin
-							startingAtBehavior: (objectMemory fetchClassOf: rcvr).
-	 mixinApplication = objectMemory nilObject ifTrue:
-		[^rcvr].
-	 dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: mixinApplication.
+	candidateReceiver := methodReceiver.
+	candidateMixin := methodMixin.
+	[candidateMixinApplication := self
+		findApplicationOfTargetMixin: candidateMixin
+		startingAtBehavior: (objectMemory fetchClassOf: candidateReceiver).
+	 self deny: (candidateMixinApplication = objectMemory nilObject).
+	 dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: candidateMixinApplication.
 	 found := self lookupMethodInDictionary: dictionary.
-	 found ifFalse:
-		[| implicitReceiverOrNil theMixin |
-		 theMixin := objectMemory followObjField: MixinIndex ofObject: mixinApplication.
-		 implicitReceiverOrNil := self nextImplicitReceiverFor: (objectMemory
-																followObjField: EnclosingObjectIndex
-																ofObject: mixinApplication)
-									withMixin: (objectMemory
-													followObjField: EnclosingMixinIndex
-													ofObject: theMixin).
-		 implicitReceiverOrNil ~= objectMemory nilObject ifTrue:
-			[^implicitReceiverOrNil]].
-	^rcvr
+	 found ifTrue: [^candidateReceiver].
+	 candidateMixin := objectMemory followObjField: EnclosingMixinIndex ofObject: candidateMixin.
+	 candidateMixin = objectMemory nilObject]
+		whileFalse:
+			[candidateReceiver := objectMemory followObjField: EnclosingObjectIndex ofObject: candidateMixinApplication].
+	^methodReceiver
 ]
 
 { #category : #'plugin primitive support' }
@@ -7521,7 +7527,7 @@ StackInterpreter >> instVar: offset ofContext: aContext [
 		[self assert: ReceiverIndex + (self stackPointerIndexForFrame: spouseFP) < (objectMemory lengthOf: aContext).
 		^objectMemory integerObjectOf: (self stackPointerIndexForFrame: spouseFP)].
 	offset = InstructionPointerIndex ifTrue:
-		[^self instructionPointerForFrame: spouseFP currentFP: localFP currentIP: localIP].
+		[^self instructionPointerForFrame: spouseFP currentFP: localFP currentIP: (self oopForPointer: localIP)].
 	self error: 'bad index'.
 	^0
 ]
@@ -7604,7 +7610,11 @@ StackInterpreter >> instructionPointerForFrame: spouseFP currentFP: currentFP cu
 	 frame on some other stack the frame pc is the value on top of stack.  Otherwise the
 	 frame pc is the saved pc of the frame above.  Once the frame pc is found it must be
 	 mapped to a bytecode pc."
+	<var: #spouseFP type: #'char *'>
+	<var: #currentFP type: #'char *'>
 	| theIP thePage theFPAbove |
+	<var: #thePage type: #'StackPage *'>
+	<var: #theFPAbove type: #'char *'>
 	spouseFP = currentFP
 		ifTrue: [theIP := self oopForPointer: instrPtr]
 		ifFalse:
@@ -9465,39 +9475,6 @@ StackInterpreter >> newStackPage [
 		[^lruOrFree].
 	self divorceFramesIn: lruOrFree.
 	^lruOrFree
-]
-
-{ #category : #'newspeak bytecode support' }
-StackInterpreter >> nextImplicitReceiverFor: anObject withMixin: mixin [
-	"This is used to implement the innards of the pushImplicitReceiverBytecode,
-	 used for implicit receiver sends in NS2/NS3.  Find the nearest lexically-enclosing
-	 implementation of selector by searching up the static chain of anObject,
-	 starting at mixin's application.  This is an iterative implementation derived from
-
-	<ContextPart> nextImplicitReceiverFor: obj <Object>
-					withMixin: mixin <Mixin>
-					implementing: selector <Symbol> ^<Object>"
-	| implicitReceiver mixinApplication theMixin targetMixin dictionary found |
-	self deny: (objectMemory isOopForwarded: anObject).
-	self deny: (objectMemory isForwarded: mixin).
-	implicitReceiver := anObject.
-	targetMixin := mixin.
-	[(targetMixin = objectMemory nilObject "or: [implicitReceiver = objectMemory nilObject]") ifTrue:
-		[^objectMemory nilObject].
-	mixinApplication := self findApplicationOfTargetMixin: targetMixin
-							startingAtNonMetaClass: (objectMemory fetchClassOf: implicitReceiver).
-	 mixinApplication = objectMemory nilObject ifTrue:
-		[^objectMemory nilObject].
-	 dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: mixinApplication.
-	 found := self lookupMethodInDictionary: dictionary.
-	 found]
-		whileFalse:
-			[implicitReceiver := objectMemory followObjField: EnclosingObjectIndex ofObject: mixinApplication.
-			 theMixin := objectMemory followObjField: MixinIndex ofObject: mixinApplication.
-			 theMixin = objectMemory nilObject ifTrue:
-				[^objectMemory nilObject].
-			 targetMixin := objectMemory followObjField: EnclosingMixinIndex ofObject: theMixin].
-	^implicitReceiver
 ]
 
 { #category : #'compiled methods' }
