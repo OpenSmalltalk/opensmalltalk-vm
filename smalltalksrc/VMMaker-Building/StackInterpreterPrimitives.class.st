@@ -145,7 +145,8 @@ StackInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 					ifFalse:
 						[next := objectMemory fetchClassOfNonImm: current]].
 		 (stackPages couldBeFramePointer: next)
-			ifTrue: [self assert: (self isFrame: next onPage: (stackPages stackPageFor: next))]
+			ifTrue: [self assert: (self isFrame: (self cCoerceSimple: next to: #'char *')
+									onPage: (stackPages stackPageFor: (self cCoerceSimple: next to: #'char *')))]
 			ifFalse: [self assert: (self checkOkayOop: next)].
 		 next = goal ifTrue:
 			[self assert: freeStartAtStart = objectMemory freeStart.
