@@ -1099,8 +1099,10 @@ SpurMemoryManager >> addFreeSubTree: freeTree [
 	treeNode := freeLists at: 0.
 	self assert: treeNode ~= 0.
 	[bytesInNode := self bytesInObject: treeNode.
-	 self assert: ((self oop: freeTree + bytesInArg isLessThanOrEqualTo: treeNode)
-					or: [self oop: freeTree isGreaterThanOrEqualTo: treeNode + bytesInNode]).
+	 "check for overlap; could write this as self oop: (self objectAfter: freeChunk) isLessThanOrEqualTo: child...
+	  but that relies on headers being correct, etc.  So keep it clumsy..."
+	 self assert: ((self oop: freeTree + bytesInArg - self baseHeaderSize isLessThanOrEqualTo: treeNode)
+					or: [self oop: freeTree isGreaterThanOrEqualTo: treeNode + bytesInNode - self baseHeaderSize]).
 	 self assert: bytesInNode >= (self numFreeLists * self allocationUnit).
 	 self assert: bytesInArg ~= bytesInNode.
 	 bytesInNode > bytesInArg
