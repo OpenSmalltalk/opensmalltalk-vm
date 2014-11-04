@@ -2,5 +2,7 @@
 # checkin script for subverison that serves to cause
 # platforms/Cross/vm/sqSCCSVersion.h to be checked-in so that its version
 # info reflects that of the current check-in.
+`dirname $0`/revertUnchangedPlugins
+`dirname $0`/revertUnchangedPlugins nscogsrc/plugins
 svn propset checkindate "`date`" platforms/Cross/vm/sqSCCSVersion.h
 svn ci
