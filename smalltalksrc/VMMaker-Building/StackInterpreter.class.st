@@ -5748,7 +5748,7 @@ StackInterpreter >> fetchStackPointerOf: aContext [
 { #category : #'newspeak bytecode support' }
 StackInterpreter >> findApplicationOfTargetMixin: targetMixin startingAtBehavior: aBehavior [
 	"This is used to implement implicit receiver and enclosing object lookup
-	 for Newspeak. Find the mixin applcation of which aClass is a subclass that
+	 for Newspeak. Find the mixin application of which aClass is a subclass that
 	 is an application of targetMixin. This is an implementation derived from
 
 	<ContextPart> findApplicationOf: targetMixin startingAt: aBehavior
@@ -5757,8 +5757,8 @@ StackInterpreter >> findApplicationOfTargetMixin: targetMixin startingAtBehavior
 	mixinApplication := aBehavior.
 	[mixinApplication = objectMemory nilObject
 	 or: [mixinApplication = targetMixin
-	 or: [(mixin := objectMemory fetchPointer: MixinIndex ofObject: mixinApplication) = targetMixin]]] whileFalse:
-		[mixinApplication := objectMemory fetchPointer: SuperclassIndex ofObject: mixinApplication].
+	 or: [(mixin := objectMemory followObjField: MixinIndex ofObject: mixinApplication) = targetMixin]]] whileFalse:
+		[mixinApplication := objectMemory followObjField: SuperclassIndex ofObject: mixinApplication].
 	^mixinApplication
 ]
 
@@ -7113,9 +7113,10 @@ StackInterpreter >> implicitReceiverFor: methodReceiver mixin: methodMixin imple
 	candidateReceiver := methodReceiver.
 	candidateMixin := methodMixin.
 	[candidateMixinApplication := self
-		findApplicationOfTargetMixin: candidateMixin
-		startingAtBehavior: (objectMemory fetchClassOf: candidateReceiver).
-	 self deny: (candidateMixinApplication = objectMemory nilObject).
+									findApplicationOfTargetMixin: candidateMixin
+									startingAtBehavior: (objectMemory fetchClassOf: candidateReceiver).
+	 candidateMixinApplication = objectMemory nilObject ifTrue:
+		[^methodReceiver].
 	 dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: candidateMixinApplication.
 	 found := self lookupMethodInDictionary: dictionary.
 	 found ifTrue: [^candidateReceiver].
