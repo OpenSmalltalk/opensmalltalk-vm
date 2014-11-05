@@ -28311,6 +28311,8 @@ rm -f UnicodePlugin.sub UnicodePlugin.lib
 
 echo "$as_me:$LINENO: checking for PangoCairo libraries" >&5
 echo $ECHO_N "checking for PangoCairo libraries... $ECHO_C" >&6
+save_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="-I/usr/include/cairo -I/usr/include/pango-1.0 -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/lib/arm-linux-gnueabihf/glib-2.0/include"
 cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
@@ -28367,6 +28369,7 @@ echo "${ECHO_T}******** disabling ${plugin}" >&6
 
 fi
 rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+CPPFLAGS="$save_CPPFLAGS"
 if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do

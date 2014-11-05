@@ -4,6 +4,7 @@ B3DAcceleratorPlugin \
 SqueakFFIPrims \
 SqueakSSL \
 LocalePlugin \
+UnicodePlugin \
 UnixOSProcessPlugin \
 UUIDPlugin \
 XDisplayControlPlugin

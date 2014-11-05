@@ -5,6 +5,7 @@ BochsIA32Plugin \
 SqueakFFIPrims \
 SqueakSSL \
 LocalePlugin \
+UnicodePlugin \
 UnixOSProcessPlugin \
 UUIDPlugin \
 XDisplayControlPlugin

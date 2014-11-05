@@ -1,10 +1,9 @@
 # Copied, perhaps edited, from ../../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
-B3DAcceleratorPlugin \
+LocalePlugin \
 SqueakFFIPrims \
 SqueakSSL \
-LocalePlugin \
-UnicodePlugin \
 UnixOSProcessPlugin \
 UUIDPlugin \
+UnicodePlugin \
 XDisplayControlPlugin

@@ -11,6 +11,7 @@ Contents:
 	- How to configure and build a VM on Unix
 	- Testing an external plugin has completely linked
 	- Optimization level and gcc version (please read!)
+	- Installing support libraries
 
 
 Overview
@@ -79,7 +80,10 @@ the relevant build directories
 
 Building out of the box
 -----------------------
-Install the tools (gcc, X11-devel, etc (e.g. libpng, libX11 & libxt source)).
+Install the tools (gcc, X11-devel, etc, e.g. libpng, libuuid libX11 & libxt
+source). See "Installing support libraries" below.  If the configure step fails
+when "checking for C compiler default output file name", you have yet to install
+all the necessary support packages (e.g. libuuid).
 Then cd to the build directory of your choice, e.g.
 	build.linux32x86/squeak.cog.spur/build
 Then either remove any BochsIA32Plugin line from plugins.ext or build the
@@ -87,6 +91,9 @@ Bochs support libraries (see Building the Bochs Support Libraries below).
 Then execute
 	./mvm
 answering "y" to perform a clean build or "n" to rebuild without recionfiguring.
+Again, if the configure step fails when "checking for C compiler default output
+file name", you have yet to install all the necessary support (e.g. lubuuid).
+
 The subdirectories confrm to the production/assert/debug x itimer vs threaded
 heartbeat x single vs multi-threaded parts of the matrix described above.  For
 example, build.linux32x86/squeak.cog.v3 includes
@@ -218,3 +225,22 @@ compiling the Newspeak VM with either of
 	gcc version 3.4.6 20060404 (Red Hat 3.4.6-10)
 using -O2 results in a VM that segfaults early in startup.  For these compilers
 it is probably wise to use -O1, even though -O3 seems to work.
+
+
+Installing support libraries
+----------------------------
+Different linux distributions have different mechanisms for loading packages.
+Here are some examples:
+
+CentOS
+sudo yum install cairo-devel
+sudo yum install pango-devel
+sudo yum install libuuid-devel
+sudo yum install libX11-devel
+sudo yum install mesa-libGL-devel 
+
+Ubuntu
+sudo apt-get install libcairo2-dev   
+sudo apt-get install libpango1.0-dev
+
+More advice and examples for other distros gratefully received.

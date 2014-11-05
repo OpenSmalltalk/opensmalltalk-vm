@@ -11,7 +11,8 @@ Contents:
 	- How to configure and build a VM on Unix
 	- Testing an external plugin has completely linked
 	- Optimization level and gcc version (please read!)
-   - BitBlt optimizations on ARM
+	- BitBlt optimizations on ARM
+	- Installing support libraries
 
 
 Overview
@@ -80,7 +81,10 @@ the relevant build directories
 
 Building out of the box
 -----------------------
-Install the tools (gcc, X11-devel, etc (e.g. libpng, libX11 & libxt source)).
+Install the tools (gcc, X11-devel, etc, e.g. libpng, libuuid libX11 & libxt
+source). See "Installing support libraries" below.  If the configure step fails
+when "checking for C compiler default output file name", you have yet to install
+all the necessary support packages (e.g. libuuid).
 Then cd to the build directory of your choice, e.g.
 	build.linux32x86/squeak.cog.spur/build
 Then either remove any BochsIA32Plugin line from plugins.ext or build the
@@ -88,6 +92,9 @@ Bochs support libraries (see Building the Bochs Support Libraries below).
 Then execute
 	./mvm
 answering "y" to perform a clean build or "n" to rebuild without recionfiguring.
+Again, if the configure step fails when "checking for C compiler default output
+file name", you have yet to install all the necessary support (e.g. lubuuid).
+
 The subdirectories confrm to the production/assert/debug x itimer vs threaded
 heartbeat x single vs multi-threaded parts of the matrix described above.  For
 example, build.linux32x86/squeak.cog.v3 includes
@@ -145,7 +152,7 @@ provides the 32-bit compiler and the ia32-libs provides the 32-bit libraries.
 You'll also have to add the -m32 switch to all gcc & g++ invocations.  The
 easiest way to do this is to add CC="gcc -m32" & CXX="g++ -m32" to the configure
 script:
-     ../../platforms/unix/config/configure CC="gcc -m32" CXX="g++ -m32" --without-npsqueak CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
+     ../../platforms/unix/config/configure CC="gcc -m32" CXX="g++ -m32" --without-npsqueak CFLAGS="-g -O2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
 To run a 32-bit VM on a 64-bit OS, you'll also need the 32-bit libraries
 provided by the ia32-libs package.
 
@@ -179,16 +186,18 @@ You can see the use of configure in the various mvm scripts in each build
 directory.  
 
 e.g.
-     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
+     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
      make install prefix=WhereYouWantTheVmToGo
 
 	N.B. If you're on a 64-bit linux read 3e below!!
 	N.B. On Ubuntu *do not* supply "LIBS=-lpthread -luuid", i.e. use
-     ../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0"
+     ../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0"
 
 
 N.B. The plugin set is defined by plugins.ext and plugins.int in the build dir.
 
+Be prepared to install libuuid support.  e.g. on CentOS 6.5 use
+sudo yum -y install libuuid-devel
 
 
 Testing an external plugin has completely linked
@@ -208,7 +217,7 @@ There are issues with gcc version > 4.2.1.  Any of the following flags may break
 -fcaller-saves
 
 So turn them off.  e.g.
-     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -msse2 -fno-caller-saves -fno-partial-inlining -fno-tree-pre -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS="-lpthread -luuid"
+     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -fno-caller-saves -fno-partial-inlining -fno-tree-pre -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS="-lpthread -luuid"
 See http://smallissimo.blogspot.fr/2013/02/compiling-squeak-cog-virtual-machine-on.html
 
 There appear to be issues with 3.4.x gcc version on RedHat.  In particular
@@ -227,4 +236,20 @@ However it is tricky to build from source and pre-packaged versions for Raspbian
 asasm is included in Cog/build.linux32ARM/ as a pre-built binary. The Makefiles for BitBltPlugin and vm-display-X11 reference it directly.
 
 
+Installing support libraries
+----------------------------
+Different linux distributions have different mechanisms for loading packages.
+Here are some examples:
 
+CentOS
+sudo yum install cairo-devel
+sudo yum install pango-devel
+sudo yum install libuuid-devel
+sudo yum install libX11-devel
+sudo yum install mesa-libGL-devel 
+
+Ubuntu
+sudo apt-get install libcairo2-dev   
+sudo apt-get install libpango1.0-dev
+
+More advice and examples for other distros gratefully received.
