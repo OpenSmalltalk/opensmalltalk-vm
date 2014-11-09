@@ -190,14 +190,18 @@ ImageFileHeader >> readImageVersionFrom: aStream startingAt: imageOffset [
 			[ 16r68190000 "6504" ] -> [ imageFormat := ImageFormat fromInteger: 6504. ^true ] .
 			[ 16r00001969 "6505" ] -> [ imageFormat := ImageFormat fromInteger: 6505. ^false ] .
 			[ 16r69190000 "6505" ] -> [ imageFormat := ImageFormat fromInteger: 6505. ^true ] .
+			[ 16r00001979 "6521" ] -> [ imageFormat := ImageFormat fromInteger: 6521. ^false ] .
+			[ 16r79190000 "6521" ] -> [ imageFormat := ImageFormat fromInteger: 6521. ^true ] .
 			[ 16rA0090100 "68000" ] -> [ imageFormat := ImageFormat fromInteger: 68000. aStream next: 4. ^true ] .
 			[ 16rA2090100 "68002" ] -> [ imageFormat := ImageFormat fromInteger: 68002. aStream next: 4. ^true ] .
 			[ 16rA3090100 "68003" ] -> [ imageFormat := ImageFormat fromInteger: 68003. aStream next: 4. ^true ] .
+			[ 16rB3090100 "68003" ] -> [ imageFormat := ImageFormat fromInteger: 68019. aStream next: 4. ^true ] .
 			[ 16r00000000 ] -> [
 				(aStream nextNumber: 4) caseOf: {
 					[ 16r000109A0 "68000" ] -> [ imageFormat := ImageFormat fromInteger: 68000. ^false ] .
 					[ 16r000109A2 "68002" ] -> [ imageFormat := ImageFormat fromInteger: 68002. ^false ] .
 					[ 16r000109A3 "68003" ] -> [ imageFormat := ImageFormat fromInteger: 68003. ^false ] .
+					[ 16r000109B3 "68019" ] -> [ imageFormat := ImageFormat fromInteger: 68019. ^false ] .
 				} otherwise: [self error: self asString , ' unrecognized format number']
 			]
 		} otherwise: [self error: self asString , ' unrecognized format number']
