@@ -195,7 +195,7 @@ ImageFileHeader >> readImageVersionFrom: aStream startingAt: imageOffset [
 			[ 16rA0090100 "68000" ] -> [ imageFormat := ImageFormat fromInteger: 68000. aStream next: 4. ^true ] .
 			[ 16rA2090100 "68002" ] -> [ imageFormat := ImageFormat fromInteger: 68002. aStream next: 4. ^true ] .
 			[ 16rA3090100 "68003" ] -> [ imageFormat := ImageFormat fromInteger: 68003. aStream next: 4. ^true ] .
-			[ 16rB3090100 "68003" ] -> [ imageFormat := ImageFormat fromInteger: 68019. aStream next: 4. ^true ] .
+			[ 16rB3090100 "68019" ] -> [ imageFormat := ImageFormat fromInteger: 68019. aStream next: 4. ^true ] .
 			[ 16r00000000 ] -> [
 				(aStream nextNumber: 4) caseOf: {
 					[ 16r000109A0 "68000" ] -> [ imageFormat := ImageFormat fromInteger: 68000. ^false ] .
