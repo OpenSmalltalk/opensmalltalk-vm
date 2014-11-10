@@ -909,8 +909,10 @@ extern sqInt erroronwarn;
 static void
 block()
 { struct timespec while_away_the_hours;
+  char pwd[MAXPATHLEN+1];
 
 	printf("blocking e.g. to allow attaching debugger\n");
+	printf("pid: %d pwd: %s vm:%s\n", (int)getpid(), argVec[0], getpw(pwd));
 	while (1) {
 		while_away_the_hours.tv_sec = 3600;
 		nanosleep(&while_away_the_hours, 0);

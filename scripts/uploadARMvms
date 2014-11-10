@@ -1,0 +1,61 @@
+#!/bin/sh
+# Upload archives from products to a web/ftp site via ssh.
+RemoteUser=eliotmiranda@highland-park.dreamhost.com
+RemoteRoot=mirandabanda.org/files/Cog/VM
+IFS="	
+"
+
+case `uname -m` in
+   armv6* )  ARMARCH="v6";;
+   armv7* )  ARMARCH="v7";;
+        * )  echo "Error: this script is for ARM only."
+             exit 1;;
+esac
+
+REV=
+TAG=
+cd `dirname $0`/../products
+VERBOSE=
+
+while [ -n "$1" ]; do
+	case $1 in
+	-r)		shift;REV="$1";;
+	-t)		shift;TAG="$1";;
+	-?|-h)  echo usage: $0 [-r REV -t TAG]; exit 0;;
+	*)	echo usage: $0 [-r REV -t TAG]; exit 1;;
+	esac
+	shift
+done
+
+if [ -z "$REV" ]; then
+	REV="`svnversion .. | sed 's/^.*://'`"
+	case $REV in
+	*M)	echo -n "source tree is modified, are you sure you want to continue? "
+		read a
+		case $a in
+		y|Y)	;;
+		*)		exit 1
+		esac
+		REV="`svnversion | sed 's/^.*://' | sed 's/M//'`";;
+	esac
+fi
+
+if [ -z "$TAG" ]; then
+	TAG=`date +%g.%U.`$REV
+fi
+echo REV=$REV TAG=$TAG
+
+ARCHIVES="stklinuxhtARM$ARMARCH-$TAG.tgz	stkspurlinuxhtARM$ARMARCH-$TAG.tgz"
+
+for a in $ARCHIVES; do
+	echo upload $a
+done
+
+
+ssh -x $RemoteUser mkdir $RemoteRoot/VM.r$REV
+
+echo scp -p $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
+scp -p $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
+echo ssh $RemoteUser chmod a-w $RemoteRoot/VM.r$REV/* \\\; ls -al $RemoteRoot/VM.r$REV
+ssh $RemoteUser chmod a-w $RemoteRoot/VM.r$REV/* \; ls -al $RemoteRoot/VM.r$REV
+

@@ -1,0 +1,50 @@
+#!/bin/sh
+# Create the ARM Stack VM archives in products.  Output a check of version numbers
+# etc to products/MASVALOG
+IFS="	
+"
+
+case `uname -m` in
+   armv6* )  armarch="v6";;
+   armv7* )  armarch="v7";;
+        * )  echo "Error: this script is for ARM only."
+             exit 1;;
+esac
+
+cd `dirname $0`/../products
+SQB=squeak.stack.v3
+REV=
+TAG=
+EXES=
+
+while [ -n "$1" ]; do
+	case $1 in
+	-r)		shift;REV="$1";;
+	-t)		shift;TAG="$1";;
+	-?|-h)  echo usage: $0 [-r REV -t TAG]
+			exit 0
+	esac
+	shift
+done
+
+test -n "$REV" || REV=`grep 'SvnRawRevisionString.*Rev:' ../platforms/Cross/vm/sqSCCSVersion.h \
+	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
+test -n "$TAG" || TAG=`date +%g.%U.`$REV
+echo REV=$REV TAG=$TAG
+
+for archive in stklinuxhtARM stkspurlinuxhtARM; do
+	rm -rf $archive$armarch-$TAG.tgz
+	echo $archive '=>' $archive$armarch-$TAG.tgz
+	COPYFILE_DISABLE=1 tar czf $archive$armarch-$TAG.tgz $archive
+	EXES="$EXES	$archive/lib/squeak/[0-9.-]*/squeak"
+done
+
+for vm in $EXES
+do
+	echo
+	echo checking $vm version
+#	strings - $vm | egrep '\$Rev: |Interp.*VMMaker|Cogit.*VMMaker| built on ' | grep -v 'Unix built on "__DATE__ " "__TIME__" Compiler: "__VERSION__' | sed 's/ uuid:.*//'
+	strings - $vm | egrep '\$Rev: |Interp.*VMMaker|Cogit.*VMMaker| built on ' | sed 's/ uuid:.*//'
+	echo checking $vm for asserts
+	strings - $vm | grep "assert[^0-9]*[0-9][0-9][0-9]"
+done 2>&1 | tee MASVALOG
