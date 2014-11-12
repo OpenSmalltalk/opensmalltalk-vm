@@ -11,6 +11,7 @@ typedef struct sqSSL {
 
 	char *certName;
 	char *peerName;
+	char *serverName;
 
 	SSL_METHOD *method;
 	SSL_CTX *ctx;
@@ -135,6 +136,7 @@ sqInt sqDestroySSL(sqInt handle) {
 
 	if(ssl->certName) free(ssl->certName);
 	if(ssl->peerName) free(ssl->peerName);
+	if(ssl->serverName) free(ssl->serverName);
 
 	free(ssl);
 	handleBuf[handle] = NULL;
@@ -184,6 +186,13 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		if(ssl->loglevel) printf("sqConnectSSL: BIO_write failed\n");
 		return SQSSL_GENERIC_ERROR;
 	}
+
+	/* if a server name is provided, use it */
+	if(ssl->serverName) {
+		if(ssl->loglevel) printf("sqSetupSSL: Using server name %s\n", ssl->serverName);
+		SSL_set_tlsext_host_name(ssl->ssl, ssl->serverName);
+	}
+
 	if(ssl->loglevel) printf("sqConnectSSL: SSL_connect\n");
 	result = SSL_connect(ssl->ssl);
 	if(result <= 0) {
@@ -370,6 +379,7 @@ char* sqGetStringPropertySSL(sqInt handle, int propID) {
 	switch(propID) {
 		case SQSSL_PROP_PEERNAME:  return ssl->peerName;
 		case SQSSL_PROP_CERTNAME:  return ssl->certName;
+		case SQSSL_PROP_SERVERNAME: return ssl->serverName;
 		default:
 			if(ssl->loglevel) printf("sqGetStringPropertySSL: Unknown property ID %d\n", propID);
 			return NULL;
@@ -392,14 +402,22 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char *propName, sqInt pro
 	if(ssl == NULL) return 0;
 
 	if(propLen) {
-	  property = calloc(1, propLen+1);
-	  memcpy(property, propName, propLen);
+		property = malloc(propLen + 1);
+		memcpy(property, propName, propLen);
+		property[propLen] = '\0';
 	};
 
 	if(ssl->loglevel) printf("sqSetStringPropertySSL(%d): %s\n", propID, property);
 
 	switch(propID) {
-		case SQSSL_PROP_CERTNAME: ssl->certName = property; break;
+		case SQSSL_PROP_CERTNAME:
+			if (ssl->certName) free(ssl->certName);
+			ssl->certName = property;
+			break;
+		case SQSSL_PROP_SERVERNAME:
+			if (ssl->serverName) free(ssl->serverName);
+			ssl->serverName = property;
+			break;
 		default: 
 			if(property) free(property);
 			if(ssl->loglevel) printf("sqSetStringPropertySSL: Unknown property ID %d\n", propID);
