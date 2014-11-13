@@ -30,7 +30,7 @@ NewsqueakIA32ABIPluginAttic >> primBoxedCalloc [
 		[^interpreterProxy primitiveFailFor: PrimErrNoCMemory].
 	oop := interpreterProxy 
 			instantiateClass: interpreterProxy classAlien
-			indexableSize: 2 * BytesPerOop.
+			indexableSize: 2 * interpreterProxy bytesPerOop.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	ptr := interpreterProxy firstIndexableField: oop.
@@ -61,7 +61,7 @@ NewsqueakIA32ABIPluginAttic >> primBoxedMalloc [
 		[^interpreterProxy primitiveFailFor: PrimErrNoCMemory].
 	oop := interpreterProxy 
 			instantiateClass: interpreterProxy classAlien
-			indexableSize: 2 * BytesPerOop.
+			indexableSize: 2 * interpreterProxy bytesPerOop.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	ptr := interpreterProxy firstIndexableField: oop.

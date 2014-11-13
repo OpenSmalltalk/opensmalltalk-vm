@@ -874,9 +874,9 @@ StackInterpreter class >> initializeContextIndices [
 	LargeContextSlots := CtxtTempFrameStart + 56.
 	
 	"Including the header size in these sizes is problematic for multiple memory managers,
-	 so we don't use them, except LargeContextSize for asserts.  Set small to #bogus for error checking."
+	 so we don't use them.  Set to #bogus for error checking."
 	SmallContextSize := #bogus.
-	LargeContextSize := LargeContextSlots * BytesPerOop + BaseHeaderSize.
+	LargeContextSize := #bogus.
 
 	"Class BlockClosure"
 	ClosureOuterContextIndex := 0.
@@ -1844,7 +1844,7 @@ StackInterpreter >> activateNewClosureMethod: blockClosure numArgs: numArgs mayC
 	-1 for 0-based addressing of fetchByte 
 	-1 because it gets incremented BEFORE fetching currentByte"
 	closureIP := self quickFetchInteger: ClosureStartPCIndex ofObject: blockClosure.
-	instructionPointer := theMethod + closureIP + BaseHeaderSize - 2.
+	instructionPointer := theMethod + closureIP + objectMemory baseHeaderSize - 2.
 	self setMethod: theMethod.
 
 	"Now check for stack overflow or an event (interrupt, must scavenge, etc)"
@@ -2044,7 +2044,7 @@ StackInterpreter >> arrayValueOf: arrayOop [
 
 	<returnTypeC: #'void *'>
 	(objectMemory isWordsOrBytes: arrayOop) ifTrue:
-		[^self cCoerceSimple: (self pointerForOop: arrayOop + BaseHeaderSize) to: #'void *'].
+		[^self cCoerceSimple: (self pointerForOop: arrayOop + objectMemory baseHeaderSize) to: #'void *'].
 	self primitiveFail
 ]
 
@@ -2065,7 +2065,6 @@ StackInterpreter >> assertClassOf: oop is: classOop [
 	"Succeed if oop is an instance of the given class. Fail if the object is an integer."
 
 	<inline: true>
-	<asmLabel: false>
 	self success: (objectMemory isClassOfNonImm: oop equalTo: classOop)
 ]
 
@@ -2091,7 +2090,7 @@ StackInterpreter >> assertValidExecutionPointe: lip r: lfp s: lsp imbar: inInter
 	self assert: lsp < lfp l: ln.
 	self assert: lfp > lsp l: ln.
 	self assert: lsp >= (stackPage realStackLimit - self stackLimitOffset) l: ln.
-	self assert:  (lfp - lsp) < LargeContextSize l: ln.
+	self assert: (lfp - lsp) / objectMemory bytesPerOop < LargeContextSlots l: ln.
 	self assert: (self validInstructionPointer: lip inFrame: lfp) l: ln.
 	self assert: ((self frameIsBlockActivation: lfp)
 				or: [(self pushedReceiverOrClosureOfFrame: lfp) = (self frameReceiver: lfp)])
@@ -2177,7 +2176,6 @@ StackInterpreter >> bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitiv
 	 that the snapshot contains only single contexts.  This allows the test for being
 	 married to avoid checking for a context's frame pointer being in bounds.  If
 	 flushExtPrims is true, flush references to external primitives in methods."
-	<asmLabel: false>
 	objectMemory allObjectsDo:
 		[:obj| | fmt |
 		fmt := objectMemory formatOf: obj.
@@ -3901,28 +3899,28 @@ StackInterpreter >> checkOkayStackPage: thePage [
 	ok := true.
 	"Skip the instruction pointer on top of stack of inactive pages."
 	thePage = stackPage ifFalse:
-		[theSP := theSP + BytesPerWord].
+		[theSP := theSP + objectMemory wordSize].
 	[frameRcvrOffset := self frameReceiverOffset: theFP.
 	 [theSP <= frameRcvrOffset] whileTrue:
 		[oop := stackPages longAt: theSP.
 		 (objectMemory isIntegerObject: oop) ifFalse:
 			[ok := ok & (self checkOkayFields: oop)].
-		 theSP := theSP + BytesPerWord].
+		 theSP := theSP + objectMemory wordSize].
 	(self frameHasContext: theFP) ifTrue:
 		[self assert: (objectMemory isContext: (self frameContext: theFP)).
 		 ok := ok & (self checkOkayFields: (self frameContext: theFP))].
 	ok := ok & (self checkOkayFields: (self frameMethodObject: theFP)).
 	(callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
-		[theSP := theFP + FoxCallerSavedIP + BytesPerWord.
+		[theSP := theFP + FoxCallerSavedIP + objectMemory wordSize.
 		 theFP := callerFP].
 	theSP := self isCog
-				ifTrue: [theFP + FoxCallerSavedIP + BytesPerWord] "caller ip is ceBaseReturnPC"
+				ifTrue: [theFP + FoxCallerSavedIP + objectMemory wordSize] "caller ip is ceBaseReturnPC"
 				ifFalse: [theFP + FoxCallerSavedIP]. "caller ip is frameCallerContext in a base frame"
 	[theSP <= thePage baseAddress] whileTrue:
 		[oop := stackPages longAt: theSP.
 		 (objectMemory isIntegerObject: oop) ifFalse:
 			[ok := ok & (self checkOkayFields: oop)].
-		 theSP := theSP + BytesPerWord].
+		 theSP := theSP + objectMemory wordSize].
 	^ok
 ]
 
@@ -3985,14 +3983,14 @@ StackInterpreter >> checkStackIntegrity [
 					 theFP := thePage  headFP].
 			 "Skip the instruction pointer on top of stack of inactive pages."
 			 thePage = stackPage ifFalse:
-				[theSP := theSP + BytesPerWord].
+				[theSP := theSP + objectMemory wordSize].
 			 [[theSP <= (theFP + FoxReceiver)] whileTrue:
 				[oop := stackPages longAt: theSP.
 				 ((objectMemory isNonImmediate: oop) 
 				   and: [(objectMemory heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 					[self printFrameThing: 'object leak in frame temp' andFrame: theFP at: theSP.
 					 ok := false].
-				 theSP := theSP + BytesPerWord].
+				 theSP := theSP + objectMemory wordSize].
 			 (self frameHasContext: theFP) ifTrue:
 				[oop := self frameContext: theFP.
 				 ((objectMemory isImmediate: oop) 
@@ -4016,16 +4014,16 @@ StackInterpreter >> checkStackIntegrity [
 				[self printFrameThing: 'object leak in frame mthd' andFrame: theFP at: theFP + FoxMethod.
 				 ok := false].
 			 (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
-				[theSP := theFP + FoxCallerSavedIP + BytesPerWord.
+				[theSP := theFP + FoxCallerSavedIP + objectMemory wordSize.
 				 theFP := callerFP].
-			 theSP := theFP + FoxCallerSavedIP + BytesPerWord.
+			 theSP := theFP + FoxCallerSavedIP + objectMemory wordSize.
 			 [theSP <= thePage baseAddress] whileTrue:
 				[oop := stackPages longAt: theSP.
 				 ((objectMemory isNonImmediate: oop) 
 				   and: [(objectMemory heapMapAtWord: (self pointerForOop: oop)) = 0]) ifTrue:
 					[self printFrameThing: 'object leak in frame arg' andFrame: theFP at: theSP.
 					 ok := false].
-				 theSP := theSP + BytesPerWord]]].
+				 theSP := theSP + objectMemory wordSize]]].
 	^ok
 ]
 
@@ -4299,7 +4297,7 @@ StackInterpreter >> commonReturn [
 			  localFP := self frameCallerFP: localFP.
 			  localFP ~~ frameToReturnTo] whileTrue.
 			localIP := self frameCallerSavedIP: callerFP.
-			localSP := (self frameCallerSP: callerFP) - BytesPerWord].
+			localSP := (self frameCallerSP: callerFP) - objectMemory wordSize].
 	self setMethod: (self frameMethod: localFP).
 	self fetchNextBytecode.
 	self internalStackTopPut: localReturnValue
@@ -4438,8 +4436,9 @@ StackInterpreter >> compare31or32Bits: obj1 equal: obj2 [
 
 { #category : #initialization }
 StackInterpreter >> computeStackZoneSize [
-	self cCode: []
-		inSmalltalk: [stackPages ifNil: [stackPages := self stackPagesClass new]].
+	self cCode: [] inSmalltalk:
+		[stackPages ifNil:
+			[stackPages := self stackPagesClass new setInterpreter: self]].
 	^numStackPages * ((self sizeof: InterpreterStackPage) + self stackPageByteSize)
 	 + stackPages extraStackBytes
 ]
@@ -4480,7 +4479,7 @@ StackInterpreter >> context: aContext hasValidInversePCMappingOf: theIP in: theF
 StackInterpreter >> contextInstructionPointer: theIP frame: theFP [
 	<var: #theFP type: #'char *'>
 	self assert: (self validInstructionPointer: theIP + 1 inFrame: theFP).
-	^objectMemory integerObjectOf: theIP - (self iframeMethod: theFP) - BaseHeaderSize + 2
+	^objectMemory integerObjectOf: theIP - (self iframeMethod: theFP) - objectMemory baseHeaderSize + 2
 ]
 
 { #category : #'image save/restore' }
@@ -4497,9 +4496,9 @@ StackInterpreter >> convertFloatsToPlatformOrder [
 	objectMemory allObjectsDo:
 		[:obj| | temp |
 		(objectMemory compactClassIndexOf: obj) = ClassFloatCompactIndex ifTrue:
-			[temp := self longAt: obj + BaseHeaderSize.
-			 self longAt: obj + BaseHeaderSize put: (self longAt: obj + BaseHeaderSize + 4).
-			 self longAt: obj + BaseHeaderSize + 4 put: temp]]
+			[temp := self longAt: obj + objectMemory baseHeaderSize.
+			 self longAt: obj + objectMemory baseHeaderSize put: (self longAt: obj + objectMemory baseHeaderSize + 4).
+			 self longAt: obj + objectMemory baseHeaderSize + 4 put: temp]]
 ]
 
 { #category : #'internal interpreter access' }
@@ -4572,7 +4571,7 @@ StackInterpreter >> createActualMessageTo: lookupClass [
 								numSlots: MessageLookupClassIndex + 1].
 
 	"Since the array is new can use unchecked stores."
-	(argumentCount - 1) * BytesPerOop to: 0 by: BytesPerOop negated do:
+	(argumentCount - 1) * objectMemory bytesPerOop to: 0 by: objectMemory bytesPerOop negated do:
 		[:i|
 		self longAt:  argumentArray + objectMemory baseHeaderSize + i put: self popStack].
 	"Since message is new can use unchecked stores."
@@ -4597,7 +4596,7 @@ StackInterpreter >> dbgFloatValueOf: oop [
 	((objectMemory isNonImmediate: oop)
 	and: [(objectMemory fetchClassOfNonImm: oop) = (objectMemory splObj: ClassFloat)]) ifTrue:
 		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		 objectMemory fetchFloatAt: oop + BaseHeaderSize into: result.
+		 objectMemory fetchFloatAt: oop + objectMemory baseHeaderSize into: result.
 		 ^result].
 	^nil
 ]
@@ -4692,7 +4691,7 @@ StackInterpreter >> divorceAllFrames [
 		[self externalWriteBackHeadFramePointers].
 	activeContext := self
 						ensureFrameIsMarried: framePointer
-						SP: stackPointer + BytesPerWord.
+						SP: stackPointer + objectMemory wordSize.
 	0 to: numStackPages - 1 do:
 		[:i| | aPage |
 		aPage := stackPages stackPageAt: i.
@@ -4716,7 +4715,7 @@ StackInterpreter >> divorceFramesIn: aStackPage [
 	theFP := aStackPage headFP.
 	theSP := aStackPage headSP.
 	theIP := stackPages longAt: theSP.
-	theSP := theSP + BytesPerWord. "theSP points at hottest item on frame's stack"
+	theSP := theSP + objectMemory wordSize. "theSP points at hottest item on frame's stack"
 	calleeContext := nil.
 
 	[theContext := self ensureFrameIsMarried: theFP SP: theSP.
@@ -4938,9 +4937,9 @@ StackInterpreter >> encodeFrameFieldHasContext: hasContext "<Boolean>" isBlock: 
 	<inline: true>
 	^VMBIGENDIAN
 		ifTrue: [1
-				+ (numArgs << ((BytesPerWord * 8) - 8))
-				+ (hasContext ifTrue: [1 << ((BytesPerWord * 8) - 16)] ifFalse: [0])
-				+  (isBlock ifTrue: [1 << ((BytesPerWord * 8) - 24)] ifFalse: [0])]
+				+ (numArgs << ((objectMemory wordSize * 8) - 8))
+				+ (hasContext ifTrue: [1 << ((objectMemory wordSize * 8) - 16)] ifFalse: [0])
+				+  (isBlock ifTrue: [1 << ((objectMemory wordSize * 8) - 24)] ifFalse: [0])]
 		ifFalse: [1
 				+ (numArgs << 8)
 				+  (hasContext ifTrue: [1 << 16] ifFalse: [0])
@@ -4962,7 +4961,6 @@ StackInterpreter >> ensureCallerContext: theFP [
 	<inline: true>
 	<var: #theFP type: #'char *'>
 	<var: #callerFP type: #'char *'>
-	<asmLabel: false>
 	callerFP := self frameCallerFP: theFP.
 	callerFP = 0 ifTrue: "base frame, context in saved ip slot (or base of stack in Cog)"
 		[^self frameCallerContext: theFP].
@@ -5426,7 +5424,7 @@ StackInterpreter >> externalDivorceFrame: theFP andContext: ctxt [
 		ifTrue: [stackPages freeStackPage: thePage]
 		ifFalse:
 			[callerIP := self oopForPointer: (self frameCallerSavedIP: theFP).
-			 callerSP := (self frameCallerSP: theFP) - BytesPerWord.
+			 callerSP := (self frameCallerSP: theFP) - objectMemory wordSize.
 			 stackPages longAt: callerSP put: callerIP.
 			 self setHeadFP: callerFP andSP: callerSP inPage: thePage]
 	
@@ -5584,8 +5582,7 @@ StackInterpreter >> externalSetStackPageAndPointersForSuspendedContextOfProcess:
 
 { #category : #'stack pages' }
 StackInterpreter >> externalWriteBackHeadFramePointers [
-	<asmLabel: false>
-	self assert:  (framePointer - stackPointer) < LargeContextSize.
+	self assert:  (framePointer - stackPointer) < (LargeContextSlots * objectMemory bytesPerOop).
 	self assert: stackPage = stackPages mostRecentlyUsedPage.
 	self setHeadFP: framePointer andSP: stackPointer inPage: stackPage.
 	self assert: stackPages pageListIsWellFormed
@@ -5595,7 +5592,7 @@ StackInterpreter >> externalWriteBackHeadFramePointers [
 StackInterpreter >> externalizeFPandSP [
 	"Copy the frame and stack pointers to global variables for use in primitives and other functions outside the interpret loop."
 	self assert: (localSP < stackPage baseAddress
-				and: [localSP > (stackPage realStackLimit - LargeContextSize)]).
+				and: [localSP > (stackPage realStackLimit - (LargeContextSlots * objectMemory bytesPerOop))]).
 	stackPointer := localSP.
 	framePointer := localFP
 ]
@@ -5958,7 +5955,6 @@ StackInterpreter >> findSPOrNilOf: theFP on: thePage startingFrom: startFrame [
 	<returnTypeC: #'char *'>
 	| aFrame prevFrame |
 	<inline: true>
-	<asmLabel: false>
 	<var: #aFrame type: #'char *'>
 	<var: #prevFrame type: #'char *'>
 	self assert: (stackPages isFree: thePage) not.
@@ -5969,7 +5965,7 @@ StackInterpreter >> findSPOrNilOf: theFP on: thePage startingFrom: startFrame [
 		 "Skip the instruction pointer on top of stack of inactive pages."
 		^thePage = stackPage
 			ifTrue: [thePage headSP]
-			ifFalse: [thePage headSP + BytesPerWord]].
+			ifFalse: [thePage headSP + objectMemory wordSize]].
 	aFrame := startFrame.
 	[prevFrame := aFrame.
 	 aFrame := self frameCallerFP: aFrame.
@@ -6055,7 +6051,7 @@ StackInterpreter >> fireEphemeron: ephemeron [
 StackInterpreter >> firstByteIndexOfMethod: methodObj [
 	"Answer the one-relative index of the first bytecode in methodObj.
 	 Used for safer bounds-checking on methods."
-	^(objectMemory literalCountOf: methodObj) + LiteralStart * BytesPerOop + 1
+	^(objectMemory literalCountOf: methodObj) + LiteralStart * objectMemory bytesPerOop + 1
 ]
 
 { #category : #'compiled methods' }
@@ -6083,7 +6079,7 @@ StackInterpreter >> floatObjectOf: aFloat [
 	newFloatObj := objectMemory
 						eeInstantiateSmallClassIndex: ClassFloatCompactIndex
 						format: objectMemory firstLongFormat
-						numSlots: 8 / objectMemory wordSize.
+						numSlots: (self sizeof: #double) / objectMemory bytesPerOop.
 	objectMemory storeFloatAt: newFloatObj + objectMemory baseHeaderSize from: aFloat.
 	^newFloatObj
 ]
@@ -6095,7 +6091,6 @@ StackInterpreter >> floatValueOf: oop [
 	 Note: May be called by translated primitive code."
 
 	| isFloat result |
-	<asmLabel: false>
 	<returnTypeC: #double>
 	<var: #result type: #double>
 	isFloat := self isInstanceOfClassFloat: oop.
@@ -6223,8 +6218,8 @@ StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 	<var: #theSP type: #'char *'>
 	<var: #ptr type: #'char *'>
 	theFP + (self frameStackedReceiverOffset: theFP)
-		to: theFP + FoxCallerSavedIP + BytesPerWord
-		by: BytesPerWord
+		to: theFP + FoxCallerSavedIP + objectMemory wordSize
+		by: objectMemory wordSize
 		do: [:ptr| | oop |
 			oop := stackPages longAt: ptr.
 			((objectMemory isNonImmediate: oop)
@@ -6232,7 +6227,7 @@ StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 				[stackPages longAt: ptr put: (objectMemory followForwarded: oop)]].
 	theSP
 		to: (self frameReceiverOffset: theFP)
-		by: BytesPerWord
+		by: objectMemory wordSize
 		do: [:ptr| | oop |
 			oop := stackPages longAt: ptr.
 			((objectMemory isNonImmediate: oop)
@@ -6353,7 +6348,7 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 				ifTrue: [theIPPtr := 0]
 				ifFalse:
 					[theIPPtr := theSP asUnsignedInteger.
-					 theSP := theSP + BytesPerWord].
+					 theSP := theSP + objectMemory wordSize].
 			 [self assert: (thePage addressIsInPage: theFP).
 			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr asVoidPointer]).
 			  oop := stackPages longAt: theFP + FoxReceiver.
@@ -6476,9 +6471,8 @@ StackInterpreter >> frameCallerSP: theFP [
 	 This points to the hottest item on the caller frame's stack."
 	<var: #theFP type: #'char *'>
 	<returnTypeC: 'char *'>
-	<asmLabel: false>
 	self assert: (self isBaseFrame: theFP) not.
-	^theFP + (self frameStackedReceiverOffset: theFP) + BytesPerWord
+	^theFP + (self frameStackedReceiverOffset: theFP) + objectMemory wordSize
 ]
 
 { #category : #'frame access' }
@@ -6495,9 +6489,8 @@ StackInterpreter >> frameCallerStackPointer: theFP [
 	<var: #theFP type: #'char *'>
 	<returnTypeC: #'char *'>
 	<inline: true>
-	<asmLabel: false>
 	self assert: (self isBaseFrame: theFP) not.
-	^theFP + (self frameStackedReceiverOffset: theFP) + BytesPerWord
+	^theFP + (self frameStackedReceiverOffset: theFP) + objectMemory wordSize
 ]
 
 { #category : #'frame access' }
@@ -6597,7 +6590,7 @@ StackInterpreter >> frameStackedReceiverOffsetNumArgs: numArgs [
 	 a block activation is always on the stack above any arguments and the frame
 	 itself.  See the diagram in StackInterpreter class>>initializeFrameIndices."
 	<inline: true>
-	^FoxCallerSavedIP + BytesPerWord + (numArgs << ShiftForWord)
+	^FoxCallerSavedIP + objectMemory wordSize + (numArgs << objectMemory shiftForWord)
 ]
 
 { #category : #'object memory support' }
@@ -6718,7 +6711,7 @@ StackInterpreter >> getErrorObjectFromPrimFailCode [
 	| table |
 	primFailCode > 0 ifTrue:
 		[table := objectMemory splObj: PrimErrTableIndex.
-		 primFailCode <= ((objectMemory lastPointerOf: table) // BytesPerWord) ifTrue:
+		 primFailCode <= ((objectMemory lastPointerOf: table) // objectMemory wordSize) ifTrue:
 			[^objectMemory fetchPointer: primFailCode - 1 ofObject: table]].
 	^objectMemory integerObjectOf: primFailCode
 ]
@@ -6837,7 +6830,7 @@ StackInterpreter >> handleForwardedSendFaultForTag: classTag [
 	rcvr := objectMemory followForwarded: rcvr.
 	self stackValue: argumentCount put: rcvr.
 	self followForwardedFrameContents: framePointer
-		stackPointer: stackPointer + (argumentCount + 1 * BytesPerWord). "don't repeat effort"
+		stackPointer: stackPointer + (argumentCount + 1 * objectMemory wordSize). "don't repeat effort"
 	(objectMemory isPointers: (self frameReceiver: framePointer)) ifTrue:
 		[objectMemory
 			followForwardedObjectFields: (self frameReceiver: framePointer)
@@ -6965,7 +6958,7 @@ StackInterpreter >> highBit: anUnsignedValue [
 	<var: #shifted type: #usqInt>
 	shifted := anUnsignedValue.
 	bitNo := 0.
-	self cppIf: BytesPerWord > 4
+	self cppIf: objectMemory wordSize > 4
 		ifTrue:
 			[shifted < (1 << 32) ifFalse:
 				[shifted := shifted >> 32.
@@ -7051,7 +7044,7 @@ StackInterpreter >> ifValidWriteBackStack: theCFP Pointers: theCSP Save: savedFP
 { #category : #'frame access' }
 StackInterpreter >> iframeInstructionPointerForIndex: ip method: aMethod [
 	"Answer the instruction pointer for use in an interpreter frame (a pointer to a bytecode)."
-	self assert: (ip between: (((LiteralStart + (objectMemory literalCountOf: aMethod)) * BytesPerOop)) + 1
+	self assert: (ip between: (((LiteralStart + (objectMemory literalCountOf: aMethod)) * objectMemory bytesPerOop)) + 1
 					and: (objectMemory lengthOf: aMethod)).
 	^aMethod + ip + objectMemory baseHeaderSize - 2
 ]
@@ -7068,7 +7061,7 @@ StackInterpreter >> iframeMethod: theFP [
 StackInterpreter >> imageFormatCompatibilityVersion [
 	"This VM is backward-compatible with the immediately preceeding version."
 
-	^BytesPerWord == 4 ifTrue: [6504] ifFalse: [68002]
+	^objectMemory wordSize == 4 ifTrue: [6504] ifFalse: [68002]
 ]
 
 { #category : #'image save/restore' }
@@ -7078,7 +7071,7 @@ StackInterpreter >> imageFormatVersion [
 	 must avoid version numbers that are invariant under byte reversal."
 	| isSpurFlag |
 	isSpurFlag := objectMemory hasSpurMemoryManagerAPI ifTrue: [2r10000] ifFalse: [0].
-	^(BytesPerWord = 4 ifTrue: [6505] ifFalse: [68003])
+	^(objectMemory wordSize = 4 ifTrue: [6505] ifFalse: [68003])
 	  + isSpurFlag
 ]
 
@@ -7182,8 +7175,8 @@ StackInterpreter >> initStackPages [
 	self cCode: [self me: theStackMemory ms: 0 et: stackPagesBytes].
 	stackPages
 		initializeStack: theStackMemory
-		numSlots: stackPagesBytes / BytesPerWord
-		pageSize: stackPageBytes / BytesPerWord
+		numSlots: stackPagesBytes / objectMemory wordSize
+		pageSize: stackPageBytes / objectMemory wordSize
 ]
 
 { #category : #initialization }
@@ -7205,8 +7198,8 @@ StackInterpreter >> initStackPagesAndInterpret [
 	self cCode: [self me: theStackMemory ms: 0 et: stackPagesBytes].
 	stackPages
 		initializeStack: theStackMemory
-		numSlots: stackPagesBytes / BytesPerWord
-		pageSize: stackPageBytes / BytesPerWord.
+		numSlots: stackPagesBytes / objectMemory wordSize
+		pageSize: stackPageBytes / objectMemory wordSize.
 
 	"Once the stack pages are initialized we can continue to bootstrap the system."
 	self loadInitialContext.
@@ -7287,6 +7280,57 @@ StackInterpreter >> initializeExtraClassInstVarIndices [
 			[classNameIndex := i - 1]]
 ]
 
+{ #category : #'as yet unclassified' }
+StackInterpreter >> initializeFrameIndices [
+	"Format of a stack frame.  Word-sized indices relative to the frame pointer.
+	 Terminology
+		Frames are either single (have no context) or married (have a context).
+		Contexts are either single (exist on the heap), married (have a context) or widowed (had a frame that has exited).
+	 Stacks grow down:
+
+			receiver for method activations/closure for block activations
+			arg0
+			...
+			argN
+			caller's method ip/base frame's sender context
+	fp->	saved fp
+			method
+			frame flags
+			context (uninitialized)
+			receiver
+			first temp
+			...
+	sp->	Nth temp
+
+	frame flags holds the number of arguments (since argument temporaries are above the frame)
+	the flag for a block activation
+	and the flag indicating if the context field is valid (whether the frame is married).
+
+	The first frame in a stack page is the baseFrame and is marked as such by a null saved fp,
+	in which case the saved method ip is actually the context (possibly hybrid) beneath the base frame"
+
+	| fxCallerSavedIP fxSavedFP fxMethod fxFrameFlags fxThisContext fxReceiver |
+	fxCallerSavedIP := 1.
+	fxSavedFP := 0.
+	fxMethod := -1.
+	fxFrameFlags := -2.	"Can find numArgs, needed for fast temp access. args are above fxCallerSavedIP.
+							 Can find ``is block'' bit
+							 Can find ``has context'' bit"
+	fxThisContext := -3.
+	fxReceiver := -4.
+
+	FrameSlots := fxCallerSavedIP - fxReceiver + 1.
+
+	FoxCallerSavedIP := fxCallerSavedIP * objectMemory wordSize.
+	"In base frames the caller saved ip field holds the caller context."
+	FoxCallerContext := FoxCallerSavedIP.
+	FoxSavedFP := fxSavedFP * objectMemory wordSize.
+	FoxMethod := fxMethod * objectMemory wordSize.
+	FoxFrameFlags := fxFrameFlags * objectMemory wordSize.
+	FoxThisContext := fxThisContext * objectMemory wordSize.
+	FoxReceiver := fxReceiver * objectMemory wordSize
+]
+
 { #category : #initialization }
 StackInterpreter >> initializeInterpreter: bytesToShift [
 	"Initialize Interpreter state before starting execution of a new image."
@@ -7329,7 +7373,6 @@ StackInterpreter >> inlineLookupInMethodCacheSel: selector classTag: classTag [
 
 	| hash probe |
 	<inline: true>
-	<asmLabel: false>
 	hash := selector bitXor: classTag.  "shift drops two low-order zeros from addresses"
 
 	probe := hash bitAnd: MethodCacheMask.  "first probe"
@@ -7777,13 +7820,13 @@ StackInterpreter >> internalMustBeBoolean [
 { #category : #'internal interpreter access' }
 StackInterpreter >> internalPop: nItems [
 	"In the StackInterpreter stacks grow down."
-	localSP := localSP + (nItems * BytesPerOop)
+	localSP := localSP + (nItems * objectMemory bytesPerOop)
 ]
 
 { #category : #'internal interpreter access' }
 StackInterpreter >> internalPop: nItems thenPush: oop [
 	"In the StackInterpreter stacks grow down."
-	stackPages longAtPointer: (localSP := localSP + ((nItems - 1) * BytesPerOop)) put: oop
+	stackPages longAtPointer: (localSP := localSP + ((nItems - 1) * objectMemory bytesPerOop)) put: oop
 ]
 
 { #category : #'internal interpreter access' }
@@ -7791,14 +7834,14 @@ StackInterpreter >> internalPopStack [
 	"In the StackInterpreter stacks grow down."
 	| top |
 	top := stackPages longAt: localSP.
-	localSP := localSP + BytesPerOop.
+	localSP := localSP + objectMemory bytesPerOop.
 	^top
 ]
 
 { #category : #'internal interpreter access' }
 StackInterpreter >> internalPush: object [
 	"In the StackInterpreter stacks grow down."
-	stackPages longAtPointer: (localSP := localSP - BytesPerOop) put: object
+	stackPages longAtPointer: (localSP := localSP - objectMemory bytesPerOop) put: object
 ]
 
 { #category : #'primitive support' }
@@ -7838,13 +7881,13 @@ StackInterpreter >> internalStackTopPut: aValue [
 { #category : #'internal interpreter access' }
 StackInterpreter >> internalStackValue: offset [
 	"In the StackInterpreter stacks grow down."
-	^stackPages longAtPointer: localSP + (offset * BytesPerOop)
+	^stackPages longAtPointer: localSP + (offset * objectMemory bytesPerOop)
 ]
 
 { #category : #'internal interpreter access' }
 StackInterpreter >> internalStackValue: offset put: aValue [
 	"In the StackInterpreter stacks grow down."
-	^stackPages longAtPointer: localSP + (offset * BytesPerOop) put: aValue
+	^stackPages longAtPointer: localSP + (offset * objectMemory bytesPerOop) put: aValue
 ]
 
 { #category : #utilities }
@@ -7885,8 +7928,8 @@ StackInterpreter >> interpreterAllocationReserveBytes [
 	 number of frames per page times the number of pages."
 	| maxUsedBytesPerPage maxFramesPerPage |
 	maxUsedBytesPerPage := self stackPageFrameBytes + self stackLimitOffset.
-	maxFramesPerPage := maxUsedBytesPerPage / BytesPerWord // FrameSlots.
-	^maxFramesPerPage * LargeContextSlots * BytesPerOop * numStackPages
+	maxFramesPerPage := maxUsedBytesPerPage / objectMemory wordSize // FrameSlots.
+	^maxFramesPerPage * LargeContextSlots * objectMemory bytesPerOop * numStackPages
 ]
 
 { #category : #'plugin support' }
@@ -8315,7 +8358,6 @@ StackInterpreter >> loadFloatOrIntFrom: floatOrInt [
 	 Otherwise fail -- ie return with primErrorCode non-zero."
 
 	<inline: true>
-	<asmLabel: false>
 	<returnTypeC: #double>
 
 	(objectMemory isIntegerObject: floatOrInt) ifTrue:
@@ -8393,7 +8435,7 @@ StackInterpreter >> longPrintOop: oop [
 			self space; printNum: i; space; printHex: fieldOop; space; cr].
 		 ^self].
 	"this is nonsense.  apologies."
-	startIP := (objectMemory lastPointerOf: oop) + BytesPerOop - objectMemory baseHeaderSize / BytesPerOop.
+	startIP := (objectMemory lastPointerOf: oop) + objectMemory bytesPerOop - objectMemory baseHeaderSize / objectMemory bytesPerOop.
 	lastIndex := 256 min: startIP.
 	lastIndex > 0 ifTrue:
 		[1 to: lastIndex do:
@@ -8409,7 +8451,7 @@ StackInterpreter >> longPrintOop: oop [
 		ifFalse:
 			[startIP > 64 ifTrue: [self print: '...'; cr]]
 		ifTrue:
-			[startIP := startIP * BytesPerWord + 1.
+			[startIP := startIP * objectMemory wordSize + 1.
 			 lastIndex := objectMemory lengthOf: oop.
 			 lastIndex - startIP > 100 ifTrue:
 				[lastIndex := startIP + 100].
@@ -8419,7 +8461,7 @@ StackInterpreter >> longPrintOop: oop [
 				[:index| | byte |
 				column = 1 ifTrue:
 					[self cCode: 'printf("0x%08x: ", oop+BaseHeaderSize+index-1)'
-						inSmalltalk: [self print: (oop+BaseHeaderSize+index-1) hex; print: ': ']].
+						inSmalltalk: [self print: (oop+objectMemory baseHeaderSize+index-1) hex; print: ': ']].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
 				self cCode: 'printf(" %02x/%-3d", byte,byte)'
 					inSmalltalk: [self space; print: (byte radix: 16); printChar: $/; printNum: byte].
@@ -8495,7 +8537,6 @@ StackInterpreter >> lookupMethodFor: selector InDictionary: dictionary [
 	 execution of images in which Symbols have been compacted out."
 	| length index mask wrapAround nextSelector methodArray |
 	<inline: true>
-	<asmLabel: false>
 	length := objectMemory numSlotsOf: dictionary.
 	mask := length - SelectorStart - 1.
 	index := SelectorStart + (objectMemory methodDictionaryHash: selector mask: mask).
@@ -8550,7 +8591,7 @@ StackInterpreter >> lookupMethodInClass: class [
 	"Cound not find a normal message -- raise exception #doesNotUnderstand:"
 	self createActualMessageTo: class.
 	messageSelector := objectMemory splObj: SelectorDoesNotUnderstand.
-	self sendBreak: messageSelector + BaseHeaderSize
+	self sendBreak: messageSelector + objectMemory baseHeaderSize
 		point: (objectMemory lengthOf: messageSelector)
 		receiver: nil.
 	^self lookupMethodInClass: class
@@ -8562,7 +8603,6 @@ StackInterpreter >> lookupMethodInDictionary: dictionary [
 	 execution of images in which Symbols have been compacted out."
 	| length index mask wrapAround nextSelector methodArray |
 	<inline: true>
-	<asmLabel: false>
 	length := objectMemory numSlotsOf: dictionary.
 	mask := length - SelectorStart - 1.
 	"Use linear search on small dictionaries; its cheaper.
@@ -8673,41 +8713,41 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	1 to: numArgs do:
 		[:i|
 		stackPages
-			longAt: (pointer := pointer - BytesPerWord)
+			longAt: (pointer := pointer - objectMemory wordSize)
 			put: (objectMemory fetchPointer: ReceiverIndex + i ofObject: aContext)].
 	"saved caller ip is sender context in base frame"
 	stackPages
-		longAt: (pointer := pointer - BytesPerWord)
+		longAt: (pointer := pointer - objectMemory wordSize)
 		put: (objectMemory fetchPointer: SenderIndex ofObject: aContext).
 	"base frame's saved fp is null"
 	stackPages
-		longAt: (pointer := pointer - BytesPerWord)
+		longAt: (pointer := pointer - objectMemory wordSize)
 		put: 0.
 	page baseFP: pointer; headFP: pointer.
 	stackPages
-		longAt: (pointer := pointer - BytesPerWord)
+		longAt: (pointer := pointer - objectMemory wordSize)
 		put: theMethod.
 	stackPages
-		longAt: (pointer := pointer - BytesPerWord)
+		longAt: (pointer := pointer - objectMemory wordSize)
 		put: (self encodeFrameFieldHasContext: true isBlock: maybeClosure ~= objectMemory nilObject numArgs: numArgs).
 	self assert: (self frameHasContext: page baseFP).
 	self assert: (self frameNumArgs: page baseFP) == numArgs.
 	stackPages
-		longAt: (pointer := pointer - BytesPerWord)
+		longAt: (pointer := pointer - objectMemory wordSize)
 		put: aContext.
 	stackPages
-		longAt: (pointer := pointer - BytesPerWord)
+		longAt: (pointer := pointer - objectMemory wordSize)
 		put: rcvr.
 	stackPtrIndex := self quickFetchInteger: StackPointerIndex ofObject: aContext.
 	self assert: ReceiverIndex + stackPtrIndex < (objectMemory lengthOf: aContext).
 	numArgs + 1 to: stackPtrIndex do:
 		[:i|
 		stackPages
-			longAt: (pointer := pointer - BytesPerWord)
+			longAt: (pointer := pointer - objectMemory wordSize)
 			put: (objectMemory fetchPointer: ReceiverIndex + i ofObject: aContext)].
 	"top of stack is the instruction pointer"
 	theIP := self iframeInstructionPointerForIndex: theIP method: theMethod.
-	stackPages longAt: (pointer := pointer - BytesPerWord) put: theIP.
+	stackPages longAt: (pointer := pointer - objectMemory wordSize) put: theIP.
 	page headSP: pointer.
 	self assert: (self context: aContext hasValidInversePCMappingOf: theIP in: page baseFP).
 
@@ -8808,7 +8848,7 @@ StackInterpreter >> mapStackPages [
 				ifTrue: [theIPPtr := 0]
 				ifFalse:
 					[theIPPtr := theSP.
-					 theSP := theSP + BytesPerWord].
+					 theSP := theSP + objectMemory wordSize].
 			[self assert: (thePage addressIsInPage: theFP).
 			 self assert: (thePage addressIsInPage: theSP).
 			 self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr]).
@@ -8816,7 +8856,7 @@ StackInterpreter >> mapStackPages [
 				[oop := stackPages longAt: theSP.
 				 (objectMemory shouldRemapOop: oop) ifTrue:
 					[stackPages longAt: theSP put: (objectMemory remapObj: oop)].
-				 theSP := theSP + BytesPerWord].
+				 theSP := theSP + objectMemory wordSize].
 			 (self frameHasContext: theFP) ifTrue:
 				[(objectMemory shouldRemapObj: (self frameContext: theFP)) ifTrue:
 					[stackPages
@@ -8836,14 +8876,14 @@ StackInterpreter >> mapStackPages [
 				 theIPPtr ~= 0 ifTrue:
 					[stackPages longAt: theIPPtr put: theIP + (self frameMethod: theFP)]].
 			 (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
-				[theSP := (theIPPtr := theFP + FoxCallerSavedIP) + BytesPerWord.
+				[theSP := (theIPPtr := theFP + FoxCallerSavedIP) + objectMemory wordSize.
 				 theFP := callerFP].
 			 theSP := theFP + FoxCallerContext. "a.k.a. FoxCallerSavedIP"
 			 [theSP <= thePage baseAddress] whileTrue:
 				[oop := stackPages longAt: theSP.
 				 (objectMemory shouldRemapOop: oop) ifTrue:
 					[stackPages longAt: theSP put: (objectMemory remapObj: oop)].
-				 theSP := theSP + BytesPerWord]]]
+				 theSP := theSP + objectMemory wordSize]]]
 ]
 
 { #category : #'object memory support' }
@@ -8950,7 +8990,7 @@ StackInterpreter >> markAndTraceStackPage: thePage [
 	theFP := thePage  headFP.
 	"Skip the instruction pointer on top of stack of inactive pages."
 	thePage = stackPage ifFalse:
-		[theSP := theSP + BytesPerWord].
+		[theSP := theSP + objectMemory wordSize].
 	[frameRcvrOffset := self frameReceiverOffset: theFP.
 	 [theSP <= frameRcvrOffset] whileTrue:
 		[oop := stackPages longAt: theSP.
@@ -8959,13 +8999,13 @@ StackInterpreter >> markAndTraceStackPage: thePage [
 			 stackPages longAt: theSP put: oop].
 		 (objectMemory isImmediate: oop) ifFalse:
 			[objectMemory markAndTrace: oop].
-		 theSP := theSP + BytesPerWord].
+		 theSP := theSP + objectMemory wordSize].
 	(self frameHasContext: theFP) ifTrue:
 		[self assert: (objectMemory isContext: (self frameContext: theFP)).
 		 objectMemory markAndTrace: (self frameContext: theFP)].
 	objectMemory markAndTrace: (self iframeMethod: theFP).
 	(callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
-		[theSP := theFP + FoxCallerSavedIP + BytesPerWord.
+		[theSP := theFP + FoxCallerSavedIP + objectMemory wordSize.
 		 theFP := callerFP].
 	theSP := theFP + FoxCallerSavedIP. "caller ip is frameCallerContext in a base frame"
 	[theSP <= thePage baseAddress] whileTrue:
@@ -8975,7 +9015,7 @@ StackInterpreter >> markAndTraceStackPage: thePage [
 			 stackPages longAt: theSP put: oop].
 		 (objectMemory isImmediate: oop) ifFalse:
 			[objectMemory markAndTrace: oop].
-		 theSP := theSP + BytesPerWord]
+		 theSP := theSP + objectMemory wordSize]
 ]
 
 { #category : #'object memory support' }
@@ -9067,7 +9107,7 @@ StackInterpreter >> marriedContext: spouseContext pointsTo: anOop stackDeltaForC
 	<var: #rcvrOffset type: #'char *'>
 	theFP := self frameOfMarriedContext: spouseContext.
 	theFP = framePointer
-		ifTrue: [theSP := stackPointer + (stackDeltaForCurrentFrame * BytesPerWord)]
+		ifTrue: [theSP := stackPointer + (stackDeltaForCurrentFrame * objectMemory wordSize)]
 		ifFalse:
 			[thePage := stackPages stackPageFor: theFP.
 			theSP := self findSPOf: theFP on: thePage].
@@ -9090,14 +9130,14 @@ StackInterpreter >> marriedContext: spouseContext pointsTo: anOop stackDeltaForC
 	 [theSP <= rcvrOffset] whileTrue:
 		[anOop = (stackPages longAt: theSP) ifTrue:
 			[^true].
-		 theSP := theSP + BytesPerWord].
+		 theSP := theSP + objectMemory wordSize].
 	"Finally check stacked receiver (closure field or duplicate of receiver) and arguments"
-	theSP := theFP + FoxCallerSavedIP + BytesPerWord.
+	theSP := theFP + FoxCallerSavedIP + objectMemory wordSize.
 	rcvrOffset := theFP + (self frameStackedReceiverOffset: theFP).
 	 [theSP <= rcvrOffset] whileTrue:
 		[anOop = (stackPages longAt: theSP) ifTrue:
 			[^true].
-		 theSP := theSP + BytesPerWord].
+		 theSP := theSP + objectMemory wordSize].
 	^false
 ]
 
@@ -9190,7 +9230,7 @@ StackInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 			ofObject: theContext "inline self temporary: i - 1 in:theFP" 
 			withValue: (stackPages longAt: theFP
 										+ FoxCallerSavedIP
-										+ ((numArgs - i + 1) * BytesPerWord))].
+										+ ((numArgs - i + 1) * objectMemory wordSize))].
 	copyTemps ifTrue:
 		[numTemps := self frameNumTemps: theFP.
 		 1 to: numTemps do:
@@ -9389,14 +9429,14 @@ StackInterpreter >> moveFramesIn: oldPage through: theFP toPage: newPage [
 	<var: #offsetCallerFP type: #'char *'>
 	<var: #source type: #'char *'>
 	<returnTypeC: 'char *'>
-	newSP := newPage baseAddress + BytesPerWord.
+	newSP := newPage baseAddress + objectMemory wordSize.
 	stackedReceiverOffset := self frameStackedReceiverOffset: theFP.
 	"First move the data.  We will fix up frame pointers later."
 	theFP + stackedReceiverOffset
 		to: oldPage headSP
-		by: BytesPerWord negated
+		by: objectMemory wordSize negated
 		do: [:source|
-			newSP := newSP - BytesPerWord.
+			newSP := newSP - objectMemory wordSize.
 			stackPages longAt: newSP put: (stackPages longAt: source)].
 	"newSP = oldSP + delta => delta = newSP - oldSP"
 	delta := newSP - oldPage headSP.
@@ -9409,7 +9449,7 @@ StackInterpreter >> moveFramesIn: oldPage through: theFP toPage: newPage [
 	callerIP := self oopForPointer: (self frameCallerSavedIP: theFP).
 	stackPages longAt: theFP + stackedReceiverOffset put: callerIP.
 	self assert: (callerFP < oldPage baseAddress
-				and: [callerFP > (oldPage realStackLimit - (LargeContextSize / 2))]).
+				and: [callerFP > (oldPage realStackLimit - (LargeContextSlots * objectMemory bytesPerOop / 2))]).
 	oldPage
 		headFP: callerFP;
 		headSP: theFP + stackedReceiverOffset.
@@ -9730,7 +9770,7 @@ StackInterpreter >> pop2AndPushIntegerIfOK: integerResult [
 StackInterpreter >> pop: nItems [
 	<inline: true>
 	"In the StackInterpreter stacks grow down."
-	stackPointer := stackPointer + (nItems*BytesPerWord).
+	stackPointer := stackPointer + (nItems*objectMemory wordSize).
 	^nil
 ]
 
@@ -9740,7 +9780,7 @@ StackInterpreter >> pop: nItems thenPush: oop [
 	| sp |
 	<inline: true>
 	<var: #sp type: #'char *'>
-	stackPages longAt: (sp := stackPointer + ((nItems - 1) * BytesPerWord)) put: oop.
+	stackPages longAt: (sp := stackPointer + ((nItems - 1) * objectMemory wordSize)) put: oop.
 	stackPointer := sp
 ]
 
@@ -9751,7 +9791,7 @@ StackInterpreter >> pop: nItems thenPushBool: trueOrFalse [
 	<inline: true>
 	<var: #sp type: #'char *'>
 	stackPages
-		longAt: (sp := stackPointer + ((nItems - 1) * BytesPerWord))
+		longAt: (sp := stackPointer + ((nItems - 1) * objectMemory wordSize))
 		put: (objectMemory booleanObjectOf: trueOrFalse).
 	stackPointer := sp
 ]
@@ -9764,7 +9804,7 @@ StackInterpreter >> pop: nItems thenPushFloat: f [
 	<var: #f type: #double>
 	<var: #sp type: #'char *'>
 	stackPages
-		longAt: (sp := stackPointer + ((nItems - 1) * BytesPerWord))
+		longAt: (sp := stackPointer + ((nItems - 1) * objectMemory wordSize))
 		put: (self floatObjectOf: f).
 	stackPointer := sp
 ]
@@ -9776,7 +9816,7 @@ StackInterpreter >> pop: nItems thenPushInteger: integerVal [
 	| sp |
 	<var: #sp type: #'char *'>
 	stackPages
-		longAt: (sp := stackPointer + ((nItems - 1) * BytesPerWord))
+		longAt: (sp := stackPointer + ((nItems - 1) * objectMemory wordSize))
 		put: (objectMemory integerObjectOf: integerVal).
 	stackPointer := sp
 ]
@@ -9811,7 +9851,7 @@ StackInterpreter >> popStack [
 	| top |
 	<inline: true>
 	top := stackPages longAt: stackPointer.
-	stackPointer := stackPointer + BytesPerWord.
+	stackPointer := stackPointer + objectMemory wordSize.
 	^top
 ]
 
@@ -9858,7 +9898,7 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 	newLargeInteger := objectMemory
 							eeInstantiateSmallClassIndex: ClassLargePositiveIntegerCompactIndex
 							format: (objectMemory byteFormatForNumBytes: sz)
-							numSlots: 8 / objectMemory bytesPerSlot.
+							numSlots: 8 / objectMemory bytesPerOop.
 	objectMemory
 		storeByte: 7 ofObject: newLargeInteger withValue: (integerValue >> 56 bitAnd: 16rFF);
 		storeByte: 6 ofObject: newLargeInteger withValue: (integerValue >> 48 bitAnd: 16rFF);
@@ -9921,7 +9961,6 @@ StackInterpreter >> preBecomeAction [
 
 { #category : #'object memory support' }
 StackInterpreter >> preGCAction: gcModeArg [
-	<asmLabel: false>
 	"Need to write back the frame pointers unless all pages are free (as in snapshot)"
 	stackPage ~= 0 ifTrue:
 		[self externalWriteBackHeadFramePointers].
@@ -10161,8 +10200,8 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 	"Cannot fail this primitive from here-on.  Slide the actual receiver and arguments down
 	 to replace the perform arguments and saved newMethod and then execute the new
 	 method. Use argumentCount not arraySize because an MNU may have changed it."
-	delta := BytesPerWord * (performArgCount + 2). "+2 = receiver + saved newMethod"
-	argumentCount * BytesPerWord to: 0 by: BytesPerWord negated do:
+	delta := objectMemory wordSize * (performArgCount + 2). "+2 = receiver + saved newMethod"
+	argumentCount * objectMemory wordSize to: 0 by: objectMemory wordSize negated do:
 		[:offset|
 		stackPages
 			longAt: stackPointer + offset + delta
@@ -10495,9 +10534,9 @@ StackInterpreter >> printFrame: theFP WithSP: theSP [
 	numArgs := self frameNumArgs: theFP.
 	self shortPrintFrame: theFP.
 	self printFrameOop: 'rcvr/clsr'
-		at: theFP + FoxCallerSavedIP + ((numArgs + 1) * BytesPerWord).
+		at: theFP + FoxCallerSavedIP + ((numArgs + 1) * objectMemory wordSize).
 	numArgs to: 1 by: -1 do:
-		[:i| self printFrameOop: 'arg' at: theFP + FoxCallerSavedIP + (i * BytesPerWord)].
+		[:i| self printFrameOop: 'arg' at: theFP + FoxCallerSavedIP + (i * objectMemory wordSize)].
 	self printFrameThing: 'cllr ip/ctxt' at: theFP + FoxCallerSavedIP.
 	self printFrameThing: 'saved fp' at: theFP + FoxSavedFP.
 	self printFrameOop: 'method' at: theFP + FoxMethod.
@@ -10508,12 +10547,12 @@ StackInterpreter >> printFrame: theFP WithSP: theSP [
 	(topThing >= theMethod
 	 and: [topThing <= (theMethod + (objectMemory sizeBitsOfSafe: theMethod))])
 		ifTrue:
-			[theFP + FoxReceiver - BytesPerWord to: theSP + BytesPerWord by: BytesPerWord negated do:
+			[theFP + FoxReceiver - objectMemory wordSize to: theSP + objectMemory wordSize by: objectMemory wordSize negated do:
 				[:addr|
 				self printFrameOop: 'temp/stck' at: addr].
 			self printFrameThing: 'frame ip' at: theSP]
 		ifFalse:
-			[theFP + FoxReceiver - BytesPerWord to: theSP by: BytesPerWord negated do:
+			[theFP + FoxReceiver - objectMemory wordSize to: theSP by: objectMemory wordSize negated do:
 				[:addr|
 				self printFrameOop: 'temp/stck' at: addr]]
 ]
@@ -10877,7 +10916,7 @@ StackInterpreter >> printOop: oop [
 									ifFalse: [' direct @ ']]).
 			 ^self printHex: (self startOfAlienData: oop) asUnsignedInteger; cr].
 		 (objectMemory isWords: oop) ifTrue:
-			[lastIndex := 64 min: ((objectMemory numBytesOf: oop) / BytesPerWord).
+			[lastIndex := 64 min: ((objectMemory numBytesOf: oop) / objectMemory wordSize).
 			 lastIndex > 0 ifTrue:
 				[1 to: lastIndex do:
 					[:index|
@@ -10889,7 +10928,7 @@ StackInterpreter >> printOop: oop [
 			^self].
 		^self printStringOf: oop; cr].
 	"this is nonsense.  apologies."
-	startIP := (objectMemory lastPointerOf: oop) + BytesPerOop - objectMemory baseHeaderSize / BytesPerOop.
+	startIP := (objectMemory lastPointerOf: oop) + objectMemory bytesPerOop - objectMemory baseHeaderSize / objectMemory bytesPerOop.
 	lastIndex := 256 min: startIP.
 	lastIndex > 0 ifTrue:
 		[1 to: lastIndex do:
@@ -10905,7 +10944,7 @@ StackInterpreter >> printOop: oop [
 		ifFalse:
 			[startIP > 64 ifTrue: [self print: '...'; cr]]
 		ifTrue:
-			[startIP := startIP * BytesPerWord + 1.
+			[startIP := startIP * objectMemory wordSize + 1.
 			 lastIndex := objectMemory lengthOf: oop.
 			 lastIndex - startIP > 100 ifTrue:
 				[lastIndex := startIP + 100].
@@ -10915,7 +10954,7 @@ StackInterpreter >> printOop: oop [
 				[:index| | byte |
 				column = 1 ifTrue:
 					[self cCode: 'printf("0x%08x: ", oop+BaseHeaderSize+index-1)'
-						inSmalltalk: [self print: (oop+BaseHeaderSize+index-1) hex; print: ': ']].
+						inSmalltalk: [self print: (oop+objectMemory baseHeaderSize+index-1) hex; print: ': ']].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
 				self cCode: 'printf(" %02x/%-3d", byte,byte)'
 					inSmalltalk: [self space; print: (byte radix: 16); printChar: $/; printNum: byte].
@@ -11184,7 +11223,7 @@ StackInterpreter >> push: object [
 	| sp |
 	<inline: true>
 	<var: #sp type: #'char *'>
-	stackPages longAt: (sp := stackPointer - BytesPerWord) put: object.
+	stackPages longAt: (sp := stackPointer - objectMemory wordSize) put: object.
 	stackPointer := sp
 ]
 
@@ -11225,11 +11264,11 @@ StackInterpreter >> pushClosureNumArgs: numArgs copiedValues: numCopied blockSiz
 	<inline: true>
 	| newClosure context |
 	"No need to record the pushed copied values in the outerContext."
-	context := self ensureFrameIsMarried: localFP SP: localSP + (numCopied * BytesPerOop).
+	context := self ensureFrameIsMarried: localFP SP: localSP + (numCopied * objectMemory bytesPerOop).
 	newClosure := self
 					closureIn: context
 					numArgs: numArgs
-					instructionPointer: (self oopForPointer: localIP) + 2 - (method+BaseHeaderSize)
+					instructionPointer: (self oopForPointer: localIP) + 2 - (method+objectMemory baseHeaderSize)
 					numCopiedValues: numCopied.
 	numCopied > 0 ifTrue:
 		[0 to: numCopied - 1 do:
@@ -11577,7 +11616,7 @@ StackInterpreter >> putToSleep: aProcess yieldingIf: yieldImplicitly [
 	 adding to the back if yieldImplicitly or to the front if not yieldImplicitly."
 
 	| priority processLists processList |
-	self assert: (framePointer - stackPointer) < LargeContextSize.
+	self assert: (framePointer - stackPointer) < (LargeContextSlots * objectMemory bytesPerOop).
 	priority := self quickFetchInteger: PriorityIndex ofObject: aProcess.
 	(highestRunnableProcessPriority ~= 0
 	 and: [priority > highestRunnableProcessPriority]) ifTrue:
@@ -11619,7 +11658,7 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	metaclassNumSlots := 6.	"guess Metaclass instSize"
 	classNameIndex := 6.		"guess (Class instVarIndexFor: 'name' ifAbsent: []) - 1"
 	swapBytes := self checkImageVersionFrom: f startingAt: imageOffset.
-	headerStart := (self sqImageFilePosition: f) - BytesPerWord.  "record header start position"
+	headerStart := (self sqImageFilePosition: f) - objectMemory wordSize.  "record header start position"
 
 	headerSize			:= self getLongFromFile: f swap: swapBytes.
 	dataSize			:= self getLongFromFile: f swap: swapBytes.
@@ -11747,7 +11786,7 @@ StackInterpreter >> reestablishContextPriorToCallback: callbackContext [
 						ifTrue: [stackPages freeStackPage: stackPage]
 						ifFalse: "calloutContext is immediately below on the same page.  Make it current."
 							[instructionPointer := (self frameCallerSavedIP: framePointer) asUnsignedInteger.
-							 stackPointer := framePointer + (self frameStackedReceiverOffset: framePointer) + BytesPerWord.
+							 stackPointer := framePointer + (self frameStackedReceiverOffset: framePointer) + objectMemory wordSize.
 							 framePointer := self frameCallerFP: framePointer.
 							 ^true]]
 				ifFalse:
@@ -11762,7 +11801,7 @@ StackInterpreter >> reestablishContextPriorToCallback: callbackContext [
 			 "findSPOf:on: points to the word beneath the instructionPointer, but
 			  there is no instructionPointer on the top frame of the current page."
 			 self assert: thePage ~= stackPage.
-			 stackPointer := (self findSPOf: theFP on: thePage) - BytesPerWord.
+			 stackPointer := (self findSPOf: theFP on: thePage) - objectMemory wordSize.
 			 framePointer := theFP]
 		ifFalse:
 			[thePage := self makeBaseFrameFor: calloutContext.
@@ -11941,7 +11980,7 @@ StackInterpreter >> returnAs: returnTypeOop ThroughCallback: vmCallbackContext C
 						ifTrue: [stackPages freeStackPage: stackPage]
 						ifFalse: "calloutMethodContext is immediately below on the same page.  Make it current."
 							[instructionPointer := (self frameCallerSavedIP: framePointer) asUnsignedInteger.
-							 stackPointer := framePointer + (self frameStackedReceiverOffset: framePointer) + BytesPerWord.
+							 stackPointer := framePointer + (self frameStackedReceiverOffset: framePointer) + objectMemory wordSize.
 							 framePointer := self frameCallerFP: framePointer.
 							 self restoreCStackStateForCallbackContext: vmCallbackContext.
 							 "N.B. siglongjmp is defines as _longjmp on non-win32 platforms.
@@ -11960,7 +11999,7 @@ StackInterpreter >> returnAs: returnTypeOop ThroughCallback: vmCallbackContext C
 			 "findSPOf:on: points to the word beneath the instructionPointer, but
 			  there is no instructionPointer on the top frame of the current page."
 			 self assert: thePage ~= stackPage.
-			 stackPointer := (self findSPOf: theFP on: thePage) - BytesPerWord.
+			 stackPointer := (self findSPOf: theFP on: thePage) - objectMemory wordSize.
 			 framePointer := theFP]
 		ifFalse:
 			[thePage := self makeBaseFrameFor: calloutMethodContext.
@@ -12050,7 +12089,7 @@ StackInterpreter >> reverseDisplayFrom: startIndex to: endIndex [
 	or: [objectMemory isPointersNonImm: displayBits]]) ifTrue: [^ nil].
 	wordStartIndex := startIndex * 4.
 	wordEndIndex := endIndex * 4 min: (objectMemory sizeBitsOf: displayBits).
-	displayBits := displayBits + BaseHeaderSize.
+	displayBits := displayBits + objectMemory baseHeaderSize.
 	displayBits + wordStartIndex to: displayBits + wordEndIndex by: 4 do:
 		[:ptr | | reversed  |
 		reversed := (objectMemory long32At: ptr) bitXor: 4294967295.
@@ -12228,7 +12267,7 @@ StackInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 		[^false].
 	self saveCStackStateForCallbackContext: vmCallbackContext.
 	self push: (self splObj: ClassAlien). "receiver"
-	self cppIf: BytesPerWord = 8
+	self cppIf: objectMemory wordSize = 8
 		ifTrue:
 			[(self argumentCountOf: newMethod) = 4 ifTrue:
 				[self push: (self positive64BitIntegerFor: vmCallbackContext thunkp asUnsignedInteger).
@@ -12343,15 +12382,14 @@ StackInterpreter >> setFullScreenFlag: value [
 { #category : #'stack pages' }
 StackInterpreter >> setHeadFP: theFP andSP: theSP inPage: thePage [
 	<inline: true>
-	<asmLabel: false>
 	<var: #theFP type: #'char *'>
 	<var: #theSP type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
 	self assert: theSP < theFP.
 	self assert: (theSP < thePage baseAddress
-				and: [theSP > (thePage realStackLimit - LargeContextSize)]).
+				and: [theSP > (thePage realStackLimit - (LargeContextSlots * objectMemory bytesPerOop))]).
 	self assert: (theFP < thePage baseAddress
-				and: [theFP > (thePage realStackLimit - (LargeContextSize / 2))]).
+				and: [theFP > (thePage realStackLimit - (LargeContextSlots * objectMemory bytesPerOop / 2))]).
 	thePage headFP: theFP; headSP: theSP
 ]
 
@@ -12471,7 +12509,6 @@ StackInterpreter >> setStackPageAndLimit: thePage [
 	"Set stackPage to a different page.  Set stackLimit unless it has
 	 been smashed.  Make the stackPage the most recently used"
 	<inline: true>
-	<asmLabel: false>
 	<var: #thePage type: #'StackPage *'>
 	self assert: thePage ~= 0.
 	stackPage := thePage.
@@ -12666,7 +12703,7 @@ StackInterpreter >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
 StackInterpreter >> shuffleArgumentsAndStoreAbsentReceiver: theReceiver [
 	"For the absent receiver sends move the arguments up the stack and store the supplied receiver."
 	<inline: true>
-	localSP := localSP - BytesPerOop. "a.k.a. self internalPush: anything"
+	localSP := localSP - objectMemory bytesPerOop. "a.k.a. self internalPush: anything"
 	1 to: argumentCount do:
 		[:i| | oop |
 		oop := self internalStackValue: i.
@@ -12760,7 +12797,7 @@ StackInterpreter >> signed64BitIntegerFor: integerValue [
 	newLargeInteger := objectMemory
 							eeInstantiateSmallClassIndex: largeClass
 							format: (objectMemory byteFormatForNumBytes: sz)
-							numSlots: sz + 3 // objectMemory bytesPerSlot.
+							numSlots: sz + 3 // objectMemory bytesPerOop.
 	sz > 4 ifTrue:
 		[objectMemory
 			storeByte: 7 ofObject: newLargeInteger withValue: (magnitude >> 56 bitAnd: 16rFF);
@@ -12829,7 +12866,7 @@ StackInterpreter >> sizeOfSTArrayFromCPrimitive: cPtr [
 
 	| oop |
 	<var: #cPtr type: 'void *'>
-	oop := (self oopForPointer: cPtr) - BaseHeaderSize.
+	oop := (self oopForPointer: cPtr) - objectMemory baseHeaderSize.
 	(objectMemory isWordsOrBytes: oop) ifFalse: [
 		self primitiveFail.
 		^0].
@@ -12843,7 +12880,6 @@ StackInterpreter >> slowPrimitiveResponse [
 	 Called under the assumption that primFunctionPointer has been preloaded."
 	| nArgs savedFramePointer savedStackPointer |
 	<inline: true>
-	<asmLabel: false>
 	<var: #savedFramePointer type: #'char *'>
 	<var: #savedStackPointer type: #'char *'>
 	self assert: (objectMemory isOopForwarded: (self stackValue: argumentCount)) not.
@@ -12860,7 +12896,7 @@ StackInterpreter >> slowPrimitiveResponse [
 	and: [self successful
 	and: [framePointer = savedFramePointer
 	and: [(self isMachineCodeFrame: framePointer) not]]]) ifTrue:"Don't fail if primitive has done something radical, e.g. perform:"
-		[stackPointer ~= (savedStackPointer + (nArgs * BytesPerWord)) ifTrue:
+		[stackPointer ~= (savedStackPointer + (nArgs * objectMemory wordSize)) ifTrue:
 			[self flag: 'Would be nice to make this a message send of e.g. unbalancedPrimitive to the current process or context'.
 			 "This is necessary but insufficient; the result may still have been written to the stack.
 			   At least we'll know something is wrong."
@@ -13022,14 +13058,14 @@ StackInterpreter >> stSizeOf: oop [
 StackInterpreter >> stackFloatValue: offset [
 	"In the StackInterpreter stacks grow down."
 	<returnTypeC: #double>
-	^self floatValueOf: (stackPages longAt: stackPointer + (offset*BytesPerWord))
+	^self floatValueOf: (stackPages longAt: stackPointer + (offset*objectMemory wordSize))
 ]
 
 { #category : #'stack access' }
 StackInterpreter >> stackIntegerValue: offset [
 	"In the StackInterpreter stacks grow down."
 	| integerPointer |
-	integerPointer := stackPages longAt: stackPointer + (offset*BytesPerWord).
+	integerPointer := stackPages longAt: stackPointer + (offset*objectMemory wordSize).
 	^self checkedIntegerValueOf: integerPointer
 ]
 
@@ -13062,7 +13098,7 @@ StackInterpreter >> stackLimitOffset [
 		+ the frame size
 		+ the max number of temps.
 	 Since a method's number of temps includes its arguments the actual offset is:"
-	^(FrameSlots + 64) * BytesPerWord
+	^(FrameSlots + 64) * objectMemory wordSize
 ]
 
 { #category : #'stack access' }
@@ -13070,7 +13106,7 @@ StackInterpreter >> stackObjectValue: offset [
 	"Ensures that the given object is a real object, not a SmallInteger."
 	"In the StackInterpreter stacks grow down."
 	| oop |
-	oop := stackPages longAt: stackPointer + (offset * BytesPerWord).
+	oop := stackPages longAt: stackPointer + (offset * objectMemory wordSize).
 	(objectMemory isImmediate: oop) ifTrue:
 		[self primitiveFail. ^ nil].
 	^oop
@@ -13158,7 +13194,7 @@ StackInterpreter >> stackPointerIndexForFrame: theFP [
 StackInterpreter >> stackPointerIndexForFrame: theFP WithSP: theSP [
 	"Return the 1-based index rel to the given frame"
 	"In the StackInterpreter stacks grow down."
-	^(((theFP + FoxReceiver) - theSP) >> ShiftForWord) + (self frameNumArgs: theFP)
+	^(((theFP + FoxReceiver) - theSP) >> objectMemory shiftForWord) + (self frameNumArgs: theFP)
 ]
 
 { #category : #'stack access' }
@@ -13166,7 +13202,7 @@ StackInterpreter >> stackPositiveMachineIntegerValue: offset [
 	<api>
 	"In the StackInterpreter stacks grow down."
 	| integerPointer |
-	integerPointer := stackPages longAt: stackPointer + (offset*BytesPerWord).
+	integerPointer := stackPages longAt: stackPointer + (offset*objectMemory wordSize).
 	^self positiveMachineIntegerValueOf: integerPointer
 ]
 
@@ -13175,7 +13211,7 @@ StackInterpreter >> stackSignedMachineIntegerValue: offset [
 	<api>
 	"In the StackInterpreter stacks grow down."
 	| integerPointer |
-	integerPointer := stackPages longAt: stackPointer + (offset*BytesPerWord).
+	integerPointer := stackPages longAt: stackPointer + (offset*objectMemory wordSize).
 	^self signedMachineIntegerValueOf: integerPointer
 ]
 
@@ -13195,14 +13231,14 @@ StackInterpreter >> stackTopPut: aValue [
 StackInterpreter >> stackValue: offset [
 	<api>
 	"In the StackInterpreter stacks grow down."
-	^stackPages longAt: stackPointer + (offset*BytesPerWord)
+	^stackPages longAt: stackPointer + (offset*objectMemory wordSize)
 ]
 
 { #category : #'stack access' }
 StackInterpreter >> stackValue: offset put: oop [
 	"In the StackInterpreter stacks grow down."
 	^stackPages
-		longAt: stackPointer + (offset*BytesPerWord)
+		longAt: stackPointer + (offset*objectMemory wordSize)
 		put: oop
 ]
 
@@ -13353,12 +13389,12 @@ StackInterpreter >> stringOf: oop [
 	^ String streamContents:
 		[:strm |
 		size := 128 min: (self stSizeOf: oop).
-		nLongs := size-1//BytesPerWord+1.
+		nLongs := size-1//objectMemory wordSize+1.
 		1 to: nLongs do:
-			[:i | long := self longAt: oop + BaseHeaderSize + (i-1*BytesPerWord).
+			[:i | long := self longAt: oop + objectMemory baseHeaderSize + (i-1*objectMemory wordSize).
 			chars := self charsOfLong: long.
 			strm nextPutAll: (i=nLongs
-							ifTrue: [chars copyFrom: 1 to: size-1\\BytesPerWord+1]
+							ifTrue: [chars copyFrom: 1 to: size-1\\objectMemory wordSize+1]
 							ifFalse: [chars])]]
 ]
 
@@ -13367,7 +13403,6 @@ StackInterpreter >> subscript: array with: index format: fmt [
 	"Note: This method assumes that the index is within bounds!"
 
 	<inline: true>
-	<asmLabel: false> "If labelled icc duplicates when inlining stObject:at:"
 	fmt <= objectMemory lastPointerFormat ifTrue:
 		[^objectMemory fetchPointer: index - 1 ofObject: array].
 	fmt >= objectMemory firstByteFormat ifTrue:
@@ -13495,8 +13530,8 @@ StackInterpreter >> temporary: offset in: theFP [
 	<inline: true>
 	<var: #theFP type: #'char *'>
 	^offset < (frameNumArgs := self frameNumArgs: theFP)
-		ifTrue: [stackPages longAt: theFP + FoxCallerSavedIP + ((frameNumArgs - offset) * BytesPerWord)]
-		ifFalse: [stackPages longAt: theFP + FoxReceiver - BytesPerWord + ((frameNumArgs - offset) * BytesPerWord)]
+		ifTrue: [stackPages longAt: theFP + FoxCallerSavedIP + ((frameNumArgs - offset) * objectMemory wordSize)]
+		ifFalse: [stackPages longAt: theFP + FoxReceiver - objectMemory wordSize + ((frameNumArgs - offset) * objectMemory wordSize)]
 ]
 
 { #category : #'internal interpreter access' }
@@ -13506,8 +13541,8 @@ StackInterpreter >> temporary: offset in: theFP put: valueOop [
 	<inline: true>
 	<var: #theFP type: #'char *'>
 	^offset < (frameNumArgs := self frameNumArgs: theFP)
-		ifTrue: [stackPages longAt: theFP + FoxCallerSavedIP + ((frameNumArgs - offset) * BytesPerWord) put: valueOop]
-		ifFalse: [stackPages longAt: theFP + FoxReceiver - BytesPerWord + ((frameNumArgs - offset) * BytesPerWord) put: valueOop]
+		ifTrue: [stackPages longAt: theFP + FoxCallerSavedIP + ((frameNumArgs - offset) * objectMemory wordSize) put: valueOop]
+		ifFalse: [stackPages longAt: theFP + FoxReceiver - objectMemory wordSize + ((frameNumArgs - offset) * objectMemory wordSize) put: valueOop]
 ]
 
 { #category : #'compiled methods' }
@@ -13522,10 +13557,9 @@ StackInterpreter >> temporaryLocation: offset in: theFP numArgs: numArgs [
 	"Answer the pointer to a given temporary (for debug frame printing in odd circumstances)"
 	<var: #theFP type: #'char *'>
 	<returnTypeC: #'char *'>
-	<asmLabel: false>
 	^offset < numArgs
-		ifTrue: [theFP + FoxCallerSavedIP + ((numArgs - offset) * BytesPerWord)]
-		ifFalse: [theFP + FoxReceiver - BytesPerWord + ((numArgs - offset) * BytesPerWord)]
+		ifTrue: [theFP + FoxCallerSavedIP + ((numArgs - offset) * objectMemory wordSize)]
+		ifFalse: [theFP + FoxReceiver - objectMemory wordSize + ((numArgs - offset) * objectMemory wordSize)]
 ]
 
 { #category : #simulation }
@@ -13569,7 +13603,7 @@ StackInterpreter >> transferTo: newProc [
 	self assertValidExecutionPointe: instructionPointer + 1 r: framePointer s: stackPointer.
 	sched := self schedulerPointer.
 	oldProc := objectMemory fetchPointer: ActiveProcessIndex ofObject: sched.
-	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer + BytesPerWord.
+	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer + objectMemory wordSize.
 	objectMemory storePointer: SuspendedContextIndex ofObject: oldProc withValue: activeContext.
 	objectMemory storePointer: ActiveProcessIndex ofObject: sched withValue: newProc.
 	objectMemory storePointerUnchecked: MyListIndex ofObject: newProc withValue: objectMemory nilObject.
@@ -13690,7 +13724,7 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 { #category : #'internal interpreter access' }
 StackInterpreter >> unPop: nItems [
 	"In the StackInterpreter stacks grow down."
-	stackPointer := stackPointer - (nItems*BytesPerWord)
+	stackPointer := stackPointer - (nItems*objectMemory wordSize)
 ]
 
 { #category : #'miscellaneous bytecodes' }
@@ -13758,21 +13792,21 @@ StackInterpreter >> updateObjectsPostByteSwap [
 		[:oop| | fmt wordAddr methodHeader temp |
 		fmt := objectMemory formatOf: oop.
 		 fmt >= self firstByteFormat ifTrue: "oop contains bytes"
-			[wordAddr := oop + BaseHeaderSize.
+			[wordAddr := oop + objectMemory baseHeaderSize.
 			fmt >= self firstCompiledMethodFormat ifTrue: "compiled method; start after methodHeader and literals"
-				[methodHeader := self longAt: oop + BaseHeaderSize.
-				 wordAddr := wordAddr + (((objectMemory literalCountOfMethodHeader: methodHeader) + LiteralStart) * BytesPerOop)].
+				[methodHeader := self longAt: oop + objectMemory baseHeaderSize.
+				 wordAddr := wordAddr + (((objectMemory literalCountOfMethodHeader: methodHeader) + LiteralStart) * objectMemory bytesPerOop)].
 			objectMemory reverseBytesFrom: wordAddr to: oop + (objectMemory sizeBitsOf: oop)].
 		 fmt = self firstLongFormat ifTrue: "Bitmap, Float etc"
 			[(swapFloatWords
 			  and: [(objectMemory compactClassIndexOf: oop) = ClassFloatCompactIndex])
 				ifTrue:
-					[temp := self longAt: oop + BaseHeaderSize.
-					 self longAt: oop + BaseHeaderSize put: (self longAt: oop + BaseHeaderSize + 4).
-					 self longAt: oop + BaseHeaderSize + 4 put: temp]
+					[temp := self longAt: oop + objectMemory baseHeaderSize.
+					 self longAt: oop + objectMemory baseHeaderSize put: (self longAt: oop + objectMemory baseHeaderSize + 4).
+					 self longAt: oop + objectMemory baseHeaderSize + 4 put: temp]
 				ifFalse:
-					[BytesPerWord = 8 ifTrue: "Object contains 32-bit half-words packed into 64-bit machine words."
-						[wordAddr := oop + BaseHeaderSize.
+					[objectMemory wordSize = 8 ifTrue: "Object contains 32-bit half-words packed into 64-bit machine words."
+						[wordAddr := oop + objectMemory baseHeaderSize.
 						 objectMemory reverseWordsFrom: wordAddr to: oop + (objectMemory sizeBitsOf: oop)]]]]
 ]
 
@@ -13799,20 +13833,20 @@ StackInterpreter >> updateStateOfSpouseContextForFrame: theFP WithSP: theSP [
 	pointer := theFP + (self frameStackedReceiverOffsetNumArgs: tempIndex).
 	1 to: tempIndex do:
 		[:i|
-		pointer := pointer - BytesPerWord.
+		pointer := pointer - objectMemory wordSize.
 		self assert: (objectMemory addressCouldBeOop: (stackPages longAt: pointer)).
 		 objectMemory storePointer: ReceiverIndex + i
 			ofObject: theContext
 			withValue: (stackPages longAt: pointer)].
 	"now update the non-argument stack contents."
-	pointer := theFP + FoxReceiver - BytesPerWord.
+	pointer := theFP + FoxReceiver - objectMemory wordSize.
 	[pointer >= theSP] whileTrue:
 		[self assert: (objectMemory addressCouldBeOop: (stackPages longAt: pointer)).
 		 tempIndex := tempIndex + 1.
 		 objectMemory storePointer: ReceiverIndex + tempIndex
 			ofObject: theContext
 			withValue: (stackPages longAt: pointer).
-		 pointer := pointer - BytesPerWord].
+		 pointer := pointer - objectMemory wordSize].
 	self assert: ReceiverIndex + tempIndex < (objectMemory lengthOf: theContext).
 	objectMemory storePointerUnchecked: StackPointerIndex
 		ofObject: theContext
@@ -13944,7 +13978,7 @@ StackInterpreter >> whereIs: anOop [
 StackInterpreter >> withSmallIntegerTags: value [
 	<inline: true>
 	<var: #value type: #'char *'>
-	self assert: ((self oopForPointer: value) bitAnd: BytesPerWord - 1) = 0.
+	self assert: ((self oopForPointer: value) bitAnd: objectMemory wordSize - 1) = 0.
 	^(self oopForPointer: value) + 1
 ]
 
@@ -13960,7 +13994,7 @@ StackInterpreter >> withoutSmallIntegerTags: anInteger [
 StackInterpreter >> wordSwapped: w [
 	"Return the given 64-bit integer with its halves in the reverse order."
 
-	BytesPerWord = 8 ifFalse: [self error: 'This cannot happen.'].
+	objectMemory wordSize = 8 ifFalse: [self error: 'This cannot happen.'].
 	^   ((w bitShift: Byte4ShiftNegated) bitAnd: Bytes3to0Mask)
 	  + ((w bitShift: Byte4Shift         ) bitAnd: Bytes7to4Mask)
 
@@ -14052,7 +14086,7 @@ StackInterpreter >> writeImageFileIOSimulation [
 	 c.f. writeImageFileIO"
 	<doNotGenerate>
 	| headerSize file |
-	BytesPerWord = 4 ifFalse: [self error: 'Not rewritten for 64 bits yet'].
+	objectMemory wordSize = 4 ifFalse: [self error: 'Not rewritten for 64 bits yet'].
 	headerSize := 64.
 
 	(file := FileStream fileNamed: self imageName) ifNil:

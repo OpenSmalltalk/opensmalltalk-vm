@@ -2363,26 +2363,26 @@ CogIA32Compiler >> genPushRegisterArgsForAbortMissNumArgs: numArgs [
 		 numArgs = 0 ifTrue:
 			[cogit MoveMw: 0 r: SPReg R: TempReg.
 			 cogit PushR: TempReg.
-			 cogit MoveMw: BytesPerWord * 2 r: SPReg R: TempReg.
-			 cogit MoveR: TempReg Mw: BytesPerWord r: SPReg.
-			 cogit MoveR: ReceiverResultReg Mw: 2 * BytesPerWord r: SPReg.
+			 cogit MoveMw: objectMemory wordSize * 2 r: SPReg R: TempReg.
+			 cogit MoveR: TempReg Mw: objectMemory wordSize r: SPReg.
+			 cogit MoveR: ReceiverResultReg Mw: 2 * objectMemory wordSize r: SPReg.
 			 ^self].
 		 numArgs = 1 ifTrue:
-			[cogit MoveMw: BytesPerWord r: SPReg R: TempReg.
+			[cogit MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 			 cogit PushR: TempReg.
-			 cogit MoveMw: BytesPerWord r: SPReg R: TempReg.
+			 cogit MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 			 cogit PushR: TempReg.
-			 cogit MoveR: ReceiverResultReg Mw: 3 * BytesPerWord r: SPReg.
-			 cogit MoveR: Arg0Reg Mw: 2 * BytesPerWord r: SPReg.
+			 cogit MoveR: ReceiverResultReg Mw: 3 * objectMemory wordSize r: SPReg.
+			 cogit MoveR: Arg0Reg Mw: 2 * objectMemory wordSize r: SPReg.
 			 ^self].
 		 numArgs = 2 ifTrue:
 			[cogit PushR: Arg1Reg.
-			 cogit MoveMw: BytesPerWord * 2 r: SPReg R: TempReg.
+			 cogit MoveMw: objectMemory wordSize * 2 r: SPReg R: TempReg.
 			 cogit PushR: TempReg.
-			 cogit MoveMw: BytesPerWord * 2 r: SPReg R: TempReg.
+			 cogit MoveMw: objectMemory wordSize * 2 r: SPReg R: TempReg.
 			 cogit PushR: TempReg.
-			 cogit MoveR: ReceiverResultReg Mw: 4 * BytesPerWord r: SPReg.
-			 cogit MoveR: Arg0Reg Mw: 3 * BytesPerWord r: SPReg.
+			 cogit MoveR: ReceiverResultReg Mw: 4 * objectMemory wordSize r: SPReg.
+			 cogit MoveR: Arg0Reg Mw: 3 * objectMemory wordSize r: SPReg.
 			 ^self]]
 ]
 
@@ -2402,7 +2402,7 @@ CogIA32Compiler >> genPushRegisterArgsForNumArgs: numArgs [
 					 numArgs > 1 ifTrue:
 						[cogit PushR: Arg1Reg]].
 				 cogit PushR: TempReg.
-				 cogit MoveR: ReceiverResultReg Mw: BytesPerWord * (1 + numArgs) r: SPReg]
+				 cogit MoveR: ReceiverResultReg Mw: objectMemory wordSize * (1 + numArgs) r: SPReg]
 			ifFalse:
 				[cogit MoveMw: 0 r: SPReg R: TempReg. "Save return address"
 				 cogit MoveR: ReceiverResultReg Mw: 0 r: SPReg.

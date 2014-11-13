@@ -146,10 +146,10 @@ CogMethodZone >> addToYoungReferrers: cogMethod [
 	self assert: (self occurrencesInYoungReferrers: cogMethod) = 0.
 	self assert: cogMethod cmRefersToYoung.
 	self assert: (youngReferrers <= limitAddress
-				and: [youngReferrers >= (limitAddress - (methodCount * BytesPerWord))]).
-	(self asserta: limitAddress - (methodCount * BytesPerWord) >= mzFreeStart) ifFalse:
+				and: [youngReferrers >= (limitAddress - (methodCount * objectMemory wordSize))]).
+	(self asserta: limitAddress - (methodCount * objectMemory wordSize) >= mzFreeStart) ifFalse:
 		[self error: 'no room on youngReferrers list'].
-	youngReferrers := youngReferrers - BytesPerWord.
+	youngReferrers := youngReferrers - objectMemory wordSize.
 	objectMemory longAt: youngReferrers put: cogMethod asUnsignedInteger
 ]
 
@@ -157,7 +157,7 @@ CogMethodZone >> addToYoungReferrers: cogMethod [
 CogMethodZone >> allocate: numBytes [
 	| roundedBytes allocation |
 	roundedBytes := numBytes + 7 bitAnd: -8.
-	mzFreeStart + roundedBytes >= (limitAddress - (methodCount * BytesPerWord)) ifTrue:
+	mzFreeStart + roundedBytes >= (limitAddress - (methodCount * objectMemory wordSize)) ifTrue:
 		[^0].
 	allocation := mzFreeStart.
 	mzFreeStart := mzFreeStart + roundedBytes.
@@ -395,7 +395,7 @@ CogMethodZone >> kosherYoungReferrers [
 		[cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: pointer) to: #'CogMethod *'.
 		 (cogMethod cmType ~= CMFree and: [cogMethod cmRefersToYoung]) ifFalse:
 			[^false].
-		 pointer := pointer + BytesPerWord].
+		 pointer := pointer + objectMemory wordSize].
 	^true
 ]
 
@@ -512,7 +512,7 @@ CogMethodZone >> occurrencesInYoungReferrers: cogMethod [
 	[pointer < limitAddress] whileTrue:
 		[cogMethod asInteger = (objectMemory longAt: pointer) ifTrue:
 			[count := count + 1].
-		 pointer := pointer + BytesPerWord].
+		 pointer := pointer + objectMemory wordSize].
 	^count
 ]
 
@@ -629,7 +629,7 @@ CogMethodZone >> printCogYoungReferrers [
 		 (cogMethod cmRefersToYoung and: [cogMethod cmType ~= CMFree]) ifFalse:
 			[coInterpreter print: ' '].
 		 coInterpreter printCogMethod: cogMethod.
-		 pointer := pointer + BytesPerWord]
+		 pointer := pointer + objectMemory wordSize]
 ]
 
 { #category : #accessing }
@@ -655,17 +655,17 @@ CogMethodZone >> pruneYoungReferrers [
 	youngReferrers = limitAddress ifTrue:
 		[^nil].
 	dest := limitAddress.
-	[next := dest - BytesPerWord.
+	[next := dest - objectMemory wordSize.
 	 next >= youngReferrers
 	 and: [(coInterpreter cCoerceSimple: (objectMemory longAt: next) to: #'CogMethod *') cmRefersToYoung]] whileTrue:
 		[dest := next].
 	self assert: dest >= youngReferrers.
-	source := dest - BytesPerWord.
+	source := dest - objectMemory wordSize.
 	[source >= youngReferrers] whileTrue:
 		[(coInterpreter cCoerceSimple: (objectMemory longAt: source) to: #'CogMethod *') cmRefersToYoung ifTrue:
-			[self assert: source < (dest - BytesPerWord).
-			 objectMemory longAt: (dest := dest - BytesPerWord) put: (objectMemory longAt: source)].
-		 source := source - BytesPerWord].
+			[self assert: source < (dest - objectMemory wordSize).
+			 objectMemory longAt: (dest := dest - objectMemory wordSize) put: (objectMemory longAt: source)].
+		 source := source - objectMemory wordSize].
 	youngReferrers := dest.
 	self assert: self kosherYoungReferrers
 ]
@@ -691,7 +691,7 @@ CogMethodZone >> relocateAndPruneYoungReferrers [
 	youngReferrers = limitAddress ifTrue:
 		[^nil].
 	dest := limitAddress.
-	[next := dest - BytesPerWord.
+	[next := dest - objectMemory wordSize.
 	 next >= youngReferrers
 	 and: [(cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: next) to: #'CogMethod *') cmType ~= CMFree
 	 and: [cogMethod cmRefersToYoung]]] whileTrue:
@@ -699,18 +699,18 @@ CogMethodZone >> relocateAndPruneYoungReferrers [
 			[coInterpreter longAt: next put: cogMethod asInteger + cogMethod objectHeader].
 		 dest := next].
 	self assert: dest >= youngReferrers.
-	source := dest - BytesPerWord.
+	source := dest - objectMemory wordSize.
 	[source >= youngReferrers] whileTrue:
 		[cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: source) to: #'CogMethod *'.
 		 (cogMethod cmType ~= CMFree
 		  and: [cogMethod cmRefersToYoung]) ifTrue:
-			[self assert: source < (dest - BytesPerWord).
+			[self assert: source < (dest - objectMemory wordSize).
 			 cogMethod objectHeader ~= 0 ifTrue:
 				[cogMethod := coInterpreter
 									cCoerceSimple: cogMethod asInteger + cogMethod objectHeader asInteger
 									to: #'CogMethod *'].
-			 objectMemory longAt: (dest := dest - BytesPerWord) put: cogMethod asInteger].
-		 source := source - BytesPerWord].
+			 objectMemory longAt: (dest := dest - objectMemory wordSize) put: cogMethod asInteger].
+		 source := source - objectMemory wordSize].
 	youngReferrers := dest.
 	"this assert must be deferred until after compaction.  See the end of compactCogCompiledCode"
 	"self assert: self kosherYoungReferrers"
@@ -790,7 +790,7 @@ CogMethodZone >> voidYoungReferrersPostTenureAll [
 		[cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: pointer) to: #'CogMethod *'.
 		 cogMethod cmType ~= CMFree ifTrue:
 			[cogMethod cmRefersToYoung: false].
-		 pointer := pointer + BytesPerWord].
+		 pointer := pointer + objectMemory wordSize].
 	youngReferrers := limitAddress
 ]
 

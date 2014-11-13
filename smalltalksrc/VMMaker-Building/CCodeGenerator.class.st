@@ -752,7 +752,9 @@ CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
 	callsOf := Dictionary new: methods size * 2.
 	methods keysAndValuesDo:
 		[:s :m|
-		m isRealMethod ifTrue: [callsOf at: s put: 0]].
+		(m isRealMethod
+		 and: [self shouldGenerateMethod: m]) ifTrue:
+			[callsOf at: s put: 0]].
 
 	"For each method, scan its parse tree once or twice to:
 		1. determine if the method contains unrenamable C code or declarations or has a C builtin
@@ -1091,7 +1093,7 @@ CCodeGenerator >> emitCExpression: aParseNode on: aStream indent: level [
 
 	(aParseNode isLeaf
 	 or: [aParseNode isSend
-		 and: [#(bytesPerOop bytesPerWord baseHeaderSize) includes: aParseNode selector]])
+		 and: [#(bytesPerOop bytesPerWord baseHeaderSize wordSize) includes: aParseNode selector]])
 		ifTrue: 
 			["omit parens"
 			 aParseNode emitCCodeAsExpressionOn: aStream level: level generator: self]
@@ -1115,7 +1117,8 @@ CCodeGenerator >> emitCFunctionPrototypes: methodList on: aStream [
 		 aStream nextPutAll: '\\#if defined(__GNUC__) && !defined(NeverInline)\# define NeverInline __attribute__ ((noinline))\#endif' withCRs.
 		 aStream nextPutAll: '\\#if !defined(NeverInline)\# define NeverInline /*empty*/\#endif\\' withCRs].
 	exporting := false.
-	(methodList select: [:m| m isRealMethod]) do:
+	(methodList select: [:m| m isRealMethod
+							 and: [self shouldGenerateMethod: m]]) do:
 		[:m |
 		self emitExportPragma ifTrue:
 			[m export
@@ -1187,7 +1190,8 @@ CCodeGenerator >> emitCMethods: methodList on: aStream [
 			methodList doWithIndex:
 				[ :m :i |
 				bar value: i.
-				m isRealMethod ifTrue:
+				(m isRealMethod
+				 and: [self shouldGenerateMethod: m]) ifTrue:
 					[m emitCCodeOn: aStream generator: self]]]
 ]
 
@@ -2639,7 +2643,7 @@ CCodeGenerator >> generateTimes: msgNode on: aStream indent: level [
 CCodeGenerator >> generateToByDo: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 	"N.B. MessageNode>>asTranslatorNodeIn: adds the limit var as a hidden fourth argument."
-	| blockExpr iterationVar limitExpr mayHaveSideEffects limitVar step negative |
+	| blockExpr iterationVar limitExpr mayHaveSideEffects limitVar step |
 	blockExpr := msgNode args third.
 	blockExpr args size = 1 ifFalse:
 		[self error: 'wrong number of block arguments'].
@@ -2654,10 +2658,10 @@ CCodeGenerator >> generateToByDo: msgNode on: aStream indent: level [
 		 self emitCExpression: limitExpr on: aStream.
 		 limitExpr := limitVar].
 	aStream nextPutAll: '; ', iterationVar.
-	negative := ((step := msgNode args at: 2) isConstant and: [step value < 0])
-				or: [step isSend and: [step selector == #negated
-					and: [step receiver isConstant and: [step receiver value >= 0]]]].
-	self generateToByDoLimitExpression: limitExpr negative: negative on: aStream.
+	step := msgNode args at: 2.
+	self generateToByDoLimitExpression: limitExpr
+		negative: (self stepExpressionIsNegative: step)
+		on: aStream.
 	aStream nextPutAll: '; ', iterationVar, ' += '.
 	self emitCExpression: step on: aStream.
 	aStream nextPutAll: ') {'; cr.
@@ -3041,6 +3045,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 
 	#bytesPerOop 				#generateBytesPerOop:on:indent:
 	#bytesPerWord 			#generateBytesPerWord:on:indent:
+	#wordSize		 			#generateBytesPerWord:on:indent:
 	#baseHeaderSize			#generateBaseHeaderSize:on:indent:
 	
 	#sharedCodeNamed:inCase:		#generateSharedCodeDirective:on:indent:
@@ -3302,7 +3307,8 @@ CCodeGenerator >> localizeGlobalVariables [
 			[:name |
 			(methods at: name ifAbsent: []) ifNotNil:
 				[:procedure | | newDeclaration |
-				procedure isRealMethod ifTrue:
+				(procedure isRealMethod
+				 and: [self shouldGenerateMethod: procedure]) ifTrue:
 					[(localized at: name ifAbsentPut: [SortedCollection new]) add: key.
 					elected add: (procedure locals add: key).
 					newDeclaration := variableDeclarations at: key ifAbsent: ['sqInt ', key].
@@ -3462,7 +3468,7 @@ CCodeGenerator >> methodsThatCanInvoke: aSelectorList [
 { #category : #accessing }
 CCodeGenerator >> mostBasicConstantSelectors [
 	"c.f. VMBasicConstants class>>#mostBasicConstantNames"
-	^#(baseHeaderSize bytesPerOop bytesPerWord)
+	^#(baseHeaderSize bytesPerOop bytesPerWord wordSize)
 ]
 
 { #category : #'C code generator' }
@@ -3566,15 +3572,15 @@ CCodeGenerator >> options: aDictionary [
 CCodeGenerator >> outputAsmLabel: selector on: aStream [
 	| count |
 	suppressAsmLabels ifTrue: [^self].
-	asmLabelCounts isNil ifTrue:
+	asmLabelCounts ifNil:
 		[asmLabelCounts := Dictionary new].
 	count := asmLabelCounts
 				at: selector
 				put: 1 + (asmLabelCounts at: selector ifAbsent: [-1]).
 	 aStream
 		nextPutAll: 'VM_LABEL(';
-		print: count;
 		nextPutAll: (self cFunctionNameFor: selector);
+		nextPutAll: (count = 0 ifTrue: [''] ifFalse: [count printString]);
 		nextPut: $);
 		nextPut: $;
 ]
@@ -3680,37 +3686,39 @@ CCodeGenerator >> pruneMethods: selectorList [
 CCodeGenerator >> pruneUnreachableMethods [
 	"Remove any methods that are not reachable. Retain methods needed by the translated classes - see implementors of requiredMethodNames"
  	
-	| newMethods previousSize visited |
+	| neededSelectors newMethods previousSize visited |
 	"add all the exported methods and all the called methods to the requiredSelectors"
 	"keep all the fake methods (macros and struct accessors; these are needed
 	 to ensure correct code generation."
 
+	neededSelectors := Set withAll: requiredSelectors.
 	methods do: [ :m |
 		m export ifTrue:
-			[requiredSelectors add: m selector].
+			[neededSelectors add: m selector].
 		m isRealMethod ifFalse:
-			[requiredSelectors add: m selector]].
+			[neededSelectors add: m selector]].
 
 	"Now compute the transitive closure..."
-	previousSize := requiredSelectors size.
+	previousSize := neededSelectors size.
 	visited := IdentitySet new: methods size.
-	[requiredSelectors do:
+	[neededSelectors do:
 		[:s|
 		(methods at: s ifAbsent: []) ifNotNil:
 			[:m|
 			(visited includes: m) ifFalse:
 				[visited add: m.
-				 m isRealMethod ifTrue:
-					[requiredSelectors addAll: m allCalls]]]].
-	 requiredSelectors size > previousSize]
+				 (m isRealMethod
+				  and: [self shouldGenerateMethod: m]) ifTrue:
+					[neededSelectors addAll: m allCalls]]]].
+	 neededSelectors size > previousSize]
 		whileTrue:
-			[previousSize := requiredSelectors size].
+			[previousSize := neededSelectors size].
 
 	"build a new dictionary of methods from the collection of all the ones to keep"			
-	newMethods := Dictionary new: requiredSelectors size.
-	requiredSelectors do:
+	newMethods := Dictionary new: neededSelectors size.
+	neededSelectors do:
 		[:sel|
-		methods at: sel ifPresent:[:meth| newMethods at: sel put: meth]].
+		methods at: sel ifPresent: [:meth| newMethods at: sel put: meth]].
 	methods := newMethods
 ]
 
@@ -3773,19 +3781,6 @@ CCodeGenerator >> removeMethodsReferingToGlobals: varList except: methodName [
 				self removeMethodForSelector: sel]]].
 
 	^removed
-]
-
-{ #category : #public }
-CCodeGenerator >> removeUnneededBuiltins [
-	| toRemove |
-	toRemove := Set new: 64.
-	methods keysDo:
-		[:sel|
-		(self isBuiltinSelector: sel) ifTrue:
-			[(requiredSelectors includes: sel) ifFalse:
-				[toRemove add: sel]]].
-	toRemove do:
-		[:sel| self removeMethodForSelector: sel]
 ]
 
 { #category : #utilities }
@@ -3992,6 +3987,13 @@ CCodeGenerator >> shouldGenerateAsInterpreterProxySend: aSendNode [
 ]
 
 { #category : #utilities }
+CCodeGenerator >> shouldGenerateMethod: aTMethod [
+	^(self isBuiltinSelector: aTMethod selector)
+		ifTrue: [requiredSelectors includes: aTMethod selector]
+		ifFalse: [true]
+]
+
+{ #category : #utilities }
 CCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
 	"Answer whether a method shoud be translated.  Process optional methods by
 	 interpreting the argument to the option: pragma as either a Cogit class name
@@ -4078,6 +4080,15 @@ CCodeGenerator >> sortStrings: aStringOrSymbolCollection [
 	"We need to define this since different Squeak versions answer different results
 	 for asSortedCollection and if sort order changes, generated code changes too."
 	^aStringOrSymbolCollection asSortedCollection: [:a :b| a caseSensitiveLessOrEqual: b]
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> stepExpressionIsNegative: aNode [
+	"Answer if the step expression (the by: argument in a to:by:do:) is negative."
+	self isConstantNode: aNode valueInto: [:stepValue| ^stepValue < 0].
+	(aNode isSend and: [aNode selector == #negated]) ifTrue:
+		[self isConstantNode: aNode receiver valueInto: [:stepValue| ^stepValue > 0]].
+	^false
 ]
 
 { #category : #public }

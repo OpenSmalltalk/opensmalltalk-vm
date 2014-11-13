@@ -25,7 +25,7 @@ BlockNode >> isPotentialCCaseLabel: stmt in: aTMethod [
 		and: [stmt isConstantNumber or: [stmt literalValue isSymbol]]]) ifTrue:
 		[^true].
 	stmt isMessageNode ifTrue:
-		[| selector method |
+		[| selector implementingClass method |
 		 selector := stmt selector key.
 		 (#(* + -) includes: selector) ifTrue:
 			[^(self isPotentialCCaseLabel: stmt receiver in: aTMethod)
@@ -37,11 +37,14 @@ BlockNode >> isPotentialCCaseLabel: stmt in: aTMethod [
 			[^true].
 
 		 (stmt arguments isEmpty
-		  and: [method := (aTMethod definingClass whichClassIncludesSelector: selector) >> selector.
+		  and: [implementingClass := aTMethod definingClass whichClassIncludesSelector: selector.
+			   implementingClass ifNil:
+				[implementingClass := aTMethod definingClass objectMemoryClass whichClassIncludesSelector: selector].
+			   method := implementingClass >> selector.
 			   (method isQuick
 				or: [(method literalAt: 1) isInteger
 					and: [method numLiterals = 3]])
-		   and: [(aTMethod definingClass basicNew perform: selector) isInteger]]) ifTrue:
+		   and: [(implementingClass basicNew perform: selector) isInteger]]) ifTrue:
 				[^true]].
 	^false
 ]

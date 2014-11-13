@@ -2044,7 +2044,7 @@ Cogit >> addressOfEndOfCase: n inCPIC: cPIC [
 Cogit >> addressSpaceMask [
 	<doNotGenerate>
 	"Quad-byte-align, because the ARM requires 4-byte aligned jump & call targets."
-	^((1 << (8 * BytesPerWord)) - 1) bitAnd: -4
+	^((1 << (8 * objectMemory wordSize)) - 1) bitAnd: -4
 ]
 
 { #category : #'generate machine code' }
@@ -2056,7 +2056,7 @@ Cogit >> alignUptoRoutineBoundary: anAddress [
 Cogit >> allButTopBitOfAddressSpaceMask [
 	<doNotGenerate>
 	"Quad-byte-align, because the ARM requires 4-byte aligned jump & call targets."
-	^((1 << (8 * BytesPerWord - 1)) - 1) bitAnd: -4
+	^((1 << (8 * objectMemory wordSize - 1)) - 1) bitAnd: -4
 ]
 
 { #category : #disassembly }
@@ -2793,7 +2793,7 @@ Cogit >> ceImplicitReceiverFor: selector receiver: receiver [
 	<var: #cogMethod type: #'CogMethod *'>
 	retpc := coInterpreter stackTop.
 	classpc := retpc + backEnd jumpShortByteSize.
-	mixinpc := retpc + backEnd jumpShortByteSize + BytesPerOop.
+	mixinpc := retpc + backEnd jumpShortByteSize + objectMemory bytesPerOop.
 	mixin := coInterpreter
 				implicitReceiverFor: receiver
 				mixin: coInterpreter mMethodClass
@@ -2843,7 +2843,7 @@ Cogit >> ceImplicitReceiverFor: selector receiver: receiver cache: cacheAddress 
 	backEnd
 		unalignedLongAt: cacheAddress
 			put: (objectRepresentation inlineCacheTagForClass: rcvrClass);
-		unalignedLongAt: cacheAddress + BytesPerOop
+		unalignedLongAt: cacheAddress + objectMemory bytesPerOop
 			put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
 	^mixin
 ]
@@ -3320,7 +3320,7 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 { #category : #'simulation only' }
 Cogit >> cogBlockMethodSurrogateAt: address [
 	<doNotGenerate>
-	self assert: (address bitAnd: BytesPerWord - 1) = 0.
+	self assert: (address bitAnd: objectMemory wordSize - 1) = 0.
 	^cogBlockMethodSurrogateClass new
 		at: address
 		objectMemory: objectMemory
@@ -3504,7 +3504,7 @@ Cogit >> cogMethodDoesntLookKosher: cogMethod [
 	<api>
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
-	((cogMethod blockSize bitAnd: BytesPerWord - 1) ~= 0
+	((cogMethod blockSize bitAnd: objectMemory wordSize - 1) ~= 0
 	 or: [cogMethod blockSize < (self sizeof: CogMethod)
 	 or: [cogMethod blockSize >= 32768]]) ifTrue:
 		[^1].
@@ -3532,7 +3532,7 @@ Cogit >> cogMethodDoesntLookKosher: cogMethod [
 			[(cogMethod methodObject ~= 0
 			 and: [cogMethod methodObject < methodZoneBase
 				   or: [cogMethod methodObject > (methodZone freeStart - openPICSize)
-				   or: [(cogMethod methodObject bitAnd: BytesPerWord - 1) ~= 0
+				   or: [(cogMethod methodObject bitAnd: objectMemory wordSize - 1) ~= 0
 				   or: [(self cCoerceSimple: cogMethod methodObject
 							to: #'CogMethod *') cmType ~= CMOpenPIC]]]]) ifTrue:
 				[^23]].
@@ -3567,7 +3567,7 @@ Cogit >> cogMethodOrBlockSurrogateAt: address [
 { #category : #'simulation only' }
 Cogit >> cogMethodSurrogateAt: address [
 	<doNotGenerate>
-	self assert: (address < 0 or: [(address bitAnd: BytesPerWord - 1) = 0]).
+	self assert: (address < 0 or: [(address bitAnd: objectMemory wordSize - 1) = 0]).
 	^cogMethodSurrogateClass new
 		at: address
 		objectMemory: objectMemory
@@ -3809,10 +3809,10 @@ Cogit >> compileBlockEntry: blockStart [
 	self AlignmentNops: self blockAlignment.
 	blockStart fakeHeader: self Label.
 	(self sizeof: CogBlockMethod) caseOf:
-		{ [2 * BytesPerWord]	"ObjectMemory"
+		{ [2 * objectMemory wordSize]	"ObjectMemory"
 			->	[self Fill32: 0.		"gets filled in later with the homeOffset and startpc"
 				 self Fill32: 0].		"gets filled in later with numArgs et al"
-		   [3 * BytesPerWord]	"Spur"
+		   [3 * objectMemory wordSize]	"Spur"
 			->	[self Fill32: 0.		"gets filled in later with the homeOffset and startpc"
 				 self Fill32: 0.		"is left fallow"
 				 self Fill32: 0].		"gets filled in later with numArgs et al"
@@ -3896,11 +3896,11 @@ Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrCo
 	 indicates a constant."
 	<var: #aRoutine type: #'void *'>
 	<inline: false>
-	cStackAlignment > BytesPerWord ifTrue:
+	cStackAlignment > objectMemory wordSize ifTrue:
 		[backEnd
 			genAlignCStackSavingRegisters: saveRegs
 			numArgs: numArgs
-			wordAlignment: cStackAlignment / BytesPerWord].
+			wordAlignment: cStackAlignment / objectMemory wordSize].
 	saveRegs ifTrue:
 		[backEnd genSaveRegisters].
 	numArgs > 0 ifTrue:
@@ -4183,7 +4183,7 @@ Cogit >> computeEntryOffsets [
 	self cppIf: NewspeakVM
 		ifTrue: [cmDynSuperEntryOffset := dynSuperEntry address - methodZoneBase].
 	missOffset := sendMissCall address + sendMissCall machineCodeSize - methodZoneBase.
-	entryPointMask := BytesPerWord - 1.
+	entryPointMask := objectMemory wordSize - 1.
 	[self cppIf: NewspeakVM
 		ifTrue: [(cmEntryOffset bitAnd: entryPointMask) = (cmNoCheckEntryOffset bitAnd: entryPointMask)
 				or: [(cmEntryOffset bitAnd: entryPointMask) = (cmDynSuperEntryOffset bitAnd: entryPointMask)
@@ -4318,9 +4318,9 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 					(mapEntries at: a) = #IsNSSendCall ifTrue:
 						[mapEntries
 							at: a + backEnd jumpShortByteSize
-								put: {'Class'. #disassembleCachedOop:. BytesPerWord};
-							at: a + backEnd jumpShortByteSize + BytesPerOop
-								put: {'ImplicitReceiver'. #disassembleCachedOop:. BytesPerWord}]]]].
+								put: {'Class'. #disassembleCachedOop:. (objectMemory wordSize)};
+							at: a + backEnd jumpShortByteSize + objectMemory bytesPerOop
+								put: {'ImplicitReceiver'. #disassembleCachedOop:. (objectMemory wordSize)}]]]].
 
 	"This would all be far more elegant and simple if we used blocks.
 	 But there are no blocks in C and the basic enumerators here need
@@ -5840,7 +5840,7 @@ Cogit >> generateNewspeakRuntime [
 			[self MoveMw: 0 r: Arg1Reg R: TempReg.
 			 self CmpR: ClassReg R: TempReg.
 			 jumpMiss := self JumpNonZero: 0.
-			 self MoveMw: BytesPerOop r: Arg1Reg R: TempReg.
+			 self MoveMw: objectMemory bytesPerOop r: Arg1Reg R: TempReg.
 			 self CmpCq: 0 R: TempReg.
 			 jumpItsTheReceiverStupid := self JumpZero: 0.
 			 self MoveR: TempReg R: ReceiverResultReg.
@@ -5871,7 +5871,7 @@ Cogit >> generateNewspeakRuntime [
 			 self MoveMw: backEnd jumpShortByteSize r: retpcReg R: Arg1Reg.
 			 self CmpR: ClassReg R: Arg1Reg.
 			 jumpMiss := self JumpNonZero: 0.
-			 self MoveMw: backEnd jumpShortByteSize + BytesPerOop r: retpcReg R: ClassReg.
+			 self MoveMw: backEnd jumpShortByteSize + objectMemory bytesPerOop r: retpcReg R: ClassReg.
 			 self CmpCq: 0 R: ClassReg.
 			 jumpItsTheReceiverStupid := self JumpZero: 0.
 			 self MoveR: ClassReg R: ReceiverResultReg.
@@ -6170,7 +6170,7 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 						primitiveTerminateTo primitiveStoreStackp primitiveDoPrimitiveWithArgs)
 							includes: function) ifFalse:
 						[self assert: savedFramePointer = coInterpreter framePointer.
-						 self assert: savedStackPointer + (savedArgumentCount * BytesPerWord)
+						 self assert: savedStackPointer + (savedArgumentCount * objectMemory wordSize)
 								= coInterpreter stackPointer]]
 			ifFalse:
 				[self assert: savedFramePointer = coInterpreter framePointer.
@@ -6180,7 +6180,7 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 		 rpc := processor retpcIn: coInterpreter memory.
 		 self assert: (rpc >= codeBase and: [rpc < methodZone freeStart]).
 		 processor
-			smashCallerSavedRegistersWithValuesFrom: 16r80000000 by: BytesPerWord;
+			smashCallerSavedRegistersWithValuesFrom: 16r80000000 by: objectMemory wordSize;
 			simulateReturnIn: coInterpreter memory].
 	self assert: (result isInteger "an oop result"
 			or: [result == coInterpreter
@@ -6299,16 +6299,18 @@ Cogit >> initialOpenPICUsageCount [
 
 { #category : #initialization }
 Cogit >> initialize [
+	| wordSize |
+	wordSize := self class objectMemoryClass wordSize.
 	cogMethodSurrogateClass := NewspeakVM
 									ifTrue:
-										[BytesPerWord = 4
+										[wordSize = 4
 											ifTrue: [NewspeakCogMethodSurrogate32]
 											ifFalse: [NewspeakCogMethodSurrogate64]]
 									ifFalse:
-										[BytesPerWord = 4
+										[wordSize = 4
 											ifTrue: [CogMethodSurrogate32]
 											ifFalse: [CogMethodSurrogate64]].
-	cogBlockMethodSurrogateClass := BytesPerWord = 4
+	cogBlockMethodSurrogateClass := wordSize = 4
 											ifTrue: [CogBlockMethodSurrogate32]
 											ifFalse: [CogBlockMethodSurrogate64]
 ]
@@ -7064,7 +7066,7 @@ Cogit >> mapObjectReferencesInMachineCodeForYoungGC [
 					 hasYoungObj
 						ifTrue: [hasYoungObj := false]
 						ifFalse: [cogMethod cmRefersToYoung: false]]].
-		 pointer := pointer + BytesPerWord].
+		 pointer := pointer + objectMemory wordSize].
 	methodZone pruneYoungReferrers.
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
 		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
@@ -7140,7 +7142,7 @@ Cogit >> markAndTraceMachineCodeForNewSpaceGC [
 				[(objectMemory isYoung: cogMethod methodObject) ifTrue:
 					[objectMemory markAndTrace: cogMethod methodObject].
 				self markYoungObjectsIn: cogMethod]].
-		 pointer := pointer + BytesPerWord].
+		 pointer := pointer + objectMemory wordSize].
 	objectMemory leakCheckIncrementalGC ifTrue:
 		[self assert: self allMachineCodeObjectReferencesValid].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
@@ -7287,19 +7289,19 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 						ifTrue:
 							[(objectRepresentation cacheTagIsMarked: class)
 								ifTrue:
-									[(mixin := backEnd unalignedLongAt: cacheAddress + BytesPerOop) ~= 0 ifTrue:
+									[(mixin := backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop) ~= 0 ifTrue:
 										[objectRepresentation
 											markAndTraceLiteral: mixin
 											in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
-											at: (self asAddress: cacheAddress + BytesPerOop
-													put: [:val| backEnd unalignedLongAt: cacheAddress + BytesPerOop put: val])]]
+											at: (self asAddress: cacheAddress + objectMemory bytesPerOop
+													put: [:val| backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop put: val])]]
 								ifFalse:
 									[backEnd
 										unalignedLongAt: cacheAddress put: 0;
-										unalignedLongAt: cacheAddress + BytesPerOop put: 0.
+										unalignedLongAt: cacheAddress + objectMemory bytesPerOop put: 0.
 									 codeModified := true]]
 						ifFalse:
-							[self assert: (backEnd unalignedLongAt: cacheAddress + BytesPerOop) = 0]]]]].
+							[self assert: (backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop) = 0]]]]].
 	^0 "keep scanning"
 ]
 
@@ -7353,19 +7355,19 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 								ifTrue:
 									[(objectRepresentation cacheTagIsMarked: class)
 										ifTrue:
-											[(mixin := backEnd unalignedLongAt: cacheAddress + BytesPerOop) ~= 0 ifTrue:
+											[(mixin := backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop) ~= 0 ifTrue:
 												[objectRepresentation
 													markAndTraceLiteral: mixin
 													in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
-													at: (self asAddress: cacheAddress + BytesPerOop
-															put: [:val| backEnd unalignedLongAt: cacheAddress + BytesPerOop put: val])]]
+													at: (self asAddress: cacheAddress + objectMemory bytesPerOop
+															put: [:val| backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop put: val])]]
 										ifFalse:
 											[backEnd
 												unalignedLongAt: cacheAddress put: 0;
-												unalignedLongAt: cacheAddress + BytesPerOop put: 0.
+												unalignedLongAt: cacheAddress + objectMemory bytesPerOop put: 0.
 											 codeModified := true]]
 								ifFalse:
-									[self assert: (backEnd unalignedLongAt: cacheAddress + BytesPerOop) = 0]]]]]].
+									[self assert: (backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop) = 0]]]]]].
 	^0 "keep scanning"
 ]
 
@@ -7430,7 +7432,7 @@ Cogit >> markYoungObjects: annotation pc: mcpc method: cogMethod [
 						 class ~= 0 ifTrue:
 							[objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
 								[objectRepresentation markAndTraceLiteralIfYoung: class].
-							 mixin := backEnd unalignedLongAt: cacheAddress + BytesPerOop.
+							 mixin := backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop.
 							 objectRepresentation markAndTraceLiteralIfYoung: mixin]]]]].
 	^0 "keep scanning"
 ]
@@ -8466,10 +8468,10 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 							  and: [objectMemory isYoung: mappedOop]) ifTrue:
 								[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]].
 						 "Second look at the mixin entry. this must be 0 or an object."
-						 (oop := backEnd unalignedLongAt: cacheAddress + BytesPerOop) ~= 0 ifTrue:
+						 (oop := backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop) ~= 0 ifTrue:
 							[mappedOop := objectRepresentation remapOop: oop.
 							 mappedOop ~= oop ifTrue:
-								[backEnd unalignedLongAt: cacheAddress + BytesPerOop put: mappedOop].
+								[backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop put: mappedOop].
 							 (hasYoungPtr ~= 0
 							  and: [objectMemory isYoung: mappedOop]) ifTrue:
 								[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]]]
@@ -8917,7 +8919,7 @@ Cogit >> simulateEnilopmart: enilopmartAddress numArgs: n [
 	(printInstructions or: [printRegisters]) ifTrue:
 		[coInterpreter printExternalHeadFrame].
 	processor
-		smashRegistersWithValuesFrom: 16r80000000 by: BytesPerWord;
+		smashRegistersWithValuesFrom: 16r80000000 by: objectMemory wordSize;
 		simulateLeafCallOf: enilopmartAddress
 		nextpc: 16rBADF00D
 		memory: coInterpreter memory.
@@ -8986,7 +8988,7 @@ Cogit >> simulatedAddressFor: anObject [
 	<doNotGenerate>
 	^simulatedAddresses
 		at: anObject
-		ifAbsentPut: [(simulatedAddresses size + 101 * BytesPerWord) negated bitAnd: self allButTopBitOfAddressSpaceMask]
+		ifAbsentPut: [(simulatedAddresses size + 101 * objectMemory wordSize) negated bitAnd: self allButTopBitOfAddressSpaceMask]
 ]
 
 { #category : #initialization }
@@ -9395,7 +9397,7 @@ Cogit >> unlinkIfForwardedSend: annotation pc: mcpc ignored: superfluity [
 						[self assert: NumOopsPerIRC = 2.
 						 cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
 						 ((objectMemory isForwardedClassIndex: (backEnd unalignedLongAt: cacheAddress))
-						 or: [objectMemory isForwardedClassIndex: (backEnd unalignedLongAt: cacheAddress + BytesPerOop)]) ifTrue:
+						 or: [objectMemory isForwardedClassIndex: (backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop)]) ifTrue:
 							[self voidImplicitReceiverCacheAt: mcpc]]]]].
 	^0 "keep scanning"
 ]
@@ -9692,7 +9694,7 @@ Cogit >> voidImplicitReceiverCacheAt: mcpc [
 	cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
 	backEnd
 		unalignedLongAt: cacheAddress put: 0;
-		unalignedLongAt: cacheAddress + BytesPerOop put: 0.
+		unalignedLongAt: cacheAddress + objectMemory bytesPerOop put: 0.
 	objectRepresentation canPinObjects ifFalse:
 		[codeModified := true]
 ]

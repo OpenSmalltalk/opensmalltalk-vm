@@ -1070,29 +1070,29 @@ Interpreter >> activateNewClosureMethod: blockClosure [
 
 	"Assume: newContext will be recorded as a root if necessary by the
 	 call to newActiveContext: below, so we can use unchecked stores."
-	where :=  newContext + BaseHeaderSize.
-	self longAt: where + (SenderIndex << ShiftForWord)
+	where :=  newContext + self baseHeaderSize.
+	self longAt: where + (SenderIndex << self shiftForWord)
 		put: activeContext.
-	self longAt: where + (InstructionPointerIndex << ShiftForWord)
+	self longAt: where + (InstructionPointerIndex << self shiftForWord)
 		put: (self fetchPointer: ClosureStartPCIndex ofObject: theBlockClosure).
-	self longAt: where + (StackPointerIndex << ShiftForWord)
+	self longAt: where + (StackPointerIndex << self shiftForWord)
 		put: (self integerObjectOf: argumentCount + numCopied).
-	self longAt: where + (MethodIndex << ShiftForWord)
+	self longAt: where + (MethodIndex << self shiftForWord)
 		put: (self fetchPointer: MethodIndex ofObject: outerContext).
-	self longAt: where + (ClosureIndex << ShiftForWord)
+	self longAt: where + (ClosureIndex << self shiftForWord)
 		put: theBlockClosure.
-	self longAt: where + (ReceiverIndex << ShiftForWord)
+	self longAt: where + (ReceiverIndex << self shiftForWord)
 		put: (self fetchPointer: ReceiverIndex ofObject: outerContext).
 
 	"Copy the arguments..."
 	1 to: argumentCount do:
-		[:i | self longAt: where + ((ReceiverIndex+i) << ShiftForWord)
+		[:i | self longAt: where + ((ReceiverIndex+i) << self shiftForWord)
 				put: (self stackValue: argumentCount-i)].
 
 	"Copy the copied values..."
-	where := newContext + BaseHeaderSize + ((ReceiverIndex + 1 + argumentCount) << ShiftForWord).
+	where := newContext + self baseHeaderSize + ((ReceiverIndex + 1 + argumentCount) << self shiftForWord).
 	0 to: numCopied - 1 do:
-		[:i| self longAt: where + (i << ShiftForWord)
+		[:i| self longAt: where + (i << self shiftForWord)
 				put: (self fetchPointer: i + ClosureFirstCopiedValueIndex
 						  ofObject: theBlockClosure)].
 
@@ -1109,27 +1109,27 @@ Interpreter >> activateNewMethod [
 	methodHeader := self methodHeaderOf: newMethod.
 	newContext := self allocateOrRecycleContext: (methodHeader bitAnd: LargeContextBit).
 
-	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * BytesPerWord) + 1.
+	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * self wordSize) + 1.
 	tempCount := (methodHeader >> 19) bitAnd: 16r3F.
 
 	"Assume: newContext will be recorded as a root if necessary by the
 	 call to newActiveContext: below, so we can use unchecked stores."
 
-	where :=  newContext  + BaseHeaderSize.
-	self longAt: where + (SenderIndex << ShiftForWord) put: activeContext.
-	self longAt: where + (InstructionPointerIndex << ShiftForWord) put: (self integerObjectOf: initialIP).
-	self longAt: where + (StackPointerIndex << ShiftForWord) put: (self integerObjectOf: tempCount).
-	self longAt: where + (MethodIndex << ShiftForWord) put: newMethod.
-	self longAt: where + (ClosureIndex << ShiftForWord) put: nilObj.
+	where :=  newContext  + self baseHeaderSize.
+	self longAt: where + (SenderIndex << self shiftForWord) put: activeContext.
+	self longAt: where + (InstructionPointerIndex << self shiftForWord) put: (self integerObjectOf: initialIP).
+	self longAt: where + (StackPointerIndex << self shiftForWord) put: (self integerObjectOf: tempCount).
+	self longAt: where + (MethodIndex << self shiftForWord) put: newMethod.
+	self longAt: where + (ClosureIndex << self shiftForWord) put: nilObj.
 
 	"Copy the receiver and arguments..."
 	0 to: argumentCount do:
-		[:i | self longAt: where + ((ReceiverIndex+i) << ShiftForWord) put: (self stackValue: argumentCount-i)].
+		[:i | self longAt: where + ((ReceiverIndex+i) << self shiftForWord) put: (self stackValue: argumentCount-i)].
 
 	"clear remaining temps to nil in case it has been recycled"
 	nilOop := nilObj.
 	argumentCount+1+ReceiverIndex to: tempCount+ReceiverIndex do:
-		[:i | self longAt: where + (i << ShiftForWord) put: nilOop].
+		[:i | self longAt: where + (i << self shiftForWord) put: nilOop].
 
 	self pop: argumentCount + 1.
 	reclaimableContextCount := reclaimableContextCount + 1.
@@ -1288,15 +1288,14 @@ Interpreter >> argumentCountOfClosure: closurePointer [
 
 { #category : #utilities }
 Interpreter >> arrayValueOf: arrayOop [
-	"Return the address of first indexable field of resulting array object, or fail if the instance variable does not contain an indexable bytes or words object."
+	"Return the address of first indexable field of resulting array object, or fail if
+	 the instance variable does not contain an indexable bytes or words object."
 	"Note: May be called by translated primitive code."
 
-	<returnTypeC: 'void *'>
-	((self isIntegerObject: arrayOop) not and:
-	 [self isWordsOrBytes: arrayOop])
-		ifTrue: [^ self cCode: '(void *)pointerForOop(arrayOop + BaseHeaderSize)'].
-	self primitiveFail.
-
+	<returnTypeC: #'void *'>
+	(self isWordsOrBytes: arrayOop) ifTrue:
+		[^self cCoerceSimple: (self pointerForOop: arrayOop + self baseHeaderSize) to: #'void *'].
+	self primitiveFail
 ]
 
 { #category : #'array primitive support' }
@@ -1314,7 +1313,6 @@ Interpreter >> assertClassOf: oop is: classOop [
 	"Succeed if oop is an instance of the given class. Fail if the object is an integer."
 
 	<inline: true>
-	<asmLabel: false>
 	self success: (self isClassOfNonImm: oop equalTo: classOop)
 ]
 
@@ -1325,7 +1323,7 @@ Interpreter >> balancedStack: delta afterPrimitive: primIdx withArgs: nArgs [
 	"81-88 are control primitives after which the stack may look unbalanced"
 	successFlag ifTrue:[
 		"Successful prim, stack must have exactly nArgs arguments popped off"
-		^(stackPointer - activeContext + (nArgs * BytesPerWord)) = delta
+		^(stackPointer - activeContext + (nArgs * self wordSize)) = delta
 	].
 	"Failed prim must leave stack intact"
 	^(stackPointer - activeContext) = delta
@@ -1390,15 +1388,15 @@ Interpreter >> byteSwapByteObjectsFrom: startOop to: stopAddr [
 				ifFalse: [fmt := self formatOf: oop.
 					fmt >= 8
 						ifTrue: ["oop contains bytes"
-							wordAddr := oop + BaseHeaderSize.
+							wordAddr := oop + self baseHeaderSize.
 							fmt >= 12
 								ifTrue: ["compiled method; start after methodHeader and literals"
-									methodHeader := self longAt: oop + BaseHeaderSize.
-									wordAddr := wordAddr + BytesPerWord + ((methodHeader >> 10 bitAnd: 255) * BytesPerWord)].
+									methodHeader := self longAt: oop + self baseHeaderSize.
+									wordAddr := wordAddr + self wordSize + ((methodHeader >> 10 bitAnd: 255) * self wordSize)].
 							self reverseBytesFrom: wordAddr to: oop + (self sizeBitsOf: oop)].
-					(fmt = 6 and: [BytesPerWord = 8])
+					(fmt = 6 and: [self wordSize = 8])
 						ifTrue: ["Object contains 32-bit half-words packed into 64-bit machine words."
-							wordAddr := oop + BaseHeaderSize.
+							wordAddr := oop + self baseHeaderSize.
 							self reverseWordsFrom: wordAddr to: oop + (self sizeBitsOf: oop)]].
 			oop := self objectAfter: oop]
 ]
@@ -2250,7 +2248,7 @@ Interpreter >> closureNumArgs: numArgs instructionPointer: initialIP numCopiedVa
 	<inline: true>
 	newClosure := self
 					instantiateSmallClass: (self splObj: ClassBlockClosure)
-					sizeInBytes: (BytesPerWord * (ClosureFirstCopiedValueIndex + numCopied)) + BaseHeaderSize.
+					sizeInBytes: (self wordSize * (ClosureFirstCopiedValueIndex + numCopied)) + self baseHeaderSize.
 	"Assume: have just allocated a new closure; it must be young. Thus, can use unchecked stores."
 	self storePointerUnchecked: ClosureStartPCIndex ofObject: newClosure withValue: (self integerObjectOf: initialIP).
 	self storePointerUnchecked: ClosureNumArgsIndex ofObject: newClosure withValue: (self integerObjectOf: numArgs).
@@ -2641,13 +2639,13 @@ Interpreter >> createActualMessageTo: aClass [
 
 	compilerInitialized
 		ifTrue: [self compilerCreateActualMessage: message storingArgs: argumentArray]
-		ifFalse: [self transfer: argumentCount from: stackPointer - (argumentCount - 1 * BytesPerWord) to: argumentArray + BaseHeaderSize.
+		ifFalse: [self transfer: argumentCount from: stackPointer - (argumentCount - 1 * self wordSize) to: argumentArray + self baseHeaderSize.
 			self pop: argumentCount thenPush: message].
 
 	argumentCount := 1.
 	self storePointer: MessageSelectorIndex ofObject: message withValue: messageSelector.
 	self storePointer: MessageArgumentsIndex ofObject: message withValue: argumentArray.
-	(self lastPointerOf: message) >= (MessageLookupClassIndex * BytesPerWord + BaseHeaderSize)
+	(self lastPointerOf: message) >= (MessageLookupClassIndex * self wordSize + self baseHeaderSize)
 		ifTrue: ["Only store lookupClass if message has 3 fields (old images don't)"
 			self storePointer: MessageLookupClassIndex ofObject: message withValue: lookupClass]
 ]
@@ -2692,7 +2690,7 @@ Interpreter >> displayBitsOf: aForm Left: l Top: t Right: r Bottom: b [
 				showSurfaceFn = 0 ifTrue: [^self success: false]].
 			self cCode:'((sqInt (*)(sqInt, sqInt, sqInt, sqInt, sqInt))showSurfaceFn)(surfaceHandle, left, top, right-left, bottom-top)'.
 		] ifFalse: [
-			dispBitsIndex := dispBits + BaseHeaderSize.  "index in memory byte array"
+			dispBitsIndex := dispBits + self baseHeaderSize.  "index in memory byte array"
 			self cCode: 'ioShowDisplay(dispBitsIndex, w, h, d, left, right, top, bottom)'
 				inSmalltalk: [self showDisplayBits: dispBitsIndex 
 								w: w h: h d: d
@@ -2938,11 +2936,11 @@ Interpreter >> fetchContextRegisters: activeCntx [
 	-1 for 0-based addressing of fetchByte 
 	-1 because it gets incremented BEFORE fetching currentByte "
 	tmp := self quickFetchInteger: InstructionPointerIndex ofObject: activeCntx.
-	instructionPointer := method + tmp + BaseHeaderSize - 2.
+	instructionPointer := method + tmp + self baseHeaderSize - 2.
 
 	"the stack pointer is a pointer variable also..."
 	tmp := self quickFetchInteger: StackPointerIndex ofObject: activeCntx.
-	stackPointer := activeCntx + BaseHeaderSize + (TempFrameStart + tmp - 1 * BytesPerWord)
+	stackPointer := activeCntx + self baseHeaderSize + (TempFrameStart + tmp - 1 * self wordSize)
 ]
 
 { #category : #utilities }
@@ -2982,7 +2980,7 @@ Interpreter >> fetchIntegerOrTruncFloat: fieldIndex ofObject: objectPointer [
 	self assertClassOf: intOrFloat is: (self splObj: ClassFloat).
 	successFlag ifTrue: [
 		self cCode: '' inSmalltalk: [floatVal := Float new: 2].
-		self fetchFloatAt: intOrFloat + BaseHeaderSize into: floatVal.
+		self fetchFloatAt: intOrFloat + self baseHeaderSize into: floatVal.
 		self cCode: 'frac = modf(floatVal, &trunc)'.
 		"the following range check is for C ints, with range -2^31..2^31-1"
 		self flag: #Dan.		"The ranges are INCORRECT if SmallIntegers are wider than 31 bits."
@@ -3077,8 +3075,8 @@ Interpreter >> floatObjectOf: aFloat [
 	<inline: false>
 	<var: #aFloat type: 'double '>
 	self flag: #Dan.
-	newFloatObj := self instantiateSmallClass: (self splObj: ClassFloat) sizeInBytes: 8+BaseHeaderSize.
-	self storeFloatAt: newFloatObj + BaseHeaderSize from: aFloat.
+	newFloatObj := self instantiateSmallClass: (self splObj: ClassFloat) sizeInBytes: 8+self baseHeaderSize.
+	self storeFloatAt: newFloatObj + self baseHeaderSize from: aFloat.
 	^ newFloatObj.
 
 ]
@@ -3095,7 +3093,7 @@ Interpreter >> floatValueOf: oop [
 	isFloat := self isInstanceOfClassFloat: oop.
 	isFloat ifTrue:
 		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		 self fetchFloatAt: oop + BaseHeaderSize into: result.
+		 self fetchFloatAt: oop + self baseHeaderSize into: result.
 		 ^result].
 	self primitiveFail.
 	^0.0
@@ -3274,7 +3272,7 @@ Interpreter >> getThisSessionID [
 Interpreter >> imageFormatCompatibilityVersion [
 	"This VM is backward-compatible with the immediately preceeding non-closure version."
 
-	BytesPerWord == 4
+	self wordSize == 4
 		ifTrue: [^6502]
 		ifFalse: [^68000]
 ]
@@ -3283,7 +3281,7 @@ Interpreter >> imageFormatCompatibilityVersion [
 Interpreter >> imageFormatVersion [
 	"Return a magic constant that changes when the image format changes. Since the image reading code uses this to detect byte ordering, one must avoid version numbers that are invariant under byte reversal."
 
-	BytesPerWord == 4
+	self wordSize == 4
 		ifTrue: [^6504]
 		ifFalse: [^68002]
 ]
@@ -3336,6 +3334,38 @@ Interpreter >> initialCleanup [
 	self longAt: activeContext put: ((self longAt: activeContext) bitAnd: AllButRootBit).
 	"Clean external primitives"
 	self flushExternalPrimitives.
+]
+
+{ #category : #'as yet unclassified' }
+Interpreter >> initializeContextIndices [
+	"Class MethodContext"
+	| contextFixedSizePlusHeader |
+	SenderIndex := 0.
+	InstructionPointerIndex := 1.
+	StackPointerIndex := 2.
+	MethodIndex := 3.
+	ClosureIndex := 4. "N.B. Called receiverMap in the image."
+	ReceiverIndex := 5.
+	TempFrameStart := 6.  "Note this is in two places!"
+
+	"Class BlockContext"
+	CallerIndex := 0.
+	BlockArgumentCountIndex := 3.
+	InitialIPIndex := 4.
+	HomeIndex := 5.
+
+	"Class BlockClosure"
+	ClosureOuterContextIndex := 0.
+	ClosureStartPCIndex := 1.
+	ClosureNumArgsIndex := 2.
+	ClosureFirstCopiedValueIndex := 3.
+
+	CtxtTempFrameStart := 6.  "Copy of TempFrameStart in Interp"
+	contextFixedSizePlusHeader := CtxtTempFrameStart + 1.
+	SmallContextSize := contextFixedSizePlusHeader + 16 * self wordSize.  "16 indexable fields"
+	"Large contexts have 56 indexable fileds.  Max with single header word."
+	"However note that in 64 bits, for now, large contexts have 3-word headers"
+	LargeContextSize := contextFixedSizePlusHeader + 56 * self wordSize
 ]
 
 { #category : #initialization }
@@ -3441,23 +3471,23 @@ Interpreter >> internalActivateNewMethod [
 
 	"Assume: newContext will be recorded as a root if necessary by the
 	 call to newActiveContext: below, so we can use unchecked stores."
-	where :=   newContext + BaseHeaderSize.
-	self longAt: where + (SenderIndex << ShiftForWord) put: activeContext.
-	self longAt: where + (InstructionPointerIndex << ShiftForWord)
-		put: (self integerObjectOf: (((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * BytesPerWord) + 1)).
-	self longAt: where + (StackPointerIndex << ShiftForWord) put: (self integerObjectOf: tempCount).
-	self longAt: where + (MethodIndex << ShiftForWord) put: newMethod.
-	self longAt: where + (ClosureIndex << ShiftForWord) put: nilObj.
+	where :=   newContext + self baseHeaderSize.
+	self longAt: where + (SenderIndex << self shiftForWord) put: activeContext.
+	self longAt: where + (InstructionPointerIndex << self shiftForWord)
+		put: (self integerObjectOf: (((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * self wordSize) + 1)).
+	self longAt: where + (StackPointerIndex << self shiftForWord) put: (self integerObjectOf: tempCount).
+	self longAt: where + (MethodIndex << self shiftForWord) put: newMethod.
+	self longAt: where + (ClosureIndex << self shiftForWord) put: nilObj.
 
 	"Copy the receiver and arguments..."
 	argCount2 := argumentCount.
 	0 to: argCount2 do:
-		[:i | self longAt: where + ((ReceiverIndex+i) << ShiftForWord) put: (self internalStackValue: argCount2-i)].
+		[:i | self longAt: where + ((ReceiverIndex+i) << self shiftForWord) put: (self internalStackValue: argCount2-i)].
 
 	"clear remaining temps to nil in case it has been recycled"
 	methodHeader := nilObj.  "methodHeader here used just as faster (register?) temp"
 	argCount2+1+ReceiverIndex to: tempCount+ReceiverIndex do:
-		[:i | self longAt: where + (i << ShiftForWord) put: methodHeader].
+		[:i | self longAt: where + (i << self shiftForWord) put: methodHeader].
 
 	self internalPop: argCount2 + 1.
 	reclaimableContextCount := reclaimableContextCount + 1.
@@ -3529,11 +3559,11 @@ Interpreter >> internalFetchContextRegisters: activeCntx [
 		  -1 for 0-based addressing of fetchByte
 		  -1 because it gets incremented BEFORE fetching currentByte"
 	tmp := self quickFetchInteger: InstructionPointerIndex ofObject: activeCntx.
-	localIP := self pointerForOop: method + tmp + BaseHeaderSize - 2.
+	localIP := self pointerForOop: method + tmp + self baseHeaderSize - 2.
 
 	"the stack pointer is a pointer variable also..."
 	tmp := self quickFetchInteger: StackPointerIndex ofObject: activeCntx.
-	localSP := self pointerForOop: activeCntx + BaseHeaderSize + ((TempFrameStart + tmp - 1) * BytesPerWord)
+	localSP := self pointerForOop: activeCntx + self baseHeaderSize + ((TempFrameStart + tmp - 1) * self wordSize)
 ]
 
 { #category : #'message sending' }
@@ -3565,13 +3595,13 @@ Interpreter >> internalNewActiveContext: aContext [
 { #category : #contexts }
 Interpreter >> internalPop: nItems [
 
-	localSP := localSP - (nItems * BytesPerWord).
+	localSP := localSP - (nItems * self wordSize).
 ]
 
 { #category : #contexts }
 Interpreter >> internalPop: nItems thenPush: oop [
 
-	self longAtPointer: (localSP := localSP - ((nItems - 1) * BytesPerWord)) put: oop.
+	self longAtPointer: (localSP := localSP - ((nItems - 1) * self wordSize)) put: oop.
 
 ]
 
@@ -3638,7 +3668,7 @@ Interpreter >> internalPrimitiveValue [
 { #category : #contexts }
 Interpreter >> internalPush: object [
 
-	self longAtPointer: (localSP := localSP + BytesPerWord) put: object.
+	self longAtPointer: (localSP := localSP + self wordSize) put: object.
 ]
 
 { #category : #'process primitive support' }
@@ -3654,8 +3684,7 @@ Interpreter >> internalQuickCheckForInterrupts [
 
 		self browserPluginReturnIfNeeded.
 
-		self internalizeIPandSP].
-
+		self internalizeIPandSP]
 ]
 
 { #category : #contexts }
@@ -3667,7 +3696,7 @@ Interpreter >> internalStackTop [
 { #category : #contexts }
 Interpreter >> internalStackValue: offset [
 
-	^ self longAtPointer: localSP - (offset * BytesPerWord)
+	^ self longAtPointer: localSP - (offset * self wordSize)
 ]
 
 { #category : #contexts }
@@ -3682,10 +3711,10 @@ Interpreter >> internalStoreContextRegisters: activeCntx [
 	<inline: true>
 	self storePointerUnchecked: InstructionPointerIndex ofObject: activeCntx
 		withValue: (self integerObjectOf: 
-			((self oopForPointer: localIP) + 2 - (method + BaseHeaderSize))).
+			((self oopForPointer: localIP) + 2 - (method + self baseHeaderSize))).
 	self storePointerUnchecked: StackPointerIndex		  ofObject: activeCntx
 		withValue: (self integerObjectOf:
-			((((self oopForPointer: localSP) - (activeCntx + BaseHeaderSize)) >> ShiftForWord) - TempFrameStart + 1)).
+			((((self oopForPointer: localSP) - (activeCntx + self baseHeaderSize)) >> self shiftForWord) - TempFrameStart + 1)).
 
 ]
 
@@ -3861,24 +3890,24 @@ Interpreter >> justActivateNewMethod [
 				freeContexts := self fetchPointer: 0 ofObject: newContext]
 		ifFalse: ["Slower call for large contexts or empty free list"
 				newContext := self allocateOrRecycleContext: needsLarge].
-	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * BytesPerWord) + 1.
+	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * self wordSize) + 1.
 	tempCount := (methodHeader >> 19) bitAnd: 16r3F.
 
 	"Assume: newContext will be recorded as a root if necessary by the
 	 call to newActiveContext: below, so we can use unchecked stores."
-	where := newContext + BaseHeaderSize.
-	self longAt: where + (SenderIndex << ShiftForWord) put: activeContext.
-	self longAt: where + (InstructionPointerIndex << ShiftForWord) put: (self integerObjectOf: initialIP).
-	self longAt: where + (StackPointerIndex << ShiftForWord) put: (self integerObjectOf: tempCount).
-	self longAt: where + (MethodIndex << ShiftForWord) put: newMethod.
+	where := newContext + self baseHeaderSize.
+	self longAt: where + (SenderIndex << self shiftForWord) put: activeContext.
+	self longAt: where + (InstructionPointerIndex << self shiftForWord) put: (self integerObjectOf: initialIP).
+	self longAt: where + (StackPointerIndex << self shiftForWord) put: (self integerObjectOf: tempCount).
+	self longAt: where + (MethodIndex << self shiftForWord) put: newMethod.
 
 	"Set the receiver..."
-	self longAt: where + (ReceiverIndex << ShiftForWord) put: receiver.
+	self longAt: where + (ReceiverIndex << self shiftForWord) put: receiver.
 
 	"clear all args and temps to nil in case it has been recycled"
 	needsLarge := nilObj.  "needsLarge here used just as faster (register?) temp"
 	ReceiverIndex + 1 to: tempCount + ReceiverIndex do:
-		[:i | self longAt: where + (i << ShiftForWord) put: needsLarge].
+		[:i | self longAt: where + (i << self shiftForWord) put: needsLarge].
 	reclaimableContextCount := reclaimableContextCount + 1.
 
 	activeContext := newContext.
@@ -3920,7 +3949,6 @@ Interpreter >> loadFloatOrIntFrom: floatOrInt [
 	 Otherwise fail -- ie return with primErrorCode non-zero."
 
 	<inline: true>
-	<asmLabel: false>
 	<returnTypeC: #double>
 
 	(self isIntegerObject: floatOrInt) ifTrue:
@@ -4101,7 +4129,7 @@ Interpreter >> makePointwithxValue: xValue yValue: yValue [
 "make a Point xValue@yValue.
 We know both will be integers so no value nor root checking is needed"
 	| pointResult |
-	pointResult := self instantiateSmallClass: (self splObj: ClassPoint) sizeInBytes: 3*BytesPerWord.
+	pointResult := self instantiateSmallClass: (self splObj: ClassPoint) sizeInBytes: 3*self wordSize.
 	self storePointerUnchecked: XIndex ofObject: pointResult withValue: (self integerObjectOf: xValue).
 	self storePointerUnchecked: YIndex ofObject: pointResult withValue: (self integerObjectOf: yValue).
 	^ pointResult
@@ -4355,7 +4383,7 @@ Interpreter >> pop2AndPushIntegerIfOK: integerResult [
 Interpreter >> pop: nItems [
 	"Note: May be called by translated primitive code."
 
-	stackPointer := stackPointer - (nItems*BytesPerWord).
+	stackPointer := stackPointer - (nItems*self wordSize).
 	^nil
 ]
 
@@ -4363,7 +4391,7 @@ Interpreter >> pop: nItems [
 Interpreter >> pop: nItems thenPush: oop [
 
 	| sp |
-	self longAt: (sp := stackPointer - ((nItems - 1) * BytesPerWord)) put: oop.
+	self longAt: (sp := stackPointer - ((nItems - 1) * self wordSize)) put: oop.
 	stackPointer := sp.
 
 ]
@@ -4372,7 +4400,7 @@ Interpreter >> pop: nItems thenPush: oop [
 Interpreter >> pop: nItems thenPushBool: trueOrFalse [
 	"A few places pop a few items off the stack and then push a boolean. Make it convenient"
 	| sp |
-	self longAt: (sp := stackPointer - ((nItems - 1) * BytesPerWord))
+	self longAt: (sp := stackPointer - ((nItems - 1) * self wordSize))
 		put:(trueOrFalse ifTrue: [trueObj] ifFalse: [falseObj]).
 	stackPointer := sp
 ]
@@ -4381,7 +4409,7 @@ Interpreter >> pop: nItems thenPushBool: trueOrFalse [
 Interpreter >> pop: nItems thenPushInteger: integerVal [
 "lots of places pop a few items off the stack and then push an integer. MAke it convenient"
 	| sp |
-	self longAt: (sp := stackPointer - ((nItems - 1) * BytesPerWord)) put:(self integerObjectOf: integerVal).
+	self longAt: (sp := stackPointer - ((nItems - 1) * self wordSize)) put:(self integerObjectOf: integerVal).
 	stackPointer := sp.
 
 ]
@@ -4414,7 +4442,7 @@ Interpreter >> popStack [
 
 	| top |
 	top := self longAt: stackPointer.
-	stackPointer := stackPointer - BytesPerWord.
+	stackPointer := stackPointer - self wordSize.
 	^ top
 ]
 
@@ -4436,10 +4464,10 @@ Interpreter >> positive32BitIntegerFor: integerValue [
 		ifTrue: [(self isIntegerValue: integerValue)
 					ifTrue: [^ self integerObjectOf: integerValue]].
 
-	BytesPerWord = 4
+	self wordSize = 4
 	ifTrue: ["Faster instantiateSmallClass: currently only works with integral word size."
 			newLargeInteger := self instantiateSmallClass: (self splObj: ClassLargePositiveInteger)
-					sizeInBytes: BaseHeaderSize + 4]
+					sizeInBytes: self baseHeaderSize + 4]
 	ifFalse: ["Cant use instantiateSmallClass: due to integral word requirement."
 			newLargeInteger := self instantiateClass: (self splObj: ClassLargePositiveInteger)
 					indexableSize: 4].
@@ -4723,7 +4751,7 @@ Interpreter >> primitiveBeCursor [
 				self success: ((extentX > 0) and: [extentY > 0]).
 				self success: ((offsetX >= (extentX * -1)) and: [offsetX <= 0]).
 				self success: ((offsetY >= (extentY * -1)) and: [offsetY <= 0]).
-				cursorBitsIndex := bitsObj + BaseHeaderSize.
+				cursorBitsIndex := bitsObj + self baseHeaderSize.
 				self success: ((self isWords: bitsObj) and: [(self lengthOf: bitsObj) = (extentX * extentY)]).
 				self cCode: '' inSmalltalk:
 					[ourCursor := Cursor
@@ -4737,7 +4765,7 @@ Interpreter >> primitiveBeCursor [
 				self success: ((offsetX >= -16) and: [offsetX <= 0]).
 				self success: ((offsetY >= -16) and: [offsetY <= 0]).
 				self success: ((self isWords: bitsObj) and: [(self lengthOf: bitsObj) = 16]).
-				cursorBitsIndex := bitsObj + BaseHeaderSize.
+				cursorBitsIndex := bitsObj + self baseHeaderSize.
 				self cCode: '' inSmalltalk:
 					[ourCursor := Cursor
 						extent: extentX @ extentY
@@ -4756,7 +4784,7 @@ Interpreter >> primitiveBeCursor [
 		successFlag ifTrue: [
 			self success: ((extentX = 16) and: [extentY = 16 and: [depth = 1]]).
 			self success: ((self isWords: bitsObj) and: [(self lengthOf: bitsObj) = 16]).
-			maskBitsIndex := bitsObj + BaseHeaderSize]].
+			maskBitsIndex := bitsObj + self baseHeaderSize]].
 
 
 	successFlag ifTrue: [
@@ -4942,7 +4970,7 @@ Interpreter >> primitiveBlockCopy [
 	newContext := self instantiateContext: (self splObj: ClassBlockContext) sizeInBytes: contextSize.
 	methodContext := self popRemappableOop.
 
-	initialIP := self integerObjectOf: (instructionPointer+1+3) - (method+BaseHeaderSize).
+	initialIP := self integerObjectOf: (instructionPointer+1+3) - (method+self baseHeaderSize).
 	"Was instructionPointer + 3, but now it's greater by 1 due to preIncrement"
 
 	"Assume: have just allocated a new context; it must be young.
@@ -5046,12 +5074,12 @@ Interpreter >> primitiveClipboardText [
 			(self isBytes: s) ifFalse: [^ self primitiveFail].
 			successFlag
 				ifTrue: [sz := self stSizeOf: s.
-					self clipboardWrite: sz From: s + BaseHeaderSize At: 0.
+					self clipboardWrite: sz From: s + self baseHeaderSize At: 0.
 					self pop: 1]]
 		ifFalse: [sz := self clipboardSize.
 			(self sufficientSpaceToAllocate: sz) ifFalse:[^self primitiveFail].
 			s := self instantiateClass: (self splObj: ClassByteString) indexableSize: sz.
-			self clipboardRead: sz Into: s + BaseHeaderSize At: 0.
+			self clipboardRead: sz Into: s + self baseHeaderSize At: 0.
 			self pop: 1 thenPush: s]
 ]
 
@@ -5078,7 +5106,7 @@ Interpreter >> primitiveClosureCopyWithCopiedValues [
 	newClosure := self
 					closureNumArgs: numArgs
 									"greater by 1 due to preIncrement of localIP"
-					instructionPointer: instructionPointer + 2 - (method+BaseHeaderSize)
+					instructionPointer: instructionPointer + 2 - (method+self baseHeaderSize)
 					numCopiedValues: numCopiedValues.
 	"Assume: have just allocated a new closure; it must be young. Thus, can use unchecked stores."
 	self storePointerUnchecked: ClosureOuterContextIndex ofObject: newClosure withValue: (self stackValue: 2).
@@ -5218,7 +5246,7 @@ Interpreter >> primitiveConstantFill [
 	rcvrIsBytes ifTrue: [self success: (fillValue >= 0 and: [fillValue <= 255])].
 	successFlag
 		ifTrue: [end := rcvr + (self sizeBitsOf: rcvr).
-			i := rcvr + BaseHeaderSize.
+			i := rcvr + self baseHeaderSize.
 			rcvrIsBytes
 				ifTrue: [[i < end]
 						whileTrue: [self byteAt: i put: fillValue.
@@ -5627,9 +5655,9 @@ Interpreter >> primitiveExternalCall [
 	functionLength := self lengthOf: functionName.
 	successFlag ifFalse: [^ nil].
 
-	addr := self ioLoadExternalFunction: functionName + BaseHeaderSize
+	addr := self ioLoadExternalFunction: functionName + self baseHeaderSize
 				OfLength: functionLength
-				FromModule: moduleName + BaseHeaderSize
+				FromModule: moduleName + self baseHeaderSize
 				OfLength: moduleLength.
 	addr = 0
 		ifTrue: [index := -1]
@@ -6000,7 +6028,7 @@ Interpreter >> primitiveGetAttribute [
 						indexableSize: sz.
 			self
 				getAttribute: attr
-				Into: s + BaseHeaderSize
+				Into: s + self baseHeaderSize
 				Length: sz.
 			self pop: 2 thenPush: s]
 ]
@@ -6157,13 +6185,13 @@ Interpreter >> primitiveImageName [
 		self assertClassOf: s is: (self splObj: ClassByteString).
 		successFlag ifTrue: [
 			sz := self stSizeOf: s.
-			self imageNamePut: (s + BaseHeaderSize) Length: sz.
+			self imageNamePut: (s + self baseHeaderSize) Length: sz.
 			self pop: 1.  "pop s, leave rcvr on stack"
 		].
 	] ifFalse: [
 		sz := self imageNameSize.
 		s := self instantiateClass: (self splObj: ClassByteString) indexableSize: sz.
-		self imageNameGet: (s + BaseHeaderSize) Length: sz.
+		self imageNameGet: (s + self baseHeaderSize) Length: sz.
 		self pop: 1.  "rcvr"
 		self push: s.
 	].
@@ -6286,7 +6314,7 @@ Interpreter >> primitiveIntegerAt [
 	sz := self lengthOf: rcvr.  "number of fields"
 	self success: ((index >= 1) and: [index <= sz]).
 	successFlag ifTrue: [
-		addr := rcvr + BaseHeaderSize + (index - 1 * BytesPerWord). "for zero indexing"
+		addr := rcvr + self baseHeaderSize + (index - 1 * self wordSize). "for zero indexing"
 		value := self intAt: addr.
 		self pop: 2.  "pop rcvr, index"
 		"push element value"
@@ -6311,7 +6339,7 @@ Interpreter >> primitiveIntegerAtPut [
 	((index >= 1) and: [index <= sz]) ifFalse:[^self success: false].
 	value := self signed32BitValueOf: valueOop.
 	successFlag ifTrue:[
-		addr := rcvr + BaseHeaderSize + (index - 1 * BytesPerWord). "for zero indexing"
+		addr := rcvr + self baseHeaderSize + (index - 1 * self wordSize). "for zero indexing"
 		value := self intAt: addr put: value.
 		self pop: 3 thenPush: valueOop. "pop all; return value"
 	].
@@ -6348,7 +6376,7 @@ Interpreter >> primitiveInvokeObjectAsMethod [
 	| runSelector runReceiver runArgs newReceiver lookupClass |
 	runArgs := self instantiateClass: (self splObj: ClassArray) indexableSize: argumentCount.
 	self beRootIfOld: runArgs. "do we really need this?"
-	self transfer: argumentCount from: stackPointer - ((argumentCount - 1) * BytesPerWord) to: runArgs + BaseHeaderSize.
+	self transfer: argumentCount from: stackPointer - ((argumentCount - 1) * self wordSize) to: runArgs + self baseHeaderSize.
 
 	runSelector := messageSelector.
 	runReceiver := self stackValue: argumentCount.
@@ -6541,7 +6569,7 @@ Interpreter >> primitiveLoadImageSegment [
 	outPointerArray := self stackTop.
 	lastOut := outPointerArray + (self lastPointerOf: outPointerArray).
 	segmentWordArray := self stackValue: 1.
-	endSeg := segmentWordArray + (self sizeBitsOf: segmentWordArray) - BaseHeaderSize.
+	endSeg := segmentWordArray + (self sizeBitsOf: segmentWordArray) - self baseHeaderSize.
 
 	"Essential type checks"
 	((self formatOf: outPointerArray) = 2				"Must be indexable pointers"
@@ -6549,32 +6577,32 @@ Interpreter >> primitiveLoadImageSegment [
 		ifFalse: [^ self primitiveFail].
 
 	"Version check.  Byte order of the WordArray now"
-	data := self longAt: segmentWordArray + BaseHeaderSize.
+	data := self longAt: segmentWordArray + self baseHeaderSize.
 	(self readableFormat: (data bitAnd: 16rFFFF "low 2 bytes")) ifFalse: [
 		"Not readable -- try again with reversed bytes..."
-		self reverseBytesFrom: segmentWordArray + BaseHeaderSize to: endSeg + BytesPerWord.
-		data := self longAt: segmentWordArray + BaseHeaderSize.
+		self reverseBytesFrom: segmentWordArray + self baseHeaderSize to: endSeg + self wordSize.
+		data := self longAt: segmentWordArray + self baseHeaderSize.
 		(self readableFormat: (data bitAnd: 16rFFFF "low 2 bytes")) ifFalse: [
 			"Still NG -- put things back and fail"
-			self reverseBytesFrom: segmentWordArray + BaseHeaderSize to: endSeg + BytesPerWord.
+			self reverseBytesFrom: segmentWordArray + self baseHeaderSize to: endSeg + self wordSize.
 			DoAssertionChecks ifTrue: [self verifyCleanHeaders].
 			^ self primitiveFail]].
 	"Reverse the Byte type objects if the is data from opposite endian machine."
 	"Test top byte.  $d on the Mac or $s on the PC.  Rest of word is equal."
 	(data >> 16) = (self imageSegmentVersion >> 16) ifFalse: [
 		"Reverse the byte-type objects once"
-		segOop := self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord.
+		segOop := self oopFromChunk: segmentWordArray + self baseHeaderSize + self wordSize.
 			 "Oop of first embedded object"
-		self byteSwapByteObjectsFrom: segOop to: endSeg + BytesPerWord].
+		self byteSwapByteObjectsFrom: segOop to: endSeg + self wordSize].
 
 	"Proceed through the segment, remapping pointers..."
-	segOop := self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord.
+	segOop := self oopFromChunk: segmentWordArray + self baseHeaderSize + self wordSize.
 	[segOop <= endSeg] whileTrue:
 		[(self headerType: segOop) <= 1
 			ifTrue: ["This object has a class field (type = 0 or 1) -- start with that."
-					fieldPtr := segOop - BytesPerWord.  doingClass := true]
+					fieldPtr := segOop - self wordSize.  doingClass := true]
 			ifFalse: ["No class field -- start with first data field"
-					fieldPtr := segOop + BaseHeaderSize.  doingClass := false].
+					fieldPtr := segOop + self baseHeaderSize.  doingClass := false].
 		lastPtr := segOop + (self lastPointerOf: segOop).	"last field"
 		lastPtr > endSeg ifTrue: [
 			DoAssertionChecks ifTrue: [self verifyCleanHeaders].
@@ -6590,7 +6618,7 @@ Interpreter >> primitiveLoadImageSegment [
 			(self isIntegerObject: fieldOop)
 				ifTrue:
 					["Integer -- nothing to do"
-					fieldPtr := fieldPtr + BytesPerWord]
+					fieldPtr := fieldPtr + self wordSize]
 				ifFalse:
 					[(fieldOop bitAnd: 3) = 0 ifFalse: [^ self primitiveFail "bad oop"].
 					(fieldOop bitAnd: 16r80000000) = 0
@@ -6605,37 +6633,37 @@ Interpreter >> primitiveLoadImageSegment [
 								fieldPtr := fieldPtr + 8.
 								doingClass := false]
 						ifFalse: [self longAt: fieldPtr put: mapOop.
-								fieldPtr := fieldPtr + BytesPerWord].
+								fieldPtr := fieldPtr + self wordSize].
 					segOop < youngStart
 						ifTrue: [self possibleRootStoreInto: segOop value: mapOop].
 					]].
 		segOop := self objectAfter: segOop].
 
 	"Again, proceed through the segment checking consistency..."
-	segOop := self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord.
+	segOop := self oopFromChunk: segmentWordArray + self baseHeaderSize + self wordSize.
 	[segOop <= endSeg] whileTrue:
 		[(self oopHasAcceptableClass: segOop) ifFalse: [^ self primitiveFail "inconsistency"].
-		fieldPtr := segOop + BaseHeaderSize.		"first field"
+		fieldPtr := segOop + self baseHeaderSize.		"first field"
 		lastPtr := segOop + (self lastPointerOf: segOop).	"last field"
 		"Go through all oops, remapping them..."
 		[fieldPtr > lastPtr] whileFalse:
 			["Examine each pointer field"
 			fieldOop := self longAt: fieldPtr.
 			(self oopHasAcceptableClass: fieldOop) ifFalse: [^ self primitiveFail "inconsistency"].
-			fieldPtr := fieldPtr + BytesPerWord].
+			fieldPtr := fieldPtr + self wordSize].
 		segOop := self objectAfter: segOop].
 
 	"Truncate the segment word array to size = BytesPerWord (vers stamp only)"
 	extraSize := self extraHeaderBytes: segmentWordArray.
 	hdrTypeBits := self headerType: segmentWordArray.
 	extraSize = 8
-		ifTrue: [self longAt: segmentWordArray-extraSize put: BaseHeaderSize + BytesPerWord + hdrTypeBits]
+		ifTrue: [self longAt: segmentWordArray-extraSize put: self baseHeaderSize + self wordSize + hdrTypeBits]
 		ifFalse: [header := self longAt: segmentWordArray.
 				self longAt: segmentWordArray
-					put: header - (header bitAnd: SizeMask) + BaseHeaderSize + BytesPerWord].	
+					put: header - (header bitAnd: SizeMask) + self baseHeaderSize + self wordSize].	
 	"and return the roots array which was first in the segment"
 	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
-	self pop: 3 thenPush: (self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord).
+	self pop: 3 thenPush: (self oopFromChunk: segmentWordArray + self baseHeaderSize + self wordSize).
 
 ]
 
@@ -6860,7 +6888,7 @@ Interpreter >> primitiveNewMethod [
 	successFlag ifFalse:
 		[self unPop: 2. ^nil].
 	class := self popStack.
-	size := (self literalCountOfMethodHeader: header) + 1 * BytesPerWord + bytecodeCount.
+	size := (self literalCountOfMethodHeader: header) + 1 * self wordSize + bytecodeCount.
 	theMethod := self instantiateClass: class indexableSize: size.
 	self storePointerUnchecked: HeaderIndex ofObject: theMethod withValue: header.
 	literalCount := self literalCountOfMethodHeader: header.
@@ -6988,7 +7016,7 @@ Interpreter >> primitiveObjectPointsTo [
 	(self isIntegerObject: rcvr) ifTrue: [^self pushBool: false].
 
 	lastField := self lastPointerOf: rcvr.
-	BaseHeaderSize to: lastField by: BytesPerWord do:
+	self baseHeaderSize to: lastField by: self wordSize do:
 		[:i | (self longAt: rcvr + i) = thang
 			ifTrue: [^ self pushBool: true]].
 	self pushBool: false.
@@ -7584,10 +7612,10 @@ Interpreter >> primitiveShortAt [
 	rcvr := self stackValue: 1.
 	self success: ((self isIntegerObject: rcvr) not and: [self isWordsOrBytes: rcvr]).
 	successFlag ifFalse: [ ^ nil ].
-	sz := ((self sizeBitsOf: rcvr) - BaseHeaderSize) // 2.  "number of 16-bit fields"
+	sz := ((self sizeBitsOf: rcvr) - self baseHeaderSize) // 2.  "number of 16-bit fields"
 	self success: ((index >= 1) and: [index <= sz]).
 	successFlag ifTrue: [
-		addr := rcvr + BaseHeaderSize + (2 * (index - 1)).
+		addr := rcvr + self baseHeaderSize + (2 * (index - 1)).
 		value := self shortAt: addr.
 		self pop: 2 thenPushInteger: value. 
 	]
@@ -7603,11 +7631,11 @@ Interpreter >> primitiveShortAtPut [
 	rcvr := self stackValue: 2.
 	self success: ((self isIntegerObject: rcvr) not and: [self isWordsOrBytes: rcvr]).
 	successFlag ifFalse: [ ^ nil ].
-	sz := ((self sizeBitsOf: rcvr) - BaseHeaderSize) // 2.  "number of 16-bit fields"
+	sz := ((self sizeBitsOf: rcvr) - self baseHeaderSize) // 2.  "number of 16-bit fields"
 	self success: ((index >= 1) and: [index <= sz]).
 	self success: ((value >= -32768) and: [value <= 32767]).
 	successFlag ifTrue: [
-		addr := rcvr + BaseHeaderSize + (2 * (index - 1)).
+		addr := rcvr + self baseHeaderSize + (2 * (index - 1)).
 		self shortAt: addr put: value.
 		self pop: 2.  "pop index and value; leave rcvr on stack"
 	]
@@ -7828,8 +7856,8 @@ Interpreter >> primitiveStoreStackp [
 	| ctxt newStackp stackp |
 	ctxt := self stackValue: 1.
 	newStackp := self stackIntegerValue: 0.
-	self success: (self oop: newStackp isGreaterThanOrEqualTo: 0).
-	self success: (self oop: newStackp isLessThanOrEqualTo: (LargeContextSize - BaseHeaderSize // BytesPerWord - CtxtTempFrameStart)).
+	self success: newStackp >= 0.
+	self success: newStackp <= (LargeContextSlots - CtxtTempFrameStart).
 	successFlag ifFalse: [^ self primitiveFail].
 	stackp := self fetchStackPointerOf: ctxt.
 	"Nil any newly accessible cells"
@@ -8174,7 +8202,7 @@ Interpreter >> primitiveVMParameter [
 		self storePointerUnchecked: 36	ofObject: result withValue: (self integerObjectOf: statSpecialMarkCount).
 		self storePointerUnchecked: 37	ofObject: result withValue: (self integerObjectOf: statIGCDeltaUsecs + 500 // 1000).
 		self storePointerUnchecked: 38	ofObject: result withValue: (self integerObjectOf: statPendingFinalizationSignals).
-		self storePointerUnchecked: 39	ofObject: result withValue: (self integerObjectOf: BytesPerWord).
+		self storePointerUnchecked: 39	ofObject: result withValue: (self integerObjectOf: self wordSize).
 		self storePointerUnchecked: 40	ofObject: result withValue: (self integerObjectOf: self imageFormatVersion).
 		41 to: 54 do:
 			[:i | self storePointerUnchecked: i ofObject: result withValue: nilObj].
@@ -8222,7 +8250,7 @@ Interpreter >> primitiveVMParameter [
 		arg = 37  	ifTrue: [result := statSpecialMarkCount]. 
 		arg = 38  	ifTrue: [result := statIGCDeltaUsecs + 500 // 1000]. 
 		arg = 39  	ifTrue: [result := statPendingFinalizationSignals]. 
-		arg = 40  	ifTrue: [result := BytesPerWord].
+		arg = 40  	ifTrue: [result := self wordSize].
 		arg = 41  	ifTrue: [result := self imageFormatVersion].
 		(arg >= 42
 		 and: [arg <= 55]) ifTrue: [result := nilObj].
@@ -8286,7 +8314,7 @@ Interpreter >> primitiveVMPath [
 	| s sz |
 	sz := self vmPathSize.
 	s := self instantiateClass: (self splObj: ClassByteString) indexableSize: sz.
-	self vmPathGet: (s + BaseHeaderSize) Length: sz.
+	self vmPathGet: (s + self baseHeaderSize) Length: sz.
 	self pop: 1 thenPush: s.
 
 ]
@@ -8559,7 +8587,7 @@ Interpreter >> printNameOfClass: classOop count: cnt [
 
 	cnt <= 0 ifTrue: [^self print: 'bad class'].
 	((self sizeBitsOf: classOop) = metaclassSizeBits
-	  and: [metaclassSizeBits >= (6 * BytesPerWord)])	"(Metaclass instSize * 4)"
+	  and: [metaclassSizeBits >= (6 * self wordSize)])	"(Metaclass instSize * 4)"
 		ifTrue: [self printNameOfClass: (self fetchPointer: 5 "thisClass" ofObject: classOop) count: cnt - 1.
 				self print: ' class']
 		ifFalse: [self printStringOf: (self fetchPointer: 6 "name" ofObject: classOop)]
@@ -8586,7 +8614,7 @@ Interpreter >> printOop: oop [
 	fmt := self formatOf: oop.
 	(fmt > 4 and: [fmt < 12]) ifTrue:
 		[^self printStringOf: oop].
-	lastIndex := 64 min: ((self lastPointerOf: oop) / BytesPerWord).
+	lastIndex := 64 min: ((self lastPointerOf: oop) / self wordSize).
 	lastIndex > 0 ifTrue:
 		[1 to: lastIndex do:
 			[:index|
@@ -8632,7 +8660,7 @@ Interpreter >> printUnbalancedStack: primIdx [
 Interpreter >> push: object [
 
 	| sp |
-	self longAt: (sp := stackPointer + BytesPerWord) put: object.
+	self longAt: (sp := stackPointer + self wordSize) put: object.
 	stackPointer := sp.
 ]
 
@@ -8669,7 +8697,7 @@ Interpreter >> pushClosureCopyCopiedValuesBytecode [
 	self externalizeIPandSP. "This is a pain."
 	newClosure := self
 					closureNumArgs: numArgs
-					instructionPointer: ((self cCoerce: localIP to: 'sqInt') + 2 - (method+BaseHeaderSize))
+					instructionPointer: ((self cCoerce: localIP to: 'sqInt') + 2 - (method+self baseHeaderSize))
 					numCopiedValues: numCopied.
 	self internalizeIPandSP.
 	"Assume: have just allocated a new closure; it must be young. Thus, can use unchecked stores."
@@ -8932,9 +8960,9 @@ Interpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imageO
 	<var: #dataSize type: 'size_t '>
 	<var: #imageOffset type: 'squeakFileOffsetType '>
 
-	metaclassSizeBits := 6 * BytesPerWord.	"guess (Metaclass instSize * BPW)"
+	metaclassSizeBits := 6 * self wordSize.	"guess (Metaclass instSize * BPW)"
 	swapBytes := self checkImageVersionFrom: f startingAt: imageOffset.
-	headerStart := (self sqImageFilePosition: f) - BytesPerWord.  "record header start position"
+	headerStart := (self sqImageFilePosition: f) - self wordSize.  "record header start position"
 
 	headerSize			:= self getLongFromFile: f swap: swapBytes.
 	dataSize				:= self getLongFromFile: f swap: swapBytes.
@@ -9155,7 +9183,7 @@ Interpreter >> reverseDisplayFrom: startIndex to: endIndex [
 	w := self fetchInteger: 1 ofObject: displayObj.
 	dispBitsPtr := self fetchPointer: 0 ofObject: displayObj.
 	(self isIntegerObject: dispBitsPtr) ifTrue: [^ nil].
-	dispBitsPtr := dispBitsPtr + BaseHeaderSize.
+	dispBitsPtr := dispBitsPtr + self baseHeaderSize.
 	dispBitsPtr + (startIndex * 4) to: dispBitsPtr + (endIndex * 4) by: 4
 		do: [:ptr | 
 			reversed := (self long32At: ptr) bitXor: 4294967295.
@@ -9255,11 +9283,11 @@ Interpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regsPtr J
 		[^false].
 	self storeContextRegisters: activeContext.
 	self justActivateNewMethod.
-	where := activeContext + BaseHeaderSize + (ReceiverIndex << ShiftForWord).
-	self longAt: where + (1 << ShiftForWord) put: self popRemappableOop.
-	self longAt: where + (2 << ShiftForWord) put: self popRemappableOop.
-	self longAt: where + (3 << ShiftForWord) put: self popRemappableOop.
-	self longAt: where + (4 << ShiftForWord) put: self popRemappableOop.
+	where := activeContext + self baseHeaderSize + (ReceiverIndex << self shiftForWord).
+	self longAt: where + (1 << self shiftForWord) put: self popRemappableOop.
+	self longAt: where + (2 << self shiftForWord) put: self popRemappableOop.
+	self longAt: where + (3 << self shiftForWord) put: self popRemappableOop.
+	self longAt: where + (4 << self shiftForWord) put: self popRemappableOop.
 	self interpret.
 	"not reached"
 	^true
@@ -9579,7 +9607,7 @@ Interpreter >> sizeOfSTArrayFromCPrimitive: cPtr [
 
 	| oop |
 	<var: #cPtr type: 'void *'>
-	oop := (self oopForPointer: cPtr) - BaseHeaderSize.
+	oop := (self oopForPointer: cPtr) - self baseHeaderSize.
 	(self isWordsOrBytes: oop) ifFalse: [
 		self primitiveFail.
 		^0].
@@ -9647,8 +9675,8 @@ Interpreter >> snapshotCleanUp [
 					"Clean out context"
 					(fmt = 3 and: [self isContextHeader: header])
 						ifTrue: [sz := self sizeBitsOf: oop.
-							(self lastPointerOf: oop) + BytesPerWord
-								to: sz - BaseHeaderSize by: BytesPerWord
+							(self lastPointerOf: oop) + self wordSize
+								to: sz - self baseHeaderSize by: self wordSize
 								do: [:i | self longAt: oop + i put: nilObj]].
 					"Clean out external functions"
 					fmt >= 12
@@ -9723,13 +9751,13 @@ Interpreter >> stSizeOf: oop [
 { #category : #contexts }
 Interpreter >> stackFloatValue: offset [
 	<returnTypeC: #double>
-	^self floatValueOf: (self longAt: stackPointer - (offset*BytesPerWord))
+	^self floatValueOf: (self longAt: stackPointer - (offset*self wordSize))
 ]
 
 { #category : #contexts }
 Interpreter >> stackIntegerValue: offset [
 	| integerPointer |
-	integerPointer := self longAt: stackPointer - (offset*BytesPerWord).
+	integerPointer := self longAt: stackPointer - (offset*self wordSize).
 	^self checkedIntegerValueOf: integerPointer
 ]
 
@@ -9738,7 +9766,7 @@ Interpreter >> stackObjectValue: offset [
 	"Ensures that the given object is a real object, not a SmallInteger."
 
 	| oop |
-	oop := self longAt: stackPointer - (offset * BytesPerWord).
+	oop := self longAt: stackPointer - (offset * self wordSize).
 	(self isIntegerObject: oop) ifTrue: [self primitiveFail. ^ nil].
 	^ oop
 
@@ -9748,7 +9776,7 @@ Interpreter >> stackObjectValue: offset [
 Interpreter >> stackPointerIndex [
 	"Return the 0-based index rel to the current context.
 	(This is what stackPointer used to be before conversion to pointer"
-	^ (stackPointer - activeContext - BaseHeaderSize) >> ShiftForWord
+	^ (stackPointer - activeContext - self baseHeaderSize) >> self shiftForWord
 ]
 
 { #category : #contexts }
@@ -9758,7 +9786,7 @@ Interpreter >> stackTop [
 
 { #category : #contexts }
 Interpreter >> stackValue: offset [
-	^ self longAt: stackPointer - (offset*BytesPerWord)
+	^ self longAt: stackPointer - (offset*self wordSize)
 ]
 
 { #category : #'stack bytecodes' }
@@ -9815,7 +9843,7 @@ Interpreter >> storeContextRegisters: activeCntx [
 
 	<inline: true>
 	self storePointerUnchecked: InstructionPointerIndex ofObject: activeCntx
-		withValue: (self integerObjectOf: (instructionPointer - method - (BaseHeaderSize - 2))).
+		withValue: (self integerObjectOf: (instructionPointer - method - (self baseHeaderSize - 2))).
 	self storePointerUnchecked: StackPointerIndex ofObject: activeCntx
 		withValue: (self integerObjectOf: (self stackPointerIndex - TempFrameStart + 1)).
 
@@ -9976,12 +10004,12 @@ Interpreter >> transfer: count fromIndex: firstFrom ofObject: fromOop toIndex: f
 	| fromIndex toIndex lastFrom |
 	<inline: true>
 	self flag: #Dan.  "Need to check all senders before converting this for 64 bits"
-	fromIndex := fromOop + (firstFrom * BytesPerWord).
-	toIndex := toOop + (firstTo * BytesPerWord).
-	lastFrom := fromIndex + (count * BytesPerWord).
+	fromIndex := fromOop + (firstFrom * self wordSize).
+	toIndex := toOop + (firstTo * self wordSize).
+	lastFrom := fromIndex + (count * self wordSize).
 	[self oop: fromIndex isLessThan: lastFrom]
-		whileTrue: [fromIndex := fromIndex + BytesPerWord.
-			toIndex := toIndex + BytesPerWord.
+		whileTrue: [fromIndex := fromIndex + self wordSize.
+			toIndex := toIndex + self wordSize.
 			self
 				longAt: toIndex
 				put: (self longAt: fromIndex)]
@@ -10009,7 +10037,7 @@ Interpreter >> transferTo: aProc [
 
 { #category : #contexts }
 Interpreter >> unPop: nItems [
-	stackPointer := stackPointer + (nItems*BytesPerWord)
+	stackPointer := stackPointer + (nItems*self wordSize)
 ]
 
 { #category : #'interpreter shell' }
@@ -10040,7 +10068,7 @@ Interpreter >> wakeHighestPriority [
 Interpreter >> wordSwapped: w [
 	"Return the given 64-bit integer with its halves in the reverse order."
 
-	BytesPerWord = 8 ifFalse: [self error: 'This cannot happen.'].
+	self wordSize = 8 ifFalse: [self error: 'This cannot happen.'].
 	^   ((w bitShift: Byte4ShiftNegated) bitAnd: Bytes3to0Mask)
 	  + ((w bitShift: Byte4Shift         ) bitAnd: Bytes7to4Mask)
 

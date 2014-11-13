@@ -34,6 +34,11 @@ NewObjectMemorySimulator >> arrayValueOf: arrayOop [
 	^coInterpreter arrayValueOf: arrayOop
 ]
 
+{ #category : #'memory access' }
+NewObjectMemorySimulator >> baseHeaderSize [
+	^4
+]
+
 { #category : #'simulation only' }
 NewObjectMemorySimulator >> booleanValueOf: obj [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -64,6 +69,11 @@ NewObjectMemorySimulator >> byteAtPointer: pointer put: byteValue [
 	pointer is a raw address, and byteValue is an 8-bit quantity."
 
 	^ self byteAt: pointer  put: byteValue
+]
+
+{ #category : #'memory access' }
+NewObjectMemorySimulator >> bytesPerOop [
+	^4
 ]
 
 { #category : #'memory access' }
@@ -125,9 +135,9 @@ NewObjectMemorySimulator >> firstIndexableField: oop [
 		["pointer; may need to delve into the class format word"
 		totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
 		fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
-		^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)) to: 'oop *'].
+		^self cCoerce: (self pointerForOop: oop + self baseHeaderSize + (fixedFields << self shiftForWord)) to: 'oop *'].
 	^self
-		cCoerce: (self pointerForOop: oop + BaseHeaderSize)
+		cCoerce: (self pointerForOop: oop + self baseHeaderSize)
 		to: (fmt < self firstByteFormat
 				ifTrue: [fmt = self firstLongFormat
 						ifTrue: ["32 bit field objects" 'int *']
@@ -612,4 +622,9 @@ NewObjectMemorySimulator >> validOop: oop [
 	(self longAt: oop) = 4 ifTrue: [^ false].
 	(self headerType: oop) = 2 ifTrue: [^ false].	"Free object"
 	^ true
+]
+
+{ #category : #'memory access' }
+NewObjectMemorySimulator >> wordSize [
+	^4
 ]

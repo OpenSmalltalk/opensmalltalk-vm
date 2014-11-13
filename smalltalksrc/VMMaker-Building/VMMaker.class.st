@@ -1101,7 +1101,6 @@ VMMaker >> generateCogitFile [
 								ifTrue: [ex rearmHandlerDuring: [ex pass]]
 								ifFalse: [ex pass]]].
 	self needsToRegenerateCogitFile ifFalse: [^nil].
-	cg removeUnneededBuiltins.
 
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
 
@@ -1250,7 +1249,6 @@ VMMaker >> generateInterpreterFile [
 								ifTrue: [ex rearmHandlerDuring: [ex pass]]
 								ifFalse: [ex pass]]].
 	self needsToRegenerateInterpreterFile ifFalse: [^nil].
-	cg removeUnneededBuiltins.
 
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
 

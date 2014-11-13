@@ -116,11 +116,6 @@ Spur64BitMemoryManager >> bytesPerOop [
 	^8
 ]
 
-{ #category : #accessing }
-Spur64BitMemoryManager >> bytesPerSlot [
-	^8
-]
-
 { #category : #'interpreter access' }
 Spur64BitMemoryManager >> changeClassOf: rcvr to: argClass [
 	"Attempt to change the class of the receiver to the argument given that the
@@ -216,10 +211,10 @@ Spur64BitMemoryManager >> fetchClassTagOf: oop [
 Spur64BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 	<inline: true>
 	<var: #p type: #usqInt>
-	self assert: (self oop: objOop + self baseHeaderSize + (numSlots * self bytesPerSlot) - 1
+	self assert: (self oop: objOop + self baseHeaderSize + (numSlots * self bytesPerOop) - 1
 					isLessThan: (self addressAfter: objOop)).
 	(objOop + self baseHeaderSize) asUnsignedInteger
-		to: (objOop + self baseHeaderSize + (numSlots * self bytesPerSlot) - 1) asUnsignedInteger
+		to: (objOop + self baseHeaderSize + (numSlots * self bytesPerOop) - 1) asUnsignedInteger
 		by: self allocationUnit
 		do: [:p| self longAt: p put: fillValue]
 ]
@@ -230,7 +225,7 @@ Spur64BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	| numSlots |
 	"must have room for a header (single or double) plus the next free pointer"
 	self assert: (numBytes \\ self allocationUnit = 0
-				 and: [numBytes >= (self baseHeaderSize + self bytesPerSlot)]).
+				 and: [numBytes >= (self baseHeaderSize + self bytesPerOop)]).
 	"double header"
 	numBytes >= ((self numSlotsMask << self shiftForWord) + self baseHeaderSize) ifTrue:
 		[numSlots := numBytes - self baseHeaderSize - self baseHeaderSize >> self shiftForWord.
@@ -391,7 +386,7 @@ Spur64BitMemoryManager >> largeObjectBytesForSlots: numSlots [
 	"Answer the total number of bytes in an object with an overflow header, including header bytes."
 	<returnTypeC: #usqInt>
 	^self baseHeaderSize + self baseHeaderSize "double header"
-	+ (numSlots * self bytesPerSlot) "no rounding; bytesPerSlot = allocationUnit"
+	+ (numSlots * self bytesPerOop) "no rounding; bytesPerOop = allocationUnit"
 ]
 
 { #category : #accessing }
@@ -598,6 +593,7 @@ Spur64BitMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
 { #category : #'word size' }
 Spur64BitMemoryManager >> shiftForWord [
 	<api>
+	<cmacro: '() 3'>
 	^3
 ]
 
@@ -608,7 +604,7 @@ Spur64BitMemoryManager >> smallObjectBytesForSlots: numSlots [
 	^self baseHeaderSize "single header"
 	+ (numSlots < 1
 		ifTrue: [self allocationUnit] "at least one slot for the forwarding pointer"
-		ifFalse: [numSlots * self bytesPerSlot])
+		ifFalse: [numSlots * self bytesPerOop])
 ]
 
 { #category : #'word size' }

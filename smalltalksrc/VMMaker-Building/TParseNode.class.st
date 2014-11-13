@@ -347,6 +347,16 @@ TParseNode >> noneSatisfy: aBlock unless: cautionaryBlock [
 	^true
 ]
 
+{ #category : #enumerating }
+TParseNode >> occurrencesOf: aNode [
+	| count |
+	count := 0.
+	self nodesDo:
+		[:node|
+		node = aNode ifTrue: [count := count + 1]].
+	^count
+]
+
 { #category : #printing }
 TParseNode >> printOn: aStream [ 
 	"Append a description of the receiver onto the given stream."

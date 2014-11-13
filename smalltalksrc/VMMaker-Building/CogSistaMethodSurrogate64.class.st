@@ -12,9 +12,8 @@ CogSistaMethodSurrogate64 class >> alignedByteSize [
 { #category : #accessing }
 CogSistaMethodSurrogate64 class >> offsetOf: aByteSymbol [
 	"These should be generated!!"
-	self assert: self objectMemoryClass baseHeaderSize = BaseHeaderSize.
 	^aByteSymbol == #counters
-		ifTrue: [32 + BaseHeaderSize]
+		ifTrue: [32 + self objectMemoryClass baseHeaderSize]
 		ifFalse: [super offsetOf: aByteSymbol]
 ]
 

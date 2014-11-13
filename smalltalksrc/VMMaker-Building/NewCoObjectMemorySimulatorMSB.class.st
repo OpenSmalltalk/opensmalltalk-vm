@@ -7,7 +7,7 @@ Class {
 { #category : #'memory access' }
 NewCoObjectMemorySimulatorMSB >> byteAt: byteAddress [
 	| lowBits bpwMinus1 |
-	bpwMinus1 := BytesPerWord-1.
+	bpwMinus1 := self wordSize-1.
 	lowBits := byteAddress bitAnd: bpwMinus1.
 	^ ((self longAt: byteAddress - lowBits)
 		bitShift: (lowBits - bpwMinus1) * 8)
@@ -17,7 +17,7 @@ NewCoObjectMemorySimulatorMSB >> byteAt: byteAddress [
 { #category : #'memory access' }
 NewCoObjectMemorySimulatorMSB >> byteAt: byteAddress put: byte [
 	| longWord shift lowBits bpwMinus1 longAddress |
-	bpwMinus1 := BytesPerWord-1.
+	bpwMinus1 := self wordSize-1.
 	lowBits := byteAddress bitAnd: bpwMinus1.
 	longAddress := byteAddress - lowBits.
 	longWord := self longAt: longAddress.
@@ -32,7 +32,7 @@ NewCoObjectMemorySimulatorMSB >> byteAt: byteAddress put: byte [
 
 { #category : #'debug support' }
 NewCoObjectMemorySimulatorMSB >> charsOfLong: long [
-	^ (BytesPerWord to: 1 by: -1) collect:
+	^ (self wordSize to: 1 by: -1) collect:
 		[:i | ((long digitAt: i) between: 14 and: 126)
 					ifTrue: [(long digitAt: i) asCharacter]
 					ifFalse: [$?]]
@@ -62,7 +62,7 @@ NewCoObjectMemorySimulatorMSB >> halfWordLowInLong32: long32 [
 NewCoObjectMemorySimulatorMSB >> nextLongFrom: aStream [
 	"Read a 32- or 64-bit quantity from the given (binary) stream."
 
-	^ aStream nextNumber: BytesPerWord
+	^ aStream nextNumber: self wordSize
 ]
 
 { #category : #'image save/restore' }
@@ -93,7 +93,7 @@ NewCoObjectMemorySimulatorMSB >> putShort: n toFile: f [
 NewCoObjectMemorySimulatorMSB >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
 	| lowBits bpwMinus2 |
-	bpwMinus2 := BytesPerWord-2.
+	bpwMinus2 := self wordSize-2.
 	lowBits := byteAddress bitAnd: bpwMinus2.
 	^ ((self longAt: byteAddress - lowBits)
 		bitShift: (lowBits - bpwMinus2) * 8)
@@ -105,7 +105,7 @@ NewCoObjectMemorySimulatorMSB >> shortAt: byteAddress [
 NewCoObjectMemorySimulatorMSB >> shortAt: byteAddress put: a16BitValue [
     "Return the half-word at byteAddress which must be even."
 	| longWord shift lowBits bpwMinus2 longAddress |
-	bpwMinus2 := BytesPerWord-2.
+	bpwMinus2 := self wordSize-2.
 	lowBits := byteAddress bitAnd: bpwMinus2.
 	longAddress := byteAddress - lowBits.
 	longWord := self longAt: longAddress.
