@@ -3468,7 +3468,7 @@ CCodeGenerator >> methodsThatCanInvoke: aSelectorList [
 { #category : #accessing }
 CCodeGenerator >> mostBasicConstantSelectors [
 	"c.f. VMBasicConstants class>>#mostBasicConstantNames"
-	^#(baseHeaderSize bytesPerOop bytesPerWord wordSize)
+	^#(baseHeaderSize bytesPerOop bytesPerWord shiftForWord wordSize)
 ]
 
 { #category : #'C code generator' }

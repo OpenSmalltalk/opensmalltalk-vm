@@ -59,6 +59,14 @@ TSendNode >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in:
 	 e.g. currentBytecode bitAnd: 15 is the same in case 1 and case 17, but '1 /* 1 bitAnd: 15 */' differs
 	 from '1 /* 17 bitAnd: 15 */', whereas '1 /* currentBytecode bitAnd: 15 */' doesn't change."
 	| newReceiver newArguments |
+	"Constant-fold shiftForWord, but not BytesPerWord"
+	((codeGen mostBasicConstantSelectors includes: selector)
+	 and: [(codeGen isBuiltinSelector: selector) not]) ifTrue:
+		[codeGen isConstantNode: self valueInto:
+			[:val|
+			 ^TConstantNode new
+				setValue: val;
+				yourself]].
 	newReceiver := receiver bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen.
 	newArguments := arguments collect: [:a| a bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen].
 	(newReceiver = receiver
