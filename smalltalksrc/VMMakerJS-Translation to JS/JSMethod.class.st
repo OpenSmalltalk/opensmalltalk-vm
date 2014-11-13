@@ -325,7 +325,8 @@ JSMethod >> emitJSCodeOn: aStream generator: aCodeGen [
 	aCodeGen pushScope: declarations while: [
 		self emitJSCommentOn: aStream.	"place method comment before function"
 		self emitJSHeaderOn: aStream generator: aCodeGen.
-		parseTree emitJSCodeOn: aStream level: 1 generator: aCodeGen.
+		(self emitJSSpecialOn:  aStream level: 1 generator: aCodeGen)
+			ifFalse: [parseTree emitJSCodeOn: aStream level: 1 generator: aCodeGen].
 		aStream nextPutAll: '}'; cr]
 ]
 
@@ -399,6 +400,27 @@ JSMethod >> emitJSHeaderOn: aStream generator: aCodeGen [
 	(#(primitiveExtractChannel primitiveCondenseSound) includes: selector)
 		ifTrue: [#(src dst) do: [:v | aStream nextPutAll: '	var _', v, ' = 0;'; cr]].
 	locals isEmpty ifFalse: [ aStream cr ].
+]
+
+{ #category : #'JS hacks' }
+JSMethod >> emitJSSpecialOn: aStream level: level generator: aCodeGen [
+	| expr type |
+	aCodeGen pluginName = 'B2DPlugin' ifFalse: [^false].
+	(returnType includes: $*) ifFalse: [^false].
+	parseTree statements first isReturn ifFalse: [^false].
+	expr := parseTree statements first expression.
+	expr isSend ifFalse: [^false].
+	type := returnType.
+	expr selector = #cCoerce:to: ifTrue: [
+		type = expr args second value ifFalse: [self halt].
+		expr := expr args first.
+	].
+	expr selector = #+ ifFalse: [^false].
+	aStream tab: level; nextPutAll: 'return '.
+	expr emitJSPointerArithmetic: type on: aStream level: level generator: aCodeGen type: type top: true.
+	aStream nextPutAll: ';'; cr. 
+	^true
+
 ]
 
 { #category : #'JS code generation' }
