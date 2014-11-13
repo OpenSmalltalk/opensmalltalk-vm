@@ -5708,7 +5708,6 @@ ObjectMemory >> whereIsMaybeHeapThing: anOop [
 
 { #category : #'interpreter access' }
 ObjectMemory >> wordSize [
-	"Answer the width of an object pointer, in bytes."
-
-	^self wordSize
+	"Answer the manager's word size, which is assumed to be equivalent to the underlying machine's word size."
+	^4
 ]

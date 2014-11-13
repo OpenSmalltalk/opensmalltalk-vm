@@ -14,6 +14,8 @@ Spur64BitMemoryManager class >> isImmediate: anObject [
 
 { #category : #'word size' }
 Spur64BitMemoryManager class >> wordSize [
+	"Answer the manager's word size, which is the size of an oop, and which
+	 is assumed to be equivalent to the underlying machine's word size."
 	^8
 ]
 
@@ -620,6 +622,8 @@ Spur64BitMemoryManager >> wordIndexableFormat [
 
 { #category : #'word size' }
 Spur64BitMemoryManager >> wordSize [
+	"Answer the manager's word size, which is the size of an oop, and which
+	 is assumed to be equivalent to the underlying machine's word size."
 	<cmacro: '() 8'>
 	^8
 ]
