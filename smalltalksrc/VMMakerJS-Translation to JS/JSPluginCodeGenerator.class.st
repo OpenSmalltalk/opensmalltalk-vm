@@ -92,6 +92,8 @@ JSPluginCodeGenerator >> ignoredMethods [
 	pluginName = 'ScratchPlugin' ifTrue: [
 			^(ScratchPlugin organization listAtCategoryNamed: 'serial port'), 
 				(ScratchPlugin organization listAtCategoryNamed: 'os functions')].
+	pluginName = 'B2DPlugin' ifTrue: [
+		^self translatedMethodsB2DPlugin collect: [:ea | ea key]].
 	^super ignoredMethods
 ]
 
@@ -115,6 +117,16 @@ JSPluginCodeGenerator >> localizeGlobalVariables [
 ]
 
 { #category : #public }
+JSPluginCodeGenerator >> overrideJSTranslationDictionary [
+	| sel |
+	sel := (#translatedMethods, self pluginName) asSymbol.
+	(self respondsTo: sel) ifFalse: [^self].
+	(self perform: sel) associationsDo: [:assoc |
+		translationDict at: assoc key put: assoc value].
+
+]
+
+{ #category : #public }
 JSPluginCodeGenerator >> pluginName [
 	^pluginName
 ]
@@ -124,4 +136,15 @@ JSPluginCodeGenerator >> pluginName: aString [
 "TPR - moved from JSCodeGenerator"
 	"Set the plugin name when generating plugins."
 	pluginName := aString.
+	self overrideJSTranslationDictionary.
+]
+
+{ #category : #public }
+JSPluginCodeGenerator >> translatedMethodsB2DPlugin [
+	"see senders of translatedMethods"
+	^{
+		#makeUnsignedFrom: -> #generateMakeUnsignedFrom:on:indent:.
+		#loadPointIntAt:from: -> #generateLoadPointInt:on:indent:.
+		#loadPointShortAt:from: -> #generateLoadPointShort:on:indent:.
+	}
 ]
