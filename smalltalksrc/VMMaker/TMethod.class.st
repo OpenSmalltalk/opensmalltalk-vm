@@ -1535,14 +1535,16 @@ TMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: aCod
 			ifTrue: [] ifFalse:
 		[node isSend
 			ifTrue:
-				[node isBuiltinOperator ifFalse: [^false].
+				[((aCodeGen mostBasicConstantSelectors includes: node selector)
+				  or: [node isBuiltinOperator]) ifFalse: [^false].
 				 count := count + 1] ifFalse:
 		[node isVariable ifTrue:
-			[constantExpression := false.
-			((locals includes: node name) or:
-			 [(args includes: node name) or:
-			 [(#('self' 'true' 'false' 'nil') includes: node name) or:
-			 [targetMeth maySubstituteGlobal: node name in: aCodeGen]]]) ifFalse: [^false]] ifFalse:
+			[(aCodeGen isNonArgumentImplicitReceiverVariableName: node name) ifFalse:
+				[constantExpression := false.
+				((locals includes: node name)
+				 or: [(args includes: node name)
+				 or: [(#('self' 'true' 'false' 'nil') includes: node name)
+				 or: [targetMeth maySubstituteGlobal: node name in: aCodeGen]]]) ifFalse: [^false]]] ifFalse:
 		[^false]]]].
 	"inline constant expressions"
 	constantExpression ifNil: [^true].
