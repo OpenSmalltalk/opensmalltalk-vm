@@ -576,7 +576,7 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	 bridge := bridgehead + manager baseHeaderSize.
 	 bridgeSpan := (manager rawNumSlotsOf: bridgehead) = 0
 						ifTrue: [0]
-						ifFalse: [manager bytesPerSlot * (manager rawOverflowSlotsOf: bridge)].
+						ifFalse: [manager bytesPerOop * (manager rawOverflowSlotsOf: bridge)].
 	 oldBase := oldBase + nextSegmentSize + bridgeSpan.
 	 newBase := newBase + nextSegmentSize - manager bridgeSize.
 	 nextSegmentSize := manager long64At: bridge.

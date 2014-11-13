@@ -619,7 +619,7 @@ InterpreterPrimitives >> primitiveBeCursor [
 				self success: ((offsetX >= (extentX * -1)) and: [offsetX <= 0]).
 				self success: ((offsetY >= (extentY * -1)) and: [offsetY <= 0]).
 				self success: ((objectMemory isWords: bitsObj) and: [(objectMemory lengthOf: bitsObj) = (extentX * extentY)]).
-				cursorBitsIndex := bitsObj + BaseHeaderSize.
+				cursorBitsIndex := bitsObj + objectMemory baseHeaderSize.
 				self cCode: '' inSmalltalk:
 					[ourCursor := Cursor
 						extent: extentX @ extentY
@@ -1111,7 +1111,7 @@ InterpreterPrimitives >> primitiveConstantFill [
 	rcvrIsBytes ifTrue: [self success: (fillValue >= 0 and: [fillValue <= 255])].
 	self successful ifTrue:
 		[end := rcvr + (objectMemory sizeBitsOf: rcvr).
-		i := rcvr + BaseHeaderSize.
+		i := rcvr + objectMemory baseHeaderSize.
 		rcvrIsBytes
 			ifTrue: [[i < end] whileTrue:
 						[objectMemory byteAt: i put: fillValue.
@@ -1679,7 +1679,7 @@ InterpreterPrimitives >> primitiveGetAttribute [
 						indexableSize: sz.
 			self
 				getAttribute: attr
-				Into: s + BaseHeaderSize
+				Into: s + objectMemory baseHeaderSize
 				Length: sz.
 			self pop: 2 thenPush: s]
 ]
@@ -1878,13 +1878,13 @@ InterpreterPrimitives >> primitiveImageName [
 		self assertClassOf: s is: (objectMemory splObj: ClassByteString).
 		self successful ifTrue: [
 			sz := self stSizeOf: s.
-			self imageNamePut: (s + BaseHeaderSize) Length: sz.
+			self imageNamePut: (s + objectMemory baseHeaderSize) Length: sz.
 			self pop: 1.  "pop s, leave rcvr on stack"
 		].
 	] ifFalse: [
 		sz := self imageNameSize.
 		s := objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: sz.
-		self imageNameGet: (s + BaseHeaderSize) Length: sz.
+		self imageNameGet: (s + objectMemory baseHeaderSize) Length: sz.
 		self pop: 1.  "rcvr"
 		self push: s.
 	]
@@ -2668,7 +2668,7 @@ InterpreterPrimitives >> primitiveObjectPointsTo [
 		[^self pop: 2 thenPushBool: false].
 
 	lastField := self lastPointerOf: rcvr.
-	BaseHeaderSize to: lastField by: BytesPerWord do:
+	objectMemory baseHeaderSize to: lastField by: objectMemory wordSize do:
 		[:i |
 		(self longAt: rcvr + i) = thang ifTrue:
 			[^self pop: 2 thenPushBool: true]].
@@ -3791,7 +3791,7 @@ InterpreterPrimitives >> primitiveVMPath [
 	| s sz |
 	sz := self vmPathSize.
 	s := objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: sz.
-	self vmPathGet: (s + BaseHeaderSize) Length: sz.
+	self vmPathGet: (s + objectMemory baseHeaderSize) Length: sz.
 	self pop: 1 thenPush: s.
 
 ]
@@ -4096,7 +4096,7 @@ InterpreterPrimitives >> signedMachineIntegerValueOf: oop [
 InterpreterPrimitives >> sizeFieldOfAlien: alienObj [
 	"Answer the first field of alienObj which is assumed to be an Alien of at least 8 bytes"
 	<inline: true>
-	^self longAt: alienObj + BaseHeaderSize
+	^self longAt: alienObj + objectMemory baseHeaderSize
 ]
 
 { #category : #'primitive support' }
@@ -4121,8 +4121,8 @@ InterpreterPrimitives >> startOfAlienData: oop [
 		[self primitiveFailFor: PrimErrBadArgument.
 		 ^0].
 	^self cCoerceSimple: ((self isDirectAlien: oop)
-						 	ifTrue: [oop + BaseHeaderSize + BytesPerOop]
-							ifFalse: [self longAt: oop + BaseHeaderSize + BytesPerOop])
+						 	ifTrue: [oop + objectMemory baseHeaderSize + objectMemory bytesPerOop]
+							ifFalse: [self longAt: oop + objectMemory baseHeaderSize + objectMemory bytesPerOop])
 			to: #'void *'
 ]
 

@@ -224,7 +224,7 @@ StackInterpreterPrimitives >> primitiveClosureCopyWithCopiedValues [
 					closureIn: (self stackValue: 2)
 					numArgs: numArgs
 							"greater by 1 due to preIncrement of localIP"
-					instructionPointer: instructionPointer + 2 - (method+BaseHeaderSize)
+					instructionPointer: instructionPointer + 2 - (method+objectMemory baseHeaderSize)
 					copiedValues: self stackTop.
 	self pop: 3 thenPush: newClosure
 ]
@@ -447,9 +447,9 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 	functionLength := objectMemory lengthOf: functionName.
 	self successful ifFalse: [^self primitiveFailFor: -3]. "invalid methodArg state"
 
-	addr := self ioLoadExternalFunction: functionName + BaseHeaderSize
+	addr := self ioLoadExternalFunction: functionName + objectMemory baseHeaderSize
 				OfLength: functionLength
-				FromModule: moduleName + BaseHeaderSize
+				FromModule: moduleName + objectMemory baseHeaderSize
 				OfLength: moduleLength.
 	addr = 0 ifTrue:
 		[^self primitiveFailFor: -1]. "could not find function; answer generic failure (see below)"
@@ -622,19 +622,18 @@ StackInterpreterPrimitives >> primitiveExternalCall [
 	| lit addr moduleName functionName moduleLength functionLength accessorDepth index |
 	<var: #addr declareC: 'void (*addr)()'>
 	
-	"Fetch the first literal of the method"
-	(objectMemory literalCountOf: newMethod) > 0 ifFalse:
+	"Check for it being a method for primitiveDoPrimitiveWithArgs.
+	 Fetch the first literal of the method; check its an Array of length 4.
+	 Look at the function index in case it has been loaded before"
+	((objectMemory isOopCompiledMethod: newMethod)
+	 and: [(objectMemory literalCountOf: newMethod) > 0
+	 and: [lit := self literal: 0 ofMethod: newMethod.
+		(objectMemory isArray: lit)
+	 and: [(objectMemory numSlotsOf: lit) = 4
+	 and: [index := objectMemory fetchPointer: 3 ofObject: lit.
+		objectMemory isIntegerObject: index]]]]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadMethod].
 
-	lit := self literal: 0 ofMethod: newMethod. 
-	"Check if it's an array of length 4"
-	((objectMemory isArray: lit) and: [(objectMemory lengthOf: lit) = 4]) ifFalse:
-		[^self primitiveFailFor: PrimErrBadMethod].
-
-	"Look at the function index in case it has been loaded before"
-	index := objectMemory fetchPointer: 3 ofObject: lit.
-	(objectMemory isIntegerObject: index) ifFalse:
-		[^self primitiveFailFor: PrimErrBadMethod].
 	index := objectMemory integerValueOf: index.
 	"Check if we have already looked up the function and failed."
 	index < 0 ifTrue:
@@ -675,9 +674,9 @@ StackInterpreterPrimitives >> primitiveExternalCall [
 	"Spur needs to know the primitive's accessorDepth which is stored in the last slot of the first literal."
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
-			[addr := self ioLoadExternalFunction: functionName + BaseHeaderSize
+			[addr := self ioLoadExternalFunction: functionName + objectMemory baseHeaderSize
 						OfLength: functionLength
-						FromModule: moduleName + BaseHeaderSize
+						FromModule: moduleName + objectMemory baseHeaderSize
 						OfLength: moduleLength
 						AccessorDepthInto: (self addressOf: accessorDepth
 												 put: [:val| accessorDepth := val]).
@@ -690,9 +689,9 @@ StackInterpreterPrimitives >> primitiveExternalCall [
 						ofObject: lit
 						withValue: (objectMemory integerObjectOf: accessorDepth)]]
 		ifFalse:
-			[addr := self ioLoadExternalFunction: functionName + BaseHeaderSize
+			[addr := self ioLoadExternalFunction: functionName + objectMemory baseHeaderSize
 						OfLength: functionLength
-						FromModule: moduleName + BaseHeaderSize
+						FromModule: moduleName + objectMemory baseHeaderSize
 						OfLength: moduleLength.
 			 addr = 0
 				ifTrue: [index := -1]
@@ -969,10 +968,10 @@ StackInterpreterPrimitives >> primitiveObjectPointsTo [
 			methodHeader = thang ifTrue: [^self pop: 2 thenPushBool: true].
 			numSlots := (objectMemory literalCountOfMethodHeader: methodHeader) + LiteralStart].
 
-	self assert: numSlots - 1 * BytesPerOop + objectMemory baseHeaderSize = (objectMemory lastPointerOf: rcvr).
+	self assert: numSlots - 1 * objectMemory bytesPerOop + objectMemory baseHeaderSize = (objectMemory lastPointerOf: rcvr).
 	objectMemory baseHeaderSize
-		to: numSlots - 1 * BytesPerOop + objectMemory baseHeaderSize
-		by: BytesPerOop
+		to: numSlots - 1 * objectMemory bytesPerOop + objectMemory baseHeaderSize
+		by: objectMemory bytesPerOop
 		do: [:i|
 			(self longAt: rcvr + i) = thang ifTrue:
 				[^self pop: 2 thenPushBool: true]].
@@ -995,8 +994,8 @@ StackInterpreterPrimitives >> primitivePerform [
 	argumentCount to: 1 by: -1 do:
 		[:i|
 		stackPages
-			longAt: stackPointer + (i * BytesPerWord)
-			put: (stackPages longAt: stackPointer + ((i - 1) * BytesPerWord))].
+			longAt: stackPointer + (i * objectMemory wordSize)
+			put: (stackPages longAt: stackPointer + ((i - 1) * objectMemory wordSize))].
 	self pop: 1.
 	lookupClassTag := objectMemory fetchClassTagOf: newReceiver.
 	self sendBreakpoint: messageSelector receiver: newReceiver.
@@ -1012,9 +1011,9 @@ StackInterpreterPrimitives >> primitivePerform [
 		self unPop: 1.
 		1 to: argumentCount by: 1 do:
 			[:i |
-			stackPages longAt: stackPointer + ((i - 1) * BytesPerWord)
-				put: (stackPages longAt: stackPointer + (i * BytesPerWord))].
-		stackPages longAt: stackPointer + (argumentCount * BytesPerWord) put: messageSelector.
+			stackPages longAt: stackPointer + ((i - 1) * objectMemory wordSize)
+				put: (stackPages longAt: stackPointer + (i * objectMemory wordSize))].
+		stackPages longAt: stackPointer + (argumentCount * objectMemory wordSize) put: messageSelector.
 		argumentCount := argumentCount + 1.
 		newMethod := performMethod.
 		^self primitiveFail].
@@ -1100,7 +1099,7 @@ StackInterpreterPrimitives >> primitiveStoreStackp [
 	ctxt := self stackValue: 1.
 	newStackp := self stackIntegerValue: 0.
 	(self successful
-	 and: [newStackp between: 0 and: (objectMemory lengthOf: ctxt)]) ifFalse:
+	 and: [newStackp between: 0 and: (objectMemory numSlotsOf: ctxt) - CtxtTempFrameStart]) ifFalse:
 		[^self primitiveFail].
 	self externalWriteBackHeadFramePointers.
 	(self isStillMarriedContext: ctxt) ifTrue:
@@ -1174,12 +1173,12 @@ StackInterpreterPrimitives >> primitiveTerminateTo [
 					 frameAbove := self findFrameAbove: contextsFP inPage: pageToStopOn.
 					 contextsIP := (self frameCallerSavedIP: frameAbove) asUnsignedInteger.
 					 newSP := self frameCallerSP: frameAbove.
-					 newFP := newSP - stackedReceiverOffset - BytesPerWord.
+					 newFP := newSP - stackedReceiverOffset - objectMemory wordSize.
 					 theFP + stackedReceiverOffset
 						to: stackPointer
-						by: BytesPerWord negated
+						by: objectMemory wordSize negated
 						do: [:source|
-							newSP := newSP - BytesPerWord.
+							newSP := newSP - objectMemory wordSize.
 							stackPages longAt: newSP put: (stackPages longAt: source)].
 					 stackPages longAt: newFP + FoxSavedFP put: contextsFP.
 					 stackPages longAt: newFP + FoxCallerSavedIP put: contextsIP.
@@ -1263,7 +1262,7 @@ StackInterpreterPrimitives >> primitiveTerminateTo [
 									  and we're done."
 									 frameAbove := self findFrameAbove: contextsFP inPage: thePage.
 									 frameAbove ~= 0 ifTrue:
-										[contextsSP := (self frameCallerSP: frameAbove) - BytesPerWord.
+										[contextsSP := (self frameCallerSP: frameAbove) - objectMemory wordSize.
 										 stackPages longAt: contextsSP put: (self frameCallerSavedIP: frameAbove).
 										 self setHeadFP: contextsFP andSP: contextsSP inPage: thePage].
 									 currentCtx := aContextOrNil]
@@ -1404,7 +1403,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 36	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statSpecialMarkCount).
 		objectMemory storePointerUnchecked: 37	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statIGCDeltaUsecs + 500 // 1000).
 		objectMemory storePointerUnchecked: 38	ofObject: result withValue: (objectMemory integerObjectOf: statPendingFinalizationSignals).
-		objectMemory storePointerUnchecked: 39	ofObject: result withValue: (objectMemory integerObjectOf: BytesPerWord).
+		objectMemory storePointerUnchecked: 39	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory wordSize).
 		objectMemory storePointerUnchecked: 40	ofObject: result withValue: (objectMemory integerObjectOf: self imageFormatVersion).
 		objectMemory storePointerUnchecked: 41	ofObject: result withValue: (objectMemory integerObjectOf: numStackPages).
 		objectMemory storePointerUnchecked: 42	ofObject: result withValue: (objectMemory integerObjectOf: desiredNumStackPages).
@@ -1487,7 +1486,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 37	ifTrue: [result := objectMemory integerObjectOf: objectMemory statSpecialMarkCount].
 		arg = 38	ifTrue: [result := objectMemory integerObjectOf: objectMemory statIGCDeltaUsecs + 500 // 1000].
 		arg = 39	ifTrue: [result := objectMemory integerObjectOf: statPendingFinalizationSignals].
-		arg = 40	ifTrue: [result := objectMemory integerObjectOf: BytesPerWord].
+		arg = 40	ifTrue: [result := objectMemory integerObjectOf: objectMemory wordSize].
 		arg = 41	ifTrue: [result := objectMemory integerObjectOf: self imageFormatVersion].
 		arg = 42	ifTrue: [result := objectMemory integerObjectOf: numStackPages].
 		arg = 43	ifTrue: [result := objectMemory integerObjectOf: desiredNumStackPages].

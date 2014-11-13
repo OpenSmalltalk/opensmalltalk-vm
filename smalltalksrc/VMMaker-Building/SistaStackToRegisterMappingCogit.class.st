@@ -293,7 +293,7 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	counterIndex := counterIndex + 1.
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
-	self assert: BytesPerWord = CounterBytes.
+	self assert: objectMemory wordSize = CounterBytes.
 	retry := self MoveAw: counterAddress R: SendNumArgsReg.
 	self SubCq: 16r10000 R: SendNumArgsReg. "Count executed"
 	"Don't write back if we trip; avoids wrapping count back to initial value, and if we trip we don't execute."
@@ -467,7 +467,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	self ssAllocateRequiredReg: SendNumArgsReg. "Use this as the count reg."
 	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
-	self assert: BytesPerWord = CounterBytes.
+	self assert: objectMemory wordSize = CounterBytes.
 	self MoveAw: counterAddress R: SendNumArgsReg.
 	self SubCq: 16r10000 R: SendNumArgsReg. "Count executed"
 	"If counter trips simply abort the inlined comparison and send continuing to the following
@@ -534,7 +534,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	self ssAllocateRequiredReg: SendNumArgsReg. "Use this as the count reg."
 	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
-	self assert: BytesPerWord = CounterBytes.
+	self assert: objectMemory wordSize = CounterBytes.
 	self MoveAw: counterAddress R: SendNumArgsReg.
 	self SubCq: 16r10000 R: SendNumArgsReg. "Count executed"
 	"If counter trips simply abort the inlined comparison and send continuing to the following
@@ -575,7 +575,7 @@ SistaStackToRegisterMappingCogit >> getJumpTargetPCAt: pc [
 { #category : #initialization }
 SistaStackToRegisterMappingCogit >> initialize [
 	super initialize.
-	cogMethodSurrogateClass := BytesPerWord = 4
+	cogMethodSurrogateClass := objectMemory wordSize = 4
 											ifTrue: [CogSistaMethodSurrogate32]
 											ifFalse: [CogSistaMethodSurrogate64]
 ]

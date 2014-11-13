@@ -1,6 +1,6 @@
 Class {
 	#name : #CoInterpreterStackPagesLSB,
-	#superclass : #CoInterpreterStackPagesSimulator,
+	#superclass : #CoInterpreterStackPages,
 	#category : #'VMMaker-JITSimulation'
 }
 

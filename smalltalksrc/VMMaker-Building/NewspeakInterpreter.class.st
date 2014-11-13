@@ -1125,29 +1125,29 @@ NewspeakInterpreter >> activateNewClosureMethod: blockClosure [
 
 	"Assume: newContext will be recorded as a root if necessary by the
 	 call to newActiveContext: below, so we can use unchecked stores."
-	where :=  newContext + BaseHeaderSize.
-	self longAt: where + (SenderIndex << ShiftForWord)
+	where :=  newContext + self baseHeaderSize.
+	self longAt: where + (SenderIndex << self shiftForWord)
 		put: activeContext.
-	self longAt: where + (InstructionPointerIndex << ShiftForWord)
+	self longAt: where + (InstructionPointerIndex << self shiftForWord)
 		put: (self fetchPointer: ClosureStartPCIndex ofObject: theBlockClosure).
-	self longAt: where + (StackPointerIndex << ShiftForWord)
+	self longAt: where + (StackPointerIndex << self shiftForWord)
 		put: (self integerObjectOf: argumentCount + numCopied).
-	self longAt: where + (MethodIndex << ShiftForWord)
+	self longAt: where + (MethodIndex << self shiftForWord)
 		put: (self fetchPointer: MethodIndex ofObject: outerContext).
-	self longAt: where + (ClosureIndex << ShiftForWord)
+	self longAt: where + (ClosureIndex << self shiftForWord)
 		put: theBlockClosure.
-	self longAt: where + (ReceiverIndex << ShiftForWord)
+	self longAt: where + (ReceiverIndex << self shiftForWord)
 		put: (self fetchPointer: ReceiverIndex ofObject: outerContext).
 
 	"Copy the arguments..."
 	1 to: argumentCount do:
-		[:i | self longAt: where + ((ReceiverIndex+i) << ShiftForWord)
+		[:i | self longAt: where + ((ReceiverIndex+i) << self shiftForWord)
 				put: (self stackValue: argumentCount-i)].
 
 	"Copy the copied values..."
-	where := newContext + BaseHeaderSize + ((ReceiverIndex + 1 + argumentCount) << ShiftForWord).
+	where := newContext + self baseHeaderSize + ((ReceiverIndex + 1 + argumentCount) << self shiftForWord).
 	0 to: numCopied - 1 do:
-		[:i| self longAt: where + (i << ShiftForWord)
+		[:i| self longAt: where + (i << self shiftForWord)
 				put: (self fetchPointer: i + ClosureFirstCopiedValueIndex
 						  ofObject: theBlockClosure)].
 
@@ -1164,27 +1164,27 @@ NewspeakInterpreter >> activateNewMethod [
 	methodHeader := self methodHeaderOf: newMethod.
 	newContext := self allocateOrRecycleContext: (methodHeader bitAnd: LargeContextBit).
 
-	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * BytesPerWord) + 1.
+	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * self wordSize) + 1.
 	tempCount := (methodHeader >> 19) bitAnd: 16r3F.
 
 	"Assume: newContext will be recorded as a root if necessary by the
 	 call to newActiveContext: below, so we can use unchecked stores."
 
-	where :=  newContext  + BaseHeaderSize.
-	self longAt: where + (SenderIndex << ShiftForWord) put: activeContext.
-	self longAt: where + (InstructionPointerIndex << ShiftForWord) put: (self integerObjectOf: initialIP).
-	self longAt: where + (StackPointerIndex << ShiftForWord) put: (self integerObjectOf: tempCount).
-	self longAt: where + (MethodIndex << ShiftForWord) put: newMethod.
-	self longAt: where + (ClosureIndex << ShiftForWord) put: nilObj.
+	where :=  newContext  + self baseHeaderSize.
+	self longAt: where + (SenderIndex << self shiftForWord) put: activeContext.
+	self longAt: where + (InstructionPointerIndex << self shiftForWord) put: (self integerObjectOf: initialIP).
+	self longAt: where + (StackPointerIndex << self shiftForWord) put: (self integerObjectOf: tempCount).
+	self longAt: where + (MethodIndex << self shiftForWord) put: newMethod.
+	self longAt: where + (ClosureIndex << self shiftForWord) put: nilObj.
 
 	"Copy the receiver and arguments..."
 	0 to: argumentCount do:
-		[:i | self longAt: where + ((ReceiverIndex+i) << ShiftForWord) put: (self stackValue: argumentCount-i)].
+		[:i | self longAt: where + ((ReceiverIndex+i) << self shiftForWord) put: (self stackValue: argumentCount-i)].
 
 	"clear remaining temps to nil in case it has been recycled"
 	nilOop := nilObj.
 	argumentCount+1+ReceiverIndex to: tempCount+ReceiverIndex do:
-		[:i | self longAt: where + (i << ShiftForWord) put: nilOop].
+		[:i | self longAt: where + (i << self shiftForWord) put: nilOop].
 
 	"Pass primitive error code to last temp if method receives it (indicated
 	 by an initial long store temp bytecode).  Protect against obsolete values
@@ -1193,7 +1193,7 @@ NewspeakInterpreter >> activateNewMethod [
 		[((self primitiveIndexOfMethodHeader: methodHeader) > 0
 		   and: [(self fetchByte: initialIP - 1 ofObject: newMethod) = 129 "long store temp"]) ifTrue:
 			[errorCode := self fetchPointer: primFailCode - 1 ofObject: (self splObj: PrimErrTableIndex).
-			 self longAt: where + ((tempCount+ReceiverIndex) << ShiftForWord)
+			 self longAt: where + ((tempCount+ReceiverIndex) << self shiftForWord)
 				put: errorCode "nil if primFailCode == 1, or primFailCode"].
 		primFailCode := 0].
 
@@ -1391,7 +1391,7 @@ NewspeakInterpreter >> arrayValueOf: arrayOop [
 	<returnTypeC: #'void *'>
 	((self isNonIntegerObject: arrayOop)
 	 and: [self isWordsOrBytes: arrayOop]) ifTrue:
-		[^self cCoerceSimple: (self pointerForOop: arrayOop + BaseHeaderSize) to: #'void *'].
+		[^self cCoerceSimple: (self pointerForOop: arrayOop + self baseHeaderSize) to: #'void *'].
 	self primitiveFail
 ]
 
@@ -1410,7 +1410,6 @@ NewspeakInterpreter >> assertClassOf: oop is: classOop [
 	"Succeed if the given (non-integer) object is an instance of the given class. Fail if the object is an integer."
 
 	<inline: true>
-	<asmLabel: false>
 	self success: (self isClassOfNonImm: oop equalTo: classOop)
 ]
 
@@ -1542,15 +1541,15 @@ NewspeakInterpreter >> byteSwapByteObjectsFrom: startOop to: stopAddr [
 				ifFalse: [fmt := self formatOf: oop.
 					fmt >= 8
 						ifTrue: ["oop contains bytes"
-							wordAddr := oop + BaseHeaderSize.
+							wordAddr := oop + self baseHeaderSize.
 							fmt >= 12
 								ifTrue: ["compiled method; start after methodHeader and literals"
-									methodHeader := self longAt: oop + BaseHeaderSize.
-									wordAddr := wordAddr + BytesPerWord + ((methodHeader >> 10 bitAnd: 255) * BytesPerWord)].
+									methodHeader := self longAt: oop + self baseHeaderSize.
+									wordAddr := wordAddr + self wordSize + ((methodHeader >> 10 bitAnd: 255) * self wordSize)].
 							self reverseBytesFrom: wordAddr to: oop + (self sizeBitsOf: oop)].
-					(fmt = 6 and: [BytesPerWord = 8])
+					(fmt = 6 and: [self wordSize = 8])
 						ifTrue: ["Object contains 32-bit half-words packed into 64-bit machine words."
-							wordAddr := oop + BaseHeaderSize.
+							wordAddr := oop + self baseHeaderSize.
 							self reverseWordsFrom: wordAddr to: oop + (self sizeBitsOf: oop)]].
 			oop := self objectAfter: oop]
 ]
@@ -2315,7 +2314,7 @@ NewspeakInterpreter >> closureNumArgs: numArgs instructionPointer: initialIP num
 	<inline: true>
 	newClosure := self
 					instantiateSmallClass: (self splObj: ClassBlockClosure)
-					sizeInBytes: (BytesPerWord * (ClosureFirstCopiedValueIndex + numCopied)) + BaseHeaderSize.
+					sizeInBytes: (self wordSize * (ClosureFirstCopiedValueIndex + numCopied)) + self baseHeaderSize.
 	"Assume: have just allocated a new closure; it must be young. Thus, can use unchecked stores."
 	self storePointerUnchecked: ClosureStartPCIndex ofObject: newClosure withValue: (self integerObjectOf: initialIP).
 	self storePointerUnchecked: ClosureNumArgsIndex ofObject: newClosure withValue: (self integerObjectOf: numArgs).
@@ -2649,7 +2648,7 @@ NewspeakInterpreter >> createActualMessageTo: aClass [
 	lookupClass := self popRemappableOop.
 	self beRootIfOld: argumentArray.
 
-	self transfer: argumentCount from: stackPointer - (argumentCount - 1 * BytesPerWord) to: argumentArray + BaseHeaderSize.
+	self transfer: argumentCount from: stackPointer - (argumentCount - 1 * self wordSize) to: argumentArray + self baseHeaderSize.
 	self pop: argumentCount thenPush: message.
 
 	argumentCount := 1.
@@ -2669,9 +2668,69 @@ NewspeakInterpreter >> dbgFloatValueOf: oop [
 	((self isNonIntegerObject: oop)
 	and: [(self fetchClassOfNonImm: oop) = (self splObj: ClassFloat)]) ifTrue:
 		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		 self fetchFloatAt: oop + BaseHeaderSize into: result.
+		 self fetchFloatAt: oop + self baseHeaderSize into: result.
 		 ^result].
 	^nil
+]
+
+{ #category : #'as yet unclassified' }
+NewspeakInterpreter >> declareCVarsIn: aCCodeGenerator [
+
+	aCCodeGenerator
+		addHeaderFile:'<stddef.h> /* for e.g. alloca */';
+		addHeaderFile:'<setjmp.h>';
+		addHeaderFile:'"vmCallback.h"';
+		addHeaderFile:'"dispdbg.h"'.
+	aCCodeGenerator 
+		var: #interpreterProxy 
+		type: #'struct VirtualMachine*'.
+	aCCodeGenerator
+		declareVar: #sendTrace type: 'volatile int';
+		declareVar: #byteCount type: 'unsigned long'.
+	aCCodeGenerator
+		var: #primitiveTable
+		declareC: 'void *primitiveTable[', (MaxPrimitiveIndex +2) printString, '] = ',	self primitiveTableString.
+	aCCodeGenerator
+		var: #primitiveFunctionPointer
+		declareC: 'void (*primitiveFunctionPointer)()'.
+	aCCodeGenerator
+		var: #methodCache
+		declareC: 'long methodCache[', (MethodCacheSize + 1) printString, ']'.
+	aCCodeGenerator
+		var: #atCache
+		declareC: 'sqInt atCache[', (AtCacheTotalSize + 1) printString, ']'.
+	aCCodeGenerator var: #localIP type: #'char*'.
+	aCCodeGenerator var: #localSP type: #'char*'.
+	aCCodeGenerator var: #showSurfaceFn type: #'void*'.
+	"Newspeak as of mid 2011 derives SystemScope systemName from the interpreterVersion (via system attribute 1004)
+	 by copying up to but not including the last space, provided the string ends with a digit.  So spaces must be eliminated
+	 from the Monitcello version string, and we can't surround it with square brackets.."
+	(aCCodeGenerator shortMonticelloDescriptionForClass: self) last isDigit ifFalse:
+		[self error: 'Newspeak expects interpreterVersion ends with a digit'].
+	aCCodeGenerator
+		var: #interpreterVersion
+		declareC: 'const char *interpreterVersion = "Newspeak Virtual Machine ',
+						((aCCodeGenerator shortMonticelloDescriptionForClass: self) copyReplaceAll: ' ' with: '_'),
+						'"'.
+	aCCodeGenerator
+		var: #externalPrimitiveTable
+		declareC: 'void *externalPrimitiveTable[', (MaxExternalPrimitiveTableSize + 1) printString, ']'.
+
+	aCCodeGenerator
+		var: #imageFormatVersionNumber
+		declareC: 'sqInt imageFormatVersionNumber = ',
+					(self wordSize == 4
+						ifTrue: ['6502']
+						ifFalse: ['68000']).
+	aCCodeGenerator
+		var: #breakSelector type: #'char *';
+		var: #breakSelectorLength
+		declareC: 'sqInt breakSelectorLength = -1';
+		var: #primTraceLogIndex type: #'unsigned char';
+		var: #primTraceLog declareC: 'sqInt primTraceLog[256]';
+		var: #sendTraceLogIndex type: #'unsigned char';
+		var: #sendTraceLog declareC: 'sqInt sendTraceLog[256]'
+
 ]
 
 { #category : #'message sending' }
@@ -2712,7 +2771,7 @@ NewspeakInterpreter >> displayBitsOf: aForm Left: l Top: t Right: r Bottom: b [
 				showSurfaceFn = 0 ifTrue: [^self success: false]].
 			self cCode:'((sqInt (*)(sqInt, sqInt, sqInt, sqInt, sqInt))showSurfaceFn)(surfaceHandle, left, top, right-left, bottom-top)'.
 		] ifFalse: [
-			dispBitsIndex := dispBits + BaseHeaderSize.  "index in memory byte array"
+			dispBitsIndex := dispBits + self baseHeaderSize.  "index in memory byte array"
 			self cCode: 'ioShowDisplay(dispBitsIndex, w, h, d, left, right, top, bottom)'
 				inSmalltalk: [self showDisplayBits: dispBitsIndex 
 								w: w h: h d: d
@@ -3092,11 +3151,11 @@ NewspeakInterpreter >> fetchContextRegisters: activeCntx [
 	-1 for 0-based addressing of fetchByte 
 	-1 because it gets incremented BEFORE fetching currentByte "
 	tmp := self quickFetchInteger: InstructionPointerIndex ofObject: activeCntx.
-	instructionPointer := method + tmp + BaseHeaderSize - 2.
+	instructionPointer := method + tmp + self baseHeaderSize - 2.
 
 	"the stack pointer is a pointer variable also..."
 	tmp := self quickFetchInteger: StackPointerIndex ofObject: activeCntx.
-	stackPointer := activeCntx + BaseHeaderSize + (TempFrameStart + tmp - 1 * BytesPerWord)
+	stackPointer := activeCntx + self baseHeaderSize + (TempFrameStart + tmp - 1 * self wordSize)
 ]
 
 { #category : #utilities }
@@ -3136,7 +3195,7 @@ NewspeakInterpreter >> fetchIntegerOrTruncFloat: fieldIndex ofObject: objectPoin
 	self assertClassOf: intOrFloat is: (self splObj: ClassFloat).
 	self successful ifTrue: [
 		self cCode: '' inSmalltalk: [floatVal := Float new: 2].
-		self fetchFloatAt: intOrFloat + BaseHeaderSize into: floatVal.
+		self fetchFloatAt: intOrFloat + self baseHeaderSize into: floatVal.
 		self cCode: 'frac = modf(floatVal, &trunc)'.
 		"the following range check is for C ints, with range -2^31..2^31-1"
 		self flag: #Dan.		"The ranges are INCORRECT if SmallIntegers are wider than 31 bits."
@@ -3287,8 +3346,8 @@ NewspeakInterpreter >> floatObjectOf: aFloat [
 	<var: #aFloat type: #double>
 	<inline: false> "because storeFloatAt:from: insists that its last arg is a variable"
 	self flag: #Dan. "None of the float stuff has been converted for 64 bits"
-	newFloatObj := self instantiateSmallClass: (self splObj: ClassFloat) sizeInBytes: 8+BaseHeaderSize.
-	self storeFloatAt: newFloatObj + BaseHeaderSize from: aFloat.
+	newFloatObj := self instantiateSmallClass: (self splObj: ClassFloat) sizeInBytes: 8+self baseHeaderSize.
+	self storeFloatAt: newFloatObj + self baseHeaderSize from: aFloat.
 	^newFloatObj
 ]
 
@@ -3304,7 +3363,7 @@ NewspeakInterpreter >> floatValueOf: oop [
 	isFloat := self isInstanceOfClassFloat: oop.
 	isFloat ifTrue:
 		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		 self fetchFloatAt: oop + BaseHeaderSize into: result.
+		 self fetchFloatAt: oop + self baseHeaderSize into: result.
 		 ^result].
 	self primitiveFail.
 	^0.0
@@ -3505,7 +3564,7 @@ NewspeakInterpreter >> highBit: anUnsignedValue [
 	<var: #shifted type: #usqInt>
 	shifted := anUnsignedValue.
 	bitNo := 0.
-	self cppIf: BytesPerWord > 4
+	self cppIf: self wordSize > 4
 		ifTrue:
 			[shifted < (1 << 32) ifFalse:
 				[shifted := shifted >> 32.
@@ -3549,7 +3608,7 @@ NewspeakInterpreter >> ifValidWriteBackStack: theCFP Pointers: theCSP Save: save
 NewspeakInterpreter >> imageFormatCompatibilityVersion [
 	"This VM is backward-compatible with the immediately preceeding non-closure version."
 
-	BytesPerWord == 4
+	self wordSize == 4
 		ifTrue: [^6502]
 		ifFalse: [^68000]
 ]
@@ -3559,7 +3618,7 @@ NewspeakInterpreter >> imageFormatForwardCompatibilityVersion [
 	"This VM is forwards-compatible with the immediately following closure version, and
 	 will write the new version number in snapshots if the closure creation bytecode is used."
 
-	BytesPerWord == 4
+	self wordSize == 4
 		ifTrue: [^6504]
 		ifFalse: [^68002]
 ]
@@ -3767,27 +3826,27 @@ NewspeakInterpreter >> internalActivateNewMethod [
 				self externalizeIPandSP.
 				newContext := self allocateOrRecycleContext: needsLarge.
 				self internalizeIPandSP].
-	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * BytesPerWord) + 1.
+	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * self wordSize) + 1.
 	tempCount := (methodHeader >> 19) bitAnd: 16r3F.
 
 	"Assume: newContext will be recorded as a root if necessary by the
 	 call to newActiveContext: below, so we can use unchecked stores."
-	where :=   newContext + BaseHeaderSize.
-	self longAt: where + (SenderIndex << ShiftForWord) put: activeContext.
-	self longAt: where + (InstructionPointerIndex << ShiftForWord) put: (self integerObjectOf: initialIP).
-	self longAt: where + (StackPointerIndex << ShiftForWord) put: (self integerObjectOf: tempCount).
-	self longAt: where + (MethodIndex << ShiftForWord) put: newMethod.
-	self longAt: where + (ClosureIndex << ShiftForWord) put: nilObj.
+	where :=   newContext + self baseHeaderSize.
+	self longAt: where + (SenderIndex << self shiftForWord) put: activeContext.
+	self longAt: where + (InstructionPointerIndex << self shiftForWord) put: (self integerObjectOf: initialIP).
+	self longAt: where + (StackPointerIndex << self shiftForWord) put: (self integerObjectOf: tempCount).
+	self longAt: where + (MethodIndex << self shiftForWord) put: newMethod.
+	self longAt: where + (ClosureIndex << self shiftForWord) put: nilObj.
 
 	"Copy the receiver and arguments..."
 	argCount2 := argumentCount.
 	0 to: argCount2 do:
-		[:i | self longAt: where + ((ReceiverIndex+i) << ShiftForWord) put: (self internalStackValue: argCount2-i)].
+		[:i | self longAt: where + ((ReceiverIndex+i) << self shiftForWord) put: (self internalStackValue: argCount2-i)].
 
 	"clear remaining temps to nil in case it has been recycled"
 	needsLarge := nilObj.  "needsLarge here used just as faster (register?) temp"
 	argCount2+1+ReceiverIndex to: tempCount+ReceiverIndex do:
-		[:i | self longAt: where + (i << ShiftForWord) put: needsLarge].
+		[:i | self longAt: where + (i << self shiftForWord) put: needsLarge].
 
 	"Pass primitive error code to last temp if method receives it (indicated
 	 by an initial long store temp bytecode).  Protect against obsolete values
@@ -3796,7 +3855,7 @@ NewspeakInterpreter >> internalActivateNewMethod [
 		[((self primitiveIndexOfMethodHeader: methodHeader) > 0
 		  and: [(self fetchByte: initialIP - 1 ofObject: newMethod) = 129 "long store temp"]) ifTrue:
 			[needsLarge := self fetchPointer: primFailCode - 1 ofObject: (self splObj: PrimErrTableIndex).
-			 self longAt: where + ((tempCount+ReceiverIndex) << ShiftForWord)
+			 self longAt: where + ((tempCount+ReceiverIndex) << self shiftForWord)
 				put: needsLarge "nil if primFailCode == 1, or primFailCode"].
 		primFailCode := 0].
 
@@ -3870,11 +3929,11 @@ NewspeakInterpreter >> internalFetchContextRegisters: activeCntx [
 		  -1 for 0-based addressing of fetchByte
 		  -1 because it gets incremented BEFORE fetching currentByte"
 	tmp := self quickFetchInteger: InstructionPointerIndex ofObject: activeCntx.
-	localIP := self pointerForOop: method + tmp + BaseHeaderSize - 2.
+	localIP := self pointerForOop: method + tmp + self baseHeaderSize - 2.
 
 	"the stack pointer is a pointer variable also..."
 	tmp := self quickFetchInteger: StackPointerIndex ofObject: activeCntx.
-	localSP := self pointerForOop: activeCntx + BaseHeaderSize + ((TempFrameStart + tmp - 1) * BytesPerWord)
+	localSP := self pointerForOop: activeCntx + self baseHeaderSize + ((TempFrameStart + tmp - 1) * self wordSize)
 ]
 
 { #category : #'message sending' }
@@ -3906,13 +3965,13 @@ NewspeakInterpreter >> internalNewActiveContext: aContext [
 { #category : #'internal interpreter access' }
 NewspeakInterpreter >> internalPop: nItems [
 
-	localSP := localSP - (nItems * BytesPerWord).
+	localSP := localSP - (nItems * self wordSize).
 ]
 
 { #category : #'internal interpreter access' }
 NewspeakInterpreter >> internalPop: nItems thenPush: oop [
 
-	self longAtPointer: (localSP := localSP - ((nItems - 1) * BytesPerWord)) put: oop.
+	self longAtPointer: (localSP := localSP - ((nItems - 1) * self wordSize)) put: oop.
 
 ]
 
@@ -3945,7 +4004,7 @@ NewspeakInterpreter >> internalPrimitiveValue [
 { #category : #'internal interpreter access' }
 NewspeakInterpreter >> internalPush: object [
 
-	self longAtPointer: (localSP := localSP + BytesPerWord) put: object.
+	self longAtPointer: (localSP := localSP + self wordSize) put: object.
 ]
 
 { #category : #processes }
@@ -3999,7 +4058,7 @@ NewspeakInterpreter >> internalStackTopPut: aValue [
 { #category : #'internal interpreter access' }
 NewspeakInterpreter >> internalStackValue: offset [
 
-	^ self longAtPointer: localSP - (offset * BytesPerWord)
+	^ self longAtPointer: localSP - (offset * self wordSize)
 ]
 
 { #category : #contexts }
@@ -4014,10 +4073,10 @@ NewspeakInterpreter >> internalStoreContextRegisters: activeCntx [
 	<inline: true>
 	self storePointerUnchecked: InstructionPointerIndex ofObject: activeCntx
 		withValue: (self integerObjectOf: 
-			((self oopForPointer: localIP) + 2 - (method + BaseHeaderSize))).
+			((self oopForPointer: localIP) + 2 - (method + self baseHeaderSize))).
 	self storePointerUnchecked: StackPointerIndex		  ofObject: activeCntx
 		withValue: (self integerObjectOf:
-			((((self oopForPointer: localSP) - (activeCntx + BaseHeaderSize)) >> ShiftForWord) - TempFrameStart + 1)).
+			((((self oopForPointer: localSP) - (activeCntx + self baseHeaderSize)) >> self shiftForWord) - TempFrameStart + 1)).
 
 ]
 
@@ -4207,24 +4266,24 @@ NewspeakInterpreter >> justActivateNewMethod [
 				freeContexts := self fetchPointer: 0 ofObject: newContext]
 		ifFalse: ["Slower call for large contexts or empty free list"
 				newContext := self allocateOrRecycleContext: needsLarge].
-	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * BytesPerWord) + 1.
+	initialIP := ((LiteralStart + (self literalCountOfMethodHeader: methodHeader)) * self wordSize) + 1.
 	tempCount := (methodHeader >> 19) bitAnd: 16r3F.
 
 	"Assume: newContext will be recorded as a root if necessary by the
 	 call to newActiveContext: below, so we can use unchecked stores."
-	where := newContext + BaseHeaderSize.
-	self longAt: where + (SenderIndex << ShiftForWord) put: activeContext.
-	self longAt: where + (InstructionPointerIndex << ShiftForWord) put: (self integerObjectOf: initialIP).
-	self longAt: where + (StackPointerIndex << ShiftForWord) put: (self integerObjectOf: tempCount).
-	self longAt: where + (MethodIndex << ShiftForWord) put: newMethod.
+	where := newContext + self baseHeaderSize.
+	self longAt: where + (SenderIndex << self shiftForWord) put: activeContext.
+	self longAt: where + (InstructionPointerIndex << self shiftForWord) put: (self integerObjectOf: initialIP).
+	self longAt: where + (StackPointerIndex << self shiftForWord) put: (self integerObjectOf: tempCount).
+	self longAt: where + (MethodIndex << self shiftForWord) put: newMethod.
 
 	"Set the receiver..."
-	self longAt: where + (ReceiverIndex << ShiftForWord) put: receiver.
+	self longAt: where + (ReceiverIndex << self shiftForWord) put: receiver.
 
 	"clear all args and temps to nil in case it has been recycled"
 	needsLarge := nilObj.  "needsLarge here used just as faster (register?) temp"
 	ReceiverIndex + 1 to: tempCount + ReceiverIndex do:
-		[:i | self longAt: where + (i << ShiftForWord) put: needsLarge].
+		[:i | self longAt: where + (i << self shiftForWord) put: needsLarge].
 	reclaimableContextCount := reclaimableContextCount + 1.
 
 	activeContext := newContext.
@@ -4274,7 +4333,6 @@ NewspeakInterpreter >> loadFloatOrIntFrom: floatOrInt [
 	 Otherwise fail -- ie return with primErrorCode non-zero."
 
 	<inline: true>
-	<asmLabel: false>
 	<returnTypeC: #double>
 
 	(self isIntegerObject: floatOrInt) ifTrue:
@@ -4328,7 +4386,6 @@ NewspeakInterpreter >> lookupInMethodCacheSel: selector class: class [
 
 	| hash probe |
 	<inline: true>
-	<asmLabel: false>
 	hash := selector bitXor: class.  "shift drops two low-order zeros from addresses"
 
 	probe := hash bitAnd: MethodCacheMask.  "first probe"
@@ -4392,7 +4449,7 @@ NewspeakInterpreter >> lookupMethodInClass: class [
 	messageSelector := self splObj: SelectorDoesNotUnderstand.
 	RecordSendTrace ifTrue:
 		[self fastLogSend: messageSelector].
-	self sendBreak: messageSelector + BaseHeaderSize
+	self sendBreak: messageSelector + self baseHeaderSize
 		point: (self lengthOf: messageSelector)
 		receiver: nil.
 	^ self lookupMethodInClass: rclass
@@ -4455,7 +4512,7 @@ NewspeakInterpreter >> makePointwithxValue: xValue yValue: yValue [
 "make a Point xValue@yValue.
 We know both will be integers so no value nor root checking is needed"
 	| pointResult |
-	pointResult := self instantiateSmallClass: (self splObj: ClassPoint) sizeInBytes: 3*BytesPerWord.
+	pointResult := self instantiateSmallClass: (self splObj: ClassPoint) sizeInBytes: 3*self wordSize.
 	self storePointerUnchecked: XIndex ofObject: pointResult withValue: (self integerObjectOf: xValue).
 	self storePointerUnchecked: YIndex ofObject: pointResult withValue: (self integerObjectOf: yValue).
 	^ pointResult
@@ -4824,14 +4881,14 @@ NewspeakInterpreter >> pop2AndPushIntegerIfOK: integerResult [
 NewspeakInterpreter >> pop: nItems [
 	"Note: May be called by translated primitive code."
 
-	stackPointer := stackPointer - (nItems*BytesPerWord).
+	stackPointer := stackPointer - (nItems*self wordSize).
 ]
 
 { #category : #'internal interpreter access' }
 NewspeakInterpreter >> pop: nItems thenPush: oop [
 
 	| sp |
-	self longAt: (sp := stackPointer - ((nItems - 1) * BytesPerWord)) put: oop.
+	self longAt: (sp := stackPointer - ((nItems - 1) * self wordSize)) put: oop.
 	stackPointer := sp.
 
 ]
@@ -4840,7 +4897,7 @@ NewspeakInterpreter >> pop: nItems thenPush: oop [
 NewspeakInterpreter >> pop: nItems thenPushBool: trueOrFalse [
 	"A few places pop a few items off the stack and then push a boolean. Make it convenient"
 	| sp |
-	self longAt: (sp := stackPointer - ((nItems - 1) * BytesPerWord))
+	self longAt: (sp := stackPointer - ((nItems - 1) * self wordSize))
 		put:(trueOrFalse ifTrue: [trueObj] ifFalse: [falseObj]).
 	stackPointer := sp
 ]
@@ -4849,7 +4906,7 @@ NewspeakInterpreter >> pop: nItems thenPushBool: trueOrFalse [
 NewspeakInterpreter >> pop: nItems thenPushInteger: integerVal [
 "lots of places pop a few items off the stack and then push an integer. MAke it convenient"
 	| sp |
-	self longAt: (sp := stackPointer - ((nItems - 1) * BytesPerWord)) put:(self integerObjectOf: integerVal).
+	self longAt: (sp := stackPointer - ((nItems - 1) * self wordSize)) put:(self integerObjectOf: integerVal).
 	stackPointer := sp.
 
 ]
@@ -4882,7 +4939,7 @@ NewspeakInterpreter >> popStack [
 
 	| top |
 	top := self longAt: stackPointer.
-	stackPointer := stackPointer - BytesPerWord.
+	stackPointer := stackPointer - self wordSize.
 	^ top
 ]
 
@@ -4904,10 +4961,10 @@ NewspeakInterpreter >> positive32BitIntegerFor: integerValue [
 		ifTrue: [(self isIntegerValue: integerValue)
 					ifTrue: [^ self integerObjectOf: integerValue]].
 
-	BytesPerWord = 4
+	self wordSize = 4
 	ifTrue: ["Faster instantiateSmallClass: currently only works with integral word size."
 			newLargeInteger := self instantiateSmallClass: (self splObj: ClassLargePositiveInteger)
-					sizeInBytes: BaseHeaderSize + 4]
+					sizeInBytes: self baseHeaderSize + 4]
 	ifFalse: ["Cant use instantiateSmallClass: due to integral word requirement."
 			newLargeInteger := self instantiateClass: (self splObj: ClassLargePositiveInteger)
 					indexableSize: 4].
@@ -4954,7 +5011,7 @@ NewspeakInterpreter >> positive64BitIntegerFor: integerValue [
 	check = 0 ifTrue: [^self positive32BitIntegerFor: integerValue].
 	
 	newLargeInteger :=
-		self instantiateSmallClass: (self splObj: ClassLargePositiveInteger) sizeInBytes: BaseHeaderSize + 8.
+		self instantiateSmallClass: (self splObj: ClassLargePositiveInteger) sizeInBytes: self baseHeaderSize + 8.
 	0 to: 7 do: [:i |
 		self cCode: 'value = ( integerValue >> (i * 8)) & 255'.
 		self storeByte: i ofObject: newLargeInteger withValue: value].
@@ -5237,12 +5294,12 @@ NewspeakInterpreter >> primitiveBeCursor [
 		self success: ((offsetX >= -16) and: [offsetX <= 0]).
 		self success: ((offsetY >= -16) and: [offsetY <= 0]).
 		self success: ((self isWords: bitsObj) and: [(self lengthOf: bitsObj) = 16]).
-		cursorBitsIndex := bitsObj + BaseHeaderSize.
+		cursorBitsIndex := bitsObj + self baseHeaderSize.
 		self cCode: '' inSmalltalk:
 			[ourCursor := Cursor
 				extent: extentX @ extentY
 				fromArray: ((1 to: 16) collect: [:i |
-					((self fetchLong32: i-1 ofObject: bitsObj) >> (BytesPerWord*8 - 16)) bitAnd: 16rFFFF])
+					((self fetchLong32: i-1 ofObject: bitsObj) >> (self wordSize*8 - 16)) bitAnd: 16rFFFF])
 				offset: offsetX  @ offsetY]].
 
 	argumentCount = 1 ifTrue: [
@@ -5256,7 +5313,7 @@ NewspeakInterpreter >> primitiveBeCursor [
 		self successful ifTrue: [
 			self success: ((extentX = 16) and: [extentY = 16 and: [depth = 1]]).
 			self success: ((self isWords: bitsObj) and: [(self lengthOf: bitsObj) = 16]).
-			maskBitsIndex := bitsObj + BaseHeaderSize]].
+			maskBitsIndex := bitsObj + self baseHeaderSize]].
 
 	self successful ifTrue: [
 		argumentCount = 0
@@ -5355,7 +5412,7 @@ NewspeakInterpreter >> primitiveBlockCopy [
 	newContext := self instantiateContext: (self splObj: ClassBlockContext) sizeInBytes: contextSize.
 	methodContext := self popRemappableOop.
 
-	initialIP := self integerObjectOf: (instructionPointer+1+3) - (method+BaseHeaderSize).
+	initialIP := self integerObjectOf: (instructionPointer+1+3) - (method+self baseHeaderSize).
 	"Was instructionPointer + 3, but now it's greater by 1 due to preIncrement"
 
 	"Assume: have just allocated a new context; it must be young.
@@ -5641,12 +5698,12 @@ NewspeakInterpreter >> primitiveClipboardText [
 			(self isBytes: s) ifFalse: [^ self primitiveFail].
 			self successful
 				ifTrue: [sz := self stSizeOf: s.
-					self clipboardWrite: sz From: s + BaseHeaderSize At: 0.
+					self clipboardWrite: sz From: s + self baseHeaderSize At: 0.
 					self pop: 1]]
 		ifFalse: [sz := self clipboardSize.
 			(self sufficientSpaceToAllocate: sz) ifFalse:[^self primitiveFail].
 			s := self instantiateClass: (self splObj: ClassByteString) indexableSize: sz.
-			self clipboardRead: sz Into: s + BaseHeaderSize At: 0.
+			self clipboardRead: sz Into: s + self baseHeaderSize At: 0.
 			self pop: 1 thenPush: s]
 ]
 
@@ -5672,7 +5729,7 @@ NewspeakInterpreter >> primitiveClosureCopyWithCopiedValues [
 	newClosure := self
 					closureNumArgs: numArgs
 									"greater by 1 due to preIncrement of localIP"
-					instructionPointer: instructionPointer + 2 - (method+BaseHeaderSize)
+					instructionPointer: instructionPointer + 2 - (method+self baseHeaderSize)
 					numCopiedValues: numCopiedValues.
 	"Assume: have just allocated a new closure; it must be young. Thus, can use unchecked stores."
 	self storePointerUnchecked: ClosureOuterContextIndex ofObject: newClosure withValue: (self stackValue: 2).
@@ -5788,7 +5845,7 @@ NewspeakInterpreter >> primitiveConstantFill [
 	rcvrIsBytes ifTrue: [self success: (fillValue >= 0 and: [fillValue <= 255])].
 	self successful
 		ifTrue: [end := rcvr + (self sizeBitsOf: rcvr).
-			i := rcvr + BaseHeaderSize.
+			i := rcvr + self baseHeaderSize.
 			rcvrIsBytes
 				ifTrue: [[i < end]
 						whileTrue: [self byteAt: i put: fillValue.
@@ -5946,9 +6003,9 @@ NewspeakInterpreter >> primitiveDoNamedPrimitiveWithArgs [
 	functionLength := self lengthOf: functionName.
 	self successful ifFalse: [^self primitiveFail]. "invalid methodArg state"
 
-	addr := self ioLoadExternalFunction: functionName + BaseHeaderSize
+	addr := self ioLoadExternalFunction: functionName + self baseHeaderSize
 				OfLength: functionLength
-				FromModule: moduleName + BaseHeaderSize
+				FromModule: moduleName + self baseHeaderSize
 				OfLength: moduleLength.
 	addr = 0 ifTrue:
 		[^self primitiveFail]. "could not find function"
@@ -6232,9 +6289,9 @@ NewspeakInterpreter >> primitiveExternalCall [
 	functionLength := self lengthOf: functionName.
 	self successful ifFalse: [^ nil].
 
-	addr := self ioLoadExternalFunction: functionName + BaseHeaderSize
+	addr := self ioLoadExternalFunction: functionName + self baseHeaderSize
 				OfLength: functionLength
-				FromModule: moduleName + BaseHeaderSize
+				FromModule: moduleName + self baseHeaderSize
 				OfLength: moduleLength.
 	addr = 0
 		ifTrue: [index := -1]
@@ -6268,10 +6325,10 @@ NewspeakInterpreter >> primitiveFailAfterCleanup: outPointerArray [
 
 	| i lastAddr |   "Store nils throughout the outPointer array."
 	lastAddr := outPointerArray + (self lastPointerOf: outPointerArray).
-	i := outPointerArray + BaseHeaderSize.
+	i := outPointerArray + self baseHeaderSize.
 	[i <= lastAddr] whileTrue:
 		[self longAt: i put: nilObj.
-		i := i + BytesPerWord].
+		i := i + self wordSize].
 
 	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
 	self primitiveFail
@@ -6633,7 +6690,7 @@ NewspeakInterpreter >> primitiveGetAttribute [
 						indexableSize: sz.
 			self
 				getAttribute: attr
-				Into: s + BaseHeaderSize
+				Into: s + self baseHeaderSize
 				Length: sz.
 			self pop: 2 thenPush: s]
 ]
@@ -6741,13 +6798,13 @@ NewspeakInterpreter >> primitiveImageName [
 		self assertClassOf: s is: (self splObj: ClassByteString).
 		self successful ifTrue: [
 			sz := self stSizeOf: s.
-			self imageNamePut: (s + BaseHeaderSize) Length: sz.
+			self imageNamePut: (s + self baseHeaderSize) Length: sz.
 			self pop: 1.  "pop s, leave rcvr on stack"
 		].
 	] ifFalse: [
 		sz := self imageNameSize.
 		s := self instantiateClass: (self splObj: ClassByteString) indexableSize: sz.
-		self imageNameGet: (s + BaseHeaderSize) Length: sz.
+		self imageNameGet: (s + self baseHeaderSize) Length: sz.
 		self pop: 1.  "rcvr"
 		self push: s.
 	].
@@ -6856,7 +6913,7 @@ NewspeakInterpreter >> primitiveIntegerAt [
 	sz := self lengthOf: rcvr.  "number of fields"
 	((index >= 1) and: [index <= sz]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
-	addr := rcvr + BaseHeaderSize - 4 "for zero indexing" + (index * 4).
+	addr := rcvr + self baseHeaderSize - 4 "for zero indexing" + (index * 4).
 	value := self intAt: addr.
 	self pop: 2.  "pop rcvr, index"
 	"push element value"
@@ -6885,7 +6942,7 @@ NewspeakInterpreter >> primitiveIntegerAtPut [
 		[^self primitiveFailFor: PrimErrBadIndex].
 	(self isOopImmutable: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrNoModification].
-	addr := rcvr + BaseHeaderSize - 4 "for zero indexing" + (index * 4).
+	addr := rcvr + self baseHeaderSize - 4 "for zero indexing" + (index * 4).
 	value := self intAt: addr put: value.
 	self pop: 3 thenPush: valueOop "pop all; return value"
 
@@ -6911,7 +6968,7 @@ NewspeakInterpreter >> primitiveInvokeObjectAsMethod [
 	| runSelector runReceiver runArgs newReceiver lookupClass |
 	runArgs := self instantiateClass: (self splObj: ClassArray) indexableSize: argumentCount.
 	self beRootIfOld: runArgs. "do we really need this?"
-	self transfer: argumentCount from: stackPointer - ((argumentCount - 1) * BytesPerWord) to: runArgs + BaseHeaderSize.
+	self transfer: argumentCount from: stackPointer - ((argumentCount - 1) * self wordSize) to: runArgs + self baseHeaderSize.
 
 	runSelector := messageSelector.
 	runReceiver := self stackValue: argumentCount.
@@ -7052,7 +7109,7 @@ NewspeakInterpreter >> primitiveLoadImageSegment [
 	outPointerArray := self stackTop.
 	lastOut := outPointerArray + (self lastPointerOf: outPointerArray).
 	segmentWordArray := self stackValue: 1.
-	endSeg := segmentWordArray + (self sizeBitsOf: segmentWordArray) - BaseHeaderSize.
+	endSeg := segmentWordArray + (self sizeBitsOf: segmentWordArray) - self baseHeaderSize.
 
 	"Essential type checks"
 	((self formatOf: outPointerArray) = 2				"Must be indexable pointers"
@@ -7060,32 +7117,32 @@ NewspeakInterpreter >> primitiveLoadImageSegment [
 		ifFalse: [^ self primitiveFail].
 
 	"Version check.  Byte order of the WordArray now"
-	data := self longAt: segmentWordArray + BaseHeaderSize.
+	data := self longAt: segmentWordArray + self baseHeaderSize.
 	(self readableFormat: (data bitAnd: 16rFFFF "low 2 bytes")) ifFalse: [
 		"Not readable -- try again with reversed bytes..."
-		self reverseBytesFrom: segmentWordArray + BaseHeaderSize to: endSeg + BytesPerWord.
-		data := self longAt: segmentWordArray + BaseHeaderSize.
+		self reverseBytesFrom: segmentWordArray + self baseHeaderSize to: endSeg + self wordSize.
+		data := self longAt: segmentWordArray + self baseHeaderSize.
 		(self readableFormat: (data bitAnd: 16rFFFF "low 2 bytes")) ifFalse: [
 			"Still NG -- put things back and fail"
-			self reverseBytesFrom: segmentWordArray + BaseHeaderSize to: endSeg + BytesPerWord.
+			self reverseBytesFrom: segmentWordArray + self baseHeaderSize to: endSeg + self wordSize.
 			DoAssertionChecks ifTrue: [self verifyCleanHeaders].
 			^ self primitiveFail]].
 	"Reverse the Byte type objects if the data from opposite endian machine"
 	"Test top byte.  $d on the Mac or $s on the PC.  Rest of word is equal"
 	data = self imageSegmentVersion ifFalse: [
 		"Reverse the byte-type objects once"
-		segOop := self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord.
+		segOop := self oopFromChunk: segmentWordArray + self baseHeaderSize + self wordSize.
 			 "Oop of first embedded object"
-		self byteSwapByteObjectsFrom: segOop to: endSeg + BytesPerWord].
+		self byteSwapByteObjectsFrom: segOop to: endSeg + self wordSize].
 
 	"Proceed through the segment, remapping pointers..."
-	segOop := self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord.
+	segOop := self oopFromChunk: segmentWordArray + self baseHeaderSize + self wordSize.
 	[segOop <= endSeg] whileTrue:
 		[(self headerType: segOop) <= 1
 			ifTrue: ["This object has a class field (type = 0 or 1) -- start with that."
-					fieldPtr := segOop - BytesPerWord.  doingClass := true]
+					fieldPtr := segOop - self wordSize.  doingClass := true]
 			ifFalse: ["No class field -- start with first data field"
-					fieldPtr := segOop + BaseHeaderSize.  doingClass := false].
+					fieldPtr := segOop + self baseHeaderSize.  doingClass := false].
 		lastPtr := segOop + (self lastPointerOf: segOop).	"last field"
 		lastPtr > endSeg ifTrue: [
 			DoAssertionChecks ifTrue: [self verifyCleanHeaders].
@@ -7101,7 +7158,7 @@ NewspeakInterpreter >> primitiveLoadImageSegment [
 			(self isIntegerObject: fieldOop)
 				ifTrue:
 					["Integer -- nothing to do"
-					fieldPtr := fieldPtr + BytesPerWord]
+					fieldPtr := fieldPtr + self wordSize]
 				ifFalse:
 					[(fieldOop bitAnd: 3) = 0 ifFalse: [^ self primitiveFail "bad oop"].
 					(fieldOop bitAnd: 16r80000000) = 0
@@ -7116,37 +7173,37 @@ NewspeakInterpreter >> primitiveLoadImageSegment [
 								fieldPtr := fieldPtr + 8.
 								doingClass := false]
 						ifFalse: [self longAt: fieldPtr put: mapOop.
-								fieldPtr := fieldPtr + BytesPerWord].
+								fieldPtr := fieldPtr + self wordSize].
 					segOop < youngStart
 						ifTrue: [self possibleRootStoreInto: segOop value: mapOop].
 					]].
 		segOop := self objectAfter: segOop].
 
 	"Again, proceed through the segment checking consistency..."
-	segOop := self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord.
+	segOop := self oopFromChunk: segmentWordArray + self baseHeaderSize + self wordSize.
 	[segOop <= endSeg] whileTrue:
 		[(self oopHasAcceptableClass: segOop) ifFalse: [^ self primitiveFail "inconsistency"].
-		fieldPtr := segOop + BaseHeaderSize.		"first field"
+		fieldPtr := segOop + self baseHeaderSize.		"first field"
 		lastPtr := segOop + (self lastPointerOf: segOop).	"last field"
 		"Go through all oops, remapping them..."
 		[fieldPtr > lastPtr] whileFalse:
 			["Examine each pointer field"
 			fieldOop := self longAt: fieldPtr.
 			(self oopHasAcceptableClass: fieldOop) ifFalse: [^ self primitiveFail "inconsistency"].
-			fieldPtr := fieldPtr + BytesPerWord].
+			fieldPtr := fieldPtr + self wordSize].
 		segOop := self objectAfter: segOop].
 
 	"Truncate the segment word array to size = BytesPerWord (vers stamp only)"
 	extraSize := self extraHeaderBytes: segmentWordArray.
 	hdrTypeBits := self headerType: segmentWordArray.
 	extraSize = 8
-		ifTrue: [self longAt: segmentWordArray-extraSize put: BaseHeaderSize + BytesPerWord + hdrTypeBits]
+		ifTrue: [self longAt: segmentWordArray-extraSize put: self baseHeaderSize + self wordSize + hdrTypeBits]
 		ifFalse: [header := self longAt: segmentWordArray.
 				self longAt: segmentWordArray
-					put: header - (header bitAnd: SizeMask) + BaseHeaderSize + BytesPerWord].	
+					put: header - (header bitAnd: SizeMask) + self baseHeaderSize + self wordSize].	
 	"and return the roots array which was first in the segment"
 	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
-	self pop: 3 thenPush: (self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord).
+	self pop: 3 thenPush: (self oopFromChunk: segmentWordArray + self baseHeaderSize + self wordSize).
 
 ]
 
@@ -7287,7 +7344,7 @@ NewspeakInterpreter >> primitiveNewMethod [
 	self successful ifFalse:
 		[self unPop: 2. ^nil].
 	class := self popStack.
-	size := (self literalCountOfMethodHeader: header) + 1 * BytesPerWord + bytecodeCount.
+	size := (self literalCountOfMethodHeader: header) + 1 * self wordSize + bytecodeCount.
 	theMethod := self instantiateClass: class indexableSize: size.
 	self storePointerUnchecked: HeaderIndex ofObject: theMethod withValue: header.
 	literalCount := self literalCountOfMethodHeader: header.
@@ -7458,7 +7515,7 @@ NewspeakInterpreter >> primitiveObjectPointsTo [
 	(self isIntegerObject: rcvr) ifTrue: [^self pushBool: false].
 
 	lastField := self lastPointerOf: rcvr.
-	BaseHeaderSize to: lastField by: BytesPerWord do:
+	self baseHeaderSize to: lastField by: self wordSize do:
 		[:i | (self longAt: rcvr + i) = thang
 			ifTrue: [^ self pushBool: true]].
 	self pushBool: false.
@@ -7951,10 +8008,10 @@ NewspeakInterpreter >> primitiveShortAt [
 	((self isIntegerObject: rcvr)
 	or: [(self isWordsOrBytes: rcvr) not]) ifTrue:
 		[^self primitiveFailFor: PrimErrInappropriate].
-	sz := ((self sizeBitsOf: rcvr) - BaseHeaderSize) // 2.  "number of 16-bit fields"
+	sz := ((self sizeBitsOf: rcvr) - self baseHeaderSize) // 2.  "number of 16-bit fields"
 	((index >= 1) and: [index <= sz]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
-	addr := rcvr + BaseHeaderSize + (2 * (index - 1)).
+	addr := rcvr + self baseHeaderSize + (2 * (index - 1)).
 	value := self shortAt: addr.
 	self pop: 2 thenPushInteger: value
 ]
@@ -7971,12 +8028,12 @@ NewspeakInterpreter >> primitiveShortAtPut [
 	rcvr := self stackValue: 2.
 	((self isIntegerObject: rcvr) not and: [self isWordsOrBytes: rcvr]) ifFalse:
 		[^self primitiveFailFor: PrimErrInappropriate].
-	sz := ((self sizeBitsOf: rcvr) - BaseHeaderSize) // 2.  "number of 16-bit fields"
+	sz := ((self sizeBitsOf: rcvr) - self baseHeaderSize) // 2.  "number of 16-bit fields"
 	(index >= 1 and: [index <= sz]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	(self isOopImmutable: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrNoModification].
-	addr := rcvr + BaseHeaderSize + (2 * (index - 1)).
+	addr := rcvr + self baseHeaderSize + (2 * (index - 1)).
 	self shortAt: addr put: value.
 	self pop: 3 thenPush: (self integerObjectOf: value) "pop all; return value"
 ]
@@ -8159,11 +8216,12 @@ NewspeakInterpreter >> primitiveStoreStackp [
 	ctxt := self stackValue: 1.
 	newStackp := self stackIntegerValue: 0.
 	self success: newStackp >= 0.
-	self success: newStackp <= (LargeContextSize - BaseHeaderSize // BytesPerWord - CtxtTempFrameStart).
+	self success: newStackp <= (LargeContextSlots - CtxtTempFrameStart).
 	self successful ifFalse: [^ self primitiveFail].
 	stackp := self fetchStackPointerOf: ctxt.
-	newStackp > stackp ifTrue: ["Nil any newly accessible cells"
-			stackp + 1 to: newStackp do: [:i | self storePointer: i + CtxtTempFrameStart - 1 ofObject: ctxt withValue: nilObj]].
+	"Nil any newly accessible cells"
+	stackp + 1 to: newStackp do:
+		[:i | self storePointerUnchecked: i + CtxtTempFrameStart - 1 ofObject: ctxt withValue: nilObj].
 	self storeStackPointerValue: newStackp inContext: ctxt.
 	self pop: 1
 ]
@@ -8473,7 +8531,7 @@ NewspeakInterpreter >> primitiveVMParameter [
 		self storePointerUnchecked: 38 ofObject: result withValue:
 			(self integerObjectOf: statPendingFinalizationSignals).
 		self storePointerUnchecked: 39 ofObject: result withValue:
-			(self integerObjectOf: BytesPerWord).
+			(self integerObjectOf: self wordSize).
 		self storePointerUnchecked: 40 ofObject: result withValue:
 			(self integerObjectOf: ImmutabilityBit ~= 0).
 		self pop: 1 thenPush: result.
@@ -8520,7 +8578,7 @@ NewspeakInterpreter >> primitiveVMParameter [
 	index = 37  	ifTrue: [result := statSpecialMarkCount]. 
 	index = 38  	ifTrue: [result := statIGCDeltaUsecs + 500 // 1000]. 
 	index = 39  	ifTrue: [result := statPendingFinalizationSignals]. 
-	index = 40  	ifTrue: [result := BytesPerWord].
+	index = 40  	ifTrue: [result := self wordSize].
 	index = 41  	ifTrue: [result := ImmutabilityBit ~= 0].
 	argumentCount = 1 ifTrue:
 		[self pop: 2 thenPush: (self integerObjectOf: result).
@@ -8569,7 +8627,7 @@ NewspeakInterpreter >> primitiveVMPath [
 	| s sz |
 	sz := self vmPathSize.
 	s := self instantiateClass: (self splObj: ClassByteString) indexableSize: sz.
-	self vmPathGet: (s + BaseHeaderSize) Length: sz.
+	self vmPathGet: (s + self baseHeaderSize) Length: sz.
 	self pop: 1 thenPush: s.
 
 ]
@@ -8913,7 +8971,7 @@ NewspeakInterpreter >> printNameOfClass: classOop count: cnt [
 	<inline: false>
 	(classOop = 0 or: [cnt <= 0]) ifTrue: [^self print: 'bad class'].
 	((self sizeBitsOf: classOop) = metaclassSizeBits
-	  and: [metaclassSizeBits > (thisClassIndex * BytesPerWord)])	"(Metaclass instSize * 4)"
+	  and: [metaclassSizeBits > (thisClassIndex * self wordSize)])	"(Metaclass instSize * 4)"
 		ifTrue: [self printNameOfClass: (self fetchPointer: thisClassIndex ofObject: classOop) count: cnt - 1.
 				self print: ' class']
 		ifFalse: [self printStringOf: (self fetchPointer: classNameIndex ofObject: classOop)]
@@ -8938,7 +8996,7 @@ NewspeakInterpreter >> printOop: oop [
 	(oop between: self startOfMemory and: freeBlock) ifFalse:
 		[self printHex: oop; print: ' is not on the heap'; cr.
 		 ^nil].
-	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
+	(oop bitAnd: (self wordSize - 1)) ~= 0 ifTrue:
 		[self printHex: oop; print: ' is misaligned'; cr.
 		 ^nil].
 	(self isFreeObject: oop) ifTrue:
@@ -8955,7 +9013,7 @@ NewspeakInterpreter >> printOop: oop [
 	self cr.
 	(fmt > 4 and: [fmt < 12]) ifTrue:
 		[(self isWords: oop) ifTrue:
-			[lastIndex := 64 min: ((self byteSizeOf: oop) / BytesPerWord).
+			[lastIndex := 64 min: ((self byteSizeOf: oop) / self wordSize).
 			 lastIndex > 0 ifTrue:
 				[1 to: lastIndex do:
 					[:index|
@@ -8966,7 +9024,7 @@ NewspeakInterpreter >> printOop: oop [
 					[self cr]].
 			^nil].
 		^self printStringOf: oop; cr].
-	lastIndex := 64 min: (startIP := (self lastPointerOf: oop) / BytesPerWord).
+	lastIndex := 64 min: (startIP := (self lastPointerOf: oop) / self wordSize).
 	lastIndex > 0 ifTrue:
 		[1 to: lastIndex do:
 			[:index|
@@ -8981,7 +9039,7 @@ NewspeakInterpreter >> printOop: oop [
 		ifFalse:
 			[startIP > 64 ifTrue: [self print: '...'; cr]]
 		ifTrue:
-			[startIP := startIP * BytesPerWord + 1.
+			[startIP := startIP * self wordSize + 1.
 			 lastIndex := self lengthOf: oop.
 			 lastIndex - startIP > 100 ifTrue:
 				[lastIndex := startIP + 100].
@@ -9019,7 +9077,7 @@ NewspeakInterpreter >> printOopShortInner: oop [
 	(oop between: self startOfMemory and: freeBlock) ifFalse:
 		[self printHex: oop; print: ' is not on the heap'.
 		 ^nil].
-	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
+	(oop bitAnd: (self wordSize - 1)) ~= 0 ifTrue:
 		[self printHex: oop; print: ' is misaligned'.
 		 ^nil].
 	(self isFloatObject: oop) ifTrue:
@@ -9083,7 +9141,7 @@ NewspeakInterpreter >> printStringOf: oop [
 		[^nil].
 	(oop between: self startOfMemory and: freeBlock) ifFalse:
 		[^nil].
-	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
+	(oop bitAnd: (self wordSize - 1)) ~= 0 ifTrue:
 		[^nil].
 	fmt := self formatOf: oop.
 	fmt < 8 ifTrue: [ ^nil ].
@@ -9143,7 +9201,7 @@ NewspeakInterpreter >> printUnbalancedStackFromNamedPrimitive [
 NewspeakInterpreter >> push: object [
 
 	| sp |
-	self longAt: (sp := stackPointer + BytesPerWord) put: object.
+	self longAt: (sp := stackPointer + self wordSize) put: object.
 	stackPointer := sp.
 ]
 
@@ -9171,7 +9229,7 @@ NewspeakInterpreter >> pushClosureCopyCopiedValuesBytecode [
 	 Create a Closure with space for the copiedValues and pop numCopied values off the stack into the closure.
 	 Set numArgs as specified, and set startpc to the pc following the block size and jump over that code."
 	| newClosure numArgsNumCopied numArgs numCopied blockSize |
-	BytesPerWord == 4
+	self wordSize == 4
 		ifTrue: [imageFormatVersionNumber := 6504]
 		ifFalse: [imageFormatVersionNumber := 68002].
 	numArgsNumCopied := self fetchByte.
@@ -9183,7 +9241,7 @@ NewspeakInterpreter >> pushClosureCopyCopiedValuesBytecode [
 	self externalizeIPandSP. "This is a pain."
 	newClosure := self
 					closureNumArgs: numArgs
-					instructionPointer: ((self oopForPointer: localIP) + 2 - (method+BaseHeaderSize))
+					instructionPointer: ((self oopForPointer: localIP) + 2 - (method+self baseHeaderSize))
 					numCopiedValues: numCopied.
 	self internalizeIPandSP.
 	"Assume: have just allocated a new closure; it must be young. Thus, can use unchecked stores."
@@ -9476,9 +9534,9 @@ NewspeakInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt
 	<var: #dataSize type: 'size_t '>
 	<var: #imageOffset type: 'squeakFileOffsetType '>
 
-	metaclassSizeBits := 7 * BytesPerWord.	"guess (Metaclass instSize+1 * 4)"
+	metaclassSizeBits := 7 * self wordSize.	"guess (Metaclass instSize+1 * 4)"
 	swapBytes := self checkImageVersionFrom: f startingAt: imageOffset.
-	headerStart := (self sqImageFilePosition: f) - BytesPerWord.  "record header start position"
+	headerStart := (self sqImageFilePosition: f) - self wordSize.  "record header start position"
 
 	headerSize			:= self getLongFromFile: f swap: swapBytes.
 	dataSize			:= self getLongFromFile: f swap: swapBytes.
@@ -9697,7 +9755,7 @@ NewspeakInterpreter >> reverseDisplayFrom: startIndex to: endIndex [
 	w := self fetchInteger: 1 ofObject: displayObj.
 	dispBitsPtr := self fetchPointer: 0 ofObject: displayObj.
 	(self isIntegerObject: dispBitsPtr) ifTrue: [^ nil].
-	dispBitsPtr := dispBitsPtr + BaseHeaderSize.
+	dispBitsPtr := dispBitsPtr + self baseHeaderSize.
 	dispBitsPtr + (startIndex * 4) to: dispBitsPtr + (endIndex * 4) by: 4
 		do: [:ptr | 
 			reversed := (self long32At: ptr) bitXor: 4294967295.
@@ -9746,8 +9804,8 @@ NewspeakInterpreter >> roomToPushNArgs: n [
 	 the frame were converted into a context."
 	| cntxSize |
 	((self methodHeaderOf: method) bitAnd: LargeContextBit) ~= 0
-		ifTrue: [cntxSize := LargeContextSize / BytesPerWord - ReceiverIndex]
-		ifFalse: [cntxSize := SmallContextSize / BytesPerWord - ReceiverIndex].
+		ifTrue: [cntxSize := LargeContextSlots - CtxtTempFrameStart]
+		ifFalse: [cntxSize := SmallContextSlots - CtxtTempFrameStart].
 	^self stackPointerIndex + n <= cntxSize
 ]
 
@@ -9818,11 +9876,11 @@ NewspeakInterpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: r
 		[^false].
 	self storeContextRegisters: activeContext.
 	self justActivateNewMethod.
-	where := activeContext + BaseHeaderSize + (ReceiverIndex << ShiftForWord).
-	self longAt: where + (1 << ShiftForWord) put: self popRemappableOop.
-	self longAt: where + (2 << ShiftForWord) put: self popRemappableOop.
-	self longAt: where + (3 << ShiftForWord) put: self popRemappableOop.
-	self longAt: where + (4 << ShiftForWord) put: self popRemappableOop.
+	where := activeContext + self baseHeaderSize + (ReceiverIndex << self shiftForWord).
+	self longAt: where + (1 << self shiftForWord) put: self popRemappableOop.
+	self longAt: where + (2 << self shiftForWord) put: self popRemappableOop.
+	self longAt: where + (3 << self shiftForWord) put: self popRemappableOop.
+	self longAt: where + (4 << self shiftForWord) put: self popRemappableOop.
 	self interpret.
 	"not reached"
 	^true
@@ -9850,8 +9908,8 @@ NewspeakInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 	self storeContextRegisters: activeContext.
 	self justActivateNewMethod.
 	relativeSP := stackPointer - activeContext.
-	stackPointer := activeContext + BaseHeaderSize + (ReceiverIndex * BytesPerWord).
-	self cppIf: BytesPerWord = 8
+	stackPointer := activeContext + self baseHeaderSize + (ReceiverIndex * self wordSize).
+	self cppIf: self wordSize = 8
 		ifTrue:
 			[(self argumentCountOf: newMethod) = 4 ifTrue:
 				[self push: (self positive64BitIntegerFor: vmCallbackContext thunkp asUnsignedInteger).
@@ -10002,7 +10060,7 @@ NewspeakInterpreter >> shortPrintOop: oop [
 	(oop between: self startOfMemory and: freeBlock) ifFalse:
 		[self printHex: oop; print: ' is not on the heap'; cr.
 		 ^nil].
-	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
+	(oop bitAnd: (self wordSize - 1)) ~= 0 ifTrue:
 		[self printHex: oop; print: ' is misaligned'; cr.
 		 ^nil].
 	self print: ': a(n) '.
@@ -10280,7 +10338,7 @@ NewspeakInterpreter >> singleExtendedSuperBytecode [
 NewspeakInterpreter >> sizeFieldOfAlien: alienObj [
 	"Answer the first field of alienObj which is assumed to be an Alien of at least 8 bytes"
 	<inline: true>
-	^self longAt: alienObj + BaseHeaderSize
+	^self longAt: alienObj + self baseHeaderSize
 ]
 
 { #category : #'primitive support' }
@@ -10303,7 +10361,7 @@ NewspeakInterpreter >> sizeOfSTArrayFromCPrimitive: cPtr [
 
 	| oop |
 	<var: #cPtr type: 'void *'>
-	oop := (self oopForPointer: cPtr) - BaseHeaderSize.
+	oop := (self oopForPointer: cPtr) - self baseHeaderSize.
 	(self isWordsOrBytes: oop) ifFalse: [
 		self primitiveFail.
 		^0].
@@ -10321,7 +10379,7 @@ NewspeakInterpreter >> slowPrimitiveResponse [
 	FailImbalancedPrimitives ifTrue:
 		[savedContext := activeContext.
 		 nArgs := argumentCount.
-		 deltaIfSuccess := stackPointer - (argumentCount * BytesPerOop) - activeContext].
+		 deltaIfSuccess := stackPointer - (argumentCount * self bytesPerOop) - activeContext].
 	self fastLogPrim: messageSelector.
 	self initPrimCall.
 	self dispatchFunctionPointer: primitiveFunctionPointer.
@@ -10333,7 +10391,7 @@ NewspeakInterpreter >> slowPrimitiveResponse [
 			 self warning: 'failing primitive due to unbalanced stack'.
 			 "This is necessary but insufficient; the result may still have been written to the stack.
 			   At least we'll know something is wrong."
-			 stackPointer := activeContext + deltaIfSuccess + (nArgs * BytesPerOop).
+			 stackPointer := activeContext + deltaIfSuccess + (nArgs * self bytesPerOop).
 			 self failUnbalancedPrimitive]].
 	^ self successful
 ]
@@ -10394,8 +10452,8 @@ NewspeakInterpreter >> snapshotCleanUp [
 					"Clean out context"
 					(fmt = 3 and: [self isContextHeader: header])
 						ifTrue: [sz := self sizeBitsOf: oop.
-							(self lastPointerOf: oop) + BytesPerWord
-								to: sz - BaseHeaderSize by: BytesPerWord
+							(self lastPointerOf: oop) + self wordSize
+								to: sz - self baseHeaderSize by: self wordSize
 								do: [:i | self longAt: oop + i put: nilObj]].
 					"Clean out external functions"
 					fmt >= 12
@@ -10477,13 +10535,13 @@ NewspeakInterpreter >> stSizeOf: oop [
 { #category : #'internal interpreter access' }
 NewspeakInterpreter >> stackFloatValue: offset [
 	<returnTypeC: #double>
-	^self floatValueOf: (self longAt: stackPointer - (offset*BytesPerWord))
+	^self floatValueOf: (self longAt: stackPointer - (offset*self wordSize))
 ]
 
 { #category : #'internal interpreter access' }
 NewspeakInterpreter >> stackIntegerValue: offset [
 	| integerPointer |
-	integerPointer := self longAt: stackPointer - (offset*BytesPerWord).
+	integerPointer := self longAt: stackPointer - (offset*self wordSize).
 	^self checkedIntegerValueOf: integerPointer
 ]
 
@@ -10492,7 +10550,7 @@ NewspeakInterpreter >> stackObjectValue: offset [
 	"Ensures that the given object is a real object, not a SmallInteger."
 
 	| oop |
-	oop := self longAt: stackPointer - (offset * BytesPerWord).
+	oop := self longAt: stackPointer - (offset * self wordSize).
 	(self isIntegerObject: oop) ifTrue: [self primitiveFail. ^ nil].
 	^ oop
 
@@ -10512,14 +10570,14 @@ NewspeakInterpreter >> stackPointerIndexFor: sp context: ctxt [
 	(This is what stackPointer used to be before conversion to pointer"
 	<api>
 	<inline: true>
-	^ (sp - ctxt - BaseHeaderSize) >> ShiftForWord
+	^ (sp - ctxt - self baseHeaderSize) >> self shiftForWord
 ]
 
 { #category : #'internal interpreter access' }
 NewspeakInterpreter >> stackPositiveMachineIntegerValue: offset [
 	<api>
 	| integerPointer |
-	integerPointer := self longAt: stackPointer - (offset*BytesPerWord).
+	integerPointer := self longAt: stackPointer - (offset*self wordSize).
 	^self positiveMachineIntegerValueOf: integerPointer
 ]
 
@@ -10527,7 +10585,7 @@ NewspeakInterpreter >> stackPositiveMachineIntegerValue: offset [
 NewspeakInterpreter >> stackSignedMachineIntegerValue: offset [
 	<api>
 	| integerPointer |
-	integerPointer := self longAt: stackPointer - (offset*BytesPerWord).
+	integerPointer := self longAt: stackPointer - (offset*self wordSize).
 	^self signedMachineIntegerValueOf: integerPointer
 ]
 
@@ -10538,12 +10596,12 @@ NewspeakInterpreter >> stackTop [
 
 { #category : #'internal interpreter access' }
 NewspeakInterpreter >> stackValue: offset [
-	^ self longAt: stackPointer - (offset*BytesPerWord)
+	^ self longAt: stackPointer - (offset*self wordSize)
 ]
 
 { #category : #'internal interpreter access' }
 NewspeakInterpreter >> stackValue: offset put: oop [
-	^self longAt: stackPointer - (offset*BytesPerWord)
+	^self longAt: stackPointer - (offset*self wordSize)
 		put: oop
 ]
 
@@ -10556,8 +10614,8 @@ NewspeakInterpreter >> startOfAlienData: oop [
 		[self primitiveFailFor: PrimErrBadArgument.
 		 ^0].
 	^self cCoerceSimple: ((self sizeFieldOfAlien: oop) > 0
-						 	ifTrue: [oop + BaseHeaderSize + BytesPerOop]
-							ifFalse: [self longAt: oop + BaseHeaderSize + BytesPerOop])
+						 	ifTrue: [oop + self baseHeaderSize + self bytesPerOop]
+							ifFalse: [self longAt: oop + self baseHeaderSize + self bytesPerOop])
 			to: #'void *'
 ]
 
@@ -10629,7 +10687,7 @@ NewspeakInterpreter >> storeContextRegisters: activeCntx [
 
 	<inline: true>
 	self storePointerUnchecked: InstructionPointerIndex ofObject: activeCntx
-		withValue: (self integerObjectOf: (instructionPointer - method - (BaseHeaderSize - 2))).
+		withValue: (self integerObjectOf: (instructionPointer - method - (self baseHeaderSize - 2))).
 	self storePointerUnchecked: StackPointerIndex ofObject: activeCntx
 		withValue: (self integerObjectOf: (self stackPointerIndex - TempFrameStart + 1)).
 
@@ -10826,12 +10884,12 @@ NewspeakInterpreter >> transfer: count fromIndex: firstFrom ofObject: fromOop to
 	| fromIndex toIndex lastFrom |
 	<inline: true>
 	self flag: #Dan.  "Need to check all senders before converting this for 64 bits"
-	fromIndex := fromOop + (firstFrom * BytesPerWord).
-	toIndex := toOop + (firstTo * BytesPerWord).
-	lastFrom := fromIndex + (count * BytesPerWord).
+	fromIndex := fromOop + (firstFrom * self wordSize).
+	toIndex := toOop + (firstTo * self wordSize).
+	lastFrom := fromIndex + (count * self wordSize).
 	[self oop: fromIndex isLessThan: lastFrom]
-		whileTrue: [fromIndex := fromIndex + BytesPerWord.
-			toIndex := toIndex + BytesPerWord.
+		whileTrue: [fromIndex := fromIndex + self wordSize.
+			toIndex := toIndex + self wordSize.
 			self
 				longAt: toIndex
 				put: (self longAt: fromIndex)]
@@ -10853,7 +10911,7 @@ NewspeakInterpreter >> transferTo: aProc [
 
 { #category : #'internal interpreter access' }
 NewspeakInterpreter >> unPop: nItems [
-	stackPointer := stackPointer + (nItems*BytesPerWord)
+	stackPointer := stackPointer + (nItems*self wordSize)
 ]
 
 { #category : #'interpreter shell' }
@@ -10897,7 +10955,7 @@ NewspeakInterpreter >> wakeHighestPriority [
 NewspeakInterpreter >> wordSwapped: w [
 	"Return the given 64-bit integer with its halves in the reverse order."
 
-	BytesPerWord = 8 ifFalse: [self error: 'This cannot happen.'].
+	self wordSize = 8 ifFalse: [self error: 'This cannot happen.'].
 	^   ((w bitShift: Byte4ShiftNegated) bitAnd: Bytes3to0Mask)
 	  + ((w bitShift: Byte4Shift         ) bitAnd: Bytes7to4Mask)
 

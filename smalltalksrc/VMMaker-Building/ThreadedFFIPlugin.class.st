@@ -1718,7 +1718,7 @@ ThreadedFFIPlugin >> returnStructInRegisters: returnStructSize [
 ThreadedFFIPlugin >> sizeField: oop [
 	"Answer the first field of oop which is assumed to be an Alien of at least 8 bytes"
 	<inline: true>
-	^self longAt: oop + BaseHeaderSize
+	^self longAt: oop + interpreterProxy baseHeaderSize
 ]
 
 { #category : #'primitive support' }
@@ -1727,6 +1727,6 @@ ThreadedFFIPlugin >> startOfData: oop [ "<Alien oop> ^<Integer>"
 	 the second field.  For indirect and pointer aliens it is what the second field points to."
 	<inline: true>
 	^(self sizeField: oop) > 0
-	 	ifTrue: [oop + BaseHeaderSize + BytesPerOop]
-		ifFalse: [self longAt: oop + BaseHeaderSize + BytesPerOop]
+	 	ifTrue: [oop + interpreterProxy baseHeaderSize + interpreterProxy bytesPerOop]
+		ifFalse: [self longAt: oop + interpreterProxy baseHeaderSize + interpreterProxy bytesPerOop]
 ]

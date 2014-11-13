@@ -20,8 +20,6 @@ Class {
 		'comment',
 		'definingClass',
 		'globalStructureBuildMethodHasFoo',
-		'canAsmLabel',
-		'mustAsmLabel',
 		'properties',
 		'extraVariableNumber'
 	],
@@ -154,28 +152,6 @@ TMethod >> allReferencedVariables [
 ]
 
 { #category : #inlining }
-TMethod >> argAssignmentsFor: meth args: argList in: aCodeGen [
-	"Return a collection of assignment nodes that assign the given argument expressions to the formal parameter variables of the given method."
-	"Optimization: If the actual parameters are either constants or local variables in the target method (the receiver), substitute them directly into the body of meth. Note that global variables cannot be subsituted because the inlined method might depend on the exact ordering of side effects to the globals."
-
-	| stmtList substitutionDict |
-	stmtList := OrderedCollection new: 100.
-	substitutionDict := Dictionary new: 100.
-	meth args with: argList do:
-		[ :argName :exprNode |
-		(self isNode: exprNode substitutableFor: argName inMethod: meth in: aCodeGen)
-			ifTrue:
-				[substitutionDict at: argName put: exprNode.
-				 locals remove: argName]
-			ifFalse:
-				[stmtList add: (TAssignmentNode new
-								setVariable: (TVariableNode new setName: argName)
-								expression: exprNode copy)]].
-	meth parseTree: (meth parseTree bindVariablesIn: substitutionDict).
-	^stmtList
-]
-
-{ #category : #inlining }
 TMethod >> argAssignmentsFor: meth send: aSendNode in: aCodeGen [
 	"Return a collection of assignment nodes that assign the given argument expressions to the formal parameter variables of the given method."
 	"Optimization: If the actual parameters are either constants or local variables in the target method (the receiver), substitute them directly into the body of meth. Note that global variables cannot be subsituted because the inlined method might depend on the exact ordering of side effects to the globals."
@@ -243,16 +219,6 @@ TMethod >> args [
 { #category : #transformations }
 TMethod >> asInlineNode [
 	^TInlineNode new method: self
-]
-
-{ #category : #accessing }
-TMethod >> asmLabel [
-	^canAsmLabel
-]
-
-{ #category : #accessing }
-TMethod >> asmLabel: aBoolean [
-	canAsmLabel := aBoolean
 ]
 
 { #category : #transformations }
@@ -830,21 +796,6 @@ TMethod >> extractInlineDirective [
 ]
 
 { #category : #transformations }
-TMethod >> extractLabelDirective [
-	"Scan the top-level statements for an inlining directive of the form:
-
-		self asmLabel: <boolean>
-
-	 and remove the directive from the method body. Answer the
-	 argument of the directive or true if there is no export directive."
-
-	^self
-		extractDirective: #asmLabel:
-		valueBlock: [:sendNode| sendNode args first value ~= false and: [mustAsmLabel := true. true]]
-		default: true
-]
-
-{ #category : #transformations }
 TMethod >> extractSharedCase [
 	"Scan the pragmas for an shared case directive of the form:
 		<sharedCodeNamed: 'sharedLabel' inCase: 'sharedCase'.>
@@ -1393,15 +1344,6 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 		add: (label := TLabeledCommentNode new setComment: 'begin ', sel);
 		addAll: (self argAssignmentsFor: meth send: aSendNode in: aCodeGen);
 		addAll: meth statements.  "method body"
-	"Vile hacks to prevent too many labels.  If the C compiler inlines functions it can duplicate
-	 labels and cause compilation to fail.  The second statement prevents us creating labels in
-	 anything other than the interpreter.  If we add labels to small functions that may be inlined
-	 by the C compiler then the label can be duplicated by the C compiler and cause the assembler
-	 to fail.  eem 9/20/2008 12:29"
-	(aCodeGen wantsLabels
-	 and: [meth asmLabel
-	 and: [meth mustAsmLabel or: [meth hasMoreSendsThan: 20]]]) ifTrue:
-		[label asmLabel: sel].
 	(directReturn
 	 and: [meth endsWithReturn not]) ifTrue:
 		[inlineStmts add:
@@ -1546,15 +1488,21 @@ TMethod >> isInlineableConditional: aSendNode in: aCodeGen [
 
 { #category : #inlining }
 TMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: aCodeGen [
-	"Answer true if the given parameter node is either a constant, a local variable, or a formal parameter of the receiver. Such parameter nodes may be substituted directly into the body of the method during inlining. Note that global variables cannot be subsituted into methods with possible side effects (i.e., methods that may assign to global variables) because the inlined method might depend on having the value of the global variable captured when it is passed in as an argument."
+	"Answer if the given parameter node may be substituted directly into the body of
+	 the method during inlining, instead of being bound to the actual parameter variable.
+	 We allow a constant, a local variable, or a formal parameter, or simple expressions
+	 involving only these to to be directly substituted. Note that global variables cannot
+	 be subsituted into methods with possible side effects (i.e., methods that may assign
+	 to global variables) because the inlined method might depend on having the value of
+	 the global variable captured when it is passed in as an argument."
 
-	| var madeNonTrivialCall |
+	| madeNonTrivialCall count constantExpression usageCount |
 	aNode isConstant ifTrue: [^true].
 
 	aNode isVariable ifTrue:
-		[var := aNode name.
-		((locals includes: var) or: [args includes: var]) ifTrue: [^true].
-		(#(self true false nil) includes: var) ifTrue: [^true].
+		[((locals includes: aNode name)
+		 or: [(args includes: aNode name)
+		 or: [#('self' 'true' 'false' 'nil') includes: aNode name]]) ifTrue: [^true].
 		"We can substitute any variable provided it is only read in the method being inlined,
 		 and if it is not read after any non-trivial call (which may update the variable)."
 		madeNonTrivialCall := false.
@@ -1572,28 +1520,42 @@ TMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: aCod
 					[:node|
 					node isSend and: [aCodeGen isAssertSelector: node selector]]]) ifTrue:
 			[^true].
-		(targetMeth maySubstituteGlobal: var in: aCodeGen) ifTrue: [^true]].
+		^targetMeth maySubstituteGlobal: aNode name in: aCodeGen].
 
 	"For now allow literal blocks to be substituted.  They better be accessed only
 	 with value[:value:*] messages though!"
 	aNode isStmtList ifTrue: [^true].
 
+	count := 0.
+	constantExpression := true.
 	"scan expression tree; must contain only constants, builtin ops, and inlineable vars"
-	aNode nodesDo: [ :node |
-		node isSend ifTrue: [
-			node isBuiltinOperator ifFalse: [^false].
-		].
-		node isVariable ifTrue: [
-			var := node name.
-			((locals includes: var) or:
-			 [(args includes: var) or:
-			 [(#(self true false nil) includes: var) or:
-			 [targetMeth maySubstituteGlobal: var in: aCodeGen]]]) ifFalse: [^false].
-		].
-		(node isConstant or: [node isVariable or: [node isSend]]) ifFalse: [^false].
-	].
+	aNode nodesDo:
+		[:node|
+		node isConstant
+			ifTrue: [] ifFalse:
+		[node isSend
+			ifTrue:
+				[node isBuiltinOperator ifFalse: [^false].
+				 count := count + 1] ifFalse:
+		[node isVariable ifTrue:
+			[constantExpression := false.
+			((locals includes: node name) or:
+			 [(args includes: node name) or:
+			 [(#('self' 'true' 'false' 'nil') includes: node name) or:
+			 [targetMeth maySubstituteGlobal: node name in: aCodeGen]]]) ifFalse: [^false]] ifFalse:
+		[^false]]]].
+	"inline constant expressions"
+	constantExpression ifNil: [^true].
 
-	^ true
+	"scan target to find usage count"
+	usageCount := 0.
+	targetMeth parseTree nodesDo:
+		[:node|
+		(node isVariable and: [node name = argName]) ifTrue:
+			[usageCount := usageCount + 1]].
+	"Now only inline expressions if they are used only once or are simple
+	 w.r.t. the usage count; a heuristic that seems to work well enough."
+	^usageCount = 1 or: [count <= usageCount]
 ]
 
 { #category : #testing }
@@ -1710,16 +1672,6 @@ TMethod >> mergePropertiesOfSuperMethod: superTMethod [
 		[:aPragma|
 		(self shouldIncorporatePragmaFromSuperMethod: aPragma) ifTrue:
 			[properties := properties copyWith: aPragma]]
-]
-
-{ #category : #accessing }
-TMethod >> mustAsmLabel [
-	^mustAsmLabel == true
-]
-
-{ #category : #accessing }
-TMethod >> mustAsmLabel: aBoolean [
-	mustAsmLabel := aBoolean
 ]
 
 { #category : #initialization }
@@ -2295,7 +2247,6 @@ TMethod >> setSelector: sel definingClass: class args: argList locals: localList
 	complete := false.  "set to true when all possible inlining has been done"
 	export := self extractExportDirective.
 	static := self extractStaticDirective.
-	canAsmLabel := self extractLabelDirective.
 	self extractSharedCase.
 	globalStructureBuildMethodHasFoo := false
 ]

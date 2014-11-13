@@ -192,7 +192,7 @@ InterpreterSimulator >> clipboardSize [
 { #category : #'I/O primitives' }
 InterpreterSimulator >> clipboardWrite: sz From: actualDataAddress At: ignored [
 
-	Clipboard clipboardText: (self stringOf: actualDataAddress - BaseHeaderSize)
+	Clipboard clipboardText: (self stringOf: actualDataAddress - self baseHeaderSize)
 ]
 
 { #category : #initialization }
@@ -342,9 +342,9 @@ InterpreterSimulator >> firstIndexableField: oop [
 		["pointer; may need to delve into the class format word"
 		totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
 		fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
-		^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)) to: 'oop *'].
+		^self cCoerce: (self pointerForOop: oop + self baseHeaderSize + (fixedFields << self shiftForWord)) to: 'oop *'].
 	^self
-		cCoerce: (self pointerForOop: oop + BaseHeaderSize)
+		cCoerce: (self pointerForOop: oop + self baseHeaderSize)
 		to: (fmt < 8
 				ifTrue: [fmt = 6
 						ifTrue: ["32 bit field objects" 'int *']
@@ -842,29 +842,29 @@ InterpreterSimulator >> longPrint: oop [
 	(self isIntegerObject: oop) ifTrue: [^ self shortPrint: oop].
 	^ String streamContents:
 		[:strm |
-		lastPtr := 64*BytesPerWord min: (self lastPointerOf: oop).
+		lastPtr := 64*self wordSize min: (self lastPointerOf: oop).
 		hdrType := self headerType: oop.
 		hdrType = 2 ifTrue: [lastPtr := 0].
 		prevVal := 0.
-		(self headerStart: oop) to: lastPtr by: BytesPerWord do:
+		(self headerStart: oop) to: lastPtr by: self wordSize do:
 			[:a | val := self longAt: oop+a.
 			(a > 0 and: [(val = prevVal) & (a ~= lastPtr)])
 			ifTrue:
-			[prevVal = (self longAt: oop+a-(BytesPerWord*2)) ifFalse: [strm cr; nextPutAll: '        ...etc...']]
+			[prevVal = (self longAt: oop+a-(self wordSize*2)) ifFalse: [strm cr; nextPutAll: '        ...etc...']]
 			ifFalse:
 			[strm cr; nextPutAll: (a<16 ifTrue: [' ', a hex] ifFalse: [a hex]); 
 				space; space; space; nextPutAll: val hex8; space; space.
-			a = (BytesPerWord*2) negated ifTrue:
+			a = (self wordSize*2) negated ifTrue:
 				[strm nextPutAll: 'size = ' , (val - hdrType) hex].
-			a = BytesPerWord negated ifTrue:
+			a = self wordSize negated ifTrue:
 				[strm nextPutAll: '<' , (self nameOfClass: (val - hdrType)) , '>'].
 			a = 0 ifTrue: [strm cr; tab; nextPutAll: (self dumpHeader: val)].
 			a > 0 ifTrue: [strm nextPutAll: (self shortPrint: val)].
-			a = BytesPerWord ifTrue:
+			a = self wordSize ifTrue:
 				[(self isCompiledMethod: oop) ifTrue:
 					[strm cr; tab; nextPutAll: (self dumpMethodHeader: val)]]].
 			prevVal := val].
-		lastLong := 256 min: (self sizeBitsOf: oop) - BaseHeaderSize.
+		lastLong := 256 min: (self sizeBitsOf: oop) - self baseHeaderSize.
 		hdrType = 2
 			ifTrue:
 			["free" strm cr; nextPutAll: (oop+(self longAt: oop)-2) hex;
@@ -873,13 +873,13 @@ InterpreterSimulator >> longPrint: oop [
 			[(self formatOf: oop) = 3
 			ifTrue:
 				[strm cr; tab; nextPutAll: '/ next 3 fields are above SP... /'.
-				lastPtr+BytesPerWord to: lastPtr+(3*BytesPerWord) by: BytesPerWord do:
+				lastPtr+self wordSize to: lastPtr+(3*self wordSize) by: self wordSize do:
 					[:a | val := self longAt: oop+a.
 					strm cr; nextPutAll: a hex; 
 						space; space; space; nextPutAll: val hex8; space; space.
 					(self validOop: val) ifTrue: [strm nextPutAll: (self shortPrint: val)]]]
 			ifFalse:
-			[lastPtr+BytesPerWord to: lastLong by: BytesPerWord do:
+			[lastPtr+self wordSize to: lastLong by: self wordSize do:
 				[:a | val := self longAt: oop+a.
 				strm cr; nextPutAll: (a<16 ifTrue: [' ', a hex] ifFalse: [a hex]); 
 					space; space; space.
@@ -928,7 +928,7 @@ InterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 
 { #category : #'debug support' }
 InterpreterSimulator >> nameOfClass: classOop [
-	(self sizeBitsOf: classOop) = (Metaclass instSize +1*BytesPerWord) ifTrue:
+	(self sizeBitsOf: classOop) = (Metaclass instSize +1*self wordSize) ifTrue:
 		[^ (self nameOfClass:
 				(self fetchPointer: 5 "thisClass" ofObject: classOop)) , ' class'].
 	^ self stringOf: (self fetchPointer: 6 "name" ofObject: classOop)
@@ -1364,7 +1364,7 @@ InterpreterSimulator >> printStackTemps: ctxt onStream: strm [
 			strm nextPutAll: oop hex; space]].
 	
 	strm cr; tab; nextPutAll: 'stack: '.
-	nTemps + 1 to: (self lastPointerOf: ctxt)//BytesPerWord - TempFrameStart do:
+	nTemps + 1 to: (self lastPointerOf: ctxt)//self wordSize - TempFrameStart do:
 		[:i | oop := self fetchPointer: TempFrameStart + i-1 ofObject: ctxt.
 			strm nextPutAll: oop hex; space].
 	
@@ -1399,7 +1399,7 @@ InterpreterSimulator >> printTop: n [
 			strm space; nextPutAll: (self nameOfClass: classAndSel first).
 			strm nextPutAll: '>>'; nextPutAll: (self shortPrint: classAndSel last).
 			ctxt = activeContext
-				ifTrue: [ip := instructionPointer - method - (BaseHeaderSize - 2).
+				ifTrue: [ip := instructionPointer - method - (self baseHeaderSize - 2).
 						sp := self stackPointerIndex - TempFrameStart + 1.
 						top := self stackTop]
 				ifFalse: [ip := self integerValueOf:
@@ -1522,7 +1522,7 @@ InterpreterSimulator >> shortPrint: oop [
 	(self isIntegerObject: oop) ifTrue: [^ '=' , (self integerValueOf: oop) printString , 
 		' (' , (self integerValueOf: oop) hex , ')'].
 	classOop := self fetchClassOf: oop.
-	(self sizeBitsOf: classOop) = (Metaclass instSize +1*BytesPerWord) ifTrue: [
+	(self sizeBitsOf: classOop) = (Metaclass instSize +1*self wordSize) ifTrue: [
 		^ 'class ' , (self nameOfClass: oop)].
 	name := self nameOfClass: classOop.
 	name size = 0 ifTrue: [name := '??'].
@@ -1537,9 +1537,9 @@ InterpreterSimulator >> shortPrint: oop [
 	name = 'True' ifTrue: [^ 'true'].
 	name = 'Float' ifTrue: [successFlag := true. ^ '=' , (self floatValueOf: oop) printString].
 	name = 'Association' ifTrue: [^ '(' ,
-				(self shortPrint: (self longAt: oop + BaseHeaderSize)) ,
+				(self shortPrint: (self longAt: oop + self baseHeaderSize)) ,
 				' -> ' ,
-				(self longAt: oop + BaseHeaderSize + BytesPerWord) hex8 , ')'].
+				(self longAt: oop + self baseHeaderSize + self wordSize) hex8 , ')'].
 	('AEIOU' includes: name first)
 		ifTrue: [^ 'an ' , name]
 		ifFalse: [^ 'a ' , name]
@@ -1645,7 +1645,7 @@ InterpreterSimulator >> stats [
 							(d between: -16000 and: 16000)
 								ifTrue: [stats add: #oops32k]
 								ifFalse: [stats add: #oopsOther]]].
-				fieldAddr := fieldAddr - BytesPerWord]].
+				fieldAddr := fieldAddr - self wordSize]].
 		bar value: oop.
 		last := oop.
 		last := last.
@@ -1686,12 +1686,12 @@ InterpreterSimulator >> stringOf: oop [
 	^ String streamContents:
 		[:strm |
 		size := 100 min: (self stSizeOf: oop).
-		nLongs := size-1//BytesPerWord+1.
+		nLongs := size-1//self wordSize+1.
 		1 to: nLongs do:
-			[:i | long := self longAt: oop + BaseHeaderSize + (i-1*BytesPerWord).
+			[:i | long := self longAt: oop + self baseHeaderSize + (i-1*self wordSize).
 			chars := self charsOfLong: long.
 			strm nextPutAll: (i=nLongs
-							ifTrue: [chars copyFrom: 1 to: size-1\\BytesPerWord+1]
+							ifTrue: [chars copyFrom: 1 to: size-1\\self wordSize+1]
 							ifFalse: [chars])]]
 ]
 
@@ -1799,12 +1799,12 @@ InterpreterSimulator >> validateActiveContext [
 InterpreterSimulator >> validateOopsIn: object [
 	| fieldPtr limit former header | 
 	"for each oop in me see if it is legal"
-	fieldPtr := object + BaseHeaderSize.	"first field"
+	fieldPtr := object + self baseHeaderSize.	"first field"
 	limit := object + (self lastPointerOf: object).	"a good field"
 	[fieldPtr > limit] whileFalse: [
 		former := self longAt: fieldPtr.
 		(self validOop: former) ifFalse: [self error: 'invalid oop in pointers object'].
-		fieldPtr := fieldPtr + BytesPerWord].
+		fieldPtr := fieldPtr + self wordSize].
 	"class"
 	header := self baseHeader: object.
 	(header bitAnd: CompactClassMask) = 0 ifTrue: [	
@@ -1816,7 +1816,7 @@ InterpreterSimulator >> validateOopsIn: object [
 InterpreterSimulator >> vmPathGet: stringBase Length: stringSize [
 	| pathName stringOop |
 	pathName := Smalltalk vmPath.
-	stringOop := stringBase - BaseHeaderSize. "Due to C call in Interp"
+	stringOop := stringBase - self baseHeaderSize. "Due to C call in Interp"
 	1 to: stringSize do:
 		[:i | self storeByte: i-1 ofObject: stringOop
 			withValue: (pathName at: i) asciiValue].
@@ -1844,7 +1844,7 @@ InterpreterSimulator >> writeImageFileIO: numberOfBytesToWrite [
 	"Actually emit the first numberOfBytesToWrite object memory bytes onto the snapshot."
 
 	| headerSize file |
-	BytesPerWord = 4 ifFalse: [self error: 'Not rewritten for 64 bits yet'].
+	self wordSize = 4 ifFalse: [self error: 'Not rewritten for 64 bits yet'].
 	headerSize := 64.
 
 	[

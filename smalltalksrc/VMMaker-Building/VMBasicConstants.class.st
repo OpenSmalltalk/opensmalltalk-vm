@@ -68,7 +68,6 @@ Class {
 		'PrimErrWritePastObject',
 		'PrimNoErr',
 		'STACKVM',
-		'ShiftForWord',
 		'SistaVM',
 		'VMBIGENDIAN'
 	],

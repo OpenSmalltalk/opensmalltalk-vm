@@ -638,12 +638,12 @@ CoInterpreterPrimitives >> primitiveTerminateTo [
 					 self assert: ((contextsIP asUnsignedInteger >= objectMemory startOfMemory)
 								or: [contextsIP = cogit ceReturnToInterpreterPC]) == (self isMachineCodeFrame: contextsFP) not.
 					 newSP := self frameCallerSP: frameAbove.
-					 newFP := newSP - stackedReceiverOffset - BytesPerWord.
+					 newFP := newSP - stackedReceiverOffset - objectMemory wordSize.
 					 theFP + stackedReceiverOffset
 						to: stackPointer
-						by: BytesPerWord negated
+						by: objectMemory wordSize negated
 						do: [:source|
-							newSP := newSP - BytesPerWord.
+							newSP := newSP - objectMemory wordSize.
 							stackPages longAt: newSP put: (stackPages longAt: source)].
 					 stackPages longAt: newFP + FoxSavedFP put: contextsFP.
 					"Ensure contract between machine-code callee and interpreter caller frames is preserved.
@@ -736,7 +736,7 @@ CoInterpreterPrimitives >> primitiveTerminateTo [
 									  and we're done."
 									 frameAbove := self findFrameAbove: contextsFP inPage: thePage.
 									 frameAbove ~= 0 ifTrue:
-										[contextsSP := (self frameCallerSP: frameAbove) - BytesPerWord.
+										[contextsSP := (self frameCallerSP: frameAbove) - objectMemory wordSize.
 										 stackPages longAt: contextsSP put: (self frameCallerSavedIP: frameAbove).
 										 self setHeadFP: contextsFP andSP: contextsSP inPage: thePage].
 									 currentCtx := aContextOrNil]

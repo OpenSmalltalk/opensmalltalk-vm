@@ -68,7 +68,7 @@ InterpreterSimulatorLSB >> halfWordLowInLong32: long32 [
 InterpreterSimulatorLSB >> nextLongFrom: aStream [
 	"Read a 32- or 64-bit quantity from the given (binary) stream."
 
-	^ aStream nextLittleEndianNumber: BytesPerWord
+	^ aStream nextLittleEndianNumber: self wordSize
 ]
 
 { #category : #'image save/restore' }

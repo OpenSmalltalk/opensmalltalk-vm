@@ -34,6 +34,11 @@ NewCoObjectMemorySimulator >> arrayValueOf: arrayOop [
 	^coInterpreter arrayValueOf: arrayOop
 ]
 
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> baseHeaderSize [
+	^4
+]
+
 { #category : #'simulation only' }
 NewCoObjectMemorySimulator >> booleanValueOf: obj [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -64,6 +69,11 @@ NewCoObjectMemorySimulator >> byteAtPointer: pointer put: byteValue [
 	pointer is a raw address, and byteValue is an 8-bit quantity."
 
 	^ self byteAt: pointer  put: byteValue
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> bytesPerOop [
+	^4
 ]
 
 { #category : #'memory access' }
@@ -124,7 +134,7 @@ NewCoObjectMemorySimulator >> fetchInteger: fieldIndex ofObject: objectPointer [
 NewCoObjectMemorySimulator >> fetchPointer: fieldIndex ofObject: oop [
 	"index by word size, and return a pointer as long as the word size"
 	self assert: oop >= self startOfMemory.
-	self assert: oop + BaseHeaderSize + (fieldIndex << ShiftForWord) < freeStart.
+	self assert: oop + self baseHeaderSize + (fieldIndex << self shiftForWord) < freeStart.
 	^super fetchPointer: fieldIndex ofObject: oop
 ]
 
@@ -139,9 +149,9 @@ NewCoObjectMemorySimulator >> firstIndexableField: oop [
 		["pointer; may need to delve into the class format word"
 		totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
 		fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
-		^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)) to: 'oop *'].
+		^self cCoerce: (self pointerForOop: oop + self baseHeaderSize + (fixedFields << self shiftForWord)) to: 'oop *'].
 	^self
-		cCoerce: (self pointerForOop: oop + BaseHeaderSize)
+		cCoerce: (self pointerForOop: oop + self baseHeaderSize)
 		to: (fmt < 8
 				ifTrue: [fmt = 6
 						ifTrue: ["32 bit field objects" 'int *']
@@ -573,7 +583,7 @@ NewCoObjectMemorySimulator >> storePointer: fieldIndex ofObject: oop withValue: 
 	fmt := self formatOfHeader: hdr.
 	self assert: ((fmt <= 4 or: [fmt >= 12])
 				and: [fieldIndex >= 0 and: [fieldIndex < (self lengthOf: oop baseHeader: hdr format: fmt)]]).
-	self assert: oop + BaseHeaderSize + (fieldIndex << ShiftForWord) < freeStart.
+	self assert: oop + self baseHeaderSize + (fieldIndex << self shiftForWord) < freeStart.
 	^super storePointer: fieldIndex ofObject: oop withValue: valuePointer
 ]
 
@@ -586,7 +596,7 @@ NewCoObjectMemorySimulator >> storePointerUnchecked: fieldIndex ofObject: oop wi
 	fmt := self formatOfHeader: hdr.
 	self assert: ((fmt <= 4 or: [fmt >= 12])
 				and: [fieldIndex >= 0 and: [fieldIndex < (self lengthOf: oop baseHeader: hdr format: fmt)]]).
-	self assert: oop + BaseHeaderSize + (fieldIndex << ShiftForWord) < freeStart.
+	self assert: oop + self baseHeaderSize + (fieldIndex << self shiftForWord) < freeStart.
 	^super storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer
 ]
 
@@ -629,4 +639,9 @@ NewCoObjectMemorySimulator >> validOop: oop [
 	(self longAt: oop) = 4 ifTrue: [^ false].
 	(self headerType: oop) = 2 ifTrue: [^ false].	"Free object"
 	^ true
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> wordSize [
+	^4
 ]
