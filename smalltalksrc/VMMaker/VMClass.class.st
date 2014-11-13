@@ -567,11 +567,6 @@ VMClass >> asString: stringIndex size: stringSize [
 	^self st: (ByteString new: stringSize) rn: stringIndex cpy: stringSize
 ]
 
-{ #category : #'translation support' }
-VMClass >> asmLabel: aBoolean [
-	"For translation only; noop when running in Smalltalk."
-]
-
 { #category : #'debug support' }
 VMClass >> assert: aBooleanExpression l: linenum [
 	<doNotGenerate>
@@ -593,16 +588,12 @@ VMClass >> asserta: aBooleanExpression l: linenum [
 	^self asserta: aBooleanExpression
 ]
 
-{ #category : #accessing }
-VMClass >> bytesPerOop [
-	^BytesPerOop
-]
-
 { #category : #'translation support' }
 VMClass >> cCode: codeString [
 	"Support for Smalltalk-to-C translation.
 	 For translation only; noop when running in Smalltalk.
 	 The argument is output literally when generating C code."
+	<doNotGenerate>
 ]
 
 { #category : #'translation support' }
@@ -612,13 +603,14 @@ VMClass >> cCode: codeStringOrBlock inSmalltalk: aBlock [
 	  If the first argument is a string it is output literally, and if it is a block it is translated.
 	  N.B.  If the first argument is a block then replacement happens at TMethod creation time so the use
 	  of cCode:inSmalltalk: with a block first argument does not prevent inlining and is hence preferred."
-
+	<doNotGenerate>
 	^aBlock value
 ]
 
 { #category : #'translation support' }
 VMClass >> cPreprocessorDirective: codeString [
 	"For translation only; noop when running in Smalltalk."
+	<doNotGenerate>
 ]
 
 { #category : #'translation support' }
@@ -629,6 +621,7 @@ VMClass >> cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock [
 		self cppIf: IMMUTABILITY
 			ifTrue: [(self internalIsImmutable: obj) ifTrue:
 						[^self primitiveFailFor: PrimErrNoModification]]"
+	<doNotGenerate>
 	^self cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock ifFalse: nil
 ]
 
@@ -646,6 +639,7 @@ VMClass >> cppIf: conditionBlockOrSymbolValue ifTrue: trueExpressionOrBlock ifFa
 		self cppIf: #A_GLOBAL
 			ifTrue: [self doSomethingFor64Bit]
 			ifFalse: [self doSomethingFor32Bit]"
+	<doNotGenerate>
 	^(conditionBlockOrSymbolValue value
 		ifNil: [false]
 		ifNotNil: [:value|
@@ -904,29 +898,23 @@ VMClass >> safe: signedInteger mod: positiveModulus [
 ]
 
 { #category : #'translation support' }
-VMClass >> sharedCodeNamed: label inCase: caseNumber [
-	"For translation only; noop when running in Smalltalk."
-]
-
-{ #category : #'translation support' }
 VMClass >> sizeof: objectSymbolOrClass [
 	<doNotGenerate>
 	| index |
 	objectSymbolOrClass isInteger ifTrue:
-		[self flag: #Dan.
-		 ^BytesPerWord].
+		[^self class objectMemoryClass wordSize].
 	objectSymbolOrClass isSymbol ifTrue:
 		[(objectSymbolOrClass last == $*
 		 or: [#long == objectSymbolOrClass
 		 or: [#'unsigned long' == objectSymbolOrClass]]) ifTrue:
-			[^BytesPerWord].
+			[^self class objectMemoryClass wordSize].
 		index := #(	#sqLong #usqLong #double
 					#int #'unsigned int' #float
 					#short #'unsigned short'
 					#char #'unsigned char' #'signed char')
 						indexOf: objectSymbolOrClass
 						ifAbsent:
-							[objectSymbolOrClass = #sqInt ifTrue: [^BytesPerOop].
+							[objectSymbolOrClass = #sqInt ifTrue: [^self class objectMemoryClass bytesPerOop].
 							 self error: 'unrecognized C type name'].
 		^#(8 8 8
 			4 4 4

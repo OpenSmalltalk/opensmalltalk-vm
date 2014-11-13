@@ -208,7 +208,7 @@ CogObjectRepresentationFor32BitSpur >> genCreateClosureAt: bcpc numArgs: numArgs
 		cogit
 			PopR: TempReg;
 			MoveR: TempReg
-				Mw: numCopied - i + ClosureFirstCopiedValueIndex * BytesPerOop + BaseHeaderSize
+				Mw: numCopied - i + ClosureFirstCopiedValueIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize
 					r: ReceiverResultReg].
 	^0
 ]
@@ -285,17 +285,17 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 	continuation :=
 	cogit MoveR: FPReg R: TempReg.
 	self genSetSmallIntegerTagsIn: TempReg.
-	cogit MoveR: TempReg Mw: BaseHeaderSize + (SenderIndex * BytesPerOop) r: ReceiverResultReg.
+	cogit MoveR: TempReg Mw: objectMemory baseHeaderSize + (SenderIndex * objectMemory bytesPerOop) r: ReceiverResultReg.
 
 	"pc gets frame caller as a SmallInteger"
 	cogit MoveMw: FoxSavedFP r: FPReg R: TempReg.
 	self genSetSmallIntegerTagsIn: TempReg.
-	cogit MoveR: TempReg Mw: BaseHeaderSize + (InstructionPointerIndex * BytesPerOop) r: ReceiverResultReg.
+	cogit MoveR: TempReg Mw: objectMemory baseHeaderSize + (InstructionPointerIndex * objectMemory bytesPerOop) r: ReceiverResultReg.
 
 	"Set the method field, freeing up ClassReg again, and frame's context field,"
 	cogit
 		MoveMw: (cogit offset: CogMethod of: #methodObject) r: ClassReg R: TempReg;
-		MoveR: TempReg Mw: BaseHeaderSize + (MethodIndex * BytesPerWord) r: ReceiverResultReg;
+		MoveR: TempReg Mw: objectMemory baseHeaderSize + (MethodIndex * objectMemory wordSize) r: ReceiverResultReg;
 		MoveR: ReceiverResultReg Mw: FoxThisContext r: FPReg.
 
 	"Now compute stack pointer; this is stackPointer (- 1 for return pc if a CISC) - framePointer - 4 (1 each for saved pc, method, context, receiver) + 1 (1-relative)"
@@ -306,7 +306,7 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 		SubCq: (cogit backEnd hasLinkRegister ifTrue: [3] ifFalse: [4]) R: TempReg;
 		AddR: SendNumArgsReg R: TempReg.
 	self genConvertIntegerToSmallIntegerInReg: TempReg.
-	cogit MoveR: TempReg Mw: BaseHeaderSize + (StackPointerIndex * BytesPerOop) r: ReceiverResultReg.
+	cogit MoveR: TempReg Mw: objectMemory baseHeaderSize + (StackPointerIndex * objectMemory bytesPerOop) r: ReceiverResultReg.
 
 	"Set closureOrNil to either the stacked receiver or nil"
 	isInBlock
@@ -317,12 +317,12 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 				MoveXwr: TempReg R: FPReg R: TempReg]
 		ifFalse:
 			[cogit MoveCw: objectMemory nilObject R: TempReg].
-	cogit MoveR: TempReg Mw: BaseHeaderSize + (ClosureIndex * BytesPerOop) r: ReceiverResultReg.
+	cogit MoveR: TempReg Mw: objectMemory baseHeaderSize + (ClosureIndex * objectMemory bytesPerOop) r: ReceiverResultReg.
 
 	"Set the receiver"
 	cogit
 		MoveMw: FoxMFReceiver r: FPReg R: TempReg;
-		MoveR: TempReg Mw: BaseHeaderSize + (ReceiverIndex * BytesPerOop) r: ReceiverResultReg.
+		MoveR: TempReg Mw: objectMemory baseHeaderSize + (ReceiverIndex * objectMemory bytesPerOop) r: ReceiverResultReg.
 
 	"Now copy the arguments.  This is tricky because of the shortage of registers,.  ClassReg ranges
 	 from 1 to numArgs (SendNumArgsReg), and from ReceiverIndex + 1 to ReceiverIndex + numArgs.
@@ -338,9 +338,9 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 		SubR: ClassReg R: TempReg;
 		AddCq: 2 R: TempReg; "+2 for saved fp and saved pc"
 		MoveXwr: TempReg R: FPReg R: TempReg;
-		AddCq: ReceiverIndex + (BaseHeaderSize / BytesPerWord) R: ClassReg; "Now convert ClassReg from frame index to context index"
+		AddCq: ReceiverIndex + (objectMemory baseHeaderSize / objectMemory wordSize) R: ClassReg; "Now convert ClassReg from frame index to context index"
 		MoveR: TempReg Xwr: ClassReg R: ReceiverResultReg;
-		SubCq: ReceiverIndex + (BaseHeaderSize / BytesPerWord) - 1 R: ClassReg; "convert back adding 1 ;-)"
+		SubCq: ReceiverIndex + (objectMemory baseHeaderSize / objectMemory wordSize) - 1 R: ClassReg; "convert back adding 1 ;-)"
 		Jump: loopHead.
 	exit jmpTarget: cogit Label.
 
@@ -356,9 +356,9 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 	cogit
 		MoveR: FPReg R: ClassReg;
 		AddCq: FoxMFReceiver R: ClassReg;
-		AddCq: ReceiverIndex + 1 + (BaseHeaderSize / BytesPerWord) R: SendNumArgsReg.
+		AddCq: ReceiverIndex + 1 + (objectMemory baseHeaderSize / objectMemory wordSize) R: SendNumArgsReg.
 	loopHead :=
-	cogit SubCq: BytesPerWord R: ClassReg.
+	cogit SubCq: objectMemory wordSize R: ClassReg.
 	cogit CmpR: SPReg R: ClassReg.
 	exit := cogit backEnd hasLinkRegister
 				ifTrue: [cogit JumpBelowOrEqual: 0]
@@ -457,11 +457,11 @@ CogObjectRepresentationFor32BitSpur >> genGetInlineCacheClassTagFrom: sourceReg 
 			 jumpCompare jmpTarget:
 				(cogit AndCq: objectMemory classIndexMask R: destReg)]
 		ifTrue:
-			[cogit AlignmentNops: BytesPerWord.
+			[cogit AlignmentNops: objectMemory wordSize.
 			 immLabel := cogit Label.
 			 cogit AndCq: 1 R: destReg.
 			 jumpCompare := cogit Jump: 0.
-			 cogit AlignmentNops: BytesPerWord.
+			 cogit AlignmentNops: objectMemory wordSize.
 			 entryLabel := cogit Label.
 			 cogit MoveR: sourceReg R: destReg.
 			 cogit AndCq: objectMemory tagMask R: destReg.
@@ -1814,11 +1814,11 @@ CogObjectRepresentationFor32BitSpur >> genNoPopCreateClosureAt: bcpc numArgs: nu
 	skip jmpTarget: cogit Label.
 
 	cogit
-		MoveR: ClassReg Mw: ClosureOuterContextIndex * BytesPerOop + BaseHeaderSize r: ReceiverResultReg;
+		MoveR: ClassReg Mw: ClosureOuterContextIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg;
 		MoveCq: (objectMemory integerObjectOf: bcpc) R: TempReg;
-		MoveR: TempReg Mw: ClosureStartPCIndex * BytesPerOop + BaseHeaderSize r: ReceiverResultReg;
+		MoveR: TempReg Mw: ClosureStartPCIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg;
 		MoveCq: (objectMemory integerObjectOf: numArgs) R: TempReg;
-		MoveR: TempReg Mw: ClosureNumArgsIndex * BytesPerOop + BaseHeaderSize r: ReceiverResultReg.
+		MoveR: TempReg Mw: ClosureNumArgsIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg.
 	^0
 ]
 

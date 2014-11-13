@@ -453,7 +453,6 @@ SmartSyntaxPluginTMethod >> setSelector: sel definingClass: class args: argList 
 	complete := false.  "set to true when all possible inlining has been done"
 	export := self extractExportDirective.
 	static := self extractStaticDirective.
-	canAsmLabel := self extractLabelDirective.
 	self extractSharedCase.
 	isPrimitive := false.  "set to true only if you find a primtive direction."
 	suppressingFailureGuards := self extractSuppressFailureGuardDirective.

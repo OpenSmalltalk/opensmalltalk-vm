@@ -404,7 +404,7 @@ CogVMSimulator >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 	self maybeCheckStackDepth: (selector = (objectMemory splObj: SelectorAboutToReturn)
 										ifTrue: [numArgs]
 										ifFalse: [numArgs + 1])
-		sp: stackPointer + BytesPerWord
+		sp: stackPointer + objectMemory wordSize
 		pc: (stackPages longAt: stackPointer).
 	^super ceSendAbort: selector to: rcvr numArgs: numArgs
 ]
@@ -547,7 +547,7 @@ CogVMSimulator >> clipboardSize [
 { #category : #'I/O primitives' }
 CogVMSimulator >> clipboardWrite: sz From: actualDataAddress At: ignored [
 
-	Clipboard clipboardText: (self stringOf: actualDataAddress - BaseHeaderSize)
+	Clipboard clipboardText: (self stringOf: actualDataAddress - objectMemory baseHeaderSize)
 ]
 
 { #category : #'debug support' }
@@ -1101,8 +1101,8 @@ CogVMSimulator >> frameCallerContext: theFP [
 	| thePage |
 	self assert: (self isBaseFrame: theFP).
 	thePage := stackPages stackPageFor: theFP.
-	self assert: theFP + (self frameStackedReceiverOffset: theFP) + (2 * BytesPerWord) = thePage baseAddress.
-	self assert: (stackPages longAt: thePage baseAddress - BytesPerWord) = (self frameContext: theFP).
+	self assert: theFP + (self frameStackedReceiverOffset: theFP) + (2 * objectMemory wordSize) = thePage baseAddress.
+	self assert: (stackPages longAt: thePage baseAddress - objectMemory wordSize) = (self frameContext: theFP).
 	^super frameCallerContext: theFP
 ]
 
@@ -1847,7 +1847,7 @@ CogVMSimulator >> isBoundThreadId: threadId [
 
 { #category : #'rump c stack' }
 CogVMSimulator >> isOnRumpCStack: address [
-	^address between: heapBase - self rumpCStackSize and: heapBase - BytesPerWord
+	^address between: heapBase - self rumpCStackSize and: heapBase - objectMemory wordSize
 ]
 
 { #category : #'primitive support' }
@@ -2187,7 +2187,7 @@ CogVMSimulator >> maybeCheckStackDepth: delta sp: sp pc: mcpc [
 		 lastbcpc := cogit lastBytecodePCForBlockAt: startbcpc in: cogHomeMethod methodObject.
 		 bcpc > lastbcpc ifTrue:
 			[bcpc := lastbcpc]].
-	asp := self stackPointerIndexForFrame: framePointer WithSP: sp + BytesPerWord.
+	asp := self stackPointerIndexForFrame: framePointer WithSP: sp + objectMemory wordSize.
 	csp := debugStackPointers at: bcpc.
 	"Compensate lazily for absent receiver sends."
 	(NewspeakVM
@@ -2209,7 +2209,7 @@ CogVMSimulator >> methodCache [
 
 { #category : #'simulation only' }
 CogVMSimulator >> methodCacheSize [
-	^MethodCacheSize * BytesPerWord
+	^MethodCacheSize * objectMemory wordSize
 ]
 
 { #category : #'simulation only' }
@@ -2242,7 +2242,7 @@ CogVMSimulator >> moveMethodCacheToMemoryAt: address [
 	 and adds 1 on accesses itself."
 	methodCache := CMethodCacheAccessor new
 						memory: objectMemory memory
-						offset: address / BytesPerWord
+						offset: address / objectMemory wordSize
 						array: oldMethodCache
 						functionPointerIndex: MethodCachePrimFunction
 						entrySize: MethodCacheEntrySize.
@@ -2263,7 +2263,7 @@ CogVMSimulator >> movePrimTraceLogToMemoryAt: address [
 	self flag: 'broken for 64-bit VM because Bitmap access unit is 32-bits'.
 	primTraceLog := CObjectAccessor new
 						memory: objectMemory memory
-						offset: address / BytesPerWord.
+						offset: address / objectMemory wordSize.
 	0 to: PrimTraceLogSize - 1 do:
 		[:i|
 		self assert: (primTraceLog at: i) = 0].
@@ -2441,8 +2441,8 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	objectMemory firstSegmentSize: firstSegSize.
 	"For Open PICs to be able to probe the method cache during
 	 simulation the methodCache must be relocated to memory."
-	methodCacheSize := methodCache size * BytesPerWord.
-	primTraceLogSize := primTraceLog size * BytesPerWord.
+	methodCacheSize := methodCache size * objectMemory wordSize.
+	primTraceLogSize := primTraceLog size * objectMemory wordSize.
 	"allocate interpreter memory. This list is in address order, low to high.
 	 In the actual VM the stack zone exists on the C stack."
 	heapBase := (Cogit guardPageSize
@@ -2620,7 +2620,7 @@ CogVMSimulator >> primStringtranslatefromtotable [
 
 { #category : #'simulation only' }
 CogVMSimulator >> primTraceLogSize [
-	^PrimTraceLogSize * BytesPerWord
+	^PrimTraceLogSize * objectMemory wordSize
 ]
 
 { #category : #'I/O primitives' }
@@ -3062,9 +3062,9 @@ CogVMSimulator >> printNum: anInteger [
 { #category : #'rump c stack' }
 CogVMSimulator >> printRumpCStackTo: address [
 	self assert: (self isOnRumpCStack: address).
-	heapBase - BytesPerWord
+	heapBase - objectMemory wordSize
 		to: address
-		by: BytesPerWord negated
+		by: objectMemory wordSize negated
 		do:
 			[:addr|
 			self printHex: addr; tab; printHex: (self longAt: addr); cr]
@@ -3089,7 +3089,7 @@ CogVMSimulator >> printStringOf: oop on: aStream [
 		[^nil].
 	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
 		[^nil].
-	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
+	(oop bitAnd: (objectMemory wordSize - 1)) ~= 0 ifTrue:
 		[^nil].
 	fmt := objectMemory formatOf: oop.
 	fmt < 8 ifTrue: [ ^nil ].
@@ -3814,7 +3814,7 @@ CogVMSimulator >> vmOwnerLockAddress [
 CogVMSimulator >> vmPathGet: stringBase Length: stringSize [
 	| pathName stringOop |
 	pathName := Smalltalk vmPath.
-	stringOop := stringBase - BaseHeaderSize. "Due to C call in Interp"
+	stringOop := stringBase - objectMemory baseHeaderSize. "Due to C call in Interp"
 	1 to: stringSize do:
 		[:i | objectMemory storeByte: i-1 ofObject: stringOop
 			withValue: (pathName at: i) asciiValue].

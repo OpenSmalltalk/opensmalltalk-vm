@@ -709,7 +709,6 @@ SpurMemoryManager class >> implicitReturnTypeFor: aSelector [
 SpurMemoryManager class >> initBytesPerWord: nBytes [
 
 	BytesPerWord := nBytes.
-	ShiftForWord := (BytesPerWord log: 2) rounded.
 	"The following is necessary to avoid confusing the compiler with shifts that are larger than the width of the type on which they operate.  In gcc, such shifts cause incorrect code to be generated."
 	BytesPerWord = 8
 		ifTrue:					"64-bit VM"
@@ -815,8 +814,7 @@ SpurMemoryManager class >> initializeCompactClassIndices [
 { #category : #'class initialization' }
 SpurMemoryManager class >> initializeObjectHeaderConstants [
 
-	BytesPerWord ifNil: [BytesPerWord := 4].  "May get called on fileIn, so supply default"
-	BaseHeaderSize := 8 "Alas so much of the VM uses BaseheaderSize explicitly we don't (yet) make it a message."
+	BytesPerWord ifNil: [BytesPerWord := 4]  "May get called on fileIn, so supply default"
 ]
 
 { #category : #'class initialization' }
@@ -907,7 +905,6 @@ SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 	self initBytesPerWord: (self == SpurMemoryManager
 								ifTrue: [optionsDictionary at: #BytesPerWord ifAbsent: [4]]
 								ifFalse: [self wordSize]).
-	BytesPerOop := optionsDictionary at: #BytesPerOop ifAbsent: [BytesPerWord].
 
 	self initializeObjectHeaderConstants. "Initializes BaseHeaderSize so do early"
 	self initializeSpurObjectRepresentationConstants.
@@ -1378,7 +1375,7 @@ SpurMemoryManager >> allInstancesOf: aClass [
 			 self emptyObjStack: weaklingStack]
 		ifFalse:
 			[self assert: (self isEmptyObjStack: weaklingStack)].
-	(count > (ptr - start / self bytesPerSlot) "not enough room"
+	(count > (ptr - start / self bytesPerOop) "not enough room"
 	 or: [limit ~= ptr and: [limit - ptr <= self allocationUnit]]) ifTrue: "can't split a single word"
 		[self freeObject: freeChunk.
 		 ^self integerObjectOf: count].
@@ -1468,7 +1465,7 @@ SpurMemoryManager >> allObjects [
 					 count := count + 1.
 					 ptr < limit ifTrue:
 						[self longAt: ptr put: obj.
-						 ptr := ptr + self bytesPerSlot]]
+						 ptr := ptr + self bytesPerOop]]
 				ifFalse:
 					[MarkObjectsForEnumerationPrimitives ifTrue:
 						[(self isSegmentBridge: obj) ifFalse:
@@ -1481,7 +1478,7 @@ SpurMemoryManager >> allObjects [
 		ifFalse:
 			[self assert: (self isEmptyObjStack: weaklingStack)].
 	self assert: count >= self numSlotsMask.
-	(count > (ptr - start / self bytesPerSlot) "not enough room"
+	(count > (ptr - start / self bytesPerOop) "not enough room"
 	 or: [limit ~= ptr and: [limit - ptr <= self allocationUnit]]) ifTrue: "can't split a single word"
 		[self freeChunkWithBytes: (self bytesInObject: freeChunk) at: (self startOfObject: freeChunk).
 		 self checkFreeSpace.
@@ -1669,7 +1666,7 @@ SpurMemoryManager >> allStrongSlotsOfWeaklingAreMarked: aWeakling [
 
 { #category : #'weakness and ephemerality' }
 SpurMemoryManager >> allUnscannedEphemeronsAreActive [
-	unscannedEphemerons start to: unscannedEphemerons top - self bytesPerSlot do:
+	unscannedEphemerons start to: unscannedEphemerons top - self bytesPerOop do:
 		[:p| | key |
 		key := self keyOfEphemeron: (self longAt: p).
 		((self isImmediate: key) or: [self isMarked: key]) ifTrue:
@@ -1686,7 +1683,7 @@ SpurMemoryManager >> allocateBytes: numBytes classIndex: classIndex [
 	self assert: (coInterpreter addressCouldBeClassObj: (self classAtIndex: classIndex)).
 	self assert: (self instSpecOfClass: (self classAtIndex: classIndex)) = self firstByteFormat.
 	^self
-		allocateSlots: (numBytes + self bytesPerSlot - 1 // self bytesPerSlot)
+		allocateSlots: (numBytes + self bytesPerOop - 1 // self bytesPerOop)
 		format: (self byteFormatForNumBytes: numBytes)
 		classIndex: classIndex
 ]
@@ -2314,7 +2311,7 @@ SpurMemoryManager >> ambiguousClass: aClass allInstancesInto: start limit: limit
 						 count := count + 1.
 						 ptr < limit ifTrue:
 							[self longAt: ptr put: obj.
-							 ptr := ptr + self bytesPerSlot]]]
+							 ptr := ptr + self bytesPerOop]]]
 				ifFalse:
 					[MarkObjectsForEnumerationPrimitives ifTrue:
 						[(self isSegmentBridge: obj) ifFalse:
@@ -2405,7 +2402,7 @@ SpurMemoryManager >> atLeastClassIndexHalfHeader: obj [
 SpurMemoryManager >> averageObjectSizeInBytes [
 	"Answer an approximation of the average object size.  This is a bit of an underestimate.
 	 In the 32-bit system average object size is about 11 words per object, including header."
-	^8 * self bytesPerSlot
+	^8 * self bytesPerOop
 ]
 
 { #category : #snapshot }
@@ -2597,17 +2594,17 @@ SpurMemoryManager >> byteSizeOfInstanceOf: classObj withIndexableSlots: nElement
 		[self weakArrayFormat]	->
 			[numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements].
 		[self sixtyFourBitIndexableFormat]	->
-			[numSlots := self bytesPerSlot = 4 ifTrue: [nElements * 2] ifFalse: [nElements]].
+			[numSlots := self bytesPerOop = 4 ifTrue: [nElements * 2] ifFalse: [nElements]].
 		[self firstLongFormat]	->
-			[numSlots := self bytesPerSlot = 4 ifTrue: [nElements] ifFalse: [nElements + 1 // 2]].
+			[numSlots := self bytesPerOop = 4 ifTrue: [nElements] ifFalse: [nElements + 1 // 2]].
 		[self firstShortFormat]	->
-			[numSlots := self bytesPerSlot = 4 ifTrue: [nElements + 1 // 2] ifFalse: [nElements + 3 // 4]].
+			[numSlots := self bytesPerOop = 4 ifTrue: [nElements + 1 // 2] ifFalse: [nElements + 3 // 4]].
 		[self firstByteFormat]	->
-			[numSlots := nElements + (self bytesPerSlot - 1) // self bytesPerSlot].
+			[numSlots := nElements + (self bytesPerOop - 1) // self bytesPerOop].
 		[self firstCompiledMethodFormat]	-> "Assume nElements is derived from CompiledMethod>>basicSize."
-			[numSlots := nElements + (self bytesPerSlot - 1) // self bytesPerSlot] }
+			[numSlots := nElements + (self bytesPerOop - 1) // self bytesPerOop] }
 		otherwise: [^errorBlock value: PrimErrBadReceiver negated]. "non-indexable"
-	numSlots >= (1 << (self bytesPerSlot * 8 - self logBytesPerSlot)) ifTrue:
+	numSlots >= (1 << (self bytesPerOop * 8 - self logbytesPerOop)) ifTrue:
 		[^errorBlock value: PrimErrLimitExceeded].
 	^self objectBytesForSlots: numSlots
 ]
@@ -2641,11 +2638,6 @@ SpurMemoryManager >> bytesLeftInOldSpace [
 	"Answer the amount of available free old space.  Used by primitiveFullGC
 	 to answer the current available memory."
 	^totalFreeOldSpace
-]
-
-{ #category : #'header format' }
-SpurMemoryManager >> bytesPerSlot [
-	^self subclassResponsibility
 ]
 
 { #category : #'memory access' }
@@ -3611,7 +3603,7 @@ SpurMemoryManager >> containsOnlyValidBecomeObjects: array [
 		 (self isImmediate: oop) ifTrue: [^PrimErrInappropriate].
 		 (self isPinned: oop) ifTrue: [^PrimErrObjectIsPinned].
 		 effectsFlags := effectsFlags bitOr: (self becomeEffectFlagsFor: oop).
-		 fieldOffset := fieldOffset - BytesPerOop].
+		 fieldOffset := fieldOffset - self bytesPerOop].
 	"only set flags after checking all args."
 	becomeEffectsFlags := effectsFlags.
 	^0
@@ -3641,7 +3633,7 @@ SpurMemoryManager >> containsOnlyValidBecomeObjects: array1 and: array2 [
 		 (self isImmediate: oop) ifTrue: [^PrimErrInappropriate].
 		 (self isPinned: oop) ifTrue: [^PrimErrObjectIsPinned].
 		 effectsFlags := effectsFlags bitOr: (self becomeEffectFlagsFor: oop).
-		 fieldOffset := fieldOffset - BytesPerOop].
+		 fieldOffset := fieldOffset - self bytesPerOop].
 	"only set flags after checking all args."
 	becomeEffectsFlags := effectsFlags.
 	^0
@@ -3905,12 +3897,12 @@ SpurMemoryManager >> eeInstantiateSmallClass: classObj numSlots: numSlots [
 	 engine and implies that this allocation will *NOT* cause a GC.  N.B. the instantiated
 	 object IS NOT FILLED and must be completed before returning it to Smalltalk. Since
 	 this call is used in routines that do just that we are safe.  Break this rule and die in GC.
-	 Result is guaranteed to be young."
-	| classIndex |
+	 Result is guaranteed to be young.  We assume this is only used on classes that are
+	 already in the class table."
 	<inline: true>
-	classIndex := self ensureBehaviorHash: classObj.
+	self assert: (self rawHashBitsOf: classObj) ~= 0.
 	^self
-		eeInstantiateSmallClassIndex: classIndex
+		eeInstantiateSmallClassIndex: (self rawHashBitsOf: classObj)
 		format: (self instSpecOfClass: classObj)
 		numSlots: numSlots
 ]
@@ -4347,7 +4339,7 @@ SpurMemoryManager >> findString: aCString [
 		[:obj|
 		 ((self isBytesNonImm: obj)
 		  and: [(self lengthOf: obj) = cssz
-		  and: [(self str: aCString n: (self pointerForOop: obj + BaseHeaderSize) cmp: cssz) = 0]]) ifTrue:
+		  and: [(self str: aCString n: (self pointerForOop: obj + self baseHeaderSize) cmp: cssz) = 0]]) ifTrue:
 			[coInterpreter printHex: obj; space; printOopShort: obj; cr]]
 ]
 
@@ -4362,7 +4354,7 @@ SpurMemoryManager >> findStringBeginningWith: aCString [
 		[:obj|
 		 ((self isBytesNonImm: obj)
 		  and: [(self lengthOf: obj) >= cssz
-		  and: [(self str: aCString n: (self pointerForOop: obj + BaseHeaderSize) cmp: cssz) = 0]]) ifTrue:
+		  and: [(self str: aCString n: (self pointerForOop: obj + self baseHeaderSize) cmp: cssz) = 0]]) ifTrue:
 				[coInterpreter printHex: obj; space; printNum: (self lengthOf: obj); space; printOopShort: obj; cr]]
 ]
 
@@ -4521,7 +4513,6 @@ SpurMemoryManager >> fixedFieldsFieldWidth [
 SpurMemoryManager >> fixedFieldsOf: objOop format: fmt length: wordLength [
 	| class |
 	<inline: true>
-	<asmLabel: false>
 	"N.B. written to fall through to fetchClassOfNonImm: et al for forwarders
 	 so as to trigger an assert fail."
 	(fmt >= self sixtyFourBitIndexableFormat or: [fmt = self arrayFormat]) ifTrue:
@@ -5561,8 +5552,8 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	<inline: false>
 	| freeListObj |
 	"Catch mis-initializations leading to bad translations to C"
-	self assert: BaseHeaderSize = self baseHeaderSize.
-	self assert: (self maxSlotsForAlloc * BytesPerWord) asInteger > 0.
+	self assert: self baseHeaderSize = self baseHeaderSize.
+	self assert: (self maxSlotsForAlloc * self wordSize) asInteger > 0.
 	self bootstrapping ifFalse:
 		[self
 			initSegmentBridgeWithBytes: self bridgeSize
@@ -5973,7 +5964,6 @@ SpurMemoryManager >> isClassOfNonImm: oop equalTo: classOop compactClassIndex: k
 
 	| ccIndex |
 	<inline: true>
-	<asmLabel: false>
 	self assert: (self isImmediate: oop) not.
 
 	ccIndex := self classIndexOf: oop.
@@ -6677,7 +6667,6 @@ SpurMemoryManager >> lastPointerOf: objOop [
 	 Works with CompiledMethods, as well as ordinary objects."
 	<api>
 	<inline: true>
-	<asmLabel: false>
 	| fmt contextSize header |
 	fmt := self formatOf: objOop.
 	self assert: fmt ~= self forwardedFormat.
@@ -6686,8 +6675,8 @@ SpurMemoryManager >> lastPointerOf: objOop [
 		  and: [self isContextNonImm: objOop]) ifTrue:
 			["contexts end at the stack pointer"
 			contextSize := coInterpreter fetchStackPointerOf: objOop.
-			^CtxtTempFrameStart - 1 + contextSize * BytesPerOop + self baseHeaderSize].
-		^(self numSlotsOf: objOop) - 1 * BytesPerOop + self baseHeaderSize  "all pointers"].
+			^CtxtTempFrameStart - 1 + contextSize * self bytesPerOop + self baseHeaderSize].
+		^(self numSlotsOf: objOop) - 1 * self bytesPerOop + self baseHeaderSize  "all pointers"].
 	fmt < self firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
@@ -6700,9 +6689,8 @@ SpurMemoryManager >> lastPointerOfMethodHeader: methodHeader [
 	"Answer the byte offset of the last pointer field of a
 	 CompiledMethod with the given header."
 	<inline: true>
-	<asmLabel: false>
 	^(self literalCountOfMethodHeader: methodHeader)
-	  + LiteralStart - 1 * BytesPerOop + self baseHeaderSize
+	  + LiteralStart - 1 * self bytesPerOop + self baseHeaderSize
 ]
 
 { #category : #snapshot }
@@ -6715,7 +6703,6 @@ SpurMemoryManager >> lastPointerOfWhileSwizzling: objOop [
 	 and the image contains no forwarders (see class comment)."
 	<api>
 	<inline: true>
-	<asmLabel: false>
 	| fmt header |
 	fmt := self formatOf: objOop.
 	self assert: fmt ~= self forwardedFormat.
@@ -6766,7 +6753,6 @@ SpurMemoryManager >> lengthOf: objOop [
 
 	<api>
 	<inline: true>
-	<asmLabel: false>
 	^self lengthOf: objOop format: (self formatOf: objOop)
 ]
 
@@ -6787,7 +6773,6 @@ SpurMemoryManager >> lengthOf: objOop format: fmt [
 	 should be subtracted from the result of this method."
 	| numSlots |
 	<inline: true>
-	<asmLabel: false> 
 	numSlots := self numSlotsOfAny: objOop. "don't let forwarders freak us out..."
 	fmt <= self sixtyFourBitIndexableFormat ifTrue:
 		[^numSlots].
@@ -6887,8 +6872,8 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 
 	"Finally evaporate the container, leaving the newly loaded objects in place."
 	(self hasOverflowHeader: segmentWordArray)
-		ifTrue: [self setOverflowNumSlotsOf: segmentWordArray to: self allocationUnit / self bytesPerSlot]
-		ifFalse: [self setRawNumSlotsOf: segmentWordArray to: self allocationUnit / self bytesPerSlot].
+		ifTrue: [self setOverflowNumSlotsOf: segmentWordArray to: self allocationUnit / self bytesPerOop]
+		ifFalse: [self setRawNumSlotsOf: segmentWordArray to: self allocationUnit / self bytesPerOop].
 	
 	self leakCheckImageSegments ifTrue:
 		[self runLeakCheckerForFullGC: true].
@@ -7558,7 +7543,7 @@ SpurMemoryManager >> methodReturnValue: oop [
 SpurMemoryManager >> minSlotsForShortening [
 	"Answer the minimum number of additional slots to allocate in an object to always be able to shorten it.
 	 This is enough slots to allocate a minimum-sized object."
-	^self allocationUnit * 2 / self bytesPerSlot
+	^self allocationUnit * 2 / self bytesPerOop
 ]
 
 { #category : #compaction }
@@ -7993,7 +7978,6 @@ SpurMemoryManager >> numBytesOf: objOop [
 	<api>
 	| fmt numBytes |
 	<inline: true>
-	<asmLabel: false>
 	fmt := self formatOf: objOop.
 	numBytes := self numSlotsOf: objOop.
 	numBytes := numBytes << self shiftForWord.
@@ -8010,7 +7994,6 @@ SpurMemoryManager >> numBytesOf: objOop [
 { #category : #'object format' }
 SpurMemoryManager >> numFixedSlotsOf: objOop [
 	<inline: true>
-	<asmLabel: false>
 	^self fixedFieldsOfClassFormat: (self formatOfClass: (self fetchClassOfNonImm: objOop))
 ]
 
@@ -8028,7 +8011,6 @@ SpurMemoryManager >> numPointerSlotsOf: objOop [
 	 Works with CompiledMethods, as well as ordinary objects."
 	<api>
 	<inline: true>
-	<asmLabel: false>
 	| fmt contextSize numLiterals header |
 	fmt := self formatOf: objOop.
 	fmt <= self lastPointerFormat ifTrue:
@@ -8114,7 +8096,6 @@ SpurMemoryManager >> numStrongSlotsOf: objOop format: fmt ephemeronInactiveIf: c
 	 Works with CompiledMethods, as well as ordinary objects."
 	<var: 'criterion' declareC: 'int (*criterion)(sqInt key)'>
 	<inline: true>
-	<asmLabel: false>
 	| numSlots  contextSize numLiterals header |
 	fmt <= self lastPointerFormat ifTrue:
 		[numSlots := self numSlotsOf: objOop.
@@ -8148,7 +8129,6 @@ SpurMemoryManager >> numStrongSlotsOfInephemeral: objOop [
 	 which is .expected not to be an active ephemeron.
 	 Works with CompiledMethods, as well as ordinary objects."
 	<inline: true>
-	<asmLabel: false>
 	| fmt numSlots  contextSize numLiterals header |
 	fmt := self formatOf: objOop.
 	self assert: (fmt ~= self ephemeronFormat or: [self isMarked: (self keyOfEphemeron: objOop)]).
@@ -8179,7 +8159,6 @@ SpurMemoryManager >> numStrongSlotsOfWeakling: objOop [
 	"Answer the number of strong pointer fields in the given weakling."
 	<api>
 	<inline: true>
-	<asmLabel: false>
 	self assert: (self formatOf: objOop) = self weakArrayFormat.
 	^self fixedFieldsOfClass: (self fetchClassOfNonImm: objOop)
 ]
@@ -8343,7 +8322,7 @@ SpurMemoryManager >> objectsReachableFromRoots: arrayOfRoots [
 	count := count + 1.
 	ptr < limit ifTrue:
 		[self longAt: ptr put: arrayOfRoots.
-		 ptr := ptr + self bytesPerSlot].
+		 ptr := ptr + self bytesPerOop].
 
 	0 to: (self numSlotsOf: arrayOfRoots) - 1 do:
 		[:i|
@@ -8357,7 +8336,7 @@ SpurMemoryManager >> objectsReachableFromRoots: arrayOfRoots [
 		 count := count + 1.
 		 ptr < limit ifTrue:
 			[self longAt: ptr put: objOop.
-			 ptr := ptr + self bytesPerSlot].
+			 ptr := ptr + self bytesPerOop].
 		 oop := self fetchClassOfNonImm: objOop.
 		 (self isMarked: oop) ifFalse:
 			[self setIsMarkedOf: objOop to: true.
@@ -8385,7 +8364,7 @@ SpurMemoryManager >> objectsReachableFromRoots: arrayOfRoots [
 
 	totalFreeOldSpace := totalFreeOldSpace - (self bytesInObject: freeChunk).
 	"Now try and allocate the result"
-	(count > (ptr - start / self bytesPerSlot) "not enough room"
+	(count > (ptr - start / self bytesPerOop) "not enough room"
 	 or: [limit ~= ptr and: [limit - ptr <= self allocationUnit]]) ifTrue: "can't split a single word"
 		[self freeChunkWithBytes: (self bytesInObject: freeChunk) at: (self startOfObject: freeChunk).
 		 self checkFreeSpace.
@@ -8896,7 +8875,7 @@ SpurMemoryManager >> printMemoryFrom: start to: end [
 	address := start bitAnd: (self wordSize - 1) bitInvert.
 	[address < end] whileTrue:
 		[coInterpreter printHex: address; printChar: $:; space; printHex: (self longAt: address); cr.
-		 address := address + BytesPerWord]
+		 address := address + self wordSize]
 ]
 
 { #category : #'debug printing' }
@@ -9346,7 +9325,7 @@ SpurMemoryManager >> reverseBytesFrom: startAddr to: stopAddr [
 	addr := startAddr.
 	[self oop: addr isLessThan: stopAddr] whileTrue:
 		[self longAt: addr put: (self byteSwapped: (self longAt: addr)).
-		addr := addr + BytesPerWord]
+		addr := addr + self wordSize]
 ]
 
 { #category : #snapshot }
@@ -10362,7 +10341,7 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArray outPointers: outPoi
 
 	"Check that it can be safely shortened."
 	(endSeg ~= segAddr
-	 and: [endSeg - segAddr < (self baseHeaderSize + self bytesPerSlot)]) ifTrue:
+	 and: [endSeg - segAddr < (self baseHeaderSize + self bytesPerOop)]) ifTrue:
 		[^self return: PrimErrWritePastObject
 				restoringObjectsIn: arrayOfObjects savedHashes: savedInHashes
 				and: outPointerArray savedHashes: savedOutHashes].
@@ -10671,7 +10650,7 @@ SpurMemoryManager >> swizzleFieldsOfObject: oop [
 		[fieldOop := self longAt: fieldAddr.
 		 (self isNonImmediate: fieldOop) ifTrue:
 			[self longAt: fieldAddr put: (segmentManager swizzleObj: fieldOop)].
-		 fieldAddr := fieldAddr - BytesPerOop]
+		 fieldAddr := fieldAddr - self bytesPerOop]
 ]
 
 { #category : #'obj stacks' }
@@ -10904,7 +10883,7 @@ SpurMemoryManager >> uniqueIndex: classIndex allInstancesInto: start limit: limi
 					 	[count := count + 1.
 						 ptr < limit ifTrue:
 							[self longAt: ptr put: obj.
-							 ptr := ptr + self bytesPerSlot]]]
+							 ptr := ptr + self bytesPerOop]]]
 				ifFalse:
 					[MarkObjectsForEnumerationPrimitives ifTrue:
 						[(self isSegmentBridge: obj) ifFalse:

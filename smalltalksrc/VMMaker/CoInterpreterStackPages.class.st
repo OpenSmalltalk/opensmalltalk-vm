@@ -60,7 +60,7 @@ CoInterpreterStackPages >> byteAt: byteAddress [ "<Integer>"
 CoInterpreterStackPages >> couldBeFramePointer: pointer [
 	"Answer if the argument is a properly aligned pointer into the stack zone."
 	<var: #pointer type: #'void *'>
-	^(pointer asUnsignedInteger bitAnd: BytesPerWord - 1) = 0
+	^(pointer asUnsignedInteger bitAnd: objectMemory wordSize - 1) = 0
 	   and: [pointer asUnsignedInteger
 				between: (stackBasePlus1 - 1) asUnsignedInteger
 				and: (self cCode: [pages asUnsignedInteger]
@@ -71,7 +71,7 @@ CoInterpreterStackPages >> couldBeFramePointer: pointer [
 CoInterpreterStackPages >> extraStackBytes [
 	"See initializeStack:numSlots:pageSize:stackLimitOffset:stackPageHeadroom:
 	``Because stack pages grow down...''"
-	^BytesPerWord
+	^objectMemory wordSize
 ]
 
 { #category : #'page access' }
@@ -126,15 +126,15 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 	self cCode: []
 		inSmalltalk:
 			[self assert: objectMemory startOfMemory - coInterpreter cogCodeSize - Cogit guardPageSize - coInterpreter methodCacheSize - coInterpreter primTraceLogSize - coInterpreter rumpCStackSize
-					= (stackSlots * BytesPerWord roundUpTo: objectMemory allocationUnit)].
+					= (stackSlots * objectMemory wordSize roundUpTo: objectMemory allocationUnit)].
 	structStackPageSize := coInterpreter sizeof: InterpreterStackPage.
-	bytesPerPage := slotsPerPage * BytesPerWord.
+	bytesPerPage := slotsPerPage * objectMemory wordSize.
 	numPages := coInterpreter numStkPages.
 
 	"Because stack pages grow down baseAddress is at the top of a stack page and so to avoid
 	 subtracting BytesPerWord from baseAddress and lastAddress in the init loop below we simply
 	 push the stackPage array up one word to avoid the overlap.  This word is extraStackBytes."
-	pageStructBase := theStackPages + (numPages * bytesPerPage) + BytesPerWord.
+	pageStructBase := theStackPages + (numPages * bytesPerPage) + objectMemory wordSize.
 	pages := self cCode: [self cCoerceSimple: pageStructBase to: #'StackPage *']
 				  inSmalltalk:
 					[pageMap := Dictionary new.
@@ -169,7 +169,7 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 	self cCode: []
 		inSmalltalk:
 			[minStackAddress := theStackPages.
-			 maxStackAddress := theStackPages + (numPages * bytesPerPage) + BytesPerWord - 1].
+			 maxStackAddress := theStackPages + (numPages * bytesPerPage) + objectMemory wordSize - 1].
 
 	"The overflow limit is the amount of stack to retain when moving frames from an overflowing
 	 stack to reduce thrashing.  See stackOverflowOrEvent:mayContextSwitch:"
@@ -179,7 +179,7 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 		[:index|
 		 page := self stackPageAt: index.
 		 self assert: (self pageIndexFor: page baseAddress) == index.
-		 self assert: (self pageIndexFor: page baseAddress - (slotsPerPage - 1 * BytesPerWord)) == index.
+		 self assert: (self pageIndexFor: page baseAddress - (slotsPerPage - 1 * objectMemory wordSize)) == index.
 		 self assert: (self stackPageFor: page baseAddress) == page.
 		 self assert: (self stackPageFor: page stackLimit) == page.
 		 self cCode: []
@@ -189,7 +189,7 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 				 self assert: (self memIndexFor: (self oopForPointer: page baseAddress))
 							== (memIndex + slotsPerPage - 1).
 				 index < (numPages - 1) ifTrue:
-					[self assert: (self stackPageFor: page baseAddress + BytesPerWord) == (self stackPageAt: index + 1)]].
+					[self assert: (self stackPageFor: page baseAddress + objectMemory wordSize) == (self stackPageAt: index + 1)]].
 		coInterpreter initializePageTraceToInvalid: page].
 
 	mostRecentlyUsedPage := self stackPageAt: 0.
@@ -228,6 +228,7 @@ CoInterpreterStackPages >> isFree: thePage [
 
 { #category : #'memory access' }
 CoInterpreterStackPages >> longAt: byteAddress [
+	<doNotGenerate>
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 	self assert: (byteAddress >= minStackAddress and: [byteAddress < maxStackAddress]).
 	^objectMemory longAt: byteAddress
@@ -235,6 +236,7 @@ CoInterpreterStackPages >> longAt: byteAddress [
 
 { #category : #'memory access' }
 CoInterpreterStackPages >> longAt: byteAddress put: a32BitValue [
+	<doNotGenerate>
 	self assert: (byteAddress >= minStackAddress and: [byteAddress < maxStackAddress]).
 	^objectMemory longAt: byteAddress put: a32BitValue
 ]
@@ -277,7 +279,6 @@ CoInterpreterStackPages >> markStackPageMostRecentlyUsed: page [ "<InterpreterSt
 	                v                        <-prev-next->                         v
 	                free page<->free page<->free page<->free page"
 	<var: #page type: #'StackPage *'>
-	<asmLabel: false>
 	<returnTypeC: #void>
 	page == mostRecentlyUsedPage ifTrue:
 		[^nil].
@@ -325,7 +326,7 @@ CoInterpreterStackPages >> markStackPageNextMostRecentlyUsed: page [ "<Interpret
 
 { #category : #'page access' }
 CoInterpreterStackPages >> memIndexFor: byteAddress [
-	^(self oopForPointer: byteAddress) - coInterpreter stackZoneBase - 1 // BytesPerWord + 1
+	^(self oopForPointer: byteAddress) - coInterpreter stackZoneBase - 1 // objectMemory wordSize + 1
 ]
 
 { #category : #'page access' }
@@ -402,6 +403,21 @@ CoInterpreterStackPages >> pageListIsWellFormed [
 	^ok
 ]
 
+{ #category : #accessing }
+CoInterpreterStackPages >> pages [
+	<doNotGenerate>
+	^pages
+]
+
+{ #category : #initialization }
+CoInterpreterStackPages >> setInterpreter: anInterpreter [
+	"Initialize the stackPages memory for simulation.  To keep access monitoring
+	 in one place we defer to the coInterpreter for accessing memory."
+	<doNotGenerate>
+	coInterpreter := anInterpreter.
+	objectMemory := coInterpreter objectMemory
+]
+
 { #category : #assertions }
 CoInterpreterStackPages >> somePageHasHeadFrameFP: theFP [
 	^pages anySatisfy: [:page| page headFP = theFP]
@@ -436,6 +452,12 @@ CoInterpreterStackPages >> stackPageFor: pointer [ "<Integer>"
 	<var: #pointer type: #'void *'>
 	<returnTypeC: #'StackPage *'>
 	^self stackPageAt: (self pageIndexFor: pointer)
+]
+
+{ #category : #accessing }
+CoInterpreterStackPages >> surrogateAtAddress: anAddress [
+	<doNotGenerate>
+	^pageMap at: anAddress
 ]
 
 { #category : #'debug printing' }

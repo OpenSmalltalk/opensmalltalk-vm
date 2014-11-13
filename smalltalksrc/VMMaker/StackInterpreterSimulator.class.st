@@ -303,7 +303,7 @@ StackInterpreterSimulator >> clipboardSize [
 { #category : #'I/O primitives' }
 StackInterpreterSimulator >> clipboardWrite: sz From: actualDataAddress At: ignored [
 
-	Clipboard clipboardText: (self stringOf: actualDataAddress - BaseHeaderSize)
+	Clipboard clipboardText: (self stringOf: actualDataAddress - objectMemory baseHeaderSize)
 ]
 
 { #category : #'debug support' }
@@ -2340,9 +2340,9 @@ StackInterpreterSimulator >> shortPrint: oop [
 	name = 'Float' ifTrue: [^ '=' , (self dbgFloatValueOf: oop) printString].
 	(#('Association' 'ReadOnlyVariableBinding' 'VariableBinding') includes: name) ifTrue:
 		[^ '(' ,
-		(self shortPrint: (self longAt: oop + BaseHeaderSize)) ,
+		(self shortPrint: (self longAt: oop + objectMemory baseHeaderSize)) ,
 		' -> ' ,
-		(self longAt: oop + BaseHeaderSize + BytesPerWord) hex8 , ')'].
+		(self longAt: oop + objectMemory baseHeaderSize + objectMemory wordSize) hex8 , ')'].
 	^(('AEIOU' includes: name first) ifTrue: ['an '] ifFalse: ['a ']), name
 ]
 
@@ -2773,7 +2773,7 @@ StackInterpreterSimulator >> validOop: oop [
 StackInterpreterSimulator >> vmPathGet: stringBase Length: stringSize [
 	| pathName stringOop |
 	pathName := Smalltalk vmPath.
-	stringOop := stringBase - BaseHeaderSize. "Due to C call in Interp"
+	stringOop := stringBase - objectMemory baseHeaderSize. "Due to C call in Interp"
 	1 to: stringSize do:
 		[:i | objectMemory storeByte: i-1 ofObject: stringOop
 			withValue: (pathName at: i) asciiValue].

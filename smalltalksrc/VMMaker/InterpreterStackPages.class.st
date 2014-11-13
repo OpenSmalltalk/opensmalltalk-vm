@@ -15,6 +15,7 @@ Class {
 	#superclass : #VMClass,
 	#instVars : [
 		'interpreter',
+		'objectMemory',
 		'stackMemory',
 		'indexOffset',
 		'pages',
@@ -60,12 +61,12 @@ InterpreterStackPages >> couldBeFramePointer: pointer [
 	<var: #pointer type: #'void *'>
 	^self
 		cCode:
-			[(pointer asUnsignedInteger bitAnd: BytesPerWord - 1) = 0
+			[(pointer asUnsignedInteger bitAnd: objectMemory wordSize - 1) = 0
 			   and: [pointer asUnsignedInteger
 						between: stackMemory asUnsignedInteger
 						and: pages asUnsignedInteger]]
 		inSmalltalk:
-			[(pointer  bitAnd: BytesPerWord - 1) = 0
+			[(pointer  bitAnd: objectMemory wordSize - 1) = 0
 			 and: [(self memIndexFor: pointer)
 					between: 1 and: stackMemory size]]
 ]
@@ -144,13 +145,13 @@ InterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots pag
 	stackMemory := theStackPages. "For initialization in the C code."
 	self cCode: '' inSmalltalk: [pageSizeInSlots := slotsPerPage].
 	structStackPageSize := interpreter sizeof: InterpreterStackPage.
-	bytesPerPage := slotsPerPage * BytesPerWord.
-	numPages := stackSlots // (slotsPerPage + (structStackPageSize / BytesPerWord)).
+	bytesPerPage := slotsPerPage * objectMemory wordSize.
+	numPages := stackSlots // (slotsPerPage + (structStackPageSize / objectMemory wordSize)).
 
 	"Because stack pages grow down baseAddress is at the top of a stack page and so to avoid
 	 subtracting BytesPerWord from baseAddress and lastAddress in the init loop below we simply
 	 push the stackPage array up one word to avoid the overlap.  This word is extraStackBytes."
-	pageStructBase := theStackPages + (numPages * bytesPerPage) + BytesPerWord.
+	pageStructBase := theStackPages + (numPages * bytesPerPage) + objectMemory wordSize.
 	pages := self cCode: '(StackPage *)pageStructBase'
 				  inSmalltalk:
 						[pageStructBase class.
@@ -171,7 +172,7 @@ InterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots pag
 		 page := self stackPageAt: index.
 		 page
 			lastAddress: (self cCode: '(char *)theStackPages + (index * GIV(bytesPerPage))'
-							inSmalltalk: [(index * slotsPerPage - indexOffset) * BytesPerWord]);
+							inSmalltalk: [(index * slotsPerPage - indexOffset) * objectMemory wordSize]);
 			baseAddress: (page lastAddress + bytesPerPage);
 			stackLimit: page baseAddress - interpreter stackLimitBytes;
 			realStackLimit: page stackLimit;
@@ -181,11 +182,11 @@ InterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots pag
 	self cCode: ''
 		inSmalltalk:
 			[| lowestAddress highestAddress |
-			lowestAddress := (pages at: 1) lastAddress + BytesPerWord.
+			lowestAddress := (pages at: 1) lastAddress + objectMemory wordSize.
 			highestAddress := (pages at: numPages) baseAddress.
 			"see InterpreterStackPages>>longAt:"
-			self assert: lowestAddress // BytesPerWord + indexOffset = 1.
-			self assert: highestAddress // BytesPerWord + indexOffset = (numPages * slotsPerPage)].
+			self assert: lowestAddress // objectMemory wordSize + indexOffset = 1.
+			self assert: highestAddress // objectMemory wordSize + indexOffset = (numPages * slotsPerPage)].
 
 	"The overflow limit is the amount of stack to retain when moving frames from an overflowing
 	 stack to reduce thrashing.  See stackOverflowOrEvent:mayContextSwitch:"
@@ -196,7 +197,7 @@ InterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots pag
 		[:index|
 		 page := self stackPageAt: index.
 		 self assert: (self pageIndexFor: page baseAddress) == index.
-		 self assert: (self pageIndexFor: page baseAddress - (slotsPerPage - 1 * BytesPerWord)) == index.
+		 self assert: (self pageIndexFor: page baseAddress - (slotsPerPage - 1 * objectMemory wordSize)) == index.
 		 self assert: (self stackPageFor: page baseAddress) == page.
 		 self assert: (self stackPageFor: page stackLimit) == page.
 		 self cCode: ''
@@ -206,7 +207,7 @@ InterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots pag
 				 self assert: (self memIndexFor: (self oopForPointer: page baseAddress))
 							== (memIndex + slotsPerPage - 1).
 				 index < (numPages - 1) ifTrue:
-					[self assert: (self stackPageFor: page baseAddress + BytesPerWord) == (self stackPageAt: index + 1)]].
+					[self assert: (self stackPageFor: page baseAddress + objectMemory wordSize) == (self stackPageAt: index + 1)]].
 		interpreter initializePageTraceToInvalid: page].
 
 	mostRecentlyUsedPage := self stackPageAt: 0.
@@ -218,7 +219,7 @@ InterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots pag
 	 self assert: (self stackPageAt: theIndex) == page.
 	 self assert: (self pageIndexFor: page baseAddress) == theIndex.
 	 self assert: (self pageIndexFor: page stackLimit) == theIndex.
-	 self assert: (self pageIndexFor: page lastAddress + BytesPerWord) == theIndex.
+	 self assert: (self pageIndexFor: page lastAddress + objectMemory wordSize) == theIndex.
 	 (page := page nextPage) ~= mostRecentlyUsedPage] whileTrue.
 	self assert: count == numPages.
 	self assert: self pageListIsWellFormed
@@ -229,7 +230,8 @@ InterpreterStackPages >> initializeWithByteSize: byteSize "<Integer>" for: anInt
 	"Initialize the stackPages memory for simulation."
 	<doNotGenerate>
 	interpreter := anInterpreter.
-	^stackMemory := Array new: byteSize / BytesPerWord withAll: 0
+	objectMemory := anInterpreter objectMemory.
+	^stackMemory := Array new: byteSize / objectMemory wordSize withAll: 0
 ]
 
 { #category : #'page access' }
@@ -243,16 +245,18 @@ InterpreterStackPages >> isFree: thePage [
 
 { #category : #'memory access' }
 InterpreterStackPages >> longAt: byteAddress [
+	<doNotGenerate>
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
-	self assert: (byteAddress bitAnd: BytesPerWord - 1) == 0.
-	^stackMemory at: byteAddress // BytesPerWord + indexOffset
+	self assert: (byteAddress bitAnd: objectMemory wordSize - 1) == 0.
+	^stackMemory at: byteAddress // objectMemory wordSize + indexOffset
 ]
 
 { #category : #'memory access' }
 InterpreterStackPages >> longAt: byteAddress put: a32BitValue [
+	<doNotGenerate>
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
-	self assert: (byteAddress bitAnd: BytesPerWord - 1) == 0.
-	^stackMemory at: byteAddress // BytesPerWord + indexOffset put: a32BitValue
+	self assert: (byteAddress bitAnd: objectMemory wordSize - 1) == 0.
+	^stackMemory at: byteAddress // objectMemory wordSize + indexOffset put: a32BitValue
 ]
 
 { #category : #'page access' }
@@ -293,7 +297,6 @@ InterpreterStackPages >> markStackPageMostRecentlyUsed: page [ "<InterpreterStac
 	                v                        <-prev-next->                         v
 	                free page<->free page<->free page<->free page"
 	<var: #page type: #'StackPage *'>
-	<asmLabel: false>
 	page == mostRecentlyUsedPage ifTrue:
 		[^nil].
 	"Common case; making new page most recently used."
@@ -339,7 +342,7 @@ InterpreterStackPages >> markStackPageNextMostRecentlyUsed: page [ "<Interpreter
 
 { #category : #'page access' }
 InterpreterStackPages >> memIndexFor: byteAddress [
-	^(self oopForPointer: byteAddress) // BytesPerWord + indexOffset
+	^(self oopForPointer: byteAddress) // objectMemory wordSize + indexOffset
 ]
 
 { #category : #'page access' }
@@ -412,6 +415,14 @@ InterpreterStackPages >> pageListIsWellFormed [
 	(self asserta: count = numPages) ifFalse:
 		[ok := false].
 	^ok
+]
+
+{ #category : #initialization }
+InterpreterStackPages >> setInterpreter: anInterpreter [
+	"Initialize the stackPages memory for simulation."
+	<doNotGenerate>
+	interpreter := anInterpreter.
+	objectMemory := interpreter objectMemory
 ]
 
 { #category : #assertions }

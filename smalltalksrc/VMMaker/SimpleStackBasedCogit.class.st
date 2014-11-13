@@ -1088,10 +1088,10 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
  
 	(flags anyMask: PrimCallCollectsProfileSamples) ifTrue:
 		["Test nextProfileTick for being non-zero and call checkProfileTick if so"
-		BytesPerWord = 4
+		objectMemory wordSize = 4
 			ifTrue:
 				[self MoveAw: coInterpreter nextProfileTickAddress R: TempReg.
-				 self MoveAw: coInterpreter nextProfileTickAddress + BytesPerWord R: ClassReg.
+				 self MoveAw: coInterpreter nextProfileTickAddress + objectMemory wordSize R: ClassReg.
 				 self OrR: TempReg R: ClassReg]
 			ifFalse:
 				[self MoveAw: coInterpreter nextProfileTickAddress R: TempReg.
@@ -1146,10 +1146,10 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 			(flags anyMask: PrimCallCollectsProfileSamples) ifTrue:
 				[self assert: (flags anyMask: PrimCallNeedsNewMethod).
 				"Test nextProfileTick for being non-zero and call checkProfileTick if so"
-				BytesPerWord = 4
+				objectMemory wordSize = 4
 					ifTrue:
 						[self MoveAw: coInterpreter nextProfileTickAddress R: TempReg.
-						 self MoveAw: coInterpreter nextProfileTickAddress + BytesPerWord R: ClassReg.
+						 self MoveAw: coInterpreter nextProfileTickAddress + objectMemory wordSize R: ClassReg.
 						 self OrR: TempReg R: ClassReg]
 					ifFalse:
 						[self MoveAw: coInterpreter nextProfileTickAddress R: TempReg.
@@ -1181,9 +1181,9 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 			self CmpCq: 0 R: TempReg.
 			jmp := self JumpNonZero: 0.
 			"Fetch result from stack"
-			self MoveMw: BytesPerWord r: SPReg R: ReceiverResultReg.
+			self MoveMw: objectMemory wordSize r: SPReg R: ReceiverResultReg.
 			self flag: 'currently caller pushes result'.
-			self RetN: BytesPerWord].	"return to caller, popping receiver"
+			self RetN: objectMemory wordSize].	"return to caller, popping receiver"
 
 	(flags anyMask: PrimCallCollectsProfileSamples) ifTrue:
 		["The sample is collected by cePrimReturnEnterCogCode for external calls"
@@ -1209,7 +1209,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 		["Jump to restore of receiver reg and proceed to frame build for failure."
 		 jmp jmpTarget: self Label.
 		 "Restore receiver reg from stack.  If on RISCs ret pc is in LinkReg, if on CISCs ret pc is on stack."
-		 self MoveMw: BytesPerWord * (methodOrBlockNumArgs + (backEnd hasLinkRegister ifTrue: [0] ifFalse: [1]))
+		 self MoveMw: objectMemory wordSize * (methodOrBlockNumArgs + (backEnd hasLinkRegister ifTrue: [0] ifFalse: [1]))
 			r: SPReg
 			R: ReceiverResultReg].
 	^0
@@ -1234,14 +1234,14 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	self flag: #lookupInMethodCacheSel:classTag:. "so this method shows up as a sender of lookupInMethodCacheSel:class:"
 	self MoveR: ClassReg R: SendNumArgsReg.
 	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
-	self LogicalShiftLeftCq: ShiftForWord R: ClassReg.
-	self AndCq: MethodCacheMask << ShiftForWord R: ClassReg.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << ShiftForWord)
+	self LogicalShiftLeftCq: objectMemory shiftForWord R: ClassReg.
+	self AndCq: MethodCacheMask << objectMemory shiftForWord R: ClassReg.
+	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << objectMemory shiftForWord)
 		r: ClassReg
 		R: TempReg.
 	self annotate: (self CmpCw: selector R: TempReg) objRef: selector.
 	jumpSelectorMiss := self JumpNonZero: 0.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << ShiftForWord)
+	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << objectMemory shiftForWord)
 		r: ClassReg
 		R: TempReg.
 	self CmpR: SendNumArgsReg R: TempReg.
@@ -1249,7 +1249,7 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 
 	itsAHit := self Label.
 	"Fetch the method.  The interpret trampoline requires the bytecoded method in SendNumArgsReg"
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheMethod << ShiftForWord)
+	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheMethod << objectMemory shiftForWord)
 		r: ClassReg
 		R: SendNumArgsReg.
 	"If the method is compiled jump to its unchecked entry-point, otherwise interpret it."
@@ -1265,14 +1265,14 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	jumpSelectorMiss jmpTarget: (jumpClassMiss jmpTarget: self Label).
 	self MoveR: SendNumArgsReg R: ClassReg.
 	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
-	self LogicalShiftLeftCq: ShiftForWord - 1 R: ClassReg.
-	self AndCq: MethodCacheMask << ShiftForWord R: ClassReg.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << ShiftForWord)
+	self LogicalShiftLeftCq: objectMemory shiftForWord - 1 R: ClassReg.
+	self AndCq: MethodCacheMask << objectMemory shiftForWord R: ClassReg.
+	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << objectMemory shiftForWord)
 		r: ClassReg
 		R: TempReg.
 	self annotate: (self CmpCw: selector R: TempReg) objRef: selector.
 	jumpSelectorMiss := self JumpNonZero: 0.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << ShiftForWord)
+	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << objectMemory shiftForWord)
 		r: ClassReg
 		R: TempReg.
 	self CmpR: SendNumArgsReg R: TempReg.
@@ -1282,15 +1282,15 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	jumpSelectorMiss jmpTarget: self Label.
 	self MoveR: SendNumArgsReg R: ClassReg.
 	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
-	ShiftForWord > 2 ifTrue:
-		[self LogicalShiftLeftCq: ShiftForWord - 1 R: ClassReg].
-	self AndCq: MethodCacheMask << ShiftForWord R: ClassReg.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << ShiftForWord)
+	objectMemory shiftForWord > 2 ifTrue:
+		[self LogicalShiftLeftCq: objectMemory shiftForWord - 1 R: ClassReg].
+	self AndCq: MethodCacheMask << objectMemory shiftForWord R: ClassReg.
+	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << objectMemory shiftForWord)
 		r: ClassReg
 		R: TempReg.
 	self annotate: (self CmpCw: selector R: TempReg) objRef: selector.
 	jumpSelectorMiss := self JumpNonZero: 0.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << ShiftForWord)
+	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << objectMemory shiftForWord)
 		r: ClassReg
 		R: TempReg.
 	self CmpR: SendNumArgsReg R: TempReg.
@@ -1406,8 +1406,8 @@ SimpleStackBasedCogit >> firstSpecialSelectorBytecodeOffset [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> frameOffsetOfTemporary: index [
 	^index < methodOrBlockNumArgs
-		ifTrue: [FoxCallerSavedIP + ((methodOrBlockNumArgs - index) * BytesPerWord)]
-		ifFalse: [FoxMFReceiver - BytesPerWord + ((methodOrBlockNumArgs - index) * BytesPerWord)]
+		ifTrue: [FoxCallerSavedIP + ((methodOrBlockNumArgs - index) * objectMemory wordSize)]
+		ifFalse: [FoxMFReceiver - objectMemory wordSize + ((methodOrBlockNumArgs - index) * objectMemory wordSize)]
 ]
 
 { #category : #'bytecode generators' }
@@ -1421,7 +1421,7 @@ SimpleStackBasedCogit >> genBlockReturn [
 	 Eliot"
 	backEnd hasLinkRegister ifTrue:
 		[self PopR: LinkReg].
-	self RetN: methodOrBlockNumArgs + 1 * BytesPerWord.
+	self RetN: methodOrBlockNumArgs + 1 * objectMemory wordSize.
 	^0
 ]
 
@@ -1447,7 +1447,7 @@ SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: pre
 	<var: #jumpFailCheck type: #'AbstractInstruction *'>
 	<var: #doOp type: #'AbstractInstruction *'>
 	<var: #fail type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
 	self MoveR: TempReg R: ClassReg.
 	jumpImmediate := objectRepresentation genJumpImmediateInScratchReg: TempReg.
@@ -1466,7 +1466,7 @@ SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: pre
 					scratchReg: TempReg.
 	self MoveR: SendNumArgsReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpImmediate jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg].
@@ -1498,7 +1498,7 @@ SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator invert: invert
 	<var: #compare type: #'AbstractInstruction *'>
 	<var: #jumpFail type: #'AbstractInstruction *'>
 
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
 	self MoveR: TempReg R: ClassReg.
 	jumpImmediate := objectRepresentation genJumpImmediateInScratchReg: TempReg.
@@ -1513,10 +1513,10 @@ SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator invert: invert
 	self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
 		objRef: objectMemory falseObject.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpCond jmpTarget: (self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
 							objRef: objectMemory trueObject).
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpImmediate jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg].
@@ -1876,7 +1876,7 @@ SimpleStackBasedCogit >> genGetImplicitReceiverFor: selector forPush: forPushSen
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 	objectRepresentation canPinObjects ifTrue:
-		[self MoveCw: theIRCs + (2 * BytesPerOop * indexOfIRC) R: Arg1Reg.
+		[self MoveCw: theIRCs + (2 * objectMemory bytesPerOop * indexOfIRC) R: Arg1Reg.
 		 self MoveCw: selector R: SendNumArgsReg.
 		 self CallNewspeakSend: ceImplicitReceiverTrampoline.
 		 indexOfIRC := indexOfIRC + 1.
@@ -2011,7 +2011,7 @@ SimpleStackBasedCogit >> genMustBeBooleanTrampolineFor: boolean called: trampoli
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPopStackBytecode [
-	self AddCq: BytesPerWord R: SPReg.
+	self AddCq: objectMemory wordSize R: SPReg.
 	^0
 ]
 
@@ -2029,10 +2029,10 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 	profiling ifTrue:
 		["Test nextProfileTick for being non-zero and call checkProfileTick: if so.
 		  N.B. nextProfileTick is 64-bits so 32-bit systems need to test both halves."
-		BytesPerWord = 4
+		objectMemory wordSize = 4
 			ifTrue:
 				[self MoveAw: coInterpreter nextProfileTickAddress R: TempReg.
-				 self MoveAw: coInterpreter nextProfileTickAddress + BytesPerWord R: ClassReg.
+				 self MoveAw: coInterpreter nextProfileTickAddress + objectMemory wordSize R: ClassReg.
 				 self OrR: TempReg R: ClassReg]
 			ifFalse:
 				[self MoveAw: coInterpreter nextProfileTickAddress R: TempReg.
@@ -2068,7 +2068,7 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 			[backEnd genLoadStackPointers.									"Switch back to Smalltalk stack."
 			 self MoveMw: 0 r: SPReg R: ReceiverResultReg.						"Fetch result from stack"
 			 self MoveAw: coInterpreter instructionPointerAddress R: LinkReg.	"Get and restore ret pc"
-			 self RetN: BytesPerWord]											"Return, popping result from stack"
+			 self RetN: objectMemory wordSize]											"Return, popping result from stack"
 		ifFalse:
 			[self MoveAw: coInterpreter instructionPointerAddress R: ClassReg.	"Get return pc"
 			 backEnd genLoadStackPointers.									"Switch back to Smalltalk stack."
@@ -2106,10 +2106,10 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 		ifTrue:
 			[self MoveMw: 0 r: SPReg R: ReceiverResultReg]	"Fetch result from stack"
 		ifFalse:
-			[self MoveMw: BytesPerWord r: SPReg R: ReceiverResultReg.	"Fetch result from stack"
+			[self MoveMw: objectMemory wordSize r: SPReg R: ReceiverResultReg.	"Fetch result from stack"
 			 self PushR: ClassReg].											"Restore return pc on CISCs"
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord.	"return to caller, popping receiver"
+	self RetN: objectMemory wordSize.	"return to caller, popping receiver"
 
 	profiling ifTrue:
 		["Call ceCheckProfileTick: to record sample and then continue.  newMethod
@@ -2131,7 +2131,7 @@ SimpleStackBasedCogit >> genPrimitiveAdd [
 	| jumpNotSI jumpOvfl |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpOvfl type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ClassReg.
@@ -2140,7 +2140,7 @@ SimpleStackBasedCogit >> genPrimitiveAdd [
 	jumpOvfl := self JumpOverflow: 0.
 	self MoveR: TempReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpOvfl jmpTarget: (jumpNotSI jmpTarget: self Label).
 	^0
 ]
@@ -2151,7 +2151,7 @@ SimpleStackBasedCogit >> genPrimitiveAsCharacter [
 	na := coInterpreter argumentCountOf: methodObj.
 	na <= 1 ifTrue:
 		[na = 1 ifTrue:
-			[self MoveMw: BytesPerWord r: SPReg R: Arg0Reg].
+			[self MoveMw: objectMemory wordSize r: SPReg R: Arg0Reg].
 		 (r := objectRepresentation
 				genInnerPrimitiveAsCharacter: 0
 				inReg: (na = 0 ifTrue: [ReceiverResultReg] ifFalse: [Arg0Reg])) < 0 ifTrue:
@@ -2176,7 +2176,7 @@ SimpleStackBasedCogit >> genPrimitiveAsFloat [
 					scratchReg: TempReg.
 	self MoveR: SendNumArgsReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord.
+	self RetN: objectMemory wordSize.
 	jumpFailAlloc jmpTarget: self Label.
 	^self compileFallbackToInterpreterPrimitive
 ]
@@ -2184,8 +2184,8 @@ SimpleStackBasedCogit >> genPrimitiveAsFloat [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveAt [
 	| r |
-	self MoveMw: BytesPerWord r: SPReg R: Arg0Reg.
-	(r := objectRepresentation genInnerPrimitiveAt: BytesPerWord * 2) < 0 ifTrue:
+	self MoveMw: objectMemory wordSize r: SPReg R: Arg0Reg.
+	(r := objectRepresentation genInnerPrimitiveAt: objectMemory wordSize * 2) < 0 ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
 ]
@@ -2193,9 +2193,9 @@ SimpleStackBasedCogit >> genPrimitiveAt [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveAtPut [
 	| r |
-	self MoveMw: BytesPerWord * 2 r: SPReg R: Arg0Reg.
-	self MoveMw: BytesPerWord r: SPReg R: Arg1Reg.
-	((r := objectRepresentation genInnerPrimitiveAtPut: BytesPerWord * 3) < 0
+	self MoveMw: objectMemory wordSize * 2 r: SPReg R: Arg0Reg.
+	self MoveMw: objectMemory wordSize r: SPReg R: Arg1Reg.
+	((r := objectRepresentation genInnerPrimitiveAtPut: objectMemory wordSize * 3) < 0
 	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
@@ -2205,13 +2205,13 @@ SimpleStackBasedCogit >> genPrimitiveAtPut [
 SimpleStackBasedCogit >> genPrimitiveBitAnd [
 	| jumpNotSI |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	"Whether the SmallInteger tags are zero or non-zero, anding them together will preserve them."
 	self AndR: ClassReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpNotSI jmpTarget: self Label.
 	^0
 ]
@@ -2220,13 +2220,13 @@ SimpleStackBasedCogit >> genPrimitiveBitAnd [
 SimpleStackBasedCogit >> genPrimitiveBitOr [
 	| jumpNotSI |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	"Whether the SmallInteger tags are zero or non-zero, oring them together will preserve them."
 	self OrR: ClassReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpNotSI jmpTarget: self Label.
 	^0
 ]
@@ -2275,7 +2275,7 @@ nonInt:
 	<var: #jumpNegative type: #'AbstractInstruction *'>
 	<var: #jumpTooBig type: #'AbstractInstruction *'>
 	<var: #jumpInRange type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
@@ -2292,14 +2292,14 @@ nonInt:
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ReceiverResultReg.
 	self LogicalShiftLeftR: ClassReg R: ReceiverResultReg.
 	objectRepresentation genAddSmallIntegerTagsTo: ReceiverResultReg.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpNegative jmpTarget: (self NegateR: ClassReg).
 	self CmpCq: objectRepresentation numSmallIntegerBits R: ClassReg. "N.B. FLAGS := ClassReg - 31"
 	jumpInRange := self JumpLessOrEqual: 0.
 	self MoveCq: objectRepresentation numSmallIntegerBits R: ClassReg.
 	jumpInRange jmpTarget: (self ArithmeticShiftRightR: ClassReg R: ReceiverResultReg).
 	objectRepresentation genSetSmallIntegerTagsIn: ReceiverResultReg.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpNotSI jmpTarget: (jumpTooBig jmpTarget: (jumpOvfl jmpTarget: self Label)).
 	^0
 ]
@@ -2308,14 +2308,14 @@ nonInt:
 SimpleStackBasedCogit >> genPrimitiveBitXor [
 	| jumpNotSI |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	"Clear one or the other tag so that xoring will preserve them."
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ClassReg.
 	self XorR: ClassReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpNotSI jmpTarget: self Label.
 	^0
 ]
@@ -2323,7 +2323,7 @@ SimpleStackBasedCogit >> genPrimitiveBitXor [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveCharacterValue [
 	| r |
-	(r := objectRepresentation genInnerPrimitiveCharacterValue: BytesPerWord) < 0 ifTrue:
+	(r := objectRepresentation genInnerPrimitiveCharacterValue: objectMemory wordSize) < 0 ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
 ]
@@ -2345,7 +2345,7 @@ SimpleStackBasedCogit >> genPrimitiveClass [
 			instRegIsReceiver: methodOrBlockNumArgs = 0.
 		 self MoveR: ClassReg R: ReceiverResultReg].
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord.
+	self RetN: objectMemory wordSize.
 	^0
 ]
 
@@ -2393,7 +2393,7 @@ SimpleStackBasedCogit >> genPrimitiveDiv [
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpExact type: #'AbstractInstruction *'>
 	<var: #jumpSameSign type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	self MoveR: TempReg R: Arg1Reg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
@@ -2419,7 +2419,7 @@ SimpleStackBasedCogit >> genPrimitiveDiv [
 	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	"test for overflow; the only case is SmallInteger minVal // -1"
 	jumpExact jmpTarget:
 		(self CmpCq: (1 << (objectRepresentation numSmallIntegerBits - 1)) R: TempReg).
@@ -2435,7 +2435,7 @@ SimpleStackBasedCogit >> genPrimitiveDivide [
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpInexact type: #'AbstractInstruction *'>
 	<var: #jumpOverflow type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
@@ -2454,7 +2454,7 @@ SimpleStackBasedCogit >> genPrimitiveDivide [
 	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpOverflow jmpTarget: (jumpInexact jmpTarget: (jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label))).
 	^0
 ]
@@ -2525,7 +2525,7 @@ SimpleStackBasedCogit >> genPrimitiveFloatSquareRoot [
 					scratchReg: TempReg.
 	self MoveR: SendNumArgsReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord.
+	self RetN: objectMemory wordSize.
 	jumpFailAlloc jmpTarget: self Label.
 	^self compileFallbackToInterpreterPrimitive
 ]
@@ -2551,16 +2551,16 @@ SimpleStackBasedCogit >> genPrimitiveIdentical [
 		receiver (also in ResultReceiverReg)
 		arg
 		return address"
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	^objectRepresentation
-		genInnerPrimitiveIdentical: BytesPerWord * 2
+		genInnerPrimitiveIdentical: objectMemory wordSize * 2
 		orNotIf: false
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveIdentityHash [
 	| r |
-	(r := objectRepresentation genInnerPrimitiveIdentityHash: BytesPerWord) < 0 ifTrue:
+	(r := objectRepresentation genInnerPrimitiveIdentityHash: objectMemory wordSize) < 0 ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
 ]
@@ -2582,7 +2582,7 @@ SimpleStackBasedCogit >> genPrimitiveMod [
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpExact type: #'AbstractInstruction *'>
 	<var: #jumpSameSign type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ClassReg.
@@ -2605,7 +2605,7 @@ SimpleStackBasedCogit >> genPrimitiveMod [
 	objectRepresentation genSetSmallIntegerTagsIn: ClassReg.
 	self MoveR: ClassReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label).
 	^0
 ]
@@ -2615,7 +2615,7 @@ SimpleStackBasedCogit >> genPrimitiveMultiply [
 	| jumpNotSI jumpOvfl |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpOvfl type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
@@ -2626,7 +2626,7 @@ SimpleStackBasedCogit >> genPrimitiveMultiply [
 	objectRepresentation genSetSmallIntegerTagsIn: ClassReg.
 	self MoveR: ClassReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpOvfl jmpTarget: (jumpNotSI jmpTarget: self Label).
 	^0
 ]
@@ -2634,7 +2634,7 @@ SimpleStackBasedCogit >> genPrimitiveMultiply [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNew [
 	| r |
-	((r := objectRepresentation genInnerPrimitiveNew: BytesPerWord) < 0
+	((r := objectRepresentation genInnerPrimitiveNew: objectMemory wordSize) < 0
 	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
 	"Call the interpreter primitive either when the machine-code primitive
@@ -2645,7 +2645,7 @@ SimpleStackBasedCogit >> genPrimitiveNew [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNewMethod [
 	| r |
-	((r := objectRepresentation genInnerPrimitiveNewMethod: 2 * BytesPerWord) < 0
+	((r := objectRepresentation genInnerPrimitiveNewMethod: 2 * objectMemory wordSize) < 0
 	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
 	"Call the interpreter primitive either when the machine-code primitive
@@ -2656,7 +2656,7 @@ SimpleStackBasedCogit >> genPrimitiveNewMethod [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNewWithArg [
 	| r |
-	((r := objectRepresentation genInnerPrimitiveNewWithArg: BytesPerWord) < 0
+	((r := objectRepresentation genInnerPrimitiveNewWithArg: objectMemory wordSize) < 0
 	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
 	"Call the interpreter primitive either when the machine-code primitive
@@ -2675,9 +2675,9 @@ SimpleStackBasedCogit >> genPrimitiveNotIdentical [
 		receiver (also in ResultReceiverReg)
 		arg
 		return address"
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	^objectRepresentation
-		genInnerPrimitiveIdentical: BytesPerWord * 2
+		genInnerPrimitiveIdentical: objectMemory wordSize * 2
 		orNotIf: true
 ]
 
@@ -2687,7 +2687,7 @@ SimpleStackBasedCogit >> genPrimitiveQuo [
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpOverflow type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
@@ -2705,7 +2705,7 @@ SimpleStackBasedCogit >> genPrimitiveQuo [
 	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpOverflow jmpTarget: (jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label)).
 	^0
 ]
@@ -2713,7 +2713,7 @@ SimpleStackBasedCogit >> genPrimitiveQuo [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveSize [
 	| r |
-	(r := objectRepresentation genInnerPrimitiveSize: BytesPerWord) < 0 ifTrue:
+	(r := objectRepresentation genInnerPrimitiveSize: objectMemory wordSize) < 0 ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
 ]
@@ -2721,8 +2721,8 @@ SimpleStackBasedCogit >> genPrimitiveSize [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveStringAt [
 	| r |
-	self MoveMw: BytesPerWord r: SPReg R: Arg0Reg.
-	(r := objectRepresentation genInnerPrimitiveStringAt: BytesPerWord * 2) < 0 ifTrue:
+	self MoveMw: objectMemory wordSize r: SPReg R: Arg0Reg.
+	(r := objectRepresentation genInnerPrimitiveStringAt: objectMemory wordSize * 2) < 0 ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
 ]
@@ -2730,9 +2730,9 @@ SimpleStackBasedCogit >> genPrimitiveStringAt [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveStringAtPut [
 	| r |
-	self MoveMw: BytesPerWord * 2 r: SPReg R: Arg0Reg.
-	self MoveMw: BytesPerWord r: SPReg R: Arg1Reg.
-	((r := objectRepresentation genInnerPrimitiveStringAtPut: BytesPerWord * 3) < 0
+	self MoveMw: objectMemory wordSize * 2 r: SPReg R: Arg0Reg.
+	self MoveMw: objectMemory wordSize r: SPReg R: Arg1Reg.
+	((r := objectRepresentation genInnerPrimitiveStringAtPut: objectMemory wordSize * 3) < 0
 	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
@@ -2747,7 +2747,7 @@ SimpleStackBasedCogit >> genPrimitiveSubtract [
 	| jumpNotSI jumpOvfl |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpOvfl type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	self MoveR: ReceiverResultReg R: TempReg.
@@ -2756,7 +2756,7 @@ SimpleStackBasedCogit >> genPrimitiveSubtract [
 	objectRepresentation genAddSmallIntegerTagsTo: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpOvfl jmpTarget: (jumpNotSI jmpTarget: self Label).
 	^0
 ]
@@ -3118,7 +3118,7 @@ SimpleStackBasedCogit >> genSend: selector numArgs: numArgs [
 	self assert: needsFrame.
 	self assert: (numArgs between: 0 and: 256). "say"
 	self assert: (objectMemory addressCouldBeOop: selector).
-	self MoveMw: numArgs * BytesPerWord r: SPReg R: ReceiverResultReg.
+	self MoveMw: numArgs * objectMemory wordSize r: SPReg R: ReceiverResultReg.
 	numArgs > 2 ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
 	self MoveCw: selector R: ClassReg.
@@ -3141,11 +3141,11 @@ SimpleStackBasedCogit >> genSendAbsentDynamicSuper: selector numArgs: numArgs [
 			self PushR: TempReg.
 			2 to: numArgs do:
 				[:index|
-				self MoveMw: index * BytesPerWord r: SPReg R: TempReg.
-				self MoveR: TempReg Mw: index - 1 * BytesPerWord r: SPReg].
+				self MoveMw: index * objectMemory wordSize r: SPReg R: TempReg.
+				self MoveR: TempReg Mw: index - 1 * objectMemory wordSize r: SPReg].
 			"if we copied the code in genSendDynamicSuper: we could save an instruction.
 			But we care not; the smarts are in StackToRegisterMappingCogit et al"
-			self MoveR: ReceiverResultReg Mw: numArgs * BytesPerWord r: SPReg].
+			self MoveR: ReceiverResultReg Mw: numArgs * objectMemory wordSize r: SPReg].
 	^self genSendDynamicSuper: selector numArgs: numArgs
 ]
 
@@ -3172,11 +3172,11 @@ SimpleStackBasedCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
 			self PushR: TempReg.
 			2 to: numArgs do:
 				[:index|
-				self MoveMw: index * BytesPerWord r: SPReg R: TempReg.
-				self MoveR: TempReg Mw: index - 1 * BytesPerWord r: SPReg].
+				self MoveMw: index * objectMemory wordSize r: SPReg R: TempReg.
+				self MoveR: TempReg Mw: index - 1 * objectMemory wordSize r: SPReg].
 			"if we copied the code in genSend:numArgs: we could save an instruction.
 			But we care not; the smarts are in StackToRegisterMappingCogit et al"
-			self MoveR: ReceiverResultReg Mw: numArgs * BytesPerWord r: SPReg].
+			self MoveR: ReceiverResultReg Mw: numArgs * objectMemory wordSize r: SPReg].
 	^self genSend: selector numArgs: numArgs
 ]
 
@@ -3185,7 +3185,7 @@ SimpleStackBasedCogit >> genSendDynamicSuper: selector numArgs: numArgs [
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 	self assert: needsFrame.
-	self MoveMw: numArgs * BytesPerWord r: SPReg R: ReceiverResultReg.
+	self MoveMw: numArgs * objectMemory wordSize r: SPReg R: ReceiverResultReg.
 	numArgs > 2 ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
 	self MoveCw: selector R: ClassReg.
@@ -3218,7 +3218,7 @@ SimpleStackBasedCogit >> genSendSuper: selector numArgs: numArgs [
 	self assert: (objectMemory addressCouldBeOop: selector).
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
-	self MoveMw: numArgs * BytesPerWord r: SPReg R: ReceiverResultReg.
+	self MoveMw: numArgs * objectMemory wordSize r: SPReg R: ReceiverResultReg.
 	numArgs > 2 ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
 	self MoveCw: selector R: ClassReg.
@@ -3270,7 +3270,7 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode [
 	| jumpFail jumpTrue |
 	<var: #jumpFail type: #'AbstractInstruction *'>
 	<var: #jumpTrue type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpFail := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	self CmpR: ClassReg R: ReceiverResultReg. "N.B. FLAGS := RRReg - ClassReg"
@@ -3278,10 +3278,10 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode [
 	self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
 		objRef: objectMemory falseObject.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpTrue jmpTarget: (self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
 						objRef: objectMemory trueObject).
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpFail jmpTarget: self Label.
 	^0
 ]
@@ -3301,7 +3301,7 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCompariso
 	<var: #jumpFail type: #'AbstractInstruction *'>
 	backEnd hasDoublePrecisionFloatingPointSupport ifFalse:
 		[^self genSmallIntegerComparison: jumpOpcode].
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
+	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpDouble := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	self CmpR: ClassReg R: ReceiverResultReg. "N.B. FLAGS := RRReg - ClassReg"
@@ -3309,10 +3309,10 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCompariso
 	self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
 		objRef: objectMemory falseObject.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpTrue jmpTarget: (self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
 						objRef: objectMemory trueObject).
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	
 	"Argument may be a Float : let us check or fail"
 	jumpDouble jmpTarget: self Label.
@@ -3333,10 +3333,10 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCompariso
 	self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
 		objRef: objectMemory falseObject.
 	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 	jumpCond jmpTarget: (self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
 							objRef: objectMemory trueObject).
-	self RetN: BytesPerWord * 2.
+	self RetN: objectMemory wordSize * 2.
 
 	objectRepresentation smallIntegerIsOnlyImmediateType
 		ifTrue: [jumpFail jmpTarget: self Label]
@@ -3453,7 +3453,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: s
 		scratchReg: TempReg.
 	jmpDone jmpTarget: self Label.
 	popBoolean ifTrue:
-		[self AddCq: BytesPerWord R: SPReg].
+		[self AddCq: objectMemory wordSize R: SPReg].
 	^0
 ]
 
@@ -3534,7 +3534,7 @@ SimpleStackBasedCogit >> genUpArrowReturn [
 		 self PopR: FPReg].
 	backEnd hasLinkRegister ifTrue:
 		[self PopR: LinkReg].
-	self RetN: methodOrBlockNumArgs + 1 * BytesPerWord.
+	self RetN: methodOrBlockNumArgs + 1 * objectMemory wordSize.
 	^0
 ]
 
