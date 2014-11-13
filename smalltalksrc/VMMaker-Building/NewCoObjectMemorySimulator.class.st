@@ -640,8 +640,3 @@ NewCoObjectMemorySimulator >> validOop: oop [
 	(self headerType: oop) = 2 ifTrue: [^ false].	"Free object"
 	^ true
 ]
-
-{ #category : #'memory access' }
-NewCoObjectMemorySimulator >> wordSize [
-	^4
-]
