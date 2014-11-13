@@ -35,11 +35,12 @@ CogMethodSurrogate64 class >> alignedByteSize [
 { #category : #accessing }
 CogMethodSurrogate64 class >> offsetOf: aByteSymbol [
 	"These should be generated!!"
-	self assert: self objectMemoryClass baseHeaderSize = BaseHeaderSize.
+	| baseHeaderSize |
+	baseHeaderSize := self objectMemoryClass baseHeaderSize.
 	^aByteSymbol caseOf:
-		{	[#methodObject]		-> [8 + BaseHeaderSize].
-			[#selector]				-> [24 + BaseHeaderSize].
-			[#blockEntryOffset]	-> [6 + BaseHeaderSize].
+		{	[#methodObject]		-> [8 + baseHeaderSize].
+			[#selector]				-> [24 + baseHeaderSize].
+			[#blockEntryOffset]	-> [6 + baseHeaderSize].
 		}
 ]
 

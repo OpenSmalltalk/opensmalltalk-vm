@@ -43,11 +43,6 @@ IA32ABIPlugin class >> hasHeaderFile [
 	^true
 ]
 
-{ #category : #'class initialization' }
-IA32ABIPlugin class >> initialize [
-	BytesPerOop := BytesPerWord
-]
-
 { #category : #translation }
 IA32ABIPlugin class >> moduleName [
 	^'IA32ABI'
@@ -91,7 +86,7 @@ IA32ABIPlugin >> primAddressField [
 	| rcvr value valueOop |
 	<export: true>
 	rcvr := interpreterProxy stackValue: 0.
-	value := self longAt: rcvr + BaseHeaderSize + BytesPerOop.
+	value := self longAt: rcvr + interpreterProxy baseHeaderSize + interpreterProxy bytesPerOop.
 	valueOop := interpreterProxy positive32BitIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
@@ -108,7 +103,7 @@ IA32ABIPlugin >> primAddressFieldPut [
 	value := interpreterProxy positive32BitValueOf: valueOop.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	self longAt: rcvr + BaseHeaderSize + BytesPerOop put: value.
+	self longAt: rcvr + interpreterProxy baseHeaderSize + interpreterProxy bytesPerOop put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
 
@@ -832,7 +827,7 @@ IA32ABIPlugin >> primSizeField [
 	<export: true>
 
 	rcvr := interpreterProxy stackValue: 0.
-	value := (self longAt: rcvr + BaseHeaderSize) signedIntFromLong.
+	value := (self longAt: rcvr + interpreterProxy baseHeaderSize) signedIntFromLong.
 	valueOop := interpreterProxy signed32BitIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
@@ -850,7 +845,7 @@ IA32ABIPlugin >> primSizeFieldPut [
 	value := interpreterProxy signed32BitValueOf: valueOop.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	self longAt: rcvr + BaseHeaderSize put: value signedIntToLong.
+	self longAt: rcvr + interpreterProxy baseHeaderSize put: value signedIntToLong.
 	^interpreterProxy methodReturnValue: valueOop
 ]
 
@@ -1201,14 +1196,14 @@ IA32ABIPlugin >> setInterpreter: anInterpreter [
 IA32ABIPlugin >> sizeField: rcvr [
 	"Answer the first field of rcvr which is assumed to be an Alien of at least 8 bytes"
 	<inline: true>
-	^self longAt: rcvr + BaseHeaderSize
+	^self longAt: rcvr + interpreterProxy baseHeaderSize
 ]
 
 { #category : #'private-support' }
 IA32ABIPlugin >> startOfByteData: rcvr [ "<byte indexable oop> ^<Integer>"
 	"Answer the start of rcvr's data, given that it is not an alien."
 	<inline: true>
-	^rcvr + BaseHeaderSize
+	^rcvr + interpreterProxy baseHeaderSize
 ]
 
 { #category : #'private-support' }
@@ -1217,8 +1212,8 @@ IA32ABIPlugin >> startOfData: rcvr [ "<Alien oop> ^<Integer>"
 	 the second field.  For indirect and pointer aliens it is what the second field points to."
 	<inline: true>
 	^(self sizeField: rcvr) > 0
-	 	ifTrue: [rcvr + BaseHeaderSize + BytesPerOop]
-		ifFalse: [self longAt: rcvr + BaseHeaderSize + BytesPerOop]
+	 	ifTrue: [rcvr + interpreterProxy baseHeaderSize + interpreterProxy bytesPerOop]
+		ifFalse: [self longAt: rcvr + interpreterProxy baseHeaderSize + interpreterProxy bytesPerOop]
 ]
 
 { #category : #'private-support' }
@@ -1227,6 +1222,6 @@ IA32ABIPlugin >> startOfData: rcvr "<Alien oop>" withSize: sizeField [ "<Integer
 	 the second field.  For indirect and pointer aliens it is what the second field points to."
 	<inline: true>
 	^sizeField > 0
-	 	ifTrue: [rcvr + BaseHeaderSize + BytesPerOop]
-		ifFalse: [self longAt: rcvr + BaseHeaderSize + BytesPerOop]
+	 	ifTrue: [rcvr + interpreterProxy baseHeaderSize + interpreterProxy bytesPerOop]
+		ifFalse: [self longAt: rcvr + interpreterProxy baseHeaderSize + interpreterProxy bytesPerOop]
 ]

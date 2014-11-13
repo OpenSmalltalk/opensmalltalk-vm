@@ -155,7 +155,7 @@ CogObjectRepresentationForSqueakV3 >> cacheTagIsMarked: cacheTag [
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> checkValidInlineCacheTag: cacheTag [
 	^cacheTag = ConstZero
-	  or: [((cacheTag bitAnd: 1 << ShiftForWord - 1) = 0
+	  or: [((cacheTag bitAnd: 1 << objectMemory shiftForWord - 1) = 0
 		   and: [cacheTag
 				between: 1 << objectMemory compactClassFieldLSB
 				and: (objectMemory compactClassIndexOfHeader: -1) << objectMemory compactClassFieldLSB])
@@ -236,7 +236,7 @@ CogObjectRepresentationForSqueakV3 >> genAllocFloatValue: dpreg into: resultReg 
 	<returnTypeC: #'AbstractInstruction *'>
 	| allocSize newFloatHeaderSansHash jumpFail |
 	<var: #jumpFail type: #'AbstractInstruction *'>
-	allocSize := BaseHeaderSize + (objectMemory sizeof: #double).
+	allocSize := objectMemory baseHeaderSize + (objectMemory sizeof: #double).
 	newFloatHeaderSansHash := ((ClassFloatCompactIndex << objectMemory compactClassFieldLSB
 									bitOr: (objectMemory formatOfClass: objectMemory classFloat))
 									bitOr: allocSize)
@@ -249,11 +249,11 @@ CogObjectRepresentationForSqueakV3 >> genAllocFloatValue: dpreg into: resultReg 
 	jumpFail := cogit JumpAboveOrEqual: 0.
 	cogit MoveR: resultReg R: scratch2.
 	self flag: #newObjectHash.
-	cogit AndCq: HashMaskUnshifted << BytesPerWord R: scratch2.
-	cogit LogicalShiftLeftCq: HashBitsOffset - BytesPerWord R: scratch2.
+	cogit AndCq: HashMaskUnshifted << objectMemory wordSize R: scratch2.
+	cogit LogicalShiftLeftCq: HashBitsOffset - objectMemory wordSize R: scratch2.
 	cogit OrCq: newFloatHeaderSansHash R: scratch2.
 	cogit MoveR: scratch2 Mw: 0 r: resultReg.
-	cogit MoveRd: dpreg M64: BaseHeaderSize r: resultReg.
+	cogit MoveRd: dpreg M64: objectMemory baseHeaderSize r: resultReg.
 	cogit MoveR: scratch1 Aw: objectMemory freeStartAddress.
 	^jumpFail
 ]
@@ -288,7 +288,7 @@ CogObjectRepresentationForSqueakV3 >> genCreateClosureAt: bcpc numArgs: numArgs 
 	cogit MoveCq: numArgs + (numCopied << 6) + (bcpc << 12) R: SendNumArgsReg.
 	cogit CallRT: ceClosureCopyTrampoline.
 	numCopied > 0 ifTrue:
-		[cogit AddCq: numCopied * BytesPerWord R: SPReg].
+		[cogit AddCq: numCopied * objectMemory wordSize R: SPReg].
 	^0
 ]
 
@@ -318,8 +318,8 @@ CogObjectRepresentationForSqueakV3 >> genGetClassFormatOfNonInt: instReg into: d
 	"Get header word in destReg"
 	cogit MoveMw: 0 r: instReg R: destReg.
 	"Form the byte index of the compact class field"
-	cogit LogicalShiftRightCq: (objectMemory compactClassFieldLSB - ShiftForWord) R: destReg.
-	cogit AndCq: self compactClassFieldMask << ShiftForWord R: destReg.
+	cogit LogicalShiftRightCq: (objectMemory compactClassFieldLSB - objectMemory shiftForWord) R: destReg.
+	cogit AndCq: self compactClassFieldMask << objectMemory shiftForWord R: destReg.
 	jumpCompact := cogit JumpNonZero: 0.
 	cogit MoveMw: objectMemory classFieldOffset r: instReg R: scratchReg.
 	"The use of signedIntFromLong is a hack to get round short addressing mode computations.
@@ -328,12 +328,12 @@ CogObjectRepresentationForSqueakV3 >> genGetClassFormatOfNonInt: instReg into: d
 	cogit AndCq: AllButTypeMask signedIntFromLong R: scratchReg.
 	jumpGotClass := cogit Jump: 0.
 	"Don't have to subtract one from the destReg compactClassArray index because of the header word."
-	self assert: BaseHeaderSize = BytesPerWord.
+	self assert: objectMemory baseHeaderSize = objectMemory wordSize.
 	jumpCompact jmpTarget:
 		(cogit annotate: (cogit MoveMw: (objectMemory splObj: CompactClasses) r: destReg R: scratchReg)
 			objRef: (objectMemory splObj: CompactClasses)).
 	jumpGotClass jmpTarget:
-		(cogit MoveMw: InstanceSpecificationIndex << ShiftForWord + BytesPerWord r: scratchReg R: destReg).
+		(cogit MoveMw: InstanceSpecificationIndex << objectMemory shiftForWord + objectMemory wordSize r: scratchReg R: destReg).
 	^0
 ]
 
@@ -356,8 +356,8 @@ CogObjectRepresentationForSqueakV3 >> genGetClassObjectOf: instReg into: destReg
 	"Get header word in scratchReg"
 	cogit MoveMw: 0 r: instReg R: scratchReg.
 	"Form the byte index of the compact class field"
-	cogit LogicalShiftRightCq: (objectMemory compactClassFieldLSB - ShiftForWord) R: scratchReg.
-	cogit AndCq: self compactClassFieldMask << ShiftForWord R: scratchReg.
+	cogit LogicalShiftRightCq: (objectMemory compactClassFieldLSB - objectMemory shiftForWord) R: scratchReg.
+	cogit AndCq: self compactClassFieldMask << objectMemory shiftForWord R: scratchReg.
 	jumpCompact := cogit JumpNonZero: 0.
 	cogit MoveMw: objectMemory classFieldOffset r: instReg R: destReg.
 	cogit AndCq: AllButTypeMask signedIntFromLong R: destReg.
@@ -367,7 +367,7 @@ CogObjectRepresentationForSqueakV3 >> genGetClassObjectOf: instReg into: destReg
 				objRef: objectMemory classSmallInteger).
 	jumpGotClass2 := cogit Jump: 0.
 	"Don't have to subtract one from the destReg compactClassArray index because of the header word."
-	self assert: BaseHeaderSize = BytesPerWord.
+	self assert: objectMemory baseHeaderSize = objectMemory wordSize.
 	jumpCompact jmpTarget:
 		(cogit annotate: (cogit MoveMw: (objectMemory splObj: CompactClasses) r: scratchReg R: destReg)
 			objRef: (objectMemory splObj: CompactClasses)).
@@ -389,7 +389,7 @@ CogObjectRepresentationForSqueakV3 >> genGetClassTagOf: instReg into: destReg sc
 	"Compatibility with SpurObjectRepresentation/SpurMemoryManager."
 	| entryLabel |
 	<var: #entryLabel type: #'AbstractInstruction *'>
-	cogit AlignmentNops: (BytesPerWord max: 8).
+	cogit AlignmentNops: (objectMemory wordSize max: 8).
 	entryLabel := cogit Label.
 	self genGetClassObjectOf: instReg into: destReg scratchReg: scratchReg instRegIsReceiver: nil.
 	^entryLabel
@@ -408,7 +408,7 @@ CogObjectRepresentationForSqueakV3 >> genGetCompactClassIndexNonImmOf: instReg i
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genGetDoubleValueOf: srcReg into: destFPReg [ 
-	cogit MoveM64: BaseHeaderSize r: srcReg Rd: destFPReg.
+	cogit MoveM64: objectMemory baseHeaderSize r: srcReg Rd: destFPReg.
 	^0
 ]
 
@@ -457,7 +457,7 @@ CogObjectRepresentationForSqueakV3 >> genGetInlineCacheClassTagFrom: sourceReg i
 	<var: #entryLabel type: #'AbstractInstruction *'>
 	<var: #jumpIsInt type: #'AbstractInstruction *'>
 	<var: #jumpCompact type: #'AbstractInstruction *'>
-	cogit AlignmentNops: (BytesPerWord max: 8).
+	cogit AlignmentNops: (objectMemory wordSize max: 8).
 	entryLabel := cogit Label.
 	cogit MoveR: sourceReg R: destReg.
 	cogit AndCq: 1 R: destReg.
@@ -519,11 +519,11 @@ CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg form
 	jumpShortHeader := cogit JumpNonZero: 0.
 	self assert: Size4Bit = 0.
 	cogit
-		MoveMw: 0 - (2 * BytesPerWord) r: sourceReg R: destReg; "(self sizeHeader: oop) bitAnd: LongSizeMask"
+		MoveMw: 0 - (2 * objectMemory wordSize) r: sourceReg R: destReg; "(self sizeHeader: oop) bitAnd: LongSizeMask"
 		AndCq: LongSizeMask signedIntFromLong R: destReg.
 	jumpSkip :=  cogit Jump: 0.
 	jumpShortHeader jmpTarget: (cogit AndCq: SizeMask R: destReg).	"hdr bitAnd: SizeMask"
-	jumpSkip jmpTarget: (cogit SubCq: BaseHeaderSize R: destReg). "sz - BaseheaderSize for all three arms"
+	jumpSkip jmpTarget: (cogit SubCq: objectMemory baseHeaderSize R: destReg). "sz - BaseheaderSize for all three arms"
 	cogit CmpCq: objectMemory weakArrayFormat R: formatReg.	"fmt <= 4"
 	jumpFmtLeWeakArray := cogit JumpLessOrEqual: 0.
 	cogit CmpCq: objectMemory firstByteFormat R: formatReg.
@@ -536,7 +536,7 @@ CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg form
 	jumpGotWordSize := cogit Jump: 0.
 	jumpFmtLeWeakArray jmpTarget: cogit Label.
 	cogit
-		LogicalShiftRightCq: ShiftForWord R: destReg; "(sz - BaseHeaderSize) >> ShiftForWord words"
+		LogicalShiftRightCq: objectMemory shiftForWord R: destReg; "(sz - BaseHeaderSize) >> ShiftForWord words"
 		CmpCq: objectMemory arrayFormat R: formatReg.
 	jumpFmtIsArray := cogit JumpZero: 0.
 	self genGetFixedFieldsOfPointerNonInt: sourceReg into: formatReg scratchReg: scratchReg.
@@ -595,7 +595,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 	cogit AddR: SendNumArgsReg R: Arg1Reg. "Add fixed fields to index"
 	jumpFmtEq2 jmpTarget: cogit Label.
 	cogit "Too lazy [knackered, more like. ed.] to define index with displacement addressing right now"
-		AddCq: BaseHeaderSize / BytesPerWord R: Arg1Reg;
+		AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: Arg1Reg;
 		MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
 		RetN: retNoffset.
 	jumpFmtGt4 jmpTarget: cogit Label.
@@ -606,14 +606,14 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 	cogit CmpCq: 11 R: ClassReg.
 	jumpFmtGt11 := cogit JumpGreater: 0.
 	cogit
-		AddCq: BaseHeaderSize R: Arg1Reg;
+		AddCq: objectMemory baseHeaderSize R: Arg1Reg;
 		MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
 	self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
 	cogit RetN: retNoffset.
 	jumpFmtLt8 jmpTarget: cogit Label.
-	self assert: BytesPerWord = 4. "documenting my laziness"
+	self assert: objectMemory wordSize = 4. "documenting my laziness"
 	cogit "Too lazy [knackered, more like. ed.] to define index with displacement addressing right now"
-		AddCq: BaseHeaderSize / BytesPerWord R: Arg1Reg;
+		AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: Arg1Reg;
 		MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
 		CmpCq: 16r3FFFFFFF R: ReceiverResultReg.
 	jumpLarge := cogit JumpAbove: 0.
@@ -717,21 +717,21 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveStringAt: retNOffset [
 	jumpShortHeader := cogit JumpNonZero: 0.
 	self assert: Size4Bit = 0.
 	cogit
-		MoveMw: 0 - (2 * BytesPerWord) r: ReceiverResultReg R: ClassReg; "(self sizeHeader: oop) bitAnd: LongSizeMask"
+		MoveMw: 0 - (2 * objectMemory wordSize) r: ReceiverResultReg R: ClassReg; "(self sizeHeader: oop) bitAnd: LongSizeMask"
 		AndCq: LongSizeMask signedIntFromLong R: ClassReg.
 	jumpSkip :=  cogit Jump: 0.
 	jumpShortHeader jmpTarget: (cogit AndCq: SizeMask R: ClassReg).	"hdr bitAnd: SizeMask"
-	jumpSkip jmpTarget: (cogit SubCq: BaseHeaderSize R: ClassReg). "sz - BaseHeaderSize"
+	jumpSkip jmpTarget: (cogit SubCq: objectMemory baseHeaderSize R: ClassReg). "sz - BaseHeaderSize"
 	cogit SubR: SendNumArgsReg R: ClassReg. "sz - (fmt bitAnd: 3)"
 	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
 	cogit SubCq: 1 R: Arg1Reg.
 	cogit CmpR: ClassReg R: Arg1Reg.
 	jumpBounds := cogit JumpAboveOrEqual: 0.
-	cogit AddCq: BaseHeaderSize R: Arg1Reg.
+	cogit AddCq: objectMemory baseHeaderSize R: Arg1Reg.
 	cogit annotate: (cogit MoveCw: objectMemory characterTable R: Arg0Reg)
 		objRef: objectMemory characterTable.
 	cogit MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
-		AddCq: BaseHeaderSize / BytesPerWord R: ReceiverResultReg.
+		AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: ReceiverResultReg.
 	cogit MoveXwr: ReceiverResultReg R: Arg0Reg R: ReceiverResultReg.
 	cogit RetN: retNOffset.
 	jumpSI jmpTarget:
@@ -763,7 +763,7 @@ CogObjectRepresentationForSqueakV3 >> genJumpSmallIntegerInScratchReg: aRegister
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genLoadSlot: index sourceReg: sourceReg destReg: destReg [
-	cogit MoveMw: index * BytesPerWord + BaseHeaderSize r: sourceReg R: destReg.
+	cogit MoveMw: index * objectMemory wordSize + objectMemory baseHeaderSize r: sourceReg R: destReg.
 	^0
 ]
 
@@ -798,7 +798,7 @@ CogObjectRepresentationForSqueakV3 >> genShiftAwaySmallIntegerTagsInScratchReg: 
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genStoreImmediateInSourceReg: sourceReg slotIndex: index destReg: destReg [
-	cogit MoveR: sourceReg Mw: index * BytesPerWord + BaseHeaderSize r: destReg.
+	cogit MoveR: sourceReg Mw: index * objectMemory wordSize + objectMemory baseHeaderSize r: destReg.
 	^0
 ]
 
@@ -810,7 +810,7 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	<var: #jmpSourceOld type: #'AbstractInstruction *'>
 	<var: #jmpAlreadyRoot type: #'AbstractInstruction *'>
 	"do the store"
-	cogit MoveR: sourceReg Mw: index * BytesPerWord + BaseHeaderSize r: destReg.
+	cogit MoveR: sourceReg Mw: index * objectMemory wordSize + objectMemory baseHeaderSize r: destReg.
 	"now the check.  Is value stored an integer?  If so we're done"
 	cogit MoveR: sourceReg R: scratchReg.
 	cogit AndCq: 1 R: scratchReg.
@@ -828,7 +828,7 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	 Test the root bit.  Only need to fetch the byte containing it,
 	 which reduces the size of the mask constant."
 	rootBitByteOffset := jmpSourceOld isBigEndian
-							ifTrue: [BytesPerWord - RootBitDigitLength]
+							ifTrue: [objectMemory wordSize - RootBitDigitLength]
 							ifFalse:[RootBitDigitLength - 1].
 	mask := RootBitDigitLength > 1
 				ifTrue: [RootBit >> (RootBitDigitLength - 1 * 8)]
@@ -853,7 +853,7 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: index intoNewObjectInDestReg: destReg [
-	cogit MoveR: sourceReg Mw: index * BytesPerWord + BaseHeaderSize r: destReg.
+	cogit MoveR: sourceReg Mw: index * objectMemory wordSize + objectMemory baseHeaderSize r: destReg.
 	^0
 ]
 
@@ -1061,7 +1061,7 @@ CogObjectRepresentationForSqueakV3 >> shouldAnnotateObjectReference: anOop [
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> slotOffsetOfInstVarIndex: index [
-	^index * BytesPerWord + BaseHeaderSize
+	^index * objectMemory wordSize + objectMemory baseHeaderSize
 ]
 
 { #category : #testing }

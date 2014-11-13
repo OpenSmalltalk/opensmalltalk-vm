@@ -205,7 +205,7 @@ StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 		var: #realCECallCogCodePopReceiverArg1Arg0Regs
 			declareC: 'void (*realCECallCogCodePopReceiverArg1Arg0Regs)(void)';
 		var: 'simStack'
-			declareC: 'CogSimStackEntry simStack[', ((CoInterpreter bindingOf: #LargeContextSize) value * 5 / 4 // BytesPerWord) asString, ']';
+			declareC: 'CogSimStackEntry simStack[', ((CoInterpreter bindingOf: #LargeContextSlots) value * 5 // 4) asString, ']';
 		var: 'simSelf'
 			type: #CogSimStackEntry;
 		var: #optStatus
@@ -1149,14 +1149,14 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	self flag: #lookupInMethodCacheSel:classTag:. "so this method shows up as a sender of lookupInMethodCacheSel:class:"
 	self MoveR: ClassReg R: SendNumArgsReg.
 	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
-	self LogicalShiftLeftCq: ShiftForWord R: ClassReg.
-	self AndCq: MethodCacheMask << ShiftForWord R: ClassReg.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << ShiftForWord)
+	self LogicalShiftLeftCq: objectMemory shiftForWord R: ClassReg.
+	self AndCq: MethodCacheMask << objectMemory shiftForWord R: ClassReg.
+	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << objectMemory shiftForWord)
 		r: ClassReg
 		R: TempReg.
 	self annotate: (self CmpCw: selector R: TempReg) objRef: selector.
 	jumpSelectorMiss := self JumpNonZero: 0.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << ShiftForWord)
+	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << objectMemory shiftForWord)
 		r: ClassReg
 		R: TempReg.
 	self CmpR: SendNumArgsReg R: TempReg.
@@ -1164,7 +1164,7 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 
 	itsAHit := self Label.
 	"Fetch the method.  The interpret trampoline requires the bytecoded method in SendNumArgsReg"
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheMethod << ShiftForWord)
+	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheMethod << objectMemory shiftForWord)
 		r: ClassReg
 		R: SendNumArgsReg.
 	"If the method is compiled jump to its unchecked entry-point, otherwise interpret it."
@@ -1180,14 +1180,14 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	jumpSelectorMiss jmpTarget: (jumpClassMiss jmpTarget: self Label).
 	self MoveR: SendNumArgsReg R: ClassReg.
 	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
-	self LogicalShiftLeftCq: ShiftForWord - 1 R: ClassReg.
-	self AndCq: MethodCacheMask << ShiftForWord R: ClassReg.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << ShiftForWord)
+	self LogicalShiftLeftCq: objectMemory shiftForWord - 1 R: ClassReg.
+	self AndCq: MethodCacheMask << objectMemory shiftForWord R: ClassReg.
+	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << objectMemory shiftForWord)
 		r: ClassReg
 		R: TempReg.
 	self annotate: (self CmpCw: selector R: TempReg) objRef: selector.
 	jumpSelectorMiss := self JumpNonZero: 0.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << ShiftForWord)
+	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << objectMemory shiftForWord)
 		r: ClassReg
 		R: TempReg.
 	self CmpR: SendNumArgsReg R: TempReg.
@@ -1197,15 +1197,15 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	jumpSelectorMiss jmpTarget: self Label.
 	self MoveR: SendNumArgsReg R: ClassReg.
 	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
-	ShiftForWord > 2 ifTrue:
-		[self LogicalShiftLeftCq: ShiftForWord - 1 R: ClassReg].
-	self AndCq: MethodCacheMask << ShiftForWord R: ClassReg.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << ShiftForWord)
+	objectMemory shiftForWord > 2 ifTrue:
+		[self LogicalShiftLeftCq: objectMemory shiftForWord - 1 R: ClassReg].
+	self AndCq: MethodCacheMask << objectMemory shiftForWord R: ClassReg.
+	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << objectMemory shiftForWord)
 		r: ClassReg
 		R: TempReg.
 	self annotate: (self CmpCw: selector R: TempReg) objRef: selector.
 	jumpSelectorMiss := self JumpNonZero: 0.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << ShiftForWord)
+	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << objectMemory shiftForWord)
 		r: ClassReg
 		R: TempReg.
 	self CmpR: SendNumArgsReg R: TempReg.
@@ -1232,6 +1232,50 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 StackToRegisterMappingCogit >> debugStackPointerFor: bcpc [
 	<doNotGenerate>
 	^(debugStackPointers at: bcpc) - (needsFrame ifTrue: [1] ifFalse: [0])
+]
+
+{ #category : #'as yet unclassified' }
+StackToRegisterMappingCogit >> declareCVarsIn: aCodeGen [
+	aCodeGen
+		var: #methodAbortTrampolines
+			declareC: 'sqInt methodAbortTrampolines[4]';
+		var: #picAbortTrampolines
+			declareC: 'sqInt picAbortTrampolines[4]';
+		var: #picMissTrampolines
+			declareC: 'sqInt picMissTrampolines[4]';
+		var: 'ceCall0ArgsPIC'
+			declareC: 'void (*ceCall0ArgsPIC)(void)';
+		var: 'ceCall1ArgsPIC'
+			declareC: 'void (*ceCall1ArgsPIC)(void)';
+		var: 'ceCall2ArgsPIC'
+			declareC: 'void (*ceCall2ArgsPIC)(void)';
+		var: #ceCallCogCodePopReceiverArg0Regs
+			declareC: 'void (*ceCallCogCodePopReceiverArg0Regs)(void)';
+		var: #realCECallCogCodePopReceiverArg0Regs
+			declareC: 'void (*realCECallCogCodePopReceiverArg0Regs)(void)';
+		var: #ceCallCogCodePopReceiverArg1Arg0Regs
+			declareC: 'void (*ceCallCogCodePopReceiverArg1Arg0Regs)(void)';
+		var: #realCECallCogCodePopReceiverArg1Arg0Regs
+			declareC: 'void (*realCECallCogCodePopReceiverArg1Arg0Regs)(void)';
+		var: 'simStack'
+			declareC: 'CogSimStackEntry simStack[', ((CoInterpreter bindingOf: #LargeContextSize) value * 5 / 4 // objectMemory wordSize) asString, ']';
+		var: 'simSelf'
+			type: #CogSimStackEntry;
+		var: #optStatus
+			type: #CogSSOptStatus;
+		var: 'prevBCDescriptor'
+			type: #'BytecodeDescriptor *'.
+
+	self numPushNilsFunction ifNotNil:
+		[aCodeGen
+			var: 'numPushNilsFunction'
+				declareC: 'sqInt (* const numPushNilsFunction)(struct _BytecodeDescriptor *,sqInt,sqInt,sqInt) = ', (aCodeGen cFunctionNameFor: self numPushNilsFunction);
+			var: 'pushNilSizeFunction'
+				declareC: 'sqInt (* const pushNilSizeFunction)(sqInt) = ', (aCodeGen cFunctionNameFor: self pushNilSizeFunction)].
+
+	aCodeGen
+		addSelectorTranslation: #register to: (aCodeGen cFunctionNameFor: 'registerr');
+		addSelectorTranslation: #register: to: (aCodeGen cFunctionNameFor: 'registerr:')
 ]
 
 { #category : #'bytecode generators' }
@@ -1936,7 +1980,7 @@ StackToRegisterMappingCogit >> genPICMissTrampolineFor: numArgs [
 StackToRegisterMappingCogit >> genPopStackBytecode [
 	self annotateBytecodeIfAnnotated: self ssTop.
 	self ssTop spilled ifTrue:
-		[self AddCq: BytesPerWord R: SPReg].
+		[self AddCq: objectMemory wordSize R: SPReg].
 	self ssPop: 1.
 	^0
 ]
@@ -2139,7 +2183,7 @@ StackToRegisterMappingCogit >> genPrimitiveClass [
 			[reg := Arg0Reg]
 		ifFalse:
 			[methodOrBlockNumArgs > 0 ifTrue:
-				[self MoveMw: BytesPerWord r: SPReg R: ReceiverResultReg].
+				[self MoveMw: objectMemory wordSize r: SPReg R: ReceiverResultReg].
 			reg := ReceiverResultReg].
 	(objectRepresentation
 			genGetClassObjectOf: reg
@@ -3402,7 +3446,7 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 			 self PopR: FPReg.
 			 backEnd hasLinkRegister ifTrue:
 				[self PopR: LinkReg].
-			 self RetN: methodOrBlockNumArgs + 1 * BytesPerWord]
+			 self RetN: methodOrBlockNumArgs + 1 * objectMemory wordSize]
 		ifFalse:
 			[backEnd hasLinkRegister ifTrue:
 				[self PopR: LinkReg].
@@ -3410,7 +3454,7 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 						"A method with an interpreter prim will push its register args for the prim.  If the failure
 						 body is frameless the args must still be popped, see e.g. Behavior>>nextInstance."
 						or: [regArgsHaveBeenPushed])
-							ifTrue: [methodOrBlockNumArgs + 1 * BytesPerWord]
+							ifTrue: [methodOrBlockNumArgs + 1 * objectMemory wordSize]
 							ifFalse: [0])].
 	^0
 ]
@@ -3594,7 +3638,7 @@ StackToRegisterMappingCogit >> initSimStackForFramefulMethod: startpc [
 			spilled: true;
 			annotateUse: false;
 			register: FPReg;
-			offset: FoxCallerSavedIP + ((methodOrBlockNumArgs - i) * BytesPerWord);
+			offset: FoxCallerSavedIP + ((methodOrBlockNumArgs - i) * objectMemory wordSize);
 			bcptr: startpc].
 	"temps"
 	methodOrBlockNumArgs to: simStackPtr do:
@@ -3605,7 +3649,7 @@ StackToRegisterMappingCogit >> initSimStackForFramefulMethod: startpc [
 			spilled: true;
 			annotateUse: false;
 			register: FPReg;
-			offset: FoxMFReceiver - (i - methodOrBlockNumArgs + 1 * BytesPerWord);
+			offset: FoxMFReceiver - (i - methodOrBlockNumArgs + 1 * objectMemory wordSize);
 			bcptr: startpc]
 ]
 
@@ -3633,7 +3677,7 @@ StackToRegisterMappingCogit >> initSimStackForFramelessBlock: startpc [
 			spilled: true;
 			annotateUse: false;
 			register: SPReg;
-			offset: ((methodOrBlockNumTemps - i) * BytesPerWord);
+			offset: ((methodOrBlockNumTemps - i) * objectMemory wordSize);
 			bcptr: startpc].
 	simSpillBase := simStackPtr := methodOrBlockNumTemps - 1
 ]
@@ -3678,7 +3722,7 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 					register: SPReg;
 					spilled: true;
 					annotateUse: false;
-					offset: ((methodOrBlockNumArgs - i) * BytesPerWord);
+					offset: ((methodOrBlockNumArgs - i) * objectMemory wordSize);
 					bcptr: startpc]].
 	simSpillBase := simStackPtr := methodOrBlockNumArgs - 1
 ]
@@ -3754,9 +3798,9 @@ StackToRegisterMappingCogit >> marshallImplicitReceiverSendArguments: numArgs [
 					 self PushR: TempReg.
 					 2 to: numSpilled do:
 						[:index|
-						self MoveMw: index * BytesPerWord r: SPReg R: TempReg.
-						self MoveR: TempReg Mw: index - 1 * BytesPerWord r: SPReg].
-					 self MoveR: ReceiverResultReg Mw: numSpilled * BytesPerWord r: SPReg]
+						self MoveMw: index * objectMemory wordSize r: SPReg R: TempReg.
+						self MoveR: TempReg Mw: index - 1 * objectMemory wordSize r: SPReg].
+					 self MoveR: ReceiverResultReg Mw: numSpilled * objectMemory wordSize r: SPReg]
 				ifFalse:
 					[self PushR: ReceiverResultReg].
 			self ssFlushTo: simStackPtr]
@@ -3857,7 +3901,7 @@ StackToRegisterMappingCogit >> merge: fixup afterContinuation: mergeWithContinua
 	methodOrBlockNumTemps to: simStackPtr do:
 		[:i|
 		(self simStackAt: i)
-			mergeAt: FoxMFReceiver - (i - methodOrBlockNumArgs + 1 * BytesPerOop)
+			mergeAt: FoxMFReceiver - (i - methodOrBlockNumArgs + 1 * objectMemory bytesPerOop)
 			from: FPReg]
 ]
 
