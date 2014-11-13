@@ -251,12 +251,12 @@ TMethod >> buildCaseStmt: aSendNode in: aCodeGen [
 	"Note: the first argument is the variable to be dispatched on. The second argument is a constant node holding an array of unary selectors, which will be turned into sends to self."
 
 	| unimplemented errorMessage |
-	((aSendNode args size >= 2) and:
-	 [aSendNode args second isConstant and:
-	 [aSendNode args second value class = Array]]) ifFalse:
+	(aSendNode args size >= 2
+	 and: [aSendNode args second isConstant
+	 and: [aSendNode args second value isArray]]) ifFalse:
 		[self error: 'wrong node structure for a case statement'].
 
-	unimplemented := aSendNode args second value reject: [:s| self definingClass includesSelector: s].
+	unimplemented := aSendNode args second value select: [:s| (aCodeGen methodNamed: s) isNil].
 	unimplemented isEmpty ifFalse:
 		[errorMessage := 'The following selectors in case statement "', (aSendNode printString copyUpTo: $#), '..." are unimplemented: ',
 							(String streamContents: [:s| unimplemented do: [:sel| s crtab; store: sel]]).
