@@ -17,6 +17,8 @@ Spur32BitMemoryManager class >> simulatorClass [
 
 { #category : #'word size' }
 Spur32BitMemoryManager class >> wordSize [
+	"Answer the manager's word size, which is the size of an oop, and which
+	 is assumed to be equivalent to the underlying machine's word size."
 	^4
 ]
 
@@ -697,6 +699,8 @@ Spur32BitMemoryManager >> wordIndexableFormat [
 
 { #category : #'word size' }
 Spur32BitMemoryManager >> wordSize [
+	"Answer the manager's word size, which is the size of an oop, and which
+	 is assumed to be equivalent to the underlying machine's word size."
 	<api>
 	<cmacro: '() 4'>
 	^4
