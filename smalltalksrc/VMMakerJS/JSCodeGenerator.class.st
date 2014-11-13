@@ -87,13 +87,14 @@ JSCodeGenerator class >> monticelloDescriptionFor: aClass [
 JSCodeGenerator class >> translateAllPluginsIn: aDirectory [
 	self beActiveDuring: [
 		#(	ADPCMCodecPlugin
+			BalloonEnginePlugin
 			"BMPReadWriterPlugin	-- not working yet"
 			BitBltSimulation
-			DSAPlugin
+			"DSAPlugin			--not working yet"
 			DeflatePlugin
 			FFTPlugin
 			FloatArrayPlugin
-			"GeniePlugin		-- not working yet"
+			GeniePlugin		"-- not working yet"
 			JPEGReaderPlugin
 			KedamaPlugin
 			KedamaPlugin2
@@ -449,9 +450,8 @@ JSCodeGenerator >> checkForGlobalUsage: vars in: aJSMethod [
 
 { #category : #private }
 JSCodeGenerator >> checkNonPointer: node op: op [
-	node isVariable
-		ifTrue: [(self typeOfVariable: node name) ifNotNil: [:type |
-			(type includes: $*) ifTrue: [self halt: 'cannot do ', op, ' with ', type]]].
+	self ifPointerVar: node then: [:type |
+		self halt: 'cannot do ', op, ' with ', type]
 ]
 
 { #category : #public }
@@ -975,8 +975,12 @@ self halt.
 { #category : #'JS translation' }
 JSCodeGenerator >> generateAt: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
-	| arrayNode indexNode subtractOne complex |
+	| arrayNode indexNode subtractOne complex coerceTo |
 	arrayNode := msgNode receiver.
+	(arrayNode isSend and: [arrayNode selector = #cCoerce:to: and: [arrayNode args first isVariable]]) ifTrue: [
+		coerceTo := (arrayNode args second value) copyWithout: $ .
+		arrayNode := arrayNode args first.
+		aStream nextPutAll: '('].
 	indexNode := msgNode args first.
 	subtractOne := self isOneBasedArray: arrayNode name in: currentMethod.
 	(subtractOne and: [indexNode isPlusOne]) ifTrue: [
@@ -991,12 +995,19 @@ JSCodeGenerator >> generateAt: msgNode on: aStream indent: level [
 	complex ifTrue: [aStream nextPut: $)].
 	subtractOne ifTrue: [aStream nextPutAll: ' - 1'].
 	aStream nextPut: $].
+	coerceTo ifNotNil: [
+		coerceTo = 'int*' ifFalse: [self halt].
+		aStream nextPutAll: '|0)'].
+
 ]
 
 { #category : #'JS translation' }
 JSCodeGenerator >> generateAtPut: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
 	| putExpr incExpr |
+	(msgNode receiver isSend and: [msgNode receiver selector = #cCoerce:to:]) ifTrue: [
+		msgNode receiver args asString =  '{deltaST . ''int *''}'
+			ifTrue: [msgNode receiver: msgNode receiver args first]].	"HACK!"
 	self generateAt: msgNode on: aStream indent: level.
 
 	(putExpr := msgNode args last) isPlusOne ifTrue: [
@@ -1081,10 +1092,14 @@ JSCodeGenerator >> generateBitShift: msgNode on: aStream indent: level [
 	rcvr := msgNode receiver.
 	arg isConstant ifTrue: [
 		"bit shift amount is a constant"
-		self emitJSExpression: rcvr on: aStream.
 		arg value < 0 ifTrue: [
+			"skip unneeded coercion to unsigned"
+			(rcvr isSend and: [rcvr selector = #cCoerce:to: and: [rcvr args second value = 'unsigned']])
+				ifTrue: [self emitJSExpression: rcvr args first on: aStream]
+				ifFalse: [self emitJSExpression: rcvr on: aStream].
 			aStream nextPutAll: ' >>> ', arg value negated printString.
 		] ifFalse: [
+			self emitJSExpression: rcvr on: aStream.
 			aStream nextPutAll: ' << ', arg value printString.
 		].
 	] ifFalse: [
@@ -1147,11 +1162,16 @@ JSCodeGenerator >> generateCCoercion: msgNode on: aStream indent: level [
 		cType = 'double *' ifTrue: [^aStream nextPutAll: '.wordsAsFloat64Array()'].
 		self halt.
 	] ifFalse: [
-		(#('int' 'unsigned int') includes: cType) ifTrue: [
+		(#('int') includes: cType) ifTrue: [
 			aStream nextPutAll: '('.
 			self emitJSExpression: expr on: aStream.
 			^aStream nextPutAll: '|0)'].
-		((#('double' 'float') includes: cType) or: ['sqInt (*)(*)'match: cType])
+		(#('unsigned int' 'unsigned' ) includes: cType) ifTrue: [
+				aStream nextPutAll: '('.
+				self emitJSExpression: expr on: aStream.
+				^ aStream nextPutAll: '>>>0)'].
+		((#('double' 'float') includes: cType) or: [('sqInt (*)(*)'match: cType)
+			or: [#(transformPoint:into:) includes: currentMethod selector]])
 			ifFalse: [self halt].
 		self emitJSExpression: expr on: aStream.
 	]
@@ -1209,7 +1229,7 @@ JSCodeGenerator >> generateDivide: msgNode on: aStream indent: level [
 	rcvr := msgNode receiver.
 	arg := msgNode args first.
 	msgNode selector == #/ ifTrue: [
-		(#('Matrix2x3Plugin' 'ScratchPlugin' 'FloatArrayPlugin' 'KedamaPlugin' 'KedamaPlugin2' 'FFTPlugin' 'Klatt') includes: self pluginName) ifFalse: [self halt].
+		(#('Matrix2x3Plugin' 'ScratchPlugin' 'FloatArrayPlugin' 'KedamaPlugin' 'KedamaPlugin2' 'FFTPlugin' 'Klatt' 'B2DPlugin') includes: self pluginName) ifFalse: [self halt: msgNode].
 		self emitJSExpression: rcvr on: aStream.
 		aStream nextPutAll: ' / '.
 		^self emitJSExpression: arg on: aStream].
@@ -1326,7 +1346,9 @@ JSCodeGenerator >> generateFirstIndexableField: msgNode on: aStream indent: leve
 			ifTrue: ['unsigned int*'] ifFalse: [
 		msgNode asString = 'interpreterProxy firstIndexableField: blockOop'
 			ifTrue: ['int*'] ifFalse: [
-		self halt]]]].
+		parent method == (TReturnNode>>#emitJSCodeOn:level:generator:)
+			ifTrue: [currentMethod returnType] ifFalse: [
+		self halt]]]]].
 	cType ifNotNil: [
 		cType := cType copyReplaceAll: ' *' with: '* '.
 		accessor := (cType beginsWith: 'unsigned char*') ifTrue: ['.bytes']
@@ -1746,6 +1768,26 @@ JSCodeGenerator >> generateLessThanOrEqual: msgNode on: aStream indent: level [
 ]
 
 { #category : #'JS hacks' }
+JSCodeGenerator >> generateLoadPointInt: msgNode on: aStream indent: level [
+	aStream nextPutAll: '('.
+	self emitJSExpression: msgNode args second on: aStream. 
+	aStream nextPutAll: '['.
+	self emitJSExpression: msgNode args first on: aStream. 
+	aStream nextPutAll: ']|0)'.
+
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateLoadPointShort: msgNode on: aStream indent: level [
+	msgNode args second isVariable ifFalse: [self halt].
+	msgNode args second name = 'points' ifFalse: [self halt].
+	aStream nextPutAll: '(points.int16Array || (points.int16Array = new Int16Array(points.buffer, points.byteOffset)))['.
+	 msgNode args first emitJSCodeAsExpressionOn: aStream level: 0 generator: self.
+	aStream nextPutAll: ']'.
+
+]
+
+{ #category : #'JS hacks' }
 JSCodeGenerator >> generateLong32At: msgNode on: aStream indent: level [
 	| expr index |
 	expr := msgNode args first.
@@ -1758,6 +1800,26 @@ JSCodeGenerator >> generateLong32At: msgNode on: aStream indent: level [
 		ifFalse: [
 			index emitJSCodeAsExpressionOn: aStream level: level generator: self.
 			aStream nextPutAll: ' >>> 2'].
+	aStream nextPut: $].
+
+]
+
+{ #category : #'JS hacks' }
+JSCodeGenerator >> generateMakeUnsignedFrom: msgNode on: aStream indent: level [
+	"Generate the JS code for this message onto the given stream."
+	| expr type coerce |
+	msgNode args size = 1 ifFalse: [self halt].
+	expr := msgNode args first.
+	(expr isSend and: [expr selector = #at:])
+		ifFalse: [^self emitJSExpression: expr on: aStream].
+	coerce := expr receiver.
+	(coerce isSend and: [coerce selector = #cCoerce:to:])
+		ifFalse: [^self emitJSExpression: expr on: aStream].
+	type := (coerce args second value) copyWithout: $ .
+	type = 'int*' ifFalse: [self halt].
+	self emitJSExpression: coerce args first on: aStream.
+	aStream nextPut: $[.
+	expr args first emitJSCodeAsExpressionOn: aStream level: 0 generator: self.
 	aStream nextPut: $].
 
 ]
@@ -1916,11 +1978,23 @@ self halt.
 JSCodeGenerator >> generatePlus: msgNode on: aStream indent: level [
 	"Generate the JS code for this message onto the given stream."
 	msgNode receiver isBitBltPtr ifFalse: [
-		self checkNonPointer: msgNode receiver op: '+'.
 		self checkNonPointer: msgNode args first op: '+'.
+		self ifPointerVar: msgNode receiver then: [:type |
+			(self generatePointerPlus: msgNode type: type on: aStream indent: level)
+				ifTrue: [^self].
+			self halt: 'cannot do + with ', type].
 		self emitJSExpression: msgNode receiver on: aStream.
 		aStream nextPutAll: ' + '].
 	self emitJSExpression: msgNode args first on: aStream.
+]
+
+{ #category : #'JS translation' }
+JSCodeGenerator >> generatePointerPlus: msgNode type: type on: aStream indent: level [
+	"Generate the JS code for this message onto the given stream."
+	(#('B2DPlugin' 'GeniePlugin') includes: self pluginName) ifFalse: [self halt].
+	msgNode emitJSPointerArithmetic: type on: aStream level: level generator: self type: type top: true.
+	^true
+
 ]
 
 { #category : #'JS translation' }
@@ -2338,6 +2412,16 @@ JSCodeGenerator >> globalsAsSet [
 	^ variablesSetCache
 ]
 
+{ #category : #private }
+JSCodeGenerator >> ifPointerVar: node then: aBlock [
+	(node isSend and: [node selector = #+]) ifTrue: [
+		^self ifPointerVar: node receiver then: aBlock].
+	node isVariable ifTrue: [
+		(self typeOfVariable: node name) ifNotNil: [:type |
+			(type includes: $*) ifTrue: [aBlock value: type]]].
+
+]
+
 { #category : #public }
 JSCodeGenerator >> ignoredMethods [
 	^#()
@@ -2352,7 +2436,7 @@ JSCodeGenerator >> initialize [
 	variableDeclarations := Dictionary new: 100.
 	methods := Dictionary new: 500.
 	macros := Dictionary new.
-	self initializeCTranslationDictionary.
+	self initializeJSTranslationDictionary.
 	receiverDict := Dictionary new.
 	headerFiles := OrderedCollection new.
 	globalVariableUsage := Dictionary new.
@@ -2367,8 +2451,8 @@ JSCodeGenerator >> initialize [
 ]
 
 { #category : #'JS translation' }
-JSCodeGenerator >> initializeCTranslationDictionary [ 
-	"Initialize the dictionary mapping message names to actions for C code generation."
+JSCodeGenerator >> initializeJSTranslationDictionary [ 
+	"Initialize the dictionary mapping message names to actions for JS code generation."
 
 	| pairs |
 	translationDict := Dictionary new: 200.
@@ -2531,6 +2615,8 @@ JSCodeGenerator >> initializeCTranslationDictionary [
 		'*dst++ = *src; src += 2'									'dst[_dst++] = src[_src]; _src += 2'
 		'tX'															'tX'
 		'tY'															'tY'
+		'((sqInt (*)(sqInt, sqInt, sqInt))copyBitsFn)(x0, x1, yValue)'	'copyBitsFn(x0, x1, yValue)'
+		'((sqInt (*)(sqInt))loadBBFn)(bbObj)'							'loadBBFn(bbObj)'
 	).
 	1 to: pairs size by: 2 do: [:i |
 		cCodeTranslationDict at: (pairs at: i) put: (pairs at: i + 1)].
@@ -2640,8 +2726,7 @@ JSCodeGenerator >> isOneBasedArray: varName in: method [
 
 { #category : #private }
 JSCodeGenerator >> isPointer: node [
-	node isVariable ifFalse: [^false].
-	(self typeOfVariable: node name) ifNotNil: [:type | ^type includes: $*].
+	self ifPointerVar: node then: [:type | ^true].
 	^false
 ]
 
