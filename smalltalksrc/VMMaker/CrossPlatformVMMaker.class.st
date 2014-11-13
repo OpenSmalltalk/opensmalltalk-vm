@@ -61,5 +61,7 @@ CrossPlatformVMMaker >> validatePlugin: plName in: listOfPlugins [
 					and: [listOfPlugins includes: plName name])
 				ifTrue: [plugin := plName]].
 	plugin ifNil: [^ self couldNotFindPluginClass: plName].
+	plugin shouldBeTranslated ifFalse:
+		[self error: 'untranslateable plugin class ', plName].
 	^plugin
 ]
