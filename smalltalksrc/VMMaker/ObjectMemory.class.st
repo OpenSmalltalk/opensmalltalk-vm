@@ -1066,6 +1066,7 @@ ObjectMemory >> bytesPerOop [
 
 { #category : #'simulation support' }
 ObjectMemory >> cCoerceSimple: value to: cTypeString [
+	<doNotGenerate>
 	^cTypeString caseOf:
 	   {	[#'char *']	->	[value] }
 ]
@@ -4745,6 +4746,8 @@ ObjectMemory >> shiftForWord [
 	"N.B. This would appear to hard-code the header size for 32-bit images.  But if generating
 	 a 64-bit image, this method could be removed and the relevant one substituted.  We can't
 	 mark this method as <doNotGenerate> as we need an actual method to guide code gen."
+	<api>
+	<cmacro: '() 2'>
 	^2
 ]
 
