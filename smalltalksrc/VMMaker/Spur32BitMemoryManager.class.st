@@ -458,7 +458,7 @@ Spur32BitMemoryManager >> largeObjectBytesForSlots: numSlots [
 ]
 
 { #category : #'header format' }
-Spur32BitMemoryManager >> logBytesPerSlot [
+Spur32BitMemoryManager >> logBytesPerOop [
 	^2
 ]
 
