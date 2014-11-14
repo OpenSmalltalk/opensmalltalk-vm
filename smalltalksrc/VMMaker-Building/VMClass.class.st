@@ -490,9 +490,11 @@ VMClass class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
 
 	"The most basic constants must be defined here, not in e.g. the plugin sources, so allow those
 	 other sources to be shared between different builds (Spur vs SqueakV3, 32-bit vs 64-bit, etc)"
-	VMBasicConstants mostBasicConstantNames do:
-		[:const|
-		aStream nextPutAll: '#define '; nextPutAll: const; space; print: (VMBasicConstants classPool at: const); cr].
+	VMBasicConstants mostBasicConstantNames asSet asArray sort do:
+		[:constName|
+		(VMBasicConstants classPool at: constName ifAbsent: []) ifNotNil:
+			[:const|
+			aStream nextPutAll: '#define '; nextPutAll: constName; space; print: const; cr]].
 	aStream cr.
 
 	((VMBasicConstants classPool associations select: [:a| a key beginsWith: 'PrimErr'])
