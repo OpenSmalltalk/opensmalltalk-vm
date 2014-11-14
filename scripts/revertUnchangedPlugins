@@ -6,13 +6,12 @@
 IFS='	
 '
 if [ $# = 0 ]; then
-PD=src/plugins
-else
-PD=$1
+	set -- src/plugins
 fi
-for d in $PD/[A-Z]*
-do
-	test -d "$d" || continue
-	find "$d" -name .svn -prune -o \( -type f -a -name '*.[ch]' \) -exec \
-		scripts/revertIfEssentiallyUnchanged {} \;
+for pd in $@; do
+	for d in $pd/[A-Z]*; do
+		test -d "$d" || continue
+		find "$d" -name .svn -prune -o \( -type f -a -name '*.[ch]' \) -exec \
+			scripts/revertIfEssentiallyUnchanged {} \;
+	done
 done
