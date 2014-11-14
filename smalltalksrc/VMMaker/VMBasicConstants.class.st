@@ -74,8 +74,26 @@ Class {
 	#category : #'VMMaker-Interpreter'
 }
 
-{ #category : #accessing }
+{ #category : #'C translation' }
 VMBasicConstants class >> mostBasicConstantNames [
-	"c.f. CCodeGenerator class>>#mostBasicConstantSelectors"
-	^#(BaseHeaderSize BytesPerWord BytesPerOop)
+	"c.f. mostBasicConstantSelectors"
+	^#(BaseHeaderSize BytesPerWord BytesPerOop ShiftForWord BytesPerWord)
+]
+
+{ #category : #'C translation' }
+VMBasicConstants class >> mostBasicConstantSelectors [
+	"c.f. mostBasicConstantNames"
+	^#(baseHeaderSize wordSize bytesPerOop shiftForWord bytesPerWord "bytesPerWord isn't used, but kept for history")
+]
+
+{ #category : #'C translation' }
+VMBasicConstants class >> valueOfBasicSelector: selector [
+	"Answer the numberic value of a basic constant accessed via the selector.
+	 Answer nil if selector is not a basic constant accessor."
+	"self mostBasicConstantSelectors collect: [:s| {s. self valueOfBasicSelector: s}]"
+	| index key |
+	^((index := self mostBasicConstantSelectors indexOf: selector) > 0
+	  and: [(key := self mostBasicConstantNames at: index ifAbsent: []) notNil
+	  and: [self includesKey: key]]) ifTrue:
+		[classPool at: key]
 ]

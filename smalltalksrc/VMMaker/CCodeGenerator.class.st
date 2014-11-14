@@ -3216,11 +3216,17 @@ CCodeGenerator >> isConstantNode: aNode valueInto: aBlock [
 		 ^true].
 	aNode isSend ifFalse:
 		[^false].
-	(self anyMethodNamed: aNode selector) ifNotNil:
-		[:m|
-		(m statements size = 1
-		 and: [m statements last isReturn]) ifTrue:
-			[^self isConstantNode: m statements last expression valueInto: aBlock]].
+	(self anyMethodNamed: aNode selector)
+		ifNil:
+			[(VMBasicConstants valueOfBasicSelector: aNode selector) ifNotNil:
+				[:value|
+				 aBlock value: value.
+				 ^true]]
+		ifNotNil:
+			[:m|
+			(m statements size = 1
+			 and: [m statements last isReturn]) ifTrue:
+				[^self isConstantNode: m statements last expression valueInto: aBlock]].
 	^false
 ]
 
@@ -3463,12 +3469,6 @@ CCodeGenerator >> methodsThatCanInvoke: aSelectorList [
 	].
 	^ out
 	
-]
-
-{ #category : #accessing }
-CCodeGenerator >> mostBasicConstantSelectors [
-	"c.f. VMBasicConstants class>>#mostBasicConstantNames"
-	^#(baseHeaderSize bytesPerOop bytesPerWord shiftForWord wordSize)
 ]
 
 { #category : #'C code generator' }
@@ -3983,7 +3983,7 @@ CCodeGenerator >> shortMonticelloDescriptionForClass: aClass [
 { #category : #utilities }
 CCodeGenerator >> shouldGenerateAsInterpreterProxySend: aSendNode [
 	^(self messageReceiverIsInterpreterProxy: aSendNode)
-	  and: [(self mostBasicConstantSelectors includes: aSendNode selector) not]
+	  and: [(VMBasicConstants mostBasicConstantSelectors includes: aSendNode selector) not]
 ]
 
 { #category : #utilities }

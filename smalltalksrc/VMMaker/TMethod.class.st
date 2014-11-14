@@ -1535,7 +1535,7 @@ TMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: aCod
 			ifTrue: [] ifFalse:
 		[node isSend
 			ifTrue:
-				[((aCodeGen mostBasicConstantSelectors includes: node selector)
+				[((VMBasicConstants mostBasicConstantSelectors includes: node selector)
 				  or: [node isBuiltinOperator]) ifFalse: [^false].
 				 count := count + 1] ifFalse:
 		[node isVariable ifTrue:
