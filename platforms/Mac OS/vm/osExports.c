@@ -17,7 +17,7 @@
 
 /* duh ... this is ugly */
 #define XFN(export) {"", #export, (void*)export},
-#define XFN2(plugin, export) {#plugin, #export, (void*)plugin##_##export},
+#define XFND(export,depth) {"", #export "\000" depth, (void*)export},
 
 WindowPtr getSTWindow(void);
 void setMessageHook(eventMessageHook theHook);
@@ -60,14 +60,14 @@ void *os_exports[][3] = {
 /* Plugin support primitives
    We should make these primitives a proper plugin
    but right now we just need the exports. */
-	XFN(primitivePluginBrowserReady)
+	XFND(primitivePluginBrowserReady,"\377")
 #ifdef ENABLE_URL_FETCH
-	XFN(primitivePluginRequestURLStream)
-	XFN(primitivePluginRequestURL)
-	XFN(primitivePluginPostURL)
-	XFN(primitivePluginRequestFileHandle)
-	XFN(primitivePluginDestroyRequest)
-	XFN(primitivePluginRequestState)
+	XFND(primitivePluginRequestURLStream,"\001")
+	XFND(primitivePluginRequestURL,"\001")
+	XFND(primitivePluginPostURL,"\001")
+	XFND(primitivePluginRequestFileHandle,"\000")
+	XFND(primitivePluginDestroyRequest,"\000")
+	XFND(primitivePluginRequestState,"\000")
 #endif
 	{NULL, NULL, NULL}
 };

@@ -1,0 +1,11 @@
+#!/bin/sh
+# Touch file(s) or all modified files in a directory back to the checkin date
+for f in "$@"
+do
+	if [ -d "$f" ]; then
+		$0 "$f"/*
+	else
+		changed="`svn info \"$f\" | grep 'Last Changed Date:' | sed 's/ *(.*//'`"
+		test -n "$changed" && touch -t "`date -j -f 'Last Changed Date: %Y-%m-%d %H:%M:%S %z' \"$changed\" '+%Y%m%d%H%M.%S'`" "$f"
+	fi
+done
