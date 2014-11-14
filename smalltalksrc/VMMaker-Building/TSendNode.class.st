@@ -60,7 +60,7 @@ TSendNode >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in:
 	 from '1 /* 17 bitAnd: 15 */', whereas '1 /* currentBytecode bitAnd: 15 */' doesn't change."
 	| newReceiver newArguments |
 	"Constant-fold shiftForWord, but not BytesPerWord"
-	((codeGen mostBasicConstantSelectors includes: selector)
+	((VMBasicConstants mostBasicConstantSelectors includes: selector)
 	 and: [(codeGen isBuiltinSelector: selector) not]) ifTrue:
 		[codeGen isConstantNode: self valueInto:
 			[:val|
