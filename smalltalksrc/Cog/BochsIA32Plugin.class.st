@@ -243,7 +243,7 @@ BochsIA32Plugin >> primitiveSingleStepInMemory: memory "<Bitmap|ByteArray|WordAr
 BochsIA32Plugin >> sizeField: rcvr [
 	"Answer the first field of rcvr which is assumed to be an Alien of at least 8 bytes"
 	<inline: true>
-	^self longAt: rcvr + BaseHeaderSize
+	^self longAt: rcvr + interpreterProxy baseHeaderSize
 ]
 
 { #category : #'alien support' }
@@ -252,6 +252,6 @@ BochsIA32Plugin >> startOfData: rcvr [ "<Alien oop> ^<Integer>"
 	 the second field.  For indirect and pointer aliens it is what the second field points to."
 	<inline: true>
 	^(self sizeField: rcvr) > 0
-	 	ifTrue: [rcvr + BaseHeaderSize + BytesPerOop]
-		ifFalse: [self longAt: rcvr + BaseHeaderSize + BytesPerOop]
+	 	ifTrue: [rcvr + interpreterProxy baseHeaderSize + interpreterProxy bytesPerOop]
+		ifFalse: [self longAt: rcvr + interpreterProxy baseHeaderSize + interpreterProxy bytesPerOop]
 ]
