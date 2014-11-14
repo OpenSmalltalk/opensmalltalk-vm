@@ -32,7 +32,7 @@ Class {
 	#classVars : [
 		'CaseStatements'
 	],
-	#category : 'VMMakerJS-Translation to JS'
+	#category : #'VMMakerJS-Translation to JS'
 }
 
 { #category : #'class initialization' }

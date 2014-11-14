@@ -39,7 +39,7 @@ Class {
 		'IsActive',
 		'UseRightShiftForDivide'
 	],
-	#category : 'VMMakerJS-Translation to JS'
+	#category : #'VMMakerJS-Translation to JS'
 }
 
 { #category : #preferences }
