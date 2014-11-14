@@ -392,7 +392,7 @@ Spur64BitMemoryManager >> largeObjectBytesForSlots: numSlots [
 ]
 
 { #category : #accessing }
-Spur64BitMemoryManager >> logBytesPerSlot [
+Spur64BitMemoryManager >> logBytesPerOop [
 	^3
 ]
 

@@ -2606,7 +2606,7 @@ SpurMemoryManager >> byteSizeOfInstanceOf: classObj withIndexableSlots: nElement
 		[self firstCompiledMethodFormat]	-> "Assume nElements is derived from CompiledMethod>>basicSize."
 			[numSlots := nElements + (self bytesPerOop - 1) // self bytesPerOop] }
 		otherwise: [^errorBlock value: PrimErrBadReceiver negated]. "non-indexable"
-	numSlots >= (1 << (self bytesPerOop * 8 - self logbytesPerOop)) ifTrue:
+	numSlots >= (1 << (self bytesPerOop * 8 - self logBytesPerOop)) ifTrue:
 		[^errorBlock value: PrimErrLimitExceeded].
 	^self objectBytesForSlots: numSlots
 ]
