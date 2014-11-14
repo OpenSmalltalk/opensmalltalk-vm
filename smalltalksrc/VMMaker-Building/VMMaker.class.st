@@ -495,7 +495,7 @@ VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass optio
 					BalloonEnginePlugin B3DAcceleratorPlugin BMPReadWriterPlugin BitBltSimulation BochsIA32Plugin
 					CameraPlugin CroquetPlugin DSAPlugin DeflatePlugin DropPlugin
 					"FT2Plugin" FFTPlugin FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin
-					GeniePlugin HostWindowPlugin IA32ABIPlugin ImmX11Plugin InternetConfigPlugin
+					GeniePlugin GdbARMPlugin HostWindowPlugin IA32ABIPlugin ImmX11Plugin InternetConfigPlugin
 					JPEGReadWriter2Plugin JPEGReaderPlugin JoystickTabletPlugin KlattSynthesizerPlugin
 					LargeIntegersPlugin LocalePlugin MIDIPlugin MacMenubarPlugin Matrix2x3Plugin
 					MiscPrimitivePlugin Mpeg3Plugin QuicktimePlugin RePlugin
