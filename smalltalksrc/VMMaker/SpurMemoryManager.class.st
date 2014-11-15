@@ -814,7 +814,8 @@ SpurMemoryManager class >> initializeCompactClassIndices [
 { #category : #'class initialization' }
 SpurMemoryManager class >> initializeObjectHeaderConstants [
 
-	BytesPerWord ifNil: [BytesPerWord := 4]  "May get called on fileIn, so supply default"
+	BytesPerWord ifNil: [BytesPerWord := 4].  "May get called on fileIn, so supply default"
+	BaseHeaderSize := 8 "This is still needed for VM generation."
 ]
 
 { #category : #'class initialization' }
@@ -8690,6 +8691,17 @@ SpurMemoryManager >> primitiveFailureCode [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
 	^coInterpreter primitiveFailureCode
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> print64BitMemoryFrom: start to: end [
+	<doNotGenerate>
+	| wordSize64 address |
+	wordSize64 := 8.
+	address := start bitAnd: (wordSize64 - 1) bitInvert.
+	[address < end] whileTrue:
+		[coInterpreter printHex: address; printChar: $:; space; printHex: (self long64At: address); cr.
+		 address := address + wordSize64]
 ]
 
 { #category : #'debug support' }
