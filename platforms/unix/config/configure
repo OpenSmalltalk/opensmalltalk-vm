@@ -27735,7 +27735,7 @@ esac
 if test "${enable_fast_bitblt+set}" = set; then
   enableval="$enable_fast_bitblt"
    if   test "x$enableval" = "xyes" ; then
-      bitblt_objs="BitBltPlugin.o BitBltArm.o BitBltArmLinux.o BitBltArmOther.o BitBltArmSimd.o BitBltDispatch.o BitBltGeneric.o BitBltArmSimdAlphaBlend.o BitBltArmSimdBitLogical.o BitBltArmSimdPixPaint.o BitBltArmSimdSourceWord.o"
+      bitblt_objs="BitBltPlugin.o BitBltArm.o BitBltArmLinux.o BitBltArmSimd.o BitBltDispatch.o BitBltGeneric.o BitBltArmSimdAlphaBlend.o BitBltArmSimdBitLogical.o BitBltArmSimdPixPaint.o BitBltArmSimdSourceWord.o"
       bitblt_flags="-DENABLE_FAST_BLT"
    fi
 

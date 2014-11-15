@@ -11,7 +11,7 @@ esac
 AC_ARG_ENABLE(fast-bitblt,
  [  --enable-fast-bitblt enable fast BitBlt optimizations (default=no)],
  [ if   test "x$enableval" = "xyes" ; then
-      bitblt_objs="BitBltPlugin.o BitBltArm.o BitBltArmLinux.o BitBltArmOther.o BitBltArmSimd.o BitBltDispatch.o BitBltGeneric.o BitBltArmSimdAlphaBlend.o BitBltArmSimdBitLogical.o BitBltArmSimdPixPaint.o BitBltArmSimdSourceWord.o"
+      bitblt_objs="BitBltPlugin.o BitBltArm.o BitBltArmLinux.o BitBltArmSimd.o BitBltDispatch.o BitBltGeneric.o BitBltArmSimdAlphaBlend.o BitBltArmSimdBitLogical.o BitBltArmSimdPixPaint.o BitBltArmSimdSourceWord.o"
       bitblt_flags="-DENABLE_FAST_BLT"
    fi
  ],
