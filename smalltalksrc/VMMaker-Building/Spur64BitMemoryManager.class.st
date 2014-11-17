@@ -12,6 +12,11 @@ Spur64BitMemoryManager class >> isImmediate: anObject [
 	  or: [anObject class == Float and: [anObject exponent between: -128 and: 127]]]
 ]
 
+{ #category : #'simulation only' }
+Spur64BitMemoryManager class >> simulatorClass [
+	^Spur64BitMMLESimulator
+]
+
 { #category : #'word size' }
 Spur64BitMemoryManager class >> wordSize [
 	"Answer the manager's word size, which is the size of an oop, and which
@@ -28,6 +33,43 @@ Spur64BitMemoryManager >> addressAfter: objOop [
 					ifTrue: [self allocationUnit]
 					ifFalse: [numSlots << self shiftForWord].
 	^objOop + self baseHeaderSize + slotBytes
+]
+
+{ #category : #allocation }
+Spur64BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex [
+	"Allocate an object with numSlots space.  If there is room beneath scavengeThreshold
+	 allocate in newSpace, otherwise alocate in oldSpace.  If there is not room in newSpace
+	 and a scavenge is not already scheduled, schedule a scavenge."
+	<inline: true>
+	| numBytes newObj |
+	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
+	 16 bytes otherwise (num slots in preceeding word).
+	 Objects always have at least one slot, for the forwarding pointer,
+	 and are multiples of 8 bytes in length."
+	numSlots >= self numSlotsMask
+		ifTrue:
+			[numSlots >> 56 > 0 ifTrue:
+				[^nil]. "overflow size must fit in 56-bits"
+			 newObj := freeStart + self baseHeaderSize.
+			 numBytes := self largeObjectBytesForSlots: numSlots]
+		ifFalse:
+			[newObj := freeStart.
+			 numBytes := self smallObjectBytesForSlots: numSlots].
+	
+	freeStart + numBytes > scavengeThreshold ifTrue:
+		[needGCFlag ifFalse: [self scheduleScavenge].
+		 ^self allocateSlotsInOldSpace: numSlots bytes: numBytes format: formatField classIndex: classIndex].
+	numSlots >= self numSlotsMask
+		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
+			[self flag: #endianness.
+			 self longAt: freeStart put: self numSlotsMask << self numSlotsFullShift + numSlots.
+			 self longAt: newObj put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex)]
+		ifFalse:
+			[self longAt: newObj put: (self headerForSlots: numSlots format: formatField classIndex: classIndex)].
+	self assert: numBytes \\ self allocationUnit = 0.
+	self assert: newObj \\ self allocationUnit = 0.
+	freeStart := freeStart + numBytes.
+	^newObj
 ]
 
 { #category : #allocation }
@@ -370,10 +412,31 @@ Spur64BitMemoryManager >> integerValueOf: oop [
 			[oop bitShift: self numTagBits negated]
 ]
 
+{ #category : #'object testing' }
+Spur64BitMemoryManager >> isIntegerObject: oop [
+	^(oop bitAnd: self tagMask) = 1
+]
+
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> isIntegerValue: intValue [
+	"Answer if the given value can be represented as a Smalltalk integer value.
+	 In 64-bits we use a 3 bit tag which leaves 61 bits for 2's complement signed
+	 integers. In C, use a shift add and mask to test if the top 4 bits are all the same."
+	<api>
+	^self
+		cCode: [(intValue >> 60 + 1 bitAnd: 16rF) <= 1]
+		inSmalltalk: [intValue >= -16r2000000000000000 and: [intValue <= 16r1FFFFFFFFFFFFFFF]]
+]
+
 { #category : #'header access' }
 Spur64BitMemoryManager >> isMarked: objOop [
 	<api>
 	^((self longAt: objOop) >> self markedBitFullShift bitAnd: 1) ~= 0
+]
+
+{ #category : #'object testing' }
+Spur64BitMemoryManager >> isNonIntegerObject: oop [
+	^(oop bitAnd: self tagMask) ~= 1
 ]
 
 { #category : #'object testing' }
@@ -476,7 +539,9 @@ Spur64BitMemoryManager >> rawOverflowSlotsOf: objOop [
 	<returnTypeC: #usqLong>
 	<inline: true>
 	self flag: #endianness.
-	^((self longAt: objOop - self baseHeaderSize) << 8) asUnsignedLong >> 8
+	^self
+		cCode: [((self longAt: objOop - self baseHeaderSize) << 8) asUnsignedLong >> 8]
+		inSmalltalk: [(self longAt: objOop - self baseHeaderSize) bitAnd: 16rFFFFFFFFFFFFFF]
 ]
 
 { #category : #'object access' }
