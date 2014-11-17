@@ -831,9 +831,7 @@ CCodeGenerator >> computeKernelReturnTypes [
 			longAtPointer: #sqInt longAtPointer:put: #sqInt
 				long32At: #sqInt long32At:put: #sqInt
 
-		 longLongAt: #sqLong longLongAt:put: #sqLong
-			longLongAtPointer: #sqLong longLongAtPointer:put: #sqLong
-				long64At: #sqLong long64At:put: #sqLong
+		 long64At: #sqLong long64At:put: #sqLong
 		
 		 fetchFloatAt:into: #void storeFloatAt:from: #void
 			fetchFloatAtPointer:into: #void storeFloatAtPointer:from: #void
@@ -3263,8 +3261,8 @@ CCodeGenerator >> isKernelSelector: sel [
 		 byteAt: byteAt:put: byteAtPointer: byteAtPointer:put:
 		 shortAt: shortAt:put: shortAtPointer: shortAtPointer:put:
 		 intAt: intAt:put: intAtPointer: intAtPointer:put:
-		 longAt: longAt:put: longAtPointer: longAtPointer:put: long32At: long32At:put:
-		 longLongAt: longLongAt:put: longLongAtPointer: longLongAtPointer:put: 	long64At: long64At:put:
+		 longAt: longAt:put: longAtPointer: longAtPointer:put:
+		 long32At: long32At:put: long64At: long64At:put:
 		 fetchFloatAt:into: storeFloatAt:from: fetchFloatAtPointer:into: storeFloatAtPointer:from:
 		 fetchSingleFloatAt:into: storeSingleFloatAt:from: fetchSingleFloatAtPointer:into: storeSingleFloatAtPointer:from:
 		 pointerForOop: oopForPointer:
