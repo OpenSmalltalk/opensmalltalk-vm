@@ -350,7 +350,8 @@ InterpreterPrimitives >> positive64BitValueOf: oop [
 			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
 			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
 	(ok and: [(sz := objectMemory lengthOf: oop) <= (self sizeof: #sqLong)]) ifFalse:
-		[^self primitiveFail].
+		[self primitiveFail.
+		 ^0].
 
 	value := 0.
 	0 to: sz - 1 do: [:i |

@@ -39,7 +39,10 @@ VMClass class >> cogMethodClass: options [
 
 { #category : #'accessing class hierarchy' }
 VMClass class >> cogitClass [
-	^nil
+	^initializationOptions ifNotNil:
+		[Smalltalk classNamed: (initializationOptions
+									at: #Cogit
+									ifAbsent: [#SimpleStackBasedCogit])]
 ]
 
 { #category : #initialization }

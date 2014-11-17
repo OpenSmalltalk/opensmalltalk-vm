@@ -90,13 +90,6 @@ CoInterpreter class >> apiExportHeaderName [
 	^'cointerp.h'
 ]
 
-{ #category : #'accessing class hierarchy' }
-CoInterpreter class >> cogitClass [
-	^Smalltalk classNamed: (initializationOptions
-								at: #Cogit
-								ifAbsent: [#SimpleStackBasedCogit])
-]
-
 { #category : #translation }
 CoInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	"Override to avoid repeating StackInterpreter's declarations and add our own extensions"

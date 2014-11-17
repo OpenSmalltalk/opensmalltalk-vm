@@ -192,27 +192,6 @@ LittleEndianBitmap >> longAt: byteIndex put: aValue bigEndian: bigEndian [
 ]
 
 { #category : #accessing }
-LittleEndianBitmap >> longLongAt: byteAddress [
-	"memory is a Bitmap, a 32-bit indexable array of bits"
-	| hiWord loWord |
-	byteAddress - 1 \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
-	loWord := self at: byteAddress - 1 // 4 + 1.
-	hiWord := self at: byteAddress - 1 // 4 + 2.
-	^hiWord = 0
-		ifTrue: [loWord]
-		ifFalse: [(hiWord signedIntFromLong bitShift: 32) + loWord]
-]
-
-{ #category : #accessing }
-LittleEndianBitmap >> longLongAt: byteAddress put: a64BitValue [
-	byteAddress - 1 \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
-	self
-		longAt: byteAddress put: (a64BitValue bitAnd: 16rffffffff);
-		longAt: byteAddress + 4 put: a64BitValue >> 32.
-	^a64BitValue
-]
-
-{ #category : #accessing }
 LittleEndianBitmap >> unsignedByteAt: byteAddress [
 	"Extract a byte from a Bitmap (little-endian version)"
 	| lowBits |
