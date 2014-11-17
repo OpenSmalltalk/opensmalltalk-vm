@@ -7,6 +7,11 @@ Class {
 	#category : #'Cog-Bootstrapping'
 }
 
+{ #category : #testing }
+SimulatorHarness >> deny: aBooleanOrBlock [
+	aBooleanOrBlock value ifTrue: [AssertionFailure signal: 'Assertion failed']
+]
+
 { #category : #'bootstrap methods' }
 SimulatorHarness >> interpreter: sim object: receiver perform: selector withArguments: arguments [
 	"Interpret an expression in oldHeap using oldInterpreter.
