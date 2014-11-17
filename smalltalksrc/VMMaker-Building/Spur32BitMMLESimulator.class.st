@@ -203,105 +203,6 @@ Spur32BitMMLESimulator >> intAt: byteAddress put: a32BitValue [
 	^self longAt: byteAddress put: (a32BitValue bitAnd: 16rFFFFFFFF)
 ]
 
-{ #category : #'object testing' }
-Spur32BitMMLESimulator >> isIntegerObject: oop [
-	"This list records the valid senders of isIntegerObject: as we replace uses of
-	  isIntegerObject: by isImmediate: where appropriate."
-	"| sel |
-	sel := thisContext sender method selector.
-	(#(	DoIt
-		DoItIn:
-		baseFrameReturn
-		bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf:
-		bytecodePrimAt
-		bytecodePrimAtPut
-		bytesOrInt:growTo:
-		ceBaseFrameReturn:
-		checkIsStillMarriedContext:currentFP:
-		checkedIntegerValueOf:
-		cogMethodDoesntLookKosher:
-		commonAt:
-		commonAtPut:
-		commonVariable:at:put:cacheIndex:
-		compare31or32Bits:equal:
-		digitBitLogic:with:opIndex:
-		digitLength:
-		displayBitsOf:Left:Top:Right:Bottom:
-		ensureContextHasBytecodePC:
-		externalInstVar:ofContext:
-		fetchIntOrFloat:ofObject:
-		fetchIntOrFloat:ofObject:ifNil:
-		fetchStackPointerOf:
-		fileValueOf:
-		frameOfMarriedContext:
-		functionForPrimitiveExternalCall:
-		genSpecialSelectorArithmetic
-		genSpecialSelectorComparison
-		inlineCacheTagForInstance:
-		instVar:ofContext:
-		isCogMethodReference:
-		isLiveContext:
-		isMarriedOrWidowedContext:
-		isNegativeIntegerValueOf:
-		isNormalized:
-		loadBitBltDestForm
-		loadBitBltSourceForm
-		loadFloatOrIntFrom:
-		loadPoint:from:
-		magnitude64BitValueOf:
-		makeBaseFrameFor:
-		numPointerSlotsOf:
-		objCouldBeClassObj:
-		on:do: ""from the debugger""
-		positive32BitValueOf:
-		positive64BitValueOf:
-		primDigitAdd:
-		primDigitBitShiftMagnitude:
-		primDigitCompare:
-		primDigitDiv:negative:
-		primDigitMultiply:negative:
-		primDigitSubtract:
-		primitiveAllInstances
-		primitiveAsCharacter
-		primitiveContextAt
-		primitiveContextAtPut
-		primitiveExternalCall
-		primitiveFileSetPosition
-		primitiveFileTruncate	DoIt
-		primitiveForwardSignalToSemaphore
-		primitiveGrowMemoryByAtLeast
-		primitiveInputSemaphore
-		primitiveMakePoint
-		primitiveNewMethod
-		primitiveObjectAtPut
-		primitiveSizeInBytesOfInstance
-		primitiveVMParameter
-		printContext:
-		quickFetchInteger:ofObject:
-		shortPrint:
-		shortPrintOop:
-		signed32BitValueOf:
-		signed64BitValueOf:
-		subscript:with:storing:format:
-		unlockSurfaces
-		establishFrameForContextToReturnTo:
-		positiveMachineIntegerValueOf:) includes: sel) ifFalse:
-		[self halt]."
-	^super isIntegerObject: oop
-]
-
-{ #category : #'object testing' }
-Spur32BitMMLESimulator >> isNonIntegerObject: oop [
-	"This list records the valid senders of isNonIntegerObject: as we replace uses of
-	  isNonIntegerObject: by isNonImmediate: where appropriate."
-	"(#(	on:do: ""from the debugger""
-		reverseDisplayFrom:to:
-		primitiveObjectAtPut
-		isCogMethodReference:) includes: thisContext sender method selector) ifFalse:
-		[self halt]."
-	^super isNonIntegerObject: oop
-]
-
 { #category : #'image segment in/out' }
 Spur32BitMMLESimulator >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray [
 	self leakCheckImageSegments ifTrue:
@@ -360,27 +261,6 @@ Spur32BitMMLESimulator >> longAt: byteAddress put: a32BitValue [
 		[self halt]."
 	byteAddress \\ 4 ~= 0 ifTrue: [self unalignedAccessError].
 	^memory at: byteAddress // 4 + 1 put: a32BitValue
-]
-
-{ #category : #'memory access' }
-Spur32BitMMLESimulator >> longLongAt: byteAddress [
-	"memory is a Bitmap, a 32-bit indexable array of bits"
-	| hiWord loWord |
-	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
-	loWord := memory at: byteAddress // 4 + 1.
-	hiWord := memory at: byteAddress // 4 + 2.
-	^hiWord = 0
-		ifTrue: [loWord]
-		ifFalse: [(hiWord bitShift: 32) + loWord]
-]
-
-{ #category : #'memory access' }
-Spur32BitMMLESimulator >> longLongAt: byteAddress put: a64BitValue [
-	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
-	self
-		longAt: byteAddress put: (a64BitValue bitAnd: 16rffffffff);
-		longAt: byteAddress + 4 put: a64BitValue >> 32.
-	^a64BitValue
 ]
 
 { #category : #'gc - global' }

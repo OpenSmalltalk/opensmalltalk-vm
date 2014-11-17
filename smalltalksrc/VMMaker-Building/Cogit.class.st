@@ -458,13 +458,6 @@ Cogit class >> cogToBytecodeMethodMapping [
 	to reset the bytecoded method's header if it is referring to the freed CogMethod."
 ]
 
-{ #category : #'accessing class hierarchy' }
-Cogit class >> cogitClass [
-	^Smalltalk classNamed: (initializationOptions
-								at: #Cogit
-								ifAbsent: [#SimpleStackBasedCogit])
-]
-
 { #category : #translation }
 Cogit class >> declareCVarsIn: aCCodeGenerator [
 	#(	'coInterpreter' 'objectMemory' 'methodZone' 'objectRepresentation'
