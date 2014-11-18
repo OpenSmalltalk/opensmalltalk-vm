@@ -934,6 +934,11 @@ SpurMemoryManager class >> mustBeGlobal: var [
 ]
 
 { #category : #accessing }
+SpurMemoryManager class >> numSmallIntegerTagBits [
+	^self subclassResponsibility
+]
+
+{ #category : #accessing }
 SpurMemoryManager class >> objectFormatsMap [
 	"self objectFormatsMap"
 	| map |
@@ -8081,6 +8086,11 @@ SpurMemoryManager >> numSlotsOfAny: objOop [
 	^numSlots = self numSlotsMask
 		ifTrue: [self rawOverflowSlotsOf: objOop] "overflow slots; (2^32)-1 slots are plenty"
 		ifFalse: [numSlots]
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> numSmallIntegerTagBits [
+	^self subclassResponsibility
 ]
 
 { #category : #'object access' }
