@@ -258,12 +258,6 @@ ObjectMemory class >> initializeCompactClassIndices [
 ]
 
 { #category : #initialization }
-ObjectMemory class >> initializeImmediates [
-	"The Squeak VM supports 31-bit immediate 2's compliment SmallInteger objects as the only immediate type."
-	ImmediateTagMask := SmallIntegerShift := 1
-]
-
-{ #category : #initialization }
 ObjectMemory class >> initializeObjectHeaderConstants [
 
 	BytesPerWord ifNil: [BytesPerWord := 4].  "May get called on fileIn, so supply default"
@@ -398,7 +392,6 @@ ObjectMemory class >> initializeWithOptions: optionsDictionary [
 	DoExpensiveAssertionChecks := optionsDictionary at: #DoExpensiveAssertionChecks ifAbsent: [false].
 
 	self initializeObjectHeaderConstants. "Initializes BaseHeaderSize so do early"
-	self initializeImmediates.
 	self initializeSpecialObjectIndices.
 	self initializeCompactClassIndices.
 	self initializePrimitiveErrorCodes.
