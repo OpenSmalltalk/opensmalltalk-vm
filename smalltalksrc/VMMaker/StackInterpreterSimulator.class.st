@@ -676,13 +676,6 @@ StackInterpreterSimulator >> getErrorObjectFromPrimFailCode [
 	^super getErrorObjectFromPrimFailCode
 ]
 
-{ #category : #initialization }
-StackInterpreterSimulator >> getLongFromFile: aStream swap: swapFlag [
-	^swapFlag 
-		ifTrue: [objectMemory byteSwapped: (self nextLongFrom: aStream)]
-		ifFalse: [self nextLongFrom: aStream]
-]
-
 { #category : #'image save/restore' }
 StackInterpreterSimulator >> getShortFromFile: aFile swap: swapFlag [
 	| aShort |
@@ -1421,12 +1414,6 @@ StackInterpreterSimulator >> nextImplicitReceiverFor: anObject withMixin: mixin 
 ]
 
 { #category : #initialization }
-StackInterpreterSimulator >> nextLongFrom: aStream [
-	"Read a 32-bit quantity from the given (binary) stream."
-	^self subclassResponsibility
-]
-
-{ #category : #initialization }
 StackInterpreterSimulator >> nextShortFrom: aStream [
 	"Read a 16-bit quantity from the given (binary) stream."
 	^self subclassResponsibility
@@ -1533,13 +1520,13 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	imageName := f fullName.
 	f binary.
 
-	version := self nextLongFrom: f.  "current version: 16r1968 (=6504) vive la revolucion!"
+	version := self getWord32FromFile: f swap: false.  "current version: 16r1968 (=6504) vive la revolucion!"
 	(self readableFormat: version)
 		ifTrue: [swapBytes := false]
 		ifFalse: [(version := objectMemory byteSwapped: version) = self imageFormatVersion
 					ifTrue: [swapBytes := true]
 					ifFalse: [self error: 'incomaptible image format']].
-	headerSize := self getLongFromFile: f swap: swapBytes.
+	headerSize := self getWord32FromFile: f swap: swapBytes.
 	dataSize := self getLongFromFile: f swap: swapBytes.  "length of heap in file"
 	oldBaseAddr := self getLongFromFile: f swap: swapBytes.  "object memory base address of image"
 	objectMemory specialObjectsOop: (self getLongFromFile: f swap: swapBytes).
@@ -1548,7 +1535,7 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	savedWindowSize	:= self getLongFromFile: f swap: swapBytes.
 	headerFlags		:= self getLongFromFile: f swap: swapBytes.
 	self setImageHeaderFlagsFrom: headerFlags.
-	extraVMMemory	:= self getLongFromFile: f swap: swapBytes.
+	extraVMMemory	:= self getWord32FromFile: f swap: swapBytes.
 	hdrNumStackPages	:= self getShortFromFile: f swap: swapBytes.
 	"4 stack pages is small.  Should be able to run with as few as
 	 three. 4 should be comfortable but slow.  8 is a reasonable
@@ -1562,8 +1549,8 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	"pad to word boundary.  This slot can be used for anything else that will fit in 16 bits.
 	 It is used for the cog code size in Cog.  Preserve it to be polite to other VMs."
 	theUnknownShort	:= self getShortFromFile: f swap: swapBytes.
-	self assert: f position = 40.
-	hdrEdenBytes		:= self getLongFromFile: f swap: swapBytes.
+	self assert: f position = (objectMemory wordSize = 4 ifTrue: [40] ifFalse: [64]).
+	hdrEdenBytes		:= self getWord32FromFile: f swap: swapBytes.
 	objectMemory edenBytes: (hdrEdenBytes = 0
 							ifTrue: [objectMemory defaultEdenBytes]
 							ifFalse: [hdrEdenBytes]).
@@ -1574,7 +1561,7 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	"pad to word boundary.  This slot can be used for anything else that will fit in 16 bits.
 	 Preserve it to be polite to other VMs."
 	the2ndUnknownShort	:= self getShortFromFile: f swap: swapBytes.
-	self assert: f position = 48.
+	self assert: f position = (objectMemory wordSize = 4 ifTrue: [48] ifFalse: [72]).
 	firstSegSize := self getLongFromFile: f swap: swapBytes.
 	objectMemory firstSegmentSize: firstSegSize.
 	"allocate interpreter memory"
@@ -1602,9 +1589,9 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	self ensureImageFormatIsUpToDate: swapBytes.
 
 	bytesToShift := objectMemory memoryBaseForImageRead - oldBaseAddr.  "adjust pointers for zero base address"
-	Utilities informUser: 'Relocating object pointers...'
-				during: [self initializeInterpreter: bytesToShift].
-
+	Utilities
+		informUser: 'Relocating object pointers...'
+		during: [self initializeInterpreter: bytesToShift]
 ]
 
 { #category : #accessing }

@@ -5939,17 +5939,17 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 	metaclassNumSlots := 6.	"guess Metaclass instSize"
 	classNameIndex := 6.		"guess (Class instVarIndexFor: 'name' ifAbsent: []) - 1"
 	swapBytes := self checkImageVersionFrom: f startingAt: imageOffset.
-	headerStart := (self sqImageFilePosition: f) - objectMemory wordSize.  "record header start position"
+	headerStart := (self sqImageFilePosition: f) - 4.  "record header start position"
 
-	headerSize			:= self getLongFromFile: f swap: swapBytes.
+	headerSize			:= self getWord32FromFile: f swap: swapBytes.
 	dataSize			:= self getLongFromFile: f swap: swapBytes.
 	oldBaseAddr		:= self getLongFromFile: f swap: swapBytes.
 	objectMemory specialObjectsOop: (self getLongFromFile: f swap: swapBytes).
 	objectMemory lastHash: (self getLongFromFile: f swap: swapBytes). "N.B.  not used."
 	savedWindowSize	:= self getLongFromFile: f swap: swapBytes.
-	headerFlags			:= self getLongFromFile: f swap: swapBytes.
+	headerFlags		:= self getLongFromFile: f swap: swapBytes.
 	self setImageHeaderFlagsFrom: headerFlags.
-	extraVMMemory		:= self getLongFromFile: f swap: swapBytes. "N.B.  not used."
+	extraVMMemory	:= self getWord32FromFile: f swap: swapBytes. "N.B.  not used."
 	hdrNumStackPages	:= self getShortFromFile: f swap: swapBytes.
 	"4 stack pages is small.  Should be able to run with as few as
 	 three. 4 should be comfortable but slow.  8 is a reasonable
@@ -5971,7 +5971,7 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 							[hdrCogCodeSize = 0
 									ifTrue: [self defaultCogCodeSize]
 									ifFalse: [hdrCogCodeSize]].
-	hdrEdenBytes		:= self getLongFromFile: f swap: swapBytes.
+	hdrEdenBytes		:= self getWord32FromFile: f swap: swapBytes.
 	objectMemory edenBytes: (desiredEdenBytes ~= 0
 						ifTrue: [desiredEdenBytes]
 						ifFalse:

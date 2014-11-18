@@ -39,13 +39,6 @@ CogVMSimulatorLSB >> halfWordLowInLong32: long32 [
 ]
 
 { #category : #initialization }
-CogVMSimulatorLSB >> nextLongFrom: aStream [
-	"Read a 32- or 64-bit quantity from the given (binary) stream."
-
-	^ aStream nextLittleEndianNumber: objectMemory wordSize
-]
-
-{ #category : #initialization }
 CogVMSimulatorLSB >> nextShortFrom: aStream [
 	"Read a 16-bit quantity from the given (binary) stream."
 	^aStream nextLittleEndianNumber: 2

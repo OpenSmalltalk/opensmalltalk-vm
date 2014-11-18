@@ -34,13 +34,6 @@ StackInterpreterSimulatorLSB >> halfWordLowInLong32: long32 [
 ]
 
 { #category : #initialization }
-StackInterpreterSimulatorLSB >> nextLongFrom: aStream [
-	"Read a 32- or 64-bit quantity from the given (binary) stream."
-
-	^ aStream nextLittleEndianNumber: objectMemory wordSize
-]
-
-{ #category : #initialization }
 StackInterpreterSimulatorLSB >> nextShortFrom: aStream [
 	"Read a 16-bit quantity from the given (binary) stream."
 	^aStream nextLittleEndianNumber: 2
