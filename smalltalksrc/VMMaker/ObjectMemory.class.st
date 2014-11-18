@@ -436,6 +436,11 @@ ObjectMemory class >> mustBeGlobal: var [
 	^false "used to be: ^'memory' = var"
 ]
 
+{ #category : #accessing }
+ObjectMemory class >> numSmallIntegerTagBits [
+	^1
+]
+
 { #category : #'accessing class hierarchy' }
 ObjectMemory class >> objectRepresentationClass [
 	^self subclassResponsibility
@@ -3920,6 +3925,11 @@ ObjectMemory >> numSlotsOf: obj [
 			ifTrue: [(self sizeHeader: obj) bitAnd: AllButTypeMask]
 			ifFalse: [header bitAnd: SizeMask].
 	^sz - self baseHeaderSize >> self shiftForWord
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> numSmallIntegerTagBits [
+	^1
 ]
 
 { #category : #'object enumeration' }
