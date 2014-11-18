@@ -81,6 +81,13 @@ NewCoObjectMemorySimulatorLSB >> nextShortFrom: aStream [
 	^aStream nextLittleEndianNumber: 2
 ]
 
+{ #category : #initialization }
+NewCoObjectMemorySimulatorLSB >> nextWord32From: aStream [
+	"Read a 32-bit quantity from the given (binary) stream."
+
+	^aStream nextLittleEndianNumber: 4
+]
+
 { #category : #'memory access' }
 NewCoObjectMemorySimulatorLSB >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."

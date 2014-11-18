@@ -309,22 +309,6 @@ NewCoObjectMemorySimulator >> methodReturnValue: oop [
 	^coInterpreter methodReturnValue: oop
 ]
 
-{ #category : #'image save/restore' }
-NewCoObjectMemorySimulator >> nextLongFrom: aStream swap: swapFlag [
-	^swapFlag 
-		ifTrue: [self byteSwapped: (self nextLongFrom: aStream)]
-		ifFalse: [self nextLongFrom: aStream]
-]
-
-{ #category : #initialization }
-NewCoObjectMemorySimulator >> nextShortFrom: aStream swap: swapFlag [
-	| aShort |
-	aShort := self nextShortFrom: aStream.
-	^swapFlag 
-		ifTrue: [(aShort bitShift: -8) + ((aShort bitAnd: 16rFF) bitShift: 8)]
-		ifFalse: [aShort]
-]
-
 { #category : #'debugging traps' }
 NewCoObjectMemorySimulator >> noteAsRoot: oop headerLoc: headerLoc [
 	"Trap attempts to make cog methods roots."

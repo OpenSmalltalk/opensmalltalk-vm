@@ -295,22 +295,6 @@ NewObjectMemorySimulator >> methodReturnValue: oop [
 	^coInterpreter methodReturnValue: oop
 ]
 
-{ #category : #'image save/restore' }
-NewObjectMemorySimulator >> nextLongFrom: aStream swap: swapFlag [
-	^swapFlag 
-		ifTrue: [self byteSwapped: (self nextLongFrom: aStream)]
-		ifFalse: [self nextLongFrom: aStream]
-]
-
-{ #category : #initialization }
-NewObjectMemorySimulator >> nextShortFrom: aStream swap: swapFlag [
-	| aShort |
-	aShort := self nextShortFrom: aStream.
-	^swapFlag 
-		ifTrue: [(aShort bitShift: -8) + ((aShort bitAnd: 16rFF) bitShift: 8)]
-		ifFalse: [aShort]
-]
-
 { #category : #testing }
 NewObjectMemorySimulator >> objectBefore: addr [
 	| oop prev |
