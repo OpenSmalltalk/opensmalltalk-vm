@@ -109,6 +109,7 @@ Class {
 	#classVars : [
 		'AltBytecodeEncoderClassName',
 		'AltLongStoreBytecode',
+		'AlternateHeaderHasPrimFlag',
 		'AtCacheEntries',
 		'AtCacheFixedFields',
 		'AtCacheFmt',
@@ -141,7 +142,8 @@ Class {
 		'StackPageReachedButUntraced',
 		'StackPageTraceInvalid',
 		'StackPageTraced',
-		'StackPageUnreached'
+		'StackPageUnreached',
+		'V3PrimitiveBitsMask'
 	],
 	#pools : [
 		'VMBasicConstants',
@@ -150,7 +152,6 @@ Class {
 		'VMSpurObjectRepresentationConstants',
 		'VMSqueakClassIndices',
 		'VMSqueakV3BytecodeConstants',
-		'VMSqueakV3ObjectRepresentationConstants',
 		'VMStackFrameOffsets'
 	],
 	#category : #'VMMaker-Interpreter'
@@ -965,6 +966,8 @@ StackInterpreter class >> initializeMethodIndices [
 	LargeContextBit := 16r20000 << tagBits.  "This bit set in method headers if large context is needed."
 	MethodHeaderTempCountShift := 18 + tagBits.
 	MethodHeaderArgCountShift := 24 + tagBits.
+	V3PrimitiveBitsMask := 16r100001FF << tagBits.
+	AlternateHeaderHasPrimFlag := 16r10000 << tagBits.
 	"The position of the unused flag bit in the method header, not including tag bit(s)"
 	HeaderFlagBitPosition := 29
 ]
@@ -2014,7 +2017,7 @@ StackInterpreter >> allocateMemory: heapSize minimum: minimumMemory imageFile: f
 { #category : #'compiled methods' }
 StackInterpreter >> alternateHeaderHasPrimitiveFlag: methodHeader [
 	<inline: true>
-	^methodHeader anyMask: 16r10000 << SmallIntegerShift
+	^methodHeader anyMask: AlternateHeaderHasPrimFlag
 ]
 
 { #category : #utilities }
@@ -8364,7 +8367,7 @@ StackInterpreter >> literal: offset ofMethod: methodPointer [
 { #category : #'compiled methods' }
 StackInterpreter >> literalCountOfAlternateHeader: headerPointer [
 	<inline: true>
-	^(headerPointer >> 1) bitAnd: 16rFFFF
+	^(objectMemory integerValueOf: headerPointer) bitAnd: 16rFFFF
 ]
 
 { #category : #'compiled methods' }
@@ -9390,9 +9393,9 @@ StackInterpreter >> methodHeaderHasPrimitive: methodHeader [
 				ifTrue:
 					[(self headerIndicatesAlternateBytecodeSet: methodHeader)
 						ifTrue: [self alternateHeaderHasPrimitiveFlag: methodHeader]
-						ifFalse: [(methodHeader bitAnd: 16r200003FE) ~= 0]]
+						ifFalse: [methodHeader anyMask: V3PrimitiveBitsMask]]
 				ifFalse:
-					[(methodHeader bitAnd: 16r200003FE) ~= 0]]
+					[methodHeader anyMask: V3PrimitiveBitsMask]]
 ]
 
 { #category : #'frame access' }
