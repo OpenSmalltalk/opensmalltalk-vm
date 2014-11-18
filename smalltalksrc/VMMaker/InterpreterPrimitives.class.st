@@ -70,7 +70,6 @@ Class {
 		'VMObjectIndices',
 		'VMSqueakClassIndices',
 		'VMSqueakV3BytecodeConstants',
-		'VMSqueakV3ObjectRepresentationConstants',
 		'VMStackFrameOffsets'
 	],
 	#category : #'VMMaker-Interpreter'
