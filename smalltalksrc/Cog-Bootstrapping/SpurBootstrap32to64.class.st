@@ -58,7 +58,7 @@ SpurBootstrap32to64 >> bootstrapImageUsingFileDirectory: imageName [
 
 { #category : #'bootstrap image' }
 SpurBootstrap32to64 >> clone: obj32 [
-	| obj64 format numSlots numBytes |
+	| obj64 format numSlots numBytes hash |
 	format := heap32 formatOf: obj32.
 	numSlots := heap32 numSlotsOf: obj32.
 	format > heap32 lastPointerFormat ifTrue:
@@ -86,6 +86,15 @@ SpurBootstrap32to64 >> clone: obj32 [
 				allocateSlots: numSlots
 				format: format
 				classIndex: (heap32 classIndexOf: obj32).
+	(hash := heap32 rawHashBitsOf: obj32) ~= 0 ifTrue:
+		[heap64 setHashBitsOf: obj64 to: hash].
+	(heap32 isImmutable: obj32) ~= 0 ifTrue:
+		[heap64 setIsImmutableOf: obj64 to: true].
+	(heap32 isPinned: obj32) ~= 0 ifTrue:
+		[heap64 setIsPinnedOf: obj64 to: true].
+	self deny: (heap32 isRemembered: obj32).
+	self deny: (heap32 isMarked: obj32).
+	self deny: (heap32 isGrey: obj32).
 	reverseMap at: obj64 put: obj32.
 	^map at: obj32 put: obj64
 ]
