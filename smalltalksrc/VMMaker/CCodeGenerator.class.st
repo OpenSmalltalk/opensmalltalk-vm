@@ -4122,23 +4122,6 @@ CCodeGenerator >> storeCodeOnFile: fileName doInlining: inlineFlag doAssertions:
 ]
 
 { #category : #public }
-CCodeGenerator >> storeHeaderOnFile: fileName bytesPerWord: bytesPerWord [
-	"Store C header code for this interpreter on the given file."
-
-	| aStream |
-	aStream := VMMaker forceNewFileNamed: fileName.
-	aStream ifNil: [Error signal: 'Could not open C header file: ', fileName].
-	aStream
-		nextPutAll: '/* ';
-		nextPutAll: VMMaker headerNotice;
-		nextPutAll: ' */'; cr; cr.
-	self writeDefineBytesPerWord: bytesPerWord on: aStream.
-	self writeDefineMemoryAccessInImageOn: aStream.
-	self writeDefaultMacrosOn: aStream.
-	aStream close
-]
-
-{ #category : #public }
 CCodeGenerator >> storeHeaderOnFile: fileName contents: contents [
 	"Store C header code on the given file. Evaluate
 	 aBlock with the stream to generate its contents."
@@ -4391,51 +4374,4 @@ CCodeGenerator >> with: aNode ifAppropriateSetTo: aBoolean do: aBlock [
 							ifNotNil: [savedOptions copy].
 	optionsDictionary at: aNode name put: aBoolean.
 	^aBlock ensure: [optionsDictionary := savedOptions]
-]
-
-{ #category : #public }
-CCodeGenerator >> writeDefaultMacrosOn: aStream [
-	"Write macros to provide default implementations of certain functions used by
-	the interpreter. If not previously defined in config.h they will be defined here.
-	The definitions will be available to any module that includes sqMemoryAccess.h.
-	The default macros are chosen for backward compatibility with existing platform
-	support code."
-
-	aStream cr;
-		nextPutAll: '#ifndef allocateMemoryMinimumImageFileHeaderSize'; cr;
-		nextPutAll: ' /* Called by Interpreter>>allocateMemory:minimum:imageFile:headerSize: */'; cr;
-		nextPutAll: ' #define allocateMemoryMinimumImageFileHeaderSize(',
-						'heapSize, minimumMemory, fileStream, headerSize) \'; cr;
-		nextPutAll: '    sqAllocateMemory(minimumMemory, heapSize)'; cr;
-		nextPutAll: '#endif'; cr; cr;
-		nextPutAll: '#ifndef sqImageFileReadEntireImage'; cr;
-		nextPutAll: ' /* Called by Interpreter>>sqImage:read:size:length: */'; cr;
-		nextPutAll: ' #define sqImageFileReadEntireImage(memoryAddress, fileStream, ',
-						'elementSize,  length) \'; cr;
-		nextPutAll: '    sqImageFileRead(memoryAddress, fileStream, elementSize,  length)'; cr;
-		nextPutAll: '#endif'; cr; cr
-
-]
-
-{ #category : #public }
-CCodeGenerator >> writeDefineBytesPerWord: bytesPerWord on: aStream [
-	aStream
-		nextPutAll: '#define SQ_VI_BYTES_PER_WORD ';
-		print: bytesPerWord;
-		cr
-
-]
-
-{ #category : #public }
-CCodeGenerator >> writeDefineMemoryAccessInImageOn: aStream [
-	"If MemoryAccess is present in the image, then define MEMORY_ACCESS_IN_IMAGE as
-	a C preprocessor macro. When MEMORY_ACCESS_IN_IMAGE is defined, the traditional
-	C preprocessor macros for low level memory access are ignored and will be replaced
-	by directly translated (and inlined) SLANG versions of the same. This enables visibility
-	of the memory access functions for debuggers and profilers."
-
-	(Smalltalk classNamed: #MemoryAccess)
-		ifNotNilDo: [:ma | ma isEnabled
-			ifTrue: [aStream nextPutAll: '#define MEMORY_ACCESS_IN_IMAGE 1'; cr]]
-
 ]

@@ -3699,29 +3699,29 @@ StackInterpreter >> checkImageVersionFrom: f startingAt: imageOffset [
 
 	<inline: false>
 	| version firstVersion |
-	<var: #f type: 'sqImageFile '>
-	<var: #imageOffset type: 'squeakFileOffsetType '>
+	<var: #f type: #sqImageFile>
+	<var: #imageOffset type: #squeakFileOffsetType>
 
 	"check the version number"
 	self sqImageFile: f Seek: imageOffset.
-	version := firstVersion := self getLongFromFile: f swap: false.
+	version := firstVersion := self getWord32FromFile: f swap: false.
 	(self readableFormat: version) ifTrue: [^ false].
 
 	"try with bytes reversed"
 	self sqImageFile: f Seek: imageOffset.
-	version := self getLongFromFile: f swap: true.
+	version := self getWord32FromFile: f swap: true.
 	(self readableFormat: version) ifTrue: [^ true].
 
 	"Note: The following is only meaningful if not reading an embedded image"
 	imageOffset = 0 ifTrue:[
 		"try skipping the first 512 bytes (prepended by certain Mac file transfer utilities)"
 		self sqImageFile: f Seek: 512.
-		version := self getLongFromFile: f swap: false.
+		version := self getWord32FromFile: f swap: false.
 		(self readableFormat: version) ifTrue: [^ false].
 
 		"try skipping the first 512 bytes with bytes reversed"
 		self sqImageFile: f Seek: 512.
-		version := self getLongFromFile: f swap: true.
+		version := self getWord32FromFile: f swap: true.
 		(self readableFormat: version) ifTrue: [^ true]].
 
 	"hard failure; abort"
@@ -6748,16 +6748,21 @@ StackInterpreter >> getInterruptPending [
 
 { #category : #'image save/restore' }
 StackInterpreter >> getLongFromFile: aFile swap: swapFlag [
-	"Answer the next word read from aFile, byte-swapped according to the swapFlag."
+	"Answer the next 32 or 64 bit word read from aFile, byte-swapped according to the swapFlag."
 
+	<var: #aFile type: #sqImageFile>
 	| w |
-	<var: #aFile type: 'sqImageFile '>
+	<var: #w type: #long>
 	w := 0.
-	self cCode: 'sqImageFileRead(&w, sizeof(w), 1, aFile)'.
-	swapFlag
-		ifTrue: [^ objectMemory byteSwapped: w]
-		ifFalse: [^ w].
-
+	self cCode: [self
+					sq: (self addressOf: w)
+					Image: (self sizeof: #long)
+					File: 1
+					Read: aFile]
+		inSmalltalk: [w := objectMemory nextLongFrom: aFile].
+	^swapFlag
+		ifTrue: [objectMemory byteSwapped: w]
+		ifFalse: [w]
 ]
 
 { #category : #'plugin primitive support' }
@@ -6774,14 +6779,20 @@ StackInterpreter >> getSavedWindowSize [
 
 { #category : #'image save/restore' }
 StackInterpreter >> getShortFromFile: aFile swap: swapFlag [
-	"Answer the next half-word read from aFile, byte-swapped according to the swapFlag."
+	"Answer the next 16 bit word read from aFile, byte-swapped according to the swapFlag."
 
+	<var: #aFile type: #sqImageFile>
 	| w |
-	<var: #aFile type: #'sqImageFile'>
+	<var: #w type: #short>
 	w := 0.
-	self cCode: 'sqImageFileRead(&w, sizeof(unsigned short), 1, aFile)'.
+	self cCode: [self
+					sq: (self addressOf: w)
+					Image: (self sizeof: #short)
+					File: 1
+					Read: aFile]
+		inSmalltalk: [w := objectMemory nextShortFrom: aFile].
 	^swapFlag
-		ifTrue: [(w bitShift: -8) + ((w bitAnd: 16rFF) bitShift: 8)]
+		ifTrue: [objectMemory byteSwapped: w]
 		ifFalse: [w]
 ]
 
@@ -6798,6 +6809,25 @@ StackInterpreter >> getThisSessionID [
 	"return the global session ID value"
 	<inline: false>
 	^globalSessionID
+]
+
+{ #category : #'image save/restore' }
+StackInterpreter >> getWord32FromFile: aFile swap: swapFlag [
+	"Answer the next 32 bit word read from aFile, byte-swapped according to the swapFlag."
+
+	<var: #aFile type: #sqImageFile>
+	| w |
+	<var: #w type: #int>
+	w := 0.
+	self cCode: [self
+					sq: (self addressOf: w)
+					Image: (self sizeof: #int)
+					File: 1
+					Read: aFile]
+		inSmalltalk: [w := objectMemory nextWord32From: aFile].
+	^swapFlag
+		ifTrue: [objectMemory byteSwapped: w]
+		ifFalse: [w]
 ]
 
 { #category : #'message sending' }
@@ -11589,9 +11619,9 @@ StackInterpreter >> putLong: aLong toFile: aFile [
 	 on a different platform.) Set successFlag to false if the write fails."
 
 	<var: #aLong type: #long>
-	| objectsWritten |
 	<var: #aFile type: #sqImageFile>
-
+	<inline: false>
+	| objectsWritten |
 	objectsWritten := self
 						cCode: [self sq: (self addressOf: aLong) Image: (self sizeof: #long) File: 1 Write: aFile]
 						inSmalltalk:
@@ -11610,9 +11640,10 @@ StackInterpreter >> putShort: aShort toFile: aFile [
 	 (Bytes will be swapped, if necessary, when the image is read on a
 	 different platform.) Set successFlag to false if the write fails."
 
-	| objectsWritten |
+	<var: #aShort type: #short>
 	<var: #aFile type: #sqImageFile>
-
+	<inline: false>
+	| objectsWritten |
 	objectsWritten := self
 						cCode: [self sq: (self addressOf: aShort) Image: (self sizeof: #short) File: 1 Write: aFile]
 						inSmalltalk:
@@ -11648,9 +11679,9 @@ StackInterpreter >> putWord32: aWord32 toFile: aFile [
 	 on a different platform.) Set successFlag to false if the write fails."
 
 	<var: #aWord32 type: #int>
-	| objectsWritten |
 	<var: #aFile type: #sqImageFile>
-
+	<inline: false>
+	| objectsWritten |
 	objectsWritten := self
 						cCode: [self sq: (self addressOf: aWord32) Image: 4 File: 1 Write: aFile]
 						inSmalltalk:
@@ -11693,9 +11724,9 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	metaclassNumSlots := 6.	"guess Metaclass instSize"
 	classNameIndex := 6.		"guess (Class instVarIndexFor: 'name' ifAbsent: []) - 1"
 	swapBytes := self checkImageVersionFrom: f startingAt: imageOffset.
-	headerStart := (self sqImageFilePosition: f) - objectMemory wordSize.  "record header start position"
+	headerStart := (self sqImageFilePosition: f) - 4.  "record header start position"
 
-	headerSize			:= self getLongFromFile: f swap: swapBytes.
+	headerSize			:= self getWord32FromFile: f swap: swapBytes.
 	dataSize			:= self getLongFromFile: f swap: swapBytes.
 	oldBaseAddr		:= self getLongFromFile: f swap: swapBytes.
 	objectMemory specialObjectsOop: (self getLongFromFile: f swap: swapBytes).
@@ -11703,7 +11734,7 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	savedWindowSize	:= self getLongFromFile: f swap: swapBytes.
 	headerFlags		:= self getLongFromFile: f swap: swapBytes.
 	self setImageHeaderFlagsFrom: headerFlags.
-	extraVMMemory	:= self getLongFromFile: f swap: swapBytes.
+	extraVMMemory	:= self getWord32FromFile: f swap: swapBytes.
 	hdrNumStackPages	:= self getShortFromFile: f swap: swapBytes.
 	"4 stack pages is small.  Should be able to run with as few as
 	 three. 4 should be comfortable but slow.  8 is a reasonable
@@ -11720,7 +11751,7 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 	"pad to word boundary.  This slot can be used for anything else that will fit in 16 bits.
 	 It is used for the cog code size in Cog.  Preserve it to be polite to other VMs."
 	theUnknownShort	:= self getShortFromFile: f swap: swapBytes.
-	hdrEdenBytes		:= self getLongFromFile: f swap: swapBytes.
+	hdrEdenBytes		:= self getWord32FromFile: f swap: swapBytes.
 	objectMemory edenBytes: (desiredEdenBytes ~= 0
 						ifTrue: [desiredEdenBytes]
 						ifFalse:

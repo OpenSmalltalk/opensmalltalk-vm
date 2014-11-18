@@ -71,6 +71,13 @@ NewCoObjectMemorySimulatorMSB >> nextShortFrom: aStream [
 	^aStream nextNumber: 2
 ]
 
+{ #category : #'image save/restore' }
+NewCoObjectMemorySimulatorMSB >> nextWord32From: aStream [
+	"Read a 32-bit quantity from the given (binary) stream."
+
+	^aStream nextNumber: 4
+]
+
 { #category : #'memory access' }
 NewCoObjectMemorySimulatorMSB >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
