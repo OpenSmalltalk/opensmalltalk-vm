@@ -21,6 +21,7 @@ Class {
 SpurBootstrap32to64 >> bootstrapImage [
 	self cloneObjects.
 	self fillInObjects.
+	self fillInHeap
 ]
 
 { #category : #'public access' }
@@ -49,7 +50,6 @@ SpurBootstrap32to64 >> bootstrapImageUsingFileDirectory: imageName [
 				ifTrue: [ex resume]
 				ifFalse: [ex pass]].
 	self writeSnapshot: (dir fullNameFor: baseName, '-64.image')
-		ofTransformedImage: heap32
 		headerFlags: imageHeaderFlags
 		screenSize: savedWindowSize.
 	dir deleteFileNamed: baseName, '-64.changes';
@@ -91,16 +91,33 @@ SpurBootstrap32to64 >> clone: obj32 [
 ]
 
 { #category : #'bootstrap image' }
+SpurBootstrap32to64 >> cloneFreeLists: obj32 [
+	| obj64 |
+	obj64 := heap64
+				allocateSlots: heap64 numFreeLists
+				format: heap64 sixtyFourBitIndexableFormat
+				classIndex: heap64 sixtyFourBitLongsClassIndexPun.
+	reverseMap at: obj64 put: obj32.
+	^map at: obj32 put: obj64
+]
+
+{ #category : #'bootstrap image' }
 SpurBootstrap32to64 >> cloneObjects [
-	heap32 allObjectsDo:
+	| freeListsObject |
+	freeListsObject := heap32 freeListsObject.
+	heap32 allOldSpaceObjectsDo:
 		[:obj32| | classIndex value |
 		classIndex := heap32 classIndexOf: obj32.
-		((classIndex between: ClassLargeNegativeIntegerCompactIndex and: ClassLargePositiveIntegerCompactIndex)
-		 and: [interpreter32 initPrimCall.
-			value := heap32 positive64BitValueOf: obj32.
-			interpreter32 failed not
-		 and: [heap64 isIntegerValue: value]]) ifFalse:
-			[self clone: obj32]]
+		obj32 = freeListsObject
+			ifTrue:
+				[self cloneFreeLists: obj32]
+			ifFalse:
+				[((classIndex between: ClassLargeNegativeIntegerCompactIndex and: ClassLargePositiveIntegerCompactIndex)
+				  and: [interpreter32 initPrimCall.
+					value := heap32 positive64BitValueOf: obj32.
+					interpreter32 failed not
+				  and: [heap64 isIntegerValue: value]]) ifFalse:
+					[self clone: obj32]]]
 ]
 
 { #category : #'bootstrap image' }
@@ -137,6 +154,27 @@ SpurBootstrap32to64 >> fillInCompiledMethod: obj64 from: obj32 [
 				storeByte: offset + i 
 				ofObject: obj64
 				withValue: (heap32 fetchByte: i ofObject: obj32)]
+]
+
+{ #category : #'bootstrap image' }
+SpurBootstrap32to64 >> fillInHeap [
+	| heapEnd freeListsObj |
+	heapEnd := heap64 freeStart.
+	heap64
+		nilObject: (map at: heap32 nilObject);
+		falseObject: (map at: heap32 falseObject);
+		trueObject: (map at: heap32 trueObject);
+		specialObjectsOop: (map at: heap32 specialObjectsOop);
+		lastHash: heap32 lastHash.
+	heap64 segmentManager
+		initSegmentForInImageCompilationFrom: heap64 nilObject
+		to: heapEnd + heap64 bridgeSize.
+	freeListsObj := heap64 objectAfter: heap64 trueObject.
+	heap64
+		fillObj: freeListsObj numSlots: (heap64 numSlotsOf: freeListsObj) with: 0;
+		initializeFreeSpacePostLoad: freeListsObj;
+		initializePostBootstrap;
+		setEndOfMemory: (heap64 segmentManager bridgeAt: 0) + heap64 baseHeaderSize
 ]
 
 { #category : #'bootstrap image' }
@@ -249,4 +287,17 @@ SpurBootstrap32to64 >> on: imageName [
 		codeSize: 0.
 	heap64 bootstrapping: true.
 	self initMaps
+]
+
+{ #category : #snapshot }
+SpurBootstrap32to64 >> writeSnapshot: imageFileName headerFlags: headerFlags screenSize: screenSizeInteger [
+	heap64
+		checkFreeSpace;
+		runLeakCheckerForFullGC: true.
+	interpreter64
+		setImageHeaderFlagsFrom: headerFlags;
+		setDisplayForm: nil;
+		imageName: imageFileName;
+		writeImageFileIO.
+	Transcript cr; show: 'Done!'
 ]
