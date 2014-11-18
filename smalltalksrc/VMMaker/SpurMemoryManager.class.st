@@ -4104,6 +4104,11 @@ SpurMemoryManager >> ephemeronFormat [
 	^5
 ]
 
+{ #category : #'spur bootstrap' }
+SpurMemoryManager >> ephemeronQueue [
+	^ephemeronQueue
+]
+
 { #category : #'debug support' }
 SpurMemoryManager >> existInstancesInNewSpaceOf: classObj [
 	| classIndex |
@@ -6437,6 +6442,16 @@ SpurMemoryManager >> isValidObjStackAt: objStackRootIndex [
 ]
 
 { #category : #'obj stacks' }
+SpurMemoryManager >> isValidObjStackPage: objStackPage [
+	"for the Spur 32- to 64-bit bootstrap"
+	<doNotGenerate>
+	^self
+		isValidObjStackPage: objStackPage
+		myIndex: ((self numSlotsOfAny: objStackPage) = ObjStackPageSlots ifTrue:
+					[self fetchPointer: ObjStackMyx ofObject: objStackPage])
+]
+
+{ #category : #'obj stacks' }
 SpurMemoryManager >> isValidObjStackPage: objStackPage myIndex: myx [
 	"Just check the page itself."
 	<inline: false>
@@ -7392,6 +7407,11 @@ SpurMemoryManager >> markObjectsIn: arrayOfRoots [
 		oop := self followField: i ofObject: arrayOfRoots.
 		(self isNonImmediate: oop) ifTrue:
 			[self setIsMarkedOf: oop to: true]]
+]
+
+{ #category : #'spur bootstrap' }
+SpurMemoryManager >> markStack [
+	^markStack
 ]
 
 { #category : #'gc - global' }
@@ -11094,6 +11114,11 @@ SpurMemoryManager >> weakArrayClassIndexPun [
 SpurMemoryManager >> weakArrayFormat [
 	<api>
 	^4
+]
+
+{ #category : #'spur bootstrap' }
+SpurMemoryManager >> weaklingStack [
+	^weaklingStack
 ]
 
 { #category : #'debug printing' }
