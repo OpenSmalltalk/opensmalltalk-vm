@@ -133,6 +133,8 @@ Class {
 		'MaxJumpBuf',
 		'MaxPrimitiveIndex',
 		'MaxQuickPrimitiveIndex',
+		'MethodHeaderArgCountShift',
+		'MethodHeaderTempCountShift',
 		'MixinIndex',
 		'PrimitiveExternalCallIndex',
 		'PrimitiveTable',
@@ -954,11 +956,15 @@ StackInterpreter class >> initializeMessageIndices [
 
 { #category : #initialization }
 StackInterpreter class >> initializeMethodIndices [
+	| tagBits |
 	"Class CompiledMethod"
 	HeaderIndex := 0.
 	LiteralStart := 1.
 
-	LargeContextBit := 16r40000.  "This bit set in method headers if large context is needed."
+	tagBits := self objectMemoryClass numSmallIntegerTagBits.
+	LargeContextBit := 16r20000 << tagBits.  "This bit set in method headers if large context is needed."
+	MethodHeaderTempCountShift := 18 + tagBits.
+	MethodHeaderArgCountShift := 24 + tagBits.
 	"The position of the unused flag bit in the method header, not including tag bit(s)"
 	HeaderFlagBitPosition := 29
 ]
@@ -2033,7 +2039,7 @@ StackInterpreter >> argumentCountOfClosure: closurePointer [
 { #category : #'compiled methods' }
 StackInterpreter >> argumentCountOfMethodHeader: header [
 	<api>
-	^header >> 25 bitAnd: 16r0F
+	^header >> MethodHeaderArgCountShift bitAnd: 16rF
 ]
 
 { #category : #utilities }
@@ -7252,7 +7258,7 @@ StackInterpreter >> initialCleanup [
 
 { #category : #'compiled methods' }
 StackInterpreter >> initialPCForHeader: methodHeader method: theMethod [
-	"Answer the initial PC for a method; used only in methods that build a frame."
+	"Answer a pointer to the initial byte for a method; used only in methods that build a frame."
 	<inline: true>
 	^theMethod
 	+ ((LiteralStart + (objectMemory literalCountOfMethodHeader: methodHeader)) * objectMemory bytesPerOop)
@@ -7723,7 +7729,7 @@ StackInterpreter >> internalActivateNewMethod [
 
 	methodHeader := objectMemory methodHeaderOf: newMethod.
 	numTemps := self temporaryCountOfMethodHeader: methodHeader.
-
+	self assert: argumentCount = (self argumentCountOfMethodHeader: methodHeader).
 	rcvr := self internalStackValue: argumentCount. "could new rcvr be set at point of send?"
 	self assert: (objectMemory isOopForwarded: rcvr) not.
 
@@ -13615,7 +13621,7 @@ StackInterpreter >> temporary: offset in: theFP put: valueOop [
 StackInterpreter >> temporaryCountOfMethodHeader: header [
 	<api>
 	<inline: true>
-	^(header >> 19) bitAnd: 16r3F
+	^header >> MethodHeaderTempCountShift bitAnd: 16r3F
 ]
 
 { #category : #'internal interpreter access' }

@@ -13,6 +13,11 @@ Spur64BitMemoryManager class >> isImmediate: anObject [
 ]
 
 { #category : #'simulation only' }
+Spur64BitMemoryManager class >> numSmallIntegerTagBits [
+	^3
+]
+
+{ #category : #'simulation only' }
 Spur64BitMemoryManager class >> simulatorClass [
 	^Spur64BitMMLESimulator
 ]
@@ -499,6 +504,11 @@ Spur64BitMemoryManager >> numSlotsForShortening: objOop toIndexableSize: indexab
 		{ [self arrayFormat]			-> [indexableSize].
 		  [self firstLongFormat]		-> [self numSlotsForBytes: indexableSize * 4].
 		  [self firstLongFormat + 1]	-> [self numSlotsForBytes: indexableSize * 4] }
+]
+
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> numSmallIntegerTagBits [
+	^3
 ]
 
 { #category : #'object access' }

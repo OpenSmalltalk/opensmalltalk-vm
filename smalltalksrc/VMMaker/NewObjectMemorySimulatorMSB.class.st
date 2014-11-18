@@ -30,14 +30,6 @@ NewObjectMemorySimulatorMSB >> byteAt: byteAddress put: byte [
 	^byte
 ]
 
-{ #category : #'debug support' }
-NewObjectMemorySimulatorMSB >> charsOfLong: long [
-	^ (self wordSize to: 1 by: -1) collect:
-		[:i | ((long digitAt: i) between: 14 and: 126)
-					ifTrue: [(long digitAt: i) asCharacter]
-					ifFalse: [$?]]
-]
-
 { #category : #'memory access' }
 NewObjectMemorySimulatorMSB >> endianness [
 	^#big

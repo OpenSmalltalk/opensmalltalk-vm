@@ -30,14 +30,6 @@ NewCoObjectMemorySimulatorMSB >> byteAt: byteAddress put: byte [
 	^byte
 ]
 
-{ #category : #'debug support' }
-NewCoObjectMemorySimulatorMSB >> charsOfLong: long [
-	^ (self wordSize to: 1 by: -1) collect:
-		[:i | ((long digitAt: i) between: 14 and: 126)
-					ifTrue: [(long digitAt: i) asCharacter]
-					ifFalse: [$?]]
-]
-
 { #category : #'float primitives' }
 NewCoObjectMemorySimulatorMSB >> fetchFloatAt: floatBitsAddress into: aFloat [
 	aFloat at: 1 put: (self long32At: floatBitsAddress).
