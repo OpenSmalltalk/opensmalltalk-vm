@@ -263,6 +263,16 @@ Spur64BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 		do: [:p| self longAt: p put: fillValue]
 ]
 
+{ #category : #'header access' }
+Spur64BitMemoryManager >> identityHashFullWordMask [
+	^16r3fffff00000000
+]
+
+{ #category : #'header access' }
+Spur64BitMemoryManager >> identityHashFullWordShift [
+	^32
+]
+
 { #category : #'free space' }
 Spur64BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	<var: #numBytes type: #usqLong>
@@ -607,13 +617,6 @@ Spur64BitMemoryManager >> setFormatOf: objOop to: format [
 	objOop
 		put: ((self longAt: objOop) bitAnd: (self formatMask << self formatShift) bitInvert64)
 			+ (format << self formatShift)
-]
-
-{ #category : #'header access' }
-Spur64BitMemoryManager >> setHashBitsOf: objOop to: hash [
-	self assert: (hash between: 0 and: self identityHashFullWordMask).
-	self longAt: objOop
-		put: ((self longAt: objOop) bitClear: self identityHashFullWordMask) + hash
 ]
 
 { #category : #'header access' }
