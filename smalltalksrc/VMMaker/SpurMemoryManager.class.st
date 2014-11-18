@@ -9113,7 +9113,7 @@ SpurMemoryManager >> rawClassTagForClass: classObj [
 { #category : #'header access' }
 SpurMemoryManager >> rawHashBitsOf: objOop [
 	self flag: #endianness.
-	^(self longAt: objOop + 4) bitAnd: self identityHashHalfWordMask
+	^(self long32At: objOop + 4) bitAnd: self identityHashHalfWordMask
 ]
 
 { #category : #'object access' }
@@ -9565,7 +9565,10 @@ SpurMemoryManager >> setFreeOldSpaceStart: newFreeOldSpaceStart [
 
 { #category : #'header access' }
 SpurMemoryManager >> setHashBitsOf: objOop to: hash [
-	self subclassResponsibility
+	self flag: #endianness.
+	self assert: (hash between: 0 and: self identityHashHalfWordMask).
+	self long32At: objOop + 4
+		put: ((self long32At: objOop + 4) bitClear: self identityHashHalfWordMask) + hash
 ]
 
 { #category : #snapshot }

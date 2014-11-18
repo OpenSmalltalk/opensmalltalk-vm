@@ -661,14 +661,6 @@ Spur32BitMemoryManager >> setFormatOf: objOop to: format [
 ]
 
 { #category : #'header access' }
-Spur32BitMemoryManager >> setHashBitsOf: objOop to: hash [
-	self flag: #endianness.
-	self assert: (hash between: 0 and: self identityHashHalfWordMask).
-	self longAt: objOop + 4
-		put: ((self longAt: objOop + 4) bitClear: self identityHashHalfWordMask) + hash
-]
-
-{ #category : #'header access' }
 Spur32BitMemoryManager >> setIsGreyOf: objOop to: aBoolean [
 	self flag: #endianness.
 	self longAt: objOop
