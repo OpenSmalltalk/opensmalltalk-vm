@@ -1,5 +1,5 @@
 Class {
-	#name : #SpurBootstrap32to64,
+	#name : #Spur32to64BitBootstrap,
 	#superclass : #SimulatorHarness,
 	#instVars : [
 		'heap32',
@@ -9,23 +9,31 @@ Class {
 		'interpreter32',
 		'interpreter64',
 		'imageHeaderFlags',
-		'savedWindowSize'
+		'savedWindowSize',
+		'literalMap'
 	],
 	#pools : [
+		'VMObjectIndices',
 		'VMSqueakClassIndices'
 	],
 	#category : #'Cog-Bootstrapping'
 }
 
-{ #category : #'public access' }
-SpurBootstrap32to64 >> bootstrapImage [
-	self cloneObjects.
-	self fillInObjects.
-	self fillInHeap
+{ #category : #'bootstrap image' }
+Spur32to64BitBootstrap >> alterSystem [
+	self nilWordSize
 ]
 
 { #category : #'public access' }
-SpurBootstrap32to64 >> bootstrapImage: imageName [
+Spur32to64BitBootstrap >> bootstrapImage [
+	self cloneObjects.
+	self fillInObjects.
+	self fillInHeap.
+	self alterSystem
+]
+
+{ #category : #'public access' }
+Spur32to64BitBootstrap >> bootstrapImage: imageName [
 	(Smalltalk classNamed: #FileReference) ifNotNil:
 		[^self bootstrapImageUsingFileReference: imageName].
 	(Smalltalk classNamed: #FileDirectory) ifNotNil:
@@ -34,7 +42,7 @@ SpurBootstrap32to64 >> bootstrapImage: imageName [
 ]
 
 { #category : #'public access' }
-SpurBootstrap32to64 >> bootstrapImageUsingFileDirectory: imageName [
+Spur32to64BitBootstrap >> bootstrapImageUsingFileDirectory: imageName [
 	| dirName baseName dir |
 	dirName := FileDirectory dirPathFor: imageName.
 	baseName := (imageName endsWith: '.image')
@@ -57,7 +65,7 @@ SpurBootstrap32to64 >> bootstrapImageUsingFileDirectory: imageName [
 ]
 
 { #category : #'bootstrap image' }
-SpurBootstrap32to64 >> clone: obj32 [
+Spur32to64BitBootstrap >> clone: obj32 [
 	| obj64 format numSlots numBytes hash |
 	format := heap32 formatOf: obj32.
 	numSlots := heap32 numSlotsOf: obj32.
@@ -100,7 +108,7 @@ SpurBootstrap32to64 >> clone: obj32 [
 ]
 
 { #category : #'bootstrap image' }
-SpurBootstrap32to64 >> cloneFreeLists: obj32 [
+Spur32to64BitBootstrap >> cloneFreeLists: obj32 [
 	| obj64 |
 	obj64 := heap64
 				allocateSlots: heap64 numFreeLists
@@ -111,7 +119,7 @@ SpurBootstrap32to64 >> cloneFreeLists: obj32 [
 ]
 
 { #category : #'bootstrap image' }
-SpurBootstrap32to64 >> cloneObjects [
+Spur32to64BitBootstrap >> cloneObjects [
 	"Clone all normal objects.  Of hidden objects only clone the freeLists object and
 	 the classTableRoot and class table pages. In particular, dont clone objStacks.
 	 The refs to the objStacks are nilled out in fillInHeap."
@@ -134,7 +142,7 @@ SpurBootstrap32to64 >> cloneObjects [
 ]
 
 { #category : #'bootstrap image' }
-SpurBootstrap32to64 >> fillInBitsObject: obj64 from: obj32 [
+Spur32to64BitBootstrap >> fillInBitsObject: obj64 from: obj32 [
 	0 to: (heap32 numBytesOf: obj32) - 1 do:
 		[:i|
 		heap64
@@ -144,7 +152,7 @@ SpurBootstrap32to64 >> fillInBitsObject: obj64 from: obj32 [
 ]
 
 { #category : #'bootstrap image' }
-SpurBootstrap32to64 >> fillInCompiledMethod: obj64 from: obj32 [
+Spur32to64BitBootstrap >> fillInCompiledMethod: obj64 from: obj32 [
 	| offset |
 	"interpreter32 printOop: oop32"
 	"interpreter64 printOop: oop64"
@@ -171,7 +179,7 @@ SpurBootstrap32to64 >> fillInCompiledMethod: obj64 from: obj32 [
 ]
 
 { #category : #'bootstrap image' }
-SpurBootstrap32to64 >> fillInHeap [
+Spur32to64BitBootstrap >> fillInHeap [
 	| heapEnd freeListsObj |
 	heapEnd := heap64 freeStart.
 	heap64
@@ -179,7 +187,8 @@ SpurBootstrap32to64 >> fillInHeap [
 		falseObject: (map at: heap32 falseObject);
 		trueObject: (map at: heap32 trueObject);
 		specialObjectsOop: (map at: heap32 specialObjectsOop);
-		lastHash: heap32 lastHash.
+		lastHash: heap32 lastHash;
+		setHiddenRootsObj: (map at: heap32 classTableRootObj).
 	heap64 segmentManager
 		initSegmentForInImageCompilationFrom: heap64 nilObject
 		to: heapEnd + heap64 bridgeSize.
@@ -193,7 +202,7 @@ SpurBootstrap32to64 >> fillInHeap [
 ]
 
 { #category : #'bootstrap image' }
-SpurBootstrap32to64 >> fillInObjects [
+Spur32to64BitBootstrap >> fillInObjects [
 	"interpreter32 printOop: obj32"
 	{heap32 markStack. heap32 weaklingStack. heap32 ephemeronQueue} do:
 		[:obj|
@@ -221,7 +230,7 @@ SpurBootstrap32to64 >> fillInObjects [
 ]
 
 { #category : #'bootstrap image' }
-SpurBootstrap32to64 >> fillInPointerObject: obj64 from: obj32 [ 
+Spur32to64BitBootstrap >> fillInPointerObject: obj64 from: obj32 [ 
 	0 to: (heap64 numSlotsOf: obj64) - 1 do:
 		[:i|
 		 heap64
@@ -231,7 +240,7 @@ SpurBootstrap32to64 >> fillInPointerObject: obj64 from: obj32 [
 ]
 
 { #category : #'bootstrap image' }
-SpurBootstrap32to64 >> fillInPointerObjectWithPC: obj64 from: obj32 [
+Spur32to64BitBootstrap >> fillInPointerObjectWithPC: obj64 from: obj32 [
 	| method |
 	self fillInPointerObject: obj64 from: obj32.
 	(heap64 classIndexOf: obj64) = ClassBlockClosureCompactIndex ifTrue:
@@ -248,8 +257,27 @@ SpurBootstrap32to64 >> fillInPointerObjectWithPC: obj64 from: obj32 [
 		 self incrementPCField: InstructionPointerIndex ofObject: obj64 for: method]
 ]
 
+{ #category : #'public access' }
+Spur32to64BitBootstrap >> findSymbol: aString [
+	"Find the Symbol equal to aString in oldHeap."
+	| symbolClass |
+	(literalMap at: aString ifAbsent: nil) ifNotNil:
+		[:oop| ^oop].
+	symbolClass := self symbolClass.
+	heap64 allObjectsDo:
+		[:obj|
+		(symbolClass = (heap64 fetchClassOfNonImm: obj)
+		 and: [(heap64 numBytesOf: obj) = aString size
+		 and: [aString = (heap64 stringOf: obj)]]) ifTrue:
+			[aString isSymbol ifTrue:
+				[literalMap at: aString asSymbol put: obj].
+			 ^obj]].
+	Transcript cr; nextPutAll: 'Warning, could not find '; store: aString; flush.
+	^nil
+]
+
 { #category : #'bootstrap image' }
-SpurBootstrap32to64 >> incrementPCField: fieldIndex ofObject: obj64 for: method32 [
+Spur32to64BitBootstrap >> incrementPCField: fieldIndex ofObject: obj64 for: method32 [
 	| value nLits |
 	value := heap64 fetchPointer: fieldIndex ofObject: obj64.
 	(heap64 isIntegerObject: value)
@@ -264,13 +292,14 @@ SpurBootstrap32to64 >> incrementPCField: fieldIndex ofObject: obj64 for: method3
 ]
 
 { #category : #'initialize-release' }
-SpurBootstrap32to64 >> initMaps [
+Spur32to64BitBootstrap >> initMaps [
 	map := Dictionary new: heap32 memory size // 32.
-	reverseMap := Dictionary new: heap32 memory size // 32
+	reverseMap := Dictionary new: heap32 memory size // 32.
+	literalMap := IdentityDictionary new
 ]
 
 { #category : #'bootstrap image' }
-SpurBootstrap32to64 >> isUnmappedObject: obj32 [
+Spur32to64BitBootstrap >> isUnmappedObject: obj32 [
 	"Answer if obj32 is an object that is not cloned by the bootstrap."
 	^((heap32 classIndexOf: obj32)
 			between: ClassLargeNegativeIntegerCompactIndex
@@ -280,7 +309,7 @@ SpurBootstrap32to64 >> isUnmappedObject: obj32 [
 ]
 
 { #category : #'bootstrap image' }
-SpurBootstrap32to64 >> map32BitOop: oop32 [
+Spur32to64BitBootstrap >> map32BitOop: oop32 [
 	"interpreter32 printOop: oop32"
 	^map
 		at: oop32
@@ -299,8 +328,21 @@ SpurBootstrap32to64 >> map32BitOop: oop32 [
 					 heap64 integerObjectOf: value]]
 ]
 
+{ #category : #'bootstrap image' }
+Spur32to64BitBootstrap >> nilWordSize [
+	| wordSizeSym |
+	wordSizeSym := self findSymbol: #WordSize.
+	heap64 allOldSpaceObjectsDo:
+		[:o|
+		((heap64 numSlotsOf: o) > ValueIndex
+		and: [(heap64 isPointersNonImm: o)
+		and: [(heap64 fetchPointer: KeyIndex ofObject: o) = wordSizeSym
+		and: [(heap64 fetchPointer: ValueIndex ofObject: o) = (heap64 integerObjectOf: 4)]]]) ifTrue:
+			[heap64 storePointer: ValueIndex ofObject: o withValue: heap64 nilObject]]
+]
+
 { #category : #'public access' }
-SpurBootstrap32to64 >> on: imageName [
+Spur32to64BitBootstrap >> on: imageName [
 	(interpreter32 := StackInterpreterSimulator newWithOptions: #(ObjectMemory Spur32BitMemoryManager))
 		openOn: imageName extraMemory: 0.
 	heap32 := interpreter32 objectMemory.
@@ -317,8 +359,13 @@ SpurBootstrap32to64 >> on: imageName [
 	self initMaps
 ]
 
+{ #category : #'public access' }
+Spur32to64BitBootstrap >> symbolClass [
+	^heap64 fetchClassOfNonImm: (heap64 splObj: SelectorDoesNotUnderstand)
+]
+
 { #category : #snapshot }
-SpurBootstrap32to64 >> writeSnapshot: imageFileName headerFlags: headerFlags screenSize: screenSizeInteger [
+Spur32to64BitBootstrap >> writeSnapshot: imageFileName headerFlags: headerFlags screenSize: screenSizeInteger [
 	heap64
 		checkFreeSpace;
 		runLeakCheckerForFullGC: true.
