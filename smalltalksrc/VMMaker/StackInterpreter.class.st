@@ -4499,9 +4499,9 @@ StackInterpreter >> convertFloatsToPlatformOrder [
 	objectMemory allObjectsDo:
 		[:obj| | temp |
 		(objectMemory compactClassIndexOf: obj) = ClassFloatCompactIndex ifTrue:
-			[temp := self longAt: obj + objectMemory baseHeaderSize.
-			 self longAt: obj + objectMemory baseHeaderSize put: (self longAt: obj + objectMemory baseHeaderSize + 4).
-			 self longAt: obj + objectMemory baseHeaderSize + 4 put: temp]]
+			[temp := objectMemory long32At: obj + objectMemory baseHeaderSize.
+			 objectMemory long32At: obj + objectMemory baseHeaderSize put: (objectMemory long32At: obj + objectMemory baseHeaderSize + 4).
+			 objectMemory long32At: obj + objectMemory baseHeaderSize + 4 put: temp]]
 ]
 
 { #category : #'internal interpreter access' }
