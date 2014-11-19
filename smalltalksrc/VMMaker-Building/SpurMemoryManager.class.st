@@ -7979,10 +7979,10 @@ SpurMemoryManager >> numBytesOf: objOop [
 	fmt := self formatOf: objOop.
 	numBytes := self numSlotsOf: objOop.
 	numBytes := numBytes << self shiftForWord.
+	fmt >= self firstByteFormat ifTrue: "bytes (the common case), including CompiledMethod"
+		[^numBytes - (fmt bitAnd: 7)].
 	fmt <= self sixtyFourBitIndexableFormat ifTrue:
 		[^numBytes].
-	fmt >= self firstByteFormat ifTrue: "bytes, including CompiledMethod"
-		[^numBytes - (fmt bitAnd: 7)].
 	fmt >= self firstShortFormat ifTrue:
 		[^numBytes - ((fmt bitAnd: 3) << 1)].
 	"fmt >= self firstLongFormat"
