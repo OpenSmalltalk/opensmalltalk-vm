@@ -414,15 +414,15 @@ Spur64BitMemoryManager >> integerObjectOf: value [
 		inSmalltalk: [value << self numTagBits
 					+ (value >= 0
 						ifTrue: [1]
-						ifFalse: [16r8000000000000001])]
+						ifFalse: [16r10000000000000001])]
 ]
 
 { #category : #immediates }
 Spur64BitMemoryManager >> integerValueOf: oop [
-	"Translator produces 'oop >> 1'"
+	"Translator produces 'oop >> 3'"
 	^(oop bitShift: -63) = 1 "tests top bit"
 		ifTrue: "negative"
-			[((oop bitShift: self numTagBits negated) bitAnd: 16r3FFFFFFFFFFFFFFF) - 16r3FFFFFFFFFFFFFFF - 1  "Faster than -16r4000000000000000 (a LgInt)"]
+			[((oop bitShift: self numTagBits negated) bitAnd: 16r1FFFFFFFFFFFFFFF) - 16r1FFFFFFFFFFFFFFF - 1  "Faster than -16r4000000000000000 (a LgInt)"]
 		ifFalse: "positive"
 			[oop bitShift: self numTagBits negated]
 ]
@@ -440,7 +440,7 @@ Spur64BitMemoryManager >> isIntegerValue: intValue [
 	<api>
 	^self
 		cCode: [(intValue >> 60 + 1 bitAnd: 16rF) <= 1]
-		inSmalltalk: [intValue >= -16r2000000000000000 and: [intValue <= 16r1FFFFFFFFFFFFFFF]]
+		inSmalltalk: [intValue >= -16r1000000000000000 and: [intValue <= 16rFFFFFFFFFFFFFFF]]
 ]
 
 { #category : #'header access' }
