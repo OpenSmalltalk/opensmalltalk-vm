@@ -1573,7 +1573,7 @@ CCodeGenerator >> generateBitClear: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-CCodeGenerator >> generateBitInvert32: msgNode on: aStream indent: level [
+CCodeGenerator >> generateBitInvert: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPut: $~.
@@ -2980,7 +2980,8 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#bitXor:			#generateBitXor:on:indent:
 	#bitShift:			#generateBitShift:on:indent:
 	#signedBitShift:	#generateSignedBitShift:on:indent:
-	#bitInvert32		#generateBitInvert32:on:indent:
+	#bitInvert32		#generateBitInvert:on:indent:
+	#bitInvert64		#generateBitInvert:on:indent:
 	#bitClear:			#generateBitClear:on:indent:
 	#truncateTo:		#generateTruncateTo:on:indent:
 	#rounded			#generateRounded:on:indent:
