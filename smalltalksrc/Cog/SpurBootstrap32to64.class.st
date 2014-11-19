@@ -127,7 +127,7 @@ SpurBootstrap32to64 >> cloneObjects [
 				[(heap32 isValidObjStackPage: obj32) ifFalse:
 					[((classIndex between: ClassLargeNegativeIntegerCompactIndex and: ClassLargePositiveIntegerCompactIndex)
 					  and: [interpreter32 initPrimCall.
-						value := heap32 positive64BitValueOf: obj32.
+						value := interpreter32 signed64BitValueOf: obj32.
 						interpreter32 failed not
 					  and: [heap64 isIntegerValue: value]]) ifFalse:
 						[self clone: obj32]]]]
@@ -146,21 +146,28 @@ SpurBootstrap32to64 >> fillInBitsObject: obj64 from: obj32 [
 { #category : #'bootstrap image' }
 SpurBootstrap32to64 >> fillInCompiledMethod: obj64 from: obj32 [
 	| offset |
+	"interpreter32 printOop: oop32"
+	"interpreter64 printOop: oop64"
 	0 to: (heap32 numPointerSlotsOf: obj32) - 1 do:
-		[:i|
+		[:i| | oop32 oop64 |
+		 oop32 := heap32 fetchPointer: i ofObject: obj32.
+		 oop64 := self map32BitOop: oop32.
 		 heap64
 			storePointerUnchecked: i
 			ofObject: obj64
-			withValue: (self map32BitOop: (heap32 fetchPointer: i ofObject: obj32))].
+			withValue: oop64.
+		 (heap64 isIntegerObject: oop64) ifTrue:
+			[interpreter32 initPrimCall.
+			 self assert: (interpreter32 signed64BitValueOf: oop32) = (heap64 integerValueOf: oop64)]].
 	offset := (interpreter64 startPCOfMethod: obj64)
 			- (interpreter32 startPCOfMethod: obj32).
 	(interpreter32 startPCOfMethod: obj32)
 		to: (heap32 numBytesOf: obj32) - 1
-		do: [:i|
+		do: [:j|
 			heap64
-				storeByte: offset + i 
+				storeByte: offset + j 
 				ofObject: obj64
-				withValue: (heap32 fetchByte: i ofObject: obj32)]
+				withValue: (heap32 fetchByte: j ofObject: obj32)]
 ]
 
 { #category : #'bootstrap image' }
@@ -274,6 +281,7 @@ SpurBootstrap32to64 >> isUnmappedObject: obj32 [
 
 { #category : #'bootstrap image' }
 SpurBootstrap32to64 >> map32BitOop: oop32 [
+	"interpreter32 printOop: oop32"
 	^map
 		at: oop32
 		ifAbsent:
@@ -286,7 +294,7 @@ SpurBootstrap32to64 >> map32BitOop: oop32 [
 					[| value |
 					 self assert: (self isUnmappedObject: oop32).
 					 interpreter32 initPrimCall.
-					 value := heap32 positive64BitValueOf: oop32.
+					 value := interpreter32 signed64BitValueOf: oop32.
 					 self deny: interpreter32 failed.
 					 heap64 integerObjectOf: value]]
 ]
