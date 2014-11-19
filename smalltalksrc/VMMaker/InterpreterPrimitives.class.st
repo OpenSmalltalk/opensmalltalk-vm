@@ -290,7 +290,7 @@ InterpreterPrimitives >> magnitude64BitValueOf: oop [
 							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
 							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
 			ok ifFalse: [^self primitiveFail]].
-	sz := objectMemory lengthOf: oop.
+	sz := objectMemory numBytesOf: oop.
 	sz > (self sizeof: #sqLong) ifTrue:
 		[^self primitiveFail].
 
@@ -348,7 +348,7 @@ InterpreterPrimitives >> positive64BitValueOf: oop [
 			isClassOfNonImm: oop
 			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
 			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
-	(ok and: [(sz := objectMemory lengthOf: oop) <= (self sizeof: #sqLong)]) ifFalse:
+	(ok and: [(sz := objectMemory numBytesOf: oop) <= (self sizeof: #sqLong)]) ifFalse:
 		[self primitiveFail.
 		 ^0].
 
@@ -377,7 +377,7 @@ InterpreterPrimitives >> positiveMachineIntegerValueOf: oop [
 			isClassOfNonImm: oop
 			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
 			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
-	(ok and: [(bs := objectMemory lengthOf: oop) <= (self sizeof: #'unsigned long')]) ifFalse:
+	(ok and: [(bs := objectMemory numBytesOf: oop) <= (self sizeof: #'unsigned long')]) ifFalse:
 		[^self primitiveFail].
 
 	((self sizeof: #'unsigned long') = 8
@@ -3975,7 +3975,7 @@ InterpreterPrimitives >> signed32BitValueOf: oop [
 { #category : #'primitive support' }
 InterpreterPrimitives >> signed64BitValueOf: oop [
 	"Convert the given object into an integer value.
-	The object may be either a positive SmallInteger or a eight-byte LargeInteger."
+	 The object may be either a positive SmallInteger or a eight-byte LargeInteger."
 	| sz value negative ok |
 	<inline: false>
 	<returnTypeC: #sqLong>
@@ -3997,7 +3997,7 @@ InterpreterPrimitives >> signed64BitValueOf: oop [
 							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
 							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
 			ok ifFalse: [^self primitiveFail]].
-	sz := objectMemory lengthOf: oop.
+	sz := objectMemory numBytesOf: oop.
 	sz > (self sizeof: #sqLong) ifTrue:
 		[^self primitiveFail].
 
@@ -4019,7 +4019,7 @@ InterpreterPrimitives >> signed64BitValueOf: oop [
 			 self assert: (self sizeof: value << 1) == 8].
 		"Don't fail for -9223372036854775808/-16r8000000000000000.
 		 Alas the simple (negative and: [value - 1 > 0]) isn't adequate since in C the result of signed integer
-		  overflow is undefined and hence under optimization this may fail.  The shift, however, is well-defined."
+		 overflow is undefined and hence under optimization this may fail.  The shift, however, is well-defined."
 		 (negative and: [0 = (self cCode: [value << 1]
 									inSmalltalk: [value << 1 bitAnd: (1 << 64) - 1])]) ifTrue: 
 			[^value].
@@ -4053,7 +4053,8 @@ InterpreterPrimitives >> signedMachineIntegerValueOf: oop [
 							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
 							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
 			ok ifFalse: [^self primitiveFail]].
-	(bs := objectMemory lengthOf: oop) > (self sizeof: #'unsigned long') ifTrue:
+	bs := objectMemory numBytesOf: oop.
+	bs > (self sizeof: #'unsigned long') ifTrue:
 		[^self primitiveFail].
 
 	((self sizeof: #'unsigned long') = 8
