@@ -2309,6 +2309,12 @@ SpurMemoryManager >> anyMobileObjectsFrom: initialOop below: limit [
 	^false
 ]
 
+{ #category : #'interpreter access' }
+SpurMemoryManager >> areIntegers: oop1 and: oop2 [
+	"Test oop1 and oop2 to make sure both are SmallIntegers."
+	self subclassResponsibility
+]
+
 { #category : #'class table puns' }
 SpurMemoryManager >> arrayClassIndexPun [
 	"Class puns are class indices not used by any class.  There is an entry
@@ -7544,6 +7550,11 @@ SpurMemoryManager >> minSlotsForShortening [
 	^self allocationUnit * 2 / self bytesPerOop
 ]
 
+{ #category : #'interpreter access' }
+SpurMemoryManager >> minSmallInteger [
+	self subclassResponsibility
+]
+
 { #category : #compaction }
 SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [ 
 	"Move the sequence of movable objects starting at startAddress.  Answer the start
@@ -8086,6 +8097,11 @@ SpurMemoryManager >> numSlotsOfAny: objOop [
 	^numSlots = self numSlotsMask
 		ifTrue: [self rawOverflowSlotsOf: objOop] "overflow slots; (2^32)-1 slots are plenty"
 		ifFalse: [numSlots]
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> numSmallIntegerBits [
+	self subclassResponsibility
 ]
 
 { #category : #'interpreter access' }

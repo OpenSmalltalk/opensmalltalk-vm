@@ -2020,12 +2020,6 @@ StackInterpreter >> alternateHeaderHasPrimitiveFlag: methodHeader [
 	^methodHeader anyMask: AlternateHeaderHasPrimFlag
 ]
 
-{ #category : #utilities }
-StackInterpreter >> areIntegers: oop1 and: oop2 [
-"Test oop1 and oop2 to make sure both are SmallIntegers."
-	^ ((oop1 bitAnd: oop2) bitAnd: 1) ~= 0
-]
-
 { #category : #'compiled methods' }
 StackInterpreter >> argumentCountOf: methodPointer [
 	<api>
@@ -2499,7 +2493,7 @@ StackInterpreter >> bytecodePrimAdd [
 	| rcvr arg result |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg)
+	(objectMemory areIntegers: rcvr and: arg)
 		ifTrue: [result := (objectMemory integerValueOf: rcvr) + (objectMemory integerValueOf: arg).
 				(objectMemory isIntegerValue: result) ifTrue:
 					[self internalPop: 2 thenPush: (objectMemory integerObjectOf: result).
@@ -2673,7 +2667,7 @@ StackInterpreter >> bytecodePrimDivide [
 	| rcvr arg result |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg)
+	(objectMemory areIntegers: rcvr and: arg)
 		ifTrue: [rcvr := objectMemory integerValueOf: rcvr.
 			arg := objectMemory integerValueOf: arg.
 			(arg ~= 0 and: [rcvr \\ arg = 0])
@@ -2707,7 +2701,7 @@ StackInterpreter >> bytecodePrimEqual [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue: [^self booleanCheat: rcvr = arg].
+	(objectMemory areIntegers: rcvr and: arg) ifTrue: [^self booleanCheat: rcvr = arg].
 
 	self initPrimCall.
 	aBool := self primitiveFloatEqual: rcvr toArg: arg.
@@ -2723,7 +2717,7 @@ StackInterpreter >> bytecodePrimEqualSistaV1 [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue: [^self booleanCheatSistaV1: rcvr = arg].
+	(objectMemory areIntegers: rcvr and: arg) ifTrue: [^self booleanCheatSistaV1: rcvr = arg].
 
 	self initPrimCall.
 	aBool := self primitiveFloatEqual: rcvr toArg: arg.
@@ -2739,7 +2733,7 @@ StackInterpreter >> bytecodePrimEqualV4 [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue: [^self booleanCheatV4: rcvr = arg].
+	(objectMemory areIntegers: rcvr and: arg) ifTrue: [^self booleanCheatV4: rcvr = arg].
 
 	self initPrimCall.
 	aBool := self primitiveFloatEqual: rcvr toArg: arg.
@@ -2755,7 +2749,7 @@ StackInterpreter >> bytecodePrimGreaterOrEqual [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue:
+	(objectMemory areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
 		^self cCode: [self booleanCheat: rcvr >= arg]
@@ -2775,7 +2769,7 @@ StackInterpreter >> bytecodePrimGreaterOrEqualSistaV1 [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue:
+	(objectMemory areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
 		^self cCode: [self booleanCheatSistaV1: rcvr >= arg]
@@ -2795,7 +2789,7 @@ StackInterpreter >> bytecodePrimGreaterOrEqualV4 [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue:
+	(objectMemory areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
 		^self cCode: [self booleanCheatV4: rcvr >= arg]
@@ -2815,7 +2809,7 @@ StackInterpreter >> bytecodePrimGreaterThan [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue:
+	(objectMemory areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
 		^self cCode: [self booleanCheat: rcvr > arg]
@@ -2835,7 +2829,7 @@ StackInterpreter >> bytecodePrimGreaterThanSistaV1 [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue:
+	(objectMemory areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
 		^self cCode: [self booleanCheatSistaV1: rcvr > arg]
@@ -2855,7 +2849,7 @@ StackInterpreter >> bytecodePrimGreaterThanV4 [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue:
+	(objectMemory areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
 		^self cCode: [self booleanCheatV4: rcvr > arg]
@@ -2911,7 +2905,7 @@ StackInterpreter >> bytecodePrimLessOrEqual [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue:
+	(objectMemory areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
 		^self cCode: [self booleanCheat: rcvr <= arg]
@@ -2931,7 +2925,7 @@ StackInterpreter >> bytecodePrimLessOrEqualSistaV1 [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue:
+	(objectMemory areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
 		^self cCode: [self booleanCheatSistaV1: rcvr <= arg]
@@ -2951,7 +2945,7 @@ StackInterpreter >> bytecodePrimLessOrEqualV4 [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue:
+	(objectMemory areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
 		^self cCode: [self booleanCheatV4: rcvr <= arg]
@@ -2971,7 +2965,7 @@ StackInterpreter >> bytecodePrimLessThan [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue:
+	(objectMemory areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
 		^self cCode: [self booleanCheat: rcvr < arg]
@@ -2991,7 +2985,7 @@ StackInterpreter >> bytecodePrimLessThanSistaV1 [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue:
+	(objectMemory areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
 		^self cCode: [self booleanCheatSistaV1: rcvr < arg]
@@ -3011,7 +3005,7 @@ StackInterpreter >> bytecodePrimLessThanV4 [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue:
+	(objectMemory areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
 		^self cCode: [self booleanCheatV4: rcvr < arg]
@@ -3059,7 +3053,7 @@ StackInterpreter >> bytecodePrimMultiply [
 	| rcvr arg result |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg)
+	(objectMemory areIntegers: rcvr and: arg)
 		ifTrue: [rcvr := objectMemory integerValueOf: rcvr.
 				arg := objectMemory integerValueOf: arg.
 				result := rcvr * arg.
@@ -3115,7 +3109,7 @@ StackInterpreter >> bytecodePrimNotEqual [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue: [^self booleanCheat: rcvr ~= arg].
+	(objectMemory areIntegers: rcvr and: arg) ifTrue: [^self booleanCheat: rcvr ~= arg].
 
 	self initPrimCall.
 	aBool := self primitiveFloatEqual: rcvr toArg: arg.
@@ -3131,7 +3125,7 @@ StackInterpreter >> bytecodePrimNotEqualSistaV1 [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue: [^self booleanCheatSistaV1: rcvr ~= arg].
+	(objectMemory areIntegers: rcvr and: arg) ifTrue: [^self booleanCheatSistaV1: rcvr ~= arg].
 
 	self initPrimCall.
 	aBool := self primitiveFloatEqual: rcvr toArg: arg.
@@ -3147,7 +3141,7 @@ StackInterpreter >> bytecodePrimNotEqualV4 [
 	| rcvr arg aBool |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg) ifTrue: [^self booleanCheatV4: rcvr ~= arg].
+	(objectMemory areIntegers: rcvr and: arg) ifTrue: [^self booleanCheatV4: rcvr ~= arg].
 
 	self initPrimCall.
 	aBool := self primitiveFloatEqual: rcvr toArg: arg.
@@ -3230,7 +3224,7 @@ StackInterpreter >> bytecodePrimSubtract [
 	| rcvr arg result |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
-	(self areIntegers: rcvr and: arg)
+	(objectMemory areIntegers: rcvr and: arg)
 		ifTrue: [result := (objectMemory integerValueOf: rcvr) - (objectMemory integerValueOf: arg).
 				(objectMemory isIntegerValue: result) ifTrue:
 					[self internalPop: 2 thenPush: (objectMemory integerObjectOf: result).
@@ -4758,7 +4752,7 @@ StackInterpreter >> divorceFramesIn: aStackPage [
 StackInterpreter >> doPrimitiveDiv: rcvr by: arg [
 	"Rounds negative results towards negative infinity, rather than zero."
 	| result posArg posRcvr integerRcvr integerArg |
-	(self areIntegers: rcvr and: arg)
+	(objectMemory areIntegers: rcvr and: arg)
 		ifTrue: [integerRcvr := objectMemory integerValueOf: rcvr.
 				integerArg := objectMemory integerValueOf: arg.
 				self success: integerArg ~= 0]
@@ -4784,7 +4778,7 @@ StackInterpreter >> doPrimitiveDiv: rcvr by: arg [
 { #category : #'arithmetic primitive support' }
 StackInterpreter >> doPrimitiveMod: rcvr by: arg [
 	| integerResult integerRcvr integerArg |
-	(self areIntegers: rcvr and: arg)
+	(objectMemory areIntegers: rcvr and: arg)
 		ifTrue: [integerRcvr := objectMemory integerValueOf: rcvr.
 				integerArg := objectMemory integerValueOf: arg.
 				self success: integerArg ~= 0]

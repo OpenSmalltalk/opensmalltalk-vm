@@ -68,7 +68,8 @@ Spur64BitMMLESimulator >> endianness [
 
 { #category : #'float primitives' }
 Spur64BitMMLESimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
-	aFloat at: 1 put: (self long64At: floatBitsAddress)
+	aFloat at: 2 put: (self long32At: floatBitsAddress).
+	aFloat at: 1 put: (self long32At: floatBitsAddress+4)
 ]
 
 { #category : #'object access' }
