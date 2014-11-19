@@ -841,6 +841,12 @@ ObjectMemory >> allocationUnit [
 	^self wordSize
 ]
 
+{ #category : #'interpreter access' }
+ObjectMemory >> areIntegers: oop1 and: oop2 [
+	"Test oop1 and oop2 to make sure both are SmallIntegers."
+	^((oop1 bitAnd: oop2) bitAnd: 1) ~= 0
+]
+
 { #category : #'header formats' }
 ObjectMemory >> arrayFormat [
 	<api>
@@ -3734,6 +3740,11 @@ ObjectMemory >> maxIdentityHash [
 ]
 
 { #category : #'interpreter access' }
+ObjectMemory >> maxSmallInteger [
+	^1073741823
+]
+
+{ #category : #'interpreter access' }
 ObjectMemory >> maybeSplObj: index [
 	<api>
 	"Answer one of the objects in the SpecialObjectsArray, if in range, otherwise answer nil."
@@ -3782,6 +3793,11 @@ ObjectMemory >> methodHeaderOf: methodObj [
 ObjectMemory >> minSlotsForShortening [
 	"HeaderTypeFree free chunks require 1 word of header"
 	^1
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> minSmallInteger [
+	^-1073741824
 ]
 
 { #category : #'header access' }
@@ -3918,6 +3934,11 @@ ObjectMemory >> numSlotsOf: obj [
 			ifTrue: [(self sizeHeader: obj) bitAnd: AllButTypeMask]
 			ifFalse: [header bitAnd: SizeMask].
 	^sz - self baseHeaderSize >> self shiftForWord
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> numSmallIntegerBits [
+	^31
 ]
 
 { #category : #'interpreter access' }

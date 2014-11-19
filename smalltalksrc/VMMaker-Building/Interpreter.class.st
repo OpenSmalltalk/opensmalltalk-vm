@@ -1261,12 +1261,6 @@ Interpreter >> allocateOrRecycleContext: needsLarge [
 
 ]
 
-{ #category : #utilities }
-Interpreter >> areIntegers: oop1 and: oop2 [
-"Test oop1 and oop2 to make sure both are SmallIntegers."
-	^ ((oop1 bitAnd: oop2) bitAnd: 1) ~= 0
-]
-
 { #category : #'compiled methods' }
 Interpreter >> argumentCountOf: methodPointer [
 	^((self methodHeaderOf: methodPointer) >> 25) bitAnd: 16r0F
