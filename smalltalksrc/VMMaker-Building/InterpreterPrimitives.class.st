@@ -753,7 +753,7 @@ InterpreterPrimitives >> primitiveBitShift [
 	| integerReceiver integerArgument shifted |
 	integerArgument := self stackTop.
 	(objectMemory isIntegerObject: integerArgument) ifFalse:
-		[^self primitiveFailed].
+		[^self primitiveFail].
 	integerReceiver := self stackValue: 1.
 	objectMemory wordSize = 4
 		ifTrue:
@@ -764,13 +764,13 @@ InterpreterPrimitives >> primitiveBitShift [
 		[(integerArgument := objectMemory integerValueOf: integerArgument) >= 0
 			ifTrue: "Left shift -- must fail if we lose bits beyond 32"
 				[integerArgument <= objectMemory numSmallIntegerBits ifFalse:
-					[^self primitiveFailed].
+					[^self primitiveFail].
 				shifted := integerReceiver << integerArgument.
 				(shifted >> integerArgument) = integerReceiver ifFalse:
-					[^self primitiveFailed]]
+					[^self primitiveFail]]
 			ifFalse: "Right shift -- OK to lose bits"
 				[integerArgument >= objectMemory numSmallIntegerBits negated ifFalse:
-					[^self primitiveFailed].
+					[^self primitiveFail].
 			shifted := integerReceiver >> (0 - integerArgument)].
 		shifted := (objectMemory isIntegerValue: shifted)
 					ifTrue: [objectMemory integerObjectOf: shifted]
