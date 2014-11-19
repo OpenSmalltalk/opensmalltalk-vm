@@ -21,5 +21,5 @@ SmallInteger class >> ccg: cg prolog: aBlock expr: aString index: anInteger [
 { #category : #'*VMMaker-plugin generation' }
 SmallInteger class >> ccgCanConvertFrom: anObject [
 
-	^anObject class == self
+	^anObject isInteger
 ]

@@ -398,8 +398,8 @@ Spur64BitMMLESimulator >> shortAt: byteAddress put: a16BitValue [
 
 { #category : #'float primitives' }
 Spur64BitMMLESimulator >> storeFloatAt: floatBitsAddress from: aFloat [
-	self long32At: floatBitsAddress put: (aFloat at: 1).
-	self long32At: floatBitsAddress+4 put: (aFloat at: 2)
+	self long32At: floatBitsAddress put: (aFloat at: 2).
+	self long32At: floatBitsAddress+4 put: (aFloat at: 1)
 ]
 
 { #category : #'image segment in/out' }
