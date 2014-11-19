@@ -543,15 +543,46 @@ LargeIntegersPlugin >> cDigitCompare: pFirst with: pSecond len: len [
 
 { #category : #'C core util' }
 LargeIntegersPlugin >> cDigitLengthOfCSI: csi [ 
-	"Answer the number of indexable fields of a CSmallInteger. This value is 
-	   the same as the largest legal subscript."
-	(csi < 256 and: [csi > -256])
-		ifTrue: [^ 1].
-	(csi < 65536 and: [csi > -65536])
-		ifTrue: [^ 2].
-	(csi < 16777216 and: [csi > -16777216])
-		ifTrue: [^ 3].
-	^ 4
+	"Answer the number of bytes required to represent the value of a CSmallInteger."
+	csi >= 0 ifTrue:
+		[csi < 256 ifTrue:
+			[^1].
+		 csi < 65536 ifTrue:
+			[^2].
+		 csi < 16777216 ifTrue:
+			[^3].
+		 interpreterProxy bytesPerOop = 4
+			ifTrue:
+				[^4]
+			ifFalse:
+				[csi < 4294967296 ifTrue:
+					[^4].
+				 csi < 1099511627776 ifTrue:
+					[^5].
+				 csi < 281474976710656 ifTrue:
+					[^6].
+				 csi < 72057594037927936 ifTrue:
+					[^7].
+				 ^8]].
+	csi > -256 ifTrue:
+		[^1].
+	csi > -65536 ifTrue:
+		[^2].
+	csi > -16777216 ifTrue:
+		[^3].
+	interpreterProxy bytesPerOop = 4
+		ifTrue:
+			[^4]
+		ifFalse:
+			[csi > -4294967296 ifTrue:
+				[^4].
+			 csi > -1099511627776 ifTrue:
+				[^5].
+			 csi > -281474976710656 ifTrue:
+				[^6].
+			 csi > -72057594037927936 ifTrue:
+				[^7].
+			^8]
 ]
 
 { #category : #'C core' }
@@ -593,18 +624,13 @@ LargeIntegersPlugin >> cDigitOfCSI: csi at: ix [
 	LargePositiveInteger uses bytes of base two number, and each is a       
 	      'digit' base 256."
 	"ST indexed!"
-	ix < 1 ifTrue: [interpreterProxy primitiveFail].
-	ix > 4 ifTrue: [^ 0].
-	csi < 0
-		ifTrue: 
-			[self cCode: ''
-				inSmalltalk: [csi = -1073741824 ifTrue: ["SmallInteger minVal"
-						"Can't negate minVal -- treat specially"
-						^ #(0 0 0 64 ) at: ix]].
-			^ (0 - csi) >> (ix - 1 * 8)
-				bitAnd: 255]
-		ifFalse: [^ csi >> (ix - 1 * 8)
-				bitAnd: 255]
+	ix < 1 ifTrue: [interpreterProxy primitiveFail. ^0].
+	ix > interpreterProxy bytesPerOop ifTrue: [^0].
+	^self
+		cCode: [(csi < 0
+					ifTrue: [0 - csi]
+					ifFalse: [csi]) >> (ix - 1 * 8) bitAnd: 255]
+		inSmalltalk: [csi digitAt: ix]
 ]
 
 { #category : #'C core' }
@@ -717,7 +743,7 @@ LargeIntegersPlugin >> cdigitMontgomery: pBytesFirst
 { #category : #'oop util' }
 LargeIntegersPlugin >> createLargeFromSmallInteger: anOop [ 
 	"anOop has to be a SmallInteger!"
-	| val class size res pByte |
+	| val class size res pByte byte |
 	<var: #pByte type: 'unsigned char *  '>
 	val := interpreterProxy integerValueOf: anOop.
 	val < 0
@@ -726,8 +752,10 @@ LargeIntegersPlugin >> createLargeFromSmallInteger: anOop [
 	size := self cDigitLengthOfCSI: val.
 	res := interpreterProxy instantiateClass: class indexableSize: size.
 	pByte := interpreterProxy firstIndexableField: res.
-	1 to: size do: [:ix | pByte at: ix - 1 put: (self cDigitOfCSI: val at: ix)].
-	^ res
+	1 to: size do: [:ix |
+		byte := self cDigitOfCSI: val at: ix.
+		pByte at: ix - 1 put: byte].
+	^res
 ]
 
 { #category : #'oop functions' }
@@ -1052,7 +1080,7 @@ LargeIntegersPlugin >> isNormalized: anInteger [
 	(self unsafeByteOf: anInteger at: len) = 0 ifTrue:
 		[^ false].
 	"no leading zero, now check if anInteger is in SmallInteger range or not"
-	sLen := 4.
+	sLen := interpreterProxy bytesPerOop.
 	"maximal digitLength of aSmallInteger"
 	len > sLen ifTrue:
 		[^ true].
@@ -1060,11 +1088,11 @@ LargeIntegersPlugin >> isNormalized: anInteger [
 		[^ false].
 	"len = sLen"
 	positive
-		ifTrue: [maxVal := 1073741823. "SmallInteger maxVal"
+		ifTrue: [maxVal := interpreterProxy maxSmallInteger. "SmallInteger maxVal"
 				"all bytes of maxVal but the highest one are just FF's"
 				^ (self unsafeByteOf: anInteger at: sLen)
 					> (self cDigitOfCSI: maxVal at: sLen)]
-		ifFalse: [minVal := -1073741824. "SmallInteger minVal"
+		ifFalse: [minVal := interpreterProxy minSmallInteger. "SmallInteger minVal"
 				"all bytes of minVal but the highest one are just 00's"
 			(self unsafeByteOf: anInteger at: sLen) < (self cDigitOfCSI: minVal at: sLen) ifTrue:
 				[^ false].
@@ -1110,7 +1138,7 @@ LargeIntegersPlugin >> normalizeNegative: aLargeNegativeInteger [
 	len <= sLen
 		ifTrue: 
 			["SmallInteger minVal"
-			minVal := -1073741824.
+			minVal := interpreterProxy minSmallInteger.
 			(len < sLen or: [(self digitOfBytes: aLargeNegativeInteger at: sLen)
 					< (self cDigitOfCSI: minVal at: sLen)
 				"minVal lastDigit"])
@@ -1150,10 +1178,11 @@ LargeIntegersPlugin >> normalizePositive: aLargePositiveInteger [
 		whileTrue: [len := len - 1].
 	len = 0 ifTrue: [^ 0 asOop: SmallInteger].
 	"Now check if in SmallInteger range"
-	sLen := 4.
+	sLen := interpreterProxy bytesPerOop.
 	"SmallInteger maxVal digitLength."
-	(len <= sLen and: [(self digitOfBytes: aLargePositiveInteger at: sLen)
-			<= (self cDigitOfCSI: 1073741823 at: sLen)
+	(len <= sLen
+	 and: [(self digitOfBytes: aLargePositiveInteger at: sLen)
+			<= (self cDigitOfCSI: interpreterProxy maxSmallInteger at: sLen)
 		"SmallInteger maxVal"])
 		ifTrue: 
 			["If so, return its SmallInt value"

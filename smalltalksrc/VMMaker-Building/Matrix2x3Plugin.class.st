@@ -120,8 +120,8 @@ Matrix2x3Plugin >> matrix2x3TransformPoint: m [
 
 { #category : #private }
 Matrix2x3Plugin >> okayIntValue: value [
-	^(value >= -1073741824 asFloat and:[m23ResultX <= 1073741823 asFloat]) 
-
+	^(value >= interpreterProxy minSmallInteger asFloat
+	  and: [m23ResultX <= interpreterProxy maxSmallInteger asFloat])
 ]
 
 { #category : #primitives }
