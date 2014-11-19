@@ -83,7 +83,9 @@ VMBasicConstants class >> mostBasicConstantNames [
 { #category : #'C translation' }
 VMBasicConstants class >> mostBasicConstantSelectors [
 	"c.f. mostBasicConstantNames"
-	^#(baseHeaderSize wordSize bytesPerOop shiftForWord bytesPerWord "bytesPerWord isn't used, but kept for history")
+	^#(	baseHeaderSize wordSize bytesPerOop shiftForWord
+		bytesPerWord "bytesPerWord isn't used, but kept for history"
+		minSmallInteger maxSmallInteger)
 ]
 
 { #category : #'C translation' }

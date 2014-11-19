@@ -2624,6 +2624,15 @@ CCodeGenerator >> generateSignedIntToShort: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateSmallIntegerConstant: aSendNode on: aStream indent: indent [
+	aSendNode selector = #minSmallInteger ifTrue:
+		[^aStream nextPutAll: 'MinSmallInteger'].
+	aSendNode selector = #maxSmallInteger ifTrue:
+		[^aStream nextPutAll: 'MaxSmallInteger'].
+	self error: 'unknown SmallInteger constant'
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateSmalltalkMetaError: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
@@ -3047,6 +3056,8 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#bytesPerWord 			#generateBytesPerWord:on:indent:
 	#wordSize		 			#generateBytesPerWord:on:indent:
 	#baseHeaderSize			#generateBaseHeaderSize:on:indent:
+	#minSmallInteger			#generateSmallIntegerConstant:on:indent:
+	#maxSmallInteger			#generateSmallIntegerConstant:on:indent:
 	
 	#sharedCodeNamed:inCase:		#generateSharedCodeDirective:on:indent:
 

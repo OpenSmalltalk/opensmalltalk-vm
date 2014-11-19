@@ -127,6 +127,12 @@ Spur32BitMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes fo
 	^chunk
 ]
 
+{ #category : #'interpreter access' }
+Spur32BitMemoryManager >> areIntegers: oop1 and: oop2 [
+	"Test oop1 and oop2 to make sure both are SmallIntegers."
+	^((oop1 bitAnd: oop2) bitAnd: 1) ~= 0
+]
+
 { #category : #snapshot }
 Spur32BitMemoryManager >> byteSwapped: w [
 	"Answer the given integer with its bytes in the reverse order."
@@ -521,6 +527,11 @@ Spur32BitMemoryManager >> maxSlotsForAlloc [
 ]
 
 { #category : #'interpreter access' }
+Spur32BitMemoryManager >> maxSmallInteger [
+	^16r3FFFFFFF
+]
+
+{ #category : #'interpreter access' }
 Spur32BitMemoryManager >> methodDictionaryHash: oop mask: mask [
 	<inline: true>
 	^mask bitAnd: ((self isImmediate: oop)
@@ -528,6 +539,11 @@ Spur32BitMemoryManager >> methodDictionaryHash: oop mask: mask [
 									ifTrue: [self integerValueOf: oop]
 									ifFalse: [self characterValueOf: oop]]
 						ifFalse: [self hashBitsOf: oop])
+]
+
+{ #category : #'interpreter access' }
+Spur32BitMemoryManager >> minSmallInteger [
+	^-16r40000000
 ]
 
 { #category : #'free space' }
@@ -544,6 +560,11 @@ Spur32BitMemoryManager >> numSlotsForShortening: objOop toIndexableSize: indexab
 	^(self formatOf: objOop) caseOf:
 		{ [self arrayFormat]			-> [indexableSize].
 		  [self firstLongFormat]		-> [self numSlotsForBytes: indexableSize * 4] }
+]
+
+{ #category : #'interpreter access' }
+Spur32BitMemoryManager >> numSmallIntegerBits [
+	^31
 ]
 
 { #category : #'interpreter access' }
