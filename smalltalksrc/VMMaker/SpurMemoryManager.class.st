@@ -5491,7 +5491,7 @@ SpurMemoryManager >> initialize [
 	segmentManager := SpurSegmentManager new manager: self; yourself.
 
 	"We can also initialize here anything that is only for simulation."
-	heapMap := self wordSize = 4 ifTrue: [CogCheck32BitHeapMap new].
+	heapMap := CogCheck32BitHeapMap new.
 
 	"N.B. We *don't* initialize extraRoots because we don't simulate it."
 ]
@@ -5789,8 +5789,7 @@ SpurMemoryManager >> integerObjectOf: value [
 
 { #category : #immediates }
 SpurMemoryManager >> integerObjectOfCharacterObject: oop [
-	"Immediate characters are unsigned"
-	^(self cCoerceSimple: oop to: #'unsigned long') >> 1
+	self subclassResponsibility
 ]
 
 { #category : #immediates }
@@ -9917,6 +9916,11 @@ SpurMemoryManager >> slotSizeOf: oop [
 	 Otherwise return the number of words."
 	(self isImmediate: oop) ifTrue: [^0].
 	^self lengthOf: oop
+]
+
+{ #category : #'cog jit support' }
+SpurMemoryManager >> smallIntegerTag [
+	^1
 ]
 
 { #category : #allocation }

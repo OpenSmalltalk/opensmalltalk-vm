@@ -36,6 +36,13 @@ Integer >> asVoidPointer [
 	^self
 ]
 
+{ #category : #'*VMMaker-bit manipulation' }
+Integer >> bitInvert64 [
+	"Answer the 64-bit complement of the receiver."
+
+	^self bitXor: 16rFFFFFFFFFFFFFFFF
+]
+
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> coerceTo: cTypeString sim: interpreter [
 

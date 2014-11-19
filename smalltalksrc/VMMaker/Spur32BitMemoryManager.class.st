@@ -461,6 +461,12 @@ Spur32BitMemoryManager >> integerObjectOf: value [
 ]
 
 { #category : #immediates }
+Spur32BitMemoryManager >> integerObjectOfCharacterObject: oop [
+	"Immediate characters are unsigned"
+	^(self cCoerceSimple: oop to: #'unsigned long') >> 1
+]
+
+{ #category : #immediates }
 Spur32BitMemoryManager >> integerValueOf: oop [
 	"Translator produces 'oop >> 1'"
 	^(oop bitShift: -31) = 1 "tests top bit"
