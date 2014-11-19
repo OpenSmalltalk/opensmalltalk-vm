@@ -3953,7 +3953,7 @@ InterpreterPrimitives >> signed32BitValueOf: oop [
 							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
 							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
 			ok ifFalse: [^self primitiveFail]].
-	(objectMemory lengthOf: oop) > 4 ifTrue:
+	(objectMemory numBytesOf: oop) > 4 ifTrue:
 		[^self primitiveFail].
 
 	value :=  (objectMemory fetchByte: 0 ofObject: oop) +

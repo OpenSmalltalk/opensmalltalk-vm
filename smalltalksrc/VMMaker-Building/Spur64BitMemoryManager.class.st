@@ -669,7 +669,7 @@ Spur64BitMemoryManager >> setFormatOf: objOop to: format [
 	 16 - 23 byte indexable
 	 24 - 31 compiled method"
 	self assert: (format between: 0 and: self formatMask).
-	objOop
+	self longAt: objOop
 		put: ((self longAt: objOop) bitAnd: (self formatMask << self formatShift) bitInvert64)
 			+ (format << self formatShift)
 ]
