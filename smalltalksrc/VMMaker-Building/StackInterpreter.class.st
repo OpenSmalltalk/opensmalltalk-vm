@@ -1204,7 +1204,9 @@ StackInterpreter class >> initializePrimitiveTable [
 		"SpurMemoryManager primitives"
 		(170 primitiveAsCharacter)
 		(171 primitiveCharacterValue)
-		(172 174 primitiveFail)
+		(172 primitiveFail)
+		(173 primitiveSlotAt)	"c.f. (73 primitiveInstVarAt)"
+		(174 primitiveSlotAtPut)	"c.f. (74 primitiveInstVarAtPut)"
 		(175 primitiveBehaviorHash)
 		(176 primitiveMaxIdentityHash)
 		(177 primitiveAllInstances)
@@ -3522,9 +3524,9 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
 	 If the primitive is 118, then primitiveDoPrimitiveWithArgs sets newMethod
 	 to a SmallInteger whose value is the primitive it is evaluating."
 	<option: #SpurObjectMemory>
-	| primIndex accessorDepth found |
+	| primIndex accessorDepth found scannedStackFrame |
 	self assert: self failed.
-	found := false.
+	found := scannedStackFrame := false.
 	primIndex := (objectMemory isIntegerObject: newMethod)
 					ifTrue: [objectMemory integerValueOf: newMethod]
 					ifFalse:
@@ -3548,7 +3550,12 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
 					[self assert: index < argumentCount. "receiver should have been caught at send time."
 					 found := true.
 					 oop := objectMemory followForwarded: oop.
-					 self stackValue: index put: oop].
+					 self stackValue: index put: oop.
+					 scannedStackFrame ifFalse:
+						[scannedStackFrame := true.
+						 self
+							followForwardedFrameContents: framePointer
+							stackPointer: stackPointer + (argumentCount + 1 * objectMemory wordSize) "don't repeat effort"]].
 				((objectMemory hasPointerFields: oop)
 				 and: [objectMemory followForwardedObjectFields: oop toDepth: accessorDepth]) ifTrue:
 					[found := true]]]].
@@ -6219,6 +6226,7 @@ StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 	"follow pointers in the current stack frame up to theSP."
 	<var: #theFP type: #'char *'>
 	<var: #theSP type: #'char *'>
+	<inline: false>
 	<var: #ptr type: #'char *'>
 	theFP + (self frameStackedReceiverOffset: theFP)
 		to: theFP + FoxCallerSavedIP + objectMemory wordSize

@@ -10,6 +10,16 @@ Spur32BitMemoryManager class >> isImmediate: anObject [
 	  or: [anObject class == Character]
 ]
 
+{ #category : #translation }
+Spur32BitMemoryManager class >> maxSmallInteger [
+	^16r3FFFFFFF
+]
+
+{ #category : #translation }
+Spur32BitMemoryManager class >> minSmallInteger [
+	^-16r40000000
+]
+
 { #category : #'simulation only' }
 Spur32BitMemoryManager class >> numSmallIntegerTagBits [
 	^1

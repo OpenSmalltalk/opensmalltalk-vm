@@ -423,6 +423,16 @@ ObjectMemory class >> isNonArgumentImplicitReceiverVariableName: aString [
 ]
 
 { #category : #translation }
+ObjectMemory class >> maxSmallInteger [
+	^1073741823
+]
+
+{ #category : #translation }
+ObjectMemory class >> minSmallInteger [
+	^-1073741824
+]
+
+{ #category : #translation }
 ObjectMemory class >> mustBeGlobal: var [
 	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM support code."
 
