@@ -7485,6 +7485,11 @@ SpurMemoryManager >> maxSlotsForNewSpaceAlloc [
 ]
 
 { #category : #'interpreter access' }
+SpurMemoryManager >> maxSmallInteger [
+	self subclassResponsibility
+]
+
+{ #category : #'interpreter access' }
 SpurMemoryManager >> maybeSplObj: index [
 	<api>
 	"Answer one of the objects in the SpecialObjectsArray, if in range, otherwise answer nil."

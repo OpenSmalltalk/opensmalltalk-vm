@@ -12,6 +12,16 @@ Spur64BitMemoryManager class >> isImmediate: anObject [
 	  or: [anObject class == Float and: [anObject exponent between: -128 and: 127]]]
 ]
 
+{ #category : #translation }
+Spur64BitMemoryManager class >> maxSmallInteger [
+	^16rFFFFFFFFFFFFFFF
+]
+
+{ #category : #translation }
+Spur64BitMemoryManager class >> minSmallInteger [
+	^-16r1000000000000000
+]
+
 { #category : #'simulation only' }
 Spur64BitMemoryManager class >> numSmallIntegerTagBits [
 	^3
