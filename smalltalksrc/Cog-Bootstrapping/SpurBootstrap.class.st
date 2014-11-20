@@ -111,14 +111,17 @@ SpurBootstrap class >> bootstrapOldSqueakImage: imageFileBaseName [
 
 { #category : #utilities }
 SpurBootstrap class >> bootstrapPharoImage: imageFileBaseName [
-	| oldCompilerClass |
+	| oldCompilerClass oldBytecodeBackend |
 	
 	oldCompilerClass := SmalltalkImage compilerClass.
+	oldBytecodeBackend := CompilationContext bytecodeBackend. 
 	[ 
 		SmalltalkImage compilerClass: Compiler. 
+		CompilationContext bytecodeBackend: IRSpurSqueakV3PlusClosuresBytecodeGenerator.
 		self bootstrapImage: imageFileBaseName type: 'pharo' ]
-	ensure: [ SmalltalkImage compilerClass: oldCompilerClass ].
-	
+	ensure: [ 
+		SmalltalkImage compilerClass: oldCompilerClass.
+		CompilationContext bytecodeBackend: oldBytecodeBackend ]
 ]
 
 { #category : #utilities }
