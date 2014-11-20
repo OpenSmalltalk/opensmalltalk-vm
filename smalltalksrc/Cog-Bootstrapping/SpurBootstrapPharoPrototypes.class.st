@@ -51,12 +51,18 @@ SpurBootstrapPharoPrototypes >> BlockClosurePHAROPROTOTYPEsimulateValueWithArgum
 { #category : #'method prototypes' }
 SpurBootstrapPharoPrototypes >> CharacterPROTOTYPEcodePoint [
 	"Just for ANSI Compliance"	
-	^self
+	^self asciiValue
 ]
 
 { #category : #'method prototypes' }
 SpurBootstrapPharoPrototypes >> CharacterPROTOTYPEsetValue: newValue [
 	self error: 'Characters are immutable'
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPharoPrototypes >> CharacterPROTOTYPEshallowCopy [
+	"Answer the receiver, because Characters are unique."
+	^self
 ]
 
 { #category : #'method prototypes' }
@@ -73,6 +79,11 @@ SpurBootstrapPharoPrototypes >> ContextPROTOTYPEfailPrimitiveWith: maybePrimFail
 SpurBootstrapPharoPrototypes >> ContextPROTOTYPEisPrimFailToken: anObject [
 	<indirect>
 
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPharoPrototypes >> ContextPROTOTYPEobjectClass: aReceiver [ 
+	<indirect>
 ]
 
 { #category : #'method prototypes' }
