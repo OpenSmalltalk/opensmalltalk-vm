@@ -22,6 +22,7 @@ Integer >> asPositiveIntegerObj [
 
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> asUnsignedInteger [
+	self assert: self >= 0.
 	^self
 ]
 

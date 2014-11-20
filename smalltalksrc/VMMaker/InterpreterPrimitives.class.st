@@ -76,6 +76,12 @@ Class {
 }
 
 { #category : #'primitive support' }
+InterpreterPrimitives >> asUnsigned: anInteger [
+	<inline: true>
+	^self cCode: [anInteger asUnsignedLong] inSmalltalk: [anInteger bitAnd: objectMemory maxSmallInteger]
+]
+
+{ #category : #'primitive support' }
 InterpreterPrimitives >> cStringOrNullFor: oop [
 	"Answer either a malloced string with the null-terminated contents of oop if oop is a string,
 	 or the null pointer if oop is nil, or fail.  It is the client's responsibility to free the string later."
@@ -3383,6 +3389,50 @@ InterpreterPrimitives >> primitiveSizeInBytesOfInstance [
 	err >= 0 ifTrue:
 		[^self primitiveFailFor: err].
 	self pop: 1 thenPushInteger: byteSize
+]
+
+{ #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveSlotAt [
+	| index rcvr numSlots |
+	index := self stackTop.
+	rcvr := self stackValue: 1.
+	(objectMemory isIntegerObject: index) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	(objectMemory isImmediate: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrBadReceiver].
+	index := objectMemory integerValueOf: index.
+	(objectMemory isPointersNonImm: rcvr) ifTrue:
+		[numSlots := objectMemory numSlotsOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[self pop: argumentCount + 1 thenPush: (objectMemory fetchPointer: index ofObject: rcvr).
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+	"for now just fail for non-pointer objects; the issue here is should
+	 strings answer characters and if so how do we efficiently identify strings?"
+	^self primitiveFailFor: PrimErrBadReceiver
+]
+
+{ #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveSlotAtPut [
+	| newValue index rcvr numSlots |
+	newValue := self stackTop.
+	index := self stackValue: 1.
+	rcvr := self stackValue: 2.
+	(objectMemory isIntegerObject: index) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	(objectMemory isImmediate: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrBadReceiver].
+	index := objectMemory integerValueOf: index.
+	(objectMemory isPointersNonImm: rcvr) ifTrue:
+		[numSlots := objectMemory numSlotsOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[objectMemory storePointer: index ofObject: rcvr withValue: newValue.
+			 self pop: argumentCount + 1 thenPush: newValue.
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+	"for now just fail for non-pointer objects; the issue here is should
+	 strings answer characters and if so how do we efficiently identify strings?"
+	^self primitiveFailFor: PrimErrBadReceiver
 ]
 
 { #category : #'system control primitives' }
