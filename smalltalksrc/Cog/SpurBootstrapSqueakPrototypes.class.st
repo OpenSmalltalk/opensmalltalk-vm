@@ -1,6 +1,6 @@
 Class {
 	#name : #SpurBootstrapSqueakPrototypes,
-	#superclass : #SpurBootstrapPrototypes,
+	#superclass : #SpurBootstrapSqueakFamilyPrototypes,
 	#category : #'Cog-Bootstrapping'
 }
 
