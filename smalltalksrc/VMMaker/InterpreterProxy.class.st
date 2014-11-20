@@ -331,14 +331,14 @@ InterpreterProxy >> floatArg: offset [
 InterpreterProxy >> floatObjectOf: aFloat [
 	<returnTypeC: #sqInt> "...because answering the float argument causes the type inferencer to say this answers a float."
 	<var: #aFloat type: 'double '>
-	aFloat class == Float ifFalse:[self error:'Not a float object'].
+	aFloat isFloat ifFalse:[self error:'Not a float object'].
 	^aFloat
 ]
 
 { #category : #converting }
 InterpreterProxy >> floatValueOf: oop [
 	<returnTypeC:'double'>
-	oop class == Float
+	oop isFloat
 		ifTrue:[^oop]
 		ifFalse:[self primitiveFail. ^0.0].
 ]
@@ -521,7 +521,7 @@ InterpreterProxy >> isCharacterValue: anInteger [
 
 { #category : #testing }
 InterpreterProxy >> isFloatObject: oop [
-	^oop class == Float
+	^oop isFloat
 ]
 
 { #category : #testing }
@@ -821,7 +821,7 @@ InterpreterProxy >> pushBool: trueOrFalse [
 { #category : #'stack access' }
 InterpreterProxy >> pushFloat: f [
 	<var: #f type: 'double '>
-	f class == Float ifFalse:[^self error:'Not a Float'].
+	f isFloat ifFalse:[^self error:'Not a Float'].
 	self push: f.
 ]
 
