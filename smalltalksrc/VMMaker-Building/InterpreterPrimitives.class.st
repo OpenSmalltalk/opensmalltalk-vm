@@ -2549,7 +2549,7 @@ InterpreterPrimitives >> primitiveNewMethod [
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveNewWithArg [
 	"Allocate a new indexable instance. Fail if the allocation would leave less than lowSpaceThreshold bytes free. May cause a GC."
-	| size spaceOkay |
+	| size spaceOkay instSpec |
 	size := self positiveMachineIntegerValueOf: self stackTop.
 	self cppIf: NewspeakVM
 		ifTrue: "For the mirror prims check that the class obj is actually a valid class."
@@ -2562,9 +2562,11 @@ InterpreterPrimitives >> primitiveNewWithArg [
 				ifTrue:
 					[(objectMemory instantiateClass: (self stackValue: 1) indexableSize: size)
 						ifNotNil: [:obj| self pop: argumentCount + 1 thenPush: obj]
-						ifNil: [self primitiveFailFor: ((objectMemory isCompiledMethodFormat: (objectMemory instSpecOfClass: (self stackValue: 1)))
-														ifTrue: [PrimErrBadReceiver]
-														ifFalse: [PrimErrNoMemory])]]
+						ifNil: [instSpec := objectMemory instSpecOfClass: (self stackValue: 1).
+							  self primitiveFailFor: (((objectMemory isIndexableFormat: instSpec)
+													and: [(objectMemory isCompiledMethodFormat: instSpec) not])
+														ifTrue: [PrimErrNoMemory]
+														ifFalse: [PrimErrBadReceiver])]]
 				ifFalse:
 					[spaceOkay := objectMemory sufficientSpaceToInstantiate: (self stackValue: 1) indexableSize: size.
 					 spaceOkay
