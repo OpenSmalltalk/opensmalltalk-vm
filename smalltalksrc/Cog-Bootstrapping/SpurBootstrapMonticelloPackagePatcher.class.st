@@ -520,8 +520,8 @@ SpurBootstrapMonticelloPackagePatcher >> patchForPackage: package withPatches: p
 			add: (self
 					immediateClassDefinitionFor: #SmallInteger
 					from: snapshot definitions
-					comment: 'My instances are 31-bit numbers, stored in twos complement form. The allowable range is approximately +- 1 billion (see SmallInteger minVal, maxVal).  My instances are encoded in tagged pointers in the VM, so called immediates, and therefore are pure immutable values.'
-					stamp: 'eem 8/12/2014 14:54')].
+					comment: 'My instances are at least 31-bit numbers, stored in twos complement form. The allowable range in 32-bits is approximately +- 10^9 (+- 1billion).  In 64-bits my instances are 61-bit numbers, stored in twos complement form. The allowable range is approximately +- 10^18 (+- 1 quintillion).   The actual values are computed at start-up.  See SmallInteger class startUp:, minVal, maxVal.'
+					stamp: 'eem 11/20/2014 08:41')].
 	(package includesClass: CompiledMethod) ifTrue:
 		[patches
 			add: (self compiledMethodClassDefinition)].
