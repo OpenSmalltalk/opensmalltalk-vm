@@ -90,6 +90,9 @@ static const          int shiftTable84[4] = {      -12,       -8,       -4,     
 static const unsigned int  maskTable85[4] = { 0xF80000, 0x00F800, 0x0000F8, 0x000000 };
 static const          int shiftTable85[4] = {       -9,       -6,       -3,        0 };
 
+/** The dispatch table for >= 8bpp big-endian compareColors functions */
+compare_colors_fn_t compareColorsFns[3*2*3*3];
+
 
 #ifdef PROFILING
 static uint64_t gettime(void)
@@ -436,3 +439,33 @@ void copyBitsDispatch(operation_t *op)
 #endif
 }
 
+sqInt compareColorsDispatch(compare_operation_t *op)
+{
+    uint32_t log2bppA;
+    uint32_t log2bppB;
+    switch (op->srcA.depth)
+    {
+    case 1:  log2bppA = 0; break;
+    case 2:  log2bppA = 1; break;
+    case 4:  log2bppA = 2; break;
+    case 8:  log2bppA = 3; break;
+    case 16: log2bppA = 4; break;
+    case 32: log2bppA = 5; break;
+    default: abort();
+    }
+    switch (op->srcB.depth)
+    {
+    case 1:  log2bppB = 0; break;
+    case 2:  log2bppB = 1; break;
+    case 4:  log2bppB = 2; break;
+    case 8:  log2bppB = 3; break;
+    case 16: log2bppB = 4; break;
+    case 32: log2bppB = 5; break;
+    default: abort();
+    }
+    if (log2bppA < 3 || log2bppB < 3 || !op->srcA.msb || !op->srcB.msb)
+        /* These cases aren't catered for by the function table */
+        return genericCompareColors(op, log2bppA, log2bppB);
+    else
+        return compareColorsFns[(((op->matchRule * 2) + op->tally) * 3 + (log2bppA - 3)) * 3 + (log2bppB - 3)](op, log2bppA, log2bppB);
+}

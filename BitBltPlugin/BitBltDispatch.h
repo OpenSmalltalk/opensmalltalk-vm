@@ -82,6 +82,13 @@ typedef enum {
 }
 combination_rule_t;
 
+typedef enum {
+    MR_pixelMatch, /* 0 */
+    MR_notAnotB,   /* 1 */
+    MR_notAmatchB, /* 2 */
+}
+match_rule_t;
+
 typedef struct {
 	void  *bits;
 	usqInt depth;
@@ -119,7 +126,24 @@ typedef struct {
 }
 operation_t;
 
+typedef struct {
+    match_rule_t  matchRule;
+    bool          tally;
+    src_or_dest_t srcA;
+    src_or_dest_t srcB;
+    usqInt        width;
+    usqInt        height;
+    usqInt        colorA;
+    usqInt        colorB;
+}
+compare_operation_t;
+
+typedef usqInt (*compare_colors_fn_t)(compare_operation_t *op, usqInt log2bppA, usqInt log2bppB);
+
+extern compare_colors_fn_t compareColorsFns[3*2*3*3];
+
 void initialiseCopyBits(void);
 void copyBitsDispatch(operation_t *op);
+sqInt compareColorsDispatch(compare_operation_t *op);
 
 #endif /* BITBLTDISPATCH_H_ */

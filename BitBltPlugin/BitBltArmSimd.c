@@ -257,8 +257,57 @@ static fast_path_t fastPaths[] = {
 		{ fastPathBitAnd32_32,           CR_bitAnd,     STD_FLAGS(32,32,NO,NO) },
 };
 
+#define TALLY_FAST_PATH(op, srcA_bpp, srcB_bpp)                                                                                                 \
+extern uint32_t armSimd##op##Tally##srcB_bpp##_##srcA_bpp##_wide  (uint32_t width, uint32_t height, uint32_t *srcA, uint32_t srcAStride, uint32_t *srcB, uint32_t srcBStride, uint32_t colorA, uint32_t colorB, void *unused, uint32_t bitPtrs); \
+extern uint32_t armSimd##op##Tally##srcB_bpp##_##srcA_bpp##_narrow(uint32_t width, uint32_t height, uint32_t *srcA, uint32_t srcAStride, uint32_t *srcB, uint32_t srcBStride, uint32_t colorA, uint32_t colorB, void *unused, uint32_t bitPtrs); \
+extern uint32_t armSimd##op##Tally##srcB_bpp##_##srcA_bpp##_tiny  (uint32_t width, uint32_t height, uint32_t *srcA, uint32_t srcAStride, uint32_t *srcB, uint32_t srcBStride, uint32_t colorA, uint32_t colorB, void *unused, uint32_t bitPtrs); \
+static uint32_t tallyFastPath##op##srcA_bpp##_##srcB_bpp(compare_operation_t *op, uint32_t log2bppA, uint32_t log2bppB)                         \
+{                                                                                                                                               \
+    IGNORE(log2bppA);                                                                                                                           \
+    IGNORE(log2bppB);                                                                                                                           \
+    COPY_COMPARE_OP_TO_LOCALS(op, uint32_t, uint32_t);                                                                                          \
+    /* Get pointers to initial words */                                                                                                         \
+    uint32_t *srcA = srcABits + srcAPitch * srcAY + srcAX * srcA_bpp / 32;                                                                      \
+    uint32_t *srcB = srcBBits + srcBPitch * srcBY + srcBX * srcB_bpp / 32;                                                                      \
+    /* Get initial pixel offset within words, mangle into pitch if possible */                                                                  \
+    uint32_t bitPtrs = 0;                                                                                                                       \
+    uint32_t srcAXpix = srcAX & (31 / srcA_bpp);                                                                                                \
+    if (srcA_bpp < 8)                                                                                                                           \
+        bitPtrs = srcAXpix;                                                                                                                     \
+    else if (srcA_bpp == 8 || srcA_bpp == 16)                                                                                                   \
+        srcAPitch |= srcAXpix << 30;                                                                                                            \
+    uint32_t srcBXpix = srcBX & (31 / srcB_bpp);                                                                                                \
+    if (srcB_bpp < 8)                                                                                                                           \
+        bitPtrs |= srcBXpix << 27;                                                                                                              \
+    else if (srcB_bpp == 8 || srcB_bpp == 16)                                                                                                   \
+        srcBPitch |= srcBXpix << 30;                                                                                                            \
+    /* Adjust strides to remove number of words partially or wholly read/written */                                                             \
+    srcAPitch -= (srcA_bpp * (srcAXpix + width) + 31) / 32;                                                                                     \
+    srcBPitch -= (srcB_bpp * (srcBXpix + width) + 31) / 32;                                                                                     \
+    /* Work out which width class this operation is.                                                                                            \
+     * Rather than re-evaluate this for each line, we want one choice                                                                           \
+     * for the whole operation; this means we can't assume anything about                                                                       \
+     * alignment to sizes larger than 4 bytes, because that's the only                                                                          \
+     * guarantee we have about line stride. */                                                                                                  \
+    if (width > (128-32)/srcA_bpp && (((srcAXpix-1) ^ (srcAXpix+width-(128-32)/srcA_bpp)) &~ (31/srcA_bpp)))                                    \
+        return armSimd##op##Tally##srcB_bpp##_##srcA_bpp##_wide(width, height, srcA, srcAPitch, srcB, srcBPitch, colorA, colorB, 0, bitPtrs);   \
+    else if (srcA_bpp > 8 || (((srcAXpix-1) ^ (srcAXpix+width)) &~ (31/srcA_bpp)))                                                              \
+        return armSimd##op##Tally##srcB_bpp##_##srcA_bpp##_narrow(width, height, srcA, srcAPitch, srcB, srcBPitch, colorA, colorB, 0, bitPtrs); \
+    else                                                                                                                                        \
+        return armSimd##op##Tally##srcB_bpp##_##srcA_bpp##_tiny(width, height, srcA, srcAPitch, srcB, srcBPitch, colorA, colorB, 0, bitPtrs);   \
+}
+
+#define ADD_TALLY_FN(op, srcA_bpp, srcB_bpp)                     \
+    do { compareColorsFns[(((MR_##op * 2) + 1) * 3 +             \
+            (srcA_bpp == 8 ? 0 : srcA_bpp == 16 ? 1 : 2)) * 3 +  \
+            (srcB_bpp == 8 ? 0 : srcB_bpp == 16 ? 1 : 2)] =      \
+            tallyFastPath##op##srcA_bpp##_##srcB_bpp; } while(0)
+
+TALLY_FAST_PATH(pixelMatch, 32, 32)
+
 void addArmSimdFastPaths(void)
 {
 	addFastPaths(fastPaths, sizeof fastPaths / sizeof *fastPaths);
-}
 
+	ADD_TALLY_FN(pixelMatch, 32, 32);
+}

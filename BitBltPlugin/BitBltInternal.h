@@ -125,7 +125,7 @@ enum {
 /** This macro basically tells the compiler that the pointer to the
  * "op" structure doesn't alias with any other pointers. I'd use the
  * restrict keyword instead, but Squeak is built C89. */
-#define COPY_OP_TO_LOCALS(op, src_type, dest_type)                      \
+#define COPY_OP_TO_LOCALS(op, src_type, dest_type)                             \
 	combination_rule_t combinationRule  = op->combinationRule;                 \
 	bool               noSource         = op->noSource;                        \
 	src_type          *srcBits          = op->src.bits;                        \
@@ -174,6 +174,44 @@ enum {
 	IGNORE(noHalftone);      \
 	IGNORE(halftoneHeight);  \
 	IGNORE(halftoneBase);    \
+
+#define COPY_COMPARE_OP_TO_LOCALS(op, srcA_type, srcB_type)                    \
+    match_rule_t       matchRule        = op->matchRule;                       \
+    bool               tally            = op->tally;                           \
+    srcA_type         *srcABits         = op->srcA.bits;                       \
+    uint32_t           srcADepth        = op->srcA.depth;                      \
+    uint32_t           srcAPitch        = op->srcA.pitch / sizeof (srcA_type); \
+    bool               srcAMSB          = op->srcA.msb;                        \
+    uint32_t           srcAX            = op->srcA.x;                          \
+    uint32_t           srcAY            = op->srcA.y;                          \
+    srcB_type         *srcBBits         = op->srcB.bits;                       \
+    uint32_t           srcBDepth        = op->srcB.depth;                      \
+    uint32_t           srcBPitch        = op->srcB.pitch / sizeof (srcB_type); \
+    bool               srcBMSB          = op->srcB.msb;                        \
+    uint32_t           srcBX            = op->srcB.x;                          \
+    uint32_t           srcBY            = op->srcB.y;                          \
+    uint32_t           width            = op->width;                           \
+    uint32_t           height           = op->height;                          \
+    uint32_t           colorA           = op->colorA;                          \
+    uint32_t           colorB           = op->colorB;                          \
+    IGNORE(matchRule); \
+    IGNORE(tally);     \
+    IGNORE(srcABits);  \
+    IGNORE(srcADepth); \
+    IGNORE(srcAPitch); \
+    IGNORE(srcAMSB);   \
+    IGNORE(srcAX);     \
+    IGNORE(srcAY);     \
+    IGNORE(srcBBits);  \
+    IGNORE(srcBDepth); \
+    IGNORE(srcBPitch); \
+    IGNORE(srcBMSB);   \
+    IGNORE(srcBX);     \
+    IGNORE(srcBY);     \
+    IGNORE(width);     \
+    IGNORE(height);    \
+    IGNORE(colorA);    \
+    IGNORE(colorB);    \
 
 
 typedef struct {
