@@ -27,5 +27,6 @@
 #define BITBLTGENERIC_H_
 
 void addGenericFastPaths(void);
+uint32_t genericCompareColors(compare_operation_t *op, uint32_t log2bppA, uint32_t log2bppB);
 
 #endif /* BITBLTGENERIC_H_ */

@@ -41,18 +41,20 @@ FLAG_COLOUR_MAP                 *       1 :SHL: 2
 
 FLAG_DST_WRITEONLY              *       0 :SHL: 3
 FLAG_DST_READWRITE              *       1 :SHL: 3
-FLAG_SPILL_NO_LINE_VARS         *       0 :SHL: 4
-FLAG_SPILL_LINE_VARS_WIDE       *       1 :SHL: 4
-FLAG_SPILL_LINE_VARS_NON_WIDE   *       2 :SHL: 4
-FLAG_SPILL_LINE_VARS            *       3 :SHL: 4
-FLAG_EXPAND_SKEW                *       0 :SHL: 6
-FLAG_NO_EXPAND_SKEW             *       1 :SHL: 6
-FLAG_PROCESS_SERIAL             *       0 :SHL: 7  ; sub-word data is presented MS-aligned, and results are expected LS-aligned
-FLAG_PROCESS_PARALLEL           *       1 :SHL: 7  ; sub-word data retains its original alignment throughout (only useful if src & dest depths same)
-FLAG_MAX_128BIT_MACRO           *       0 :SHL: 8
-FLAG_MAX_256BIT_MACRO           *       1 :SHL: 8  ; particularly tight loops can sometimes benefit from being unrolled to allow 2x 128-bit blocks to be staggered
-FLAG_PRELOAD_DST                *       0 :SHL: 9
-FLAG_NO_PRELOAD_DST             *       1 :SHL: 9
+FLAG_DST_READONLY               *       2 :SHL: 3
+FLAG_DST_ACCESS                 *       3 :SHL: 3
+FLAG_SPILL_NO_LINE_VARS         *       0 :SHL: 5
+FLAG_SPILL_LINE_VARS_WIDE       *       1 :SHL: 5
+FLAG_SPILL_LINE_VARS_NON_WIDE   *       2 :SHL: 5
+FLAG_SPILL_LINE_VARS            *       3 :SHL: 5
+FLAG_EXPAND_SKEW                *       0 :SHL: 7
+FLAG_NO_EXPAND_SKEW             *       1 :SHL: 7
+FLAG_PROCESS_SERIAL             *       0 :SHL: 8  ; sub-word data is presented MS-aligned, and results are expected LS-aligned
+FLAG_PROCESS_PARALLEL           *       1 :SHL: 8  ; sub-word data retains its original alignment throughout (only useful if src & dest depths same)
+FLAG_MAX_128BIT_MACRO           *       0 :SHL: 9
+FLAG_MAX_256BIT_MACRO           *       1 :SHL: 9  ; particularly tight loops can sometimes benefit from being unrolled to allow 2x 128-bit blocks to be staggered
+FLAG_PRELOAD_DST                *       0 :SHL: 10
+FLAG_NO_PRELOAD_DST             *       1 :SHL: 10
 
 ; Offsets into stack
         GBLA    args_stack_offset
@@ -676,6 +678,7 @@ $lab
 
         MACRO
 $lab    WriteFirstSubWord $base, $data, $pixels, $tmp1, $tmp2
+        ASSERT (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY
         ; It is assumed that there is at least 1 pixel to write
         LCLS    reg0
 reg0    LookupWk $data
@@ -719,6 +722,7 @@ $lab    ; Pixels should be LS-aligned whether processing was done in parallel or
 
         MACRO
 $lab    WriteLastSubWord $base, $data, $pixels, $aligned, $tmp1, $tmp2
+        ASSERT (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY
         ; It is assumed that there is at least 1 pixel to write
         LCLS    reg0
 reg0    LookupWk $data
@@ -810,7 +814,8 @@ $lab    Write1Word $base, $first
 reg0    LookupWk $first
         Print   Data, "Write1Word: %08X @%p\n", $reg0, $base
 $lab
-     IF (flags :AND: FLAG_DST_READWRITE) > 0
+        ASSERT (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY
+     IF (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_READWRITE
         STR     $reg0, [$base, #-4] ; base is assumed previously updated during read
    ELSE
         STR     $reg0, [$base], #4
@@ -829,7 +834,8 @@ reg1    LookupWk $first+1
       ]
         Print   Data, "Write2Words: %08X %08X @%p\n", $reg0, $reg1, $base
 $lab
-     IF (flags :AND: FLAG_DST_READWRITE) > 0
+        ASSERT (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY
+     IF (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_READWRITE
         STMDB   $base, {$reg0, $reg1} ; base is assumed previously updated during read
    ELSE
         STMIA   $base!, {$reg0, $reg1}
@@ -861,7 +867,8 @@ reg3    LookupWk $first+3
         Print   Data, "Write4Words: %08X %08X", $reg0, $reg1
         Print   Data, " %08X %08X @%p\n", $reg2, $reg3, $base
 $lab
-     IF (flags :AND: FLAG_DST_READWRITE) > 0
+        ASSERT (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY
+     IF (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_READWRITE
         STMDB   $base, {$reg0, $reg1, $reg2, $reg3} ; base is assumed previously updated during read
    ELSE
         STMIA   $base!, {$reg0, $reg1, $reg2, $reg3}
@@ -876,11 +883,13 @@ $lab    ReadFirstSubWord src, 0, carry, $pixels, $fixed_skew, skew, scratch
   [ dst_w_bpp < 32
         ANDS    scratch, $pixels, #32/dst_w_bpp - 1
         BEQ     %FT02
-      [ flags :AND: FLAG_DST_READWRITE > 0
+     IF (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_READWRITE
         LDR     $wk1, [dst]
-      ]
+   ELIF (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_READONLY
+        LDR     $wk1, [dst], #4
+  ENDIF
     [ flags :AND: FLAG_PROCESS_PARALLEL = 0
-      [ flags :AND: FLAG_DST_READWRITE > 0
+      [ (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_WRITEONLY
         MOV     scratch, scratch, LSL #dst_bpp_shift
         MOV     $wk1, $wk1, ROR scratch
       ]
@@ -895,8 +904,11 @@ pow2str DecimalStr pow2
 01
 pow2    SETA    pow2 * 2
         WEND
+      [ (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY
         WriteFirstSubWord dst, 1, $pixels, scratch, $wk2
+      ]
     |
+        ASSERT (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY ; Can't really do read-only 32-bit processing without an indication of which bits are valid
         $prefix._32bits $wk0, $wk1, $fixed_skew ; and return result in $wk0
         WriteFirstSubWord dst, 0, $pixels, scratch, $wk2
     ]
@@ -945,9 +957,11 @@ $lab
   [ dst_w_bpp < 32
         TST     $pixels, #32/dst_w_bpp - 1
         BEQ     %FT02
-      [ flags :AND: FLAG_DST_READWRITE > 0
+     IF (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_READWRITE
         LDR     $wk1, [dst]
-      ]
+   ELIF (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_READONLY
+        LDR     $wk1, [dst], #4
+  ENDIF
     [ flags :AND: FLAG_PROCESS_PARALLEL = 0
         LCLA    pow2
         LCLS    pow2str
@@ -968,8 +982,11 @@ pow2str DecimalStr pow2
 01
 pow2    SETA    pow2 / 2
         WEND
+      [ (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY
         WriteLastSubWord dst, 1, $pixels, ls_aligned, scratch, $wk0
+      ]
     |
+        ASSERT (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY ; Can't really do read-only 32-bit processing without an indication of which bits are valid
         ReadLastSubWord src, 0, carry, $pixels, $fixed_skew, skew, scratch
         $prefix._32bits $wk0, $wk1, $fixed_skew ; and return result in $wk0
         WriteLastSubWord dst, 0, $pixels, ms_aligned, scratch, $wk1
@@ -1386,7 +1403,7 @@ prefix  SETS    "$op.$src_bpp._$dst_w_bpp.$qualifier"
 
 src_bpp_shift   Log2    src_bpp
 dst_bpp_shift   Log2    dst_w_bpp
-      [ flags :AND: FLAG_DST_READWRITE = 0
+      [ (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_WRITEONLY
 dst_r_bpp       SETA    0
       |
 dst_r_bpp       SETA    dst_w_bpp
@@ -1520,7 +1537,7 @@ dst_prefetch_offset SETA -16
 dst_prefetch_offset SETA 0
       ]
 52
-        WHILE   dst_prefetch_offset <= 0
+        WHILE   dst_prefetch_offset <> 16
 subblock SETA   0
         WHILE   subblock < pix_per_block*dst_w_bpp/128
       [ dst_w_bpp > 4 * src_bpp :LAND: src_bpp > 0
@@ -1573,7 +1590,7 @@ subblock SETA   subblock + 1
         WEND
         SUBS    x, x, #pix_per_block
         BHS     %BT52
-      [ dst_prefetch_offset < 0
+      [ dst_prefetch_offset = -16
         B       %FT55
 54
       ]
