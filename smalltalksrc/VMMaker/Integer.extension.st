@@ -1,5 +1,11 @@
 Extension { #name : #Integer }
 
+{ #category : #'*VMMaker-bit manipulation' }
+Integer >> >>> shiftAmount [  "right shift, but causes CCodeGenerator to generate a signed shift"
+	shiftAmount < 0 ifTrue: [self error: 'negative arg'].
+	^self bitShift: 0 - shiftAmount
+]
+
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> asLong [
 	^self
