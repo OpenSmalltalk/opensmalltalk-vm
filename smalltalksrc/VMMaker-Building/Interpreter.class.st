@@ -3063,36 +3063,6 @@ Interpreter >> findSelectorOfMethod: meth forReceiver: rcvr [
 	^ nilObj    "method not found in superclass chain"
 ]
 
-{ #category : #'object format' }
-Interpreter >> floatObjectOf: aFloat [
-	| newFloatObj |
-	<inline: false>
-	<var: #aFloat type: 'double '>
-	self flag: #Dan.
-	newFloatObj := self instantiateSmallClass: (self splObj: ClassFloat) sizeInBytes: 8+self baseHeaderSize.
-	self storeFloatAt: newFloatObj + self baseHeaderSize from: aFloat.
-	^ newFloatObj.
-
-]
-
-{ #category : #utilities }
-Interpreter >> floatValueOf: oop [
-	"Answer the C double precision floating point value of the argument,
-	 or fail if it is not a Float, and answer 0.
-	 Note: May be called by translated primitive code."
-
-	| isFloat result |
-	<returnTypeC: #double>
-	<var: #result type: #double>
-	isFloat := self isInstanceOfClassFloat: oop.
-	isFloat ifTrue:
-		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		 self fetchFloatAt: oop + self baseHeaderSize into: result.
-		 ^result].
-	self primitiveFail.
-	^0.0
-]
-
 { #category : #'method lookup cache' }
 Interpreter >> flushAtCache [
 	"Flush the at cache. The method cache is flushed on every programming change and garbage collect."
@@ -4686,9 +4656,9 @@ Interpreter >> primitiveArrayBecomeOneWayCopyHash [
 Interpreter >> primitiveAsFloat [
 	| arg |
 	arg := self popInteger.
-	successFlag
-		ifTrue: [ self pushFloat: (self cCode: '((double) arg)' inSmalltalk: [arg asFloat]) ]
-		ifFalse: [ self unPop: 1 ].
+	self successful
+		ifTrue: [self pushFloat: arg asFloat]
+		ifFalse: [self unPop: 1]
 ]
 
 { #category : #'object access primitives' }

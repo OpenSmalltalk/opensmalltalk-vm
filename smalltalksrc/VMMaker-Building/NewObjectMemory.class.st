@@ -1101,6 +1101,37 @@ NewObjectMemory >> firstValidIndexOfIndexableObject: obj withFormat: fmt [
 		ifFalse: [1]
 ]
 
+{ #category : #'interpreter access' }
+NewObjectMemory >> floatObjectOf: aFloat [
+	| newFloatObj |
+	<inline: false>
+	<var: #aFloat type: #double>
+	newFloatObj := self
+						eeInstantiateSmallClassIndex: ClassFloatCompactIndex
+						format: self firstLongFormat
+						numSlots: (self sizeof: #double) / self bytesPerOop.
+	self storeFloatAt: newFloatObj + self baseHeaderSize from: aFloat.
+	^newFloatObj
+]
+
+{ #category : #'interpreter access' }
+NewObjectMemory >> floatValueOf: oop [
+	"Answer the C double precision floating point value of the argument,
+	 or fail if it is not a Float, and answer 0.
+	 Note: May be called by translated primitive code."
+
+	| isFloat result |
+	<returnTypeC: #double>
+	<var: #result type: #double>
+	isFloat := self isFloatInstance: oop.
+	isFloat ifTrue:
+		[self cCode: '' inSmalltalk: [result := Float new: 2].
+		 self fetchFloatAt: oop + self baseHeaderSize into: result.
+		 ^result].
+	coInterpreter primitiveFail.
+	^0.0
+]
+
 { #category : #'frame access' }
 NewObjectMemory >> formatOfMethodContext [
 	"Answer the class format word for MethodContext which is used to instantiate
