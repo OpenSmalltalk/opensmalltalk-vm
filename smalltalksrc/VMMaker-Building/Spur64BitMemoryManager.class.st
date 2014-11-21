@@ -293,6 +293,43 @@ Spur64BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 		do: [:p| self longAt: p put: fillValue]
 ]
 
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> floatObjectOf: aFloat [
+	| newFloatObj |
+	<inline: false>
+	<var: #aFloat type: #double>
+	(self isSmallFloatValue: aFloat) ifTrue:
+		[^self smallFloatObjectOf: aFloat].
+	newFloatObj := self
+						eeInstantiateSmallClassIndex: ClassFloatCompactIndex
+						format: self firstLongFormat
+						numSlots: (self sizeof: #double) / self bytesPerOop.
+	self storeFloatAt: newFloatObj + self baseHeaderSize from: aFloat.
+	^newFloatObj
+]
+
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> floatValueOf: oop [
+	"Answer the C double precision floating point value of the argument,
+	 or fail if it is not a Float, and answer 0.
+	 Note: May be called by translated primitive code."
+
+	| result tagBits |
+	<returnTypeC: #double>
+	<var: #result type: #double>
+	(tagBits := oop bitAnd: self tagMask) ~= 0
+		ifTrue:
+			[tagBits = self smallFloatTag ifTrue:
+				[^self smallFloatValueOf: oop]]
+		ifFalse:
+			[(self classIndexOf: oop) = ClassFloatCompactIndex ifTrue:
+				[self cCode: '' inSmalltalk: [result := Float new: 2].
+				 self fetchFloatAt: oop + self baseHeaderSize into: result.
+				 ^result]].
+	coInterpreter primitiveFail.
+	^0.0
+]
+
 { #category : #'header access' }
 Spur64BitMemoryManager >> identityHashFullWordMask [
 	^16r3fffff00000000
@@ -458,6 +495,15 @@ Spur64BitMemoryManager >> integerValueOf: oop [
 			[oop bitShift: self numTagBits negated]
 ]
 
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> isFloatInstance: oop [
+	<inline: true>
+	| tagBits |
+	^(tagBits := oop bitAnd: self tagMask) ~= 0
+		ifTrue: [tagBits = self smallFloatTag]
+		ifFalse: [(self classIndexOf: oop) = ClassFloatCompactIndex]
+]
+
 { #category : #'object testing' }
 Spur64BitMemoryManager >> isIntegerObject: oop [
 	^(oop bitAnd: self tagMask) = 1
@@ -483,6 +529,20 @@ Spur64BitMemoryManager >> isMarked: objOop [
 { #category : #'object testing' }
 Spur64BitMemoryManager >> isNonIntegerObject: oop [
 	^(oop bitAnd: self tagMask) ~= 1
+]
+
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> isSmallFloatValue: aFloat [
+	<inline: true>
+	<var: #aFloat type: #double>
+	| exponent |
+	exponent := self
+					cCode:
+						[| rawFloat |
+						 rawFloat := (self cCoerce: (self addressOf: aFloat) to: 'sqLong *') at: 0.
+						 rawFloat >> 52 bitAnd: 16r7FF]
+					inSmalltalk: [aFloat exponent].
+	^exponent between: -127 and: 127
 ]
 
 { #category : #'object testing' }
@@ -637,6 +697,16 @@ Spur64BitMemoryManager >> rawOverflowSlotsOf: objOop put: numSlots [
 	^numSlots
 ]
 
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> rotateLeft: anInteger [
+	^(anInteger >> 63 bitAnd: 1) + ((self cCode: [anInteger] inSmalltalk: [anInteger bitAnd: 16r7FFFFFFFFFFFFFFF]) << 1)
+]
+
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> rotateRight: anInteger [
+	^(self cCode: [anInteger] inSmalltalk: [anInteger bitAnd: 1]) << 63 + (anInteger asUnsignedLong >> 1)
+]
+
 { #category : #'header access' }
 Spur64BitMemoryManager >> set: objOop classIndexTo: classIndex formatTo: format [
 	"0 = 0 sized objects (UndefinedObject True False et al)
@@ -738,6 +808,70 @@ Spur64BitMemoryManager >> shiftForWord [
 	<api>
 	<cmacro: '() 3'>
 	^3
+]
+
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> smallFloatExponentOffset [
+	^128
+]
+
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> smallFloatMantissaBits [
+	^52
+]
+
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> smallFloatObjectOf: aFloat [
+	"Encode the argument, aFloat in the SmallFloat range, as a tagged small float.
+	 See section 61-bit Immediate Floats in the SpurMemoryManager class comment.
+
+	 Encode:					[1s][     11 exponent     ][52mantissa] 
+	 rot sign:				[     11 exponent     ][52mantissa][1s] 
+	 sub exponent offset:	[ 000 ][8expsubset][52 mantissa][1s] 
+	 shift:					[8expsubset][52 mantissa][1s][ 000 ] 
+	 or/add tags:			[8expsubset][52mantissa][1s][3tags]"
+	<inline: true>
+	<var: #aFloat type: #double>
+	| rawFloat rot |
+	rawFloat := self
+					cCode:
+						[(self cCoerce: (self addressOf: aFloat) to: 'sqLong *') at: 0]
+					inSmalltalk: [(aFloat at: 1) << 32 + (aFloat at: 2)].
+	rot := self rotateLeft: rawFloat.
+	rot > 1 ifTrue:
+		[rot := rot - (self smallFloatExponentOffset << (self smallFloatMantissaBits + 1)).
+		 self assert: rot > 0].
+	^rot << self numTagBits + self smallFloatTag
+]
+
+{ #category : #'cog jit support' }
+Spur64BitMemoryManager >> smallFloatTag [
+	^3
+]
+
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> smallFloatValueOf: oop [
+	"Answer the C double precision floating point value of the argument, a SmallFloat.
+	 See section 61-bit Immediate Floats in the SpurMemoryManager class comment.
+							msb                                              lsb 
+	 Decode:				[8expsubset][52mantissa][1s][3tags] 
+	 shift away tags:		[ 000 ][8expsubset][52mantissa][1s] 
+	 add exponent offset:	[     11 exponent     ][52mantissa][1s] 
+	 rot sign:				[1s][     11 exponent     ][52mantissa]"
+	| rot |
+	<returnTypeC: #double>
+	<var: #result type: #double>
+	self assert: (oop bitAnd: self tagMask) = self smallFloatTag.
+	rot := oop >> self numTagBits.
+	rot > 1 ifTrue:
+		[rot := rot + (self smallFloatExponentOffset << (self smallFloatMantissaBits + 1))].
+	rot := self rotateRight: rot.
+	^self cCode: [(self cCoerce: (self addressOf: rot) to: #'double *') at: 0]
+		inSmalltalk:
+			[(Float new: 2)
+				at: 1 put: rot >> 32;
+				at: 2 put: (rot bitAnd: 16rFFFFFFFF);
+				yourself]
 ]
 
 { #category : #allocation }
