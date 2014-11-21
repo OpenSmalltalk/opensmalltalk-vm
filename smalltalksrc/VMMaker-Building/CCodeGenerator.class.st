@@ -2624,6 +2624,16 @@ CCodeGenerator >> generateSignedIntToShort: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateSignedShiftRight: msgNode on: aStream indent: level [
+	"Generate the C code for >>> onto the given stream."
+
+	aStream nextPutAll: '((sqInt) '.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPutAll: ') >> '.
+	self emitCExpression: msgNode args first on: aStream
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateSmallIntegerConstant: aSendNode on: aStream indent: indent [
 	aSendNode selector = #minSmallInteger ifTrue:
 		[^aStream nextPutAll: 'MinSmallInteger'].
@@ -2971,6 +2981,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#\\				#generateModulo:on:indent:
 	#<<			#generateShiftLeft:on:indent:
 	#>>			#generateShiftRight:on:indent:
+	#>>>			#generateSignedShiftRight:on:indent:
 	#min:			#generateMin:on:indent:
 	#max:			#generateMax:on:indent:
 	#between:and:	#generateBetweenAnd:on:indent:
