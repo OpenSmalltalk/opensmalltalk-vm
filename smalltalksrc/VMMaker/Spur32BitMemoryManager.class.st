@@ -320,6 +320,37 @@ Spur32BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 				longAt: p + 4 put: fillValue]
 ]
 
+{ #category : #'interpreter access' }
+Spur32BitMemoryManager >> floatObjectOf: aFloat [
+	| newFloatObj |
+	<inline: false>
+	<var: #aFloat type: #double>
+	newFloatObj := self
+						eeInstantiateSmallClassIndex: ClassFloatCompactIndex
+						format: self firstLongFormat
+						numSlots: (self sizeof: #double) / self bytesPerOop.
+	self storeFloatAt: newFloatObj + self baseHeaderSize from: aFloat.
+	^newFloatObj
+]
+
+{ #category : #'interpreter access' }
+Spur32BitMemoryManager >> floatValueOf: oop [
+	"Answer the C double precision floating point value of the argument,
+	 or fail if it is not a Float, and answer 0.
+	 Note: May be called by translated primitive code."
+
+	| isFloat result |
+	<returnTypeC: #double>
+	<var: #result type: #double>
+	isFloat := self isFloatInstance: oop.
+	isFloat ifTrue:
+		[self cCode: '' inSmalltalk: [result := Float new: 2].
+		 self fetchFloatAt: oop + self baseHeaderSize into: result.
+		 ^result].
+	coInterpreter primitiveFail.
+	^0.0
+]
+
 { #category : #'free space' }
 Spur32BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	<var: #numBytes type: #usqLong>
@@ -484,6 +515,13 @@ Spur32BitMemoryManager >> integerValueOf: oop [
 			[((oop bitShift: -1) bitAnd: 16r3FFFFFFF) - 16r3FFFFFFF - 1  "Faster than -16r40000000 (a LgInt)"]
 		ifFalse: "positive"
 			[oop bitShift: -1]
+]
+
+{ #category : #'interpreter access' }
+Spur32BitMemoryManager >> isFloatInstance: oop [
+	<inline: true>
+	^(self isNonImmediate: oop)
+	  and: [(self classIndexOf: oop) = ClassFloatCompactIndex]
 ]
 
 { #category : #'object testing' }

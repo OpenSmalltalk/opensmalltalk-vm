@@ -3334,35 +3334,6 @@ NewspeakInterpreter >> floatArg: index [
 	^self floatValueOf: oop
 ]
 
-{ #category : #'object format' }
-NewspeakInterpreter >> floatObjectOf: aFloat [
-	| newFloatObj |
-	<var: #aFloat type: #double>
-	<inline: false> "because storeFloatAt:from: insists that its last arg is a variable"
-	self flag: #Dan. "None of the float stuff has been converted for 64 bits"
-	newFloatObj := self instantiateSmallClass: (self splObj: ClassFloat) sizeInBytes: 8+self baseHeaderSize.
-	self storeFloatAt: newFloatObj + self baseHeaderSize from: aFloat.
-	^newFloatObj
-]
-
-{ #category : #utilities }
-NewspeakInterpreter >> floatValueOf: oop [
-	"Answer the C double precision floating point value of the argument,
-	 or fail if it is not a Float, and answer 0.
-	 Note: May be called by translated primitive code."
-
-	| isFloat result |
-	<returnTypeC: #double>
-	<var: #result type: #double>
-	isFloat := self isInstanceOfClassFloat: oop.
-	isFloat ifTrue:
-		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		 self fetchFloatAt: oop + self baseHeaderSize into: result.
-		 ^result].
-	self primitiveFail.
-	^0.0
-]
-
 { #category : #'debug printing' }
 NewspeakInterpreter >> flush [
 	<cmacro: '() fflush(stdout)'>
@@ -5219,8 +5190,8 @@ NewspeakInterpreter >> primitiveAsFloat [
 	| arg |
 	arg := self popInteger.
 	self successful
-		ifTrue: [ self pushFloat: (self cCode: '((double) arg)' inSmalltalk: [arg asFloat]) ]
-		ifFalse: [ self unPop: 1 ].
+		ifTrue: [self pushFloat: arg asFloat]
+		ifFalse: [self unPop: 1]
 ]
 
 { #category : #'object access primitives' }

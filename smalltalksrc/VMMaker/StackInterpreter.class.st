@@ -5648,9 +5648,9 @@ StackInterpreter >> fetchFloat: fieldIndex ofObject: objectPointer [
 	"Note: May be called by translated primitive code."
 
 	| floatOop |
-	<returnTypeC: 'double'>
+	<returnTypeC: #double>
 	floatOop := objectMemory fetchPointer: fieldIndex ofObject: objectPointer.
-	^ self floatValueOf: floatOop
+	^objectMemory floatValueOf: floatOop
 ]
 
 { #category : #utilities }
@@ -6078,38 +6078,7 @@ StackInterpreter >> floatArg: index [
 	<returnTypeC: #double>
 	oop := self methodArg: index.
 	oop = 0 ifTrue:[^0.0]. "methodArg: failed"
-	^self floatValueOf: oop
-]
-
-{ #category : #'object format' }
-StackInterpreter >> floatObjectOf: aFloat [
-	| newFloatObj |
-	<inline: false>
-	<var: #aFloat type: #double>
-	newFloatObj := objectMemory
-						eeInstantiateSmallClassIndex: ClassFloatCompactIndex
-						format: objectMemory firstLongFormat
-						numSlots: (self sizeof: #double) / objectMemory bytesPerOop.
-	objectMemory storeFloatAt: newFloatObj + objectMemory baseHeaderSize from: aFloat.
-	^newFloatObj
-]
-
-{ #category : #utilities }
-StackInterpreter >> floatValueOf: oop [
-	"Answer the C double precision floating point value of the argument,
-	 or fail if it is not a Float, and answer 0.
-	 Note: May be called by translated primitive code."
-
-	| isFloat result |
-	<returnTypeC: #double>
-	<var: #result type: #double>
-	isFloat := self isInstanceOfClassFloat: oop.
-	isFloat ifTrue:
-		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		 objectMemory fetchFloatAt: oop + objectMemory baseHeaderSize into: result.
-		 ^result].
-	self primitiveFail.
-	^0.0
+	^objectMemory floatValueOf: oop
 ]
 
 { #category : #'debug printing' }
@@ -8403,7 +8372,7 @@ StackInterpreter >> loadFloatOrIntFrom: floatOrInt [
 
 	(objectMemory isIntegerObject: floatOrInt) ifTrue:
 		[^(objectMemory integerValueOf: floatOrInt) asFloat].
-	^self floatValueOf: floatOrInt
+	^objectMemory floatValueOf: floatOrInt
 ]
 
 { #category : #initialization }
@@ -9846,7 +9815,7 @@ StackInterpreter >> pop: nItems thenPushFloat: f [
 	<var: #sp type: #'char *'>
 	stackPages
 		longAt: (sp := stackPointer + ((nItems - 1) * objectMemory wordSize))
-		put: (self floatObjectOf: f).
+		put: (objectMemory floatObjectOf: f).
 	stackPointer := sp
 ]
 
@@ -9865,7 +9834,7 @@ StackInterpreter >> pop: nItems thenPushInteger: integerVal [
 { #category : #'primitive support' }
 StackInterpreter >> popFloat [
 	<returnTypeC: #double>
-	^self floatValueOf: self popStack
+	^objectMemory floatValueOf: self popStack
 ]
 
 { #category : #'internal interpreter access' }
@@ -11421,7 +11390,7 @@ StackInterpreter >> pushEnclosingObjectBytecode [
 StackInterpreter >> pushFloat: f [
 
 	<var: #f type: #double>
-	self push: (self floatObjectOf: f).
+	self push: (objectMemory floatObjectOf: f).
 ]
 
 { #category : #'stack bytecodes' }
@@ -13153,7 +13122,7 @@ StackInterpreter >> stSizeOf: oop [
 StackInterpreter >> stackFloatValue: offset [
 	"In the StackInterpreter stacks grow down."
 	<returnTypeC: #double>
-	^self floatValueOf: (stackPages longAt: stackPointer + (offset*objectMemory wordSize))
+	^objectMemory floatValueOf: (stackPages longAt: stackPointer + (offset*objectMemory wordSize))
 ]
 
 { #category : #'stack access' }

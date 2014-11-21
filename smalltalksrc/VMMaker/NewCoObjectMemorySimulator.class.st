@@ -159,12 +159,6 @@ NewCoObjectMemorySimulator >> firstIndexableField: oop [
 				ifFalse: ["byte objects (including CompiledMethod" 'char *'])
 ]
 
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> floatValueOf: obj [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter floatValueOf: obj
-]
-
 { #category : #'gc -- mark and sweep' }
 NewCoObjectMemorySimulator >> fullGC [
 	"If we're /not/ a clone, clone the VM and push it over the cliff.

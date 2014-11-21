@@ -172,19 +172,6 @@ InterpreterPrimitives >> isInstanceOfClassByteString: oop [
 ]
 
 { #category : #'primitive support' }
-InterpreterPrimitives >> isInstanceOfClassFloat: oop [
-	<inline: true>
-	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
-	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
-	 phrase (objectMemory splObj: ClassFloat) is expanded in-place and is
-	 _not_ evaluated if oop has a non-zero CompactClassIndex."
-	^objectMemory
-		is: oop
-		instanceOf: (objectMemory splObj: ClassFloat) 
-		compactClassIndex: ClassFloatCompactIndex
-]
-
-{ #category : #'primitive support' }
 InterpreterPrimitives >> isInstanceOfClassLargeNegativeInteger: oop [
 	<inline: true>
 	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
@@ -581,8 +568,8 @@ InterpreterPrimitives >> primitiveAsFloat [
 	| arg |
 	arg := self popInteger.
 	self successful
-		ifTrue: [ self pushFloat: (self cCode: '((double) arg)' inSmalltalk: [arg asFloat]) ]
-		ifFalse: [ self unPop: 1 ]
+		ifTrue: [self pushFloat: arg asFloat]
+		ifFalse: [self unPop: 1]
 ]
 
 { #category : #'indexing primitives' }
@@ -1629,13 +1616,13 @@ InterpreterPrimitives >> primitiveFormPrint [
 	| landscapeFlag vScale hScale rcvr bitsArray w h
 	 depth pixelsPerWord wordsPerLine bitsArraySize ok |
 
-	<var: #vScale type: 'double '>
-	<var: #hScale type: 'double '>
+	<var: #vScale type: #double>
+	<var: #hScale type: #double>
 	landscapeFlag := self booleanValueOf: self stackTop.
-	vScale := self floatValueOf: (self stackValue: 1).
-	hScale := self floatValueOf: (self stackValue: 2).
+	vScale := objectMemory floatValueOf: (self stackValue: 1).
+	hScale := objectMemory floatValueOf: (self stackValue: 2).
 	rcvr := self stackValue: 3.
-	((objectMemory  isPointers: rcvr)
+	((objectMemory isPointers: rcvr)
 	 and: [(objectMemory lengthOf: rcvr) >= 4]) ifFalse:
 		[self success: false].
 	self successful ifTrue:

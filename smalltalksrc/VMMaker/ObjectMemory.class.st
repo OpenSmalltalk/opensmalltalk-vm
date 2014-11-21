@@ -1993,6 +1993,34 @@ ObjectMemory >> fixedFieldsOf: oop format: fmt length: wordLength [
 	^(classFormat >> 11 bitAnd: 16rC0) + (classFormat >> 2 bitAnd: 16r3F) - 1
 ]
 
+{ #category : #'interpreter access' }
+ObjectMemory >> floatObjectOf: aFloat [
+	| newFloatObj |
+	<inline: false>
+	<var: #aFloat type: #double>
+	newFloatObj := self instantiateSmallClass: (self splObj: ClassFloat) sizeInBytes: (self sizeof: #double)+self baseHeaderSize.
+	self storeFloatAt: newFloatObj + self baseHeaderSize from: aFloat.
+	^newFloatObj
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> floatValueOf: oop [
+	"Answer the C double precision floating point value of the argument,
+	 or fail if it is not a Float, and answer 0.
+	 Note: May be called by translated primitive code."
+
+	| isFloat result |
+	<returnTypeC: #double>
+	<var: #result type: #double>
+	isFloat := self isFloatInstance: oop.
+	isFloat ifTrue:
+		[self cCode: '' inSmalltalk: [result := Float new: 2].
+		 self fetchFloatAt: oop + self baseHeaderSize into: result.
+		 ^result].
+	self primitiveFail.
+	^0.0
+]
+
 { #category : #'forward compatibility' }
 ObjectMemory >> followField: fieldIndex ofObject: anObject [
 	"Spur compatibility; in V3 this is a synonym for fetchPointer:ofObject:"
@@ -3047,6 +3075,19 @@ ObjectMemory >> isContextHeader: aHeader [
 ObjectMemory >> isContextNonImm: oop [
 	<inline: true>
 	^self isContextHeader: (self baseHeader: oop)
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> isFloatInstance: oop [
+	<inline: true>
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (objectMemory splObj: ClassFloat) is expanded in-place and is
+	 _not_ evaluated if oop has a non-zero CompactClassIndex."
+	^self
+		is: oop
+		instanceOf: (self splObj: ClassFloat) 
+		compactClassIndex: ClassFloatCompactIndex
 ]
 
 { #category : #'interpreter access' }
