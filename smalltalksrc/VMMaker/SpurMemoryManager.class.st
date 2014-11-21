@@ -4528,11 +4528,18 @@ SpurMemoryManager >> fixedFieldsOfClassFormatMask [
 	^1 << self fixedFieldsFieldWidth - 1
 ]
 
-{ #category : #'simulation only' }
-SpurMemoryManager >> floatValueOf: obj [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	<doNotGenerate>
-	^coInterpreter floatValueOf: obj
+{ #category : #'interpreter access' }
+SpurMemoryManager >> floatObjectOf: aFloat [
+	self subclassResponsibility
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> floatValueOf: oop [
+	"Answer the C double precision floating point value of the argument,
+	 or fail if it is not a Float, and answer 0.
+	 Note: May be called by translated primitive code."
+
+	self subclassResponsibility
 ]
 
 { #category : #'gc - scavenging' }
@@ -6044,6 +6051,11 @@ SpurMemoryManager >> isEphemeronFormat: format [
 SpurMemoryManager >> isFixedSizePointerFormat: format [
 	^format <= self nonIndexablePointerFormat
 	  or: [format = self ephemeronFormat]
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> isFloatInstance: oop [
+	self subclassResponsibility
 ]
 
 { #category : #'simulation only' }
