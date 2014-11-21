@@ -247,23 +247,28 @@ InterpreterPrimitives >> magnitude64BitIntegerFor: magnitude neg: isNegative [
 	<var: 'highWord' type: #usqInt>
 
 	isSmall := isNegative
-				ifTrue: [magnitude <= (objectMemory maxSmallInteger + 1)]
+				ifTrue: [magnitude < objectMemory maxSmallInteger]
 				ifFalse: [magnitude < (objectMemory maxSmallInteger + 1)].
 	isSmall ifTrue:
 		[smallVal := self cCoerceSimple: magnitude to: #sqInt.
-		isNegative	ifTrue: [smallVal := 0 - smallVal].
-		^objectMemory integerObjectOf: smallVal].
+		 isNegative ifTrue: [smallVal := 0 - smallVal].
+		 ^objectMemory integerObjectOf: smallVal].
+
 	largeClass := isNegative
 					ifTrue: [objectMemory classLargeNegativeInteger]
 					ifFalse: [objectMemory classLargePositiveInteger].
-	highWord := magnitude >> 32.
-	highWord = 0 
-		ifTrue: [sz := 4] 
+	objectMemory wordSize = 8
+		ifTrue: [sz := 8]
 		ifFalse:
-			[sz := 5.
-			(highWord := highWord >> 8) = 0 ifFalse: [sz := sz + 1].
-			(highWord := highWord >> 8) = 0 ifFalse: [sz := sz + 1].
-			(highWord := highWord >> 8) = 0 ifFalse: [sz := sz + 1]].
+			[(highWord := magnitude >> 32) = 0
+				ifTrue: [sz := 4] 
+				ifFalse:
+					[sz := 5.
+					 (highWord := highWord >> 8) = 0 ifFalse:
+						[sz := sz + 1.
+						 (highWord := highWord >> 8) = 0 ifFalse:
+							[sz := sz + 1.
+							 (highWord := highWord >> 8) = 0 ifFalse: [sz := sz + 1]]]]].
 	newLargeInteger := objectMemory instantiateClass: largeClass indexableSize:  sz.
 	0 to: sz-1 do: [:i |
 		intValue := (magnitude >> (i * 8)) bitAnd: 255.
@@ -768,21 +773,23 @@ InterpreterPrimitives >> primitiveBitShift [
 			[integerReceiver := self signed64BitValueOf: integerReceiver].
 	self successful ifTrue:
 		[(integerArgument := objectMemory integerValueOf: integerArgument) >= 0
-			ifTrue: "Left shift -- must fail if we lose bits beyond 32"
+			ifTrue: "Left shift -- must fail bits would be lost"
 				[integerArgument <= objectMemory numSmallIntegerBits ifFalse:
 					[^self primitiveFail].
 				shifted := integerReceiver << integerArgument.
-				(shifted >> integerArgument) = integerReceiver ifFalse:
+				integerReceiver = (objectMemory wordSize = 4
+									ifTrue: [shifted >> integerArgument]
+									ifFalse: [shifted >>> integerArgument])  ifFalse:
 					[^self primitiveFail]]
 			ifFalse: "Right shift -- OK to lose bits"
 				[integerArgument >= objectMemory numSmallIntegerBits negated ifFalse:
 					[^self primitiveFail].
-			shifted := integerReceiver >> (0 - integerArgument)].
-		shifted := (objectMemory isIntegerValue: shifted)
-					ifTrue: [objectMemory integerObjectOf: shifted]
+				 shifted := integerReceiver >> (0 - integerArgument)].
+		shifted := objectMemory wordSize = 4
+					ifTrue: [self positive32BitIntegerFor: shifted]
 					ifFalse:
-						[objectMemory wordSize = 4
-							ifTrue: [self positive32BitIntegerFor: shifted]
+						[(objectMemory isIntegerValue: shifted)
+							ifTrue: [objectMemory integerObjectOf: shifted]
 							ifFalse: [self signed64BitIntegerFor: shifted]].
 		self pop: 2 thenPush: shifted]
 ]
