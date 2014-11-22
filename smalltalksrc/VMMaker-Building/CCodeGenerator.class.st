@@ -4037,8 +4037,13 @@ CCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
 				[:optionClass|
 				 aClass cogitClass ifNotNil:
 					[:cogitClass|
-					 (Cogit withAllSubclasses anySatisfy: [:c| c = cogitClass]) ifTrue:
-						[^cogitClass includesBehavior: optionClass]]].
+					 (optionClass includesBehavior: Cogit) ifTrue:
+						[^cogitClass includesBehavior: optionClass]].
+				 aClass objectMemoryClass ifNotNil:
+					[:objectMemoryClass|
+					 ((optionClass includesBehavior: ObjectMemory)
+					   or: [optionClass includesBehavior: SpurMemoryManager]) ifTrue:
+						[^objectMemoryClass includesBehavior: optionClass]]].
 			 "Lookup options in options, class variables of the defining class, VMBasicConstants, the interpreterClass and the objectMemoryClass"
 			 {aClass initializationOptions.
 			   aClass.

@@ -274,6 +274,21 @@ Spur64BitMemoryManager >> changeClassOf: rcvr to: argClass [
 ]
 
 { #category : #'interpreter access' }
+Spur64BitMemoryManager >> exponentOfSmallFloat: oop [
+	"Answer the exponent of the argument, a SmallFloat.
+	 See section 61-bit Immediate Floats in the SpurMemoryManager class comment.
+				msb                                              lsb 
+				[8expsubset][52mantissa][1s][3tags]"
+	| exp |
+	self assert: (oop bitAnd: self tagMask) = self smallFloatTag.
+	^oop <= 15
+		ifTrue: [0]
+		ifFalse:
+			[exp := oop >> (self numTagBits + self smallFloatMantissaBits + 1).
+			 exp + self smallFloatExponentOffset - 1022]
+]
+
+{ #category : #'interpreter access' }
 Spur64BitMemoryManager >> fetchClassTagOf: oop [
 	| tagBits |
 	^(tagBits := oop bitAnd: self tagMask) ~= 0
@@ -812,7 +827,9 @@ Spur64BitMemoryManager >> shiftForWord [
 
 { #category : #'interpreter access' }
 Spur64BitMemoryManager >> smallFloatExponentOffset [
-	^128
+	"896 is 1023 - 127, where 1023 is the mid-point of the 11-bit double precision exponent range,
+	 and 127 is the mid-point of the 8-bit SmallDouble exponent range."
+	^896
 ]
 
 { #category : #'interpreter access' }
@@ -825,7 +842,7 @@ Spur64BitMemoryManager >> smallFloatObjectOf: aFloat [
 	"Encode the argument, aFloat in the SmallFloat range, as a tagged small float.
 	 See section 61-bit Immediate Floats in the SpurMemoryManager class comment.
 
-	 Encode:					[1s][     11 exponent     ][52mantissa] 
+	 Encode:				[1s][     11 exponent     ][52mantissa] 
 	 rot sign:				[     11 exponent     ][52mantissa][1s] 
 	 sub exponent offset:	[ 000 ][8expsubset][52 mantissa][1s] 
 	 shift:					[8expsubset][52 mantissa][1s][ 000 ] 
@@ -833,15 +850,15 @@ Spur64BitMemoryManager >> smallFloatObjectOf: aFloat [
 	<inline: true>
 	<var: #aFloat type: #double>
 	| rawFloat rot |
-	rawFloat := self
-					cCode:
-						[(self cCoerce: (self addressOf: aFloat) to: 'sqLong *') at: 0]
+	self assert: (self isSmallFloatValue: aFloat).
+	rawFloat := self cCode: [(self cCoerce: (self addressOf: aFloat) to: 'sqLong *') at: 0]
 					inSmalltalk: [(aFloat at: 1) << 32 + (aFloat at: 2)].
 	rot := self rotateLeft: rawFloat.
 	rot > 1 ifTrue:
 		[rot := rot - (self smallFloatExponentOffset << (self smallFloatMantissaBits + 1)).
 		 self assert: rot > 0].
-	^rot << self numTagBits + self smallFloatTag
+	^self cCode: [rot << self numTagBits + self smallFloatTag]
+		inSmalltalk: [((rot << self numTagBits) bitAnd: 16rFFFFFFFFFFFFFFFF) + self smallFloatTag]
 ]
 
 { #category : #'cog jit support' }

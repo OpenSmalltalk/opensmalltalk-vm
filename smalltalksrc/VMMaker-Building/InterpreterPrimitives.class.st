@@ -1653,7 +1653,8 @@ InterpreterPrimitives >> primitiveFractionalPart [
 	<var: #trunc type: #double>
 	rcvr := self popFloat.
 	self successful
-		ifTrue: [self cCode: 'frac = modf(rcvr, &trunc)' inSmalltalk: [frac := rcvr fractionPart].
+		ifTrue: [frac := self cCode: [self mod: rcvr f: (self addressOf: trunc)]
+							inSmalltalk: [rcvr fractionPart].
 				self pushFloat: frac]
 		ifFalse: [self unPop: 1]
 ]
@@ -3431,6 +3432,244 @@ InterpreterPrimitives >> primitiveSlotAtPut [
 	^self primitiveFailFor: PrimErrBadReceiver
 ]
 
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatAdd [
+	<option: #Spur64BitMemoryManager>
+	| rcvr arg |
+	<var: #rcvr type: #double>
+	<var: #arg type: #double>
+
+	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
+	arg := self loadFloatOrIntFrom: self stackTop.
+	self successful ifTrue:
+		[self pop: 2 thenPushFloat: rcvr + arg]
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatArctan [
+	<option: #Spur64BitMemoryManager>
+	| rcvr |
+	<var: #rcvr type: #double>
+	rcvr := objectMemory smallFloatValueOf: self stackTop.
+	self pop: 1
+		thenPushFloat: (self cCode: [rcvr atan]
+							inSmalltalk: [rcvr = rcvr
+											ifTrue: [rcvr arcTan]
+											ifFalse: [Float nan]])
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatDivide [
+	<option: #Spur64BitMemoryManager>
+	| rcvr arg |
+	<var: #rcvr type: #double>
+	<var: #arg type: #double>
+
+	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
+	arg := self loadFloatOrIntFrom: self stackTop.
+	self successful ifTrue:
+		[self pop: 2 thenPushFloat: rcvr / arg]
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatEqual [
+	<option: #Spur64BitMemoryManager>
+	| rcvr arg |
+	<var: #rcvr type: #double>
+	<var: #arg type: #double>
+
+	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
+	arg := self loadFloatOrIntFrom: self stackTop.
+	self successful ifTrue:
+		[self pop: 2 thenPushBool: rcvr = arg]
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatExp [
+	"Computes E raised to the receiver power.
+	 Since SmallFloats cannot represent NaNs there's no need to special case."
+	<option: #Spur64BitMemoryManager>
+
+	self pop: 1 thenPushFloat: (objectMemory smallFloatValueOf: self stackTop) exp
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatExponent [
+	"Answer the exponent part of this float."
+	<option: #Spur64BitMemoryManager>
+
+	self pop: 1 thenPushInteger: (objectMemory exponentOfSmallFloat: self stackTop) - 1
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatFractionalPart [
+	<option: #Spur64BitMemoryManager>
+	| rcvr frac trunc |
+	<var: #rcvr type: #double>
+	<var: #frac type: #double>
+	<var: #trunc type: #double>
+	rcvr := objectMemory smallFloatValueOf: self stackTop.
+	frac := self cCode: [self mod: rcvr f: (self addressOf: trunc)]
+				inSmalltalk: [rcvr fractionPart].
+	self pop: 1 thenPushFloat: frac
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatGreaterOrEqual [
+	<option: #Spur64BitMemoryManager>
+	| rcvr arg |
+	<var: #rcvr type: #double>
+	<var: #arg type: #double>
+
+	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
+	arg := self loadFloatOrIntFrom: self stackTop.
+	self successful ifTrue:
+		[self pop: 2 thenPushBool: rcvr >= arg]
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatGreaterThan [
+	<option: #Spur64BitMemoryManager>
+	| rcvr arg |
+	<var: #rcvr type: #double>
+	<var: #arg type: #double>
+
+	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
+	arg := self loadFloatOrIntFrom: self stackTop.
+	self successful ifTrue:
+		[self pop: 2 thenPushBool: rcvr > arg]
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatLessOrEqual [
+	<option: #Spur64BitMemoryManager>
+	| rcvr arg |
+	<var: #rcvr type: #double>
+	<var: #arg type: #double>
+
+	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
+	arg := self loadFloatOrIntFrom: self stackTop.
+	self successful ifTrue:
+		[self pop: 2 thenPushBool: rcvr <= arg]
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatLessThan [
+	<option: #Spur64BitMemoryManager>
+	| rcvr arg |
+	<var: #rcvr type: #double>
+	<var: #arg type: #double>
+
+	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
+	arg := self loadFloatOrIntFrom: self stackTop.
+	self successful ifTrue:
+		[self pop: 2 thenPushBool: rcvr < arg]
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatLogN [
+	"Natural log."
+	<option: #Spur64BitMemoryManager>
+	| rcvr |
+	<var: #rcvr type: #double>
+	rcvr := objectMemory smallFloatValueOf: self stackTop.
+	self pop: 1
+		thenPushFloat: (self cCode: [rcvr log]
+							inSmalltalk: [rcvr = rcvr
+											ifTrue: [rcvr ln]
+											ifFalse: [Float nan]])
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatMultiply [
+	<option: #Spur64BitMemoryManager>
+	| rcvr arg |
+	<var: #rcvr type: #double>
+	<var: #arg type: #double>
+
+	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
+	arg := self loadFloatOrIntFrom: self stackTop.
+	self successful ifTrue:
+		[self pop: 2 thenPushFloat: rcvr * arg]
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatNotEqual [
+	<option: #Spur64BitMemoryManager>
+	| rcvr arg |
+	<var: #rcvr type: #double>
+	<var: #arg type: #double>
+
+	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
+	arg := self loadFloatOrIntFrom: self stackTop.
+	self successful ifTrue:
+		[self pop: 2 thenPushBool: (rcvr = arg) not]
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatSine [
+	<option: #Spur64BitMemoryManager>
+	| rcvr |
+	<var: #rcvr type: #double>
+	rcvr := objectMemory smallFloatValueOf: self stackTop.
+	self pop: 1
+		thenPushFloat: (self cCode: [rcvr sin]
+							inSmalltalk: [rcvr = rcvr
+											ifTrue: [rcvr sin]
+											ifFalse: [Float nan]])
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatSquareRoot [
+	<option: #Spur64BitMemoryManager>
+
+	self pop: 1 thenPushFloat: (objectMemory smallFloatValueOf: self stackTop) sqrt
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatSubtract [
+	<option: #Spur64BitMemoryManager>
+	| rcvr arg |
+	<var: #rcvr type: #double>
+	<var: #arg type: #double>
+
+	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
+	arg := self loadFloatOrIntFrom: self stackTop.
+	self successful ifTrue:
+		[self pop: 2 thenPushFloat: rcvr - arg]
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatTimesTwoPower [
+	<option: #Spur64BitMemoryManager>
+	| rcvr arg |
+	<var: #rcvr type: #double>
+	arg := self stackTop.
+	(objectMemory isIntegerObject: arg)
+		ifTrue:
+			[rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
+			 arg := objectMemory integerValueOf: arg.
+			 self pop: 1
+				thenPushFloat: (self cCode: [self ld: rcvr exp: arg]
+									inSmalltalk: [rcvr timesTwoPower: arg])]
+		ifFalse:
+			[self primitiveFail]
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatTruncated [
+	<option: #Spur64BitMemoryManager>
+	| rcvr trunc |
+	<var: #rcvr type: #double>
+	<var: #trunc type: #double>
+	rcvr := self smallFloatValueOf: self stackTop.
+	self cCode: [self mod: rcvr f: (self addressOf: trunc)]
+		inSmalltalk: [trunc := rcvr truncated].
+	(trunc between: SmallInteger minVal asFloat and: SmallInteger maxVal asFloat)
+		ifTrue: [self pop: 1 thenPushInteger: trunc asInteger]
+		ifFalse: [self primitiveFail]
+]
+
 { #category : #'system control primitives' }
 InterpreterPrimitives >> primitiveSnapshot [
 	"save a normal snapshot under the same name as it was loaded unless it has been renamed by the last primitiveImageName"
@@ -3763,19 +4002,16 @@ InterpreterPrimitives >> primitiveTimesTwoPower [
 
 { #category : #'arithmetic float primitives' }
 InterpreterPrimitives >> primitiveTruncated [ 
-	| rcvr frac trunc |
+	| rcvr trunc |
 	<var: #rcvr type: #double>
-	<var: #frac type: #double>
 	<var: #trunc type: #double>
 	rcvr := self popFloat.
 	self successful ifTrue:
-		[self cCode: 'frac = modf(rcvr, &trunc)'
+		[self cCode: [self mod: rcvr f: (self addressOf: trunc)]
 			inSmalltalk: [trunc := rcvr truncated].
-		self flag: #Dan.		"The ranges are INCORRECT if SmallIntegers are wider than 31 bits."
-		self cCode: 'success((-1073741824.0 <= trunc) && (trunc <= 1073741823.0))'
-			inSmalltalk: [self success: (trunc between: SmallInteger minVal and: SmallInteger maxVal)]].
+		self success: (trunc between: SmallInteger minVal asFloat and: SmallInteger maxVal asFloat)].
 	self successful
-		ifTrue: [self cCode: 'pushInteger((sqInt) trunc)' inSmalltalk: [self pushInteger: trunc]]
+		ifTrue: [self pushInteger: trunc asInteger]
 		ifFalse: [self unPop: 1]
 ]
 
