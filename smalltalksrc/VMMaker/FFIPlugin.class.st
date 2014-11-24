@@ -1,5 +1,5 @@
 "
-This plugin provides access to foreign function interfaces on those platforms that provide such. For example Windows DLLs and unix .so's.
+This plugin provides access to foreign function interfaces on those platforms that provide such. For example Windows DLLs and unix .so's.  It is obsolete, having been superceded by the ThreadedFFIPlugin.
 "
 Class {
 	#name : #FFIPlugin,
