@@ -196,12 +196,14 @@ VMClass class >> initializeMiscConstants [
 
 	initializationOptions ifNil: [self initializationOptions: Dictionary new].
 	omc := initializationOptions at: #ObjectMemory ifAbsent: nil.
+	(omc isNil and: [self defaultObjectMemoryClass notNil]) ifTrue:
+		[omc := initializationOptions at: #ObjectMemory put: self defaultObjectMemoryClass name].
 	initializationOptions
 		at: #SqueakV3ObjectMemory	"the good ole default"
 			put: (omc
 					ifNil: [true]
 					ifNotNil: [(Smalltalk at: omc) includesBehavior: ObjectMemory]);
-		at: #SpurObjectMemory		"the new condender"
+		at: #SpurObjectMemory		"the new contender"
 			put: (omc
 					ifNil: [false]
 					ifNotNil: [(Smalltalk at: omc) includesBehavior: SpurMemoryManager]).
