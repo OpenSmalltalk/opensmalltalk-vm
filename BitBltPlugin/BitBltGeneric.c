@@ -484,8 +484,8 @@ static uint32_t genericCompareRow(uint32_t        width,
         b32 >>= bppB * (pixelIndexes >> 27);
     while (width > 0)
     {
-        uint32_t a = msbA ? a32 >> (32-bppA) : a32 & ((1<<bppA)-1);
-        uint32_t b = msbB ? b32 >> (32-bppB) : b32 & ((1<<bppB)-1);
+        uint32_t a = (msbA ? a32 >> (32-bppA) : a32 & ((1<<bppA)-1)) & 0xFFFFFF;
+        uint32_t b = (msbB ? b32 >> (32-bppB) : b32 & ((1<<bppB)-1)) & 0xFFFFFF;
         uint32_t nextPixelIndexes;
         if (matchRule == MR_pixelMatch)
             count += a == colorA && b == colorB;
