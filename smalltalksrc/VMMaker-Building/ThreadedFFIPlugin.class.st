@@ -650,7 +650,7 @@ ThreadedFFIPlugin >> ffiContentsOfHandle: oop errCode: errCode [
 	"Make sure that the given oop is a valid external handle"
 	<inline: true>
 	((interpreterProxy isBytes: oop)
-	 and: [(interpreterProxy byteSizeOf: oop) = 4]) ifFalse:
+	 and: [(interpreterProxy byteSizeOf: oop) = (self sizeof: #sqInt)]) ifFalse:
 		[^self ffiFail: errCode].
 	^interpreterProxy fetchPointer: 0 ofObject: oop
 ]
@@ -818,7 +818,9 @@ ThreadedFFIPlugin >> ffiLoadCalloutModule: module [
 		"plain module name"
 		ffiModuleName := module.
 		moduleLength := interpreterProxy byteSizeOf: ffiModuleName.
-		moduleHandle := interpreterProxy ioLoadModule: (self cCoerce: (interpreterProxy firstIndexableField: ffiModuleName) to:'int') OfLength: moduleLength.
+		moduleHandle := (interpreterProxy
+							ioLoadModule: (interpreterProxy firstIndexableField: ffiModuleName) asInteger
+							OfLength: moduleLength) asInteger.
 		(interpreterProxy failed
 		 or: [moduleHandle = 0]) ifTrue:
 			[^self ffiFail: FFIErrorModuleNotFound]. "failed"
@@ -835,7 +837,9 @@ ThreadedFFIPlugin >> ffiLoadCalloutModule: module [
 		ffiModuleName := interpreterProxy fetchPointer: 1 ofObject: rcvr.
 		(interpreterProxy isBytes: ffiModuleName) ifFalse:[^self ffiFail: FFIErrorBadExternalLibrary].
 		moduleLength := interpreterProxy byteSizeOf: ffiModuleName.
-		moduleHandle := interpreterProxy ioLoadModule: (self cCoerce: (interpreterProxy firstIndexableField: ffiModuleName) to:'int') OfLength: moduleLength.
+		moduleHandle := (interpreterProxy
+								ioLoadModule: (interpreterProxy firstIndexableField: ffiModuleName) asInteger
+								OfLength: moduleLength) asInteger.
 		(interpreterProxy failed
 		 or: [moduleHandle = 0]) ifTrue:
 			[^self ffiFail: FFIErrorModuleNotFound]. "failed"
@@ -1628,7 +1632,7 @@ ThreadedFFIPlugin >> primitiveForceLoad [
 	| rcvr moduleHandlePtr moduleHandle ffiModuleName ptr |
 	<export: true>
 	<inline: false>
-	<var: #ptr type: #'int *'>
+	<var: #ptr type: #'sqInt *'>
 	interpreterProxy methodArgumentCount = 0 ifFalse:
 		[^interpreterProxy primitiveFail].
 	rcvr := interpreterProxy stackValue: 0.
@@ -1641,10 +1645,11 @@ ThreadedFFIPlugin >> primitiveForceLoad [
 	ffiModuleName := interpreterProxy fetchPointer: 1 ofObject: rcvr.
 	(interpreterProxy isBytes: ffiModuleName) ifFalse:
 		[^self ffiFail: FFIErrorBadExternalLibrary].
-	moduleHandle := interpreterProxy
-						ioLoadModule: (self cCoerce: (interpreterProxy firstIndexableField: ffiModuleName) to: #int)
-						OfLength: (interpreterProxy byteSizeOf: ffiModuleName).
-	interpreterProxy failed ifTrue:[^self ffiFail: FFIErrorModuleNotFound]. "failed"
+	moduleHandle := (interpreterProxy
+						ioLoadModule: (interpreterProxy firstIndexableField: ffiModuleName) asInteger
+						OfLength: (interpreterProxy byteSizeOf: ffiModuleName)) asInteger.
+	interpreterProxy failed ifTrue:
+		[^self ffiFail: FFIErrorModuleNotFound]. "failed"
 	"and store back"
 	ptr := interpreterProxy firstIndexableField: moduleHandlePtr.
 	ptr at: 0 put: moduleHandle.
