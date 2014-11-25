@@ -1,1 +1,0 @@
-"Change the update stream to trunk and update"[MCMcmUpdater	defaultUpdateURL: 'http://source.squeak.org/trunk';	updateFromServer] valueSupplyingAnswer: true.Smalltalk snapshot: true andQuit: true

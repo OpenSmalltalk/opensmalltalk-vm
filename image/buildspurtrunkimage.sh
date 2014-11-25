@@ -7,8 +7,8 @@ if [ "$1" != -skiptrunkbuild ]; then
 	cp -p $SQUEAK45.image trunk46forspur.image
 	cp -p $SQUEAK45.changes trunk46forspur.changes
 
-	echo $VM trunk46forspur.image BuildSqueakTrunkImage.st
-	$VM trunk46forspur.image BuildSqueakTrunkImage.st
+	echo $VM trunk46forspur.image UpdateSqueakTrunkImage.st
+	$VM trunk46forspur.image UpdateSqueakTrunkImage.st
 fi
 
 #Old code pre patchAndUploadUnpatchedInTrunk
