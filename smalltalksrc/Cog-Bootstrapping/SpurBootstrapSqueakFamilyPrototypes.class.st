@@ -4,6 +4,11 @@ Class {
 	#category : #'Cog-Bootstrapping'
 }
 
+{ #category : #accessing }
+SpurBootstrapSqueakFamilyPrototypes class >> imageType [
+	^'squeak'
+]
+
 { #category : #'method prototypes' }
 SpurBootstrapSqueakFamilyPrototypes >> ClassBuilderPROTOTYPEcomputeFormat: type instSize: newInstSize forSuper: newSuper ccIndex: ccIndex [
 	"Compute the new format for making oldClass a subclass of newSuper.

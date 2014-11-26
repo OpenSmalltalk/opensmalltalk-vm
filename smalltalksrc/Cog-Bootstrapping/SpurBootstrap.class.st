@@ -333,9 +333,9 @@ SpurBootstrap >> addNewMethods [
 SpurBootstrap >> allMethodPrototypes [
 	"Answer all prototype selectors, including those marked <remove>"
 	^(imageTypes 
-		inject: (IdentitySet withAll: SpurBootstrapPrototypes new allMethodPrototypes)
+		inject: (IdentitySet withAll: SpurBootstrapPrototypes allMethodPrototypes)
 		into: [:allPrototypes :type | | prototypes |
-			prototypes := (SpurBootstrapPrototypes prototypesFor: type) allMethodPrototypes.
+			prototypes := (SpurBootstrapPrototypes prototypeClassFor: type) allMethodPrototypes.
 			allPrototypes
 				removeAllSuchThat: [:existing| prototypes anySatisfy: [:new| existing selector == new selector]];
 				addAll: prototypes;
@@ -964,7 +964,8 @@ SpurBootstrap >> fillInPointerObjectWithPC: newObj from: oldObj [
 		[method := oldHeap
 						fetchPointer: MethodIndex
 						ofObject: oldObj.
-		 (oldInterpreter primitiveIndexOf: method) > 0 ifTrue:
+		 (method ~= oldHeap nilObject
+		  and: [(oldInterpreter primitiveIndexOf: method) > 0]) ifTrue:
 			[self incrementPCField: InstructionPointerIndex ofObject: newObj by: 3]].
 ]
 
@@ -1023,7 +1024,8 @@ SpurBootstrap >> findRequiredGlobals [
 				(l isVariableBinding
 				 and: [l key isSymbol
 				 and: [SpurBootstrapPrototypes withAllSubclasses noneSatisfy: [:sbpc| sbpc name == l key]]]) ifTrue:
-					[(Smalltalk bindingOf: l key) == l
+					[((Smalltalk bindingOf: l key) == l
+					  or: [(Undeclared bindingOf: l key) == l])
 						ifTrue: [globals add: l]
 						ifFalse:
 							[self assert: (nonMetaClass bindingOf: l key) == l.
@@ -1233,7 +1235,7 @@ SpurBootstrap >> installableMethodFor: aCompiledMethod selector: selector classN
 		oop := (literal isLiteral or: [literal isVariableBinding])
 					ifTrue:
 						[literal isInteger
-							ifTrue: [oldHeap integerObjectOf: literal]
+							ifTrue: [oldInterpreter signed64BitIntegerFor: literal]
 							ifFalse: [literalMap
 										at: literal
 										ifAbsent: [self findLiteral: literal
@@ -1450,7 +1452,8 @@ SpurBootstrap >> newClassFormatFor: oldClassObj [
 	 NEW: 		<5 bits inst spec><16 bits inst size>"
 	| oldFormat instSize newInstSpec |
 	((oldInterpreter classNameOf: oldClassObj Is: 'SmallInteger')
-	 or: [oldInterpreter classNameOf: oldClassObj Is: 'Character']) ifTrue:
+	 or: [(oldInterpreter classNameOf: oldClassObj Is: 'Character')
+	 or: [oldInterpreter classNameOf: oldClassObj Is: 'SmallFloat64']]) ifTrue:
 		[^newHeap integerObjectOf: newHeap instSpecForImmediateClasses << 16].
 	oldFormat := oldHeap formatOfClass: oldClassObj. "N.B. SmallInteger with tag bit cleared"
 	oldFormat := oldFormat >> 1.
