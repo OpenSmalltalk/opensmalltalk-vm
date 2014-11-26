@@ -245,7 +245,7 @@ SpurBootstrapSqueakPrototypes >> SmalltalkImagePROTOTYPErecreateSpecialObjectsAr
 	newArray at: 7 put: ByteString.
 	newArray at: 8 put: Array.
 	newArray at: 9 put: Smalltalk.
-	newArray at: 10 put: Float.
+	newArray at: 10 put: BoxedFloat64.
 	newArray at: 11 put: (self globals at: #MethodContext ifAbsent: [self globals at: #Context]).
 	newArray at: 12 put: nil. "was BlockContext."
 	newArray at: 13 put: Point.
