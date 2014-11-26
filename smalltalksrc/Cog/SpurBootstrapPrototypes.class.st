@@ -4,17 +4,40 @@ Class {
 	#category : #'Cog-Bootstrapping'
 }
 
+{ #category : #'accessing method dictionary' }
+SpurBootstrapPrototypes class >> allMethodPrototypes [
+	^(self canUnderstand: #allMethods)
+		ifTrue: "Pharo"
+			[self allMethods select:
+				[:each| each category = 'method prototypes']]
+		ifFalse: "Squeak"
+			[false
+				ifTrue: "%$#@*! collect: on IdentitySet answers a *Set*, not an IdentitySet %$#@*!"
+					[self allSelectors
+						collect: [:s| self lookupSelector: s]
+						thenSelect: [:m| m protocol = 'method prototypes']]
+				ifFalse: "...hence: "
+					[self allSelectors
+						inject: IdentitySet new
+						into: [:methods :sel| | method |
+							method := self lookupSelector: sel.
+							method protocol = 'method prototypes' ifTrue:
+								[methods add: method].
+							methods]]]
+]
+
 { #category : #accessing }
 SpurBootstrapPrototypes class >> imageType [ 
 	^ self subclassResponsibility
 ]
 
 { #category : #'instance creation' }
-SpurBootstrapPrototypes class >> prototypesFor: type [ 
-	^ (self allSubclasses 
-		detect: [ :aClass | aClass imageType = type ])
-		new
-	
+SpurBootstrapPrototypes class >> prototypeClassFor: type [ 
+	| deepest |
+	deepest := nil.
+	self allSubclassesDo:
+		[:aClass | aClass imageType = type ifTrue: [deepest := aClass]].
+	^deepest
 ]
 
 { #category : #'method prototypes' }
@@ -672,6 +695,46 @@ SpurBootstrapPrototypes >> EncoderForV3PlusClosuresclassPROTOTYPEcallPrimitiveCo
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrapPrototypes >> FloatclassPROTOTYPEfromIEEE32Bit: word [
+	"Convert the given 32 bit word (which is supposed to be a positive 32-bit value) from
+	 a 32 bit IEEE floating point representation into an actual Squeak float object (being
+	 64 bits wide). Should only be used for conversion in FloatArrays or likewise objects."
+	
+	| sign mantissa exponent delta |
+	word <= 0 ifTrue:
+		[^word negative
+			ifTrue: [self error: 'Cannot deal with negative numbers']
+			ifFalse: [self zero]].
+	sign := word bitAnd: 16r80000000.
+	word = sign ifTrue:
+		[^self negativeZero].
+	
+	exponent := ((word bitShift: -23) bitAnd: 16rFF) - 127.
+	mantissa := word bitAnd:  16r7FFFFF.
+
+	exponent = 128 ifTrue: "Either NAN or INF"
+		[^mantissa = 0
+			ifTrue:
+				[sign = 0 
+					ifTrue: [self infinity]
+					ifFalse: [self negativeInfinity]]
+			ifFalse: [self nan]].
+
+	exponent = -127 ifTrue:
+		"gradual underflow (denormalized number)
+		 Remove first bit of mantissa and adjust exponent"
+		[delta := mantissa highBit.
+		 mantissa := (mantissa bitShift: 1) bitAnd: (1 bitShift: delta) - 1.
+		 exponent := exponent + delta - 23].
+	
+	"Create new float"
+	^(self basicNew: 2)
+		basicAt: 1 put: ((sign bitOr: (1023 + exponent bitShift: 20)) bitOr: (mantissa bitShift: -3));
+		basicAt: 2 put: ((mantissa bitAnd: 7) bitShift: 29);
+		* 1.0 "reduce to SmallFloat64 if possible"
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrapPrototypes >> InstructionClientPROTOTYPEcallPrimitive: pimIndex [
 	"V3PlusClosures:	139 10001011	iiiiiiii   jjjjjjjj  Call Primitive #iiiiiiii + (jjjjjjjj * 256)
 	 NewsqueakV4:		249 11111001	iiiiiiii   jjjjjjjj  Call Primitive #iiiiiiii + (jjjjjjjj * 256)
@@ -834,19 +897,4 @@ SpurBootstrapPrototypes >> WideStringPROTOTYPEat: index put: aCharacter [
 				ifFalse: [self errorNonIntegerIndex]]
 		ifFalse:
 			[self errorImproperStore]
-]
-
-{ #category : #accessing }
-SpurBootstrapPrototypes >> allMethodPrototypes [ 
-	^[self class allMethods "Pharo"
-		select: [ :each | each category = 'method prototypes' ]]
-		on: MessageNotUnderstood
-		do: [:ex|
-			ex message selector == #allMethods
-				ifTrue:
-					[self class selectors "Squeak"
-						collect: [:s| self class >> s]
-						thenSelect: [:m| m protocol = 'method prototypes']]
-				ifFalse:
-					[ex pass]]
 ]
