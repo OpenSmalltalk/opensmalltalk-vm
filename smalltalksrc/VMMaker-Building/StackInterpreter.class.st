@@ -6336,7 +6336,7 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 				[stackPages
 					longAt: theFP + FoxReceiver
 					put: (objectMemory followForwarded: oop)].
-			  theIP := (theFP + (self frameStackedReceiverOffset: theFP)) asUnsignedInteger. "reuse theIP; its just an offset here"
+			  theIP := (theFP + (self frameStackedReceiverOffset: theFP)) asInteger. "reuse theIP; its just an offset here"
 			  oop := stackPages longAt: theIP.
 			  (objectMemory isOopForwarded: oop) ifTrue:
 				[stackPages
@@ -6361,7 +6361,7 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 					longAt: theFP + FoxMethod
 					put: (oop := newOop)].
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
-				[theIPPtr := (theFP + FoxCallerSavedIP) asUnsignedInteger.
+				[theIPPtr := (theFP + FoxCallerSavedIP) asInteger.
 				 theFP := callerFP]]]
 ]
 
@@ -11104,12 +11104,17 @@ StackInterpreter >> printStackCallStack [
 ]
 
 { #category : #'debug printing' }
-StackInterpreter >> printStackCallStackOf: aFramePointer [
-	<var: #aFramePointer type: #'char *'>
+StackInterpreter >> printStackCallStackOf: frameOrContext [
 	<api>
 	| theFP context |
 	<var: #theFP type: #'char *'>
-	theFP := aFramePointer.
+	(objectMemory addressCouldBeObj: frameOrContext) ifTrue:
+		[((objectMemory isContext: frameOrContext)
+		  and: [self checkIsStillMarriedContext: frameOrContext currentFP: nil]) ifTrue:
+			[^self printStackCallStackOf: (self frameOfMarriedContext: frameOrContext)].
+		 ^nil].
+	 
+	theFP := frameOrContext asVoidPointer.
 	[context := self shortReversePrintFrameAndCallers: theFP.
 	 ((self isMarriedOrWidowedContext: context)
 	  and:

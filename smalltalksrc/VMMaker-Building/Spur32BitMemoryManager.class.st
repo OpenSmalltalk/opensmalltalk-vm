@@ -262,14 +262,14 @@ Spur32BitMemoryManager >> coalesce: obj1 and: obj2 [
 
 	"compute total number of slots in obj2, including header"
 	obj2slots := header2NumSlots = self numSlotsMask
-					ifTrue: [(self longAt: obj2 - self baseHeaderSize) + (2 * self baseHeaderSize / self wordSize)]
+					ifTrue: [(self rawOverflowSlotsOf: obj2) + (2 * self baseHeaderSize / self wordSize)]
 					ifFalse: [(header2NumSlots = 0 ifTrue: [1] ifFalse: [header2NumSlots]) + (self baseHeaderSize / self wordSize)].
 	obj2slots := obj2slots + (obj2slots bitAnd: 1).
 	self assert: obj2slots * self wordSize = (self bytesInObject: obj2).
 
 	"if obj1 already has a double header things are simple..."
 	header1NumSlots = self numSlotsMask ifTrue:
-		[self longAt: obj1  - self baseHeaderSize put: obj2slots + (self longAt: obj1 - self baseHeaderSize).
+		[self rawOverflowSlotsOf: obj1 put: obj2slots + (self rawOverflowSlotsOf: obj1).
 		 ^obj1].
 
 	"compute total number of slots in obj1, excluding header"
@@ -281,8 +281,7 @@ Spur32BitMemoryManager >> coalesce: obj1 and: obj2 [
 
 	"if obj1 still only requires a single header things are simple..."
 	newNumSlots < self numSlotsMask ifTrue:
-		[self byteAt: obj1 + (self numSlotsFullShift / BitsPerByte)
-			put: newNumSlots.
+		[self rawNumSlotsOf: obj1 put: newNumSlots.
 		 ^obj1].
 
 	"convert from single to double header..."
@@ -407,40 +406,33 @@ Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 	| instSpec classFormat numSlots classIndex newObj fillValue |
 	classFormat := self formatOfClass: classObj.
 	instSpec := self instSpecOfClassFormat: classFormat.
+	classIndex := self rawHashBitsOf: classObj.
 	fillValue := 0.
 	instSpec caseOf: {
 		[self arrayFormat]	->
-			[nElements > self maxSlotsForAlloc ifTrue:
-				[^nil].
-			 numSlots := nElements.
+			[numSlots := nElements.
 			 fillValue := nilObj].
 		[self indexablePointersFormat]	->
-			[nElements > (self maxSlotsForAlloc - (self fixedFieldsOfClassFormat: classFormat)) ifTrue:
-				[^nil].
-			 numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements.
+			[numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements.
 			 fillValue := nilObj].
 		[self weakArrayFormat]	->
-			[nElements > (self maxSlotsForAlloc - (self fixedFieldsOfClassFormat: classFormat)) ifTrue:
-				[^nil].
-			 numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements.
+			[numSlots := (self fixedFieldsOfClassFormat: classFormat) + nElements.
 			 fillValue := nilObj].
 		[self sixtyFourBitIndexableFormat]	->
 			[nElements > (self maxSlotsForAlloc / 2) ifTrue:
-				[^nil].
+				[coInterpreter primitiveFailFor: PrimErrUnsupported.
+				 ^nil].
 			 numSlots := nElements * 2].
 		[self firstLongFormat]	->
-			[nElements > self maxSlotsForAlloc ifTrue:
-				[^nil].
+			[(classIndex = ClassFloatCompactIndex and: [nElements ~= 2]) ifTrue:
+				[coInterpreter primitiveFailFor: PrimErrBadReceiver.
+				 ^nil].
 			 numSlots := nElements].
 		[self firstShortFormat]	->
 			[numSlots := nElements + 1 // 2.
-			 numSlots > self maxSlotsForAlloc ifTrue:
-				[^nil].
 			 instSpec := instSpec + (nElements bitAnd: 1)].
 		[self firstByteFormat]	->
 			[numSlots := nElements + 3 // 4.
-			 numSlots > self maxSlotsForAlloc ifTrue:
-				[^nil].
 			 instSpec := instSpec + (4 - nElements bitAnd: 3)] }
 		otherwise: ["some Squeak images include funky fixed subclasses of abstract variable
 					 superclasses. e.g. DirectoryEntry as a subclass of ArrayedCollection.
@@ -448,13 +440,19 @@ Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 					 (nElements ~= 0 or: [instSpec > self lastPointerFormat]) ifTrue:
 						[^nil].
 					 numSlots := self fixedFieldsOfClassFormat: classFormat]. "non-indexable"
-	classIndex := self ensureBehaviorHash: classObj.
-	classIndex < 0 ifTrue:
-		[coInterpreter primitiveFailFor: classIndex negated.
-		 ^nil].
+	classIndex = 0 ifTrue:
+		[classIndex := self ensureBehaviorHash: classObj.
+		 classIndex < 0 ifTrue:
+			[coInterpreter primitiveFailFor: classIndex negated.
+			 ^nil]].
 	numSlots > self maxSlotsForNewSpaceAlloc
-		ifTrue: [newObj := self allocateSlotsInOldSpace: numSlots format: instSpec classIndex: classIndex]
-		ifFalse: [newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex].
+		ifTrue:
+			[numSlots > self maxSlotsForAlloc ifTrue:
+				[coInterpreter primitiveFailFor: PrimErrUnsupported.
+				 ^nil].
+			 newObj := self allocateSlotsInOldSpace: numSlots format: instSpec classIndex: classIndex]
+		ifFalse:
+			[newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex].
 	newObj ifNotNil:
 		[self fillObj: newObj numSlots: numSlots with: fillValue].
 	^newObj
