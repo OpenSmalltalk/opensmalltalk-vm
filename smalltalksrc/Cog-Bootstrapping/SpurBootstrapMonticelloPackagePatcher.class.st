@@ -141,6 +141,38 @@ SpurBootstrapMonticelloPackagePatcher >> cachedNonDiffyVersionNamed: versionName
 ]
 
 { #category : #'private-accessing' }
+SpurBootstrapMonticelloPackagePatcher >> classDefinitionFor: className type: typeSymbol from: definitions comment: commentString stamp: stampString [
+	| classDef |
+	classDef := definitions
+					detect: [:d| d isClassDefinition and: [d className = className]]
+					ifNone:
+						[self assert: (#(BoxedFloat64 SmallFloat64) includes: className).
+						 MCClassDefinition
+							name: className
+							superclassName: #Float
+							traitComposition: '{}'
+							classTraitComposition: '{}'
+							category: 'Kernel-Numbers'
+							instVarNames: #()
+							classVarNames: #()
+							poolDictionaryNames: #()
+							classInstVarNames: #()
+							type: typeSymbol
+							comment: commentString asString
+							commentStamp: stampString].
+	className == #Character ifTrue:
+		[classDef variables removeAllSuchThat:
+			[:varDef|
+			 varDef isInstanceVariable and: [varDef name = 'value']]].
+	classDef instVarNamed: 'type' put: typeSymbol.
+	commentString ifNotNil:
+		[classDef
+			instVarNamed: 'comment' put: commentString;
+			instVarNamed: 'commentStamp' put: stampString].
+	^MCAddition of: classDef
+]
+
+{ #category : #'private-accessing' }
 SpurBootstrapMonticelloPackagePatcher >> compiledMethodClassDefinition [
 	^MCAddition of: 
 		(MCClassDefinition name: #CompiledMethod
@@ -227,6 +259,25 @@ SpurBootstrapMonticelloPackagePatcher >> filesForPackage: package in: aDirectory
 		 and: [(fileName copyFrom: package name size + 2 to: package name size + 5) ~= 'spur']]]
 ]
 
+{ #category : #'private-accessing' }
+SpurBootstrapMonticelloPackagePatcher >> filteredDefinitionsAsPatches: modifiedDefinitions patches: existingPatches [
+	^modifiedDefinitions
+		select:
+			[:def|
+			 existingPatches noneSatisfy:
+				[:addition|
+				def isMethodDefinition
+				and: [addition definition isMethodDefinition
+				and: [addition definition selector = def selector
+				and: [addition definition className = def className
+				and: [addition definition classIsMeta = def classIsMeta]]]]]]
+		thenCollect:
+			[:def|
+			 ((def source includesSubString: 'DELETEME')
+				ifTrue: [MCRemoval]
+				ifFalse: [MCAddition]) of: def]
+]
+
 { #category : #configurations }
 SpurBootstrapMonticelloPackagePatcher >> findOldestConfigurationFor: packageVersions inVersionNames: configurationVersionNames repository: repo [
 	| oldest |
@@ -257,20 +308,6 @@ SpurBootstrapMonticelloPackagePatcher >> imageTypes: typeArray [
 ]
 
 { #category : #'private-accessing' }
-SpurBootstrapMonticelloPackagePatcher >> immediateClassDefinitionFor: className from: definitions comment: commentString stamp: stampString [
-	| classDef |
-	classDef := definitions detect: [:d| d isClassDefinition and: [d className = className]].
-	classDef variables removeAllSuchThat:
-		[:varDef|
-		 varDef isInstanceVariable and: [varDef name = 'value']].
-	classDef
-		instVarNamed: 'type' put: #immediate;
-		instVarNamed: 'comment' put: commentString;
-		instVarNamed: 'commentStamp' put: stampString.
-	^MCAddition of: classDef
-]
-
-{ #category : #'private-accessing' }
 SpurBootstrapMonticelloPackagePatcher >> modifiedCharacterDefinitionsIn: definitions [
 	| rewriter |
 	rewriter := RBParseTreeRewriter new.
@@ -281,6 +318,57 @@ SpurBootstrapMonticelloPackagePatcher >> modifiedCharacterDefinitionsIn: definit
 		collect: [:d| { d. self patchDefinition: d withRewriter: rewriter} ]
 		thenSelect: [:pair| pair first source ~= pair second source])
 			collect: [:pair| pair second])
+]
+
+{ #category : #'private-accessing' }
+SpurBootstrapMonticelloPackagePatcher >> modifiedFloatDefinitionsIn: definitions [
+	"Delete the non-accessing primitives in Float (prims 41 through 59),
+	 and copy them to BoxedFloat64,
+	 and create corresponding ones in SmallFloat64 with primtiive numbers + 500."
+	| floatPrims |
+	floatPrims := definitions select:
+					[:d| | index |
+					d isMethodDefinition
+					and: [d fullClassName = #Float
+					and: [(index := d source indexOfSubCollection: '<primitive: ') > 0
+					and: [(Integer readFrom: (ReadStream on: d source from: index + '<primitive: ' size to: index + '<primitive: ' size + 4))
+							between: 41
+							and: 59]]]].
+	^(floatPrims collect:
+		[:d|
+		 MCMethodDefinition 
+			className: d className
+			classIsMeta: false
+			selector: d selector
+			category: d category
+			timeStamp: d timeStamp
+			source: d source, 'DELETEME']),
+	 (floatPrims collect:
+		[:d|
+		 MCMethodDefinition 
+			className: #BoxedFloat64
+			classIsMeta: false
+			selector: d selector
+			category: d category
+			timeStamp: d timeStamp
+			source: d source]),
+	 (floatPrims collect:
+		[:d|
+		 MCMethodDefinition 
+			className: #SmallFloat64
+			classIsMeta: false
+			selector: d selector
+			category: d category
+			timeStamp: 'eem 11/25/2014 07:54'
+			source: (d source copyReplaceAll: '<primitive: ' with: '<primitive: 5')])
+]
+
+{ #category : #accessing }
+SpurBootstrapMonticelloPackagePatcher >> packageForMissingClassNamed: className [
+	(className = #BoxedFloat64
+	 or: [className = #SmallFloat64]) ifTrue:
+		[^PackageInfo named: 'Kernel'].
+	self error: 'unknown missing class'
 ]
 
 { #category : #'private-accessing' }
@@ -300,15 +388,19 @@ SpurBootstrapMonticelloPackagePatcher >> packagesAndPatches [
 	imageTypes ifNotNil:
 		[spurBootstrap imageTypes: imageTypes].
 	spurBootstrap prototypeClassNameMetaSelectorMethodDo:
-		[:className :isMeta :selector :method| | class methodReference source definition |
-		 class := Smalltalk classNamed: className.
-		 isMeta ifTrue:
-			[class := class class].
-		 methodReference := (class includesSelector: selector) ifTrue:
-								[(class >> selector) methodReference].
-		 (methodReference notNil
-		  and: [methodReference category = Categorizer default]) ifTrue:
-			[methodReference := nil].
+		[:className :isMeta :selector :method| | package category source definition |
+		 (Smalltalk classNamed: className)
+			ifNil: [package := self packageForMissingClassNamed: className]
+			ifNotNil:
+				[:behavior| | class methodReference |
+				 class := isMeta ifTrue: [behavior class] ifFalse: [behavior].
+				 (class includesSelector: selector) ifTrue:
+					[methodReference := (class >> selector) methodReference.
+					 category := methodReference category].
+				 package := (methodReference isNil
+							  or: [methodReference category = Categorizer default])
+								ifTrue: [PackageOrganizer default packageOfClass: class]
+								ifFalse: [PackageOrganizer default packageOfMethod: methodReference]].
 		 source := method getSourceFromFile asString allButFirst: method selector size - selector size.
 		 source first ~= selector first ifTrue:
 			[source replaceFrom: 1 to: selector size with: selector startingAt: 1].
@@ -316,27 +408,25 @@ SpurBootstrapMonticelloPackagePatcher >> packagesAndPatches [
 										className: className
 										classIsMeta: isMeta
 										selector: selector
-										category: (methodReference
-													ifNotNil: [methodReference category]
-													ifNil: [SpurBootstrap
-															categoryForClass: className
-															meta: isMeta
-															selector: selector])
+										category: (category ifNil: [SpurBootstrap
+																	categoryForClass: className
+																	meta: isMeta
+																	selector: selector])
 										timeStamp: method timeStamp
 										source: source).
 		 (method pragmaAt: #remove) ifNotNil:
 			[definition := definition inverse].
-		 (packagesAndPatches
-				at: (methodReference
-						ifNotNil: [PackageOrganizer default packageOfMethod: methodReference]
-						ifNil: [PackageOrganizer default packageOfClass: class])
-				ifAbsentPut: [OrderedCollection new])
+		 (packagesAndPatches at: package ifAbsentPut: [OrderedCollection new])
 			add: definition].
 	^packagesAndPatches
 ]
 
 { #category : #patching }
 SpurBootstrapMonticelloPackagePatcher >> patch [
+	"(SpurBootstrapMonticelloPackagePatcher new
+			from: 'trunkpackages'
+			to: 'spurpackages')
+		patch"
 	"(SpurBootstrapMonticelloPackagePatcher new
 			from: '/Users/eliot/Squeak/Squeak4.5-spur/squeakv3-package-cache'
 			to: '/Users/eliot/Squeak/Squeak4.5-spur/package-cache')
@@ -492,22 +582,11 @@ SpurBootstrapMonticelloPackagePatcher >> patchFile: packageFile [
 SpurBootstrapMonticelloPackagePatcher >> patchForPackage: package withPatches: patches snapshot: snapshot [
 	(package includesClass: Character) ifTrue:
 		[patches
-			addAll: ((self modifiedCharacterDefinitionsIn: snapshot definitions)
-						select:
-							[:def|
-							 patches noneSatisfy:
-								[:addition|
-								def isMethodDefinition
-								and: [addition definition isMethodDefinition
-								and: [addition definition selector = def selector
-								and: [addition definition className = def className
-								and: [addition definition classIsMeta = def classIsMeta]]]]]]
-						thenCollect:
-							[:def|
-							 ((def source includesSubString: 'DELETEME')
-								ifTrue: [MCRemoval]
-								ifFalse: [MCAddition]) of: def]);
-			add: (self immediateClassDefinitionFor: #Character
+			addAll: (self filteredDefinitionsAsPatches: (self modifiedCharacterDefinitionsIn: snapshot definitions)
+						patches: patches);
+			add: (self
+					classDefinitionFor: #Character
+					type: #immediate
 					from: snapshot definitions
 					comment: 'I represent a character by storing its associated Unicode as an unsigned 30-bit value.  Characters are created uniquely, so that all instances of a particular Unicode are identical.  My instances are encoded in tagged pointers in the VM, so called immediates, and therefore are pure immutable values.
 
@@ -518,13 +597,36 @@ SpurBootstrapMonticelloPackagePatcher >> patchForPackage: package withPatches: p
 	(package includesClass: SmallInteger) ifTrue:
 		[patches
 			add: (self
-					immediateClassDefinitionFor: #SmallInteger
+					classDefinitionFor: #SmallInteger
+					type: #immediate
 					from: snapshot definitions
 					comment: 'My instances are at least 31-bit numbers, stored in twos complement form. The allowable range in 32-bits is approximately +- 10^9 (+- 1billion).  In 64-bits my instances are 61-bit numbers, stored in twos complement form. The allowable range is approximately +- 10^18 (+- 1 quintillion).   The actual values are computed at start-up.  See SmallInteger class startUp:, minVal, maxVal.'
 					stamp: 'eem 11/20/2014 08:41')].
+	(package includesClass: Float) ifTrue:
+		[patches
+			add: (self
+					classDefinitionFor: #Float
+					type: #normal
+					from: snapshot definitions
+					comment: nil
+					stamp: nil);
+			add: (self
+					classDefinitionFor: #BoxedFloat64
+					type: #words
+					from: snapshot definitions
+					comment: 'My instances hold 64-bit Floats in heap objects.  This is the only representation on 32-bit systems.  But on 64-bit systems SmallFloat64 holds a subset of the full 64-bit double-precision range in immediate objects.'
+					stamp: 'eem 11/25/2014 07:54');
+			add: (self
+					classDefinitionFor: #SmallFloat64
+					type: #immediate
+					from: snapshot definitions
+					comment: 'My instances represent 64-bit Floats whose exponent fits in 8 bits as immediate objects.  This representation is only available on 64-bit systems, not 32-bit systems.'
+					stamp: 'eem 11/25/2014 07:54');
+			addAll: (self filteredDefinitionsAsPatches: (self modifiedFloatDefinitionsIn: snapshot definitions)
+						patches: patches)].
 	(package includesClass: CompiledMethod) ifTrue:
 		[patches
-			add: (self compiledMethodClassDefinition)].
+			add: self compiledMethodClassDefinition].
 	^MCPatch operations: patches
 ]
 

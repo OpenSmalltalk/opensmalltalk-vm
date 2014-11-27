@@ -146,6 +146,8 @@ SpurBootstrap class >> categoryForClass: className meta: isMeta selector: select
 			[#(Behavior identityHash)]						-> [#comparing].
 			[#(Behavior isEphemeronClass)]				-> [#testing].
 			[#(Behavior isImmediateClass)]					-> [#testing].
+			[#(BoxedFloat64 class basicNew)]				-> [#'instance creation'].
+			[#(BoxedFloat64 class basicNew:)]				-> [#'instance creation'].
 			[#(Character identityHash)]						-> [#comparing].
 			[#(Character setValue:)]						-> [#accessing].
 			[#(Class immediateSubclass:instanceVariableNames:classVariableNames:poolDictionaries:category:)]
@@ -179,6 +181,12 @@ SpurBootstrap class >> categoryForClass: className meta: isMeta selector: select
 			[#(MethodContext failPrimitiveWith:)]			-> [#'system simulation'].
 			[#(MethodContext class allInstances)]			-> [#enumerating].
 			[#(MethodContext class allInstancesDo:)]		-> [#enumerating].
+			[#(SmallFloat64 class basicNew)]				-> [#'instance creation'].
+			[#(SmallFloat64 class basicNew:)]				-> [#'instance creation'].
+			[#(SmallFloat64 copy)]							-> [#copying].
+			[#(SmallFloat64 deepCopy)]					-> [#copying].
+			[#(SmallFloat64 shallowCopy)]					-> [#copying].
+			[#(SmallFloat64 veryDeepCopyWith:)]			-> [#copying].
 			[#(SmallInteger asCharacter)]					-> [#converting].
 			[#(SmalltalkImage growMemoryByAtLeast:)]	-> [#'memory space'].
 			[#(SmalltalkImage maxIdentityHash)]			-> [#'system attributes'].
