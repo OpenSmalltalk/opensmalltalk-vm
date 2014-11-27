@@ -7,6 +7,38 @@ Class {
 	#category : #CMakeVMMakerSqueak
 }
 
+{ #category : #cmake }
+SqueakWindowsConfig >> cmakeWriteDirectoriesDotCmake: aMaker [
+	|temp o|
+	"We could put these inline, but other components include the directories.cmake file. So, we continue that convention"
+	o := String new writeStream.
+	temp := OrderedCollection new.
+	temp
+		addLast: ((CMakeSet new) variable: 'topDir' quotedValue: (self topDir fullName));
+		addLast: ((CMakeSet new) variable: 'buildDir' quotedValue: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName]));
+		addLast: ((CMakeSet new) variable: 'thirdpartyDir' quotedValue: '${buildDir}/thirdParty');
+		addLast: ((CMakeSet new) variable: 'platformsDir' quotedValue: (self platformsDir));
+		addLast: ((CMakeSet new) variable: 'srcDir' quotedValue: (self srcDir pathName));
+		addLast: ((CMakeSet new) variable: 'srcPluginsDir' quotedValue: (pluginsDir ifNil: [ '${srcDir}/plugins' ]));
+		addLast: ((CMakeSet new) variable: 'srcVMDir' quotedValue: '${srcDir}/vm');
+		addLast: ((CMakeSet new) variable: 'platformName' quotedValue: (self platformName));
+		addLast: ((CMakeSet new) variable: 'targetPlatform' quotedValue: '${platformsDir}/${platformName}');
+		addLast: ((CMakeSet new) variable: 'crossDir' quotedValue: '${platformsDir}/Cross');
+		addLast: ((CMakeSet new) variable: 'platformVMDir' quotedValue: '${targetPlatform}/vm}');
+		addLast: ((CMakeSet new) variable: 'outputDir' quotedValue: (self outputDir fullName));
+		addLast: ((CMakeSet new) variable: 'externalModulesDir' quotedValue: (self externalModulesDir)).
+	temp do: [:each |  o nextPutAll: (each content); cr].
+	self write: (o contents) toFile: 'directories.cmake'.
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast:((CMakeMessage new) message: (self class name), ' setDirectories: aMaker' )
+	].
+	templates addLast: ((CMakeInclude new) file: 'directories.cmake').
+
+
+]
+
 { #category : #compiling }
 SqueakWindowsConfig >> compilerDefinitions [
 	^ {  
@@ -186,38 +218,6 @@ SqueakWindowsConfig >> platformSources [
 		'sqWin32Prefs.c'
 		'sqWin32Utils.c'
 	)
-]
-
-{ #category : #cmake }
-SqueakWindowsConfig >> setDirectories: aMaker [
-	|temp o|
-	"We could put these inline, but other components include the directories.cmake file. So, we continue that convention"
-	o := String new writeStream.
-	temp := OrderedCollection new.
-	temp
-		addLast: ((CMakeSet new) variable: 'topDir' quotedValue: (self topDir fullName));
-		addLast: ((CMakeSet new) variable: 'buildDir' quotedValue: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName]));
-		addLast: ((CMakeSet new) variable: 'thirdpartyDir' quotedValue: '${buildDir}/thirdParty');
-		addLast: ((CMakeSet new) variable: 'platformsDir' quotedValue: (self platformsDir));
-		addLast: ((CMakeSet new) variable: 'srcDir' quotedValue: (self srcDir pathName));
-		addLast: ((CMakeSet new) variable: 'srcPluginsDir' quotedValue: (pluginsDir ifNil: [ '${srcDir}/plugins' ]));
-		addLast: ((CMakeSet new) variable: 'srcVMDir' quotedValue: '${srcDir}/vm');
-		addLast: ((CMakeSet new) variable: 'platformName' quotedValue: (self platformName));
-		addLast: ((CMakeSet new) variable: 'targetPlatform' quotedValue: '${platformsDir}/${platformName}');
-		addLast: ((CMakeSet new) variable: 'crossDir' quotedValue: '${platformsDir}/Cross');
-		addLast: ((CMakeSet new) variable: 'platformVMDir' quotedValue: '${targetPlatform}/vm}');
-		addLast: ((CMakeSet new) variable: 'outputDir' quotedValue: (self outputDir fullName));
-		addLast: ((CMakeSet new) variable: 'externalModulesDir' quotedValue: (self externalModulesDir)).
-	temp do: [:each |  o nextPutAll: (each content); cr].
-	self write: (o contents) toFile: 'directories.cmake'.
-	(enabledebugmessages)
-		ifTrue:[	
-	templates 
-		addLast:((CMakeMessage new) message: (self class name), ' setDirectories: aMaker' )
-	].
-	templates addLast: ((CMakeInclude new) file: 'directories.cmake').
-
-
 ]
 
 { #category : #'cmake buildType redirects' }
