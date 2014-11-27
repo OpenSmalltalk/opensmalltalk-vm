@@ -10,20 +10,9 @@ SpurBootstrapPrototypes class >> allMethodPrototypes [
 		ifTrue: "Pharo"
 			[self allMethods select:
 				[:each| each category = 'method prototypes']]
-		ifFalse: "Squeak"
-			[false
-				ifTrue: "%$#@*! collect: on IdentitySet answers a *Set*, not an IdentitySet %$#@*!"
-					[self allSelectors
-						collect: [:s| self lookupSelector: s]
-						thenSelect: [:m| m protocol = 'method prototypes']]
-				ifFalse: "...hence: "
-					[self allSelectors
-						inject: IdentitySet new
-						into: [:methods :sel| | method |
-							method := self lookupSelector: sel.
-							method protocol = 'method prototypes' ifTrue:
-								[methods add: method].
-							methods]]]
+		ifFalse: "Squeak" "%$#@*! collect: on IdentitySet answers a *Set*, not an IdentitySet %$#@*!"
+			[(self allSelectors collect: [:s| self lookupSelector: s] as: IdentitySet)
+				select: [:m| m protocol = 'method prototypes']]
 ]
 
 { #category : #accessing }
@@ -419,6 +408,30 @@ SpurBootstrapPrototypes >> BehaviorPROTOTYPEtypeOfClass [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrapPrototypes >> BoxedFloat64classPROTOTYPEbasicNew [
+	^self basicNew: 2
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> BoxedFloat64classPROTOTYPEbasicNew: sizeRequested [ 
+	"Primitive. Answer an instance of this class with the number
+	 of indexable variables specified by the argument, sizeRequested.
+	 Fail if this class is not indexable or if the argument is not a
+	 positive Integer, or if there is not enough memory available. 
+	 Essential. See Object documentation whatIsAPrimitive."
+
+	<primitive: 71>
+	sizeRequested isInteger ifTrue:
+		[^sizeRequested = 2
+			ifTrue: "arg okay; space must be low."
+				[OutOfMemory signal.
+				 self basicNew: sizeRequested]  "retry if user proceeds"
+			ifFalse:
+				[self error: 'a Float shall always have two slots']].
+	self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrapPrototypes >> BytecodeEncoderPROTOTYPEcomputeMethodHeaderForNumArgs: numArgs numTemps: numTemps numLits: numLits primitive: primitiveIndex [
 	numArgs > 15 ifTrue:
 		[^self error: 'Cannot compile -- too many arguments'].
@@ -695,6 +708,16 @@ SpurBootstrapPrototypes >> EncoderForV3PlusClosuresclassPROTOTYPEcallPrimitiveCo
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrapPrototypes >> FloatclassPROTOTYPEbasicNew [
+	^BoxedFloat64 basicNew: 2
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> FloatclassPROTOTYPEbasicNew: anInteger [
+	^BoxedFloat64 basicNew: 2
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrapPrototypes >> FloatclassPROTOTYPEfromIEEE32Bit: word [
 	"Convert the given 32 bit word (which is supposed to be a positive 32-bit value) from
 	 a 32 bit IEEE floating point representation into an actual Squeak float object (being
@@ -764,6 +787,40 @@ SpurBootstrapPrototypes >> MethodNodePROTOTYPEgenerate: trailer using: aCompiled
 	"Since this method has inst var refs the prototype must live in the actual class."
 
 	<indirect>
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> SmallFloat64PROTOTYPEcopy [
+	"Answer the receiver, because SmallFloat64s are unique."
+	^self
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> SmallFloat64PROTOTYPEdeepCopy [
+	"Answer the receiver, because SmallFloat64s are unique."
+	^self
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> SmallFloat64PROTOTYPEshallowCopy [
+	"Answer the receiver, because SmallFloat64s are unique."
+	^self
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> SmallFloat64PROTOTYPEveryDeepCopyWith: deepCopier [
+	"Answer the receiver, because SmallFloat64s are unique."
+	^self
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> SmallFloat64classPROTOTYPEbasicNew [
+	self error: 'SmallFloat64s can only be created by performing arithmetic'
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> SmallFloat64classPROTOTYPEbasicNew: anInteger [
+	^self basicNew
 ]
 
 { #category : #'method prototypes' }
