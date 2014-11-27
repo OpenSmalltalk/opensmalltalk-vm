@@ -273,6 +273,41 @@ Spur64BitMemoryManager >> changeClassOf: rcvr to: argClass [
 	^0
 ]
 
+{ #category : #'gc - global' }
+Spur64BitMemoryManager >> coalesce: obj1 and: obj2 [
+	| header1NumSlots header2NumSlots obj2slots newNumSlots |
+	header1NumSlots := self rawNumSlotsOf: obj1.
+	header2NumSlots := self rawNumSlotsOf: obj2.
+
+	"compute total number of slots in obj2, including header"
+	obj2slots := header2NumSlots = self numSlotsMask
+					ifTrue: [(self rawOverflowSlotsOf: obj2) + (2 * self baseHeaderSize / self wordSize)]
+					ifFalse: [(header2NumSlots = 0 ifTrue: [1] ifFalse: [header2NumSlots]) + (self baseHeaderSize / self wordSize)].
+	self assert: obj2slots * self wordSize = (self bytesInObject: obj2).
+
+	"if obj1 already has a double header things are simple..."
+	header1NumSlots = self numSlotsMask ifTrue:
+		[self rawOverflowSlotsOf: obj1 put: obj2slots + (self rawOverflowSlotsOf: obj1).
+		 ^obj1].
+
+	"compute total number of slots in obj1, excluding header"
+	header1NumSlots := header1NumSlots = 0 ifTrue: [1] ifFalse: [header1NumSlots].
+	self assert: header1NumSlots * self wordSize + self baseHeaderSize = (self bytesInObject: obj1).
+	newNumSlots := obj2slots + header1NumSlots.
+
+	"if obj1 still only requires a single header things are simple..."
+	newNumSlots < self numSlotsMask ifTrue:
+		[self rawNumSlotsOf: obj1 put: newNumSlots.
+		 ^obj1].
+
+	"convert from single to double header..."
+	newNumSlots := newNumSlots - (self baseHeaderSize / self wordSize).
+	self
+		setRawNumSlotsOf: obj1 + self baseHeaderSize to: self numSlotsMask;
+		setOverflowNumSlotsOf: obj1 + self baseHeaderSize to: newNumSlots.
+	^obj1 + self baseHeaderSize
+]
+
 { #category : #'interpreter access' }
 Spur64BitMemoryManager >> exponentOfSmallFloat: oop [
 	"Answer the exponent of the argument, a SmallFloat.
@@ -408,6 +443,7 @@ Spur64BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 	| instSpec classFormat numSlots classIndex newObj fillValue |
 	classFormat := self formatOfClass: classObj.
 	instSpec := self instSpecOfClassFormat: classFormat.
+	classIndex := self rawHashBitsOf: classObj.
 	fillValue := 0.
 	instSpec caseOf: {
 		[self arrayFormat]	->
@@ -422,7 +458,10 @@ Spur64BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 		[self sixtyFourBitIndexableFormat]	->
 			[numSlots := nElements].
 		[self firstLongFormat]	->
-			[numSlots := nElements + 1 // 2.
+			[(classIndex = ClassFloatCompactIndex and: [nElements ~= 2]) ifTrue:
+				[coInterpreter primitiveFailFor: PrimErrBadReceiver.
+				 ^nil].
+			 numSlots := nElements + 1 // 2.
 			 instSpec := instSpec + (nElements bitAnd: 1)].
 		[self firstShortFormat]	->
 			[numSlots := nElements + 3 // 4.
@@ -436,14 +475,16 @@ Spur64BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 					 (nElements ~= 0 or: [instSpec > self lastPointerFormat]) ifTrue:
 						[^nil].
 					 numSlots := self fixedFieldsOfClassFormat: classFormat]. "non-indexable"
-	classIndex := self ensureBehaviorHash: classObj.
-	classIndex < 0 ifTrue:
-		[coInterpreter primitiveFailFor: classIndex negated.
-		 ^nil].
+	classIndex = 0 ifTrue:
+		[classIndex := self ensureBehaviorHash: classObj.
+		 classIndex < 0 ifTrue:
+			[coInterpreter primitiveFailFor: classIndex negated.
+			 ^nil]].
 	numSlots > self maxSlotsForNewSpaceAlloc
 		ifTrue:
 			[numSlots > self maxSlotsForAlloc ifTrue:
-				[^nil].
+				[coInterpreter primitiveFailFor: PrimErrUnsupported.
+				 ^nil].
 			 newObj := self allocateSlotsInOldSpace: numSlots format: instSpec classIndex: classIndex]
 		ifFalse:
 			[newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex].
@@ -707,8 +748,7 @@ Spur64BitMemoryManager >> rawOverflowSlotsOf: objOop put: numSlots [
 	<returnTypeC: #usqLong>
 	<inline: true>
 	self flag: #endianness.
-	self longAt: objOop - self baseHeaderSize
-		put: (self byteAt: objOop - 1) << 56 + numSlots.
+	self longAt: objOop - self baseHeaderSize put: self numSlotsMask << 56 + numSlots.
 	^numSlots
 ]
 
