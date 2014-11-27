@@ -130,7 +130,7 @@ Concrete implementations of SqueakCMakeVMMakerAbstractBuilder provide an invokat
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(overview prerequisites  terms igorStasenkoDesign  buildersAndConfigs plugins pthreads configDotCmake templates vmdrivers)
+	^#(overview prerequisites  terms igorStasenkoDesign  tests buildersAndConfigs plugins pthreads configDotCmake templates vmplugins)
 ]
 
 { #category : #pages }
@@ -279,10 +279,23 @@ Redirect Methods:
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakDeveloperHelp class >> vmdrivers [
+CMakeVMMakerSqueakDeveloperHelp class >> tests [
 	^HelpTopic
-		title:'VMDrivers'
+		title:'Tests'
+		contents:
+'
+When all tests pass. This does not mean the classes are configured correctly for source,output and build directories.
+
+It does mean nothing structural is preventing that from being implemented.
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakDeveloperHelp class >> vmplugins [
+	^HelpTopic
+		title:'VMPlugins'
 		contents:'
 
-TODO CMakeVMMakerSqueak-VMDriver purpose, configuration and use'
+TODO CMakeVMMakerSqueak-VMPlugin purpose, configuration and use'
 ]

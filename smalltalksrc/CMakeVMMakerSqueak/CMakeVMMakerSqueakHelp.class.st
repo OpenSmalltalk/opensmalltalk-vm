@@ -13,6 +13,11 @@ CMakeVMMakerSqueakHelp class >> bookName [
 ]
 
 { #category : #accessing }
+CMakeVMMakerSqueakHelp class >> key [
+	^'CMakeVMMakerSqueakHelp'
+]
+
+{ #category : #accessing }
 CMakeVMMakerSqueakHelp class >> pages [
-	^#(CMakeVMMakerSqueakDeveloperHelp CMakeVMMakerSqueakBuildersHelp CMakeVMMakerSqueakHowToCreateNewConfigurationHelp)
+	^#(CMakeVMMakerSqueakStartHereHelp CMakeVMMakerSqueakDeveloperHelp CMakeVMMakerSqueakBuildersHelp CMakeVMMakerSqueakHowToCreateNewConfigurationHelp)
 ]
