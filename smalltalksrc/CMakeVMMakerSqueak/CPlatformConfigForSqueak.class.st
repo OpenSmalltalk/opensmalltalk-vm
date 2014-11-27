@@ -1468,6 +1468,12 @@ CPlatformConfigForSqueak >> cmakeSetSourceFilesPropertiesNoBuildType [
 
 ]
 
+{ #category : #cmake }
+CPlatformConfigForSqueak >> cmakeWriteDirectoriesDotCmake: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setupDirectories:'"
+	self subclassResponsibility
+]
+
 { #category : #'source generation' }
 CPlatformConfigForSqueak >> cogitClass [
 	self subclassResponsibility
@@ -3711,8 +3717,8 @@ CPlatformConfigForSqueak >> vmStackExecutableName [
 ]
 
 { #category : #accessing }
-CPlatformConfigForSqueak >> vmdrivers [
-	^vmdrivers
+CPlatformConfigForSqueak >> vmplugins [
+	^vmplugins
 ]
 
 { #category : #'cmake executable names' }
