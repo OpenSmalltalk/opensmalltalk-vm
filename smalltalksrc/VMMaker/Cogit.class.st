@@ -477,14 +477,14 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		addHeaderFile:'<stddef.h>'; "for e.g. offsetof"
 		addHeaderFile:'"sqCogStackAlignment.h"';
+		addHeaderFile:'"dispdbg.h"'; "must preceed cointerp.h & cogit.h otherwise NoDbgRegParms gets screwed up"
 		addHeaderFile:'"cogmethod.h"';
 		addHeaderFile:'#if COGMTVM';
 		addHeaderFile:'"cointerpmt.h"';
 		addHeaderFile:'#else';
 		addHeaderFile:'"cointerp.h"';
 		addHeaderFile:'#endif';
-		addHeaderFile:'"cogit.h"';
-		addHeaderFile:'"dispdbg.h"'.
+		addHeaderFile:'"cogit.h"'.
 	aCCodeGenerator
 		var: #ceGetSP
 			declareC: 'unsigned long (*ceGetSP)(void)';
