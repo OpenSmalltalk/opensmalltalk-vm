@@ -1,3 +1,9 @@
+"
+A CMakeVMMakerSqueakStartHereHelp provides examples of usage for newbies.
+
+
+
+"
 Class {
 	#name : #CMakeVMMakerSqueakStartHereHelp,
 	#superclass : #CMakeVMMakerSqueakHelp,
@@ -6,7 +12,7 @@ Class {
 
 { #category : #accessing }
 CMakeVMMakerSqueakStartHereHelp class >> bookName [
-	^'CMakeVMMaker Start Here'
+	^'Start Here'
 ]
 
 { #category : #accessing }
@@ -29,36 +35,26 @@ CMakeVMMakerSqueakStartHereHelp class >> shortVersionLinuxBuild [
 	^HelpTopic
 		title: 'Short  Version Linux Build'
 		contents:
-'These steps will familiarize you with the CMakeVMMaker system from a user perspective. At the end of this Help Topic you should have a working system for Linux.
-Each step is an action followed by an explanation of what you are looking at.
-
-1. (SqueakLinux64x86w32CompatBuilder default) browseHierarchy
-
-    CMakeVmMakerSqueak uses Builders to build builds. 
-    The author''s system is a 64 bit architecture with 32 bit compatability libraries installed, so he uses the SqueakLinux64x86w32CompatBuilder.
-     Builder.
-
-2. (SqueakLinux64x86w32CompatBuilder default) browse	
-    The Classes in the CMakeVMMakerSqueak-Builder Class Category are named with the convention "Squeak[Operating System][Architecture][Miscelaneous]Builder".
-      
-     If you are compiling on a pure 32 bit linux box, use the  (SqueakLinux32x86Builder default)    builder
-    
-      A pure 64 bit linux build would require the (SqueakLinux32x86_64Builder default)  builder.
-       
-     The same convention holds for other operating systems (mac, windows, etc) 
-
-2.  (SqueakLinux64x86w32CompatBuilder default) configurationsCategory  inspect
-
-     In CmakeVMMakerSqueak, Builders utilize "Configurations" to generate "builds".
-     Configurations are classes and are stored in specific class categories .
-     Open a browser and look in the "CMakeVMMakerSqueak-Linux64X86-32BitCompatibility" category and you will see the Configuration classes available for that builder.
-
-      
-     
-3. (SqueakLinux64x86w32CompatBuilder default) allAvailableBuildTypes
+'1. ---Query the Builder for available configurations and build types---
+SqueakLinux32x86Builder configurationsCategory.
+SqueakLinux32x86Builder availableBuildConfigurations.
+SqueakLinux32x86Builder availableBuildTypesFor:(SqueakLinux32x86Builder availableBuildConfigurations at:1). "Replace at:1 as neccessary"
 
 
-do c
+2.---Direct the Builder to invoke a Configuration for a specific build type---
+SqueakLinux32x86Builder
+	configureA: #Linux32x86SqueakCogV3Config forBuildType:#build;   
+	enableMessageTracking: false;
+	generateByTemplate.
 
+3.---Direct the Builder to ask the configuration for where it puts its build files---
+SqueakLinux32x86Builder buildDirectory 
+
+4.---Open an X-terminal and cd to the above directory and kick off the cmake-build---
+cd (some directory)/Contents/Resources/oscogvm/cmake.build.linux32.x86/squeak.cog.v3/build/
+./build.sh
+
+5.---view your build---
+cd (some directory)/Contents/Resources/oscogvm/products/(FIX ME TTY)
 '
 ]

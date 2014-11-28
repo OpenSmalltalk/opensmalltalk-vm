@@ -52,6 +52,12 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux64X86-32BitCompatibility'
 }
 
+{ #category : #'as yet unclassified' }
+Linux64x86w32BitSqueakCogV3Config class >> isAbstractBaseClass [
+	^false
+
+]
+
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitSqueakCogV3Config >> cmakeAddDefinitionsBuild [
 	|c d  o|
