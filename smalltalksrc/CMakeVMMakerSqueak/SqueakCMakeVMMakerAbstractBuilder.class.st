@@ -298,11 +298,13 @@ SqueakCMakeVMMakerAbstractBuilder >> configurationDictionary: aCategoryName [
 	"return a Dictionary of CMakeMakerSqueak-XYZ platform configurations and their associated CMakeVMakerConfigurationInfo "
 	result := Dictionary new.
 	Smalltalk globals 
-		allClassesDo:[:c | (c class category asString withoutQuoting = aCategoryName)    "is there a faster lookup method?"
+		allClassesDo:[:c | (c class category asString withoutQuoting = aCategoryName)  "is there a faster lookup method?"
 			ifTrue: [ 
-					info := CMakeVMakerConfigurationInfo new.
-					info visit: c.
-					result at: (c name) put:info]].
+					(c isAbstractBaseClass)
+						ifFalse:[
+							info := CMakeVMakerConfigurationInfo new.
+							info visit: c.
+							result at: (c name) put:info]]].
 	^result
 
 
