@@ -10,7 +10,7 @@ However this can be very easy by just returning the base configuration.
 
 Tests are written to verify that this support infrastructure is in place.
 
-I have two important variables.
+I have two important methods.
 
 excludeFromBuild and isAbstractBaseClass.
 
@@ -19,7 +19,7 @@ excludeFromBuild
 		is used to exclude a configuration from Testing.
 
 isAbstractBaseClass 
-		is a class instance variable used by configurations that exclude themselves from being built by a Builder BUT need to be included in 		Testing.
+		is used by configurations that exclude themselves from being built by a Builder BUT need to be included in 		Testing.
 
 										
 excludeFromBuild  | isAbstractBaseClass  | should build  | should test
@@ -76,13 +76,7 @@ Class {
 
 { #category : #'as yet unclassified' }
 CPlatformConfigForSqueak class >> isAbstractBaseClass [
-	^isAbstractBaseClass ifNil:[false] ifNotNil:[isAbstractBaseClass]
-
-]
-
-{ #category : #'as yet unclassified' }
-CPlatformConfigForSqueak class >> isAbstractBaseClass: aBoolean [
-	isAbstractBaseClass := aBoolean
+	^true
 
 ]
 
