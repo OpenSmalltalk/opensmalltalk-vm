@@ -84,7 +84,8 @@ CMakeVMPlugin >> includedirectories: anObject [
 
 { #category : #'initialize-release' }
 CMakeVMPlugin >> initialize [
-"force CPlatformConfigurations to set my internal state explicitly by filling me with initial nonsense values"
+"force CPlatformConfigurations to set my internal state explicitly by filling me with initial nonsense values. 
+ If you see these in your CMakeLists.txt, then your configuration needs to replace them"
 	sources := OrderedCollection with: 'sources' with: 'paths'.
 	compilerdefinitions := OrderedCollection with:'-DCompiler' with: '-DDefinitions'.
 	compilerflags := OrderedCollection with:'-compiler' with: '-flags'.
