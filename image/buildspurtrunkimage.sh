@@ -21,7 +21,7 @@ fi
 IMAGE=""
 GOTIMAGE=""
 while true; do
-	for f in *VMMaker*spur.image; do
+	for f in *VMMaker*spur.image SpurVMMaker.image; do
 		if test -f "$f"; then
 			IMAGE="$f"
 .			./getGoodSpurVM.sh
