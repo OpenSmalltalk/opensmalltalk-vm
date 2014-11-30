@@ -34,7 +34,7 @@ CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testExtraPluginSettings [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o buildTypes vmGenerator pluginGenerator|
-					o:= configuration new.
+					o:= configuration basicNew.
 					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
 						ifTrue:[
 							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
@@ -58,15 +58,18 @@ CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testExtraVMSettings [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o buildTypes vmGenerator|
-					o:= configuration new.
+					o:= configuration basicNew.
 					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
 						ifTrue:[
 							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
 							buildTypes do:[:buildType |
 								o configureForBuildType: buildType.
+								o enabledebugmessages:true.
+								o templates: OrderedCollection new. 
 								vmGenerator:=CMakeVMGeneratorForSqueak new.
 								vmGenerator config: o.
 								vmGenerator output:(String new writeStream).
+								o extraVMSettings: vmGenerator.
 								self shouldnt: [o extraVMSettings: vmGenerator] raise: Error]]]].
 
 ]
@@ -78,7 +81,7 @@ CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testSetExtraTargetProperties [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o buildTypes vmGenerator|
-					o:= configuration new.
+					o:= configuration basicNew.
 					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
 						ifTrue:[
 							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
@@ -98,12 +101,14 @@ CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testSetGlobalOptions [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o buildTypes vmGenerator|
-					o:= configuration new.
+					o:= configuration basicNew.
 					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
 						ifTrue:[
 							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
 							buildTypes do:[:buildType |
 								o configureForBuildType: buildType.
+								o enabledebugmessages:true.
+								o templates: OrderedCollection new. 
 								vmGenerator:=CMakeVMGeneratorForSqueak new.
 								vmGenerator output:(String new writeStream).
 								self shouldnt: [o setGlobalOptions: vmGenerator] raise: Error]]]].
@@ -117,12 +122,14 @@ CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testSetGlobalOptionsAfterDetermi
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o buildTypes vmGenerator|
-					o:= configuration new.
+					o:= configuration basicNew.
 					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
 						ifTrue:[
 							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
 							buildTypes do:[:buildType |
 								o configureForBuildType: buildType.
+								o enabledebugmessages:true.
+								o templates: OrderedCollection new. 
 								vmGenerator:=CMakeVMGeneratorForSqueak new.
 								vmGenerator output:(String new writeStream).
 								self shouldnt: [o setGlobalOptionsAfterDetermineSystem: vmGenerator] raise: Error]]]].
@@ -136,7 +143,7 @@ CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testSetPostBuildActions [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o buildTypes vmGenerator|
-					o:= configuration new.
+					o:= configuration basicNew.
 					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
 						ifTrue:[
 							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).

@@ -300,11 +300,9 @@ SqueakCMakeVMMakerAbstractBuilder >> configurationDictionary: aCategoryName [
 	Smalltalk globals 
 		allClassesDo:[:c | (c class category asString withoutQuoting = aCategoryName)  "is there a faster lookup method?"
 			ifTrue: [ 
-					(c isAbstractBaseClass)
-						ifFalse:[
 							info := CMakeVMakerConfigurationInfo new.
 							info visit: c.
-							result at: (c name) put:info]]].
+							result at: (c name) put:info]].
 	^result
 
 

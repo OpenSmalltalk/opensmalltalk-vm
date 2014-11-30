@@ -10,7 +10,7 @@ CMakeVMMakerSqueakMacintoshConfigTest >> testExecutableType [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-					o:= configuration new.
+					o:= configuration basicNew.
 					(o excludeFromBuild not) | (configuration isAbstractBaseClass)
 					ifTrue:[self assert:(o  executableType = 'MACOSX_BUNDLE')]]]
 
@@ -25,7 +25,7 @@ CMakeVMMakerSqueakMacintoshConfigTest >> testPlatformName [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							(o excludeFromBuild not) | (configuration isAbstractBaseClass)
 								ifTrue:[self assert:(o  platformName = 'Mac OS' )]]]
 
@@ -41,7 +41,7 @@ CMakeVMMakerSqueakMacintoshConfigTest >> testResourcesDir [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-					o:= configuration new.
+					o:= configuration basicNew.
 					(o excludeFromBuild not) | (configuration isAbstractBaseClass)
 								ifTrue:[ self assert:(o  resourcesDir isKindOf: FileDirectory)]]]
 
@@ -56,7 +56,7 @@ CMakeVMMakerSqueakMacintoshConfigTest >> testResourcesDirName [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							(o excludeFromBuild not) | (configuration isAbstractBaseClass)
 								ifTrue:[self assert:(o  resourcesDirName isString)]]]
 

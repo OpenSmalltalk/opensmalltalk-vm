@@ -120,7 +120,6 @@ CMakeVMGeneratorForSqueak >> generateByTemplate [
 	self flag: 'tty'. "refactor so that the cascade reflects CMake terminilogy"
 	output := String new writeStream.
 	config templates: OrderedCollection new. 
-	self break.
 	config 
 		setGlobalOptions: self;    
 		cmakePrefixPath;

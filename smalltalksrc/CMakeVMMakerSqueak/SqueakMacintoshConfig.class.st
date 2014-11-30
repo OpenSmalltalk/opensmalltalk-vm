@@ -105,6 +105,11 @@ SqueakMacintoshConfig >> customizeVMDrivers [
 	self subclassResponsibility
 ]
 
+{ #category : #plugins }
+SqueakMacintoshConfig >> customizeVMPlugins [
+	"do nothing,. only used on linux?"
+]
+
 { #category : #accessing }
 SqueakMacintoshConfig >> defaultDirectoriesFromGitDir: gitRepository [
 	"Set the default values for all necessary directories taking into account the Git repostiory. An example to use this method is:
