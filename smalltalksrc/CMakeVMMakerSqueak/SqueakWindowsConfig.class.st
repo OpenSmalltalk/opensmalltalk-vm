@@ -112,6 +112,11 @@ SqueakWindowsConfig >> customizeVMDrivers [
 	self subclassResponsibility
 ]
 
+{ #category : #plugins }
+SqueakWindowsConfig >> customizeVMPlugins [
+	"do nothing,. only used on linux?"
+]
+
 { #category : #accessing }
 SqueakWindowsConfig >> executableType [
 	^ 'WIN32'

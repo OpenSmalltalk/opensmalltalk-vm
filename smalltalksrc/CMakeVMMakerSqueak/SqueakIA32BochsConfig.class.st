@@ -33,6 +33,11 @@ SqueakIA32BochsConfig >> availableBuildTypes [
 ]
 
 { #category : #plugins }
+SqueakIA32BochsConfig >> customizeVMPlugins [
+	"do nothing,. only used on linux?"
+]
+
+{ #category : #plugins }
 SqueakIA32BochsConfig >> defaultExternalPlugins [
 	^ #()
 ]

@@ -995,7 +995,6 @@ SqueakUnixConfig >> extraSources [
 { #category : #'cmake buildType redirects' }
 SqueakUnixConfig >> extraVMSettingsBuild: aMaker [
 	"add a generated version.c"
-	self flag: 'tty'. "Figure out how other's generated version info"
 	(enabledebugmessages)
 		ifTrue:[	templates 
 		addLast:((CMakeMessage new) message: (self class name) , 'extraVMSettingsBuild: aMaker')
@@ -1005,6 +1004,8 @@ SqueakUnixConfig >> extraVMSettingsBuild: aMaker [
 						output:(OrderedCollection with: 'version.c')
 						commandsandargs: (OrderedCollection with: 'COMMAND ${platformsDir}/unix/config/verstamp version.c gcc' )
 						comment: 'Generating version.c').
+
+
 
 
 ]

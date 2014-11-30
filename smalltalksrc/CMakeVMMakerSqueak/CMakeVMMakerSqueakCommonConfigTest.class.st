@@ -15,10 +15,10 @@ CMakeVMMakerSqueakCommonConfigTest >> testAvailableBuildTypes [
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
 		do:[:each | 
 			(Smalltalk at:each) 
-				allSubclassesDo:[:configuration | | o |
-					o:= configuration new.
-					(o excludeFromBuild not)                               ""
-						ifTrue:[self assert:(o  availableBuildTypes isKindOf: Collection)]]]
+				allSubclassesDo:[:configuration | | config |
+					config:= configuration basicNew.
+					(config excludeFromBuild not)                               ""
+						ifTrue:[  self assert:(config  availableBuildTypes isKindOf: Collection)]]]
 
 
 
@@ -36,7 +36,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testBuildDir [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							o excludeFromBuild not
 								ifTrue:[self assert:(o  buildDir isKindOf: FileDirectory)]]]
 
@@ -56,7 +56,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testBuildDirName [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							(o excludeFromBuild not)                               ""
 								ifTrue:[
 									self assert:(o  buildDirName isString).
@@ -78,7 +78,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testBuildScript [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							(o excludeFromBuild not)                               ""
 								ifTrue:[
 									self assert:(o  buildScript isString).
@@ -100,7 +100,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testCogitClass [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							o excludeFromBuild not                                                     
 							 	ifTrue:[self assert:(o  cogitClass inheritsFrom: Cogit)]]]
 
@@ -120,7 +120,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testCommonCompilerFlags [
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
 					configuration isAbstractBaseClass   "*"
-					ifFalse:[	o:= configuration new. 
+					ifFalse:[	o:= configuration basicNew. 
 							self assert:(o commonCompilerFlags isKindOf: Collection)]]].
 
 "*
@@ -145,7 +145,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testCrossSources [
 				allSubclassesDo:[:configuration | | o |
 					configuration isAbstractBaseClass not
 						ifTrue:[
-							o:= configuration new.
+							o:= configuration basicNew.
 							(o excludeFromBuild not)
 								ifTrue:[	self assert:(o  crossSources isArray)]]]]
 
@@ -165,7 +165,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testDirBuildPlatform [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-									o:= configuration new.
+									o:= configuration basicNew.
 									self assert:(o  dirBuildPlatform isString)]]
 
 
@@ -185,7 +185,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testDirSource [
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
 					configuration isAbstractBaseClass not
-						ifTrue:[	o:= configuration new.
+						ifTrue:[	o:= configuration basicNew.
 								o excludeFromBuild not
 									ifTrue:[self assert:(o  dirSource isString)]]]]
 
@@ -205,7 +205,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testExcludeFromBuild [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							self assert:((o excludeFromBuild  basicType) = #Boolean)]]
 
 
@@ -224,7 +224,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testExectuableName [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							(o excludeFromBuild not)
 								ifTrue:[self assert:(o  executableName isString)]]]
 
@@ -244,7 +244,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testExecutableType [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							(o excludeFromBuild not)
 								ifTrue:[self assert:(o  executableType isString)]]]
 
@@ -263,7 +263,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testExternalsModuleDir [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							o excludeFromBuild not                                                     
 								ifTrue:[self assert:(o  externalModulesDir isString)]]]
 
@@ -282,7 +282,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testExtraSources [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							(o excludeFromBuild not)
 								ifTrue:[self assert:(o  extraSources isString)]]]
 
@@ -302,7 +302,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testInterpreterClass [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							o excludeFromBuild not                                                     
 							 	ifTrue:[
 										self assert:(o  interpreterClass inheritsFrom: InterpreterPrimitives).
@@ -349,7 +349,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testOutputDir [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							(o excludeFromBuild not)
 								ifTrue:[self assert:(o  outputDir isKindOf: FileDirectory)]]]
 
@@ -369,7 +369,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testOutputDirName [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							(o excludeFromBuild not)                               ""
 								ifTrue:[
 									self assert:(o  outputDirName isString).
@@ -390,7 +390,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testPlatformSources [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-					o:= configuration new.
+					o:= configuration basicNew.
 					(o excludeFromBuild not) | (configuration isAbstractBaseClass)
 						ifTrue:[self assert:(o  platformSources isArray)]]]
 
@@ -410,7 +410,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testSrcDir [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-					o:= configuration new.
+					o:= configuration basicNew.
 					(o excludeFromBuild not) | (configuration isAbstractBaseClass)
 						ifTrue:[self assert:(o  srcDir isKindOf: FileDirectory)]]]
 
@@ -430,7 +430,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testTopDir [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-					o:= configuration new.
+					o:= configuration basicNew.
 					(o excludeFromBuild not) | (configuration isAbstractBaseClass)
 						ifTrue:[self assert:(o  topDir isKindOf: FileDirectory)]]]
 
@@ -449,7 +449,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testVersion [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-					o:= configuration new.
+					o:= configuration basicNew.
 					(o excludeFromBuild not) | (configuration isAbstractBaseClass)
 						ifTrue:[self assert:(o  version isString)]]]
 
@@ -469,7 +469,7 @@ CMakeVMMakerSqueakCommonConfigTest >> testdirBuildLanguageVMMM [
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
-							o:= configuration new.
+							o:= configuration basicNew.
 							o excludeFromBuild not                                                     
 							 	ifTrue:[self assert:(o  dirBuildLanguageVMMM isString)]]]
 
