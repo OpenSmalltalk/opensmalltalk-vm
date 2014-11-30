@@ -142,6 +142,11 @@ SqueakAndroidStackEvtConfig >> crossSources [
 ]
 
 { #category : #plugins }
+SqueakAndroidStackEvtConfig >> customizeVMPlugins [
+	"do nothing"
+]
+
+{ #category : #plugins }
 SqueakAndroidStackEvtConfig >> defaultExternalPlugins [
 	^ #()
 ]

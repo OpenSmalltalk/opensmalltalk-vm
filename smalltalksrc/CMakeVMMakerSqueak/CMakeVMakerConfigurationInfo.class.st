@@ -18,7 +18,8 @@ Class {
 		'availableBuildTypes',
 		'dirBuildPlatform',
 		'dirSource',
-		'excludeFromBuild'
+		'excludeFromBuild',
+		'isAbstractBaseClass'
 	],
 	#category : #'CMakeVMMakerSqueak-Builder'
 }
@@ -51,11 +52,12 @@ CMakeVMakerConfigurationInfo >> visit: aVisitor [
 	|v|
 	"I am being visited by a CMakeVMMakerSqueak configuration class. Extract its information and store it in myself"
 	self flag:'tty'. "why am I not storing the instances itself?does this visit stuff really make sense? I am thinking its 'lightweight'. hmmm"
-	v:= aVisitor new.
+	v:= aVisitor basicNew.
 	availableBuildTypes := v availableBuildTypes.
 	dirBuildPlatform := v dirBuildPlatform.
 	dirSource  := v dirSource.
 	excludeFromBuild := v excludeFromBuild.
+	isAbstractBaseClass := (v class) isAbstractBaseClass.
 
 
 ]

@@ -77,6 +77,20 @@ SqueakSunOS32x86Config >> coreSourcesBuildMultiThreaded [
 ]
 
 { #category : #plugins }
+SqueakSunOS32x86Config >> customizeVMPlugins [
+	|mysubset iwantonly|
+	"trim the vmdrivers ordered collection of CMakeVMDriver subclasses to only those I want. then customize them for use on this OS/platform"
+"	iwantonly :=	 #(#CMakeVMDisplayNull  #CMakeVMDisplayX11  #CMakeVMSoundALSA  #CMakeVMSoundNull ).
+	mysubset := vmplugins select: [:vmd | 0 < (iwantonly occurrencesOf: (vmd class name) asSymbol)]. 
+	vmplugins := mysubset.
+	self 
+		customizeCMakeVMDisplayNull;
+		customizeCMakeVMDisplayX11;
+		customizeCMakeVMSoundALSA;
+		customizeCMakeVMSoundNull."
+]
+
+{ #category : #plugins }
 SqueakSunOS32x86Config >> defaultExternalPlugins [
 	^#(	)
 ]
