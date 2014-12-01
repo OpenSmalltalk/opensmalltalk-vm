@@ -1560,7 +1560,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 	(objectMemory isIntegerObject: arg)
 		ifTrue: [arg := objectMemory integerValueOf: arg]
 		ifFalse:
-			[(index = 55 and: [self isFloatObject: arg]) ifFalse:
+			[(index = 55 and: [objectMemory isFloatInstance: arg]) ifFalse:
 				[^self primitiveFailFor: PrimErrBadArgument]].
 
 	"assume failure, then set success for handled indices"

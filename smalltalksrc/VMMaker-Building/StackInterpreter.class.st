@@ -8069,8 +8069,9 @@ StackInterpreter >> isEmptyList: aLinkedList [
 
 { #category : #'internal interpreter access' }
 StackInterpreter >> isFloatObject: oop [
-	^(objectMemory isNonImmediate: oop)
-	   and: [ClassFloatCompactIndex = (objectMemory compactClassIndexOf: oop)]
+	<api>
+	<inline: true>
+	^objectMemory isFloatInstance: oop
 ]
 
 { #category : #'frame access' }
