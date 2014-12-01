@@ -21,6 +21,7 @@ Class {
 
 { #category : #'bootstrap image' }
 Spur32to64BitBootstrap >> alterSystem [
+	self installSmallFloatInClassTable.
 	self nilWordSize
 ]
 
@@ -299,6 +300,16 @@ Spur32to64BitBootstrap >> initMaps [
 ]
 
 { #category : #'bootstrap image' }
+Spur32to64BitBootstrap >> installSmallFloatInClassTable [
+	| firstPage |
+	firstPage := heap64 fetchPointer: 0 ofObject: heap64 classTableRootObj.
+	heap64
+		storePointer: heap64 smallFloatTag
+		ofObject: firstPage
+		withValue: self smallFloatClass
+]
+
+{ #category : #'bootstrap image' }
 Spur32to64BitBootstrap >> isUnmappedObject: obj32 [
 	"Answer if obj32 is an object that is not cloned by the bootstrap."
 	^((heap32 classIndexOf: obj32)
@@ -357,6 +368,20 @@ Spur32to64BitBootstrap >> on: imageName [
 		codeSize: 0.
 	heap64 bootstrapping: true.
 	self initMaps
+]
+
+{ #category : #'bootstrap image' }
+Spur32to64BitBootstrap >> smallFloatClass [
+	| sf64sym |
+	sf64sym := self findSymbol: #SmallFloat64.
+	heap64 allObjectsDo:
+		[:o|
+		((heap64 isPointersNonImm: o)
+		 and: [(heap64 numSlotsOf: o) > interpreter32 classNameIndex
+		 and: [(interpreter64 addressCouldBeClassObj: o)
+		 and: [(heap64 fetchPointer: interpreter32 classNameIndex ofObject: o) = sf64sym]]]) ifTrue:
+			[^o]].
+	^nil
 ]
 
 { #category : #'public access' }
