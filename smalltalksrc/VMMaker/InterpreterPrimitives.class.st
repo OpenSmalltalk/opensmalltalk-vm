@@ -3684,7 +3684,7 @@ InterpreterPrimitives >> primitiveSmallFloatTruncated [
 	| rcvr trunc |
 	<var: #rcvr type: #double>
 	<var: #trunc type: #double>
-	rcvr := self smallFloatValueOf: self stackTop.
+	rcvr := objectMemory smallFloatValueOf: self stackTop.
 	self cCode: [self mod: rcvr f: (self addressOf: trunc)]
 		inSmalltalk: [trunc := rcvr truncated].
 	(trunc between: objectMemory minSmallInteger asFloat and: objectMemory maxSmallInteger asFloat)
