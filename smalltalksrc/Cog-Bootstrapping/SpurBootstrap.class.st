@@ -144,6 +144,7 @@ SpurBootstrap class >> categoryForClass: className meta: isMeta selector: select
 			[#(Behavior handleFailingFailingBasicNew)]		-> [#private].
 			[#(Behavior handleFailingFailingBasicNew:)]		-> [#private].
 			[#(Behavior identityHash)]						-> [#comparing].
+			[#(Behavior isCompiledMethodClass)]			-> [#testing].
 			[#(Behavior isEphemeronClass)]				-> [#testing].
 			[#(Behavior isImmediateClass)]					-> [#testing].
 			[#(BoxedFloat64 class basicNew)]				-> [#'instance creation'].
@@ -183,6 +184,7 @@ SpurBootstrap class >> categoryForClass: className meta: isMeta selector: select
 			[#(MethodContext class allInstancesDo:)]		-> [#enumerating].
 			[#(SmallFloat64 class basicNew)]				-> [#'instance creation'].
 			[#(SmallFloat64 class basicNew:)]				-> [#'instance creation'].
+			[#(SmallFloat64 clone)]							-> [#copying].
 			[#(SmallFloat64 copy)]							-> [#copying].
 			[#(SmallFloat64 deepCopy)]					-> [#copying].
 			[#(SmallFloat64 shallowCopy)]					-> [#copying].
