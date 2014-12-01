@@ -303,6 +303,12 @@ SpurBootstrapPrototypes >> BehaviorPROTOTYPEisBytes [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrapPrototypes >> BehaviorPROTOTYPEisCompiledMethodClass [
+	"Answer whether the receiver has compiled method instances that mix pointers and bytes."
+	^self instSpec >= 24
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrapPrototypes >> BehaviorPROTOTYPEisEphemeronClass [
 	"Answer whether the receiver has ephemeral instance variables.  The garbage collector will
 	 fire (queue for finalization) any ephemeron whose first instance variable is not referenced
@@ -787,6 +793,33 @@ SpurBootstrapPrototypes >> MethodNodePROTOTYPEgenerate: trailer using: aCompiled
 	"Since this method has inst var refs the prototype must live in the actual class."
 
 	<indirect>
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> ObjectPROTOTYPEclone [
+	"Answer a shallow copy of the receiver."
+	<primitive: 148 error: ec>
+	| class newObject |
+	ec == #'insufficient object memory' ifFalse:
+		[^self primitiveFailed].
+	"If the primitive fails due to insufficient memory, instantiate via basicNew: to invoke
+	 the garbage collector before retrying, and use copyFrom: to copy state."
+	newObject := (class := self class) isVariable
+					ifTrue: 
+						[class isCompiledMethodClass
+							ifTrue:
+								[class newMethod: self basicSize - self initialPC + 1 header: self header]
+							ifFalse:
+								[class basicNew: self basicSize]]
+					ifFalse:
+						[class basicNew].
+	^newObject copyFrom: self
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> SmallFloat64PROTOTYPEclone [
+	"Answer the receiver, because SmallFloat64s are unique."
+	^self
 ]
 
 { #category : #'method prototypes' }
