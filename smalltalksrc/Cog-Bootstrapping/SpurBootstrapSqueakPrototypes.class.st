@@ -220,6 +220,12 @@ SpurBootstrapSqueakPrototypes >> ProtoObjectPROTOTYPEscaledIdentityHash [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrapSqueakPrototypes >> SmallIntegerPROTOTYPEclone [
+	"Answer the receiver, because SmallIntegers are unique."
+	^self
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrapSqueakPrototypes >> SmalltalkImagePROTOTYPErecreateSpecialObjectsArray [
 	"Smalltalk recreateSpecialObjectsArray"
 	
