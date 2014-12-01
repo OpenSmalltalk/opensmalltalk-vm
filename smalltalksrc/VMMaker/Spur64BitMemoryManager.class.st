@@ -309,6 +309,26 @@ Spur64BitMemoryManager >> coalesce: obj1 and: obj2 [
 ]
 
 { #category : #'interpreter access' }
+Spur64BitMemoryManager >> dbgFloatValueOf: oop [
+	"Answer the C double precision floating point value of the argument,
+	 or if it is not, answer 0."
+
+	| result tagBits |
+	<returnTypeC: #double>
+	<var: #result type: #double>
+	(tagBits := oop bitAnd: self tagMask) ~= 0
+		ifTrue:
+			[tagBits = self smallFloatTag ifTrue:
+				[^self smallFloatValueOf: oop]]
+		ifFalse:
+			[(self classIndexOf: oop) = ClassFloatCompactIndex ifTrue:
+				[self cCode: '' inSmalltalk: [result := Float new: 2].
+				 self fetchFloatAt: oop + self baseHeaderSize into: result.
+				 ^result]].
+	^0.0
+]
+
+{ #category : #'interpreter access' }
 Spur64BitMemoryManager >> exponentOfSmallFloat: oop [
 	"Answer the exponent of the argument, a SmallFloat.
 	 See section 61-bit Immediate Floats in the SpurMemoryManager class comment.
@@ -558,6 +578,12 @@ Spur64BitMemoryManager >> isFloatInstance: oop [
 	^(tagBits := oop bitAnd: self tagMask) ~= 0
 		ifTrue: [tagBits = self smallFloatTag]
 		ifFalse: [(self classIndexOf: oop) = ClassFloatCompactIndex]
+]
+
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> isImmediateFloat: oop [
+	<inline: true>
+	^(oop bitAnd: self tagMask) = self smallFloatTag
 ]
 
 { #category : #'object testing' }

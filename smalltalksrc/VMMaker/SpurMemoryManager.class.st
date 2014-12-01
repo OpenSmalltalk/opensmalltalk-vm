@@ -3727,6 +3727,14 @@ SpurMemoryManager >> countNumClassPagesPreSwizzle: bytesToShift [
 	
 ]
 
+{ #category : #'interpreter access' }
+SpurMemoryManager >> dbgFloatValueOf: oop [
+	"Answer the C double precision floating point value of the argument,
+	 or if it is not, answer 0."
+
+	self subclassResponsibility
+]
+
 { #category : #snapshot }
 SpurMemoryManager >> defaultEdenBytes [
 	"Answer the default amount of memory to allocate for the eden space.
@@ -5971,7 +5979,7 @@ SpurMemoryManager >> isClassOfNonImm: oop equalTo: classOop compactClassIndex: k
 SpurMemoryManager >> isCompiledMethod: objOop [
     "Answer whether the argument object is of compiled method format"
 	<api>
-    ^(self formatOf: objOop) >= 24
+    ^(self formatOf: objOop) >= self firstCompiledMethodFormat
 ]
 
 { #category : #'header formats' }
@@ -6122,6 +6130,11 @@ SpurMemoryManager >> isImmediate: oop [
 { #category : #'object testing' }
 SpurMemoryManager >> isImmediateCharacter: oop [
 	^(oop bitAnd: self tagMask) = 2
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> isImmediateFloat: oop [
+	self subclassResponsibility
 ]
 
 { #category : #'header access' }
@@ -6586,13 +6599,17 @@ SpurMemoryManager >> isWordsNonImm: objOop [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isWordsOrBytes: oop [
+	"Answer if the contains only indexable words or bytes (no oops). See comment in formatOf:"
+	"Note: Excludes CompiledMethods."
 	^(self isNonImmediate: oop)
 	  and: [self isWordsOrBytesNonImm: oop]
 ]
 
 { #category : #'object testing' }
 SpurMemoryManager >> isWordsOrBytesNonImm: objOop [
-	^(self formatOf: objOop) >= self sixtyFourBitIndexableFormat
+	"Answer if the contains only indexable words or bytes (no oops). See comment in formatOf:"
+	"Note: Excludes CompiledMethods."
+	^self isPureBitsFormat: (self formatOf: objOop)
 ]
 
 { #category : #'object testing' }

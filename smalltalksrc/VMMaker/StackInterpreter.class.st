@@ -4595,22 +4595,6 @@ StackInterpreter >> createActualMessageTo: lookupClass [
 	argumentCount := 1
 ]
 
-{ #category : #utilities }
-StackInterpreter >> dbgFloatValueOf: oop [
-	"This version answers the value of a float or nil if not a flat *WITHOUT* setting successFlag or any other such nonsense.  It is hence safe for use in debug printing.  Sheesh."
-
-	| result |
-	<returnTypeC: #double>
-	<var: #result type: #double>
-	self flag: #Dan.  "None of the float stuff has been converted for 64 bits"
-	((objectMemory isNonImmediate: oop)
-	and: [(objectMemory fetchClassOfNonImm: oop) = (objectMemory splObj: ClassFloat)]) ifTrue:
-		[self cCode: '' inSmalltalk: [result := Float new: 2].
-		 objectMemory fetchFloatAt: oop + objectMemory baseHeaderSize into: result.
-		 ^result].
-	^nil
-]
-
 { #category : #initialization }
 StackInterpreter >> defaultNumStackPages [
 	"Return the default number of stack pages allocate at startup.
@@ -10917,7 +10901,7 @@ StackInterpreter >> printOop: oop [
 	self print: ': a(n) '.
 	self printNameOfClass: (cls := objectMemory fetchClassOfNonImm: oop) count: 5.
 	cls = (objectMemory splObj: ClassFloat) ifTrue:
-		[^self cr; printFloat: (self dbgFloatValueOf: oop); cr].
+		[^self cr; printFloat: (objectMemory dbgFloatValueOf: oop); cr].
 	fmt := objectMemory formatOf: oop.
 	fmt > objectMemory lastPointerFormat ifTrue:
 		[self print: ' nbytes '; printNum: (objectMemory numBytesOf: oop)].
@@ -11017,7 +11001,7 @@ StackInterpreter >> printOopShortInner: oop [
 	(objectMemory isForwarded: oop) ifTrue:
 		[^self print: ' is a forwarder to '; printHex: (objectMemory followForwarded: oop)].
 	(self isFloatObject: oop) ifTrue:
-		[^self printFloat: (self dbgFloatValueOf: oop)].
+		[^self printFloat: (objectMemory dbgFloatValueOf: oop)].
 	classOop := objectMemory fetchClassOfNonImm: oop.
 	(objectMemory addressCouldBeObj: classOop) ifFalse:
 		[^self print: 'a ??'].
@@ -12598,6 +12582,75 @@ StackInterpreter >> shortConditionalJumpFalse [
 StackInterpreter >> shortConditionalJumpTrue [
 
 	self jumplfTrueBy: (currentBytecode bitAnd: 7) + 1
+]
+
+{ #category : #simulation }
+StackInterpreter >> shortPrint: oop [
+	<doNotGenerate>
+	| name classOop |
+	(objectMemory isImmediate: oop) ifTrue:
+		[(objectMemory isImmediateCharacter: oop) ifTrue:
+			[^(objectMemory characterValueOf: oop) < 256
+				ifTrue:
+					['=$', (objectMemory characterValueOf: oop) printString,
+					' (', (String with: (Character value: (objectMemory characterValueOf: oop))), ')']
+				ifFalse:
+					['=$', (objectMemory characterValueOf: oop) printString, '(???)']].
+		(objectMemory isIntegerObject: oop) ifTrue:
+			[^'=', (objectMemory integerValueOf: oop) printString,
+			' (', (objectMemory integerValueOf: oop) hex, ')'].
+		(objectMemory isImmediateFloat: oop) ifTrue:
+			[^ '=', (objectMemory floatValueOf: oop) printString, ' (', oop hex, ')'].
+		^'= UNKNOWN IMMEDIATE', ' (', (objectMemory integerValueOf: oop) hex, ')'].
+	(objectMemory addressCouldBeObj: oop) ifFalse:
+		[^(oop bitAnd: objectMemory allocationUnit - 1) ~= 0
+			ifTrue: [' is misaligned']
+			ifFalse: [self whereIs: oop]].
+	(objectMemory isFreeObject: oop) ifTrue:
+		[^' is a free chunk of size ', (objectMemory sizeOfFree: oop) printString].
+	(objectMemory isForwarded: oop) ifTrue:
+		[^' is a forwarded object to ', (objectMemory followForwarded: oop) hex,
+			' of slot size ', (objectMemory numSlotsOfAny: oop) printString].
+	(objectMemory isFloatInstance: oop) ifTrue:
+		[^'=', (objectMemory dbgFloatValueOf: oop) printString].
+	oop = objectMemory nilObject ifTrue:
+		[^'nil'].
+	oop = objectMemory falseObject ifTrue:
+		[^'false'].
+	oop = objectMemory trueObject ifTrue:
+		[^'true'].
+
+	classOop := objectMemory fetchClassOfNonImm: oop.
+	((self objCouldBeClassObj: oop)
+	 and: [(objectMemory numSlotsOf: classOop) = metaclassNumSlots]) ifTrue:
+		[^'class ', (self nameOfClass: oop)].
+	name := self nameOfClass: classOop.
+	name size = 0 ifTrue: [name := '??'].
+	(#('String'  'ByteString') includes: name) ifTrue:
+		[^(self stringOf: oop) printString].
+	(#('Symbol'  'ByteSymbol') includes: name) ifTrue:
+		[^'#', (self stringOf: oop)].
+	name = 'Character' ifTrue: "SpurMemoryManager has immediate Characters (see above); ObjectMemory does not"
+		[^'=', (Character value: (objectMemory integerValueOf: 
+				(objectMemory fetchPointer: 0 ofObject: oop))) printString].
+
+	"Try to spot association-like things; they're all subclasses of LookupKey"
+	((objectMemory isPointersNonImm: oop)
+	 and: [((objectMemory instanceSizeOf: classOop) between: ValueIndex + 1 and: ValueIndex + 2)
+	 and: [(objectMemory isBytes: (objectMemory fetchPointer: KeyIndex ofObject: oop))]]) ifTrue:
+		[| classLookupKey |
+		 classLookupKey := objectMemory fetchClassOfNonImm: (objectMemory splObj: SchedulerAssociation).
+		 [classLookupKey = objectMemory nilObject ifTrue:
+			[^(('AEIOU' includes: name first) ifTrue: ['an '] ifFalse: ['a ']), name].
+		  (objectMemory instanceSizeOf: classLookupKey) = (KeyIndex + 1)] whileFalse:
+			[classLookupKey := self superclassOf: classLookupKey].
+		 (self includesBehavior: classOop ThatOf: classLookupKey) ifTrue:
+			[^(('AEIOU' includes: name first) ifTrue: ['an '] ifFalse: ['a ']), name,
+				' ', (self shortPrint: (objectMemory fetchPointer: KeyIndex ofObject: oop)),
+				' -> ',
+				(objectMemory fetchPointer: ValueIndex ofObject: oop) hex8]].
+
+	^(('AEIOU' includes: name first) ifTrue: ['an '] ifFalse: ['a ']), name
 ]
 
 { #category : #'debug printing' }

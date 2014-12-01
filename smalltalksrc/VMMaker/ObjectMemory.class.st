@@ -1749,6 +1749,22 @@ ObjectMemory >> copyObj: oop toSegment: segmentWordArray addr: lastSeg stopAt: s
 	^lastSeg + extraSize + bodySize
 ]
 
+{ #category : #'interpreter access' }
+ObjectMemory >> dbgFloatValueOf: oop [
+	"Answer the C double precision floating point value of the argument,
+	 or if it is not, answer 0."
+
+	| isFloat result |
+	<returnTypeC: #double>
+	<var: #result type: #double>
+	isFloat := self isFloatInstance: oop.
+	isFloat ifTrue:
+		[self cCode: '' inSmalltalk: [result := Float new: 2].
+		 self fetchFloatAt: oop + self baseHeaderSize into: result.
+		 ^result].
+	^0.0
+]
+
 { #category : #'plugin support' }
 ObjectMemory >> displayObject [
 	^self splObj: TheDisplay
@@ -3123,6 +3139,11 @@ ObjectMemory >> isImmediate: anOop [
 { #category : #'interpreter access' }
 ObjectMemory >> isImmediateCharacter: objectPointer [
 
+	^false
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> isImmediateFloat: oop [
 	^false
 ]
 
