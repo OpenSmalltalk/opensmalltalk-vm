@@ -122,6 +122,11 @@ InterpreterPrimitives >> initPrimCall [
 	primFailCode := 0
 ]
 
+{ #category : #'object access primitives' }
+InterpreterPrimitives >> isAppropriateForCopyObject: oop [
+	^objectMemory isPointersNonImm: oop
+]
+
 { #category : #'primitive support' }
 InterpreterPrimitives >> isDirectAlien: oop [
 	^(self sizeFieldOfAlien: oop) > 0
@@ -1161,32 +1166,49 @@ InterpreterPrimitives >> primitiveControlVMProfiling [
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveCopyObject [
 	"Primitive. Copy the state of the receiver from the argument. 
-		Fail if receiver and argument are of a different class. 
-		Fail if the receiver or argument are non-pointer objects.
+		Fail if receiver and argument are of a different class.
+		Fail if the receiver or argument are contexts (because of context-to-stack mapping).
 		Fail if receiver and argument have different lengths (for indexable objects).
-	"
+		Fail if the objects are not in a fit state to be copied (e.g. married contexts and Cogged methods)"
 	| rcvr arg length |
-	self methodArgumentCount = 1 ifFalse:
-		[^self primitiveFail].
-	arg := self stackObjectValue: 0.
-	rcvr := self stackObjectValue: 1.
+	self methodArgumentCount >= 1 ifFalse:
+		[^self primitiveFailFor: PrimErrBadNumArgs].
+	arg := self stackTop.
+	rcvr := self stackValue: 1.
+	(objectMemory isImmediate: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrBadReceiver].
+	(objectMemory isImmediate: arg) ifTrue:
+		[^self primitiveFailFor: PrimErrBadArgument].
 
-	self failed ifTrue:[^nil].
-	(objectMemory isPointers: rcvr) ifFalse:
-		[^self primitiveFail].
-	(objectMemory fetchClassOfNonImm: rcvr) = (objectMemory fetchClassOfNonImm: arg) ifFalse:
-		[^self primitiveFail].
-	length := objectMemory lengthOf: rcvr.
-	length = (objectMemory lengthOf: arg) ifFalse:
-		[^self primitiveFail].
-	
-	"Now copy the elements"
-	0 to: length-1 do:[:i|
-		objectMemory storePointer: i ofObject: rcvr withValue: (objectMemory fetchPointer: i ofObject: arg)].
+	(objectMemory fetchClassTagOfNonImm: rcvr)
+		~= (objectMemory fetchClassTagOfNonImm: arg) ifTrue:
+		[^self primitiveFailFor: PrimErrBadArgument].
+
+	(objectMemory isWordsOrBytesNonImm: rcvr)
+		ifTrue:
+			[length := objectMemory numBytesOf: rcvr.
+			((objectMemory formatOf: rcvr) = (objectMemory formatOf: arg)
+			  and: [length = (objectMemory numBytesOf: arg)]) ifFalse:
+				[^self primitiveFailFor: PrimErrBadArgument].
+			 self mem: rcvr + objectMemory baseHeaderSize
+				cp: arg + objectMemory baseHeaderSize
+				y: length]
+		ifFalse:
+			[(self isAppropriateForCopyObject: rcvr) ifFalse:
+				[^self primitiveFailFor: PrimErrBadReceiver].
+			 length := objectMemory numSlotsOf: rcvr.
+			 ((self isAppropriateForCopyObject: arg)
+			  and: [length = (objectMemory lengthOf: arg)]) ifFalse:
+				[^self primitiveFailFor: PrimErrBadArgument].
+			 0 to: length - 1 do:
+				[:i|
+				objectMemory
+					storePointer: i
+					ofObject: rcvr
+					withValue: (objectMemory fetchPointer: i ofObject: arg)]].
 
 	"Note: The above could be faster for young receivers but I don't think it'll matter"
-	self pop: 1. "pop arg; answer receiver"
-
+	self pop: self methodArgumentCount "pop arg; answer receiver"
 ]
 
 { #category : #'system control primitives' }
