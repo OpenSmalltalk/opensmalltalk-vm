@@ -1,0 +1,21 @@
+How to build a new plugin:
+1. Start xcode, create a new "Carbon bundle" project
+2. Create the project under build.macosNNproc/variant/MyPlugin
+   e.g.  build.macos32x86/squeak.cog.v3/MyPlugin
+3. Edit the project settings:
+   Header Search Path: /Developer/Headers/FlatCarbon
+4. Add the following files:
+   ../../../src/vm/interp.h
+   ../../../platforms/Cross/vm/sqMemoryAccess.h
+   ../../../platforms/Cross/vm/sqVirtualMachine.h
+   ../../../platforms/Mac OS/vm/config.h
+   ../../../platforms/Mac OS/vm/sqConfig.h
+   ../../../platforms/Mac OS/vm/sqPlatformSpecific.h
+5. Add the files for your plugin from
+   ../../../platforms/Cross/MyPlugin
+   ../../../platforms/Mac OS/MyPlugin
+   ../../../src/plugins/MyPlugin
+6. Cross your fingers and compile
+
+Alternatively, adapt the Template provided here. Be sure to edit VMSRCDIR to be
+the directory containing vm/interp.h from the VM you're adding the plugin to.

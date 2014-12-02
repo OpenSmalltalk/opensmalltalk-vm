@@ -1,0 +1,6 @@
+/* Localized versions of Info.plist keys */
+
+CFBundleName = "SpellingPlugin";
+CFBundleShortVersionString = "SpellingPlugin version 1.0.1B1";
+CFBundleGetInfoString = "SpellingPlugin version 1.0.1B1";
+NSHumanReadableCopyright = "http://www.squeak.org";

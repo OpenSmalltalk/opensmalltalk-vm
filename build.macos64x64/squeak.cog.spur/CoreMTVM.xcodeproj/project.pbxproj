@@ -1,0 +1,1890 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 42;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		73BC1BBB0F576864003412C5 /* cogit.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB60F576864003412C5 /* cogit.c */; settings = {COMPILER_FLAGS = "-fno-inline"; }; };
+		73BC1BBC0F576864003412C5 /* cogit.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BB70F576864003412C5 /* cogit.h */; };
+		73BC1BBD0F576864003412C5 /* cogmethod.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BB80F576864003412C5 /* cogmethod.h */; };
+		73BC1BBE0F576864003412C5 /* gcc3x-cointerpmt.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB90F576864003412C5 /* gcc3x-cointerpmt.c */; };
+		73BC1BBF0F576864003412C5 /* cointerpmt.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BBA0F576864003412C5 /* cointerpmt.h */; };
+		733AC8DB0FEAAC4F007C6206 /* version.c in Sources */ = {isa = PBXBuildFile; fileRef = 733AC8DA0FEAAC4F007C6206 /* version.c */; };
+		733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */ = {isa = PBXBuildFile; fileRef = 733B2C36106AB74B004652BE /* sqExternalSemaphores.c */; };
+		735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */; };
+		7351A09B100963670035A878 /* sqUnixThreads.c in Sources */ = {isa = PBXBuildFile; fileRef = 7351A09A100963670035A878 /* sqUnixThreads.c */; };
+		737888E713D0DE6500C5E1AD /* sqMemoryFence.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E513D0DE6500C5E1AD /* sqMemoryFence.h */; };
+		737888E813D0DE6500C5E1AD /* sqSCCSVersion.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */; };
+		738FB1EA0EE4CF94004BEE42 /* ia32abicc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738FB1E90EE4CF94004BEE42 /* ia32abicc.c */; };
+		739C6ED6112DCBB00049B7D3 /* sqTicker.c in Sources */ = {isa = PBXBuildFile; fileRef = 739C6ED5112DCBB00049B7D3 /* sqTicker.c */; };
+		739C6ED9112DCBD10049B7D3 /* sqAtomicOps.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C6ED7112DCBD10049B7D3 /* sqAtomicOps.h */; };
+		739C6EDA112DCBD10049B7D3 /* sqAssert.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C6ED8112DCBD10049B7D3 /* sqAssert.h */; };
+		73B54C530E55EFED00FE780C /* sqUnixVMProfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 73B54C520E55EFED00FE780C /* sqUnixVMProfile.c */; };
+		73B96E490E47D7A10079C51B /* sqUnixHeartbeat.c in Sources */ = {isa = PBXBuildFile; fileRef = 73B96E480E47D7A10079C51B /* sqUnixHeartbeat.c */; };
+		73BC1BC70F57699F003412C5 /* sqCogStackAlignment.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BC60F57699F003412C5 /* sqCogStackAlignment.h */; };
+		94002C4409EB18EF003C4BF2 /* sqMemoryAccess.h in Headers */ = {isa = PBXBuildFile; fileRef = 94002C4209EB18EF003C4BF2 /* sqMemoryAccess.h */; };
+		941A3B2D09AA144000C9D25A /* sqMacOpenGL.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AE0F02EB4E090100013C /* sqMacOpenGL.h */; };
+		941A3B2E09AA144000C9D25A /* JConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AE4102EB4E090100013C /* JConfig.h */; };
+		941A3B2F09AA144000C9D25A /* sqConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AEED02EB4E0A0100013C /* sqConfig.h */; };
+		941A3B3109AA144000C9D25A /* sqMacMain.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AEF502EB4E0A0100013C /* sqMacMain.h */; };
+		941A3B3209AA144000C9D25A /* sqMacTime.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AEFB02EB4E0A0100013C /* sqMacTime.h */; };
+		941A3B3309AA144000C9D25A /* sqMacUIAppleEvents.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AEFD02EB4E0A0100013C /* sqMacUIAppleEvents.h */; };
+		941A3B3409AA144000C9D25A /* sqMacUIClipBoard.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AEFF02EB4E0A0100013C /* sqMacUIClipBoard.h */; };
+		941A3B3509AA144000C9D25A /* sqMacUIConstants.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF0002EB4E0A0100013C /* sqMacUIConstants.h */; };
+		941A3B3609AA144000C9D25A /* sqMacUIEvents.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF0202EB4E0A0100013C /* sqMacUIEvents.h */; };
+		941A3B3709AA144000C9D25A /* sqMacUIMenuBar.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF0402EB4E0A0100013C /* sqMacUIMenuBar.h */; };
+		941A3B3809AA144000C9D25A /* sqMacWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF0602EB4E0A0100013C /* sqMacWindow.h */; };
+		941A3B3909AA144000C9D25A /* sqPlatformSpecific.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF0802EB4E0A0100013C /* sqPlatformSpecific.h */; };
+		941A3B3A09AA144000C9D25A /* AsynchFilePlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF1302EB4E0A0100013C /* AsynchFilePlugin.h */; };
+		941A3B3B09AA144000C9D25A /* B3DAcceleratorPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF1502EB4E0A0100013C /* B3DAcceleratorPlugin.h */; };
+		941A3B3C09AA144000C9D25A /* sqOpenGLRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF1802EB4E0A0100013C /* sqOpenGLRenderer.h */; };
+		941A3B3D09AA144000C9D25A /* DropPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF1A02EB4E0A0100013C /* DropPlugin.h */; };
+		941A3B3E09AA144000C9D25A /* FilePlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF1E02EB4E0A0100013C /* FilePlugin.h */; };
+		941A3B3F09AA144000C9D25A /* InternetConfigPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF2102EB4E0A0100013C /* InternetConfigPlugin.h */; };
+		941A3B4009AA144000C9D25A /* JoystickTabletPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF2302EB4E0A0100013C /* JoystickTabletPlugin.h */; };
+		941A3B4109AA144000C9D25A /* jchuff.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF2C02EB4E0A0100013C /* jchuff.h */; };
+		941A3B4209AA144000C9D25A /* jconfig.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF3202EB4E0A0100013C /* jconfig.h */; };
+		941A3B4309AA144000C9D25A /* jdct.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF3E02EB4E0A0100013C /* jdct.h */; };
+		941A3B4409AA144000C9D25A /* jdhuff.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF4102EB4E0A0100013C /* jdhuff.h */; };
+		941A3B4509AA144000C9D25A /* jerror.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF4C02EB4E0A0100013C /* jerror.h */; };
+		941A3B4609AA144000C9D25A /* jinclude.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF5402EB4E0A0100013C /* jinclude.h */; };
+		941A3B4709AA144000C9D25A /* jmemsys.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF5902EB4E0A0100013C /* jmemsys.h */; };
+		941A3B4809AA144000C9D25A /* jmorecfg.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF5A02EB4E0A0100013C /* jmorecfg.h */; };
+		941A3B4909AA144000C9D25A /* jpegint.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF5B02EB4E0A0100013C /* jpegint.h */; };
+		941A3B4A09AA144000C9D25A /* jpeglib.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF5C02EB4E0A0100013C /* jpeglib.h */; };
+		941A3B4B09AA144000C9D25A /* JPEGReadWriter2Plugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF5D02EB4E0A0100013C /* JPEGReadWriter2Plugin.h */; };
+		941A3B4C09AA144000C9D25A /* jversion.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF6102EB4E0A0100013C /* jversion.h */; };
+		941A3B4D09AA144000C9D25A /* MIDIPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF6402EB4E0A0100013C /* MIDIPlugin.h */; };
+		941A3B4E09AA144000C9D25A /* SecurityPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFBD02EB4E0A0100013C /* SecurityPlugin.h */; };
+		941A3B4F09AA144000C9D25A /* SerialPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFBF02EB4E0A0100013C /* SerialPlugin.h */; };
+		941A3B5009AA144000C9D25A /* SocketPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFC102EB4E0A0100013C /* SocketPlugin.h */; };
+		941A3B5109AA144000C9D25A /* SoundCodecPrims.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFC302EB4E0A0100013C /* SoundCodecPrims.h */; };
+		941A3B5209AA144000C9D25A /* SoundGenerationPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFC602EB4E0A0100013C /* SoundGenerationPlugin.h */; };
+		941A3B5309AA144000C9D25A /* SoundPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFC902EB4E0A0100013C /* SoundPlugin.h */; };
+		941A3B5409AA144000C9D25A /* b3d.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFCB02EB4E0A0100013C /* b3d.h */; };
+		941A3B5509AA144000C9D25A /* b3dAlloc.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFCD02EB4E0A0100013C /* b3dAlloc.h */; };
+		941A3B5609AA144000C9D25A /* b3dTypes.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFD202EB4E0A0100013C /* b3dTypes.h */; };
+		941A3B5709AA144000C9D25A /* sqFFI.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFD402EB4E0A0100013C /* sqFFI.h */; };
+		941A3B5809AA144000C9D25A /* SurfacePlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFD702EB4E0A0100013C /* SurfacePlugin.h */; };
+		941A3B5909AA144000C9D25A /* UUIDPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFD902EB4E0A0100013C /* UUIDPlugin.h */; };
+		941A3B5A09AA144000C9D25A /* sq.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFDC02EB4E0A0100013C /* sq.h */; };
+		941A3B5B09AA144000C9D25A /* sqVirtualMachine.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFDF02EB4E0A0100013C /* sqVirtualMachine.h */; };
+		941A3B5D09AA144000C9D25A /* sqGnu.h in Headers */ = {isa = PBXBuildFile; fileRef = 66A8FED80300824600A80109 /* sqGnu.h */; };
+		941A3B5E09AA144000C9D25A /* sqMacEncoding.h in Headers */ = {isa = PBXBuildFile; fileRef = 9405366D057BC0EB0080D7FF /* sqMacEncoding.h */; };
+		941A3B6209AA144000C9D25A /* MacMenubarPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = 940AFA4206DFD0280062E19F /* MacMenubarPlugin.h */; };
+		941A3B6309AA144000C9D25A /* sqMacUnixInterfaceSound.h in Headers */ = {isa = PBXBuildFile; fileRef = 94D42B2B07B2C8DC001CCA37 /* sqMacUnixInterfaceSound.h */; };
+		941A3B6409AA144000C9D25A /* sqMacUnixCommandLineInterface.h in Headers */ = {isa = PBXBuildFile; fileRef = 940D36BA07ED2D910054C5E1 /* sqMacUnixCommandLineInterface.h */; };
+		941A3B6509AA144000C9D25A /* HID_Utilities_External.h in Headers */ = {isa = PBXBuildFile; fileRef = 94148CAD080DB44600E8C647 /* HID_Utilities_External.h */; };
+		941A3B6609AA144000C9D25A /* config.h in Headers */ = {isa = PBXBuildFile; fileRef = 94820D7F080E0B0F0061C2AB /* config.h */; };
+		941A3B6709AA144000C9D25A /* interp.h in Headers */ = {isa = PBXBuildFile; fileRef = 948214FE080E3ABE0061C2AB /* interp.h */; };
+		941A3B6809AA144000C9D25A /* HID_Error_Handler.h in Headers */ = {isa = PBXBuildFile; fileRef = 9479BF22083E61A200DC08AE /* HID_Error_Handler.h */; };
+		941A3B6909AA144000C9D25A /* HID_Name_Lookup.h in Headers */ = {isa = PBXBuildFile; fileRef = 9479BF24083E61A200DC08AE /* HID_Name_Lookup.h */; };
+		941A3B6A09AA144000C9D25A /* HID_Queue_Utilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 9479BF26083E61A200DC08AE /* HID_Queue_Utilities.h */; };
+		941A3B6B09AA144000C9D25A /* HID_Utilities_Internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 9479BF27083E61A200DC08AE /* HID_Utilities_Internal.h */; };
+		941A3B6C09AA144000C9D25A /* HID_Utilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 9479BF29083E61A200DC08AE /* HID_Utilities.h */; };
+		941A3B6D09AA144000C9D25A /* sqMacUnixFileInterface.h in Headers */ = {isa = PBXBuildFile; fileRef = 946DD776098FF9E3006BBA1E /* sqMacUnixFileInterface.h */; };
+		941A3B6E09AA144000C9D25A /* sqUnixAsynchFile.h in Headers */ = {isa = PBXBuildFile; fileRef = 946DD81F098FFFB6006BBA1E /* sqUnixAsynchFile.h */; };
+		941A3B6F09AA144000C9D25A /* sqMacImageIO.h in Headers */ = {isa = PBXBuildFile; fileRef = 946DD91D099015C5006BBA1E /* sqMacImageIO.h */; };
+		941A3B7009AA144000C9D25A /* sqMacFileLogic.h in Headers */ = {isa = PBXBuildFile; fileRef = 948AE67B09942EF2006256FE /* sqMacFileLogic.h */; };
+		941A3B7209AA144000C9D25A /* Squeak.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DC0300584000A80109 /* Squeak.icns */; };
+		941A3B7309AA144000C9D25A /* SqueakChanges.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DD0300584000A80109 /* SqueakChanges.icns */; };
+		941A3B7409AA144000C9D25A /* SqueakImage.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DE0300584000A80109 /* SqueakImage.icns */; };
+		941A3B7509AA144000C9D25A /* SqueakPlugin.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DF0300584000A80109 /* SqueakPlugin.icns */; };
+		941A3B7609AA144000C9D25A /* SqueakScript.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73E00300584000A80109 /* SqueakScript.icns */; };
+		941A3B7709AA144000C9D25A /* SqueakGeneric.icns in Resources */ = {isa = PBXBuildFile; fileRef = 94FC2ECE05498CA800A80109 /* SqueakGeneric.icns */; };
+		941A3B7809AA144000C9D25A /* SqueakProject.icns in Resources */ = {isa = PBXBuildFile; fileRef = 94FC2ECF05498CA800A80109 /* SqueakProject.icns */; };
+		941A3B7909AA144000C9D25A /* SqueakSources.icns in Resources */ = {isa = PBXBuildFile; fileRef = 94FC2ED005498CA800A80109 /* SqueakSources.icns */; };
+		941A3B9A09AA144000C9D25A /* sqMacInternetConfiguration.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AE3D02EB4E090100013C /* sqMacInternetConfiguration.c */; };
+		941A3B9B09AA144000C9D25A /* sqMacJoystickAndTablet.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AE3F02EB4E090100013C /* sqMacJoystickAndTablet.c */; };
+		941A3B9C09AA144000C9D25A /* sqMacMIDI.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AE4302EB4E090100013C /* sqMacMIDI.c */; };
+		941A3B9E09AA144000C9D25A /* sqMacUUID.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AE6A02EB4E0A0100013C /* sqMacUUID.c */; };
+		941A3BA109AA144000C9D25A /* sqUnixSpurMemory.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEF602EB4E0A0100013C /* sqUnixSpurMemory.c */; };
+		941A3BA209AA144000C9D25A /* sqMacTime.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEFA02EB4E0A0100013C /* sqMacTime.c */; };
+		941A3BA309AA144000C9D25A /* sqMacUIAppleEvents.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEFC02EB4E0A0100013C /* sqMacUIAppleEvents.c */; };
+		941A3BA409AA144000C9D25A /* sqMacUIClipBoard.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEFE02EB4E0A0100013C /* sqMacUIClipBoard.c */; };
+		941A3BA509AA144000C9D25A /* sqOpenGLRenderer.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF1602EB4E0A0100013C /* sqOpenGLRenderer.c */; };
+		941A3BA609AA144000C9D25A /* sqFilePluginBasicPrims.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF1F02EB4E0A0100013C /* sqFilePluginBasicPrims.c */; };
+		941A3BA709AA144000C9D25A /* Error.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF2502EB4E0A0100013C /* Error.c */; };
+		941A3BA809AA144000C9D25A /* jcapimin.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF2602EB4E0A0100013C /* jcapimin.c */; };
+		941A3BA909AA144000C9D25A /* jcapistd.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF2702EB4E0A0100013C /* jcapistd.c */; };
+		941A3BAA09AA144000C9D25A /* jccoefct.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF2802EB4E0A0100013C /* jccoefct.c */; };
+		941A3BAB09AA144000C9D25A /* jccolor.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF2902EB4E0A0100013C /* jccolor.c */; };
+		941A3BAC09AA144000C9D25A /* jcdctmgr.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF2A02EB4E0A0100013C /* jcdctmgr.c */; };
+		941A3BAD09AA144000C9D25A /* jchuff.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF2B02EB4E0A0100013C /* jchuff.c */; };
+		941A3BAE09AA144000C9D25A /* jcinit.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF2D02EB4E0A0100013C /* jcinit.c */; };
+		941A3BAF09AA144000C9D25A /* jcmainct.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF2E02EB4E0A0100013C /* jcmainct.c */; };
+		941A3BB009AA144000C9D25A /* jcmarker.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF2F02EB4E0A0100013C /* jcmarker.c */; };
+		941A3BB109AA144000C9D25A /* jcmaster.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF3002EB4E0A0100013C /* jcmaster.c */; };
+		941A3BB209AA144000C9D25A /* jcomapi.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF3102EB4E0A0100013C /* jcomapi.c */; };
+		941A3BB309AA144000C9D25A /* jcparam.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF3302EB4E0A0100013C /* jcparam.c */; };
+		941A3BB409AA144000C9D25A /* jcphuff.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF3402EB4E0A0100013C /* jcphuff.c */; };
+		941A3BB509AA144000C9D25A /* jcprepct.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF3502EB4E0A0100013C /* jcprepct.c */; };
+		941A3BB609AA144000C9D25A /* jcsample.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF3602EB4E0A0100013C /* jcsample.c */; };
+		941A3BB709AA144000C9D25A /* jctrans.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF3702EB4E0A0100013C /* jctrans.c */; };
+		941A3BB809AA144000C9D25A /* jdapimin.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF3802EB4E0A0100013C /* jdapimin.c */; };
+		941A3BB909AA144000C9D25A /* jdapistd.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF3902EB4E0A0100013C /* jdapistd.c */; };
+		941A3BBA09AA144000C9D25A /* jdatadst.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF3A02EB4E0A0100013C /* jdatadst.c */; };
+		941A3BBB09AA144000C9D25A /* jdatasrc.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF3B02EB4E0A0100013C /* jdatasrc.c */; };
+		941A3BBC09AA144000C9D25A /* jdcoefct.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF3C02EB4E0A0100013C /* jdcoefct.c */; };
+		941A3BBD09AA144000C9D25A /* jdcolor.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF3D02EB4E0A0100013C /* jdcolor.c */; };
+		941A3BBE09AA144000C9D25A /* jddctmgr.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF3F02EB4E0A0100013C /* jddctmgr.c */; };
+		941A3BBF09AA144000C9D25A /* jdhuff.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF4002EB4E0A0100013C /* jdhuff.c */; };
+		941A3BC009AA144000C9D25A /* jdinput.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF4202EB4E0A0100013C /* jdinput.c */; };
+		941A3BC109AA144000C9D25A /* jdmainct.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF4302EB4E0A0100013C /* jdmainct.c */; };
+		941A3BC209AA144000C9D25A /* jdmarker.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF4402EB4E0A0100013C /* jdmarker.c */; };
+		941A3BC309AA144000C9D25A /* jdmaster.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF4502EB4E0A0100013C /* jdmaster.c */; };
+		941A3BC409AA144000C9D25A /* jdmerge.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF4602EB4E0A0100013C /* jdmerge.c */; };
+		941A3BC509AA144000C9D25A /* jdphuff.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF4702EB4E0A0100013C /* jdphuff.c */; };
+		941A3BC609AA144000C9D25A /* jdpostct.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF4802EB4E0A0100013C /* jdpostct.c */; };
+		941A3BC709AA144000C9D25A /* jdsample.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF4902EB4E0A0100013C /* jdsample.c */; };
+		941A3BC809AA144000C9D25A /* jdtrans.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF4A02EB4E0A0100013C /* jdtrans.c */; };
+		941A3BC909AA144000C9D25A /* jerror.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF4B02EB4E0A0100013C /* jerror.c */; };
+		941A3BCA09AA144000C9D25A /* jfdctflt.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF4D02EB4E0A0100013C /* jfdctflt.c */; };
+		941A3BCB09AA144000C9D25A /* jfdctfst.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF4E02EB4E0A0100013C /* jfdctfst.c */; };
+		941A3BCC09AA144000C9D25A /* jfdctint.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF4F02EB4E0A0100013C /* jfdctint.c */; };
+		941A3BCD09AA144000C9D25A /* jidctflt.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF5002EB4E0A0100013C /* jidctflt.c */; };
+		941A3BCE09AA144000C9D25A /* jidctfst.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF5102EB4E0A0100013C /* jidctfst.c */; };
+		941A3BCF09AA144000C9D25A /* jidctint.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF5202EB4E0A0100013C /* jidctint.c */; };
+		941A3BD009AA144000C9D25A /* jidctred.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF5302EB4E0A0100013C /* jidctred.c */; };
+		941A3BD109AA144000C9D25A /* jmemdatadst.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF5502EB4E0A0100013C /* jmemdatadst.c */; };
+		941A3BD209AA144000C9D25A /* jmemdatasrc.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF5602EB4E0A0100013C /* jmemdatasrc.c */; };
+		941A3BD309AA144000C9D25A /* jmemmgr.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF5702EB4E0A0100013C /* jmemmgr.c */; };
+		941A3BD409AA144000C9D25A /* jmemnobs.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF5802EB4E0A0100013C /* jmemnobs.c */; };
+		941A3BD509AA144000C9D25A /* jquant1.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF5E02EB4E0A0100013C /* jquant1.c */; };
+		941A3BD609AA144000C9D25A /* jquant2.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF5F02EB4E0A0100013C /* jquant2.c */; };
+		941A3BD709AA144000C9D25A /* jutils.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AF6002EB4E0A0100013C /* jutils.c */; };
+		941A3BD809AA144000C9D25A /* sqSoundCodecPluginBasicPrims.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AFC402EB4E0A0100013C /* sqSoundCodecPluginBasicPrims.c */; };
+		941A3BD909AA144000C9D25A /* b3dAlloc.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AFCC02EB4E0A0100013C /* b3dAlloc.c */; };
+		941A3BDA09AA144000C9D25A /* b3dDraw.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AFCE02EB4E0A0100013C /* b3dDraw.c */; };
+		941A3BDB09AA144000C9D25A /* b3dInit.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AFCF02EB4E0A0100013C /* b3dInit.c */; };
+		941A3BDC09AA144000C9D25A /* b3dMain.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AFD002EB4E0A0100013C /* b3dMain.c */; };
+		941A3BDD09AA144000C9D25A /* b3dRemap.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AFD102EB4E0A0100013C /* b3dRemap.c */; };
+		941A3BDE09AA144000C9D25A /* SurfacePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AFD602EB4E0A0100013C /* SurfacePlugin.c */; };
+		941A3BE009AA144000C9D25A /* sqVirtualMachine.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AFDE02EB4E0A0100013C /* sqVirtualMachine.c */; };
+		941A3BE109AA144000C9D25A /* osExports.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEC702EB4E0A0100013C /* osExports.c */; };
+		941A3BE409AA144000C9D25A /* sqUnixSocket.c in Sources */ = {isa = PBXBuildFile; fileRef = 94D854E3048EF1F300A80109 /* sqUnixSocket.c */; };
+		941A3BE509AA144000C9D25A /* aio.c in Sources */ = {isa = PBXBuildFile; fileRef = 94D854E7048EF27E00A80109 /* aio.c */; };
+		941A3BE609AA144000C9D25A /* sqMacEncoding.c in Sources */ = {isa = PBXBuildFile; fileRef = 9405366E057BC0EB0080D7FF /* sqMacEncoding.c */; };
+		941A3BEA09AA144000C9D25A /* sqMacUnixInterfaceSound.c in Sources */ = {isa = PBXBuildFile; fileRef = 94D42B2C07B2C8DC001CCA37 /* sqMacUnixInterfaceSound.c */; };
+		941A3BEB09AA144000C9D25A /* sqUnixSoundMacOSXJMM.c in Sources */ = {isa = PBXBuildFile; fileRef = 94FD7EC807B8491B002F2291 /* sqUnixSoundMacOSXJMM.c */; };
+		941A3BEC09AA144000C9D25A /* sqMacUnixCommandLineInterface.c in Sources */ = {isa = PBXBuildFile; fileRef = 940D36BB07ED2D910054C5E1 /* sqMacUnixCommandLineInterface.c */; };
+		941A3BED09AA144000C9D25A /* HID_Error_Handler.c in Sources */ = {isa = PBXBuildFile; fileRef = 9479BF21083E61A200DC08AE /* HID_Error_Handler.c */; };
+		941A3BEE09AA144000C9D25A /* HID_Name_Lookup.c in Sources */ = {isa = PBXBuildFile; fileRef = 9479BF23083E61A200DC08AE /* HID_Name_Lookup.c */; };
+		941A3BEF09AA144000C9D25A /* HID_Queue_Utilities.c in Sources */ = {isa = PBXBuildFile; fileRef = 9479BF25083E61A200DC08AE /* HID_Queue_Utilities.c */; };
+		941A3BF009AA144000C9D25A /* HID_Utilities.c in Sources */ = {isa = PBXBuildFile; fileRef = 9479BF28083E61A200DC08AE /* HID_Utilities.c */; };
+		941A3BF109AA144000C9D25A /* sqMacUnixFileInterface.c in Sources */ = {isa = PBXBuildFile; fileRef = 946DD777098FF9E3006BBA1E /* sqMacUnixFileInterface.c */; };
+		941A3BF209AA144000C9D25A /* sqUnixAsynchFile.c in Sources */ = {isa = PBXBuildFile; fileRef = 946DD81E098FFFB6006BBA1E /* sqUnixAsynchFile.c */; };
+		941A3BF309AA144000C9D25A /* sqMacImageIO.c in Sources */ = {isa = PBXBuildFile; fileRef = 946DD91C099015C5006BBA1E /* sqMacImageIO.c */; };
+		941A3BF409AA144000C9D25A /* sqMacOpenGL.c in Sources */ = {isa = PBXBuildFile; fileRef = 946DDA6D09902C5B006BBA1E /* sqMacOpenGL.c */; };
+		941A3BF509AA144000C9D25A /* sqMacOpenGLInfo.c in Sources */ = {isa = PBXBuildFile; fileRef = 946DDA6E09902C5B006BBA1E /* sqMacOpenGLInfo.c */; };
+		941A3BF609AA144000C9D25A /* sqMacSecurity.c in Sources */ = {isa = PBXBuildFile; fileRef = 94C9F08C0991B7BD008BAAB5 /* sqMacSecurity.c */; };
+		941A3BF709AA144000C9D25A /* sqMacUIEventsUniversal.c in Sources */ = {isa = PBXBuildFile; fileRef = 94196AAE09974200005962BF /* sqMacUIEventsUniversal.c */; };
+		941A3BF809AA144000C9D25A /* sqMacUIMenuBarUniversal.c in Sources */ = {isa = PBXBuildFile; fileRef = 94196AAF09974200005962BF /* sqMacUIMenuBarUniversal.c */; };
+		941A3BF909AA144000C9D25A /* sqMacWindowUniversal.c in Sources */ = {isa = PBXBuildFile; fileRef = 94196AB009974200005962BF /* sqMacWindowUniversal.c */; };
+		941A3BFB09AA144000C9D25A /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 087740A300C6A47FC0A80109 /* CoreFoundation.framework */; };
+		941A3BFC09AA144000C9D25A /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 087740A400C6A47FC0A80109 /* Carbon.framework */; };
+		941A3BFD09AA144000C9D25A /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 087740A700C6A4EDC0A80109 /* OpenGL.framework */; };
+		941A3BFE09AA144000C9D25A /* AGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0192233A00CCBFCBC0A80109 /* AGL.framework */; };
+		941A3BFF09AA144000C9D25A /* QuickTime.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 05DD6BB000CCC66FC0A80109 /* QuickTime.framework */; };
+		941A3C0009AA144000C9D25A /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94D42ACA07B2C071001CCA37 /* CoreAudio.framework */; };
+		941A3C0109AA144000C9D25A /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94D42AFC07B2C5DF001CCA37 /* AudioToolbox.framework */; };
+		941A3C0209AA144000C9D25A /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94148CC5080DB5A400E8C647 /* IOKit.framework */; };
+		941A3C0309AA144000C9D25A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 944B5B5008F5C7A900611DF8 /* Foundation.framework */; };
+		9426FF1F09F489D200ECEDDC /* chartables.c in Sources */ = {isa = PBXBuildFile; fileRef = 9426FF0F09F489D200ECEDDC /* chartables.c */; };
+		9426FF2009F489D200ECEDDC /* config.h in Headers */ = {isa = PBXBuildFile; fileRef = 9426FF1009F489D200ECEDDC /* config.h */; };
+		9426FF2109F489D200ECEDDC /* get.c in Sources */ = {isa = PBXBuildFile; fileRef = 9426FF1109F489D200ECEDDC /* get.c */; };
+		9426FF2209F489D200ECEDDC /* internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 9426FF1209F489D200ECEDDC /* internal.h */; };
+		9426FF2309F489D200ECEDDC /* pcre.c in Sources */ = {isa = PBXBuildFile; fileRef = 9426FF1309F489D200ECEDDC /* pcre.c */; };
+		9426FF2409F489D200ECEDDC /* pcre.h in Headers */ = {isa = PBXBuildFile; fileRef = 9426FF1409F489D200ECEDDC /* pcre.h */; };
+		9426FF2509F489D200ECEDDC /* rePlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = 9426FF1509F489D200ECEDDC /* rePlugin.h */; };
+		9426FF2609F489D200ECEDDC /* study.c in Sources */ = {isa = PBXBuildFile; fileRef = 9426FF1609F489D200ECEDDC /* study.c */; };
+		94465A2C09BA85EA00BD3A71 /* sqMacSerialPort.c in Sources */ = {isa = PBXBuildFile; fileRef = 94465A2909BA85EA00BD3A71 /* sqMacSerialPort.c */; };
+		94E4DA3B09BBB9E90046E6F4 /* sqMacDragDrop.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E4DA3909BBB9E90046E6F4 /* sqMacDragDrop.c */; };
+		94E8D43C09AF5D4100D45FB8 /* sqMacUnixExternalPrims.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E8D43909AF5D4100D45FB8 /* sqMacUnixExternalPrims.c */; };
+		A21AB9C70E99661000A432CA /* sqMacNSPluginUILogic2.c in Sources */ = {isa = PBXBuildFile; fileRef = A21AB9C60E99661000A432CA /* sqMacNSPluginUILogic2.c */; };
+		A21AB9CB0E99682000A432CA /* NSCursorWrappers.m in Sources */ = {isa = PBXBuildFile; fileRef = A21AB9CA0E99682000A432CA /* NSCursorWrappers.m */; };
+		A21ABB4F0E9968A800A432CA /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A21ABB4E0E9968A800A432CA /* AppKit.framework */; };
+		73DFFAC018D380C200C3C543 /* AioPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 73DFFABF18D380C200C3C543 /* AioPlugin.c */; };
+		A27729380CE7A8D300ABAFCA /* ADPCMCodecPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27728EC0CE7A8D300ABAFCA /* ADPCMCodecPlugin.c */; };
+		A27729390CE7A8D300ABAFCA /* AsynchFilePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27728EE0CE7A8D300ABAFCA /* AsynchFilePlugin.c */; };
+		A277293A0CE7A8D300ABAFCA /* B2DPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27728F00CE7A8D300ABAFCA /* B2DPlugin.c */; };
+		A277293B0CE7A8D300ABAFCA /* B3DAcceleratorPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27728F20CE7A8D300ABAFCA /* B3DAcceleratorPlugin.c */; };
+		A277293C0CE7A8D300ABAFCA /* BitBltPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27728F40CE7A8D300ABAFCA /* BitBltPlugin.c */; };
+		A277293D0CE7A8D300ABAFCA /* BMPReadWriterPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27728F60CE7A8D300ABAFCA /* BMPReadWriterPlugin.c */; };
+		A277293F0CE7A8D300ABAFCA /* DropPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27728FA0CE7A8D300ABAFCA /* DropPlugin.c */; };
+		A27729400CE7A8D300ABAFCA /* DSAPrims.c in Sources */ = {isa = PBXBuildFile; fileRef = A27728FC0CE7A8D300ABAFCA /* DSAPrims.c */; };
+		A27729410CE7A8D300ABAFCA /* FFTPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27728FE0CE7A8D300ABAFCA /* FFTPlugin.c */; };
+		A27729430CE7A8D300ABAFCA /* FilePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729020CE7A8D300ABAFCA /* FilePlugin.c */; };
+		A27729460CE7A8D300ABAFCA /* GeniePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729080CE7A8D300ABAFCA /* GeniePlugin.c */; };
+		A27729470CE7A8D300ABAFCA /* HostWindowPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277290A0CE7A8D300ABAFCA /* HostWindowPlugin.c */; };
+		738FB1ED0EE4D092004BEE42 /* IA32ABI.c in Sources */ = {isa = PBXBuildFile; fileRef = 738FB1EC0EE4D092004BEE42 /* IA32ABI.c */; };
+		A27729480CE7A8D300ABAFCA /* InternetConfigPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277290C0CE7A8D300ABAFCA /* InternetConfigPlugin.c */; };
+		A27729490CE7A8D300ABAFCA /* JoystickTabletPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277290E0CE7A8D300ABAFCA /* JoystickTabletPlugin.c */; };
+		A277294A0CE7A8D300ABAFCA /* JPEGReaderPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729100CE7A8D300ABAFCA /* JPEGReaderPlugin.c */; };
+		A277294B0CE7A8D300ABAFCA /* JPEGReadWriter2Plugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729120CE7A8D300ABAFCA /* JPEGReadWriter2Plugin.c */; };
+		A277294C0CE7A8D300ABAFCA /* Klatt.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729140CE7A8D300ABAFCA /* Klatt.c */; };
+		A277294D0CE7A8D300ABAFCA /* LargeIntegers.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729160CE7A8D300ABAFCA /* LargeIntegers.c */; };
+		A277294E0CE7A8D300ABAFCA /* LocalePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729180CE7A8D300ABAFCA /* LocalePlugin.c */; };
+		A277294F0CE7A8D300ABAFCA /* MacMenubarPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277291A0CE7A8D300ABAFCA /* MacMenubarPlugin.c */; };
+		A27729500CE7A8D300ABAFCA /* Matrix2x3Plugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277291C0CE7A8D300ABAFCA /* Matrix2x3Plugin.c */; };
+		A27729510CE7A8D300ABAFCA /* MIDIPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277291E0CE7A8D300ABAFCA /* MIDIPlugin.c */; };
+		A27729520CE7A8D300ABAFCA /* MiscPrimitivePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729200CE7A8D300ABAFCA /* MiscPrimitivePlugin.c */; };
+		A27729530CE7A8D300ABAFCA /* RePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729220CE7A8D300ABAFCA /* RePlugin.c */; };
+		A27729540CE7A8D300ABAFCA /* SecurityPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729240CE7A8D300ABAFCA /* SecurityPlugin.c */; };
+		A27729550CE7A8D300ABAFCA /* SerialPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729260CE7A8D300ABAFCA /* SerialPlugin.c */; };
+		A27729560CE7A8D300ABAFCA /* SocketPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729280CE7A8D300ABAFCA /* SocketPlugin.c */; };
+		A27729570CE7A8D300ABAFCA /* SoundCodecPrims.c in Sources */ = {isa = PBXBuildFile; fileRef = A277292A0CE7A8D300ABAFCA /* SoundCodecPrims.c */; };
+		A27729580CE7A8D300ABAFCA /* SoundGenerationPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277292C0CE7A8D300ABAFCA /* SoundGenerationPlugin.c */; };
+		A27729590CE7A8D300ABAFCA /* SoundPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277292E0CE7A8D300ABAFCA /* SoundPlugin.c */; };
+		A277295A0CE7A8D300ABAFCA /* StarSqueakPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729300CE7A8D300ABAFCA /* StarSqueakPlugin.c */; };
+		A277295B0CE7A8D300ABAFCA /* UUIDPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729330CE7A8D300ABAFCA /* UUIDPlugin.c */; };
+		A277295D0CE7A8D300ABAFCA /* ZipPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729370CE7A8D300ABAFCA /* ZipPlugin.c */; };
+		A27729770CE7A9AE00ABAFCA /* sqMacHostWindow.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729750CE7A9AE00ABAFCA /* sqMacHostWindow.c */; };
+		A27729780CE7A9AE00ABAFCA /* sqMacHostWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = A27729760CE7A9AE00ABAFCA /* sqMacHostWindow.h */; };
+		A277297B0CE7A9BE00ABAFCA /* HostWindowPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = A277297A0CE7A9BE00ABAFCA /* HostWindowPlugin.h */; };
+		A27729A80CE7AFBE00ABAFCA /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A27729A70CE7AFBE00ABAFCA /* SystemConfiguration.framework */; };
+		A2835CFF0E07A13300308978 /* sqHeapMap.c in Sources */ = {isa = PBXBuildFile; fileRef = A2835CFE0E07A13300308978 /* sqHeapMap.c */; };
+		A2C08F430EA3E0FD0036416C /* dispdbg.h in Headers */ = {isa = PBXBuildFile; fileRef = A2C08F420EA3E0FD0036416C /* dispdbg.h */; };
+		A2F27E691087169800F905FB /* nsPoolManagement.h in Headers */ = {isa = PBXBuildFile; fileRef = A2F27E671087169800F905FB /* nsPoolManagement.h */; };
+		A2F27E6A1087169800F905FB /* nsPoolManagement.m in Sources */ = {isa = PBXBuildFile; fileRef = A2F27E681087169800F905FB /* nsPoolManagement.m */; };
+		A2FB6B590CCD71B000A29088 /* sqMacLocaleCarbon.c in Sources */ = {isa = PBXBuildFile; fileRef = A2FB6B570CCD71B000A29088 /* sqMacLocaleCarbon.c */; };
+		A2FB6B5A0CCD71B000A29088 /* sqMacLocaleCarbon.h in Headers */ = {isa = PBXBuildFile; fileRef = A2FB6B580CCD71B000A29088 /* sqMacLocaleCarbon.h */; };
+		A2FB6B730CCD723F00A29088 /* LocalePlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = A2FB6B720CCD723F00A29088 /* LocalePlugin.h */; };
+		DA6061C40AA515470009E25D /* sqMacMain.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEF402EB4E0A0100013C /* sqMacMain.c */; };
+		DA6061CA0AA5155E0009E25D /* sqNamedPrims.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AFDD02EB4E0A0100013C /* sqNamedPrims.c */; };
+		DAFA08940AA64625008DF459 /* GreenCogSqueak.icns in Resources */ = {isa = PBXBuildFile; fileRef = DAFA08930AA64625008DF459 /* GreenCogSqueak.icns */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0192233A00CCBFCBC0A80109 /* AGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AGL.framework; path = /System/Library/Frameworks/AGL.framework; sourceTree = "<absolute>"; };
+		05DD6BB000CCC66FC0A80109 /* QuickTime.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickTime.framework; path = /System/Library/Frameworks/QuickTime.framework; sourceTree = "<absolute>"; };
+		087740A300C6A47FC0A80109 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = /System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<absolute>"; };
+		087740A400C6A47FC0A80109 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
+		087740A700C6A4EDC0A80109 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = /System/Library/Frameworks/OpenGL.framework; sourceTree = "<absolute>"; };
+		664A73DB0300584000A80109 /* Squeak VM.r */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.rez; name = "Squeak VM.r"; path = "resources/ProjectBuilder/Squeak VM.r"; sourceTree = "<group>"; };
+		664A73DC0300584000A80109 /* Squeak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = Squeak.icns; path = resources/ProjectBuilder/Squeak.icns; sourceTree = "<group>"; };
+		664A73DD0300584000A80109 /* SqueakChanges.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakChanges.icns; path = resources/ProjectBuilder/SqueakChanges.icns; sourceTree = "<group>"; };
+		664A73DE0300584000A80109 /* SqueakImage.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakImage.icns; path = resources/ProjectBuilder/SqueakImage.icns; sourceTree = "<group>"; };
+		664A73DF0300584000A80109 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakPlugin.icns; path = resources/ProjectBuilder/SqueakPlugin.icns; sourceTree = "<group>"; };
+		664A73E00300584000A80109 /* SqueakScript.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakScript.icns; path = resources/ProjectBuilder/SqueakScript.icns; sourceTree = "<group>"; };
+		66A8FED80300824600A80109 /* sqGnu.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqGnu.h; path = Developer/sqGnu.h; sourceTree = "<group>"; };
+		733AC8DA0FEAAC4F007C6206 /* version.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = version.c; sourceTree = "<group>"; };
+		733B2C36106AB74B004652BE /* sqExternalSemaphores.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqExternalSemaphores.c; sourceTree = "<group>"; };
+		7351A09A100963670035A878 /* sqUnixThreads.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixThreads.c; path = vm/sqUnixThreads.c; sourceTree = "<group>"; };
+		737888E513D0DE6500C5E1AD /* sqMemoryFence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMemoryFence.h; sourceTree = "<group>"; };
+		737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSCCSVersion.h; sourceTree = "<group>"; };
+		738FB1E90EE4CF94004BEE42 /* ia32abicc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = ia32abicc.c; path = IA32ABI/ia32abicc.c; sourceTree = "<group>"; };
+		738FB1EC0EE4D092004BEE42 /* IA32ABI.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = IA32ABI.c; path = IA32ABI/IA32ABI.c; sourceTree = "<group>"; };
+		739C6ED5112DCBB00049B7D3 /* sqTicker.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqTicker.c; sourceTree = "<group>"; };
+		739C6ED7112DCBD10049B7D3 /* sqAtomicOps.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqAtomicOps.h; sourceTree = "<group>"; };
+		739C6ED8112DCBD10049B7D3 /* sqAssert.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqAssert.h; sourceTree = "<group>"; };
+		73B54C520E55EFED00FE780C /* sqUnixVMProfile.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixVMProfile.c; path = vm/sqUnixVMProfile.c; sourceTree = "<group>"; };
+		73B96E480E47D7A10079C51B /* sqUnixHeartbeat.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixHeartbeat.c; path = vm/sqUnixHeartbeat.c; sourceTree = "<group>"; };
+		73BC1BB60F576864003412C5 /* cogit.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = cogit.c; sourceTree = "<group>"; };
+		73BC1BB70F576864003412C5 /* cogit.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = cogit.h; sourceTree = "<group>"; };
+		73BC1BB80F576864003412C5 /* cogmethod.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = cogmethod.h; sourceTree = "<group>"; };
+		73BC1BB90F576864003412C5 /* gcc3x-cointerpmt.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = "gcc3x-cointerpmt.c"; sourceTree = "<group>"; };
+		73BC1BBA0F576864003412C5 /* cointerpmt.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = cointerpmt.h; sourceTree = "<group>"; };
+		73BC1BC60F57699F003412C5 /* sqCogStackAlignment.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqCogStackAlignment.h; sourceTree = "<group>"; };
+		73DFFABF18D380C200C3C543 /* AioPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = AioPlugin.c; path = AioPlugin/AioPlugin.c; sourceTree = "<group>"; };
+		94002C4209EB18EF003C4BF2 /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMemoryAccess.h; sourceTree = "<group>"; };
+		9405366D057BC0EB0080D7FF /* sqMacEncoding.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacEncoding.h; sourceTree = "<group>"; };
+		9405366E057BC0EB0080D7FF /* sqMacEncoding.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacEncoding.c; sourceTree = "<group>"; };
+		940AFA4206DFD0280062E19F /* MacMenubarPlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = MacMenubarPlugin.h; path = MacMenubarPlugin/MacMenubarPlugin.h; sourceTree = "<group>"; };
+		940D36BA07ED2D910054C5E1 /* sqMacUnixCommandLineInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacUnixCommandLineInterface.h; sourceTree = "<group>"; };
+		940D36BB07ED2D910054C5E1 /* sqMacUnixCommandLineInterface.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacUnixCommandLineInterface.c; sourceTree = "<group>"; };
+		94148CAD080DB44600E8C647 /* HID_Utilities_External.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = HID_Utilities_External.h; sourceTree = "<group>"; };
+		94148CC5080DB5A400E8C647 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = /System/Library/Frameworks/IOKit.framework; sourceTree = "<absolute>"; };
+		94196AAE09974200005962BF /* sqMacUIEventsUniversal.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacUIEventsUniversal.c; sourceTree = "<group>"; };
+		94196AAF09974200005962BF /* sqMacUIMenuBarUniversal.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacUIMenuBarUniversal.c; sourceTree = "<group>"; };
+		94196AB009974200005962BF /* sqMacWindowUniversal.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacWindowUniversal.c; sourceTree = "<group>"; };
+		941A3C0C09AA144000C9D25A /* Squeak.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Squeak.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9426FF0F09F489D200ECEDDC /* chartables.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = chartables.c; sourceTree = "<group>"; };
+		9426FF1009F489D200ECEDDC /* config.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
+		9426FF1109F489D200ECEDDC /* get.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = get.c; sourceTree = "<group>"; };
+		9426FF1209F489D200ECEDDC /* internal.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = internal.h; sourceTree = "<group>"; };
+		9426FF1309F489D200ECEDDC /* pcre.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = pcre.c; sourceTree = "<group>"; };
+		9426FF1409F489D200ECEDDC /* pcre.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = pcre.h; sourceTree = "<group>"; };
+		9426FF1509F489D200ECEDDC /* rePlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = rePlugin.h; sourceTree = "<group>"; };
+		9426FF1609F489D200ECEDDC /* study.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = study.c; sourceTree = "<group>"; };
+		944659E609BA835900BD3A71 /* sqUnixSerial.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixSerial.c; path = ../../../unix/plugins/SerialPlugin/sqUnixSerial.c; sourceTree = "<group>"; };
+		94465A2909BA85EA00BD3A71 /* sqMacSerialPort.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacSerialPort.c; sourceTree = "<group>"; };
+		944B5B5008F5C7A900611DF8 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
+		9454DFE603E1C93E00DA393B /* sqMacNSPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacNSPlugin.c; sourceTree = "<group>"; };
+		946DD776098FF9E3006BBA1E /* sqMacUnixFileInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacUnixFileInterface.h; sourceTree = "<group>"; };
+		946DD777098FF9E3006BBA1E /* sqMacUnixFileInterface.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacUnixFileInterface.c; sourceTree = "<group>"; };
+		946DD81E098FFFB6006BBA1E /* sqUnixAsynchFile.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixAsynchFile.c; path = ../../../unix/plugins/AsynchFilePlugin/sqUnixAsynchFile.c; sourceTree = "<group>"; };
+		946DD81F098FFFB6006BBA1E /* sqUnixAsynchFile.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqUnixAsynchFile.h; path = ../../../unix/plugins/AsynchFilePlugin/sqUnixAsynchFile.h; sourceTree = "<group>"; };
+		946DD91C099015C5006BBA1E /* sqMacImageIO.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacImageIO.c; sourceTree = "<group>"; };
+		946DD91D099015C5006BBA1E /* sqMacImageIO.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacImageIO.h; sourceTree = "<group>"; };
+		946DDA6D09902C5B006BBA1E /* sqMacOpenGL.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacOpenGL.c; sourceTree = "<group>"; };
+		946DDA6E09902C5B006BBA1E /* sqMacOpenGLInfo.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacOpenGLInfo.c; sourceTree = "<group>"; };
+		9479BF21083E61A200DC08AE /* HID_Error_Handler.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = HID_Error_Handler.c; sourceTree = "<group>"; };
+		9479BF22083E61A200DC08AE /* HID_Error_Handler.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = HID_Error_Handler.h; sourceTree = "<group>"; };
+		9479BF23083E61A200DC08AE /* HID_Name_Lookup.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = HID_Name_Lookup.c; sourceTree = "<group>"; };
+		9479BF24083E61A200DC08AE /* HID_Name_Lookup.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = HID_Name_Lookup.h; sourceTree = "<group>"; };
+		9479BF25083E61A200DC08AE /* HID_Queue_Utilities.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = HID_Queue_Utilities.c; sourceTree = "<group>"; };
+		9479BF26083E61A200DC08AE /* HID_Queue_Utilities.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = HID_Queue_Utilities.h; sourceTree = "<group>"; };
+		9479BF27083E61A200DC08AE /* HID_Utilities_Internal.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = HID_Utilities_Internal.h; sourceTree = "<group>"; };
+		9479BF28083E61A200DC08AE /* HID_Utilities.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = HID_Utilities.c; sourceTree = "<group>"; };
+		9479BF29083E61A200DC08AE /* HID_Utilities.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = HID_Utilities.h; sourceTree = "<group>"; };
+		9481DDB309B38AE3005C4088 /* sqMacNSPluginUILogic.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacNSPluginUILogic.c; sourceTree = "<group>"; };
+		94820D7F080E0B0F0061C2AB /* config.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
+		948214FE080E3ABE0061C2AB /* interp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = interp.h; sourceTree = "<group>"; };
+		948AE67B09942EF2006256FE /* sqMacFileLogic.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqMacFileLogic.h; path = "../../platforms/Mac OS/vm/sqMacFileLogic.h"; sourceTree = SOURCE_ROOT; };
+		94C9F08C0991B7BD008BAAB5 /* sqMacSecurity.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacSecurity.c; sourceTree = "<group>"; };
+		94D42ACA07B2C071001CCA37 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = /System/Library/Frameworks/CoreAudio.framework; sourceTree = "<absolute>"; };
+		94D42AFC07B2C5DF001CCA37 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = /System/Library/Frameworks/AudioToolbox.framework; sourceTree = "<absolute>"; };
+		94D42B2B07B2C8DC001CCA37 /* sqMacUnixInterfaceSound.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacUnixInterfaceSound.h; sourceTree = "<group>"; };
+		94D42B2C07B2C8DC001CCA37 /* sqMacUnixInterfaceSound.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacUnixInterfaceSound.c; sourceTree = "<group>"; };
+		94D854E3048EF1F300A80109 /* sqUnixSocket.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixSocket.c; path = ../../platforms/unix/plugins/SocketPlugin/sqUnixSocket.c; sourceTree = SOURCE_ROOT; };
+		94D854E7048EF27E00A80109 /* aio.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = aio.c; path = ../../platforms/unix/vm/aio.c; sourceTree = SOURCE_ROOT; };
+		94E4DA3909BBB9E90046E6F4 /* sqMacDragDrop.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacDragDrop.c; sourceTree = "<group>"; };
+		94E8D43909AF5D4100D45FB8 /* sqMacUnixExternalPrims.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacUnixExternalPrims.c; sourceTree = "<group>"; };
+		94FC2ECE05498CA800A80109 /* SqueakGeneric.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakGeneric.icns; path = resources/ProjectBuilder/SqueakGeneric.icns; sourceTree = "<group>"; };
+		94FC2ECF05498CA800A80109 /* SqueakProject.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakProject.icns; path = resources/ProjectBuilder/SqueakProject.icns; sourceTree = "<group>"; };
+		94FC2ED005498CA800A80109 /* SqueakSources.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakSources.icns; path = resources/ProjectBuilder/SqueakSources.icns; sourceTree = "<group>"; };
+		94FD7EC807B8491B002F2291 /* sqUnixSoundMacOSXJMM.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqUnixSoundMacOSXJMM.c; sourceTree = "<group>"; };
+		A21AB9C60E99661000A432CA /* sqMacNSPluginUILogic2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacNSPluginUILogic2.c; sourceTree = "<group>"; };
+		A21AB9CA0E99682000A432CA /* NSCursorWrappers.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSCursorWrappers.m; sourceTree = "<group>"; };
+		A21ABB4E0E9968A800A432CA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
+		A27728EC0CE7A8D300ABAFCA /* ADPCMCodecPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ADPCMCodecPlugin.c; path = ADPCMCodecPlugin/ADPCMCodecPlugin.c; sourceTree = "<group>"; };
+		A27728EE0CE7A8D300ABAFCA /* AsynchFilePlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = AsynchFilePlugin.c; path = AsynchFilePlugin/AsynchFilePlugin.c; sourceTree = "<group>"; };
+		A27728F00CE7A8D300ABAFCA /* B2DPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = B2DPlugin.c; path = B2DPlugin/B2DPlugin.c; sourceTree = "<group>"; };
+		A27728F20CE7A8D300ABAFCA /* B3DAcceleratorPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = B3DAcceleratorPlugin.c; path = B3DAcceleratorPlugin/B3DAcceleratorPlugin.c; sourceTree = "<group>"; };
+		A27728F40CE7A8D300ABAFCA /* BitBltPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = BitBltPlugin.c; path = BitBltPlugin/BitBltPlugin.c; sourceTree = "<group>"; };
+		A27728F60CE7A8D300ABAFCA /* BMPReadWriterPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = BMPReadWriterPlugin.c; path = BMPReadWriterPlugin/BMPReadWriterPlugin.c; sourceTree = "<group>"; };
+		A27728FA0CE7A8D300ABAFCA /* DropPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = DropPlugin.c; path = DropPlugin/DropPlugin.c; sourceTree = "<group>"; };
+		A27728FC0CE7A8D300ABAFCA /* DSAPrims.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = DSAPrims.c; path = DSAPrims/DSAPrims.c; sourceTree = "<group>"; };
+		A27728FE0CE7A8D300ABAFCA /* FFTPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = FFTPlugin.c; path = FFTPlugin/FFTPlugin.c; sourceTree = "<group>"; };
+		A27729020CE7A8D300ABAFCA /* FilePlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = FilePlugin.c; path = FilePlugin/FilePlugin.c; sourceTree = "<group>"; };
+		A27729080CE7A8D300ABAFCA /* GeniePlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = GeniePlugin.c; path = GeniePlugin/GeniePlugin.c; sourceTree = "<group>"; };
+		A277290A0CE7A8D300ABAFCA /* HostWindowPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = HostWindowPlugin.c; path = HostWindowPlugin/HostWindowPlugin.c; sourceTree = "<group>"; };
+		A277290C0CE7A8D300ABAFCA /* InternetConfigPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = InternetConfigPlugin.c; path = InternetConfigPlugin/InternetConfigPlugin.c; sourceTree = "<group>"; };
+		A277290E0CE7A8D300ABAFCA /* JoystickTabletPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = JoystickTabletPlugin.c; path = JoystickTabletPlugin/JoystickTabletPlugin.c; sourceTree = "<group>"; };
+		A27729100CE7A8D300ABAFCA /* JPEGReaderPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = JPEGReaderPlugin.c; path = JPEGReaderPlugin/JPEGReaderPlugin.c; sourceTree = "<group>"; };
+		A27729120CE7A8D300ABAFCA /* JPEGReadWriter2Plugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = JPEGReadWriter2Plugin.c; path = JPEGReadWriter2Plugin/JPEGReadWriter2Plugin.c; sourceTree = "<group>"; };
+		A27729140CE7A8D300ABAFCA /* Klatt.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Klatt.c; path = Klatt/Klatt.c; sourceTree = "<group>"; };
+		A27729160CE7A8D300ABAFCA /* LargeIntegers.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = LargeIntegers.c; path = LargeIntegers/LargeIntegers.c; sourceTree = "<group>"; };
+		A27729180CE7A8D300ABAFCA /* LocalePlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = LocalePlugin.c; path = LocalePlugin/LocalePlugin.c; sourceTree = "<group>"; };
+		A277291A0CE7A8D300ABAFCA /* MacMenubarPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = MacMenubarPlugin.c; path = MacMenubarPlugin/MacMenubarPlugin.c; sourceTree = "<group>"; };
+		A277291C0CE7A8D300ABAFCA /* Matrix2x3Plugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Matrix2x3Plugin.c; path = Matrix2x3Plugin/Matrix2x3Plugin.c; sourceTree = "<group>"; };
+		A277291E0CE7A8D300ABAFCA /* MIDIPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = MIDIPlugin.c; path = MIDIPlugin/MIDIPlugin.c; sourceTree = "<group>"; };
+		A27729200CE7A8D300ABAFCA /* MiscPrimitivePlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = MiscPrimitivePlugin.c; path = MiscPrimitivePlugin/MiscPrimitivePlugin.c; sourceTree = "<group>"; };
+		A27729220CE7A8D300ABAFCA /* RePlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = RePlugin.c; path = RePlugin/RePlugin.c; sourceTree = "<group>"; };
+		A27729240CE7A8D300ABAFCA /* SecurityPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SecurityPlugin.c; path = SecurityPlugin/SecurityPlugin.c; sourceTree = "<group>"; };
+		A27729260CE7A8D300ABAFCA /* SerialPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SerialPlugin.c; path = SerialPlugin/SerialPlugin.c; sourceTree = "<group>"; };
+		A27729280CE7A8D300ABAFCA /* SocketPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SocketPlugin.c; path = SocketPlugin/SocketPlugin.c; sourceTree = "<group>"; };
+		A277292A0CE7A8D300ABAFCA /* SoundCodecPrims.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SoundCodecPrims.c; path = SoundCodecPrims/SoundCodecPrims.c; sourceTree = "<group>"; };
+		A277292C0CE7A8D300ABAFCA /* SoundGenerationPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SoundGenerationPlugin.c; path = SoundGenerationPlugin/SoundGenerationPlugin.c; sourceTree = "<group>"; };
+		A277292E0CE7A8D300ABAFCA /* SoundPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SoundPlugin.c; path = SoundPlugin/SoundPlugin.c; sourceTree = "<group>"; };
+		A27729300CE7A8D300ABAFCA /* StarSqueakPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = StarSqueakPlugin.c; path = StarSqueakPlugin/StarSqueakPlugin.c; sourceTree = "<group>"; };
+		A27729330CE7A8D300ABAFCA /* UUIDPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = UUIDPlugin.c; path = UUIDPlugin/UUIDPlugin.c; sourceTree = "<group>"; };
+		735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = VMProfileMacSupportPlugin.c; path = VMProfileMacSupportPlugin/VMProfileMacSupportPlugin.c; sourceTree = "<group>"; };
+		A27729370CE7A8D300ABAFCA /* ZipPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ZipPlugin.c; path = ZipPlugin/ZipPlugin.c; sourceTree = "<group>"; };
+		A27729750CE7A9AE00ABAFCA /* sqMacHostWindow.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacHostWindow.c; sourceTree = "<group>"; };
+		A27729760CE7A9AE00ABAFCA /* sqMacHostWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacHostWindow.h; sourceTree = "<group>"; };
+		A277297A0CE7A9BE00ABAFCA /* HostWindowPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HostWindowPlugin.h; sourceTree = "<group>"; };
+		A27729A70CE7AFBE00ABAFCA /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = /System/Library/Frameworks/SystemConfiguration.framework; sourceTree = "<absolute>"; };
+		A2835CFE0E07A13300308978 /* sqHeapMap.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqHeapMap.c; sourceTree = "<group>"; };
+		A2C08F420EA3E0FD0036416C /* dispdbg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dispdbg.h; sourceTree = "<group>"; };
+		A2F27E671087169800F905FB /* nsPoolManagement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = nsPoolManagement.h; sourceTree = "<group>"; };
+		A2F27E681087169800F905FB /* nsPoolManagement.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = nsPoolManagement.m; sourceTree = "<group>"; };
+		A2FB6B570CCD71B000A29088 /* sqMacLocaleCarbon.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqMacLocaleCarbon.c; path = LocalePlugin/sqMacLocaleCarbon.c; sourceTree = "<group>"; };
+		A2FB6B580CCD71B000A29088 /* sqMacLocaleCarbon.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqMacLocaleCarbon.h; path = LocalePlugin/sqMacLocaleCarbon.h; sourceTree = "<group>"; };
+		A2FB6B720CCD723F00A29088 /* LocalePlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = LocalePlugin.h; path = LocalePlugin/LocalePlugin.h; sourceTree = "<group>"; };
+		DAD40DAF0AA60CE90082521A /* CoreVM.plist */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.plist.xml; path = CoreVM.plist; sourceTree = "<group>"; };
+		DAFA08930AA64625008DF459 /* GreenCogSqueak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = GreenCogSqueak.icns; path = resources/ProjectBuilder/GreenCogSqueak.icns; sourceTree = "<group>"; };
+		F5F8AE0F02EB4E090100013C /* sqMacOpenGL.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacOpenGL.h; sourceTree = "<group>"; };
+		F5F8AE3D02EB4E090100013C /* sqMacInternetConfiguration.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacInternetConfiguration.c; sourceTree = "<group>"; };
+		F5F8AE3F02EB4E090100013C /* sqMacJoystickAndTablet.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacJoystickAndTablet.c; sourceTree = "<group>"; };
+		F5F8AE4102EB4E090100013C /* JConfig.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = JConfig.h; sourceTree = "<group>"; };
+		F5F8AE4302EB4E090100013C /* sqMacMIDI.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacMIDI.c; sourceTree = "<group>"; };
+		F5F8AE6A02EB4E0A0100013C /* sqMacUUID.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacUUID.c; sourceTree = "<group>"; };
+		F5F8AEC702EB4E0A0100013C /* osExports.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = osExports.c; sourceTree = "<group>"; };
+		F5F8AEED02EB4E0A0100013C /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqConfig.h; sourceTree = "<group>"; };
+		F5F8AEF402EB4E0A0100013C /* sqMacMain.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacMain.c; sourceTree = "<group>"; };
+		F5F8AEF502EB4E0A0100013C /* sqMacMain.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacMain.h; sourceTree = "<group>"; };
+		F5F8AEF602EB4E0A0100013C /* sqUnixSpurMemory.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixSpurMemory.c; path = ../../platforms/unix/vm/sqUnixSpurMemory.c; sourceTree = SOURCE_ROOT; };
+		F5F8AEFA02EB4E0A0100013C /* sqMacTime.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacTime.c; sourceTree = "<group>"; };
+		F5F8AEFB02EB4E0A0100013C /* sqMacTime.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacTime.h; sourceTree = "<group>"; };
+		F5F8AEFC02EB4E0A0100013C /* sqMacUIAppleEvents.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacUIAppleEvents.c; sourceTree = "<group>"; };
+		F5F8AEFD02EB4E0A0100013C /* sqMacUIAppleEvents.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacUIAppleEvents.h; sourceTree = "<group>"; };
+		F5F8AEFE02EB4E0A0100013C /* sqMacUIClipBoard.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacUIClipBoard.c; sourceTree = "<group>"; };
+		F5F8AEFF02EB4E0A0100013C /* sqMacUIClipBoard.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacUIClipBoard.h; sourceTree = "<group>"; };
+		F5F8AF0002EB4E0A0100013C /* sqMacUIConstants.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacUIConstants.h; sourceTree = "<group>"; };
+		F5F8AF0202EB4E0A0100013C /* sqMacUIEvents.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacUIEvents.h; sourceTree = "<group>"; };
+		F5F8AF0402EB4E0A0100013C /* sqMacUIMenuBar.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacUIMenuBar.h; sourceTree = "<group>"; };
+		F5F8AF0602EB4E0A0100013C /* sqMacWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacWindow.h; sourceTree = "<group>"; };
+		F5F8AF0802EB4E0A0100013C /* sqPlatformSpecific.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqPlatformSpecific.h; sourceTree = "<group>"; };
+		F5F8AF1302EB4E0A0100013C /* AsynchFilePlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = AsynchFilePlugin.h; sourceTree = "<group>"; };
+		F5F8AF1502EB4E0A0100013C /* B3DAcceleratorPlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = B3DAcceleratorPlugin.h; sourceTree = "<group>"; };
+		F5F8AF1602EB4E0A0100013C /* sqOpenGLRenderer.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqOpenGLRenderer.c; sourceTree = "<group>"; };
+		F5F8AF1802EB4E0A0100013C /* sqOpenGLRenderer.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqOpenGLRenderer.h; sourceTree = "<group>"; };
+		F5F8AF1A02EB4E0A0100013C /* DropPlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = DropPlugin.h; sourceTree = "<group>"; };
+		F5F8AF1E02EB4E0A0100013C /* FilePlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = FilePlugin.h; sourceTree = "<group>"; };
+		F5F8AF1F02EB4E0A0100013C /* sqFilePluginBasicPrims.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqFilePluginBasicPrims.c; sourceTree = "<group>"; };
+		F5F8AF2102EB4E0A0100013C /* InternetConfigPlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = InternetConfigPlugin.h; sourceTree = "<group>"; };
+		F5F8AF2302EB4E0A0100013C /* JoystickTabletPlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = JoystickTabletPlugin.h; sourceTree = "<group>"; };
+		F5F8AF2502EB4E0A0100013C /* Error.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = Error.c; sourceTree = "<group>"; };
+		F5F8AF2602EB4E0A0100013C /* jcapimin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jcapimin.c; sourceTree = "<group>"; };
+		F5F8AF2702EB4E0A0100013C /* jcapistd.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jcapistd.c; sourceTree = "<group>"; };
+		F5F8AF2802EB4E0A0100013C /* jccoefct.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jccoefct.c; sourceTree = "<group>"; };
+		F5F8AF2902EB4E0A0100013C /* jccolor.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jccolor.c; sourceTree = "<group>"; };
+		F5F8AF2A02EB4E0A0100013C /* jcdctmgr.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jcdctmgr.c; sourceTree = "<group>"; };
+		F5F8AF2B02EB4E0A0100013C /* jchuff.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jchuff.c; sourceTree = "<group>"; };
+		F5F8AF2C02EB4E0A0100013C /* jchuff.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = jchuff.h; sourceTree = "<group>"; };
+		F5F8AF2D02EB4E0A0100013C /* jcinit.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jcinit.c; sourceTree = "<group>"; };
+		F5F8AF2E02EB4E0A0100013C /* jcmainct.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jcmainct.c; sourceTree = "<group>"; };
+		F5F8AF2F02EB4E0A0100013C /* jcmarker.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jcmarker.c; sourceTree = "<group>"; };
+		F5F8AF3002EB4E0A0100013C /* jcmaster.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jcmaster.c; sourceTree = "<group>"; };
+		F5F8AF3102EB4E0A0100013C /* jcomapi.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jcomapi.c; sourceTree = "<group>"; };
+		F5F8AF3202EB4E0A0100013C /* jconfig.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = jconfig.h; sourceTree = "<group>"; };
+		F5F8AF3302EB4E0A0100013C /* jcparam.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jcparam.c; sourceTree = "<group>"; };
+		F5F8AF3402EB4E0A0100013C /* jcphuff.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jcphuff.c; sourceTree = "<group>"; };
+		F5F8AF3502EB4E0A0100013C /* jcprepct.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jcprepct.c; sourceTree = "<group>"; };
+		F5F8AF3602EB4E0A0100013C /* jcsample.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jcsample.c; sourceTree = "<group>"; };
+		F5F8AF3702EB4E0A0100013C /* jctrans.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jctrans.c; sourceTree = "<group>"; };
+		F5F8AF3802EB4E0A0100013C /* jdapimin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdapimin.c; sourceTree = "<group>"; };
+		F5F8AF3902EB4E0A0100013C /* jdapistd.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdapistd.c; sourceTree = "<group>"; };
+		F5F8AF3A02EB4E0A0100013C /* jdatadst.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdatadst.c; sourceTree = "<group>"; };
+		F5F8AF3B02EB4E0A0100013C /* jdatasrc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdatasrc.c; sourceTree = "<group>"; };
+		F5F8AF3C02EB4E0A0100013C /* jdcoefct.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdcoefct.c; sourceTree = "<group>"; };
+		F5F8AF3D02EB4E0A0100013C /* jdcolor.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdcolor.c; sourceTree = "<group>"; };
+		F5F8AF3E02EB4E0A0100013C /* jdct.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = jdct.h; sourceTree = "<group>"; };
+		F5F8AF3F02EB4E0A0100013C /* jddctmgr.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jddctmgr.c; sourceTree = "<group>"; };
+		F5F8AF4002EB4E0A0100013C /* jdhuff.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdhuff.c; sourceTree = "<group>"; };
+		F5F8AF4102EB4E0A0100013C /* jdhuff.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = jdhuff.h; sourceTree = "<group>"; };
+		F5F8AF4202EB4E0A0100013C /* jdinput.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdinput.c; sourceTree = "<group>"; };
+		F5F8AF4302EB4E0A0100013C /* jdmainct.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdmainct.c; sourceTree = "<group>"; };
+		F5F8AF4402EB4E0A0100013C /* jdmarker.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdmarker.c; sourceTree = "<group>"; };
+		F5F8AF4502EB4E0A0100013C /* jdmaster.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdmaster.c; sourceTree = "<group>"; };
+		F5F8AF4602EB4E0A0100013C /* jdmerge.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdmerge.c; sourceTree = "<group>"; };
+		F5F8AF4702EB4E0A0100013C /* jdphuff.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdphuff.c; sourceTree = "<group>"; };
+		F5F8AF4802EB4E0A0100013C /* jdpostct.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdpostct.c; sourceTree = "<group>"; };
+		F5F8AF4902EB4E0A0100013C /* jdsample.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdsample.c; sourceTree = "<group>"; };
+		F5F8AF4A02EB4E0A0100013C /* jdtrans.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jdtrans.c; sourceTree = "<group>"; };
+		F5F8AF4B02EB4E0A0100013C /* jerror.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jerror.c; sourceTree = "<group>"; };
+		F5F8AF4C02EB4E0A0100013C /* jerror.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = jerror.h; sourceTree = "<group>"; };
+		F5F8AF4D02EB4E0A0100013C /* jfdctflt.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jfdctflt.c; sourceTree = "<group>"; };
+		F5F8AF4E02EB4E0A0100013C /* jfdctfst.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jfdctfst.c; sourceTree = "<group>"; };
+		F5F8AF4F02EB4E0A0100013C /* jfdctint.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jfdctint.c; sourceTree = "<group>"; };
+		F5F8AF5002EB4E0A0100013C /* jidctflt.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jidctflt.c; sourceTree = "<group>"; };
+		F5F8AF5102EB4E0A0100013C /* jidctfst.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jidctfst.c; sourceTree = "<group>"; };
+		F5F8AF5202EB4E0A0100013C /* jidctint.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jidctint.c; sourceTree = "<group>"; };
+		F5F8AF5302EB4E0A0100013C /* jidctred.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jidctred.c; sourceTree = "<group>"; };
+		F5F8AF5402EB4E0A0100013C /* jinclude.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = jinclude.h; sourceTree = "<group>"; };
+		F5F8AF5502EB4E0A0100013C /* jmemdatadst.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jmemdatadst.c; sourceTree = "<group>"; };
+		F5F8AF5602EB4E0A0100013C /* jmemdatasrc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jmemdatasrc.c; sourceTree = "<group>"; };
+		F5F8AF5702EB4E0A0100013C /* jmemmgr.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jmemmgr.c; sourceTree = "<group>"; };
+		F5F8AF5802EB4E0A0100013C /* jmemnobs.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jmemnobs.c; sourceTree = "<group>"; };
+		F5F8AF5902EB4E0A0100013C /* jmemsys.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = jmemsys.h; sourceTree = "<group>"; };
+		F5F8AF5A02EB4E0A0100013C /* jmorecfg.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = jmorecfg.h; sourceTree = "<group>"; };
+		F5F8AF5B02EB4E0A0100013C /* jpegint.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = jpegint.h; sourceTree = "<group>"; };
+		F5F8AF5C02EB4E0A0100013C /* jpeglib.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = jpeglib.h; sourceTree = "<group>"; };
+		F5F8AF5D02EB4E0A0100013C /* JPEGReadWriter2Plugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = JPEGReadWriter2Plugin.h; sourceTree = "<group>"; };
+		F5F8AF5E02EB4E0A0100013C /* jquant1.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jquant1.c; sourceTree = "<group>"; };
+		F5F8AF5F02EB4E0A0100013C /* jquant2.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jquant2.c; sourceTree = "<group>"; };
+		F5F8AF6002EB4E0A0100013C /* jutils.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = jutils.c; sourceTree = "<group>"; };
+		F5F8AF6102EB4E0A0100013C /* jversion.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = jversion.h; sourceTree = "<group>"; };
+		F5F8AF6402EB4E0A0100013C /* MIDIPlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MIDIPlugin.h; sourceTree = "<group>"; };
+		F5F8AFBD02EB4E0A0100013C /* SecurityPlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = SecurityPlugin.h; sourceTree = "<group>"; };
+		F5F8AFBF02EB4E0A0100013C /* SerialPlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = SerialPlugin.h; sourceTree = "<group>"; };
+		F5F8AFC102EB4E0A0100013C /* SocketPlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = SocketPlugin.h; sourceTree = "<group>"; };
+		F5F8AFC302EB4E0A0100013C /* SoundCodecPrims.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = SoundCodecPrims.h; sourceTree = "<group>"; };
+		F5F8AFC402EB4E0A0100013C /* sqSoundCodecPluginBasicPrims.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqSoundCodecPluginBasicPrims.c; sourceTree = "<group>"; };
+		F5F8AFC602EB4E0A0100013C /* SoundGenerationPlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = SoundGenerationPlugin.h; sourceTree = "<group>"; };
+		F5F8AFC902EB4E0A0100013C /* SoundPlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = SoundPlugin.h; sourceTree = "<group>"; };
+		F5F8AFCB02EB4E0A0100013C /* b3d.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = b3d.h; sourceTree = "<group>"; };
+		F5F8AFCC02EB4E0A0100013C /* b3dAlloc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = b3dAlloc.c; sourceTree = "<group>"; };
+		F5F8AFCD02EB4E0A0100013C /* b3dAlloc.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = b3dAlloc.h; sourceTree = "<group>"; };
+		F5F8AFCE02EB4E0A0100013C /* b3dDraw.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = b3dDraw.c; sourceTree = "<group>"; };
+		F5F8AFCF02EB4E0A0100013C /* b3dInit.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = b3dInit.c; sourceTree = "<group>"; };
+		F5F8AFD002EB4E0A0100013C /* b3dMain.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = b3dMain.c; sourceTree = "<group>"; };
+		F5F8AFD102EB4E0A0100013C /* b3dRemap.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = b3dRemap.c; sourceTree = "<group>"; };
+		F5F8AFD202EB4E0A0100013C /* b3dTypes.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = b3dTypes.h; sourceTree = "<group>"; };
+		F5F8AFD402EB4E0A0100013C /* sqFFI.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqFFI.h; sourceTree = "<group>"; };
+		F5F8AFD602EB4E0A0100013C /* SurfacePlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = SurfacePlugin.c; sourceTree = "<group>"; };
+		F5F8AFD702EB4E0A0100013C /* SurfacePlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = SurfacePlugin.h; sourceTree = "<group>"; };
+		F5F8AFD902EB4E0A0100013C /* UUIDPlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = UUIDPlugin.h; sourceTree = "<group>"; };
+		F5F8AFDC02EB4E0A0100013C /* sq.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sq.h; sourceTree = "<group>"; };
+		F5F8AFDD02EB4E0A0100013C /* sqNamedPrims.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqNamedPrims.c; sourceTree = "<group>"; };
+		F5F8AFDE02EB4E0A0100013C /* sqVirtualMachine.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqVirtualMachine.c; sourceTree = "<group>"; };
+		F5F8AFDF02EB4E0A0100013C /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqVirtualMachine.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		941A3BFA09AA144000C9D25A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				941A3BFB09AA144000C9D25A /* CoreFoundation.framework in Frameworks */,
+				941A3BFC09AA144000C9D25A /* Carbon.framework in Frameworks */,
+				941A3BFD09AA144000C9D25A /* OpenGL.framework in Frameworks */,
+				941A3BFE09AA144000C9D25A /* AGL.framework in Frameworks */,
+				941A3BFF09AA144000C9D25A /* QuickTime.framework in Frameworks */,
+				941A3C0009AA144000C9D25A /* CoreAudio.framework in Frameworks */,
+				941A3C0109AA144000C9D25A /* AudioToolbox.framework in Frameworks */,
+				941A3C0209AA144000C9D25A /* IOKit.framework in Frameworks */,
+				941A3C0309AA144000C9D25A /* Foundation.framework in Frameworks */,
+				A27729A80CE7AFBE00ABAFCA /* SystemConfiguration.framework in Frameworks */,
+				A21ABB4F0E9968A800A432CA /* AppKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		08773EB500C6A1C4C0A80109 = {
+			isa = PBXGroup;
+			children = (
+				F5F8ADC002EB4E090100013C /* Sources */,
+				08773F0500C6A1C4C0A80109 /* Resources */,
+				08773F3000C6A1C4C0A80109 /* Products */,
+				087740A400C6A47FC0A80109 /* Carbon.framework */,
+				A21ABB4E0E9968A800A432CA /* AppKit.framework */,
+				94148CC5080DB5A400E8C647 /* IOKit.framework */,
+				087740A300C6A47FC0A80109 /* CoreFoundation.framework */,
+				94D42AFC07B2C5DF001CCA37 /* AudioToolbox.framework */,
+				94D42ACA07B2C071001CCA37 /* CoreAudio.framework */,
+				087740A700C6A4EDC0A80109 /* OpenGL.framework */,
+				0192233A00CCBFCBC0A80109 /* AGL.framework */,
+				05DD6BB000CCC66FC0A80109 /* QuickTime.framework */,
+				944B5B5008F5C7A900611DF8 /* Foundation.framework */,
+				A27729A70CE7AFBE00ABAFCA /* SystemConfiguration.framework */,
+				DAD40DAF0AA60CE90082521A /* CoreVM.plist */,
+			);
+			sourceTree = "<group>";
+		};
+		08773F0500C6A1C4C0A80109 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				664A73DB0300584000A80109 /* Squeak VM.r */,
+				DAFA08930AA64625008DF459 /* GreenCogSqueak.icns */,
+				664A73DC0300584000A80109 /* Squeak.icns */,
+				664A73DD0300584000A80109 /* SqueakChanges.icns */,
+				664A73DE0300584000A80109 /* SqueakImage.icns */,
+				664A73DF0300584000A80109 /* SqueakPlugin.icns */,
+				664A73E00300584000A80109 /* SqueakScript.icns */,
+				94FC2ECE05498CA800A80109 /* SqueakGeneric.icns */,
+				94FC2ECF05498CA800A80109 /* SqueakProject.icns */,
+				94FC2ED005498CA800A80109 /* SqueakSources.icns */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		08773F3000C6A1C4C0A80109 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				941A3C0C09AA144000C9D25A /* Squeak.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		733CCBFE1101106800EA8510 /* vm */ = {
+			isa = PBXGroup;
+			children = (
+				73B96E480E47D7A10079C51B /* sqUnixHeartbeat.c */,
+				7351A09A100963670035A878 /* sqUnixThreads.c */,
+				73B54C520E55EFED00FE780C /* sqUnixVMProfile.c */,
+			);
+			name = vm;
+			sourceTree = "<group>";
+		};
+		7384271E11010B920070B80D /* plugins */ = {
+			isa = PBXGroup;
+			children = (
+				73DFFABF18D380C200C3C543 /* AioPlugin.c */,
+				A27728EC0CE7A8D300ABAFCA /* ADPCMCodecPlugin.c */,
+				A27728EE0CE7A8D300ABAFCA /* AsynchFilePlugin.c */,
+				A27728F00CE7A8D300ABAFCA /* B2DPlugin.c */,
+				A27728F20CE7A8D300ABAFCA /* B3DAcceleratorPlugin.c */,
+				A27728F40CE7A8D300ABAFCA /* BitBltPlugin.c */,
+				A27728F60CE7A8D300ABAFCA /* BMPReadWriterPlugin.c */,
+				A27728FA0CE7A8D300ABAFCA /* DropPlugin.c */,
+				A27728FC0CE7A8D300ABAFCA /* DSAPrims.c */,
+				A27728FE0CE7A8D300ABAFCA /* FFTPlugin.c */,
+				A27729020CE7A8D300ABAFCA /* FilePlugin.c */,
+				A27729080CE7A8D300ABAFCA /* GeniePlugin.c */,
+				A277290A0CE7A8D300ABAFCA /* HostWindowPlugin.c */,
+				738FB1EC0EE4D092004BEE42 /* IA32ABI.c */,
+				A277290C0CE7A8D300ABAFCA /* InternetConfigPlugin.c */,
+				A277290E0CE7A8D300ABAFCA /* JoystickTabletPlugin.c */,
+				A27729100CE7A8D300ABAFCA /* JPEGReaderPlugin.c */,
+				A27729120CE7A8D300ABAFCA /* JPEGReadWriter2Plugin.c */,
+				A27729140CE7A8D300ABAFCA /* Klatt.c */,
+				A27729160CE7A8D300ABAFCA /* LargeIntegers.c */,
+				A27729180CE7A8D300ABAFCA /* LocalePlugin.c */,
+				A277291A0CE7A8D300ABAFCA /* MacMenubarPlugin.c */,
+				A277291C0CE7A8D300ABAFCA /* Matrix2x3Plugin.c */,
+				A277291E0CE7A8D300ABAFCA /* MIDIPlugin.c */,
+				A27729200CE7A8D300ABAFCA /* MiscPrimitivePlugin.c */,
+				A27729220CE7A8D300ABAFCA /* RePlugin.c */,
+				A27729240CE7A8D300ABAFCA /* SecurityPlugin.c */,
+				A27729260CE7A8D300ABAFCA /* SerialPlugin.c */,
+				A27729280CE7A8D300ABAFCA /* SocketPlugin.c */,
+				A277292A0CE7A8D300ABAFCA /* SoundCodecPrims.c */,
+				A277292C0CE7A8D300ABAFCA /* SoundGenerationPlugin.c */,
+				A277292E0CE7A8D300ABAFCA /* SoundPlugin.c */,
+				A27729300CE7A8D300ABAFCA /* StarSqueakPlugin.c */,
+				A27729330CE7A8D300ABAFCA /* UUIDPlugin.c */,
+				735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */,
+				A27729370CE7A8D300ABAFCA /* ZipPlugin.c */,
+			);
+			name = plugins;
+			path = ../../src/plugins;
+			sourceTree = "<group>";
+		};
+		738FB1E80EE4CF4B004BEE42 /* IA32ABI */ = {
+			isa = PBXGroup;
+			children = (
+				738FB1E90EE4CF94004BEE42 /* ia32abicc.c */,
+			);
+			name = IA32ABI;
+			sourceTree = "<group>";
+		};
+		73BC1BC80F5769A8003412C5 /* unix */ = {
+			isa = PBXGroup;
+			children = (
+				733CCBFE1101106800EA8510 /* vm */,
+			);
+			name = unix;
+			path = ../../platforms/unix;
+			sourceTree = "<group>";
+		};
+		940AFA4106DFCFDC0062E19F /* MacMenubarPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				940AFA4206DFD0280062E19F /* MacMenubarPlugin.h */,
+			);
+			name = MacMenubarPlugin;
+			sourceTree = "<group>";
+		};
+		9426FF2909F489ED00ECEDDC /* RePlugin */ = {
+			isa = PBXGroup;
+			children = (
+				9426FF0F09F489D200ECEDDC /* chartables.c */,
+				9426FF1009F489D200ECEDDC /* config.h */,
+				9426FF1109F489D200ECEDDC /* get.c */,
+				9426FF1209F489D200ECEDDC /* internal.h */,
+				9426FF1309F489D200ECEDDC /* pcre.c */,
+				9426FF1409F489D200ECEDDC /* pcre.h */,
+				9426FF1509F489D200ECEDDC /* rePlugin.h */,
+				9426FF1609F489D200ECEDDC /* study.c */,
+			);
+			path = RePlugin;
+			sourceTree = "<group>";
+		};
+		A27729630CE7A92800ABAFCA /* WebProxyPlugin */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = WebProxyPlugin;
+			sourceTree = "<group>";
+		};
+		A277296F0CE7A95400ABAFCA /* WebProxyPlugin */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = WebProxyPlugin;
+			sourceTree = "<group>";
+		};
+		A27729740CE7A9AE00ABAFCA /* HostWindowPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				A27729750CE7A9AE00ABAFCA /* sqMacHostWindow.c */,
+				A27729760CE7A9AE00ABAFCA /* sqMacHostWindow.h */,
+			);
+			path = HostWindowPlugin;
+			sourceTree = "<group>";
+		};
+		A27729790CE7A9BE00ABAFCA /* HostWindowPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				A277297A0CE7A9BE00ABAFCA /* HostWindowPlugin.h */,
+			);
+			path = HostWindowPlugin;
+			sourceTree = "<group>";
+		};
+		A27729980CE7AEE400ABAFCA /* WebProxyPlugin */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = WebProxyPlugin;
+			sourceTree = "<group>";
+		};
+		A2DB7E170EA02105005419A3 /* GIFLibPlugin */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = GIFLibPlugin;
+			sourceTree = "<group>";
+		};
+		A2FB6B560CCD718C00A29088 /* LocalePlugin */ = {
+			isa = PBXGroup;
+			children = (
+				A2FB6B570CCD71B000A29088 /* sqMacLocaleCarbon.c */,
+				A2FB6B580CCD71B000A29088 /* sqMacLocaleCarbon.h */,
+			);
+			name = LocalePlugin;
+			sourceTree = "<group>";
+		};
+		A2FB6B710CCD722300A29088 /* LocalePlugin */ = {
+			isa = PBXGroup;
+			children = (
+				A2FB6B720CCD723F00A29088 /* LocalePlugin.h */,
+			);
+			name = LocalePlugin;
+			sourceTree = "<group>";
+		};
+		DAFB92EC0B9F50CF000B4B7C /* FileDialogPlugin */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = FileDialogPlugin;
+			sourceTree = "<group>";
+		};
+		DAFB93040B9F5D00000B4B7C /* FileDialogPlugin */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = FileDialogPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8ADC002EB4E090100013C /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8ADC502EB4E090100013C /* vm */,
+				7384271E11010B920070B80D /* plugins */,
+				F5F8AF0F02EB4E0A0100013C /* Cross */,
+				F5F8AE0802EB4E090100013C /* Mac OS */,
+				73BC1BC80F5769A8003412C5 /* unix */,
+			);
+			name = Sources;
+			sourceTree = "<group>";
+		};
+		F5F8ADC502EB4E090100013C /* vm */ = {
+			isa = PBXGroup;
+			children = (
+				73BC1BB60F576864003412C5 /* cogit.c */,
+				73BC1BB70F576864003412C5 /* cogit.h */,
+				73BC1BB80F576864003412C5 /* cogmethod.h */,
+				73BC1BB90F576864003412C5 /* gcc3x-cointerpmt.c */,
+				73BC1BBA0F576864003412C5 /* cointerpmt.h */,
+				948214FE080E3ABE0061C2AB /* interp.h */,
+			);
+			name = vm;
+			path = ../../spursrc/vm;
+			sourceTree = "<group>";
+		};
+		F5F8AE0802EB4E090100013C /* Mac OS */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AE0A02EB4E090100013C /* plugins */,
+				F5F8AE6C02EB4E0A0100013C /* vm */,
+			);
+			name = "Mac OS";
+			path = "../../platforms/Mac OS";
+			sourceTree = SOURCE_ROOT;
+		};
+		F5F8AE0A02EB4E090100013C /* plugins */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AE0B02EB4E090100013C /* AsynchFilePlugin */,
+				F5F8AE0D02EB4E090100013C /* B3DAcceleratorPlugin */,
+				F5F8AE1102EB4E090100013C /* DropPlugin */,
+				DAFB92EC0B9F50CF000B4B7C /* FileDialogPlugin */,
+				F5F8AE3902EB4E090100013C /* FilePlugin */,
+				A27729740CE7A9AE00ABAFCA /* HostWindowPlugin */,
+				F5F8AE3B02EB4E090100013C /* InternetConfigPlugin */,
+				F5F8AE3E02EB4E090100013C /* JoystickTabletPlugin */,
+				F5F8AE4002EB4E090100013C /* JPEGReadWriter2Plugin */,
+				A2FB6B560CCD718C00A29088 /* LocalePlugin */,
+				940AFA4106DFCFDC0062E19F /* MacMenubarPlugin */,
+				F5F8AE4202EB4E090100013C /* MIDIPlugin */,
+				F5F8AE5202EB4E0A0100013C /* SecurityPlugin */,
+				F5F8AE5402EB4E0A0100013C /* SerialPlugin */,
+				F5F8AE5602EB4E0A0100013C /* SocketPlugin */,
+				F5F8AE5D02EB4E0A0100013C /* SoundPlugin */,
+				F5F8AE6902EB4E0A0100013C /* UUIDPlugin */,
+				A27729630CE7A92800ABAFCA /* WebProxyPlugin */,
+			);
+			path = plugins;
+			sourceTree = "<group>";
+		};
+		F5F8AE0B02EB4E090100013C /* AsynchFilePlugin */ = {
+			isa = PBXGroup;
+			children = (
+				946DD81E098FFFB6006BBA1E /* sqUnixAsynchFile.c */,
+				946DD81F098FFFB6006BBA1E /* sqUnixAsynchFile.h */,
+			);
+			path = AsynchFilePlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AE0D02EB4E090100013C /* B3DAcceleratorPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				946DDA6D09902C5B006BBA1E /* sqMacOpenGL.c */,
+				F5F8AE0F02EB4E090100013C /* sqMacOpenGL.h */,
+				946DDA6E09902C5B006BBA1E /* sqMacOpenGLInfo.c */,
+			);
+			path = B3DAcceleratorPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AE1102EB4E090100013C /* DropPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				94E4DA3909BBB9E90046E6F4 /* sqMacDragDrop.c */,
+			);
+			path = DropPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AE3902EB4E090100013C /* FilePlugin */ = {
+			isa = PBXGroup;
+			children = (
+				948AE67B09942EF2006256FE /* sqMacFileLogic.h */,
+				946DD776098FF9E3006BBA1E /* sqMacUnixFileInterface.h */,
+				946DD777098FF9E3006BBA1E /* sqMacUnixFileInterface.c */,
+			);
+			path = FilePlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AE3B02EB4E090100013C /* InternetConfigPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AE3D02EB4E090100013C /* sqMacInternetConfiguration.c */,
+			);
+			path = InternetConfigPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AE3E02EB4E090100013C /* JoystickTabletPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				9479BF21083E61A200DC08AE /* HID_Error_Handler.c */,
+				9479BF22083E61A200DC08AE /* HID_Error_Handler.h */,
+				9479BF23083E61A200DC08AE /* HID_Name_Lookup.c */,
+				9479BF24083E61A200DC08AE /* HID_Name_Lookup.h */,
+				9479BF25083E61A200DC08AE /* HID_Queue_Utilities.c */,
+				9479BF26083E61A200DC08AE /* HID_Queue_Utilities.h */,
+				9479BF27083E61A200DC08AE /* HID_Utilities_Internal.h */,
+				9479BF28083E61A200DC08AE /* HID_Utilities.c */,
+				9479BF29083E61A200DC08AE /* HID_Utilities.h */,
+				94148CAD080DB44600E8C647 /* HID_Utilities_External.h */,
+				F5F8AE3F02EB4E090100013C /* sqMacJoystickAndTablet.c */,
+			);
+			path = JoystickTabletPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AE4002EB4E090100013C /* JPEGReadWriter2Plugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AE4102EB4E090100013C /* JConfig.h */,
+			);
+			path = JPEGReadWriter2Plugin;
+			sourceTree = "<group>";
+		};
+		F5F8AE4202EB4E090100013C /* MIDIPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AE4302EB4E090100013C /* sqMacMIDI.c */,
+			);
+			path = MIDIPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AE5202EB4E0A0100013C /* SecurityPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				94C9F08C0991B7BD008BAAB5 /* sqMacSecurity.c */,
+			);
+			path = SecurityPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AE5402EB4E0A0100013C /* SerialPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				94465A2909BA85EA00BD3A71 /* sqMacSerialPort.c */,
+				944659E609BA835900BD3A71 /* sqUnixSerial.c */,
+			);
+			path = SerialPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AE5602EB4E0A0100013C /* SocketPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				94D854E3048EF1F300A80109 /* sqUnixSocket.c */,
+				94D854E7048EF27E00A80109 /* aio.c */,
+			);
+			path = SocketPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AE5D02EB4E0A0100013C /* SoundPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				94D42B2B07B2C8DC001CCA37 /* sqMacUnixInterfaceSound.h */,
+				94D42B2C07B2C8DC001CCA37 /* sqMacUnixInterfaceSound.c */,
+				94FD7EC807B8491B002F2291 /* sqUnixSoundMacOSXJMM.c */,
+			);
+			path = SoundPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AE6902EB4E0A0100013C /* UUIDPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AE6A02EB4E0A0100013C /* sqMacUUID.c */,
+			);
+			path = UUIDPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AE6C02EB4E0A0100013C /* vm */ = {
+			isa = PBXGroup;
+			children = (
+				733AC8DA0FEAAC4F007C6206 /* version.c */,
+				A21AB9CA0E99682000A432CA /* NSCursorWrappers.m */,
+				A21AB9C60E99661000A432CA /* sqMacNSPluginUILogic2.c */,
+				94820D7F080E0B0F0061C2AB /* config.h */,
+				F5F8AEC702EB4E0A0100013C /* osExports.c */,
+				F5F8AEED02EB4E0A0100013C /* sqConfig.h */,
+				66A8FED80300824600A80109 /* sqGnu.h */,
+				9405366D057BC0EB0080D7FF /* sqMacEncoding.h */,
+				9405366E057BC0EB0080D7FF /* sqMacEncoding.c */,
+				94E8D43909AF5D4100D45FB8 /* sqMacUnixExternalPrims.c */,
+				F5F8AEF402EB4E0A0100013C /* sqMacMain.c */,
+				F5F8AEF502EB4E0A0100013C /* sqMacMain.h */,
+				946DD91C099015C5006BBA1E /* sqMacImageIO.c */,
+				946DD91D099015C5006BBA1E /* sqMacImageIO.h */,
+				F5F8AEF602EB4E0A0100013C /* sqUnixSpurMemory.c */,
+				9454DFE603E1C93E00DA393B /* sqMacNSPlugin.c */,
+				9481DDB309B38AE3005C4088 /* sqMacNSPluginUILogic.c */,
+				F5F8AEFA02EB4E0A0100013C /* sqMacTime.c */,
+				F5F8AEFB02EB4E0A0100013C /* sqMacTime.h */,
+				F5F8AEFC02EB4E0A0100013C /* sqMacUIAppleEvents.c */,
+				F5F8AEFD02EB4E0A0100013C /* sqMacUIAppleEvents.h */,
+				F5F8AEFE02EB4E0A0100013C /* sqMacUIClipBoard.c */,
+				F5F8AEFF02EB4E0A0100013C /* sqMacUIClipBoard.h */,
+				F5F8AF0002EB4E0A0100013C /* sqMacUIConstants.h */,
+				94196AAE09974200005962BF /* sqMacUIEventsUniversal.c */,
+				F5F8AF0202EB4E0A0100013C /* sqMacUIEvents.h */,
+				94196AAF09974200005962BF /* sqMacUIMenuBarUniversal.c */,
+				F5F8AF0402EB4E0A0100013C /* sqMacUIMenuBar.h */,
+				940D36BB07ED2D910054C5E1 /* sqMacUnixCommandLineInterface.c */,
+				940D36BA07ED2D910054C5E1 /* sqMacUnixCommandLineInterface.h */,
+				F5F8AF0602EB4E0A0100013C /* sqMacWindow.h */,
+				94196AB009974200005962BF /* sqMacWindowUniversal.c */,
+				F5F8AF0802EB4E0A0100013C /* sqPlatformSpecific.h */,
+				A2F27E671087169800F905FB /* nsPoolManagement.h */,
+				A2F27E681087169800F905FB /* nsPoolManagement.m */,
+			);
+			path = vm;
+			sourceTree = "<group>";
+		};
+		F5F8AF0F02EB4E0A0100013C /* Cross */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AF1102EB4E0A0100013C /* plugins */,
+				F5F8AFDB02EB4E0A0100013C /* vm */,
+			);
+			name = Cross;
+			path = ../../platforms/Cross;
+			sourceTree = "<group>";
+		};
+		F5F8AF1102EB4E0A0100013C /* plugins */ = {
+			isa = PBXGroup;
+			children = (
+				A2DB7E170EA02105005419A3 /* GIFLibPlugin */,
+				A27729980CE7AEE400ABAFCA /* WebProxyPlugin */,
+				A27729790CE7A9BE00ABAFCA /* HostWindowPlugin */,
+				A277296F0CE7A95400ABAFCA /* WebProxyPlugin */,
+				A2FB6B710CCD722300A29088 /* LocalePlugin */,
+				F5F8AF1202EB4E0A0100013C /* AsynchFilePlugin */,
+				F5F8AF1402EB4E0A0100013C /* B3DAcceleratorPlugin */,
+				F5F8AF1902EB4E0A0100013C /* DropPlugin */,
+				DAFB93040B9F5D00000B4B7C /* FileDialogPlugin */,
+				F5F8AF1D02EB4E0A0100013C /* FilePlugin */,
+				738FB1E80EE4CF4B004BEE42 /* IA32ABI */,
+				F5F8AF2002EB4E0A0100013C /* InternetConfigPlugin */,
+				F5F8AF2202EB4E0A0100013C /* JoystickTabletPlugin */,
+				F5F8AF2402EB4E0A0100013C /* JPEGReadWriter2Plugin */,
+				F5F8AF6302EB4E0A0100013C /* MIDIPlugin */,
+				9426FF2909F489ED00ECEDDC /* RePlugin */,
+				F5F8AFBC02EB4E0A0100013C /* SecurityPlugin */,
+				F5F8AFBE02EB4E0A0100013C /* SerialPlugin */,
+				F5F8AFC002EB4E0A0100013C /* SocketPlugin */,
+				F5F8AFC202EB4E0A0100013C /* SoundCodecPrims */,
+				F5F8AFC502EB4E0A0100013C /* SoundGenerationPlugin */,
+				F5F8AFC802EB4E0A0100013C /* SoundPlugin */,
+				F5F8AFCA02EB4E0A0100013C /* Squeak3D */,
+				F5F8AFD302EB4E0A0100013C /* SqueakFFIPrims */,
+				F5F8AFD502EB4E0A0100013C /* SurfacePlugin */,
+				F5F8AFD802EB4E0A0100013C /* UUIDPlugin */,
+			);
+			path = plugins;
+			sourceTree = "<group>";
+		};
+		F5F8AF1202EB4E0A0100013C /* AsynchFilePlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AF1302EB4E0A0100013C /* AsynchFilePlugin.h */,
+			);
+			path = AsynchFilePlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AF1402EB4E0A0100013C /* B3DAcceleratorPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AF1502EB4E0A0100013C /* B3DAcceleratorPlugin.h */,
+				F5F8AF1602EB4E0A0100013C /* sqOpenGLRenderer.c */,
+				F5F8AF1802EB4E0A0100013C /* sqOpenGLRenderer.h */,
+			);
+			path = B3DAcceleratorPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AF1902EB4E0A0100013C /* DropPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AF1A02EB4E0A0100013C /* DropPlugin.h */,
+			);
+			path = DropPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AF1D02EB4E0A0100013C /* FilePlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AF1E02EB4E0A0100013C /* FilePlugin.h */,
+				F5F8AF1F02EB4E0A0100013C /* sqFilePluginBasicPrims.c */,
+			);
+			path = FilePlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AF2002EB4E0A0100013C /* InternetConfigPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AF2102EB4E0A0100013C /* InternetConfigPlugin.h */,
+			);
+			path = InternetConfigPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AF2202EB4E0A0100013C /* JoystickTabletPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AF2302EB4E0A0100013C /* JoystickTabletPlugin.h */,
+			);
+			path = JoystickTabletPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AF2402EB4E0A0100013C /* JPEGReadWriter2Plugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AF2502EB4E0A0100013C /* Error.c */,
+				F5F8AF2602EB4E0A0100013C /* jcapimin.c */,
+				F5F8AF2702EB4E0A0100013C /* jcapistd.c */,
+				F5F8AF2802EB4E0A0100013C /* jccoefct.c */,
+				F5F8AF2902EB4E0A0100013C /* jccolor.c */,
+				F5F8AF2A02EB4E0A0100013C /* jcdctmgr.c */,
+				F5F8AF2B02EB4E0A0100013C /* jchuff.c */,
+				F5F8AF2C02EB4E0A0100013C /* jchuff.h */,
+				F5F8AF2D02EB4E0A0100013C /* jcinit.c */,
+				F5F8AF2E02EB4E0A0100013C /* jcmainct.c */,
+				F5F8AF2F02EB4E0A0100013C /* jcmarker.c */,
+				F5F8AF3002EB4E0A0100013C /* jcmaster.c */,
+				F5F8AF3102EB4E0A0100013C /* jcomapi.c */,
+				F5F8AF3202EB4E0A0100013C /* jconfig.h */,
+				F5F8AF3302EB4E0A0100013C /* jcparam.c */,
+				F5F8AF3402EB4E0A0100013C /* jcphuff.c */,
+				F5F8AF3502EB4E0A0100013C /* jcprepct.c */,
+				F5F8AF3602EB4E0A0100013C /* jcsample.c */,
+				F5F8AF3702EB4E0A0100013C /* jctrans.c */,
+				F5F8AF3802EB4E0A0100013C /* jdapimin.c */,
+				F5F8AF3902EB4E0A0100013C /* jdapistd.c */,
+				F5F8AF3A02EB4E0A0100013C /* jdatadst.c */,
+				F5F8AF3B02EB4E0A0100013C /* jdatasrc.c */,
+				F5F8AF3C02EB4E0A0100013C /* jdcoefct.c */,
+				F5F8AF3D02EB4E0A0100013C /* jdcolor.c */,
+				F5F8AF3E02EB4E0A0100013C /* jdct.h */,
+				F5F8AF3F02EB4E0A0100013C /* jddctmgr.c */,
+				F5F8AF4002EB4E0A0100013C /* jdhuff.c */,
+				F5F8AF4102EB4E0A0100013C /* jdhuff.h */,
+				F5F8AF4202EB4E0A0100013C /* jdinput.c */,
+				F5F8AF4302EB4E0A0100013C /* jdmainct.c */,
+				F5F8AF4402EB4E0A0100013C /* jdmarker.c */,
+				F5F8AF4502EB4E0A0100013C /* jdmaster.c */,
+				F5F8AF4602EB4E0A0100013C /* jdmerge.c */,
+				F5F8AF4702EB4E0A0100013C /* jdphuff.c */,
+				F5F8AF4802EB4E0A0100013C /* jdpostct.c */,
+				F5F8AF4902EB4E0A0100013C /* jdsample.c */,
+				F5F8AF4A02EB4E0A0100013C /* jdtrans.c */,
+				F5F8AF4B02EB4E0A0100013C /* jerror.c */,
+				F5F8AF4C02EB4E0A0100013C /* jerror.h */,
+				F5F8AF4D02EB4E0A0100013C /* jfdctflt.c */,
+				F5F8AF4E02EB4E0A0100013C /* jfdctfst.c */,
+				F5F8AF4F02EB4E0A0100013C /* jfdctint.c */,
+				F5F8AF5002EB4E0A0100013C /* jidctflt.c */,
+				F5F8AF5102EB4E0A0100013C /* jidctfst.c */,
+				F5F8AF5202EB4E0A0100013C /* jidctint.c */,
+				F5F8AF5302EB4E0A0100013C /* jidctred.c */,
+				F5F8AF5402EB4E0A0100013C /* jinclude.h */,
+				F5F8AF5502EB4E0A0100013C /* jmemdatadst.c */,
+				F5F8AF5602EB4E0A0100013C /* jmemdatasrc.c */,
+				F5F8AF5702EB4E0A0100013C /* jmemmgr.c */,
+				F5F8AF5802EB4E0A0100013C /* jmemnobs.c */,
+				F5F8AF5902EB4E0A0100013C /* jmemsys.h */,
+				F5F8AF5A02EB4E0A0100013C /* jmorecfg.h */,
+				F5F8AF5B02EB4E0A0100013C /* jpegint.h */,
+				F5F8AF5C02EB4E0A0100013C /* jpeglib.h */,
+				F5F8AF5D02EB4E0A0100013C /* JPEGReadWriter2Plugin.h */,
+				F5F8AF5E02EB4E0A0100013C /* jquant1.c */,
+				F5F8AF5F02EB4E0A0100013C /* jquant2.c */,
+				F5F8AF6002EB4E0A0100013C /* jutils.c */,
+				F5F8AF6102EB4E0A0100013C /* jversion.h */,
+			);
+			path = JPEGReadWriter2Plugin;
+			sourceTree = "<group>";
+		};
+		F5F8AF6302EB4E0A0100013C /* MIDIPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AF6402EB4E0A0100013C /* MIDIPlugin.h */,
+			);
+			path = MIDIPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AFBC02EB4E0A0100013C /* SecurityPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AFBD02EB4E0A0100013C /* SecurityPlugin.h */,
+			);
+			path = SecurityPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AFBE02EB4E0A0100013C /* SerialPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AFBF02EB4E0A0100013C /* SerialPlugin.h */,
+			);
+			path = SerialPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AFC002EB4E0A0100013C /* SocketPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AFC102EB4E0A0100013C /* SocketPlugin.h */,
+			);
+			path = SocketPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AFC202EB4E0A0100013C /* SoundCodecPrims */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AFC302EB4E0A0100013C /* SoundCodecPrims.h */,
+				F5F8AFC402EB4E0A0100013C /* sqSoundCodecPluginBasicPrims.c */,
+			);
+			path = SoundCodecPrims;
+			sourceTree = "<group>";
+		};
+		F5F8AFC502EB4E0A0100013C /* SoundGenerationPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AFC602EB4E0A0100013C /* SoundGenerationPlugin.h */,
+			);
+			path = SoundGenerationPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AFC802EB4E0A0100013C /* SoundPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AFC902EB4E0A0100013C /* SoundPlugin.h */,
+			);
+			path = SoundPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AFCA02EB4E0A0100013C /* Squeak3D */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AFCB02EB4E0A0100013C /* b3d.h */,
+				F5F8AFCC02EB4E0A0100013C /* b3dAlloc.c */,
+				F5F8AFCD02EB4E0A0100013C /* b3dAlloc.h */,
+				F5F8AFCE02EB4E0A0100013C /* b3dDraw.c */,
+				F5F8AFCF02EB4E0A0100013C /* b3dInit.c */,
+				F5F8AFD002EB4E0A0100013C /* b3dMain.c */,
+				F5F8AFD102EB4E0A0100013C /* b3dRemap.c */,
+				F5F8AFD202EB4E0A0100013C /* b3dTypes.h */,
+			);
+			path = Squeak3D;
+			sourceTree = "<group>";
+		};
+		F5F8AFD302EB4E0A0100013C /* SqueakFFIPrims */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AFD402EB4E0A0100013C /* sqFFI.h */,
+			);
+			path = SqueakFFIPrims;
+			sourceTree = "<group>";
+		};
+		F5F8AFD502EB4E0A0100013C /* SurfacePlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AFD602EB4E0A0100013C /* SurfacePlugin.c */,
+				F5F8AFD702EB4E0A0100013C /* SurfacePlugin.h */,
+			);
+			path = SurfacePlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AFD802EB4E0A0100013C /* UUIDPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				F5F8AFD902EB4E0A0100013C /* UUIDPlugin.h */,
+			);
+			path = UUIDPlugin;
+			sourceTree = "<group>";
+		};
+		F5F8AFDB02EB4E0A0100013C /* vm */ = {
+			isa = PBXGroup;
+			children = (
+				A2C08F420EA3E0FD0036416C /* dispdbg.h */,
+				F5F8AFDC02EB4E0A0100013C /* sq.h */,
+				739C6ED8112DCBD10049B7D3 /* sqAssert.h */,
+				73BC1BC60F57699F003412C5 /* sqCogStackAlignment.h */,
+				737888E513D0DE6500C5E1AD /* sqMemoryFence.h */,
+				737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */,
+				733B2C36106AB74B004652BE /* sqExternalSemaphores.c */,
+				739C6ED7112DCBD10049B7D3 /* sqAtomicOps.h */,
+				A2835CFE0E07A13300308978 /* sqHeapMap.c */,
+				94002C4209EB18EF003C4BF2 /* sqMemoryAccess.h */,
+				F5F8AFDD02EB4E0A0100013C /* sqNamedPrims.c */,
+				739C6ED5112DCBB00049B7D3 /* sqTicker.c */,
+				F5F8AFDE02EB4E0A0100013C /* sqVirtualMachine.c */,
+				F5F8AFDF02EB4E0A0100013C /* sqVirtualMachine.h */,
+			);
+			path = vm;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		941A3B2C09AA144000C9D25A /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				941A3B2D09AA144000C9D25A /* sqMacOpenGL.h in Headers */,
+				941A3B2E09AA144000C9D25A /* JConfig.h in Headers */,
+				941A3B2F09AA144000C9D25A /* sqConfig.h in Headers */,
+				941A3B3109AA144000C9D25A /* sqMacMain.h in Headers */,
+				941A3B3209AA144000C9D25A /* sqMacTime.h in Headers */,
+				941A3B3309AA144000C9D25A /* sqMacUIAppleEvents.h in Headers */,
+				941A3B3409AA144000C9D25A /* sqMacUIClipBoard.h in Headers */,
+				941A3B3509AA144000C9D25A /* sqMacUIConstants.h in Headers */,
+				941A3B3609AA144000C9D25A /* sqMacUIEvents.h in Headers */,
+				941A3B3709AA144000C9D25A /* sqMacUIMenuBar.h in Headers */,
+				941A3B3809AA144000C9D25A /* sqMacWindow.h in Headers */,
+				941A3B3909AA144000C9D25A /* sqPlatformSpecific.h in Headers */,
+				941A3B3A09AA144000C9D25A /* AsynchFilePlugin.h in Headers */,
+				941A3B3B09AA144000C9D25A /* B3DAcceleratorPlugin.h in Headers */,
+				941A3B3C09AA144000C9D25A /* sqOpenGLRenderer.h in Headers */,
+				941A3B3D09AA144000C9D25A /* DropPlugin.h in Headers */,
+				941A3B3E09AA144000C9D25A /* FilePlugin.h in Headers */,
+				941A3B3F09AA144000C9D25A /* InternetConfigPlugin.h in Headers */,
+				941A3B4009AA144000C9D25A /* JoystickTabletPlugin.h in Headers */,
+				941A3B4109AA144000C9D25A /* jchuff.h in Headers */,
+				941A3B4209AA144000C9D25A /* jconfig.h in Headers */,
+				941A3B4309AA144000C9D25A /* jdct.h in Headers */,
+				941A3B4409AA144000C9D25A /* jdhuff.h in Headers */,
+				941A3B4509AA144000C9D25A /* jerror.h in Headers */,
+				941A3B4609AA144000C9D25A /* jinclude.h in Headers */,
+				941A3B4709AA144000C9D25A /* jmemsys.h in Headers */,
+				941A3B4809AA144000C9D25A /* jmorecfg.h in Headers */,
+				941A3B4909AA144000C9D25A /* jpegint.h in Headers */,
+				941A3B4A09AA144000C9D25A /* jpeglib.h in Headers */,
+				941A3B4B09AA144000C9D25A /* JPEGReadWriter2Plugin.h in Headers */,
+				941A3B4C09AA144000C9D25A /* jversion.h in Headers */,
+				941A3B4D09AA144000C9D25A /* MIDIPlugin.h in Headers */,
+				941A3B4E09AA144000C9D25A /* SecurityPlugin.h in Headers */,
+				941A3B4F09AA144000C9D25A /* SerialPlugin.h in Headers */,
+				941A3B5009AA144000C9D25A /* SocketPlugin.h in Headers */,
+				941A3B5109AA144000C9D25A /* SoundCodecPrims.h in Headers */,
+				941A3B5209AA144000C9D25A /* SoundGenerationPlugin.h in Headers */,
+				941A3B5309AA144000C9D25A /* SoundPlugin.h in Headers */,
+				941A3B5409AA144000C9D25A /* b3d.h in Headers */,
+				941A3B5509AA144000C9D25A /* b3dAlloc.h in Headers */,
+				941A3B5609AA144000C9D25A /* b3dTypes.h in Headers */,
+				941A3B5709AA144000C9D25A /* sqFFI.h in Headers */,
+				941A3B5809AA144000C9D25A /* SurfacePlugin.h in Headers */,
+				941A3B5909AA144000C9D25A /* UUIDPlugin.h in Headers */,
+				941A3B5A09AA144000C9D25A /* sq.h in Headers */,
+				941A3B5B09AA144000C9D25A /* sqVirtualMachine.h in Headers */,
+				941A3B5D09AA144000C9D25A /* sqGnu.h in Headers */,
+				941A3B5E09AA144000C9D25A /* sqMacEncoding.h in Headers */,
+				941A3B6209AA144000C9D25A /* MacMenubarPlugin.h in Headers */,
+				941A3B6309AA144000C9D25A /* sqMacUnixInterfaceSound.h in Headers */,
+				941A3B6409AA144000C9D25A /* sqMacUnixCommandLineInterface.h in Headers */,
+				941A3B6509AA144000C9D25A /* HID_Utilities_External.h in Headers */,
+				941A3B6609AA144000C9D25A /* config.h in Headers */,
+				941A3B6709AA144000C9D25A /* interp.h in Headers */,
+				941A3B6809AA144000C9D25A /* HID_Error_Handler.h in Headers */,
+				941A3B6909AA144000C9D25A /* HID_Name_Lookup.h in Headers */,
+				941A3B6A09AA144000C9D25A /* HID_Queue_Utilities.h in Headers */,
+				941A3B6B09AA144000C9D25A /* HID_Utilities_Internal.h in Headers */,
+				941A3B6C09AA144000C9D25A /* HID_Utilities.h in Headers */,
+				941A3B6D09AA144000C9D25A /* sqMacUnixFileInterface.h in Headers */,
+				941A3B6E09AA144000C9D25A /* sqUnixAsynchFile.h in Headers */,
+				941A3B6F09AA144000C9D25A /* sqMacImageIO.h in Headers */,
+				941A3B7009AA144000C9D25A /* sqMacFileLogic.h in Headers */,
+				94002C4409EB18EF003C4BF2 /* sqMemoryAccess.h in Headers */,
+				9426FF2009F489D200ECEDDC /* config.h in Headers */,
+				9426FF2209F489D200ECEDDC /* internal.h in Headers */,
+				9426FF2409F489D200ECEDDC /* pcre.h in Headers */,
+				9426FF2509F489D200ECEDDC /* rePlugin.h in Headers */,
+				A2FB6B5A0CCD71B000A29088 /* sqMacLocaleCarbon.h in Headers */,
+				A2FB6B730CCD723F00A29088 /* LocalePlugin.h in Headers */,
+				A27729780CE7A9AE00ABAFCA /* sqMacHostWindow.h in Headers */,
+				A277297B0CE7A9BE00ABAFCA /* HostWindowPlugin.h in Headers */,
+				A2C08F430EA3E0FD0036416C /* dispdbg.h in Headers */,
+				73BC1BBC0F576864003412C5 /* cogit.h in Headers */,
+				73BC1BBD0F576864003412C5 /* cogmethod.h in Headers */,
+				73BC1BBF0F576864003412C5 /* cointerpmt.h in Headers */,
+				73BC1BC70F57699F003412C5 /* sqCogStackAlignment.h in Headers */,
+				A2F27E691087169800F905FB /* nsPoolManagement.h in Headers */,
+				739C6ED9112DCBD10049B7D3 /* sqAtomicOps.h in Headers */,
+				739C6EDA112DCBD10049B7D3 /* sqAssert.h in Headers */,
+				737888E713D0DE6500C5E1AD /* sqMemoryFence.h in Headers */,
+				737888E813D0DE6500C5E1AD /* sqSCCSVersion.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		941A3B2B09AA144000C9D25A /* Squeak */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 941A3C0709AA144000C9D25A /* Build configuration list for PBXNativeTarget "Squeak" */;
+			buildPhases = (
+				941A3B2C09AA144000C9D25A /* Headers */,
+				941A3B7109AA144000C9D25A /* Resources */,
+				733AC8E70FEAAE29007C6206 /* ShellScript */,
+				941A3B7A09AA144000C9D25A /* Sources */,
+				941A3BFA09AA144000C9D25A /* Frameworks */,
+				941A3C0409AA144000C9D25A /* Rez */,
+			);
+			name = Squeak;
+			productInstallPath = "$(USER_APPS_DIR)";
+			productName = "Squeak VM OPT";
+			productReference = 941A3C0C09AA144000C9D25A /* Squeak.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		08773EB400C6A1C4C0A80109 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 94D95B1D0923E6810034C6F0 /* Build configuration list for PBXProject "CoreMTVM" */;
+			compatibilityVersion = "Xcode 2.4";
+			developmentRegion = English;
+			hasScannedForEncodings = 1;
+			knownRegions = (
+				English,
+				Japanese,
+				French,
+				German,
+			);
+			mainGroup = 08773EB500C6A1C4C0A80109;
+			productRefGroup = 08773F3000C6A1C4C0A80109 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				941A3B2B09AA144000C9D25A /* Squeak */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		941A3B7109AA144000C9D25A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				941A3B7209AA144000C9D25A /* Squeak.icns in Resources */,
+				941A3B7309AA144000C9D25A /* SqueakChanges.icns in Resources */,
+				941A3B7409AA144000C9D25A /* SqueakImage.icns in Resources */,
+				941A3B7509AA144000C9D25A /* SqueakPlugin.icns in Resources */,
+				941A3B7609AA144000C9D25A /* SqueakScript.icns in Resources */,
+				941A3B7709AA144000C9D25A /* SqueakGeneric.icns in Resources */,
+				941A3B7809AA144000C9D25A /* SqueakProject.icns in Resources */,
+				941A3B7909AA144000C9D25A /* SqueakSources.icns in Resources */,
+				DAFA08940AA64625008DF459 /* GreenCogSqueak.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXRezBuildPhase section */
+		941A3C0409AA144000C9D25A /* Rez */ = {
+			isa = PBXRezBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXRezBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		733AC8E70FEAAE29007C6206 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			comments = "Script creates sqNamedPrims.h.";
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "$SRCROOT/mkNamedPrims.sh $SRCROOT/plugins.int >$SRCROOT/sqNamedPrims.h\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		941A3B7A09AA144000C9D25A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				941A3B9A09AA144000C9D25A /* sqMacInternetConfiguration.c in Sources */,
+				941A3B9B09AA144000C9D25A /* sqMacJoystickAndTablet.c in Sources */,
+				941A3B9C09AA144000C9D25A /* sqMacMIDI.c in Sources */,
+				941A3B9E09AA144000C9D25A /* sqMacUUID.c in Sources */,
+				941A3BA109AA144000C9D25A /* sqUnixSpurMemory.c in Sources */,
+				941A3BA209AA144000C9D25A /* sqMacTime.c in Sources */,
+				941A3BA309AA144000C9D25A /* sqMacUIAppleEvents.c in Sources */,
+				941A3BA409AA144000C9D25A /* sqMacUIClipBoard.c in Sources */,
+				941A3BA509AA144000C9D25A /* sqOpenGLRenderer.c in Sources */,
+				941A3BA609AA144000C9D25A /* sqFilePluginBasicPrims.c in Sources */,
+				941A3BA709AA144000C9D25A /* Error.c in Sources */,
+				941A3BA809AA144000C9D25A /* jcapimin.c in Sources */,
+				941A3BA909AA144000C9D25A /* jcapistd.c in Sources */,
+				941A3BAA09AA144000C9D25A /* jccoefct.c in Sources */,
+				941A3BAB09AA144000C9D25A /* jccolor.c in Sources */,
+				941A3BAC09AA144000C9D25A /* jcdctmgr.c in Sources */,
+				941A3BAD09AA144000C9D25A /* jchuff.c in Sources */,
+				941A3BAE09AA144000C9D25A /* jcinit.c in Sources */,
+				941A3BAF09AA144000C9D25A /* jcmainct.c in Sources */,
+				941A3BB009AA144000C9D25A /* jcmarker.c in Sources */,
+				941A3BB109AA144000C9D25A /* jcmaster.c in Sources */,
+				941A3BB209AA144000C9D25A /* jcomapi.c in Sources */,
+				941A3BB309AA144000C9D25A /* jcparam.c in Sources */,
+				941A3BB409AA144000C9D25A /* jcphuff.c in Sources */,
+				941A3BB509AA144000C9D25A /* jcprepct.c in Sources */,
+				941A3BB609AA144000C9D25A /* jcsample.c in Sources */,
+				941A3BB709AA144000C9D25A /* jctrans.c in Sources */,
+				941A3BB809AA144000C9D25A /* jdapimin.c in Sources */,
+				941A3BB909AA144000C9D25A /* jdapistd.c in Sources */,
+				941A3BBA09AA144000C9D25A /* jdatadst.c in Sources */,
+				941A3BBB09AA144000C9D25A /* jdatasrc.c in Sources */,
+				941A3BBC09AA144000C9D25A /* jdcoefct.c in Sources */,
+				941A3BBD09AA144000C9D25A /* jdcolor.c in Sources */,
+				941A3BBE09AA144000C9D25A /* jddctmgr.c in Sources */,
+				941A3BBF09AA144000C9D25A /* jdhuff.c in Sources */,
+				941A3BC009AA144000C9D25A /* jdinput.c in Sources */,
+				941A3BC109AA144000C9D25A /* jdmainct.c in Sources */,
+				941A3BC209AA144000C9D25A /* jdmarker.c in Sources */,
+				941A3BC309AA144000C9D25A /* jdmaster.c in Sources */,
+				941A3BC409AA144000C9D25A /* jdmerge.c in Sources */,
+				941A3BC509AA144000C9D25A /* jdphuff.c in Sources */,
+				941A3BC609AA144000C9D25A /* jdpostct.c in Sources */,
+				941A3BC709AA144000C9D25A /* jdsample.c in Sources */,
+				941A3BC809AA144000C9D25A /* jdtrans.c in Sources */,
+				941A3BC909AA144000C9D25A /* jerror.c in Sources */,
+				941A3BCA09AA144000C9D25A /* jfdctflt.c in Sources */,
+				941A3BCB09AA144000C9D25A /* jfdctfst.c in Sources */,
+				941A3BCC09AA144000C9D25A /* jfdctint.c in Sources */,
+				941A3BCD09AA144000C9D25A /* jidctflt.c in Sources */,
+				941A3BCE09AA144000C9D25A /* jidctfst.c in Sources */,
+				941A3BCF09AA144000C9D25A /* jidctint.c in Sources */,
+				941A3BD009AA144000C9D25A /* jidctred.c in Sources */,
+				941A3BD109AA144000C9D25A /* jmemdatadst.c in Sources */,
+				941A3BD209AA144000C9D25A /* jmemdatasrc.c in Sources */,
+				941A3BD309AA144000C9D25A /* jmemmgr.c in Sources */,
+				941A3BD409AA144000C9D25A /* jmemnobs.c in Sources */,
+				941A3BD509AA144000C9D25A /* jquant1.c in Sources */,
+				941A3BD609AA144000C9D25A /* jquant2.c in Sources */,
+				941A3BD709AA144000C9D25A /* jutils.c in Sources */,
+				941A3BD809AA144000C9D25A /* sqSoundCodecPluginBasicPrims.c in Sources */,
+				941A3BD909AA144000C9D25A /* b3dAlloc.c in Sources */,
+				941A3BDA09AA144000C9D25A /* b3dDraw.c in Sources */,
+				941A3BDB09AA144000C9D25A /* b3dInit.c in Sources */,
+				941A3BDC09AA144000C9D25A /* b3dMain.c in Sources */,
+				941A3BDD09AA144000C9D25A /* b3dRemap.c in Sources */,
+				941A3BDE09AA144000C9D25A /* SurfacePlugin.c in Sources */,
+				941A3BE009AA144000C9D25A /* sqVirtualMachine.c in Sources */,
+				941A3BE109AA144000C9D25A /* osExports.c in Sources */,
+				941A3BE409AA144000C9D25A /* sqUnixSocket.c in Sources */,
+				941A3BE509AA144000C9D25A /* aio.c in Sources */,
+				941A3BE609AA144000C9D25A /* sqMacEncoding.c in Sources */,
+				941A3BEA09AA144000C9D25A /* sqMacUnixInterfaceSound.c in Sources */,
+				941A3BEB09AA144000C9D25A /* sqUnixSoundMacOSXJMM.c in Sources */,
+				941A3BEC09AA144000C9D25A /* sqMacUnixCommandLineInterface.c in Sources */,
+				941A3BED09AA144000C9D25A /* HID_Error_Handler.c in Sources */,
+				941A3BEE09AA144000C9D25A /* HID_Name_Lookup.c in Sources */,
+				941A3BEF09AA144000C9D25A /* HID_Queue_Utilities.c in Sources */,
+				941A3BF009AA144000C9D25A /* HID_Utilities.c in Sources */,
+				941A3BF109AA144000C9D25A /* sqMacUnixFileInterface.c in Sources */,
+				941A3BF209AA144000C9D25A /* sqUnixAsynchFile.c in Sources */,
+				941A3BF309AA144000C9D25A /* sqMacImageIO.c in Sources */,
+				941A3BF409AA144000C9D25A /* sqMacOpenGL.c in Sources */,
+				941A3BF509AA144000C9D25A /* sqMacOpenGLInfo.c in Sources */,
+				941A3BF609AA144000C9D25A /* sqMacSecurity.c in Sources */,
+				941A3BF709AA144000C9D25A /* sqMacUIEventsUniversal.c in Sources */,
+				941A3BF809AA144000C9D25A /* sqMacUIMenuBarUniversal.c in Sources */,
+				941A3BF909AA144000C9D25A /* sqMacWindowUniversal.c in Sources */,
+				94E8D43C09AF5D4100D45FB8 /* sqMacUnixExternalPrims.c in Sources */,
+				94465A2C09BA85EA00BD3A71 /* sqMacSerialPort.c in Sources */,
+				94E4DA3B09BBB9E90046E6F4 /* sqMacDragDrop.c in Sources */,
+				9426FF1F09F489D200ECEDDC /* chartables.c in Sources */,
+				9426FF2109F489D200ECEDDC /* get.c in Sources */,
+				9426FF2309F489D200ECEDDC /* pcre.c in Sources */,
+				9426FF2609F489D200ECEDDC /* study.c in Sources */,
+				DA6061C40AA515470009E25D /* sqMacMain.c in Sources */,
+				DA6061CA0AA5155E0009E25D /* sqNamedPrims.c in Sources */,
+				A2FB6B590CCD71B000A29088 /* sqMacLocaleCarbon.c in Sources */,
+				A27729380CE7A8D300ABAFCA /* ADPCMCodecPlugin.c in Sources */,
+				A27729390CE7A8D300ABAFCA /* AsynchFilePlugin.c in Sources */,
+				A277293A0CE7A8D300ABAFCA /* B2DPlugin.c in Sources */,
+				A277293B0CE7A8D300ABAFCA /* B3DAcceleratorPlugin.c in Sources */,
+				A277293C0CE7A8D300ABAFCA /* BitBltPlugin.c in Sources */,
+				A277293D0CE7A8D300ABAFCA /* BMPReadWriterPlugin.c in Sources */,
+				A277293F0CE7A8D300ABAFCA /* DropPlugin.c in Sources */,
+				A27729400CE7A8D300ABAFCA /* DSAPrims.c in Sources */,
+				A27729410CE7A8D300ABAFCA /* FFTPlugin.c in Sources */,
+				A27729430CE7A8D300ABAFCA /* FilePlugin.c in Sources */,
+				A27729460CE7A8D300ABAFCA /* GeniePlugin.c in Sources */,
+				A27729470CE7A8D300ABAFCA /* HostWindowPlugin.c in Sources */,
+				A27729480CE7A8D300ABAFCA /* InternetConfigPlugin.c in Sources */,
+				A27729490CE7A8D300ABAFCA /* JoystickTabletPlugin.c in Sources */,
+				A277294A0CE7A8D300ABAFCA /* JPEGReaderPlugin.c in Sources */,
+				A277294B0CE7A8D300ABAFCA /* JPEGReadWriter2Plugin.c in Sources */,
+				A277294C0CE7A8D300ABAFCA /* Klatt.c in Sources */,
+				A277294D0CE7A8D300ABAFCA /* LargeIntegers.c in Sources */,
+				A277294E0CE7A8D300ABAFCA /* LocalePlugin.c in Sources */,
+				A277294F0CE7A8D300ABAFCA /* MacMenubarPlugin.c in Sources */,
+				A27729500CE7A8D300ABAFCA /* Matrix2x3Plugin.c in Sources */,
+				A27729510CE7A8D300ABAFCA /* MIDIPlugin.c in Sources */,
+				A27729520CE7A8D300ABAFCA /* MiscPrimitivePlugin.c in Sources */,
+				A27729530CE7A8D300ABAFCA /* RePlugin.c in Sources */,
+				A27729540CE7A8D300ABAFCA /* SecurityPlugin.c in Sources */,
+				A27729550CE7A8D300ABAFCA /* SerialPlugin.c in Sources */,
+				A27729560CE7A8D300ABAFCA /* SocketPlugin.c in Sources */,
+				A27729570CE7A8D300ABAFCA /* SoundCodecPrims.c in Sources */,
+				A27729580CE7A8D300ABAFCA /* SoundGenerationPlugin.c in Sources */,
+				A27729590CE7A8D300ABAFCA /* SoundPlugin.c in Sources */,
+				A277295A0CE7A8D300ABAFCA /* StarSqueakPlugin.c in Sources */,
+				A277295B0CE7A8D300ABAFCA /* UUIDPlugin.c in Sources */,
+				A277295D0CE7A8D300ABAFCA /* ZipPlugin.c in Sources */,
+				A27729770CE7A9AE00ABAFCA /* sqMacHostWindow.c in Sources */,
+				A2835CFF0E07A13300308978 /* sqHeapMap.c in Sources */,
+				73B96E490E47D7A10079C51B /* sqUnixHeartbeat.c in Sources */,
+				73B54C530E55EFED00FE780C /* sqUnixVMProfile.c in Sources */,
+				735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */,
+				A21AB9C70E99661000A432CA /* sqMacNSPluginUILogic2.c in Sources */,
+				A21AB9CB0E99682000A432CA /* NSCursorWrappers.m in Sources */,
+				738FB1EA0EE4CF94004BEE42 /* ia32abicc.c in Sources */,
+				738FB1ED0EE4D092004BEE42 /* IA32ABI.c in Sources */,
+				73BC1BBB0F576864003412C5 /* cogit.c in Sources */,
+				73BC1BBE0F576864003412C5 /* gcc3x-cointerpmt.c in Sources */,
+				733AC8DB0FEAAC4F007C6206 /* version.c in Sources */,
+				7351A09B100963670035A878 /* sqUnixThreads.c in Sources */,
+				733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */,
+				A2F27E6A1087169800F905FB /* nsPoolManagement.m in Sources */,
+				739C6ED6112DCBB00049B7D3 /* sqTicker.c in Sources */,
+				73DFFAC018D380C200C3C543 /* AioPlugin.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		73BCFAF20EFB043300B7BA8D /* Assert */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = i386;
+				COPY_PHASE_STRIP = NO;
+				DEBUGGING_SYMBOLS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 1;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"COGMTVM=1",
+					"DEBUGVM=0",
+					"USE_GLOBAL_STRUCT=0",
+					"TZ=\"$TZ\"",
+					NO_ISNAN,
+					TARGET_API_MAC_CARBON,
+					SQUEAK_BUILTIN_PLUGIN,
+					HAVE_SYS_TIME_H,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION_i386 = 4.2;
+				GCC_WARN_UNKNOWN_PRAGMAS = NO;
+				HEADER_SEARCH_PATHS = (
+					/Developer/Headers/FlatCarbon,
+					$SRCROOT,
+				);
+				INFOPLIST_FILE = CoreVM.plist;
+				MACOSX_DEPLOYMENT_TARGET = 10.5;
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Squeak;
+				SECTORDER_FLAGS = "";
+				UNSTRIPPED_PRODUCT = YES;
+				WARNING_CFLAGS = "";
+				WRAPPER_EXTENSION = app;
+				ZERO_LINK = NO;
+			};
+			name = Assert;
+		};
+		73BCFAF30EFB043300B7BA8D /* Assert */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = i386;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"COGMTVM=1",
+					"DEBUGVM=0",
+					"USE_GLOBAL_STRUCT=0",
+					"TZ=\"$TZ\"",
+					HAVE_SYS_TIME_H,
+					SQUEAK_BUILTIN_PLUGIN,
+					TARGET_API_MAC_CARBON,
+				);
+				HEADER_SEARCH_PATHS = (
+					/Developer/Headers/FlatCarbon,
+					$SRCROOT,
+				);
+				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+			};
+			name = Assert;
+		};
+		941A3C0809AA144000C9D25A /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = i386;
+				COPY_PHASE_STRIP = NO;
+				DEBUGGING_SYMBOLS = YES;
+				GCC_DYNAMIC_NO_PIC = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INPUT_FILETYPE = automatic;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"COGMTVM=1",
+					"DEBUGVM=1",
+					"USE_GLOBAL_STRUCT=0",
+					"TZ=\"$TZ\"",
+					NO_ISNAN,
+					TARGET_API_MAC_CARBON,
+					SQUEAK_BUILTIN_PLUGIN,
+					HAVE_SYS_TIME_H,
+					"EXTERNALPRIMSDEBUG=1",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION_i386 = 4.2;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_MISSING_PARENTHESES = YES;
+				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_PARAMETER = YES;
+				GCC_WARN_UNUSED_VALUE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					/Developer/Headers/FlatCarbon,
+					$SRCROOT,
+				);
+				INFOPLIST_FILE = CoreVM.plist;
+				MACOSX_DEPLOYMENT_TARGET = 10.5;
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PER_ARCH_CFLAGS_i386 = "";
+				PRODUCT_NAME = Squeak;
+				WARNING_CFLAGS = "";
+				WRAPPER_EXTENSION = app;
+				ZERO_LINK = NO;
+			};
+			name = Development;
+		};
+		941A3C0909AA144000C9D25A /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = i386;
+				COPY_PHASE_STRIP = YES;
+				GCC_AUTO_VECTORIZATION = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_ENABLE_SSE3_EXTENSIONS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = "";
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"NDEBUG=1",
+					"COGMTVM=1",
+					"DEBUGVM=0",
+					"USE_GLOBAL_STRUCT=0",
+					"TZ=\"$TZ\"",
+					TARGET_API_MAC_CARBON,
+					SQUEAK_BUILTIN_PLUGIN,
+					HAVE_SYS_TIME_H,
+				);
+				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS = "$(GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS_QUOTED_FOR_TARGET_1)";
+				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS_QUOTED_FOR_TARGET_1 = "BUILD_VERSION=\"\\\"Squeak Cog Spur MT OS/X 5.0.0\\\"\"";
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_UNROLL_LOOPS = YES;
+				GCC_VERSION_i386 = 4.2;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNKNOWN_PRAGMAS = NO;
+				HEADER_SEARCH_PATHS = (
+					/Developer/Headers/FlatCarbon,
+					$SRCROOT,
+				);
+				INFOPLIST_FILE = CoreVM.plist;
+				MACOSX_DEPLOYMENT_TARGET = 10.5;
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PER_ARCH_CFLAGS_i386 = "-O3  -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium4  -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS";
+				PRODUCT_NAME = Squeak;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = "";
+				WRAPPER_EXTENSION = app;
+				ZERO_LINK = NO;
+			};
+			name = Deployment;
+		};
+		941A3C0A09AA144000C9D25A /* DeploymentSymbols */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = i386;
+				COPY_PHASE_STRIP = NO;
+				DEBUGGING_SYMBOLS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"NDEBUG=1",
+					"COGMTVM=1",
+					"DEBUGVM=0",
+					"USE_GLOBAL_STRUCT=0",
+					"TZ=\"$TZ\"",
+					NO_ISNAN,
+					TARGET_API_MAC_CARBON,
+					SQUEAK_BUILTIN_PLUGIN,
+					HAVE_SYS_TIME_H,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION_i386 = 4.2;
+				GCC_WARN_UNKNOWN_PRAGMAS = NO;
+				HEADER_SEARCH_PATHS = (
+					/Developer/Headers/FlatCarbon,
+					$SRCROOT,
+				);
+				INFOPLIST_FILE = CoreVM.plist;
+				MACOSX_DEPLOYMENT_TARGET = 10.5;
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Squeak;
+				SECTORDER_FLAGS = "";
+				UNSTRIPPED_PRODUCT = YES;
+				WARNING_CFLAGS = "";
+				WRAPPER_EXTENSION = app;
+				ZERO_LINK = NO;
+			};
+			name = DeploymentSymbols;
+		};
+		94D95B1E0923E6810034C6F0 /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = i386;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"COGMTVM=1",
+					"DEBUGVM=1",
+					"USE_GLOBAL_STRUCT=0",
+					"TZ=\"$TZ\"",
+					HAVE_SYS_TIME_H,
+					SQUEAK_BUILTIN_PLUGIN,
+					TARGET_API_MAC_CARBON,
+					"EXTERNALPRIMSDEBUG=1",
+				);
+				HEADER_SEARCH_PATHS = (
+					/Developer/Headers/FlatCarbon,
+					$SRCROOT,
+				);
+				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+			};
+			name = Development;
+		};
+		94D95B1F0923E6810034C6F0 /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = i386;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"NDEBUG=1",
+					"COGMTVM=1",
+					"DEBUGVM=0",
+					"USE_GLOBAL_STRUCT=0",
+					"TZ=\"$TZ\"",
+					HAVE_SYS_TIME_H,
+					SQUEAK_BUILTIN_PLUGIN,
+					TARGET_API_MAC_CARBON,
+				);
+				GCC_VERSION = 4.2;
+				HEADER_SEARCH_PATHS = (
+					/Developer/Headers/FlatCarbon,
+					$SRCROOT,
+				);
+				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+			};
+			name = Deployment;
+		};
+		94D95B200923E6810034C6F0 /* DeploymentSymbols */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = i386;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"NDEBUG=1",
+					"COGMTVM=1",
+					"USE_GLOBAL_STRUCT=0",
+					"TZ=\"$TZ\"",
+					HAVE_SYS_TIME_H,
+					SQUEAK_BUILTIN_PLUGIN,
+					TARGET_API_MAC_CARBON,
+				);
+				HEADER_SEARCH_PATHS = (
+					/Developer/Headers/FlatCarbon,
+					$SRCROOT,
+				);
+				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+			};
+			name = DeploymentSymbols;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		941A3C0709AA144000C9D25A /* Build configuration list for PBXNativeTarget "Squeak" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				941A3C0809AA144000C9D25A /* Development */,
+				941A3C0909AA144000C9D25A /* Deployment */,
+				941A3C0A09AA144000C9D25A /* DeploymentSymbols */,
+				73BCFAF20EFB043300B7BA8D /* Assert */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Development;
+		};
+		94D95B1D0923E6810034C6F0 /* Build configuration list for PBXProject "CoreMTVM" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				94D95B1E0923E6810034C6F0 /* Development */,
+				94D95B1F0923E6810034C6F0 /* Deployment */,
+				94D95B200923E6810034C6F0 /* DeploymentSymbols */,
+				73BCFAF30EFB043300B7BA8D /* Assert */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Development;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 08773EB400C6A1C4C0A80109 /* Project object */;
+}

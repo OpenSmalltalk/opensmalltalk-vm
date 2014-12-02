@@ -1,0 +1,14 @@
+#!/bin/bash
+trap 'exit 2' HUP INT PIPE TERM
+DIRS="newspeak.cog.spur newspeak.stack.spur squeak.cog.spur squeak.sista.spur squeak.stack.spur"
+for d in $DIRS; do
+	if test -d "$d"; then
+		(cd $d;./mvm -A)
+	else
+		echo no $d directory found
+	fi
+done
+echo no news is good news...
+for d in $DIRS; do
+	test -d $d && grep 'BUILD FAILED' $d/LOG*
+done
