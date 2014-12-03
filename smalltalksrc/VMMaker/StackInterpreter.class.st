@@ -6004,6 +6004,9 @@ StackInterpreter >> findSelectorOfMethod: methArg [
 		ifFalse: [meth := methArg].
 	 (objectMemory isOopCompiledMethod: meth) ifFalse:
 		[^objectMemory nilObject].
+	NewspeakVM ifTrue:
+		[(self maybeSelectorOfMethod: meth) ifNotNil:
+			[:selector| ^selector]].
 	classObj := self safeMethodClassOf: meth.
 	(self addressCouldBeClassObj: classObj) ifTrue:
 		[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: classObj.
@@ -9286,6 +9289,30 @@ StackInterpreter >> maybeRetryFailureDueToForwarding [
 ]
 
 { #category : #'debug support' }
+StackInterpreter >> maybeSelectorOfMethod: methodObj [
+	"Answer the selector of a method, assuming its penultimate literal is either
+	 a symbol or a pointer object whose first slot references the method and
+	 whose second slot is a symbol (i.e. an AdditionalMethodState).  If a Symbol
+	 can't be found answer nil.  This isn't satisfactory, as it puts a lot of information
+	 into the VM, but it is needed for adequate crash debugging at Cadence."
+	| penultimateLiteral maybeSelector |
+	self assert: (objectMemory isOopCompiledMethod: methodObj).
+	penultimateLiteral := self penultimateLiteralOf: methodObj.
+	(objectMemory isWordsOrBytes: penultimateLiteral) ifTrue:
+		[^(objectMemory fetchClassTagOfNonImm: penultimateLiteral)
+			= (objectMemory fetchClassTagOfNonImm: (objectMemory splObj: SelectorDoesNotUnderstand)) ifTrue:
+			[penultimateLiteral]].
+	^((objectMemory isPointers: penultimateLiteral)
+	 and: [(objectMemory numSlotsOf: penultimateLiteral) >= 2
+	 and: [(objectMemory fetchPointer: 0 ofObject: penultimateLiteral) = methodObj
+	 and: [maybeSelector := objectMemory fetchPointer: 1 ofObject: penultimateLiteral.
+		(objectMemory isWordsOrBytes: maybeSelector)
+	 and: [(objectMemory fetchClassTagOfNonImm: maybeSelector)
+			= (objectMemory fetchClassTagOfNonImm: (objectMemory splObj: SelectorDoesNotUnderstand))]]]]) ifTrue:
+		[penultimateLiteral]
+]
+
+{ #category : #'debug support' }
 StackInterpreter >> maybeTraceStackOverflow [
 	"nop in the stack interpreter"
 ]
@@ -10758,23 +10785,18 @@ StackInterpreter >> printLikelyImplementorsOfSelector: selector [
 	 second is selector (e.g. an AdditionalMethodState)."
 	<api>
 	objectMemory allObjectsDo:
-		[:obj| | penultimateLiteral methodClassAssociation |
-		(objectMemory isCompiledMethod: obj) ifTrue:
-			[penultimateLiteral := self penultimateLiteralOf: obj.
-			 (penultimateLiteral = selector
-			 or: [(objectMemory isPointers: penultimateLiteral)
-				and: [(objectMemory numSlotsOf: penultimateLiteral) >= 2
-				and: [(objectMemory fetchPointer: 0 ofObject: penultimateLiteral) = obj
-				and: [(objectMemory fetchPointer: 1 ofObject: penultimateLiteral) = selector]]]]) ifTrue:
-				["try and print the key of the method class association (the name of the implementing class)"
-				 methodClassAssociation := self methodClassAssociationOf: obj.
-				 self printHexnp: obj;
-					space;
-					printOopShortInner: (((objectMemory isPointers: methodClassAssociation)
-										  and: [(objectMemory numSlotsOf: methodClassAssociation) >= 2])
-											ifTrue: [objectMemory fetchPointer: 0 ofObject: methodClassAssociation]
-											ifFalse: [methodClassAssociation]);
-					cr]]]
+		[:obj| | methodClassAssociation |
+		((objectMemory isCompiledMethod: obj)
+		 and: [(self maybeSelectorOfMethod: obj) = selector]) ifTrue:
+			["try and print the key of the method class association (the name of the implementing class)"
+			 methodClassAssociation := self methodClassAssociationOf: obj.
+			 self printHexnp: obj;
+				space;
+				printOopShortInner: (((objectMemory isPointers: methodClassAssociation)
+									  and: [(objectMemory numSlotsOf: methodClassAssociation) >= 2])
+										ifTrue: [objectMemory fetchPointer: 0 ofObject: methodClassAssociation]
+										ifFalse: [methodClassAssociation]);
+				cr]]
 ]
 
 { #category : #'debug printing' }
@@ -14181,9 +14203,9 @@ StackInterpreter >> writeImageFileIO [
 		ifTrue:
 			[self putLong: objectMemory firstSegmentBytes toFile: f.
 			 self putLong: objectMemory bytesLeftInOldSpace toFile: f.
-			 1 to: 2 do: [:i| self putLong: 0 toFile: f]	"Pad the rest of the header."]
+			 2 timesRepeat: [self putLong: 0 toFile: f]	"Pad the rest of the header."]
 		ifFalse:
-			[1 to: 4 do: [:i| self putLong: 0 toFile: f]].  "Pad the rest of the header."
+			[4 timesRepeat: [self putLong: 0 toFile: f]].  "Pad the rest of the header."
 
 	 objectMemory wordSize = 8 ifTrue:
 		[3 timesRepeat: [self putLong: 0 toFile: f]]. "Pad the rest of the header."
