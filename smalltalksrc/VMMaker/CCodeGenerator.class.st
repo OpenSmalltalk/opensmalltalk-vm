@@ -2663,6 +2663,14 @@ CCodeGenerator >> generateTimes: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateTimesRepeat: msgNode on: aStream indent: level [
+	"Generate while(1) { stmtList } "
+
+	msgNode receiver value timesRepeat:
+		[msgNode args first emitCCodeOn: aStream level: level generator: self]
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateToByDo: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 	"N.B. MessageNode>>asTranslatorNodeIn: adds the limit var as a hidden fourth argument."
@@ -3019,6 +3027,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#to:do:			#generateToDo:on:indent:
 	#to:by:do:		#generateToByDo:on:indent:
 	#repeat 		#generateRepeat:on:indent:
+	#timesRepeat:	#generateTimesRepeat:on:indent:
 
 	#ifTrue:			#generateIfTrue:on:indent:
 	#ifFalse:		#generateIfFalse:on:indent:

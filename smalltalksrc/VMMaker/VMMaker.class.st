@@ -535,6 +535,17 @@ VMMaker class >> generateSqueakSpurCogVM [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateSqueakSpurStack64VM [
+	"No primitives since we can use those for the Cog VM"
+	^VMMaker
+		generate: StackInterpreter
+		with: #(ObjectMemory Spur64BitMemoryManager)
+		to: (FileDirectory default directoryNamed: self sourceTree, '/spurstack64src') fullName
+		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
+		including: #()
+]
+
+{ #category : #configurations }
 VMMaker class >> generateSqueakSpurStackVM [
 	"No primitives since we can use those for the Cog VM"
 	^VMMaker
@@ -1250,6 +1261,7 @@ VMMaker >> generateInterpreterFile [
 					ifFalse: [(ex respondsTo: #rearmHandlerDuring:)
 								ifTrue: [ex rearmHandlerDuring: [ex pass]]
 								ifFalse: [ex pass]]].
+	self reinitializeWordSizeFrom: cg.
 	self needsToRegenerateInterpreterFile ifFalse: [^nil].
 
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
@@ -1812,6 +1824,14 @@ VMMaker >> reinitializePluginsLists [
 	self initializeAllPlugins.
 	self internal: internalPlugins external: externalPlugins.
 	self changed: #reinitialize 
+]
+
+{ #category : #initialize }
+VMMaker >> reinitializeWordSizeFrom: aCCodeGenerator [
+	| wordSize |
+	wordSize := aCCodeGenerator vmClass objectMemoryClass wordSize.
+	optionsDictionary at: #BytesPerWord put: wordSize.
+	is64BitVM := wordSize = 8
 ]
 
 { #category : #'objects from disk' }
