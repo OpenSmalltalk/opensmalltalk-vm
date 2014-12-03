@@ -706,9 +706,9 @@ SpurMemoryManager class >> implicitReturnTypeFor: aSelector [
 ]
 
 { #category : #'class initialization' }
-SpurMemoryManager class >> initBytesPerWord: nBytes [
+SpurMemoryManager class >> initBytesPerWord: wordSize [
 
-	BytesPerWord := nBytes.
+	BytesPerWord := BytesPerOop := wordSize.
 	"The following is necessary to avoid confusing the compiler with shifts that are larger than the width of the type on which they operate.  In gcc, such shifts cause incorrect code to be generated."
 	BytesPerWord = 8
 		ifTrue:					"64-bit VM"
