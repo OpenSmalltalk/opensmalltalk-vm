@@ -468,7 +468,7 @@ int ioMicroMSecs(void) {
 	return (microTicks.lo / 1000) + (microTicks.hi * 4294967);
 }
 
-int ioMSecs(void) {
+sqInt ioMSecs(void) {
 	/* return a time in milliseconds for use in Delays and Time millisecondClockValue */
 	/* Note: This was once a macro based on clock(); it now uses the microsecond clock for
 	   greater resolution. See the comment in ioMicroMSecs(). */

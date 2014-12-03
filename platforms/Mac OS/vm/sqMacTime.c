@@ -142,7 +142,7 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
 #undef ioMSecs
 //Issue with unix aio.c sept 2003
 
-int ioMSecs() {
+sqInt ioMSecs() {
     return ioMicroMSecs();
 }
 

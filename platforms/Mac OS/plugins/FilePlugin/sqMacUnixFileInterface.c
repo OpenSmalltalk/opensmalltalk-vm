@@ -116,7 +116,8 @@ static CFURLRef makeFileSystemURLFromString(char *pathString,int length,CFString
 static OSErr getFInfo(char *filename,FSCatalogInfo *catInfo,CFStringEncoding encoding);
 OSStatus SetVMPathFromApplicationDirectory();
 
-sqInt dir_Create(char *pathString, sqInt pathStringLength)
+sqInt
+dir_Create(char *pathString, sqInt pathStringLength)
 {
   /* Create a new directory with the given path. By default, this
      directory is created relative to the cwd. */
@@ -129,7 +130,8 @@ sqInt dir_Create(char *pathString, sqInt pathStringLength)
 }
 
 
-sqInt dir_Delete(char *pathString, sqInt pathStringLength)
+sqInt
+dir_Delete(char *pathString, sqInt pathStringLength)
 {
   /* Delete the existing directory with the given path. */
   char name[DOCUMENT_NAME_SIZE+1];
@@ -144,7 +146,8 @@ sqInt dir_Delete(char *pathString, sqInt pathStringLength)
 }
 
 
-sqInt dir_Delimitor(void)
+sqInt
+dir_Delimitor(void)
 {
   return DELIMITERInt;
 }
@@ -172,7 +175,8 @@ static int maybeOpenDir(char *unixPath)
 }
 
 
-sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
+sqInt
+dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
 /* outputs: */  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
 		sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
 {
@@ -280,7 +284,8 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   return ENTRY_FOUND;
 }
 
-sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString, sqInt nameStringLength,
+sqInt
+dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString, sqInt nameStringLength,
 /* outputs: */  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
 		sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
 {
@@ -509,7 +514,8 @@ OSErr getFInfoViaFSRef(FSRef *theFSRef,	FInfo *finderInfo) {
 	return err;
 	
 }
-int dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator) {
+sqInt
+dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator) {
 	/* Set the Macintosh type and creator of the given file. */
 	/* Note: On other platforms, this is just a noop. */
 
@@ -538,7 +544,8 @@ int dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType
     return true;
 }
 
-int dir_GetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator) {
+sqInt
+dir_GetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator) {
 	/* Get the Macintosh type and creator of the given file. */
 	/* Note: On other platforms, this is just a noop. */
 

@@ -40,7 +40,8 @@ extern char **argVec;
 
 /*** VM Home Directory Path ***/
 
-int vmPathSize(void) {
+sqInt
+vmPathSize(void) {
 	char path[VMPATH_SIZE + 1];
 
 	if (gSqueakVMPathAnswersResources)
@@ -50,7 +51,8 @@ int vmPathSize(void) {
 	return strlen(path);
 }
 
-int vmPathGetLength(sqInt sqVMPathIndex, int length) {
+sqInt
+vmPathGetLength(sqInt sqVMPathIndex, sqInt length) {
 	char *stVMPath = (char *) sqVMPathIndex;
 	int count, i;
 	char path[VMPATH_SIZE + 1];
@@ -71,14 +73,16 @@ int vmPathGetLength(sqInt sqVMPathIndex, int length) {
 
 /*** Image File Naming ***/
 
-int imageNameSize(void) {
+sqInt
+imageNameSize(void) {
     char path[IMAGE_NAME_SIZE+1];
     getImageNameWithEncoding(path,gCurrentVMEncoding);
 
     return strlen(path);
 }
 
-int imageNameGetLength(sqInt sqImageNameIndex, int length) {
+sqInt
+imageNameGetLength(sqInt sqImageNameIndex, sqInt length) {
 	char *sqImageName = (char *) sqImageNameIndex;
 	int count, i;
         char path[IMAGE_NAME_SIZE+1];
@@ -94,7 +98,8 @@ int imageNameGetLength(sqInt sqImageNameIndex, int length) {
 	return count;
 }
 
-int imageNamePutLength(sqInt sqImageNameIndex, int length) {
+sqInt
+imageNamePutLength(sqInt sqImageNameIndex, sqInt length) {
 	char *sqImageName = (char *) sqImageNameIndex;
 	int count, i, ch, j;
 	int lastColonIndex = -1;
@@ -124,25 +129,29 @@ int imageNamePutLength(sqInt sqImageNameIndex, int length) {
 	return count;
 }
 
-int IsImageName(char *name) {
+int
+IsImageName(char *name) {
 	char *suffix;
 
 	suffix = strrchr(name, '.');  /* pointer to last period in name */
-	if (suffix == NULL) return false;
-	if (strcmp(suffix, ".ima") == 0) return true;
-	if (strcmp(suffix, ".image") == 0) return true;
-	if (strcmp(suffix, ".IMA") == 0) return true;
-	if (strcmp(suffix, ".IMAGE") == 0) return true;
+	if (suffix) {
+		if (!strcmp(suffix, ".ima")) return true;
+		if (!strcmp(suffix, ".image")) return true;
+		if (!strcmp(suffix, ".IMA")) return true;
+		if (!strcmp(suffix, ".IMAGE")) return true;
+	}
 	return false;
 }
 
 /*** Image File Operations ***/
-void sqImageFileClose(sqImageFile f) {
+void
+sqImageFileClose(sqImageFile f) {
    if (f != 0)
       fclose(f);
 }
 
-sqImageFile sqImageFileOpen(char *fileName, char *mode) {
+sqImageFile
+sqImageFileOpen(char *fileName, char *mode) {
     char cFileName[DOCUMENT_NAME_SIZE+1];
     sqImageFile remember;
     
@@ -154,25 +163,21 @@ sqImageFile sqImageFileOpen(char *fileName, char *mode) {
     return remember;
 }
 
-squeakFileOffsetType sqImageFilePosition(sqImageFile f) {
-    if (f != 0)
-      return ftello(f);
-    return 0;
+squeakFileOffsetType
+sqImageFilePosition(sqImageFile f) { return f ? ftello(f) : 0; }
+
+size_t
+sqImageFileRead(void *ptr, size_t elementSize, size_t count, sqImageFile f) {
+	return f ? fread(ptr, elementSize, count, f) : 0;
 }
 
-size_t      sqImageFileRead(void *ptr, size_t elementSize, size_t count, sqImageFile f) {
-    if (f != 0)
-      return fread(ptr, elementSize, count, f);
-    return 0;
+void
+sqImageFileSeek(sqImageFile f, squeakFileOffsetType pos) {
+	if (f != 0)
+		fseeko(f, pos, SEEK_SET);
 }
 
-void        sqImageFileSeek(sqImageFile f, squeakFileOffsetType pos) {
-    if (f != 0)
-      fseeko(f, pos, SEEK_SET);
-}
-
-sqInt sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f) {
-    if (f != 0)
-      return fwrite(ptr,elementSize,count,f);
-	return 0;
+sqInt
+sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f) {
+	return f ? fwrite(ptr,elementSize,count,f) : 0;
 }

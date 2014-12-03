@@ -21,7 +21,7 @@
 		730BD72510AA25350023C110 /* SqueakFFIPrims.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 4; name = SqueakFFIPrims.c; path = ../../../src/plugins/SqueakFFIPrims/SqueakFFIPrims.c; sourceTree = SOURCE_ROOT; };
 		730BD72710AA26D00023C110 /* sqFFIPlugin.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 4; name = sqFFIPlugin.c; path = ../../../platforms/Cross/plugins/SqueakFFIPrims/sqFFIPlugin.c; sourceTree = SOURCE_ROOT; };
 		730BD72910AA26EF0023C110 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = "../../../platforms/Mac OS/vm/config.h"; sourceTree = SOURCE_ROOT; };
-		730BD72A10AA26FB0023C110 /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spurstacksrc/vm/interp.h; sourceTree = SOURCE_ROOT; };
+		730BD72A10AA26FB0023C110 /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spurstack64src/vm/interp.h; sourceTree = SOURCE_ROOT; };
 		730BD72D10AA27410023C110 /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
 		730BD72F10AA27590023C110 /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
 		730BD73010AA277B0023C110 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakPlugin.icns; path = ../resources/ProjectBuilder/SqueakPlugin.icns; sourceTree = SOURCE_ROOT; };
@@ -184,7 +184,7 @@
 		1DEB911C08733D790010E9CD /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = x86_64;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_OPTIMIZATION_LEVEL = 2;
 				INFOPLIST_FILE = Info.plist;

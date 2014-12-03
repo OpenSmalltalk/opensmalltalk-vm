@@ -489,7 +489,11 @@ main(int argc, char **argv, char **envp)
 		ProcessSerialNumber psn = { 0, kCurrentProcess };
 		ProcessInfoRec info;
 		info.processName = NULL;
+#if _LP64
+		info.processAppRef = NULL;
+#else
 		info.processAppSpec = NULL;
+#endif
 		info.processInfoLength = sizeof(ProcessInfoRec);
 		GetProcessInformation(&psn,&info);
 		if ((info.processMode & modeOnlyBackground) && TransformProcessType != NULL) {
@@ -593,7 +597,7 @@ main(int argc, char **argv, char **envp)
     return 0;
 }
 
-int ioExit(void) { return ioExitWithErrorCode(0); }
+sqInt ioExit(void) { return ioExitWithErrorCode(0); }
 
 sqInt
 ioExitWithErrorCode(int ec)
@@ -616,14 +620,16 @@ extern sqInt reportStackHeadroom;
 	return ec;
 }
 
-int ioDisablePowerManager(int disableIfNonZero) {
+sqInt
+ioDisablePowerManager(sqInt disableIfNonZero) {
 	#pragma unused(disableIfNonZero)
 	return 0;
 }
 
 /*** I/O Primitives ***/
 
-int ioBeep(void) {
+sqInt
+ioBeep(void) {
 	SysBeep(1000);
 	return 0;
 }
@@ -634,7 +640,8 @@ void SqueakTerminate() {
 	sqMacMemoryFree();
 }
 
-int ioFormPrint(int bitsAddr, int width, int height, int depth, double hScale, double vScale, int landscapeFlag) {
+sqInt
+ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double hScale, double vScale, sqInt landscapeFlag) {
 	/* experimental: print a form with the given bitmap, width, height, and depth at
 	   the given horizontal and vertical scales in the given orientation
            However John Mcintosh has introduced a printjob class and plugin to replace this primitive */
@@ -788,11 +795,11 @@ char * GetAttributeString(int id) {
 	return "";
 }
 
-int attributeSize(int id) {
-	return strlen(GetAttributeString(id));
-}
+sqInt
+attributeSize(sqInt id) { return strlen(GetAttributeString(id)); }
 
-int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
+sqInt
+getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length) {
 	char *srcPtr, *dstPtr, *end;
 	int charsToMove;
 

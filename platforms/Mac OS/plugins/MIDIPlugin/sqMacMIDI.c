@@ -1,7 +1,7 @@
 #include "sq.h"
 #include "MIDIPlugin.h"
-    #include <Carbon/Carbon.h>
-    #include <QuickTime/QuickTimeMusic.h>
+#include <Carbon/Carbon.h>
+#include <QuickTime/QuickTimeMusic.h>
 
 extern struct VirtualMachine *interpreterProxy;
 

@@ -18,15 +18,11 @@
 #include "sq.h"
 #include "sqMacUIClipBoard.h"
 
-int clipboardSize(void);
-
 /*** Clipboard Support (text only for now) ***/
 
-void SetUpClipboard(void) {
-}
+void SetUpClipboard(void) { }
 
-void FreeClipboard(void) {
-}
+void FreeClipboard(void) { }
 
 /**
  * Implementation straight out of Apple's pasteboard guide. 

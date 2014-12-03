@@ -225,10 +225,11 @@ sqInt ioIsWindowObscured(void) {
   return false;
 }
 
-int makeMainWindow(void);
-static int ioSetFullScreenActual(int fullScreen);
+sqInt makeMainWindow(void);
+static sqInt ioSetFullScreenActual(sqInt fullScreen);
 
-int ioSetFullScreen(int fullScreen) {
+sqInt
+ioSetFullScreen(sqInt fullScreen) {
         void *  giLocker;
 		int return_value=0;
 		if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
@@ -245,7 +246,8 @@ int ioSetFullScreen(int fullScreen) {
         return return_value;
 }
 
-static int ioSetFullScreenActual(int fullScreen) {
+static sqInt
+ioSetFullScreenActual(sqInt fullScreen) {
     Rect                screen, workArea;
     int                 width, height, maxWidth, maxHeight;
     int                 oldWidth, oldHeight;
@@ -757,7 +759,7 @@ displayReconfigurationCallback(	CGDirectDisplayID display,
 	postFullScreenUpdate();
 }
 
-int
+sqInt
 makeMainWindow(void) {
 	WindowPtr window;
 	char	shortImageName[256];
@@ -830,12 +832,10 @@ void SetWindowTitle(int windowIndex,char *title) {
 	CFRelease(tempTitle);
 }
 
-int ioForceDisplayUpdate(void) {
-	/* do nothing on a Mac */
-	return 0;
-}
+sqInt ioForceDisplayUpdate(void) { /* do nothing on a Mac */ return 0; }
 
-int ioHasDisplayDepth(int depth) {
+sqInt
+ioHasDisplayDepth(sqInt depth) {
 	/* Return true if this platform supports the given color display depth. */
 
 	switch (depth) {
@@ -850,7 +850,8 @@ int ioHasDisplayDepth(int depth) {
 	return false;
 }
 
-int ioScreenDepth(void) {
+sqInt
+ioScreenDepth(void) {
     GDHandle mainDevice;
 
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 32;
@@ -861,7 +862,8 @@ int ioScreenDepth(void) {
     return (*(*mainDevice)->gdPMap)->pixelSize;
 }
 
-int ioScreenSize(void) {
+sqInt
+ioScreenSize(void) {
 	int w, h;
     Rect portRect;
     extern Boolean gSqueakExplicitWindowOpenNeeded;
@@ -888,7 +890,8 @@ int ioScreenSize(void) {
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }
 
-int ioSetCursor(sqInt cursorBitsIndex, int offsetX, int offsetY) {
+sqInt
+ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY) {
 	/* Old version; forward to new version. */
 	ioSetCursorWithMask(cursorBitsIndex, nil, offsetX, offsetY);
 	return 0;
@@ -896,7 +899,8 @@ int ioSetCursor(sqInt cursorBitsIndex, int offsetX, int offsetY) {
 
 Cursor macCursor;
 
-int ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, int offsetX, int offsetY) {
+sqInt
+ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY) {
 	/* Set the 16x16 cursor bitmap. If cursorMaskIndex is nil, then make the mask the same as
 	   the cursor bitmap. If not, then mask and cursor bits combined determine how cursor is
 	   displayed:
@@ -1212,10 +1216,11 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 			}
 		}
 	}
-	return (false);
+	return false;
 }
 
-int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
+sqInt
+ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag) {
 	/* Set the window to the given width, height, and color depth. Put the window
 	   into the full screen mode specified by fullscreenFlag. */
 

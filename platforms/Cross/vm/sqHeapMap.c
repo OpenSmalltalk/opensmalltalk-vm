@@ -36,7 +36,7 @@
  
 #define NUMPAGES 256
 
-static uchar *mapPages[256] = { 0, };
+static uchar *mapPages[NUMPAGES] = { 0, };
 
 #define PAGESIZE (1024*1024)
 #define PAGESHIFT 24
@@ -74,7 +74,7 @@ heapMapAtWordPut(void *wordPointer, int bit)
 		error("misaligned word");
 	if (!page) {
 		if (!(page = malloc(PAGESIZE))) {
-			perror("malloc");
+			perror("heapMap malloc");
 			exit(1);
 		}
 		mapPages[PAGEINDEX(address)] = page;
@@ -98,6 +98,98 @@ clearHeapMap(void)
 		if (mapPages[i])
 			memset(mapPages[i],0,PAGESIZE);
 }
-#else
-# error 64-bit verison not yet implemented (hint: you need another level of indirection to make the table small enough)
-#endif
+#else /* SQ_IMAGE32 */
+/*
+ * 64-bit address space = 2^64 bytes = 2^61 64-bit words at a bit per 64-bit
+ * word.  So we need to be able to cover 2^58 bytes.  If we have e.g. 65536
+ * root pages, for a minimum overhead of 512k then each page needs to cover
+ * 2^58 / 65536 words = 2^42 bytes per page, so we need a two-level page table.
+ * We split the table 16 bits for the root, 19 bits for intermediate pages (an
+ * overhead of 4mb per second-level page), leaving 2^23 byts per page, 8mb per
+ * page.
+ */
+ 
+#define NUMROOTPAGES 65536
+
+static uchar **mapPages[NUMROOTPAGES] = { 0, };
+
+#define PAGESIZE (8*1024*1024)
+#define PAGESHIFT 26 /* 8mb = 2^23, + 2^3 for 64-bit units = 2^26 */
+#define PAGEMASK 0x3FFFFFF
+#define DIRECTORYSIZE ((1 << 19) * sizeof(void *))
+#define DIRECTORYSHIFT (PAGESHIFT + 19)
+#define DIRECTORYMASK 0x7FFFF
+#define LOGWORDSIZE 3
+#define LOGBITSPERBYTE 3
+
+#define BITINDEX(a) (((a) >> LOGWORDSIZE) & ((1<<LOGBITSPERBYTE)-1))
+#define BYTEINDEX(a) (((a) & PAGEMASK) >> (LOGWORDSIZE + LOGBITSPERBYTE))
+#define PAGEINDEX(a) (((a) >> PAGESHIFT) & DIRECTORYMASK)
+#define DIRECTORYINDEX(a) ((a) >> DIRECTORYSHIFT)
+
+/*
+ * Answer non-zero if the heapMap is set at wordPointer, 0 otherwise
+ */
+int
+heapMapAtWord(void *wordPointer)
+{
+	ulong address = (ulong)wordPointer;
+	uchar **directory, *page;
+	if ((address & ((1<<LOGWORDSIZE)-1)))
+		error("misaligned word");
+	if (!(directory = mapPages[DIRECTORYINDEX(address)]))
+		return 0;
+	page = directory[PAGEINDEX(address)];
+	return page
+		? page[BYTEINDEX(address)] & (1 << BITINDEX(address))
+		: 0;
+}
+
+/*
+ * Set the value in the map at wordPointer to bit.
+ */
+void
+heapMapAtWordPut(void *wordPointer, int bit)
+{
+	ulong address = (ulong)wordPointer;
+	uchar **directory, *page;
+	if ((address & ((1<<LOGWORDSIZE)-1)))
+		error("misaligned word");
+	if (!(directory = mapPages[DIRECTORYINDEX(address)])) {
+		if (!(directory = malloc(DIRECTORYSIZE))) {
+			perror("heapMap malloc");
+			exit(1);
+		}
+		mapPages[DIRECTORYINDEX(address)] = directory;
+		memset(directory,0,DIRECTORYSIZE);
+	}
+	if (!(page = directory[PAGEINDEX(address)])) {
+		if (!(page = malloc(PAGESIZE))) {
+			perror("heapMap malloc");
+			exit(1);
+		}
+		directory[PAGEINDEX(address)] = page;
+		memset(page,0,PAGESIZE);
+	}
+	if (bit)
+		page[BYTEINDEX(address)] |= 1 << BITINDEX(address);
+	else
+		page[BYTEINDEX(address)] &= (uchar)-1 ^ (1 << BITINDEX(address));
+}
+
+/*
+ * Clear the heap map to zero.
+ */
+void
+clearHeapMap(void)
+{
+	long i, j;
+	uchar **directory, *page;
+
+	for (i = 0; i < NUMROOTPAGES; i++)
+		if ((directory = mapPages[i]))
+			for (j = 0; j < DIRECTORYSIZE; j++)
+				if ((page = directory[j]))
+					memset(page,0,PAGESIZE);
+}
+#endif /* SQ_IMAGE32 */

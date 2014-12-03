@@ -236,14 +236,14 @@ ignoreLastEvent()
         eventBufferPut = MAX_EVENT_BUFFER -1;
 }
 
-int
+sqInt
 ioSetInputSemaphore(int semaIndex)
 {
 	inputSemaphoreIndex = semaIndex;
 	return 1;
 }
 
-int
+sqInt
 ioGetNextEvent(sqInputEvent *evt)
 {
 	ioProcessEvents();
@@ -269,7 +269,7 @@ ioGetNextEvent(sqInputEvent *evt)
 	return true;
 }
 
-int
+sqInt
 ioGetButtonState(void)
 {
 	ioProcessEvents();
@@ -282,7 +282,7 @@ ioGetButtonState(void)
 	return buttonState;
 }
 
-int
+sqInt
 ioGetKeystroke(void)
 {
 	int keystate;
@@ -299,7 +299,7 @@ ioGetKeystroke(void)
 	return keystate;
 }
 
-int
+sqInt
 ioMousePoint(void)
 {
 	Point p;
@@ -1008,7 +1008,7 @@ recordMouseEventCarbon(EventRef event,UInt32 whatHappened,Boolean noPointConvers
                                 &wheelMouseDirection);
             GetEventParameter( event,
                                 kEventParamMouseWheelDelta,
-                                typeLongInteger,
+                                typeSInt32,
                                 NULL,
                                 sizeof(long),
                                 NULL,
@@ -1035,7 +1035,7 @@ recordMouseEventCarbon(EventRef event,UInt32 whatHappened,Boolean noPointConvers
                GetEventParameter(
                        event,
                        kEventParamClickCount,
-                       typeLongInteger,
+                       typeSInt32,
                        NULL,
                        sizeof(typeUInt32),
                        NULL,
@@ -1160,7 +1160,7 @@ recordKeyboardEventCarbon(EventRef event)
     /*  kEventTextInputUnicodeForKeyEvent
         Required parameters:
         -->     kEventParamTextInputSendComponentInstance           typeComponentInstance
-        -->     kEventParamTextInputSendRefCon                      typeLongInteger
+        -->     kEventParamTextInputSendRefCon                      typeSInt32
         -->     kEventParamTextInputSendSLRec                       typeIntlWritingCode
         -->     kEventParamTextInputSendText                        typeUnicodeText
         -->     kEventParamTextInputSendKeyboardEvent               typeEventRef

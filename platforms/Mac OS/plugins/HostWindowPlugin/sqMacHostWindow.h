@@ -6,6 +6,7 @@
  *
  
    3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
+	eem 12/2/2014 16:47 MouseTrackingRef => HIViewTrackingAreaRef
 
  */
 
@@ -14,7 +15,7 @@
 
 /* window handle type */
 #define wHandleType WindowPtr
-#define wIndexType int 
+#define wIndexType sqInt
 
 typedef struct windowDescriptorBlock {
 	struct windowDescriptorBlock * next;
@@ -22,22 +23,22 @@ typedef struct windowDescriptorBlock {
 	wIndexType		windowIndex;
 	/* extra fields to support your platform needs */
 	CGContextRef context;
-	MouseTrackingRef windowTrackingRef;
-	int rememberTicker;
-	int dirty;
-	int sync;
-	int locked;
+	HIViewTrackingAreaRef windowTrackingRef;
 	int	width;
 	int	height;
-	int isInvisible;
+	char rememberTicker;
+	char dirty;
+	char sync;
+	char locked;
+	char isInvisible;
 } windowDescriptorBlock;
 
 windowDescriptorBlock *windowBlockFromHandle(wHandleType windowHandle);
-int windowIndexFromBlock( windowDescriptorBlock * thisWindow);
-int windowIndexFromHandle(wHandleType windowHandle);
+sqInt windowIndexFromBlock(windowDescriptorBlock * thisWindow);
+sqInt windowIndexFromHandle(wHandleType windowHandle);
 wHandleType windowHandleFromIndex(wIndexType windowIndex);
 windowDescriptorBlock *AddWindowBlock(void);
 windowDescriptorBlock *windowBlockFromIndex(int windowIndex);
-int getCurrentIndexInUse(void);
-void SetUpCarbonEventForWindowIndex(int index);
-void setWindowTrackingRgn(int windowIndex);
+sqInt getCurrentIndexInUse(void);
+void SetUpCarbonEventForWindowIndex(sqInt index);
+void setWindowTrackingRgn(sqInt windowIndex);

@@ -20,7 +20,7 @@ extern struct VirtualMachine * interpreterProxy;
 
 #define fromSqueak(string,length) string
 void fixPath(char *path);
-int dir_CreateSecurity(char *pathString, int pathStringLength);
+//sqInt dir_CreateSecurity(char *pathString, sqInt pathStringLength);
 int _ioSetFileAccess(int enable);
 
 static char secureUserDirectory[PATH_MAX];
@@ -56,66 +56,64 @@ static int isAccessibleFileName(char *fileName) {
 }
 
 /* directory access */
-int ioCanCreatePathOfSize(char* pathString, int pathStringLength) {
+sqInt ioCanCreatePathOfSize(char* pathString, sqInt pathStringLength) {
 #pragma unused(pathStringLength)
   if(allowFileAccess) return 1;
   return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
 }
 
-int ioCanListPathOfSize(char* pathString, int pathStringLength) {
+sqInt ioCanListPathOfSize(char* pathString, sqInt pathStringLength) {
 #pragma unused(pathStringLength)
   if(allowFileAccess) return 1;
   return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
 }
 
-int ioCanDeletePathOfSize(char* pathString, int pathStringLength) {
+sqInt ioCanDeletePathOfSize(char* pathString, sqInt pathStringLength) {
 #pragma unused(pathStringLength)
   if(allowFileAccess) return 1;
   return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
 }
 
 /* file access */
-int ioCanOpenFileOfSizeWritable(char* pathString, int pathStringLength, int writeFlag) {
+sqInt ioCanOpenFileOfSizeWritable(char* pathString, sqInt pathStringLength, sqInt writeFlag) {
 #pragma unused(pathStringLength,writeFlag)
   if(allowFileAccess) return 1;
   return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
 }
 
-int ioCanOpenAsyncFileOfSizeWritable(char* pathString, int pathStringLength, int writeFlag) {
+sqInt ioCanOpenAsyncFileOfSizeWritable(char* pathString, sqInt pathStringLength, sqInt writeFlag) {
   return ioCanOpenFileOfSizeWritable(pathString,pathStringLength,writeFlag);
 }
-int ioCanDeleteFileOfSize(char* pathString, int pathStringLength) {
+sqInt ioCanDeleteFileOfSize(char* pathString, sqInt pathStringLength) {
 #pragma unused(pathStringLength)
   if(allowFileAccess) return 1;
   return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
 }
 
-int ioCanRenameFileOfSize(char* pathString, int pathStringLength) {
+sqInt ioCanRenameFileOfSize(char* pathString, sqInt pathStringLength) {
 #pragma unused(pathStringLength)
   if(allowFileAccess) return 1;
   return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
 }
 
 
-int ioCanGetFileTypeOfSize(char* pathString, int pathStringLength) {
+sqInt ioCanGetFileTypeOfSize(char* pathString, sqInt pathStringLength) {
 #pragma unused(pathString,pathStringLength)
   return 1; /* of no importance here */
 }
 
-int ioCanSetFileTypeOfSize(char* pathString, int pathStringLength) {
+sqInt ioCanSetFileTypeOfSize(char* pathString, sqInt pathStringLength) {
 #pragma unused(pathString,pathStringLength)
   return 1; /* of no importance here */
 }
 
 /* disabling/querying */
-int ioDisableFileAccess(void) {
-  allowFileAccess = 0;
- return 0;
+sqInt ioDisableFileAccess(void) {
+	allowFileAccess = 0;
+	return 0;
 }
 
-int ioHasFileAccess(void) {
-  return allowFileAccess;
-}
+sqInt ioHasFileAccess(void) { return allowFileAccess; }
 
 /***************************************************************************/
 /***************************************************************************/
@@ -125,16 +123,14 @@ int ioHasFileAccess(void) {
 
 static int allowImageWrite = 1;  /* allow writing the image */
 
-int ioCanRenameImage(void) {
+sqInt ioCanRenameImage(void) {
   return allowImageWrite; /* only when we're allowed to save the image */
 }
 
-int ioCanWriteImage() {
-  return allowImageWrite;
-}
+sqInt ioCanWriteImage() { return allowImageWrite; }
 
-int ioDisableImageWrite() {
-  allowImageWrite = 0;
+sqInt ioDisableImageWrite() {
+	allowImageWrite = 0;
 	return 0;
 }
 
@@ -146,29 +142,27 @@ int ioDisableImageWrite() {
 /* socket security - for now it's all or nothing */
 static int allowSocketAccess = 1; /* allow access to sockets */
 
-int ioCanCreateSocketOfType(int netType, int socketType) {
+sqInt ioCanCreateSocketOfType(sqInt netType, sqInt socketType) {
 #pragma unused(netType,socketType)
   return allowSocketAccess;
 }
 
-int ioCanConnectToPort(int netAddr, int port) {
+sqInt ioCanConnectToPort(sqInt netAddr, sqInt port) {
 #pragma unused(netAddr,port)
   return allowSocketAccess;
 }
 
-int ioCanListenOnPort(int  s, int port) {
+sqInt ioCanListenOnPort(sqInt s, sqInt port) {
 #pragma unused(s,port)
   return allowSocketAccess;
 }
 
-int ioDisableSocketAccess() {
-  allowSocketAccess = 0;
+sqInt ioDisableSocketAccess() {
+	allowSocketAccess = 0;
 	return 0;
 }
 
-int ioHasSocketAccess() {
-  return allowSocketAccess;
-}
+sqInt ioHasSocketAccess() { return allowSocketAccess; }
 
 /***************************************************************************/
 /***************************************************************************/
@@ -177,16 +171,12 @@ int ioHasSocketAccess() {
 /* SecurityPlugin primitive support */
 
 
-char *ioGetSecureUserDirectory(void) {
-  return  secureUserDirectory;
-}
+char *ioGetSecureUserDirectory(void) { return  secureUserDirectory; }
 
-char *ioGetUntrustedUserDirectory(void) {
-  return untrustedUserDirectory;
-}
+char *ioGetUntrustedUserDirectory(void) { return untrustedUserDirectory; }
 
 /* note: following is called from VM directly, not from plugin */
-int ioInitSecurity(void) {
+sqInt ioInitSecurity(void) {
   extern char gSqueakUntrustedDirectoryName[],gSqueakTrustedDirectoryName[];
   
   if (gInitialized) return 1;
@@ -204,23 +194,17 @@ int ioInitSecurity(void) {
 /***************************************************************************/
 /***************************************************************************/
 /* private entries for restoring rights */
-int _ioSetImageWrite(int enable);
-
 int _ioSetImageWrite(int enable) {
   if(enable == allowImageWrite) return 1;
   allowImageWrite = enable;
   return 1;
 }
 
-int _ioSetFileAccess(int enable);
-
 int _ioSetFileAccess(int enable) {
   if(enable == allowFileAccess) return 1;
   allowFileAccess = enable;
   return 1;
 }
-
-int _ioSetSocketAccess(int enable);
 
 int _ioSetSocketAccess(int enable) {
   if(enable == allowSocketAccess) return 1;
@@ -238,7 +222,8 @@ void fixPath(char *path) {
         }
 }
 
-int dir_CreateSecurity(char *pathString, int pathStringLength) {
+#if 0
+sqInt dir_CreateSecurity(char *pathString, sqInt pathStringLength) {
 	/* Create a new directory with the given path. By default, this
 	   directory is created in the current directory. Use
 	   a full path name such as "MyDisk:Working:New Folder" to
@@ -247,3 +232,4 @@ int dir_CreateSecurity(char *pathString, int pathStringLength) {
     //JMM tests create file in Vm directory, other place, other volume
 	return dir_Create(pathString, pathStringLength);
 }
+#endif

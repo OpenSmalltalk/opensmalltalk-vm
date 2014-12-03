@@ -7,6 +7,7 @@
 	July 15th 2005 add logic to flush QD buffers for os-x 10.4
 	 3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
 	4.1.0b2  set window title via cfstring
+	eem 12/2/2014 16:47 MouseTrackingRef => HIViewTrackingAreaRef
  */
 
 #include "sqVirtualMachine.h"
@@ -14,24 +15,25 @@
 #include "sqMacWindow.h"
 
 extern struct VirtualMachine *interpreterProxy;
-int RemoveWindowBlock(windowDescriptorBlock * thisWindow);
+sqInt RemoveWindowBlock(windowDescriptorBlock * thisWindow);
 
-int createWindowWidthheightoriginXyattrlength(int w,int h,int x,int y,  char * list, int listLength) {
+sqInt
+createWindowWidthheightoriginXyattrlength(sqInt w, sqInt h, sqInt x, sqInt y, char *list, sqInt listLength) {
 	int index;
 	long windowClass,windowAttributes;
 	WindowPtr window;
 	windowDescriptorBlock *windowBlock;
 	if (listLength != 8) return -1;
-	
+
 	memmove(&windowClass, list, 4);
 	memmove(&windowAttributes, list+4, 4);
 
 	window = SetUpWindow(y,x,y+h,x+w,windowClass,windowAttributes);
 	if (window == 0) return -1;
-	
+
 	windowBlock = AddWindowBlock();
 	windowBlock->handle = (wHandleType) window;
-	
+
 	index = windowBlock->windowIndex;
 	windowBlock->isInvisible = !MacIsWindowVisible(window);
 	SetUpCarbonEventForWindowIndex(index);
@@ -39,47 +41,40 @@ int createWindowWidthheightoriginXyattrlength(int w,int h,int x,int y,  char * l
 //	CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context); 
 	windowBlock->width = w;
 	windowBlock->height = h; 
-	
+
 	sqShowWindow(index);
 	return index;
 }
 
-void setWindowTrackingRgn(int windowIndex) {
-		
+void
+setWindowTrackingRgn(sqInt windowIndex) {
+
 	Rect rgnRect;
 	RgnHandle rgn = NewRgn();
-	MouseTrackingRegionID id;
 	windowDescriptorBlock *windowBlock = windowBlockFromIndex(windowIndex);
-	
+
 	if (!windowBlock) 
 		return;
-		
+
 	if (windowBlock->windowTrackingRef) {
 		GetWindowBounds(windowBlock->handle, kWindowContentRgn, &rgnRect);	
 		SetRectRgn( rgn, rgnRect.left, rgnRect.top, rgnRect.right, rgnRect.bottom );
-		ChangeMouseTrackingRegion(windowBlock->windowTrackingRef,rgn, NULL);
+		HIViewChangeTrackingArea(windowBlock->windowTrackingRef,rgn);
 		DisposeRgn( rgn );	
 		return;
 	}
 
 	GetWindowBounds(windowBlock->handle, kWindowContentRgn, &rgnRect);	
 	SetRectRgn( rgn, rgnRect.left, rgnRect.top, rgnRect.right, rgnRect.bottom );
-		
-	id.signature = 'FAST';
-	id.id = windowIndex;
-		
-	OSStatus err = CreateMouseTrackingRegion(windowBlock->handle, rgn, NULL, kMouseTrackingOptionsGlobalClip,
-						id, NULL, NULL, &windowBlock->windowTrackingRef);
-	if ( noErr == err ) {
-		RetainMouseTrackingRegion( windowBlock->windowTrackingRef);
-		err = SetMouseTrackingRegionEnabled( windowBlock->windowTrackingRef, TRUE );
-	}
-		
+
+	OSStatus err = HIViewNewTrackingArea(windowBlock->handle, rgn, windowIndex,
+										 &windowBlock->windowTrackingRef);
 	DisposeRgn( rgn );	
 }
 
 
-int closeWindow(int windowIndex) {
+sqInt
+closeWindow(sqInt windowIndex) {
 	wHandleType	windowHandle;
 	windowHandle = windowHandleFromIndex(windowIndex);
 	if(windowHandle == NULL) 
@@ -87,10 +82,10 @@ int closeWindow(int windowIndex) {
 	if (windowBlockFromIndex(windowIndex)->context)
 		QDEndCGContext(GetWindowPort(windowBlockFromIndex(windowIndex)->handle),&windowBlockFromIndex(windowIndex)->context);
 		//CGContextRelease(windowBlockFromIndex(windowIndex)->context);
-	
+
 
 	if (windowBlockFromIndex(windowIndex)->windowTrackingRef) {
-		ReleaseMouseTrackingRegion(windowBlockFromIndex(windowIndex)->windowTrackingRef );
+		HIViewDisposeTrackingArea(windowBlockFromIndex(windowIndex)->windowTrackingRef );
 		windowBlockFromIndex(windowIndex)->windowTrackingRef = NULL;
 	}
 
@@ -100,21 +95,22 @@ int closeWindow(int windowIndex) {
 	return 1;
 }
 
-int ioPositionOfWindow(wIndexType windowIndex)
+sqInt
+ioPositionOfWindow(wIndexType windowIndex)
 {
 	Rect portRect;
 	if (windowHandleFromIndex(windowIndex) == nil)
 		return -1;
-		
+
 	GetPortBounds(GetWindowPort(windowHandleFromIndex(windowIndex)),&portRect);
  	QDLocalToGlobalRect(GetWindowPort(windowHandleFromIndex(windowIndex)), &portRect);
 	return (portRect.left << 16) | (portRect.top & 0xFFFF);  /* left is high 16 bits; top is low 16 bits */
 }
 
-int ioPositionOfWindowSetxy(wIndexType windowIndex, int x, int y)
+sqInt
+ioPositionOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 {
 	void *giLocker;
-	int return_value=0;
 	if (windowHandleFromIndex(windowIndex) == nil)
 		return -1;
 
@@ -129,19 +125,18 @@ int ioPositionOfWindowSetxy(wIndexType windowIndex, int x, int y)
 		foo[5] = true;
 		foo[6] = 0;
 		((sqInt (*) (void *)) giLocker)(foo);
-		return_value = interpreterProxy->positive32BitIntegerFor(foo[6]);
 	}
 	return ioPositionOfWindow(windowIndex);
 }
 
-int ioSizeOfWindow(wIndexType windowIndex)
+sqInt
+ioSizeOfWindow(wIndexType windowIndex)
 {
 	Rect portRect;
 	int w, h;
 
-	if (windowHandleFromIndex(windowIndex) == nil)
+	if (!windowHandleFromIndex(windowIndex))
 		return -1;
-
 
 	GetPortBounds(GetWindowPort(windowHandleFromIndex(windowIndex)),&portRect);
 	w =  portRect.right -  portRect.left;
@@ -149,11 +144,11 @@ int ioSizeOfWindow(wIndexType windowIndex)
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }
 
-int ioSizeOfWindowSetxy(wIndexType windowIndex, int x, int y)
+sqInt
+ioSizeOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 {
 	void * giLocker;
-	int return_value=0;
-	if (windowHandleFromIndex(windowIndex) == nil)
+	if (!windowHandleFromIndex(windowIndex))
 		return -1;
 	giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
 	if (giLocker != 0) {
@@ -166,29 +161,30 @@ int ioSizeOfWindowSetxy(wIndexType windowIndex, int x, int y)
 		foo[5] = true;
 		foo[6] = 0;
 		((sqInt (*) (void *)) giLocker)(foo);
-		return_value = interpreterProxy->positive32BitIntegerFor(foo[6]);
 	}
 	setWindowTrackingRgn(windowIndex);
 	return ioSizeOfWindow(windowIndex);
 }
 
-int ioSetTitleOfWindow(int windowIndex, char * newTitle, int sizeOfTitle) {
+sqInt
+ioSetTitleOfWindow(sqInt windowIndex, char *newTitle, sqInt sizeOfTitle) {
 	char string[256];
 	if (sizeOfTitle > 255) 
 		return -1;
 
 	memcpy(string,newTitle,sizeOfTitle);
 	string[sizeOfTitle] = 0x00;
-	
+
 	CFStringRef windowTitleCFString = CFStringCreateWithCString (nil,string,kCFStringEncodingUTF8);
 
 	SetWindowTitleWithCFString (windowHandleFromIndex(windowIndex),windowTitleCFString);
-	
+
 	CFRelease(windowTitleCFString);
 	return 1;
 }
 
-int ioCloseAllWindows(void) {
+sqInt
+ioCloseAllWindows(void) {
 	return 1;
 }
 
@@ -204,7 +200,8 @@ static windowDescriptorBlock *windowListRoot = NULL;
 /* simple linked list management code */
 /* window list management */
 
-windowDescriptorBlock *windowBlockFromIndex(int windowIndex) {
+windowDescriptorBlock *
+windowBlockFromIndex(sqInt windowIndex) {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while(entry) {
@@ -225,9 +222,9 @@ windowDescriptorBlock *entry;
 }
 
 
-wHandleType windowHandleFromIndex(int windowIndex)  {
-windowDescriptorBlock *entry;
-	entry = windowListRoot;
+wHandleType
+windowHandleFromIndex(sqInt windowIndex)  {
+	windowDescriptorBlock *entry = windowListRoot;
 	while(entry) {
 		if(entry->windowIndex == windowIndex) return entry->handle;
 		entry = entry->next;
@@ -235,7 +232,8 @@ windowDescriptorBlock *entry;
 	return NULL;
 }
 
-int windowIndexFromHandle(wHandleType windowHandle) {
+sqInt
+windowIndexFromHandle(wHandleType windowHandle) {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while(entry) {
@@ -245,7 +243,8 @@ windowDescriptorBlock *entry;
 	return 0;
 }
 
-int windowIndexFromBlock( windowDescriptorBlock * thisWindow) {
+sqInt
+windowIndexFromBlock(windowDescriptorBlock *thisWindow) {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while(entry) {
@@ -255,7 +254,7 @@ windowDescriptorBlock *entry;
 	return 0;
 }
 
-static int nextIndex = 1; 
+static sqInt nextIndex = 1; 
 
 windowDescriptorBlock *AddWindowBlock(void) {
 /* create a new entry in the linkedlist of windows.
@@ -282,7 +281,8 @@ windowDescriptorBlock *thisWindow;
  * Remove the given entry from the list of windows.
  * free it, if found.
  */
- int RemoveWindowBlock(windowDescriptorBlock * thisWindow) {
+sqInt
+RemoveWindowBlock(windowDescriptorBlock * thisWindow) {
 windowDescriptorBlock *prevEntry;
 
 
@@ -303,6 +303,4 @@ windowDescriptorBlock *prevEntry;
 	return 1;
 }
 
-int getCurrentIndexInUse(void) {
-	return nextIndex-1;
-}
+sqInt getCurrentIndexInUse(void) { return nextIndex-1; }

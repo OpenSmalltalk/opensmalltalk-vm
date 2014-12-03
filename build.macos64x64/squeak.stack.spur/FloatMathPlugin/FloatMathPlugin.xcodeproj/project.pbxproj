@@ -60,7 +60,7 @@
 		08EA7FFBFE8413EDC02AAC07 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
 		8D01CCD10486CAD60068D4B7 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8D01CCD20486CAD60068D4B7 /* FloatMathPlugin.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FloatMathPlugin.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		A271C7DD0CEB874D0014AC5E /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spurstacksrc/vm/interp.h; sourceTree = SOURCE_ROOT; };
+		A271C7DD0CEB874D0014AC5E /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spurstack64src/vm/interp.h; sourceTree = SOURCE_ROOT; };
 		A271C7DE0CEB878E0014AC5E /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
 		A271C7DF0CEB878E0014AC5E /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
 		A271C7E00CEB87BE0014AC5E /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = "../../../platforms/Mac OS/vm/config.h"; sourceTree = SOURCE_ROOT; };
@@ -367,7 +367,7 @@
 		4FADC23508B4156C00ABE55E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = x86_64;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_MODEL_TUNING = G4;
 				GCC_OPTIMIZATION_LEVEL = 2;
@@ -378,17 +378,6 @@
 					HAVE_SYS_TIME_H,
 					NO_ISNAN,
 				);
-				ICC_DEFINES = "$(GCC_PREPROCESSOR_DEFINITIONS)";
-				ICC_FP_MODEL = source;
-				ICC_IGNORE_STD_INCLUDEDIR = NO;
-				ICC_LANG_ANSI = "compiler-default";
-				ICC_OPTLEVEL = none;
-				ICC_OPT_INLINE = default;
-				ICC_OPT_IPO_FOR_SINGLE_FILE_COMPILATION = NO;
-				ICC_OPT_LOOP_UNROLL = "-unroll";
-				ICC_OPT_USE_ARCH_IA32 = archT;
-				ICC_OTHER_CFLAGS = "$(inherited)";
-				ICC_PREDEFINE_GCC = gcc;
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				OTHER_CFLAGS = (
@@ -433,11 +422,6 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCarbon;
-				ICC_FP_MODEL = source;
-				ICC_FP_SPECULATION = off;
-				ICC_OPTLEVEL = speedHLO;
-				ICC_OTHER_CFLAGS = "$(OTHER_CFLAGS)";
-				ICC_OTHER_CPLUSPLUSFLAGS = "$(ICC_OTHER_CFLAGS) $(OTHER_CPLUSPLUSFLAGS)";
 				OTHER_CFLAGS = "$(OTHER_CFLAGS)";
 				PREBINDING = NO;
 				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;

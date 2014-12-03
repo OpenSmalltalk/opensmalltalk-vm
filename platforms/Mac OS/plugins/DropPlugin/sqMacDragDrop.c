@@ -105,7 +105,8 @@ extern struct VirtualMachine *interpreterProxy;
 
 // Startup logic
 
-int dropInit(void)
+sqInt
+dropInit(void)
 {
  	void *fn;
     Boolean  installedReceiver=false, installedTracker=false;
@@ -160,7 +161,8 @@ bail:
 
 // Shutdown logic
 
-int dropShutdown() {
+sqInt
+dropShutdown() {
     if (gMainReceiveHandler != NULL)
 		RemoveReceiveHandler(gMainReceiveHandler, gWindowPtr);
 	if (gMainTrackingHandler != NULL)
@@ -176,14 +178,16 @@ int dropShutdown() {
 	return 1;
 }
 
-int sqSecFileAccessCallback(void *function) {
+sqInt
+sqSecFileAccessCallback(void *function) {
 #pragma unused(function)
 	return 0;
  }
 
 //Primitive to get file name
 
-char *dropRequestFileName(int dropIndex) {
+char *
+dropRequestFileName(sqInt dropIndex) {
     if(dropIndex < 1 || dropIndex > gNumDropFiles) 
         return NULL;
 		
@@ -195,7 +199,8 @@ char *dropRequestFileName(int dropIndex) {
 
 //Primitive to get file stream handle.
 
-int dropRequestFileHandle(int dropIndex) {
+sqInt
+dropRequestFileHandle(sqInt dropIndex) {
     sqInt  fileOop;
 	void *fn;
     char *dropName = dropRequestFileName(dropIndex);
@@ -225,8 +230,9 @@ int dropRequestFileHandle(int dropIndex) {
 	error; it only means the flavor wasn't there and we should
 	not accept the drag. Therefore, we translate 'badDragFlavorErr'
 	into a 'false' value for '*approved'. */
-	
-static pascal OSErr ApproveDragReference(DragReference theDragRef, Boolean *approved) {
+
+static pascal OSErr
+ApproveDragReference(DragReference theDragRef, Boolean *approved) {
 
 	OSErr err;
 	DragAttributes dragAttrs;
@@ -278,7 +284,8 @@ bail:
 	window.  if the drag is approved, then the drop box will be hilitied appropriately
 	as the mouse passes over it.  */
 
-pascal OSErr MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWindow, void *refCon, DragReference theDragRef) {
+pascal OSErr
+MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWindow, void *refCon, DragReference theDragRef) {
 #pragma unused(refCon)
 		/* we're drawing into the image well if we hilite... */
 	EventRecord		theEvent;
@@ -402,7 +409,8 @@ static pascal OSErr SetDropFolder
 	
      */
      
-pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReference theDragRef) {
+pascal OSErr
+MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReference theDragRef) {
 
 #pragma unused(refcon)
 #pragma unused(theWindow)
@@ -520,7 +528,8 @@ pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReferen
 	return noErr;
 }
 
-void sqSetNumberOfDropFiles(int numberOfFiles) {
+void
+sqSetNumberOfDropFiles(sqInt numberOfFiles) {
         while (gDragDropThrottleSpinLock);
         gDragDropThrottleSpinLock = true;
 	if (gNumDropFiles != 0 ) {
@@ -535,7 +544,8 @@ void sqSetNumberOfDropFiles(int numberOfFiles) {
     return;
 }
 
-void sqSetFileInformation(int dropIndex, void *dropFile) { 
+void
+sqSetFileInformation(sqInt dropIndex, void *dropFile) { 
     if(dropIndex < 1 || dropIndex > gNumDropFiles) 
         return;
     memcpy(&dropFiles[dropIndex-1],(char *) dropFile,sizeof(HFSFlavorSqueak));

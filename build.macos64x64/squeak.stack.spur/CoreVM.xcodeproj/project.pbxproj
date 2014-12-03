@@ -7,10 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		73BC1BBE0F576864003412C5 /* gcc3x-interp.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB90F576864003412C5 /* gcc3x-interp.c */; };
 		733AC8DB0FEAAC4F007C6206 /* version.c in Sources */ = {isa = PBXBuildFile; fileRef = 733AC8DA0FEAAC4F007C6206 /* version.c */; };
 		733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */ = {isa = PBXBuildFile; fileRef = 733B2C36106AB74B004652BE /* sqExternalSemaphores.c */; };
 		7351A09B100963670035A878 /* sqUnixThreads.c in Sources */ = {isa = PBXBuildFile; fileRef = 7351A09A100963670035A878 /* sqUnixThreads.c */; };
+		735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */; };
 		737888E713D0DE6500C5E1AD /* sqMemoryFence.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E513D0DE6500C5E1AD /* sqMemoryFence.h */; };
 		737888E813D0DE6500C5E1AD /* sqSCCSVersion.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */; };
 		738FB1EA0EE4CF94004BEE42 /* ia32abicc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738FB1E90EE4CF94004BEE42 /* ia32abicc.c */; };
@@ -20,6 +20,7 @@
 		739C6EDA112DCBD10049B7D3 /* sqAssert.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C6ED8112DCBD10049B7D3 /* sqAssert.h */; };
 		73B54C530E55EFED00FE780C /* sqUnixVMProfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 73B54C520E55EFED00FE780C /* sqUnixVMProfile.c */; };
 		73B96E490E47D7A10079C51B /* sqUnixHeartbeat.c in Sources */ = {isa = PBXBuildFile; fileRef = 73B96E480E47D7A10079C51B /* sqUnixHeartbeat.c */; };
+		73BC1BBE0F576864003412C5 /* gcc3x-interp.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB90F576864003412C5 /* gcc3x-interp.c */; };
 		73DFFAC018D380C200C3C543 /* AioPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 73DFFABF18D380C200C3C543 /* AioPlugin.c */; };
 		94002C4409EB18EF003C4BF2 /* sqMemoryAccess.h in Headers */ = {isa = PBXBuildFile; fileRef = 94002C4209EB18EF003C4BF2 /* sqMemoryAccess.h */; };
 		941A3B2D09AA144000C9D25A /* sqMacOpenGL.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AE0F02EB4E090100013C /* sqMacOpenGL.h */; };
@@ -53,7 +54,6 @@
 		941A3B4A09AA144000C9D25A /* jpeglib.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF5C02EB4E0A0100013C /* jpeglib.h */; };
 		941A3B4B09AA144000C9D25A /* JPEGReadWriter2Plugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF5D02EB4E0A0100013C /* JPEGReadWriter2Plugin.h */; };
 		941A3B4C09AA144000C9D25A /* jversion.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF6102EB4E0A0100013C /* jversion.h */; };
-		941A3B4D09AA144000C9D25A /* MIDIPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AF6402EB4E0A0100013C /* MIDIPlugin.h */; };
 		941A3B4E09AA144000C9D25A /* SecurityPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFBD02EB4E0A0100013C /* SecurityPlugin.h */; };
 		941A3B4F09AA144000C9D25A /* SerialPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFBF02EB4E0A0100013C /* SerialPlugin.h */; };
 		941A3B5009AA144000C9D25A /* SocketPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFC102EB4E0A0100013C /* SocketPlugin.h */; };
@@ -95,7 +95,6 @@
 		941A3B7909AA144000C9D25A /* SqueakSources.icns in Resources */ = {isa = PBXBuildFile; fileRef = 94FC2ED005498CA800A80109 /* SqueakSources.icns */; };
 		941A3B9A09AA144000C9D25A /* sqMacInternetConfiguration.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AE3D02EB4E090100013C /* sqMacInternetConfiguration.c */; };
 		941A3B9B09AA144000C9D25A /* sqMacJoystickAndTablet.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AE3F02EB4E090100013C /* sqMacJoystickAndTablet.c */; };
-		941A3B9C09AA144000C9D25A /* sqMacMIDI.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AE4302EB4E090100013C /* sqMacMIDI.c */; };
 		941A3B9E09AA144000C9D25A /* sqMacUUID.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AE6A02EB4E0A0100013C /* sqMacUUID.c */; };
 		941A3BA109AA144000C9D25A /* sqUnixSpurMemory.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEF602EB4E0A0100013C /* sqUnixSpurMemory.c */; };
 		941A3BA209AA144000C9D25A /* sqMacTime.c in Sources */ = {isa = PBXBuildFile; fileRef = F5F8AEFA02EB4E0A0100013C /* sqMacTime.c */; };
@@ -184,7 +183,6 @@
 		941A3BFC09AA144000C9D25A /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 087740A400C6A47FC0A80109 /* Carbon.framework */; };
 		941A3BFD09AA144000C9D25A /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 087740A700C6A4EDC0A80109 /* OpenGL.framework */; };
 		941A3BFE09AA144000C9D25A /* AGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0192233A00CCBFCBC0A80109 /* AGL.framework */; };
-		941A3BFF09AA144000C9D25A /* QuickTime.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 05DD6BB000CCC66FC0A80109 /* QuickTime.framework */; };
 		941A3C0009AA144000C9D25A /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94D42ACA07B2C071001CCA37 /* CoreAudio.framework */; };
 		941A3C0109AA144000C9D25A /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94D42AFC07B2C5DF001CCA37 /* AudioToolbox.framework */; };
 		941A3C0209AA144000C9D25A /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94148CC5080DB5A400E8C647 /* IOKit.framework */; };
@@ -224,7 +222,6 @@
 		A277294E0CE7A8D300ABAFCA /* LocalePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729180CE7A8D300ABAFCA /* LocalePlugin.c */; };
 		A277294F0CE7A8D300ABAFCA /* MacMenubarPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277291A0CE7A8D300ABAFCA /* MacMenubarPlugin.c */; };
 		A27729500CE7A8D300ABAFCA /* Matrix2x3Plugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277291C0CE7A8D300ABAFCA /* Matrix2x3Plugin.c */; };
-		A27729510CE7A8D300ABAFCA /* MIDIPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277291E0CE7A8D300ABAFCA /* MIDIPlugin.c */; };
 		A27729520CE7A8D300ABAFCA /* MiscPrimitivePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729200CE7A8D300ABAFCA /* MiscPrimitivePlugin.c */; };
 		A27729530CE7A8D300ABAFCA /* RePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729220CE7A8D300ABAFCA /* RePlugin.c */; };
 		A27729540CE7A8D300ABAFCA /* SecurityPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729240CE7A8D300ABAFCA /* SecurityPlugin.c */; };
@@ -235,7 +232,6 @@
 		A27729590CE7A8D300ABAFCA /* SoundPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277292E0CE7A8D300ABAFCA /* SoundPlugin.c */; };
 		A277295A0CE7A8D300ABAFCA /* StarSqueakPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729300CE7A8D300ABAFCA /* StarSqueakPlugin.c */; };
 		A277295B0CE7A8D300ABAFCA /* UUIDPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729330CE7A8D300ABAFCA /* UUIDPlugin.c */; };
-		735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */; };
 		A277295D0CE7A8D300ABAFCA /* ZipPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729370CE7A8D300ABAFCA /* ZipPlugin.c */; };
 		A27729770CE7A9AE00ABAFCA /* sqMacHostWindow.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729750CE7A9AE00ABAFCA /* sqMacHostWindow.c */; };
 		A27729780CE7A9AE00ABAFCA /* sqMacHostWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = A27729760CE7A9AE00ABAFCA /* sqMacHostWindow.h */; };
@@ -255,7 +251,6 @@
 
 /* Begin PBXFileReference section */
 		0192233A00CCBFCBC0A80109 /* AGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AGL.framework; path = /System/Library/Frameworks/AGL.framework; sourceTree = "<absolute>"; };
-		05DD6BB000CCC66FC0A80109 /* QuickTime.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickTime.framework; path = /System/Library/Frameworks/QuickTime.framework; sourceTree = "<absolute>"; };
 		087740A300C6A47FC0A80109 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = /System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<absolute>"; };
 		087740A400C6A47FC0A80109 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
 		087740A700C6A4EDC0A80109 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = /System/Library/Frameworks/OpenGL.framework; sourceTree = "<absolute>"; };
@@ -269,6 +264,7 @@
 		733AC8DA0FEAAC4F007C6206 /* version.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = version.c; sourceTree = "<group>"; };
 		733B2C36106AB74B004652BE /* sqExternalSemaphores.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqExternalSemaphores.c; sourceTree = "<group>"; };
 		7351A09A100963670035A878 /* sqUnixThreads.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixThreads.c; path = vm/sqUnixThreads.c; sourceTree = "<group>"; };
+		735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = VMProfileMacSupportPlugin.c; path = VMProfileMacSupportPlugin/VMProfileMacSupportPlugin.c; sourceTree = "<group>"; };
 		737888E513D0DE6500C5E1AD /* sqMemoryFence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMemoryFence.h; sourceTree = "<group>"; };
 		737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSCCSVersion.h; sourceTree = "<group>"; };
 		738FB1E90EE4CF94004BEE42 /* ia32abicc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = ia32abicc.c; path = IA32ABI/ia32abicc.c; sourceTree = "<group>"; };
@@ -373,7 +369,6 @@
 		A277292E0CE7A8D300ABAFCA /* SoundPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SoundPlugin.c; path = SoundPlugin/SoundPlugin.c; sourceTree = "<group>"; };
 		A27729300CE7A8D300ABAFCA /* StarSqueakPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = StarSqueakPlugin.c; path = StarSqueakPlugin/StarSqueakPlugin.c; sourceTree = "<group>"; };
 		A27729330CE7A8D300ABAFCA /* UUIDPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = UUIDPlugin.c; path = UUIDPlugin/UUIDPlugin.c; sourceTree = "<group>"; };
-		735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = VMProfileMacSupportPlugin.c; path = VMProfileMacSupportPlugin/VMProfileMacSupportPlugin.c; sourceTree = "<group>"; };
 		A27729370CE7A8D300ABAFCA /* ZipPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ZipPlugin.c; path = ZipPlugin/ZipPlugin.c; sourceTree = "<group>"; };
 		A27729750CE7A9AE00ABAFCA /* sqMacHostWindow.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacHostWindow.c; sourceTree = "<group>"; };
 		A27729760CE7A9AE00ABAFCA /* sqMacHostWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacHostWindow.h; sourceTree = "<group>"; };
@@ -515,7 +510,6 @@
 				941A3BFC09AA144000C9D25A /* Carbon.framework in Frameworks */,
 				941A3BFD09AA144000C9D25A /* OpenGL.framework in Frameworks */,
 				941A3BFE09AA144000C9D25A /* AGL.framework in Frameworks */,
-				941A3BFF09AA144000C9D25A /* QuickTime.framework in Frameworks */,
 				941A3C0009AA144000C9D25A /* CoreAudio.framework in Frameworks */,
 				941A3C0109AA144000C9D25A /* AudioToolbox.framework in Frameworks */,
 				941A3C0209AA144000C9D25A /* IOKit.framework in Frameworks */,
@@ -542,7 +536,6 @@
 				94D42ACA07B2C071001CCA37 /* CoreAudio.framework */,
 				087740A700C6A4EDC0A80109 /* OpenGL.framework */,
 				0192233A00CCBFCBC0A80109 /* AGL.framework */,
-				05DD6BB000CCC66FC0A80109 /* QuickTime.framework */,
 				944B5B5008F5C7A900611DF8 /* Foundation.framework */,
 				A27729A70CE7AFBE00ABAFCA /* SystemConfiguration.framework */,
 				DAD40DAF0AA60CE90082521A /* CoreVM.plist */,
@@ -668,20 +661,6 @@
 			path = RePlugin;
 			sourceTree = "<group>";
 		};
-		A27729630CE7A92800ABAFCA /* WebProxyPlugin */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = WebProxyPlugin;
-			sourceTree = "<group>";
-		};
-		A277296F0CE7A95400ABAFCA /* WebProxyPlugin */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = WebProxyPlugin;
-			sourceTree = "<group>";
-		};
 		A27729740CE7A9AE00ABAFCA /* HostWindowPlugin */ = {
 			isa = PBXGroup;
 			children = (
@@ -697,13 +676,6 @@
 				A277297A0CE7A9BE00ABAFCA /* HostWindowPlugin.h */,
 			);
 			path = HostWindowPlugin;
-			sourceTree = "<group>";
-		};
-		A27729980CE7AEE400ABAFCA /* WebProxyPlugin */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = WebProxyPlugin;
 			sourceTree = "<group>";
 		};
 		A2DB7E170EA02105005419A3 /* GIFLibPlugin */ = {
@@ -730,20 +702,6 @@
 			name = LocalePlugin;
 			sourceTree = "<group>";
 		};
-		DAFB92EC0B9F50CF000B4B7C /* FileDialogPlugin */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = FileDialogPlugin;
-			sourceTree = "<group>";
-		};
-		DAFB93040B9F5D00000B4B7C /* FileDialogPlugin */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = FileDialogPlugin;
-			sourceTree = "<group>";
-		};
 		F5F8ADC002EB4E090100013C /* Sources */ = {
 			isa = PBXGroup;
 			children = (
@@ -763,7 +721,7 @@
 				948214FE080E3ABE0061C2AB /* interp.h */,
 			);
 			name = vm;
-			path = ../../spurstacksrc/vm;
+			path = ../../spurstack64src/vm;
 			sourceTree = "<group>";
 		};
 		F5F8AE0802EB4E090100013C /* Mac OS */ = {
@@ -782,7 +740,6 @@
 				F5F8AE0B02EB4E090100013C /* AsynchFilePlugin */,
 				F5F8AE0D02EB4E090100013C /* B3DAcceleratorPlugin */,
 				F5F8AE1102EB4E090100013C /* DropPlugin */,
-				DAFB92EC0B9F50CF000B4B7C /* FileDialogPlugin */,
 				F5F8AE3902EB4E090100013C /* FilePlugin */,
 				A27729740CE7A9AE00ABAFCA /* HostWindowPlugin */,
 				F5F8AE3B02EB4E090100013C /* InternetConfigPlugin */,
@@ -796,7 +753,6 @@
 				F5F8AE5602EB4E0A0100013C /* SocketPlugin */,
 				F5F8AE5D02EB4E0A0100013C /* SoundPlugin */,
 				F5F8AE6902EB4E0A0100013C /* UUIDPlugin */,
-				A27729630CE7A92800ABAFCA /* WebProxyPlugin */,
 			);
 			path = plugins;
 			sourceTree = "<group>";
@@ -980,14 +936,11 @@
 			isa = PBXGroup;
 			children = (
 				A2DB7E170EA02105005419A3 /* GIFLibPlugin */,
-				A27729980CE7AEE400ABAFCA /* WebProxyPlugin */,
 				A27729790CE7A9BE00ABAFCA /* HostWindowPlugin */,
-				A277296F0CE7A95400ABAFCA /* WebProxyPlugin */,
 				A2FB6B710CCD722300A29088 /* LocalePlugin */,
 				F5F8AF1202EB4E0A0100013C /* AsynchFilePlugin */,
 				F5F8AF1402EB4E0A0100013C /* B3DAcceleratorPlugin */,
 				F5F8AF1902EB4E0A0100013C /* DropPlugin */,
-				DAFB93040B9F5D00000B4B7C /* FileDialogPlugin */,
 				F5F8AF1D02EB4E0A0100013C /* FilePlugin */,
 				738FB1E80EE4CF4B004BEE42 /* IA32ABI */,
 				F5F8AF2002EB4E0A0100013C /* InternetConfigPlugin */,
@@ -1283,7 +1236,6 @@
 				941A3B4A09AA144000C9D25A /* jpeglib.h in Headers */,
 				941A3B4B09AA144000C9D25A /* JPEGReadWriter2Plugin.h in Headers */,
 				941A3B4C09AA144000C9D25A /* jversion.h in Headers */,
-				941A3B4D09AA144000C9D25A /* MIDIPlugin.h in Headers */,
 				941A3B4E09AA144000C9D25A /* SecurityPlugin.h in Headers */,
 				941A3B4F09AA144000C9D25A /* SerialPlugin.h in Headers */,
 				941A3B5009AA144000C9D25A /* SocketPlugin.h in Headers */,
@@ -1346,6 +1298,8 @@
 				941A3B7A09AA144000C9D25A /* Sources */,
 				941A3BFA09AA144000C9D25A /* Frameworks */,
 				941A3C0409AA144000C9D25A /* Rez */,
+			);
+			buildRules = (
 			);
 			name = Squeak;
 			productInstallPath = "$(USER_APPS_DIR)";
@@ -1431,7 +1385,6 @@
 			files = (
 				941A3B9A09AA144000C9D25A /* sqMacInternetConfiguration.c in Sources */,
 				941A3B9B09AA144000C9D25A /* sqMacJoystickAndTablet.c in Sources */,
-				941A3B9C09AA144000C9D25A /* sqMacMIDI.c in Sources */,
 				941A3B9E09AA144000C9D25A /* sqMacUUID.c in Sources */,
 				941A3BA109AA144000C9D25A /* sqUnixSpurMemory.c in Sources */,
 				941A3BA209AA144000C9D25A /* sqMacTime.c in Sources */,
@@ -1547,7 +1500,6 @@
 				A277294E0CE7A8D300ABAFCA /* LocalePlugin.c in Sources */,
 				A277294F0CE7A8D300ABAFCA /* MacMenubarPlugin.c in Sources */,
 				A27729500CE7A8D300ABAFCA /* Matrix2x3Plugin.c in Sources */,
-				A27729510CE7A8D300ABAFCA /* MIDIPlugin.c in Sources */,
 				A27729520CE7A8D300ABAFCA /* MiscPrimitivePlugin.c in Sources */,
 				A27729530CE7A8D300ABAFCA /* RePlugin.c in Sources */,
 				A27729540CE7A8D300ABAFCA /* SecurityPlugin.c in Sources */,
@@ -1584,7 +1536,7 @@
 		73BCFAF20EFB043300B7BA8D /* Assert */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = x86_64;
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
@@ -1592,15 +1544,15 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUGVM=0",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1)",
 					"VM_LABEL(foo)=0",
 					NO_ISNAN,
 					TARGET_API_MAC_CARBON,
 					SQUEAK_BUILTIN_PLUGIN,
 					HAVE_SYS_TIME_H,
 				);
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1 = "TZ=\\\"$TZ\\\"";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_VERSION_i386 = 4.2;
 				GCC_WARN_UNKNOWN_PRAGMAS = NO;
 				HEADER_SEARCH_PATHS = (
 					/Developer/Headers/FlatCarbon,
@@ -1622,16 +1574,17 @@
 		73BCFAF30EFB043300B7BA8D /* Assert */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = x86_64;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUGVM=0",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1)",
 					"VM_LABEL(foo)=0",
 					HAVE_SYS_TIME_H,
 					SQUEAK_BUILTIN_PLUGIN,
 					TARGET_API_MAC_CARBON,
 				);
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1 = "TZ=\\\"$TZ\\\"";
 				HEADER_SEARCH_PATHS = (
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
@@ -1643,7 +1596,7 @@
 		941A3C0809AA144000C9D25A /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = x86_64;
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
 				GCC_DYNAMIC_NO_PIC = YES;
@@ -1654,7 +1607,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUGVM=1",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1)",
 					"VM_LABEL(foo)=0",
 					NO_ISNAN,
 					TARGET_API_MAC_CARBON,
@@ -1662,8 +1615,8 @@
 					HAVE_SYS_TIME_H,
 					"EXTERNALPRIMSDEBUG=1",
 				);
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1 = "TZ=\\\"$TZ\\\"";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_VERSION_i386 = 4.2;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
 				GCC_WARN_MISSING_PARENTHESES = YES;
@@ -1681,7 +1634,6 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
-				PER_ARCH_CFLAGS_i386 = "";
 				PRODUCT_NAME = Squeak;
 				WARNING_CFLAGS = "";
 				WRAPPER_EXTENSION = app;
@@ -1692,7 +1644,7 @@
 		941A3C0909AA144000C9D25A /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = x86_64;
 				COPY_PHASE_STRIP = YES;
 				GCC_AUTO_VECTORIZATION = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -1704,16 +1656,16 @@
 					"NDEBUG=1",
 					"DEBUGVM=0",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1)",
 					TARGET_API_MAC_CARBON,
 					SQUEAK_BUILTIN_PLUGIN,
 					HAVE_SYS_TIME_H,
 				);
 				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS = "$(GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS_QUOTED_FOR_TARGET_1)";
 				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS_QUOTED_FOR_TARGET_1 = "BUILD_VERSION=\"\\\"Squeak Stack Spur OS/X 5.0.0\\\"\"";
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1 = "TZ=\\\"$TZ\\\"";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_UNROLL_LOOPS = YES;
-				GCC_VERSION_i386 = 4.2;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNKNOWN_PRAGMAS = NO;
 				HEADER_SEARCH_PATHS = (
@@ -1724,7 +1676,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
-				PER_ARCH_CFLAGS_i386 = "-O3  -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium4  -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS";
+				PER_ARCH_CFLAGS_x86_64 = "-O3  -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium4  -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS";
 				PRODUCT_NAME = Squeak;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = "";
@@ -1736,7 +1688,7 @@
 		941A3C0A09AA144000C9D25A /* DeploymentSymbols */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = x86_64;
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
@@ -1745,14 +1697,14 @@
 					"NDEBUG=1",
 					"DEBUGVM=0",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1)",
 					NO_ISNAN,
 					TARGET_API_MAC_CARBON,
 					SQUEAK_BUILTIN_PLUGIN,
 					HAVE_SYS_TIME_H,
 				);
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1 = "TZ=\\\"$TZ\\\"";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_VERSION_i386 = 4.2;
 				GCC_WARN_UNKNOWN_PRAGMAS = NO;
 				HEADER_SEARCH_PATHS = (
 					/Developer/Headers/FlatCarbon,
@@ -1774,17 +1726,18 @@
 		94D95B1E0923E6810034C6F0 /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = x86_64;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUGVM=1",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1)",
 					"VM_LABEL(foo)=0",
 					HAVE_SYS_TIME_H,
 					SQUEAK_BUILTIN_PLUGIN,
 					TARGET_API_MAC_CARBON,
 					"EXTERNALPRIMSDEBUG=1",
 				);
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1 = "TZ=\\\"$TZ\\\"";
 				HEADER_SEARCH_PATHS = (
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
@@ -1796,16 +1749,17 @@
 		94D95B1F0923E6810034C6F0 /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = x86_64;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
 					"DEBUGVM=0",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1)",
 					HAVE_SYS_TIME_H,
 					SQUEAK_BUILTIN_PLUGIN,
 					TARGET_API_MAC_CARBON,
 				);
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1 = "TZ=\\\"$TZ\\\"";
 				GCC_VERSION = 4.2;
 				HEADER_SEARCH_PATHS = (
 					/Developer/Headers/FlatCarbon,
@@ -1818,15 +1772,16 @@
 		94D95B200923E6810034C6F0 /* DeploymentSymbols */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = x86_64;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1)",
 					HAVE_SYS_TIME_H,
 					SQUEAK_BUILTIN_PLUGIN,
 					TARGET_API_MAC_CARBON,
 				);
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1 = "TZ=\\\"$TZ\\\"";
 				HEADER_SEARCH_PATHS = (
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,

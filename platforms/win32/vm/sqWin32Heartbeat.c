@@ -254,7 +254,7 @@ ioUTCMicrosecondsNow()
 usqLong
 ioLocalMicrosecondsNow() { return ioUTCMicrosecondsNow() + vmGMTOffset; };
 
-int
+sqInt
 ioMSecs() { return millisecondClock; }
 
 /* Note: ioMicroMSecs returns *milli*seconds */
