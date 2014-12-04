@@ -209,12 +209,21 @@ SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asUnsignedPtrFro
 SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asUnsignedValueFrom: anInteger [
 	"Answer a codestring for positive integer coercion (with validating side-effect) of oop, as described in comment to ccgLoad:expr:asRawOopFrom:"
 
-	^aBlock value: (String streamContents: [:aStream | aStream
-		nextPutAll: 'interpreterProxy positive32BitValueOf:';
-		crtab: 2;
-		nextPutAll: '(interpreterProxy stackValue:';
-		nextPutAll: anInteger asString;
-		nextPutAll:	')'])
+	^aBlock value: (String streamContents: [:aStream |
+		aStream
+			nextPutAll: '(interpreterProxy bytesPerOop = 4';
+			crtab: 2;
+			nextPutAll: 'ifTrue: [interpreterProxy positive32BitValueOf:';
+			crtab: 4;
+			nextPutAll: '(interpreterProxy stackValue:';
+			print: anInteger;
+			nextPutAll: ')]';
+			crtab: 2;
+			nextPutAll: 'ifFalse: [interpreterProxy positive64BitValueOf:';
+			crtab: 4;
+			nextPutAll: '(interpreterProxy stackValue:';
+			print: anInteger;
+			nextPutAll: ')])'])
 ]
 
 { #category : #coercing }
@@ -498,9 +507,9 @@ SmartSyntaxPluginCodeGenerator >> generateCoerceToFloatValueFrom: aNode on: aStr
 SmartSyntaxPluginCodeGenerator >> generateCoerceToObjectFromPtr: aNode on: aStream [
 	"This code assumes no named instance variables"
 
-	aStream nextPutAll: '((int) '.
+	aStream nextPutAll: '((sqInt)(('.
 	self emitCExpression: aNode on: aStream.
-	aStream nextPutAll: ') - 4'
+	aStream nextPutAll: ') - BaseHeaderSize))'
 ]
 
 { #category : #'asOop:/asValue:' }
