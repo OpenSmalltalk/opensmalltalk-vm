@@ -26,7 +26,7 @@ Float class >> ccg: cg prolog: aBlock expr: aString index: anInteger [
 { #category : #'*VMMaker-plugin generation' }
 Float class >> ccgCanConvertFrom: anObject [
 
-	^anObject class == self
+	^anObject isFloat
 ]
 
 { #category : #'*VMMaker-plugin generation' }
