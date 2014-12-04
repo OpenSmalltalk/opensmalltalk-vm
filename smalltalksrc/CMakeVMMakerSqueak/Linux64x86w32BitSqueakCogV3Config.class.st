@@ -139,7 +139,7 @@ Linux64x86w32BitSqueakCogV3Config >> compilerDefinitions [
 	 ' -DLSB_FIRST=1'
 	 '-D_GNU_SOURCE'
  	 '-D_FILE_OFFSET_BITS=64'
-	  '-DUSE_GLOBAL_STRUCT=0'
+"	  '-DUSE_GLOBAL_STRUCT=0'"
  	 '-DCOGMTVM=0') 
 
 ]
@@ -150,10 +150,10 @@ Linux64x86w32BitSqueakCogV3Config >> compilerFlags [
 		'-w'
 		'-m32'
 		'-msse2'
-		'-g3'                      "extra debugging info"
+"		'-g3'                      extra debugging info"
 		'-O1'
-	 	'-fno-caller-saves'
-		'-fno-tree-pre') 
+"	 	'-fno-caller-saves'
+		'-fno-tree-pre'") 
 
 ]
 

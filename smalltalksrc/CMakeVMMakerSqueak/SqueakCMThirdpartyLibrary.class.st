@@ -46,7 +46,7 @@ SqueakCMThirdpartyLibrary class >> supports: aConfig [
 SqueakCMThirdpartyLibrary >> generateFor: aVMGenerator [
 
 	| libDir stream contents |
-	
+	self break.
 	vmGen := aVMGenerator.
 	
 	gen := CMakeGenerator new

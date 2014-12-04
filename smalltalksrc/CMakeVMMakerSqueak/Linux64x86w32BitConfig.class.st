@@ -243,18 +243,9 @@ Linux64x86w32BitConfig >> customizeVMPlugins [
 
 { #category : #plugins }
 Linux64x86w32BitConfig >> defaultExternalPlugins [
-	^ #(
-		B3DAcceleratorPlugin
-		ThreadedIA32FFIPlugin "SqueakFFIPrims"
-		"UUIDPlugin"
-		"UnixOSProcessPlugin ?? "	
-		JPEGReaderPlugin 
-		JPEGReadWriter2Plugin 			
-		RePlugin
-		InternetConfigPlugin
-	)
+"developing template model for plugins one at a time"
+	^ #()
 
-"debug"
 ]
 
 { #category : #plugins }
@@ -335,33 +326,23 @@ Linux64x86w32BitConfig >> internalPluginsBuild [
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfig >> postBuildActionsBuild: aMaker [
 	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
-	aMaker message: 'postBuildActionsBuild: aMaker'.
-	aMaker  include: 'config.cmake'.
-	"# CONFIGURE_PLUGINS"
-	aMaker cmd: 'LIST' params:'REMOVE_DUPLICATES config_vars'.
-	aMaker cmd: 'FILE' params: 'WRITE ${CMAKE_BINARY_DIR}/config.h.in ""'.
-	aMaker puts:'
-FOREACH (var ${config_vars})
-  FILE (APPEND ${CMAKE_BINARY_DIR}/config.h.in "#cmakedefine ${var} @${var}@\n")
-ENDFOREACH (var)'.
-	aMaker cmd: 'CONFIGURE_FILE' params:'${CMAKE_BINARY_DIR}/config.h.in ${CMAKE_BINARY_DIR}/config.h'.
-	"# INCLUDE(build.cmake) <--this tells me the config needs to be up higher
-	# BUILD PLUGINS
-	#ADD_SUBDIRECTORY (${unix}/npsqueak)
-	#SET (cmake ${unix}/../../cmake)
-	#IF (EXISTS ${cmake}/Packages.cmake)
-	#  INCLUDE (${cmake}/Packages.cmake)
-	#ENDIF ()
-	"
-	aMaker cmd: 'GET_CMAKE_PROPERTY' params: 'tmp VARIABLES'.
-	aMaker cmd: 'LIST' params: 'REMOVE_ITEM tmp tmp'.
-	aMaker cmd: 'LIST' params: 'SORT tmp'.
-	aMaker cmd: 'FILE' params: 'WRITE ${CMAKE_BINARY_DIR}/config.h.status ""'.
-	aMaker puts:'
-FILE (WRITE ${CMAKE_BINARY_DIR}/config.status "")
-FOREACH (var ${tmp})
-  FILE (APPEND ${CMAKE_BINARY_DIR}/config.status "${var}=${${var}}\n")
-ENDFOREACH ()'
+	(aMaker config enabledebugmessages)
+		ifTrue:[	
+	aMaker config templates 
+		addLast: ((CMakeMessage new) message: (self class name), ' postBuildActionsBuild' )
+	].
+	aMaker config templates 
+		addLast: ((CMakeMessage new) message: 'postBuildActionsBuild: aMaker' );
+		addLast:((CMakeCommand new) command:'include' params:'config.cmake');                                                 "cmake --help-command include "
+		addLast:((CMakeCommand new) command:'LIST' params:'REMOVE_DUPLICATES config_vars');                      "cmake --help-command LIST"
+		addLast:((CMakeCommand new) command:'FILE' params:'WRITE ${CMAKE_BINARY_DIR}/config.h.in ""');          "cmake --help-command FILE"
+		addLast:(CMakeAppendConfigHIn new);
+		addLast:((CMakeCommand new) command:'CONFIGURE_FILE' params:'${CMAKE_BINARY_DIR}/config.h.in ${CMAKE_BINARY_DIR}/config.h');
+		addLast:((CMakeCommand new) command:'GET_CMAKE_PROPERTY' params:'tmp VARIABLES');
+		addLast:((CMakeCommand new) command:'LIST' params:'REMOVE_ITEM tmp tmp');
+		addLast:((CMakeCommand new) command:'LIST' params:'SORT tmp');
+		addLast:((CMakeCommand new) command:'FILE' params:'WRITE ${CMAKE_BINARY_DIR}/config.h.status ""');
+		addLast:(CMakeAppendConfigStatus new).
 
 
 ]

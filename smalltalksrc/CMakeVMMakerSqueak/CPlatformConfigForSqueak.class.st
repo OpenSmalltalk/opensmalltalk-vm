@@ -2883,7 +2883,7 @@ CPlatformConfigForSqueak >> postBuildActionsBuildAssert: aMaker [
 	"
 	SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActions'"
 
-	^self postBuildActionsBuild: aMaker
+	self postBuildActionsBuild: aMaker
 
 ]
 
@@ -2892,7 +2892,7 @@ CPlatformConfigForSqueak >> postBuildActionsBuildAssertITimerHeartbeat: aMaker [
 	"
 	SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActions'"
 
-	^self postBuildActionsBuild: aMaker
+	self postBuildActionsBuild: aMaker
 
 ]
 
@@ -2901,7 +2901,7 @@ CPlatformConfigForSqueak >> postBuildActionsBuildDebug: aMaker [
 	"
 	SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActions'"
 
-	^self postBuildActionsBuild: aMaker
+	self postBuildActionsBuild: aMaker
 
 ]
 
@@ -2910,7 +2910,7 @@ CPlatformConfigForSqueak >> postBuildActionsBuildDebugITimerHeartbeat: aMaker [
 	"
 	SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActions'"
 
-	^self postBuildActionsBuild: aMaker
+	self postBuildActionsBuild: aMaker
 
 ]
 
@@ -2919,7 +2919,7 @@ CPlatformConfigForSqueak >> postBuildActionsBuildITimerHeartbeat: aMaker [
 	"
 	SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActions'"
 
-	^self postBuildActionsBuild: aMaker
+	self postBuildActionsBuild: aMaker
 
 ]
 
@@ -2928,7 +2928,7 @@ CPlatformConfigForSqueak >> postBuildActionsBuildMultiThreaded: aMaker [
 	"
 	SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActions'"
 
-	^self postBuildActionsBuild: aMaker
+	self postBuildActionsBuild: aMaker
 
 ]
 
@@ -2937,7 +2937,7 @@ CPlatformConfigForSqueak >> postBuildActionsBuildMultiThreadedAssert: aMaker [
 	"
 	SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActions'"
 
-	^self postBuildActionsBuild: aMaker
+	self postBuildActionsBuild: aMaker
 
 ]
 
@@ -2946,7 +2946,7 @@ CPlatformConfigForSqueak >> postBuildActionsBuildMultiThreadedDebug: aMaker [
 	"
 	SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActions'"
 
-	^self postBuildActionsBuild: aMaker
+	self postBuildActionsBuild: aMaker
 
 ]
 
