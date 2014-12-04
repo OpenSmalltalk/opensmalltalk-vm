@@ -2563,7 +2563,7 @@ NewObjectMemory >> safeObjectAfter: oop [
 		ifTrue: [sz := self sizeOfFree: oop]
 		ifFalse: [sz := self sizeBitsOf: oop].
 	^(oop + sz) asUnsignedInteger >= freeStart
-		ifTrue: [freeStart]
+		ifTrue: [freeStart asInteger]
 		ifFalse: [self oopFromChunk: oop + sz]
 ]
 
