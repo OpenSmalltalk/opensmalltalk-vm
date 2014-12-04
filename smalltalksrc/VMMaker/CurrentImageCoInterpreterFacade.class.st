@@ -66,7 +66,9 @@ Class {
 CurrentImageCoInterpreterFacade class >> forCogit: aCogit [
 	| class |
 	class := self allSubclasses
-				detect: [:subclass| aCogit class objectMemoryClass = subclass objectRepresentationClass objectMemoryClass]
+				detect: [:subclass|
+						aCogit class objectMemoryClass objectRepresentationClass
+						== subclass objectRepresentationClass]
 				ifNone: [self error: 'cannot find subclass for the Cogit''s objectRepresentation and/or objectMemory'].
 	^class new
 		cogit: aCogit;
@@ -151,6 +153,11 @@ CurrentImageCoInterpreterFacade >> byteSizeOf: anOop [
 			on: MessageNotUnderstood
 			do: [:ex| obj class isBytes ifTrue: [1] ifFalse: [Smalltalk wordSize]].
 	^obj basicSize * elementSize
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> bytesPerOop [
+	^objectMemory bytesPerOop
 ]
 
 { #category : #'debug support' }
@@ -358,10 +365,10 @@ CurrentImageCoInterpreterFacade >> initialize [
 					ifTrue: [Bitmap]
 					ifFalse: [LittleEndianBitmap]) new: 1024*1024/4.
 	objectMemory := self class objectMemoryClass simulatorClass new.
+	objectMemory memory: memory.
 	objectMemory
 		initializeFreeSpaceForFacadeFrom: self startOfMemory
 		to: self variablesBase.
-	objectMemory memory: memory.
 	coInterpreter := CoInterpreter new.
 	coInterpreter
 		instVarNamed: 'objectMemory'
