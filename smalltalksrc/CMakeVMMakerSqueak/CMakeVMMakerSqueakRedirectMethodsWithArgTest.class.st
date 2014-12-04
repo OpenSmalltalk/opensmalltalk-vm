@@ -138,7 +138,7 @@ CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testSetGlobalOptionsAfterDetermi
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testSetPostBuildActions [
-	self flag:'tty'. "Is the self shouldnt sufficient?"
+	self flag:'tty'. "This test will probably fail if the oscogvm/cmake.build.xzy/language.vm.memorymanager/buildtype/ directory is not in place"
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
 		do:[:each | 
 			(Smalltalk at:each) 
@@ -149,6 +149,8 @@ CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testSetPostBuildActions [
 							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
 							buildTypes do:[:buildType |
 								o configureForBuildType: buildType.
+								o enabledebugmessages: true.
+								o templates: OrderedCollection new.
 								vmGenerator:=CMakeVMGeneratorForSqueak new.
 								vmGenerator config: o.
 								vmGenerator output:(String new writeStream).
