@@ -118,6 +118,7 @@ CMakeVMGeneratorForSqueak >> generateByTemplate [
 	"attempt to move way from string based writing to  template based. Think Seaside renderOn composition"
 	| extPlugins intPlugins |
 	self flag: 'tty'. "refactor so that the cascade reflects CMake terminilogy"
+
 	output := String new writeStream.
 	config templates: OrderedCollection new. 
 	config 
@@ -125,7 +126,7 @@ CMakeVMGeneratorForSqueak >> generateByTemplate [
 		cmakePrefixPath;
 		cmakeIncludePath;
 		cmakeLibraryPath;
-		cmakeIncludeModules;          
+		cmakeIncludeModules;
 		cmakeCFlags;          
 		cmakeAddDefinitions;
 		cmakeWriteDirectoriesDotCmake:  self;
@@ -144,13 +145,16 @@ CMakeVMGeneratorForSqueak >> generateByTemplate [
 	      setExecutableOutputPath;
 		addVMPlugins: self.
 	config templates do: [:each | self puts: each content].
+	config templates: OrderedCollection new. 
 	extPlugins := self generatePluginConfigs: config internalPlugins internal: true.
 	 intPlugins := self generatePluginConfigs: config externalPlugins internal: false.
-	self processThirdpartyLibraries.
+	self processThirdpartyLibraries.                       "<--unused in Pharo code? What exactly does this do?"
 	self processPlugins:  intPlugins, extPlugins.
-	self cmd: 'target_link_libraries'
-		params: self moduleName , ' ${LINKLIBS}'.
+	self config templates	addLast:((CMakeCommand new) command:'target_link_libraries' params:(self moduleName , ' ${LINKLIBS}')).
+"	self cmd: 'target_link_libraries'
+		params: self moduleName , ' ${LINKLIBS}'."
 	config postBuildActions: self..
+	config templates do: [:each | self puts: each content].
 	self saveFile.
 	self generateBuildScript
 ]
@@ -229,6 +233,7 @@ CMakeVMGeneratorForSqueak >> processPlugins: pluginGenerators [
 	| libs libDeps |
 	libs := OrderedCollection new.
 	libDeps := Dictionary new.
+self break.
 	pluginGenerators do: [:gen |
 		gen doNotGenerate ifFalse: [
 			self  puts: (gen configDotCMake at: (gen plugin name) ifAbsent:[gen configDotCmakeEmpty]). 
