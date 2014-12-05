@@ -2985,7 +2985,7 @@ Cogit >> checkIfValidOopRef: annotation pc: mcpc cogMethod: cogMethod [
 		  and: [offset ~= cmNoCheckEntryOffset
 		  and: [(self cCoerceSimple: entryPoint - offset to: #'CogMethod *') cmType ~= CMOpenPIC]])
 			ifTrue: "linked non-super send, cacheTag is a cacheTag"
-				[(objectRepresentation checkValidInlineCacheTag: selectorOrCacheTag) ifFalse:
+				[(objectRepresentation validInlineCacheTag: selectorOrCacheTag) ifFalse:
 					[coInterpreter print: 'cache tag leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 					^1]]
 			ifFalse: "unlinked send or super send; cacheTag is a selector"
@@ -3019,14 +3019,14 @@ Cogit >> checkIfValidOopRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 							[(self asserta: (objectRepresentation checkValidOopReference: cacheTag)) ifFalse:
 								[^4]]
 						ifFalse:
-							[(self asserta: (objectRepresentation checkValidInlineCacheTag: cacheTag)) ifFalse:
+							[(self asserta: (objectRepresentation validInlineCacheTag: cacheTag)) ifFalse:
 								[^5]].
 					((objectRepresentation couldBeObject: cacheTag)
 					 and: [objectMemory isReallyYoungObject: cacheTag]) ifTrue:
 						[(self asserta: (self cCoerceSimple: cogMethod to: #'CogMethod *') cmRefersToYoung) ifFalse:
 							[^6]]]
 				ifFalse:
-					[(self asserta: (objectRepresentation checkValidInlineCacheTag: cacheTag)) ifFalse:
+					[(self asserta: (objectRepresentation validInlineCacheTag: cacheTag)) ifFalse:
 						[^7]]].
 		entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		entryPoint > methodZoneBase ifTrue:
@@ -3416,7 +3416,7 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 	 are effectively garbage collected on return."
 	coInterpreter
 		compilationBreak: cPIC selector
-		point: (objectMemory lengthOf: cPIC selector)
+		point: (objectMemory numBytesOf: cPIC selector)
 		isMNUCase: isMNUCase.
 	self allocateOpcodes: 5 bytecodes: 0.
 	self assert: (objectRepresentation inlineCacheTagIsYoung: caseNTag) not.
@@ -3426,7 +3426,7 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 	 and: [coInterpreter methodHasCogMethod: caseNMethod])
 		ifTrue:
 			[operand := 0.
-			 target :=  (coInterpreter cogMethodOf: caseNMethod) asInteger + cmNoCheckEntryOffset]
+			 target := (coInterpreter cogMethodOf: caseNMethod) asInteger + cmNoCheckEntryOffset]
 		ifFalse:
 			[isMNUCase ifTrue:
 				[cPIC cpicHasMNUCase: true].
@@ -3461,7 +3461,7 @@ Cogit >> cogMNUPICSelector: selector methodOperand: methodOperand numArgs: numAr
 		[^0].
 	coInterpreter
 		compilationBreak: selector
-		point: (objectMemory lengthOf: selector)
+		point: (objectMemory numBytesOf: selector)
 		isMNUCase: true.
 	self assert: endCPICCase0 notNil.
 	startAddress := methodZone allocate: closedPICSize.
@@ -3585,7 +3585,7 @@ Cogit >> cogOpenPICSelector: selector numArgs: numArgs [
 	| startAddress headerSize codeSize mapSize end |
 	coInterpreter
 		compilationBreak: selector
-		point: (objectMemory lengthOf: selector)
+		point: (objectMemory numBytesOf: selector)
 		isMNUCase: false.
 	startAddress := methodZone allocate: openPICSize.
 	startAddress = 0 ifTrue:
@@ -3627,7 +3627,7 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 		[^self cCoerceSimple: YoungSelectorInPIC to: #'CogMethod *'].
 	coInterpreter
 		compilationBreak: selector
-		point: (objectMemory lengthOf: selector)
+		point: (objectMemory numBytesOf: selector)
 		isMNUCase: isMNUCase.
 	startAddress := methodZone allocate: closedPICSize.
 	startAddress = 0 ifTrue:
@@ -3849,6 +3849,10 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: c
 	<var: #targetEntry type: #'void *'>
 	<var: #jumpNext type: #'AbstractInstruction *'>
 	self assert: case1Method notNil.
+	coInterpreter
+		compilationBreak: cPIC selector
+		point: (objectMemory numBytesOf: cPIC selector)
+		isMNUCase: isMNUCase.
 	self compilePICProlog: numArgs.
 	self assert: (objectRepresentation inlineCacheTagIsYoung: case1Tag) not.
 	(isMNUCase not
@@ -4047,6 +4051,10 @@ Cogit >> compileMNUCPIC: cPIC methodOperand: methodOperand numArgs: numArgs [
 	<var: #cPIC type: #'CogMethod *'>
 	| jumpNext |
 	<var: #jumpNext type: #'AbstractInstruction *'>
+	coInterpreter
+		compilationBreak: cPIC selector
+		point: (objectMemory numBytesOf: cPIC selector)
+		isMNUCase: true.
 	self compilePICProlog: numArgs.
 	jumpNext := self compileCPICEntry.
 	self MoveCw: methodOperand R: SendNumArgsReg.
@@ -8798,7 +8806,7 @@ Cogit >> setSelectorOf: cogMethod to: aSelectorOop [
 	"self disassembleMethod: cogMethod"
 	coInterpreter
 		compilationBreak: aSelectorOop
-		point: (objectMemory lengthOf: aSelectorOop)
+		point: (objectMemory numBytesOf: aSelectorOop)
 		isMNUCase: false.
 	self assert: cogMethod cmType = CMMethod.
 	cogMethod selector: aSelectorOop.
