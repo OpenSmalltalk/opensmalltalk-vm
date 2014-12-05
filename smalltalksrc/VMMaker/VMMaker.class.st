@@ -340,13 +340,15 @@ VMMaker class >> generateAllSpurConfigurations [
 		generateNewspeakSpurStackVM;
 		generateSqueakSpurCogVM;
 		generateSqueakSpurCogSistaVM;
-		generateSqueakSpurStackVM
+		generateSqueakSpurStackVM;
+		generateSqueakSpurStack64VM
 ]
 
 { #category : #configurations }
 VMMaker class >> generateAllSpurConfigurationsUnderVersionControl [
 	self generateNewspeakSpurStackVM;
 		generateSqueakSpurStackVM;
+		generateSqueakSpurStack64VM;
 		generateNewspeakSpurCogVM;
 		generateSqueakSpurCogVM;
 		generateSqueakSpurCogSistaVM
@@ -356,7 +358,8 @@ VMMaker class >> generateAllSpurConfigurationsUnderVersionControl [
 VMMaker class >> generateAllStackConfigurationsUnderVersionControl [
 	self generateNewspeakSpurStackVM;
 		generateSqueakStackVM;
-		generateSqueakSpurStackVM
+		generateSqueakSpurStackVM;
+		generateSqueakSpurStack64VM
 ]
 
 { #category : #configurations }
