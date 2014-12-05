@@ -2341,18 +2341,19 @@ CoInterpreter >> commonSend [
 ]
 
 { #category : #'debug support' }
-CoInterpreter >> compilationBreak: selectorOop point: selectorLength [
+CoInterpreter >> compilationBreak: selectorOop point: selectorLength isMNUCase: isMNUCase [
 	<api>
-	<cmacro: '(sel, len) do { \
-	if ((len) == breakSelectorLength \
-	 && !strncmp((char *)((sel) + BaseHeaderSize), breakSelector, breakSelectorLength)) { \
+	<cmacro: '(sel, len, isMNU) do { \
+	if ((len) == (isMNU ? -breakSelectorLength : breakSelectorLength) \
+	 && !strncmp((char *)((sel) + BaseHeaderSize), breakSelector, (isMNU ? -breakSelectorLength : breakSelectorLength))) { \
 		suppressHeartbeatFlag = 1; \
 		compilationBreakpointFor(sel); \
 	} \
 } while (0)'>
-	| i |
-	breakSelectorLength = selectorLength ifTrue:
-		[i := breakSelectorLength.
+	| bsl i |
+	bsl := isMNUCase ifTrue: [breakSelectorLength negated] ifFalse: [breakSelectorLength].
+	bsl = selectorLength ifTrue:
+		[i := bsl.
 		 [i > 0] whileTrue:
 			[(objectMemory byteAt: selectorOop + i + objectMemory baseHeaderSize - 1) = (breakSelector at: i) asInteger
 				ifTrue: [(i := i - 1) = 0 ifTrue:
@@ -5059,6 +5060,35 @@ CoInterpreter >> minimumUnusedHeadroom [
 		unused < minUnused ifTrue:
 			[minUnused := unused]].
 	^minUnused
+]
+
+{ #category : #'debug support' }
+CoInterpreter >> mnuCompilationBreak: selectorOop point: selectorLength [
+	<api>
+	<cmacro: '(sel, len) do { \
+	if ((len) == -breakSelectorLength \
+	 && !strncmp((char *)((sel) + BaseHeaderSize), breakSelector, -breakSelectorLength)) { \
+		suppressHeartbeatFlag = 1; \
+		compilationBreakpointFor(sel); \
+	} \
+} while (0)'>
+	| i |
+	breakSelectorLength negated = selectorLength ifTrue:
+		[i := breakSelectorLength negated.
+		 [i > 0] whileTrue:
+			[(objectMemory byteAt: selectorOop + i + objectMemory baseHeaderSize - 1) = (breakSelector at: i) asInteger
+				ifTrue: [(i := i - 1) = 0 ifTrue:
+							[self mnuCompilationBreakpointFor: selectorOop]]
+				ifFalse: [i := 0]]]
+]
+
+{ #category : #'debug support' }
+CoInterpreter >> mnuCompilationBreakpointFor: selectorOop [
+	<api>
+	suppressHeartbeatFlag := true.
+	self
+		cCode: [self warning: 'compilation MNU break (heartbeat suppressed)']
+		inSmalltalk: [self halt: 'Compilation for MNU of ', breakSelector]
 ]
 
 { #category : #'message sending' }
