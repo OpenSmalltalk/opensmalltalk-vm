@@ -237,7 +237,7 @@ CurrentImageCoInterpreterFacade >> compactClassFieldWidth [
 ]
 
 { #category : #'debug support' }
-CurrentImageCoInterpreterFacade >> compilationBreak: aString point: length [ 
+CurrentImageCoInterpreterFacade >> compilationBreak: aString point: length isMNUCase: isMNUCase [
 	^self
 ]
 

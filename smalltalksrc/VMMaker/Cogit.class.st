@@ -3272,7 +3272,8 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	"coInterpreter stringOf: aSelectorOop"
 	coInterpreter
 		compilationBreak: aSelectorOop
-		point: (objectMemory lengthOf: aSelectorOop).
+		point: (objectMemory lengthOf: aSelectorOop)
+		isMNUCase: false.
 	aMethodObj = breakMethod ifTrue: [self halt: 'Compilation of breakMethod'].
 	self cppIf: NewspeakVM
 		ifTrue: [cogMethod := methodZone findPreviouslyCompiledVersionOf: aMethodObj with: aSelectorOop.
@@ -3415,7 +3416,8 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 	 are effectively garbage collected on return."
 	coInterpreter
 		compilationBreak: cPIC selector
-		point: (objectMemory lengthOf: cPIC selector).
+		point: (objectMemory lengthOf: cPIC selector)
+		isMNUCase: isMNUCase.
 	self allocateOpcodes: 5 bytecodes: 0.
 	self assert: (objectRepresentation inlineCacheTagIsYoung: caseNTag) not.
 	"Caller patches to open pic if caseNMethod is young."
@@ -3459,7 +3461,8 @@ Cogit >> cogMNUPICSelector: selector methodOperand: methodOperand numArgs: numAr
 		[^0].
 	coInterpreter
 		compilationBreak: selector
-		point: (objectMemory lengthOf: selector).
+		point: (objectMemory lengthOf: selector)
+		isMNUCase: true.
 	self assert: endCPICCase0 notNil.
 	startAddress := methodZone allocate: closedPICSize.
 	startAddress = 0 ifTrue:
@@ -3582,7 +3585,8 @@ Cogit >> cogOpenPICSelector: selector numArgs: numArgs [
 	| startAddress headerSize codeSize mapSize end |
 	coInterpreter
 		compilationBreak: selector
-		point: (objectMemory lengthOf: selector).
+		point: (objectMemory lengthOf: selector)
+		isMNUCase: false.
 	startAddress := methodZone allocate: openPICSize.
 	startAddress = 0 ifTrue:
 		[^self cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
@@ -3623,7 +3627,8 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 		[^self cCoerceSimple: YoungSelectorInPIC to: #'CogMethod *'].
 	coInterpreter
 		compilationBreak: selector
-		point: (objectMemory lengthOf: selector).
+		point: (objectMemory lengthOf: selector)
+		isMNUCase: isMNUCase.
 	startAddress := methodZone allocate: closedPICSize.
 	startAddress = 0 ifTrue:
 		[^self cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
@@ -8793,7 +8798,8 @@ Cogit >> setSelectorOf: cogMethod to: aSelectorOop [
 	"self disassembleMethod: cogMethod"
 	coInterpreter
 		compilationBreak: aSelectorOop
-		point: (objectMemory lengthOf: aSelectorOop).
+		point: (objectMemory lengthOf: aSelectorOop)
+		isMNUCase: false.
 	self assert: cogMethod cmType = CMMethod.
 	cogMethod selector: aSelectorOop.
 	(objectMemory isYoung: aSelectorOop) ifTrue:
