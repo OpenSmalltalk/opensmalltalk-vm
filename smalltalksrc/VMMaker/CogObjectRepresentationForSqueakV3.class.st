@@ -153,16 +153,6 @@ CogObjectRepresentationForSqueakV3 >> cacheTagIsMarked: cacheTag [
 ]
 
 { #category : #'garbage collection' }
-CogObjectRepresentationForSqueakV3 >> checkValidInlineCacheTag: cacheTag [
-	^cacheTag = ConstZero
-	  or: [((cacheTag bitAnd: 1 << objectMemory shiftForWord - 1) = 0
-		   and: [cacheTag
-				between: 1 << objectMemory compactClassFieldLSB
-				and: (objectMemory compactClassIndexOfHeader: -1) << objectMemory compactClassFieldLSB])
-		 or: [self checkValidObjectReference: cacheTag]]
-]
-
-{ #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> checkValidOopReference: anOop [
 	^(objectMemory isIntegerObject: anOop)
 	   or: [(objectMemory heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
@@ -1067,4 +1057,14 @@ CogObjectRepresentationForSqueakV3 >> slotOffsetOfInstVarIndex: index [
 { #category : #testing }
 CogObjectRepresentationForSqueakV3 >> smallIntegerIsOnlyImmediateType [
 	^true
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSqueakV3 >> validInlineCacheTag: cacheTag [
+	^cacheTag = ConstZero
+	  or: [((cacheTag bitAnd: 1 << objectMemory shiftForWord - 1) = 0
+		   and: [cacheTag
+				between: 1 << objectMemory compactClassFieldLSB
+				and: (objectMemory compactClassIndexOfHeader: -1) << objectMemory compactClassFieldLSB])
+		 or: [self checkValidObjectReference: cacheTag]]
 ]
