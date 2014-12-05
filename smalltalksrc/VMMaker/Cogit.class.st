@@ -3849,10 +3849,6 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: c
 	<var: #targetEntry type: #'void *'>
 	<var: #jumpNext type: #'AbstractInstruction *'>
 	self assert: case1Method notNil.
-	coInterpreter
-		compilationBreak: cPIC selector
-		point: (objectMemory numBytesOf: cPIC selector)
-		isMNUCase: isMNUCase.
 	self compilePICProlog: numArgs.
 	self assert: (objectRepresentation inlineCacheTagIsYoung: case1Tag) not.
 	(isMNUCase not
@@ -4051,10 +4047,6 @@ Cogit >> compileMNUCPIC: cPIC methodOperand: methodOperand numArgs: numArgs [
 	<var: #cPIC type: #'CogMethod *'>
 	| jumpNext |
 	<var: #jumpNext type: #'AbstractInstruction *'>
-	coInterpreter
-		compilationBreak: cPIC selector
-		point: (objectMemory numBytesOf: cPIC selector)
-		isMNUCase: true.
 	self compilePICProlog: numArgs.
 	jumpNext := self compileCPICEntry.
 	self MoveCw: methodOperand R: SendNumArgsReg.
