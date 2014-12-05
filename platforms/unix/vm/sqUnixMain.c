@@ -1391,6 +1391,10 @@ static int vm_parseArgument(int argc, char **argv)
 		return 2; }
 #endif
 #if STACKVM
+      else if (!strcmp(argv[0], "-breakmnu")) { 
+		extern void setBreakMNUSelector(char *);
+		setBreakMNUSelector(argv[1]);
+		return 2; }
       else if (!strcmp(argv[0], "-eden")) {
 		extern sqInt desiredEdenBytes;
 		desiredEdenBytes = strtobkm(argv[1]);
@@ -1493,6 +1497,7 @@ static void vm_printUsage(void)
   printf("  -breaksel selector    set breakpoint on send of selector\n");
 #endif
 #if STACKVM
+  printf("  -breakmnu selector    set breakpoint on MNU of selector\n");
   printf("  -eden <size>[mk]      use given eden size\n");
   printf("  -leakcheck num        check for leaks in the heap\n");
   printf("  -stackpages <num>     use given number of stack pages\n");

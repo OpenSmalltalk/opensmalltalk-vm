@@ -237,7 +237,7 @@ ignoreLastEvent()
 }
 
 sqInt
-ioSetInputSemaphore(int semaIndex)
+ioSetInputSemaphore(sqInt semaIndex)
 {
 	inputSemaphoreIndex = semaIndex;
 	return 1;
@@ -314,7 +314,7 @@ ioMousePoint(void)
 	return (p.h << 16) | (p.v & 0xFFFF);  /* x is high 16 bits; y is low 16 bits */
 }
 
-int
+sqInt
 ioPeekKeystroke(void)
 {
 	int keystate;
@@ -413,9 +413,8 @@ SetUpCarbonEvent()
 }
 
 void
-SetUpCarbonEventForWindowIndex(int index)
+SetUpCarbonEventForWindowIndex(sqInt index)
 {
-	extern 	void setWindowTrackingRgn(int index);
 /* Installing the window event handler */
     InstallWindowEventHandler(windowHandleFromIndex(index), NewEventHandlerUPP(MyWindowEventHandler), GetEventTypeCount(windEventList), windEventList, 0, NULL);
     InstallWindowEventHandler(windowHandleFromIndex(index), NewEventHandlerUPP(MyWindowEventMouseHandler), GetEventTypeCount(windEventMouseList), windEventMouseList, 0, NULL);
@@ -614,7 +613,6 @@ MyWindowEventHandler(EventHandlerCallRef myHandler,
        case kEventWindowResizeCompleted:
             break;
 		case kEventWindowBoundsChanged: {
-			extern void setWindowTrackingRgn(int index);
 			setWindowTrackingRgn(windowIndexFromHandle((wHandleType)window));
 			GetWindowBounds(window,kWindowContentRgn,&globalBounds);
 			recordWindowEventCarbon(WindowEventMetricChange,globalBounds.left, globalBounds.top,
@@ -1410,7 +1408,7 @@ doPendingFlush(void)
 
 }
 
-int
+sqInt
 ioProcessEvents(void)
 {
 	extern sqInt inIOProcessEvents;

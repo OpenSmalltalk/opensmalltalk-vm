@@ -104,7 +104,8 @@ struct VirtualMachine* interpreterProxy;
 #define nilObject(n) (interpreterProxy->nilObject(n))
 
 
-int primitivePluginBrowserReady(void) {
+sqInt
+primitivePluginBrowserReady(void) {
    if (gSqueakBrowserSubProcess)
      {
       pop(1);
@@ -605,7 +606,8 @@ int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
   stream functions.
   Note: A request id is the index into requests[].
 */
-int primitivePluginRequestURLStream()
+sqInt
+primitivePluginRequestURLStream()
 {
   sqStreamRequest *req;
   int id, length, semaIndex;
@@ -646,7 +648,8 @@ int primitivePluginRequestURLStream()
   primitivePluginRequestURL: url target: target semaIndex: semaIndex
   Request a URL into the given target.
 */
-int primitivePluginRequestURL()
+sqInt
+primitivePluginRequestURL()
 {
   sqStreamRequest *req;
   int urlLength;
@@ -706,7 +709,8 @@ static int isFileURL(int urlOop) {
   primitivePluginPostURL: url target: target data: data semaIndex: semaIndex
   Post data to a URL.
 */
-EXPORT(int) primitivePluginPostURL(void)
+EXPORT(sqInt)
+primitivePluginPostURL(void)
 {
   sqStreamRequest *req;
   int urlLength;
@@ -765,7 +769,8 @@ EXPORT(int) primitivePluginPostURL(void)
   data. Note: The file handle must be read-only for
   security reasons.
 */
-int primitivePluginRequestFileHandle()
+sqInt
+primitivePluginRequestFileHandle()
 {
   sqStreamRequest *req;
   int id, fileOop;
@@ -819,7 +824,8 @@ int primitivePluginRequestFileHandle()
   primitivePluginDestroyRequest: id
   Destroy a request that has been issued before.
 */
-sqInt primitivePluginDestroyRequest()
+sqInt
+primitivePluginDestroyRequest()
 {
   sqStreamRequest *req;
   int id;
@@ -844,7 +850,8 @@ sqInt primitivePluginDestroyRequest()
   Return false if the operation was aborted.
   Return nil if the operation is still in progress.
 */
-sqInt primitivePluginRequestState()
+sqInt
+primitivePluginRequestState()
 {
   sqStreamRequest *req;
   int id;

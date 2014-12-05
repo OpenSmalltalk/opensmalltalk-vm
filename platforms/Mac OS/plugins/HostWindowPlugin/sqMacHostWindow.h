@@ -38,7 +38,7 @@ sqInt windowIndexFromBlock(windowDescriptorBlock * thisWindow);
 sqInt windowIndexFromHandle(wHandleType windowHandle);
 wHandleType windowHandleFromIndex(wIndexType windowIndex);
 windowDescriptorBlock *AddWindowBlock(void);
-windowDescriptorBlock *windowBlockFromIndex(int windowIndex);
+windowDescriptorBlock *windowBlockFromIndex(sqInt windowIndex);
 sqInt getCurrentIndexInUse(void);
 void SetUpCarbonEventForWindowIndex(sqInt index);
 void setWindowTrackingRgn(sqInt windowIndex);

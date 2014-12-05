@@ -112,7 +112,12 @@ void* ioGetWindowHandle(void)
 	return getSTWindow();
 }
 
-sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
+sqInt
+ioSetWindowWidthHeight(sqInt w, sqInt h) {
+#if _LP64
+	/* SetWindowBounds is unsupported on 64-bits.  For now bail. */
+	return 0;
+#else
   Rect workArea;
   Rect newBounds;
   Rect oldBounds;
@@ -171,7 +176,12 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
   /** And awayyyyyy we go **/
   giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
   if (giLocker != 0) {
-    sqInt foo[6] = { 3, (int)SetWindowBounds, (int)win, kWindowStructureRgn, (int) (&(newBounds)), 0 };
+    sqInt foo[6] = { 3,
+					(sqInt)SetWindowBounds,
+					(sqInt)win,
+					kWindowStructureRgn,
+					(sqInt) &newBounds,
+					0 };
     ((sqInt (*) (void *)) giLocker)(foo);
     result = interpreterProxy->positive32BitIntegerFor(foo[5]);
   }
@@ -189,6 +199,7 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
   if (result != 0) return 0;	 /* Failed */
 
   return 1;
+#endif /* _LP64 */
 }
 
 
@@ -297,7 +308,11 @@ ioSetFullScreenActual(sqInt fullScreen) {
 			ProcessSerialNumber psn = { 0, kCurrentProcess };
 			ProcessInfoRec info;
 			info.processName = NULL;
+#if _LP64
+			info.processAppRef = NULL;
+#else
 			info.processAppSpec = NULL;
+#endif
 			info.processInfoLength = sizeof(ProcessInfoRec);
 			GetProcessInformation(&psn,&info);
 			SetFrontProcess(&psn);
@@ -385,9 +400,9 @@ static void sqShowWindowActual(int windowIndex){
 	}
 }
 
-int ioShowDisplay(
-	sqInt dispBitsIndex, int width, int height, int depth,
-	int affectedL, int affectedR, int affectedT, int affectedB) {
+sqInt
+ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
+		sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB) {
 
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 1;
 	ioShowDisplayOnWindow( (unsigned char*)  dispBitsIndex,  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
@@ -411,9 +426,10 @@ static CGDataProviderDirectAccessCallbacks gProviderCallbacks = {
 static void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int height, int depth, int desiredDepth,
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex, int *pitch);
 
-int ioShowDisplayOnWindow(
-	unsigned char*  dispBitsIndex, int width, int height, int depth,
-	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
+sqInt
+ioShowDisplayOnWindow(
+	unsigned char*  dispBitsIndex, sqInt width, sqInt height, sqInt depth,
+	sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB, sqInt windowIndex) {
 
 	static CGColorSpaceRef colorspace = NULL;
 	extern CGContextRef SharedBrowserBitMapContextRef;
@@ -626,7 +642,9 @@ static void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int 
 
 	/* create a mask region so that only the affected rectangle is copied */
 	SetRectRgn(maskRect, affectedL, affectedT, affectedR, affectedB);
-	CopyBits((BitMap *) *stPixMap,(BitMap *)*GetGWorldPixMap(offscreenGWorld), &srcRect, &dstRect, srcCopy, maskRect);
+	CopyBits((BitMap *) *stPixMap,
+			 (BitMap *)*GetGWorldPixMap(offscreenGWorld),
+			 &srcRect, &dstRect, srcCopy, maskRect);
 	*pitch = GetPixRowBytes(GetGWorldPixMap(offscreenGWorld));
 	return GetPixBaseAddr(GetGWorldPixMap(offscreenGWorld));
 }

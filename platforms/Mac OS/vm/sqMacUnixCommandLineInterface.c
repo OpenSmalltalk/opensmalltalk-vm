@@ -188,6 +188,10 @@ static int parseArgument(int argc, char **argv)
 		return 2; }
 #endif
 #if STACKVM
+      else if (!strcmp(argv[0], "-breakmnu")) { 
+		extern void setBreakMNUSelector(char *);
+		setBreakMNUSelector(argv[1]);
+		return 2; }
       else if (!strcmp(argv[0], "-eden")) { 
 		extern sqInt desiredEdenBytes;
 		desiredEdenBytes = strtobkm(argv[1]);	 
@@ -300,6 +304,7 @@ static void printUsage(void)
   printf("  -breaksel selector    set breakpoint on send of selector\n");
 #endif
 #if STACKVM
+  printf("  -breakmnu selector    set breakpoint on MNU of selector\n");
   printf("  -eden <size>[mk]      set eden memory to bytes\n");
   printf("  -leakcheck num        check for leaks in the heap\n");
   printf("  -stackpages num       use n stack pages\n");
@@ -322,9 +327,6 @@ static void printUsage(void)
   printf("  -cogmaxlits <n>       set max number of literals for methods to be compiled to machine code\n");
   printf("  -cogminjumps <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");
   printf("  -reportheadroom       report unused stack headroom on exit\n");
-#endif
-#if STACKVM || NewspeakVM
-  printf("  -breaksel selector    call warning when sending or jitting selector\n");
 #endif
   printf("  -pathenc <enc>        set encoding for pathnames (default: %s)\n",
 		getEncodingType(gCurrentVMEncoding));

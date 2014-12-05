@@ -624,7 +624,8 @@ int IsPrefixedBy(char *s, char *prefix) {
 	return true;
 }
 
-int primitivePluginBrowserReady(void) {
+sqInt
+primitivePluginBrowserReady(void) {
 	/* Args: none.
 	   Always return true on Macintosh. */
 	PLUGINDEBUGSTR("\pPrimitiveCallBrowserReady;g;");

@@ -36,6 +36,6 @@ void DoZoomWindow (EventRecord* theEvent, WindowPtr theWindow, short zoomDir, sh
 void SetupKeyboard(void);    
 int getUIToLock(sqInt *);
 void SetUpCarbonEvent();
-void SetUpCarbonEventForWindowIndex(int index);
+void SetUpCarbonEventForWindowIndex(sqInt index);
 void RunApplicationEventLoopWithSqueak(void);
-void   postFullScreenUpdate(void);
+void postFullScreenUpdate(void);

@@ -104,15 +104,15 @@ March	2005	JMM 3.7.6	Add host window support
 #endif
 /*** Exported Primitives ***/
 
-int primitivePluginBrowserReady(void);
+sqInt primitivePluginBrowserReady(void);
 
 #ifdef ENABLE_URL_FETCH
-int primitivePluginDestroyRequest(void);
-int primitivePluginRequestFileHandle(void);
-int primitivePluginRequestState(void);
-int primitivePluginRequestURL(void);
-int primitivePluginRequestURLStream(void);
-int primitivePluginPostURL(void);
+sqInt primitivePluginDestroyRequest(void);
+sqInt primitivePluginRequestFileHandle(void);
+sqInt primitivePluginRequestState(void);
+sqInt primitivePluginRequestURL(void);
+sqInt primitivePluginRequestURLStream(void);
+sqInt primitivePluginPostURL(void);
 #endif
 
 /* Constants */
@@ -718,7 +718,8 @@ void GetTempFSSpec(FSSpec *spec,FSRef *theFSRef) {
     err = FSGetCatalogInfo (theFSRef,kFSCatInfoNone,nil,nil,spec,nil);
 }
 
-int primitivePluginDestroyRequest(void) {
+sqInt
+primitivePluginDestroyRequest(void) {
 	/* Args: handle.
 	   Destroy the given request. */
 
@@ -734,7 +735,8 @@ int primitivePluginDestroyRequest(void) {
 	return 0;
 }
 
-int primitivePluginRequestFileHandle(void) {
+sqInt
+primitivePluginRequestFileHandle(void) {
 	/* Args: handle.
 	   Return a file handle for the completed request. Fail if
 	   the request handle is not valid or hasn't successfully completed. */
@@ -776,7 +778,8 @@ int primitivePluginRequestFileHandle(void) {
 	return 0;
 }
 
-int primitivePluginRequestState(void) {
+sqInt
+primitivePluginRequestState(void) {
 	/* Args: handle.
 	   Return true if the request succeeded, false if it failed, and nil if
 	   it is still in progress. Fail if the request handle is not valid. */
@@ -812,7 +815,8 @@ int primitivePluginRequestState(void) {
 	return 0;
 }
 
-int primitivePluginRequestURL(void) {
+sqInt
+primitivePluginRequestURL(void) {
 	/* Args: url, target, semaphoreIndex.
 	   Start a URL request to fetch the given URL to the given target.
 	   (See the Netscape Plugin programmer's manual for possible targets.)
@@ -873,7 +877,8 @@ int primitivePluginRequestURL(void) {
 	return 0;
 }
 
-int primitivePluginPostURL(void) {
+sqInt
+primitivePluginPostURL(void) {
 	/* Args: url, target, semaphoreIndex.
 	   Start a URL request to post the given URL to the given target.
 	   (See the Netscape Plugin programmer's manual for possible targets.)
@@ -963,7 +968,8 @@ int primitivePluginPostURL(void) {
 	return 0;
 }
 
-int primitivePluginRequestURLStream(void) {
+sqInt
+primitivePluginRequestURLStream(void) {
 	/* Args: url, semaphoreIndex.
 	   Start a URL request to fetch the given URL. Return a handle that
 	   can be used to identify this request. Fail if there are already

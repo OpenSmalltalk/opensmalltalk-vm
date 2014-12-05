@@ -812,7 +812,6 @@ void FreePixmap(void) {
 }
 
 extern Boolean gSqueakWindowHasTitle;
-extern int SetUpCarbonEventForWindowIndex(int index);
 int makeMainWindow(void) {
 	WindowPtr window;
 	char	shortImageName[256];

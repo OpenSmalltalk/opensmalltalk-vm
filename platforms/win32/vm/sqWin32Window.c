@@ -3190,9 +3190,10 @@ int printUsage(int level)
                    TEXT("\n\t-log: LogFile \t\t(use LogFile for VM messages)")
                    TEXT("\n\t-memory: megaByte \t(set memory to megaByte MB)")
 #if STACKVM || NewspeakVM
-                   TEXT("\n\t-breaksel: string \t(set breakSelector to sel for debug)")
+                   TEXT("\n\t-breaksel: string \t(call warning on send of sel for debug)")
 #endif /* STACKVM || NewspeakVM */
 #if STACKVM
+                   TEXT("\n\t-breakmnu: string \t(call warning on MNU of sel for debug)")
                    TEXT("\n\t-leakcheck: n \t(leak check on GC (1=full,2=incr,3=both))")
                    TEXT("\n\t-eden: bytes \t(set eden memory size to bytes)")
 				   TEXT("\n\t-stackpages: n \t(use n stack pages)")

@@ -22,26 +22,34 @@
 		suppressHeartbeatFlag = 1; \
 		warning("send breakpoint (heartbeat suppressed)"); \
 	} while (0)
+# define warnMNUBreak() do { \
+		suppressHeartbeatFlag = 1; \
+		warning("MNU breakpoint (heartbeat suppressed)"); \
+	} while (0)
 #else
 # define warnSendBreak() warning("send breakpoint")
+# define warnMNUBreak() warning("MNU breakpoint")
 #endif
 
 #if PRODUCTION /* default for no send breakpoint. */
 # define sendBreakpointreceiver(sel, len, rcvr) 0
+# define mnuBreakpointreceiver(sel, len, rcvr) 0
 
 #elif 0 /* send tracing.  */
 # define sendBreakpointreceiver(sel, len, rcvr) do { \
 	if (sendTrace) \
 		printf("%.*s\n", len, (char *)(sel)); \
 } while (0)
+# define mnuBreakpointreceiver(sel, len, rcvr) 0
 
 #elif 0 /* send trace/byte count.  */
 # define sendBreakpointreceiver(sel, len, rcvr) do { \
 	if (sendTrace) \
 		printf("%u %.*s\n", GIV(byteCount), len, (char *)(sel)); \
 } while (0)
+# define mnuBreakpointreceiver(sel, len, rcvr) 0
 
-#elif 1 /* breakpoint without byteCount. */
+#else /* breakpoint for assert and debug configurations. */
 # define sendBreakpointreceiver(sel, len, rcvr) do { \
 	if ((len) == breakSelectorLength \
 	 && !strncmp((char *)(sel), breakSelector, breakSelectorLength)) { \
@@ -51,17 +59,14 @@
 	if (sendTrace) \
 		printf("%.*s\n", len, (char *)(sel)); \
 } while (0)
-
-#elif 0 /* breakpoint with byteCount. */
-# define sendBreakpointreceiver(sel, len, rcvr) do { \
-	if ((len) == breakSelectorLength \
-	 && !strncmp((char *)(sel), breakSelector, breakSelectorLength)) { \
-		warnSendBreak(); \
+# define mnuBreakpointreceiver(sel, len, rcvr) do { \
+	if ((len) == -breakSelectorLength \
+	 && !strncmp((char *)(sel), breakSelector, -breakSelectorLength)) { \
+		warnMNUBreak(); \
 		if (0) sendTrace = 1; \
 	} \
-	if (sendTrace) \
-		printf("%u %.*s\n", GIV(byteCount), len, (char *)(sel)); \
 } while (0)
+
 #endif
 
 /*
