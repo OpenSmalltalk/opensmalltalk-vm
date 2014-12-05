@@ -7,19 +7,7 @@ The VM does not use Contexts directly.  Instead Contexts serve as proxies for a 
 
 In addition to SmallInteger arithmetic and Floats, the VM supports logic on 32-bit PositiveLargeIntegers, thus allowing it to simulate itself much more effectively than would otherwise be the case.
 
-NOTE:  Here follows a list of things to be borne in mind when working on this code, or when making changes for the future.
-
-1.  There are a number of things that should be done the next time we plan to release a completely incompatible image format.  These include unifying the instanceSize field of the class format word -- see instantiateClass:indexableSize:, and unifying the bits of the method primitive index (if we decide we need more than 512, after all) -- see primitiveIndexOf:.  Also, contexts should be given a special format code (see next item).
-
-2.  There are several fast checks for contexts (see isContextHeader: and isMethodContextHeader:) which will fail if the compact class indices of BlockContext or MethodContext change.  This is necessary because the oops may change during a compaction when the oops are being adjusted.  It's important to be aware of this when writing a new image using the SystemTracer.  A better solution would be to reserve one of the format codes for Contexts only.  An even better solution is to eliminate compact classes altogether (see 6.).
-
-3.  We have made normal files tolerant to size and positions up to 32 bits.  This has not been done for async files, since they are still experimental.  The code in size, at: and at:put: should work with sizes and indices up to 31 bits, although I have not tested it (di 12/98); it might or might not work with 32-bit sizes. [Late news, the support has been extended to 64-bit file sizes].
-
-4.  Note that 0 is used in a couple of places as an impossible oop.  This should be changed to a constant that really is impossible (or perhaps there is code somewhere that guarantees it --if so it should be put in this comment).  The places include the method cache and the at cache.
-
-5. Moving to a 2 bit immediate tag and having immediate Characters is a good choice for Unicode and the JIT.  We can still have 31-bit SmallIntegers by allowing two tag patterns for SmallInteger.
-
-6.  If Eliot Miranda's 2 word header scheme is acceptable in terms of footprint (we estimate about a 10% increase in image size with about 35 reclaimed by better representation of CompiledMethod - loss of MethodProperties) then the in-line cache for the JIT is simplified, class access is faster and header access is the same in 32-bit and full 64-bit images.  [Late breaking news, the 2-word header scheme is more compact, by over 2%].  See SpurMemorymanager's class comment.
+StackInterpreter and subclasses support multiple memory managers.  Currently there are two.  NewMemoryManager is a slightly refined version of ObjectMemory, and is the memory manager and garbage collector for the original Squeak object representation as described in ""Back to the Future The Story of Squeak, A Practical Smalltalk Written in Itself"", see http://ftp.squeak.org/docs/OOPSLA.Squeak.html.  Spur is a faster, more regular object representation that is designed for more performance and functionality, and to have a common header format for both 32-bit and 64-bit versions.  You can read about it in SpurMemoryManager's class comment.  There is also a video of a presentation at ESUG 2014 (https://www.youtube.com/watch?v=k0nBNS1aHZ4), along with slides (http://www.slideshare.net/esug/spur-a-new-object-representation-for-cog?related=1).
 "
 Class {
 	#name : #StackInterpreter,
@@ -4562,6 +4550,7 @@ StackInterpreter >> createActualMessageTo: lookupClass [
 	| argumentArray message |
 	<inline: false> "This is a useful break-point"
 	self assert: ((objectMemory isImmediate: messageSelector) or: [objectMemory addressCouldBeObj: messageSelector]).
+	self mnuBreakpoint: messageSelector receiver: nil.
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
 			[argumentArray := objectMemory
@@ -6716,14 +6705,12 @@ StackInterpreter >> getInterruptPending [
 { #category : #'image save/restore' }
 StackInterpreter >> getLongFromFile: aFile swap: swapFlag [
 	"Answer the next 32 or 64 bit word read from aFile, byte-swapped according to the swapFlag."
-
 	<var: #aFile type: #sqImageFile>
 	| w |
-	<var: #w type: #long>
 	w := 0.
 	self cCode: [self
 					sq: (self addressOf: w)
-					Image: (self sizeof: #long)
+					Image: (self sizeof: w)
 					File: 1
 					Read: aFile]
 		inSmalltalk: [w := objectMemory nextLongFrom: aFile].
@@ -9422,6 +9409,33 @@ StackInterpreter >> mframeCogMethod: theFP [
 StackInterpreter >> microsecondsToMilliseconds: microseconds [
 	<var: #microseconds type: #usqLong>
 	^microseconds // 1000 bitAnd: MillisecondClockMask
+]
+
+{ #category : #'debugging traps' }
+StackInterpreter >> mnuBreak: selectorString point: selectorLength receiver: receiverOrNil [
+	<doNotGenerate> "C version is in platforms/Cross/vm/dispdbg.h"
+	"self shortPrintFrameAndCallers: localFP"
+	| i |
+	breakSelectorLength negated = selectorLength ifTrue:
+		[i := breakSelectorLength negated.
+		 [i > 0] whileTrue:
+			[(objectMemory byteAt: selectorString + i - 1) = (breakSelector at: i) asInteger
+				ifTrue: [(i := i - 1) = 0 ifTrue:
+							[self changed: #byteCountText.
+							 self halt: 'MNU of '
+									, breakSelector,
+									(receiverOrNil
+										ifNotNil: [' to ', (self shortPrint: receiverOrNil)]
+										ifNil: [''])]]
+				ifFalse: [i := 0]]]
+]
+
+{ #category : #'debug support' }
+StackInterpreter >> mnuBreakpoint: selector receiver: rcvr [
+	<inline: true>
+	self mnuBreak: (objectMemory firstFixedFieldOfMaybeImmediate: selector)
+		point: (objectMemory lengthOfMaybeImmediate: selector)
+		receiver: rcvr
 ]
 
 { #category : #initialization }
@@ -12274,6 +12288,25 @@ StackInterpreter >> sendAbsentImplicit0ArgsBytecode [
 	self commonSendAbsentImplicit
 ]
 
+{ #category : #'debugging traps' }
+StackInterpreter >> sendBreak: selectorString point: selectorLength receiver: receiverOrNil [
+	<doNotGenerate> "C version is in platforms/Cross/vm/dispdbg.h"
+	"self shortPrintFrameAndCallers: localFP"
+	| i |
+	breakSelectorLength = selectorLength ifTrue:
+		[i := breakSelectorLength.
+		 [i > 0] whileTrue:
+			[(objectMemory byteAt: selectorString + i - 1) = (breakSelector at: i) asInteger
+				ifTrue: [(i := i - 1) = 0 ifTrue:
+							[self changed: #byteCountText.
+							 self halt: 'Send of '
+									, breakSelector,
+									(receiverOrNil
+										ifNotNil: [' to ', (self shortPrint: receiverOrNil)]
+										ifNil: [''])]]
+				ifFalse: [i := 0]]]
+]
+
 { #category : #'debug support' }
 StackInterpreter >> sendBreakpoint: selector receiver: rcvr [
 	<inline: true>
@@ -12395,12 +12428,21 @@ StackInterpreter >> sendLiteralSelector2ArgsBytecode [
 ]
 
 { #category : #'debug support' }
+StackInterpreter >> setBreakMNUSelector: aString [
+	<api>
+	<var: #aString type: #'char *'>
+	(breakSelector := aString)
+		ifNil: [breakSelectorLength := objectMemory minSmallInteger "nil's effective length is zero"]
+		ifNotNil: [breakSelectorLength := (self strlen: aString) negated]
+]
+
+{ #category : #'debug support' }
 StackInterpreter >> setBreakSelector: aString [
 	<api>
 	<var: #aString type: #'char *'>
-	aString isNil
-		ifTrue: [breakSelectorLength := -1. "nil's effective length is zero" breakSelector := nil]
-		ifFalse: [breakSelectorLength := self strlen: aString. breakSelector := aString]
+	(breakSelector := aString)
+		ifNil: [breakSelectorLength := objectMemory minSmallInteger "nil's effective length is zero"]
+		ifNotNil: [breakSelectorLength := self strlen: aString]
 ]
 
 { #category : #'primitive support' }

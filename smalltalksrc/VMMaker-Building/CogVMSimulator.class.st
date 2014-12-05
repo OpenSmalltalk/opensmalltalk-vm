@@ -3210,24 +3210,6 @@ CogVMSimulator >> savedWindowSize [
 	^savedWindowSize ifNil: [0]
 ]
 
-{ #category : #'debugging traps' }
-CogVMSimulator >> sendBreak: selectorString point: selectorLength receiver: receiverOrNil [
-	"self shortPrintFrameAndCallers: localFP"
-	| i |
-	breakSelectorLength = selectorLength ifTrue:
-		[i := breakSelectorLength.
-		 [i > 0] whileTrue:
-			[(objectMemory byteAt: selectorString + i - 1) = (breakSelector at: i) asInteger
-				ifTrue: [(i := i - 1) = 0 ifTrue:
-							[self changed: #byteCountText.
-							 self halt: 'Send of '
-									, breakSelector,
-									(receiverOrNil
-										ifNotNil: [' to ', (self shortPrint: receiverOrNil)]
-										ifNil: [''])]]
-				ifFalse: [i := 0]]]
-]
-
 { #category : #'multi-threading simulation switch' }
 CogVMSimulator >> sendInvokeCallbackContext: vmCallbackContext [
 	"This method includes or excludes CoInterpreterMT methods as required.
