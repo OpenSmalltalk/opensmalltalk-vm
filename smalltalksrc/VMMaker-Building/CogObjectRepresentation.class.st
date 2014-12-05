@@ -375,3 +375,8 @@ CogObjectRepresentation >> setCogit: aCogit methodZone: aMethodZone [
 CogObjectRepresentation >> smallIntegerIsOnlyImmediateType [
 	self subclassResponsibility
 ]
+
+{ #category : #'debug support' }
+CogObjectRepresentation >> validInlineCacheTag: classIndexOrTagPattern [
+	self subclassResponsibility
+]

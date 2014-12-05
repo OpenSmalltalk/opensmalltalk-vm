@@ -49,12 +49,6 @@ CogObjectRepresentationForSpur >> canPinObjects [
 ]
 
 { #category : #'debug support' }
-CogObjectRepresentationForSpur >> checkValidInlineCacheTag: classIndexOrTagPattern [
-	^classIndexOrTagPattern <= objectMemory tagMask
-	  or: [(objectMemory classAtIndex: classIndexOrTagPattern) notNil]
-]
-
-{ #category : #'debug support' }
 CogObjectRepresentationForSpur >> checkValidOopReference: anOop [
 	^(objectMemory isImmediate: anOop)
 	   or: [(objectMemory heapMapAtWord: (self pointerForOop: anOop)) ~= 0]

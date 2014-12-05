@@ -8658,6 +8658,23 @@ StackInterpreter >> lookupMethodNoMNUEtcInClass: class [
 	^SelectorDoesNotUnderstand
 ]
 
+{ #category : #'debug support' }
+StackInterpreter >> lookupSelector: selector inClass: class [
+	"Lookup selector in class.  Answer the method or nil.  This is a debugging routine."
+	| currentClass dictionary |
+	<api>
+
+	currentClass := class.
+	[currentClass ~= objectMemory nilObject] whileTrue:
+		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
+		 dictionary = objectMemory nilObject ifTrue:
+			[^nil].
+		 (self lookupMethodFor: selector InDictionary: dictionary) ifNotNil:
+			[:meth| ^meth].
+		currentClass := self superclassOf: currentClass].
+	^nil
+]
+
 { #category : #'frame access' }
 StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	"Marry aContext with the base frame of a new stack page.  Build the base
@@ -9411,7 +9428,7 @@ StackInterpreter >> microsecondsToMilliseconds: microseconds [
 	^microseconds // 1000 bitAnd: MillisecondClockMask
 ]
 
-{ #category : #'debugging traps' }
+{ #category : #'debug support' }
 StackInterpreter >> mnuBreak: selectorString point: selectorLength receiver: receiverOrNil [
 	<doNotGenerate> "C version is in platforms/Cross/vm/dispdbg.h"
 	"self shortPrintFrameAndCallers: localFP"
@@ -12288,7 +12305,7 @@ StackInterpreter >> sendAbsentImplicit0ArgsBytecode [
 	self commonSendAbsentImplicit
 ]
 
-{ #category : #'debugging traps' }
+{ #category : #'debug support' }
 StackInterpreter >> sendBreak: selectorString point: selectorLength receiver: receiverOrNil [
 	<doNotGenerate> "C version is in platforms/Cross/vm/dispdbg.h"
 	"self shortPrintFrameAndCallers: localFP"
