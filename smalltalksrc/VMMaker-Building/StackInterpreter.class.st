@@ -198,7 +198,7 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		as: #usqInt
 		in: aCCodeGenerator.
 	"These are all pointers; char * because Slang has no support for C pointer arithmetic."
-	self declareC: #(localIP localSP localFP stackPointer framePointer stackLimit stackMemory)
+	self declareC: #(localIP localSP localFP stackPointer framePointer stackLimit stackMemory breakSelector)
 		as: #'char *'
 		in: aCCodeGenerator.
 	self declareC: #(stackPage overflowedPage)
@@ -256,10 +256,6 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #interruptCheckChain
 		declareC: 'void (*interruptCheckChain)(void) = 0'.
-	aCCodeGenerator
-		var: #breakSelector type: #'char *';
-		var: #breakSelectorLength
-		declareC: 'sqInt breakSelectorLength = -1'.
 
 	self declareCAsUSqLong: #(nextPollUsecs nextWakeupUsecs longRunningPrimitiveGCUsecs
 								longRunningPrimitiveStartUsecs longRunningPrimitiveStopUsecs
@@ -7325,6 +7321,7 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 	self checkAssumedCompactClasses.
 	self initializeExtraClassInstVarIndices.
 	method := newMethod := objectMemory nilObject.
+	breakSelectorLength := objectMemory minSmallInteger.
 	methodDictLinearSearchLimit := 8.
 	self flushMethodCache.
 	self flushAtCache.
