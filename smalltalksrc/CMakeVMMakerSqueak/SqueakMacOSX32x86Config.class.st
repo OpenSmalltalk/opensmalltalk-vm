@@ -119,11 +119,6 @@ SqueakMacOSX32x86Config >> configureB3DAcceleratorPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSX32x86Config >> configureClipboardExtendedPlugin: maker [
-	
-]
-
-{ #category : #'plugin extra rules' }
 SqueakMacOSX32x86Config >> configureCroquetPlugin: maker [ 
 	"extra rules for CroquetPlugin"
 
@@ -393,8 +388,10 @@ SqueakMacOSX32x86Config >> externalPluginsBuild [
 { #category : #'cmake buildType redirects' }
 SqueakMacOSX32x86Config >> extraPluginSettingsBuild: aMaker [
 	"Cog currently runs only in 32 bit mode" 
-	self flag: 'tty'. "cut-n-paste from pharo code. I have no idea if this is appropriate for this platform"
-	aMaker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'
+	self flag: 'tty'. "adapted from pharo code. I have no idea if this is appropriate for this platform"
+	aMaker templates 
+		addLast:((CMakeSet new) variable:'CMAKE_OSX_ARCHITECTURES' value: 'i386')
+
 ]
 
 { #category : #'cmake buildType redirects' }

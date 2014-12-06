@@ -121,8 +121,28 @@ SqueakIOSConfig >> configureB3DAcceleratorPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakIOSConfig >> configureClipboardExtendedPlugin: maker [
-	
+SqueakIOSConfig >> configureByTemplateB3DAcceleratorPlugin: aMaker [
+	self flag:'tty'. "consider portablility of /user/X11/include"
+	super configureByTemplateB3DAcceleratorPlugin: aMaker.  
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '/usr/X11/include')); "for GL.h  <--tty. I don't think this is portable. Revisit on refactor"
+		addLast:((CMakeListAppend new) 
+				list:'sources' 
+				elements: (OrderedCollection 
+					with: '${pluginPlatform}/sqMacOpenGL.c'  
+					with: '${pluginPlatform}/sqMacOpenGLInfo.c')).
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakIOSConfig >> configureByTemplateCroquetPlugin: aMaker [ 
+
+	super configureByTemplateCroquetPlugin: aMaker.  
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqMacCroquet.c')).
+
+
 ]
 
 { #category : #'plugin extra rules' }
@@ -395,21 +415,26 @@ SqueakIOSConfig >> externalPluginsBuild [
 
 { #category : #'cmake buildType redirects' }
 SqueakIOSConfig >> extraPluginSettingsBuild: aMaker [	
-	aMaker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
-	
-	aMaker 
-		setTargetProperty: 'COMPILE_FLAGS' 
-		to: '"-include \"', (self buildDir / self prefixHeaderFileName) fullName, '\""'.  
+     self flag: 'tty'. "I have no idea what this stuff is for. DO NOT take it as the work of somebody who does (:" 
+	aMaker templates 
+		addLast:((CMakeSet new) variable:'CMAKE_OSX_ARCHITECTURES' value:'i386');
+	     addLast:((CMakeSetTargetProperties new) 
+			target: aMaker moduleName 
+			propertiesandvalues: (OrderedCollection with: 'COMPILE_FLAGS   "-include \"', (self buildDir / self prefixHeaderFileName) fullName, '\""' )) .
+	aMaker isExternal 
+		ifTrue:[
+			aMaker templates 
+				addLast:((CMakeSet new) variable:'LIBRARY_OUTPUT_PATH' value:'${outputDir}');
+				addLast:((CMakeSet new) variable:'EXECUTABLE_OUTPUT_PATH' value: self outputDir fullName);
+				addLast:((CMakeListAppend new) list: 'linkFlags' elements:  (OrderedCollection with: '-undefined dynamic_lookup' ))].
+	aMaker templates
+		addLast:((CMakeSetTargetProperties new) 
+			target: aMaker moduleName 
+			propertiesandvalues: (OrderedCollection with: 'GCC_PREFIX_HEADER   ${buildDir}/' , self executableName , '_Prefix.pch' )) .
 
-	aMaker isExternal ifTrue: [
-		"copy result to results dir "
-		
-		aMaker set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir fullName.
-		aMaker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir fullName.
-		aMaker puts: 'list(APPEND linkFlags "-undefined dynamic_lookup")' ].
-	
-	"maker addXCodeProperty: 'GCC_VERSION' value: '4.3'."
-	aMaker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/' , self executableName , '_Prefix.pch'.
+
+
+
 	
 
 ]

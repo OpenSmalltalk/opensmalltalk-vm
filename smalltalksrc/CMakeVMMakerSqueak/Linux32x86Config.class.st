@@ -189,11 +189,10 @@ Linux32x86Config >> externalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> extraPluginSettingsBuild: maker [
-	maker isExternal ifTrue: [
-		"copy lib to results dir "
-		maker set: 'LIBRARY_OUTPUT_PATH' to: '${outputDir}' 
-	].
+Linux32x86Config >> extraPluginSettingsBuild: aMaker [
+	aMaker isExternal 
+		ifTrue:[aMaker templates addLast:((CMakeSet new) variable:'LIBRARY_OUTPUT_PATH' value:'${outputDir}')].
+
 
 ]
 

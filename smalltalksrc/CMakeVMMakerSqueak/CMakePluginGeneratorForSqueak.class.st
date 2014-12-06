@@ -16,7 +16,8 @@ Class {
 		'extraRules',
 		'doNotGenerate',
 		'externalDependencies',
-		'configDotCMake'
+		'configDotCMake',
+		'templates'
 	],
 	#category : #CMakeVMMakerSqueak
 }
@@ -574,7 +575,45 @@ CMakePluginGeneratorForSqueak >> generate: aPlugin for: aCMakeVMGenerator intern
 	vmGen := aCMakeVMGenerator.
 	extraRules := aBlock.
 		
-	^ self generate
+	^ self generateByTemplate
+]
+
+{ #category : #'squeak compatibility' }
+CMakePluginGeneratorForSqueak >> generateByTemplate [
+	| name  |
+
+	output := String new writeStream.
+	name := plugin moduleName.
+	templates:= OrderedCollection new.
+      
+	templates
+		addLast:((CMakeMessage new) message: (internal ifTrue: [ 'Adding internal plugin: '] ifFalse: ['Adding external plugin: '])  , name);
+		addLast:((CMakeSet new) variable: #pluginName quotedValue: name);
+		addLast:((CMakeSet new) variable: #pluginSrc quotedValue:  '${srcPluginsDir}/', name);
+		addLast:((CMakeSet new) variable: #pluginCross quotedValue: '${crossDir}/plugins/', name );
+		addLast:((CMakeSet new) variable: #pluginPlatform quotedValue: '${targetPlatform}/plugins/', name );
+		addLast:((CMakeSet new) variable: #LINKLIBS value: '' ).  "clear LINKLIBS variable"
+	internal ifTrue: [ templates addLast:((CMakeAddDefinitions new) definitions: (OrderedCollection with: '-DSQUEAK_BUILTIN_PLUGIN' ))].
+      templates 
+		addLast:((CMakeListAppend new) list: 'sources' elements: (OrderedCollection with: '${pluginSrc}/', name , '.c' ));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${pluginSrc} ${pluginCross} ${targetPlatform}/plugins/${pluginName}'))." default include directories for plugin "
+	vmGen config configureByTemplatePlugin: plugin with: self. 
+	extraRules ifNotNil: [ extraRules value: self ].
+	" generate a static lib for internal plugin, or shared for external"
+	internal 
+		ifTrue: [	templates addLast:((CMakeAddLibrary new) library: name type: 'STATIC' sources: (OrderedCollection with: '${sources}'))]
+		ifFalse: [templates addLast:((CMakeAddLibrary new) library: name type: 'SHARED' sources: (OrderedCollection with: '${sources}'))].
+	vmGen config extraPluginSettings: self.   
+	self isExternal 
+		ifTrue: [	templates addLast:((CMakeTargetLinkLibraries new) target: self moduleName  items: (OrderedCollection with: '${LINKLIBS}'))].
+       templates
+		addLast:((CMakeSetProperty new) scope: 'TARGET ', name property: 'LINK_FLAGS' values: (OrderedCollection with: '${linkFlags}')); " see senders of #linkFlags "
+		addLast:((CMakeIfPluginDependencies new) plugin: self moduleName dependencies: (OrderedCollection with: ' ${', self moduleName , '_dependencies}')).
+	templates do: [:each | self puts: each content].
+	self saveFile.
+
+
+
 ]
 
 { #category : #'initialize-release' }
@@ -710,6 +749,16 @@ CMakePluginGeneratorForSqueak >> saveFile [
 		forceNewFileNamed: (self outputFileName)
 		do:[:s | s nextPutAll:(self config fixLineEndsOf: output contents)]
 
+]
+
+{ #category : #accessing }
+CMakePluginGeneratorForSqueak >> templates [
+	^templates
+]
+
+{ #category : #accessing }
+CMakePluginGeneratorForSqueak >> templates: anOrderedCollection [
+	templates := anOrderedCollection
 ]
 
 { #category : #accessing }
