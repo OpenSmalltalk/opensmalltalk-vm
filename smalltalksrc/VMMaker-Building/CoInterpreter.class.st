@@ -1703,6 +1703,7 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 				[(errSelIdx = SelectorDoesNotUnderstand
 				  and: [(cogMethod := cogit cogMNUPICSelector: messageSelector
+											receiver: rcvr
 											methodOperand: (self mnuMethodOrNilFor: rcvr)
 											numArgs: argumentCount) asUnsignedInteger
 						> cogit minCogMethodAddress]) ifTrue:

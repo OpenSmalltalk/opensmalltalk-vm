@@ -150,7 +150,6 @@ Class {
 		'blockNoContextSwitchOffset',
 		'stackOverflowCall',
 		'sendMiss',
-		'sendMissCall',
 		'missOffset',
 		'entryPointMask',
 		'checkedEntryAlignment',
@@ -162,9 +161,8 @@ Class {
 		'dynSuperEntry',
 		'dynSuperEntryAlignment',
 		'cmDynSuperEntryOffset',
-		'mnuCall',
-		'interpretCall',
-		'interpretLabel',
+		'picMNUAbort',
+		'picInterpretAbort',
 		'endCPICCase0',
 		'endCPICCase1',
 		'numPICCases',
@@ -521,8 +519,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #primInvokeLabel type: #'AbstractInstruction *'.
 	self declareC: #(abstractOpcodes stackCheckLabel
 					blockEntryLabel blockEntryNoContextSwitch
-					stackOverflowCall sendMiss sendMissCall entry noCheckEntry dynSuperEntry
-					mnuCall interpretCall interpretLabel endCPICCase0 endCPICCase1)
+					stackOverflowCall sendMiss entry noCheckEntry dynSuperEntry
+					picMNUAbort picInterpretAbort endCPICCase0 endCPICCase1)
 			as: #'AbstractInstruction *'
 				in: aCCodeGenerator.
 	aCCodeGenerator
@@ -2537,11 +2535,12 @@ Cogit >> bytecodeSetOffsetForHeader: methodHeader [
 
 { #category : #'simulation only' }
 Cogit >> cCoerce: value to: cTypeString [
-	"Type coercion for translation only; just return the value when running in Smalltalk."
+	"Type coercion. For translation a cast will be emmitted. When running in Smalltalk
+	  answer a suitable wrapper for correct indexing."
 	<doNotGenerate>
-	^value == nil
-		ifTrue: [value]
-		ifFalse: [value coerceTo: cTypeString sim: objectMemory]
+	^value
+		ifNil: [value]
+		ifNotNil: [value coerceTo: cTypeString sim: objectMemory]
 ]
 
 { #category : #'translation support' }
@@ -2679,6 +2678,7 @@ Cogit >> ceCPICMiss: cPIC receiver: receiver [
 	(objectMemory isOopForwarded: receiver) ifTrue:
 		[^coInterpreter ceSendFromInLineCacheMiss: cPIC].
 	outerReturn := coInterpreter stackTop.
+	self deny: (backEnd inlineCacheTagAt: outerReturn) = self picAbortDiscriminatorValue. 
 	cPIC cPICNumCases < numPICCases
 		ifTrue:
 			[self lookup: cPIC selector
@@ -2899,8 +2899,9 @@ Cogit >> ceSICMiss: receiver [
 	cacheTag := objectRepresentation inlineCacheTagForInstance: receiver.
 	((errorSelectorOrNil notNil and: [errorSelectorOrNil ~= SelectorDoesNotUnderstand])
 	 or: [(objectRepresentation inlineCacheTagIsYoung: cacheTag)
+	 or: [(backEnd inlineCacheTagAt: outerReturn) = self picAbortDiscriminatorValue
 	 or: [newTargetMethodOrNil isNil
-	 or: [objectMemory isYoung: newTargetMethodOrNil]]]) ifTrue:
+	 or: [objectMemory isYoung: newTargetMethodOrNil]]]]) ifTrue:
 		[result := self patchToOpenPICFor: targetMethod selector
 					numArgs: targetMethod cmNumArgs
 					receiver: receiver.
@@ -3451,13 +3452,14 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 ]
 
 { #category : #'in-line cacheing' }
-Cogit >> cogMNUPICSelector: selector methodOperand: methodOperand numArgs: numArgs [
+Cogit >> cogMNUPICSelector: selector receiver: rcvr methodOperand: methodOperand numArgs: numArgs [
 	<api>
 	"Attempt to create a one-case PIC for an MNU.
 	 The tag for the case is at the send site and so doesn't need to be generated."
 	<returnTypeC: #'CogMethod *'>
 	| startAddress headerSize size end |
-	(objectMemory isYoung: selector) ifTrue:
+	((objectMemory isYoung: selector)
+	 or: [(objectRepresentation inlineCacheTagForInstance: rcvr) = self picAbortDiscriminatorValue]) ifTrue:
 		[^0].
 	coInterpreter
 		compilationBreak: selector
@@ -3482,7 +3484,7 @@ Cogit >> cogMNUPICSelector: selector methodOperand: methodOperand numArgs: numAr
 	size := self generateInstructionsAt: startAddress + headerSize.
 	end := self outputInstructionsAt: startAddress + headerSize.
 	"The missOffset is the same as the interpretOffset."
-	self assert: missOffset = (interpretCall address + interpretCall machineCodeSize - startAddress).
+	self assert: missOffset = (picInterpretAbort address + picInterpretAbort machineCodeSize - startAddress).
 	self assert: startAddress + cmEntryOffset = entry address.
 	^self
 		fillInCPICHeader: (self cCoerceSimple: startAddress to: #'CogMethod *')
@@ -3649,7 +3651,7 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 	size := self generateInstructionsAt: startAddress + headerSize.
 	end := self outputInstructionsAt: startAddress + headerSize.
 	"The missOffset is th same as the interpretOffset."
-	self assert: missOffset = (interpretCall address + interpretCall machineCodeSize - startAddress).
+	self assert: missOffset = (picInterpretAbort address + picInterpretAbort machineCodeSize - startAddress).
 	self assert: startAddress + cmEntryOffset = entry address.
 	self assert: endCPICCase0 address = (startAddress + firstCPICCaseOffset).
 	self assert: endCPICCase1 address = (startAddress + firstCPICCaseOffset + cPICCaseSize).
@@ -3722,17 +3724,20 @@ Cogit >> compileAbort [
 	 path depending on ReceiverResultReg; if zero it takes the stack overflow
 	 path; if nonzero the in-line cache miss path.  Neither of these paths returns.
 	 The abort routine must be called;  In the callee the method is located by
-	 adding the relevant offset to the return address of the call."
+	 adding the relevant offset to the return address of the call.
+
+	 N.B. This code must match that in compilePICAbort: so that the offset of the
+	 return address of the call is the same in methods and closed PICs."
+	<returnTypeC: #'AbstractInstruction *'>
 	stackOverflowCall := self MoveCq: 0 R: ReceiverResultReg.
 	backEnd hasLinkRegister
 		ifTrue:
-			["if we have a link register we will assume that it does not get automatically pushed onto the stack
-			and thus needs to be manually handled here"
-			sendMiss := self PushR: LinkReg.
-			 sendMissCall := self Call: (self methodAbortTrampolineFor: methodOrBlockNumArgs)]
+			["If there is a link register it must be saved (pushed onto the stack) before it
+			  is smashed by the abort call, and hence needs to be manually handled here"
+			 sendMiss := self PushR: LinkReg.
+			 ^self Call: (self methodAbortTrampolineFor: methodOrBlockNumArgs)]
 		ifFalse:
-			[sendMiss :=
-			 sendMissCall := self Call: (self methodAbortTrampolineFor: methodOrBlockNumArgs)]
+			[^sendMiss := self Call: (self methodAbortTrampolineFor: methodOrBlockNumArgs)]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -3849,7 +3854,7 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: c
 	<var: #targetEntry type: #'void *'>
 	<var: #jumpNext type: #'AbstractInstruction *'>
 	self assert: case1Method notNil.
-	self compilePICProlog: numArgs.
+	self compilePICAbort: numArgs.
 	self assert: (objectRepresentation inlineCacheTagIsYoung: case1Tag) not.
 	(isMNUCase not
 	 and: [coInterpreter methodHasCogMethod: case1Method])
@@ -3859,7 +3864,7 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: c
 		ifFalse:
 			[self assert: (case1Method isNil or: [(objectMemory isYoungObject: case1Method) not]).
 			 operand := case1Method.
-			 targetEntry := case1Method isNil ifTrue: [mnuCall] ifFalse: [interpretLabel]].
+			 targetEntry := case1Method isNil ifTrue: [picMNUAbort] ifFalse: [picInterpretAbort]].
 
 	jumpNext := self compileCPICEntry.
 	self MoveCw: 0 R: SendNumArgsReg.
@@ -3867,7 +3872,7 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: c
 	endCPICCase0 := self CmpCw: case1Tag R: TempReg.
 	jumpNext jmpTarget: endCPICCase0.
 	self MoveCw: operand R: SendNumArgsReg.
-	self JumpLongZero: (isMNUCase ifTrue: [mnuCall] ifFalse: [targetEntry]) asInteger.
+	self JumpLongZero: (isMNUCase ifTrue: [picMNUAbort] ifFalse: [targetEntry]) asInteger.
 	endCPICCase1 := self MoveCw: cPIC asInteger R: ClassReg.
 	self JumpLong: (self cPICMissTrampolineFor: numArgs).
 	^0
@@ -3937,7 +3942,7 @@ Cogit >> compileClosedPICPrototype [
 	| numArgs jumpNext |
 	<var: #jumpNext type: #'AbstractInstruction *'>
 	numArgs := 0.
-	self compilePICProlog: numArgs.
+	self compilePICAbort: numArgs.
 	jumpNext := self compileCPICEntry.
 	self MoveCw: 16r5EAF00D R: SendNumArgsReg.
 	self JumpLong: 16r5EEDCA5E.
@@ -4047,10 +4052,10 @@ Cogit >> compileMNUCPIC: cPIC methodOperand: methodOperand numArgs: numArgs [
 	<var: #cPIC type: #'CogMethod *'>
 	| jumpNext |
 	<var: #jumpNext type: #'AbstractInstruction *'>
-	self compilePICProlog: numArgs.
+	self compilePICAbort: numArgs.
 	jumpNext := self compileCPICEntry.
 	self MoveCw: methodOperand R: SendNumArgsReg.
-	self JumpLong: mnuCall asInteger.
+	self JumpLong: picMNUAbort asInteger.
 	jumpNext jmpTarget: (self MoveCw: cPIC asInteger R: ClassReg).
 	self JumpLong: (self cPICMissTrampolineFor: numArgs).
 	^0
@@ -4075,23 +4080,25 @@ Cogit >> compileOpenPIC: selector numArgs: numArgs [
 ]
 
 { #category : #'in-line cacheing' }
-Cogit >> compilePICProlog: numArgs [
-	"The start of a PIC has a call to a run-time abort routine that either handles
-	 a dispatch to an interpreted method or a dispatch of an MNU case.  The
-	 routine selects the path depending on ClassReg; if zero it takes the MNU
-	 path; if nonzero the dispatch to interpreter path.  Neither of these paths
-	 returns. The abort routine must be called;  In the callee the PIC is located
-	 by adding the relevant offset to the return address of the call."
-	mnuCall := self MoveCq: 0 R: ClassReg.
+Cogit >> compilePICAbort: numArgs [
+	"The start of a PIC has a call to a run-time abort routine that either handles a dispatch to an
+	 interpreted method or a dispatch of an MNU case.  The routine selects the path by testing
+	 ClassReg, which holds the inline cache tag; if equal to the picAbortDiscriminatorValue (zero)
+	 it takes the MNU path; if nonzero the dispatch to interpreter path.  Neither of these paths
+	 returns. The abort routine must be called;  In the callee the PIC is located by adding the
+	 relevant offset to the return address of the call.
+
+	 N.B. This code must match that in compileAbort so that the offset of the return address of
+	 the call is the same in methods and closed PICs."
+	picMNUAbort := self MoveCq: self picAbortDiscriminatorValue R: ClassReg.
 	backEnd hasLinkRegister
 		ifTrue:
-			["if we have a link register we will assume that it does not get automatically pushed onto the stack
-			and thus needs to be manually handled here"
-			 interpretLabel := self PushR: LinkReg.
-			 interpretCall := self Call: (self picAbortTrampolineFor: numArgs)]
+			["If there is a link register it must be saved (pushed onto the stack) before it
+			  is smashed by the abort call, and hence needs to be manually handled here".
+			 picInterpretAbort := self PushR: LinkReg.
+			 self Call: (self picAbortTrampolineFor: numArgs)]
 		ifFalse:
-			[interpretLabel :=
-			 interpretCall := self Call: (self picAbortTrampolineFor: numArgs)].
+			[picInterpretAbort := self Call: (self picAbortTrampolineFor: numArgs)].
 	^0
 ]
 
@@ -4170,9 +4177,11 @@ Cogit >> computeEntryOffsets [
 	 need cmNoCheckEntryOffset up front to be able to generate the map starting from cmNoCheckEntryOffset"
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
+	| sendMissCall |
+	<var: 'sendMissCall' type: #'AbstractInstruction *'>
 	self allocateOpcodes: 20 bytecodes: 0.
 	methodOrBlockNumArgs := 0.
-	self compileAbort.
+	sendMissCall := self compileAbort.
 	self compileEntry.
 	self computeMaximumSizes.
 	self generateInstructionsAt: methodZoneBase + (self sizeof: CogMethod).
@@ -5192,14 +5201,19 @@ Cogit >> genGetLeafCallStackPointer [
 { #category : #initialization }
 Cogit >> genInnerPICAbortTrampoline: name [
 	"Generate the abort for a PIC.  This abort performs either a call of
-	 ceInterpretMethodFromPIC:receiver: to handle invoking an uncogged
-	 target or a call of ceMNUFromPICMNUMethod:receiver: to handle an
-	 MNU dispatch in a closed PIC.  It distinguishes the two by testing
-	 ClassReg.  If the register is zero then this is an MNU."
+	 ceInterpretMethodFromPIC:receiver: to handle invoking an uncogged target
+	 or a call of ceMNUFromPICMNUMethod:receiver: to handle an MNU dispatch
+	 in a closed PIC.  It distinguishes the two by testing ClassReg.  If the register
+	 is zero then this is an MNU.
+	
+	 This poses a problem in 32-bit Spur, where zero is the cache tag for immediate
+	 characters (tag pattern 2r10) because SmallIntegers have tag patterns 2r11
+	 and 2r01, so anding with 1 reduces these to 0 & 1.  We solve the ambiguity by
+	 patching send sites with a 0 cache tag to open PICs instead of closed PICs."
 	<var: #name type: #'char *'>
 	| jumpMNUCase |
 	<var: #jumpMNUCase type: #'AbstractInstruction *'>
-	self CmpCq: 0 R: ClassReg.
+	self CmpCq: self picAbortDiscriminatorValue R: ClassReg.
 	jumpMNUCase := self JumpZero: 0.
 	self compileTrampolineFor: #ceInterpretMethodFromPIC:receiver:
 		numArgs: 2
@@ -7908,6 +7922,13 @@ Cogit >> pc: address isWithinMethod: cogMethod [
 	^address asInteger
 		between: cogMethod asInteger + (self sizeof: CogMethod)
 		and: cogMethod asInteger + cogMethod blockSize
+]
+
+{ #category : #accessing }
+Cogit >> picAbortDiscriminatorValue [
+	"This value is used to decide between MNU processing
+	 or interpretation in the closed PIC aborts."
+	^0
 ]
 
 { #category : #'compile abstract instructions' }
