@@ -470,15 +470,12 @@ SqueakWin32x86Config >> externalPluginsBuild [
 
 { #category : #'cmake buildType redirects' }
 SqueakWin32x86Config >> extraPluginSettingsBuild: aMaker [
-
-	self flag:'tty'. "cut-n-paste from pharo code in CogWindowsConfig. caveat emptor"
 	self subclassResponsibility.
-"	
-	aMaker isExternal ifTrue: [
-		aMaker set: 'LIBRARY_OUTPUT_PATH' toString: '${outputDir}'.
-		
-		aMaker cmd: 'set_target_properties' params:  aMaker moduleName , ' PROPERTIES PREFIX "" '
-	]"
+"
+	aMaker isExternal 
+		ifTrue:[aMaker templates addLast:((CMakeSet new) variable:'LIBRARY_OUTPUT_PATH' value:'${outputDir}')].
+	
+"
 ]
 
 { #category : #'cmake buildType redirects' }

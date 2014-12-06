@@ -777,6 +777,157 @@ SqueakUnixConfig >> configureB3DAcceleratorPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateAsynchFilePlugin: aMaker [
+	aMaker templates addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixAsynchFile.c'))
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateB3DAcceleratorPlugin: aMaker [
+	super configureByTemplateB3DAcceleratorPlugin: aMaker.  
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixOpenGL.c'))
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateDropPlugin: aMaker [
+
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${crossDir}/plugins/FilePlugin'));
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixDragDrop.c'))
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateFT2Plugin: aMaker [ 
+	self flag: 'tty'. "See portability comment below"
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'LINKLIBS' elements: (OrderedCollection with: 'freetype'));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '/usr/include/freetype2')). "<---THIS IS NOT PORTABLE.."
+
+"On a refactoring pass, the 'cmake .' commmand should be able to dig this library up generically and the argument to with: can be a variable"
+
+	
+	
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateFileCopyPlugin: aMaker [
+
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixFileCopyPlugin.c'))
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateFilePlugin: aMaker [
+	super configureByTemplateFilePlugin: aMaker.
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixFile.c'))
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateInternetConfigPlugin: aMaker [
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixInternetConfiguration.c'))
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateJoystickTabletPlugin: aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixJoystickTablet.c'))
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateLocalePlugin: aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixLocale.c'))	
+
+	
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateMIDIPlugin: aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixMIDI.c'))
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateSecurityPlugin: aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixSecurity.c'))
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateSerialPlugin: aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixSerial.c'))
+	
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateSocketPlugin: aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixSocket.c'))
+	
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateSoundPlugin: aMaker [ 
+
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixSound.c'));
+		addLast:((CMakeListAppend new) list:'LINKLIBS' elements: (OrderedCollection with: 'asound'))
+
+	
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateSqueakSSLPlugin: aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixOpenSSL.c'));
+		addLast:((CMakeListAppend new) list:'LINKLIBS' elements: (OrderedCollection with: 'ssl'))
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateUUIDPlugin: aMaker [ 
+	self flag: 'tty'.
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '/usr/include/uuid')); "<---THIS IS NOT PORTABLE.."
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixUUID.c'))
+
+"On a refactoring pass, the 'cmake .' commmand should be able to dig this library up generically and the argument to with: can be a variable"
+
+	
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakUnixConfig >> configureByTemplateUnixOSProcessPlugin: aMaker [ 
+	super configureByTemplateUnixOSProcessPlugin: aMaker.
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${crossDir}/plugins/SocketPlugin'));
+		addLast:((CMakeAddDefinitions new) definitions: (OrderedCollection with:  '-DSQAIO_H=\"sqaio.h\"'))
+
+	
+
+]
+
+{ #category : #'plugin extra rules' }
 SqueakUnixConfig >> configureDropPlugin: maker [
 	"extra rules for DropPlugin"
 	super configureDropPlugin: maker.  

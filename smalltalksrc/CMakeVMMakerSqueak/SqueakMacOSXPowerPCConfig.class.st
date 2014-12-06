@@ -118,8 +118,176 @@ SqueakMacOSXPowerPCConfig >> configureB3DAcceleratorPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacOSXPowerPCConfig >> configureClipboardExtendedPlugin: maker [
+SqueakMacOSXPowerPCConfig >> configureByTemplateB3DAcceleratorPlugin: aMaker [
+	self flag:'tty'. "Consider portability of the include below"
+	super configureByTemplateB3DAcceleratorPlugin: aMaker.  
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '/usr/X11/include'));   "for GL.h <--tty portability problem?"
+		addLast:((CMakeListAppend new) 
+			list:'sources' 
+			elements: (OrderedCollection 
+				with: '${pluginPlatform}/sqMacOpenGL.c'
+				with: '${pluginPlatform}/sqMacOpenGLInfo.c')).
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateCroquetPlugin: aMaker [ 
+	super configureByTemplateCroquetPlugin: aMaker.  
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqMacCroquet.c'))
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateFFIPlugin: aMaker [
+	super configureByTemplateFFIPlugin: aMaker.
+	aMaker templates 
+		addLast:((CMakeListAppend new) 
+			list:'sources' 
+			elements: (OrderedCollection 
+				with: '${pluginPlatform}/x86-sysv-MacIntel.c'
+				with: '${pluginPlatform}/x86-sysv-asm-MacIntel.S')).
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateFT2Plugin: aMaker [
+	| lib |
+	self flag:'tty'. "is internalFT2 still not supported?"
+	aMaker isExternal ifFalse: [self error: 'building internal FT2Plugin is not supported yet' ]. 	
+	self flag:'tty'. "I haven't been down the addThirdpartyLibrary rabbit hole yet"
+	lib := self addThirdpartyLibrary: 'freetype2'.
+	aMaker templates   	"link plugin with freetype lib"
+		addLast:((CMakeListAppend new) list:'LINKLIBS' elements: (OrderedCollection with:  (lib targetForLinking)));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: lib includeDir)).
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateInternetConfigPlugin: aMaker [
+	self flag:'tty'. "pharo's configureInternetConfigPlugin has a super call to an empty method that I omit here. "
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqMacInternetConfiguration.c')).
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateJoystickTabletPlugin: aMaker [ 
+	self flag:'tty'. "pharo's configureJoystickTabletPlugin has a super call to an empty method that I omit here. "
+	aMaker templates 
+		addLast:((CMakeListAppend new) 
+			list:'sources' 
+			elements: (OrderedCollection 
+					with: '${pluginPlatform}/HID_Error_Handler.c'
+					with: '${pluginPlatform}/HID_Name_Lookup.c'
+					with: '${pluginPlatform}/HID_Queue_Utilities.c'
+					with: '${pluginPlatform}/HID_Utilities.c'
+					with: '${pluginPlatform}/sqMacJoystickAndTablet.c')).
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateLocalePlugin: aMaker [ 
+	self flag:'tty'. "pharo's configureLocalePlugin: has a super call to an empty method that I omit here. "
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqMacLocaleCarbon.c'))
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateMIDIPlugin: aMaker [ 
+	self flag:'tty'. "pharo's configureMIDIPlugin: has a super call to an empty method that I omit here. "
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqMacMIDI.c')).
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateMpeg3Plugin: aMaker [
+
+	super configureByTemplateMpeg3Plugin: aMaker.
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqMacFileBits.c'))
+
 	
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateObjectiveCPlugin: aMaker [
+	aMaker doNotGenerate: true
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateQuicktimePlugin: aMaker [
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new)  
+			dirs: (OrderedCollection 	
+					 with: '${pluginPlatform}'
+					 with: '${crossDir}/plugins/SurfacePlugin'));
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqMacQuicktimeInteface.c')). 
+           " not a typo , a file is named 'inteface' instead of 'interface' "
+	aMaker addFrameworksByTemplate: #( 'Carbon' 'QuickTime' ) maker: aMaker.
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateSecurityPlugin: aMaker [ 
+	self flag:'tty'. "pharo's configureSecurityPlugin: has a super call to an empty method that I omit here. "
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${crossDir}/plugins/FilePlugin'));
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqMacSecurity.c')).
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateSerialPlugin: aMaker [ 
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with:  '${platformsDir}/unix/plugins/SerialPlugin' ));
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${platformsDir}/unix/plugins/SerialPlugin/sqUnixSerial.c'))
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateSocketPlugin: aMaker [ 
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${platformsDir}/unix/plugins/SocketPlugin'));
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${platformsDir}/unix/plugins/SocketPlugin/sqUnixSocket.c')).
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateSoundGenerationPlugin: maker [ 
+	maker doNotGenerate: true. 
+	"pharo code comment:  The sources in platforms/Cross/plugins/SoundGenerationPlugin/sqOldSoundPrims.c 
+	are out of date and need to be fixed before it can be built 
+
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/sqOldSoundPrims.c'));
+	"
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateTestOSAPlugin: aMaker [
+	aMaker addFrameworksByTemplate: #( 'Carbon'  'ApplicationServices' ).
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacOSXPowerPCConfig >> configureByTemplateUnixOSProcessPlugin: aMaker [ 
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${crossDir}/plugins/FilePlugin')).
+
 ]
 
 { #category : #'plugin extra rules' }

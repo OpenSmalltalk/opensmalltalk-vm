@@ -47,6 +47,7 @@ CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testExtraPluginSettings [
 								pluginGenerator vmGenerator: vmGenerator.
 								pluginGenerator isInternal: false.
 								pluginGenerator output:(String new writeStream).
+								pluginGenerator templates: OrderedCollection new.
 								self shouldnt: [o extraPluginSettings: pluginGenerator] raise: Error]]]].
 
 ]

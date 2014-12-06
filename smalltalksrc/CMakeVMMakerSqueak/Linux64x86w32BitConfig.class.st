@@ -309,13 +309,16 @@ Linux64x86w32BitConfig >> externalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfig >> extraPluginSettingsBuild: maker [
-	self flag:'tty'. "this dumps the libs into the executable's directory. This breaks the distribution convention squeak has had for a while. However, we probably should handle that in a packaging/redistribution step and not worry about it now" 
-	maker isExternal ifTrue: [
-		"copy lib to outputDir "
+Linux64x86w32BitConfig >> extraPluginSettingsBuild: aMaker [
+	aMaker isExternal 
+		ifTrue:[aMaker templates addLast:((CMakeSet new) variable:'LIBRARY_OUTPUT_PATH' value:'${outputDir}')].
+	aMaker templates addLast:((CMakeSet new) variable:'linkFlags' quotedValue:'${linkFlags} -m32').
+
+
+"	maker isExternal ifTrue: [
 		maker set: 'LIBRARY_OUTPUT_PATH' to: '${outputDir}' 
 	].
-	maker set: #linkFlags toString: '${linkFlags} -m32'
+	maker set: #linkFlags toString: '${linkFlags} -m32'"
 ]
 
 { #category : #'cmake buildType redirects' }

@@ -98,6 +98,6 @@ CMakeListAppend >> list [
 CMakeListAppend >> list: aString elements: anObject [
 	list:=aString.
 	elements := anObject.
-	self content:'  list( APPEND ', list, ' ' , self elements,  ')'
+	self content:'  list( APPEND ', list, ' "' , self elements,  '")'
 	
 ]
