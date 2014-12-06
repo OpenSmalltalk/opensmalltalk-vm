@@ -7928,6 +7928,7 @@ Cogit >> pc: address isWithinMethod: cogMethod [
 Cogit >> picAbortDiscriminatorValue [
 	"This value is used to decide between MNU processing
 	 or interpretation in the closed PIC aborts."
+	<inline: true>
 	^0
 ]
 
