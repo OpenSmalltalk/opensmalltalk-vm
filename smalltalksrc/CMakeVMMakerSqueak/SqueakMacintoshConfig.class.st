@@ -8,6 +8,17 @@ Class {
 }
 
 { #category : #cmake }
+SqueakMacintoshConfig >> addFrameworksByTemplate: aCollection maker: aMaker [
+	"for mac only "
+	self flag:'tty'. "TODO: replace the CMakeCommand with CMakeFindLibrary. cmake --help-command find_library"
+	aCollection
+		do: [:each | 
+			aMaker templates
+				addLast:((CMakeCommand new) command: 'find_library' params:each , '_FMWK ', each );
+				addLast:((CMakeListAppend new) list:'LINKLIBS' elements: (OrderedCollection with: '${', each , '_FMWK}'))]
+]
+
+{ #category : #cmake }
 SqueakMacintoshConfig >> cmakeWriteDirectoriesDotCmake: aMaker [
 	|temp o|
 	"We could put these inline, but other components include the directories.cmake file. So, we continue that convention"
