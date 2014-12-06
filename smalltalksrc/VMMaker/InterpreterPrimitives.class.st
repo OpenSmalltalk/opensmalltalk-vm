@@ -1190,8 +1190,8 @@ InterpreterPrimitives >> primitiveCopyObject [
 			((objectMemory formatOf: rcvr) = (objectMemory formatOf: arg)
 			  and: [length = (objectMemory numBytesOf: arg)]) ifFalse:
 				[^self primitiveFailFor: PrimErrBadArgument].
-			 self mem: rcvr + objectMemory baseHeaderSize
-				cp: arg + objectMemory baseHeaderSize
+			 self mem: (rcvr + objectMemory baseHeaderSize) asVoidPointer
+				cp: (arg + objectMemory baseHeaderSize) asVoidPointer
 				y: length]
 		ifFalse:
 			[(self isAppropriateForCopyObject: rcvr) ifFalse:

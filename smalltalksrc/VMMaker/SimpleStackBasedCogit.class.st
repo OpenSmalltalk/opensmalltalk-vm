@@ -1224,7 +1224,7 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	<var: #jumpClassMiss type: #'AbstractInstruction *'>
 	<var: #itsAHit type: #'AbstractInstruction *'>
 	<var: #jumpBCMethod type: #'AbstractInstruction *'>
-	self compilePICProlog: numArgs.
+	self compilePICAbort: numArgs.
 	self cppIf: NewspeakVM ifTrue:
 		[self Nop. "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
 		 dynSuperEntry := self Nop].
@@ -1257,7 +1257,7 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 		genLoadSlot: HeaderIndex sourceReg: SendNumArgsReg destReg: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpBCMethod := objectRepresentation genJumpSmallIntegerInScratchReg: TempReg.
-	jumpBCMethod jmpTarget: interpretLabel.
+	jumpBCMethod jmpTarget: picInterpretAbort.
 	self AddCq: cmNoCheckEntryOffset R: ClassReg.
 	self JumpR: ClassReg.
 
