@@ -284,6 +284,20 @@ Spur32BitMMLECoSimulator >> memoryBaseForImageRead [
 		ifFalse: [super memoryBaseForImageRead]
 ]
 
+{ #category : #initialization }
+Spur32BitMMLECoSimulator >> nextLongFrom: aStream [
+	"Read a 32- or 64-bit quantity from the given (binary) stream."
+
+	^aStream nextLittleEndianNumber: self wordSize
+]
+
+{ #category : #initialization }
+Spur32BitMMLECoSimulator >> nextWord32From: aStream [
+	"Read a 32-bit quantity from the given (binary) stream."
+
+	^aStream nextLittleEndianNumber: 4
+]
+
 { #category : #'spur bootstrap' }
 Spur32BitMMLECoSimulator >> numClassTablePages [
 	^numClassTablePages
