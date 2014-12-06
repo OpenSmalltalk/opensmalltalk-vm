@@ -1510,6 +1510,247 @@ I have factored them out in the interest of clarity and simplicity.
 "
 ]
 
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateB3DAcceleratorPlugin: aMaker [
+
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/sqOpenGLRenderer.c'))
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateBitBltSimulation: aMaker [
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${pluginCross}'));
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/BitBltGeneric.c'));
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/BitBltDispatch.c'))
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateBochsIA32Plugin: aMaker [
+
+	"this stuff is not ready for use yet" 
+	
+" 	maker addCrossSources:
+		#( 'sqBochsIA32Plugin.cpp'  )
+
+"
+	aMaker doNotGenerate:true
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateCroquetPlugin: aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/TriBoxStub.c'))
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateFFIPlugin: aMaker [
+	self flag:'tty'. "comment below is from pharo code. I have no idea at the moment."
+	" it is incomplete right now, because in Cog this plugin are not used anymore"
+	aMaker doNotGenerate: true.
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/sqFFIPlugin.c')).
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateFilePlugin: aMaker [
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/sqFilePluginBasicPrims.c'))
+
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateFloatMathPlugin: aMaker [
+      |cfiles pfiles|
+	cfiles:= #(
+		'acos.c' 'acosh.c' 'asin.c' 'asinh.c' 'atan.c' 'atan2.c' 'atanh.c'
+		'copysign.c' 'cos.c' 'cosh.c' 'exp.c' 'expm1.c' 'finite.c' 'fmod.c'
+		'hypot.c' 'isnan.c' 'k_cos.c' 'k_rem_pio2.c' 'k_sin.c' 'k_tan.c' 'ldexp.c'
+		'log.c' 'log10.c' 'log1p.c' 'modf.c' 'pow.c' 'rem_pio2.c' 'rint.c'
+		'scalb.c' 'scalbn.c' 'sin.c' 'sinh.c' 'sqrt.c' 'tan.c' 'tanh.c' ).
+	pfiles:=OrderedCollection new.  "Anybody who knows how to do this elegantly, please change this"
+	cfiles do:[:each | pfiles addLast:('$(pluginCross)/', each)].
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: pfiles);
+		addLast:((CMakeAddDefinitions new) definitions: (OrderedCollection with: '-O0')).  "See Note 1."
+	self isLittleEndian 
+		ifTrue: [
+			aMaker templates 
+				addLast:((CMakeAddDefinitions new) definitions: (OrderedCollection with:'-D__LITTLE_ENDIAN=1' ))].  "See Note 2."
+
+	aMaker templates "See Note 3."
+		addLast:((CMakeIfAddDefinitionsElseAddDefinitions new) 
+					condition:'${WIN32}' 
+					ifdefinitions:'-Werror-implicit-function-declaration'
+					elsedefinitions:'-DNO_ISNAN')
+
+"
+Note 1. according to http://www.netlib.org/fdlibm/readme	it should be compiled with no optimizations
+
+Note 2. compile with -D__LITTLE_ENDIAN	This macro is set automatically in fdlibm.h when compiled ith -m32 but
+		not when compiled with -m64 (Nicolas Cellier)
+
+Note 3. 	It may be better to push these down to SqueakMacintoshConfig, SqueakUnixConfig, SqueakWindowsConfig.
+I think it is clearer here.
+
+In the mean time this template outputs the following:
+
+if (${WIN32})
+	add_definitions(-Werror-implicit-function-declaration)	<---push down to SqueakWindowsConfig
+else(${WIN32})
+	add_definitions(-DNO_ISNAN)                                        <---push down to SqueakUnix/MacConfigs
+endif (${WIN32})'.
+
+"
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateIA32ABIPlugin: aMaker [
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/ia32abicc.c')).
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateJPEGReadWriter2Plugin: aMaker [ 
+      |cfiles pfiles|
+	cfiles:=  #('Error.c' 'jcapimin.c' 'jcapistd.c' 'jccoefct.c' 'jccolor.c' 'jcdctmgr.c' 
+                       'jchuff.c' 'jcinit.c' 'jcmainct.c' 'jcmarker.c' 'jcmaster.c' 'jcomapi.c'  'jcparam.c' 
+                       'jcphuff.c' 'jcprepct.c' 'jcsample.c' 'jctrans.c' 'jdapimin.c' 'jdapistd.c'
+                       'jdatadst.c' 'jdatasrc.c' 'jdcoefct.c' 'jdcolor.c' 'jddctmgr.c' 'jdhuff.c'
+                       'jdinput.c' 'jdmainct.c' 'jdmarker.c' 'jdmaster.c' 'jdmerge.c' 'jdphuff.c' 'jdpostct.c'
+                       'jdsample.c' 'jdtrans.c' 'jerror.c' 'jfdctflt.c' 'jfdctfst.c' 'jfdctint.c'
+                       'jidctflt.c' 'jidctfst.c' 'jidctint.c' 'jidctred.c' 'jmemdatadst.c' 'jmemdatasrc.c'
+                       'jmemmgr.c' 'jmemnobs.c' 'jquant1.c' 'jquant2.c' 'jutils.c' ) .
+	pfiles:=OrderedCollection new.  "Anybody who knows how to do this elegantly, please change this"
+	cfiles do:[:each | pfiles addLast:('$(pluginCross)/', each)].
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: pfiles).
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateMpeg3Plugin: aMaker [
+      |cfiles pfiles|
+	cfiles:=#( 'libmpeg/bitstream.c' 'libmpeg/changesForSqueak.c'	'libmpeg/audio/dct.c' 
+     'libmpeg/video/getpicture.c' 'libmpeg/audio/header.c' 'libmpeg/video/headers.c' 
+     'libmpeg/video/idct.c' 'libmpeg/audio/layer1.c' 'libmpeg/audio/layer2.c' 
+     'libmpeg/audio/layer3.c' 'libmpeg/libmpeg3.c' 'libmpeg/video/macroblocks.c' 
+     'libmpeg/video/mmxtest.c' 'libmpeg/video/motion.c' 'libmpeg/mpeg3atrack.c' 
+     'libmpeg/audio/mpeg3audio.c' 'libmpeg/mpeg3demux.c' 'libmpeg/mpeg3io.c'
+     'libmpeg/mpeg3title.c' 'libmpeg/video/mpeg3video.c' 'libmpeg/mpeg3vtrack.c'
+     'libmpeg/video/output.c' 'libmpeg/audio/pcm.c' 'libmpeg/video/reconstruct.c'
+     'libmpeg/video/seek.c' 'libmpeg/video/slice.c' 'libmpeg/audio/synthesizers.c'
+     'libmpeg/audio/tables.c' 'libmpeg/video/vlc.c' ).
+	pfiles:=OrderedCollection new.  "Anybody who knows how to do this elegantly, please change this"
+	cfiles do:[:each | pfiles addLast:('$(pluginCross)/', each)].
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${pluginCross}/libmpeg ${pluginCross}/libmpeg/audio ${pluginCross}/libmpeg/video'));
+		addLast:((CMakeListAppend new) list:'sources' elements: pfiles).
+
+	
+	
+
+]
+
+{ #category : #'source generation' }
+CPlatformConfigForSqueak >> configureByTemplatePlugin: aPlugin with: generator [
+	"by-pass the pharo's CPlatformConf>>configurePlugin: with: so that I can use templates"
+	^ self perform: ( 'configureByTemplate' , aPlugin name , ':' ) asSymbol with: generator.
+	
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateRePlugin: aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) 
+			list:'sources' 
+			elements: (OrderedCollection 
+						with: '$(pluginCross)/pcre.c'
+						with: '$(pluginCross)/study.c'
+						with: '$(pluginCross)/get.c'
+						with: '$(pluginCross)/chartables.c'))
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateReentrantIA32FFIPlugin: aMaker [
+	aMaker templates 
+		addLast:((CMakeListAppend new) 
+			list:'sources' 
+			elements: (OrderedCollection 
+						with: '$(pluginCross)/sqFFIPlugin.c'
+						with: '$(pluginCross)/sqFFITestFuncs.c'
+						with: '$(pluginCross)/sqManualSurface.c')).
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateSoundCodecPlugin: aMaker [
+	aMaker templates 
+		addLast:((CMakeListAppend new) 
+			list:'sources' 
+			elements: (OrderedCollection 	with: '$(pluginCross)/sqSoundCodecPluginBasicPrims.c')).
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateSoundGenerationPlugin: aMaker [ 
+	aMaker doNotGenerate: true. 
+	"From Pharo comment:  The sources in platforms/Cross/plugins/SoundGenerationPlugin/sqOldSoundPrims.c 
+	are out of date and need to be fixed before it can be built 
+	
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/sqOldSoundPrims.c'));
+	"
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateSurfacePlugin: aMaker [ 
+	aMaker templates
+			addLast:((CMakeSet new) variable: #sources value: '');"remove default source file"
+			addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/SurfacePlugin.c')).
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateThreadedIA32FFIPlugin: aMaker [
+	aMaker templates 
+		addLast:((CMakeListAppend new) 
+			list:'sources' 
+			elements: (OrderedCollection 
+						with: '$(pluginCross)/sqFFIPlugin.c'
+						with: '$(pluginCross)/sqFFITestFuncs.c'
+						with: '$(pluginCross)/sqManualSurface.c')).
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfigForSqueak >> configureByTemplateUnixOSProcessPlugin: aMaker [
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${crossDir}/plugins/FilePlugin'));
+		addLast:((CMakeSet new) variable: #linkFlags value: '-undefined dynamic_lookup').  	"THIS IS UGLY AND LAME!!! (comment from Pharo code)"
+
+
+]
+
 { #category : #cmake }
 CPlatformConfigForSqueak >> configureForBuildType: aSymbol [
 	"Set my internal state appropriate for my build type".

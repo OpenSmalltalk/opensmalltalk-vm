@@ -186,11 +186,10 @@ SqueakBSDConfig >> externalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakBSDConfig >> extraPluginSettingsBuild: maker [
-	maker isExternal ifTrue: [
-		"copy lib to results dir "
-		maker set: 'LIBRARY_OUTPUT_PATH' to: '${outputDir}' 
-	].
+SqueakBSDConfig >> extraPluginSettingsBuild: aMaker [
+	aMaker isExternal 
+		ifTrue:[aMaker templates addLast:((CMakeSet new) variable:'LIBRARY_OUTPUT_PATH' value:'${outputDir}')].
+
 
 ]
 
