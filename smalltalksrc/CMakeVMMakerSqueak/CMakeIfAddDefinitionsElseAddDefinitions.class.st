@@ -25,7 +25,7 @@ Class {
 CMakeIfAddDefinitionsElseAddDefinitions >> condition: cString ifdefinitions:iString elsedefinitions:eString [
 	condition:=cString.
 	ifdefinitions:= iString.
-	elsedefinitions:=eString
+	elsedefinitions:=eString.
 	self content:'
 IF(', condition ,')
 	 add_definitions(', ifdefinitions,')
