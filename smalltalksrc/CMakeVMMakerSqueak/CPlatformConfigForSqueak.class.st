@@ -1522,8 +1522,8 @@ CPlatformConfigForSqueak >> configureByTemplateB3DAcceleratorPlugin: aMaker [
 CPlatformConfigForSqueak >> configureByTemplateBitBltSimulation: aMaker [
 	aMaker templates 
 		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${pluginCross}'));
-		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/BitBltGeneric.c'));
-		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/BitBltDispatch.c'))
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginCross}/BitBltGeneric.c'));
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginCross}/BitBltDispatch.c'))
 
 
 ]
@@ -1544,7 +1544,7 @@ CPlatformConfigForSqueak >> configureByTemplateBochsIA32Plugin: aMaker [
 { #category : #'plugin extra rules' }
 CPlatformConfigForSqueak >> configureByTemplateCroquetPlugin: aMaker [ 
 	aMaker templates 
-		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/TriBoxStub.c'))
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginCross}/TriBoxStub.c'))
 
 ]
 
@@ -1561,7 +1561,7 @@ CPlatformConfigForSqueak >> configureByTemplateFFIPlugin: aMaker [
 { #category : #'plugin extra rules' }
 CPlatformConfigForSqueak >> configureByTemplateFilePlugin: aMaker [
 	aMaker templates 
-		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/sqFilePluginBasicPrims.c'))
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginCross}/sqFilePluginBasicPrims.c'))
 
 
 
@@ -1578,7 +1578,7 @@ CPlatformConfigForSqueak >> configureByTemplateFloatMathPlugin: aMaker [
 		'log.c' 'log10.c' 'log1p.c' 'modf.c' 'pow.c' 'rem_pio2.c' 'rint.c'
 		'scalb.c' 'scalbn.c' 'sin.c' 'sinh.c' 'sqrt.c' 'tan.c' 'tanh.c' ).
 	pfiles:=OrderedCollection new.  "Anybody who knows how to do this elegantly, please change this"
-	cfiles do:[:each | pfiles addLast:('$(pluginCross)/', each)].
+	cfiles do:[:each | pfiles addLast:('${pluginCross}/', each)].
 	aMaker templates 
 		addLast:((CMakeListAppend new) list:'sources' elements: pfiles);
 		addLast:((CMakeAddDefinitions new) definitions: (OrderedCollection with: '-O0')).  "See Note 1."
@@ -1655,7 +1655,7 @@ CPlatformConfigForSqueak >> configureByTemplateMpeg3Plugin: aMaker [
      'libmpeg/video/seek.c' 'libmpeg/video/slice.c' 'libmpeg/audio/synthesizers.c'
      'libmpeg/audio/tables.c' 'libmpeg/video/vlc.c' ).
 	pfiles:=OrderedCollection new.  "Anybody who knows how to do this elegantly, please change this"
-	cfiles do:[:each | pfiles addLast:('$(pluginCross)/', each)].
+	cfiles do:[:each | pfiles addLast:('${pluginCross}/', each)].
 	aMaker templates 
 		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${pluginCross}/libmpeg ${pluginCross}/libmpeg/audio ${pluginCross}/libmpeg/video'));
 		addLast:((CMakeListAppend new) list:'sources' elements: pfiles).
@@ -1704,7 +1704,7 @@ CPlatformConfigForSqueak >> configureByTemplateSoundCodecPlugin: aMaker [
 	aMaker templates 
 		addLast:((CMakeListAppend new) 
 			list:'sources' 
-			elements: (OrderedCollection 	with: '$(pluginCross)/sqSoundCodecPluginBasicPrims.c')).
+			elements: (OrderedCollection 	with: '${pluginCross}/sqSoundCodecPluginBasicPrims.c')).
 
 
 ]
@@ -1724,7 +1724,7 @@ CPlatformConfigForSqueak >> configureByTemplateSoundGenerationPlugin: aMaker [
 CPlatformConfigForSqueak >> configureByTemplateSurfacePlugin: aMaker [ 
 	aMaker templates
 			addLast:((CMakeSet new) variable: #sources value: '');"remove default source file"
-			addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '$(pluginCross)/SurfacePlugin.c')).
+			addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginCross}/SurfacePlugin.c')).
 
 
 ]

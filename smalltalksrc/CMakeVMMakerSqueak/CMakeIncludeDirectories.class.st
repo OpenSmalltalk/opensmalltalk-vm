@@ -74,6 +74,7 @@ CMakeIncludeDirectories >> afterorbefore [
 
 { #category : #accessing }
 CMakeIncludeDirectories >> dirs [
+	self flag:'tty'. "see CMakeListAppend>>elements for inject method to use If I have doublequotes are needed. "
 	^ String streamContents: [:stream | dirs asStringOn: stream delimiter: ' ' ]
 
 ]

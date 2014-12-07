@@ -121,5 +121,6 @@ CMakeSetProperty >> scope: sString  property: pString values: anOrderedCollectio
 
 { #category : #accessing }
 CMakeSetProperty >> values [
+	self flag:'tty'. "see CMakeListAppend>>elements for inject method to use If I have doublequotes are needed. "
  	^ String streamContents: [:stream | values asStringOn: stream delimiter: ' ' ]
 ]
