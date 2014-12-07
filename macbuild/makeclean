@@ -1,3 +1,0 @@
-#!/bin/bash
-
-rm -r ./build ./*/build ./plugin-projects/*/build ./Fast.app ./FastMT.app ./Debug.app ./DebugMT.app ./Assert.app ./AssertMT.app ./Croquet.app ./Squeak.app

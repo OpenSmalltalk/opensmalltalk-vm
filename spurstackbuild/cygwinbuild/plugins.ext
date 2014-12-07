@@ -1,5 +1,0 @@
-# Copied, perhaps edited, from ../../src/examplePlugins.ext
-EXTERNAL_PLUGINS = \
-SqueakFFIPrims \
-Win32OSProcessPlugin
-
