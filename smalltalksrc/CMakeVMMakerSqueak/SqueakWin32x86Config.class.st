@@ -138,230 +138,189 @@ SqueakWin32x86Config >> availableBuildTypes [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureAsynchFilePlugin:  maker [ 
-	"extra rules for AsynchFilePlugin "
-
-	super configureAsynchFilePlugin:  maker.
+SqueakWin32x86Config >> configureByTemplateAsynchFilePlugin:  aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqWin32AsyncFilePrims.c'))
 	
-	maker addPlatformSources: #( 'sqWin32AsyncFilePrims.c')
+
 
 
 
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureB3DAcceleratorPlugin:  maker [ 
-	"extra rules for B3DAcceleratorPlugin "
+SqueakWin32x86Config >> configureByTemplateCroquetPlugin:  aMaker [ 
+	super configureByTemplateCroquetPlugin:  aMaker.
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqWin32CroquetPlugin.c'))
 
-	super configureB3DAcceleratorPlugin:  maker.
-	
-	maker addPlatformSources: #( 'sqWin32DualB3DX.c' 'sqWin32D3D.c' 'sqWin32OpenGL.c')
-
-
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureCroquetPlugin:  maker [ 
-	"extra rules for CroquetPlugin "
-
-	super configureCroquetPlugin:  maker.
-	
-	maker addPlatformSources: #( 'sqWin32CroquetPlugin.c')
 
 
 
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureDropPlugin:  maker [ 
-	"extra rules for DropPlugin "
+SqueakWin32x86Config >> configureByTemplateDropPlugin:  aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqWin32Drop.c')).
 
-	super configureDropPlugin:  maker.
-	
-	maker addPlatformSources: #( 'sqWin32Drop')
 
 
 
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureFT2Plugin: maker [
-	"extra rules for Freetype plugin.
-	a custom rule to build freetype library"
+SqueakWin32x86Config >> configureByTemplateFT2Plugin: aMaker [
 	| lib |
-	
-"	maker isExternal ifFalse: [
-		self error: 'building internal FT2Plugin is not supported yet'  	
-	].
-"
-	"add freetype library into loop"
+	self flag:'tty'. "is internalFT2 still not supported?"
+	aMaker isExternal ifFalse: [self error: 'building internal FT2Plugin is not supported yet' ]. 	
+	self flag:'tty'. "I haven't been down the addThirdpartyLibrary rabbit hole yet"
 	lib := self addThirdpartyLibrary: 'freetype2'.
+	aMaker templates   	"link plugin with freetype lib"
+		addLast:((CMakeListAppend new) list:'LINKLIBS' elements: (OrderedCollection with:  (lib targetForLinking)));
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: lib includeDir)).
+]
 
-	"link plugin with freetype lib"
-	maker addExternalLibrary: lib targetForLinking.
-	maker includeDirectories: lib includeDir.
+{ #category : #'plugin extra rules' }
+SqueakWin32x86Config >> configureByTemplateFilePlugin: aMaker [ 
+
+	super configureByTemplateFilePlugin: aMaker.
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqWin32FilePrims.c'))
+	
 
 
 ]
 
 { #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureFilePlugin: maker [ 
-	
-	super configureFilePlugin: maker.
-	
-	maker addPlatformSources:
-		#( 'sqWin32FilePrims.c')
+SqueakWin32x86Config >> configureByTemplateHostWindowPlugin:    aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqWin32HostWindowPlugin.c'))
 
 
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakWin32x86Config >> configureByTemplateJoystickTabletPlugin:  aMaker [ 
+
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqWin32Joystick.c'))
+	
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakWin32x86Config >> configureByTemplateLocalePlugin: aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqWin32Locale.c'))
+	
+
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakWin32x86Config >> configureByTemplateMIDIPlugin:  aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqWin32MIDI.c'))
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakWin32x86Config >> configureByTemplateMpeg3Plugin:  aMaker [ 
+
+	super configureByTemplateMpeg3Plugin:  aMaker.
+	aMaker templates 
+		addLast:((CMakeAddDefinitions new) definitions: (OrderedCollection with:  '-DNOPTHREADS'));
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqOpenFile.c'))	
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakWin32x86Config >> configureByTemplateSecurityPlugin: aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqWin32Security.c'))	
+
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakWin32x86Config >> configureByTemplateSerialPlugin:  aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqWin32SerialPort.c'))	
+
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakWin32x86Config >> configureByTemplateSocketPlugin:  aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqWin32NewNet.c'))	
+
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakWin32x86Config >> configureByTemplateSoundPlugin: aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqWin32Sound.c'))
+	
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakWin32x86Config >> configureByTemplateSqueakSSLPlugin: aMaker [
+	| lib |
+	self flag:'tty'. "expect transposing mistakes here. see pharo CPlatformConfig configureSSLPlugin for originial code"
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixOpenSSL.c')).
+	lib := self addThirdpartyLibrary: 'openssl'.  "is this order important? probably not."
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: lib includeDir));
+		addLast:((CMakeLinkDirectories new) directories: (OrderedCollection with: '${outputDir}'));
+		addLast:((CMakeListAppend new) list:'LINKLIBS' elements: (OrderedCollection with: 'libeay32.dll' with: 'ssleay32.dll'));
+		addLast:((CMakeListAppend new) 
+					list: self moduleName , '_dependencies'
+					 elements: (OrderedCollection with: lib buildTarget)).
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakWin32x86Config >> configureByTemplateUUIDPlugin: aMaker [ 
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqWin32UUID.c'))	
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakWin32x86Config >> configureByTemplateWin32OSProcessPlugin: aMaker [ 
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) 
+				dirs: (OrderedCollection 
+						with:'${crossDir}/plugins/FilePlugin' 
+						with: '${crossDir}/plugins/SocketPlugin'))
 
 ]
 
 { #category : #cmake }
 SqueakWin32x86Config >> configureForNoBuildType [
 		generateBuild:=generateBuildAssert:=generateBuildAssertITimerHeartbeat:=generateBuildDebug:=generateBuildDebugITimerHeartbeat:= generateBuildDebugMultiThreaded:= generateBuildIHeartbeatTimer:= generateBuildMultiThreaded:= generateBuildMultiThreadedAssert:= generateBuildMultiThreadedDebug:=false.
-]
-
-{ #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureHostWindowPlugin:    maker [ 
-	"extra rules for HostWindowPlugin "
-
-	super configureHostWindowPlugin:  maker.
-	
-	maker addPlatformSources: #( 'sqWin32HostWindowPlugin.c')
-
-
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureJoystickTabletPlugin:  maker [ 
-	
-	super configureJoystickTabletPlugin:  maker.
-	
-	maker addPlatformSources:
-		#( 'sqWin32Joystick.c')
-
-
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureLocalePlugin:   maker [ 
-	"extra rules for LocalePlugin "
-
-	super configureLocalePlugin:  maker.
-	
-	maker addPlatformSources: #( 'sqWin32Locale.c')
-
-
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureMIDIPlugin:  maker [ 
-	"extra rules for MIDIPlugin "
-
-	super configureMIDIPlugin:  maker.
-	
-	maker addPlatformSources: #( 'sqWin32MIDI.c')
-
-
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureMpeg3Plugin:  maker [ 
-	"extra rules for Mpeg3Plugin "
-
-	super configureMpeg3Plugin:  maker.
-	
-	maker addDefinitions: '-DNOPTHREADS'.
-
-	maker addPlatformSources: #( 'sqOpenFile.c')
-]
-
-{ #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureSecurityPlugin: maker [ 
-	"extra rules for SecurityPlugin"
-
-	super configureSecurityPlugin: maker.
-	
-	maker addPlatformSources: #( 'sqWin32Security')
-
-
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureSerialPlugin:     maker [ 
-	"extra rules for SerialPlugin "
-
-	super configureSerialPlugin:  maker.
-	
-	maker addPlatformSources: #( 'sqWin32SerialPort.c')
-
-
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureSocketPlugin:  maker [ 
-	"extra rules for SocketPlugin "
-
-	super configureSocketPlugin:  maker.
-	
-	maker addPlatformSources: #( 'sqWin32NewNet.c')
-
-
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureSoundPlugin: maker [ 
-	"extra rules for SoundPlugin"
-	
-	maker addPlatformSources: #( 'sqWin32Sound' )
-]
-
-{ #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureSqueakSSLPlugin: maker [
-	| lib |
-	maker addPlatformSources: #('sqUnixOpenSSL.c').
-	
-	lib := self addThirdpartyLibrary: 'openssl'.
-
-	maker includeDirectories: lib includeDir.
-	maker linkDirectories: '${outputDir}'.
-	
-	maker addExternalLibraries: 
-		#( 
-			'libeay32.dll' 
-			'ssleay32.dll'
-		).
-		
-	maker addDependency: lib buildTarget
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureUUIDPlugin: maker [ 
-	"extra rules for UUIDPlugin"
-	
-	maker addPlatformSources:
-		#( 'sqWin32UUID.c')
-
-
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakWin32x86Config >> configureWin32OSProcessPlugin: maker [ 
-	"extra rules for Win32OSProcessPlugin"
-
-	maker includeDirectories: '${crossDir}/plugins/FilePlugin'.
-	maker includeDirectories: '${crossDir}/plugins/SocketPlugin'.
-
 ]
 
 { #category : #'cmake buildType redirects' }
