@@ -40,6 +40,7 @@ Class {
 
 { #category : #accessing }
 CMakeAddDefinitions >> definitions [
+	self flag:'tty'. "see CMakeListAppend>>elements for inject method to use If I have doublequotes are needed. "
 	^ String streamContents: [:stream | definitions asStringOn: stream delimiter: ' ' ]
 
 ]

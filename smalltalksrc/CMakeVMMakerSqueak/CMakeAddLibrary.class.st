@@ -70,6 +70,7 @@ CMakeAddLibrary >> list: aString elements: anObject [
 
 { #category : #accessing }
 CMakeAddLibrary >> sources [
+	self flag:'tty'. "see CMakeListAppend>>elements for inject method to use If I have doublequotes are needed. "
 	^ String streamContents: [:stream | sources asStringOn: stream delimiter: ' ' ]
 
 ]
