@@ -82,6 +82,7 @@ CMakeAddCustomCommandOutput >> append [
 
 { #category : #accessing }
 CMakeAddCustomCommandOutput >> commandsandargs [
+	self flag:'tty'. "see CMakeListAppend>>elements for inject method to use If I have doublequotes are needed. "
  	^ String streamContents: [:stream | commandsandargs asStringOn: stream delimiter: ' ' ]
 ]
 

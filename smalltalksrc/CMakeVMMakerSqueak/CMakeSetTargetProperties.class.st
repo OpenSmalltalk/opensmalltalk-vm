@@ -122,6 +122,7 @@ CMakeSetTargetProperties >> initialize [
 
 { #category : #accessing }
 CMakeSetTargetProperties >> propertiesandvalues [
+	self flag:'tty'. "see CMakeListAppend>>elements for inject method to use If I have doublequotes are needed. "
  	^ String streamContents: [:stream | propertiesandvalues asStringOn: stream delimiter: ' ' ]
 ]
 

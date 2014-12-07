@@ -77,8 +77,22 @@ Class {
 
 { #category : #accessing }
 CMakeListAppend >> elements [
-	^ String streamContents: [:stream | elements asStringOn: stream delimiter: ' ' ]
+	| e |
+	self flag:'tty'.  "see Note 1 below"
+	e := elements inject: '' into: [:res :each | res , ' "' , each, '"' ].  "quote each element"
+	^ e
 
+
+"
+This breaks my convention in other Templates of using 
+
+^ String streamContents: [:stream | dirs asStringOn: stream delimiter: ' ' ].  
+
+This bears watching.
+
+
+
+"
 ]
 
 { #category : #'initialize-release' }
@@ -98,6 +112,6 @@ CMakeListAppend >> list [
 CMakeListAppend >> list: aString elements: anObject [
 	list:=aString.
 	elements := anObject.
-	self content:'  list( APPEND ', list, ' "' , self elements,  '")'
+	self content:'  list( APPEND ', list, ' ' , self elements,  ')'
 	
 ]
