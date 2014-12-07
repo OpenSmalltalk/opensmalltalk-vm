@@ -76,15 +76,27 @@ SqueakMacintoshConfig >> compilerFlags [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakMacintoshConfig >> configureB3DAcceleratorPlugin: maker [
-	"extra rules for B3DAcceleratorPlugin"
-	
-	super configureB3DAcceleratorPlugin: maker.  
-	
-	maker 
-		includeDirectories: '/usr/X11/include';  "for GL.h"
-		addPlatformSources: #( 'sqMacOpenGL.c' 'sqMacOpenGLInfo.c')
+SqueakMacintoshConfig >> configureByTemplateB3DAcceleratorPlugin: aMaker [
+	self flag:'tty'.  "check portability issue"
+	super configureByTemplateB3DAcceleratorPlugin: aMaker.  
+	aMaker templates 
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with:  '/usr/X11/include'));  "<--not portable. for GL.h"
+		addLast:((CMakeListAppend new) 
+				list:'sources' 
+				elements: (OrderedCollection 
+					with: '${pluginPlatform}/sqMacOpenGL.c'
+					with: '${pluginPlatform}/sqMacOpenGLInfo.c'))
 
+
+]
+
+{ #category : #'plugin extra rules' }
+SqueakMacintoshConfig >> configureByTemplateClipboardExtendedPlugin: aMaker [
+	aMaker templates 
+		addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqMacExtendedClipboard.c'))
+	
+
+	
 ]
 
 { #category : #'plugin extra rules' }

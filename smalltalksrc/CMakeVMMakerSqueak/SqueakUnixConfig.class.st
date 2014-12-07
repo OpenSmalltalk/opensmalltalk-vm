@@ -754,29 +754,6 @@ SqueakUnixConfig >> configsqUnixCharConv [
 ]
 
 { #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureAsynchFilePlugin: maker [
-
-	maker addPlatformSources:
-	#( 
-		'sqUnixAsynchFile.c'
-	)
-
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureB3DAcceleratorPlugin: maker [
-	"extra rules for B3DAcceleratorPlugin"
-	
-	super configureB3DAcceleratorPlugin: maker.
-	
-	maker 
-		addPlatformSources: #( 'sqUnixOpenGL.c' ) 
-		
-
-]
-
-{ #category : #'plugin extra rules' }
 SqueakUnixConfig >> configureByTemplateAsynchFilePlugin: aMaker [
 	aMaker templates addLast:((CMakeListAppend new) list:'sources' elements: (OrderedCollection with: '${pluginPlatform}/sqUnixAsynchFile.c'))
 
@@ -927,155 +904,11 @@ SqueakUnixConfig >> configureByTemplateUnixOSProcessPlugin: aMaker [
 
 ]
 
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureDropPlugin: maker [
-	"extra rules for DropPlugin"
-	super configureDropPlugin: maker.  
-	maker includeDirectories: '${crossDir}/plugins/FilePlugin'. 
-	maker addPlatformSources: #( 'sqUnixDragDrop')
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureFT2Plugin: maker [ 
-
-	"extra rules for FT2Plugin" 
-	
-	maker addExternalLibraries: #('freetype' ).
-	
-	"
-	ft2build.h. says: 
-	<prefix>/include/freetype2' must be in your current inclusion path "
-	self flag:'tty'. "is this generic?"
-	maker includeDirectories:  '/usr/include/freetype2'
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureFileCopyPlugin: maker [
-	"extra rules for DropPlugin"
-
-	maker addPlatformSources: #( 'sqUnixFileCopyPlugin')
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureFilePlugin: maker [
-	"extra rules for FilePlugin"
-
-	super configureFilePlugin: maker.  
-	
-	maker addPlatformSources: #( 'sqUnixFile')
-]
-
 { #category : #'cmake configuration' }
 SqueakUnixConfig >> configureForBuildType: aSymbol [
 	"Set my internal state appropriate for my build type".
 	self configureNoBuildType.                "reset all internal flags"
 	buildType:= aSymbol.                       "error checking was handled previously"
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureInternetConfigPlugin: maker [
-	super configureInternetConfigPlugin: maker.
-	maker addPlatformSources: #( 'sqUnixInternetConfiguration' )
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureJoystickTabletPlugin: maker [ 
-	"extra rules for JoystickTabletPlugin"
-	
-	super configureJoystickTabletPlugin: maker.  
-	maker addPlatformSources:
-		#( 'sqUnixJoystickTablet' )
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureLocalePlugin: maker [ 
-	"extra rules for LocalePlugin"
-
-	super configureLocalePlugin:  maker.
-	
-	maker addPlatformSources: #( 'sqUnixLocale.c')
-	
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureMIDIPlugin: maker [ 
-	"extra rules for MIDIPlugin"
-
-	super configureMIDIPlugin: maker.  
-
-	"requires ALSA"
-
-	maker addPlatformSources: #( 'sqUnixMIDI')
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureSecurityPlugin: maker [ 
-	"extra rules for MIDIPlugin"
-
-	super configureSecurityPlugin: maker.
-	
-	maker addPlatformSources: #( 'sqUnixSecurity')
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureSerialPlugin: maker [ 
-	"extra rules for SerialPlugin"
-	
-	maker addPlatformSources: #( 'sqUnixSerial')
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureSocketPlugin: maker [ 
-	"extra rules for SocketPlugin"
-	
-	maker addPlatformSources: #( 'sqUnixSocket')
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureSoundPlugin: maker [ 
-	"extra rules for SoundPlugin"
-	
-	maker addPlatformSources: #( 'sqUnixSound').
-	maker addExternalLibraries: #( 'asound' )
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureSqueakSSLPlugin: maker [ 
-	"extra rules for SqueakSSLPlugin"
-	
-	maker addPlatformSources: #( 'sqUnixOpenSSL.c').
-	
-	maker addExternalLibraries: #('ssl' ).
-	
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureUUIDPlugin: maker [ 
-	"extra rules for UUIDPlugin"
-
-	super configureUUIDPlugin: maker.    
-	
-	maker includeDirectories: '/usr/include/uuid'.
-	
-	maker addPlatformSources:
-		#( 'sqUnixUUID.c')
-
-
-
-]
-
-{ #category : #'plugin extra rules' }
-SqueakUnixConfig >> configureUnixOSProcessPlugin: maker [ 
-	"extra rules for UnixOSProcessPlugin"
-
-	maker includeDirectories: '${crossDir}/plugins/FilePlugin'.
-	maker includeDirectories: '${crossDir}/plugins/SocketPlugin'.
-	
-	maker addDefinitions: '-DSQAIO_H=\"sqaio.h\"'
 
 ]
 
