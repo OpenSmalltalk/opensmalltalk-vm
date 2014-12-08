@@ -1,12 +1,20 @@
 "
-A slightly modified configuration, which avoids linking with openGL libraries.
+I am a configuration for 64 bit Linux with 32 Bit compatability libraries.
+I have been tested with Slackware64 14.1 which uses /usr/lib for 32 bit compatability  libs and /usr/lib64 for normal libs.
+
+If you have a machine which uses /usr/lib for 64 bit libs and /usr/lib32 for 32 bit compat libs then subclass me and modify (at least) the following methods:
+
+compilerFlags
+externalLibraries
+linkFlagsBuild
+linkerFlags
+
 
 SqueakLinux64x86w32CompatBuilder 
-	configureABuildFor: #Linux32x86SqueakCogV3NoGLConfig withBuildType: #build;
-	generateSources;
-	generate.  
+	configureABuildFor: #Linux64x86w32BitSqueakCogV3Config withBuildType: #build;
+	enableMessageTracking: true;
+	generateByTemplate.
 
-HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
 HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 

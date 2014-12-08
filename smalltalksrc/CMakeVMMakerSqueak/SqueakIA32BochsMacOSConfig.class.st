@@ -2,11 +2,10 @@
 I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
 SqueakIA32BochsBuilder 
-	configureABuildFor: #MY NAME HERE withBuildType: #build;
-	generateSources;
-	generate.  
+	configureABuildFor: SqueakIA32BochsMacOSConfig withBuildType: #build;
+	enableMessageTracking: true;
+	generateByTemplate.
 
-HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
 HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 

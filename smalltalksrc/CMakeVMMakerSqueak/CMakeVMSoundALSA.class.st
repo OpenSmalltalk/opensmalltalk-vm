@@ -1,3 +1,6 @@
+"
+A CMakeVMSoundALSA is a data-bucket that holds configration information
+"
 Class {
 	#name : #CMakeVMSoundALSA,
 	#superclass : #CMakeVMPlugin,

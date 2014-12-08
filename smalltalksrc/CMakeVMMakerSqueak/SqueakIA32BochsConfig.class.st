@@ -1,6 +1,9 @@
 "
 N.B. I honestly have no idea how to use this. tty (:
 
+SqueakIA32BochsConfig is an Abstract base class that provides common information for my subclasses.
+I am not meant to be built.
+
 I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
 
@@ -8,10 +11,9 @@ I am not meant to be built.
 
 SqueakIA32BochsBuilder 
 	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
-	generateSources;
-	generate.  
+	enableMessageTracking: true;
+	generateByTemplate.
 
-HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
 HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 

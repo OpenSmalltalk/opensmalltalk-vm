@@ -1,5 +1,5 @@
 "
-A CMakeCheckTypeSizeTemplate looks like this:
+A CMakeCheckTypeSize looks like this:
 
   CHECK_TYPE_SIZE (int SIZEOF_INT)
   CHECK_TYPE_SIZE (long SIZEOF_LONG)

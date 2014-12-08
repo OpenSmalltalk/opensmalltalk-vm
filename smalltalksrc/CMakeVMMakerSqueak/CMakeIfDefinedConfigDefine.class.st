@@ -11,7 +11,7 @@ Class {
 	#instVars : [
 		'variable'
 	],
-	#category : #'CMakeVMMakerSqueak-CMakeTemplates'
+	#category : #'CMakeVMMakerSqueak-CMakeCustomTemplates'
 }
 
 { #category : #'initialize-release' }

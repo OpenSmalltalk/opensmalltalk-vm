@@ -1,3 +1,6 @@
+"
+A CMakeVMDisplayNull is a data-bucket that holds configration information
+"
 Class {
 	#name : #CMakeVMDisplayNull,
 	#superclass : #CMakeVMPlugin,

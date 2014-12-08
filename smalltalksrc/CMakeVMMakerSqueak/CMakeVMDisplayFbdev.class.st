@@ -1,3 +1,6 @@
+"
+A CMakeVMDisplayFbdev  is a data-bucket that holds configration information
+"
 Class {
 	#name : #CMakeVMDisplayFbdev,
 	#superclass : #CMakeVMPlugin,

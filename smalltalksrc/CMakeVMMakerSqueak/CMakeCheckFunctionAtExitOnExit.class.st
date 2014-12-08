@@ -1,5 +1,5 @@
 "
-A CMakeCheckFunctionAtExitOnExitTemplate is a hack that needs to be refactored. It looks like this
+A CMakeCheckFunctionAtExitOnExit It looks like this
 
   CHECK_FUNCTION_EXISTS (atexit           HAVE_ATEXIT)
   CHECK_FUNCTION_EXISTS (on_exit          HAVE_ON_EXIT)

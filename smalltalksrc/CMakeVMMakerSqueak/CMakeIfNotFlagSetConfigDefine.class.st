@@ -15,7 +15,7 @@ Class {
 		'variable',
 		'flag'
 	],
-	#category : #'CMakeVMMakerSqueak-CMakeTemplates'
+	#category : #'CMakeVMMakerSqueak-CMakeCustomTemplates'
 }
 
 { #category : #accessing }

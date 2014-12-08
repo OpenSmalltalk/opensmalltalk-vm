@@ -1,3 +1,6 @@
+"
+A CMakeVMSoundNAS is a data-bucket that holds configration information
+"
 Class {
 	#name : #CMakeVMSoundNAS,
 	#superclass : #CMakeVMPlugin,

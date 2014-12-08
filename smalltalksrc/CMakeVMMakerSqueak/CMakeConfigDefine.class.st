@@ -1,5 +1,5 @@
 "
-A CMakeSetTemplate 's contents look like
+A CMakeConfigDefine 's contents look like
 
 
 	CONFIG_DEFINE (SQ_VERSION)
@@ -22,7 +22,7 @@ Class {
 		'variable',
 		'value'
 	],
-	#category : #'CMakeVMMakerSqueak-CMakeTemplates'
+	#category : #'CMakeVMMakerSqueak-CMakeCustomTemplates'
 }
 
 { #category : #'initialize-release' }

@@ -1,3 +1,6 @@
+"
+A CMakeVMSoundSun is a data-bucket that holds configration information
+"
 Class {
 	#name : #CMakeVMSoundSun,
 	#superclass : #CMakeVMPlugin,

@@ -47,6 +47,8 @@ Tests make the decision on what configurations to test. Here are some examples.
 	(o excludeFromBuild not) & (configuration isAbstractBaseClass)       Not allowed. [OS][VMWordSize][Processor] AbstractBaseClasses should not be built. This is a useful test in its own right.
 	(o excludeFromBuild) & (configuration isAbstractBaseClass)             These are the AbstractBaseClasses. An AbstractBaseClass should always be excluded from a build
 
+
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 tty.
 "
 Class {
@@ -3015,6 +3017,7 @@ CPlatformConfigForSqueak >> linkFlagsNoBuildType [
 
 { #category : #compiling }
 CPlatformConfigForSqueak >> linkerFlags [
+	self flag:'tty'. "Does this need to be ported to the redirect design pattern with linkerFlagsBuild, linkerFlagsDebug etc?"
 	"-Wl -z now define these in your concrete CPlatformConfigForSqueak and feed them to cmakeSharedLinkerFlags"
 	self	subclassResponsibility
 ]

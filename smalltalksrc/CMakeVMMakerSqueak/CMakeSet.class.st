@@ -1,5 +1,7 @@
 "
-A CMakeSetTemplate 's contents look like SET(foo ""bar"")
+A CMakeSet 's contents look like 
+
+SET(foo ""bar"")
 
 "
 Class {
