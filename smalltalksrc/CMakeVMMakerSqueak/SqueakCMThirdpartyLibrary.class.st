@@ -48,6 +48,7 @@ SqueakCMThirdpartyLibrary class >> supports: aConfig [
 SqueakCMThirdpartyLibrary >> generateFor: aVMGenerator [
 
 	| libDir stream contents |
+	self flag:'tty'. "This l must be transformed to generateByTemplateFor: and the output converted to CMakeTemplates"
 	self break.
 	vmGen := aVMGenerator.
 	
