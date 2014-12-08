@@ -1669,7 +1669,7 @@ CPlatformConfigForSqueak >> configureByTemplateMpeg3Plugin: aMaker [
 
 { #category : #'source generation' }
 CPlatformConfigForSqueak >> configureByTemplatePlugin: aPlugin with: generator [
-	"by-pass the pharo's CPlatformConf>>configurePlugin: with: so that I can use templates"
+
 	^ self perform: ( 'configureByTemplate' , aPlugin name , ':' ) asSymbol with: generator.
 	
 ]
@@ -2557,22 +2557,6 @@ CPlatformConfigForSqueak >> frameworksBuildMultiThreadedDebug [
 	^self frameworksBuild
 
 
-]
-
-{ #category : #'source generation' }
-CPlatformConfigForSqueak >> generate [
-	self 
-		generatePluginsList;
-		generateLicense;
-		generateUtilsCmake;
-		generatePluginsCmake;
-		generateVmBuildCmake;
-		generateVmConfigCmake;
-		generateVmConfigIn;
-		generateTestDoubleWordAlignmentC;
-		generateTestDoubleWordOrderC;
-		generateTestLanginfoCodesetC.
-	^ CMakeVMGeneratorForSqueak generate: self 
 ]
 
 { #category : #'source generation' }

@@ -99,12 +99,6 @@ SqueakCMakeVMMakerAbstractBuilder class >> enableMessageTracking: aBoolean [
 ]
 
 { #category : #building }
-SqueakCMakeVMMakerAbstractBuilder class >> generate [
-	default ifNil:[default:= self new].
-	^default  generate
-]
-
-{ #category : #building }
 SqueakCMakeVMMakerAbstractBuilder class >> generateByTemplate [
 	default ifNil:[default:= self new].
 	^default  generateByTemplate
@@ -290,13 +284,6 @@ SqueakCMakeVMMakerAbstractBuilder >> enableMessageTracking: aBoolean [
 ]
 
 { #category : #building }
-SqueakCMakeVMMakerAbstractBuilder >> generate [
-	(config isKindOf: CPlatformConfig)
-		ifTrue:[config generate]
-		
-]
-
-{ #category : #building }
 SqueakCMakeVMMakerAbstractBuilder >> generateByTemplate [
 	(config isKindOf: CPlatformConfig)
 		ifTrue:[config generateByTemplate]
@@ -305,6 +292,8 @@ SqueakCMakeVMMakerAbstractBuilder >> generateByTemplate [
 
 { #category : #building }
 SqueakCMakeVMMakerAbstractBuilder >> generateSources [
+	self flag: 'tty'. "This used to work, but it looks like CPlaformConfig>>generateSources breaks at 'maker cogitClass: cg'"
+	self error:'Pharo CPlatformConfig is broken. Will fix later'.
 	(config isKindOf: CPlatformConfig)
 		ifTrue:[config generateSources]
 		
