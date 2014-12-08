@@ -1,5 +1,5 @@
 "
-A CMakeCheckTypeSizeTemplate looks like this:
+A CMakeCheckTryRunDoubleWordAlignmentOrder  looks like this:
 
 
         TRY_RUN (DOUBLE_WORD_ALIGNMENT tmp ${CMAKE_BINARY_DIR}  ${CMAKE_BINARY_DIR}/testDoubleWordAlignment.c)

@@ -1,3 +1,6 @@
+"
+A CMakeVMSoundNull is a data-bucket that holds configration information
+"
 Class {
 	#name : #CMakeVMSoundNull,
 	#superclass : #CMakeVMPlugin,

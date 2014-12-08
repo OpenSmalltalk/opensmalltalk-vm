@@ -1,3 +1,12 @@
+"
+A SqueakMacintoshConfig is a top level configuration for Mac configuratons.
+My immediate sub-classes are Abstract Base classes for specific Mac variants.
+The sub-classes of my Abstract Base Classes are concrete configurations of the form
+[Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+I am not meant to be built.
+
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+"
 Class {
 	#name : #SqueakMacintoshConfig,
 	#superclass : #CPlatformConfigForSqueak,

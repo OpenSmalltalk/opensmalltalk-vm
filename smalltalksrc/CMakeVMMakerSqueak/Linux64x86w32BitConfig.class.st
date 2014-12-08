@@ -1,14 +1,16 @@
 "
-I provide base class functionality.
-
+A Linux64x86w32BitConfig is an Abstract base class that provides common information for my subclasses.
 I am not meant to be built.
+
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
 SqueakLinux64x86w32CompatBuilder 
 	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
-	generateSources;
-	generate.  
+	enableMessageTracking: true;
+	generateByTemplate.
 
-HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+
+
 HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 

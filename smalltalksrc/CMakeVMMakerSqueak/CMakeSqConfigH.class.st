@@ -7,6 +7,10 @@ IF (NOT DEFINED __sq_config_h)
 
 ENDIF (NOT DEFINED __sq_config_h)
 
+View me with: 
+Transcript show: ((Linux64x86w32BitSqueakCogV3Config new) configureForBuildType: #build) contentForVmConfigCmake
+
+
 "
 Class {
 	#name : #CMakeSqConfigH,
