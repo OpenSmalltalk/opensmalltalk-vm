@@ -15,13 +15,6 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-CMakeVMGeneratorForSqueak class >> generate: aConfigOrClass [  
-	^self new 
-		generate: aConfigOrClass;
-		yourself  
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMGeneratorForSqueak class >> generateByTemplate: aConfigOrClass [  
 	^self new 
 		generateByTemplate: aConfigOrClass;
@@ -53,57 +46,6 @@ CMakeVMGeneratorForSqueak >> config: aCPlatformConfigForSqueak [
 { #category : #'as yet unclassified' }
 CMakeVMGeneratorForSqueak >> configurationName [
 	^ config class name
-]
-
-{ #category : #'code generation' }
-CMakeVMGeneratorForSqueak >> generate [
-	| intPlugins extPlugins |
-	output := String new writeStream.
-	config setGlobalOptions: self.
-
-	self 
-		printHeader;
-		project: config executableName.
-
-	config setGlobalOptionsAfterDetermineSystem: self.
-"I NEED COMPILER FLAGS, DEFINITIONS, LINKS, INCLUDES HERE"
-	config setupDirectories: self.
-
-	self message: '${CMAKE_MODULE_PATH}'.
-	self set: 'CMAKE_CONFIGURATION_TYPES' to: 'Release'.
-
-	config preferredIncludes 	do: [ :each | self includeDirectories: each ].
-	self includeDirectories: self includeDirs.	
-	config standardIncludes 	do: [:each | self includeDirectories: each ].
-
-	self addDefinitions: config compilerFlags. "<--- this needs to be definitions, not compiler flags"
-
-	config extraVMSettings: self.
-
-	self puts: 'add_executable(' , config executableName, ' ', config executableType, ' ' , self sources , ')'.
-	intPlugins := self generatePluginConfigs: config internalPlugins internal: true.
-	extPlugins := self generatePluginConfigs: config externalPlugins internal: false.
-
-	self processThirdpartyLibraries.
-
-	self processPlugins:  intPlugins, extPlugins.
-
-	config setExtraTargetProperties: self.
-
-	self cmd: 'target_link_libraries'
-		params: self moduleName , ' ${LINKLIBS}'.
-
-	config postBuildActions: self.
-
-	self saveFile.
-	self generateBuildScript.
-]
-
-{ #category : #'as yet unclassified' }
-CMakeVMGeneratorForSqueak >> generate: aConfigOrClass [
-	
-	config := aConfigOrClass isBehavior ifTrue: [ aConfigOrClass new ] ifFalse: [aConfigOrClass].
-	^ self generate
 ]
 
 { #category : #'as yet unclassified' }
@@ -233,7 +175,6 @@ CMakeVMGeneratorForSqueak >> processPlugins: pluginGenerators [
 	| libs libDeps |
 	libs := OrderedCollection new.
 	libDeps := Dictionary new.
-self break.
 	pluginGenerators do: [:gen |
 		gen doNotGenerate ifFalse: [
 			self  puts: (gen configDotCMake at: (gen plugin name) ifAbsent:[gen configDotCmakeEmpty]). 
@@ -266,7 +207,7 @@ self break.
 
 { #category : #'as yet unclassified' }
 CMakeVMGeneratorForSqueak >> processThirdpartyLibraries [
-
+	self flag:'tty'. "This generate call must be transformed to generateByTemplateFor:"
 	config thirdpartyLibs do: [:each | 
 		each generateFor: self ]
 
