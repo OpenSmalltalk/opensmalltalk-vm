@@ -1,18 +1,16 @@
 "
-tty. Don't use me until I am refactored for this platform
+N.B. Don't use me until I am refactored for this platform. tty does not own a Mac.
 
-I am not sure what this does yet. I have put this here to keep a consistent pattern of top level configuration per platform.
-I need to be configured for the job I am advertised to do.
-
-
+SqueakMacOSX32x86Config is an Abstract base class that provides common information for my subclasses.
 I am not meant to be built.
+
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
 SqueakMacOSX32x86Builder 
 	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
-	generateSources;
-	generate.  
+	enableMessageTracking: true;
+	generateByTemplate.
 
-HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
 HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {

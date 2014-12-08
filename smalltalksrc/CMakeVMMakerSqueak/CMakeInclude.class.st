@@ -1,5 +1,7 @@
 "
-A CMakeSetTemplate 's contents look like INCLUDE(fileName)
+A CMakeInclude looks like 
+
+INCLUDE(fileName)
 
 "
 Class {

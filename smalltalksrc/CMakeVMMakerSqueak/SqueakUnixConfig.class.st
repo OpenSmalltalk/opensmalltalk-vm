@@ -1,5 +1,12 @@
 "
 A SqueakUnixConfig is a top level configuration for *nix configuratons.
+My immediate sub-classes are Abstract Base classes for specific *nix variants.
+The sub-classes of my Abstract Base Classes are concrete configurations of the form
+[Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+I am not meant to be built.
+
+
+HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 "
 Class {
@@ -914,6 +921,12 @@ SqueakUnixConfig >> configureForBuildType: aSymbol [
 
 { #category : #'cmake configuration' }
 SqueakUnixConfig >> contentForVmConfigCmake [
+"I am a convenience method for developers who are modifying the templates for generateVMConfigCmake method.
+
+Transcript clear.
+Transcript show: ((Linux64x86w32BitSqueakCogV3Config new) configureForBuildType: #build) contentForVmConfigCmake
+((Linux64x86w32BitSqueakCogV3Config new) configureForBuildType: #build) contentForVmConfigCmake   
+"
 	|template |
 	template:= CMakeSqConfigH new.
 	template templates: self configIanPiumartasTemplates.

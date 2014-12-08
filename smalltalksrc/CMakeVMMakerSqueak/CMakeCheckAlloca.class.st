@@ -1,5 +1,5 @@
 "
-A CMakeCheckAllocaTemplate is a hack that looks like this:
+A CMakeCheckAlloca looks like this:
 
 
         CHECK_INCLUDE_FILE (alloca.h HAVE_ALLOCA_H)

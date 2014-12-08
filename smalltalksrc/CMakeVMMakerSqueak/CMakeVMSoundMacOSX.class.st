@@ -1,3 +1,6 @@
+"
+A CMakeVMSoundMacOSX is a data-bucket that holds configration information
+"
 Class {
 	#name : #CMakeVMSoundMacOSX,
 	#superclass : #CMakeVMPlugin,

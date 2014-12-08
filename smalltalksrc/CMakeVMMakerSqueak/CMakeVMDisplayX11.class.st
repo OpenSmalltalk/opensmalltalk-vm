@@ -1,3 +1,6 @@
+"
+A CMakeVMDisplayX11 is a data-bucket that holds configration information
+"
 Class {
 	#name : #CMakeVMDisplayX11,
 	#superclass : #CMakeVMPlugin,

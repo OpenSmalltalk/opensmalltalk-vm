@@ -1,4 +1,6 @@
 "
+N.B. I am not used. I am kept for reference should we re-do the plugin configurations during a re-factoring.
+
 A CMakePluginExternal is what Ian Piumarta wrote in trunk/platforms/unix/cmake/PlatformExternal.cmake. 
 
 I .look like this in the original:

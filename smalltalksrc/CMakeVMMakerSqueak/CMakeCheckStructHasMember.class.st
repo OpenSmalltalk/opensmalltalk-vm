@@ -1,5 +1,5 @@
 "
-A CMakeCheckStructHasMemberTemplate looks like this:
+A CMakeCheckStructHasMember looks like this:
 
 	CHECK_STRUCT_HAS_MEMBER (""struct tm"" tm_gmtoff time.h HAVE_TM_GMTOFF)
 	CONFIG_DEFINE(HAVE_TM_GMTOFF)

@@ -1,5 +1,5 @@
 "
-A CMakeTestBigEndianTemplate looks like this:
+A CMakeTestBigEndian looks like this:
 
         TEST_BIG_ENDIAN (WORDS_BIGENDIAN)
         IF (WORDS_BIGENDIAN)

@@ -1,5 +1,5 @@
 "
-A CMakeCheckTryCompileHaveLangInfoCodesetTemplate looks like this.
+A CMakeCheckTryCompileHaveLangInfoCodeset  looks like this.
 
         IF (HAVE_LANGINFO_H)
          TRY_COMPILE (HAVE_LANGINFO_CODESET ${CMAKE_BINARY_DIR}  ${CMAKE_BINARY_DIR}/testLanginfoCodeset.c)

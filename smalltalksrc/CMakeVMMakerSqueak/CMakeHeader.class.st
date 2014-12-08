@@ -1,5 +1,5 @@
 "
-A CMakeHeader is looks something like this:.
+A CMakeHeader looks something like this:.
 	# This is automatically generated file using Linux64x86w32BitSqueakCogV3Config on 14 July 2014 1:33:18.378 pm
 
 

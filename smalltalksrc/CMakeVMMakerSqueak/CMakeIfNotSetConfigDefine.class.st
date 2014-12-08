@@ -1,10 +1,10 @@
 "
-A CMakeHeaderFilesTemplate looks something like this:
+A CMakeIfNotSetConfigDefine looks something like this:
 
-  	IF (NOT without-SUGAR)
- 	 SET (SUGAR 1)
-	ENDIF ()
-	CONFIG_DEFINE (SUGAR)
+ IF(NOT ', variable ,')
+	SET (',variable,' 1)
+  ENDIF(', variable ,')
+ CONFIG_DEFINE(', variable,')'
 
 "
 Class {
@@ -13,7 +13,7 @@ Class {
 	#instVars : [
 		'variable'
 	],
-	#category : #'CMakeVMMakerSqueak-CMakeTemplates'
+	#category : #'CMakeVMMakerSqueak-CMakeCustomTemplates'
 }
 
 { #category : #'initialize-release' }

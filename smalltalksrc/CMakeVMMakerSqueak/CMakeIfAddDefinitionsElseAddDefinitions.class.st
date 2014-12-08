@@ -18,7 +18,7 @@ Class {
 		'ifdefinitions',
 		'elsedefinitions'
 	],
-	#category : #'CMakeVMMakerSqueak-CMakeTemplates'
+	#category : #'CMakeVMMakerSqueak-CMakeCustomTemplates'
 }
 
 { #category : #accessing }

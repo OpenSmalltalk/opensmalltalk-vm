@@ -1,5 +1,5 @@
 "
-A CMakeSetTemplate 's contents look like 
+A CMakeSetConfigDefine 's contents look like 
 
 	SET (VM_X11DIR \""${X11_LIBRARY_DIR}\"")
 	CONFIG_DEFINE (VM_X11DIR)
@@ -11,7 +11,7 @@ Class {
 		'variable',
 		'value'
 	],
-	#category : #'CMakeVMMakerSqueak-CMakeTemplates'
+	#category : #'CMakeVMMakerSqueak-CMakeCustomTemplates'
 }
 
 { #category : #'initialize-release' }

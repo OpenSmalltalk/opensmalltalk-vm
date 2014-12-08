@@ -1,5 +1,5 @@
 "
-A CMakeCompilerIsGNUCCTemplate is 
+A CMakeCompilerIsGNUCC looks like this
 
         IF (CMAKE_COMPILER_IS_GNUCC)
           SET (interp gnu-interp)

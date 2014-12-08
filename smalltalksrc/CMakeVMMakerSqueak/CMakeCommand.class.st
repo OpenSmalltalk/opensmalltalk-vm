@@ -1,17 +1,8 @@
 "
-A CMakeSetTemplate 's contents look like
+A CMakeCommand  is a generic template for implementing cmake commands if one doesn't exist and you are too lazy to write a template (:
+cmake --help-command-list
 
 
-	CONFIG_DEFINE (SQ_VERSION)
-
-
-CONFIG_DEFINE is a Macro Ian Piumarta wrote that looks like this:
-
-MACRO (CONFIG_DEFINE var)
-  LIST (APPEND config_vars ""${var}"")
-ENDMACRO (CONFIG_DEFINE var)
-
-You can see it in CPlatformConfigForSqueak class utilsCMake
 
 
 "

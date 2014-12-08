@@ -3,7 +3,8 @@ I encapsulate the simplest version of the CMake add_library command.
 
 If you want additional versions, either copy me or enhance me.
 
-You can see the documentation with cmake --help-command add_library
+You can see the documentation with
+cmake --help-command add_library
 
 add_library
 -----------

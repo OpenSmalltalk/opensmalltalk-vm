@@ -1,11 +1,5 @@
 "
-A CMakeSetTemplate 's contents look like 
-
-
-
-I need to be modified to support the multiple targets, outputs, comand/args/implicit_depends as I only support 1 of each because tty is lazy
-
-from the CMake --help-command add_custom_command  
+cmake --help-command add_custom_command  
 
 add_custom_command
 ------------------

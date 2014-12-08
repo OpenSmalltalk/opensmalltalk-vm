@@ -1,16 +1,8 @@
 "
-A CMakeVMDriver is a composite template that simplifies outputing vm drivers like vm-display-X11 to a CMakeLists.txt file.
-I replace the output of pharo's CMakeVMMaker 
+A CMakePluginVm is a composite template that simplifies outputing vm drivers like vm-display-X11 to a CMakeLists.txt file.
 
-CogFamilyUnixConfig addDriver: name sources: aSources generator: cmakeGen externalLibs: extLibs which was invoked like so:
 
-	aMaker message: 'addVMDrivers: aMaker'.
-	 self 
-		addDriver: 'vm-display-null' 
-		sources: #( 
-			'${targetPlatform}/vm-display-null/sqUnixDisplayNull' )
-		generator: aMaker
-		externalLibs: #();
+
 		
 "
 Class {

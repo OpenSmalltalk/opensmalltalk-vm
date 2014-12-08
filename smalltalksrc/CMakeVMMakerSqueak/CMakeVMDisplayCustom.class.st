@@ -1,3 +1,6 @@
+"
+A CMakeVMDisplayCustom  is a data-bucket that holds configration information
+"
 Class {
 	#name : #CMakeVMDisplayCustom,
 	#superclass : #CMakeVMPlugin,

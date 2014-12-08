@@ -1,3 +1,6 @@
+"
+A CMakeVMSoundCustom is a data-bucket that holds configration information
+"
 Class {
 	#name : #CMakeVMSoundCustom,
 	#superclass : #CMakeVMPlugin,
