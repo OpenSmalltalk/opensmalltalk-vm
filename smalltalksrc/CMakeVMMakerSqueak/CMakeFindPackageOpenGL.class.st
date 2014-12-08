@@ -1,5 +1,5 @@
 "
-A CMakeFindPackageOpenGLTemplate  looks like this.
+A CMakeFindPackageOpenGL  looks like this.
 
 	message(""without-gl = ${without_gl}"")
 

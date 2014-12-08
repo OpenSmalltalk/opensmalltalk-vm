@@ -1,3 +1,13 @@
+"
+A CMakeVersion looks like this:
+
+  SET (version  \""1.2.3.4\"")
+  STRING (REGEX REPLACE ""(.*)\\.(.*)\\.(.*)-(.*)"" ""\\1"" major   ${version})
+  STRING (REGEX REPLACE ""(.*)\\.(.*)\\.(.*)-(.*)"" ""\\2"" minor   ${version})
+  STRING (REGEX REPLACE ""(.*)\\.(.*)\\.(.*)-(.*)"" ""\\3"" patch   ${version})
+  STRING (REGEX REPLACE ""(.*)\\.(.*)\\.(.*)-(.*)"" ""\\4"" release ${version})
+
+"
 Class {
 	#name : #CMakeVersion,
 	#superclass : #CMakeTemplate,

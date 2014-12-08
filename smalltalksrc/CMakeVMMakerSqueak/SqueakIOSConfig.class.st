@@ -1,19 +1,17 @@
 "
-tty. This layer is should be merged with it's parent.
+tty. I have zero clue what goes into IOS, I am adapted from the Pharo code
 
-This is an abstract class for all Mac Carbon configurations. It is intended to share code between different concrete implementations. 
-
-It is using a Carbon framework , which eventually will be replaced by Cocoa. (see CocoaIOSConfig and its subclasses).
-
+A SqueakIOSConfig is an Abstract base class that provides common information for my subclasses.
+I am not meant to be built.
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
 I am not meant to be built.
 
-SqueakMacOSBuilder 
+SqueakIOSBuilder 
 	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
-	generateSources;
-	generate.  
+	enableMessageTracking: true;
+	generateByTemplate.
 
-HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
 HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 "

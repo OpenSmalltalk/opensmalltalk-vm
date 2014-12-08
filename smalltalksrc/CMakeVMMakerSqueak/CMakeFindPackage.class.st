@@ -1,5 +1,5 @@
 "
-A CMakeFindPackageTemplate can look like this:
+A CMakeFindPackage can look like this:
 
         FIND_PACKAGE (X11)
         IF (X11_FOUND)

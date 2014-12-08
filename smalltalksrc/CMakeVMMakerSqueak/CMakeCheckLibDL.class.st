@@ -1,6 +1,5 @@
 "
-A CMakeCheckLibDLTemplate needs to be refactored.
-I look like this:
+A CMakeCheckLibDL looks like this:
 
         CHECK_LIBRARY_EXISTS (dl dlopen """" HAVE_LIBDL)
         IF (HAVE_LIBDL)

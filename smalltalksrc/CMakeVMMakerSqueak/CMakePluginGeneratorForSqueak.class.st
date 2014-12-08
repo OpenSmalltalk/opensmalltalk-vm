@@ -3,7 +3,7 @@ A CMakePluginGeneratorForSqueak overides some CMakeVMPluginGenerator methods for
 
 I also add Dictionary for storing a plugins config.cmake file
 
-Instance Variables
+
 
 "
 Class {

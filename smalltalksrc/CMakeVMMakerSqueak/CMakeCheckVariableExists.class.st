@@ -1,5 +1,5 @@
 "
-A CMakeCheckVariableExistsTemplate looks like this:
+A CMakeCheckVariableExists looks like this:
 
 	CHECK_VARIABLE_EXISTS (timezone	HAVE_TIMEZONE)
 

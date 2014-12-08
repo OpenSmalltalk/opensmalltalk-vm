@@ -1,5 +1,5 @@
 "
-A CMakeHeaderFilesTemplate looks something like this:
+A CMakeCheckIncludeFile looks something like this:
 
         check_include_file(""unistd.h"" HAVE_UNISTD_H)
         if(HAVE_UNISTD_H)

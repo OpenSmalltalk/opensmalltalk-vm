@@ -1,14 +1,14 @@
 "
-A SqueakSunOS32x86CogConfig provides common informatin for my subclasses.
-
+A SqueakSunOS32x86Config is an Abstract base class that provides common information for my subclasses.
 I am not meant to be built.
+
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
 SqueakSunOS32x86Builder 
 	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
-	generateSources;
-	generate.  
+	enableMessageTracking: true;
+	generateByTemplate.
 
-HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
 HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 "
 Class {

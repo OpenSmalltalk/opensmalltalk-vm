@@ -1,3 +1,6 @@
+"
+A CMakeVMDisplayQuartz is a data-bucket that holds configration information
+"
 Class {
 	#name : #CMakeVMDisplayQuartz,
 	#superclass : #CMakeVMPlugin,

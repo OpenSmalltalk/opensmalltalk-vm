@@ -1,5 +1,5 @@
 "
-A CMakeCheckLibraryExistsTemplate is a CMake Command in the CheckLibraryExists Module
+A CMakeCheckLibraryExists is a CMake Command in the CheckLibraryExists Module
 
 http://cmake.org/Wiki/CMake:How_To_Write_Platform_Checks
 

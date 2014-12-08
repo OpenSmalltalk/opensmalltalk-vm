@@ -1,4 +1,6 @@
 "
+N.B. tty: I have not parsed these in depth as of 2014.12.09
+
 A SqueakCMThirdpartyLibrary is the root library for copies of classes in CMakeVMMaker-Libs.  
 I replace only the Squeak incompatible methods of my parent
 

@@ -1,17 +1,14 @@
 "
-A Linux32x86Config is a Squeak Compatibility Layer between the Pharo code in CMakeVMMaker and CMakeVMakerSqueak.
-
-I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
-
-
+A Linux32x86Config  is an Abstract base class that provides common information for my subclasses.
 I am not meant to be built.
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
 SqueakLinux32x86Builder 
 	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
-	generateSources;
-	generate.  
+	enableMessageTracking: true;
+	generateByTemplate.
 
-HelpBrowser openOn: CMakeVMMakerSqueakEndUserHelp
+
 HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 

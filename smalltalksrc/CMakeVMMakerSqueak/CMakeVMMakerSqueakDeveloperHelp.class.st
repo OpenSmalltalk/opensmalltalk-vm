@@ -232,13 +232,22 @@ CMakeVMMakerSqueakDeveloperHelp class >> templates [
 	^HelpTopic
 		title:'CPlatformConfigForSqueak class templates'
 		contents:
-'explain:
-utilsCMake
-vmBUildCMake
-vmConfigCMake
-vmConfiIn
-testDouble*
-pluginsCMake
+'CMakeVMMakerSqueak utilizes wrapper classes on CMake commands to generate CMake output files like CMakeLists.txt.
+
+Currently the 3 class categories produce output as such:
+
+1. CMakeVMMakerSqueak-CMakeCompositeTemplates output large CMake structures. The essentially wrap both custom and standard CMake templates.
+
+2. CMakeVMMakerSqueak-CMakeCustomTemplates typically wrap CMake logic constructs like IF(DEFINED foo;
+
+3. CMakeVMMakerSqueak-CMakeTemplates are wrappers for specific CMake Commands, properties and variables.
+cmake --help 
+cmake --help-command-list
+cmake --help-property-list
+cmake --help-variable-list
+
+will give you an idea of what is wrapped. As new templates are introduced, they can be re-used easily, minimizing errors.
+
 '
 ]
 
