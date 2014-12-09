@@ -130,7 +130,7 @@ Concrete implementations of SqueakCMakeVMMakerAbstractBuilder provide an invokat
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(overview prerequisites  terms igorStasenkoDesign  tests buildersAndConfigs plugins pthreads configDotCmake templates vmplugins)
+	^#(overview prerequisites  terms igorStasenkoDesign  tests buildersAndConfigs plugins pthreads configDotCmake templates vmplugins CMakeVMMakerSqueakBuildersHelp CMakeVMMakerSqueakHowToCreateNewConfigurationHelp)
 ]
 
 { #category : #pages }
