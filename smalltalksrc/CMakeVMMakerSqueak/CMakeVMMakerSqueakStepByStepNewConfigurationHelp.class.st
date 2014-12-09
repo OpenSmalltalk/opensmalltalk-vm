@@ -4,18 +4,23 @@ A CMakeVMMakerSqueakNewConfigurationStepByStepHelp itemizes the steps needed to 
 HelpBrowser openOn: CMakeVMMakerSqueakNewConfigurationStepByStepHelp
 "
 Class {
-	#name : #CMakeVMMakerSqueakHowToCreateNewConfigurationHelp,
-	#superclass : #CMakeVMMakerSqueakDeveloperHelp,
+	#name : #CMakeVMMakerSqueakStepByStepNewConfigurationHelp,
+	#superclass : #CMakeVMMakerSqueakConfigurationsHelp,
 	#category : #'CMakeVMMakerSqueak-Help'
 }
 
 { #category : #accessing }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> bookName [ 
-	^'Setting up a Configuration. Step By Step.'
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> bookName [ 
+	^'Step By Step: New Configurations'
 ]
 
 { #category : #accessing }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> pages [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> key [
+	^'CMakeVMMakerSqueakStepByStepNewConfigurationHelp'
+]
+
+{ #category : #accessing }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> pages [
 	^#(step1 
 		step2 
 		step3 
@@ -38,7 +43,7 @@ CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> pages [
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step1 [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step1 [
 	^HelpTopic
 		title:'Step 1. Choose Your Category'
 		contents:
@@ -54,7 +59,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step2 [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step2 [
 	^HelpTopic
 		title:'Step 2. Copy Existing Concrete Configuration'
 		contents:
@@ -74,7 +79,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step3 [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step3 [
 	^HelpTopic
 		title:'Step 4. Customize the "cmake" protocol'
 		contents:
@@ -97,7 +102,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step4 [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step4 [
 	^HelpTopic
 		title:'Step 4. Customize the "cmake build type config" protocol'
 		contents:
@@ -148,7 +153,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step4a [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step4a [
 	^HelpTopic
 		title:'Step 4a. setGlobalOptions'
 		contents:
@@ -162,7 +167,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step4b [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step4b [
 	^HelpTopic
 		title:'Step 4b. setGlobalOptionsAfterDetermineSystem'
 		contents:
@@ -177,7 +182,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step4c [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step4c [
 	^HelpTopic
 		title:'Step 4c. setupDirectories'
 		contents:
@@ -191,7 +196,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step4d [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step4d [
 	^HelpTopic
 		title:'Step 4d. preferredIncludes'
 		contents:
@@ -226,7 +231,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step4e [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step4e [
 	^HelpTopic
 		title:'Step 4e. standardIncludes'
 		contents:
@@ -240,7 +245,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step4f [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step4f [
 	^HelpTopic
 		title:'Step 4f. compilerFlags'
 		contents:
@@ -254,7 +259,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step4g [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step4g [
 	^HelpTopic
 		title:'Step 4g. extraVMSettings'
 		contents:
@@ -268,7 +273,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step4h [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step4h [
 	^HelpTopic
 		title:'Step4h internalPlugins'
 		contents:
@@ -281,7 +286,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step4i [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step4i [
 	^HelpTopic
 		title:'Step4i externalPlugins'
 		contents:
@@ -296,7 +301,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step4j [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step4j [
 	^HelpTopic
 		title:'Step4j thirdpartyLibs'
 		contents:
@@ -310,7 +315,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step4k [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step4k [
 	^HelpTopic
 		title:'Step4k setExtraTargetProperties:aMaker'
 		contents:
@@ -324,7 +329,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step4l [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step4l [
 	^HelpTopic
 		title:'Step4k postBuildActions: aMaker'
 		contents:
@@ -338,7 +343,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step4m [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step4m [
 	^HelpTopic
 		title:'Step4m configH'
 		contents:
@@ -361,7 +366,7 @@ A Reminder: Consistent Naming Conventions Are Our Friends!
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakHowToCreateNewConfigurationHelp class >> step5 [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> step5 [
 	^HelpTopic
 		title:'Step5 set up ''cmake directory'' protocol'
 		contents:

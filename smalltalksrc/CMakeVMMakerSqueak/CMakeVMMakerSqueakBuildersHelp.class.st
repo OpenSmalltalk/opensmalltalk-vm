@@ -83,6 +83,11 @@ SqueakLinux64x86w32CompatBuilder sourceDirectoryFor:(SqueakLinux64x86w32CompatBu
 ]
 
 { #category : #accessing }
+CMakeVMMakerSqueakBuildersHelp class >> key [
+	^'CMakeVMMakerSqueakBuildersHelp'
+]
+
+{ #category : #accessing }
 CMakeVMMakerSqueakBuildersHelp class >> pages [
 	^#(builders queryingBuilders buildTypes  generatingCMakeBuilds scratch)
 ]

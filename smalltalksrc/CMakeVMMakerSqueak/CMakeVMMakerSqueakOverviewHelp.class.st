@@ -1,0 +1,356 @@
+Class {
+	#name : #CMakeVMMakerSqueakOverviewHelp,
+	#superclass : #CMakeVMMakerSqueakDeveloperHelp,
+	#category : #'CMakeVMMakerSqueak-Help'
+}
+
+{ #category : #accessing }
+CMakeVMMakerSqueakOverviewHelp class >> bookName [ 
+	^'Overview'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakOverviewHelp class >> buildersAndConfigs [
+	^HelpTopic
+		title:'Organization'
+		contents:
+'
+The CMakeVMMakerSqueak Builders and Configurations are organized to mirror  Eliot''s GNU build system organization.
+
+The intent is to reduce brain cycles translating from the computer''s directory layout to what you see in CMakeVMMakerSqueak by providing a (nearly) one-to-one correspondence.
+
+Eliot has named build directories in Cog/ svn (oscogvm directory in this system) by the convention
+build.[OperatingSystem].[VMWordSize].[Processor Architecture]. For  example: build.macosx32x86 
+
+Under each build.[OperatingSystem].[VMWordSize].[Processor Architecture]  directory are subdirectories for each
+[Language][VM][MemoryManager]. example newspeak.sista.spur.
+
+The permutations of [Language][VM][MemoryManager] currently are: 
+
+[newspeak | squeak]. [cog | sista | stack]. [spur | v3] or 2! x 3! x 2!  which is  between 12 and eleventy billion permutations 
+
+Similarly, in CMakeVMMakerSqueak,  Categories containing Configurations are organized by CMakeVMMakerSqueak-[OperatingSystem][VMWordSize][Processor][etc]
+
+Configuration classes within a CMakeVMMakerSqueak-[OperatingSystem][VMWordSize][Processor][etc] are Named:
+[[Squeak] | [] ][Language][VM][MemoryManager][etc]Config and correspond with the 12 permutations
+
+When CMakeVMMakerSqueak generates build or products , it prefaces Eliot''s naming convention with a ''cmake.''
+
+for example builds take place in:  cmake.build.linux.32.x66/squeak.cog.spur
+and output is placed in cmake.products. for example: oscogvm/cmake.products/squeak.cog.v3.noGL/
+
+Builders manage Configurations and Builds for a particular [Language][VM][MemoryManager]  category.
+THERE IS A ONE-TO-ONE CORRESPONEDENCE between aConcreteBuilder>configurationsCategory and the Smalltalk Category name. 
+If you change one, you must change the other in order for the Builder to manage that configuration.
+
+example: SqueakMacOSX32x86Builder configurationsCategory
+
+
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakOverviewHelp class >> configDotCmake [
+	^HelpTopic
+		title:'config.cmake'
+		contents:
+'The config.cmake file is included in CMakeLists.txt. 
+
+It contains CMake code to generate a config.h file on unix systems.
+
+You can view a Configurations config.cmake with this code:
+
+Transcript clear.
+Transcript show: ((Linux64x86w32BitSqueakCogV3Config new) configureForBuildType: #build) contentForVmConfigCmake
+
+or print it in place with:
+
+((Linux64x86w32BitSqueakCogV3Config new) configureForBuildType: #build) contentForVmConfigCmake   
+
+The config.cmake file is generated with the usual Builder expressions.
+
+SqueakLinux64x86w32CompatBuilder
+	configureA: #Linux64x86w32BitSqueakCogV3Config forBuildType:#build;
+	generate.
+
+
+A config.cmake is created from CMake Templates (wrappers) in the CmakeVMMakerSqueak-CMakeTemplates  and CmakeVMMakerSqueak-CMakeCustomTemplates categories.
+
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakOverviewHelp class >> igorStasenkoDesign [
+	^HelpTopic
+		title:'Design Patterns'
+		contents:
+'CMakeVMMakerSqueak extends Igor Stasenko''s pharo work in CMMakeVMMaker. 
+
+The system employs the Visitor design pattern in two places.
+
+1. When a CPlatformConfigForSqueak subclass invokes CMakeVMGeneratorForSqueak>>generate passing itself as the visitor.
+2. In SqueakCMakeVMMakerAbstractBuilder when Configuration information is cached in a CMakeVMakerConfigurationInfo.
+
+The CPlatformConfigForSqueak makes heavy use of a Template pattern. This pattern is used extensively in the protocol ''cmake buildType redirects''.
+This is used to force correct implementation of configurations. It also extends the pharo system to support the build types required for the 
+
+Fairly extensive Tests are written to ensure correct implementation of Configurations.
+
+'
+]
+
+{ #category : #accessing }
+CMakeVMMakerSqueakOverviewHelp class >> key [
+	^'CMakeVMMakerSqueakOverviewHelp'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakOverviewHelp class >> looseEnds [
+	^HelpTopic
+		title:'Loose Ends'
+		contents:
+'As of 2014.12.09 there are the inevitable loose ends. Some are:
+
+Importing and compiling 3''rd party libraries has not been ported or tested.
+The Builder facades lacks some query functionality.
+The Builder facades may prove to be useless--we may want to throw them away.
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakOverviewHelp class >> overview [
+	^HelpTopic
+		title:'Overview'
+		contents:
+'Repeat after me: "CMAKE DRIVES THE PROCESS."
+
+Keeping the above statement in mind is the key to this package. 
+
+What we are looking for is a CMake system that correctly builds a virtual machine on a given platform. 
+We then encapsulate that CMake system state in CMakeVMMakerSqueak Configurations. The end user can then reproduce that CMake system on their platform.
+
+Hopefully this package makes the above process predictable and somewhat sane.
+
+Towards that end, this system does the following :
+
+Stores CMake configuration in concrete subclasses of CPlatformConfigForSqueak in a predicatable manner.
+Provides methods for extracting the CMake configuration from those classes.
+Provides a (hopefully) newbie friendly Facade for extracting the CMake configuration via Builders (Concrete subclasses of SqueakCMakeVMMakerAbstractBuilder)
+Provides (for the configuration developer) CMake command wrapper code in subclasses of CMakeTemplate.
+Proves to be scriptable such that generating the CMake output can be automated (or extracted from a Seaside website).
+
+As the SqueakVM community gains experience with CMake, I expect the quality of the generated CMake output to improve considerably. CMake is a BIG system with LOTS of stuff in it. Storing the knowledge we gain in our Squeak classes should make things a lot easier on us.
+
+
+
+
+
+
+
+
+
+
+The heart of the package is CMakeGeneratorForSqueak and its two subclasses CMakeVMGeneratorForSqueak and CMakePluginGeneratorForSqueak.
+
+
+CMakeVMGeneratorForSqueak collects information from subclasses of CPlatformConfigForSqueak, CMThirdpartyLibrary and InterpreterPlugins and writes it out to CMake files and associated directories. 
+
+From there, the user invokes cmake and make using a generated build.sh script.
+
+The programmer directs the flow of the generator by coding a subclass of CPlatformConf, setting it up correctly and asking it to generate itself. 
+
+The configuration then invokes the CMakeGeneratorForSqueak passing itself as an argument. 
+
+The VMGeneratator extracts the information and utilizes VMPluginGenerator to generate plugin stuff, the CPlatformConf to generate other stuff and CMThirdPartyLibrary''s to generate other stuff. 
+
+The end result is a CMake evironment that is set up to correctly build a VM
+
+Concrete implementations of SqueakCMakeVMMakerAbstractBuilder provide an invokation facade and configuration query capabilities.
+
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakOverviewHelp class >> pages [
+	^#(overview  prerequisites  terms igorStasenkoDesign   buildersAndConfigs     vmplugins  )
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakOverviewHelp class >> plugins [
+	^HelpTopic
+		title:'Plugins'
+		contents:'
+
+TODO explain the design and methodology of the ''plugin extra rules'' protocol in
+
+Explain CMakePluginGeneratorSqueak containing the config.cmake files
+
+
+provide example of mapping from plugins.int to defaultInternalPlugins
+
+|s|
+Transcript clear.
+s:=SortedCollection new.
+InterpreterPlugin allSubclassesDo:[:p|
+	p moduleName = ''B2DPlugin''
+		ifTrue:[Transcript show:p name].
+	s add: (p moduleName)].
+
+Transcript show: s.
+
+SqueakUnixConfig browse
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakOverviewHelp class >> prerequisites [
+	^HelpTopic
+		title:'Prerequisites'
+		contents:
+'The CMakeVMMakerSqueak depends on CMakeVMMaker (a pharo implementation)
+
+CMake from  http://www.cmake.org/ is required to process the output of this package.
+
+This package was written using cmake version 2.8.12
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakOverviewHelp class >> pthreads [
+	^HelpTopic
+		title:'PThreads'
+		contents:'
+
+http://www.mirandabanda.org/files/Cog/VM/VM.r3006/README.3006
+
+N.B. For Squeak/Pharo/Croquet please use the archives whose names begin with
+     Cog or cog.  The archives whose names begin with nsvm or Newspeak are
+     for Newspeak and are missing plugins required by Squeak/Pharo/Croquet.
+     VMs with "mt" or "MT" in the name are multi-threaded VMs which support
+     non-blocking FFI calls.  The archives containing "Spur" or "spur" are
+     VMs using the new Spur object representation and garbage collector and
+     should be used with Spur-format Squeak/Pharo/Croquet or Newspeak images.
+
+     There are two variants of the Linux VMs; those ending in "ht" have a
+     heartbeat thread, while those that don''t, use an interval timer for the
+     heartbeat (the Windows and Mac VMs have a threaded heartbeat).  The
+     threaded heartbeat is better (for example, signals from the interval timer
+     interfere with system calls, etc), but to use it one must have a kernel
+     later than 2.6.12 and configure linux to allow the VM to use multiple
+     thread priorities.  To do so, create a file called VM.conf where VM is
+     the name of the vm executable ("squeak" for the Squeak vm, "nsvm" for
+     the Newspeak vm) in /etc/security/limits.d/ with contents:
+*       hard    rtprio  2
+*       soft    rtprio  2
+
+     e.g.
+sudo cat >/etc/security/limits.d/squeak.conf <<END
+*       hard    rtprio  2
+*       soft    rtprio  2
+END
+sudo cp /etc/security/limits.d/squeak.conf /etc/security/limits.d/nsvm.conf
+     Then log out and log back in for the limits to take effect.
+
+
+On Slackware linux 14.0  
+bash$ man limits
+
+From the man page, the O (oh) option is:   O: max real time priority
+
+create a file /etc/limits file and add an entry
+
+tty O100
+
+where tty is the login name, and the O option is set to 100.
+
+Logout and re-login.
+
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakOverviewHelp class >> templates [
+	^HelpTopic
+		title:'CPlatformConfigForSqueak class templates'
+		contents:
+'CMakeVMMakerSqueak utilizes wrapper classes on CMake commands to generate CMake output files like CMakeLists.txt.
+
+Currently the 3 class categories produce output as such:
+
+1. CMakeVMMakerSqueak-CMakeCompositeTemplates output large CMake structures. The essentially wrap both custom and standard CMake templates.
+
+2. CMakeVMMakerSqueak-CMakeCustomTemplates typically wrap CMake logic constructs like IF(DEFINED foo;
+
+3. CMakeVMMakerSqueak-CMakeTemplates are wrappers for specific CMake Commands, properties and variables.
+cmake --help 
+cmake --help-command-list
+cmake --help-property-list
+cmake --help-variable-list
+
+will give you an idea of what is wrapped. As new templates are introduced, they can be re-used easily, minimizing errors.
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakOverviewHelp class >> terms [
+	^HelpTopic
+		title:'Terms'
+		contents:
+'
+AbstractBaseClass:   
+	Typically the topmost class in a [OS][VMWordSize][Processor][ETC]  class category. Example: CPlatformConfigForSqueak. Most of the configuration action happens at this level and lower.
+
+Builder:                      
+	A concrete subclass of SqueakCMakeVMMakerAbstractBuilder. Builders act as a facade for invoking the configurations.They also provide query tools for the configurations that a builder manages. There is a one-to-one correspondence between a Builder''s configurationsCategory and the configurations it manages. example:    SqueakBSDx86Builder configurationsCategory
+
+buildType:
+	One of SqueakCMakeVMMakerAbstractBuilder  allBuildTypes 
+                                 
+
+CMakeLists.txt:
+	The instructions that CMake uses to build build systems.  One output of a configuration
+
+Configuration:            
+	CPlatformConfigForSqueak  and its subclasses. These maintain the definitions that are rendered into CMakeLists.txt files
+
+
+Generator:                 
+	CMakeGeneratorForSqueak and its subclasses
+
+
+Redirect Methods:      
+	Given a method X, it is a redirect method if a call to it redirects to xBuildType based on the state of the configurations buildType  buildType variable.  See CPlatformConfigForSqueak protocol ''cmake buildType redirects''
+
+
+
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakOverviewHelp class >> tests [
+	^HelpTopic
+		title:'Tests'
+		contents:
+'
+When all tests pass. This does not mean the classes are configured correctly for source,output and build directories.
+
+It does mean nothing structural is preventing that from being implemented.
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakOverviewHelp class >> vmplugins [
+	^HelpTopic
+		title:'VMPlugins'
+		contents:'
+
+TODO CMakeVMMakerSqueak-VMPlugin purpose, configuration and use'
+]

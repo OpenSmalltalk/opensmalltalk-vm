@@ -6,7 +6,7 @@ A CMakeVMMakerSqueakStartHereHelp provides examples of usage for newbies.
 "
 Class {
 	#name : #CMakeVMMakerSqueakStartHereHelp,
-	#superclass : #CMakeVMMakerSqueakDeveloperHelp,
+	#superclass : #CMakeVMMakerSqueakHelp,
 	#category : #'CMakeVMMakerSqueak-Help'
 }
 
