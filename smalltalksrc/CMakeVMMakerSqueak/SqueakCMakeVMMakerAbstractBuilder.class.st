@@ -6,10 +6,7 @@ I am a facade to the various Squeak[Platform][WordSize][VM][MemoryManager]Config
 I provide facilities to query my configurations.
 I use the Visitor pattern in collecting information about my configurations.
 
-HelpBrowser openOn: CMakeVMMakerSqueakBuildersHelp.
-HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp.
-HelpBrowser openOn: CMakeVMMakerSqueakStartHereHelp.
-
+HelpBrowser openOn: CMakeVMMakerSqueakHelp.
 
 
 

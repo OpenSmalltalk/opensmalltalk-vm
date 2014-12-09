@@ -3,10 +3,7 @@ I am a facade.
 
 I query, and invoke CMakeVMMakerSqueak configurations.
 
-HelpBrowser openOn: CMakeVMMakerSqueakBuildersHelp.
-HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp.
-HelpBrowser openOn: CMakeVMMakerSqueakStartHereHelp.
-
+HelpBrowser openOn: CMakeVMMakerSqueakHelp.
 "
 Class {
 	#name : #SqueakLinux32x86Builder,
