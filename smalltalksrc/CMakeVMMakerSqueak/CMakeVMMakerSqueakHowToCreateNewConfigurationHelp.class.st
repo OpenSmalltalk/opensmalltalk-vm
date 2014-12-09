@@ -5,7 +5,7 @@ HelpBrowser openOn: CMakeVMMakerSqueakNewConfigurationStepByStepHelp
 "
 Class {
 	#name : #CMakeVMMakerSqueakHowToCreateNewConfigurationHelp,
-	#superclass : #CMakeVMMakerSqueakHelp,
+	#superclass : #CMakeVMMakerSqueakDeveloperHelp,
 	#category : #'CMakeVMMakerSqueak-Help'
 }
 

@@ -129,10 +129,12 @@ Linux64x86w32BitConfig >> addVMPluginsBuild: aMaker [
 
 { #category : #cmake }
 Linux64x86w32BitConfig >> availableBuildTypes [
-	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
-"	subclasses should use
+ 	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+"
 
-  ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
+subclasses should use
+
+  ^super allBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
 	
 
 ]
