@@ -87,12 +87,12 @@ extern int thisSession;
 
 /*** Exported Functions ***/
 int asyncFileClose(AsyncFile *f);
-int asyncFileOpen(AsyncFile *f, int fileNamePtr, int fileNameSize, int writeFlag, int semaIndex);
+int asyncFileOpen(AsyncFile *f, long fileNamePtr, int fileNameSize, int writeFlag, int semaIndex);
 int asyncFileRecordSize();
-int asyncFileReadResult(AsyncFile *f, int bufferPtr, int bufferSize);
+int asyncFileReadResult(AsyncFile *f, long bufferPtr, int bufferSize);
 int asyncFileReadStart(AsyncFile *f, int fPosition, int count);
 int asyncFileWriteResult(AsyncFile *f);
-int asyncFileWriteStart(AsyncFile *f, int fPosition, int bufferPtr, int bufferSize);
+int asyncFileWriteStart(AsyncFile *f, int fPosition, long bufferPtr, int bufferSize);
 
 
 /*****************************************************************************
@@ -205,7 +205,7 @@ int asyncFileClose(AsyncFile *f) {
   return 1;
 }
 
-int asyncFileOpen(AsyncFile *f, int fileNamePtr, int fileNameSize, 
+int asyncFileOpen(AsyncFile *f, long fileNamePtr, int fileNameSize, 
 		  int writeFlag, int semaIndex) {
   /* Opens the given file using the supplied AsyncFile structure to record
      its state. Fails with no side effects if f is already open. Files are
@@ -278,7 +278,7 @@ int asyncFileOpen(AsyncFile *f, int fileNamePtr, int fileNameSize,
   return 1;
 }
 
-int asyncFileReadResult(AsyncFile *f, int bufferPtr, int bufferSize) {
+int asyncFileReadResult(AsyncFile *f, long bufferPtr, int bufferSize) {
   /* Copy up to bufferSize bytes from the buffer of the last read operation
      into the given Squeak buffer, and return the number of bytes copied.
      Negative values indicate:
@@ -341,7 +341,7 @@ int asyncFileWriteResult(AsyncFile *f) {
   return state->bytesTransferred;
 }
 
-int asyncFileWriteStart(AsyncFile *f, int fPosition, int bufferPtr, int bufferSize) {
+int asyncFileWriteStart(AsyncFile *f, int fPosition, long bufferPtr, int bufferSize) {
   /* Start an asynchronous operation to write bufferSize bytes to the given file
      starting at the given file position. The file''s semaphore will be signalled when
      the operation is complete. The client may then use asyncFileWriteResult() to
