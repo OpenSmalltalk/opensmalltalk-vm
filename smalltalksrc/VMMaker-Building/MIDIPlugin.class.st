@@ -65,18 +65,14 @@ MIDIPlugin >> primitiveMIDIGetPortDirectionality: portNum [
 
 { #category : #primitives }
 MIDIPlugin >> primitiveMIDIGetPortName: portNum [
-
-	| portName sz nameObj namePtr |
+	| portName sz nameObj |
 	<var: #portName declareC: 'char portName[256]'>
-	<var: #namePtr type: 'char * '>
-	self primitive: 'primitiveMIDIGetPortName'
-		parameters: #(SmallInteger).
+	self primitive: 'primitiveMIDIGetPortName' parameters: #(SmallInteger).
 
-	sz := self cCode: 'sqMIDIGetPortName(portNum, (int) &portName, 255)'.
+	sz := self sqMIDIGet: portNum Port: portName Name: 255.
 	nameObj := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: sz.
-	interpreterProxy failed ifTrue:[^nil].
-	namePtr := nameObj asValue: String .
-	self cCode: 'memcpy(namePtr, portName, sz)'.
+	interpreterProxy failed ifTrue: [^nil].
+	self mem: (nameObj asValue: String) cp: portName y: sz.
 	^nameObj
 ]
 
