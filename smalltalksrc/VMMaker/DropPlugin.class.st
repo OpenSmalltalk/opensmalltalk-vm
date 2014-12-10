@@ -89,8 +89,7 @@ DropPlugin >> primitiveDropRequestFileName [
 { #category : #primitives }
 DropPlugin >> setFileAccessCallback: address [
 	<export: true>
-	<var: #address type: 'int'>
-	^self cCode: 'sqSecFileAccessCallback((void *) address)'.
+	^self sqSecFileAccessCallback: address asVoidPointer
 ]
 
 { #category : #initialize }
