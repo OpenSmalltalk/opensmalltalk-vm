@@ -36,7 +36,6 @@
  * truth is very definitely not beauty today.  Sigh...
  */
 
-
 #include "sq.h"
 #include "sqVirtualMachine.h"
 #include "FilePlugin.h"
@@ -50,33 +49,31 @@ extern int		       uxDropFileCount;
 extern char		     **uxDropFileNames;
 
 
-int dropInit(void)	{ return 1; }
-int dropShutdown(void)	{ return 1; }
+sqInt dropInit(void)     { return 1; }
+sqInt dropShutdown(void) { return 1; }
 
-char *dropRequestFileName(int dropIndex)	// in st coordinates
+char *dropRequestFileName(sqInt dropIndex)	// in st coordinates
 {
-  if ((dropIndex > 0) && (dropIndex <= uxDropFileCount))
-    {
-      assert(uxDropFileNames);
-      dndReceived(uxDropFileNames[dropIndex - 1]);
-      return uxDropFileNames[dropIndex - 1];
-    }
-  return 0;
+	if ((dropIndex > 0) && (dropIndex <= uxDropFileCount)) {
+		assert(uxDropFileNames);
+		dndReceived(uxDropFileNames[dropIndex - 1]);
+		return uxDropFileNames[dropIndex - 1];
+	}
+	return 0;
 }
 
-int dropRequestFileHandle(int dropIndex)
+sqInt dropRequestFileHandle(sqInt dropIndex)
 {
-  char *path= dropRequestFileName(dropIndex);
-  if (path)
-    {
-      // you cannot be serious?
-      int handle= instantiateClassindexableSize(classByteArray(), fileRecordSize());
-      sqFileOpen((SQFile *)fileValueOf(handle), (int)path, strlen(path), 0);
-      return handle;
-    }  
-  return interpreterProxy->nilObject();
+	char *path= dropRequestFileName(dropIndex);
+	if (path) {
+		// you cannot be serious?
+		sqInt handle = instantiateClassindexableSize(classByteArray(), fileRecordSize());
+		sqFileOpen((SQFile *)fileValueOf(handle), (int)path, strlen(path), 0);
+		return handle;
+	}  
+	return interpreterProxy->nilObject();
 }
 
-int  sqSecFileAccessCallback(void *callback)		 { return 0; }
-void sqSetNumberOfDropFiles(int numberOfFiles)		 { }
-void sqSetFileInformation(int dropIndex, void *dropFile) { }
+sqInt	sqSecFileAccessCallback(void *callback)               { return 0; }
+void	sqSetNumberOfDropFiles(sqInt numberOfFiles)           { }
+void	sqSetFileInformation(sqInt dropIndex, void *dropFile) { }

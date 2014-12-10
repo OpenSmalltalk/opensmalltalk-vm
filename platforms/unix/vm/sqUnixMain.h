@@ -3,7 +3,7 @@
 
 extern char   imageName[];
 extern char   shortImageName[];
-extern int    inputEventSemaIndex;
+extern sqInt  inputEventSemaIndex;
 extern char   vmPath[];
 extern char  *exeName;
 extern char **argVec;

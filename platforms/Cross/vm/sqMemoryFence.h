@@ -32,24 +32,28 @@
  * by other threads before a fence will be visible to the calling thread, and
  * vice versa.  Writers follow a write with a fence. Readers use a fence before
  * reading.  See e.g. http://en.wikipedia.org/wiki/Memory_barrier
- *
- * The only implementation directly uses mfence on x86.
- * Please add implementations for other ISAs as required.
  */
 
-#if defined(__GNUC__) && (defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_))
-# if defined(__MINGW32__) && !__SSE2__
+#if defined(__GNUC__)
+# define GCC_HAS_BUILTIN_SYNC \
+			(__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1))
+# define GCC_HAS_BUILTIN_ATOMIC \
+			(__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7))
+#endif
+
+#if defined(__GNUC__) || defined(__clang__)
+# if GCC_HAS_BUILTIN_SYNC || defined(__clang__)
+#	define sqLowLevelMFence() __sync_synchronize()
+# elif defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_)
+#	if defined(__MINGW32__) && !__SSE2__
 	/* Andreas is fond of the gcc 2.95 MINGW but it lacks sse2 support */
-#	define sqLowLevelMFence() asm volatile (".byte 0x0f;.byte 0xae;.byte 0xf0")
-# elif defined(TARGET_OS_IS_IPHONE)
-#	define sqLowLevelMFence() __sync_synchronize()
-# else
-#	define sqLowLevelMFence() asm volatile ("mfence")
+#	 define sqLowLevelMFence() asm volatile (".byte 0x0f;.byte 0xae;.byte 0xf0")
+#	else
+#	 define sqLowLevelMFence() asm volatile ("mfence")
+#	endif
 # endif
-#else
-# if defined(TARGET_OS_IS_IPHONE) || (defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__)))
-#	define sqLowLevelMFence() __sync_synchronize()
-# elif !defined(sqLowLevelMFence)
+#endif
+
+#if !defined(sqLowLevelMFence)
 extern void sqLowLevelMFence(void);
-# endif
 #endif

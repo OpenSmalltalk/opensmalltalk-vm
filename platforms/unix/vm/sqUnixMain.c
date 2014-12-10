@@ -1957,7 +1957,7 @@ main(int argc, char **argv, char **envp)
   return 0;
 }
 
-int ioExit(void) { return ioExitWithErrorCode(0); }
+sqInt ioExit(void) { return ioExitWithErrorCode(0); }
 
 sqInt
 ioExitWithErrorCode(int ec)

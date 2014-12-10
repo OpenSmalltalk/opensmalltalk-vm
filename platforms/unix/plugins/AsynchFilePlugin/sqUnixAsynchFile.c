@@ -182,7 +182,7 @@ FilePtr asyncFileAttach(AsyncFile *f, int fd, int semaIndex)
 /*** public functions ***/
 
 
-int asyncFileOpen(AsyncFile *f, int fileNamePtr, int fileNameSize,
+int asyncFileOpen(AsyncFile *f, long fileNamePtr, int fileNameSize,
 		  int writeFlag, int semaIndex)
 {
   int fd= 0;
@@ -237,7 +237,7 @@ int asyncFileRecordSize(void)
 }
 
 
-int asyncFileReadResult(AsyncFile *f, int bufferPtr, int bufferSize)
+int asyncFileReadResult(AsyncFile *f, long bufferPtr, int bufferSize)
 {
   FilePtr fp= 0;
   int n= 0;
@@ -331,7 +331,7 @@ static void writeHandler(int fd, void *data, int flags)
 }
 
 
-int asyncFileWriteStart(AsyncFile *f, int fPosition, int bufferPtr, int count)
+int asyncFileWriteStart(AsyncFile *f, int fPosition, long bufferPtr, int count)
 {
   FilePtr fp= 0;
   validate(f);
