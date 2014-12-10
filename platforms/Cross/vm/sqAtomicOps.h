@@ -140,10 +140,8 @@ AtomicGet(uint64_t *target)
 #if defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
 /* tpr - this is code intended for the Raspberry Pi Raspbian OS 
  * We'll experimentally trust in our MMU to keep 64bit accesses atomic */
-#define get64(var)  \
-	(var)
-#define set64(var,value) \
-		(var) = (value)
+# define get64(variable) variable
+# define set64(variable,value) (variable = value)
 
 #else
 /* Dear implementor, you have choices.  For example consider defining get64 &
@@ -161,88 +159,89 @@ AtomicGet(uint64_t *target)
 #endif
 
 
-
-
-/* Atomic increment of 32-bit values allows a lock-free implementation of the
- * request side of signalSemaphoreWithIndex:
- */
-
-	/* Currently we provide definitions for x86 and GCC only.  */
-#if defined(__GNUC__) && (defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_))
-#ifdef TARGET_OS_IS_IPHONE
-#define sqAtomicAddConst(var,n) OSAtomicAdd32(n,&var)
-#else
-# define sqAtomicAddConst(var,n) \
-	asm volatile ("lock addl %1, %0" : "=m" (var) : "i" (n), "m" (var))
+#if defined(__GNUC__)
+# define GCC_HAS_BUILTIN_SYNC \
+			(__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1))
+# define GCC_HAS_BUILTIN_ATOMIC \
+			(__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7))
 #endif
-#elif defined TARGET_OS_IS_IPHONE
-#define sqAtomicAddConst(var,n) OSAtomicAdd32(n,&var)
-#elif  defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
-/* tpr - this is code intended for the Raspberry Pi Raspbian OS */
-/* We'll experimentally use the gcc inbuilt functions detailed in
- * http://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html
+
+/* Atomic increment of 16 or 32-bit variables allows a lock-free implementation
+ * of the request side of signalSemaphoreWithIndex:. If the platform provides
+ * the operation on 16-bit variables, define ATOMICADD16 as 1.
  */
-#define sqAtomicAddConst(var,n) \
-	__sync_fetch_and_add((int *)&var, n)
+
+#undef ATOMICADD16
+
+#if TARGET_OS_IS_IPHONE
+# define sqAtomicAddConst(var,n) (assert(sizeof(var) == 4), OSAtomicAdd32(n,&(var))
+
+#elif defined(__GNUC__) || defined(__clang__)
+# if GCC_HAS_BUILTIN_SYNC || defined(__clang__)
+#	define sqAtomicAddConst(var,n) __sync_fetch_and_add((sqInt *)&(var), n)
+
+# elif defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_)
+	/* support for gcc 3.x; 8-, 16- & 32-bit only */
+#	define sqAtomicAddConst(var,n) do {\
+	if (sizeof(var) == sizeof(char)) \
+		asm volatile ("lock addb %1, %0" : "=m" (var) : "i" (n), "m" (var)); \
+	else if (sizeof(var) == sizeof(short)) \
+		asm volatile ("lock addw %1, %0" : "=m" (var) : "i" (n), "m" (var)); \
+	else \
+		asm volatile ("lock addl %1, %0" : "=m" (var) : "i" (n), "m" (var)); \
+	} while (0)
+# endif
+
+/* On x86/x86_64 the intrinsics apply to any integral size */
+# if defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_) \
+  || defined(x86_64) || defined(__x86_64) || defined(__x86_64__)
+#	define ATOMICADD16 1
+# endif
+
 #else
 /* Dear implementor, you have choices.  Google atomic increment and you will
- * find a number of implementations for other architectures.
+ * find a number of alternative implementations.
  */
-#	error atomic increment of 32-bit variables not yet defined for this platfom
+#	error atomic increment of variables not yet defined for this platfom
 #endif
 
-
-
-
-/* Atomic compare and swap of 32-bit values allows a lock-free implementation of
- * the request side of signalSemaphoreWithIndex: using tides to limit the range
- * of indices examined.
+/* Atomic compare and swap of sqInt variables allows a lock-free implementation
+ * of the request side of signalSemaphoreWithIndex: using tides to limit the
+ * range of indices examined.
  *
  * sqCompareAndSwap(var,old,new) arranges atomically that if var's value is
- * equal to old, then var's is set to new.
- *
- * sqCompareAndSwapRes(var,old,new,res) arranges atomically that if var's value
- * is equal to old, then var's value is set to new, and that in any case, res
- * is set to the previous value of var.
+ * equal to old, then var's value is set to new, and answers true iff the swap
+ * was made.
  */
 
-	/* Currently we provide definitions for x86 and GCC only.  */
-#if defined(__GNUC__) && (defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_))
-
-#ifdef TARGET_OS_IS_IPHONE
-# define sqCompareAndSwap(var,old,new) OSAtomicCompareAndSwap32(old, new, &var) 
-/* N.B.  This is not atomic in fetching var's old value :( */
-# define sqCompareAndSwapRes(var,old,new,res) do { res = var; if (OSAtomicCompareAndSwap32(old, new, &var)) res = new; } while (0)
-#else
+#if TARGET_OS_IS_IPHONE
 # define sqCompareAndSwap(var,old,new) \
-	asm volatile ("movl %1, %%eax; lock cmpxchg %2, %0" \
-					: "=m"(var) \
-					: "g"(old), "r"(new), "m"(var)\
-					: "memory", "%eax")
+	(sizeof(var) == 8 \
+		? OSAtomicCompareAndSwap64(old, new, &var) \
+		: OSAtomicCompareAndSwap32(old, new, &var))
 
-# define sqCompareAndSwapRes(var,old,new,res) \
-	asm volatile ("movl %2, %%eax; lock cmpxchg %3, %0; movl %%eax, %1" \
-					: "=m"(var), "=g"(res) \
-					: "g"(old), "r"(new), "m"(var) \
-					: "memory", "%eax")
-#endif
-#elif defined TARGET_OS_IS_IPHONE
-# define sqCompareAndSwap(var,old,new) OSAtomicCompareAndSwap32(old, new, &var) 
-# define sqCompareAndSwapRes(var,old,new,res) res = var; OSAtomicCompareAndSwap32(old, new, &var) 
+#elif defined(__GNUC__) || defined(__clang__)
+# if GCC_HAS_BUILTIN_SYNC || defined(__clang__)
+#	define sqCompareAndSwap(var,old,new) \
+	__sync_bool_compare_and_swap(&(var), old, new)
 
-#elif  defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
-/* tpr - this is code intended for the Raspberry Pi Raspbian OS */
-/* We'll experimentally use the gcc inbuilt functions detailed in
- * http://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html */
-# define sqCompareAndSwap(var,old,new) \
-	__sync_bool_compare_and_swap(&(var), (old), (new))
-
-# define sqCompareAndSwapRes(var,old,new,res) \
-	(res = __sync_val_compare_and_swap(&(var), (old), (new)))
+# elif defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_)
+	/* support for gcc 3.x; 32-bit only */
+	/* N.B.  One cannot test the result of this expression.  If you need that
+	 * you'll have to wrap the code in a function and return the result.  This
+			sete %%al;movzbl %%al,%%eax
+	 * can be used to set al based on the condition code & extend it to 32-bits.
+	 */
+#	define sqCompareAndSwap(var,old,new) \
+	asm volatile ("movl %1, %%eax; lock cmpxchg %2, %0"\
+						: "=m"(var) \
+						: "g"(old), "r"(new), "m"(var) \
+						: "memory", "%eax")
+# endif
 
 #else
-/* Dear implementor, you have choices.  Google atomic increment and you will
- * find a number of implementations for other architectures.
+/* Dear implementor, you have choices.  Google atomic compare and swap and you
+ * will find a number of alternative implementations.
  */
 #	error atomic compare/swap of 32-bit variables not yet defined for this platfom
 #endif

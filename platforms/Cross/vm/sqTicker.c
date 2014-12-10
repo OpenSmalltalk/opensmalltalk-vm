@@ -246,9 +246,7 @@ checkHighPriorityTickees(usqLong utcMicrosecondClock)
 		if (async[i].tickee
 		 && !async[i].inProgress
 		 && utcMicrosecondClock >= async[i].tickeeDeadlineUsecs) {
-			int previousInProgress;
-			sqCompareAndSwapRes(async[i].inProgress,0,1,previousInProgress);
-			if (previousInProgress == 0) {
+			if (sqCompareAndSwap(async[i].inProgress,0,1)) {
 				assert(async[i].inProgress);
 				if (async[i].tickeeDeadlineUsecs + HiccupThreshold
 					< utcMicrosecondClock)

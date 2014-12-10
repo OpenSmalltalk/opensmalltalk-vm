@@ -60,14 +60,15 @@ sqOSThread ioVMThread; /* initialized in the various <plat>/vm/sqFooMain.c */
 extern void forceInterruptCheck(void);
 extern sqInt doSignalSemaphoreWithIndex(sqInt semaIndex);
 
+/* Use 16-bit counters if possible, otherwise 32-bit */
 typedef struct {
-#if !defined(TARGET_OS_IS_IPHONE) && (x86 || x86-64) /* etc etc x86 allows atomic update of 16 bit values */
+# if ATOMICADD16
 		short requests;
 		short responses;
-#else
-		long requests;
-		long responses;
-#endif
+# else
+		int requests;
+		int responses;
+# endif
 	} SignalRequest;
 
 static SignalRequest *signalRequests = 0;
@@ -80,8 +81,8 @@ static volatile sqInt checkSignalRequests;
  */
 static volatile int tideLock = 0;
 static volatile int useTideA = 1;
-static volatile sqInt lowTideA = (unsigned long)-1 >> 1, highTideA = -1;
-static volatile sqInt lowTideB = (unsigned long)-1 >> 1, highTideB = -1;
+static volatile sqInt lowTideA = (usqInt)-1 >> 1, highTideA = -1;
+static volatile sqInt lowTideB = (usqInt)-1 >> 1, highTideB = -1;
 
 int
 ioGetMaxExtSemTableSize(void) { return numSignalRequests; }

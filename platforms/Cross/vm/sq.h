@@ -269,7 +269,7 @@ unsigned long ioHeartbeatFrequency(int);
 
 #if COGMTVM
 #define THRLOGSZ 256
-extern int thrlogidx;
+extern int thrlogidx = 0;
 extern char *thrlog[];
 
 /* Debug logging that defers printing.  Use like printf, e.g.
@@ -279,10 +279,10 @@ extern char *thrlog[];
  * threads after myindex is obtained but before asprintf completes we can get
  * two threads using the same entry.  But this is good enough for now.
  */
-#define THRLOG(...) do { int myidx, oldidx; \
+#define THRLOG(...) do { int myidx, nextidx; \
 	do { myidx = thrlogidx; \
-		sqCompareAndSwapRes(thrlogidx,myidx,(myidx+1)&(THRLOGSZ-1),oldidx); \
-	} while (myidx != oldidx); \
+		 nextidx = (myidx+1)&(THRLOGSZ-1); \
+	} while (!sqCompareAndSwap(thrlogidx,myidx,nextidx)); \
 	if (thrlog[myidx]) free(thrlog[myidx]); \
 	asprintf(thrlog + myidx, __VA_ARGS__); \
 } while (0)

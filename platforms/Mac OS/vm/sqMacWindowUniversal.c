@@ -594,8 +594,13 @@ ioShowDisplayOnWindow(
 }
 
 
-static void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int height, int depth, int desiredDepth,
-	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex, int *pitch) {
+static void *
+copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int height, int depth, int desiredDepth,
+	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex, int *pitch)
+{
+#if _LP64
+	error("copy124BitsTheHardWay unimplemented because GetGWorldPixMap is unavailable");
+#else
 
 	static GWorldPtr offscreenGWorld = nil;
 	QDErr error;
@@ -647,6 +652,7 @@ static void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int 
 			 &srcRect, &dstRect, srcCopy, maskRect);
 	*pitch = GetPixRowBytes(GetGWorldPixMap(offscreenGWorld));
 	return GetPixBaseAddr(GetGWorldPixMap(offscreenGWorld));
+#endif /* _LP64 */
 }
 
 void SetUpPixmap(void) {
@@ -1250,14 +1256,12 @@ ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag) {
 
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
 
-	if (QDGetCGDirectDisplayID == NULL)
-		return ioSetDisplayMode( width,  height,  depth,  fullscreenFlag);
-
+#if !_LP64
 	dominantGDevice = getThatDominateGDevice(getSTWindow());
-       if (dominantGDevice == null) {
-            success(false);
-            return 0;
-        }
+    if (dominantGDevice == null) {
+		success(false);
+		return 0;
+	}
 
 
 	mainDominateWindow = QDGetCGDirectDisplayID(dominantGDevice);
@@ -1267,6 +1271,7 @@ ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag) {
 	if ( err != CGDisplayNoErr ) {
 		return 0;
 	}
+#endif /* !_LP64 */
 
 	ioSetFullScreen(fullscreenFlag);
 

@@ -12,7 +12,6 @@ DropPlugin \
 DSAPrims \
 FFTPlugin \
 FilePlugin \
-HostWindowPlugin \
 IA32ABI \
 InternetConfigPlugin \
 JoystickTabletPlugin \

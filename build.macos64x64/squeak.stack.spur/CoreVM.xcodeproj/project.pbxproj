@@ -212,7 +212,6 @@
 		A27729410CE7A8D300ABAFCA /* FFTPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27728FE0CE7A8D300ABAFCA /* FFTPlugin.c */; };
 		A27729430CE7A8D300ABAFCA /* FilePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729020CE7A8D300ABAFCA /* FilePlugin.c */; };
 		A27729460CE7A8D300ABAFCA /* GeniePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729080CE7A8D300ABAFCA /* GeniePlugin.c */; };
-		A27729470CE7A8D300ABAFCA /* HostWindowPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277290A0CE7A8D300ABAFCA /* HostWindowPlugin.c */; };
 		A27729480CE7A8D300ABAFCA /* InternetConfigPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277290C0CE7A8D300ABAFCA /* InternetConfigPlugin.c */; };
 		A27729490CE7A8D300ABAFCA /* JoystickTabletPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277290E0CE7A8D300ABAFCA /* JoystickTabletPlugin.c */; };
 		A277294A0CE7A8D300ABAFCA /* JPEGReaderPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729100CE7A8D300ABAFCA /* JPEGReaderPlugin.c */; };
@@ -233,8 +232,6 @@
 		A277295A0CE7A8D300ABAFCA /* StarSqueakPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729300CE7A8D300ABAFCA /* StarSqueakPlugin.c */; };
 		A277295B0CE7A8D300ABAFCA /* UUIDPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729330CE7A8D300ABAFCA /* UUIDPlugin.c */; };
 		A277295D0CE7A8D300ABAFCA /* ZipPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729370CE7A8D300ABAFCA /* ZipPlugin.c */; };
-		A27729770CE7A9AE00ABAFCA /* sqMacHostWindow.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729750CE7A9AE00ABAFCA /* sqMacHostWindow.c */; };
-		A27729780CE7A9AE00ABAFCA /* sqMacHostWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = A27729760CE7A9AE00ABAFCA /* sqMacHostWindow.h */; };
 		A277297B0CE7A9BE00ABAFCA /* HostWindowPlugin.h in Headers */ = {isa = PBXBuildFile; fileRef = A277297A0CE7A9BE00ABAFCA /* HostWindowPlugin.h */; };
 		A27729A80CE7AFBE00ABAFCA /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A27729A70CE7AFBE00ABAFCA /* SystemConfiguration.framework */; };
 		A2835CFF0E07A13300308978 /* sqHeapMap.c in Sources */ = {isa = PBXBuildFile; fileRef = A2835CFE0E07A13300308978 /* sqHeapMap.c */; };
@@ -1274,7 +1271,6 @@
 				9426FF2509F489D200ECEDDC /* rePlugin.h in Headers */,
 				A2FB6B5A0CCD71B000A29088 /* sqMacLocaleCarbon.h in Headers */,
 				A2FB6B730CCD723F00A29088 /* LocalePlugin.h in Headers */,
-				A27729780CE7A9AE00ABAFCA /* sqMacHostWindow.h in Headers */,
 				A277297B0CE7A9BE00ABAFCA /* HostWindowPlugin.h in Headers */,
 				A2C08F430EA3E0FD0036416C /* dispdbg.h in Headers */,
 				A2F27E691087169800F905FB /* nsPoolManagement.h in Headers */,
@@ -1490,7 +1486,6 @@
 				A27729410CE7A8D300ABAFCA /* FFTPlugin.c in Sources */,
 				A27729430CE7A8D300ABAFCA /* FilePlugin.c in Sources */,
 				A27729460CE7A8D300ABAFCA /* GeniePlugin.c in Sources */,
-				A27729470CE7A8D300ABAFCA /* HostWindowPlugin.c in Sources */,
 				A27729480CE7A8D300ABAFCA /* InternetConfigPlugin.c in Sources */,
 				A27729490CE7A8D300ABAFCA /* JoystickTabletPlugin.c in Sources */,
 				A277294A0CE7A8D300ABAFCA /* JPEGReaderPlugin.c in Sources */,
@@ -1512,7 +1507,6 @@
 				A277295B0CE7A8D300ABAFCA /* UUIDPlugin.c in Sources */,
 				735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */,
 				A277295D0CE7A8D300ABAFCA /* ZipPlugin.c in Sources */,
-				A27729770CE7A9AE00ABAFCA /* sqMacHostWindow.c in Sources */,
 				A2835CFF0E07A13300308978 /* sqHeapMap.c in Sources */,
 				73B96E490E47D7A10079C51B /* sqUnixHeartbeat.c in Sources */,
 				73B54C530E55EFED00FE780C /* sqUnixVMProfile.c in Sources */,

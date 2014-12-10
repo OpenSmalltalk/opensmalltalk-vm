@@ -159,6 +159,8 @@ pcbufferSIGPROFhandler(int sig, siginfo_t *info, ucontext_t *uap)
 	pctype pc = uap->uc_mcontext->ss.rip;
 #elif __linux__ && __i386__
 	pctype pc = uap->uc_mcontext.gregs[REG_EIP];
+#elif __linux__ && __x86_64__
+	pctype pc = uap->uc_mcontext.gregs[REG_RIP];
 #elif __linux__ && __arm__
 	pctype pc = uap->uc_mcontext.arm_pc;
 #elif __FreeBSD__ && __i386__

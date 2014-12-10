@@ -1,0 +1,28 @@
+#!/bin/bash
+# debug Spur VM with VM profiler and itimer heartbeat
+INSTALLDIR=debug/cogspur64linux
+OPT="-g3 -O0 -DDEBUGVM=1"
+
+if [ $# -ge 1 ]; then
+	INSTALLDIR="$1"; shift
+fi
+
+echo -n "clean? "
+read a
+case $a in
+n|no|N|NO)	echo "ok but this isn't safe!!";;
+*)			test -f Makefile && make reallyclean
+esac
+test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
+		--with-vmversion=5.0 \
+		--with-src=spur64src --with-plugins=src/plugins \
+	CC="gcc -m64" \
+	CXX="g++ -m64" \
+	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -DCOGMTVM=0 -DITIMER_HEARTBEAT=1" \
+	LIBS="-lpthread -luuid" \
+	LDFLAGS=-Wl,-z,now
+rm -f vm/sqUnixMain.o # nuke version info
+rm -rf ../../../products/$INSTALLDIR
+# prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
+# but older linux readlinks lack the -f flag
+make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG

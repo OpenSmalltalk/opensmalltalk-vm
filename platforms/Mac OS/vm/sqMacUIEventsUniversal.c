@@ -340,40 +340,54 @@ IsKeyDown() { interpreterProxy->success(false); return null; }
 
 extern MenuHandle fileMenu, editMenu;
 
-static EventTypeSpec appEventCmdList[] = {{kEventClassCommand, kEventCommandProcess}};
+static EventTypeSpec appEventCmdList[] = {
+					{kEventClassCommand, kEventCommandProcess}
+};
 
-static EventTypeSpec appEventList[] = {{kEventClassApplication, kEventAppActivated},
-                                {kEventClassApplication, kEventAppDeactivated}};
+static EventTypeSpec appEventList[] = {
+					{kEventClassApplication, kEventAppActivated},
+					{kEventClassApplication, kEventAppDeactivated}
+};
 
-static EventTypeSpec windEventList[] = {{kEventClassWindow, kEventWindowDrawContent },
-                            { kEventClassWindow, kEventWindowHidden },
-                            { kEventClassWindow, kEventWindowActivated},
-							{ kEventClassWindow, kEventWindowBoundsChanged},
-							{ kEventClassWindow, kEventWindowResizeStarted},
-							{ kEventClassWindow, kEventWindowResizeCompleted},
-							{ kEventClassWindow, kEventWindowClose},
-							{ kEventClassWindow, kEventWindowCollapsed},
-                            { kEventClassWindow, kEventWindowDeactivated}};
+static EventTypeSpec windEventList[] = {
+#if !_LP64
+					{ kEventClassWindow, kEventWindowDrawContent },
+#endif
+					{ kEventClassWindow, kEventWindowHidden },
+					{ kEventClassWindow, kEventWindowActivated},
+					{ kEventClassWindow, kEventWindowBoundsChanged},
+					{ kEventClassWindow, kEventWindowResizeStarted},
+					{ kEventClassWindow, kEventWindowResizeCompleted},
+					{ kEventClassWindow, kEventWindowClose},
+					{ kEventClassWindow, kEventWindowCollapsed},
+					{ kEventClassWindow, kEventWindowDeactivated}
+};
 
 static EventTypeSpec windEventMouseList[] = {
-							{ kEventClassMouse, kEventMouseMoved},
-                            { kEventClassMouse, kEventMouseWheelMoved},
-                            { kEventClassMouse, kEventMouseDragged},
-                            { kEventClassMouse, kEventMouseUp},
-							{ kEventClassMouse, kEventMouseDown},
-		                    { kEventClassMouse, kEventMouseEntered },
-		                    { kEventClassMouse, kEventMouseExited }
-							};
+					{ kEventClassMouse, kEventMouseMoved},
+					{ kEventClassMouse, kEventMouseWheelMoved},
+					{ kEventClassMouse, kEventMouseDragged},
+					{ kEventClassMouse, kEventMouseUp},
+					{ kEventClassMouse, kEventMouseDown},
+					{ kEventClassMouse, kEventMouseEntered },
+					{ kEventClassMouse, kEventMouseExited }
+};
 
-static EventTypeSpec windEventKBList[] = {{ kEventClassKeyboard, kEventRawKeyDown},
-                            { kEventClassKeyboard, kEventRawKeyUp},
-							{ kEventClassKeyboard, kEventRawKeyRepeat},
-                            { kEventClassKeyboard, kEventRawKeyModifiersChanged}};
+static EventTypeSpec windEventKBList[] = {
+					{ kEventClassKeyboard, kEventRawKeyDown},
+					{ kEventClassKeyboard, kEventRawKeyUp},
+					{ kEventClassKeyboard, kEventRawKeyRepeat},
+					{ kEventClassKeyboard, kEventRawKeyModifiersChanged}
+};
 
 
-static EventTypeSpec appleEventEventList[] = {{ kEventClassAppleEvent, kEventAppleEvent}};
+static EventTypeSpec appleEventEventList[] = {
+					{ kEventClassAppleEvent, kEventAppleEvent}
+};
 
-static EventTypeSpec textInputEventList[] = {{ kEventClassTextInput, kEventTextInputUnicodeForKeyEvent}};
+static EventTypeSpec textInputEventList[] = {
+					{ kEventClassTextInput, kEventTextInputUnicodeForKeyEvent}
+};
 
 static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
                 EventRef event, void* userData);
@@ -600,9 +614,11 @@ MyWindowEventHandler(EventHandlerCallRef myHandler,
 			}
             windowActive = 0;
              break;
+#if !_LP64
        case kEventWindowDrawContent:
             result = noErr;
             break;
+#endif
        case kEventWindowResizeStarted:
 			{
 				windowDescriptorBlock *targetWindowBlock;

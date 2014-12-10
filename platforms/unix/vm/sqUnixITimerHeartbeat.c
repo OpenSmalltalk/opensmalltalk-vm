@@ -364,12 +364,9 @@ static void
 heartbeat_handler(int sig, struct siginfo *sig_info, void *context)
 {
 #if !defined(SA_NODEFER)
-  {	int zero = 0;
-	int previouslyHandlingHeartbeat;
-    sqCompareAndSwapRes(handling_heartbeat,zero,1,previouslyHandlingHeartbeat);
-	if (previouslyHandlingHeartbeat)
+	/* if the CAS fails, the heartbeat is already being handled. */
+    if (!sqCompareAndSwap(handling_heartbeat,0,1))
 		return;
-  }
 
 	handling_heartbeat = 1;
 #endif
