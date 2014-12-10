@@ -31,15 +31,15 @@ AsynchFilePlugin class >> requiresPlatformFiles [
 
 { #category : #primitives }
 AsynchFilePlugin >> asyncFileValueOf: oop [
-	"Answer a pointer to the first byte of the async file record within the given Smalltalk bytes object, or nil if oop is not an async file record."
+	"Answer a pointer to the first byte of the async file record within the given
+	 Smalltalk bytes object, or fail and answer nil if oop is not an async file record."
 
 	<returnTypeC: 'AsyncFile *'>
-	interpreterProxy success:
-		((interpreterProxy isBytes: oop)
-		 and: [(interpreterProxy slotSizeOf: oop) = (self cCode: 'sizeof(AsyncFile)')]).
-	^interpreterProxy failed
-		ifTrue: [nil]
-		ifFalse: [self cCoerceSimple: (interpreterProxy firstIndexableField: oop) to: 'AsyncFile *']
+	((interpreterProxy isBytes: oop)
+	 and: [(interpreterProxy byteSizeOf: oop) = (self sizeof: #AsyncFile)]) ifTrue:
+		[^self cCoerceSimple: (interpreterProxy firstIndexableField: oop) to: 'AsyncFile *'].
+	interpreterProxy primitiveFailFor: PrimErrBadArgument.
+	^nil
 ]
 
 { #category : #'initialize-release' }
@@ -75,16 +75,21 @@ AsynchFilePlugin >> primitiveAsyncFileOpen: fileName forWrite: writeFlag semaInd
 	| fileNameSize fOop f okToOpen |
 	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileOpen' parameters: #(#String #Boolean #SmallInteger ).
-	fileNameSize := interpreterProxy slotSizeOf: (fileName asOop: String).
+	fileNameSize := interpreterProxy byteSizeOf: (fileName asOop: String).
 	"If the security plugin can be loaded, use it to check for permission.
 	If not, assume it's ok"
-	sCOAFfn ~= 0
-		ifTrue: [okToOpen := self cCode: ' ((sqInt (*) (char *, sqInt, sqInt)) sCOAFfn)(fileName, fileNameSize, writeFlag)'.
-			okToOpen ifFalse: [^ interpreterProxy primitiveFail]].
-	fOop := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: (self cCode: 'sizeof(AsyncFile)').
+	sCOAFfn ~= 0 ifTrue:
+		[okToOpen := self cCode: '((sqInt (*) (char *, sqInt, sqInt)) sCOAFfn)(fileName, fileNameSize, writeFlag)'
+							inSmalltalk: [true].
+		 okToOpen ifFalse:
+			[^interpreterProxy primitiveFail]].
+	fOop := interpreterProxy
+				instantiateClass: interpreterProxy classByteArray
+				indexableSize: (self sizeof: #AsyncFile).
 	f := self asyncFileValueOf: fOop.
-	interpreterProxy failed ifFalse: [self cCode: 'asyncFileOpen(f, (int)fileName, fileNameSize, writeFlag, semaIndex)'].
-	^ fOop
+	interpreterProxy failed ifFalse:
+		[self cCode: 'asyncFileOpen(f, fileName, fileNameSize, writeFlag, semaIndex)'].
+	^fOop
 ]
 
 { #category : #primitives }
@@ -104,7 +109,7 @@ AsynchFilePlugin >> primitiveAsyncFileReadResult: fhandle intoBuffer: buffer at:
 			bufferSize := bufferSize * 4].
 	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= bufferSize]).
 
-	bufferPtr := (self cCoerce: (interpreterProxy firstIndexableField: buffer) to: 'int') + startIndex - 1. 	"adjust for zero-origin indexing"
+	bufferPtr := (self cCoerce: (interpreterProxy firstIndexableField: buffer) to:#sqInt) + startIndex - 1. 	"adjust for zero-origin indexing"
 	interpreterProxy failed ifFalse: [r := self cCode: 'asyncFileReadResult(f, bufferPtr, count)'].
 	^ r asOop: SmallInteger
 ]
@@ -148,7 +153,7 @@ AsynchFilePlugin >> primitiveAsyncFileWriteStart: fHandle fPosition: fPosition f
 			startIndex := startIndex - 1 * 4 + 1.
 			bufferSize := bufferSize * 4].
 	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= bufferSize]).
-	bufferPtr := (self cCoerce: (interpreterProxy firstIndexableField: buffer) to: 'int') + startIndex - 1.	"adjust for zero-origin indexing"
+	bufferPtr := (self cCoerce: (interpreterProxy firstIndexableField: buffer) to: #sqInt) + startIndex - 1.	"adjust for zero-origin indexing"
 	interpreterProxy failed ifFalse: [self cCode: 'asyncFileWriteStart(f, fPosition, bufferPtr, count)']
 ]
 
@@ -157,4 +162,14 @@ AsynchFilePlugin >> shutdownModule [
 	"Initialise the module"
 	<export: true>
 	^self cCode: 'asyncFileShutdown()' inSmalltalk:[true]
+]
+
+{ #category : #simulation }
+AsynchFilePlugin >> sizeof: objectSymbolOrClass [
+	<doNotGenerate>
+	objectSymbolOrClass isInteger ifTrue:
+		[^interpreterProxy wordSize].
+	objectSymbolOrClass == #AsyncFile ifTrue:
+		[^interpreterProxy wordSize * 2].
+	^super sizeof: objectSymbolOrClass
 ]
