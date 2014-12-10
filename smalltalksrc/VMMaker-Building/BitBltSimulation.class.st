@@ -3005,16 +3005,16 @@ BitBltSimulation >> rgbComponentAlpha32 [
 	<inline: false> "This particular method should be optimized in itself"
 
 	"Give the compile a couple of hints"
-	<var: #sourceWord declareC:'register int sourceWord'>
-	<var: #deltaX declareC:'register int deltaX'>
+	<var: #sourceWord type: 'register long'>
+	<var: #deltaX type: 'register long'>
 
 	"The following should be declared as pointers so the compiler will
 	notice that they're used for accessing memory locations 
 	(good to know on an Intel architecture) but then the increments
 	would be different between ST code and C code so must hope the
 	compiler notices what happens (MS Visual C does)"
-	<var: #srcIndex declareC:'register int srcIndex'>
-	<var: #dstIndex declareC:'register int dstIndex'>
+	<var: #srcIndex type: 'register long'>
+	<var: #dstIndex type: 'register long'>
 	
 	deltaY := bbH + 1. "So we can pre-decrement"
 	srcY := sy.
