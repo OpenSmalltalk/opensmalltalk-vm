@@ -2,16 +2,11 @@
 
 #include "sq.h"
 
-
-/* Memory Access Macros */
-#define byteAt(i) (*((unsigned char *) (i)))
-#define byteAtput(i, val) (*((unsigned char *) (i)) = val)
-#define longAt(i) (*((int *) (i)))
-#define longAtput(i, val) (*((int *) (i)) = val)
+#if OLD_SOUND_PRIMS
 
 /*** Imported Functions/Variables ***/
-extern int stackValue(int);
-extern int successFlag;
+extern sqInt stackValue(sqInt);
+extern sqInt successFlag;
 
 /*** Variables ***/
 
@@ -396,3 +391,4 @@ int oldprimSampledSoundmixSampleCountintostartingAtleftVolrightVol(void) {
 	storeIntegerofObjectwithValue(12, rcvr, indexTimes1000);
 	pop(5);
 }
+#endif /* OLD_SOUND_PRIMS */
