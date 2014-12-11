@@ -14,7 +14,9 @@ CMakeVMMakerSqueakHistoryHelp class >> cmakeVMMakerSqueak [
 	^HelpTopic
 		title: 'Summary'
 		contents:
-'CMakeVMMakerSqueak ....
+'TODO: EDIT ME.
+
+CMakeVMMakerSqueak ....
 
 The original version subclassed the various Generators,  Configs and Builders of Igor''s version while providing a small pharo/squeak compatibility layer where required. This philosophy was in place for CMakeVMMakerSqueak-tty.1 to CMakeVMMakerSqueak-tty.26
 
@@ -82,7 +84,7 @@ CMakeVMMakerSqueakHistoryHelp class >> overview [
 		contents:
 'CMakeVMMaker Squeak is a product of Igor Stasenko''s CMakeVMaker for pharo and Ian Piumurta''s custom CMake configuration files he wrote for the Stack Interpreter on Linux.
 
-Here I present an overview of the design of each historical system and end with a summary of their contributions to this system.
+Here I present an overview of the design of each historical system and end with a summary of their  influences on this system.
 '
 ]
 

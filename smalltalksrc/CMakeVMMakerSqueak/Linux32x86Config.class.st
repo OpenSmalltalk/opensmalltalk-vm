@@ -57,6 +57,7 @@ Linux32x86Config >> addVMPluginsBuild: aMaker [
 
 { #category : #cmake }
 Linux32x86Config >> availableBuildTypes [
+	self flag:'tty'. "Should this be pushed up? I am guessing yes"
 	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
 "	subclasses should use
 

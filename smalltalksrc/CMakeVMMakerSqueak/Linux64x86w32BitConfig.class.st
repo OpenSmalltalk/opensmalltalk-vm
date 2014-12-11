@@ -292,7 +292,7 @@ Linux64x86w32BitConfig >> defaultInternalPlugins [
 { #category : #cmake }
 Linux64x86w32BitConfig >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
-	^self dirLinux32x8664
+	^self dirLinux64x86w32BitConfig
 ]
 
 { #category : #cmake }
