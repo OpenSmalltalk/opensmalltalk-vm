@@ -68,6 +68,3 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
 sqInt dir_PathToWorkingDir(char *pathName, sqInt pathNameMax);
 sqInt dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator);
 sqInt dir_GetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator);
-
-/* Plugin export */
-SQFile *fileValueOf(sqInt obj);
