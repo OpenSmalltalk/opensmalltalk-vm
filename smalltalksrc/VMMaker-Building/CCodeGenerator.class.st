@@ -1444,6 +1444,20 @@ CCodeGenerator >> generateAsAddress: msgNode on: aStream indent: level [
 	self emitCExpression: msgNode args first on: aStream
 ]
 
+{ #category : #'C translation support' }
+CCodeGenerator >> generateAsConstantExpression: msgNode on: aStream [
+	"Attempt to generate the C code for this message onto the given stream.
+	 Answer if the attempt succeeded.  This handles integer overflow of int
+	 expressions in a 64-bit compiler."
+
+	msgNode constantNumbericValueOrNil ifNotNil:
+		[:value|
+		 (value between: -1 << 31 and: 1 << 31 - 1) ifFalse:
+			[aStream nextPutAll: (self cLiteralFor: value).
+			 ^true]].
+	^false
+]
+
 { #category : #'C translation' }
 CCodeGenerator >> generateAsFloat: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
@@ -2332,9 +2346,10 @@ CCodeGenerator >> generateMin: msgNode on: aStream indent: level [
 CCodeGenerator >> generateMinus: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ' - '.
-	self emitCExpression: msgNode args first on: aStream.
+	(self generateAsConstantExpression: msgNode on: aStream) ifFalse:
+		[self emitCExpression: msgNode receiver on: aStream.
+		 aStream nextPutAll: ' - '.
+		 self emitCExpression: msgNode args first on: aStream]
 ]
 
 { #category : #'C translation' }
@@ -2413,10 +2428,10 @@ CCodeGenerator >> generatePerform: msgNode on: aStream indent: level [
 { #category : #'C translation' }
 CCodeGenerator >> generatePlus: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
-
-	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ' + '.
-	self emitCExpression: msgNode args first on: aStream.
+	(self generateAsConstantExpression: msgNode on: aStream) ifFalse:
+		[self emitCExpression: msgNode receiver on: aStream.
+		 aStream nextPutAll: ' + '.
+		 self emitCExpression: msgNode args first on: aStream]
 ]
 
 { #category : #'C translation' }
@@ -2658,9 +2673,10 @@ CCodeGenerator >> generateSmalltalkMetaError: msgNode on: aStream indent: level 
 CCodeGenerator >> generateTimes: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ' * '.
-	self emitCExpression: msgNode args first on: aStream.
+	(self generateAsConstantExpression: msgNode on: aStream) ifFalse:
+		[self emitCExpression: msgNode receiver on: aStream.
+		 aStream nextPutAll: ' * '.
+		 self emitCExpression: msgNode args first on: aStream]
 ]
 
 { #category : #'C translation' }
@@ -2971,7 +2987,7 @@ CCodeGenerator >> initialize [
 	suppressAsmLabels := false
 ]
 
-{ #category : #'C translation' }
+{ #category : #'C translation support' }
 CCodeGenerator >> initializeCTranslationDictionary [ 
 	"Initialize the dictionary mapping message names to actions for C code generation."
 
@@ -3207,7 +3223,7 @@ CCodeGenerator >> instVarNamesForClass: aClass [
 					[:ivn| vmClass isNonArgumentImplicitReceiverVariableName: ivn]]
 ]
 
-{ #category : #'C translation' }
+{ #category : #'C translation support' }
 CCodeGenerator >> is64BitIntegralVariable: node typeInto: aBlock [
 	| decl |
 	^node isVariable
@@ -3917,7 +3933,7 @@ CCodeGenerator >> reportShouldNotBeRemoved: removed varList: varList [
 		self inform: str]
 ]
 
-{ #category : #'C translation' }
+{ #category : #'C translation support' }
 CCodeGenerator >> reservedWords [
 	^#(	'auto'
 		'break'
@@ -4124,7 +4140,7 @@ CCodeGenerator >> sortStrings: aStringOrSymbolCollection [
 	^aStringOrSymbolCollection asSortedCollection: [:a :b| a caseSensitiveLessOrEqual: b]
 ]
 
-{ #category : #'C translation' }
+{ #category : #'C translation support' }
 CCodeGenerator >> stepExpressionIsNegative: aNode [
 	"Answer if the step expression (the by: argument in a to:by:do:) is negative."
 	self isConstantNode: aNode valueInto: [:stepValue| ^stepValue < 0].
