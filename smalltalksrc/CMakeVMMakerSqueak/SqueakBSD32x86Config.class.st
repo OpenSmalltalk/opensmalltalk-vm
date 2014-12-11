@@ -15,18 +15,18 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 "
 Class {
-	#name : #SqueakBSDConfig,
+	#name : #SqueakBSD32x86Config,
 	#superclass : #SqueakUnixConfig,
 	#category : #'CMakeVMMakerSqueak-BSD32x86'
 }
 
 { #category : #'as yet unclassified' }
-SqueakBSDConfig class >> initialize [
+SqueakBSD32x86Config class >> initialize [
 	isAbstractBaseClass:=true
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakBSDConfig >> addVMPluginsBuild: aMaker [
+SqueakBSD32x86Config >> addVMPluginsBuild: aMaker [
 	aMaker message: 'addVMDrivers: aMaker'.
 	 self 
 		addDriver: 'vm-display-null' 
@@ -57,7 +57,7 @@ SqueakBSDConfig >> addVMPluginsBuild: aMaker [
 ]
 
 { #category : #cmake }
-SqueakBSDConfig >> availableBuildTypes [
+SqueakBSD32x86Config >> availableBuildTypes [
 	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
 "	subclasses should use
 
@@ -67,7 +67,7 @@ SqueakBSDConfig >> availableBuildTypes [
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakBSDConfig >> coreSourcesBuild [
+SqueakBSD32x86Config >> coreSourcesBuild [
 	"files to include from src/vm dir"
 	^ #(
 		'cogit.c'
@@ -76,7 +76,7 @@ SqueakBSDConfig >> coreSourcesBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakBSDConfig >> coreSourcesBuildMultiThreaded [
+SqueakBSD32x86Config >> coreSourcesBuildMultiThreaded [
 	"files to include from src/vm dir"
 	^ #(
 		'cogit.c'
@@ -85,7 +85,7 @@ SqueakBSDConfig >> coreSourcesBuildMultiThreaded [
 ]
 
 { #category : #plugins }
-SqueakBSDConfig >> customizeVMPlugins [
+SqueakBSD32x86Config >> customizeVMPlugins [
 	|mysubset iwantonly|
 	"trim the vmdrivers ordered collection of CMakeVMDriver subclasses to only those I want. then customize them for use on this OS/platform"
 "	iwantonly :=	 #(#CMakeVMDisplayNull  #CMakeVMDisplayX11  #CMakeVMSoundALSA  #CMakeVMSoundNull ).
@@ -99,7 +99,7 @@ SqueakBSDConfig >> customizeVMPlugins [
 ]
 
 { #category : #plugins }
-SqueakBSDConfig >> defaultExternalPlugins [
+SqueakBSD32x86Config >> defaultExternalPlugins [
 " tty 2014.06.10  cut-n-paste from Cog/build.linux32x86/newspeak.cog.spur/build/plugins.ext"
 	^ #(B3DAcceleratorPlugin 
 		BochsIA32Plugin 
@@ -120,7 +120,7 @@ Use  ThreadedFFIPlugin.  The FFIPlugin is obsolete (it requires assembler suppor
 ]
 
 { #category : #plugins }
-SqueakBSDConfig >> defaultInternalPlugins [
+SqueakBSD32x86Config >> defaultInternalPlugins [
 " N.B. THESE MAY BE WILDLY INAPPROPRIATE FOR BSD. cut-n-pasted from Linux32x86Config.
    N.B. moduleName->XYZ means XYZ appears in the GNU-Build's plugins.int/ext. However, Smalltalk requires the class name.
                                  XYZSmalltalkClass  moduleName->XYZ as it appears in plugins.int/ext
@@ -164,30 +164,30 @@ SqueakBSDConfig >> defaultInternalPlugins [
 ]
 
 { #category : #cmake }
-SqueakBSDConfig >> dirBuildPlatform [
+SqueakBSD32x86Config >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	^self dirBSD32x86
 ]
 
 { #category : #cmake }
-SqueakBSDConfig >> excludeFromBuild [
+SqueakBSD32x86Config >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
 ]
 
 { #category : #cmake }
-SqueakBSDConfig >> executableName [
+SqueakBSD32x86Config >> executableName [
 	"AbstractBaseClass configurations are not meant to be executable"
 	^ self vmIShouldNotBeHereExecutableName
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakBSDConfig >> externalPluginsBuild [
+SqueakBSD32x86Config >> externalPluginsBuild [
 	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakBSDConfig >> extraPluginSettingsBuild: aMaker [
+SqueakBSD32x86Config >> extraPluginSettingsBuild: aMaker [
 	aMaker isExternal 
 		ifTrue:[aMaker templates addLast:((CMakeSet new) variable:'LIBRARY_OUTPUT_PATH' value:'${outputDir}')].
 
@@ -195,11 +195,11 @@ SqueakBSDConfig >> extraPluginSettingsBuild: aMaker [
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakBSDConfig >> internalPluginsBuild [
+SqueakBSD32x86Config >> internalPluginsBuild [
 	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakBSDConfig >> postBuildActionsBuild: gen [
+SqueakBSD32x86Config >> postBuildActionsBuild: gen [
 	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
 ]
