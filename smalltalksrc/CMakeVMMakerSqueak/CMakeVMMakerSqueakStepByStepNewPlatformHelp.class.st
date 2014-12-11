@@ -11,7 +11,7 @@ Class {
 
 { #category : #accessing }
 CMakeVMMakerSqueakStepByStepNewPlatformHelp class >> bookName [ 
-	^'Step By Step: New Platform'
+	^'Example Workflow: New Platform'
 ]
 
 { #category : #accessing }
@@ -24,7 +24,7 @@ CMakeVMMakerSqueakStepByStepNewPlatformHelp class >> overview [
 	^HelpTopic
 		title:'Overview'
 		contents:
-' 
+' Write me.
 '
 ]
 
@@ -38,6 +38,6 @@ CMakeVMMakerSqueakStepByStepNewPlatformHelp class >> step1 [
 	^HelpTopic
 		title:'Step 1. '
 		contents:
-' 
+' Write me
 '
 ]

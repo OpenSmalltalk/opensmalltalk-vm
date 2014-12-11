@@ -175,8 +175,6 @@ SqueakCMakeVMMakerAbstractBuilder >> availableBuildTypes [
 SqueakCMakeVMMakerAbstractBuilder >> availableBuildTypes: aCategoryName [
 	"answer the CMakeVMakerSqueak configurations in a Smalltalk category"
 	^((self configurationDictionary:aCategoryName) keys asSortedCollection) sort
-
-
 ]
 
 { #category : #queries }
