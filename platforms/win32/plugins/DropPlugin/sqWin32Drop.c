@@ -757,7 +757,7 @@ int dropRequestFileHandle(int dropIndex) {
   fileHandle = instantiateClassindexableSize(classByteArray(), fileRecordSize());
   wasBrowserMode = fBrowserMode;
   fBrowserMode = false;
-  sqFileOpen(fileValueOf(fileHandle),(int)dropName, strlen(dropName), 0);
+  sqFileOpen(fileValueOf(fileHandle),(sqInt)dropName, strlen(dropName), 0);
   fBrowserMode = wasBrowserMode;
   return fileHandle;
 }
