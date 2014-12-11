@@ -91,6 +91,12 @@ TParseNode >> comment: aComment [
 	comment := aComment 
 ]
 
+{ #category : #testing }
+TParseNode >> constantNumbericValueOrNil [
+
+	^nil
+]
+
 { #category : #enumerating }
 TParseNode >> detect: aBlock [
 	^self detect: aBlock ifNone: [self error: 'Node is not in the tree']
