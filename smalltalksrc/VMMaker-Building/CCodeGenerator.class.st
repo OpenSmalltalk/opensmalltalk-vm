@@ -2531,7 +2531,7 @@ CCodeGenerator >> generateShiftLeft: msgNode on: aStream indent: level [
 	| rcvr arg valueBeyondInt castToLong |
 	rcvr := msgNode receiver.
 	arg := msgNode args first.
-	valueBeyondInt := 1 bitShift: BytesPerWord * 4. "The default type of const << N is int."
+	valueBeyondInt := 1 bitShift: 32. "The default type of const << N is int."
 	castToLong := false.
 	rcvr constantNumbericValueOrNil ifNotNil:
 		[:rcvrVal|
