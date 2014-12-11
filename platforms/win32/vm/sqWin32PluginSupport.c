@@ -19,22 +19,22 @@ DWORD g_WM_BROWSER_PIPE = 0; /* Browser pipe */
 DWORD g_WM_CLIENT_PIPE = 0;  /* Client pipe */
 
 
-int stackObjectValue(int);
-int stackIntegerValue(int);
-int isBytes(int);
-int byteSizeOf(int);
-void *firstIndexableField(int);
-int push(int);
-int pop(int);
-int positive32BitIntegerFor(int);
-int nilObject(void);
-int instantiateClassindexableSize(int, int);
-int classByteArray(void);
-int fileRecordSize(void);
-SQFile *fileValueOf(int);
-int failed(void);
-int pushBool(int);
-int getFullScreenFlag(void);
+sqInt stackObjectValue(sqInt);
+sqInt stacksqIntegerValue(sqInt);
+sqInt isBytes(sqInt);
+sqInt byteSizeOf(sqInt);
+void *firstIndexableField(sqInt);
+sqInt push(sqInt);
+sqInt pop(sqInt);
+sqInt positive32BitsqIntegerFor(sqInt);
+sqInt nilObject(void);
+sqInt instantiateClassindexableSize(sqInt, sqInt);
+sqInt classByteArray(void);
+sqInt fileRecordSize(void);
+SQFile *fileValueOf(sqsqInt);
+sqInt failed(void);
+sqInt pushBool(sqInt);
+sqInt getFullScreenFlag(void);
 
 void pluginGetURLRequest(int id, void* urlIndex, int urlSize, 
 			 void* targetIndex, int targetSize);

@@ -122,7 +122,7 @@ int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstN
   int status= 0;
   char *from= (char *)alloca(srcNameSize + 1);
   char *to= (char *)alloca(dstNameSize + 1);
-  sqFilenameFromString(from, (int)srcName, srcNameSize);
-  sqFilenameFromString(to, (int)dstName, dstNameSize);
+  sqFilenameFromString(from, (sqInt)srcName, srcNameSize);
+  sqFilenameFromString(to, (sqInt)dstName, dstNameSize);
   return copy(from, to);
 }

@@ -68,7 +68,7 @@ sqInt dropRequestFileHandle(sqInt dropIndex)
 	if (path) {
 		// you cannot be serious?
 		sqInt handle = instantiateClassindexableSize(classByteArray(), fileRecordSize());
-		sqFileOpen((SQFile *)fileValueOf(handle), (int)path, strlen(path), 0);
+		sqFileOpen(fileValueOf(handle), path, strlen(path), 0);
 		return handle;
 	}  
 	return interpreterProxy->nilObject();
