@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "SoundCodecPrims.h"
+
 /****** begin "gsm.h" *****/
 
 #ifdef __cplusplus
@@ -130,10 +132,15 @@ extern void gsm_implode GSM_P((gsm, gsm_signal *, gsm_byte   *));
 /****** begin "private.h" *****/
 
 typedef short			word;		/* 16 bit signed int	*/
-typedef long			longword;	/* 32 bit signed int	*/
-
 typedef unsigned short		uword;		/* unsigned word	*/
-typedef unsigned long		ulongword;	/* unsigned longword	*/
+
+#if _LP64
+typedef int				longword;	/* 32 bit signed int	*/
+typedef unsigned int	ulongword;	/* unsigned longword	*/
+#else
+typedef long			longword;	/* 32 bit signed int	*/
+typedef unsigned long	ulongword;	/* unsigned longword	*/
+#endif
 
 struct gsm_state {
 
@@ -3842,31 +3849,14 @@ word gsm_FAC[8]	= { 18431, 20479, 22527, 24575, 26623, 28671, 30719, 32767 };
 
 /***** Squeak Interface Code Starts Here *****/
 
-/* prototypes */
-void gsmEncode(
-	int state, int frameCount,
-	int src, int srcIndex, int srcSize,
-	int dst, int dstIndex, int dstSize,
-	int *srcDelta, int *dstDelta);
-	
-void gsmDecode(
-	int state, int frameCount,
-	int src, int srcIndex, int srcSize,
-	int dst, int dstIndex, int dstSize,
-	int *srcDelta, int *dstDelta);
-	
-void gsmInitState(int state);
-
-int gsmStateBytes(void);
-
 /* glue functions */
 
 void gsmEncode(
-  int state, int frameCount,
-  int src, int srcIndex, int srcSize,
-  int dst, int dstIndex, int dstSize,
-  int *srcDelta, int *dstDelta) {
-  	int maxSrcFrames, maxDstFrames, srcPtr, dstPtr, i;
+  long state, long frameCount,
+  long src, long srcIndex, long srcSize,
+  long dst, long dstIndex, long dstSize,
+  long *srcDelta, long *dstDelta) {
+  	long maxSrcFrames, maxDstFrames, srcPtr, dstPtr, i;
 
 	maxSrcFrames = (srcSize + 1 - srcIndex) / 160;
 	maxDstFrames = (dstSize + 1 - dstIndex) / 33;
@@ -3885,11 +3875,11 @@ void gsmEncode(
 }
 
 void gsmDecode(
-  int state, int frameCount,
-  int src, int srcIndex, int srcSize,
-  int dst, int dstIndex, int dstSize,
-  int *srcDelta, int *dstDelta) {
-  	int maxSrcFrames, maxDstFrames, srcPtr, dstPtr, i;
+  long state, long frameCount,
+  long src, long srcIndex, long srcSize,
+  long dst, long dstIndex, long dstSize,
+  long *srcDelta, long *dstDelta) {
+  	long maxSrcFrames, maxDstFrames, srcPtr, dstPtr, i;
 
 	maxSrcFrames = (srcSize + 1 - srcIndex) / 33;
 	maxDstFrames = (dstSize + 1 - dstIndex) / 160;
@@ -3907,13 +3897,11 @@ void gsmDecode(
 	*dstDelta = frameCount * 160;
 }
 
-void gsmInitState(int state) {
+void gsmInitState(long state) {
 	/* Initialize the given GSM state record. */
 	memset((char *) state, 0, sizeof(struct gsm_state));
 	((gsm) state)->nrp = 40;
 }
 
-int gsmStateBytes(void) {
 	/* Return the size of a GSM state record in bytes. */
-	return sizeof(struct gsm_state);
-}
+long gsmStateBytes(void) { return sizeof(struct gsm_state); }
