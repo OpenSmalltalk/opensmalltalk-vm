@@ -1,17 +1,17 @@
 /* SoundCodec Plugin */
 /* prototypes */
 void gsmEncode(
-	int state, int frameCount,
-	int src, int srcIndex, int srcSize,
-	int dst, int dstIndex, int dstSize,
-	int *srcDelta, int *dstDelta);
+	long state, long frameCount,
+	long src, long srcIndex, long srcSize,
+	long dst, long dstIndex, long dstSize,
+	long *srcDelta, long *dstDelta);
 	
 void gsmDecode(
-	int state, int frameCount,
-	int src, int srcIndex, int srcSize,
-	int dst, int dstIndex, int dstSize,
-	int *srcDelta, int *dstDelta);
+	long state, long frameCount,
+	long src, long srcIndex, long srcSize,
+	long dst, long dstIndex, long dstSize,
+	long *srcDelta, long *dstDelta);
 	
-void gsmInitState(int state);
+void gsmInitState(long state);
 
-int gsmStateBytes(void);
+long gsmStateBytes(void);
