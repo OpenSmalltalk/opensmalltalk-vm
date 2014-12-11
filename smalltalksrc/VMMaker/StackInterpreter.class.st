@@ -14007,7 +14007,8 @@ StackInterpreter >> updateObjectsPostByteSwap [
 					 self longAt: oop + objectMemory baseHeaderSize put: (self longAt: oop + objectMemory baseHeaderSize + 4).
 					 self longAt: oop + objectMemory baseHeaderSize + 4 put: temp]
 				ifFalse:
-					[objectMemory wordSize = 8 ifTrue: "Object contains 32-bit half-words packed into 64-bit machine words."
+					[(objectMemory hasSpurMemoryManagerAPI not
+					  and: [objectMemory wordSize = 8]) ifTrue: "Object contains 32-bit half-words packed into 64-bit machine words."
 						[wordAddr := oop + objectMemory baseHeaderSize.
 						 objectMemory reverseWordsFrom: wordAddr to: oop + (objectMemory sizeBitsOf: oop)]]]]
 ]
