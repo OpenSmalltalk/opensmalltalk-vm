@@ -108,6 +108,17 @@ TSendNode >> bindVariablesIn: aDictionary [
 ]
 
 { #category : #'C code generation' }
+TSendNode >> constantNumbericValueOrNil [
+	(#(* // + -) includes: selector) ifTrue:
+		[receiver constantNumbericValueOrNil ifNotNil:
+			[:rval|
+			arguments first constantNumbericValueOrNil ifNotNil:
+				[:aval|
+				^rval perform: selector with: aval]]].
+	^nil
+]
+
+{ #category : #'C code generation' }
 TSendNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen [
 	"Emit the receiver in a form that can be passed as an argument."
 

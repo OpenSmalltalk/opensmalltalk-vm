@@ -7,6 +7,12 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
+{ #category : #testing }
+TConstantNode >> constantNumbericValueOrNil [
+
+	^value isNumber ifTrue: [value]
+]
+
 { #category : #'C code generation' }
 TConstantNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	"Emit a C literal."
