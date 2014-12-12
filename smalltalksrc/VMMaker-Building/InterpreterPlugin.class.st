@@ -146,6 +146,14 @@ InterpreterPlugin class >> preambleCCode [
 ]
 
 { #category : #translation }
+InterpreterPlugin class >> pruneUnusedInterpreterPluginMethodsIn: aCodeGen [
+	aCodeGen unreachableMethods do:
+		[:m|
+		 m definingClass = InterpreterPlugin ifTrue:
+			[aCodeGen removeMethodForSelector: m selector]]
+]
+
+{ #category : #translation }
 InterpreterPlugin class >> requiresCrossPlatformFiles [
 	"default is ok for most, any plugin needing cross platform files aside from a normal header must say so. See SoundCodecPlugin for example"
 	^self hasHeaderFile
@@ -216,6 +224,7 @@ InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFla
 	self initialize.
 	cg := self buildCodeGeneratorUpTo: self.
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
+	self pruneUnusedInterpreterPluginMethodsIn: cg.
 	cg storeCodeOnFile:  (directory fullNameFor: fname) doInlining: inlineFlag.
 	^cg exportedPrimitiveNames asArray
 ]
