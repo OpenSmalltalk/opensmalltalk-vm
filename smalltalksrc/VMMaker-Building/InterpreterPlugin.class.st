@@ -286,6 +286,15 @@ InterpreterPlugin >> msg: s [
 	^0
 ]
 
+{ #category : #'API access' }
+InterpreterPlugin >> positiveMachineIntegerFor: value [
+	<var: #value type: #'unsigned long'>
+	<inline: true>
+	^interpreterProxy bytesPerWord = 8
+		ifTrue: [interpreterProxy positive64BitIntegerFor: value]
+		ifFalse: [interpreterProxy positive32BitIntegerFor: value]
+]
+
 { #category : #initialize }
 InterpreterPlugin >> setInterpreter: anInterpreter [ 
 	"Note: This is coded so that it can be run in Squeak."
@@ -299,6 +308,15 @@ InterpreterPlugin >> setInterpreter: anInterpreter [
 	ok ifTrue:
 		[self expandDereferenceInterpreterProxyFunctionTable].
 	^ok
+]
+
+{ #category : #'API access' }
+InterpreterPlugin >> signedMachineIntegerFor: value [
+	<var: #value type: #'unsigned long'>
+	<inline: true>
+	^interpreterProxy bytesPerWord = 8
+		ifTrue: [interpreterProxy signed64BitIntegerFor: value]
+		ifFalse: [interpreterProxy signed32BitIntegerFor: value]
 ]
 
 { #category : #'simulation support' }
