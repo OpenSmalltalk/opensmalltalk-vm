@@ -26,6 +26,7 @@ VMProfileLinuxSupportPlugin class >> declareHeaderFilesIn: cg [
 
 { #category : #'iteration callbacks' }
 VMProfileLinuxSupportPlugin >> count: info num: size modules: ignored [
+	<returnTypeC: #int>
 	<var: #info type: #'struct dl_phdr_info *'>
 	<var: #size type: #'size_t'>
 	<var: #ignored type: #'void *'>
@@ -108,6 +109,7 @@ VMProfileLinuxSupportPlugin >> primitiveInterpretAddress [
 
 { #category : #'iteration callbacks' }
 VMProfileLinuxSupportPlugin >> reap: info module: size names: ignored [
+	<returnTypeC: #int>
 	| elfModuleName len moduleNameObj GetAttributeString |
 	<var: #info type: #'struct dl_phdr_info *'>
 	<var: 'elfModuleName' type: #'const char *'>
@@ -139,6 +141,7 @@ VMProfileLinuxSupportPlugin >> reap: info module: size names: ignored [
 { #category : #'iteration callbacks' }
 VMProfileLinuxSupportPlugin >> reap: info module: size symlinks: ignored [
 	"like reap:module:names:, but follows symlinks"
+	<returnTypeC: #int>
 	| elfModuleName len moduleNameObj GetAttributeString symLinkBuf |
 	<var: #info type: #'struct dl_phdr_info *'>
 	<var: 'elfModuleName' type: #'const char *'>
