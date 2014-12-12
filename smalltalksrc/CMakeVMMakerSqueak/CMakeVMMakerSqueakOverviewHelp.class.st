@@ -64,6 +64,14 @@ Linux32x86SqueakCogV3Config
 
 When the Linux32x86SqueakCogV3Config is  configured for the buildType #build.debug it will map its output to cmake.build.linux32x86/squeak.cog.v3/build.debug/
 
+The naming convention for Configurations takes the following form:
+[Optional Prefix]][Platform] [Language] [VM] [MemoryManager] [Optional Suffix] Config.
+
+As of 2014.12.09 the possible combinatons are:
+
+[Prefix][Platform][Newspeak | Squeak][Cog | Sista | Stack][V3 | Spur][Foo]Config.
+
+
 '
 ]
 
