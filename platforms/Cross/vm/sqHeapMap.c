@@ -22,6 +22,7 @@
 #include "sqMemoryAccess.h" 
 
 #include <stdlib.h>
+#include <string.h> /* for memset */
 
 #define ulong unsigned long
 #define uchar unsigned char

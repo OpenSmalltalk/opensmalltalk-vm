@@ -158,7 +158,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 	X509 *cert;
 	sqSSL *ssl = sslFromHandle(handle);
 
-	if(ssl->loglevel) printf("sqConnectSSL: %x\n", (int)ssl);
+	if(ssl->loglevel) printf("sqConnectSSL: %p\n", ssl);
 
 	/* Verify state of session */
 	if(ssl == NULL || (ssl->state != SQSSL_UNUSED && ssl->state != SQSSL_CONNECTING)) {
@@ -211,7 +211,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 
 	if(ssl->loglevel) printf("sqConnectSSL: SSL_get_peer_certificate\n");
 	cert = SSL_get_peer_certificate(ssl->ssl);
-	if(ssl->loglevel) printf("sqConnectSSL: cert = %x\n", (int)cert);
+	if(ssl->loglevel) printf("sqConnectSSL: cert = %p\n", cert);
 	/* Fail if no cert received. */
 	if(cert) {
 		X509_NAME_get_text_by_NID(X509_get_subject_name(cert), 
@@ -295,7 +295,7 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt 
 
 	if(ssl->loglevel) printf("sqAcceptSSL: SSL_get_peer_certificate\n");
 	cert = SSL_get_peer_certificate(ssl->ssl);
-	if(ssl->loglevel) printf("sqAcceptSSL: cert = %x\n", (int)cert);
+	if(ssl->loglevel) printf("sqAcceptSSL: cert = %p\n", cert);
 
 	if(cert) {
 	  X509_NAME_get_text_by_NID(X509_get_subject_name(cert), 
@@ -432,7 +432,7 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char *propName, sqInt pro
 		propID - the property id to retrieve
 	Returns: The integer value of the property.
 */
-int sqGetIntPropertySSL(sqInt handle, int propID) {
+sqInt sqGetIntPropertySSL(sqInt handle, sqInt propID) {
 	sqSSL *ssl = sslFromHandle(handle);
 
 	if(ssl == NULL) return 0;

@@ -167,7 +167,7 @@ static void display_winExit(void)
   printf("shut down your Custom Window system here\n");
 }
 
-static int  display_winImageFind(char *buf, int len)		{ trace();  return 0; }
+static long  display_winImageFind(char *buf, long len)		{ trace();  return 0; }
 static void display_winImageNotFound(void)			{ trace(); }
 
 static sqInt display_primitivePluginBrowserReady(void)		{ return primitiveFail(); }

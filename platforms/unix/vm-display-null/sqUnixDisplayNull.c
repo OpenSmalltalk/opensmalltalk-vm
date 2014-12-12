@@ -8,7 +8,7 @@ static char *display_winSystemName(void) { return "none"; }
 static void  display_winInit(void) {}
 static void  display_winOpen(void) {}
 static void  display_winSetName(char *title) {}
-static int   display_winImageFind(char *imageName, int size) { return 0; }
+static long  display_winImageFind(char *imageName, long size) { return 0; }
 static void  display_winImageNotFound(void) {}
 static void  display_winExit(void) {}
 
@@ -140,36 +140,36 @@ static sqInt display_primitivePluginDestroyRequest(void)	{ return primitiveFail(
 static sqInt display_primitivePluginRequestState(void)		{ return primitiveFail(); }
 
 #if (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 2)
-static int display_hostWindowClose(int index)                                               { return 0; }
-static int display_hostWindowCreate(int w, int h, int x, int y,
-  char *list, int attributeListLength)                                                      { return 0; }
-static int display_hostWindowShowDisplay(unsigned *dispBitsIndex, int width, int height, int depth,
-  int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex)              { return 0; }
-static int display_hostWindowGetSize(int windowIndex)                                       { return -1; }
-static int display_hostWindowSetSize(int windowIndex, int w, int h)                         { return -1; }
-static int display_hostWindowGetPosition(int windowIndex)                                   { return -1; }
-static int display_hostWindowSetPosition(int windowIndex, int x, int y)                     { return -1; }
-static int display_hostWindowSetTitle(int windowIndex, char *newTitle, int sizeOfTitle)     { return -1; }
-static int display_hostWindowCloseAll(void)                                                 { return 0; }
+static long display_hostWindowClose(long index)             { return 0; }
+static long display_hostWindowCreate(long w, long h, long x, long y,
+  char *list, long attributeListLength)                     { return 0; }
+static long display_hostWindowShowDisplay(unsigned *dispBitsIndex, long width, long height, long depth,
+  long affectedL, long affectedR, long affectedT, long affectedB, long windowIndex)              { return 0; }
+static long display_hostWindowGetSize(long windowIndex)     { return -1; }
+static long display_hostWindowSetSize(long windowIndex, long w, long h) { return -1; }
+static long display_hostWindowGetPosition(long windowIndex) { return -1; }
+static long display_hostWindowSetPosition(long windowIndex, long x, long y) { return -1; }
+static long display_hostWindowSetTitle(long windowIndex, char *newTitle, long sizeOfTitle)     { return -1; }
+static long display_hostWindowCloseAll(void)                { return 0; }
 #endif
 
 #if (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3)
 
-sqInt display_ioSetCursorPositionXY(sqInt x, sqInt y) { return 0; }
+long display_ioSetCursorPositionXY(long x, long y) { return 0; }
 
-int display_ioPositionOfScreenWorkArea (int windowIndex) { return -1; }
+long display_ioPositionOfScreenWorkArea (long windowIndex) { return -1; }
 
-int display_ioSizeOfScreenWorkArea (int windowIndex) { return -1; }
+long display_ioSizeOfScreenWorkArea (long windowIndex) { return -1; }
 
 void *display_ioGetWindowHandle() { return 0; }
 
-int display_ioPositionOfNativeDisplay(void *windowHandle) { return -1; }
+long display_ioPositionOfNativeDisplay(void *windowHandle) { return -1; }
 
-int display_ioSizeOfNativeDisplay(void *windowHandle) { return -1; }
+long display_ioSizeOfNativeDisplay(void *windowHandle) { return -1; }
 
-int display_ioPositionOfNativeWindow(void *windowHandle) { return -1; }
+long display_ioPositionOfNativeWindow(void *windowHandle) { return -1; }
 
-int display_ioSizeOfNativeWindow(void *windowHandle) { return -1; }
+long display_ioSizeOfNativeWindow(void *windowHandle) { return -1; }
 
 #endif /* (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3) */
 

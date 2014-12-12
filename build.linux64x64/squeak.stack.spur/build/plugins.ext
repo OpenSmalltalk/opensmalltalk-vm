@@ -1,7 +1,7 @@
 # Copied, perhaps edited, from ../../src/examplePlugins.ext
+# SqueakFFIPrims needs implementing
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
-SqueakFFIPrims \
 SqueakSSL \
 LocalePlugin \
 UnicodePlugin \

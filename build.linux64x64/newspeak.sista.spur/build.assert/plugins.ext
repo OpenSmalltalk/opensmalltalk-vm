@@ -1,3 +1,10 @@
-# Copied, perhaps edited, from ../../../nscogsrc/examplePlugins.ext
+# Copied, perhaps edited, from ../../src/examplePlugins.ext
+# SqueakFFIPrims needs implementing
 EXTERNAL_PLUGINS = \
-SqueakSSL
+B3DAcceleratorPlugin \
+SqueakSSL \
+LocalePlugin \
+UnicodePlugin \
+UnixOSProcessPlugin \
+UUIDPlugin \
+XDisplayControlPlugin

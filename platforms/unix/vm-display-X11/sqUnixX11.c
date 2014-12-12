@@ -7002,18 +7002,18 @@ sqInt display_primitivePluginRequestState(void);
 
 #if (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 2)
 
-static int display_hostWindowCreate(int w, int h, int x, int y, char *list, int attributeListLength)
+static long display_hostWindowCreate(long w, long h, long x, long y, char *list, long attributeListLength)
 											    { return 0; }
-static int display_hostWindowClose(int index)                                               { return 0; }
-static int display_hostWindowCloseAll(void)                                                 { return 0; }
-static int display_hostWindowShowDisplay(unsigned *dispBitsIndex, int width, int height, int depth,
+static long display_hostWindowClose(long index)                                               { return 0; }
+static long display_hostWindowCloseAll(void)                                                 { return 0; }
+static long display_hostWindowShowDisplay(unsigned *dispBitsIndex, long width, long height, long depth,
 					 int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex)
 											    { return 0; }
 
 #define isWindowHandle(winIdx) ((winIdx) >= 65536)
 
-static int display_ioSizeOfNativeWindow(void *windowHandle);
-static int display_hostWindowGetSize(int windowIndex)
+static long display_ioSizeOfNativeWindow(void *windowHandle);
+static long display_hostWindowGetSize(long windowIndex)
 {
 	return isWindowHandle(windowIndex)
 			? display_ioSizeOfNativeWindow((void *)windowIndex)
@@ -7023,7 +7023,7 @@ static int display_hostWindowGetSize(int windowIndex)
 /* ioSizeOfWindowSetxy: args are int windowIndex, int w & h for the
  * width / height to make the window. Return the actual size the OS
  * produced in (width<<16 | height) format or -1 for failure as above. */
-static int display_hostWindowSetSize(int windowIndex, int w, int h)
+static long display_hostWindowSetSize(long windowIndex, long w, long h)
 {
 	XWindowAttributes attrs;
 	int real_border_width;
@@ -7044,8 +7044,8 @@ static int display_hostWindowSetSize(int windowIndex, int w, int h)
 		: -1;
 }
 
-static int display_ioPositionOfNativeWindow(void *windowHandle);
-static int display_hostWindowGetPosition(int windowIndex)
+static long display_ioPositionOfNativeWindow(void *windowHandle);
+static long display_hostWindowGetPosition(long windowIndex)
 {
 	return isWindowHandle(windowIndex)
 			? display_ioPositionOfNativeWindow((void *)windowIndex)
@@ -7055,7 +7055,7 @@ static int display_hostWindowGetPosition(int windowIndex)
 /* ioPositionOfWindowSetxy: args are int windowIndex, int x & y for the
  * origin x/y for the window. Return the actual origin the OS
  * produced in (left<<16 | top) format or -1 for failure, as above */
-static int display_hostWindowSetPosition(int windowIndex, int x, int y)
+static long display_hostWindowSetPosition(long windowIndex, long x, long y)
 {
 	if (!isWindowHandle(windowIndex))
 		return -1;
@@ -7065,7 +7065,7 @@ static int display_hostWindowSetPosition(int windowIndex, int x, int y)
 }
 
 
-static int display_hostWindowSetTitle(int windowIndex, char *newTitle, int sizeOfTitle)
+static long display_hostWindowSetTitle(long windowIndex, char *newTitle, long sizeOfTitle)
 { 
   if (windowIndex != 1 && windowIndex != stParent && windowIndex != stWindow)
     return -1;
@@ -7081,10 +7081,7 @@ static int display_hostWindowSetTitle(int windowIndex, char *newTitle, int sizeO
 #endif /* (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 2) */
 
 
-static char *display_winSystemName(void)
-{
-  return "X11";
-}
+static char *display_winSystemName(void) { return "X11"; }
 
 
 static void display_winInit(void)
@@ -7139,7 +7136,7 @@ static void display_winExit(void)
 }
 
 
-static int  display_winImageFind(char *buf, int len)	{ return 0; }
+static long  display_winImageFind(char *buf, long len)	{ return 0; }
 static void display_winImageNotFound(void)		{}
 
 #if SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3
@@ -7149,8 +7146,8 @@ static void display_winImageNotFound(void)		{}
  * In the following functions "Display" refers to the user area of a window and
  * "Window" refers to the entire window including border & title bar.
  */
-static sqInt
-display_ioSetCursorPositionXY(sqInt x, sqInt y)
+static long
+display_ioSetCursorPositionXY(long x, long y)
 {
 	if (!XWarpPointer(stDisplay, None, DefaultRootWindow(stDisplay),
 					  0, 0, 0, 0, x, y))
@@ -7161,8 +7158,8 @@ display_ioSetCursorPositionXY(sqInt x, sqInt y)
 
 /* Return the pixel origin (topleft) of the platform-defined working area
    for the screen containing the given window. */
-static int
-display_ioPositionOfScreenWorkArea(int windowIndex)
+static long
+display_ioPositionOfScreenWorkArea(long windowIndex)
 {
 /* We simply hard-code this.  There's no obvious window-manager independent way
  * to discover this that doesn't involve creating a window.
@@ -7176,8 +7173,8 @@ display_ioPositionOfScreenWorkArea(int windowIndex)
 
 /* Return the pixel extent of the platform-defined working area
    for the screen containing the given window. */
-static int
-display_ioSizeOfScreenWorkArea(int windowIndex)
+static long
+display_ioSizeOfScreenWorkArea(long windowIndex)
 {
 	XWindowAttributes attrs;
 
@@ -7189,7 +7186,7 @@ display_ioSizeOfScreenWorkArea(int windowIndex)
 
 void *display_ioGetWindowHandle() { return (void *)stParent; }
 
-static int
+static long
 display_ioPositionOfNativeDisplay(void *windowHandle)
 {
 	XWindowAttributes attrs;
@@ -7205,7 +7202,7 @@ display_ioPositionOfNativeDisplay(void *windowHandle)
 	return (rootx << 16) | rooty;
 }
 
-static int
+static long
 display_ioSizeOfNativeDisplay(void *windowHandle)
 {
 	XWindowAttributes attrs;
@@ -7217,7 +7214,7 @@ display_ioSizeOfNativeDisplay(void *windowHandle)
 	return (attrs.width << 16) | attrs.height;
 }
 
-static int
+static long
 display_ioPositionOfNativeWindow(void *windowHandle)
 {
 	XWindowAttributes attrs;
@@ -7233,7 +7230,7 @@ display_ioPositionOfNativeWindow(void *windowHandle)
 	return (rootx - attrs.x << 16) | (rooty - attrs.y);
 }
 
-static int
+static long
 display_ioSizeOfNativeWindow(void *windowHandle)
 {
 	XWindowAttributes attrs;
