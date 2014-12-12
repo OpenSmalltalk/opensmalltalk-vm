@@ -56,7 +56,7 @@ fl;ags in my configH method
 "
 Class {
 	#name : #Linux32x86SqueakCogV3Config,
-	#superclass : #Linux64x86w32BitConfig,
+	#superclass : #Linux32x86Config,
 	#category : #'CMakeVMMakerSqueak-Linux32x86'
 }
 
