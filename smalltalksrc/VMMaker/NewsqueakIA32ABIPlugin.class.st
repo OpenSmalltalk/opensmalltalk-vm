@@ -74,27 +74,27 @@ NewsqueakIA32ABIPlugin >> isAlien: anOop [
 
 { #category : #'primitives-accessing' }
 NewsqueakIA32ABIPlugin >> primAddressField [
-	"Answer the unsigned 32-bit integer comprising the address field (the second 32-bit field)."
+	"Answer the unsigned 32-bit (or 64-bit) integer comprising the address field (the second 32-bit or 64-bit field)."
 	"<Alien> primAddressField ^<Integer>
 		<primitive: 'primAddressField' error: errorCode module: 'IA32ABI'>"
 	| rcvr value valueOop |
 	<export: true>
 	rcvr := interpreterProxy stackValue: 0.
 	value := self longAt: rcvr + interpreterProxy baseHeaderSize + interpreterProxy bytesPerOop.
-	valueOop := interpreterProxy positive32BitIntegerFor: value.
+	valueOop := self positiveMachineIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
 
 { #category : #'primitives-accessing' }
 NewsqueakIA32ABIPlugin >> primAddressFieldPut [
-	"Store an unsigned integer into the size field (the second 32 bit field; little endian)."
+	"Store an unsigned integer into the size field (the second 32/64 bit field; little endian)."
 	"<Alien> addressFieldPut: value <Integer> ^<Integer>
 		<primitive: 'primAddressFieldPut' error: errorCode module: 'IA32ABI'>"
 	| rcvr value valueOop |
 	<export: true>
 	valueOop := interpreterProxy stackValue: 0.
 	rcvr := interpreterProxy stackValue: 1.
-	value := interpreterProxy positive32BitValueOf: valueOop.
+	value := interpreterProxy positiveMachineIntegerValueOf: valueOop.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(interpreterProxy isOopImmutable: rcvr) ifTrue:
@@ -327,17 +327,15 @@ NewsqueakIA32ABIPlugin >> primCalloc [
 		<primitive: 'primCalloc' error: errorCode module: 'IA32ABI'>"
 	| byteSize addr |
 	<export: true>
-	<var: #byteSize type: 'long'>
 
 	byteSize := interpreterProxy stackIntegerValue: 0.
 	(interpreterProxy failed
 	 or: [byteSize <= 0 "some mallocs can't deal with malloc(0) bytes"]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	self cCode: 'addr = (sqInt)calloc(1,byteSize)'
-		inSmalltalk: [addr := self Ccalloc: byteSize].
+	addr := self cCode: [(self c: 1 alloc: byteSize) asUnsignedInteger] inSmalltalk: [Alien Ccalloc: byteSize].
 	addr = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoCMemory].
-	interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: addr)
+	interpreterProxy methodReturnValue: (self positiveMachineIntegerFor: addr)
 ]
 
 { #category : #'primitives-accessing' }
@@ -474,12 +472,11 @@ NewsqueakIA32ABIPlugin >> primInIOProcessEventsFlagAddress [
 	"Answer the address of the int inIOProcessEvents flag.  This can be used to
 	 disable invocation of ioProcessEvents and is for backward-compatibility.
 	 Please use the core VM primitiveEventProcessingControl in new code."
-	| address |
+	| inIOProcessEvents |
 	<export: true>
-	self
-		cCode: '{ extern int inIOProcessEvents; address = (sqInt)&inIOProcessEvents; }'
-		inSmalltalk: [address := 0].
-	interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: address)
+	<var: 'inIOProcessEvents' declareC: 'extern int inIOProcessEvents'>
+	self cCode: '' inSmalltalk: [inIOProcessEvents = 0].
+	interpreterProxy methodReturnValue: (self positiveMachineIntegerFor: (self addressOf: inIOProcessEvents))
 ]
 
 { #category : #'primitives-library loading' }
@@ -508,7 +505,7 @@ NewsqueakIA32ABIPlugin >> primInLibraryFindSymbol [
 	(interpreterProxy failed
 	 or: [address = 0]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNotFound].
-	interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: address asUnsignedInteger)
+	interpreterProxy methodReturnValue: (self positiveMachineIntegerFor: address asUnsignedInteger)
 ]
 
 { #category : #'primitives-library loading' }
@@ -528,7 +525,7 @@ NewsqueakIA32ABIPlugin >> primLoadLibrary [
 					OfLength: (interpreterProxy byteSizeOf: libraryName).
 	libraryHandle = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNotFound].
-	interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: libraryHandle asUnsignedInteger)
+	interpreterProxy methodReturnValue: (self positiveMachineIntegerFor: libraryHandle asUnsignedInteger)
 ]
 
 { #category : #'primitives-memory management' }
@@ -538,16 +535,15 @@ NewsqueakIA32ABIPlugin >> primMalloc [
 		<primitive: 'primMalloc' error: errorCode module: 'IA32ABI'>"
 	| byteSize addr |
 	<export: true>
-	<var: #byteSize type: 'long'>
 
 	byteSize := interpreterProxy stackIntegerValue: 0.
 	(interpreterProxy failed
 	 or: [byteSize <= 0 "some mallocs can't deal with malloc(0) bytes"]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	addr := self cCode: [self malloc: byteSize] inSmalltalk: [Alien Cmalloc: byteSize].
+	addr := self cCode: [(self malloc: byteSize) asUnsignedInteger] inSmalltalk: [Alien Cmalloc: byteSize].
 	addr = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoCMemory].
-	interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: addr asUnsignedInteger)
+	interpreterProxy methodReturnValue: (self positiveMachineIntegerFor: addr)
 ]
 
 { #category : #'primitives-callbacks' }
@@ -837,7 +833,7 @@ NewsqueakIA32ABIPlugin >> primSignedShortAtPut [
 
 { #category : #'primitives-accessing' }
 NewsqueakIA32ABIPlugin >> primSizeField [
-	"Answer the signed 32-bit integer comprising the size field (the first 32-bit field)."
+	"Answer the signed 32- or 64-bit integer comprising the size field (the first 32- or 64-bit field)."
 	"<Alien> primSizeField ^<Integer>
 		<primitive: 'primSizeField' error: errorCode module: 'IA32ABI'>"
 	| rcvr value valueOop |
@@ -845,7 +841,7 @@ NewsqueakIA32ABIPlugin >> primSizeField [
 
 	rcvr := interpreterProxy stackValue: 0.
 	value := (self longAt: rcvr + interpreterProxy baseHeaderSize) signedIntFromLong.
-	valueOop := interpreterProxy signed32BitIntegerFor: value.
+	valueOop := self signedMachineIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
 
@@ -859,7 +855,7 @@ NewsqueakIA32ABIPlugin >> primSizeFieldPut [
 
 	valueOop := interpreterProxy stackValue: 0.
 	rcvr := interpreterProxy stackValue: 1.
-	value := interpreterProxy signed32BitValueOf: valueOop.
+	value := interpreterProxy signedMachineIntegerValueOf: valueOop.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(interpreterProxy isOopImmutable: rcvr) ifTrue:
@@ -928,8 +924,8 @@ NewsqueakIA32ABIPlugin >> primThunkEntryAddress [
 	preclude making the plugin internal."
 	| address |
 	<export: true>
-	address := self cCode: '(sqInt)thunkEntry' inSmalltalk: [0].
-	interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: address)
+	address := self cCode: [#thunkEntry asInteger] inSmalltalk: [0].
+	interpreterProxy methodReturnValue: (self positiveMachineIntegerFor: address)
 ]
 
 { #category : #'primitives-accessing' }
