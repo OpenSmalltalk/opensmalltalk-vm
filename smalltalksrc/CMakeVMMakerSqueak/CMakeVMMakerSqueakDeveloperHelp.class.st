@@ -73,7 +73,7 @@ cmake --help-variable-list  etc.
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(CMakeVMMakerSqueakHistoryHelp CMakeVMMakerSqueakOverviewHelp  CMakeVMMakerSqueakConfigurationsHelp CMakeVMMakerSqueakTemplatesHelp CMakeVMMakerSqueakGeneratorsHelp CMakeVMMakerSqueakBuildersHelp configDotCmake looseEnds  plugins pthreads  templates tests  )
+	^#(CMakeVMMakerSqueakHistoryHelp CMakeVMMakerSqueakOverviewHelp CMakeVMMakerSqueakDesignPatternsHelp  CMakeVMMakerSqueakConfigurationsHelp CMakeVMMakerSqueakTemplatesHelp CMakeVMMakerSqueakGeneratorsHelp CMakeVMMakerSqueakBuildersHelp configDotCmake looseEnds  plugins pthreads  templates tests  )
 ]
 
 { #category : #pages }

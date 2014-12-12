@@ -9,9 +9,84 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Help'
 }
 
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> aNoteOnFoo [
+	^HelpTopic
+		title:'A Note On FOO'
+		contents:
+'Since we have customized plugins, now is a good time to introduce the FOO in [PLATFORM][Language][VM][Memory Manager][BuildType][foo] 
+
+The purpose of FOO is to accomadate personal plugins that ''just work'' for an odd-ball platform or odd set of plugins or some obscure operating system..
+
+Some examples will suffice to convey the purpose of FOO. (below I encase [FOO] for clarity)
+
+Linux64x86w32BitSqueakCogV3[WithoutGL]Config
+
+SqueakBSD32x86[TTYsConfigurationFromHell]Config
+
+Linux32x86SqueakCogV3[BillyBobVeryOwn]Config
+
+Linux32x86SqueakCogV3[withoutIA32BOCHSPLugin]Config
+
+you get the idea. 
+
+
+'
+]
+
 { #category : #accessing }
 CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> bookName [ 
 	^'Example Workflow: New Configuration'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> choosePlugins [
+	^HelpTopic
+		title:'Choose Plugins'
+		contents:
+'
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> configureAbstractBaseClass [
+	^HelpTopic
+		title:'Configure Abstract Base Class'
+		contents:
+'Abstract Base Classes contain configuration information for a specific platform.
+
+Let''s start from the top and work are way down. evaluate:
+
+CPlatformConfigForSqueak browseHierarchy
+
+CPlatformConfigForSqueak is a fairly involved class, but focusing on the protocol ''cmake directory'' for now, we see a bunch of dirFOO methods.
+
+selectinng: 
+
+CPlatformConfigForSqueak >>dirLinux32x86
+	^''cmake.build.linux32x86'' 
+
+We see the top-level directory for our new platform specific build. 
+
+The next level down in our hierarchy is SqueakUnixConfig which contains configuration info specific to Unix platforms. An example being: 
+
+SqueakUnixConfig>>platformName
+	^self unixPlatformName
+
+
+The next level down is our Abstract Base Class for our specific variant of Unix--specifically Linux32x86Config.
+
+The methods in this class contain system wide configuratin information for this Platform. On a mature platform tree, this class''s configuration should be rock-solid. However, as of 2014.12.09, the Abstract Base Class has not been configured correctly and I must set it up here. 
+
+Setting it up is not difficult and an existing Abstract Base Class can provide a good starting point. However, a familiarity with the design patterns of the Configurations is helpful (particularly the Redirect Method pattern)
+
+HelpBrowser openOn: CMakeVMMakerSqueakDesignPatternsHelp
+
+
+
+
+'
 ]
 
 { #category : #pages }
@@ -21,16 +96,13 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> createTheConfiguration
 		contents:
 'Our new Concrete Configuration must be created as a subclass of our Platform''s Abstract Base Class.
 
-The naming convention for Configurations takes the following form:
-
-[Platform][Language][VM][MemoryManager][Foo]Config.
-In 2014.12.09 this resolves too..
-
-[Platform][Newspeak | Squeak][Cog | Sista | Stack][V3 | Spur][Foo]Config.
-
 SInce I am creating a Squeak Cog V3 config for the Linux32x86 Platform I choose the name:
 
 Linux32x86SqueakCogV3Config.
+
+(For a discussion on naming conventions evaluate:
+HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
+)
 
 To create it, I subclass the Abstract Base Class for my Platform like so:
 
@@ -72,36 +144,11 @@ SqueakLinux32x86Builder availableBuildTypesFor: #Linux32x86SqueakCogV3Config
 
 SqueakLinux32x86Builder  sourceDirectoryFor:#Linux32x86SqueakCogV3Config
 -->  "src"                                                        "Where the vm source code is located"
-'
 
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> creatingNamingConfiguration [
-	^HelpTopic
-		title:'Creating and Naming a New Configuration '
-		contents:
-'I want to create a new Squeak, Cog, V3 CMake configuration for a pure 32 bit Slackware 14.1 system.
-All tests pass.
-My target Platform is Linux 32x86.
-My class category is CMakeVMMakerSqueak-Linux32x86
-The super-class of my configuration is Linux32x86Config.
-
-
-In class category CMakeVMMakerSqueak-Linux32x86 the Linux32x86Config funtions as an Abstract Base Class for this platform. 
-
-I can identify the Abstract Base Class in several ways
-
-1. Its at the top. Linux32x86Config is at the top of the Platform''s/Class Category inheritence tree .
-2. Linux32x86Config is named for the Platform--Linux 32x86.
-3. Examining Linux32x86Config class initialize we see it assigns #true to the isAbstractBaseClass class instance variable.
-4. Linux32x86Config  isAbstractBaseClass answers ''true''
-Linux32x86Config  isAbstractBaseClass 
---> true
-
-
+My new configuration is correctly named and in the correct place. 
 
 '
+
 ]
 
 { #category : #pages }
@@ -161,16 +208,19 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> firstCMakeGeneration [
 	^HelpTopic
 		title:'First CMake Generation'
 		contents:
-'While not necessary, I am going to do a sanity check and generate CMake code from the configuration for the first time
+'For didactic purposes I am going to do a sanity check and generate CMake code from the configuration for the first time. 
+
+If you are not familiar with the CMakeVMMakerSqueak naming conventions, please evaluate:
+HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
 
 On my system the Cog svn tree is located under my Squeak install directory in the folder ''oscogvm".
 
-Opening an x-term, navigating there it looks like this:
+Opening an X-term and navigating there it looks like this:
 
 bash-4.2$ pwd
 /home/tty/usr/src/smalltalk/CMake.oscog/cogVMMaker/oscogvm
 
-And the contents of the directory look something like this. Note the subdirectory that starts with ""cmake.""
+The contents of the directory look something like this. Note the subdirectory that starts with ""cmake.""
 
 bash-4.2$ ls --width=1
 CHANGES
@@ -183,26 +233,45 @@ build.linux32x86
 build.macos32x86
 build.macos64x64
 build.win32x86
-cmake.build.linux64x86w32BitConfig  <-----created by CMakeVMMakerSqueak for the Linux64x86w32BitSqueakCogV3Config
+cmake.build.linux64x86w32BitCompatibility  <-----created by CMakeVMMakerSqueak for the Linux64x86w32BitSqueakCogV3Config
 history
 image
 .....
 
-That cmake.build.linux32_64x86 directory was generated by a previous cmake generation for the Linux32_64
+That cmake.build.linux64x86w32BitCompatibility directory was generated by a previous cmake generation for the Linux64X86-32BitCompatibility Platform.
 
-(For a discussin of naming conventions evaluate:
-HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
-
-)
-
-
-
-
+Now, I ask the Builder to configure my new configuration for a buildType and output its contents. I do so by evaluating:
 
 SqueakLinux32x86Builder
 	configureA: #Linux32x86SqueakCogV3Config forBuildType:#build; 
 	enableMessageTracking: true;
 	generateByTemplate.
+
+
+and look again :
+
+bash-4.2$ ls  cmake.build.linux64x86w32BitCompatibility/
+squeak.cog.v3
+
+bash-4.2$ tree cmake.build.linux64x86w32BitCompatibility/
+`-- squeak.cog.v3
+    `-- build
+        |-- ADPCMCodecPlugin
+        |   `-- CMakeLists.txt
+...etc
+We see that the configuration has generated its build heirarchy.
+
+
+Note, however that the cmake.build.linux64x86w32BitCompatibility directory is for a different Platform! Since we copied an existing Configuration from a different platform, this make sense.
+
+
+
+
+
+dirBuildPlatform
+	"the directory for the platform. example: build.linux32x86"
+	^self dirLinux32x86
+
 
 
 
@@ -224,6 +293,10 @@ Builders are subclasses of SqueakCMakeVMMakerAbstractBuilder.
 
 Builders are named according to the Platform they manage.
 
+(For a discussion on naming conventions evaluate:
+HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
+)
+
 Builders manage configurations for one Platform in one  class category.
 
 My platform is Linux 32x86.
@@ -233,7 +306,7 @@ I suspect that the  SqueakLinux32x86Builder as the Builder that will manage my n
 I confirm this by sending it the ''configurationsCategory'' message as shown below:
 
 SqueakLinux32x86Builder configurationsCategory 
--->''CMakeVMMakerSqueak-Linux32x86''
+-->''CMakeVMMakerSqueak-Linux32x86''                    <---this is the correct class category for my Platform.
 
 This is correct Builder for my new Configuration. 
 
@@ -260,9 +333,18 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> identifyPlatform [
 		contents:
 'My target platform is Linux 32 bit x86. 
 
-I identify my Platform in the list of CMakeVMMakerSqueak-xyz class categories.  
+I identify my Platform in the existing CMakeVMMakerSqueak-xyz class categories.  
 
 I choose the  CMakeVMMakerSqueak-Linux32x86 as the location for my new Configuration.
+
+If I wanted a configuration for MacOSX32x86, I would place my configuration in CMakeVMMakerSqueak-MacOSX32x86.
+If SunOSx3x86 then CMakeVMMakerSqueak-SunOS32x86.
+etc, etc.
+
+
+(For a discussion on naming conventions evaluate:
+HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
+)
 
 
 '
@@ -318,9 +400,8 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> overview [
 	^HelpTopic
 		title:'Overview'
 		contents:
-'I want to create a new Squeak, Cog, V3 CMake configuration for a pure 32 bit Slackware 14.1 system.
+'This Help Topic is a running commentary on how I created Squeak, Cog, V3 CMake configuration for a pure 32 bit Slackware 14.1 system.
 
-This Help Topic is a running commentary on accomplishing this task.
 
 The steps involved should be the same for any platform.'
 ]
@@ -336,9 +417,9 @@ createTheConfiguration
 excludingConfigFromBuilds
 setAvailableBuildTypes
 firstCMakeGeneration
-"setting paths"
+setOutputPath
 settingPlugins
-
+aNoteOnFoo
 )
 ]
 
@@ -347,7 +428,7 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setAvailableBuildTypes
 	^HelpTopic
 		title:'Setting Available Build Types'
 		contents:
-'Configurations must inform Builders what BuildTypes they support.*
+'Configurations  inform Builders what BuildTypes they support. via the availableBuildTypes method*
 
 Here is my Builder asking my new Configuration what build types it supports (remember, this Configuration was copied, so it has been configured already)
 
@@ -376,18 +457,33 @@ Here I show what happens when I subtract more from the available pool. Here I se
 Linux32x86SqueakCogV3Config >> availableBuildTypes 
 	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes copyWithoutAll: #(  #buildMultiThreadedDebug #buildNone)
 
-With the result that my Builder shows the removed items:
+With the result that my Builder shows the removed items as Available Build Types:
 
 SqueakLinux32x86Builder availableBuildTypesFor: #Linux32x86SqueakCogV3Config 
 --> an OrderedCollection(#build #buildAssert #buildAssertITimerHeartbeat #buildDebug #buildDebugITimerHeartbeat #buildITimerHeartbeat #buildMultiThreaded #buildMultiThreadedAssert)
 
+Since I will only be developing the #build buildType for now, I put it as so:
+
+Linux32x86SqueakCogV3Config>>availableBuildTypes 
+	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes copyWithoutAll: #( #buildAssert #buildAssertITimerHeartbeat #buildDebug #buildDebugITimerHeartbeat #buildITimerHeartbeat #buildMultiThreaded #buildMultiThreadedAssert #buildMultiThreadedDebug #buildNone)
 
 
+and verify it is correct:
+
+SqueakLinux32x86Builder availableBuildTypesFor: #Linux32x86SqueakCogV3Config 
+-->an OrderedCollection(#build)
 
 
-*N.B. tty. In my opinion, this is a weak design on my part. If there is an elegant way to do this , I am for it.
+*N.B. tty. In my opinion, this is a weak design on my part. as it relies on the developr to set it up. If there is an elegant way to do this , I am for it.
+'
+]
 
-
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setOutputPath [
+	^HelpTopic
+		title:'Set Output Path'
+		contents:
+'WRITE ME
 
 '
 ]
