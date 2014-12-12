@@ -4307,18 +4307,32 @@ CCodeGenerator >> typeOfVariable: varName [ "<String>"
 CCodeGenerator >> unreachableMethods [
 	"Return a collection of methods that are never invoked."
 
-	| sent out |
-	sent := Set new.
-	methods do: [ :m |
-		m export ifTrue:[sent add: m selector].
-		sent addAll: m allCalls.
-	].
+	| neededSelectors previousSize visited |
+	neededSelectors := Set new.
+	"collect the exports"
+	methods do:
+		[:m|
+		 m export ifTrue:
+			[neededSelectors add: m selector]].
 
-	out := OrderedCollection new.
-	methods keys do: [ :sel |
-		(sent includes: sel) ifFalse: [ out add: sel ].
-	].
-	^ out
+	"Now compute the transitive closure..."
+	previousSize := neededSelectors size.
+	visited := IdentitySet new: methods size.
+	[neededSelectors do:
+		[:s|
+		(methods at: s ifAbsent: []) ifNotNil:
+			[:m|
+			(visited includes: m) ifFalse:
+				[visited add: m.
+				 m export ifTrue:
+					[neededSelectors
+						add: m selector;
+						addAll: m allCalls]]]].
+	 neededSelectors size > previousSize]
+		whileTrue:
+			[previousSize := neededSelectors size].
+
+	^methods reject: [:m| neededSelectors includes: m selector]
 ]
 
 { #category : #accessing }

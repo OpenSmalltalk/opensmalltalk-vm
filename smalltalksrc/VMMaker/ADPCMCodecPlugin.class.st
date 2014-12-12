@@ -27,6 +27,7 @@ ADPCMCodecPlugin class >> translateInDirectory: directory doInlining: inlineFlag
 	inlineFlag ifTrue:[
 		"now remove a few which will be inlined but not pruned"
 		cg pruneMethods: #(indexForDeltaFrom:to: nextBits: nextBits:put:)].
+	self pruneUnusedInterpreterPluginMethodsIn: cg.
 	self storeString: cg generateCodeStringForPrimitives onFileNamed: (directory fullNameFor: self moduleName, '.c').
 	^cg exportedPrimitiveNames asArray
 
