@@ -1,172 +1,197 @@
 "
-tty. I have zero clue what goes into IOS, I am adapted from the Pharo code
-
-A SqueakIOSConfig is an Abstract base class that provides common information for my subclasses.
+A Linux64x86w32BitConfig is an Abstract base class that provides common information for my subclasses.
 I am not meant to be built.
+
 I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
-I am not meant to be built.
-
-SqueakIOSBuilder 
+SqueakLinux64x86w32CompatBuilder 
 	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
 	enableMessageTracking: true;
 	generateByTemplate.
 
+
+
 HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
+
 
 "
 Class {
 	#name : #SqueakIOSConfig,
-	#superclass : #SqueakMacintoshConfig,
+	#superclass : #SqueakUnixConfig,
 	#category : #'CMakeVMMakerSqueak-IOS'
 }
 
-{ #category : #'as yet unclassified' }
-SqueakIOSConfig class >> licenseTemplate [
-	^'Squeak  {1} license information
-==============================
-
-About Squeak
------------
-
-
-Squeak is a modern, open source, full-featured implementation of the powerful Smalltalk programming language and environment. Squeak is highly-portable, running on almost any platform you could name and you can really truly write once run anywhere.  Squeak is the vehicle for a wide range of projects from multimedia applications and educational platforms to commercial web application development. Read on and join in!
-
-http://www.squeak.org
-
-
-LIcense
-
-Note: The current release of Squeak is a combination of source code originating from it''s origins at Apple which Apple agreed to license under the Apache license and more recent contributions licensed under the MIT license. The vast majority of the code is under the MIT license.
-MIT License
-
-Copyright (c) The individual, corporate, and institutional contributors who have collectively contributed elements to this software ("The Squeak Community"), 1996-2010 All rights reserved.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-Portions of Squeak are covered by the following license:
-Apache License, Version 2.0
-
-Copyright (c) Xerox Corp. 1981, 1982 All rights reserved. Copyright (c) Apple Computer, Inc. 1985-1996 All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> addVMPluginsBuild: aMaker [
+	|temp o|
+	self flag:'tty'. "I am writing sub-directory CMakeLists.txt here. Should I also write the config.cmake files?"
+	enabledebugmessages
+		ifTrue: [templates  "this message will go to the top level CMakeLists.txt file"
+				addLast: (CMakeMessage new message: self class name , 'addVMPluginsBuild: aMaker')].
+	vmplugins do:[ :vmp |                    
+		o := String new writeStream.   "each VMPlugin gets its own CMakeLists.txt file in its own directory"
+		temp := OrderedCollection new.	
+		temp
+			addAllLast:((CMakePluginVm new)    "this is the CMakeCompositTemplate"
+					config: self 
+					definitions: (vmp compilerdefinitions)
+					module: (vmp module)
+					sources: (vmp sources)
+					includedirectories: (vmp includedirectories)).
+		temp do: [:each |  o nextPutAll: (each content); cr].
+	((self buildDir) directoryExists: (vmp module))
+		ifFalse:[	(self buildDir) createDirectory: (vmp module)].
+		self write: (o contents) toFile: vmp module , FileDirectory slash , aMaker outputFileName.
+		templates   "this will go to the top level CMakeLists.txt file"
+			addLast: ((CMakeAddSubDirectory new) sourcedir: (vmp module)) 
+	].
 
 
-About Cog
----------
 
-Cog is a virtual machine designed for Smalltalk and other similar dynamic languages.  Cog builds on the
-Squeak virtual machine adding a stack-to-register-mapping just-in-time compiler, aggressive in-line message
-cacheing and effective optimization of Smalltalk’s first-class activation records.  Cog is the virtual machine
-underlying Teleplace''s Croquet-based enterprise virtual collaboration spaces software, the fastest virtual
-machine for Squeak, and for Gilad Bracha''s Newspeak modular language inspired by Beta and Smalltalk.  
-Like the original Squeak VM, Cog is implemented and developed in Smalltalk, and translated into a lower-level
-language to produce the production VM.  Being a Smalltalk program it is a delight to develop.  Cog is
-available under the MIT open source license and is unencumbered for commercial deployment.
 
-Cog''s performance relative to the existing Squeak interpreter varies, depending on the benchmark chosen.
-As of early-2011, the Cog JIT uses strong inline cacheing techniques and stack-to-register mapping that
-results in a register-based calling convention for low-arity methods.  Due to the complexity of the Squeak
-object representation it has a limited set of primitives implemented in machine code that, for example,
-exclude object allocation.  Performance of the early-2011 JIT for the nbody, binarytrees and chameneos
-redux benchmarks from the computer language shootout is in the range of 4 to 6 times faster than the
-interpreter.
-'
-]
 
-{ #category : #'as yet unclassified' }
-SqueakIOSConfig class >> pluginsTemplate [
-	^'Squeak {1} ships with the following plugins already built:
-		
-Internal: 
-=========
-{2}
 
-External: 
-=========
-{3}
 
-'
+
+
+
 ]
 
 { #category : #cmake }
 SqueakIOSConfig >> availableBuildTypes [
-	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
-"	subclasses should use
+ 	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+"
 
-  ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
+subclasses should use
+
+  ^super allBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
 	
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> coreSourcesBuild [
+	"files to include from src/vm dir"
+	^ #(
+		'cogit.c'
+		'gcc3x-cointerp.c'
+		)
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> coreSourcesBuildMultiThreaded [
+	"files to include from src/vm dir"
+	^ #(
+		'cogit.c'
+		'cointerpmt.c'
+		)
+]
+
+{ #category : #plugins }
+SqueakIOSConfig >> customizeCMakeVMDisplayNull [
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMDisplayNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
+		sources: #('${targetPlatform}/vm-display-null/sqUnixDisplayNull') ;
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: #();
+		linkerflags: (self linkerFlags);
+		includedirectories:(OrderedCollection 
+										with:'${crossDir}/plugins/FilePlugin' 
+										with: '${targetPlatform}/plugins/B3DAcceleratorPlugin'  
+ 									     with: '${crossDir}/plugins/B3DAcceleratorPlugin').
+	self flag:'tty'. "I don't think includedirectories is correct. revisit"
+
+
+
+
+
+
+
+]
+
+{ #category : #plugins }
+SqueakIOSConfig >> customizeCMakeVMDisplayX11 [
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMDisplayX11 = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
+		sources: #( '${targetPlatform}/vm-display-X11/sqUnixX11' '${targetPlatform}/vm-display-X11/sqUnixMozilla' );
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: (self externalLibraries);
+		linkerflags: (self linkerFlags);
+		includedirectories:(OrderedCollection 
+										with:'${crossDir}/plugins/FilePlugin' 
+										with: '${targetPlatform}/plugins/B3DAcceleratorPlugin'  
+ 									     with: '${crossDir}/plugins/B3DAcceleratorPlugin').
+
+]
+
+{ #category : #plugins }
+SqueakIOSConfig >> customizeCMakeVMSoundALSA [
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMSoundALSA = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
+		sources: #( '${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' );
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: (self externalLibraries);
+		linkerflags: (self linkerFlags);
+		includedirectories: #().
+	
+]
+
+{ #category : #plugins }
+SqueakIOSConfig >> customizeCMakeVMSoundNull [
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMSoundNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
+		sources: #( '${targetPlatform}/vm-sound-null/sqUnixSoundNull' );
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: (self externalLibraries);
+		linkerflags: (self linkerFlags);
+		includedirectories:#()
+
+
+]
+
+{ #category : #plugins }
+SqueakIOSConfig >> customizeVMPlugins [
+	|mysubset iwantonly|
+	"trim the vmdrivers ordered collection of CMakeVMDriver subclasses to only those I want. then customize them for use on this OS/platform"
+	iwantonly :=	 #(#CMakeVMDisplayNull  #CMakeVMDisplayX11  #CMakeVMSoundALSA  #CMakeVMSoundNull ).
+	mysubset := vmplugins select: [:vmd | 0 < (iwantonly occurrencesOf: (vmd class name) asSymbol)]. 
+	vmplugins := mysubset.
+	self 
+		customizeCMakeVMDisplayNull;
+		customizeCMakeVMDisplayX11;
+		customizeCMakeVMSoundALSA;
+		customizeCMakeVMSoundNull.
+
+
+
 
 ]
 
 { #category : #plugins }
 SqueakIOSConfig >> defaultExternalPlugins [
+	"add your external plugins here"
+	^ #()
 
-	^ #(
-		BochsIA32Plugin
-		CroquetPlugin
-		ThreadedIA32FFIPlugin "SqueakFFIPrims"
-		FloatArrayPlugin
-		FloatMathPlugin
-		Mpeg3Plugin
-		QuicktimePlugin
-"		TestOSAPlugin  - not works"
-		"UnixOSProcessPlugin ?? "
-		)
+
 ]
 
 { #category : #plugins }
 SqueakIOSConfig >> defaultInternalPlugins [
-
-	^ #(
-		ADPCMCodecPlugin
-		AsynchFilePlugin
-		B3DAcceleratorPlugin
-		BalloonEnginePlugin "B2DPlugin" 
-		BitBltSimulation "BitBltPlugin"
-		BMPReadWriterPlugin
-		DeflatePlugin  "ZipPlugin"
-		DropPlugin
-		DSAPlugin "DSAPrims"
-		FFTPlugin
-		FilePlugin
-		HostWindowPlugin
-		IA32ABIPlugin "IA32ABI"
-		InternetConfigPlugin
-		JoystickTabletPlugin
-		JPEGReaderPlugin
-		JPEGReadWriter2Plugin
-		KlattSynthesizerPlugin "Klatt"
-		LargeIntegersPlugin "LargeIntegers"
-		LocalePlugin
-		MacMenubarPlugin
-		Matrix2x3Plugin
-		MIDIPlugin
-		MiscPrimitivePlugin
-		QVMProfileMacSupportPlugin
-		RePlugin
-		SecurityPlugin
-		SerialPlugin
-		SocketPlugin
-		SoundCodecPlugin "SoundCodecPrims"
-		SoundGenerationPlugin
-		SoundPlugin
-		StarSqueakPlugin
-		SurfacePlugin
-		UUIDPlugin
-		)
+	"add your internal plugins here"
+	^ #()
 ]
 
 { #category : #cmake }
 SqueakIOSConfig >> dirBuildPlatform [
-	"the directory for the platform. example: build.linux32x86"
 	^self dirMacOS
 ]
 
@@ -216,7 +241,6 @@ SqueakIOSConfig >> extraPluginSettingsBuild: aMaker [
 { #category : #'source files' }
 SqueakIOSConfig >> extraSources [
 	" mac VM using some unix sources"
-	
 	^ 
 	'${platformsDir}/unix/plugins/SocketPlugin/sqUnixSocket.c 
 	${platformsDir}/unix/vm/aio.c 
@@ -227,9 +251,8 @@ SqueakIOSConfig >> extraSources [
 	${resources}'
 ]
 
-{ #category : #cmake }
+{ #category : #'as yet unclassified' }
 SqueakIOSConfig >> fixLibsTemplate [
-
 ^
 'include(GetPrerequisites)
 
@@ -287,29 +310,43 @@ SqueakIOSConfig >> internalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakIOSConfig >> postBuildActionsBuild: gen [
-
+SqueakIOSConfig >> postBuildActionsBuild: aMaker [
+	"N.B. tty. This code was copied from Pharo code and converted to templates. Do not assume output it is complete or correct."
 	" override to add custom rules after all targets is defined "
-	
 	self write: self fixLibsTemplate toFile: 'fix_libs.cmake'.
 	
-	
-	gen
-		set: #bundlePath toString: '${outputDir}/', self executableName, '.app';
-		set: #pluginsRelPath toString: '@executable_path/Plugins'.
-
-	gen
-		puts: '
-		INSTALL(CODE "
-			set(externalModulesDir \"${externalModulesDir}\")
-			set(bundlePath \"${bundlePath}\")
-			set(pluginsRelPath \"${pluginsRelPath}\")
-			
-			include(fix_libs.cmake)
-		")'
+	aMaker config templates
+		addLast:((CMakeSet new) variable:#bundlePath value:  '${outputDir}/', self executableName, '.app');   "no clue what these are. tty"
+		addLast:((CMakeSet new) variable: #pluginsRelPath value:  '@executable_path/Plugins');
+		addLast:(CMakeIOSInstallCode new).
 			
 "					FILE(GLOB_RECURSE bLibs /${externalModulesDir}/*.*)
 "
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakIOSConfig >> preferredIncludesBuild [
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: (self class name), ' preferredIncludesBuild' )
+	].
+	templates
+		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${targetPlatform}/plugins/B3DAcceleratorPlugin')).
+
+	(enabledebugmessages)
+		ifTrue:[	
+	templates 
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_PATH =  ${CMAKE_INCLUDE_PATH}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_SYSTEM_INCLUDE_PATH =  ${CMAKE_SYSTEM_INCLUDE_PATH}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES = ${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES =  ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_FIND_ROOT_PATH_MODE_INCLUDE =  ${CMAKE_FIND_ROOT_PATH_MODE_INCLUDE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_FIND_ROOT_PATH_MODE_INCLUDE =  ${CMAKE_INCLUDE_CURRENT_DIR}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE =  ${CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_BEFORE}' );
+		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE}' )
+	].
 ]
 
 { #category : #'cmake buildType redirects' }
