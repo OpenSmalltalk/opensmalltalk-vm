@@ -189,7 +189,7 @@ clearHeapMap(void)
 
 	for (i = 0; i < NUMROOTPAGES; i++)
 		if ((directory = mapPages[i]))
-			for (j = 0; j < DIRECTORYSIZE; j++)
+			for (j = 0; j < DIRECTORYSIZE / sizeof(void *); j++)
 				if ((page = directory[j]))
 					memset(page,0,PAGESIZE);
 }
