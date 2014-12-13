@@ -201,16 +201,6 @@ Linux32ARMv6Config >> internalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32ARMv6Config >> linkFlagsBuild [
-	"Answer array of libraries to link to
-	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'"
-	^ { 
-		'-lpthread'
-           . '-luuid'
-	   }
-]
-
-{ #category : #'cmake buildType redirects' }
 Linux32ARMv6Config >> postBuildActionsBuild: gen [
 	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
 ]
