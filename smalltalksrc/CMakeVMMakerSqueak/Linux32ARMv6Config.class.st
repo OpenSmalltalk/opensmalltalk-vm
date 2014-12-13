@@ -1,16 +1,18 @@
 "
-A Linux32ARMv6Config is an Abstract base class that provides common information for my subclasses.
+A Linux64x86w32BitConfig is an Abstract base class that provides common information for my subclasses.
 I am not meant to be built.
+
 I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
-I am not meant to be built.
-
-SqueakLinux32ARMv6Builder 
+SqueakLinux64x86w32CompatBuilder 
 	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
 	enableMessageTracking: true;
 	generateByTemplate.
 
+
+
 HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
 
 
 "
@@ -20,48 +22,50 @@ Class {
 	#category : #'CMakeVMMakerSqueak-Linux32ARMv6'
 }
 
-{ #category : #'as yet unclassified' }
-Linux32ARMv6Config class >> initialize [
-	isAbstractBaseClass:=true
-]
-
 { #category : #'cmake buildType redirects' }
 Linux32ARMv6Config >> addVMPluginsBuild: aMaker [
-	aMaker message: 'addVMDrivers: aMaker'.
-	 self 
-		addDriver: 'vm-display-null' 
-		sources: #( 
-			'${targetPlatform}/vm-display-null/sqUnixDisplayNull' )
-		generator: aMaker
-		externalLibs: #();
-		
-		addDriver: 'vm-display-X11' 
-		sources: #( 
-			'${targetPlatform}/vm-display-X11/sqUnixX11'
-			'${targetPlatform}/vm-display-X11/sqUnixMozilla' )
-		generator: aMaker
-		externalLibs: (self externalLibs);
+	|temp o|
+	self flag:'tty'. "I am writing sub-directory CMakeLists.txt here. Should I also write the config.cmake files?"
+	enabledebugmessages
+		ifTrue: [templates  "this message will go to the top level CMakeLists.txt file"
+				addLast: (CMakeMessage new message: self class name , 'addVMPluginsBuild: aMaker')].
+	vmplugins do:[ :vmp |                    
+		o := String new writeStream.   "each VMPlugin gets its own CMakeLists.txt file in its own directory"
+		temp := OrderedCollection new.	
+		temp
+			addAllLast:((CMakePluginVm new)    "this is the CMakeCompositTemplate"
+					config: self 
+					definitions: (vmp compilerdefinitions)
+					module: (vmp module)
+					sources: (vmp sources)
+					includedirectories: (vmp includedirectories)).
+		temp do: [:each |  o nextPutAll: (each content); cr].
+	((self buildDir) directoryExists: (vmp module))
+		ifFalse:[	(self buildDir) createDirectory: (vmp module)].
+		self write: (o contents) toFile: vmp module , FileDirectory slash , aMaker outputFileName.
+		templates   "this will go to the top level CMakeLists.txt file"
+			addLast: ((CMakeAddSubDirectory new) sourcedir: (vmp module)) 
+	].
 
-		addDriver: 'vm-sound-ALSA' 
-		sources: #( 
-			'${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' )
-		generator: aMaker
-		externalLibs: #();
 
-		addDriver: 'vm-sound-null' 
-		sources: #( 
-			'${targetPlatform}/vm-sound-null/sqUnixSoundNull' )
-		generator: aMaker
-		externalLibs: #().
+
+
+
+
+
+
+
 
 ]
 
 { #category : #cmake }
 Linux32ARMv6Config >> availableBuildTypes [
-	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
-"	subclasses should use
+ 	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+"
 
-  ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
+subclasses should use
+
+  ^super allBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
 	
 
 ]
@@ -71,7 +75,7 @@ Linux32ARMv6Config >> coreSourcesBuild [
 	"files to include from src/vm dir"
 	^ #(
 		'cogit.c'
-		'cointerp.c'
+		'gcc3x-cointerp.c'
 		)
 ]
 
@@ -82,6 +86,76 @@ Linux32ARMv6Config >> coreSourcesBuildMultiThreaded [
 		'cogit.c'
 		'cointerpmt.c'
 		)
+]
+
+{ #category : #plugins }
+Linux32ARMv6Config >> customizeCMakeVMDisplayNull [
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMDisplayNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
+		sources: #('${targetPlatform}/vm-display-null/sqUnixDisplayNull') ;
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: #();
+		linkerflags: (self linkerFlags);
+		includedirectories:(OrderedCollection 
+										with:'${crossDir}/plugins/FilePlugin' 
+										with: '${targetPlatform}/plugins/B3DAcceleratorPlugin'  
+ 									     with: '${crossDir}/plugins/B3DAcceleratorPlugin').
+	self flag:'tty'. "I don't think includedirectories is correct. revisit"
+
+
+
+
+
+
+
+]
+
+{ #category : #plugins }
+Linux32ARMv6Config >> customizeCMakeVMDisplayX11 [
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMDisplayX11 = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
+		sources: #( '${targetPlatform}/vm-display-X11/sqUnixX11' '${targetPlatform}/vm-display-X11/sqUnixMozilla' );
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: (self externalLibraries);
+		linkerflags: (self linkerFlags);
+		includedirectories:(OrderedCollection 
+										with:'${crossDir}/plugins/FilePlugin' 
+										with: '${targetPlatform}/plugins/B3DAcceleratorPlugin'  
+ 									     with: '${crossDir}/plugins/B3DAcceleratorPlugin').
+
+]
+
+{ #category : #plugins }
+Linux32ARMv6Config >> customizeCMakeVMSoundALSA [
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMSoundALSA = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
+		sources: #( '${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' );
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: (self externalLibraries);
+		linkerflags: (self linkerFlags);
+		includedirectories: #().
+	
+]
+
+{ #category : #plugins }
+Linux32ARMv6Config >> customizeCMakeVMSoundNull [
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMSoundNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
+		sources: #( '${targetPlatform}/vm-sound-null/sqUnixSoundNull' );
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: (self externalLibraries);
+		linkerflags: (self linkerFlags);
+		includedirectories:#()
+
+
 ]
 
 { #category : #plugins }
@@ -165,13 +239,12 @@ Linux32ARMv6Config >> defaultInternalPlugins [
 
 { #category : #cmake }
 Linux32ARMv6Config >> dirBuildPlatform [
-	"the directory for the platform. example: build.linux32x86"
-	^self dirLinux32x86
+	^self dirLinux32Armv6
 ]
 
 { #category : #cmake }
 Linux32ARMv6Config >> excludeFromBuild [
-	"over-ride to exclude yourself from a build"
+	"over-ride to exclude yourself from a build or not"
 	^true
 ]
 
@@ -191,8 +264,6 @@ Linux32ARMv6Config >> extraPluginSettingsBuild: aMaker [
 	aMaker isExternal 
 		ifTrue:[aMaker templates addLast:((CMakeSet new) variable:'LIBRARY_OUTPUT_PATH' value:'${outputDir}')].
 
-
-
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -201,8 +272,14 @@ Linux32ARMv6Config >> internalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32ARMv6Config >> postBuildActionsBuild: gen [
+Linux32ARMv6Config >> postBuildActionsBuild: aMaker [
 	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
+	(aMaker config enabledebugmessages)
+		ifTrue:[	
+	aMaker config templates 
+		addLast: ((CMakeMessage new) message: (self class name), ' postBuildActionsBuild' )
+	].
+
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -215,7 +292,7 @@ Linux32ARMv6Config >> preferredIncludesBuild [
 	templates
 		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${targetPlatform}/plugins/B3DAcceleratorPlugin')).
 
-    (enabledebugmessages)
+	(enabledebugmessages)
 		ifTrue:[	
 	templates 
 		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_PATH =  ${CMAKE_INCLUDE_PATH}' );
@@ -228,7 +305,4 @@ Linux32ARMv6Config >> preferredIncludesBuild [
 		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_BEFORE}' );
 		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE}' )
 	].
-
-	
-
 ]
