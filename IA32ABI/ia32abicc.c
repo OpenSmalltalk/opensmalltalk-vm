@@ -49,7 +49,7 @@ struct VirtualMachine* interpreterProxy;
 #endif
 #if __GNUC__
 # define setsp(sp) asm volatile ("movl %0,%%esp" : : "m"(sp))
-# define getsp() ({ void *esp; asm volatile ("movl %%esp,%0" : "=r"(esp) : ); esp;})
+# define getsp() ({ void *sp; asm volatile ("movl %%esp,%0" : "=r"(sp) : ); sp;})
 #endif
 #if __APPLE__ && __MACH__ && __i386__
 # define STACK_ALIGN_BYTES 16

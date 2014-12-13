@@ -33,7 +33,15 @@
 extern sqInt callIA32IntegralReturn(SIGNATURE);
 extern sqInt callIA32FloatReturn   (SIGNATURE);
 extern sqInt callIA32DoubleReturn  (SIGNATURE);
-extern long  thunkEntry            (void *thunkp, long *stackp);
+
+#if defined(i386) || defined(__i386) || defined(__i386__)
+# define INT_REG_ARGS /* none */
+#elif defined(__amd64__) || defined(__x86_64__) || defined(__amd64) || defined(__x86_64)
+# define INT_REG_ARGS long,long,long,long,long,long,
+#elif defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
+# define INT_REG_ARGS long,long,long,long,long,long,long,long,
+#endif
+extern long  thunkEntry (INT_REG_ARGS void *,long *);
 extern void *allocateExecutablePage(long *pagesize);
 extern VMCallbackContext *getMostRecentCallbackContext(void);
 
