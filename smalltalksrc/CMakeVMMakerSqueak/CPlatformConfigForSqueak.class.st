@@ -2894,115 +2894,18 @@ CPlatformConfigForSqueak >> iosPlatformName [
 	^'iOS'
 ]
 
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> linkFlags [
-	" 
-cmake --help-property LINK_FLAGS            
-LINK_FLAGS
-----------
-
-Additional flags to use when linking this target.
-
-The LINK_FLAGS property can be used to add extra flags to the link
-step of a target.  LINK_FLAGS_<CONFIG> will add to the configuration
-<CONFIG>, for example, DEBUG, RELEASE, MINSIZEREL, RELWITHDEBINFO.
-
-'-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11' -L/usr/lib32 etc..."
-	|d flags|
-	self flag:'tty'. "is a link_flag really something like -lX11 or is it something else?"
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self linkFlagsBuild];
-		at: #buildAssert  put: [self linkFlagsBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self linkFlagsBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self linkFlagsBuildDebug];   
-		at: #buildDebugITimerHeartbeat  put: [self linkFlagsBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self linkFlagsBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self linkFlagsBuildMultiThreaded ];
-		at: #buildMultiThreadedAssert  put: [self linkFlagsBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self linkFlagsBuildMultiThreadedDebug ];
-		at: #buildNone put:[self linkFlagsNoBuildType].
-	flags := String
-				streamContents: [:stream | ((d at: buildType) value collect: #withBlanksTrimmed as: Set)
-						asStringOn: stream
-						delimiter: ' '].
-	^flags.
-
-
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> linkFlagsBuild [
-	"SystemNavigation default browseMethodsWhoseNamesContain: 'linkFlagsBuild'
-
-	^ { 
-		'-lpthread'
-           . '-luuid'
-	   }
-	"
-	self subclassResponsibility
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> linkFlagsBuildAssert [
-	 "override this if you need to customize for this build type"
-	^ self linkFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> linkFlagsBuildAssertITimerHeartbeat [
-	 "override this if you need to customize for this build type"
-	^ self linkFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> linkFlagsBuildDebug [
-	 "override this if you need to customize for this build type"
-	^ self linkFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> linkFlagsBuildDebugITimerHeartbeat [
-	 "override this if you need to customize for this build type"
-	^ self linkFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> linkFlagsBuildITimerHeartbeat [
-	 "override this if you need to customize for this build type"
-	^ self linkFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> linkFlagsBuildMultiThreaded [
-	 "override this if you need to customize for this build type"
-	^ self linkFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> linkFlagsBuildMultiThreadedAssert [
-	 "override this if you need to customize for this build type"
-	^ self linkFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> linkFlagsBuildMultiThreadedDebug [
-	 "override this if you need to customize for this build type"
-	^ self linkFlagsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> linkFlagsNoBuildType [
-	"SHOULD NOT GET HERE"
-	self shouldNotImplement.
-
-]
-
 { #category : #compiling }
 CPlatformConfigForSqueak >> linkerFlags [
 	self flag:'tty'. "Does this need to be ported to the redirect design pattern with linkerFlagsBuild, linkerFlagsDebug etc?"
-	"-Wl -z now define these in your concrete CPlatformConfigForSqueak and feed them to cmakeSharedLinkerFlags"
+"
+linkerFlags
+	^#(	'-Wl'
+            '-z'
+            'now'
+	   ) 
+"
+
+
 	self	subclassResponsibility
 ]
 
