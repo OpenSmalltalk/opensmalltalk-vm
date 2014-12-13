@@ -87,12 +87,12 @@ extern int thisSession;
 
 /*** Exported Functions ***/
 int asyncFileClose(AsyncFile *f);
-int asyncFileOpen(AsyncFile *f, long fileNamePtr, int fileNameSize, int writeFlag, int semaIndex);
+int asyncFileOpen(AsyncFile *f, char *fileNamePtr, int fileNameSize, int writeFlag, int semaIndex);
 int asyncFileRecordSize();
-int asyncFileReadResult(AsyncFile *f, long bufferPtr, int bufferSize);
+int asyncFileReadResult(AsyncFile *f, void *bufferPtr, int bufferSize);
 int asyncFileReadStart(AsyncFile *f, int fPosition, int count);
 int asyncFileWriteResult(AsyncFile *f);
-int asyncFileWriteStart(AsyncFile *f, int fPosition, long bufferPtr, int bufferSize);
+int asyncFileWriteStart(AsyncFile *f, int fPosition, void *bufferPtr, int bufferSize);
 
 
 /*****************************************************************************
@@ -205,7 +205,7 @@ int asyncFileClose(AsyncFile *f) {
   return 1;
 }
 
-int asyncFileOpen(AsyncFile *f, long fileNamePtr, int fileNameSize, 
+int asyncFileOpen(AsyncFile *f, char *fileNamePtr, int fileNameSize, 
 		  int writeFlag, int semaIndex) {
   /* Opens the given file using the supplied AsyncFile structure to record
      its state. Fails with no side effects if f is already open. Files are
@@ -224,7 +224,7 @@ int asyncFileOpen(AsyncFile *f, long fileNamePtr, int fileNameSize,
   /* copy the file name into a null-terminated C string */
   if (fileNameSize > 255) return success(false);
   for (i = 0; i < fileNameSize; i++) {
-    cFileName[i] = *((char *) (fileNamePtr + i));
+    cFileName[i] = *(fileNamePtr + i);
   }
   cFileName[fileNameSize] = 0;
 
@@ -278,7 +278,7 @@ int asyncFileOpen(AsyncFile *f, long fileNamePtr, int fileNameSize,
   return 1;
 }
 
-int asyncFileReadResult(AsyncFile *f, long bufferPtr, int bufferSize) {
+int asyncFileReadResult(AsyncFile *f, void *bufferPtr, int bufferSize) {
   /* Copy up to bufferSize bytes from the buffer of the last read operation
      into the given Squeak buffer, and return the number of bytes copied.
      Negative values indicate:
@@ -297,7 +297,7 @@ int asyncFileReadResult(AsyncFile *f, long bufferPtr, int bufferSize) {
   
   /* copy the file buffer into the squeak buffer */
   bytesRead = (bufferSize < state->bytesTransferred) ? bufferSize : state->bytesTransferred;
-  MoveMemory((void *) bufferPtr, (void *)state->bufferPtr, bytesRead);
+  MoveMemory(bufferPtr, (void *)state->bufferPtr, bytesRead);
   return bytesRead;
 }
 
@@ -341,7 +341,7 @@ int asyncFileWriteResult(AsyncFile *f) {
   return state->bytesTransferred;
 }
 
-int asyncFileWriteStart(AsyncFile *f, int fPosition, long bufferPtr, int bufferSize) {
+int asyncFileWriteStart(AsyncFile *f, int fPosition, void *bufferPtr, int bufferSize) {
   /* Start an asynchronous operation to write bufferSize bytes to the given file
      starting at the given file position. The file''s semaphore will be signalled when
      the operation is complete. The client may then use asyncFileWriteResult() to
@@ -357,7 +357,7 @@ int asyncFileWriteStart(AsyncFile *f, int fPosition, long bufferPtr, int bufferS
   if (state->bufferPtr == NULL) return success(false);  /* could not allocate buffer */
 
   /* copy the squeak buffer into the file buffer */
-  MoveMemory((void*)state->bufferPtr, (void*) bufferPtr, bufferSize);
+  MoveMemory((void*)state->bufferPtr, bufferPtr, bufferSize);
 
   state->dwPosition = fPosition;
   state->dwSize = bufferSize;
