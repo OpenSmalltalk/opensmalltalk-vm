@@ -1,15 +1,18 @@
 "
-A Linux32x86Config  is an Abstract base class that provides common information for my subclasses.
+A Linux64x86w32BitConfig is an Abstract base class that provides common information for my subclasses.
 I am not meant to be built.
+
 I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
 
-SqueakLinux32x86Builder 
+SqueakLinux64x86w32CompatBuilder 
 	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
 	enableMessageTracking: true;
 	generateByTemplate.
 
 
+
 HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+
 
 
 "
@@ -57,11 +60,12 @@ Linux32x86Config >> addVMPluginsBuild: aMaker [
 
 { #category : #cmake }
 Linux32x86Config >> availableBuildTypes [
-	self flag:'tty'. "Should this be pushed up? I am guessing yes"
-	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
-"	subclasses should use
+ 	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
+"
 
-  ^super availableBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
+subclasses should use
+
+  ^super allBuildTypes copyWithoutAll: #( #assertWithHeartbeatTimer #debugWithHeartbeatTimer debugMultiThreadedFFI.....etc))   "
 	
 
 ]
@@ -71,7 +75,7 @@ Linux32x86Config >> coreSourcesBuild [
 	"files to include from src/vm dir"
 	^ #(
 		'cogit.c'
-		'cointerp.c'
+		'gcc3x-cointerp.c'
 		)
 ]
 
@@ -99,6 +103,11 @@ Linux32x86Config >> customizeCMakeVMDisplayNull [
 										with: '${targetPlatform}/plugins/B3DAcceleratorPlugin'  
  									     with: '${crossDir}/plugins/B3DAcceleratorPlugin').
 	self flag:'tty'. "I don't think includedirectories is correct. revisit"
+
+
+
+
+
 
 
 ]
@@ -164,82 +173,70 @@ Linux32x86Config >> customizeVMPlugins [
 
 
 
+
 ]
 
 { #category : #plugins }
 Linux32x86Config >> defaultExternalPlugins [
-" tty 2014.06.10  cut-n-paste from Cog/build.linux32x86/newspeak.cog.spur/build/plugins.ext"
-	^ #(B3DAcceleratorPlugin 
-		BochsIA32Plugin 
-	      ThreadedFFIPlugin    "moduleName->SqueakFFIPrims "
-		"FFIPlugin"                   "moduleName->SqueakFFIPrims "
-		SqueakSSLPlugin       "moduleName->SqueakSSL" 
-		LocalePlugin 
-		UnixOSProcessPlugin 
-		UUIDPlugin)
+	^ #(
+		B3DAcceleratorPlugin
+		ThreadedIA32FFIPlugin "SqueakFFIPrims"
+		"UUIDPlugin"
+		"UnixOSProcessPlugin ?? "	
+		JPEGReaderPlugin 
+		JPEGReadWriter2Plugin 			
+		RePlugin
+		InternetConfigPlugin
+	)
 
-
-"N.B. Regarding ThreadedFFIPlugin and FFIPlugin from eem:
-
-Use  ThreadedFFIPlugin.  The FFIPlugin is obsolete (it requires assembler support files, and is non-reentrant).  This should generate in src/plugins/SqueakFFIPrims/{SqueakFFIPrims.c,ARM32FFIPlugin.c,IA32FFIPlugin.c} and you should compile only src/plugins/SqueakFFIPrims/SqueakFFIPrims.c.  src/plugins/SqueakFFIPrims/SqueakFFIPrims.c is a simple wrapper that includes ARM32FFIPlugin.c or IA32FFIPlugin.c as appropriate (and others can be added as they are developed).
-
-
-"
+"debug"
 ]
 
 { #category : #plugins }
 Linux32x86Config >> defaultInternalPlugins [
-" tty 2014.06.10  cut-n-paste from Cog/build.linux32x86/newspeak.cog.spur/build/plugins.int
-   N.B. moduleName->XYZ means XYZ appears in the GNU-Build's plugins.int/ext. However, Smalltalk requires the class name.
-                                 XYZSmalltalkClass  moduleName->XYZ as it appears in plugins.int/ext
-"
+" took from unixbuild/bld/plugins.int"
 	^ #(
-	    ADPCMCodecPlugin
-    AsynchFilePlugin
-    BalloonEnginePlugin "moduleName -->B2DPlugin"
-    BitBltSimulation        "moduleName->BitBltPlugin"
-    BMPReadWriterPlugin
-    CroquetPlugin
-    DeflatePlugin               "moduleName->ZipPlugin"
-    DropPlugin
-    DSAPlugin                    "moduleName->DSAPrims"
-    FFTPlugin
-    FileCopyPlugin
-    FilePlugin
-    FloatArrayPlugin
-    FloatMathPlugin
-    IA32ABIPlugin             "moduleName->IA32ABI"
-   " InflatePlugin"               "moduleName->ZipPlugin"   "already included with the DeflatePlugin"
-    JoystickTabletPlugin
-    JPEGReaderPlugin
-    JPEGReadWriter2Plugin
-    KlattSynthesizerPlugin  "moduleName->Klatt"
-    LargeIntegersPlugin      "moduleName->LargeIntegers"
-    Matrix2x3Plugin
-    MIDIPlugin
-    MiscPrimitivePlugin
-    Mpeg3Plugin
-    RePlugin
-    SecurityPlugin
-    SerialPlugin
-    SocketPlugin
-    SoundCodecPlugin        "moduleName->SoundCodecPrims"
-    SoundGenerationPlugin
-    SoundPlugin
-    StarSqueakPlugin
-    SurfacePlugin
-    VMProfileLinuxSupportPlugin)
+		ADPCMCodecPlugin 
+		AsynchFilePlugin 
+		BalloonEnginePlugin "B2DPlugin" 
+		BitBltSimulation "BitBltPlugin"
+		BMPReadWriterPlugin 
+		CroquetPlugin 
+		DeflatePlugin  "ZipPlugin"
+		DropPlugin 
+		DSAPlugin "DSAPrims" 
+		FFTPlugin 
+		FileCopyPlugin 
+		FilePlugin 
+		FloatArrayPlugin 
+		FloatMathPlugin 
+		JoystickTabletPlugin 
+		KlattSynthesizerPlugin "Klatt"
+		LargeIntegersPlugin "LargeIntegers"
+		Matrix2x3Plugin 
+		MIDIPlugin 
+		MiscPrimitivePlugin 
+		Mpeg3Plugin  	
+		SecurityPlugin 
+		SerialPlugin 
+		SocketPlugin 
+		SoundCodecPlugin "SoundCodecPrims"
+		SoundGenerationPlugin 
+		SoundPlugin 
+		StarSqueakPlugin 
+		SurfacePlugin	
+		LocalePlugin
+		)
 ]
 
 { #category : #cmake }
 Linux32x86Config >> dirBuildPlatform [
-	"the directory for the platform. example: build.linux32x86"
 	^self dirLinux32x86
 ]
 
 { #category : #cmake }
 Linux32x86Config >> excludeFromBuild [
-	"over-ride to exclude yourself from a build"
+	"over-ride to exclude yourself from a build or not"
 	^true
 ]
 
@@ -258,8 +255,13 @@ Linux32x86Config >> externalPluginsBuild [
 Linux32x86Config >> extraPluginSettingsBuild: aMaker [
 	aMaker isExternal 
 		ifTrue:[aMaker templates addLast:((CMakeSet new) variable:'LIBRARY_OUTPUT_PATH' value:'${outputDir}')].
+	aMaker templates addLast:((CMakeSet new) variable:'linkFlags' quotedValue:'${linkFlags} -m32').
 
 
+"	maker isExternal ifTrue: [
+		maker set: 'LIBRARY_OUTPUT_PATH' to: '${outputDir}' 
+	].
+	maker set: #linkFlags toString: '${linkFlags} -m32'"
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -268,18 +270,27 @@ Linux32x86Config >> internalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> linkFlagsBuild [
-	"Answer array of libraries to link to
-	SystemNavigation default browseMethodsWhoseNamesContain: 'libsBuild'"
-	^ { 
-		'-lpthread'
-           . '-luuid'
-	   }
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86Config >> postBuildActionsBuild: gen [
+Linux32x86Config >> postBuildActionsBuild: aMaker [
 	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
+	(aMaker config enabledebugmessages)
+		ifTrue:[	
+	aMaker config templates 
+		addLast: ((CMakeMessage new) message: (self class name), ' postBuildActionsBuild' )
+	].
+	aMaker config templates 
+		addLast: ((CMakeMessage new) message: 'postBuildActionsBuild: aMaker' );
+		addLast:((CMakeCommand new) command:'include' params:'config.cmake');                                                 "cmake --help-command include "
+		addLast:((CMakeCommand new) command:'LIST' params:'REMOVE_DUPLICATES config_vars');                      "cmake --help-command LIST"
+		addLast:((CMakeCommand new) command:'FILE' params:'WRITE ${CMAKE_BINARY_DIR}/config.h.in ""');          "cmake --help-command FILE"
+		addLast:(CMakeAppendConfigHIn new);
+		addLast:((CMakeCommand new) command:'CONFIGURE_FILE' params:'${CMAKE_BINARY_DIR}/config.h.in ${CMAKE_BINARY_DIR}/config.h');
+		addLast:((CMakeCommand new) command:'GET_CMAKE_PROPERTY' params:'tmp VARIABLES');
+		addLast:((CMakeCommand new) command:'LIST' params:'REMOVE_ITEM tmp tmp');
+		addLast:((CMakeCommand new) command:'LIST' params:'SORT tmp');
+		addLast:((CMakeCommand new) command:'FILE' params:'WRITE ${CMAKE_BINARY_DIR}/config.h.status ""');
+		addLast:(CMakeAppendConfigStatus new).
+
+
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -292,7 +303,7 @@ Linux32x86Config >> preferredIncludesBuild [
 	templates
 		addLast: ((CMakeIncludeDirectories new) dirs: (OrderedCollection with: '${targetPlatform}/plugins/B3DAcceleratorPlugin')).
 
-    (enabledebugmessages)
+	(enabledebugmessages)
 		ifTrue:[	
 	templates 
 		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_PATH =  ${CMAKE_INCLUDE_PATH}' );
@@ -305,7 +316,4 @@ Linux32x86Config >> preferredIncludesBuild [
 		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_BEFORE}' );
 		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE}' )
 	].
-
-	
-
 ]

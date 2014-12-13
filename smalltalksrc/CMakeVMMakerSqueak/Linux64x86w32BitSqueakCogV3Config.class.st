@@ -74,17 +74,12 @@ Linux64x86w32BitSqueakCogV3Config >> availableBuildTypes [
 
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitSqueakCogV3Config >> cmakeAddDefinitionsBuild [
-	|c d  o|
 	(enabledebugmessages)
 		ifTrue:[	templates 
 		addLast:((CMakeMessage new) message: (self class name) , 'cmakeAddDefinitionsBuild')
 	] .
-	c := self compilerFlags asOrderedCollection.
-	d := self compilerDefinitions asOrderedCollection.
-	o:= OrderedCollection new.
-	o addAllLast: c; addAllLast: d.
 	templates
-		addLast:((CMakeAddDefinitions new) definitions: (self compilerDefinitions asOrderedCollection)). "see my self flag below"
+		addLast:((CMakeAddDefinitions new) definitions: (self compilerDefinitions asOrderedCollection)). 
 
 ]
 
@@ -234,24 +229,6 @@ Linux64x86w32BitSqueakCogV3Config >> externalLibsBuild [
 { #category : #'source generation' }
 Linux64x86w32BitSqueakCogV3Config >> interpreterClass [
 	^ CoInterpreter
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitSqueakCogV3Config >> linkFlagsBuild [
-	"Answer array of libraries to link to"
-	^ { '-L/usr/lib'
-	     . '-L/usr/lib/X11'
-           . '-luuid'
-           . 'lSM' 
-           . '-lICE'
-           . '-ldl' 
-           . '-lGL'
-           . '-lpthread'
-           . '-lm' 
-           . '-lnsl'
-           . '-lX11'
-	   } 
-
 ]
 
 { #category : #compiling }
