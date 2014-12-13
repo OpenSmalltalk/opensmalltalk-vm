@@ -897,6 +897,19 @@ printRegisterState(ucontext_t *uap)
 			regs->mc_edi, regs->mc_edi, regs->mc_ebp, regs->mc_esp,
 			regs->mc_eip);
 	return regs->mc_eip;
+#elif __linux__ && __x86_64__
+	gregset_t *regs = &uap->uc_mcontext.gregs;
+	printf(	"\trax 0x%08x rbx 0x%08x rcx 0x%08x rdx 0x%08x\n"
+			"\trdi 0x%08x rsi 0x%08x rbp 0x%08x rsp 0x%08x\n"
+			"\tr8  0x%08x r9  0x%08x r10 0x%08x r11 0x%08x\n"
+			"\tr12 0x%08x r13 0x%08x r14 0x%08x r15 0x%08x\n"
+			"\trip 0x%08x\n",
+			regs[REG_RAX], regs[REG_RBX], regs[REG_RCX], regs[REG_RDX],
+			regs[REG_RDI], regs[REG_RDI], regs[REG_RBP], regs[REG_RSP],
+			regs[REG_R8 ], regs[REG_R9 ], regs[REG_R10], regs[REG_R11],
+			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
+			regs[REG_RIP]);
+	return regs[REG_RIP];
 #else
 	printf("don't know how to derive register state from a ucontext_t on this platform\n");
 	return 0;
