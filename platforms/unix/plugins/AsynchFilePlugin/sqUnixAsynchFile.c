@@ -184,7 +184,7 @@ FilePtr asyncFileAttach(AsyncFile *f, int fd, int semaIndex)
 /*** public functions ***/
 
 
-int asyncFileOpen(AsyncFile *f, int fileNamePtr, int fileNameSize,
+int asyncFileOpen(AsyncFile *f, char *fileNamePtr, int fileNameSize,
 		  int writeFlag, int semaIndex)
 {
   int fd= 0;
@@ -239,13 +239,13 @@ int asyncFileRecordSize(void)
 }
 
 
-int asyncFileReadResult(AsyncFile *f, int bufferPtr, int bufferSize)
+int asyncFileReadResult(AsyncFile *f, void *bufferPtr, int bufferSize)
 {
   FilePtr fp= 0;
   int n= 0;
   validate(f);
   fp= (FilePtr)f->state;
-  n= read(fp->fd, (void *)bufferPtr, bufferSize);
+  n= read(fp->fd, bufferPtr, bufferSize);
   if      ((n < 0) && (errno == EWOULDBLOCK))
     return fp->rd.status= Busy;
   else if (n <= 0)
@@ -333,7 +333,7 @@ static void writeHandler(int fd, void *data, int flags)
 }
 
 
-int asyncFileWriteStart(AsyncFile *f, int fPosition, int bufferPtr, int count)
+int asyncFileWriteStart(AsyncFile *f, int fPosition, void *bufferPtr, int count)
 {
   FilePtr fp= 0;
   validate(f);
@@ -363,7 +363,7 @@ int asyncFileWriteStart(AsyncFile *f, int fPosition, int bufferPtr, int count)
       goto fail;
     }
 
-  memcpy((void *)fp->buf.bytes, (void *)bufferPtr, count);
+  memcpy((void *)fp->buf.bytes, bufferPtr, count);
   fp->buf.pos= 0;	/* current output pointer */
   fp->buf.size= count;	/* bytes to transfer */
   fp->wr.status= Busy;	/* transfer in progress */

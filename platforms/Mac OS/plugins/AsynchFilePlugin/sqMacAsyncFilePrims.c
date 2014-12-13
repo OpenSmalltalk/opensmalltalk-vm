@@ -85,12 +85,12 @@ IOCompletionUPP asyncFileCompletionProc = nil;
 
 /*** Exported Functions ***/
 int asyncFileClose(AsyncFile *f);
-int asyncFileOpen(AsyncFile *f, int fileNamePtr, int fileNameSize, int writeFlag, int semaIndex);
+int asyncFileOpen(AsyncFile *f, char *fileNamePtr, int fileNameSize, int writeFlag, int semaIndex);
 int asyncFileRecordSize();
-int asyncFileReadResult(AsyncFile *f, int bufferPtr, int bufferSize);
+int asyncFileReadResult(AsyncFile *f, void *bufferPtr, int bufferSize);
 int asyncFileReadStart(AsyncFile *f, int fPosition, int count);
 int asyncFileWriteResult(AsyncFile *f);
-int asyncFileWriteStart(AsyncFile *f, int fPosition, int bufferPtr, int bufferSize);
+int asyncFileWriteStart(AsyncFile *f, int fPosition, void *bufferPtr, int bufferSize);
 
 /*** Local Functions ***/
 void asyncFileAllocateBuffer(AsyncFileState *state, int byteCount);
@@ -203,7 +203,7 @@ int asyncFileClose(AsyncFile *f) {
 	return 0;
 }
 
-int asyncFileOpen(AsyncFile *f, int fileNamePtr, int fileNameSize, int writeFlag, int semaIndex) {
+int asyncFileOpen(AsyncFile *f, char *fileNamePtr, int fileNameSize, int writeFlag, int semaIndex) {
   /* Opens the given file using the supplied AsyncFile structure to record
 	 its state. Fails with no side effects if f is already open. Files are
 	 always opened in binary mode. */
@@ -270,7 +270,7 @@ int asyncFileOpen(AsyncFile *f, int fileNamePtr, int fileNameSize, int writeFlag
 	return 0;
 }
 
-int asyncFileReadResult(AsyncFile *f, int bufferPtr, int bufferSize) {
+int asyncFileReadResult(AsyncFile *f, void *bufferPtr, int bufferSize) {
   /* Copy up to bufferSize bytes from the buffer of the last read operation
 	 into the given Squeak buffer, and return the number of bytes copied.
 	 Negative values indicate:
@@ -290,7 +290,7 @@ int asyncFileReadResult(AsyncFile *f, int bufferPtr, int bufferSize) {
 
 	/* copy the file buffer into the squeak buffer */
 	bytesRead = (bufferSize < state->bytesTransferred) ? bufferSize : state->bytesTransferred;
-	memcpy((char *) bufferPtr, state->bufferPtr, bytesRead);
+	memcpy(bufferPtr, state->bufferPtr, bytesRead);
 	return bytesRead;
 }
 
@@ -340,7 +340,7 @@ int asyncFileWriteResult(AsyncFile *f) {
 	return state->bytesTransferred;
 }
 
-int asyncFileWriteStart(AsyncFile *f, int fPosition, int bufferPtr, int bufferSize) {
+int asyncFileWriteStart(AsyncFile *f, int fPosition, void *bufferPtr, int bufferSize) {
   /* Start an asynchronous operation to write bufferSize bytes to the given file
 	 starting at the given file position. The file's semaphore will be signalled when
 	 the operation is complete. The client may then use asyncFileWriteResult() to
@@ -359,7 +359,7 @@ int asyncFileWriteStart(AsyncFile *f, int fPosition, int bufferPtr, int bufferSi
 	if (state->bufferPtr == nil) return success(false);  /* could not allocate buffer */
 
 	/* copy the squeak buffer into the file buffer */
-	memcpy(state->bufferPtr, (char *) bufferPtr, bufferSize);
+	memcpy(state->bufferPtr, bufferPtr, bufferSize);
 
 	asyncFileInitPB(state, fPosition);
 	err = PBWriteAsync(&state->pb);
