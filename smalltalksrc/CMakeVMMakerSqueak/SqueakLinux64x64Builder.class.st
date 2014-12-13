@@ -7,12 +7,12 @@ HelpBrowser openOn: CMakeVMMakerSqueakHelp.
 
 "
 Class {
-	#name : #'SqueakLinuxX86_64Builder',
+	#name : #SqueakLinux64x64Builder,
 	#superclass : #SqueakCMakeVMMakerAbstractBuilder,
 	#category : #'CMakeVMMakerSqueak-Builder'
 }
 
 { #category : #queries }
-SqueakLinuxX86_64Builder >> configurationsCategory [
-	^'CMakeVMMakerSqueak-LinuxX86-64'
+SqueakLinux64x64Builder >> configurationsCategory [
+	^'CMakeVMMakerSqueak-Linux64x64'
 ]

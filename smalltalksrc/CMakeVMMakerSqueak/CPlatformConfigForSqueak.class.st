@@ -1979,8 +1979,8 @@ CPlatformConfigForSqueak >> dirLinux32x86 [
 ]
 
 { #category : #'cmake directory ' }
-CPlatformConfigForSqueak >> dirLinux64 [
-	^'cmake.build.linux64'
+CPlatformConfigForSqueak >> dirLinux64x64 [
+	^'cmake.build.linux64x64'
 ]
 
 { #category : #'cmake directory ' }

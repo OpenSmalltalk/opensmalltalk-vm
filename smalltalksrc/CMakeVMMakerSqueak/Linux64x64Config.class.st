@@ -17,13 +17,13 @@ HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
 "
 Class {
-	#name : #SqueakSunOS32x86Config,
+	#name : #Linux64x64Config,
 	#superclass : #SqueakUnixConfig,
-	#category : #'CMakeVMMakerSqueak-SunOS32x86'
+	#category : #'CMakeVMMakerSqueak-Linux64x64'
 }
 
 { #category : #'cmake buildType redirects' }
-SqueakSunOS32x86Config >> addVMPluginsBuild: aMaker [
+Linux64x64Config >> addVMPluginsBuild: aMaker [
 	|temp o|
 	self flag:'tty'. "I am writing sub-directory CMakeLists.txt here. Should I also write the config.cmake files?"
 	enabledebugmessages
@@ -59,7 +59,7 @@ SqueakSunOS32x86Config >> addVMPluginsBuild: aMaker [
 ]
 
 { #category : #cmake }
-SqueakSunOS32x86Config >> availableBuildTypes [
+Linux64x64Config >> availableBuildTypes [
  	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
 "
 
@@ -71,7 +71,7 @@ subclasses should use
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakSunOS32x86Config >> coreSourcesBuild [
+Linux64x64Config >> coreSourcesBuild [
 	"files to include from src/vm dir"
 	^ #(
 		'cogit.c'
@@ -80,7 +80,7 @@ SqueakSunOS32x86Config >> coreSourcesBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakSunOS32x86Config >> coreSourcesBuildMultiThreaded [
+Linux64x64Config >> coreSourcesBuildMultiThreaded [
 	"files to include from src/vm dir"
 	^ #(
 		'cogit.c'
@@ -89,7 +89,7 @@ SqueakSunOS32x86Config >> coreSourcesBuildMultiThreaded [
 ]
 
 { #category : #plugins }
-SqueakSunOS32x86Config >> customizeCMakeVMDisplayNull [
+Linux64x64Config >> customizeCMakeVMDisplayNull [
 	|module|
 	module := vmplugins detect: [:vmd | #CMakeVMDisplayNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
 	module 
@@ -113,7 +113,7 @@ SqueakSunOS32x86Config >> customizeCMakeVMDisplayNull [
 ]
 
 { #category : #plugins }
-SqueakSunOS32x86Config >> customizeCMakeVMDisplayX11 [
+Linux64x64Config >> customizeCMakeVMDisplayX11 [
 	|module|
 	module := vmplugins detect: [:vmd | #CMakeVMDisplayX11 = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
 	module 
@@ -130,7 +130,7 @@ SqueakSunOS32x86Config >> customizeCMakeVMDisplayX11 [
 ]
 
 { #category : #plugins }
-SqueakSunOS32x86Config >> customizeCMakeVMSoundALSA [
+Linux64x64Config >> customizeCMakeVMSoundALSA [
 	|module|
 	module := vmplugins detect: [:vmd | #CMakeVMSoundALSA = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
 	module 
@@ -144,7 +144,7 @@ SqueakSunOS32x86Config >> customizeCMakeVMSoundALSA [
 ]
 
 { #category : #plugins }
-SqueakSunOS32x86Config >> customizeCMakeVMSoundNull [
+Linux64x64Config >> customizeCMakeVMSoundNull [
 	|module|
 	module := vmplugins detect: [:vmd | #CMakeVMSoundNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
 	module 
@@ -159,7 +159,7 @@ SqueakSunOS32x86Config >> customizeCMakeVMSoundNull [
 ]
 
 { #category : #plugins }
-SqueakSunOS32x86Config >> customizeVMPlugins [
+Linux64x64Config >> customizeVMPlugins [
 	|mysubset iwantonly|
 	"trim the vmdrivers ordered collection of CMakeVMDriver subclasses to only those I want. then customize them for use on this OS/platform"
 	iwantonly :=	 #(#CMakeVMDisplayNull  #CMakeVMDisplayX11  #CMakeVMSoundALSA  #CMakeVMSoundNull ).
@@ -177,7 +177,7 @@ SqueakSunOS32x86Config >> customizeVMPlugins [
 ]
 
 { #category : #plugins }
-SqueakSunOS32x86Config >> defaultExternalPlugins [
+Linux64x64Config >> defaultExternalPlugins [
 	^ #(
 		B3DAcceleratorPlugin
 		ThreadedIA32FFIPlugin "SqueakFFIPrims"
@@ -193,7 +193,7 @@ SqueakSunOS32x86Config >> defaultExternalPlugins [
 ]
 
 { #category : #plugins }
-SqueakSunOS32x86Config >> defaultInternalPlugins [
+Linux64x64Config >> defaultInternalPlugins [
 " took from unixbuild/bld/plugins.int"
 	^ #(
 		ADPCMCodecPlugin 
@@ -230,47 +230,47 @@ SqueakSunOS32x86Config >> defaultInternalPlugins [
 ]
 
 { #category : #cmake }
-SqueakSunOS32x86Config >> dirBuildPlatform [
-	^self dirSunOS32x86
+Linux64x64Config >> dirBuildPlatform [
+	^self dirLinux64x64
 ]
 
 { #category : #cmake }
-SqueakSunOS32x86Config >> excludeFromBuild [
+Linux64x64Config >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
 ]
 
 { #category : #cmake }
-SqueakSunOS32x86Config >> executableName [
+Linux64x64Config >> executableName [
 	"AbstractBaseClass configurations are not meant to be executable"
 	^ self vmIShouldNotBeHereExecutableName
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakSunOS32x86Config >> externalPluginsBuild [
+Linux64x64Config >> externalPluginsBuild [
 	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakSunOS32x86Config >> extraPluginSettingsBuild: aMaker [
+Linux64x64Config >> extraPluginSettingsBuild: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'extraPluginSettingsBuild:'"
+	(aMaker config enabledebugmessages)
+		ifTrue:[	
+			aMaker config templates 
+				addLast: ((CMakeMessage new) message: (self class name), ' extraPluginSettingsBuild:' )].
+
 	aMaker isExternal 
 		ifTrue:[aMaker templates addLast:((CMakeSet new) variable:'LIBRARY_OUTPUT_PATH' value:'${outputDir}')].
-	aMaker templates addLast:((CMakeSet new) variable:'linkFlags' quotedValue:'${linkFlags} -m32').
 
-
-"	maker isExternal ifTrue: [
-		maker set: 'LIBRARY_OUTPUT_PATH' to: '${outputDir}' 
-	].
-	maker set: #linkFlags toString: '${linkFlags} -m32'"
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakSunOS32x86Config >> internalPluginsBuild [
+Linux64x64Config >> internalPluginsBuild [
 	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakSunOS32x86Config >> postBuildActionsBuild: aMaker [
+Linux64x64Config >> postBuildActionsBuild: aMaker [
 	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
 	(aMaker config enabledebugmessages)
 		ifTrue:[	
@@ -294,7 +294,7 @@ SqueakSunOS32x86Config >> postBuildActionsBuild: aMaker [
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakSunOS32x86Config >> preferredIncludesBuild [
+Linux64x64Config >> preferredIncludesBuild [
 	(enabledebugmessages)
 		ifTrue:[	
 	templates 

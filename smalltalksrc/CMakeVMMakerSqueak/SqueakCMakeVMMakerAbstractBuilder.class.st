@@ -280,8 +280,12 @@ SqueakCMakeVMMakerAbstractBuilder >> enableMessageTracking: aBoolean [
 
 { #category : #building }
 SqueakCMakeVMMakerAbstractBuilder >> generateByTemplate [
+	self flag:'tty'. "If we ever script builds, this inform must by bypassed"
 	(config isKindOf: CPlatformConfig)
-		ifTrue:[config generateByTemplate]
+		ifTrue:[
+			(config excludeFromBuild)
+				ifTrue:[self inform: '', config class, ' >>"excludeFromBuild" answers #true. Most likely because it is under development']
+				ifFalse: [config generateByTemplate]]
 		
 ]
 
@@ -316,7 +320,7 @@ SqueakCMakeVMMakerAbstractBuilder >> getInfoForBuilds [
 SqueakCMakeVMMakerAbstractBuilder >> initialize [
 	"a stupid <cough>temporary</cough> hack to workaround initialization problems"
 	Cogit allSubclassesDo: [ :each | each initializeWithOptions: (VMMaker new instVarNamed: 'optionsDictionary') ].
-
+	scriptMode:= false. "On the chance that we ever use scripts to invoke builders, here is  a flag to bypass user interaction/informs"
 	self initializeBuildTypeAndDirectoryInfo.
 
 	

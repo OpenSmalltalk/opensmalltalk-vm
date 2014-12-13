@@ -27,6 +27,11 @@ SqueakMacintoshConfig >> addFrameworksByTemplate: aCollection maker: aMaker [
 				addLast:((CMakeListAppend new) list:'LINKLIBS' elements: (OrderedCollection with: '${', each , '_FMWK}'))]
 ]
 
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> addVMPluginsBuild: aMaker [
+	"do nothing. Unless Mac uses this, then push me down"
+]
+
 { #category : #cmake }
 SqueakMacintoshConfig >> cmakeWriteDirectoriesDotCmake: aMaker [
 	|temp o|
@@ -403,6 +408,11 @@ SqueakMacintoshConfig >> frameworksBuildMultiThreadedAssert [
 { #category : #'cmake buildType redirects' }
 SqueakMacintoshConfig >> frameworksBuildMultiThreadedDebug [
 	^ self frameworksBuild
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> generateVmConfigCmake [
+	"do nothing. Unless Mac uses this, then push me down"
 ]
 
 { #category : #accessing }
