@@ -112,24 +112,30 @@ CMakeVMMakerSqueakDesignPatternsHelp class >> redirectPatternImplementation [
 		contents:
 'Implementation is very straight forward.
 
-For ''Release'' type buildTypes the default is to return setGlobalOptionsBuild: aMaker.
+Pictorially it looks like this:
+#buildITimerHeartbeat #buildMultiThreaded  
+                                       --are redirected to---> #build 
 
-Example:
+And this: 
+#buildAssert #buildAssertITimerHeartbeat #buildDebugITimerHeartbeat#buildMultiThreadedAssert #buildMultiThreadedDebug 
+                                                                                                                                                                     -- are redirected to---> #buldDebug 
+
+
+In code:
+
 setGlobalOptionsBuildMultiThreaded: aMaker
-	^self setGlobalOptionsBuild: aMaker
+	^self setGlobalOptionsBuild: aMaker                   <----redirect to #build
 
-For "Debug" type buildTypes the default is to return setGlobalOptionsBuild: aMaker
-
-Example:
 
 setGlobalOptionsBuildAssertITimerHeartbeat: aMaker
-	^self setGlobalOptionsBuildDebug: aMaker
+	^self setGlobalOptionsBuildDebug: aMaker               <----redirect to #buildDebug
 
 
 Any Configuration in the CPlatformConfigForSqueak heirarchy can override any of these Redirect Methods to provide custom results for any build type at any step in the generate process.
 
 
-
+The Implementation is a bit of over-kill in many instances. However, I find the idea of boiler-plate consistency is easier to code and comprehend for newbie coders.
+Getting newbie-coders comfortable writing configurations is a goal of this project.
 
 '
 ]
@@ -207,12 +213,12 @@ CMakeVMMakerSqueakDesignPatternsHelp class >> redirectPatternMotivation [
 		contents:
 'The motivation for the Redirect Pattern is to reduce the number of concrete configurations by encapsulating every possible build type in one concrete configuration
 
-If you look at the pharo CMakeVMMaker package,  under the CMakeVMMaker-Unix class category, note the existence of StackUnixDebugConfig.   It is the "Debug" that is the problem.  The pharo team supports two build types: Release and Debug, while the Squeak team supports (currently) 10 build types. The number of Concrete Configurations becomes--in my view--too many.
+If you look at the pharo CMakeVMMaker package,  under the CMakeVMMaker-Unix class category, note the existence of StackUnixConfig and its child class StackUnixDebugConfig.   It is the "Debug" that is the problem.  The pharo team supports two build types: Release and Debug, while the Squeak team supports (currently) 10 build types. By adopting the pharo strategy of creating a new sub-class for each buildType the number of Concrete Configurations becomes--in my view--too many.
 
 Here is the math: 
 
-A configurations [PLATFORM].[Language].[VM].[Memory Manager] [buildType] form expands to:
- [BSD32x64. | .....| SunOS32x86].[Newspeak | Squeak ].Cog | Stack  ].[V3 | Spur] [#build | #build.debug| ...| #buildMultiThreadedDebug]
+A configurations [PLATFORM]x[Language]x[VM]x[Memory Manager]x[buildType] form expands to:
+ [BSD32x64. | .....| SunOS32x86] x [Newspeak | Squeak ]. [Cog | Stack  ] [V3 | Spur]   [#build | #build.debug| ...| #buildMultiThreadedDebug]
 
 which in combination yeilds (as of today)
 
@@ -243,13 +249,6 @@ The answer is that I find it easier to understand--and I believe easier for newb
 Secondly, adding new redirect methods is straighforward boilerplate--just a matter of copy-n-paste-rename. 
 
 Thirdly it reduces brain-cycles when debugging.
-
-
-
-
-
-I hope this tutorial has made things clear.
-
 '
 
 ]

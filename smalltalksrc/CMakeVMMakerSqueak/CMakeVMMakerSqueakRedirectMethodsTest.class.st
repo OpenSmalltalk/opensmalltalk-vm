@@ -180,21 +180,6 @@ CMakeVMMakerSqueakRedirectMethodsTest >> testInternalPlugins [
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakRedirectMethodsTest >> testLinkFlags [
-	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
-		do:[:each | 
-			(Smalltalk at:each) 
-				allSubclassesDo:[:configuration | | o buildTypes|
-					o:= configuration basicNew.
-					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
-						ifTrue:[
-							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
-							buildTypes do:[:buildType |
-								o configureForBuildType: buildType.
-								self assert:(o  linkFlags isString)]]]].
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakRedirectMethodsTest >> testThirdPartyLibs [
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
 		do:[:each | 

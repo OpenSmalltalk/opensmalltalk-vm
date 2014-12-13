@@ -236,24 +236,6 @@ Linux32x86SqueakCogV3Config >> interpreterClass [
 	^ CoInterpreter
 ]
 
-{ #category : #'cmake buildType redirects' }
-Linux32x86SqueakCogV3Config >> linkFlagsBuild [
-	"Answer array of libraries to link to"
-	^ { '-L/usr/lib'
-	     . '-L/usr/lib/X11'
-           . '-luuid'
-           . 'lSM' 
-           . '-lICE'
-           . '-ldl' 
-           . '-lGL'
-           . '-lpthread'
-           . '-lm' 
-           . '-lnsl'
-           . '-lX11'
-	   } 
-
-]
-
 { #category : #compiling }
 Linux32x86SqueakCogV3Config >> linkerFlags [
 	^#(	'-Wl'
