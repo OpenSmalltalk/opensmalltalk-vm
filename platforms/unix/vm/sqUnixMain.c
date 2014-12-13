@@ -1617,7 +1617,11 @@ char *getVersionInfo(int verbose)
   info[0]= '\0';
 
 #if SPURVM
-# define ObjectMemory " Spur"
+# if BytesPerOop == 8
+#	define ObjectMemory " Spur 64-bit"
+# else
+#	define ObjectMemory " Spur"
+# endif
 #else
 # define ObjectMemory
 #endif
