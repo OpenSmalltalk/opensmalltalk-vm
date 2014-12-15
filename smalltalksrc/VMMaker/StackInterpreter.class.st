@@ -201,6 +201,9 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	self declareC: #(localIP localSP localFP stackPointer framePointer stackLimit stackMemory breakSelector)
 		as: #'char *'
 		in: aCCodeGenerator.
+	aCCodeGenerator
+		var: #breakSelectorLength
+		declareC: 'sqInt breakSelectorLength = MinSmallInteger'.
 	self declareC: #(stackPage overflowedPage)
 		as: #'StackPage *'
 		in: aCCodeGenerator.
@@ -7321,7 +7324,7 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 	self checkAssumedCompactClasses.
 	self initializeExtraClassInstVarIndices.
 	method := newMethod := objectMemory nilObject.
-	breakSelectorLength := objectMemory minSmallInteger.
+	self cCode: '' inSmalltalk: [breakSelectorLength := objectMemory minSmallInteger].
 	methodDictLinearSearchLimit := 8.
 	self flushMethodCache.
 	self flushAtCache.
@@ -12843,14 +12846,18 @@ StackInterpreter >> shortPrintOop: oop [
 	<inline: false>
 	self printHexnp: oop.
 	(objectMemory isImmediate: oop) ifTrue:
-		[(objectMemory isImmediateCharacter: oop) ifTrue:
-			[self
-				cCode: 'printf("=$%ld ($%lc)\n", (long)characterValueOf(oop), (wint_t)characterValueOf(oop))'
-				inSmalltalk: [self print: (self shortPrint: oop); cr]].
-		 (objectMemory isIntegerObject: oop) ifTrue:
+		[(objectMemory isIntegerObject: oop) ifTrue:
 			[self
 				cCode: 'printf("=%ld\n", (long)integerValueOf(oop))'
 				inSmalltalk: [self print: (self shortPrint: oop); cr]].
+		 (objectMemory isImmediateCharacter: oop) ifTrue:
+			[self
+				cCode: 'printf("=$%ld ($%lc)\n", (long)characterValueOf(oop), (wint_t)characterValueOf(oop))'
+				inSmalltalk: [self print: (self shortPrint: oop); cr]].
+		 (objectMemory isImmediateFloat: oop) ifTrue:
+			[self
+				cCode: 'printf("=%g\n", floatValueOf(oop))'
+				inSmalltalk: [self print: '='; printFloat: (objectMemory floatValueOf: oop); cr]].
 		 ^self].
 	(objectMemory addressCouldBeObj: oop) ifFalse:
 		[^self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
@@ -13345,7 +13352,9 @@ StackInterpreter >> stackPageFrameBytes [
 	"Answer a byte size that accomodates a useful number of frames.
 	 512 bytes is room for around 40 frames a page which is a good
 	 compromise between overflow rate and latency in divorcing a page."
-	^512
+	^objectMemory bytesPerOop = 8
+		ifTrue: [1024]
+		ifFalse: [512]
 ]
 
 { #category : #'stack pages' }
