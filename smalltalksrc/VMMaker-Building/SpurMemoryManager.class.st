@@ -1401,7 +1401,7 @@ SpurMemoryManager >> allInstancesOf: aClass [
 	start := self startOfObject: freeChunk.
 	self freeChunkWithBytes: limit - start - bytes at: start + bytes.
 	totalFreeOldSpace := totalFreeOldSpace - bytes.
-	self setOverflowNumSlotsOf: freeChunk to: count.
+	self rawOverflowSlotsOf: freeChunk put: count.
 	self set: freeChunk classIndexTo: ClassArrayCompactIndex formatTo: self arrayFormat.
 	self possibleRootStoreInto: freeChunk.
 	self checkFreeSpace.
@@ -1495,7 +1495,7 @@ SpurMemoryManager >> allObjects [
 	start := self startOfObject: freeChunk.
 	self freeChunkWithBytes: limit - start - bytes at: start + bytes.
 	totalFreeOldSpace := totalFreeOldSpace - bytes.
-	self setOverflowNumSlotsOf: freeChunk to: count.
+	self rawOverflowSlotsOf: freeChunk put: count.
 	self set: freeChunk classIndexTo: ClassArrayCompactIndex formatTo: self arrayFormat.
 	self possibleRootStoreInto: freeChunk.
 	self checkFreeSpace.
@@ -4792,7 +4792,7 @@ SpurMemoryManager >> forward: obj1 to: obj2 [
 	self storePointer: 0 ofForwarder: obj1 withValue: obj2.
 	"For safety make sure the forwarder has a slot count that includes its contents."
 	(self rawNumSlotsOf: obj1) = 0 ifTrue:
-		[self setRawNumSlotsOf: obj1 to: 1]
+		[self rawNumSlotsOf: obj1 put: 1]
 ]
 
 { #category : #'become implementation' }
@@ -6899,8 +6899,8 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 
 	"Finally evaporate the container, leaving the newly loaded objects in place."
 	(self hasOverflowHeader: segmentWordArray)
-		ifTrue: [self setOverflowNumSlotsOf: segmentWordArray to: self allocationUnit / self bytesPerOop]
-		ifFalse: [self setRawNumSlotsOf: segmentWordArray to: self allocationUnit / self bytesPerOop].
+		ifTrue: [self rawOverflowSlotsOf: segmentWordArray put: self allocationUnit / self bytesPerOop]
+		ifFalse: [self rawNumSlotsOf: segmentWordArray put: self allocationUnit / self bytesPerOop].
 	
 	self leakCheckImageSegments ifTrue:
 		[self runLeakCheckerForFullGC: true].
@@ -9735,21 +9735,8 @@ SpurMemoryManager >> setObjectFree: objOop [
 	 (self long64At: objOop) ~= 0 assert in isEnumerableObject: isn't triggered."
 		 
 	(self rawNumSlotsOf: objOop) = 0 ifTrue:
-		[self setRawNumSlotsOf: objOop to: 1].
+		[self rawNumSlotsOf: objOop put: 1].
 	self setFree: objOop
-]
-
-{ #category : #'free space' }
-SpurMemoryManager >> setOverflowNumSlotsOf: objOop to: numSlots [
-	self flag: #endian.
-	self long32At: objOop - self baseHeaderSize put: numSlots
-]
-
-{ #category : #'free space' }
-SpurMemoryManager >> setRawNumSlotsOf: objOop to: n [
-	"Private to free space. See freeSmallObject:"
-	self flag: #endian.
-	self byteAt: objOop + 7 put: n
 ]
 
 { #category : #'word size' }

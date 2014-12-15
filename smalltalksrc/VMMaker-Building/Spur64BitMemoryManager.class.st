@@ -303,8 +303,8 @@ Spur64BitMemoryManager >> coalesce: obj1 and: obj2 [
 	"convert from single to double header..."
 	newNumSlots := newNumSlots - (self baseHeaderSize / self wordSize).
 	self
-		setRawNumSlotsOf: obj1 + self baseHeaderSize to: self numSlotsMask;
-		setOverflowNumSlotsOf: obj1 + self baseHeaderSize to: newNumSlots.
+		rawNumSlotsOf: obj1 + self baseHeaderSize put: self numSlotsMask;
+		rawOverflowSlotsOf: obj1 + self baseHeaderSize put: newNumSlots.
 	^obj1 + self baseHeaderSize
 ]
 
