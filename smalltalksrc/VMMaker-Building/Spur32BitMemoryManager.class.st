@@ -321,6 +321,12 @@ Spur32BitMemoryManager >> fetchClassTagOf: oop [
 	^self classIndexOf: oop
 ]
 
+{ #category : #'object access' }
+Spur32BitMemoryManager >> fetchLong32: fieldIndex ofFloatObject: oop [
+	"index by word size, and return a pointer as long as the word size"
+	^self fetchLong32: fieldIndex ofObject: oop
+]
+
 { #category : #instantiation }
 Spur32BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 	<inline: true>
