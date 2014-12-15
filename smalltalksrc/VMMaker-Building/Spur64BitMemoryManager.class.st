@@ -638,23 +638,17 @@ Spur64BitMemoryManager >> isNonIntegerObject: oop [
 Spur64BitMemoryManager >> isSmallFloatValue: aFloat [
 	<inline: true>
 	<var: #aFloat type: #double>
-	| exponent |
-	exponent := self
-					cCode:
-						[| rawFloat |
-						 rawFloat := (self cCoerce: (self addressOf: aFloat) to: 'sqLong *') at: 0.
-						 rawFloat >> 52 bitAnd: 16r7FF]
-					inSmalltalk: [self smallFloatExponentOffset
-								+ (aFloat isFinite
-									ifTrue:
-										[aFloat = 0.0
-											ifTrue: [0]
-											ifFalse: [aFloat exponent + 127]]
-									ifFalse: "Float nan & Float infinity exponent = -1, so mask to make > 0"
-										[aFloat exponent bitAnd: SmallInteger maxVal])].
-	^exponent
-		between: self smallFloatExponentOffset
-		and: 255 + self smallFloatExponentOffset
+	| exponent rawFloat |
+	rawFloat := self
+					cCode: [(self cCoerce: (self addressOf: aFloat) to: 'sqLong *') at: 0]
+					inSmalltalk: [(aFloat at: 1) << 32 + (aFloat at: 2)].
+	exponent := rawFloat >> 52 bitAnd: 16r7FF.
+	^exponent > self smallFloatExponentOffset
+	 	ifTrue: [exponent <= (255 + self smallFloatExponentOffset)]
+		ifFalse:
+			[(rawFloat bitAnd: (1 << 52 - 1)) = 0
+				ifTrue: [exponent = 0]
+				ifFalse: [exponent = self smallFloatExponentOffset]]
 ]
 
 { #category : #'object testing' }
@@ -973,7 +967,6 @@ Spur64BitMemoryManager >> smallFloatValueOf: oop [
 	 rot sign:				[1s][     11 exponent     ][52mantissa]"
 	| rot |
 	<returnTypeC: #double>
-	<var: #result type: #double>
 	self assert: (oop bitAnd: self tagMask) = self smallFloatTag.
 	rot := oop >> self numTagBits.
 	rot > 1 ifTrue:
