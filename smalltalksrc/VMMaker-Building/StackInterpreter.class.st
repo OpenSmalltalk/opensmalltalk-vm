@@ -10945,7 +10945,10 @@ StackInterpreter >> printOop: oop [
 						ifTrue: [' is misaligned']
 						ifFalse: [self whereIs: oop]); cr].
 	(objectMemory isFreeObject: oop) ifTrue:
-		[^self print: ' is a free chunk of size '; printNum: (objectMemory sizeOfFree: oop); cr].
+		[self print: ' is a free chunk of size '; printNum: (objectMemory sizeOfFree: oop).
+		 objectMemory hasSpurMemoryManagerAPI ifTrue:
+			[self print: ' 0th: '; printHex: (objectMemory fetchPointer: 0 ofFreeChunk: oop)].
+		 ^self cr].
 	(objectMemory isForwarded: oop) ifTrue:
 		[^self
 			print: ' is a forwarded object to '; printHex: (objectMemory followForwarded: oop);
@@ -12687,7 +12690,10 @@ StackInterpreter >> shortPrint: oop [
 			ifTrue: [' is misaligned']
 			ifFalse: [self whereIs: oop]].
 	(objectMemory isFreeObject: oop) ifTrue:
-		[^' is a free chunk of size ', (objectMemory sizeOfFree: oop) printString].
+		[^' is a free chunk of size ', (objectMemory sizeOfFree: oop) printString,
+			(objectMemory hasSpurMemoryManagerAPI
+				ifTrue: [' 0th: ', (objectMemory fetchPointer: 0 ofFreeChunk: oop) hex]
+				ifFalse: [''])].
 	(objectMemory isForwarded: oop) ifTrue:
 		[^' is a forwarded object to ', (objectMemory followForwarded: oop) hex,
 			' of slot size ', (objectMemory numSlotsOfAny: oop) printString].
