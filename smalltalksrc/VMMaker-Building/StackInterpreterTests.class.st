@@ -16,7 +16,7 @@ StackInterpreterTests >> testImmediateFloats [
 		self shouldnt: [sfo := smm smallFloatObjectOf: f] raise: Error.
 		self assert: (smm smallFloatValueOf: sfo) equals: f.
 		self assert: ((smm exponentOfSmallFloat: sfo) between: -126 and: 127)].
-	{Float nan. Float infinity. Float negativeInfinity. 1.0e-39. 1.0e39 } do:
+	{Float nan. Float infinity. Float negativeInfinity. 1.0e-39. 1.0e39. 5.8774717541114375e-39. 6.80564733841877e38 } do:
 		[:f| self deny: (smm isSmallFloatValue: f)].
 	vm initPrimCall.
 	smallFloatOop := smm smallFloatTag + (1 << (smm smallFloatMantissaBits + smm numTagBits)).

@@ -2624,6 +2624,11 @@ SpurMemoryManager >> bytesLeftInOldSpace [
 	^totalFreeOldSpace
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> bytesPerOop [
+	self subclassResponsibility
+]
+
 { #category : #'memory access' }
 SpurMemoryManager >> cCoerce: value to: cTypeString [
 	"Type coercion. For translation a cast will be emmitted. When running in Smalltalk
@@ -4257,6 +4262,12 @@ SpurMemoryManager >> fetchInteger: fieldIndex ofObject: objectPointer [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
 	^coInterpreter fetchInteger: fieldIndex ofObject: objectPointer
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> fetchLong32: fieldIndex ofFloatObject: oop [
+	"index by word size, and return a pointer as long as the word size"
+	^self subclassResponsibility
 ]
 
 { #category : #'object access' }
@@ -6908,6 +6919,11 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 	^self objectStartingAt: segmentStart
 ]
 
+{ #category : #'header format' }
+SpurMemoryManager >> logBytesPerOop [
+	self subclassResponsibility
+]
+
 { #category : #'debug printing' }
 SpurMemoryManager >> longPrintInstancesOf: aClassOop [
 	"Scan the heap printing the oops of any and all objects that are instances of aClassOop"
@@ -8838,6 +8854,25 @@ SpurMemoryManager >> printFreeList: chunkOrIndex [
 	[freeChunk ~= 0] whileTrue:
 		[self printFreeChunk: freeChunk.
 		 freeChunk := self fetchPointer: self freeChunkNextIndex ofFreeChunk: freeChunk]
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printFreeListHeads [
+	<api>
+	| expectedMask |
+	expectedMask := 0.
+	0 to: self numFreeLists - 1 do:
+		[:i|
+		coInterpreter printHex: (freeLists at: i).
+		(freeLists at: i) ~= 0 ifTrue:
+			[expectedMask := expectedMask + (1 << i)].
+		i \\ (32 >> self logBytesPerOop) = 0
+			ifTrue: [coInterpreter cr]
+			ifFalse: [coInterpreter tab]].
+	coInterpreter
+		print: 'mask: '; printHex: freeListsMask;
+		print: ' expected: '; printHex: expectedMask;
+		cr
 ]
 
 { #category : #'debug printing' }
