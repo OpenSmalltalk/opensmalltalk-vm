@@ -757,13 +757,15 @@ CogVMSimulator >> doesNotUnderstand: aMessage [
 		[(objectMemory class whichClassIncludesSelector: aMessage selector) ifNotNil:
 			[:implementingClass|
 			(implementingClass inheritsFrom: Object) ifTrue: "i.e. VMClass and below"
-				[Transcript nextPutAll: 'warning: redirecting ', aMessage selector, ' in ', thisContext sender printString, ' to objectMemory'; cr; flush.
+				[thisContext sender selector ~~ #DoIt ifTrue:
+					[Transcript nextPutAll: 'warning: redirecting ', aMessage selector, ' in ', thisContext sender printString, ' to objectMemory'; cr; flush].
 				 aMessage lookupClass: nil.
 				^aMessage sentTo: objectMemory]].
 		(cogit class whichClassIncludesSelector: aMessage selector) ifNotNil:
 			[:implementingClass|
 			(implementingClass inheritsFrom: Object) ifTrue: "i.e. VMClass and below"
-				[Transcript nextPutAll: 'warning: redirecting ', aMessage selector, ' in ', thisContext sender printString, ' to cogit'; cr; flush.
+				[thisContext sender selector ~~ #DoIt ifTrue:
+					[Transcript nextPutAll: 'warning: redirecting ', aMessage selector, ' in ', thisContext sender printString, ' to cogit'; cr; flush].
 				 aMessage lookupClass: nil.
 				^aMessage sentTo: cogit]]].
 	^super doesNotUnderstand: aMessage
