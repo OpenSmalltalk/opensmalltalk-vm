@@ -933,6 +933,7 @@ ScratchPlugin >> primitiveSaturationShift [
 { #category : #scaling }
 ScratchPlugin >> primitiveScale [
 	"Scale using bilinear interpolation."
+	"This version isn't really able to do much with full ARGB based images; the A channel will be ignored and only fully transparent pixels will be treated as transparent. The output pixel will be either fully transparent or fully opaque."
 
 	| inOop inW inH outOop outW outH in out inX inY xIncr yIncr outPix w1 w2 w3 w4 t p1 p2 p3 p4 tWeight |
 	<export: true>
@@ -974,6 +975,7 @@ ScratchPlugin >> primitiveScale [
 			((inX >> 10) < (inW - 1)) ifTrue: [p4 := in at: t + 1] ifFalse: [p4 := p3].
 
 			"deal with transparent pixels"
+			"Note as above - only transparent not translucent"
 			tWeight := 0.
 			p1 = 0 ifTrue: [p1 := p2. tWeight := tWeight + w1].
 			p2 = 0 ifTrue: [p2 := p1. tWeight := tWeight + w2].
@@ -990,7 +992,10 @@ ScratchPlugin >> primitiveScale [
 				outPix := outPix bitOr: (((t >> 20) bitAnd: 255) << 8).
 				t := (w1 * (p1 bitAnd: 255)) + (w2 * (p2 bitAnd: 255)) + (w3 * (p3 bitAnd: 255)) + (w4 * (p4 bitAnd: 255)).
 				outPix := outPix bitOr: ((t >> 20) bitAnd: 255).
-				outPix = 0 ifTrue: [outPix := 1]].
+				"If the result is black, remember to make it Squeak-standard-fake-black"
+				outPix = 0 ifTrue: [outPix := 1].
+				"add the A channel to make it really opaque"
+				outPix := outPix bitOr: 16rFF000000].
 
 			out at: (outY * outW) + outX put: outPix.
 			inX := inX + xIncr].
