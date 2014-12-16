@@ -1,0 +1,50 @@
+#!/bin/bash
+INSTALLDIR=nsvmlinuxast
+if [ $# -ge 1 ]; then
+	case "$1" in
+	-*)	;;
+	*)	INSTALLDIR="$1"; shift
+	esac
+fi
+OPT=-O1
+
+echo -n "clean? "
+read a
+case $a in
+n|no|N|NO)	echo "ok but this isn't safe!!";;
+*)			rm config.h; test -f Makefile && make reallyclean
+esac
+test -f config.h || ../../../platforms/unix/config/configure --with-src=nscogsrc \
+	--without-vm-display-fbdev --without-npsqueak \
+	CC="gcc -m32" \
+	CFLAGS="-g $OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1 -DDEBUGVM=0 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer" \
+	LIBS="-lpthread -luuid" \
+	LDFLAGS=-Wl,-z,now
+../../../scripts/nukeversion
+rm -rf ../../../$INSTALLDIR
+# would prefer make install prefix=`readlink -f \`pwd\`/../../../$INSTALLDIR`
+# but older linux readlinks lack the -f flag
+make install prefix=`(cd ../../../;pwd)`/$INSTALLDIR
+(cd ../../../$INSTALLDIR
+ if [ -f squeak ]; then
+        mv squeak nsvm
+        ex -u NONE "+g/squeak/s/squeak/nsvm/g" +w +q nsvm
+  fi
+  if [ -f bin/squeak ]; then
+        mv bin/squeak bin/nsvm
+        ex -u NONE "+g/squeak/s/squeak/nsvm/g" +w +q bin/nsvm
+  fi
+  rm -rf man doc
+  LIBDIR="`echo lib/squeak/[0-9.-]*`"
+  test -f $LIBDIR/squeak && mv $LIBDIR/squeak $LIBDIR/nsvm
+  test -d lib/squeak && mv lib/squeak lib/nsvm
+  LIBDIR="`echo lib/nsvm/[0-9.-]*`"
+  if [ "$1" = -copysource ]; then
+	cp ~/Squeak/SqueakV41.sources $LIBDIR
+  elif [ -h ~/Squeak/SqueakV41.sources ]; then
+	ln "`readlink ~/Squeak/SqueakV41.sources`" $LIBDIR
+  elif [ -f ~/Squeak/SqueakV41.sources ]; then
+	ln ~/Squeak/SqueakV41.sources $LIBDIR
+  else
+	echo "can't find SqueakV41.sources" 1>&2
+  fi)
