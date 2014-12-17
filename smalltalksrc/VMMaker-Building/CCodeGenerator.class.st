@@ -1588,8 +1588,14 @@ CCodeGenerator >> generateBitClear: msgNode on: aStream indent: level [
 
 { #category : #'C translation' }
 CCodeGenerator >> generateBitInvert: msgNode on: aStream indent: level [
-	"Generate the C code for this message onto the given stream."
+	"Generate the C code for this message onto the given stream.
+	 If the selector is bitInvert32 then cast to unsigned int to ensure
+	 a 32-bit value on 64-bit platforms."
 
+	| castToUnsignedInt |
+	castToUnsignedInt := msgNode selector = #bitInvert32.
+	castToUnsignedInt ifTrue:
+		[aStream nextPutAll: '(unsigned int)'].
 	aStream nextPut: $~.
 	self emitCExpression: msgNode receiver on: aStream
 ]
@@ -2545,21 +2551,22 @@ CCodeGenerator >> generateShiftLeft: msgNode on: aStream indent: level [
 	rcvr := msgNode receiver.
 	arg := msgNode args first.
 	valueBeyondInt := 1 bitShift: 32. "The default type of const << N is int."
-	castToLong := false.
-	rcvr constantNumbericValueOrNil ifNotNil:
-		[:rcvrVal|
-		arg constantNumbericValueOrNil ifNotNil:
-			[:argVal|
-			 castToLong := rcvrVal < valueBeyondInt
-							  and: [(rcvrVal bitShift: argVal) >= valueBeyondInt]]].
+	castToLong := vmClass notNil and: [vmClass objectMemoryClass wordSize = 8].
+	castToLong ifFalse:
+		[rcvr constantNumbericValueOrNil ifNotNil:
+			[:rcvrVal|
+			 arg constantNumbericValueOrNil ifNotNil:
+				[:argVal|
+				 castToLong := rcvrVal < valueBeyondInt
+								  and: [(rcvrVal bitShift: argVal) >= valueBeyondInt]]]].
 	castToLong
 		ifTrue:
-			[rcvr isConstant
+			[(rcvr isConstant and: [rcvr name isEmpty])
 				ifTrue:
 					[self emitCExpression: rcvr on: aStream.
 					 aStream nextPutAll: 'LL']
 				ifFalse:
-					[aStream nextPutAll: '((unsigned long)'.
+					[aStream nextPutAll: '((long)'.
 					 self emitCExpression: rcvr on: aStream.
 					 aStream nextPut: $)]]
 		ifFalse:
