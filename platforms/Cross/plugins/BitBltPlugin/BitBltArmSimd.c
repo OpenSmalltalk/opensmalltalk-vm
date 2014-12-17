@@ -258,17 +258,17 @@ static fast_path_t fastPaths[] = {
 };
 
 #define TALLY_FAST_PATH(op, srcA_bpp, srcB_bpp)                                                                                                 \
-extern uint32_t armSimd##op##Tally##srcB_bpp##_##srcA_bpp##_wide  (uint32_t width, uint32_t height, uint32_t *srcA, uint32_t srcAStride, uint32_t *srcB, uint32_t srcBStride, uint32_t colorA, uint32_t colorB, void *unused, uint32_t bitPtrs); \
-extern uint32_t armSimd##op##Tally##srcB_bpp##_##srcA_bpp##_narrow(uint32_t width, uint32_t height, uint32_t *srcA, uint32_t srcAStride, uint32_t *srcB, uint32_t srcBStride, uint32_t colorA, uint32_t colorB, void *unused, uint32_t bitPtrs); \
-extern uint32_t armSimd##op##Tally##srcB_bpp##_##srcA_bpp##_tiny  (uint32_t width, uint32_t height, uint32_t *srcA, uint32_t srcAStride, uint32_t *srcB, uint32_t srcBStride, uint32_t colorA, uint32_t colorB, void *unused, uint32_t bitPtrs); \
-static uint32_t tallyFastPath##op##srcA_bpp##_##srcB_bpp(compare_operation_t *op, uint32_t log2bppA, uint32_t log2bppB)                         \
+extern uint32_t armSimd##op##Tally##srcB_bpp##_##srcA_bpp##_wide  (uint32_t width, uint32_t height, const uint32_t *srcA, uint32_t srcAStride, const uint32_t *srcB, uint32_t srcBStride, uint32_t colorA, uint32_t colorB, void *unused, uint32_t bitPtrs); \
+extern uint32_t armSimd##op##Tally##srcB_bpp##_##srcA_bpp##_narrow(uint32_t width, uint32_t height, const uint32_t *srcA, uint32_t srcAStride, const uint32_t *srcB, uint32_t srcBStride, uint32_t colorA, uint32_t colorB, void *unused, uint32_t bitPtrs); \
+extern uint32_t armSimd##op##Tally##srcB_bpp##_##srcA_bpp##_tiny  (uint32_t width, uint32_t height, const uint32_t *srcA, uint32_t srcAStride, const uint32_t *srcB, uint32_t srcBStride, uint32_t colorA, uint32_t colorB, void *unused, uint32_t bitPtrs); \
+static uint32_t tallyFastPath##op##srcA_bpp##_##srcB_bpp(const compare_operation_t *op, uint32_t log2bppA, uint32_t log2bppB)                   \
 {                                                                                                                                               \
     IGNORE(log2bppA);                                                                                                                           \
     IGNORE(log2bppB);                                                                                                                           \
     COPY_COMPARE_OP_TO_LOCALS(op, uint32_t, uint32_t);                                                                                          \
     /* Get pointers to initial words */                                                                                                         \
-    uint32_t *srcA = srcABits + srcAPitch * srcAY + srcAX * srcA_bpp / 32;                                                                      \
-    uint32_t *srcB = srcBBits + srcBPitch * srcBY + srcBX * srcB_bpp / 32;                                                                      \
+    const uint32_t *srcA = srcABits + srcAPitch * srcAY + srcAX * srcA_bpp / 32;                                                                \
+    const uint32_t *srcB = srcBBits + srcBPitch * srcBY + srcBX * srcB_bpp / 32;                                                                \
     /* Get initial pixel offset within words, mangle into pitch if possible */                                                                  \
     uint32_t bitPtrs = 0;                                                                                                                       \
     uint32_t srcAXpix = srcAX & (31 / srcA_bpp);                                                                                                \
@@ -297,17 +297,141 @@ static uint32_t tallyFastPath##op##srcA_bpp##_##srcB_bpp(compare_operation_t *op
         return armSimd##op##Tally##srcB_bpp##_##srcA_bpp##_tiny(width, height, srcA, srcAPitch, srcB, srcBPitch, colorA, colorB, 0, bitPtrs);   \
 }
 
+#define TEST_FAST_PATH(op, srcA_bpp, srcB_bpp)                                                                                                  \
+extern uint32_t armSimd##op##Test##srcB_bpp##_##srcA_bpp##_wide  (uint32_t width, uint32_t height, const uint32_t *srcA, uint32_t srcAStride, const uint32_t *srcB, uint32_t srcBStride, uint32_t colorA, uint32_t colorB, void *unused, uint32_t bitPtrs); \
+extern uint32_t armSimd##op##Test##srcB_bpp##_##srcA_bpp##_narrow(uint32_t width, uint32_t height, const uint32_t *srcA, uint32_t srcAStride, const uint32_t *srcB, uint32_t srcBStride, uint32_t colorA, uint32_t colorB, void *unused, uint32_t bitPtrs); \
+extern uint32_t armSimd##op##Test##srcB_bpp##_##srcA_bpp##_tiny  (uint32_t width, uint32_t height, const uint32_t *srcA, uint32_t srcAStride, const uint32_t *srcB, uint32_t srcBStride, uint32_t colorA, uint32_t colorB, void *unused, uint32_t bitPtrs); \
+static uint32_t testFastPath##op##srcA_bpp##_##srcB_bpp(const compare_operation_t *op, uint32_t log2bppA, uint32_t log2bppB)                    \
+{                                                                                                                                               \
+    IGNORE(log2bppA);                                                                                                                           \
+    IGNORE(log2bppB);                                                                                                                           \
+    COPY_COMPARE_OP_TO_LOCALS(op, uint32_t, uint32_t);                                                                                          \
+    /* Early termination is most likely in the centre, so start from the      */                                                                \
+    /* middle and work outwards                                               */                                                                \
+    const uint32_t *srcAUp = srcABits + srcAPitch * (srcAY + (height >> 1)) + srcAX * srcA_bpp / 32;                                            \
+    const uint32_t *srcBUp = srcBBits + srcBPitch * (srcBY + (height >> 1)) + srcBX * srcB_bpp / 32;                                            \
+    const uint32_t *srcADown = srcAUp;                                                                                                          \
+    const uint32_t *srcBDown = srcBUp;                                                                                                          \
+    /* Get initial pixel offset within words, mangle into pitch if possible   */                                                                \
+    uint32_t bitPtrs = 0;                                                                                                                       \
+    uint32_t srcAXpix = srcAX & (31 / srcA_bpp);                                                                                                \
+    if (srcA_bpp < 8)                                                                                                                           \
+        bitPtrs = srcAXpix;                                                                                                                     \
+    else if (srcA_bpp == 8 || srcA_bpp == 16)                                                                                                   \
+        srcAPitch |= srcAXpix << 30;                                                                                                            \
+    uint32_t srcBXpix = srcBX & (31 / srcB_bpp);                                                                                                \
+    if (srcB_bpp < 8)                                                                                                                           \
+        bitPtrs |= srcBXpix << 27;                                                                                                              \
+    else if (srcB_bpp == 8 || srcB_bpp == 16)                                                                                                   \
+        srcBPitch |= srcBXpix << 30;                                                                                                            \
+    /* Work out which width class this operation is.                          */                                                                \
+    /* Rather than re-evaluate this for each line, we want one choice for the */                                                                \
+    /* whole operation; this means we can't assume anything about alignment   */                                                                \
+    /* to sizes larger than 4 bytes, because that's the only guarantee we     */                                                                \
+    /* have about line stride.                                                */                                                                \
+    uint32_t (*testRow)(uint32_t, uint32_t, const uint32_t *, uint32_t, const uint32_t *, uint32_t, uint32_t, uint32_t, void *, uint32_t);      \
+    if (width > (128-32)/srcA_bpp && (((srcAXpix-1) ^ (srcAXpix+width-(128-32)/srcA_bpp)) &~ (31/srcA_bpp)))                                    \
+        testRow = armSimd##op##Test##srcB_bpp##_##srcA_bpp##_wide;                                                                              \
+    else if (srcA_bpp > 8 || (((srcAXpix-1) ^ (srcAXpix+width)) &~ (31/srcA_bpp)))                                                              \
+        testRow = armSimd##op##Test##srcB_bpp##_##srcA_bpp##_narrow;                                                                            \
+    else                                                                                                                                        \
+        testRow = armSimd##op##Test##srcB_bpp##_##srcA_bpp##_tiny;                                                                              \
+    if (height & 1)                                                                                                                             \
+    {                                                                                                                                           \
+        height++;                                                                                                                               \
+        goto odd_number_of_rows_remain;                                                                                                         \
+    }                                                                                                                                           \
+    while (height != 0)                                                                                                                         \
+    {                                                                                                                                           \
+        srcADown -= srcAPitch;                                                                                                                  \
+        srcBDown -= srcBPitch;                                                                                                                  \
+        if (testRow(width, 1, srcADown, srcAPitch, srcBDown, srcBPitch, colorA, colorB, 0, bitPtrs))                                            \
+            return 1;                                                                                                                           \
+        odd_number_of_rows_remain:                                                                                                              \
+        if (testRow(width, 1, srcAUp, srcAPitch, srcBUp, srcBPitch, colorA, colorB, 0, bitPtrs))                                                \
+            return 1;                                                                                                                           \
+        srcAUp += srcAPitch;                                                                                                                    \
+        srcBUp += srcBPitch;                                                                                                                    \
+        height -= 2;                                                                                                                            \
+    }                                                                                                                                           \
+    return 0;                                                                                                                                   \
+}
+
 #define ADD_TALLY_FN(op, srcA_bpp, srcB_bpp)                     \
     do { compareColorsFns[(((MR_##op * 2) + 1) * 3 +             \
             (srcA_bpp == 8 ? 0 : srcA_bpp == 16 ? 1 : 2)) * 3 +  \
             (srcB_bpp == 8 ? 0 : srcB_bpp == 16 ? 1 : 2)] =      \
             tallyFastPath##op##srcA_bpp##_##srcB_bpp; } while(0)
 
+#define ADD_TEST_FN(op, srcA_bpp, srcB_bpp)                      \
+    do { compareColorsFns[(((MR_##op * 2) + 0) * 3 +             \
+            (srcA_bpp == 8 ? 0 : srcA_bpp == 16 ? 1 : 2)) * 3 +  \
+            (srcB_bpp == 8 ? 0 : srcB_bpp == 16 ? 1 : 2)] =      \
+            testFastPath##op##srcA_bpp##_##srcB_bpp; } while(0)
+
 TALLY_FAST_PATH(pixelMatch, 32, 32)
+TALLY_FAST_PATH(notAnotB,   32, 32)
+TALLY_FAST_PATH(notAmatchB, 32, 32)
+TEST_FAST_PATH(pixelMatch, 32, 32)
+TEST_FAST_PATH(notAnotB,   32, 32)
+TEST_FAST_PATH(notAmatchB, 32, 32)
+
+TALLY_FAST_PATH(pixelMatch, 16, 16)
+TALLY_FAST_PATH(notAnotB,   16, 16)
+TALLY_FAST_PATH(notAmatchB, 16, 16)
+TEST_FAST_PATH(pixelMatch, 16, 16)
+TEST_FAST_PATH(notAnotB,   16, 16)
+TEST_FAST_PATH(notAmatchB, 16, 16)
+
+TALLY_FAST_PATH(pixelMatch, 16, 32)
+TALLY_FAST_PATH(notAnotB,   16, 32)
+TALLY_FAST_PATH(notAmatchB, 16, 32)
+TEST_FAST_PATH(pixelMatch, 16, 32)
+TEST_FAST_PATH(notAnotB,   16, 32)
+TEST_FAST_PATH(notAmatchB, 16, 32)
+
+TALLY_FAST_PATH(notAmatchB, 32, 16)
+TEST_FAST_PATH(notAmatchB, 32, 16)
+
+TALLY_FAST_PATH(pixelMatch, 8, 8)
+TALLY_FAST_PATH(notAnotB,   8, 8)
+TALLY_FAST_PATH(notAmatchB, 8, 8)
+TEST_FAST_PATH(pixelMatch, 8, 8)
+TEST_FAST_PATH(notAnotB,   8, 8)
+TEST_FAST_PATH(notAmatchB, 8, 8)
 
 void addArmSimdFastPaths(void)
 {
 	addFastPaths(fastPaths, sizeof fastPaths / sizeof *fastPaths);
 
-	ADD_TALLY_FN(pixelMatch, 32, 32);
+    ADD_TALLY_FN(pixelMatch, 32, 32);
+    ADD_TALLY_FN(notAnotB,   32, 32);
+    ADD_TALLY_FN(notAmatchB, 32, 32);
+    ADD_TEST_FN(pixelMatch, 32, 32);
+    ADD_TEST_FN(notAnotB,   32, 32);
+    ADD_TEST_FN(notAmatchB, 32, 32);
+
+    ADD_TALLY_FN(pixelMatch, 16, 16);
+    ADD_TALLY_FN(notAnotB,   16, 16);
+    ADD_TALLY_FN(notAmatchB, 16, 16);
+    ADD_TEST_FN(pixelMatch, 16, 16);
+    ADD_TEST_FN(notAnotB,   16, 16);
+    ADD_TEST_FN(notAmatchB, 16, 16);
+
+    ADD_TALLY_FN(pixelMatch, 16, 32);
+    ADD_TALLY_FN(notAnotB,   16, 32);
+    ADD_TALLY_FN(notAmatchB, 16, 32);
+    ADD_TEST_FN(pixelMatch, 16, 32);
+    ADD_TEST_FN(notAnotB,   16, 32);
+    ADD_TEST_FN(notAmatchB, 16, 32);
+
+    ADD_TALLY_FN(notAmatchB, 32, 16);
+    ADD_TEST_FN(notAmatchB, 32, 16);
+
+    ADD_TALLY_FN(pixelMatch, 8, 8);
+    ADD_TALLY_FN(notAnotB,   8, 8);
+    ADD_TALLY_FN(notAmatchB, 8, 8);
+    ADD_TEST_FN(pixelMatch, 8, 8);
+    ADD_TEST_FN(notAnotB,   8, 8);
+    ADD_TEST_FN(notAmatchB, 8, 8);
 }

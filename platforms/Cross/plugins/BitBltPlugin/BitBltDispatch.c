@@ -198,7 +198,6 @@ static void profile_record(combination_rule_t combinationRule, uint32_t flags, u
 
 void initialiseCopyBits(void)
 {
-	size_t i;
 	addGenericFastPaths();
 #ifdef __arm__
 	addArmFastPaths();
@@ -439,33 +438,76 @@ void copyBitsDispatch(operation_t *op)
 #endif
 }
 
-sqInt compareColorsDispatch(compare_operation_t *op)
+sqInt compareColorsDispatch(const compare_operation_t *op)
 {
     uint32_t log2bppA;
     uint32_t log2bppB;
-    switch (op->srcA.depth)
+    const compare_operation_t *op2 = op;
+    compare_operation_t myOp;
+    if (op->srcA.depth > op->srcB.depth && op->matchRule != MR_notAmatchB)
+    {
+        /* The other two rules are commutative, so we only need implement
+         * the differing colour depth cases one way round */
+        myOp = *op;
+        op2 = &myOp;
+        myOp.srcA = op->srcB;
+        myOp.srcB = op->srcA;
+        myOp.colorA = op->colorB;
+        myOp.colorB = op->colorA;
+    }
+    switch (op2->srcA.depth)
     {
     case 1:  log2bppA = 0; break;
     case 2:  log2bppA = 1; break;
     case 4:  log2bppA = 2; break;
     case 8:  log2bppA = 3; break;
     case 16: log2bppA = 4; break;
-    case 32: log2bppA = 5; break;
+    case 32:
+        log2bppA = 5;
+        if (op2->colorA != 0)
+        {
+            /* Non-transparent colors in the framebuffer are always present with
+             * the alpha bits set, but that may not be the case with the constant
+             * comparison color
+             */
+            if (op2 == op)
+            {
+                myOp = *op;
+                op2 = &myOp;
+            }
+            myOp.colorA |= 0xFF000000;
+        }
+        break;
     default: abort();
     }
-    switch (op->srcB.depth)
+    switch (op2->srcB.depth)
     {
     case 1:  log2bppB = 0; break;
     case 2:  log2bppB = 1; break;
     case 4:  log2bppB = 2; break;
     case 8:  log2bppB = 3; break;
     case 16: log2bppB = 4; break;
-    case 32: log2bppB = 5; break;
+    case 32:
+        log2bppB = 5;
+        if (op2->colorB != 0)
+        {
+            /* Non-transparent colors in the framebuffer are always present with
+             * the alpha bits set, but that may not be the case with the constant
+             * comparison color
+             */
+            if (op2 == op)
+            {
+                myOp = *op;
+                op2 = &myOp;
+            }
+            myOp.colorB |= 0xFF000000;
+        }
+        break;
     default: abort();
     }
-    if (log2bppA < 3 || log2bppB < 3 || !op->srcA.msb || !op->srcB.msb)
+    if (log2bppA < 3 || log2bppB < 3 || !op2->srcA.msb || !op2->srcB.msb)
         /* These cases aren't catered for by the function table */
-        return genericCompareColors(op, log2bppA, log2bppB);
+        return genericCompareColors(op2, log2bppA, log2bppB);
     else
-        return compareColorsFns[(((op->matchRule * 2) + op->tally) * 3 + (log2bppA - 3)) * 3 + (log2bppB - 3)](op, log2bppA, log2bppB);
+        return compareColorsFns[(((op2->matchRule * 2) + op2->tally) * 3 + (log2bppA - 3)) * 3 + (log2bppB - 3)](op2, log2bppA, log2bppB);
 }

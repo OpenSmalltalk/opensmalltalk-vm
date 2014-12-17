@@ -1484,7 +1484,7 @@ tmp_leading_pixels SETS "pc" ; ensure no match with self
       ]
 
         EXPORT  armSimd$prefix._wide
-armSimd$prefix._wide
+armSimd$prefix._wide  ROUT
  [ src_bpp > 0 :LOR: dst_r_bpp > 0
         ; Check whether this is actually a medium-width operation
         ; (decision made here rather in C due to availability of
@@ -1498,14 +1498,14 @@ armSimd$prefix._wide
         BLO     armSimd$prefix._medium
         FunctionPrologue  WIDE, (prefetch_distance+2)*pix_per_block
 51
-        PreloadLeadingStep1  $src_bpp, $preload_src, src
+        PreloadLeadingStep1  src_bpp, $preload_src, src
       [ flags :AND: FLAG_NO_PRELOAD_DST = 0
-        PreloadLeadingStep1  $dst_r_bpp, $preload_dst, dst
+        PreloadLeadingStep1  dst_r_bpp, $preload_dst, dst
       ]
         CalculateLeadingPixels
-        PreloadLeadingStep2  $src_bpp, $src_bpp_shift, $preload_src, src, $tmp_leading_pixels, scratch
+        PreloadLeadingStep2  src_bpp, src_bpp_shift, $preload_src, src, $tmp_leading_pixels, scratch
       [ flags :AND: FLAG_NO_PRELOAD_DST = 0
-        PreloadLeadingStep2  $dst_r_bpp, $dst_bpp_shift, $preload_dst, dst, $tmp_leading_pixels, scratch
+        PreloadLeadingStep2  dst_r_bpp, dst_bpp_shift, $preload_dst, dst, $tmp_leading_pixels, scratch
       ]
         CalculateSkew
       [ "$newline" <> ""
@@ -1556,7 +1556,7 @@ subblock SETA   0
      [ src_bpp > 0
       [ flags & FLAG_MAX_256BIT_MACRO > 0
         ; prefetch distance = 256/bpp, block distance = 256/dst_w_bpp
-do_preload IsEndOfGroup subblock, 256/256*dst_w_bpp/src_bpp
+do_preload IsEndOfGroup subblock/2, 256/256*dst_w_bpp/src_bpp
       |
         ; prefetch distance = 256/bpp, block distance = 128/dst_w_bpp
 do_preload IsEndOfGroup subblock, 256/128*dst_w_bpp/src_bpp
@@ -1607,9 +1607,9 @@ dst_prefetch_offset SETA dst_prefetch_offset + 16
       |
         ADD     x, x, #(prefetch_distance + 2) * pix_per_block - 1
       ]
-        PreloadTrailing  $src_bpp, $src_bpp_shift, src, x, &$fixed_skew
+        PreloadTrailing  src_bpp, src_bpp_shift, src, x, &$fixed_skew
       [ flags :AND: FLAG_NO_PRELOAD_DST = 0
-        PreloadTrailing  $dst_r_bpp, $dst_bpp_shift, dst, x
+        PreloadTrailing  dst_r_bpp, dst_bpp_shift, dst, x
       ]
         SUB     x, x, #128/dst_w_bpp - 1
     ]
@@ -1643,7 +1643,7 @@ fixed_skew      SETA    fixed_skew + src_bpp
         LTORG
 
         EXPORT  armSimd$prefix._medium
-armSimd$prefix._medium
+armSimd$prefix._medium  ROUT
  ]
         FunctionPrologue  NON_WIDE, 0
 51
@@ -1709,7 +1709,8 @@ fixed_skew      SETA    fixed_skew + src_bpp
         LTORG
 
         EXPORT  armSimd$prefix._narrow
-armSimd$prefix._narrow  FunctionPrologue  NON_WIDE, 0
+armSimd$prefix._narrow  ROUT
+        FunctionPrologue  NON_WIDE, 0
       [ src_bpp > 0 :LAND: src_bpp < 32
 	; Because we're only aiming for 1-word alignment at the destination,
 	; we can at least have a constant skew for every scanline
@@ -1781,7 +1782,8 @@ fixed_skew      SETA    fixed_skew + src_bpp
 
  [ dst_w_bpp <= 8
         EXPORT  armSimd$prefix._tiny
-armSimd$prefix._tiny  FunctionPrologue  NON_WIDE, 0
+armSimd$prefix._tiny  ROUT
+        FunctionPrologue  NON_WIDE, 0
 51
         PreloadLine src, src_bpp, src_bpp_shift, scratch, carry
         BIC     scratch, dst, #31 ; loading dest is unconditional below
