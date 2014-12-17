@@ -138,12 +138,12 @@ typedef struct {
 }
 compare_operation_t;
 
-typedef usqInt (*compare_colors_fn_t)(compare_operation_t *op, usqInt log2bppA, usqInt log2bppB);
+typedef usqInt (*compare_colors_fn_t)(const compare_operation_t *op, usqInt log2bppA, usqInt log2bppB);
 
 extern compare_colors_fn_t compareColorsFns[3*2*3*3];
 
 void initialiseCopyBits(void);
 void copyBitsDispatch(operation_t *op);
-sqInt compareColorsDispatch(compare_operation_t *op);
+sqInt compareColorsDispatch(const compare_operation_t *op);
 
 #endif /* BITBLTDISPATCH_H_ */
