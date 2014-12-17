@@ -10,22 +10,20 @@ REV=
 TAG=
 EXES=
 
+# By default the Newspeak Cog VMs are not built; superceded by Spur.
+NL=
+NM=
+NW=
 if [ $# = 0 ]; then
 CL=1
 CM=1
 CW=1
-NL=1
-NM=1
-NW=1
 
 else
 
 CL=
 CM=
 CW=
-NL=
-NM=
-NW=
 	while [ -n "$1" ]; do
 		case $1 in
 		-c)		CL=1;CM=1;CW=1;;
