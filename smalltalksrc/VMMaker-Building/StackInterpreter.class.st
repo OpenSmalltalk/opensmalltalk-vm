@@ -8337,20 +8337,6 @@ StackInterpreter >> loadBitBltFrom: bb [
 	^self cCode: '((sqInt (*)(sqInt))fn)(bb)'
 ]
 
-{ #category : #utilities }
-StackInterpreter >> loadFloatOrIntFrom: floatOrInt [
-	"If floatOrInt is an integer, then convert it to a C double float and return it.
-	 If it is a Float, then load its value and return it.
-	 Otherwise fail -- ie return with primErrorCode non-zero."
-
-	<inline: true>
-	<returnTypeC: #double>
-
-	(objectMemory isIntegerObject: floatOrInt) ifTrue:
-		[^(objectMemory integerValueOf: floatOrInt) asFloat].
-	^objectMemory floatValueOf: floatOrInt
-]
-
 { #category : #initialization }
 StackInterpreter >> loadInitialContext [
 	<inline: false>
@@ -10068,8 +10054,8 @@ StackInterpreter >> primitiveFloatAdd: rcvrOop toArg: argOop [
 	<var: #rcvr type: #double>
 	<var: #arg type: #double>
 
-	rcvr := self loadFloatOrIntFrom: rcvrOop.
-	arg := self loadFloatOrIntFrom: argOop.
+	rcvr := objectMemory loadFloatOrIntFrom: rcvrOop.
+	arg := objectMemory loadFloatOrIntFrom: argOop.
 	self successful ifTrue:
 		[self pop: 2 thenPushFloat: rcvr + arg]
 ]
@@ -10080,8 +10066,8 @@ StackInterpreter >> primitiveFloatDivide: rcvrOop byArg: argOop [
 	<var: #rcvr type: #double>
 	<var: #arg type: #double>
 
-	rcvr := self loadFloatOrIntFrom: rcvrOop.
-	arg := self loadFloatOrIntFrom: argOop.
+	rcvr := objectMemory loadFloatOrIntFrom: rcvrOop.
+	arg := objectMemory loadFloatOrIntFrom: argOop.
 	self success: arg ~= 0.0.
 	self successful ifTrue:
 		[self pop: 2 thenPushFloat: rcvr / arg]
@@ -10093,8 +10079,8 @@ StackInterpreter >> primitiveFloatEqual: rcvrOop toArg: argOop [
 	<var: #rcvr type: #double>
 	<var: #arg type: #double>
 
-	rcvr := self loadFloatOrIntFrom: rcvrOop.
-	arg := self loadFloatOrIntFrom: argOop.
+	rcvr := objectMemory loadFloatOrIntFrom: rcvrOop.
+	arg := objectMemory loadFloatOrIntFrom: argOop.
 	^rcvr = arg
 ]
 
@@ -10104,8 +10090,8 @@ StackInterpreter >> primitiveFloatGreater: rcvrOop thanArg: argOop [
 	<var: #rcvr type: #double>
 	<var: #arg type: #double>
 
-	rcvr := self loadFloatOrIntFrom: rcvrOop.
-	arg := self loadFloatOrIntFrom: argOop.
+	rcvr := objectMemory loadFloatOrIntFrom: rcvrOop.
+	arg := objectMemory loadFloatOrIntFrom: argOop.
 	^rcvr > arg
 ]
 
@@ -10115,8 +10101,8 @@ StackInterpreter >> primitiveFloatGreaterOrEqual: rcvrOop toArg: argOop [
 	<var: #rcvr type: #double>
 	<var: #arg type: #double>
 
-	rcvr := self loadFloatOrIntFrom: rcvrOop.
-	arg := self loadFloatOrIntFrom: argOop.
+	rcvr := objectMemory loadFloatOrIntFrom: rcvrOop.
+	arg := objectMemory loadFloatOrIntFrom: argOop.
 	^rcvr >= arg
 ]
 
@@ -10126,8 +10112,8 @@ StackInterpreter >> primitiveFloatLess: rcvrOop thanArg: argOop [
 	<var: #rcvr type: #double>
 	<var: #arg type: #double>
 
-	rcvr := self loadFloatOrIntFrom: rcvrOop.
-	arg := self loadFloatOrIntFrom: argOop.
+	rcvr := objectMemory loadFloatOrIntFrom: rcvrOop.
+	arg := objectMemory loadFloatOrIntFrom: argOop.
 	^rcvr < arg
 ]
 
@@ -10137,8 +10123,8 @@ StackInterpreter >> primitiveFloatLessOrEqual: rcvrOop toArg: argOop [
 	<var: #rcvr type: #double>
 	<var: #arg type: #double>
 
-	rcvr := self loadFloatOrIntFrom: rcvrOop.
-	arg := self loadFloatOrIntFrom: argOop.
+	rcvr := objectMemory loadFloatOrIntFrom: rcvrOop.
+	arg := objectMemory loadFloatOrIntFrom: argOop.
 	^rcvr <= arg
 ]
 
@@ -10148,8 +10134,8 @@ StackInterpreter >> primitiveFloatMultiply: rcvrOop byArg: argOop [
 	<var: #rcvr type: #double>
 	<var: #arg type: #double>
 
-	rcvr := self loadFloatOrIntFrom: rcvrOop.
-	arg := self loadFloatOrIntFrom: argOop.
+	rcvr := objectMemory loadFloatOrIntFrom: rcvrOop.
+	arg := objectMemory loadFloatOrIntFrom: argOop.
 	self successful ifTrue:
 		[self pop: 2 thenPushFloat: rcvr * arg]
 ]
@@ -10160,8 +10146,8 @@ StackInterpreter >> primitiveFloatSubtract: rcvrOop fromArg: argOop [
 	<var: #rcvr type: #double>
 	<var: #arg type: #double>
 
-	rcvr := self loadFloatOrIntFrom: rcvrOop.
-	arg := self loadFloatOrIntFrom: argOop.
+	rcvr := objectMemory loadFloatOrIntFrom: rcvrOop.
+	arg := objectMemory loadFloatOrIntFrom: argOop.
 	self successful ifTrue:
 		[self pop: 2 thenPushFloat: rcvr - arg]
 ]
@@ -10807,7 +10793,7 @@ StackInterpreter >> printHexPtrnp: p [
 { #category : #'debug printing' }
 StackInterpreter >> printHexnp: n [
 	"Print n in hex,  in the form '0x1234', unpadded"
-	self print: '0x%x' f: n
+	self print: '0x%lx' f: n
 ]
 
 { #category : #'debug printing' }
@@ -11043,13 +11029,21 @@ StackInterpreter >> printOopShortInner: oop [
 				printChar: $$;
 				printChar: (objectMemory characterValueOf: oop);
 				printChar: $(;
-				printHex: (objectMemory integerValueOf: oop);
+				printHexnp: (objectMemory integerValueOf: oop);
 				printChar: $)].
-		^self
-			printNum: (objectMemory integerValueOf: oop);
-			printChar: $(;
-			printHex: (objectMemory integerValueOf: oop);
-			printChar: $)].
+		 (objectMemory isIntegerObject: oop) ifTrue:
+			[^self
+				printNum: (objectMemory integerValueOf: oop);
+				printChar: $(;
+				printHexnp: (objectMemory integerValueOf: oop);
+				printChar: $)].
+		 (objectMemory isImmediateFloat: oop) ifTrue:
+			[^self
+				printFloat: (objectMemory dbgFloatValueOf: oop);
+				printChar: $(;
+				printHexnp: oop;
+				printChar: $)].
+		 ^self print: 'unknown immediate '; printHexnp: oop].
 	(objectMemory addressCouldBeObj: oop) ifFalse:
 		[^self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 						ifTrue: [' is misaligned']
@@ -11057,7 +11051,7 @@ StackInterpreter >> printOopShortInner: oop [
 	(objectMemory isFreeObject: oop) ifTrue:
 		[^self print: ' is a free chunk'].
 	(objectMemory isForwarded: oop) ifTrue:
-		[^self print: ' is a forwarder to '; printHex: (objectMemory followForwarded: oop)].
+		[^self print: ' is a forwarder to '; printHexnp: (objectMemory followForwarded: oop)].
 	(self isFloatObject: oop) ifTrue:
 		[^self printFloat: (objectMemory dbgFloatValueOf: oop)].
 	classOop := objectMemory fetchClassOfNonImm: oop.
@@ -11099,7 +11093,7 @@ StackInterpreter >> printOopShortInner: oop [
 			[self space;
 				printOopShort: (objectMemory fetchPointer: KeyIndex ofObject: oop);
 				print: ' -> ';
-				printHex: (objectMemory fetchPointer: ValueIndex ofObject: oop)]]
+				printHexnp: (objectMemory fetchPointer: ValueIndex ofObject: oop)]]
 ]
 
 { #category : #'debug printing' }
