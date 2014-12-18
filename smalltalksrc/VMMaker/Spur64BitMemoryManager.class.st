@@ -336,10 +336,10 @@ Spur64BitMemoryManager >> exponentOfSmallFloat: oop [
 				[8expsubset][52mantissa][1s][3tags]"
 	| exp |
 	self assert: (oop bitAnd: self tagMask) = self smallFloatTag.
-	^oop <= 15
+	^oop asUnsignedInteger <= 15
 		ifTrue: [0]
 		ifFalse:
-			[exp := oop >> (self numTagBits + self smallFloatMantissaBits + 1).
+			[exp := oop asUnsignedInteger >> (self numTagBits + self smallFloatMantissaBits + 1).
 			 exp + self smallFloatExponentOffset - 1022]
 ]
 
@@ -666,6 +666,32 @@ Spur64BitMemoryManager >> largeObjectBytesForSlots: numSlots [
 	+ (numSlots * self bytesPerOop) "no rounding; bytesPerOop = allocationUnit"
 ]
 
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> loadFloatOrIntFrom: floatOrIntOop [
+	"If floatOrInt is an integer, then convert it to a C double float and return it.
+	 If it is a Float, then load its value and return it.
+	 Otherwise fail -- ie return with primErrorCode non-zero."
+
+	<inline: true>
+	<returnTypeC: #double>
+	| result tagBits |
+	<var: #result type: #double>
+
+	(tagBits := floatOrIntOop bitAnd: self tagMask) ~= 0
+		ifTrue:
+			[tagBits = self smallFloatTag ifTrue:
+				[^self smallFloatValueOf: floatOrIntOop].
+			 tagBits = self smallIntegerTag ifTrue:
+				[^(self integerValueOf: floatOrIntOop) asFloat]]
+		ifFalse:
+			[(self classIndexOf: floatOrIntOop) = ClassFloatCompactIndex ifTrue:
+				[self cCode: '' inSmalltalk: [result := Float new: 2].
+				 self fetchFloatAt: floatOrIntOop + self baseHeaderSize into: result.
+				 ^result]].
+	coInterpreter primitiveFail.
+	^0.0
+]
+
 { #category : #accessing }
 Spur64BitMemoryManager >> logBytesPerOop [
 	^3
@@ -940,6 +966,7 @@ Spur64BitMemoryManager >> smallFloatObjectOf: aFloat [
 	<inline: true>
 	<var: #aFloat type: #double>
 	| rawFloat rot |
+	<var: #rot type: #'unsigned long'>
 	self assert: (self isSmallFloatValue: aFloat).
 	rawFloat := self cCode: [(self cCoerce: (self addressOf: aFloat) to: 'sqLong *') at: 0]
 					inSmalltalk: [(aFloat at: 1) << 32 + (aFloat at: 2)].
@@ -968,7 +995,7 @@ Spur64BitMemoryManager >> smallFloatValueOf: oop [
 	| rot |
 	<returnTypeC: #double>
 	self assert: (oop bitAnd: self tagMask) = self smallFloatTag.
-	rot := oop >> self numTagBits.
+	rot := oop asUnsignedInteger >> self numTagBits.
 	rot > 1 ifTrue:
 		[rot := rot + (self smallFloatExponentOffset << (self smallFloatMantissaBits + 1))].
 	rot := self rotateRight: rot.
