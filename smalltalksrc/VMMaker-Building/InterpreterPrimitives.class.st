@@ -3464,7 +3464,7 @@ InterpreterPrimitives >> primitiveSmallFloatAdd [
 	<var: #arg type: #double>
 
 	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
-	arg := self loadFloatOrIntFrom: self stackTop.
+	arg := objectMemory loadFloatOrIntFrom: self stackTop.
 	self successful ifTrue:
 		[self pop: 2 thenPushFloat: rcvr + arg]
 ]
@@ -3490,7 +3490,7 @@ InterpreterPrimitives >> primitiveSmallFloatDivide [
 	<var: #arg type: #double>
 
 	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
-	arg := self loadFloatOrIntFrom: self stackTop.
+	arg := objectMemory loadFloatOrIntFrom: self stackTop.
 	self successful ifTrue:
 		[self pop: 2 thenPushFloat: rcvr / arg]
 ]
@@ -3503,7 +3503,7 @@ InterpreterPrimitives >> primitiveSmallFloatEqual [
 	<var: #arg type: #double>
 
 	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
-	arg := self loadFloatOrIntFrom: self stackTop.
+	arg := objectMemory loadFloatOrIntFrom: self stackTop.
 	self successful ifTrue:
 		[self pop: 2 thenPushBool: rcvr = arg]
 ]
@@ -3546,7 +3546,7 @@ InterpreterPrimitives >> primitiveSmallFloatGreaterOrEqual [
 	<var: #arg type: #double>
 
 	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
-	arg := self loadFloatOrIntFrom: self stackTop.
+	arg := objectMemory loadFloatOrIntFrom: self stackTop.
 	self successful ifTrue:
 		[self pop: 2 thenPushBool: rcvr >= arg]
 ]
@@ -3559,7 +3559,7 @@ InterpreterPrimitives >> primitiveSmallFloatGreaterThan [
 	<var: #arg type: #double>
 
 	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
-	arg := self loadFloatOrIntFrom: self stackTop.
+	arg := objectMemory loadFloatOrIntFrom: self stackTop.
 	self successful ifTrue:
 		[self pop: 2 thenPushBool: rcvr > arg]
 ]
@@ -3572,7 +3572,7 @@ InterpreterPrimitives >> primitiveSmallFloatLessOrEqual [
 	<var: #arg type: #double>
 
 	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
-	arg := self loadFloatOrIntFrom: self stackTop.
+	arg := objectMemory loadFloatOrIntFrom: self stackTop.
 	self successful ifTrue:
 		[self pop: 2 thenPushBool: rcvr <= arg]
 ]
@@ -3585,7 +3585,7 @@ InterpreterPrimitives >> primitiveSmallFloatLessThan [
 	<var: #arg type: #double>
 
 	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
-	arg := self loadFloatOrIntFrom: self stackTop.
+	arg := objectMemory loadFloatOrIntFrom: self stackTop.
 	self successful ifTrue:
 		[self pop: 2 thenPushBool: rcvr < arg]
 ]
@@ -3612,7 +3612,7 @@ InterpreterPrimitives >> primitiveSmallFloatMultiply [
 	<var: #arg type: #double>
 
 	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
-	arg := self loadFloatOrIntFrom: self stackTop.
+	arg := objectMemory loadFloatOrIntFrom: self stackTop.
 	self successful ifTrue:
 		[self pop: 2 thenPushFloat: rcvr * arg]
 ]
@@ -3625,7 +3625,7 @@ InterpreterPrimitives >> primitiveSmallFloatNotEqual [
 	<var: #arg type: #double>
 
 	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
-	arg := self loadFloatOrIntFrom: self stackTop.
+	arg := objectMemory loadFloatOrIntFrom: self stackTop.
 	self successful ifTrue:
 		[self pop: 2 thenPushBool: (rcvr = arg) not]
 ]
@@ -3658,7 +3658,7 @@ InterpreterPrimitives >> primitiveSmallFloatSubtract [
 	<var: #arg type: #double>
 
 	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
-	arg := self loadFloatOrIntFrom: self stackTop.
+	arg := objectMemory loadFloatOrIntFrom: self stackTop.
 	self successful ifTrue:
 		[self pop: 2 thenPushFloat: rcvr - arg]
 ]
