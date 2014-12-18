@@ -124,22 +124,19 @@ Spur32to64BitBootstrap >> cloneObjects [
 	"Clone all normal objects.  Of hidden objects only clone the freeLists object and
 	 the classTableRoot and class table pages. In particular, dont clone objStacks.
 	 The refs to the objStacks are nilled out in fillInHeap."
-	| freeListsObject |
+	| i freeListsObject |
+	i := 0.
 	freeListsObject := heap32 freeListsObject.
 	heap32 allOldSpaceObjectsDo:
-		[:obj32| | classIndex value |
-		classIndex := heap32 classIndexOf: obj32.
-		obj32 = freeListsObject
+		[:obj32|
+		(i := i + 1) >= 100000 ifTrue:
+			[Transcript nextPut: $:; flush. i := 0].
+		 obj32 = freeListsObject
 			ifTrue:
 				[self cloneFreeLists: obj32]
 			ifFalse:
-				[(heap32 isValidObjStackPage: obj32) ifFalse:
-					[((classIndex between: ClassLargeNegativeIntegerCompactIndex and: ClassLargePositiveIntegerCompactIndex)
-					  and: [interpreter32 initPrimCall.
-						value := interpreter32 signed64BitValueOf: obj32.
-						interpreter32 failed not
-					  and: [heap64 isIntegerValue: value]]) ifFalse:
-						[self clone: obj32]]]]
+				[(self shouldClone: obj32) ifTrue:
+					[self clone: obj32]]]
 ]
 
 { #category : #'bootstrap image' }
@@ -205,12 +202,16 @@ Spur32to64BitBootstrap >> fillInHeap [
 { #category : #'bootstrap image' }
 Spur32to64BitBootstrap >> fillInObjects [
 	"interpreter32 printOop: obj32"
+	| i |
 	{heap32 markStack. heap32 weaklingStack. heap32 ephemeronQueue} do:
 		[:obj|
 		obj ~= heap32 nilObject ifTrue:
 			[map at: obj put: (map at: heap32 nilObject)]].
+	i := 0.
 	heap32 allObjectsDo:
 		[:obj32|
+		(i := i + 1) >= 10000 ifTrue:
+			[Transcript nextPut: $.; flush. i := 0].
 		(map at: obj32 ifAbsent: nil)
 			ifNotNil:
 				[:obj64| | format classIndex |
@@ -314,29 +315,33 @@ Spur32to64BitBootstrap >> isUnmappedObject: obj32 [
 	"Answer if obj32 is an object that is not cloned by the bootstrap."
 	^((heap32 classIndexOf: obj32)
 			between: ClassLargeNegativeIntegerCompactIndex
-			and: ClassLargePositiveIntegerCompactIndex)
+			and: ClassFloatCompactIndex)
 	  or: [obj32 = heap32 freeListsObject
-	  or: [heap32 isValidObjStackPage: obj32]]
+	  or: [(heap32 isValidObjStackPage: obj32)]]
 ]
 
 { #category : #'bootstrap image' }
-Spur32to64BitBootstrap >> map32BitOop: oop32 [
-	"interpreter32 printOop: oop32"
+Spur32to64BitBootstrap >> map32BitOop: obj32 [
+	"interpreter32 printOop: obj32"
 	^map
-		at: oop32
+		at: obj32
 		ifAbsent:
-			[(heap32 isImmediate: oop32)
+			[(heap32 isImmediate: obj32)
 				ifTrue:
-					[(heap32 isImmediateCharacter: oop32)
-						ifTrue: [heap64 characterObjectOf: (heap32 characterValueOf: oop32)]
-						ifFalse: [heap64 integerObjectOf: (heap32 integerValueOf: oop32)]]
+					[(heap32 isImmediateCharacter: obj32)
+						ifTrue: [heap64 characterObjectOf: (heap32 characterValueOf: obj32)]
+						ifFalse: [heap64 integerObjectOf: (heap32 integerValueOf: obj32)]]
 				ifFalse:
 					[| value |
-					 self assert: (self isUnmappedObject: oop32).
-					 interpreter32 initPrimCall.
-					 value := interpreter32 signed64BitValueOf: oop32.
-					 self deny: interpreter32 failed.
-					 heap64 integerObjectOf: value]]
+					 self assert: (self isUnmappedObject: obj32).
+					 (heap32 isFloatInstance: obj32)
+						ifTrue:
+							[heap64 smallFloatObjectOf: (heap32 floatValueOf: obj32)]
+						ifFalse:
+							[interpreter32 initPrimCall.
+							 value := interpreter32 signed64BitValueOf: obj32.
+							 self deny: interpreter32 failed.
+							 heap64 integerObjectOf: value]]]
 ]
 
 { #category : #'bootstrap image' }
@@ -368,6 +373,29 @@ Spur32to64BitBootstrap >> on: imageName [
 		codeSize: 0.
 	heap64 bootstrapping: true.
 	self initMaps
+]
+
+{ #category : #'bootstrap image' }
+Spur32to64BitBootstrap >> shouldClone: obj32 [
+	| classIndex value |
+	(heap32 isValidObjStackPage: obj32) ifTrue:
+		[^false].
+
+	classIndex := heap32 classIndexOf: obj32.
+
+	((classIndex between: ClassLargeNegativeIntegerCompactIndex and: ClassLargePositiveIntegerCompactIndex)
+	 and: [interpreter32 initPrimCall.
+		   value := interpreter32 signed64BitValueOf: obj32.
+		   interpreter32 failed not
+		   and: [heap64 isIntegerValue: value]]) ifTrue:
+		[^false].
+
+	(classIndex = ClassFloatCompactIndex
+	and: [value := heap32 floatValueOf: obj32.
+		heap64 isSmallFloatValue: value]) ifTrue:
+		[^false].
+
+	^true
 ]
 
 { #category : #'bootstrap image' }
