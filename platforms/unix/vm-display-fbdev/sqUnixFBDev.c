@@ -418,7 +418,7 @@ static sqInt display_ioForceDisplayUpdate(void)								{ return 0; }
 static sqInt display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)		{ return 0; }
 static void display_winSetName(char *imageName)								{ return  ; }
 static void display_winExit(void)									{ return  ; }
-static int  display_winImageFind(char *buf, int len)							{ return 0; }
+static long  display_winImageFind(char *buf, int len)							{ return 0; }
 static void display_winImageNotFound(void)								{ return  ; }
 
 
