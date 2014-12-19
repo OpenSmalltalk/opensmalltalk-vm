@@ -1428,7 +1428,8 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 		"0 through 6, +, -, *, /, //, \\, quo:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 		[0]	->	[self AddCq: untaggedVal R: ra].
 		[1]	->	[self MoveCq: untaggedVal R: TempReg.
-				self SubR: ra R: TempReg ].
+				self SubR: ra R: TempReg.
+				self MoveR: TempReg R: ra ].
 		[2]	->	[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ra.
 				 self MoveCq: (objectMemory integerValueOf: val) R: TempReg.
 				 self MulR: TempReg R: ra.
@@ -3421,21 +3422,20 @@ StackToRegisterMappingCogit >> genTrinaryInlinePrimitive: prim [
 		[optStatus isReceiverResultRegLive: false].
 	self ssTop popToReg: TempReg.
 	self ssPop: 1.
-	self ssTop popToReg: rr.
-	self ssPop: 1.
 	self ssTop popToReg: ra.
 	self ssPop: 1.
+	self ssTop popToReg: rr.
+	self ssPop: 1.
 	self ssPushRegister: TempReg.
-	self genConvertSmallIntegerToIntegerInReg: rr.
+	self genConvertSmallIntegerToIntegerInReg: ra.
 	"Now: ra is the variable object, rr is long, TempReg holds the value to store."
 	prim caseOf: {
 		"0 - 1 pointerAt:put: and byteAt:Put:"
-		[0] ->	[ self MoveR: TempReg Xwr: rr R: ra ].
+		[0] ->	[ self MoveR: TempReg Xwr: ra R: rr ].
 		[1] ->	[ self genConvertSmallIntegerToIntegerInReg: TempReg.
-				self MoveR: TempReg Xbr: rr R: ra ]
+				self MoveR: TempReg Xbr: ra R: rr ]
 	}
 	otherwise: [^EncounteredUnknownBytecode].
-
 	^0
 ]
 
