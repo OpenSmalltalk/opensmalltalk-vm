@@ -1438,7 +1438,10 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
-
+		[64] ->	[untaggedVal := untaggedVal >> 1.
+				self MoveXwr: untaggedVal R: ra R: ra ].
+		[65] ->	[untaggedVal := untaggedVal >> 1.
+				self MoveXbr: untaggedVal R: ra R: ra ]
 	}
 	otherwise: [^EncounteredUnknownBytecode].
 	self ssPushRegister: ra.
@@ -1478,6 +1481,10 @@ StackToRegisterMappingCogit >> genBinaryVarOpConstInlinePrimitive: prim [
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
+		[64] ->	[self genConvertSmallIntegerToIntegerInReg: rr.
+				self MoveXwr: rr R: val R: rr ].
+		[65] ->	[self genConvertSmallIntegerToIntegerInReg: rr.
+				self MoveXbr: rr R: val R: rr ]
 
 	}
 	otherwise: [^EncounteredUnknownBytecode].
@@ -1520,6 +1527,10 @@ StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
+		[64] ->	[self genConvertSmallIntegerToIntegerInReg: rr.
+				self MoveXwr: rr R: ra R: ra ].
+		[65] ->	[self genConvertSmallIntegerToIntegerInReg: rr.
+				self MoveXbr: rr R: ra R: ra ]
 
 	}
 	otherwise: [^EncounteredUnknownBytecode].
@@ -3392,8 +3403,35 @@ StackToRegisterMappingCogit >> genTrinaryInlinePrimitive: prim [
 	"Unary inline primitives."
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#trinaryInlinePrimitive:"
-	"not yet implemented"
-	^EncounteredUnknownBytecode
+
+	| ra rr |
+	(rr := backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
+		[self ssAllocateRequiredReg:
+			(rr := optStatus isReceiverResultRegLive
+					ifTrue: [Arg0Reg]
+					ifFalse: [ReceiverResultReg])].
+	(ra := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: rr))) ifNil:
+		[self ssAllocateRequiredReg: (ra := Arg1Reg)].
+	(rr = ReceiverResultReg or: [ra = ReceiverResultReg]) ifTrue:
+		[optStatus isReceiverResultRegLive: false].
+	self ssTop popToReg: TempReg.
+	self ssPop: 1.
+	self ssTop popToReg: rr.
+	self ssPop: 1.
+	self ssTop popToReg: ra.
+	self ssPop: 1.
+	self ssPushRegister: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: rr.
+	"Now: ra is the variable object, rr is long, TempReg holds the value to store."
+	prim caseOf: {
+		"0 - 1 pointerAt:put: and byteAt:Put:"
+		[0] ->	[ self MoveR: TempReg Xwr: rr R: ra ].
+		[1] ->	[ self genConvertSmallIntegerToIntegerInReg: TempReg.
+				self MoveR: TempReg Xbr: rr R: ra ]
+	}
+	otherwise: [^EncounteredUnknownBytecode].
+
+	^0
 ]
 
 { #category : #'inline primitive generators' }
@@ -3420,6 +3458,12 @@ StackToRegisterMappingCogit >> genUnaryInlinePrimitive: prim [
 				[resultReg ifNil: [resultReg := rcvrReg].
 				 objectRepresentation
 					genGetNumSlotsOf: rcvrReg into: resultReg;
+					genConvertIntegerToSmallIntegerInScratchReg: resultReg.
+				 self ssPushRegister: resultReg].
+			[3] ->	"03 unchecked byte numBytes"
+				[resultReg ifNil: [resultReg := rcvrReg].
+				 objectRepresentation
+					genGetNumBytesOf: rcvrReg into: resultReg;
 					genConvertIntegerToSmallIntegerInScratchReg: resultReg.
 				 self ssPushRegister: resultReg].
 				  }
