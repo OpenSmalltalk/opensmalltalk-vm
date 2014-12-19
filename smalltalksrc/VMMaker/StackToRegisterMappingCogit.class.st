@@ -1427,7 +1427,8 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 	prim caseOf: {
 		"0 through 6, +, -, *, /, //, \\, quo:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 		[0]	->	[self AddCq: untaggedVal R: ra].
-		[1]	->	[self SubCq: untaggedVal R: ra].
+		[1]	->	[self MoveCq: untaggedVal R: TempReg.
+				self SubR: ra R: TempReg ].
 		[2]	->	[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ra.
 				 self MoveCq: (objectMemory integerValueOf: val) R: TempReg.
 				 self MulR: TempReg R: ra.
@@ -1438,10 +1439,12 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
-		[64] ->	[untaggedVal := untaggedVal >> 1.
-				self MoveXwr: untaggedVal R: ra R: ra ].
-		[65] ->	[untaggedVal := untaggedVal >> 1.
-				self MoveXbr: untaggedVal R: ra R: ra ]
+		[64] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
+				 self MoveCq: val R: TempReg.
+				self MoveXwr: ra R: TempReg R: ra ].
+		[65] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
+				self MoveCq: val R: TempReg.
+				self MoveXbr: ra R: TempReg R: ra ]
 	}
 	otherwise: [^EncounteredUnknownBytecode].
 	self ssPushRegister: ra.
@@ -1469,7 +1472,7 @@ StackToRegisterMappingCogit >> genBinaryVarOpConstInlinePrimitive: prim [
 	prim caseOf: {
 		"0 through 6, +, -, *, /, //, \\, quo:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 		[0]	->	[self AddCq: untaggedVal R: rr].
-		[1]	->	[self SubCq: untaggedVal R: rr].
+		[1]	->	[self SubCq: untaggedVal R: rr ].
 		[2]	->	[self flag: 'could use MulCq:R'.
 				 objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: rr.
 				 self MoveCq: (objectMemory integerValueOf: val) R: TempReg.
@@ -1482,9 +1485,11 @@ StackToRegisterMappingCogit >> genBinaryVarOpConstInlinePrimitive: prim [
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
 		[64] ->	[self genConvertSmallIntegerToIntegerInReg: rr.
-				self MoveXwr: rr R: val R: rr ].
+				self MoveCq: val >> 1 R: TempReg.
+				self MoveXwr: TempReg R: rr R: rr ].
 		[65] ->	[self genConvertSmallIntegerToIntegerInReg: rr.
-				self MoveXbr: rr R: val R: rr ]
+				self MoveCq: val >> 1 R: TempReg.
+				self MoveXbr: TempReg R: rr R: rr ]
 
 	}
 	otherwise: [^EncounteredUnknownBytecode].
@@ -1527,10 +1532,10 @@ StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
-		[64] ->	[self genConvertSmallIntegerToIntegerInReg: rr.
-				self MoveXwr: rr R: ra R: ra ].
-		[65] ->	[self genConvertSmallIntegerToIntegerInReg: rr.
-				self MoveXbr: rr R: ra R: ra ]
+		[64] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
+				self MoveXwr: ra R: rr R: rr ].
+		[65] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
+				self MoveXbr: ra R: rr R: rr ]
 
 	}
 	otherwise: [^EncounteredUnknownBytecode].
