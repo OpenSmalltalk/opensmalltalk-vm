@@ -475,6 +475,28 @@ CogObjectRepresentationFor32BitSpur >> genGetInlineCacheClassTagFrom: sourceReg 
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genGetNumBytesOf: srcReg into: destReg [
+	"Get the size in byte-sized slots of the object in srcReg into destReg.
+	 srcReg may equal destReg.
+	destReg <- numSlots << self shiftForWord - (fmt bitAnd: 7)."
+	<var: #jmp type: #'AbstractInstruction'>
+	| jmp |
+	self genGetRawSlotSizeOfNonImm: srcReg into: TempReg.
+	cogit CmpCq: objectMemory numSlotsMask R: TempReg.
+	jmp := cogit JumpLess: 0.
+	cogit MoveMw: objectMemory wordSize negated r: srcReg R: TempReg.
+	jmp jmpTarget: (cogit LogicalShiftLeftCq: objectMemory shiftForWord R: TempReg). 
+	"Now: TempReg = numSlots << shiftForWord"
+	cogit MoveMw: 0 r: srcReg R: destReg.
+	cogit LogicalShiftRightCq: objectMemory formatShift R: destReg. 
+	cogit AndCq: objectMemory formatMask R: destReg. 
+	cogit AndCq: objectMemory wordSize - 1 R: destReg.
+	"Now: fmt bitAnd: 7 in destReg"
+	cogit SubR: TempReg R: destReg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genGetNumSlotsOf: srcReg into: destReg [
 	"Get the size in word-sized slots of the object in srcReg into destReg.
 	 srcReg may equal destReg."
