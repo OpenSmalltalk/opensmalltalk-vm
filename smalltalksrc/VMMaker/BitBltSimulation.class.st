@@ -2669,7 +2669,7 @@ BitBltSimulation >> primitiveCompareColorA: colorA to: colorB test: testID [
 	<export: true>
 	rcvr := self
 				primitive: 'primitiveCompareColors'
-				parameters: #(#SmallInteger #SmallInteger #SmallInteger )
+				parameters: #(#Unsigned #Unsigned #SmallInteger )
 				receiver: #Oop.
 	self
 		cppIf: #'ENABLE_FAST_BLT'
