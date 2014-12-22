@@ -2444,7 +2444,9 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 		ifFalse:
 			[self followForwardedObjectFields: array2 toDepth: 0.
 			ec := self containsOnlyValidBecomeObjects: array1].
-	ec ~= 0 ifTrue: [^ec].
+	ec ~= 0 ifTrue:
+		[becomeEffectsFlags := 0.
+		 ^ec].
 
 	coInterpreter preBecomeAction.
 	twoWayFlag
