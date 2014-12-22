@@ -993,9 +993,10 @@ StackInterpreter class >> initializePointIndices [
 
 { #category : #initialization }
 StackInterpreter class >> initializePrimitiveTable [ 
-	"This table generates a C function address table use in primitiveResponse along with dispatchFunctionPointerOn:in:"
+	"This table generates a C function address table used in slowPrimitiveResponse along with dispatchFunctionPointerOn:in:"
+	"self initializePrimitiveTable"
 
-	"NOTE: The real limit here is 2047 because of the method header layout but there is no point in going over the needed size"
+	"NOTE: The real limit here is 2047 because of the old method header layout but there is no point in going over the needed size"
 	MaxPrimitiveIndex := 575.	
 	MaxQuickPrimitiveIndex := 519.
 	PrimitiveTable := Array new: MaxPrimitiveIndex + 1.
@@ -1190,9 +1191,9 @@ StackInterpreter class >> initializePrimitiveTable [
 
 		"SpurMemoryManager primitives"
 		(170 primitiveAsCharacter)
-		(171 primitiveCharacterValue)
+		(171 primitiveImmediateAsInteger)
 		(172 primitiveFail)
-		(173 primitiveSlotAt)	"c.f. (73 primitiveInstVarAt)"
+		(173 primitiveSlotAt)		"c.f. (73 primitiveInstVarAt)"
 		(174 primitiveSlotAtPut)	"c.f. (74 primitiveInstVarAtPut)"
 		(175 primitiveBehaviorHash)
 		(176 primitiveMaxIdentityHash)
@@ -6302,7 +6303,7 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 			 thePage = stackPage
 				ifTrue: [theIPPtr := 0]
 				ifFalse:
-					[theIPPtr := theSP asUnsignedInteger.
+					[theIPPtr := theSP asInteger.
 					 theSP := theSP + objectMemory wordSize].
 			 [self assert: (thePage addressIsInPage: theFP).
 			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr asVoidPointer]).
@@ -7324,7 +7325,9 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 	self checkAssumedCompactClasses.
 	self initializeExtraClassInstVarIndices.
 	method := newMethod := objectMemory nilObject.
-	self cCode: '' inSmalltalk: [breakSelectorLength := objectMemory minSmallInteger].
+	self cCode: '' inSmalltalk:
+		[breakSelectorLength ifNil:
+			[breakSelectorLength := objectMemory minSmallInteger]].
 	methodDictLinearSearchLimit := 8.
 	self flushMethodCache.
 	self flushAtCache.
@@ -11226,6 +11229,41 @@ StackInterpreter >> printStackPagesInUse [
 			 self cr]]
 ]
 
+{ #category : #'object memory support' }
+StackInterpreter >> printStackReferencesTo: oop [
+	<api>
+	<var: #thePage type: #'StackPage *'>
+	<var: #theSP type: #'char *'>
+	<var: #theFP type: #'char *'>
+	<var: #callerFP type: #'char *'>
+	0 to: numStackPages - 1 do:
+		[:i| | thePage theSP theFP callerFP |
+		thePage := stackPages stackPageAt: i.
+		thePage isFree ifFalse:
+			[theSP := thePage headSP.
+			 theFP := thePage  headFP.
+			 "Skip the instruction pointer on top of stack of inactive pages."
+			 thePage = stackPage ifFalse:
+				[theSP := theSP + objectMemory wordSize].
+			[[theSP <= (theFP + FoxReceiver)] whileTrue:
+				[oop = (stackPages longAt: theSP) ifTrue:
+					[self print: 'FP: '; printHexnp: theFP; print: ' @ '; printHexnp: theSP; cr].
+				 theSP := theSP + objectMemory wordSize].
+			 (self frameHasContext: theFP) ifTrue:
+				[oop = (self frameContext: theFP) ifTrue:
+					[self print: 'FP: '; printHexnp: theFP; print: ' CTXT'; cr]].
+			 oop = (self frameMethod: theFP) ifTrue:
+				[self print: 'FP: '; printHexnp: theFP; print: ' MTHD'; cr].
+			 (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
+				[theSP := (theFP + FoxCallerSavedIP) + objectMemory wordSize.
+				 theFP := callerFP].
+			 theSP := theFP + FoxCallerContext. "a.k.a. FoxCallerSavedIP"
+			 [theSP <= thePage baseAddress] whileTrue:
+				[oop = (stackPages longAt: theSP) ifTrue:
+					[self print: 'FP: '; printHexnp: theFP; print: ' @ '; printHexnp: theSP; cr].
+				 theSP := theSP + objectMemory wordSize]]]
+]
+
 { #category : #'debug printing' }
 StackInterpreter >> printStringOf: oop [
 	| fmt len cnt max i |
@@ -12719,8 +12757,9 @@ StackInterpreter >> shortPrint: oop [
 
 	"Try to spot association-like things; they're all subclasses of LookupKey"
 	((objectMemory isPointersNonImm: oop)
+	 and: [classOop ~= objectMemory nilObject
 	 and: [((objectMemory instanceSizeOf: classOop) between: ValueIndex + 1 and: ValueIndex + 2)
-	 and: [(objectMemory isBytes: (objectMemory fetchPointer: KeyIndex ofObject: oop))]]) ifTrue:
+	 and: [(objectMemory isBytes: (objectMemory fetchPointer: KeyIndex ofObject: oop))]]]) ifTrue:
 		[| classLookupKey |
 		 classLookupKey := objectMemory fetchClassOfNonImm: (objectMemory splObj: SchedulerAssociation).
 		 [classLookupKey = objectMemory nilObject ifTrue:
