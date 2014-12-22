@@ -547,6 +547,71 @@ SpurBootstrapPrototypes >> CharacterclassPROTOTYPEvalue: anInteger [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrapPrototypes >> ClassDescriptionPROTOTYPEupdateInstances: oldInstances from: oldClass isMeta: isMeta [
+	"Recreate any existing instances of the argument, oldClass, as instances of the receiver,
+	 which is a newly changed class. Permute variables as necessary, and forward old instances
+	 to new instances.  Answer nil to defeat old clients that expect an array of old instances.
+	 The old behaviour, which necessitated a global GC, exchanged identities and answered
+	 the old instances.  But no clients used the result.  This way we avoid the unnecessary GC,"
+	| map variable instSize newInstances |
+
+	oldInstances isEmpty ifTrue:
+		[^nil]. "no instances to convert"
+	isMeta ifTrue:
+		[(oldInstances size = 1
+		  and: [self soleInstance class == self]) ifFalse:
+			[^self error:'Metaclasses can only have one instance']].
+	map := self instVarMappingFrom: oldClass.
+	variable := self isVariable.
+	instSize := self instSize.
+	newInstances := Array new: oldInstances size.
+	1 to: oldInstances size do:
+		[:i|
+		newInstances
+			at: i
+			put: (self newInstanceFrom: (oldInstances at: i) variable: variable size: instSize map: map)].
+	"Now perform a bulk mutation of old instances into new ones"
+	oldInstances elementsForwardIdentityTo: newInstances.
+	^nil
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> ClassDescriptionPROTOTYPEupdateInstancesFrom: oldClass [
+	"Recreate any existing instances of the argument, oldClass, as instances of 
+	 the receiver, which is a newly changed class. Permute variables as necessary,
+	 and forward old instances to new instances.. Answer nil to defeat any clients
+	 that expected the old behaviour of answering the array of old instances."
+	"ar 7/15/1999: The updating below is possibly dangerous. If there are any
+	contexts having an old instance as receiver it might crash the system if
+	the new receiver in which the context is executed has a different layout.
+	See bottom below for a simple example:"
+	self updateInstances: oldClass allInstances asArray from: oldClass isMeta: self isMeta.
+	"Now fix up instances in segments that are out on the disk."
+	ImageSegment allSubInstancesDo:
+		[:seg |
+		seg segUpdateInstancesOf: oldClass toBe: self isMeta: self isMeta].
+	^nil
+
+"This attempts to crash the VM by stepping off the end of an instance.
+ As the doctor says, do not do this."
+"	| crashingBlock class |
+	class := Object subclass: #CrashTestDummy
+		instanceVariableNames: 'instVar'
+		classVariableNames: ''
+		poolDictionaries: ''
+		category: 'Crash-Test'.
+	class compile:'instVar: value instVar := value'.
+	class compile:'crashingBlock ^[instVar]'.
+	crashingBlock := (class new) instVar: 42; crashingBlock.
+	Object subclass: #CrashTestDummy
+		instanceVariableNames: ''
+		classVariableNames: ''
+		poolDictionaries: ''
+		category: 'Crash-Test'.
+	crashingBlock value"
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrapPrototypes >> CompiledMethodPROTOTYPEnumLiterals [
 	"Answer the number of literals used by the receiver."
 	^self header bitAnd: 65535
@@ -832,6 +897,13 @@ SpurBootstrapPrototypes >> SmallFloat64PROTOTYPEcopy [
 SpurBootstrapPrototypes >> SmallFloat64PROTOTYPEdeepCopy [
 	"Answer the receiver, because SmallFloat64s are unique."
 	^self
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> SmallFloat64PROTOTYPEidentityHash [
+	"Answer an integer unique to the receiver."
+	<primitive: 171>
+	^self primitiveFailed
 ]
 
 { #category : #'method prototypes' }
