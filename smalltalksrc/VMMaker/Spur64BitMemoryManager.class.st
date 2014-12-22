@@ -355,21 +355,17 @@ Spur64BitMemoryManager >> fetchClassTagOf: oop [
 Spur64BitMemoryManager >> fetchLong32: fieldIndex ofFloatObject: oop [
 	"index by word size, and return a pointer as long as the word size"
 	
-	| rot |
+	| bits |
 	(self isImmediateFloat: oop) ifFalse:
 		[^self fetchLong32: fieldIndex ofObject: oop].
-	
-	rot := oop >> self numTagBits.
-	rot > 1 ifTrue:
-		[rot := rot + (self smallFloatExponentOffset << (self smallFloatMantissaBits + 1))].
-	rot := self rotateRight: rot.
+	bits := self smallFloatBitsOf: oop.
 	^self
-		cCode: [self longAt: (self cCoerceSimple: (self addressOf: rot) to: #'char *')
+		cCode: [self longAt: (self cCoerceSimple: (self addressOf: bits) to: #'char *')
 							+ (fieldIndex << self shiftForWord)]
 		inSmalltalk: [self flag: #endian.
 					fieldIndex = 0
-						ifTrue: [rot >> 32]
-						ifFalse: [rot bitAnd: 16rFFFFFFFF]]
+						ifTrue: [bits >> 32]
+						ifFalse: [bits bitAnd: 16rFFFFFFFF]]
 ]
 
 { #category : #instantiation }
@@ -716,14 +712,14 @@ Spur64BitMemoryManager >> mem: destAddress mo: sourceAddress ve: bytes [
 	dst := destAddress asInteger.
 	src := sourceAddress asInteger.
 	"Emulate the c library memmove function"
-	self assert: bytes \\ 8 = 0.
+	self assert: bytes \\ 4 = 0.
 	destAddress > sourceAddress
 		ifTrue:
-			[bytes - 8 to: 0 by: -8 do:
-				[:i| self longAt: dst + i put: (self longAt: src + i)]]
+			[bytes - 4 to: 0 by: -4 do:
+				[:i| self long32At: dst + i put: (self long32At: src + i)]]
 		ifFalse:
-			[0 to: bytes - 8 by: 8 do:
-				[:i| self longAt: dst + i put: (self longAt: src + i)]]
+			[0 to: bytes - 4 by: 4 do:
+				[:i| self long32At: dst + i put: (self long32At: src + i)]]
 ]
 
 { #category : #'interpreter access' }
@@ -838,6 +834,22 @@ Spur64BitMemoryManager >> rotateRight: anInteger [
 	^(self cCode: [anInteger] inSmalltalk: [anInteger bitAnd: 1]) << 63 + (anInteger asUnsignedLong >> 1)
 ]
 
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> rotatedFloatBitsOf: oop [
+	"Answer the signed, but unadjusted value of a SmallFloat64, suitable for use as a hash.
+	 Keeping the exponent unadjusted keeps the value in the SmallInteger range.
+	 See section 61-bit Immediate Floats in the SpurMemoryManager class comment.
+							msb                                             lsb 
+	 Decode:				[8expsubset][52mantissa][1s][3tags] 
+	 shift away tags & sign:	[   0000   ][8expsubset][52mantissa]
+	 add sign:				[    ssss   ][8expsubset][52mantissa]"
+	self assert: (self isImmediateFloat: oop).
+	^oop asUnsignedInteger >> (self numTagBits + 1)
+	 + ((oop anyMask: 1 << self numTagBits)
+		ifTrue: [-1 << (64 - self numTagBits - 1)]
+		ifFalse: [0])
+]
+
 { #category : #'header access' }
 Spur64BitMemoryManager >> set: objOop classIndexTo: classIndex formatTo: format [
 	"0 = 0 sized objects (UndefinedObject True False et al)
@@ -942,6 +954,24 @@ Spur64BitMemoryManager >> shiftForWord [
 ]
 
 { #category : #'interpreter access' }
+Spur64BitMemoryManager >> smallFloatBitsOf: oop [
+	"Answer the ieee 754 double precision floating point bits of the argument, a SmallFloat.
+	 See section 61-bit Immediate Floats in the SpurMemoryManager class comment.
+							msb                                              lsb 
+	 Decode:				[8expsubset][52mantissa][1s][3tags] 
+	 shift away tags:		[ 000 ][8expsubset][52mantissa][1s] 
+	 add exponent offset:	[     11 exponent     ][52mantissa][1s] 
+	 rot sign:				[1s][     11 exponent     ][52mantissa]"
+	| rot |
+	self assert: (self isImmediateFloat: oop).
+	rot := oop asUnsignedInteger >> self numTagBits.
+	rot > 1 ifTrue: "a.k.a. ~= +/-0.0"
+		[rot := rot + (self smallFloatExponentOffset << (self smallFloatMantissaBits + 1))].
+	rot := self rotateRight: rot.
+	^rot
+]
+
+{ #category : #'interpreter access' }
 Spur64BitMemoryManager >> smallFloatExponentOffset [
 	"896 is 1023 - 127, where 1023 is the mid-point of the 11-bit double precision exponent range,
 	 and 127 is the mid-point of the 8-bit SmallDouble exponent range."
@@ -971,7 +1001,7 @@ Spur64BitMemoryManager >> smallFloatObjectOf: aFloat [
 	rawFloat := self cCode: [(self cCoerce: (self addressOf: aFloat) to: 'sqLong *') at: 0]
 					inSmalltalk: [(aFloat at: 1) << 32 + (aFloat at: 2)].
 	rot := self rotateLeft: rawFloat.
-	rot > 1 ifTrue:
+	rot > 1 ifTrue: "a.k.a. ~= +/-0.0"
 		[rot := rot - (self smallFloatExponentOffset << (self smallFloatMantissaBits + 1)).
 		 self assert: rot > 0].
 	^self cCode: [rot << self numTagBits + self smallFloatTag]
@@ -992,18 +1022,14 @@ Spur64BitMemoryManager >> smallFloatValueOf: oop [
 	 shift away tags:		[ 000 ][8expsubset][52mantissa][1s] 
 	 add exponent offset:	[     11 exponent     ][52mantissa][1s] 
 	 rot sign:				[1s][     11 exponent     ][52mantissa]"
-	| rot |
+	| bits |
 	<returnTypeC: #double>
-	self assert: (oop bitAnd: self tagMask) = self smallFloatTag.
-	rot := oop asUnsignedInteger >> self numTagBits.
-	rot > 1 ifTrue:
-		[rot := rot + (self smallFloatExponentOffset << (self smallFloatMantissaBits + 1))].
-	rot := self rotateRight: rot.
-	^self cCode: [(self cCoerce: (self addressOf: rot) to: #'double *') at: 0]
+	bits := self smallFloatBitsOf: oop.
+	^self cCode: [(self cCoerce: (self addressOf: bits) to: #'double *') at: 0]
 		inSmalltalk:
 			[(Float new: 2)
-				at: 1 put: rot >> 32;
-				at: 2 put: (rot bitAnd: 16rFFFFFFFF);
+				at: 1 put: bits >> 32;
+				at: 2 put: (bits bitAnd: 16rFFFFFFFF);
 				yourself]
 ]
 
