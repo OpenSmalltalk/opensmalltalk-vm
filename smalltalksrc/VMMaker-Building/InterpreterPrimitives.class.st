@@ -900,17 +900,6 @@ InterpreterPrimitives >> primitiveChangeClass [
 ]
 
 { #category : #'object access primitives' }
-InterpreterPrimitives >> primitiveCharacterValue [
-	| characterCode characterObject |
-	characterObject := self stackTop.
-	characterCode := CharacterTable
-						ifNil: [objectMemory integerObjectOf: (objectMemory characterValueOf: characterObject)]
-						ifNotNil: [objectMemory fetchPointer: CharacterValueIndex ofObject: characterObject].
-	"the Character must be the receiver for safety"
-	self pop: 1 thenPush: characterCode
-]
-
-{ #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveClass [
 	| instance |
 	instance := self stackTop.
@@ -1924,6 +1913,25 @@ InterpreterPrimitives >> primitiveImageName [
 		self pop: 1.  "rcvr"
 		self push: s.
 	]
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveImmediateAsInteger [
+	"For a Smalnteger, answer itself.
+	 For a Character, answer its code as an unsigned integer.
+	 For a SmallFloat, answer the signed, but unadjusted bit pattern (so as to keep the result a SmallInteger).
+	 This is a good value for an immediate's hash."
+	<option: #Spur64BitMemoryManager>
+	| oop value |
+	oop := self stackTop.
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[value := objectMemory integerValueOf: oop] ifFalse:
+	[(objectMemory isCharacterObject: oop) ifTrue:
+		[value := objectMemory characterValueOf: oop] ifFalse:
+	[(objectMemory isImmediateFloat: oop) ifTrue:
+		[value := objectMemory rotatedFloatBitsOf: oop] ifFalse:
+	[^self primitiveFailFor: PrimErrBadReceiver]]].
+	self pop: argumentCount thenPushInteger: value
 ]
 
 { #category : #'memory space primitives' }
@@ -3562,6 +3570,14 @@ InterpreterPrimitives >> primitiveSmallFloatGreaterThan [
 	arg := objectMemory loadFloatOrIntFrom: self stackTop.
 	self successful ifTrue:
 		[self pop: 2 thenPushBool: rcvr > arg]
+]
+
+{ #category : #'arithmetic float primitives' }
+InterpreterPrimitives >> primitiveSmallFloatHash [
+	"Answer the ieee 754 double precision floating point bits of the SmallFloat receiver."
+	<option: #Spur64BitMemoryManager>
+
+	self pop: 1 thenPush: (objectMemory positive64BitIntegerFor: (objectMemory smallFloatBitsOf: self stackTop))
 ]
 
 { #category : #'arithmetic float primitives' }

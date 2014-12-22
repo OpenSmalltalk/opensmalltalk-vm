@@ -1427,9 +1427,10 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 	prim caseOf: {
 		"0 through 6, +, -, *, /, //, \\, quo:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 		[0]	->	[self AddCq: untaggedVal R: ra].
-		[1]	->	[self MoveCq: untaggedVal R: TempReg.
-				self SubR: ra R: TempReg.
-				self MoveR: TempReg R: ra ].
+		[1]	->	[self MoveCq: val R: TempReg.
+				 self SubR: ra R: TempReg.
+				 objectRepresentation genAddSmallIntegerTagsTo: TempReg.
+				 self MoveR: TempReg R: ra].
 		[2]	->	[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ra.
 				 self MoveCq: (objectMemory integerValueOf: val) R: TempReg.
 				 self MulR: TempReg R: ra.
@@ -1442,10 +1443,11 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
 		[64] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
 				 self MoveCq: val R: TempReg.
-				self MoveXwr: ra R: TempReg R: ra ].
+				 self MoveXwr: ra R: TempReg R: ra].
 		[65] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
-				self MoveCq: val R: TempReg.
-				self MoveXbr: ra R: TempReg R: ra ]
+				 self MoveCq: val R: TempReg.
+				 self MoveXbr: ra R: TempReg R: ra]
+
 	}
 	otherwise: [^EncounteredUnknownBytecode].
 	self ssPushRegister: ra.
