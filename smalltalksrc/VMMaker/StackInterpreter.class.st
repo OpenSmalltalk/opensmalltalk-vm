@@ -918,8 +918,8 @@ StackInterpreter class >> initializeFrameIndices [
 	fxSavedFP := 0.
 	fxMethod := -1.
 	fxFrameFlags := -2.	"Can find numArgs, needed for fast temp access. args are above fxCallerSavedIP.
-							 Can find ``is block'' bit
-							 Can find ``has context'' bit"
+						 Can find ``is block'' bit
+						 Can find ``has context'' bit"
 	fxThisContext := -3.
 	fxReceiver := -4.
 
@@ -932,7 +932,16 @@ StackInterpreter class >> initializeFrameIndices [
 	FoxMethod := fxMethod * BytesPerWord.
 	FoxFrameFlags := fxFrameFlags * BytesPerWord.
 	FoxThisContext := fxThisContext * BytesPerWord.
-	FoxReceiver := fxReceiver * BytesPerWord
+	FoxReceiver := fxReceiver * BytesPerWord.
+
+	"Mark the CoInterpreter-specific offsets as #undeclared to
+	 avoid including them accidentally in StackInterpreter code."
+	IFrameSlots := #undeclared.
+	MFrameSlots := #undeclared.
+	FoxIFrameFlags := #undeclared.
+	FoxIFSavedIP := #undeclared.
+	FoxIFReceiver := #undeclared.
+	FoxMFReceiver := #undeclared
 ]
 
 { #category : #initialization }
@@ -10560,15 +10569,21 @@ StackInterpreter >> printFrame: theFP [
 			 (stackPages isFree: thePage) ifTrue:
 				[self printHexPtr: theFP; print: ' is on a free page?!'; cr.
 				 ^nil].
-			 theSP := self findSPOrNilOf: theFP
-						on: thePage
-						startingFrom: ((thePage = stackPage
-									and: [framePointer < thePage headFP])
-										ifTrue: [framePointer]
-										ifFalse: [thePage headFP])].
-	theSP isNil ifTrue:
+			 (thePage ~= stackPage
+			  and: [theFP = thePage headFP])
+				ifTrue: [theSP := thePage headSP]
+				ifFalse:
+					[theSP := self findSPOrNilOf: theFP
+								on: thePage
+								startingFrom: ((thePage = stackPage
+												and: [framePointer
+														between: thePage realStackLimit
+														and: thePage baseAddress])
+												ifTrue: [framePointer]
+												ifFalse: [thePage headFP])]].
+	theSP ifNil:
 		[self print: 'could not find sp; using bogus value'; cr.
-		 theSP := theFP + FoxReceiver].
+		 theSP := self frameReceiverOffset: theFP].
 	self printFrame: theFP WithSP: theSP
 ]
 
@@ -11241,23 +11256,24 @@ StackInterpreter >> printStackReferencesTo: oop [
 		thePage := stackPages stackPageAt: i.
 		thePage isFree ifFalse:
 			[theSP := thePage headSP.
-			 theFP := thePage  headFP.
+			 theFP := thePage headFP.
 			 "Skip the instruction pointer on top of stack of inactive pages."
 			 thePage = stackPage ifFalse:
 				[theSP := theSP + objectMemory wordSize].
-			[[theSP <= (theFP + FoxReceiver)] whileTrue:
+			 [[theSP <= (self frameReceiverOffset: theFP)] whileTrue:
 				[oop = (stackPages longAt: theSP) ifTrue:
 					[self print: 'FP: '; printHexnp: theFP; print: ' @ '; printHexnp: theSP; cr].
 				 theSP := theSP + objectMemory wordSize].
-			 (self frameHasContext: theFP) ifTrue:
+			  (self frameHasContext: theFP) ifTrue:
 				[oop = (self frameContext: theFP) ifTrue:
 					[self print: 'FP: '; printHexnp: theFP; print: ' CTXT'; cr]].
-			 oop = (self frameMethod: theFP) ifTrue:
+			  oop = (self frameMethod: theFP) ifTrue:
 				[self print: 'FP: '; printHexnp: theFP; print: ' MTHD'; cr].
-			 (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
-				[theSP := (theFP + FoxCallerSavedIP) + objectMemory wordSize.
-				 theFP := callerFP].
-			 theSP := theFP + FoxCallerContext. "a.k.a. FoxCallerSavedIP"
+			  (callerFP := self frameCallerFP: theFP) ~= 0]
+				whileTrue:
+					[theSP := (theFP + FoxCallerSavedIP) + objectMemory wordSize.
+					 theFP := callerFP].
+			 theSP := theFP + FoxCallerSavedIP. "a.k.a. FoxCallerContext"
 			 [theSP <= thePage baseAddress] whileTrue:
 				[oop = (stackPages longAt: theSP) ifTrue:
 					[self print: 'FP: '; printHexnp: theFP; print: ' @ '; printHexnp: theSP; cr].
