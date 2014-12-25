@@ -882,6 +882,44 @@ SpurBootstrapPrototypes >> ObjectPROTOTYPEclone [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrapPrototypes >> ObjectPROTOTYPEisPinned [
+	"Answer if the receiver is pinned.  The VM's garbage collector routinely moves
+	 objects as it reclaims and compacts memory.  But it can also pin an object so
+	 that it will not be moved, which can make it easier to pass objects out through
+	 the FFI."
+	<primitive: 183 error: ec>
+	^self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> ObjectPROTOTYPEpin [
+	"The VM's garbage collector routinely moves objects as it reclaims and compacts
+	 memory. But it can also pin an object so that it will not be moved, which can make
+	 it easier to pass objects out through the FFI.  Objects are unpinnned when created.
+	 This method ensures an object is pinned, and answers whether it was already pinned."
+	^self setPinned: true
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> ObjectPROTOTYPEsetPinned: aBoolean [
+	"The VM's garbage collector routinely moves objects as it reclaims and compacts
+	 memory. But it can also pin an object so that it will not be moved, which can make
+	 it easier to pass objects out through the FFI.  Objects are unpinnned when created.
+	 This primitive either pins or unpins an object, and answers if it was already pinned."
+	<primitive: 184 error: ec>
+	^self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> ObjectPROTOTYPEunpin [
+	"The VM's garbage collector routinely moves objects as it reclaims and compacts
+	 memory. But it can also pin an object so that it will not be moved, which can make
+	 it easier to pass objects out through the FFI.  Objects are unpinnned when created.
+	 This method ensures an object is unpinned, and answers whether it was pinned."
+	^self setPinned: false
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrapPrototypes >> SmallFloat64PROTOTYPEclone [
 	"Answer the receiver, because SmallFloat64s are unique."
 	^self

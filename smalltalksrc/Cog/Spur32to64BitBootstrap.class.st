@@ -97,9 +97,9 @@ Spur32to64BitBootstrap >> clone: obj32 [
 				classIndex: (heap32 classIndexOf: obj32).
 	(hash := heap32 rawHashBitsOf: obj32) ~= 0 ifTrue:
 		[heap64 setHashBitsOf: obj64 to: hash].
-	(heap32 isImmutable: obj32) ~= 0 ifTrue:
+	(heap32 isImmutable: obj32) ifTrue:
 		[heap64 setIsImmutableOf: obj64 to: true].
-	(heap32 isPinned: obj32) ~= 0 ifTrue:
+	(heap32 isPinned: obj32) ifTrue:
 		[heap64 setIsPinnedOf: obj64 to: true].
 	self deny: (heap32 isRemembered: obj32).
 	self deny: (heap32 isMarked: obj32).
