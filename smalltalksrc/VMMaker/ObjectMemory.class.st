@@ -4949,6 +4949,11 @@ ObjectMemory >> signalLowSpace: aValue [
 	^signalLowSpace := aValue
 ]
 
+{ #category : #'header formats' }
+ObjectMemory >> sixtyFourBitIndexableFormat [
+	^7
+]
+
 { #category : #'object access' }
 ObjectMemory >> sizeBitsOf: oop [
 	"Answer the number of bytes in the given object, including its base header, rounded up to an integral number of words."
