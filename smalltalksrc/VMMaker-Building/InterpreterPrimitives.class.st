@@ -541,16 +541,25 @@ InterpreterPrimitives >> primitiveArrayBecomeOneWay [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveArrayBecomeOneWayCopyHash [
-	"Similar to primitiveArrayBecomeOneWay but accepts a third argument whether to copy
-	the receiver's identity hash over the argument's identity hash."
+	"Similar to primitiveArrayBecomeOneWay but accepts a third argument deciding whether to
+	 copy the receiver's element's identity hash over the argument's elementy's identity hash."
 
-	| copyHashFlag arg rcvr ec |
-	copyHashFlag := self booleanValueOf: (self stackTop).
-	arg := self stackValue: 1.
-	rcvr := self stackValue: 2.
-	ec := objectMemory become: rcvr with: arg twoWay: false copyHash: copyHashFlag.
+	| copyHashFlag ec |
+	self stackTop = objectMemory trueObject
+		ifTrue: [copyHashFlag := true]
+		ifFalse:
+			[self stackTop = objectMemory falseObject
+				ifTrue: [copyHashFlag := false]
+				ifFalse:
+					[self primitiveFailFor: PrimErrBadArgument.
+					 ^nil]].
+	ec := objectMemory
+			become: (self stackValue: 2)
+			with: (self stackValue: 1)
+			twoWay: false
+			copyHash: copyHashFlag.
 	ec = PrimNoErr
-		ifTrue: [self pop: 2]
+		ifTrue: [self pop: argumentCount]
 		ifFalse: [self primitiveFailFor: ec]
 ]
 
@@ -1931,7 +1940,7 @@ InterpreterPrimitives >> primitiveImmediateAsInteger [
 	[(objectMemory isImmediateFloat: oop) ifTrue:
 		[value := objectMemory rotatedFloatBitsOf: oop] ifFalse:
 	[^self primitiveFailFor: PrimErrBadReceiver]]].
-	self pop: argumentCount thenPushInteger: value
+	self pop: argumentCount + 1 thenPushInteger: value
 ]
 
 { #category : #'memory space primitives' }
@@ -2130,11 +2139,9 @@ InterpreterPrimitives >> primitiveIsPinned [
 	((objectMemory isImmediate: obj)
 	 or: [objectMemory isForwarded: obj]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadReceiver].
-	self pop: argumentCount - 1.
-	self stackTopPut:
-			(objectMemory hasSpurMemoryManagerAPI
-				ifTrue: [objectMemory booleanObjectOf: (objectMemory isPinned: obj)]
-				ifFalse: [objectMemory falseObject])
+	self pop: argumentCount + 1
+		thenPushBool: (objectMemory hasSpurMemoryManagerAPI
+						and: [objectMemory booleanObjectOf: (objectMemory isPinned: obj)])
 ]
 
 { #category : #'memory space primitives' }
@@ -2809,7 +2816,7 @@ InterpreterPrimitives >> primitivePin [
 			  and: [objectMemory pinObject: obj]) = 0 ifTrue:
 				[^self primitiveFailFor: PrimErrNoMemory]].
 	
-	self pop: argumentCount - 1 thenPush: wasPinned
+	self pop: argumentCount + 1 thenPush: wasPinned
 ]
 
 { #category : #'object access primitives' }
@@ -3422,28 +3429,73 @@ InterpreterPrimitives >> primitiveSizeInBytesOfInstance [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveSlotAt [
-	| index rcvr numSlots |
+	"Answer a slot in an object.  This numbers all slots from 1, ignoring the distinction between
+	 named and indexed inst vars.  In objects with both named and indexed inst vars, the named
+	 inst vars preceed the indexed ones.  In non-object indexed objects (objects that contain
+	 bits, not object references) this primitive answers the raw integral value at each slot. 
+	 e.g. for Strings it answers the character code, not the Character object at each slot."
+	| index rcvr fmt numSlots |
 	index := self stackTop.
 	rcvr := self stackValue: 1.
 	(objectMemory isIntegerObject: index) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	(objectMemory isImmediate: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrBadReceiver].
+	fmt := objectMemory formatOf: rcvr.
 	index := objectMemory integerValueOf: index.
-	(objectMemory isPointersNonImm: rcvr) ifTrue:
+
+	fmt <= objectMemory lastPointerFormat ifTrue:
 		[numSlots := objectMemory numSlotsOf: rcvr.
 		 (self asUnsigned: index) < numSlots ifTrue:
 			[self pop: argumentCount + 1 thenPush: (objectMemory fetchPointer: index ofObject: rcvr).
 			 ^0].
 		 ^self primitiveFailFor: PrimErrBadIndex].
-	"for now just fail for non-pointer objects; the issue here is should
-	 strings answer characters and if so how do we efficiently identify strings?"
+
+	fmt >= objectMemory firstByteFormat ifTrue:
+		[fmt >= objectMemory firstCompiledMethodFormat ifTrue:
+			[^self primitiveFailFor: PrimErrUnsupported].
+		 numSlots := objectMemory numBytesOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[self pop: argumentCount + 1 thenPushInteger: (objectMemory fetchByte: index ofObject: rcvr).
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	(objectMemory hasSpurMemoryManagerAPI
+	 and: [fmt >= objectMemory firstShortFormat]) ifTrue:
+		[numSlots := objectMemory num16BitUnitsOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[self pop: argumentCount + 1 thenPushInteger: (objectMemory fetchShort16: index ofObject: rcvr).
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	fmt = objectMemory sixtyFourBitIndexableFormat ifTrue:
+		[numSlots := objectMemory num64BitUnitsOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[self pop: argumentCount + 1
+				thenPush: (self positive64BitIntegerFor: (objectMemory fetchLong64: index ofObject: rcvr)).
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	fmt >= objectMemory firstLongFormat ifTrue:
+		[numSlots := objectMemory num32BitUnitsOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[self pop: argumentCount + 1
+				thenPush: (objectMemory bytesPerOop = 8
+							ifTrue: [objectMemory integerObjectOf: (objectMemory fetchLong32: index ofObject: rcvr)]
+							ifFalse: [self positive32BitIntegerFor: (objectMemory fetchLong32: index ofObject: rcvr)]).
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
 	^self primitiveFailFor: PrimErrBadReceiver
 ]
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveSlotAtPut [
-	| newValue index rcvr numSlots |
+	"Assign a slot in an object.  This numbers all slots from 1, ignoring the distinction between
+	 named and indexed inst vars.  In objects with both named and indexed inst vars, the named
+	 inst vars preceed the indexed ones.  In non-object indexed objects (objects that contain
+	 bits, not object references) this primitive assigns a raw integral value at each slot."
+	| newValue index rcvr fmt numSlots value |
 	newValue := self stackTop.
 	index := self stackValue: 1.
 	rcvr := self stackValue: 2.
@@ -3451,16 +3503,65 @@ InterpreterPrimitives >> primitiveSlotAtPut [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	(objectMemory isImmediate: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrBadReceiver].
+	fmt := objectMemory formatOf: rcvr.
 	index := objectMemory integerValueOf: index.
-	(objectMemory isPointersNonImm: rcvr) ifTrue:
+
+	fmt <= objectMemory lastPointerFormat ifTrue:
 		[numSlots := objectMemory numSlotsOf: rcvr.
 		 (self asUnsigned: index) < numSlots ifTrue:
 			[objectMemory storePointer: index ofObject: rcvr withValue: newValue.
 			 self pop: argumentCount + 1 thenPush: newValue.
 			 ^0].
 		 ^self primitiveFailFor: PrimErrBadIndex].
-	"for now just fail for non-pointer objects; the issue here is should
-	 strings answer characters and if so how do we efficiently identify strings?"
+
+	value := self positiveMachineIntegerValueOf: newValue.
+	self failed ifTrue:
+		[primFailCode := PrimErrBadArgument.
+		^0].
+
+	fmt >= objectMemory firstByteFormat ifTrue:
+		[fmt >= objectMemory firstCompiledMethodFormat ifTrue:
+			[^self primitiveFailFor: PrimErrUnsupported].
+		 (self asUnsigned: value) > 16rFF ifTrue:
+			[^self primitiveFailFor: PrimErrBadArgument].
+		 numSlots := objectMemory numBytesOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[objectMemory storeByte: index ofObject: rcvr withValue: value.
+			 self pop: argumentCount + 1 thenPush: newValue.
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	(objectMemory hasSpurMemoryManagerAPI
+	 and: [fmt >= objectMemory firstShortFormat]) ifTrue:
+		[(self asUnsigned: value) > 16rFFFF ifTrue:
+			[^self primitiveFailFor: PrimErrBadArgument].
+		 numSlots := objectMemory num16BitUnitsOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[objectMemory storeShort16: index ofObject: rcvr withValue: value.
+			 self pop: argumentCount + 1 thenPush: newValue.
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	(objectMemory bytesPerOop = 8
+	 and: [fmt = objectMemory sixtyFourBitIndexableFormat]) ifTrue:
+		[numSlots := objectMemory num64BitUnitsOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[objectMemory storeLong64: index ofObject: rcvr withValue: value.
+			 self pop: argumentCount + 1 thenPush: newValue.
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	fmt >= objectMemory firstLongFormat ifTrue:
+		[(objectMemory wordSize > 4
+		  and: [(self asUnsigned: value) > 16rFFFFFFFF]) ifTrue:
+			[^self primitiveFailFor: PrimErrBadArgument].
+		 numSlots := objectMemory num32BitUnitsOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[objectMemory storeLong32: index ofObject: rcvr withValue: value.
+			 self pop: argumentCount + 1 thenPush: newValue.
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
 	^self primitiveFailFor: PrimErrBadReceiver
 ]
 
