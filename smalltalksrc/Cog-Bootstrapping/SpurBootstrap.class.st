@@ -182,11 +182,16 @@ SpurBootstrap class >> categoryForClass: className meta: isMeta selector: select
 			[#(MethodContext failPrimitiveWith:)]			-> [#'system simulation'].
 			[#(MethodContext class allInstances)]			-> [#enumerating].
 			[#(MethodContext class allInstancesDo:)]		-> [#enumerating].
+			[#(Object isPinned)]							-> [#'system primitives'].
+			[#(Object pin)]									-> [#'system primitives'].
+			[#(Object setPinned:)]							-> [#'system primitives'].
+			[#(Object unpin)]								-> [#'system primitives'].
 			[#(SmallFloat64 class basicNew)]				-> [#'instance creation'].
 			[#(SmallFloat64 class basicNew:)]				-> [#'instance creation'].
 			[#(SmallFloat64 clone)]							-> [#copying].
 			[#(SmallFloat64 copy)]							-> [#copying].
 			[#(SmallFloat64 deepCopy)]					-> [#copying].
+			[#(SmallFloat64 identityHash)]					-> [#comparing].
 			[#(SmallFloat64 shallowCopy)]					-> [#copying].
 			[#(SmallFloat64 veryDeepCopyWith:)]			-> [#copying].
 			[#(SmallInteger asCharacter)]					-> [#converting].
