@@ -56,7 +56,7 @@ fl;ags in my configH method
 "
 Class {
 	#name : #Linux64x86w32BitSqueakCogV3Config,
-	#superclass : #Linux64x86w32BitConfig,
+	#superclass : #Linux64x86w32BitConfigUsrLib,
 	#category : #'CMakeVMMakerSqueak-Linux64X86-32BitCompatibility'
 }
 
@@ -196,28 +196,6 @@ Linux64x86w32BitSqueakCogV3Config >> excludeFromBuild [
 { #category : #cmake }
 Linux64x86w32BitSqueakCogV3Config >> executableName [
 	^ self vmCogExecutableName
-]
-
-{ #category : #compiling }
-Linux64x86w32BitSqueakCogV3Config >> externalLibraries [
-	^#(
-		     '-L/usr/lib'
-		     '-L/usr/lib/X11'
-			'uuid'  ""
-			 'ssl'  ""
-			 'crypto' ""
-			 'm'      	"C math library"
-			 'dl'      "dynamic linking library"
-			 'pthread' "POSIX threads library"
-			 'SM'   "session management library for X11"
-			 'ICE'   "ICE is the Inter Client Exchange protocol, part of X11"
-			 'GL'    "libGL implements the GLX interface as well as the main OpenGL API entrypoints"
-			 'X11'
-			 'nsl'    "network services library"
-		)
-				
-
-
 ]
 
 { #category : #'cmake buildType redirects' }
