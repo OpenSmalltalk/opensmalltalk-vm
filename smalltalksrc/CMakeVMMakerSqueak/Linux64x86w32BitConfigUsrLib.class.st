@@ -1,8 +1,13 @@
 "
-A Linux64x86w32BitConfig is an Abstract base class that provides common information for my subclasses.
+A Linux64x86w32BitConfigUsrLib is an Abstract base class that provides common information for my subclasses.
 I am not meant to be built.
 
-I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf
+I am a configuration for linux64x86 where the 32 bit compatibility libraries reside in /usr/lib  (example: Slackware64 14.1)
+
+Some linux platforms (such as Ubuntu). store their 32 bit compat libs in /usr/lib32.  For those, use subclasses of Linux64x86w32BitConfigUsrLib32
+
+
+I configure a VM according to my name's form: [Operating System] [WordSize] [Processor Language][VM MemoryManager][BuildType]Conf[Foo]
 
 SqueakLinux64x86w32CompatBuilder 
 	configureABuildFor: #ONE OF MY SUBCLASSES NAME HERE withBuildType: #build;
@@ -11,19 +16,19 @@ SqueakLinux64x86w32CompatBuilder
 
 
 
-HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+HelpBrowser openOn: CMakeVMMakerSqueakHelp
 
 
 
 "
 Class {
-	#name : #Linux32x86Config,
+	#name : #Linux64x86w32BitConfigUsrLib,
 	#superclass : #SqueakUnixConfig,
-	#category : #'CMakeVMMakerSqueak-Linux32x86'
+	#category : #'CMakeVMMakerSqueak-Linux64X86-32BitCompatibility'
 }
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> addVMPluginsBuild: aMaker [
+Linux64x86w32BitConfigUsrLib >> addVMPluginsBuild: aMaker [
 	|temp o|
 	self flag:'tty'. "I am writing sub-directory CMakeLists.txt here. Should I also write the config.cmake files?"
 	enabledebugmessages
@@ -59,7 +64,7 @@ Linux32x86Config >> addVMPluginsBuild: aMaker [
 ]
 
 { #category : #cmake }
-Linux32x86Config >> availableBuildTypes [
+Linux64x86w32BitConfigUsrLib >> availableBuildTypes [
  	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
 "
 
@@ -71,7 +76,7 @@ subclasses should use
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> coreSourcesBuild [
+Linux64x86w32BitConfigUsrLib >> coreSourcesBuild [
 	"files to include from src/vm dir"
 	^ #(
 		'cogit.c'
@@ -80,7 +85,7 @@ Linux32x86Config >> coreSourcesBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> coreSourcesBuildMultiThreaded [
+Linux64x86w32BitConfigUsrLib >> coreSourcesBuildMultiThreaded [
 	"files to include from src/vm dir"
 	^ #(
 		'cogit.c'
@@ -89,7 +94,7 @@ Linux32x86Config >> coreSourcesBuildMultiThreaded [
 ]
 
 { #category : #plugins }
-Linux32x86Config >> customizeCMakeVMDisplayNull [
+Linux64x86w32BitConfigUsrLib >> customizeCMakeVMDisplayNull [
 	|module|
 	module := vmplugins detect: [:vmd | #CMakeVMDisplayNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
 	module 
@@ -113,7 +118,7 @@ Linux32x86Config >> customizeCMakeVMDisplayNull [
 ]
 
 { #category : #plugins }
-Linux32x86Config >> customizeCMakeVMDisplayX11 [
+Linux64x86w32BitConfigUsrLib >> customizeCMakeVMDisplayX11 [
 	|module|
 	module := vmplugins detect: [:vmd | #CMakeVMDisplayX11 = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
 	module 
@@ -130,7 +135,7 @@ Linux32x86Config >> customizeCMakeVMDisplayX11 [
 ]
 
 { #category : #plugins }
-Linux32x86Config >> customizeCMakeVMSoundALSA [
+Linux64x86w32BitConfigUsrLib >> customizeCMakeVMSoundALSA [
 	|module|
 	module := vmplugins detect: [:vmd | #CMakeVMSoundALSA = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
 	module 
@@ -144,7 +149,7 @@ Linux32x86Config >> customizeCMakeVMSoundALSA [
 ]
 
 { #category : #plugins }
-Linux32x86Config >> customizeCMakeVMSoundNull [
+Linux64x86w32BitConfigUsrLib >> customizeCMakeVMSoundNull [
 	|module|
 	module := vmplugins detect: [:vmd | #CMakeVMSoundNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
 	module 
@@ -159,7 +164,7 @@ Linux32x86Config >> customizeCMakeVMSoundNull [
 ]
 
 { #category : #plugins }
-Linux32x86Config >> customizeVMPlugins [
+Linux64x86w32BitConfigUsrLib >> customizeVMPlugins [
 	|mysubset iwantonly|
 	"trim the vmdrivers ordered collection of CMakeVMDriver subclasses to only those I want. then customize them for use on this OS/platform"
 	iwantonly :=	 #(#CMakeVMDisplayNull  #CMakeVMDisplayX11  #CMakeVMSoundALSA  #CMakeVMSoundNull ).
@@ -177,7 +182,7 @@ Linux32x86Config >> customizeVMPlugins [
 ]
 
 { #category : #plugins }
-Linux32x86Config >> defaultExternalPlugins [
+Linux64x86w32BitConfigUsrLib >> defaultExternalPlugins [
 	^ #(
 		B3DAcceleratorPlugin
 		ThreadedIA32FFIPlugin "SqueakFFIPrims"
@@ -193,7 +198,7 @@ Linux32x86Config >> defaultExternalPlugins [
 ]
 
 { #category : #plugins }
-Linux32x86Config >> defaultInternalPlugins [
+Linux64x86w32BitConfigUsrLib >> defaultInternalPlugins [
 " took from unixbuild/bld/plugins.int"
 	^ #(
 		ADPCMCodecPlugin 
@@ -230,24 +235,24 @@ Linux32x86Config >> defaultInternalPlugins [
 ]
 
 { #category : #cmake }
-Linux32x86Config >> dirBuildPlatform [
-	^self dirLinux32x86
+Linux64x86w32BitConfigUsrLib >> dirBuildPlatform [
+	^self dirLinux64x86w32BitCompatibility
 ]
 
 { #category : #cmake }
-Linux32x86Config >> excludeFromBuild [
+Linux64x86w32BitConfigUsrLib >> excludeFromBuild [
 	"over-ride to exclude yourself from a build or not"
 	^true
 ]
 
 { #category : #cmake }
-Linux32x86Config >> executableName [
+Linux64x86w32BitConfigUsrLib >> executableName [
 	"AbstractBaseClass configurations are not meant to be executable"
 	^ self vmIShouldNotBeHereExecutableName
 ]
 
 { #category : #compiling }
-Linux32x86Config >> externalLibraries [
+Linux64x86w32BitConfigUsrLib >> externalLibraries [
 	^#(
 		     '-L/usr/lib'
 		     '-L/usr/lib/X11'
@@ -269,12 +274,12 @@ Linux32x86Config >> externalLibraries [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> externalPluginsBuild [
+Linux64x86w32BitConfigUsrLib >> externalPluginsBuild [
 	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> extraPluginSettingsBuild: aMaker [
+Linux64x86w32BitConfigUsrLib >> extraPluginSettingsBuild: aMaker [
 	aMaker isExternal 
 		ifTrue:[aMaker templates addLast:((CMakeSet new) variable:'LIBRARY_OUTPUT_PATH' value:'${outputDir}')].
 	aMaker templates addLast:((CMakeSet new) variable:'linkFlags' quotedValue:'${linkFlags} -m32').
@@ -287,12 +292,12 @@ Linux32x86Config >> extraPluginSettingsBuild: aMaker [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> internalPluginsBuild [
+Linux64x86w32BitConfigUsrLib >> internalPluginsBuild [
 	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> postBuildActionsBuild: aMaker [
+Linux64x86w32BitConfigUsrLib >> postBuildActionsBuild: aMaker [
 	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
 	(aMaker config enabledebugmessages)
 		ifTrue:[	
@@ -316,7 +321,7 @@ Linux32x86Config >> postBuildActionsBuild: aMaker [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32x86Config >> preferredIncludesBuild [
+Linux64x86w32BitConfigUsrLib >> preferredIncludesBuild [
 	(enabledebugmessages)
 		ifTrue:[	
 	templates 

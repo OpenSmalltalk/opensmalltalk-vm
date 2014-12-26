@@ -203,28 +203,6 @@ Linux32x86SqueakCogV3Config >> executableName [
 	^ self vmCogExecutableName
 ]
 
-{ #category : #compiling }
-Linux32x86SqueakCogV3Config >> externalLibraries [
-	^#(
-		     '-L/usr/lib'
-		     '-L/usr/lib/X11'
-			'uuid'  ""
-			 'ssl'  ""
-			 'crypto' ""
-			 'm'      	"C math library"
-			 'dl'      "dynamic linking library"
-			 'pthread' "POSIX threads library"
-			 'SM'   "session management library for X11"
-			 'ICE'   "ICE is the Inter Client Exchange protocol, part of X11"
-			 'GL'    "libGL implements the GLX interface as well as the main OpenGL API entrypoints"
-			 'X11'
-			 'nsl'    "network services library"
-		)
-				
-
-
-]
-
 { #category : #'cmake buildType redirects' }
 Linux32x86SqueakCogV3Config >> externalLibsBuild [
 	^self externalLibraries asOrderedCollection.
