@@ -1930,7 +1930,7 @@ InterpreterPrimitives >> primitiveImmediateAsInteger [
 	 For a Character, answer its code as an unsigned integer.
 	 For a SmallFloat, answer the signed, but unadjusted bit pattern (so as to keep the result a SmallInteger).
 	 This is a good value for an immediate's hash."
-	<option: #Spur64BitMemoryManager>
+	<option: #SpurObjectMemory>
 	| oop value |
 	oop := self stackTop.
 	(objectMemory isIntegerObject: oop) ifTrue:
