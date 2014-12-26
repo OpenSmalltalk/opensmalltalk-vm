@@ -158,7 +158,7 @@ Spur32BitCoMemoryManager >> headerWhileForwardingOf: aCompiledMethodObjOop [
 
 { #category : #'image segment in/out' }
 Spur32BitCoMemoryManager >> ifAProxy: objOop updateCopy: copy [
-	"If the obejct being copied to the segment is weird and has exotic state,
+	"If the object being copied to the segment is weird and has exotic state,
 	 i.e. a married context or a jitted method, update the copy with the vanilla state."
 
 	super ifAProxy: objOop updateCopy: copy.
