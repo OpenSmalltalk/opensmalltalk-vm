@@ -69,7 +69,7 @@ CMakePluginVm >> template [
 	temp
 		addLast: ((CMakeHeader new)  configurationName:  config class name );
 		addLast: ((CMakeProject new)variable:  module  );
-		addLast: ((CMakeMinimumRequired new) version: '3.0.0');
+		addLast: ((CMakeMinimumRequired new) version: '2.8.12');
 		addLast: ((CMakeInclude new) file: ((config buildDir fullName), FileDirectory slash, 'directories.cmake')) ; 
 		addLast:((CMakeAddDefinitions new) definitions: config compilerDefinitions asOrderedCollection);
 		addLast:((CMakeAddDefinitions new) definitions: config compilerFlags asOrderedCollection);

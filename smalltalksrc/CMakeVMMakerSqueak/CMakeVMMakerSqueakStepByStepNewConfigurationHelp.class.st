@@ -40,11 +40,17 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> bookName [
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> choosePlugins [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> compilingLinkingSetup [
 	^HelpTopic
-		title:'Choose Plugins'
+		title:'Compiling and Linking Setup'
 		contents:
-'
+'In your concrete configuration''s ''compiling'' protocol contains the methods that you must customize for your Configuration
+
+cmakeAddDefinitionsBuild
+cmakeCFlagsBuild
+externalLibsBuild
+linkerFlags
+
 
 '
 ]
@@ -149,6 +155,33 @@ My new configuration is correctly named and in the correct place.
 
 '
 
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> customizePlugins [
+	^HelpTopic
+		title:'customize Plugins'
+		contents:
+'We can customize which plugins we want on our configuration by overriding our platform''s defaultExternalPlugins and defaultInternalPlugins methods.
+
+The default set can be further customized according to buildType if desired via the externalPlugins[BuildType] and internalPlugins[BuildType] redirect pattern
+
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> customizeVMDrivers [
+	^HelpTopic
+		title:'Specify VM Drivers'
+		contents:
+'The SqueakUnixConfig contains the unverisal list of VM Drivers for *nix.
+
+In our concrete Configuration, we need to specify which ones we want for out build.
+
+We do this by overloading the SqueakUnixConfig>>customizeVMDrivers method.
+
+'
 ]
 
 { #category : #pages }
@@ -458,7 +491,7 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> overview [
 	^HelpTopic
 		title:'Overview'
 		contents:
-'This Help Topic is a running commentary on how I created Squeak, Cog, V3 CMake configuration for a pure 32 bit Slackware 14.1 system.
+'This Help Topic presents the workflow the author used in creating the  Squeak, Cog, V3 CMake configuration for a pure 32 bit Slackware 14.1 system.
 
 
 The steps involved should be the same for any platform.'
@@ -476,10 +509,31 @@ excludingConfigFromBuilds
 setAvailableBuildTypes
 firstCMakeGeneration
 takingStock
-setOutputPath
+theVMGenerator
+reviewMethodRedirectPattern
+setOutputDirectory
 settingPlugins
+compilingLinkingSetup
+customizeVMDrivers
+customizePlugins
 aNoteOnFoo
 )
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> reviewMethodRedirectPattern [
+	^HelpTopic
+		title:'Review of Method Redirect Pattern'
+		contents:
+'Besides the VMGenerator>>generateByTemplate, the system relies heavily on what I call a Method Redirect Pattern.
+
+If you have not read it yet, its a short read here:
+
+HelpBrowser openOn: CMakeVMMakerSqueakDesignPatternsHelp
+
+'
+
+
 ]
 
 { #category : #pages }
@@ -538,11 +592,34 @@ SqueakLinux32x86Builder availableBuildTypesFor: #Linux32x86SqueakCogV3Config
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setOutputPath [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setOutputDirectory [
 	^HelpTopic
-		title:'Set Output Path'
+		title:'Set Output Directory'
 		contents:
-'WRITE ME
+'The output directory is where the finished product is placed when the compilation is successful.
+
+Typically this is ''oscogvm/cmake.products/foo/
+
+The topmost configuration CPlatformConfigForSqueak defines the output directory as such:
+
+outputDir
+	"the directory where built binaries will be stored"
+	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput /  self dirInstall) ]	
+
+which (on linux) translates to ''oscogvm/cmaike.products/(subclass resposibility))''
+
+Its that (subclass responsibility) we have to customize in our new configuration.
+
+The convention we use is [Language][VM][MemoryModel]
+
+Since I am building a Squeak Cog V3 configuration, my method should return "squeak.cog.v3"
+
+If you look at implementors of dirInstall, you will see that they typically return some pre-defined strings that are defined in the ''cmake directory'' protocol of CPlatformConfigForSqueak.
+
+For my configuration you can see that I return the "^self squeakCogV3" which returns the directory name that matches the [Language][VM][Memory Model] pattern I need.
+
+
+
 
 '
 ]
@@ -569,7 +646,7 @@ If you have not generated CMake output at this point, go back and try until you 
 At this point, please evaluate:
 HelpBrowser openOn: CMakeVMMakerSqueakDesignPatternsHelp
 
-And read the secion on the Method Redirect Pattern before continuing.
+And read the section on the Method Redirect Pattern before continuing.
 '
 
 
@@ -597,4 +674,55 @@ CMakeVMMakerSqueakWindowsConfigTest
 As of 2014.12.09 all tests pass. 
 
 As we create the Configuration these tests will be an important check on our work and we will return to them often.'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> theVMGenerator [
+	^HelpTopic
+		title:'The VM Generator'
+		contents:
+'Before we move onto setting the most common directives and flags in the Concrete Configuration, lets take a quick look at the method that actually generates the CMake files for us. You probably will not need this, but its handy to know of.
+
+CMakeVMGeneratorForSqueak browse
+
+Look at the generateByTemplate method and the long cascade that starts with:
+
+	config 
+		setGlobalOptions: self;    
+		cmakePrefixPath;
+		cmakeIncludePath;.....
+
+
+Here you see the generator extracting CMake data from your Configuration in a straighforward order.
+
+The names of the methods are a bit of a holdover from the pharo code and do not conceptually match the sections of Ian Piumarta''s CMake template. 
+
+If you generate your CMake files with message tracking enabled as per below
+
+SqueakLinux32x86Builder
+	configureA: #Linux32x86SqueakCogV3Config forBuildType:#build; 
+	enableMessageTracking: true;                                                 <---message tracking 
+	generateByTemplate.
+
+
+You can see in your CMakeLists.txt which method is responsible for which bits of code.
+
+Here we see these two lines from the VMGenerator
+
+	config 
+	      ....
+		cmakeIncludeDirectories:  self;
+		preferredIncludes;     
+            ....
+
+tracked in the CMakeLists.txt
+
+  message( "Linux32x86SqueakCogV3Config includeDirs: aMaker")                                             <---message tracking message
+  include_directories(  ${crossDir}/vm ${srcVMDir} ${targetPlatform}/vm ${buildDir})                <--output of cmakeIncludeDirectories:self
+  message( "Linux32x86SqueakCogV3Config preferredIncludesBuild")                                       <--message tracking message
+  include_directories(  ${targetPlatform}/plugins/B3DAcceleratorPlugin)                                     <-- output of preferredIncludesBuild
+
+'
+
+
 ]

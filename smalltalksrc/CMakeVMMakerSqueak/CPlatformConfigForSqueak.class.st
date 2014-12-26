@@ -3375,7 +3375,7 @@ CPlatformConfigForSqueak >> setGlobalOptionsBuild: aMaker [
 	templates 
 		addLast: ((CMakeHeader new)  configurationName:  self class name );
 		addLast: ((CMakeProject new)variable: self executableName  );
-		addLast: ((CMakeMinimumRequired new) version: '3.0.0');
+		addLast: ((CMakeMinimumRequired new) version: '2.8.12');
 		addLast: ((CMakeSet new) variable: 'CMAKE_CONFIGURATION_TYPES' value: 'Release').
 
 ]
@@ -3402,7 +3402,7 @@ CPlatformConfigForSqueak >> setGlobalOptionsBuildDebug: aMaker [
 		addLast: ((CMakeMessage new) message: (self class name), '  setGlobalOptionsBuild: aMaker');
 		addLast: ((CMakeHeader new)  configurationName:  self class name );
 		addLast: ((CMakeProject new)variable: self executableName  );
-		addLast: ((CMakeMinimumRequired new) version: '3.0.0');
+		addLast: ((CMakeMinimumRequired new) version: '2.8.12');
 		addLast: ((CMakeMessage new) message: 'CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}');
 		addLast: ((CMakeSet new) variable: 'CMAKE_CONFIGURATION_TYPES' value: 'Debug').
 
