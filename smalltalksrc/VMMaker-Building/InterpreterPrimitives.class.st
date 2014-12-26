@@ -1490,7 +1490,6 @@ InterpreterPrimitives >> primitiveFloatAt [
 	 onto the least significant word."
 	| rcvr index result |
 	<var: #result type: #usqInt>
-	self initPrimCall.
 	rcvr := self stackValue: 1.
 	index := self stackTop.
 	index = ConstOne ifTrue:
@@ -1517,13 +1516,14 @@ InterpreterPrimitives >> primitiveFloatAtPut [
 	 onto the least significant word."
 	| rcvr index oopToStore valueToStore |
 	<var: #valueToStore type: #usqInt>
-	self initPrimCall.
 	oopToStore := self stackTop.
 	valueToStore := self positive32BitValueOf: oopToStore.
 	self successful ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	rcvr := self stackValue: 2.
 	index := self stackValue: 1.
+	(objectMemory isImmediateFloat: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrBadReceiver].
 	index = ConstOne ifTrue:
 		[objectMemory storeLong32: (VMBIGENDIAN ifTrue: [0] ifFalse: [1])
 			ofObject: rcvr
@@ -3442,7 +3442,7 @@ InterpreterPrimitives >> primitiveSlotAt [
 	(objectMemory isImmediate: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrBadReceiver].
 	fmt := objectMemory formatOf: rcvr.
-	index := objectMemory integerValueOf: index.
+	index := (objectMemory integerValueOf: index) - 1.
 
 	fmt <= objectMemory lastPointerFormat ifTrue:
 		[numSlots := objectMemory numSlotsOf: rcvr.
@@ -3504,7 +3504,7 @@ InterpreterPrimitives >> primitiveSlotAtPut [
 	(objectMemory isImmediate: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrBadReceiver].
 	fmt := objectMemory formatOf: rcvr.
-	index := objectMemory integerValueOf: index.
+	index := (objectMemory integerValueOf: index) - 1.
 
 	fmt <= objectMemory lastPointerFormat ifTrue:
 		[numSlots := objectMemory numSlotsOf: rcvr.
