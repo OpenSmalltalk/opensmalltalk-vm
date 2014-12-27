@@ -1,0 +1,20 @@
+The mkfile here assumes that the B2DPlugin, FilePlugin, SocketPlugin, and
+BitBltPlugin have been generated as internal plugins along with the interpreter.
+It also assumes that all of this is generated under a 'src' directory, in the
+same root as this README file.
+
+So, to generate the interpreter and then build it, select the Plan9 platform in
+VMMaker, and set the output as that root plus a directory called 'src':
+	/path/to/platforms/Plan9/src
+
+Then, enable the plugins which are listed above, as internal plugins.
+
+Assuming you have a recent version of VMMaker which includes fixes for
+correct code generation for Plan9, code generation should go smoothly.
+
+Running 'mk' in this directory will generate a binary called 'interp', also in
+this directory, and running this binary with the Squeak image as an argument
+should start a Squeak window!
+
+Questions, comments, or concerns should go to:
+Alex Franchuk <alex.franchuk@gmail.com>
