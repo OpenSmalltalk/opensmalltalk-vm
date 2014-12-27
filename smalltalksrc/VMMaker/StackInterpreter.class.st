@@ -5850,9 +5850,10 @@ StackInterpreter >> findMethodWithPrimitive: primitive FromContext: senderContex
 		[^theContext].
 	 self isMarriedOrWidowedContext: theContext] whileFalse:
 		[theContext = homeContext ifTrue: [^0].
-		 (objectMemory fetchPointer: ClosureIndex ofObject: theContext) = objectMemory nilObject ifTrue:
+		 (primitive = 0
+		  or: [(objectMemory fetchPointer: ClosureIndex ofObject: theContext) ~= objectMemory nilObject]) ifFalse:
 		 	[theMethod := objectMemory fetchPointer: MethodIndex ofObject: theContext.
-			 (self primitiveIndexOf: theMethod) == primitive ifTrue:
+			 (self primitiveIndexOf: theMethod) = primitive ifTrue:
 				[^theContext]].
 		 theContext := objectMemory fetchPointer: SenderIndex ofObject: theContext].
 	(self isWidowedContext: theContext) ifTrue:
@@ -5878,9 +5879,10 @@ StackInterpreter >> findMethodWithPrimitive: primitive FromFP: startFP UpToConte
 	[((self frameHasContext: theFP)
 	  and: [homeContext = (self frameContext: theFP)]) ifTrue:
 		[^0].
-	 (self frameIsBlockActivation: theFP) ifFalse:
+	 (primitive = 0
+	  or: [self frameIsBlockActivation: theFP]) ifFalse:
 	 	[theMethod := self frameMethodObject: theFP.
-		 (self primitiveIndexOf: theMethod) == primitive ifTrue:
+		 (self primitiveIndexOf: theMethod) = primitive ifTrue:
 			[theFP = theFPAbove
 						ifTrue: [theSP := self findSPOf: theFP on: (stackPages stackPageFor: theFP)]
 						ifFalse: [theSP := self frameCallerStackPointer: theFPAbove].
@@ -6023,16 +6025,22 @@ StackInterpreter >> findSelectorOfMethod: methArg [
 { #category : #'return bytecodes' }
 StackInterpreter >> findUnwindThroughContext: homeContext [
 	"Search for either an unwind-protect (activation of method with primitive 198)
-	 or homeContext along the sender chain, which ever is found first.  If homeContext
-	 is not found answer nilObj, indicating cannotReturn:.  If homeContext is found
-	 answer 0.  If homeContext is itself an unwind-protect answer the context, not 0."
+	 or homeContext along the sender chain, which ever is found first.  Return values:
+		0			home context was found on sender chain with no intervening unwind-protects
+		nilObj		home context could not be found => cannotReturn
+		context		the context of an intervening unwind-protect implies home context was found"
 	| ctxtOrNilOrZero theMethod |
 	"Since nothing changes we don't need to internalize."
 	ctxtOrNilOrZero := self findMethodWithPrimitive: 198 FromFP: framePointer UpToContext: homeContext.
 	ctxtOrNilOrZero = 0 ifTrue:
 		[theMethod := objectMemory fetchPointer: MethodIndex ofObject: homeContext.
-		 (self primitiveIndexOf: theMethod) == 198 ifTrue:
-			[^homeContext]].
+		 (self primitiveIndexOf: theMethod) = 198 ifTrue:
+			[^homeContext].
+		 ^0].
+	ctxtOrNilOrZero = objectMemory nilObject ifFalse:
+		[(self findMethodWithPrimitive: 0 FromContext: ctxtOrNilOrZero UpToContext: homeContext)
+		  = objectMemory nilObject ifTrue:
+			[^objectMemory nilObject]].
 	^ctxtOrNilOrZero
 ]
 
