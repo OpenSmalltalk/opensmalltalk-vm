@@ -6,9 +6,6 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id$
-*
-*   NOTES:
 *
 *****************************************************************************/
 #define DIRECTDRAW_VERSION 0x700 /* restrict to DX7 */

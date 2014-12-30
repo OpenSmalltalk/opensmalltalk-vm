@@ -6,7 +6,6 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id$
 *
 *   NOTES:
 *     1) For MIDI output the MIDI mapper is reported as first device
@@ -23,10 +22,6 @@
 
 #ifndef STACK_SIZE_PARAM_IS_A_RESERVATION
 # define STACK_SIZE_PARAM_IS_A_RESERVATION 0x00010000
-#endif
-
-#ifndef NO_RCSID
-  static char RCSID[] = "$Id$";
 #endif
 
 /*** MIDI Parameters (used with sqMIDIParameter function) ***/
