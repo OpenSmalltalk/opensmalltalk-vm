@@ -6,7 +6,6 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id$
 *
 *   NOTES:
 *	1) TCP & UDP are now fully supported.
@@ -36,10 +35,6 @@ typedef unsigned long ULONG_PTR;
 
 #ifndef STACK_SIZE_PARAM_IS_A_RESERVATION
 #  define STACK_SIZE_PARAM_IS_A_RESERVATION 0x00010000
-#endif
-
-#ifndef NO_RCSID
-  static char RCSID[]="$Id$";
 #endif
 
 #ifndef NDEBUG

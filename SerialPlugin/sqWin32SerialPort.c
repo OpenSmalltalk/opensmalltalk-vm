@@ -6,19 +6,12 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id$
-*
-*   NOTES:
 *
 *****************************************************************************/
 #include <windows.h>
 #include "sq.h"
 
 #ifndef NO_SERIAL_PORT
-
-#ifndef NO_RCSID
-  static char RCSID[] = "$Id$";
-#endif
 
 /* Maximum number of serial ports supported */
 #define MAX_SERIAL_PORTS 256

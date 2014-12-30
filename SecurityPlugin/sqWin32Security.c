@@ -26,7 +26,7 @@ static int resourceDirectoryLen;
 /* imported from sqWin32Prefs.c */
 extern TCHAR squeakIniName[MAX_PATH];
 
-/* imported from sqWin32Intel.c */
+/* imported from sqWin32Main.c */
 extern BOOL fLowRights;  /* started as low integrity process, 
 			need to use alternate untrustedUserDirectory */
 

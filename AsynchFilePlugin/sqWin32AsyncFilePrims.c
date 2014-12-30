@@ -6,7 +6,6 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id$
 *
 *   NOTES:
 *     1) Instead of the async io functions (e.g., ReadFileEx/WriteFileEx)
