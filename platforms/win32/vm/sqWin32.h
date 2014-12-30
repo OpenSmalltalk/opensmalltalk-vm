@@ -149,7 +149,6 @@ int readableFormat(int imageVersion);
   /* Do not rely on stdio functions but rather pure Win32 stuff */
   #define WIN32_FILE_SUPPORT
   /* Take out the static strings */
-  #define NO_RCSID
   #define NO_WARNINGS
 #if 0
   /* Finally, override the warning functions containing static strings */

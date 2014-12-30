@@ -6,9 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Stubs.c 2 2001-10-24 23:11:49Z rowledge $
 *
-*   NOTES:
 *****************************************************************************/
 #include "sq.h"
 

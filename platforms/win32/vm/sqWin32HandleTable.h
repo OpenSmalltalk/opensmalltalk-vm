@@ -6,7 +6,6 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: 
 *   EMAIL:   andreas.raab@gmx.de
-*   RCSID:   $Id$
 *
 *   NOTES:
 *     1) This is a simple handle table which can be used to verify whether

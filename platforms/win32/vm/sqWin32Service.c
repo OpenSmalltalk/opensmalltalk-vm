@@ -6,8 +6,6 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Service.c 342 2002-05-04 23:20:28Z andreasraab $
-*
 *
 *   NOTES:   On Win95 the two "magic" entries in the registry are
 *
@@ -19,10 +17,6 @@
 #include "sq.h"
 
 #ifndef NO_SERVICE
-
-#ifndef NO_RCSID
-  static char RCSID[] = "$Id: sqWin32Service.c 342 2002-05-04 23:20:28Z andreasraab $";
-#endif
 
 /****************************************************************/
 /* Imports from sqWin32Main.c                                  */

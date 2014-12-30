@@ -6,19 +6,12 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Directory.c 1696 2007-06-03 18:13:07Z andreas $
-*
-*   NOTES:
 *
 *****************************************************************************/
 #include <windows.h>
 #include "sq.h"
 
 extern struct VirtualMachine *interpreterProxy;
-
-#ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32Directory.c 1696 2007-06-03 18:13:07Z andreas $";
-#endif
 
 /***
 	The interface to the directory primitive is path based.

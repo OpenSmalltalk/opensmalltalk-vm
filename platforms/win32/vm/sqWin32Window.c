@@ -6,7 +6,6 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c 1693 2007-06-03 02:09:21Z andreas $
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -38,10 +37,6 @@
 #include "sq.h"
 #include "sqWin32Prefs.h"
 #include "sqSCCSVersion.h"
-
-#ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c 1693 2007-06-03 02:09:21Z andreas $");
-#endif
 
 /****************************************************************************/
 /* General Squeak declarations and definitions                              */

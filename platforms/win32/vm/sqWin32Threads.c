@@ -1,12 +1,9 @@
 /****************************************************************************
-*   PROJECT: Win32 thread support code for Cog & Stack VMs
+*   PROJECT: Squeak port for Win32 (NT / Win95)
 *   FILE:    sqWin32Threads.c
-*   CONTENT: 
+*   CONTENT: Win32 thread support code for Cog & Stack VMs
 *
 *   AUTHOR:  Eliot Miranda
-*   ADDRESS: 
-*   EMAIL:   eliot@teleplace.com
-*   RCSID:   $Id$
 *
 *   NOTES: See the comment of CogThreadManager in the VMMaker package for
 *          overall design documentation.

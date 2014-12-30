@@ -1,12 +1,9 @@
 /****************************************************************************
-*   PROJECT: Win32 time functions and heartbeat logic for Stack VM
+*   PROJECT: Squeak port for Win32 (NT / Win95)
 *   FILE:    sqWin32Heartbeat.c
-*   CONTENT: 
+*   CONTENT: Win32 time functions and heartbeat logic for Stack VM
 *
 *   AUTHOR:  Eliot Miranda
-*   ADDRESS: 
-*   EMAIL:   eliot@teleplace.com
-*   RCSID:   $Id$
 *
 *   NOTES: 
 *  August 3rd, 2008, EEM added heart-beat thread.

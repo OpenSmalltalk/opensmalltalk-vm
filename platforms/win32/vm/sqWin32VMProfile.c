@@ -1,13 +1,10 @@
 /****************************************************************************
-*   PROJECT: Win32 (CreateThread/WaitSingleObject/SetThreadAffinityMask)
-*			 profiling logic for statistical profiling of the VM
+*   PROJECT: Squeak port for Win32 (NT / Win95)
 *   FILE:    sqWin32VMProfile.c
-*   CONTENT: 
+*   CONTENT: Win32 (CreateThread/WaitSingleObject/SetThreadAffinityMask)
+*			 profiling logic for statistical profiling of the VM
 *
 *   AUTHOR:  Eliot Miranda
-*   ADDRESS: 
-*   EMAIL:   eliot@teleplace.com
-*   RCSID:   $Id$
 *
 *   NOTES: 
 *  August 15th, 2008, EEM wrote pc sampling code
