@@ -21,6 +21,6 @@ int main(int argc, char **argv) {
 		printf("\t%s_exports,\n", argv[i]);
 	}
 	printf("\tNULL\n");
-	printf("};");
+	printf("};\n");
 	return 0;
 }

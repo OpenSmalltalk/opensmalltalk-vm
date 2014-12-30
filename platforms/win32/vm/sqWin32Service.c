@@ -25,7 +25,7 @@
 #endif
 
 /****************************************************************/
-/* Imports from sqWin32Intel.c                                  */
+/* Imports from sqWin32Main.c                                  */
 /****************************************************************/
 
 extern TCHAR *logName;        /* full path and name to log file */

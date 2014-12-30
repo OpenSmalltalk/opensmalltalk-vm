@@ -147,7 +147,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		 * address such as 0xNNNNf000 but VirtualAlloc will answer 0xNNNN0000.
 		 * So accept allocs above minAddress rather than allocs above address
 		 */
-		if (alloc >= minAddress && alloc <= address + delta) {
+		if (alloc >= (char *)minAddress && alloc <= address + delta) {
 			if (printMaps && fIsConsole)
 				fprintf(stderr,
 						"VirtualAlloc [%p,%p) above %p)\n",

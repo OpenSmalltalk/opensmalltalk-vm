@@ -20,18 +20,18 @@ DWORD g_WM_CLIENT_PIPE = 0;  /* Client pipe */
 
 
 sqInt stackObjectValue(sqInt);
-sqInt stacksqIntegerValue(sqInt);
+sqInt stackIntegerValue(sqInt);
 sqInt isBytes(sqInt);
 sqInt byteSizeOf(sqInt);
 void *firstIndexableField(sqInt);
 sqInt push(sqInt);
 sqInt pop(sqInt);
-sqInt positive32BitsqIntegerFor(sqInt);
+sqInt positive32BitIntegerFor(sqInt);
 sqInt nilObject(void);
 sqInt instantiateClassindexableSize(sqInt, sqInt);
 sqInt classByteArray(void);
 sqInt fileRecordSize(void);
-SQFile *fileValueOf(sqsqInt);
+SQFile *fileValueOf(sqInt);
 sqInt failed(void);
 sqInt pushBool(sqInt);
 sqInt getFullScreenFlag(void);

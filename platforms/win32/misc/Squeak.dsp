@@ -141,7 +141,7 @@ SOURCE=..\vm\sqWin32GUID.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\vm\sqWin32Intel.c
+SOURCE=..\vm\sqWin32Main.c
 # SUBTRACT CPP /D "SQUEAK_BUILTIN_PLUGIN"
 # End Source File
 # Begin Source File

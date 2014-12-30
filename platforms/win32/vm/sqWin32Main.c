@@ -1,12 +1,11 @@
 /****************************************************************************
 *   PROJECT: Squeak port for Win32 (NT / Win95)
-*   FILE:    sqWin32Intel.c
-*   CONTENT: Special support stuff only for Win95/WinNT on x86
+*   FILE:    sqWin32Main.c
+*   CONTENT: Main entry point and support stuff for Win95/WinNT/WinXP on x86
 *
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Intel.c 1435 2006-04-11 00:17:05Z andreas $
 *
 *   NOTES: (I think this comment of Andreas' is obsolete; eem 6/2013)
 *    1) When using this module the virtual machine MUST NOT be compiled
@@ -1987,7 +1986,7 @@ isCFramePointerInUse()
 #if !defined(min)
 # define min(x,y) (((x)>(y))?(y):(x))
 #endif
-static char *p = 0;
+static volatile char *p = 0;
 
 static void
 sighandler(int sig) { p = (char *)&sig; }
