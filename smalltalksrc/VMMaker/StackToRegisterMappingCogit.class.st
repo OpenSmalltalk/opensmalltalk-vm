@@ -1439,6 +1439,18 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
+		[32] -> [ self CmpCq: val R: ra.
+				self genBinaryInlineComparison: JumpGreater opFalse: JumpLess destReg: ra ].
+		[33] -> [ self CmpCq: val R: ra.
+				self genBinaryInlineComparison: JumpLess opFalse: JumpGreater destReg: ra ].
+		[34] -> [ self CmpCq: val R: ra.
+				self genBinaryInlineComparison: JumpGreaterOrEqual opFalse: JumpLessOrEqual destReg: ra ].
+		[35] -> [ self CmpCq: val R: ra.
+				self genBinaryInlineComparison: JumpLessOrEqual opFalse: JumpGreaterOrEqual destReg: ra ].
+		[36] -> [ self CmpCq: val R: ra.
+				self genBinaryInlineComparison: JumpZero opFalse: JumpNonZero destReg: ra ].
+		[37] -> [ self CmpCq: val R: ra.
+				self genBinaryInlineComparison: JumpNonZero opFalse: JumpZero destReg: ra ].
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
 		[64] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
@@ -1452,6 +1464,44 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 	otherwise: [^EncounteredUnknownBytecode].
 	self ssPushRegister: ra.
 	^0
+]
+
+{ #category : #'inline primitive generators' }
+StackToRegisterMappingCogit >> genBinaryInlineComparison: opTrue opFalse: opFalse destReg: destReg [
+	"Inlined comparison. opTrue = jump for true and opFalse = jump for false"
+	| nextPC branchDescriptor nExts |	
+	nextPC := bytecodePC + 3.
+	[branchDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + (byte0 bitAnd: 256).
+	 			nExts := 0.	
+	branchDescriptor isExtension] whileTrue:
+	[nExts := nExts + 1.
+	 		nextPC := nextPC + branchDescriptor numBytes].
+	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse])
+		ifTrue: [
+		"This is the path where the inlined comparison is followed immediatly by a branch"
+		| targetBytecodePC postBranchPC |
+		targetBytecodePC := nextPC
+				+ branchDescriptor numBytes
+				+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
+		postBranchPC := nextPC + branchDescriptor numBytes.
+		self ssPushConstant: objectMemory trueObject. "dummy object"
+		self gen: (branchDescriptor isBranchTrue ifTrue: [opTrue] ifFalse: [opFalse])
+			operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
+		self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
+		 ]
+		ifFalse: [ 
+		"This is the path where the inlined comparison is *not* followed immediatly by a branch"
+			| condJump jump |
+			condJump := self gen: opTrue operand: 0.
+	 		self 
+				annotate: (self MoveCw: objectMemory falseObject R: destReg) 
+				objRef: objectMemory falseObject.
+	 		jump := self Jump: 0.
+			condJump jmpTarget: (self 
+				annotate: (self MoveCw: objectMemory trueObject R: destReg) 
+				objRef: objectMemory trueObject).
+			jump jmpTarget: self Label ].
+	^ 0
 ]
 
 { #category : #'inline primitive generators' }
@@ -1484,7 +1534,20 @@ StackToRegisterMappingCogit >> genBinaryVarOpConstInlinePrimitive: prim [
 
 		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 
-		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
+		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)
+		Here the comparison is reversed (cst on the left, reg on the right) so I inverted opTrue and opFalse"
+		[32] -> [ self CmpCq: val R: rr.
+				self genBinaryInlineComparison: JumpLess opFalse: JumpGreater destReg: rr ].
+		[33] -> [ self CmpCq: val R: rr.
+				self genBinaryInlineComparison: JumpGreater opFalse: JumpLess destReg: rr ].
+		[34] -> [ self CmpCq: val R: rr.
+				self genBinaryInlineComparison: JumpLessOrEqual opFalse: JumpGreaterOrEqual destReg: rr ].
+		[35] -> [ self CmpCq: val R: rr.
+				self genBinaryInlineComparison: JumpGreaterOrEqual opFalse: JumpLessOrEqual destReg: rr ].
+		[36] -> [ self CmpCq: val R: rr.
+				self genBinaryInlineComparison: JumpNonZero opFalse: JumpZero destReg: rr ].
+		[37] -> [ self CmpCq: val R: rr.
+				self genBinaryInlineComparison: JumpZero opFalse: JumpNonZero destReg: rr ].
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
 		[64] ->	[self genConvertSmallIntegerToIntegerInReg: rr.
@@ -1533,6 +1596,18 @@ StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
+		[32] -> [ self CmpR: rr R: ra.
+				self genBinaryInlineComparison: JumpGreater opFalse: JumpLess destReg: rr ].
+		[33] -> [ self CmpR: rr R: ra.
+				self genBinaryInlineComparison: JumpLess opFalse: JumpGreater destReg: rr ].
+		[34] -> [ self CmpR: rr R: ra.
+				self genBinaryInlineComparison: JumpGreaterOrEqual opFalse: JumpLessOrEqual destReg: rr ].
+		[35] -> [ self CmpR: rr R: ra.
+				self genBinaryInlineComparison: JumpLessOrEqual opFalse: JumpGreaterOrEqual destReg: rr ].
+		[36] -> [ self CmpR: rr R: ra.
+				self genBinaryInlineComparison: JumpZero opFalse: JumpNonZero destReg: rr ].
+		[37] -> [ self CmpR: rr R: ra.
+				self genBinaryInlineComparison: JumpNonZero opFalse: JumpZero destReg: rr ].
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
 		[64] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
