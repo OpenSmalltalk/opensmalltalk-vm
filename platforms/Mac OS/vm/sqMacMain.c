@@ -1133,7 +1133,7 @@ isCFramePointerInUse()
 #if !defined(min)
 # define min(x,y) (((x)>(y))?(y):(x))
 #endif
-static volatile char *p = 0;
+static char * volatile p = 0;
 
 static void
 sighandler(int sig) { p = (char *)&sig; }

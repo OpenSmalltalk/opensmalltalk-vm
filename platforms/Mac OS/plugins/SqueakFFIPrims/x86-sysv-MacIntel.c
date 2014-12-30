@@ -77,7 +77,7 @@ static int	 ffiTempStringCount= 0;
 volatile int	 ffiIntReturnValue;
 volatile int	 ffiLongReturnValue;
 volatile double	 ffiFloatReturnValue;
-volatile int	*ffiStructReturnValue;
+int	* volatile   ffiStructReturnValue;
 
 
 extern int ffiCallAddressOf(void *addr, void *stack, int size);
