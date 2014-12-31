@@ -132,7 +132,7 @@ long *GPRegsLocation;
 long gpRegCount = 0;
 long fpRegCount = 0;
 volatile long long longReturnValue;
-volatile char *longReturnValueLocation = (char*) &longReturnValue;
+char *volatile longReturnValueLocation = (char*) &longReturnValue;
 volatile double floatReturnValue;
 volatile double *floatReturnValueLocation = &floatReturnValue;
 
@@ -208,7 +208,7 @@ long
 thunkEntry(void *thunkp, long *stackp)
 {
 	jmp_buf trampoline;
-	volatile CallBackReturnSpec *rs;
+	CallBackReturnSpec * volatile rs;
 
 	if (sizeof(int) != sizeof(rs)) {
 		perror("setjmp cannot return a pointer; reimplement!\n");
