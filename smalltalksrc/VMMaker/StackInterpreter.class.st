@@ -4197,7 +4197,7 @@ StackInterpreter >> commonCallerReturn [
 
 { #category : #'return bytecodes' }
 StackInterpreter >> commonReturn [
-	"Do an ^-return (return form method), perhaps checking for unwinds if this is a block activation.
+	"Do an ^-return (return from method), checking for unwinds if this is a block activation.
 	 Note: Assumed to be inlined into the dispatch loop."
 
 	<sharedCodeInCase: #returnReceiver>
@@ -4218,8 +4218,8 @@ StackInterpreter >> commonReturn [
 	home := nil.
 	"Walk the closure's lexical chain to find the context or frame to return from (home)."
 	[closure ~= objectMemory nilObject] whileTrue:
-		[home := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: closure.
-		 closure := objectMemory fetchPointer: ClosureIndex ofObject: home].
+		[home := objectMemory followField: ClosureOuterContextIndex ofObject: closure.
+		 closure := objectMemory followField: ClosureIndex ofObject: home].
 	"home is to be returned from provided there is no unwind-protect activation between
 	 this frame and home's sender.  Search for an unwind.  findUnwindThroughContext:
 	 will answer either the context for an unwind-protect activation or nilObj if the sender
@@ -4227,7 +4227,8 @@ StackInterpreter >> commonReturn [
 	 current page's headFrame pointers to enable the search to identify widowed contexts
 	 correctly."
 	self writeBackHeadFramePointers.
-	unwindContextOrNilOrZero := self internalFindUnwindThroughContext: home.
+	self externalizeIPandSP.
+	unwindContextOrNilOrZero := self findUnwindThroughContext: home.
 	unwindContextOrNilOrZero = objectMemory nilObject ifTrue:
 		["error: can't find home on chain; cannot return"
 		 ^self internalCannotReturn: localReturnValue].
@@ -4271,7 +4272,6 @@ StackInterpreter >> commonReturn [
 	newPage ~~ stackPage ifTrue:
 		[| currentCtx thePage nextCntx |
 		 currentCtx := self frameCallerContext: stackPage baseFP.
-		 self assert: (objectMemory isContext: currentCtx).
 		 stackPages freeStackPage: stackPage.
 		 [self assert: (objectMemory isContext: currentCtx).
 		  (self isMarriedOrWidowedContext: currentCtx)
@@ -4305,6 +4305,7 @@ StackInterpreter >> commonReturn [
 			  localFP ~~ frameToReturnTo] whileTrue.
 			localIP := self frameCallerSavedIP: callerFP.
 			localSP := (self frameCallerSP: callerFP) - objectMemory wordSize].
+	self maybeReturnToMachineCodeFrame.
 	self setMethod: (self frameMethod: localFP).
 	self fetchNextBytecode.
 	self internalStackTopPut: localReturnValue
@@ -5842,6 +5843,7 @@ StackInterpreter >> findMethodWithPrimitive: primitive FromContext: senderContex
 	"See findUnwindThroughContext:.  Alas this is mutually recursive with
 	 findMethodWithPrimitive:FromFP:SP:ThroughContext: instead of iterative.
 	 We're doing the simplest thing that could possibly work.  Niceties can wait."
+	<inline: false>
 	| theContext theMethod |
 	self assert: (senderContext = objectMemory nilObject or: [objectMemory isContext: senderContext]).
 	self assert: (homeContext = objectMemory nilObject or: [objectMemory isContext: homeContext]).
@@ -5869,6 +5871,7 @@ StackInterpreter >> findMethodWithPrimitive: primitive FromFP: startFP UpToConte
 	"See findUnwindThroughContext:.  Alas this is mutually recursive with
 	 findMethodWithPrimitive:FromContext:ThroughContext: instead of iterative.
 	 We're doing the simplest thing that could possibly work.  Niceties can wait."
+	<inline: true>
 	| theFP theFPAbove theSP theMethod senderContext |
 	<var: #startFP type: #'char *'>
 	<var: #theFP type: #'char *'>
@@ -6029,14 +6032,18 @@ StackInterpreter >> findUnwindThroughContext: homeContext [
 		0			home context was found on sender chain with no intervening unwind-protects
 		nilObj		home context could not be found => cannotReturn
 		context		the context of an intervening unwind-protect implies home context was found"
-	| ctxtOrNilOrZero theMethod |
+	| onSamePage ctxtOrNilOrZero theMethod |
+	"Almost always (98%) the home is on the same page."
+	onSamePage := (self isStillMarriedContext: homeContext)
+					and: [(stackPages pageIndexFor: framePointer) = (stackPages pageIndexFor: (self frameOfMarriedContext: homeContext))].
 	"Since nothing changes we don't need to internalize."
 	ctxtOrNilOrZero := self findMethodWithPrimitive: 198 FromFP: framePointer UpToContext: homeContext.
-	ctxtOrNilOrZero = 0 ifTrue:
+	(onSamePage or: [ctxtOrNilOrZero = 0]) ifTrue:
 		[theMethod := objectMemory fetchPointer: MethodIndex ofObject: homeContext.
 		 (self primitiveIndexOf: theMethod) = 198 ifTrue:
 			[^homeContext].
 		 ^0].
+	"Found an unwind.  Can the home context be found also?"
 	ctxtOrNilOrZero = objectMemory nilObject ifFalse:
 		[(self findMethodWithPrimitive: 0 FromContext: ctxtOrNilOrZero UpToContext: homeContext)
 		  = objectMemory nilObject ifTrue:
@@ -7283,57 +7290,6 @@ StackInterpreter >> initializeExtraClassInstVarIndices [
 			[classNameIndex := i - 1]]
 ]
 
-{ #category : #'as yet unclassified' }
-StackInterpreter >> initializeFrameIndices [
-	"Format of a stack frame.  Word-sized indices relative to the frame pointer.
-	 Terminology
-		Frames are either single (have no context) or married (have a context).
-		Contexts are either single (exist on the heap), married (have a context) or widowed (had a frame that has exited).
-	 Stacks grow down:
-
-			receiver for method activations/closure for block activations
-			arg0
-			...
-			argN
-			caller's method ip/base frame's sender context
-	fp->	saved fp
-			method
-			frame flags
-			context (uninitialized)
-			receiver
-			first temp
-			...
-	sp->	Nth temp
-
-	frame flags holds the number of arguments (since argument temporaries are above the frame)
-	the flag for a block activation
-	and the flag indicating if the context field is valid (whether the frame is married).
-
-	The first frame in a stack page is the baseFrame and is marked as such by a null saved fp,
-	in which case the saved method ip is actually the context (possibly hybrid) beneath the base frame"
-
-	| fxCallerSavedIP fxSavedFP fxMethod fxFrameFlags fxThisContext fxReceiver |
-	fxCallerSavedIP := 1.
-	fxSavedFP := 0.
-	fxMethod := -1.
-	fxFrameFlags := -2.	"Can find numArgs, needed for fast temp access. args are above fxCallerSavedIP.
-							 Can find ``is block'' bit
-							 Can find ``has context'' bit"
-	fxThisContext := -3.
-	fxReceiver := -4.
-
-	FrameSlots := fxCallerSavedIP - fxReceiver + 1.
-
-	FoxCallerSavedIP := fxCallerSavedIP * objectMemory wordSize.
-	"In base frames the caller saved ip field holds the caller context."
-	FoxCallerContext := FoxCallerSavedIP.
-	FoxSavedFP := fxSavedFP * objectMemory wordSize.
-	FoxMethod := fxMethod * objectMemory wordSize.
-	FoxFrameFlags := fxFrameFlags * objectMemory wordSize.
-	FoxThisContext := fxThisContext * objectMemory wordSize.
-	FoxReceiver := fxReceiver * objectMemory wordSize
-]
-
 { #category : #initialization }
 StackInterpreter >> initializeInterpreter: bytesToShift [
 	"Initialize Interpreter state before starting execution of a new image."
@@ -7794,16 +7750,6 @@ StackInterpreter >> internalFindNewMethod [
 		 self addNewMethodToCache: lkupClass]
 ]
 
-{ #category : #'return bytecodes' }
-StackInterpreter >> internalFindUnwindThroughContext: homeContext [
-	"Search for either an unwind-protect (activation of method with primitive 198)
-	 or homeContext along the sender chain, which ever is found first.  If homeContext
-	 is not found answer nilObj, indicating cannotReturn:.  If homeContext is found
-	 answer 0.  If homeContext is itself an unwind-protect answer the context, not 0."
-	self externalizeIPandSP.
-	^self findUnwindThroughContext: homeContext
-]
-
 { #category : #'internal interpreter access' }
 StackInterpreter >> internalFollowedReceiver [
 	<inline: true>
@@ -8185,9 +8131,68 @@ StackInterpreter >> isStillMarriedContext: aContext [
 ]
 
 { #category : #'frame access' }
+StackInterpreter >> isStillMarriedContextDuringGC: aContext [
+	"Answer if aContext is married or widowed and still married.
+	 If a context is widowed then turn it into a single dead context.
+	This version is for use during scavenging when stack references may be forwarded.
+	 Following what appear to be references to forwarded objects on the stack is dangerous;
+	 an instruction ponter may be correctly aligned and may point to bytes that just happen
+	 to look like a forwarder. So it is only safe to follow fields that we know are frameContext
+	 fields; hence the stack page is walked to check that aOnceMarriedContext is pointing to
+	 a live frame.  This only has to happen during scavenging because after a become: all
+	 frameContext fields have been followed and so there is no need to follow forwarders."
+	^(self isMarriedOrWidowedContext: aContext)
+	    and: [(self isWidowedContextDuringGC: aContext) not]
+]
+
+{ #category : #'frame access' }
 StackInterpreter >> isWidowedContext: aOnceMarriedContext [
 	"See if the argument is married to a live frame or not.
-	 If it is not, turn it into a bereaved single context."
+	 If it is not, turn it into a bereaved single context. This version is safe for use
+	 only when no frameContext fields may be forwarded (as maybe the case
+	 when scavenging).  Post become: all frameContext fields are followed, and
+	 hence nrmally no following of frameCOtext fields is necessary.  But during
+	 a scavenge one must use isWidowedContextDuringGC:."
+	| theFrame thePage shouldBeFrameCallerField |
+	<var: #theFrame type: #'char *'>
+	<var: #thePage type: #'StackPage *'>
+	<var: #shouldBeFrameCallerField type: #'char *'>
+	self assert: ((objectMemory isContext: aOnceMarriedContext)
+				  and: [self isMarriedOrWidowedContext: aOnceMarriedContext]).
+	theFrame := self frameOfMarriedContext: aOnceMarriedContext.
+	thePage := stackPages stackPageFor: theFrame.
+	((stackPages isFree: thePage)
+	 or: [theFrame < thePage headFP]) ifFalse:
+		["The frame pointer is within the bounds of a live page.
+		   Now check if it matches a frame."
+		 shouldBeFrameCallerField := self withoutSmallIntegerTags:
+											(objectMemory
+												fetchPointer: InstructionPointerIndex
+												ofObject: aOnceMarriedContext).
+		 ((self frameCallerFP: theFrame) = shouldBeFrameCallerField
+		  and: [self frameHasContext: theFrame]) ifTrue:
+			[self deny: (((self isFrame: theFrame onPage: thePage))
+						and: [objectMemory isForwarded: (self frameContext: theFrame)]).
+			 (self frameContext: theFrame) = aOnceMarriedContext ifTrue: "It is still married!"
+				[^false]]].
+	"It is out of range or doesn't match the frame's context.
+	 It is widowed. Time to wear black."
+	self markContextAsDead: aOnceMarriedContext.
+	^true
+]
+
+{ #category : #'frame access' }
+StackInterpreter >> isWidowedContextDuringGC: aOnceMarriedContext [
+	"See if the argument is married to a live frame or not.  i.e. see if there is a matching
+	 frame whose frameContext field is aOnceMarriedContext, or a forwarder to it.
+	 If aOnceMarriedContext is not married to a live frame, turn it into a bereaved single context.
+	 This version is for use during scavenging when stack references may be forwarded.
+	 Following what appear to be references to forwarded objects on the stack is dangerous;
+	 an instruction ponter may be correctly aligned and may point to bytes that just happen
+	 to look like a forwarder. So it is only safe to follow fields that we know are frameContext
+	 fields; hence the stack page is walked to check that aOnceMarriedContext is pointing to
+	 a live frame.  This only has to happen during scavenging because after a become: all
+	 frameContext fields have been followed and so there is no need to follow forwarders."
 	| maybeFrame thePage shouldBeFrameCallerField maybeFrameCtxt |
 	<var: #maybeFrame type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
@@ -9298,6 +9303,12 @@ StackInterpreter >> maybeRetryFailureDueToForwarding [
 	 and: [self checkForAndFollowForwardedPrimitiveState]]) ifTrue:
 		[self initPrimCall.
 		 self dispatchFunctionPointer: primitiveFunctionPointer]
+]
+
+{ #category : #'return bytecodes' }
+StackInterpreter >> maybeReturnToMachineCodeFrame [
+	"Hook for the CoInterpreter to return to machine-code or
+	 load the saved IP.  This is a nop in the StackInterpreter."
 ]
 
 { #category : #'debug support' }
@@ -12708,7 +12719,7 @@ StackInterpreter >> setTraceFlagOnContextsFramesPageIfNeeded: aContext [
 	| thePage |
 	<inline: false>
 	<var: #thePage type: #'StackPage *'>
-	(self isStillMarriedContext: aContext) ifTrue:
+	(self isStillMarriedContextDuringGC: aContext) ifTrue:
 		[thePage := stackPages stackPageFor: (self frameOfMarriedContext: aContext).
 		 self assert: (thePage trace between: StackPageUnreached and: StackPageTraced).
 		 thePage trace = StackPageUnreached ifTrue:

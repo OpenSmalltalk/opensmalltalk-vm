@@ -1537,8 +1537,8 @@ CoInterpreter >> ceNonLocalReturn: returnValue [
 	home := nil.
 	"Walk the closure's lexical chain to find the context or frame to return from (home)."
 	[closure ~= objectMemory nilObject] whileTrue:
-		[home := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: closure.
-		 closure := objectMemory fetchPointer: ClosureIndex ofObject: home].
+		[home := objectMemory followField: ClosureOuterContextIndex ofObject: closure.
+		 closure := objectMemory followField: ClosureIndex ofObject: home].
 	"home is to be returned from provided there is no unwind-protect activation between
 	 this frame and home's sender.  Search for an unwind.  findUnwindThroughContext:
 	 will answer either the context for an unwind-protect activation or nilObj if the sender
@@ -2199,126 +2199,6 @@ CoInterpreter >> commonCallerReturn [
 	self setMethod: (self iframeMethod: localFP).
 	self fetchNextBytecode.
 	self internalStackTopPut: localReturnValue
-]
-
-{ #category : #'return bytecodes' }
-CoInterpreter >> commonReturn [
-	"Do an ^-return (return form method), perhaps checking for unwinds if this is a block activation.
-	 Note: Assumed to be inlined into the dispatch loop."
-
-	<sharedCodeNamed: 'commonReturn' inCase: #returnReceiver>
-	| closure home unwindContextOrNilOrZero frameToReturnTo contextToReturnTo theFP callerFP newPage |
-	<var: #frameToReturnTo type: #'char *'>
-	<var: #theFP type: #'char *'>
-	<var: #callerFP type: #'char *'>
-	<var: #newPage type: #'StackPage *'>
-	<var: #thePage type: #'StackPage *'>
-
-	"If this is a method simply return to the  sender/caller."
-	(self frameIsBlockActivation: localFP) ifFalse:
-		[^self commonCallerReturn].
-
-	"Since this is a block activation the closure is on the stack above any args and the frame."
-	closure := self pushedReceiverOrClosureOfFrame: localFP.
-
-	home := nil.
-	"Walk the closure's lexical chain to find the context or frame to return from (home)."
-	[closure ~= objectMemory nilObject] whileTrue:
-		[home := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: closure.
-		 closure := objectMemory fetchPointer: ClosureIndex ofObject: home].
-	"home is to be returned from provided there is no unwind-protect activation between
-	 this frame and home's sender.  Search for an unwind.  findUnwindThroughContext:
-	 will answer either the context for an unwind-protect activation or nilObj if the sender
-	 cannot be found or 0 if no unwind is found but the sender is.  We must update the
-	 current page's headFrame pointers to enable the search to identify widowed contexts
-	 correctly."
-	self writeBackHeadFramePointers.
-	unwindContextOrNilOrZero := self internalFindUnwindThroughContext: home.
-	unwindContextOrNilOrZero = objectMemory nilObject ifTrue:
-		["error: can't find home on chain; cannot return"
-		 ^self internalCannotReturn: localReturnValue].
-	unwindContextOrNilOrZero ~= 0 ifTrue:
-		[^self internalAboutToReturn: localReturnValue through: unwindContextOrNilOrZero].
-
-	"Now we know home is on the sender chain.
-	 We could be returning to either a context or a frame.  Find out which."
-	contextToReturnTo := nil.
-	(self isMarriedOrWidowedContext: home)
-		ifTrue:
-			[self assert: (self checkIsStillMarriedContext: home currentFP: localFP).
-			 theFP := self frameOfMarriedContext: home.
-			 (self isBaseFrame: theFP)
-				ifTrue:
-					[contextToReturnTo := self frameCallerContext: theFP]
-				ifFalse:
-					[frameToReturnTo := self frameCallerFP: theFP]]
-		ifFalse:
-			[contextToReturnTo := objectMemory fetchPointer: SenderIndex ofObject: home.
-			 ((objectMemory isContext: contextToReturnTo)
-			  and: [self isMarriedOrWidowedContext: contextToReturnTo]) ifTrue:
-				[self assert: (self checkIsStillMarriedContext: contextToReturnTo currentFP: localFP).
-			 	 frameToReturnTo := self frameOfMarriedContext: contextToReturnTo.
-				 contextToReturnTo := nil]].
-
-	"If returning to a context we must make a frame for it unless it is dead."
-	contextToReturnTo ~= nil ifTrue:
-		[frameToReturnTo := self establishFrameForContextToReturnTo: contextToReturnTo.
-		 frameToReturnTo == 0 ifTrue:
-			["error: home's sender is dead; cannot return"
-			 ^self internalCannotReturn: localReturnValue]].
-
-	"Now we have a frame to return to.  If it is on a different page we must free intervening pages and
-	 nil out intervening contexts.  We must free intervening stack pages because if we leave the pages
-	 to be divorced then their contexts will be divorced with intact senders and instruction pointers.  This
-	 code is similar to primitiveTerminateTo.  We must move any frames on itervening pages above the
-	 frame linked to because these may be in use, e.g. via co-routining (see baseFrameReturn)."
-	self assert: stackPages pageListIsWellFormed.
-	newPage := stackPages stackPageFor: frameToReturnTo.
-	newPage ~~ stackPage ifTrue:
-		[| currentCtx thePage nextCntx |
-		 currentCtx := self frameCallerContext: stackPage baseFP.
-		 self assert: (objectMemory isContext: currentCtx).
-		 stackPages freeStackPage: stackPage.
-		 [(self isMarriedOrWidowedContext: currentCtx)
-		   and: [(stackPages stackPageFor: (theFP := self frameOfMarriedContext: currentCtx)) = newPage]] whileFalse:
-			[(self isMarriedOrWidowedContext: currentCtx)
-				ifTrue:
-					[thePage := stackPages stackPageFor: theFP.
-					 theFP ~= thePage headFP ifTrue:
-						["Since we've just deallocated a page we know that newStackPage won't deallocate an existing one."
-						 self moveFramesIn: thePage through: (self findFrameAbove: theFP inPage: thePage) toPage: self newStackPage].
-					 currentCtx := self frameCallerContext: thePage baseFP.
-					 stackPages freeStackPage: thePage]
-				ifFalse:
-					[nextCntx := objectMemory fetchPointer: SenderIndex ofObject: currentCtx.
-					 self markContextAsDead: currentCtx.
-					 currentCtx := nextCntx]].
-		 self setStackPageAndLimit: newPage.
-		 localSP := stackPage headSP.
-		 localFP := stackPage headFP].
-
-	"Two cases.  Returning to the top frame on a new page or an interior frame on the current page.
-	 The top frame has its instruction pointer on top of stack. An interior frame has its instruction pointer
-	 in the caller frame. We need to peel back any frames on the page until we get to the correct frame."
-
-	localFP = frameToReturnTo
-		ifTrue:
-			[localIP := self pointerForOop: self internalStackTop]
-		ifFalse:
-			[[callerFP := localFP.
-			  localFP := self frameCallerFP: localFP.
-			  localFP ~~ frameToReturnTo] whileTrue.
-			localIP := self frameCallerSavedIP: callerFP.
-			localSP := (self frameCallerSP: callerFP) - objectMemory wordSize].
-	localIP asUnsignedInteger < objectMemory startOfMemory ifTrue:
-		[localIP asUnsignedInteger ~= cogit ceReturnToInterpreterPC ifTrue:
-			["localIP in the cog method zone indicates a return to machine code."
-			 ^self returnToMachineCodeFrame].
-		 localIP := self pointerForOop: (self iframeSavedIP: localFP)].
-	"pop the saved IP, push the return value and continue."
-	self internalStackTopPut: localReturnValue.
-	self setMethod: (self iframeMethod: localFP).
-	^self fetchNextBytecode
 ]
 
 { #category : #'message sending' }
@@ -3742,87 +3622,6 @@ CoInterpreter >> initializeCodeGenerator [
 		upTo: (self cCode: [objectMemory memory] inSmalltalk: [Cogit guardPageSize]) + cogCodeSize
 ]
 
-{ #category : #'as yet unclassified' }
-CoInterpreter >> initializeFrameIndices [
-	"Format of a stack frame.  Word-sized indices relative to the frame pointer.
-	 Terminology
-		Frames are either single (have no context) or married (have a context).
-		Contexts are either single (exist on the heap), married (have a context) or widowed (had a frame that has exited).
-	 Stacks grow down:
-
-			receiver for method activations/closure for block activations
-			arg0
-			...
-			argN
-			caller's saved ip/this stackPage (for a base frame)
-	fp->	saved fp
-			method
-			context (initialized to nil)
-			frame flags (interpreter only)
-			saved method ip (initialized to 0; interpreter only)
-			receiver
-			first temp
-			...
-	sp->	Nth temp
-
-	In an interpreter frame
-		frame flags holds
-			the backward jump count (see ifBackwardsCheckForEvents)
-			the number of arguments (since argument temporaries are above the frame)
-			the flag for a block activation
-			and the flag indicating if the context field is valid (whether the frame is married).
-		saved method ip holds the saved method ip when the callee frame is a machine code frame.
-		This is because the saved method ip is actually the ceReturnToInterpreterTrampoline address.
-	In a machine code frame
-		the flag indicating if the context is valid is the least significant bit of the method pointer
-		the flag for a block activation is the next most significant bit of the method pointer
-
-	Interpreter frames are distinguished from method frames by the method field which will
-	be a pointer into the heap for an interpreter frame and a pointer into the method zone for
-	a machine code frame.
-
-	The first frame in a stack page is the baseFrame and is marked as such by a saved fp being its stackPage,
-	in which case the first word on the stack is the caller context (possibly hybrid) beneath the base frame."
-
-	| fxCallerSavedIP fxSavedFP fxMethod fxIFrameFlags fxThisContext fxIFReceiver fxMFReceiver fxIFSavedIP |
-	fxCallerSavedIP := 1.
-	fxSavedFP := 0.
-	fxMethod := -1.
-	fxThisContext := -2.
-	fxIFrameFlags := -3.	"Can find numArgs, needed for fast temp access. args are above fxCallerSavedIP.
-							 Can find ``is block'' bit
-							 Can find ``has context'' bit"
-	fxIFSavedIP := -4.
-	fxIFReceiver := -5.
-	fxMFReceiver := -3.
-
-	"For debugging nil out values that differ in the StackInterpreter."
-	FrameSlots := #undeclared.
-	IFrameSlots := fxCallerSavedIP - fxIFReceiver + 1.
-	MFrameSlots := fxCallerSavedIP - fxMFReceiver + 1.
-
-	FoxCallerSavedIP := fxCallerSavedIP * objectMemory wordSize.
-	"In Cog a base frame's caller context is stored on the first word of the stack page."
-	FoxCallerContext := #undeclared.
-	FoxSavedFP := fxSavedFP * objectMemory wordSize.
-	FoxMethod := fxMethod * objectMemory wordSize.
-	FoxThisContext := fxThisContext * objectMemory wordSize.
-	FoxFrameFlags := #undeclared.
-	FoxIFrameFlags := fxIFrameFlags * objectMemory wordSize.
-	FoxIFSavedIP := fxIFSavedIP * objectMemory wordSize.
-	FoxReceiver := #undeclared.
-	FoxIFReceiver := fxIFReceiver * objectMemory wordSize.
-	FoxMFReceiver := fxMFReceiver * objectMemory wordSize.
-
-	"N.B.  There is room for one more flag given the current 8 byte alignment of methods (which
-	 is at least needed to distinguish the checked and uncecked entry points by their alignment."
-	MFMethodFlagHasContextFlag := 1.
-	MFMethodFlagIsBlockFlag := 2.
-	MFMethodFlagFrameIsMarkedFlag := 4. "for pathTo:using:followWeak:"
-	MFMethodFlagsMask := MFMethodFlagHasContextFlag + MFMethodFlagIsBlockFlag + MFMethodFlagFrameIsMarkedFlag.
-	MFMethodMask := (MFMethodFlagsMask + 1) negated
-]
-
 { #category : #'frame access' }
 CoInterpreter >> instVar: offset ofContext: aContext [
 	"Fetch an instance avriable from a maybe married context.
@@ -4914,6 +4713,18 @@ CoInterpreter >> maybeMethodHasCogMethod: anOop [
 	^(objectMemory isNonImmediate: anOop)
 	  and: [(objectMemory isCompiledMethod: anOop)
 	  and: [self isCogMethodReference: (self rawHeaderOf: anOop)]]
+]
+
+{ #category : #'return bytecodes' }
+CoInterpreter >> maybeReturnToMachineCodeFrame [
+	"If the frame we're returning to is a machine code one, then return to it.
+	 Otherwise, if it's an interpreter frame, load the saved ip."
+	<inline: true>
+	localIP asUnsignedInteger < objectMemory startOfMemory ifTrue:
+		[localIP asUnsignedInteger ~= cogit ceReturnToInterpreterPC ifTrue:
+			["localIP in the cog method zone indicates a return to machine code."
+			 ^self returnToMachineCodeFrame].
+		 localIP := self pointerForOop: (self iframeSavedIP: localFP)]
 ]
 
 { #category : #'debug support' }
