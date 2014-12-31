@@ -487,7 +487,7 @@ CogObjectRepresentationFor32BitSpur >> genGetNumBytesOf: srcReg into: destReg [
 	jmp := cogit JumpLess: 0.
 	cogit MoveMw: objectMemory wordSize negated r: srcReg R: destReg.
 	jmp jmpTarget: (cogit LogicalShiftLeftCq: objectMemory shiftForWord R: destReg). 
-	"Now: TempReg = numSlots << shiftForWord"
+	"Now: destReg = numSlots << shiftForWord"
 	cogit MoveMw: 0 r: srcReg R: TempReg.
 	cogit LogicalShiftRightCq: objectMemory formatShift R: TempReg.
 	cogit AndCq: objectMemory wordSize - 1 R: TempReg.
