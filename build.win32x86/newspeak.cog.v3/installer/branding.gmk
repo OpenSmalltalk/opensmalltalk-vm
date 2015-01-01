@@ -6,8 +6,8 @@
 # the 0-255 field.  So use YY.WW.SVN where WW is the week number.
 #VERSION:= 07.11.0101
 SVNREV  := $(shell grep '\$Rev: ' ../../../platforms/Cross/vm/sqSCCSVersion.h | sed 's/.*$Rev: \([0-9][0-9]*\).*/\1/' )
-#VERSION:= $(shell date +%g.%m%d.$(SVNREV))
-VERSION := $(shell date +%g.%U.$(SVNREV))
+#VERSION:= $(shell date +%y.%m%d.$(SVNREV))
+VERSION := $(shell date +%y.%U.$(SVNREV))
 
 # Base name of the executable (.exe is appended on Windows)
 ifndef VM_BASE_NAME

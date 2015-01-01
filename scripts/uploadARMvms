@@ -41,7 +41,7 @@ if [ -z "$REV" ]; then
 fi
 
 if [ -z "$TAG" ]; then
-	TAG=`date +%g.%U.`$REV
+	TAG=`date +%y.%U.`$REV
 fi
 echo REV=$REV TAG=$TAG
 

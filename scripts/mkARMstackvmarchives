@@ -29,7 +29,7 @@ done
 
 test -n "$REV" || REV=`grep 'SvnRawRevisionString.*Rev:' ../platforms/Cross/vm/sqSCCSVersion.h \
 	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
-test -n "$TAG" || TAG=`date +%g.%U.`$REV
+test -n "$TAG" || TAG=`date +%y.%U.`$REV
 echo REV=$REV TAG=$TAG
 
 for archive in stklinuxhtARM stkspurlinuxhtARM; do

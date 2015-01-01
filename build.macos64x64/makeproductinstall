@@ -4,7 +4,7 @@ IFS="
 trap 'exit 2' HUP INT PIPE TERM
 REV=`grep 'SvnRawRevisionString.*Rev:' "\`dirname $0\`/../platforms/Cross/vm/sqSCCSVersion.h" \
 	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
-TAG=`date +%g.%U.`$REV
+TAG=`date +%y.%U.`$REV
 set -- Newspeak\ Virtual\ Machine	Newspeak\ Spur\ Virtual\ Machine
 for td in newspeak.cog.spur; do
 	d=$td/installer
