@@ -6044,7 +6044,8 @@ StackInterpreter >> findUnwindThroughContext: homeContext [
 	ctxtOrNilOrZero = 0 ifTrue:
 		[theMethod := objectMemory fetchPointer: MethodIndex ofObject: homeContext.
 		 (self primitiveIndexOf: theMethod) = 198 ifTrue:
-			[^homeContext]].
+			[^homeContext].
+		 ^0].
 
 	"If an unwind was found, can the home context be found also?  No need to look if on the same page.
 	 No need to look if cannot return (ctxtOrNilOrZero = objectMemory nilObject)"
@@ -10841,7 +10842,7 @@ StackInterpreter >> printHexPtrnp: p [
 { #category : #'debug printing' }
 StackInterpreter >> printHexnp: n [
 	"Print n in hex,  in the form '0x1234', unpadded"
-	self print: '0x%lx' f: n
+	self print: '0x%lx' f: (self cCoerceSimple: n to: #'unsigned long')
 ]
 
 { #category : #'debug printing' }
