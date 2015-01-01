@@ -4209,7 +4209,7 @@ StackInterpreter >> commonReturn [
 	<var: #thePage type: #'StackPage *'>
 
 	"If this is a method simply return to the  sender/caller."
-	(self frameIsBlockActivation: localFP) ifFalse:
+	(self iframeIsBlockActivation: localFP) ifFalse:
 		[^self commonCallerReturn].
 
 	"Since this is a block activation the closure is on the stack above any args and the frame."
@@ -4265,7 +4265,7 @@ StackInterpreter >> commonReturn [
 	"Now we have a frame to return to.  If it is on a different page we must free intervening pages and
 	 nil out intervening contexts.  We must free intervening stack pages because if we leave the pages
 	 to be divorced then their contexts will be divorced with intact senders and instruction pointers.  This
-	 code is similar to primitiveTerminateTo.  We must move any frames on itervening pages above the
+	 code is similar to primitiveTerminateTo.  We must move any frames on intervening pages above the
 	 frame linked to because these may be in use, e.g. via co-routining (see baseFrameReturn)."
 	self assert: stackPages pageListIsWellFormed.
 	newPage := stackPages stackPageFor: frameToReturnTo.
@@ -6042,9 +6042,10 @@ StackInterpreter >> findUnwindThroughContext: homeContext [
 		[theMethod := objectMemory fetchPointer: MethodIndex ofObject: homeContext.
 		 (self primitiveIndexOf: theMethod) = 198 ifTrue:
 			[^homeContext].
-		 ^0].
-	"Found an unwind.  Can the home context be found also?"
-	ctxtOrNilOrZero = objectMemory nilObject ifFalse:
+		 self assert: ctxtOrNilOrZero ~= objectMemory nilObject.
+		 ^ctxtOrNilOrZero].
+	"If an unwnd was found, can the home context be found also?"
+	ctxtOrNilOrZero ~= objectMemory nilObject ifTrue:
 		[(self findMethodWithPrimitive: 0 FromContext: ctxtOrNilOrZero UpToContext: homeContext)
 		  = objectMemory nilObject ifTrue:
 			[^objectMemory nilObject]].
@@ -7057,6 +7058,11 @@ StackInterpreter >> iframeInstructionPointerForIndex: ip method: aMethod [
 	self assert: (ip between: (((LiteralStart + (objectMemory literalCountOf: aMethod)) * objectMemory bytesPerOop)) + 1
 					and: (objectMemory lengthOf: aMethod)).
 	^aMethod + ip + objectMemory baseHeaderSize - 2
+]
+
+{ #category : #'frame access' }
+StackInterpreter >> iframeIsBlockActivation: theFP [ "<Integer>"
+	^self frameIsBlockActivation: theFP
 ]
 
 { #category : #'frame access' }
