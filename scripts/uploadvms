@@ -148,12 +148,12 @@ if [ -n "$CheckDMG" -a -n "$MNSCOG" -a ! -f "Newspeak Virtual Machine-$TAG.dmg" 
 fi
 if [ -n "$CheckDMG" -a -n "$MNSSPUR" -a ! -f "Newspeak Spur Virtual Machine-$TAG.dmg" ]; then
 	NMID=../build.macos32x86/newspeak.cog.spur/installer
-	if [ -f "Newspeak Virtual Spur Machine-$TAG.dmg" ]; then
+	if [ -f "Newspeak Spur Virtual Machine-$TAG.dmg" ]; then
 		true
-	elif [ -f "$NMID/Newspeak Virtual Spur Machine-$TAG.dmg" ]; then
-		ln "$NMID/Newspeak Virtual Spur Machine-$TAG.dmg" .
+	elif [ -f "$NMID/Newspeak Spur Virtual Machine-$TAG.dmg" ]; then
+		ln "$NMID/Newspeak Spur Virtual Machine-$TAG.dmg" .
 	else
-		echo Newspeak Virtual Spur Machine-$TAG.dmg is missing 1>&2
+		echo Newspeak Spur Virtual Machine-$TAG.dmg is missing 1>&2
 		exit 1
 	fi
 fi
