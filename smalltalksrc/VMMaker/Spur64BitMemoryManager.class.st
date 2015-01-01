@@ -680,7 +680,7 @@ Spur64BitMemoryManager >> loadFloatOrIntFrom: floatOrIntOop [
 			 (tagBits = self smallIntegerTag
 			  and: [shift := 64 - self numTagBits - self smallFloatMantissaBits.
 				(self cCode: [floatOrIntOop << shift]
-						inSmalltalk: [floatOrIntOop << shift bitAnd: 1 << 64 - 1]) >> shift = floatOrIntOop]) ifTrue:
+						inSmalltalk: [floatOrIntOop << shift bitAnd: 1 << 64 - 1]) >>> shift = floatOrIntOop]) ifTrue:
 				[^(self integerValueOf: floatOrIntOop) asFloat]]
 		ifFalse:
 			[(self classIndexOf: floatOrIntOop) = ClassFloatCompactIndex ifTrue:
