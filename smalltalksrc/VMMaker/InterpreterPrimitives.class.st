@@ -2813,7 +2813,7 @@ InterpreterPrimitives >> primitivePin [
 		ifFalse:
 			[wasPinned := objectMemory falseObject.
 			 (boolean = objectMemory trueObject
-			  and: [objectMemory pinObject: obj]) = 0 ifTrue:
+			  and: [(objectMemory pinObject: obj) = 0]) ifTrue:
 				[^self primitiveFailFor: PrimErrNoMemory]].
 	
 	self pop: argumentCount + 1 thenPush: wasPinned
