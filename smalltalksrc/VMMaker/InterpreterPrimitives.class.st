@@ -2797,10 +2797,9 @@ InterpreterPrimitives >> primitivePin [
 
 	obj := self stackValue: 1.
 	((objectMemory isImmediate: obj)
-	 or: [(objectMemory isForwarded: obj)
-	 or: [(objectMemory isContext: obj)
-		and: [self isStillMarriedContext: obj]]]) ifTrue:
+	 or: [objectMemory isForwarded: obj]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadReceiver].
+
 	boolean := self stackTop.
 	(boolean = objectMemory falseObject
 	 or: [boolean = objectMemory trueObject]) ifFalse:
@@ -2809,7 +2808,8 @@ InterpreterPrimitives >> primitivePin [
 	(objectMemory isPinned: obj)
 		ifTrue:
 			[wasPinned := objectMemory trueObject.
-			 objectMemory setIsPinnedOf: obj to: boolean = objectMemory trueObject]
+			 boolean ~= wasPinned ifTrue:
+				[objectMemory setIsPinnedOf: obj to: false]]
 		ifFalse:
 			[wasPinned := objectMemory falseObject.
 			 (boolean = objectMemory trueObject
