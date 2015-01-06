@@ -260,8 +260,8 @@
 		087740A300C6A47FC0A80109 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = /System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<absolute>"; };
 		087740A400C6A47FC0A80109 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
 		087740A700C6A4EDC0A80109 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = /System/Library/Frameworks/OpenGL.framework; sourceTree = "<absolute>"; };
-		664A73DB0300584000A80109 /* Squeak VM.r */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.rez; name = "Squeak VM.r"; path = "resources/ProjectBuilder/Squeak VM.r"; sourceTree = "<group>"; };
-		664A73DF0300584000A80109 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakPlugin.icns; path = resources/ProjectBuilder/SqueakPlugin.icns; sourceTree = "<group>"; };
+		664A73DB0300584000A80109 /* Squeak VM.r */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.rez; name = "Squeak VM.r"; path = "Squeak VM.r"; sourceTree = "<group>"; };
+		664A73DF0300584000A80109 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakPlugin.icns; path = SqueakPlugin.icns; sourceTree = "<group>"; };
 		66A8FED80300824600A80109 /* sqGnu.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqGnu.h; path = Developer/sqGnu.h; sourceTree = "<group>"; };
 		730DA7FD1379F4C9004985EC /* sqMacHostWindow.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqMacHostWindow.c; path = HostWindowPlugin/sqMacHostWindow.c; sourceTree = "<group>"; };
 		7339705F137A1CE2001B0C43 /* acos.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = acos.c; path = FloatMathPlugin/acos.c; sourceTree = "<group>"; };
@@ -331,7 +331,7 @@
 		73BEE4CA137A1895009EA37A /* FloatArrayPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = FloatArrayPlugin.c; path = FloatArrayPlugin/FloatArrayPlugin.c; sourceTree = "<group>"; };
 		73BEE4CD137A191B009EA37A /* FloatMathPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FloatMathPlugin.h; path = FloatMathPlugin/FloatMathPlugin.h; sourceTree = "<group>"; };
 		73BEE4CF137A19A3009EA37A /* sqaio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqaio.h; path = vm/sqaio.h; sourceTree = "<group>"; };
-		73C91A9613DE251D00EFDE79 /* NewspeakDocuments.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = NewspeakDocuments.icns; path = resources/ProjectBuilder/NewspeakDocuments.icns; sourceTree = "<group>"; };
+		73C91A9613DE251D00EFDE79 /* NewspeakDocuments.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = NewspeakDocuments.icns; path = NewspeakDocuments.icns; sourceTree = "<group>"; };
 		73DCBD121378A59F000E8F88 /* sqMacHostWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMacHostWindow.h; path = HostWindowPlugin/sqMacHostWindow.h; sourceTree = "<group>"; };
 		73DCBD151378A687000E8F88 /* HostWindowPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HostWindowPlugin.h; path = HostWindowPlugin/HostWindowPlugin.h; sourceTree = "<group>"; };
 		73E7120E137A1DD7002EDF89 /* FileCopyPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FileCopyPlugin.h; path = FileCopyPlugin/FileCopyPlugin.h; sourceTree = "<group>"; };
@@ -399,7 +399,7 @@
 		A2FB6B570CCD71B000A29088 /* sqMacLocaleCarbon.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqMacLocaleCarbon.c; path = LocalePlugin/sqMacLocaleCarbon.c; sourceTree = "<group>"; };
 		A2FB6B580CCD71B000A29088 /* sqMacLocaleCarbon.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqMacLocaleCarbon.h; path = LocalePlugin/sqMacLocaleCarbon.h; sourceTree = "<group>"; };
 		DAD40DAF0AA60CE90082521A /* CoreVM.plist */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.plist.xml; path = CoreVM.plist; sourceTree = "<group>"; };
-		DAFA08930AA64625008DF459 /* Newspeak Virtual Machine.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "Newspeak Virtual Machine.icns"; path = "resources/ProjectBuilder/Newspeak Virtual Machine.icns"; sourceTree = "<group>"; };
+		DAFA08930AA64625008DF459 /* Newspeak Virtual Machine.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "Newspeak Virtual Machine.icns"; path = "Newspeak Virtual Machine.icns"; sourceTree = "<group>"; };
 		F5F8AE4102EB4E090100013C /* JConfig.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = JConfig.h; sourceTree = "<group>"; };
 		F5F8AE6A02EB4E0A0100013C /* sqMacUUID.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacUUID.c; sourceTree = "<group>"; };
 		F5F8AEED02EB4E0A0100013C /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqConfig.h; sourceTree = "<group>"; };
@@ -546,6 +546,7 @@
 				664A73DF0300584000A80109 /* SqueakPlugin.icns */,
 			);
 			name = Resources;
+			path = "../../platforms/Mac OS/Resources";
 			sourceTree = "<group>";
 		};
 		08773F3000C6A1C4C0A80109 /* Products */ = {

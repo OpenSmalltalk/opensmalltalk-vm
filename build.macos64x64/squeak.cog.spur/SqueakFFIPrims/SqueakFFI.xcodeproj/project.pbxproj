@@ -53,6 +53,7 @@
 				08FB77AFFE84173DC02AAC07 /* Source */,
 				089C167CFE841241C02AAC07 /* Resources */,
 				089C1671FE841209C02AAC07 /* External Frameworks and Libraries */,
+				8D576317048677EA00EA77CD /* Info.plist */,
 				19C28FB6FE9D52B211CA2CBB /* Products */,
 			);
 			name = SqueakFFI;
@@ -70,10 +71,10 @@
 			isa = PBXGroup;
 			children = (
 				730BD73010AA277B0023C110 /* SqueakPlugin.icns */,
-				8D576317048677EA00EA77CD /* Info.plist */,
 			);
 			name = Resources;
-			sourceTree = "<group>";
+			path = "../../../platforms/Mac OS/Resources";
+			sourceTree = SOURCE_ROOT;
 		};
 		08FB77AFFE84173DC02AAC07 /* Source */ = {
 			isa = PBXGroup;

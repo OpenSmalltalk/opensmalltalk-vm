@@ -24,7 +24,7 @@
 		730BD72A10AA26FB0023C110 /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spurstacksrc/vm/interp.h; sourceTree = SOURCE_ROOT; };
 		730BD72D10AA27410023C110 /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
 		730BD72F10AA27590023C110 /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
-		730BD73010AA277B0023C110 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakPlugin.icns; path = ../resources/ProjectBuilder/SqueakPlugin.icns; sourceTree = SOURCE_ROOT; };
+		730BD73010AA277B0023C110 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakPlugin.icns; sourceTree = "<group>"; };
 		733EFEAC10B4D31C00A2FDA5 /* sqFFI.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = sqFFI.h; path = ../../../platforms/Cross/plugins/SqueakFFIPrims/sqFFI.h; sourceTree = SOURCE_ROOT; };
 		7386749011ED15E500E5B738 /* sqFFITestFuncs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqFFITestFuncs.c; path = ../../../platforms/Cross/plugins/SqueakFFIPrims/sqFFITestFuncs.c; sourceTree = SOURCE_ROOT; };
 		739A636B10AA442600F87ADB /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqConfig.h; path = "../../../platforms/Mac OS/vm/sqConfig.h"; sourceTree = SOURCE_ROOT; };
@@ -53,6 +53,7 @@
 				08FB77AFFE84173DC02AAC07 /* Source */,
 				089C167CFE841241C02AAC07 /* Resources */,
 				089C1671FE841209C02AAC07 /* External Frameworks and Libraries */,
+				8D576317048677EA00EA77CD /* Info.plist */,
 				19C28FB6FE9D52B211CA2CBB /* Products */,
 			);
 			name = SqueakFFI;
@@ -70,10 +71,10 @@
 			isa = PBXGroup;
 			children = (
 				730BD73010AA277B0023C110 /* SqueakPlugin.icns */,
-				8D576317048677EA00EA77CD /* Info.plist */,
 			);
 			name = Resources;
-			sourceTree = "<group>";
+			path = "../../../platforms/Mac OS/Resources";
+			sourceTree = SOURCE_ROOT;
 		};
 		08FB77AFFE84173DC02AAC07 /* Source */ = {
 			isa = PBXGroup;
