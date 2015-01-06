@@ -1,0 +1,96 @@
+//
+//  sqSqueakMainApplication.h
+//  
+//
+//  Created by John M McIntosh on 5/15/08.
+//
+/*
+ Some of this code was funded via a grant from the European Smalltalk User Group (ESUG)
+ Copyright (c) 2008 Corporate Smalltalk Consulting Ltd. All rights reserved.
+ MIT License
+ Permission is hereby granted, free of charge, to any person
+ obtaining a copy of this software and associated documentation
+ files (the "Software"), to deal in the Software without
+ restriction, including without limitation the rights to use,
+ copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the
+ Software is furnished to do so, subject to the following
+ conditions:
+ 
+ The above copyright notice and this permission notice shall be
+ included in all copies or substantial portions of the Software.
+ 
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ OTHER DEALINGS IN THE SOFTWARE.
+ 
+ The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
+ "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
+ and its contributors", in the same place and form as other third-party acknowledgments. 
+ Alternately, this acknowledgment may appear in the software itself, in the same form and location as other 
+ such third-party acknowledgments.
+ */
+
+//
+
+#import <Foundation/Foundation.h>
+#import "sq.h"
+#import "Queue.h"
+#import "sqSqueakFileDirectoryInterface.h"
+#import "sqSqueakScreenAndWindow.h"
+#import "sqSqueakInfoPlistInterface.h"
+#import	"sqSqueakSoundCoreAudio.h"
+
+#import "sqSqueakMainApp.h"
+
+@interface sqSqueakMainApplication : NSObject {
+	NSURL                           *vmPathStringURL;
+	NSURL                           *imageNameURL;
+	NSStringEncoding                currentVMEncoding;
+	NSMutableArray                  *argsArguments;
+	NSMutableArray                  *commandLineArguments;
+	sqSqueakFileDirectoryInterface  *fileDirectoryLogic;
+	sqSqueakSoundCoreAudio          *soundInterfaceLogic;
+    sqSqueakInfoPlistInterface      *infoPlistInterfaceLogic;
+	sqInt                           inputSemaphoreIndex; //event semaphore for VM thread
+	Queue                           * eventQueue;		 //event queue for user events from UI thread
+    BOOL                            noHandlers;
+}
+- (void) setupFloat;
+- (void) setupErrorRecovery;
+- (void) fetchPreferences;
+- (sqSqueakInfoPlistInterface *) newSqSqueakInfoPlistInterfaceCreation;
+- (void) doHeadlessSetup;
+- (void) doMemorySetup;
+- (void) parseUnixArgs;
+- (void) attachToSignals;
+- (void) setupMenus;
+- (void) setupTimers;
+- (void) setupAIO;
+- (void) setupEventQueue;
+- (void) setupBrowserLogic;
+- (void) setupSoundLogic;
+- (void) runSqueak;
+- (void) MenuBarRestore;
+- (void) ioExit;
+- (void) ioExitWithErrorCode: (int) ec;
+- (sqSqueakFileDirectoryInterface *) newFileDirectoryInterfaceInstance;
+
+@property BOOL noHandlers;
+@property (nonatomic,retain) NSURL* vmPathStringURL;
+@property (nonatomic,readonly) sqSqueakInfoPlistInterface* infoPlistInterfaceLogic;
+@property (nonatomic,retain) sqSqueakSoundCoreAudio* soundInterfaceLogic;
+@property (nonatomic,retain) NSURL* imageNameURL;
+@property (nonatomic,assign) sqInt inputSemaphoreIndex;
+@property (nonatomic,assign) NSStringEncoding currentVMEncoding;
+@property (nonatomic,retain) Queue* eventQueue;
+@property (nonatomic,retain) sqSqueakFileDirectoryInterface * fileDirectoryLogic;
+@property (nonatomic,retain) sqSqueakInfoPlistInterface *infoPListInterfaceLogic;
+@property (nonatomic,retain) NSMutableArray* argsArguments;
+@property (nonatomic,retain) NSMutableArray*commandLineArguments;
+@end
