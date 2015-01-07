@@ -758,7 +758,7 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacFileLogic.h</PATH>
+                    <PATH>sqMacUnixFileInterface.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
@@ -817,7 +817,7 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacFileLogic.h</PATH>
+                    <PATH>sqMacUnixFileInterface.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
             </LINKORDER>
@@ -1532,7 +1532,7 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacFileLogic.h</PATH>
+                    <PATH>sqMacUnixFileInterface.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
@@ -1591,7 +1591,7 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacFileLogic.h</PATH>
+                    <PATH>sqMacUnixFileInterface.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
             </LINKORDER>
@@ -1620,7 +1620,7 @@
             <FILEREF>
                 <TARGETNAME>InternetConfigPlugin</TARGETNAME>
                 <PATHTYPE>Name</PATHTYPE>
-                <PATH>sqMacFileLogic.h</PATH>
+                <PATH>sqMacUnixFileInterface.h</PATH>
                 <PATHFORMAT>MacOS</PATHFORMAT>
             </FILEREF>
             <FILEREF>

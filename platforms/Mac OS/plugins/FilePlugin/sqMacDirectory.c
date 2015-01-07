@@ -29,7 +29,7 @@
 
 #include "sq.h"
 #include "FilePlugin.h"
-#include "sqMacFileLogic.h"
+#include "sqMacUnixFileInterface.h"
 #if TARGET_API_MAC_CARBON
 	#include <Carbon/Carbon.h>
 	#include <unistd.h>

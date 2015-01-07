@@ -11,7 +11,7 @@
 
 #include "sqMacEncoding.h"
 #include "sqMacUIConstants.h"
-#include "sqMacFileLogic.h"
+#include "sqMacUnixFileInterface.h"
 
 
     CFStringEncoding gCurrentVMEncoding=kCFStringEncodingMacRoman;

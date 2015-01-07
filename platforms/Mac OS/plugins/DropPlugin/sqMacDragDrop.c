@@ -62,7 +62,7 @@ Some of this code comes from
 
 
 #include "sqVirtualMachine.h"
-#include "sqMacFileLogic.h"	
+#include "sqMacUnixFileInterface.h"	
 #include "sqMacUIConstants.h"
 #include "DropPlugin.h"
 

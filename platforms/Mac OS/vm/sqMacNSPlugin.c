@@ -71,7 +71,7 @@ March	2005	JMM 3.7.6	Add host window support
 
 #include "sq.h"
 #include "sqMacUIEvents.h"
-#include "sqMacFileLogic.h"
+#include "sqMacUnixFileInterface.h"
 #include "FilePlugin.h"
 #include "sqMacTime.h"
 #include "npapi.h"

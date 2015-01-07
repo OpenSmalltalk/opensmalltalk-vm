@@ -34,7 +34,7 @@
 #include "sq.h"
 #include "sqMacUnixCommandLineInterface.h"
 #include "sqMacEncoding.h"
-#include "sqMacFileLogic.h"
+#include "sqMacUnixFileInterface.h"
 #include "sqMacUIConstants.h"
 #include "sqMacUnixFileInterface.h"
 

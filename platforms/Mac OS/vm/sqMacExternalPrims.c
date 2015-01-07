@@ -18,7 +18,7 @@
 
 #include "sq.h"
 #include "sqMacExternalPrims.h"
-#include "sqMacFileLogic.h"
+#include "sqMacUnixFileInterface.h"
 #include "sqMacEncoding.h"
 #include "sqMacUIConstants.h"
 

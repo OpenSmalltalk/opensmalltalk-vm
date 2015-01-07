@@ -14,7 +14,7 @@
 #include <InternetConfig.h>
 #include "sq.h"
 #include "InternetConfigPlugin.h"
-#include "sqMacFileLogic.h"
+#include "sqMacUnixFileInterface.h"
 #include "sqMacUIConstants.h"
 
 static OSType GetApplicationSignature(void);

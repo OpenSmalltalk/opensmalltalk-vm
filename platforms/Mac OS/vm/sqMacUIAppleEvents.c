@@ -21,7 +21,7 @@
 #include "sqMacUIConstants.h"
 #include "sqMacUIEvents.h"
 #include "sqMacEncoding.h"
-#include "sqMacFileLogic.h"
+#include "sqMacUnixFileInterface.h"
 #include "DropPlugin.h"
 
 extern char gSqueakImageName;

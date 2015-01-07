@@ -49,7 +49,7 @@ Also if you attempt to use Apple's StdClib it wants posix names, sigh...
 
 #include "sq.h"
 #include "sqVirtualMachine.h"
-#include "sqMacFileLogic.h"	
+#include "sqMacUnixFileInterface.h"	
 
 static void resolveLongName(short vRefNum, long parID, unsigned char *shortFileName,FSSpec *possibleSpec,Boolean isFolder,Str255 *name,squeakFileOffsetType *sizeOfFile);
 static int fetchFileSpec(FSSpec *spec,unsigned char *name,long *parentDirectory);

@@ -84,7 +84,6 @@
 		941A3B6D09AA144000C9D25A /* sqMacUnixFileInterface.h in Headers */ = {isa = PBXBuildFile; fileRef = 946DD776098FF9E3006BBA1E /* sqMacUnixFileInterface.h */; };
 		941A3B6E09AA144000C9D25A /* sqUnixAsynchFile.h in Headers */ = {isa = PBXBuildFile; fileRef = 946DD81F098FFFB6006BBA1E /* sqUnixAsynchFile.h */; };
 		941A3B6F09AA144000C9D25A /* sqMacImageIO.h in Headers */ = {isa = PBXBuildFile; fileRef = 946DD91D099015C5006BBA1E /* sqMacImageIO.h */; };
-		941A3B7009AA144000C9D25A /* sqMacFileLogic.h in Headers */ = {isa = PBXBuildFile; fileRef = 948AE67B09942EF2006256FE /* sqMacFileLogic.h */; };
 		941A3B7209AA144000C9D25A /* Squeak.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DC0300584000A80109 /* Squeak.icns */; };
 		941A3B7309AA144000C9D25A /* SqueakChanges.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DD0300584000A80109 /* SqueakChanges.icns */; };
 		941A3B7409AA144000C9D25A /* SqueakImage.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DE0300584000A80109 /* SqueakImage.icns */; };
@@ -251,12 +250,12 @@
 		087740A300C6A47FC0A80109 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = /System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<absolute>"; };
 		087740A400C6A47FC0A80109 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
 		087740A700C6A4EDC0A80109 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = /System/Library/Frameworks/OpenGL.framework; sourceTree = "<absolute>"; };
-		664A73DB0300584000A80109 /* Squeak VM.r */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.rez; name = "Squeak VM.r"; path = "Squeak VM.r"; sourceTree = "<group>"; };
-		664A73DC0300584000A80109 /* Squeak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = Squeak.icns; path = Squeak.icns; sourceTree = "<group>"; };
-		664A73DD0300584000A80109 /* SqueakChanges.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakChanges.icns; path = SqueakChanges.icns; sourceTree = "<group>"; };
-		664A73DE0300584000A80109 /* SqueakImage.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakImage.icns; path = SqueakImage.icns; sourceTree = "<group>"; };
-		664A73DF0300584000A80109 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakPlugin.icns; path = SqueakPlugin.icns; sourceTree = "<group>"; };
-		664A73E00300584000A80109 /* SqueakScript.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakScript.icns; path = SqueakScript.icns; sourceTree = "<group>"; };
+		664A73DB0300584000A80109 /* Squeak VM.r */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.rez; path = "Squeak VM.r"; sourceTree = "<group>"; };
+		664A73DC0300584000A80109 /* Squeak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Squeak.icns; sourceTree = "<group>"; };
+		664A73DD0300584000A80109 /* SqueakChanges.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakChanges.icns; sourceTree = "<group>"; };
+		664A73DE0300584000A80109 /* SqueakImage.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakImage.icns; sourceTree = "<group>"; };
+		664A73DF0300584000A80109 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakPlugin.icns; sourceTree = "<group>"; };
+		664A73E00300584000A80109 /* SqueakScript.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakScript.icns; sourceTree = "<group>"; };
 		66A8FED80300824600A80109 /* sqGnu.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqGnu.h; path = Developer/sqGnu.h; sourceTree = "<group>"; };
 		733AC8DA0FEAAC4F007C6206 /* version.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = version.c; sourceTree = "<group>"; };
 		733B2C36106AB74B004652BE /* sqExternalSemaphores.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqExternalSemaphores.c; sourceTree = "<group>"; };
@@ -317,7 +316,6 @@
 		9481DDB309B38AE3005C4088 /* sqMacNSPluginUILogic.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacNSPluginUILogic.c; sourceTree = "<group>"; };
 		94820D7F080E0B0F0061C2AB /* config.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 		948214FE080E3ABE0061C2AB /* interp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = interp.h; sourceTree = "<group>"; };
-		948AE67B09942EF2006256FE /* sqMacFileLogic.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqMacFileLogic.h; path = "../../platforms/Mac OS/vm/sqMacFileLogic.h"; sourceTree = SOURCE_ROOT; };
 		94C9F08C0991B7BD008BAAB5 /* sqMacSecurity.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacSecurity.c; sourceTree = "<group>"; };
 		94D42ACA07B2C071001CCA37 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = /System/Library/Frameworks/CoreAudio.framework; sourceTree = "<absolute>"; };
 		94D42AFC07B2C5DF001CCA37 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = /System/Library/Frameworks/AudioToolbox.framework; sourceTree = "<absolute>"; };
@@ -327,9 +325,9 @@
 		94D854E7048EF27E00A80109 /* aio.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = aio.c; path = ../../platforms/unix/vm/aio.c; sourceTree = SOURCE_ROOT; };
 		94E4DA3909BBB9E90046E6F4 /* sqMacDragDrop.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacDragDrop.c; sourceTree = "<group>"; };
 		94E8D43909AF5D4100D45FB8 /* sqMacUnixExternalPrims.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacUnixExternalPrims.c; sourceTree = "<group>"; };
-		94FC2ECE05498CA800A80109 /* SqueakGeneric.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakGeneric.icns; path = SqueakGeneric.icns; sourceTree = "<group>"; };
-		94FC2ECF05498CA800A80109 /* SqueakProject.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakProject.icns; path = SqueakProject.icns; sourceTree = "<group>"; };
-		94FC2ED005498CA800A80109 /* SqueakSources.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakSources.icns; path = SqueakSources.icns; sourceTree = "<group>"; };
+		94FC2ECE05498CA800A80109 /* SqueakGeneric.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakGeneric.icns; sourceTree = "<group>"; };
+		94FC2ECF05498CA800A80109 /* SqueakProject.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakProject.icns; sourceTree = "<group>"; };
+		94FC2ED005498CA800A80109 /* SqueakSources.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakSources.icns; sourceTree = "<group>"; };
 		94FD7EC807B8491B002F2291 /* sqUnixSoundMacOSXJMM.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqUnixSoundMacOSXJMM.c; sourceTree = "<group>"; };
 		A21AB9C60E99661000A432CA /* sqMacNSPluginUILogic2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacNSPluginUILogic2.c; sourceTree = "<group>"; };
 		A21AB9CA0E99682000A432CA /* NSCursorWrappers.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSCursorWrappers.m; sourceTree = "<group>"; };
@@ -379,7 +377,7 @@
 		A2FB6B580CCD71B000A29088 /* sqMacLocaleCarbon.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqMacLocaleCarbon.h; path = LocalePlugin/sqMacLocaleCarbon.h; sourceTree = "<group>"; };
 		A2FB6B720CCD723F00A29088 /* LocalePlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = LocalePlugin.h; path = LocalePlugin/LocalePlugin.h; sourceTree = "<group>"; };
 		DAD40DAF0AA60CE90082521A /* CoreVM.plist */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.plist.xml; path = CoreVM.plist; sourceTree = "<group>"; };
-		DAFA08930AA64625008DF459 /* GreenCogSqueak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = GreenCogSqueak.icns; path = GreenCogSqueak.icns; sourceTree = "<group>"; };
+		DAFA08930AA64625008DF459 /* GreenCogSqueak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = GreenCogSqueak.icns; sourceTree = "<group>"; };
 		F5F8AE0F02EB4E090100013C /* sqMacOpenGL.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacOpenGL.h; sourceTree = "<group>"; };
 		F5F8AE3D02EB4E090100013C /* sqMacInternetConfiguration.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacInternetConfiguration.c; sourceTree = "<group>"; };
 		F5F8AE3F02EB4E090100013C /* sqMacJoystickAndTablet.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacJoystickAndTablet.c; sourceTree = "<group>"; };
@@ -636,6 +634,29 @@
 			path = ../../platforms/unix;
 			sourceTree = "<group>";
 		};
+		73F1E0951A5CB2E90072BF0D /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				73F1E09C1A5CB31F0072BF0D /* plugins */,
+				73F1E09F1A5CB3280072BF0D /* vm */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		73F1E09C1A5CB31F0072BF0D /* plugins */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = plugins;
+			sourceTree = "<group>";
+		};
+		73F1E09F1A5CB3280072BF0D /* vm */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = vm;
+			sourceTree = "<group>";
+		};
 		940AFA4106DFCFDC0062E19F /* MacMenubarPlugin */ = {
 			isa = PBXGroup;
 			children = (
@@ -706,6 +727,7 @@
 				F5F8ADC502EB4E090100013C /* vm */,
 				7384271E11010B920070B80D /* plugins */,
 				F5F8AF0F02EB4E0A0100013C /* Cross */,
+				73F1E0951A5CB2E90072BF0D /* iOS */,
 				F5F8AE0802EB4E090100013C /* Mac OS */,
 				73BC1BC80F5769A8003412C5 /* unix */,
 			);
@@ -785,7 +807,6 @@
 		F5F8AE3902EB4E090100013C /* FilePlugin */ = {
 			isa = PBXGroup;
 			children = (
-				948AE67B09942EF2006256FE /* sqMacFileLogic.h */,
 				946DD776098FF9E3006BBA1E /* sqMacUnixFileInterface.h */,
 				946DD777098FF9E3006BBA1E /* sqMacUnixFileInterface.c */,
 			);
@@ -1264,7 +1285,6 @@
 				941A3B6D09AA144000C9D25A /* sqMacUnixFileInterface.h in Headers */,
 				941A3B6E09AA144000C9D25A /* sqUnixAsynchFile.h in Headers */,
 				941A3B6F09AA144000C9D25A /* sqMacImageIO.h in Headers */,
-				941A3B7009AA144000C9D25A /* sqMacFileLogic.h in Headers */,
 				94002C4409EB18EF003C4BF2 /* sqMemoryAccess.h in Headers */,
 				9426FF2009F489D200ECEDDC /* config.h in Headers */,
 				9426FF2209F489D200ECEDDC /* internal.h in Headers */,

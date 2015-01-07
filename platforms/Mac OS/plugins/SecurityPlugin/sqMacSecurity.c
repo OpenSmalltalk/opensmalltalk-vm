@@ -6,7 +6,7 @@
 // 3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 
 #include "sq.h"
-#include "sqMacFileLogic.h"	
+#include "sqMacUnixFileInterface.h"	
 #include "SecurityPlugin.h"
 #include "sqMacUIConstants.h"
 #include "FilePlugin.h"

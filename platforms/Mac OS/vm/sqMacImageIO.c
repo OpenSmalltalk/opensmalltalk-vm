@@ -18,7 +18,7 @@
 #include "sqMacImageIO.h"
 #include "sqMacUIConstants.h"
 #include "sqMacWindow.h"
-#include "sqMacFileLogic.h"
+#include "sqMacUnixFileInterface.h"
 #include "sqMacEncoding.h"
 
 

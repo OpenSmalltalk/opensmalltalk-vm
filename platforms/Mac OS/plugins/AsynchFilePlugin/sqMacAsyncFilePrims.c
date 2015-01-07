@@ -1,6 +1,6 @@
 #include "sq.h"
 #include "AsynchFilePlugin.h"
-#include "sqMacFileLogic.h"
+#include "sqMacUnixFileInterface.h"
 #if TARGET_API_MAC_CARBON
 #include <Carbon/Carbon.h>
 #else

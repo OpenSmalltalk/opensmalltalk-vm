@@ -88,7 +88,6 @@
 		941A3B6D09AA144000C9D25A /* sqMacUnixFileInterface.h in Headers */ = {isa = PBXBuildFile; fileRef = 946DD776098FF9E3006BBA1E /* sqMacUnixFileInterface.h */; };
 		941A3B6E09AA144000C9D25A /* sqUnixAsynchFile.h in Headers */ = {isa = PBXBuildFile; fileRef = 946DD81F098FFFB6006BBA1E /* sqUnixAsynchFile.h */; };
 		941A3B6F09AA144000C9D25A /* sqMacImageIO.h in Headers */ = {isa = PBXBuildFile; fileRef = 946DD91D099015C5006BBA1E /* sqMacImageIO.h */; };
-		941A3B7009AA144000C9D25A /* sqMacFileLogic.h in Headers */ = {isa = PBXBuildFile; fileRef = 948AE67B09942EF2006256FE /* sqMacFileLogic.h */; };
 		941A3B7209AA144000C9D25A /* Squeak.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DC0300584000A80109 /* Squeak.icns */; };
 		941A3B7309AA144000C9D25A /* SqueakChanges.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DD0300584000A80109 /* SqueakChanges.icns */; };
 		941A3B7409AA144000C9D25A /* SqueakImage.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DE0300584000A80109 /* SqueakImage.icns */; };
@@ -334,7 +333,6 @@
 		9481DDB309B38AE3005C4088 /* sqMacNSPluginUILogic.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacNSPluginUILogic.c; sourceTree = "<group>"; };
 		94820D7F080E0B0F0061C2AB /* config.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 		948214FE080E3ABE0061C2AB /* interp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = interp.h; sourceTree = "<group>"; };
-		948AE67B09942EF2006256FE /* sqMacFileLogic.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqMacFileLogic.h; path = "../../platforms/Mac OS/vm/sqMacFileLogic.h"; sourceTree = SOURCE_ROOT; };
 		94C9F08C0991B7BD008BAAB5 /* sqMacSecurity.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacSecurity.c; sourceTree = "<group>"; };
 		94D42ACA07B2C071001CCA37 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = /System/Library/Frameworks/CoreAudio.framework; sourceTree = "<absolute>"; };
 		94D42AFC07B2C5DF001CCA37 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = /System/Library/Frameworks/AudioToolbox.framework; sourceTree = "<absolute>"; };
@@ -846,7 +844,6 @@
 		F5F8AE3902EB4E090100013C /* FilePlugin */ = {
 			isa = PBXGroup;
 			children = (
-				948AE67B09942EF2006256FE /* sqMacFileLogic.h */,
 				946DD776098FF9E3006BBA1E /* sqMacUnixFileInterface.h */,
 				946DD777098FF9E3006BBA1E /* sqMacUnixFileInterface.c */,
 			);
@@ -1330,7 +1327,6 @@
 				941A3B6D09AA144000C9D25A /* sqMacUnixFileInterface.h in Headers */,
 				941A3B6E09AA144000C9D25A /* sqUnixAsynchFile.h in Headers */,
 				941A3B6F09AA144000C9D25A /* sqMacImageIO.h in Headers */,
-				941A3B7009AA144000C9D25A /* sqMacFileLogic.h in Headers */,
 				94002C4409EB18EF003C4BF2 /* sqMemoryAccess.h in Headers */,
 				9426FF2009F489D200ECEDDC /* config.h in Headers */,
 				9426FF2209F489D200ECEDDC /* internal.h in Headers */,

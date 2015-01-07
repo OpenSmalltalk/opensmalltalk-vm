@@ -86,7 +86,7 @@
 #include "sqMacUIAppleEvents.h"
 #include "sqMacImageIO.h"
 #include "sqMacUIClipBoard.h"
-#include "sqMacFileLogic.h"
+#include "sqMacUnixFileInterface.h"
 #include "sqMacUIEvents.h"
 #include "sqMacMemory.h"
 #include "sqMacEncoding.h"

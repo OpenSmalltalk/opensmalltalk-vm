@@ -1341,7 +1341,7 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacFileLogic.h</PATH>
+                    <PATH>sqMacUnixFileInterface.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
@@ -2528,7 +2528,7 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacFileLogic.h</PATH>
+                    <PATH>sqMacUnixFileInterface.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -4325,7 +4325,7 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacFileLogic.h</PATH>
+                    <PATH>sqMacUnixFileInterface.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
@@ -5343,7 +5343,7 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacFileLogic.h</PATH>
+                    <PATH>sqMacUnixFileInterface.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -7885,7 +7885,7 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacFileLogic.h</PATH>
+                    <PATH>sqMacUnixFileInterface.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
@@ -8922,7 +8922,7 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacFileLogic.h</PATH>
+                    <PATH>sqMacUnixFileInterface.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -10465,7 +10465,7 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacFileLogic.h</PATH>
+                    <PATH>sqMacUnixFileInterface.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
@@ -11626,7 +11626,7 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacFileLogic.h</PATH>
+                    <PATH>sqMacUnixFileInterface.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -13054,7 +13054,7 @@
             <FILEREF>
                 <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
                 <PATHTYPE>Name</PATHTYPE>
-                <PATH>sqMacFileLogic.h</PATH>
+                <PATH>sqMacUnixFileInterface.h</PATH>
                 <PATHFORMAT>MacOS</PATHFORMAT>
             </FILEREF>
             <FILEREF>
