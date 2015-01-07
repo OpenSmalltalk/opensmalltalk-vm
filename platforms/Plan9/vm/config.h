@@ -43,8 +43,6 @@
 #ifndef __sq_config_h
 #define __sq_config_h
 
-#define	HAVE_INTERP_H 1
-
 /* header files */
 
 #undef	HAVE_UNISTD_H
@@ -119,7 +117,6 @@
 #endif
 
 #undef HAVE_LIBDL
-/* #undef	DOUBLE_WORD_ALIGNMENT */
 /* #undef	DOUBLE_WORD_ORDER */
 
 /* other configured variables */

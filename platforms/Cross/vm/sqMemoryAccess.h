@@ -16,27 +16,18 @@
 #define __sqMemoryAccess_h
 
 #include "config.h"
-
-#if defined(HAVE_INTERP_H)
-# include "interp.h"
-#else
-# define SQ_VI_BYTES_PER_WORD 4		/* build a 32-bit VM */
-# warning 
-# warning ***************************************************
-# warning *
-# warning * interp.h not found -- defaulting to a 32-bit VM
-# warning *
-# warning * update your image-side VM sources to the latest
-# warning * version to avoid this message
-# warning *
-# warning ***************************************************
-# warning 
-#endif
+#include "interp.h"
 
 #if (SQ_VI_BYTES_PER_WORD == 4)
 # define SQ_IMAGE32 1
 #else
 # define SQ_IMAGE64 1
+#endif
+
+#if (SQ_IMAGE64 || SPURVM)
+# define OBJECTS_32BIT_ALIGNED 0
+#else
+# define OBJECTS_32BIT_ALIGNED 1
 #endif
 
 #if (SIZEOF_VOID_P == 4)
@@ -157,7 +148,7 @@
  * Pre-Cog systems stored floats in Mac PowerPC big-endian format.
  * BigEndianFloats selects this behaviour for backwards-compatibility.
  * RISC systems typically insist on double-word alignment of double-words, but
- * the heap is only word-aligned.  DOUBLE_WORD_ALIGNMENT selects word access.
+ * the heap is only word-aligned.  OBJECTS_32BIT_ALIGNED selects word access.
  */
 #if BigEndianFloats && !VMBIGENDIAN
 /* this is to allow strict aliasing assumption in the optimizer */
@@ -171,7 +162,7 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _swapper;
 		((_swapper *)(&doubleVar))->i[1] = *((int *)(intPointerToFloat) + 0); \
 		((_swapper *)(&doubleVar))->i[0] = *((int *)(intPointerToFloat) + 1); \
 	} while (0)
-# elif defined(DOUBLE_WORD_ALIGNMENT)
+# elif defined(OBJECTS_32BIT_ALIGNED)
 /* this is to allow strict aliasing assumption in the optimizer */
 typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _aligner;
 /* word-based copy for machines with alignment restrictions */
@@ -183,11 +174,11 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _aligner;
 	((_aligner *)(&doubleVar))->i[0] = *((int *)(intPointerToFloat) + 0); \
 	((_aligner *)(&doubleVar))->i[1] = *((int *)(intPointerToFloat) + 1); \
   } while (0)
-#else /* !(BigEndianFloats && !VMBIGENDIAN) && !DOUBLE_WORD_ALIGNMENT */
+#else /* !(BigEndianFloats && !VMBIGENDIAN) && !OBJECTS_32BIT_ALIGNED */
 /* for machines that allow doubles to be on any word boundary */
 # define storeFloatAtPointerfrom(i, doubleVar) (*((double *) (i)) = (doubleVar))
 # define fetchFloatAtPointerinto(i, doubleVar) ((doubleVar) = *((double *) (i)))
-#endif /* !(BigEndianFloats && !VMBIGENDIAN) && !DOUBLE_WORD_ALIGNMENT */
+#endif /* !(BigEndianFloats && !VMBIGENDIAN) && !OBJECTS_32BIT_ALIGNED */
 
 #define storeFloatAtfrom(i, doubleVar)	storeFloatAtPointerfrom(pointerForOop(i), doubleVar)
 #define fetchFloatAtinto(i, doubleVar)	fetchFloatAtPointerinto(pointerForOop(i), doubleVar)
