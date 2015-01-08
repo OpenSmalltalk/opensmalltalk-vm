@@ -40,7 +40,7 @@ modules, but which are not relevant to the outside. */
 #define	NEWLINE	'\r'
 #define SQUEAK_PLUGIN
 
-#include "config.h"
+#include "reconfig.h"
 
 /* To cope with SunOS4 and other systems that lack memmove() but have bcopy(),
 define a macro for memmove() if HAVE_MEMMOVE is false, provided that HAVE_BCOPY
