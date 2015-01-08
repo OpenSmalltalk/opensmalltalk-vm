@@ -1,4 +1,5 @@
 /* config.h.  Generated automatically by configure.  */
+/* renamed to reConfig.h to avoid conflicts with the main config.h */
 
 /* On Unix systems config.in is converted by configure into config.h. PCRE is
 written in Standard C, but there are a few non-standard things it can cope
