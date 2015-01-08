@@ -59,7 +59,6 @@ int readableFormat(int imageVersion);
 #endif
 
 #ifdef _MIPS_
-#	undef  DOUBLE_WORD_ALIGNMENT
 #	define  DOUBLE_WORD_ORDER
 #endif
 

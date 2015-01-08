@@ -40,6 +40,12 @@
 # define SQ_IMAGE64 1
 #endif
 
+#if (SQ_IMAGE64 || SPURVM)
+# define OBJECTS_32BIT_ALIGNED 0
+#else
+# define OBJECTS_32BIT_ALIGNED 1
+#endif
+
 #if (SIZEOF_VOID_P == 4)
 # define SQ_HOST32 1
 #elif (SIZEOF_VOID_P == 8)
@@ -129,7 +135,7 @@
    these macros to swap words if necessary. This costs no extra and
    obviates sometimes having to word-swap floats when reading an image.
 */
-#if defined(DOUBLE_WORD_ALIGNMENT) || defined(DOUBLE_WORD_ORDER)
+#if defined(OBJECTS_32BIT_ALIGNED) || defined(DOUBLE_WORD_ORDER)
 /* this is to allow strict aliasing assumption in the optimizer */
 typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _swapper;
 # ifdef DOUBLE_WORD_ORDER
@@ -149,7 +155,7 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _swapper;
 	((_swapper *)(&floatVarName))->i[0] = *((int *)(intPointerToFloat) + 0); \
 	((_swapper *)(&floatVarName))->i[1] = *((int *)(intPointerToFloat) + 1);
 # endif /*!DOUBLE_WORD_ORDER*/
-#else /*!(DOUBLE_WORD_ORDER||DOUBLE_WORD_ALIGNMENT)*/
+#else /*!(DOUBLE_WORD_ORDER||OBJECTS_32BIT_ALIGNED)*/
 /* for machines that allow doubles to be on any word boundary */
 # define storeFloatAtPointerfrom(i, floatVarName) \
 	*((double *) (i)) = (floatVarName);

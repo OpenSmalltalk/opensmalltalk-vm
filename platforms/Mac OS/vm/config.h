@@ -170,7 +170,6 @@
 #endif
 
 #define HAVE_LIBDL 1
-/* #undef	DOUBLE_WORD_ALIGNMENT */
 /* #undef	DOUBLE_WORD_ORDER */
 
 /* damage containment */
