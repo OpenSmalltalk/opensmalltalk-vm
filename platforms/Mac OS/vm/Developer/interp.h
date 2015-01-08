@@ -1,1 +1,0 @@
-/* Automatically generated from Squeak on #(6 June 2005 10:59:27 pm) */#define SQ_VI_BYTES_PER_WORD 4

@@ -3,16 +3,16 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 42;
+	objectVersion = 46;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7332D71A1A5DCAE50085E8BA /* sqGnu.h in Headers */ = {isa = PBXBuildFile; fileRef = 7332D7191A5DCAE50085E8BA /* sqGnu.h */; };
 		733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */ = {isa = PBXBuildFile; fileRef = 733B2C36106AB74B004652BE /* sqExternalSemaphores.c */; };
 		7351A09B100963670035A878 /* sqUnixThreads.c in Sources */ = {isa = PBXBuildFile; fileRef = 7351A09A100963670035A878 /* sqUnixThreads.c */; };
 		735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */; };
 		737888E713D0DE6500C5E1AD /* sqMemoryFence.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E513D0DE6500C5E1AD /* sqMemoryFence.h */; };
 		737888E813D0DE6500C5E1AD /* sqSCCSVersion.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */; };
-		738FB1EA0EE4CF94004BEE42 /* ia32abicc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738FB1E90EE4CF94004BEE42 /* ia32abicc.c */; };
 		738FB1ED0EE4D092004BEE42 /* IA32ABI.c in Sources */ = {isa = PBXBuildFile; fileRef = 738FB1EC0EE4D092004BEE42 /* IA32ABI.c */; };
 		739C6ED6112DCBB00049B7D3 /* sqTicker.c in Sources */ = {isa = PBXBuildFile; fileRef = 739C6ED5112DCBB00049B7D3 /* sqTicker.c */; };
 		739C6ED9112DCBD10049B7D3 /* sqAtomicOps.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C6ED7112DCBD10049B7D3 /* sqAtomicOps.h */; };
@@ -20,6 +20,9 @@
 		73B54C530E55EFED00FE780C /* sqUnixVMProfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 73B54C520E55EFED00FE780C /* sqUnixVMProfile.c */; };
 		73B96E490E47D7A10079C51B /* sqUnixHeartbeat.c in Sources */ = {isa = PBXBuildFile; fileRef = 73B96E480E47D7A10079C51B /* sqUnixHeartbeat.c */; };
 		73BC1BBE0F576864003412C5 /* gcc3x-interp.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB90F576864003412C5 /* gcc3x-interp.c */; };
+		73C50A191A5DCF4F00FA9451 /* dax64business.h in Headers */ = {isa = PBXBuildFile; fileRef = 73C50A171A5DCF4F00FA9451 /* dax64business.h */; };
+		73C50A1A1A5DCF4F00FA9451 /* x64ia32abicc.c in Sources */ = {isa = PBXBuildFile; fileRef = 73C50A181A5DCF4F00FA9451 /* x64ia32abicc.c */; };
+		73C50A241A5DD04400FA9451 /* sqConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = 73C50A231A5DD04400FA9451 /* sqConfig.h */; };
 		73D16CAD1A5DBAA100E316FB /* config.h in Headers */ = {isa = PBXBuildFile; fileRef = 73D16CAC1A5DBAA100E316FB /* config.h */; };
 		73DFFAC018D380C200C3C543 /* AioPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 73DFFABF18D380C200C3C543 /* AioPlugin.c */; };
 		73F1E42E1A5CB5F70072BF0D /* sqMacOpenGL.c in Sources */ = {isa = PBXBuildFile; fileRef = 73F1E4071A5CB5F70072BF0D /* sqMacOpenGL.c */; };
@@ -265,7 +268,7 @@
 		941A3C0209AA144000C9D25A /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94148CC5080DB5A400E8C647 /* IOKit.framework */; };
 		941A3C0309AA144000C9D25A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 944B5B5008F5C7A900611DF8 /* Foundation.framework */; };
 		9426FF1F09F489D200ECEDDC /* chartables.c in Sources */ = {isa = PBXBuildFile; fileRef = 9426FF0F09F489D200ECEDDC /* chartables.c */; };
-		9426FF2009F489D200ECEDDC /* config.h in Headers */ = {isa = PBXBuildFile; fileRef = 9426FF1009F489D200ECEDDC /* config.h */; };
+		9426FF2009F489D200ECEDDC /* reConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = 9426FF1009F489D200ECEDDC /* reConfig.h */; };
 		9426FF2109F489D200ECEDDC /* get.c in Sources */ = {isa = PBXBuildFile; fileRef = 9426FF1109F489D200ECEDDC /* get.c */; };
 		9426FF2209F489D200ECEDDC /* internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 9426FF1209F489D200ECEDDC /* internal.h */; };
 		9426FF2309F489D200ECEDDC /* pcre.c in Sources */ = {isa = PBXBuildFile; fileRef = 9426FF1309F489D200ECEDDC /* pcre.c */; };
@@ -324,13 +327,13 @@
 		664A73DF0300584000A80109 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakPlugin.icns; sourceTree = "<group>"; };
 		664A73E00300584000A80109 /* SqueakScript.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakScript.icns; sourceTree = "<group>"; };
 		66A8FED80300824600A80109 /* sqGnu.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqGnu.h; path = Developer/sqGnu.h; sourceTree = "<group>"; };
+		7332D7191A5DCAE50085E8BA /* sqGnu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqGnu.h; sourceTree = "<group>"; };
 		733AC8DA0FEAAC4F007C6206 /* version.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = version.c; sourceTree = "<group>"; };
 		733B2C36106AB74B004652BE /* sqExternalSemaphores.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqExternalSemaphores.c; sourceTree = "<group>"; };
 		7351A09A100963670035A878 /* sqUnixThreads.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixThreads.c; path = vm/sqUnixThreads.c; sourceTree = "<group>"; };
 		735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = VMProfileMacSupportPlugin.c; path = VMProfileMacSupportPlugin/VMProfileMacSupportPlugin.c; sourceTree = "<group>"; };
 		737888E513D0DE6500C5E1AD /* sqMemoryFence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMemoryFence.h; sourceTree = "<group>"; };
 		737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSCCSVersion.h; sourceTree = "<group>"; };
-		738FB1E90EE4CF94004BEE42 /* ia32abicc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = ia32abicc.c; path = IA32ABI/ia32abicc.c; sourceTree = "<group>"; };
 		738FB1EC0EE4D092004BEE42 /* IA32ABI.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = IA32ABI.c; path = IA32ABI/IA32ABI.c; sourceTree = "<group>"; };
 		739C6ED5112DCBB00049B7D3 /* sqTicker.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqTicker.c; sourceTree = "<group>"; };
 		739C6ED7112DCBD10049B7D3 /* sqAtomicOps.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqAtomicOps.h; sourceTree = "<group>"; };
@@ -338,6 +341,9 @@
 		73B54C520E55EFED00FE780C /* sqUnixVMProfile.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixVMProfile.c; path = vm/sqUnixVMProfile.c; sourceTree = "<group>"; };
 		73B96E480E47D7A10079C51B /* sqUnixHeartbeat.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixHeartbeat.c; path = vm/sqUnixHeartbeat.c; sourceTree = "<group>"; };
 		73BC1BB90F576864003412C5 /* gcc3x-interp.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = "gcc3x-interp.c"; sourceTree = "<group>"; };
+		73C50A171A5DCF4F00FA9451 /* dax64business.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = dax64business.h; path = IA32ABI/dax64business.h; sourceTree = "<group>"; };
+		73C50A181A5DCF4F00FA9451 /* x64ia32abicc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = x64ia32abicc.c; path = IA32ABI/x64ia32abicc.c; sourceTree = "<group>"; };
+		73C50A231A5DD04400FA9451 /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqConfig.h; sourceTree = "<group>"; };
 		73D16CAC1A5DBAA100E316FB /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 		73DFFABF18D380C200C3C543 /* AioPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = AioPlugin.c; path = AioPlugin/AioPlugin.c; sourceTree = "<group>"; };
 		73F1E4071A5CB5F70072BF0D /* sqMacOpenGL.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacOpenGL.c; sourceTree = "<group>"; };
@@ -486,7 +492,7 @@
 		94196AB009974200005962BF /* sqMacWindowUniversal.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacWindowUniversal.c; sourceTree = "<group>"; };
 		941A3C0C09AA144000C9D25A /* Squeak.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Squeak.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9426FF0F09F489D200ECEDDC /* chartables.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = chartables.c; sourceTree = "<group>"; };
-		9426FF1009F489D200ECEDDC /* config.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
+		9426FF1009F489D200ECEDDC /* reConfig.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = reConfig.h; sourceTree = "<group>"; };
 		9426FF1109F489D200ECEDDC /* get.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = get.c; sourceTree = "<group>"; };
 		9426FF1209F489D200ECEDDC /* internal.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = internal.h; sourceTree = "<group>"; };
 		9426FF1309F489D200ECEDDC /* pcre.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = pcre.c; sourceTree = "<group>"; };
@@ -819,7 +825,8 @@
 		738FB1E80EE4CF4B004BEE42 /* IA32ABI */ = {
 			isa = PBXGroup;
 			children = (
-				738FB1E90EE4CF94004BEE42 /* ia32abicc.c */,
+				73C50A171A5DCF4F00FA9451 /* dax64business.h */,
+				73C50A181A5DCF4F00FA9451 /* x64ia32abicc.c */,
 			);
 			name = IA32ABI;
 			sourceTree = "<group>";
@@ -973,6 +980,7 @@
 			isa = PBXGroup;
 			children = (
 				73F1E4531A5CBA650072BF0D /* Classes */,
+				7332D7191A5DCAE50085E8BA /* sqGnu.h */,
 				73F1E4801A5CBA650072BF0D /* main.m */,
 			);
 			name = Common;
@@ -1058,6 +1066,7 @@
 				73F1E4981A5CBA650072BF0D /* keyBoardStrokeDetails.m */,
 				73F1E4991A5CBA650072BF0D /* macintoshosxextra.c */,
 				73F1E49A1A5CBA650072BF0D /* macintoshosxextra.h */,
+				73C50A231A5DD04400FA9451 /* sqConfig.h */,
 				73F1E49B1A5CBA650072BF0D /* sqMacUnixExternalPrims.m */,
 				73F1E49C1A5CBA650072BF0D /* sqMacV2Browser.h */,
 				73F1E49D1A5CBA650072BF0D /* sqMacV2Browser.m */,
@@ -1109,7 +1118,7 @@
 			isa = PBXGroup;
 			children = (
 				9426FF0F09F489D200ECEDDC /* chartables.c */,
-				9426FF1009F489D200ECEDDC /* config.h */,
+				9426FF1009F489D200ECEDDC /* reConfig.h */,
 				9426FF1109F489D200ECEDDC /* get.c */,
 				9426FF1209F489D200ECEDDC /* internal.h */,
 				9426FF1309F489D200ECEDDC /* pcre.c */,
@@ -1699,7 +1708,7 @@
 				941A3B5B09AA144000C9D25A /* sqVirtualMachine.h in Headers */,
 				941A3B6709AA144000C9D25A /* interp.h in Headers */,
 				94002C4409EB18EF003C4BF2 /* sqMemoryAccess.h in Headers */,
-				9426FF2009F489D200ECEDDC /* config.h in Headers */,
+				9426FF2009F489D200ECEDDC /* reconfig.h in Headers */,
 				9426FF2209F489D200ECEDDC /* internal.h in Headers */,
 				9426FF2409F489D200ECEDDC /* pcre.h in Headers */,
 				9426FF2509F489D200ECEDDC /* rePlugin.h in Headers */,
@@ -1771,6 +1780,9 @@
 				73F1E5221A5CBA650072BF0D /* sqSqueakOSXScreenAndWindow.h in Headers */,
 				73F1E5241A5CBA650072BF0D /* sqSqueakOSXView.h in Headers */,
 				73D16CAD1A5DBAA100E316FB /* config.h in Headers */,
+				7332D71A1A5DCAE50085E8BA /* sqGnu.h in Headers */,
+				73C50A191A5DCF4F00FA9451 /* dax64business.h in Headers */,
+				73C50A241A5DD04400FA9451 /* sqConfig.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1802,7 +1814,7 @@
 		08773EB400C6A1C4C0A80109 /* Project object */ = {
 			isa = PBXProject;
 			buildConfigurationList = 94D95B1D0923E6810034C6F0 /* Build configuration list for PBXProject "CoreVM" */;
-			compatibilityVersion = "Xcode 2.4";
+			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 1;
 			knownRegions = (
@@ -1979,7 +1991,6 @@
 				A2835CFF0E07A13300308978 /* sqHeapMap.c in Sources */,
 				73B96E490E47D7A10079C51B /* sqUnixHeartbeat.c in Sources */,
 				73B54C530E55EFED00FE780C /* sqUnixVMProfile.c in Sources */,
-				738FB1EA0EE4CF94004BEE42 /* ia32abicc.c in Sources */,
 				738FB1ED0EE4D092004BEE42 /* IA32ABI.c in Sources */,
 				73BC1BBE0F576864003412C5 /* gcc3x-interp.c in Sources */,
 				7351A09B100963670035A878 /* sqUnixThreads.c in Sources */,
@@ -2051,6 +2062,7 @@
 				73F1E51F1A5CBA650072BF0D /* sqSqueakOSXInfoPlistInterface.m in Sources */,
 				73F1E5211A5CBA650072BF0D /* sqSqueakOSXOpenGLView.m in Sources */,
 				73F1E5231A5CBA650072BF0D /* sqSqueakOSXScreenAndWindow.m in Sources */,
+				73C50A1A1A5DCF4F00FA9451 /* x64ia32abicc.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2113,7 +2125,7 @@
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
 				);
-				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				SDKROOT = macosx10.6;
 			};
 			name = Assert;
 		};
@@ -2266,7 +2278,7 @@
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
 				);
-				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				SDKROOT = macosx10.6;
 			};
 			name = Development;
 		};
@@ -2289,7 +2301,7 @@
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
 				);
-				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				SDKROOT = macosx10.6;
 			};
 			name = Deployment;
 		};
@@ -2310,7 +2322,7 @@
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
 				);
-				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				SDKROOT = macosx10.6;
 			};
 			name = DeploymentSymbols;
 		};

@@ -322,52 +322,6 @@ extern long HIDSetReport (pRecDevice pDevice,const IOHIDReportType reportType, c
 #endif
 
 // ==================================
-// HUD utilities interfaces
-
-// returns calibrated value given raw value passed in
-// calibrated value is equal to min and max values returned by HIDGetElementValue since device list built scaled to element reported min and max values
-extern long HIDCalibrateValue (long value, pRecElement pElement);
-
-// returns scaled value given raw value passed in
-// scaled value is equal to current value assumed to be in the range of element reported min and max values scaled to user min and max scaled values
-extern long HIDScaleValue (long value, pRecElement pElement);
-
-// convert an element type to a mask
-extern HIDElementTypeMask HIDConvertElementTypeToMask (const long type);
-
-// find this device
-extern Boolean HIDFindDevice(const pRecDevice pSearchDevice, pRecDevice *ppFoundDevice);
-
-// find the device and element for this action
-// Device: serial, vendorID, productID, location, usagePage, usage
-// Element: cookie, usagePage, usage, 
-extern Boolean HIDFindActionDeviceAndElement(const pRecDevice pSearchDevice, const pRecElement pSearchElement,
-										  pRecDevice *ppFoundDevice, pRecElement *ppFoundElement);
-// find the device and element for this action
-// Device: serial, vendorID, productID, location, usagePage, usage
-// Element: cookie, usagePage, usage, 
-
-extern Boolean HIDFindSubElement(const pRecElement pStartElement, const pRecElement pSearchElement, pRecElement *ppFoundElement);
-
-// print out all of an elements information
-extern int HIDPrintElement(const pRecElement pElement);
-
-// return true if this is a valid device pointer
-extern Boolean HIDIsValidDevice(const pRecDevice pSearchDevice);
-
-// return true if this is a valid element pointer for this device
-extern Boolean HIDIsValidElement(const pRecDevice pSearchDevice, const pRecElement pSearchElement);
-
-// ==================================
-// Name Lookup Interfaces
-
-// set name from vendor id/product id look up (using cookies)
-extern Boolean HIDGetElementNameFromVendorProductCookie (const long vendorID, const long productID, const long cookie, char * pName);
-
-// set name from vendor id/product id look up (using usage page & usage)
-extern Boolean HIDGetElementNameFromVendorProductUsage (const long vendorID, const long productID, const long pUsagePage, const long pUsage, char * pName);
-
-// ==================================
 // Conguration and Save Interfaces
 
 enum

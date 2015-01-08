@@ -194,7 +194,7 @@
 		941A3C0209AA144000C9D25A /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94148CC5080DB5A400E8C647 /* IOKit.framework */; };
 		941A3C0309AA144000C9D25A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 944B5B5008F5C7A900611DF8 /* Foundation.framework */; };
 		9426FF1F09F489D200ECEDDC /* chartables.c in Sources */ = {isa = PBXBuildFile; fileRef = 9426FF0F09F489D200ECEDDC /* chartables.c */; };
-		9426FF2009F489D200ECEDDC /* config.h in Headers */ = {isa = PBXBuildFile; fileRef = 9426FF1009F489D200ECEDDC /* config.h */; };
+		9426FF2009F489D200ECEDDC /* reConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = 9426FF1009F489D200ECEDDC /* reConfig.h */; };
 		9426FF2109F489D200ECEDDC /* get.c in Sources */ = {isa = PBXBuildFile; fileRef = 9426FF1109F489D200ECEDDC /* get.c */; };
 		9426FF2209F489D200ECEDDC /* internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 9426FF1209F489D200ECEDDC /* internal.h */; };
 		9426FF2309F489D200ECEDDC /* pcre.c in Sources */ = {isa = PBXBuildFile; fileRef = 9426FF1309F489D200ECEDDC /* pcre.c */; };
@@ -1328,7 +1328,7 @@
 				941A3B6E09AA144000C9D25A /* sqUnixAsynchFile.h in Headers */,
 				941A3B6F09AA144000C9D25A /* sqMacImageIO.h in Headers */,
 				94002C4409EB18EF003C4BF2 /* sqMemoryAccess.h in Headers */,
-				9426FF2009F489D200ECEDDC /* config.h in Headers */,
+				9426FF2009F489D200ECEDDC /* reconfig.h in Headers */,
 				9426FF2209F489D200ECEDDC /* internal.h in Headers */,
 				9426FF2409F489D200ECEDDC /* pcre.h in Headers */,
 				9426FF2509F489D200ECEDDC /* rePlugin.h in Headers */,
