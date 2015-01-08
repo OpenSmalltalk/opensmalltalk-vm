@@ -4117,7 +4117,9 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 	 minorIndex to: self classTablePageSize - 1 do:
 		[:i|
 		(self fetchPointer: i ofObject: page) = nilObj ifTrue:
-			[classTableIndex := majorIndex << self classTableMajorIndexShift + i.
+			[classTableIndex := majorIndex << self classTableMajorIndexShift + i..
+			 "classTableIndex must never index the first page, which is reserved for classes known to the VM."
+			 self assert: classTableIndex >= (1 << self classTableMajorIndexShift).
 			 self storePointer: i
 				ofObject: page
 				withValue: aBehavior.
@@ -4183,7 +4185,9 @@ SpurMemoryManager >> expungeDuplicateAndUnmarkedClasses: expungeUnmarked [
 						 "If the removed class is before the classTableIndex, set the
 						  classTableIndex to point to the empty slot so as to reuse it asap."
 						 classIndex < classTableIndex ifTrue:
-							[classTableIndex := classIndex]]]]]
+							[classTableIndex := classIndex]]]]].
+	"classTableIndex must never index the first page, which is reserved for classes known to the VM."
+	self assert: classTableIndex >= (1 << self classTableMajorIndexShift)
 ]
 
 { #category : #'class table' }
@@ -4203,7 +4207,9 @@ SpurMemoryManager >> expungeFromClassTable: aBehavior [
 	"If the removed class is before the classTableIndex, set the
 	 classTableIndex to point to the empty slot so as to reuse it asap."
 	classIndex < classTableIndex ifTrue:
-		[classTableIndex := classIndex]
+		[classTableIndex := classIndex].
+	"classTableIndex must never index the first page, which is reserved for classes known to the VM."
+	self assert: classTableIndex >= (1 << self classTableMajorIndexShift)
 ]
 
 { #category : #'simulation only' }
@@ -5958,12 +5964,15 @@ SpurMemoryManager >> isCharacterValue: anInteger [
 
 { #category : #'class table' }
 SpurMemoryManager >> isClassAtUniqueIndex: aClass [
-	"Answer if aClass exists at only one index in the class table."
+	"Answer if aClass exists at only one index in the class table.  Be careful not to
+	 be misled by classes that have puns, such as Array."
 	| expectedIndex |
 	expectedIndex := self rawHashBitsOf: aClass.
 	self classTableEntriesDo:
 		[:entry :index|
-		 (entry = aClass and: [index ~= expectedIndex]) ifTrue:
+		 (entry = aClass
+		  and: [index ~= expectedIndex
+		  and: [index > self lastClassIndexPun]]) ifTrue:
 			[^false]].
 	^true
 ]
@@ -8737,7 +8746,9 @@ SpurMemoryManager >> postBecomeScanClassTable: effectsFlags [
 					 "If the removed class is before the classTableIndex, set the
 					  classTableIndex to point to the empty slot so as to reuse it asap."
 					 (i << self classTableMajorIndexShift + j) < classTableIndex ifTrue:
-						[classTableIndex := i << self classTableMajorIndexShift + j]]]]]
+						[classTableIndex := i << self classTableMajorIndexShift + j]]]]].
+	"classTableIndex must never index the first page, which is reserved for classes known to the VM."
+	self assert: classTableIndex >= (1 << self classTableMajorIndexShift)
 ]
 
 { #category : #snapshot }
@@ -9130,7 +9141,9 @@ SpurMemoryManager >> purgeDuplicateClassTableEntriesFor: aClass [
 		 (entry = aClass and: [index ~= expectedIndex]) ifTrue:
 			[self classAtIndex: index put: nilObj.
 			 index < classTableIndex ifTrue:
-				[classTableIndex := index]]]
+				[classTableIndex := index]]].
+	"classTableIndex must never index the first page, which is reserved for classes known to the VM."
+	self assert: classTableIndex >= (1 << self classTableMajorIndexShift)
 ]
 
 { #category : #'simulation only' }
