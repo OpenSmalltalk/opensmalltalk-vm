@@ -2728,14 +2728,6 @@ StackInterpreterSimulator >> withMemoryProtectionDo: aBlock [
 ]
 
 { #category : #'frame access' }
-StackInterpreterSimulator >> withSmallIntegerTags: value [
-	"The simulator works with strictly positive bit patterns"
-	^value < 0
-		ifTrue: [(value bitAnd: 16rFFFFFFFF) + 1]
-		ifFalse: [value + 1]
-]
-
-{ #category : #'frame access' }
 StackInterpreterSimulator >> withoutSmallIntegerTags: anInteger [
 	self assert: (anInteger >= 0 and: [anInteger highBit <= 32]).
 	^(anInteger bitAnd: 16r80000000) ~= 0

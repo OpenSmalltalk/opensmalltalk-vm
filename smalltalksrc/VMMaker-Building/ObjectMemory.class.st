@@ -3827,6 +3827,11 @@ ObjectMemory >> markPhase [
 
 ]
 
+{ #category : #'interpreter access' }
+ObjectMemory >> maxCInteger [
+	^16rFFFFFFFF
+]
+
 { #category : #'forward compatibility' }
 ObjectMemory >> maxIdentityHash [
 	^HashMaskUnshifted

@@ -2703,6 +2703,11 @@ NewObjectMemory >> sizeHeader: obj putBodySize: byteSize [
 				bitOr: ((self longAt: obj - (self wordSize*2)) bitClear: LongSizeMask))
 ]
 
+{ #category : #'cog jit support' }
+NewObjectMemory >> smallIntegerTag [
+	^1
+]
+
 { #category : #'memory access' }
 NewObjectMemory >> startOfFreeSpace [
 	<inline: true>

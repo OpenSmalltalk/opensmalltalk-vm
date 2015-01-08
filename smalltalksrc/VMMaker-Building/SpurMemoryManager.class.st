@@ -7533,6 +7533,11 @@ SpurMemoryManager >> markedBitHalfShift [
 	^23
 ]
 
+{ #category : #'interpreter access' }
+SpurMemoryManager >> maxCInteger [
+	self subclassResponsibility
+]
+
 { #category : #accessing }
 SpurMemoryManager >> maxIdentityHash [
 	^self identityHashHalfWordMask
@@ -9873,7 +9878,8 @@ SpurMemoryManager >> shouldRemapObj: objOop [
 	"Answer if the obj should be scavenged (or simply followed). The method is called
 	 shouldRemapObj: for compatibility with ObjectMemory."
 	^(self isForwarded: objOop)
-	  or: [self isReallyYoungObject: objOop]
+	  or: [self deny: (self isInFutureSpace: objOop).
+		  self isReallyYoungObject: objOop]
 ]
 
 { #category : #'gc - scavenging' }

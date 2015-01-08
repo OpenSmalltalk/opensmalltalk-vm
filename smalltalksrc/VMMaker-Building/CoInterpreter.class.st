@@ -3073,7 +3073,13 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 							put: (oop := newOop)]].
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := (theFP + FoxCallerSavedIP) asUnsignedInteger.
-				 theFP := callerFP]]]
+				 theFP := callerFP].
+			 theSP := theFP + FoxCallerSavedIP + objectMemory wordSize.
+			 [theSP <= thePage baseAddress] whileTrue:
+				[oop := stackPages longAt: theSP.
+				 (objectMemory isForwarded: oop) ifTrue:
+					[stackPages longAt: theSP put: (objectMemory followForwarded: oop)].
+				 theSP := theSP + objectMemory wordSize]]]
 ]
 
 { #category : #'process primitive support' }
@@ -4124,6 +4130,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	<var: #cogMethod type: #'CogMethod *'>
 	"theIP must be typed as signed because it is assigned ceCannotResumePC and so maybe implicitly typed as unsigned."
 	<var: #theIP type: #sqInt>
+	self assert: (objectMemory isContext: aContext).
 	self assert: (self isSingleContext: aContext).
 	self assert: (objectMemory goodContextSize: aContext).
 	theIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
@@ -4305,7 +4312,7 @@ CoInterpreter >> mapPrimTraceLog [
 
 { #category : #'object memory support' }
 CoInterpreter >> mapStackPages [
-	<inline: false>
+	<inline: #never>
 	<var: #thePage type: #'StackPage *'>
 	<var: #theSP type: #'char *'>
 	<var: #theFP type: #'char *'>
@@ -5982,6 +5989,8 @@ CoInterpreter >> returnToExecutive: inInterpreter postContextSwitch: switchedCon
 		 switchedContext
 			ifTrue:
 				[cogMethod := self mframeCogMethod: framePointer.
+				self assert: (instructionPointer > cogit minCogMethodAddress 
+							and: [instructionPointer < cogit maxCogMethodAddress]).
 				 (instructionPointer ~= (cogMethod asInteger + cogMethod stackCheckOffset)
 				  and: [cogit isSendReturnPC: instructionPointer])
 					ifTrue:
