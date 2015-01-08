@@ -696,6 +696,11 @@ Spur64BitMemoryManager >> logBytesPerOop [
 	^3
 ]
 
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> maxCInteger [
+	^16rFFFFFFFFFFFFFFFF
+]
+
 { #category : #instantiation }
 Spur64BitMemoryManager >> maxSlotsForAlloc [
 	"Answer the maximum number of slots we are willing to attempt to allocate in an object.

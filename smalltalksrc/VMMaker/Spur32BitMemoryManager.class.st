@@ -613,6 +613,11 @@ Spur32BitMemoryManager >> logBytesPerOop [
 	^2
 ]
 
+{ #category : #'interpreter access' }
+Spur32BitMemoryManager >> maxCInteger [
+	^16rFFFFFFFF
+]
+
 { #category : #instantiation }
 Spur32BitMemoryManager >> maxSlotsForAlloc [
 	"Answer the maximum number of slots we are willing to attempt to allocate in an object.

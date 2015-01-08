@@ -78,7 +78,7 @@ Class {
 { #category : #'primitive support' }
 InterpreterPrimitives >> asUnsigned: anInteger [
 	<inline: true>
-	^self cCode: [anInteger asUnsignedLong] inSmalltalk: [anInteger bitAnd: objectMemory maxSmallInteger]
+	^self cCode: [anInteger asUnsignedLong] inSmalltalk: [anInteger bitAnd: objectMemory maxCInteger]
 ]
 
 { #category : #'primitive support' }
