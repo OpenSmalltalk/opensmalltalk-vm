@@ -6369,7 +6369,13 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 					put: (oop := newOop)].
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := (theFP + FoxCallerSavedIP) asInteger.
-				 theFP := callerFP]]]
+				 theFP := callerFP].
+			 theSP := theFP + FoxCallerContext. "a.k.a. FoxCallerSavedIP"
+			 [theSP <= thePage baseAddress] whileTrue:
+				[oop := stackPages longAt: theSP.
+				 (objectMemory isForwarded: oop) ifTrue:
+					[stackPages longAt: theSP put: (objectMemory followForwarded: oop)].
+				 theSP := theSP + objectMemory wordSize]]]
 ]
 
 { #category : #'compiled methods' }
@@ -8707,6 +8713,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	<inline: false>
 	<var: #page type: #'StackPage *'>
 	<var: #pointer type: #'char *'>
+	self assert: (objectMemory isContext: aContext).
 	self assert: (self isSingleContext: aContext).
 	self assert: (objectMemory goodContextSize: aContext).
 	page := self newStackPage.
@@ -8857,7 +8864,7 @@ StackInterpreter >> mapProfileState [
 
 { #category : #'object memory support' }
 StackInterpreter >> mapStackPages [
-	<inline: false>
+	<inline: #never>
 	<var: #thePage type: #'StackPage *'>
 	<var: #theSP type: #'char *'>
 	<var: #theFP type: #'char *'>
@@ -14277,7 +14284,9 @@ StackInterpreter >> withSmallIntegerTags: value [
 	<inline: true>
 	<var: #value type: #'char *'>
 	self assert: ((self oopForPointer: value) bitAnd: objectMemory wordSize - 1) = 0.
-	^(self oopForPointer: value) + 1
+	^(self
+		cCode: [self oopForPointer: value]
+		inSmalltalk: [value bitAnd: objectMemory maxCInteger]) + objectMemory smallIntegerTag
 ]
 
 { #category : #'frame access' }
