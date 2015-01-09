@@ -816,6 +816,11 @@ CurrentImageCoInterpreterFacade >> scavengeThresholdAddress [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> shiftForWord [
+	^objectMemory shiftForWord
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> sizeOfCallPrimitiveBytecode: methodHeaderOop [
 	^coInterpreter sizeOfCallPrimitiveBytecode: methodHeaderOop
 ]
