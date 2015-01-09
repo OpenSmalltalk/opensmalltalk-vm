@@ -5,7 +5,7 @@ F=
 H=
 while [ -n "$1" ]; do
 	case $1 in
-	-A|-AS)	D=LOGD;A=LOGA;F=LOGS;;
+	-A|-AS)	D=LOGD;A=LOGA;F=LOGF;;
 	-d)	D=LOGD;;
 	-a)	A=LOGA;;
 	-f)	F=LOGF;;

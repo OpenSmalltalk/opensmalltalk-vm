@@ -7,7 +7,7 @@ C=
 while [ -n "$1" ]; do
 	case $1 in
 	-c)	C=-c;; #-c == Core VM only
-	-A)	D=LOGD;A=LOGA;F=LOGS;;
+	-A)	D=LOGD;A=LOGA;F=LOGF;;
 	-d)	D=LOGD;;
 	-a)	A=LOGA;;
 	-f)	F=LOGF;;
