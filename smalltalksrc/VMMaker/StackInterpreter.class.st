@@ -1453,7 +1453,8 @@ StackInterpreter class >> macroBenchmark [  "StackInterpreter macroBenchmark"
 StackInterpreter class >> mustBeGlobal: var [
 	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM support code."
 
-	^(self objectMemoryClass mustBeGlobal: var)
+	^(super mustBeGlobal: var)
+	   or: [(self objectMemoryClass mustBeGlobal: var)
 	   or: [(#('interpreterProxy' 'interpreterVersion' 'inIOProcessEvents'
 			'deferDisplayUpdates' 'extraVMMemory' 'showSurfaceFn'
 			'desiredNumStackPages' 'desiredEdenBytes'
@@ -1461,7 +1462,7 @@ StackInterpreter class >> mustBeGlobal: var [
 			'suppressHeartbeatFlag') includes: var)
 	   or: [ "This allows slow machines to define bytecodeSetSelector as 0
 			to avoid the interpretation overhead."
-			MULTIPLEBYTECODESETS not and: [var = 'bytecodeSetSelector']]]
+			MULTIPLEBYTECODESETS not and: [var = 'bytecodeSetSelector']]]]
 ]
 
 { #category : #translation }
@@ -6370,12 +6371,11 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := (theFP + FoxCallerSavedIP) asInteger.
 				 theFP := callerFP].
-			 theSP := theFP + FoxCallerContext. "a.k.a. FoxCallerSavedIP"
-			 [theSP <= thePage baseAddress] whileTrue:
-				[oop := stackPages longAt: theSP.
-				 (objectMemory isForwarded: oop) ifTrue:
-					[stackPages longAt: theSP put: (objectMemory followForwarded: oop)].
-				 theSP := theSP + objectMemory wordSize]]]
+			 "And finally follow the caller context."
+			 self assert: theFP = thePage baseFP.
+			 oop := self frameCallerContext: theFP.
+			 (objectMemory isForwarded: oop) ifTrue:
+				[self frameCallerContext: theFP put: (objectMemory followForwarded: oop)]]]
 ]
 
 { #category : #'compiled methods' }

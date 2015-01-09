@@ -3271,7 +3271,7 @@ CCodeGenerator >> is64BitIntegralVariable: node typeInto: aBlock [
 
 { #category : #inlining }
 CCodeGenerator >> isAssertSelector: selector [
-	^#(assert: asserta: assert:l: asserta:l: deny:) includes: selector
+	^#(assert: asserta: assert:l: asserta:l: deny: eassert:) includes: selector
 ]
 
 { #category : #utilities }
