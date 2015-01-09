@@ -26,6 +26,7 @@ extern void warningat(char *,int);
 # define assertl(expr,line) 0
 # define assertal(expr,line) (expr)
 # define assertfl(msg,line) 0
+# define eassert(expr) 0 /* hack disabling of asserts.  Better in makefile? */
 # define PRODUCTION 1
 #elif 1
 # define assert(expr)  ((expr)||(warning(#expr " " __stringifyNum(__LINE__)),0))
@@ -34,5 +35,8 @@ extern void warningat(char *,int);
 # define assertl(expr,line)  ((expr)||(warningat(#expr,line),0))
 # define assertal(expr,line) ((expr)||(warningat(#expr,line),0))
 # define assertfl(msg,line)  (warningat(#msg,line),0)
+extern char expensiveAsserts;
+# define eassert(expr)  (!expensiveAsserts||(expr) \
+						 ||(warning(#expr " " __stringifyNum(__LINE__)),0))
 # define PRODUCTION 0
 #endif
