@@ -136,7 +136,7 @@ CogMethodZone >> addToUnpairedMethodList: aCogMethod [
 	self assert: (unpairedMethodList == nil
 				or: [(self cCoerceSimple: unpairedMethodList to: #'CogMethod *') cmType = CMMethod]).
 	aCogMethod nextMethodOrIRCs: unpairedMethodList.
-	unpairedMethodList := aCogMethod
+	unpairedMethodList := aCogMethod asUnsignedInteger
 ]
 
 { #category : #'young referers' }

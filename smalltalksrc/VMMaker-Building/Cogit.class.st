@@ -6261,6 +6261,7 @@ Cogit >> implicitReceiverCacheAddressAt: mcpc [
 				call ceImplicitReceiver
 	 and Lclass: .word; Lmixin: .word is somewhere on the heap."
 	<option: #NewspeakVM>
+	<var: #mcpc type: #'char *'>
 	<inline: true>
 	<returnTypeC: #usqInt>
 	^objectRepresentation canPinObjects
@@ -7305,7 +7306,7 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 										[objectRepresentation
 											markAndTraceLiteral: mixin
 											in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
-											at: (self asAddress: cacheAddress + objectMemory bytesPerOop
+											at: (self asAddress: (cacheAddress + objectMemory bytesPerOop) asVoidPointer
 													put: [:val| backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop put: val])]]
 								ifFalse:
 									[backEnd
@@ -9710,6 +9711,7 @@ Cogit >> voidImplicitReceiverCacheAt: mcpc [
 				call ceImplicitReceiver
 	 and Lclass: .word; Lmixin: .word is somewhere on the heap."
 	<option: #NewspeakVM>
+	<var: #mcpc type: #'char *'>
 	| cacheAddress |
 	self assert: NumOopsPerIRC = 2.
 	cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
