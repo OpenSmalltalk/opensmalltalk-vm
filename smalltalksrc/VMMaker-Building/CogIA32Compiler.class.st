@@ -2568,8 +2568,9 @@ CogIA32Compiler >> implicitReceiveCacheAt: callSiteReturnAddress [
 	"Answer the implicit receiver cache for the return address
 	 of a call to the ceImplicitReceiverTrampoline."
 	<option: #NewspeakVM>
+	<var: #callSiteReturnAddress type: #'char *'>
 	<inline: false>
-	^self literalBeforeFollowingAddress: callSiteReturnAddress - 10
+	^self literalBeforeFollowingAddress: callSiteReturnAddress asUnsignedInteger - 10
 ]
 
 { #category : #'inline cacheing' }
