@@ -3961,7 +3961,7 @@ SpurMemoryManager >> emptyObjStack: objStack [
 	| nextPage nextNextPage |
 	objStack = nilObj ifTrue:
 		[^self].
-	self assert: (self isValidObjStack: objStack).
+	self eassert: (self isValidObjStack: objStack).
 	self storePointer: ObjStackTopx ofObjStack: objStack withValue: 0.
 	nextPage := self fetchPointer: ObjStackNextx ofObject: objStack.
 	[nextPage ~= 0] whileTrue:
@@ -3973,7 +3973,7 @@ SpurMemoryManager >> emptyObjStack: objStack [
 		 self storePointer: ObjStackFreex ofObjStack: objStack withValue: nextPage.
 		 nextPage := nextNextPage].
 	self storePointer: ObjStackNextx ofObjStack: objStack withValue: 0.
-	self assert: (self isValidObjStack: objStack)
+	self eassert: (self isValidObjStack: objStack)
 ]
 
 { #category : #accessing }
@@ -6042,7 +6042,7 @@ SpurMemoryManager >> isContextNonImm: oop [
 SpurMemoryManager >> isEmptyObjStack: objStack [
 	objStack = nilObj ifTrue:
 		[^true].
-	self assert: (self isValidObjStack: objStack).
+	self eassert: (self isValidObjStack: objStack).
 	^0 = (self fetchPointer: ObjStackTopx ofObject: objStack)
 	  and: [0 = (self fetchPointer: ObjStackNextx ofObject: objStack)]
 ]
@@ -7979,7 +7979,7 @@ SpurMemoryManager >> noCheckClassAtIndex: classIndex [
 SpurMemoryManager >> noCheckPush: objOop onObjStack: objStack [
 	"Push an element on an objStack.  Split from push:onObjStack: for testing."
 	| topx |
-	self assert: (self isValidObjStack: objStack).
+	self eassert: (self isValidObjStack: objStack).
 	self cCode: [] "for debugging markAndTrace: set (MarkStackRecord := OrderedCollection new)"
 		inSmalltalk:
 			[(self fetchPointer: ObjStackMyx ofObject: objStack) = MarkStackRootIndex ifTrue:
@@ -8292,7 +8292,7 @@ SpurMemoryManager >> objStack: objStack from: start do: aBlock [
 	 unstable if aBlock causes elements to be removed."
 	<inline: true>
 	| size objStackPage numToEnumerate |
-	self assert: (self isValidObjStack: weaklingStack).
+	self eassert: (self isValidObjStack: weaklingStack).
 	size := self fetchPointer: ObjStackTopx ofObject: objStack.
 	objStackPage := self fetchPointer: ObjStackNextx ofObject: objStack.
 	[objStackPage ~= 0] whileTrue:
@@ -8641,7 +8641,7 @@ SpurMemoryManager >> pop: nItems thenPush: oop [
 { #category : #'obj stacks' }
 SpurMemoryManager >> popObjStack: objStack [
 	| topx top nextPage myx |
-	self assert: (self isValidObjStack: objStack).
+	self eassert: (self isValidObjStack: objStack).
 	topx := self fetchPointer: ObjStackTopx ofObject: objStack.
 	topx = 0 ifTrue:
 		[self assert: (self fetchPointer: ObjStackNextx ofObject: objStack) = 0.
@@ -8668,9 +8668,9 @@ SpurMemoryManager >> popObjStack: objStack [
 			 self storePointer: ObjStackNextx ofObjStack: objStack withValue: 0.
 			 myx := self fetchPointer: ObjStackMyx ofObject: objStack.
 			 self updateRootOfObjStackAt: myx with: nextPage.
-			 self assert: (self isValidObjStack: nextPage)]
+			 self eassert: (self isValidObjStack: nextPage)]
 		ifFalse:
-			[self assert: (self isValidObjStack: objStack)].
+			[self eassert: (self isValidObjStack: objStack)].
 	^top
 ]
 

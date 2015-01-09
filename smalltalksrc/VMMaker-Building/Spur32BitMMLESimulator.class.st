@@ -412,6 +412,7 @@ Spur32BitMMLESimulator >> storeImageSegmentInto: segmentWordArray outPointers: o
 { #category : #'ad-hoc tests' }
 Spur32BitMMLESimulator >> testObjStackDo [
 	| size them seqA seqB seqC rs |
+	ExpensiveAsserts := true.
 	self initializeWeaklingStack; emptyObjStack: weaklingStack.
 	self assert: (self topOfObjStack: weaklingStack) isNil.
 	self assert: (self capacityOfObjStack: weaklingStack) >= ObjStackLimit.

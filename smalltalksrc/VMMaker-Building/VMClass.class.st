@@ -5,7 +5,8 @@ Class {
 	#name : #VMClass,
 	#superclass : #Object,
 	#classVars : [
-		'DefaultBase'
+		'DefaultBase',
+		'ExpensiveAsserts'
 	],
 	#pools : [
 		'VMBasicConstants',
@@ -98,6 +99,9 @@ VMClass class >> declareCAsUSqLong: arrayOfVariableNames in: aCCodeGenerator [
 { #category : #translation }
 VMClass class >> declareCVarsIn: aCCodeGenerator [ 
 	"Declare any additional variables and/or add type declarations for existing variables."
+	aCCodeGenerator
+		var: #expensiveAsserts
+		declareC: 'char expensiveAsserts = 0'
 ]
 
 { #category : #translation }
@@ -180,7 +184,8 @@ VMClass class >> initialize [
 	(Utilities classPool at: #CommonRequestStrings ifAbsent: []) ifNotNil:
 		[:commonRequestStringHolder|
 		(commonRequestStringHolder contents asString includesSubString: 'VMClass open') ifFalse:
-			[Utilities appendToCommonRequests: '-\VMMaker generateConfiguration\VMMaker generateAllConfigurationsUnderVersionControl\VMMaker generateAllSpurConfigurations\VMClass openCogMultiWindowBrowser\VMClass openObjectMemoriesInterpretersBrowser\VMClass openSpurMultiWindowBrowser' withCRs]]
+			[Utilities appendToCommonRequests: '-\VMMaker generateConfiguration\VMMaker generateAllConfigurationsUnderVersionControl\VMMaker generateAllSpurConfigurations\VMClass openCogMultiWindowBrowser\VMClass openObjectMemoriesInterpretersBrowser\VMClass openSpurMultiWindowBrowser' withCRs]].
+	ExpensiveAsserts := false
 ]
 
 { #category : #initialization }
@@ -271,7 +276,9 @@ VMClass class >> initializeWithOptions: optionsDictionaryOrArray [
 	 the code generator, a stale ancilliary class may be computed."
 	(self withAllSuperclasses copyUpThrough: VMClass) do:
 		[:class|
-		class initializationOptions: optionsDictionary]
+		class initializationOptions: optionsDictionary].
+
+	ExpensiveAsserts := optionsDictionary at: #ExpensiveAsserts ifAbsent: [false]
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -320,6 +327,13 @@ VMClass class >> monticelloDescription [
 	"Answer the Monticello version of the packlage containing the receiver.
 	 This is a hook to allow subclasses to expand upon the default monticello description."
 	^CCodeGenerator monticelloDescriptionFor: self
+]
+
+{ #category : #translation }
+VMClass class >> mustBeGlobal: var [
+	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM support code."
+
+	^var = #expensiveAsserts
 ]
 
 { #category : #translation }
@@ -680,6 +694,17 @@ VMClass >> doOrDefer: aBlock [
 	Processor activeProcess == Project uiProcess
 		ifTrue: [aBlock value]
 		ifFalse: [WorldState addDeferredUIMessage: aBlock]
+]
+
+{ #category : #'debug support' }
+VMClass >> eassert: aBooleanExpressionOrBlock [
+	"This is for expensive asserts that we're only interested in checking in extremis.
+	 For exampl,e now that Spur objStacks are debugged there's no benefit to evaluating
+	 isValidObjStack: throguhout the mark loop because its damn slow."
+	<doNotGenerate>
+	ExpensiveAsserts ifTrue:
+		[aBooleanExpressionOrBlock value ifFalse:
+			[AssertionFailure signal: 'Assertion failed']]
 ]
 
 { #category : #'memory access' }
