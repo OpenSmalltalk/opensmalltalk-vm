@@ -286,3 +286,6 @@ AC_DEFUN([AC_PLUGIN_CHECK_LIB],[
     plibs="${plibs} $1",
     AC_MSG_RESULT([******** disabling ${plugin} due to missing libraries])
     disabled_plugins="${disabled_plugins} ${plugin}")])
+
+# Recent Unix stuff
+m4_include([ax_have_epoll.m4])

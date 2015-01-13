@@ -112,6 +112,9 @@
 #undef	HAVE_ALLOCA
 #undef	HAVE_ALLOCA_H
 
+#undef	HAVE_EPOLL
+#undef	HAVE_EPOLL_PWAIT
+
 #undef	HAVE_UNSETENV
 
 #undef	HAVE_NANOSLEEP

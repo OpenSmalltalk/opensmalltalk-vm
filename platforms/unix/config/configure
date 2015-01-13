@@ -23764,6 +23764,444 @@ _ACEOF
 
 fi
 
+  ax_have_epoll_cppflags="${CPPFLAGS}"
+  if test "${ac_cv_header_linux_version_h+set}" = set; then
+  echo "$as_me:$LINENO: checking for linux/version.h" >&5
+echo $ECHO_N "checking for linux/version.h... $ECHO_C" >&6
+if test "${ac_cv_header_linux_version_h+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+fi
+echo "$as_me:$LINENO: result: $ac_cv_header_linux_version_h" >&5
+echo "${ECHO_T}$ac_cv_header_linux_version_h" >&6
+else
+  # Is the header compilable?
+echo "$as_me:$LINENO: checking linux/version.h usability" >&5
+echo $ECHO_N "checking linux/version.h usability... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+#include <linux/version.h>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_header_compiler=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_header_compiler=no
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+echo "${ECHO_T}$ac_header_compiler" >&6
+
+# Is the header present?
+echo "$as_me:$LINENO: checking linux/version.h presence" >&5
+echo $ECHO_N "checking linux/version.h presence... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <linux/version.h>
+_ACEOF
+if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
+  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null; then
+  if test -s conftest.err; then
+    ac_cpp_err=$ac_c_preproc_warn_flag
+    ac_cpp_err=$ac_cpp_err$ac_c_werror_flag
+  else
+    ac_cpp_err=
+  fi
+else
+  ac_cpp_err=yes
+fi
+if test -z "$ac_cpp_err"; then
+  ac_header_preproc=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+  ac_header_preproc=no
+fi
+rm -f conftest.err conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+echo "${ECHO_T}$ac_header_preproc" >&6
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc:$ac_c_preproc_warn_flag in
+  yes:no: )
+    { echo "$as_me:$LINENO: WARNING: linux/version.h: accepted by the compiler, rejected by the preprocessor!" >&5
+echo "$as_me: WARNING: linux/version.h: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { echo "$as_me:$LINENO: WARNING: linux/version.h: proceeding with the compiler's result" >&5
+echo "$as_me: WARNING: linux/version.h: proceeding with the compiler's result" >&2;}
+    ac_header_preproc=yes
+    ;;
+  no:yes:* )
+    { echo "$as_me:$LINENO: WARNING: linux/version.h: present but cannot be compiled" >&5
+echo "$as_me: WARNING: linux/version.h: present but cannot be compiled" >&2;}
+    { echo "$as_me:$LINENO: WARNING: linux/version.h:     check for missing prerequisite headers?" >&5
+echo "$as_me: WARNING: linux/version.h:     check for missing prerequisite headers?" >&2;}
+    { echo "$as_me:$LINENO: WARNING: linux/version.h: see the Autoconf documentation" >&5
+echo "$as_me: WARNING: linux/version.h: see the Autoconf documentation" >&2;}
+    { echo "$as_me:$LINENO: WARNING: linux/version.h:     section \"Present But Cannot Be Compiled\"" >&5
+echo "$as_me: WARNING: linux/version.h:     section \"Present But Cannot Be Compiled\"" >&2;}
+    { echo "$as_me:$LINENO: WARNING: linux/version.h: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: linux/version.h: proceeding with the preprocessor's result" >&2;}
+    { echo "$as_me:$LINENO: WARNING: linux/version.h: in the future, the compiler will take precedence" >&5
+echo "$as_me: WARNING: linux/version.h: in the future, the compiler will take precedence" >&2;}
+    (
+      cat <<\_ASBOX
+## ------------------------------------------ ##
+## Report this to the AC_PACKAGE_NAME lists.  ##
+## ------------------------------------------ ##
+_ASBOX
+    ) |
+      sed "s/^/$as_me: WARNING:     /" >&2
+    ;;
+esac
+echo "$as_me:$LINENO: checking for linux/version.h" >&5
+echo $ECHO_N "checking for linux/version.h... $ECHO_C" >&6
+if test "${ac_cv_header_linux_version_h+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_cv_header_linux_version_h=$ac_header_preproc
+fi
+echo "$as_me:$LINENO: result: $ac_cv_header_linux_version_h" >&5
+echo "${ECHO_T}$ac_cv_header_linux_version_h" >&6
+
+fi
+if test $ac_cv_header_linux_version_h = yes; then
+  CPPFLAGS="${CPPFLAGS} -DHAVE_LINUX_VERSION_H"
+fi
+
+
+  echo "$as_me:$LINENO: checking for Linux epoll(7) interface" >&5
+echo $ECHO_N "checking for Linux epoll(7) interface... $ECHO_C" >&6
+  if test "${ax_cv_have_epoll+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+      cat >conftest.$ac_ext <<_ACEOF
+      /* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <sys/epoll.h>
+#ifdef HAVE_LINUX_VERSION_H
+#  include <linux/version.h>
+#  if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,45)
+#    error linux kernel version is too old to have epoll
+#  endif
+#endif
+
+int
+main ()
+{
+int fd, rc;
+struct epoll_event ev;
+fd = epoll_create(128);
+rc = epoll_wait(fd, &ev, 1, 0);
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ax_cv_have_epoll=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ax_cv_have_epoll=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+fi
+
+  CPPFLAGS="${ax_have_epoll_cppflags}"
+  if test "${ax_cv_have_epoll}" = "yes"; then
+  echo "$as_me:$LINENO: result: yes" >&5
+echo "${ECHO_T}yes" >&6
+
+else
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+
+fi
+
+
+  ax_have_epoll_cppflags="${CPPFLAGS}"
+  if test "${ac_cv_header_linux_version_h+set}" = set; then
+  echo "$as_me:$LINENO: checking for linux/version.h" >&5
+echo $ECHO_N "checking for linux/version.h... $ECHO_C" >&6
+if test "${ac_cv_header_linux_version_h+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+fi
+echo "$as_me:$LINENO: result: $ac_cv_header_linux_version_h" >&5
+echo "${ECHO_T}$ac_cv_header_linux_version_h" >&6
+else
+  # Is the header compilable?
+echo "$as_me:$LINENO: checking linux/version.h usability" >&5
+echo $ECHO_N "checking linux/version.h usability... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+#include <linux/version.h>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_header_compiler=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_header_compiler=no
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+echo "${ECHO_T}$ac_header_compiler" >&6
+
+# Is the header present?
+echo "$as_me:$LINENO: checking linux/version.h presence" >&5
+echo $ECHO_N "checking linux/version.h presence... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <linux/version.h>
+_ACEOF
+if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
+  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null; then
+  if test -s conftest.err; then
+    ac_cpp_err=$ac_c_preproc_warn_flag
+    ac_cpp_err=$ac_cpp_err$ac_c_werror_flag
+  else
+    ac_cpp_err=
+  fi
+else
+  ac_cpp_err=yes
+fi
+if test -z "$ac_cpp_err"; then
+  ac_header_preproc=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+  ac_header_preproc=no
+fi
+rm -f conftest.err conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+echo "${ECHO_T}$ac_header_preproc" >&6
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc:$ac_c_preproc_warn_flag in
+  yes:no: )
+    { echo "$as_me:$LINENO: WARNING: linux/version.h: accepted by the compiler, rejected by the preprocessor!" >&5
+echo "$as_me: WARNING: linux/version.h: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { echo "$as_me:$LINENO: WARNING: linux/version.h: proceeding with the compiler's result" >&5
+echo "$as_me: WARNING: linux/version.h: proceeding with the compiler's result" >&2;}
+    ac_header_preproc=yes
+    ;;
+  no:yes:* )
+    { echo "$as_me:$LINENO: WARNING: linux/version.h: present but cannot be compiled" >&5
+echo "$as_me: WARNING: linux/version.h: present but cannot be compiled" >&2;}
+    { echo "$as_me:$LINENO: WARNING: linux/version.h:     check for missing prerequisite headers?" >&5
+echo "$as_me: WARNING: linux/version.h:     check for missing prerequisite headers?" >&2;}
+    { echo "$as_me:$LINENO: WARNING: linux/version.h: see the Autoconf documentation" >&5
+echo "$as_me: WARNING: linux/version.h: see the Autoconf documentation" >&2;}
+    { echo "$as_me:$LINENO: WARNING: linux/version.h:     section \"Present But Cannot Be Compiled\"" >&5
+echo "$as_me: WARNING: linux/version.h:     section \"Present But Cannot Be Compiled\"" >&2;}
+    { echo "$as_me:$LINENO: WARNING: linux/version.h: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: linux/version.h: proceeding with the preprocessor's result" >&2;}
+    { echo "$as_me:$LINENO: WARNING: linux/version.h: in the future, the compiler will take precedence" >&5
+echo "$as_me: WARNING: linux/version.h: in the future, the compiler will take precedence" >&2;}
+    (
+      cat <<\_ASBOX
+## ------------------------------------------ ##
+## Report this to the AC_PACKAGE_NAME lists.  ##
+## ------------------------------------------ ##
+_ASBOX
+    ) |
+      sed "s/^/$as_me: WARNING:     /" >&2
+    ;;
+esac
+echo "$as_me:$LINENO: checking for linux/version.h" >&5
+echo $ECHO_N "checking for linux/version.h... $ECHO_C" >&6
+if test "${ac_cv_header_linux_version_h+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_cv_header_linux_version_h=$ac_header_preproc
+fi
+echo "$as_me:$LINENO: result: $ac_cv_header_linux_version_h" >&5
+echo "${ECHO_T}$ac_cv_header_linux_version_h" >&6
+
+fi
+if test $ac_cv_header_linux_version_h = yes; then
+  CPPFLAGS="${CPPFLAGS} -DHAVE_LINUX_VERSION_H"
+fi
+
+
+  echo "$as_me:$LINENO: checking for Linux epoll(7) interface with signals extension" >&5
+echo $ECHO_N "checking for Linux epoll(7) interface with signals extension... $ECHO_C" >&6
+  if test "${ax_cv_have_epoll_pwait+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+      cat >conftest.$ac_ext <<_ACEOF
+      /* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#ifdef HAVE_LINUX_VERSION_H
+#  include <linux/version.h>
+#  if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
+#    error linux kernel version is too old to have epoll_pwait
+#  endif
+#endif
+#include <sys/epoll.h>
+#include <signal.h>
+
+int
+main ()
+{
+int fd, rc;
+struct epoll_event ev;
+fd = epoll_create(128);
+rc = epoll_wait(fd, &ev, 1, 0);
+rc = epoll_pwait(fd, &ev, 1, 0, (sigset_t const *)(0));
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ax_cv_have_epoll_pwait=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ax_cv_have_epoll_pwait=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+fi
+
+  CPPFLAGS="${ax_have_epoll_cppflags}"
+  if test "${ax_cv_have_epoll_pwait}" = "yes"; then
+  echo "$as_me:$LINENO: result: yes" >&5
+echo "${ECHO_T}yes" >&6
+
+else
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+
+fi
+
+
 
 # Checks for platform characteristics.
 
@@ -27784,19 +28222,7 @@ fi
 plugin="IA32ABI"
 plibs=""
 rm -f IA32ABI.sub IA32ABI.lib
-ia32abi_objs="IA32ABI.o AlienSUnitTestProcedures.o"
-
-case $host_cpu in
-i386|i486|i586|i686)
-ia32abi_objs="IA32ABI.o AlienSUnitTestProcedures.o ia32abicc.o"
-;;
-powerpc|ppc)
-ia32abi_objs="IA32ABI.o AlienSUnitTestProcedures.o ppcia32abicc.o"
-;;
-x86_64|x64)
-ia32abi_objs="IA32ABI.o AlienSUnitTestProcedures.o x64ia32abicc.o"
-;;
-esac
+ia32abi_objs="IA32ABI.o AlienSUnitTestProcedures.o xabicc.o"
 
 IA32ABI_OBJS=$ia32abi_objs
 

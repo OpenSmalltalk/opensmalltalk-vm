@@ -286,6 +286,8 @@ AC_CHECK_FUNCS(snprintf __snprintf,[break])
 
 AC_FUNC_MMAP
 AC_FUNC_ALLOCA
+AX_HAVE_EPOLL
+AX_HAVE_EPOLL_PWAIT
 
 # Checks for platform characteristics.
 
