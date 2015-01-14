@@ -871,7 +871,7 @@ SpurBootstrapPrototypes >> FloatclassPROTOTYPEfromIEEE32Bit: word [
 		"gradual underflow (denormalized number)
 		 Remove first bit of mantissa and adjust exponent"
 		[delta := mantissa highBit.
-		 mantissa := (mantissa bitShift: 1) bitAnd: (1 bitShift: delta) - 1.
+		 mantissa := (mantissa bitAnd: (1 bitShift: delta - 1) - 1) bitShift: 24 - delta.
 		 exponent := exponent + delta - 23].
 	
 	"Create new float"
