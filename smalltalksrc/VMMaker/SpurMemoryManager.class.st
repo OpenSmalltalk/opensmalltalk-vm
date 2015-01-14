@@ -4772,7 +4772,7 @@ SpurMemoryManager >> formatOf: objOop [
 	 10 - 11 32-bit indexable	(11 unused in 32 bits)
 	 12 - 15 16-bit indexable	(14 & 15 unused in 32-bits)
 	 16 - 23 byte indexable		(20-23 unused in 32-bits)
-	 24 - 31 compiled method	(28-21 unused in 32-bits)"
+	 24 - 31 compiled method	(28-31 unused in 32-bits)"
 	^(self longAt: objOop) >> self formatShift bitAnd: self formatMask
 ]
 
