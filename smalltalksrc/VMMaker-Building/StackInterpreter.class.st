@@ -8072,6 +8072,7 @@ StackInterpreter >> isFrame: aFrame onPage: aPage [
 { #category : #'frame access' }
 StackInterpreter >> isLiveContext: oop [
 	"Answer if the argument, which can be any object, is a live context."
+	self deny: (objectMemory isOopForwarded: oop).
 	(objectMemory isContext: oop) ifFalse:
 		[^false].
 	(self isSingleContext: oop) ifTrue:
