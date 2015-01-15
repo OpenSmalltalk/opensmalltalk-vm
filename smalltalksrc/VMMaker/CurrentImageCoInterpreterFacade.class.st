@@ -296,6 +296,21 @@ CurrentImageCoInterpreterFacade >> fetchPointer: index ofObject: anOop [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> firstByteFormat [
+	^objectMemory firstByteFormat
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> firstCompiledMethodFormat [
+	^objectMemory firstCompiledMethodFormat
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> firstLongFormat [
+	^objectMemory firstLongFormat
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> formatOfClass: classOop [
 	^self subclassResponsibility
 ]
@@ -956,6 +971,11 @@ CurrentImageCoInterpreterFacade >> variablesBase [
 		768k to 1023k		method cache
 		 1023k to 1024k	rump C stack"
 	^memory byteSize / 2
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> weakArrayFormat [
+	^objectMemory weakArrayFormat
 ]
 
 { #category : #accessing }
