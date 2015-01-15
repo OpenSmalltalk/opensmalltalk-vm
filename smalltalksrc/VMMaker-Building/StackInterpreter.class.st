@@ -624,8 +624,9 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 		(200 207	storeAndPopReceiverVariableBytecode)
 		(208 215	storeAndPopTemporaryVariableBytecode)
 		(216		popStackBytecode)
+		(217		unconditionnalTrapBytecode)
 
-		(217 223	unknownBytecode)
+		(218 223	unknownBytecode)
 
 		"2 byte bytecodes"
 		(224		extABytecode)
@@ -14063,6 +14064,12 @@ StackInterpreter >> unaryInlinePrimitive: primIndex [
 	otherwise:
 		[localIP := localIP - 3.
 		 self respondToUnknownBytecode]
+]
+
+{ #category : #'sista bytecodes' }
+StackInterpreter >> unconditionnalTrapBytecode [
+	"SistaV1: *	217	Trap"
+	^ self respondToSistaTrap
 ]
 
 { #category : #'interpreter shell' }
