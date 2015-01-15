@@ -70,7 +70,7 @@ if [ -d "$DEST" ]; then
 else
 	mv build/$BUILD_CONFIGURATION/$APP "$DEST"
 fi
-../scripts/versionInfoPlist ../platforms CoreVM.plist "$DEST/Contents/Info.plist"
+../../scripts/versionInfoPlist ../../platforms CoreVM.plist "$DEST/Contents/Info.plist"
 
 # Build the Float plugin
 echo
@@ -116,7 +116,7 @@ cp -R SqueakSSL/build/$XCD_BUILD_CONFIGURATION/SqueakSSL.bundle "$DEST/Contents/
 if false; then
 # Build the BochsIA32Plugin
 # N.B. To build the plugin you also have to build the Bochs libraries in
-# ../processors/IA32/bochs.  cd ../processors/IA32/bochs. Run conf.COG & makeem.
+# ../../processors/IA32/bochs.  cd ../../processors/IA32/bochs. Run conf.COG & makeem.
 echo BochsIA32Plugin xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project BochsIA32Plugin/BochsIA32Plugin.xcodeproj
 xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project BochsIA32Plugin/BochsIA32Plugin.xcodeproj
 rm -rf "$DEST/Contents/Resources/BochsIA32Plugin.bundle"

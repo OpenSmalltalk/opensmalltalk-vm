@@ -1,6 +1,6 @@
 #!/bin/bash
 # Spur VM with VM profiler and itimer heartbeat
-INSTALLDIR=cogspurlinux
+INSTALLDIR=sistaspurlinux
 # Some gcc versions create a broken VM using -O2
 case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
 3.4.*)	OPT="-g -O1 -DNDEBUG -DDEBUGVM=0";;

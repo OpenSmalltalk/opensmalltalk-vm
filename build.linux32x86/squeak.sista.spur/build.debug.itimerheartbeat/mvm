@@ -1,6 +1,6 @@
 #!/bin/bash
 # debug Spur VM with VM profiler and itimer heartbeat
-INSTALLDIR=debug/cogspurlinux
+INSTALLDIR=debug/sistaspurlinux
 OPT="-g3 -O0 -DDEBUGVM=1"
 
 if [ $# -ge 1 ]; then

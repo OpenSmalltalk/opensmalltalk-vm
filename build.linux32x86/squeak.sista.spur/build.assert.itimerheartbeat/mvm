@@ -1,6 +1,6 @@
 #!/bin/bash
 # assert VM with VM profiler and itimer heartbeat
-INSTALLDIR=assert/cogspurlinux
+INSTALLDIR=assert/sistaspurlinux
 OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
