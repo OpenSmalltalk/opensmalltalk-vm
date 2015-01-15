@@ -17,6 +17,11 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation class >> objectRepres
 	^CogObjectRepresentationFor32BitSpur
 ]
 
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> accessorDepthForPrimitiveIndex: anInteger [
+	^StackInterpreterPrimitives primitiveAccessorDepthTable at: anInteger + 1
+]
+
 { #category : #'cog jit support' }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> allocatePinnedSlots: nSlots [
 	^(objectMemory allocatePinnedSlots: nSlots)
@@ -34,6 +39,11 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> arrayFormat [
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> baseHeaderSize [
 	^SpurMemoryManager baseHeaderSize
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> ceCheckForAndFollowForwardedPrimitiveState [
+	^coInterpreter ceCheckForAndFollowForwardedPrimitiveState
 ]
 
 { #category : #accessing }
@@ -79,9 +89,29 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> eeInstantiateClass
 	^self oopForObject: (Array new: numSlots)
 ]
 
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> firstShortFormat [
+	^objectMemory firstShortFormat
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> fixedFieldsOfClassFormatMask [
+	^objectMemory fixedFieldsOfClassFormatMask
+]
+
 { #category : #forwarding }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> followForwardedObjectFields: objOop toDepth: depth [ 
 	"This is a noop in the facade"
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> formatMask [
+	^objectMemory formatMask
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> formatShift [
+	^objectMemory formatShift
 ]
 
 { #category : #accessing }

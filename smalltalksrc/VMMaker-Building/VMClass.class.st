@@ -311,6 +311,11 @@ VMClass class >> isInterpreterClass [
 ]
 
 { #category : #translation }
+VMClass class >> isNonArgumentImplicitReceiverVariableName: aString [
+	^false
+]
+
+{ #category : #translation }
 VMClass class >> isPluginClass [
 	"InterpreterPlugin class override this."
 	^false

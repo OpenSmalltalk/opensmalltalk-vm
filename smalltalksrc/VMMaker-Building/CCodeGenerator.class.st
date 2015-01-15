@@ -187,11 +187,14 @@ CCodeGenerator >> accessorDepthForMethod: method [
 		self storePointer: 1 ofObject: field withValue: (self stackValue: 1)
 	has depth 2, since field is accessed, and field is an element of obj."
 
-	^((self
-			accessorChainsForMethod: method
-			interpreterClass: (vmClass ifNil: [StackInterpreter]))
-		inject: 0
-		into: [:length :chain| length max: (self accessorDepthForChain: chain)]) - 1
+	^((method definingClass >> method selector) pragmaAt: #accessorDepth:)
+		ifNil:
+			[((self
+					accessorChainsForMethod: method
+					interpreterClass: (vmClass ifNil: [StackInterpreter]))
+				inject: 0
+				into: [:length :chain| length max: (self accessorDepthForChain: chain)]) - 1]
+		ifNotNil: [:pragma| pragma arguments first]
 ]
 
 { #category : #'spur primitive compilation' }
