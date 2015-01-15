@@ -123,6 +123,7 @@ Class {
 		'MaxPrimitiveIndex',
 		'MaxQuickPrimitiveIndex',
 		'MethodHeaderArgCountShift',
+		'MethodHeaderOptimizedBitShift',
 		'MethodHeaderTempCountShift',
 		'MixinIndex',
 		'PrimitiveExternalCallIndex',
@@ -961,6 +962,7 @@ StackInterpreter class >> initializeMethodIndices [
 
 	tagBits := self objectMemoryClass numSmallIntegerTagBits.
 	LargeContextBit := 16r20000 << tagBits.  "This bit set in method headers if large context is needed."
+	MethodHeaderOptimizedBitShift := 28 + tagBits.
 	MethodHeaderTempCountShift := 18 + tagBits.
 	MethodHeaderArgCountShift := 24 + tagBits.
 	V3PrimitiveBitsMask := 16r100001FF << tagBits.
@@ -8109,6 +8111,12 @@ StackInterpreter >> isNullExternalPrimitiveCall: aMethodObj [
 	  and: [(objectMemory lengthOf: lit) = 4
 	  and: [(objectMemory fetchPointer: 3 ofObject: lit) = ConstZero
 			or: [(objectMemory fetchPointer: 3 ofObject: lit) = ConstMinusOne]]]
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> isOptimizedMethod: header [
+	<api>
+	^ (header >> MethodHeaderOptimizedBitShift bitAnd: 1) = 1 
 ]
 
 { #category : #'primitive support' }
