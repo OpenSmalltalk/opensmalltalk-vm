@@ -504,7 +504,9 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 
 		(1 216 216 genPopStackBytecode needsFrameNever: -1)
 
-		(1 217 223 unknownBytecode)
+		(1 217 217 genUnconditionnalTrapBytecode isMapped)
+
+		(1 218 223 unknownBytecode)
 
 		"2 byte bytecodes"
 		(2 224 224 extABytecode extension)

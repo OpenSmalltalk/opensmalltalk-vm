@@ -558,6 +558,17 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 		numArgs: 1
 ]
 
+{ #category : #'bytecode generators' }
+SistaStackToRegisterMappingCogit >> genUnconditionnalTrapBytecode [
+	"SistaV1: *	217		Trap"
+	"Use ssFlushNoUpdateTo: so we continue compiling as if the stack had not been flushed . 
+	(typically, this kind of trap is in a branch)  
+	Control does not return after the ceClassTrapTrampoline call."
+	self ssFlushNoUpdateTo: simStackPtr.
+	self CallRT: ceTrapTrampoline.
+	^0
+]
+
 { #category : #initialization }
 SistaStackToRegisterMappingCogit >> generateSistaRuntime [
 	"Trap sends Sista trap message to context with top of stack, so we don't need any arguments..."
