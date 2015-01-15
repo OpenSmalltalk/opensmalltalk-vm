@@ -49,7 +49,7 @@ Instance Variables (inherited)
 	200-207	11001 iii			Pop and Store Receiver Variable #iii
 	208-215	11010 iii			Pop and Store Temporary Variable #iii
 	216		11011000			Pop Stack Top
-	217		11011001			UNASSIGNED
+	217		11011001			Unconditionnal trap
 	218-219	1101101 i			UNASSIGNED
 	220-223	110111 ii			UNASSIGNED
 
@@ -1199,6 +1199,12 @@ EncoderForSistaV1 >> genStoreTemp: tempIndex [
 	stream
 		nextPut: 242;
 		nextPut: tempIndex
+]
+
+{ #category : #'bytecode generation' }
+EncoderForSistaV1 >> genTrap [
+	"217		11011001			Unconditionnal trap"
+	stream nextPut: 217
 ]
 
 { #category : #'bytecode generation' }
