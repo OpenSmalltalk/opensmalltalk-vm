@@ -3518,6 +3518,12 @@ SimpleStackBasedCogit >> genTraceStoreTrampoline [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genUnconditionnalTrapBytecode [
+	"SistaV1: *	217		Trap"
+	^EncounteredUnknownBytecode
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genUpArrowReturn [
 	"Generate a method return from within a method or a block.
 	 Frameless method activation looks like
