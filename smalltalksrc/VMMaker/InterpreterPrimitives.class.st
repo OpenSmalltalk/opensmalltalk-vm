@@ -588,14 +588,14 @@ InterpreterPrimitives >> primitiveAsFloat [
 
 { #category : #'indexing primitives' }
 InterpreterPrimitives >> primitiveAt [
-
-	self commonAt: false.
+	<accessorDepth: 0>
+	self commonAt: false
 ]
 
 { #category : #'indexing primitives' }
 InterpreterPrimitives >> primitiveAtPut [
-
-	self commonAtPut: false.
+	<accessorDepth: 0>
+	self commonAtPut: false
 ]
 
 { #category : #'I/O primitives' }
