@@ -284,6 +284,9 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	<var: #desc type: #'CogSimStackEntry *'>
 	<var: #retry type: #'AbstractInstruction *'>
 	<var: #countTripped type: #'AbstractInstruction *'>
+
+	(coInterpreter isOptimizedMethod: methodObj) ifTrue: [ ^ super genJumpIf: boolean to: targetBytecodePC ].
+
 	self ssFlushTo: simStackPtr - 1.
 	desc := self ssTop.
 	self ssPop: 1.
@@ -402,6 +405,9 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
+
+	(coInterpreter isOptimizedMethod: methodObj) ifTrue: [ ^ super genSpecialSelectorComparison ].
+
 	self ssFlushTo: simStackPtr - 2.
 	primDescriptor := self generatorAt: byte0.
 	argIsInt := self ssTop type = SSConstant
@@ -508,6 +514,9 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	<var: #countTripped type: #'AbstractInstruction *'>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
+
+	(coInterpreter isOptimizedMethod: methodObj) ifTrue: [ ^ super genSpecialSelectorEqualsEquals ].
+
 	self ssFlushTo: simStackPtr - 2.
 	primDescriptor := self generatorAt: byte0.
 
