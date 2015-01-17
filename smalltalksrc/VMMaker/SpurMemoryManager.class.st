@@ -4056,15 +4056,19 @@ SpurMemoryManager >> ensureRoomOnObjStackAt: objStackRootIndex [
 ]
 
 { #category : #'interpreter access' }
-SpurMemoryManager >> ensureSemaphoreForwardedThroughContext: aSemaphore [
-	"Make sure that the aSemaphore is forwarded through to the suspendedContext of the first link."
+SpurMemoryManager >> ensureSemaphoreUnforwardedThroughContext: aSemaphore [
+	"Make sure that the aSemaphore is followed through to the suspendedContext of the first link."
 	<inline: true>
-	(self isForwarded: (self fetchPointer: FirstLinkIndex ofObject: aSemaphore)) ifTrue:
-		["0 = aSemaphore, 1 = aProcess. Hence references to suspendedContext will /not/ be forwarded."
-		 self followForwardedObjectFields: aSemaphore toDepth: 1].
-	self deny: (self isForwarded: (self
-									fetchPointer: SuspendedContextIndex
-									ofObject: (self fetchPointer: FirstLinkIndex ofObject: aSemaphore)))
+	| proc ctxt |
+	proc := self fetchPointer: FirstLinkIndex ofObject: aSemaphore.
+	(self isForwarded: proc) ifTrue:
+		[self followForwardedObjectFields: aSemaphore toDepth: 1.
+		 proc := self fetchPointer: FirstLinkIndex ofObject: aSemaphore].
+	self deny: (self isForwarded: proc).
+	ctxt := self fetchPointer: SuspendedContextIndex ofObject: proc.
+	(self isForwarded: ctxt) ifTrue:
+		[ctxt := self followForwarded: ctxt.
+		 self storePointer: SuspendedContextIndex ofObject: proc withValue: ctxt]
 ]
 
 { #category : #'image segment in/out' }
@@ -6137,6 +6141,11 @@ SpurMemoryManager >> isFreeObjectClassIndexPun [
 	^0
 ]
 
+{ #category : #'object testing' }
+SpurMemoryManager >> isFreeOop: oop [
+	^(self isNonImmediate: oop) and: [self isFreeObject: oop]
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> isGrey: objOop [
 	^((self longAt: objOop) >> self greyBitShift bitAnd: 1) ~= 0
@@ -6470,14 +6479,14 @@ SpurMemoryManager >> isValidFreeObject: objOop [
 	  and: [(self isFreeObject: objOop)
 	  and: [(self oop: (self addressAfter: objOop) isLessThanOrEqualTo: endOfMemory)
 	  and: [((chunk := (self fetchPointer: self freeChunkNextIndex ofFreeChunk: objOop)) = 0
-		   or: [self isFreeObject: chunk])
-	  and: [(self bytesInObject: objOop) < (self numFreeLists * self allocationUnit)
+		   or: [self isFreeOop: chunk])
+	  and: [(self isLargeFreeObject: objOop) not
 		    or: [((chunk := (self fetchPointer: self freeChunkParentIndex ofFreeChunk: objOop)) = 0
-			   or: [self isFreeObject: chunk])
+			   or: [(self isFreeOop: chunk) and: [self isLargeFreeObject: chunk]])
 			  and: [((chunk := (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: objOop)) = 0
-				    or: [self isFreeObject: chunk])
+				    or: [(self isFreeOop: chunk) and: [self isLargeFreeObject: chunk]])
 			  and: [(chunk := (self fetchPointer: self freeChunkLargerIndex ofFreeChunk: objOop)) = 0
-				    or: [self isFreeObject: chunk]]]]]]]]
+				    or: [(self isFreeOop: chunk) and: [self isLargeFreeObject: chunk]]]]]]]]]
 ]
 
 { #category : #'obj stacks' }
@@ -9876,10 +9885,13 @@ SpurMemoryManager >> shorten: objOop toIndexableSize: indexableSize [
 SpurMemoryManager >> shouldRemapObj: objOop [
 	<api>
 	"Answer if the obj should be scavenged (or simply followed). The method is called
-	 shouldRemapObj: for compatibility with ObjectMemory."
+	 shouldRemapObj: for compatibility with ObjectMemory.  We test for being already
+	 scavenged because mapStackPages via mapInterpeeterOops may be applied twice
+	 in the context of a global GC where a scavenge, followed by a scan-mark-free, and
+	 final compaction passes may result in scvenged fields being visited twice."
 	^(self isForwarded: objOop)
-	  or: [self deny: (self isInFutureSpace: objOop).
-		  self isReallyYoungObject: objOop]
+	  or: [(self isReallyYoungObject: objOop)
+		 and: [(self isInFutureSpace: objOop) not]]
 ]
 
 { #category : #'gc - scavenging' }
