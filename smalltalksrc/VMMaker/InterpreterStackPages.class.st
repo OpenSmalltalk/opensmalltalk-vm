@@ -404,9 +404,8 @@ InterpreterStackPages >> pageListIsWellFormed [
 			[ok := false].
 		 (self asserta: page isFree not)
 			ifTrue:
-				[(self asserta: (self stackPageFor: page baseFP) == page) ifFalse:
-					[ok := false].
-				 (self asserta: (self stackPageFor: page headSP) == page) ifFalse:
+				[(self asserta: ((page addressIsInPage: page baseFP)
+								and: [page addressIsInPage: page headSP])) ifFalse:
 					[ok := false]]
 			ifFalse:
 				[ok := false].
