@@ -1782,7 +1782,7 @@ ObjectMemory >> ensureBehaviorHash: oop [
 ]
 
 { #category : #'forward compatibility' }
-ObjectMemory >> ensureSemaphoreForwardedThroughContext: aSemaphore [
+ObjectMemory >> ensureSemaphoreUnforwardedThroughContext: aSemaphore [
 	"Compatibility with SpurMemoryManager"
 	<inline: true>
 ]
