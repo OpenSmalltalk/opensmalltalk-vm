@@ -11222,6 +11222,30 @@ SpurMemoryManager >> validClassTableRootPages [
 	^true
 ]
 
+{ #category : #'free space' }
+SpurMemoryManager >> validFreeTree [
+	<api>
+	^(self validFreeTreeChunk: (freeLists at: 0) parent: 0) isNil
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> validFreeTreeChunk: chunk parent: parent [
+	<returnTypeC: 'const char *'>
+	chunk = 0 ifTrue:
+		[^nil].
+	(self addressCouldBeOldObj: chunk) ifFalse:
+		[^'not in old space'].
+	(self bytesInObject: chunk) / self allocationUnit < self numFreeLists ifTrue:
+		[^'too small'].
+	parent ~= (self fetchPointer: self freeChunkParentIndex ofFreeChunk: chunk) ifTrue:
+		[^'bad parent'].
+	(self validFreeTreeChunk: (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: chunk) parent: chunk) ifNotNil:
+		[:reason| ^reason].
+	(self validFreeTreeChunk: (self fetchPointer: self freeChunkLargerIndex ofFreeChunk: chunk) parent: chunk) ifNotNil:
+		[:reason| ^reason].
+	^nil
+]
+
 { #category : #'obj stacks' }
 SpurMemoryManager >> validObjStacks [
 	^(markStack = nilObj or: [self isValidObjStack: markStack])
