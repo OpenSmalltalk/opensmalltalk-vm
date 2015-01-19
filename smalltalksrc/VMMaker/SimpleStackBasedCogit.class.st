@@ -205,7 +205,9 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(2 243 243 genExtJumpIfTrue			branch isBranchTrue isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
 		(2 244 244 genExtJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
 
-		(2 245 248	unknownBytecode)
+		(2 245 245 genExtSendAbsentSelfBytecode isMapped)
+
+		(2 246 248	unknownBytecode)
 
 		"3 byte bytecodes"
 		(3 249 249 callPrimitiveBytecode)
@@ -213,8 +215,9 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(3 251 251 genStoreRemoteTempLongBytecode)
 		(3 252 252 genStoreAndPopRemoteTempLongBytecode)
 		(3 253 253 genExtPushClosureBytecode block v4:Block:Code:Size:)
+		(3 254 254 genExtSendAbsentOuterBytecode isMapped)
 
-		(3 254 255	unknownBytecode))
+		(3 255 255	unknownBytecode))
 ]
 
 { #category : #'class initialization' }
@@ -1720,6 +1723,30 @@ SimpleStackBasedCogit >> genExtSendAbsentImplicitBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtSendAbsentOuterBytecode [
+	"254		 11111110	i i i i i j j j kkkkkkkk	Send To Absent Outer Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments at Depth kkkkkkkk "
+	| litIndex nArgs depth |
+	litIndex := (byte1 >> 3) + (extA << 5).
+	extA := 0.
+	nArgs := (byte1 bitAnd: 7) + (extB << 3).
+	extB := 0.
+	depth := byte2.
+	^self genSendAbsentOuter: (self getLiteral: litIndex) numArgs: nArgs depth: depth
+
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtSendAbsentSelfBytecode [
+	"245		11110101	i i i i i j j j	Send To Absent Self Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
+	| litIndex nArgs |
+	litIndex := (byte1 >> 3) + (extA << 5).
+	extA := 0.
+	nArgs := (byte1 bitAnd: 7) + (extB << 3).
+	extB := 0.
+	^self genSendAbsentSelf: (self getLiteral: litIndex) numArgs: nArgs
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtSendBytecode [
 	"238		11101110	i i i i i j j j	Send Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
 	| litIndex nArgs |
@@ -3134,19 +3161,7 @@ SimpleStackBasedCogit >> genSendAbsentDynamicSuper: selector numArgs: numArgs [
 	"Shuffle arguments if necessary and push receiver.
 	 Then send."
 	<inline: false>
-	numArgs = 0
-		ifTrue:
-			[self PushR: ReceiverResultReg]
-		ifFalse:
-			[self MoveMw: 0 r: SPReg R: TempReg.
-			self PushR: TempReg.
-			2 to: numArgs do:
-				[:index|
-				self MoveMw: index * objectMemory wordSize r: SPReg R: TempReg.
-				self MoveR: TempReg Mw: index - 1 * objectMemory wordSize r: SPReg].
-			"if we copied the code in genSendDynamicSuper: we could save an instruction.
-			But we care not; the smarts are in StackToRegisterMappingCogit et al"
-			self MoveR: ReceiverResultReg Mw: numArgs * objectMemory wordSize r: SPReg].
+	self marshallAbsentReceiverSendArguments: numArgs.
 	^self genSendDynamicSuper: selector numArgs: numArgs
 ]
 
@@ -3165,19 +3180,27 @@ SimpleStackBasedCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
 	result := self genGetImplicitReceiverFor: selector forPush: false.
 	result ~= 0 ifTrue:
 		[^result].
-	numArgs = 0
-		ifTrue:
-			[self PushR: ReceiverResultReg]
-		ifFalse:
-			[self MoveMw: 0 r: SPReg R: TempReg.
-			self PushR: TempReg.
-			2 to: numArgs do:
-				[:index|
-				self MoveMw: index * objectMemory wordSize r: SPReg R: TempReg.
-				self MoveR: TempReg Mw: index - 1 * objectMemory wordSize r: SPReg].
-			"if we copied the code in genSend:numArgs: we could save an instruction.
-			But we care not; the smarts are in StackToRegisterMappingCogit et al"
-			self MoveR: ReceiverResultReg Mw: numArgs * objectMemory wordSize r: SPReg].
+	self marshallAbsentReceiverSendArguments: numArgs.
+	^self genSend: selector numArgs: numArgs
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genSendAbsentOuter: selector numArgs: numArgs depth: depth [
+	"Shuffle arguments if necessary and push receiver.
+	 Then send."
+	<inline: false>
+	self genPushEnclosingObjectAt: depth.
+	self PopR: ReceiverResultReg.
+	self marshallAbsentReceiverSendArguments: numArgs.
+	^self genSend: selector numArgs: numArgs
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genSendAbsentSelf: selector numArgs: numArgs [
+	"Shuffle arguments if necessary and push receiver.
+	 Then send."
+	<inline: false>
+	self marshallAbsentReceiverSendArguments: numArgs.
 	^self genSend: selector numArgs: numArgs
 ]
 
@@ -3605,6 +3628,22 @@ SimpleStackBasedCogit >> generateTracingTrampolines [
 						at: (a := self simulatedAddressFor: #ceShortCutTraceStore:)
 						put: #ceShortCutTraceStore:.
 					 a]
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> marshallAbsentReceiverSendArguments: numArgs [
+	"Shuffle arguments if necessary and push receiver."
+	numArgs = 0
+		ifTrue:
+			[self PushR: ReceiverResultReg]
+		ifFalse:
+			[self MoveMw: 0 r: SPReg R: TempReg.
+			self PushR: TempReg.
+			2 to: numArgs do:
+				[:index|
+				self MoveMw: index * BytesPerWord r: SPReg R: TempReg.
+				self MoveR: TempReg Mw: index - 1 * BytesPerWord r: SPReg].
+			self MoveR: ReceiverResultReg Mw: numArgs * BytesPerWord r: SPReg].
 ]
 
 { #category : #'primitive generators' }
