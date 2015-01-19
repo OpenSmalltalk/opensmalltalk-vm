@@ -250,7 +250,7 @@ ioNewProfileSamplesInto(void *sampleBuffer)
 	memcpy(sampleBuffer,
 		   pc_buffer + pc_buffer_index,
 		   (pc_buffer_size - pc_buffer_index) * sizeof(pctype));
-	memcpy((pctype *)sampleBuffer + pc_buffer_index,
+	memcpy((pctype *)sampleBuffer + (pc_buffer_size - pc_buffer_index),
 		   pc_buffer,
 		   pc_buffer_index * sizeof(pctype));
 	return pc_buffer_size;
