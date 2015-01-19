@@ -1408,12 +1408,6 @@ StackInterpreterSimulator >> nameOfClass: classOop [
 	^self stringOf: maybeNameOop
 ]
 
-{ #category : #'newspeak bytecode support' }
-StackInterpreterSimulator >> nextImplicitReceiverFor: anObject withMixin: mixin [
-	lookupCount := lookupCount + 1.
-	^super nextImplicitReceiverFor: anObject withMixin: mixin
-]
-
 { #category : #initialization }
 StackInterpreterSimulator >> nextShortFrom: aStream [
 	"Read a 16-bit quantity from the given (binary) stream."
