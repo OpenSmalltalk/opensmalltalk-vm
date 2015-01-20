@@ -826,3 +826,9 @@ CogMethodZone >> zoneEnd: zoneEnd [
 	<doNotGenerate> 
 	limitAddress := zoneEnd
 ]
+
+{ #category : #accessing }
+CogMethodZone >> zoneFree [
+	<inline: true>
+	^mzFreeStart
+]

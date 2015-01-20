@@ -745,6 +745,7 @@ InterpreterProxy >> positive32BitValueOf: oop [
 
 { #category : #converting }
 InterpreterProxy >> positive64BitIntegerFor: integerValue [
+	<api>
 	<returnTypeC: #sqInt> "...because answering the 64-bit argument causes the type inferencer to say this answers 64-bits."
 	<var: 'integerValue' type: #sqLong>
 	integerValue isInteger ifFalse:[self error:'Not an Integer object'].

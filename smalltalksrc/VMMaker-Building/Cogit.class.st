@@ -3353,7 +3353,7 @@ Cogit >> cogCodeConstituents [
 		[^constituents].
 	coInterpreter pushRemappableOop: constituents.
 	((label := objectMemory stringForCString: 'CogCode') isNil
-	 or: [(value := coInterpreter positive32BitIntegerFor: codeBase) isNil]) ifTrue:
+	 or: [(value := self positiveMachineIntegerFor: codeBase) isNil]) ifTrue:
 		[^nil].
 	coInterpreter
 		storePointerUnchecked: 0 ofObject: coInterpreter topRemappableOop withValue: label;
@@ -3361,7 +3361,7 @@ Cogit >> cogCodeConstituents [
 	0 to: trampolineTableIndex - 1 by: 2 do:
 		[:i|
 		((label := objectMemory stringForCString: (trampolineAddresses at: i)) isNil
-		 or: [(value := coInterpreter positive32BitIntegerFor: (trampolineAddresses at: i + 1) asUnsignedInteger) isNil]) ifTrue:
+		 or: [(value := self positiveMachineIntegerFor: (trampolineAddresses at: i + 1) asUnsignedInteger) isNil]) ifTrue:
 			[coInterpreter popRemappableOop.
 			 ^nil].
 		coInterpreter
@@ -3377,7 +3377,7 @@ Cogit >> cogCodeConstituents [
 				withValue: (cogMethod cmType = CMMethod
 								ifTrue: [cogMethod methodObject]
 								ifFalse: [cogMethod selector]).
-			 (value := coInterpreter positive32BitIntegerFor: cogMethod asUnsignedInteger) isNil ifTrue:
+			 (value := self positiveMachineIntegerFor: cogMethod asUnsignedInteger) isNil ifTrue:
 				[coInterpreter popRemappableOop.
 				 ^nil].
 			 coInterpreter
@@ -3387,14 +3387,14 @@ Cogit >> cogCodeConstituents [
 			 count := count + 2].
 		cogMethod := methodZone methodAfter: cogMethod].
 	((label := objectMemory stringForCString: 'CCFree') isNil
-	 or: [(value := coInterpreter positive32BitIntegerFor: methodZone freeStart) isNil]) ifTrue:
+	 or: [(value := self positiveMachineIntegerFor: methodZone zoneFree) isNil]) ifTrue:
 		[coInterpreter popRemappableOop.
 		 ^nil].
 	coInterpreter
 		storePointerUnchecked: count ofObject: coInterpreter topRemappableOop withValue: label;
 		storePointerUnchecked: count + 1 ofObject: coInterpreter topRemappableOop withValue: value.
 	((label := objectMemory stringForCString: 'CCEnd') isNil
-	 or: [(value := coInterpreter positive32BitIntegerFor: methodZone zoneEnd) isNil]) ifTrue:
+	 or: [(value := self positiveMachineIntegerFor: methodZone zoneEnd) isNil]) ifTrue:
 		[coInterpreter popRemappableOop.
 		 ^nil].
 	coInterpreter
@@ -7931,6 +7931,15 @@ Cogit >> picAbortDiscriminatorValue [
 	 or interpretation in the closed PIC aborts."
 	<inline: true>
 	^0
+]
+
+{ #category : #'profiling primitives' }
+Cogit >> positiveMachineIntegerFor: value [
+	<var: #value type: #'unsigned long'>
+	<inline: true>
+	^objectMemory wordSize = 8
+		ifTrue: [coInterpreter positive64BitIntegerFor: value]
+		ifFalse: [coInterpreter positive32BitIntegerFor: value]
 ]
 
 { #category : #'compile abstract instructions' }

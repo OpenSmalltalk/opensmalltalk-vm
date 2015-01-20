@@ -299,7 +299,7 @@ InterpreterPlugin >> msg: s [
 InterpreterPlugin >> positiveMachineIntegerFor: value [
 	<var: #value type: #'unsigned long'>
 	<inline: true>
-	^interpreterProxy bytesPerWord = 8
+	^interpreterProxy wordSize = 8
 		ifTrue: [interpreterProxy positive64BitIntegerFor: value]
 		ifFalse: [interpreterProxy positive32BitIntegerFor: value]
 ]
@@ -323,7 +323,7 @@ InterpreterPlugin >> setInterpreter: anInterpreter [
 InterpreterPlugin >> signedMachineIntegerFor: value [
 	<var: #value type: #'unsigned long'>
 	<inline: true>
-	^interpreterProxy bytesPerWord = 8
+	^interpreterProxy wordSize = 8
 		ifTrue: [interpreterProxy signed64BitIntegerFor: value]
 		ifFalse: [interpreterProxy signed32BitIntegerFor: value]
 ]

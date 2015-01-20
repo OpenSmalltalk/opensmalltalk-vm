@@ -1112,6 +1112,7 @@ CoInterpreter >> ceActivateFailingPrimitiveMethod: aPrimitiveMethod [
 { #category : #trampolines }
 CoInterpreter >> ceActiveContext [
 	<api>
+	<option: #SqueakV3ObjectMemory>
 	"Since the trampoline checks for marriage we should only be here for a single frame."
 	self assert: (self isMachineCodeFrame: framePointer).
 	self assert: (self frameHasContext: framePointer) not.
@@ -1500,6 +1501,7 @@ CoInterpreter >> ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr [
 { #category : #trampolines }
 CoInterpreter >> ceNewArraySlotSize: slotSize [
 	<api>
+	<option: #SqueakV3ObjectMemory>
 	objectMemory hasSpurMemoryManagerAPI ifTrue:
 		[| obj |
 		 obj := objectMemory
@@ -2335,6 +2337,7 @@ CoInterpreter >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
 { #category : #trampolines }
 CoInterpreter >> createClosureNumArgs: numArgs numCopied: numCopied startpc: initialIP [
 	<api>
+	<option: #SqueakV3ObjectMemory>
 	| context newClosure |
 	self assert: (self isMachineCodeFrame: framePointer).
 	"Do *not* include the return pc or copied values in the stack contents;
