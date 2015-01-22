@@ -98,6 +98,8 @@ Class {
 		'AltBytecodeEncoderClassName',
 		'AltLongStoreBytecode',
 		'AlternateHeaderHasPrimFlag',
+		'AlternateHeaderIsOptimizedFlag',
+		'AlternateHeaderNumLiteralsMask',
 		'AtCacheEntries',
 		'AtCacheFixedFields',
 		'AtCacheFmt',
@@ -968,9 +970,11 @@ StackInterpreter class >> initializeMethodIndices [
 	MethodHeaderArgCountShift := 24 + tagBits.
 	V3PrimitiveBitsMask := 16r100001FF << tagBits.
 	AlternateHeaderHasPrimFlag := 16r10000 << tagBits.
+	AlternateHeaderIsOptimizedFlag := 16r8000 << tagBits.
+	AlternateHeaderNumLiteralsMask := 16r7FFF. "N.B.  *not* shifted"
 	"The position of the unused flag bit in the method header, not including tag bit(s).
-	 This is used either as the `has been interpreted' flag or the `is an optimized method' flag; the
-	 latter if this is a Sista VM."
+	 Bits 28 & 29 are either used as an accessModifer code in Newspeak (public, private, protected)
+	 or are free for use as flag bits."
 	MethodHeaderFlagBitPosition := 28 + tagBits
 ]
 
@@ -1823,6 +1827,23 @@ StackInterpreter >> abstractDetailedSymbolicMethod: aMethod [
 		indent: 0;
 		printInstructionsOn: ts.
 	ts flush
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> accessModifierOfMethod: methodObj [
+	<option: #NewspeakVM>
+	^self accessModifierOfMethodHeader: (objectMemory methodHeaderOf: methodObj)
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> accessModifierOfMethodHeader: header [
+	<option: #NewspeakVM>
+	"accessModifier bits:
+		 00 public
+		 01 private
+		 10 protected
+		 11 undefined"
+	^header >> MethodHeaderFlagBitPosition bitAnd: 3
 ]
 
 { #category : #'control primitives' }
@@ -8118,10 +8139,16 @@ StackInterpreter >> isNullExternalPrimitiveCall: aMethodObj [
 ]
 
 { #category : #'compiled methods' }
-StackInterpreter >> isOptimizedMethod: header [
+StackInterpreter >> isOptimizedMethod: methodObj [
 	<api>
 	<option: #SistaVM>
-	^header >> MethodHeaderFlagBitPosition anyMask: 1
+	^self isOptimizedMethodHeader: (objectMemory methodHeaderOf: methodObj)
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> isOptimizedMethodHeader: header [
+	<option: #SistaVM>
+	^header anyMask: AlternateHeaderIsOptimizedFlag
 ]
 
 { #category : #'primitive support' }
@@ -8131,6 +8158,24 @@ StackInterpreter >> isPrimitiveFunctionPointerAnIndex [
 	 quick primitive indices are small they can't be confused with function
 	 addresses. "
 	^(self cCoerce: primitiveFunctionPointer to: 'unsigned long') <= MaxQuickPrimitiveIndex
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> isPrivateMethod: methodObj [
+	<option: #NewspeakVM>
+	^(self accessModifierOfMethod: methodObj) = 1
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> isProtectedMethod: methodObj [
+	<option: #NewspeakVM>
+	^(self accessModifierOfMethod: methodObj) = 2
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> isPublicMethod: methodObj [
+	<option: #NewspeakVM>
+	^(self accessModifierOfMethod: methodObj) = 0
 ]
 
 { #category : #'compiled methods' }
@@ -8372,7 +8417,7 @@ StackInterpreter >> literal: offset ofMethod: methodPointer [
 { #category : #'compiled methods' }
 StackInterpreter >> literalCountOfAlternateHeader: headerPointer [
 	<inline: true>
-	^(objectMemory integerValueOf: headerPointer) bitAnd: 16rFFFF
+	^(objectMemory integerValueOf: headerPointer) bitAnd: AlternateHeaderNumLiteralsMask
 ]
 
 { #category : #'compiled methods' }
