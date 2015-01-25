@@ -56,6 +56,11 @@ ENDIF ()
 
 CONFIGURE_FILE (${config}/config.in ${bld}/config @ONLY)
 
+IF (NOT DEFINED OPT--vm-only)
+# Build the common components that apply to both the 32-bit and 64-bit
+# object memory VM. Typically these will be built with the 32-bit object
+# memory VM only and shared for both.
+
 # launcher scripts
 
 ADD_CUSTOM_TARGET (squeak
@@ -90,3 +95,5 @@ ADD_CUSTOM_TARGET (squeak.1
 )
 ADD_DEPENDENCIES (squeakvm${scriptsuffix} squeak.1)
 INSTALL (FILES ${bld}/squeak.1 DESTINATION share/man/man1)
+
+ENDIF (NOT DEFINED OPT--vm-only)

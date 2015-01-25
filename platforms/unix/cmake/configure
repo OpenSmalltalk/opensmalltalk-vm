@@ -16,6 +16,7 @@ Options include:
   --without-gl          disable everything that depends on OpenGL
   --without-SUGAR       disable support for SUGAR environment
   --image64             build a VM for running 64-bit images
+  --vm-only             build executables only, no scripts or man pages
   --enableFastBlt       use optimised BitBlt (not supported on most platforms)
 Notes:
 1. By default the CFLAGS will be set to create optimised binaries.  If you are
