@@ -3988,7 +3988,9 @@ SpurMemoryManager >> ensureBehaviorHash: aBehavior [
 	<inline: true>
 	self assert: (coInterpreter addressCouldBeClassObj: aBehavior).
 	(newHash := self rawHashBitsOf: aBehavior) = 0 ifTrue:
-		[(err := self enterIntoClassTable: aBehavior) ~= 0 ifTrue:
+		[(coInterpreter objCouldBeClassObj: aBehavior) ifFalse:
+			[^PrimErrBadReceiver negated].
+		 (err := self enterIntoClassTable: aBehavior) ~= 0 ifTrue:
 			[^err negated].
 		 newHash := self rawHashBitsOf: aBehavior.
 		 self assert: (self classAtIndex: newHash) = aBehavior].
@@ -9958,6 +9960,13 @@ SpurMemoryManager >> signed32BitValueOf: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
 	^coInterpreter signed32BitValueOf: oop
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> signedMachineIntegerValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter signedMachineIntegerValueOf: oop
 ]
 
 { #category : #'header formats' }

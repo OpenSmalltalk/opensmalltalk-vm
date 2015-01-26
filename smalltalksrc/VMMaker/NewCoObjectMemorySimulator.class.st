@@ -487,6 +487,12 @@ NewCoObjectMemorySimulator >> signed32BitValueOf: oop [
 	^coInterpreter signed32BitValueOf: oop
 ]
 
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> signedMachineIntegerValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter signedMachineIntegerValueOf: oop
+]
+
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> sqGrowMemory: oldLimit By: delta [
 	| newMemory |
