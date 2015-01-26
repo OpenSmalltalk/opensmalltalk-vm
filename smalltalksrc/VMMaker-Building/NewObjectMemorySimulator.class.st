@@ -460,6 +460,12 @@ NewObjectMemorySimulator >> signed32BitIntegerFor: integerValue [
 	^coInterpreter signed32BitIntegerFor: integerValue
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> signedMachineIntegerValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter signedMachineIntegerValueOf: oop
+]
+
 { #category : #printing }
 NewObjectMemorySimulator >> space [
 	^coInterpreter space

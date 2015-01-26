@@ -2723,7 +2723,7 @@ StackInterpreterSimulator >> withMemoryProtectionDo: aBlock [
 
 { #category : #'frame access' }
 StackInterpreterSimulator >> withoutSmallIntegerTags: anInteger [
-	self assert: (anInteger >= 0 and: [anInteger highBit <= 32]).
+	self assert: (anInteger >= 0 and: [anInteger highBit <= (objectMemory wordSize * 8)]).
 	^(anInteger bitAnd: 16r80000000) ~= 0
 		ifTrue: ["negative"
 				(anInteger bitAnd: 16r7FFFFFFE) - 16r80000000]

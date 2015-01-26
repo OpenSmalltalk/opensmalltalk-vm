@@ -13,7 +13,7 @@ CoInterpreterTests >> testMinimumUnusedHeadroom [
 	| ci bpw |
 	CoInterpreter initializeWithOptions: Dictionary new.
 	ci := CogVMSimulator new.
-	bpw := ci objectMemory bytesPerWord.
+	bpw := ci objectMemory wordSize.
 	ci initStackPagesForTests.
 	self assert: ci minimumUnusedHeadroom = ci stackPageByteSize.
 	0 to: ci stackPageByteSize - 1 by: bpw do:
