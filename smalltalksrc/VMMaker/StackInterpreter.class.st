@@ -6356,7 +6356,7 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 			[theIPPtr := instructionPointer - method.
 			 method := objectMemory followForwarded: method.
 			 instructionPointer := method + theIPPtr].
-		(objectMemory isForwarded: newMethod) ifTrue:
+		(objectMemory isOopForwarded: newMethod) ifTrue:
 			[newMethod := objectMemory followForwarded: newMethod]].
 
 	self assert: stackPage ~= 0.
@@ -10039,27 +10039,8 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 
 { #category : #'object memory support' }
 StackInterpreter >> postBecomeAction: theBecomeEffectsFlags [
-	"Insulate the stack zone from the effects of a become.
-	 All receivers must be unfollowed for two reasons:
-		1. inst var access is direct with no read barrier
-		2. super sends (always to the receiver) have no class check and so don't trap
-		   for forwarded receivers.
-	 Methods must be unfollowed since bytecode access is direct with no read barrier.
-	 But this only needs to be done if the becomeEffectsFlags indicate that a
-	 CompiledMethod was becommed.
-	 The scheduler state must be followed, but only if the becomeEffectsFlags indicate
-	 that a pointer object was becommed."
-	self followForwardingPointersInStackZone: theBecomeEffectsFlags.
-	theBecomeEffectsFlags ~= 0 ifTrue:
-		[(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
-			[self followForwardedMethodsInMethodCache.
-			 self followForwardedMethodsInMethodZone]. "for CoInterpreter"
-		 (theBecomeEffectsFlags anyMask: BecameActiveClassFlag) ifTrue:
-			[self flushBecommedClassesInMethodCache.
-			 self flushBecommedClassesInMethodZone]. "for CoInterpreter"
-		 self followForwardingPointersInScheduler.
-		 self followForwardingPointersInSpecialObjectsArray.
-		 self followForwardingPointersInProfileState]
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[self spurPostBecomeAction: theBecomeEffectsFlags]
 ]
 
 { #category : #'object memory support' }
@@ -13314,6 +13295,33 @@ StackInterpreter >> specialSelector: index [
 { #category : #'message sending' }
 StackInterpreter >> specialSelectorNumArgs: index [
 	^objectMemory integerValueOf: (objectMemory fetchPointer: (index * 2) + 1 ofObject: (objectMemory splObj: SpecialSelectors))
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> spurPostBecomeAction: theBecomeEffectsFlags [
+	"Insulate the stack zone from the effects of a become.
+	 All receivers must be unfollowed for two reasons:
+		1. inst var access is direct with no read barrier
+		2. super sends (always to the receiver) have no class check and so don't trap
+		   for forwarded receivers.
+	 Methods must be unfollowed since bytecode access is direct with no read barrier.
+	 But this only needs to be done if the becomeEffectsFlags indicate that a
+	 CompiledMethod was becommed.
+	 The scheduler state must be followed, but only if the becomeEffectsFlags indicate
+	 that a pointer object was becommed."
+	<inline: false> "For VM profiling"
+	theBecomeEffectsFlags ~= 0 ifTrue:
+		["(theBecomeEffectsFlags anyMask: BecamePointerObjectFlag+BecameCompiledMethodFlag) ifTrue:
+			["self followForwardingPointersInStackZone: theBecomeEffectsFlags"]".
+		 (theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
+			[self followForwardedMethodsInMethodCache.
+			 self followForwardedMethodsInMethodZone]. "for CoInterpreter"
+		 (theBecomeEffectsFlags anyMask: BecameActiveClassFlag) ifTrue:
+			[self flushBecommedClassesInMethodCache.
+			 self flushBecommedClassesInMethodZone]. "for CoInterpreter"
+		 self followForwardingPointersInScheduler.
+		 self followForwardingPointersInSpecialObjectsArray.
+		 self followForwardingPointersInProfileState]
 ]
 
 { #category : #'indexing primitive support' }
