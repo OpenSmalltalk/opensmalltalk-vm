@@ -4572,6 +4572,18 @@ StackInterpreter >> copyBitsFrom: x0 to: x1 at: y [
 	^self cCode: '((sqInt (*)(sqInt, sqInt, sqInt))fn)(x0, x1, y)'
 ]
 
+{ #category : #'debug support' }
+StackInterpreter >> couldBeProcess: oop [
+	<inline: #never>
+	^(objectMemory addressCouldBeObj: oop)
+	  and: [(objectMemory isPointersNonImm: oop)
+	  and: [(objectMemory isContext: oop) not
+	  and: [(objectMemory lengthOf: oop) > MyListIndex
+	  and: [objectMemory isContext: (objectMemory
+										fetchPointer: SuspendedContextIndex
+										ofObject: oop)]]]]
+]
+
 { #category : #'debug printing' }
 StackInterpreter >> cr [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
@@ -10485,11 +10497,7 @@ StackInterpreter >> printCallStackOf: aContextOrProcessOrFrame [
 	<inline: false>
 	(stackPages couldBeFramePointer: aContextOrProcessOrFrame) ifTrue:
 		[^self printCallStackFP: (self cCoerceSimple: aContextOrProcessOrFrame to: #'char *')].
-	((objectMemory isContext: aContextOrProcessOrFrame) not
-	and: [(objectMemory lengthOf: aContextOrProcessOrFrame) > MyListIndex
-	and: [objectMemory isContext: (objectMemory
-									fetchPointer: SuspendedContextIndex
-									ofObject: aContextOrProcessOrFrame)]]) ifTrue:
+	(self couldBeProcess: aContextOrProcessOrFrame) ifTrue:
 		[^self printCallStackOf: (objectMemory
 									fetchPointer: SuspendedContextIndex
 									ofObject: aContextOrProcessOrFrame)].
@@ -11204,17 +11212,21 @@ StackInterpreter >> printStackCallStack [
 ]
 
 { #category : #'debug printing' }
-StackInterpreter >> printStackCallStackOf: frameOrContext [
+StackInterpreter >> printStackCallStackOf: aContextOrProcessOrFrame [
 	<api>
 	| theFP context |
 	<var: #theFP type: #'char *'>
-	(objectMemory addressCouldBeObj: frameOrContext) ifTrue:
-		[((objectMemory isContext: frameOrContext)
-		  and: [self checkIsStillMarriedContext: frameOrContext currentFP: nil]) ifTrue:
-			[^self printStackCallStackOf: (self frameOfMarriedContext: frameOrContext) asInteger].
+	(objectMemory addressCouldBeObj: aContextOrProcessOrFrame) ifTrue:
+		[((objectMemory isContext: aContextOrProcessOrFrame)
+		  and: [self checkIsStillMarriedContext: aContextOrProcessOrFrame currentFP: nil]) ifTrue:
+			[^self printStackCallStackOf: (self frameOfMarriedContext: aContextOrProcessOrFrame) asInteger].
+		 (self couldBeProcess: aContextOrProcessOrFrame) ifTrue:
+			[^self printCallStackOf: (objectMemory
+										fetchPointer: SuspendedContextIndex
+										ofObject: aContextOrProcessOrFrame)].
 		 ^nil].
-	 
-	theFP := frameOrContext asVoidPointer.
+
+	theFP := aContextOrProcessOrFrame asVoidPointer.
 	[context := self shortReversePrintFrameAndCallers: theFP.
 	 ((self isMarriedOrWidowedContext: context)
 	  and:
