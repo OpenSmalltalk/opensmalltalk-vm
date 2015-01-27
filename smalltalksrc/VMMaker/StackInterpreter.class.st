@@ -13321,6 +13321,7 @@ StackInterpreter >> spurPostBecomeAction: theBecomeEffectsFlags [
 	 CompiledMethod was becommed.
 	 The scheduler state must be followed, but only if the becomeEffectsFlags indicate
 	 that a pointer object was becommed."
+	<option: #SpurObjectMemory>
 	<inline: false> "For VM profiling"
 	theBecomeEffectsFlags ~= 0 ifTrue:
 		["(theBecomeEffectsFlags anyMask: BecamePointerObjectFlag+BecameCompiledMethodFlag) ifTrue:
