@@ -9,6 +9,6 @@
 # include "ia32abicc.c"
 #elif powerpc|ppc
 # include "ppcia32abicc.c"
-#elif x86_64|x64
-# include "x64ia32abicc.o"
+#elif x86_64|x64|__x86_64|__x86_64__
+# include "x64ia32abicc.c"
 #endif
