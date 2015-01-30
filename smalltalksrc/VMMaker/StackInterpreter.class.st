@@ -13315,7 +13315,8 @@ StackInterpreter >> spurPostBecomeAction: theBecomeEffectsFlags [
 	 All receivers must be unfollowed for two reasons:
 		1. inst var access is direct with no read barrier
 		2. super sends (always to the receiver) have no class check and so don't trap
-		   for forwarded receivers.
+		   for forwarded receivers.  This is an issue for primitives that assume their receiver
+		   is valid and don't validate.
 	 Methods must be unfollowed since bytecode access is direct with no read barrier.
 	 But this only needs to be done if the becomeEffectsFlags indicate that a
 	 CompiledMethod was becommed.
@@ -13323,10 +13324,9 @@ StackInterpreter >> spurPostBecomeAction: theBecomeEffectsFlags [
 	 that a pointer object was becommed."
 	<option: #SpurObjectMemory>
 	<inline: false> "For VM profiling"
+	self followForwardingPointersInStackZone: theBecomeEffectsFlags.
 	theBecomeEffectsFlags ~= 0 ifTrue:
-		["(theBecomeEffectsFlags anyMask: BecamePointerObjectFlag+BecameCompiledMethodFlag) ifTrue:
-			["self followForwardingPointersInStackZone: theBecomeEffectsFlags"]".
-		 (theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
+		[(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 			[self followForwardedMethodsInMethodCache.
 			 self followForwardedMethodsInMethodZone]. "for CoInterpreter"
 		 (theBecomeEffectsFlags anyMask: BecameActiveClassFlag) ifTrue:
