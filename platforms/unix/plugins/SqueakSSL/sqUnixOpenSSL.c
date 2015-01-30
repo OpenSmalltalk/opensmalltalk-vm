@@ -174,7 +174,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		SSL_set_connect_state(ssl->ssl);
 	}
 
-	if(ssl->loglevel) printf("sqConnectSSL: BIO_write %d bytes\n", srcLen);
+	if(ssl->loglevel) printf("sqConnectSSL: BIO_write %ld bytes\n", srcLen);
 
 	n = BIO_write(ssl->bioRead, srcBuf, srcLen);
 
@@ -261,7 +261,7 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt 
 		SSL_set_accept_state(ssl->ssl);
 	}
 
-	if(ssl->loglevel) printf("sqAcceptSSL: BIO_write %d bytes\n", srcLen);
+	if(ssl->loglevel) printf("sqAcceptSSL: BIO_write %ld bytes\n", srcLen);
 
 	n = BIO_write(ssl->bioRead, srcBuf, srcLen);
 
@@ -331,7 +331,7 @@ sqInt sqEncryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 
 	if(ssl == NULL || ssl->state != SQSSL_CONNECTED) return SQSSL_INVALID_STATE;
 
-	if(ssl->loglevel) printf("sqEncryptSSL: Encrypting %d bytes\n", srcLen);
+	if(ssl->loglevel) printf("sqEncryptSSL: Encrypting %ld bytes\n", srcLen);
 
 	nbytes = SSL_write(ssl->ssl, srcBuf, srcLen);
 	if(nbytes != srcLen) return SQSSL_GENERIC_ERROR;
