@@ -67,8 +67,8 @@ AsynchFilePlugin >> primitiveAsyncFileClose: fh [
 	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileClose' parameters: #(Oop ).
 	f := self asyncFileValueOf: fh.
-	interpreterProxy failed ifFalse:
-		[self asyncFileClose: f]
+	interpreterProxy failed ifTrue: [^nil].
+	self asyncFileClose: f
 ]
 
 { #category : #primitives }
@@ -109,11 +109,11 @@ AsynchFilePlugin >> primitiveAsyncFileReadResult: fhandle intoBuffer: buffer at:
 		 bufferSize := bufferSize * 4].
 	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= bufferSize]).
 
-	interpreterProxy failed ifFalse:
-		["adjust for zero-origin indexing"
-		 bufferPtr := (self cCoerce: (interpreterProxy firstIndexableField: buffer) to:#sqInt) + startIndex - 1.
-		 r := self asyncFile: f Read: bufferPtr asVoidPointer Result: count].
-	^ r asOop: SmallInteger
+	interpreterProxy failed ifTrue: [^nil].
+	"adjust for zero-origin indexing"
+	bufferPtr := (self cCoerce: (interpreterProxy firstIndexableField: buffer) to:#sqInt) + startIndex - 1.
+	r := self asyncFile: f Read: bufferPtr asVoidPointer Result: count.
+	^r asOop: SmallInteger
 ]
 
 { #category : #primitives }
@@ -122,9 +122,8 @@ AsynchFilePlugin >> primitiveAsyncFileReadStart: fHandle fPosition: fPosition co
 	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileReadStart' parameters: #(Oop SmallInteger SmallInteger).
 	f := self asyncFileValueOf: fHandle.
-	interpreterProxy failed ifFalse:
-		[self asyncFile: f Read: fPosition Start: count]
-
+	interpreterProxy failed ifTrue: [^nil].
+	self asyncFile: f Read: fPosition Start: count
 ]
 
 { #category : #primitives }
@@ -134,9 +133,9 @@ AsynchFilePlugin >> primitiveAsyncFileWriteResult: fHandle [
 	self primitive: 'primitiveAsyncFileWriteResult' parameters:#(Oop).
 
 	f := self asyncFileValueOf: fHandle.
-	interpreterProxy failed ifFalse:
-		[r := self asyncFileWriteResult: f.
-		 ^r asOop: SmallInteger]
+	interpreterProxy failed ifTrue: [^nil].
+	r := self asyncFileWriteResult: f.
+	^r asOop: SmallInteger
 ]
 
 { #category : #primitives }
@@ -154,10 +153,10 @@ AsynchFilePlugin >> primitiveAsyncFileWriteStart: fHandle fPosition: fPosition f
 		 bufferSize := bufferSize * 4].
 	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= bufferSize]).
 
-	interpreterProxy failed ifFalse:
-		["adjust for zero-origin indexing"
-		 bufferPtr := (self cCoerce: (interpreterProxy firstIndexableField: buffer) to: #sqInt) + startIndex - 1.
-		 self async: f File: fPosition Write: bufferPtr asVoidPointer Start: count]
+	interpreterProxy failed ifTrue: [^nil].
+	"adjust for zero-origin indexing"
+	bufferPtr := (self cCoerce: (interpreterProxy firstIndexableField: buffer) to: #sqInt) + startIndex - 1.
+	self async: f File: fPosition Write: bufferPtr asVoidPointer Start: count
 ]
 
 { #category : #'initialize-release' }
