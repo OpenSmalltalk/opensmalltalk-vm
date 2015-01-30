@@ -67,7 +67,8 @@ AsynchFilePlugin >> primitiveAsyncFileClose: fh [
 	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileClose' parameters: #(Oop ).
 	f := self asyncFileValueOf: fh.
-	self asyncFileClose: f
+	interpreterProxy failed ifFalse:
+		[self asyncFileClose: f]
 ]
 
 { #category : #primitives }
@@ -102,15 +103,16 @@ AsynchFilePlugin >> primitiveAsyncFileReadResult: fhandle intoBuffer: buffer at:
 	count := num.
 	startIndex := start.
 	bufferSize := interpreterProxy slotSizeOf: buffer. "in bytes or words"
-	(interpreterProxy isWords: buffer)
-		ifTrue: ["covert word counts to byte counts"
-			count := count * 4.
-			startIndex := startIndex - 1 * 4 + 1.
-			bufferSize := bufferSize * 4].
+	(interpreterProxy isWords: buffer) ifTrue: "covert word counts to byte counts"
+		[count := count * 4.
+		 startIndex := startIndex - 1 * 4 + 1.
+		 bufferSize := bufferSize * 4].
 	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= bufferSize]).
 
-	bufferPtr := (self cCoerce: (interpreterProxy firstIndexableField: buffer) to:#sqInt) + startIndex - 1. 	"adjust for zero-origin indexing"
-	interpreterProxy failed ifFalse: [r := self cCode: 'asyncFileReadResult(f, bufferPtr, count)'].
+	interpreterProxy failed ifFalse:
+		["adjust for zero-origin indexing"
+		 bufferPtr := (self cCoerce: (interpreterProxy firstIndexableField: buffer) to:#sqInt) + startIndex - 1.
+		 r := self asyncFile: f Read: bufferPtr asVoidPointer Result: count].
 	^ r asOop: SmallInteger
 ]
 
@@ -120,20 +122,21 @@ AsynchFilePlugin >> primitiveAsyncFileReadStart: fHandle fPosition: fPosition co
 	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileReadStart' parameters: #(Oop SmallInteger SmallInteger).
 	f := self asyncFileValueOf: fHandle.
-	self cCode: 'asyncFileReadStart(f, fPosition, count)'
+	interpreterProxy failed ifFalse:
+		[self asyncFile: f Read: fPosition Start: count]
 
 ]
 
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileWriteResult: fHandle [
-
 	| f r |
 	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileWriteResult' parameters:#(Oop).
 
 	f := self asyncFileValueOf: fHandle.
-	r := self cCode:' asyncFileWriteResult(f)'.
-	^r asOop: SmallInteger
+	interpreterProxy failed ifFalse:
+		[r := self asyncFileWriteResult: f.
+		 ^r asOop: SmallInteger]
 ]
 
 { #category : #primitives }
@@ -142,19 +145,19 @@ AsynchFilePlugin >> primitiveAsyncFileWriteStart: fHandle fPosition: fPosition f
 	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileWriteStart' parameters: #(Oop SmallInteger Oop SmallInteger SmallInteger ).
 	f := self asyncFileValueOf: fHandle.
-	interpreterProxy failed ifTrue: [^ nil].
-
 	count := num.
 	startIndex := start.
 	bufferSize := interpreterProxy slotSizeOf: buffer.	"in bytes or words"
-	(interpreterProxy isWords: buffer)
-		ifTrue: ["covert word counts to byte counts"
-			count := count * 4.
-			startIndex := startIndex - 1 * 4 + 1.
-			bufferSize := bufferSize * 4].
+	(interpreterProxy isWords: buffer) ifTrue: "covert word counts to byte counts"
+		[count := count * 4.
+		 startIndex := startIndex - 1 * 4 + 1.
+		 bufferSize := bufferSize * 4].
 	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= bufferSize]).
-	bufferPtr := (self cCoerce: (interpreterProxy firstIndexableField: buffer) to: #sqInt) + startIndex - 1.	"adjust for zero-origin indexing"
-	interpreterProxy failed ifFalse: [self cCode: 'asyncFileWriteStart(f, fPosition, bufferPtr, count)']
+
+	interpreterProxy failed ifFalse:
+		["adjust for zero-origin indexing"
+		 bufferPtr := (self cCoerce: (interpreterProxy firstIndexableField: buffer) to: #sqInt) + startIndex - 1.
+		 self async: f File: fPosition Write: bufferPtr asVoidPointer Start: count]
 ]
 
 { #category : #'initialize-release' }

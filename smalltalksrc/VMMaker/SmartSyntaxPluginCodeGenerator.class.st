@@ -182,6 +182,39 @@ SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asNonIntegerValu
 ]
 
 { #category : #coercing }
+SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asOopPtrFrom: anInteger [
+	"Answer codestring for integer pointer to first indexable field of object (without validating side-effect), as described in comment to ccgLoad:expr:asRawOopFrom:"
+
+	^aBlock value: (String streamContents:
+		[:aStream |
+		 aStream
+			nextPutAll: 'self cCoerce: (interpreterProxy firstIndexableField:';
+			crtab: 4;
+			nextPutAll: '(interpreterProxy stackValue:';
+			print: anInteger;
+			nextPutAll:	'))';
+			crtab: 3;
+			nextPutAll: 'to: ''sqInt *'''])
+]
+
+{ #category : #coercing }
+SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asOopPtrFrom: anInteger andThen: valBlock [
+	"Answer codestring for integer pointer to first indexable field of object (without validating side-effect unless specified in valBlock), as described in comment to ccgLoad:expr:asRawOopFrom:"
+
+	^(valBlock value: anInteger), '.',
+	 (aBlock value: (String streamContents:
+		[:aStream |
+		aStream
+			nextPutAll: 'self cCoerce: (interpreterProxy firstIndexableField:';
+			crtab: 4;
+			nextPutAll: '(interpreterProxy stackValue:';
+			print: anInteger;
+			nextPutAll:	'))';
+			crtab: 3;
+			nextPutAll: 'to: ''sqInt *''']))
+]
+
+{ #category : #coercing }
 SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asRawOopFrom: anInteger [
 	"Answer a string for a Slang expression that will load an oop (without validation) from stack index anInteger.  Apply aBlock, a BlockContext instance that when passed an expression, will return a string assigning the expression to the desired identifier, to the string before answering.  aString is a Slang expression that refers to the stack value, once it has been loaded."
 
