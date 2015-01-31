@@ -1,9 +1,12 @@
-  /*  Changed Sept 15th by John M McIntosh to support Macintosh & Squeak
+/* Changed Sept 15th by John M McIntosh to support Macintosh & Squeak
+ * Changed 2015/1/30 by Eliot Miranda to include memoryAllocate/memoryFree decls
  */
 
 #ifndef MPEG3PRIVATE_H
 #define MPEG3PRIVATE_H
 
+void * memoryAllocate(int number,unsigned size);
+void memoryFree(void *stuff);
 
 /** configuration **/
 #if defined(__MWERKS__)

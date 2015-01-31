@@ -808,7 +808,9 @@ int glRenderVertexBuffer(int handle, int primType, int flags, int texHandle, flo
 	B3DInputFace *facePtr = (B3DInputFace*) idxArray;
 	GLuint tracking;
 	int nVertices = vtxSize;
+#ifndef GL_VERSION_1_1
 	int nFaces = 0;
+#endif
 	int i, vtxFlags;
 
 	struct glRenderer *renderer = glRendererFromHandle(handle);
