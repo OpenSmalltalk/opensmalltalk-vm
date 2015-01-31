@@ -49,6 +49,8 @@ extern VMCallbackContext *getMostRecentCallbackContext(void);
  * wanted or necessary.
  */
 #if !defined(WIN32)
+# undef setjmp
+# undef longjmp
 # define setjmp _setjmp
 # define longjmp _longjmp
 #endif
