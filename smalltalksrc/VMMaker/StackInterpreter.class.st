@@ -26,6 +26,7 @@ Class {
 		'stackPointer',
 		'framePointer',
 		'localReturnValue',
+		'localAbsentReceiver',
 		'extA',
 		'extB',
 		'primitiveFunctionPointer',
@@ -210,6 +211,8 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		as: #'StackPage *'
 		in: aCCodeGenerator.
 	aCCodeGenerator removeVariable: 'stackPages'.  "this is an implicit receiver in the translated code."
+	NewspeakVM ifFalse:
+		[aCCodeGenerator removeVariable: 'localAbsentReceiver'].
 	"This defines bytecodeSetSelector as 0 if MULTIPLEBYTECODESETS
 	 is not defined, for the benefit of the interpreter on slow machines."
 	aCCodeGenerator addConstantForBinding: (self bindingOf: #MULTIPLEBYTECODESETS).
@@ -4354,6 +4357,21 @@ StackInterpreter >> commonSend [
 ]
 
 { #category : #'send bytecodes' }
+StackInterpreter >> commonSendAbsent [
+	"Send an absent receiver message, shuffling arguments and inserting the absent
+	 receiver for the send.  Assume: messageSelector and argumentCount have been
+	 set, and that the arguments but not the receiver have been pushed onto the stack,"
+	"Note: This method is inlined into the interpreter dispatch loop."
+	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments"
+	"240		11110000	i i i i i j j j	Send To Absent Implicit Receiver Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
+	<sharedCodeInCase: #extSendAbsentImplicitBytecode>
+	self shuffleArgumentsAndStoreAbsentReceiver: localAbsentReceiver.
+	lkupClassTag := objectMemory fetchClassTagOf: localAbsentReceiver.
+	self assert: (objectMemory classForClassTag: lkupClassTag) ~= objectMemory nilObject.
+	self commonSend
+]
+
+{ #category : #'send bytecodes' }
 StackInterpreter >> commonSendAbsentImplicit [
 	"Send a message to the implicit receiver for that message."
 	"Assume: messageSelector and argumentCount have been set, and that 
@@ -4362,16 +4380,11 @@ StackInterpreter >> commonSendAbsentImplicit [
 	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments"
 	"240		11110000	i i i i i j j j	Send To Absent Implicit Receiver Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
 	<sharedCodeInCase: #extSendAbsentImplicitBytecode>
-	| followedReceiver implicitReceiver |
-	followedReceiver := self internalFollowedReceiver.
-	implicitReceiver := self
-							implicitReceiverFor: followedReceiver
-							mixin: (self methodClassOf: method)
-							implementing: messageSelector.
-	self shuffleArgumentsAndStoreAbsentReceiver: implicitReceiver.
-	lkupClassTag := objectMemory fetchClassTagOf: implicitReceiver.
-	self assert: lkupClassTag ~= objectMemory nilObject.
-	self commonSend
+	localAbsentReceiver := self
+								implicitReceiverFor: self receiver
+								mixin: (self methodClassOf: method)
+								implementing: messageSelector.
+	self commonSendAbsent
 ]
 
 { #category : #'indexing primitive support' }
@@ -4918,11 +4931,14 @@ StackInterpreter >> dynamicSuperSendBytecode [
 	<inline: true>
 	argumentCount := self fetchByte.
 	messageSelector := self literal: self fetchByte.
+	"To maintain the invariant that all receivers are unforwarded we need an explicit
+	 read barrier in the super send cases."
+	self ensureReceiverUnforwarded.
 	rcvr := self internalStackValue: argumentCount.
 	mClassMixin := self methodClassOf: method.
 	mixinApplication := self 
-		findApplicationOfTargetMixin: mClassMixin
-		startingAtBehavior: (objectMemory fetchClassOf: rcvr).
+							findApplicationOfTargetMixin: mClassMixin
+							startingAtBehavior: (objectMemory fetchClassOf: rcvr).
 	lkupClassTag := objectMemory classTagForClass: (self superclassOf: mixinApplication).
 	self commonSend
 ]
@@ -5026,6 +5042,15 @@ StackInterpreter >> ensureImageFormatIsUpToDate: swapBytes [
 	swapBytes
 		ifTrue: [self reverseBytesInImage]
 		ifFalse: [self convertFloatsToPlatformOrder]
+]
+
+{ #category : #'send bytecodes' }
+StackInterpreter >> ensureReceiverUnforwarded [
+	"To maintain the invariant that all receivers are unforwarded we need an explicit
+	 read barrier in the super send cases."
+	(objectMemory isOopForwarded: (self internalStackValue: argumentCount)) ifTrue:
+		[self internalStackValue: argumentCount
+			put: (objectMemory followForwarded: (self internalStackValue: argumentCount))]
 ]
 
 { #category : #'callback support' }
@@ -5273,20 +5298,18 @@ StackInterpreter >> extSendAbsentImplicitBytecode [
 { #category : #'send bytecodes' }
 StackInterpreter >> extSendAbsentOuterBytecode [
 	"254		  11111110 	i i i i i j j j	kkkkkkkk Send To Enclosing Object at Depth kkkkkkkk Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	| byte depth absentReceiver |
+	| byte depth |
 	byte := self fetchByte.
 	messageSelector := self literal: (byte >> 3) + (extA << 5).
 	extA := 0.
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
 	depth := self fetchByte.
-	absentReceiver := self 
+	localAbsentReceiver := self 
 							enclosingObjectAt: depth
 							withObject: self receiver 
 							withMixin: (self methodClassOf: method).
-	self shuffleArgumentsAndStoreAbsentReceiver: absentReceiver.
-	lkupClassTag := objectMemory classTagForClass: (objectMemory fetchClassOf: absentReceiver).
-	self commonSend
+	self commonSendAbsent
 ]
 
 { #category : #'send bytecodes' }
@@ -5298,9 +5321,8 @@ StackInterpreter >> extSendAbsentSelfBytecode [
 	extA := 0.
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
-	self shuffleArgumentsAndStoreAbsentReceiver: self receiver.
-	lkupClassTag := objectMemory classTagForClass: (objectMemory fetchClassOf: self receiver).
-	self commonSend
+	localAbsentReceiver := self receiver.
+	self commonSendAbsent
 ]
 
 { #category : #'send bytecodes' }
@@ -5314,7 +5336,7 @@ StackInterpreter >> extSendBytecode [
 	extB := 0.
 	rcvr := self internalStackValue: argumentCount.
 	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
-	self assert: lkupClassTag ~= objectMemory nilObject.
+	self assert: (objectMemory classForClassTag: lkupClassTag) ~= objectMemory nilObject.
 	self commonSend
 ]
 
@@ -7805,17 +7827,6 @@ StackInterpreter >> internalFindNewMethod [
 		 self lookupMethodInClass: lkupClass.
 		 self internalizeIPandSP.
 		 self addNewMethodToCache: lkupClass]
-]
-
-{ #category : #'internal interpreter access' }
-StackInterpreter >> internalFollowedReceiver [
-	<inline: true>
-	| rcvr |
-	rcvr := stackPages longAt: localFP + FoxReceiver.
-	(objectMemory isOopForwarded: rcvr) ifTrue:
-		[rcvr := objectMemory followForwarded: rcvr.
-		 stackPages longAt: localFP + FoxReceiver put: rcvr].
-	^rcvr
 ]
 
 { #category : #'return bytecodes' }
@@ -11553,12 +11564,11 @@ StackInterpreter >> pushImplicitReceiverBytecode [
 	 effectively finds the nearest lexically-enclosing implementation of
 	 that selector by searching up the static chain of the receiver,
 	 starting at the current method."
-	| selector followedReceiver |
+	| selector |
 	selector := self literal: self fetchByte.
 	self fetchNextBytecode.
-	followedReceiver := self internalFollowedReceiver.
 	self internalPush: (self
-						implicitReceiverFor: followedReceiver
+						implicitReceiverFor: self receiver
 						mixin: (self methodClassOf: method)
 						implementing: selector)
 ]
@@ -13317,6 +13327,10 @@ StackInterpreter >> spurPostBecomeAction: theBecomeEffectsFlags [
 		2. super sends (always to the receiver) have no class check and so don't trap
 		   for forwarded receivers.  This is an issue for primitives that assume their receiver
 		   is valid and don't validate.
+	 Super sends require an explicit check to ensure receivers in super sends are unforwarded.
+	 e.g. super doSomethingWith: (self become: other) forwards the receiver self pushed on the
+	 stack.  So we could avoid following non-pointer receivers.  But this is too tricky,  Instead, we
+	 always follow receivers.
 	 Methods must be unfollowed since bytecode access is direct with no read barrier.
 	 But this only needs to be done if the becomeEffectsFlags indicate that a
 	 CompiledMethod was becommed.
@@ -13818,6 +13832,11 @@ StackInterpreter >> superclassSend [
 	superclass := self superclassOf: (self methodClassOf: method).
 	objectMemory ensureBehaviorHash: superclass.
 	lkupClassTag := objectMemory classTagForClass: superclass.
+	"To maintain the invariant that all receivers are unforwarded we need an explicit
+	 read barrier in the super send cases.  Even though we always follow receivers
+	 on become  e.g. super doSomethingWith: (self become: other) forwards the receiver
+	 self pushed on the stack."
+	self ensureReceiverUnforwarded.
 	self assert: lkupClassTag ~= objectMemory nilObject.
 	self commonSend
 ]
