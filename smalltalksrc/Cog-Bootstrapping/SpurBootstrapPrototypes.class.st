@@ -612,8 +612,9 @@ SpurBootstrapPrototypes >> ClassDescriptionPROTOTYPEupdateInstances: oldInstance
 		[^nil]. "no instances to convert"
 	isMeta ifTrue:
 		[(oldInstances size = 1
-		  and: [self soleInstance class == self]) ifFalse:
-			[^self error:'Metaclasses can only have one instance']].
+		  and: [self soleInstance class == self
+				or: [self soleInstance class == oldClass]]) ifFalse:
+			[^self error: 'Metaclasses can only have one instance']].
 	map := self instVarMappingFrom: oldClass.
 	variable := self isVariable.
 	instSize := self instSize.
