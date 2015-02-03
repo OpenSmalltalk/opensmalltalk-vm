@@ -22,6 +22,15 @@ FilePluginSimulator >> close [  "close any files that ST may have opened"
 	openFiles do: [:f | f close]
 ]
 
+{ #category : #simulation }
+FilePluginSimulator >> createDirectory: aString [
+	^[FileDirectory default primCreateDirectory: aString.
+	   true]
+		on: Error
+		do: [:ex| false]
+	
+]
+
 { #category : #'file primitives' }
 FilePluginSimulator >> fileOpenName: nameIndex size: nameSize write: writeFlag secure: secureFlag [
 	"Open the named file, possibly checking security. Answer the file oop."
