@@ -4034,6 +4034,12 @@ ObjectMemory >> numSlotsOf: obj [
 	^sz - self baseHeaderSize >> self shiftForWord
 ]
 
+{ #category : #'object access' }
+ObjectMemory >> numSlotsOfAny: obj [
+	"Sput compatibility"
+	^self numSlotsOf: obj
+]
+
 { #category : #'interpreter access' }
 ObjectMemory >> numSmallIntegerBits [
 	^31

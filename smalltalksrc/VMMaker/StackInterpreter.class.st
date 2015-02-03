@@ -310,9 +310,15 @@ StackInterpreter class >> initializeBytecodeTable [
 		[:initalizer| ^self perform: initalizer].
 
 	NewspeakVM ifTrue:
-		[^MULTIPLEBYTECODESETS
-			ifTrue: [self initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid]
-			ifFalse: [self initializeBytecodeTableForNewspeakV3PlusClosures]].
+		[^(initializationOptions at: #SpurObjectMemory ifAbsent: false)
+			ifTrue:
+				[MULTIPLEBYTECODESETS
+					ifTrue: [self initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid]
+					ifFalse: [self initializeBytecodeTableForNewspeakV4]]
+			ifFalse:
+				[MULTIPLEBYTECODESETS
+					ifTrue: [self initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid]
+					ifFalse: [self initializeBytecodeTableForNewspeakV3PlusClosures]]].
 
 	^self initializeBytecodeTableForSqueakV3PlusClosures
 ]
@@ -783,6 +789,20 @@ StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosures [
 		(224 239 sendLiteralSelector1ArgBytecode)
 		(240 255 sendLiteralSelector2ArgsBytecode)
 	)
+]
+
+{ #category : #initialization }
+StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid [
+	"StackInterpreter initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid"
+
+	| v3Table v4Table |
+	self initializeBytecodeTableForNewspeakV4.
+	v4Table := BytecodeTable.
+	AltBytecodeEncoderClassName := BytecodeEncoderClassName.
+	AltLongStoreBytecode := LongStoreBytecode.
+	self initializeBytecodeTableForSqueakV3PlusClosures.
+	v3Table := BytecodeTable.
+	BytecodeTable := v3Table, v4Table
 ]
 
 { #category : #initialization }
@@ -4362,8 +4382,10 @@ StackInterpreter >> commonSendAbsent [
 	 receiver for the send.  Assume: messageSelector and argumentCount have been
 	 set, and that the arguments but not the receiver have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
-	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments"
+	"160-175	1010 i i i i				Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments"
 	"240		11110000	i i i i i j j j	Send To Absent Implicit Receiver Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
+	"245		 11110101 i i i i i j j j	Send To Self Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
+	"254		 11111110 i i i i i j j j	kkkkkkkk Send To Enclosing Object at Depth kkkkkkkk Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
 	<sharedCodeInCase: #extSendAbsentImplicitBytecode>
 	self shuffleArgumentsAndStoreAbsentReceiver: localAbsentReceiver.
 	lkupClassTag := objectMemory fetchClassTagOf: localAbsentReceiver.
@@ -8547,7 +8569,7 @@ StackInterpreter >> longPrintOop: oop [
 			self cr]].
 	(objectMemory isCompiledMethod: oop)
 		ifFalse:
-			[startIP > 64 ifTrue: [self print: '...'; cr]]
+			[startIP > lastIndex ifTrue: [self print: '...'; cr]]
 		ifTrue:
 			[startIP := startIP * objectMemory wordSize + 1.
 			 lastIndex := objectMemory lengthOf: oop.
@@ -9782,7 +9804,7 @@ StackInterpreter >> objCouldBeClassObj: objOop [
 	<inline: false>
 	| fieldOop |
 	^(objectMemory isPointersNonImm: objOop)
-	  and: [(objectMemory numSlotsOf: objOop) > InstanceSpecificationIndex
+	  and: [(objectMemory numSlotsOfAny: objOop) > InstanceSpecificationIndex
 	  and: [fieldOop := objectMemory fetchPointer: SuperclassIndex ofObject: objOop.
 			((objectMemory isNonImmediate: fieldOop)
 			and:[ (objectMemory isPointersNonImm: fieldOop)

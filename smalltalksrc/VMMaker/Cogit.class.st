@@ -757,9 +757,15 @@ Cogit class >> initializeBytecodeTable [
 		[:initalizer| ^self perform: initalizer].
 
 	NewspeakVM ifTrue:
-		[^MULTIPLEBYTECODESETS
-			ifTrue: [self initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid]
-			ifFalse: [self initializeBytecodeTableForNewspeakV3PlusClosures]].
+		[^(initializationOptions at: #SpurObjectMemory ifAbsent: false)
+			ifTrue:
+				[MULTIPLEBYTECODESETS
+					ifTrue: [self initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid]
+					ifFalse: [self initializeBytecodeTableForNewspeakV4]]
+			ifFalse:
+				[MULTIPLEBYTECODESETS
+					ifTrue: [self initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid]
+					ifFalse: [self initializeBytecodeTableForNewspeakV3PlusClosures]]].
 	^self initializeBytecodeTableForSqueakV3PlusClosures
 ]
 
@@ -776,6 +782,23 @@ Cogit class >> initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid 
 	AltNSSendIsPCAnnotated := NSSendIsPCAnnotated.
 	AltFirstSpecialSelector := FirstSpecialSelector.
 	self initializeBytecodeTableForNewspeakV3PlusClosures.
+	v3Table := generatorTable.
+	generatorTable := CArrayAccessor on: v3Table object, v4Table object
+]
+
+{ #category : #'class initialization' }
+Cogit class >> initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid [
+	"SimpleStackBasedCogit initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid"
+	"StackToRegisterMappingCogit initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid"
+
+	| v3Table v4Table |
+	"N.B. Must do it backwards to evaluate AltBlockCreationBytecodeSize & BlockCreationBytecodeSize et al correctly."
+	self initializeBytecodeTableForNewspeakV4.
+	v4Table := generatorTable.
+	AltBlockCreationBytecodeSize := BlockCreationBytecodeSize.
+	AltNSSendIsPCAnnotated := NSSendIsPCAnnotated.
+	AltFirstSpecialSelector := FirstSpecialSelector.
+	self initializeBytecodeTableForSqueakV3PlusClosures.
 	v3Table := generatorTable.
 	generatorTable := CArrayAccessor on: v3Table object, v4Table object
 ]
