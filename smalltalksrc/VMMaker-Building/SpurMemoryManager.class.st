@@ -7275,7 +7275,6 @@ SpurMemoryManager >> markAndTrace: objOop [
 { #category : #'gc - global' }
 SpurMemoryManager >> markAndTraceClassOf: objOop [
 	"Ensure the class of the argument is marked, pushing it on the markStack if not already marked.
-	 Also set the relevant bit in the classTableBitmap so that duplicate entries can be eliminated.
 	 And for one-way become, which can create duplicate entries in the class table, make sure
 	 objOop's classIndex refers to the classObj's actual classIndex.
 	 Note that this is recursive, but the metaclass chain should terminate quickly."
@@ -7283,6 +7282,7 @@ SpurMemoryManager >> markAndTraceClassOf: objOop [
 	| classIndex classObj realClassIndex |
 	classIndex := self classIndexOf: objOop.
 	classObj := self classOrNilAtIndex: classIndex.
+	self assert: (coInterpreter objCouldBeClassObj: classObj).
 	realClassIndex := self rawHashBitsOf: classObj.
 	classIndex ~= realClassIndex ifTrue:
 		[self setClassIndexOf: objOop to: realClassIndex].
@@ -7473,19 +7473,20 @@ SpurMemoryManager >> markLoopFrom: objOop [
 ]
 
 { #category : #'gc - global' }
-SpurMemoryManager >> markObjects: objectsShouldBeUnmarked [
+SpurMemoryManager >> markObjects: objectsShouldBeUnmarkedAndUnmarkedClassesShouldBeExpunged [
 	<inline: #never> "for profiling"
-	"Mark all accessible objects.  "
+	"Mark all accessible objects.  objectsShouldBeUnmarkedAndUnmarkedClassesShouldBeExpunged
+	 is true if all objects are unmarked and/or if unmarked classes shoud be removed from the class table."
 	"If the incremental collector is running mark bits may be set; stop it and clear them if necessary."
 	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: 'marking...'; flush].
 	self runLeakCheckerForFullGC: true.
 
-	self shutDownIncrementalGC: objectsShouldBeUnmarked.
+	self shutDownIncrementalGC: objectsShouldBeUnmarkedAndUnmarkedClassesShouldBeExpunged.
 	self initializeUnscannedEphemerons.
 	self initializeMarkStack.
 	self initializeWeaklingStack.
 	self markAccessibleObjectsAndFireEphemerons.
-	self expungeDuplicateAndUnmarkedClasses: true.
+	self expungeDuplicateAndUnmarkedClasses: objectsShouldBeUnmarkedAndUnmarkedClassesShouldBeExpunged.
 	self nilUnmarkedWeaklingSlots
 ]
 
@@ -9444,7 +9445,7 @@ SpurMemoryManager >> resetFreeListHeads [
 
 { #category : #'image segment in/out' }
 SpurMemoryManager >> restoreObjectsIn: objArray savedHashes: savedHashes [
-	"Enumerate the objects in objArray,unmarking them and restoring their hashes
+	"Enumerate the objects in objArray, unmarking them and restoring their hashes
 	 from the corresponding 32-bit slots in savedHashes.  The first unused entry in
 	 objArray will have a non-hash value entry in savedHashes.  Free savedHashes."
 	<inline: false>
@@ -10515,7 +10516,7 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArray outPointers: outPoi
 				restoringObjectsIn: arrayOfObjects savedHashes: savedInHashes
 				and: outPointerArray savedHashes: savedOutHashes].
 
-	"We're done.  SHorten the results, restore hashes and return."
+	"We're done.  Shorten the results, restore hashes and return."
 	self shorten: segmentWordArray toIndexableSize: segAddr - (segmentWordArray + self baseHeaderSize) / 4.
 	self shorten: outPointerArray toIndexableSize: outIndex.
 	^self return: PrimNoErr
@@ -10702,6 +10703,13 @@ SpurMemoryManager >> sufficientSpaceAfterGC: numBytes [
 { #category : #allocation }
 SpurMemoryManager >> sufficientSpaceToInstantiate: classObj indexableSize: indexableFields [
 	self shouldNotImplement
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> superclassOf: classPointer [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter superclassOf: classPointer
 ]
 
 { #category : #compaction }
