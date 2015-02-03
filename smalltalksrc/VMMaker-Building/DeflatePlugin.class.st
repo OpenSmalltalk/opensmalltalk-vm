@@ -271,7 +271,8 @@ DeflatePlugin >> findMatch: here lastLength: lastLength lastMatch: lastMatch cha
 
 { #category : #'initialize-release' }
 DeflatePlugin >> initialize [
-	writeStreamInstSize := 0
+	writeStreamInstSize := 0.
+	super initialize
 ]
 
 { #category : #deflating }
