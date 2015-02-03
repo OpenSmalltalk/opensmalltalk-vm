@@ -688,7 +688,8 @@ SpurBootstrapMonticelloPackagePatcher >> spurConfigurationOf: anMCConfiguration 
 						 ver notNil])
 						ifTrue: [found := true. info := ver info].
 					(ver isNil and: [spurVersionName notNil]) ifTrue:
-						[Transcript nextPutAll: 'failed to get ', spurVersionName, ' in ', anMCConfiguration name; cr; flush].
+						[Transcript nextPutAll: 'failed to get ', spurVersionName, ' in ', anMCConfiguration name; cr; flush.
+						 self error: 'failed to get ', spurVersionName, ' in ', anMCConfiguration name].
 					s nextPut: #dependency; nextPut: (MCConfiguration dependencyToArray: (MCVersionDependency package: dep package info: info))]].
 	^found ifTrue:
 		[MCConfiguration fromArray: clone]
