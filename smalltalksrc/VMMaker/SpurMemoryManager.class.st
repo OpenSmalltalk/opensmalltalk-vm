@@ -3992,17 +3992,19 @@ SpurMemoryManager >> endOfMemory [
 
 { #category : #'class table' }
 SpurMemoryManager >> ensureBehaviorHash: aBehavior [
-	| newHash err |
+	| hash err |
 	<inline: true>
 	self assert: (coInterpreter addressCouldBeClassObj: aBehavior).
-	(newHash := self rawHashBitsOf: aBehavior) = 0 ifTrue:
-		[(coInterpreter objCouldBeClassObj: aBehavior) ifFalse:
-			[^PrimErrBadReceiver negated].
-		 (err := self enterIntoClassTable: aBehavior) ~= 0 ifTrue:
-			[^err negated].
-		 newHash := self rawHashBitsOf: aBehavior.
-		 self assert: (self classAtIndex: newHash) = aBehavior].
-	^newHash
+	^(hash := self rawHashBitsOf: aBehavior) ~= 0
+		ifTrue:
+			[hash]
+		ifFalse:
+			[(coInterpreter objCouldBeClassObj: aBehavior)
+				ifFalse: [PrimErrBadReceiver negated]
+				ifTrue:
+					[(err := self enterIntoClassTable: aBehavior) ~= 0
+						ifTrue: [err negated]
+						ifFalse: [self rawHashBitsOf: aBehavior]]]
 ]
 
 { #category : #'image segment in/out' }

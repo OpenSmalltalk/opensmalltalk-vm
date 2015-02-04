@@ -10315,7 +10315,7 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 	 the actual receiver and arguments pushed, and on success we have to slide the actual
 	 receiver and arguments down to replace the original ones."
 	<inline: true>
-	| arraySize performArgCount classTag delta |
+	| arraySize performArgCount delta |
 	(objectMemory isArray: argumentArray) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 
@@ -10342,10 +10342,9 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 								ifTrue: [objectMemory fetchClassOf: actualReceiver]
 								ifFalse: [lookupClassOrNil]);
 			cr].
-	classTag := lookupClassOrNil isNil
+	self findNewMethodInClassTag: (lookupClassOrNil isNil
 										ifTrue: [objectMemory fetchClassTagOf: actualReceiver]
-										ifFalse: [objectMemory classTagForClass: lookupClassOrNil].
-	self findNewMethodInClassTag: classTag.
+										ifFalse: [objectMemory classTagForClass: lookupClassOrNil]).
 
 	"Only test CompiledMethods for argument count - any other objects playacting as CMs will have to take their chances"
 	((objectMemory isOopCompiledMethod: newMethod)
