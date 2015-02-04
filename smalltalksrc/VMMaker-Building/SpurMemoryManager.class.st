@@ -4260,6 +4260,7 @@ SpurMemoryManager >> fetchClassOf: oop [
 
 { #category : #'object access' }
 SpurMemoryManager >> fetchClassOfNonImm: objOop [
+	<inline: #never>
 	| classIndex |
 	classIndex := self classIndexOf: objOop.
 	classIndex <= self classIsItselfClassIndexPun ifTrue:
@@ -9500,7 +9501,7 @@ SpurMemoryManager >> reverseBytesIn32BitWordsFrom: startAddr to: stopAddr [
 	addr := startAddr.
 	[self oop: addr isLessThan: stopAddr] whileTrue:
 		[self long32At: addr put: (self byteSwapped32Bits: (self long32At: addr)).
-		 addr := addr + self wordSize]
+		 addr := addr + 4]
 ]
 
 { #category : #snapshot }
@@ -9558,7 +9559,7 @@ SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag [
 SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
 	<inline: false>
 	(fullGCFlag
-			ifTrue: [self leakCheckFullGC]
+			ifTrue: [self leakCheckFullGC or: [self leakCheckImageSegments]]
 			ifFalse: [self leakCheckNewSpaceGC]) ifTrue:
 		[fullGCFlag
 			ifTrue: [coInterpreter reverseDisplayFrom: 0 to: 7]
