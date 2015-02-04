@@ -2340,13 +2340,16 @@ SpurMemoryManager >> arrayValueOf: arrayOop [
 
 { #category : #'image segment in/out' }
 SpurMemoryManager >> assignClassIndicesAndPinFrom: segmentStart to: segmentLimit outPointers: outPointerArray [
-	"Make a final pass, assigning class indices and/or pinning pinned objects"
+	"This is part of loadImageSegmentFrom:outPointers:.
+	 Make a final pass, assigning the real class indices and/or pinning pinned objects."
 	| objOop topHashBit |
 	topHashBit := 1 bitShift: self identityHashFieldWidth - 1.
 	objOop := self objectStartingAt: segmentStart.
 	[objOop < segmentLimit] whileTrue:
 		[| classRef classOop classIndex |
-		 classRef := self classIndexOf: objOop.
+		 "In the segment, class indices are offset indexes into the segment data,
+		  or into outPointers.  See mapOopsFrom:to:outPointers:outHashes:."
+		 classRef := (self classIndexOf: objOop) - self firstClassIndexPun.
 		 classOop := (classRef anyMask: topHashBit)
 						ifTrue: [self fetchPointer: classRef - topHashBit ofObject: outPointerArray]
 						ifFalse: [classRef * self allocationUnit + segmentStart].
@@ -2593,6 +2596,11 @@ SpurMemoryManager >> byteSizeOfInstanceOf: classObj withIndexableSlots: nElement
 	numSlots >= (1 asLong << (self bytesPerOop * 8 - self logBytesPerOop)) ifTrue:
 		[^errorBlock value: (nElements < 0 ifTrue: [PrimErrBadArgument] ifFalse: [PrimErrLimitExceeded])].
 	^self objectBytesForSlots: numSlots
+]
+
+{ #category : #snapshot }
+SpurMemoryManager >> byteSwapped32Bits: w [
+	self subclassResponsibility
 ]
 
 { #category : #snapshot }
@@ -6898,18 +6906,17 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 	(self objectBytesForSlots: segmentLimit) < (self allocationUnit "version info" + self baseHeaderSize "one object header") ifTrue:
 		[^PrimErrBadArgument].
 
-	"First thing is to verify format.  If Spur is ever ported to big-endian machines then the segment
-	 may have to be byte/word swapped, but so far it only runs on little-endian machines, so for now
-	 just fail if endinanness is wrong."
+	"Verify format.  If the format is wrong, word-swap (since ImageSegment data are 32-bit longs).
+	 If it is still wrong, undo the damage and fail."
 	segVersion := self longAt: segmentWordArray + self baseHeaderSize.
-	(coInterpreter readableFormat: (segVersion bitAnd: 16rFFFF "low 2 bytes")) ifFalse:
-		[self reverseBytesFrom: segmentWordArray + self baseHeaderSize
+	(coInterpreter readableFormat: (segVersion bitAnd: 16rFFFFFF "low 3 bytes")) ifFalse:
+		[self reverseBytesIn32BitWordsFrom: segmentWordArray + self baseHeaderSize
 			to: (self addressAfter: segmentWordArray).
 		 segVersion := self longAt: segmentWordArray + self baseHeaderSize.
-		 (coInterpreter readableFormat: (segVersion bitAnd: 16rFFFF "low 2 bytes")) ifFalse:
-			[self reverseBytesFrom: segmentWordArray + self baseHeaderSize
+		 (coInterpreter readableFormat: (segVersion bitAnd: 16rFFFFFF "low 3 bytes")) ifFalse:
+			[self reverseBytesIn32BitWordsFrom: segmentWordArray + self baseHeaderSize
 				to: (self addressAfter: segmentWordArray).
-		^PrimErrBadArgument]].
+			 ^PrimErrBadArgument]].
 
 	segmentStart := segmentWordArray + self baseHeaderSize + self allocationUnit.
 	segmentLimit := segmentLimit * self bytesPerOop + segmentWordArray + self baseHeaderSize.
@@ -6919,7 +6926,7 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 	 ported to big-endian machines then the segment may have to be byte/word swapped,
 	 but so far it only runs on little-endian machines, so for now just fail if endinanness is wrong."
 	self flag: #endianness.
-	(segVersion >> 16) ~= (self imageSegmentVersion >> 16) ifTrue:
+	(segVersion >> 24 bitAnd: 16rFF) ~= (self imageSegmentVersion >> 24 bitAnd: 16rFF) ifTrue:
 		"Reverse the byte-type objects once"
 		[true
 			ifTrue: [^PrimErrBadArgument]
@@ -7082,9 +7089,10 @@ SpurMemoryManager >> mapExtraRoots [
 
 { #category : #'image segment in/out' }
 SpurMemoryManager >> mapOopsAndValidateClassRefsFrom: segmentStart to: segmentLimit outPointers: outPointerArray [
-	"scan through mapping oops and validating class references.
-	 Defer entering any class objects into the class table and/or
-	 pinning objects until a second pass."
+	"This is part of loadImageSegmentFrom:outPointers:.
+	 Scan through mapping oops and validating class references.  Defer
+	 entering any class objects into the class table and/or pinning objects
+	 until the second pass in assignClassIndicesAndPinFrom:to:outPointers:."
 	| numOutPointers objOop topHashBit topOopBit |
 	numOutPointers := self numSlotsOf: outPointerArray.
 	topHashBit := 1 bitShift: self identityHashFieldWidth - 1.
@@ -7094,7 +7102,7 @@ SpurMemoryManager >> mapOopsAndValidateClassRefsFrom: segmentStart to: segmentLi
 		[| classIndex hash oop mappedOop |
 		 (self isMarked: objOop) ifTrue:
 			[^PrimErrInappropriate].
-		 classIndex := self classIndexOf: objOop.
+		 classIndex := (self classIndexOf: objOop) - self firstClassIndexPun.
 		 "validate the class ref, but don't update it until any internal classes have been added to the class table."
 		 (classIndex anyMask: topHashBit)
 			ifTrue:
@@ -7130,9 +7138,10 @@ SpurMemoryManager >> mapOopsAndValidateClassRefsFrom: segmentStart to: segmentLi
 
 { #category : #'image segment in/out' }
 SpurMemoryManager >> mapOopsFrom: segStart to: segAddr outPointers: outPointerArray outHashes: savedOutHashes [
-	"Now scan, adding out pointers to the outPointersArray; all objects in arrayOfObjects
-	 have their hashes set to point to their copies in segmentWordArray.  Answer the outIndex
-	 if the scan succeded, otherwise answer -1.  It will fail if outPointers is too small."
+	"This is part of storeImageSegmentInto:outPointers:roots:.
+	 Now scan, adding out pointers to the outPointersArray; all objects in arrayOfObjects
+	 have had their hashes set to point to their copies in segmentWordArray.  Answer the
+	 outIndex if the scan succeded.  Fail if outPointers is too small and answer -1."
 	| objOop outIndex topHashBit topOopBit |
 	outIndex := 0.
 	self fillObj: outPointerArray numSlots: (self numSlotsOf: outPointerArray) with: nilObj.
@@ -7140,14 +7149,16 @@ SpurMemoryManager >> mapOopsFrom: segStart to: segAddr outPointers: outPointerAr
 	topOopBit := 1 bitShift: self bytesPerOop * 8 - 1.
 	objOop := self objectStartingAt: segStart.
 	[objOop < segAddr] whileTrue:
-		[| oop hash |
+		[| oop segIndex |
 		 oop := self fetchClassOfNonImm: objOop.
 		 (self isMarked: oop) ifFalse: "oop is a new outPointer; allocate its oop"
 			[outIndex := self newOutPointer: oop at: outIndex in: outPointerArray hashes: savedOutHashes topHashBit: topHashBit.
 			 outIndex = 0 ifTrue:"no room in outPointers; fail"
 				[^-1]].
-		 hash := self rawHashBitsOf: oop.
-		 self setClassIndexOf: objOop to: hash.
+		 "Set the clone's class index to an offset index into segmentWordArray.
+		  Use an offset so that code cannot confuse a clone with e.g. a forwarder."
+		 segIndex := self rawHashBitsOf: oop.
+		 self setClassIndexOf: objOop to: segIndex + self firstClassIndexPun.
 		 0 to: (self numPointerSlotsOf: objOop) - 1 do:
 			[:i|
 			 oop := self fetchPointer: i ofObject: objOop.
@@ -9480,6 +9491,16 @@ SpurMemoryManager >> reverseBytesFrom: startAddr to: stopAddr [
 	[self oop: addr isLessThan: stopAddr] whileTrue:
 		[self longAt: addr put: (self byteSwapped: (self longAt: addr)).
 		addr := addr + self wordSize]
+]
+
+{ #category : #snapshot }
+SpurMemoryManager >> reverseBytesIn32BitWordsFrom: startAddr to: stopAddr [
+	"Byte-swap the given range of memory (not inclusive of stopAddr!)."
+	| addr |
+	addr := startAddr.
+	[self oop: addr isLessThan: stopAddr] whileTrue:
+		[self long32At: addr put: (self byteSwapped32Bits: (self long32At: addr)).
+		 addr := addr + self wordSize]
 ]
 
 { #category : #snapshot }
