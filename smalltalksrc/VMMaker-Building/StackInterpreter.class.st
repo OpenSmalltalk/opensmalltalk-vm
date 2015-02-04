@@ -10339,7 +10339,7 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 	self printSends ifTrue:
 		[self printActivationNameForSelector: messageSelector
 				startClass: (lookupClassOrNil isNil
-								ifTrue: [objectMemory classForClassTag: lkupClassTag]
+								ifTrue: [objectMemory fetchClassOf: actualReceiver]
 								ifFalse: [lookupClassOrNil]);
 			cr].
 	self findNewMethodInClassTag: (lookupClassOrNil isNil
