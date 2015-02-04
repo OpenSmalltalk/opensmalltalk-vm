@@ -2343,7 +2343,7 @@ SpurMemoryManager >> assignClassIndicesAndPinFrom: segmentStart to: segmentLimit
 	"This is part of loadImageSegmentFrom:outPointers:.
 	 Make a final pass, assigning the real class indices and/or pinning pinned objects."
 	| objOop topHashBit |
-	topHashBit := 1 bitShift: self identityHashFieldWidth - 1.
+	topHashBit := 1 << self identityHashFieldWidth - 1.
 	objOop := self objectStartingAt: segmentStart.
 	[objOop < segmentLimit] whileTrue:
 		[| classRef classOop classIndex |
@@ -7096,8 +7096,8 @@ SpurMemoryManager >> mapOopsAndValidateClassRefsFrom: segmentStart to: segmentLi
 	 until the second pass in assignClassIndicesAndPinFrom:to:outPointers:."
 	| numOutPointers objOop topHashBit topOopBit |
 	numOutPointers := self numSlotsOf: outPointerArray.
-	topHashBit := 1 bitShift: self identityHashFieldWidth - 1.
-	topOopBit := 1 bitShift: self bytesPerOop * 8 - 1.
+	topHashBit := 1 << self identityHashFieldWidth - 1.
+	topOopBit := 1 << self bytesPerOop * 8 - 1.
 	objOop := self objectStartingAt: segmentStart.
 	[objOop < segmentLimit] whileTrue:
 		[| classIndex hash oop mappedOop |
@@ -7146,8 +7146,8 @@ SpurMemoryManager >> mapOopsFrom: segStart to: segAddr outPointers: outPointerAr
 	| objOop outIndex topHashBit topOopBit |
 	outIndex := 0.
 	self fillObj: outPointerArray numSlots: (self numSlotsOf: outPointerArray) with: nilObj.
-	topHashBit := 1 bitShift: self identityHashFieldWidth - 1.
-	topOopBit := 1 bitShift: self bytesPerOop * 8 - 1.
+	topHashBit := 1 << self identityHashFieldWidth - 1.
+	topOopBit := 1 << self bytesPerOop * 8 - 1.
 	objOop := self objectStartingAt: segStart.
 	[objOop < segAddr] whileTrue:
 		[| oop segIndex |
