@@ -4253,9 +4253,9 @@ SpurMemoryManager >> fetchByte: byteIndex ofObject: objOop [
 { #category : #'object access' }
 SpurMemoryManager >> fetchClassOf: oop [
 	| tagBits |
-	(tagBits := oop bitAnd: self tagMask) ~= 0 ifTrue:
-		[^self fetchPointer: tagBits ofObject: classTableFirstPage].
-	^self fetchClassOfNonImm: oop
+	^(tagBits := oop bitAnd: self tagMask) ~= 0
+		ifTrue: [self fetchPointer: tagBits ofObject: classTableFirstPage]
+		ifFalse: [self fetchClassOfNonImm: oop]
 ]
 
 { #category : #'object access' }
