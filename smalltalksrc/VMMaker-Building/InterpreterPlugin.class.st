@@ -252,7 +252,9 @@ InterpreterPlugin >> getModuleName [
 	we're thinking it contains. This is important!"
 	<returnTypeC:'const char*'>
 	<export: true>
-	^moduleName
+	^self cCode: [moduleName]
+		inSmalltalk:
+			[self class codeGeneratorClass new pluginClass: self class]
 ]
 
 { #category : #debugging }
@@ -341,4 +343,16 @@ InterpreterPlugin >> sizeof: objectSymbolOrClass [
 	objectSymbolOrClass == #squeakFileOffsetType ifTrue:
 		[^8].
 	^super sizeof: objectSymbolOrClass
+]
+
+{ #category : #'simulation support' }
+InterpreterPlugin >> st: aString rn: bString cpy: n [
+	<doNotGenerate>
+	^interpreterProxy st: aString rn: bString cpy: n
+]
+
+{ #category : #'simulation support' }
+InterpreterPlugin >> strlen: aCString [
+	<doNotGenerate>
+	^interpreterProxy strlen: aCString
 ]
