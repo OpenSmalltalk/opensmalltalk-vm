@@ -866,6 +866,8 @@ CCodeGenerator >> declareModuleName: nameString [
 	"', nameString,' (e)"
 #endif
 '.
+	"and for run-time use, answer the string"
+	^nameString, ' (i)'
 ]
 
 { #category : #public }
