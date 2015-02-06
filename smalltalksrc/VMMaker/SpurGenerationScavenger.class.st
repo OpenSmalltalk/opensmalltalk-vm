@@ -409,7 +409,10 @@ SpurGenerationScavenger >> fireEphemeronsInRememberedSet [
 		 self assert: (manager isEphemeron: ephemeron).
 		 self assert: (self isScavengeSurvivor: (manager keyOfEphemeron: ephemeron)) not.
 		 coInterpreter fireEphemeron: ephemeron.
-		 self copyAndForward: (manager keyOfEphemeron: ephemeron).
+		 manager
+			storePointerUnchecked: 0
+			ofObject: ephemeron
+			withValue: (self copyAndForward: (manager keyOfEphemeron: ephemeron)).
 		 (self scavengeReferentsOf: ephemeron)
 			ifTrue: "keep in set"
 				[i := i + 1]
@@ -452,7 +455,10 @@ SpurGenerationScavenger >> fireEphemeronsOnEphemeronList [
 		 ephemeron := manager followForwarded: ephemeronCorpse.
 		 self assert: (self isScavengeSurvivor: (manager keyOfEphemeron: ephemeron)) not.
 		 coInterpreter fireEphemeron: ephemeron.
-		 self copyAndForward: (manager keyOfEphemeron: ephemeron).
+		 manager
+			storePointerUnchecked: 0
+			ofObject: ephemeron
+			withValue: (self copyAndForward: (manager keyOfEphemeron: ephemeron)).
 		 self cCoerceSimple: (self scavengeReferentsOf: ephemeron) to: #void.
 		 ephemeronCorpse := self nextCorpseOrNil: ephemeronCorpse]
 ]
