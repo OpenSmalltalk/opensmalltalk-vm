@@ -3097,7 +3097,7 @@ Cogit >> checkIntegrityOfObjectReferencesInCode: gcModes [
 						 performUntil: #checkIfValidOopRef:pc:cogMethod:
 						 arg: cogMethod asInteger) ~= 0
 							ifTrue: [ok := false].
-					 (objectMemory hasSpurMemoryManagerAPI
+					 (objectRepresentation hasSpurMemoryManagerAPI
 					  or: [gcModes anyMask: GCModeNewSpace]) ifTrue:
 						[(((objectMemory isYoungObject: cogMethod methodObject)
 						    or: [objectMemory isYoung: cogMethod selector])

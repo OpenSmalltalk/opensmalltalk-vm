@@ -636,6 +636,11 @@ CogObjectRepresentationForSpur >> getActiveContextAllocatesInMachineCode [
 	^true
 ]
 
+{ #category : #testing }
+CogObjectRepresentationForSpur >> hasSpurMemoryManagerAPI [
+	^true
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> hasValidHeaderPostGC: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
