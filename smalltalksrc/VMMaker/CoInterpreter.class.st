@@ -1948,12 +1948,12 @@ CoInterpreter >> checkAssertsEnabledInCoInterpreter [
 ]
 
 { #category : #'object memory support' }
-CoInterpreter >> checkCodeIntegrity: fullGCFlag [
+CoInterpreter >> checkCodeIntegrity: gcModes [
 	"Perform an integrity/leak check using the heapMap.  Assume
 	 clearLeakMapAndMapAccessibleObjects has set a bit at each
 	 object's header.  Check that all object references in machine
 	 code are valid.  Answer if all checks pass."
-	^cogit checkIntegrityOfObjectReferencesInCode: fullGCFlag
+	^cogit checkIntegrityOfObjectReferencesInCode: gcModes
 ]
 
 { #category : #'process primitive support' }
@@ -5338,6 +5338,9 @@ CoInterpreter >> printFrame: theFP WithSP: theSP [
 	<var: #cogMethod type: #'CogBlockMethod *'>
 	<var: #homeMethod type: #'CogMethod *'>
 	self cCode: '' inSmalltalk: [self transcript ensureCr].
+	(stackPages couldBeFramePointer: theFP) ifNil:
+		[self printHexPtr: theFP; print: ' is not in the stack zone?!'; cr.
+		 ^nil].
 	(self isMachineCodeFrame: theFP)
 		ifTrue:
 			[| cogMethod homeMethod |
