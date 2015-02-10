@@ -3065,7 +3065,7 @@ Cogit >> checkIfValidOopRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 ]
 
 { #category : #debugging }
-Cogit >> checkIntegrityOfObjectReferencesInCode: fullGCFlag [
+Cogit >> checkIntegrityOfObjectReferencesInCode: gcModes [
 	<api>
 	"Answer if all references to objects in machine-code are valid."	
 	| cogMethod ok count |
@@ -3097,7 +3097,8 @@ Cogit >> checkIntegrityOfObjectReferencesInCode: fullGCFlag [
 						 performUntil: #checkIfValidOopRef:pc:cogMethod:
 						 arg: cogMethod asInteger) ~= 0
 							ifTrue: [ok := false].
-					 fullGCFlag ifFalse:
+					 (objectMemory hasSpurMemoryManagerAPI
+					  or: [gcModes anyMask: GCModeNewSpace]) ifTrue:
 						[(((objectMemory isYoungObject: cogMethod methodObject)
 						    or: [objectMemory isYoung: cogMethod selector])
 						   and: [cogMethod cmRefersToYoung not]) ifTrue:
@@ -3704,7 +3705,7 @@ Cogit >> cogitPostGCAction: gcMode [
 	self assert: self allMethodsHaveCorrectHeader.
 	"The youngReferrers should be correct after a GC since that is the point at which it is
 	 pruned.  But at other times false positives or free methods on the list are acceptable."
-	self assert: (gcMode = GCModeBecome or: [methodZone kosherYoungReferrers])
+	self assert: ((gcMode noMask: GCModeFull+GCModeNewSpace) or: [methodZone kosherYoungReferrers])
 ]
 
 { #category : #disassembly }
@@ -6940,8 +6941,7 @@ Cogit >> mapObjectReferencesInMachineCode: gcMode [
 	<api>
 	"Update all references to objects in machine code."
 	gcMode caseOf: {
-		[GCModeScavenge]	-> [self mapObjectReferencesInMachineCodeForYoungGC].
-		[GCModeIncr]			-> [self mapObjectReferencesInMachineCodeForYoungGC].
+		[GCModeNewSpace]	-> [self mapObjectReferencesInMachineCodeForYoungGC].
 		[GCModeFull]			-> [self mapObjectReferencesInMachineCodeForFullGC].
 		[GCModeBecome]		-> [self mapObjectReferencesInMachineCodeForBecome] }.
 
@@ -7179,7 +7179,7 @@ Cogit >> markAndTraceMachineCodeForNewSpaceGC [
 					[objectMemory markAndTrace: cogMethod methodObject].
 				self markYoungObjectsIn: cogMethod]].
 		 pointer := pointer + objectMemory wordSize].
-	objectMemory leakCheckIncrementalGC ifTrue:
+	objectMemory leakCheckNewSpaceGC ifTrue:
 		[self assert: self allMachineCodeObjectReferencesValid].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
 		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]

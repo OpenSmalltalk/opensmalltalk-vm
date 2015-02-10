@@ -1615,12 +1615,6 @@ StackInterpreterSimulator >> preBecomeAction [
 	super preBecomeAction
 ]
 
-{ #category : #'debugging traps' }
-StackInterpreterSimulator >> preGCAction: gcMode [
-	"self halt."
-	^super preGCAction: gcMode
-]
-
 { #category : #'other primitives' }
 StackInterpreterSimulator >> primBitmapcompresstoByteArray [
 	^ self primitiveFail
