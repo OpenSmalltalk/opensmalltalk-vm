@@ -7329,7 +7329,6 @@ StackInterpreter >> initialCleanup [
 	 deal with external primitives.  Since references to external plugins in methods are
 	 cleaned up in snapshotCleanUp only initialize the tables, not visit each method."
 	self flushMethodCache.
-	self flushAtCache.
 	self flushExternalPrimitiveTable
 ]
 
@@ -7407,7 +7406,6 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 			[breakSelectorLength := objectMemory minSmallInteger]].
 	methodDictLinearSearchLimit := 8.
 	self flushMethodCache.
-	self flushAtCache.
 	self initialCleanup.
 	profileSemaphore := profileProcess := profileMethod := objectMemory nilObject.
 	interruptKeycode := 2094. "cmd-. as used for Mac but no other OS"

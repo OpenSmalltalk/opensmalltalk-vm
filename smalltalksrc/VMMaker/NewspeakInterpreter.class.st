@@ -3371,7 +3371,6 @@ NewspeakInterpreter >> flushExternalPrimitives [
 									self flushExternalPrimitiveOf: oop]]].
 			oop := self objectAfter: oop].
 	self flushMethodCache.
-	self flushAtCache.
 	self flushExternalPrimitiveTable
 ]
 
@@ -3379,7 +3378,8 @@ NewspeakInterpreter >> flushExternalPrimitives [
 NewspeakInterpreter >> flushMethodCache [
 	"Flush the method cache. The method cache is flushed on every programming change and garbage collect."
 
-	1 to: MethodCacheSize do: [ :i | methodCache at: i put: 0 ]
+	1 to: MethodCacheSize do: [ :i | methodCache at: i put: 0 ].
+	1 to: AtCacheTotalSize do: [ :i | atCache at: i put: 0 ]
 ]
 
 { #category : #'method lookup cache' }
@@ -3698,7 +3698,6 @@ NewspeakInterpreter >> initializeInterpreter: bytesToShift [
 	newMethod := nilObj.
 	lkupClass := nilObj.
 	self flushMethodCache.
-	self flushAtCache.
 	self loadInitialContext.
 	self initialCleanup.
 	interruptCheckCounter := 0.
@@ -6494,8 +6493,7 @@ NewspeakInterpreter >> primitiveFloatSubtract: rcvrOop fromArg: argOop [
 NewspeakInterpreter >> primitiveFlushCache [
 	"Clear the method lookup cache. This must be done after every programming change."
 
-	self flushMethodCache.
-	self flushAtCache
+	self flushMethodCache
 ]
 
 { #category : #'system control primitives' }
