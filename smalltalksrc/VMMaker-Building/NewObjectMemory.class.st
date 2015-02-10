@@ -340,8 +340,7 @@ NewObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copy
 	Returns PrimNoErr if the primitive succeeds."
 	"Implementation: Uses forwarding blocks to update references as done in compaction."
 	| start |
-	self leakCheckBecome ifTrue:
-		[self runLeakCheckerForFullGC: true].
+	self runLeakCheckerFor: GCModeBecome.
 	(self isArray: array1) ifFalse:
 		[^PrimErrBadReceiver].
 	((self isArray: array2)
@@ -365,8 +364,7 @@ NewObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copy
 	coInterpreter postBecomeAction: 0.
 
 	self initializeMemoryFirstFree: freeStart. "re-initialize memory used for forwarding table"
-	self leakCheckBecome ifTrue:
-		[self runLeakCheckerForFullGC: true].
+	self runLeakCheckerFor: GCModeBecome.
 
 	^PrimNoErr "success"
 ]
@@ -1224,7 +1222,7 @@ NewObjectMemory >> fullGC [
 	fullGCLock > 0 ifTrue:
 		[self warning: 'aborting fullGC because fullGCLock > 0'.
 		 ^self].
-	self runLeakCheckerForFullGC: true.
+	self runLeakCheckerFor: GCModeFull.
 	self preGCAction: GCModeFull.
 	needGCFlag := false.
 	gcStartUsecs := self ioUTCMicrosecondsNow.
@@ -1236,7 +1234,7 @@ NewObjectMemory >> fullGC [
 	"Sweep phase returns the number of survivors.
 	Use the up-to-date version instead the one from startup."
 	totalObjectCount := self sweepPhaseForFullGC.
-	self runLeakCheckerForFullGC: true.
+	self runLeakCheckerFor: GCModeFull.
 	self fullCompaction.
 	statFullGCs := statFullGCs + 1.
 	statGCEndUsecs := self ioUTCMicrosecondsNow.
@@ -1244,8 +1242,9 @@ NewObjectMemory >> fullGC [
 	self capturePendingFinalizationSignals.
 
 	youngStart := freeStart.  "reset the young object boundary"
+	self attemptToShrink.
 	self postGCAction: GCModeFull.
-	self runLeakCheckerForFullGC: true
+	self runLeakCheckerFor: GCModeFull
 ]
 
 { #category : #accessing }
@@ -1470,8 +1469,8 @@ NewObjectMemory >> incrementalGC [
 		 (this should be very rare)"
 		 statRootTableOverflows := statRootTableOverflows + 1.
 		 ^self fullGC].
-	self runLeakCheckerForFullGC: false.
-	coInterpreter preGCAction: GCModeIncr.
+	self runLeakCheckerFor: GCModeNewSpace.
+	coInterpreter preGCAction: GCModeNewSpace.
 	needGCFlag := false.
 	gcStartUsecs := self ioUTCMicrosecondsNow.
 	statSweepCount := statMarkCount := statMkFwdCount := statCompMoveCount := 0.
@@ -1482,7 +1481,7 @@ NewObjectMemory >> incrementalGC [
 	1 to: weakRootCount do:
 		[:i| self finalizeReference: (weakRoots at: i)].
 	survivorCount := self sweepPhase.
-	self runLeakCheckerForFullGC: false.
+	self runLeakCheckerFor: GCModeNewSpace.
 	self incrementalCompaction.
 	statIncrGCs := statIncrGCs + 1.
 	statGCEndUsecs := self ioUTCMicrosecondsNow.
@@ -1511,9 +1510,10 @@ NewObjectMemory >> incrementalGC [
 			[self biasToGrow.
 			 weDidGrow := true].
 		youngStart := freeStart].
-	coInterpreter postGCAction: GCModeIncr.
+	self attemptToShrink.
+	coInterpreter postGCAction: GCModeNewSpace.
 	
-	self runLeakCheckerForFullGC: false.
+	self runLeakCheckerFor: GCModeNewSpace.
 	weDidGrow ifTrue:
 		[self biasToGrowCheckGCLimit]
 ]
@@ -1802,19 +1802,13 @@ NewObjectMemory >> lastPointerWhileForwarding: objOop [
 { #category : #'debug support' }
 NewObjectMemory >> leakCheckBecome [
 	<api>
-	^(checkForLeaks bitAnd: 4) ~= 0
+	^(checkForLeaks bitAnd: GCModeBecome) ~= 0
 ]
 
 { #category : #'debug support' }
 NewObjectMemory >> leakCheckFullGC [
 	<api>
-	^(checkForLeaks bitAnd: 1) ~= 0
-]
-
-{ #category : #'debug support' }
-NewObjectMemory >> leakCheckIncrementalGC [
-	<api>
-	^(checkForLeaks bitAnd: 2) ~= 0
+	^(checkForLeaks bitAnd: GCModeFull) ~= 0
 ]
 
 { #category : #'debug support' }
@@ -2537,19 +2531,17 @@ NewObjectMemory >> rightType: headerWord [
 ]
 
 { #category : #'debug support' }
-NewObjectMemory >> runLeakCheckerForFullGC: fullGCFlag [
+NewObjectMemory >> runLeakCheckerFor: gcModes [
 	<inline: false>
-	(fullGCFlag
-			ifTrue: [self leakCheckFullGC]
-			ifFalse: [self leakCheckNewSpaceGC]) ifTrue:
-		[fullGCFlag
+	(gcModes anyMask: checkForLeaks) ifTrue:
+		[(gcModes anyMask: GCModeFull)
 			ifTrue: [coInterpreter reverseDisplayFrom: 0 to: 7]
 			ifFalse: [coInterpreter reverseDisplayFrom: 8 to: 15].
 		 self clearLeakMapAndMapAccessibleObjects.
 		 self assert: self checkHeapIntegrity.
 		 self assert: coInterpreter checkInterpreterIntegrity.
 		 self assert: coInterpreter checkStackIntegrity.
-		 self assert: (coInterpreter checkCodeIntegrity: fullGCFlag).
+		 self assert: (coInterpreter checkCodeIntegrity: gcModes).
 		 self validate "simulation only"]
 ]
 
@@ -2604,13 +2596,12 @@ NewObjectMemory >> scheduleIncrementalGC [
 ]
 
 { #category : #'debug support' }
-NewObjectMemory >> setCheckForLeaks: anInteger [
+NewObjectMemory >> setCheckForLeaks: integerFlags [
 	"0 = do nothing.
 	 1 = check for leaks on fullGC.
 	 2 = check for leaks on incrementalGC.
-	 4 = check for leaks on become
-	 7 = check for leaks on all three."
-	checkForLeaks := anInteger
+	 8 = check for leaks on become"
+	checkForLeaks := integerFlags
 ]
 
 { #category : #initialization }

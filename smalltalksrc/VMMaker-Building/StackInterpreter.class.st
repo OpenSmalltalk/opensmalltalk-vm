@@ -1007,10 +1007,13 @@ StackInterpreter class >> initializeMiscConstants [
 	super initializeMiscConstants.
 	STACKVM := true.
 
-	GCModeFull := 1.
-	GCModeIncr := 2.
-	GCModeScavenge := 3.
-	GCModeBecome := 4.
+	"These flags function to identify a GC operation, or
+	 to specify what operations the leak checker should be run for."
+	GCModeFull := 1.				"stop-the-world global GC"
+	GCModeNewSpace := 2.		"Spur's scavenge, or V3's incremental"
+	GCModeIncremental := 4.		"incremental global gc (Dijkstra tri-colour marking); as yet unimplemented"
+	GCModeBecome := 8.			"v3 post-become sweeping"
+	GCModeImageSegment := 16.	"just a flag for leak checking image segments"
 
 	StackPageTraceInvalid := -1.
 	StackPageUnreached := 0.
@@ -8490,7 +8493,7 @@ StackInterpreter >> loadInitialContext [
 	<inline: false>
 	| activeProc activeContext |
 	self cCode: [] inSmalltalk: [self initExtensions].
-	objectMemory runLeakCheckerForFullGC: true.
+	objectMemory runLeakCheckerFor: GCModeFull.
 	activeProc := self activeProcess.
 	activeContext := objectMemory fetchPointer: SuspendedContextIndex ofObject: activeProc.
 	self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext
@@ -10090,15 +10093,7 @@ StackInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 
 { #category : #'object memory support' }
 StackInterpreter >> postGCAction: gcModeArg [
-	"Shrink free memory and signal the gc semaphore"
-
-	(gcModeArg = GCModeFull or: [gcModeArg = GCModeIncr]) ifTrue:"but *not* become and *not* scavenge"
-		[| freeSizeNow |
-		 freeSizeNow := objectMemory freeSize.
-		 (freeSizeNow > objectMemory shrinkThreshold
-		  and: [freeSizeNow > objectMemory growHeadroom]) ifTrue:
-			["Attempt to shrink memory after successfully reclaiming lots of memory"
-			 objectMemory shrinkObjectMemory: freeSizeNow - objectMemory growHeadroom]].
+	"Signal the gc semaphore"
 
 	self signalSemaphoreWithIndex: gcSemaphoreIndex
 ]
@@ -10650,11 +10645,16 @@ StackInterpreter >> printFloat: f [
 
 { #category : #'debug printing' }
 StackInterpreter >> printFrame: theFP [
-	| thePage theSP |
+	| thePage frameAbove theSP |
 	<inline: false>
 	<var: #theFP type: #'char *'>
-	<var: #thePage type: #'StackPage *'>
 	<var: #theSP type: #'char *'>
+	<var: #frameAbove type: #'char *'>
+	<var: #thePage type: #'StackPage *'>
+	(stackPages couldBeFramePointer: theFP) ifFalse:
+		[self printHexPtr: theFP; print: ' is not in the stack zone?!'; cr.
+		 ^nil].
+	frameAbove := nil.
 	theFP = framePointer
 		ifTrue: [theSP := stackPointer]
 		ifFalse:
@@ -10666,18 +10666,22 @@ StackInterpreter >> printFrame: theFP [
 			  and: [theFP = thePage headFP])
 				ifTrue: [theSP := thePage headSP]
 				ifFalse:
-					[theSP := self findSPOrNilOf: theFP
-								on: thePage
-								startingFrom: ((thePage = stackPage
-												and: [framePointer
-														between: thePage realStackLimit
-														and: thePage baseAddress])
-												ifTrue: [framePointer]
-												ifFalse: [thePage headFP])]].
+					[frameAbove := self safeFindFrameAbove: theFP
+										on: thePage
+										startingFrom: ((thePage = stackPage
+														and: [framePointer
+																between: thePage realStackLimit
+																and: thePage baseAddress])
+														ifTrue: [framePointer]
+														ifFalse: [thePage headFP]).
+					 theSP := frameAbove ifNotNil:
+								[self frameCallerSP: frameAbove]]].
 	theSP ifNil:
 		[self print: 'could not find sp; using bogus value'; cr.
 		 theSP := self frameReceiverOffset: theFP].
-	self printFrame: theFP WithSP: theSP
+	self printFrame: theFP WithSP: theSP.
+	frameAbove ifNotNil:
+		[self printFrameThing: 'frame pc' at: frameAbove + FoxCallerSavedIP]
 ]
 
 { #category : #'debug printing' }
@@ -10689,6 +10693,9 @@ StackInterpreter >> printFrame: theFP WithSP: theSP [
 	<var: #theSP type: #'char *'>
 	<var: #addr type: #'char *'>
 	self cCode: '' inSmalltalk: [self transcript ensureCr].
+	(stackPages couldBeFramePointer: theFP) ifFalse:
+		[self printHexPtr: theFP; print: ' is not in the stack zone?!'; cr.
+		 ^nil].
 	theMethod := self frameMethod: theFP.
 	numArgs := self frameNumArgs: theFP.
 	self shortPrintFrame: theFP.
@@ -11047,12 +11054,15 @@ StackInterpreter >> printOop: oop [
 	(objectMemory isFreeObject: oop) ifTrue:
 		[self print: ' is a free chunk of size '; printNum: (objectMemory sizeOfFree: oop).
 		 objectMemory hasSpurMemoryManagerAPI ifTrue:
-			[self print: ' 0th: '; printHex: (objectMemory fetchPointer: 0 ofFreeChunk: oop)].
+			[self print: ' 0th: '; printHex: (objectMemory fetchPointer: 0 ofFreeChunk: oop).
+			 objectMemory printHeaderTypeOf: oop].
 		 ^self cr].
 	(objectMemory isForwarded: oop) ifTrue:
-		[^self
+		[self
 			print: ' is a forwarded object to '; printHex: (objectMemory followForwarded: oop);
-			print: ' of slot size '; printNum: (objectMemory numSlotsOfAny: oop); cr].
+			print: ' of slot size '; printNum: (objectMemory numSlotsOfAny: oop).
+		 objectMemory printHeaderTypeOf: oop.
+		 ^self cr].
 	self print: ': a(n) '.
 	self printNameOfClass: (cls := objectMemory fetchClassOfNonImm: oop) count: 5.
 	cls = (objectMemory splObj: ClassFloat) ifTrue:
@@ -11140,7 +11150,7 @@ StackInterpreter >> printOopShortInner: oop [
 				printChar: $$;
 				printChar: (objectMemory characterValueOf: oop);
 				printChar: $(;
-				printHexnp: (objectMemory integerValueOf: oop);
+				printHexnp: (objectMemory characterValueOf: oop);
 				printChar: $)].
 		 (objectMemory isIntegerObject: oop) ifTrue:
 			[^self
@@ -12376,6 +12386,30 @@ StackInterpreter >> roomToPushNArgs: n [
 			 ^self stackPointerIndex + n <= cntxSize]
 		ifFalse: "simpler code that simply insists args are <= max arg count"
 			[^n <= (LargeContextSlots - CtxtTempFrameStart)]
+]
+
+{ #category : #'frame access' }
+StackInterpreter >> safeFindFrameAbove: theFP on: thePage startingFrom: startFrame [
+	"Search for the previous frame to theFP (the frame that theFP calls).
+	 DO NOT CALL THIS WITH theFP == localFP OR theFP == framePointer!"
+	<var: #theFP type: #'char *'>
+	<var: #thePage type: #'StackPage *'>
+	<var: #startFrame type: #'char *'>
+	<returnTypeC: #'char *'>
+	| aFrame prevFrame |
+	<inline: true>
+	<var: #aFrame type: #'char *'>
+	<var: #prevFrame type: #'char *'>
+	self assert: (stackPages isFree: thePage) not.
+	startFrame = theFP ifTrue:
+		[^nil].
+	aFrame := startFrame.
+	[prevFrame := aFrame.
+	 aFrame := self frameCallerFP: aFrame.
+	 aFrame ~= 0] whileTrue:
+		[theFP = aFrame ifTrue:
+			[^prevFrame]].
+	^nil
 ]
 
 { #category : #'compiled methods' }

@@ -863,6 +863,16 @@ ObjectMemory >> arrayFormat [
 	^2
 ]
 
+{ #category : #allocation }
+ObjectMemory >> attemptToShrink [
+	"Attempt to shrink memory after successfully reclaiming lots of memory."
+	| freeSizeNow |
+	freeSizeNow := self freeSize.
+	(freeSizeNow > shrinkThreshold
+	 and: [freeSizeNow > growHeadroom]) ifTrue:
+		[self shrinkObjectMemory: freeSizeNow - growHeadroom]
+]
+
 { #category : #contexts }
 ObjectMemory >> badContextSize: oop [
 	| numSlots |
@@ -2232,6 +2242,7 @@ ObjectMemory >> fullGC [
 	self capturePendingFinalizationSignals.
 
 	youngStart := freeBlock.  "reset the young object boundary"
+	self attemptToShrink.
 	self postGCAction: GCModeFull.
 	DoAssertionChecks ifTrue:
 		[self clearLeakMapAndMapAccessibleObjects.
@@ -2573,7 +2584,7 @@ ObjectMemory >> incrementalGC [
 		 self checkInterpreterIntegrity.
 		 self validate].
 
-	self preGCAction: GCModeIncr.
+	self preGCAction: GCModeNewSpace.
 	"incremental GC and compaction"
 
 	gcStartUsecs := self ioUTCMicrosecondsNow.
@@ -2615,7 +2626,8 @@ ObjectMemory >> incrementalGC [
 				ifTrue: [self biasToGrow.
 						weDidGrow := true].
 			youngStart := freeBlock].
-	self postGCAction: GCModeIncr.
+	self attemptToShrink.
+	self postGCAction: GCModeNewSpace.
 	DoAssertionChecks ifTrue:
 		[self validate.
 		 self checkHeapIntegrity.
@@ -5645,13 +5657,6 @@ ObjectMemory >> transfer: count from: src to: dst [
 ObjectMemory >> trueObject [
 	<api>
 	^trueObj
-]
-
-{ #category : #'as yet unclassified' }
-ObjectMemory >> unsignedIntegerSuffix [
-	"Answer the suffix that should be appended to unsigned integer literals in generated code."
-
-	^self wordSize = 4 ifTrue: ['UL'] ifFalse: ['ULL']
 ]
 
 { #category : #'gc -- compaction' }
