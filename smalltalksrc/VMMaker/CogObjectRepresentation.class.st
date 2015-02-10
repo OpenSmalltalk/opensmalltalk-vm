@@ -237,6 +237,11 @@ CogObjectRepresentation >> getActiveContextAllocatesInMachineCode [
 	^false
 ]
 
+{ #category : #testing }
+CogObjectRepresentation >> hasSpurMemoryManagerAPI [
+	^false
+]
+
 { #category : #'in-line cacheing' }
 CogObjectRepresentation >> inlineCacheTagForClass: classOop [
 	"Answer the relevant inline cache tag for a class.
