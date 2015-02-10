@@ -1374,7 +1374,6 @@ CogVMSimulator >> initialize [
 	methodCache := Array new: MethodCacheSize.
 	atCache := Array new: AtCacheTotalSize.
 	self flushMethodCache.
-	self flushAtCache.
 	cogCompiledCodeCompactionCalledFor := false.
 	gcSemaphoreIndex := 0.
 	externalSemaphoreSignalRequests := externalSemaphoreSignalResponses := #().
