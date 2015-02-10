@@ -3597,7 +3597,7 @@ SpurMemoryManager >> containsOnlyValidBecomeObjects: array [
 	 Otherwise answer an informative error code.
 	 Can't become: immediates!  Shouldn't become pinned objects."
 	| fieldOffset effectsFlags oop |
-	fieldOffset := self lastPointerOf: array.
+	fieldOffset := self lastPointerOfArray: array.
 	effectsFlags := 0.
 	"same size as array2"
 	[fieldOffset >= self baseHeaderSize] whileTrue:
@@ -3641,10 +3641,10 @@ SpurMemoryManager >> containsOnlyValidBecomeObjects: array1 and: array2 [
 		 effectsFlags := effectsFlags bitOr: (self becomeEffectFlagsFor: oop).
 		 size := size + (self bytesInObject: oop).
 		 fieldOffset := fieldOffset - self bytesPerOop].
-	"only set flags after checking all args."
-	becomeEffectsFlags := effectsFlags.
 	size >= (totalFreeOldSpace + (scavengeThreshold - freeStart)) ifTrue:
 		[^PrimErrNoMemory].
+	"only set flags after checking all args."
+	becomeEffectsFlags := effectsFlags.
 	^0
 ]
 
@@ -6778,6 +6778,13 @@ SpurMemoryManager >> lastPointerOf: objOop [
 	"CompiledMethod: contains both pointers and bytes"
 	header := self methodHeaderOf: objOop.
 	^self lastPointerOfMethodHeader: header
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> lastPointerOfArray: objOop [ 
+	"Answer the byte offset of the last pointer field of the given array."
+	self assert: (self isArray: objOop).
+	^(self numSlotsOf: objOop) - 1 * self bytesPerOop + self baseHeaderSize
 ]
 
 { #category : #'object enumeration' }
