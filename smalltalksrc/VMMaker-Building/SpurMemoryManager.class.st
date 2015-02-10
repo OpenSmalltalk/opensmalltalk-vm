@@ -1405,7 +1405,7 @@ SpurMemoryManager >> allInstancesOf: aClass [
 	self set: freeChunk classIndexTo: ClassArrayCompactIndex formatTo: self arrayFormat.
 	self possibleRootStoreInto: freeChunk.
 	self checkFreeSpace.
-	self runLeakCheckerForFullGC: false.
+	self runLeakCheckerFor: GCModeFull.
 	^freeChunk
 	
 	
@@ -1499,7 +1499,7 @@ SpurMemoryManager >> allObjects [
 	self set: freeChunk classIndexTo: ClassArrayCompactIndex formatTo: self arrayFormat.
 	self possibleRootStoreInto: freeChunk.
 	self checkFreeSpace.
-	self runLeakCheckerForFullGC: false.
+	self runLeakCheckerFor: GCModeFull.
 	^freeChunk
 	
 	
@@ -2343,7 +2343,7 @@ SpurMemoryManager >> assignClassIndicesAndPinFrom: segmentStart to: segmentLimit
 	"This is part of loadImageSegmentFrom:outPointers:.
 	 Make a final pass, assigning the real class indices and/or pinning pinned objects."
 	| objOop topHashBit |
-	topHashBit := 1 << self identityHashFieldWidth - 1.
+	topHashBit := 1 << (self identityHashFieldWidth - 1).
 	objOop := self objectStartingAt: segmentStart.
 	[objOop < segmentLimit] whileTrue:
 		[| classRef classOop classIndex |
@@ -2383,6 +2383,14 @@ SpurMemoryManager >> atLeastClassIndexHalfHeader: obj [
 	"PRIVATE: For compaction, answer the bits contaning the
 	 classIndex and isPinned bits in the most natural form."
 	^self longAt: obj
+]
+
+{ #category : #'growing/shrinking memory' }
+SpurMemoryManager >> attemptToShrink [
+	"Attempt to shrink memory after successfully reclaiming lots of memory."
+	(totalFreeOldSpace > shrinkThreshold
+	 and: [totalFreeOldSpace > growHeadroom]) ifTrue:
+		[segmentManager shrinkObjectMemory: totalFreeOldSpace - growHeadroom]
 ]
 
 { #category : #accessing }
@@ -2434,8 +2442,7 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 	"Implementation: Uses lazy forwarding to defer updating references until message send."
 	| ec |
 	self assert: becomeEffectsFlags = 0.
-	self leakCheckBecome ifTrue:
-		[self runLeakCheckerForFullGC: true].
+	self runLeakCheckerFor: GCModeBecome.
 	(self isArray: array1) ifFalse:
 		[^PrimErrBadReceiver].
 	((self isArray: array2)
@@ -2466,8 +2473,7 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 	becomeEffectsFlags := 0.
 
 	self assert: self validClassTableHashes.
-	self leakCheckBecome ifTrue:
-		[self runLeakCheckerForFullGC: true].
+	self runLeakCheckerFor: GCModeBecome.
 
 	^PrimNoErr "success"
 ]
@@ -2840,11 +2846,11 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs classIndice
 							 "don't be misled by CogMethods; they appear to be young, but they're not"
 							 (self isReallyYoung: fieldOop) ifTrue:
 								[containsYoung := true]]]].
-					containsYoung ifTrue:
-						[(self isRemembered: obj) ifFalse:
-							[coInterpreter print: 'unremembered object '; printHex: obj; print: ' contains young oop(s)'; cr.
-							 self eek.
-							 ok := false]]]].
+			 containsYoung ifTrue:
+				[(self isRemembered: obj) ifFalse:
+					[coInterpreter print: 'unremembered object '; printHex: obj; print: ' contains young oop(s)'; cr.
+					 self eek.
+					 ok := false]]]].
 	numRememberedObjectsInHeap ~= scavenger rememberedSetSize ifTrue:
 		[coInterpreter
 			print: 'root count mismatch. #heap roots ';
@@ -5076,6 +5082,7 @@ SpurMemoryManager >> fullGC [
 	statMarkCount := 0.
 	coInterpreter preGCAction: GCModeFull.
 	self globalGarbageCollect.
+	self attemptToShrink.
 	coInterpreter postGCAction: GCModeFull.
 	statFullGCs := statFullGCs + 1.
 	statGCEndUsecs := self ioUTCMicrosecondsNow.
@@ -5132,7 +5139,7 @@ SpurMemoryManager >> globalGarbageCollect [
 
 	"Mid-way the leak check must be more lenient.  Unmarked classes will have been
 	 expunged from the table, but unmarked instances will not yet have been reclaimed."
-	self runLeakCheckerForFullGC: true
+	self runLeakCheckerFor: GCModeFull
 		excludeUnmarkedNewSpaceObjs: true
 		classIndicesShouldBeValid: true.
 
@@ -5143,7 +5150,7 @@ SpurMemoryManager >> globalGarbageCollect [
 	self assert: (self isEmptyObjStack: markStack).
 	self assert: (self isEmptyObjStack: weaklingStack).
 	self assert: self allObjectsUnmarked.
-	self runLeakCheckerForFullGC: true
+	self runLeakCheckerFor: GCModeFull
 ]
 
 { #category : #'object testing' }
@@ -5377,6 +5384,20 @@ SpurMemoryManager >> inFreeTreeReplace: treeNode with: newNode [
 					 self storePointer: self freeChunkParentIndex ofFreeChunk: relative withValue: newNode]].
 		self storePointer: i ofFreeChunk: newNode withValue: relative.
 		self storePointer: i ofFreeChunk: treeNode withValue: 0]
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> inLineRunLeakCheckerFor: gcModes excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
+	<inline: true>
+	(gcModes anyMask: checkForLeaks) ifTrue:
+		[(gcModes anyMask: GCModeFull)
+			ifTrue: [coInterpreter reverseDisplayFrom: 0 to: 7]
+			ifFalse: [coInterpreter reverseDisplayFrom: 8 to: 15].
+		 self clearLeakMapAndMapAccessibleObjects.
+		 self assert: (self checkHeapIntegrity: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid).
+		 self assert: coInterpreter checkInterpreterIntegrity.
+		 self assert: coInterpreter checkStackIntegrity.
+		 self assert: (coInterpreter checkCodeIntegrity: gcModes)]
 ]
 
 { #category : #'debug printing' }
@@ -6793,31 +6814,30 @@ SpurMemoryManager >> lastPointerOfWhileSwizzling: objOop [
 { #category : #'debug support' }
 SpurMemoryManager >> leakCheckBecome [
 	<api>
-	^(checkForLeaks bitAnd: 4) ~= 0
+	^(checkForLeaks bitAnd: GCModeBecome) ~= 0
 ]
 
 { #category : #'debug support' }
 SpurMemoryManager >> leakCheckFullGC [
 	<api>
-	^(checkForLeaks bitAnd: 1) ~= 0
+	^(checkForLeaks bitAnd: GCModeFull) ~= 0
 ]
 
 { #category : #'debug support' }
 SpurMemoryManager >> leakCheckImageSegments [
-	<api>
-	^(checkForLeaks bitAnd: 16) ~= 0
+	^(checkForLeaks bitAnd: GCModeImageSegment) ~= 0
 ]
 
 { #category : #'debug support' }
-SpurMemoryManager >> leakCheckIncrementalGC [
+SpurMemoryManager >> leakCheckIncremental [
 	<api>
-	^(checkForLeaks bitAnd: 8) ~= 0
+	^(checkForLeaks bitAnd: GCModeIncremental) ~= 0
 ]
 
 { #category : #'debug support' }
 SpurMemoryManager >> leakCheckNewSpaceGC [
 	<api>
-	^(checkForLeaks bitAnd: 2) ~= 0
+	^(checkForLeaks bitAnd: GCModeNewSpace) ~= 0
 ]
 
 { #category : #'object access' }
@@ -6948,8 +6968,7 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 		ifTrue: [self rawOverflowSlotsOf: segmentWordArray put: self allocationUnit / self bytesPerOop]
 		ifFalse: [self rawNumSlotsOf: segmentWordArray put: self allocationUnit / self bytesPerOop].
 	
-	self leakCheckImageSegments ifTrue:
-		[self runLeakCheckerForFullGC: true].
+	self runLeakCheckerFor: GCModeImageSegment.
 
 	^self objectStartingAt: segmentStart
 ]
@@ -7088,7 +7107,7 @@ SpurMemoryManager >> mapOopsAndValidateClassRefsFrom: segmentStart to: segmentLi
 	 until the second pass in assignClassIndicesAndPinFrom:to:outPointers:."
 	| numOutPointers objOop topHashBit topOopBit |
 	numOutPointers := self numSlotsOf: outPointerArray.
-	topHashBit := 1 << self identityHashFieldWidth - 1.
+	topHashBit := 1 << (self identityHashFieldWidth - 1).
 	topOopBit := 1 << self bytesPerOop * 8 - 1.
 	objOop := self objectStartingAt: segmentStart.
 	[objOop < segmentLimit] whileTrue:
@@ -7138,7 +7157,7 @@ SpurMemoryManager >> mapOopsFrom: segStart to: segAddr outPointers: outPointerAr
 	| objOop outIndex topHashBit topOopBit |
 	outIndex := 0.
 	self fillObj: outPointerArray numSlots: (self numSlotsOf: outPointerArray) with: nilObj.
-	topHashBit := 1 << self identityHashFieldWidth - 1.
+	topHashBit := 1 << (self identityHashFieldWidth - 1).
 	topOopBit := 1 << self bytesPerOop * 8 - 1.
 	objOop := self objectStartingAt: segStart.
 	[objOop < segAddr] whileTrue:
@@ -7483,7 +7502,7 @@ SpurMemoryManager >> markObjects: objectsShouldBeUnmarkedAndUnmarkedClassesShoul
 	 is true if all objects are unmarked and/or if unmarked classes shoud be removed from the class table."
 	"If the incremental collector is running mark bits may be set; stop it and clear them if necessary."
 	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: 'marking...'; flush].
-	self runLeakCheckerForFullGC: true.
+	self runLeakCheckerFor: GCModeFull.
 
 	self shutDownIncrementalGC: objectsShouldBeUnmarkedAndUnmarkedClassesShouldBeExpunged.
 	self initializeUnscannedEphemerons.
@@ -8488,7 +8507,7 @@ SpurMemoryManager >> objectsReachableFromRoots: arrayOfRoots [
 	self shorten: freeChunk toIndexableSize: count.
 	self possibleRootStoreInto: freeChunk.
 	self checkFreeSpace.
-	self runLeakCheckerForFullGC: false.
+	self runLeakCheckerFor: GCModeImageSegment.
 	^freeChunk
 ]
 
@@ -8941,7 +8960,7 @@ SpurMemoryManager >> printFreeTreeChunk: chunkOrZero [
 { #category : #'debug printing' }
 SpurMemoryManager >> printHeaderTypeOf: objOop [
 	coInterpreter
-		print: ((self numSlotsOf: objOop) >= self numSlotsMask
+		print: ((self numSlotsOfAny: objOop) >= self numSlotsMask
 					ifTrue: [' hdr16 ']
 					ifFalse: [' hdr8 ']);
 		printChar: ((self isImmutable: objOop) ifTrue: [$i] ifFalse: [$.]);
@@ -9372,14 +9391,13 @@ SpurMemoryManager >> remapObj: objOop [
 	self assert: (self shouldRemapOop: objOop).
 	(self isForwarded: objOop)
 		ifTrue:
-			[resolvedObj := self followForwarded: objOop.
-			(self isInFutureSpace: resolvedObj) ifTrue: "already scavenged"
-				[^resolvedObj]]
+			[resolvedObj := self followForwarded: objOop]
 		ifFalse:
-			[self deny: (self isInFutureSpace: resolvedObj).
+			[self deny: (self isInFutureSpace: objOop).
 			 resolvedObj := objOop].
 	(scavengeInProgress
-	 and: [self isReallyYoung: resolvedObj]) ifTrue: "a becommed or compacted object whose target is in old space, or a CogMethod."
+	 and: [(self isReallyYoung: resolvedObj) "don't scavenge immediate, old, or CogMethod objects."
+	 and: [(self isInFutureSpace: resolvedObj) not]]) ifTrue: 
 		[^scavenger copyAndForward: resolvedObj].
 	^resolvedObj
 ]
@@ -9471,8 +9489,7 @@ SpurMemoryManager >> restoreObjectsIn: objArray savedHashes: savedHashes [
 SpurMemoryManager >> return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes [
 	self restoreObjectsIn: firstArray savedHashes: firstSavedHashes.
 	self restoreObjectsIn: secondArray savedHashes: secondSavedHashes.
-	self leakCheckImageSegments ifTrue:
-		[self runLeakCheckerForFullGC: true].
+	self runLeakCheckerFor: GCModeImageSegment.
 	self assert: self allObjectsUnmarked.
 	^errCode
 ]
@@ -9544,24 +9561,27 @@ SpurMemoryManager >> roundBytesToAllocationUnit: bytes [
 ]
 
 { #category : #'debug support' }
-SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag [
-	^self runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: false classIndicesShouldBeValid: true
+SpurMemoryManager >> runLeakCheckerFor: gcModes [
+	<inline: false>
+	^self
+		inLineRunLeakCheckerFor: gcModes
+		excludeUnmarkedNewSpaceObjs: false
+		classIndicesShouldBeValid: true
 ]
 
 { #category : #'debug support' }
-SpurMemoryManager >> runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
+SpurMemoryManager >> runLeakCheckerFor: gcModes excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
 	<inline: false>
-	(fullGCFlag
-			ifTrue: [self leakCheckFullGC or: [self leakCheckImageSegments]]
-			ifFalse: [self leakCheckNewSpaceGC]) ifTrue:
-		[fullGCFlag
-			ifTrue: [coInterpreter reverseDisplayFrom: 0 to: 7]
-			ifFalse: [coInterpreter reverseDisplayFrom: 8 to: 15].
-		 self clearLeakMapAndMapAccessibleObjects.
-		 self assert: (self checkHeapIntegrity: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid).
-		 self assert: coInterpreter checkInterpreterIntegrity.
-		 self assert: coInterpreter checkStackIntegrity.
-		 self assert: (coInterpreter checkCodeIntegrity: fullGCFlag)]
+	self inLineRunLeakCheckerFor: gcModes
+		excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs
+		classIndicesShouldBeValid: classIndicesShouldBeValid
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> runLeakCheckerForFullGC [
+	<doNotGenerate>
+	"Support for the Spur bootstrap"
+	self runLeakCheckerFor: GCModeFull
 ]
 
 { #category : #'debug printing' }
@@ -9611,10 +9631,10 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 			printNum: coInterpreter interpreterAllocationReserveBytes - (scavenger eden limit - freeStart); cr].
 	self checkMemoryMap.
 	self checkFreeSpace.
-	self runLeakCheckerForFullGC: false.
+	self runLeakCheckerFor: GCModeNewSpace.
 
 	coInterpreter
-		preGCAction: GCModeScavenge;
+		preGCAction: GCModeNewSpace;
 		"would prefer this to be in mapInterpreterOops, but
 		 compatibility with ObjectMemory dictates it goes here."
 		flushMethodCacheFrom: newSpaceStart to: newSpaceLimit.
@@ -9630,9 +9650,9 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 	statScavengeGCUsecs := statScavengeGCUsecs + statSGCDeltaUsecs.
 	statRootTableCount := scavenger rememberedSetSize.
 
-	coInterpreter postGCAction: GCModeScavenge.
+	coInterpreter postGCAction: GCModeNewSpace.
 
-	self runLeakCheckerForFullGC: false.
+	self runLeakCheckerFor: GCModeNewSpace.
 	self checkFreeSpace
 ]
 
@@ -9672,14 +9692,14 @@ SpurMemoryManager >> set: objOop classIndexTo: classIndex formatTo: format [
 ]
 
 { #category : #'spur bootstrap' }
-SpurMemoryManager >> setCheckForLeaks: anInteger [
+SpurMemoryManager >> setCheckForLeaks: integerFlags [
 	" 0 = do nothing.
-	  1 = check for leaks on fullGC.
-	  2 = check for leaks on scavenger.
-	  4 = check for leaks on become
-	  8 = check for leaks on truly incremental.
-	15 = check for leaks on all four."
-	checkForLeaks := anInteger
+	  1 = check for leaks on fullGC (GCModeFull).
+	  2 = check for leaks on scavenger (GCModeNewSpace).
+	  4 = check for leaks on incremental (GCModeIncremental)
+	  8 = check for leaks on become
+	 16 = check for leaks on image segments"
+	checkForLeaks := integerFlags
 ]
 
 { #category : #'header access' }
@@ -9937,13 +9957,6 @@ SpurMemoryManager >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
 	^coInterpreter showDisplayBits: aForm Left: l Top: t Right: r Bottom: b
-]
-
-{ #category : #'growing/shrinking memory' }
-SpurMemoryManager >> shrinkObjectMemory: delta [
-	"Attempt to shrink the object memory by the given delta amount."
-	<doNotGenerate>
-	segmentManager shrinkObjectMemory: delta
 ]
 
 { #category : #'free space' }
@@ -10449,8 +10462,7 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArray outPointers: outPoi
 	<inline: false>
 	| arrayOfObjects savedInHashes savedOutHashes fillValue segStart segAddr endSeg outIndex |
 
-	self leakCheckImageSegments ifTrue:
-		[self runLeakCheckerForFullGC: true].
+	self runLeakCheckerFor: GCModeImageSegment.
 
 	"First compute the transitive closure, collecting the sequence of objects to be stored in the arrayOfObjects array."
 	arrayOfObjects := self objectsReachableFromRoots: arrayOfRoots.

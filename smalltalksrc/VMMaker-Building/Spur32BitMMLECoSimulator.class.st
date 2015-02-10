@@ -323,14 +323,12 @@ Spur32BitMMLECoSimulator >> return: errCode restoringObjectsIn: firstArray saved
 ]
 
 { #category : #'debug support' }
-Spur32BitMMLECoSimulator >> runLeakCheckerForFullGC: fullGCFlag excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
+Spur32BitMMLECoSimulator >> runLeakCheckerFor: gcModes excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
 	(coInterpreter displayView isNil
-	 and: [fullGCFlag
-			ifTrue: [self leakCheckFullGC]
-			ifFalse: [self leakCheckNewSpaceGC]]) ifTrue:
+	 and: [gcModes anyMask: checkForLeaks]) ifTrue:
 		[coInterpreter transcript nextPutAll: 'leak-checking...'; flush].
 	^super
-		runLeakCheckerForFullGC: fullGCFlag
+		runLeakCheckerFor: gcModes
 		excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs
 		classIndicesShouldBeValid: classIndicesShouldBeValid
 ]
