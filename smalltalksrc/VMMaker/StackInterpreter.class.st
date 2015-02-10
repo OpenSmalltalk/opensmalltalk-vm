@@ -6251,7 +6251,6 @@ StackInterpreter >> flushExternalPrimitives [
 				 primIdx = PrimitiveExternalCallIndex ifTrue: "It's primitiveExternalCall"
 					[self flushExternalPrimitiveOf: oop]]]].
 	self flushMethodCache.
-	self flushAtCache.
 	self flushExternalPrimitiveTable
 ]
 
@@ -6797,7 +6796,7 @@ StackInterpreter >> getErrorObjectFromPrimFailCode [
 	| table |
 	primFailCode > 0 ifTrue:
 		[table := objectMemory splObj: PrimErrTableIndex.
-		 primFailCode <= ((objectMemory lastPointerOf: table) // objectMemory wordSize) ifTrue:
+		 primFailCode <= (objectMemory numSlotsOf: table) ifTrue:
 			[^objectMemory fetchPointer: primFailCode - 1 ofObject: table]].
 	^objectMemory integerObjectOf: primFailCode
 ]
@@ -8847,7 +8846,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 			 "If this is a synthetic context its IP could be pointing at the CallPrimitive opcode.  If so, skip it."
 			 (theIP signedIntFromLong > 0
 			  and: [(self methodHeaderHasPrimitive: header)
-			  and: [theIP = (1 + (objectMemory lastPointerOf: theMethod))]]) ifTrue:
+			  and: [theIP = (1 + (objectMemory lastPointerOfMethodHeader: header))]]) ifTrue:
 				[theIP := theIP + (self sizeOfCallPrimitiveBytecode: header)].
 			 stackPages longAt: pointer put: rcvr].
 	"Put the arguments on the stack"
@@ -13401,6 +13400,7 @@ StackInterpreter >> spurPostBecomeAction: theBecomeEffectsFlags [
 	<option: #SpurObjectMemory>
 	<inline: false> "For VM profiling"
 	self followForwardingPointersInStackZone: theBecomeEffectsFlags.
+	self flushAtCache.
 	theBecomeEffectsFlags ~= 0 ifTrue:
 		[(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 			[self followForwardedMethodsInMethodCache.
