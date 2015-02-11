@@ -820,8 +820,9 @@ SpurMemoryManager class >> initializeObjectHeaderConstants [
 	BaseHeaderSize := 8. "This is still needed for VM generation."
 
 	"These are used in image segments"
-	TopHashBit := 1 << (self basicNew identityHashFieldWidth - 1).
-	TopOopBit := 1 << (self basicNew bytesPerOop * 8 - 1)
+	self ~~ SpurMemoryManager ifTrue:
+		[TopHashBit := 1 << (self basicNew identityHashFieldWidth - 1).
+		 TopOopBit := 1 << (self basicNew bytesPerOop * 8 - 1)]
 ]
 
 { #category : #'class initialization' }
