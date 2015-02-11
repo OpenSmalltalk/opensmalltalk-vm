@@ -3607,6 +3607,7 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
 			[accessorDepth := self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod]
 		ifFalse:
 			[self assert: (self saneFunctionPointerForFailureOfPrimIndex: primIndex)].
+	self assert: (accessorDepth between: -127 and: 127).
 	accessorDepth >= 0 ifTrue:
 		[0 to: argumentCount do:
 			[:index| | oop |
