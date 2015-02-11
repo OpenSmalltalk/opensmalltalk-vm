@@ -454,7 +454,7 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 			 newMethod := methodArg.
 			 self callExternalPrimitive: addr. "On Spur, sets primitiveFunctionPointer"
 			 self maybeRetryFailureDueToForwarding.
-			 newMethod  := objectMemory fetchPointer: 4 ofObject: tempOop]
+			 newMethod := objectMemory fetchPointer: 4 ofObject: tempOop]
 		ifFalse:
 			[self callExternalPrimitive: addr].
 	self successful ifFalse: "If primitive failed, then restore state for failure code"
@@ -464,6 +464,9 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 		 self push: (objectMemory fetchPointer: 1 ofObject: tempOop).
 		 self push: (objectMemory fetchPointer: 0 ofObject: tempOop).
 		 argumentCount := 3.
+		 "Must reset primitiveFunctionPointer for checkForAndFollowForwardedPrimitiveState"
+		 objectMemory hasSpurMemoryManagerAPI ifTrue:
+			[primitiveFunctionPointer := #primitiveDoNamedPrimitiveWithArgs].
 		 "Hack.  A nil prim error code (primErrorCode = 1) is interpreted by the image
 		  as meaning this primitive is not implemented.  So to pass back nil as an error
 		  code we use -1 to indicate generic failure."
