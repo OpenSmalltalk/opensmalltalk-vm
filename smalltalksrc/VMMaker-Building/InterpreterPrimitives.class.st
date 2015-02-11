@@ -114,6 +114,12 @@ InterpreterPrimitives >> failed [
 ]
 
 { #category : #'primitive support' }
+InterpreterPrimitives >> floatExponentBits [
+	"Answer the number of bits in the double-precision exponent.  This is an 11-bit field."
+	^11
+]
+
+{ #category : #'primitive support' }
 InterpreterPrimitives >> initPrimCall [
 	"Set the failure code/success flag in preparation for calling a primitve.
 	 If primFailCode is non-zero a primitive has failed.  If primFailCode is
@@ -130,6 +136,13 @@ InterpreterPrimitives >> isAppropriateForCopyObject: oop [
 { #category : #'primitive support' }
 InterpreterPrimitives >> isDirectAlien: oop [
 	^(self sizeFieldOfAlien: oop) > 0
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> isFinite: aDouble [
+	<var: #aDouble type: #double>
+	<inline: true>
+	^aDouble - aDouble = 0.0
 ]
 
 { #category : #'primitive support' }
@@ -3817,18 +3830,31 @@ InterpreterPrimitives >> primitiveSmallFloatSubtract [
 { #category : #'arithmetic float primitives' }
 InterpreterPrimitives >> primitiveSmallFloatTimesTwoPower [
 	<option: #Spur64BitMemoryManager>
-	| rcvr arg |
+	| rcvr result arg twiceMaxExponent |
 	<var: #rcvr type: #double>
+	<var: #result type: #double>
 	arg := self stackTop.
-	(objectMemory isIntegerObject: arg)
+	(objectMemory isIntegerObject: arg) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
+	"N.B. SmallFloats are finite.  NaN and Infinity overflow into boxed floats."
+	rcvr = 0.0
 		ifTrue:
-			[rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
-			 arg := objectMemory integerValueOf: arg.
-			 self pop: 2
-				thenPushFloat: (self cCode: [self ld: rcvr exp: arg]
-									inSmalltalk: [rcvr timesTwoPower: arg])]
+			[result := rcvr]
 		ifFalse:
-			[self primitiveFail]
+			[arg := objectMemory integerValueOf: arg.
+			 twiceMaxExponent := 2 * (1 << self floatExponentBits).
+			 arg < twiceMaxExponent negated
+				ifTrue:
+					[result := rcvr < 0.0 ifTrue: [-0.0] ifFalse: [0.0]]
+				ifFalse:
+					[arg > twiceMaxExponent
+						ifTrue:
+							[result := rcvr < 0.0 ifTrue: [-1.0e200 / 1.0e-200] ifFalse: [1.0e200 / 1.0e-200]]
+						ifFalse:
+							[result := self cCode: [self ld: rcvr exp: arg]
+											inSmalltalk: [rcvr timesTwoPower: arg]]]].
+	self pop: 2 thenPushFloat: result
 ]
 
 { #category : #'arithmetic float primitives' }
@@ -4166,13 +4192,31 @@ InterpreterPrimitives >> primitiveTestShortenIndexableSize [
 
 { #category : #'arithmetic float primitives' }
 InterpreterPrimitives >> primitiveTimesTwoPower [
-	| rcvr arg |
+	<option: #Spur64BitMemoryManager>
+	| rcvr result arg twiceMaxExponent |
 	<var: #rcvr type: #double>
-	arg := self popInteger.
-	rcvr := self popFloat.
-	self successful
-		ifTrue: [ self pushFloat: (self cCode: 'ldexp(rcvr, arg)' inSmalltalk: [rcvr timesTwoPower: arg]) ]
-		ifFalse: [ self unPop: 2 ]
+	<var: #result type: #double>
+	arg := self stackTop.
+	(objectMemory isIntegerObject: arg) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	rcvr := objectMemory floatValueOf: (self stackValue: 1).
+	((self isFinite: rcvr) and: [rcvr ~= 0])
+		ifFalse:
+			[result := rcvr]
+		ifTrue:
+			[arg := objectMemory integerValueOf: arg.
+			 twiceMaxExponent := 2 * (1 << self floatExponentBits).
+			 arg < twiceMaxExponent negated
+				ifTrue:
+					[result := rcvr < 0.0 ifTrue: [-0.0] ifFalse: [0.0]]
+				ifFalse:
+					[arg > twiceMaxExponent
+						ifTrue:
+							[result := rcvr < 0.0 ifTrue: [-1.0e200 / 1.0e-200] ifFalse: [1.0e200 / 1.0e-200]]
+						ifFalse:
+							[result := self cCode: [self ld: rcvr exp: arg]
+											inSmalltalk: [rcvr timesTwoPower: arg]]]].
+	self pop: 2 thenPushFloat: result
 ]
 
 { #category : #'arithmetic float primitives' }
