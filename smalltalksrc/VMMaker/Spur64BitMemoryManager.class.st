@@ -369,12 +369,12 @@ Spur64BitMemoryManager >> fetchLong32: fieldIndex ofFloatObject: oop [
 		[^self fetchLong32: fieldIndex ofObject: oop].
 	bits := self smallFloatBitsOf: oop.
 	^self
-		cCode: [self longAt: (self cCoerceSimple: (self addressOf: bits) to: #'char *')
-							+ (fieldIndex << self shiftForWord)]
-		inSmalltalk: [self flag: #endian.
-					fieldIndex = 0
-						ifTrue: [bits >> 32]
-						ifFalse: [bits bitAnd: 16rFFFFFFFF]]
+		cCode: [(self cCoerceSimple: (self addressOf: bits) to: #'int *') at: fieldIndex]
+		inSmalltalk:
+			[self flag: #endian.
+			 fieldIndex = 0
+				ifTrue: [bits bitAnd: 16rFFFFFFFF]
+				ifFalse: [bits >> 32]]
 ]
 
 { #category : #instantiation }
