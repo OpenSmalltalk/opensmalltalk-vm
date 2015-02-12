@@ -634,6 +634,13 @@ Spur64BitMemoryManager >> isMarked: objOop [
 	^((self longAt: objOop) >> self markedBitFullShift bitAnd: 1) ~= 0
 ]
 
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> isNegativeSmallFloat: aSmallFloat [
+	<inline: true>
+	self assert: (self isImmediateFloat: aSmallFloat).
+	^aSmallFloat anyMask: self smallFloatSignBit
+]
+
 { #category : #'object testing' }
 Spur64BitMemoryManager >> isNonIntegerObject: oop [
 	^(oop bitAnd: self tagMask) ~= 1
@@ -654,6 +661,13 @@ Spur64BitMemoryManager >> isSmallFloatValue: aFloat [
 			[(rawFloat bitAnd: (1 << 52 - 1)) = 0
 				ifTrue: [exponent = 0]
 				ifFalse: [exponent = self smallFloatExponentOffset]]
+]
+
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> isSmallFloatZero: aSmallFloat [
+	<inline: true>
+	self assert: (self isImmediateFloat: aSmallFloat).
+	^aSmallFloat asUnsignedInteger <= self negativeSmallFloatZero
 ]
 
 { #category : #'object testing' }
@@ -728,6 +742,13 @@ Spur64BitMemoryManager >> logBytesPerOop [
 ]
 
 { #category : #'interpreter access' }
+Spur64BitMemoryManager >> mapSignedSmallFloatToSignedSmallFloatZero: aSmallFloat [
+	<inline: true>
+	self assert: (self isImmediateFloat: aSmallFloat).
+	^aSmallFloat bitAnd: self smallFloatSignBit + self tagMask
+]
+
+{ #category : #'interpreter access' }
 Spur64BitMemoryManager >> maxCInteger [
 	^16rFFFFFFFFFFFFFFFF
 ]
@@ -772,6 +793,12 @@ Spur64BitMemoryManager >> methodDictionaryHash: oop mask: mask [
 { #category : #'interpreter access' }
 Spur64BitMemoryManager >> minSmallInteger [
 	^-16r1000000000000000
+]
+
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> negativeSmallFloatZero [
+	<inline: true>
+	^self smallFloatSignBit + self smallFloatTag
 ]
 
 { #category : #'free space' }
@@ -844,6 +871,12 @@ Spur64BitMemoryManager >> oldRawNumSlotsOf: objOop [
 	^(self longAt: objOop) asUnsignedLong >> self numSlotsFullShift
 ]
 
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> positiveSmallFloatZero [
+	<inline: true>
+	^self smallFloatTag
+]
+
 { #category : #'object access' }
 Spur64BitMemoryManager >> rawOverflowSlotsOf: objOop [
 	<returnTypeC: #usqLong>
@@ -884,7 +917,7 @@ Spur64BitMemoryManager >> rotatedFloatBitsOf: oop [
 	 add sign:				[    ssss   ][8expsubset][52mantissa]"
 	self assert: (self isImmediateFloat: oop).
 	^oop asUnsignedInteger >> (self numTagBits + 1)
-	 + ((oop anyMask: 1 << self numTagBits)
+	 + ((oop anyMask: self smallFloatSignBit)
 		ifTrue: [-1 << (64 - self numTagBits - 1)]
 		ifFalse: [0])
 ]
@@ -1045,6 +1078,12 @@ Spur64BitMemoryManager >> smallFloatObjectOf: aFloat [
 		 self assert: rot > 0].
 	^self cCode: [rot << self numTagBits + self smallFloatTag]
 		inSmalltalk: [((rot << self numTagBits) bitAnd: 16rFFFFFFFFFFFFFFFF) + self smallFloatTag]
+]
+
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> smallFloatSignBit [
+	<inline: true>
+	^1 << self numTagBits
 ]
 
 { #category : #'cog jit support' }
