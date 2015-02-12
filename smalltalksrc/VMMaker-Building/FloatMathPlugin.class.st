@@ -357,8 +357,8 @@ FloatMathPlugin >> primitiveTanH [
 
 { #category : #'float primitives' }
 FloatMathPlugin >> primitiveTimesTwoPower [
-	"Computes E raised to the receiver power."
-	| rcvr arg twiceMaxExponent result |
+	"Multiply the receiver by the power of the argument."
+	| rcvr arg result |
 	<export: true>
 	<var: #rcvr type: #double>
 	<var: #result type: #double>
@@ -366,24 +366,16 @@ FloatMathPlugin >> primitiveTimesTwoPower [
 	rcvr := interpreterProxy stackFloatValue: 1.
 	interpreterProxy failed ifTrue:
 		[^nil].
-	((self isFinite: rcvr) and: [rcvr ~= 0.0])
-		ifFalse:
-			[result := rcvr]
-		ifTrue:
-			[twiceMaxExponent := 2 * (1 << 11).
-			 arg < twiceMaxExponent negated
-				ifTrue:
-					[result := rcvr < 0.0 ifTrue: [-0.0] ifFalse: [0.0]]
-				ifFalse:
-					[arg > twiceMaxExponent
-						ifTrue:
-							[result := rcvr < 0.0 ifTrue: [-1.0e200 / 1.0e-200] ifFalse: [1.0e200 / 1.0e-200]]
-						ifFalse:
-							[result := self cCode: '__ieee754_ldexp(rcvr, arg)'
-											inSmalltalk: [rcvr timesTwoPower: arg]]]].
-	(self isnan: result) ifTrue:
-		[^interpreterProxy primitiveFail].
-	interpreterProxy
-		pop: interpreterProxy methodArgumentCount + 1;
-		pushFloat: result
+	interpreterProxy bytesPerOop > 4 ifTrue:
+		[| twiceMaxExponent | "clip arg to at most int range; ldexp's last arg is of type int"
+		 twiceMaxExponent := 2 * (1 << self floatExponentBits).
+	 	 arg < twiceMaxExponent negated
+			ifTrue: [arg := twiceMaxExponent negated]
+			ifFalse: [arg > twiceMaxExponent ifTrue:
+						[arg := twiceMaxExponent]]].
+	result := self cCode: '__ieee754_ldexp(rcvr, (int)arg)'
+					inSmalltalk: [rcvr timesTwoPower: arg].
+	(self isnan: result) ifFalse:
+		[interpreterProxy methodReturnValue: (interpreterProxy floatObjectOf: result)].
+	^nil
 ]
