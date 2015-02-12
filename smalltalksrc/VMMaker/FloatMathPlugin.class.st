@@ -22,6 +22,13 @@ FloatMathPlugin class >> simulatorClass [
 ]
 
 { #category : #'float primitives' }
+FloatMathPlugin >> floatExponentBits [
+	"Answer the number of bits in the double-precision exponent.  This is an 11-bit field."
+	<inline: true>
+	^11
+]
+
+{ #category : #'float primitives' }
 FloatMathPlugin >> isFinite: aDouble [
 	<var: #aDouble type: #double>
 	<inline: true>
