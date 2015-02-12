@@ -124,7 +124,7 @@ static int    installHandlers=	1;	/* 0 to disable sigusr1 & sigsegv handlers */
        int    uxDropFileCount=	0;	/* number of dropped items	*/
        char **uxDropFileNames=	0;	/* dropped filenames		*/
 
-       int    textEncodingUTF8= 0;	/* 1 if copy from external selection uses UTF8 */
+       int    textEncodingUTF8= 1;	/* 1 if copy from external selection uses UTF8 */
 
 #if defined(IMAGE_DUMP)
 static int    dumpImageFile=	0;	/* 1 after SIGHUP received */
@@ -1479,21 +1479,19 @@ static int vm_parseArgument(int argc, char **argv)
 		reportStackHeadroom = 1;
 		return 1; }
 #endif /* COGVM */
-      else if (!strcmp(argv[0], "-textenc"))
-	{
-	  char *buf= (char *)malloc(strlen(argv[1]) + 1);
-	  int len, i;
-	  strcpy(buf, argv[1]);
-	  len= strlen(buf);
-	  for (i= 0;  i < len;  ++i)
-	    buf[i]= toupper(buf[i]);
-	  if ((!strcmp(buf, "UTF8")) || (!strcmp(buf, "UTF-8")))
-	    textEncodingUTF8= 1;
-	  else
-	    setEncoding(&uxTextEncoding, buf);
-	  free(buf);
-	  return 2;
-	}
+      else if (!strcmp(argv[0], "-textenc")) {
+		int i, len = strlen(argv[1]);
+		char *buf = (char *)alloca(len + 1);
+		for (i = 0;  i < len;  ++i)
+			buf[i] = toupper(argv[1][i]);
+		if ((!strcmp(buf, "UTF8")) || (!strcmp(buf, "UTF-8")))
+			textEncodingUTF8 = 1;
+		else {
+			textEncodingUTF8 = 0;
+			setEncoding(&uxTextEncoding, buf);
+		}
+		return 2;
+	  }
     }
   return 0;	/* option not recognised */
 }
