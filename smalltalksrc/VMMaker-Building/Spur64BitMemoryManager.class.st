@@ -665,7 +665,7 @@ Spur64BitMemoryManager >> isSmallFloatValue: aFloat [
 
 { #category : #'interpreter access' }
 Spur64BitMemoryManager >> isSmallFloatZero: aSmallFloat [
-	<inline: true>
+	<inline: #always>
 	self assert: (self isImmediateFloat: aSmallFloat).
 	^aSmallFloat asUnsignedInteger <= self negativeSmallFloatZero
 ]

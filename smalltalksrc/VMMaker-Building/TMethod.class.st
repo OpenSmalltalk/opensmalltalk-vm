@@ -488,7 +488,7 @@ TMethod >> emitCCodeOn: aStream generator: aCodeGen [
 	aCodeGen currentMethod: self.
 	self emitCCommentOn: aStream.	"place method comment before function"
 	aStream cr. 
-	self emitCFunctionPrototype: aStream generator: aCodeGen newlineBeforeName: true.
+	self emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: false.
 	aStream cr; nextPut: ${.
 	self emitCLocalsOn: aStream generator: aCodeGen.
 	aCodeGen
@@ -525,18 +525,20 @@ TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen [
 			[:pragma|
 			aStream nextPutAll: (pragma argumentAt: 1).
 			^self]].
-	self emitCFunctionPrototype: aStream generator: aCodeGen newlineBeforeName: false
+	self emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: true
 ]
 
 { #category : #'C code generation' }
-TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen newlineBeforeName: newlineBeforeName [ "<Boolean>"
+TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPrototype [ "<Boolean>"
 	"Emit a C function header for this method onto the given stream."
 
 	export 
 		ifTrue:[aStream nextPutAll: 'EXPORT('; nextPutAll: returnType; nextPut: $)]
-		ifFalse:[self isStatic ifTrue:[aStream nextPutAll: 'static '].
-				aStream nextPutAll: returnType].
-	newlineBeforeName ifTrue: [aStream cr] ifFalse: [aStream space].
+		ifFalse:
+			[self isStatic ifTrue:[aStream nextPutAll: 'static '].
+			 (isPrototype or: [inline ~~ #always]) ifFalse: [aStream nextPutAll: 'inline '].
+			 aStream nextPutAll: returnType].
+	isPrototype ifTrue: [aStream space] ifFalse: [aStream cr].
 	(returnType last = $)
 	and: [returnType includesSubString: (aCodeGen cFunctionNameFor: selector)]) ifTrue:
 		["Hack fix for e.g. <returnTypeC: 'void (*setInterruptCheckChain(void (*aFunction)(void)))()'>"
@@ -783,7 +785,7 @@ TMethod >> extractExportDirective [
 TMethod >> extractInlineDirective [
 	"Scan the pragmas (or top-level statements) for an inlining directive of the form:
 
-		<inline: <boolean|#never|#dontCare|#asSpecified>
+		<inline: <boolean|#never|#dontCare|#asSpecified|#always>
 
 	 Answer a boolean equivalent to the argument of the directive or #dontCare if there is no inlining directive."
 
@@ -791,7 +793,7 @@ TMethod >> extractInlineDirective [
 	^self
 		extractDirective: #inline:
 		valueBlock:
-			[:sendNode| (inline := sendNode args first value) = true]
+			[:sendNode| #(true always) includes: (inline := sendNode args first value)]
 		default: #dontCare
 ]
 
