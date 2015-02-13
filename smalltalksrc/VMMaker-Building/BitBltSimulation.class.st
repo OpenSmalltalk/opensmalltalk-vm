@@ -2728,39 +2728,38 @@ BitBltSimulation >> primitiveDisplayString [
 	| kernDelta xTable glyphMap stopIndex startIndex sourceString bbObj maxGlyph ascii glyphIndex sourcePtr left quickBlt |
 	<export: true>
 	<var: #sourcePtr type: 'char *'>
-	interpreterProxy methodArgumentCount = 6 
-		ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy methodArgumentCount = 6 ifFalse:
+		[^interpreterProxy primitiveFail].
 	kernDelta := interpreterProxy stackIntegerValue: 0.
 	xTable := interpreterProxy stackObjectValue: 1.
 	glyphMap := interpreterProxy stackObjectValue: 2.
-	((interpreterProxy fetchClassOf: xTable) = interpreterProxy classArray and:[
-		(interpreterProxy fetchClassOf: glyphMap) = interpreterProxy classArray])
-			ifFalse:[^interpreterProxy primitiveFail].
-	(interpreterProxy slotSizeOf: glyphMap) = 256 ifFalse:[^interpreterProxy primitiveFail].
-	interpreterProxy failed ifTrue:[^nil].
-	maxGlyph := (interpreterProxy slotSizeOf: xTable) - 2.
-
 	stopIndex := interpreterProxy stackIntegerValue: 3.
 	startIndex := interpreterProxy stackIntegerValue: 4.
 	sourceString := interpreterProxy stackObjectValue: 5.
-	(interpreterProxy isBytes: sourceString) ifFalse:[^interpreterProxy primitiveFail].
-	(startIndex > 0 and:[stopIndex > 0 and:[
-		stopIndex <= (interpreterProxy byteSizeOf: sourceString)]])
-			ifFalse:[^interpreterProxy primitiveFail].
-
 	bbObj := interpreterProxy stackObjectValue: 6.
-	(self loadBitBltFrom: bbObj) ifFalse:[^interpreterProxy primitiveFail].
-	(combinationRule = 30 or:[combinationRule = 31]) "needs extra source alpha"
-		ifTrue:[^interpreterProxy primitiveFail].
+	interpreterProxy failed ifTrue:
+		[^nil].
+
+	((interpreterProxy isArray: xTable)
+	 and: [(interpreterProxy isArray: glyphMap)
+	 and: [(interpreterProxy slotSizeOf: glyphMap) = 256
+	 and: [(interpreterProxy isBytes: sourceString)
+	 and: [startIndex > 0
+	 and: [stopIndex > 0
+	 and: [stopIndex <= (interpreterProxy byteSizeOf: sourceString)
+	 and: [(self loadBitBltFrom: bbObj)
+	 and: [combinationRule ~= 30 "these two need extra source alpha"
+	 and: [combinationRule ~= 31]]]]]]]]]) ifFalse:
+		[^interpreterProxy primitiveFail].
+	maxGlyph := (interpreterProxy slotSizeOf: xTable) - 2.
 	"See if we can go directly into copyLoopPixMap (usually we can)"
 	quickBlt := destBits ~= 0 "no OS surfaces please"
 				and:[sourceBits ~= 0 "and again"
 				and:[noSource = false "needs a source"
 				and:[sourceForm ~= destForm "no blits onto self"
-				and:[(cmFlags ~= 0 
-						or:[sourceMSB ~= destMSB 
-						or:[sourceDepth ~= destDepth]]) "no point using slower version"
-				]]]].
+				and:[cmFlags ~= 0 
+					 or:[sourceMSB ~= destMSB 
+					 or:[sourceDepth ~= destDepth]]]]]]. "no point using slower version"
 	left := destX.
 	sourcePtr := interpreterProxy firstIndexableField: sourceString.
 	startIndex to: stopIndex do:[:charIndex|
