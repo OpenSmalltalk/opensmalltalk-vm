@@ -2399,6 +2399,13 @@ ObjectMemory >> hasForwardingBlock: objOop [
 	^self isMarked: objOop
 ]
 
+{ #category : #'object format' }
+ObjectMemory >> hasSixtyFourBitImmediates [
+	"The V3 64-bit memory manager has 64-bit oops, but its SmallIntegers only have
+	 31 bits of precision.  The Spur 64-bit memory manager has 61-bit immediates."
+	^false
+]
+
 { #category : #'api characterization' }
 ObjectMemory >> hasSpurMemoryManagerAPI [
 	^false

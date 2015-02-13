@@ -3648,6 +3648,8 @@ InterpreterPrimitives >> primitiveSmallFloatDivide [
 
 	rcvr := objectMemory smallFloatValueOf: (self stackValue: 1).
 	arg := objectMemory loadFloatOrIntFrom: self stackTop.
+	arg = 0.0 ifTrue:
+		[self primitiveFail].
 	self successful ifTrue:
 		[self pop: 2 thenPushFloat: rcvr / arg]
 ]
@@ -4194,7 +4196,6 @@ InterpreterPrimitives >> primitiveTestShortenIndexableSize [
 { #category : #'arithmetic float primitives' }
 InterpreterPrimitives >> primitiveTimesTwoPower [
 	"Multiply the receiver by the power of the argument."
-	<option: #Spur64BitMemoryManager>
 	| rcvr result arg |
 	<var: #rcvr type: #double>
 	<var: #result type: #double>
