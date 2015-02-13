@@ -98,17 +98,11 @@ TAssignmentNode >> emitLiteralArrayDeclarationOn: aStream level: level generator
 
 { #category : #'C code generation' }
 TAssignmentNode >> emitStatementListExpansion: stmtList on: aStream level: level generator: aCodeGen [
-	| lastStmt copy |
-	lastStmt := stmtList statements last.
-	lastStmt = variable ifTrue:
+	stmtList statements last = variable ifTrue:
 		[^expression emitCCodeOn: aStream level: level generator: aCodeGen].
-	copy := stmtList copy.
-	copy statements
-		at: stmtList statements size
-		put: (TAssignmentNode new
-				setVariable: variable
-				expression: lastStmt).
-	copy emitCCodeOn: aStream level: level generator: aCodeGen
+	stmtList copy
+		assignLastExpressionTo: variable;
+		emitCCodeOn: aStream level: level generator: aCodeGen
 ]
 
 { #category : #'C code generation' }
@@ -234,7 +228,7 @@ TAssignmentNode >> setExpression: expressionNode [
 
 { #category : #accessing }
 TAssignmentNode >> setVariable: varNode expression: expressionNode [
-
+	self assert: (expressionNode isGoTo or: [expressionNode isLabel]) not.
 	variable := varNode.
 	expression := expressionNode.
 ]
