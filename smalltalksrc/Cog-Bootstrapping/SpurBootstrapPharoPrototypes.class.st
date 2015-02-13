@@ -585,6 +585,12 @@ SpurBootstrapPharoPrototypes >> TraitBehaviorPROTOTYPEkindOfSubclass [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrapPharoPrototypes >> VirtualMachinePROTOTYPEisSpur [ 
+	"this value is always true but is here for backward compatibility (non Spur images should return false)"
+	^ true
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrapPharoPrototypes >> VirtualMachinePROTOTYPEsetGCParameters [
 	"Adjust the VM's default GC parameters to avoid too much tenuring.
 	 Maybe this should be left to the VM?"
