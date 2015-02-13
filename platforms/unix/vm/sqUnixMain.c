@@ -99,7 +99,7 @@ static int    useItimer=	1;	/* 0 to disable itimer-based clock */
        int    uxDropFileCount=	0;	/* number of dropped items	*/
        char **uxDropFileNames=	0;	/* dropped filenames		*/
 
-       int    textEncodingUTF8= 0;	/* 1 if copy from external selection uses UTF8 */
+       int    textEncodingUTF8= 1;	/* 1 if copy from external selection uses UTF8 */
 
 #if defined(IMAGE_DUMP)
 static int    dumpImageFile=	0;	/* 1 after SIGHUP received */
@@ -1082,10 +1082,11 @@ static int vm_parseArgument(int argc, char **argv)
 	  len= strlen(buf);
 	  for (i= 0;  i < len;  ++i)
 	    buf[i]= toupper(buf[i]);
-	  if ((!strcmp(buf, "UTF8")) || (!strcmp(buf, "UTF-8")))
-	    textEncodingUTF8= 1;
-	  else
-	    setEncoding(&uxTextEncoding, buf);
+	  if (strcmp(buf, "UTF8") && strcmp(buf, "UTF-8"))
+	    {
+	      textEncodingUTF8= 0;
+	      setEncoding(&uxTextEncoding, buf);
+	    }
 	  free(buf);
 	  return 2;
 	}
