@@ -384,7 +384,7 @@ Spur64BitMMLESimulator >> shortAt: byteAddress put: a16BitValue [
 	lowBits = 0
 		ifTrue: "storing into LS word"
 			[long := self long32At: byteAddress.
-			 self longAt: byteAddress
+			 self long32At: byteAddress
 				put: ((long bitAnd: 16rFFFF0000) bitOr: a16BitValue)]
 		ifFalse: "storing into MS word"
 			[longAddress := byteAddress - 2.

@@ -9433,6 +9433,28 @@ StackInterpreter >> maybeFlagMethodAsInterpreted: aMethod [
 ]
 
 { #category : #'primitive support' }
+StackInterpreter >> maybeInlinePositive32BitIntegerFor: integerValue [
+	"N.B. will *not* cause a GC.
+	 integerValue is interpreted as POSITIVE, e.g. as the result of Bitmap>at:."
+	<notOption: #Spur64BitMemoryManager>
+	| newLargeInteger |
+	self deny: objectMemory hasSixtyFourBitImmediates.
+	(integerValue >= 0
+	 and: [objectMemory isIntegerValue: integerValue]) ifTrue:
+		[^objectMemory integerObjectOf: integerValue].
+	newLargeInteger := objectMemory
+							eeInstantiateSmallClassIndex: ClassLargePositiveIntegerCompactIndex
+							format: (objectMemory byteFormatForNumBytes: 4)
+							numSlots: 1.
+	objectMemory
+		storeByte: 3 ofObject: newLargeInteger withValue: (integerValue >> 24 bitAnd: 16rFF);
+		storeByte: 2 ofObject: newLargeInteger withValue: (integerValue >> 16 bitAnd: 16rFF);
+		storeByte: 1 ofObject: newLargeInteger withValue: (integerValue >>   8 bitAnd: 16rFF);
+		storeByte: 0 ofObject: newLargeInteger withValue: (integerValue ">> 0" bitAnd: 16rFF).
+	^newLargeInteger
+]
+
+{ #category : #'primitive support' }
 StackInterpreter >> maybeRetryFailureDueToForwarding [
 	"In Spur a primitive may fail due to encountering a forwarder. On failure, check
 	 the accessorDepth for the primitive and if non-negative scan the args to the
@@ -9747,6 +9769,31 @@ StackInterpreter >> noFixupSuperclassOf: classPointer [
 	^objectMemory noFixupFollowField: SuperclassIndex ofObject: classPointer
 ]
 
+{ #category : #'primitive support' }
+StackInterpreter >> noInlineSigned32BitIntegerFor: integerValue [
+	"Answer a full 32 bit integer object for the given integer value."
+	<notOption: #Spur64BitMemoryManager>
+	| newLargeInteger value largeClass |
+	<inline: false>
+	(objectMemory isIntegerValue: integerValue) ifTrue:
+		[^objectMemory integerObjectOf: integerValue].
+	self deny: objectMemory hasSixtyFourBitImmediates.
+	 integerValue < 0
+		ifTrue: [largeClass := ClassLargeNegativeIntegerCompactIndex.
+				value := 0 - integerValue]
+		ifFalse: [largeClass := ClassLargePositiveIntegerCompactIndex.
+				value := integerValue].
+	newLargeInteger := objectMemory
+							eeInstantiateSmallClassIndex: largeClass
+							format: (objectMemory byteFormatForNumBytes: 4)
+							numSlots: 1.
+	objectMemory storeByte: 3 ofObject: newLargeInteger withValue: ((value >> 24) bitAnd: 16rFF).
+	objectMemory storeByte: 2 ofObject: newLargeInteger withValue: ((value >> 16) bitAnd: 16rFF).
+	objectMemory storeByte: 1 ofObject: newLargeInteger withValue: ((value >> 8) bitAnd: 16rFF).
+	objectMemory storeByte: 0 ofObject: newLargeInteger withValue: (value bitAnd: 16rFF).
+	^newLargeInteger
+]
+
 { #category : #'internal interpreter access' }
 StackInterpreter >> noInlineTemporary: offset in: theFP [
 	<var: #theFP type: #'char *'>
@@ -10044,23 +10091,15 @@ StackInterpreter >> popStackBytecode [
 
 { #category : #'primitive support' }
 StackInterpreter >> positive32BitIntegerFor: integerValue [
-	| newLargeInteger |
-	"N.B. will *not* cause a GC.
-		integerValue is interpreted as POSITIVE, e.g. as the result of Bitmap>at:."
-	(integerValue >= 0
-	 and: [objectMemory isIntegerValue: integerValue]) ifTrue:
-		[^objectMemory integerObjectOf: integerValue].
-
-	newLargeInteger := objectMemory
-							eeInstantiateSmallClassIndex: ClassLargePositiveIntegerCompactIndex
-							format: (objectMemory byteFormatForNumBytes: 4)
-							numSlots: 1.
-	objectMemory
-		storeByte: 3 ofObject: newLargeInteger withValue: (integerValue >> 24 bitAnd: 16rFF);
-		storeByte: 2 ofObject: newLargeInteger withValue: (integerValue >> 16 bitAnd: 16rFF);
-		storeByte: 1 ofObject: newLargeInteger withValue: (integerValue >>   8 bitAnd: 16rFF);
-		storeByte: 0 ofObject: newLargeInteger withValue: (integerValue ">> 0" bitAnd: 16rFF).
-	^newLargeInteger
+	"integerValue is interpreted as POSITIVE, e.g. as the result of Bitmap>at:.
+	 N.B.  Returning in each arm separately enables Slang inlining.
+	 /Don't/ return the ifTrue:ifFalse: unless Slang inlining of conditionals is fixed."
+	<inline: true>
+	objectMemory hasSixtyFourBitImmediates
+		ifTrue:
+			[^objectMemory integerObjectOf: (integerValue bitAnd: 16rFFFFFFFF)]
+		ifFalse:
+			[^self maybeInlinePositive32BitIntegerFor: integerValue]
 ]
 
 { #category : #'primitive support' }
@@ -10068,7 +10107,7 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 	<var: 'integerValue' type: #sqLong>
 	"Answer a Large Positive Integer object for the given integer value.  N.B. will *not* cause a GC."
 	| newLargeInteger highWord sz |
-	objectMemory wordSize = 8
+	objectMemory hasSixtyFourBitImmediates
 		ifTrue:
 			[(integerValue >= 0 and: [objectMemory isIntegerValue: integerValue]) ifTrue:
 				[^objectMemory integerObjectOf: integerValue].
@@ -10097,6 +10136,15 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 		storeByte: 0 ofObject: newLargeInteger withValue: (integerValue ">> 0" bitAnd: 16rFF).
 	^newLargeInteger
 
+]
+
+{ #category : #'callback support' }
+StackInterpreter >> positiveMachineIntegerFor: value [
+	<var: #value type: #'unsigned long'>
+	<inline: true>
+	^objectMemory wordSize = 8
+		ifTrue: [self positive64BitIntegerFor: value]
+		ifFalse: [self positive32BitIntegerFor: value]
 ]
 
 { #category : #'object memory support' }
@@ -12544,10 +12592,10 @@ StackInterpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regs
 	and: [primitiveFunctionPointer = 0]) ifFalse:
 		[^false].
 	self push: (self splObj: ClassAlien). "receiver"
-	self push: (self positive32BitIntegerFor: thunkPtr).
-	self push: (self positive32BitIntegerFor: stackPtr).
-	self push: (self positive32BitIntegerFor: regsPtr).
-	self push: (self positive32BitIntegerFor: jmpBufPtr).
+	self push: (self positiveMachineIntegerFor: thunkPtr).
+	self push: (self positiveMachineIntegerFor: stackPtr).
+	self push: (self positiveMachineIntegerFor: regsPtr).
+	self push: (self positiveMachineIntegerFor: jmpBufPtr).
 	self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector.
 	self justActivateNewMethod.
 	(self isMachineCodeFrame: framePointer) ifFalse:
@@ -12579,19 +12627,11 @@ StackInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 		[^false].
 	self saveCStackStateForCallbackContext: vmCallbackContext.
 	self push: (self splObj: ClassAlien). "receiver"
-	self cppIf: objectMemory wordSize = 8
-		ifTrue:
-			[(self argumentCountOf: newMethod) = 4 ifTrue:
-				[self push: (self positive64BitIntegerFor: vmCallbackContext thunkp asUnsignedInteger).
-				 self push: (self positive64BitIntegerFor: vmCallbackContext stackp asUnsignedInteger).
-				 self push: (self positive64BitIntegerFor: vmCallbackContext intregargsp asUnsignedInteger)].
-			 self push: (self positive64BitIntegerFor: vmCallbackContext asUnsignedInteger)]
-		ifFalse:
-			[(self argumentCountOf: newMethod) = 4 ifTrue:
-				[self push: (self positive32BitIntegerFor: vmCallbackContext thunkp asUnsignedInteger).
-				 self push: (self positive32BitIntegerFor: vmCallbackContext stackp asUnsignedInteger).
-				 self push: (self positive32BitIntegerFor: vmCallbackContext intregargsp asUnsignedInteger)].
-			 self push: (self positive32BitIntegerFor: vmCallbackContext asUnsignedInteger)].
+	(self argumentCountOf: newMethod) = 4 ifTrue:
+		[self push: (self positiveMachineIntegerFor: vmCallbackContext thunkp asUnsignedInteger).
+		 self push: (self positiveMachineIntegerFor: vmCallbackContext stackp asUnsignedInteger).
+		 self push: (self positiveMachineIntegerFor: vmCallbackContext intregargsp asUnsignedInteger)].
+	self push: (self positiveMachineIntegerFor: vmCallbackContext asUnsignedInteger).
 	self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector.
 	self justActivateNewMethod.
 	(self isMachineCodeFrame: framePointer) ifFalse:
@@ -13139,25 +13179,20 @@ StackInterpreter >> signalFinalization: weakReferenceOop [
 
 { #category : #'primitive support' }
 StackInterpreter >> signed32BitIntegerFor: integerValue [
-	"Answer a full 32 bit integer object for the given integer value."
-	| newLargeInteger value largeClass |
-	<inline: false>
-	(objectMemory isIntegerValue: integerValue) ifTrue:
-		[^objectMemory integerObjectOf: integerValue].
-	 integerValue < 0
-		ifTrue: [largeClass := ClassLargeNegativeIntegerCompactIndex.
-				value := 0 - integerValue]
-		ifFalse: [largeClass := ClassLargePositiveIntegerCompactIndex.
-				value := integerValue].
-	newLargeInteger := objectMemory
-							eeInstantiateSmallClassIndex: largeClass
-							format: (objectMemory byteFormatForNumBytes: 4)
-							numSlots: 1.
-	objectMemory storeByte: 3 ofObject: newLargeInteger withValue: ((value >> 24) bitAnd: 16rFF).
-	objectMemory storeByte: 2 ofObject: newLargeInteger withValue: ((value >> 16) bitAnd: 16rFF).
-	objectMemory storeByte: 1 ofObject: newLargeInteger withValue: ((value >> 8) bitAnd: 16rFF).
-	objectMemory storeByte: 0 ofObject: newLargeInteger withValue: (value bitAnd: 16rFF).
-	^newLargeInteger
+	"Answer a full 32 bit integer object for the given integer value.
+	 N.B.  Returning in each arm separately enables Slang inlining.
+	 /Don't/ return the ifTrue:ifFalse: unless Slang inlining of conditionals is fixed."
+	<inline: true>
+	objectMemory hasSixtyFourBitImmediates
+		ifTrue:
+			[^objectMemory integerObjectOf: 
+				(self cCode: [self cCoerceSimple: integerValue to: #int]
+					inSmalltalk: [(integerValue bitAnd: 16r7FFFFFFF)
+								- ((integerValue >> 31 anyMask: 1)
+									ifTrue: [-16r100000000]
+									ifFalse: [0])])]
+		ifFalse:
+			[^self noInlineSigned32BitIntegerFor: integerValue]
 ]
 
 { #category : #'primitive support' }

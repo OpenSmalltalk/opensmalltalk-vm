@@ -71,7 +71,7 @@ VMProfileLinuxSupportPlugin >> primitiveDLSymInLibrary [
 	self dlclose: lib.
 	ok ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrNotFound].
-	^interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: addr asUnsignedLong)
+	^interpreterProxy methodReturnValue: (interpreterProxy positiveMachineIntegerFor: addr asUnsignedLong)
 ]
 
 { #category : #primitives }
@@ -103,8 +103,7 @@ VMProfileLinuxSupportPlugin >> primitiveInterpretAddress [
 	<export: true>
 	| interpret |
 	<var: #interpret declareC: 'extern void interpret()'>
-	self touch: interpret.
-	^interpreterProxy methodReturnValue: (interpreterProxy positive32BitIntegerFor: interpret asUnsignedLong)
+	^interpreterProxy methodReturnValue: (interpreterProxy positiveMachineIntegerFor: interpret asUnsignedLong)
 ]
 
 { #category : #'iteration callbacks' }

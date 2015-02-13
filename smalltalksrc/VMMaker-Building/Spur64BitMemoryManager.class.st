@@ -426,6 +426,13 @@ Spur64BitMemoryManager >> floatValueOf: oop [
 	^0.0
 ]
 
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> hasSixtyFourBitImmediates [
+	"The V3 64-bit memory manager has 64-bit oops, but its SmallIntegers only have
+	 31 bits of precision.  The Spur 64-bit memory manager has 61-bit immediates."
+	^true
+]
+
 { #category : #'header access' }
 Spur64BitMemoryManager >> identityHashFullWordMask [
 	^16r3fffff00000000

@@ -3665,6 +3665,40 @@ CCodeGenerator >> nonStructClassesForTranslationClasses: classes [
 	^ChangeSet superclassOrder: nonStructClasses
 ]
 
+{ #category : #utilities }
+CCodeGenerator >> optionIsTrue: pragma in: aClass [
+	"Answer whether an option: or notOption: pragma is true in the context of aClass.
+	 The argument to the option: pragma is interpreted as either a Cogit class name
+	 or a class variable name or a variable name in VMBasicConstants."
+	| key |
+	key := pragma argumentAt: 1.
+	"If the option is the name of a subclass of Cogit, include it if it inherits from the Cogit class."
+	(Smalltalk classNamed: key) ifNotNil:
+		[:optionClass|
+		 aClass cogitClass ifNotNil:
+			[:cogitClass|
+			 (optionClass includesBehavior: Cogit) ifTrue:
+				[^cogitClass includesBehavior: optionClass]].
+		 aClass objectMemoryClass ifNotNil:
+			[:objectMemoryClass|
+			 ((optionClass includesBehavior: ObjectMemory)
+			   or: [optionClass includesBehavior: SpurMemoryManager]) ifTrue:
+				[^objectMemoryClass includesBehavior: optionClass]]].
+	"Lookup options in options, class variables of the defining class, VMBasicConstants, the interpreterClass and the objectMemoryClass"
+	{aClass initializationOptions.
+	  aClass.
+	  VMBasicConstants.
+	  aClass interpreterClass.
+	  aClass objectMemoryClass} do:
+		[:scopeOrNil|
+		 scopeOrNil ifNotNil:
+			[:scope|
+			 (scope bindingOf: key) ifNotNil:
+				[:binding|
+				binding value ~~ false ifTrue: [^true]]]].
+	^false
+]
+
 { #category : #accessing }
 CCodeGenerator >> options [
 	^optionsDictionary
@@ -4115,38 +4149,18 @@ CCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
 	 interpreting the argument to the option: pragma as either a Cogit class name
 	 or a class variable name or a variable name in VMBasicConstants.  Exclude
 	 methods with the doNotGenerate pragma."
-	| pragmas |
+	| optionPragmas notOptionPragmas |
+	(aClass >> selector pragmaAt: #doNotGenerate) ifNotNil:
+		[^false].
+
 	"where is pragmasAt: ??"
-	(pragmas := (aClass >> selector) pragmas select: [:p| p keyword == #option:]) notEmpty ifTrue:
-		[pragmas do:
-			[:pragma| | key |
-			 key := pragma argumentAt: 1.
-			 "If the option is the name of a subclass of Cogit, include it if it inherits from the Cogit class."
-			 (Smalltalk classNamed: key) ifNotNil:
-				[:optionClass|
-				 aClass cogitClass ifNotNil:
-					[:cogitClass|
-					 (optionClass includesBehavior: Cogit) ifTrue:
-						[^cogitClass includesBehavior: optionClass]].
-				 aClass objectMemoryClass ifNotNil:
-					[:objectMemoryClass|
-					 ((optionClass includesBehavior: ObjectMemory)
-					   or: [optionClass includesBehavior: SpurMemoryManager]) ifTrue:
-						[^objectMemoryClass includesBehavior: optionClass]]].
-			 "Lookup options in options, class variables of the defining class, VMBasicConstants, the interpreterClass and the objectMemoryClass"
-			 {aClass initializationOptions.
-			   aClass.
-			   VMBasicConstants.
-			   aClass interpreterClass.
-			   aClass objectMemoryClass} do:
-				[:scopeOrNil|
-				 scopeOrNil ifNotNil:
-					[:scope|
-					 (scope bindingOf: key) ifNotNil:
-						[:binding|
-						binding value ~~ false ifTrue: [^true]]]]].
-		^false].
-	^(aClass >> selector pragmaAt: #doNotGenerate) isNil
+	optionPragmas := (aClass >> selector) pragmas select: [:p| p keyword == #option:].
+	notOptionPragmas := (aClass >> selector) pragmas select: [:p| p keyword == #notOption:].
+	(optionPragmas notEmpty or: [notOptionPragmas notEmpty]) ifTrue:
+		[^(optionPragmas allSatisfy: [:pragma| self optionIsTrue: pragma in: aClass])
+		   and: [notOptionPragmas noneSatisfy: [:pragma| self optionIsTrue: pragma in: aClass]]].
+
+	^true
 ]
 
 { #category : #inlining }
