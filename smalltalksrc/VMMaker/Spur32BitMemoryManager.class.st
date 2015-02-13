@@ -378,6 +378,13 @@ Spur32BitMemoryManager >> floatValueOf: oop [
 	^0.0
 ]
 
+{ #category : #'interpreter access' }
+Spur32BitMemoryManager >> hasSixtyFourBitImmediates [
+	"The V3 64-bit memory manager has 64-bit oops, but its SmallIntegers only have
+	 31 bits of precision.  The Spur 64-bit memory manager has 61-bit immediates."
+	^false
+]
+
 { #category : #'free space' }
 Spur32BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	<var: #numBytes type: #usqLong>

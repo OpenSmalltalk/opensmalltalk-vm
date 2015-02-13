@@ -444,27 +444,26 @@ B3DAcceleratorPlugin >> primitiveGetIntProperty [
 
 { #category : #'primitives-renderer' }
 B3DAcceleratorPlugin >> primitiveGetRendererColorMasks [
-	| handle result masks array arrayOop |
+	| handle masks array |
 	<export: true>
-	<var: #masks declareC:'int masks[4]'>
+	<var: #masks declareC:'unsigned int masks[4]'>
 	interpreterProxy methodArgumentCount = 2
 		ifFalse:[^interpreterProxy primitiveFail].
 	array := interpreterProxy stackObjectValue: 0.
 	handle := interpreterProxy stackIntegerValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
-	(interpreterProxy fetchClassOf: array) = interpreterProxy classArray
+	((interpreterProxy isArray: array)
+	and: [(interpreterProxy slotSizeOf: array) = 4
+	and: [self cCode:'b3dxGetRendererColorMasks(handle, masks)' inSmalltalk:[false]]])
 		ifFalse:[^interpreterProxy primitiveFail].
-	(interpreterProxy slotSizeOf: array) = 4
-		ifFalse:[^interpreterProxy primitiveFail].
-	result := self cCode:'b3dxGetRendererColorMasks(handle, masks)' inSmalltalk:[false].
-	result ifFalse:[^interpreterProxy primitiveFail].
-	arrayOop := array.
-	0 to: 3 do:[:i|
-		interpreterProxy pushRemappableOop: arrayOop.
-		result := interpreterProxy positive32BitIntegerFor: (masks at: i).
-		arrayOop := interpreterProxy popRemappableOop.
-		interpreterProxy storePointer: i ofObject: arrayOop withValue: result].
-	^interpreterProxy pop: 2. "pop args return receiver"
+	interpreterProxy pushRemappableOop: array.
+	0 to: 3 do: [:i|
+		interpreterProxy
+			storePointer: i
+			ofObject: interpreterProxy topRemappableOop
+			withValue: (interpreterProxy positive32BitIntegerFor: (masks at: i))].
+	interpreterProxy popRemappableOop.
+	^interpreterProxy pop: 2 "pop args return receiver"
 ]
 
 { #category : #'primitives-renderer' }
@@ -768,28 +767,27 @@ B3DAcceleratorPlugin >> primitiveTextureDepth [
 
 { #category : #'primitives-textures' }
 B3DAcceleratorPlugin >> primitiveTextureGetColorMasks [
-	| handle result masks array renderer arrayOop |
+	| handle masks array renderer |
 	<export: true>
-	<var: #masks declareC:'int masks[4]'>
+	<var: #masks declareC:'unsigned int masks[4]'>
 	interpreterProxy methodArgumentCount = 3
 		ifFalse:[^interpreterProxy primitiveFail].
 	array := interpreterProxy stackObjectValue: 0.
 	handle := interpreterProxy stackIntegerValue: 1.
 	renderer := interpreterProxy stackIntegerValue: 2.
 	interpreterProxy failed ifTrue:[^nil].
-	(interpreterProxy fetchClassOf: array) = interpreterProxy classArray
+	((interpreterProxy isArray: array)
+	 and: [(interpreterProxy slotSizeOf: array) = 4
+	 and: [self cCode:'b3dxTextureColorMasks(renderer, handle, masks)' inSmalltalk:[false]]])
 		ifFalse:[^interpreterProxy primitiveFail].
-	(interpreterProxy slotSizeOf: array) = 4
-		ifFalse:[^interpreterProxy primitiveFail].
-	result := self cCode:'b3dxTextureColorMasks(renderer, handle, masks)' inSmalltalk:[false].
-	result ifFalse:[^interpreterProxy primitiveFail].
-	arrayOop := array.
-	0 to: 3 do:[:i|
-		interpreterProxy pushRemappableOop: arrayOop.
-		result := interpreterProxy positive32BitIntegerFor: (masks at: i).
-		arrayOop := interpreterProxy popRemappableOop.
-		interpreterProxy storePointer: i ofObject: arrayOop withValue: result].
-	^interpreterProxy pop: 3. "pop args return receiver"
+	interpreterProxy pushRemappableOop: array.
+	0 to: 3 do: [:i|
+		interpreterProxy
+			storePointer: i
+			ofObject: interpreterProxy topRemappableOop
+			withValue: (interpreterProxy positive32BitIntegerFor: (masks at: i))].
+	interpreterProxy popRemappableOop.
+	^interpreterProxy pop: 3 "pop args return receiver"
 ]
 
 { #category : #'primitives-textures' }

@@ -1169,9 +1169,7 @@ StackInterpreterPrimitives >> primitiveSlotAt [
 		[numSlots := objectMemory num32BitUnitsOf: rcvr.
 		 (self asUnsigned: index) < numSlots ifTrue:
 			[self pop: argumentCount + 1
-				thenPush: (objectMemory bytesPerOop = 8
-							ifTrue: [objectMemory integerObjectOf: (objectMemory fetchLong32: index ofObject: rcvr)]
-							ifFalse: [self positive32BitIntegerFor: (objectMemory fetchLong32: index ofObject: rcvr)]).
+				thenPush: (self positive32BitIntegerFor: (objectMemory fetchLong32: index ofObject: rcvr)).
 			 ^0].
 		 ^self primitiveFailFor: PrimErrBadIndex].
 
