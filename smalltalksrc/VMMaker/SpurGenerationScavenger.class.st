@@ -241,9 +241,9 @@ SpurGenerationScavenger >> copyAndForward: survivor [
 	bytesInObj := manager bytesInObject: survivor.
 	format := manager formatOf: survivor.
 	tenure := self shouldBeTenured: survivor. "Allow Slang to inline."
-	(tenure or: [futureSurvivorStart + bytesInObj > futureSpace limit])
-		ifTrue: [newLocation := self copyToOldSpace: survivor bytes: bytesInObj format: format]
-		ifFalse: [newLocation := self copyToFutureSpace: survivor bytes: bytesInObj].
+	newLocation := (tenure or: [futureSurvivorStart + bytesInObj > futureSpace limit])
+						ifTrue: [self copyToOldSpace: survivor bytes: bytesInObj format: format]
+						ifFalse: [self copyToFutureSpace: survivor bytes: bytesInObj].
 	manager forwardSurvivor: survivor to: newLocation.
 	"if weak or ephemeron add to the relevant list for subsequent scanning."
 	(manager isWeakFormat: format) ifTrue:
