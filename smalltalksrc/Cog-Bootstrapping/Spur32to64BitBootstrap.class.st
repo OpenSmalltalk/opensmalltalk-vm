@@ -421,7 +421,7 @@ Spur32to64BitBootstrap >> symbolClass [
 Spur32to64BitBootstrap >> writeSnapshot: imageFileName headerFlags: headerFlags screenSize: screenSizeInteger [
 	heap64
 		checkFreeSpace;
-		runLeakCheckerForFullGC: true.
+		runLeakCheckerForFullGC.
 	interpreter64
 		setImageHeaderFlagsFrom: headerFlags;
 		setDisplayForm: nil;

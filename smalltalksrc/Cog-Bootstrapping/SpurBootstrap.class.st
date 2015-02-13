@@ -1363,7 +1363,7 @@ SpurBootstrap >> launch: heap simulatorClass: simulatorClass headerFlags: header
 		instVarNamed: 'methodDictLinearSearchLimit' put: SmallInteger maxVal." "for now"
 	heap
 		setCheckForLeaks: 0;
-		runLeakCheckerForFullGC: true.
+		runLeakCheckerForFullGC.
 
 	sim halt; run
 ]
@@ -1609,7 +1609,9 @@ SpurBootstrap >> rehashImage [
 	| n sim rehashFlags dotDate rehashSym sizeSym |
 	rehashSym := map at: (self findSymbol: #rehash).
 	sizeSym := map at: (self findSymbol: #size).
-	sim := StackInterpreterSimulator onObjectMemory: newHeap.
+	sim := StackInterpreterSimulator 
+				onObjectMemory: newHeap 
+				options: #(ObjectMemory #Spur32BitMemoryManager).
 	sim 
 		setImageHeaderFlagsFrom: oldInterpreter getImageHeaderFlags;
 		imageName: 'spur image';
@@ -1618,6 +1620,8 @@ SpurBootstrap >> rehashImage [
 	sim bootstrapping: true.
 	sim initializeInterpreter: 0.
 	sim instVarNamed: 'methodDictLinearSearchLimit' put: SmallInteger maxVal.
+	
+	sim redirectTranscriptToHost.
 
 	newHeap
 		setHashBitsOf: newHeap nilObject to: 1;
@@ -1921,7 +1925,7 @@ SpurBootstrap >> validate [
 	self touch: p.
 	self assert: (n between: map size and: map size + ((imageTypes includes: 'squeak')
 														ifTrue: [6]
-														ifFalse: [8])). "+ 6 or 8 is room for freelists & classTable"
+														ifFalse: [10])). "+ 6 or 10 is room for freelists & classTable"
 
 	"check some class properties to ensure the format changes are correct"
 	self assert: (newHeap fixedFieldsOfClassFormat: (newHeap formatOfClass: newHeap classArray)) = 0.
@@ -1976,63 +1980,13 @@ SpurBootstrap >> writeSnapshot: imageFileName ofTransformedImage: spurHeap heade
 			spurHeap allOldSpaceEntitiesDo: [:e| penultimate := ultimate. ultimate := e].
 			self assert: (spurHeap addressAfter: ultimate) = end]].
 	spurHeap checkFreeSpace.
-	spurHeap runLeakCheckerForFullGC: true.
+	spurHeap runLeakCheckerForFullGC.
 	barriers ifNotNil: "old, pre-pigCompact segmented save"
 		[spurHeap segmentManager initializeFromFreeChunks: (barriers sort collect: [:b| spurHeap objectStartingAt: b])].
 	spurHeap checkFreeSpace.
-	spurHeap runLeakCheckerForFullGC: true.
+	spurHeap runLeakCheckerForFullGC.
 	sim bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf: true.
 	sim imageName: imageFileName.
 	sim writeImageFileIO.
 	Transcript cr; show: 'Done!'
-]
-
-{ #category : #testing }
-SpurBootstrap >> writeSnapshotOfTransformedImage [
-	self writeSnapshotOfTransformedImageAs: 'spur.image'
-]
-
-{ #category : #testing }
-SpurBootstrap >> writeSnapshotOfTransformedImageAs: imageFileName [
-	"The bootstrapped image typically contains a few big free chunks and one huge free chunk.
-	 Test snapshot writing and loading by turning the largest non-huge chunks into segment bridges
-	 and saving."
-	| penultimate ultimate heap sizes counts barriers sim |
-	heap := TransformedImage veryDeepCopy.
-	sim := StackInterpreterSimulator onObjectMemory: heap.
-	sim bootstrapping: true.
-	heap coInterpreter: sim.
-	sim initializeInterpreter: 0;
-		setImageHeaderFlagsFrom: ImageHeaderFlags;
-		setDisplayForm: nil;
-		setSavedWindowSize: ImageScreenSize >> 16 @ (ImageScreenSize bitAnd: 16rFFFF).
-	heap allOldSpaceEntitiesDo: [:e| penultimate := ultimate. ultimate := e].
-	self assert: (heap isFreeObject: penultimate).
-	self assert: (heap isSegmentBridge: ultimate).
-	sizes := Bag new.
-	heap allObjectsInFreeTree: (heap freeLists at: 0) do:
-		[:f|
-		sizes add: (heap bytesInObject: f)].
-	counts := sizes sortedCounts.
-	self assert: counts last key = 1. "1 huge chunk"
-	counts size > 1
-		ifTrue:
-			[self assert: ((counts at: counts size - 1) key > 2
-						and: [(counts at: counts size - 1) value > 1024]).
-			barriers := (1 to: (counts at: counts size - 1) key) collect:
-							[:ign| heap allocateOldSpaceChunkOfExactlyBytes: (counts at: counts size - 1) value].
-			barriers := barriers, {heap allocateOldSpaceChunkOfExactlyBytes: (heap bytesInObject: penultimate)}]
-		ifFalse:
-			[barriers := {heap allocateOldSpaceChunkOfExactlyBytes: (heap bytesInObject: penultimate)}].
-	heap setEndOfMemory: barriers last.
-	heap allOldSpaceEntitiesDo: [:e| penultimate := ultimate. ultimate := e].
-	self assert: (heap addressAfter: ultimate) = barriers last.
-	heap checkFreeSpace.
-	heap runLeakCheckerForFullGC: true.
-	heap segmentManager initializeFromFreeChunks: (barriers sort collect: [:b| heap objectStartingAt: b]).
-	heap checkFreeSpace.
-	heap runLeakCheckerForFullGC: true.
-	sim bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitivesIf: true.
-	sim imageName: imageFileName.
-	sim writeImageFileIO
 ]
