@@ -1,0 +1,6 @@
+#!/bin/sh
+# Create the Cog VM archives in products.  Chck the log files in products for
+# agreement
+`dirname $0`/mkcogvmarchives
+`dirname $0`/mkspurvmarchives
+cat `dirname $0`/../products/M[CS]VALOG | egrep '\$Rev|VMMaker' | sort -u
