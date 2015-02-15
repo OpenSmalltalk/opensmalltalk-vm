@@ -4200,6 +4200,8 @@ CCodeGenerator >> signedTypeForIntegralType: aCTypeString [
 CCodeGenerator >> sizeOfIntegralCType: anIntegralCType [ "<String>"
 	"N.B. Only works for values for which isIntegralCType: answers true."
 	| prunedCType index |
+	(anIntegralCType beginsWith: 'register ') ifTrue:
+		[^self sizeOfIntegralCType: (anIntegralCType allButFirst: 9)].
 	prunedCType := (anIntegralCType beginsWith: 'unsigned ')
 						ifTrue: [(anIntegralCType allButFirst: 9) withBlanksTrimmed]
 						ifFalse: [(anIntegralCType beginsWith: 'signed ')
@@ -4387,9 +4389,9 @@ CCodeGenerator >> translationMethodClass [
 { #category : #'type inference' }
 CCodeGenerator >> typeFor: aNode in: aTMethod [
 	aNode isVariable ifTrue:
-		[^aTMethod typeFor: aNode in: self].
+		[^(aTMethod typeFor: aNode in: self) ifNil: [#sqInt]].
 	aNode isSend ifTrue:
-		[^self returnTypeForSend: aNode in: currentMethod].
+		[^self returnTypeForSend: aNode in: aTMethod].
 	^#sqInt
 ]
 
