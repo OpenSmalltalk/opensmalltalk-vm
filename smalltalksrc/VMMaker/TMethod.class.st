@@ -85,7 +85,7 @@ TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 				^self]. "don't know; leave unspecified."
 			^types notEmpty ifTrue:
 				[typeSet add: types anyOne]].
-		 ^(aCodeGen returnTypeForSend: expr) ifNotNil:
+		 ^(aCodeGen returnTypeForSend: expr in: self) ifNotNil:
 			[:type| typeSet add: type]].
 	expr isVariable ifTrue:
 		[(aCodeGen typeOfVariable: expr name)
@@ -1046,7 +1046,7 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 		 and: [(locals includes: (var := node variable name))
 		 and: [(declarations includesKey: var) not
 		 and: [node expression isSend
-		 and: [(type := aCodeGen returnTypeForSend: node expression) notNil]]]]) ifTrue:
+		 and: [(type := aCodeGen returnTypeForSend: node expression in: self) notNil]]]]) ifTrue:
 			[(#(sqInt void) includes: type) ifFalse:
 				["the $: is to map things like unsigned field : 3 to usqInt"
 				 declarations
@@ -1557,14 +1557,25 @@ TMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: aCod
 		[:node|
 		(node isVariable and: [node name = argName]) ifTrue:
 			[usageCount := usageCount + 1]].
+	"(usageCount > 1 and: [count <= usageCount]) ifTrue:
+		[[UsageCounts := Dictionary new.
+		  self removeClassVarName: #UsageCounts].
+		 (UsageCounts at: usageCount ifAbsentPut: [Set new]) add: ({targetMeth. argName. aNode})]."
 	"Now only inline expressions if they are used only once or are simple
-	 w.r.t. the usage count; a heuristic that seems to work well enough."
-	^usageCount = 1 or: [count <= usageCount]
+	 w.r.t. the usage count, and the usage count is not large; a heuristic that seems to work well enough."
+	^usageCount = 1 or: [usageCount <= 7 and: [count <= usageCount]]
 ]
 
 { #category : #testing }
 TMethod >> isRealMethod [
 	^(self definedAsMacro or: [self isStructAccessor]) not
+]
+
+{ #category : #testing }
+TMethod >> isReturnConstant [
+	^parseTree statements size = 1
+	 and: [parseTree statements last isReturn
+	 and: [parseTree statements last expression isLeaf]]
 ]
 
 { #category : #accessing }
@@ -2553,7 +2564,7 @@ TMethod >> typeFor: aVariable in: aCodeGen [
 			ifAbsent: [((locals includes: aVariable) or: [args includes: aVariable]) ifFalse:
 						[aCodeGen typeOfVariable: aVariable]]) ifNotNil:
 		[:decl|
-		aCodeGen extractTypeFor: aVariable fromDeclaration: decl]
+		aCodeGen extractTypeFor: aVariable asString fromDeclaration: decl]
 ]
 
 { #category : #utilities }

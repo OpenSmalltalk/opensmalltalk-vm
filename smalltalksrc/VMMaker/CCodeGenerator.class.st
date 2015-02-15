@@ -1345,6 +1345,24 @@ CCodeGenerator >> emitHeaderFiles: headerFilesSubSequence on: aStream [
 		aStream nextPutAll: hdr; cr]
 ]
 
+{ #category : #'C translation support' }
+CCodeGenerator >> emitSignedComparison: operator for: msgNode on: aStream indent: level [
+	"Emit a signed comparison.
+	 Make sure the receiver expression is signed if comparing against zero."
+
+	| arg rcvrType |
+	((arg := msgNode args first) isConstant
+	and: [arg value isInteger
+	and: [arg value = 0
+	and: [(self typeFor: msgNode receiver in: currentMethod)
+			ifNil: [false]
+			ifNotNil: [:t| (rcvrType := t) first = $u]]]]) ifTrue:
+		[aStream nextPut: $(; nextPutAll: (self signedTypeForIntegralType: rcvrType); nextPut: $)].
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream space; nextPutAll: operator; space.
+	self emitCExpression: arg on: aStream
+]
+
 { #category : #public }
 CCodeGenerator >> exportedPrimitiveNames [
 	"Return an array of all exported primitives"
@@ -1812,18 +1830,14 @@ CCodeGenerator >> generateFlag: msgNode on: aStream indent: level [
 CCodeGenerator >> generateGreaterThan: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ' > '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitSignedComparison: #> for: msgNode on: aStream indent: level
 ]
 
 { #category : #'C translation' }
 CCodeGenerator >> generateGreaterThanOrEqual: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ' >= '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitSignedComparison: #>= for: msgNode on: aStream indent: level
 ]
 
 { #category : #'C translation' }
@@ -2323,18 +2337,14 @@ CCodeGenerator >> generateIsNil: msgNode on: aStream indent: level [
 CCodeGenerator >> generateLessThan: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ' < '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitSignedComparison: #< for: msgNode on: aStream indent: level
 ]
 
 { #category : #'C translation' }
 CCodeGenerator >> generateLessThanOrEqual: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ' <= '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitSignedComparison: #<= for: msgNode on: aStream indent: level
 ]
 
 { #category : #'C translation' }
@@ -2998,6 +3008,11 @@ CCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 					ifNotNil: [(Set withAll: methods)
 								addAll: apiMethods;
 								yourself].
+	"Make an initial pass to assign the return types of all simple mehtods that return constants."						
+	allMethods do:
+		[:m|
+		m isReturnConstant ifTrue:
+			[m inferReturnTypeIn: self]].
 	[| changedReturnType |
 	 changedReturnType := false.
 	 allMethods do:
@@ -4063,8 +4078,10 @@ CCodeGenerator >> returnPrefixFromVariable: aName [
 ]
 
 { #category : #'type inference' }
-CCodeGenerator >> returnTypeForSend: aTSendNode [
-	"Answer the return type for a send.  Absent sends default to #sqInt."
+CCodeGenerator >> returnTypeForSend: aTSendNode in: aTMethod [
+	"Answer the return type for a send.  Absent sends default to #sqInt.
+	 The bitwise operators answer unsigned versions of their argument types, at least in gcc
+	 although this author can't find that in the C99 spec.  If you can find this, please let me know."
 	| sel |
 	^(self anyMethodNamed: (sel := aTSendNode selector))
 		ifNil: [kernelReturnTypes
@@ -4072,6 +4089,10 @@ CCodeGenerator >> returnTypeForSend: aTSendNode [
 				ifAbsent:
 					[^sel
 						caseOf: {
+						[#bitAnd:]				->	[self unsignedTypeForBitwiseSend: aTSendNode in: aTMethod].
+						[#bitOr:]				->	[self unsignedTypeForBitwiseSend: aTSendNode in: aTMethod].
+						[#bitXor:]				->	[self unsignedTypeForBitwiseSend: aTSendNode in: aTMethod].
+						[#asVoidPointer]		->	[#'void *'].
 						[#asVoidPointer]		->	[#'void *'].
 						[#asUnsignedInteger]	->	[#usqInt].
 						[#asLong]				->	[#long].
@@ -4161,6 +4182,18 @@ CCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
 		   and: [notOptionPragmas noneSatisfy: [:pragma| self optionIsTrue: pragma in: aClass]]].
 
 	^true
+]
+
+{ #category : #'type inference' }
+CCodeGenerator >> signedTypeForIntegralType: aCTypeString [
+	(aCTypeString beginsWith: 'unsigned ') ifTrue:
+		[^aCTypeString allButFirst: 8].
+	
+	(aCTypeString beginsWith: 'usq') ifTrue:
+		[^aCTypeString allButFirst].
+
+	self error: 'unknown type'.
+	^#long
 ]
 
 { #category : #inlining }
@@ -4351,6 +4384,15 @@ CCodeGenerator >> translationMethodClass [
 	^TMethod
 ]
 
+{ #category : #'type inference' }
+CCodeGenerator >> typeFor: aNode in: aTMethod [
+	aNode isVariable ifTrue:
+		[^aTMethod typeFor: aNode in: self].
+	aNode isSend ifTrue:
+		[^self returnTypeForSend: aNode in: currentMethod].
+	^#sqInt
+]
+
 { #category : #'C code generator' }
 CCodeGenerator >> typeOfVariable: varName [ "<String>" 
 	scopeStack reverseDo:
@@ -4393,6 +4435,23 @@ CCodeGenerator >> unreachableMethods [
 			[previousSize := neededSelectors size].
 
 	^methods reject: [:m| neededSelectors includes: m selector]
+]
+
+{ #category : #'type inference' }
+CCodeGenerator >> unsignedTypeForBitwiseSend: aTSendNode in: aTMethod [
+	"The result of the bitwise operators in C is unsigned."
+	| t1 t2 type |
+	t1 := (self typeFor: aTSendNode receiver in: aTMethod) ifNil: [^nil].
+	t2 := (self typeFor: aTSendNode args first in: aTMethod) ifNil: [^nil].
+	type := (self sizeOfIntegralCType: t1) >= (self sizeOfIntegralCType: t1)
+				ifTrue: [t1]
+				ifFalse: [t2].
+	^type first = $u
+		ifTrue: [type]
+		ifFalse:
+			[(type beginsWith: 'sq')
+				ifTrue: ['u', type]
+				ifFalse: ['unsigned ', type]]
 ]
 
 { #category : #accessing }
