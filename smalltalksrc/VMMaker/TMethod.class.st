@@ -1206,7 +1206,7 @@ TMethod >> inlineGuardingConditional: aSendNode in: aCodeGen [
 	| evaluateIfTrue replacementTree map lastNode evaluateLabel skipLabel method |
 	self assert: self == aCodeGen currentMethod.
 	self assert: (self isInlineableConditional: aSendNode in: aCodeGen).
-	self maybeBreakFor: aSendNode receiver in: aCodeGen.
+	aCodeGen maybeBreakForInlineOf: aSendNode in: self.
 	evaluateIfTrue := aSendNode selector = #ifTrue:.
 	method := (aCodeGen methodNamed: aSendNode receiver selector) copy.
 	replacementTree := method inlineFunctionCall: aSendNode receiver in: aCodeGen.
@@ -1254,7 +1254,7 @@ TMethod >> inlineReturningConditional: aSendNode in: aCodeGen [
 	| returnIfTrue returnNode replacementTree map lastNode label method |
 	self assert: self == aCodeGen currentMethod.
 	self assert: (self isInlineableConditional: aSendNode in: aCodeGen).
-	self maybeBreakFor: aSendNode receiver in: aCodeGen.
+	aCodeGen maybeBreakForInlineOf: aSendNode receiver in: self.
 	returnIfTrue := aSendNode selector = #ifTrue:.
 	returnNode := aSendNode args first.
 	method := (aCodeGen methodNamed: aSendNode receiver selector) copy.
@@ -1307,7 +1307,7 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 	meth := aCodeGen methodNamed: sel.
 	methArgs := meth args.
 	"convenient for debugging..."
-	self maybeBreakFor: aSendNode in: aCodeGen.
+	aCodeGen maybeBreakForInlineOf: aSendNode in: self.
 	(methArgs notEmpty and: [methArgs first beginsWith: 'self_in_']) ifTrue:
 		[methArgs := methArgs allButFirst].
 	methArgs size = aSendNode args size ifFalse:
@@ -1361,7 +1361,7 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 TMethod >> inlineableFunctionCall: aNode in: aCodeGen [
 	"Answer true if the given send node is a call to a 'functional' method--a method whose body is a single return statement of some expression and whose actual parameters can all be directly substituted."
 
-	self maybeBreakFor: aNode in: aCodeGen.
+	aCodeGen maybeBreakForTestToInline: aNode in: self.
 	aNode isSend ifFalse:
 		[^false].
 	^(aCodeGen methodNamed: aNode selector)
@@ -1382,7 +1382,7 @@ TMethod >> inlineableSend: aNode in: aCodeGen [
 	"Answer true if the given send node is a call to a method that can be inlined."
 
 	| m |
-	self maybeBreakFor: aNode in: aCodeGen.
+	aCodeGen maybeBreakForTestToInline: aNode in: self.
 	aNode isSend ifFalse: [ ^false ].
 	m := aCodeGen methodNamed: aNode selector.  "nil if builtin or external function"
 	^m ~= nil and: [m ~~ self and: [m isComplete and: [aCodeGen mayInline: m selector]]]
@@ -1528,6 +1528,13 @@ TMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: aCod
 	 with value[:value:*] messages though!"
 	aNode isStmtList ifTrue: [^true].
 
+	"Don't inline expressions unless type-compatible,"
+	aNode isSend ifTrue:
+		[(aCodeGen
+				isActualType: (aCodeGen returnTypeForSend: aNode in: self)
+				compatibleWithFormalType: (self typeFor: argName in: aCodeGen)) ifFalse:
+			[^false]].
+
 	count := 0.
 	constantExpression := true.
 	"scan expression tree; must contain only constants, builtin ops, and inlineable vars"
@@ -1664,16 +1671,6 @@ TMethod >> maySubstituteGlobal: globalVar in: aCodeGen [
 	writtenToGlobalVarsCache = nil ifTrue:
 		[self computePossibleSideEffectsInto: (Set new: 50) visited: (Set new: 50) in: aCodeGen].
 	^(writtenToGlobalVarsCache includes: globalVar) not
-]
-
-{ #category : #inlining }
-TMethod >> maybeBreakFor: aNode in: aCodeGen [
-	"convenient for debugging..."
-	(aNode isSend
-	and: [(aCodeGen breakSrcInlineSelector notNil or: [aCodeGen breakDestInlineSelector notNil])
-	and: [(aCodeGen breakSrcInlineSelector ifNil: [true] ifNotNil: [:srcSel| srcSel = aNode selector])
-	and: [aCodeGen breakDestInlineSelector ifNil: [true] ifNotNil: [:dstSel| dstSel = selector]]]]) ifTrue:
-		[self halt: selector]
 ]
 
 { #category : #inlining }
@@ -2562,7 +2559,7 @@ TMethod >> typeFor: aVariable in: aCodeGen [
 	^(declarations
 			at: aVariable asString
 			ifAbsent: [((locals includes: aVariable) or: [args includes: aVariable]) ifFalse:
-						[aCodeGen typeOfVariable: aVariable]]) ifNotNil:
+						[aCodeGen typeOfVariable: aVariable asString]]) ifNotNil:
 		[:decl|
 		aCodeGen extractTypeFor: aVariable asString fromDeclaration: decl]
 ]

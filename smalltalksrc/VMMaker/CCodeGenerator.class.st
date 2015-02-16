@@ -33,6 +33,7 @@ Class {
 		'optionsDictionary',
 		'breakSrcInlineSelector',
 		'breakDestInlineSelector',
+		'breakOnInline',
 		'vmMaker'
 	],
 	#classVars : [
@@ -558,18 +559,13 @@ CCodeGenerator >> arrayInitializerCalled: varName for: array sizeString: sizeStr
 ]
 
 { #category : #accessing }
-CCodeGenerator >> breakDestInlineSelector [
-	^breakDestInlineSelector
-]
-
-{ #category : #accessing }
 CCodeGenerator >> breakDestInlineSelector: aSelector [
 	breakDestInlineSelector := aSelector
 ]
 
 { #category : #accessing }
-CCodeGenerator >> breakSrcInlineSelector [
-	^breakSrcInlineSelector
+CCodeGenerator >> breakOnInline: aBooleanOrNil [
+	breakOnInline := aBooleanOrNil
 ]
 
 { #category : #accessing }
@@ -767,7 +763,8 @@ CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
 	inlineList := Set new: methods size * 2.
 	(methods reject: [:m| selectorsOfMethodsNotToInline includes: m selector]) do:
 		[:m| | inlineIt hasUnrenamableCCode nodeCount |
-		breakSrcInlineSelector = m selector ifTrue:
+		(breakSrcInlineSelector = m selector
+		 and: [breakOnInline isNil]) ifTrue:
 			[self halt].
 		inlineIt := #dontCare.
 		(translationDict includesKey: m selector)
@@ -1345,24 +1342,6 @@ CCodeGenerator >> emitHeaderFiles: headerFilesSubSequence on: aStream [
 		aStream nextPutAll: hdr; cr]
 ]
 
-{ #category : #'C translation support' }
-CCodeGenerator >> emitSignedComparison: operator for: msgNode on: aStream indent: level [
-	"Emit a signed comparison.
-	 Make sure the receiver expression is signed if comparing against zero."
-
-	| arg rcvrType |
-	((arg := msgNode args first) isConstant
-	and: [arg value isInteger
-	and: [arg value = 0
-	and: [(self typeFor: msgNode receiver in: currentMethod)
-			ifNil: [false]
-			ifNotNil: [:t| (rcvrType := t) first = $u]]]]) ifTrue:
-		[aStream nextPut: $(; nextPutAll: (self signedTypeForIntegralType: rcvrType); nextPut: $)].
-	self emitCExpression: msgNode receiver on: aStream.
-	aStream space; nextPutAll: operator; space.
-	self emitCExpression: arg on: aStream
-]
-
 { #category : #public }
 CCodeGenerator >> exportedPrimitiveNames [
 	"Return an array of all exported primitives"
@@ -1830,14 +1809,18 @@ CCodeGenerator >> generateFlag: msgNode on: aStream indent: level [
 CCodeGenerator >> generateGreaterThan: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitSignedComparison: #> for: msgNode on: aStream indent: level
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPutAll: ' > '.
+	self emitCExpression: msgNode args first on: aStream.
 ]
 
 { #category : #'C translation' }
 CCodeGenerator >> generateGreaterThanOrEqual: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitSignedComparison: #>= for: msgNode on: aStream indent: level
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPutAll: ' >= '.
+	self emitCExpression: msgNode args first on: aStream.
 ]
 
 { #category : #'C translation' }
@@ -2337,14 +2320,18 @@ CCodeGenerator >> generateIsNil: msgNode on: aStream indent: level [
 CCodeGenerator >> generateLessThan: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitSignedComparison: #< for: msgNode on: aStream indent: level
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPutAll: ' < '.
+	self emitCExpression: msgNode args first on: aStream.
 ]
 
 { #category : #'C translation' }
 CCodeGenerator >> generateLessThanOrEqual: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitSignedComparison: #<= for: msgNode on: aStream indent: level
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPutAll: ' <= '.
+	self emitCExpression: msgNode args first on: aStream.
 ]
 
 { #category : #'C translation' }
@@ -3305,6 +3292,19 @@ CCodeGenerator >> is64BitIntegralVariable: node typeInto: aBlock [
 ]
 
 { #category : #inlining }
+CCodeGenerator >> isActualType: actualTypeOrNil compatibleWithFormalType: formalTypeOrNil [ 
+	| actualType formalType |
+	actualType := actualTypeOrNil ifNil: [#sqInt].
+	formalType := formalTypeOrNil ifNil: [#sqInt].
+	((self isIntegralCType: actualType)
+	 and: [self isIntegralCType: formalType]) ifFalse:
+		[^actualType = formalType].
+	"For now, insist that the signedness agrees."
+	^(actualType first = $u) = (formalType first = $u)
+	 or: [actualTypeOrNil isNil or: [formalTypeOrNil isNil]]
+]
+
+{ #category : #inlining }
 CCodeGenerator >> isAssertSelector: selector [
 	^#(assert: asserta: assert:l: asserta:l: deny: eassert:) includes: selector
 ]
@@ -3476,6 +3476,28 @@ CCodeGenerator >> mayInline: sel [
 	"Answer if the method with the given selector may be inlined."
 
 	^(self isAssertSelector: sel) not and: [inlineList includes: sel]
+]
+
+{ #category : #inlining }
+CCodeGenerator >> maybeBreakForInlineOf: aNode in: aTMethod [
+	"convenient for debugging..."
+	(aNode isSend
+	and: [(breakSrcInlineSelector notNil or: [breakDestInlineSelector notNil])
+	and: [(breakSrcInlineSelector ifNil: [true] ifNotNil: [:srcSel| srcSel = aNode selector])
+	and: [breakDestInlineSelector ifNil: [true] ifNotNil: [:dstSel| dstSel = aTMethod selector
+	and: [breakOnInline ~~ false]]]]]) ifTrue:
+		[aTMethod halt: aTMethod selector, ' ', aNode selector]
+]
+
+{ #category : #inlining }
+CCodeGenerator >> maybeBreakForTestToInline: aNode in: aTMethod [
+	"convenient for debugging..."
+	(aNode isSend
+	and: [(breakSrcInlineSelector notNil or: [breakDestInlineSelector notNil])
+	and: [(breakSrcInlineSelector ifNil: [true] ifNotNil: [:srcSel| srcSel = aNode selector])
+	and: [breakDestInlineSelector ifNil: [true] ifNotNil: [:dstSel| dstSel = aTMethod selector
+	and: [breakOnInline ~~ true]]]]]) ifTrue:
+		[aTMethod halt: aTMethod selector, ' ', aNode selector]
 ]
 
 { #category : #'C code generator' }
@@ -4078,20 +4100,24 @@ CCodeGenerator >> returnPrefixFromVariable: aName [
 ]
 
 { #category : #'type inference' }
-CCodeGenerator >> returnTypeForSend: aTSendNode in: aTMethod [
+CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod [
 	"Answer the return type for a send.  Absent sends default to #sqInt.
 	 The bitwise operators answer unsigned versions of their argument types, at least in gcc
 	 although this author can't find that in the C99 spec.  If you can find this, please let me know."
 	| sel |
-	^(self anyMethodNamed: (sel := aTSendNode selector))
+	^(self anyMethodNamed: (sel := sendNode selector))
 		ifNil: [kernelReturnTypes
 				at: sel
 				ifAbsent:
 					[^sel
 						caseOf: {
-						[#bitAnd:]				->	[self unsignedTypeForBitwiseSend: aTSendNode in: aTMethod].
-						[#bitOr:]				->	[self unsignedTypeForBitwiseSend: aTSendNode in: aTMethod].
-						[#bitXor:]				->	[self unsignedTypeForBitwiseSend: aTSendNode in: aTMethod].
+						[#+]					->	[self typeForArithmetic: sendNode in: aTMethod].
+						[#-]						->	[self typeForArithmetic: sendNode in: aTMethod].
+						[#*]					->	[self typeForArithmetic: sendNode in: aTMethod].
+						[#/]						->	[self typeForArithmetic: sendNode in: aTMethod].
+						[#bitAnd:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
+						[#bitOr:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
+						[#bitXor:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
 						[#asVoidPointer]		->	[#'void *'].
 						[#asVoidPointer]		->	[#'void *'].
 						[#asUnsignedInteger]	->	[#usqInt].
@@ -4099,8 +4125,8 @@ CCodeGenerator >> returnTypeForSend: aTSendNode in: aTMethod [
 						[#asUnsignedLong]		->	[#'unsigned long'].
 						[#signedIntToLong]		->	[#usqInt]. "c.f. generateSignedIntToLong:on:indent:"
 						[#signedIntToShort]	->	[#usqInt]. "c.f. generateSignedIntToShort:on:indent:"
-						[#cCoerce:to:]			->	[aTSendNode args last value].
-						[#cCoerceSimple:to:]	->	[aTSendNode args last value] }
+						[#cCoerce:to:]			->	[sendNode args last value].
+						[#cCoerceSimple:to:]	->	[sendNode args last value] }
 						otherwise: [#sqInt]]]
 		ifNotNil:
 			[:m|
@@ -4395,8 +4421,18 @@ CCodeGenerator >> typeFor: aNode in: aTMethod [
 	^#sqInt
 ]
 
+{ #category : #'type inference' }
+CCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
+	"Answer the return type for an arithmetic sendThis is so that the inliner can still
+	 inline simple expressions.  Deal with pointer arithmetic and floating point arithmetic"
+	(self typeFor: sendNode args first in: aTMethod) = #double ifTrue:
+		[^#double].
+	^self typeFor: sendNode receiver in: aTMethod
+]
+
 { #category : #'C code generator' }
-CCodeGenerator >> typeOfVariable: varName [ "<String>" 
+CCodeGenerator >> typeOfVariable: varName [ "<String>"
+	self assert: varName isString.
 	scopeStack reverseDo:
 		[:dict|
 		(dict includesKey: varName) ifTrue:
