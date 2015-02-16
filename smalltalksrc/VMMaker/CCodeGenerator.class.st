@@ -4115,6 +4115,7 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod [
 						[#-]						->	[self typeForArithmetic: sendNode in: aTMethod].
 						[#*]					->	[self typeForArithmetic: sendNode in: aTMethod].
 						[#/]						->	[self typeForArithmetic: sendNode in: aTMethod].
+						[#at:]					->	[self typeForDereference: sendNode in: aTMethod].
 						[#bitAnd:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
 						[#bitOr:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
 						[#bitXor:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
@@ -4428,6 +4429,16 @@ CCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
 	(self typeFor: sendNode args first in: aTMethod) = #double ifTrue:
 		[^#double].
 	^self typeFor: sendNode receiver in: aTMethod
+]
+
+{ #category : #'type inference' }
+CCodeGenerator >> typeForDereference: sendNode in: aTMethod [
+	| type |
+	type := self typeFor: sendNode receiver in: aTMethod.
+	type last = $* ifTrue:
+		[^type allButLast withBlanksTrimmed].
+	self error: 'cannot determine type'.
+	^nil
 ]
 
 { #category : #'C code generator' }
