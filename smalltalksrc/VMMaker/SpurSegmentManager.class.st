@@ -316,6 +316,7 @@ SpurSegmentManager >> initialize [
 
 { #category : #'simulation only' }
 SpurSegmentManager >> initializeFromFreeChunks: freeChunks [
+	<doNotGenerate>
 	"For testing, create a set of segments using the freeChunks as bridges."
 	self assert: (freeChunks allSatisfy: [:f| manager hasOverflowHeader: f]).
 	numSegments := freeChunks size.
