@@ -350,7 +350,8 @@ InterpreterProxy >> fullDisplayUpdate [
 
 { #category : #other }
 InterpreterProxy >> fullGC [
-	Smalltalk garbageCollect.
+	<returnTypeC: #sqInt>
+	Smalltalk garbageCollect
 ]
 
 { #category : #'special objects' }
@@ -712,13 +713,15 @@ InterpreterProxy >> pinObject: anObject [
 
 { #category : #'stack access' }
 InterpreterProxy >> pop: nItems [
+	<returnTypeC: #sqInt>
 	1 to: nItems do:[:i| stack removeLast].
 ]
 
 { #category : #'stack access' }
 InterpreterProxy >> pop: nItems thenPush: oop [
+	<returnTypeC: #sqInt>
 	self pop: nItems.
-	self push: oop.
+	self push: oop
 ]
 
 { #category : #'instance creation' }
@@ -810,17 +813,20 @@ InterpreterProxy >> primitiveMethod [
 
 { #category : #'stack access' }
 InterpreterProxy >> push: object [
+	<returnTypeC: #sqInt>
 	stack addLast: object
 ]
 
 { #category : #'stack access' }
 InterpreterProxy >> pushBool: trueOrFalse [
+	<returnTypeC: #sqInt>
 	(trueOrFalse == true or:[trueOrFalse == false]) ifFalse:[self error:'Not a Boolean'].
 	self push: trueOrFalse
 ]
 
 { #category : #'stack access' }
 InterpreterProxy >> pushFloat: f [
+	<returnTypeC: #sqInt>
 	<var: #f type: 'double '>
 	f isFloat ifFalse:[^self error:'Not a Float'].
 	self push: f.
@@ -828,11 +834,13 @@ InterpreterProxy >> pushFloat: f [
 
 { #category : #'stack access' }
 InterpreterProxy >> pushInteger: integerValue [
+	<returnTypeC: #sqInt>
 	self push: (self integerObjectOf: integerValue).
 ]
 
 { #category : #'instance creation' }
 InterpreterProxy >> pushRemappableOop: oop [
+	<returnTypeC: #sqInt>
 	remapBuffer addLast: oop
 ]
 
@@ -845,6 +853,7 @@ InterpreterProxy >> reestablishContextPriorToCallback: callbackContext [
 
 { #category : #'callback support' }
 InterpreterProxy >> returnAs: returnTypeOop ThroughCallback: vmCallbackContext Context: callbackMethodContext [
+	<returnTypeC: #sqInt>
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
 	"callbackMethodContext is an activation of invokeCallback:[stack:registers:jmpbuf:].
 	 Its sender is the VM's state prior to the callback.  Reestablish that state (via longjmp),
@@ -892,6 +901,7 @@ InterpreterProxy >> signalNoResume: aSemaphore [
 
 { #category : #other }
 InterpreterProxy >> signalSemaphoreWithIndex: semaIndex [
+	<returnTypeC: #sqInt>
 	((Smalltalk externalObjects) at: semaIndex) signal
 ]
 
@@ -1015,6 +1025,7 @@ InterpreterProxy >> storePointer: index ofObject: oop withValue: valuePointer [
 
 { #category : #other }
 InterpreterProxy >> success: aBoolean [
+	<returnTypeC: #sqInt>
 	aBoolean ifTrue: [^self].
 	primFailCode = 0 ifTrue: [self primitiveFailFor: 1]
 ]
@@ -1026,6 +1037,7 @@ InterpreterProxy >> superclassOf: classPointer [
 
 { #category : #other }
 InterpreterProxy >> tenuringIncrementalGC [
+	<returnTypeC: #sqInt>
 	Smalltalk forceTenuring; garbageCollectMost
 ]
 

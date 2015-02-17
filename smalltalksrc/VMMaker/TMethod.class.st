@@ -312,12 +312,10 @@ TMethod >> checkForCompleteness: stmtLists in: aCodeGen [
 
 { #category : #'primitive compilation' }
 TMethod >> checkSuccessExpr [
-	"Return the parse tree for an expression that aborts the primitive if the successFlag is not true."
-
-	| expr |
-	expr := 'successFlag ifFalse: [^ nil ]'.
-	^ self statementsFor: expr varName: ''
-
+	"Answer the parse tree for an expression that aborts the primitive if there has been a failure."
+	^self
+		statementsFor: 'interpreterProxy failed ifTrue: [^nil]'
+		varName: ''
 ]
 
 { #category : #accessing }
@@ -383,31 +381,6 @@ TMethod >> computePossibleSideEffectsInto: writtenToVars visited: visitedSelecto
 	writtenToGlobalVarsCache := writtenToVars copy
 ]
 
-{ #category : #'primitive compilation' }
-TMethod >> covertToZeroBasedArrayReferences [
-	"Replace the index expressions in at: and at:put: messages with (<expr> - 1), since C uses zero-based array indexing."
-	"Note: Up through release 1.31, generated primitives used the convention that array variables pointed to the first element. That meant that Smalltalk one-based index expressions had to have one subtracted to yield a zero-based index. Later, we decided to adjust the base address by -1 once in the primitive prolog rather on every array access. This resulted in a five percent performance increase for the bitmap compress/decompress primitives. This method is retained as documentation and in case we choose to revert the the previous scheme."
-
-	| oldIndexExpr newIndexExpr |
-	parseTree nodesDo: [ :n |
-		(n isSend and: [(n selector = #at:) or: [ n selector = #at:put: ]]) ifTrue: [
-			oldIndexExpr := n args first.
-			oldIndexExpr isConstant ifTrue: [
-				"index expression is a constant: decrement the constant now"
-				newIndexExpr := TConstantNode new setValue: (n args first value - 1).
-			] ifFalse: [
-				"index expression is complex: build an expression to decrement result at runtime"
-				newIndexExpr := TSendNode new
-					setSelector: #-
-					receiver: oldIndexExpr
-					arguments: (Array with: (TConstantNode new setValue: 1)).
-			].
-			n args at: 1 put: newIndexExpr.
-		].
-	].
-
-]
-
 { #category : #accessing }
 TMethod >> declarationAt: aVariableName [
 	^declarations at: aVariableName ifAbsent: [#sqInt, ' ', aVariableName]
@@ -444,22 +417,7 @@ TMethod >> definingClass: aClass [
 { #category : #'C code generation' }
 TMethod >> determineTypeFor: aNode in: aCodeGen [
 	aNode isSend ifTrue:
-		[aNode selector == #addressOf: ifTrue:
-			[^(self determineTypeFor: aNode args first in: aCodeGen)
-				ifNil: [#sqInt]
-				ifNotNil: [:type| type, (type last isLetter ifTrue: [' *'] ifFalse: ['*'])]].
-		(aNode selector == #at:
-		 and: [aNode receiver isVariable]) ifTrue:
-			[(aCodeGen typeOfVariable: aNode receiver name) ifNotNil:
-				[:type|
-				^type last = $*
-					ifTrue: [aCodeGen
-								extractTypeFor: aNode receiver name
-								fromDeclaration: type allButLast]
-					ifFalse: [type]]].
-		^(aCodeGen anyMethodNamed: aNode selector)
-			ifNil: [#sqInt]
-			ifNotNil: [:method| method returnType]].
+		[^(aCodeGen returnTypeForSend: aNode in: self) ifNil: [#sqInt]].
 	aNode isAssignment ifTrue:
 		[^self determineTypeFor: aNode expression in: aCodeGen].
 	self error: 'don''t know how to extract return type from this kind of node'
@@ -1022,7 +980,8 @@ TMethod >> inferReturnTypeIn: aCodeGen [
 
 { #category : #'type inference' }
 TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
-	"infer types for untyped variables form assignments and arithmetic uses.
+	"infer types for untyped variables from assignments and arithmetic uses.
+	 For debugging answer a Dictionary from var to the nodes that determined types
 	 This for debugging:
 		(self copy inferTypesForImplicitlyTypedVariablesIn: aCodeGen)"
 	| explicitlyTyped effectiveNodes |
@@ -1039,20 +998,16 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 		 and: [node args first value = 0
 		 and: [(type := self typeFor: var in: aCodeGen) notNil
 		 and: [type first == $u]]]]]]]) ifTrue:
-			[declarations at: var put: (declarations at: var) allButFirst.
+			[declarations at: var put: (aCodeGen signedTypeForIntegralType: type), ' ', var.
 			 effectiveNodes at: var put: { declarations at: var. node }].
-		"if an assignment of a known send, set the variable's type to the return type of the send."
+		"if an assignment to an untyped local of a known type, set the local's type to that type."
 		(node isAssignment
 		 and: [(locals includes: (var := node variable name))
 		 and: [(declarations includesKey: var) not
-		 and: [node expression isSend
-		 and: [(type := aCodeGen returnTypeForSend: node expression in: self) notNil]]]]) ifTrue:
-			[(#(sqInt void) includes: type) ifFalse:
-				["the $: is to map things like unsigned field : 3 to usqInt"
-				 declarations
-					at: var
-					put: ((type includes: $:) ifTrue: [#usqInt] ifFalse: [type]), ' ', var.
-				 effectiveNodes at: var put: { declarations at: var. node }]]].
+		 and: [(type := self typeFor: node expression in: aCodeGen) notNil
+		 and: [type ~= #void]]]]) ifTrue:
+			[declarations at: var put: type, ' ', var.
+			 effectiveNodes at: var put: { declarations at: var. node }]].
 	^effectiveNodes
 ]
 
@@ -1449,6 +1404,24 @@ TMethod >> isComplete [
 ]
 
 { #category : #inlining }
+TMethod >> isConditionalToBeTransformedForAssignment: aSend in: aCodeGen [
+	"Answer if a send is of the form
+		e1
+			ifTrue: [e2 ifTrue: [self m1] ifFalse: [self m2]]
+			ifFalse: [self m3]
+	 such that at least one of the sends mN may be inlined.."
+
+	^(#(ifTrue:ifFalse: ifFalse:ifTrue:) includes: aSend selector)
+	   and: [aSend args anySatisfy:
+			[:arg| | stmt |
+			self assert: arg isStmtList.
+			arg statements size > 1
+			or: [(stmt := arg statements first) isSend
+				and: [(aCodeGen mayInline: stmt selector)
+					or: [self isConditionalToBeTransformedForAssignment: stmt in: aCodeGen]]]]]
+]
+
+{ #category : #inlining }
 TMethod >> isFunctional [
 	"Answer true if the receiver is a functional method. That is, if it
 	 consists of a single return statement of an expression that contains
@@ -1662,6 +1635,19 @@ TMethod >> locals [
 	"The local variables of this method."
 
 	^locals
+]
+
+{ #category : #transformations }
+TMethod >> mapSendsFromSelfToInterpreterProxy: selectors [
+	| interpreterProxyNode |
+	interpreterProxyNode := TVariableNode new setName: 'interpreterProxy'.
+	parseTree nodesDo:
+		[:node|
+		(node isSend
+		and: [node receiver isVariable
+		and: [node receiver name = 'self'
+		and: [selectors includes: node selector]]]) ifTrue:
+			[node receiver: interpreterProxyNode]]
 ]
 
 { #category : #'inlining support' }
@@ -1949,8 +1935,7 @@ TMethod >> printSingleComment: aString on: aStream indent: indent tabWidth: tabW
 { #category : #private }
 TMethod >> printTempsAndVar: varName on: aStream [ 
 	"add the required temps and the varname to the stream"
-	aStream nextPutAll: '| rcvr stackPointer successFlag ' , varName , ' |';
-	 cr
+	aStream nextPutAll: '| rcvr stackPointer interpreterProxy ' , varName , ' |'; cr
 ]
 
 { #category : #'inlining support' }
@@ -2417,20 +2402,21 @@ TMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
 
 { #category : #inlining }
 TMethod >> transformConditionalAssignment: node in: aCodeGen [
-	"If possible asnwer the transformation of code of the form
+	"If possible answer the transformation of code of the form
 		var := e1
-				ifTrue: [e2 ifTrue: [v1] ifFalse: [v2]]
-				ifFalse: [v3]
+				ifTrue: [e2 ifTrue: [self m1] ifFalse: [self m2]]
+				ifFalse: [self m3]
 	 into
 		e1
-			ifTrue: [e2 ifTrue: [var := v1] ifFalse: [var := v2]]
-			ifFalse: [var := v3]
-	 to allow inlining of v1, v2, et al.  Otherwise answer nil."
+			ifTrue: [e2 ifTrue: [var := self m1] ifFalse: [var := self m2]]
+			ifFalse: [var := self m3]
+	 to allow inlining of m1, m2, et al.  Otherwise answer nil."
 
 	| expr |
 	^(node isAssignment
 	   and: [(expr := node expression) isSend
-	   and: [#(ifTrue:ifFalse: ifFalse:ifTrue:) includes: expr selector]]) ifTrue:
+	   and: [(#(ifTrue:ifFalse: ifFalse:ifTrue:) includes: expr selector)
+	   and: [self isConditionalToBeTransformedForAssignment: expr  in: aCodeGen]]]) ifTrue:
 		[expr copy
 			arguments:
 				(expr args collect:
@@ -2556,12 +2542,18 @@ TMethod >> typeFor: aVariable in: aCodeGen [
 	 if no type is found and the variable is global (not an arg or a local).  Expect the
 	 cCodeGen to answer nil for variables without types. nil for typelessness is required
 	 by the type propagation logic in inlineSend:directReturn:exitVar:in:."
+	| varName |
+	varName := aVariable asString.
 	^(declarations
-			at: aVariable asString
-			ifAbsent: [((locals includes: aVariable) or: [args includes: aVariable]) ifFalse:
-						[aCodeGen typeOfVariable: aVariable asString]]) ifNotNil:
+			at: varName
+			ifAbsent:
+				[(args includes: varName) "arg types default to sqInt"
+					ifTrue: ['sqInt ', varName]
+					ifFalse:
+						[(locals includes: varName) ifFalse: "don't provide type for locals"
+							[aCodeGen typeOfVariable: varName]]]) ifNotNil:
 		[:decl|
-		aCodeGen extractTypeFor: aVariable asString fromDeclaration: decl]
+		aCodeGen extractTypeFor: varName fromDeclaration: decl]
 ]
 
 { #category : #utilities }
