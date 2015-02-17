@@ -8,7 +8,8 @@ Class {
 		'pluginClass',
 		'pluginName',
 		'pluginFunctionsUsed',
-		'inProgressSelectors'
+		'inProgressSelectors',
+		'inliningDone'
 	],
 	#category : #'VMMaker-Translation to C'
 }
@@ -52,6 +53,18 @@ VMPluginCodeGenerator >> accessorsAndAssignmentsForSubMethodNamed: selector actu
 		into: aTrinaryBlock
 ]
 
+{ #category : #'spur primitive compilation' }
+VMPluginCodeGenerator >> actualsForMethod: aTMethod [
+	"Normal primitives have no arguments, but translated primitives do.
+	 Override to answer actuals for translated primitives."
+	^(aTMethod args size - 1 to: 0 by: -1) collect:
+		[:i|
+		 TSendNode new
+			setSelector: #stackValue:
+			receiver: (TVariableNode new setName: 'interpreterProxy')
+			arguments: {TConstantNode new setValue: i}]
+]
+
 { #category : #'C translation' }
 VMPluginCodeGenerator >> atLeastVMProxyMajor: major minor: minor [ 
 	^String streamContents:
@@ -62,29 +75,19 @@ VMPluginCodeGenerator >> atLeastVMProxyMajor: major minor: minor [
 			nextPutAll: ')']
 ]
 
-{ #category : #utilities }
-VMPluginCodeGenerator >> compileToTMethodSelector: selector in: aClass [
-	"Compile a method to a TMethod. Override to eagerly record declarations etc
-	 that happen in a later phase in the main VM's CCodeGenerator."
-
-	| m |
-	m := (Compiler new
-			parse: (aClass sourceCodeAt: selector)
-			in: aClass
-			notifying: nil)
-				asTranslationMethodOfClass: self translationMethodClass.
-	m removeFinalSelfReturnIn: self.
-	m recordDeclarationsIn: self.
-	m inferReturnTypeIn: self.
-	m returnType ifNil:
-		[m returnType: (self implicitReturnTypeFor: selector)].
-	^m
-]
-
 { #category : #inlining }
 VMPluginCodeGenerator >> doInlining: inlineFlag [
-"do inlining for a plugin"
-	^self doBasicInlining: inlineFlag
+	"do inlining for a plugin; avoid doing it twice and make sure that
+	 primitive prolog preparation is done immediately after inlining.
+	 Also, since sharing between plugins means that normal pruning
+	 can't be done, allow plugins that want to prune specific methods."
+	inliningDone ifFalse:
+		[self doBasicInlining: inlineFlag.
+		 self prepareTranslatedPrimitives.
+		 pluginClass methodsToBePruned do:
+			[:sel|
+			methods removeKey: sel].
+		 inliningDone := true]
 ]
 
 { #category : #'C code generator' }
@@ -121,53 +124,6 @@ VMPluginCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertion
 				ex pass].
 	headerFiles := savedHeaders.
 	super emitCCodeOn: aStream doInlining: inlineFlag doAssertions: assertionFlag
-]
-
-{ #category : #'C code generator' }
-VMPluginCodeGenerator >> emitCHeaderForPrimitivesOn: aStream [
-	"Write a C file header for compiled primitives onto the given stream."
-
-	self emitCHeaderOn: aStream.
-	aStream nextPutAll: '
-/*** Proxy Functions ***/
-#if defined(SQUEAK_BUILTIN_PLUGIN)
-extern sqInt stackValue(sqInt offset);
-extern sqInt stackIntegerValue(sqInt offset);
-extern sqInt failed(void);
-# define successFlag (!failed())
-extern sqInt success(sqInt aBoolean);
-extern void * arrayValueOf(sqInt oop);
-extern void * fetchArrayofObject(sqInt fieldIndex, sqInt objectPointer);
-extern double fetchFloatofObject(sqInt fieldIndex, sqInt objectPointer);
-extern sqInt fetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer);
-extern double floatValueOf(sqInt oop);
-extern sqInt pop(sqInt nItems);
-extern sqInt pushInteger(sqInt integerValue);
-extern sqInt sizeOfSTArrayFromCPrimitive(void *cPtr);
-extern sqInt storeIntegerofObjectwithValue(sqInt index, sqInt oop, sqInt integer);
-extern sqInt primitiveFail(void);
-#else /* SQUEAK_BUILTIN_PLUGIN */
-# define stackValue(i) (interpreterProxy->stackValue(i))
-# define stackIntegerValue(i) (interpreterProxy->stackIntegerValue(i))
-# define successFlag (!interpreterProxy->failed())
-# define success(bool) (interpreterProxy->success(bool))
-# define arrayValueOf(oop) (interpreterProxy->arrayValueOf(oop))
-# define fetchArrayofObject(idx,oop) (interpreterProxy->fetchArrayofObject(idx,oop))
-# define fetchFloatofObject(idx,oop) (interpreterProxy->fetchFloatofObject(idx,oop))
-# define fetchIntegerofObject(idx,oop) (interpreterProxy->fetchIntegerofObject(idx,oop))
-# define floatValueOf(oop) (interpreterProxy->floatValueOf(oop))
-# define pop(n) (interpreterProxy->pop(n))
-# define pushInteger(n) (interpreterProxy->pushInteger(n))
-# define sizeOfSTArrayFromCPrimitive(cPtr) (interpreterProxy->sizeOfSTArrayFromCPrimitive(cPtr))
-# define storeIntegerofObjectwithValue(idx,oop,value) (interpreterProxy->storeIntegerofObjectwithValue(idx,oop,value))
-# define primitiveFail() interpreterProxy->primitiveFail()
-#endif /* SQUEAK_BUILTIN_PLUGIN */
-
-/* allows accessing Strings in both C and Smalltalk */
-#define asciiValue(c) c
-
-
-'
 ]
 
 { #category : #'C code generator' }
@@ -235,22 +191,6 @@ VMPluginCodeGenerator >> emitIfdefForPluginFunctionOption: anArray on: aStream [
 	aStream nextPutAll: '#if '; nextPutAll: (self perform: anArray first withArguments: anArray allButFirst)
 ]
 
-{ #category : #public }
-VMPluginCodeGenerator >> generateCodeStringForPrimitives [
-"TPR - moved down from CCodeGenerator"
-	| s methodList |
-	s := ReadWriteStream on: (String new: 1000).
-	methodList := methods asSortedCollection: [:m1 :m2 | m1 selector < m2 selector].
-	self emitCHeaderForPrimitivesOn: s.
-	self emitCConstantsOn: s.
-	self emitCVariablesOn: s.
-	self emitCFunctionPrototypes: methodList on: s.
-	methodList do: [:m | m emitCCodeOn: s generator: self].
-	self emitExportsOn: s.
-	^ s contents
-
-]
-
 { #category : #'C translation' }
 VMPluginCodeGenerator >> generateInterpreterProxyFunctionDeference: aNode on: aStream indent: anInteger [
 	| pluginsToClone |
@@ -279,7 +219,8 @@ VMPluginCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
 { #category : #public }
 VMPluginCodeGenerator >> initialize [
 	super initialize.
-	pluginFunctionsUsed := Set new
+	pluginFunctionsUsed := Set new.
+	inliningDone := false
 ]
 
 { #category : #public }
@@ -383,6 +324,11 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 								cr].
 						actual].
 	pluginFuncs do:
+		[:tMethod|
+		 tMethod recordDeclarationsIn: self.
+		 tMethod returnType ifNil:
+			[tMethod inferReturnTypeIn: self]].
+	pluginFuncs do:
 		[:tMethod| | functionName |
 		functionName := self cFunctionNameFor: tMethod selector.
 		aStream nextPutAll:
@@ -415,6 +361,18 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 				 aStream nextPutAll: ' 0']].
 	aStream cr; nextPutAll: 'extern'.
 	aStream cr; nextPutAll: '#endif'; cr
+]
+
+{ #category : #'C code generator' }
+VMPluginCodeGenerator >> prepareTranslatedPrimitives [
+	"Translated primitives need their prolog and epilog adding and all
+	 sends to self that should be sends to interpreterproxy changing."
+	methods do:
+		[:meth|
+		 meth primitive > 0 ifTrue:
+			[meth
+				preparePrimitivePrologue;
+				mapSendsFromSelfToInterpreterProxy: InterpreterProxy selectors]]
 ]
 
 { #category : #'C code generator' }
@@ -518,6 +476,17 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 
 	stream cr; crtab; nextPutAll:'return VM;'; cr; nextPutAll:'}'; cr.
 	stream close.
+]
+
+{ #category : #'type inference' }
+VMPluginCodeGenerator >> typeFor: aNode in: aTMethod [
+	"Override to provide the type for InterpreterProxy's implicit stack variable."
+	aNode isVariable ifTrue:
+		[^(aTMethod typeFor: aNode in: self) ifNil:
+			[aNode name = 'stack'
+				ifTrue: [#'sqInt *']
+				ifFalse: [#sqInt]]].
+	^super typeFor: aNode in: aTMethod
 ]
 
 { #category : #'C translation' }

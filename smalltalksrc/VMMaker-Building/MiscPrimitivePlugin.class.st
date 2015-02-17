@@ -18,25 +18,6 @@ MiscPrimitivePlugin class >> monticelloDescription [
 ]
 
 { #category : #translation }
-MiscPrimitivePlugin class >> translateInDirectory: directory doInlining: inlineFlag [
-"handle a special case code string rather than normal generated code."
-	| cg fname fstat |
-	 fname := self moduleName, '.c'.
-
-	"don't translate if the file is newer than my timeStamp"
-	fstat := directory entryAt: fname ifAbsent:[nil].
-	fstat ifNotNil:[self timeStamp < fstat modificationTime ifTrue:[^nil]].
-
-	self initialize.
-	cg := self buildCodeGeneratorUpTo: InterpreterPlugin.
-	cg addMethodsForPrimitives: self translatedPrimitives.
-	self pruneUnusedInterpreterPluginMethodsIn: cg.
-	self storeString: cg generateCodeStringForPrimitives onFileNamed: (directory fullNameFor: fname).
-	^cg exportedPrimitiveNames asArray
-
-]
-
-{ #category : #translation }
 MiscPrimitivePlugin class >> translatedPrimitives [
 	"an assorted list of various primitives"
 	^#(
@@ -67,4 +48,10 @@ MiscPrimitivePlugin class >> translatedPrimitives [
 									selector: pair last]);
 						yourself].
 	SystemNavigation default browseMessageList: tps asArray sort name: 'Translated Primitives' "
+]
+
+{ #category : #'helper functions' }
+MiscPrimitivePlugin >> asciiValue: aCharacter [
+	<cmacro: '(aCharacter) aCharacter'>
+	^aCharacter asciiValue
 ]

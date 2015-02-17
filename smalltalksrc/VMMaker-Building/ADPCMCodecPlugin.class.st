@@ -8,6 +8,13 @@ Class {
 }
 
 { #category : #translation }
+ADPCMCodecPlugin class >> methodsToBePruned [
+	"Since sharing between plugins means that normal pruning
+	 can't be done, allow plugins that want to prune specific methods."
+	^#(indexForDeltaFrom:to: nextBits: nextBits:put:)
+]
+
+{ #category : #translation }
 ADPCMCodecPlugin class >> monticelloDescription [
 	"Override to include the ADPCMCodec class."
 	"self monticelloDescription"
@@ -15,20 +22,8 @@ ADPCMCodecPlugin class >> monticelloDescription [
 ]
 
 { #category : #translation }
-ADPCMCodecPlugin class >> translateInDirectory: directory doInlining: inlineFlag [
-"handle a special case code string rather than generated code"
-"Not currently hooked into the timeStamp mechanism for VMMaker since this would mean replicating code from InterpreterPlugin; waiting for a more elegant solution to appear. In the meantime this means that this plugin will always get regenerated even if the file is uptodate"
-	| cg |
-	self initialize.
-
-	cg := self buildCodeGeneratorUpTo: InterpreterPlugin.
-
-	cg addMethodsForPrimitives: ADPCMCodec translatedPrimitives.
-	inlineFlag ifTrue:[
-		"now remove a few which will be inlined but not pruned"
-		cg pruneMethods: #(indexForDeltaFrom:to: nextBits: nextBits:put:)].
-	self pruneUnusedInterpreterPluginMethodsIn: cg.
-	self storeString: cg generateCodeStringForPrimitives onFileNamed: (directory fullNameFor: self moduleName, '.c').
-	^cg exportedPrimitiveNames asArray
-
+ADPCMCodecPlugin class >> translatedPrimitives [
+	"Answer an Array of Class, selector pair Arrays for any primitives to
+	 be translated from Smalltalk methods elsewhere in the system."
+	^ADPCMCodec translatedPrimitives
 ]
