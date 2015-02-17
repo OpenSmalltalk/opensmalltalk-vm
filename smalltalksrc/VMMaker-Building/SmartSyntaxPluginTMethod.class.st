@@ -330,7 +330,7 @@ SmartSyntaxPluginTMethod >> primitiveDirectiveWasHandled: stmt on: sStream [
 SmartSyntaxPluginTMethod >> printTempsAndVar: varName on: aStream [ 
 	"add the required temps and the varname to the stream"
 	aStream nextPutAll: '| '.
-	(#('rcvr' 'stackPointer' 'successFlag' 'interpreterProxy' ) reject: [:each | locals includes: each])
+	(#('rcvr' 'stackPointer' 'interpreterProxy') reject: [:each | locals includes: each])
 		do: [:each | aStream nextPutAll: each;
 			 space].
 	(locals reject: [:each | each first = $_])
