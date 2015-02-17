@@ -108,7 +108,7 @@ CCodeGenerator >> accessorChainsForMethod: method interpreterClass: interpreterC
 
 	| accessors assignments roots chains extendedChains extended lastPass |
 	self accessorsAndAssignmentsForMethod: method
-		actuals: {}
+		actuals: (self actualsForMethod: method)
 		depth: 0
 		interpreterClass: interpreterClass
 		into: [:theRoots :theAccessors :theAssignments|
@@ -257,6 +257,14 @@ CCodeGenerator >> accessorsAndAssignmentsForMethod: method actuals: actualParame
 		value: assignments
 ]
 
+{ #category : #'spur primitive compilation' }
+CCodeGenerator >> actualsForMethod: aTMethod [
+	"Normal primitives have no arguments, but translated primitives do.
+	 This class doesn't handle translated primitives and so smply answers an empty array.
+	 Subclasses override as required."
+	^#()
+]
+
 { #category : #public }
 CCodeGenerator >> addAllClassVarsFor: aClass [
 	"Add the class variables for the given class (and its superclasses) to the code base as constants."
@@ -401,7 +409,7 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 ]
 
 { #category : #public }
-CCodeGenerator >> addMethodsForPrimitives: classAndSelectorList [ 
+CCodeGenerator >> addMethodsForTranslatedPrimitives: classAndSelectorList [ 
 	| verbose |
 	verbose := false.
 	classAndSelectorList do:
@@ -409,7 +417,6 @@ CCodeGenerator >> addMethodsForPrimitives: classAndSelectorList [
 		aClass := Smalltalk at: classAndSelector first.
 		selector := classAndSelector last.
 		self addAllClassVarsFor: aClass.
-"TPR - should pool vars also be added here?"
 
 		"compile the method source and convert to a suitable translation method.
 		 find the method in either the class or the metaclass"
@@ -418,26 +425,12 @@ CCodeGenerator >> addMethodsForPrimitives: classAndSelectorList [
 					in: ((aClass includesSelector: selector)
 							ifTrue: [aClass]
 							ifFalse: [aClass class]).
-		meth primitive > 0 ifTrue:[meth preparePrimitiveName].
-		"for old-style array accessing: 
-		meth covertToZeroBasedArrayReferences."
+		meth primitive > 0 ifTrue:
+			[meth preparePrimitiveName].
 		meth replaceSizeMessages.
 		self addMethod: meth].
 
-	self prepareMethods.
-	verbose
-		ifTrue: 
-			[self printUnboundCallWarnings.
-			self printUnboundVariableReferenceWarnings.
-			logger cr].
-
-	"code generation"
-	self doInlining: true.
-
-	methods do:[:m|
-		"if this method is supposed to be a primitive (rather than a helper 
-		routine), add assorted prolog and epilog items"
-		m primitive > 0 ifTrue: [m preparePrimitivePrologue]].
+	self prepareMethods
 ]
 
 { #category : #public }
@@ -556,6 +549,28 @@ CCodeGenerator >> arrayInitializerCalled: varName for: array sizeString: sizeStr
 							ifTrue: [newLine value]
 							ifFalse: [s space]].
 				 s crtab; nextPut: $}]]
+]
+
+{ #category : #utilities }
+CCodeGenerator >> baseTypeForType: aCType [
+	"Reduce various declarations to the most basic type we can determine."
+	| type fpIndex closeidx openidx |
+	type := aCType.
+	((openidx := type indexOfSubCollection: 'const ') > 0
+	and: [openidx = 1 or: [(type at: openidx) isSeparator]]) ifTrue:
+		[type := type copyReplaceFrom: openidx to: openidx + 5 with: ''].
+	((type beginsWith: 'unsigned') and: [(type includes: $:) and: [type last isDigit]]) ifTrue:
+		[^#usqInt].
+	(fpIndex := type indexOfSubCollection: '(*') > 0 ifTrue:
+		[type := type copyReplaceFrom: (type indexOf: $( startingAt: fpIndex + 1)
+					to: (type indexOf: $) startingAt: fpIndex + 1)
+					with: ''].
+	"collapse [size] to *"
+	openidx := 0.
+	[(openidx := type indexOf: $[ startingAt: openidx + 1) > 0
+	 and: [(closeidx := type indexOf: $] startingAt: openidx + 1) > 0]] whileTrue:
+		[type := type copyReplaceFrom: openidx to: closeidx with: '*'].
+	^type withBlanksTrimmed
 ]
 
 { #category : #accessing }
@@ -1353,23 +1368,14 @@ CCodeGenerator >> exportedPrimitiveNames [
 CCodeGenerator >> extractTypeFor: aVariable fromDeclaration: aVariableDeclaration [
 	"Eliminate inessentials from aVariableDeclaration to answer a C type without the variable,
 	 or initializations etc"
-	| decl fpIndex closeidx openidx |
+	| decl |
 	decl := aVariableDeclaration.
 	(decl beginsWith: 'static') ifTrue:
 		[decl := decl allButFirst: 6].
 	(decl indexOf: $= ifAbsent: []) ifNotNil:
 		[:index| decl := decl copyFrom: 1 to: index - 1].
 	decl := decl copyReplaceAll: aVariable with: '' tokenish: [:ch| ch = $_ or: [ch isAlphaNumeric]].
-	(fpIndex := decl indexOfSubCollection: '(*') > 0 ifTrue:
-		[decl := decl copyReplaceFrom: (decl indexOf: $( startingAt: fpIndex + 1)
-					to: (decl indexOf: $) startingAt: fpIndex + 1)
-					with: ''].
-	"collapse [size] to *"
-	openidx := 0.
-	[(openidx := decl indexOf: $[ startingAt: openidx + 1) > 0
-	 and: [(closeidx := decl indexOf: $] startingAt: openidx + 1) > 0]] whileTrue:
-		[decl := decl copyReplaceFrom: openidx to: closeidx with: '*'].
-	^decl withBlanksTrimmed
+	^self baseTypeForType: decl
 ]
 
 { #category : #'C code generator' }
@@ -2995,7 +3001,7 @@ CCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 					ifNotNil: [(Set withAll: methods)
 								addAll: apiMethods;
 								yourself].
-	"Make an initial pass to assign the return types of all simple mehtods that return constants."						
+	"Make an initial pass to assign the return types of all simple methods that return constants."						
 	allMethods do:
 		[:m|
 		m isReturnConstant ifTrue:
@@ -3298,7 +3304,8 @@ CCodeGenerator >> isActualType: actualTypeOrNil compatibleWithFormalType: formal
 	formalType := formalTypeOrNil ifNil: [#sqInt].
 	((self isIntegralCType: actualType)
 	 and: [self isIntegralCType: formalType]) ifFalse:
-		[^actualType = formalType].
+		[^actualType = formalType
+		 or: [formalType = 'double' and: [actualType = 'float']]].
 	"For now, insist that the signedness agrees."
 	^(actualType first = $u) = (formalType first = $u)
 	 or: [actualTypeOrNil isNil or: [formalTypeOrNil isNil]]
@@ -3495,8 +3502,8 @@ CCodeGenerator >> maybeBreakForTestToInline: aNode in: aTMethod [
 	(aNode isSend
 	and: [(breakSrcInlineSelector notNil or: [breakDestInlineSelector notNil])
 	and: [(breakSrcInlineSelector ifNil: [true] ifNotNil: [:srcSel| srcSel = aNode selector])
-	and: [breakDestInlineSelector ifNil: [true] ifNotNil: [:dstSel| dstSel = aTMethod selector
-	and: [breakOnInline ~~ true]]]]]) ifTrue:
+	and: [(breakDestInlineSelector ifNil: [true] ifNotNil: [:dstSel| dstSel = aTMethod selector])
+	and: [breakOnInline ~~ true]]]]) ifTrue:
 		[aTMethod halt: aTMethod selector, ' ', aNode selector]
 ]
 
@@ -4115,6 +4122,9 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod [
 						[#-]						->	[self typeForArithmetic: sendNode in: aTMethod].
 						[#*]					->	[self typeForArithmetic: sendNode in: aTMethod].
 						[#/]						->	[self typeForArithmetic: sendNode in: aTMethod].
+						[#addressOf:]			->	[(self typeFor: sendNode receiver in: aTMethod)
+														ifNil: [#sqInt]
+														ifNotNil: [:type| type, (type last isLetter ifTrue: [' *'] ifFalse: ['*'])]].
 						[#at:]					->	[self typeForDereference: sendNode in: aTMethod].
 						[#bitAnd:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
 						[#bitOr:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
@@ -4131,13 +4141,9 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod [
 						otherwise: [#sqInt]]]
 		ifNotNil:
 			[:m|
-			m returnType ifNotNil:
-				[:type| "map fields to #usqInt"
-				((type beginsWith: 'unsigned')
-				 and: [(type includes: $:)
-				 and: [type last isDigit]])
-					ifTrue: [#usqInt]
-					ifFalse: [type]]]
+			 m returnType ifNotNil:
+				[:type|
+				 self baseTypeForType: type]]
 ]
 
 { #category : #accessing }
@@ -4426,19 +4432,31 @@ CCodeGenerator >> typeFor: aNode in: aTMethod [
 CCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
 	"Answer the return type for an arithmetic sendThis is so that the inliner can still
 	 inline simple expressions.  Deal with pointer arithmetic and floating point arithmetic"
-	(self typeFor: sendNode args first in: aTMethod) = #double ifTrue:
+	| rcvrType argType |
+	argType := self typeFor: sendNode args first in: aTMethod.
+	argType = #double ifTrue:
 		[^#double].
-	^self typeFor: sendNode receiver in: aTMethod
+	rcvrType := self typeFor: sendNode receiver in: aTMethod.
+	(sendNode selector == #-
+	 and: [rcvrType notNil and: [rcvrType last = $*
+	 and: [argType notNil and: [argType last = $*]]]]) ifTrue:
+		[^#int].
+	^rcvrType
 ]
 
 { #category : #'type inference' }
 CCodeGenerator >> typeForDereference: sendNode in: aTMethod [
-	| type |
-	type := self typeFor: sendNode receiver in: aTMethod.
-	type last = $* ifTrue:
-		[^type allButLast withBlanksTrimmed].
-	self error: 'cannot determine type'.
-	^nil
+	(self typeFor: sendNode receiver in: aTMethod) ifNotNil:
+		[:type|
+		 type last = $* ifTrue:
+			[^type allButLast withBlanksTrimmed]].
+	"It would be nice to warn here, but there are contexts when the type is unknown, for example determining
+	 the return types of apiMethods.  inferTypesForImplicitlyTypedVariablesAndMethods could provide a signal
+	 handler to suppress the warnings in that case but that's too fancy.  Instead we live with the default."
+	"logger
+		nextPutAll: 'warning, cannot determine type of at: for ', sendNode receiver asString, ' in ', aTMethod selector;
+		cr."
+	^#sqInt
 ]
 
 { #category : #'C code generator' }
