@@ -19,10 +19,10 @@ test -f config.h || ../../../platforms/unix/config/configure \
 	CC="gcc " \
 	CXX="g++ " \
 	CFLAGS="$OPT -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS" \
-	LIBS="-lpthread -luuid" \
+	LIBS="-lpthread -luuid -lasound" \
 	LDFLAGS=-Wl,-z,now
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag and Raspbian lacks `readlinks`
-make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
+make -j4 install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
