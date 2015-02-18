@@ -3308,7 +3308,7 @@ CCodeGenerator >> isActualType: actualTypeOrNil compatibleWithFormalType: formal
 		 or: [formalType = 'double' and: [actualType = 'float']]].
 	"For now, insist that the signedness agrees."
 	^(actualType first = $u) = (formalType first = $u)
-	 or: [actualTypeOrNil isNil or: [formalTypeOrNil isNil]]
+	  or: [actualTypeOrNil isNil] "a nil formal defaults to #sqInt"
 ]
 
 { #category : #inlining }
@@ -4129,11 +4129,11 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod [
 						[#bitAnd:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
 						[#bitOr:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
 						[#bitXor:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
-						[#asVoidPointer]		->	[#'void *'].
-						[#asVoidPointer]		->	[#'void *'].
-						[#asUnsignedInteger]	->	[#usqInt].
+						[#asFloat]				->	[#double].
 						[#asLong]				->	[#long].
+						[#asUnsignedInteger]	->	[#usqInt].
 						[#asUnsignedLong]		->	[#'unsigned long'].
+						[#asVoidPointer]		->	[#'void *'].
 						[#signedIntToLong]		->	[#usqInt]. "c.f. generateSignedIntToLong:on:indent:"
 						[#signedIntToShort]	->	[#usqInt]. "c.f. generateSignedIntToShort:on:indent:"
 						[#cCoerce:to:]			->	[sendNode args last value].
@@ -4431,17 +4431,28 @@ CCodeGenerator >> typeFor: aNode in: aTMethod [
 { #category : #'type inference' }
 CCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
 	"Answer the return type for an arithmetic sendThis is so that the inliner can still
-	 inline simple expressions.  Deal with pointer arithmetic and floating point arithmetic"
+	 inline simple expressions.  Deal with pointer arithmetic, floating point arithmetic
+	 and promotion."
 	| rcvrType argType |
 	argType := self typeFor: sendNode args first in: aTMethod.
 	argType = #double ifTrue:
 		[^#double].
 	rcvrType := self typeFor: sendNode receiver in: aTMethod.
-	(sendNode selector == #-
-	 and: [rcvrType notNil and: [rcvrType last = $*
-	 and: [argType notNil and: [argType last = $*]]]]) ifTrue:
-		[^#int].
-	^rcvrType
+	"deal with unknowns, answering nil."
+	(rcvrType isNil or: [argType isNil]) ifTrue:
+		[^nil].
+	"deal with pointer arithmetic"
+	(rcvrType last = $* or: [argType last = $*]) ifTrue:
+		[(sendNode selector == #-
+		  and: [rcvrType last = $* and: [argType last = $*]]) ifTrue:
+			[^#int].
+		 ^rcvrType last = $
+			ifTrue: [rcvrType]
+			ifFalse: [argType]].
+	"deal with promotion; answer the longest type, defaulting to the recever if they're the same"
+	^(self sizeOfIntegralCType: rcvrType) >= (self sizeOfIntegralCType: argType)
+		ifTrue: [rcvrType]
+		ifFalse: [argType]
 ]
 
 { #category : #'type inference' }
@@ -4506,8 +4517,13 @@ CCodeGenerator >> unreachableMethods [
 
 { #category : #'type inference' }
 CCodeGenerator >> unsignedTypeForBitwiseSend: aTSendNode in: aTMethod [
-	"The result of the bitwise operators in C is unsigned."
+	"The result of the bitwise operators in C is unsigned.
+	 We make an exception for currentBytecode bitAnd: N to allow better inlining in cases."
 	| t1 t2 type |
+	(aTSendNode receiver isVariable
+	and: [aTSendNode receiver name = 'currentBytecode'
+	and: [aTSendNode selector == #bitAnd:]]) ifTrue:
+		[^#sqInt].
 	t1 := (self typeFor: aTSendNode receiver in: aTMethod) ifNil: [^nil].
 	t2 := (self typeFor: aTSendNode args first in: aTMethod) ifNil: [^nil].
 	type := (self sizeOfIntegralCType: t1) >= (self sizeOfIntegralCType: t1)
