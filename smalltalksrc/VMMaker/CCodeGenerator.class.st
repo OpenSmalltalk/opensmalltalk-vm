@@ -3305,10 +3305,12 @@ CCodeGenerator >> isActualType: actualTypeOrNil compatibleWithFormalType: formal
 	((self isIntegralCType: actualType)
 	 and: [self isIntegralCType: formalType]) ifFalse:
 		[^actualType = formalType
-		 or: [formalType = 'double' and: [actualType = 'float']]].
-	"For now, insist that the signedness agrees."
+		 or: [formalType = #double and: [actualType = #float]]].
+	"For now, insist that the signedness agrees.  If the actual's type is unknown allow inlining.
+	 A formal defaults to #sqInt. Allowing inlining an unsigned type within a sqInt formal is wrong;
+	 snd for testing, it breaks e.g. the BitBltPlugin."
 	^(actualType first = $u) = (formalType first = $u)
-	  or: [actualTypeOrNil isNil] "a nil formal defaults to #sqInt"
+	  or: [actualTypeOrNil isNil] 
 ]
 
 { #category : #inlining }
@@ -3517,6 +3519,23 @@ CCodeGenerator >> maybePutPreambleFor: aClass on: aStream [
 			nextPutAll: '/* '; print: actualClass; nextPutAll: '>>preambleCCode */'; cr;
 			nextPutAll: preamble; cr;
 			nextPutAll: '/* end '; print: actualClass; nextPutAll: '>>preambleCCode */'; cr]
+]
+
+{ #category : #'type inference' }
+CCodeGenerator >> mergeTypeOf: var in: aDictionary with: newType [
+	"var is a variable that has been assigned an expression of type  newType.
+	 Either assign its type, if it is as yet untyped, or merge newType with its existing type.
+	 N.B. We refuse to promote a variable that already has integral type to a floating point
+	 type.  The existing plugins depend on this; one can always use an explicit type in future."
+	| existingType mergedType |
+	existingType := self
+						extractTypeFor: var
+						fromDeclaration: (aDictionary at: var ifAbsentPut: [newType, ' ', var]).
+	existingType ~= newType ifTrue:
+		[((self isIntegralCType: existingType)
+		  and: [self isFloatingPointCType: newType]) ifFalse:
+			[mergedType := self promoteArithmeticTypes: existingType and: newType.
+			 aDictionary at: var put: mergedType, ' ', var]]
 ]
 
 { #category : #utilities }
@@ -3868,6 +3887,25 @@ CCodeGenerator >> printUnboundVariableReferenceWarnings [
 			logger tab; show: sel; cr.
 		].
 	].
+]
+
+{ #category : #'type inference' }
+CCodeGenerator >> promoteArithmeticTypes: firstType and: secondType [
+	"Answer the return type for an arithmetic sendThis is so that the inliner can still
+	 inline simple expressions.  Deal with pointer arithmetic, floating point arithmetic
+	 and promotion."
+	((#(#double float) includes: firstType)
+	 or: [#(#double float) includes: secondType]) ifTrue:
+		[^(firstType = #float and: [secondType = #float])
+			ifTrue: [#float]
+			ifFalse: [#double]].
+	"deal with unknowns, answering nil."
+	(firstType isNil or: [secondType isNil]) ifTrue:
+		[^nil].
+	"deal with promotion; answer the longest type, defaulting to the recever if they're the same"
+	^(self sizeOfIntegralCType: firstType) >= (self sizeOfIntegralCType: secondType)
+		ifTrue: [firstType]
+		ifFalse: [secondType]
 ]
 
 { #category : #inlining }
@@ -4247,6 +4285,7 @@ CCodeGenerator >> sizeOfIntegralCType: anIntegralCType [ "<String>"
 		['usqInt']	->	[BytesPerWord].
 		['int']		->	[4].
 		['short']		->	[2].
+		['short int']	->	[2].
 		['char']		->	[1].
 		['long']		->	[BytesPerWord].
 		['size_t']		->	[BytesPerWord].
@@ -4434,25 +4473,20 @@ CCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
 	 inline simple expressions.  Deal with pointer arithmetic, floating point arithmetic
 	 and promotion."
 	| rcvrType argType |
-	argType := self typeFor: sendNode args first in: aTMethod.
-	argType = #double ifTrue:
-		[^#double].
 	rcvrType := self typeFor: sendNode receiver in: aTMethod.
-	"deal with unknowns, answering nil."
-	(rcvrType isNil or: [argType isNil]) ifTrue:
-		[^nil].
+	argType := self typeFor: sendNode args first in: aTMethod.
 	"deal with pointer arithmetic"
-	(rcvrType last = $* or: [argType last = $*]) ifTrue:
-		[(sendNode selector == #-
-		  and: [rcvrType last = $* and: [argType last = $*]]) ifTrue:
-			[^#int].
-		 ^rcvrType last = $
+	((rcvrType notNil and: [rcvrType last = $*]) or: [argType notNil and: [argType last = $*]]) ifTrue:
+		[(rcvrType isNil or: [argType isNil]) ifTrue:
+			[^nil].
+		 (rcvrType last = $* and: [argType last = $*]) ifTrue:
+			[sendNode selector == #- ifTrue:
+				[^#int].
+			 self error: 'invalid pointer arithmetic'].
+		 ^rcvrType last = $*
 			ifTrue: [rcvrType]
 			ifFalse: [argType]].
-	"deal with promotion; answer the longest type, defaulting to the recever if they're the same"
-	^(self sizeOfIntegralCType: rcvrType) >= (self sizeOfIntegralCType: argType)
-		ifTrue: [rcvrType]
-		ifFalse: [argType]
+	^self promoteArithmeticTypes: rcvrType and: argType
 ]
 
 { #category : #'type inference' }

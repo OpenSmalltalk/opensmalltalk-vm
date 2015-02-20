@@ -985,7 +985,7 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 	 This for debugging:
 		(self copy inferTypesForImplicitlyTypedVariablesIn: aCodeGen)"
 	| alreadyExplicitlyTyped effectiveNodes |
-	"selector = #blockDispatchTargetsFor:perform:arg: ifTrue:
+	"selector = #transformColor: ifTrue:
 		[self halt]."
 	alreadyExplicitlyTyped := declarations keys asSet.
 	effectiveNodes := Dictionary new. "this for debugging"
@@ -1006,13 +1006,13 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 		 Only observe known sends (methods in the current set) and typed local variables."
 		(node isAssignment
 		 and: [(locals includes: (var := node variable name))
-		 and: [(declarations includesKey: var) not
+		 and: [(alreadyExplicitlyTyped includes: var) not "don't be fooled by previously inferred types"
 		 and: [(type := node expression isSend
 						ifTrue: [aCodeGen returnTypeForSend: node expression in: self]
 						ifFalse: [self typeFor: node expression in: aCodeGen]) notNil
 		 and: [type ~= #void]]]]) ifTrue:
-			[declarations at: var put: type, ' ', var.
-			 effectiveNodes at: var put: { declarations at: var. node }]].
+			[aCodeGen mergeTypeOf: var in: declarations with: type.
+			 effectiveNodes at: var put: { declarations at: var. node }, (effectiveNodes at: var ifAbsent: [#()])]].
 	^effectiveNodes
 ]
 
