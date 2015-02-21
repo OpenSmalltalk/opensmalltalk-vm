@@ -585,8 +585,11 @@ init_mmap (camPtr cam)
 	if (!(cam->buffers = calloc (req.count, sizeof (struct buffer))))
 		return false;
 
+    /* we have at least as many buffers as requested; save that actual number for uninit_map later */
+    cam->nBuffers = req.count;
+    
 	vBufReset(bufPtr);
-	for (bufPtr->index = 0; bufPtr->index < req.count; bufPtr->index++) {
+	for (bufPtr->index = 0; bufPtr->index < /* req.count */ cam->nBuffers; bufPtr->index++) {
 
 		if (!xioctl(cam, VIDIOC_QUERYBUF, bufPtr)) return false;
 		
