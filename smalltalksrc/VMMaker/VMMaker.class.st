@@ -297,8 +297,7 @@ VMMaker class >> generate: interpreterClass with: optionsPairsArray to: srcDirNa
 
 { #category : #configurations }
 VMMaker class >> generateAllCogConfigurationsUnderVersionControl [
-	self generateNewspeakCogVM;
-		generateNewspeakSpurCogVM;
+	self generateNewspeakSpurCogVM;
 		generateSqueakCogVM;
 		generateSqueakCogMTVM;
 		generateSqueakSpurCogVM;
@@ -314,15 +313,13 @@ VMMaker class >> generateAllConfigurationsUnderVersionControl [
 
 { #category : #configurations }
 VMMaker class >> generateAllNewspeakConfigurationsUnderVersionControl [
-	self generateNewspeakCogVM;
-		generateNewspeakSpurStackVM;
+	self generateNewspeakSpurStackVM;
 		generateNewspeakSpurCogVM
 ]
 
 { #category : #configurations }
 VMMaker class >> generateAllNonSpurConfigurationsUnderVersionControl [
-	self generateNewspeakCogVM;
-		generateSqueakCogVM;
+	self generateSqueakCogVM;
 		generateSqueakCogMTVM;
 		generateSqueakStackVM;
 		generateSqueakCogSistaVM
@@ -392,37 +389,6 @@ VMMaker class >> generateEitherSqueakCogVM [
 ]
 
 { #category : #configurations }
-VMMaker class >> generateNewspeakCogVM [
-	^VMMaker
-		generate: CoInterpreter
-		and: StackToRegisterMappingCogit
-		with: #(	NewspeakVM true
-				MULTIPLEBYTECODESETS true)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/nscogsrc')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
-		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation
-					DeflatePlugin DSAPlugin DropPlugin FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin
-					ImmX11Plugin JPEGReadWriter2Plugin JPEGReaderPlugin LargeIntegersPlugin
-					Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin RePlugin
-					SecurityPlugin SocketPlugin SoundPlugin SqueakSSLPlugin SurfacePlugin
-					UUIDPlugin UnixOSProcessPlugin UnixAioPlugin
-					VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
-]
-
-{ #category : #configurations }
-VMMaker class >> generateNewspeakInterpreterVM [
-	^VMMaker
-		generate: NewspeakInterpreter
-		to: (FileDirectory default pathFromURI: self sourceTree, '/nssrc')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
-		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation DeflatePlugin DSAPlugin DropPlugin
-					FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin ImmX11Plugin JPEGReadWriter2Plugin
-					JPEGReaderPlugin LargeIntegersPlugin Matrix2x3Plugin MiscPrimitivePlugin NewsqueakIA32ABIPlugin
-					RePlugin SecurityPlugin SocketPlugin SoundPlugin SqueakSSLPlugin SurfacePlugin
-					UUIDPlugin UnixOSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
-]
-
-{ #category : #configurations }
 VMMaker class >> generateNewspeakSpurCogVM [
 	"No primitives since we can use those for the Cog Newspeak VM"
 	^VMMaker
@@ -438,25 +404,16 @@ VMMaker class >> generateNewspeakSpurCogVM [
 
 { #category : #configurations }
 VMMaker class >> generateNewspeakSpurStackVM [
-	"No primitives since we can use those for the Cog Newspeak VM"
+	"No primitives since we can use those from the Cog Newspeak VM"
 	^VMMaker
 		generate: StackInterpreter
 		with: #(	ObjectMemory Spur32BitMemoryManager
 				MULTIPLEBYTECODESETS true
-				NewspeakVM true)
+				NewspeakVM true
+				FailImbalancedPrimitives false
+				CheckPrivacyViolations true)
 		to: (FileDirectory default directoryNamed: self sourceTree, '/nsspurstacksrc') fullName
 		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
-		including: #()
-]
-
-{ #category : #configurations }
-VMMaker class >> generateNewspeakStackVM [
-	"No primitives since we can use those for the Cog Newspeak VM"
-	^VMMaker
-		generate: StackInterpreter
-		with: #(NewspeakVM true MULTIPLEBYTECODESETS true)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/nsstacksrc')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including: #()
 ]
 
@@ -539,10 +496,11 @@ VMMaker class >> generateSqueakSpurCogVM [
 
 { #category : #configurations }
 VMMaker class >> generateSqueakSpurStack64VM [
-	"No primitives since we can use those for the Cog VM"
+	"No primitives since we can use those from the Cog VM"
 	^VMMaker
 		generate: StackInterpreter
-		with: #(ObjectMemory Spur64BitMemoryManager)
+		with: #(ObjectMemory Spur64BitMemoryManager
+				FailImbalancedPrimitives false)
 		to: (FileDirectory default directoryNamed: self sourceTree, '/spurstack64src') fullName
 		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
 		including: #()
@@ -550,10 +508,11 @@ VMMaker class >> generateSqueakSpurStack64VM [
 
 { #category : #configurations }
 VMMaker class >> generateSqueakSpurStackVM [
-	"No primitives since we can use those for the Cog VM"
+	"No primitives since we can use those from the Cog VM"
 	^VMMaker
 		generate: StackInterpreter
-		with: #(ObjectMemory Spur32BitMemoryManager)
+		with: #(ObjectMemory Spur32BitMemoryManager
+				FailImbalancedPrimitives false)
 		to: (FileDirectory default directoryNamed: self sourceTree, '/spurstacksrc') fullName
 		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
 		including: #()
@@ -561,9 +520,10 @@ VMMaker class >> generateSqueakSpurStackVM [
 
 { #category : #configurations }
 VMMaker class >> generateSqueakStackVM [
-	"No primitives since we can use those for the Cog VM"
+	"No primitives since we can use those from the Cog VM"
 	^VMMaker
 		generate: StackInterpreter
+		with: #(FailImbalancedPrimitives false)
 		to: (FileDirectory default directoryNamed: self sourceTree, '/stacksrc') fullName
 		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
 		including: #()

@@ -3705,6 +3705,15 @@ CCodeGenerator >> nilOrBooleanConstantReceiverOf: aNode [
 	^nil
 ]
 
+{ #category : #inlining }
+CCodeGenerator >> nodeToCast: exprNode to: cType [
+	^TSendNode new
+		setSelector: #cCoerceSimple:
+		receiver: (TVariableNode new setName: 'self')
+		arguments: { exprNode. TConstantNode new setValue: cType }
+		isBuiltInOp: true
+]
+
 { #category : #utilities }
 CCodeGenerator >> nonStructClassesForTranslationClasses: classes [
 	"Answer in superclass order (any superclass precedes any subclass)

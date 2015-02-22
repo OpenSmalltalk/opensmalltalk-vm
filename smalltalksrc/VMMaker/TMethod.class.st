@@ -168,7 +168,13 @@ TMethod >> argAssignmentsFor: meth send: aSendNode in: aCodeGen [
 		[ :argName :exprNode |
 		(self isNode: exprNode substitutableFor: argName inMethod: meth in: aCodeGen)
 			ifTrue:
-				[substitutionDict at: argName put: exprNode.
+				[substitutionDict
+					at: argName
+					put: (((exprNode isSend or: [exprNode isVariable])
+						  and: [(self typeFor: argName in: aCodeGen) notNil
+						  and: [(aCodeGen typeFor: exprNode in: self) isNil]])
+							ifTrue: [aCodeGen nodeToCast: exprNode to: (self typeFor: argName in: aCodeGen)]
+							ifFalse: [exprNode]).
 				 locals remove: argName]
 			ifFalse:
 				[stmtList add: (TAssignmentNode new
