@@ -8737,7 +8737,7 @@ StackInterpreter >> lookupMethodInClass: class [
 		 and: [(self accessModifierOfMethod: newMethod) ~= 0]]]]) ifTrue:
 			[self print: (self nameOfClass: currentClass); space.
 			 self printStringOf: (messageSelector); print: ' from '.
-			 self printStringOf: (self fetchPointer: 0 ofObject: (self methodClassOf: method)); cr].
+			 self printStringOf: (self maybeSelectorOfMethod: method); cr].
 		found ifTrue: [^currentClass].
 		currentClass := self superclassOf: currentClass].
 
