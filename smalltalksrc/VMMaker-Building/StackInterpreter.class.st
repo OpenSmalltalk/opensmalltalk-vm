@@ -32,6 +32,7 @@ Class {
 		'primitiveFunctionPointer',
 		'methodCache',
 		'atCache',
+		'isPrivateSend',
 		'lkupClassTag',
 		'lkupClass',
 		'methodDictLinearSearchLimit',
@@ -112,6 +113,7 @@ Class {
 		'BytecodeEncoderClassName',
 		'BytecodeTable',
 		'CacheProbeMax',
+		'CheckPrivacyViolations',
 		'DirBadPath',
 		'DirEntryFound',
 		'DirNoMoreEntries',
@@ -245,6 +247,8 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 				array: vmClass primitiveAccessorDepthTable]
 		ifFalse:
 			[aCCodeGenerator removeVariable: #primitiveAccessorDepthTable].
+	(NewspeakVM and: [CheckPrivacyViolations]) ifFalse:
+		[aCCodeGenerator removeVariable: #isPrivateSend].
 	aCCodeGenerator
 		var: #primitiveFunctionPointer
 		declareC: 'void (*primitiveFunctionPointer)()'.
@@ -1027,7 +1031,9 @@ StackInterpreter class >> initializeMiscConstants [
 	MaxExternalPrimitiveTableSize := 4096. "entries"
 
 	MaxJumpBuf := 32. "max. callback depth"
-	FailImbalancedPrimitives := true
+	FailImbalancedPrimitives := initializationOptions at: #FailImbalancedPrimitives ifAbsentPut: [true].
+
+	CheckPrivacyViolations := initializationOptions at: #CheckPrivacyViolations ifAbsentPut: [false]
 ]
 
 { #category : #initialization }
@@ -4410,6 +4416,8 @@ StackInterpreter >> commonSendAbsent [
 	self shuffleArgumentsAndStoreAbsentReceiver: localAbsentReceiver.
 	lkupClassTag := objectMemory fetchClassTagOf: localAbsentReceiver.
 	self assert: (objectMemory classForClassTag: lkupClassTag) ~= objectMemory nilObject.
+	CheckPrivacyViolations ifTrue:
+            [isPrivateSend := true].
 	self commonSend
 ]
 
@@ -7381,6 +7389,7 @@ StackInterpreter >> initialize [
 	jmpDepth := 0.
 	longRunningPrimitiveStartUsecs := longRunningPrimitiveStopUsecs := 0.
 	maxExtSemTabSizeSet := false.
+	isPrivateSend := false.
 	statForceInterruptCheck := statStackOverflow := statCheckForEvents :=
 	statProcessSwitch := statIOProcessEvents := statStackPageDivorce := 0
 ]
@@ -7865,7 +7874,10 @@ StackInterpreter >> internalFindNewMethod [
 		 lkupClass := objectMemory classForClassTag: lkupClassTag.
 		 self lookupMethodInClass: lkupClass.
 		 self internalizeIPandSP.
-		 self addNewMethodToCache: lkupClass]
+		 self addNewMethodToCache: lkupClass].
+	"Clear the flag set in commonSendAbsent and tested in lookupMethodInClass:"
+	(NewspeakVM and: [CheckPrivacyViolations]) ifTrue:
+		[isPrivateSend := false].
 ]
 
 { #category : #'return bytecodes' }
@@ -8718,6 +8730,14 @@ StackInterpreter >> lookupMethodInClass: class [
 			self sendBreakpoint: messageSelector receiver: nil.
 			^self lookupMethodInClass: (self superclassOf: currentClass)].
 		found := self lookupMethodInDictionary: dictionary.
+		(NewspeakVM
+		 and: [CheckPrivacyViolations
+		 and: [isPrivateSend not
+		 and: [messageSelector ~= (objectMemory splObj: SelectorDoesNotUnderstand)
+		 and: [(self accessModifierOfMethod: newMethod) ~= 0]]]]) ifTrue:
+			[self print: (self nameOfClass: currentClass); space.
+			 self printStringOf: (messageSelector); print: ' from '.
+			 self printStringOf: (self fetchPointer: 0 ofObject: (self methodClassOf: method)); cr].
 		found ifTrue: [^currentClass].
 		currentClass := self superclassOf: currentClass].
 
