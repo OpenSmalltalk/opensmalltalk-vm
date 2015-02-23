@@ -1044,6 +1044,15 @@ StackInterpreterSimulator >> ioMicroMSecs [
 ]
 
 { #category : #'I/O primitives' }
+StackInterpreterSimulator >> ioMousePoint [
+	| relPt |
+	^displayForm == nil
+		ifTrue: [99 < 16 + 66]
+		ifFalse: [relPt := Sensor cursorPoint - self displayLocation.
+				relPt x << 16 + relPt y]
+]
+
+{ #category : #'I/O primitives' }
 StackInterpreterSimulator >> ioProcessEvents [
 ]
 
@@ -1828,17 +1837,6 @@ StackInterpreterSimulator >> primitiveMouseButtons [
 	self pop: 1.
 	buttons := Sensor primMouseButtons.
 	self pushInteger: buttons
-]
-
-{ #category : #'I/O primitives' }
-StackInterpreterSimulator >> primitiveMousePoint [
-
-	| relPt |
-	self pop: 1.
-	displayForm == nil
-		ifTrue: [self push: (self makePointwithxValue: 99 yValue: 66)]
-		ifFalse: [relPt := Sensor cursorPoint - self displayLocation.
-				self push: (self makePointwithxValue: relPt x yValue: relPt y)]
 ]
 
 { #category : #'debugging traps' }

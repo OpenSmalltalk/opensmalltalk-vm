@@ -9,15 +9,23 @@ Class {
 		'CMMethod',
 		'CMOpenPIC',
 		'CheckAllocationFillerAfterPrimCall',
+		'EncounteredUnknownBytecode',
+		'InsufficientCodeSpace',
 		'MaxLiteralCountForCompile',
 		'MaxMethodSize',
+		'MaxNegativeErrorCode',
 		'MaxNumArgs',
 		'MaxStackCheckOffset',
+		'MethodTooBig',
+		'NotFullyInitialized',
 		'PrimCallCollectsProfileSamples',
 		'PrimCallDoNotJIT',
 		'PrimCallMayCallBack',
 		'PrimCallNeedsNewMethod',
-		'PrimCallNeedsPrimitiveFunction'
+		'PrimCallNeedsPrimitiveFunction',
+		'ShouldNotJIT',
+		'UnimplementedPrimitive',
+		'YoungSelectorInPIC'
 	],
 	#category : #'VMMaker-JIT'
 }

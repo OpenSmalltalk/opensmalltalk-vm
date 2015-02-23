@@ -31,8 +31,8 @@ Class {
 		'pools',
 		'selectorTranslations',
 		'optionsDictionary',
-		'breakSrcInlineSelector',
-		'breakDestInlineSelector',
+		'breakSrcInlineSelectors',
+		'breakDestInlineSelectors',
 		'breakOnInline',
 		'vmMaker'
 	],
@@ -575,7 +575,7 @@ CCodeGenerator >> baseTypeForType: aCType [
 
 { #category : #accessing }
 CCodeGenerator >> breakDestInlineSelector: aSelector [
-	breakDestInlineSelector := aSelector
+	breakDestInlineSelectors add: aSelector
 ]
 
 { #category : #accessing }
@@ -585,7 +585,7 @@ CCodeGenerator >> breakOnInline: aBooleanOrNil [
 
 { #category : #accessing }
 CCodeGenerator >> breakSrcInlineSelector: aSelector [
-	breakSrcInlineSelector := aSelector
+	breakSrcInlineSelectors add: aSelector
 ]
 
 { #category : #utilities }
@@ -778,7 +778,7 @@ CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
 	inlineList := Set new: methods size * 2.
 	(methods reject: [:m| selectorsOfMethodsNotToInline includes: m selector]) do:
 		[:m| | inlineIt hasUnrenamableCCode nodeCount |
-		(breakSrcInlineSelector = m selector
+		((breakSrcInlineSelectors includes: m selector)
 		 and: [breakOnInline isNil]) ifTrue:
 			[self halt].
 		inlineIt := #dontCare.
@@ -2994,36 +2994,42 @@ CCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 	 done here."
 
 	"Iterate over all methods, inferring #void return types, until we reach a fixed point."
-	| firstTime allMethods |
-	firstTime := true.
+	| allMethods |
 	allMethods := apiMethods
 					ifNil: [methods]
 					ifNotNil: [(Set withAll: methods)
 								addAll: apiMethods;
 								yourself].
-	"Make an initial pass to assign the return types of all simple methods that return constants."						
+	"Make an initial pass to assign the return types of all simple methods that return constants,
+	 or those that have explicit return types."						
 	allMethods do:
 		[:m|
-		m isReturnConstant ifTrue:
+		m removeFinalSelfReturnIn: self. "must preceed recordDeclarationsIn: because it may set returnType"
+		m recordDeclarationsIn: self.
+		(m returnType isNil
+		 and: [m isReturnConstant]) ifTrue:
 			[m inferReturnTypeIn: self]].
+
+	"now iterate until we reach a fixed point"
 	[| changedReturnType |
 	 changedReturnType := false.
 	 allMethods do:
 		[:m|
-		 firstTime ifTrue:
-			[m removeFinalSelfReturnIn: self. "must preceed recordDeclarationsIn: because it may set returnType"
-			 m recordDeclarationsIn: self].
 		 m inferTypesForImplicitlyTypedVariablesIn: self.
 		 (m inferReturnTypeIn: self) ifTrue:
 			[changedReturnType := true]].
-	 firstTime := false.
 	 changedReturnType] whileTrue.
 
 	"Type all as-yet-untyped methods as the default"
 	methods do:
 		[:m|
 		m returnType ifNil:
-			[m returnType: (self implicitReturnTypeFor: m selector)]]
+			[m returnType: (self implicitReturnTypeFor: m selector)]].
+
+	"Make a final pass to type anything assigned from the default type"
+	allMethods do:
+		[:m|
+		 m inferTypesForImplicitlyTypedVariablesIn: self]
 ]
 
 { #category : #public }
@@ -3045,7 +3051,9 @@ CCodeGenerator >> initialize [
 	logger := (ProvideAnswerNotification new tag: #logger; signal) ifNil: [Transcript].
 	pools := IdentitySet new.
 	selectorTranslations := IdentityDictionary new.
-	suppressAsmLabels := false
+	suppressAsmLabels := false.
+	breakSrcInlineSelectors := IdentitySet new.
+	breakDestInlineSelectors := IdentitySet new
 ]
 
 { #category : #'C translation support' }
@@ -3491,22 +3499,28 @@ CCodeGenerator >> mayInline: sel [
 CCodeGenerator >> maybeBreakForInlineOf: aNode in: aTMethod [
 	"convenient for debugging..."
 	(aNode isSend
-	and: [(breakSrcInlineSelector notNil or: [breakDestInlineSelector notNil])
-	and: [(breakSrcInlineSelector ifNil: [true] ifNotNil: [:srcSel| srcSel = aNode selector])
-	and: [breakDestInlineSelector ifNil: [true] ifNotNil: [:dstSel| dstSel = aTMethod selector
-	and: [breakOnInline ~~ false]]]]]) ifTrue:
+	and: [breakSrcInlineSelectors size + breakDestInlineSelectors size > 0
+	and: [(breakSrcInlineSelectors isEmpty or: [breakSrcInlineSelectors includes: aNode selector])
+	and: [(breakDestInlineSelectors isEmpty or: [(breakDestInlineSelectors includes: aTMethod selector)])
+	and: [breakOnInline ~~ false]]]]) ifTrue:
 		[aTMethod halt: aTMethod selector, ' ', aNode selector]
 ]
 
 { #category : #inlining }
-CCodeGenerator >> maybeBreakForTestToInline: aNode in: aTMethod [
+CCodeGenerator >> maybeBreakForTestToInline: aNodeOrSelector in: aTMethod [
 	"convenient for debugging..."
-	(aNode isSend
-	and: [(breakSrcInlineSelector notNil or: [breakDestInlineSelector notNil])
-	and: [(breakSrcInlineSelector ifNil: [true] ifNotNil: [:srcSel| srcSel = aNode selector])
-	and: [(breakDestInlineSelector ifNil: [true] ifNotNil: [:dstSel| dstSel = aTMethod selector])
-	and: [breakOnInline ~~ true]]]]) ifTrue:
-		[aTMethod halt: aTMethod selector, ' ', aNode selector]
+	| selector |
+	selector := aNodeOrSelector isSymbol
+					ifTrue: [aNodeOrSelector]
+					ifFalse:
+						[aNodeOrSelector isSend
+							ifTrue: [aNodeOrSelector selector]
+							ifFalse: [^self]].
+	(breakSrcInlineSelectors size + breakDestInlineSelectors size > 0
+	and: [(breakSrcInlineSelectors isEmpty or: [breakSrcInlineSelectors includes: selector])
+	and: [(breakDestInlineSelectors isEmpty or: [(breakDestInlineSelectors includes: aTMethod selector)])
+	and: [breakOnInline ~~ true]]]) ifTrue:
+		[aTMethod halt: aTMethod selector, ' ', selector]
 ]
 
 { #category : #'C code generator' }
@@ -3708,7 +3722,7 @@ CCodeGenerator >> nilOrBooleanConstantReceiverOf: aNode [
 { #category : #inlining }
 CCodeGenerator >> nodeToCast: exprNode to: cType [
 	^TSendNode new
-		setSelector: #cCoerceSimple:
+		setSelector: #cCoerceSimple:to:
 		receiver: (TVariableNode new setName: 'self')
 		arguments: { exprNode. TConstantNode new setValue: cType }
 		isBuiltInOp: true
@@ -3999,8 +4013,8 @@ CCodeGenerator >> removeConstant: aName [
 { #category : #utilities }
 CCodeGenerator >> removeMethodForSelector: aSelector [
 	"Remove the given method from the code base"
-	(breakSrcInlineSelector == aSelector
-	 or: [breakDestInlineSelector == aSelector]) ifTrue:
+	((breakSrcInlineSelectors includes: aSelector)
+	 or: [(breakDestInlineSelectors includes: aSelector)]) ifTrue:
 		[self halt].
 	methods removeKey:  aSelector ifAbsent: []
 ]
@@ -4177,6 +4191,11 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod [
 						[#bitOr:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
 						[#bitXor:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
 						[#asFloat]				->	[#double].
+						[#atan]					->	[#double].
+						[#exp]					->	[#double].
+						[#log]					->	[#double].
+						[#sin]					->	[#double].
+						[#sqrt]					->	[#double].
 						[#asLong]				->	[#long].
 						[#asUnsignedInteger]	->	[#usqInt].
 						[#asUnsignedLong]		->	[#'unsigned long'].
@@ -4184,7 +4203,11 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod [
 						[#signedIntToLong]		->	[#usqInt]. "c.f. generateSignedIntToLong:on:indent:"
 						[#signedIntToShort]	->	[#usqInt]. "c.f. generateSignedIntToShort:on:indent:"
 						[#cCoerce:to:]			->	[sendNode args last value].
-						[#cCoerceSimple:to:]	->	[sendNode args last value] }
+						[#cCoerceSimple:to:]	->	[sendNode args last value].
+						[#ifTrue:ifFalse:]		->	[self typeForConditional: sendNode in: aTMethod].
+						[#ifFalse:ifTrue:]		->	[self typeForConditional: sendNode in: aTMethod].
+						[#ifTrue:]				->	[self typeForConditional: sendNode in: aTMethod].
+						[#ifFalse:]				->	[self typeForConditional: sendNode in: aTMethod] }
 						otherwise: [#sqInt]]]
 		ifNotNil:
 			[:m|
@@ -4448,12 +4471,12 @@ CCodeGenerator >> suppressAsmLabelsWhile: aBlock [
 { #category : #utilities }
 CCodeGenerator >> testInliningFor: selector as: inlineFlagOrSymbol [
 	"Test inlining for the method with the given selector.
-	 Do all inlining first (cuz that's how the algorithm works.
+	 Do all inlining first (cuz that's how the algorithm works).
 	 Then try and inline into a copy of the method.  This isn't
 	 exactly what happens in the real deal but is close enough."
 	| meth |
-	(breakDestInlineSelector = selector
-	or: [breakSrcInlineSelector = selector]) ifTrue:
+	((breakDestInlineSelectors includes:  selector)
+	 or: [(breakSrcInlineSelectors includes:  selector)]) ifTrue:
 		[self halt].
 	meth := (self methodNamed: selector) copy.
 	self doBasicInlining: inlineFlagOrSymbol.
@@ -4496,6 +4519,20 @@ CCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
 			ifTrue: [rcvrType]
 			ifFalse: [argType]].
 	^self promoteArithmeticTypes: rcvrType and: argType
+]
+
+{ #category : #'type inference' }
+CCodeGenerator >> typeForConditional: sendNode in: aTMethod [
+	"Answer the return type for a conditional, ifTrue:ifFalse: et al"
+	| firstType secondType |
+	firstType := self typeFor: sendNode args first statements last in: aTMethod.
+	sendNode selector numArgs = 1 ifTrue:
+		[^firstType].
+	secondType := self typeFor: sendNode args second statements last in: aTMethod.
+	((firstType notNil and: [(self isIntegralCType: firstType) or: [self isFloatingPointCType: firstType]])
+	 and: [secondType notNil and: [(self isIntegralCType: secondType) or: [self isFloatingPointCType: secondType]]]) ifTrue:
+		[^self promoteArithmeticTypes: firstType and: secondType].
+	^firstType ifNil: [secondType]
 ]
 
 { #category : #'type inference' }

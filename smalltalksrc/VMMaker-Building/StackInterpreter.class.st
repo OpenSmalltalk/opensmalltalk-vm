@@ -4990,6 +4990,8 @@ StackInterpreter >> dynamicSuperSendBytecode [
 							findApplicationOfTargetMixin: mClassMixin
 							startingAtBehavior: (objectMemory fetchClassOf: rcvr).
 	lkupClassTag := objectMemory classTagForClass: (self superclassOf: mixinApplication).
+	CheckPrivacyViolations ifTrue:
+            [isPrivateSend := true].
 	self commonSend
 ]
 
@@ -8730,15 +8732,9 @@ StackInterpreter >> lookupMethodInClass: class [
 			self sendBreakpoint: messageSelector receiver: nil.
 			^self lookupMethodInClass: (self superclassOf: currentClass)].
 		found := self lookupMethodInDictionary: dictionary.
-		(NewspeakVM
-		 and: [CheckPrivacyViolations
-		 and: [isPrivateSend not
-		 and: [messageSelector ~= (objectMemory splObj: SelectorDoesNotUnderstand)
-		 and: [(self accessModifierOfMethod: newMethod) ~= 0]]]]) ifTrue:
-			[self print: (self nameOfClass: currentClass); space.
-			 self printStringOf: (messageSelector); print: ' from '.
-			 self printStringOf: (self maybeSelectorOfMethod: method); cr].
-		found ifTrue: [^currentClass].
+		found ifTrue:
+			[self maybeCheckPrivacyOfNewMethod: currentClass.
+			 ^currentClass].
 		currentClass := self superclassOf: currentClass].
 
 	"Could not find #doesNotUnderstand: -- unrecoverable error."
@@ -9430,6 +9426,19 @@ StackInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 
 	^theContext
 
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> maybeCheckPrivacyOfNewMethod: currentClass [
+	<inline: true>
+	(NewspeakVM
+	  and: [CheckPrivacyViolations
+	  and: [isPrivateSend not
+	  and: [messageSelector ~= (objectMemory splObj: SelectorDoesNotUnderstand)
+	  and: [(self accessModifierOfMethod: newMethod) ~= 0]]]]) ifTrue:
+		[self print: (self nameOfClass: currentClass); space.
+		 self printStringOf: (messageSelector); print: ' from '.
+		 self printStringOf: (self maybeSelectorOfMethod: method); cr]
 ]
 
 { #category : #'primitive support' }

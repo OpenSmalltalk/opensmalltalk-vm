@@ -580,7 +580,7 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 						ifFalse: [manager bytesPerOop * (manager rawOverflowSlotsOf: bridge)].
 	 oldBase := oldBase + nextSegmentSize + bridgeSpan.
 	 newBase := newBase + nextSegmentSize - manager bridgeSize.
-	 nextSegmentSize := manager long64At: bridge.
+	 nextSegmentSize := (manager long64At: bridge) asUnsignedInteger.
 	 nextSegmentSize ~= 0] whileTrue:
 		[bridgehead := bridgehead - manager bridgeSize + nextSegmentSize].
 	"newBase should point just past the last bridge. all others should have been eliminated."
