@@ -2412,22 +2412,15 @@ InterpreterPrimitives >> primitiveLowSpaceSemaphore [
 
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveMakePoint [
-	| rcvr argument pt |
-	argument := self stackTop.
+	<inline: false>
+	| rcvr pt |
 	rcvr := self stackValue: 1.
-	(objectMemory isIntegerObject: rcvr)
-		ifTrue: [(objectMemory isIntegerObject: argument)
-				ifTrue: [pt := self makePointwithxValue: (objectMemory integerValueOf: rcvr) yValue: (objectMemory integerValueOf: argument)]
-				ifFalse: [pt := self makePointwithxValue: (objectMemory integerValueOf: rcvr) yValue: 0.
-					"Above may cause GC!"
-					objectMemory storePointer: 1 ofObject: pt withValue: (self stackValue: 0)]]
-		ifFalse: [(self isFloatObject: rcvr)
-				ifFalse: [^ self success: false].
-			pt := self makePointwithxValue: 0 yValue: 0.
-			"Above may cause GC!"
-			objectMemory storePointer: 0 ofObject: pt withValue: (self stackValue: 1).
-			objectMemory storePointer: 1 ofObject: pt withValue: (self stackValue: 0)].
-
+	((self isIntegerObject: rcvr) or: [self isFloatObject: rcvr]) ifFalse:
+		[^self primitiveFail].
+	pt := objectMemory eeInstantiateSmallClass: (objectMemory splObj: ClassPoint) numSlots: YIndex + 1.
+	objectMemory
+		storePointerUnchecked: XIndex ofObject: pt withValue: rcvr;
+		storePointerUnchecked: YIndex ofObject: pt withValue: self stackTop.
 	self pop: 2 thenPush: pt
 ]
 
@@ -2528,11 +2521,10 @@ InterpreterPrimitives >> primitiveMousePoint [
 	Return a Point indicating current position of the mouse. Note that mouse coordinates may be negative if the mouse moves above or to the left of the top-left corner of the Smalltalk window."
 
 	| pointWord x y |
-	self pop: 1.
 	pointWord := self ioMousePoint.
 	x := self signExtend16: ((pointWord >> 16) bitAnd: 16rFFFF).
 	y := self signExtend16: (pointWord bitAnd: 16rFFFF).
-	self push: (self makePointwithxValue: x  yValue: y).
+	self pop: 1 thenPush: (self makePointwithxValue: x  yValue: y)
 ]
 
 { #category : #'arithmetic integer primitives' }
@@ -3183,21 +3175,11 @@ InterpreterPrimitives >> primitiveScreenSize [
 	 Currently there is a limit of 65535 in each direction because the
 	 point is encoded into a single 32bit value in the image header.
 	 This might well become a problem one day"
-	self
-		cCode:
-			[| pointWord |
-			 pointWord := self ioScreenSize.
-			 self pop: 1
-				thenPush: (self makePointwithxValue: (pointWord >> 16 bitAnd: 65535)
-								yValue: (pointWord bitAnd: 65535))]
-		inSmalltalk:
-			[| size |
-			"Default to a reasonable size for simulation, unless the window has opened,
-			 in which case allow the screen to be as large as the simulation window"
-			 size := (self displayView notNil and: [self savedWindowSize notNil])
-						ifTrue: [self desiredDisplayExtent]
-						ifFalse: [self desiredDisplayExtent min: 800@640].
-			 self pop: 1 thenPush: (self makePointwithxValue: size x yValue: size y)]
+	| pointWord |
+	pointWord := self ioScreenSize.
+	self pop: 1
+		thenPush: (self makePointwithxValue: (pointWord >> 16 bitAnd: 65535)
+						yValue: (pointWord bitAnd: 65535))
 ]
 
 { #category : #'system control primitives' }

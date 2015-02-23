@@ -1731,6 +1731,15 @@ CogVMSimulator >> ioMicroMSecs [
 ]
 
 { #category : #'I/O primitives' }
+CogVMSimulator >> ioMousePoint [
+	| relPt |
+	^displayForm == nil
+		ifTrue: [99 < 16 + 66]
+		ifFalse: [relPt := Sensor cursorPoint - self displayLocation.
+				relPt x << 16 + relPt y]
+]
+
+{ #category : #'I/O primitives' }
 CogVMSimulator >> ioProcessEvents [
 ]
 
@@ -2777,17 +2786,6 @@ CogVMSimulator >> primitiveMouseButtons [
 	self pop: 1.
 	buttons := Sensor primMouseButtons.
 	self pushInteger: buttons
-]
-
-{ #category : #'I/O primitives' }
-CogVMSimulator >> primitiveMousePoint [
-
-	| relPt |
-	self pop: 1.
-	displayForm == nil
-		ifTrue: [self push: (self makePointwithxValue: 99 yValue: 66)]
-		ifFalse: [relPt := Sensor cursorPoint - self displayLocation.
-				self push: (self makePointwithxValue: relPt x yValue: relPt y)]
 ]
 
 { #category : #'debugging traps' }

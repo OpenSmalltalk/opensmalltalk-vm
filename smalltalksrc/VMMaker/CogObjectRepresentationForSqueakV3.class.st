@@ -381,7 +381,8 @@ CogObjectRepresentationForSqueakV3 >> genGetClassTagOf: instReg into: destReg sc
 	<var: #entryLabel type: #'AbstractInstruction *'>
 	cogit AlignmentNops: (objectMemory wordSize max: 8).
 	entryLabel := cogit Label.
-	self genGetClassObjectOf: instReg into: destReg scratchReg: scratchReg instRegIsReceiver: nil.
+	(self genGetClassObjectOf: instReg into: destReg scratchReg: scratchReg instRegIsReceiver: nil) ~= 0 ifTrue:
+		[self error: 'internal error'].
 	^entryLabel
 ]
 

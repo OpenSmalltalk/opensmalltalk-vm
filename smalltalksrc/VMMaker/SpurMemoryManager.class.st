@@ -11310,7 +11310,8 @@ SpurMemoryManager >> validFreeTree [
 
 { #category : #'free space' }
 SpurMemoryManager >> validFreeTreeChunk: chunk parent: parent [
-	<returnTypeC: 'const char *'>
+	<var: 'reason' type: #'const char *'>
+	<returnTypeC: #'const char *'>
 	chunk = 0 ifTrue:
 		[^nil].
 	(self addressCouldBeOldObj: chunk) ifFalse:
