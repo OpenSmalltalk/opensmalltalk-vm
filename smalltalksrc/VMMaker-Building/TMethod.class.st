@@ -157,29 +157,31 @@ TMethod >> argAssignmentsFor: meth send: aSendNode in: aCodeGen [
 	"Optimization: If the actual parameters are either constants or local variables in the target method (the receiver), substitute them directly into the body of meth. Note that global variables cannot be subsituted because the inlined method might depend on the exact ordering of side effects to the globals."
 
 	| stmtList substitutionDict argList |
-	stmtList := OrderedCollection new: 100.
-	substitutionDict := Dictionary new: 100.
-	argList := aSendNode args.
-	
-	meth args size > aSendNode args size ifTrue:
+	meth args size > (argList := aSendNode args) size ifTrue:
 		[self assert: (meth args first beginsWith: 'self_in_').
 		 argList := {aSendNode receiver}, aSendNode args].
+	
+	stmtList := OrderedCollection new: argList size.
+	substitutionDict := Dictionary new: 100.
 	meth args with: argList do:
 		[ :argName :exprNode |
 		(self isNode: exprNode substitutableFor: argName inMethod: meth in: aCodeGen)
 			ifTrue:
 				[substitutionDict
 					at: argName
-					put: (((exprNode isSend or: [exprNode isVariable])
-						  and: [(self typeFor: argName in: aCodeGen) notNil
-						  and: [(aCodeGen typeFor: exprNode in: self) isNil]])
-							ifTrue: [aCodeGen nodeToCast: exprNode to: (self typeFor: argName in: aCodeGen)]
-							ifFalse: [exprNode]).
+					put: (self node: exprNode
+							typeCompatibleWith: argName
+							inliningInto: meth selector
+							in: aCodeGen).
 				 locals remove: argName]
 			ifFalse:
-				[stmtList add: (TAssignmentNode new
-								setVariable: (TVariableNode new setName: argName)
-								expression: exprNode copy)]].
+				[stmtList addLast:
+					(TAssignmentNode new
+						setVariable: (TVariableNode new setName: argName)
+						expression: (self node: exprNode copy
+										typeCompatibleWith: argName
+										inliningInto: meth selector
+										in: aCodeGen))]].
 	meth parseTree: (meth parseTree bindVariablesIn: substitutionDict).
 	^stmtList
 ]
@@ -991,8 +993,7 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 	 This for debugging:
 		(self copy inferTypesForImplicitlyTypedVariablesIn: aCodeGen)"
 	| alreadyExplicitlyTyped effectiveNodes |
-	"selector = #transformColor: ifTrue:
-		[self halt]."
+	aCodeGen maybeBreakForTestToInline: selector in: self.
 	alreadyExplicitlyTyped := declarations keys asSet.
 	effectiveNodes := Dictionary new. "this for debugging"
 	parseTree nodesDo:
@@ -1278,34 +1279,23 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 		[methArgs := methArgs allButFirst].
 	methArgs size = aSendNode args size ifFalse:
 		[^nil].
-	methArgs with: aSendNode args do:
-		[:formal :actual|
-		(actual isVariable
-		and: [(aCodeGen
-				variableOfType: (self typeFor: formal using: aCodeGen)
-				acceptsValueOfType: (self typeFor: actual name in: aCodeGen)) not]) ifTrue:
-			[aCodeGen logger
-				nextPutAll:
-					'type mismatch for formal ', formal, ' and actual ', actual name,
-					' when inlining ', sel, ' in ', selector, '. Use a cast.';
-				cr; flush]]. 
 	meth := meth copy.
 
 	"Propagate the return type of an inlined method"
-	(directReturn or:[exitVar notNil]) ifTrue:[
-		exitType := directReturn 
-			ifTrue:[returnType] 
-			ifFalse:[(self typeFor: exitVar in: aCodeGen) ifNil:[#sqInt]].
-		(exitType = #void or:[exitType = meth returnType]) 
-			ifFalse:[meth propagateReturnIn: aCodeGen]].
+	(directReturn or: [exitVar notNil]) ifTrue:
+		[exitType := directReturn 
+						ifTrue: [returnType] 
+						ifFalse: [(self typeFor: exitVar in: aCodeGen) ifNil: [#sqInt]].
+		(exitType = #void or: [exitType = meth returnType]) ifFalse:
+			[meth propagateReturnIn: aCodeGen]].
 
 	meth renameVarsForInliningInto: self except: #() in: aCodeGen.
 	meth renameLabelsForInliningInto: self.
 	self addVarsDeclarationsAndLabelsOf: meth except: #().
-	meth hasReturn ifTrue:[
-		directReturn ifFalse:[
-			exitLabel := self unusedLabelForInliningInto: self.
-			(meth exitVar: exitVar label: exitLabel) "is label used?"
+	meth hasReturn ifTrue:
+		[directReturn ifFalse:
+			[exitLabel := self unusedLabelForInliningInto: self.
+			 (meth exitVar: exitVar label: exitLabel) "is label used?"
 				ifTrue: [ labels add: exitLabel ]
 				ifFalse: [ exitLabel := nil ]]].
 	(inlineStmts := OrderedCollection new: 100)
@@ -1507,6 +1497,10 @@ TMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: aCod
 					node isSend and: [aCodeGen isAssertSelector: node selector]]]) ifTrue:
 			[^true].
 		^targetMeth maySubstituteGlobal: aNode name in: aCodeGen].
+
+	"don't much up asserts with complex expansions"
+	(targetMeth usesVariableUninlinably: argName in: aCodeGen) ifTrue:
+		[^false].
 
 	"For now allow literal blocks to be substituted.  They better be accessed only
 	 with value[:value:*] messages though!"
@@ -1712,6 +1706,28 @@ TMethod >> newCascadeTempFor: aTParseNode [
 { #category : #accessing }
 TMethod >> newDeclarations: aDictionary [
 	declarations := aDictionary
+]
+
+{ #category : #inlining }
+TMethod >> node: exprNode typeCompatibleWith: argName inliningInto: inlineSelector in: aCodeGen [
+	"Answer either exprNode or, iff argName is typed and exprNode is untyped, a cast of exprNode to the type of argName."
+	| formalType actualType |
+	^((exprNode isSend or: [exprNode isVariable])
+	   and: [(formalType := self typeFor: argName in: aCodeGen) notNil
+	   and: [(actualType := aCodeGen typeFor: exprNode in: self) isNil
+			or: [(aCodeGen variableOfType: formalType acceptsValueOfType: actualType) not]]])
+		ifTrue: [aCodeGen nodeToCast: exprNode to: formalType]
+		ifFalse:
+			[((exprNode isSend or: [exprNode isVariable])
+			  and: [(aCodeGen
+					variableOfType: (aCodeGen typeFor: exprNode in: self)
+					acceptsValueOfType: (self typeFor: argName in: aCodeGen)) not]) ifTrue:
+				[aCodeGen logger
+					nextPutAll:
+						'type mismatch for formal ', argName, ' and actual ', exprNode asString,
+						' when inlining ', inlineSelector, ' in ', selector, '. Use a cast.';
+					cr; flush]. 
+			exprNode]
 ]
 
 { #category : #utilities }
@@ -2218,9 +2234,11 @@ TMethod >> returnType [
 
 { #category : #accessing }
 TMethod >> returnType: aString [
-	"Set the type of the values returned by this method. This string will be used in the C declaration of this function."
+	"Set the type of the values returned by this method.
+	 This string will be used in the C declaration of this function.
+	 If the type exists as a symbol, use that."
 
-	returnType := aString
+	returnType := (Symbol findInterned: aString) ifNil: [aString]
 ]
 
 { #category : #accessing }
@@ -2443,7 +2461,7 @@ TMethod >> transformToStructClassMethodFor: aCCodeGenerator [
 	 as this causes serious type redefinitions ``somewhere'' in the inliner."
 	| replacements selfNode typeForSelf |
 	self isStructAccessor ifTrue:
-		[^returnType := definingClass returnTypeForAccessor: selector].
+		[^self returnType: (definingClass returnTypeForAccessor: selector)].
 	replacements := IdentityDictionary new.
 	selfNode := TVariableNode new setName: 'self_in_', (aCCodeGenerator cFunctionNameFor: selector).
 	args do:
@@ -2568,13 +2586,6 @@ TMethod >> typeFor: aVariable in: aCodeGen [
 ]
 
 { #category : #utilities }
-TMethod >> typeFor: aVariable using: aCCodeGen [
-	"Answer the type for aVariable.  Answer nil for variables without types.  nil for
-	 typelessness is required by the type propagation logic in inlineSend:directReturn:exitVar:in:."
-	^aCCodeGen extractTypeFor: aVariable fromDeclaration: (declarations at: aVariable asString ifAbsent: [^nil])
-]
-
-{ #category : #utilities }
 TMethod >> typeForSelf [
 	self assert: definingClass notNil.
 	^[definingClass typeForSelf]
@@ -2609,6 +2620,19 @@ TMethod >> unusedNamePrefixedBy: aString avoiding: usedNames [
 	].
 	usedNames add: newVarName.
 	^ newVarName
+]
+
+{ #category : #inlining }
+TMethod >> usesVariableUninlinably: argName in: aCodeGen [
+	^parseTree anySatisfy:
+		[:node|
+		node isSend
+		and: [(aCodeGen isAssertSelector: node selector)
+		and: [node args anySatisfy:
+				[:argNode|
+				 argNode anySatisfy:
+					[:subNode|
+					 subNode isVariable and: [subNode name = argName]]]]]]
 ]
 
 { #category : #utilities }
