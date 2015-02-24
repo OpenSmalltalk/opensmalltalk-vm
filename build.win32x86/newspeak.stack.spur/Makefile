@@ -27,7 +27,7 @@ BUILD:=buildast
 else
 BUILD:=builddbg
 endif
-PLUGINSRCDIR:= ../../nscogsrc
+PLUGINSRCDIR:= ../../nsspursrc
 VMSRCDIR:= ../../nsspurstacksrc
 BLDDIR:= $(BASEDIR)/$(BUILD)
 OBJDIR:= $(BLDDIR)/vm

@@ -31,11 +31,11 @@
 # define warnMNUBreak() warning("MNU breakpoint")
 #endif
 
-#if PRODUCTION /* default for no send breakpoint. */
+#if PRODUCTION && !SENDTRACE /* default for no send breakpoint. */
 # define sendBreakpointreceiver(sel, len, rcvr) 0
 # define mnuBreakpointreceiver(sel, len, rcvr) 0
 
-#elif 0 /* send tracing.  */
+#elif SENDTRACE /* send tracing.  */
 # define sendBreakpointreceiver(sel, len, rcvr) do { \
 	if (sendTrace) \
 		printf("%.*s\n", len, (char *)(sel)); \

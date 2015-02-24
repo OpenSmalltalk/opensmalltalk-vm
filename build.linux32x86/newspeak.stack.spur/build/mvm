@@ -22,7 +22,7 @@ n|no|N|NO)	echo "ok but this isn't safe!!";;
 esac
 test -f config.h || ../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
-		--with-src=nsspurstacksrc  --with-plugins=nscogsrc/plugins --disable-cogit \
+		--with-src=nsspurstacksrc  --with-plugins=nsspursrc/plugins --disable-cogit \
 		--without-vm-display-fbdev --without-npsqueak \
 	CC="gcc -m32" \
 	CXX="g++ -m32" \

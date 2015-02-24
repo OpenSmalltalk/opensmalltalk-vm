@@ -609,7 +609,7 @@
 				A27729370CE7A8D300ABAFCA /* ZipPlugin.c */,
 			);
 			name = plugins;
-			path = ../../nscogsrc/plugins;
+			path = ../../nsspursrc/plugins;
 			sourceTree = "<group>";
 		};
 		738FB1E80EE4CF4B004BEE42 /* IA32ABI */ = {
