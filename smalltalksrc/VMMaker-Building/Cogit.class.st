@@ -4813,6 +4813,12 @@ Cogit >> framePointerAddress [
 	^coInterpreter framePointerAddress
 ]
 
+{ #category : #'jit - api' }
+Cogit >> freeMethod: cogMethod [
+	<doNotGenerate>
+	methodZone freeMethod: cogMethod
+]
+
 { #category : #compaction }
 Cogit >> freePICsWithFreedTargets [
 	| cogMethod count |
