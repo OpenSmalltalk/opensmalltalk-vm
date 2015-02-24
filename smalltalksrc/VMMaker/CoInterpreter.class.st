@@ -2285,7 +2285,7 @@ CoInterpreter >> contextInstructionPointer: theIP frame: theFP [
 
 { #category : #'frame access' }
 CoInterpreter >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
-	<var: #cogHomeMethod type: #'CogHomeMethod *'>
+	<var: #cogHomeMethod type: #'CogMethod *'>
 	<returnTypeC: #usqInt>
 	"Convert the current interpreter frame into a machine code frame
 	 and answer the machine code pc matching bcpc."
