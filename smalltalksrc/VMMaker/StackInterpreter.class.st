@@ -9475,11 +9475,15 @@ StackInterpreter >> maybeInlinePositive32BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: ClassLargePositiveIntegerCompactIndex
 							format: (objectMemory byteFormatForNumBytes: 4)
 							numSlots: 1.
-	objectMemory
-		storeByte: 3 ofObject: newLargeInteger withValue: (integerValue >> 24 bitAnd: 16rFF);
-		storeByte: 2 ofObject: newLargeInteger withValue: (integerValue >> 16 bitAnd: 16rFF);
-		storeByte: 1 ofObject: newLargeInteger withValue: (integerValue >>   8 bitAnd: 16rFF);
-		storeByte: 0 ofObject: newLargeInteger withValue: (integerValue ">> 0" bitAnd: 16rFF).
+	self cppIf: VMBIGENDIAN
+		ifTrue:
+			[objectMemory
+				storeByte: 3 ofObject: newLargeInteger withValue: (integerValue >> 24 bitAnd: 16rFF);
+				storeByte: 2 ofObject: newLargeInteger withValue: (integerValue >> 16 bitAnd: 16rFF);
+				storeByte: 1 ofObject: newLargeInteger withValue: (integerValue >>   8 bitAnd: 16rFF);
+				storeByte: 0 ofObject: newLargeInteger withValue: (integerValue ">> 0" bitAnd: 16rFF)]
+		ifFalse:
+			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: integerValue].
 	^newLargeInteger
 ]
 
@@ -9816,10 +9820,15 @@ StackInterpreter >> noInlineSigned32BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: largeClass
 							format: (objectMemory byteFormatForNumBytes: 4)
 							numSlots: 1.
-	objectMemory storeByte: 3 ofObject: newLargeInteger withValue: ((value >> 24) bitAnd: 16rFF).
-	objectMemory storeByte: 2 ofObject: newLargeInteger withValue: ((value >> 16) bitAnd: 16rFF).
-	objectMemory storeByte: 1 ofObject: newLargeInteger withValue: ((value >> 8) bitAnd: 16rFF).
-	objectMemory storeByte: 0 ofObject: newLargeInteger withValue: (value bitAnd: 16rFF).
+	self cppIf: VMBIGENDIAN
+		ifTrue:
+			[objectMemory
+				storeByte: 3 ofObject: newLargeInteger withValue: ((value >> 24) bitAnd: 16rFF);
+				storeByte: 2 ofObject: newLargeInteger withValue: ((value >> 16) bitAnd: 16rFF);
+				storeByte: 1 ofObject: newLargeInteger withValue: ((value >> 8) bitAnd: 16rFF);
+				storeByte: 0 ofObject: newLargeInteger withValue: (value bitAnd: 16rFF)]
+		ifFalse:
+			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: value].
 	^newLargeInteger
 ]
 
@@ -10154,15 +10163,19 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: ClassLargePositiveIntegerCompactIndex
 							format: (objectMemory byteFormatForNumBytes: sz)
 							numSlots: 8 / objectMemory bytesPerOop.
-	objectMemory
-		storeByte: 7 ofObject: newLargeInteger withValue: (integerValue >> 56 bitAnd: 16rFF);
-		storeByte: 6 ofObject: newLargeInteger withValue: (integerValue >> 48 bitAnd: 16rFF);
-		storeByte: 5 ofObject: newLargeInteger withValue: (integerValue >> 40 bitAnd: 16rFF);
-		storeByte: 4 ofObject: newLargeInteger withValue: (integerValue >> 32 bitAnd: 16rFF);
-		storeByte: 3 ofObject: newLargeInteger withValue: (integerValue >> 24 bitAnd: 16rFF);
-		storeByte: 2 ofObject: newLargeInteger withValue: (integerValue >> 16 bitAnd: 16rFF);
-		storeByte: 1 ofObject: newLargeInteger withValue: (integerValue >>   8 bitAnd: 16rFF);
-		storeByte: 0 ofObject: newLargeInteger withValue: (integerValue ">> 0" bitAnd: 16rFF).
+	self cppIf: VMBIGENDIAN
+		ifTrue:
+			[objectMemory
+				storeByte: 7 ofObject: newLargeInteger withValue: (integerValue >> 56 bitAnd: 16rFF);
+				storeByte: 6 ofObject: newLargeInteger withValue: (integerValue >> 48 bitAnd: 16rFF);
+				storeByte: 5 ofObject: newLargeInteger withValue: (integerValue >> 40 bitAnd: 16rFF);
+				storeByte: 4 ofObject: newLargeInteger withValue: (integerValue >> 32 bitAnd: 16rFF);
+				storeByte: 3 ofObject: newLargeInteger withValue: (integerValue >> 24 bitAnd: 16rFF);
+				storeByte: 2 ofObject: newLargeInteger withValue: (integerValue >> 16 bitAnd: 16rFF);
+				storeByte: 1 ofObject: newLargeInteger withValue: (integerValue >>   8 bitAnd: 16rFF);
+				storeByte: 0 ofObject: newLargeInteger withValue: (integerValue ">> 0" bitAnd: 16rFF)]
+		ifFalse:
+			[objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: integerValue].
 	^newLargeInteger
 
 ]
@@ -13270,17 +13283,23 @@ StackInterpreter >> signed64BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: largeClass
 							format: (objectMemory byteFormatForNumBytes: sz)
 							numSlots: sz + 3 // objectMemory bytesPerOop.
-	sz > 4 ifTrue:
-		[objectMemory
-			storeByte: 7 ofObject: newLargeInteger withValue: (magnitude >> 56 bitAnd: 16rFF);
-			storeByte: 6 ofObject: newLargeInteger withValue: (magnitude >> 48 bitAnd: 16rFF);
-			storeByte: 5 ofObject: newLargeInteger withValue: (magnitude >> 40 bitAnd: 16rFF);
-			storeByte: 4 ofObject: newLargeInteger withValue: (magnitude >> 32 bitAnd: 16rFF)].
-	objectMemory
-		storeByte: 3 ofObject: newLargeInteger withValue: (magnitude >> 24 bitAnd: 16rFF);
-		storeByte: 2 ofObject: newLargeInteger withValue: (magnitude >> 16 bitAnd: 16rFF);
-		storeByte: 1 ofObject: newLargeInteger withValue: (magnitude >>   8 bitAnd: 16rFF);
-		storeByte: 0 ofObject: newLargeInteger withValue: (magnitude ">> 0" bitAnd: 16rFF).
+	self cppIf: VMBIGENDIAN
+		ifTrue:
+			[sz > 4 ifTrue:
+				[objectMemory
+					storeByte: 7 ofObject: newLargeInteger withValue: (magnitude >> 56 bitAnd: 16rFF);
+					storeByte: 6 ofObject: newLargeInteger withValue: (magnitude >> 48 bitAnd: 16rFF);
+					storeByte: 5 ofObject: newLargeInteger withValue: (magnitude >> 40 bitAnd: 16rFF);
+					storeByte: 4 ofObject: newLargeInteger withValue: (magnitude >> 32 bitAnd: 16rFF)].
+			objectMemory
+				storeByte: 3 ofObject: newLargeInteger withValue: (magnitude >> 24 bitAnd: 16rFF);
+				storeByte: 2 ofObject: newLargeInteger withValue: (magnitude >> 16 bitAnd: 16rFF);
+				storeByte: 1 ofObject: newLargeInteger withValue: (magnitude >>   8 bitAnd: 16rFF);
+				storeByte: 0 ofObject: newLargeInteger withValue: (magnitude ">> 0" bitAnd: 16rFF)]
+		ifFalse:
+			[sz > 4 ifTrue:
+				[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: magnitude >> 32].
+			objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: magnitude].
 	^newLargeInteger
 ]
 
