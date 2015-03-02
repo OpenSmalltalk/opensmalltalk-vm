@@ -6508,7 +6508,6 @@ CoInterpreter >> transferTo: newProc from: sourceCode [
 	 and to cope with possible code compaction in makeBaseFrameFor:."
 	| activeContext sched oldProc |
 	<inline: false>
-	self recordContextSwitchFrom: self activeProcess in: sourceCode.
 	statProcessSwitch := statProcessSwitch + 1.
 	self push: instructionPointer.
 	self externalWriteBackHeadFramePointers.
@@ -6519,6 +6518,7 @@ CoInterpreter >> transferTo: newProc from: sourceCode [
 	instructionPointer := 0.
 	sched := self schedulerPointer.
 	oldProc := objectMemory fetchPointer: ActiveProcessIndex ofObject: sched.
+	self recordContextSwitchFrom: oldProc in: sourceCode.
 	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer + objectMemory wordSize.
 	objectMemory storePointer: SuspendedContextIndex ofObject: oldProc withValue: activeContext.
 	objectMemory storePointer: ActiveProcessIndex ofObject: sched withValue: newProc.
