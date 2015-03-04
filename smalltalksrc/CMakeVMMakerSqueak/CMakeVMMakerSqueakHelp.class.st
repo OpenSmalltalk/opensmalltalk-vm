@@ -19,5 +19,5 @@ CMakeVMMakerSqueakHelp class >> key [
 
 { #category : #accessing }
 CMakeVMMakerSqueakHelp class >> pages [
-	^#( CMakeVMMakerSqueakStartHereHelp CMakeVMMakerSqueakDeveloperHelp )
+	^#( CMakeVMMakerSqueakStartHereHelp CMakeVMMakerSqueakExampleWorkflowHelp CMakeVMMakerSqueakDeveloperHelp )
 ]
