@@ -1733,9 +1733,9 @@ CogVMSimulator >> ioMicroMSecs [
 { #category : #'I/O primitives' }
 CogVMSimulator >> ioMousePoint [
 	| relPt |
-	^displayForm == nil
-		ifTrue: [99 < 16 + 66]
-		ifFalse: [relPt := Sensor cursorPoint - self displayLocation.
+	^displayForm
+		ifNil: [99 << 16 + 66]
+		ifNotNil: [relPt := Sensor cursorPoint - self displayLocation.
 				relPt x << 16 + relPt y]
 ]
 
