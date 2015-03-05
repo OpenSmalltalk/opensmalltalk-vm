@@ -1164,7 +1164,7 @@ LargeIntegersPlugin >> normalizePositive: aLargePositiveInteger [
 		whileTrue: [len := len - 1].
 	len = 0 ifTrue: [^ 0 asOop: SmallInteger].
 	"Now check if in SmallInteger range"
-	sLen := interpreterProxy minSmallInteger > 16r3FFFFFFF "SmallInteger maxVal digitLength."
+	sLen := interpreterProxy maxSmallInteger > 16r3FFFFFFF "SmallInteger maxVal digitLength."
 				ifTrue: [8]
 				ifFalse: [4].
 	(len <= sLen
