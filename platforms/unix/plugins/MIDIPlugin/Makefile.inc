@@ -1,1 +1,1 @@
-XLDFLAGS= -lasound
+XLDFLAGS=   -lasound

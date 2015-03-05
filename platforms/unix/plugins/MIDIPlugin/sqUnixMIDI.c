@@ -34,9 +34,15 @@
 #include "MIDIPlugin.h"
 
 #include "config.h"
+#include "debug.h"
 
+/* this simply doesn't work */
 #if defined(USE_MIDI_ALSA)
 # include "sqUnixMIDIALSA.inc"
 #else
+
 # include "sqUnixMIDINone.inc"
 #endif
+
+
+/* # include "sqUnixMIDIALSA.inc" */
