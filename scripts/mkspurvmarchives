@@ -50,7 +50,7 @@ test -n "$TAG" || TAG=`date +%y.%U.`$REV
 echo REV=$REV TAG=$TAG
 
 if [ -n "$CL" ]; then
-	for archive in cogspurlinuxht; do
+	for archive in cogspurlinux cogspurlinuxht; do
 		rm -rf $archive-$TAG.tgz
 		echo $archive '=>' $archive-$TAG.tgz
 		COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $archive

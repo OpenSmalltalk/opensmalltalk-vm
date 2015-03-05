@@ -112,7 +112,7 @@ echo REV=$REV TAG=$TAG
 ARCHIVES=
 test -n "$LCOG" && ARCHIVES="$ARCHIVES	coglinux-$TAG.tgz	coglinuxht-$TAG.tgz"
 test -n "$LTCOG" && ARCHIVES="$ARCHIVES	cogmtlinuxht-$TAG.tgz"
-test -n "$LSPUR" && ARCHIVES="$ARCHIVES	cogspurlinuxht-$TAG.tgz"
+test -n "$LSPUR" && ARCHIVES="$ARCHIVES	cogspurlinux-$TAG.tgz	cogspurlinuxht-$TAG.tgz"
 test -n "$LTSPUR" && ARCHIVES="$ARCHIVES	cogspurmtlinuxht-$TAG.tgz"
 test -n "$MCOG" && ARCHIVES="$ARCHIVES	Cog.app-$TAG.tgz	CogSpur.app-$TAG.tgz"
 test -n "$MTCOG" && ARCHIVES="$ARCHIVES	CogMT.app-$TAG.tgz"
