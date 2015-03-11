@@ -903,7 +903,7 @@ SpurBootstrap >> fillInCompiledMethod: newObj from: oldObj [
 				storeByte: firstByteIndex + 0 ofObject: newObj withValue: 139;
 				storeByte: firstByteIndex + 1 ofObject: newObj withValue: (primIndex bitAnd: 255);
 				storeByte: firstByteIndex + 2 ofObject: newObj withValue: (primIndex bitShift: -8).
-			 firstByteIndex to: (oldHeap numBytesOf: oldObj) - 1 do:
+			 firstByteIndex to: (oldHeap numBytesOfBytes: oldObj) - 1 do:
 				[:i|
 				newHeap storeByte: i + 3 ofObject: newObj withValue: (oldHeap fetchByte: i ofObject: oldObj)]]
 		ifFalse:
