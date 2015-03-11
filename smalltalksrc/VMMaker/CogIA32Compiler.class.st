@@ -145,7 +145,7 @@ CogIA32Compiler >> cResultRegister [
 	^self abstractRegisterForConcreteRegister: EAX
 ]
 
-{ #category : #assertions }
+{ #category : #accessing }
 CogIA32Compiler >> callInstructionByteSize [
 	^5
 ]

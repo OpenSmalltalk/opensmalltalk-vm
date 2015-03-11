@@ -1968,7 +1968,7 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 		arg: nil
 		arg: nil
 		saveRegs: false
-		pushLinkReg: true
+		pushLinkReg: false "The LinkReg has already been pushed in the abort sequence."
 		resultReg: nil.
 	jumpSICMiss jmpTarget: self Label.
 	backEnd genPushRegisterArgsForAbortMissNumArgs: numArgs.
@@ -1980,7 +1980,7 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 		arg: nil
 		arg: nil
 		saveRegs: false
-		pushLinkReg: true
+		pushLinkReg: false "The LinkReg has already been pushed in the abort sequence."
 		resultReg: nil
 		appendOpcodes: true
 ]
@@ -3562,9 +3562,7 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 				[self PopR: LinkReg].
 			 self RetN: methodOrBlockNumArgs + 1 * objectMemory wordSize]
 		ifFalse:
-			[backEnd hasLinkRegister ifTrue:
-				[self PopR: LinkReg].
-			 self RetN: ((methodOrBlockNumArgs > self numRegArgs
+			[self RetN: ((methodOrBlockNumArgs > self numRegArgs
 						"A method with an interpreter prim will push its register args for the prim.  If the failure
 						 body is frameless the args must still be popped, see e.g. Behavior>>nextInstance."
 						or: [regArgsHaveBeenPushed])
