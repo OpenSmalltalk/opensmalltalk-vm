@@ -292,7 +292,10 @@ InterpreterPrimitives >> magnitude64BitIntegerFor: magnitude neg: isNegative [
 		ifFalse:
 			[sz > 4 ifTrue:
 				[objectMemory storeLong32: 1 ofObject: newLargeInteger withValue: magnitude >> 32].
-			objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: magnitude].
+			objectMemory
+				storeLong32: 0
+				ofObject: newLargeInteger
+				withValue: (self cCode: [magnitude] inSmalltalk: [magnitude bitAnd: 16rFFFFFFFF])].
 
 	^newLargeInteger
 ]
@@ -300,7 +303,7 @@ InterpreterPrimitives >> magnitude64BitIntegerFor: magnitude neg: isNegative [
 { #category : #'primitive support' }
 InterpreterPrimitives >> magnitude64BitValueOf: oop [
 	"Convert the given object into an integer value.
-	The object may be either a positive SmallInteger or a eight-byte LargeInteger."
+	The object may be either a positive SmallInteger or an eight-byte LargeInteger."
 	| sz value ok smallIntValue |
 	<returnTypeC: #usqLong>
 	<var: #value type: #usqLong>
@@ -311,7 +314,8 @@ InterpreterPrimitives >> magnitude64BitValueOf: oop [
 		^self cCoerce: smallIntValue to: #usqLong].
 
 	(objectMemory isNonIntegerImmediate: oop) ifTrue:
-		[^self primitiveFail].
+		[self primitiveFail.
+		 ^0].
 
 	ok := objectMemory isClassOfNonImm: oop
 					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
@@ -321,14 +325,17 @@ InterpreterPrimitives >> magnitude64BitValueOf: oop [
 			[ok := objectMemory isClassOfNonImm: oop
 							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
 							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
-			ok ifFalse: [^self primitiveFail]].
-	sz := objectMemory numBytesOf: oop.
+			ok ifFalse:
+				[self primitiveFail.
+				 ^0]].
+	sz := objectMemory numBytesOfBytes: oop.
 	sz > (self sizeof: #sqLong) ifTrue:
-		[^self primitiveFail].
+		[self primitiveFail.
+		 ^0].
 
-	value := 0.
-	0 to: sz - 1 do: [:i |
-		value := value + ((self cCoerce: (objectMemory fetchByte: i ofObject: oop) to: #sqLong) <<  (i*8))].
+	value := objectMemory fetchByte: sz - 1 ofObject: oop.
+	sz - 2 to: 0 by: -1 do:
+		[:i | value := value << 8 + (objectMemory fetchByte: i ofObject: oop)].
 	^value
 ]
 
@@ -337,11 +344,11 @@ InterpreterPrimitives >> positive32BitValueOf: oop [
 	"Convert the given object into an integer value.
 	The object may be either a positive SmallInteger or a four-byte LargePositiveInteger."
 	<returnTypeC: #usqInt>
-	| value ok |
+	| value ok sz |
 	(objectMemory isIntegerObject: oop) ifTrue:
 		[value := objectMemory integerValueOf: oop.
-		value < 0 ifTrue: [self primitiveFail. value := 0].
-		^value].
+		 value < 0 ifTrue: [self primitiveFail. value := 0].
+		 ^value].
 
 	(objectMemory isNonIntegerImmediate: oop) ifTrue:
 		[self primitiveFail.
@@ -350,13 +357,21 @@ InterpreterPrimitives >> positive32BitValueOf: oop [
 	ok := objectMemory isClassOfNonImm: oop
 			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
 			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
-	(ok and: [(objectMemory lengthOf: oop) = 4]) ifFalse:
+	ok ifFalse:
 		[self primitiveFail.
 		 ^0].
-	^(objectMemory fetchByte: 0 ofObject: oop)
-	+ ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
-	+ ((objectMemory fetchByte: 2 ofObject: oop) << 16)
-	+ ((objectMemory fetchByte: 3 ofObject: oop) << 24)
+	sz := objectMemory numBytesOfBytes: oop.
+	sz > 4 ifTrue:
+		[self primitiveFail.
+		 ^0].
+	^self cppIf: VMBIGENDIAN
+		ifTrue:
+			[   (objectMemory fetchByte: 0 ofObject: oop)
+			+ ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
+			+ ((objectMemory fetchByte: 2 ofObject: oop) << 16)
+			+ ((objectMemory fetchByte: 3 ofObject: oop) << 24)]
+		ifFalse:
+			[objectMemory fetchLong32: 0 ofObject: oop]
 ]
 
 { #category : #'primitive support' }
@@ -380,7 +395,11 @@ InterpreterPrimitives >> positive64BitValueOf: oop [
 			isClassOfNonImm: oop
 			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
 			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
-	(ok and: [(sz := objectMemory numBytesOf: oop) <= (self sizeof: #sqLong)]) ifFalse:
+	ok ifFalse:
+		[self primitiveFail.
+		 ^0].
+	sz := objectMemory numBytesOfBytes: oop.
+	sz > (self sizeof: #sqLong) ifTrue:
 		[self primitiveFail.
 		 ^0].
 
@@ -403,30 +422,44 @@ InterpreterPrimitives >> positiveMachineIntegerValueOf: oop [
 		^value].
 
 	(objectMemory isNonIntegerImmediate: oop) ifTrue:
-		[^self primitiveFail].
+		[self primitiveFail.
+		 ^0].
 
 	ok := objectMemory
 			isClassOfNonImm: oop
 			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
 			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
-	(ok and: [(bs := objectMemory numBytesOf: oop) <= (self sizeof: #'unsigned long')]) ifFalse:
-		[^self primitiveFail].
+	ok ifFalse:
+		[self primitiveFail.
+		 ^0].
+	bs := objectMemory numBytesOfBytes: oop.
+	bs > (self sizeof: #'unsigned long') ifTrue:
+		[self primitiveFail.
+		 ^0].
 
 	((self sizeof: #'unsigned long') = 8
 	and: [bs > 4]) ifTrue:
-		[^  (objectMemory fetchByte: 0 ofObject: oop)
-		 + ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
-		 + ((objectMemory fetchByte: 2 ofObject: oop) << 16)
-		 + ((objectMemory fetchByte: 3 ofObject: oop) << 24)
-		 + ((objectMemory fetchByte: 4 ofObject: oop) << 32)
-		 + ((objectMemory fetchByte: 5 ofObject: oop) << 40)
-		 + ((objectMemory fetchByte: 6 ofObject: oop) << 48)
-		 + ((objectMemory fetchByte: 7 ofObject: oop) << 56)].
-
-	^  (objectMemory fetchByte: 0 ofObject: oop)
-	+ ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
-	+ ((objectMemory fetchByte: 2 ofObject: oop) << 16)
-	+ ((objectMemory fetchByte: 3 ofObject: oop) << 24)
+		[^self cppIf: VMBIGENDIAN
+			ifTrue:
+				[    (objectMemory fetchByte: 0 ofObject: oop)
+				 + ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
+				 + ((objectMemory fetchByte: 2 ofObject: oop) << 16)
+				 + ((objectMemory fetchByte: 3 ofObject: oop) << 24)
+				 + ((objectMemory fetchByte: 4 ofObject: oop) << 32)
+				 + ((objectMemory fetchByte: 5 ofObject: oop) << 40)
+				 + ((objectMemory fetchByte: 6 ofObject: oop) << 48)
+				 + ((objectMemory fetchByte: 7 ofObject: oop) << 56)]
+			ifFalse:
+				[objectMemory fetchLong64: 0 ofObject: oop]]
+		ifFalse:
+			[^self cppIf: VMBIGENDIAN
+				ifTrue:
+					[    (objectMemory fetchByte: 0 ofObject: oop)
+					 + ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
+					 + ((objectMemory fetchByte: 2 ofObject: oop) << 16)
+					 + ((objectMemory fetchByte: 3 ofObject: oop) << 24)]
+				ifFalse:
+					[objectMemory fetchLong32: 0 ofObject: oop]]
 ]
 
 { #category : #'arithmetic integer primitives' }
@@ -608,11 +641,11 @@ InterpreterPrimitives >> primitiveAsCharacter [
 
 { #category : #'arithmetic float primitives' }
 InterpreterPrimitives >> primitiveAsFloat [
-	| arg |
-	arg := self popInteger.
-	self successful
-		ifTrue: [self pushFloat: arg asFloat]
-		ifFalse: [self unPop: 1]
+	"N.B. This will answer inexact results for integers with > 53 bits of magnitude."
+	| rcvr |
+	rcvr := self stackTop.
+	self assert: (objectMemory isIntegerObject: rcvr).
+	self pop: 1 thenPushFloat: (objectMemory integerValueOf: rcvr) asFloat
 ]
 
 { #category : #'indexing primitives' }
@@ -1002,7 +1035,7 @@ InterpreterPrimitives >> primitiveClipboardText [
 			[s := self stackTop.
 			 (objectMemory isBytes: s) ifFalse: [^ self primitiveFail].
 			 self successful ifTrue:
-				[sz := objectMemory numBytesOf: s.
+				[sz := objectMemory numBytesOfBytes: s.
 				 self clipboardWrite: sz From: s + objectMemory baseHeaderSize At: 0.
 				 self pop: 1]]
 		ifFalse:
@@ -1420,10 +1453,20 @@ InterpreterPrimitives >> primitiveEnterCriticalSection [
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveEqual [
 	| integerReceiver integerArgument result |
-	integerArgument := self popStack.
-	integerReceiver := self popStack.
-	result := self compare31or32Bits: integerReceiver equal: integerArgument.
-	self checkBooleanResult: result
+	integerArgument := self stackTop.
+	integerReceiver := self stackValue: 1.
+	(objectMemory areIntegers: integerReceiver and: integerArgument)
+		ifTrue: [self pop: 2 thenPushBool: integerReceiver = integerArgument]
+		ifFalse:
+			[result := objectMemory hasSixtyFourBitImmediates
+						ifTrue:
+							[(self signed64BitValueOf: integerReceiver)
+								= (self signed64BitValueOf: integerArgument)]
+						ifFalse:
+							[(self positiveMachineIntegerValueOf: integerReceiver)
+								= (self positiveMachineIntegerValueOf: integerArgument)].
+			 self successful ifTrue:
+				[self pop: 2 thenPushBool: result]]
 ]
 
 { #category : #'arithmetic largeint primitives' }
@@ -1861,9 +1904,14 @@ InterpreterPrimitives >> primitiveGetWindowSize [
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveGreaterOrEqual [
 	| integerReceiver integerArgument |
-	integerArgument := self popInteger.
-	integerReceiver := self popInteger.
-	self checkBooleanResult: integerReceiver >= integerArgument
+	integerArgument := self stackTop.
+	integerReceiver := self stackValue: 1.
+	(objectMemory areIntegers: integerReceiver and: integerArgument)
+		ifTrue: [self cCode: '' inSmalltalk:
+					[integerReceiver := objectMemory integerValueOf: integerReceiver.
+					 integerArgument := objectMemory integerValueOf: integerArgument].
+				self pop: 2 thenPushBool: integerReceiver >= integerArgument]
+		ifFalse: [self primitiveFail]
 ]
 
 { #category : #'arithmetic largeint primitives' }
@@ -1884,9 +1932,14 @@ InterpreterPrimitives >> primitiveGreaterOrEqualLargeIntegers [
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveGreaterThan [
 	| integerReceiver integerArgument |
-	integerArgument := self popInteger.
-	integerReceiver := self popInteger.
-	self checkBooleanResult: integerReceiver > integerArgument
+	integerArgument := self stackTop.
+	integerReceiver := self stackValue: 1.
+	(objectMemory areIntegers: integerReceiver and: integerArgument)
+		ifTrue: [self cCode: '' inSmalltalk:
+					[integerReceiver := objectMemory integerValueOf: integerReceiver.
+					 integerArgument := objectMemory integerValueOf: integerArgument].
+				self pop: 2 thenPushBool: integerReceiver > integerArgument]
+		ifFalse: [self primitiveFail]
 ]
 
 { #category : #'arithmetic largeint primitives' }
@@ -2274,9 +2327,14 @@ InterpreterPrimitives >> primitiveKbdPeek [
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveLessOrEqual [
 	| integerReceiver integerArgument |
-	integerArgument := self popInteger.
-	integerReceiver := self popInteger.
-	self checkBooleanResult: integerReceiver <= integerArgument
+	integerArgument := self stackTop.
+	integerReceiver := self stackValue: 1.
+	(objectMemory areIntegers: integerReceiver and: integerArgument)
+		ifTrue: [self cCode: '' inSmalltalk:
+					[integerReceiver := objectMemory integerValueOf: integerReceiver.
+					 integerArgument := objectMemory integerValueOf: integerArgument].
+				self pop: 2 thenPushBool: integerReceiver <= integerArgument]
+		ifFalse: [self primitiveFail]
 ]
 
 { #category : #'arithmetic largeint primitives' }
@@ -2297,9 +2355,14 @@ InterpreterPrimitives >> primitiveLessOrEqualLargeIntegers [
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveLessThan [
 	| integerReceiver integerArgument |
-	integerArgument := self popInteger.
-	integerReceiver := self popInteger.
-	self checkBooleanResult: integerReceiver < integerArgument
+	integerArgument := self stackTop.
+	integerReceiver := self stackValue: 1.
+	(objectMemory areIntegers: integerReceiver and: integerArgument)
+		ifTrue: [self cCode: '' inSmalltalk:
+					[integerReceiver := objectMemory integerValueOf: integerReceiver.
+					 integerArgument := objectMemory integerValueOf: integerArgument].
+				self pop: 2 thenPushBool: integerReceiver < integerArgument]
+		ifFalse: [self primitiveFail]
 ]
 
 { #category : #'arithmetic largeint primitives' }
@@ -2429,7 +2492,7 @@ InterpreterPrimitives >> primitiveMakePoint [
 	<inline: false>
 	| rcvr pt |
 	rcvr := self stackValue: 1.
-	((self isIntegerObject: rcvr) or: [self isFloatObject: rcvr]) ifFalse:
+	((objectMemory isIntegerObject: rcvr) or: [objectMemory isFloatObject: rcvr]) ifFalse:
 		[^self primitiveFail].
 	pt := objectMemory eeInstantiateSmallClass: (objectMemory splObj: ClassPoint) numSlots: YIndex + 1.
 	objectMemory
@@ -2706,10 +2769,20 @@ InterpreterPrimitives >> primitiveNoop [
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveNotEqual [
 	| integerReceiver integerArgument result |
-	integerArgument := self popStack.
-	integerReceiver := self popStack.
-	result := (self compare31or32Bits: integerReceiver equal: integerArgument) not.
-	self checkBooleanResult: result
+	integerArgument := self stackTop.
+	integerReceiver := self stackValue: 1.
+	(objectMemory areIntegers: integerReceiver and: integerArgument)
+		ifTrue: [self pop: 2 thenPushBool: integerReceiver ~= integerArgument]
+		ifFalse:
+			[result := objectMemory hasSixtyFourBitImmediates
+						ifTrue:
+							[(self signedMachineIntegerValueOf: integerReceiver)
+								~= (self signedMachineIntegerValueOf: integerArgument)]
+						ifFalse:
+							[(self positiveMachineIntegerValueOf: integerReceiver)
+								~= (self positiveMachineIntegerValueOf: integerArgument)].
+			 self successful ifTrue:
+				[self pop: 2 thenPushBool: result]]
 ]
 
 { #category : #'arithmetic largeint primitives' }
@@ -3363,17 +3436,16 @@ InterpreterPrimitives >> primitiveSignal [
 
 { #category : #'memory space primitives' }
 InterpreterPrimitives >> primitiveSignalAtBytesLeft [
-	"Set the low-water mark for free space. When the free space 
-	falls below this level, the new and new: primitives fail and 
-	system attempts to allocate space (e.g., to create a method 
-	context) cause the low-space semaphore (if one is 
-	registered) to be signalled."
+	"Set the low-water mark for free space. When the free space falls
+	 below this level, the new and new: primitives fail and system attempts
+	 to allocate space (e.g., to create a method context) cause the low-space
+	 semaphore (if one is registered) to be signalled."
 	| bytes |
-	bytes := self popInteger.
-	self successful
-		ifTrue: [objectMemory lowSpaceThreshold: bytes]
-		ifFalse: [objectMemory lowSpaceThreshold: 0.
-			self unPop: 1]
+	bytes := self stackTop.
+	((objectMemory isIntegerObject: bytes)
+	 and: [(bytes := objectMemory integerValueOf: bytes) >= 0])
+		ifTrue: [objectMemory lowSpaceThreshold: bytes. self pop: 1]
+		ifFalse: [self primitiveFailFor: PrimErrBadArgument]
 ]
 
 { #category : #'arithmetic float primitives' }
@@ -3476,7 +3548,7 @@ InterpreterPrimitives >> primitiveSlotAt [
 	fmt >= objectMemory firstByteFormat ifTrue:
 		[fmt >= objectMemory firstCompiledMethodFormat ifTrue:
 			[^self primitiveFailFor: PrimErrUnsupported].
-		 numSlots := objectMemory numBytesOf: rcvr.
+		 numSlots := objectMemory numBytesOfBytes: rcvr.
 		 (self asUnsigned: index) < numSlots ifTrue:
 			[self pop: argumentCount + 1 thenPushInteger: (objectMemory fetchByte: index ofObject: rcvr).
 			 ^0].
@@ -3546,7 +3618,7 @@ InterpreterPrimitives >> primitiveSlotAtPut [
 			[^self primitiveFailFor: PrimErrUnsupported].
 		 (self asUnsigned: value) > 16rFF ifTrue:
 			[^self primitiveFailFor: PrimErrBadArgument].
-		 numSlots := objectMemory numBytesOf: rcvr.
+		 numSlots := objectMemory numBytesOfBytes: rcvr.
 		 (self asUnsigned: index) < numSlots ifTrue:
 			[objectMemory storeByte: index ofObject: rcvr withValue: value.
 			 self pop: argumentCount + 1 thenPush: newValue.
@@ -4413,7 +4485,8 @@ InterpreterPrimitives >> signed32BitValueOf: oop [
 		[^objectMemory integerValueOf: oop].
 
 	(objectMemory isNonIntegerImmediate: oop) ifTrue:
-		[^self primitiveFail].
+		[self primitiveFail.
+		 ^0].
 
 	ok := objectMemory isClassOfNonImm: oop
 					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
@@ -4425,14 +4498,20 @@ InterpreterPrimitives >> signed32BitValueOf: oop [
 			 ok := objectMemory isClassOfNonImm: oop
 							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
 							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
-			ok ifFalse: [^self primitiveFail]].
-	(objectMemory numBytesOf: oop) > 4 ifTrue:
+			 ok ifFalse:
+				[self primitiveFail.
+				 ^0]].
+	(objectMemory numBytesOfBytes: oop) > 4 ifTrue:
 		[^self primitiveFail].
 
-	value :=  (objectMemory fetchByte: 0 ofObject: oop) +
-			  ((objectMemory fetchByte: 1 ofObject: oop) <<  8) +
-			  ((objectMemory fetchByte: 2 ofObject: oop) << 16) +
-			  ((objectMemory fetchByte: 3 ofObject: oop) << 24).
+	value := self cppIf: VMBIGENDIAN
+				ifTrue:
+					[ (objectMemory fetchByte: 0 ofObject: oop) +
+					 ((objectMemory fetchByte: 1 ofObject: oop) <<  8) +
+					 ((objectMemory fetchByte: 2 ofObject: oop) << 16) +
+					 ((objectMemory fetchByte: 3 ofObject: oop) << 24)]
+				ifFalse:
+					[objectMemory fetchLong32: 0 ofObject: oop].
 	self cCode: []
 		inSmalltalk:
 			[(value anyMask: 16r80000000) ifTrue:
@@ -4450,7 +4529,8 @@ InterpreterPrimitives >> signed32BitValueOf: oop [
 		 (negative and: [0 = (self cCode: [value << 1]
 									inSmalltalk: [value << 1 bitAnd: (1 << 32) - 1])]) ifTrue: 
 			[^value].
-		 ^self primitiveFail].
+		 self primitiveFail.
+		 ^0].
 	^negative
 		ifTrue: [0 - value]
 		ifFalse: [value]
@@ -4468,7 +4548,8 @@ InterpreterPrimitives >> signed64BitValueOf: oop [
 		[^self cCoerce: (objectMemory integerValueOf: oop) to: #sqLong].
 
 	(objectMemory isNonIntegerImmediate: oop) ifTrue:
-		[^self primitiveFail].
+		[self primitiveFail.
+		 ^0].
 
 	ok := objectMemory isClassOfNonImm: oop
 					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
@@ -4480,14 +4561,23 @@ InterpreterPrimitives >> signed64BitValueOf: oop [
 			 ok := objectMemory isClassOfNonImm: oop
 							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
 							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
-			ok ifFalse: [^self primitiveFail]].
-	sz := objectMemory numBytesOf: oop.
+			ok ifFalse:
+				[self primitiveFail.
+				 ^0]].
+	sz := objectMemory numBytesOfBytes: oop.
 	sz > (self sizeof: #sqLong) ifTrue:
-		[^self primitiveFail].
+		[self primitiveFail.
+		 ^0].
 
-	value := 0.
-	0 to: sz - 1 do: [:i |
-		value := value + ((self cCoerce: (objectMemory fetchByte: i ofObject: oop) to: #sqLong) <<  (i*8))].
+	self cppIf: VMBIGENDIAN
+		ifTrue:
+			[value := objectMemory fetchByte: sz - 1 ofObject: oop.
+			 sz - 2 to: 0 by: -1 do: [:i |
+				value := value << 8 + (objectMemory fetchByte: i ofObject: oop)]]
+		ifFalse:
+			[value := sz > 4
+						ifTrue: [objectMemory fetchLong64: 0 ofObject: oop]
+						ifFalse: [objectMemory fetchLong32: 0 ofObject: oop]].
 	"Filter out values out of range for the signed interpretation such as
 	16rFFFFFFFF... (positive w/ bit 64 set) and -16rFFFFFFFF... (negative w/ bit
 	64 set). Since the sign is implicit in the class we require that the high bit of
@@ -4507,7 +4597,8 @@ InterpreterPrimitives >> signed64BitValueOf: oop [
 		 (negative and: [0 = (self cCode: [value << 1]
 									inSmalltalk: [value << 1 bitAnd: (1 << 64) - 1])]) ifTrue: 
 			[^value].
-		 ^self primitiveFail].
+		 self primitiveFail.
+		 ^0].
 	^negative
 		ifTrue:[0 - value]
 		ifFalse:[value]
@@ -4542,22 +4633,28 @@ InterpreterPrimitives >> signedMachineIntegerValueOf: oop [
 		[^self primitiveFail].
 
 	((self sizeof: #'unsigned long') = 8
-	 and: [bs > 4])
-		ifTrue:
-			[value :=   (objectMemory fetchByte: 0 ofObject: oop)
-					+ ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
-					+ ((objectMemory fetchByte: 2 ofObject: oop) << 16)
-					+ ((objectMemory fetchByte: 3 ofObject: oop) << 24)
-					+ ((objectMemory fetchByte: 4 ofObject: oop) << 32)
-					+ ((objectMemory fetchByte: 5 ofObject: oop) << 40)
-					+ ((objectMemory fetchByte: 6 ofObject: oop) << 48)
-					+ ((objectMemory fetchByte: 7 ofObject: oop) << 56)]
+	and: [bs > 4]) ifTrue:
+		[value := self cppIf: VMBIGENDIAN
+					ifTrue:
+						[    (objectMemory fetchByte: 0 ofObject: oop)
+						 + ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
+						 + ((objectMemory fetchByte: 2 ofObject: oop) << 16)
+						 + ((objectMemory fetchByte: 3 ofObject: oop) << 24)
+						 + ((objectMemory fetchByte: 4 ofObject: oop) << 32)
+						 + ((objectMemory fetchByte: 5 ofObject: oop) << 40)
+						 + ((objectMemory fetchByte: 6 ofObject: oop) << 48)
+						 + ((objectMemory fetchByte: 7 ofObject: oop) << 56)]
+					ifFalse:
+						[objectMemory fetchLong64: 0 ofObject: oop]]
 		ifFalse:
-			[value :=   (objectMemory fetchByte: 0 ofObject: oop)
-					+ ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
-					+ ((objectMemory fetchByte: 2 ofObject: oop) << 16)
-					+ ((objectMemory fetchByte: 3 ofObject: oop) << 24)].
-
+			[value := self cppIf: VMBIGENDIAN
+						ifTrue:
+							[    (objectMemory fetchByte: 0 ofObject: oop)
+							 + ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
+							 + ((objectMemory fetchByte: 2 ofObject: oop) << 16)
+							 + ((objectMemory fetchByte: 3 ofObject: oop) << 24)]
+						ifFalse:
+							[objectMemory fetchLong32: 0 ofObject: oop]].
 	
 	self cCode: []
 		inSmalltalk:

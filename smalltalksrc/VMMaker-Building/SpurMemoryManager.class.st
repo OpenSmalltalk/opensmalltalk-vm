@@ -6050,9 +6050,11 @@ SpurMemoryManager >> isClassOfNonImm: oop equalTo: classOop compactClassIndex: k
 	self assert: (self isImmediate: oop) not.
 
 	ccIndex := self classIndexOf: oop.
-	knownClassIndex ~= 0 ifTrue:
-		[^knownClassIndex = ccIndex].
-	^classOop = (self classAtIndex: ccIndex)
+	knownClassIndex ~= 0
+		ifTrue:
+			[^knownClassIndex = ccIndex]
+		ifFalse:
+			[^classOop = (self classAtIndex: ccIndex)]
 ]
 
 { #category : #'object testing' }
@@ -8134,6 +8136,16 @@ SpurMemoryManager >> numBytesOf: objOop [
 		[^numBytes - ((fmt bitAnd: 3) << 1)].
 	"fmt >= self firstLongFormat"
 	^numBytes - ((fmt bitAnd: 1) << 2)
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> numBytesOfBytes: objOop [ 
+	"Answer the number of indexable bytes in the given non-immediate byte-indexable object."
+	| fmt |
+	<inline: true>
+	fmt := self formatOf: objOop.
+	self assert: fmt >= self firstByteFormat.
+	^(self numSlotsOf: objOop) << self shiftForWord - (fmt bitAnd: 7)
 ]
 
 { #category : #'object format' }

@@ -87,13 +87,14 @@ CArray >> at: offset put: val [
 CArray >> coerceTo: cTypeString sim: interpreterSimulator [
 
 	^cTypeString caseOf: {
-		['int']		-> [self ptrAddress].
-		['float *']	-> [self asCArrayAccessor asFloatAccessor].
-		['int *']		-> [self asCArrayAccessor asIntAccessor].
-		['char *']	-> [self shallowCopy unitSize: 1; yourself].
-		['unsigned']	-> [self ptrAddress].
-		['sqInt']		-> [self ptrAddress].
-		['usqInt']	-> [self ptrAddress] }
+		['int']				-> [self ptrAddress].
+		['float *']			-> [self asCArrayAccessor asFloatAccessor].
+		['int *']				-> [self asCArrayAccessor asIntAccessor].
+		['char *']			-> [self shallowCopy unitSize: 1; yourself].
+		['unsigned char *']	-> [self shallowCopy unitSize: 1; yourself].
+		['unsigned']			-> [self ptrAddress].
+		['sqInt']				-> [self ptrAddress].
+		['usqInt']			-> [self ptrAddress] }
 ]
 
 { #category : #converting }
