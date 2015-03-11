@@ -33,6 +33,7 @@ Class {
 		'traceOn',
 		'myBitBlt',
 		'displayForm',
+		'fakeForm',
 		'filesOpen',
 		'imageName',
 		'pluginList',
@@ -794,7 +795,7 @@ StackInterpreterSimulator >> initialize [
 	traceOn := true.
 	printSends := printReturns := printFrameAtEachStep := printBytecodeAtEachStep := false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
-	displayForm := 'Display has not yet been installed' asDisplayText form.
+	displayForm := fakeForm := 'Display has not yet been installed' asDisplayText form.
 	eventQueue := SharedQueue new.
 	suppressHeartbeatFlag := false.
 	systemAttributes := Dictionary new.
@@ -1079,11 +1080,13 @@ StackInterpreterSimulator >> ioScreenDepth [
 
 { #category : #'I/O primitives support' }
 StackInterpreterSimulator >> ioScreenSize [
-	"Return the screen extent packed into 32 bits."
-
-	^displayForm
-		ifNotNil: [(displayForm width << 16) + displayForm height]
-		ifNil: [savedWindowSize ifNil: 640 << 16 + 480]
+	"Answer the screen extent packed into 32 bits.  In the simulator,
+	 displayForm gets initialized with a fake form; don't be deceived."
+	| extent |
+	extent := (displayForm notNil and: [displayForm ~~ fakeForm])
+				ifTrue: [displayForm extent]
+				ifFalse: [self desiredDisplayExtent].
+	^extent x << 16 + extent y
 ]
 
 { #category : #'I/O primitives' }
