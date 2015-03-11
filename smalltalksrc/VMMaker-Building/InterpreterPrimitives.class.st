@@ -2873,28 +2873,6 @@ InterpreterPrimitives >> primitivePin [
 	self pop: argumentCount + 1 thenPush: wasPinned
 ]
 
-{ #category : #'object access primitives' }
-InterpreterPrimitives >> primitivePointX [
-	| rcvr | 
-	<inline: false>
-	rcvr := self popStack.
-	self assertClassOf: rcvr is: (objectMemory splObj: ClassPoint).
-	self successful
-		ifTrue: [self push: (objectMemory fetchPointer: XIndex ofObject: rcvr)]
-		ifFalse: [self unPop: 1]
-]
-
-{ #category : #'object access primitives' }
-InterpreterPrimitives >> primitivePointY [
-	| rcvr | 
-	<inline: false>
-	rcvr := self popStack.
-	self assertClassOf: rcvr is: (objectMemory splObj: ClassPoint).
-	self successful
-		ifTrue: [self push: (objectMemory fetchPointer: YIndex ofObject: rcvr)]
-		ifFalse: [self unPop: 1]
-]
-
 { #category : #'process primitives' }
 InterpreterPrimitives >> primitiveProcessBindToThreadId [
 	"Simulation only.  Fail."
