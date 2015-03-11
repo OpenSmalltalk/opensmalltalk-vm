@@ -230,6 +230,11 @@ CogARMCompiler >> cResultRegister [
 	^R0
 ]
 
+{ #category : #accessing }
+CogARMCompiler >> callInstructionByteSize [
+	^4
+]
+
 { #category : #'inline cacheing' }
 CogARMCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 	"Answer the address the call immediately preceeding callSiteReturnAddress will jump to."
