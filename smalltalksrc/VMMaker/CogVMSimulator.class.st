@@ -53,6 +53,7 @@ Class {
 		'traceOn',
 		'myBitBlt',
 		'displayForm',
+		'fakeForm',
 		'imageName',
 		'pluginList',
 		'mappedPluginEntries',
@@ -1402,7 +1403,7 @@ CogVMSimulator >> initialize [
 	traceOn := true.
 	printSends := printFrameAtEachStep := printBytecodeAtEachStep := false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
-	displayForm := 'Display has not yet been installed' asDisplayText form.
+	displayForm := fakeForm := 'Display has not yet been installed' asDisplayText form.
 	suppressHeartbeatFlag := deferSmash := deferredSmash := false.
 	systemAttributes := Dictionary new.
 	primTraceLog := CArrayAccessor on: (Array new: 256 withAll: 0).
@@ -1772,11 +1773,13 @@ CogVMSimulator >> ioScreenDepth [
 
 { #category : #'I/O primitives support' }
 CogVMSimulator >> ioScreenSize [
-	"Return the screen extent packed into 32 bits."
-
-	^displayForm
-		ifNotNil: [(displayForm width << 16) + displayForm height]
-		ifNil: [savedWindowSize ifNil: 640 << 16 + 480]
+	"Answer the screen extent packed into 32 bits.  In the simulator,
+	 displayForm gets initialized with a fake form; don't be deceived."
+	| extent |
+	extent := (displayForm notNil and: [displayForm ~~ fakeForm])
+				ifTrue: [displayForm extent]
+				ifFalse: [self desiredDisplayExtent].
+	^extent x << 16 + extent y
 ]
 
 { #category : #'I/O primitives' }

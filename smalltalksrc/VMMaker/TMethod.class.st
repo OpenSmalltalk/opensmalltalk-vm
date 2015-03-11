@@ -1809,8 +1809,11 @@ TMethod >> prepareMethodIn: aCodeGen [
 
 { #category : #'primitive compilation' }
 TMethod >> preparePrimitiveName [
-	"Prepare the selector for this method in translation"
+	"Prepare the selector for this method in translation.
+	 Remember the original selector in properties."
 	| aClass |
+	properties := properties copy.
+	properties selector: selector.
 	aClass := definingClass.
 	primitive = 117 
 		ifTrue:[selector := ((aClass includesSelector: selector)

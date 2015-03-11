@@ -552,6 +552,13 @@ CCodeGenerator >> arrayInitializerCalled: varName for: array sizeString: sizeStr
 ]
 
 { #category : #utilities }
+CCodeGenerator >> baseTypeForPointerType: aCType [
+	"Answer the type of the referent of a pointer type."
+	self assert: aCType last == $*.
+	^self baseTypeForType: aCType allButLast
+]
+
+{ #category : #utilities }
 CCodeGenerator >> baseTypeForType: aCType [
 	"Reduce various declarations to the most basic type we can determine."
 	| type fpIndex closeidx openidx |
