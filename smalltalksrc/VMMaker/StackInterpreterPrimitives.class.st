@@ -1143,7 +1143,7 @@ StackInterpreterPrimitives >> primitiveSlotAt [
 	fmt >= objectMemory firstByteFormat ifTrue:
 		[fmt >= objectMemory firstCompiledMethodFormat ifTrue:
 			[^self primitiveFailFor: PrimErrUnsupported].
-		 numSlots := objectMemory numBytesOf: rcvr.
+		 numSlots := objectMemory numBytesOfBytes: rcvr.
 		 (self asUnsigned: index) < numSlots ifTrue:
 			[self pop: argumentCount + 1 thenPushInteger: (objectMemory fetchByte: index ofObject: rcvr).
 			 ^0].
@@ -1213,7 +1213,7 @@ StackInterpreterPrimitives >> primitiveSlotAtPut [
 			[^self primitiveFailFor: PrimErrUnsupported].
 		 (self asUnsigned: value) > 16rFF ifTrue:
 			[^self primitiveFailFor: PrimErrBadArgument].
-		 numSlots := objectMemory numBytesOf: rcvr.
+		 numSlots := objectMemory numBytesOfBytes: rcvr.
 		 (self asUnsigned: index) < numSlots ifTrue:
 			[objectMemory storeByte: index ofObject: rcvr withValue: value.
 			 self pop: argumentCount + 1 thenPush: newValue.

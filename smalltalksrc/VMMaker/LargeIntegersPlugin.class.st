@@ -541,7 +541,7 @@ LargeIntegersPlugin >> cDigitLengthOfCSI: csi [
 			[^2].
 		 csi < 16777216 ifTrue:
 			[^3].
-		 interpreterProxy bytesPerOop = 4
+		 self cppIf: interpreterProxy bytesPerOop = 4
 			ifTrue:
 				[^4]
 			ifFalse:
@@ -560,7 +560,7 @@ LargeIntegersPlugin >> cDigitLengthOfCSI: csi [
 		[^2].
 	csi > -16777216 ifTrue:
 		[^3].
-	interpreterProxy bytesPerOop = 4
+	self cppIf: interpreterProxy bytesPerOop = 4
 		ifTrue:
 			[^4]
 		ifFalse:
@@ -614,8 +614,6 @@ LargeIntegersPlugin >> cDigitOfCSI: csi at: ix [
 	LargePositiveInteger uses bytes of base two number, and each is a       
 	      'digit' base 256."
 	"ST indexed!"
-	ix < 1 ifTrue: [interpreterProxy primitiveFail. ^0].
-	ix > interpreterProxy bytesPerOop ifTrue: [^0].
 	^self
 		cCode: [(csi < 0
 					ifTrue: [0 - csi]
@@ -920,6 +918,12 @@ LargeIntegersPlugin >> digitLength: oop [
 		ifFalse: [^ self byteSizeOfBytes: oop]
 ]
 
+{ #category : #util }
+LargeIntegersPlugin >> digitLengthOfNonImmediate: oop [
+	<inline: true>
+	^self byteSizeOfBytes: oop
+]
+
 { #category : #'oop functions' }
 LargeIntegersPlugin >> digitMontgomery: firstLarge times: secondLarge modulo: thirdLarge mInvModB: mInv [
 
@@ -976,10 +980,11 @@ LargeIntegersPlugin >> digitMultiplyLarge: firstInteger with: secondInteger nega
 
 { #category : #util }
 LargeIntegersPlugin >> digitOf: oop at: ix [ 
-	(interpreterProxy isIntegerObject: oop)
-		ifTrue: [^ self cDigitOfCSI: (interpreterProxy integerValueOf: oop)
-				at: ix]
-		ifFalse: [^ self digitOfBytes: oop at: ix]
+	(interpreterProxy isIntegerObject: oop) ifTrue:
+		[ix < 1 ifTrue: [interpreterProxy primitiveFail. ^0].
+		 ix > interpreterProxy bytesPerOop ifTrue: [^0].
+		 ^self cDigitOfCSI: (interpreterProxy integerValueOf: oop) at: ix].
+	^self digitOfBytes: oop at: ix
 ]
 
 { #category : #util }
@@ -1055,45 +1060,38 @@ LargeIntegersPlugin >> initialize [
 
 { #category : #'oop functions' }
 LargeIntegersPlugin >> isNormalized: anInteger [ 
-	| len maxVal minVal sLen class positive |
+	| len class positive pointer |
+	<var: #pointer type: #'unsigned char *'>
 	(interpreterProxy isIntegerObject: anInteger) ifTrue:
-		[^ true].
+		[^true].
 	class := interpreterProxy fetchClassOf: anInteger.
 	(positive := class = interpreterProxy classLargePositiveInteger) ifFalse:
 		[class = interpreterProxy classLargeNegativeInteger ifFalse:
 			[interpreterProxy primitiveFailFor: PrimErrBadArgument.
 			 ^false]].
+	pointer := interpreterProxy cCoerce: (interpreterProxy firstIndexableField: anInteger) to: #'unsigned char *'.
 	"Check for leading zero of LargeInteger"
-	len := self digitLength: anInteger.
-	len = 0 ifTrue:
-		[^ false].
-	(self unsafeByteOf: anInteger at: len) = 0 ifTrue:
-		[^ false].
+	len := self digitLengthOfNonImmediate: anInteger.
+	(len = 0 or: [(pointer at: len - 1) = 0]) ifTrue:
+		[^false].
 	"no leading zero, now check if anInteger is in SmallInteger range or not"
-	sLen := interpreterProxy bytesPerOop.
 	"maximal digitLength of aSmallInteger"
-	len > sLen ifTrue:
-		[^ true].
-	len < sLen ifTrue:
-		[^ false].
-	"len = sLen"
-	positive
-		ifTrue: [maxVal := interpreterProxy maxSmallInteger. "SmallInteger maxVal"
-				"all bytes of maxVal but the highest one are just FF's"
-				^ (self unsafeByteOf: anInteger at: sLen)
-					> (self cDigitOfCSI: maxVal at: sLen)]
-		ifFalse: [minVal := interpreterProxy minSmallInteger. "SmallInteger minVal"
-				"all bytes of minVal but the highest one are just 00's"
-			(self unsafeByteOf: anInteger at: sLen) < (self cDigitOfCSI: minVal at: sLen) ifTrue:
-				[^ false].
-			"if just one digit differs, then anInteger < minval (the corresponding digit byte is greater!)
-			and therefore a LargeNegativeInteger"
-			1
-				to: sLen
-				do: [:ix |
-					(self unsafeByteOf: anInteger at: ix) = (self cDigitOfCSI: minVal at: ix) ifFalse:
-						[^ true]]].
-	^ false
+	len ~= interpreterProxy bytesPerOop ifTrue:
+		[^len > interpreterProxy bytesPerOop].
+	positive ifTrue: "all bytes of but the highest one are just FF's"
+		[^(pointer at: interpreterProxy bytesPerOop - 1)
+			> (self cDigitOfCSI: interpreterProxy maxSmallInteger at: interpreterProxy bytesPerOop)].
+	"all bytes of but the highest one are just 00's"
+	(pointer at: interpreterProxy bytesPerOop - 1)
+	 < (self cDigitOfCSI: interpreterProxy minSmallInteger at: interpreterProxy bytesPerOop) ifTrue:
+		[^false].
+	"if just one digit differs, then anInteger < minval (the corresponding digit byte is greater!)
+	 and therefore a LargeNegativeInteger"
+	0 to: interpreterProxy bytesPerOop - 1 do:
+		[:ix |
+		(pointer at: ix) = (self cDigitOfCSI: interpreterProxy minSmallInteger at: ix + 1) ifFalse:
+			[^true]].
+	^false
 ]
 
 { #category : #util }
@@ -1116,74 +1114,71 @@ LargeIntegersPlugin >> normalize: aLargeInteger [
 LargeIntegersPlugin >> normalizeNegative: aLargeNegativeInteger [ 
 	"Check for leading zeroes and return shortened copy if so."
 	"First establish len = significant length."
-	| sLen val len oldLen minVal |
-	len := oldLen := self digitLength: aLargeNegativeInteger.
-	[len ~= 0 and: [(self unsafeByteOf: aLargeNegativeInteger at: len) = 0]]
-		whileTrue: [len := len - 1].
+	| sLen val len oldLen pointer |
+	len := oldLen := self digitLengthOfNonImmediate: aLargeNegativeInteger.
+	pointer := interpreterProxy
+				cCoerce: (interpreterProxy firstIndexableField: aLargeNegativeInteger)
+				to: #'unsigned char *'.
+	[len > 0 and: [(pointer at: len - 1) = 0]] whileTrue:
+		[len := len - 1].
 	len = 0 ifTrue: [^ 0 asOop: SmallInteger].
+
 	"Now check if in SmallInteger range"
 	sLen := interpreterProxy minSmallInteger < -16r40000000
 				ifTrue: [8]
-				ifFalse: [4]. "SmallInteger minVal digitLength"
-	len <= sLen
-		ifTrue: 
-			["SmallInteger minVal"
-			minVal := interpreterProxy minSmallInteger.
-			(len < sLen
-			 or: [(self digitOfBytes: aLargeNegativeInteger at: sLen) < (self cDigitOfCSI: minVal at: sLen)
-				"minVal lastDigit"])
-				ifTrue: 
-					["If high digit less, then can be small"
-					val := 0.
-					len to: 1 by: -1 do:
-						[:i | val := val * 256 - (self unsafeByteOf: aLargeNegativeInteger at: i)].
-					^ val asOop: SmallInteger].
-			1 to: sLen do: [:i | "If all digits same, then = minVal (sr: minVal digits 1 to 3 are 0)"
-				(self digitOfBytes: aLargeNegativeInteger at: i) = (self cDigitOfCSI: minVal at: i)
-					ifFalse: "Not so; return self shortened"
-						[len < oldLen
-							ifTrue: "^ self growto: len"
-								[^ self bytes: aLargeNegativeInteger growTo: len]
-							ifFalse: [^ aLargeNegativeInteger]]].
-			^ minVal asOop: SmallInteger].
+				ifFalse: [4]. "SmallInteger digitLength"
+	len <= sLen ifTrue: 
+		[(len < sLen
+		  or: [(pointer at: sLen - 1)
+				< (self cDigitOfCSI: interpreterProxy minSmallInteger at: sLen)]) ifTrue: "interpreterProxy minSmallInteger lastDigit"
+			["If high digit less, then can be small"
+			val := 0 - (pointer at: (len := len - 1)).
+			len - 1 to: 0 by: -1 do:
+				[:i | val := val * 256 - (pointer at: i)].
+			^val asOop: SmallInteger].
+		 1 to: sLen do:
+			[:i | | byte | "If all digits same, then = minSmallInteger (sr: minSmallInteger digits 1 to sLen - 1 are 0)"
+			byte := i > len ifTrue: [0] ifFalse: [pointer at: i - 1].
+			byte ~= (self cDigitOfCSI: interpreterProxy minSmallInteger at: i) ifTrue: "Not so; return self shortened"
+				[len < oldLen ifTrue: "^ self growto: len"
+					[^self bytes: aLargeNegativeInteger growTo: len].
+				 ^aLargeNegativeInteger]].
+		 ^interpreterProxy minSmallInteger asOop: SmallInteger].
 	"Return self, or a shortened copy"
-	len < oldLen
-		ifTrue: "^ self growto: len"
-			[^ self bytes: aLargeNegativeInteger growTo: len]
-		ifFalse: [^ aLargeNegativeInteger]
+	len < oldLen ifTrue: "^ self growto: len"
+		[^self bytes: aLargeNegativeInteger growTo: len].
+	^aLargeNegativeInteger
 ]
 
 { #category : #'oop functions' }
 LargeIntegersPlugin >> normalizePositive: aLargePositiveInteger [ 
 	"Check for leading zeroes and return shortened copy if so."
 	"First establish len = significant length."
-	| sLen val len oldLen |
-	len := oldLen := self digitLength: aLargePositiveInteger.
-	[len ~= 0 and: [(self unsafeByteOf: aLargePositiveInteger at: len)
-			= 0]]
-		whileTrue: [len := len - 1].
+	| sLen val len oldLen pointer |
+	<var: #pointer type: #'unsigned char *'>
+	len := oldLen := self digitLengthOfNonImmediate: aLargePositiveInteger.
+	pointer := interpreterProxy
+				cCoerce: (interpreterProxy firstIndexableField: aLargePositiveInteger)
+				to: #'unsigned char *'.
+	[len > 0 and: [(pointer at: len - 1) = 0]] whileTrue:
+		[len := len - 1].
 	len = 0 ifTrue: [^ 0 asOop: SmallInteger].
+
 	"Now check if in SmallInteger range"
 	sLen := interpreterProxy maxSmallInteger > 16r3FFFFFFF "SmallInteger maxVal digitLength."
 				ifTrue: [8]
 				ifFalse: [4].
 	(len <= sLen
-	 and: [(self digitOfBytes: aLargePositiveInteger at: sLen)
-			<= (self cDigitOfCSI: interpreterProxy maxSmallInteger at: sLen)
-		"SmallInteger maxVal"])
-		ifTrue: 
-			["If so, return its SmallInt value"
-			val := 0.
-			len
-				to: 1
-				by: -1
-				do: [:i | val := val * 256 + (self unsafeByteOf: aLargePositiveInteger at: i)].
-			^ val asOop: SmallInteger].
+	 and: [(pointer at: sLen - 1) <= (self cDigitOfCSI: interpreterProxy maxSmallInteger at: sLen)]) ifTrue: 
+		["If so, return its SmallInt value"
+		 val := pointer at: (len := len - 1).
+		 len - 1 to: 0 by: -1 do:
+			[:i | val := val * 256 + (pointer at: i)].
+		^val asOop: SmallInteger].
 	"Return self, or a shortened copy"
-	len < oldLen
-		ifTrue: ["^ self growto: len"
-			^ self bytes: aLargePositiveInteger growTo: len]
-		ifFalse: [^ aLargePositiveInteger]
+	len < oldLen ifTrue: "^ self growto: len"
+		[^self bytes: aLargePositiveInteger growTo: len].
+	^aLargePositiveInteger
 ]
 
 { #category : #'Integer primitives' }
@@ -1701,10 +1696,8 @@ LargeIntegersPlugin >> think [
 ]
 
 { #category : #util }
-LargeIntegersPlugin >> unsafeByteOf: bytesOop at: ix [
-	"Argument bytesOop must not be aSmallInteger!"
+LargeIntegersPlugin >> unsafeByteOf: bytesObj at: ix [
+	"Argument bytesObj must not be aSmallInteger!"
 	<inline: true>
-	| pointer |
-	<var: #pointer type: #'unsigned char *'>
-	^(pointer := interpreterProxy firstIndexableField: bytesOop) at: ix - 1
+	^(interpreterProxy cCoerce: (interpreterProxy firstIndexableField: bytesObj) to: #'unsigned char *') at: ix - 1
 ]

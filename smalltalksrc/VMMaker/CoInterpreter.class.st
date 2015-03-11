@@ -704,7 +704,7 @@ CoInterpreter >> assertValidExecutionPointe: lip r: lifp s: lisp imbar: inInterp
 							ifTrue: [self iframeSavedIP: lifp]
 							ifFalse: [lip].
 				 self assert: (theIP >= (methodField + (objectMemory lastPointerOf: methodField))
-							  and: [theIP < (methodField + (objectMemory numBytesOf: methodField) + objectMemory baseHeaderSize - 1)])
+							  and: [theIP < (methodField + (objectMemory numBytesOfBytes: methodField) + objectMemory baseHeaderSize - 1)])
 					l: ln].
 			 self assert: ((self iframeIsBlockActivation: lifp)
 					or: [(self pushedReceiverOrClosureOfFrame: lifp) = (self iframeReceiver: lifp)])
@@ -813,7 +813,7 @@ CoInterpreter >> assertValidStackedInstructionPointersIn: aStackPage line: ln [
 			 theIP = cogit ceReturnToInterpreterPC ifTrue:
 				[theIP := self iframeSavedIP: theFP].
 			 self assert: (theIP >= (methodObj + (objectMemory lastPointerOf: methodObj))
-						  and: [theIP < (methodObj + (objectMemory numBytesOf: methodObj) + objectMemory baseHeaderSize - 1)])
+						  and: [theIP < (methodObj + (objectMemory numBytesOfBytes: methodObj) + objectMemory baseHeaderSize - 1)])
 				l: ln.
 			 prevFrameWasCogged := false].
 	 theIP := (stackPages longAt: theFP + FoxCallerSavedIP) asUnsignedInteger.

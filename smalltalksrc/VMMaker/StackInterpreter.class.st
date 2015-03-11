@@ -3551,13 +3551,6 @@ StackInterpreter >> checkAssumedCompactClasses [
 	classByteArrayCompactIndex := objectMemory compactIndexOfClass: (objectMemory splObj: ClassByteArray)
 ]
 
-{ #category : #'arithmetic primitive support' }
-StackInterpreter >> checkBooleanResult: result [
-	self successful
-		ifTrue: [self pushBool: result]
-		ifFalse: [self unPop: 2]
-]
-
 { #category : #'object memory support' }
 StackInterpreter >> checkCodeIntegrity: fullGCFlag [
 	"This is a no-op in the StackVM"
@@ -4517,19 +4510,6 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 	^self primitiveFailFor: ((objectMemory isIndexable: rcvr)
 								ifFalse: [PrimErrBadReceiver]
 								ifTrue: [PrimErrBadIndex])
-]
-
-{ #category : #'arithmetic primitive support' }
-StackInterpreter >> compare31or32Bits: obj1 equal: obj2 [
-	"May set success to false"
-
-	"First compare two ST integers..."
-	((objectMemory isIntegerObject: obj1)
-		and: [objectMemory isIntegerObject: obj2])
-		ifTrue: [^ obj1 = obj2].
-
-	"Now compare, assuming positive integers, but setting fail if not"
-	^ (self positive32BitValueOf: obj1) = (self positive32BitValueOf: obj2)
 ]
 
 { #category : #initialization }
@@ -10092,14 +10072,6 @@ StackInterpreter >> popFloat [
 ]
 
 { #category : #'internal interpreter access' }
-StackInterpreter >> popInteger [
-"returns 0 if the stackTop was not an integer value, plus sets successFlag false"
-	| integerPointer |
-	integerPointer := self popStack.
-	^self checkedIntegerValueOf: integerPointer
-]
-
-{ #category : #'internal interpreter access' }
 StackInterpreter >> popPos32BitInteger [
 	"May set successFlag, and return false if not valid"
 
@@ -14412,7 +14384,7 @@ StackInterpreter >> validInstructionPointer: theInstrPointer inMethod: aMethod f
 	 Context(Part)>>reset have to be updated to skip the callPrimtiive bytecode otherwise."
 	"-1 for pre-increment in fetchNextBytecode"
 	^theInstrPointer >= (aMethod + (objectMemory lastPointerOf: aMethod) + objectMemory bytesPerOop - 1)
-	  and: [theInstrPointer < (aMethod + (objectMemory numBytesOf: aMethod) + objectMemory baseHeaderSize - 1)]
+	  and: [theInstrPointer < (aMethod + (objectMemory numBytesOfBytes: aMethod) + objectMemory baseHeaderSize - 1)]
 ]
 
 { #category : #'stack pages' }
