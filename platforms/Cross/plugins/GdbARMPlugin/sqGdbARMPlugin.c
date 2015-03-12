@@ -3,7 +3,6 @@
 
 #include "GdbARMPlugin.h"
 //disassembler
-#include <gdbconfig.h> /*  TPR - <---- this is actually a *link* to the gdb gdb-7.6/bfd/config.h because it otherwise clashes with the Squeak one also in the assorted include paths. Must be a proper way to handle this case; it must happen elsewhere */
 #include <bfd.h>
 #include <dis-asm.h>
 
