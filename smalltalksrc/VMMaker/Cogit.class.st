@@ -1917,6 +1917,13 @@ Cogit >> SubRd: dpreg1 Rd: dpreg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> TstCq: quickConstant R: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: TstCqR operand: quickConstant operand: reg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> XorCw: wordConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
