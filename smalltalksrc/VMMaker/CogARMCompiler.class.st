@@ -1348,19 +1348,17 @@ CogARMCompiler >> genPushRegisterArgsForNumArgs: numArgs [
 ]
 
 { #category : #abi }
-CogARMCompiler >> genRestoreRegisters [
-	"Load the general purpose registers after the return of a trampoline call."
-	"Because no registers were saved we don't restore any."
-	"cogit
-		gen: LDMFD operand: 16r7F"
+CogARMCompiler >> genRestoreRegs [
+	"Restore the general purpose registers for a trampoline call."
+	"Restore none, because the ARM ABI only defines callee saved registers, no caller-saved regs."
+	"cogit gen: LDMFD operand: 16r7F"
 ]
 
 { #category : #abi }
 CogARMCompiler >> genSaveRegisters [
 	"Save the general purpose registers for a trampoline call."
-	"Save none, because we use only callee saved registers."
-	"cogit
-		gen: STMFD operand: 16r7F"
+	"Save none, because the ARM ABI only defines callee saved registers, no caller-saved regs."
+	"cogit gen: STMFD operand: 16r7F"
 ]
 
 { #category : #'smalltalk calling convention' }
