@@ -31,5 +31,5 @@ rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag
-make install prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
+make install-squeak install-plugins prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
 ../../editnewspeakinstall.sh ../../../products/$INSTALLDIR "$@"

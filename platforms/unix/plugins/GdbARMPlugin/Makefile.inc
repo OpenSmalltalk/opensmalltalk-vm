@@ -1,6 +1,5 @@
-# edit this to suit your system; it really ought to use relative paths
-# or some other convenience
-GDBBUILDFOLDER	= /mnt/hgfs/tim/Documents/Squeak/Rasbian-VM/gdb-7.6
+# This assumes you untar the gdb 7.6 source in processors/ARM/gdb-7.6/
+GDBBUILDFOLDER	= ../../../../processors/ARM/gdb-7.6/
 XCFLAGS		= -m32 -DNEED_UI_LOOP_HOOK
 
 XINCLUDES	+= -I$(GDBBUILDFOLDER)/include

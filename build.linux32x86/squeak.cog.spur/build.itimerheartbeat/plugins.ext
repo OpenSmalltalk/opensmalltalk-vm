@@ -2,6 +2,7 @@
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
 BochsIA32Plugin \
+GdbARMPlugin \
 SqueakFFIPrims \
 SqueakSSL \
 LocalePlugin \
