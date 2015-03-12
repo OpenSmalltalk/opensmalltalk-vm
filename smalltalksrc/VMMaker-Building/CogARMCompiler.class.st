@@ -11,13 +11,17 @@ Class {
 	#superclass : #CogAbstractInstruction,
 	#classVars : [
 		'AL',
+		'AddOpcode',
+		'AndOpcode',
 		'BICCqR',
+		'BicOpcode',
 		'CArg0Reg',
 		'CArg1Reg',
 		'CArg2Reg',
 		'CArg3Reg',
 		'CC',
 		'CS',
+		'CmpOpcode',
 		'EQ',
 		'GE',
 		'GT',
@@ -29,6 +33,7 @@ Class {
 		'LT',
 		'MI',
 		'NE',
+		'OrOpcode',
 		'PC',
 		'PL',
 		'R0',
@@ -47,8 +52,10 @@ Class {
 		'RISCTempReg',
 		'SP',
 		'STMFD',
+		'SubOpcode',
 		'VC',
-		'VS'
+		'VS',
+		'XorOpcode'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -109,7 +116,14 @@ CogARMCompiler class >> initialize [
 	GT := 12.
 	LE := 13.
 	AL := 14.
-	
+
+	AddOpcode := 	4.
+	AndOpcode := 0.
+	BicOpcode := 16rE.
+	CmpOpcode := 10.
+	OrOpcode := 16rC.
+	SubOpcode := 2.
+	XorOpcode := 1.
 	"Specific instructions"
 	LastRTLCode isNil ifTrue:
 		[CogRTLOpcodes initialize].
@@ -232,6 +246,7 @@ CogARMCompiler >> cResultRegister [
 
 { #category : #accessing }
 CogARMCompiler >> callInstructionByteSize [
+	"we only get to use quick B[LX] calls. We hope"
 	^4
 ]
 
@@ -314,6 +329,7 @@ CogARMCompiler >> computeMaximumSize [
 			[SubCqR]				-> [rotateableAt0then4or20Block value].
 			[AndCqR]				-> [rotateableAt0then4or20Block value].
 			[OrCqR]					-> [rotateableAt0then4or20Block value].
+			[TstCqR]				-> [rotateableAt0then4or20Block value].
 			[XorCqR]				-> [rotateableAt0then4or20Block value].
 			[CmpCwR]				-> [^maxSize := 20].
 			[AddCwR]				-> [^maxSize := 20].
@@ -487,40 +503,6 @@ CogARMCompiler >> concretizeCall [
 ]
 
 { #category : #'generate machine code - concretize' }
-CogARMCompiler >> concretizeCmpCqR [
-	"Will get inlined into concretizeAt: switch."
-	"All other data operations write back their results. The write back register should be zero for CMP."
-	<inline: true>
-	| size |
-	size := self concretizeDataOperationCqR: 16rA.
-	machineCode at: size - 3 put: ((machineCode at: size -3) bitAnd: 16rFF).
-	^size
-
-]
-
-{ #category : #'generate machine code - concretize' }
-CogARMCompiler >> concretizeCmpCwR [
-	"Will get inlined into concretizeAt: switch."
-	"All other data operations write back their results. The write back register should be zero for CMP."
-	<inline: true>
-	| size |
-	size := self concretizeDataOperationCwR: 16rA.
-	machineCode at: size - 3 put: ((machineCode at: size -3) bitAnd: 16rFF).
-	^size
-]
-
-{ #category : #'generate machine code - concretize' }
-CogARMCompiler >> concretizeCmpRR [
-	"Will get inlined into concretizeAt: switch."
-	"All other data operations write back their results. The write back register should be zero for CMP."
-	<inline: true>
-	| size |
-	size := self concretizeDataOperationRR: 16rA.
-	machineCode at: size - 3 put: ((machineCode at: size -3) bitAnd: 16rFF).
-	^size
-]
-
-{ #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeConditionalJump: conditionCode [
 	"Will get inlined into concretizeAt: switch."
 	"Sizing/generating jumps.
@@ -562,9 +544,10 @@ CogARMCompiler >> concretizeDataOperationCqR: opcode [
 	<inline: true>
 	self 
 		rotateable8bitImmediate: (operands at: 0) 
-		ifTrue: [:rot :immediate | | reg |
-			reg := self concreteRegister: (operands at: 1).
-			self machineCodeAt: 0 put: (self type: 1 op: opcode set: 1 rn: reg rd: reg shifterOperand: ((rot>>1)"in this usage we have to halve the rot value" << 8 bitOr: immediate)).
+		ifTrue: [:rot :immediate | | rd rn |
+			rn := self concreteRegister: (operands at: 1).
+			rd := opcode = CmpOpcode ifTrue: [0] ifFalse:[rn].
+			self machineCodeAt: 0 put: (self type: 1 op: opcode set: 1 rn: rn rd: rd shifterOperand: ((rot>>1)"in this usage we have to halve the rot value" << 8 bitOr: immediate)).
 			^machineCodeSize := 4]
 		ifFalse: [^self concretizeDataOperationCwR: opcode].
 	
@@ -575,25 +558,27 @@ CogARMCompiler >> concretizeDataOperationCwR: opcode [
 	"Will get inlined into concretizeAt: switch."
 	"Load the word into the RISCTempReg, then cmp R, RISCTempReg"
 	<inline: true>
-	| constant srcDestReg instrOffset|
+	| constant rn rd instrOffset|
 	constant := operands at: 0.
-	srcDestReg := (self concreteRegister: (operands at: 1)).
+	rn := (self concreteRegister: (operands at: 1)).
+	rd := opcode = CmpOpcode ifTrue: [0] ifFalse:[rn].
 	instrOffset := self at: 0 moveCw: constant intoR: RISCTempReg.
 	self machineCodeAt: instrOffset 
-		put: (self type: 0 op: opcode set: 1 rn: srcDestReg rd: srcDestReg shifterOperand: RISCTempReg).
+		put: (self type: 0 op: opcode set: 1 rn: rn rd: rd shifterOperand: RISCTempReg).
 	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeDataOperationRR: opcode [
 	"Will get inlined into concretizeAt: switch."
-	"Load the word into the RISCTempReg, then cmp R, RISCTempReg"
+	"Load the word into the RISCTempReg, then op R, RISCTempReg"
 	<inline: true>
-	| destReg srcReg |
+	| rn rd srcReg |
 	srcReg := self concreteRegister: (operands at: 0).
-	destReg := (self concreteRegister: (operands at: 1)).
+	rn := (self concreteRegister: (operands at: 1)).
+	rd := opcode = CmpOpcode ifTrue: [0] ifFalse: [rn].
 	self machineCodeAt: 0 
-		put: (self type: 0 op: opcode set: 1 rn: destReg rd: destReg shifterOperand: srcReg).
+		put: (self type: 0 op: opcode set: 1 rn: rn rd: rd shifterOperand: srcReg).
 	^machineCodeSize := 4.
 ]
 
@@ -1056,6 +1041,18 @@ CogARMCompiler >> concretizeSubCqR [
 				ifFalse: [^self concretizeDataOperationCwR: 2]]
 ]
 
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeTstCqR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	self rotateable8bitImmediate: (operands at: 0)
+		ifTrue: [ :rot :immediate | | reg |
+			reg := self concreteRegister: (operands at: 1).
+			self machineCodeAt: 0 put: (self tst: reg rn: reg imm: immediate ror: rot).
+			^machineCodeSize := 4]
+		ifFalse: [^self concretizeDataOperationCwR: 8]
+]
+
 { #category : #encoding }
 CogARMCompiler >> cond: c br: link offset: offset [
 	"c : 4 bit, opcode = 10 bitOr: link, offset >>2, limited to 24 bits (which are sign-extended, shifted left 2 and added to 8 + pc to make the resulting address)"
@@ -1146,30 +1143,31 @@ CogARMCompiler >> dispatchConcretize [
 		[RetN]						-> [^self concretizeRetN].
 		"Arithmetic"
 		[AddCqR]					-> [^self concretizeAddCqR].
-		[AddCwR]					-> [^self concretizeDataOperationCwR: 4].
-		[AddRR]						-> [^self concretizeDataOperationRR: 4].
+		[AddCwR]					-> [^self concretizeDataOperationCwR: AddOpcode].
+		[AddRR]						-> [^self concretizeDataOperationRR: AddOpcode].
 		"[AddRdRd]					-> [^self concretizeSEE2OpRdRd: 16r58]."
 		[AndCqR]					-> [^self concretizeAndCqR].
-		[AndCwR]					-> [^self concretizeDataOperationCwR: 0].
-		[AndRR]						-> [^self concretizeDataOperationRR: 0].
-		[BICCqR]					-> [^self   concretizeDataOperationCqR: 16rE].
-		[CmpCqR]					-> [^self concretizeCmpCqR].
-		[CmpCwR]					-> [^self concretizeCmpCwR].
-		[CmpRR]					-> [^self concretizeCmpRR].
+		[AndCwR]					-> [^self concretizeDataOperationCwR: AndOpcode].
+		[AndRR]						-> [^self concretizeDataOperationRR: AndOpcode].
+		[BICCqR]					-> [^self concretizeDataOperationCqR: BicOpcode].
+		[CmpCqR]					-> [^self concretizeDataOperationCqR: CmpOpcode].
+		[CmpCwR]					-> [^self concretizeDataOperationCwR: CmpOpcode].
+		[CmpRR]					-> [^self concretizeDataOperationRR: CmpOpcode].
 		[CmpRdRd]					-> [^self concretizeCmpRdRd].
 		"[DivRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5E].
 		[MulRdRd]					-> [^self concretizeSEE2OpRdRd: 16r59]."
-		[OrCqR]						-> [^self concretizeDataOperationCqR: 16rC].
-		[OrCwR]					-> [^self concretizeDataOperationCwR: 16rC].
-		[OrRR]						-> [^self concretizeDataOperationRR: 16rC].
+		[OrCqR]						-> [^self concretizeDataOperationCqR: OrOpcode].
+		[OrCwR]					-> [^self concretizeDataOperationCwR: OrOpcode].
+		[OrRR]						-> [^self concretizeDataOperationRR: OrOpcode].
 		[SubCqR]					-> [^self concretizeSubCqR].
-		[SubCwR]					-> [^self concretizeDataOperationCwR: 2].
-		[SubRR]						-> [^self concretizeDataOperationRR: 2].
+		[SubCwR]					-> [^self concretizeDataOperationCwR: SubOpcode].
+		[SubRR]						-> [^self concretizeDataOperationRR: SubOpcode].
 		"[SubRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5C]."
 		[SqrtRd]						-> [^self concretizeSqrtRd].
-		[XorCqR]						-> [^self concretizeDataOperationCqR: 1].
-		[XorCwR]						-> [^self concretizeDataOperationCwR: 1].
-		[XorRR]							-> [^self concretizeDataOperationRR: 1].
+		[TstCqR]					-> [^self concretizeTstCqR].
+		[XorCqR]						-> [^self concretizeDataOperationCqR: XorOpcode].
+		[XorCwR]						-> [^self concretizeDataOperationCwR: XorOpcode].
+		[XorRR]							-> [^self concretizeDataOperationRR: XorOpcode].
 		[NegateR]						-> [^self concretizeNegateR].
 		[LoadEffectiveAddressMwrR]	-> [^self concretizeLoadEffectiveAddressMwrR].
 		[ArithmeticShiftRightCqR]		-> [^self concretizeArithmeticShiftRightCqR].
@@ -1237,11 +1235,14 @@ CogARMCompiler >> fmstat [
 
 { #category : #abi }
 CogARMCompiler >> genAlignCStackSavingRegisters: saveRegs numArgs: numArgs wordAlignment: alignment [ 
-	"ARM needs 8 byte stack alignment but it's hard to be sure where the stack is at this
-	 point due to the complexities of whether we push the return address or not.  So do
-	 a simple bitAnd to effectively round-down the SP - except the vagaries of the ARM
-	 instruction set means we actually need a BIC sp, sp, $7"
-
+"ARM doesn't push the first 4 arguments. Now, currently Cog doesn't use more than 4 args so we should never need to push any - but just in case we'll check for it"
+	| wordsPushedModAlignment delta |
+	wordsPushedModAlignment := ((saveRegs ifTrue: [self numberOfSaveableRegisters] ifFalse: [0])
+									+ (numArgs > 4 ifTrue:[numArgs - 4] ifFalse:[0]))
+									\\ alignment.
+	wordsPushedModAlignment ~= 0 ifTrue:
+		[delta := alignment - wordsPushedModAlignment.
+		 cogit SubCq: delta * 4 R: SPReg].
 	^0
 ]
 
@@ -1954,6 +1955,14 @@ CogARMCompiler >> subs: destReg rn: srcReg imm: immediate ror: rot [
 "return a SUBDS destReg, srcReg, immediat ROR rot instruction. Remember the ROR is doubled by the cpu so use 30>>1 etc"
 
 	^self type: 1 op: 2 set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> tst: ignored rn: srcReg imm: immediate ror: rot [
+"return a TST srcReg, immediat ROR rot instruction. Remember the ROR is doubled by the cpu so use 30>>1 etc"
+"also note that TST has no destREg"
+
+	^self type: 1 op: 8 set: 1 rn: srcReg rd: 0 shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
 { #category : #encoding }
