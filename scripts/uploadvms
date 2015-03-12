@@ -55,7 +55,7 @@ else
 	CheckDMG=
 	CheckMSI=
 	while [ -n "$1" ]; do
-		case $1 in
+		case "$1" in
 		-archives)	JustUpload=JustUpload;;
 		-all)	all;;
 		-spur)	CheckDMG=1;CheckMSI=1;
@@ -84,8 +84,8 @@ else
 		-r)		shift;REV="$1";;
 		-t)		shift;TAG="$1";;
 		-T)		TEST=1;;
-		-?|-h)  echo usage: $0 [-l -m -w -c -n -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw -archives -r REV -t TAG -T]; exit 0;;
-		*)	echo usage: $0 [-l -m -w -c -n -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw -archives -r REV -t TAG -T]; exit 1;;
+		-?|-h)  echo usage: $0 [-all -l -m -w -c -n -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw -archives -r REV -t TAG -T]; exit 0;;
+		*)	echo usage: $0 [-all -l -m -w -c -n -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw -archives -r REV -t TAG -T]; exit 1;;
 		esac
 		shift
 	done

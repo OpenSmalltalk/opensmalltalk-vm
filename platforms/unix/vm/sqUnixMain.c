@@ -1827,6 +1827,14 @@ extern void initGlobalStructure(void); // this is effectively null if a global r
 int
 main(int argc, char **argv, char **envp)
 {
+  /* check the interpreter's size assumptions for basic data types */
+  if (sizeof(int) != 4) error("This C compiler's integers are not 32 bits.");
+  if (sizeof(double) != 8) error("This C compiler's floats are not 64 bits.");
+  if (sizeof(sqLong) != 8) error("This C compiler's long longs are not 64 bits.");
+#if 0
+  if (sizeof(time_t) != 4) error("This C compiler's time_t's are not 32 bits.");
+#endif
+
   fldcw(0x12bf);	/* signed infinity, round to nearest, REAL8, disable intrs, disable signals */
   mtfsfi(0);		/* disable signals, IEEE mode, round to nearest */
 
