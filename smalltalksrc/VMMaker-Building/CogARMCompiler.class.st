@@ -50,6 +50,7 @@ Class {
 		'R8',
 		'R9',
 		'RISCTempReg',
+		'RsbOpcode',
 		'SP',
 		'STMFD',
 		'SubOpcode',
@@ -122,6 +123,7 @@ CogARMCompiler class >> initialize [
 	BicOpcode := 16rE.
 	CmpOpcode := 10.
 	OrOpcode := 16rC.
+	RsbOpcode := 3.
 	SubOpcode := 2.
 	XorOpcode := 1.
 	"Specific instructions"
@@ -149,37 +151,42 @@ CogARMCompiler class >> specificOpcodes [
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> add: destReg rn: srcReg imm: immediate ror: rot [
-"return an ADD destReg, srcReg, immediat ROR rot instruction. Remember the ROR is doubled by the cpu so use 30>>1 etc"
+"Remember the ROR is doubled by the cpu so use 30>>1 etc.
+	ADD destReg, srcReg, #immediate ROR #rot"
 
-	^self type: 1 op: 4 set: 0 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
+	^self type: 1 op: AddOpcode set: 0 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> add: destReg rn: srcReg rm: addReg [
-"return an ADD destReg, srcReg, addReg instruction"
+"return an ADD destReg, srcReg, addReg instruction
+	ADD destReg, srcReg, addReg"
 
-	^self type: 0 op: 4 set: 0 rn: srcReg rd: destReg shifterOperand: addReg
+	^self type: 0 op: AddOpcode set: 0 rn: srcReg rd: destReg shifterOperand: addReg
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> adds: destReg rn: srcReg imm: immediate ror: rot [
-"return an ADDS destReg, srcReg, immediat ROR rot instruction. Remember the ROR is doubled by the cpu so use 30>>1 etc"
+"Remember the ROR is doubled by the cpu so use 30>>1 etc
+	ADDS destReg, srcREg, #immediate ROR #rot"
 
-	^self type: 1 op: 4 set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
+	^self type: 1 op: AddOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> and: destReg rn: srcReg imm: immediate ror: rot [
-"return an AND destReg, srcReg, immediat ROR rot instruction. Remember the ROR is doubled by the cpu so use 30>>1 etc"
+"Remember the ROR is doubled by the cpu so use 30>>1 etc
+	AND destReg, srcReg, #immediate ROR #rot"
 
-	^self type: 1 op: 0 set: 0 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
+	^self type: 1 op: AndOpcode set: 0 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ands: destReg rn: srcReg imm: immediate ror: rot [
-"return an ANDS destReg, srcReg, immediat ROR rot instruction. Remember the ROR is doubled by the cpu so use 30>>1 etc"
+"Remember the ROR is doubled by the cpu so use 30>>1 etc
+	ANDS destReg, srcReg, #immediate ROR #rot"
 
-	^self type: 1 op: 0 set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
+	^self type: 1 op: AndOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -204,35 +211,40 @@ CogARMCompiler >> at: offset moveCw: constant intoR: destReg [
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> b: offset [
-"return a B offset instruction"
+"return a B offset instruction; offset is signed 24bits of WORD offset, so +_32Mbyte range
+	B offset"
 	^self cond: AL br: 0 offset: offset
 
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> bics: destReg rn: srcReg imm: immediate ror: rot [
-"return a BICS destReg, srcReg, immediat ROR rot instruction. Remember the ROR is doubled by the cpu so use 30>>1 etc"
+"Remember the ROR is doubled by the cpu so use 30>>1 etc
+	BICS destReg, srcReg, #immediate ROR #rot"
 
 	^self type: 1 op: 14 set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> bl: offset [
-"return a BL offset instruction"
+"return a BL offset instruction; offset is signed 24bits of WORD offset, so +_32Mbyte range. Return address is in LR
+	BL offset"
 	^self cond: AL br: 1 offset: offset
 
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> blx: targetReg [
-"return a BX targetReg instruction"
+"Branch&link to the address in targetReg. Return address is in LR
+	BX targetReg"
 	^self cond: AL bx: 1 target: targetReg
 
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> bx: targetReg [
-"return a BX targetReg instruction"
+"Branch to address in targetReg.
+	BX targetReg"
 	^self cond: AL bx: 0 target: targetReg
 
 ]
@@ -252,8 +264,8 @@ CogARMCompiler >> callInstructionByteSize [
 
 { #category : #'inline cacheing' }
 CogARMCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
-	"Answer the address the call immediately preceeding callSiteReturnAddress will jump to."
-	"this is also used by #jumpLongTargetBeforeFOllowingAddress: and so we check for both call and jump related instructions; later on we can use simpler tests once it feels safe to assume we get here always with a call/jump in the proper place"
+	"Answer the address that the call immediately preceeding callSiteReturnAddress will jump to."
+	"this is also used by #jumpLongTargetBeforeFollowingAddress: and so we check for both call and jump related instructions; later on we can use simpler tests once it feels safe to assume we get here always with a call/jump in the proper place"
 	| callDistance call |
 	call := self instructionBeforeAddress: callSiteReturnAddress.
 	self assert: call ~= 0. "andeq r0, r0 will not be generated, not even as nops"
@@ -489,6 +501,12 @@ CogARMCompiler >> concretizeAt: actualAddress [
 CogARMCompiler >> concretizeCall [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
+	"build either a
+	BL offset
+	or
+	{move offset to offsetReg}
+	BLX offsetReg
+	instruction sequence. In production VMs we expect never to have long calls within generated code"
 	| offset |
 	self assert: (operands at: 0) ~= 0.
 	self assert: (operands at: 0) \\ 4 = 0.
@@ -767,6 +785,31 @@ CogARMCompiler >> concretizeMoveCwR [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeMoveM16rR [
+	"Will get inlined into concretizeAt: switch."
+	"ldrh destReg, [srcReg, #immediate],
+	or 
+	move offset to RISCTempReg
+	ldrh destReg, [srcReg, RISCTempReg]"
+	<inline: true>
+	| srcReg offset destReg instrOffset|
+	offset := operands at: 0.
+	srcReg := self concreteRegister: (operands at: 1).
+	destReg := self concreteRegister: (operands at: 2).
+	self is8BitValue: offset
+		ifTrue: [ :u :immediate | 
+			self machineCodeAt: 0 
+				"ldrh destReg, [srcReg, #immediate]"
+				put: (self ldrh: destReg rn: srcReg plus: u imm: immediate).
+			^machineCodeSize := 4]
+		ifFalse: [ 
+			instrOffset := self at: 0 moveCw: offset intoR: RISCTempReg.
+			"ldrh destReg, [srcReg, RISCTempReg]"
+			self machineCodeAt: instrOffset put: (self ldrh: destReg rn: srcReg rm: RISCTempReg).
+			^machineCodeSize := instrOffset + 4 ]
+]
+
+{ #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveMbrR [
 	"Will get inlined into concretizeAt: switch."
 	"ldrb destReg, [srcReg, #immediate] or ldrb destReg, [srcReg, RISCTempReg]"
@@ -945,8 +988,8 @@ CogARMCompiler >> concretizeNegateR [
 	<inline: true>
 	| reg |
 	reg := self concreteRegister: (operands at: 0).
-	"rsb r?, r?, #0"
-	self machineCodeAt: 0 put: (self type: 1 op: 3 set: 0 rn: reg rd: reg).
+	"RSB destReg, srcReg, #0"
+	self machineCodeAt: 0 put: (self type: 1 op: RsbOpcode set: 0 rn: reg rd: reg).
 	^machineCodeSize := 4
 ]
 
@@ -1072,7 +1115,7 @@ CogARMCompiler >> cond: c bx: link target: targetReg [
 { #category : #encoding }
 CogARMCompiler >> cond: c type: t op: o set: s [
 	"c : 4 bit, t: 3 bit, o: 4 bit, s: 1bit"
-	"cccctttoooos + oxFFFFF - the leftmost 12bit of (most) ARM instruction"
+	"cccctttoooos + oxFFFFF - the leftmost 12bits of (most) ARM instruction. The other 20 bits get built elsewhere"
 	<inline: true>
 	^ c << 28 bitOr: ((t << 25) bitOr: ((o << 21) bitOr: (s << 20)))
 ]
@@ -1087,6 +1130,7 @@ CogARMCompiler >> cond: conditionCode type: type op: flagsOrOpcode set: doUpdate
 
 { #category : #encoding }
 CogARMCompiler >> cond: conditionCode type: type op: flagsOrOpcode set: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister shifterOperand: so [
+"build an instruction - cccctttoooo + source + target + shifter op"
 	<inline: true>
 	^(self cond: conditionCode type: type op: flagsOrOpcode set: doUpdateStatusRegister rn: sourceRegister rd: targetRegister) bitOr: (so bitAnd: 16rFFF)
 ]
@@ -1248,7 +1292,7 @@ CogARMCompiler >> genAlignCStackSavingRegisters: saveRegs numArgs: numArgs wordA
 
 { #category : #assertions }
 CogARMCompiler >> genGetLeafCallStackPointerFunction [
-"create a tiny leaf function that just returns the SP in r0; doesn't seem to actually get used. "
+"create a tiny leaf function that just returns the SP in r0 "
 	cogit MoveR: SP R: R0.
 	cogit RetN: 0
 ]
@@ -1432,12 +1476,6 @@ CogARMCompiler >> inlineCacheTagAt: callSiteReturnAddress [
 CogARMCompiler >> instructionBeforeAddress: followingAddress [
 	"Answer the instruction immediately preceeding followingAddress."
 	^objectMemory longAt: followingAddress -4
-
-	" old version - ^  ((objectMemory byteAt: followingAddress - 1 235) << 24)
-	+  ((objectMemory byteAt: followingAddress - 2) << 16)
-	+  ((objectMemory byteAt: followingAddress - 3) << 8)
-	+   (objectMemory byteAt: followingAddress - 4)"
-
 ]
 
 { #category : #testing }
@@ -1468,6 +1506,17 @@ CogARMCompiler >> instructionIsBX: instr [
 CogARMCompiler >> is12BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: falseAlternativeBlock [
 	"For LDR and STR, there is an instruction allowing for one instruction encoding if the offset is encodable in 12 bit."
 	constant abs <= 4095 "(2 raisedTo: 12)-1"
+		ifTrue: [
+			constant >= 0 
+				ifTrue: [trueAlternativeBlock value: 1 value: constant]
+				ifFalse: [trueAlternativeBlock value: 0 value: constant abs]]
+		ifFalse: falseAlternativeBlock
+]
+
+{ #category : #testing }
+CogARMCompiler >> is8BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: falseAlternativeBlock [
+	"For extended LDR and STR for half & double, there is an instruction allowing for one instruction encoding if the offset is encodable in 8 bit."
+	constant abs <= 255 "(2 raisedTo: 8)-1"
 		ifTrue: [
 			constant >= 0 
 				ifTrue: [trueAlternativeBlock value: 1 value: constant]
@@ -1515,32 +1564,47 @@ CogARMCompiler >> jumpLongTargetBeforeFollowingAddress: mcpc [
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ldr: destReg rn: baseReg plus: u imm: immediate12bitValue [
-"return a LDR destReg, [baseReg, 'u' immediate12bitValue]"
+"	LDR destReg, [baseReg, immediate12bitValue] u=0 -> subtract imm; =1 -> add imm "
 	^self memMxr: AL reg: destReg  base: baseReg u: u b: 0 l: 1 imm: immediate12bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ldr: destReg rn: baseReg plusImm: immediate12bitValue [
-"return a LDR destReg, [baseReg, +immediate12bitValue]"
+"	LDR destReg, [baseReg, +immediate12bitValue]"
 	^self memMxr: AL reg: destReg  base: baseReg u: 1 b: 0 l: 1 imm: immediate12bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ldr: destReg rn: baseReg rm: offsetReg [
-"return a LDR destReg, [baseReg, + offsetReg] The contents of offsetReg are assumed to be correctly signed"
+"	LDR destReg, [baseReg, + offsetReg]
+	The contents of offsetReg are assumed to be correctly signed"
 	^self memMxr: AL reg: destReg  base: baseReg p: 1 u: 1 b: 0 w: 0 l: 1 rm: offsetReg
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ldrb: destReg rn: baseReg plus: u imm: immediate12bitValue [
-"return a LDRB destReg, [baseReg, 'u' immediate12bitValue]"
+"	LDRB destReg, [baseReg, 'u' immediate12bitValue] u=0 -> subtract imm; =1 -> add imm "
 	^self memMxr: AL reg: destReg  base: baseReg u: u b: 1 l: 1 imm: immediate12bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ldrb: destReg rn: baseReg rm: offsetReg [
-"return a LDR destReg, [baseReg, + offsetReg] The contents of offsetReg are assumed to be correctly signed"
+"	LDR destReg, [baseReg, + offsetReg] 
+	The contents of offsetReg are assumed to be correctly signed"
 	^self memMxr: AL reg: destReg  base: baseReg p: 1 u: 1 b: 1 w: 0 l: 1 rm: offsetReg
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> ldrh: destReg rn: baseReg plus: u imm: immediate8bitValue [
+"	LDRH destReg, [baseReg, 'u' immediate8bitValue] u=0 -> subtract imm; =1 -> add imm "
+	^self memM16xr: AL reg: destReg  base: baseReg p: 1 u: u  w: 0 l: 1 offset: immediate8bitValue
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> ldrh: destReg rn: baseReg rm: offsetReg [
+"	LDRH destReg, [baseReg, +offsetReg]
+	The contents of offsetReg are assumed to be correctly signed"
+	^self memM16xr: AL reg: destReg  base: baseReg p: 1 u: 1  w: 0 l: 1 rm: offsetReg
 ]
 
 { #category : #abi }
@@ -1592,6 +1656,49 @@ CogARMCompiler >> machineCodeBytes [
 			orr R3, R3, #<addressByte4>, 0
 			cmp R?, R3"
 	^20
+]
+
+{ #category : #encoding }
+CogARMCompiler >> memM16xr: cond reg: destReg base: baseReg p: postpreoffset u: updown w: weirdstuff l: loadstore offset: offset8 [ 
+	"build an ARM [base +/- offset8]  half-word memory instruction
+	p -> pre-index (1) or post-index (0) the offset. Combines with W to do some odd things.
+	u -> up (1) or down (0) ie + or - for the offset
+	b -> byte(1) or word (0)
+	w -> write-back (1) if pre-indexing. 
+	l -> load (1) or store (0)"
+	^ cond << 28
+		bitOr: (0 << 25
+		bitOr: (postpreoffset << 24
+		bitOr: (updown << 23
+		bitOr: (1 << 22
+		bitOr: (weirdstuff << 21
+		bitOr: (loadstore << 20
+		bitOr: (baseReg << 16
+		bitOr: (destReg << 12 
+		bitOr: ((offset8 bitAnd: 16rF0) << 4
+		bitOr: (11 << 4
+		bitOr: (offset8 bitAnd: 16rF)))))))))))
+]
+
+{ #category : #encoding }
+CogARMCompiler >> memM16xr: cond reg: destReg base: baseReg p: postpreoffset u: updown w: weirdstuff l: loadstore rm: offsetReg [ 
+	"build an ARM [base +/- offsetReg] memory instruction
+	p -> pre-index (1) or post-index (0) the offset. Combines with W to do some odd things.
+	u -> up (1) or down (0) ie + or - for the offset
+	b -> byte(1) or word (0)
+	w -> write-back (1) if pre-indexing. 
+	l -> load (1) or store (0)"
+	^ cond << 28
+		bitOr: (0 << 25
+		bitOr: (postpreoffset << 24
+		bitOr: (updown << 23
+		bitOr: (0 << 22
+		bitOr: (weirdstuff << 21
+		bitOr: (loadstore << 20
+		bitOr: (baseReg << 16
+		bitOr: (destReg << 12 
+		bitOr: (16rB0
+		bitOr: offsetReg)))))))))
 ]
 
 { #category : #encoding }
@@ -1649,42 +1756,23 @@ l -> load (1) or store (0)"
 		bitOr: immediate12bitValue))))))
 ]
 
-{ #category : #encoding }
-CogARMCompiler >> minimalRightRingRotationFor: constant initialRotation: iniRightRingRotation [
-	"Given a constant and some initial rotation, tries to minimize that rotation in an effort to encode the according byte in constant. This is used, to encode the last 12bit of many operations, for which a 8bit immediate rotated by (2*)4bit is available. That immediate need be encoded with minimal rotation."
-	| byte rightRingRotation |
-	rightRingRotation := iniRightRingRotation.
-		"Counter rotation to get the according byte. Because Smalltalk does not have left ring shift, shift further right."
-		rightRingRotation ~= 0 ifTrue: [
-			byte := constant >> (-2 * rightRingRotation + 32) bitAnd: 16rFF.
-			"For 0, the shift has to be 0. For other immediates, the encoding with minimal rightRingRotation should be choosen."
-			byte = 0
-				ifTrue: [ rightRingRotation := 0]
-				ifFalse: [
-					0 to: 2 do: [ :j | 
-						(byte bitAnd: 16r03) = 0
-							ifTrue: [ rightRingRotation := rightRingRotation - 1.
-									byte := byte >> 2 ]]]]
-			ifFalse: [ byte := constant bitAnd: 16rFF].
-	^{rightRingRotation. byte}
-]
-
 { #category : #'ARM convenience instructions' }
-CogARMCompiler >> mov: destReg imm: immediate8bitValue ror: rotateRightBy [
-	"return the ARM instruction MOV destReg, #immediate8BitValue ROR rotateRightBy"
-	^self type: 1 op: 16rD set: 0 rn: 0 rd: destReg shifterOperand: ((rotateRightBy>>1) <<8 bitOr: immediate8bitValue)
+CogARMCompiler >> mov: destReg imm: immediate8bitValue ror: rot [
+	"Remember the ROR is doubled by the cpu so use 30>>1 etc.
+	MOV destReg, #immediate8BitValue ROR rot"
+	^self type: 1 op: 16rD set: 0 rn: 0 rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate8bitValue)
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> mov: destReg rn: srcReg [
-"return a MOV destReg, srcReg instruction"
+"	MOV destReg, srcReg"
 
 	^self type: 0 op: 16rD set: 0 rn: 0 rd: destReg shifterOperand: srcReg
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> movs: destReg rn: srcReg [
-"return a MOV destReg, srcReg instruction"
+"	MOVS destReg, srcReg"
 
 	^self type: 0 op: 16rD set: 1 rn: 0 rd: destReg shifterOperand: srcReg
 ]
@@ -1718,9 +1806,10 @@ CogARMCompiler >> numberOfSaveableRegisters [
 ]
 
 { #category : #'ARM convenience instructions' }
-CogARMCompiler >> orr: destReg imm: immediate8bitValue ror: rotateRightBy [
-	"return the ARM instruction ORR destReg, #immediate8BitValue ROR rotateRightBy"
-	^self type: 1 op: 16rC set: 0 rn: destReg rd: destReg shifterOperand: ((rotateRightBy>>1) <<8 bitOr: immediate8bitValue)
+CogARMCompiler >> orr: destReg imm: immediate8bitValue ror: rot [
+	"Remember the ROR is doubled by the cpu so use 30>>1 etc.
+	ORR destReg, #immediate8BitValue ROR rot"
+	^self type: 1 op: 16rC set: 0 rn: destReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate8bitValue)
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1741,13 +1830,15 @@ CogARMCompiler >> pld: baseReg plus: u offset: immediate [
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> popR: dstReg [
-"return a pop - LDR srcReg, [sp] #4"
+"	pop word off TOS
+	LDR srcReg, [sp] #4"
 	^self memMxr: AL reg: dstReg base: SP p: 0 u: 1 b: 0 w: 0 l: 1 imm: 4
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> pushR: srcReg [
-"return a push - STR srcReg, [sp, #-4]!"
+"	push word to TOS 
+	STR srcReg, [sp, #-4]!"
 	^self memMxr: AL reg: srcReg base: SP p: 1 u: 0 b: 0 w: 1l: 0 imm: 4
 ]
 
@@ -1922,45 +2013,49 @@ CogARMCompiler >> stackPageInterruptHeadroomBytes [
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> str: destReg rn: baseReg plus: u imm: immediate12bitValue [
-"return a STR destReg, [baseReg, 'u' immediate12bitValue]"
+"	STR destReg, [baseReg, 'u' immediate12bitValue] u=0 -> subtract imm; =1 -> add imm "
 	^self memMxr: AL reg: destReg  base: baseReg u: u b: 0 l: 0 imm: immediate12bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> str: srcReg rn: baseReg plusImm: immediate12bitValue [
-"return a STR srcReg, [baseReg, +immediate12bitValue]"
+"	STR srcReg, [baseReg, +immediate12bitValue]"
 	^self memMxr: AL reg: srcReg  base: baseReg u: 1 b: 0 l: 0 imm: immediate12bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> str: srcReg rn: baseReg rm: offsetReg [
-"return a STR srcReg, [baseReg, + offsetReg] The contents of offsetReg are assumed to be correctly signed"
+"	STR srcReg, [baseReg, + offsetReg] 
+The contents of offsetReg are assumed to be correctly signed"
 	^self memMxr: AL reg: srcReg  base: baseReg p: 1 u: 1 b: 0 w: 0 l: 0 rm: offsetReg
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> strb: destReg rn: baseReg plus: u imm: immediate12bitValue [
-"return a STRB destReg, [baseReg, 'u' immediate12bitValue]"
+"	STRB destReg, [baseReg, 'u' immediate12bitValue] u=0 -> subtract imm; =1 -> add imm "
 	^self memMxr: AL reg: destReg  base: baseReg u: u b: 1 l: 0 imm: immediate12bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> strb: srcReg rn: baseReg rm: offsetReg [
-"return a STRB srcReg, [baseReg, + offsetReg] The contents of offsetReg are assumed to be correctly signed"
+"	STRB srcReg, [baseReg, + offsetReg] 
+	The contents of offsetReg are assumed to be correctly signed"
 	^self memMxr: AL reg: srcReg  base: baseReg p: 1 u: 1 b: 1 w: 0 l: 0 rm: offsetReg
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> subs: destReg rn: srcReg imm: immediate ror: rot [
-"return a SUBDS destReg, srcReg, immediat ROR rot instruction. Remember the ROR is doubled by the cpu so use 30>>1 etc"
+"	Remember the ROR is doubled by the cpu so use 30>>1 etc
+	SUBS destReg, srcReg, #immediate ROR rot"
 
 	^self type: 1 op: 2 set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> tst: ignored rn: srcReg imm: immediate ror: rot [
-"return a TST srcReg, immediat ROR rot instruction. Remember the ROR is doubled by the cpu so use 30>>1 etc"
-"also note that TST has no destREg"
+"	Remember the ROR is doubled by the cpu so use 30>>1 etc"
+"also note that TST has no destReg
+	TST srcReg, #immediate ROR rot"
 
 	^self type: 1 op: 8 set: 1 rn: srcReg rd: 0 shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
