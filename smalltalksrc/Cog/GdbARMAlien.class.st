@@ -975,16 +975,15 @@ GdbARMAlien >> register: int0to15 [
 	^self unsignedLongAt: 13 + (4 * int0to15)
 ]
 
+{ #category : #accessing }
+GdbARMAlien >> registerAt: index [ 
+	^self perform: (self registerStateNames at: index + 1)
+]
+
 { #category : #'accessing-abstract' }
 GdbARMAlien >> registerState [
 	^{	self r0. self r1. self r2. self r3. self r4. self r5. self r6. self r7.
 		self r8. self r9. self r10. self fp. self r12. self sp. self lr. self pc. self eflags }
-]
-
-{ #category : #'accessing-abstract' }
-GdbARMAlien >> registerStateGetters [
-	^#(	r0 r1 r2 r3 r4 r5 r6 r7
-		r8 r9 r10 fp r12 sp lr pc eflags )
 ]
 
 { #category : #'accessing-abstract' }
@@ -1104,7 +1103,7 @@ GdbARMAlien >> sp [
 
 { #category : #accessing }
 GdbARMAlien >> sp: anUnsignedInteger [
-Transcript nextPutAll: 'set SP to ', anUnsignedInteger hex; cr.
+
 	^self unsignedLongAt: 65 put: anUnsignedInteger
 ]
 
