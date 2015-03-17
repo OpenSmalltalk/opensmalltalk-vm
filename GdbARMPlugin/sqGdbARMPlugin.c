@@ -195,11 +195,23 @@ getlog(long *len)
 	return gdb_log;
 }
 
+#if __linux__
+# define HaveLinkTimeWrapping 1
+#else
+# define HaveLinkTimeWrapping 0
+#endif
+
 // adding custom Software Interrupts to the ARMulator
+
+#if HaveLinkTimeWrapping
 unsigned __real_ARMul_OSHandleSWI(ARMul_State*, ARMword);
   
 unsigned
 __wrap_ARMul_OSHandleSWI (ARMul_State * state, ARMword number)
+#else
+unsigned
+ARMul_OSHandleSWI (ARMul_State * state, ARMword number)
+#endif
 {
 	switch(number)
 	  {
@@ -213,5 +225,9 @@ __wrap_ARMul_OSHandleSWI (ARMul_State * state, ARMword number)
 			gdb_log_printf(NULL, "Illegal Instruction fetch address (%#p).", state->Reg[15]-8);
 			return TRUE;
 	  }
+#if HaveLinkTimeWrapping
 	return __real_ARMul_OSHandleSWI(state, number);
+#else
+	return core_ARMul_OSHandleSWI(state, number);
+#endif
 }
