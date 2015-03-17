@@ -72,7 +72,7 @@ Spur32BitCoMemoryManager >> ceClassAtIndex: classIndex [
 ]
 
 { #category : #trampolines }
-Spur32BitCoMemoryManager >> ceSheduleScavenge [
+Spur32BitCoMemoryManager >> ceScheduleScavenge [
 	<api>
 	self assert: freeStart >= scavengeThreshold.
 	self scheduleScavenge
