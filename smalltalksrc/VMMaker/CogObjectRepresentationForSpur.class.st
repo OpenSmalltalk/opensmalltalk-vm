@@ -621,7 +621,7 @@ CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
 									arg: ReceiverResultReg
 									result: cogit returnRegForStoreCheck.
 	ceScheduleScavengeTrampoline := cogit
-											genTrampolineFor: #ceScheduleScavenge
+											genSafeTrampolineFor: #ceScheduleScavenge
 											called: 'ceScheduleScavengeTrampoline'.
 	ceSmallActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: false inBlock: false called: 'ceSmallMethodContext'.
 	ceSmallActiveContextInBlockTrampoline := self genActiveContextTrampolineLarge: false inBlock: true called: 'ceSmallBlockContext'.
