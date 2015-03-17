@@ -77,6 +77,12 @@ GdbARMAlien >> cflag [
 	^self unsignedLongAt: 573
 ]
 
+{ #category : #accessing }
+GdbARMAlien >> cflag: unsignedInteger [
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+	^self unsignedLongAt: 573 put: unsignedInteger
+]
+
 { #category : #disassembly }
 GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager [
 	| parts strm hexNum string |
@@ -141,6 +147,16 @@ GdbARMAlien >> eflags [
 			bitOr: self cflag << 3) 
 				bitOr: self vflag << 2)
 					bitOr: self ifflags
+]
+
+{ #category : #accessing }
+GdbARMAlien >> eflags: anUnsignedInteger [
+	"set the processor flags from the integer"
+	self nflag: (anUnsignedInteger >> 5 bitOr: 1).
+	self zflag: (anUnsignedInteger >> 4 bitOr: 1).
+	self cflag: (anUnsignedInteger >> 3 bitOr: 1).
+	self vflag: (anUnsignedInteger >> 2 bitOr: 1).
+	self ifflags: (anUnsignedInteger bitOr: 3)
 ]
 
 { #category : #accessing }
@@ -424,6 +440,12 @@ GdbARMAlien >> ifflags [
 	^self unsignedLongAt: 581
 ]
 
+{ #category : #accessing }
+GdbARMAlien >> ifflags: unsignedInteger [
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+	^self unsignedLongAt: 581 put: unsignedInteger
+]
+
 { #category : #'processor setup' }
 GdbARMAlien >> initializeStackFor: aCogit [
 "Different cpus need different stack alignment etc, so handle the details here."
@@ -612,6 +634,12 @@ GdbARMAlien >> lr: anUnsignedInteger [
 GdbARMAlien >> nflag [
 "The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
 	^self unsignedLongAt: 565
+]
+
+{ #category : #accessing }
+GdbARMAlien >> nflag: unsignedInteger [
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+	^self unsignedLongAt: 565 put: unsignedInteger
 ]
 
 { #category : #opcodes }
@@ -999,7 +1027,7 @@ GdbARMAlien >> registerStatePCIndex [
 { #category : #'accessing-abstract' }
 GdbARMAlien >> registerStateSetters [
 "a list of register setting messages used to initialise or reset registers"
-	^#(	r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: r10: fp: r12: sp: lr: pc:)
+	^#(	r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: r10: fp: r12: sp: lr: pc: eflags:)
 ]
 
 { #category : #accessing }
@@ -1020,10 +1048,39 @@ GdbARMAlien >> setFramePointer: framePointer stackPointer: stackPointer [
 	self sp: stackPointer
 ]
 
+{ #category : #'accessing-abstract' }
+GdbARMAlien >> setRegisterState: aRegisterStateArray [
+	"N.B. keep in sync with voidRegisterState"
+
+	self r0:  (aRegisterStateArray at: 1).
+	self r1: (aRegisterStateArray at: 2).
+	self r2: (aRegisterStateArray at: 3).
+	self r3: (aRegisterStateArray at: 4).
+	self r4: (aRegisterStateArray at: 5).
+	self r5: (aRegisterStateArray at: 6).
+	self r6: (aRegisterStateArray at: 7).
+	self r7: (aRegisterStateArray at: 8).
+	self r8: (aRegisterStateArray at: 9).
+	self r9: (aRegisterStateArray at: 10).
+	self r10: (aRegisterStateArray at: 11).
+	self fp: (aRegisterStateArray at: 12).
+	self r12: (aRegisterStateArray at: 13).
+	self sp: (aRegisterStateArray at: 14).
+	self lr: (aRegisterStateArray at: 15).
+	self pc: (aRegisterStateArray at: 16).
+	self eflags:  (aRegisterStateArray at: 17).
+]
+
 { #category : #accessing }
 GdbARMAlien >> sflag [
 "The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
 	^self unsignedLongAt: 585
+]
+
+{ #category : #accessing }
+GdbARMAlien >> sflag: unsignedInteger [
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+	^self unsignedLongAt: 585 put: unsignedInteger
 ]
 
 { #category : #'execution simulation' }
@@ -1115,9 +1172,28 @@ GdbARMAlien >> tflag [
 ]
 
 { #category : #accessing }
+GdbARMAlien >> tflag: unsignedInteger [
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+"This would be the Thumb flag if we have it -which depends rather oddly on the compiletime flags used to build the ARMulator. Sigh"
+	^self unsignedLongAt: 589 put: unsignedInteger
+]
+
+{ #category : #accessing }
 GdbARMAlien >> vflag [
 "The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
 	^self unsignedLongAt: 577
+]
+
+{ #category : #accessing }
+GdbARMAlien >> vflag: unsignedInteger [
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+	^self unsignedLongAt: 577 put: unsignedInteger
+]
+
+{ #category : #'accessing-abstract' }
+GdbARMAlien >> voidRegisterState [
+	"N.B. keep in sync with setRegisterState:"
+	self setRegisterState: (Array new: 17 withAll: 0)
 ]
 
 { #category : #printing }
@@ -1150,4 +1226,10 @@ GdbARMAlien >> writePopPushDetailsIn: memory in: transcript for: aCogit [
 GdbARMAlien >> zflag [
 "The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
 	^self unsignedLongAt: 569
+]
+
+{ #category : #accessing }
+GdbARMAlien >> zflag: unsignedInteger [
+"The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
+	^self unsignedLongAt: 569 put: unsignedInteger
 ]
