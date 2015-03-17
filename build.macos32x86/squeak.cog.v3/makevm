@@ -116,10 +116,14 @@ cp -R SqueakSSL/build/$XCD_BUILD_CONFIGURATION/SqueakSSL.bundle "$DEST/Contents/
 # Build the BochsIA32Plugin
 # N.B. To build the plugin you also have to build the Bochs libraries in
 # ../../processors/IA32/bochs.  cd ../../processors/IA32/bochs. Run conf.COG & makeem.
+if test -f ../../processors/IA32/macbochs/cpu/libcpu.a; then
 echo BochsIA32Plugin xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project BochsIA32Plugin/BochsIA32Plugin.xcodeproj
 xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project BochsIA32Plugin/BochsIA32Plugin.xcodeproj
 rm -rf "$DEST/Contents/Resources/BochsIA32Plugin.bundle"
 cp -R BochsIA32Plugin/build/$XCD_BUILD_CONFIGURATION/BochsIA32Plugin.bundle "$DEST/Contents/Resources"
+else
+echo "not building BochsIA32Plugin; support libraries unavailable"
+fi
 
 # Build the UnixOSProcessPlugin
 echo UnixOSProcessPlugin xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project UnixOSProcessPlugin/UnixOSProcessPlugin.xcodeproj

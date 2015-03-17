@@ -1,0 +1,7 @@
+Build the support libraries for the GdbARMPlugin in the 32-bit Mac OS build.
+
+Download binutils from http://ftp.gnu.org/gnu/binutils/binutils-2.25.tar.gz
+Unpack binutils-2.25.tar.gz to binutils-2.25
+Unpack ../ARM-gdb-7.6.zip to gdb-7.6
+
+./BUILD.sh
