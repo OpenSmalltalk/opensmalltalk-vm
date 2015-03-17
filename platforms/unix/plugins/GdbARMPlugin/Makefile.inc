@@ -8,4 +8,4 @@ XINCLUDES	+= -I$(GDBBUILDFOLDER)/sim/arm
 XLDFLAGS=	$(GDBBUILDFOLDER)/sim/arm/libsim.a \
 		$(GDBBUILDFOLDER)/opcodes/libopcodes.a \
 		-lbfd -liberty \
-		-Wl,-wrap,ARMul_OSHandleSWI
+		-Wl
