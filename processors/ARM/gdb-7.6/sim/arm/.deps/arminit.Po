@@ -1,0 +1,9 @@
+arminit.o: arminit.c armdefs.h config.h armemu.h dbg_rdi.h
+
+armdefs.h:
+
+config.h:
+
+armemu.h:
+
+dbg_rdi.h:

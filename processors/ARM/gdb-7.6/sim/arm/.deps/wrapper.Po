@@ -1,0 +1,34 @@
+wrapper.o: wrapper.c config.h ../../include/gdb/callback.h \
+ ../../include/gdb/remote-sim.h armdefs.h armemu.h dbg_rdi.h \
+ ../../include/ansidecl.h ../common/sim-utils.h ../common/run-sim.h \
+ ../../include/gdb/sim-arm.h ../../include/gdb/signals.h \
+ ../../include/gdb/signals.def ../../include/libiberty.h \
+ ../../include/ansidecl.h
+
+config.h:
+
+../../include/gdb/callback.h:
+
+../../include/gdb/remote-sim.h:
+
+armdefs.h:
+
+armemu.h:
+
+dbg_rdi.h:
+
+../../include/ansidecl.h:
+
+../common/sim-utils.h:
+
+../common/run-sim.h:
+
+../../include/gdb/sim-arm.h:
+
+../../include/gdb/signals.h:
+
+../../include/gdb/signals.def:
+
+../../include/libiberty.h:
+
+../../include/ansidecl.h:

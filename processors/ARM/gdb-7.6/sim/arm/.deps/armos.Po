@@ -1,0 +1,20 @@
+armos.o: armos.c config.h ../../include/ansidecl.h targ-vals.h armdefs.h \
+ armos.h armemu.h armfpe.h dbg_rdi.h ../../include/gdb/callback.h
+
+config.h:
+
+../../include/ansidecl.h:
+
+targ-vals.h:
+
+armdefs.h:
+
+armos.h:
+
+armemu.h:
+
+armfpe.h:
+
+dbg_rdi.h:
+
+../../include/gdb/callback.h:

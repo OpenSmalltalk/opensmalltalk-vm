@@ -1,0 +1,10 @@
+maverick.o: maverick.c armdefs.h config.h ../../include/ansidecl.h \
+ armemu.h
+
+armdefs.h:
+
+config.h:
+
+../../include/ansidecl.h:
+
+armemu.h:

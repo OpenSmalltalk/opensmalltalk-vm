@@ -1,6 +1,0 @@
-Notes:
-	- The tracer subdir should be the first one build in a 'make'.
-	It generates the channel header file, which is needed by tracer.h.
-	- Delete the  generated.channels.h  file if you add a channel, and
-	rebuild _everything_.  Some channel numbers could have changed.
-

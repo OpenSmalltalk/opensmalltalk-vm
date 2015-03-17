@@ -1,0 +1,10 @@
+targ-map.o: targ-map.c config.h ../../include/ansidecl.h \
+ ../../include/gdb/callback.h targ-vals.h
+
+config.h:
+
+../../include/ansidecl.h:
+
+../../include/gdb/callback.h:
+
+targ-vals.h:
