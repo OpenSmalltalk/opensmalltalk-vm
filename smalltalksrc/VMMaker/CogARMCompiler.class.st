@@ -300,13 +300,8 @@ CogARMCompiler >> canMulRR [
 CogARMCompiler >> computeMaximumSize [
 	"Because we don't use Thumb, each ARM instruction has 4 bytes. Some abstract opcodes need more than one instruction."
 	
-	| rotateableAt0then4or20Block |
-	rotateableAt0then4or20Block := [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
-	
-	
-	(opcode between: FirstShortJump and: LastJump) ifTrue: [^maxSize := 16].
+	(opcode between: FirstShortJump and: LastJump) ifTrue:
+		[^maxSize := 16].
 	
 	opcode
 		caseOf: {
@@ -335,14 +330,30 @@ CogARMCompiler >> computeMaximumSize [
 			[RetN]					-> [^(operands at: 0) = 0 
 											ifTrue: [maxSize := 4]
 											ifFalse: [maxSize := 8]].
-			[CmpCqR]				-> [rotateableAt0then4or20Block value].
-			[AddCqR]				-> [rotateableAt0then4or20Block value].
-			[BICCqR]				-> [rotateableAt0then4or20Block value].
-			[SubCqR]				-> [rotateableAt0then4or20Block value].
-			[AndCqR]				-> [rotateableAt0then4or20Block value].
-			[OrCqR]					-> [rotateableAt0then4or20Block value].
-			[TstCqR]				-> [rotateableAt0then4or20Block value].
-			[XorCqR]				-> [rotateableAt0then4or20Block value].
+			[CmpCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[AddCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[BICCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[SubCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[AndCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[OrCqR]					-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[TstCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[XorCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
 			[CmpCwR]				-> [^maxSize := 20].
 			[AddCwR]				-> [^maxSize := 20].
 			[SubCwR]				-> [^maxSize := 20].
@@ -361,7 +372,10 @@ CogARMCompiler >> computeMaximumSize [
 			[JumpLong]				-> [^maxSize := 20].
 			[JumpLongZero]		-> [^maxSize := 20].
 			[JumpLongNonZero]	-> [^maxSize := 20].
-			[LoadEffectiveAddressMwrR] -> [rotateableAt0then4or20Block value].
+			[LoadEffectiveAddressMwrR]
+									-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
 			[PushCw]				-> [^maxSize := 20].
 		}
 		otherwise: [^maxSize := 4].
@@ -1926,6 +1940,7 @@ CogARMCompiler >> rewriteJumpLongAt: callSiteReturnAddress target: callTargetAdd
 
 { #category : #testing }
 CogARMCompiler >> rotateable8bitImmediate: constant ifTrue: trueAlternativeBlock ifFalse: falseAlternativeBlock [
+	<inline: true>
 	"For data processing operands, there is the immediate shifter_operand variant, 
 	where an 8 bit value is ring shifted _right_ by 2*i.
 	This is only suitable for quick constant(Cq), which don't change."

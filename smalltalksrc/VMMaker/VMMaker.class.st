@@ -383,9 +383,10 @@ VMMaker class >> generateEitherSqueakCogVM [
 	| coInterpreterClass |
 	coInterpreterClass := self chooseCoInterpreterClassIfAbsent: [^self].
 	^self generateSqueakCogVMWithInterpreterClass: coInterpreterClass
-		  options: ((coInterpreterClass includesBehavior: CoInterpreterMT)
-					ifTrue: [#(COGMTVM true)]
-					ifFalse: [#()])
+		  options: #( ISA IA32),
+					((coInterpreterClass includesBehavior: CoInterpreterMT)
+						ifTrue: [#(COGMTVM true)]
+						ifFalse: [#()])
 ]
 
 { #category : #configurations }
@@ -396,7 +397,8 @@ VMMaker class >> generateNewspeakSpurCogVM [
 		and: StackToRegisterMappingCogit
 		with: #(	ObjectMemory Spur32BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
-				NewspeakVM true)
+				NewspeakVM true
+				ISA IA32)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/nsspursrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation
@@ -438,6 +440,7 @@ VMMaker class >> generateSqueakCogSistaVM [
 		and: SistaStackToRegisterMappingCogit
 		with: #(	SistaVM true
 				MULTIPLEBYTECODESETS true
+				ISA IA32
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/sistasrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
@@ -483,6 +486,7 @@ VMMaker class >> generateSqueakSpurCogSistaVM [
 		with: #(	SistaVM true
 				ObjectMemory Spur32BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
+				ISA IA32
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/spursistasrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
@@ -495,7 +499,8 @@ VMMaker class >> generateSqueakSpurCogVM [
 	^VMMaker
 		generate: CoInterpreter
 		and: StackToRegisterMappingCogit
-		with: #(	ObjectMemory Spur32BitCoMemoryManager)
+		with: #(	ObjectMemory Spur32BitCoMemoryManager
+				ISA IA32)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/spursrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#()
@@ -783,7 +788,9 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 
 	| cg interpreterClasses apicg |
 	initializeClasses ifTrue:
-		[interpreterClass initializeWithOptions: optionsDictionary].
+		[interpreterClass initializeWithOptions: optionsDictionary.
+		 interpreterClass hasCogit ifTrue:
+			[interpreterClass cogitClass initializeWithOptions: optionsDictionary]].
 
 	(cg := self createCodeGenerator) vmClass: interpreterClass.
 
