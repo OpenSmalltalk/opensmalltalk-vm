@@ -163,6 +163,11 @@ VMClass class >> getVMMaker [
 	^Notification new tag: #getVMMaker; signal
 ]
 
+{ #category : #'accessing class hierarchy' }
+VMClass class >> hasCogit [
+	^false
+]
+
 { #category : #translation }
 VMClass class >> implicitReturnTypeFor: aSelector [
 	"Answer the return type for methods that don't have an explicit return."

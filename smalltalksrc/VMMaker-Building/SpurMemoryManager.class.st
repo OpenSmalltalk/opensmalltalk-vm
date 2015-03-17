@@ -6033,6 +6033,8 @@ SpurMemoryManager >> isClassAtUniqueIndex: aClass [
 
 { #category : #'object testing' }
 SpurMemoryManager >> isClassOfNonImm: objOop equalTo: classOop [
+	<inline: true>
+	self assert: (self isNonImmediate: objOop).
 	^(self classIndexOf: objOop) = (self rawHashBitsOf: classOop)
 ]
 

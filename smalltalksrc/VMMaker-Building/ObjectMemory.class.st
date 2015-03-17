@@ -3057,8 +3057,7 @@ ObjectMemory >> isClassOfNonImm: oop equalTo: classOop [
 
 	| ccIndex cl |
 	<inline: true>
-	(self isIntegerObject: oop) ifTrue:
-		[^false].
+	self assert: (self isNonImmediate: oop).
 
 	cl := (ccIndex := self compactClassIndexOf: oop) = 0
 			ifTrue: [(self classHeader: oop) bitAnd: AllButTypeMask]

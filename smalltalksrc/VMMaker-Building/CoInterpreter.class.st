@@ -139,6 +139,11 @@ CoInterpreter class >> exportAPISelectors: options [
 		into: [:set :class| set addAll: (self exportAPISelectorsFor: class); yourself]
 ]
 
+{ #category : #'accessing class hierarchy' }
+CoInterpreter class >> hasCogit [
+	^true
+]
+
 { #category : #initialization }
 CoInterpreter class >> initializeContextIndices [
 	super initializeContextIndices.
@@ -5581,7 +5586,7 @@ CoInterpreter >> printMethodCacheFor: thing [
 			[self cCode: [] inSmalltalk: [self transcript ensureCr].
 			 self printNum: i; cr; tab.
 			 (objectMemory isBytesNonImm: s)
-				ifTrue: [self cCode: 'printf("%x %.*s\n", s, numBytesOf(s), (char *)firstIndexableField(s))'
+				ifTrue: [self cCode: 'printf("%lx %.*s\n", s, numBytesOf(s), (char *)firstIndexableField(s))'
 						inSmalltalk: [self printHex: s; space; print: (self stringOf: s); cr]]
 				ifFalse: [self shortPrintOop: s].
 			 self tab.
