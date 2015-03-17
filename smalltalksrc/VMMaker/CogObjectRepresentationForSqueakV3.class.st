@@ -450,10 +450,8 @@ CogObjectRepresentationForSqueakV3 >> genGetInlineCacheClassTagFrom: sourceReg i
 	<var: #jumpCompact type: #'AbstractInstruction *'>
 	cogit AlignmentNops: (objectMemory wordSize max: 8).
 	entryLabel := cogit Label.
-	cogit backEnd hasLinkRegister
-		ifFalse:[ cogit MoveR: sourceReg R: destReg.
-				cogit AndCq: 1 R: destReg]
-		ifTrue:[cogit TstCq: 1 R: sourceReg]. "<---- this works for ARM but is not yet implemented for x86"
+	cogit MoveR: sourceReg R: destReg.
+	cogit AndCq: 1 R: destReg.
 	jumpIsInt := cogit JumpNonZero: 0.
 	"Get header word in destReg"
 	cogit MoveMw: 0 r: sourceReg R: destReg.
