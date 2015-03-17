@@ -304,6 +304,12 @@ InterpreterPlugin >> doesNotUnderstand: aMessage [
 		ifNil: [^super doesNotUnderstand: aMessage]
 		ifNotNil:
 			[:tuple| | method |
+			 "First check the cache for validity; if the ast element of the tuple is the actual method
+			 then the cache is up-to-date.  if it is not, the method has changed and should be regenerated."
+			 method := tuple last.
+			 method == (method methodClass >> method selector) ifFalse:
+				[translatedMethodCache removeKey: aMessage selector.
+				 ^self doesNotUnderstand: aMessage].
 			 method := tuple first.
 			 tuple second
 				ifNil: [interpreterProxy primitiveFail]
@@ -559,19 +565,19 @@ InterpreterPlugin >> tryToRunTranslatedPrimitive: method types: types subsidiari
 
 { #category : #simulation }
 InterpreterPlugin >> tupleOrNilForTranslatedPrimitiveSelector: selector [
-	"Answer a tuple of method, types, subsidiary methods, for the selector of a translated
-	 primitive.  If the method cannot be simulated, for example if it accesses instance
-	 variables, answer a tuple whose types element is nil."
+	"Answer a tuple of {simulation method, types, subsidiary methods, original method}
+	 for the selector of a translated primitive.  If the method cannot be simulated, for
+	 example if it accesses instance variables, answer a tuple whose types element is nil."
 	<doNotGenerate>
 	^(self class methodOrNilForTranslatedPrimitiveSelector: selector) ifNotNil:
 		[:method| | argNames argPragmas cg types subsidiaryMethods |
 		"Since the plugin itself runs the method, and the method is on some
 		 distant class, if the method accesses inst vars, the mechanism can't work."
-		method hasInstVarRef ifTrue: [^{method. nil. nil}].
-		argNames := [method methodClass newParser parseParameterNames: method getSourceFromFile]
+		method hasInstVarRef ifTrue: [^{method. nil. nil. method}].
+		argNames := [method methodClass newParser parseParameterNames: method getSource]
 						on: Error
 						do: [:ex|
-							^{method. nil. nil}].
+							^{method. nil. nil. method}].
 		argPragmas := method pragmas select:
 							[:p|
 							(p keyword beginsWith: 'var:')
@@ -595,11 +601,12 @@ InterpreterPlugin >> tupleOrNilForTranslatedPrimitiveSelector: selector [
 					[:subsidiary| | subsidiaryMethod |
 					subsidiaryMethod := method methodClass >> subsidiary.
 					subsidiaryMethod hasInstVarRef ifTrue:
-						[^{method. nil. nil}].
+						[^{method. nil. nil. method}].
 					subsidiaryMethod].
 		 { self methodWithoutPrimitive: method.
 		   types.
 		   Dictionary withAll:
 			(subsidiaryMethods collect:
-				[:m| m selector -> (self methodWithoutPrimitive: m)])}]
+				[:m| m selector -> (self methodWithoutPrimitive: m)]).
+		   method}]
 ]

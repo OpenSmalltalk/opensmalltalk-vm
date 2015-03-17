@@ -373,7 +373,7 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 	cogit RetN: 0.
 	
 	jumpNeedScavenge jmpTarget:
-		(cogit CallRT: ceSheduleScavengeTrampoline).
+		(cogit CallRT: ceScheduleScavengeTrampoline).
 	cogit Jump: continuation.
 	^0
 ]
@@ -1799,7 +1799,7 @@ CogObjectRepresentationFor32BitSpur >> genNewArrayOfSize: size initialized: init
 		MoveR: TempReg Aw: objectMemory freeStartAddress;
 		CmpCq: objectMemory getScavengeThreshold R: TempReg.
 	skip := cogit JumpBelow: 0.
-	cogit CallRT: ceSheduleScavengeTrampoline.
+	cogit CallRT: ceScheduleScavengeTrampoline.
 	skip jmpTarget: cogit Label.
 	^0
 ]
@@ -1832,7 +1832,7 @@ CogObjectRepresentationFor32BitSpur >> genNoPopCreateClosureAt: bcpc numArgs: nu
 		MoveR: TempReg Aw: objectMemory freeStartAddress;
 		CmpCq: objectMemory getScavengeThreshold R: TempReg.
 	skip := cogit JumpBelow: 0.
-	cogit CallRT: ceSheduleScavengeTrampoline.
+	cogit CallRT: ceScheduleScavengeTrampoline.
 	skip jmpTarget: cogit Label.
 
 	cogit
