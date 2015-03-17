@@ -3,6 +3,9 @@
 
 #include "GdbARMPlugin.h"
 //disassembler
+#if __APPLE__ && __MACH__
+# include "config.h"
+#endif
 #include <bfd.h>
 #include <dis-asm.h>
 
