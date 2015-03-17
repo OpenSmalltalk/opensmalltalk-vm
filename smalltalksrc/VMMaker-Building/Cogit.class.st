@@ -4062,7 +4062,11 @@ Cogit >> compileEntry [
 	self JumpNonZero: sendMiss.
 	noCheckEntry := self Label.
 	self compileSendTrace ifTrue:
-		[self CallRT: ceTraceLinkedSendTrampoline]
+		[backEnd hasLinkRegister ifTrue:
+			[self PushR: LinkReg].
+		 self CallRT: ceTraceLinkedSendTrampoline.
+		 backEnd hasLinkRegister ifTrue:
+			[self PopR: LinkReg]]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -4204,7 +4208,7 @@ Cogit >> computeEntryOffsets [
 	 are effectively garbage collected on return."
 	| sendMissCall |
 	<var: 'sendMissCall' type: #'AbstractInstruction *'>
-	self allocateOpcodes: 20 bytecodes: 0.
+	self allocateOpcodes: 24 bytecodes: 0.
 	methodOrBlockNumArgs := 0.
 	sendMissCall := self compileAbort.
 	self compileEntry.
