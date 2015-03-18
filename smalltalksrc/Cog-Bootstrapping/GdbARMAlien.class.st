@@ -113,11 +113,9 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager [
 			LongConstReg = (parts at: 3) 
 				ifTrue:[
 					(parts at:5) first = $#
-						ifTrue:["looks a good candidate with the # indicating a const - due to disassembler idiocy we have to check for both hex
-							and dec values. "
-							(parts last beginsWith: '0x') 
-								ifTrue:[ LongConstValue :=  LongConstValue +((NumberParser on: (parts last allButFirst:2)) nextUnsignedIntegerBase: 16)]
-								ifFalse:[ LongConstValue := LongConstValue + ((NumberParser on: (parts at:5) allButFirst) nextUnsignedIntegerBase: 10) ].
+						ifTrue:["looks a good candidate"
+							(parts last beginsWith: '0x') ifTrue:[
+								LongConstValue := LongConstValue + ((NumberParser on: (parts last allButFirst:2)) nextUnsignedIntegerBase: 16) ].
 							LongConstStep:= LongConstStep +1].
 					LongConstStep = 4
 						ifTrue:["we've completed a pattern of mov/orr/orr/orr, so print the value it built" 
@@ -142,6 +140,32 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager [
 	^ anInstructionString, ' = ', string
 ]
 
+{ #category : #disassembly }
+GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager fromAddress: address [
+	| word opcode shift mode operand |
+	word := aSymbolManager objectMemory longAt: address.
+	(self instructionIsAnyB: word)
+		ifTrue:
+			[operand := word bitAnd: 16rFFFFFF.
+			 (operand anyMask: 16r800000) ifTrue:
+				[operand := operand - 16r1000000].
+			 operand := operand * 4 + address + 8]
+		ifFalse:
+			[shift := word >> 7 bitAnd: 16r1F.
+			 mode := word >> 25 bitAnd: 7.
+			 "CogARMCompiler always uses a 0 shift in the last operand."
+			 (mode ~= 1 and: [shift ~= 0]) ifTrue:
+				[^anInstructionString].
+			 opcode := word >> 21 bitAnd: 16rF.
+			 opcode ~= CogARMCompiler orOpcode ifTrue:
+				[^anInstructionString].
+			 operand := aSymbolManager backEnd literalBeforeFollowingAddress: address + 4].
+	"is there an intersting address with this?"
+	^(aSymbolManager lookupAddress: operand)
+		ifNotNil: [:string| anInstructionString, ' = ', (operand printStringRadix: 16), ' = ', string]
+		ifNil: [anInstructionString, ' = ', (operand printStringRadix: 16)]
+]
+
 { #category : #accessing }
 GdbARMAlien >> eflags [
 	
@@ -154,11 +178,11 @@ GdbARMAlien >> eflags [
 { #category : #accessing }
 GdbARMAlien >> eflags: anUnsignedInteger [
 	"set the processor flags from the integer"
-	self nflag: (anUnsignedInteger >> 5 bitOr: 1).
-	self zflag: (anUnsignedInteger >> 4 bitOr: 1).
-	self cflag: (anUnsignedInteger >> 3 bitOr: 1).
-	self vflag: (anUnsignedInteger >> 2 bitOr: 1).
-	self ifflags: (anUnsignedInteger bitOr: 3)
+	self nflag: (anUnsignedInteger >> 5 bitAnd: 1).
+	self zflag: (anUnsignedInteger >> 4 bitAnd: 1).
+	self cflag: (anUnsignedInteger >> 3 bitAnd: 1).
+	self vflag: (anUnsignedInteger >> 2 bitAnd: 1).
+	self ifflags: (anUnsignedInteger bitAnd: 3)
 ]
 
 { #category : #accessing }
@@ -470,6 +494,12 @@ GdbARMAlien >> instructionIsAddSP: instr [
 GdbARMAlien >> instructionIsAlignSP: instr [
 "is this a bics sp, sp, #7 -  instruction?"
 	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rFFFFFFF)) = (16r3DDD007)]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsAnyB: instr [
+	"is this any of the B BX BL or BLX <offset> instructions?"
+	^(instr >> 25 bitAnd: 7) = 5
 ]
 
 { #category : #testing }
