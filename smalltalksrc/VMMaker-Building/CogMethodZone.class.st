@@ -799,7 +799,7 @@ CogMethodZone >> voidYoungReferrersPostTenureAll [
 CogMethodZone >> whereIsMaybeCodeThing: anOop [
 	<api>
 	<returnTypeC: 'char *'>
-	(self oop: anOop isGreaterThanOrEqualTo: baseAddress andLessThan: limitAddress) ifTrue:
+	(self oop: anOop isGreaterThanOrEqualTo: cogit cogCodeBase andLessThan: limitAddress) ifTrue:
 		[(self oop: anOop isLessThan: cogit minCogMethodAddress) ifTrue:
 			[^' is in generated runtime'].
 		 (self oop: anOop isLessThan: mzFreeStart) ifTrue:

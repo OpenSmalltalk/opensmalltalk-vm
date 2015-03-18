@@ -126,6 +126,7 @@ Class {
 		'PrefetchAw',
 		'PushCw',
 		'PushR',
+		'RISCTempReg',
 		'ReceiverResultReg',
 		'RetN',
 		'SPReg',

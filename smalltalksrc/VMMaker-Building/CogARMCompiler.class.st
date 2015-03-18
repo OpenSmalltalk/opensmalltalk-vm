@@ -50,7 +50,6 @@ Class {
 		'R7',
 		'R8',
 		'R9',
-		'RISCTempReg',
 		'RsbOpcode',
 		'SP',
 		'STMFD',
@@ -1979,6 +1978,11 @@ CogARMCompiler >> rewriteJumpLongAt: callSiteReturnAddress target: callTargetAdd
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress - 1]."
 	^20
+]
+
+{ #category : #accessing }
+CogARMCompiler >> riscTempReg [
+	^RISCTempReg
 ]
 
 { #category : #testing }

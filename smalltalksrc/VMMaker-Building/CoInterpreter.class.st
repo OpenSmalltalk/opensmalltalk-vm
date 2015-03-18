@@ -5106,6 +5106,12 @@ CoInterpreter >> nextProfileTickLow [
 	^nextProfileTick bitAnd: 16rFFFFFFFF
 ]
 
+{ #category : #simulation }
+CoInterpreter >> nilLocalFP [
+	<doNotGenerate>
+	localFP := nil
+]
+
 { #category : #'compiled methods' }
 CoInterpreter >> noAssertHeaderOf: methodPointer [
 	<api>

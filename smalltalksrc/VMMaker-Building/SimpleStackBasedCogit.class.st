@@ -911,6 +911,8 @@ SimpleStackBasedCogit >> compileBlockFrameBuild: blockStart [
 	<var: #blockStart type: #'BlockStart *'>
 	<inline: false>
 	self annotateBytecode: self Label.
+	backEnd hasLinkRegister ifTrue:
+		[self PushR: LinkReg].
 	self PushR: FPReg.
 	self MoveR: SPReg R: FPReg.
 	"The block method field must have its MFMethodFlagIsBlockFlag bit set.
