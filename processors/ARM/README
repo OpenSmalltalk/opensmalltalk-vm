@@ -1,8 +1,5 @@
-To build the GdbARMPlugin on linux (currently only supported on linux) get
-gdb-7.6, e.g. from http://www.gnu.org/software/gdb/download/gdb-7.6.tar.gz
-Unpack it here so one obtains platforms/ARM/gdb-7.6
-
-Then make sure you have binutils and libiberty installed.  e.g.
+To build the GdbARMPlugin on linux (currently only supported on linux & 32-bit
+Mac OS X) make sure you have binutils and libiberty installed.  e.g.
 
 CentOS configuration for binutils and libiberty
 yum install buinutils-devel
@@ -10,6 +7,8 @@ yum install compat-gcc-34
 
 Ubuntu configuration for binutils and libiberty
 sudo apt-get install binutils-dev libiberty-dev
+
+The gdb-7.6 here is a subtly modified version of, um, gdb-7.6.
 
 Then
 

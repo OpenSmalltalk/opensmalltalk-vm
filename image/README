@@ -1,4 +1,8 @@
 This directory contains scripts that can buld various VMMaker and Spur images.
+As of early 2015 the default VMMaker build script is
+	buildspurvmmakerimage.sh
+and it builds a Spur VMMaker image.
+
 The standard Cog VMMaker image is built loading the latest VMMaker.oscog and Cog
 packages, plus support packages, into an updated Squeak trunk image.
 You can build this image using buildsqueaktrunkvmmakerimage.sh.

@@ -1,0 +1,1 @@
+Transcript clear.Smalltalk snapshot: true andQuit: true.[[Processor activeProcess bindToThreadId: 2]	on: Error	do: [:ex|]. StdioListener new run] forkAt: Processor activePriority + 1

@@ -1,4 +1,5 @@
 #!/bin/sh
+# This is (in a way) obsoleted by getlatestspurtrunkimage.sh
 . ./envvars.sh
 ./getsqueak45.sh
 . ./getGoodCogVM.sh

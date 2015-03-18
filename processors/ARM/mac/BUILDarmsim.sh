@@ -3,13 +3,7 @@
 #	gdb-7.6/opcodes/libopcodes.a
 #	gdb-7.6/sim/arm/libsim.a
 
-test -d gdb-7.6 || unzip ../ARM-gdb-7.6.zip
-
-#TARGET='--target=arm-linux'
-#BUILD='--build=i386-apple-darwin9'
-#CFLAGS='CFLAGS=\"-arch i386 -g -O2\"'
-#LDFLAGS='LDFLAGS=\"-arch i386\"'
-#./configure "$TARGET" "$BUILD" "$CFLAGS" "$LDFLAGS"
+test -d gdb-7.6 || svn export ../gdb-7.6
 
 ln -s ../../binutils-2.25/bfd/bfd.h gdb-7.6/bfd/bfd.h
 ln -s ../../binutils-2.25/bfd/config.h gdb-7.6/bfd/config.h

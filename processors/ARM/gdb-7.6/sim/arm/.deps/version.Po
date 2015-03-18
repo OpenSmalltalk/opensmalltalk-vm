@@ -1,3 +1,0 @@
-version.o: version.c ../common/version.h
-
-../common/version.h:

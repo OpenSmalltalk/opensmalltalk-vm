@@ -457,7 +457,7 @@ ARMul_OSHandleSWI (ARMul_State * state, ARMword number)
 	// TPR - This is the SWI number which is returned by our memory interface 
 	// if there is an instruction fetch for an illegal address.
 	// this #define stolen from GdbARMPlugin.h and ought to be done better
-	#define InstructionPrefetchError 5
+#	define InstructionPrefetchError 5
 		state->Emulate = STOP;
 		state->EndCondition = InstructionPrefetchError;
 			
