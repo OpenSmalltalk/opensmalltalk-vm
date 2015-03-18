@@ -113,9 +113,11 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager [
 			LongConstReg = (parts at: 3) 
 				ifTrue:[
 					(parts at:5) first = $#
-						ifTrue:["looks a good candidate"
-							(parts last beginsWith: '0x') ifTrue:[
-								LongConstValue := LongConstValue + ((NumberParser on: (parts last allButFirst:2)) nextUnsignedIntegerBase: 16) ].
+						ifTrue:["looks a good candidate with the # indicating a const - due to disassembler idiocy we have to check for both hex
+							and dec values. "
+							(parts last beginsWith: '0x') 
+								ifTrue:[ LongConstValue :=  LongConstValue +((NumberParser on: (parts last allButFirst:2)) nextUnsignedIntegerBase: 16)]
+								ifFalse:[ LongConstValue := LongConstValue + ((NumberParser on: (parts at:5) allButFirst) nextUnsignedIntegerBase: 10) ].
 							LongConstStep:= LongConstStep +1].
 					LongConstStep = 4
 						ifTrue:["we've completed a pattern of mov/orr/orr/orr, so print the value it built" 
@@ -142,7 +144,7 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager [
 
 { #category : #disassembly }
 GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager fromAddress: address [
-	| word opcode shift mode operand |
+	| word opcode rotate mode operand |
 	word := aSymbolManager objectMemory longAt: address.
 	(self instructionIsAnyB: word)
 		ifTrue:
@@ -151,13 +153,13 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager from
 				[operand := operand - 16r1000000].
 			 operand := operand * 4 + address + 8]
 		ifFalse:
-			[shift := word >> 7 bitAnd: 16r1F.
-			 mode := word >> 25 bitAnd: 7.
-			 "CogARMCompiler always uses a 0 shift in the last operand."
-			 (mode ~= 1 and: [shift ~= 0]) ifTrue:
-				[^anInstructionString].
-			 opcode := word >> 21 bitAnd: 16rF.
+			[opcode := word >> 21 bitAnd: 16rF.
 			 opcode ~= CogARMCompiler orOpcode ifTrue:
+				[^anInstructionString].
+			rotate := word >> 8 bitAnd: 16rF.
+			 mode := word >> 25 bitAnd: 7.
+			 "CogARMCompiler always uses a 0 rotate in the last operand of the final ORR when building long constants."
+			 (mode = 1 and: [rotate ~= 0]) ifTrue:
 				[^anInstructionString].
 			 operand := aSymbolManager backEnd literalBeforeFollowingAddress: address + 4].
 	"is there an intersting address with this?"
