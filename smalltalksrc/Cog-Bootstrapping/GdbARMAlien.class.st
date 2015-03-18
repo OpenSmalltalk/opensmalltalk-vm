@@ -113,8 +113,11 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager [
 			LongConstReg = (parts at: 3) 
 				ifTrue:[
 					(parts at:5) first = $#
-						ifTrue:["looks a good candidate with the # indicating a const"
-							LongConstValue := LongConstValue + ((NumberParser on: (parts at:5) allButFirst) nextUnsignedIntegerBase: 10) .
+						ifTrue:["looks a good candidate with the # indicating a const - due to disassembler idiocy we have to check for both hex
+							and dec values. "
+							(parts last beginsWith: '0x') 
+								ifTrue:[ LongConstValue :=  LongConstValue +((NumberParser on: (parts last allButFirst:2)) nextUnsignedIntegerBase: 16)]
+								ifFalse:[ LongConstValue := LongConstValue + ((NumberParser on: (parts at:5) allButFirst) nextUnsignedIntegerBase: 10) ].
 							LongConstStep:= LongConstStep +1].
 					LongConstStep = 4
 						ifTrue:["we've completed a pattern of mov/orr/orr/orr, so print the value it built" 
