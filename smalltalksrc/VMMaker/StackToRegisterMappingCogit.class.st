@@ -3582,23 +3582,27 @@ StackToRegisterMappingCogit >> generateEnilopmarts [
 			[realCECallCogCodePopReceiverArg0Regs :=
 				self genEnilopmartFor: ReceiverResultReg
 					and: Arg0Reg
+					forCall: true
 					called: 'realCECallCogCodePopReceiverArg0Regs'.
 			 ceCallCogCodePopReceiverArg0Regs := #callCogCodePopReceiverArg0Regs.
 			 realCECallCogCodePopReceiverArg1Arg0Regs :=
 				self genEnilopmartFor: ReceiverResultReg
-					and: Arg0Reg							
+					and: Arg0Reg
 					and: Arg1Reg
+					forCall: true
 					called: 'realCECallCogCodePopReceiverArg1Arg0Regs'.
 			 ceCallCogCodePopReceiverArg1Arg0Regs := #callCogCodePopReceiverArg1Arg0Regs]
 		ifFalse:
 			[ceCallCogCodePopReceiverArg0Regs :=
 				self genEnilopmartFor: ReceiverResultReg
 					and: Arg0Reg
+					forCall: true
 					called: 'ceCallCogCodePopReceiverArg0Regs'.
 			 ceCallCogCodePopReceiverArg1Arg0Regs :=
 				self genEnilopmartFor: ReceiverResultReg
-					and: Arg0Reg							
+					and: Arg0Reg
 					and: Arg1Reg
+					forCall: true
 					called: 'ceCallCogCodePopReceiverArg1Arg0Regs'].
 
 	"These are special versions of the ceCallCogCodePopReceiverAndClassRegs enilopmart that also
