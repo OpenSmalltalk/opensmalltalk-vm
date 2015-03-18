@@ -11336,7 +11336,7 @@ StackInterpreter >> printSends [
 { #category : #'debug printing' }
 StackInterpreter >> printStackCallStack [
 	<doNotGenerate>
-	self printStackCallStackOf: localFP
+	self printStackCallStackOf: (localFP ifNil: [framePointer])
 ]
 
 { #category : #'debug printing' }
