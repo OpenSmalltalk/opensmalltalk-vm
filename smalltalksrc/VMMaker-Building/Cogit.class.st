@@ -5361,6 +5361,26 @@ Cogit >> genPICAbortTrampoline [
 ]
 
 { #category : #initialization }
+Cogit >> genReturnTrampolineFor: aRoutine  called: aString arg: regOrConst0 [
+	"Generate a trampoline for a routine used as a return address, that has one argument.
+	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<var: #aString type: #'char *'>
+	^self
+		genTrampolineFor: aRoutine
+		called: aString
+		numArgs: 1
+		arg: regOrConst0
+		arg: nil
+		arg: nil
+		arg: nil
+		saveRegs: false
+		pushLinkReg: false "Since the routine is reached by a return instruction it should /not/ push the link register."
+		resultReg: nil
+		appendOpcodes: false
+]
+
+{ #category : #initialization }
 Cogit >> genSafeTrampolineFor: aRoutine called: aString [
 	"Generate a trampoline with no arguments that will
 	 save and restore all registers around the call"
@@ -5972,9 +5992,6 @@ Cogit >> generateRunTimeTrampolines [
 	ceSendMustBeBooleanAddTrueTrampoline := self genMustBeBooleanTrampolineFor: objectMemory trueObject
 														called: 'ceSendMustBeBooleanAddTrueTrampoline'.
 	ceNonLocalReturnTrampoline := self genNonLocalReturnTrampoline.
-	ceBaseFrameReturnTrampoline := self genTrampolineFor: #ceBaseFrameReturn:
-										called: 'ceBaseFrameReturnTrampoline'
-										arg: ReceiverResultReg.
 	ceCheckForInterruptTrampoline := self genCheckForInterruptsTrampoline.
 	ceFetchContextInstVarTrampoline := self genTrampolineFor: #ceContext:instVar:
 											called: 'ceFetchContextInstVarTrampoline'
@@ -5986,12 +6003,17 @@ Cogit >> generateRunTimeTrampolines [
 											arg: ReceiverResultReg
 											arg: SendNumArgsReg
 											arg: ClassReg
-											result: ReceiverResultReg. "to keep ReceiverResultReg live."
-	ceReturnToInterpreterTrampoline := self genTrampolineFor: #ceReturnToInterpreter:
-											called: 'ceReturnToInterpreterTrampoline'
-											arg: ReceiverResultReg.
+											result: ReceiverResultReg. "to keep ReceiverResultReg live.".
 	ceCannotResumeTrampoline := self genTrampolineFor: #ceCannotResume
-											called: 'ceCannotResumeTrampoline'
+											called: 'ceCannotResumeTrampoline'.
+	"These two are unusual; they are reached by return instructions."
+	ceBaseFrameReturnTrampoline := self genReturnTrampolineFor: #ceBaseFrameReturn:
+											called: 'ceBaseFrameReturnTrampoline'
+											arg: ReceiverResultReg.
+	ceReturnToInterpreterTrampoline := self
+											genReturnTrampolineFor: #ceReturnToInterpreter:
+											called: 'ceReturnToInterpreterTrampoline'
+											arg: ReceiverResultReg
 ]
 
 { #category : #initialization }
@@ -8893,6 +8915,10 @@ Cogit >> setThreadManager: aCogThreadManager [
 { #category : #'simulation only' }
 Cogit >> shortcutTrampoline: aProcessorSimulationTrap to: aBlock [
 	<doNotGenerate>
+	coInterpreter printFrameAtEachStep ifTrue:
+		[coInterpreter
+			printFrame: processor fp
+			WithSP: processor sp].
 	processor
 		simulateLeafCallOf: aProcessorSimulationTrap address
 		nextpc: aProcessorSimulationTrap nextpc
@@ -8907,7 +8933,11 @@ Cogit >> shortcutTrampoline: aProcessorSimulationTrap to: aBlock [
 	processor
 		sp: coInterpreter stackPointer;
 		fp: coInterpreter framePointer;
-		simulateLeafReturnIn: coInterpreter memory
+		simulateLeafReturnIn: coInterpreter memory.
+	coInterpreter printFrameAtEachStep ifTrue:
+		[coInterpreter
+			printFrame: processor fp
+			WithSP: processor sp]
 ]
 
 { #category : #'bytecode generators' }
@@ -9049,11 +9079,16 @@ Cogit >> simulatedAddressFor: anObject [
 	 into a Smalltalk message send or block evaluation.
 
 	 N.B. These addresses are at the top end of the bottom half of the address space
-	 so that they don't have the sign bit set and so will not look like negative numbers."
+	 so that they don't have the sign bit set and so will not look like negative numbers,
+	 unless they're the short-cut routines on ARM, where we want to use a bl, not a blx."
 	<doNotGenerate>
 	^simulatedAddresses
 		at: anObject
-		ifAbsentPut: [(simulatedAddresses size + 101 * objectMemory wordSize) negated bitAnd: self allButTopBitOfAddressSpaceMask]
+		ifAbsentPut:
+			[(simulatedAddresses size + 101 * objectMemory wordSize) negated
+				bitAnd: ((backEnd wantsNearAddressFor: anObject)
+							ifTrue: [self addressSpaceMask]
+							ifFalse: [self allButTopBitOfAddressSpaceMask])]
 ]
 
 { #category : #initialization }
@@ -9353,7 +9388,11 @@ Cogit >> testPCMappingForCompiledMethod: aCompiledMethod cogMethod: cm [
 { #category : #debugging }
 Cogit >> traceLinkedSendOffset [
 	<api>
-	^cmNoCheckEntryOffset + backEnd callInstructionByteSize
+	^cmNoCheckEntryOffset
+	 + backEnd callInstructionByteSize
+	 + (backEnd hasLinkRegister
+		ifTrue: [backEnd pushLinkRegisterByteSize]
+		ifFalse: [0])
 ]
 
 { #category : #'method map' }
