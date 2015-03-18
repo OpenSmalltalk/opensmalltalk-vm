@@ -151,7 +151,7 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager from
 			[operand := word bitAnd: 16rFFFFFF.
 			 (operand anyMask: 16r800000) ifTrue:
 				[operand := operand - 16r1000000].
-			 operand := operand * 4 + address + 8]
+			 operand := operand * 4 + address + 8 bitAnd: aSymbolManager addressSpaceMask]
 		ifFalse:
 			[opcode := word >> 21 bitAnd: 16rF.
 			 opcode ~= CogARMCompiler orOpcode ifTrue:
@@ -1158,8 +1158,6 @@ GdbARMAlien >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
 
 { #category : #'execution simulation' }
 GdbARMAlien >> simulateLeafReturnIn: aMemory [
-"simulate a leaf return; this may get a bit more complicated since we are trying to compensate for the IA32 automagically pushing the return address whereas the ARM doesn't."
-self halt.
 	self pc: self lr
 ]
 
