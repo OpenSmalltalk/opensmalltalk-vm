@@ -32,6 +32,7 @@ Class {
 		'LS',
 		'LT',
 		'MI',
+		'MoveOpcode',
 		'NE',
 		'OrOpcode',
 		'PC',
@@ -120,9 +121,10 @@ CogARMCompiler class >> initialize [
 
 	AddOpcode := 	4.
 	AndOpcode := 0.
-	BicOpcode := 16rE.
+	BicOpcode := 14.
 	CmpOpcode := 10.
-	OrOpcode := 16rC.
+	MoveOpcode := 13.
+	OrOpcode := 12.
 	RsbOpcode := 3.
 	SubOpcode := 2.
 	XorOpcode := 1.
@@ -140,6 +142,11 @@ CogARMCompiler class >> initialize [
 		self classPool
 			declare: classVarName from: Undeclared;
 			at: classVarName put: value + LastRTLCode - 1]
+]
+
+{ #category : #accessing }
+CogARMCompiler class >> orOpcode [
+	^OrOpcode
 ]
 
 { #category : #'class initialization' }
@@ -479,7 +486,7 @@ CogARMCompiler >> concretizeArithmeticShiftRightCqR [
 	distance := (operands at: 0) min: 31.
 	reg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dist -100 srcR"
-	self machineCodeAt: 0 put: (self type: 0 op: 16rD set: 0 rn: 0 rd: reg 
+	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 0 rn: 0 rd: reg 
 									shifterOperand: (distance << 7 bitOr: (64 "flag for arithmetic" bitOr: reg))).
 	^machineCodeSize := 4
 ]
@@ -494,7 +501,7 @@ CogARMCompiler >> concretizeArithmeticShiftRightRR [
 	distReg := self concreteRegister: (operands at: 0).
 	destReg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 destR distR 0101 srcR"
-	self machineCodeAt: 0 put: (self type: 0 op: 16rD set: 0 rn: 0 rd: destReg 
+	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 0 rn: 0 rd: destReg 
 									shifterOperand: (distReg << 8 bitOr: (80 bitOr: destReg))).
 	^machineCodeSize := 4
 ]
@@ -693,7 +700,7 @@ CogARMCompiler >> concretizeLogicalShiftLeftCqR [
 	distance := (operands at: 0) min: 31.
 	reg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dista 000 srcR"
-	self machineCodeAt: 0 put: (self type: 0 op: 16rD set: 0 rn: 0 rd: reg shifterOperand: (distance << 7 bitOr: reg)).
+	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 0 rn: 0 rd: reg shifterOperand: (distance << 7 bitOr: reg)).
 	^machineCodeSize := 4
 ]
 
@@ -707,7 +714,7 @@ CogARMCompiler >> concretizeLogicalShiftLeftRR [
 	distReg := self concreteRegister: (operands at: 0).
 	destReg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dist 0001 srcR"
-	self machineCodeAt: 0 put: (self type: 0 op: 16rD set: 0 rn: 0 rd: destReg 
+	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 0 rn: 0 rd: destReg 
 									shifterOperand: (distReg << 8 bitOr: (16 bitOr: destReg))).
 	^machineCodeSize := 4
 ]
@@ -722,7 +729,7 @@ CogARMCompiler >> concretizeLogicalShiftRightCqR [
 	distance := (operands at: 0) min: 31.
 	reg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dist -010 srcR"
-	self machineCodeAt: 0 put: (self type: 0 op: 16rD set: 0 rn: 0 rd: reg 
+	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 0 rn: 0 rd: reg 
 									shifterOperand: (distance << 7 bitOr: (32 bitOr: reg))).
 	^machineCodeSize := 4
 ]
@@ -737,7 +744,7 @@ CogARMCompiler >> concretizeLogicalShiftRightRR [
 	distReg := self concreteRegister: (operands at: 0).
 	destReg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dist 0011 srcR"
-	self machineCodeAt: 0 put: (self type: 0 op: 16rD set: 0 rn: 0 rd: destReg 
+	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 0 rn: 0 rd: destReg 
 									shifterOperand: (distReg << 8 bitOr: (48 bitOr: destReg))).
 	^machineCodeSize := 4
 ]
@@ -1493,6 +1500,12 @@ CogARMCompiler >> instructionBeforeAddress: followingAddress [
 ]
 
 { #category : #testing }
+CogARMCompiler >> instructionIsAnyB: instr [
+	"is this any of the B BX BL or BLX <offset> instructions?"
+	^(instr >> 25 bitAnd: 7) = 5
+]
+
+{ #category : #testing }
 CogARMCompiler >> instructionIsB: instr [
 "is this a B <offset> instruction?"
 	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rF<<24)) = (16rA<<24)]
@@ -1774,21 +1787,21 @@ l -> load (1) or store (0)"
 CogARMCompiler >> mov: destReg imm: immediate8bitValue ror: rot [
 	"Remember the ROR is doubled by the cpu so use 30>>1 etc.
 	MOV destReg, #immediate8BitValue ROR rot"
-	^self type: 1 op: 16rD set: 0 rn: 0 rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate8bitValue)
+	^self type: 1 op: MoveOpcode set: 0 rn: 0 rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate8bitValue)
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> mov: destReg rn: srcReg [
 "	MOV destReg, srcReg"
 
-	^self type: 0 op: 16rD set: 0 rn: 0 rd: destReg shifterOperand: srcReg
+	^self type: 0 op: MoveOpcode set: 0 rn: 0 rd: destReg shifterOperand: srcReg
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> movs: destReg rn: srcReg [
 "	MOVS destReg, srcReg"
 
-	^self type: 0 op: 16rD set: 1 rn: 0 rd: destReg shifterOperand: srcReg
+	^self type: 0 op: MoveOpcode set: 1 rn: 0 rd: destReg shifterOperand: srcReg
 ]
 
 { #category : #printing }
@@ -1942,13 +1955,15 @@ CogARMCompiler >> rewriteJumpLongAt: callSiteReturnAddress target: callTargetAdd
 CogARMCompiler >> rotateable8bitImmediate: constant ifTrue: trueAlternativeBlock ifFalse: falseAlternativeBlock [
 	<inline: true>
 	"For data processing operands, there is the immediate shifter_operand variant, 
-	where an 8 bit value is ring shifted _right_ by 2*i.
-	This is only suitable for quick constant(Cq), which don't change."
+	 where an 8 bit value is ring shifted _right_ by i.
+	 This is only suitable for quick constants(Cq), which won't change."
 	
-	(constant bitAnd: 16rFF) = constant ifTrue: [ ^trueAlternativeBlock value: 0 value: constant].
-	2 to: 30 do: [:i |
-		(constant bitAnd: 16rFF << i) = constant 
-			ifTrue: [ ^trueAlternativeBlock value: 32 - i value: constant >> i ]].
+	(constant bitAnd: 16rFF) = constant ifTrue:
+		[^trueAlternativeBlock value: 0 value: constant].
+	1 to: 30 do:
+		[:i |
+		(constant bitAnd: 16rFF << i) = constant ifTrue:
+			[^trueAlternativeBlock value: 32 - i value: constant >> i]].
 	^falseAlternativeBlock value
 ]
 
