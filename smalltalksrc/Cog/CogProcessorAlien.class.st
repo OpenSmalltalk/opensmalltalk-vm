@@ -176,7 +176,7 @@ CogProcessorAlien >> disassembleNextInstructionIn: memory for: aSymbolManager [ 
 				ifFalse: [^self pc hex, ' : Invalid address'].
 	^aSymbolManager
 		ifNil: [string]
-		ifNotNil: [self decorateDisassembly: string for: aSymbolManager]
+		ifNotNil: [self decorateDisassembly: string for: aSymbolManager fromAddress: self pc]
 ]
 
 { #category : #'accessing-abstract' }
