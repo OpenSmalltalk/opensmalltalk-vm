@@ -1862,6 +1862,11 @@ CogARMCompiler >> popR: dstReg [
 	^self memMxr: AL reg: dstReg base: SP p: 0 u: 1 b: 0 w: 0 l: 1 imm: 4
 ]
 
+{ #category : #accessing }
+CogARMCompiler >> pushLinkRegisterByteSize [
+	^4
+]
+
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> pushR: srcReg [
 "	push word to TOS 
@@ -2101,4 +2106,10 @@ CogARMCompiler >> type: type op: flagsOrOpcode set: doUpdateStatusRegister rn:  
 CogARMCompiler >> type: type op: flagsOrOpcode set: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister shifterOperand: so [
 	<inline: true>
 	^(self type: type op: flagsOrOpcode set: doUpdateStatusRegister rn: sourceRegister rd: targetRegister) bitOr: (so bitAnd: 16rFFF)
+]
+
+{ #category : #simulation }
+CogARMCompiler >> wantsNearAddressFor: anObject [
+	"A hack hook to allow ARM to override the simulated address for the short-cut trampolines"
+	^anObject isSymbol and: [anObject beginsWith: 'ceShortCut']
 ]
