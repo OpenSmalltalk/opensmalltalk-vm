@@ -436,7 +436,6 @@ CogVMSimulator >> ceStackOverflow: contextSwitchIfNotNil [
 
 { #category : #'debug support' }
 CogVMSimulator >> ceTraceBlockActivation [
-	<var: #theFP type: #'char *'>
 	cogit printOnTrace ifTrue:
 		[transcript print: byteCount; nextPut: $/; print: (sendCount := sendCount + 1); space].
 	cogit assertCStackWellAligned.
@@ -2935,6 +2934,11 @@ CogVMSimulator >> printECS [
 CogVMSimulator >> printFloat: f [
 
 	traceOn ifTrue: [ transcript print: f ]
+]
+
+{ #category : #testing }
+CogVMSimulator >> printFrameAtEachStep [
+	^printFrameAtEachStep
 ]
 
 { #category : #'debug printing' }
