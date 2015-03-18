@@ -1529,6 +1529,12 @@ CogARMCompiler >> instructionIsBX: instr [
 	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: 16r0FFFFFF0) = 16r12FFF10]
 ]
 
+{ #category : #disassembly }
+CogARMCompiler >> instructionSizeAt: pc [
+	"Answer the instruction size at pc.Simple on ARM ;-)"
+	^4
+]
+
 { #category : #testing }
 CogARMCompiler >> is12BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: falseAlternativeBlock [
 	"For LDR and STR, there is an instruction allowing for one instruction encoding if the offset is encodable in 12 bit."
@@ -1572,6 +1578,14 @@ CogARMCompiler >> isCallPreceedingReturnPC: mcpc [
 ]
 
 { #category : #testing }
+CogARMCompiler >> isJumpAt: pc [
+	| instr |
+	instr := objectMemory long32At: pc.
+	^(self instructionIsB: instr)
+	  or: [self instructionIsBX: instr]
+]
+
+{ #category : #testing }
 CogARMCompiler >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction."
 	^self isJump or: [opcode = AlignmentNops or: [opcode = Call]]
@@ -1587,6 +1601,17 @@ CogARMCompiler >> isQuick: operand [
 CogARMCompiler >> jumpLongTargetBeforeFollowingAddress: mcpc [ 
 	"Answer the target address for the long jump immediately preceeding mcpc"
 	^self callTargetFromReturnAddress: mcpc
+]
+
+{ #category : #disassembly }
+CogARMCompiler >> jumpTargetPCAt: pc [
+	<returnTypeC: #usqInt>
+	| operand word |
+	word := objectMemory long32At: pc.
+	operand := word bitAnd: 16rFFFFFF.
+	(operand anyMask: 16r800000) ifTrue:
+		[operand := operand - 16r1000000].
+	^operand * 4 + pc + 8 bitAnd: cogit addressSpaceMask
 ]
 
 { #category : #'ARM convenience instructions' }
