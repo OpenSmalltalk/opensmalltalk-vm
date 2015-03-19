@@ -4195,7 +4195,7 @@ Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: r
 		resultReg: resultRegOrNil
 		saveRegs: saveRegs.
 	backEnd genLoadStackPointers.
-	backEnd hasLinkRegister ifTrue:
+	(pushLinkReg and: [backEnd hasLinkRegister]) ifTrue:
 		[self PopR: LinkReg].
 	self RetN: 0
 ]
@@ -8758,10 +8758,8 @@ Cogit >> setThreadManager: aCogThreadManager [
 { #category : #'simulation only' }
 Cogit >> shortcutTrampoline: aProcessorSimulationTrap to: aBlock [
 	<doNotGenerate>
-	coInterpreter printFrameAtEachStep ifTrue:
-		[coInterpreter
-			printFrame: processor fp
-			WithSP: processor sp].
+	backEnd hasLinkRegister ifTrue:
+		[processor pushWord: processor lr in: coInterpreter memory].
 	processor
 		simulateLeafCallOf: aProcessorSimulationTrap address
 		nextpc: aProcessorSimulationTrap nextpc
@@ -8777,10 +8775,8 @@ Cogit >> shortcutTrampoline: aProcessorSimulationTrap to: aBlock [
 		sp: coInterpreter stackPointer;
 		fp: coInterpreter framePointer;
 		simulateLeafReturnIn: coInterpreter memory.
-	coInterpreter printFrameAtEachStep ifTrue:
-		[coInterpreter
-			printFrame: processor fp
-			WithSP: processor sp]
+	backEnd hasLinkRegister ifTrue:
+		[processor lr: (processor popWordIn: coInterpreter memory)]
 ]
 
 { #category : #'bytecode generators' }
