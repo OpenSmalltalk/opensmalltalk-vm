@@ -2884,6 +2884,14 @@ CogIA32Compiler >> s: scale i: indexReg b: baseReg [
 	^scale << 6 + (indexReg << 3) + baseReg
 ]
 
+{ #category : #abi }
+CogIA32Compiler >> saveAndRestoreLinkRegAround: aBlock [
+	"If the processor's ABI includes a link register, generate instructions
+	 to save and restore it around aBlock, which is assumed to generate code."
+	<inline: true>
+	^aBlock value
+]
+
 { #category : #testing }
 CogIA32Compiler >> setsConditionCodesFor: aConditionalJumpOpcode [
 	<inline: false> "to save Slang from having to be a real compiler (it can't inline switches that return)"

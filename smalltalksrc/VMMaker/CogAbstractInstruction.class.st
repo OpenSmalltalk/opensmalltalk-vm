@@ -886,6 +886,14 @@ CogAbstractInstruction >> resolveJumpTarget [
 		 self jmpTarget: fixup targetInstruction]
 ]
 
+{ #category : #abi }
+CogAbstractInstruction >> saveAndRestoreLinkRegAround: aBlock [
+	"If the processor's ABI includes a link register, generate instructions
+	 to save and restore it around aBlock, which is assumed to generate code."
+	<inline: true>
+	self subclassResponsibility
+]
+
 { #category : #'generate machine code' }
 CogAbstractInstruction >> setLabelOffset: aValue [
 	"Hack:  To arrange that the block method field pushed in a block entry has

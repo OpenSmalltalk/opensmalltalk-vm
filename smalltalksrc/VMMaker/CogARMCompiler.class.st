@@ -576,7 +576,7 @@ CogARMCompiler >> concretizeConditionalJumpLong: conditionCode [
 ]
 
 { #category : #'generate machine code - concretize' }
-CogARMCompiler >> concretizeDataOperationCqR: opcode [
+CogARMCompiler >> concretizeDataOperationCqR: armOpcode [
 	"Will get inlined into concretizeAt: switch."
 	"4 == Add, 2 == Sub, Xor == 1, And == 0, Or == 12, Bic == 14"
 	<inline: true>
@@ -585,38 +585,38 @@ CogARMCompiler >> concretizeDataOperationCqR: opcode [
 		ifTrue: [:rot :immediate | | rd rn |
 			rn := self concreteRegister: (operands at: 1).
 			rd := opcode = CmpOpcode ifTrue: [0] ifFalse:[rn].
-			self machineCodeAt: 0 put: (self type: 1 op: opcode set: 1 rn: rn rd: rd shifterOperand: ((rot>>1)"in this usage we have to halve the rot value" << 8 bitOr: immediate)).
+			self machineCodeAt: 0 put: (self type: 1 op: armOpcode set: 1 rn: rn rd: rd shifterOperand: ((rot>>1)"in this usage we have to halve the rot value" << 8 bitOr: immediate)).
 			^machineCodeSize := 4]
-		ifFalse: [^self concretizeDataOperationCwR: opcode].
+		ifFalse: [^self concretizeDataOperationCwR: armOpcode].
 	
 ]
 
 { #category : #'generate machine code - concretize' }
-CogARMCompiler >> concretizeDataOperationCwR: opcode [
+CogARMCompiler >> concretizeDataOperationCwR: armOpcode [
 	"Will get inlined into concretizeAt: switch."
 	"Load the word into the RISCTempReg, then cmp R, RISCTempReg"
 	<inline: true>
 	| constant rn rd instrOffset|
 	constant := operands at: 0.
 	rn := (self concreteRegister: (operands at: 1)).
-	rd := opcode = CmpOpcode ifTrue: [0] ifFalse:[rn].
+	rd := armOpcode = CmpOpcode ifTrue: [0] ifFalse:[rn].
 	instrOffset := self at: 0 moveCw: constant intoR: RISCTempReg.
 	self machineCodeAt: instrOffset 
-		put: (self type: 0 op: opcode set: 1 rn: rn rd: rd shifterOperand: RISCTempReg).
+		put: (self type: 0 op: armOpcode set: 1 rn: rn rd: rd shifterOperand: RISCTempReg).
 	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
-CogARMCompiler >> concretizeDataOperationRR: opcode [
+CogARMCompiler >> concretizeDataOperationRR: armOpcode [
 	"Will get inlined into concretizeAt: switch."
 	"Load the word into the RISCTempReg, then op R, RISCTempReg"
 	<inline: true>
 	| rn rd srcReg |
 	srcReg := self concreteRegister: (operands at: 0).
 	rn := (self concreteRegister: (operands at: 1)).
-	rd := opcode = CmpOpcode ifTrue: [0] ifFalse: [rn].
+	rd := armOpcode = CmpOpcode ifTrue: [0] ifFalse: [rn].
 	self machineCodeAt: 0 
-		put: (self type: 0 op: opcode set: 1 rn: rn rd: rd shifterOperand: srcReg).
+		put: (self type: 0 op: armOpcode set: 1 rn: rn rd: rd shifterOperand: srcReg).
 	^machineCodeSize := 4.
 ]
 
@@ -1282,12 +1282,12 @@ CogARMCompiler >> extractOffsetFromBL: instr [
 ]
 
 { #category : #testing }
-CogARMCompiler >> extractOffsetFromBXAt: address [
+CogARMCompiler >> extractOffsetFromBXAt: addr [
 "this should return the long call/jump target"
-	^(objectMemory byteAt: address -4) 
-		+ ((objectMemory byteAt: address - 8) << 8) 
-		+ ((objectMemory byteAt: address - 12) << 16) 
-		+ ((objectMemory byteAt: address - 16) << 24)
+	^(objectMemory byteAt: addr -4) 
+		+ ((objectMemory byteAt: addr - 8) << 8) 
+		+ ((objectMemory byteAt: addr - 12) << 16) 
+		+ ((objectMemory byteAt: addr - 16) << 24)
 ]
 
 { #category : #'ARM convenience instructions' }
@@ -2006,6 +2006,18 @@ CogARMCompiler >> rotateable8bitImmediate: constant ifTrue: trueAlternativeBlock
 		(constant bitAnd: ((16rFF <<i bitAnd:16rFFFFFFFF) bitOr: 16rFF>>(32-i))) = constant ifTrue:
 			[^trueAlternativeBlock value: 32 - i value: constant >> i]].
 	^falseAlternativeBlock value
+]
+
+{ #category : #abi }
+CogARMCompiler >> saveAndRestoreLinkRegAround: aBlock [
+	"If the processor's ABI includes a link register, generate instructions
+	 to save and restore it around aBlock, which is assumed to generate code."
+	<inline: true>
+	| inst |
+	inst := cogit PushR: LinkReg.
+	aBlock value.
+	cogit PopR: LinkReg.
+	^inst
 ]
 
 { #category : #testing }
