@@ -4062,11 +4062,8 @@ Cogit >> compileEntry [
 	self JumpNonZero: sendMiss.
 	noCheckEntry := self Label.
 	self compileSendTrace ifTrue:
-		[backEnd hasLinkRegister ifTrue:
-			[self PushR: LinkReg].
-		 self CallRT: ceTraceLinkedSendTrampoline.
-		 backEnd hasLinkRegister ifTrue:
-			[self PopR: LinkReg]]
+		[backEnd saveAndRestoreLinkRegAround:
+			[self CallRT: ceTraceLinkedSendTrampoline]]
 ]
 
 { #category : #'compile abstract instructions' }
