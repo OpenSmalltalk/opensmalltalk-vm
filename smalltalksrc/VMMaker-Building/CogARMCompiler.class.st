@@ -1460,14 +1460,14 @@ CogARMCompiler >> genPushRegisterArgsForAbortMissNumArgs: numArgs [
 	 us a lot of work."
 
 	"Iff there are register args convert
-		sp		->	outerRetpc		(send site retpc)
-		linkReg = innerRetpc		(PIC abort/miss retpc)
+		sp		->	outerRetpc			(send site retpc)
+		linkReg = innerRetpc			(PIC abort/miss retpc)
 	 to
 		base	->	receiver
 					(arg0)
 					(arg1)
-		sp		->	outerRetpc		(send site retpc)
-		linkReg = innerRetpc		(PIC abort/miss retpc) - we will rely upon the next bit of code generation to push the current lr if required"
+		sp		->	outerRetpc			(send site retpc)
+		sp		->	linkReg/innerRetpc	(PIC abort/miss retpc)"
 	numArgs <= cogit numRegArgs ifTrue:
 		[self assert: cogit numRegArgs <= 2.
 		 cogit MoveMw: 0 r: SPReg R: TempReg. "Save return address"
@@ -1476,7 +1476,8 @@ CogARMCompiler >> genPushRegisterArgsForAbortMissNumArgs: numArgs [
 			[cogit PushR: Arg0Reg.
 			 numArgs > 1 ifTrue:
 				[cogit PushR: Arg1Reg]].
-		cogit PushR: TempReg] "push back return address"
+		cogit PushR: TempReg]. "push back return address"
+	cogit PushR: LinkReg
 ]
 
 { #category : #'smalltalk calling convention' }
