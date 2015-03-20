@@ -9,6 +9,9 @@ This class does not take any special action to flush the instruction cache on in
 Class {
 	#name : #CogARMCompiler,
 	#superclass : #CogAbstractInstruction,
+	#instVars : [
+		'cond'
+	],
 	#classVars : [
 		'AL',
 		'AddOpcode',
@@ -20,8 +23,11 @@ Class {
 		'CArg2Reg',
 		'CArg3Reg',
 		'CC',
+		'CPSRReg',
 		'CS',
 		'CmpOpcode',
+		'CondHI',
+		'CondLS',
 		'EQ',
 		'GE',
 		'GT',
@@ -32,9 +38,12 @@ Class {
 		'LS',
 		'LT',
 		'MI',
+		'MRS',
+		'MSR',
 		'MoveOpcode',
 		'NE',
 		'OrOpcode',
+		'OverflowFlag',
 		'PC',
 		'PL',
 		'R0',
@@ -51,6 +60,8 @@ Class {
 		'R8',
 		'R9',
 		'RsbOpcode',
+		'SMLALOpcode',
+		'SMULL',
 		'SP',
 		'STMFD',
 		'SubOpcode',
@@ -65,6 +76,13 @@ Class {
 CogARMCompiler class >> ARMTempReg [
 "return the name of the general temp reg in the ARM APCS convention"
 	^RISCTempReg
+]
+
+{ #category : #translation }
+CogARMCompiler class >> filteredInstVarNames [
+	"Edit such that cond is amongst the char size vars opcode machineCodeSize and maxSize."
+	^(super filteredInstVarNames copyWithout: 'cond')
+		copyReplaceFrom: 4 to: 3 with: #('cond')
 ]
 
 { #category : #'class initialization' }
@@ -127,10 +145,17 @@ CogARMCompiler class >> initialize [
 	RsbOpcode := 3.
 	SubOpcode := 2.
 	XorOpcode := 1.
+	SMLALOpcode := 7.
+
+	CondHI := 8.
+	CondLS := 9.
+	CPSRReg := 16.
+	OverflowFlag := 1 << 28.
+
 	"Specific instructions"
 	LastRTLCode isNil ifTrue:
 		[CogRTLOpcodes initialize].
-	specificOpcodes := #(LDMFD STMFD BICCqR).
+	specificOpcodes := #(SMULL MSR MRS LDMFD STMFD BICCqR).
 	refs := (thisContext method literals select: [:l| l isVariableBinding and: [classPool includesKey: l key]]) collect:
 				[:ea| ea key].
 	(classPool keys reject: [:k| (specificOpcodes includes: k) or: [refs includes: k]]) do:
@@ -538,6 +563,23 @@ CogARMCompiler >> concretizeCall [
 		ifFalse: [
 			"self error: 'While we know how to generate a long distance call, we can''t update such a send site yet. Please restart with smaller cache size'."
 			^self concretizeLongCall]
+]
+
+{ #category : #'generate machine code' }
+CogARMCompiler >> concretizeConditionalInstruction [
+	"Concretize the current instruction, but with a condition."
+	<returnTypeC: #void>
+	| savedCond |
+	self assert: cond notNil.
+	savedCond := cond.
+	cond := nil.
+	self dispatchConcretize.
+	cond := savedCond.
+	3 to: machineCodeSize by: 4 do:
+		[:i| | topByte |
+		 topByte := machineCode at: i.
+		 self assert: (topByte bitClear: 15) = 0.
+		 machineCode at: i put: cond << 4 + topByte]
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1085,6 +1127,21 @@ CogARMCompiler >> concretizeRetN [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeSMULL [
+	| srcReg destReg hiReg loReg |
+	srcReg := self concreteRegister: (operands at: 0).
+	destReg := self concreteRegister: (operands at: 1).
+	hiReg := self concreteRegister: RISCTempReg.
+	loReg := self concreteRegister: TempReg.
+	self machineCodeAt: 0
+		put: (self type: 0 op: 6 set: 0 rn: hiReg rd: loReg)
+			+ (srcReg << 8)
+			+ (9 << 4)
+			+ destReg.
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeSubCqR [
 	"Will get inlined into concretizeAt: switch."
 	"Try whether the quick constant is a small negative number. If it is, optimize."
@@ -1114,6 +1171,16 @@ CogARMCompiler >> concretizeTstCqR [
 			self machineCodeAt: 0 put: (self tst: reg rn: reg imm: immediate ror: rot).
 			^machineCodeSize := 4]
 		ifFalse: [^self concretizeDataOperationCwR: 8]
+]
+
+{ #category : #accessing }
+CogARMCompiler >> cond [
+	^cond
+]
+
+{ #category : #accessing }
+CogARMCompiler >> cond: condCode [
+	^cond := condCode
 ]
 
 { #category : #encoding }
@@ -1162,6 +1229,10 @@ CogARMCompiler >> dispatchConcretize [
 	 to get around the branch size limits in the SqueakV3 (blue book derived)
 	 bytecode set."
 	<returnTypeC: #void>
+	cond ifNotNil:
+		[self concretizeConditionalInstruction.
+		 ^self].
+		 
 	opcode caseOf: {
 		"Noops & Pseudo Ops"
 		[Label]					-> [^self concretizeLabel].
@@ -1170,9 +1241,6 @@ CogARMCompiler >> dispatchConcretize [
 		[Fill32]					-> [^self concretizeFill32].
 		[FillFromWord]			-> [^self concretizeFillFromWord].
 		[Nop]					-> [^self concretizeNop].
-		"Specific Control/Data Movement"
-		"[LDM]					-> [^self concretizeLDM].
-		[STM]					-> [^self concretizeSTM]."
 		"Control"
 		[Call]						-> [^self concretizeCall].
 		[JumpR]						-> [^self concretizeJumpR].
@@ -1267,7 +1335,8 @@ CogARMCompiler >> dispatchConcretize [
 		[ConvertRRd]		-> [^self concretizeConvertRRd].
 		"ARM specific opcodes" 
 		[LDMFD]			-> [^self concretizeLDMFD].
-		[STMFD]			-> [^self concretizeSTMFD]	}
+		[STMFD]			-> [^self concretizeSTMFD].
+		[SMULL]			-> [^self concretizeSMULL]	}
 ]
 
 { #category : #testing }
@@ -1343,6 +1412,20 @@ CogARMCompiler >> genLoadStackPointers [
 	cogit MoveAw: cogit stackPointerAddress R: SPReg.
 	cogit MoveAw: cogit framePointerAddress R: FPReg.
 	^0
+]
+
+{ #category : #'abstract instructions' }
+CogARMCompiler >> genMulR: regSource R: regDest [
+	"Use SMULL to produce a 64-bit result, implicitly in TempReg,RISCTempReg.
+	 Test the top word for 0 or 1 and set oVerflow if not equal.  Move result in
+	 TempReg into regDest."
+	<var: #inst type: #AbstractInstruction>
+
+	cogit
+		gen: SMULL operand: regSource operand: regDest; "result in TempReg,RISCTempReg"
+		AddCq: 1 R: RISCTempReg; "turn -1,0 into 0,1"
+		AddCq: -1 R: RISCTempReg; "turn 0,1 into not oVerflow"
+		MoveR: TempReg R: regDest
 ]
 
 { #category : #abi }
