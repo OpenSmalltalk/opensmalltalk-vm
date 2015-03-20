@@ -26,8 +26,6 @@ Class {
 		'CPSRReg',
 		'CS',
 		'CmpOpcode',
-		'CondHI',
-		'CondLS',
 		'EQ',
 		'GE',
 		'GT',
@@ -147,8 +145,6 @@ CogARMCompiler class >> initialize [
 	XorOpcode := 1.
 	SMLALOpcode := 7.
 
-	CondHI := 8.
-	CondLS := 9.
 	CPSRReg := 16.
 	OverflowFlag := 1 << 28.
 
