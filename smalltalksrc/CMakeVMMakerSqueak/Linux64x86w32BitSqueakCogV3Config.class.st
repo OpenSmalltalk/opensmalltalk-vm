@@ -69,7 +69,7 @@ Linux64x86w32BitSqueakCogV3Config class >> isAbstractBaseClass [
 { #category : #'as yet unclassified' }
 Linux64x86w32BitSqueakCogV3Config >> availableBuildTypes [ 
 "2.14.12.09 only buildType implemented is #build so I remove #build from the below OrderedCollection."
-	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes copyWithoutAll: #( #buildAssert #buildAssertITimerHeartbeat #buildDebug #buildDebugITimerHeartbeat #buildITimerHeartbeat #buildMultiThreaded #buildMultiThreadedAssert #buildMultiThreadedDebug #buildNone)
+	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes copyWithoutAll: #( #buildAssertITimerHeartbeat #buildDebug #buildDebugITimerHeartbeat #buildITimerHeartbeat #buildMultiThreaded #buildMultiThreadedAssert #buildMultiThreadedDebug #buildNone)
 ]
 
 { #category : #'cmake buildType redirects' }
