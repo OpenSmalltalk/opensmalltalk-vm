@@ -2973,7 +2973,7 @@ SpurMemoryManager >> checkOkayOop: oop [
 
 	"specific header bit checks"
 	unusedBits := (1 << self classIndexFieldWidth)
-				   | (1 << (self identityHashFieldWidth + 32)).
+				   bitOr: (1 << (self identityHashFieldWidth + 32)).
 	((self long64At: oop) bitAnd: unusedBits) ~= 0 ifTrue:
 		[self print: 'oop '; printHex: oop; print: ' has some unused header bits set; should be zero'. ^false].
 
@@ -7943,9 +7943,9 @@ SpurMemoryManager >> newSpaceRefCountMask [
 	 table to be pruned when full by using these bits as a reference
 	 count of newSpace objects from the remembered table. Objects
 	 with a high count should be tenured to prune the remembered table."
-	^ (1 << self greyBitShift)
-	 | (1 << self pinnedBitShift)
-	 | (1 << self rememberedBitShift)
+	^1 << self greyBitShift
+	  bitOr: (1 << self pinnedBitShift
+	  bitOr: 1 << self rememberedBitShift)
 ]
 
 { #category : #accessing }
@@ -8589,13 +8589,13 @@ SpurMemoryManager >> okayOop: signedOop [
 
 	"specific header bit checks"
 	unusedBits := (1 << self classIndexFieldWidth)
-				   | (1 << (self identityHashFieldWidth + 32)).
+				   bitOr: (1 << (self identityHashFieldWidth + 32)).
 	((self long64At: oop) bitAnd: unusedBits) ~= 0 ifTrue:
 		[self error: 'some unused header bits are set; should be zero'. ^false].
 
-	unusedBitsInYoungObjects := (1 << self greyBitShift)
-								   | (1 << self pinnedBitShift)
-								   | (1 << self rememberedBitShift).
+	unusedBitsInYoungObjects := ((1 << self greyBitShift)
+								   bitOr: (1 << self pinnedBitShift))
+								   bitOr: (1 << self rememberedBitShift).
 	((self longAt: oop) bitAnd: unusedBitsInYoungObjects) ~= 0 ifTrue:
 		[self error: 'some header bits unused in young objects are set; should be zero'. ^false].
 	^true
