@@ -80,7 +80,7 @@ CMakeVMMakerSqueakOverviewHelp class >> overview [
 	^HelpTopic
 		title:'Overview'
 		contents:
-'Repeat after me: "CMAKE DRIVES THE PROCESS."
+'"CMake drives development."
 
 Keeping the above statement in mind is the key to this package. 
 
@@ -99,17 +99,7 @@ Proves to be scriptable such that generating the CMake output can be automated (
 
 As the SqueakVM community gains experience with CMake, I expect the quality of the generated CMake output to improve considerably. CMake is a BIG system with LOTS of stuff in it. Storing the knowledge we gain in our Squeak classes should make things a lot easier on us.
 
-
-
-
-
-
-
-
-
-
 The heart of the package is CMakeGeneratorForSqueak and its two subclasses CMakeVMGeneratorForSqueak and CMakePluginGeneratorForSqueak.
-
 
 CMakeVMGeneratorForSqueak collects information from subclasses of CPlatformConfigForSqueak, CMThirdpartyLibrary and InterpreterPlugins and writes it out to CMake files and associated directories. 
 
@@ -124,14 +114,12 @@ The VMGeneratator extracts the information and utilizes VMPluginGenerator to gen
 The end result is a CMake evironment that is set up to correctly build a VM
 
 Concrete implementations of SqueakCMakeVMMakerAbstractBuilder provide an invokation facade and configuration query capabilities.
-
-
 '
 ]
 
 { #category : #pages }
 CMakeVMMakerSqueakOverviewHelp class >> pages [
-	^#(overview  prerequisites  namingConventions terms       )
+	^#(overview  prerequisites  namingConventions  )
 ]
 
 { #category : #pages }
@@ -144,41 +132,5 @@ CMakeVMMakerSqueakOverviewHelp class >> prerequisites [
 CMake from  http://www.cmake.org/ is required to process the output of this package.
 
 This package was written using cmake version 2.8.12
-'
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakOverviewHelp class >> terms [
-	^HelpTopic
-		title:'Terms'
-		contents:
-'
-AbstractBaseClass:   
-	Typically the topmost class in a [OS][VMWordSize][Processor][ETC]  class category. Example: CPlatformConfigForSqueak. Most of the configuration action happens at this level and lower.
-
-Builder:                      
-	A concrete subclass of SqueakCMakeVMMakerAbstractBuilder. Builders act as a facade for invoking the configurations.They also provide query tools for the configurations that a builder manages. There is a one-to-one correspondence between a Builder''s configurationsCategory and the configurations it manages. example:    SqueakBSDx86Builder configurationsCategory
-
-buildType:
-	One of SqueakCMakeVMMakerAbstractBuilder  allBuildTypes 
-                                 
-
-CMakeLists.txt:
-	The instructions that CMake uses to build build systems.  One output of a configuration
-
-Configuration:            
-	CPlatformConfigForSqueak  and its subclasses. These maintain the definitions that are rendered into CMakeLists.txt files
-
-
-Generator:                 
-	CMakeGeneratorForSqueak and its subclasses
-
-
-Redirect Methods:      
-	Given a method X, it is a redirect method if a call to it redirects to xBuildType based on the state of the configurations buildType  buildType variable.  See CPlatformConfigForSqueak protocol ''cmake buildType redirects''
-
-
-
-
 '
 ]
