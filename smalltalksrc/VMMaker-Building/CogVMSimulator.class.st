@@ -74,6 +74,9 @@ Class {
 		'debugStackDepthDictionary',
 		'performFilters'
 	],
+	#classVars : [
+		'ByteCountsPerMicrosecond'
+	],
 	#category : #'VMMaker-JITSimulation'
 }
 
@@ -94,6 +97,10 @@ CogVMSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMe
 			ifTrue: [CoInterpreterMT]
 			ifFalse: [CoInterpreter])
 		initializeWithOptions: initializationOptions.
+
+	ByteCountsPerMicrosecond := initializationOptions
+										at: #ByteCountsPerMicrosecond
+										ifAbsent: [10].
 
 	(self cogitClass withAllSuperclasses copyUpTo: Cogit) reverseDo:
 		[:c| c initializeWithOptions: initializationOptions]
@@ -1761,7 +1768,7 @@ CogVMSimulator >> ioRelinquishProcessorForMicroseconds: microseconds [
 					[self forceInterruptCheckFromHeartbeat].
 				(Delay forMilliseconds: microseconds + 999 // 1000) wait]
 		ifFalse: [Processor yield].
-	byteCount := byteCount + microseconds - 1.
+	byteCount := byteCount + (microseconds * ByteCountsPerMicrosecond) - 1.
 	self incrementByteCount
 ]
 
@@ -1803,11 +1810,17 @@ CogVMSimulator >> ioSynchronousCheckForEvents [
 CogVMSimulator >> ioUTCMicroseconds [
 	"Return the value of the microsecond clock."
 	"NOT.  Actually, we want something a lot slower and, for exact debugging,
-	something more repeatable than real time.  Dan had an idea: use the byteCount..."
+	 something more repeatable than real time.  Dan had an idea: use the byteCount...
+	 We increment byteCount in stackLimitFromMachineCode and a real machine
+	 can easily run e.g. nfib at 6e7 / second, which this would be 1 usec ~= 60 byteCounts.
+	 Use 10 byteCounts per usec by default; see CogVMSimulator class>>initializeWithOptions:objectMemoryClass:"
 
-	^byteCount + startMicroseconds
+	^byteCount // ByteCountsPerMicrosecond + startMicroseconds
 	
-"At 20k bytecodes per second, this gives us aobut 200 ticks per second, or about 1/5 of what you'd expect for the real time clock.  This should still service events at one or two per second"
+	"Dan:
+	 At 20k bytecodes per second, this gives us about 200 ticks per second, or about 1/5
+	 of what you'd expect for the real time clock.  This should still service events at one or
+	 two per second"
 ]
 
 { #category : #'multi-threading simulation switch' }
@@ -3363,17 +3376,18 @@ CogVMSimulator >> sqShrinkMemory: oldLimit By: delta [
 
 { #category : #'I/O primitives support' }
 CogVMSimulator >> stackLimitFromMachineCode [
-	"Intercept accesses to the stackLimit from machine code to
-	 increment byteCount so that ioMSecs/ioMicroseconds does
-	 somethng reasonable when we're purely in machine code."
-	(byteCount := byteCount + 1) - lastPollCount >= 100 ifTrue:
-		[lastPollCount := byteCount.
-		 ("Sensor peekEvent notNil" false
-		  or: [nextProfileTick > 0
-			  and: [nextProfileTick <= self ioUTCMicroseconds]]) ifTrue:
-			[suppressHeartbeatFlag "gets set by selector breakpoints"
-				ifTrue: [self forceInterruptCheck]
-				ifFalse: [self forceInterruptCheckFromHeartbeat]]].
+	"Intercept accesses to the stackLimit from machine code to increment byteCount so that
+	 ioMSecs/ioMicroseconds does something reasonable when we're purely in machine code.
+	 Force an interrupt check every 2 ms in simulated time (2ms = the default heartbeat), or if
+	 the profile tick has expired.."
+
+	(byteCount := byteCount + 1) - lastPollCount >= (2000 * ByteCountsPerMicrosecond) ifTrue:
+		[lastPollCount := byteCount].
+	(lastPollCount = byteCount
+	 or: [nextProfileTick > 0 and: [nextProfileTick <= self ioUTCMicroseconds]]) ifTrue:
+		[suppressHeartbeatFlag "gets set by selector breakpoints"
+			ifTrue: [self forceInterruptCheck]
+			ifFalse: [self forceInterruptCheckFromHeartbeat]].
 	^stackLimit
 ]
 
