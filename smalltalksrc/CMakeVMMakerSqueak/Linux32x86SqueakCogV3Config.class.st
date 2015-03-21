@@ -89,6 +89,22 @@ Linux32x86SqueakCogV3Config >> cmakeAddDefinitionsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> cmakeAddDefinitionsBuildAssert [
+	|c d  o|
+	(enabledebugmessages)
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: (self class name) , 'cmakeAddDefinitionsBuildAssert')
+	] .
+	c := self compilerFlagsAssert asOrderedCollection.
+	d := self compilerDefinitionsAssert asOrderedCollection.
+	o:= OrderedCollection new.
+	o addAllLast: c; addAllLast: d.
+	templates
+		addLast:((CMakeAddDefinitions new) definitions: (self compilerDefinitionsAssert asOrderedCollection)). "see my self flag below"
+
+]
+
+{ #category : #'cmake buildType redirects' }
 Linux32x86SqueakCogV3Config >> cmakeCFlagsBuild [
 	|cflags|
 	self flag:'tty'. "#build should have -O2"
