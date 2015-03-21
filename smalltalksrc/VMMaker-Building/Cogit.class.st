@@ -951,7 +951,8 @@ Cogit class >> preGenerationHook: aCCodeGenerator [
 			ifTrue: [m static: false]
 			ifFalse:
 				[m export ifFalse:
-					[m static: true]]]
+					[m static: true]]].
+	aCCodeGenerator pruneMethods: #(saveAndRestoreLinkRegAround:)
 ]
 
 { #category : #accessing }
