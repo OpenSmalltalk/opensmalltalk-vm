@@ -852,50 +852,50 @@ CPlatformConfigForSqueak >> cmakeAddDefinitionsBuild [
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildAssert [
-	 ""
-	self subclassResponsibility
+	 "override default for custom buildType. "
+	^self cmakeAddDefinitionsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildAssertITimerHeartbeat [
-	 ""
-	self subclassResponsibility
+	 "override default for custom buildType. "
+	^self cmakeAddDefinitionsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildDebug [
-	 ""
-	self subclassResponsibility
+	 "override default for custom buildType. "
+	^self cmakeAddDefinitionsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildDebugITimerHeartbeat [
-	 ""
-	self subclassResponsibility
+	 "override default for custom buildType. "
+	^self cmakeAddDefinitionsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildITimerHeartbeat [
-	 ""
-	self subclassResponsibility
+	 "override default for custom buildType. "
+	^self cmakeAddDefinitionsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildMultiThreaded [
-	 ""
-	self subclassResponsibility
+	 "override default for custom buildType. "
+	^self cmakeAddDefinitionsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildMultiThreadedAssert [
-	 ""
-	self subclassResponsibility
+	 "override default for custom buildType. "
+	^self cmakeAddDefinitionsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> cmakeAddDefinitionsBuildMultiThreadedDebug [
-	 ""
-	self subclassResponsibility
+	 "override default for custom buildType. "
+	^self cmakeAddDefinitionsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -2561,7 +2561,6 @@ CPlatformConfigForSqueak >> frameworksBuildMultiThreadedDebug [
 
 { #category : #'source generation' }
 CPlatformConfigForSqueak >> generateByTemplate [
-
 	self 
 		generatePluginsList;                                        "informative list of plugins for end user"
 		generateLicense;                                             "Squeak license"
@@ -2716,7 +2715,7 @@ CPlatformConfigForSqueak >> internalPluginsBuild [
 CPlatformConfigForSqueak >> internalPluginsBuildAssert [ 
 	"convenience method to customize plugins for this build default to internalPluins
 	^self internalPlugins"
-	self subclassResponsibility
+	^self internalPluginsBuild
 
 ]
 
@@ -2724,15 +2723,14 @@ CPlatformConfigForSqueak >> internalPluginsBuildAssert [
 CPlatformConfigForSqueak >> internalPluginsBuildAssertITimerHeartbeat [ 
 	"convenience method to customize plugins for this build default to internalPluins
 	^self internalPlugins"
-	self subclassResponsibility
-
+	^self internalPluginsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> internalPluginsBuildDebug [ 
 	"convenience method to customize plugins for this build.  default is self  internalPluins
 	^self internalPlugins"
-	self subclassResponsibility
+	^self internalPluginsBuild
 
 ]
 
@@ -2740,15 +2738,14 @@ CPlatformConfigForSqueak >> internalPluginsBuildDebug [
 CPlatformConfigForSqueak >> internalPluginsBuildDebugITimerHeartbeat [ 
 	"convenience method to customize plugins for this build.  default is self  internalPluins
 	^self internalPlugins"
-	self subclassResponsibility
-
+	^self internalPluginsBuild
 ]
 
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> internalPluginsBuildITimerHeartbeat [ 
 	"convenience method to customize plugins for this build.  default is self  internalPluins
 	^self internalPlugins"
-	self subclassResponsibility
+	^self internalPluginsBuild
 
 ]
 
@@ -2756,7 +2753,7 @@ CPlatformConfigForSqueak >> internalPluginsBuildITimerHeartbeat [
 CPlatformConfigForSqueak >> internalPluginsBuildMultiThreaded [ 
 	"convenience method to customize plugins for this build.  default is self  internalPluins
 	^self internalPlugins"
-	self subclassResponsibility
+	^self internalPluginsBuild
 
 ]
 
@@ -2764,7 +2761,7 @@ CPlatformConfigForSqueak >> internalPluginsBuildMultiThreaded [
 CPlatformConfigForSqueak >> internalPluginsBuildMultiThreadedAssert [
 	"convenience method to customize plugins for this build.  default is self  internalPluins
 	^self internalPlugins"
-	self subclassResponsibility
+	^self internalPluginsBuild
 
 ]
 
@@ -2772,7 +2769,7 @@ CPlatformConfigForSqueak >> internalPluginsBuildMultiThreadedAssert [
 CPlatformConfigForSqueak >> internalPluginsBuildMultiThreadedDebug [ 
 	"convenience method to customize plugins for this build.  default is self  internalPluins
 	^self internalPlugins"
-	self subclassResponsibility
+	^self internalPluginsBuild
 
 ]
 

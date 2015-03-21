@@ -239,7 +239,7 @@ SqueakCMakeVMMakerAbstractBuilder >> configureA: configSymbol forBuildType: type
 				config := (Smalltalk at: configSymbol) new.                              "verify this config can handle this build type."
 				config excludeFromBuild                                                         "has a developer excluded this build manually?"
 					ifTrue:[^self userErrorConfigMarkedAsExcludeFromBuild: configSymbol].   
-				i:=config availableBuildTypes indexOf:typeSymbol                                    
+				i:=config availableBuildTypes indexOf:typeSymbol          
 						ifAbsent:[^self userErrorInvalidBuildType: typeSymbol "this config does not support this build type"
 										forConfiguration: configSymbol 
 										hasTypes: config availableBuildTypes].
