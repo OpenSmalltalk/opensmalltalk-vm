@@ -3716,7 +3716,16 @@ CCodeGenerator >> nilOrBooleanConstantReceiverOf: aNode [
 					[^rcvr].
 				(self nilOrBooleanConstantReceiverOf: aNode args last statements first) ifNotNil:
 					[:arg|
-					^rcvr perform: aNode selector with: [arg]]]].
+					^rcvr perform: aNode selector with: [arg]]].
+			 "We can also eliminate expr and: [false], but only if expr is side-effect free.
+			  This is a weak test; we don't traverse calls.  Caveat emptor!"
+			 (aNode selector == #and:
+			  and: [(aNode receiver noneSatisfy: [:node| node isAssignment]) "No side-effects in the elided expression"
+			  and: [aNode args last statements size = 1]]) ifTrue:
+				[(self nilOrBooleanConstantReceiverOf: aNode args last statements first) ifNotNil:
+					[:arg|
+					arg ifFalse:
+						[^arg]]]].
 		 ((#(= ~= < > <= >=) includes: aNode selector)
 		  and: [(self isConstantNode: aNode receiver valueInto: [:v| receiver := v])
 		  and: [receiver isInteger
