@@ -1962,8 +1962,9 @@ TMethod >> propagateReturnIn: aCodeGen [
 							fromDeclaration: returnType.
 	map := IdentityDictionary new.
 	parseTree nodesDo:[:node|
-		node isReturn ifTrue:[
-			map at: node expression put: (TSendNode new
+		(node isReturn
+		 and: [(aCodeGen typeFor: node expression in: self) ~= coercionType]) ifTrue:
+			[map at: node expression put: (TSendNode new
 				setSelector: #cCoerce:to:
 				receiver: (TVariableNode new setName: 'self')
 				arguments: {node expression.
