@@ -558,15 +558,7 @@ main(int argc, char **argv, char **envp)
  	}
 
 #if SPURVM
-  {	off_t here, size;
-
-	here = ftello(f);
-	if (fseek(f, 0, SEEK_END)) perror("fseek");
-	size = ftello(f);
-	if (fseek(f, here, SEEK_SET)) perror("fseek");
-	size = 1 << highBit(size-1);
-	readImageFromFileHeapSizeStartingAt(f, size + size / 4, 0);
-  }
+	readImageFromFileHeapSizeStartingAt(f, 0, 0);
 #else
 	readImageFromFileHeapSizeStartingAt(f, sqGetAvailableMemory(), 0);
 #endif
