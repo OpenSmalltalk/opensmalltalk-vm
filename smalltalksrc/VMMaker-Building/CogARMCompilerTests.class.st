@@ -45,63 +45,83 @@ CogARMCompilerTests >> strip: aFancyDisassembledInstruction [
 { #category : #tests }
 CogARMCompilerTests >> testAdd [
 	"self new testAdd"
-	
-	"the forms are valid, "
+	|memory|
+	self resetGen. "initialise important stuff"
+		
 	"test AddCqR"
 	self concreteCompilerClass registersWithNamesDo: [ :reg :regName |
 		#(0 16rF 16rFF) do:
-			[:n| | inst len |
-			inst := self gen: AddCqR operand: n operand: reg.
-			len := inst concretizeAt: 0.
-			self processor
-				disassembleInstructionAt: 0
-				In: inst machineCode object
-				into: [:str :sz| | plainJane herIntended |
-					plainJane := self strip: str.
-					herIntended := 'adds	', regName, ', ', regName, ', #', n asString.
-					self assert: (plainJane match: herIntended)]]].
+			[:n| 
+			self gen: AddCqR operand: n operand: reg]].
+	memory := self generateInstructions.
+	self disassembleOpcodesIn: memory to: Transcript	.
 		
+	self resetGen. "initialise important stuff"
 	"test AddCwR"
 	self concreteCompilerClass registersWithNamesDo: [ :reg :regName |
-		#(16rFFFFFFFF 16r88888888 0) do:
-			[:n| | inst len |
-			inst := self gen: AddCwR operand: n operand: reg.
-			len := inst concretizeAt: 0.
-			self processor
-				disassembleInstructionAt: 0
-				In: inst machineCode object
-				into: [:str :sz| | plainJane herIntended |
-					plainJane := self strip: str.
-					herIntended := 'mov	sl, #', (n bitAnd: 16rFF << 24) asString.
-					self assert: (plainJane match: herIntended)].
-			self processor
-				disassembleInstructionAt: 4
-				In: inst machineCode object
-				into: [:str :sz| | plainJane herIntended |
-					plainJane := self strip: str.
-					herIntended := 'orr	sl, sl, #', (n bitAnd: 16rFF << 16) asString.
-					self assert: (plainJane match: herIntended)].
-			self processor
-				disassembleInstructionAt: 8
-				In: inst machineCode object
-				into: [:str :sz| | plainJane herIntended |
-					plainJane := self strip: str.
-					herIntended := 'orr	sl, sl, #', (n bitAnd: 16rFF << 8) signedIntFromLong asString.
-					self assert: (plainJane match: herIntended)].
-			self processor
-				disassembleInstructionAt: 12
-				In: inst machineCode object
-				into: [:str :sz| | plainJane herIntended |
-					plainJane := self strip: str.
-					herIntended := 'orr	sl, sl, #', (n bitAnd: 16rFF) asString.
-					self assert: (plainJane match: herIntended)].
-			self processor
-				disassembleInstructionAt: 16
-				In: inst machineCode object
-				into: [:str :sz| | plainJane herIntended |
-					plainJane := self strip: str.
-					herIntended := 'adds	', regName, ', ', regName, ', sl'.
-					self assert: (plainJane match: herIntended)]]]
+		#(16rFFFFFFFF 16r88888888) do:
+			[:n|
+			self gen: AddCwR operand: n operand: reg]].
+	memory := self generateInstructions.
+	self disassembleOpcodesIn: memory to: Transcript	.
+
+]
+
+{ #category : #tests }
+CogARMCompilerTests >> testGenerateAdd [
+	"self new testGenerateAdd"
+	|memory|
+	self resetGen. "initialise important stuff"
+		
+	"test AddCqR"
+	self concreteCompilerClass registersWithNamesDo: [ :reg :regName |
+		#(0 16rF 16rFF) do:
+			[:n| 
+			self gen: AddCqR operand: n operand: reg]].
+	memory := self generateInstructions.
+	self disassembleOpcodesIn: memory to: Transcript	.
+		
+	self resetGen. "initialise important stuff"
+	"test AddCwR"
+	self concreteCompilerClass registersWithNamesDo: [ :reg :regName |
+		#(16rFFFFFFFF 16r88888888) do:
+			[:n|
+			self gen: AddCwR operand: n operand: reg]].
+	memory := self generateInstructions.
+	self disassembleOpcodesIn: memory to: Transcript	.
+
+]
+
+{ #category : #tests }
+CogARMCompilerTests >> testGenerateMul [
+	"self new testGenerateMul"
+	"Currently demonstrates that the CogARMCompiler>genMulR:R: algorithm ain't gonna work too well"
+	
+	|memory compiler |
+	compiler := self gen: nil. "grab something usefully like a compiler for later abuse"
+	self resetGen. "initialise important stuff"
+
+	"test MulRR"
+	self gen: LogicalShiftLeftCqR operand: 1 operand:1. "LSL r1 - to make the right bit pattern for a SmallInt that has had the flag masked out"
+	self gen: LogicalShiftLeftCqR operand: 1 operand:0. "LSL r1 - to make the right bit pattern for a SmallInt that has had the flag masked out"
+	self gen: MoveRR operand: 0 operand: 2.
+	compiler genMulR: 1 R: 0.
+	memory := self generateInstructions.
+	self disassembleOpcodesIn: memory to: Transcript	.
+	{SmallInteger maxVal@2. SmallInteger minVal@2. 0@0. 1@1. -1@0. -1@1. -1@ -1} do:[:val | | x y |
+			x := val x.
+			y := val y.
+			self processor reset.
+			processor signedLongAt: 13 put: x;
+				signedLongAt: 17 put: y.
+			[[processor pc < memory size] whileTrue:
+						[self processor singleStepIn: memory]]
+						on: Error
+						do: [:ex| ].
+			Transcript show: x asString, ' * ', y asString; cr.
+			processor printRegisterState: processor registerState on: Transcript.
+			Transcript flush]
+	
 
 ]
 
@@ -129,6 +149,34 @@ CogARMCompilerTests >> testMoveCwR [
 				expected := getter == rgetter ifTrue: [ n ] ifFalse: [0].
 				self assert: (self processor perform: getter) = expected].
 			self assert: self processor pc = 16]]
+
+]
+
+{ #category : #tests }
+CogARMCompilerTests >> testPerformAdd [
+	"self new testPerformAdd"
+	
+	| memory |
+	#(16rFF00FF00 16r00000012 16r12345678) do:
+		[:n| | |
+		self concreteCompilerClass dataRegistersWithAccessorsDo: 
+			[ :r :rgetter :rset |
+			self resetGen. "initialise important stuff"
+ 			self gen: MoveCwR operand: n operand: r.
+			self gen: AddCqR operand: 42 operand: r.
+			memory := self generateInstructions.
+			self disassembleOpcodesIn: memory to: Transcript	.
+			self processor
+				reset.
+			[[processor pc < memory size] whileTrue:
+				[self processor singleStepIn: memory]]
+				on: Error
+				do: [:ex| ].
+			self concreteCompilerClass dataRegistersWithAccessorsDo:
+				[:ireg :getter :setter| | expected |
+				expected := getter == rgetter ifTrue: [ n + 42] ifFalse: [0].
+				self assert: (self processor perform: getter) = expected].
+			self assert: self processor pc = 20]]
 
 ]
 
@@ -183,23 +231,28 @@ CogARMCompilerTests >> testRetN [
 		self processor
 			disassembleInstructionAt: 0
 			In: inst machineCode object
-			into: [:str :sz| | plainJane herIntended |
+			into: [:str :sz| | plainJane  |
 				"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 				plainJane := self strip: str.
-				self assert: (plainJane match: 'pop	{pc}') | (plainJane match: 'ldmfd	sp!, {pc}').
+				self assert: (plainJane match: 'mov	pc, lr').
 				self assert: len = sz]].
 	
-	#(1 2 4 8 16 31) do:
+	#(1 2 3 4 5 6 7) do:
 		[:n| | inst len |
-		inst := self gen: RetN operand: n.
+		inst := self gen: RetN operand: n * 4.
 		len := inst concretizeAt: 0.
 		self processor
 			disassembleInstructionAt: 0
 			In: inst machineCode object
 			into: [:str :sz| | plainJane herIntended |
-				"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 				plainJane := self strip: str.
-				herIntended := 'add	sp, sp, #', n asString,', 30'.
-				self assert: (plainJane match: herIntended).
-				self assert: len = 8]]
+				herIntended := 'add	sp, sp, #', (n * 4 )asString.
+				self assert: (plainJane match: herIntended)].
+		self processor
+			disassembleInstructionAt: 4
+			In: inst machineCode object
+			into: [:str :sz| | plainJane |
+				plainJane := self strip: str.
+				self assert: (plainJane match: 'mov	pc, lr').		
+		self assert: len = 8]]
 ]
