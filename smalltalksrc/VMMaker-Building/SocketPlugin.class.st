@@ -1044,8 +1044,8 @@ SocketPlugin >> shutdownModule [
 { #category : #primitives }
 SocketPlugin >> socketRecordSize [
 	"Return the size of a Smalltalk socket record in bytes."
-
-	^ self cCode: 'sizeof(SQSocket)' inSmalltalk: [12]
+	<inline: true>
+	^ self sizeof: #SQSocket
 ]
 
 { #category : #primitives }
