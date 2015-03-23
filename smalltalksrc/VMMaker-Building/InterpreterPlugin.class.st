@@ -505,6 +505,9 @@ InterpreterPlugin >> sizeof: objectSymbolOrClass [
 	 only be BytesPerWord big. But in the actual VM they are at least 5 words long."
 	objectSymbolOrClass == #SQFile ifTrue:
 		[^interpreterProxy wordSize * 5].
+	"SQSocket is typedef struct { int sessionID; int socketType; void *privateSocketPtr; } SQSocket"
+	objectSymbolOrClass == #SQSocket ifTrue:
+		[^8 + interpreterProxy wordSize].
 	"We assume the file offset type is always 64-bits."
 	objectSymbolOrClass == #squeakFileOffsetType ifTrue:
 		[^8].
