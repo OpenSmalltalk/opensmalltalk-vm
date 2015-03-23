@@ -5543,6 +5543,28 @@ SpurMemoryManager >> initSpaceForAllocationCheck: aNewSpace limit: limit [
 				do: [:p| self longAt: p put: p]]]
 ]
 
+{ #category : #snapshot }
+SpurMemoryManager >> initialHeadroom: extraVmMemory givenFreeOldSpaceInImage: freeOldSpaceInImage [
+	"Answer how much headroom to allocate, if any, on loading the image.
+	 If the image already conatins lots of free space, we should not allocate lots more."
+	<inline: true>
+	| headroom |
+	headroom := extraVmMemory = 0
+					ifTrue: [growHeadroom ifNil: [16*1024*1024]]
+					ifFalse: [extraVmMemory].
+	freeOldSpaceInImage >= headroom ifTrue:
+		[^0].
+	freeOldSpaceInImage >= (headroom * 7 // 8) ifTrue:
+		[^headroom // 8].
+	freeOldSpaceInImage >= (headroom * 3 // 4) ifTrue:
+		[^headroom // 4].
+	freeOldSpaceInImage >= (headroom * 5 // 8) ifTrue:
+		[^headroom * 3 // 8].
+	freeOldSpaceInImage >= (headroom // 2) ifTrue:
+		[^headroom // 2].
+	^headroom
+]
+
 { #category : #'object enumeration' }
 SpurMemoryManager >> initialInstanceOf: classObj [
 	<inline: false>
@@ -9598,6 +9620,16 @@ SpurMemoryManager >> rootTableCount [
 { #category : #allocation }
 SpurMemoryManager >> roundBytesToAllocationUnit: bytes [
 	^bytes + (self allocationUnit - 1) bitClear: self allocationUnit - 1
+]
+
+{ #category : #snapshot }
+SpurMemoryManager >> roundUpHeapSize: heapSize [
+	<var: 'heapSize' type: #usqInt>
+	| bit |
+	bit := heapSize highBit - 1 * 3 // 4.
+	^(heapSize anyMask: (1 << bit - 1))
+		ifTrue: [(heapSize bitClear: (1 << bit - 1)) + (1 << bit)]
+		ifFalse: [heapSize]
 ]
 
 { #category : #'debug support' }

@@ -1517,7 +1517,7 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 
 	| f version headerSize dataSize count oldBaseAddr bytesToShift swapBytes
 	  headerFlags heapBase firstSegSize heapSize
-	  hdrNumStackPages hdrEdenBytes hdrMaxExtSemTabSize |
+	  hdrNumStackPages hdrEdenBytes hdrMaxExtSemTabSize allocationReserve |
 	"open image file and read the header"
 
 	f := FileStream readOnlyFileNamed: fileName.
@@ -1571,15 +1571,31 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	self assert: f position = (objectMemory wordSize = 4 ifTrue: [48] ifFalse: [72]).
 	firstSegSize := self getLongFromFile: f swap: swapBytes.
 	objectMemory firstSegmentSize: firstSegSize.
+	"compare memory requirements with availability"
+	allocationReserve := self interpreterAllocationReserveBytes.
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[| freeOldSpaceInImage headroom |
+			 freeOldSpaceInImage := self getLongFromFile: f swap: swapBytes.
+			 headroom := objectMemory
+							initialHeadroom: extraVMMemory
+							givenFreeOldSpaceInImage: freeOldSpaceInImage.
+			 heapSize := objectMemory roundUpHeapSize:
+						   dataSize
+						+ headroom
+						+ objectMemory newSpaceBytes
+						+ (headroom > allocationReserve
+							ifTrue: [0]
+							ifFalse: [allocationReserve])]
+		ifFalse:
+			[heapSize :=  dataSize
+						+ extraBytes
+						+ objectMemory newSpaceBytes
+						+ (extraBytes > allocationReserve
+							ifTrue: [0]
+							ifFalse: [allocationReserve])].
 	"allocate interpreter memory"
 	heapBase := objectMemory startOfMemory.
-	heapSize := dataSize
-				+ extraBytes
-				+ objectMemory newSpaceBytes
-				+ self interpreterAllocationReserveBytes
-				+ (objectMemory hasSpurMemoryManagerAPI
-					ifTrue: [headerSize]
-					ifFalse: [0]).
 	objectMemory
 		setHeapBase: heapBase
 		memoryLimit: heapBase + heapSize
