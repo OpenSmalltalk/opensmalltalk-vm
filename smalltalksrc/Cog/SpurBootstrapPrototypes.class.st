@@ -1208,6 +1208,26 @@ SpurBootstrapPrototypes >> SmalltalkImagePROTOTYPEmaxIdentityHash [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrapPrototypes >> SmalltalkImagePROTOTYPEprimBytesLeft [
+	"Primitive. Answer the number of free bytes available in old space.
+	 Not accurate unless preceded by
+		Smalltalk garbageCollectMost (for reasonable accuracy), or
+		Smalltalk garbageCollect (for real accuracy).
+	 See Object documentation whatIsAPrimitive."
+
+	<primitive: 112>
+	^0
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapPrototypes >> SmalltalkImagePROTOTYPEprimitiveGarbageCollect [
+	"Primitive. Reclaims all garbage and answers the size of the largest free chunk in old space.."
+
+	<primitive: 130>
+	^self primitiveFailed
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrapPrototypes >> SpaceTallyPROTOTYPEspaceForInstancesOf: aClass [
 	"Answer a pair of the number of bytes consumed by all instances of the
 	 given class, including their object headers, and the number of instances."

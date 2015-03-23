@@ -1125,7 +1125,6 @@ GdbARMAlien >> simulateCallOf: address nextpc: nextpc memory: aMemory [
 	In ARM aapcs, every method can define for itself, wether it wants to push lr (nextpc), and wether it 
 	uses a frame pointer. The standard never mentions a fp. It merely defines r4-r11 to be callee-saved."
 
-	self assert: self sp \\ 8 = 0. "This check ensures, that we conform with ARM abi. Before doing anything to the stack, we ensure 2-word alignment."
 	self pushWord: nextpc in: aMemory.
 	self pushWord: self fp in: aMemory.
 	self fp: self sp.
@@ -1163,8 +1162,6 @@ GdbARMAlien >> simulateLeafReturnIn: aMemory [
 
 { #category : #'execution simulation' }
 GdbARMAlien >> simulateReturnIn: aMemory [
-"simulate a return; this may get a bit more complicated since we are trying to compensate for the IA32 automagically pushing the return address whereas the ARM doesn't."
-
 	PostBuildStackDelta ~= 0 ifTrue:
 		[self sp: self sp + PostBuildStackDelta].
 	self fp: (self popWordIn: aMemory).
