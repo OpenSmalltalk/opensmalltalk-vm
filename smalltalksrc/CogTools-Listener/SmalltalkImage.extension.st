@@ -1,6 +1,6 @@
 Extension { #name : #SmalltalkImage }
 
 { #category : #'*CogTools-Listener' }
-SmalltalkImage >> snapshot: save andQuit: quit [
-	^self snapshot: save andQuit: quit embedded: false
+SmalltalkImage >> quit [
+	self snapshot: false andQuit: true
 ]
