@@ -349,7 +349,7 @@ SpurSegmentManager >> insertSegmentFor: segAddress [
 	 is in the middle of the existing segments, shuffle them
 	 up to make room. Answer the new segment's index."
 	| segIndex lastSegIndex |
-	self assert: segAddress > (segments at: 0) segLimit.
+	self assert: segAddress >= (segments at: 0) segLimit.
 	numSegments = numSegInfos ifTrue:
 		[self allocateOrExtendSegmentInfos].
 	self assert: numSegments < numSegInfos.
