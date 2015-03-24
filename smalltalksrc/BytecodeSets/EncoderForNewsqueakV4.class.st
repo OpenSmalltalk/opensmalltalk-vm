@@ -1222,8 +1222,9 @@ EncoderForNewsqueakV4 >> isSpecialLiteral: literal [
 { #category : #'special literal encodings' }
 EncoderForNewsqueakV4 >> isSpecialLiteralForPush: literal [
 	^literal == false
-	  or: [literal == #nil
-	  or: [literal isInteger and: [literal between: -32768 and: 32767]]]
+	  or: [literal == true
+	  or: [literal == nil
+	  or: [literal isInteger and: [literal between: -32768 and: 32767]]]]
 ]
 
 { #category : #encoding }
