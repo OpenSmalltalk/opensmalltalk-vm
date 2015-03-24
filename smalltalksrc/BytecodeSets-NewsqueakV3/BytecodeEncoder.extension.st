@@ -1,6 +1,21 @@
 Extension { #name : #BytecodeEncoder }
 
 { #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizeSendAbsentDynamicSuperclass: selectorLiteralIndex numArgs: numArgs [
+	^self sizeOpcodeSelector: #genSendAbsentDynamicSuper:numArgs: withArguments: {selectorLiteralIndex. numArgs}
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizeSendAbsentImplicit: selectorLiteralIndex numArgs: numArgs [
+	^self sizeOpcodeSelector: #genSendAbsentImplicit:numArgs: withArguments: {selectorLiteralIndex. numArgs}
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizeSendImplicit: selectorLiteralIndex numArgs: numArgs [
+	^self sizeOpcodeSelector: #genSendImplicit:numArgs: withArguments: {selectorLiteralIndex. numArgs}
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
 BytecodeEncoder >> sizeTrapIfNotInstanceOf: litIndex [
 	^self sizeOpcodeSelector: #genTrapIfNotInstanceOf: withArguments: {litIndex}
 ]
