@@ -1,6 +1,5 @@
 #!/bin/sh
-# Create the getGoodCogNsvm.sh & getGoodSpurNsvm.sh scripts.
-GetCogScript=getGoodCogNsvm.sh
+# Create the getGoodSpurNsvm.sh script.
 GetSpurScript=getGoodSpurNsvm.sh
 
 REV=
@@ -46,71 +45,7 @@ test -n "$ABORT" || rm -rf "$SD"
 test -n "$ABORT" || exit 1
 
 
-echo $GetCogScript $GetSpurScript
-
-cat >$GetCogScript <<END
-#!/bin/sh
-# Sets the VM env var to the r$REV Newspeak VM for the current platform.
-# will download and install the VM in this directory if necessary.
-
-TAG=$TAG
-REV=$REV
-LCBINDIR=4.0-$REV
-URL=http://www.mirandabanda.org/files/Cog/VM/VM.r\$REV/
-
-. ./envvars.sh
-
-case "\$OS" in
-Darwin) get_vm_from_tar \\
-END
-
-echo -n '            "Newspeak Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine" ' >>$GetCogScript
-echo -n `quietmd5 "$SD/Newspeak Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine"` >>$GetCogScript
-echo ' \' >> $GetCogScript
-echo -n '            "Newspeak Virtual Machine.app-$TAG.tgz" ' >>$GetCogScript
-quietmd5 "../products/Newspeak Virtual Machine.app-$TAG.tgz" >>$GetCogScript
-
-cat >>$GetCogScript <<END
-        VM="Newspeak Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine";;
-Linux)
-    if expr \$OSREL \\> 2.6.12; then
-        get_vm_from_tar \\
-END
-
-echo -n '        nsvmlinuxht/lib/nsvm/$LCBINDIR/nsvm ' >>$GetCogScript
-echo -n `quietmd5 $SD/nsvmlinuxht/lib/nsvm/$LCBINDIR/nsvm` >>$GetCogScript
-echo ' \' >>$GetCogScript
-echo -n '        nsvmlinuxht-$TAG.tgz ' >>$GetCogScript
-quietmd5 ../products/nsvmlinuxht-$TAG.tgz >>$GetCogScript
-
-cat >>$GetCogScript <<END
-    else
-        get_vm_from_tar \\
-END
-
-echo -n '        nsvmlinux/lib/nsvm/$LCBINDIR/nsvm ' >>$GetCogScript
-echo -n `quietmd5 $SD/nsvmlinux/lib/nsvm/$LCBINDIR/nsvm` >>$GetCogScript
-echo ' \' >>$GetCogScript
-echo -n '        nsvmlinux-$TAG.tgz ' >>$GetCogScript
-quietmd5 ../products/nsvmlinux-$TAG.tgz >>$GetCogScript
-cat >>$GetCogScript <<END
-    fi;;
-CYGWIN*) get_vm_from_zip \\
-END
-
-echo -n '            nsvmwin/nsvmConsole.exe ' >>$GetCogScript
-echo -n `quietmd5 $SD/nsvmwin/nsvmConsole.exe` >>$GetCogScript
-echo ' \' >>$GetCogScript
-echo -n '            nsvmwin-$TAG.zip ' >>$GetCogScript
-quietmd5 ../products/nsvmwin-$TAG.zip >>$GetCogScript
-
-cat >>$GetCogScript <<END
-    VM=nsvmwin/nsvmConsole.exe;;
-*)  echo "don't know how to run nsvm on your system.  bailing out." 1>&2; exit 2
-esac
-END
-
-chmod a+x $GetCogScript
+echo $GetSpurScript
 
 cat >$GetSpurScript <<END
 #!/bin/sh
