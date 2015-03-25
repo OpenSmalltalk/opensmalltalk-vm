@@ -5304,6 +5304,37 @@ SpurMemoryManager >> headerForSlots: numSlots format: formatField classIndex: cl
 	+ classIndex
 ]
 
+{ #category : #'header format' }
+SpurMemoryManager >> headerForSlots: numSlots hash: hash format: formatField classIndex: classIndex [
+	<api>
+	"The header format in LSB is
+	 MSB:	| 8: numSlots		| (on a byte boundary)
+			| 2 bits				|	(msb,lsb = {isMarked,?})
+			| 22: identityHash	| (on a word boundary)
+			| 3 bits				|	(msb <-> lsb = {isGrey,isPinned,isRemembered}
+			| 5: format			| (on a byte boundary)
+			| 2 bits				|	(msb,lsb = {isImmutable,?})
+			| 22: classIndex		| (on a word boundary) : LSB
+	 The remaining bits (7) are used for
+		isImmutable	(bit 23)
+		isRemembered	(bit 29)
+		isPinned		(bit 30)
+		isGrey			(bit 31)
+		isMarked		(bit 55)
+	 leaving 2 unused bits, each next to a 22-bit field, allowing those fields to be
+	 expanded to 23 bits..  The three bit field { isGrey, isPinned, isRemembered }
+	 is for bits that are never set in young objects.  This allows the remembered
+	 table to be pruned when full by using these bits as a reference count of
+	 newSpace objects from the remembered table. Objects with a high count
+	 should be tenured to prune the remembered table."
+	<returnTypeC: #usqLong>
+	<inline: true>
+	^ ((self cCoerceSimple: numSlots to: #usqLong) << self numSlotsFullShift)
+	+ ((self cCoerceSimple: hash to: #usqLong) << self identityHashFullWordShift)
+	+ (formatField << self formatShift)
+	+ classIndex
+]
+
 { #category : #'debug support' }
 SpurMemoryManager >> heapMap [
 	^heapMap
@@ -9015,6 +9046,29 @@ SpurMemoryManager >> printFreeTreeChunk: chunkOrZero [
 		[self printFreeTreeChunk: (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: chunkOrZero).
 		 self printFreeChunk: chunkOrZero.
 		 self printFreeTreeChunk: (self fetchPointer: self freeChunkLargerIndex ofFreeChunk: chunkOrZero)]
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printHeaderOf: objOop [
+	<api>
+	"N.B. No safety bounds checks!!  We need to look e.g. at corpses."
+	coInterpreter printHexnp: objOop.
+	(self numSlotsOfAny: objOop) >= self numSlotsMask
+		ifTrue: [coInterpreter
+					print: ' hdr16 slotf '; printHexnp: (self numSlotsOfAny: objOop - self allocationUnit);
+					print: ' slotc '; printHexnp: (self rawOverflowSlotsOf: objOop); space]
+		ifFalse: [coInterpreter print: ' hdr8 slots '; printHexnp: (self numSlotsOfAny: objOop)].
+	coInterpreter
+		space;
+		printChar: ((self isMarked: objOop) ifTrue: [$M] ifFalse: [$m]);
+		printChar: ((self isGrey: objOop) ifTrue: [$G] ifFalse: [$g]);
+		printChar: ((self isPinned: objOop) ifTrue: [$P] ifFalse: [$p]);
+		printChar: ((self isRemembered: objOop) ifTrue: [$R] ifFalse: [$r]);
+		printChar: ((self isImmutable: objOop) ifTrue: [$I] ifFalse: [$i]);
+		print: ' hash '; printHexnp: (self rawHashBitsOf: objOop);
+		print: ' fmt '; printHexnp: (self formatOf: objOop);
+		print: ' cidx '; printHexnp: (self classIndexOf: objOop);
+		cr
 ]
 
 { #category : #'debug printing' }
