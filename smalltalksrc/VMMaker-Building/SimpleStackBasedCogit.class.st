@@ -2096,10 +2096,15 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 
 	backEnd hasLinkRegister
 		ifTrue:
-			[backEnd genLoadStackPointers.									"Switch back to Smalltalk stack."
-			 self MoveMw: 0 r: SPReg R: ReceiverResultReg.						"Fetch result from stack"
-			 self MoveAw: coInterpreter instructionPointerAddress R: LinkReg.	"Get and restore ret pc"
-			 self RetN: objectMemory wordSize]											"Return, popping result from stack"
+			[backEnd genLoadStackPointers.											"Switch back to Smalltalk stack."
+			 backEnd hasPCRegister
+				ifTrue:
+					[self PopR: ReceiverResultReg.										"Pop result from stack"
+					 self MoveAw: coInterpreter instructionPointerAddress R: PCReg]	"Return"
+				ifFalse:
+					[self MoveMw: 0 r: SPReg R: ReceiverResultReg.						"Fetch result from stack"
+					 self MoveAw: coInterpreter instructionPointerAddress R: LinkReg.	"Get ret pc"
+					 self RetN: objectMemory wordSize]]								"Return, popping result from stack"
 		ifFalse:
 			[self MoveAw: coInterpreter instructionPointerAddress R: ClassReg.	"Get return pc"
 			 backEnd genLoadStackPointers.									"Switch back to Smalltalk stack."
