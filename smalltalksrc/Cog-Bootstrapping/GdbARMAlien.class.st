@@ -68,7 +68,7 @@ GdbARMAlien >> cResultRegister: aValue [
 
 { #category : #'accessing-abstract' }
 GdbARMAlien >> callerSavedSmashRegisterAccessors [
-	^#(r0: r1: r2: r3: )
+	^#(r0: r1: r2: r3: lr:)
 ]
 
 { #category : #accessing }
@@ -262,8 +262,10 @@ GdbARMAlien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray
 	"Handle an execution primitive failure.  Convert out-of-range call and absolute
 	 memory read into register instructions into ProcessorSimulationTrap signals."
 	"self printRegistersOn: Transcript"
-	| pc |
-	self endCondition = 5 ifTrue:[self pc: self priorPc].
+	| pcOnEntry pc |
+	pcOnEntry := self pc.
+	self endCondition = 5 ifTrue:
+		[self pc: self priorPc].
 	((pc := self pc) between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
 		[(self instructionTypeAt: pc in: memoryArray)
 			caseOf: {
@@ -276,18 +278,6 @@ GdbARMAlien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray
 				[#MoveRAw]	-> [^self handleMoveRAwFailureAt: pc in: memoryArray].
 				[#MoveRMbr]	-> [^self handleMoveRMbrFailureAt: pc in: memoryArray].
 				[#Ret]			-> [^self handleRetFailureAt: pc in: memoryArray].} 
-			otherwise: [^self handleExecutionPrimitiveFailureAt: pc in: memoryArray]].
-
-	pc = 0 ifTrue:[self halt: 'pc should not be 0 at this point; simulator failure'].
-
-	((pc := self lr - 4) between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
-		[(self instructionTypeAt: pc in: memoryArray)
-			caseOf: {
-				[#Call] 		-> [^self handleCallFailureAt: pc in: memoryArray].
-				[#LongCall] -> [^self handleLongCallFailureAt: pc in: memoryArray].
-				[#Jump] 	-> [^self handleJmpFailureAt: pc in: memoryArray].
-				[#LongJump] 	-> [^self handleLongJmpFailureAt: pc in: memoryArray].
-				[#Ret]		-> [^self handleRetFailureAt: pc in: memoryArray].} 
 			otherwise: [^self handleExecutionPrimitiveFailureAt: pc in: memoryArray]].
 	^self reportPrimitiveFailure
 ]
@@ -1071,7 +1061,8 @@ GdbARMAlien >> reset [
 
 { #category : #'accessing-abstract' }
 GdbARMAlien >> retpcIn: aMemory [
-"the return address is on the stack, apparently"
+	"The return address is on the stack, having been pushed by either
+	 simulateCallOf:nextpc:memory: or simulateJumpCallOf:memory:"
 	^aMemory unsignedLongAt: self fp + 5 bigEndian: false
 ]
 
@@ -1142,6 +1133,7 @@ GdbARMAlien >> simulateJumpCallOf: address memory: aMemory [
 	uses a frame pointer. The standard never mentions a fp. It merely defines r4-r11 to be callee-saved."
 
 	self assert: self sp \\ 8 = 0. "This check ensures, that we conform with ARM abi. Before doing anything to the stack, we ensure 2-word alignment."
+	self pushWord: self lr in: aMemory.
 	self pushWord: self fp in: aMemory.
 	self fp: self sp.
 	PostBuildStackDelta ~= 0 ifTrue:
@@ -1165,8 +1157,9 @@ GdbARMAlien >> simulateReturnIn: aMemory [
 	PostBuildStackDelta ~= 0 ifTrue:
 		[self sp: self sp + PostBuildStackDelta].
 	self fp: (self popWordIn: aMemory).
-	self lr: (self popWordIn: aMemory).
-	self pc: self lr
+	"According to tpr, most C compilers implement return by simply
+	 popping into the pc, rather than popping through the link register."
+	self pc: (self popWordIn: aMemory)
 ]
 
 { #category : #'accessing-abstract' }
