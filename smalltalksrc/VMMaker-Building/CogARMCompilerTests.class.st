@@ -72,7 +72,7 @@ CogARMCompilerTests >> testAdd [
 				In: inst machineCode object
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'mov	sl, #', (n bitAnd: 16rFF << 24) asString.
+					herIntended := 'mov	sl, #', (n bitAnd: 16rFF << 24) signedIntFromLong asString.
 					self assert: (plainJane match: herIntended)].
 			self processor
 				disassembleInstructionAt: 4
@@ -102,31 +102,6 @@ CogARMCompilerTests >> testAdd [
 					plainJane := self strip: str.
 					herIntended := 'adds	', regName, ', ', regName, ', sl'.
 					self assert: (plainJane match: herIntended)]]]
-
-]
-
-{ #category : #tests }
-CogARMCompilerTests >> testGenerateAdd [
-	"self new testGenerateAdd"
-	|memory|
-	self resetGen. "initialise important stuff"
-		
-	"test AddCqR"
-	self concreteCompilerClass registersWithNamesDo: [ :reg :regName |
-		#(0 16rF 16rFF) do:
-			[:n| 
-			self gen: AddCqR operand: n operand: reg]].
-	memory := self generateInstructions.
-	self disassembleOpcodesIn: memory to: Transcript	.
-		
-	self resetGen. "initialise important stuff"
-	"test AddCwR"
-	self concreteCompilerClass registersWithNamesDo: [ :reg :regName |
-		#(16rFFFFFFFF 16r88888888) do:
-			[:n|
-			self gen: AddCwR operand: n operand: reg]].
-	memory := self generateInstructions.
-	self disassembleOpcodesIn: memory to: Transcript	.
 
 ]
 
