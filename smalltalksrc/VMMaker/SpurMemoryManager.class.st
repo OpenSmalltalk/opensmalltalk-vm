@@ -5306,7 +5306,6 @@ SpurMemoryManager >> headerForSlots: numSlots format: formatField classIndex: cl
 
 { #category : #'header format' }
 SpurMemoryManager >> headerForSlots: numSlots hash: hash format: formatField classIndex: classIndex [
-	<api>
 	"The header format in LSB is
 	 MSB:	| 8: numSlots		| (on a byte boundary)
 			| 2 bits				|	(msb,lsb = {isMarked,?})
@@ -5349,6 +5348,11 @@ SpurMemoryManager >> hiddenRootSlots [
 { #category : #'header format' }
 SpurMemoryManager >> identityHashFieldWidth [
 	^22
+]
+
+{ #category : #'header access' }
+SpurMemoryManager >> identityHashFullWordShift [
+	^32
 ]
 
 { #category : #'header format' }
