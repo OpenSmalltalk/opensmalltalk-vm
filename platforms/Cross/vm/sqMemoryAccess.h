@@ -105,7 +105,7 @@
   static inline sqLong long64Atput(sqInt oop, sqLong val)		{ return long64AtPointerput(pointerForOop(oop), val); }
   static inline sqInt oopAt(sqInt oop)				{ return oopAtPointer(pointerForOop(oop)); }
   static inline sqInt oopAtput(sqInt oop, sqInt val)		{ return oopAtPointerput(pointerForOop(oop), val); }
-#else
+#else /* USE_INLINE_MEMORY_ACCESSORS */
   /* Use macros when static inline functions aren't efficient. */
 # define byteAtPointer(ptr)			((sqInt)(*((unsigned char *)(ptr))))
 # define byteAtPointerput(ptr,val)	((sqInt)(*((unsigned char *)(ptr))= (unsigned char)(val)))
@@ -122,23 +122,25 @@
 # if defined(sqMemoryBase) && !sqMemoryBase
 #  define pointerForOop(oop)		((char *)(oop))
 #  define oopForPointer(ptr)		((sqInt)(ptr))
+#  define atPointerArg(oop)			oop
 # else
 #  define pointerForOop(oop)		((char *)(sqMemoryBase + ((usqInt)(oop))))
 #  define oopForPointer(ptr)		((sqInt)(((char *)(ptr)) - (sqMemoryBase)))
+#  define atPointerArg(oop)			sqMemoryBase + (usqInt)(oop)
 # endif
-# define byteAt(oop)				byteAtPointer(pointerForOop(oop))
-# define byteAtput(oop,val)			byteAtPointerput(pointerForOop(oop), (val))
-# define shortAt(oop)				shortAtPointer(pointerForOop(oop))
-# define shortAtput(oop,val)		shortAtPointerput(pointerForOop(oop), (val))
-# define longAt(oop)				longAtPointer(pointerForOop(oop))
-# define longAtput(oop,val)			longAtPointerput(pointerForOop(oop), (val))
-# define long64At(oop)			long64AtPointer(pointerForOop(oop))
-# define long64Atput(oop,val)		long64AtPointerput(pointerForOop(oop), (val))
-# define intAt(oop)					intAtPointer(pointerForOop(oop))
-# define intAtput(oop,val)			intAtPointerput(pointerForOop(oop), (val))
-# define oopAt(oop)					oopAtPointer(pointerForOop(oop))
-# define oopAtput(oop,val)			oopAtPointerput(pointerForOop(oop), (val))
-#endif
+# define byteAt(oop)				byteAtPointer(atPointerArg(oop))
+# define byteAtput(oop,val)			byteAtPointerput(atPointerArg(oop), val)
+# define shortAt(oop)				shortAtPointer(atPointerArg(oop))
+# define shortAtput(oop,val)		shortAtPointerput(atPointerArg(oop), val)
+# define longAt(oop)				longAtPointer(atPointerArg(oop))
+# define longAtput(oop,val)			longAtPointerput(atPointerArg(oop), val)
+# define long64At(oop)				long64AtPointer(atPointerArg(oop))
+# define long64Atput(oop,val)		long64AtPointerput(atPointerArg(oop), val)
+# define intAt(oop)					intAtPointer(atPointerArg(oop))
+# define intAtput(oop,val)			intAtPointerput(atPointerArg(oop), val)
+# define oopAt(oop)					oopAtPointer(atPointerArg(oop))
+# define oopAtput(oop,val)			oopAtPointerput(atPointerArg(oop), val)
+#endif /* USE_INLINE_MEMORY_ACCESSORS */
 
 #define long32At	intAt
 #define long32Atput	intAtput
