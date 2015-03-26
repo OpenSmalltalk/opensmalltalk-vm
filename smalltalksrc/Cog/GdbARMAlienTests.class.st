@@ -9,7 +9,7 @@ Class {
 
 { #category : #accessing }
 GdbARMAlienTests >> integerRegisterGetters [
-	^#(r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 fp r12 lr sp pc)
+	^#(r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 sl fp r12 lr sp pc)
 ]
 
 { #category : #accessing }
@@ -20,10 +20,11 @@ GdbARMAlienTests >> integerRegisterSetters [
 { #category : #accessing }
 GdbARMAlienTests >> memory [ 
 "build a memory for this test; a ByteArray of 1024 bytes, filled with NOPs"
-	| mem |
+	| mem nop|
+	nop := CogARMCompiler new mov: 0  rn: 0.
 	mem := ByteArray new: 1024.
 	1 to: 1024  by: 4do:[:i|
-		mem unsignedLongAt: i put: 16rE1A00000 bigEndian: false].
+		mem unsignedLongAt: i put: nop bigEndian: false].
 	^mem
 ]
 
@@ -253,7 +254,7 @@ GdbARMAlienTests >> testDisassembling [
 
 	| memory result |
 	memory := WordArray new: 2.
-	memory at: 1 put: 3800756324.
+	memory at: 1 put:  (CogARMCompiler new add: 15 rn: 10 imm: 100 ror:0).
 	result := self processor
 		disassembleInstructionAt: 0 
 		In: memory 
@@ -626,7 +627,7 @@ GdbARMAlienTests >> testLongJumpAddressForming [
 		singleStepIn: memory.
 	self 
 		assert: self processor pc = 16;
-		assert: self processor r10 = 16r7FFFFE68;
+		assert: self processor sl = 16r7FFFFE68;
 		assert: self processor zflag = 0;
 		assert: self processor cflag = 0;
 		assert: self processor vflag = 0;
@@ -781,7 +782,7 @@ GdbARMAlienTests >> testMoveRAw [
 	self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
 	self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
 	self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2.
-	self assert:[(memory unsignedLongAt: (processor r10) + 1) = processor r5]
+	self assert:[(memory unsignedLongAt: (processor sl) + 1) = processor r5]
 
 ]
 
@@ -911,12 +912,12 @@ GdbARMAlienTests >> testQuickDisassemby [
 
 	| memory result |
 	memory := WordArray new: 2.
-	memory at: 1 put: 3858758348.
+	memory at: 1 put: (CogARMCompiler new orr: 6  imm: 16r3F ror: 16).
 	result := self processor
 		disassembleInstructionAt: 0 
 		In: memory 
 		into: [:str :len | 
-			^str].
+			^str =  '00000000: orr	r6, r6, #4128768	; 0x3f0000'].
 ]
 
 { #category : #execution }
