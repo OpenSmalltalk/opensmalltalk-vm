@@ -9,7 +9,7 @@ do
 		cp -R build/Debug/UnixOSProcessPlugin.bundle "../$d/Contents/Resources"
 	fi
 done
-for d in Fast.app "Qwaq VM.app"
+for d in Fast.app "Qwaq VM.app" Squeak.app Croquet.app
 do
 	if [ -d "../$d" ]; then
 		echo installed Release UnixOSProcessPlugin in ../$d

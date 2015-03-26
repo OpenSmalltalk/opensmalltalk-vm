@@ -9,7 +9,7 @@ do
 		cp -R build/Debug/BochsIA32Plugin.bundle "../$d/Contents/Resources"
 	fi
 done
-for d in Fast.app Croquet.app
+for d in Fast.app Croquet.app Squeak.app
 do
 	if [ -d "../$d" ]; then
 		echo installed Release BochsIA32Plugin in ../$d
