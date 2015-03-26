@@ -575,10 +575,6 @@ ARMul_Emulate26 (ARMul_State * state)
 	  // if we get back an SWI_CogPrefetch then the pc was outside limits
 	  decoded = ARMul_ReLoadInstr (state, pc + isize, isize);
 	  loaded  = ARMul_ReLoadInstr (state, pc + isize * 2, isize);
-      // TPR - save the pc to help in CogVM sim error handling, IFF the instr is not a SWI_CogPrefetch
-          if ( instr != (0xEF000000 | SWI_CogPrefetch)) {
-          	state->temp = pc;
-          }
 	  NORMALCYCLE; // set to do simple SEQ next time & break to end of switch
 	  break;
 
@@ -592,10 +588,6 @@ ARMul_Emulate26 (ARMul_State * state)
 	  state->Aborted = 0;
 	  instr   = ARMul_LoadInstrN (state, pc, isize);
 	  decoded = ARMul_LoadInstrS (state, pc + (isize), isize);
-// TPR - save the pc to help in CogVM sim error handling, IFF the instr is not an abort SWI
-          if ( instr != (0xEF000000 | SWI_CogPrefetch)) {
-          	state->temp = pc;
-          }
 	  loaded  = ARMul_LoadInstrS (state, pc + (isize * 2), isize);
 	  NORMALCYCLE;
 	  break;
@@ -603,12 +595,12 @@ ARMul_Emulate26 (ARMul_State * state)
     // END OF SWITCH stmt, where the above breaks go 
     
  // TPR - save the pc to help in CogVM sim error handling, IFF the instr is not an abort SWI
-          if ( instr != (0xEF000000 | SWI_CogPrefetch)) {
-          	state->temp = pc;
-          }
+    if ( instr != (0xEF000000 | SWI_CogPrefetch)) {
+		state->temp = pc;
+	}
 
-     if (state->EventSet)
-	ARMul_EnvokeEvent (state);
+    if (state->EventSet)
+		ARMul_EnvokeEvent (state);
 #if 0 /* Enable this for a helpful bit of debugging when tracing is needed.  */
       fprintf (stderr, "pc: %x, instr: %x\n", pc & ~1, instr);
       if (instr == 0)
