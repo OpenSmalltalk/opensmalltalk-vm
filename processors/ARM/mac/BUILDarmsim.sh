@@ -8,12 +8,14 @@ test -d gdb-7.6 || svn export ../gdb-7.6
 ln -s ../../binutils-2.25/bfd/bfd.h gdb-7.6/bfd/bfd.h
 ln -s ../../binutils-2.25/bfd/config.h gdb-7.6/bfd/config.h
 libtool -V >gdb-7.6/bfd/libtool-soversion
+if false; then
 ed - gdb-7.6/sim/arm/armos.c <<END
 /^ARMul_OSHandleSWI/
 s/^/core_/
 w
 q
 END
+fi
 (cd gdb-7.6/opcodes # i.e. processors/ARM/gdb-7.6/opcodes
 ./configure --target=arm-linux --build=i386-apple-darwin9 CFLAGS="-arch i386 -g -O2" LDFLAGS="-arch i386"
 make
