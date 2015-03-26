@@ -447,7 +447,7 @@ configure:6839: $? = 0
 configure:6839: result: yes
 configure:6839: checking for __setfpucw
 configure:6839: gcc -o conftest -g -O2   conftest.c  >&5
-/tmp/ccumGyEY.o: In function `main':
+/tmp/ccka0ti2.o: In function `main':
 /mnt/hgfs/tim/Documents/Squeak/Rasbian-VM/Pi-CogVM/Cog/processors/ARM/gdb-7.6/sim/common/conftest.c:75: undefined reference to `__setfpucw'
 collect2: error: ld returned 1 exit status
 configure:6839: $? = 1
@@ -599,7 +599,7 @@ configure:6921: $? = 0
 configure:6930: result: yes
 configure:6956: checking for library containing zlibVersion
 configure:6987: gcc -o conftest -g -O2   conftest.c -lnsl  >&5
-/tmp/ccw297dY.o: In function `main':
+/tmp/cc6ihiQd.o: In function `main':
 /mnt/hgfs/tim/Documents/Squeak/Rasbian-VM/Pi-CogVM/Cog/processors/ARM/gdb-7.6/sim/common/conftest.c:53: undefined reference to `zlibVersion'
 collect2: error: ld returned 1 exit status
 configure:6987: $? = 1
@@ -710,7 +710,7 @@ configure:10198: checking how to hardcode library paths into programs
 configure:10223: result: immediate
 configure:10317: checking for shl_load
 configure:10317: gcc -o conftest -g -O2   conftest.c -lz -lnsl  >&5
-/tmp/ccAVKmQV.o: In function `main':
+/tmp/ccN0Wv6V.o: In function `main':
 /mnt/hgfs/tim/Documents/Squeak/Rasbian-VM/Pi-CogVM/Cog/processors/ARM/gdb-7.6/sim/common/conftest.c:78: undefined reference to `shl_load'
 collect2: error: ld returned 1 exit status
 configure:10317: $? = 1
@@ -864,7 +864,7 @@ configure: failed program was:
 configure:10355: result: no
 configure:10360: checking for dlopen
 configure:10360: gcc -o conftest -g -O2   conftest.c -lz -lnsl  >&5
-/tmp/ccGMa0C1.o: In function `main':
+/tmp/ccwcvMF1.o: In function `main':
 /mnt/hgfs/tim/Documents/Squeak/Rasbian-VM/Pi-CogVM/Cog/processors/ARM/gdb-7.6/sim/common/conftest.c:78: undefined reference to `dlopen'
 collect2: error: ld returned 1 exit status
 configure:10360: $? = 1
@@ -961,7 +961,7 @@ configure:10600: $? = 0
 configure:10618: result: yes
 configure:10623: checking whether a statically linked program can dlopen itself
 configure:10703: gcc -o conftest -g -O2  -DHAVE_DLFCN_H  -Wl,--export-dynamic -static conftest.c -ldl -lz -lnsl  >&5
-/tmp/ccYC6wPb.o: In function `main':
+/tmp/cckBQwCa.o: In function `main':
 /mnt/hgfs/tim/Documents/Squeak/Rasbian-VM/Pi-CogVM/Cog/processors/ARM/gdb-7.6/sim/common/configure:10683: warning: Using 'dlopen' in statically linked applications requires at runtime the shared libraries from the glibc version used for linking
 /usr/bin/ld: dynamic STT_GNU_IFUNC symbol `strcmp' with pointer equality in `/usr/lib/gcc/i686-linux-gnu/4.8/../../../i386-linux-gnu/libc.a(strcmp.o)' can not be used when making an executable; recompile with -fPIE and relink with -pie
 collect2: error: ld returned 1 exit status

@@ -447,7 +447,7 @@ configure:8569: $? = 0
 configure:8569: result: yes
 configure:8569: checking for __setfpucw
 configure:8569: gcc -o conftest -g -O2   conftest.c  >&5
-/tmp/ccEK9d2W.o: In function `main':
+/tmp/ccymOjvz.o: In function `main':
 /mnt/hgfs/tim/Documents/Squeak/Rasbian-VM/Pi-CogVM/Cog/processors/ARM/gdb-7.6/sim/arm/conftest.c:75: undefined reference to `__setfpucw'
 collect2: error: ld returned 1 exit status
 configure:8569: $? = 1
@@ -599,7 +599,7 @@ configure:8651: $? = 0
 configure:8660: result: yes
 configure:8686: checking for library containing zlibVersion
 configure:8717: gcc -o conftest -g -O2   conftest.c -lnsl  >&5
-/tmp/ccE36uq5.o: In function `main':
+/tmp/cct2DOfG.o: In function `main':
 /mnt/hgfs/tim/Documents/Squeak/Rasbian-VM/Pi-CogVM/Cog/processors/ARM/gdb-7.6/sim/arm/conftest.c:53: undefined reference to `zlibVersion'
 collect2: error: ld returned 1 exit status
 configure:8717: $? = 1
@@ -710,7 +710,7 @@ configure:11928: checking how to hardcode library paths into programs
 configure:11953: result: immediate
 configure:12047: checking for shl_load
 configure:12047: gcc -o conftest -g -O2   conftest.c -lz -lnsl  >&5
-/tmp/ccwG2viw.o: In function `main':
+/tmp/ccR1zhOm.o: In function `main':
 /mnt/hgfs/tim/Documents/Squeak/Rasbian-VM/Pi-CogVM/Cog/processors/ARM/gdb-7.6/sim/arm/conftest.c:78: undefined reference to `shl_load'
 collect2: error: ld returned 1 exit status
 configure:12047: $? = 1
@@ -864,7 +864,7 @@ configure: failed program was:
 configure:12085: result: no
 configure:12090: checking for dlopen
 configure:12090: gcc -o conftest -g -O2   conftest.c -lz -lnsl  >&5
-/tmp/ccZZ9CqF.o: In function `main':
+/tmp/cciImnQq.o: In function `main':
 /mnt/hgfs/tim/Documents/Squeak/Rasbian-VM/Pi-CogVM/Cog/processors/ARM/gdb-7.6/sim/arm/conftest.c:78: undefined reference to `dlopen'
 collect2: error: ld returned 1 exit status
 configure:12090: $? = 1
@@ -961,7 +961,7 @@ configure:12330: $? = 0
 configure:12348: result: yes
 configure:12353: checking whether a statically linked program can dlopen itself
 configure:12433: gcc -o conftest -g -O2  -DHAVE_DLFCN_H  -Wl,--export-dynamic -static conftest.c -ldl -lz -lnsl  >&5
-/tmp/ccFmMjQP.o: In function `main':
+/tmp/ccCKjI5A.o: In function `main':
 /mnt/hgfs/tim/Documents/Squeak/Rasbian-VM/Pi-CogVM/Cog/processors/ARM/gdb-7.6/sim/arm/configure:12413: warning: Using 'dlopen' in statically linked applications requires at runtime the shared libraries from the glibc version used for linking
 /usr/bin/ld: dynamic STT_GNU_IFUNC symbol `strcmp' with pointer equality in `/usr/lib/gcc/i686-linux-gnu/4.8/../../../i386-linux-gnu/libc.a(strcmp.o)' can not be used when making an executable; recompile with -fPIE and relink with -pie
 collect2: error: ld returned 1 exit status

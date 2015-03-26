@@ -1,9 +1,15 @@
 /*
-  This file is a compy of armvirt.c, which is part of the ARMulator distributed e.g. with gdb and skyeye.
-  In order to overwrite GetWord and PutWord, I (lars wasserman) had to copy the whole file and alter the Make to use it instead of the default ARM armvirt.c.
-  Also changed: ReLoadInstr.
-  TPR - changed the errors returned in PutWord & GetWord to discriminate between read & write bounds errors for better simulation
-  TPR - changed Get/PutWord to ensure address used is an actual word address ie bottom two bits are zeros. Without that, fetching bytes becomes... fun
+  This file is a replacement copy of armvirt.c, which is part of the ARMulator distributed
+  with gdb.
+  Originally altered by Lars Wasserman to replace PutWord & GetWord, with extensive
+  further mangling by tim@rowlwege.org 
+  TPR - changed ReLoadInstr to return a fake SWI_CogPrefetch when fetching an 
+  instruction would go past our memory bounds; this stops the sim and returns to the
+  Cog development UI. 
+  TPR - changed the errors returned in PutWord & GetWord to discriminate between read & 
+  write bounds errors for better simulation
+  TPR - changed Get/PutWord to ensure address used is an actual word address ie bottom 
+  two bits are zeros. Without that, fetching bytes becomes... fun
 */
 #include "GdbARMPlugin.h"
 

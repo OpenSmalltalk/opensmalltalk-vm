@@ -503,7 +503,9 @@ ARMul_Emulate26 (ARMul_State * state)
 
   /* Execute the next instruction.  */
 
-  if (state->NextInstr < PRIMEPIPE)
+  if (state->NextInstr < PRIMEPIPE) /* ie SEQ(0) NONSEQ(1) PCINCEDSEQ(2) PCINCEDNONSEQ(3) 
+                                    - PRIMEPIPE is 4 and RESUME is 8 */
+
     {
       decoded = state->decoded;
       loaded = state->loaded;
@@ -512,12 +514,12 @@ ARMul_Emulate26 (ARMul_State * state)
 
   do
     {
-      /* Just keep going.  */
+      /* Just keep going until stopped.  */
       isize = INSN_SIZE;
 
       switch (state->NextInstr)
 	{
-	case SEQ:
+	case SEQ: /* NORMALCYCLE leads us here unless the state gets changed deeper in the loop */
 	  /* Advance the pipeline, and an S cycle.  */
 	  state->Reg[15] += isize;
 	  pc += isize;
@@ -555,21 +557,29 @@ ARMul_Emulate26 (ARMul_State * state)
 	  break;
 
 	case RESUME:
-	  /* The program counter has been changed.  */
-	  pc = state->Reg[15];
+	  /* The program counter has been changed.  
+	     We always start here with state->EndCondition=NoError
+	     and state->NextInstr=RESUME.
+	     See arminit.c>>ARMul_DoProg or ARMul_DoRun.
+	     If we are single stepping then state->Emulate=ONCE
+	     If we are just running then state->Emulate=RUN but will get changed
+	     to PCINCEDSEQ or PCINCEDNONSEQ
+	    */
+	  pc = state->Reg[15]; // set the pc from the value set in Alien->pc:
 #ifndef MODE32
 	  pc = pc & R15PCBITS;
 #endif
-	  state->Reg[15] = pc + (isize * 2);
+	  state->Reg[15] = pc + (isize * 2); // bump the r15 by two instructions per ARM hw 
 	  state->Aborted = 0;
-	  instr   = ARMul_ReLoadInstr (state, pc, isize);
+	  instr   = ARMul_ReLoadInstr (state, pc, isize); // load the instruction to actually run
+	  // if we get back an SWI_CogPrefetch then the pc was outside limits
 	  decoded = ARMul_ReLoadInstr (state, pc + isize, isize);
 	  loaded  = ARMul_ReLoadInstr (state, pc + isize * 2, isize);
-// TPR - save the pc to help in CogVM sim error handling, IFF the instr is not an abort SWI
+      // TPR - save the pc to help in CogVM sim error handling, IFF the instr is not a SWI_CogPrefetch
           if ( instr != (0xEF000000 | SWI_CogPrefetch)) {
           	state->temp = pc;
           }
-	  NORMALCYCLE;
+	  NORMALCYCLE; // set to do simple SEQ next time & break to end of switch
 	  break;
 
 	default:
@@ -590,7 +600,8 @@ ARMul_Emulate26 (ARMul_State * state)
 	  NORMALCYCLE;
 	  break;
 	}
-
+    // END OF SWITCH stmt, where the above breaks go 
+    
  // TPR - save the pc to help in CogVM sim error handling, IFF the instr is not an abort SWI
           if ( instr != (0xEF000000 | SWI_CogPrefetch)) {
           	state->temp = pc;
@@ -634,7 +645,7 @@ ARMul_Emulate26 (ARMul_State * state)
 	      ARMul_Abort (state, ARMul_IRQV);
 	      break;
 	    }
-	}
+	} // state->Exception
 
       if (state->CallDebug > 0)
 	{
@@ -651,10 +662,10 @@ ARMul_Emulate26 (ARMul_State * state)
 	      (void) fgetc (stdin);
 	    }
 	}
-      else if (state->Emulate < ONCE)
+      else if (state->Emulate < ONCE) // ie STOP(0)	 CHANGEMODE(1) ONCE(2) RUN(3)
 	{
 	  state->NextInstr = RESUME;
-	  break;
+	  break; // if stop or changemode then break out & restart at resume
 	}
 
       state->NumInstrs++;
@@ -1584,13 +1595,14 @@ check_PMUintr:
 		    {
 		      /* BLX(2) */
 		      ARMword temp;
-
+            // work out the return address of this BLX 
 		      if (TFLAG)
 			temp = (pc + 2) | 1;
 		      else
 			temp = pc + 4;
-
+                // handle the R15 effects of a BLX
 		      WriteR15Branch (state, state->Reg[RHSReg]);
+		      // save the return address
 		      state->Reg[14] = temp;
 		      break;
 		    }
@@ -3885,15 +3897,16 @@ check_PMUintr:
 #endif /* NEED_UI_LOOP_HOOK */
 
       if (state->Emulate == ONCE)
-	state->Emulate = STOP;
+	        state->Emulate = STOP; // If we're single stepping ,stop now
       /* If we have changed mode, allow the PC to advance before stopping.  */
       else if (state->Emulate == CHANGEMODE)
-	continue;
+	        continue;
       else if (state->Emulate != RUN)
-	break;
+	        break;
     }
   while (!stop_simulator);
 
+    // END OF LOOP where breaks to STOP etc end up
   state->decoded = decoded;
   state->loaded = loaded;
   state->pc = pc;
@@ -4158,7 +4171,7 @@ WriteR15 (ARMul_State * state, ARMword src)
 
 #ifdef MODE32
   state->Reg[15] = src & PCBITS;
-#else
+#else // 26bit mode
   state->Reg[15] = (src & R15PCBITS) | ECC | ER15INT | EMODE;
   ARMul_R15Altered (state);
 #endif
