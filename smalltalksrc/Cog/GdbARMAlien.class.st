@@ -658,7 +658,7 @@ GdbARMAlien >> instructionTypeAt: pc "<Integer>" in: memoryArray [ "<Bitmap|Byte
 { #category : #'accessing-abstract' }
 GdbARMAlien >> integerRegisterState [
 	^{	self r0. self r1. self r2. self r3. self r4. self r5. self r6. self r7. self r8. 
-		self r9. self r10. self fp. self r12. self sp. self lr. self pc}
+		self r9. self sl. self fp. self r12. self sp. self lr. self pc}
 ]
 
 { #category : #accessing }
@@ -727,12 +727,6 @@ GdbARMAlien >> postCallArgumentsNumArgs: numArgs "<Integer>" in: memory [ "<Byte
 			ifTrue: [self perform: (self registerStateNames at: i)]
 			"ARM uses a full descending stack. Directly after calling a procedure, nothing but the arguments are pushed."
 			ifFalse: [memory unsignedLongAt: self sp + (i-5)*4 bigEndian: false]].
-]
-
-{ #category : #accessing }
-GdbARMAlien >> postTrapCorrectedPC [
-	"return the pc - 8 for trap handling - remember the ARM alwayshas that funky +8 offset vs the actual instruction running/failig"
-	^self pc -8
 ]
 
 { #category : #primitives }
@@ -861,7 +855,7 @@ GdbARMAlien >> printOn: aStream [
 GdbARMAlien >> printRegisterState: registerStateVector on: aStream [
 	self printFields: #(	r0 r1 r2 r3 cr
 						r4 r5 r6 r7 cr
-						r8 r9 r10 fp cr
+						r8 r9 sl fp cr
 						r12 sp lr pc eflags cr)
 		inRegisterState: registerStateVector
 		on: aStream
@@ -871,7 +865,7 @@ GdbARMAlien >> printRegisterState: registerStateVector on: aStream [
 GdbARMAlien >> printRegisterStateExceptPC: registerStateVector on: aStream [
 	self printFields: #(	r0 r1 r2 r3 cr
 						r4 r5 r6 r7 cr
-						r8 r9 r10 fp cr
+						r8 r9 sl fp cr
 						r12 sp lr eflags cr)
 		inRegisterState: registerStateVector
 		on: aStream
@@ -881,6 +875,12 @@ GdbARMAlien >> printRegisterStateExceptPC: registerStateVector on: aStream [
 GdbARMAlien >> priorPc [
 "where did the simulator stop just before a prefetch abort?"
 	^self unsignedLongAt: 609
+]
+
+{ #category : #accessing }
+GdbARMAlien >> priorPc: val [
+"set the priorPC cached pc so it isn't random nonsense"
+	^self unsignedLongAt: 609 put: val
 ]
 
 { #category : #execution }
@@ -906,13 +906,13 @@ GdbARMAlien >> r1 [
 
 { #category : #accessing }
 GdbARMAlien >> r10 [
-	^self unsignedLongAt: 53
+	^self sl
 ]
 
 { #category : #accessing }
 GdbARMAlien >> r10: anUnsignedInteger [
 
-	^self unsignedLongAt: 53 put: anUnsignedInteger
+	^self sl: anUnsignedInteger
 ]
 
 { #category : #accessing }
@@ -1053,12 +1053,12 @@ GdbARMAlien >> registerAt: index [
 { #category : #'accessing-abstract' }
 GdbARMAlien >> registerState [
 	^{	self r0. self r1. self r2. self r3. self r4. self r5. self r6. self r7.
-		self r8. self r9. self r10. self fp. self r12. self sp. self lr. self pc. self eflags }
+		self r8. self r9. self sl. self fp. self r12. self sp. self lr. self pc. self eflags }
 ]
 
 { #category : #'accessing-abstract' }
 GdbARMAlien >> registerStateNames [
-	^#(	r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 fp r12 sp lr pc eflags)
+	^#(	r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 sl fp r12 sp lr pc eflags)
 ]
 
 { #category : #'accessing-abstract' }
@@ -1069,12 +1069,13 @@ GdbARMAlien >> registerStatePCIndex [
 { #category : #'accessing-abstract' }
 GdbARMAlien >> registerStateSetters [
 "a list of register setting messages used to initialise or reset registers"
-	^#(	r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: r10: fp: r12: sp: lr: pc: eflags:)
+	^#(	r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: sl: fp: r12: sp: lr: pc: eflags:)
 ]
 
 { #category : #accessing }
 GdbARMAlien >> reset [
-	self primitiveResetCPU
+	self priorPc: 0;
+		primitiveResetCPU
 ]
 
 { #category : #'accessing-abstract' }
@@ -1180,6 +1181,17 @@ GdbARMAlien >> simulateReturnIn: aMemory [
 	self pc: (self popWordIn: aMemory)
 ]
 
+{ #category : #accessing }
+GdbARMAlien >> sl [
+	^self unsignedLongAt: 53
+]
+
+{ #category : #accessing }
+GdbARMAlien >> sl: anUnsignedInteger [
+
+	^self unsignedLongAt: 53 put: anUnsignedInteger
+]
+
 { #category : #'accessing-abstract' }
 GdbARMAlien >> smashCallerSavedRegistersWithValuesFrom: base by: step [
 	self callerSavedSmashRegisterAccessors
@@ -1251,12 +1263,12 @@ GdbARMAlien >> writePopPushDetailsIn: memory in: transcript for: aCogit [
 							>> 12) hex , ' to ' , (self sp - 4) hex; cr].
 	(self instructionIsLDRSP: instr)
 		ifTrue: [| val |
-			val := self r10 > memory size
-						ifTrue: [aCogit simulatedVariableAt: self r10]
-						ifFalse: [memory unsignedLongAt: self r10 + 1 bigEndian: false].
-			^transcript tab; nextPutAll: 'LOAD SP ' , val hex , ' from ' , self r10 hex; cr].
+			val := self sl > memory size
+						ifTrue: [aCogit simulatedVariableAt: self sl]
+						ifFalse: [memory unsignedLongAt: self sl + 1 bigEndian: false].
+			^transcript tab; nextPutAll: 'LOAD SP ' , val hex , ' from ' , self sl hex; cr].
 	(self instructionIsSTRSP: instr)
-		ifTrue: [^transcript tab; nextPutAll: 'STORE SP ' , self sp hex , ' to ' , self r10 hex; cr].
+		ifTrue: [^transcript tab; nextPutAll: 'STORE SP ' , self sp hex , ' to ' , self sl hex; cr].
 	(self instructionIsAlignSP: instr)
 		ifTrue: [^transcript tab; nextPutAll: 'ALIGN SP ' , self sp hex; cr].
 	(self instructionIsAddSP: instr) ifTrue:[^transcript tab; nextPutAll: 'ADD ', (instr bitAnd: 16rFF) asString,' to SP = ' , self sp hex; cr]
