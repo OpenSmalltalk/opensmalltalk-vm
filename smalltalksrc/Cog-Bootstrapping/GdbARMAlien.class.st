@@ -6,10 +6,19 @@ Class {
 	#superclass : #CogProcessorAlien,
 	#type : #bytes,
 	#classVars : [
+		'BadCPUInstance',
+		'ExecutionError',
+		'InstructionPrefetchError',
 		'LongConstReg',
 		'LongConstStep',
 		'LongConstValue',
-		'PostBuildStackDelta'
+		'MemoryLoadBoundsError',
+		'MemoryWriteBoundsError',
+		'NoError',
+		'PanicError',
+		'PostBuildStackDelta',
+		'SomethingLoggedError',
+		'UnsupportedOperationError'
 	],
 	#category : #'Cog-Processors'
 }
@@ -30,6 +39,17 @@ GdbARMAlien class >> initialize [
 	"GdbARMAlien initialize"
 
 	PostBuildStackDelta := 0.
+
+	"Return errors from GdbARMPlugin.h"
+	NoError := 0.
+	ExecutionError := 1.
+	BadCPUInstance := 2.
+	MemoryLoadBoundsError := 3.
+	MemoryWriteBoundsError := 4.
+	InstructionPrefetchError := 5.
+	PanicError := 6.
+	UnsupportedOperationError := 7.
+	SomethingLoggedError := 8
 ]
 
 { #category : #primitives }
@@ -264,7 +284,7 @@ GdbARMAlien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray
 	"self printRegistersOn: Transcript"
 	| pcOnEntry pc |
 	pcOnEntry := self pc.
-	self endCondition = 5 ifTrue:
+	self endCondition = InstructionPrefetchError ifTrue:
 		[self pc: self priorPc].
 	((pc := self pc) between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
 		[(self instructionTypeAt: pc in: memoryArray)
@@ -442,13 +462,11 @@ GdbARMAlien >> handleMoveRMbrFailureAt: pc "<Integer>" in: memoryArray [ "<Bitma
 { #category : #'error handling' }
 GdbARMAlien >> handleRetFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a ret into a ProcessorSimulationTrap signal."
-	self halt.
 	^(ProcessorSimulationTrap
 			pc: pc
 			nextpc: pc + 4
-			address: self lr " for popping off stack version of retiurn -> (memoryArray unsignedLongAt: self sp -3) "
-			type: #return
-			"don't quite know what to do with this yet ->accessor: #pc:")
+			address: self lr
+			type: #return)
 		signal
 ]
 
