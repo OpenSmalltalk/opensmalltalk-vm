@@ -38,6 +38,7 @@ Class {
 		'MI',
 		'MRS',
 		'MSR',
+		'MoveNotOpcode',
 		'MoveOpcode',
 		'NE',
 		'OrOpcode',
@@ -144,6 +145,7 @@ CogARMCompiler class >> initialize [
 	SubOpcode := 2.
 	XorOpcode := 1.
 	SMLALOpcode := 7.
+	MoveNotOpcode := 15.
 
 	CPSRReg := 16.
 	OverflowFlag := 1 << 28.
@@ -214,6 +216,15 @@ CogARMCompiler >> ands: destReg rn: srcReg imm: immediate ror: rot [
 	ANDS destReg, srcReg, #immediate ROR #rot"
 
 	^self type: 1 op: AndOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> ands: destReg rn: srcReg rm: addReg lsr: shft [
+"return an ANDS destReg, srcReg, addReg lsl #shft"
+"important detail - a 0 shft requires setting the shift-type code to 0 to avoid potential instruction confusion"
+	shft = 0
+		ifTrue:[^self type: 0 op: AndOpcode set: 1 rn: srcReg rd: destReg shifterOperand: addReg]
+		ifFalse:[^self type: 0 op: AndOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((shft <<7 bitOr: 32) bitOr:  addReg)]
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -476,8 +487,11 @@ CogARMCompiler >> concretizeAlignmentNops [
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeAndCqR [
 	"Will get inlined into concretizeAt: switch."
+	"AND is very important since it's used to mask all sorts of flags in the jit. We take special care to try to find fast ways to make the masks"
 	<inline: true>
-	self rotateable8bitImmediate: (operands at: 0)
+	|val|
+	val := operands at: 0.
+	self rotateable8bitImmediate: val
 		ifTrue: [ :rot :immediate | | reg |
 			reg := self concreteRegister: (operands at: 1).
 			self machineCodeAt: 0 put: (self ands: reg rn: reg imm: immediate ror: rot).
@@ -485,15 +499,26 @@ CogARMCompiler >> concretizeAndCqR [
 		ifFalse: [
 			"see if the constant bit-inverted makes a quick value and if so BIC it instead
 			If the value is -ve, we 2s complement it instead"
-			|val|
-			val := operands at: 0.
-			val <0 ifTrue:[val := -1 - val] ifFalse:[val := val bitInvert32].
-			self rotateable8bitImmediate: val
+			|invVal|
+			val <0
+				ifTrue:[invVal := -1 - val]
+				ifFalse:[invVal := val bitInvert32].
+			self rotateable8bitImmediate: invVal
 				ifTrue: [ :rot :immediate | |reg|
 					reg := self concreteRegister: (operands at: 1).
 					self machineCodeAt: 0 put: (self bics: reg rn: reg imm: immediate ror: rot).
 					^machineCodeSize := 4]
-				ifFalse: [^self concretizeDataOperationCwR: 0]]
+				ifFalse: ["let's try to see if the constant can be made from a simple shift of 0xFFFFFFFF"
+					|hb reg|
+					reg := self concreteRegister: (operands at: 1).
+					hb := (operands at: 0) highBit.
+					1 << hb = (val +1)
+						ifTrue: [ "MVN temp reg, 0, making 0xffffffff"
+							self machineCodeAt: 0 put:(self mvn: RISCTempReg imm: 0 ror: 0).
+							"Then AND reg, temp reg, lsr #(32-hb)"
+							 self machineCodeAt: 4 put:(self ands: reg rn: reg rm: RISCTempReg lsr: (32-hb )).
+							^machineCodeSize :=8]
+						ifFalse: [^self concretizeDataOperationCwR: AndOpcode]]]
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1906,6 +1931,13 @@ CogARMCompiler >> movs: destReg rn: srcReg [
 "	MOVS destReg, srcReg"
 
 	^self type: 0 op: MoveOpcode set: 1 rn: 0 rd: destReg shifterOperand: srcReg
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> mvn: destReg imm: immediate8bitValue ror: rot [
+	"Remember the ROR is doubled by the cpu so use 30>>1 etc.
+	MVN destReg, #immediate8BitValue ROR rot"
+	^self type: 1 op: MoveNotOpcode set: 0 rn: 0 rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate8bitValue)
 ]
 
 { #category : #printing }
