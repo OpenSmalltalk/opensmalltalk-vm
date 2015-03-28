@@ -1597,6 +1597,7 @@ StackToRegisterMappingCogit >> genCallPICEnilopmartNumArgs: numArgs [
 	<returnTypeC: 'void (*genCallPICEnilopmartNumArgs(sqInt numArgs))(void)'>
 	| size endAddress enilopmart |
 	opcodeIndex := 0.
+	backEnd maybeEstablishVarBase. "Must happen first; value may be used in genLoadStackPointers"
 	backEnd genLoadStackPointers.
 	self PopR: ClassReg. "cacheTag"
 	self PopR: TempReg. "entry-point"

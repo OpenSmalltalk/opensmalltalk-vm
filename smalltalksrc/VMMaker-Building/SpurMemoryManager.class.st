@@ -7139,7 +7139,7 @@ SpurMemoryManager >> lookupAddress: address [
 	 or: [classSize > 255]) ifTrue:
 		[^nil].
 	"Address could be a class or a metaclass"
-	(fmt = 1 and: [size >= classNameIndex]) ifTrue:
+	(fmt = 1 and: [size > classNameIndex]) ifTrue:
 		["Is address a class? If so class's thisClass is address."
 		 (self lookupAddress: (self fetchPointer: classNameIndex ofObject: address)) ifNotNil:
 			[:maybeClassName|
