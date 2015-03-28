@@ -314,17 +314,14 @@ CogAbstractInstruction >> callerSavedRegisterMask [
 ]
 
 { #category : #testing }
-CogAbstractInstruction >> callsAreRelative [
-	^self subclassResponsibility
-]
-
-{ #category : #testing }
 CogAbstractInstruction >> canDivQuoRem [
+	<inline: true>
 	^self subclassResponsibility
 ]
 
 { #category : #testing }
 CogAbstractInstruction >> canMulRR [
+	<inline: true>
 	^self subclassResponsibility
 ]
 
@@ -600,6 +597,21 @@ CogAbstractInstruction >> hasPCRegister [
 	^false
 ]
 
+{ #category : #testing }
+CogAbstractInstruction >> hasThreeAddressArithmetic [
+	"Answer if the receiver supports three-address arithmetic instructions (currently only AndCqRR)"
+	<inline: true>
+	^self subclassResponsibility
+]
+
+{ #category : #testing }
+CogAbstractInstruction >> hasVarBaseRegister [
+	"Answer if the processor has a dedicated callee-saved register to point to
+	 the base of commonly-accessed variables. By default this is false."
+	<inline: true>
+	^false
+]
+
 { #category : #'inline cacheing' }
 CogAbstractInstruction >> implicitReceiveCacheAt: callSiteReturnAddress [
 	"Answer the implicit receiver cache for the return address
@@ -768,6 +780,12 @@ CogAbstractInstruction >> maxSize: anObject [
 	"Set the value of maxSize"
 
 	maxSize := anObject
+]
+
+{ #category : #'abstract instructions' }
+CogAbstractInstruction >> maybeEstablishVarBase [
+	"If the receiver has a VarBaseReg, generate the code to set it to its value."
+	self subclassResponsibility
 ]
 
 { #category : #printing }

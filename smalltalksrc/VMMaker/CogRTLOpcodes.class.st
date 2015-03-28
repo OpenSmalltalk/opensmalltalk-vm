@@ -11,6 +11,7 @@ Class {
 		'AddRdRd',
 		'AlignmentNops',
 		'AndCqR',
+		'AndCqRR',
 		'AndCwR',
 		'AndRR',
 		'Arg0Reg',
@@ -138,6 +139,7 @@ Class {
 		'SubRdRd',
 		'TempReg',
 		'TstCqR',
+		'VarBaseReg',
 		'XorCqR',
 		'XorCwR',
 		'XorRR'
@@ -150,18 +152,20 @@ CogRTLOpcodes class >> initialize [
 	"Abstract opcodes are a compound of a one word operation specifier and zero or more operand type specifiers.
 	 e.g. MoveRR is the Move opcode with two register operand specifiers and defines a move register to
 	 register instruction from operand 0 to operand 1.  The word and register size is assumed to be either 32-bits on
-	 a 32-bit architecture or 64-bits on a 64-bit architecture.		(self initialize)
+	 a 32-bit architecture or 64-bits on a 64-bit architecture.  The abstract machine is mostly a 2 address machine
+	 with the odd three address instruction added to better exploit RISCs.
+			(self initialize)
 	The operand specifiers are
 		R		- general purpose register
 		Rd		- double-precision floating-point register
-		Cq		- a quick constant that can be encoded in the minimum space possible.
+		Cq		- a `quick' constant that can be encoded in the minimum space possible.
 		Cw		- a constant with word size where word is the default operand size for the Smalltalk VM, 32-bits
 				  for a 32-bit VM, 64-bits for a 64-bit VM.  The generated constant must occupy the default number
 				  of bits.  This allows e.g. a garbage collector to update the value without invalidating the code.
 		C32	- a constant with 32 bit size.  The generated constant must occupy 32 bits.
 		C64	- a constant with 64 bit size.  The generated constant must occupy 64 bits.
-		Aw		- memory word with an absolute address
-		Ab		- memory byte with an absolute address
+		Aw		- memory word at an absolute address
+		Ab		- memory byte at an absolute address
 		Mwr	- memory word whose address is at a constant offset from an address in a register
 		Mbr		- memory byte whose address is at a constant offset from an address in a register
 		M16r	- memory 16-bit halfword whose address is at a constant offset from an address in a register
@@ -187,15 +191,20 @@ CogRTLOpcodes class >> initialize [
 	Note that there are no generic division instructions defined, but a processor may define some."
 
 	| opcodeNames refs |
-	FPReg := -1.
+	self flag: 'GPRegMin and GPRegMax are poorly thought-out and should instead defer to the backEnd for allocateable registers.'.
+	"A small fixed set of abstract registers are defined and used in code generation
+	 for Smalltalk code, and executes on stack pages in the stack zone.
+	 These are mapped to processor-specific registers by concreteRegister:"
+	FPReg := -1.	"A frame pointer is used for Smalltalk frames."
 	SPReg := -2.
-	ReceiverResultReg := GPRegMax := -3.
+	ReceiverResultReg := GPRegMax := -3. "The receiver at point of send, and return value from a send"
 	TempReg := -4.
-	ClassReg := -5.
-	SendNumArgsReg := -6.
-	Arg0Reg := -7.
+	ClassReg := -5.							"The inline send cache class tag is in this register, loaded at the send site"
+	SendNumArgsReg := -6.				"Sends > 2 args set the arg count in this reg"
+	Arg0Reg := -7.							"In the StackToregisterMappingCogit 1 & 2 arg sends marshall into these registers."
 	Arg1Reg := GPRegMin := -8.
 
+	"Floating-point registers"
 	DPFPReg0 := -9.
 	DPFPReg1 := -10.
 	DPFPReg2 := -11.
@@ -204,9 +213,12 @@ CogRTLOpcodes class >> initialize [
 	DPFPReg5 := -14.
 	DPFPReg6 := -15.
 	DPFPReg7 := -16.
-	
+
+	"RISC-specific"
 	LinkReg := -17.
-	PCReg := -18.
+	RISCTempReg := -18.
+	PCReg := -19.
+	VarBaseReg := -20. "If useful, points to base of interpreter variables."
 
 	opcodeNames := #("Noops & Pseudo Ops"
 						Label
@@ -279,6 +291,8 @@ CogRTLOpcodes class >> initialize [
 						CmpRR AddRR SubRR AndRR OrRR XorRR MulRR
 						CmpCqR AddCqR SubCqR AndCqR OrCqR XorCqR MulCqR
 						CmpCwR AddCwR SubCwR AndCwR OrCwR XorCwR MulCwR
+
+						AndCqRR
 
 						CmpRdRd AddRdRd SubRdRd MulRdRd DivRdRd TstCqR SqrtRd
 

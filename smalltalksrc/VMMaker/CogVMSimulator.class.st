@@ -3698,6 +3698,18 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		addLine;
 		add: 'print cog methods' target: cogMethodZone action: #printCogMethods;
 		add: 'print cog methods with prim...' action: [(self promptNum: 'prim index') ifNotNil: [:pix| cogMethodZone printCogMethodsWithPrimitive: pix]];
+		add: 'print cog methods with selector...' action:
+			[|s| s := UIManager default request: 'selector'.
+			s notEmpty ifTrue:
+				[s = 'nil' ifTrue: [s := nil].
+				 cogMethodZone methodsDo:
+					[:m|
+					(s ifNil: [m selector = objectMemory nilObject]
+					 ifNotNil: [(objectMemory numBytesOf: m selector) = s size
+							and: [(self str: s
+									n: (m selector + objectMemory baseHeaderSize)
+									cmp: (objectMemory numBytesOf: m selector)) = 0]]) ifTrue:
+						[cogit printCogMethod: m]]]];
 		add: 'print cog method for...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit printCogMethodFor: pc]];
 		add: 'print trampoline table' target: cogit action: #printTrampolineTable;
 		add: 'print prim trace log' action: #dumpPrimTraceLog;
