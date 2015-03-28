@@ -1251,6 +1251,19 @@ Cogit >> AndCq: quickConstant R: reg [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> AndCq: quickConstant R: srcReg R: destReg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	| first |
+	<var: 'first' type: #'AbstractInstruction *'>
+	backEnd hasThreeAddressArithmetic ifTrue:
+		[^self gen: AndCqRR operand: quickConstant operand: srcReg operand: destReg].
+	first := self gen: MoveRR operand: srcReg operand: destReg.
+	self gen: AndCqR operand: quickConstant operand: destReg.
+	^first
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> AndCw: wordConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2730,7 +2743,7 @@ Cogit >> ceCPICMiss: cPIC receiver: receiver [
 		isMNUCase: errorSelectorOrNil = SelectorDoesNotUnderstand.
 	"Jump back into the pic at its entry in case this is an MNU."
 	coInterpreter
-		executeCogMethod: cPIC
+		executeCogPIC: cPIC
 		fromLinkedSendWithReceiver: receiver
 		andCacheTag: (backEnd inlineCacheTagAt: outerReturn).
 	"NOTREACHED"
@@ -2961,7 +2974,7 @@ Cogit >> ceSICMiss: receiver [
 	processor flushICacheFrom: outerReturn - 1 - extent to: outerReturn - 1.
 	"Jump back into the pic at its entry in case this is an MNU (newTargetMethodOrNil is nil)"
 	coInterpreter
-		executeCogMethod: pic
+		executeCogPIC: pic
 		fromLinkedSendWithReceiver: receiver
 		andCacheTag: (backEnd inlineCacheTagAt: outerReturn).
 	"NOTREACHED"
@@ -4522,6 +4535,19 @@ Cogit >> extBBytecode [
 	^0
 ]
 
+{ #category : #initialization }
+Cogit >> fakeAddressFor: anObject index: index [
+	"Answer a fake address for some variable based on some index.
+	 The index will usually be the size of simulatedAddresses, but
+	 in determining the varBaseAddress we take a guess at the final
+	 size of simulatedAddresses."
+	<doNotGenerate>
+	^(index + 101 * objectMemory wordSize) negated
+		bitAnd: ((backEnd wantsNearAddressFor: anObject)
+					ifTrue: [self addressSpaceMask]
+					ifFalse: [self allButTopBitOfAddressSpaceMask])
+]
+
 { #category : #'generate machine code' }
 Cogit >> fillInBlockHeadersAt: startAddress [
 	"Fill in the block headers now we know the exact layout of the code."
@@ -4972,6 +4998,7 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 and: regArg3 forCall: forCall ca
 	<returnTypeC: #'void (*genEnilopmartForandandforCallcalled(sqInt regArg1, sqInt regArg2, sqInt regArg3, sqInt forCall, sqInt trampolineName))(void)'>
 	| size endAddress enilopmart |
 	opcodeIndex := 0.
+	backEnd maybeEstablishVarBase. "Must happen first; value may be used in genLoadStackPointers"
 	backEnd genLoadStackPointers.
 	regArg3 ifNotNil: [self PopR: regArg3].
 	regArg2 ifNotNil: [self PopR: regArg2].
@@ -6239,7 +6266,9 @@ Cogit >> initializeBackend [
 	methodLabel opcode: Label.
 	methodLabel operands at: 0 put: 0.
 	methodLabel operands at: 1 put: 0. "label offset"
-	callerSavedRegMask := backEnd callerSavedRegisterMask
+	callerSavedRegMask := backEnd callerSavedRegisterMask.
+	backEnd hasVarBaseRegister ifTrue:
+		[self assert: ((self registerMaskFor: VarBaseReg) noMask: callerSavedRegMask)]
 ]
 
 { #category : #initialization }
@@ -8241,6 +8270,20 @@ Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 [
 	^((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)
 ]
 
+{ #category : #'register management' }
+Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 [
+	"Answer a bit mask identifying the symbolic registers.
+	 Registers are negative numbers."
+	^(((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)) bitOr: 1 << (1 - reg5)
+]
+
+{ #category : #'register management' }
+Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 [
+	"Answer a bit mask identifying the symbolic registers.
+	 Registers are negative numbers."
+	^((((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)) bitOr: 1 << (1 - reg5)) bitOr: 1 << (1 - reg6)
+]
+
 { #category : #disassembly }
 Cogit >> relativeLabelForPC: pc [ 
 	<doNotGenerate>
@@ -8928,11 +8971,7 @@ Cogit >> simulatedAddressFor: anObject [
 	<doNotGenerate>
 	^simulatedAddresses
 		at: anObject
-		ifAbsentPut:
-			[(simulatedAddresses size + 101 * objectMemory wordSize) negated
-				bitAnd: ((backEnd wantsNearAddressFor: anObject)
-							ifTrue: [self addressSpaceMask]
-							ifFalse: [self allButTopBitOfAddressSpaceMask])]
+		ifAbsentPut: [self fakeAddressFor: anObject index: simulatedAddresses size]
 ]
 
 { #category : #initialization }
@@ -9613,6 +9652,14 @@ Cogit >> updateMaybeObjRefAt: mcpc [
 		[backEnd storeLiteral: subject beforeFollowingAddress: mcpc.
 		 codeModified := true].
 	^objectMemory isYoungObject: subject
+]
+
+{ #category : #accessing }
+Cogit >> varBaseAddress [
+	"We expect simulatedAddresses to have around 40 entries.  48 is hopefully a good maximum."
+	<doNotGenerate>
+	^self cCode: [coInterpreter varBaseAddress]
+		inSmalltalk: [self fakeAddressFor: nil index: 48]
 ]
 
 { #category : #'jit - api' }

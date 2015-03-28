@@ -167,17 +167,14 @@ CogIA32Compiler >> callerSavedRegisterMask [
 ]
 
 { #category : #testing }
-CogIA32Compiler >> callsAreRelative [
-	^true
-]
-
-{ #category : #testing }
 CogIA32Compiler >> canDivQuoRem [
+	<inline: true>
 	^true
 ]
 
 { #category : #testing }
 CogIA32Compiler >> canMulRR [
+	<inline: true>
 	^true
 ]
 
@@ -2563,6 +2560,13 @@ CogIA32Compiler >> hasSSEInstructions [
 	^(cogit ceCheckFeatures bitAnd: (1 << 25)) ~= 0
 ]
 
+{ #category : #testing }
+CogIA32Compiler >> hasThreeAddressArithmetic [
+	"Answer if the receiver supports three-address arithmetic instructions"
+	<inline: true>
+	^false
+]
+
 { #category : #'inline cacheing' }
 CogIA32Compiler >> implicitReceiveCacheAt: callSiteReturnAddress [
 	"Answer the implicit receiver cache for the return address
@@ -2728,6 +2732,11 @@ CogIA32Compiler >> machineCodeBytes [
 	"Answer the maximum number of bytes of machine code generated for any abstract instruction.
 	 e.g. lock movsd  0x400(%esp),%xmm4 => f0 f2 0f 10 a4 24 00 04 00 00"
 	^10
+]
+
+{ #category : #'abstract instructions' }
+CogIA32Compiler >> maybeEstablishVarBase [
+	"The receiver does not have a VarBaseReg; do nothing."
 ]
 
 { #category : #encoding }
