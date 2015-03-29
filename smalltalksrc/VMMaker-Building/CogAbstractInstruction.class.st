@@ -569,6 +569,7 @@ CogAbstractInstruction >> getJmpTarget [
 
 { #category : #testing }
 CogAbstractInstruction >> hasDoublePrecisionFloatingPointSupport [
+	<inline: true>
 	^self subclassResponsibility
 ]
 
@@ -576,16 +577,8 @@ CogAbstractInstruction >> hasDoublePrecisionFloatingPointSupport [
 CogAbstractInstruction >> hasLinkRegister [
 	"Answer if the processor has a link register, i.e. if calls pass
 	 the return pc in a register instead of pushing it on a stack."
+	<inline: true>
 	^self subclassResponsibility
-]
-
-{ #category : #testing }
-CogAbstractInstruction >> hasPCDependentInstructions [
-	"Answer whether the concrete machine code contains pc-dependent
-	 instructions, such as the IA32/x86's short and long relative jumps
-	 and the EMT64/x86-64's pc-relative addressing mode.  Such
-	 instructions require an extra pass to generate them correctly."
-	^false
 ]
 
 { #category : #testing }
@@ -594,7 +587,15 @@ CogAbstractInstruction >> hasPCRegister [
 	 On such processors we can execute jumping to pop top of stack by popping into
 	 the pc register.  Note that this is not a generic RISC feature.  The PowerPC does not
 	 allow one to pop into the pc for example.  So by default, answer false."
+	<inline: true>
 	^false
+]
+
+{ #category : #testing }
+CogAbstractInstruction >> hasPCRelativeAddressing [
+	"Answer if the processor has PC-relative addressing."
+	<inline: true>
+	^self subclassResponsibility
 ]
 
 { #category : #testing }
@@ -642,6 +643,7 @@ CogAbstractInstruction >> isAnInstruction: addressOrInstruction [
 
 { #category : #testing }
 CogAbstractInstruction >> isBigEndian [
+	<inline: true>
 	^self subclassResponsibility
 ]
 
