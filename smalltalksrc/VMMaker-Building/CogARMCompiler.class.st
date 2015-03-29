@@ -1035,10 +1035,15 @@ CogARMCompiler >> concretizeMoveMbrR [
 				put: (self ldrb: destReg rn: srcReg plus: u imm: immediate).
 			^machineCodeSize := 4]
 		ifFalse:
-			[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg.
-			"ldrb destReg, [srcReg, ConcreteIPReg]"
-			self machineCodeAt: instrOffset put: (self ldrb: destReg rn: srcReg rm: ConcreteIPReg).
-			^machineCodeSize := instrOffset + 4 ]
+			[(self isAddressRelativeToVarBase: offset)
+				ifTrue:
+					[self machineCodeAt: 0 put: (self ldr: ConcreteIPReg rn: ConcreteVarBaseReg plusImm: offset - cogit varBaseAddress).
+					 instrOffset := 4]
+				ifFalse:
+					[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg].
+			 "ldrb destReg, [srcReg, ConcreteIPReg]"
+			 self machineCodeAt: instrOffset put: (self ldrb: destReg rn: srcReg rm: ConcreteIPReg).
+			 ^machineCodeSize := instrOffset + 4]
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1096,7 +1101,12 @@ CogARMCompiler >> concretizeMoveRMbr [
 				put: (self strb: srcReg rn: baseReg plus: u imm: immediate).
 			^machineCodeSize := 4]
 		ifFalse:
-			[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg.
+			[(self isAddressRelativeToVarBase: offset)
+				ifTrue:
+					[self machineCodeAt: 0 put: (self ldr: ConcreteIPReg rn: ConcreteVarBaseReg plusImm: offset - cogit varBaseAddress).
+					 instrOffset := 4]
+				ifFalse:
+					[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg].
 			"strb 	srcReg, [baseReg, ConcreteIPReg]"
 			self machineCodeAt: instrOffset put: (self strb: srcReg rn: baseReg rm: ConcreteIPReg).
 			^machineCodeSize := instrOffset + 4 ]
@@ -1705,6 +1715,7 @@ CogARMCompiler >> generalPurposeRegisterMap [
 { #category : #testing }
 CogARMCompiler >> hasDoublePrecisionFloatingPointSupport [
 	"might be true, but is for the forseeable future disabled"
+	<inline: true>
 	^false
 ]
 
@@ -1805,14 +1816,24 @@ CogARMCompiler >> is8BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: fa
 ]
 
 { #category : #testing }
-CogARMCompiler >> isAddressRelativeToVarBase: address [
-	^address notNil
-	  and: [address >= cogit varBaseAddress
-	  and: [address - cogit varBaseAddress < (1 << 12)]]
+CogARMCompiler >> isAddressRelativeToPC: pcAddress [
+	"Support for addressing the method relative to the PC."
+	^pcAddress notNil
+	  and: [pcAddress <= address
+	  and: [address - pcAddress < (1 << 12)]]
+]
+
+{ #category : #testing }
+CogARMCompiler >> isAddressRelativeToVarBase: varAddress [
+	"Support for addressing variables off the dedicated VarBaseReg"
+	^varAddress notNil
+	  and: [varAddress >= cogit varBaseAddress
+	  and: [varAddress - cogit varBaseAddress < (1 << 12)]]
 ]
 
 { #category : #testing }
 CogARMCompiler >> isBigEndian [
+	<inline: true>
 	^false
 ]
 
