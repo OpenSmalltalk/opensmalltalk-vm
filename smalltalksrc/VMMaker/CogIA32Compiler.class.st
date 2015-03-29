@@ -2531,21 +2531,13 @@ CogIA32Compiler >> generateLowLevelUnlock: vmOwnerLockAddress [
 { #category : #testing }
 CogIA32Compiler >> hasDoublePrecisionFloatingPointSupport [
 	"We can generate dpfp support if the processor has SSE2 instructions."
+	<inline: true>
 	^self hasSSE2Instructions
 ]
 
 { #category : #testing }
 CogIA32Compiler >> hasLinkRegister [
 	^false
-]
-
-{ #category : #testing }
-CogIA32Compiler >> hasPCDependentInstructions [
-	"Answer whether the concrete machine code contains pc-dependent
-	 instructions, such as the IA32/x86's short and long relative jumps
-	 and the EMT64/x86-64's pc-relative addressing mode.  Such
-	 instructions require an extra pass to generate them correctly."
-	^true
 ]
 
 { #category : #testing }
@@ -2618,6 +2610,7 @@ CogIA32Compiler >> instructionSizeAt: pc [
 
 { #category : #testing }
 CogIA32Compiler >> isBigEndian [
+	<inline: true>
 	^false
 ]
 
