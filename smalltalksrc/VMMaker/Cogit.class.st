@@ -219,7 +219,7 @@ Class {
 		'ceTraceBlockActivationTrampoline',
 		'ceTraceStoreTrampoline',
 		'ceGetSP',
-		'sendTrampolines',
+		'ordinarySendTrampolines',
 		'superSendTrampolines',
 		'dynamicSuperSendTrampolines',
 		'firstSend',
@@ -241,7 +241,11 @@ Class {
 		'extB',
 		'numIRCs',
 		'indexOfIRC',
-		'theIRCs'
+		'theIRCs',
+		'selfSendEntry',
+		'cmSelfSendEntryOffset',
+		'selfSendEntryAlignment',
+		'selfSendTrampolines'
 	],
 	#classVars : [
 		'AltBlockCreationBytecodeSize',
@@ -458,8 +462,9 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			[:simulationVariableNotNeededForRealVM|
 			aCCodeGenerator removeVariable: simulationVariableNotNeededForRealVM].
 	NewspeakVM ifFalse:
-		[#(	'dynSuperEntry' 'dynSuperEntryAlignment' 'dynamicSuperSendTrampolines'
-			'ceImplicitReceiverTrampoline' 'ceEnclosingObjectTrampoline' 'cmDynSuperEntryOffset'
+		[#(	'selfSendEntry' 'selfSendEntryAlignment' 'dynSuperEntry' 'dynSuperEntryAlignment'
+			'selfSendTrampolines' 'dynamicSuperSendTrampolines' 'ceImplicitReceiverTrampoline'
+			'ceEnclosingObjectTrampoline' 'cmSelfSendEntryOffset' 'cmDynSuperEntryOffset'
 			'numIRCs' 'indexOfIRC' 'theIRCs') do:
 				[:variableNotNeededInNormalVM|
 				aCCodeGenerator removeVariable: variableNotNeededInNormalVM]].
@@ -511,7 +516,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #primInvokeLabel type: #'AbstractInstruction *'.
 	self declareC: #(abstractOpcodes stackCheckLabel
 					blockEntryLabel blockEntryNoContextSwitch
-					stackOverflowCall sendMiss entry noCheckEntry dynSuperEntry
+					stackOverflowCall sendMiss entry noCheckEntry selfSendEntry dynSuperEntry
 					picMNUAbort picInterpretAbort endCPICCase0 endCPICCase1)
 			as: #'AbstractInstruction *'
 				in: aCCodeGenerator.
@@ -520,10 +525,12 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		declareVar: #blockStarts type: #'BlockStart *';
 		declareVar: #fixups type: #'BytecodeFixup *'.
 	aCCodeGenerator
-		var: #sendTrampolines
-			declareC: 'sqInt sendTrampolines[NumSendTrampolines]';
+		var: #ordinarySendTrampolines
+			declareC: 'sqInt ordinarySendTrampolines[NumSendTrampolines]';
 		var: #superSendTrampolines
 			declareC: 'sqInt superSendTrampolines[NumSendTrampolines]';
+		var: #selfSendTrampolines
+			declareC: 'sqInt selfSendTrampolines[NumSendTrampolines]';
 		var: #dynamicSuperSendTrampolines
 			declareC: 'sqInt dynamicSuperSendTrampolines[NumSendTrampolines]';
 		var: #trampolineAddresses
@@ -2913,9 +2920,15 @@ Cogit >> ceSICMiss: receiver [
 	self assert: targetMethod selector ~= objectMemory nilObject.
 	self cppIf: NewspeakVM ifTrue:
 		[self assert: (targetMethod asInteger + cmEntryOffset = entryPoint
-					or: [targetMethod asInteger + cmDynSuperEntryOffset = entryPoint]).
+					or: [targetMethod asInteger + cmSelfSendEntryOffset = entryPoint
+					or: [targetMethod asInteger + cmDynSuperEntryOffset = entryPoint]]).
 		 "Avoid the effort of implementing PICs for the relatively low dynamic frequency
 		  dynamic super send and simply rebind the send site."
+		 targetMethod asInteger + cmSelfSendEntryOffset = entryPoint ifTrue:
+			[^coInterpreter
+				ceSelfSend: targetMethod selector
+				to: receiver
+				numArgs: targetMethod cmNumArgs].
 		 targetMethod asInteger + cmDynSuperEntryOffset = entryPoint ifTrue:
 			[^coInterpreter
 				ceDynamicSuperSend: targetMethod selector
@@ -3922,7 +3935,8 @@ Cogit >> compileCPICEntry [
 	<returnTypeC: #'AbstractInstruction *'>
 	"Compile the cache tag computation and the first comparison.  Answer the address of that comparison."
 	self cppIf: NewspeakVM ifTrue:
-		[self Nop. "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
+		[self Nop. "1st nop differentiates from no-check entry if using nextMethod"
+		 selfSendEntry := self Nop.
 		 dynSuperEntry := self Nop].
 	entry := objectRepresentation genGetInlineCacheClassTagFrom: ReceiverResultReg into: TempReg forEntry: true.
 	self CmpR: ClassReg R: TempReg.
@@ -4063,13 +4077,14 @@ Cogit >> compileEntry [
 	 that in the inline cache.  Other non-obvious elements are that its alignment must be
 	 different from the alignment of the noCheckEntry so that the method map machinery
 	 can distinguish normal and super sends (super sends bind to the noCheckEntry).
-	 In Newspeak we also need to distinguish dynSuperSends from normal and super
-	 and so on Nespeak, bind the dynSuperEntry to the preceeding nop (on x86 there
-	 happens to be one anyway)."
+	 In Newspeak we also need to distinguish dynSuperSends and self sends from normal
+	 and super sends and so on Newspeak, bind the dynSuperEntry and selfSendEntry to
+	 preceeding nops (on x86 there happens to be at least one anyway)."
 
 	self cppIf: NewspeakVM ifTrue:
-		[self Nop. "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
-		 dynSuperEntry := self Nop].
+		[self Nop. "1st nop differentiates from no-check entry if using nextMethod".
+		 dynSuperEntry := self Nop.
+		 selfSendEntry := self Nop]. "Put selfSend last as it has higher dynamic frequency."
 	entry := objectRepresentation genGetInlineCacheClassTagFrom: ReceiverResultReg into: TempReg forEntry: true.
 	self CmpR: ClassReg R: TempReg.
 	self JumpNonZero: sendMiss.
@@ -4226,14 +4241,16 @@ Cogit >> computeEntryOffsets [
 	self generateInstructionsAt: methodZoneBase + (self sizeof: CogMethod).
 	cmEntryOffset := entry address - methodZoneBase.
 	cmNoCheckEntryOffset := noCheckEntry address - methodZoneBase.
-	self cppIf: NewspeakVM
-		ifTrue: [cmDynSuperEntryOffset := dynSuperEntry address - methodZoneBase].
+	self cppIf: NewspeakVM ifTrue:
+		[cmSelfSendEntryOffset := selfSendEntry address - methodZoneBase.
+		 cmDynSuperEntryOffset := dynSuperEntry address - methodZoneBase].
 	missOffset := sendMissCall address + sendMissCall machineCodeSize - methodZoneBase.
 	entryPointMask := objectMemory wordSize - 1.
 	[self cppIf: NewspeakVM
 		ifTrue: [(cmEntryOffset bitAnd: entryPointMask) = (cmNoCheckEntryOffset bitAnd: entryPointMask)
+				or: [(cmEntryOffset bitAnd: entryPointMask) = (cmSelfSendEntryOffset bitAnd: entryPointMask)
 				or: [(cmEntryOffset bitAnd: entryPointMask) = (cmDynSuperEntryOffset bitAnd: entryPointMask)
-				or: [(cmNoCheckEntryOffset bitAnd: entryPointMask) = (cmDynSuperEntryOffset bitAnd: entryPointMask)]]]
+				or: [(cmNoCheckEntryOffset bitAnd: entryPointMask) = (cmDynSuperEntryOffset bitAnd: entryPointMask)]]]]
 		ifFalse: [(cmEntryOffset bitAnd: entryPointMask) = (cmNoCheckEntryOffset bitAnd: entryPointMask)]] whileTrue:
 		[entryPointMask := entryPointMask + entryPointMask + 1].
 	entryPointMask >= (methodZone roundUpLength: 1) ifTrue:
@@ -4243,10 +4260,15 @@ Cogit >> computeEntryOffsets [
 	self assert: checkedEntryAlignment ~= uncheckedEntryAlignment.
 	self cppIf: NewspeakVM
 		ifTrue:
-			[cmDynSuperEntryOffset := dynSuperEntry address - methodZoneBase.
+			[cmSelfSendEntryOffset := selfSendEntry address - methodZoneBase.
+			 selfSendEntryAlignment := cmSelfSendEntryOffset bitAnd: entryPointMask.
+			 cmDynSuperEntryOffset := dynSuperEntry address - methodZoneBase.
 			 dynSuperEntryAlignment := cmDynSuperEntryOffset bitAnd: entryPointMask.
+			self assert: selfSendEntryAlignment ~= checkedEntryAlignment.
+			self assert: selfSendEntryAlignment ~= uncheckedEntryAlignment.
 			self assert: dynSuperEntryAlignment ~= checkedEntryAlignment.
-			self assert: dynSuperEntryAlignment ~= uncheckedEntryAlignment]
+			self assert: dynSuperEntryAlignment ~= uncheckedEntryAlignment.
+			self assert: dynSuperEntryAlignment ~= selfSendEntryAlignment]
 ]
 
 { #category : #'generate machine code' }
@@ -4341,8 +4363,9 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 	
 	cogMethod cmType = CMMethod ifTrue:
 		[mapEntries at: cogMethod asInteger + cmNoCheckEntryOffset put: 'noCheckEntry'.
-		self cppIf: NewspeakVM
-			ifTrue: [mapEntries at: cogMethod asInteger + dynSuperEntryAlignment put: 'dynSuperEntry']].
+		self cppIf: NewspeakVM ifTrue:
+			[mapEntries at: cogMethod asInteger + selfSendEntryAlignment put: 'selfSendEntry'.
+			mapEntries at: cogMethod asInteger + dynSuperEntryAlignment put: 'dynSuperEntry']].
 
 	cogMethod cmType = CMClosedPIC ifTrue:
 		[mapEntries at: cogMethod asInteger + firstCPICCaseOffset put: 'ClosedPICCase0'.
@@ -5891,7 +5914,7 @@ Cogit >> generateRunTimeTrampolines [
 Cogit >> generateSendTrampolines [
 	0 to: NumSendTrampolines - 2 do:
 		[:numArgs|
-		sendTrampolines
+		ordinarySendTrampolines
 			at: numArgs
 			put: (self genTrampolineFor: #ceSend:super:to:numArgs:
 					  called: (self trampolineName: 'ceSend' numArgs: numArgs)
@@ -5899,7 +5922,7 @@ Cogit >> generateSendTrampolines [
 					  arg: 0
 					  arg: ReceiverResultReg
 					  arg: numArgs)].
-	sendTrampolines
+	ordinarySendTrampolines
 		at: NumSendTrampolines - 1
 		put: (self genTrampolineFor: #ceSend:super:to:numArgs:
 					called: (self trampolineName: 'ceSend' numArgs: -1)
@@ -5924,6 +5947,22 @@ Cogit >> generateSendTrampolines [
 							called: (self trampolineName: 'ceDynSuperSend' numArgs: -1)
 							arg: ClassReg
 							arg: ReceiverResultReg
+							arg: SendNumArgsReg).
+			0 to: NumSendTrampolines - 2 do:
+				[:numArgs|
+				selfSendTrampolines
+					at: numArgs
+					put: (self genTrampolineFor: #ceSelfSend:to:numArgs:
+							  called: (self trampolineName: 'ceSelfSend' numArgs: numArgs)
+							  arg: ClassReg
+							  arg: ReceiverResultReg
+							  arg: numArgs)].
+			selfSendTrampolines
+				at: NumSendTrampolines - 1
+				put: (self genTrampolineFor: #ceSelfSend:to:numArgs:
+							called: (self trampolineName: 'ceSelfSend' numArgs: -1)
+							arg: ClassReg
+							arg: ReceiverResultReg
 							arg: SendNumArgsReg)].
 	0 to: NumSendTrampolines - 2 do:
 		[:numArgs|
@@ -5943,7 +5982,7 @@ Cogit >> generateSendTrampolines [
 					arg: 1
 					arg: ReceiverResultReg
 					arg: SendNumArgsReg).
-	firstSend := sendTrampolines at: 0.
+	firstSend := ordinarySendTrampolines at: 0.
 	lastSend := superSendTrampolines at: NumSendTrampolines - 1
 ]
 
@@ -6534,7 +6573,8 @@ Cogit >> linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod of
 	self cppIf: NewspeakVM
 		ifTrue: [self assert: (theEntryOffset = cmEntryOffset
 							or: [theEntryOffset = cmNoCheckEntryOffset
-							or: [theEntryOffset = cmDynSuperEntryOffset]])]
+							or: [theEntryOffset = cmSelfSendEntryOffset
+							or: [theEntryOffset = cmDynSuperEntryOffset]]])]
 		ifFalse: [self assert: (theEntryOffset = cmEntryOffset
 							or: [theEntryOffset = cmNoCheckEntryOffset])].
 	self assert: (callSiteReturnAddress between: methodZoneBase and: methodZone freeStart).
@@ -7742,14 +7782,15 @@ Cogit >> offsetAndSendTableFor: entryPoint annotation: annotation into: binaryBl
 		ifTrue:
 			[self assert: annotation = IsSendCall.
 			 (entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-				ifTrue: [binaryBlock value: cmEntryOffset value: sendTrampolines]
-				ifFalse:
-					[(entryPoint bitAnd: entryPointMask) = dynSuperEntryAlignment
+				ifTrue: [binaryBlock value: cmEntryOffset value: ordinarySendTrampolines]
+				ifFalse: [(entryPoint bitAnd: entryPointMask) = selfSendEntryAlignment
+					ifTrue: [binaryBlock value: cmSelfSendEntryOffset value: selfSendTrampolines]
+					ifFalse: [(entryPoint bitAnd: entryPointMask) = dynSuperEntryAlignment
 						ifTrue: [binaryBlock value: cmDynSuperEntryOffset value: dynamicSuperSendTrampolines]
-						ifFalse: [binaryBlock value: cmNoCheckEntryOffset value: superSendTrampolines]]]
+						ifFalse: [binaryBlock value: cmNoCheckEntryOffset value: superSendTrampolines]]]]
 		ifFalse:
 			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-				ifTrue: [binaryBlock value: cmEntryOffset value: sendTrampolines]
+				ifTrue: [binaryBlock value: cmEntryOffset value: ordinarySendTrampolines]
 				ifFalse: [binaryBlock value: cmNoCheckEntryOffset value: superSendTrampolines]]
 ]
 
@@ -8656,6 +8697,13 @@ Cogit >> selectorForSendBefore: bcpc in: aCompiledMethod [
 	^(sel := is selectorToSendOrSelf) ~~ is ifTrue: [sel]
 ]
 
+{ #category : #accessing }
+Cogit >> selfSendEntryOffset [
+	<api>
+	<cmacro: '() cmSelfSendEntryOffset'>
+	^cmSelfSendEntryOffset
+]
+
 { #category : #analysis }
 Cogit >> sendSitesIn: cogMethod do: binaryBlock [
 	"Evaluate binaryBlock with the annotation and mcpc for each send site in cogMethod"
@@ -8744,10 +8792,11 @@ Cogit >> setInterpreter: aCoInterpreter [
 	breakBlock ifNil: [self breakPC: breakPC].
 	(backEnd := processor abstractInstructionCompilerClass new) cogit: self.
 	(methodLabel := processor abstractInstructionCompilerClass new) cogit: self.
-	sendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
+	ordinarySendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
 	superSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
 	NewspeakVM ifTrue:
-		[dynamicSuperSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines)].
+		[selfSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
+		 dynamicSuperSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines)].
 	"debug metadata"
 	objectReferencesInRuntime := CArrayAccessor on: (Array new: NumObjRefsInRuntime).
 	runtimeObjectRefIndex := 0.
@@ -9137,20 +9186,23 @@ Cogit >> targetMethodAndSendTableFor: entryPoint into: binaryBlock [
 			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
 				ifTrue:
 					[targetMethod := self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *'.
-					 sendTable := sendTrampolines]
+					 sendTable := ordinarySendTrampolines]
+			ifFalse: [(entryPoint bitAnd: entryPointMask) = selfSendEntryAlignment
+				ifTrue:
+					[targetMethod := self cCoerceSimple: entryPoint - cmSelfSendEntryOffset to: #'CogMethod *'.
+					 sendTable := selfSendTrampolines]
+			ifFalse: [(entryPoint bitAnd: entryPointMask) = dynSuperEntryAlignment
+				ifTrue:
+					[targetMethod := self cCoerceSimple: entryPoint - cmDynSuperEntryOffset to: #'CogMethod *'.
+					 sendTable := dynamicSuperSendTrampolines]
 				ifFalse:
-					[(entryPoint bitAnd: entryPointMask) = dynSuperEntryAlignment
-						ifTrue:
-							[targetMethod := self cCoerceSimple: entryPoint - cmDynSuperEntryOffset to: #'CogMethod *'.
-							 sendTable := dynamicSuperSendTrampolines]
-						ifFalse:
-							[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-							 sendTable := superSendTrampolines]]]
+					[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
+					 sendTable := superSendTrampolines]]]]
 		ifFalse:
 			[(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
 				ifTrue:
 					[targetMethod := self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *'.
-					 sendTable := sendTrampolines]
+					 sendTable := ordinarySendTrampolines]
 				ifFalse:
 					[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 					 sendTable := superSendTrampolines]].

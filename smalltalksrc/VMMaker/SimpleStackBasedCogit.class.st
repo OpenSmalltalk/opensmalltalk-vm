@@ -415,7 +415,7 @@ SimpleStackBasedCogit class >> initializeMiscConstants [
 	super initializeMiscConstants.
 	MaxLiteralCountForCompile := initializationOptions at: #MaxLiteralCountForCompile ifAbsent: [60].
 	NumTrampolines := NewspeakVM
-							ifTrue: [50]
+							ifTrue: [53]
 							ifFalse: [42]
 ]
 
@@ -1234,6 +1234,7 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	self compilePICAbort: numArgs.
 	self cppIf: NewspeakVM ifTrue:
 		[self Nop. "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
+		 selfSendEntry := self Nop.
 		 dynSuperEntry := self Nop].
 	entry := objectRepresentation genGetClassTagOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
 
@@ -3149,7 +3150,14 @@ SimpleStackBasedCogit >> genSecondExtendedSendBytecode [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSend: selector numArgs: numArgs [
+	<inline: true>
+	^self genSend: selector numArgs: numArgs sendTable: ordinarySendTrampolines
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genSend: selector numArgs: numArgs sendTable: sendTable [
 	<inline: false>
+	<var: #sendTable type: #'sqInt *'>
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 	self assert: needsFrame.
@@ -3159,7 +3167,7 @@ SimpleStackBasedCogit >> genSend: selector numArgs: numArgs [
 	numArgs > 2 ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
 	self MoveCw: selector R: ClassReg.
-	self CallSend: (sendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
+	self CallSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
 	self flag: 'currently caller pushes result'.
 	self PushR: ReceiverResultReg.
 	^0
@@ -3171,7 +3179,7 @@ SimpleStackBasedCogit >> genSendAbsentDynamicSuper: selector numArgs: numArgs [
 	 Then send."
 	<inline: false>
 	self marshallAbsentReceiverSendArguments: numArgs.
-	^self genSendDynamicSuper: selector numArgs: numArgs
+	^self genSend: selector numArgs: numArgs sendTable: dynamicSuperSendTrampolines
 ]
 
 { #category : #'bytecode generators' }
@@ -3210,7 +3218,7 @@ SimpleStackBasedCogit >> genSendAbsentSelf: selector numArgs: numArgs [
 	 Then send."
 	<inline: false>
 	self marshallAbsentReceiverSendArguments: numArgs.
-	^self genSend: selector numArgs: numArgs
+	^self genSend: selector numArgs: numArgs sendTable: selfSendTrampolines
 ]
 
 { #category : #'bytecode generators' }
@@ -3246,19 +3254,7 @@ SimpleStackBasedCogit >> genSendLiteralSelector2ArgsBytecode [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendSuper: selector numArgs: numArgs [
 	<inline: false>
-	self assert: needsFrame.
-	self assert: (numArgs between: 0 and: 256). "say"
-	self assert: (objectMemory addressCouldBeOop: selector).
-	(objectMemory isYoung: selector) ifTrue:
-		[hasYoungReferent := true].
-	self MoveMw: numArgs * objectMemory wordSize r: SPReg R: ReceiverResultReg.
-	numArgs > 2 ifTrue:
-		[self MoveCq: numArgs R: SendNumArgsReg].
-	self MoveCw: selector R: ClassReg.
-	self CallSend: (superSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
-	self flag: 'currently caller pushes result'.
-	self PushR: ReceiverResultReg.
-	^0
+	^self genSend: selector numArgs: numArgs sendTable: superSendTrampolines
 ]
 
 { #category : #'bytecode generators' }
