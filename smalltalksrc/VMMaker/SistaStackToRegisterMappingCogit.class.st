@@ -500,6 +500,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 		[self MoveCq: argInt R: Arg0Reg].
 	^self genMarshalledSend: (coInterpreter specialSelector: byte0 - self firstSpecialSelectorBytecodeOffset)
 		numArgs: 1
+		sendTable: ordinarySendTrampolines
 ]
 
 { #category : #'bytecode generators' }
@@ -565,6 +566,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	countTripped jmpTarget: self Label.
 	^self genMarshalledSend: (coInterpreter specialSelector: byte0 - self firstSpecialSelectorBytecodeOffset)
 		numArgs: 1
+		sendTable: ordinarySendTrampolines
 ]
 
 { #category : #'bytecode generators' }

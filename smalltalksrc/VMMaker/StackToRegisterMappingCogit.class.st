@@ -672,7 +672,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 StackToRegisterMappingCogit class >> initializeMiscConstants [
 	super initializeMiscConstants.
 	NumTrampolines := NewspeakVM
-							ifTrue: [60]
+							ifTrue: [63]
 							ifFalse: [52]
 ]
 
@@ -1157,6 +1157,7 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	self compilePICAbort: numArgs.
 	self cppIf: NewspeakVM ifTrue:
 		[self Nop. "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
+		 selfSendEntry := self Nop.
 		 dynSuperEntry := self Nop].
 	entry := objectRepresentation genGetClassTagOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
 
@@ -1918,43 +1919,16 @@ StackToRegisterMappingCogit >> genJumpTo: targetBytecodePC [
 ]
 
 { #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genMarshalledSend: selector numArgs: numArgs [
+StackToRegisterMappingCogit >> genMarshalledSend: selector numArgs: numArgs sendTable: sendTable [
 	<inline: false>
+	<var: #sendTable type: #'sqInt *'>
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 	self assert: needsFrame.
 	numArgs > 2 ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
 	self MoveCw: selector R: ClassReg.
-	self CallSend: (sendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
-	optStatus isReceiverResultRegLive: false.
-	^self ssPushRegister: ReceiverResultReg
-]
-
-{ #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genMarshalledSendDynamicSuper: selector numArgs: numArgs [
-	<inline: false>
-	(objectMemory isYoung: selector) ifTrue:
-		[hasYoungReferent := true].
-	self assert: needsFrame.
-	numArgs > 2 ifTrue:
-		[self MoveCq: numArgs R: SendNumArgsReg].
-	self MoveCw: selector R: ClassReg.
-	self CallSend: (dynamicSuperSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
-	optStatus isReceiverResultRegLive: false.
-	^self ssPushRegister: ReceiverResultReg
-]
-
-{ #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genMarshalledSendSuper: selector numArgs: numArgs [
-	<inline: false>
-	(objectMemory isYoung: selector) ifTrue:
-		[hasYoungReferent := true].
-	self assert: needsFrame.
-	numArgs > 2 ifTrue:
-		[self MoveCq: numArgs R: SendNumArgsReg].
-	self MoveCw: selector R: ClassReg.
-	self CallSend: (superSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
+	self CallSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
 	optStatus isReceiverResultRegLive: false.
 	^self ssPushRegister: ReceiverResultReg
 ]
@@ -2810,7 +2784,7 @@ StackToRegisterMappingCogit >> genReturnTopFromMethod [
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSend: selector numArgs: numArgs [
 	self marshallSendArguments: numArgs.
-	^self genMarshalledSend: selector numArgs: numArgs
+	^self genMarshalledSend: selector numArgs: numArgs sendTable: ordinarySendTrampolines
 ]
 
 { #category : #'bytecode generators' }
@@ -2824,7 +2798,7 @@ StackToRegisterMappingCogit >> genSendAbsentDynamicSuper: selector numArgs: numA
 	self ssAllocateCallReg: ReceiverResultReg.
 	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
 	self marshallAbsentReceiverSendArguments: numArgs.
-	^self genMarshalledSendDynamicSuper: selector numArgs: numArgs
+	^self genMarshalledSend: selector numArgs: numArgs sendTable: dynamicSuperSendTrampolines
 ]
 
 { #category : #'bytecode generators' }
@@ -2838,7 +2812,7 @@ StackToRegisterMappingCogit >> genSendAbsentImplicit: selector numArgs: numArgs 
 	result ~= 0 ifTrue:
 		[^result].
 	self marshallAbsentReceiverSendArguments: numArgs.
-	^self genMarshalledSend: selector numArgs: numArgs
+	^self genMarshalledSend: selector numArgs: numArgs sendTable: ordinarySendTrampolines
 ]
 
 { #category : #'bytecode generators' }
@@ -2854,7 +2828,7 @@ StackToRegisterMappingCogit >> genSendAbsentOuter: selector numArgs: numArgs dep
 	self MoveCq: depth R: SendNumArgsReg.
 	self CallRT: ceEnclosingObjectTrampoline.
 	self marshallAbsentReceiverSendArguments: numArgs.
-	^self genMarshalledSend: selector numArgs: numArgs
+	^self genMarshalledSend: selector numArgs: numArgs sendTable: ordinarySendTrampolines
 ]
 
 { #category : #'bytecode generators' }
@@ -2868,19 +2842,19 @@ StackToRegisterMappingCogit >> genSendAbsentSelf: selector numArgs: numArgs [
 	self ssAllocateCallReg: ReceiverResultReg.
 	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
 	self marshallAbsentReceiverSendArguments: numArgs.
-	^self genMarshalledSend: selector numArgs: numArgs
+	^self genMarshalledSend: selector numArgs: numArgs sendTable: selfSendTrampolines
 ]
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSendDynamicSuper: selector numArgs: numArgs [
 	self marshallSendArguments: numArgs.
-	^self genMarshalledSendDynamicSuper: selector numArgs: numArgs
+	^self genMarshalledSend: selector numArgs: numArgs sendTable: dynamicSuperSendTrampolines
 ]
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSendSuper: selector numArgs: numArgs [
 	self marshallSendArguments: numArgs.
-	^self genMarshalledSendSuper: selector numArgs: numArgs
+	^self genMarshalledSend: selector numArgs: numArgs sendTable: superSendTrampolines
 ]
 
 { #category : #initialization }
@@ -3102,7 +3076,8 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 		[annotateInst ifTrue: [self annotateBytecode: instToAnnotate].
 		 self MoveCq: argInt R: Arg0Reg].
 	self genMarshalledSend: (coInterpreter specialSelector: byte0 - self firstSpecialSelectorBytecodeOffset)
-		numArgs: 1.
+		numArgs: 1
+		sendTable: ordinarySendTrampolines.
 	jumpContinue jmpTarget: self Label.
 	^0
 ]
@@ -3209,6 +3184,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 		[self MoveCq: argInt R: Arg0Reg].
 	^self genMarshalledSend: (coInterpreter specialSelector: byte0 - self firstSpecialSelectorBytecodeOffset)
 		numArgs: 1
+		sendTable: ordinarySendTrampolines.
 ]
 
 { #category : #'bytecode generators' }
@@ -3660,7 +3636,7 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 	"Override to generate code to push the register arg(s) for <= numRegArg arity sends."
 	0 to: NumSendTrampolines - 2 do:
 		[:numArgs|
-		sendTrampolines
+		ordinarySendTrampolines
 			at: numArgs
 			put: (self genSendTrampolineFor: #ceSend:super:to:numArgs:
 					  numArgs: numArgs
@@ -3669,7 +3645,7 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 					  arg: 0
 					  arg: ReceiverResultReg
 					  arg: numArgs)].
-	sendTrampolines
+	ordinarySendTrampolines
 		at: NumSendTrampolines - 1
 		put: (self genSendTrampolineFor: #ceSend:super:to:numArgs:
 					numArgs: self numRegArgs + 1
@@ -3697,6 +3673,24 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 							called: (self trampolineName: 'ceDynSuperSend' numArgs: -1)
 							arg: ClassReg
 							arg: ReceiverResultReg
+							arg: SendNumArgsReg).
+			0 to: NumSendTrampolines - 2 do:
+				[:numArgs|
+				selfSendTrampolines
+					at: numArgs
+					put: (self genSendTrampolineFor: #ceSelfSend:to:numArgs:
+							  numArgs: numArgs
+							  called: (self trampolineName: 'ceSelfSend' numArgs: numArgs)
+							  arg: ClassReg
+							  arg: ReceiverResultReg
+							  arg: numArgs)].
+			selfSendTrampolines
+				at: NumSendTrampolines - 1
+				put: (self genSendTrampolineFor: #ceSelfSend:to:numArgs:
+							numArgs: self numRegArgs + 1
+							called: (self trampolineName: 'ceSelfSend' numArgs: -1)
+							arg: ClassReg
+							arg: ReceiverResultReg
 							arg: SendNumArgsReg)].
 	0 to: NumSendTrampolines - 2 do:
 		[:numArgs|
@@ -3718,7 +3712,7 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 					arg: 1
 					arg: ReceiverResultReg
 					arg: SendNumArgsReg).
-	firstSend := sendTrampolines at: 0.
+	firstSend := ordinarySendTrampolines at: 0.
 	lastSend := superSendTrampolines at: NumSendTrampolines - 1
 ]
 
