@@ -3159,21 +3159,24 @@ InterpreterPrimitives >> primitiveScanCharacters [
 	self methodArgumentCount = 6
 		ifFalse: [^ self primitiveFail].
 
-	"Load the arguments"
+	"Load the receiver and arguments"
 	kernDelta := self stackIntegerValue: 0.
 	stops := self stackObjectValue: 1.
-	(objectMemory isArray: stops) ifFalse: [^ self primitiveFail].
-	(objectMemory slotSizeOf: stops) >= 258 ifFalse: [^ self primitiveFail].
 	scanRightX := self stackIntegerValue: 2.
 	sourceString := self stackObjectValue: 3.
-	(objectMemory isBytes: sourceString) ifFalse: [^ self primitiveFail].
 	scanStopIndex := self stackIntegerValue: 4.
 	scanStartIndex := self stackIntegerValue: 5.
+	rcvr := self stackObjectValue: 6.
+	self successful ifFalse: [^ nil].
+	
+	"check argument type and range"
+	(objectMemory isArray: stops) ifFalse: [^ self primitiveFail].
+	(objectMemory slotSizeOf: stops) >= 258 ifFalse: [^ self primitiveFail].
+	(objectMemory isBytes: sourceString) ifFalse: [^ self primitiveFail].
 	(scanStartIndex > 0 and: [scanStopIndex > 0 and: [scanStopIndex <= (objectMemory byteSizeOf: sourceString)]])
 		ifFalse: [^ self primitiveFail].
 
-	"Load receiver and required instVars"
-	rcvr := self stackObjectValue: 6.
+	"Check receiver and required instVars"
 	((objectMemory isPointers: rcvr) and: [(objectMemory slotSizeOf: rcvr) >= 4]) ifFalse: [^ self primitiveFail].
 	scanDestX := self fetchInteger: 0 ofObject: rcvr.
 	scanLastIndex := self fetchInteger: 1 ofObject: rcvr.
