@@ -80,8 +80,6 @@ SistaStackToRegisterMappingCogit class >> ancilliaryClasses: options [
 
 { #category : #translation }
 SistaStackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
-	"We need the super send here to ensure that self pushNilSizeFunction answers the right function in Sista."
-	super declareCVarsIn: aCodeGen.
 	aCodeGen var: 'counters' type: #usqInt
 ]
 
