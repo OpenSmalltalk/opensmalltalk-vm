@@ -107,12 +107,6 @@ BitBltSimulator >> dstLongAt: dstIndex put: value [
 ]
 
 { #category : #simulation }
-BitBltSimulator >> halftoneAt: idx [
-
-	^ (halftoneBase + (idx \\ halftoneHeight * 4)) long32At: 0
-]
-
-{ #category : #simulation }
 BitBltSimulator >> initBBOpTable [
 	opTable := OpTable.
 	maskTable := Array new: 32.
@@ -136,7 +130,7 @@ BitBltSimulator >> initialiseModule [
 	ditherThresholds16 := self class ditherThresholds16.
 	ditherValues16 := self class ditherValues16.
 	dither8Lookup := self class dither8Lookup.
-
+	^true
 ]
 
 { #category : #simulation }
