@@ -4,12 +4,12 @@ Class {
 	#category : #'VMMaker-JITSimulation'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 NSSendCacheSurrogate32 class >> alignedByteSize [
 	^20
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 NSSendCacheSurrogate32 >> classTag [
 	^memory unsignedLongAt: address + 9
 ]
@@ -21,7 +21,7 @@ NSSendCacheSurrogate32 >> classTag: aValue [
 		put: aValue
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 NSSendCacheSurrogate32 >> enclosingObject [
 	^memory unsignedLongAt: address + 13
 ]
@@ -33,7 +33,7 @@ NSSendCacheSurrogate32 >> enclosingObject: aValue [
 		put: aValue
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 NSSendCacheSurrogate32 >> numArgs [
 	^memory unsignedLongAt: address + 5
 ]
@@ -45,7 +45,7 @@ NSSendCacheSurrogate32 >> numArgs: aValue [
 		put: aValue
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 NSSendCacheSurrogate32 >> selector [
 	^memory unsignedLongAt: address + 1
 ]
@@ -57,7 +57,7 @@ NSSendCacheSurrogate32 >> selector: aValue [
 		put: aValue
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 NSSendCacheSurrogate32 >> target [
 	^memory unsignedLongAt: address + 17
 ]
