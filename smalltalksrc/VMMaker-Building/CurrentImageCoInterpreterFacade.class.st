@@ -107,7 +107,12 @@ CurrentImageCoInterpreterFacade >> addressCouldBeOop: anOop [
 
 { #category : #labels }
 CurrentImageCoInterpreterFacade >> addressForLabel: l [
-	^variables at: l ifAbsentPut: [variables size * 4 + self variablesBase]
+	^variables
+		at: l
+		ifAbsentPut:
+			[(coInterpreter class instVarIndexFor: l ifAbsent: [objectMemory class instVarIndexFor: l ifAbsent: [#(CStackPointer CFramePointer) includes: l]])
+				ifNil: [variables size * 4 + self variablesBase]
+				ifNotNil: [cogit fakeAddressFor: l index: (variables keys select: [:k| (coInterpreter class instVarIndexFor: l ifAbsent: []) notNil]) size]]
 ]
 
 { #category : #accessing }
@@ -219,11 +224,16 @@ CurrentImageCoInterpreterFacade >> cogit [
 { #category : #'initialize-release' }
 CurrentImageCoInterpreterFacade >> cogit: aCogit [
 	cogit := aCogit.
+	cogit objectMemory ifNil:
+		[cogit instVarNamed: 'objectMemory' put: objectMemory].
 	coInterpreter cogit: aCogit.
 	(objectMemory respondsTo: #cogit:) ifTrue:
 		[objectMemory cogit: aCogit].
 	(objectMemory respondsTo: #coInterpreter:) ifTrue:
-		[objectMemory coInterpreter: coInterpreter]
+		[objectMemory coInterpreter: coInterpreter].
+	#('stackLimit') do:
+		[:l| self addressForLabel: l].
+	self initializeObjectMap
 ]
 
 { #category : #accessing }
@@ -390,10 +400,7 @@ CurrentImageCoInterpreterFacade >> initialize [
 			put: objectMemory;
 		instVarNamed: 'primitiveTable'
 			put: (CArrayAccessor on: CoInterpreter primitiveTable copy).
-	variables := Dictionary new.
-	#('stackLimit') do:
-		[:l| self addressForLabel: l].
-	self initializeObjectMap
+	variables := Dictionary new
 ]
 
 { #category : #'initialize-release' }
