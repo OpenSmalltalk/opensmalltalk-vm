@@ -110,9 +110,9 @@ CurrentImageCoInterpreterFacade >> addressForLabel: l [
 	^variables
 		at: l
 		ifAbsentPut:
-			[(coInterpreter class instVarIndexFor: l ifAbsent: [objectMemory class instVarIndexFor: l ifAbsent: [#(CStackPointer CFramePointer) includes: l]])
-				ifNil: [variables size * 4 + self variablesBase]
-				ifNotNil: [cogit fakeAddressFor: l index: (variables keys select: [:k| (coInterpreter class instVarIndexFor: l ifAbsent: []) notNil]) size]]
+			[(self isLabelRelativeToCogitVarBaseReg: l)
+				ifTrue: [cogit fakeAddressFor: l index: variables size]
+				ifFalse: [variables size * 4 + self variablesBase]]
 ]
 
 { #category : #accessing }
@@ -480,6 +480,17 @@ CurrentImageCoInterpreterFacade >> isIntegerObject: anOop [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> isIntegerValue: anInteger [
 	^objectMemory isIntegerValue: anInteger
+]
+
+{ #category : #labels }
+CurrentImageCoInterpreterFacade >> isLabelRelativeToCogitVarBaseReg: l [
+	coInterpreter class
+		instVarIndexFor: l
+		ifAbsent:
+			[objectMemory class
+				instVarIndexFor: l
+				ifAbsent: [^false]].
+	^true
 ]
 
 { #category : #accessing }
