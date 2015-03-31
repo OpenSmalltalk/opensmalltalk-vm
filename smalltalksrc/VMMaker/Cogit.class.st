@@ -4560,7 +4560,8 @@ Cogit >> fakeAddressFor: anObject index: index [
 	 size of simulatedAddresses."
 	<doNotGenerate>
 	^(index + 101 * objectMemory wordSize) negated
-		bitAnd: ((backEnd wantsNearAddressFor: anObject)
+		bitAnd: ((backEnd notNil
+				and: [backEnd wantsNearAddressFor: anObject])
 					ifTrue: [self addressSpaceMask]
 					ifFalse: [self allButTopBitOfAddressSpaceMask])
 ]
