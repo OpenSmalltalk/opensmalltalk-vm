@@ -390,7 +390,7 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 	"Even thoug we exclude initialize methods, we must consider their
 	 global variable usage, otherwise globals may be incorrectly localized."
 	selector == #initialize ifTrue:
-		[self checkForGlobalUsage: tmethod allReferencedVariables in: tmethod.
+		[self checkForGlobalUsage: (tmethod allReferencedVariablesIn: self) in: tmethod.
 		 ^nil].
 	self addMethod: tmethod.
 	"If the method has a macro then add the macro.  But keep the method
@@ -491,6 +491,23 @@ CCodeGenerator >> addStructMethodFor: aClass selector: selector [
 		[:tmethod|
 		tmethod transformToStructClassMethodFor: self.
 		tmethod]
+]
+
+{ #category : #utilities }
+CCodeGenerator >> addVariablesInVerbatimCIn: aCCodeSendNode to: aCollection [
+	"If aCCodeSendNode has a string argument, parse it and extract anything
+	 that looks like a variable, and add the resulting vars to aCollection."
+	| separators tokens |
+	(aCCodeSendNode isSend
+	 and: [(aCCodeSendNode selector beginsWith: #cCode:)
+	 and: [aCCodeSendNode args first isConstant
+	 and: [aCCodeSendNode args first value isString]]]) ifFalse:
+		[^self].
+	separators := (Character space to: 255 asCharacter) reject:
+					[:char|
+					char isLetter or: [char isDigit or: [char = $_]]].
+	tokens := aCCodeSendNode args first value findTokens: separators.
+	aCollection addAll: (tokens select: [:token| token first isLetter]) asSet
 ]
 
 { #category : #utilities }
@@ -1046,7 +1063,7 @@ CCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: asse
 		[methodList := { methods at: #interpret }, (methodList copyWithout: (methods at: #interpret))].
 	"clean out no longer valid variable names and then
 	 handle any global variable usage in each method"
-	methodList do: [:m | self checkForGlobalUsage: m removeUnusedTemps in: m].
+	methodList do: [:m | self checkForGlobalUsage: (m removeUnusedTempsIn: self) in: m].
 	self localizeGlobalVariables.
 
 	self emitCHeaderOn: aStream.
@@ -2205,10 +2222,9 @@ CCodeGenerator >> generateInlineCppIfElse: msgNode asArgument: asArgument on: aS
 			 expansion := expansion allButFirst: (expansion findFirst: [:c| c ~~ Character tab]) - 1.
 			 aStream nextPutAll: expansion]].
 
-	(optionsDictionary notNil
-	 and: [msgNode args first isConstant
-	 and: [#(true false) includes: (optionsDictionary at: msgNode args first name ifAbsent: [nil])]]) ifTrue:
-		[(optionsDictionary at: msgNode args first name)
+	(self nilOrBooleanConditionFor: msgNode) ifNotNil:
+		[:condition|
+		 condition
 			ifTrue:
 				[putStatement value: msgNode args second]
 			ifFalse:
@@ -3693,6 +3709,26 @@ CCodeGenerator >> needToGenerateHeader: headerName file: interpHdrPath contents:
 	 or: [(dirtyStamp and: [[((self class monticelloDescriptionFor: vmClass) includes: $*) not]
 							on: Error do: [:ex| false]]) "If no stamp don't worry"
 	 or: [self confirm: headerName, ' contents are unchanged.\Writing the file may cause recompilation of support files.\Do you want to write the header file?' withCRs]]
+]
+
+{ #category : #utilities }
+CCodeGenerator >> nilOrBooleanConditionFor: nodeOrNil [
+	"If nodeOrNil is one of the conditional sends for which we do translation-time dead code elimination
+	 (i.e. cppIf:ifTrue: et al or ifTrue: et al) and the conditional does evaluate to a translation-time
+	 boolean constant, answer that constant, otherwise answer nil.  Used to prune dead code,
+	 either for code egenraton or dead variable elimination."
+	nodeOrNil ifNil:
+		[^nil].
+	nodeOrNil isSend ifFalse:
+		[^nil].
+	(#(cppIf:ifTrue: cppIf:ifTrue:ifFalse:) includes: nodeOrNil selector) ifTrue:
+		[^(optionsDictionary notNil
+		   and: [nodeOrNil args first isConstant
+		   and: [#(true false) includes: (optionsDictionary at: nodeOrNil args first name ifAbsent: [nil])]]) ifTrue:
+			[optionsDictionary at: nodeOrNil args first name]].
+
+	^(#(ifTrue: ifFalse: ifTrue:ifFalse: ifFalse:ifTrue:) includes: nodeOrNil selector) ifTrue:
+		[self nilOrBooleanConstantReceiverOf: nodeOrNil]
 ]
 
 { #category : #utilities }
