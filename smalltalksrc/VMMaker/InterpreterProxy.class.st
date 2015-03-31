@@ -1035,6 +1035,14 @@ InterpreterProxy >> superclassOf: classPointer [
 	^classPointer superclass
 ]
 
+{ #category : #initialize }
+InterpreterProxy >> synthesizeStackFor: receiver with: args [
+	<doNotGenerate>
+	self push: receiver.
+	argumentCount := args size.
+	1 to: argumentCount do: [:i | self push: (args at: i)].
+]
+
 { #category : #other }
 InterpreterProxy >> tenuringIncrementalGC [
 	<returnTypeC: #sqInt>
