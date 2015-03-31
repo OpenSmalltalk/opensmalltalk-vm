@@ -82,8 +82,8 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures 
 		(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: isMappedInBlock -1)
 		(1 125 125 genReturnTopFromBlock		return needsFrameNever: -1)
 
-		(3 126 126 genDynamicSuperSendBytecode isMapped)			"Newspeak"
-		(2 127 127 genPushImplicitReceiverBytecode isMapped hasIRC)	"Newspeak"
+		(3 126 126 unknownBytecode)		"Was non-absent Newspeak super"
+		(2 127 127 unknownBytecode)		"Was push implicit receiver"
 
 		(2 128 128 extendedPushBytecode needsFrameNever: 1)
 		(2 129 129 extendedStoreBytecode)
@@ -96,13 +96,9 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures 
 		(1 136 136 duplicateTopBytecode needsFrameNever: 1)
 
 		(1 137 137 genPushActiveContextBytecode)
-		(2 138 138 genPushNewArrayBytecode)),
+		(2 138 138 genPushNewArrayBytecode)
 
-		((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
-			ifTrue: [#((3 139 139 callPrimitiveBytecode))]									"V3PlusClosures on Spur"
-			ifFalse: [#((2 139 139 genPushEnclosingObjectBytecode isMapped))]),	"Newspeak"
-
-	  #(
+		(3 139 139 callPrimitiveBytecode)
 		(3 140 140 genPushRemoteTempLongBytecode)
 		(3 141 141 genStoreRemoteTempLongBytecode)
 		(3 142 142 genStoreAndPopRemoteTempLongBytecode)
@@ -415,7 +411,7 @@ SimpleStackBasedCogit class >> initializeMiscConstants [
 	super initializeMiscConstants.
 	MaxLiteralCountForCompile := initializationOptions at: #MaxLiteralCountForCompile ifAbsent: [60].
 	NumTrampolines := NewspeakVM
-							ifTrue: [53]
+							ifTrue: [56]
 							ifFalse: [42]
 ]
 
@@ -1547,11 +1543,6 @@ SimpleStackBasedCogit >> genDoubleFailIfZeroArgRcvr: rcvrReg arg: argReg [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genDynamicSuperSendBytecode [
-	^self genSendDynamicSuper: (self getLiteral: byte2) numArgs: byte1
-]
-
-{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtJumpIfFalse [
 	"244		11110100	i i i i i i i i	Pop and Jump 0n False i i i i i i i i (+ Extend B * 256, where Extend B >= 0)"
 	| distance target |
@@ -1875,52 +1866,6 @@ SimpleStackBasedCogit >> genFastPrimTraceUsing: r1 and: r2 [
 	self MoveMw: (self offset: CogMethod of: #selector) r: r1 R: TempReg.
 	self MoveCw: coInterpreter primTraceLogAddress asInteger R: r1.
 	self MoveR: TempReg Xwr: r2 R: r1
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genGetImplicitReceiverFor: selector forPush: forPushSendBar [
-	"Cached implicit receiver implementation.  If objectRepresentation doesn't support
-	 pinning then caller looks like
-				mov selector, ClassReg
-				call ceImplicitReceiverTrampoline
-				br continue
-		Lclass	.word
-		Lmixin:	.word
-		continue:
-	 If objectRepresentation supports pinning then caller looks like
-				mov Lclass, Arg1Reg
-				mov selector, SendNumArgsReg
-				call ceImplicitReceiver
-	 and Lclass: .word; Lmixin: .word is somewhere on the heap.
-
-	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
-	 If 0, answer the actual receiver.  This is done in the trampoline.
-	 See generateNewspeakRuntime."
-
-	| skip |
-	<var: #skip type: #'AbstractInstruction *'>
-	"N.B. For PC mapping either this is used for SendAbsentImplicit or for PushAbsentReceiver
-	 but not both.  So any Newspeak instruction set has to choose either SendAbsentImplicit
-	 or PushImplicitReceiver.  See isPCMappedAnnotation:alternateInstructionSet:"
-	self assert: forPushSendBar = (self isPCMappedAnnotation: IsNSSendCall
-										alternateInstructionSet: bytecodeSetOffset > 0).
-	self assert: (self noAssertMethodClassAssociationOf: methodObj) ~= objectMemory nilObject.
-	self assert: needsFrame.
-	(objectMemory isYoung: selector) ifTrue:
-		[hasYoungReferent := true].
-	objectRepresentation canPinObjects ifTrue:
-		[self MoveCw: theIRCs + (2 * objectMemory bytesPerOop * indexOfIRC) R: Arg1Reg.
-		 self MoveCw: selector R: SendNumArgsReg.
-		 self CallNewspeakSend: ceImplicitReceiverTrampoline.
-		 indexOfIRC := indexOfIRC + 1.
-		 ^0].
-	self MoveCw: selector R: SendNumArgsReg.
-	self CallNewspeakSend: ceImplicitReceiverTrampoline.
-	skip := self Jump: 0.
-	self Fill32: 0.
-	self Fill32: 0.
-	skip jmpTarget: self Label.
-	^0
 ]
 
 { #category : #'bytecode generators' }
@@ -2887,16 +2832,6 @@ SimpleStackBasedCogit >> genPushEnclosingObjectBytecode [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genPushImplicitReceiverBytecode [
-	| result |
-	result := self genGetImplicitReceiverFor: (self getLiteral: byte1) forPush: true.
-	result ~= 0 ifTrue:
-		[^result].
-	self PushR: ReceiverResultReg.
-	^0
-]
-
-{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushLiteral: literal [
 	self annotate: (self PushCw: literal) objRef: literal.
 	^0
@@ -3191,15 +3126,28 @@ SimpleStackBasedCogit >> genSendAbsentImplicit0ArgsBytecode [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
-	"Get the implicit receiver and shuffle arguments if necessary.
-	 Then send."
+	| nsSendCache |
 	<inline: false>
-	| result |
-	result := self genGetImplicitReceiverFor: selector forPush: false.
-	result ~= 0 ifTrue:
-		[^result].
+	(objectMemory isYoung: selector) ifTrue:
+		[hasYoungReferent := true].
+
+	nsSendCache := theIRCs + (NumOopsPerNSC * objectMemory bytesPerOop * indexOfIRC).
+	indexOfIRC := indexOfIRC + 1.
+	self assert: (objectMemory isInOldSpace: nsSendCache).
+	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs.
+
+	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
+
+	"This leaves the method receiver on the stack, which might not be the implicit receiver. But we care
+	 not: the callee will use ReceiverResultReg to build its frame, not the value beneath the arguments."
 	self marshallAbsentReceiverSendArguments: numArgs.
-	^self genSend: selector numArgs: numArgs
+
+	"Load the cache last so it is a fixed distance from the call."
+	self MoveCw: nsSendCache R: SendNumArgsReg.
+	self CallNewspeakSend: (implicitReceiverSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
+
+	self PushR: ReceiverResultReg.
+	^0
 ]
 
 { #category : #'bytecode generators' }

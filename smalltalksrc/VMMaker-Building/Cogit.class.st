@@ -161,6 +161,9 @@ Class {
 		'dynSuperEntry',
 		'dynSuperEntryAlignment',
 		'cmDynSuperEntryOffset',
+		'selfSendEntry',
+		'selfSendEntryAlignment',
+		'cmSelfSendEntryOffset',
 		'picMNUAbort',
 		'picInterpretAbort',
 		'endCPICCase0',
@@ -222,6 +225,7 @@ Class {
 		'ordinarySendTrampolines',
 		'superSendTrampolines',
 		'dynamicSuperSendTrampolines',
+		'selfSendTrampolines',
 		'firstSend',
 		'lastSend',
 		'realCEEnterCogCodePopReceiverReg',
@@ -242,10 +246,8 @@ Class {
 		'numIRCs',
 		'indexOfIRC',
 		'theIRCs',
-		'selfSendEntry',
-		'cmSelfSendEntryOffset',
-		'selfSendEntryAlignment',
-		'selfSendTrampolines'
+		'implicitReceiverSendTrampolines',
+		'nsSendCacheSurrogateClass'
 	],
 	#classVars : [
 		'AltBlockCreationBytecodeSize',
@@ -273,9 +275,14 @@ Class {
 		'MaxStackAllocSize',
 		'MaxUnitDisplacement',
 		'MaxX2NDisplacement',
+		'NSCClassTagIndex',
+		'NSCEnclosingObjectIndex',
+		'NSCNumArgsIndex',
+		'NSCSelectorIndex',
+		'NSCTargetIndex',
 		'NSSendIsPCAnnotated',
 		'NumObjRefsInRuntime',
-		'NumOopsPerIRC',
+		'NumOopsPerNSC',
 		'NumSendTrampolines',
 		'NumTrampolines',
 		'ProcessorClass'
@@ -299,11 +306,19 @@ Class {
 Cogit class >> additionalHeadersDo: aBinaryBlock [
 	"Evaluate aBinaryBlock with the names and contents of
 	 any additional header files that need to be generated."
+
+	NewspeakVM ifTrue:
+		[aBinaryBlock
+			value: 'cogmethod.h'
+			value: NewspeakCogMethod cogMethodHeader.
+		 aBinaryBlock
+			value: 'nssendcache.h'
+			value: NSSendCache typedef.
+		 ^self].
+
 	aBinaryBlock
 		value: 'cogmethod.h'
-		value: (NewspeakVM
-					ifTrue: [NewspeakCogMethod]
-					ifFalse: [CogMethod]) cogMethodHeader
+		value: CogMethod cogMethodHeader
 ]
 
 { #category : #translation }
@@ -326,7 +341,7 @@ Cogit class >> ancilliaryClasses: options [
 		CogBlockMethod.
 		CogMethod },
 	((options at: #NewspeakVM ifAbsent: [false])
-		ifTrue: [{NewspeakCogMethod}]
+		ifTrue: [{NewspeakCogMethod. NSSendCache}]
 		ifFalse: [#()])
 ]
 
@@ -462,10 +477,10 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			[:simulationVariableNotNeededForRealVM|
 			aCCodeGenerator removeVariable: simulationVariableNotNeededForRealVM].
 	NewspeakVM ifFalse:
-		[#(	'selfSendEntry' 'selfSendEntryAlignment' 'dynSuperEntry' 'dynSuperEntryAlignment'
-			'selfSendTrampolines' 'dynamicSuperSendTrampolines' 'ceImplicitReceiverTrampoline'
-			'ceEnclosingObjectTrampoline' 'cmSelfSendEntryOffset' 'cmDynSuperEntryOffset'
-			'numIRCs' 'indexOfIRC' 'theIRCs') do:
+		[#(	'selfSendEntry' 'selfSendEntryAlignment' 'cmSelfSendEntryOffset'
+			'dynSuperEntry' 'dynSuperEntryAlignment' 'cmDynSuperEntryOffset'
+			'selfSendTrampolines' 'dynamicSuperSendTrampolines' 'implicitReceiverSendTrampolines'
+			'ceEnclosingObjectTrampoline' 'numIRCs' 'indexOfIRC' 'theIRCs') do:
 				[:variableNotNeededInNormalVM|
 				aCCodeGenerator removeVariable: variableNotNeededInNormalVM]].
 	aCCodeGenerator removeConstant: #COGMTVM. "this should be defined at compile time"
@@ -473,7 +488,10 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		addHeaderFile:'<stddef.h>'; "for e.g. offsetof"
 		addHeaderFile:'"sqCogStackAlignment.h"';
 		addHeaderFile:'"dispdbg.h"'; "must preceed cointerp.h & cogit.h otherwise NoDbgRegParms gets screwed up"
-		addHeaderFile:'"cogmethod.h"';
+		addHeaderFile:'"cogmethod.h"'.
+	NewspeakVM ifTrue:
+		[aCCodeGenerator addHeaderFile:'"nssendcache.h"'].
+	aCCodeGenerator
 		addHeaderFile:'#if COGMTVM';
 		addHeaderFile:'"cointerpmt.h"';
 		addHeaderFile:'#else';
@@ -516,7 +534,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #primInvokeLabel type: #'AbstractInstruction *'.
 	self declareC: #(abstractOpcodes stackCheckLabel
 					blockEntryLabel blockEntryNoContextSwitch
-					stackOverflowCall sendMiss entry noCheckEntry selfSendEntry dynSuperEntry
+					stackOverflowCall sendMiss
+					entry noCheckEntry selfSendEntry dynSuperEntry
 					picMNUAbort picInterpretAbort endCPICCase0 endCPICCase1)
 			as: #'AbstractInstruction *'
 				in: aCCodeGenerator.
@@ -533,6 +552,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			declareC: 'sqInt selfSendTrampolines[NumSendTrampolines]';
 		var: #dynamicSuperSendTrampolines
 			declareC: 'sqInt dynamicSuperSendTrampolines[NumSendTrampolines]';
+		var: #implicitReceiverSendTrampolines
+			declareC: 'sqInt implicitReceiverSendTrampolines[NumSendTrampolines]';
 		var: #trampolineAddresses
 			declareC: 'static char *trampolineAddresses[NumTrampolines*2]';
 		var: #objectReferencesInRuntime
@@ -856,8 +877,14 @@ Cogit class >> initializeMiscConstants [
 	NumSendTrampolines := 4.
 	"Currently not even the ceImplicitReceiverTrampoline contains object references."
 	NumObjRefsInRuntime := 0.
-	"The implicit receiver cache has two entries, class and mixin oops."
-	NumOopsPerIRC := 2.
+
+	NSCSelectorIndex := (NSSendCache instVarNames indexOf: #selector) - 1.
+	NSCNumArgsIndex := (NSSendCache instVarNames indexOf: #numArgs) - 1.
+	NSCClassTagIndex := (NSSendCache instVarNames indexOf: #classTag) - 1.
+	NSCEnclosingObjectIndex := (NSSendCache instVarNames indexOf: #enclosingObject) - 1.
+	NSCTargetIndex := (NSSendCache instVarNames indexOf: #target) - 1.
+	NumOopsPerNSC := NSSendCache instVarNames size.
+
 	"Max size to alloca when compiling.
 	 Mac OS X 10.6.8 segfaults approaching 8Mb.
 	 Linux 2.6.9 segfaults above 11Mb.
@@ -916,7 +943,7 @@ Cogit class >> mustBeGlobal: var [
 		'ceCallCogCodePopReceiverAndClassRegs' 'realCECallCogCodePopReceiverAndClassRegs'
 		'ceReturnToInterpreterTrampoline' 'ceCannotResumeTrampoline'
 		'ceTryLockVMOwner' 'ceUnlockVMOwner'
-		'cmEntryOffset' 'cmNoCheckEntryOffset' 'cmDynSuperEntryOffset' 'missOffset'
+		'cmEntryOffset' 'cmNoCheckEntryOffset' 'cmDynSuperEntryOffset' 'cmSelfSendEntryOffset' 'missOffset'
 		'blockNoContextSwitchOffset' 'breakPC'
 		'CFramePointer' 'CStackPointer' 'cFramePointerInUse' 'ceGetSP'
 		'traceFlags' 'traceStores' 'debugPrimCallStackOffset')
@@ -977,7 +1004,7 @@ Cogit class >> requiredMethodNames: options [
 { #category : #translation }
 Cogit class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
-	^({ CogBlockMethod. CogMethod. SistaCogMethod. NewspeakCogMethod } includes: aStructClass) not
+	^({ CogBlockMethod. CogMethod. SistaCogMethod. NewspeakCogMethod. NSSendCache } includes: aStructClass) not
 ]
 
 { #category : #translation }
@@ -2594,6 +2621,8 @@ Cogit >> cCoerceSimple: value to: cTypeString [
 			ifFalse: [self cogMethodSurrogateAt: value asUnsignedInteger]].
 	cTypeString == #'CogBlockMethod *' ifTrue:
 		[^self cogBlockMethodSurrogateAt: value asUnsignedInteger].
+	cTypeString == #'NSSendCache *' ifTrue:
+		[^self nsSendCacheSurrogateAt: value asUnsignedInteger].
 	(cTypeString == #'AbstractInstruction *'
 	 and: [value isBehavior]) ifTrue:
 		[^processor abstractInstructionCompilerClass].
@@ -2809,80 +2838,6 @@ Cogit >> ceEnterCogCodePopReceiverReg [
 	self simulateEnilopmart: ceEnterCogCodePopReceiverReg numArgs: 1
 ]
 
-{ #category : #'in-line cacheing' }
-Cogit >> ceImplicitReceiverFor: selector receiver: receiver [
-	"Cached implicit receiver implementation.  Caller looks like
-		mov selector, ClassReg
-				call ceImplicitReceiver
-				br continue
-		Lclass	.word
-		Lmixin:	.word
-		continue:
-	 The trampoline has already fetched the class and probed the cache and found
-	 that the cache missed.  Compute the implicit receiver for the receiver's class
-	 and reload the class tag.  If either the class tag or the mixin are young then the
-	 method needs to be added to the youngReferrers list to ensure correct GC."
-
-	<option: #SqueakV3ObjectMemory>
-	| rcvrClass retpc classpc mixinpc mixin cogMethod |
-	<var: #cogMethod type: #'CogMethod *'>
-	retpc := coInterpreter stackTop.
-	classpc := retpc + backEnd jumpShortByteSize.
-	mixinpc := retpc + backEnd jumpShortByteSize + objectMemory bytesPerOop.
-	mixin := coInterpreter
-				implicitReceiverFor: receiver
-				mixin: coInterpreter mMethodClass
-				implementing: selector.
-	rcvrClass := objectMemory fetchClassOf: receiver.
-	cogMethod := coInterpreter mframeHomeMethodExport.
-	cogMethod cmRefersToYoung ifFalse:
-		[((objectRepresentation inlineCacheTagsMayBeObjects
-		   and: [objectMemory isYoung: rcvrClass])
-		  or: [mixin ~= receiver and: [objectMemory isYoung: mixin]]) ifTrue:
-			[methodZone ensureInYoungReferrers: cogMethod]].
-	backEnd
-		unalignedLongAt: classpc
-			put: (objectRepresentation inlineCacheTagForClass: rcvrClass);
-		unalignedLongAt: mixinpc
-			put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
-	^mixin
-]
-
-{ #category : #'in-line cacheing' }
-Cogit >> ceImplicitReceiverFor: selector receiver: receiver cache: cacheAddress [
-	"Cached implicit receiver implementation.  Caller looks like
-				mov Lclass, Arg1Reg
-				mov selector, SendNumArgsReg
-				call ceImplicitReceiver
-	 and Lclass: .word; Lmixin: .word is somewhere on the heap.
-	 The trampoline has already fetched the class and probed the cache and found
-	 that the cache missed.  Compute the implicit receiver for the receiver's class
-	 and reload the class tag.  If either the class tag or the mixin are young then the
-	 method needs to be added to the youngReferrers list to ensure correct GC."
-
-	<option: #SpurObjectMemory>
-	<var: #cacheAddress type: #usqInt>
-	| rcvrClass mixin cogMethod |
-	<var: #cogMethod type: #'CogMethod *'>
-	mixin := coInterpreter
-				implicitReceiverFor: receiver
-				mixin: coInterpreter mMethodClass
-				implementing: selector.
-	rcvrClass := objectMemory fetchClassOf: receiver.
-	cogMethod := coInterpreter mframeHomeMethodExport.
-	cogMethod cmRefersToYoung ifFalse:
-		[((objectRepresentation inlineCacheTagsMayBeObjects
-		   and: [objectMemory isYoung: rcvrClass])
-		  or: [mixin ~= receiver and: [objectMemory isYoung: mixin]]) ifTrue:
-			[methodZone ensureInYoungReferrers: cogMethod]].
-	backEnd
-		unalignedLongAt: cacheAddress
-			put: (objectRepresentation inlineCacheTagForClass: rcvrClass);
-		unalignedLongAt: cacheAddress + objectMemory bytesPerOop
-			put: (mixin = receiver ifTrue: [0] ifFalse: [mixin]).
-	^mixin
-]
-
 { #category : #accessing }
 Cogit >> ceReturnToInterpreterPC [
 	<api>
@@ -3011,14 +2966,28 @@ Cogit >> checkEnoughOpcodes [
 
 { #category : #'garbage collection' }
 Cogit >> checkIfValidOopRef: annotation pc: mcpc cogMethod: cogMethod [
+	| nsSendCache |
 	<var: #mcpc type: #'char *'>
+	<var: #nsSendCache type: #'NSSendCache *'>
 	annotation = IsObjectReference ifTrue:
 		[| literal |
 		 literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
 		 (objectRepresentation checkValidOopReference: literal) ifFalse:
 			[coInterpreter print: 'object ref leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 			^1]].
-	(self isSendAnnotation: annotation) ifTrue:
+
+	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
+		[ | enclosingObject |
+		nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		[(objectRepresentation checkValidOopReference: nsSendCache selector) ifFalse:
+			[coInterpreter print: 'selector leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
+			^1]].
+		(enclosingObject := nsSendCache enclosingObject) ~= 0 ifTrue:
+			[[(objectRepresentation checkValidOopReference: enclosingObject) ifFalse:
+				[coInterpreter print: 'enclosing object leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
+				^1]]]]].
+
+	annotation = IsSendCall ifTrue:
 		[| entryPoint selectorOrCacheTag offset |
 		 entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint <= methodZoneBase
@@ -3047,7 +3016,8 @@ Cogit >> checkIfValidOopRef: annotation pc: mcpc cogMethod: cogMethod [
 { #category : #'garbage collection' }
 Cogit >> checkIfValidOopRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 	<var: #mcpc type: #'char *'>
-	| literal entryPoint |
+	<var: #nsSendCache type: #'NSSendCache *'>
+	| literal entryPoint nsSendCache |
 	annotation = IsObjectReference ifTrue:
 		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
 		 (self asserta: (objectRepresentation checkValidOopReference: literal)) ifFalse:
@@ -3056,7 +3026,25 @@ Cogit >> checkIfValidOopRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 		 and: [objectMemory isReallyYoungObject: literal]) ifTrue:
 			[(self asserta: (self cCoerceSimple: cogMethod to: #'CogMethod *') cmRefersToYoung) ifFalse:
 				[^2]]].
-	(self isSendAnnotation: annotation) ifTrue:
+
+	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
+		[ | classTag enclosingObject nsTargetMethod |
+		nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		(self asserta: (objectRepresentation checkValidOopReference: nsSendCache selector)) ifFalse:
+			[^9].
+		classTag := nsSendCache classTag.
+		(self asserta: (classTag = 0 or: [objectRepresentation validInlineCacheTag: classTag])) ifFalse:
+			[^10].
+		enclosingObject := nsSendCache enclosingObject.
+		(self asserta: (enclosingObject = 0 or: [objectRepresentation checkValidOopReference: enclosingObject])) ifFalse:
+			[^11].
+		entryPoint := nsSendCache target.
+		entryPoint ~= 0 ifTrue: [
+			nsTargetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
+			(self asserta: (nsTargetMethod cmType = CMMethod)) ifFalse:
+				[^12]]]].
+
+	annotation = IsSendCall ifTrue:
 		[(self asserta: (self cCoerceSimple: cogMethod to: #'CogMethod *') cmType = CMMethod) ifFalse:
 			[^3].
 		 self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
@@ -5213,6 +5201,54 @@ Cogit >> genMethodAbortTrampoline [
 ]
 
 { #category : #initialization }
+Cogit >> genNSSendTrampolineFor: aRoutine numArgs: numArgs called: aString [
+	"ReceiverResultReg: method receiver
+	SendNumArgsReg: the NSSendCache cache"
+	<option: #NewspeakVM>
+	<var: #aRoutine type: #'void *'>
+	<var: #aString type: #'char *'>
+	| jumpMiss jumpItsTheReceiverStupid |
+	<var: #jumpMiss type: #'AbstractInstruction *'>
+	<var: #jumpItsTheReceiverStupid type: #'AbstractInstruction *'>
+	opcodeIndex := 0.
+	objectRepresentation
+		genGetInlineCacheClassTagFrom: ReceiverResultReg
+		into: ClassReg
+		forEntry: false.
+	self MoveMw: NSCClassTagIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
+	self CmpR: ClassReg R: TempReg.
+	jumpMiss := self JumpNonZero: 0.
+	self MoveMw: NSCEnclosingObjectIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
+	self CmpCq: 0 R: TempReg.
+	jumpItsTheReceiverStupid := self JumpZero: 0.
+	self MoveR: TempReg R: ReceiverResultReg.
+	"We don't patch stack(-numArgs). See comment in ceImplicitReceiverSend:receiver:"
+	jumpItsTheReceiverStupid jmpTarget: self Label.
+	self MoveMw: NSCTargetIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
+	self JumpR: TempReg.
+
+	jumpMiss jmpTarget: self Label.
+	objectRepresentation
+		genEnsureObjInRegNotForwarded: ReceiverResultReg
+		scratchReg: TempReg
+		updatingMw: FoxMFReceiver
+		r: FPReg.
+	backEnd genPushRegisterArgsForNumArgs: numArgs.
+	^self
+		genTrampolineFor: aRoutine
+		called: aString
+		numArgs: 2
+		arg: SendNumArgsReg "The NSSendCache"
+		arg: ReceiverResultReg
+		arg: nil
+		arg: nil
+		saveRegs: false
+		pushLinkReg: true
+		resultReg: ReceiverResultReg  "Never happens?"
+		appendOpcodes: true
+]
+
+{ #category : #initialization }
 Cogit >> genNonLocalReturnTrampoline [
 	opcodeIndex := 0.
 	"write the return address to the coInterpreter instructionPointerAddress;
@@ -5763,93 +5799,66 @@ Cogit >> generateMissAbortTrampolines [
 { #category : #initialization }
 Cogit >> generateNewspeakRuntime [
 	<option: #NewspeakVM>
-	| jumpMiss jumpItsTheReceiverStupid retpcReg |
-	<var: #jumpMiss type: #'AbstractInstruction *'>
-	<var: #jumpItsTheReceiverStupid type: #'AbstractInstruction *'>
-	"Generate the non-send runtime support for Newspeak, explicit outer and implicit receiver.
-	 The dynamic frequency of explicit outer is so low we merely call an interpreter routine."
+	"Generate the non-send runtime support for Newspeak: push enclosing object.
+	The dynamic frequency is so low we merely call an interpreter routine."
 	ceEnclosingObjectTrampoline := self genTrampolineFor: #ceEnclosingObjectAt:
 										called: 'ceEnclosingObjectTrampoline'
 										arg: SendNumArgsReg
 										result: ReceiverResultReg.
-	"Cached push implicit receiver implementation.  If objectRepresentation doesn't support
-	 pinning then caller looks like
-				mov selector, SendNumArgsReg
-				call ceImplicitReceiver
-				br continue
-		Lclass:	.word
-		Lmixin::	.word
-		continue:
-	 If objectRepresentation supports pinning then caller looks like
-				mov Lclass, Arg1Reg
-				mov selector, SendNumArgsReg
-				call ceImplicitReceiver
-	 and Lclass: .word; Lmixin: .word is somewhere on the heap.
+]
 
-	 If class tag matches class of receiver then mixin contains either 0 or the implicit receiver.
-	 If 0, answer the actual receiver, otherwise the mixin.
-	 Generate the class fetch and cache probe inline for speed.
-	 Smashes Arg1Reg, RegClass and caller-saved regs."
-	opcodeIndex := 0.
-	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
-	objectRepresentation
-		genGetInlineCacheClassTagFrom: ReceiverResultReg
-		into: ClassReg
-		forEntry: false.
-	objectRepresentation canPinObjects
-		ifTrue:
-			[self MoveMw: 0 r: Arg1Reg R: TempReg.
-			 self CmpR: ClassReg R: TempReg.
-			 jumpMiss := self JumpNonZero: 0.
-			 self MoveMw: objectMemory bytesPerOop r: Arg1Reg R: TempReg.
-			 self CmpCq: 0 R: TempReg.
-			 jumpItsTheReceiverStupid := self JumpZero: 0.
-			 self MoveR: TempReg R: ReceiverResultReg.
-			 jumpItsTheReceiverStupid jmpTarget: (self RetN: 0).
-			 jumpMiss jmpTarget: self Label.
-			 objectRepresentation
-				genEnsureObjInRegNotForwarded: ReceiverResultReg
-				scratchReg: TempReg
-				updatingMw: FoxMFReceiver
-				r: FPReg.
-			 ceImplicitReceiverTrampoline := self
-												genTrampolineFor: #ceImplicitReceiverFor:receiver:cache:
-												called: 'ceImplicitReceiverTrampoline'
-												numArgs: 3
-												arg: SendNumArgsReg
-												arg: ReceiverResultReg
-												arg: Arg1Reg
-												arg: nil
-												saveRegs: false
-												pushLinkReg: true
-												resultReg: ReceiverResultReg
-												appendOpcodes: true]
-		ifFalse:
-			[backEnd hasLinkRegister
-				ifTrue: [retpcReg := LinkReg]
-				ifFalse: [self MoveMw: 0 r: SPReg R: (retpcReg := TempReg)].
-			 self MoveMw: 0 r: SPReg R: retpcReg.
-			 self MoveMw: backEnd jumpShortByteSize r: retpcReg R: Arg1Reg.
-			 self CmpR: ClassReg R: Arg1Reg.
-			 jumpMiss := self JumpNonZero: 0.
-			 self MoveMw: backEnd jumpShortByteSize + objectMemory bytesPerOop r: retpcReg R: ClassReg.
-			 self CmpCq: 0 R: ClassReg.
-			 jumpItsTheReceiverStupid := self JumpZero: 0.
-			 self MoveR: ClassReg R: ReceiverResultReg.
-			 jumpItsTheReceiverStupid jmpTarget: (self RetN: 0).
-			 jumpMiss jmpTarget: self Label.
-			 ceImplicitReceiverTrampoline := self
-												genTrampolineFor: #ceImplicitReceiverFor:receiver:
-												called: 'ceImplicitReceiverTrampoline'
-												numArgs: 2
-												arg: SendNumArgsReg
-												arg: ReceiverResultReg
-												arg: nil
-												arg: nil
-												saveRegs: false
-												pushLinkReg: true
-												resultReg: ReceiverResultReg
-												appendOpcodes: true]
+{ #category : #initialization }
+Cogit >> generateNewspeakSendTrampolines [
+	"Self send, dynamic super send, and implicit receiver send. TODO: outer send."
+	<option: #NewspeakVM>
+	0 to: NumSendTrampolines - 2 do:
+		[:numArgs|
+		selfSendTrampolines
+			at: numArgs
+			put: (self genTrampolineFor: #ceSelfSend:to:numArgs:
+					  called: (self trampolineName: 'ceSelfSend' numArgs: numArgs)
+					  arg: ClassReg
+					  arg: ReceiverResultReg
+					  arg: numArgs)].
+	selfSendTrampolines
+		at: NumSendTrampolines - 1
+		put: (self genTrampolineFor: #ceSelfSend:to:numArgs:
+					called: (self trampolineName: 'ceSelfSend' numArgs: -1)
+					arg: ClassReg
+					arg: ReceiverResultReg
+					arg: SendNumArgsReg).
+
+	0 to: NumSendTrampolines - 2 do:
+		[:numArgs|
+		dynamicSuperSendTrampolines
+			at: numArgs
+			put: (self genTrampolineFor: #ceDynamicSuperSend:to:numArgs:
+					  called: (self trampolineName: 'ceDynSuperSend' numArgs: numArgs)
+					  arg: ClassReg
+					  arg: ReceiverResultReg
+					  arg: numArgs)].
+	dynamicSuperSendTrampolines
+		at: NumSendTrampolines - 1
+		put: (self genTrampolineFor: #ceDynamicSuperSend:to:numArgs:
+					called: (self trampolineName: 'ceDynSuperSend' numArgs: -1)
+					arg: ClassReg
+					arg: ReceiverResultReg
+					arg: SendNumArgsReg).
+
+	0 to: NumSendTrampolines - 2 do:
+		[:numArgs|
+		implicitReceiverSendTrampolines
+			at: numArgs
+			put: (self 
+				genNSSendTrampolineFor: #ceImplicitReceiverSend:receiver:
+				numArgs: numArgs
+				called: (self trampolineName: 'ceImplicitReceiverSend' numArgs: numArgs))].
+	implicitReceiverSendTrampolines
+		at: NumSendTrampolines - 1
+		put: (self 
+			genNSSendTrampolineFor: #ceImplicitReceiverSend:receiver:
+			numArgs: self numRegArgs + 1
+			called: (self trampolineName: 'ceImplicitReceiverSend' numArgs: -1)).
 ]
 
 { #category : #initialization }
@@ -5930,40 +5939,10 @@ Cogit >> generateSendTrampolines [
 					arg: 0
 					arg: ReceiverResultReg
 					arg: SendNumArgsReg).
-	self cppIf: NewspeakVM
-		ifTrue:
-			[0 to: NumSendTrampolines - 2 do:
-				[:numArgs|
-				dynamicSuperSendTrampolines
-					at: numArgs
-					put: (self genTrampolineFor: #ceDynamicSuperSend:to:numArgs:
-							  called: (self trampolineName: 'ceDynSuperSend' numArgs: numArgs)
-							  arg: ClassReg
-							  arg: ReceiverResultReg
-							  arg: numArgs)].
-			dynamicSuperSendTrampolines
-				at: NumSendTrampolines - 1
-				put: (self genTrampolineFor: #ceDynamicSuperSend:to:numArgs:
-							called: (self trampolineName: 'ceDynSuperSend' numArgs: -1)
-							arg: ClassReg
-							arg: ReceiverResultReg
-							arg: SendNumArgsReg).
-			0 to: NumSendTrampolines - 2 do:
-				[:numArgs|
-				selfSendTrampolines
-					at: numArgs
-					put: (self genTrampolineFor: #ceSelfSend:to:numArgs:
-							  called: (self trampolineName: 'ceSelfSend' numArgs: numArgs)
-							  arg: ClassReg
-							  arg: ReceiverResultReg
-							  arg: numArgs)].
-			selfSendTrampolines
-				at: NumSendTrampolines - 1
-				put: (self genTrampolineFor: #ceSelfSend:to:numArgs:
-							called: (self trampolineName: 'ceSelfSend' numArgs: -1)
-							arg: ClassReg
-							arg: ReceiverResultReg
-							arg: SendNumArgsReg)].
+
+	"Generate these in the middle so they are within [firstSend, lastSend]."
+	self cppIf: NewspeakVM ifTrue: [self generateNewspeakSendTrampolines].
+
 	0 to: NumSendTrampolines - 2 do:
 		[:numArgs|
 		superSendTrampolines
@@ -6216,41 +6195,42 @@ Cogit >> handleWriteSimulationTrap: aProcessorSimulationTrap [
 
 { #category : #'newspeak support' }
 Cogit >> implicitReceiverCacheAddressAt: mcpc [
-	"Cached push implicit receiver implementation.  If objectRepresentation doesn't support
-	 pinning then caller looks like
-				mov selector, SendNumArgsReg
-				call ceImplicitReceiver
-				br continue
-		Lclass:	.word
-		Lmixin::	.word
-		continue:
-	 If objectRepresentation supports pinning then caller looks like
-				mov Lclass, Arg1Reg
-				mov selector, SendNumArgsReg
-				call ceImplicitReceiver
-	 and Lclass: .word; Lmixin: .word is somewhere on the heap."
+	"Caller looks like
+		mov LcacheAddress, SendNumArgsReg
+		call ceImplicitReceiver"
 	<option: #NewspeakVM>
 	<var: #mcpc type: #'char *'>
 	<inline: true>
-	<returnTypeC: #usqInt>
-	^objectRepresentation canPinObjects
-		ifTrue:
-			[(backEnd implicitReceiveCacheAt: mcpc) asUnsignedInteger]
-		ifFalse:
-			[mcpc asUnsignedInteger + backEnd jumpShortByteSize]
+	self assert: false.
+	^self cCoerceSimple: (backEnd implicitReceiveCacheAt: mcpc) asUnsignedInteger to: #'NSSendCache *'
+
 ]
 
 { #category : #compaction }
 Cogit >> incrementUsageOfTargetIfLinkedSend: annotation mcpc: mcpc ignored: superfluity [
 	<var: #mcpc type: #'char *'>
-	| entryPoint |
-	(self isSendAnnotation: annotation) ifTrue:
-		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+	<var: #nsSendCache type: #'NSSendCache *'>
+	| entryPoint nsSendCache |
+
+	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
+		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		nsSendCache classTag ~= 0 ifTrue: "send is linked"
+			[ | targetMethod |
+			entryPoint := nsSendCache target.
+			targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
+			self assert: (self isPCWithinMethodZone: targetMethod asUnsignedInteger).
+			targetMethod cmUsageCount < (CMMaxUsageCount // 2) ifTrue:
+				[targetMethod cmUsageCount: targetMethod cmUsageCount + 1]]]].
+
+	annotation = IsSendCall ifTrue:
+		[self assert: annotation ~= IsNSSendCall.
+		entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
 			[self targetMethodAndSendTableFor: entryPoint into:
 				[:targetMethod :sendTable|
 				 targetMethod cmUsageCount < (CMMaxUsageCount // 2) ifTrue:
 					[targetMethod cmUsageCount: targetMethod cmUsageCount + 1]]]].
+
 	^0 "keep scanning"
 ]
 
@@ -6294,7 +6274,10 @@ Cogit >> initialize [
 											ifFalse: [CogMethodSurrogate64]].
 	cogBlockMethodSurrogateClass := wordSize = 4
 											ifTrue: [CogBlockMethodSurrogate32]
-											ifFalse: [CogBlockMethodSurrogate64]
+											ifFalse: [CogBlockMethodSurrogate64].
+	nsSendCacheSurrogateClass := wordSize = 4
+											ifTrue: [NSSendCacheSurrogate32]
+											ifFalse: [NSSendCacheSurrogate64].
 ]
 
 { #category : #initialization }
@@ -6343,6 +6326,15 @@ Cogit >> initializeFixupAt: targetIndex [
 	fixup := self fixupAt: targetIndex.
 	fixup targetInstruction: (self cCoerceSimple: 1 to: #'AbstractInstruction *').
 	^fixup
+]
+
+{ #category : #'newspeak support' }
+Cogit >> initializeNSSendCache: cacheAddress selector: selector numArgs: numArgs [
+	| nsSendCache |
+	nsSendCache := self cCoerceSimple: cacheAddress to: #'NSSendCache *'.
+	nsSendCache selector: selector.
+	nsSendCache numArgs: numArgs.
+	nsSendCache classTag: 0. "Illegal class tag"
 ]
 
 { #category : #initialization }
@@ -6464,20 +6456,11 @@ Cogit >> isPCMappedAnnotation: annotation alternateInstructionSet: isAlternateIn
 	<inline: true>
 	^self cppIf: NewspeakVM
 		ifTrue:
-			"For Newspeak we shoe-horn in implicit receiver inline cache handling as an inline
-			 send, since these caches are processed similarly to inline send caches.  But if
-			 the Newspeak instruction set includes an absent receiver send then there are
-			 two map entries for the one bytecode, the first for the implicit receiver cache
-			 and the second for the send cache. Only one of these can function as the pc-
-			 mapped entry since there is only one bytecode. c.f. isSendAnnotation:"
 			[annotation = IsSendCall
-			or: [(annotation = IsNSSendCall
-				and: [isAlternateInstSet
-						ifTrue: [AltNSSendIsPCAnnotated]
-						ifFalse: [NSSendIsPCAnnotated]])
+			or: [annotation = IsNSSendCall
 			or: [annotation = HasBytecodePC]]]
 		ifFalse:
-			[(self isSendAnnotation: annotation)
+			[(annotation = IsSendCall)
 			  or: [annotation = HasBytecodePC]]
 ]
 
@@ -6562,6 +6545,22 @@ Cogit >> latestContinuationPCFor: descriptor at: pc exts: nExts in: aMethodObj [
 	| distance |
 	distance := self spanFor: descriptor at: pc exts: nExts in: aMethodObj.
 	^pc + descriptor numBytes + (distance max: 0)
+]
+
+{ #category : #'newspeak support' }
+Cogit >> linkNSSendCache: nsSendCache classTag: classTag enclosingObject: enclosingObject target: targetMethod caller: callingMethod [
+	<api>
+	<option: #NewspeakVM>
+	<var: #nsSendCache type: #'NSSendCache *'>
+	<var: #targetMethod type: #'CogMethod *'>
+	<var: #callingMethod type: #'CogMethod *'>
+	nsSendCache classTag: classTag.
+	nsSendCache enclosingObject: enclosingObject.
+	nsSendCache target: targetMethod asInteger + cmNoCheckEntryOffset.
+	callingMethod cmRefersToYoung ifFalse:
+		[(enclosingObject ~= 0 and: [objectMemory isYoung: enclosingObject]) ifTrue:
+			[methodZone ensureInYoungReferrers: callingMethod]].
+
 ]
 
 { #category : #'in-line cacheing' }
@@ -7247,7 +7246,8 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 	"Mark and trace literals.
 	 Additionally in Newspeak, void push implicits that have unmarked classes."
 	<var: #mcpc type: #'char *'>
-	| literal |
+	<var: #nsSendCache type: #'NSSendCache *'>
+	| literal nsSendCache |
 	annotation = IsObjectReference ifTrue:
 		[literal := backEnd literalBeforeFollowingAddress: mcpc asUnsignedInteger.
 		 (objectRepresentation
@@ -7255,7 +7255,25 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 				in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
 				atpc: mcpc asUnsignedInteger) ifTrue:
 			[codeModified := true]].
-	(self isSendAnnotation: annotation) ifTrue:
+
+	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
+		[ | sel eo |
+		nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		sel := nsSendCache selector.
+			(objectMemory isForwarded: sel)
+				ifFalse: [objectMemory markAndTrace: sel]
+				ifTrue: [sel := objectMemory followForwarded: literal.
+						nsSendCache selector: sel.
+						self markAndTraceUpdatedLiteral: sel in: (self cCoerceSimple: cogMethod to: #'CogMethod *')].
+		eo := nsSendCache enclosingObject.
+		eo ~= 0 ifTrue: [
+			(objectMemory isForwarded: eo)
+				ifFalse: [objectMemory markAndTrace: eo]
+				ifTrue: [eo := objectMemory followForwarded: literal.
+						nsSendCache enclosingObject: eo.
+						self markAndTraceUpdatedLiteral: eo in: (self cCoerceSimple: cogMethod to: #'CogMethod *')]]]].
+
+	annotation = IsSendCall ifTrue:
 		[self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
 			[:entryPoint :cacheTag :tagCouldBeObj |
 			 tagCouldBeObj ifTrue:
@@ -7263,29 +7281,8 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 						markAndTraceCacheTagLiteral: cacheTag
 						in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
 						atpc: mcpc asUnsignedInteger) ifTrue:
-					[codeModified := true]].  "cacheTag is selector"
-			  self cppIf: NewspeakVM ifTrue:
-				[entryPoint = ceImplicitReceiverTrampoline ifTrue:
-					[| cacheAddress class mixin |
-					 self assert: NumOopsPerIRC = 2.
-					 cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
-					 (class := backEnd unalignedLongAt: cacheAddress) ~= 0
-						ifTrue:
-							[(objectRepresentation cacheTagIsMarked: class)
-								ifTrue:
-									[(mixin := backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop) ~= 0 ifTrue:
-										[objectRepresentation
-											markAndTraceLiteral: mixin
-											in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
-											at: (self asAddress: (cacheAddress + objectMemory bytesPerOop) asVoidPointer
-													put: [:val| backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop put: val])]]
-								ifFalse:
-									[backEnd
-										unalignedLongAt: cacheAddress put: 0;
-										unalignedLongAt: cacheAddress + objectMemory bytesPerOop put: 0.
-									 codeModified := true]]
-						ifFalse:
-							[self assert: (backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop) = 0]]]]].
+					["cacheTag is selector" codeModified := true]]]].
+
 	^0 "keep scanning"
 ]
 
@@ -7293,7 +7290,8 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMethod [
 	"Mark and trace literals.  Unlink sends that have unmarked cache tags or targets."
 	<var: #mcpc type: #'char *'>
-	| literal |
+	<var: #nsSendCache type: #'NSSendCache *'>
+	| literal nsSendCache |
 	annotation = IsObjectReference ifTrue:
 		[literal := backEnd literalBeforeFollowingAddress: mcpc asUnsignedInteger.
 		 (objectRepresentation
@@ -7301,9 +7299,34 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 				in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
 				atpc: mcpc asUnsignedInteger) ifTrue:
 			[codeModified := true]].
-	(self isSendAnnotation: annotation) ifTrue:
+
+	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
+		[ | entryPoint targetMethod sel eo |
+		nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		entryPoint := nsSendCache target.
+		entryPoint ~= 0 ifTrue: "Send is linked"
+			[targetMethod := entryPoint - cmNoCheckEntryOffset.
+			(self markAndTraceOrFreeCogMethod: targetMethod
+				firstVisit: targetMethod asUnsignedInteger > mcpc asUnsignedInteger) ifTrue:	
+					[nsSendCache classTag: 0; enclosingObject: 0; target: 0]].
+		sel := nsSendCache selector.
+			(objectMemory isForwarded: sel)
+				ifFalse: [objectMemory markAndTrace: sel]
+				ifTrue: [sel := objectMemory followForwarded: literal.
+						nsSendCache selector: sel.
+						self markAndTraceUpdatedLiteral: sel in: (self cCoerceSimple: cogMethod to: #'CogMethod *')].
+		eo := nsSendCache enclosingObject.
+		eo ~= 0 ifTrue:
+			[(objectMemory isForwarded: eo)
+				ifFalse: [objectMemory markAndTrace: eo]
+				ifTrue: [eo := objectMemory followForwarded: literal.
+						nsSendCache enclosingObject: eo.
+						self markAndTraceUpdatedLiteral: eo in: (self cCoerceSimple: cogMethod to: #'CogMethod *')]]]].
+
+	annotation = IsSendCall ifTrue:
 		[self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
 			[:entryPoint :cacheTag :tagCouldBeObj | | cacheTagMarked |
+			self assert: annotation ~= IsNSSendCall.
 			 cacheTagMarked := tagCouldBeObj and: [objectRepresentation cacheTagIsMarked: cacheTag].
 			 entryPoint > methodZoneBase
 				ifTrue: "It's a linked send."
@@ -7324,34 +7347,8 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 							markAndTraceCacheTagLiteral: cacheTag
 							in: cogMethod
 							atpc: mcpc asUnsignedInteger) ifTrue:
-						[codeModified := true].
-					 self cppIf: NewspeakVM ifTrue:
-						[entryPoint = ceImplicitReceiverTrampoline ifTrue:
-							[| cacheAddress class mixin |
-							 (objectRepresentation
-									markAndTraceCacheTagLiteral: cacheTag
-									in: cogMethod
-									atpc: mcpc asUnsignedInteger) ifTrue:
-								[codeModified := true].  "cacheTag is selector"
-							 self assert: NumOopsPerIRC = 2.
-							 cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
-							 (class := backEnd unalignedLongAt: cacheAddress) ~= 0
-								ifTrue:
-									[(objectRepresentation cacheTagIsMarked: class)
-										ifTrue:
-											[(mixin := backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop) ~= 0 ifTrue:
-												[objectRepresentation
-													markAndTraceLiteral: mixin
-													in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
-													at: (self asAddress: cacheAddress + objectMemory bytesPerOop
-															put: [:val| backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop put: val])]]
-										ifFalse:
-											[backEnd
-												unalignedLongAt: cacheAddress put: 0;
-												unalignedLongAt: cacheAddress + objectMemory bytesPerOop put: 0.
-											 codeModified := true]]
-								ifFalse:
-									[self assert: (backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop) = 0]]]]]].
+						[codeModified := true]]]].
+
 	^0 "keep scanning"
 ]
 
@@ -7398,26 +7395,24 @@ Cogit >> markMethodAndReferents: aCogMethod [
 Cogit >> markYoungObjects: annotation pc: mcpc method: cogMethod [
 	"Mark and trace young literals."
 	<var: #mcpc type: #'char *'>
-	| literal |
+	<var: #nsSendCache type: #'NSSendCache *'>
+	| literal nsSendCache |
 	annotation = IsObjectReference ifTrue:
 		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
 		 objectRepresentation markAndTraceLiteralIfYoung: literal].
-	(self isSendAnnotation: annotation) ifTrue:
+
+	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
+		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		objectRepresentation markAndTraceLiteralIfYoung: nsSendCache selector.
+		nsSendCache enclosingObject ~= 0 ifTrue:
+			[objectRepresentation markAndTraceLiteralIfYoung: nsSendCache enclosingObject]]].
+
+	annotation = IsSendCall ifTrue:
 		[self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
 			[:entryPoint :cacheTag :tagCouldBeObj |
 			 tagCouldBeObj ifTrue:
-				[objectRepresentation markAndTraceLiteralIfYoung: cacheTag].
-				 self cppIf: NewspeakVM ifTrue:
-					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
-						[| cacheAddress class mixin |
-						 self assert: NumOopsPerIRC = 2.
-						 cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
-						 class := backEnd unalignedLongAt: cacheAddress.
-						 class ~= 0 ifTrue:
-							[objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
-								[objectRepresentation markAndTraceLiteralIfYoung: class].
-							 mixin := backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop.
-							 objectRepresentation markAndTraceLiteralIfYoung: mixin]]]]].
+				[objectRepresentation markAndTraceLiteralIfYoung: cacheTag]]].
+
 	^0 "keep scanning"
 ]
 
@@ -7461,7 +7456,7 @@ Cogit >> maybeAllocAndInitIRCs [
 			[indexOfIRC := theIRCs := 0.
 			 (objectRepresentation canPinObjects and: [numIRCs > 0]) ifTrue:
 				[self assert: (self noAssertMethodClassAssociationOf: methodObj) ~= objectMemory nilObject.
-				 theIRCs := objectRepresentation allocateNPinnedSlots: numIRCs * NumOopsPerIRC.
+				 theIRCs := objectRepresentation allocateNPinnedSlots: numIRCs * NumOopsPerNSC.
 				 ^theIRCs ~= 0].
 			 ^true]
 		ifFalse:
@@ -7749,6 +7744,33 @@ Cogit >> noTargetsFreeInClosedPIC: cPIC [
 Cogit >> notYetImplemented [
 	<cmacro: '() warning("not yet implemented")'>
 	super notYetImplemented
+]
+
+{ #category : #'newspeak support' }
+Cogit >> nsSendCacheFromReturnAddress: mcpc [
+	"Caller looks like
+			mov LcacheAddress, SendNumArgsReg
+			call ceImplicitReceiver"
+	<option: #NewspeakVM>
+	<var: #mcpc type: #'char *'>
+	<inline: true>
+	| entryPoint cacheAddress |
+	entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+	self assert: entryPoint < methodZoneBase.
+	cacheAddress := (backEnd implicitReceiveCacheAt: mcpc) asUnsignedInteger.
+	self assert: (objectMemory isInOldSpace: cacheAddress).
+	^self cCoerceSimple: cacheAddress to: #'NSSendCache *'
+
+]
+
+{ #category : #'simulation only' }
+Cogit >> nsSendCacheSurrogateAt: address [
+	<doNotGenerate>
+	self assert: (address < 0 or: [(address bitAnd: objectMemory wordSize - 1) = 0]).
+	^nsSendCacheSurrogateClass new
+		at: address
+		objectMemory: objectMemory
+		cogit: self
 ]
 
 { #category : #accessing }
@@ -8385,12 +8407,36 @@ Cogit >> relocateCallsInClosedPIC: cPIC [
 { #category : #compaction }
 Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
 	<var: #mcpc type: #'char *'>
-	| entryPoint offset sendTable targetMethod unlinkedRoutine |
+	| entryPoint offset sendTable targetMethod unlinkedRoutine nsSendCache |
 	<var: #sendTable type: #'sqInt *'>
 	<var: #targetMethod type: #'CogMethod *'>
-	(self isSendAnnotation: annotation) ifTrue:
+	<var: #nsSendCache type: #'NSSendCache *'>
+
+	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
+		["Retrieve the send cache before relocating the stub call. Fetching the send
+		  cache asserts the stub call points below all the cogged methods, but
+		  until this method is actually moved, the adjusted stub call may appear to
+		  point to somewhere in the method zone."
+		nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+
+		"Fix call to trampoline. This method is moving [delta] bytes, and calls are
+		 relative, so adjust the call by -[delta] bytes"
+		backEnd relocateCallBeforeReturnPC: mcpc asInteger by: delta negated.
+
+		nsSendCache target ~= 0 ifTrue: "Send is linked"
+			[entryPoint := nsSendCache target.
+			targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
+			targetMethod cmType = CMMethod
+				ifTrue: "send target not freed; just relocate. The cache has an absolute
+						target, so only adjust by the target method's displacement."
+					[nsSendCache target: entryPoint + targetMethod objectHeader]
+				ifFalse: "send target was freed, unlink"
+					[nsSendCache classTag: 0; enclosingObject: 0; target: 0]].
+		^0]].
+
+	annotation = IsSendCall ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
-		 entryPoint <= methodZoneBase ifTrue: "send is not linked; just relocate"
+		entryPoint <= methodZoneBase ifTrue: "send is not linked; just relocate"
 			[backEnd relocateCallBeforeReturnPC: mcpc asInteger by: delta negated.
 			 ^0].
 		"It's a linked send; find which kind."
@@ -8412,11 +8458,14 @@ Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
 			tag: targetMethod selector
 			target: unlinkedRoutine.
 		 ^0].
+
 	annotation = IsRelativeCall ifTrue:
 		[backEnd relocateCallBeforeReturnPC: mcpc asInteger by: delta negated.
 		 ^0].
+
 	annotation = IsAbsPCReference ifTrue:
 		[backEnd relocateMethodReferenceBeforeAddress: mcpc asInteger by: delta].
+
 	^0 "keep scanning"
 ]
 
@@ -8443,6 +8492,8 @@ Cogit >> relocateMethodsPreCompaction [
 Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 	<var: #mcpc type: #'char *'>
 	<var: #targetMethod type: #'CogMethod *'>
+	<var: #nsSendCache type: #'NSSendCache *'>
+	| nsSendCache |
 	annotation = IsObjectReference ifTrue:
 		[| literal mappedLiteral |
 		 literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
@@ -8454,7 +8505,26 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 			 (hasYoungPtr ~= 0
 			  and: [objectMemory isYoung: mappedLiteral]) ifTrue:
 				[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]].
-	(self isSendAnnotation: annotation) ifTrue:
+
+	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
+		[ | oop mappedOop |
+		nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		oop := nsSendCache selector.	
+		mappedOop := objectRepresentation remapObject: oop.
+		oop ~= mappedOop ifTrue:
+			[nsSendCache selector: mappedOop.
+			(hasYoungPtr ~= 0 and: [objectMemory isYoung: mappedOop]) ifTrue:
+				[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]].
+		oop := nsSendCache enclosingObject.	
+		oop ~= 0 ifTrue: [
+			mappedOop := objectRepresentation remapObject: oop.
+			oop ~= mappedOop ifTrue:
+				[nsSendCache enclosingObject: mappedOop.
+				(hasYoungPtr ~= 0 and: [objectMemory isYoung: mappedOop]) ifTrue:
+					[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]].
+		^0 "keep scanning"]].
+
+	annotation = IsSendCall ifTrue:
 		[self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
 			[:entryPoint :cacheTag :tagCouldBeObj | | mappedCacheTag |
 			 (tagCouldBeObj
@@ -8466,41 +8536,15 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 				 (hasYoungPtr ~= 0
 				  and: [objectMemory isYoung: mappedCacheTag]) ifTrue:
 					[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]].
-			 (self cppIf: NewspeakVM
-					ifTrue: [entryPoint = ceImplicitReceiverTrampoline]
-					ifFalse: [false])
-				ifTrue: "Examine an implicit receiver cache."
-					[| cacheAddress oop mappedOop |
-					 self assert: NumOopsPerIRC = 2.
-					 cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
-					 (oop := backEnd unalignedLongAt: cacheAddress) ~= 0 ifTrue:
-						["First look at the classTag entry.  This is an inline cache tag and so might not be an object."
-						 (objectRepresentation inlineCacheTagsMayBeObjects
-						  and: [objectRepresentation couldBeObject: oop]) ifTrue:
-							[mappedOop := objectRepresentation remapOop: oop.
-							 mappedOop ~= oop ifTrue:
-								[backEnd unalignedLongAt: cacheAddress put: mappedOop].
-							 (hasYoungPtr ~= 0
-							  and: [objectMemory isYoung: mappedOop]) ifTrue:
-								[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]].
-						 "Second look at the mixin entry. this must be 0 or an object."
-						 (oop := backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop) ~= 0 ifTrue:
-							[mappedOop := objectRepresentation remapOop: oop.
-							 mappedOop ~= oop ifTrue:
-								[backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop put: mappedOop].
-							 (hasYoungPtr ~= 0
-							  and: [objectMemory isYoung: mappedOop]) ifTrue:
-								[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]]]
-				ifFalse:
-					[hasYoungPtr ~= 0 ifTrue:
-						["Since the unlinking routines may rewrite the cacheTag to the send's selector, and
-						  since they don't have the cogMethod to hand and can't add it to youngReferrers,
-						  the method must remain in youngReferrers if the targetMethod's selector is young."
-						 entryPoint > methodZoneBase ifTrue: "It's a linked send."
-							[self targetMethodAndSendTableFor: entryPoint into:
-								[:targetMethod :ignored|
-								 (objectMemory isYoung: targetMethod selector) ifTrue:
-									[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]]]]]].
+			hasYoungPtr ~= 0 ifTrue:
+				["Since the unlinking routines may rewrite the cacheTag to the send's selector, and
+				  since they don't have the cogMethod to hand and can't add it to youngReferrers,
+				  the method must remain in youngReferrers if the targetMethod's selector is young."
+				 entryPoint > methodZoneBase ifTrue: "It's a linked send."
+					[self targetMethodAndSendTableFor: entryPoint into:
+						[:targetMethod :ignored|
+						 (objectMemory isYoung: targetMethod selector) ifTrue:
+							[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]]]]].
 	^0 "keep scanning"
 ]
 
@@ -8796,7 +8840,8 @@ Cogit >> setInterpreter: aCoInterpreter [
 	superSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
 	NewspeakVM ifTrue:
 		[selfSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
-		 dynamicSuperSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines)].
+		dynamicSuperSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
+		implicitReceiverSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines)].
 	"debug metadata"
 	objectReferencesInRuntime := CArrayAccessor on: (Array new: NumObjRefsInRuntime).
 	runtimeObjectRefIndex := 0.
@@ -9421,31 +9466,45 @@ Cogit >> unlinkAllSends [
 { #category : #'in-line cacheing' }
 Cogit >> unlinkIfForwardedSend: annotation pc: mcpc ignored: superfluity [
 	<var: #mcpc type: #'char *'>
-	| entryPoint cacheAddress |
-	(self isSendAnnotation: annotation) ifTrue:
+	<var: #nsSendCache type: #'NSSendCache *'>
+	| entryPoint nsSendCache |
+
+	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
+		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		nsSendCache classTag ~= 0 ifTrue:
+			[(objectMemory isForwardedClassIndex: nsSendCache classTag) ifTrue: [
+				nsSendCache classTag: 0; enclosingObject: 0; target: 0]].
+		"Should we check if the enclosing object's class is forwarded as well?"
+		^0 "keep scanning"]].
+
+	annotation = IsSendCall ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase
 			ifTrue: "It's a linked send, but maybe a super send or linked to an OpenPIC, in which case the cache tag will be a selector...."
 				[(objectMemory isForwardedClassIndex: (backEnd inlineCacheTagAt: mcpc asInteger)) ifTrue:
 					[self targetMethodAndSendTableFor: entryPoint into:
 						[:targetMethod :sendTable|
-						 self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]
-			ifFalse:
-				[self cppIf: NewspeakVM ifTrue:
-					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
-						[self assert: NumOopsPerIRC = 2.
-						 cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
-						 ((objectMemory isForwardedClassIndex: (backEnd unalignedLongAt: cacheAddress))
-						 or: [objectMemory isForwardedClassIndex: (backEnd unalignedLongAt: cacheAddress + objectMemory bytesPerOop)]) ifTrue:
-							[self voidImplicitReceiverCacheAt: mcpc]]]]].
+						 self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]].
+
 	^0 "keep scanning"
 ]
 
 { #category : #'in-line cacheing' }
 Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
 	<var: #mcpc type: #'char *'>
-	| entryPoint |
-	(self isSendAnnotation: annotation) ifTrue:
+	<var: #nsSendCache type: #'NSSendCache *'>
+	| entryPoint nsSendCache |
+
+	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
+		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		(entryPoint := nsSendCache target) ~= 0 ifTrue:
+			[ | targetMethod |
+			targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
+			(targetMethod cmType = CMFree or: [nsSendCache selector = theSelector]) ifTrue:
+				[nsSendCache classTag: 0; enclosingObject: 0; target: 0]].
+		^0 "keep scanning"]].
+
+	annotation = IsSendCall ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase
 			ifTrue: "It's a linked send."
@@ -9453,83 +9512,112 @@ Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
 					[:targetMethod :sendTable| 
 					 (targetMethod cmType = CMFree
 					  or: [targetMethod selector = theSelector]) ifTrue:
-						[self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]
-			ifFalse:
-				[self cppIf: NewspeakVM ifTrue:
-					[(entryPoint = ceImplicitReceiverTrampoline
-					 and: [(backEnd inlineCacheTagAt: mcpc asInteger) = theSelector]) ifTrue:
-					 	[self voidImplicitReceiverCacheAt: mcpc]]]].
+						[self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]].
+
 	^0 "keep scanning"
 ]
 
 { #category : #'in-line cacheing' }
 Cogit >> unlinkIfLinkedSend: annotation pc: mcpc ignored: superfluity [
 	<var: #mcpc type: #'char *'>
-	| entryPoint |
-	(self isSendAnnotation: annotation) ifTrue:
+	<var: #nsSendCache type: #'NSSendCache *'>
+	| entryPoint nsSendCache |
+
+	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
+		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		nsSendCache classTag ~= 0 ifTrue: "Send is linked"
+			[nsSendCache classTag: 0; enclosingObject: 0; target: 0].
+		^0 "keep scanning"]].
+
+	annotation = IsSendCall ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase
 			ifTrue: "It's a linked send."
 				[self targetMethodAndSendTableFor: entryPoint into:
 					[:targetMethod :sendTable| 
-					 self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]
-			ifFalse:
-				[self cppIf: NewspeakVM ifTrue:
-					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
-						[self voidImplicitReceiverCacheAt: mcpc]]]].
+					 self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]].
+
 	^0 "keep scanning"
 ]
 
 { #category : #'in-line cacheing' }
 Cogit >> unlinkIfLinkedSend: annotation pc: mcpc of: theSelector [
 	<var: #mcpc type: #'char *'>
-	| entryPoint |
-	(self isSendAnnotation: annotation) ifTrue:
+	<var: #nsSendCache type: #'NSSendCache *'>
+	| entryPoint nsSendCache |
+
+	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
+		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		nsSendCache selector = theSelector ifTrue:
+			[nsSendCache classTag: 0; enclosingObject: 0; target: 0].
+		^0 "keep scanning"]].
+
+	annotation = IsSendCall ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase
 			ifTrue: "It's a linked send."
 				[self targetMethodAndSendTableFor: entryPoint into:
 					[:targetMethod :sendTable| 
 					 targetMethod selector = theSelector ifTrue:
-						[self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]
-			ifFalse:
-				[self cppIf: NewspeakVM ifTrue:
-					[(entryPoint = ceImplicitReceiverTrampoline
-					  and: [(backEnd inlineCacheTagAt: mcpc asInteger) = theSelector]) ifTrue:
-						[self voidImplicitReceiverCacheAt: mcpc]]]].
+						[self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]].
+
 	^0 "keep scanning"
 ]
 
 { #category : #'in-line cacheing' }
 Cogit >> unlinkIfLinkedSend: annotation pc: mcpc to: theCogMethod [
 	<var: #mcpc type: #'char *'>
-	| entryPoint |
-	(self isSendAnnotation: annotation) ifTrue:
+	<var: #nsSendCache type: #'NSSendCache *'>
+	| entryPoint nsSendCache |
+
+	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
+		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		(entryPoint := nsSendCache target) ~= 0 ifTrue:
+			[ | targetMethod |
+			targetMethod := entryPoint - cmNoCheckEntryOffset.
+			targetMethod = theCogMethod ifTrue:
+				[nsSendCache classTag: 0.
+				nsSendCache enclosingObject: 0.
+				nsSendCache target: 0]].
+		^0 "keep scanning"]].
+
+	annotation = IsSendCall ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase
 			ifTrue: "It's a linked send."
 				[self targetMethodAndSendTableFor: entryPoint into:
 					[:targetMethod :sendTable| 
 					 targetMethod asInteger = theCogMethod ifTrue:
-						[self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]
-			ifFalse: "Can't tell the target with PushReciver/SendImplicit so flush anyway."
-				[self cppIf: NewspeakVM ifTrue:
-					[entryPoint = ceImplicitReceiverTrampoline ifTrue:
-						[self voidImplicitReceiverCacheAt: mcpc]]]].
+						[self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]].
+
 	^0 "keep scanning"
 ]
 
 { #category : #'in-line cacheing' }
 Cogit >> unlinkIfLinkedSendToFree: annotation pc: mcpc ignored: superfluity [
 	<var: #mcpc type: #'char *'>
-	| entryPoint |
-	(self isSendAnnotation: annotation) ifTrue:
+	<var: #nsSendCache type: #'NSSendCache *'>
+	<var: #nsTargetMethod type: #'CogMethod *'>
+	| entryPoint nsSendCache nsTargetMethod |
+
+	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
+		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		(entryPoint := nsSendCache target) ~= 0 ifTrue: "It's a linked send."
+			[nsTargetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
+			nsTargetMethod cmType = CMFree ifTrue:
+				[nsSendCache classTag: 0.
+				nsSendCache enclosingObject: 0.
+				nsSendCache target: 0]].
+		^0 "keep scanning"]].
+
+	annotation = IsSendCall ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
 			[self targetMethodAndSendTableFor: entryPoint into:
 				[:targetMethod :sendTable| 
 				 targetMethod cmType = CMFree ifTrue:
 					[self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]].
+
 	^0 "keep scanning"
 ]
 
@@ -9718,33 +9806,6 @@ Cogit >> varBaseAddress [
 Cogit >> voidCogCompiledCode [
 	<api>
 	methodZone clearCogCompiledCode
-]
-
-{ #category : #'newspeak support' }
-Cogit >> voidImplicitReceiverCacheAt: mcpc [
-	"Cached push implicit receiver implementation.  If objectRepresentation doesn't support
-	 pinning then caller looks like
-				mov selector, SendNumArgsReg
-				call ceImplicitReceiver
-				br continue
-		Lclass:	.word
-		Lmixin::	.word
-		continue:
-	 If objectRepresentation supports pinning then caller looks like
-				mov Lclass, Arg1Reg
-				mov selector, SendNumArgsReg
-				call ceImplicitReceiver
-	 and Lclass: .word; Lmixin: .word is somewhere on the heap."
-	<option: #NewspeakVM>
-	<var: #mcpc type: #'char *'>
-	| cacheAddress |
-	self assert: NumOopsPerIRC = 2.
-	cacheAddress := self implicitReceiverCacheAddressAt: mcpc.
-	backEnd
-		unalignedLongAt: cacheAddress put: 0;
-		unalignedLongAt: cacheAddress + objectMemory bytesPerOop put: 0.
-	objectRepresentation canPinObjects ifFalse:
-		[codeModified := true]
 ]
 
 { #category : #'debug printing' }

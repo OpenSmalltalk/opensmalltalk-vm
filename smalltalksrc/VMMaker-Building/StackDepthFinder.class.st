@@ -318,6 +318,16 @@ StackDepthFinder >> sendToAbsentImplicitReceiver: selector numArgs: numArgs [
 	self drop: numArgs - 1 "e.g. if no args pushes a result"
 ]
 
+{ #category : #'instruction decoding' }
+StackDepthFinder >> sendToAbsentOuter: selector numArgs: numArgs depth: depth [
+	self drop: numArgs - 1 "e.g. if no args pushes a result"
+]
+
+{ #category : #'instruction decoding' }
+StackDepthFinder >> sendToAbsentSelf: selector numArgs: numArgs [
+	self drop: numArgs - 1 "e.g. if no args pushes a result"
+]
+
 { #category : #accessing }
 StackDepthFinder >> stackPointerAt: aPC [ 
 	[pc < aPC] whileTrue:
