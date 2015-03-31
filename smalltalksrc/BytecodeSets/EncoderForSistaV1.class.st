@@ -15,6 +15,7 @@ N.B.  Extension bytecodes can only come before extensible bytecodes, and only if
 Instance Variables (inherited)
 
 1 Byte Bytecodes
+	code	(note)	binary			name
 	0-15		0000 iiii 			Push Receiver Variable #iiii
 	16-31		0001 iiii			Push Literal Variable #iiii
 	32-63		001 iiiii				Push Literal #iiiii
@@ -66,7 +67,9 @@ Instance Variables (inherited)
 *	232		11101000	iiiiiiii		Push Integer #iiiiiiii (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)
 *	233		11101001	iiiiiiii		Push Character #iiiiiiii (+ Extend B * 256)
 **	234		11101010	iiiiijjj		Send Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments
-**	235		11101011	iiiiijjj		Send To Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments
+**	235	(1)	11101011	iiiiijjj	ExtendB < 64
+										ifTrue: [Send To Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments]
+										ifFalse: [Send To Superclass of Stacked Class Literal Selector #iiiii (+ Extend A * 32) with jjj (+ (Extend B bitAnd: 63) * 8) Arguments]
 *	236		11101100	iiiiiiii		Trap If Not Instance Of Behavior/Array Of Behavior #iiiiiiii (+ Extend A * 256, where Extend A >= 0)
 *	237		11101101	iiiiiiii		Jump #iiiiiiii (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)
 *	238		11101110	iiiiiiii		Pop and Jump 0n True #iiiiiiii (+ Extend B * 256, where Extend B >= 0)
@@ -80,7 +83,7 @@ Instance Variables (inherited)
 	246-247	1111011 i	xxxxxxxx	UNASSIGNED
 
 3 Byte Bytecodes
-	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
+	248	(2)	11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	249		11111001 	xxxxxxxx	syyyyyyy	Reserved for Push Float
 **	250		11111010 	eeiiikkk		jjjjjjjj		Push Closure Num Copied iii (+ExtA//16*8) Num Args kkk (+ ExtA\\16*8) BlockSize jjjjjjjj (+ExtB*256). ee = num extensions
 	251		11111011 	kkkkkkkk	jjjjjjjj		Push Temp At kkkkkkkk In Temp Vector At: jjjjjjjj
@@ -88,7 +91,9 @@ Instance Variables (inherited)
 	253		11111101 	kkkkkkkk	jjjjjjjj		Pop and Store Temp At kkkkkkkk In Temp Vector At: jjjjjjjj
 	254-255	1111111i	xxxxxxxx	yyyyyyyy	UNASSIGNED
 
-The Call Primitive Bytecode specifies either a primitive in the primitive table (m=0) or an inlined primitive (m=1). Non-inlined primtiives from the primitive table have index (jjjjjjj * 256) + iiiiiiii and return from the method if they succeed.  This bytecode is only valid as the first bytecode of a method.  Inline primitives have index (jjjjjjj * 256) + iiiiiiii, cannot fail, and do not return when they succeed, yielding a result (typically on top of stack after popping their arguments, but possibly in a byte data stack, for example for unboxed floating-point primitives).
+(1) Bytecode 235 is a super send bytecode that starts the lookup in the superclass of some class.  It has two forms, ""norma;"" and ""directed"". In the normal form, the class is the value of the method's methodClassAssociation which must be the last literal.  In the directed form the class is the class on top of stack.
+
+(2) The Call Primitive Bytecode specifies either a primitive in the primitive table (m=0) or an inlined primitive (m=1). Non-inlined primtiives from the primitive table have index (jjjjjjj * 256) + iiiiiiii and return from the method if they succeed.  This bytecode is only valid as the first bytecode of a method.  Inline primitives have index (jjjjjjj * 256) + iiiiiiii, cannot fail, and do not return when they succeed, yielding a result (typically on top of stack after popping their arguments, but possibly in a byte data stack, for example for unboxed floating-point primitives).
 
 We sort the inline primitive operations by arity.  Nullary primitives occupy the 0-999 range.  Unary primitives occupy the 1-1999 range, etc.
 
@@ -1046,6 +1051,24 @@ EncoderForSistaV1 >> genSend: selectorLiteralIndex numArgs: nArgs [
 	stream
 		nextPut: 238;
 		nextPut: extendedNArgs + (extendedIndex * 8)
+]
+
+{ #category : #'bytecode generation' }
+EncoderForSistaV1 >> genSendDirectedSuper: selectorLiteralIndex numArgs: nArgs [
+	| extendedIndex |
+	(selectorLiteralIndex < 0 or: [selectorLiteralIndex > 65535]) ifTrue:
+		[^self outOfRangeError: 'selectorLiteralIndex' index: selectorLiteralIndex range: 0 to: 65535].
+	(nArgs < 0 or: [nArgs > 31]) ifTrue:
+		[^self outOfRangeError: 'numArgs' index: nArgs range: 0 to: 31 "!!"].
+	(extendedIndex := selectorLiteralIndex) > 31 ifTrue:
+		[self genUnsignedSingleExtendA: extendedIndex // 32.
+		 extendedIndex := extendedIndex \\ 32].
+	"Bit 6 of the ExtB byte is the directed send flag.  Bit 6 allows for future expansion to up to 255 args."
+	self genUnsignedSingleExtendB: nArgs // 8 + 64.
+	"235		11101011	iiiiijjj		Send To Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
+	stream
+		nextPut: 235;
+		nextPut: nArgs \\ 8 + (extendedIndex * 8)
 ]
 
 { #category : #'bytecode generation' }
