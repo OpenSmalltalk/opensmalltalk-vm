@@ -137,17 +137,27 @@ TMethod >> allLocals [
 ]
 
 { #category : #accessing }
-TMethod >> allReferencedVariables [
+TMethod >> allReferencedVariablesIn: aCodeGen [
 	"Answer the set of all variables referenced in the receiver."
 	| refs |
 	refs := Set new.
-	"find all the variable names referenced in this method"
-	parseTree nodesDo:
-		[:node|
-		node isVariable ifTrue: [refs add: node name asString].
-		node isStmtList ifTrue: [refs addAll: node args]].
-	"add all the non-arg declarations (might be variables used only in cCode sections)"
-	refs addAll: (declarations keys reject: [:e | self args includes: e]).
+	"Find all the variable names referenced in this method.
+	 Don't descend into "
+	parseTree
+		nodesWithParentsDo:
+			[:node :parent|
+			node isVariable ifTrue: [refs add: node name asString].
+			node isStmtList ifTrue: [refs addAll: node args].
+			(node isSend
+			 and: [node selector beginsWith: #cCode:]) ifTrue:
+				[aCodeGen addVariablesInVerbatimCIn: node to: refs]]
+		unless:
+			[:node :parent|
+			(aCodeGen nilOrBooleanConditionFor: parent)
+				ifNil: [false]
+				ifNotNil:
+					[:condition| "double negatives are confusing, aren't they ;-)"
+					node = parent args second == condition not]].
 	^refs
 ]
 
@@ -552,7 +562,7 @@ TMethod >> emitCLocalsOn: aStream generator: aCodeGen [
 { #category : #'C code generation' }
 TMethod >> emitInlineOn: aStream level: level generator: aCodeGen [
 	"Emit C code for this method onto the given stream. All calls to inlined methods should already have been expanded."
-	self removeUnusedTemps.
+	self removeUnusedTempsIn: aCodeGen.
 	sharedLabel ifNotNil:
 		[aStream crtab: level-1; nextPutAll: sharedLabel; nextPut: $:.
 		aStream crtab: level.
@@ -2085,13 +2095,13 @@ TMethod >> removeFinalSelfReturnIn: aCodeGenOrNil [
 ]
 
 { #category : #utilities }
-TMethod >> removeUnusedTemps [
+TMethod >> removeUnusedTempsIn: aCodeGen [
 	"Remove all of the unused temps in this method. Answer a set of the references."
 	"After inlining some variable references are now obsolete, we could fix them there
 	 but the code seems a bit complicated, the other choice to to rebuild the locals
 	 before extruding. This is done here"
 	| refs |
-	refs := self allReferencedVariables.
+	refs := self allReferencedVariablesIn: aCodeGen.
 	"reset the locals to be only those still referred to"
 	locals := locals select: [:e| refs includes: e].
 	^refs
