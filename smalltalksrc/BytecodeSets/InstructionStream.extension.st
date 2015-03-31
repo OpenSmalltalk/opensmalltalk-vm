@@ -215,7 +215,11 @@ InstructionStream >> interpretNext2ByteNSV4Instruction: bytecode for: client ext
 		[bytecode = 242 ifTrue:
 			[^client jump: (extB bitShift: 8) + byte].
 		 ^client jump: (extB bitShift: 8) + byte if: bytecode = 243].
-	"245		11110101	xxxxxxxx	UNASSIGNED"
+	bytecode = 245 ifTrue:
+		[| selector numArgs |
+		 selector := method literalAt: (extA bitShift: 5) + (byte // 8) + 1.
+		 numArgs := (extB bitShift: 3) + (byte \\ 8).
+		 ^client sendToAbsentSelf: selector numArgs: numArgs].
 	"246-247	1111011 i	xxxxxxxx	UNASSIGNED
 	 248-249	1111100 i	xxxxxxxx	UNASSIGNED"
 	^self unusedBytecode: client at: startPC
@@ -304,8 +308,14 @@ InstructionStream >> interpretNext3ByteNSV4Instruction: bytecode for: client ext
 	bytecode = 251 ifTrue:
 		[^client storeIntoRemoteTemp: byte2 inVectorAt: byte3].
 	bytecode = 249 ifTrue:
-			[^client callPrimitive: byte2 + (byte3 bitShift: 8)].
-	"254-255	1111111 i	xxxxxxxx	yyyyyyyy	UNASSIGNED"
+		[^client callPrimitive: byte2 + (byte3 bitShift: 8)].
+	bytecode = 254 ifTrue:
+		[| selector numArgs depth |
+		 selector := method literalAt: (extA bitShift: 5) + (byte2 // 8) + 1.
+		 numArgs := (extB bitShift: 3) + (byte2 \\ 8).
+		depth := byte3.
+		 ^client sendToAbsentOuter: selector numArgs: numArgs depth: depth].
+	"255-255	11111111	xxxxxxxx	yyyyyyyy	UNASSIGNED"
 	^self unusedBytecode: client at: startPC
 ]
 
@@ -564,10 +574,11 @@ InstructionStream >> interpretNextSistaV1InstructionFor: client [
 			"div16 = 5"
 			 offset < 2 ifTrue:
 				[^client pushConstant: offset].
-			 offset = 3 ifTrue:
+			 offset = 2 ifTrue:
 				[^self interpretSistaV1ExtendedPush: extB for: client].
-			 offset = 4 ifTrue:
+			 offset = 3 ifTrue:
 				[^client doDup].
+			
 			 offset = 8 ifTrue:
 				[^client methodReturnReceiver].
 			 offset = 9 ifTrue:
