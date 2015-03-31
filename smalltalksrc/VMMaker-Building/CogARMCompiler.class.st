@@ -261,15 +261,6 @@ CogARMCompiler >> ands: destReg rn: srcReg imm: immediate ror: rot [
 	^self type: 1 op: AndOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
-{ #category : #'ARM convenience instructions' }
-CogARMCompiler >> ands: destReg rn: srcReg rm: addReg lsr: shft [
-"return an ANDS destReg, srcReg, addReg lsl #shft"
-"important detail - a 0 shft requires setting the shift-type code to 0 to avoid potential instruction confusion"
-	shft = 0
-		ifTrue:[^self type: 0 op: AndOpcode set: 1 rn: srcReg rd: destReg shifterOperand: addReg]
-		ifFalse:[^self type: 0 op: AndOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((shft <<7 bitOr: 32) bitOr:  addReg)]
-]
-
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> at: offset moveCw: constant intoR: destReg [
 	"This loads aWord into the inter-opcode temporary register. Because most ARM instruction enable using a (8-12bit) offset relative to a register, the LS Byte can be included in that instruction, saving one instruction. This is done in a decorator, e.g. CmpCqR"
@@ -600,7 +591,7 @@ CogARMCompiler >> concretizeAndCqR [
 						ifTrue: [ "MVN temp reg, 0, making 0xffffffff"
 							self machineCodeAt: 0 put:(self mvn: ConcreteIPReg imm: 0 ror: 0).
 							"Then AND reg, temp reg, lsr #(32-hb)"
-							 self machineCodeAt: 4 put:(self ands: reg rn: reg rm: ConcreteIPReg lsr: (32-hb )).
+							 self machineCodeAt: 4 put:(self dataOpType: AndOpcode rd: reg rn: reg rm: ConcreteIPReg lsr: (32-hb )).
 							^machineCodeSize :=8]
 						ifFalse: [^self concretizeDataOperationCwR: AndOpcode]]]
 ]
@@ -638,7 +629,7 @@ CogARMCompiler >> concretizeAndCqRR [
 						ifTrue: "MVN temp reg, 0, making 0xffffffff"
 							[self machineCodeAt: 0 put:(self mvn: ConcreteIPReg imm: 0 ror: 0).
 							"Then AND reg, temp reg, lsr #(32-hb)"
-							 self machineCodeAt: 4 put: (self ands: dstReg rn: srcReg rm: ConcreteIPReg lsr: 32 - hb).
+							 self machineCodeAt: 4 put: (self dataOpType: AndOpcode rd: dstReg rn: srcReg rm: ConcreteIPReg lsr: 32 - hb).
 							^machineCodeSize := 8]
 						ifFalse:
 							[^self concretizeDataOperationCwR: AndOpcode]]]
@@ -766,14 +757,26 @@ CogARMCompiler >> concretizeDataOperationCqR: armOpcode [
 	"Will get inlined into concretizeAt: switch."
 	"4 == Add, 2 == Sub, Xor == 1, And == 0, Or == 12, Bic == 14"
 	<inline: true>
-	self 
-		rotateable8bitImmediate: (operands at: 0) 
-		ifTrue: [:rot :immediate | | rd rn |
-			rn := self concreteRegister: (operands at: 1).
-			rd := opcode = CmpOpcode ifTrue: [0] ifFalse:[rn].
+	|val rd rn |
+	val := operands at: 0.
+	rn := self concreteRegister: (operands at: 1).
+	rd := opcode = CmpOpcode ifTrue: [0] ifFalse:[rn].
+
+	self  rotateable8bitImmediate: val 
+		ifTrue: [:rot :immediate |
 			self machineCodeAt: 0 put: (self type: 1 op: armOpcode set: 1 rn: rn rd: rd shifterOperand: ((rot>>1)"in this usage we have to halve the rot value" << 8 bitOr: immediate)).
 			^machineCodeSize := 4]
-		ifFalse: [^self concretizeDataOperationCwR: armOpcode].
+		ifFalse: ["let's try to see if the constant can be made from a simple shift of 0xFFFFFFFF"
+				val > 0 ifTrue: [
+					|hb |
+					hb := val highBit.
+					1 << hb = (val +1)
+						ifTrue: [ "MVN temp,  #0, making 0xffffffff"
+							self machineCodeAt: 0 put:(self mvn: ConcreteIPReg imm: 0 ror: 0).
+							"Then armOpcode reg, temp reg, lsr #(32-hb)"
+							 self machineCodeAt: 4 put:(self dataOpType: armOpcode rd: rd  rn: rn rm: ConcreteIPReg lsr: (32-hb)).
+							^machineCodeSize :=8]].
+					^self concretizeDataOperationCwR: armOpcode].
 	
 ]
 
@@ -1384,6 +1387,15 @@ CogARMCompiler >> cond: conditionCode type: type op: flagsOrOpcode set: doUpdate
 "build an instruction - cccctttoooo + source + target + shifter op"
 	<inline: true>
 	^(self cond: conditionCode type: type op: flagsOrOpcode set: doUpdateStatusRegister rn: sourceRegister rd: targetRegister) bitOr: (so bitAnd: 16rFFF)
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> dataOpType: opcode rd: destReg rn: srcReg rm: addReg lsr: shft [
+"return an {opcode} destReg, srcReg, addReg lsl #shft"
+"important detail - a 0 shft requires setting the shift-type code to 0 to avoid potential instruction confusion"
+	shft = 0
+		ifTrue:[^self type: 0 op: opcode set: 1 rn: srcReg rd: destReg shifterOperand: addReg]
+		ifFalse:[^self type: 0 op: opcode set: 1 rn: srcReg rd: destReg shifterOperand: ((shft <<7 bitOr: 32) bitOr:  addReg)]
 ]
 
 { #category : #'generate machine code' }

@@ -4,7 +4,7 @@ Class {
 	#category : #'VMMaker-JITSimulation'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 NSSendCacheSurrogate64 class >> alignedByteSize [
 	^40
 ]
