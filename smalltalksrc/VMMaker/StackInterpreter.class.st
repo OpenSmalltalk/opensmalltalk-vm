@@ -4712,6 +4712,30 @@ StackInterpreter >> detailedSymbolicMethod: aMethod [
 	ts flush
 ]
 
+{ #category : #'send bytecodes' }
+StackInterpreter >> directedSuperclassSend [
+	"Send a message to self, starting lookup with the superclass of the class on top of stack."
+	"Assume: messageSelector and argumentCount have been set, and that
+	 the receiver and arguments have been pushed onto the stack,"
+	"Note: This method is inlined into the interpreter dispatch loop."
+	<sharedCodeInCase: #singleExtendedSuperBytecode>
+	<option: #SistaVM>
+	| class superclass |
+	class := self internalPopStack.
+	(objectMemory isForwarded: class) ifTrue:
+		[class := objectMemory followForwarded: class].
+	superclass := self superclassOf: class.
+	objectMemory ensureBehaviorHash: superclass.
+	lkupClassTag := objectMemory classTagForClass: superclass.
+	"To maintain the invariant that all receivers are unforwarded we need an explicit
+	 read barrier in the super send cases.  Even though we always follow receivers
+	 on become  e.g. super doSomethingWith: (self become: other) forwards the receiver
+	 self pushed on the stack."
+	self ensureReceiverUnforwarded.
+	self assert: lkupClassTag ~= objectMemory nilObject.
+	self commonSend
+]
+
 { #category : #'message sending' }
 StackInterpreter >> dispatchFunctionPointer: aFunctionPointer [
 	"In C aFunctionPointer is void (*aFunctionPointer)()"
@@ -5378,14 +5402,22 @@ StackInterpreter >> extSendBytecode [
 
 { #category : #'send bytecodes' }
 StackInterpreter >> extSendSuperBytecode [
-	"239		11101111	i i i i i j j j	Send To Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
+	"239		11101111	i i i i i j j j
+		ExtendB < 64
+			ifTrue: [Send To Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments]
+			ifFalse: [Send To Superclass of Stacked Class Literal Selector #iiiii (+ Extend A * 32) with jjj (+ (Extend B bitAnd: 63) * 8) Arguments]"
 	| byte |
 	byte := self fetchByte.
 	messageSelector := self literal: (byte >> 3) + (extA << 5).
 	extA := 0.
+	SistaVM ifTrue:
+		[extB >= 64 ifTrue:
+			[argumentCount := (byte bitAnd: 7) + (extB << 3).
+			 extB := 0.
+			 ^self directedSuperclassSend]].
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
-	self superclassSend.
+	self superclassSend
 ]
 
 { #category : #'stack bytecodes' }
@@ -6419,6 +6451,8 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 	<var: #theFP type: #'char *'>
 	<var: #callerFP type: #'char *'>
 	<var: #theIPPtr type: #usqInt>
+
+	self externalWriteBackHeadFramePointers.
 
 	(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 		[(objectMemory isForwarded: method) ifTrue:
@@ -14215,6 +14249,8 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 									thenCollect: [:psc| psc simulatorClass]) asSet.
 			simulatorClasses isEmpty ifTrue: [self transcript show: ' ... not found'. ^nil].
 			simulatorClasses size > 1 ifTrue: [^self error: 'This won''t work...'].
+			(plugins copyWithoutAll: simulatorClasses) notEmpty ifTrue:
+				[plugins := plugins copyWithoutAll: simulatorClasses].
 			plugins size > 1 ifTrue:
 				[self transcript show: '...multiple plugin classes; choosing ', plugins last name].
 			realPluginClass := plugins last. "hopefully lowest in the hierarchy..."
