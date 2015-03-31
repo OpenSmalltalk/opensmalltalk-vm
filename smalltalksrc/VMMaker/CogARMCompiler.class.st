@@ -1037,7 +1037,7 @@ CogARMCompiler >> concretizeMoveMbrR [
 		ifFalse:
 			[(self isAddressRelativeToVarBase: offset)
 				ifTrue:
-					[self machineCodeAt: 0 put: (self ldr: ConcreteIPReg rn: ConcreteVarBaseReg plusImm: offset - cogit varBaseAddress).
+					[self machineCodeAt: 0 put: (self adds: ConcreteIPReg rn: ConcreteVarBaseReg imm: offset - cogit varBaseAddress ror: 0).
 					 instrOffset := 4]
 				ifFalse:
 					[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg].
@@ -1103,7 +1103,7 @@ CogARMCompiler >> concretizeMoveRMbr [
 		ifFalse:
 			[(self isAddressRelativeToVarBase: offset)
 				ifTrue:
-					[self machineCodeAt: 0 put: (self ldr: ConcreteIPReg rn: ConcreteVarBaseReg plusImm: offset - cogit varBaseAddress).
+					[self machineCodeAt: 0 put: (self adds: ConcreteIPReg rn: ConcreteVarBaseReg imm: offset - cogit varBaseAddress ror: 0).
 					 instrOffset := 4]
 				ifFalse:
 					[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg].
