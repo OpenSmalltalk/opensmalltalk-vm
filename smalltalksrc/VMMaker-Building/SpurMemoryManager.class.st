@@ -8744,8 +8744,12 @@ SpurMemoryManager >> pinObject: objOop [
 			 ^objOop]].
 	oldClone := self cloneInOldSpaceForPinning: objOop.
 	oldClone ~= 0 ifTrue:
-		[self setIsPinnedOf: oldClone to: true.
-		 self forward: objOop to: oldClone].
+		[becomeEffectsFlags := self becomeEffectFlagsFor: objOop.
+		 self setIsPinnedOf: oldClone to: true.
+		 self forward: objOop to: oldClone.
+		 coInterpreter postBecomeAction: becomeEffectsFlags.
+		 self postBecomeScanClassTable: becomeEffectsFlags.
+		 becomeEffectsFlags := 0].
 	^oldClone
 ]
 
