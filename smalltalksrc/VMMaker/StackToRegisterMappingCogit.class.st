@@ -260,8 +260,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV3PlusClo
 		(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: isMappedInBlock -1)
 		(1 125 125 genReturnTopFromBlock		return needsFrameNever: -1)
 
-		(3 126 126 genDynamicSuperSendBytecode isMapped)			"Newspeak"
-		(2 127 127 genPushImplicitReceiverBytecode isMapped hasIRC)	"Newspeak"
+		(3 126 126 unknownBytecode)		"Was non-absent Newspeak super send"
+		(2 127 127 unknownBytecode)		"Was push implicit receiver"
 
 		(2 128 128 extendedPushBytecode needsFrameNever: 1)
 		(2 129 129 extendedStoreBytecode)
@@ -274,13 +274,9 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV3PlusClo
 		(1 136 136 duplicateTopBytecode needsFrameNever: 1)
 
 		(1 137 137 genPushActiveContextBytecode)
-		(2 138 138 genPushNewArrayBytecode)),
+		(2 138 138 genPushNewArrayBytecode)
 
-		((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
-			ifTrue: [#((3 139 139 callPrimitiveBytecode))]									"V3PlusClosures on Spur"
-			ifFalse: [#((2 139 139 genPushEnclosingObjectBytecode isMapped))]),	"Newspeak"
-
-	  #(
+		(3 139 139 callPrimitiveBytecode)
 		(3 140 140 genPushRemoteTempLongBytecode)
 		(3 141 141 genStoreRemoteTempLongBytecode)
 		(3 142 142 genStoreAndPopRemoteTempLongBytecode)
@@ -332,7 +328,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 
 	numPushNilsFunction := #v4:Num:Push:Nils:.
 	pushNilSizeFunction := #v4PushNilSize:.
-	NSSendIsPCAnnotated := false. "IsNSSendCall used by SendAbsentImplicit"
+	NSSendIsPCAnnotated := true. "IsNSSendCall used by SendAbsentImplicit"
 	FirstSpecialSelector := 80.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
@@ -672,7 +668,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 StackToRegisterMappingCogit class >> initializeMiscConstants [
 	super initializeMiscConstants.
 	NumTrampolines := NewspeakVM
-							ifTrue: [63]
+							ifTrue: [66]
 							ifFalse: [52]
 ]
 
@@ -1845,22 +1841,6 @@ StackToRegisterMappingCogit >> genFramelessStorePop: popBoolean ReceiverVariable
 ]
 
 { #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genGetImplicitReceiverFor: selector forPush: forPushSendBar [
-	"Cached implicit receiver implementation.  Caller looks like
-		mov selector, ClassReg
-				call cePushImplicitReceiver
-				br continue
-		Lclass	.word
-		Lmixin:	.word
-		continue:
-	 If class matches class of receiver then mixin contains either 0 or the implicit receiver.
-	 If 0, answer the actual receiver.  This is done in the trampoline.
-	 See generateNewspeakRuntime."
-	self ssAllocateCallReg: SendNumArgsReg and: ReceiverResultReg and: ClassReg and: Arg1Reg.
-	^super genGetImplicitReceiverFor: selector forPush: forPushSendBar
-]
-
-{ #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genJumpBackTo: targetBytecodePC [
 	self ssFlushTo: simStackPtr.
 	^super genJumpBackTo: targetBytecodePC
@@ -2625,15 +2605,6 @@ StackToRegisterMappingCogit >> genPushEnclosingObjectAt: level [
 ]
 
 { #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genPushImplicitReceiverBytecode [
-	| result |
-	result := self genGetImplicitReceiverFor: (self getLiteral: byte1) forPush: true.
-	result ~= 0 ifTrue:
-		[^result].
-	^self ssPushRegister: ReceiverResultReg
-]
-
-{ #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genPushLiteral: literal [
 	^self ssPushConstant: literal
 ]
@@ -2803,16 +2774,29 @@ StackToRegisterMappingCogit >> genSendAbsentDynamicSuper: selector numArgs: numA
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
-	"Get the implicit receiver and marshall arguments, shuffling the
-	 stack to push the implicit receiver if necessary. Then send."
+	| nsSendCache |
 	<inline: false>
-	| result |
-	"This must not be PC-mapped"
-	result := self genGetImplicitReceiverFor: selector forPush: false.
-	result ~= 0 ifTrue:
-		[^result].
+	(objectMemory isYoung: selector) ifTrue:
+		[hasYoungReferent := true].
+
+	nsSendCache := theIRCs + (NumOopsPerNSC * objectMemory bytesPerOop * indexOfIRC).
+	indexOfIRC := indexOfIRC + 1.
+	self assert: (objectMemory isInOldSpace: nsSendCache).
+	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs.
+
+	self ssAllocateCallReg: ReceiverResultReg and: SendNumArgsReg.
+	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
+
+	"This leaves the method receiver on the stack, which might not be the implicit receiver. But we care
+	 not: the callee will use ReceiverResultReg to build its frame, not the value beneath the arguments."
 	self marshallAbsentReceiverSendArguments: numArgs.
-	^self genMarshalledSend: selector numArgs: numArgs sendTable: ordinarySendTrampolines
+
+	"Load the cache last so it is a fixed distance from the call."
+	self MoveCw: nsSendCache R: SendNumArgsReg.
+	self CallNewspeakSend: (implicitReceiverSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
+
+	optStatus isReceiverResultRegLive: false.
+	^self ssPushRegister: ReceiverResultReg
 ]
 
 { #category : #'bytecode generators' }
@@ -3632,6 +3616,65 @@ StackToRegisterMappingCogit >> generateMissAbortTrampolines [
 ]
 
 { #category : #initialization }
+StackToRegisterMappingCogit >> generateNewspeakSendTrampolines [
+	"Self send, dynamic super send, and implicit receiver send. TODO: outer send."
+	"Override to generate code to push the register arg(s) for <= numRegArg arity sends."
+	<option: #NewspeakVM>
+	0 to: NumSendTrampolines - 2 do:
+		[:numArgs|
+		selfSendTrampolines
+			at: numArgs
+			put: (self genSendTrampolineFor: #ceSelfSend:to:numArgs:
+					  numArgs: numArgs
+					  called: (self trampolineName: 'ceSelfSend' numArgs: numArgs)
+					  arg: ClassReg
+					  arg: ReceiverResultReg
+					  arg: numArgs)].
+	selfSendTrampolines
+		at: NumSendTrampolines - 1
+		put: (self genSendTrampolineFor: #ceSelfSend:to:numArgs:
+					numArgs: self numRegArgs + 1
+					called: (self trampolineName: 'ceSelfSend' numArgs: -1)
+					arg: ClassReg
+					arg: ReceiverResultReg
+					arg: SendNumArgsReg).
+
+	0 to: NumSendTrampolines - 2 do:
+		[:numArgs|
+		dynamicSuperSendTrampolines
+			at: numArgs
+			put: (self genSendTrampolineFor: #ceDynamicSuperSend:to:numArgs:
+					  numArgs: numArgs
+					  called: (self trampolineName: 'ceDynSuperSend' numArgs: numArgs)
+					  arg: ClassReg
+					  arg: ReceiverResultReg
+					  arg: numArgs)].
+	dynamicSuperSendTrampolines
+		at: NumSendTrampolines - 1
+		put: (self genSendTrampolineFor: #ceDynamicSuperSend:to:numArgs:
+					numArgs: self numRegArgs + 1
+					called: (self trampolineName: 'ceDynSuperSend' numArgs: -1)
+					arg: ClassReg
+					arg: ReceiverResultReg
+					arg: SendNumArgsReg).
+
+	0 to: NumSendTrampolines - 2 do:
+		[:numArgs|
+		implicitReceiverSendTrampolines
+			at: numArgs
+			put: (self 
+				genNSSendTrampolineFor: #ceImplicitReceiverSend:receiver:
+				numArgs: numArgs
+				called: (self trampolineName: 'ceImplicitReceiverSend' numArgs: numArgs))].
+	implicitReceiverSendTrampolines
+		at: NumSendTrampolines - 1
+		put: (self 
+			genNSSendTrampolineFor: #ceImplicitReceiverSend:receiver:
+			numArgs: self numRegArgs + 1
+			called: (self trampolineName: 'ceImplicitReceiverSend' numArgs: -1)).
+]
+
+{ #category : #initialization }
 StackToRegisterMappingCogit >> generateSendTrampolines [
 	"Override to generate code to push the register arg(s) for <= numRegArg arity sends."
 	0 to: NumSendTrampolines - 2 do:
@@ -3654,44 +3697,10 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 					arg: 0
 					arg: ReceiverResultReg
 					arg: SendNumArgsReg).
-	self cppIf: NewspeakVM
-		ifTrue:
-			[0 to: NumSendTrampolines - 2 do:
-				[:numArgs|
-				dynamicSuperSendTrampolines
-					at: numArgs
-					put: (self genSendTrampolineFor: #ceDynamicSuperSend:to:numArgs:
-							  numArgs: numArgs
-							  called: (self trampolineName: 'ceDynSuperSend' numArgs: numArgs)
-							  arg: ClassReg
-							  arg: ReceiverResultReg
-							  arg: numArgs)].
-			dynamicSuperSendTrampolines
-				at: NumSendTrampolines - 1
-				put: (self genSendTrampolineFor: #ceDynamicSuperSend:to:numArgs:
-							numArgs: self numRegArgs + 1
-							called: (self trampolineName: 'ceDynSuperSend' numArgs: -1)
-							arg: ClassReg
-							arg: ReceiverResultReg
-							arg: SendNumArgsReg).
-			0 to: NumSendTrampolines - 2 do:
-				[:numArgs|
-				selfSendTrampolines
-					at: numArgs
-					put: (self genSendTrampolineFor: #ceSelfSend:to:numArgs:
-							  numArgs: numArgs
-							  called: (self trampolineName: 'ceSelfSend' numArgs: numArgs)
-							  arg: ClassReg
-							  arg: ReceiverResultReg
-							  arg: numArgs)].
-			selfSendTrampolines
-				at: NumSendTrampolines - 1
-				put: (self genSendTrampolineFor: #ceSelfSend:to:numArgs:
-							numArgs: self numRegArgs + 1
-							called: (self trampolineName: 'ceSelfSend' numArgs: -1)
-							arg: ClassReg
-							arg: ReceiverResultReg
-							arg: SendNumArgsReg)].
+
+	"Generate these in the middle so they are within [firstSend, lastSend]."
+	self cppIf: NewspeakVM ifTrue: [self generateNewspeakSendTrampolines].
+
 	0 to: NumSendTrampolines - 2 do:
 		[:numArgs|
 		superSendTrampolines
