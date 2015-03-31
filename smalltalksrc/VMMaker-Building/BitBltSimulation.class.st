@@ -2117,8 +2117,6 @@ BitBltSimulation >> loadColorMap [
 		cmSize := interpreterProxy slotSizeOf: cmOop.
 		cmLookupTable := interpreterProxy firstIndexableField: cmOop.
 		oldStyle := true.
-		self cCode: '' inSmalltalk:
-			[self assert: cmLookupTable unitSize = 4].
 	] ifFalse: [
 		"A new-style color map (fully qualified)"
 		((interpreterProxy isPointers: cmOop) 
@@ -2135,9 +2133,9 @@ BitBltSimulation >> loadColorMap [
 					cmLookupTable := interpreterProxy firstIndexableField: oop].
 		cmFlags := cmFlags bitOr: ColorMapNewStyle.
 		self cCode: '' inSmalltalk:
-			[self assert: (cmShiftTable isNil or: [cmShiftTable unitSize = 4]).
-			 self assert: (cmMaskTable isNil or: [cmMaskTable unitSize = 4]).
-			 self assert: (cmLookupTable isNil or: [cmLookupTable unitSize = 4])].
+			[self assert: cmShiftTable unitSize = 4.
+			 self assert: cmMaskTable unitSize = 4.
+			 self assert: cmLookupTable unitSize = 4].
 	].
 	(cmSize bitAnd: cmSize - 1) = 0 ifFalse:[^false].
 	cmMask := cmSize - 1.
@@ -2154,13 +2152,6 @@ BitBltSimulation >> loadColorMap [
 	(self isIdentityMap: cmShiftTable with: cmMaskTable)
 		ifTrue:[ cmMaskTable := nil. cmShiftTable := nil ]
 		ifFalse:[ cmFlags := cmFlags bitOr: ColorMapFixedPart].
-	self cCode: [] inSmalltalk:
-		[cmShiftTable ifNotNil:
-			[cmShiftTable := CPluggableAccessor new
-								setObject: cmShiftTable;
-								atBlock: [:obj :idx| obj intAt: idx - 1]
-								atPutBlock: [:obj :idx :val| obj intAt: idx - 1 put: val];
-								yourself]].
 	^true
 ]
 
