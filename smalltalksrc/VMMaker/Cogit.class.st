@@ -470,7 +470,7 @@ Cogit class >> cogToBytecodeMethodMapping [
 { #category : #translation }
 Cogit class >> declareCVarsIn: aCCodeGenerator [
 	#(	'coInterpreter' 'objectMemory' 'methodZone' 'objectRepresentation'
-		'cogBlockMethodSurrogateClass' 'cogMethodSurrogateClass'
+		'cogBlockMethodSurrogateClass' 'cogMethodSurrogateClass' 'nsSendCacheSurrogateClass'
 		'threadManager' 'processor' 'lastNInstructions' 'simulatedAddresses'
 		'simulatedTrampolines' 'simulatedVariableGetters' 'simulatedVariableSetters'
 		'printRegisters' 'printInstructions' 'clickConfirm' 'singleStep') do:
@@ -2973,7 +2973,6 @@ Cogit >> checkEnoughOpcodes [
 
 { #category : #'garbage collection' }
 Cogit >> checkIfValidOopRef: annotation pc: mcpc cogMethod: cogMethod [
-	| nsSendCache |
 	<var: #mcpc type: #'char *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
 	annotation = IsObjectReference ifTrue:
@@ -2984,7 +2983,7 @@ Cogit >> checkIfValidOopRef: annotation pc: mcpc cogMethod: cogMethod [
 			^1]].
 
 	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[ | enclosingObject |
+		[| nsSendCache enclosingObject |
 		nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
 		[(objectRepresentation checkValidOopReference: nsSendCache selector) ifFalse:
 			[coInterpreter print: 'selector leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
@@ -3024,7 +3023,7 @@ Cogit >> checkIfValidOopRef: annotation pc: mcpc cogMethod: cogMethod [
 Cogit >> checkIfValidOopRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 	<var: #mcpc type: #'char *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
-	| literal entryPoint nsSendCache |
+	| literal entryPoint |
 	annotation = IsObjectReference ifTrue:
 		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
 		 (self asserta: (objectRepresentation checkValidOopReference: literal)) ifFalse:
@@ -3035,7 +3034,7 @@ Cogit >> checkIfValidOopRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 				[^2]]].
 
 	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[ | classTag enclosingObject nsTargetMethod |
+		[ | nsSendCache classTag enclosingObject nsTargetMethod |
 		nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
 		(self asserta: (objectRepresentation checkValidOopReference: nsSendCache selector)) ifFalse:
 			[^9].
@@ -6217,11 +6216,12 @@ Cogit >> implicitReceiverCacheAddressAt: mcpc [
 Cogit >> incrementUsageOfTargetIfLinkedSend: annotation mcpc: mcpc ignored: superfluity [
 	<var: #mcpc type: #'char *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
-	| entryPoint nsSendCache |
+	| entryPoint |
 
 	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-		nsSendCache classTag ~= 0 ifTrue: "send is linked"
+		[|  nsSendCache |
+		 nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		 nsSendCache classTag ~= 0 ifTrue: "send is linked"
 			[ | targetMethod |
 			entryPoint := nsSendCache target.
 			targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
@@ -6231,7 +6231,7 @@ Cogit >> incrementUsageOfTargetIfLinkedSend: annotation mcpc: mcpc ignored: supe
 
 	annotation = IsSendCall ifTrue:
 		[self assert: annotation ~= IsNSSendCall.
-		entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+		 entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		 entryPoint > methodZoneBase ifTrue: "It's a linked send."
 			[self targetMethodAndSendTableFor: entryPoint into:
 				[:targetMethod :sendTable|
@@ -7254,7 +7254,7 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 	 Additionally in Newspeak, void push implicits that have unmarked classes."
 	<var: #mcpc type: #'char *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
-	| literal nsSendCache |
+	| literal |
 	annotation = IsObjectReference ifTrue:
 		[literal := backEnd literalBeforeFollowingAddress: mcpc asUnsignedInteger.
 		 (objectRepresentation
@@ -7264,7 +7264,7 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 			[codeModified := true]].
 
 	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[ | sel eo |
+		[| nsSendCache sel eo |
 		nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
 		sel := nsSendCache selector.
 			(objectMemory isForwarded: sel)
@@ -7273,8 +7273,8 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 						nsSendCache selector: sel.
 						self markAndTraceUpdatedLiteral: sel in: (self cCoerceSimple: cogMethod to: #'CogMethod *')].
 		eo := nsSendCache enclosingObject.
-		eo ~= 0 ifTrue: [
-			(objectMemory isForwarded: eo)
+		eo ~= 0 ifTrue:
+			[(objectMemory isForwarded: eo)
 				ifFalse: [objectMemory markAndTrace: eo]
 				ifTrue: [eo := objectMemory followForwarded: literal.
 						nsSendCache enclosingObject: eo.
@@ -7298,7 +7298,7 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 	"Mark and trace literals.  Unlink sends that have unmarked cache tags or targets."
 	<var: #mcpc type: #'char *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
-	| literal nsSendCache |
+	| literal |
 	annotation = IsObjectReference ifTrue:
 		[literal := backEnd literalBeforeFollowingAddress: mcpc asUnsignedInteger.
 		 (objectRepresentation
@@ -7308,7 +7308,7 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 			[codeModified := true]].
 
 	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[ | entryPoint targetMethod sel eo |
+		[| nsSendCache entryPoint targetMethod sel eo |
 		nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
 		entryPoint := nsSendCache target.
 		entryPoint ~= 0 ifTrue: "Send is linked"
@@ -7333,7 +7333,7 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 	annotation = IsSendCall ifTrue:
 		[self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
 			[:entryPoint :cacheTag :tagCouldBeObj | | cacheTagMarked |
-			self assert: annotation ~= IsNSSendCall.
+			 self assert: annotation ~= IsNSSendCall.
 			 cacheTagMarked := tagCouldBeObj and: [objectRepresentation cacheTagIsMarked: cacheTag].
 			 entryPoint > methodZoneBase
 				ifTrue: "It's a linked send."
@@ -7403,15 +7403,16 @@ Cogit >> markYoungObjects: annotation pc: mcpc method: cogMethod [
 	"Mark and trace young literals."
 	<var: #mcpc type: #'char *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
-	| literal nsSendCache |
+	| literal |
 	annotation = IsObjectReference ifTrue:
 		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
 		 objectRepresentation markAndTraceLiteralIfYoung: literal].
 
 	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-		objectRepresentation markAndTraceLiteralIfYoung: nsSendCache selector.
-		nsSendCache enclosingObject ~= 0 ifTrue:
+		[| nsSendCache |
+		 nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		 objectRepresentation markAndTraceLiteralIfYoung: nsSendCache selector.
+		 nsSendCache enclosingObject ~= 0 ifTrue:
 			[objectRepresentation markAndTraceLiteralIfYoung: nsSendCache enclosingObject]]].
 
 	annotation = IsSendCall ifTrue:
@@ -8414,32 +8415,34 @@ Cogit >> relocateCallsInClosedPIC: cPIC [
 { #category : #compaction }
 Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
 	<var: #mcpc type: #'char *'>
-	| entryPoint offset sendTable targetMethod unlinkedRoutine nsSendCache |
+	| entryPoint offset sendTable targetMethod unlinkedRoutine |
 	<var: #sendTable type: #'sqInt *'>
 	<var: #targetMethod type: #'CogMethod *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
 
-	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		["Retrieve the send cache before relocating the stub call. Fetching the send
-		  cache asserts the stub call points below all the cogged methods, but
-		  until this method is actually moved, the adjusted stub call may appear to
-		  point to somewhere in the method zone."
-		nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+	self cppIf: NewspeakVM ifTrue:
+		[| nsSendCache |
+		 annotation = IsNSSendCall ifTrue:
+			["Retrieve the send cache before relocating the stub call. Fetching the send
+			  cache asserts the stub call points below all the cogged methods, but
+			  until this method is actually moved, the adjusted stub call may appear to
+			  point to somewhere in the method zone."
+			nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
 
-		"Fix call to trampoline. This method is moving [delta] bytes, and calls are
-		 relative, so adjust the call by -[delta] bytes"
-		backEnd relocateCallBeforeReturnPC: mcpc asInteger by: delta negated.
+			"Fix call to trampoline. This method is moving [delta] bytes, and calls are
+			 relative, so adjust the call by -[delta] bytes"
+			backEnd relocateCallBeforeReturnPC: mcpc asInteger by: delta negated.
 
-		nsSendCache target ~= 0 ifTrue: "Send is linked"
-			[entryPoint := nsSendCache target.
-			targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-			targetMethod cmType = CMMethod
-				ifTrue: "send target not freed; just relocate. The cache has an absolute
-						target, so only adjust by the target method's displacement."
-					[nsSendCache target: entryPoint + targetMethod objectHeader]
-				ifFalse: "send target was freed, unlink"
-					[nsSendCache classTag: 0; enclosingObject: 0; target: 0]].
-		^0]].
+			nsSendCache target ~= 0 ifTrue: "Send is linked"
+				[entryPoint := nsSendCache target.
+				targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
+				targetMethod cmType = CMMethod
+					ifTrue: "send target not freed; just relocate. The cache has an absolute
+							target, so only adjust by the target method's displacement."
+						[nsSendCache target: entryPoint + targetMethod objectHeader]
+					ifFalse: "send target was freed, unlink"
+						[nsSendCache classTag: 0; enclosingObject: 0; target: 0]].
+			^0]].
 
 	annotation = IsSendCall ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
@@ -8500,7 +8503,6 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 	<var: #mcpc type: #'char *'>
 	<var: #targetMethod type: #'CogMethod *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
-	| nsSendCache |
 	annotation = IsObjectReference ifTrue:
 		[| literal mappedLiteral |
 		 literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
@@ -8514,7 +8516,7 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 				[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]].
 
 	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[ | oop mappedOop |
+		[| nsSendCache oop mappedOop |
 		nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
 		oop := nsSendCache selector.	
 		mappedOop := objectRepresentation remapObject: oop.
@@ -9474,15 +9476,17 @@ Cogit >> unlinkAllSends [
 Cogit >> unlinkIfForwardedSend: annotation pc: mcpc ignored: superfluity [
 	<var: #mcpc type: #'char *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
-	| entryPoint nsSendCache |
+	| entryPoint |
 
-	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-		nsSendCache classTag ~= 0 ifTrue:
-			[(objectMemory isForwardedClassIndex: nsSendCache classTag) ifTrue: [
-				nsSendCache classTag: 0; enclosingObject: 0; target: 0]].
-		"Should we check if the enclosing object's class is forwarded as well?"
-		^0 "keep scanning"]].
+	self cppIf: NewspeakVM ifTrue:
+		[| nsSendCache |
+		 annotation = IsNSSendCall ifTrue:
+			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+			nsSendCache classTag ~= 0 ifTrue:
+				[(objectMemory isForwardedClassIndex: nsSendCache classTag) ifTrue: [
+					nsSendCache classTag: 0; enclosingObject: 0; target: 0]].
+			"Should we check if the enclosing object's class is forwarded as well?"
+			^0 "keep scanning"]].
 
 	annotation = IsSendCall ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
@@ -9500,16 +9504,18 @@ Cogit >> unlinkIfForwardedSend: annotation pc: mcpc ignored: superfluity [
 Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
 	<var: #mcpc type: #'char *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
-	| entryPoint nsSendCache |
+	| entryPoint |
 
-	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-		(entryPoint := nsSendCache target) ~= 0 ifTrue:
-			[ | targetMethod |
-			targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-			(targetMethod cmType = CMFree or: [nsSendCache selector = theSelector]) ifTrue:
-				[nsSendCache classTag: 0; enclosingObject: 0; target: 0]].
-		^0 "keep scanning"]].
+	self cppIf: NewspeakVM ifTrue:
+		[| nsSendCache |
+		 annotation = IsNSSendCall ifTrue:
+			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+			 (entryPoint := nsSendCache target) ~= 0 ifTrue:
+				[ | targetMethod |
+				targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
+				(targetMethod cmType = CMFree or: [nsSendCache selector = theSelector]) ifTrue:
+					[nsSendCache classTag: 0; enclosingObject: 0; target: 0]].
+			^0 "keep scanning"]].
 
 	annotation = IsSendCall ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
@@ -9528,13 +9534,15 @@ Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
 Cogit >> unlinkIfLinkedSend: annotation pc: mcpc ignored: superfluity [
 	<var: #mcpc type: #'char *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
-	| entryPoint nsSendCache |
+	| entryPoint |
 
-	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-		nsSendCache classTag ~= 0 ifTrue: "Send is linked"
-			[nsSendCache classTag: 0; enclosingObject: 0; target: 0].
-		^0 "keep scanning"]].
+	self cppIf: NewspeakVM ifTrue:
+		[| nsSendCache |
+		 annotation = IsNSSendCall ifTrue:
+			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+			nsSendCache classTag ~= 0 ifTrue: "Send is linked"
+				[nsSendCache classTag: 0; enclosingObject: 0; target: 0].
+			^0 "keep scanning"]].
 
 	annotation = IsSendCall ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
@@ -9551,13 +9559,15 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc ignored: superfluity [
 Cogit >> unlinkIfLinkedSend: annotation pc: mcpc of: theSelector [
 	<var: #mcpc type: #'char *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
-	| entryPoint nsSendCache |
+	| entryPoint |
 
-	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-		nsSendCache selector = theSelector ifTrue:
-			[nsSendCache classTag: 0; enclosingObject: 0; target: 0].
-		^0 "keep scanning"]].
+	self cppIf: NewspeakVM ifTrue:
+		[| nsSendCache |
+		 annotation = IsNSSendCall ifTrue:
+			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+			nsSendCache selector = theSelector ifTrue:
+				[nsSendCache classTag: 0; enclosingObject: 0; target: 0].
+			^0 "keep scanning"]].
 
 	annotation = IsSendCall ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
@@ -9575,18 +9585,20 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc of: theSelector [
 Cogit >> unlinkIfLinkedSend: annotation pc: mcpc to: theCogMethod [
 	<var: #mcpc type: #'char *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
-	| entryPoint nsSendCache |
+	| entryPoint |
 
-	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-		(entryPoint := nsSendCache target) ~= 0 ifTrue:
-			[ | targetMethod |
-			targetMethod := entryPoint - cmNoCheckEntryOffset.
-			targetMethod = theCogMethod ifTrue:
-				[nsSendCache classTag: 0.
-				nsSendCache enclosingObject: 0.
-				nsSendCache target: 0]].
-		^0 "keep scanning"]].
+	self cppIf: NewspeakVM ifTrue:
+		[| nsSendCache |
+		 annotation = IsNSSendCall ifTrue:
+			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+			(entryPoint := nsSendCache target) ~= 0 ifTrue:
+				[ | targetMethod |
+				targetMethod := entryPoint - cmNoCheckEntryOffset.
+				targetMethod = theCogMethod ifTrue:
+					[nsSendCache classTag: 0.
+					nsSendCache enclosingObject: 0.
+					nsSendCache target: 0]].
+			^0 "keep scanning"]].
 
 	annotation = IsSendCall ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
@@ -9605,17 +9617,19 @@ Cogit >> unlinkIfLinkedSendToFree: annotation pc: mcpc ignored: superfluity [
 	<var: #mcpc type: #'char *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
 	<var: #nsTargetMethod type: #'CogMethod *'>
-	| entryPoint nsSendCache nsTargetMethod |
+	| entryPoint |
 
-	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-		(entryPoint := nsSendCache target) ~= 0 ifTrue: "It's a linked send."
-			[nsTargetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-			nsTargetMethod cmType = CMFree ifTrue:
-				[nsSendCache classTag: 0.
-				nsSendCache enclosingObject: 0.
-				nsSendCache target: 0]].
-		^0 "keep scanning"]].
+	self cppIf: NewspeakVM ifTrue:
+		[| nsSendCache nsTargetMethod |
+		 annotation = IsNSSendCall ifTrue:
+			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+			(entryPoint := nsSendCache target) ~= 0 ifTrue: "It's a linked send."
+				[nsTargetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
+				nsTargetMethod cmType = CMFree ifTrue:
+					[nsSendCache classTag: 0.
+					nsSendCache enclosingObject: 0.
+					nsSendCache target: 0]].
+			^0 "keep scanning"]].
 
 	annotation = IsSendCall ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
