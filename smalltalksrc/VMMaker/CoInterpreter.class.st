@@ -3162,7 +3162,15 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 	 probe, since notionally objects' internals are accessed only via sending messages to them,
 	 the exception is primitives that access the internals of the non-receiver argument(s).
 	 To avoid a read barrier on inst var fetch we scan the receivers in the stack zone and follow
-	 any forwarded ones.  This is way cheaper than scanning all of memory as in the old become."
+	 any forwarded ones.  This is way cheaper than scanning all of memory as in the old become.
+
+	 Override to handle machine code frames, and to handle the lack of an explicit read barrier on super sends.
+	 With most super send implementations (not Newspeak's absent super bytecodes) self, the receiver of the
+	 super send, is pushed before any arguments.  So if self is becommed during argument marshalling, e.g.
+		super doSomethingWith: (self become: self somethingElse)
+	 then a stale forwarded reference to self could be left on the stack.  In the StackInterpreter we deal with this
+	 with an explicit read barrier on supersend.  In the CoInterpreter we deal with it by following all non-argument
+	 stack contents."
 	| theIPPtr |
 	<inline: false>
 	<var: #thePage type: #'StackPage *'>
@@ -3170,6 +3178,8 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 	<var: #theFP type: #'char *'>
 	<var: #callerFP type: #'char *'>
 	<var: #theIPPtr type: #usqInt>
+
+	self externalWriteBackHeadFramePointers.
 
 	(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 		[(objectMemory isForwarded: method) ifTrue:
@@ -3195,11 +3205,11 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 			 [self assert: (thePage addressIsInPage: theFP).
 			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr asVoidPointer]).
 			  offset := self frameStackedReceiverOffset: theFP.
-			  oop := stackPages longAt: theFP + offset.
-			  (objectMemory isOopForwarded: oop) ifTrue:
-				[stackPages
-					longAt: theFP + offset
-					put: (objectMemory followForwarded: oop)].
+	 		  [theSP <= offset] whileTrue:
+				[oop := stackPages longAt: theSP.
+				 (objectMemory isOopForwarded: oop) ifTrue:
+					[stackPages longAt: theSP put: (objectMemory followForwarded: oop)].
+				 theSP := theSP + objectMemory wordSize].
 			  ((self frameHasContext: theFP)
 			   and: [(objectMemory isForwarded: (self frameContext: theFP))]) ifTrue:
 				[stackPages
@@ -3238,6 +3248,7 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 							put: (oop := newOop)]].
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := (theFP + FoxCallerSavedIP) asUnsignedInteger.
+				 theSP := theIPPtr + objectMemory wordSize.
 				 theFP := callerFP].
 			 "And finally follow the saved context and the caller context."
 			 theSP := thePage baseAddress - objectMemory wordSize.
