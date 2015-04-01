@@ -301,7 +301,6 @@ VMMaker class >> generateAllCogConfigurationsUnderVersionControl [
 		generateSqueakCogVM;
 		generateSqueakCogMTVM;
 		generateSqueakSpurCogVM;
-		generateSqueakCogSistaVM;
 		generateSqueakSpurCogSistaVM
 ]
 
@@ -321,14 +320,12 @@ VMMaker class >> generateAllNewspeakConfigurationsUnderVersionControl [
 VMMaker class >> generateAllNonSpurConfigurationsUnderVersionControl [
 	self generateSqueakCogVM;
 		generateSqueakCogMTVM;
-		generateSqueakStackVM;
-		generateSqueakCogSistaVM
+		generateSqueakStackVM
 ]
 
 { #category : #configurations }
 VMMaker class >> generateAllSistaConfigurationsUnderVersionControl [
-	self generateSqueakCogSistaVM;
-		generateSqueakSpurCogSistaVM
+	self generateSqueakSpurCogSistaVM
 ]
 
 { #category : #configurations }
@@ -430,21 +427,6 @@ VMMaker class >> generateNewspeakSpurStackVM [
 VMMaker class >> generateSqueakCogMTVM [
 	^self generateSqueakCogVMWithInterpreterClass: CoInterpreterMT
 		  options: #(COGMTVM true)
-]
-
-{ #category : #configurations }
-VMMaker class >> generateSqueakCogSistaVM [
-	"No primitives since we can use those for the Cog VM"
-	^VMMaker
-		generate: CoInterpreter
-		and: SistaStackToRegisterMappingCogit
-		with: #(	SistaVM true
-				MULTIPLEBYTECODESETS true
-				ISA IA32
-				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/sistasrc')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
-		including: #()
 ]
 
 { #category : #configurations }
