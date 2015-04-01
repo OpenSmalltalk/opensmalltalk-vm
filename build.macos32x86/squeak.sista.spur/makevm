@@ -113,7 +113,6 @@ xcodebuild -project SqueakSSL/SqueakSSL.xcodeproj -configuration $XCD_BUILD_CONF
 rm -rf "$DEST/Contents/Resources/SqueakSSL.bundle"
 cp -R SqueakSSL/build/$XCD_BUILD_CONFIGURATION/SqueakSSL.bundle "$DEST/Contents/Resources"
 
-if false; then
 # Build the BochsIA32Plugin
 # N.B. To build the plugin you also have to build the Bochs libraries in
 # ../../processors/IA32/bochs.  cd ../../processors/IA32/bochs. Run conf.COG & makeem.
@@ -121,6 +120,17 @@ echo BochsIA32Plugin xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project
 xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project BochsIA32Plugin/BochsIA32Plugin.xcodeproj
 rm -rf "$DEST/Contents/Resources/BochsIA32Plugin.bundle"
 cp -R BochsIA32Plugin/build/$XCD_BUILD_CONFIGURATION/BochsIA32Plugin.bundle "$DEST/Contents/Resources"
+
+# Build the GdbARMPlugin
+# N.B. To build the plugin you also have to build the gdb ARM sim libraries in
+# ../../processors/ARM/mac.
+if test -f ../../processors/ARM/mac/gdb-7.6/opcodes/libopcodes.a; then
+echo GdbARMPlugin xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project GdbARMPlugin/GdbARMPlugin.xcodeproj
+xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project GdbARMPlugin/GdbARMPlugin.xcodeproj
+rm -rf "$DEST/Contents/Resources/GdbARMPlugin.bundle"
+cp -R GdbARMPlugin/build/$XCD_BUILD_CONFIGURATION/GdbARMPlugin.bundle "$DEST/Contents/Resources"
+else
+echo "not building GdbARMPlugin; support libraries unavailable"
 fi
 
 # Build the UnixOSProcessPlugin
