@@ -314,15 +314,9 @@ StackInterpreter class >> initializeBytecodeTable [
 		[:initalizer| ^self perform: initalizer].
 
 	NewspeakVM ifTrue:
-		[^(initializationOptions at: #SpurObjectMemory ifAbsent: false)
-			ifTrue:
-				[MULTIPLEBYTECODESETS
-					ifTrue: [self initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid]
-					ifFalse: [self initializeBytecodeTableForNewspeakV4]]
-			ifFalse:
-				[MULTIPLEBYTECODESETS
-					ifTrue: [self initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid]
-					ifFalse: [self initializeBytecodeTableForNewspeakV3PlusClosures]]].
+		[^MULTIPLEBYTECODESETS
+			ifTrue: [self initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid]
+			ifFalse: [self initializeBytecodeTableForNewspeakV4]].
 
 	^self initializeBytecodeTableForSqueakV3PlusClosures
 ]
@@ -431,20 +425,6 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV3PlusClosures [
 		(224 239 sendLiteralSelector1ArgBytecode)
 		(240 255 sendLiteralSelector2ArgsBytecode)
 	)
-]
-
-{ #category : #initialization }
-StackInterpreter class >> initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid [
-	"StackInterpreter initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid"
-
-	| v3Table v4Table |
-	self initializeBytecodeTableForNewspeakV4.
-	v4Table := BytecodeTable.
-	AltBytecodeEncoderClassName := BytecodeEncoderClassName.
-	AltLongStoreBytecode := LongStoreBytecode.
-	self initializeBytecodeTableForNewspeakV3PlusClosures.
-	v3Table := BytecodeTable.
-	BytecodeTable := v3Table, v4Table
 ]
 
 { #category : #initialization }
@@ -8907,7 +8887,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	"saved caller ip is sender context in base frame"
 	stackPages
 		longAt: (pointer := pointer - objectMemory wordSize)
-		put: (objectMemory fetchPointer: SenderIndex ofObject: aContext).
+		put: (objectMemory followObjField: SenderIndex ofObject: aContext).
 	"base frame's saved fp is null"
 	stackPages
 		longAt: (pointer := pointer - objectMemory wordSize)

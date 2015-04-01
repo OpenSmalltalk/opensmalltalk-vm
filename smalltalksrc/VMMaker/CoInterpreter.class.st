@@ -1762,7 +1762,6 @@ CoInterpreter >> ceSelfSend: selector to: rcvr numArgs: numArgs [
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #newCogMethod type: #'CogMethod *'>
-	true ifTrue: [^self ceSend: selector super: 0 to: rcvr numArgs: numArgs].
 	"self printExternalHeadFrame"
 	"self printStringOf: selector"
 	cogit assertCStackWellAligned.
@@ -3176,6 +3175,7 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 	<var: #thePage type: #'StackPage *'>
 	<var: #theSP type: #'char *'>
 	<var: #theFP type: #'char *'>
+	<var: #offset type: #'char *'>
 	<var: #callerFP type: #'char *'>
 	<var: #theIPPtr type: #usqInt>
 
@@ -4308,7 +4308,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	"first word on stack is caller context of base frame"
 	stackPages
 		longAt: (pointer := page baseAddress)
-		put: (objectMemory fetchPointer: SenderIndex ofObject: aContext).
+		put: (objectMemory followObjField: SenderIndex ofObject: aContext).
 	"second word is the context itself; needed for cannotReturn processing; see ceBaseReturn:."
 	stackPages
 		longAt: (pointer := pointer - objectMemory wordSize)
@@ -4420,11 +4420,13 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 		put: rcvr.
 	stackPtrIndex := self quickFetchInteger: StackPointerIndex ofObject: aContext.
 	self assert: ReceiverIndex + stackPtrIndex < (objectMemory lengthOf: aContext).
+	"Copy the non-argument temps and stack contents to the stack.
+	 Follow these to avoid any stale self references from super sends."
 	numArgs + 1 to: stackPtrIndex do:
 		[:i|
 		stackPages
 			longAt: (pointer := pointer - objectMemory wordSize)
-			put: (objectMemory fetchPointer: ReceiverIndex + i ofObject: aContext)].
+			put: (objectMemory followField: ReceiverIndex + i ofObject: aContext)].
 	"top of stack is the instruction pointer"
 	stackPages longAt: (pointer := pointer - objectMemory wordSize) put: theIP.
 	page headSP: pointer.
