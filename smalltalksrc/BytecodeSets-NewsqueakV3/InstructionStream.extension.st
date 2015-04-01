@@ -260,7 +260,7 @@ InstructionStream >> interpretNext2ByteSistaV1Instruction: bytecode for: client 
 		[bytecode < 236 ifTrue: "sends"
 			[^client
 				send: (method literalAt: (extA bitShift: 5) + (byte // 8) + 1)
-				super: bytecode = 239
+				super: bytecode = 235
 				numArgs: (extB bitShift: 3) + (byte \\ 8)].
 		 bytecode = 236 ifTrue:
 			[^client trapIfNotInstanceOf: (method literalAt: (extA bitShift: 8) + byte + 1)].
@@ -624,8 +624,7 @@ InstructionStream >> interpretNextSistaV1InstructionFor: client [
 		 "div16 = 13"
 		 offset < 8 ifTrue:
 		 	[^client popIntoTemporaryVariable: offset].
-		 offset = 9 ifTrue:
-			[^client doDup].
+		 offset = 8 ifTrue: [ ^ client doPop ].
 		 ^self unusedBytecode: client at: savedPC].
 	"2 byte and 3 byte codes"
 	byte < 248 ifTrue:
