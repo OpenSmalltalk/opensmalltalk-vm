@@ -247,8 +247,8 @@ InstructionStream >> interpretNext2ByteSistaV1Instruction: bytecode for: client 
 					[^client pushLiteralVariable: literal].
 				 ^client pushConstant: literal].
 			bytecode = 229 ifTrue:
-				[^client pushClosureTemps: byte].
-			^client pushTemporaryVariable: byte].
+				[^client pushTemporaryVariable: byte]. 
+			^client pushClosureTemps: byte]. 
 		bytecode = 231 ifTrue:
 			[^byte < 128
 				ifTrue: [client pushNewArrayOfSize: byte]
@@ -342,9 +342,9 @@ InstructionStream >> interpretNext3ByteSistaV1Instruction: bytecode for: client 
 	bytecode = 251 ifTrue:
 		[^client pushRemoteTemp: byte2 inVectorAt: byte3].
 	bytecode = 252 ifTrue:
-		[^client popIntoRemoteTemp: byte2 inVectorAt: byte3].
-	bytecode = 253 ifTrue:
 		[^client storeIntoRemoteTemp: byte2 inVectorAt: byte3].
+	bytecode = 253 ifTrue:
+		[^client popIntoRemoteTemp: byte2 inVectorAt: byte3].
 	"249		11111001 	xxxxxxxx	syyyyyyy	Reserved for Push Float"
 	"254-255	1111111 i	xxxxxxxx	yyyyyyyy	UNASSIGNED"
 	^self unusedBytecode: client at: startPC
