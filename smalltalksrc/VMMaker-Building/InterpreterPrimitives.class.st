@@ -2256,7 +2256,7 @@ InterpreterPrimitives >> primitiveInvokeObjectAsMethod [
 InterpreterPrimitives >> primitiveIsBigEnder [
 	"Answer if running on a big endian machine."
 	<export: true>
-	self pop: 1 thenPushBool: self isBigEnder
+	self pop: 1 thenPushBool: VMBIGENDIAN
 ]
 
 { #category : #'memory space primitives' }
