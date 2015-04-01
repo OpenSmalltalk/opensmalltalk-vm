@@ -825,10 +825,10 @@ EncoderForSistaV1 >> genPushClosureCopyNumCopiedValues: numCopied numArgs: numAr
 EncoderForSistaV1 >> genPushConsArray: size [
 	(size < 0 or: [size > 127]) ifTrue:
 		[^self outOfRangeError: 'size' index: size range: 0 to: 127].
-	"233		11101001	jkkkkkkk	Push (Array new: kkkkkkk) (j = 0)
+	"231		11100111	jkkkkkkk	Push (Array new: kkkkkkk) (j = 0)
 									&	Pop kkkkkkk elements into: (Array new: kkkkkkk) (j = 1)"
 	stream
-		nextPut: 233;
+		nextPut: 231;
 		nextPut: size + 128
 ]
 
@@ -1049,7 +1049,7 @@ EncoderForSistaV1 >> genSend: selectorLiteralIndex numArgs: nArgs [
 		 extendedNArgs := extendedNArgs \\ 8].
 	"234		11101010	i i i i i j j j	Send Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
 	stream
-		nextPut: 238;
+		nextPut: 234;
 		nextPut: extendedNArgs + (extendedIndex * 8)
 ]
 
