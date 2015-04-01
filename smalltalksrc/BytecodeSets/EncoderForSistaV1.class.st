@@ -588,7 +588,7 @@ EncoderForSistaV1 class >> selectorToSendOrItselfFor: anInstructionStream in: me
 		["special byte or short send"
 		 ^byte >= 128
 			ifTrue: [method literalAt: (byte bitAnd: 15) + 1]
-			ifFalse: [Smalltalk specialSelectorAt: byte - 79]].
+			ifFalse: [Smalltalk specialSelectorAt: byte - 95]].
 	byte < 234 ifTrue: "need to check for either extension cuz order of extensions is not restricted. so extB could preceed extA"
 		[(byte >= 224 and: [byte <= 225]) ifTrue:
 			[^self extensionsAt: pc in: method into:
@@ -1013,7 +1013,7 @@ EncoderForSistaV1 >> genReturnTop [
 
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genReturnTopToCaller [
-	"93		1011101		Return Stack Top From Block [* return from enclosing block N, ExtA]"
+	"94		1011101		Return Stack Top From Block [* return from enclosing block N, ExtA]"
 	"If extended, the least significant bit of the extension determines if we return to the caller or not
 	 and the most significant bits determine how many levels of the static chain to return from.
 		ExtA = iiiiiiij
