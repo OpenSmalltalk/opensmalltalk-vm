@@ -779,38 +779,15 @@ Cogit class >> initializeBytecodeTable [
 					ifAbsent:
 						[NewspeakVM
 							ifTrue:
-								[(initializationOptions at: #SpurObjectMemory ifAbsent: false)
-									ifTrue:
-										[MULTIPLEBYTECODESETS
-											ifTrue: [#initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid]
-											ifFalse: [#initializeBytecodeTableForNewspeakV4]]
-									ifFalse:
-										[MULTIPLEBYTECODESETS
-											ifTrue: [#initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid]
-											ifFalse: [#initializeBytecodeTableForNewspeakV3PlusClosures]]]
+								[MULTIPLEBYTECODESETS
+									ifTrue: [#initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid]
+									ifFalse: [#initializeBytecodeTableForNewspeakV4]]
 							ifFalse:
 								[#initializeBytecodeTableForSqueakV3PlusClosures]].
 	"Now make sure all classes in the hierarchy have initialized to the same bytecode table."
 	(self withAllSuperclasses copyUpTo: Cogit) reverseDo: "i.e. exclude Cogit"
 		[:cogitClass|
 		 cogitClass perform: initializer]
-]
-
-{ #category : #'class initialization' }
-Cogit class >> initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid [
-	"SimpleStackBasedCogit initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid"
-	"StackToRegisterMappingCogit initializeBytecodeTableForNewspeakV3PlusClosuresNewspeakV4Hybrid"
-
-	| v3Table v4Table |
-	"N.B. Must do it backwards to evaluate AltBlockCreationBytecodeSize & BlockCreationBytecodeSize et al correctly."
-	self initializeBytecodeTableForNewspeakV4.
-	v4Table := generatorTable.
-	AltBlockCreationBytecodeSize := BlockCreationBytecodeSize.
-	AltNSSendIsPCAnnotated := NSSendIsPCAnnotated.
-	AltFirstSpecialSelector := FirstSpecialSelector.
-	self initializeBytecodeTableForNewspeakV3PlusClosures.
-	v3Table := generatorTable.
-	generatorTable := CArrayAccessor on: v3Table object, v4Table object
 ]
 
 { #category : #'class initialization' }
@@ -5013,7 +4990,10 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 and: regArg3 forCall: forCall ca
 						reg1val				pc = target address
 						reg2val
 		stackPointer ->	reg3val"
+
+	<var: #trampolineName type: #'char *'>
 	<returnTypeC: #'void (*genEnilopmartForandandforCallcalled(sqInt regArg1, sqInt regArg2, sqInt regArg3, sqInt forCall, sqInt trampolineName))(void)'>
+
 	| size endAddress enilopmart |
 	opcodeIndex := 0.
 	backEnd maybeEstablishVarBase. "Must happen first; value may be used in genLoadStackPointers"
