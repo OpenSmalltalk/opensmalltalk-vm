@@ -962,7 +962,7 @@ EncoderForSistaV1 >> genPushSpecialLiteral: aLiteral [
 			[stream nextPut: 81.
 			 ^self].
 		 ^self genPushInteger: aLiteral].
-	index := #(false true nil)
+	index := #(true false nil)
 					indexOf: aLiteral
 					ifAbsent: [^self error: 'push special literal: ', aLiteral printString,  ' is not one of true false nil'].
 	stream nextPut: 76 + index
