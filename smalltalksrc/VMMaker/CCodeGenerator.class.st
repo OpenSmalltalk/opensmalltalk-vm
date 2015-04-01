@@ -4274,9 +4274,9 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod [
 														ifNil: [#sqInt]
 														ifNotNil: [:type| type, (type last isLetter ifTrue: [' *'] ifFalse: ['*'])]].
 						[#at:]					->	[self typeForDereference: sendNode in: aTMethod].
-						[#bitAnd:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
-						[#bitOr:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
-						[#bitXor:]				->	[self unsignedTypeForBitwiseSend: sendNode in: aTMethod].
+						[#bitAnd:]				->	[self typeForArithmetic: sendNode in: aTMethod].
+						[#bitOr:]				->	[self typeForArithmetic: sendNode in: aTMethod].
+						[#bitXor:]				->	[self typeForArithmetic: sendNode in: aTMethod].
 						[#asFloat]				->	[#double].
 						[#atan]					->	[#double].
 						[#exp]					->	[#double].
@@ -4680,28 +4680,6 @@ CCodeGenerator >> unreachableMethods [
 			[previousSize := neededSelectors size].
 
 	^methods reject: [:m| neededSelectors includes: m selector]
-]
-
-{ #category : #'type inference' }
-CCodeGenerator >> unsignedTypeForBitwiseSend: aTSendNode in: aTMethod [
-	"The result of the bitwise operators in C is unsigned.
-	 We make an exception for currentBytecode bitAnd: N to allow better inlining in cases."
-	| t1 t2 type |
-	(aTSendNode receiver isVariable
-	and: [aTSendNode receiver name = 'currentBytecode'
-	and: [aTSendNode selector == #bitAnd:]]) ifTrue:
-		[^#sqInt].
-	t1 := (self typeFor: aTSendNode receiver in: aTMethod) ifNil: [^nil].
-	t2 := (self typeFor: aTSendNode args first in: aTMethod) ifNil: [^nil].
-	type := (self sizeOfIntegralCType: t1) >= (self sizeOfIntegralCType: t1)
-				ifTrue: [t1]
-				ifFalse: [t2].
-	^type first = $u
-		ifTrue: [type]
-		ifFalse:
-			[(type beginsWith: 'sq')
-				ifTrue: ['u', type]
-				ifFalse: ['unsigned ', type]]
 ]
 
 { #category : #accessing }
