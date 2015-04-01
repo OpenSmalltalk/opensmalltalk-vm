@@ -515,6 +515,7 @@ InterpreterPrimitives >> primitiveAdoptInstance [
 
 	arg := self stackObjectValue: 0.
 	rcvr := self stackObjectValue: 1.
+	self successful ifFalse:[^nil].
 
 	err := objectMemory changeClassOf: arg to: rcvr.
 	err = 0
@@ -2249,6 +2250,13 @@ InterpreterPrimitives >> primitiveInvokeObjectAsMethod [
 	self findNewMethodInClassTag: lookupClassTag.
 	self executeNewMethod.  "Recursive xeq affects successFlag"
 	self initPrimCall
+]
+
+{ #category : #'other primitives' }
+InterpreterPrimitives >> primitiveIsBigEnder [
+	"Answer if running on a big endian machine."
+	<export: true>
+	self pop: 1 thenPushBool: self isBigEnder
 ]
 
 { #category : #'memory space primitives' }
