@@ -603,7 +603,7 @@ EncoderForSistaV1 class >> selectorToSendOrItselfFor: anInstructionStream in: me
 	byte > 235 ifTrue:
 		[^anInstructionStream].
 	"they could be extended..."
-	^self extensionsFor: pc in: method into:
+	^self extensionsAt: pc in: method into:
 		[:extA :extB :nExtBytes| | index |
 		 index := ((method at: pc + 1) bitShift: -3) + (extA bitShift: 5).
 		 method literalAt: index + 1]
@@ -1013,7 +1013,7 @@ EncoderForSistaV1 >> genReturnTop [
 
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genReturnTopToCaller [
-	"94		1011101		Return Stack Top From Block [* return from enclosing block N, ExtA]"
+	"94		01011110		Return Stack Top From Block [* return from enclosing block N, ExtA]"
 	"If extended, the least significant bit of the extension determines if we return to the caller or not
 	 and the most significant bits determine how many levels of the static chain to return from.
 		ExtA = iiiiiiij
@@ -1216,11 +1216,11 @@ EncoderForSistaV1 >> genStoreRemoteTemp: tempIndex inVectorAt: tempVectorIndex [
 
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genStoreTemp: tempIndex [
-	"242		11110010	iiiiiiii		Pop and Store Temporary Variable #iiiiiiii"
+	"245		11110110	iiiiiiii		Store Temporary Variable #iiiiiiii"
 	(tempIndex < 0 or: [tempIndex > 63]) ifTrue:
 		[^self outOfRangeError: 'index' index: tempIndex range: 0 to: 63].
 	stream
-		nextPut: 242;
+		nextPut: 245;
 		nextPut: tempIndex
 ]
 
