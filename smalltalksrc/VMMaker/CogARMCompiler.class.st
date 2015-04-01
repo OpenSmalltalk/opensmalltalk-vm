@@ -1174,7 +1174,7 @@ CogARMCompiler >> concretizeMoveRXwrR [
 	base := self concreteRegister: (operands at: 2).
 	"str		src, [base, +index, LSL #2]"
 	"cond 011 1100 0 base srcR 00010 00 0 inde"
-	self machineCodeAt: 0 put: (self str: src rn: base rm: (16r100 bitOr: index)).
+	self machineCodeAt: 0 put: (self memMxr: AL reg: src base: base p: 1 u: 1 b: 0 w: 0 l: 0 rmLsl2: index).
 	^machineCodeSize := 4
 ]
 
@@ -1203,8 +1203,8 @@ CogARMCompiler >> concretizeMoveXwrRR [
 	base := self concreteRegister: (operands at: 1).
 	dest := self concreteRegister: (operands at: 2).
 	"LDR	dest, [base, +index, LSL #2]"
-	"cond 011 1100 1 base dest 00010 00 0 inde"
-	self machineCodeAt: 0 put: (self ldr: dest rn: base rm: (16r100 bitOr: index)).
+	"cond 011 1100 1 base dest 00010 00 0 inde bulit by lowest level generator so we can do the lsl #2 on the index register"
+	self machineCodeAt: 0 put: (self memMxr: AL reg: dest base: base p: 1 u: 1 b: 0 w: 0 l: 1 rmLsl2: index).
 	^machineCodeSize := 4
 ]
 
@@ -1810,7 +1810,8 @@ CogARMCompiler >> instructionSizeAt: pc [
 
 { #category : #testing }
 CogARMCompiler >> is12BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: falseAlternativeBlock [
-	"For LDR and STR, there is an instruction allowing for one instruction encoding if the offset is encodable in 12 bit."
+	"For LDR and STR, there is an instruction allowing for one instruction encoding if the offset is encodable in signed 12 bit form. pass the trueBlock the value and a 1-bit flag to tell it the sign.
+	The falseBlock can do whatever it needs to, typically building the constant as a full 32bit value and then ld/st with that as a register offset"
 	constant abs <= 4095 "(2 raisedTo: 12)-1"
 		ifTrue: [
 			constant >= 0 
@@ -1925,7 +1926,8 @@ CogARMCompiler >> ldr: destReg rn: baseReg rm: offsetReg [
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ldrb: destReg rn: baseReg plus: u imm: immediate12bitValue [
-"	LDRB destReg, [baseReg, 'u' immediate12bitValue] u=0 -> subtract imm; =1 -> add imm "
+"	LDRB destReg, [baseReg, 'u' immediate12bitValue] u=0 -> subtract imm; =1 -> add imm 
+	Note that this is a very low level interface that does not check the sign of the immediate, nor validity. See for example #concretizeMoveMbrR"
 	^self memMxr: AL reg: destReg  base: baseReg u: u b: 1 l: 1 imm: immediate12bitValue
 ]
 
@@ -2076,32 +2078,54 @@ CogARMCompiler >> memMxr: cond reg: destReg base: baseReg p: postpreoffset u: up
 	b -> byte(1) or word (0)
 	w -> write-back (1) if pre-indexing. 
 	l -> load (1) or store (0)"
-	^ cond << 28
+	^ (cond bitAnd: 16rF)  << 28
 		bitOr: (3 << 25
-		bitOr: (postpreoffset << 24
-		bitOr: (updown << 23
-		bitOr: (byteword << 22
-		bitOr: (weirdstuff << 21
-		bitOr: (loadstore << 20
-		bitOr: (baseReg << 16
-		bitOr: (destReg << 12 bitOr: offsetReg))))))))
+		bitOr: ((postpreoffset  bitAnd: 1) << 24
+		bitOr: ((updown bitAnd: 1) << 23
+		bitOr: ((byteword bitAnd: 1) << 22
+		bitOr: ((weirdstuff bitAnd: 1) << 21
+		bitOr: ((loadstore bitAnd: 1) << 20
+		bitOr: ((baseReg bitAnd: 16rF) << 16
+		bitOr: ((destReg bitAnd: 16rF) << 12 
+		bitOr: (offsetReg bitAnd: 16rF)))))))))
+]
+
+{ #category : #encoding }
+CogARMCompiler >> memMxr: cond reg: destReg base: baseReg p: postpreoffset u: updown b: byteword w: weirdstuff l: loadstore rmLsl2: offsetReg [ 
+	"build an ARM [base +/- offsetReg lsl #2] memory instruction - see also #memMxr:reg:base:p:u:b:w:l:rm: and keep them correlated properly
+	p -> pre-index (1) or post-index (0) the offset. Combines with W to do some odd things.
+	u -> up (1) or down (0) ie + or - for the offset
+	b -> byte(1) or word (0)
+	w -> write-back (1) if pre-indexing. 
+	l -> load (1) or store (0)"
+	^ (cond bitAnd: 16rF)  << 28
+		bitOr: (3 << 25
+		bitOr: ((postpreoffset  bitAnd: 1) << 24
+		bitOr: ((updown bitAnd: 1) << 23
+		bitOr: ((byteword bitAnd: 1) << 22
+		bitOr: ((weirdstuff bitAnd: 1) << 21
+		bitOr: ((loadstore bitAnd: 1) << 20
+		bitOr: ((baseReg bitAnd: 16rF) << 16
+		bitOr: ((destReg bitAnd: 16rF) << 12
+		bitOr: (16r100
+		bitOr: (offsetReg bitAnd: 16rF))))))))))
 ]
 
 { #category : #encoding }
 CogARMCompiler >> memMxr: cond reg: destReg  base: baseReg u: updown b: byteword l: loadstore imm: immediate12bitValue [
-"build an ARM [base +/- immediate 12bit offset] memory instruction
+"This is the lowest level build of an ARM [base +/- immediate 12bit offset] memory instruction
 u -> up (1) or down (0) ie + or - for the offset
 b -> byte(1) or word (0)
 l -> load (1) or store (0)"
 
-	^ cond << 28
+	^ (cond bitAnd: 16rF) << 28
 		bitOr: (5<<24
-		bitOr: (updown << 23
-		bitOr:(byteword<<22
-		bitOr:(loadstore<<20
-		bitOr:(baseReg<<16
-		bitOr:(destReg<<12
-		bitOr: immediate12bitValue))))))
+		bitOr: ((updown bitAnd: 1) << 23
+		bitOr:((byteword bitAnd: 1) <<22
+		bitOr:((loadstore bitAnd: 1) <<20
+		bitOr:((baseReg bitAnd: 16rF) <<16
+		bitOr:((destReg bitAnd: 16rF) <<12
+		bitOr: (immediate12bitValue bitAnd: 16rFFF)))))))
 ]
 
 { #category : #'ARM convenience instructions' }
