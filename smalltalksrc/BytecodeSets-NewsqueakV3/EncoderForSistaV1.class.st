@@ -1025,7 +1025,7 @@ EncoderForSistaV1 >> genReturnTopToCaller [
 		iiiiiii=2,j=1	=>	return to outerContext outerContext sender/return from outerContext outerContext
 		etc"
 
-	stream nextPut: 93
+	stream nextPut: 94
 ]
 
 { #category : #'bytecode generation' }
