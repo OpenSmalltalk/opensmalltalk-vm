@@ -164,14 +164,18 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager [
 
 { #category : #disassembly }
 GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager fromAddress: address [
+"Decode what we can of the instruction and decorate it with useful stuff"
 	| word opcode rotate mode operand |
 	word := aSymbolManager objectMemory longAt: address.
 	(self instructionIsAnyB: word)
 		ifTrue:
-			[operand := word bitAnd: 16rFFFFFF.
-			 (operand anyMask: 16r800000) ifTrue:
-				[operand := operand - 16r1000000].
-			 operand := operand * 4 + address + 8 bitAnd: aSymbolManager addressSpaceMask]
+			[((self instructionIsB: word) or: [self instructionIsBL: word])
+				ifTrue:["We can extract the offset from a plain B/BL instruction"
+					operand := self extractOffsetFromBL: word..
+					 operand := operand + address + 8 bitAnd: aSymbolManager addressSpaceMask].
+			((self instructionIsBX: word) or: [self instructionIsBLX: word])
+				ifTrue:["We can extract the offset from a  BX/BLX instructions register"			
+					operand := (self perform: (self registerStateGetters at: (word bitAnd: 15) + 1))]]
 		ifFalse:
 			[((self instructionIsAnyLoadStore: word)
 			  and: [(word >> 16 bitAnd: 15) = CogARMCompiler VarBaseReg])
@@ -238,6 +242,46 @@ GdbARMAlien >> extractOffsetFromBL: instr [
 						ifTrue: [((relativeJump bitOr: 16r3F000000) << 2) signedIntFromLong]
 						ifFalse: [relativeJump << 2].
 	^relativeJump
+]
+
+{ #category : #'accessing-abstract' }
+GdbARMAlien >> extractOffsetFromLoadStore: instr [
+"work out the address offset implied by instr.
+We assume it has been determined it is actually a load store before attaching any meaning to the result.
+If it is post-indexed, then the offset must be 0, no matter what else is encoded.
+If the instr is immediate-offset, pull the relevent bits out of instr.
+If it is register-offset, pull the value from the indicated register."
+	|offset shiftAmt shiftType |
+
+	"post-indexed means no offset to the read address"
+	(instr bitAnd: 1 << 24) = 0 ifTrue:[^0].
+	
+	(self instructionIsImmediateOffsetLoadStore: instr)
+		ifTrue:["two cases apply - a 12bit immediate for 010 group instructions and an 8bit for 000 group ldrh stuff"
+			(instr >> 25 bitAnd: 7) = 2
+				ifTrue:[ "immed word or byte op, with 12bit offset"
+					offset := instr bitAnd: 16rFFF]
+				ifFalse:["halfword 8bit offset"
+					offset := (instr bitAnd: 16rF00)>>4 bitOr: (instr bitAnd: 16rF)]].
+
+	(self instructionIsRegisterOffsetLoadStore: instr)
+		ifTrue:["both forms use same offset-reg encoding"
+			offset := self perform:(self registerStateGetters at:(instr bitAnd: 16rF) + 1).
+			(instr >> 25 bitAnd: 7) = 3
+				ifTrue:[ "register offset with assorted modifiers"
+					"sort out modifiers"
+					shiftType := instr >> 5 bitAnd: 3.
+					shiftAmt := instr  >>7 bitAnd: 16r1F.
+					shiftType = 0"lsl" ifTrue:[offset := offset << shiftAmt.].
+					shiftType = 1"lsr" ifTrue:[offset := offset >> shiftAmt].
+					shiftType = 2"asr" ifTrue:[offset := offset  >>> shiftAmt].
+					"I refuse to countenance using ROR or RRX here. Just Say No" ]
+				"halfword stuff register offset uses no modifiers in the form we suport. See ARM DDI0406A p. A8-156"].
+
+	"all forms have the bit 23 up/down flag to account for"
+	(instr bitAnd: 1<<23) = 0
+						ifTrue:["-ve offset" ^offset negated]
+						ifFalse:["+ve offset" ^offset]	
 ]
 
 { #category : #execution }
@@ -333,19 +377,34 @@ GdbARMAlien >> handleFailingBranch: instr to: address at: pc [
 
 { #category : #'error handling' }
 GdbARMAlien >> handleFailingLoadStore: instr at: pc [
+	"See e.g. ARM DDI0406A pp. A8-120, 124, 128, 132, 152, 156, etc. etc"
 	| baseReg destReg srcReg offset |
+
+	"find the register used as the base of the address and the register to load into or store from"
 	baseReg := self registerStateGetters at: (instr >> 16 bitAnd: 15)+ 1.
+	srcReg :=  self registerStateGetters at: (instr >> 12 bitAnd: 15)+ 1.
 	destReg := self registerStateSetters at: (instr >> 12 bitAnd: 15) + 1.
-	srcReg := self registerStateGetters at: (instr >> 12 bitAnd: 15) + 1.
-	"See e.g. A5.2.2/A5-20 ARM ARM v6"
-	offset := (instr >> 21 bitAnd: 2r1111001) = 2r0101000
-				ifTrue:
-					[(instr >> 23 anyMask: 1) "U bit"
-						ifTrue: [instr bitAnd: 16rFFF]
-						ifFalse: [(instr bitAnd: 16rFFF) negated]]
-				ifFalse:
-					[0].
+
+	"work out the relevant offset, whether an immediate or register value"
+	offset := self extractOffsetFromLoadStore: instr.
+	
 	(self instructionIsLDR: instr) ifTrue:
+		[^(ProcessorSimulationTrap
+				pc: pc
+				nextpc: pc + 4 
+				address: (self perform: baseReg) + offset
+				type: #read
+				accessor: destReg)
+			signal].
+	(self instructionIsLDRB: instr) ifTrue:
+		[^(ProcessorSimulationTrap
+				pc: pc
+				nextpc: pc + 4 
+				address: (self perform: baseReg) + offset
+				type: #read
+				accessor: destReg)
+			signal].
+	(self instructionIsLDRH: instr) ifTrue:
 		[^(ProcessorSimulationTrap
 				pc: pc
 				nextpc: pc + 4 
@@ -361,11 +420,23 @@ GdbARMAlien >> handleFailingLoadStore: instr at: pc [
 				type: #write
 				accessor: srcReg)
 			signal].
-	"Lars handled byte read/write failures.  i don't think we need to"
-	"(self instructionIsLDRB: instr) ifTrue:
-		[??].
 	(self instructionIsSTRB: instr) ifTrue:
-		[??]."
+		[^(ProcessorSimulationTrap
+				pc: pc
+				nextpc: pc + 4 
+				address: (self perform: baseReg) + offset
+				type: #write
+				accessor: srcReg)
+			signal].
+	(self instructionIsSTRH: instr) ifTrue:
+		[^(ProcessorSimulationTrap
+				pc: pc
+				nextpc: pc + 4 
+				address: (self perform: baseReg) + offset
+				type: #write
+				accessor: srcReg)
+			signal].
+
 	self error: 'handleFailingLoadStore:at: invoked for non-load/store?'
 ]
 
@@ -395,72 +466,124 @@ GdbARMAlien >> initializeStackFor: aCogit [
 
 { #category : #testing }
 GdbARMAlien >> instructionIsAddSP: instr [
-"is this aadd sp, sp, #? -  instruction?"
+"is this an add sp, sp, #? -  instruction?"
 	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rFFFFF00)) = (16r28DD000)]
 ]
 
 { #category : #testing }
 GdbARMAlien >> instructionIsAlignSP: instr [
-"is this a bics sp, sp, #7 -  instruction?"
-	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rFFFFFFF)) = (16r3DDD007)]
+"is this a subs sp, sp, #4 -  instruction?"
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rFFFFFFF)) = (16r2DDD004)]
 ]
 
 { #category : #testing }
-GdbARMAlien >> instructionIsAnyB: instr [
+GdbARMAlien >> instructionIsAnyB: instr [ 
 	"is this any of the B BX BL or BLX <offset> instructions?"
-	^(instr >> 25 bitAnd: 7) = 5
+	^ (self instructionIsB: instr)
+		or: [self instructionIsBL: instr]
+		or: [self instructionIsBLX: instr]
+		or: [self instructionIsBX: instr]
 ]
 
 { #category : #testing }
 GdbARMAlien >> instructionIsAnyLoadStore: instr [
-	"is this any of the LDR,STR instructions?"
-	^(instr >> 24 bitAnd: 15) = 5
+	"is this any of the LDR,STR instructions?
+	We handle byte, word, and halfword versions but NOT NOT signed extend, double or privileged versions"
+	
+	^(self instructionIsImmediateOffsetLoadStore: instr) or:[self instructionIsRegisterOffsetLoadStore: instr]
 ]
 
 { #category : #testing }
 GdbARMAlien >> instructionIsB: instr [
 "is this a B <offset> instruction?"
-	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rF<<24)) = (16rA<<24)]
+	"first test for non-NV condition code; some important instructions use it"
+	instr >> 28 = 16rF ifTrue:[^false].
+	"See ARM DDI0406A p. A8-44"
+	^ (instr bitAnd: (16rF<<24)) = (16rA<<24)
 ]
 
 { #category : #testing }
 GdbARMAlien >> instructionIsBL: instr [
 "is this a BL <offset> instruction?"
-	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rF<<24)) = (16rB<<24)]
+	"first test for non-NV condition code; some important instructions use it"
+	instr >> 28 = 16rF ifTrue:[^false].
+	"see ARM DDI0406A p. A8-58"
+	^(instr bitAnd: (16rF<<24)) = (16rB<<24)
 ]
 
 { #category : #testing }
 GdbARMAlien >> instructionIsBLX: instr [
-"is this a BLX <targetReg> instruction?"
-	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: 16r0FFFFFF0) = 16r12FFF30]
+"is this a BLX <targetReg> instruction? We DO NOT support the BLX immed version"
+	"first test for non-NV condition code; some important instructions use it"
+	instr >> 28 = 16rF ifTrue:[^false].
+	"See ARM DDI0406A p A8-60"
+ 	^(instr bitAnd: 16r0FFFFFF0) = 16r12FFF30
 ]
 
 { #category : #testing }
 GdbARMAlien >> instructionIsBX: instr [
 "is this a BX <targetReg> instruction?"
-	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: 16r0FFFFFF0) = 16r12FFF10]
+	"first test for non-NV condition code; some important instructions use it"
+	instr >> 28 = 16rF ifTrue:[^false].
+	"See ARM DDI0406A p. A8-62"
+ 	^(instr bitAnd: 16r0FFFFFF0) = 16r12FFF10
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsImmediateOffsetLoadStore: instr [
+	"is this any of the immediate offset LDR,STR instructions?"
+	| op1 |
+	"first test for non-NV condition code; some important instructions use it"
+	instr >> 28 = 16rF ifTrue:[^false].
+	"test for 010 group of load/stores"
+	op1 := instr >>25 bitAnd: 7.
+	op1 = 2 ifTrue:[^true].
+
+	"test for the ridiculously muddled 000 group"
+	op1 > 0 ifTrue:[^false].
+	"bit 21 must not be 1 and bit 22 must be 1"
+	(instr bitAnd: 3 <<21) = (2<<21) ifFalse:[^false].
+	"bits 4:7need to be 16rB for our purpose"
+	^(instr bitAnd: 16rF0) = 16rB0
+	
+	
 ]
 
 { #category : #testing }
 GdbARMAlien >> instructionIsLDR: instr [
 "is this a LDR instruction?"
 	| foo |
-	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" 
-		and: [foo := (instr >> 20 bitAnd: 16rFF).
-			foo = 16r51 "ldr r1, [r2, #imm]"
-				or:[foo = 16r59 "ldr r1, [r2, #-imm]"
-				or:[foo = 16r79 "ldr r1, [r2, r3]"]]]
+	"first test for non-NV condition code; some important instructions use it"
+	instr >> 28 = 16rF ifTrue:[^false].
+	"See ARM DDI0406A p. A8-120"
+	foo := (instr >> 20 bitAnd: 16rE5).
+	^foo = 16r41 "ldr r1, [r2, #+/-imm]"
+		or:[foo = 16r61 "ldr r1, [r2, r3]"]
 ]
 
 { #category : #testing }
 GdbARMAlien >> instructionIsLDRB: instr [
 "is this a LDRB instruction?"
 	| foo |
-	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" 
-		and: [foo := (instr >> 20 bitAnd: 16rFF).
-			foo = 16r55 "ldrb r1, [r2, #imm]"
-				or:[foo = 16r5D "ldrb r1, [r2, #-imm]"
-				or:[foo = 16r7D "ldrb r1, [r2, r3]"]]]
+	"first test for non-NV condition code; some important instructions use it"
+	instr >> 28 = 16rF ifTrue:[^false].
+	"See ARM DDI0406A p. A8-128"
+	foo := (instr >> 20 bitAnd: 16rE5).
+	^foo = 16r45 "ldrb r1, [r2, #+/-imm]"
+		or:[foo = 16r65 "ldrb r1, [r2, r3]"]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsLDRH: instr [
+"is this a LDRH instruction?"
+	| foo |
+	"first test for non-NV condition code; some important instructions use it"
+	instr >> 28 = 16rF ifTrue:[^false].
+	"See ARM DDI0406A p. A8-154"
+	(instr bitAnd: 16rF0) = 16rB0 ifFalse:[^false].
+	foo := (instr >> 20 bitAnd: 16rE3).
+	^foo = 16r3 "ldrh r1, [r2, #+/-imm]"
+		or:[foo = 16r1 "ldrh r1, [r2, r3]"]
 ]
 
 { #category : #testing }
@@ -482,6 +605,26 @@ GdbARMAlien >> instructionIsPush: instr [
 ]
 
 { #category : #testing }
+GdbARMAlien >> instructionIsRegisterOffsetLoadStore: instr [
+	"is this any of the register offset LDR,STR instructions?"
+	| op1 |
+	"first test for non-NV condition code; some important instructions use it"
+	instr >> 28 = 16rF ifTrue:[^false].
+	
+	op1 := instr >>25 bitAnd: 7.
+	"test for the 011 group - check bit 4 as well"
+	(op1 = 3 and:[(instr bitAnd: 16r10) = 0]) ifTrue:[^true].
+	"test for the ridiculously muddled 000 group"
+	op1 > 0 ifTrue:[^false].
+	"bit 21 & 22 must not be 1"
+	(instr bitAnd: 3 <<21) = 0 ifFalse:[^false].
+	"bits 4:7need to be 16rB for our purpose"
+	^(instr bitAnd: 16rF0) = 16rB0
+	
+	
+]
+
+{ #category : #testing }
 GdbARMAlien >> instructionIsReturnViaLR: instr [
 "is this a MOV pc, lr instruction?"
 	^instr =  16rE1A0F00E
@@ -491,14 +634,37 @@ GdbARMAlien >> instructionIsReturnViaLR: instr [
 GdbARMAlien >> instructionIsSTR: instr [
 "is this a STR instruction?"
 	| foo |
-	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [foo := (instr >> 20 bitAnd: 16rFF). foo = 16r58 "str r1, [r2, #imm]" or:[foo = 16r50 "str r1, [r2, #-imm]" or:[foo = 16r78 "str r1, [r2, r3]"]]]
+	"first test for non-NV condition code; some important instructions use it"
+	instr >> 28 = 16rF ifTrue:[^false].
+	"See ARM DDI0406A p. A8-382"
+ 	foo := (instr >> 20 bitAnd: 16rE5). 
+	^foo = 16r40 "str r1, [r2, #+/-imm]" 
+		or:[foo = 16r60] "str r1, [r2, #-imm]"
 ]
 
 { #category : #testing }
 GdbARMAlien >> instructionIsSTRB: instr [
 "is this a STRB instruction?"
 	| foo |
-	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [foo := (instr >> 20 bitAnd: 16rFF). foo = 16r54 "strb r1, [r2, #imm]" or:[foo = 16r5c "strb r1, [r2, #-imm]" or:[foo = 16r7c "strb r1, [r2, r3]"]]]
+	"first test for non-NV condition code; some important instructions use it"
+	instr >> 28 = 16rF ifTrue:[^false].
+	"See ARM DDI0406A p. A8-388"
+ 	foo := (instr >> 20 bitAnd: 16rE5). 
+	^foo = 16r44 "strb r1, [r2, #+/-imm]" 
+		or:[foo = 16r64] "strb r1, [r2, #-imm]"
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsSTRH: instr [
+"is this a STRH instruction?"
+	| foo |
+	"first test for non-NV condition code; some important instructions use it"
+	instr >> 28 = 16rF ifTrue:[^false].
+	"See ARM DDI0406A p. A8-154"
+	(instr bitAnd: 16rF0) = 16rB0 ifFalse:[^false].
+	foo := (instr >> 20 bitAnd: 16rE3).
+	^foo = 16r4 "strh r1, [r2, #+/-imm]"
+		or:[foo = 16r0 "strh r1, [r2, r3]"]
 ]
 
 { #category : #testing }
