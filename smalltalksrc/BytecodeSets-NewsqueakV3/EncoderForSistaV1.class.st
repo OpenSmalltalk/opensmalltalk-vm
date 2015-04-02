@@ -145,6 +145,11 @@ Class {
 	#category : #'BytecodeSets-SistaV1'
 }
 
+{ #category : #'bytecode decoding' }
+EncoderForSistaV1 class >> backJumpBytecodeSize [
+	^ 4
+]
+
 { #category : #'compiled method support' }
 EncoderForSistaV1 class >> bindingReadScanBlockFor: litVarIndex using: scanner [
 	"Answer a block argument for InstructionStream>>scanFor: that answers true
@@ -307,6 +312,11 @@ EncoderForSistaV1 class >> interpretNextInstructionFor: aClient in: anInstructio
 	^anInstructionStream interpretNextSistaV1InstructionFor: aClient
 ]
 
+{ #category : #'bytecode decoding' }
+EncoderForSistaV1 class >> isAlternateBytecodeSet [
+	^ true
+]
+
 { #category : #'instruction stream support' }
 EncoderForSistaV1 class >> isBlockReturnAt: pc in: method [
 	"Answer whether the bytecode at pc is a return from block."
@@ -335,6 +345,17 @@ EncoderForSistaV1 class >> isBranchIfTrueAt: pc in: method [
 	| byte |
 	byte := self nonExtensionBytecodeAt: pc in: method.
 	^byte >= 184 and: [byte <= 191 or: [byte = 238]]
+]
+
+{ #category : #'instruction stream support' }
+EncoderForSistaV1 class >> isCreateBlockAt: pc in: method [
+	"Answer whether the bytecode at pc is a block creation bytecode."
+	
+	"250		11111010 	eeiiikkk		jjjjjjjj		Push Closure Num Copied iii (+ExtA//16*8) Num Args kkk (+ ExtA\\16*8) BlockSize jjjjjjjj (+ExtB*256). ee = num extensions"
+
+	| byte |
+	byte := self nonExtensionBytecodeAt: pc in: method.
+	^ byte = 250
 ]
 
 { #category : #'instruction stream support' }
@@ -534,6 +555,26 @@ EncoderForSistaV1 class >> method: method refersInBytecodeToLiteral: aLiteral sp
 	^false
 ]
 
+{ #category : #'instruction stream support' }
+EncoderForSistaV1 class >> nonExtensionBytecodeAt: pc in: method [
+	"Answer the actual bytecode at pc in method, skipping past any preceeding extensions."
+	| scanpc byte |
+	scanpc := pc.
+	[ byte := method at: scanpc.
+	 byte >= 224 and: [byte <= 225]] whileTrue: [ scanpc := scanpc + 2 ].
+	^ byte
+]
+
+{ #category : #'block closure support' }
+EncoderForSistaV1 class >> numLocalTempsForBlockAt: startpc in: method [
+	| firstByte |
+	firstByte := method at: startpc.
+	^ firstByte = 230 
+		ifFalse: [ 0 ]
+		ifTrue: [ (method at: startpc + 1) + 1 ]
+	
+]
+
 { #category : #'bytecode decoding' }
 EncoderForSistaV1 class >> pcOfBlockCreationBytecodeForBlockStartingAt: startpc in: method [
 	"Answer the pc of the push closure bytecode whose block starts at startpc in method.
@@ -607,6 +648,11 @@ EncoderForSistaV1 class >> selectorToSendOrItselfFor: anInstructionStream in: me
 		[:extA :extB :nExtBytes| | index |
 		 index := ((method at: pc + 1) bitShift: -3) + (extA bitShift: 5).
 		 method literalAt: index + 1]
+]
+
+{ #category : #'bytecode decoding' }
+EncoderForSistaV1 class >> specialLiterals [
+	^ #(true false nil 0 1) 
 ]
 
 { #category : #'bytecode decoding' }
@@ -913,6 +959,15 @@ EncoderForSistaV1 >> genPushLiteralVar: literalIndex [
 	stream
 		nextPut: 227;
 		nextPut: extendedIndex
+]
+
+{ #category : #'bytecode generation' }
+EncoderForSistaV1 >> genPushNClosureTemps: numTemps [
+	"	230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii"
+	(numTemps < 0 or: [numTemps >= 64]) ifTrue:
+		[^self outOfRangeError: 'closure num temps' index: numTemps range: 0 to: 127].
+	stream nextPut: 230.
+	stream nextPut: numTemps
 ]
 
 { #category : #'bytecode generation' }
