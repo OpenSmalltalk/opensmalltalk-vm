@@ -139,7 +139,6 @@ Class {
 		'SubRdRd',
 		'TempReg',
 		'TstCqR',
-		'UnusedARMRegister',
 		'VarBaseReg',
 		'XorCqR',
 		'XorCwR',

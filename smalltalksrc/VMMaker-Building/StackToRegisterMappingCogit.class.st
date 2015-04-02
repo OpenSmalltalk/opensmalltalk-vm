@@ -1370,7 +1370,7 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 	"Const op var version of binary inline primitives."
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#binaryInlinePrimitive:"
-	| ra val untaggedVal |
+	| ra val untaggedVal adjust |
 	(ra := backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
 		[self ssAllocateRequiredReg:
 			(ra := optStatus isReceiverResultRegLive
@@ -1413,11 +1413,15 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
 		[64] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
-				 self MoveCq: val R: TempReg.
-				 self MoveXwr: ra R: TempReg R: ra].
+				adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
+				adjust ~= 0 ifTrue: [ self AddCq: adjust R: ra. ]. 
+				self MoveCq: val R: TempReg.
+				self MoveXwr: ra R: TempReg R: ra].
 		[65] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
-				 self MoveCq: val R: TempReg.
-				 self MoveXbr: ra R: TempReg R: ra]
+				adjust := objectMemory baseHeaderSize - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
+				self AddCq: adjust R: ra.
+				self MoveCq: val R: TempReg.
+				self MoveXbr: ra R: TempReg R: ra]
 
 	}
 	otherwise: [^EncounteredUnknownBytecode].
@@ -1507,10 +1511,10 @@ StackToRegisterMappingCogit >> genBinaryVarOpConstInlinePrimitive: prim [
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
 		[64] ->	[self genConvertSmallIntegerToIntegerInReg: rr.
-				self MoveCq: val >> 1 R: TempReg.
+				self MoveCq: (objectMemory integerValueOf: val) + (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1 R: TempReg.
 				self MoveXwr: TempReg R: rr R: rr ].
 		[65] ->	[self genConvertSmallIntegerToIntegerInReg: rr.
-				self MoveCq: val >> 1 R: TempReg.
+				self MoveCq: (objectMemory integerValueOf: val) + objectMemory baseHeaderSize - 1 R: TempReg.
 				self MoveXbr: TempReg R: rr R: rr ]
 
 	}
@@ -1524,7 +1528,7 @@ StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 	"Var op var version of binary inline primitives."
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#binaryInlinePrimitive:"
-	| ra rr |
+	| ra rr adjust |
 	(rr := backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
 		[self ssAllocateRequiredReg:
 			(rr := optStatus isReceiverResultRegLive
@@ -1567,8 +1571,12 @@ StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
 		[64] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
+				adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
+				adjust ~= 0 ifTrue: [ self AddCq: adjust R: ra. ]. 
 				self MoveXwr: ra R: rr R: rr ].
 		[65] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
+				adjust := objectMemory baseHeaderSize - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
+				self AddCq: adjust R: ra.
 				self MoveXbr: ra R: rr R: rr ]
 
 	}
@@ -3445,7 +3453,7 @@ StackToRegisterMappingCogit >> genTrinaryInlinePrimitive: prim [
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#trinaryInlinePrimitive:"
 
-	| ra rr |
+	| ra rr adjust |
 	(rr := backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
 		[self ssAllocateRequiredReg:
 			(rr := optStatus isReceiverResultRegLive
@@ -3466,8 +3474,12 @@ StackToRegisterMappingCogit >> genTrinaryInlinePrimitive: prim [
 	"Now: ra is the variable object, rr is long, TempReg holds the value to store."
 	prim caseOf: {
 		"0 - 1 pointerAt:put: and byteAt:Put:"
-		[0] ->	[ self MoveR: TempReg Xwr: ra R: rr ].
+		[0] ->	[ adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
+				adjust ~= 0 ifTrue: [ self AddCq: adjust R: ra. ]. 
+				self MoveR: TempReg Xwr: ra R: rr ].
 		[1] ->	[ self genConvertSmallIntegerToIntegerInReg: TempReg.
+				adjust := objectMemory baseHeaderSize - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
+				self AddCq: adjust R: ra.
 				self MoveR: TempReg Xbr: ra R: rr ]
 	}
 	otherwise: [^EncounteredUnknownBytecode].
