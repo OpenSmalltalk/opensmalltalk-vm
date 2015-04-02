@@ -1,6 +1,11 @@
 Extension { #name : #BytecodeEncoder }
 
 { #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizePushNClosureTemps: numTemps [
+	^self sizeOpcodeSelector: #genPushNClosureTemps: withArguments: {numTemps}
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
 BytecodeEncoder >> sizeSendAbsentDynamicSuperclass: selectorLiteralIndex numArgs: numArgs [
 	^self sizeOpcodeSelector: #genSendAbsentDynamicSuper:numArgs: withArguments: {selectorLiteralIndex. numArgs}
 ]
