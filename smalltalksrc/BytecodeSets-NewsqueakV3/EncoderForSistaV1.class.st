@@ -312,11 +312,6 @@ EncoderForSistaV1 class >> interpretNextInstructionFor: aClient in: anInstructio
 	^anInstructionStream interpretNextSistaV1InstructionFor: aClient
 ]
 
-{ #category : #'bytecode decoding' }
-EncoderForSistaV1 class >> isAlternateBytecodeSet [
-	^ true
-]
-
 { #category : #'instruction stream support' }
 EncoderForSistaV1 class >> isBlockReturnAt: pc in: method [
 	"Answer whether the bytecode at pc is a return from block."
@@ -567,12 +562,10 @@ EncoderForSistaV1 class >> nonExtensionBytecodeAt: pc in: method [
 
 { #category : #'block closure support' }
 EncoderForSistaV1 class >> numLocalTempsForBlockAt: startpc in: method [
-	| firstByte |
-	firstByte := method at: startpc.
-	^ firstByte = 230 
-		ifFalse: [ 0 ]
-		ifTrue: [ (method at: startpc + 1) + 1 ]
-	
+	"230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii"
+	^(method at: startpc) = 230
+		ifTrue: [method at: startpc + 1]
+		ifFalse: [0]
 ]
 
 { #category : #'bytecode decoding' }
@@ -777,11 +770,6 @@ EncoderForSistaV1 >> genCallPrimitive: primitiveIndex [
 EncoderForSistaV1 >> genDup [
 	"83			01010011			Duplicate Stack Top"
 	stream nextPut: 83
-]
-
-{ #category : #'in-line primitive generation' }
-EncoderForSistaV1 >> genInlineSmallIntegerAdd [
-	^self genCallInlinePrimitive: 0
 ]
 
 { #category : #'bytecode generation' }
