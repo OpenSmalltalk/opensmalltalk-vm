@@ -281,8 +281,3 @@ CogProcessorAlien >> smashRegistersWithValuesFrom: base by: step [
 		[:accessor :index|
 		self perform: accessor with: index - 1 * step + base]
 ]
-
-{ #category : #printing }
-CogProcessorAlien >> writePopPushDetailsIn:  memory in: transcript for: aCogit [
-	"This is for debugging the ARM.  By default do nothing.  GdbARMAlien overrides."
-]
