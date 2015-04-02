@@ -27,6 +27,9 @@
 #include "sqWin32.h"
 #if COGVM
 # include "cogmethod.h"
+# if NewspeakVM
+#	include "nssendcache.h"
+# endif
 # include "cogit.h"
 #endif
 
