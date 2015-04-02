@@ -644,6 +644,13 @@ SpurMemoryManager class >> baseHeaderSize [
 	^8
 ]
 
+{ #category : #'word size' }
+SpurMemoryManager class >> bytesPerOop [
+	"Answer the size of an oop for this manager, which is assumed
+	 to be equivalent to the underlying machine's word size."
+	^self wordSize
+]
+
 { #category : #'simulation only' }
 SpurMemoryManager class >> characterObjectOf: characterCode [
 	^characterCode asCharacter

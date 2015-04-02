@@ -503,6 +503,11 @@ CurrentImageCoInterpreterFacade >> isNonIntegerObject: anOop [
 	^objectMemory isNonIntegerObject: anOop
 ]
 
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacade >> isOptimizedMethod: methodObj [
+	^coInterpreter isOptimizedMethodHeader: (self methodHeaderOf: methodObj)
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> isQuickPrimitiveIndex: primNum [
 	^coInterpreter isQuickPrimitiveIndex: primNum
