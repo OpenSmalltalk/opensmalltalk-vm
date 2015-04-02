@@ -99,6 +99,14 @@ SistaStackToRegisterMappingCogit class >> generatorTableFrom: anArray [
 ]
 
 { #category : #'class initialization' }
+SistaStackToRegisterMappingCogit class >> initializeMiscConstants [
+	super initializeMiscConstants.
+	NumTrampolines := NewspeakVM
+							ifTrue: [67]
+							ifFalse: [53]
+]
+
+{ #category : #'class initialization' }
 SistaStackToRegisterMappingCogit class >> initializeWithOptions: optionsDictionary [
 
 	super initializeWithOptions: optionsDictionary.
@@ -130,7 +138,7 @@ SistaStackToRegisterMappingCogit >> compileBlockBodies [
 			[initialIndexOfIRC := indexOfIRC].
 		 [self compileBlockEntry: blockStart.
 		  initialStackPtr := simStackPtr.
-		  (result := self compileAbstractInstructionsFrom: blockStart startpc + ((self pushNilSize: methodObj) * blockStart numInitialNils)
+		  (result := self compileAbstractInstructionsFrom: blockStart startpc + (self pushNilSize: methodObj numInitialNils: blockStart numInitialNils)
 						through: blockStart startpc + blockStart span - 1) < 0 ifTrue:
 			[^result].
 		  "If the final simStackPtr is less than the initial simStackPtr then scanBlock: over-
@@ -597,9 +605,9 @@ SistaStackToRegisterMappingCogit >> getJumpTargetPCAt: pc [
 { #category : #initialization }
 SistaStackToRegisterMappingCogit >> initialize [
 	super initialize.
-	cogMethodSurrogateClass := objectMemory wordSize = 4
-											ifTrue: [CogSistaMethodSurrogate32]
-											ifFalse: [CogSistaMethodSurrogate64]
+	cogMethodSurrogateClass := (objectMemory ifNil: [self class objectMemoryClass]) wordSize = 4
+										ifTrue: [CogSistaMethodSurrogate32]
+										ifFalse: [CogSistaMethodSurrogate64]
 ]
 
 { #category : #initialization }
