@@ -7,6 +7,11 @@ InstructionPrinter >> blockReturnConstant: value [
 	self print: 'blockReturn: ', value printString
 ]
 
+{ #category : #'*BytecodeSets-SistaV1-decoding' }
+InstructionPrinter >> pushClosureTemps: numTemps [
+	self print: 'pushClosureTemps: ', numTemps printString
+]
+
 { #category : #'*BytecodeSets-NewsqueakV3-decoding' }
 InstructionPrinter >> pushExplicitOuter: n [ 
 	"Print the Push the Active Context's Receiver for an outer send at level (method literalAt: litIndex) bytecode."
