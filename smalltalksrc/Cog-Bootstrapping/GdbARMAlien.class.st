@@ -165,8 +165,13 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager [
 { #category : #disassembly }
 GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager fromAddress: address [
 "Decode what we can of the instruction and decorate it with useful stuff"
-	| word opcode rotate mode operand |
-	word := aSymbolManager objectMemory longAt: address.
+	| word opcode rotate mode operand memory addressinatorBlock|
+	addressinatorBlock := [:value|
+		(aSymbolManager lookupAddress: value)
+		ifNotNil: [:string| ' = ', value hex, ' = ', string]
+		ifNil: [' = ', value hex]].
+	
+	word := (memory:= aSymbolManager objectMemory) longAt: address.
 	(self instructionIsAnyB: word)
 		ifTrue:
 			[((self instructionIsB: word) or: [self instructionIsBL: word])
@@ -177,12 +182,40 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager from
 				ifTrue:["We can extract the offset from a  BX/BLX instructions register"			
 					operand := (self perform: (self registerStateGetters at: (word bitAnd: 15) + 1))]]
 		ifFalse:
-			[((self instructionIsAnyLoadStore: word)
-			  and: [(word >> 16 bitAnd: 15) = CogARMCompiler VarBaseReg])
-				ifTrue:
-					[operand := aSymbolManager varBaseAddress + (word bitAnd: 1 << 12 - 1)]
+			[(self instructionIsAnyLoadStore: word)
+				ifTrue: [|baseR|
+					"first see if this is a load via the varBase register - quick access globals. We'll trust
+					that nobody makes a nasty instruction that uses this reg in a mean way" 
+					(baseR := (word >> 16 bitAnd: 15)) = CogARMCompiler VarBaseReg
+						ifTrue:[ operand := aSymbolManager varBaseAddress + (word bitAnd: 1 << 12 - 1)]
+						ifFalse:[ operand := (self register: baseR) + (self extractOffsetFromLoadStore: word)].
+
+					"look for SP operations -pop/push"
+					 (self instructionIsPush: word) ifTrue: ["push - "
+						|srcR|
+						srcR := word >>12 bitAnd: 16rF.
+						^ (anInstructionString readStream upTo: $}), '}  (', (self register: srcR) hex, ') to ',  (self sp - 4) hex ].
+					(self instructionIsPop: word) ifTrue: ["pop - " 
+						^ (anInstructionString readStream upTo: $}), '}  (', (memory longAt: self sp) hex, ') ' , ' from ' , self sp hex ].
+
+					"look for a ld/st of the sp"
+					(self instructionIsLDRSP: word) ifTrue:[| val |
+						val := operand > memory memory size
+											ifTrue: [aSymbolManager simulatedVariableAt: operand ]
+											ifFalse: [memory longAt: operand].
+						^anInstructionString, '; Load SP (', val hex, ') from ', (addressinatorBlock value: operand)].
+					(self instructionIsSTRSP: word) ifTrue:[
+						^anInstructionString, '; Save SP (', self sp hex, ') to ',  (addressinatorBlock value: operand)].
+					]
 				ifFalse:
-					[opcode := word >> 21 bitAnd: 16rF.
+					["check for SP changers not relating to read/writing data"
+					(self instructionIsAlignSP: word)
+						ifTrue: [^anInstructionString, ' ALIGN SP ' , self sp hex; cr].
+					(self instructionIsAddSP: word)
+						ifTrue:[^anInstructionString, ' ADD ', (word bitAnd: 16rFF) asString,' to SP = ' , self sp hex].				
+
+					"check for the end of a mov/orr/orr/orr set filling a reg with a const"
+					opcode := word >> 21 bitAnd: 16rF.
 					 opcode ~= CogARMCompiler orOpcode ifTrue:
 						[^anInstructionString].
 					 rotate := word >> 8 bitAnd: 16rF.
@@ -191,10 +224,8 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager from
 					 (mode = 1 and: [rotate ~= 0]) ifTrue:
 						[^anInstructionString].
 					 operand := aSymbolManager backEnd literalBeforeFollowingAddress: address + 4]].
-	"is there an intersting address with this?"
-	^(aSymbolManager lookupAddress: operand)
-		ifNotNil: [:string| anInstructionString, ' = ', (operand printStringRadix: 16), ' = ', string]
-		ifNil: [anInstructionString, ' = ', (operand printStringRadix: 16)]
+	"is there an interesting address with this?"
+	^anInstructionString, (addressinatorBlock value: operand)
 ]
 
 { #category : #accessing }
@@ -1264,32 +1295,6 @@ GdbARMAlien >> vflag: unsignedInteger [
 GdbARMAlien >> voidRegisterState [
 	"N.B. keep in sync with setRegisterState:"
 	self setRegisterState: (Array new: 17 withAll: 0)
-]
-
-{ #category : #printing }
-GdbARMAlien >> writePopPushDetailsIn: memory in: transcript for: aCogit [ 
-	"if the next instruction is a pop or push, or a ldr/str that touches the
-	SP, write the details ontranscript"
-	| instr |
-	[instr := memory unsignedLongAt: self pc + 1 bigEndian: false]
-		on: Error
-		do: [:ex | ^ self].
-	(self instructionIsPop: instr)
-		ifTrue: [^transcript tab; nextPutAll: 'POP ' , (memory unsignedLongAt: self sp + 1 bigEndian: false) hex , ' from ' , self sp hex; cr].
-	(self instructionIsPush: instr)
-		ifTrue: [^transcript tab; nextPutAll: 'PUSH ' , (self register: (instr bitAnd: 61440)
-							>> 12) hex , ' to ' , (self sp - 4) hex; cr].
-	(self instructionIsLDRSP: instr)
-		ifTrue: [| val |
-			val := self sl > memory size
-						ifTrue: [aCogit simulatedVariableAt: self sl]
-						ifFalse: [memory unsignedLongAt: self sl + 1 bigEndian: false].
-			^transcript tab; nextPutAll: 'LOAD SP ' , val hex , ' from ' , self sl hex; cr].
-	(self instructionIsSTRSP: instr)
-		ifTrue: [^transcript tab; nextPutAll: 'STORE SP ' , self sp hex , ' to ' , self sl hex; cr].
-	(self instructionIsAlignSP: instr)
-		ifTrue: [^transcript tab; nextPutAll: 'ALIGN SP ' , self sp hex; cr].
-	(self instructionIsAddSP: instr) ifTrue:[^transcript tab; nextPutAll: 'ADD ', (instr bitAnd: 16rFF) asString,' to SP = ' , self sp hex; cr]
 ]
 
 { #category : #accessing }
