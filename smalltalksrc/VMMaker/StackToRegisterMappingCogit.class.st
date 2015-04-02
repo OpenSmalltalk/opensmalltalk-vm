@@ -218,7 +218,7 @@ StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 			var: 'numPushNilsFunction'
 				declareC: 'sqInt (* const numPushNilsFunction)(struct _BytecodeDescriptor *,sqInt,sqInt,sqInt) = ', (aCodeGen cFunctionNameFor: self numPushNilsFunction);
 			var: 'pushNilSizeFunction'
-				declareC: 'sqInt (* const pushNilSizeFunction)(sqInt) = ', (aCodeGen cFunctionNameFor: self pushNilSizeFunction)].
+				declareC: 'sqInt (* const pushNilSizeFunction)(sqInt,sqInt) = ', (aCodeGen cFunctionNameFor: self pushNilSizeFunction)].
 
 	aCodeGen
 		addSelectorTranslation: #register to: (aCodeGen cFunctionNameFor: 'registerr');
@@ -226,99 +226,11 @@ StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 ]
 
 { #category : #'class initialization' }
-StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures [
-	"StackToRegisterMappingCogit initializeBytecodeTableForNewspeakV3PlusClosures"
-
-	numPushNilsFunction := #v3:Num:Push:Nils:.
-	pushNilSizeFunction := #v3PushNilSize:.
-	NSSendIsPCAnnotated := true. "IsNSSendCall used by PushImplicitReceiver"
-	FirstSpecialSelector := 176.
-	self flag:
-'Special selector send class must be inlined to agree with the interpreter, which
- inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
- class is inlined there will be an MNU.  It must be that the Cointerpreter and Cogit
- have identical semantics.  We get away with not hardwiring the other special
- selectors either because in the Cointerpreter they are not inlined or because they
- are inlined only to instances of classes for which there will always be a method.'.
-	self generatorTableFrom: #(
-		(1    0   15 genPushReceiverVariableBytecode needsFrameNever: 1)
-		(1  16   31 genPushTemporaryVariableBytecode needsFrameIfMod16GENumArgs: 1)
-		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
-		(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1)
-		(1  96 103 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
-		(1 104 111 genStoreAndPopTemporaryVariableBytecode)
-		(1 112 112 genPushReceiverBytecode needsFrameNever: 1)
-		(1 113 113 genPushConstantTrueBytecode needsFrameNever: 1)
-		(1 114 114 genPushConstantFalseBytecode needsFrameNever: 1)
-		(1 115 115 genPushConstantNilBytecode needsFrameNever: 1)
-		(1 116 119 genPushQuickIntegerConstantBytecode needsFrameNever: 1)
-		"method returns in blocks need a frame because of nonlocalReturn:through:"
-		(1 120 120 genReturnReceiver				return needsFrameIfInBlock: isMappedInBlock 0)
-		(1 121 121 genReturnTrue					return needsFrameIfInBlock: isMappedInBlock 0)
-		(1 122 122 genReturnFalse					return needsFrameIfInBlock: isMappedInBlock 0)
-		(1 123 123 genReturnNil					return needsFrameIfInBlock: isMappedInBlock 0)
-		(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: isMappedInBlock -1)
-		(1 125 125 genReturnTopFromBlock		return needsFrameNever: -1)
-
-		(3 126 126 unknownBytecode)		"Was non-absent Newspeak super send"
-		(2 127 127 unknownBytecode)		"Was push implicit receiver"
-
-		(2 128 128 extendedPushBytecode needsFrameNever: 1)
-		(2 129 129 extendedStoreBytecode)
-		(2 130 130 extendedStoreAndPopBytecode)
-		(2 131 131 genExtendedSendBytecode isMapped)
-		(3 132 132 doubleExtendedDoAnythingBytecode isMapped)
-		(2 133 133 genExtendedSuperBytecode isMapped)
-		(2 134 134 genSecondExtendedSendBytecode isMapped)
-		(1 135 135 genPopStackBytecode needsFrameNever: -1)
-		(1 136 136 duplicateTopBytecode needsFrameNever: 1)
-
-		(1 137 137 genPushActiveContextBytecode)
-		(2 138 138 genPushNewArrayBytecode)
-
-		(3 139 139 callPrimitiveBytecode)
-		(3 140 140 genPushRemoteTempLongBytecode)
-		(3 141 141 genStoreRemoteTempLongBytecode)
-		(3 142 142 genStoreAndPopRemoteTempLongBytecode)
-		(4 143 143 genPushClosureCopyCopiedValuesBytecode block v3:Block:Code:Size:)
-
-		(1 144 151 genShortUnconditionalJump			branch v3:ShortForward:Branch:Distance:)
-		(1 152 159 genShortJumpIfFalse					branch isBranchFalse isMapped "because of mustBeBoolean"
-															v3:ShortForward:Branch:Distance:)
-		(2 160 163 genLongUnconditionalBackwardJump	branch isMapped "because of interrupt check"
-															v3:Long:Branch:Distance:)
-		(2 164 167 genLongUnconditionalForwardJump		branch v3:Long:Branch:Distance:)
-		(2 168 171 genLongJumpIfTrue					branch isBranchTrue isMapped "because of mustBeBoolean"
-															v3:LongForward:Branch:Distance:)
-		(2 172 175 genLongJumpIfFalse					branch isBranchFalse isMapped "because of mustBeBoolean"
-															v3:LongForward:Branch:Distance:)
-
-		(1 176 176 genSpecialSelectorArithmetic isMapped AddRR)
-		(1 177 177 genSpecialSelectorArithmetic isMapped SubRR)
-		(1 178 178 genSpecialSelectorComparison isMapped JumpLess)
-		(1 179 179 genSpecialSelectorComparison isMapped JumpGreater)
-		(1 180 180 genSpecialSelectorComparison isMapped JumpLessOrEqual)
-		(1 181 181 genSpecialSelectorComparison isMapped JumpGreaterOrEqual)
-		(1 182 182 genSpecialSelectorComparison isMapped JumpZero)
-		(1 183 183 genSpecialSelectorComparison isMapped JumpNonZero)
-		(1 184 189 genSpecialSelectorSend isMapped)	 " #* #/ #\\ #@ #bitShift: //"
-		(1 190 190 genSpecialSelectorArithmetic isMapped AndRR)
-		(1 191 191 genSpecialSelectorArithmetic isMapped OrRR)
-		(1 192 197 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 199 199 genSpecialSelectorClass needsFrameIfStackGreaterThanOne: notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 200 207 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
-		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
-		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
-		(1 240 255 genSendLiteralSelector2ArgsBytecode isMapped))
-]
-
-{ #category : #'class initialization' }
 StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 	"StackToRegisterMappingCogit initializeBytecodeTableForNewspeakV4"
 
 	numPushNilsFunction := #v4:Num:Push:Nils:.
-	pushNilSizeFunction := #v4PushNilSize:.
+	pushNilSizeFunction := #v4PushNilSize:numInitialNils:.
 	NSSendIsPCAnnotated := true. "IsNSSendCall used by SendAbsentImplicit"
 	FirstSpecialSelector := 80.
 	self flag:
@@ -423,7 +335,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 	"StackToRegisterMappingCogit initializeBytecodeTableForSistaV1"
 
 	numPushNilsFunction := #sistaV1:Num:Push:Nils:.
-	pushNilSizeFunction := #sistaV1PushNilSize:.
+	pushNilSizeFunction := #sistaV1PushNilSize:numInitialNils:.
 	FirstSpecialSelector := 96.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
@@ -551,7 +463,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 	"StackToRegisterMappingCogit initializeBytecodeTableForSqueakV3PlusClosures"
 
 	numPushNilsFunction := #v3:Num:Push:Nils:.
-	pushNilSizeFunction := #v3PushNilSize:.
+	pushNilSizeFunction := #v3PushNilSize:numInitialNils:.
 	FirstSpecialSelector := 176.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
@@ -643,7 +555,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 
 	super initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid..
 	numPushNilsFunction := #v3or4:Num:Push:Nils:.
-	pushNilSizeFunction := #v3or4PushNilSize:
+	pushNilSizeFunction := #v3or4PushNilSize:numInitialNils:
 ]
 
 { #category : #'class initialization' }
@@ -652,7 +564,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 
 	super initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid.
 	numPushNilsFunction := #squeakV3orSistaV1:Num:Push:Nils:.
-	pushNilSizeFunction := #squeakV3orSistaV1PushNilSize:
+	pushNilSizeFunction := #squeakV3orSistaV1PushNilSize:numInitialNils:
 ]
 
 { #category : #'class initialization' }
@@ -1039,7 +951,7 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 			[initialIndexOfIRC := indexOfIRC].
 		 [self compileBlockEntry: blockStart.
 		  initialStackPtr := simStackPtr.
-		  (result := self compileAbstractInstructionsFrom: blockStart startpc + ((self pushNilSize: methodObj) * blockStart numInitialNils)
+		  (result := self compileAbstractInstructionsFrom: blockStart startpc + (self pushNilSize: methodObj numInitialNils: blockStart numInitialNils)
 						through: blockStart startpc + blockStart span - 1) < 0 ifTrue:
 			[^result].
 		  "If the final simStackPtr is less than the initial simStackPtr then scanBlock: over-
@@ -4149,9 +4061,9 @@ StackToRegisterMappingCogit >> printSimStack [
 ]
 
 { #category : #'span functions' }
-StackToRegisterMappingCogit >> pushNilSize: aMethodObj [
+StackToRegisterMappingCogit >> pushNilSize: aMethodObj numInitialNils: numInitialNils [
 	<inline: true>
-	^self perform: pushNilSizeFunction with: aMethodObj
+	^self perform: pushNilSizeFunction with: aMethodObj with: numInitialNils
 ]
 
 { #category : #'compile abstract instructions' }
@@ -4237,7 +4149,8 @@ StackToRegisterMappingCogit >> scanBlock: blockStart [
 			  at the end of the block in compileBlockBodies."
 			 (numPushNils := self numPushNils: descriptor pc: pc nExts: nExts method: methodObj) > 0
 				ifTrue:
-					[self assert: descriptor numBytes = 1. "see compileMethodBody"
+					[self assert: (descriptor numBytes = 1
+									or: [descriptor generator == #genPushClosureTempsBytecode]).
 					 blockStart numInitialNils: blockStart numInitialNils + numPushNils]
 				ifFalse:
 					[pushingNils := false]].
@@ -4353,10 +4266,10 @@ StackToRegisterMappingCogit >> sistaV1: descriptor Num: pc Push: nExts Nils: aMe
 ]
 
 { #category : #'span functions' }
-StackToRegisterMappingCogit >> sistaV1PushNilSize: aMethodObj [
+StackToRegisterMappingCogit >> sistaV1PushNilSize: aMethodObj numInitialNils: numInitialNils [
 	"230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii"
 	<inline: true>
-	^2
+	^numInitialNils = 0 ifTrue: [0] ifFalse: [2]
 ]
 
 { #category : #'span functions' }
@@ -4369,10 +4282,10 @@ StackToRegisterMappingCogit >> squeakV3orSistaV1: descriptor Num: pc Push: nExts
 ]
 
 { #category : #'span functions' }
-StackToRegisterMappingCogit >> squeakV3orSistaV1PushNilSize: aMethodObj [
+StackToRegisterMappingCogit >> squeakV3orSistaV1PushNilSize: aMethodObj numInitialNils: numInitialNils [
 	^(coInterpreter methodUsesAlternateBytecodeSet: aMethodObj)
-		ifTrue: [self sistaV1PushNilSize: aMethodObj]
-		ifFalse: [self v3PushNilSize: aMethodObj]
+		ifTrue: [self sistaV1PushNilSize: aMethodObj numInitialNils: numInitialNils]
+		ifFalse: [self v3PushNilSize: aMethodObj numInitialNils: numInitialNils]
 ]
 
 { #category : #'simulation stack' }
@@ -4815,9 +4728,9 @@ StackToRegisterMappingCogit >> v3: descriptor Num: pc Push: nExts Nils: aMethodO
 ]
 
 { #category : #'span functions' }
-StackToRegisterMappingCogit >> v3PushNilSize: aMethodObj [
+StackToRegisterMappingCogit >> v3PushNilSize: aMethodObj numInitialNils: numInitialNils [
 	<inline: true>
-	^1
+	^numInitialNils
 ]
 
 { #category : #'span functions' }
@@ -4830,10 +4743,10 @@ StackToRegisterMappingCogit >> v3or4: descriptor Num: pc Push: nExts Nils: aMeth
 ]
 
 { #category : #'span functions' }
-StackToRegisterMappingCogit >> v3or4PushNilSize: aMethodObj [
+StackToRegisterMappingCogit >> v3or4PushNilSize: aMethodObj numInitialNils: numInitialNils [
 	^(coInterpreter methodUsesAlternateBytecodeSet: aMethodObj)
-		ifTrue: [self v4PushNilSize: aMethodObj]
-		ifFalse: [self v3PushNilSize: aMethodObj]
+		ifTrue: [self v4PushNilSize: aMethodObj numInitialNils: numInitialNils]
+		ifFalse: [self v3PushNilSize: aMethodObj numInitialNils: numInitialNils]
 ]
 
 { #category : #'span functions' }
@@ -4850,9 +4763,9 @@ StackToRegisterMappingCogit >> v4: descriptor Num: pc Push: nExts Nils: aMethodO
 ]
 
 { #category : #'span functions' }
-StackToRegisterMappingCogit >> v4PushNilSize: aMethodObj [
+StackToRegisterMappingCogit >> v4PushNilSize: aMethodObj numInitialNils: numInitialNils [
 	"77			01001101				Push false [* 1:true, 2:nil, 3:thisContext, ..., -N: pushExplicitOuter: N, N = Extend B]
 	 225		11100001	sbbbbbbb	Extend B (Ext B = Ext B prev * 256 + Ext B)"
 	<inline: true>
-	^3
+	^3 * numInitialNils
 ]
