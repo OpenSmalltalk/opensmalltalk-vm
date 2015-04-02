@@ -2321,27 +2321,27 @@ StackInterpreter >> binaryInlinePrimitive: primIndex [
 
 		"2064	unchecked Pointer Object>>at:.		The receiver is guaranteed to be a pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger"
 		[64]	->	[result := objectMemory
-									fetchPointer: (objectMemory integerValueOf: self internalStackTop)
+									fetchPointer: (objectMemory integerValueOf: self internalStackTop) - 1
 									ofObject: (self internalStackValue: 1).
 					 self internalPop: 1; internalStackTopPut: result].
 		"2065	unchecked Byte Object>>at:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The result is a SmallInteger."
 		[65]	->	[result := objectMemory
-									fetchByte: (objectMemory integerValueOf: self internalStackTop)
+									fetchByte: (objectMemory integerValueOf: self internalStackTop) - 1
 									ofObject: (self internalStackValue: 1).
 					 self internalPop: 1; internalStackTopPut: (objectMemory integerObjectOf: result)].
 		"2066	unchecked 16-bit Word Object>>at:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The result is a SmallInteger."
 		[66]	->	[result := objectMemory
-									fetchShort16: (objectMemory integerValueOf: self internalStackTop)
+									fetchShort16: (objectMemory integerValueOf: self internalStackTop) - 1
 									ofObject: (self internalStackValue: 1).
 					 self internalPop: 1; internalStackTopPut: (objectMemory integerObjectOf: result)].
 		"2067	unchecked 32 bit Word Object>>at:.	The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The result is a SmallInteger or a LargePositiveInteger."
 		[67]	->	[result := objectMemory
-									fetchLong32: (objectMemory integerValueOf: self internalStackTop)
+									fetchLong32: (objectMemory integerValueOf: self internalStackTop) - 1
 									ofObject: (self internalStackValue: 1).
 					 self internalPop: 1; internalStackTopPut: (self signed64BitValueOf: result)].
 		"2068	unchecked 64 bit Word Object>>at:.		The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The result is a SmallInteger or a LargePositiveInteger."
 		[68]	->	[result64 := objectMemory
-									fetchLong64: (objectMemory integerValueOf: self internalStackTop)
+									fetchLong64: (objectMemory integerValueOf: self internalStackTop) - 1
 									ofObject: (self internalStackValue: 1).
 					 self internalPop: 1; internalStackTopPut: (self signed64BitValueOf: result)] }
 	otherwise:
@@ -14166,35 +14166,35 @@ StackInterpreter >> trinaryInlinePrimitive: primIndex [
 		"3000	unchecked Pointer Object>>at:put:.			The receiver is guaranteed to be a pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger"
 		[0]	->	[result := self internalStackTop.
 				 objectMemory
-					storePointer: (objectMemory integerValueOf: (self internalStackValue: 1))
+					storePointer: (objectMemory integerValueOf: (self internalStackValue: 1)) - 1
 					ofObject: (self internalStackValue: 2)
 					withValue: result.
 				 self internalPop: 2; internalStackTopPut: result].
 		"3001	unchecked Byte Object>>at:put:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 8 bits."
 		[1]	->	[result := self internalStackTop.
 				 objectMemory
-					storeByte: (objectMemory integerValueOf: (self internalStackValue: 1))
+					storeByte: (objectMemory integerValueOf: (self internalStackValue: 1)) - 1
 					ofObject: (self internalStackValue: 2)
 					withValue: (objectMemory integerValueOf: result).
 				 self internalPop: 2; internalStackTopPut: result].
 		"3002	unchecked Word Object>>at:put:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 16 bits."
 		[2]	->	[result := self internalStackTop.
 				 objectMemory
-					storeShort16: (objectMemory integerValueOf: (self internalStackValue: 1))
+					storeShort16: (objectMemory integerValueOf: (self internalStackValue: 1)) - 1
 					ofObject: (self internalStackValue: 2)
 					withValue: (objectMemory integerValueOf: result).
 				 self internalPop: 2; internalStackTopPut: result].
 		"3003	unchecked DoubleWord Object>>at:put:.	The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 32 bits."
 		[3]	->	[result := self internalStackTop.
 				 objectMemory
-					storeLong32: (objectMemory integerValueOf: (self internalStackValue: 1))
+					storeLong32: (objectMemory integerValueOf: (self internalStackValue: 1)) - 1
 					ofObject: (self internalStackValue: 2)
 					withValue: (objectMemory integerValueOf: result).
 				 self internalPop: 2; internalStackTopPut: result].
 		"3004	unchecked QuadWord Object>>at:put:.		The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 64 bits."
 		[4]	->	[result := self internalStackTop.
 				 objectMemory
-					storeLong64: (objectMemory integerValueOf: (self internalStackValue: 1))
+					storeLong64: (objectMemory integerValueOf: (self internalStackValue: 1)) - 1
 					ofObject: (self internalStackValue: 2)
 					withValue: (objectMemory integerValueOf: result).
 				 self internalPop: 2; internalStackTopPut: result] }
