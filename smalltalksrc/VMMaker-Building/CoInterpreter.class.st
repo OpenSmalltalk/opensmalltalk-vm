@@ -2216,7 +2216,7 @@ CoInterpreter >> checkStackIntegrity [
 			 "Skip the instruction pointer on top of stack of inactive pages."
 			 thePage = stackPage ifFalse:
 				[theSP := theSP + objectMemory wordSize].
-			 [frameRcvrOffset := self frameReceiverOffset: theFP.
+			 [frameRcvrOffset := self frameReceiverLocation: theFP.
 			  [theSP <= frameRcvrOffset] whileTrue:
 				[oop := stackPages longAt: theSP.
 				 ((objectMemory isNonImmediate: oop) 
@@ -3204,7 +3204,7 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 					 theSP := theSP + objectMemory wordSize].
 			 [self assert: (thePage addressIsInPage: theFP).
 			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr asVoidPointer]).
-			  offset := theFP + (self frameStackedReceiverOffset: theFP).
+			  offset := self frameReceiverLocation: theFP.
 	 		  [theSP <= offset] whileTrue:
 				[oop := stackPages longAt: theSP.
 				 (objectMemory isOopForwarded: oop) ifTrue:
@@ -3394,7 +3394,7 @@ CoInterpreter >> frameReceiver: theFP [
 ]
 
 { #category : #'frame access' }
-CoInterpreter >> frameReceiverOffset: theFP [
+CoInterpreter >> frameReceiverLocation: theFP [
 	<inline: true>
 	<var: #theFP type: #'char *'>
 	^(self isMachineCodeFrame: theFP)
@@ -4504,7 +4504,7 @@ CoInterpreter >> mapStackPages [
 			[self assert: (thePage addressIsInPage: theFP).
 			 self assert: (thePage addressIsInPage: theSP).
 			 self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr]).
-			 frameRcvrOffset := self frameReceiverOffset: theFP.
+			 frameRcvrOffset := self frameReceiverLocation: theFP.
 	 		  [theSP <= frameRcvrOffset] whileTrue:
 				[oop := stackPages longAt: theSP.
 				 (objectMemory shouldRemapOop: oop) ifTrue:
@@ -4676,7 +4676,7 @@ CoInterpreter >> markAndTraceStackPage: thePage [
 	"Skip the instruction pointer on top of stack of inactive pages."
 	thePage = stackPage ifFalse:
 		[theSP := theSP + objectMemory wordSize].
-	[frameRcvrOffset := self frameReceiverOffset: theFP.
+	[frameRcvrOffset := self frameReceiverLocation: theFP.
 	 [theSP <= frameRcvrOffset] whileTrue:
 		[oop := stackPages longAt: theSP.
 		 (objectMemory isOopForwarded: oop) ifTrue:
