@@ -17438,9 +17438,7 @@ followForwardingPointersInStackZone(sqInt theBecomeEffectsFlags)
 				assert(addressIsInPage(thePage, theFP));
 				assert((theIPPtr == 0)
 				 || (addressIsInPage(thePage, ((void *)theIPPtr))));
-				offset = theFP + (frameStackedReceiverOffsetNumArgs(((((usqInt)(longAt(theFP + FoxMethod)))) < (startOfMemory())
-	? ((mframeCogMethod(theFP))->cmNumArgs)
-	: byteAt((theFP + FoxIFrameFlags) + 1))));
+				offset = frameReceiverOffset(theFP);
 				while (theSP <= offset) {
 					oop = longAt(theSP);
 					if (((oop & 3) == 0)

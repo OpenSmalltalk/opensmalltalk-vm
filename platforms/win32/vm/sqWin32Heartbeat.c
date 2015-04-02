@@ -215,6 +215,7 @@ ioUpdateVMTimezone()
 {
 	__int64 utcNow, localNow;
 
+	updateMicrosecondClock();
 	GetSystemTimeAsFileTime((FILETIME *)&utcNow);
 	FileTimeToLocalFileTime((FILETIME *)&utcNow,(FILETIME *)&localNow);
 	vmGMTOffset = (localNow - utcNow) / (__int64)TocksPerMicrosecond;

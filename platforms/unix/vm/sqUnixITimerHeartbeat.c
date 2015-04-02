@@ -138,9 +138,9 @@ updateMicrosecondClock()
 void
 ioUpdateVMTimezone()
 {
+	updateMicrosecondClock();
 #ifdef HAVE_TM_GMTOFF
 	time_t utctt;
-	updateMicrosecondClock();
 	utctt = (get64(utcMicrosecondClock) - MicrosecondsFrom1901To1970)
 				/ MicrosecondsPerSecond;
 	vmGMTOffset = localtime(&utctt)->tm_gmtoff * MicrosecondsPerSecond;
