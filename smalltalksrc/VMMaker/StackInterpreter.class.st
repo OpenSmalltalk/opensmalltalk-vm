@@ -3960,7 +3960,7 @@ StackInterpreter >> checkOkayStackPage: thePage [
 	"Skip the instruction pointer on top of stack of inactive pages."
 	thePage = stackPage ifFalse:
 		[theSP := theSP + objectMemory wordSize].
-	[frameRcvrOffset := self frameReceiverOffset: theFP.
+	[frameRcvrOffset := self frameReceiverLocation: theFP.
 	 [theSP <= frameRcvrOffset] whileTrue:
 		[oop := stackPages longAt: theSP.
 		 (objectMemory isIntegerObject: oop) ifFalse:
@@ -6077,7 +6077,7 @@ StackInterpreter >> findSPOrNilOf: theFP on: thePage startingFrom: startFrame [
 	startFrame = theFP ifTrue:
 		[thePage headSP >= startFrame ifTrue:
 			["If the SP is invalid return the pointer to the receiver field."
-			 ^self frameReceiverOffset: aFrame].
+			 ^self frameReceiverLocation: theFP].
 		 "Skip the instruction pointer on top of stack of inactive pages."
 		^thePage = stackPage
 			ifTrue: [thePage headSP]
@@ -6330,7 +6330,7 @@ StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 			 and: [objectMemory isForwarded: oop]) ifTrue:
 				[stackPages longAt: ptr put: (objectMemory followForwarded: oop)]].
 	theSP
-		to: (self frameReceiverOffset: theFP)
+		to: (self frameReceiverLocation: theFP)
 		by: objectMemory wordSize
 		do: [:ptr| | oop |
 			oop := stackPages longAt: ptr.
@@ -6665,7 +6665,7 @@ StackInterpreter >> frameReceiver: theFP [
 ]
 
 { #category : #'frame access' }
-StackInterpreter >> frameReceiverOffset: theFP [
+StackInterpreter >> frameReceiverLocation: theFP [
 	<inline: true>
 	<var: #theFP type: #'char *'>
 	^theFP + FoxReceiver
@@ -9160,7 +9160,7 @@ StackInterpreter >> markAndTraceStackPage: thePage [
 	"Skip the instruction pointer on top of stack of inactive pages."
 	thePage = stackPage ifFalse:
 		[theSP := theSP + objectMemory wordSize].
-	[frameRcvrOffset := self frameReceiverOffset: theFP.
+	[frameRcvrOffset := self frameReceiverLocation: theFP.
 	 [theSP <= frameRcvrOffset] whileTrue:
 		[oop := stackPages longAt: theSP.
 		 (objectMemory isOopForwarded: oop) ifTrue:
@@ -9295,7 +9295,7 @@ StackInterpreter >> marriedContext: spouseContext pointsTo: anOop stackDeltaForC
 						and: [anOop = (self frameContext: (self frameCallerFP: theFP))]) ifTrue:
 							[^true]]].
 	"Now check receiver, temps and stack contents"
-	rcvrOffset := self frameReceiverOffset: theFP.
+	rcvrOffset := self frameReceiverLocation: theFP.
 	 [theSP <= rcvrOffset] whileTrue:
 		[anOop = (stackPages longAt: theSP) ifTrue:
 			[^true].
@@ -10765,7 +10765,7 @@ StackInterpreter >> printFrame: theFP [
 								[self frameCallerSP: frameAbove]]].
 	theSP ifNil:
 		[self print: 'could not find sp; using bogus value'; cr.
-		 theSP := self frameReceiverOffset: theFP].
+		 theSP := self frameReceiverLocation: theFP].
 	self printFrame: theFP WithSP: theSP.
 	frameAbove ifNotNil:
 		[self printFrameThing: 'frame pc' at: frameAbove + FoxCallerSavedIP]
@@ -11454,7 +11454,7 @@ StackInterpreter >> printStackReferencesTo: oop [
 			 "Skip the instruction pointer on top of stack of inactive pages."
 			 thePage = stackPage ifFalse:
 				[theSP := theSP + objectMemory wordSize].
-			 [[theSP <= (self frameReceiverOffset: theFP)] whileTrue:
+			 [[theSP <= (self frameReceiverLocation: theFP)] whileTrue:
 				[oop = (stackPages longAt: theSP) ifTrue:
 					[self print: 'FP: '; printHexnp: theFP; print: ' @ '; printHexnp: theSP; cr].
 				 theSP := theSP + objectMemory wordSize].
