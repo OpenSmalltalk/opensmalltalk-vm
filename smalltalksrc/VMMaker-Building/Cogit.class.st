@@ -6326,6 +6326,7 @@ Cogit >> initializeFixupAt: targetIndex [
 
 { #category : #'newspeak support' }
 Cogit >> initializeNSSendCache: cacheAddress selector: selector numArgs: numArgs depth: depth [
+	<inline: true>
 	| nsSendCache |
 	nsSendCache := self cCoerceSimple: cacheAddress to: #'NSSendCache *'.
 	nsSendCache selector: selector.
@@ -7340,7 +7341,7 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 				[targetMethod := entryPoint - cmNoCheckEntryOffset.
 				 (self markAndTraceOrFreeCogMethod: targetMethod
 					firstVisit: targetMethod asUnsignedInteger > mcpc asUnsignedInteger) ifTrue:	
-						[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0]].
+						[self voidNSSendCache: nsSendCache]].
 			sel := nsSendCache selector.
 			(objectMemory isForwarded: sel)
 				ifFalse: [objectMemory markAndTrace: sel]
@@ -8509,7 +8510,7 @@ Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
 							target, so only adjust by the target method's displacement."
 						[nsSendCache target: entryPoint + targetMethod objectHeader]
 					ifFalse: "send target was freed, unlink"
-						[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0]].
+						[self voidNSSendCache: nsSendCache]].
 			^0]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
@@ -9539,7 +9540,7 @@ Cogit >> unlinkIfForwardedSend: annotation pc: mcpc ignored: superfluity [
 			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
 			 (nsSendCache classTag ~= objectRepresentation illegalClassTag
 			  and: [objectMemory isForwardedClassIndex: nsSendCache classTag]) ifTrue:
-				[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0]].
+				[self voidNSSendCache: nsSendCache]].
 			"Should we check if the enclosing object's class is forwarded as well?"
 			^0 "keep scanning"].
 
@@ -9569,7 +9570,7 @@ Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
 				[ | targetMethod |
 				targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 				(targetMethod cmType = CMFree or: [nsSendCache selector = theSelector]) ifTrue:
-					[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0]].
+					[self voidNSSendCache: nsSendCache]].
 			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
@@ -9596,7 +9597,7 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc ignored: superfluity [
 		 annotation = IsNSSendCall ifTrue:
 			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
 			nsSendCache classTag ~= objectRepresentation illegalClassTag ifTrue: "Send is linked"
-				[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0].
+				[self voidNSSendCache: nsSendCache].
 			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
@@ -9621,7 +9622,7 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc of: theSelector [
 		 annotation = IsNSSendCall ifTrue:
 			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
 			nsSendCache selector = theSelector ifTrue:
-				[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0].
+				[self voidNSSendCache: nsSendCache].
 			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
@@ -9650,7 +9651,7 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc to: theCogMethod [
 				[ | targetMethod |
 				targetMethod := entryPoint - cmNoCheckEntryOffset.
 				targetMethod = theCogMethod ifTrue:
-					[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0]].
+					[self voidNSSendCache: nsSendCache]].
 			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
@@ -9679,7 +9680,7 @@ Cogit >> unlinkIfLinkedSendToFree: annotation pc: mcpc ignored: superfluity [
 			(entryPoint := nsSendCache target) ~= 0 ifTrue: "It's a linked send."
 				[nsTargetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 				nsTargetMethod cmType = CMFree ifTrue:
-					[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0]].
+					[self voidNSSendCache: nsSendCache]].
 			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
@@ -9878,6 +9879,12 @@ Cogit >> varBaseAddress [
 Cogit >> voidCogCompiledCode [
 	<api>
 	methodZone clearCogCompiledCode
+]
+
+{ #category : #'in-line cacheing' }
+Cogit >> voidNSSendCache: nsSendCache [
+	<inline: true>
+	nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0
 ]
 
 { #category : #'debug printing' }
