@@ -3447,6 +3447,12 @@ CoInterpreter >> frameNumTemps: theFP [
 	^0
 ]
 
+{ #category : #accessing }
+CoInterpreter >> framePointer [
+	<api>
+	^framePointer
+]
+
 { #category : #'cog jit support' }
 CoInterpreter >> framePointer: theFP [
 	"Simulation only"
