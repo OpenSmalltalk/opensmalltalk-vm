@@ -240,6 +240,8 @@ CogIA32Compiler >> computeMaximumSize [
 		[RetN]					-> [^maxSize := (operands at: 0) = 0
 													ifTrue: [1]
 													ifFalse: [3]].
+		[Stop]					-> [^maxSize := 1].
+
 		"Arithmetic"
 		[AddCqR]		-> [^maxSize := (self isQuick: (operands at: 0))
 											ifTrue: [3]
@@ -1877,6 +1879,13 @@ CogIA32Compiler >> concretizeSqrtRd [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeStop [
+	<inline: true>
+	machineCode at: 0 put: 16rCC.
+	^machineCodeSize := 1
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeSubCqR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -2120,6 +2129,7 @@ CogIA32Compiler >> dispatchConcretize [
 		[JumpFPOrdered]			-> [^self concretizeConditionalJump: 16rB].
 		[JumpFPUnordered]			-> [^self concretizeConditionalJump: 16rA].
 		[RetN]						-> [^self concretizeRetN].
+		[Stop]						-> [^self concretizeStop].
 		"Arithmetic"
 		[AddCqR]					-> [^self concretizeAddCqR].
 		[AddCwR]					-> [^self concretizeAddCwR].
