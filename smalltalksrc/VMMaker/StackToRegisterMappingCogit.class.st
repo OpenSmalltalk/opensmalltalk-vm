@@ -2670,16 +2670,9 @@ StackToRegisterMappingCogit >> genSend: selector numArgs: numArgs [
 	^self genMarshalledSend: selector numArgs: numArgs sendTable: ordinarySendTrampolines
 ]
 
-{ #category : #'bytecode generator support' }
+{ #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSendAbsentDynamicSuper: selector numArgs: numArgs [
-	"OK, we could do better and avoid spilling ReceiverResultReg if we refactored
-	 marshallImplicitReceiverSendArguments: to take a flag saying whether the
-	 receiver was in ReceiverResultReg (absent receiver send) or on the stack
-	 (absent dynamic super send) and in the latter case loading ReceiverResultReg
-	 from the stack after marshalling.  But this is a rare bytecode so for the moment
-	 don't bother."
-	self ssAllocateCallReg: ReceiverResultReg.
-	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
+	<inline: false>
 	self marshallAbsentReceiverSendArguments: numArgs.
 	^self genMarshalledSend: selector numArgs: numArgs sendTable: dynamicSuperSendTrampolines
 ]
@@ -2696,8 +2689,7 @@ StackToRegisterMappingCogit >> genSendAbsentImplicitOrOuter: selector numArgs: n
 	self assert: (objectMemory isInOldSpace: nsSendCache).
 	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs depth: depth.
 
-	self ssAllocateCallReg: ReceiverResultReg and: SendNumArgsReg.
-	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
+	self ssAllocateCallReg: SendNumArgsReg.
 
 	"This leaves the method receiver on the stack, which might not be the implicit receiver. But we care
 	 not: the callee will use ReceiverResultReg to build its frame, not the value beneath the arguments."
@@ -2708,19 +2700,13 @@ StackToRegisterMappingCogit >> genSendAbsentImplicitOrOuter: selector numArgs: n
 	self CallNewspeakSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
 
 	optStatus isReceiverResultRegLive: false.
-	^self ssPushRegister: ReceiverResultReg
+	self ssPushRegister: ReceiverResultReg.
+	^0
 ]
 
-{ #category : #'bytecode generator support' }
+{ #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSendAbsentSelf: selector numArgs: numArgs [
-	"OK, we could do better and avoid spilling ReceiverResultReg if we refactored
-	 marshallAbsentReceiverSendArguments: to take a flag saying whether the
-	 receiver was in ReceiverResultReg (absent receiver send) or on the stack
-	 (absent dynamic super send) and in the latter case loading ReceiverResultReg
-	 from the stack after marshalling.  But this is a rare bytecode so for the moment
-	 don't bother."
-	self ssAllocateCallReg: ReceiverResultReg.
-	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
+	<inline: false>
 	self marshallAbsentReceiverSendArguments: numArgs.
 	^self genMarshalledSend: selector numArgs: numArgs sendTable: selfSendTrampolines
 ]
@@ -3833,6 +3819,10 @@ StackToRegisterMappingCogit >> liveRegisters [
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> marshallAbsentReceiverSendArguments: numArgs [
+	self assert: needsFrame.
+	self ssAllocateCallReg: ReceiverResultReg.
+	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
+
 	"Spill everything on the simulated stack that needs spilling (that below arguments).
 	 Marshall arguments to stack and/or registers depending on arg count.
 	 If the args don't fit in registers push receiver and args (spill everything).  Assume
