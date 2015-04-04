@@ -35,6 +35,12 @@ CogObjectRepresentationFor64BitSpur >> genFetchIndexRegister: indexReg from: tab
 ]
 
 { #category : #'in-line cacheing' }
+CogObjectRepresentationFor64BitSpur >> illegalClassTag [
+	<inline: true>
+	^0
+]
+
+{ #category : #'in-line cacheing' }
 CogObjectRepresentationFor64BitSpur >> inlineCacheTagForClass: classOop [
 	"Answer the relevant inline cache tag for a class.
 	 c.f. inlineCacheTagForInstance:"

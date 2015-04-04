@@ -219,6 +219,7 @@ Class {
 		'superSendTrampolines',
 		'directedSuperSendTrampolines',
 		'dynamicSuperSendTrampolines',
+		'outerSendTrampolines',
 		'selfSendTrampolines',
 		'firstSend',
 		'lastSend',
@@ -478,7 +479,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 	NewspeakVM ifFalse:
 		[#(	'selfSendEntry' 'selfSendEntryAlignment' 'cmSelfSendEntryOffset'
 			'dynSuperEntry' 'dynSuperEntryAlignment' 'cmDynSuperEntryOffset'
-			'selfSendTrampolines' 'dynamicSuperSendTrampolines' 'implicitReceiverSendTrampolines'
+			'selfSendTrampolines' 'dynamicSuperSendTrampolines'
+			'implicitReceiverSendTrampolines' 'outerSendTrampolines'
 			'ceEnclosingObjectTrampoline' 'numIRCs' 'indexOfIRC' 'theIRCs') do:
 				[:variableNotNeededInNormalVM|
 				aCCodeGenerator removeVariable: variableNotNeededInNormalVM]].
@@ -553,6 +555,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			declareC: 'sqInt dynamicSuperSendTrampolines[NumSendTrampolines]';
 		var: #implicitReceiverSendTrampolines
 			declareC: 'sqInt implicitReceiverSendTrampolines[NumSendTrampolines]';
+		var: #outerSendTrampolines
+			declareC: 'sqInt outerSendTrampolines[NumSendTrampolines]';
 		var: #trampolineAddresses
 			declareC: 'static char *trampolineAddresses[NumTrampolines*2]';
 		var: #objectReferencesInRuntime
@@ -5795,7 +5799,7 @@ Cogit >> generateNewspeakRuntime [
 
 { #category : #initialization }
 Cogit >> generateNewspeakSendTrampolines [
-	"Self send, dynamic super send, and implicit receiver send. TODO: outer send."
+	"Self send, dynamic super send, implicit receiver send, and outer send"
 	<option: #NewspeakVM>
 	0 to: NumSendTrampolines - 2 do:
 		[:numArgs|
@@ -5845,6 +5849,23 @@ Cogit >> generateNewspeakSendTrampolines [
 			genNSSendTrampolineFor: #ceImplicitReceiverSend:receiver:
 			numArgs: self numRegArgs + 1
 			called: (self trampolineName: 'ceImplicitReceiverSend' numArgs: -1)).
+
+	0 to: NumSendTrampolines - 2 do:
+		[:numArgs|
+		outerSendTrampolines
+			at: numArgs
+			put: (self 
+				genNSSendTrampolineFor: #ceOuterSend:receiver:
+				numArgs: numArgs
+				called: (self trampolineName: 'ceOuterSend' numArgs: numArgs))].
+	outerSendTrampolines
+		at: NumSendTrampolines - 1
+		put: (self 
+			genNSSendTrampolineFor: #ceOuterSend:receiver:
+			numArgs: self numRegArgs + 1
+			called: (self trampolineName: 'ceOuterSend' numArgs: -1)).
+
+
 ]
 
 { #category : #initialization }
@@ -6189,7 +6210,7 @@ Cogit >> incrementUsageOfTargetIfLinkedSend: annotation mcpc: mcpc ignored: supe
 		[annotation = IsNSSendCall ifTrue:
 			[| nsSendCache |
 			 nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			 nsSendCache classTag ~= 0 ifTrue: "send is linked"
+			 nsSendCache classTag ~= objectRepresentation illegalClassTag ifTrue: "send is linked"
 				[ | targetMethod |
 				entryPoint := nsSendCache target.
 				targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
@@ -6304,12 +6325,14 @@ Cogit >> initializeFixupAt: targetIndex [
 ]
 
 { #category : #'newspeak support' }
-Cogit >> initializeNSSendCache: cacheAddress selector: selector numArgs: numArgs [
+Cogit >> initializeNSSendCache: cacheAddress selector: selector numArgs: numArgs depth: depth [
 	| nsSendCache |
 	nsSendCache := self cCoerceSimple: cacheAddress to: #'NSSendCache *'.
 	nsSendCache selector: selector.
 	nsSendCache numArgs: numArgs.
-	nsSendCache classTag: 0. "Illegal class tag"
+	nsSendCache depth: depth.
+	nsSendCache classTag: objectRepresentation illegalClassTag.
+
 ]
 
 { #category : #initialization }
@@ -7315,15 +7338,15 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 			entryPoint := nsSendCache target.
 			entryPoint ~= 0 ifTrue: "Send is linked"
 				[targetMethod := entryPoint - cmNoCheckEntryOffset.
-				(self markAndTraceOrFreeCogMethod: targetMethod
+				 (self markAndTraceOrFreeCogMethod: targetMethod
 					firstVisit: targetMethod asUnsignedInteger > mcpc asUnsignedInteger) ifTrue:	
-						[nsSendCache classTag: 0; enclosingObject: 0; target: 0]].
+						[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0]].
 			sel := nsSendCache selector.
-				(objectMemory isForwarded: sel)
-					ifFalse: [objectMemory markAndTrace: sel]
-					ifTrue: [sel := objectMemory followForwarded: literal.
-							nsSendCache selector: sel.
-							self markAndTraceUpdatedLiteral: sel in: (self cCoerceSimple: cogMethod to: #'CogMethod *')].
+			(objectMemory isForwarded: sel)
+				ifFalse: [objectMemory markAndTrace: sel]
+				ifTrue: [sel := objectMemory followForwarded: literal.
+						nsSendCache selector: sel.
+						self markAndTraceUpdatedLiteral: sel in: (self cCoerceSimple: cogMethod to: #'CogMethod *')].
 			eo := nsSendCache enclosingObject.
 			eo ~= 0 ifTrue:
 				[(objectMemory isForwarded: eo)
@@ -8486,7 +8509,7 @@ Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
 							target, so only adjust by the target method's displacement."
 						[nsSendCache target: entryPoint + targetMethod objectHeader]
 					ifFalse: "send target was freed, unlink"
-						[nsSendCache classTag: 0; enclosingObject: 0; target: 0]].
+						[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0]].
 			^0]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
@@ -8888,7 +8911,8 @@ Cogit >> setInterpreter: aCoInterpreter [
 	NewspeakVM ifTrue:
 		[selfSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
 		dynamicSuperSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
-		implicitReceiverSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines)].
+		implicitReceiverSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
+		outerSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines)].
 	"debug metadata"
 	objectReferencesInRuntime := CArrayAccessor on: (Array new: NumObjRefsInRuntime).
 	runtimeObjectRefIndex := 0.
@@ -9513,11 +9537,11 @@ Cogit >> unlinkIfForwardedSend: annotation pc: mcpc ignored: superfluity [
 		[| nsSendCache |
 		 annotation = IsNSSendCall ifTrue:
 			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			nsSendCache classTag ~= 0 ifTrue:
-				[(objectMemory isForwardedClassIndex: nsSendCache classTag) ifTrue: [
-					nsSendCache classTag: 0; enclosingObject: 0; target: 0]].
+			 (nsSendCache classTag ~= objectRepresentation illegalClassTag
+			  and: [objectMemory isForwardedClassIndex: nsSendCache classTag]) ifTrue:
+				[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0]].
 			"Should we check if the enclosing object's class is forwarded as well?"
-			^0 "keep scanning"]].
+			^0 "keep scanning"].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
@@ -9545,7 +9569,7 @@ Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
 				[ | targetMethod |
 				targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 				(targetMethod cmType = CMFree or: [nsSendCache selector = theSelector]) ifTrue:
-					[nsSendCache classTag: 0; enclosingObject: 0; target: 0]].
+					[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0]].
 			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
@@ -9571,8 +9595,8 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc ignored: superfluity [
 		[| nsSendCache |
 		 annotation = IsNSSendCall ifTrue:
 			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			nsSendCache classTag ~= 0 ifTrue: "Send is linked"
-				[nsSendCache classTag: 0; enclosingObject: 0; target: 0].
+			nsSendCache classTag ~= objectRepresentation illegalClassTag ifTrue: "Send is linked"
+				[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0].
 			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
@@ -9597,7 +9621,7 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc of: theSelector [
 		 annotation = IsNSSendCall ifTrue:
 			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
 			nsSendCache selector = theSelector ifTrue:
-				[nsSendCache classTag: 0; enclosingObject: 0; target: 0].
+				[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0].
 			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
@@ -9626,9 +9650,7 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc to: theCogMethod [
 				[ | targetMethod |
 				targetMethod := entryPoint - cmNoCheckEntryOffset.
 				targetMethod = theCogMethod ifTrue:
-					[nsSendCache classTag: 0.
-					nsSendCache enclosingObject: 0.
-					nsSendCache target: 0]].
+					[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0]].
 			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
@@ -9657,9 +9679,7 @@ Cogit >> unlinkIfLinkedSendToFree: annotation pc: mcpc ignored: superfluity [
 			(entryPoint := nsSendCache target) ~= 0 ifTrue: "It's a linked send."
 				[nsTargetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 				nsTargetMethod cmType = CMFree ifTrue:
-					[nsSendCache classTag: 0.
-					nsSendCache enclosingObject: 0.
-					nsSendCache target: 0]].
+					[nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0]].
 			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
