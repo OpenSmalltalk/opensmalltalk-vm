@@ -3164,10 +3164,8 @@ SimpleStackBasedCogit >> genSend: selector numArgs: numArgs sendTable: sendTable
 	^0
 ]
 
-{ #category : #'bytecode generator support' }
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendAbsentDynamicSuper: selector numArgs: numArgs [
-	"Shuffle arguments if necessary and push receiver.
-	 Then send."
 	<inline: false>
 	self marshallAbsentReceiverSendArguments: numArgs.
 	^self genSend: selector numArgs: numArgs sendTable: dynamicSuperSendTrampolines
@@ -3191,6 +3189,7 @@ SimpleStackBasedCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendAbsentImplicitOrOuter: selector numArgs: numArgs depth: depth sendTable: sendTable [
+	<var: #sendTable type: #'sqInt *'>
 	| nsSendCache |
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
@@ -3199,8 +3198,6 @@ SimpleStackBasedCogit >> genSendAbsentImplicitOrOuter: selector numArgs: numArgs
 	indexOfIRC := indexOfIRC + 1.
 	self assert: (objectMemory isInOldSpace: nsSendCache).
 	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs depth: depth.
-
-	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
 
 	"This leaves the method receiver on the stack, which might not be the implicit receiver. But we care
 	 not: the callee will use ReceiverResultReg to build its frame, not the value beneath the arguments."
@@ -3224,10 +3221,8 @@ SimpleStackBasedCogit >> genSendAbsentOuter: selector numArgs: numArgs depth: de
 		sendTable: outerSendTrampolines
 ]
 
-{ #category : #'bytecode generator support' }
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendAbsentSelf: selector numArgs: numArgs [
-	"Shuffle arguments if necessary and push receiver.
-	 Then send."
 	<inline: false>
 	self marshallAbsentReceiverSendArguments: numArgs.
 	^self genSend: selector numArgs: numArgs sendTable: selfSendTrampolines
@@ -3622,8 +3617,11 @@ SimpleStackBasedCogit >> generateTracingTrampolines [
 		 ceTraceStoreTrampoline := self simulatedTrampolineFor: #ceShortCutTraceStore:]
 ]
 
-{ #category : #'bytecode generator support' }
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> marshallAbsentReceiverSendArguments: numArgs [
+	self assert: needsFrame.
+	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
+
 	"Shuffle arguments if necessary and push receiver."
 	numArgs = 0
 		ifTrue:
