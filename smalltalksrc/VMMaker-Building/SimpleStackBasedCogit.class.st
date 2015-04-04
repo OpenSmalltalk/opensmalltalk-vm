@@ -211,7 +211,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(3 251 251 genStoreRemoteTempLongBytecode)
 		(3 252 252 genStoreAndPopRemoteTempLongBytecode)
 		(3 253 253 genExtPushClosureBytecode block v4:Block:Code:Size:)
-		(3 254 254 genExtSendAbsentOuterBytecode isMapped)
+		(3 254 254 genExtSendAbsentOuterBytecode isMapped hasIRC)
 
 		(3 255 255	unknownBytecode))
 ]
@@ -411,7 +411,7 @@ SimpleStackBasedCogit class >> initializeMiscConstants [
 	super initializeMiscConstants.
 	MaxLiteralCountForCompile := initializationOptions at: #MaxLiteralCountForCompile ifAbsent: [60].
 	NumTrampolines := NewspeakVM
-							ifTrue: [56]
+							ifTrue: [60]
 							ifFalse: [42]
 ]
 
@@ -3179,17 +3179,26 @@ SimpleStackBasedCogit >> genSendAbsentImplicit0ArgsBytecode [
 	^self genSendAbsentImplicit: (self getLiteral: (byte0 bitAnd: 15)) numArgs: 0
 ]
 
-{ #category : #'bytecode generator support' }
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
-	| nsSendCache |
 	<inline: false>
+	^self
+		genSendAbsentImplicitOrOuter: selector
+		numArgs: numArgs
+		depth: 255 "Unused"
+		sendTable: implicitReceiverSendTrampolines
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genSendAbsentImplicitOrOuter: selector numArgs: numArgs depth: depth sendTable: sendTable [
+	| nsSendCache |
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 
 	nsSendCache := theIRCs + (NumOopsPerNSC * objectMemory bytesPerOop * indexOfIRC).
 	indexOfIRC := indexOfIRC + 1.
 	self assert: (objectMemory isInOldSpace: nsSendCache).
-	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs.
+	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs depth: depth.
 
 	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
 
@@ -3199,21 +3208,20 @@ SimpleStackBasedCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
 
 	"Load the cache last so it is a fixed distance from the call."
 	self MoveCw: nsSendCache R: SendNumArgsReg.
-	self CallNewspeakSend: (implicitReceiverSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
+	self CallNewspeakSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
 
 	self PushR: ReceiverResultReg.
 	^0
 ]
 
-{ #category : #'bytecode generator support' }
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendAbsentOuter: selector numArgs: numArgs depth: depth [
-	"Shuffle arguments if necessary and push receiver.
-	 Then send."
 	<inline: false>
-	self genPushEnclosingObjectAt: depth.
-	self PopR: ReceiverResultReg.
-	self marshallAbsentReceiverSendArguments: numArgs.
-	^self genSend: selector numArgs: numArgs
+	^self
+		genSendAbsentImplicitOrOuter: selector
+		numArgs: numArgs
+		depth: depth
+		sendTable: outerSendTrampolines
 ]
 
 { #category : #'bytecode generator support' }

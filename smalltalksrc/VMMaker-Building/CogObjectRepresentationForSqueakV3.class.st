@@ -881,6 +881,12 @@ CogObjectRepresentationForSqueakV3 >> hasValidHeaderPostGC: cogMethod [
 ]
 
 { #category : #'in-line cacheing' }
+CogObjectRepresentationForSqueakV3 >> illegalClassTag [
+	<inline: true>
+	^0
+]
+
+{ #category : #'in-line cacheing' }
 CogObjectRepresentationForSqueakV3 >> inlineCacheTagForClass: classOop [
 	"Answer the relevant inline cache tag for a class.
 	 c.f. inlineCacheTagForInstance:"

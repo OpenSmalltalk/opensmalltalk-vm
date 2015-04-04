@@ -243,6 +243,12 @@ CogObjectRepresentation >> hasSpurMemoryManagerAPI [
 ]
 
 { #category : #'in-line cacheing' }
+CogObjectRepresentation >> illegalClassTag [
+	"Answer a class tag that will fail for every object."
+	self subclassResponsibility
+]
+
+{ #category : #'in-line cacheing' }
 CogObjectRepresentation >> inlineCacheTagForClass: classOop [
 	"Answer the relevant inline cache tag for a class.
 	 c.f. inlineCacheTagForInstance:"
