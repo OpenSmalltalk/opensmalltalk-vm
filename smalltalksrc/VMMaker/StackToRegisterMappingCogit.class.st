@@ -325,7 +325,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(3 251 251 genStoreRemoteTempLongBytecode)
 		(3 252 252 genStoreAndPopRemoteTempLongBytecode)
 		(3 253 253 genExtPushClosureBytecode block v4:Block:Code:Size:)
-		(3 254 254	genExtSendAbsentOuterBytecode isMapped hasIRC)
+		(3 254 254	genExtSendAbsentOuterBytecode isMapped)
 
 		(3 255 255	unknownBytecode))
 ]
@@ -348,7 +348,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		"1 byte bytecodes"
 		"pushes"
 		(1    0   15 genPushReceiverVariableBytecode			needsFrameNever: 1)
-		(1  16   31 genPushLiteralVariable16CasesBytecode	needsFrameNever: 1)
+		(1  16   31 genPushLitVarDirSup16CasesBytecode	needsFrameNever: 1)
 		(1  32   63 genPushLiteralConstantBytecode			needsFrameNever: 1)
 		(1  64   75 genPushTemporaryVariableBytecode		needsFrameIfMod16GENumArgs: 1)
 		(1  76   76 genPushReceiverBytecode					needsFrameNever: 1)
@@ -416,7 +416,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 
 		"pushes"
 		(2 226 226 genExtPushReceiverVariableBytecode		needsFrameNever: 1)
-		(2 227 227 genExtPushLiteralVariableBytecode		needsFrameNever: 1)
+		(2 227 227 genExtPushLitVarDirSupBytecode			needsFrameNever: 1)
 		(2 228 228 genExtPushLiteralBytecode					needsFrameNever: 1)
 		(2 229 229 genLongPushTemporaryVariableBytecode)
 		(2 230 230 genPushClosureTempsBytecode)
@@ -571,7 +571,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 StackToRegisterMappingCogit class >> initializeMiscConstants [
 	super initializeMiscConstants.
 	NumTrampolines := NewspeakVM
-							ifTrue: [70]
+							ifTrue: [66]
 							ifFalse: [52]
 ]
 
@@ -760,7 +760,7 @@ StackToRegisterMappingCogit >> addBlockStartAt: bytecodepc numArgs: numArgs numC
 	^blockStart
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> annotateBytecodeIfAnnotated: aSimStackEntry [
 	<var: #aSimStackEntry type: #'CogSimStackEntry *'>
 	<inline: false>
@@ -1054,10 +1054,6 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	<var: #itsAHit type: #'AbstractInstruction *'>
 	<var: #jumpBCMethod type: #'AbstractInstruction *'>
 	self compilePICAbort: numArgs.
-	self cppIf: NewspeakVM ifTrue:
-		[self Nop. "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
-		 selfSendEntry := self Nop.
-		 dynSuperEntry := self Nop].
 	entry := objectRepresentation genGetClassTagOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
 
 	"Do first of three probes.  See CoInterpreter>>lookupInMethodCacheSel:classTag:"
@@ -1241,7 +1237,7 @@ StackToRegisterMappingCogit >> ensureNonMergeFixupAt: targetIndex [
 	^fixup
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> ensureReceiverResultRegContainsSelf [
 	needsFrame
 		ifTrue:
@@ -1717,7 +1713,7 @@ StackToRegisterMappingCogit >> genExternalizePointersForPrimitiveCall [
 	^super genExternalizePointersForPrimitiveCall
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genFramelessStorePop: popBoolean ReceiverVariable: slotIndex [
 	<inline: false>
 	| topReg valueReg constVal |
@@ -1752,13 +1748,13 @@ StackToRegisterMappingCogit >> genFramelessStorePop: popBoolean ReceiverVariable
 		scratchReg: TempReg
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genJumpBackTo: targetBytecodePC [
 	self ssFlushTo: simStackPtr.
 	^super genJumpBackTo: targetBytecodePC
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	<inline: false>
 	| desc fixup ok |
@@ -1804,23 +1800,26 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	^0
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genJumpTo: targetBytecodePC [
 	self ssFlushTo: simStackPtr.
 	^super genJumpTo: targetBytecodePC
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genMarshalledSend: selector numArgs: numArgs sendTable: sendTable [
 	<inline: false>
 	<var: #sendTable type: #'sqInt *'>
+	| annotation |
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 	self assert: needsFrame.
+	annotation := self annotationForSendTable: sendTable.
 	numArgs > 2 ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
 	self MoveCw: selector R: ClassReg.
-	self CallSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
+	self annotate: (self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1)))
+		with: annotation.
 	optStatus isReceiverResultRegLive: false.
 	^self ssPushRegister: ReceiverResultReg
 ]
@@ -2507,7 +2506,7 @@ StackToRegisterMappingCogit >> genPushClosureCopyCopiedValuesBytecode [
 	^self ssPushRegister: ReceiverResultReg
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genPushEnclosingObjectAt: level [
 	"Uncached push enclosing object"
 	optStatus isReceiverResultRegLive: false.
@@ -2517,12 +2516,12 @@ StackToRegisterMappingCogit >> genPushEnclosingObjectAt: level [
 	^self ssPushRegister: ReceiverResultReg
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genPushLiteral: literal [
 	^self ssPushConstant: literal
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genPushLiteralVariable: literalIndex [
 	<inline: false>
 	| association freeReg |
@@ -2543,7 +2542,7 @@ StackToRegisterMappingCogit >> genPushLiteralVariable: literalIndex [
 	^0
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genPushMaybeContextReceiverVariable: slotIndex [ 
 	<inline: false>
 	| jmpSingle jmpDone |
@@ -2611,7 +2610,7 @@ StackToRegisterMappingCogit >> genPushReceiverBytecode [
 	^self ssPushDesc: simSelf
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genPushReceiverVariable: index [
 	<inline: false>
 	self ensureReceiverResultRegContainsSelf.
@@ -2642,7 +2641,7 @@ StackToRegisterMappingCogit >> genPushRemoteTempLongBytecode [
 	^self ssPushRegister: SendNumArgsReg
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genPushTemporaryVariable: index [
 	"If a frameless method (not a block), only argument temps can be accessed.
 	 This is assured by the use of needsFrameIfMod16GENumArgs: in pushTemp."
@@ -2665,13 +2664,13 @@ StackToRegisterMappingCogit >> genReturnTopFromMethod [
 	^self genUpArrowReturn
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genSend: selector numArgs: numArgs [
 	self marshallSendArguments: numArgs.
 	^self genMarshalledSend: selector numArgs: numArgs sendTable: ordinarySendTrampolines
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genSendAbsentDynamicSuper: selector numArgs: numArgs [
 	"OK, we could do better and avoid spilling ReceiverResultReg if we refactored
 	 marshallImplicitReceiverSendArguments: to take a flag saying whether the
@@ -2685,17 +2684,17 @@ StackToRegisterMappingCogit >> genSendAbsentDynamicSuper: selector numArgs: numA
 	^self genMarshalledSend: selector numArgs: numArgs sendTable: dynamicSuperSendTrampolines
 ]
 
-{ #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genSendAbsentImplicitOrOuter: selector numArgs: numArgs depth: depth sendTable: sendTable [
-	<var: #sendTable type: #'sqInt *'>
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
 	| nsSendCache |
+	<inline: false>
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 
 	nsSendCache := theIRCs + (NumOopsPerNSC * objectMemory bytesPerOop * indexOfIRC).
 	indexOfIRC := indexOfIRC + 1.
 	self assert: (objectMemory isInOldSpace: nsSendCache).
-	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs depth: depth.
+	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs.
 
 	self ssAllocateCallReg: ReceiverResultReg and: SendNumArgsReg.
 	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
@@ -2706,13 +2705,29 @@ StackToRegisterMappingCogit >> genSendAbsentImplicitOrOuter: selector numArgs: n
 
 	"Load the cache last so it is a fixed distance from the call."
 	self MoveCw: nsSendCache R: SendNumArgsReg.
-	self CallNewspeakSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
+	self CallNewspeakSend: (implicitReceiverSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
 
 	optStatus isReceiverResultRegLive: false.
 	^self ssPushRegister: ReceiverResultReg
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genSendAbsentOuter: selector numArgs: numArgs depth: depth [
+	"OK, we could do better and avoid spilling ReceiverResultReg if we refactored
+	 marshallAbsentReceiverSendArguments: to take a flag saying whether the
+	 receiver was in ReceiverResultReg (absent receiver send) or on the stack
+	 (absent dynamic super send) and in the latter case loading ReceiverResultReg
+	 from the stack after marshalling.  But this is a rare bytecode so for the moment
+	 don't bother."
+	optStatus isReceiverResultRegLive: false.
+	self ssAllocateCallReg: SendNumArgsReg.
+	self MoveCq: depth R: SendNumArgsReg.
+	self CallRT: ceEnclosingObjectTrampoline.
+	self marshallAbsentReceiverSendArguments: numArgs.
+	^self genMarshalledSend: selector numArgs: numArgs sendTable: ordinarySendTrampolines
+]
+
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genSendAbsentSelf: selector numArgs: numArgs [
 	"OK, we could do better and avoid spilling ReceiverResultReg if we refactored
 	 marshallAbsentReceiverSendArguments: to take a flag saying whether the
@@ -2726,13 +2741,20 @@ StackToRegisterMappingCogit >> genSendAbsentSelf: selector numArgs: numArgs [
 	^self genMarshalledSend: selector numArgs: numArgs sendTable: selfSendTrampolines
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genSendDirectedSuper: selector numArgs: numArgs [
+	self halt: 'do all that good stuff moving the literal variable to an argument reg, etc...'.
+	self marshallSendArguments: numArgs.
+	^self genMarshalledSend: selector numArgs: numArgs sendTable: superSendTrampolines
+]
+
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genSendDynamicSuper: selector numArgs: numArgs [
 	self marshallSendArguments: numArgs.
 	^self genMarshalledSend: selector numArgs: numArgs sendTable: dynamicSuperSendTrampolines
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genSendSuper: selector numArgs: numArgs [
 	self marshallSendArguments: numArgs.
 	^self genMarshalledSend: selector numArgs: numArgs sendTable: superSendTrampolines
@@ -3159,7 +3181,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	^0
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 	<inline: false>
 	| topReg valueReg association constVal |
@@ -3207,7 +3229,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 		scratchReg: TempReg
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: slotIndex [
 	<inline: false>
 	| jmpSingle jmpDone valueReg |
@@ -3245,7 +3267,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextReceiverVaria
 	^0
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 	<inline: false>
 	| topReg valueReg constVal |
@@ -3285,7 +3307,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 		scratchReg: TempReg
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remoteTempIndex [
 	<inline: false>
 	| topReg valueReg constVal topSpilled |
@@ -3331,7 +3353,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At:
 		scratchReg: TempReg
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean TemporaryVariable: tempIndex [
 	<inline: false>
 	| reg |
@@ -3573,21 +3595,6 @@ StackToRegisterMappingCogit >> generateNewspeakSendTrampolines [
 			genNSSendTrampolineFor: #ceImplicitReceiverSend:receiver:
 			numArgs: self numRegArgs + 1
 			called: (self trampolineName: 'ceImplicitReceiverSend' numArgs: -1)).
-
-	0 to: NumSendTrampolines - 2 do:
-		[:numArgs|
-		outerSendTrampolines
-			at: numArgs
-			put: (self 
-				genNSSendTrampolineFor: #ceOuterSend:receiver:
-				numArgs: numArgs
-				called: (self trampolineName: 'ceOuterSend' numArgs: numArgs))].
-	outerSendTrampolines
-		at: NumSendTrampolines - 1
-		put: (self 
-			genNSSendTrampolineFor: #ceOuterSend:receiver:
-			numArgs: self numRegArgs + 1
-			called: (self trampolineName: 'ceOuterSend' numArgs: -1)).
 ]
 
 { #category : #initialization }
@@ -4029,8 +4036,7 @@ StackToRegisterMappingCogit >> prevInstIsPCAnnotated [
 	annotationIndex > 0 ifFalse:
 		[^false].
 	annotation := self addressOf: (annotations at: annotationIndex - 1).
-	(self isPCMappedAnnotation: annotation annotation
-			alternateInstructionSet: bytecodeSetOffset > 0) ifFalse:
+	(self isPCMappedAnnotation: annotation annotation) ifFalse:
 		[^false].
 	prevIndex := opcodeIndex - 1.
 	[prevIndex <= 0 ifTrue: [^false].

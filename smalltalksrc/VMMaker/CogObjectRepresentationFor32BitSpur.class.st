@@ -1861,12 +1861,6 @@ CogObjectRepresentationFor32BitSpur >> genShiftAwaySmallIntegerTagsInScratchReg:
 ]
 
 { #category : #'in-line cacheing' }
-CogObjectRepresentationFor32BitSpur >> illegalClassTag [
-	<inline: true>
-	^2
-]
-
-{ #category : #'in-line cacheing' }
 CogObjectRepresentationFor32BitSpur >> inlineCacheTagForClass: classOop [
 	"Answer the relevant inline cache tag for a class.
 	 c.f. inlineCacheTagForInstance:"
