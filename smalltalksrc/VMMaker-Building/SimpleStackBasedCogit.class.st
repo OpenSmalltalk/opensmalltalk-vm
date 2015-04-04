@@ -211,7 +211,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(3 251 251 genStoreRemoteTempLongBytecode)
 		(3 252 252 genStoreAndPopRemoteTempLongBytecode)
 		(3 253 253 genExtPushClosureBytecode block v4:Block:Code:Size:)
-		(3 254 254 genExtSendAbsentOuterBytecode isMapped hasIRC)
+		(3 254 254 genExtSendAbsentOuterBytecode isMapped)
 
 		(3 255 255	unknownBytecode))
 ]
@@ -411,7 +411,7 @@ SimpleStackBasedCogit class >> initializeMiscConstants [
 	super initializeMiscConstants.
 	MaxLiteralCountForCompile := initializationOptions at: #MaxLiteralCountForCompile ifAbsent: [60].
 	NumTrampolines := NewspeakVM
-							ifTrue: [60]
+							ifTrue: [56]
 							ifFalse: [42]
 ]
 
@@ -783,6 +783,25 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 
 		"(223 229 primitiveFail)"	"reserved for Cog primitives"
 	)
+]
+
+{ #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> annotationForSendTable: sendTable [
+	"c.f. offsetAndSendTableFor:annotation:into:"
+	<inline: true>
+	<var: #sendTable type: #'sqInt *'>
+	(NewspeakVM and: [sendTable == selfSendTrampolines]) ifTrue:
+		[^IsNSSelfSend].
+	(NewspeakVM and: [sendTable == dynamicSuperSendTrampolines]) ifTrue:
+		[^IsNSDynamicSuperSend].
+	(NewspeakVM and: [sendTable == implicitReceiverSendTrampolines]) ifTrue:
+		[^IsNSImplicitReceiverSend].
+	(SistaVM and: [sendTable == directedSuperSendTrampolines]) ifTrue:
+		[^IsNSImplicitReceiverSend].
+	sendTable == superSendTrampolines ifTrue:
+		[^IsSuperSend].
+	self assert: sendTable == ordinarySendTrampolines.
+	^IsSendCall
 ]
 
 { #category : #'simulation only' }
@@ -1228,10 +1247,6 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	<var: #itsAHit type: #'AbstractInstruction *'>
 	<var: #jumpBCMethod type: #'AbstractInstruction *'>
 	self compilePICAbort: numArgs.
-	self cppIf: NewspeakVM ifTrue:
-		[self Nop. "1st nop differentiates dynSuperEntry from no-check entry if using nextMethod"
-		 selfSendEntry := self Nop.
-		 dynSuperEntry := self Nop].
 	entry := objectRepresentation genGetClassTagOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
 
 	"Do first of three probes.  See CoInterpreter>>lookupInMethodCacheSel:classTag:"
@@ -1399,7 +1414,7 @@ SimpleStackBasedCogit >> extendedStoreBytecode [
 	^EncounteredUnknownBytecode
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> firstSpecialSelectorBytecodeOffset [
 	<inline: true>
 	^self cppIf: MULTIPLEBYTECODESETS
@@ -1407,7 +1422,7 @@ SimpleStackBasedCogit >> firstSpecialSelectorBytecodeOffset [
 		ifFalse: [FirstSpecialSelector]
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> frameOffsetOfTemporary: index [
 	^index < methodOrBlockNumArgs
 		ifTrue: [FoxCallerSavedIP + ((methodOrBlockNumArgs - index) * objectMemory wordSize)]
@@ -1622,6 +1637,15 @@ SimpleStackBasedCogit >> genExtPushIntegerBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtPushLitVarDirSupBytecode [
+	"227		11100011	i i i i i i i i	Push Literal Variable #iiiiiiii (+ Extend A * 256)"
+	| index |
+	index := byte1 + (extA << 8).
+	extA := 0.
+	^self genPushLiteralVariableGivenDirectedSuper: index
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtPushLiteralBytecode [
 	"228		11100100	i i i i i i i i	Push Literal #iiiiiiii (+ Extend A * 256)"
 	| index |
@@ -1756,12 +1780,16 @@ SimpleStackBasedCogit >> genExtSendBytecode [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtSendSuperBytecode [
 	"239		11101111	i i i i i j j j	Send To Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	| litIndex nArgs |
+	| isDirected litIndex nArgs |
+	(isDirected := extB >= 64) ifTrue:
+		[extB := extB bitAnd: 63].
 	litIndex := (byte1 >> 3) + (extA << 5).
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
-	^self genSendSuper: (self getLiteral: litIndex) numArgs: nArgs
+	^isDirected
+		ifTrue: [self genSendDirectedSuper: (self getLiteral: litIndex) numArgs: nArgs]
+		ifFalse: [self genSendSuper: (self getLiteral: litIndex) numArgs: nArgs]
 ]
 
 { #category : #'bytecode generators' }
@@ -1868,7 +1896,7 @@ SimpleStackBasedCogit >> genFastPrimTraceUsing: r1 and: r2 [
 	self MoveR: TempReg Xwr: r2 R: r1
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genJumpBackTo: targetBytecodePC [
 	self MoveAw: coInterpreter stackLimitAddress R: TempReg.
 	self CmpR: TempReg R: SPReg. "N.B. FLAGS := SPReg - TempReg"
@@ -1878,7 +1906,7 @@ SimpleStackBasedCogit >> genJumpBackTo: targetBytecodePC [
 	^0
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genJumpIf: boolean to: targetBytecodePC [
 	<inline: false>
 	"Cunning trick by LPD.  If true and false are contiguous subtract the smaller.
@@ -1902,7 +1930,7 @@ SimpleStackBasedCogit >> genJumpIf: boolean to: targetBytecodePC [
 	^0
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genJumpTo: targetBytecodePC [
 	self Jump: (self ensureFixupAt: targetBytecodePC - initialPC).
 	^0
@@ -2813,7 +2841,7 @@ SimpleStackBasedCogit >> genPushConstantZeroBytecode [
 	^self genPushLiteral: (objectMemory integerObjectOf: 0)
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genPushEnclosingObjectAt: level [
 	"Uncached push enclosing object"
 	self MoveCq: level R: SendNumArgsReg.
@@ -2832,6 +2860,17 @@ SimpleStackBasedCogit >> genPushEnclosingObjectBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genPushLitVarDirSup16CasesBytecode [
+	"e.g. SistaV1: 16-31		0001 iiii			Push Literal Variable #iiii"
+	^self genPushLiteralVariableGivenDirectedSuper: (byte0 bitAnd: 15)
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genPushLitVarDirSupBytecode [
+	^self genPushLiteralVariableGivenDirectedSuper: (byte0 bitAnd: 31)
+]
+
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genPushLiteral: literal [
 	self annotate: (self PushCw: literal) objRef: literal.
 	^0
@@ -2842,7 +2881,7 @@ SimpleStackBasedCogit >> genPushLiteralConstantBytecode [
 	^self genPushLiteralIndex: (byte0 bitAnd: 31)
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genPushLiteralIndex: literalIndex [ "<SmallInteger>"
 	<inline: false>
 	| literal |
@@ -2856,7 +2895,7 @@ SimpleStackBasedCogit >> genPushLiteralVariable16CasesBytecode [
 	^self genPushLiteralVariable: (byte0 bitAnd: 15)
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genPushLiteralVariable: literalIndex [
 	<inline: false>
 	| association |
@@ -2879,7 +2918,20 @@ SimpleStackBasedCogit >> genPushLiteralVariableBytecode [
 	^self genPushLiteralVariable: (byte0 bitAnd: 31)
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> genPushLiteralVariableGivenDirectedSuper: literalIndex [
+	"This is a version of genPushLiteralVariable: that looks ahead for a directed super send bytecode
+	 and does not generate any code for the dereference yet if followed by a directed super send."
+	<inline: false>
+	self nextDescriptorAndExtensionsInto:
+		[:descriptor :exta :extb|
+		(self isDirectedSuper: descriptor extA: exta extB: extb) ifTrue:
+			[self ssPushConstant: (self getLiteral: literalIndex).
+			 ^0]].
+	^self genPushLiteralVariable: literalIndex
+]
+
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genPushMaybeContextReceiverVariable: slotIndex [ 
 	<inline: false>
 	| jmpSingle jmpDone |
@@ -2947,7 +2999,7 @@ SimpleStackBasedCogit >> genPushReceiverBytecode [
 	^0
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genPushReceiverVariable: index [
 	<inline: false>
 	| maybeErr |
@@ -2976,7 +3028,7 @@ SimpleStackBasedCogit >> genPushRemoteTempLongBytecode [
 	^0
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genPushTemporaryVariable: index [
 	self MoveMw: (self frameOffsetOfTemporary: index) r: FPReg R: TempReg.
 	self PushR: TempReg.
@@ -3084,32 +3136,35 @@ SimpleStackBasedCogit >> genSecondExtendedSendBytecode [
 	^self genSend: (self getLiteral: (byte1 bitAnd: 16r3F)) numArgs: byte1 >> 6
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genSend: selector numArgs: numArgs [
 	<inline: true>
 	^self genSend: selector numArgs: numArgs sendTable: ordinarySendTrampolines
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genSend: selector numArgs: numArgs sendTable: sendTable [
 	<inline: false>
 	<var: #sendTable type: #'sqInt *'>
+	| annotation |
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 	self assert: needsFrame.
-	self assert: (numArgs between: 0 and: 256). "say"
+	annotation := self annotationForSendTable: sendTable.
+	self assert: (numArgs between: 0 and: 255). "say"
 	self assert: (objectMemory addressCouldBeOop: selector).
 	self MoveMw: numArgs * objectMemory wordSize r: SPReg R: ReceiverResultReg.
 	numArgs > 2 ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
 	self MoveCw: selector R: ClassReg.
-	self CallSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
+	self annotate: (self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1)))
+		with: annotation.
 	self flag: 'currently caller pushes result'.
 	self PushR: ReceiverResultReg.
 	^0
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genSendAbsentDynamicSuper: selector numArgs: numArgs [
 	"Shuffle arguments if necessary and push receiver.
 	 Then send."
@@ -3124,26 +3179,17 @@ SimpleStackBasedCogit >> genSendAbsentImplicit0ArgsBytecode [
 	^self genSendAbsentImplicit: (self getLiteral: (byte0 bitAnd: 15)) numArgs: 0
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
-	<inline: false>
-	^self
-		genSendAbsentImplicitOrOuter: selector
-		numArgs: numArgs
-		depth: 255 "Unused"
-		sendTable: implicitReceiverSendTrampolines
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSendAbsentImplicitOrOuter: selector numArgs: numArgs depth: depth sendTable: sendTable [
 	| nsSendCache |
+	<inline: false>
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 
 	nsSendCache := theIRCs + (NumOopsPerNSC * objectMemory bytesPerOop * indexOfIRC).
 	indexOfIRC := indexOfIRC + 1.
 	self assert: (objectMemory isInOldSpace: nsSendCache).
-	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs depth: depth.
+	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs.
 
 	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
 
@@ -3153,23 +3199,24 @@ SimpleStackBasedCogit >> genSendAbsentImplicitOrOuter: selector numArgs: numArgs
 
 	"Load the cache last so it is a fixed distance from the call."
 	self MoveCw: nsSendCache R: SendNumArgsReg.
-	self CallNewspeakSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
+	self CallNewspeakSend: (implicitReceiverSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
 
 	self PushR: ReceiverResultReg.
 	^0
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genSendAbsentOuter: selector numArgs: numArgs depth: depth [
+	"Shuffle arguments if necessary and push receiver.
+	 Then send."
 	<inline: false>
-	^self
-		genSendAbsentImplicitOrOuter: selector
-		numArgs: numArgs
-		depth: depth
-		sendTable: outerSendTrampolines
+	self genPushEnclosingObjectAt: depth.
+	self PopR: ReceiverResultReg.
+	self marshallAbsentReceiverSendArguments: numArgs.
+	^self genSend: selector numArgs: numArgs
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genSendAbsentSelf: selector numArgs: numArgs [
 	"Shuffle arguments if necessary and push receiver.
 	 Then send."
@@ -3178,19 +3225,11 @@ SimpleStackBasedCogit >> genSendAbsentSelf: selector numArgs: numArgs [
 	^self genSend: selector numArgs: numArgs sendTable: selfSendTrampolines
 ]
 
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSendDynamicSuper: selector numArgs: numArgs [
-	(objectMemory isYoung: selector) ifTrue:
-		[hasYoungReferent := true].
-	self assert: needsFrame.
-	self MoveMw: numArgs * objectMemory wordSize r: SPReg R: ReceiverResultReg.
-	numArgs > 2 ifTrue:
-		[self MoveCq: numArgs R: SendNumArgsReg].
-	self MoveCw: selector R: ClassReg.
-	self CallSend: (dynamicSuperSendTrampolines at: (numArgs min: NumSendTrampolines - 1)).
-	self flag: 'currently caller pushes result'.
-	self PushR: ReceiverResultReg.
-	^0
+{ #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> genSendDirectedSuper: selector numArgs: numArgs [
+	<inline: false>
+	self halt: 'do all that good stuff moving the literal variable to an argument reg, etc...'.
+	^self genSend: selector numArgs: numArgs sendTable: directedSuperSendTrampolines
 ]
 
 { #category : #'bytecode generators' }
@@ -3208,7 +3247,7 @@ SimpleStackBasedCogit >> genSendLiteralSelector2ArgsBytecode [
 	^self genSend: (self getLiteral: (byte0 bitAnd: 15)) numArgs: 2
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genSendSuper: selector numArgs: numArgs [
 	<inline: false>
 	^self genSend: selector numArgs: numArgs sendTable: superSendTrampolines
@@ -3390,7 +3429,7 @@ SimpleStackBasedCogit >> genStoreAndPopTemporaryVariableBytecode [
 	^self genStorePop: true TemporaryVariable: (byte0 bitAnd: 7)
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 	<inline: false>
 	| association |
@@ -3412,7 +3451,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 		scratchReg: TempReg
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: slotIndex [
 	<inline: false>
 	| jmpSingle jmpDone |
@@ -3443,7 +3482,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: s
 	^0
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 	<inline: false>
 	needsFrame ifTrue:
@@ -3460,7 +3499,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 		scratchReg: TempReg
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remoteTempIndex [
 	<inline: false>
 	self assert: needsFrame.
@@ -3477,7 +3516,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remot
 		scratchReg: TempReg
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genStorePop: popBoolean TemporaryVariable: tempIndex [
 	<inline: false>
 	popBoolean
@@ -3575,7 +3614,7 @@ SimpleStackBasedCogit >> generateTracingTrampolines [
 		 ceTraceStoreTrampoline := self simulatedTrampolineFor: #ceShortCutTraceStore:]
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> marshallAbsentReceiverSendArguments: numArgs [
 	"Shuffle arguments if necessary and push receiver."
 	numArgs = 0

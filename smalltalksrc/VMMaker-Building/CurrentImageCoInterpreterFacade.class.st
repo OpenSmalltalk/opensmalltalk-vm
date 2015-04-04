@@ -345,7 +345,7 @@ CurrentImageCoInterpreterFacade >> functionPointerFor: primIndex inClass: lookup
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> functionPointerForCompiledMethod: methodOop primitiveIndex: primIndex [
 	^([coInterpreter functionPointerForCompiledMethod: methodOop primitiveIndex: primIndex]
-			on: MessageNotUnderstood
+			on: Error
 			do: [:ex|
 				#someExternalPrimitive]) ifNotNil:
 		[:symbol|
@@ -994,6 +994,11 @@ CurrentImageCoInterpreterFacade >> variablesBase [
 		768k to 1023k		method cache
 		 1023k to 1024k	rump C stack"
 	^memory byteSize / 2
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> voidHeaderToMethodMap [
+	headerToMethodMap := Dictionary new
 ]
 
 { #category : #accessing }
