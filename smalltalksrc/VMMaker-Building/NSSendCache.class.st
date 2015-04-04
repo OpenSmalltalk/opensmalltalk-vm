@@ -2,12 +2,11 @@ Class {
 	#name : #NSSendCache,
 	#superclass : #VMStructType,
 	#instVars : [
-		'classTag',
-		'enclosingObject',
-		'target',
 		'selector',
 		'numArgs',
-		'depth'
+		'classTag',
+		'enclosingObject',
+		'target'
 	],
 	#pools : [
 		'CogMethodConstants',
@@ -46,18 +45,6 @@ NSSendCache >> classTag [
 NSSendCache >> classTag: anObject [
 
 	^classTag := anObject
-]
-
-{ #category : #accessing }
-NSSendCache >> depth [
-
-	^ depth
-]
-
-{ #category : #accessing }
-NSSendCache >> depth: anObject [
-
-	^depth := anObject
 ]
 
 { #category : #accessing }
