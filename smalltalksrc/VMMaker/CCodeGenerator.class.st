@@ -4791,15 +4791,6 @@ CCodeGenerator >> vmMaker: aVMMaker [
 ]
 
 { #category : #utilities }
-CCodeGenerator >> wantsLabels [
-	"Only label the VM, not plugins (internal or external).  This to cut down the scope
-	 of problems with labels being duplicated by C compiler optimizer inlining and
-	 loop unrolling.  We use the asmLabel: directive to control labelling in the
-	 interpreter proper. But it is too much work doing that for plugins too."
-	^vmClass notNil and: [vmClass wantsLabels]
-]
-
-{ #category : #utilities }
 CCodeGenerator >> with: aNode ifAppropriateSetTo: aBoolean do: aBlock [
 	"If aNode is a TDefineNode for a variable, set it to the supplied boolean for the duration
 	 of aBlock.  This avoids duplicating both arms of nested cppIf:ifTrue:[ifFalse:]'s."

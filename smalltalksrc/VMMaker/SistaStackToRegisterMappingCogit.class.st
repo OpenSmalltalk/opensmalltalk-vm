@@ -277,7 +277,7 @@ SistaStackToRegisterMappingCogit >> genExtTrapIfNotInstanceOfBehaviorsBytecode [
 	^0
 ]
 
-{ #category : #'bytecode generators' }
+{ #category : #'bytecode generator support' }
 SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	"The heart of performance counting in Sista.  Conditional branches are 6 times less
 	 frequent than sends and can provide basic block frequencies (send counters can't).
@@ -685,9 +685,13 @@ SistaStackToRegisterMappingCogit >> picDataFor: descriptor IsBackwardBranch: IsB
 	self targetMethodAndSendTableFor: entryPoint into: "It's a linked send; find which kind."
 		[:targetMethod :sendTable|
 		 tuple := self picDataForSendTo: targetMethod
-					methodClassIfSuper: (sendTable = superSendTrampolines ifTrue:
+					methodClassIfSuper: (sendTable = superSendTrampolines
+											ifTrue:
 												[coInterpreter methodClassOf:
-													(self cCoerceSimple: cogMethodArg to: #'CogMethod *') methodObject])
+													(self cCoerceSimple: cogMethodArg to: #'CogMethod *') methodObject]
+											ifFalse: "Difficult to find the directed send class at this point in time ;-)"
+												[sendTable = directedSuperSendTrampolines ifTrue:
+													[objectMemory nilObject]])
 					at: mcpc
 					bcpc: bcpc + 1].
 	tuple = 0 ifTrue: [^PrimErrNoMemory].
@@ -772,7 +776,7 @@ SistaStackToRegisterMappingCogit >> picDataForSendTo: cogMethod methodClassIfSup
 		{ bytecode pc, first class, target method, second class, second target method, ... }"
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #sendMcpc type: #'char *'>
-	| tuple |
+	| tuple class |
 	tuple := objectMemory
 					eeInstantiateClassIndex: ClassArrayCompactIndex
 					format: objectMemory arrayFormat
@@ -783,11 +787,10 @@ SistaStackToRegisterMappingCogit >> picDataForSendTo: cogMethod methodClassIfSup
 		[^0].
 	objectMemory storePointerUnchecked: 0 ofObject: tuple withValue: (objectMemory integerObjectOf: sendBcpc).
 	cogMethod cmType = CMMethod ifTrue:
-		[objectMemory
-			storePointer: 1
-				ofObject: tuple
-					withValue: (methodClassOrNil ifNil:
-								[objectRepresentation classForInlineCacheTag: (backEnd inlineCacheTagAt: sendMcpc asUnsignedInteger)]);
+		[class := methodClassOrNil ifNil:
+					[objectRepresentation classForInlineCacheTag: (backEnd inlineCacheTagAt: sendMcpc asUnsignedInteger)].
+		 objectMemory
+			storePointer: 1 ofObject: tuple withValue: class;
 			storePointer: 2 ofObject: tuple withValue: cogMethod methodObject.
 		^tuple].
 	cogMethod cmType = CMClosedPIC ifTrue:
