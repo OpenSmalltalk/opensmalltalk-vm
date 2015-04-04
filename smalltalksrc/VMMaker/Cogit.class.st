@@ -1920,6 +1920,13 @@ Cogit >> SqrtRd: dpreg [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> Stop [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: Stop
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> SubCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>

@@ -133,6 +133,7 @@ Class {
 		'SPReg',
 		'SendNumArgsReg',
 		'SqrtRd',
+		'Stop',
 		'SubCqR',
 		'SubCwR',
 		'SubRR',
@@ -234,6 +235,7 @@ CogRTLOpcodes class >> initialize [
 						Call
 						RetN
 						JumpR				"Not a regular jump, i.e. not pc dependent."
+						Stop				"Halt the processor"
 
 						"N.B.  Jumps are contiguous.  Long jumps are contigiuous within them.  See FirstJump et al below"
 						JumpLong
