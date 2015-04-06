@@ -2420,23 +2420,16 @@ CogIA32Compiler >> genPushRegisterArgsForNumArgs: numArgs [
 	 single machine-code frame format which saves us a lot of work."
 	numArgs <= cogit numRegArgs ifTrue:
 		[self assert: cogit numRegArgs <= 2.
-		 false "these two variants show the same performance on Intel Core i7, but the second one may be shorter."
-			ifTrue:
-				[cogit MoveMw: 0 r: SPReg R: TempReg. "Save return address"
-				 numArgs > 0 ifTrue:
-					[cogit PushR: Arg0Reg.
-					 numArgs > 1 ifTrue:
-						[cogit PushR: Arg1Reg]].
-				 cogit PushR: TempReg.
-				 cogit MoveR: ReceiverResultReg Mw: objectMemory wordSize * (1 + numArgs) r: SPReg]
-			ifFalse:
-				[cogit MoveMw: 0 r: SPReg R: TempReg. "Save return address"
-				 cogit MoveR: ReceiverResultReg Mw: 0 r: SPReg.
-				 numArgs > 0 ifTrue:
-					[cogit PushR: Arg0Reg.
-					 numArgs > 1 ifTrue:
-						[cogit PushR: Arg1Reg]].
-				cogit PushR: TempReg]] "Restore return address"
+		 "N.B. Take great care to /not/ smash TempReg, which is used in directed send marshalling."
+		 "Swap the return address with ReceiverResultReg"
+		 cogit gen: XCHGMwrR operand: 0 operand: SPReg operand: ReceiverResultReg. "Save return address; replace with receiver"
+		 numArgs > 0 ifTrue:
+			[cogit PushR: Arg0Reg.
+			 numArgs > 1 ifTrue:
+				[cogit PushR: Arg1Reg]].
+		cogit PushR: ReceiverResultReg.
+		"Reload ReceiverResultReg"
+		cogit MoveMw: numArgs + 1 * objectMemory wordSize r: SPReg R: ReceiverResultReg]
 ]
 
 { #category : #abi }
