@@ -79,6 +79,11 @@ StackDepthFinder >> containsMismatchedJoin [
 ]
 
 { #category : #'instruction decoding' }
+StackDepthFinder >> directedSuperSend: selector numArgs: numArgs [
+	self drop: numArgs + 1
+]
+
+{ #category : #'instruction decoding' }
 StackDepthFinder >> doDup [
 	"Duplicate Top Of Stack bytecode."
 	self push

@@ -101,9 +101,9 @@ SistaStackToRegisterMappingCogit class >> generatorTableFrom: anArray [
 { #category : #'class initialization' }
 SistaStackToRegisterMappingCogit class >> initializeMiscConstants [
 	super initializeMiscConstants.
-	NumTrampolines := NewspeakVM
-							ifTrue: [67]
-							ifFalse: [53]
+	NumTrampolines := 53
+						+ (NewspeakVM ifTrue: [18] ifFalse: [0])
+						+ (BytecodeSetHasDirectedSuperSend ifTrue: [4] ifFalse: [0])
 ]
 
 { #category : #'class initialization' }
@@ -616,6 +616,115 @@ SistaStackToRegisterMappingCogit >> initializeCodeZoneFrom: startAddress upTo: e
 	super initializeCodeZoneFrom: startAddress upTo: endAddress
 ]
 
+{ #category : #'method map' }
+SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc withAnnotationPerformUntil: functionSymbol arg: arg [
+	"A version of mapFor:bcpc:performUntil:arg: that passes the annotation instead of the isBackwardBranch flag."
+	<var: #cogMethod type: #'CogBlockMethod *'>
+	<var: #functionSymbol declareC: 'sqInt (*functionSymbol)(BytecodeDescriptor *desc, sqInt annotation, char *mcpc, sqInt bcpc, void *arg)'>
+	<var: #arg type: #'void *'>
+	<inline: true>
+	| isInBlock mcpc bcpc endbcpc map mapByte homeMethod aMethodObj result
+	  latestContinuation byte descriptor bsOffset nExts annotation |
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	<var: #homeMethod type: #'CogMethod *'>
+	self assert: cogMethod stackCheckOffset > 0.
+	"In both CMMethod and CMBlock cases find the start of the map and
+	 skip forward to the bytecode pc map entry for the stack check."
+	cogMethod cmType = CMMethod
+		ifTrue:
+			[isInBlock := false.
+			 homeMethod := self cCoerceSimple: cogMethod to: #'CogMethod *'.
+			 self assert: startbcpc = (coInterpreter startPCOfMethodHeader: homeMethod methodHeader).
+			 map := self mapStartFor: homeMethod.
+			 annotation := (objectMemory byteAt: map) >> AnnotationShift.
+			 self assert: (annotation = IsAbsPCReference
+						 or: [annotation = IsObjectReference
+						 or: [annotation = IsRelativeCall
+						 or: [annotation = IsDisplacementX2N]]]).
+			 latestContinuation := startbcpc.
+			 aMethodObj := homeMethod methodObject.
+			 endbcpc := (objectMemory numBytesOf: aMethodObj) - 1.
+			 bsOffset := self bytecodeSetOffsetForHeader: homeMethod methodHeader]
+		ifFalse:
+			[isInBlock := true.
+			 homeMethod := cogMethod cmHomeMethod.
+			 map := self findMapLocationForMcpc: cogMethod asUnsignedInteger + (self sizeof: CogBlockMethod)
+						inMethod: homeMethod.
+			 self assert: map ~= 0.
+			 annotation := (objectMemory byteAt: map) >> AnnotationShift.
+			 self assert: (annotation >> AnnotationShift = HasBytecodePC "fiducial"
+						 or: [annotation >> AnnotationShift = IsDisplacementX2N]).
+			 [(annotation := (objectMemory byteAt: map) >> AnnotationShift) ~= HasBytecodePC] whileTrue:
+				[map := map - 1].
+			 map := map - 1. "skip fiducial; i.e. the map entry for the pc immediately following the method header."
+			 aMethodObj := homeMethod methodObject.
+			 bcpc := startbcpc - (self blockCreationBytecodeSizeForHeader: homeMethod methodHeader).
+			 bsOffset := self bytecodeSetOffsetForHeader: homeMethod methodHeader.
+			 byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
+			 descriptor := self generatorAt: byte.
+			 endbcpc := self nextBytecodePCFor: descriptor at: bcpc exts: -1 in: aMethodObj].
+	bcpc := startbcpc.
+	mcpc := cogMethod asUnsignedInteger + cogMethod stackCheckOffset.
+	nExts := 0.
+	"The stack check maps to the start of the first bytecode,
+	 the first bytecode being effectively after frame build."
+	result := self perform: functionSymbol
+					with: nil
+					with: annotation
+					with: (self cCoerceSimple: mcpc to: #'char *')
+					with: startbcpc
+					with: arg.
+	result ~= 0 ifTrue:
+		[^result].
+	"Now skip up through the bytecode pc map entry for the stack check." 
+	[(objectMemory byteAt: map) >> AnnotationShift ~= HasBytecodePC] whileTrue:
+		[map := map - 1].
+	map := map - 1.
+	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue: "defensive; we exit on bcpc"
+		[mapByte >= FirstAnnotation
+			ifTrue:
+				[| nextBcpc |
+				annotation := mapByte >> AnnotationShift.
+				mcpc := mcpc + (mapByte bitAnd: DisplacementMask).
+				(self isPCMappedAnnotation: annotation) ifTrue:
+					[(annotation = IsSendCall
+					  and: [(mapByte := objectMemory byteAt: map - 1) >> AnnotationShift = IsAnnotationExtension]) ifTrue:
+						[annotation := annotation + (mapByte bitAnd: DisplacementMask).
+						 map := map - 1].
+					[byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
+					  descriptor := self generatorAt: byte.
+					  isInBlock
+						ifTrue: [bcpc >= endbcpc ifTrue: [^0]]
+						ifFalse:
+							[(descriptor isReturn and: [bcpc >= latestContinuation]) ifTrue: [^0].
+							 (descriptor isBranch or: [descriptor isBlockCreation]) ifTrue:
+								[| targetPC |
+								 targetPC := self latestContinuationPCFor: descriptor at: bcpc exts: nExts in: aMethodObj.
+								 latestContinuation := latestContinuation max: targetPC]].
+					  nextBcpc := self nextBytecodePCFor: descriptor at: bcpc exts: nExts in: aMethodObj.
+					  descriptor isMapped
+					  or: [isInBlock and: [descriptor isMappedInBlock]]] whileFalse:
+						[bcpc := nextBcpc.
+						 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
+					result := self perform: functionSymbol
+									with: descriptor
+									with: annotation
+									with: (self cCoerceSimple: mcpc to: #'char *')
+									with: bcpc
+									with: arg.
+					 result ~= 0 ifTrue:
+						[^result].
+					 bcpc := nextBcpc.
+					 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]]]
+			ifFalse:
+				[self assert: (mapByte >> AnnotationShift = IsDisplacementX2N
+							or: [mapByte >> AnnotationShift = IsAnnotationExtension]).
+				 mapByte < (IsAnnotationExtension << AnnotationShift) ifTrue:
+					[mcpc := mcpc + (mapByte - DisplacementX2N << AnnotationShift)]].
+		 map := map - 1].
+	^0
+]
+
 { #category : #'compile abstract instructions' }
 SistaStackToRegisterMappingCogit >> maybeAllocAndInitCounters [
 	<inline: true>
@@ -651,7 +760,7 @@ SistaStackToRegisterMappingCogit >> maybeMarkCountersIn: cogMethod [
 ]
 
 { #category : #'method introspection' }
-SistaStackToRegisterMappingCogit >> picDataFor: descriptor IsBackwardBranch: IsBackwardBranch Mcpc: mcpc Bcpc: bcpc Method: cogMethodArg [
+SistaStackToRegisterMappingCogit >> picDataFor: descriptor Annotation: annotation Mcpc: mcpc Bcpc: bcpc Method: cogMethodArg [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #mcpc type: #'char *'>
 	<var: #cogMethodArg type: #'void *'>
@@ -675,25 +784,23 @@ SistaStackToRegisterMappingCogit >> picDataFor: descriptor IsBackwardBranch: IsB
 			 picDataIndex := picDataIndex + 1.
 			 counterIndex := counterIndex + 1].
 		 ^0].
-	"infer it's a send; alas we can't just test the descriptor because of the bloody
-	 doubleExtendedDoAnythingBytecode which does sends as well as other things."
-	(backEnd isCallPreceedingReturnPC: mcpc asUnsignedInteger) ifFalse:
+	((self isPureSendAnnotation: annotation)
+	 and: [entryPoint := backEnd callTargetFromReturnAddress: mcpc asUnsignedInteger.
+		 entryPoint > methodZoneBase]) ifFalse: "send is not linked, or is not a send"
 		[^0].
-	entryPoint := backEnd callTargetFromReturnAddress: mcpc asUnsignedInteger.
-	entryPoint <= methodZoneBase ifTrue: "send is not linked, or is not a send"
-		[^0].
-	self targetMethodAndSendTableFor: entryPoint into: "It's a linked send; find which kind."
-		[:targetMethod :sendTable|
-		 tuple := self picDataForSendTo: targetMethod
-					methodClassIfSuper: (sendTable = superSendTrampolines
-											ifTrue:
-												[coInterpreter methodClassOf:
-													(self cCoerceSimple: cogMethodArg to: #'CogMethod *') methodObject]
-											ifFalse: "Difficult to find the directed send class at this point in time ;-)"
-												[sendTable = directedSuperSendTrampolines ifTrue:
-													[objectMemory nilObject]])
-					at: mcpc
-					bcpc: bcpc + 1].
+	self targetMethodAndSendTableFor: entryPoint "It's a linked send; find which kind."
+		annotation: annotation
+		into: [:targetMethod :sendTable| | methodClassIfSuper association |
+			methodClassIfSuper := nil.
+			sendTable = superSendTrampolines ifTrue:
+				[methodClassIfSuper := coInterpreter methodClassOf: (self cCoerceSimple: cogMethodArg to: #'CogMethod *') methodObject].
+			sendTable = directedSuperSendTrampolines ifTrue:
+				[association := backEnd literalBeforeInlineCacheTagAt: mcpc.
+				 methodClassIfSuper := objectRepresentation valueOfAssociation: association].
+			tuple := self picDataForSendTo: targetMethod
+						methodClassIfSuper: methodClassIfSuper
+						at: mcpc
+						bcpc: bcpc + 1].
 	tuple = 0 ifTrue: [^PrimErrNoMemory].
 	objectMemory storePointer: picDataIndex ofObject: picData withValue: tuple.
 	picDataIndex := picDataIndex + 1.
@@ -713,7 +820,7 @@ SistaStackToRegisterMappingCogit >> picDataFor: cogMethod into: arrayObj [
 	errCode := self
 					mapFor: (self cCoerceSimple: cogMethod to: #'CogBlockMethod *')
 					bcpc: (coInterpreter startPCOfMethod: cogMethod methodObject)
-					performUntil: #picDataFor:IsBackwardBranch:Mcpc:Bcpc:Method:
+					withAnnotationPerformUntil: #picDataFor:Annotation:Mcpc:Bcpc:Method:
 					arg: cogMethod asVoidPointer.
 	errCode ~= 0 ifTrue:
 		[self assert: errCode = PrimErrNoMemory.
@@ -741,7 +848,7 @@ SistaStackToRegisterMappingCogit >> picDataForBlockEntry: blockEntryMcpc Method:
 	^self
 		mapFor: cogBlockMethod
 		bcpc: cogBlockMethod startpc
-		performUntil: #picDataFor:IsBackwardBranch:Mcpc:Bcpc:Method:
+		withAnnotationPerformUntil: #picDataFor:Annotation:Mcpc:Bcpc:Method:
 		arg: cogMethod asVoidPointer
 ]
 

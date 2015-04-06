@@ -75,7 +75,7 @@ numAbstractOpcodes <Integer>
 blockStarts <Array of <BlockStart>>
 	the starts of blocks in the current method
 blockCount
-	the index into blockStarts as they are being noted, and hence eventuakly teh total number of blocks in the current method
+	the index into blockStarts as they are being noted, and hence eventually the total number of blocks in the current method
 labelCounter <Integer>
 	a nicety for numbering labels not needed in the production system but probably not expensive enough to worry about
 ceStackOverflowTrampoline <Integer>
@@ -242,7 +242,8 @@ Class {
 		'indexOfIRC',
 		'theIRCs',
 		'implicitReceiverSendTrampolines',
-		'nsSendCacheSurrogateClass'
+		'nsSendCacheSurrogateClass',
+		'tempOop'
 	],
 	#classVars : [
 		'AltBlockCreationBytecodeSize',
@@ -292,6 +293,7 @@ Class {
 		'CogMethodConstants',
 		'CogRTLOpcodes',
 		'VMBasicConstants',
+		'VMBytecodeConstants',
 		'VMObjectIndices',
 		'VMStackFrameOffsets'
 	],
@@ -790,6 +792,7 @@ Cogit class >> initializeBytecodeTable [
 	"StackToRegisterMappingCogit initializeBytecodeTableWith: Dictionary new"
 
 	| initializer |
+	BytecodeSetHasDirectedSuperSend := false.
 	initializer := initializationOptions
 					at: #bytecodeTableInitializer
 					ifAbsent:
@@ -1899,6 +1902,13 @@ Cogit >> PrefetchAw: address [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> PushCq: wordConstant [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: PushCq operand: wordConstant
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> PushCw: wordConstant [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2336,10 +2346,10 @@ Cogit >> annotationForMcpc: mcpc in: cogHomeMethod [
 	mapLocation := self findMapLocationForMcpc: mcpc inMethod: cogHomeMethod.
 	mapLocation = 0 ifTrue:
 		[^0].
-	mapByte := coInterpreter byteAt: mapLocation.
+	mapByte := objectMemory byteAt: mapLocation.
 	annotation := mapByte >> AnnotationShift.
 	annotation = IsSendCall ifTrue:
-		[mapByte := coInterpreter byteAt: mapLocation - 1.
+		[mapByte := objectMemory byteAt: mapLocation - 1.
 		 mapByte >> AnnotationShift = IsAnnotationExtension ifTrue:
 			[annotation := annotation + (mapByte bitAnd: DisplacementMask)]].
 	^annotation
@@ -4721,7 +4731,7 @@ Cogit >> findMapLocationForMcpc: targetMcpc inMethod: cogMethod [
 	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
 	map := self mapStartFor: cogMethod.
 	mcpc = targetMcpc ifTrue: [^map].
-	[(mapByte := coInterpreter byteAt: map) ~= MapEnd] whileTrue:
+	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
 		[annotation := mapByte >> AnnotationShift.
 		 annotation ~= IsAnnotationExtension ifTrue:
 			[mcpc := mcpc + (annotation = IsDisplacementX2N
@@ -5949,6 +5959,25 @@ Cogit >> generateSendTrampolines [
 
 	"Generate these in the middle so they are within [firstSend, lastSend]."
 	self cppIf: NewspeakVM ifTrue: [self generateNewspeakSendTrampolines].
+	self cppIf: BytecodeSetHasDirectedSuperSend ifTrue:
+		[0 to: NumSendTrampolines - 2 do:
+			[:numArgs|
+			directedSuperSendTrampolines
+				at: numArgs
+				put: (self genTrampolineFor: #ceSend:above:to:numArgs:
+						  called: (self trampolineName: 'ceDirectedSuperSend' numArgs: numArgs)
+						  arg: ClassReg
+						  arg: TempReg
+						  arg: ReceiverResultReg
+						  arg: numArgs)].
+		directedSuperSendTrampolines
+			at: NumSendTrampolines - 1
+			put: (self genTrampolineFor: #ceSend:above:to:numArgs:
+						called: (self trampolineName: 'ceDirectedSuperSend' numArgs: -1)
+						arg: ClassReg
+						arg: TempReg
+						arg: ReceiverResultReg
+						arg: SendNumArgsReg)].
 
 	0 to: NumSendTrampolines - 2 do:
 		[:numArgs|
@@ -6461,7 +6490,7 @@ Cogit >> isDirectedSuper: descriptor extA: exta extB: extb [
 													with jjj (+ (Extend B bitAnd: 63) * 8) Arguments]"
 	<inline: true>
 	^descriptor notNil
-	  and: [descriptor == #genExtSendSuperBytecode
+	  and: [descriptor generator == #genExtSendSuperBytecode
 	  and: [extb >= 64]]
 ]
 
@@ -6708,7 +6737,7 @@ Cogit >> mapEndFor: cogMethod [
 	<inline: true>
 	| end |
 	end := self mapStartFor: cogMethod.
-	[(coInterpreter byteAt: end) ~= MapEnd] whileTrue:
+	[(objectMemory byteAt: end) ~= MapEnd] whileTrue:
 		[end := end - 1.
 		 self assert: end > (cogMethod asInteger + cmNoCheckEntryOffset)].
 	^end
@@ -6834,7 +6863,7 @@ Cogit >> mapFor: cogMethod performAllMapEntriesUntil: functionSymbol arg: arg [
 	| mcpc map mapByte result |
 	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
 	map := self mapStartFor: cogMethod.
-	[(mapByte := coInterpreter byteAt: map) ~= MapEnd] whileTrue:
+	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
 		[mapByte >= FirstAnnotation
 			ifTrue:
 				[mcpc := mcpc + (mapByte bitAnd: DisplacementMask)]
@@ -6860,13 +6889,13 @@ Cogit >> mapFor: cogMethod performUntil: functionSymbol arg: arg [
 	| mcpc map mapByte annotation result |
 	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
 	map := self mapStartFor: cogMethod.
-	[(mapByte := coInterpreter byteAt: map) ~= MapEnd] whileTrue:
+	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
 		[mapByte >= FirstAnnotation
 			ifTrue:
 				[mcpc := mcpc + (mapByte bitAnd: DisplacementMask).
 				 "If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it."
 				 ((annotation := mapByte >> AnnotationShift) = IsSendCall
-				  and: [(mapByte := coInterpreter byteAt: map - 1) >> AnnotationShift = IsAnnotationExtension]) ifTrue:
+				  and: [(mapByte := objectMemory byteAt: map - 1) >> AnnotationShift = IsAnnotationExtension]) ifTrue:
 					[annotation := annotation + (mapByte bitAnd: DisplacementMask).
 					 map := map - 1].
 				 result := self perform: functionSymbol
@@ -7716,9 +7745,10 @@ Cogit >> nextDescriptorAndExtensionsInto: aTrinaryBlock [
 	<inline: true>
 	| savedB0 savedB1 savedB2 savedB3 savedEA savedEB descriptor bcpc |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
+	descriptor := self generatorAt: byte0.
 	savedB0 := byte0. savedB1 := byte1. savedB2 := byte2. savedB3 := byte3.
 	savedEA := extA. savedEB := extB.
-	bcpc := bytecodePC.
+	bcpc := bytecodePC + descriptor numBytes.
 	[bcpc > endPC ifTrue:
 		[^aTrinaryBlock value: nil value: 0 value: 0].
 	 byte0 := (objectMemory fetchByte: bcpc ofObject: methodObj)  + bytecodeSetOffset.
@@ -8182,7 +8212,7 @@ Cogit >> printPCMapPairsFor: cogMethod on: aStream [
 	| mcpc map mapByte annotation |
 	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
 	map := self mapStartFor: cogMethod.
-	[(mapByte := coInterpreter byteAt: map) ~= MapEnd] whileTrue:
+	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
 		[annotation := mapByte >> AnnotationShift.
 		 annotation ~= IsAnnotationExtension ifTrue:
 			[mcpc := mcpc + (annotation = IsDisplacementX2N
@@ -8909,6 +8939,8 @@ Cogit >> setInterpreter: aCoInterpreter [
 	(methodLabel := processor abstractInstructionCompilerClass new) cogit: self.
 	ordinarySendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
 	superSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
+	BytecodeSetHasDirectedSuperSend ifTrue:
+		[directedSuperSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines)].
 	NewspeakVM ifTrue:
 		[selfSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
 		dynamicSuperSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).

@@ -1075,3 +1075,8 @@ CogObjectRepresentationForSqueakV3 >> validInlineCacheTag: cacheTag [
 				and: (objectMemory compactClassIndexOfHeader: -1) << objectMemory compactClassFieldLSB])
 		 or: [self checkValidObjectReference: cacheTag]]
 ]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSqueakV3 >> valueOfAssociation: association [
+	^objectMemory fetchPointer: ValueIndex ofObject: association
+]

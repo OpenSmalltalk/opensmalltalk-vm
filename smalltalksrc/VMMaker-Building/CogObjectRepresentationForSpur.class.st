@@ -10,8 +10,8 @@ Class {
 	],
 	#pools : [
 		'CogCompilationConstants',
-		'VMSqueakClassIndices',
-		'VMSqueakV3BytecodeConstants'
+		'VMBytecodeConstants',
+		'VMSqueakClassIndices'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -857,4 +857,13 @@ CogObjectRepresentationForSpur >> slotOffsetOfInstVarIndex: index [
 { #category : #testing }
 CogObjectRepresentationForSpur >> smallIntegerIsOnlyImmediateType [
 	^false
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> valueOfAssociation: associationOop [
+	| association |
+	association := associationOop.
+	(objectMemory isForwarded: association) ifTrue:
+		[association := objectMemory followForwarded: association].
+	^objectMemory fetchPointer: ValueIndex ofObject: association
 ]
