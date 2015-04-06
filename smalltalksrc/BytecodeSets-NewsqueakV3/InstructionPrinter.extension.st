@@ -7,6 +7,11 @@ InstructionPrinter >> blockReturnConstant: value [
 	self print: 'blockReturn: ', value printString
 ]
 
+{ #category : #'*BytecodeSets-instruction decoding' }
+InstructionPrinter >> directedSuperSend: selector "<Symbol>" numArgs: numArgs [ "<SmallInteger>"
+	self print: 'directedSuperSend: ' , (self stringForSelector: selector numArgs: numArgs)
+]
+
 { #category : #'*BytecodeSets-SistaV1-decoding' }
 InstructionPrinter >> pushClosureTemps: numTemps [
 	self print: 'pushClosureTemps: ', numTemps printString
