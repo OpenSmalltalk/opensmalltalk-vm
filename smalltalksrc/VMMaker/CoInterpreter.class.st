@@ -3540,13 +3540,6 @@ CoInterpreter >> frameNumTemps: theFP [
 	^0
 ]
 
-{ #category : #accessing }
-CoInterpreter >> framePointer [
-	<api>
-	<cmacro: '() framePointer'>
-	^framePointer
-]
-
 { #category : #'cog jit support' }
 CoInterpreter >> framePointer: theFP [
 	"Simulation only"
@@ -3691,6 +3684,13 @@ CoInterpreter >> getCurrentBytecode [
 CoInterpreter >> getDesiredCogCodeSize [
 	<cmacro: '() integerObjectOf(desiredCogCodeSize)'>
 	^objectMemory integerObjectOf: desiredCogCodeSize
+]
+
+{ #category : #accessing }
+CoInterpreter >> getFramePointer [
+	<api>
+	<option: #NewspeakVM>
+	^framePointer
 ]
 
 { #category : #'object memory support' }
