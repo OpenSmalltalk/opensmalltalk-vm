@@ -18,7 +18,7 @@ Class {
 	],
 	#pools : [
 		'VMBasicConstants',
-		'VMSqueakV3BytecodeConstants'
+		'VMBytecodeConstants'
 	],
 	#category : #'VMMaker-Interpreter'
 }

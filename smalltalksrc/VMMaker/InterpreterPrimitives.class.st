@@ -66,10 +66,10 @@ Class {
 	],
 	#pools : [
 		'VMBasicConstants',
+		'VMBytecodeConstants',
 		'VMMethodCacheConstants',
 		'VMObjectIndices',
 		'VMSqueakClassIndices',
-		'VMSqueakV3BytecodeConstants',
 		'VMStackFrameOffsets'
 	],
 	#category : #'VMMaker-Interpreter'

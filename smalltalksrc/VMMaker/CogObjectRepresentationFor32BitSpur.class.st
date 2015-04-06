@@ -1181,8 +1181,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNewWithArg: retNof
 	"save num elements/slot size to instSpecReg"
 	cogit MoveR: TempReg R: instSpecReg.
 	"push fill value"
-	cogit MoveCq: 0 R: TempReg.
-	cogit PushR: TempReg.
+	cogit PushCq: 0.
 	jumpLongPrepDone := cogit Jump: 0. "go allocate"
 
 	jumpByteFormat jmpTarget:
@@ -1200,8 +1199,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNewWithArg: retNof
 	cogit AddCq: objectMemory wordSize - 1 R: instSpecReg.
 	cogit LogicalShiftRightCq: objectMemory shiftForWord R: instSpecReg.
 	"push fill value"
-	cogit MoveCq: 0 R: TempReg.
-	cogit PushR: TempReg.
+	cogit PushCq: 0.
 	jumpBytePrepDone := cogit Jump: 0. "go allocate"
 
 	jumpArrayFormat jmpTarget:
@@ -1210,8 +1208,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNewWithArg: retNof
 	"save num elements/slot size to instSpecReg"
 	cogit MoveR: TempReg R: instSpecReg.
 	"push fill value"
-	cogit MoveCw: objectMemory nilObject R: TempReg.
-	cogit PushR: TempReg.
+	cogit PushCw: objectMemory nilObject.
 	"fall through to allocate"
 
 	jumpBytePrepDone jmpTarget:
@@ -1445,8 +1442,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	"save num elements/slot size to instSpecReg"
 	cogit MoveR: TempReg R: instSpecReg.
 	"push fill value"
-	cogit MoveCq: 0 R: TempReg.
-	cogit PushR: TempReg.
+	cogit PushCq: 0.
 	jumpLongPrepDone := cogit Jump: 0. "go allocate"
 
 	jumpByteFormat jmpTarget:
@@ -1464,8 +1460,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	cogit AddCq: objectMemory wordSize - 1 R: instSpecReg.
 	cogit LogicalShiftRightCq: objectMemory shiftForWord R: instSpecReg.
 	"push fill value"
-	cogit MoveCq: 0 R: TempReg.
-	cogit PushR: TempReg.
+	cogit PushCq: 0.
 	jumpBytePrepDone := cogit Jump: 0. "go allocate"
 
 	jumpArrayFormat jmpTarget:
@@ -1474,8 +1469,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	"save num elements/slot size to instSpecReg"
 	cogit MoveR: TempReg R: instSpecReg.
 	"push fill value"
-	cogit MoveCw: objectMemory nilObject R: TempReg.
-	cogit PushR: TempReg.
+	cogit PushCw: objectMemory nilObject.
 	"fall through to allocate"
 
 	jumpBytePrepDone jmpTarget:

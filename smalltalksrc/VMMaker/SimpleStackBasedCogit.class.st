@@ -220,6 +220,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 	"SimpleStackBasedCogit initializeBytecodeTableForSistaV1"
 
+	BytecodeSetHasDirectedSuperSend := true.
 	FirstSpecialSelector := 96.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
@@ -410,9 +411,9 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSqueakV3PlusClosures [
 SimpleStackBasedCogit class >> initializeMiscConstants [
 	super initializeMiscConstants.
 	MaxLiteralCountForCompile := initializationOptions at: #MaxLiteralCountForCompile ifAbsent: [60].
-	NumTrampolines := NewspeakVM
-							ifTrue: [60]
-							ifFalse: [42]
+	NumTrampolines := 42
+						+ (NewspeakVM ifTrue: [18] ifFalse: [0])
+						+ (BytecodeSetHasDirectedSuperSend ifTrue: [4] ifFalse: [0])
 ]
 
 { #category : #'class initialization' }
@@ -796,8 +797,8 @@ SimpleStackBasedCogit >> annotationForSendTable: sendTable [
 		[^IsNSDynamicSuperSend].
 	(NewspeakVM and: [sendTable == implicitReceiverSendTrampolines]) ifTrue:
 		[^IsNSImplicitReceiverSend].
-	(SistaVM and: [sendTable == directedSuperSendTrampolines]) ifTrue:
-		[^IsNSImplicitReceiverSend].
+	(BytecodeSetHasDirectedSuperSend and: [sendTable == directedSuperSendTrampolines]) ifTrue:
+		[^IsDirectedSuperSend].
 	sendTable == superSendTrampolines ifTrue:
 		[^IsSuperSend].
 	self assert: sendTable == ordinarySendTrampolines.
@@ -2926,7 +2927,7 @@ SimpleStackBasedCogit >> genPushLiteralVariableGivenDirectedSuper: literalIndex 
 	self nextDescriptorAndExtensionsInto:
 		[:descriptor :exta :extb|
 		(self isDirectedSuper: descriptor extA: exta extB: extb) ifTrue:
-			[self ssPushConstant: (self getLiteral: literalIndex).
+			[tempOop := self getLiteral: literalIndex.
 			 ^0]].
 	^self genPushLiteralVariable: literalIndex
 ]
@@ -3156,6 +3157,9 @@ SimpleStackBasedCogit >> genSend: selector numArgs: numArgs sendTable: sendTable
 	self MoveMw: numArgs * objectMemory wordSize r: SPReg R: ReceiverResultReg.
 	numArgs > 2 ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
+	(BytecodeSetHasDirectedSuperSend
+	 and: [annotation = IsDirectedSuperSend]) ifTrue:
+		[self annotate: (self MoveCw: tempOop R: TempReg) objRef: tempOop].
 	self MoveCw: selector R: ClassReg.
 	self annotate: (self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1)))
 		with: annotation.
@@ -3231,7 +3235,7 @@ SimpleStackBasedCogit >> genSendAbsentSelf: selector numArgs: numArgs [
 { #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genSendDirectedSuper: selector numArgs: numArgs [
 	<inline: false>
-	self halt: 'do all that good stuff moving the literal variable to an argument reg, etc...'.
+	"N.B. genPushLiteralVariableGivenDirectedSuper: has already loaded tempOop with the association."
 	^self genSend: selector numArgs: numArgs sendTable: directedSuperSendTrampolines
 ]
 

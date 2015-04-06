@@ -121,9 +121,9 @@ Class {
 	],
 	#pools : [
 		'VMBasicConstants',
+		'VMBytecodeConstants',
 		'VMObjectIndices',
 		'VMSqueakClassIndices',
-		'VMSqueakV3BytecodeConstants',
 		'VMSqueakV3ObjectRepresentationConstants'
 	],
 	#category : #'VMMaker-Interpreter'
