@@ -2894,7 +2894,7 @@ Cogit >> ceSICMiss: receiver [
 	self cppIf: NewspeakVM ifTrue:
 		[| callerMethod annotation |
 		 self assert: targetMethod asInteger + cmEntryOffset = entryPoint.
-		 callerMethod := coInterpreter mframeHomeMethod: coInterpreter framePointer.
+		 callerMethod := coInterpreter mframeHomeMethod: coInterpreter getFramePointer.
 		 self assert: (outerReturn
 						between: callerMethod asUnsignedInteger + cmNoCheckEntryOffset
 						and: callerMethod asUnsignedInteger + callerMethod blockSize).

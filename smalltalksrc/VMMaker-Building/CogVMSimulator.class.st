@@ -1124,6 +1124,11 @@ CogVMSimulator >> frameOfMarriedContext: aContext [
 	^self withoutSmallIntegerTags: senderOop
 ]
 
+{ #category : #'debug support' }
+CogVMSimulator >> framePointer [
+	^framePointer
+]
+
 { #category : #'I/O primitives' }
 CogVMSimulator >> fullDisplay [
 	| primFailCodeValue |
