@@ -5622,7 +5622,7 @@ Cogit >> generateCogMethod: selector [
 	self computeMaximumSizes.
 	methodLabel concretizeAt: methodZone freeStart.
 	codeSize := self generateInstructionsAt: methodLabel address + headerSize.
-	mapSize := self generateMapAt: 0 start: methodLabel address + cmNoCheckEntryOffset.
+	mapSize := self generateMapAt: nil start: methodLabel address + cmNoCheckEntryOffset.
 	totalSize := methodZone roundUpLength: headerSize + codeSize + mapSize.
 	totalSize > MaxMethodSize ifTrue:
 		[^self cCoerceSimple: MethodTooBig to: #'CogMethod *'].
@@ -5753,7 +5753,7 @@ Cogit >> generateMapAt: addressOrNull start: startAddress [
 		 [(delta := mcpc - location) > DisplacementMask] whileTrue:
 			[maxDelta := (delta min: MaxX2NDisplacement) bitClear: DisplacementMask.
 			 self assert: maxDelta >> AnnotationShift <= DisplacementMask.
-			 addressOrNull ~= 0 ifTrue:
+			 addressOrNull ifNotNil:
 				[objectMemory
 					byteAt: addressOrNull - length
 					put: maxDelta >> AnnotationShift + DisplacementX2N.
@@ -5763,23 +5763,25 @@ Cogit >> generateMapAt: addressOrNull start: startAddress [
 					  for: mcpc].
 			 location := location + maxDelta.
 			 length := length + 1].
-		 addressOrNull ~= 0 ifTrue:
+		 addressOrNull ifNotNil:
 			[mapEntry := delta + ((annotation annotation min: IsSendCall) << AnnotationShift).
 			 objectMemory byteAt: addressOrNull - length put: mapEntry.
 			 self traceMap: annotation
 				  byte: mapEntry
 				  at: addressOrNull - length
-				  for: mcpc.
-			 annotation annotation > IsSendCall ifTrue: "Add the necessary IsAnnotationExtension"
+				  for: mcpc].
+		 location := location + delta.
+		 length := length + 1.
+		 annotation annotation > IsSendCall ifTrue: "Add the necessary IsAnnotationExtension"
+			[addressOrNull ifNotNil:
 				[mapEntry := IsAnnotationExtension << AnnotationShift + (annotation annotation - IsSendCall).
-				 objectMemory byteAt: addressOrNull - (length := length + 1) put: mapEntry.
+				 objectMemory byteAt: addressOrNull - length put: mapEntry.
 				 self traceMap: annotation
 					  byte: mapEntry
 					  at: addressOrNull - length
-					  for: mcpc]].
-		 location := location + delta.
-		 length := length + 1].
-	addressOrNull ~= 0 ifTrue:
+					  for: mcpc].
+			 length := length + 1]].
+	addressOrNull ifNotNil:
 		[objectMemory byteAt: addressOrNull - length put: MapEnd.
 		 self traceMap: MapEnd
 			  byte: MapEnd
@@ -5893,7 +5895,7 @@ Cogit >> generateOpenPICPrototype [
 	headerSize := self sizeof: CogMethod.
 	methodLabel concretizeAt: methodZoneBase.
 	codeSize := self generateInstructionsAt: methodZoneBase + headerSize.
-	mapSize := self generateMapAt: 0 start: methodZoneBase + cmNoCheckEntryOffset.
+	mapSize := self generateMapAt: nil start: methodZoneBase + cmNoCheckEntryOffset.
 	openPICSize := (methodZone roundUpLength: headerSize + codeSize) + (methodZone roundUpLength: mapSize).
 	"self cCode: ''
 		inSmalltalk:
@@ -7886,7 +7888,7 @@ Cogit >> offsetAndSendTableFor: entryPoint annotation: annotation into: binaryBl
 	annotation = IsSendCall ifTrue:
 		[offset := cmEntryOffset.
 		 sendTable := ordinarySendTrampolines] ifFalse:
-	[(SistaVM and: [annotation = IsDirectedSuperSend]) ifTrue:
+	[(BytecodeSetHasDirectedSuperSend and: [annotation = IsDirectedSuperSend]) ifTrue:
 		[offset := cmNoCheckEntryOffset.
 		 sendTable := directedSuperSendTrampolines] ifFalse:
 	[(NewspeakVM and: [annotation = IsNSSelfSend]) ifTrue:
@@ -9334,7 +9336,7 @@ Cogit >> targetMethodAndSendTableFor: entryPoint annotation: annotation into: bi
 	annotation = IsSendCall ifTrue:
 		[targetMethod := self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *'.
 		 sendTable := ordinarySendTrampolines] ifFalse:
-	[(SistaVM and: [annotation = IsDirectedSuperSend]) ifTrue:
+	[(BytecodeSetHasDirectedSuperSend and: [annotation = IsDirectedSuperSend]) ifTrue:
 		[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 		 sendTable := directedSuperSendTrampolines] ifFalse:
 	[(NewspeakVM and: [annotation = IsNSSelfSend]) ifTrue:
