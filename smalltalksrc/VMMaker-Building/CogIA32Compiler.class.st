@@ -389,6 +389,7 @@ CogIA32Compiler >> computeMaximumSize [
 											ifFalse: [3]].
 		[PopR]			-> [^maxSize := 1].
 		[PushR]			-> [^maxSize := 1].
+		[PushCq]		-> [^maxSize := (self isQuick: (operands at: 0)) ifTrue: [2] ifFalse: [5]].
 		[PushCw]		-> [^maxSize := 5].
 		[PrefetchAw]	-> [^maxSize := self hasSSEInstructions ifTrue: [7] ifFalse: [0]].
 		"Conversion"
@@ -1813,6 +1814,25 @@ CogIA32Compiler >> concretizePrefetchAw [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizePushCq [
+	<inline: true>
+	| value |
+	value := operands at: 0.
+	(self isQuick: value) ifTrue:
+		[machineCode
+			at: 0 put: 16r6A;
+			at: 1 put: (value bitAnd: 16rFF).
+		^machineCodeSize := 2].
+	machineCode
+		at: 0 put: 16r68;
+		at: 1 put: (value bitAnd: 16rFF);
+		at: 2 put: (value >> 8 bitAnd: 16rFF);
+		at: 3 put: (value >> 16 bitAnd: 16rFF);
+		at: 4 put: (value >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 5
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizePushCw [
 	<inline: true>
 	| value |
@@ -2180,6 +2200,7 @@ CogIA32Compiler >> dispatchConcretize [
 		[MoveRdM64r]		-> [^self concretizeMoveRdM64r].
 		[PopR]				-> [^self concretizePopR].
 		[PushR]				-> [^self concretizePushR].
+		[PushCq]			-> [^self concretizePushCq].
 		[PushCw]			-> [^self concretizePushCw].
 		[PrefetchAw]		-> [^self concretizePrefetchAw].
 		"Conversion"
@@ -2333,9 +2354,7 @@ CogIA32Compiler >> genMulR: regSource R: regDest [
 
 { #category : #abi }
 CogIA32Compiler >> genPassConst: constant asArgument: zeroRelativeArgIndex [
-	cogit
-		MoveCq: constant R: TempReg;
-		PushR: TempReg.
+	cogit PushCq: constant.
 	^0
 ]
 
@@ -2722,6 +2741,12 @@ CogIA32Compiler >> literalBeforeFollowingAddress: followingAddress [
 	+  ((objectMemory byteAt: followingAddress - 2) << 16)
 	+  ((objectMemory byteAt: followingAddress - 3) << 8)
 	+   (objectMemory byteAt: followingAddress - 4)
+]
+
+{ #category : #'inline cacheing' }
+CogIA32Compiler >> literalBeforeInlineCacheTagAt: callSiteReturnAddress [
+	"Answer a literal loaded before the inline cache tag load for the return address of a send."
+	^self literalBeforeFollowingAddress: callSiteReturnAddress - 10
 ]
 
 { #category : #accessing }

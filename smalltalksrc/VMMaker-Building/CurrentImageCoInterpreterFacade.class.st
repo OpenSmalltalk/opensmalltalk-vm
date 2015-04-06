@@ -251,6 +251,11 @@ CurrentImageCoInterpreterFacade >> compilationBreak: aString point: length isMNU
 	^self
 ]
 
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> cr [
+	coInterpreter transcript cr; flush
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> debugStackPointersFor: anOop [
 	^CArrayAccessor on:
@@ -802,8 +807,17 @@ CurrentImageCoInterpreterFacade >> primitivePropertyFlags: primIndex [
 ]
 
 { #category : #printing }
+CurrentImageCoInterpreterFacade >> print: it [
+	it isString ifTrue: [coInterpreter transcript nextPutAll: it] ifFalse: [it printOn: coInterpreter transcript]
+]
+
+{ #category : #printing }
 CurrentImageCoInterpreterFacade >> printHex: anInteger [
-	coInterpreter printHex: anInteger
+	| it16 |
+	it16 := anInteger radix: 16.
+	coInterpreter transcript
+		next: 8 - it16 size put: Character space;
+		nextPutAll: (anInteger storeStringBase: 16)
 ]
 
 { #category : #accessing }
