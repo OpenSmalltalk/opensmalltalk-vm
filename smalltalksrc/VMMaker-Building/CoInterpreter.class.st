@@ -3543,6 +3543,7 @@ CoInterpreter >> frameNumTemps: theFP [
 { #category : #accessing }
 CoInterpreter >> framePointer [
 	<api>
+	<cmacro: '() framePointer'>
 	^framePointer
 ]
 

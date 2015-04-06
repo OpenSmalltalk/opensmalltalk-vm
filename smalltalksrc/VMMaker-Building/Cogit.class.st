@@ -479,9 +479,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			[:simulationVariableNotNeededForRealVM|
 			aCCodeGenerator removeVariable: simulationVariableNotNeededForRealVM].
 	NewspeakVM ifFalse:
-		[#(	'selfSendEntry' 'selfSendEntryAlignment' 'cmSelfSendEntryOffset'
-			'dynSuperEntry' 'dynSuperEntryAlignment' 'cmDynSuperEntryOffset'
-			'selfSendTrampolines' 'dynamicSuperSendTrampolines'
+		[#(	'selfSendTrampolines' 'dynamicSuperSendTrampolines'
 			'implicitReceiverSendTrampolines' 'outerSendTrampolines'
 			'ceEnclosingObjectTrampoline' 'numIRCs' 'indexOfIRC' 'theIRCs') do:
 				[:variableNotNeededInNormalVM|
@@ -551,6 +549,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			declareC: 'sqInt ordinarySendTrampolines[NumSendTrampolines]';
 		var: #superSendTrampolines
 			declareC: 'sqInt superSendTrampolines[NumSendTrampolines]';
+		var: #directedSuperSendTrampolines
+			declareC: 'sqInt directedSuperSendTrampolines[NumSendTrampolines]';
 		var: #selfSendTrampolines
 			declareC: 'sqInt selfSendTrampolines[NumSendTrampolines]';
 		var: #dynamicSuperSendTrampolines
