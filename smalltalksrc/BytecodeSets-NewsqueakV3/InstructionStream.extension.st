@@ -258,7 +258,11 @@ InstructionStream >> interpretNext2ByteSistaV1Instruction: bytecode for: client 
 		^client pushConstant: (Character value: (extB bitShift: 8) + byte)].
 	bytecode < 240 ifTrue: "sends, trap and jump"
 		[bytecode < 236 ifTrue: "sends"
-			[^client
+			[(bytecode = 235 and: [extB >= 64]) ifTrue:
+				[^client
+					directedSuperSend: (method literalAt: (extA bitShift: 5) + (byte // 8) + 1)
+					numArgs: (extB - 64 bitShift: 3) + (byte \\ 8)].
+			 ^client
 				send: (method literalAt: (extA bitShift: 5) + (byte // 8) + 1)
 				super: bytecode = 235
 				numArgs: (extB bitShift: 3) + (byte \\ 8)].

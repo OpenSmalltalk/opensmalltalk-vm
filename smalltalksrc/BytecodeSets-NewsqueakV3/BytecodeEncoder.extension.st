@@ -16,6 +16,11 @@ BytecodeEncoder >> sizeSendAbsentImplicit: selectorLiteralIndex numArgs: numArgs
 ]
 
 { #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizeSendDirectedSuper: selectorLiteralIndex numArgs: numArgs [
+	^self sizeOpcodeSelector: #genSendDirectedSuper:numArgs: withArguments: {selectorLiteralIndex. numArgs}
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
 BytecodeEncoder >> sizeSendImplicit: selectorLiteralIndex numArgs: numArgs [
 	^self sizeOpcodeSelector: #genSendImplicit:numArgs: withArguments: {selectorLiteralIndex. numArgs}
 ]
