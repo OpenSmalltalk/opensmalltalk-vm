@@ -740,7 +740,7 @@ SistaStackToRegisterMappingCogit >> maybeAllocAndInitCounters [
 SistaStackToRegisterMappingCogit >> maybeFreeCounters [
 	<inline: true>
 	counters ~= 0 ifTrue:
-		[objectMemory freeCounters: counters]
+		[objectRepresentation freeCounters: counters]
 ]
 
 { #category : #compaction }
