@@ -618,10 +618,10 @@ Class {
 	#pools : [
 		'SpurMemoryManagementConstants',
 		'VMBasicConstants',
+		'VMBytecodeConstants',
 		'VMObjectIndices',
 		'VMSpurObjectRepresentationConstants',
-		'VMSqueakClassIndices',
-		'VMSqueakV3BytecodeConstants'
+		'VMSqueakClassIndices'
 	],
 	#category : #'VMMaker-SpurMemoryManager'
 }

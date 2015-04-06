@@ -336,6 +336,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 
 	numPushNilsFunction := #sistaV1:Num:Push:Nils:.
 	pushNilSizeFunction := #sistaV1PushNilSize:numInitialNils:.
+	BytecodeSetHasDirectedSuperSend := true.
 	FirstSpecialSelector := 96.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
@@ -570,9 +571,9 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 { #category : #'class initialization' }
 StackToRegisterMappingCogit class >> initializeMiscConstants [
 	super initializeMiscConstants.
-	NumTrampolines := NewspeakVM
-							ifTrue: [70]
-							ifFalse: [52]
+	NumTrampolines := 52
+						+ (NewspeakVM ifTrue: [18] ifFalse: [0])
+						+ (BytecodeSetHasDirectedSuperSend ifTrue: [4] ifFalse: [0])
 ]
 
 { #category : #'class initialization' }
@@ -1817,6 +1818,9 @@ StackToRegisterMappingCogit >> genMarshalledSend: selector numArgs: numArgs send
 	annotation := self annotationForSendTable: sendTable.
 	numArgs > 2 ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
+	(BytecodeSetHasDirectedSuperSend
+	 and: [annotation = IsDirectedSuperSend]) ifTrue:
+		[self annotate: (self MoveCw: tempOop R: TempReg) objRef: tempOop].
 	self MoveCw: selector R: ClassReg.
 	self annotate: (self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1)))
 		with: annotation.
@@ -2543,6 +2547,19 @@ StackToRegisterMappingCogit >> genPushLiteralVariable: literalIndex [
 ]
 
 { #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genPushLiteralVariableGivenDirectedSuper: literalIndex [
+	"This is a version of genPushLiteralVariable: that looks ahead for a directed super send bytecode
+	 and does not generate any code for the dereference yet if followed by a directed super send."
+	<inline: false>
+	self nextDescriptorAndExtensionsInto:
+		[:descriptor :exta :extb|
+		(self isDirectedSuper: descriptor extA: exta extB: extb) ifTrue:
+			[self ssPushConstant: (self getLiteral: literalIndex).
+			 ^0]].
+	^self genPushLiteralVariable: literalIndex
+]
+
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genPushMaybeContextReceiverVariable: slotIndex [ 
 	<inline: false>
 	| jmpSingle jmpDone |
@@ -2713,9 +2730,11 @@ StackToRegisterMappingCogit >> genSendAbsentSelf: selector numArgs: numArgs [
 
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genSendDirectedSuper: selector numArgs: numArgs [
-	self halt: 'do all that good stuff moving the literal variable to an argument reg, etc...'.
+	self assert: self ssTop type = SSConstant.
+	tempOop := self ssTop constant.
+	self ssPop: 1.
 	self marshallSendArguments: numArgs.
-	^self genMarshalledSend: selector numArgs: numArgs sendTable: superSendTrampolines
+	^self genMarshalledSend: selector numArgs: numArgs sendTable: directedSuperSendTrampolines
 ]
 
 { #category : #'bytecode generator support' }
@@ -3608,6 +3627,27 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 
 	"Generate these in the middle so they are within [firstSend, lastSend]."
 	self cppIf: NewspeakVM ifTrue: [self generateNewspeakSendTrampolines].
+	self cppIf: BytecodeSetHasDirectedSuperSend ifTrue:
+		[0 to: NumSendTrampolines - 2 do:
+			[:numArgs|
+			directedSuperSendTrampolines
+				at: numArgs
+				put: (self genSendTrampolineFor: #ceSend:above:to:numArgs:
+						  numArgs: numArgs
+						  called: (self trampolineName: 'ceDirectedSuperSend' numArgs: numArgs)
+						  arg: ClassReg
+						  arg: TempReg
+						  arg: ReceiverResultReg
+						  arg: numArgs)].
+		directedSuperSendTrampolines
+			at: NumSendTrampolines - 1
+			put: (self genSendTrampolineFor: #ceSend:above:to:numArgs:
+						numArgs: self numRegArgs + 1
+						called: (self trampolineName: 'ceDirectedSuperSend' numArgs: -1)
+						arg: ClassReg
+						arg: TempReg
+						arg: ReceiverResultReg
+						arg: SendNumArgsReg)].
 
 	0 to: NumSendTrampolines - 2 do:
 		[:numArgs|

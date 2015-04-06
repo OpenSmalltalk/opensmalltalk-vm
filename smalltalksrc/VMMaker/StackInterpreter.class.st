@@ -140,11 +140,11 @@ Class {
 	],
 	#pools : [
 		'VMBasicConstants',
+		'VMBytecodeConstants',
 		'VMMethodCacheConstants',
 		'VMObjectIndices',
 		'VMSpurObjectRepresentationConstants',
 		'VMSqueakClassIndices',
-		'VMSqueakV3BytecodeConstants',
 		'VMStackFrameOffsets'
 	],
 	#category : #'VMMaker-Interpreter'
@@ -309,6 +309,8 @@ StackInterpreter class >> initializeAssociationIndex [
 { #category : #initialization }
 StackInterpreter class >> initializeBytecodeTable [
 	"StackInterpreter initializeBytecodeTable"
+
+	BytecodeSetHasDirectedSuperSend := false.
 
 	(initializationOptions at: #bytecodeTableInitializer ifAbsent: nil) ifNotNil:
 		[:initalizer| ^self perform: initalizer].
@@ -552,6 +554,8 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 
 	BytecodeTable := Array new: 256.
 	BytecodeEncoderClassName := #EncoderForSistaV1.
+	BytecodeSetHasDirectedSuperSend := true.
+
 	self table: BytecodeTable from:
 	#(	"1 byte bytecodes"
 		(   0  15 pushReceiverVariableBytecode)

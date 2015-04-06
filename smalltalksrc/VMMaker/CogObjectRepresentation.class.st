@@ -391,3 +391,8 @@ CogObjectRepresentation >> smallIntegerIsOnlyImmediateType [
 CogObjectRepresentation >> validInlineCacheTag: classIndexOrTagPattern [
 	self subclassResponsibility
 ]
+
+{ #category : #'sista support' }
+CogObjectRepresentation >> valueOfAssociation: association [
+	self subclassResponsibility
+]

@@ -5,9 +5,10 @@ self ensureClassPool.
 	self classPool declare: k from: ObjectMemory classPool]
 "
 Class {
-	#name : #VMSqueakV3BytecodeConstants,
+	#name : #VMBytecodeConstants,
 	#superclass : #SharedPool,
 	#classVars : [
+		'BytecodeSetHasDirectedSuperSend',
 		'CtxtTempFrameStart',
 		'LargeContextBit',
 		'LargeContextSize',

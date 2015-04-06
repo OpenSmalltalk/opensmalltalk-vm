@@ -125,6 +125,7 @@ Class {
 		'PCReg',
 		'PopR',
 		'PrefetchAw',
+		'PushCq',
 		'PushCw',
 		'PushR',
 		'RISCTempReg',
@@ -280,7 +281,7 @@ CogRTLOpcodes class >> initialize [
 						MoveMbrR MoveRMbr MoveXbrRR MoveRXbrR
 						MoveCqR MoveCwR MoveC32R MoveC64R
 						MoveRdRd MoveM64rRd MoveRdM64r
-						PopR PushR PushCw
+						PopR PushR PushCq PushCw
 						PrefetchAw
 
 						"Arithmetic; destination is always last operand except Cmp; CmpXR is SubRX with no update of result"
