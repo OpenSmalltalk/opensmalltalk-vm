@@ -3419,7 +3419,7 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 							put: (oop := newOop)]].
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := (theFP + FoxCallerSavedIP) asUnsignedInteger.
-				 theSP := theIPPtr + objectMemory wordSize.
+				 theSP := self cCoerceSimple: theIPPtr + objectMemory wordSize to: #'char *'.
 				 theFP := callerFP].
 			 "And finally follow the saved context and the caller context."
 			 theSP := thePage baseAddress - objectMemory wordSize.
