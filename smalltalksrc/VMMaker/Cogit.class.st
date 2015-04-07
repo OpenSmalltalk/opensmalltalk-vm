@@ -876,6 +876,9 @@ Cogit class >> initializeMiscConstants [
 	ProcessorClass := (initializationOptions at: #ISA ifAbsent: [#IA32]) caseOf: {
 							[#IA32] 	->	[BochsIA32Alien].
 							[#ARMv5]	->	[GdbARMAlien]. }.
+
+	"Our criterion for which methods to JIT is literal count.  The default value is 60 literals or less."
+	MaxLiteralCountForCompile := initializationOptions at: #MaxLiteralCountForCompile ifAbsent: [60].
 	"we special-case 0, 1 & 2 argument sends, N is numArgs >= 3"
 	NumSendTrampolines := 4.
 	"Currently not even the ceImplicitReceiverTrampoline contains object references."
@@ -914,6 +917,7 @@ Cogit class >> initializeWithOptions: optionsDictionary [
 	self initializeCogMethodConstants.
 	self initializeAnnotationConstants.
 	self initializeBytecodeTable.
+	self initializeNumTrampolines.
 	self initializePrimitiveTable
 ]
 

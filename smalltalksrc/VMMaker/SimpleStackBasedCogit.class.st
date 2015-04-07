@@ -410,9 +410,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSqueakV3PlusClosures [
 ]
 
 { #category : #'class initialization' }
-SimpleStackBasedCogit class >> initializeMiscConstants [
-	super initializeMiscConstants.
-	MaxLiteralCountForCompile := initializationOptions at: #MaxLiteralCountForCompile ifAbsent: [60].
+SimpleStackBasedCogit class >> initializeNumTrampolines [
 	NumTrampolines := 42
 						+ (NewspeakVM ifTrue: [18] ifFalse: [0])
 						+ (BytecodeSetHasDirectedSuperSend ifTrue: [4] ifFalse: [0])
