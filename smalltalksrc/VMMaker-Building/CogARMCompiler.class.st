@@ -382,7 +382,7 @@ CogARMCompiler >> canMulRR [
 
 { #category : #'generate machine code' }
 CogARMCompiler >> computeMaximumSize [
-	"Because we don't use Thumb, each ARM instruction has 4 bytes. Some abstract opcodes need more than one instruction."
+	"Because we don't use Thumb, each ARM instruction has 4 bytes. Some abstract opcodes need more than one instruction. We only handle those in this caseOf: and let the default return 4"
 	
 	(opcode between: FirstShortJump and: LastJump) ifTrue:
 		[^maxSize := 16].
@@ -470,6 +470,9 @@ CogARMCompiler >> computeMaximumSize [
 											ifTrue: [:r :i| maxSize := 4]
 											ifFalse: [maxSize := 20]].
 			[PushCw]				-> [^maxSize := 20].
+			[PushCq]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 8]
+											ifFalse: [maxSize := 20]].
 		}
 		otherwise: [^maxSize := 4].
 	^4 "to keep C compiler quiet"
@@ -977,13 +980,23 @@ CogARMCompiler >> concretizeMoveCqR [
 	"Will get inlined into concretizeAt: switch."
 	"If the quick constant is in fact a shiftable 8bit, generate the apropriate MOV, otherwise do what is necessary for a whole word."
 	<inline: true>
+	|word reg|
+	word := operands at: 0.
+	reg := self concreteRegister: (operands at: 1).
 	self 
 		rotateable8bitImmediate: (operands at: 0) 
-		ifTrue: [:rot :immediate | | reg |
-			reg := self concreteRegister: (operands at: 1).
+		ifTrue: [:rot :immediate |
 			self machineCodeAt: 0 put: (self mov: reg imm: immediate ror: rot).
 			^machineCodeSize := 4]
-		ifFalse: [^self concretizeMoveCwR].
+		ifFalse: [|invVal|
+			word <0
+				ifTrue:[invVal := -1 - word]
+				ifFalse:[invVal := word bitInvert32].
+			self rotateable8bitImmediate: invVal
+				ifTrue: [ :rot :immediate |
+					self machineCodeAt: 0 put: (self mvn: ConcreteIPReg imm: immediate ror: rot).
+					^machineCodeSize := 4]
+				ifFalse: [^self concretizeMoveCwR]]
 	
 ]
 
@@ -1223,7 +1236,7 @@ CogARMCompiler >> concretizeNegateR [
 CogARMCompiler >> concretizeNop [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	"MOV r0, r0"
+	"(CogARMCompiler new  mov: 0 rn: 0 ) hex -> MOV r0, r0"
 	self machineCodeAt: 0 put: 16rE1A00000.
 	^machineCodeSize := 4
 			
@@ -1253,6 +1266,46 @@ CogARMCompiler >> concretizePrefetchAw [
 	"pld	[ConcreteIPReg]"
 	self machineCodeAt: instrOffset put: (self pld: ConcreteIPReg plus: 1offset: 0).
 	^machineCodeSize := instrOffset + 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizePushCq [
+	| word instrOffset |
+	<inline: true>
+	self break.
+	word := operands at: 0.
+	self
+		rotateable8bitImmediate: word
+		ifTrue: [:rot :immediate | 
+			self
+				machineCodeAt: 0
+				put: (self
+						mov: ConcreteIPReg
+						imm: immediate
+						ror: rot).
+			instrOffset := 4]
+		ifFalse: [| invVal |
+			word < 0
+				ifTrue: [invVal := -1 - word]
+				ifFalse: [invVal := word bitInvert32].
+			self
+				rotateable8bitImmediate: invVal
+				ifTrue: [:rot :immediate | 
+					self
+						machineCodeAt: 0
+						put: (self
+								mvn: ConcreteIPReg
+								imm: immediate
+								ror: rot).
+					instrOffset := 4]
+				ifFalse: [instrOffset := self
+								at: 0
+								moveCw: word
+								intoR: ConcreteIPReg]].
+	self
+		machineCodeAt: instrOffset
+		put: (self pushR: ConcreteIPReg).
+	^ machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1305,6 +1358,14 @@ CogARMCompiler >> concretizeSMULL [
 			+ (srcReg << 8)
 			+ (9 << 4)
 			+ destReg.
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeStop [
+"generate a BKPT instruction. We could, given a good enough creative impulse and an over-active sense of humour, add some numerically encoded witticism to this instruction in bits 8-19 & 0-3. It has no effect on the execution but can be a way to specify which breakpoint has been hit etc."
+	<inline: true>
+	machineCode at: 0 put: (AL <<28 bitOr: (16r42 <<20 bitOr:(7<<4))).
 	^machineCodeSize := 4
 ]
 
@@ -1506,8 +1567,10 @@ CogARMCompiler >> dispatchConcretize [
 		[MoveRdM64r]		-> [^self concretizeMoveRdM64r].
 		[PopR]				-> [^self concretizePopR].
 		[PushR]				-> [^self concretizePushR].
+		[PushCq]			-> [^self concretizePushCq].
 		[PushCw]			-> [^self concretizePushCw].
 		[PrefetchAw]		-> [^self concretizePrefetchAw].
+		[Stop]				-> [^self concretizeStop].
 		"Conversion"
 		[ConvertRRd]		-> [^self concretizeConvertRRd].
 		"ARM specific opcodes" 
