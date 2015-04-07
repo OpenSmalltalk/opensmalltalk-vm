@@ -5396,7 +5396,7 @@ StackInterpreter >> extSendSuperBytecode [
 	extA := 0.
 	SistaVM ifTrue:
 		[extB >= 64 ifTrue:
-			[argumentCount := (byte bitAnd: 7) + (extB << 3).
+			[argumentCount := (byte bitAnd: 7) + (extB - 64 << 3).
 			 extB := 0.
 			 ^self directedSuperclassSend]].
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
