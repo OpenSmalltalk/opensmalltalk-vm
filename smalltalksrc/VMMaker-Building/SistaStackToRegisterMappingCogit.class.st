@@ -271,6 +271,7 @@ SistaStackToRegisterMappingCogit >> genExtTrapIfNotInstanceOfBehaviorsBytecode [
 	self ssFlushNoUpdateTo: simStackPtr.
 	self CallRT: ceTrapTrampoline.
 	label := self Label.
+	self annotateBytecode: label.
 	0 to: numBranches - 1 do:
 		[:i|
 		(branches at: i) jmpTarget: label].
@@ -585,6 +586,7 @@ SistaStackToRegisterMappingCogit >> genUnconditionnalTrapBytecode [
 	Control does not return after the ceClassTrapTrampoline call."
 	self ssFlushNoUpdateTo: simStackPtr.
 	self CallRT: ceTrapTrampoline.
+	self annotateBytecode: self Label.
 	^0
 ]
 
