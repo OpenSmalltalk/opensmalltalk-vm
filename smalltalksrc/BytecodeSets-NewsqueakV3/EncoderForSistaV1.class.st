@@ -1317,3 +1317,8 @@ EncoderForSistaV1 >> genUnsignedSingleExtendB: extendedIndex [
 		nextPut: 225;
 		nextPut: extendedIndex
 ]
+
+{ #category : #'bytecode generation' }
+EncoderForSistaV1 >> supportsClosureOpcodes [
+	^true
+]
