@@ -4320,10 +4320,9 @@ StackToRegisterMappingCogit >> sistaV1PushNilSize: aMethodObj numInitialNils: nu
 { #category : #'span functions' }
 StackToRegisterMappingCogit >> squeakV3orSistaV1: descriptor Num: pc Push: nExts Nils: aMethodObj [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
-	| numNils |
-	(numNils := self v3: descriptor Num: pc Push: nExts Nils: aMethodObj) > 0 ifTrue:
-		[^numNils].
-	^self sistaV1: descriptor Num: pc Push: nExts Nils: aMethodObj
+	^bytecodeSetOffset = 0
+		ifTrue: [self v3: descriptor Num: pc Push: nExts Nils: aMethodObj]
+		ifFalse: [self sistaV1: descriptor Num: pc Push: nExts Nils: aMethodObj]
 ]
 
 { #category : #'span functions' }
@@ -4781,10 +4780,9 @@ StackToRegisterMappingCogit >> v3PushNilSize: aMethodObj numInitialNils: numInit
 { #category : #'span functions' }
 StackToRegisterMappingCogit >> v3or4: descriptor Num: pc Push: nExts Nils: aMethodObj [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
-	| numNils |
-	(numNils := self v3: descriptor Num: pc Push: nExts Nils: aMethodObj) > 0 ifTrue:
-		[^numNils].
-	^self v4: descriptor Num: pc Push: nExts Nils: aMethodObj
+	^bytecodeSetOffset = 0
+		ifTrue: [self v3: descriptor Num: pc Push: nExts Nils: aMethodObj]
+		ifFalse: [self v4: descriptor Num: pc Push: nExts Nils: aMethodObj]
 ]
 
 { #category : #'span functions' }
