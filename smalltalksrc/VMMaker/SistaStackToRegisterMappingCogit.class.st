@@ -579,7 +579,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 ]
 
 { #category : #'bytecode generators' }
-SistaStackToRegisterMappingCogit >> genUnconditionnalTrapBytecode [
+SistaStackToRegisterMappingCogit >> genUnconditionalTrapBytecode [
 	"SistaV1: *	217		Trap"
 	"Use ssFlushNoUpdateTo: so we continue compiling as if the stack had not been flushed . 
 	(typically, this kind of trap is in a branch)  

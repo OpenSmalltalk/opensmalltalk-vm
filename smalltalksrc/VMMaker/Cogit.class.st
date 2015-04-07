@@ -3333,8 +3333,19 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	<returnTypeC: #'CogMethod *'>
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	self assert: ((coInterpreter methodHasCogMethod: aMethodObj) not
-				or: [(self noAssertMethodClassAssociationOf: aMethodObj) = objectMemory nilObject]).
+	"In Newspeak we support annonymous accessors and hence tolerate the same
+	 method being cogged multiple times.  But only if the method class association is nil."
+	NewspeakVM
+		ifTrue:
+			[(coInterpreter methodHasCogMethod: aMethodObj) ifTrue:
+				[cogMethod := coInterpreter cogMethodOf: aMethodObj.
+				 self deny: cogMethod selector = aSelectorOop.
+				 cogMethod selector = aSelectorOop ifTrue:
+					[^cogMethod].
+				 (coInterpreter methodClassAssociationOf: aMethodObj) ~= objectMemory nilObject ifTrue:
+					[self warnMultiple: cogMethod selectors: aSelectorOop.
+					^nil]]]
+		ifFalse: [self deny: (coInterpreter methodHasCogMethod: aMethodObj)].
 	"coInterpreter stringOf: aSelectorOop"
 	coInterpreter
 		compilationBreak: aSelectorOop
@@ -6245,7 +6256,7 @@ Cogit >> incrementUsageOfTargetIfLinkedSend: annotation mcpc: mcpc ignored: supe
 				[ | targetMethod |
 				entryPoint := nsSendCache target.
 				targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-				self assert: (self isPCWithinMethodZone: targetMethod asUnsignedInteger).
+				self assert: (self isPCWithinMethodZone: targetMethod).
 				targetMethod cmUsageCount < (CMMaxUsageCount // 2) ifTrue:
 					[targetMethod cmUsageCount: targetMethod cmUsageCount + 1]]]].
 
@@ -6507,7 +6518,7 @@ Cogit >> isPCMappedAnnotation: annotation [
 { #category : #disassembly }
 Cogit >> isPCWithinMethodZone: address [
 	<api>
-	<var: #address type: #'char *'>
+	<var: #address type: #'void *'>
 	^address asUnsignedInteger
 		between: methodZoneBase
 		and: methodZone freeStart
@@ -9919,6 +9930,23 @@ Cogit >> voidCogCompiledCode [
 Cogit >> voidNSSendCache: nsSendCache [
 	<inline: true>
 	nsSendCache classTag: objectRepresentation illegalClassTag; enclosingObject: 0; target: 0
+]
+
+{ #category : #'debug printing' }
+Cogit >> warnMultiple: cogMethod selectors: aSelectorOop [
+	<inline: true>
+	self cCode:
+			[self fp: #stderr
+				r: 'Warning, attempt to use method with selector %.*s and selector %.*s\n'
+				i: (objectMemory numBytesOf: cogMethod selector)
+				n: (self cCoerceSimple: (objectMemory firstIndexableField: cogMethod selector) to: #'char *')
+				t: (objectMemory numBytesOf: aSelectorOop)
+				f: (self cCoerceSimple: (objectMemory firstIndexableField: aSelectorOop) to: #'char *')]
+		inSmalltalk:
+			[self warn: 'Warning, attempt to use method with selector ',
+						(coInterpreter stringOf: cogMethod selector),
+						' and selector ',
+						(coInterpreter stringOf: aSelectorOop)]
 ]
 
 { #category : #'debug printing' }

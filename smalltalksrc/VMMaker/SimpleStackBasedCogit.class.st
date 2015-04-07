@@ -280,7 +280,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 
 		(1 216 216 genPopStackBytecode needsFrameNever: -1)
 
-		(1 217 217 genUnconditionnalTrapBytecode isMapped)
+		(1 217 217 genUnconditionalTrapBytecode isMapped)
 
 		(1 218 223 unknownBytecode)
 
@@ -3551,7 +3551,7 @@ SimpleStackBasedCogit >> genTraceStoreTrampoline [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genUnconditionnalTrapBytecode [
+SimpleStackBasedCogit >> genUnconditionalTrapBytecode [
 	"SistaV1: *	217		Trap"
 	^EncounteredUnknownBytecode
 ]
