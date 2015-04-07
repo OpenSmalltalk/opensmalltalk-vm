@@ -270,7 +270,7 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 	self flag: #endianness.
 	cogit
 		MoveAw: objectMemory freeStartAddress R: ReceiverResultReg;
-		MoveCq: (self cCoerceSimple: header to: #usqInt) R: TempReg;
+		MoveCq: (self low32BitsOf: header) R: TempReg;
 		MoveR: TempReg Mw: 0 r: ReceiverResultReg;
 		MoveCq: header >> 32 R: TempReg;
 		MoveR: TempReg Mw: 4 r: ReceiverResultReg;
@@ -1777,7 +1777,7 @@ CogObjectRepresentationFor32BitSpur >> genNewArrayOfSize: size initialized: init
 	self flag: #endianness.
 	cogit
 		MoveAw: objectMemory freeStartAddress R: ReceiverResultReg;
-		MoveCq: (self cCoerceSimple: header to: #usqInt) R: TempReg;
+		MoveCq: (self low32BitsOf: header) R: TempReg;
 		MoveR: TempReg Mw: 0 r: ReceiverResultReg;
 		MoveCq: header >> 32 R: TempReg;
 		MoveR: TempReg Mw: 4 r: ReceiverResultReg.
@@ -1815,7 +1815,7 @@ CogObjectRepresentationFor32BitSpur >> genNoPopCreateClosureAt: bcpc numArgs: nu
 					classIndex: ClassBlockClosureCompactIndex.
 	cogit
 		MoveAw: objectMemory freeStartAddress R: ReceiverResultReg;
-		MoveCq: (self cCoerceSimple: header to: #usqInt) R: TempReg;
+		MoveCq: (self low32BitsOf: header) R: TempReg;
 		MoveR: TempReg Mw: 0 r: ReceiverResultReg;
 		MoveCq: header >> 32 R: TempReg;
 		MoveR: TempReg Mw: 4 r: ReceiverResultReg;
@@ -1889,6 +1889,12 @@ CogObjectRepresentationFor32BitSpur >> jumpNotSmallIntegerUnsignedValueInRegiste
 { #category : #initialization }
 CogObjectRepresentationFor32BitSpur >> log2BytesPerWord [
 	^2
+]
+
+{ #category : #private }
+CogObjectRepresentationFor32BitSpur >> low32BitsOf: a64BitHeader [
+	<inline: true>
+	^self cCode: [self cCoerceSimple: a64BitHeader to: #usqInt] inSmalltalk: [a64BitHeader bitAnd: 16rffffffff]
 ]
 
 { #category : #'compile abstract instructions' }
