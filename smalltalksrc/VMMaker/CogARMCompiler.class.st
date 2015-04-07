@@ -691,7 +691,7 @@ CogARMCompiler >> concretizeCall [
 	self assert: (operands at: 0) ~= 0.
 	self assert: (operands at: 0) \\ 4 = 0.
 	offset := (operands at: 0) signedIntFromLong - (address + 8 "normal pc offset") signedIntFromLong.
-	(self isQuick: offset)
+	(self isInImmediateJumpRange: offset)
 		ifTrue: [
 			self machineCodeAt: 0 put: (self bl: offset). "BL offset"
 			^machineCodeSize := 4]
@@ -727,7 +727,7 @@ CogARMCompiler >> concretizeConditionalJump: conditionCode [
 	<inline: true>
 	| offset |
 	offset := self computeJumpTargetOffsetPlus: 8.
- 	(self isQuick: offset)
+ 	(self isInImmediateJumpRange: offset)
 		ifTrue: [
 			self machineCodeAt: 0 put: (self cond: conditionCode br: 0 offset: offset). "B offset"
 			^machineCodeSize := 4]
@@ -1869,6 +1869,12 @@ CogARMCompiler >> isCallPreceedingReturnPC: mcpc [
 ]
 
 { #category : #testing }
+CogARMCompiler >> isInImmediateJumpRange: operand [
+	<var: #operand type: #'unsigned long'>
+	^operand signedIntFromLong between: -33554432 and: 33554428
+]
+
+{ #category : #testing }
 CogARMCompiler >> isJumpAt: pc [
 	| instr |
 	instr := objectMemory long32At: pc.
@@ -1880,12 +1886,6 @@ CogARMCompiler >> isJumpAt: pc [
 CogARMCompiler >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction."
 	^self isJump or: [opcode = AlignmentNops or: [opcode = Call]]
-]
-
-{ #category : #testing }
-CogARMCompiler >> isQuick: operand [
-	<var: #operand type: #'unsigned long'>
-	^operand signedIntFromLong between: -33554432 and: 33554428
 ]
 
 { #category : #'inline cacheing' }
@@ -2241,7 +2241,7 @@ CogARMCompiler >> rewriteCallAt: callSiteReturnAddress target: callTargetAddress
 		ifFalse: [callTargetAddress >= cogit minCallAddress ifFalse:
 					[self error: 'linking callsite to invalid address']].
 	callDistance := (callTargetAddress - (callSiteReturnAddress + 8 "pc offset"- 4 "return offset")) signedIntToLong.
-	self assert: (self isQuick: callDistance). "we don't support long call updates, yet"
+	self assert: (self isInImmediateJumpRange: callDistance). "we don't support long call updates, yet"
 	call := self cond: AL br: 1 offset: callDistance.
 	objectMemory longAt:  callSiteReturnAddress - 4 put: call.
 
@@ -2268,7 +2268,7 @@ CogARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag targ
 					[self error: 'linking callsite to invalid address']].
 	callDistance := (callTargetAddress - (callSiteReturnAddress + 8 "pc offset"- 4 "return offset")) signedIntToLong.
 	
-	self assert: (self isQuick: callDistance). "we don't support long call updates, yet"
+	self assert: (self isInImmediateJumpRange: callDistance). "we don't support long call updates, yet"
 	call := self cond: AL br: 1 offset: callDistance.
 	objectMemory longAt:  callSiteReturnAddress - 4 put: call.
 	
@@ -2396,8 +2396,8 @@ CogARMCompiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 			[maximumSpan := target - (eventualAbsoluteAddress + 2)].
 	address := eventualAbsoluteAddress.
 	^machineCodeSize := opcode = Call 
-				ifTrue: [(self isQuick: maximumSpan) ifTrue: [4] ifFalse: [20]]
-				ifFalse: [(self isLongJump not and: [self isQuick: maximumSpan])
+				ifTrue: [(self isInImmediateJumpRange: maximumSpan) ifTrue: [4] ifFalse: [20]]
+				ifFalse: [(self isLongJump not and: [self isInImmediateJumpRange: maximumSpan])
 								ifTrue: [4]
 								ifFalse: [20]] "load address to register, add"
 ]
