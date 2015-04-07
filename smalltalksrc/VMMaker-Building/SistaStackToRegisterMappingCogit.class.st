@@ -99,8 +99,7 @@ SistaStackToRegisterMappingCogit class >> generatorTableFrom: anArray [
 ]
 
 { #category : #'class initialization' }
-SistaStackToRegisterMappingCogit class >> initializeMiscConstants [
-	super initializeMiscConstants.
+SistaStackToRegisterMappingCogit class >> initializeNumTrampolines [
 	NumTrampolines := 53
 						+ (NewspeakVM ifTrue: [18] ifFalse: [0])
 						+ (BytecodeSetHasDirectedSuperSend ifTrue: [4] ifFalse: [0])
