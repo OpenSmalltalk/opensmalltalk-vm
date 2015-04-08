@@ -350,11 +350,11 @@
 	<key>CFBundleExecutable</key>
 	<string>${EXECUTABLE_NAME}</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak VM 5.7b3 http://www.squeak.org</string>
+	<string>http://www.squeak.org</string>
 	<key>CFBundleIconFile</key>
 	<string>Squeak.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.squeak.${PRODUCT_NAME:rfc1034identifier}</string>
+	<string>org.squeak.osx6432.$(PRODUCT_NAME:rfc1034identifier)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -362,11 +362,13 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>5.7b3</string>
+	<string>6.0</string>
 	<key>CFBundleSignature</key>
 	<string>FAST</string>
 	<key>CFBundleVersion</key>
-	<string>21.0</string>
+	<string>30.0</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.developer-tools</string>
 	<key>LSBackgroundOnly</key>
 	<false/>
 	<key>LSMinimumSystemVersion</key>
@@ -439,14 +441,14 @@
 	<string></string>
 	<key>SqueakTrustedDirectory</key>
 	<string>/foobar/tooBar/forSqueak/bogus/</string>
+	<key>SqueakUIFadeForFullScreenInSeconds</key>
+	<real>0.5</real>
 	<key>SqueakUIFlushPrimaryDeferNMilliseconds</key>
 	<integer>20</integer>
 	<key>SqueakUnTrustedDirectory</key>
 	<string>~/Library/Preferences/Squeak/Internet/My Squeak/</string>
 	<key>SqueakUseFileMappedMMAP</key>
 	<false/>
-	<key>SqueakUIFadeForFullScreenInSeconds</key>
-	<real>0.5</real>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

@@ -125,7 +125,7 @@
 					PBXFileDataSource_Warnings_ColumnID,
 				);
 			};
-			PBXPerProjectTemplateStateSaveDate = 305745864;
+			PBXPerProjectTemplateStateSaveDate = 315471770;
 			PBXPrepackagedSmartGroups_v2 = (
 				{
 					PBXTransientLocationAtTop = bottom;
@@ -473,16 +473,15 @@
 				};
 				RubberWindowFrame = "212 190 666 500 0 0 1024 746 ";
 			};
-			PBXWorkspaceStateSaveDate = 305745864;
+			PBXWorkspaceStateSaveDate = 315471770;
 		};
 		perUserProjectItems = {
 			9420ABBC123951F800EF4FDF /* PBXTextBookmark */ = 9420ABBC123951F800EF4FDF /* PBXTextBookmark */;
 			9420ABBD123951F800EF4FDF /* PBXTextBookmark */ = 9420ABBD123951F800EF4FDF /* PBXTextBookmark */;
 			9420ABBE123951F800EF4FDF /* PlistBookmark */ = 9420ABBE123951F800EF4FDF /* PlistBookmark */;
-			9420ABBF123951F800EF4FDF /* PBXTextBookmark */ = 9420ABBF123951F800EF4FDF /* PBXTextBookmark */;
-			9420ABC41239521400EF4FDF /* PBXTextBookmark */ = 9420ABC41239521400EF4FDF /* PBXTextBookmark */;
 			944D6258085F474800600D6E /* PBXTextBookmark */ = 944D6258085F474800600D6E /* PBXTextBookmark */;
 			94BB001D08A54ECD00181406 /* PBXTextBookmark */ = 94BB001D08A54ECD00181406 /* PBXTextBookmark */;
+			94BBE63512CDBD24001EFD4E /* PBXTextBookmark */ = 94BBE63512CDBD24001EFD4E /* PBXTextBookmark */;
 			94E7F76F1237474100A03A11 /* PBXTextBookmark */ = 94E7F76F1237474100A03A11 /* PBXTextBookmark */;
 			94E7F7711237474100A03A11 /* PBXTextBookmark */ = 94E7F7711237474100A03A11 /* PBXTextBookmark */;
 			94E7F92F1237572100A03A11 /* PBXTextBookmark */ = 94E7F92F1237572100A03A11 /* PBXTextBookmark */;
@@ -499,6 +498,7 @@
 			94E9A0B312380E2B0048557C /* PBXTextBookmark */ = 94E9A0B312380E2B0048557C /* PBXTextBookmark */;
 			94E9A0B412380E2B0048557C /* PBXTextBookmark */ = 94E9A0B412380E2B0048557C /* PBXTextBookmark */;
 			94E9A0B512380E2B0048557C /* PBXTextBookmark */ = 94E9A0B512380E2B0048557C /* PBXTextBookmark */;
+			94EC4A8312CD6D7600738396 /* PBXTextBookmark */ = 94EC4A8312CD6D7600738396 /* PBXTextBookmark */;
 		};
 		sourceControlManager = 9444E60D06E7B8740063F6CC /* Source Control */;
 		userBuildSettings = {
@@ -534,27 +534,7 @@
 		);
 		name = "/Users/johnmci/Documents/Squeak3.8.0/platforms/iOS/plugins/SqueakLocale/Info-SqueakLocalePlugin__Upgraded_.plist";
 		rLen = 0;
-		rLoc = 9223372036854775807;
-	};
-	9420ABBF123951F800EF4FDF /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 94E7F6C6123740F900A03A11 /* sqMacLocaleCocoa.m */;
-		name = "sqMacLocaleCocoa.m: 56";
-		rLen = 9;
-		rLoc = 2315;
-		rType = 0;
-		vrLen = 2544;
-		vrLoc = 1005;
-	};
-	9420ABC41239521400EF4FDF /* PBXTextBookmark */ = {
-		isa = PBXTextBookmark;
-		fRef = 94E7F6C6123740F900A03A11 /* sqMacLocaleCocoa.m */;
-		name = "sqMacLocaleCocoa.m: 102";
-		rLen = 22;
-		rLoc = 4212;
-		rType = 0;
-		vrLen = 2600;
-		vrLoc = 3379;
+		rLoc = 9223372036854775808;
 	};
 	94405843085E5A7A004495D0 /* InfoPlist.strings */ = {
 		isa = PBXFileReference;
@@ -748,6 +728,16 @@
 		vrLen = 1065;
 		vrLoc = 0;
 	};
+	94BBE63512CDBD24001EFD4E /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 94E7F6C6123740F900A03A11 /* sqMacLocaleCocoa.m */;
+		name = "sqMacLocaleCocoa.m: 102";
+		rLen = 22;
+		rLoc = 4212;
+		rType = 0;
+		vrLen = 2730;
+		vrLoc = 3293;
+	};
 	94BBFE8D08A46E3D00181406 /* sqMacLocaleOS9.c */ = {
 		isa = PBXFileReference;
 		lastKnownFileType = sourcecode.c.c;
@@ -765,9 +755,9 @@
 	};
 	94E7F6C6123740F900A03A11 /* sqMacLocaleCocoa.m */ = {
 		uiCtxt = {
-			sepNavIntBoundsRect = "{{0, 0}, {1058, 3341}}";
+			sepNavIntBoundsRect = "{{0, 0}, {1058, 3328}}";
 			sepNavSelRange = "{4212, 22}";
-			sepNavVisRange = "{3379, 2600}";
+			sepNavVisRange = "{3293, 2730}";
 			sepNavWindowFrame = "{{38, 28}, {1206, 974}}";
 		};
 	};
@@ -1037,5 +1027,15 @@
 		rType = 0;
 		vrLen = 1913;
 		vrLoc = 0;
+	};
+	94EC4A8312CD6D7600738396 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 94E7F6C6123740F900A03A11 /* sqMacLocaleCocoa.m */;
+		name = "sqMacLocaleCocoa.m: 102";
+		rLen = 22;
+		rLoc = 4212;
+		rType = 0;
+		vrLen = 2730;
+		vrLoc = 3293;
 	};
 }

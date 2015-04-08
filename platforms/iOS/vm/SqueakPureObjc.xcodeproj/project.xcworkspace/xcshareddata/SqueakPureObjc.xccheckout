@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>A659ECDC-D65A-44D0-BDB6-06ED122D945E</string>
+	<key>IDESourceControlProjectName</key>
+	<string>SqueakPureObjc</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>fa1542d4-bde8-0310-ad64-8ed1123d492a++9850</key>
+		<string>http://squeakvm.org/svn/squeak/trunk/platforms</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>iOS/vm/SqueakPureObjc.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>fa1542d4-bde8-0310-ad64-8ed1123d492a++9850</key>
+		<string>../../../..</string>
+	</dict>
+	<key>IDESourceControlProjectRepositoryRootDictionary</key>
+	<dict>
+		<key>fa1542d4-bde8-0310-ad64-8ed1123d492a++9850</key>
+		<string>http://squeakvm.org/svn/squeak</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>http://squeakvm.org/svn/squeak/trunk/platforms/iOS/vm/SqueakPureObjc.xcodeproj</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>fa1542d4-bde8-0310-ad64-8ed1123d492a++9850</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.subversion</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>fa1542d4-bde8-0310-ad64-8ed1123d492a++9850</string>
+			<key>IDESourceControlWCCName</key>
+			<string>platforms</string>
+		</dict>
+	</array>
+</dict>
+</plist>

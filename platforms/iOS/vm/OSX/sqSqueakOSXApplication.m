@@ -183,7 +183,7 @@ void mtfsfi(unsigned long long fpscr) {}
 			result = [self parseArgument: argData peek: peek];
 			if (result == 0)			/* option not recognised */ {
 				fprintf(stderr, "unknown option: %s\n", [argData UTF8String]);
-				[self usage];
+//				[self usage];
 			}
 			if (result == 2)
 				i++;

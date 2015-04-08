@@ -41,6 +41,7 @@
 #import "sqSqueakOSXScreenAndWindow.h"
 #import "sqMacHostWindow.h"
 #import "sqSqueakOSXInfoPlistInterface.h"
+#import <Crashlytics/Crashlytics.h>
 
 SqueakOSXAppDelegate *gDelegateApp;
 
@@ -57,6 +58,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
+    [Crashlytics startWithAPIKey:@"add501476623fc20212a60334cd537d16dfd566f"];
 	NSAutoreleasePool * pool = [NSAutoreleasePool new];
 	gDelegateApp = self;	
 	squeakApplication = [self makeApplicationInstance];

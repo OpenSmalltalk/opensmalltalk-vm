@@ -48,6 +48,8 @@
 #import "sqVirtualMachine.h"
 
 //#import <OpenGL/CGLMacro.h>
+#import <OpenGL/gl.h>
+#import <OpenGL/Opengl.h>
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;
@@ -151,8 +153,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	}
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
-		if (getFullScreenFlag() == 0)
+		if (getFullScreenFlag() == 0) {
 			[self.window makeKeyAndOrderFront: self];
+        }
 	}
 }
 
