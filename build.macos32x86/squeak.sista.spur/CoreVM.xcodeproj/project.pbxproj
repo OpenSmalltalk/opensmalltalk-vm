@@ -7,14 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		73BC1BBB0F576864003412C5 /* cogit.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB60F576864003412C5 /* cogit.c */; settings = {COMPILER_FLAGS = "-fno-inline"; }; };
-		73BC1BBC0F576864003412C5 /* cogit.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BB70F576864003412C5 /* cogit.h */; };
-		73BC1BBD0F576864003412C5 /* cogmethod.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BB80F576864003412C5 /* cogmethod.h */; };
-		73BC1BBE0F576864003412C5 /* gcc3x-cointerp.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB90F576864003412C5 /* gcc3x-cointerp.c */; };
-		73BC1BBF0F576864003412C5 /* cointerp.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BBA0F576864003412C5 /* cointerp.h */; };
 		733AC8DB0FEAAC4F007C6206 /* version.c in Sources */ = {isa = PBXBuildFile; fileRef = 733AC8DA0FEAAC4F007C6206 /* version.c */; };
 		733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */ = {isa = PBXBuildFile; fileRef = 733B2C36106AB74B004652BE /* sqExternalSemaphores.c */; };
 		7351A09B100963670035A878 /* sqUnixThreads.c in Sources */ = {isa = PBXBuildFile; fileRef = 7351A09A100963670035A878 /* sqUnixThreads.c */; };
+		735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */; };
 		737888E713D0DE6500C5E1AD /* sqMemoryFence.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E513D0DE6500C5E1AD /* sqMemoryFence.h */; };
 		737888E813D0DE6500C5E1AD /* sqSCCSVersion.h in Headers */ = {isa = PBXBuildFile; fileRef = 737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */; };
 		738FB1EA0EE4CF94004BEE42 /* ia32abicc.c in Sources */ = {isa = PBXBuildFile; fileRef = 738FB1E90EE4CF94004BEE42 /* ia32abicc.c */; };
@@ -24,6 +20,11 @@
 		739C6EDA112DCBD10049B7D3 /* sqAssert.h in Headers */ = {isa = PBXBuildFile; fileRef = 739C6ED8112DCBD10049B7D3 /* sqAssert.h */; };
 		73B54C530E55EFED00FE780C /* sqUnixVMProfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 73B54C520E55EFED00FE780C /* sqUnixVMProfile.c */; };
 		73B96E490E47D7A10079C51B /* sqUnixHeartbeat.c in Sources */ = {isa = PBXBuildFile; fileRef = 73B96E480E47D7A10079C51B /* sqUnixHeartbeat.c */; };
+		73BC1BBB0F576864003412C5 /* cogit.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB60F576864003412C5 /* cogit.c */; settings = {COMPILER_FLAGS = "-fno-inline"; }; };
+		73BC1BBC0F576864003412C5 /* cogit.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BB70F576864003412C5 /* cogit.h */; };
+		73BC1BBD0F576864003412C5 /* cogmethod.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BB80F576864003412C5 /* cogmethod.h */; };
+		73BC1BBE0F576864003412C5 /* gcc3x-cointerp.c in Sources */ = {isa = PBXBuildFile; fileRef = 73BC1BB90F576864003412C5 /* gcc3x-cointerp.c */; };
+		73BC1BBF0F576864003412C5 /* cointerp.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BBA0F576864003412C5 /* cointerp.h */; };
 		73BC1BC70F57699F003412C5 /* sqCogStackAlignment.h in Headers */ = {isa = PBXBuildFile; fileRef = 73BC1BC60F57699F003412C5 /* sqCogStackAlignment.h */; };
 		73DFFAC018D380C200C3C543 /* AioPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 73DFFABF18D380C200C3C543 /* AioPlugin.c */; };
 		94002C4409EB18EF003C4BF2 /* sqMemoryAccess.h in Headers */ = {isa = PBXBuildFile; fileRef = 94002C4209EB18EF003C4BF2 /* sqMemoryAccess.h */; };
@@ -194,7 +195,7 @@
 		941A3C0209AA144000C9D25A /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94148CC5080DB5A400E8C647 /* IOKit.framework */; };
 		941A3C0309AA144000C9D25A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 944B5B5008F5C7A900611DF8 /* Foundation.framework */; };
 		9426FF1F09F489D200ECEDDC /* chartables.c in Sources */ = {isa = PBXBuildFile; fileRef = 9426FF0F09F489D200ECEDDC /* chartables.c */; };
-		9426FF2009F489D200ECEDDC /* reConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = 9426FF1009F489D200ECEDDC /* reConfig.h */; };
+		9426FF2009F489D200ECEDDC /* config.h in Headers */ = {isa = PBXBuildFile; fileRef = 9426FF1009F489D200ECEDDC /* config.h */; };
 		9426FF2109F489D200ECEDDC /* get.c in Sources */ = {isa = PBXBuildFile; fileRef = 9426FF1109F489D200ECEDDC /* get.c */; };
 		9426FF2209F489D200ECEDDC /* internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 9426FF1209F489D200ECEDDC /* internal.h */; };
 		9426FF2309F489D200ECEDDC /* pcre.c in Sources */ = {isa = PBXBuildFile; fileRef = 9426FF1309F489D200ECEDDC /* pcre.c */; };
@@ -239,7 +240,6 @@
 		A27729590CE7A8D300ABAFCA /* SoundPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A277292E0CE7A8D300ABAFCA /* SoundPlugin.c */; };
 		A277295A0CE7A8D300ABAFCA /* StarSqueakPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729300CE7A8D300ABAFCA /* StarSqueakPlugin.c */; };
 		A277295B0CE7A8D300ABAFCA /* UUIDPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729330CE7A8D300ABAFCA /* UUIDPlugin.c */; };
-		735B4CA30E8069B7008FA2CA /* VMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */; };
 		A277295D0CE7A8D300ABAFCA /* ZipPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729370CE7A8D300ABAFCA /* ZipPlugin.c */; };
 		A27729770CE7A9AE00ABAFCA /* sqMacHostWindow.c in Sources */ = {isa = PBXBuildFile; fileRef = A27729750CE7A9AE00ABAFCA /* sqMacHostWindow.c */; };
 		A27729780CE7A9AE00ABAFCA /* sqMacHostWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = A27729760CE7A9AE00ABAFCA /* sqMacHostWindow.h */; };
@@ -263,16 +263,17 @@
 		087740A300C6A47FC0A80109 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = /System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<absolute>"; };
 		087740A400C6A47FC0A80109 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
 		087740A700C6A4EDC0A80109 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = /System/Library/Frameworks/OpenGL.framework; sourceTree = "<absolute>"; };
-		664A73DB0300584000A80109 /* Squeak VM.r */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.rez; name = "Squeak VM.r"; path = "Squeak VM.r"; sourceTree = "<group>"; };
-		664A73DC0300584000A80109 /* Squeak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = Squeak.icns; path = Squeak.icns; sourceTree = "<group>"; };
-		664A73DD0300584000A80109 /* SqueakChanges.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakChanges.icns; path = SqueakChanges.icns; sourceTree = "<group>"; };
-		664A73DE0300584000A80109 /* SqueakImage.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakImage.icns; path = SqueakImage.icns; sourceTree = "<group>"; };
-		664A73DF0300584000A80109 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakPlugin.icns; path = SqueakPlugin.icns; sourceTree = "<group>"; };
-		664A73E00300584000A80109 /* SqueakScript.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakScript.icns; path = SqueakScript.icns; sourceTree = "<group>"; };
+		664A73DB0300584000A80109 /* Squeak VM.r */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.rez; path = "Squeak VM.r"; sourceTree = "<group>"; };
+		664A73DC0300584000A80109 /* Squeak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Squeak.icns; sourceTree = "<group>"; };
+		664A73DD0300584000A80109 /* SqueakChanges.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakChanges.icns; sourceTree = "<group>"; };
+		664A73DE0300584000A80109 /* SqueakImage.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakImage.icns; sourceTree = "<group>"; };
+		664A73DF0300584000A80109 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakPlugin.icns; sourceTree = "<group>"; };
+		664A73E00300584000A80109 /* SqueakScript.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakScript.icns; sourceTree = "<group>"; };
 		66A8FED80300824600A80109 /* sqGnu.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqGnu.h; path = Developer/sqGnu.h; sourceTree = "<group>"; };
 		733AC8DA0FEAAC4F007C6206 /* version.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = version.c; sourceTree = "<group>"; };
 		733B2C36106AB74B004652BE /* sqExternalSemaphores.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqExternalSemaphores.c; sourceTree = "<group>"; };
 		7351A09A100963670035A878 /* sqUnixThreads.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqUnixThreads.c; path = vm/sqUnixThreads.c; sourceTree = "<group>"; };
+		735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = VMProfileMacSupportPlugin.c; path = VMProfileMacSupportPlugin/VMProfileMacSupportPlugin.c; sourceTree = "<group>"; };
 		737888E513D0DE6500C5E1AD /* sqMemoryFence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMemoryFence.h; sourceTree = "<group>"; };
 		737888E613D0DE6500C5E1AD /* sqSCCSVersion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSCCSVersion.h; sourceTree = "<group>"; };
 		738FB1E90EE4CF94004BEE42 /* ia32abicc.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = ia32abicc.c; path = IA32ABI/ia32abicc.c; sourceTree = "<group>"; };
@@ -342,9 +343,9 @@
 		94D854E7048EF27E00A80109 /* aio.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = aio.c; path = ../../platforms/unix/vm/aio.c; sourceTree = SOURCE_ROOT; };
 		94E4DA3909BBB9E90046E6F4 /* sqMacDragDrop.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacDragDrop.c; sourceTree = "<group>"; };
 		94E8D43909AF5D4100D45FB8 /* sqMacUnixExternalPrims.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacUnixExternalPrims.c; sourceTree = "<group>"; };
-		94FC2ECE05498CA800A80109 /* SqueakGeneric.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakGeneric.icns; path = SqueakGeneric.icns; sourceTree = "<group>"; };
-		94FC2ECF05498CA800A80109 /* SqueakProject.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakProject.icns; path = SqueakProject.icns; sourceTree = "<group>"; };
-		94FC2ED005498CA800A80109 /* SqueakSources.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakSources.icns; path = SqueakSources.icns; sourceTree = "<group>"; };
+		94FC2ECE05498CA800A80109 /* SqueakGeneric.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakGeneric.icns; sourceTree = "<group>"; };
+		94FC2ECF05498CA800A80109 /* SqueakProject.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakProject.icns; sourceTree = "<group>"; };
+		94FC2ED005498CA800A80109 /* SqueakSources.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakSources.icns; sourceTree = "<group>"; };
 		94FD7EC807B8491B002F2291 /* sqUnixSoundMacOSXJMM.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqUnixSoundMacOSXJMM.c; sourceTree = "<group>"; };
 		A21AB9C60E99661000A432CA /* sqMacNSPluginUILogic2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacNSPluginUILogic2.c; sourceTree = "<group>"; };
 		A21AB9CA0E99682000A432CA /* NSCursorWrappers.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSCursorWrappers.m; sourceTree = "<group>"; };
@@ -381,7 +382,6 @@
 		A277292E0CE7A8D300ABAFCA /* SoundPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SoundPlugin.c; path = SoundPlugin/SoundPlugin.c; sourceTree = "<group>"; };
 		A27729300CE7A8D300ABAFCA /* StarSqueakPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = StarSqueakPlugin.c; path = StarSqueakPlugin/StarSqueakPlugin.c; sourceTree = "<group>"; };
 		A27729330CE7A8D300ABAFCA /* UUIDPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = UUIDPlugin.c; path = UUIDPlugin/UUIDPlugin.c; sourceTree = "<group>"; };
-		735B4CA20E8069B7008FA2CA /* VMProfileMacSupportPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = VMProfileMacSupportPlugin.c; path = VMProfileMacSupportPlugin/VMProfileMacSupportPlugin.c; sourceTree = "<group>"; };
 		A27729370CE7A8D300ABAFCA /* ZipPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ZipPlugin.c; path = ZipPlugin/ZipPlugin.c; sourceTree = "<group>"; };
 		A27729750CE7A9AE00ABAFCA /* sqMacHostWindow.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacHostWindow.c; sourceTree = "<group>"; };
 		A27729760CE7A9AE00ABAFCA /* sqMacHostWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacHostWindow.h; sourceTree = "<group>"; };
@@ -395,7 +395,7 @@
 		A2FB6B580CCD71B000A29088 /* sqMacLocaleCarbon.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqMacLocaleCarbon.h; path = LocalePlugin/sqMacLocaleCarbon.h; sourceTree = "<group>"; };
 		A2FB6B720CCD723F00A29088 /* LocalePlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = LocalePlugin.h; path = LocalePlugin/LocalePlugin.h; sourceTree = "<group>"; };
 		DAD40DAF0AA60CE90082521A /* CoreVM.plist */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.plist.xml; path = CoreVM.plist; sourceTree = "<group>"; };
-		DAFA08930AA64625008DF459 /* GreenCogSqueak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = GreenCogSqueak.icns; path = GreenCogSqueak.icns; sourceTree = "<group>"; };
+		DAFA08930AA64625008DF459 /* GreenCogSqueak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = GreenCogSqueak.icns; sourceTree = "<group>"; };
 		F5F8AE0F02EB4E090100013C /* sqMacOpenGL.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sqMacOpenGL.h; sourceTree = "<group>"; };
 		F5F8AE3D02EB4E090100013C /* sqMacInternetConfiguration.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacInternetConfiguration.c; sourceTree = "<group>"; };
 		F5F8AE3F02EB4E090100013C /* sqMacJoystickAndTablet.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sqMacJoystickAndTablet.c; sourceTree = "<group>"; };
@@ -1328,7 +1328,7 @@
 				941A3B6E09AA144000C9D25A /* sqUnixAsynchFile.h in Headers */,
 				941A3B6F09AA144000C9D25A /* sqMacImageIO.h in Headers */,
 				94002C4409EB18EF003C4BF2 /* sqMemoryAccess.h in Headers */,
-				9426FF2009F489D200ECEDDC /* reconfig.h in Headers */,
+				9426FF2009F489D200ECEDDC /* config.h in Headers */,
 				9426FF2209F489D200ECEDDC /* internal.h in Headers */,
 				9426FF2409F489D200ECEDDC /* pcre.h in Headers */,
 				9426FF2509F489D200ECEDDC /* rePlugin.h in Headers */,
@@ -1362,6 +1362,8 @@
 				941A3B7A09AA144000C9D25A /* Sources */,
 				941A3BFA09AA144000C9D25A /* Frameworks */,
 				941A3C0409AA144000C9D25A /* Rez */,
+			);
+			buildRules = (
 			);
 			name = Squeak;
 			productInstallPath = "$(USER_APPS_DIR)";
@@ -1610,12 +1612,13 @@
 					"COGMTVM=0",
 					"DEBUGVM=0",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1)",
 					NO_ISNAN,
 					TARGET_API_MAC_CARBON,
 					SQUEAK_BUILTIN_PLUGIN,
 					HAVE_SYS_TIME_H,
 				);
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1 = "TZ=\\\"UTC\\\"";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_VERSION_i386 = 4.2;
 				GCC_WARN_UNKNOWN_PRAGMAS = NO;
@@ -1647,15 +1650,17 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = i386;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"COGMTVM=0",
 					"DEBUGVM=0",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1)",
 					HAVE_SYS_TIME_H,
 					SQUEAK_BUILTIN_PLUGIN,
 					TARGET_API_MAC_CARBON,
 				);
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1 = "TZ=\\\"UTC\\\"";
 				HEADER_SEARCH_PATHS = (
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
@@ -1682,13 +1687,14 @@
 					"COGMTVM=0",
 					"DEBUGVM=1",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1)",
 					NO_ISNAN,
 					TARGET_API_MAC_CARBON,
 					SQUEAK_BUILTIN_PLUGIN,
 					HAVE_SYS_TIME_H,
 					"EXTERNALPRIMSDEBUG=1",
 				);
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1 = "TZ=\\\"UTC\\\"";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_VERSION_i386 = 4.2;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
@@ -1737,13 +1743,14 @@
 					"COGMTVM=0",
 					"DEBUGVM=0",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1)",
 					TARGET_API_MAC_CARBON,
 					SQUEAK_BUILTIN_PLUGIN,
 					HAVE_SYS_TIME_H,
 				);
 				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS = "$(GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS_QUOTED_FOR_TARGET_1)";
 				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS_QUOTED_FOR_TARGET_1 = "BUILD_VERSION=\"\\\"Squeak Sista Spur OS/X 5.0.0\\\"\"";
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1 = "TZ=\\\"UTC\\\"";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_UNROLL_LOOPS = YES;
 				GCC_VERSION_i386 = 4.2;
@@ -1789,12 +1796,13 @@
 					"COGMTVM=0",
 					"DEBUGVM=0",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1)",
 					NO_ISNAN,
 					TARGET_API_MAC_CARBON,
 					SQUEAK_BUILTIN_PLUGIN,
 					HAVE_SYS_TIME_H,
 				);
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1 = "TZ=\\\"UTC\\\"";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_VERSION_i386 = 4.2;
 				GCC_WARN_UNKNOWN_PRAGMAS = NO;
@@ -1826,16 +1834,18 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = i386;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"COGMTVM=0",
 					"DEBUGVM=1",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1)",
 					HAVE_SYS_TIME_H,
 					SQUEAK_BUILTIN_PLUGIN,
 					TARGET_API_MAC_CARBON,
 					"EXTERNALPRIMSDEBUG=1",
 				);
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1 = "TZ=\\\"UTC\\\"";
 				HEADER_SEARCH_PATHS = (
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
@@ -1849,16 +1859,18 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = i386;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
 					"COGMTVM=0",
 					"DEBUGVM=0",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1)",
 					HAVE_SYS_TIME_H,
 					SQUEAK_BUILTIN_PLUGIN,
 					TARGET_API_MAC_CARBON,
 				);
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1 = "TZ=\\\"UTC\\\"";
 				GCC_VERSION = 4.2;
 				HEADER_SEARCH_PATHS = (
 					/Developer/Headers/FlatCarbon,
@@ -1879,15 +1891,17 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = i386;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
 					"COGMTVM=0",
 					"USE_GLOBAL_STRUCT=0",
-					"TZ=\"$TZ\"",
+					"$(GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1)",
 					HAVE_SYS_TIME_H,
 					SQUEAK_BUILTIN_PLUGIN,
 					TARGET_API_MAC_CARBON,
 				);
+				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1 = "TZ=\\\"UTC\\\"";
 				HEADER_SEARCH_PATHS = (
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
