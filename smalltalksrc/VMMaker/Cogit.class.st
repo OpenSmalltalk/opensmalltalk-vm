@@ -2359,6 +2359,13 @@ Cogit >> annotationForMcpc: mcpc in: cogHomeMethod [
 	^annotation
 ]
 
+{ #category : #'in-line cacheing' }
+Cogit >> annotationIsForUncheckedEntryPoint: annotation [
+	<inline: true>
+	^annotation = IsSuperSend
+	  or: [BytecodeSetHasDirectedSuperSend and: [annotation = IsDirectedSuperSend]]
+]
+
 { #category : #'simulation only' }
 Cogit >> assertCStackWellAligned [
 	"Check alignment of the C stack.  This is a simulation only facsimilie.
@@ -9578,34 +9585,6 @@ Cogit >> unlinkAllSends [
 ]
 
 { #category : #'in-line cacheing' }
-Cogit >> unlinkIfForwardedSend: annotation pc: mcpc ignored: superfluity [
-	<var: #mcpc type: #'char *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
-	| entryPoint |
-
-	self cppIf: NewspeakVM ifTrue:
-		[| nsSendCache |
-		 annotation = IsNSSendCall ifTrue:
-			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			 (nsSendCache classTag ~= objectRepresentation illegalClassTag
-			  and: [objectMemory isForwardedClassIndex: nsSendCache classTag]) ifTrue:
-				[self voidNSSendCache: nsSendCache]].
-			"Should we check if the enclosing object's class is forwarded as well?"
-			^0 "keep scanning"].
-
-	(self isPureSendAnnotation: annotation) ifTrue:
-		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
-		 entryPoint > methodZoneBase
-			ifTrue: "It's a linked send, but maybe a super send or linked to an OpenPIC, in which case the cache tag will be a selector...."
-				[(objectMemory isForwardedClassIndex: (backEnd inlineCacheTagAt: mcpc asInteger)) ifTrue:
-					[self targetMethodAndSendTableFor: entryPoint annotation: annotation into:
-						[:targetMethod :sendTable|
-						 self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]].
-
-	^0 "keep scanning"
-]
-
-{ #category : #'in-line cacheing' }
 Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
 	<var: #mcpc type: #'char *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
@@ -9631,6 +9610,35 @@ Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
 					 (targetMethod cmType = CMFree
 					  or: [targetMethod selector = theSelector]) ifTrue:
 						[self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]].
+
+	^0 "keep scanning"
+]
+
+{ #category : #'in-line cacheing' }
+Cogit >> unlinkIfInvalidClassSend: annotation pc: mcpc ignored: superfluity [
+	<var: #mcpc type: #'char *'>
+	<var: #nsSendCache type: #'NSSendCache *'>
+	| entryPoint |
+
+	self cppIf: NewspeakVM ifTrue:
+		[| nsSendCache |
+		 annotation = IsNSSendCall ifTrue:
+			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+			 (nsSendCache classTag ~= objectRepresentation illegalClassTag
+			  and: [objectMemory isForwardedClassIndex: nsSendCache classTag]) ifTrue:
+				[self voidNSSendCache: nsSendCache]].
+			"Should we check if the enclosing object's class is forwarded as well?"
+			^0 "keep scanning"].
+
+	(self isPureSendAnnotation: annotation) ifTrue:
+		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+		 entryPoint > methodZoneBase ifTrue: "It's a linked send, but maybe a super send or linked to an OpenPIC, in which case the cache tag will be a selector...."
+			[self targetMethodAndSendTableFor: entryPoint annotation: annotation into:
+				[:targetMethod :sendTable|
+				 ((self annotationIsForUncheckedEntryPoint: annotation)
+				  or: [targetMethod cmType = CMOpenPIC]) ifFalse:
+					[(objectMemory isValidClassTag: (backEnd inlineCacheTagAt: mcpc asInteger)) ifFalse:
+						[self unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable]]]]].
 
 	^0 "keep scanning"
 ]
@@ -9756,6 +9764,35 @@ Cogit >> unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable [
 ]
 
 { #category : #'jit - api' }
+Cogit >> unlinkSendsLinkedForInvalidClasses [
+	<api>
+	<option: #SpurObjectMemory>
+	"Unlink all sends in cog methods whose class tag is that of a forwarded class."
+	| cogMethod freedPIC |
+	<var: #cogMethod type: #'CogMethod *'>
+	methodZoneBase ifNil: [^self].
+	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
+	codeModified := freedPIC := false.
+	[cogMethod < methodZone limitZony] whileTrue:
+		[cogMethod cmType = CMMethod
+			ifTrue:
+				[self mapFor: cogMethod
+					 performUntil: #unlinkIfInvalidClassSend:pc:ignored:
+					 arg: 0]
+			ifFalse:
+				[(cogMethod cmType = CMClosedPIC
+				  and: [self cPICHasForwardedClass: cogMethod]) ifTrue:
+					[methodZone freeMethod: cogMethod.
+					 freedPIC := true]].
+		cogMethod := methodZone methodAfter: cogMethod].
+	freedPIC
+		ifTrue: [self unlinkSendsToFree]
+		ifFalse:
+			[codeModified ifTrue: "After possibly updating inline caches we need to flush the icache."
+				[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]]
+]
+
+{ #category : #'jit - api' }
 Cogit >> unlinkSendsOf: selector isMNUSelector: isMNUSelector [
 	<api>
 	"Unlink all sends in cog methods. Free all Closed PICs with the selector,
@@ -9834,35 +9871,6 @@ Cogit >> unlinkSendsTo: targetMethodObject andFreeIf: freeIfTrue [
 					 freedPIC := true]].
 		cogMethod := methodZone methodAfter: cogMethod].
 	freeIfTrue ifTrue: [self freeMethod: targetMethod].
-	freedPIC
-		ifTrue: [self unlinkSendsToFree]
-		ifFalse:
-			[codeModified ifTrue: "After possibly updating inline caches we need to flush the icache."
-				[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]]
-]
-
-{ #category : #'jit - api' }
-Cogit >> unlinkSendsToForwardedClasses [
-	<api>
-	<option: #SpurObjectMemory>
-	"Unlink all sends in cog methods whose class tag is that of a forwarded class."
-	| cogMethod freedPIC |
-	<var: #cogMethod type: #'CogMethod *'>
-	methodZoneBase ifNil: [^self].
-	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
-	codeModified := freedPIC := false.
-	[cogMethod < methodZone limitZony] whileTrue:
-		[cogMethod cmType = CMMethod
-			ifTrue:
-				[self mapFor: cogMethod
-					 performUntil: #unlinkIfForwardedSend:pc:ignored:
-					 arg: 0]
-			ifFalse:
-				[(cogMethod cmType = CMClosedPIC
-				  and: [self cPICHasForwardedClass: cogMethod]) ifTrue:
-					[methodZone freeMethod: cogMethod.
-					 freedPIC := true]].
-		cogMethod := methodZone methodAfter: cogMethod].
 	freedPIC
 		ifTrue: [self unlinkSendsToFree]
 		ifFalse:
