@@ -1815,6 +1815,9 @@ StackToRegisterMappingCogit >> genMarshalledSend: selector numArgs: numArgs send
 		[hasYoungReferent := true].
 	self assert: needsFrame.
 	annotation := self annotationForSendTable: sendTable.
+	"Deal with stale super sends; see SpurMemoryManager's class comment."
+	(self annotationIsForUncheckedEntryPoint: annotation) ifTrue:
+		[objectRepresentation genEnsureOopInRegNotForwarded: ReceiverResultReg scratchReg: TempReg].
 	numArgs > 2 ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
 	(BytecodeSetHasDirectedSuperSend

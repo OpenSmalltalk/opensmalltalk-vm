@@ -6427,16 +6427,17 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 	 The read-barrier is minimised by arranging that forwarding pointers will fail a method cache
 	 probe, since notionally objects' internals are accessed only via sending messages to them,
 	 the exception is primitives that access the internals of the non-receiver argument(s).
-	 To avoid a read barrier on bytecode, literal and inst var fetch we scan the receivers and
-	 methods in the stack zone and follow any forwarded ones.  This is of course way cheaper
-	 than scanning all of memory as in the old become."
+
+	 To avoid a read barrier on bytecode, literal and inst var fetch and non-local return, we scan
+	 the receivers (including the stacked receiver for non-local return) and method references
+	 in the stack zone and follow any forwarded ones.  This is of course way cheaper than
+	 scanning all of memory as in the old become."
 	| theIPPtr |
 	<inline: false>
-	<var: #thePage type: #'StackPage *'>
-	<var: #theSP type: #'char *'>
 	<var: #theFP type: #'char *'>
-	<var: #callerFP type: #'char *'>
 	<var: #theIPPtr type: #usqInt>
+	<var: #callerFP type: #'char *'>
+	<var: #thePage type: #'StackPage *'>
 
 	self externalWriteBackHeadFramePointers.
 
@@ -6450,29 +6451,18 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 
 	self assert: stackPage ~= 0.
 	0 to: numStackPages - 1 do:
-		[:i| | thePage theSP theFP callerFP theIP oop |
+		[:i| | thePage theFP callerFP ptr oop |
 		thePage := stackPages stackPageAt: i.
 		thePage isFree ifFalse:
-			[theSP := thePage headSP.
-			 theFP := thePage  headFP.
+			[theFP := thePage  headFP.
 			 "Skip the instruction pointer on top of stack of inactive pages."
-			 thePage = stackPage
-				ifTrue: [theIPPtr := 0]
-				ifFalse:
-					[theIPPtr := theSP asInteger.
-					 theSP := theSP + objectMemory wordSize].
+			 theIPPtr := thePage = stackPage ifTrue: [0] ifFalse: [thePage headSP asUnsignedInteger].
 			 [self assert: (thePage addressIsInPage: theFP).
 			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr asVoidPointer]).
 			  oop := stackPages longAt: theFP + FoxReceiver.
 			  (objectMemory isOopForwarded: oop) ifTrue:
 				[stackPages
 					longAt: theFP + FoxReceiver
-					put: (objectMemory followForwarded: oop)].
-			  theIP := (theFP + (self frameStackedReceiverOffset: theFP)) asInteger. "reuse theIP; its just an offset here"
-			  oop := stackPages longAt: theIP.
-			  (objectMemory isOopForwarded: oop) ifTrue:
-				[stackPages
-					longAt: theIP
 					put: (objectMemory followForwarded: oop)].
 			  ((self frameHasContext: theFP)
 			   and: [(objectMemory isForwarded: (self frameContext: theFP))]) ifTrue:
@@ -6492,6 +6482,12 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 				stackPages
 					longAt: theFP + FoxMethod
 					put: (oop := newOop)].
+			  ptr := (theFP + (self frameStackedReceiverOffset: theFP)) asInteger.
+			  oop := stackPages longAt: ptr.
+			  (objectMemory isOopForwarded: oop) ifTrue:
+				[stackPages
+					longAt: ptr
+					put: (objectMemory followForwarded: oop)].
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := (theFP + FoxCallerSavedIP) asInteger.
 				 theFP := callerFP].
@@ -8869,10 +8865,12 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	"If the frame is a closure activation then the closure should be on the stack in
 	 the pushed receiver position (closures receiver the value[:value:] messages).
 	 Otherwise it should be the receiver proper."
-	maybeClosure := objectMemory followField: ClosureIndex ofObject: aContext.
+	maybeClosure := objectMemory fetchPointer: ClosureIndex ofObject: aContext.
 	maybeClosure ~= objectMemory nilObject
 		ifTrue:
-			[numArgs := self argumentCountOfClosure: maybeClosure.
+			[(objectMemory isForwarded: maybeClosure) ifTrue:
+				[maybeClosure := objectMemory fixFollowedField: ClosureIndex ofObject: aContext withInitialValue: maybeClosure].
+			 numArgs := self argumentCountOfClosure: maybeClosure.
 			 stackPages longAt: pointer put: maybeClosure]
 		ifFalse:
 			[| header |
