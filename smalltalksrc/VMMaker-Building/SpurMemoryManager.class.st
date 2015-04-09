@@ -402,6 +402,8 @@ We have already discussed that we will catch an attempt to create a new activati
 
 We avoid a read barrier on access to receiver inst vars by scanning the stack zone (*) after a become and following pointers to the receiver. (* the Cog VM, following Peter Deutsch's PS Smalltalk VM, lazily maps stack frames to context objects, creating contexts as needed and using stack frames for all method activations.  The stack zone is small (320k default, of which at most half is used to execute Smalltalk, half being reserved for interrupt handlers running on the native stack) and organized as pages.  Context objects serve as proxy objects for stack frames in teh stack zone, or as fully fledged activations when activations on a stack page are evicted to the heap as contexts to make room for new activations).
 
+There is one wrinkle in this neat picture for sends that we call the ""stale supersend"" problem.  See the next section.
+
 We can easily avoid read barriers in direct literal access, and class hierarchy walking and message dictionary searching in message lookup (but we do not do so, see next paragraph).  Whenever the become operation becomes one or more pointer objects (and it can e.g. cheaply know if it has becommed a CompiledMethod) both the class table and the stack zone could be scanned.  In the class table we can follow the forwarding pointers in all classes in the table, and we can follow their superclasses.  But we would like to avoid scanning classes many times.  Any superclass that has a non-zero hash must be in the table and will be encountered during the scan of the class table.  Any superclass with a zero hash can be entered into the table at a point subsequent to the current index and hence scanned.  The class scan can also scan method dictionary selectors and follow the method dictionary's array reference (so that dictionaries are valid for lookup) and scan the dictionary's method array iff a CompiledMethod was becommed. (Note that support for object-as-method implies an explicit read barrier in primitiveObjectAsMethod, which is a small overhead there-in).
 
 In fact, scanning the class table is much more expensive than having a read barrier on message lookup, since
@@ -421,8 +423,12 @@ This means explicit read barriers in
 - push/store/pop literal variable
 - base frame return (accessing the sender context, its inst vars, and the method class association of its method)
 
-
 This leaves primitives where explicit access to object state is done without message sending.  Since primitives check their arguments for validity, and fail without side effects if validation fails, they fail if encountering a forwarding object, and can be retried.  There were a few exceptions to this in the Semaphore installation primitives that assumed a non-Semaphore argument was nil, hence being fooled by forwarders to Semaphores.  These primitives were easily fixed.  So all primitives that examine state fail if they encounter a forwarder amongst that state.  Slang is used to analyse the parse trees of primitives and compute an ""accessor depth"", the depth to which a primitive traverses the object graph of its input arguments.  If a primitive fails then the primitive failure code retrieves the accessor depth for the primitive and, if >= 0, traverses the state to that depth, following (and fixing) any forwarders found.  If any are found the primitive is retried.
+
+Stale Super Sends
+Notionally we catch sends to forwarded objects by only checking for forwqarders when a send lookup cache fails, but Smalltalk supersends, once linked, are unchecked, and the lookup starts from a method's methodClass, which requires an explicit read barrier.  So there is no possibility of implicitly checking for forwarding of the receiver of a super send.  Since a super send looks like push: self, marshall arguments, super send, and receivers are never forwarded this may look like a non-problem, but any computation could happen as part of marshalling the supersend arguments, e.g. ^super doSomethingWith: (self become: self somethingElse).  Because self is pushed before argument marshalling, stale forwarded references to self can be left on the stack after a become and before the supersend.
+
+There are three solutions for this problem we have considered.  One is to scan the entire stack after become (and the entire stack of a context faulted back into the stack zone).  This is expensive.  Another is to use checked entry-points for super.  This seems to add a lot of new code and complexity, and works only in jitted code.  The solution we have chosen is to explicitly test for a forwarded receiver.  In the interpreter this is done by sending ensureReceiverUnforwarded in the supersend lookup routines.  In jitted code it is done by adding code to the send site to unforward the receiver after arguments are marshalled and immediately before the send call.  Because super sends are extremely rare this adds little overhead.
 
 61-bit Immediate Floats
 Representation for immediate doubles, only used in the 64-bit implementation. Immediate doubles have the same 52 bit mantissa as IEEE double-precision  floating-point, but only have 8 bits of exponent.  So they occupy just less than the middle 1/8th of the double range.  They overlap the normal single-precision floats which also have 8 bit exponents, but exclude the single-precision denormals (exponent-127) and the single-precsion NaNs (exponent +127).  +/- zero is just a pair of values with both exponent and mantissa 0. 
@@ -6589,6 +6595,16 @@ SpurMemoryManager >> isValidClassIndex: classIndex [
 		(self
 			fetchPointer: (classIndex bitAnd: self classTableMinorIndexMask)
 			ofObject: classTablePage)
+]
+
+{ #category : #'class table' }
+SpurMemoryManager >> isValidClassTag: classIndex [
+	<api>
+	| classOrNil |
+	self assert: (classIndex between: 0 and: 1 << self classIndexFieldWidth - 1).
+	classOrNil := self classOrNilAtIndex: classIndex.
+	^classOrNil ~= nilObj
+	 and: [(self rawHashBitsOf: classOrNil) = classIndex]
 ]
 
 { #category : #'free space' }

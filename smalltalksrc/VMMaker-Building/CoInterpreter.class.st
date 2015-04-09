@@ -3277,7 +3277,7 @@ CoInterpreter >> findNewMethodInClassTag: classTagArg [
 { #category : #'object memory support' }
 CoInterpreter >> flushBecommedClassesInMethodZone [
 	<inline: true>
-	cogit unlinkSendsToForwardedClasses
+	cogit unlinkSendsLinkedForInvalidClasses
 ]
 
 { #category : #'plugin primitive support' }
@@ -3331,24 +3331,20 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 	 The read-barrier is minimised by arranging that forwarding pointers will fail a method cache
 	 probe, since notionally objects' internals are accessed only via sending messages to them,
 	 the exception is primitives that access the internals of the non-receiver argument(s).
-	 To avoid a read barrier on inst var fetch we scan the receivers in the stack zone and follow
-	 any forwarded ones.  This is way cheaper than scanning all of memory as in the old become.
 
-	 Override to handle machine code frames, and to handle the lack of an explicit read barrier on super sends.
-	 With most super send implementations (not Newspeak's absent super bytecodes) self, the receiver of the
-	 super send, is pushed before any arguments.  So if self is becommed during argument marshalling, e.g.
-		super doSomethingWith: (self become: self somethingElse)
-	 then a stale forwarded reference to self could be left on the stack.  In the StackInterpreter we deal with this
-	 with an explicit read barrier on supersend.  In the CoInterpreter we deal with it by following all non-argument
-	 stack contents."
+	 To avoid a read barrier on bytecode, literal and inst var fetch and non-local return, we scan
+	 the receivers (including the stacked receiver for non-local return) and method references
+	 in the stack zone and follow any forwarded ones.  This is of course way cheaper than
+	 scanning all of memory as in the old become.
+
+	 Override to handle machine code frames"
 	| theIPPtr |
 	<inline: false>
-	<var: #thePage type: #'StackPage *'>
 	<var: #theSP type: #'char *'>
 	<var: #theFP type: #'char *'>
-	<var: #offset type: #'char *'>
-	<var: #callerFP type: #'char *'>
 	<var: #theIPPtr type: #usqInt>
+	<var: #callerFP type: #'char *'>
+	<var: #thePage type: #'StackPage *'>
 
 	self externalWriteBackHeadFramePointers.
 
@@ -3365,27 +3361,10 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 		[:i| | thePage theSP theFP callerFP oop offset |
 		thePage := stackPages stackPageAt: i.
 		thePage isFree ifFalse:
-			[theSP := thePage headSP.
-			 theFP := thePage  headFP.
-			 "Skip the instruction pointer on top of stack of inactive pages."
-			 thePage = stackPage
-				ifTrue: [theIPPtr := 0]
-				ifFalse:
-					[theIPPtr := theSP asUnsignedInteger.
-					 theSP := theSP + objectMemory wordSize].
+			[theFP := thePage  headFP.
+			 theIPPtr := thePage = stackPage ifTrue: [0] ifFalse: [thePage headSP asUnsignedInteger].
 			 [self assert: (thePage addressIsInPage: theFP).
 			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr asVoidPointer]).
-			  offset := self frameReceiverLocation: theFP.
-	 		  [theSP <= offset] whileTrue:
-				[oop := stackPages longAt: theSP.
-				 (objectMemory isOopForwarded: oop) ifTrue:
-					[stackPages longAt: theSP put: (objectMemory followForwarded: oop)].
-				 theSP := theSP + objectMemory wordSize].
-			  ((self frameHasContext: theFP)
-			   and: [(objectMemory isForwarded: (self frameContext: theFP))]) ifTrue:
-				[stackPages
-					longAt: theFP + FoxThisContext
-					put: (objectMemory followForwarded: (self frameContext: theFP))].
 			 (self isMachineCodeFrame: theFP)
 				ifTrue:
 					[oop := stackPages longAt: theFP + FoxMFReceiver.
@@ -3393,8 +3372,7 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 						[stackPages
 							longAt: theFP + FoxMFReceiver
 							put: (objectMemory followForwarded: oop)].
-					 oop := (self mframeHomeMethod: theFP) methodObject.
-					 self assert: (objectMemory isForwarded: oop) not]
+					 self assert: (objectMemory isForwarded: (self mframeHomeMethod: theFP) methodObject) not]
 				ifFalse:
 					[oop := stackPages longAt: theFP + FoxIFReceiver.
 					 (objectMemory isOopForwarded: oop) ifTrue:
@@ -3403,23 +3381,33 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 							put: (objectMemory followForwarded: oop)].
 					 oop := self iframeMethod: theFP.
 					 (objectMemory isForwarded: oop) ifTrue:
-						[| newOop delta |
+						[| newOop |
 						 newOop := objectMemory followForwarded: oop.
-						 delta := newOop - oop.
+						 offset := newOop - oop.
 						 (theIPPtr ~= 0
 						  and: [(stackPages longAt: theIPPtr) > oop]) ifTrue:
 							[stackPages
 								longAt: theIPPtr
-								put: (stackPages longAt: theIPPtr) + delta].
+								put: (stackPages longAt: theIPPtr) + offset].
 						stackPages
 							longAt: theFP + FoxIFSavedIP
-							put: (stackPages longAt: theFP + FoxIFSavedIP) + delta.
+							put: (stackPages longAt: theFP + FoxIFSavedIP) + offset.
 						stackPages
 							longAt: theFP + FoxMethod
 							put: (oop := newOop)]].
+			  ((self frameHasContext: theFP)
+			   and: [(objectMemory isForwarded: (self frameContext: theFP))]) ifTrue:
+				[stackPages
+					longAt: theFP + FoxThisContext
+					put: (objectMemory followForwarded: (self frameContext: theFP))].
+			  offset := self frameStackedReceiverOffset: theFP.
+			  oop := stackPages longAt: theFP + offset.
+			  (objectMemory isOopForwarded: oop) ifTrue:
+				[stackPages
+					longAt: theFP + offset
+					put: (objectMemory followForwarded: oop)].
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
 				[theIPPtr := (theFP + FoxCallerSavedIP) asUnsignedInteger.
-				 theSP := self cCoerceSimple: theIPPtr + objectMemory wordSize to: #'char *'.
 				 theFP := callerFP].
 			 "And finally follow the saved context and the caller context."
 			 theSP := thePage baseAddress - objectMemory wordSize.
@@ -4498,7 +4486,9 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	maybeClosure := objectMemory fetchPointer: ClosureIndex ofObject: aContext.
 	maybeClosure ~= objectMemory nilObject
 		ifTrue:
-			[numArgs := self argumentCountOfClosure: maybeClosure.
+			[(objectMemory isForwarded: maybeClosure) ifTrue:
+				[maybeClosure := objectMemory fixFollowedField: ClosureIndex ofObject: aContext withInitialValue: maybeClosure].
+			 numArgs := self argumentCountOfClosure: maybeClosure.
 			 stackPages
 				longAt: (pointer := pointer - objectMemory wordSize)
 				put: maybeClosure]
@@ -4598,13 +4588,11 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 		put: rcvr.
 	stackPtrIndex := self quickFetchInteger: StackPointerIndex ofObject: aContext.
 	self assert: ReceiverIndex + stackPtrIndex < (objectMemory lengthOf: aContext).
-	"Copy the non-argument temps and stack contents to the stack.
-	 Follow these to avoid any stale self references from super sends."
 	numArgs + 1 to: stackPtrIndex do:
 		[:i|
 		stackPages
 			longAt: (pointer := pointer - objectMemory wordSize)
-			put: (objectMemory followField: ReceiverIndex + i ofObject: aContext)].
+			put: (objectMemory fetchPointer: ReceiverIndex + i ofObject: aContext)].
 	"top of stack is the instruction pointer"
 	stackPages longAt: (pointer := pointer - objectMemory wordSize) put: theIP.
 	page headSP: pointer.

@@ -224,14 +224,17 @@ CogObjectRepresentationForSpur >> genEnsureObjInRegNotForwarded: reg scratchReg:
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch [
-	"Make sure that the oop in reg is not forwarded."
-	| loop okImm okObj |
-	<var: #okImm type: #'AbstractInstruction *'>
-	<var: #okObj type: #'AbstractInstruction *'>
+	"Make sure that the oop in reg is not forwarded.  This routine assumes the object will
+	 never be forwarded to an immediate, as it is used to unforward  literal variables (associations). 
+	 Use the fact that isForwardedObjectClassIndexPun is a power of two to save an instruction."
+	| skip loop ok |
+	<var: #ok type: #'AbstractInstruction *'>
+	<var: #skip type: #'AbstractInstruction *'>
 	<var: #loop type: #'AbstractInstruction *'>
 	self assert: reg ~= scratch.
-	loop := cogit MoveR: reg R: scratch.
-	okImm := self genJumpImmediateInScratchReg: scratch.
+	cogit MoveR: reg R: scratch.
+	skip := self genJumpImmediateInScratchReg: scratch.
+	loop := cogit Label.
 	"notionally
 		self genGetClassIndexOfNonImm: reg into: scratch.
 		cogit CmpCq: objectMemory isForwardedObjectClassIndexPun R: TempReg.
@@ -240,10 +243,10 @@ CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg:
 	cogit
 		AndCq: objectMemory classIndexMask - objectMemory isForwardedObjectClassIndexPun
 		R: scratch.
-	okObj := cogit JumpNonZero:  0.
+	ok := cogit JumpNonZero:  0.
 	self genLoadSlot: 0 sourceReg: reg destReg: reg.
 	cogit Jump: loop.
-	okImm jmpTarget: (okObj jmpTarget: cogit Label).
+	skip jmpTarget: (ok jmpTarget: cogit Label).
 	^0
 ]
 
