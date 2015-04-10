@@ -85,7 +85,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures 
 		(3 126 126 unknownBytecode)		"Was non-absent Newspeak super"
 		(2 127 127 unknownBytecode)		"Was push implicit receiver"
 
-		(2 128 128 extendedPushBytecode needsFrameNever: 1)
+		(2 128 128 extendedPushBytecode)
 		(2 129 129 extendedStoreBytecode)
 		(2 130 130 extendedStoreAndPopBytecode)
 		(2 131 131 genExtendedSendBytecode isMapped)
@@ -98,7 +98,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV3PlusClosures 
 		(1 137 137 genPushActiveContextBytecode)
 		(2 138 138 genPushNewArrayBytecode)
 
-		(3 139 139 callPrimitiveBytecode)
+		(3 139 139 genCallPrimitiveBytecode)
 		(3 140 140 genPushRemoteTempLongBytecode)
 		(3 141 141 genStoreRemoteTempLongBytecode)
 		(3 142 142 genStoreAndPopRemoteTempLongBytecode)
@@ -206,7 +206,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(2 246 248	unknownBytecode)
 
 		"3 byte bytecodes"
-		(3 249 249 callPrimitiveBytecode)
+		(3 249 249 genCallPrimitiveBytecode)
 		(3 250 250 genPushRemoteTempLongBytecode)
 		(3 251 251 genStoreRemoteTempLongBytecode)
 		(3 252 252 genStoreAndPopRemoteTempLongBytecode)
@@ -366,7 +366,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSqueakV3PlusClosures [
 
 		(1 126 127 unknownBytecode)
 
-		(2 128 128 extendedPushBytecode needsFrameNever: 1)
+		(2 128 128 extendedPushBytecode)
 		(2 129 129 extendedStoreBytecode)
 		(2 130 130 extendedStoreAndPopBytecode)
 		(2 131 131 genExtendedSendBytecode isMapped)
@@ -380,7 +380,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSqueakV3PlusClosures [
 		(2 138 138 genPushNewArrayBytecode)),
 
 		((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
-			ifTrue: [#((3 139 139 callPrimitiveBytecode))]
+			ifTrue: [#((3 139 139 genCallPrimitiveBytecode))]
 			ifFalse: [#((1 139 139 unknownBytecode))]),
 
 	  #(
@@ -814,18 +814,6 @@ SimpleStackBasedCogit >> bytecodeFixupClass [
 { #category : #trampolines }
 SimpleStackBasedCogit >> cPICMissTrampolineFor: numArgs [
 	^ceCPICMissTrampoline
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> callPrimitiveBytecode [
-	"V3PlusClosures:	139 10001011	iiiiiiii   jjjjjjjj  Call Primitive #iiiiiiii + (jjjjjjjj * 256)
-	 NewsqueakV4:		249 11111001	iiiiiiii   jjjjjjjj  Call Primitive #iiiiiiii + (jjjjjjjj * 256)
-	 SistaV1:			248 11111000 iiiiiiii mjjjjjjj  Call Primitive #iiiiiiii + ( jjjjjjj * 256)
-							m=1 means inlined primitive, no hard return after execution."
-	self assert: (primitiveIndex = (byte1 + (byte2 << 8))
-				or: [primitiveIndex = 0 "disabled primitives, e.g. stream prims"
-					and: [(coInterpreter primitiveIndexOf: methodObj) = (byte1 + (byte2 << 8))]]).
-	^0
 ]
 
 { #category : #trampolines }
@@ -1447,9 +1435,16 @@ SimpleStackBasedCogit >> genBlockReturn [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genCallPrimitiveBytecode [
-	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution."
-	"This makes sense only for the optimizing JITs"
-	^EncounteredUnknownBytecode
+	"V3PlusClosures:	139 10001011	iiiiiiii   jjjjjjjj  Call Primitive #iiiiiiii + (jjjjjjjj * 256)
+	 NewsqueakV4:		249 11111001	iiiiiiii   jjjjjjjj  Call Primitive #iiiiiiii + (jjjjjjjj * 256)
+	 SistaV1:			248 11111000 iiiiiiii mjjjjjjj  Call Primitive #iiiiiiii + ( jjjjjjj * 256)
+							m=1 means inlined primitive, no hard return after execution."
+	bytecodePC ~= initialPC ifTrue:
+		[^EncounteredUnknownBytecode].
+	self assert: (primitiveIndex = (byte1 + (byte2 << 8))
+				or: [primitiveIndex = 0 "disabled primitives, e.g. stream prims"
+					and: [(coInterpreter primitiveIndexOf: methodObj) = (byte1 + (byte2 << 8))]]).
+	^0
 ]
 
 { #category : #'primitive generators' }

@@ -636,6 +636,11 @@ CurrentImageCoInterpreterFacade >> methodCacheAddress [
 	^memory byteSize * 3 / 4
 ]
 
+{ #category : #'object map' }
+CurrentImageCoInterpreterFacade >> methodClassOf: methodOop [
+	^self oopForObject: (self objectForOop: methodOop) methodClass
+]
+
 { #category : #testing }
 CurrentImageCoInterpreterFacade >> methodHasCogMethod: aCompiledMethod [ 
 	^false
