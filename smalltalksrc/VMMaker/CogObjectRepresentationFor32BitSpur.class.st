@@ -170,13 +170,6 @@ CogObjectRepresentationFor32BitSpur >> genConvertIntegerToSmallIntegerInReg: reg
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationFor32BitSpur >> genConvertIntegerToSmallIntegerInScratchReg: scratchReg [
-	cogit LogicalShiftLeftCq: 1 R: scratchReg.
-	cogit AddCq: 1 R: scratchReg.
-	^0
-]
-
-{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genConvertSmallIntegerToCharacterInReg: reg [
 	"Convert the SmallInteger in reg to a Character, assuming
 	 the SmallInteger's value is a valid character."
@@ -708,7 +701,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	jumpShortsOutOfBounds := cogit JumpBelowOrEqual: 0.
 	cogit AddR: Arg1Reg R: ReceiverResultReg.
 	cogit MoveM16: objectMemory baseHeaderSize r: ReceiverResultReg R: ReceiverResultReg.
-	self genConvertIntegerToSmallIntegerInScratchReg: ReceiverResultReg.
+	self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
 	jumpShortsDone := cogit Jump: 0.
 
 	jumpIsWords jmpTarget:
@@ -719,7 +712,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	cogit SubCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg1Reg.
 	jumpWordTooBig := self jumpNotSmallIntegerUnsignedValueInRegister: TempReg.
 	cogit MoveR: TempReg R: ReceiverResultReg.
-	self genConvertIntegerToSmallIntegerInScratchReg: ReceiverResultReg.
+	self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
 	jumpWordsDone := cogit Jump: 0.
 
 	jumpHasFixedFields jmpTarget:
@@ -930,7 +923,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	(jumpFixedFieldsOutOfBounds jmpTarget: cogit Label)))))))))).
 
 	cogit AddCq: 1 R: Arg0Reg. "0-rel => 1-rel"
-	self genConvertIntegerToSmallIntegerInScratchReg: Arg0Reg.
+	self genConvertIntegerToSmallIntegerInReg: Arg0Reg.
 
 	jumpBadIndex jmpTarget: (jumpImmediate jmpTarget: cogit Label).
 
@@ -1740,7 +1733,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset 
 	(jumpWordsOutOfBounds jmpTarget: cogit Label)))))).
 
 	cogit AddCq: 1 R: Arg0Reg. "0-rel => 1-rel"
-	self genConvertIntegerToSmallIntegerInScratchReg: Arg0Reg.
+	self genConvertIntegerToSmallIntegerInReg: Arg0Reg.
 
 	jumpBadIndex jmpTarget: (jumpImmediate jmpTarget: cogit Label).
 
