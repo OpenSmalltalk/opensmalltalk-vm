@@ -320,7 +320,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(2 246 248	unknownBytecode)
 
 		"3 byte bytecodes"
-		(3 249 249 callPrimitiveBytecode)
+		(3 249 249 genCallPrimitiveBytecode)
 		(3 250 250 genPushRemoteTempLongBytecode)
 		(3 251 251 genStoreRemoteTempLongBytecode)
 		(3 252 252 genStoreAndPopRemoteTempLongBytecode)
@@ -495,7 +495,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 
 		(1 126 127 unknownBytecode)
 
-		(2 128 128 extendedPushBytecode needsFrameNever: 1)
+		(2 128 128 extendedPushBytecode)
 		(2 129 129 extendedStoreBytecode)
 		(2 130 130 extendedStoreAndPopBytecode)
 		(2 131 131 genExtendedSendBytecode isMapped)
@@ -509,7 +509,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 		(2 138 138 genPushNewArrayBytecode)),
 
 		((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
-			ifTrue: [#((3 139 139 callPrimitiveBytecode))]
+			ifTrue: [#((3 139 139 genCallPrimitiveBytecode))]
 			ifFalse: [#((1 139 139 unknownBytecode))]),
 
 	   #(
@@ -1320,15 +1320,15 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 				self genBinaryInlineComparison: JumpNonZero opFalse: JumpZero destReg: ra ].
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
-		[64] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
+		[64] ->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
 				adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
 				adjust ~= 0 ifTrue: [ self AddCq: adjust R: ra. ]. 
-				self MoveCq: val R: TempReg.
+				self annotate: (self MoveCw: val R: TempReg) objRef: val.
 				self MoveXwr: ra R: TempReg R: ra].
-		[65] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
+		[65] ->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
 				adjust := objectMemory baseHeaderSize - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
 				self AddCq: adjust R: ra.
-				self MoveCq: val R: TempReg.
+				self annotate: (self MoveCw: val R: TempReg) objRef: val.
 				self MoveXbr: ra R: TempReg R: ra]
 
 	}
@@ -1418,12 +1418,10 @@ StackToRegisterMappingCogit >> genBinaryVarOpConstInlinePrimitive: prim [
 				self genBinaryInlineComparison: JumpZero opFalse: JumpNonZero destReg: rr ].
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
-		[64] ->	[self genConvertSmallIntegerToIntegerInReg: rr.
-				self MoveCq: (objectMemory integerValueOf: val) + (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1 R: TempReg.
-				self MoveXwr: TempReg R: rr R: rr ].
-		[65] ->	[self genConvertSmallIntegerToIntegerInReg: rr.
-				self MoveCq: (objectMemory integerValueOf: val) + objectMemory baseHeaderSize - 1 R: TempReg.
-				self MoveXbr: TempReg R: rr R: rr ]
+		[64] ->	[objectRepresentation genLoadSlot: (objectMemory integerValueOf: val) - 1 sourceReg: rr destReg: rr].
+		[65] ->	[self MoveCq: (objectMemory integerValueOf: val) + objectMemory baseHeaderSize - 1 R: TempReg.
+				self MoveXbr: TempReg R: rr R: rr.
+				objectRepresentation genConvertIntegerToSmallIntegerInReg: rr]
 
 	}
 	otherwise: [^EncounteredUnknownBytecode].
@@ -1478,14 +1476,15 @@ StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 				self genBinaryInlineComparison: JumpNonZero opFalse: JumpZero destReg: rr ].
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
-		[64] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
+		[64] ->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
 				adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
 				adjust ~= 0 ifTrue: [ self AddCq: adjust R: ra. ]. 
 				self MoveXwr: ra R: rr R: rr ].
-		[65] ->	[self genConvertSmallIntegerToIntegerInReg: ra.
+		[65] ->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
 				adjust := objectMemory baseHeaderSize - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
 				self AddCq: adjust R: ra.
-				self MoveXbr: ra R: rr R: rr ]
+				self MoveXbr: ra R: rr R: rr.
+				objectRepresentation genConvertIntegerToSmallIntegerInReg: rr]
 
 	}
 	otherwise: [^EncounteredUnknownBytecode].
@@ -1531,7 +1530,9 @@ StackToRegisterMappingCogit >> genCallPrimitiveBytecode [
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#inlinePrimitiveBytecode:"
 	| prim |
 	byte2 < 128 ifTrue:
-		[^EncounteredUnknownBytecode].
+		[^bytecodePC = initialPC
+			ifTrue: [0]
+			ifFalse: [EncounteredUnknownBytecode]].
 	prim := byte2 - 128 << 8 + byte1.
 
 	prim < 1000 ifTrue:
@@ -3373,36 +3374,38 @@ StackToRegisterMappingCogit >> genTrinaryInlinePrimitive: prim [
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#trinaryInlinePrimitive:"
 
-	| ra rr adjust |
-	(rr := backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
-		[self ssAllocateRequiredReg:
-			(rr := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-	(ra := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: rr))) ifNil:
-		[self ssAllocateRequiredReg: (ra := Arg1Reg)].
-	(rr = ReceiverResultReg or: [ra = ReceiverResultReg]) ifTrue:
+	| ra1 ra2 rr adjust |
+	(ra2 := backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
+		[self ssAllocateRequiredReg: (ra2 := Arg1Reg)].
+	(ra1 := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: ra2))) ifNil:
+		[self ssAllocateRequiredReg: (ra1 := Arg0Reg)].
+	(rr := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: ra1 and: ra2))) ifNil:
+		[self ssAllocateRequiredReg: (rr := ReceiverResultReg)].
+	(rr = ReceiverResultReg or: [ra1 = ReceiverResultReg or: [ra2 = ReceiverResultReg]]) ifTrue:
 		[optStatus isReceiverResultRegLive: false].
-	self ssTop popToReg: TempReg.
+	self assert: (rr ~= ra1 and: [rr ~= ra2 and: [ra1 ~= ra2]]).
+	self ssTop popToReg: ra2.
 	self ssPop: 1.
-	self ssTop popToReg: ra.
+	self ssTop popToReg: ra1.
 	self ssPop: 1.
 	self ssTop popToReg: rr.
 	self ssPop: 1.
-	self ssPushRegister: TempReg.
-	self genConvertSmallIntegerToIntegerInReg: ra.
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: ra1.
 	"Now: ra is the variable object, rr is long, TempReg holds the value to store."
 	prim caseOf: {
 		"0 - 1 pointerAt:put: and byteAt:Put:"
 		[0] ->	[ adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
-				adjust ~= 0 ifTrue: [ self AddCq: adjust R: ra. ]. 
-				self MoveR: TempReg Xwr: ra R: rr ].
-		[1] ->	[ self genConvertSmallIntegerToIntegerInReg: TempReg.
+				adjust ~= 0 ifTrue: [ self AddCq: adjust R: ra1. ]. 
+				self MoveR: ra2 Xwr: ra1 R: rr.
+				objectRepresentation genStoreCheckReceiverReg: rr valueReg: ra1 scratchReg: TempReg].
+		[1] ->	[ objectRepresentation genConvertSmallIntegerToIntegerInReg: ra2.
 				adjust := objectMemory baseHeaderSize - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
-				self AddCq: adjust R: ra.
-				self MoveR: TempReg Xbr: ra R: rr ]
+				self AddCq: adjust R: ra1.
+				self MoveR: ra2 Xbr: ra1 R: rr.
+				objectRepresentation genConvertIntegerToSmallIntegerInReg: ra2. ]
 	}
 	otherwise: [^EncounteredUnknownBytecode].
+	self ssPushRegister: ra2.
 	^0
 ]
 
@@ -3422,25 +3425,22 @@ StackToRegisterMappingCogit >> genUnaryInlinePrimitive: prim [
 							ifFalse: [ReceiverResultReg])]].
 	self ssTop popToReg: rcvrReg.
 	self ssPop: 1.
-	(resultReg := backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
-		[self ssFlushUpThroughRegister: rcvrReg].
+	(resultReg := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: rcvrReg))) ifNil:
+		[self ssAllocateRequiredReg: (resultReg := Arg1Reg)].
 	prim
 		caseOf: {
 			[1] ->	"01		unchecked pointer numSlots"
-				[resultReg ifNil: [resultReg := rcvrReg].
-				 objectRepresentation
+				[objectRepresentation
 					genGetNumSlotsOf: rcvrReg into: resultReg;
-					genConvertIntegerToSmallIntegerInScratchReg: resultReg.
-				 self ssPushRegister: resultReg].
+					genConvertIntegerToSmallIntegerInReg: resultReg].
 			[3] ->	"03 unchecked byte numBytes"
-				[resultReg ifNil: [resultReg := rcvrReg].
-				 objectRepresentation
+				[objectRepresentation
 					genGetNumBytesOf: rcvrReg into: resultReg;
-					genConvertIntegerToSmallIntegerInScratchReg: resultReg.
-				 self ssPushRegister: resultReg].
+					genConvertIntegerToSmallIntegerInReg: resultReg].
 				  }
 		otherwise:
-			[^EncounteredUnknownBytecode].
+			[^EncounteredUnknownBytecode]..
+	self ssPushRegister: resultReg.
 	^0
 ]
 
