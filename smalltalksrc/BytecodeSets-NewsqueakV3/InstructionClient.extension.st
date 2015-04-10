@@ -8,6 +8,12 @@ InstructionClient >> blockReturnConstant: value [
 ]
 
 { #category : #'*BytecodeSets-instruction decoding' }
+InstructionClient >> callInlinePrimitive: pimIndex [
+	"SistaV1:			248 11111000 iiiiiiii mjjjjjjj  Call Primitive #iiiiiiii + ( jjjjjjj * 256)
+							m=1 means inlined primitive, no hard return after execution."
+]
+
+{ #category : #'*BytecodeSets-instruction decoding' }
 InstructionClient >> directedSuperSend: selector numArgs: numArgs [
 	"Send Message Above Specific Class With Selector, selector, bytecode.
 	 Start the lookup above the class that is the value of the association on

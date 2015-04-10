@@ -8,6 +8,13 @@ InstructionPrinter >> blockReturnConstant: value [
 ]
 
 { #category : #'*BytecodeSets-instruction decoding' }
+InstructionPrinter >> callInlinePrimitive: index [
+	"Print the callInlinePrimitive."
+
+	self print: 'callInlinePrimitive: ' , index printString
+]
+
+{ #category : #'*BytecodeSets-instruction decoding' }
 InstructionPrinter >> directedSuperSend: selector "<Symbol>" numArgs: numArgs [ "<SmallInteger>"
 	self print: 'directedSuperSend: ' , (self stringForSelector: selector numArgs: numArgs)
 ]
