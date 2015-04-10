@@ -1,6 +1,11 @@
 Extension { #name : #BytecodeEncoder }
 
 { #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizeCallInlinePrimitive: primitiveIndex [
+	^self sizeOpcodeSelector: #genCallInlinePrimitive: withArguments: {primitiveIndex}
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
 BytecodeEncoder >> sizePushNClosureTemps: numTemps [
 	^self sizeOpcodeSelector: #genPushNClosureTemps: withArguments: {numTemps}
 ]
