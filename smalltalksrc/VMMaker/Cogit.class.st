@@ -1757,6 +1757,7 @@ Cogit >> MoveM64: offset r: baseReg Rd: destDPReg [
 
 { #category : #'abstract instructions' }
 Cogit >> MoveMb: offset r: baseReg R: destReg [
+	"N.B.  This instruction is guaranteed to zero-extend the byte into destReg."
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: MoveMbrR operand: offset operand: baseReg operand: destReg

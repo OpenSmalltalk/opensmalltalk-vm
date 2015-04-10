@@ -817,7 +817,6 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	mask := RootBitDigitLength > 1
 				ifTrue: [RootBit >> (RootBitDigitLength - 1 * 8)]
 				ifFalse: [RootBit].
-	"N.B. MoveMb:r:R: does not zero other bits"
 	cogit MoveMb: rootBitByteOffset r: destReg R: scratchReg.
 	cogit AndCq: mask R: scratchReg.
 	jmpAlreadyRoot := cogit JumpNonZero: 0.
@@ -825,8 +824,9 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	self assert: destReg == ReceiverResultReg.
 	cogit
 		CallRT: ceStoreCheckTrampoline
-		registersToBeSavedMask: ((cogit registerMaskFor: sourceReg)
-										bitOr: cogit callerSavedRegMask).
+		registersToBeSavedMask: (((cogit registerMaskFor: sourceReg)
+										bitOr: cogit callerSavedRegMask)
+										bitClear: (cogit registerMaskFor: ReceiverResultReg)).
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
 	(jmpSourceOld jmpTarget:

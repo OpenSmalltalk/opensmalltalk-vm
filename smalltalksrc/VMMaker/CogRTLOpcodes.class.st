@@ -169,7 +169,7 @@ CogRTLOpcodes class >> initialize [
 		Aw		- memory word at an absolute address
 		Ab		- memory byte at an absolute address
 		Mwr	- memory word whose address is at a constant offset from an address in a register
-		Mbr		- memory byte whose address is at a constant offset from an address in a register
+		Mbr		- memory byte whose address is at a constant offset from an address in a register (zero-extended on read)
 		M16r	- memory 16-bit halfword whose address is at a constant offset from an address in a register
 		M32r	- memory 32-bit halfword whose address is at a constant offset from an address in a register
 		M64r	- memory 64-bit doubleword whose address is at a constant offset from an address in a register
