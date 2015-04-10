@@ -3423,20 +3423,25 @@ StackToRegisterMappingCogit >> genUnaryInlinePrimitive: prim [
 					(rcvrReg := optStatus isReceiverResultRegLive
 							ifTrue: [Arg0Reg]
 							ifFalse: [ReceiverResultReg])]].
-	self ssTop popToReg: rcvrReg.
-	self ssPop: 1.
 	(resultReg := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: rcvrReg))) ifNil:
 		[self ssAllocateRequiredReg: (resultReg := Arg1Reg)].
+	self ssTop popToReg: rcvrReg.
+	self ssPop: 1.
 	prim
 		caseOf: {
+					"00		unchecked class"
 			[1] ->	"01		unchecked pointer numSlots"
 				[objectRepresentation
 					genGetNumSlotsOf: rcvrReg into: resultReg;
 					genConvertIntegerToSmallIntegerInReg: resultReg].
-			[3] ->	"03 unchecked byte numBytes"
+					"02		unchecked pointer basicSize"
+			[3] ->	"03		unchecked byte numBytes"
 				[objectRepresentation
 					genGetNumBytesOf: rcvrReg into: resultReg;
 					genConvertIntegerToSmallIntegerInReg: resultReg].
+					"04		unchecked short16Type format numShorts"
+					"05		unchecked word32Type format numWords"
+					"06		unchecked doubleWord64Type format numDoubleWords"
 				  }
 		otherwise:
 			[^EncounteredUnknownBytecode]..
