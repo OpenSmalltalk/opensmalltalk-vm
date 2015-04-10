@@ -516,14 +516,13 @@ CogObjectRepresentationFor32BitSpur >> genGetSizeOf: sourceReg into: destReg for
 	 context.. Hack: If the object has a pointer format other than 2 leave the number of
 	 fixed fields in formatReg.  Used by primitiveSize, primitiveAt, and primitiveAtPut"
 	<returnTypeC: #'AbstractInstruction *'>
-	| jumpNotIndexable jumpSmallSize
+	| jumpNotIndexable
 	  jumpBytesDone jumpShortsDone jumpArrayDone jump32BitLongsDone
 	  jumpIsBytes jumpHasFixedFields jumpIsShorts jumpIsContext  |
 	<inline: true>
 	"c.f. StackInterpreter>>stSizeOf: SpurMemoryManager>>lengthOf:format: fixedFieldsOf:format:length:"
 	<var: #jumpIsBytes type: #'AbstractInstruction *'>
 	<var: #jumpIsShorts type: #'AbstractInstruction *'>
-	<var: #jumpSmallSize type: #'AbstractInstruction *'>
 	<var: #jumpIsContext type: #'AbstractInstruction *'>
 	<var: #jumpArrayDone type: #'AbstractInstruction *'>
 	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
@@ -535,12 +534,7 @@ CogObjectRepresentationFor32BitSpur >> genGetSizeOf: sourceReg into: destReg for
 		into: formatReg
 		leastSignificantHalfOfBaseHeaderIntoScratch: scratchReg.
 
-	"get numSlots into destReg."
-	cogit MoveCq: 0 R: destReg. "N.B. MoveMb:r:R: does not zero other bits"
-	cogit MoveMb: 7 r: sourceReg R: destReg. "MSB of header"
-	cogit CmpCq: objectMemory numSlotsMask R: destReg.
-	jumpSmallSize := cogit JumpLess: 0.
-	cogit MoveMw: -8 r: sourceReg R: destReg. "LSW of overflow size header"
+	self genGetNumSlotsOf: sourceReg into: destReg.
 
 	"dispatch on format in a combination of highest dynamic frequency order first and convenience.
 		  0 = 0 sized objects (UndefinedObject True False et al)
@@ -557,8 +551,7 @@ CogObjectRepresentationFor32BitSpur >> genGetSizeOf: sourceReg into: destReg for
 		12 - 15 16-bit indexable
 		16 - 23 byte indexable
 		24 - 31 compiled method"
-	jumpSmallSize jmpTarget:
-					(cogit CmpCq: objectMemory firstByteFormat R: formatReg).
+	cogit CmpCq: objectMemory firstByteFormat R: formatReg.
 	jumpIsBytes := cogit JumpGreaterOrEqual: 0.
 					cogit CmpCq: objectMemory arrayFormat R: formatReg.
 	jumpArrayDone := cogit JumpZero: 0.
@@ -613,7 +606,7 @@ CogObjectRepresentationFor32BitSpur >> genGetSizeOf: sourceReg into: destReg for
 { #category : #'primitive generators' }
 CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	"Implement the guts of primitiveAt"
-	| formatReg jumpNotIndexable jumpSmallSize jumpImmediate jumpBadIndex
+	| formatReg jumpNotIndexable jumpImmediate jumpBadIndex
 	  jumpBytesDone jumpShortsDone jumpWordsDone jumpFixedFieldsDone
 	  jumpIsBytes jumpIsShorts jumpIsWords jumpWordTooBig jumpIsArray jumpHasFixedFields jumpIsContext
 	  jumpBytesOutOfBounds jumpShortsOutOfBounds jumpWordsOutOfBounds jumpArrayOutOfBounds jumpFixedFieldsOutOfBounds |
@@ -622,7 +615,6 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	<var: #jumpIsBytes type: #'AbstractInstruction *'>
 	<var: #jumpIsShorts type: #'AbstractInstruction *'>
 	<var: #jumpBadIndex type: #'AbstractInstruction *'>
-	<var: #jumpSmallSize type: #'AbstractInstruction *'>
 	<var: #jumpIsContext type: #'AbstractInstruction *'>
 	<var: #jumpImmediate type: #'AbstractInstruction *'>
 	<var: #jumpBytesDone type: #'AbstractInstruction *'>
@@ -651,12 +643,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 		into: (formatReg := SendNumArgsReg)
 		leastSignificantHalfOfBaseHeaderIntoScratch: TempReg.
 
-	"get numSlots into ClassReg."
-	cogit MoveCq: 0 R: ClassReg. "N.B. MoveMb:r:R: does not zero other bits"
-	cogit MoveMb: 7 r: ReceiverResultReg R: ClassReg. "MSB of header"
-	cogit CmpCq: objectMemory numSlotsMask R: ClassReg.
-	jumpSmallSize := cogit JumpBelow: 0.
-	cogit MoveMw: -8 r: ReceiverResultReg R: ClassReg. "LSW of overflow size header"
+	self genGetNumSlotsOf: ReceiverResultReg into: ClassReg.
 
 	"dispatch on format in a combination of highest dynamic frequency order first and convenience.
 		  0 = 0 sized objects (UndefinedObject True False et al)
@@ -673,8 +660,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 		12 - 15 16-bit indexable
 		16 - 23 byte indexable
 		24 - 31 compiled method"
-	jumpSmallSize jmpTarget:
-					(cogit CmpCq: objectMemory firstByteFormat R: formatReg).
+	cogit CmpCq: objectMemory firstByteFormat R: formatReg.
 	jumpIsBytes := cogit JumpAboveOrEqual: 0.
 					cogit CmpCq: objectMemory arrayFormat R: formatReg.
 	jumpIsArray := cogit JumpZero: 0.
@@ -773,7 +759,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	"Implement the guts of primitiveAtPut"
 	| formatReg jumpImmediate jumpBadIndex
-	  jumpSmallSize jumpNotIndexablePointers jumpNotIndexableBits
+	  jumpNotIndexablePointers jumpNotIndexableBits
 	  jumpIsContext jumpIsCompiledMethod jumpIsBytes jumpHasFixedFields
 	  jumpArrayOutOfBounds jumpFixedFieldsOutOfBounds
 	  jumpWordsOutOfBounds jumpBytesOutOfBounds jumpBytesOutOfRange
@@ -783,7 +769,6 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	"c.f. StackInterpreter>>stSizeOf: SpurMemoryManager>>lengthOf:format: fixedFieldsOf:format:length:"
 	<var: #jumpIsBytes type: #'AbstractInstruction *'>
 	<var: #jumpBadIndex type: #'AbstractInstruction *'>
-	<var: #jumpSmallSize type: #'AbstractInstruction *'>
 	<var: #jumpIsContext type: #'AbstractInstruction *'>
 	<var: #jumpImmediate type: #'AbstractInstruction *'>
 	<var: #jumpHasFixedFields type: #'AbstractInstruction *'>
@@ -806,12 +791,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 		into: (formatReg := SendNumArgsReg)
 		leastSignificantHalfOfBaseHeaderIntoScratch: TempReg.
 
-	"get numSlots into ClassReg."
-	cogit MoveCq: 0 R: ClassReg. "N.B. MoveMb:r:R: does not zero other bits"
-	cogit MoveMb: 7 r: ReceiverResultReg R: ClassReg. "MSB of header"
-	cogit CmpCq: objectMemory numSlotsMask R: ClassReg.
-	jumpSmallSize := cogit JumpBelow: 0.
-	cogit MoveMw: -8 r: ReceiverResultReg R: ClassReg. "LSW of overflow size header"
+	self genGetNumSlotsOf: ReceiverResultReg into: ClassReg.
 
 	"dispatch on format in a combination of highest dynamic frequency order first and convenience.
 		  0 = 0 sized objects (UndefinedObject True False et al)
@@ -828,8 +808,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 		12 - 15 16-bit indexable
 		16 - 23 byte indexable
 		24 - 31 compiled method"
-	jumpSmallSize jmpTarget:
-					(cogit CmpCq: objectMemory weakArrayFormat R: formatReg).
+	cogit CmpCq: objectMemory weakArrayFormat R: formatReg.
 	jumpNotPointers := cogit JumpAbove: 0.
 	"optimistic store check; assume index in range (almost always is)."
 	self genStoreCheckReceiverReg: ReceiverResultReg valueReg: Arg1Reg scratchReg: TempReg.
@@ -1532,7 +1511,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 { #category : #'primitive generators' }
 CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 	"Implement the guts of primitiveStringAt; dispatch on size"
-	| formatReg jumpNotIndexable jumpSmallSize jumpBadIndex done
+	| formatReg jumpNotIndexable jumpBadIndex done
 	  jumpIsBytes jumpIsShorts jumpIsWords jumpWordTooBig
 	  jumpBytesOutOfBounds jumpShortsOutOfBounds jumpWordsOutOfBounds |
 	<inline: true>
@@ -1542,7 +1521,6 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 	<var: #jumpIsShorts type: #'AbstractInstruction *'>
 	<var: #jumpIsWords type: #'AbstractInstruction *'>
 	<var: #jumpBadIndex type: #'AbstractInstruction *'>
-	<var: #jumpSmallSize type: #'AbstractInstruction *'>
 	<var: #jumpWordTooBig type: #'AbstractInstruction *'>
 	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
 	<var: #jumpBytesOutOfBounds type: #'AbstractInstruction *'>
@@ -1559,12 +1537,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 		into: (formatReg := SendNumArgsReg)
 		leastSignificantHalfOfBaseHeaderIntoScratch: TempReg.
 
-	"get numSlots into ClassReg."
-	cogit MoveCq: 0 R: ClassReg. "N.B. MoveMb:r:R: does not zero other bits"
-	cogit MoveMb: 7 r: ReceiverResultReg R: ClassReg. "MSB of header"
-	cogit CmpCq: objectMemory numSlotsMask R: ClassReg.
-	jumpSmallSize := cogit JumpLess: 0.
-	cogit MoveMw: -8 r: ReceiverResultReg R: ClassReg. "LSW of overflow size header"
+	self genGetNumSlotsOf: ReceiverResultReg into: ClassReg.
 
 	"dispatch on format in a combination of highest dynamic frequency order first and convenience.
 		  0 = 0 sized objects (UndefinedObject True False et al)
@@ -1581,8 +1554,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 		12 - 15 16-bit indexable
 		16 - 23 byte indexable
 		24 - 31 compiled method"
-	jumpSmallSize jmpTarget:
-					(cogit CmpCq: objectMemory firstByteFormat R: formatReg).
+	cogit CmpCq: objectMemory firstByteFormat R: formatReg.
 	jumpIsBytes := cogit JumpGreaterOrEqual: 0.
 					cogit CmpCq: objectMemory firstShortFormat R: formatReg.
 	jumpIsShorts := cogit JumpGreaterOrEqual: 0.
@@ -1635,7 +1607,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 { #category : #'primitive generators' }
 CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset [
 	"Implement the guts of primitiveStringAtPut"
-	| formatReg jumpSmallSize jumpImmediate jumpBadIndex jumpBadArg
+	| formatReg jumpImmediate jumpBadIndex jumpBadArg
 	  jumpWordsDone jumpBytesOutOfRange
 	  jumpIsBytes jumpNotString jumpIsCompiledMethod
 	  jumpBytesOutOfBounds jumpWordsOutOfBounds jumpShortsUnsupported |
@@ -1644,7 +1616,6 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset 
 	<var: #jumpBadArg type: #'AbstractInstruction *'>
 	<var: #jumpIsBytes type: #'AbstractInstruction *'>
 	<var: #jumpBadIndex type: #'AbstractInstruction *'>
-	<var: #jumpSmallSize type: #'AbstractInstruction *'>
 	<var: #jumpImmediate type: #'AbstractInstruction *'>
 	<var: #jumpWordsDone type: #'AbstractInstruction *'>
 	<var: #jumpBytesOutOfBounds type: #'AbstractInstruction *'>
@@ -1665,12 +1636,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset 
 		into: (formatReg := SendNumArgsReg)
 		leastSignificantHalfOfBaseHeaderIntoScratch: TempReg.
 
-	"get numSlots into ClassReg."
-	cogit MoveCq: 0 R: ClassReg. "N.B. MoveMb:r:R: does not zero other bits"
-	cogit MoveMb: 7 r: ReceiverResultReg R: ClassReg. "MSB of header"
-	cogit CmpCq: objectMemory numSlotsMask R: ClassReg.
-	jumpSmallSize := cogit JumpBelow: 0.
-	cogit MoveMw: -8 r: ReceiverResultReg R: ClassReg. "LSW of overflow size header"
+	self genGetNumSlotsOf: ReceiverResultReg into: ClassReg.
 
 	"dispatch on format; words and/or bytes.
 		  0 to 8 = pointer objects, forwarders, reserved.
@@ -1679,8 +1645,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset 
 		12 - 15 16-bit indexable (but unused)
 		16 - 23 byte indexable
 		24 - 31 compiled method"
-	jumpSmallSize jmpTarget:
-					(cogit CmpCq: objectMemory firstLongFormat R: formatReg).
+	cogit CmpCq: objectMemory firstLongFormat R: formatReg.
 	jumpNotString := cogit JumpBelowOrEqual: 0.
 					cogit CmpCq: objectMemory firstCompiledMethodFormat R: formatReg.
 	jumpIsCompiledMethod := cogit JumpAboveOrEqual: 0.
