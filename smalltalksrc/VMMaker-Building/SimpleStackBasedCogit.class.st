@@ -1878,7 +1878,6 @@ SimpleStackBasedCogit >> genFastPrimTraceUsing: r1 and: r2 [
 	"Suport for compileInterpreterPrimitive.  Generate inline code so as to record the primitive
 	 trace as fast as possible."
 	self MoveCq: 0 R: TempReg.
-	self MoveCq: 0 R: r2. "N.B. MoveMb:r:R: does not zero other bits"
 	"Too lazy to add MoveAbR and MoveRAb, so misuse MoveMbrR and MoveRMbr"
 	self MoveMb: coInterpreter primTraceLogIndexAddress r: TempReg R: r2.
 	self MoveR: r2 R: r1.

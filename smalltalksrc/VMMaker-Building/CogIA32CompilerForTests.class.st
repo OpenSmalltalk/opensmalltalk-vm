@@ -62,3 +62,9 @@ CogIA32CompilerForTests class >> xmmRegistersWithNamesDo: aBinaryBlock [
 CogIA32CompilerForTests >> concreteRegister: value [
 	^value
 ]
+
+{ #category : #testing }
+CogIA32CompilerForTests >> hasSSE2Instructions [
+	"Answer if we support SSE2"
+	^true
+]
