@@ -380,7 +380,8 @@ CogObjectRepresentationForSpur >> genGetOverflowSlotsOf: srcReg into: destReg [
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genGetRawSlotSizeOfNonImm: sourceReg into: destReg [
-	"The raw numSlots field is the most significant byte of the 64-bit header word."
+	"The raw numSlots field is the most significant byte of the 64-bit header word.
+	 MoveMbrR zero-extends."
 	cogit MoveMb: 7 r: sourceReg R: destReg.
 	^0
 ]
@@ -572,7 +573,6 @@ CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: va
 									ifTrue: [objectMemory baseHeaderSize - 1 - (objectMemory rememberedBitShift // 8)]
 									ifFalse:[objectMemory rememberedBitShift // 8].
 	mask := 1 << (objectMemory rememberedBitShift \\ 8).
-	"N.B. MoveMb:r:R: does not zero other bits"
 	cogit MoveMb: rememberedBitByteOffset r: destReg R: scratchReg.
 	cogit AndCq: mask R: scratchReg.
 	jmpAlreadyRemembered := cogit JumpNonZero: 0.
@@ -580,8 +580,9 @@ CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: va
 	self assert: destReg == ReceiverResultReg.
 	cogit
 		CallRT: ceStoreCheckTrampoline
-		registersToBeSavedMask: ((cogit registerMaskFor: valueReg)
-										bitOr: cogit callerSavedRegMask).
+		registersToBeSavedMask: (((cogit registerMaskFor: valueReg)
+										bitOr: cogit callerSavedRegMask)
+										bitClear: (cogit registerMaskFor: ReceiverResultReg)).
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
 	(jmpSourceOld jmpTarget:

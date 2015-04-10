@@ -1354,7 +1354,13 @@ StackToRegisterMappingCogit >> genBinaryInlineComparison: opTrue opFalse: opFals
 					+ branchDescriptor numBytes
 					+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
 			postBranchPC := nextPC + branchDescriptor numBytes.
-			self ssPushConstant: objectMemory trueObject. "dummy object"
+			(self fixupAt: nextPC - initialPC) targetInstruction = 0
+				ifTrue: "The next instruction is dead.  we can skip it."
+					[deadCode := true.
+				 	 self ensureFixupAt: targetBytecodePC - initialPC.
+					 self ensureFixupAt: postBranchPC - initialPC]
+				ifFalse:
+					[self ssPushConstant: objectMemory trueObject]. "dummy value"
 			self gen: (branchDescriptor isBranchTrue ifTrue: [opTrue] ifFalse: [opFalse])
 				operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
 			self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC)]
@@ -3379,10 +3385,16 @@ StackToRegisterMappingCogit >> genTrinaryInlinePrimitive: prim [
 		[self ssAllocateRequiredReg: (ra2 := Arg1Reg)].
 	(ra1 := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: ra2))) ifNil:
 		[self ssAllocateRequiredReg: (ra1 := Arg0Reg)].
-	(rr := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: ra1 and: ra2))) ifNil:
-		[self ssAllocateRequiredReg: (rr := ReceiverResultReg)].
-	(rr = ReceiverResultReg or: [ra1 = ReceiverResultReg or: [ra2 = ReceiverResultReg]]) ifTrue:
-		[optStatus isReceiverResultRegLive: false].
+	prim = 0
+		ifTrue:
+			[rr := ReceiverResultReg.
+			 ((self ssValue: 2) type = SSRegister
+			  and: [(self ssValue: 2) register = ReceiverResultReg]) ifFalse:
+				[self ssAllocateRequiredReg: rr]]
+		ifFalse:
+			[(rr := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: ra1 and: ra2))) ifNil:
+				[self ssAllocateRequiredReg: (rr := ReceiverResultReg)].
+			 optStatus isReceiverResultRegLive: false].
 	self assert: (rr ~= ra1 and: [rr ~= ra2 and: [ra1 ~= ra2]]).
 	self ssTop popToReg: ra2.
 	self ssPop: 1.
@@ -3397,7 +3409,7 @@ StackToRegisterMappingCogit >> genTrinaryInlinePrimitive: prim [
 		[0] ->	[ adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
 				adjust ~= 0 ifTrue: [ self AddCq: adjust R: ra1. ]. 
 				self MoveR: ra2 Xwr: ra1 R: rr.
-				objectRepresentation genStoreCheckReceiverReg: rr valueReg: ra1 scratchReg: TempReg].
+				objectRepresentation genStoreCheckReceiverReg: rr valueReg: ra2 scratchReg: TempReg].
 		[1] ->	[ objectRepresentation genConvertSmallIntegerToIntegerInReg: ra2.
 				adjust := objectMemory baseHeaderSize - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
 				self AddCq: adjust R: ra1.
