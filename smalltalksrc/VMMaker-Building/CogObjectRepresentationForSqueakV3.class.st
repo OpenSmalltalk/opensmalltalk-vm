@@ -256,13 +256,6 @@ CogObjectRepresentationForSqueakV3 >> genConvertIntegerToSmallIntegerInReg: reg 
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genConvertIntegerToSmallIntegerInScratchReg: scratchReg [
-	cogit LogicalShiftLeftCq: 1 R: scratchReg.
-	cogit AddCq: 1 R: scratchReg.
-	^0
-]
-
-{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genConvertSmallIntegerToIntegerInReg: reg [
 	cogit ArithmeticShiftRightCq: 1 R: reg.
 	^0
@@ -608,7 +601,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 		MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
 		CmpCq: 16r3FFFFFFF R: ReceiverResultReg.
 	jumpLarge := cogit JumpAbove: 0.
-	self genConvertIntegerToSmallIntegerInScratchReg: ReceiverResultReg.
+	self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
 	cogit RetN: retNoffset.
 	jumpLarge jmpTarget: (cogit CallRT: cePositive32BitIntegerTrampoline).
 	cogit
