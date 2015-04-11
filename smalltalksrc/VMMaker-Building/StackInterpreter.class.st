@@ -97,6 +97,9 @@ Class {
 		'statPendingFinalizationSignals'
 	],
 	#classVars : [
+		'AccessModifierPrivate',
+		'AccessModifierProtected',
+		'AccessModifierPublic',
 		'AltBytecodeEncoderClassName',
 		'AltLongStoreBytecode',
 		'AlternateHeaderHasPrimFlag',
@@ -354,9 +357,8 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV3PlusClosures [
 		(124 returnTopFromMethod)
 		(125 returnTopFromBlock)
 
-		"2 of the 3 Newspeak bytecodes"
-		(126 dynamicSuperSendBytecode)
-		(127 pushImplicitReceiverBytecode)
+		(126 unknownBytecode) "Was non-absent dynamic super send"
+		(127 unknownBytecode) "Was push implicit receiver"
 
 		(128 extendedPushBytecode)
 		(129 extendedStoreBytecode)
@@ -369,13 +371,10 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV3PlusClosures [
 		(136 duplicateTopBytecode)
 
 		(137 pushActiveContextBytecode)
-		(138 pushNewArrayBytecode)),
+		(138 pushNewArrayBytecode)
 
-	((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
-		ifTrue: [#((139 callPrimitiveBytecode))]					"V3PlusClosures on Spur"
-		ifFalse: [#((139 pushEnclosingObjectBytecode))]),	"Newspeak on V3"
+		(139 callPrimitiveBytecode) "Was push enclosing object"
 
-	  #(
 		(140 pushRemoteTempLongBytecode)
 		(141 storeRemoteTempLongBytecode)
 		(142 storeAndPopRemoteTempLongBytecode)
@@ -986,7 +985,10 @@ StackInterpreter class >> initializeMethodIndices [
 	"The position of the unused flag bit in the method header, not including tag bit(s).
 	 Bits 28 & 29 are either used as an accessModifer code in Newspeak (public, private, protected)
 	 or are free for use as flag bits."
-	MethodHeaderFlagBitPosition := 28 + tagBits
+	MethodHeaderFlagBitPosition := 28 + tagBits.
+	AccessModifierPublic := 2r00.
+	AccessModifierPrivate := 2r01.
+	AccessModifierProtected := 2r10.
 ]
 
 { #category : #initialization }
@@ -4963,30 +4965,6 @@ StackInterpreter >> duplicateTopBytecode [
 
 ]
 
-{ #category : #'send bytecodes' }
-StackInterpreter >> dynamicSuperSendBytecode [
-"Send a message to self, starting lookup in the superclass of the method application of the currently executing method's mixin."
-"Assume: messageSelector and argumentCount have been set, and that the receiver and arguments have been pushed onto the stack," 
-"WE WANT THE RECEIVER PUSHED IMPLICITLY, BUT IT IS NOT - SO FAR"
-"Note: This method is inlined into the interpreter dispatch loop."
-	| rcvr mClassMixin mixinApplication |
-	<inline: true>
-	argumentCount := self fetchByte.
-	messageSelector := self literal: self fetchByte.
-	"To maintain the invariant that all receivers are unforwarded we need an explicit
-	 read barrier in the super send cases."
-	self ensureReceiverUnforwarded.
-	rcvr := self internalStackValue: argumentCount.
-	mClassMixin := self methodClassOf: method.
-	mixinApplication := self 
-							findApplicationOfTargetMixin: mClassMixin
-							startingAtBehavior: (objectMemory fetchClassOf: rcvr).
-	lkupClassTag := objectMemory classTagForClass: (self superclassOf: mixinApplication).
-	CheckPrivacyViolations ifTrue:
-            [isPrivateSend := true].
-	self commonSend
-]
-
 { #category : #'debug printing' }
 StackInterpreter >> elementsPerPrintOopLine [
 	^5
@@ -5326,6 +5304,8 @@ StackInterpreter >> extSendAbsentDynamicSuperBytecode [
 							findApplicationOfTargetMixin: mClassMixin
 							startingAtBehavior: (objectMemory fetchClassOf: self receiver).
 	lkupClassTag := objectMemory classTagForClass: (self superclassOf: mixinApplication).
+	CheckPrivacyViolations ifTrue:
+            [isPrivateSend := true].
 	self commonSend
 ]
 
@@ -5355,6 +5335,8 @@ StackInterpreter >> extSendAbsentOuterBytecode [
 							enclosingObjectAt: depth
 							withObject: self receiver 
 							withMixin: (self methodClassOf: method).
+	CheckPrivacyViolations ifTrue:
+            [isPrivateSend := true].
 	self commonSendAbsent
 ]
 
@@ -5368,6 +5350,8 @@ StackInterpreter >> extSendAbsentSelfBytecode [
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
 	localAbsentReceiver := self receiver.
+	CheckPrivacyViolations ifTrue:
+            [isPrivateSend := true].
 	self commonSendAbsent
 ]
 
@@ -9437,7 +9421,7 @@ StackInterpreter >> maybeCheckPrivacyOfNewMethod: currentClass [
 	  and: [CheckPrivacyViolations
 	  and: [isPrivateSend not
 	  and: [messageSelector ~= (objectMemory splObj: SelectorDoesNotUnderstand)
-	  and: [(self accessModifierOfMethod: newMethod) ~= 0]]]]) ifTrue:
+	  and: [(self accessModifierOfMethod: newMethod) ~= AccessModifierPublic]]]]) ifTrue:
 		[self print: (self nameOfClass: currentClass); space.
 		 self printStringOf: (messageSelector); print: ' from '.
 		 self printStringOf: (self maybeSelectorOfMethod: method); cr]
@@ -11684,22 +11668,6 @@ StackInterpreter >> pushFloat: f [
 
 	<var: #f type: #double>
 	self push: (objectMemory floatObjectOf: f).
-]
-
-{ #category : #'stack bytecodes' }
-StackInterpreter >> pushImplicitReceiverBytecode [
-	"This bytecode is used to implement outer sends in NS2/NS3. The
-	 bytecode takes as an argument the literal offset of a selector. It
-	 effectively finds the nearest lexically-enclosing implementation of
-	 that selector by searching up the static chain of the receiver,
-	 starting at the current method."
-	| selector |
-	selector := self literal: self fetchByte.
-	self fetchNextBytecode.
-	self internalPush: (self
-						implicitReceiverFor: self receiver
-						mixin: (self methodClassOf: method)
-						implementing: selector)
 ]
 
 { #category : #'internal interpreter access' }
