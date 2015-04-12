@@ -7917,15 +7917,12 @@ Cogit >> offsetAndSendTableFor: entryPoint annotation: annotation into: binaryBl
 	[(NewspeakVM and: [annotation = IsNSSelfSend]) ifTrue:
 		[offset := cmEntryOffset.
 		 sendTable := selfSendTrampolines] ifFalse:
-	[(NewspeakVM and: [annotation = IsNSSelfSend]) ifTrue:
+	[(NewspeakVM and: [annotation = IsNSDynamicSuperSend]) ifTrue:
 		[offset := cmEntryOffset.
-		 sendTable := selfSendTrampolines] ifFalse:
-	[(NewspeakVM and: [annotation = IsNSSelfSend]) ifTrue:
-		[offset := cmEntryOffset.
-		 sendTable := selfSendTrampolines] ifFalse:
+		 sendTable := dynamicSuperSendTrampolines] ifFalse:
 	[self assert: annotation = IsSuperSend.
 	 offset := cmNoCheckEntryOffset.
-	 sendTable := superSendTrampolines]]]]].
+	 sendTable := superSendTrampolines]]]].
 
 	binaryBlock
 		value: offset
@@ -9365,15 +9362,12 @@ Cogit >> targetMethodAndSendTableFor: entryPoint annotation: annotation into: bi
 	[(NewspeakVM and: [annotation = IsNSSelfSend]) ifTrue:
 		[targetMethod := self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *'.
 		 sendTable := selfSendTrampolines] ifFalse:
-	[(NewspeakVM and: [annotation = IsNSSelfSend]) ifTrue:
+	[(NewspeakVM and: [annotation = IsNSDynamicSuperSend]) ifTrue:
 		[targetMethod := self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *'.
-		 sendTable := selfSendTrampolines] ifFalse:
-	[(NewspeakVM and: [annotation = IsNSSelfSend]) ifTrue:
-		[targetMethod := self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *'.
-		 sendTable := selfSendTrampolines] ifFalse:
+		 sendTable := dynamicSuperSendTrampolines] ifFalse:
 	[self assert: annotation = IsSuperSend.
 	 targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-	 sendTable := superSendTrampolines]]]]].
+	 sendTable := superSendTrampolines]]]].
 
 	binaryBlock
 		value: targetMethod
