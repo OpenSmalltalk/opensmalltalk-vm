@@ -259,15 +259,15 @@ CogAbstractInstruction >> availableRegisterOrNilFor: liveRegsMask [
 	 Subclasses with more registers can override to answer them."
 	<returnTypeC: #sqInt>
 	self flag: 'searching physical registers that are not assigned to abstract registers first will do a better job and allocate with fewer conflicts'.
-	(liveRegsMask anyMask: (cogit registerMaskFor: Arg1Reg)) ifFalse:
+	(cogit register: Arg1Reg isInMask: liveRegsMask) ifFalse:
 		[^Arg1Reg].
-	(liveRegsMask anyMask: (cogit registerMaskFor: Arg0Reg)) ifFalse:
+	(cogit register: Arg0Reg isInMask: liveRegsMask) ifFalse:
 		[^Arg0Reg].
-	(liveRegsMask anyMask: (cogit registerMaskFor: SendNumArgsReg)) ifFalse:
+	(cogit register: SendNumArgsReg isInMask: liveRegsMask) ifFalse:
 		[^SendNumArgsReg].
-	(liveRegsMask anyMask: (cogit registerMaskFor: ClassReg)) ifFalse:
+	(cogit register: ClassReg isInMask: liveRegsMask) ifFalse:
 		[^ClassReg].
-	(liveRegsMask anyMask: (cogit registerMaskFor: ReceiverResultReg)) ifFalse:
+	(cogit register: ReceiverResultReg isInMask: liveRegsMask) ifFalse:
 		[^ReceiverResultReg].
 	^nil
 ]
