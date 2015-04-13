@@ -57,6 +57,7 @@ Class {
 	#superclass : #CogProcessorAlien,
 	#type : #bytes,
 	#classVars : [
+		'ExtendedOpcodeExceptionMap',
 		'OpcodeExceptionMap',
 		'PostBuildStackDelta'
 	],
@@ -76,18 +77,23 @@ BochsIA32Alien class >> defaultIntegerBaseInDebugger [
 { #category : #'class initialization' }
 BochsIA32Alien class >> initialize [
 	"BochsIA32Alien initialize"
+	| it |
+	it := self basicNew.
 	PostBuildStackDelta := 0.
 	OpcodeExceptionMap := Array new: 256 withAll: #handleExecutionPrimitiveFailureAt:in:.
 	OpcodeExceptionMap
-		at: 1 + self basicNew callOpcode			put: #handleCallFailureAt:in:;
-		at: 1 + self basicNew jmpOpcode			put: #handleJmpFailureAt:in:;
-		at: 1 + self basicNew retOpcode			put: #handleRetFailureAt:in:;
-		at: 1 + self basicNew movALObOpcode	put: #handleMovALObFailureAt:in:;
-		at: 1 + self basicNew movObALOpcode	put: #handleMovObALFailureAt:in:;
-		at: 1 + self basicNew movGvEvOpcode	put: #handleMovGvEvFailureAt:in:;
-		at: 1 + self basicNew movEvGvOpcode	put: #handleMovEvGvFailureAt:in:;
-		at: 1 + self basicNew movGbEbOpcode	put: #handleMovGbEbFailureAt:in:;
-		at: 1 + self basicNew movEbGbOpcode	put: #handleMovEbGbFailureAt:in:
+		at: 1 + it callOpcode			put: #handleCallFailureAt:in:;
+		at: 1 + it jmpOpcode			put: #handleJmpFailureAt:in:;
+		at: 1 + it retOpcode			put: #handleRetFailureAt:in:;
+		at: 1 + it movALObOpcode	put: #handleMovALObFailureAt:in:;
+		at: 1 + it movObALOpcode	put: #handleMovObALFailureAt:in:;
+		at: 1 + it movGvEvOpcode	put: #handleMovGvEvFailureAt:in:;
+		at: 1 + it movEvGvOpcode	put: #handleMovEvGvFailureAt:in:;
+		at: 1 + it movGbEbOpcode	put: #handleMovGbEbFailureAt:in:;
+		at: 1 + it movEbGbOpcode	put: #handleMovEbGbFailureAt:in:.
+	ExtendedOpcodeExceptionMap := Array new: 256 withAll: #handleExecutionPrimitiveFailureAt:in:.
+	ExtendedOpcodeExceptionMap
+		at: 1 + it movGvEbOpcode put: #handleMovGvEbFailureAt:in:
 ]
 
 { #category : #primitives }
@@ -373,10 +379,16 @@ BochsIA32Alien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteAr
 	| pc opcode |
 	((pc := self eip) between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
 		[opcode := memoryArray byteAt: pc + 1.
-		^self
-			perform: (OpcodeExceptionMap at: opcode + 1)
-			with: pc
-			with: memoryArray].
+		 opcode ~= 16r0f ifTrue:
+			[^self
+				perform: (OpcodeExceptionMap at: opcode + 1)
+				with: pc
+				with: memoryArray].
+		 opcode := memoryArray byteAt: pc + 2.
+		 ^self
+				perform: (ExtendedOpcodeExceptionMap at: opcode + 1)
+				with: pc
+				with: memoryArray].
 	^self reportPrimitiveFailure
 ]
 
@@ -458,6 +470,37 @@ BochsIA32Alien >> handleMovGbEbFailureAt: pc "<Integer>" in: memoryArray [ "<Bit
 				signal]
 		ifFalse:
 			[self reportPrimitiveFailure]
+]
+
+{ #category : #'error handling' }
+BochsIA32Alien >> handleMovGvEbFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
+	"Convert an execution primitive failure for a register load into a ProcessorSimulationTrap signal."
+	| modrmByte mode srcIsSP srcVal dst offset |
+	modrmByte := memoryArray byteAt: pc + 3.
+	mode := modrmByte >> 6 bitAnd: 3.
+	srcIsSP := (modrmByte bitAnd: 7) = 4.
+	srcVal := self perform: (#(eax ecx edx ebx esp ebp esi edi) at: (modrmByte bitAnd: 7) + 1).
+	dst := #(eax: ecx: edx: ebx: esp: ebp: esi: edi:) at: ((modrmByte >> 3 bitAnd: 7) + 1).
+	mode = 1 ifTrue: "ModRegRegDisp8"
+		[offset := memoryArray byteAt: pc + (srcIsSP ifTrue: [5] ifFalse: [4]). "1-relative"
+		 offset > 127 ifTrue: [offset := offset - 256].
+		 ^(ProcessorSimulationTrap
+					pc: pc
+					nextpc: pc + (srcIsSP ifTrue: [5] ifFalse: [4])
+					address: ((srcVal + offset) bitAnd: 16rFFFFFFFF)
+					type: #read
+					accessor: dst)
+				signal].
+	mode = 2 ifTrue: "ModRegRegDisp32"
+		[offset := memoryArray unsignedLongAt: pc + (srcIsSP ifTrue: [5] ifFalse: [4]). "1-relative"
+		 ^(ProcessorSimulationTrap
+					pc: pc
+					nextpc: pc + (srcIsSP ifTrue: [8] ifFalse: [7])
+					address: ((srcVal + offset) bitAnd: 16rFFFFFFFF)
+					type: #read
+					accessor: dst)
+				signal].
+	^self reportPrimitiveFailure
 ]
 
 { #category : #'error handling' }
@@ -564,6 +607,13 @@ BochsIA32Alien >> movGbEbOpcode [
 	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
 		table A2"
 	^16r8A
+]
+
+{ #category : #opcodes }
+BochsIA32Alien >> movGvEbOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A3, pA14"
+	^16rB6
 ]
 
 { #category : #opcodes }
