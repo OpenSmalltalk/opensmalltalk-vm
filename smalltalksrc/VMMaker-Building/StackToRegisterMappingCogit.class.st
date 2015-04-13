@@ -1419,8 +1419,8 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 				adjust := objectMemory baseHeaderSize - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
 				self AddCq: adjust R: ra.
 				self annotate: (self MoveCw: val R: TempReg) objRef: val.
-				self MoveXbr: ra R: TempReg R: ra]
-
+				self MoveXbr: ra R: TempReg R: ra.
+				objectRepresentation genConvertIntegerToSmallIntegerInReg: ra]
 	}
 	otherwise: [^EncounteredUnknownBytecode].
 	self ssPushRegister: ra.
