@@ -760,6 +760,49 @@ StackToRegisterMappingCogit >> addBlockStartAt: bytecodepc numArgs: numArgs numC
 	^blockStart
 ]
 
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> allocateTwoRegistersInto: binaryBlock [
+	| topRegistersMask rTop rNext |
+	topRegistersMask := 0.
+	self ssTop type = SSRegister ifTrue: 
+		[ topRegistersMask := self registerMaskFor: (rTop := self ssTop register)].
+	(self ssValue: 1) type = SSRegister ifTrue: 
+		[ topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: (rNext := (self ssValue: 1) register))].
+	(rTop notNil and: [rNext notNil]) ifTrue: 
+		[ ^ binaryBlock value: rTop value: rNext ].
+	
+	rTop ifNotNil:
+		[ rNext := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: topRegistersMask).
+		rNext ifNil: 
+			[ rNext := backEnd availableRegisterOrNilFor: topRegistersMask. 
+			self assert: rNext notNil.
+			self ssAllocateRequiredRegMask: rNext upThrough: simStackPtr - 1 ].
+		^ binaryBlock value: rTop value: rNext ].
+	
+	rNext ifNotNil:
+		[ rTop := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: topRegistersMask).
+		rTop ifNil: 
+			[ rTop := backEnd availableRegisterOrNilFor: topRegistersMask. 
+			self assert: rTop notNil.
+			self ssAllocateRequiredRegMask: rTop upThrough: simStackPtr - 2 ].
+		^ binaryBlock value: rTop value: rNext ].
+	
+	rTop := backEnd availableRegisterOrNilFor: self liveRegisters.
+	topRegistersMask := rTop ifNotNil: [ self registerMaskFor: rTop ] ifNil: [0].
+	rNext := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: topRegistersMask).
+	(rTop notNil and: [ rNext notNil ]) ifTrue: 
+		[ ^ binaryBlock value: rTop value: rNext ].
+	
+	rTop ifNil: [ ^ self spillTwoRegistersInto: binaryBlock ].
+	
+	"rNext isNil. rTop is allocated"
+	rNext := backEnd availableRegisterOrNilFor: topRegistersMask. 
+	self assert: rNext notNil.
+	self ssAllocateRequiredRegMask: rNext upThrough: simStackPtr - 1.
+	^ binaryBlock value: rTop value: rNext 
+	
+]
+
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> annotateBytecodeIfAnnotated: aSimStackEntry [
 	<var: #aSimStackEntry type: #'CogSimStackEntry *'>
@@ -1441,15 +1484,8 @@ StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#binaryInlinePrimitive:"
 	| ra rr adjust |
-	(rr := backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
-		[self ssAllocateRequiredReg:
-			(rr := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-	(ra := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: rr))) ifNil:
-		[self ssAllocateRequiredReg: (ra := Arg1Reg)].
-	(rr = ReceiverResultReg or: [ra = ReceiverResultReg]) ifTrue:
-		[optStatus isReceiverResultRegLive: false].
+	self allocateTwoRegistersInto: [:rTop :rNext | ra := rTop. rr := rNext ].
+	(rr = ReceiverResultReg or: [ra = ReceiverResultReg]) ifTrue: [ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: ra.
 	self ssPop: 1.
 	self ssTop popToReg: rr.
@@ -4334,6 +4370,27 @@ StackToRegisterMappingCogit >> sistaV1PushNilSize: aMethodObj numInitialNils: nu
 	"230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii"
 	<inline: true>
 	^numInitialNils = 0 ifTrue: [0] ifFalse: [2]
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> spillTwoRegistersInto: binaryBlock [
+	"Any occurrences on the stack of the register must be
+	 flushed, and hence any values colder than them stack."
+	<var: #desc type: #'CogSimStackEntry *'>
+	| r1 r2 index |
+	index := simSpillBase max: 0.
+	[r1 notNil and: [r2 notNil and: [index < simStackPtr]]] whileTrue:
+		[| desc |
+		 desc := self simStackAt: index.
+		 desc type = SSRegister ifTrue:
+			[ r1
+				ifNil: [r1 := desc register]
+				ifNotNil: [r1 ~= desc register ifTrue:
+							[r2 := desc register]]].
+		 index := index + 1].
+	self assert: (r1 notNil and: [r2 notNil]).
+	self ssAllocateRequiredReg: r1 and: r2.
+	^binaryBlock value: r1 value: r2
 ]
 
 { #category : #'span functions' }
