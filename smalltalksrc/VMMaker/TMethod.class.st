@@ -562,7 +562,7 @@ TMethod >> emitCLocalsOn: aStream generator: aCodeGen [
 { #category : #'C code generation' }
 TMethod >> emitInlineOn: aStream level: level generator: aCodeGen [
 	"Emit C code for this method onto the given stream. All calls to inlined methods should already have been expanded."
-	self removeUnusedTempsIn: aCodeGen.
+	self removeUnusedTempsAndNilIfRequiredIn: aCodeGen.
 	sharedLabel ifNotNil:
 		[aStream crtab: level-1; nextPutAll: sharedLabel; nextPut: $:.
 		aStream crtab: level.
@@ -824,6 +824,17 @@ TMethod >> fetchRcvrExpr [
 	expr := 'rcvr := ', self vmNameString, ' stackValue: (', args size printString, ')'.
 	^ self statementsFor: expr varName: ''
 
+]
+
+{ #category : #utilities }
+TMethod >> findReadBeforeAssignedIn: variables [
+	| readBeforeAssigned |
+	readBeforeAssigned := Set new.
+	parseTree
+		addReadBeforeAssignedIn: variables
+		to: readBeforeAssigned
+		assignments: Set new.
+	^readBeforeAssigned
 ]
 
 { #category : #'primitive compilation' }
@@ -2092,6 +2103,27 @@ TMethod >> removeFinalSelfReturnIn: aCodeGenOrNil [
 			  and: [aCodeGenOrNil notNil
 			  and: [parseTree noneSatisfy: [:node| node isReturn and: [node expression isVariable not or: [node expression name ~= 'self']]]]]) ifTrue:
 				[self returnType: (aCodeGenOrNil implicitReturnTypeFor: selector)]]]
+]
+
+{ #category : #utilities }
+TMethod >> removeUnusedTempsAndNilIfRequiredIn: aCodeGen [
+	"Remove all of the unused temps in this method. Answer a set of the references.
+	 As a side-effect introduce explicit temp := nil statements for temps that are
+	 tested for nil before necessarily being assigned."
+	| refs readBeforeAssigned |
+	refs := self removeUnusedTempsIn: aCodeGen.
+	"reset the locals to be only those still referred to"
+	locals := locals select: [:e| refs includes: e].
+	(locals notEmpty
+	 and: [(readBeforeAssigned := (self findReadBeforeAssignedIn: locals)) notEmpty]) ifTrue:
+		[readBeforeAssigned := readBeforeAssigned reject: [:v| (self declarationAt: v) beginsWith: 'extern'].
+		 parseTree statements addAllFirst:
+			(readBeforeAssigned asSortedCollection collect:
+				[:var|
+				TAssignmentNode new
+					setVariable: (TVariableNode new setName: var; yourself)
+					expression: (TConstantNode new setValue: 0; yourself)])].
+	^refs
 ]
 
 { #category : #utilities }
