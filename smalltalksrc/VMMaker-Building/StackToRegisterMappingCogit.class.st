@@ -761,45 +761,90 @@ StackToRegisterMappingCogit >> addBlockStartAt: bytecodepc numArgs: numArgs numC
 ]
 
 { #category : #'simulation stack' }
+StackToRegisterMappingCogit >> allocateOneRegister [
+
+	| rTop |
+
+	self ssTop type = SSRegister ifTrue: [ ^ self ssTop register].
+	
+	rTop := self allocateRegisterNotConflictingWith: 0.
+	
+	rTop = ReceiverResultReg ifTrue: 
+		[ optStatus isReceiverResultRegLive: false ].
+	
+	^ rTop
+	
+	
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> allocateRegisterNotConflictingWith: registerMask [
+	| reg |
+	"if there's a free register, use it"
+	reg := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: registerMask).
+	reg ifNotNil: [^ reg].
+	"No free register, choose one that does not conflict with registerMask"
+	^ self freeRegisterNotConflictingWith: registerMask
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> allocateThreeRegistersInto: trinaryBlock thirdIsReceiver: thirdIsReceiver [
+	| topRegistersMask rTop rNext rThird needsThirdRegUpdate |
+	
+	topRegistersMask := 0.
+	needsThirdRegUpdate := true.
+	
+	(self ssTop type = SSRegister and: [ thirdIsReceiver not or: [ self ssTop register ~= ReceiverResultReg ] ]) ifTrue: 
+		[ topRegistersMask := self registerMaskFor: (rTop := self ssTop register)].
+	((self ssValue: 1) type = SSRegister and: [ thirdIsReceiver not or: [ (self ssValue: 1) register ~= ReceiverResultReg ] ]) ifTrue: 
+		[ topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: (rNext := (self ssValue: 1) register))].
+	((self ssValue: 2) type = SSRegister and: [thirdIsReceiver not or: [ (self ssValue: 2) register = ReceiverResultReg ] ]) ifTrue: 
+		[ needsThirdRegUpdate := false.
+		 topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: (rThird := (self ssValue: 2) register))].
+	
+	rThird ifNil: 
+		[ thirdIsReceiver 
+			ifTrue: "Is ReceiverResultReg free ?"
+				[ rThird := ReceiverResultReg. 
+				(self register: ReceiverResultReg isInMask: self liveRegisters) ifTrue: 
+					[ self ssAllocateRequiredReg: ReceiverResultReg ] ]
+			ifFalse: [ rThird := self allocateRegisterNotConflictingWith: topRegistersMask ].
+		topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: rThird) ].
+	
+	rTop ifNil: [ 
+		rTop := self allocateRegisterNotConflictingWith: topRegistersMask.
+		topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: rTop) ].
+	
+	rNext ifNil: [ rNext := self allocateRegisterNotConflictingWith: topRegistersMask ].
+	
+	(rTop = ReceiverResultReg or: [rNext = ReceiverResultReg or: [rThird = ReceiverResultReg and: [ needsThirdRegUpdate ]]]) ifTrue: 
+		[ optStatus isReceiverResultRegLive: false ].
+	
+	^ trinaryBlock value: rTop value: rNext value: rThird
+	
+	
+]
+
+{ #category : #'simulation stack' }
 StackToRegisterMappingCogit >> allocateTwoRegistersInto: binaryBlock [
 	| topRegistersMask rTop rNext |
+	
 	topRegistersMask := 0.
+	
 	self ssTop type = SSRegister ifTrue: 
 		[ topRegistersMask := self registerMaskFor: (rTop := self ssTop register)].
 	(self ssValue: 1) type = SSRegister ifTrue: 
 		[ topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: (rNext := (self ssValue: 1) register))].
-	(rTop notNil and: [rNext notNil]) ifTrue: 
-		[ ^ binaryBlock value: rTop value: rNext ].
 	
-	rTop ifNotNil:
-		[ rNext := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: topRegistersMask).
-		rNext ifNil: 
-			[ rNext := backEnd availableRegisterOrNilFor: topRegistersMask. 
-			self assert: rNext notNil.
-			self ssAllocateRequiredRegMask: rNext upThrough: simStackPtr - 1 ].
-		^ binaryBlock value: rTop value: rNext ].
+	rTop ifNil: [ rTop := self allocateRegisterNotConflictingWith: topRegistersMask ].
 	
-	rNext ifNotNil:
-		[ rTop := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: topRegistersMask).
-		rTop ifNil: 
-			[ rTop := backEnd availableRegisterOrNilFor: topRegistersMask. 
-			self assert: rTop notNil.
-			self ssAllocateRequiredRegMask: rTop upThrough: simStackPtr - 2 ].
-		^ binaryBlock value: rTop value: rNext ].
+	rNext ifNil: [ rNext := self allocateRegisterNotConflictingWith: (self registerMaskFor: rTop) ].
 	
-	rTop := backEnd availableRegisterOrNilFor: self liveRegisters.
-	topRegistersMask := rTop ifNotNil: [ self registerMaskFor: rTop ] ifNil: [0].
-	rNext := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: topRegistersMask).
-	(rTop notNil and: [ rNext notNil ]) ifTrue: 
-		[ ^ binaryBlock value: rTop value: rNext ].
+	(rTop = ReceiverResultReg or: [rNext = ReceiverResultReg]) ifTrue: 
+		[ optStatus isReceiverResultRegLive: false ].
 	
-	rTop ifNil: [ ^ self spillTwoRegistersInto: binaryBlock ].
+	^ binaryBlock value: rTop value: rNext
 	
-	"rNext isNil. rTop is allocated"
-	rNext := backEnd availableRegisterOrNilFor: topRegistersMask. 
-	self assert: rNext notNil.
-	self ssAllocateRequiredRegMask: rNext upThrough: simStackPtr - 1.
-	^ binaryBlock value: rTop value: rNext 
 	
 ]
 
@@ -1316,19 +1361,32 @@ StackToRegisterMappingCogit >> fixupAt: index [
 	^self addressOf: (fixups at: index)
 ]
 
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> freeRegisterNotConflictingWith: registerMask [
+	"Spill the closest register on stack not conflicting with registerMask. 
+	Assertion Failure if registerMask has already all the registers"
+	<var: #desc type: #'CogSimStackEntry *'>
+	| reg index |
+	index := simSpillBase max: 0.
+	[reg isNil and: [index < simStackPtr] ] whileTrue: 
+		[ | desc |
+		 desc := self simStackAt: index.
+		 desc type = SSRegister ifTrue:
+			[ (registerMask anyMask: (self registerMaskFor: desc register)) ifFalse: 
+				[ reg := desc register ] ].
+		 index := index + 1].
+	self assert: reg notNil.
+	self ssAllocateRequiredReg: reg.
+	^reg
+]
+
 { #category : #'inline primitive generators' }
 StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 	"Const op var version of binary inline primitives."
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#binaryInlinePrimitive:"
 	| ra val untaggedVal adjust |
-	(ra := backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
-		[self ssAllocateRequiredReg:
-			(ra := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-	ra = ReceiverResultReg ifTrue:
-		[optStatus isReceiverResultRegLive: false].
+	ra := self allocateOneRegister.
 	self ssTop popToReg: ra.
 	self ssPop: 1.
 	val := self ssTop constant.
@@ -1427,15 +1485,9 @@ StackToRegisterMappingCogit >> genBinaryVarOpConstInlinePrimitive: prim [
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#binaryInlinePrimitive:"
 	| rr val untaggedVal |
-	(rr := backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
-		[self ssAllocateRequiredReg:
-			(rr := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-	rr = ReceiverResultReg ifTrue:
-		[optStatus isReceiverResultRegLive: false].
 	val := self ssTop constant.
 	self ssPop: 1.
+	rr := self allocateOneRegister.
 	self ssTop popToReg: rr.
 	self ssPop: 1.
 	untaggedVal := val - objectMemory smallIntegerTag.
@@ -1485,7 +1537,6 @@ StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#binaryInlinePrimitive:"
 	| ra rr adjust |
 	self allocateTwoRegistersInto: [:rTop :rNext | ra := rTop. rr := rNext ].
-	(rr = ReceiverResultReg or: [ra = ReceiverResultReg]) ifTrue: [ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: ra.
 	self ssPop: 1.
 	self ssTop popToReg: rr.
@@ -3417,20 +3468,8 @@ StackToRegisterMappingCogit >> genTrinaryInlinePrimitive: prim [
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#trinaryInlinePrimitive:"
 
 	| ra1 ra2 rr adjust |
-	(ra2 := backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
-		[self ssAllocateRequiredReg: (ra2 := Arg1Reg)].
-	(ra1 := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: ra2))) ifNil:
-		[self ssAllocateRequiredReg: (ra1 := Arg0Reg)].
-	prim = 0
-		ifTrue:
-			[rr := ReceiverResultReg.
-			 ((self ssValue: 2) type = SSRegister
-			  and: [(self ssValue: 2) register = ReceiverResultReg]) ifFalse:
-				[self ssAllocateRequiredReg: rr]]
-		ifFalse:
-			[(rr := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: ra1 and: ra2))) ifNil:
-				[self ssAllocateRequiredReg: (rr := ReceiverResultReg)].
-			 optStatus isReceiverResultRegLive: false].
+	"The store check requires rr to be ReceiverResultReg"
+	self allocateThreeRegistersInto: [:rTop :rNext :rThird | ra2 := rTop. ra1 := rNext. rr := rThird ] thirdIsReceiver: prim = 0.
 	self assert: (rr ~= ra1 and: [rr ~= ra2 and: [ra1 ~= ra2]]).
 	self ssTop popToReg: ra2.
 	self ssPop: 1.
@@ -3463,16 +3502,8 @@ StackToRegisterMappingCogit >> genUnaryInlinePrimitive: prim [
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#unaryInlinePrimitive:"
 	| rcvrReg resultReg |
-	self ssTop type = SSRegister
-		ifTrue: [rcvrReg := self ssTop register]
-		ifFalse:
-			[(rcvrReg := backEnd availableRegisterOrNilFor: self liveRegisters) ifNil:
-				[self ssAllocateRequiredReg:
-					(rcvrReg := optStatus isReceiverResultRegLive
-							ifTrue: [Arg0Reg]
-							ifFalse: [ReceiverResultReg])]].
-	(resultReg := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: (self registerMaskFor: rcvrReg))) ifNil:
-		[self ssAllocateRequiredReg: (resultReg := Arg1Reg)].
+	rcvrReg := self allocateOneRegister.
+	resultReg := self allocateRegisterNotConflictingWith: (self registerMaskFor: rcvrReg).
 	self ssTop popToReg: rcvrReg.
 	self ssPop: 1.
 	prim
@@ -4166,6 +4197,12 @@ StackToRegisterMappingCogit >> pushNilSize: aMethodObj numInitialNils: numInitia
 	^self perform: pushNilSizeFunction with: aMethodObj with: numInitialNils
 ]
 
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> register: reg isInMask: mask [
+	<inline: true>
+	^ mask anyMask: (self registerMaskFor: reg)
+]
+
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> reinitializeFixupsFrom: start through: end [
 	"When a block must be recompiled due to overestimating the
@@ -4372,27 +4409,6 @@ StackToRegisterMappingCogit >> sistaV1PushNilSize: aMethodObj numInitialNils: nu
 	^numInitialNils = 0 ifTrue: [0] ifFalse: [2]
 ]
 
-{ #category : #'simulation stack' }
-StackToRegisterMappingCogit >> spillTwoRegistersInto: binaryBlock [
-	"Any occurrences on the stack of the register must be
-	 flushed, and hence any values colder than them stack."
-	<var: #desc type: #'CogSimStackEntry *'>
-	| r1 r2 index |
-	index := simSpillBase max: 0.
-	[r1 notNil and: [r2 notNil and: [index < simStackPtr]]] whileTrue:
-		[| desc |
-		 desc := self simStackAt: index.
-		 desc type = SSRegister ifTrue:
-			[ r1
-				ifNil: [r1 := desc register]
-				ifNotNil: [r1 ~= desc register ifTrue:
-							[r2 := desc register]]].
-		 index := index + 1].
-	self assert: (r1 notNil and: [r2 notNil]).
-	self ssAllocateRequiredReg: r1 and: r2.
-	^binaryBlock value: r1 value: r2
-]
-
 { #category : #'span functions' }
 StackToRegisterMappingCogit >> squeakV3orSistaV1: descriptor Num: pc Push: nExts Nils: aMethodObj [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
@@ -4459,12 +4475,12 @@ StackToRegisterMappingCogit >> ssAllocatePreferredReg: preferredReg [
 		(liveRegs bitAnd: preferredMask) ~= 0 ifTrue:
 			[lastPreferred := i]].
 	"If preferredReg is not live we can allocate it."
-	(liveRegs bitAnd: (self registerMaskFor: preferredReg)) = 0 ifTrue:
+	(self register: preferredReg isInMask: liveRegs) ifFalse:
 		[^preferredReg].
 	"If any other is not live we can allocate it."
 	GPRegMin to: GPRegMax do:
 		[:reg|
-		(liveRegs bitAnd: (self registerMaskFor: reg)) = 0 ifTrue:
+		(self register: reg isInMask: liveRegs) ifFalse:
 			[^reg]].
 	"All live, must spill"
 	self ssFlushTo: lastPreferred.
