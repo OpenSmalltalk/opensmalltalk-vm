@@ -258,6 +258,7 @@ CogAbstractInstruction >> availableRegisterOrNilFor: liveRegsMask [
 	"Answer an unused abstract register in the liveRegMask.
 	 Subclasses with more registers can override to answer them."
 	<returnTypeC: #sqInt>
+	self flag: 'searching physical registers that are not assigned to abstract registers first will do a better job and allocate with fewer conflicts'.
 	(liveRegsMask anyMask: (cogit registerMaskFor: Arg1Reg)) ifFalse:
 		[^Arg1Reg].
 	(liveRegsMask anyMask: (cogit registerMaskFor: Arg0Reg)) ifFalse:
