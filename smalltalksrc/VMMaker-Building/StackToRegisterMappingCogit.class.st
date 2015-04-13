@@ -763,17 +763,9 @@ StackToRegisterMappingCogit >> addBlockStartAt: bytecodepc numArgs: numArgs numC
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> allocateOneRegister [
 
-	| rTop |
-
 	self ssTop type = SSRegister ifTrue: [ ^ self ssTop register].
 	
-	rTop := self allocateRegisterNotConflictingWith: 0.
-	
-	rTop = ReceiverResultReg ifTrue: 
-		[ optStatus isReceiverResultRegLive: false ].
-	
-	^ rTop
-	
+	^ self allocateRegisterNotConflictingWith: 0
 	
 ]
 
@@ -782,32 +774,33 @@ StackToRegisterMappingCogit >> allocateRegisterNotConflictingWith: registerMask 
 	| reg |
 	"if there's a free register, use it"
 	reg := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: registerMask).
-	reg ifNotNil: [^ reg].
-	"No free register, choose one that does not conflict with registerMask"
-	^ self freeRegisterNotConflictingWith: registerMask
+	reg ifNil: "No free register, choose one that does not conflict with registerMask"
+		[reg := self freeRegisterNotConflictingWith: registerMask].
+	reg = ReceiverResultReg ifTrue: "If we've allocated RcvrResultReg, it's not live anymore"
+		[ optStatus isReceiverResultRegLive: false ].
+	^ reg
 ]
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> allocateThreeRegistersInto: trinaryBlock thirdIsReceiver: thirdIsReceiver [
-	| topRegistersMask rTop rNext rThird needsThirdRegUpdate |
+	| topRegistersMask rTop rNext rThird |
 	
 	topRegistersMask := 0.
-	needsThirdRegUpdate := true.
 	
 	(self ssTop type = SSRegister and: [ thirdIsReceiver not or: [ self ssTop register ~= ReceiverResultReg ] ]) ifTrue: 
 		[ topRegistersMask := self registerMaskFor: (rTop := self ssTop register)].
 	((self ssValue: 1) type = SSRegister and: [ thirdIsReceiver not or: [ (self ssValue: 1) register ~= ReceiverResultReg ] ]) ifTrue: 
 		[ topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: (rNext := (self ssValue: 1) register))].
 	((self ssValue: 2) type = SSRegister and: [thirdIsReceiver not or: [ (self ssValue: 2) register = ReceiverResultReg ] ]) ifTrue: 
-		[ needsThirdRegUpdate := false.
-		 topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: (rThird := (self ssValue: 2) register))].
+		[ topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: (rThird := (self ssValue: 2) register))].
 	
 	rThird ifNil: 
 		[ thirdIsReceiver 
-			ifTrue: "Is ReceiverResultReg free ?"
-				[ rThird := ReceiverResultReg. 
+			ifTrue:
+				[ rThird := ReceiverResultReg.  "Free ReceiverResultReg if it was not free"
 				(self register: ReceiverResultReg isInMask: self liveRegisters) ifTrue: 
-					[ self ssAllocateRequiredReg: ReceiverResultReg ] ]
+					[ self ssAllocateRequiredReg: ReceiverResultReg ].
+				optStatus isReceiverResultRegLive: false ]
 			ifFalse: [ rThird := self allocateRegisterNotConflictingWith: topRegistersMask ].
 		topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: rThird) ].
 	
@@ -816,9 +809,6 @@ StackToRegisterMappingCogit >> allocateThreeRegistersInto: trinaryBlock thirdIsR
 		topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: rTop) ].
 	
 	rNext ifNil: [ rNext := self allocateRegisterNotConflictingWith: topRegistersMask ].
-	
-	(rTop = ReceiverResultReg or: [rNext = ReceiverResultReg or: [rThird = ReceiverResultReg and: [ needsThirdRegUpdate ]]]) ifTrue: 
-		[ optStatus isReceiverResultRegLive: false ].
 	
 	^ trinaryBlock value: rTop value: rNext value: rThird
 	
@@ -839,9 +829,6 @@ StackToRegisterMappingCogit >> allocateTwoRegistersInto: binaryBlock [
 	rTop ifNil: [ rTop := self allocateRegisterNotConflictingWith: topRegistersMask ].
 	
 	rNext ifNil: [ rNext := self allocateRegisterNotConflictingWith: (self registerMaskFor: rTop) ].
-	
-	(rTop = ReceiverResultReg or: [rNext = ReceiverResultReg]) ifTrue: 
-		[ optStatus isReceiverResultRegLive: false ].
 	
 	^ binaryBlock value: rTop value: rNext
 	
