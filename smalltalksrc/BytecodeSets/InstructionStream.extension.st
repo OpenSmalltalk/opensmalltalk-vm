@@ -337,7 +337,7 @@ InstructionStream >> interpretNext3ByteSistaV1Instruction: bytecode for: client 
 	"we search the bytecodes by what we expect to be the static frequency."
 	bytecode = 248 ifTrue:
 		[byte3 >= 128 ifTrue:
-			[client callInlinePrimitive: byte2 + (byte3 - 128 bitShift: 8)].
+			[^client callInlinePrimitive: byte2 + (byte3 - 128 bitShift: 8)].
 		 ^client callPrimitive: byte2 + (byte3 bitShift: 8)].
 	bytecode = 250 ifTrue:
 		["**	250  11111010  eeiiikkk  jjjjjjjj  Push Closure Num Copied iii (+ExtA//16*8) Num Args kkk (+ ExtA\\16*8) BlockSize jjjjjjjj (+ExtB*256). ee = num extensions"
