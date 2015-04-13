@@ -1063,7 +1063,7 @@ CCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: asse
 		[methodList := { methods at: #interpret }, (methodList copyWithout: (methods at: #interpret))].
 	"clean out no longer valid variable names and then
 	 handle any global variable usage in each method"
-	methodList do: [:m | self checkForGlobalUsage: (m removeUnusedTempsIn: self) in: m].
+	methodList do: [:m | self checkForGlobalUsage: (m removeUnusedTempsAndNilIfRequiredIn: self) in: m].
 	self localizeGlobalVariables.
 
 	self emitCHeaderOn: aStream.
