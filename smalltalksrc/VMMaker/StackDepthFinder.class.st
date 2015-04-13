@@ -107,6 +107,11 @@ StackDepthFinder >> doJump: delta [
 ]
 
 { #category : #'instruction decoding' }
+StackDepthFinder >> doNop [
+	"do nothing ;-)"
+]
+
+{ #category : #'instruction decoding' }
 StackDepthFinder >> doPop [
 	"Remove Top Of Stack bytecode."
 	self drop
