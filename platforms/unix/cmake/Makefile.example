@@ -1,0 +1,37 @@
+# Thu Jan 29 20:12:32 EST 2015 dtl
+#
+# Makefile to build and install a 32-bit and 64-bit object memory VM. This
+# makefile can be run with /usr/sbin/checkinstall to create an RPM or Debian
+# install package.
+#
+# Copy this Makefile to your own empty ./build directory
+#
+# Assume platforms is ../platforms and src is ../src
+
+# CFLAGS setting to pass to cmake configure. If undefined, use compiler defaults.
+CFLAGS_PARAM="--CFLAGS='-O3 -D_FILE_OFFSET_BITS=64'"
+#CFLAGS_PARAM="--CFLAGS='-O0 -g'"
+
+squeakvm:	build/squeakvm build64/squeakvm64
+
+build/squeakvm:	build/CMakeCache.txt
+	(cd build; make)
+
+build/CMakeCache.txt:
+	mkdir build || true
+	(cd build; ../../platforms/unix/cmake/configure --src=../../src ${CFLAGS_PARAM})
+
+build64/squeakvm64:	build64/CMakeCache.txt
+	(cd build64; make)
+
+build64/CMakeCache.txt:
+	mkdir build64 || true
+	(cd build64; ../../platforms/unix/cmake/configure --src=../../src --image64 --vm-only ${CFLAGS_PARAM})
+
+install:	squeakvm
+	(cd build; make install)
+	(cd build64; make install)
+
+clean:
+	rm -rf build build64
+
