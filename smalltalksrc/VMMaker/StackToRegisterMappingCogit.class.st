@@ -783,6 +783,7 @@ StackToRegisterMappingCogit >> allocateRegisterNotConflictingWith: registerMask 
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> allocateThreeRegistersInto: trinaryBlock thirdIsReceiver: thirdIsReceiver [
+	<inline: true>
 	| topRegistersMask rTop rNext rThird |
 	
 	topRegistersMask := 0.
@@ -817,6 +818,7 @@ StackToRegisterMappingCogit >> allocateThreeRegistersInto: trinaryBlock thirdIsR
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> allocateTwoRegistersInto: binaryBlock [
+	<inline: true>
 	| topRegistersMask rTop rNext |
 	
 	topRegistersMask := 0.
