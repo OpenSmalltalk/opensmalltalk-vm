@@ -203,7 +203,7 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager from
 						val := operand > memory memory size
 											ifTrue: [aSymbolManager simulatedVariableAt: operand ]
 											ifFalse: [memory longAt: operand].
-						^anInstructionString, '; Load SP (', val hex, ') from ', (addressinatorBlock value: operand)].
+						^anInstructionString, '; Load SP (', (val ifNil:['unknown'] ifNotNil:[:v| v hex]) , ') from ', (addressinatorBlock value: operand)].
 					(self instructionIsSTRSP: word) ifTrue:[
 						^anInstructionString, '; Save SP (', self sp hex, ') to ',  (addressinatorBlock value: operand)].
 					]
@@ -225,7 +225,7 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager from
 						[^anInstructionString].
 					 operand := aSymbolManager backEnd literalBeforeFollowingAddress: address + 4]].
 	"is there an interesting address with this?"
-	^anInstructionString, (addressinatorBlock value: operand)
+	^anInstructionString", (addressinatorBlock value: operand) <-------------- NEEDS FIXING BETTERER"
 ]
 
 { #category : #accessing }
@@ -1184,7 +1184,7 @@ GdbARMAlien >> simulateCallOf: address nextpc: nextpc memory: aMemory [
 	In ARM aapcs, every method can define for itself, wether it wants to push lr (nextpc), and wether it 
 	uses a frame pointer. The standard never mentions a fp. It merely defines r4-r11 to be callee-saved."
 
-	self pushWord: nextpc in: aMemory.
+	self pushWord: self lr in: aMemory.
 	self pushWord: self fp in: aMemory.
 	self fp: self sp.
 	PostBuildStackDelta ~= 0 ifTrue:
