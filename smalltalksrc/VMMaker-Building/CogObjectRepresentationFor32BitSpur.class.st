@@ -473,15 +473,12 @@ CogObjectRepresentationFor32BitSpur >> genGetNumBytesOf: srcReg into: destReg [
 	 Assumes the object in srcReg has a byte format, i.e. 16 to 23 or 24 to 31 "
 	<var: #jmp type: #'AbstractInstruction *'>
 	| jmp |
-	self genGetRawSlotSizeOfNonImm: srcReg into: TempReg.
-	cogit CmpCq: objectMemory numSlotsMask R: TempReg.
+	self genGetRawSlotSizeOfNonImm: srcReg into: destReg.
+	cogit CmpCq: objectMemory numSlotsMask R: destReg.
 	jmp := cogit JumpLess: 0.
 	self genGetOverflowSlotsOf: srcReg into: destReg.
 	jmp jmpTarget: (cogit LogicalShiftLeftCq: objectMemory shiftForWord R: destReg). 
-	"Now: destReg = numSlots << shiftForWord"
-	cogit MoveMw: 0 r: srcReg R: TempReg.
-	cogit LogicalShiftRightCq: objectMemory formatShift R: TempReg.
-	cogit AndCq: objectMemory wordSize - 1 R: TempReg.
+	self genGetFormatOf: srcReg into: TempReg baseHeaderIntoScratch: nil.
 	"Now: fmt bitAnd: 3 in TempReg"
 	cogit SubR: TempReg R: destReg.
 	^0

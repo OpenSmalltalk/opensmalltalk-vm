@@ -1406,9 +1406,9 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 		[35] -> [ self CmpCq: val R: ra.
 				self genBinaryInlineComparison: JumpGreater opFalse: JumpLessOrEqual destReg: ra ].
 		[36] -> [ self CmpCq: val R: ra.
-				self genBinaryInlineComparison: JumpNonZero opFalse: JumpZero destReg: ra ].
-		[37] -> [ self CmpCq: val R: ra.
 				self genBinaryInlineComparison: JumpZero opFalse: JumpNonZero destReg: ra ].
+		[37] -> [ self CmpCq: val R: ra.
+				self genBinaryInlineComparison: JumpNonZero opFalse: JumpZero destReg: ra ].
 
 		"2064	through 2068, Pointer Object>>at:, Byte Object>>at:, Short16 Word Object>>at: LongWord32 Object>>at: Quad64Word Object>>at:. obj op 0-rel SmallInteger => oop"
 		[64] ->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
