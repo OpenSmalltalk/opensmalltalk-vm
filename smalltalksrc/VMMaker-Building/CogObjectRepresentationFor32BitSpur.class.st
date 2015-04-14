@@ -229,12 +229,11 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 	<var: #jumpSingle type: #'AbstractInstruction *'>
 	<var: #loopHead type: #'AbstractInstruction *'>
 	<var: #exit type: #'AbstractInstruction *'>
-	cogit
-		MoveMw: FoxMethod r: FPReg R: TempReg;
-		MoveR: TempReg R: ClassReg;
-		AndCq: MFMethodFlagHasContextFlag R: TempReg.
-	jumpSingle := cogit JumpZero: 0.
-	cogit
+	cogit "load the flag; stash it in both TempReg & ClassReg; do the compare (a prime candidated for use of AndCq:R:R:)"
+		MoveMw: FoxMethod r: FPReg R: ClassReg;
+		AndCq: MFMethodFlagHasContextFlag R: ClassReg R: TempReg.
+	jumpSingle := cogit JumpZero: 0. "jump if flag bit not set"
+	cogit "since the flag bit was set, get the context in the receiver reg and return"
 		MoveMw: FoxThisContext r: FPReg R: ReceiverResultReg;
 		RetN: 0.
 	jumpSingle jmpTarget: cogit Label.
@@ -366,7 +365,7 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 	cogit RetN: 0.
 	
 	jumpNeedScavenge jmpTarget:
-		(cogit CallRT: ceScheduleScavengeTrampoline).
+		(cogit backEnd saveAndRestoreLinkRegAround: [cogit CallRT: ceScheduleScavengeTrampoline]). "We need to push the LR here for ARM, and pop it back after the callRT:"
 	cogit Jump: continuation.
 	^0
 ]
