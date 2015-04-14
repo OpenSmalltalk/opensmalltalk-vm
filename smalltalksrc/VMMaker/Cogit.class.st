@@ -4233,7 +4233,7 @@ Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: r
 	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
 	<var: #aRoutine type: #'void *'>
 	<inline: false>
-	"If on a RISC processor, the return address needs to be pushed to the
+	"If on an ARM-like RISC processor, the return address needs to be pushed to the
 	 stack so that the interpreter sees the same stack layout as on CISC."
 	(pushLinkReg and: [backEnd hasLinkRegister]) ifTrue:
 		[self PushR: LinkReg].
@@ -4248,9 +4248,9 @@ Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: r
 		resultReg: resultRegOrNil
 		saveRegs: saveRegs.
 	backEnd genLoadStackPointers.
-	(pushLinkReg and: [backEnd hasLinkRegister]) ifTrue:
-		[self PopR: LinkReg].
-	self RetN: 0
+	(pushLinkReg and: [backEnd hasLinkRegister])
+		ifTrue: [self PopR: PCReg] "since we know there is no SP messing to do, might as well pop the stacked return address straight into PC"
+		ifFalse:[ self RetN: 0]
 ]
 
 { #category : #initialization }
@@ -5267,7 +5267,7 @@ Cogit >> genNSSendTrampolineFor: aRoutine numArgs: numArgs called: aString [
 Cogit >> genNonLocalReturnTrampoline [
 	opcodeIndex := 0.
 	"write the return address to the coInterpreter instructionPointerAddress;
-	 CISCs will have pushed it on the stack, so pop it first; RISCs will have it in
+	 following the CallRT to this CISCs will have pushed it on the stack, so pop it first; RISCs will have it in
 	 their link register so just write it directly."
 	backEnd hasLinkRegister
 		ifTrue:

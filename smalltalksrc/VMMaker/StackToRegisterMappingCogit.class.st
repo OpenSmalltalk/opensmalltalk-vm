@@ -1202,6 +1202,9 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	"Last probe missed.  Call ceSendFromInLineCacheMiss: to do the full lookup."
 	jumpSelectorMiss jmpTarget: self Label.
 	backEnd genPushRegisterArgsForNumArgs: numArgs.
+	"because genPushRegisterArgsForNumArgs: doesn't push LinkReg on ARM..."
+	backEnd hasLinkRegister ifTrue:
+		[self PushR: LinkReg].
 	self genSmalltalkToCStackSwitch.
 	methodLabel addDependent: (self annotateAbsolutePCRef: (self MoveCw: methodLabel asInteger R: SendNumArgsReg)).
 	self 
@@ -1930,8 +1933,8 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 	self CmpCq: 0 R: ReceiverResultReg.
 	jumpSICMiss := self JumpNonZero: 0.
 
-	"The abort sequencer has pushed the LinkReg a second time.
-	 Overwrite it with the right one."
+	"The abort sequencer has pushed the LinkReg a second time - because a stackoverflow can only happen after building a frame, which pushes LinkReg anyway, and we still need to push LinkReg in case we get to this routine from a sendMissAbort. Sigh-  there has to be a simpler way.
+	 Overwrite that duplicate with the right one - the return address for the call to the abort trampoline. The only reason it matters is an assert in ceStackOverflow: uses it"
 	backEnd hasLinkRegister ifTrue:
 		[self MoveR: LinkReg Mw: 0 r: SPReg].
 	self compileTrampolineFor: #ceStackOverflow:
@@ -3523,12 +3526,18 @@ StackToRegisterMappingCogit >> genUnaryInlinePrimitive: prim [
 StackToRegisterMappingCogit >> genUpArrowReturn [
 	"Generate a method return from within a method or a block.
 	 Frameless method activation looks like
+	for x86 - 
 				receiver
 				args
 		sp->	ret pc.
+	for ARM -
+				receiver
+				args
+				ret pc in LR.
+	A fully framed activation is described in CoInterpreter class>initializeFrameIndices.
 	 Return pops receiver and arguments off the stack.  Callee pushes the result."
 	inBlock ifTrue:
-		[self assert: needsFrame.
+		[self assert: needsFrame. 
 		 self annotateBytecode: (self CallRT: ceNonLocalReturnTrampoline).
 		 ^0].
 	needsFrame
@@ -3845,8 +3854,8 @@ StackToRegisterMappingCogit >> initSimStackForFramelessBlock: startpc [
 			annotateUse: false;
 			register: SPReg;
 			offset: ((backEnd hasLinkRegister
-						ifTrue: [methodOrBlockNumArgs - 1- i]
-						ifFalse: [methodOrBlockNumArgs - i]) * objectMemory wordSize);
+								ifTrue: [methodOrBlockNumArgs - 1- i]
+								ifFalse: [methodOrBlockNumArgs - i]) * objectMemory wordSize);
 			bcptr: startpc].
 	simSpillBase := simStackPtr := methodOrBlockNumTemps - 1
 ]
