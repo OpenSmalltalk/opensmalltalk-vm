@@ -2048,10 +2048,9 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 		["Call ceCheckProfileTick: to record sample and then continue.  newMethod
 		 should be up-to-date.  Need to save and restore the link reg around this call."
 		 jmpSample jmpTarget: self Label.
-		 backEnd hasLinkRegister ifTrue: [self PushR: LinkReg].
-		 self CallRT: (self cCode: '(unsigned long)ceCheckProfileTick'
-						inSmalltalk: [self simulatedTrampolineFor: #ceCheckProfileTick]).
-		 backEnd hasLinkRegister ifTrue: [self PopR: LinkReg].
+		 backEnd saveAndRestoreLinkRegAround:
+			[self CallRT: (self cCode: '(unsigned long)ceCheckProfileTick'
+						inSmalltalk: [self simulatedTrampolineFor: #ceCheckProfileTick])].
 		 self Jump: continuePostSample]
 ]
 

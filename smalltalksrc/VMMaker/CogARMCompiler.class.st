@@ -642,13 +642,13 @@ CogARMCompiler >> concretizeAndCqRR [
 CogARMCompiler >> concretizeArithmeticShiftRightCqR [
 	"Will get inlined into concretizeAt: switch."
 	"this is an unfortunate waste of an instruction in most cases since the shift can usually be done in a subsequent arithmetic instruction. 
-	Handle for now with a MOV reg, reg, ASR #distance"
+	Handle for now with a MOVS reg, reg, ASR #distance"
 	<inline: true>
 	| distance reg |
 	distance := (operands at: 0) min: 31.
 	reg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dist -100 srcR"
-	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 0 rn: 0 rd: reg 
+	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 1 rn: 0 rd: reg 
 									shifterOperand: (distance << 7 bitOr: (64 "flag for arithmetic" bitOr: reg))).
 	^machineCodeSize := 4
 ]
@@ -657,13 +657,13 @@ CogARMCompiler >> concretizeArithmeticShiftRightCqR [
 CogARMCompiler >> concretizeArithmeticShiftRightRR [
 	"Will get inlined into concretizeAt: switch."
 	"this is an unfortunate waste of an instruction in most cases since the shift can usually be done in a subsequent arithmetic instruction. 
-	Handle for now with a MOV reg, reg, ASR distReg"
+	Handle for now with a MOVS reg, reg, ASR distReg"
 	<inline: true>
 	| destReg distReg |
 	distReg := self concreteRegister: (operands at: 0).
 	destReg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 destR distR 0101 srcR"
-	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 0 rn: 0 rd: destReg 
+	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 1 rn: 0 rd: destReg 
 									shifterOperand: (distReg << 8 bitOr: (80 bitOr: destReg))).
 	^machineCodeSize := 4
 ]
@@ -886,13 +886,13 @@ CogARMCompiler >> concretizeLoadEffectiveAddressMwrR [
 CogARMCompiler >> concretizeLogicalShiftLeftCqR [
 	"Will get inlined into concretizeAt: switch."
 	"this is an unfortunate waste of an instruction in most cases since the shift can usually be done in a subsequent arithmetic instruction. 
-	Handle for now with a MOV reg, reg, LSL #distance"
+	Handle for now with a MOVS reg, reg, LSL #distance"
 	<inline: true>
 	| distance reg |
 	distance := (operands at: 0) min: 31.
 	reg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dista 000 srcR"
-	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 0 rn: 0 rd: reg shifterOperand: (distance << 7 bitOr: reg)).
+	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 1 rn: 0 rd: reg shifterOperand: (distance << 7 bitOr: reg)).
 	^machineCodeSize := 4
 ]
 
@@ -900,13 +900,13 @@ CogARMCompiler >> concretizeLogicalShiftLeftCqR [
 CogARMCompiler >> concretizeLogicalShiftLeftRR [
 	"Will get inlined into concretizeAt: switch."
 	"this is an unfortunate waste of an instruction in most cases since the shift can usually be done in a subsequent arithmetic instruction. 
-	Handle for now with a MOV reg, reg, LSL distReg"
+	Handle for now with a MOVS reg, reg, LSL distReg" 
 	<inline: true>
 	| destReg distReg |
 	distReg := self concreteRegister: (operands at: 0).
 	destReg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dist 0001 srcR"
-	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 0 rn: 0 rd: destReg 
+	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 1 rn: 0 rd: destReg 
 									shifterOperand: (distReg << 8 bitOr: (16 bitOr: destReg))).
 	^machineCodeSize := 4
 ]
@@ -915,13 +915,13 @@ CogARMCompiler >> concretizeLogicalShiftLeftRR [
 CogARMCompiler >> concretizeLogicalShiftRightCqR [
 	"Will get inlined into concretizeAt: switch."
 	"this is an unfortunate waste of an instruction in most cases since the shift can usually be done in a subsequent arithmetic instruction. 
-	Handle for now with a MOV reg, reg, LSR #distance"
+	Handle for now with a MOVS reg, reg, LSR #distance"
 	<inline: true>
 	| distance reg |
 	distance := (operands at: 0) min: 31.
 	reg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dist -010 srcR"
-	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 0 rn: 0 rd: reg 
+	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 1 rn: 0 rd: reg 
 									shifterOperand: (distance << 7 bitOr: (32 bitOr: reg))).
 	^machineCodeSize := 4
 ]
@@ -930,13 +930,13 @@ CogARMCompiler >> concretizeLogicalShiftRightCqR [
 CogARMCompiler >> concretizeLogicalShiftRightRR [
 	"Will get inlined into concretizeAt: switch."
 	"this is an unfortunate waste of an instruction in most cases since the shift can usually be done in a subsequent arithmetic instruction. 
-	Handle for now with a MOV reg, reg, LSR distReg"
+	Handle for now with a MOVS reg, reg, LSR distReg"
 	<inline: true>
 	| destReg distReg |
 	distReg := self concreteRegister: (operands at: 0).
 	destReg := self concreteRegister: (operands at: 1).
 	"cond 000 1101 0 0000 dest dist 0011 srcR"
-	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 0 rn: 0 rd: destReg 
+	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 1 rn: 0 rd: destReg 
 									shifterOperand: (distReg << 8 bitOr: (48 bitOr: destReg))).
 	^machineCodeSize := 4
 ]
