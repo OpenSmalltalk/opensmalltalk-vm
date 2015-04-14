@@ -3844,7 +3844,9 @@ StackToRegisterMappingCogit >> initSimStackForFramelessBlock: startpc [
 			spilled: true;
 			annotateUse: false;
 			register: SPReg;
-			offset: ((methodOrBlockNumTemps - i) * objectMemory wordSize);
+			offset: ((backEnd hasLinkRegister
+						ifTrue: [methodOrBlockNumArgs - 1- i]
+						ifFalse: [methodOrBlockNumArgs - i]) * objectMemory wordSize);
 			bcptr: startpc].
 	simSpillBase := simStackPtr := methodOrBlockNumTemps - 1
 ]
@@ -3889,7 +3891,9 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 					register: SPReg;
 					spilled: true;
 					annotateUse: false;
-					offset: ((methodOrBlockNumArgs - i) * objectMemory wordSize);
+					offset: ((backEnd hasLinkRegister
+								ifTrue: [methodOrBlockNumArgs - 1- i]
+								ifFalse: [methodOrBlockNumArgs - i]) * objectMemory wordSize);
 					bcptr: startpc]].
 	simSpillBase := simStackPtr := methodOrBlockNumArgs - 1
 ]
