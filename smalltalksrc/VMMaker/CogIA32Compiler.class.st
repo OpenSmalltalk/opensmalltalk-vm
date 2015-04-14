@@ -376,9 +376,12 @@ CogIA32Compiler >> computeMaximumSize [
 											ifTrue: [5]
 											ifFalse: [4]].
 		[MoveRXbrR]	->	[self assert: (self concreteRegister: (operands at: 1)) ~= ESP.
-							^maxSize := (self concreteRegister: (operands at: 2)) = EBP
+							^maxSize := ((self concreteRegister: (operands at: 2)) = EBP
 											ifTrue: [4]
-											ifFalse: [3]].
+											ifFalse: [3])
+										+ ((self concreteRegister: (operands at: 0)) >= 4
+											ifTrue: [2]
+											ifFalse: [0])].
 		[MoveXwrRR]	-> [self assert: (self concreteRegister: (operands at: 0)) ~= ESP.
 							^maxSize := (self concreteRegister: (operands at: 1)) = EBP
 											ifTrue: [4]
@@ -1553,22 +1556,34 @@ CogIA32Compiler >> concretizeMoveRR [
 CogIA32Compiler >> concretizeMoveRXbrR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| src index base |
+	| src index base swapreg mcIdx |
 	src := self concreteRegister: (operands at: 0).
 	index := self concreteRegister: (operands at: 1).
 	base := self concreteRegister: (operands at: 2).
+	mcIdx := 0.
+	src >= 4 ifTrue: "x86 allows movb %rl, mem only with %al, %bl, %cl, %dl, so swap with the first one that isn't used."
+		[swapreg := src.
+		 index = EAX ifTrue: [index := swapreg].
+		 base = EAX ifTrue: [base := swapreg].
+		 src := EAX. 
+		 mcIdx := 1.
+		 machineCode at: 0 put: 16r90 + swapreg].
 	base ~= EBP ifTrue:
 		[machineCode
-			at: 0 put: 16r88;
-			at: 1 put: (self mod: ModRegInd RM: 4 RO: src);
-			at: 2 put: (self s: SIB1 i: index b: base).
-		 ^machineCodeSize := 3].
+			at: mcIdx + 0 put: 16r88;
+			at: mcIdx + 1 put: (self mod: ModRegInd RM: 4 RO: src);
+			at: mcIdx + 2 put: (self s: SIB1 i: index b: base).
+		 swapreg ifNotNil:
+			[machineCode at: mcIdx + 3 put: 16r90 + swapreg].
+		 ^machineCodeSize := 3 + (2 * mcIdx)].
 	machineCode
-		at: 0 put: 16r88;
-		at: 1 put: (self mod: ModRegRegDisp8 RM: 4 RO: src);
-		at: 2 put: (self s: SIB1 i: index b: base);
-		at: 3 put: 0.
-	 ^machineCodeSize := 4
+		at: mcIdx + 0 put: 16r88;
+		at: mcIdx + 1 put: (self mod: ModRegRegDisp8 RM: 4 RO: src);
+		at: mcIdx + 2 put: (self s: SIB1 i: index b: base);
+		at: mcIdx + 3 put: 0.
+	swapreg ifNotNil:
+		[machineCode at: mcIdx + 4 put: 16r90 + swapreg].
+	 ^machineCodeSize := 4 + (2 * mcIdx)
 ]
 
 { #category : #'generate machine code' }
