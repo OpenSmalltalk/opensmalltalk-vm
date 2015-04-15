@@ -6287,26 +6287,26 @@ Cogit >> incrementUsageOfTargetIfLinkedSend: annotation mcpc: mcpc ignored: supe
 { #category : #'generate machine code' }
 Cogit >> initialClosedPICUsageCount [
 	"Answer a usage count that reflects likely long-term usage."
-	^2
+	^CMMaxUsageCount // 2
 ]
 
 { #category : #'generate machine code' }
 Cogit >> initialMethodUsageCount [
 	"Answer a usage count that reflects likely long-term usage.
-	 Answer 0 for non-primitives or quick primitives (inst var accessors),
-	 1 for methods with interpreter primitives, and 2 for compiled primitives."
-	(primitiveIndex = 0
+	 Answer 1 for non-primitives or quick primitives (inst var accessors),
+	 2 for methods with interpreter primitives, and 3 for compiled primitives."
+	(primitiveIndex = 1
 	 or: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
-		[^0].
-	self primitiveGeneratorOrNil isNil ifTrue:
 		[^1].
-	^2
+	self primitiveGeneratorOrNil isNil ifTrue:
+		[^2].
+	^3
 ]
 
 { #category : #'generate machine code' }
 Cogit >> initialOpenPICUsageCount [
 	"Answer a usage count that reflects likely long-term usage."
-	^3
+	^CMMaxUsageCount - 1
 ]
 
 { #category : #initialization }
@@ -7806,7 +7806,7 @@ Cogit >> noCheckEntryOffset [
 
 { #category : #compaction }
 Cogit >> noCogMethodsMaximallyMarked [
-	"Check that no metod is maximally marked.  A maximal mark is an indication the
+	"Check that no method is maximally marked.  A maximal mark is an indication the
 	 method has been scanned to increase the usage count of its referent methods."
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>

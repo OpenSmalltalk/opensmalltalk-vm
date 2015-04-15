@@ -5016,6 +5016,13 @@ CoInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 	^theContext
 ]
 
+{ #category : #'frame access' }
+CoInterpreter >> marryFrameCopiesTemps [
+	"Answer whether marryFrame:SP: copies non-argument temporaries."
+	<api>
+	^false
+]
+
 { #category : #'cog jit support' }
 CoInterpreter >> maxLookupNoMNUErrorCode [
 	<api>
