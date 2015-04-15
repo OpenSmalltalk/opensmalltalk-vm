@@ -352,7 +352,7 @@ CogMethodZone >> freeOlderMethodsForCompaction [
 	 cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	 [cogMethod asUnsignedInteger < mzFreeStart
 	  and: [freedSoFar < amountToFree]] whileTrue:
-		[(cogMethod cmType ~= CMFree
+		[(cogMethod cmType = CMMethod
 		  and: [cogMethod cmUsageCount <= freeableUsage]) ifTrue:
 			[self freeMethod: cogMethod.
 			 freedSoFar := freedSoFar + cogMethod blockSize].

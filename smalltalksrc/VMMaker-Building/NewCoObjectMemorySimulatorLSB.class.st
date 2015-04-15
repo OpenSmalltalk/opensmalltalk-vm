@@ -60,6 +60,27 @@ NewCoObjectMemorySimulatorLSB >> halfWordLowInLong32: long32 [
 	^ long32 bitShift: -16
 ]
 
+{ #category : #'memory access' }
+NewCoObjectMemorySimulatorLSB >> long64At: byteAddress [
+	"memory is a Bitmap, a 32-bit indexable array of bits"
+	| hiWord loWord |
+	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
+	loWord := memory at: byteAddress // 4 + 1.
+	hiWord := memory at: byteAddress // 4 + 2.
+	^hiWord = 0
+		ifTrue: [loWord]
+		ifFalse: [(hiWord bitShift: 32) + loWord]
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulatorLSB >> long64At: byteAddress put: a64BitValue [
+	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
+	self
+		longAt: byteAddress put: (a64BitValue bitAnd: 16rffffffff);
+		longAt: byteAddress + 4 put: a64BitValue >> 32.
+	^a64BitValue
+]
+
 { #category : #initialization }
 NewCoObjectMemorySimulatorLSB >> nextLongFrom: aStream [
 	"Read a 32- or 64-bit quantity from the given (binary) stream."
