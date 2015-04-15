@@ -1401,13 +1401,13 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
 		"CmpCqR is SubRCq so everything is reversed, but because no CmpRCq things are reversed again and we invert the sense of the jumps."
 		[32] -> [ self CmpCq: val R: ra.
-				self genBinaryInlineComparison: JumpLessOrEqual opFalse: JumpGreater destReg: ra ].
-		[33] -> [ self CmpCq: val R: ra.
-				self genBinaryInlineComparison: JumpGreaterOrEqual opFalse: JumpLess destReg: ra ].
-		[34] -> [ self CmpCq: val R: ra.
 				self genBinaryInlineComparison: JumpLess opFalse: JumpGreaterOrEqual destReg: ra ].
-		[35] -> [ self CmpCq: val R: ra.
+		[33] -> [ self CmpCq: val R: ra.
 				self genBinaryInlineComparison: JumpGreater opFalse: JumpLessOrEqual destReg: ra ].
+		[34] -> [ self CmpCq: val R: ra.
+				self genBinaryInlineComparison: JumpLessOrEqual opFalse: JumpGreater destReg: ra ].
+		[35] -> [ self CmpCq: val R: ra.
+				self genBinaryInlineComparison: JumpGreaterOrEqual opFalse: JumpLess destReg: ra ].
 		[36] -> [ self CmpCq: val R: ra.
 				self genBinaryInlineComparison: JumpZero opFalse: JumpNonZero destReg: ra ].
 		[37] -> [ self CmpCq: val R: ra.
@@ -1933,8 +1933,13 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 	self CmpCq: 0 R: ReceiverResultReg.
 	jumpSICMiss := self JumpNonZero: 0.
 
-	"The abort sequencer has pushed the LinkReg a second time - because a stackoverflow can only happen after building a frame, which pushes LinkReg anyway, and we still need to push LinkReg in case we get to this routine from a sendMissAbort. Sigh-  there has to be a simpler way.
-	 Overwrite that duplicate with the right one - the return address for the call to the abort trampoline. The only reason it matters is an assert in ceStackOverflow: uses it"
+	"The abort sequence has pushed the LinkReg a second time - because a stack
+	 overflow can only happen after building a frame, which pushes LinkReg anyway, and
+	 we still need to push LinkReg in case we get to this routine from a sendMissAbort.
+	 (On ARM there is a simpler way; use two separate abort calls since all instructions are 32-bits
+	  but on x86 the zero receiver reg, call methodAbort sequence is smaller; we may fix this one day).
+	 Overwrite that duplicate with the right one - the return address for the call to the abort trampoline.
+	 The only reason it matters is an assert in ceStackOverflow: uses it"
 	backEnd hasLinkRegister ifTrue:
 		[self MoveR: LinkReg Mw: 0 r: SPReg].
 	self compileTrampolineFor: #ceStackOverflow:
@@ -3526,15 +3531,15 @@ StackToRegisterMappingCogit >> genUnaryInlinePrimitive: prim [
 StackToRegisterMappingCogit >> genUpArrowReturn [
 	"Generate a method return from within a method or a block.
 	 Frameless method activation looks like
-	for x86 - 
+	 CISCs (x86):
 				receiver
 				args
 		sp->	ret pc.
-	for ARM -
+	 RISCs (ARM):
 				receiver
 				args
 				ret pc in LR.
-	A fully framed activation is described in CoInterpreter class>initializeFrameIndices.
+	 A fully framed activation is described in CoInterpreter class>initializeFrameIndices.
 	 Return pops receiver and arguments off the stack.  Callee pushes the result."
 	inBlock ifTrue:
 		[self assert: needsFrame. 
