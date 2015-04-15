@@ -2340,8 +2340,9 @@ CogARMCompiler >> rewriteJumpLongAt: callSiteReturnAddress target: callTargetAdd
 	<var: #callTargetAddress type: #usqInt>
 	"cogit disassembleFrom: callSiteReturnAddress - 40 to: callSiteReturnAddress + 9"
 
-	"check that the instruction involved is actually a long jump BX"
-	self assert: (objectMemory longAt:  callSiteReturnAddress - 4) = 16rE12FFF1A .
+	"check that the instruction involved is actually a long jump BX ip (reg 12)
+	(CogARMCompiler new bx: 12) hex"
+	self assert: (objectMemory longAt:  callSiteReturnAddress - 4) = 16rE12FFF1C .
 	
 	"The callTargetAddress is loaded byte by byte."
 	objectMemory byteAt: callSiteReturnAddress - 20 put: (callTargetAddress >> 24 bitAnd: 16rFF).
