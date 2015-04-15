@@ -291,6 +291,8 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 		MoveR: ReceiverResultReg Mw: FoxThisContext r: FPReg.
 
 	"Now compute stack pointer; this is stackPointer (- 1 for return pc if a CISC) - framePointer - 4 (1 each for saved pc, method, context, receiver) + 1 (1-relative)"
+	"TPR note - the code here is actually doing
+	context stackPointer := ((((fp - sp) / 4) - [3|4]) + num args) asSmallInteger"
 	cogit
 		MoveR: FPReg R: TempReg;
 		SubR: SPReg R: TempReg;
@@ -305,7 +307,7 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 		ifTrue:
 			[cogit
 				MoveR: SendNumArgsReg R: TempReg;
-				AddCq: 2 R: TempReg; "+2 for saved fp and saved pc"
+				AddCq: 2 R: TempReg; "+2 for saved fp and saved pc" "TPR note - is this a problematic place? Maybe only 1 with LR?"
 				MoveXwr: TempReg R: FPReg R: TempReg]
 		ifFalse:
 			[cogit MoveCw: objectMemory nilObject R: TempReg].
@@ -322,13 +324,14 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 		[:i|
 		temp := longAt(FPReg + ((SendNumArgs - i + 2) * BytesPerWord)). +2 for saved pc and savedfp
 		longAtput(FPReg + FoxMFReceiver + (i * BytesPerWord), temp)]"
+	"TPR note: this is a prime candidate for passing off to the backed to do at least faintly optimal code"
 	cogit MoveCq: 1 R: ClassReg.
 	loopHead := cogit CmpR: SendNumArgsReg R: ClassReg.
 	exit := cogit JumpGreater: 0.
 	cogit
 		MoveR: SendNumArgsReg R: TempReg;
 		SubR: ClassReg R: TempReg;
-		AddCq: 2 R: TempReg; "+2 for saved fp and saved pc"
+		AddCq:  (cogit backEnd hasLinkRegister ifTrue: [1] ifFalse: [2]) R: TempReg; "+2 for saved fp and saved pc" "TPR note another LR problem place?"
 		MoveXwr: TempReg R: FPReg R: TempReg;
 		AddCq: ReceiverIndex + (objectMemory baseHeaderSize / objectMemory wordSize) R: ClassReg; "Now convert ClassReg from frame index to context index"
 		MoveR: TempReg Xwr: ClassReg R: ReceiverResultReg;
@@ -352,9 +355,7 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 	loopHead :=
 	cogit SubCq: objectMemory wordSize R: ClassReg.
 	cogit CmpR: SPReg R: ClassReg.
-	exit := cogit backEnd hasLinkRegister
-				ifTrue: [cogit JumpBelowOrEqual: 0]
-				ifFalse: [cogit JumpBelow: 0].
+	exit := cogit JumpBelow: 0.
 	cogit
 		MoveMw: 0 r: ClassReg R: TempReg;
 		MoveR: TempReg Xwr: SendNumArgsReg R: ReceiverResultReg;
