@@ -62,12 +62,12 @@ CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlo
 			[aBinaryBlock
 				value: ivn
 				value: (ivn caseOf: {
-							['address']			-> ['unsigned long'].
-							['machineCode']	-> [{'unsigned char'. '[', machineCodeBytes printString, ']'}].
-							['operands']		-> [{'unsigned long'. '[', NumOperands, ']'}].
+							['address']			-> [#'unsigned long'].
+							['machineCode']	-> [{#'unsigned char'. '[', machineCodeBytes printString, ']'}].
+							['operands']		-> [{#'unsigned long'. '[', NumOperands, ']'}].
 							['dependent']		-> ['struct _AbstractInstruction *']}
 						otherwise:
-							[#char])]]
+							[#'unsigned char'])]]
 ]
 
 { #category : #testing }
