@@ -350,6 +350,7 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 		 SendNumArgsReg := SendNumArgsReg + 1]]"
 	coInterpreter marryFrameCopiesTemps ifFalse:
 		[cogit MoveCq: objectMemory nilObject R: TempReg].
+	"Could usefully use AddCq:R:R:"
 	cogit
 		MoveR: FPReg R: ClassReg;
 		AddCq: FoxMFReceiver R: ClassReg;
@@ -359,8 +360,8 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 	cogit CmpR: SPReg R: ClassReg.
 	"If on a CISC there's a retpc for the trampoline call on top of stack; if on a RISC there isn't."
 	exit := cogit backEnd hasLinkRegister
-				ifTrue: [cogit JumpBelowOrEqual: 0]
-				ifFalse: [cogit JumpBelow: 0].
+				ifTrue: [cogit JumpBelow: 0]
+				ifFalse: [cogit JumpBelowOrEqual: 0].
 	coInterpreter marryFrameCopiesTemps ifTrue:
 		[cogit MoveMw: 0 r: ClassReg R: TempReg].
 	cogit
@@ -814,7 +815,10 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	cogit CmpCq: objectMemory weakArrayFormat R: formatReg.
 	jumpNotPointers := cogit JumpAbove: 0.
 	"optimistic store check; assume index in range (almost always is)."
-	self genStoreCheckReceiverReg: ReceiverResultReg valueReg: Arg1Reg scratchReg: TempReg.
+	self genStoreCheckReceiverReg: ReceiverResultReg
+		valueReg: Arg1Reg
+		scratchReg: TempReg
+		inFrame: false.
 
 	cogit CmpCq: objectMemory arrayFormat R: formatReg.
 	jumpNotIndexablePointers := cogit JumpBelow: 0.
