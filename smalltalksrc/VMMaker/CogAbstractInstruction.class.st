@@ -909,6 +909,22 @@ CogAbstractInstruction >> resolveJumpTarget [
 		 self jmpTarget: fixup targetInstruction]
 ]
 
+{ #category : #'full run-time support' }
+CogAbstractInstruction >> rewriteCallFullAt: callSiteReturnAddress target: callTargetAddress [
+	"Rewrite a CallFull instruction to call a different target.  This variant is used to rewrite cached primitive calls.
+	 Answer the extent of the code change which is used to compute the range of the icache to flush.
+	 This defaults to rewriteCallAt:target:; proessors that differentiate between Call and CallFull will override."
+	^self rewriteCallAt: callSiteReturnAddress target: callTargetAddress
+]
+
+{ #category : #'full run-time support' }
+CogAbstractInstruction >> rewriteJumpFullAt: callSiteReturnAddress target: callTargetAddress [
+	"Rewrite a JumpFull instruction to jump to a different target.  This variant is used to rewrite cached primitive calls.
+	 Answer the extent of the code change which is used to compute the range of the icache to flush.
+	 This defaults to rewriteJumpLongAt:target:; proessors that differentiate between Jump and JumpFull will override."
+	^self rewriteJumpLongAt: callSiteReturnAddress target: callTargetAddress
+]
+
 { #category : #abi }
 CogAbstractInstruction >> saveAndRestoreLinkRegAround: aBlock [
 	"If the processor's ABI includes a link register, generate instructions
