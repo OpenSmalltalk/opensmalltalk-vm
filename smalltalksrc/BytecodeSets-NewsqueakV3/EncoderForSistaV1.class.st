@@ -70,7 +70,7 @@ Instance Variables (inherited)
 **	235	(1)	11101011	iiiiijjj	ExtendB < 64
 										ifTrue: [Send To Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments]
 										ifFalse: [Send To Superclass of Stacked Class Literal Selector #iiiii (+ Extend A * 32) with jjj (+ (Extend B bitAnd: 63) * 8) Arguments]
-*	236		11101100	iiiiiiii		Trap If Not Instance Of Behavior/Array Of Behavior #iiiiiiii (+ Extend A * 256, where Extend A >= 0)
+*	236		11101100	iiiiiiii		UNASSIGNED
 *	237		11101101	iiiiiiii		Jump #iiiiiiii (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)
 *	238		11101110	iiiiiiii		Pop and Jump 0n True #iiiiiiii (+ Extend B * 256, where Extend B >= 0)
 *	239		11101111	iiiiiiii		Pop and Jump 0n False #iiiiiiii (+ Extend B * 256, where Extend B >= 0)
@@ -89,7 +89,8 @@ Instance Variables (inherited)
 	251		11111011 	kkkkkkkk	jjjjjjjj		Push Temp At kkkkkkkk In Temp Vector At: jjjjjjjj
 	252		11111100 	kkkkkkkk	jjjjjjjj		Store Temp At kkkkkkkk In Temp Vector At: jjjjjjjj
 	253		11111101 	kkkkkkkk	jjjjjjjj		Pop and Store Temp At kkkkkkkk In Temp Vector At: jjjjjjjj
-	254-255	1111111i	xxxxxxxx	yyyyyyyy	UNASSIGNED
+	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)
+	255		11111111	xxxxxxxx	yyyyyyyy	UNASSIGNED
 
 (1) Bytecode 235 is a super send bytecode that starts the lookup in the superclass of some class.  It has two forms, ""norma;"" and ""directed"". In the normal form, the class is the value of the method's methodClassAssociation which must be the last literal.  In the directed form the class is the class on top of stack.
 
@@ -692,6 +693,28 @@ EncoderForSistaV1 class >> unusedBytecode [
 ]
 
 { #category : #'bytecode generation' }
+EncoderForSistaV1 >> genBranchIfNotInstanceOf: literalIndex distance: distance [
+	"254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
+							
+	| extendedIndex extendedDistance |
+	(literalIndex < 0 or: [literalIndex > 65535]) ifTrue:
+		[^self outOfRangeError: 'index' index: literalIndex range: 0 to: 65536].
+	(distance < 1 or: [distance > 32767]) ifTrue:
+		[^self outOfRangeError: 'distance' index: distance range: 0 to: 32767].
+	(extendedIndex := literalIndex) > 255 ifTrue:
+		[self genUnsignedSingleExtendA: extendedIndex // 256.
+		 extendedIndex := extendedIndex \\ 256].
+	(extendedDistance := distance - 1) > 254 ifTrue:
+		[self genUnsignedSingleExtendB: (distance bitShift: -8).
+		extendedDistance := distance bitAnd: 255].
+	
+	stream
+		nextPut: 236;
+		nextPut: extendedIndex;
+		nextPut: extendedDistance
+]
+
+{ #category : #'bytecode generation' }
 EncoderForSistaV1 >> genBranchPopFalse: distance [
 	(distance > 0 and: [distance < 9]) ifTrue:
 		["192-199	11000 iii			Pop and Jump 0n False iii + 1 (i.e., 1 through 8)"
@@ -1260,21 +1283,6 @@ EncoderForSistaV1 >> genStoreTemp: tempIndex [
 EncoderForSistaV1 >> genTrap [
 	"217		11011001			Unconditionnal trap"
 	stream nextPut: 217
-]
-
-{ #category : #'bytecode generation' }
-EncoderForSistaV1 >> genTrapIfNotInstanceOf: literalIndex [
-	"*	236		11101100	iiiiiiii		Trap If Not Instance Of Behavior/Array Of Behavior #iiiiiiii (+ Extend A * 256, where Extend A >= 0)"
-
-	| extendedIndex |
-	(literalIndex < 0 or: [literalIndex > 65535]) ifTrue:
-		[^self outOfRangeError: 'index' index: literalIndex range: 0 to: 65536].
-	(extendedIndex := literalIndex) > 255 ifTrue:
-		[self genUnsignedSingleExtendA: extendedIndex // 256.
-		 extendedIndex := extendedIndex \\ 256].
-	stream
-		nextPut: 236;
-		nextPut: extendedIndex
 ]
 
 { #category : #'bytecode generation' }
