@@ -704,7 +704,7 @@ EncoderForSistaV1 >> genBranchIfNotInstanceOf: literalIndex distance: distance [
 	(extendedIndex := literalIndex) > 255 ifTrue:
 		[self genUnsignedSingleExtendA: extendedIndex // 256.
 		 extendedIndex := extendedIndex \\ 256].
-	(extendedDistance := distance - 1) > 254 ifTrue:
+	(extendedDistance := distance) > 255 ifTrue:
 		[self genUnsignedSingleExtendB: (distance bitShift: -8).
 		extendedDistance := distance bitAnd: 255].
 	
