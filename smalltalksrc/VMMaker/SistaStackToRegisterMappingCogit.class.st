@@ -246,34 +246,27 @@ SistaStackToRegisterMappingCogit >> fillInOPICHeader: pic size: size numArgs: nu
 ]
 
 { #category : #'bytecode generators' }
-SistaStackToRegisterMappingCogit >> genExtTrapIfNotInstanceOfBehaviorsBytecode [
-	"SistaV1: *	236		11101100	iiiiiiii		Trap If Not Instance Of Behavior/Array Of Behavior #iiiiiiii (+ Extend A * 256, where Extend A >= 0)"
-	| reg litIndex literal branches label numBranches |
-	<var: #branches type: #'AbstractInstruction **'>
-	reg := self ssStorePop: true toPreferredReg: ReceiverResultReg.
-	reg ~= ReceiverResultReg ifTrue:
-		[self MoveR: reg R: ReceiverResultReg].
-	optStatus isReceiverResultRegLive: false.
-	litIndex := extA * 256 + byte1.
+SistaStackToRegisterMappingCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
+	"SistaV1: *	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
+								
+	| reg literal distance targetFixUp |
+	
+	reg := self allocateOneRegister.
+	self ssTop popToReg: reg.
+	
+	literal := self getLiteral: (extA * 256 + byte1).
 	extA := 0.
-	literal := self getLiteral: litIndex.
-	"Allow an extra branch for Spur, which may have two tag patterns for SmallInteger"
-	numBranches := (objectMemory isArrayNonImm: literal)
-						ifTrue: [(objectMemory numSlotsOf: literal) + 1]
-						ifFalse: [2].
-	branches := self alloca: numBranches type: (self cCode: [#'AbstractInstruction *'] inSmalltalk: [backEnd class]).
-	numBranches := (objectMemory isArrayNonImm: literal)
-						ifTrue: [objectRepresentation branchIfInstanceOfBehaviors: literal branches: branches]
-						ifFalse: [objectRepresentation branchIfInstanceOfBehavior: literal branches: branches].
-	"Only flush the stack if the class trap traps.  Use ssFlushNoUpdateTo: so we continue compiling as if
-	 the stack had not been flushed.  Control does not return after the ceClassTrapTrampoline call."
-	self ssFlushNoUpdateTo: simStackPtr.
-	self CallRT: ceTrapTrampoline.
-	label := self Label.
-	self annotateBytecode: label.
-	0 to: numBranches - 1 do:
-		[:i|
-		(branches at: i) jmpTarget: label].
+	distance := extB * 256 + byte2.
+	extB := 0.
+	
+	targetFixUp := (self ensureFixupAt: bytecodePC + 3 + distance - initialPC) asUnsignedInteger.
+		
+	(objectMemory isArrayNonImm: literal)
+		ifTrue: [objectRepresentation branchIf: reg notInstanceOfBehaviors: literal target: targetFixUp]
+		ifFalse: [objectRepresentation branchIf: reg notInstanceOfBehavior: literal target: targetFixUp].
+						
+	self genPopStackBytecode.
+	
 	^0
 ]
 
