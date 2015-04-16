@@ -19,6 +19,7 @@ Class {
 		'ArithmeticShiftRightCqR',
 		'ArithmeticShiftRightRR',
 		'Call',
+		'CallFull',
 		'ClassReg',
 		'CmpCqR',
 		'CmpCwR',
@@ -58,6 +59,7 @@ Class {
 		'JumpFPNotEqual',
 		'JumpFPOrdered',
 		'JumpFPUnordered',
+		'JumpFull',
 		'JumpGreater',
 		'JumpGreaterOrEqual',
 		'JumpLess',
@@ -190,7 +192,14 @@ CogRTLOpcodes class >> initialize [
 	Not all of the definitions in opcodeDefinitions below are implemented.  In particular we do not implement the
 	 XowrR scaled index addressing mode since it requires 4 operands.
 
-	Note that there are no generic division instructions defined, but a processor may define some."
+	Note that there are no generic division instructions defined, but a processor may define some.
+
+	Branch/Call ranges.  Jump[Cond] can be generated as short as possible.  Call/Jump[Cond]Long must be generated
+	in the same number of bytes irrespective of displacement since their targets may be updated, but they need only
+	span 16Mb, the maximum size of the code zone.  This allows e.g. ARM to use single-word call and jump instructions
+	for most calls and jumps.  CallFull/JumpFull must also be generated in the same number of bytes irrespective of
+	displacement for the same reason, but they must be able to span the full (32-bit or 64-bit) address space because
+	they are used to call code in the C runtime, which may be distant from the code zone."
 
 	| opcodeNames refs |
 	self flag: 'GPRegMin and GPRegMax are poorly thought-out and should instead defer to the backEnd for allocateable registers.'.
@@ -233,18 +242,20 @@ CogRTLOpcodes class >> initialize [
 						Nop
 
 						"Control"
-						Call
+						Call					"call within the code zone"
+						CallFull				"call anywhere within the full address space"
 						RetN
 						JumpR				"Not a regular jump, i.e. not pc dependent."
 						Stop				"Halt the processor"
 
-						"N.B.  Jumps are contiguous.  Long jumps are contigiuous within them.  See FirstJump et al below"
-						JumpLong
-						JumpLongZero		"a.k.a. JumpLongEqual"
-						JumpLongNonZero	"a.k.a. JumpLongNotEqual"
-						Jump
-						JumpZero			"a.k.a. JumpEqual"
-						JumpNonZero		"a.k.a. JumpNotEqual"
+						"N.B.  Jumps are contiguous.  Long and Full jumps are contigiuous within them.  See FirstJump et al below"
+						JumpFull			"Jump anywhere within the address space"
+						JumpLong			"Jump anywhere within the 16mb code zone."
+						JumpLongZero			"a.k.a. JumpLongEqual"
+						JumpLongNonZero		"a.k.a. JumpLongNotEqual"
+						Jump				"short jumps; can be encoded in as few bytes as possible; will not be disturbed by GC or relocation."
+						JumpZero				"a.k.a. JumpEqual"
+						JumpNonZero			"a.k.a. JumpNotEqual"
 						JumpNegative
 						JumpNonNegative
 						JumpOverflow
@@ -320,7 +331,7 @@ CogRTLOpcodes class >> initialize [
 			at: classVarName put: value].
 
 	"For CogAbstractInstruction>>isJump etc..."
-	FirstJump := JumpLong.
+	FirstJump := JumpFull.
 	LastJump := JumpFPUnordered.
 	FirstShortJump := Jump.
 
@@ -335,7 +346,7 @@ CogRTLOpcodes class >> nameForOpcode: opcode [ "<Integer>"
 		[:opcodeName|
 		((opcodeName beginsWith: 'First')
 		 or: [opcodeName beginsWith: 'Last'])
-			ifTrue: [#(JumpLong JumpBelowOrEqual Jump) detect: [:k| (classPool at: k) = opcode]]
+			ifTrue: [#(JumpFull JumpLong JumpBelowOrEqual Jump) detect: [:k| (classPool at: k) = opcode]]
 			ifFalse: [opcodeName]]
 ]
 
