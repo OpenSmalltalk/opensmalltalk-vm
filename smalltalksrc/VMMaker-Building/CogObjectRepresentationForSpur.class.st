@@ -560,7 +560,7 @@ CogObjectRepresentationForSpur >> genSetSmallIntegerTagsIn: scratchReg [
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: valueReg scratchReg: scratchReg [
+CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: valueReg scratchReg: scratchReg inFrame: inFrame [
 	"Generate the code for a store check of valueReg into destReg."
 	| jmpImmediate jmpDestYoung jmpSourceOld jmpAlreadyRemembered mask rememberedBitByteOffset |
 	<var: #jmpImmediate type: #'AbstractInstruction *'>
@@ -592,11 +592,20 @@ CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: va
 	jmpAlreadyRemembered := cogit JumpNonZero: 0.
 	"Remembered bit is not set.  Call store check to insert dest into remembered table."
 	self assert: destReg == ReceiverResultReg.
-	cogit
-		CallRT: ceStoreCheckTrampoline
-		registersToBeSavedMask: (((cogit registerMaskFor: valueReg)
-										bitOr: cogit callerSavedRegMask)
-										bitClear: (cogit registerMaskFor: ReceiverResultReg)).
+	inFrame
+		ifTrue:
+			[cogit
+				CallRT: ceStoreCheckTrampoline
+				registersToBeSavedMask: (((cogit registerMaskFor: valueReg)
+												bitOr: cogit callerSavedRegMask)
+												bitClear: (cogit registerMaskFor: ReceiverResultReg))]
+		ifFalse:
+			[cogit backEnd saveAndRestoreLinkRegAround:
+				[cogit
+					CallRT: ceStoreCheckTrampoline
+					registersToBeSavedMask: (((cogit registerMaskFor: valueReg)
+													bitOr: cogit callerSavedRegMask)
+													bitClear: (cogit registerMaskFor: ReceiverResultReg))]].
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
 	(jmpSourceOld jmpTarget:
@@ -620,7 +629,17 @@ CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index 
 		   Mw: index * objectMemory wordSize + objectMemory baseHeaderSize
 		   r: destReg.
 	"now the check"
-	^self genStoreCheckReceiverReg: destReg valueReg: sourceReg scratchReg: scratchReg
+	^self genStoreCheckReceiverReg: destReg valueReg: sourceReg scratchReg: scratchReg inFrame: true
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg inFrame: inFrame [
+	"do the store"
+	cogit MoveR: sourceReg
+		   Mw: index * objectMemory wordSize + objectMemory baseHeaderSize
+		   r: destReg.
+	"now the check"
+	^self genStoreCheckReceiverReg: destReg valueReg: sourceReg scratchReg: scratchReg inFrame: inFrame
 ]
 
 { #category : #'compile abstract instructions' }

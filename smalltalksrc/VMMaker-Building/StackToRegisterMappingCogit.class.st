@@ -1834,6 +1834,7 @@ StackToRegisterMappingCogit >> genFramelessStorePop: popBoolean ReceiverVariable
 		slotIndex: slotIndex
 		destReg: ReceiverResultReg
 		scratchReg: TempReg
+		inFrame: false
 ]
 
 { #category : #'bytecode generator support' }
@@ -3322,6 +3323,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 		slotIndex: ValueIndex
 		destReg: ReceiverResultReg
 		scratchReg: TempReg
+		inFrame: needsFrame
 ]
 
 { #category : #'bytecode generator support' }
@@ -3357,7 +3359,8 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextReceiverVaria
 		genStoreSourceReg: ClassReg
 		slotIndex: slotIndex
 		destReg: ReceiverResultReg
-		scratchReg: TempReg.
+		scratchReg: TempReg
+		inFrame: true.
 	jmpDone jmpTarget: self Label.
 	^0
 ]
@@ -3400,6 +3403,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 		slotIndex: slotIndex
 		destReg: ReceiverResultReg
 		scratchReg: TempReg
+		inFrame: true
 ]
 
 { #category : #'bytecode generator support' }
@@ -3446,6 +3450,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At:
 		slotIndex: slotIndex
 		destReg: ReceiverResultReg
 		scratchReg: TempReg
+		inFrame: needsFrame
 ]
 
 { #category : #'bytecode generator support' }
@@ -3483,7 +3488,7 @@ StackToRegisterMappingCogit >> genTrinaryInlinePrimitive: prim [
 		[0] ->	[ adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
 				adjust ~= 0 ifTrue: [ self AddCq: adjust R: ra1. ]. 
 				self MoveR: ra2 Xwr: ra1 R: rr.
-				objectRepresentation genStoreCheckReceiverReg: rr valueReg: ra2 scratchReg: TempReg].
+				objectRepresentation genStoreCheckReceiverReg: rr valueReg: ra2 scratchReg: TempReg inFrame: true].
 		[1] ->	[ objectRepresentation genConvertSmallIntegerToIntegerInReg: ra2.
 				adjust := objectMemory baseHeaderSize - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
 				self AddCq: adjust R: ra1.
