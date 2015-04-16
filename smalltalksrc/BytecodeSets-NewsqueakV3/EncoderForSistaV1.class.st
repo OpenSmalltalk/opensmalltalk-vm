@@ -1315,6 +1315,15 @@ EncoderForSistaV1 >> genUnsignedSingleExtendB: extendedIndex [
 		nextPut: extendedIndex
 ]
 
+{ #category : #'special literal encodings' }
+EncoderForSistaV1 >> isSpecialLiteralForPush: literal [
+	^literal == false
+	  or: [literal == true
+	  or: [literal == nil
+	  or: [(literal isInteger and: [literal between: -32768 and: 32767])
+	  or: [(literal isCharacter and: [literal asInteger between: 0 and: 65535])]]]]
+]
+
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> supportsClosureOpcodes [
 	^true
