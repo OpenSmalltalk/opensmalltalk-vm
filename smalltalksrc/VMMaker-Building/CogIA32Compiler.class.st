@@ -208,8 +208,10 @@ CogIA32Compiler >> computeMaximumSize [
 		[XCHGRR]				-> [^maxSize := 2].
 		"Control"
 		[Call]					-> [^maxSize := 5].
+		[CallFull]				-> [^maxSize := 5].
 		[JumpR]					-> [^maxSize := 2].
 		[Jump]					-> [self resolveJumpTarget. ^maxSize := 5].
+		[JumpFull]				-> [self resolveJumpTarget. ^maxSize := 5].
 		[JumpLong]				-> [self resolveJumpTarget. ^maxSize := 5].
 		[JumpZero]				-> [self resolveJumpTarget. ^maxSize := 6].
 		[JumpNonZero]			-> [self resolveJumpTarget. ^maxSize := 6].
@@ -2137,7 +2139,9 @@ CogIA32Compiler >> dispatchConcretize [
 		[XCHGRR]				-> [^self concretizeXCHGRR].
 		"Control"
 		[Call]					-> [^self concretizeCall].
+		[CallFull]				-> [^self concretizeCall].
 		[JumpR]					-> [^self concretizeJumpR].
+		[JumpFull]				-> [^self concretizeJumpLong].
 		[JumpLong]				-> [^self concretizeJumpLong].
 		[JumpLongZero]		-> [^self concretizeConditionalJumpLong: 16r4].
 		[JumpLongNonZero]	-> [^self concretizeConditionalJumpLong: 16r5].
@@ -3036,7 +3040,7 @@ CogIA32Compiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 												ifTrue: [5]
 												ifFalse: [6]]]
 							ifFalse:
-								[opcode = JumpLong
+								[(opcode = JumpLong or: [opcode = JumpFull])
 									ifTrue: [5]
 									ifFalse: [6]]
 ]

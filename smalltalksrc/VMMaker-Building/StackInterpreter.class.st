@@ -4883,10 +4883,10 @@ StackInterpreter >> enclosingObjectAt: depth withObject: methodReceiver withMixi
 		self deny: (targetMixin = objectMemory nilObject).
 		mixinApplication := self
 							findApplicationOfTargetMixin: targetMixin
-							startingAtBehavior: (self fetchClassOf: enclosingObject).
+							startingAtBehavior: (objectMemory fetchClassOf: enclosingObject).
 		self deny: (mixinApplication = objectMemory nilObject).
-		enclosingObject := self followObjField: EnclosingObjectIndex ofObject: mixinApplication.	
-		targetMixin := self followObjField: EnclosingMixinIndex ofObject: targetMixin].
+		enclosingObject := objectMemory followObjField: EnclosingObjectIndex ofObject: mixinApplication.	
+		targetMixin := objectMemory followObjField: EnclosingMixinIndex ofObject: targetMixin].
 	
 	^enclosingObject
 ]

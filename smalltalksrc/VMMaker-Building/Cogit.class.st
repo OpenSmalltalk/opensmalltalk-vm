@@ -1336,6 +1336,20 @@ Cogit >> Call: callTarget [
 	^self gen: Call operand: callTarget
 ]
 
+{ #category : #'abstract instructions' }
+Cogit >> CallFull: jumpTarget [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: CallFull operand: jumpTarget
+]
+
+{ #category : #'method map' }
+Cogit >> CallFullRT: callTarget [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self annotateCall: (self CallFull: callTarget)
+]
+
 { #category : #'method map' }
 Cogit >> CallNewspeakSend: callTarget [
 	<returnTypeC: #'AbstractInstruction *'>
@@ -1344,6 +1358,9 @@ Cogit >> CallNewspeakSend: callTarget [
 
 { #category : #'method map' }
 Cogit >> CallRT: callTarget [
+	"Big assumption here that calls and jumps look the same as regards their displacement.
+	 This works on x86 and I think on ARM."
+	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self annotateCall: (self Call: callTarget)
 ]
@@ -1552,6 +1569,22 @@ Cogit >> JumpFPNotEqual: jumpTarget [
 	<var: #jumpTarget type: #'void *'>
 	<inline: false>
 	^backEnd genJumpFPNotEqual: jumpTarget
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> JumpFull: jumpTarget [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: JumpFull operand: jumpTarget
+]
+
+{ #category : #'method map' }
+Cogit >> JumpFullRT: callTarget [
+	"Big assumption here that calls and jumps look the same as regards their displacement.
+	 This works on x86 and I think on ARM."
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self annotateCall: (self JumpFull: callTarget)
 ]
 
 { #category : #'abstract instructions' }
@@ -4009,7 +4042,7 @@ Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrCo
 		regOrConst0 < 0
 			ifTrue: [backEnd genPassReg: regOrConst0 asArgument: 0]
 			ifFalse: [backEnd genPassConst: regOrConst0 asArgument: 0]].
-	self CallRT: (self cCode: [aRoutine asUnsignedInteger]
+	self CallFullRT: (self cCode: [aRoutine asUnsignedInteger]
 					   inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
 	resultRegOrNil ifNotNil:
 		[backEnd genWriteCResultIntoReg: resultRegOrNil].
@@ -4032,13 +4065,13 @@ Cogit >> compileClosedPICPrototype [
 	self compilePICAbort: numArgs.
 	jumpNext := self compileCPICEntry.
 	self MoveCw: 16r5EAF00D R: SendNumArgsReg.
-	self JumpLong: 16r5EEDCA5E.
+	self JumpLong: methodZoneBase + 16rCA5E10.
 	jumpNext jmpTarget: (endCPICCase0 := self Label).
 	1 to: numPICCases - 1 do:
 		[:h|
 		self CmpCw: 16rBABE1F15+h R: TempReg.
 		self MoveCw: 16rBADA550 + h R: SendNumArgsReg.
-		self JumpLongZero: 16rBEDCA5E0.
+		self JumpLongZero: 16rCA5E10 + (h * 16).
 		h = 1 ifTrue:
 			[endCPICCase1 := self Label]].
 	self MoveCw: 16rAB5CE55 R: ClassReg.
@@ -4762,6 +4795,11 @@ Cogit >> findMapLocationForMcpc: targetMcpc inMethod: cogMethod [
 								ifFalse: [mapByte bitAnd: DisplacementMask])].
 		 mcpc >= targetMcpc ifTrue:
 			[self assert: mcpc = targetMcpc.
+			 annotation = IsDisplacementX2N ifTrue:
+				[map := map - 1.
+				 mapByte := objectMemory byteAt: map.
+				 annotation := mapByte >> AnnotationShift.
+				 self assert: annotation > IsAnnotationExtension].
 			 ^map].
 		 map := map - 1].
 	^0
