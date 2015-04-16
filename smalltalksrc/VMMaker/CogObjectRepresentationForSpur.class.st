@@ -903,6 +903,7 @@ CogObjectRepresentationForSpur >> maybeMarkCounters: theCounters [
 { #category : #'sista support' }
 CogObjectRepresentationForSpur >> mixed: numNonImmediates branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
 	| jmpImmediate jumps label numCases classObj index |
+	<var: #jumps type: #'AbstractInstruction **'>
 	numCases := objectMemory numSlotsOf: arrayObj.
 	cogit MoveR: reg R: TempReg.
 	jmpImmediate := self genJumpImmediateInScratchReg: TempReg.
@@ -945,8 +946,9 @@ CogObjectRepresentationForSpur >> mixed: numNonImmediates branchIf: reg notInsta
 { #category : #'sista support' }
 CogObjectRepresentationForSpur >> noneImmediateBranchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
 	"All classes in arrayObj are not immediate"
-	<inline: true>
 	| label numJumps jumps classObj |
+	<inline: true>
+	<var: #jumps type: #'AbstractInstruction **'>
 	cogit MoveR: reg R: TempReg.
 	jumps := self alloca: (objectMemory numSlotsOf: arrayObj) type: (self cCode: [#'AbstractInstruction *'] inSmalltalk: [cogit backEnd class])..
 	(self genJumpImmediateInScratchReg: TempReg) jmpTarget: targetFixUp.
