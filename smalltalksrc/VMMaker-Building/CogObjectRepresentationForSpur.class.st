@@ -33,6 +33,54 @@ CogObjectRepresentationForSpur >> allocateNPinnedSlots: nSlots [
 		ifNotNil: [objOop + objectMemory baseHeaderSize]
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> branchIf: reg notInstanceOfBehavior: classObj target: targetFixUp [
+	"Generate a branch if reg is an instance of classObj, otherwise fall-
+	 through. Cannot change the value of reg (may be used afterwards)."
+	| classIndex |
+	<inline: true>
+	<var: #jmpImmediate type: #'AbstractInstruction *'>
+	classIndex := objectMemory classTagForClass: classObj.
+	(objectMemory isImmediateClass: classObj)
+		ifTrue:
+			[self branchIf: reg hasNotImmediateTag: classIndex target: targetFixUp ]
+		ifFalse:
+			[cogit MoveR: reg R: TempReg.
+			(self genJumpImmediateInScratchReg: TempReg) jmpTarget: targetFixUp.
+			 self genGetClassIndexOfNonImm: reg into: TempReg.
+			 self genCmpClassIndex: classIndex R: TempReg.
+			 cogit JumpNonZero: targetFixUp ].
+	^0
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
+	"Generate a branch if reg is an instance of any of the classes in arrayObj,
+	 otherwise fall-through. reg should not be edited."
+	
+	| allImmediate noneImmediate immediateMask numNonImmediates classObj |
+	<inline: true>
+	
+	"let me tell you all about it, let me falsify"
+	allImmediate := true. noneImmediate := true. immediateMask := 0. numNonImmediates := 0.
+	0 to: (objectMemory numSlotsOf: arrayObj) - 1 do:
+		[:i|
+		 classObj := objectMemory fetchPointer: i ofObject: arrayObj.
+		 (objectMemory isImmediateClass: classObj)
+			ifTrue:
+				[noneImmediate := false.
+				 immediateMask := immediateMask + (objectMemory classTagForClass: classObj)]
+			ifFalse:
+				[allImmediate := false.
+				 numNonImmediates := numNonImmediates + 1]].
+
+	noneImmediate ifTrue: [ ^ self noneImmediateBranchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp ].
+
+	allImmediate ifTrue: [ ^ self allImmediate: immediateMask branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp ].
+
+	^ self mixed: numNonImmediates branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> cacheTagIsMarked: cacheTag [
 	"Answer if the cacheTag is not unmarked, i.e. answer true for compact class
@@ -531,6 +579,13 @@ CogObjectRepresentationForSpur >> genJumpNotCharacterInScratchReg: reg [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genJumpNotImmediateInScratchReg: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit AndCq: objectMemory tagMask R: aRegister.
+	^cogit JumpZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genLoadSlot: index sourceReg: sourceReg destReg: destReg [
 	cogit
 		MoveMw: index * objectMemory wordSize + objectMemory baseHeaderSize
@@ -843,6 +898,69 @@ CogObjectRepresentationForSpur >> maybeMarkCounters: theCounters [
 	<inline: true>
 	theCounters ~= 0 ifTrue:
 		[objectMemory markAndTrace: theCounters - objectMemory baseHeaderSize]
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> mixed: numNonImmediates branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
+	| jmpImmediate jumps label numCases classObj index |
+	numCases := objectMemory numSlotsOf: arrayObj.
+	cogit MoveR: reg R: TempReg.
+	jmpImmediate := self genJumpImmediateInScratchReg: TempReg.
+	
+	"Rcvr is non immediate"
+	jumps := self alloca: numNonImmediates type: (self cCode: [#'AbstractInstruction *'] inSmalltalk: [cogit backEnd class])..
+	self genGetClassIndexOfNonImm: reg into: TempReg.
+	index := 0.
+	0 to: numCases - 1 do:
+		[:i|
+			classObj := objectMemory fetchPointer: i ofObject: arrayObj.
+			(objectMemory isImmediateClass: classObj) ifFalse: [
+				self genCmpClassIndex: (objectMemory classTagForClass: classObj) R: TempReg.
+				jumps at: index put: (cogit JumpZero: 0).
+				index := index + 1 ] ].
+	cogit Jump: targetFixUp.
+	
+	"Rcvr is immediate"
+	jmpImmediate jmpTarget: cogit Label.
+	numCases - numNonImmediates "num Immediates allowed"
+		caseOf:
+		{[ 1 ] -> [ "1 immediate allowed. jump to targetFixUp if the rcvr is not this immediate"
+			0 to: numCases - 1 do:
+				[ :j |
+				classObj := objectMemory fetchPointer: j ofObject: arrayObj.
+				(objectMemory isImmediateClass: classObj) ifTrue: [
+					self branchIf: reg hasNotImmediateTag: (objectMemory classTagForClass: classObj) target: targetFixUp ] ] ] .
+		[ 2 ] -> [ "2 immediates allowed. On 32 bits nothing to do, all immediate are allowed, on 64 bits generates the jump to fixup for the third tag"
+				self branch2CasesIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp ] .
+		[ 3 ] -> [ "nothing to do, all immediates are allowed." ] }.
+	
+	label := self Label.
+	0 to: numNonImmediates - 1 do: [:i |
+		(jumps at: i) jmpTarget: label ].
+	
+	^ 0
+		
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> noneImmediateBranchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
+	"All classes in arrayObj are not immediate"
+	<inline: true>
+	| label numJumps jumps classObj |
+	cogit MoveR: reg R: TempReg.
+	jumps := self alloca: (objectMemory numSlotsOf: arrayObj) type: (self cCode: [#'AbstractInstruction *'] inSmalltalk: [cogit backEnd class])..
+	(self genJumpImmediateInScratchReg: TempReg) jmpTarget: targetFixUp.
+	self genGetClassIndexOfNonImm: reg into: TempReg.
+	0 to: (numJumps := objectMemory numSlotsOf: arrayObj) - 1 do:
+		[:i|
+		 classObj := objectMemory fetchPointer: i ofObject: arrayObj.
+		 self genCmpClassIndex: (objectMemory classTagForClass: classObj) R: TempReg.
+		jumps at: i put: (cogit JumpZero: 0) ].
+	cogit Jump: targetFixUp.
+	label := self Label.
+	0 to: numJumps do: [:i |
+		(jumps at: i) jmpTarget: label ].
+	
 ]
 
 { #category : #'calling convention' }

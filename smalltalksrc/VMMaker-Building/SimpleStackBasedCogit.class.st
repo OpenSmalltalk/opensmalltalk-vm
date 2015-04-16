@@ -229,7 +229,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(2 235 235 genExtSendSuperBytecode isMapped)
 
 		"sista bytecodes"
-		(2 236 236 genExtTrapIfNotInstanceOfBehaviorsBytecode isMapped)
+		(2 236 236 unknownBytecode)
 
 		"jumps"
 		(2 237 237 genExtUnconditionalJump	branch isMapped "because of interrupt check" v4:Long:Branch:Distance:)
@@ -254,7 +254,9 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(3 252 252 genStoreRemoteTempLongBytecode)
 		(3 253 253 genStoreAndPopRemoteTempLongBytecode)
 
-		(3 254 255	unknownBytecode))
+		(3 254 254	genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode)
+			
+		(3 255 255	unknownBytecode))
 ]
 
 { #category : #'class initialization' }
