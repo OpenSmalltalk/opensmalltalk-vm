@@ -709,7 +709,7 @@ EncoderForSistaV1 >> genBranchIfNotInstanceOf: literalIndex distance: distance [
 		extendedDistance := distance bitAnd: 255].
 	
 	stream
-		nextPut: 236;
+		nextPut: 254;
 		nextPut: extendedIndex;
 		nextPut: extendedDistance
 ]
