@@ -772,12 +772,12 @@ StackToRegisterMappingCogit >> allocateOneRegister [
 ]
 
 { #category : #'simulation stack' }
-StackToRegisterMappingCogit >> allocateRegisterNotConflictingWith: registerMask [
+StackToRegisterMappingCogit >> allocateRegisterNotConflictingWith: regMask [
 	| reg |
 	"if there's a free register, use it"
-	reg := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: registerMask).
-	reg ifNil: "No free register, choose one that does not conflict with registerMask"
-		[reg := self freeRegisterNotConflictingWith: registerMask].
+	reg := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: regMask).
+	reg ifNil: "No free register, choose one that does not conflict with regMask"
+		[reg := self freeRegisterNotConflictingWith: regMask].
 	reg = ReceiverResultReg ifTrue: "If we've allocated RcvrResultReg, it's not live anymore"
 		[ optStatus isReceiverResultRegLive: false ].
 	^ reg
@@ -1356,9 +1356,9 @@ StackToRegisterMappingCogit >> fixupAt: index [
 ]
 
 { #category : #'simulation stack' }
-StackToRegisterMappingCogit >> freeRegisterNotConflictingWith: registerMask [
-	"Spill the closest register on stack not conflicting with registerMask. 
-	Assertion Failure if registerMask has already all the registers"
+StackToRegisterMappingCogit >> freeRegisterNotConflictingWith: regMask [
+	"Spill the closest register on stack not conflicting with regMask. 
+	Assertion Failure if regMask has already all the registers"
 	<var: #desc type: #'CogSimStackEntry *'>
 	| reg index |
 	index := simSpillBase max: 0.
@@ -1366,7 +1366,7 @@ StackToRegisterMappingCogit >> freeRegisterNotConflictingWith: registerMask [
 		[ | desc |
 		 desc := self simStackAt: index.
 		 desc type = SSRegister ifTrue:
-			[ (registerMask anyMask: (self registerMaskFor: desc register)) ifFalse: 
+			[ (regMask anyMask: (self registerMaskFor: desc register)) ifFalse: 
 				[ reg := desc register ] ].
 		 index := index + 1].
 	self assert: reg notNil.
