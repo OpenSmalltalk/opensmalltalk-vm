@@ -967,12 +967,9 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 	fixup := self fixupAt: bytecodePC - initialPC.
 	fixup targetInstruction asUnsignedInteger > 0
 		ifTrue:
-			[deadCode := false.
-	 		 fixup targetInstruction asUnsignedInteger >= 2 ifTrue:
-				[self merge: fixup
-					afterContinuation: (descriptor notNil
-										and: [descriptor isUnconditionalBranch
-											or: [descriptor isReturn]]) not]]
+			[fixup targetInstruction asUnsignedInteger >= 2 ifTrue:
+				[self merge: fixup afterContinuation: deadCode not].
+			deadCode := false]
 		ifFalse: "If there's no fixup following a return there's no jump to that code and it is dead."
 			[(descriptor notNil and: [descriptor isReturn]) ifTrue:
 				[deadCode := true]].
@@ -1454,12 +1451,12 @@ StackToRegisterMappingCogit >> genBinaryInlineComparison: opTrue opFalse: opFals
 				ifTrue: "The next instruction is dead.  we can skip it."
 					[deadCode := true.
 				 	 self ensureFixupAt: targetBytecodePC - initialPC.
-					 self ensureFixupAt: postBranchPC - initialPC]
+					 self ensureFixupAt: postBranchPC - initialPC ]
 				ifFalse:
 					[self ssPushConstant: objectMemory trueObject]. "dummy value"
 			self gen: (branchDescriptor isBranchTrue ifTrue: [opTrue] ifFalse: [opFalse])
-				operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-			self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC)]
+				operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger. 
+			deadCode ifFalse: [ self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC) ] ]
 		ifFalse: "This is the path where the inlined comparison is *not* followed immediately by a branch"
 			[| condJump jump |
 			condJump := self gen: opTrue operand: 0.
@@ -3275,7 +3272,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 			[self ssPushConstant: objectMemory trueObject]. "dummy value"
 	self gen: (branchDescriptor isBranchTrue ifTrue: [JumpZero] ifFalse: [JumpNonZero])
 		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-	self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
+		deadCode ifFalse: [self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC)].
 	^0
 ]
 

@@ -618,6 +618,11 @@ CurrentImageCoInterpreterFacade >> lookupAddress: address [
 		ifFalse: [thing asString]) contractTo: 64
 ]
 
+{ #category : #'frame access' }
+CurrentImageCoInterpreterFacade >> marryFrameCopiesTemps [
+	^ false
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> memory [
 	^memory
