@@ -3379,6 +3379,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 		slotIndex: ValueIndex
 		destReg: ReceiverResultReg
 		scratchReg: TempReg
+		inFrame: needsFrame
 ]
 
 { #category : #'bytecode generator support' }
@@ -3405,7 +3406,8 @@ SimpleStackBasedCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: s
 		genStoreSourceReg: ClassReg
 		slotIndex: slotIndex
 		destReg: ReceiverResultReg
-		scratchReg: TempReg.
+		scratchReg: TempReg
+		inFrame: true.
 	jmpDone jmpTarget: self Label.
 	popBoolean ifTrue:
 		[self AddCq: objectMemory wordSize R: SPReg].
@@ -3427,6 +3429,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 		slotIndex: slotIndex
 		destReg: ReceiverResultReg
 		scratchReg: TempReg
+		inFrame: needsFrame
 ]
 
 { #category : #'bytecode generator support' }
@@ -3444,6 +3447,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remot
 		slotIndex: slotIndex
 		destReg: ReceiverResultReg
 		scratchReg: TempReg
+		inFrame: needsFrame
 ]
 
 { #category : #'bytecode generator support' }
