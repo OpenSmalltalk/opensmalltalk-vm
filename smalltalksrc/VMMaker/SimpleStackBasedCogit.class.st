@@ -1074,12 +1074,12 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 				((flags anyMask: PrimCallCollectsProfileSamples)
 					ifTrue: [cePrimReturnEnterCogCodeProfiling]
 					ifFalse: [cePrimReturnEnterCogCode]).
-			 self JumpRT: primitiveRoutine asInteger.
+			 self JumpFullRT: primitiveRoutine asInteger.
 			 primInvokeLabel := self Label.
 			 jmp := jmpSamplePrim := continuePostSamplePrim := nil]
 		ifFalse:
 			["Call the C primitive routine."
-			self CallRT: primitiveRoutine asInteger.
+			self CallFullRT: primitiveRoutine asInteger.
 			primInvokeLabel := self Label.
 			(flags anyMask: PrimCallCollectsProfileSamples) ifTrue:
 				[self assert: (flags anyMask: PrimCallNeedsNewMethod).
@@ -1131,7 +1131,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 			["Call ceCheckProfileTick: to record sample and then continue."
 			jmpSamplePrim jmpTarget: self Label.
 			self assert: (flags anyMask: PrimCallNeedsNewMethod).
-			self CallRT: (self cCode: [#ceCheckProfileTick asUnsignedLong]
+			self CallFullRT: (self cCode: [#ceCheckProfileTick asUnsignedLong]
 							   inSmalltalk: [self simulatedTrampolineFor: #ceCheckProfileTick]).
 			"reenter the post-primitive call flow"
 			self Jump: continuePostSamplePrim].
@@ -1140,7 +1140,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 		jmpSampleNonPrim jmpTarget: self Label.
 		self MoveCq: 0 R: TempReg.
 		self MoveR: TempReg Aw: coInterpreter newMethodAddress.
-		self CallRT: (self cCode: [#ceCheckProfileTick asUnsignedLong]
+		self CallFullRT: (self cCode: [#ceCheckProfileTick asUnsignedLong]
 						   inSmalltalk: [self simulatedTrampolineFor: #ceCheckProfileTick]).
 		"reenter the post-primitive call flow"
 		self Jump: continuePostSampleNonPrim].
@@ -2051,7 +2051,7 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 		 should be up-to-date.  Need to save and restore the link reg around this call."
 		 jmpSample jmpTarget: self Label.
 		 backEnd saveAndRestoreLinkRegAround:
-			[self CallRT: (self cCode: '(unsigned long)ceCheckProfileTick'
+			[self CallFullRT: (self cCode: '(unsigned long)ceCheckProfileTick'
 						inSmalltalk: [self simulatedTrampolineFor: #ceCheckProfileTick])].
 		 self Jump: continuePostSample]
 ]
@@ -3668,14 +3668,14 @@ SimpleStackBasedCogit >> rewritePrimInvocationIn: cogMethod to: primFunctionPoin
 			[address := cogMethod asUnsignedInteger
 						+ (externalPrimJumpOffsets at: cogMethod cmNumArgs).
 			extent := backEnd
-						rewriteJumpLongAt: address
+						rewriteJumpFullAt: address
 						target: (self cCode: [primFunctionPointer asUnsignedInteger]
 									inSmalltalk: [self simulatedTrampolineFor: primFunctionPointer])]
 		ifFalse:
 			[address := cogMethod asUnsignedInteger
 						+ (externalPrimCallOffsets at: cogMethod cmNumArgs).
 			extent := backEnd
-						rewriteCallAt: address
+						rewriteCallFullAt: address
 						target: (self cCode: [primFunctionPointer asUnsignedInteger]
 									inSmalltalk: [self simulatedTrampolineFor: primFunctionPointer])].
 	processor flushICacheFrom: address to: address + extent
