@@ -5061,13 +5061,13 @@ StackInterpreter >> extJumpIfNotInstanceOfBehaviorsOrPopBytecode [
 	extB := 0.
 	(objectMemory isArrayNonImm: literal)
 		ifTrue:
-			[| i |
-			 i := (objectMemory numSlotsOf: literal) asInteger.
-			 [(i := i -1) < 0
-			  or: [tosClassTag = (objectMemory rawClassTagForClass: (objectMemory fetchPointer: i ofObject: literal))]] whileTrue.
-			 i < 0 ifTrue:
-				[localIP := localIP + distance.
-				^ self fetchNextBytecode]]
+			[0 to: (objectMemory numSlotsOf: literal) asInteger - 1 do: [:i |
+				tosClassTag = (objectMemory rawClassTagForClass: (objectMemory fetchPointer: i ofObject: literal))
+					ifTrue: 
+						[ self internalPopStack.
+						^ self fetchNextBytecode ] ].
+			localIP := localIP + distance.
+				^ self fetchNextBytecode]
 		ifFalse:
 			[tosClassTag ~= (objectMemory rawClassTagForClass: literal) ifTrue:
 				[localIP := localIP + distance.
