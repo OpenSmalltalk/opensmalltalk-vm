@@ -543,7 +543,7 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 		(234		extSendBytecode)
 		(235		extSendSuperBytecode)
 
-		(236		extTrapIfNotInstanceOfBehaviorsBytecode)
+		(236		unknownBytecode)
 
 		(237		extUnconditionalJump)
 		(238		extJumpIfTrue)
@@ -567,8 +567,10 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 		(251		pushRemoteTempLongBytecode)
 		(252		storeRemoteTempLongBytecode)
 		(253		storeAndPopRemoteTempLongBytecode)
+				
+		(254		extJumpIfNotInstanceOfBehaviorsOrPopBytecode)
 
-		(254 255	unknownBytecode)
+		(255		unknownBytecode)
 	)
 ]
 
@@ -5046,6 +5048,32 @@ StackInterpreter >> extJumpIfFalse [
 	offset := byte + (extB << 8).
 	extB := 0.
 	self jumplfFalseBy: offset
+]
+
+{ #category : #'sista bytecodes' }
+StackInterpreter >> extJumpIfNotInstanceOfBehaviorsOrPopBytecode [
+	"254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
+	| tosClassTag literal distance |
+	tosClassTag := objectMemory fetchClassTagOf: self internalStackTop.
+	literal := self literal: extA << 8 + self fetchByte.
+	distance := extB << 8 + self fetchByte.
+	extA := 0.
+	extB := 0.
+	(objectMemory isArrayNonImm: literal)
+		ifTrue:
+			[| i |
+			 i := (objectMemory numSlotsOf: literal) asInteger.
+			 [(i := i -1) < 0
+			  or: [tosClassTag = (objectMemory rawClassTagForClass: (objectMemory fetchPointer: i ofObject: literal))]] whileTrue.
+			 i < 0 ifTrue:
+				[localIP := localIP + distance.
+				^ self fetchNextBytecode]]
+		ifFalse:
+			[tosClassTag ~= (objectMemory rawClassTagForClass: literal) ifTrue:
+				[localIP := localIP + distance.
+				^ self fetchNextBytecode]].
+	self internalPopStack.
+	self fetchNextBytecode
 ]
 
 { #category : #'jump bytecodes' }
@@ -12117,7 +12145,7 @@ StackInterpreter >> removeProcess: aProcess fromList: aList [
 { #category : #'sista bytecodes' }
 StackInterpreter >> respondToSistaTrap [
 	| ourContext tos |
-	<sharedCodeInCase: #extTrapIfNotInstanceOfBehaviorsBytecode>
+	<sharedCodeInCase: #unconditionnalTrapBytecode>
 	messageSelector := objectMemory splObj: SelectorSistaTrap.
 	tos := self internalPopStack.
 	ourContext := self ensureFrameIsMarried: localFP SP: localSP.
