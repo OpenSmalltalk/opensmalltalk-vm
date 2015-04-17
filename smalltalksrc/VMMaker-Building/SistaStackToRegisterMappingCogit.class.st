@@ -249,7 +249,7 @@ SistaStackToRegisterMappingCogit >> fillInOPICHeader: pic size: size numArgs: nu
 SistaStackToRegisterMappingCogit >> genDirectEqualsEqualsArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg [
 	<inline: true>
 	| label jumpEqual jumpNotEqual |
-	label := self label.
+	label := self Label.
 	unforwardArg 
 		ifFalse: [ self CmpCq: self ssTop constant R: rcvrReg ]
 		ifTrue: [ unforwardRcvr
@@ -603,21 +603,24 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	countTripped := self JumpCarry: 0.
 	self MoveR: counterReg Aw: counterAddress. "write back"
 	
-	self ssPushConstant: objectMemory trueObject. "dummy value"
 	self assert: (unforwardArg or: [ unforwardRcvr ]).
 	
 	label := self Label.
 	
 	branchDescriptor isBranchTrue ifTrue: 
-		[ fixup := self ensureNonMergeFixupAt: postBranchPC - initialPC.
+		[ self ssPop: 2.
+		fixup := self ensureNonMergeFixupAt: postBranchPC - initialPC.
 		self JumpZero: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
 		unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label  ].
-		unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ] ].
+		unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ].
+		self ssPop: -2. ].
 	branchDescriptor isBranchFalse ifTrue: 
-		[ fixup := self ensureNonMergeFixupAt: targetBytecodePC - initialPC.
+		[ self ssPop: 2.
+		fixup := self ensureNonMergeFixupAt: targetBytecodePC - initialPC.
 		self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
 		unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ].
-		unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ] ].
+		unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ].
+		self ssPop: -2. ].
 	
 	"the jump has not been taken and forwarders have been followed."
 	self SubCq: 1 R: counterReg. "Count untaken"
