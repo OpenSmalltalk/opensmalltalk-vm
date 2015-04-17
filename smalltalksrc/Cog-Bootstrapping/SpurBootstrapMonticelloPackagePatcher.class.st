@@ -523,7 +523,8 @@ SpurBootstrapMonticelloPackagePatcher >> patchAndUploadUnpatchedInTrunk [
 		[| latestBranches latestUnbranched |
 		latestBranches := self packages collect:
 							[:package|
-							(trunk versionNamesForPackageNamed: package name, '.spur') detectMax: [:vn | vn asMCVersionName versionNumber]].
+							(trunk versionNamesForPackageNamed: package name, '.spur') detectMax: [:vn | vn asMCVersionName versionNumber]]
+							thenSelect: [:branch| branch notNil].
 		latestUnbranched := latestBranches collect: [:verName| (verName copyReplaceAll: '.spur' with: '') asMCVersionName].
 		((trunk possiblyNewerVersionsOfAnyOf: latestUnbranched)
 			reject: [:unpatched| unpatched includesSubString: '.spur'])
