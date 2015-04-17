@@ -297,11 +297,8 @@ VMMaker class >> generate: interpreterClass with: optionsPairsArray to: srcDirNa
 
 { #category : #configurations }
 VMMaker class >> generateAllCogConfigurationsUnderVersionControl [
-	self generateNewspeakSpurCogVM;
-		generateSqueakCogVM;
-		generateSqueakCogMTVM;
-		generateSqueakSpurCogVM;
-		generateSqueakSpurCogSistaVM
+	self generateAllNewspeakConfigurationsUnderVersionControl;
+		generateAllSqueakConfigurationsUnderVersionControl
 ]
 
 { #category : #configurations }
@@ -313,6 +310,7 @@ VMMaker class >> generateAllConfigurationsUnderVersionControl [
 { #category : #configurations }
 VMMaker class >> generateAllNewspeakConfigurationsUnderVersionControl [
 	self generateNewspeakSpurStackVM;
+		generateNewspeakSpurStack64VM;
 		generateNewspeakSpurCogVM
 ]
 
@@ -346,6 +344,16 @@ VMMaker class >> generateAllSpurConfigurationsUnderVersionControl [
 		generateNewspeakSpurCogVM;
 		generateSqueakSpurCogVM;
 		generateSqueakSpurCogSistaVM
+]
+
+{ #category : #configurations }
+VMMaker class >> generateAllSqueakConfigurationsUnderVersionControl [
+	self generateSqueakCogVM;
+		generateSqueakCogMTVM;
+		generateSqueakSpurCogVM;
+		generateSqueakCogSistaVM;
+		generateSqueakSpurCogSistaVM
+
 ]
 
 { #category : #configurations }
@@ -406,6 +414,21 @@ VMMaker class >> generateNewspeakSpurCogVM [
 					UUIDPlugin UnixOSProcessPlugin UnixAioPlugin
 					VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin Win32OSProcessPlugin)
 
+]
+
+{ #category : #configurations }
+VMMaker class >> generateNewspeakSpurStack64VM [
+	"No primitives since we can use those from the Cog VM"
+	^VMMaker
+		generate: StackInterpreter
+		with: #(ObjectMemory Spur64BitMemoryManager
+				MULTIPLEBYTECODESETS true
+				NewspeakVM true
+				FailImbalancedPrimitives false
+				CheckPrivacyViolations true)
+		to: (FileDirectory default directoryNamed: self sourceTree, '/nsspurstack64src') fullName
+		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
+		including: #()
 ]
 
 { #category : #configurations }
