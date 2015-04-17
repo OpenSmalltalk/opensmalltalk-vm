@@ -59,7 +59,7 @@ FilePluginSimulator >> fileValueOf: objectPointer [
 						[interpreterProxy primitiveFail.
 						 ^nil].
 					interpreterProxy longAt: objectPointer + interpreterProxy baseHeaderSize].
-	file := openFiles at: index.
+	file := openFiles at: index ifAbsent: [ interpreterProxy primitiveFail. ^ nil ].
 	"this attempts to preserve file positions across snapshots when debugging the VM
 	 requires saving an image in full flight and pushing it over the cliff time after time..."
 	(file closed and: [states includesKey: file]) ifTrue:
