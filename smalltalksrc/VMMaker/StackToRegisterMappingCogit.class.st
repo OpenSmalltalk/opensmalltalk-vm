@@ -3249,25 +3249,29 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 
 	unforwardRcvr := (objectRepresentation isUnannotatableConstant: (self ssValue: 1)) not.
 	unforwardArg := (objectRepresentation isUnannotatableConstant: self ssTop) not.
-	
-	"Don't use ReceiverResultReg for receiver to keep ReceiverResultReg live.
-	 Optimize e.g. rcvr == nil, the common case for ifNil: et al."
-	needsFrame "If frameless, arg0 and arg1 may be live"
-		ifTrue: [argReg := Arg0Reg. rcvrReg := Arg1Reg]
-		ifFalse: [argReg := ClassReg. rcvrReg := SendNumArgsReg].
-	
+
 	"if the rcvr or the arg is an annotable constant, we need to push it to a register 
 	else the forwarder check can't jump back to the comparison after unforwarding the constant"
-	unforwardArg ifTrue: 
-		[self ssAllocateRequiredReg: argReg upThrough: simStackPtr - 1.
-		self ssTop popToReg: argReg].
-	unforwardRcvr ifTrue: 
-		[ self ssAllocateRequiredReg: rcvrReg upThrough: simStackPtr - 2.
-		(self ssValue:1) popToReg: rcvrReg.].
-	
+	unforwardArg
+		ifTrue: 
+			[unforwardRcvr
+				ifTrue:
+					[self allocateTwoRegistersInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
+					 self ssTop popToReg: argReg.
+					 (self ssValue:1) popToReg: rcvrReg]
+				ifFalse:
+					[argReg := self allocateOneRegister.
+					 self ssTop popToReg: argReg]]
+		ifFalse:
+			[self assert: unforwardRcvr.
+			 rcvrReg := self allocateOneRegister.
+			 (self ssValue:1) popToReg: rcvrReg].
+
 	label := self Label.
 	
 	"Here we can use Cq because the constant does not need to be annotated"
+	self assert: (unforwardArg not or: [argReg notNil]).
+	self assert: (unforwardRcvr not or: [rcvrReg notNil]).
 	unforwardArg 
 		ifFalse: [ self CmpCq: self ssTop constant R: rcvrReg ]
 		ifTrue: [ unforwardRcvr
@@ -3301,7 +3305,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 			 self ensureFixupAt: postBranchPC - initialPC]
 		ifFalse:
 			[self ssPushConstant: objectMemory trueObject]. "dummy value"
-	
+
 	self assert: (unforwardArg or: [ unforwardRcvr ]).
 	branchDescriptor isBranchTrue ifTrue: 
 		[ deadCode ifFalse: [ fixup := self ensureNonMergeFixupAt: postBranchPC - initialPC ].
