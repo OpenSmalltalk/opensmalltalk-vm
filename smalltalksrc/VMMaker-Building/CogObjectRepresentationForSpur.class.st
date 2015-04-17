@@ -298,33 +298,6 @@ CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg:
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch jumpBackTo: instruction [
-	"Make sure that the oop in reg is not forwarded.  This routine assumes the object will
-	 never be forwarded to an immediate, as it is used to unforward  literal variables (associations). 
-	 Use the fact that isForwardedObjectClassIndexPun is a power of two to save an instruction."
-	| skip ok |
-	<var: #ok type: #'AbstractInstruction *'>
-	<var: #skip type: #'AbstractInstruction *'>
-	<var: #loop type: #'AbstractInstruction *'>
-	self assert: reg ~= scratch.
-	cogit MoveR: reg R: scratch.
-	skip := self genJumpImmediateInScratchReg: scratch.
-	"notionally
-		self genGetClassIndexOfNonImm: reg into: scratch.
-		cogit CmpCq: objectMemory isForwardedObjectClassIndexPun R: TempReg.
-	 but the following is an instruction shorter:"
-	cogit MoveMw: 0 r: reg R: scratch.
-	cogit
-		AndCq: objectMemory classIndexMask - objectMemory isForwardedObjectClassIndexPun
-		R: scratch.
-	ok := cogit JumpNonZero:  0.
-	self genLoadSlot: 0 sourceReg: reg destReg: reg.
-	cogit Jump: instruction.
-	skip jmpTarget: (ok jmpTarget: cogit Label).
-	^0
-]
-
-{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genFetchIndexRegister: indexReg from: tableObj into: destReg [
 	"indexReg contains the 1-relative index of an element in tableObj."
 	self subclassResponsibility
@@ -786,13 +759,6 @@ CogObjectRepresentationForSpur >> inlineCacheTagsMayBeObjects [
 { #category : #'object representation' }
 CogObjectRepresentationForSpur >> isSmallIntegerTagNonZero [
 	^true
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> isUnannotatableConstant: simStackEntry [
-	<inline: true>
-	^ simStackEntry type = SSConstant 
-		and: [(self shouldAnnotateObjectReference: simStackEntry constant) not ]
 ]
 
 { #category : #'compile abstract instructions' }
