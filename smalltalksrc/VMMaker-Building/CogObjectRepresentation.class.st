@@ -12,6 +12,7 @@ Class {
 		'ceStoreCheckTrampoline'
 	],
 	#pools : [
+		'CogCompilationConstants',
 		'CogMethodConstants',
 		'CogRTLOpcodes',
 		'VMBasicConstants',
@@ -264,6 +265,13 @@ CogObjectRepresentation >> isImmediate: oop [
 { #category : #testing }
 CogObjectRepresentation >> isSmallIntegerTagNonZero [
 	self subclassResponsibility
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> isUnannotatableConstant: simStackEntry [
+	<inline: true>
+	^ simStackEntry type = SSConstant 
+		and: [(self shouldAnnotateObjectReference: simStackEntry constant) not ]
 ]
 
 { #category : #'garbage collection' }

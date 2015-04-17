@@ -517,7 +517,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 
-	(coInterpreter isOptimizedMethod: methodObj) ifTrue: [ ^ super genSpecialSelectorEqualsEquals ].
+	((coInterpreter isOptimizedMethod: methodObj) or: [needsFrame not]) ifTrue: [ ^ super genSpecialSelectorEqualsEquals ].
 
 	self ssFlushTo: simStackPtr - 2.
 	primDescriptor := self generatorAt: byte0.
@@ -585,9 +585,7 @@ SistaStackToRegisterMappingCogit >> genUnconditionalTrapBytecode [
 { #category : #initialization }
 SistaStackToRegisterMappingCogit >> generateSistaRuntime [
 	"Trap sends Sista trap message to context with top of stack, so we don't need any arguments..."
-	ceTrapTrampoline := self genTrampolineFor: #ceSistaTrap:
-									called: 'ceSistaTrapTrampoline'
-									arg: ReceiverResultReg
+	ceTrapTrampoline := self genTrampolineFor: #ceSistaTrap called: 'ceSistaTrapTrampoline'
 ]
 
 { #category : #'method introspection' }

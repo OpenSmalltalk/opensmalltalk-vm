@@ -7448,9 +7448,10 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 							nsSendCache enclosingObject: eo.
 							self markAndTraceUpdatedLiteral: eo in: (self cCoerceSimple: cogMethod to: #'CogMethod *')]]]].
 
-	(self isPureSendAnnotation: annotation) ifTrue:
+	annotation = IsNSSendCall ifTrue:
 		[self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
 			[:entryPoint :cacheTag :tagCouldBeObj | | cacheTagMarked |
+			 self assert: annotation ~= IsNSSendCall.
 			 cacheTagMarked := tagCouldBeObj and: [objectRepresentation cacheTagIsMarked: cacheTag].
 			 entryPoint > methodZoneBase
 				ifTrue: "It's a linked send."
