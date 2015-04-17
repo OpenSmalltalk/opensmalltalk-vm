@@ -2116,7 +2116,10 @@ TMethod >> removeUnusedTempsAndNilIfRequiredIn: aCodeGen [
 	locals := locals select: [:e| refs includes: e].
 	(locals notEmpty
 	 and: [(readBeforeAssigned := (self findReadBeforeAssignedIn: locals)) notEmpty]) ifTrue:
-		[readBeforeAssigned := readBeforeAssigned reject: [:v| (self declarationAt: v) beginsWith: 'extern'].
+		[readBeforeAssigned := readBeforeAssigned reject:
+			[:v| | d | "don't initialize externa and/or arrays"
+			 d := self declarationAt: v.
+			 (d beginsWith: 'extern') or: [d includes: $[]].
 		 parseTree statements addAllFirst:
 			(readBeforeAssigned asSortedCollection collect:
 				[:var|
