@@ -18,6 +18,7 @@ CogObjectRepresentationFor32BitSpur >> allImmediate: immediateMask branchIf: reg
 	cogit MoveR: reg R: TempReg.
 	jmpImmediate := self genJumpNotImmediateInScratchReg: TempReg.
 	jmpImmediate jmpTarget: targetFixUp.
+	^0
 ]
 
 { #category : #'sista support' }
