@@ -1966,26 +1966,26 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 ]
 
 { #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genMoveConstant: constant R: register [
+StackToRegisterMappingCogit >> genMoveConstant: constant R: reg [
 	<inline: true>
 	^ (objectRepresentation shouldAnnotateObjectReference: constant)
-		ifTrue: [ (self annotate: (self MoveCw: constant R: register) objRef: constant) ]
-		ifFalse: [ self MoveCq: constant R: register ]
+		ifTrue: [ (self annotate: (self MoveCw: constant R: reg) objRef: constant) ]
+		ifFalse: [ self MoveCq: constant R: reg ]
 	
 	
 ]
 
 { #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genMoveFalseR: register [
+StackToRegisterMappingCogit >> genMoveFalseR: reg [
 	<inline: true>
-	^ self genMoveConstant: objectMemory falseObject R: register
+	^ self genMoveConstant: objectMemory falseObject R: reg
 	
 ]
 
 { #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genMoveTrueR: register [
+StackToRegisterMappingCogit >> genMoveTrueR: reg [
 	<inline: true>
-	^ self genMoveConstant: objectMemory trueObject R: register
+	^ self genMoveConstant: objectMemory trueObject R: reg
 	
 ]
 
@@ -3230,6 +3230,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 	| primDescriptor nextPC nExts branchDescriptor unforwardRcvr argReg targetBytecodePC
 	unforwardArg  rcvrReg jumpNotEqual jumpEqual postBranchPC label fixup |
+	<var: #fixup type: #'BytecodeFixup *'>
 	<var: #jumpEqual type: #'AbstractInstruction *'>
 	<var: #jumpNotEqual type: #'AbstractInstruction *'>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
