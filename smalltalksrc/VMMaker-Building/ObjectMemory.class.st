@@ -5426,7 +5426,10 @@ ObjectMemory >> storeLong32: fieldIndex ofObject: oop withValue: valueWord [
 { #category : #'object access' }
 ObjectMemory >> storeLong64: longIndex ofObject: oop withValue: value [
 	<var: #value type: #sqLong>
-	^self long64At: oop + self baseHeaderSize + (longIndex << 3) put: value
+	self flag: #endianness.
+	self long32At: oop + self baseHeaderSize + (longIndex << 3) put: (self cCode: [value] inSmalltalk: [value bitAnd: 16rFFFFFFFF]);
+		long32At: oop + self baseHeaderSize + (longIndex << 3) + 4 put: (value >> 32).
+	^value
 ]
 
 { #category : #'object access' }

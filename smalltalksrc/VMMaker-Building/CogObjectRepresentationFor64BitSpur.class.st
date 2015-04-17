@@ -94,7 +94,7 @@ CogObjectRepresentationFor64BitSpur >> genFetchIndexRegister: indexReg from: tab
 	 Since BaseHeaderSize = BytesPerOop we can use it as a
 	 zero-relative index from the beginning of the object."
 	self assert: indexReg ~= destReg.
-	cogit annotate: (cogit MoveCw: tableObj R: destReg) objRef: tableObj.
+	cogit genMoveConstant: tableObj R: destReg.
 	cogit MoveXwr: indexReg R: destReg R: destReg.
 	^0
 ]

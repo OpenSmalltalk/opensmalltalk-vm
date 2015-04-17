@@ -9,7 +9,6 @@ Class {
 		'ceLargeActiveContextInBlockTrampoline'
 	],
 	#pools : [
-		'CogCompilationConstants',
 		'VMBytecodeConstants',
 		'VMSqueakClassIndices'
 	],
@@ -271,17 +270,24 @@ CogObjectRepresentationForSpur >> genEnsureObjInRegNotForwarded: reg scratchReg:
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch [
-	"Make sure that the oop in reg is not forwarded.  This routine assumes the object will
-	 never be forwarded to an immediate, as it is used to unforward  literal variables (associations). 
+	^ self 
+		genEnsureOopInRegNotForwarded: reg 
+		scratchReg: scratch 
+		jumpBackTo: cogit Label "label is just before the forwarder check"
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch ifForwarder: fwdJumpTarget ifNotForwarder: nonFwdJumpTargetOrZero [
+	"Make sure that the oop in reg is not forwarded.  
 	 Use the fact that isForwardedObjectClassIndexPun is a power of two to save an instruction."
-	| skip loop ok |
+	| skip ok finished |
+	<inline: true>
 	<var: #ok type: #'AbstractInstruction *'>
 	<var: #skip type: #'AbstractInstruction *'>
-	<var: #loop type: #'AbstractInstruction *'>
+	<var: #finished type: #'AbstractInstruction *'>
 	self assert: reg ~= scratch.
 	cogit MoveR: reg R: scratch.
 	skip := self genJumpImmediateInScratchReg: scratch.
-	loop := cogit Label.
 	"notionally
 		self genGetClassIndexOfNonImm: reg into: scratch.
 		cogit CmpCq: objectMemory isForwardedObjectClassIndexPun R: TempReg.
@@ -290,11 +296,23 @@ CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg:
 	cogit
 		AndCq: objectMemory classIndexMask - objectMemory isForwardedObjectClassIndexPun
 		R: scratch.
-	ok := cogit JumpNonZero:  0.
+	ok := cogit JumpNonZero: 0.
 	self genLoadSlot: 0 sourceReg: reg destReg: reg.
-	cogit Jump: loop.
-	skip jmpTarget: (ok jmpTarget: cogit Label).
-	^0
+	cogit Jump: fwdJumpTarget.
+	finished := nonFwdJumpTargetOrZero = 0
+		ifTrue: [ cogit Label ]
+		ifFalse: [ nonFwdJumpTargetOrZero ].
+	skip jmpTarget: (ok jmpTarget: finished)
+	
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch jumpBackTo: instruction [
+	^ self 
+		genEnsureOopInRegNotForwarded: reg 
+		scratchReg: scratch 
+		ifForwarder: instruction
+		ifNotForwarder: 0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -489,11 +507,9 @@ CogObjectRepresentationForSpur >> genInnerPrimitiveIdentical: retNoffset orNotIf
 	jumpCmp := orNot
 					ifTrue: [cogit JumpZero: 0]
 					ifFalse: [cogit JumpNonZero: 0].
-	cogit annotate: (cogit MoveCw: objectMemory trueObject R: ReceiverResultReg)
-		objRef: objectMemory trueObject.
+	cogit genMoveTrueR: ReceiverResultReg.
 	cogit RetN: retNoffset.
-	jumpCmp jmpTarget: (cogit annotate: (cogit MoveCw: objectMemory falseObject R: ReceiverResultReg)
-								objRef: objectMemory falseObject).
+	jumpCmp jmpTarget: (cogit genMoveFalseR: ReceiverResultReg).
 	cogit RetN: retNoffset.
 	^0
 ]
@@ -611,6 +627,12 @@ CogObjectRepresentationForSpur >> genSetCharacterTagsIn: reg [
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genSetSmallIntegerTagsIn: scratchReg [
 	self subclassResponsibility
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genSpecialSelectorEqualsEqualsGuts [
+	< inline: true >
+	^ cogit genSpecialSelectorEqualsEqualsWithForwarders
 ]
 
 { #category : #'compile abstract instructions' }
