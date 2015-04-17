@@ -983,7 +983,7 @@ CogObjectRepresentationForSpur >> noneImmediateBranchIf: reg notInstanceOfBehavi
 	label := self Label.
 	0 to: numJumps do: [:i |
 		(jumps at: i) jmpTarget: label ].
-	
+	^0
 ]
 
 { #category : #'calling convention' }
