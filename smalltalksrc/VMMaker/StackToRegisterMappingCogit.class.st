@@ -3195,8 +3195,8 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	primDescriptor := self generatorAt: byte0.
 	"forwarders have been followed in cog:selector:"
-	(self ssTop type = SSConstant
-	 and: [(self ssValue: 1) type = SSConstant]) ifTrue:
+	((objectRepresentation isUnannotatableConstant: self ssTop)
+		and: [ objectRepresentation isUnannotatableConstant: (self ssValue: 1) ]) ifTrue:
 		[self assert: primDescriptor isMapped not.
 		 result := self ssTop constant = (self ssValue: 1) constant
 									ifTrue: [objectMemory trueObject]
@@ -3214,10 +3214,8 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifTrue:
 		[self ssFlushTo: simStackPtr - 2].
 
-	unforwardRcvr := (self ssValue: 1) type ~= SSConstant
-						or: [objectRepresentation shouldAnnotateObjectReference: (self ssValue: 1) constant].
-	unforwardArg := self ssTop type ~= SSConstant
-						or: [objectRepresentation shouldAnnotateObjectReference: self ssTop constant].
+	unforwardRcvr := (objectRepresentation isUnannotatableConstant: (self ssValue: 1)) not.
+	unforwardArg := (objectRepresentation isUnannotatableConstant: self ssTop) not.
 
 	"Don't use ReceiverResultReg for receiver to keep ReceiverResultReg live.
 	 Optimize e.g. rcvr == nil, the common case for ifNil: et al."

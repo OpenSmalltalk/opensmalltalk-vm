@@ -517,7 +517,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 
-	(coInterpreter isOptimizedMethod: methodObj) ifTrue: [ ^ super genSpecialSelectorEqualsEquals ].
+	((coInterpreter isOptimizedMethod: methodObj) or: [needsFrame not]) ifTrue: [ ^ super genSpecialSelectorEqualsEquals ].
 
 	self ssFlushTo: simStackPtr - 2.
 	primDescriptor := self generatorAt: byte0.
