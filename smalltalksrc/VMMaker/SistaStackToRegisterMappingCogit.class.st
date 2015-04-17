@@ -607,20 +607,24 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	
 	label := self Label.
 	
+	unforwardArg 
+		ifFalse: [ self CmpCq: self ssTop constant R: rcvrReg ]
+		ifTrue: [ unforwardRcvr
+			ifFalse: [ self CmpCq: (self ssValue: 1) constant R: argReg ]
+			ifTrue: [ self CmpR: argReg R: rcvrReg ] ].	
+	
+	self ssPop: 2.
 	branchDescriptor isBranchTrue ifTrue: 
-		[ self ssPop: 2.
-		fixup := self ensureNonMergeFixupAt: postBranchPC - initialPC.
+		[ fixup := self ensureNonMergeFixupAt: postBranchPC - initialPC.
 		self JumpZero: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
 		unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label  ].
-		unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ].
-		self ssPop: -2. ].
+		unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ] ].
 	branchDescriptor isBranchFalse ifTrue: 
-		[ self ssPop: 2.
-		fixup := self ensureNonMergeFixupAt: targetBytecodePC - initialPC.
+		[ fixup := self ensureNonMergeFixupAt: targetBytecodePC - initialPC.
 		self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
 		unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ].
-		unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ].
-		self ssPop: -2. ].
+		unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ] ].
+	self ssPop: -2. 
 	
 	"the jump has not been taken and forwarders have been followed."
 	self SubCq: 1 R: counterReg. "Count untaken"
