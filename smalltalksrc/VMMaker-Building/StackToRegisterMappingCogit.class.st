@@ -1432,7 +1432,7 @@ StackToRegisterMappingCogit >> genBinaryInlineComparison: opTrue opFalse: opFals
 	| nextPC branchDescriptor nExts |	
 	nextPC := bytecodePC + 3.
 	nExts := 0.	
-	[branchDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + (byte0 bitAnd: 256).
+	[branchDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + bytecodeSetOffset.
 	 branchDescriptor isExtension] whileTrue:
 		[nExts := nExts + 1.
 	 	 nextPC := nextPC + branchDescriptor numBytes].
@@ -3239,7 +3239,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 
 	nextPC := bytecodePC + primDescriptor numBytes.
 	nExts := 0.
-	[branchDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + (byte0 bitAnd: 256).
+	[branchDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + bytecodeSetOffset.
 	 branchDescriptor isExtension] whileTrue:
 		[nExts := nExts + 1.
 		 nextPC := nextPC + branchDescriptor numBytes].
@@ -3660,15 +3660,20 @@ StackToRegisterMappingCogit >> genVanillaSpecialSelectorEqualsEquals [
 	argIsConstant := self ssTop type = SSConstant.
 	rcvrIsConstant := argIsConstant and: [ (self ssValue:1) type = SSConstant ].
 	
-	needsFrame "If frameless, arg0 and arg1 may be live"
-		ifTrue: [argReg := Arg0Reg. rcvrReg := Arg1Reg]
-		ifFalse: [argReg := ClassReg. rcvrReg := SendNumArgsReg].
-	argIsConstant ifFalse: 
-		[self ssAllocateRequiredReg: argReg upThrough: simStackPtr - 1.
-		self ssTop popToReg: argReg].
-	rcvrIsConstant ifFalse: 
-		[ self ssAllocateRequiredReg: rcvrReg upThrough: simStackPtr - 2.
-		(self ssValue:1) popToReg: rcvrReg.].
+	argIsConstant
+		ifFalse: 
+			[rcvrIsConstant
+				ifFalse:
+					[self allocateTwoRegistersInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
+					 self ssTop popToReg: argReg.
+					 (self ssValue:1) popToReg: rcvrReg]
+				ifTrue:
+					[argReg := self allocateOneRegister.
+					 self ssTop popToReg: argReg]]
+		ifTrue:
+			[self assert: rcvrIsConstant not.
+			 rcvrReg := self allocateOneRegister.
+			 (self ssValue:1) popToReg: rcvrReg].
 	
 	argIsConstant 
 		ifTrue: [ self genCompConstant: self ssTop constant R: rcvrReg ]
