@@ -302,8 +302,8 @@ CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg:
 	finished := nonFwdJumpTargetOrZero = 0
 		ifTrue: [ cogit Label ]
 		ifFalse: [ nonFwdJumpTargetOrZero ].
-	skip jmpTarget: (ok jmpTarget: finished)
-	
+	skip jmpTarget: (ok jmpTarget: finished).
+	^0
 ]
 
 { #category : #'compile abstract instructions' }

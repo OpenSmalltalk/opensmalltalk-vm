@@ -652,8 +652,8 @@ CurrentImageCoInterpreterFacade >> methodHasCogMethod: aCompiledMethod [
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> methodHeaderOf: oop [
-	^(self objectForOop: oop) header
+CurrentImageCoInterpreterFacade >> methodHeaderOf: methodOop [
+	^self rawHeaderOf: methodOop
 ]
 
 { #category : #accessing }
