@@ -246,6 +246,28 @@ SistaStackToRegisterMappingCogit >> fillInOPICHeader: pic size: size numArgs: nu
 ]
 
 { #category : #'bytecode generators' }
+SistaStackToRegisterMappingCogit >> genDirectEqualsEqualsArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg [
+	<inline: true>
+	| label jumpEqual jumpNotEqual |
+	label := self label.
+	unforwardArg 
+		ifFalse: [ self CmpCq: self ssTop constant R: rcvrReg ]
+		ifTrue: [ unforwardRcvr
+			ifFalse: [ self CmpCq: (self ssValue: 1) constant R: argReg ]
+			ifTrue: [ self CmpR: argReg R: rcvrReg ] ].	 
+	self ssPop: 2.
+	jumpEqual := self JumpZero: 0.
+	 unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ].
+	 unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ].
+	 self genMoveFalseR: rcvrReg.
+	 jumpNotEqual := self Jump: 0.
+	 jumpEqual jmpTarget: (self genMoveTrueR: rcvrReg).
+	 jumpNotEqual jmpTarget: self Label.
+	 self ssPushRegister: rcvrReg.
+	 ^0
+]
+
+{ #category : #'bytecode generators' }
 SistaStackToRegisterMappingCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
 	"SistaV1: *	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
 								
@@ -280,7 +302,7 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 decrements the lower half.  N.B. We *do not* eliminate dead branches (true ifTrue:/true ifFalse:)
 	 so that scanning for send and branch data is simplified and that branch data is correct."
 	<inline: false>
-	| desc ok counterAddress countTripped retry |
+	| desc ok counterAddress countTripped retry counterReg |
 	<var: #ok type: #'AbstractInstruction *'>
 	<var: #desc type: #'CogSimStackEntry *'>
 	<var: #retry type: #'AbstractInstruction *'>
@@ -293,16 +315,16 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	self ssPop: 1.
 	desc popToReg: TempReg.
 
-	self ssAllocateRequiredReg: SendNumArgsReg. "Use this as the count reg."
+	counterReg := self allocateRegisterNotConflictingWith: 0.
 	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	counterIndex := counterIndex + 1.
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
 	self assert: objectMemory wordSize = CounterBytes.
-	retry := self MoveAw: counterAddress R: SendNumArgsReg.
-	self SubCq: 16r10000 R: SendNumArgsReg. "Count executed"
+	retry := self MoveAw: counterAddress R: counterReg.
+	self SubCq: 16r10000 R: counterReg. "Count executed"
 	"Don't write back if we trip; avoids wrapping count back to initial value, and if we trip we don't execute."
 	countTripped := self JumpCarry: 0.
-	self MoveR: SendNumArgsReg Aw: counterAddress. "write back"
+	self MoveR: counterReg Aw: counterAddress. "write back"
 
 	"Cunning trick by LPD.  If true and false are contiguous subtract the smaller.
 	 Correct result is either 0 or the distance between them.  If result is not 0 or
@@ -311,15 +333,15 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	self annotate: (self SubCw: boolean R: TempReg) objRef: boolean.
 	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
 
-	self SubCq: 1 R: SendNumArgsReg. "Count untaken"
-	self MoveR: SendNumArgsReg Aw: counterAddress. "write back"
+	self SubCq: 1 R: counterReg. "Count untaken"
+	self MoveR: counterReg Aw: counterAddress. "write back"
 
 	self CmpCq: (boolean == objectMemory falseObject
 					ifTrue: [objectMemory trueObject - objectMemory falseObject]
 					ifFalse: [objectMemory falseObject - objectMemory trueObject])
 		R: TempReg.
 	ok := self JumpZero: 0.
-	self MoveCq: 0 R: SendNumArgsReg. "if SendNumArgsReg is 0 this is a mustBeBoolean, not a counter trip."
+	self MoveCq: 0 R: counterReg. "if counterReg is 0 this is a mustBeBoolean, not a counter trip."
 	countTripped jmpTarget:
 		(self CallRT: (boolean == objectMemory falseObject
 						ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
@@ -401,7 +423,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	 will then continue to the conditional branch which will trip and enter the abort."
 	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor nExts
 	  rcvrIsInt argIsInt rcvrInt argInt result jumpNotSmallInts inlineCAB annotateInst
-	  counterAddress countTripped |
+	  counterAddress countTripped counterReg |
 	<var: #countTripped type: #'AbstractInstruction *'>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
@@ -471,16 +493,17 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 					ifFalse: [self OrR: ReceiverResultReg R: TempReg]]].
 	jumpNotSmallInts := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 
-	self ssAllocateRequiredReg: SendNumArgsReg. "Use this as the count reg."
+	counterReg := self allocateRegisterNotConflictingWith: (self registerMaskFor: ReceiverResultReg and: Arg0Reg). "Use this as the count reg, can't conflict with the registers for the arg and the receiver"
+	self ssAllocateRequiredReg: counterReg. "Use this as the count reg."
 	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
 	self assert: objectMemory wordSize = CounterBytes.
-	self MoveAw: counterAddress R: SendNumArgsReg.
-	self SubCq: 16r10000 R: SendNumArgsReg. "Count executed"
+	self MoveAw: counterAddress R: counterReg.
+	self SubCq: 16r10000 R: counterReg. "Count executed"
 	"If counter trips simply abort the inlined comparison and send continuing to the following
 	 branch *without* writing back.  A double decrement will not trip the second time."
 	countTripped := self JumpCarry: 0.
-	self MoveR: SendNumArgsReg Aw: counterAddress. "write back"
+	self MoveR: counterReg Aw: counterAddress. "write back"
 
 	argIsInt
 		ifTrue: [annotateInst
@@ -493,8 +516,8 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 				ifTrue: [primDescriptor opcode]
 				ifFalse: [self inverseBranchFor: primDescriptor opcode])
 		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-	self SubCq: 1 R: SendNumArgsReg. "Count untaken"
-	self MoveR: SendNumArgsReg Aw: counterAddress. "write back"
+	self SubCq: 1 R: counterReg. "Count untaken"
+	self MoveR: counterReg Aw: counterAddress. "write back"
 	self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
 	countTripped jmpTarget: (jumpNotSmallInts jmpTarget: self Label).
 	argIsInt ifTrue:
@@ -505,22 +528,23 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 ]
 
 { #category : #'bytecode generators' }
-SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
+SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 	"Override to count inlined branches if followed by a conditional branch.
 	 We borrow the following conditional branch's counter and when about to
 	 inline the comparison we decrement the counter (without writing it back)
 	 and if it trips simply abort the inlining, falling back to the normal send which
 	 will then continue to the conditional branch which will trip and enter the abort."
-	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor nExts
-	  counterAddress countTripped unforwardArg unforwardRcvr |
+	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor nExts label counterReg fixup
+	  counterAddress countTripped unforwardArg unforwardRcvr argReg rcvrReg regMask |
+	<var: #fixup type: #'BytecodeFixup *'>
 	<var: #countTripped type: #'AbstractInstruction *'>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 
 	((coInterpreter isOptimizedMethod: methodObj) or: [needsFrame not]) ifTrue: [ ^ super genSpecialSelectorEqualsEquals ].
 
-	self ssFlushTo: simStackPtr - 2.
 	primDescriptor := self generatorAt: byte0.
+	regMask := 0.
 
 	nextPC := bytecodePC + primDescriptor numBytes.
 	nExts := 0.
@@ -528,46 +552,82 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	 branchDescriptor isExtension] whileTrue:
 		[nExts := nExts + 1.
 		 nextPC := nextPC + branchDescriptor numBytes].
+	
+	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifTrue:
+		[self ssFlushTo: simStackPtr - 2].
+	
+	unforwardRcvr := (objectRepresentation isUnannotatableConstant: (self ssValue: 1)) not.
+	unforwardArg := (objectRepresentation isUnannotatableConstant: self ssTop) not.
+	
+	"if the rcvr or the arg is an annotable constant, we need to push it to a register 
+	else the forwarder check can't jump back to the comparison after unforwarding the constant"
+	unforwardArg
+		ifTrue: 
+			[unforwardRcvr
+				ifTrue:
+					[self allocateTwoRegistersInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
+					 self ssTop popToReg: argReg.
+					 (self ssValue:1) popToReg: rcvrReg]
+				ifFalse:
+					[argReg := self allocateOneRegister.
+					 self ssTop popToReg: argReg]]
+		ifFalse:
+			[self assert: unforwardRcvr.
+			 rcvrReg := self allocateOneRegister.
+			 (self ssValue:1) popToReg: rcvrReg].
+		
+	argReg ifNotNil: [ regMask := self registerMaskFor: regMask ].
+	rcvrReg ifNotNil: [ regMask := regMask bitOr: (self registerMaskFor: rcvrReg) ].
+	
+	"Here we can use Cq because the constant does not need to be annotated"
+	self assert: (unforwardArg not or: [argReg notNil]).
+	self assert: (unforwardRcvr not or: [rcvrReg notNil]).
+	
 	"Only interested in inlining if followed by a conditional branch."
 	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
-		[^self genSpecialSelectorSend].
+		[^ self genDirectEqualsEqualsArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg].
 
 	targetBytecodePC := nextPC
 							+ branchDescriptor numBytes
 							+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
 	postBranchPC := nextPC + branchDescriptor numBytes.
-	unforwardRcvr := (self ssValue: 1) type ~= SSConstant
-						or: [objectRepresentation shouldAnnotateObjectReference: (self ssValue: 1) constant].
-	unforwardArg := self ssTop type ~= SSConstant
-						or: [objectRepresentation shouldAnnotateObjectReference: self ssTop constant].
-	self marshallSendArguments: 1.
 
-	self ssAllocateRequiredReg: SendNumArgsReg. "Use this as the count reg."
+	counterReg := self allocateRegisterNotConflictingWith: regMask. "Use this as the count reg, can't conflict with the registers for the arg and the receiver of #==."
 	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
 	self assert: objectMemory wordSize = CounterBytes.
-	self MoveAw: counterAddress R: SendNumArgsReg.
-	self SubCq: 16r10000 R: SendNumArgsReg. "Count executed"
+	self MoveAw: counterAddress R: counterReg.
+	self SubCq: 16r10000 R: counterReg. "Count executed"
 	"If counter trips simply abort the inlined comparison and send continuing to the following
 	 branch *without* writing back.  A double decrement will not trip the second time."
 	countTripped := self JumpCarry: 0.
-	self MoveR: SendNumArgsReg Aw: counterAddress. "write back"
-	unforwardRcvr ifTrue:
-		[objectRepresentation genEnsureOopInRegNotForwarded: ReceiverResultReg scratchReg: TempReg].
-	unforwardArg ifTrue:
-		[objectRepresentation genEnsureOopInRegNotForwarded: Arg0Reg scratchReg: TempReg].
-	self CmpR: Arg0Reg R: ReceiverResultReg.
-	"Cmp is weird/backwards so invert the comparison.  Further since there is a following conditional
-	 jump bytecode define non-merge fixups and leave the cond bytecode to set the mergeness."
-	self gen: (branchDescriptor isBranchTrue ifTrue: [JumpZero] ifFalse: [JumpNonZero])
-		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-	self SubCq: 1 R: SendNumArgsReg. "Count untaken"
-	self MoveR: SendNumArgsReg Aw: counterAddress. "write back"
+	self MoveR: counterReg Aw: counterAddress. "write back"
+	
+	self ssPushConstant: objectMemory trueObject. "dummy value"
+	self assert: (unforwardArg or: [ unforwardRcvr ]).
+	
+	label := self Label.
+	
+	branchDescriptor isBranchTrue ifTrue: 
+		[ fixup := self ensureNonMergeFixupAt: postBranchPC - initialPC.
+		self JumpZero: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
+		unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label  ].
+		unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ] ].
+	branchDescriptor isBranchFalse ifTrue: 
+		[ fixup := self ensureNonMergeFixupAt: targetBytecodePC - initialPC.
+		self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
+		unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ].
+		unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ] ].
+	
+	"the jump has not been taken and forwarders have been followed."
+	self SubCq: 1 R: counterReg. "Count untaken"
+	self MoveR: counterReg Aw: counterAddress. "write back"
 	self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
+	
 	countTripped jmpTarget: self Label.
-	^self genMarshalledSend: (coInterpreter specialSelector: byte0 - self firstSpecialSelectorBytecodeOffset)
-		numArgs: 1
-		sendTable: ordinarySendTrampolines
+	
+	"inlined version of #== ignoring the branchDescriptor if the counter trips to have normal state for the optimizer"
+	^ self genDirectEqualsEqualsArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg
 ]
 
 { #category : #'bytecode generators' }

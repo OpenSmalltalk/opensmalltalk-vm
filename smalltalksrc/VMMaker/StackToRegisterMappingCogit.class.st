@@ -3325,15 +3325,15 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 				ifForwarder: label
 				ifNotForwarder: fixup ] ] ].
 	branchDescriptor isBranchFalse ifTrue: 
-		[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-		self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
+		[ fixup := self ensureNonMergeFixupAt: targetBytecodePC - initialPC.
+		self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
 		unforwardArg ifTrue: [ unforwardRcvr 
 			ifFalse: [objectRepresentation 
 				genEnsureOopInRegNotForwarded: argReg 
 				scratchReg: TempReg 
 				ifForwarder: label
 				ifNotForwarder: fixup ]
-			ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ] ].
+			ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ] ].
 		unforwardRcvr ifTrue: 
 			[ objectRepresentation 
 				genEnsureOopInRegNotForwarded: rcvrReg 
