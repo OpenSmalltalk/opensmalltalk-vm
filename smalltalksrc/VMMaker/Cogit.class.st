@@ -1695,14 +1695,6 @@ Cogit >> JumpR: reg [
 	^self gen: JumpR operand: reg
 ]
 
-{ #category : #'method map' }
-Cogit >> JumpRT: callTarget [
-	"Big assumption here that calls and jumps look the same as regards their displacement.
-	 This works on x86 and I think on ARM."
-	<returnTypeC: #'AbstractInstruction *'>
-	^self annotateCall: (self JumpLong: callTarget)
-]
-
 { #category : #'abstract instructions' }
 Cogit >> JumpZero: jumpTarget [
 	<inline: true>
