@@ -163,6 +163,7 @@ Linux32x86SqueakCogV3Config >> cogitClass [
 
 { #category : #compiling }
 Linux32x86SqueakCogV3Config >> compilerDefinitions [
+	self deprecated: 'Legacy method from pharo approach. We need different definitions for each buildType'.
 	^#(
 	 '-DNDEBUG'          
  	 '-DDEBUGVM=0'

@@ -86,6 +86,8 @@ SqueakWindowsConfig >> cmakeWriteDirectoriesDotCmake: aMaker [
 
 { #category : #compiling }
 SqueakWindowsConfig >> compilerDefinitions [
+	self deprecated: 'Legacy method from pharo approach. We need different definitions for each buildType'.
+
 	^ {  
 		'-D_MT'.
 		'-DWIN32'. 
