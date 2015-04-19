@@ -8559,7 +8559,7 @@ Cogit >> relocateCallsInClosedPIC: cPIC [
 			[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 			 self assert: targetMethod cmType = CMMethod.
 			 backEnd
-				relocateJumpBeforeFollowingAddress: pc
+				relocateJumpLongBeforeFollowingAddress: pc
 				by: (delta - targetMethod objectHeader) negated].
 		pc := pc + cPICCaseSize].
 	self assert: cPIC cPICNumCases > 0.

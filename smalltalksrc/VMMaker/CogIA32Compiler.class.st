@@ -2854,11 +2854,6 @@ CogIA32Compiler >> relocateCallBeforeReturnPC: retpc by: delta [
 ]
 
 { #category : #'inline cacheing' }
-CogIA32Compiler >> relocateJumpBeforeFollowingAddress: pc by: delta [
-	self relocateCallBeforeReturnPC: pc by: delta
-]
-
-{ #category : #'inline cacheing' }
 CogIA32Compiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
 	self relocateCallBeforeReturnPC: pc by: delta
 ]
