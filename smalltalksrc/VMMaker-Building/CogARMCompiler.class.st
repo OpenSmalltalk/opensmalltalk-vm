@@ -2443,6 +2443,17 @@ CogARMCompiler >> pushR: srcReg [
 ]
 
 { #category : #'inline cacheing' }
+CogARMCompiler >> relocateCallBeforeReturnPC: retpc by: delta [
+	| instr distanceDiv4 |
+	self assert: delta \\ 4 = 0.
+	delta ~= 0 ifTrue:
+		[instr := objectMemory longAt: retpc - 4.
+		 distanceDiv4 := instr bitAnd: 16rFFFFFF.
+		 distanceDiv4 := distanceDiv4 + (delta // 4).
+		 objectMemory longAt: retpc - 4 put: ((instr bitAnd: 16rFF000000) bitOr: (delta bitAnd: 16rFFFFFF))]
+]
+
+{ #category : #'inline cacheing' }
 CogARMCompiler >> rewriteCallAt: callSiteReturnAddress target: callTargetAddress [
 	"Rewrite a call instruction to call a different target.  This variant is used to link PICs
 	 in ceSendMiss et al, and to rewrite cached primitive calls.   Answer the extent of
