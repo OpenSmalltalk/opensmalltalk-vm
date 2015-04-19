@@ -1581,7 +1581,8 @@ Cogit >> JumpFull: jumpTarget [
 { #category : #'method map' }
 Cogit >> JumpFullRT: callTarget [
 	"Big assumption here that calls and jumps look the same as regards their displacement.
-	 This works on x86 and I think on ARM."
+	 This works on x86 and I think on ARM.
+	JumpFull is intended to be the jumps anywhere in our address space. See also JumpLong et al. which jump within our *code* space"
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self annotateCall: (self JumpFull: callTarget)
