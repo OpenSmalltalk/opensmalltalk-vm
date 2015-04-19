@@ -330,7 +330,7 @@ CogARMCompiler >> cResultRegister [
 
 { #category : #accessing }
 CogARMCompiler >> callInstructionByteSize [
-	"we only get to use quick B[LX] calls. We hope"
+	"ARM calls and jumps span +/- 32 mb, more than enough for intra-zone calls and jumps."
 	^4
 ]
 
@@ -384,13 +384,57 @@ CogARMCompiler >> canMulRR [
 CogARMCompiler >> computeMaximumSize [
 	"Because we don't use Thumb, each ARM instruction has 4 bytes. Some abstract opcodes need more than one instruction. We only handle those in this caseOf: and let the default return 4"
 	
-	(opcode between: FirstShortJump and: LastJump) ifTrue:
-		[^maxSize := 16].
-	
 	opcode
 		caseOf: {
+			"Noops & Pseudo Ops"
 			[Label]					-> [^maxSize := 0].
 			[AlignmentNops]		-> [^maxSize := (operands at: 0) - 1].
+			"Specific Control/Data Movement"
+			[BICCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			"Control"
+			[CallFull]				-> [^maxSize := 20].
+			[JumpFull]				-> [^maxSize := 20].
+			[RetN]					-> [^(operands at: 0) = 0 
+											ifTrue: [maxSize := 4]
+											ifFalse: [maxSize := 8]].
+			"Arithmetic"
+			[CmpCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[AddCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[AndCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[SubCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[AndCqRR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[OrCqR]					-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[TstCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[XorCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			[AddCwR]				-> [^maxSize := 20].
+			[AndCwR]				-> [^maxSize := 20].
+			[CmpCwR]				-> [^maxSize := 20].
+			[OrCwR]				-> [^maxSize := 20].
+			[SubCwR]				-> [^maxSize := 20].
+			[XorCwR]				-> [^maxSize := 20].
+			[LoadEffectiveAddressMwrR]
+									-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := 20]].
+			"Data Movement"
 			[MoveAwR]				-> [^maxSize := (self isAddressRelativeToVarBase: (operands at: 0))
 														ifTrue: [4]
 														ifFalse: [20]].
@@ -416,59 +460,6 @@ CogARMCompiler >> computeMaximumSize [
 			[PrefetchAw] 			-> [^maxSize := (self isAddressRelativeToVarBase: (operands at: 1))
 														ifTrue: [4]
 														ifFalse: [20]].
-			[Call]					-> [^maxSize := 20 "recomputed in #sizePCDependentInstruction."].
-			[RetN]					-> [^(operands at: 0) = 0 
-											ifTrue: [maxSize := 4]
-											ifFalse: [maxSize := 8]].
-			[CmpCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
-			[AddCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
-			[BICCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
-			[SubCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
-			[AndCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
-			[AndCqRR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
-			[OrCqR]					-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
-			[TstCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
-			[XorCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
-			[CmpCwR]				-> [^maxSize := 20].
-			[AddCwR]				-> [^maxSize := 20].
-			[SubCwR]				-> [^maxSize := 20].
-			[AndCwR]				-> [^maxSize := 20].
-			[OrCwR]				-> [^maxSize := 20].
-			[XorCwR]				-> [^maxSize := 20].
-			[JumpR]					-> [^maxSize := 4].
-			[JumpFPEqual]			-> [^maxSize := 8].
-			[JumpFPNotEqual]		-> [^maxSize := 8].
-			[JumpFPLess]			-> [^maxSize := 8].
-			[JumpFPGreaterOrEqual]-> [^maxSize := 8].
-			[JumpFPGreater]		-> [^maxSize := 8].
-			[JumpFPLessOrEqual]	-> [^maxSize := 8].
-			[JumpFPOrdered]		-> [^maxSize := 8].
-			[JumpFPUnordered]		-> [^maxSize := 8].
-			[JumpLong]				-> [^maxSize := 20].
-			[JumpLongZero]		-> [^maxSize := 20].
-			[JumpLongNonZero]	-> [^maxSize := 20].
-			[LoadEffectiveAddressMwrR]
-									-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
 			[PushCw]				-> [^maxSize := 20].
 			[PushCq]				-> [^self rotateable8bitImmediate: (operands at: 0)
 											ifTrue: [:r :i| maxSize := 8]
@@ -694,13 +685,27 @@ CogARMCompiler >> concretizeCall [
 	self assert: (operands at: 0) ~= 0.
 	self assert: (operands at: 0) \\ 4 = 0.
 	offset := (operands at: 0) signedIntFromLong - (address + 8 "normal pc offset") signedIntFromLong.
-	(self isInImmediateJumpRange: offset)
-		ifTrue: [
-			self machineCodeAt: 0 put: (self bl: offset). "BL offset"
-			^machineCodeSize := 4]
-		ifFalse: [
-			"self error: 'While we know how to generate a long distance call, we can''t update such a send site yet. Please restart with smaller cache size'."
-			^self concretizeLongCall]
+	self assert: (self isInImmediateJumpRange: offset).
+	self machineCodeAt: 0 put: (self bl: offset). "BL offset"
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeCallFull [
+	"Will get inlined into concretizeAt: switch."
+	"Sizing/generating calls.
+		Jump targets can be to absolute addresses or other abstract instructions.
+		Generating initial trampolines instructions may have no maxSize and be to absolute addresses.
+		Otherwise instructions must have a machineCodeSize which must be kept to."
+	<inline: true>
+	| jumpTarget instrOffset|
+	<var: #jumpTarget type: #'AbstractInstruction *'>
+	jumpTarget := self longJumpTargetAddress.
+	instrOffset := self at: 0 moveCw: jumpTarget intoR: ConcreteIPReg.
+	"blx ConcreteIPReg"
+	self machineCodeAt: instrOffset put: (self blx: ConcreteIPReg).
+	self assert: instrOffset = 16.
+	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code' }
@@ -730,16 +735,13 @@ CogARMCompiler >> concretizeConditionalJump: conditionCode [
 	<inline: true>
 	| offset |
 	offset := self computeJumpTargetOffsetPlus: 8.
- 	(self isInImmediateJumpRange: offset)
-		ifTrue: [
-			self machineCodeAt: 0 put: (self cond: conditionCode br: 0 offset: offset). "B offset"
-			^machineCodeSize := 4]
-		ifFalse: [
-			^self concretizeConditionalJumpLong: conditionCode]
+ 	self assert: (self isInImmediateJumpRange: offset).
+	self machineCodeAt: 0 put: (self cond: conditionCode br: 0 offset: offset). "B offset"
+	^machineCodeSize := 4
 ]
 
 { #category : #'generate machine code - concretize' }
-CogARMCompiler >> concretizeConditionalJumpLong: conditionCode [
+CogARMCompiler >> concretizeConditionalJumpFull: conditionCode [
 	"Will get inlined into concretizeAt: switch."
 	"Sizing/generating jumps.
 		Jump targets can be to absolute addresses or other abstract instructions.
@@ -750,6 +752,7 @@ CogARMCompiler >> concretizeConditionalJumpLong: conditionCode [
 	<var: #jumpTarget type: #'AbstractInstruction *'>
 	jumpTarget := self longJumpTargetAddress.
 	instrOffset := self at: 0 moveCw: jumpTarget intoR: ConcreteIPReg.
+	self assert: instrOffset = 16.
 	"bx RISCTempReg"
 	self machineCodeAt: instrOffset put: (self cond: conditionCode bx: 0 target: ConcreteIPReg).
 	^machineCodeSize := instrOffset + 4
@@ -842,6 +845,24 @@ CogARMCompiler >> concretizeFill32 [
 	machineCode at: 2 put: (word >> 16bitAnd: 16rFF)..
 	machineCode at: 3 put: (word >> 24bitAnd: 16rFF)..
 	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeJumpFull [
+	"Will get inlined into concretizeAt: switch."
+	"Sizing/generating jumps.
+		Jump targets can be to absolute addresses or other abstract instructions.
+		Generating initial trampolines instructions may have no maxSize and be to absolute addresses.
+		Otherwise instructions must have a machineCodeSize which must be kept to."
+	<inline: true>
+	| jumpTarget instrOffset|
+	<var: #jumpTarget type: #'AbstractInstruction *'>
+	jumpTarget := self longJumpTargetAddress.
+	instrOffset := self at: 0 moveCw: jumpTarget intoR: ConcreteIPReg.
+	"bx RISCTempReg"
+	self machineCodeAt: instrOffset put: (self cond: 0 bx: 0 target: ConcreteIPReg).
+	self assert: instrOffset = 16.
+	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -939,23 +960,6 @@ CogARMCompiler >> concretizeLogicalShiftRightRR [
 	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 1 rn: 0 rd: destReg 
 									shifterOperand: (distReg << 8 bitOr: (48 bitOr: destReg))).
 	^machineCodeSize := 4
-]
-
-{ #category : #'generate machine code - concretize' }
-CogARMCompiler >> concretizeLongCall [
-	"Will get inlined into concretizeAt: switch."
-	"Sizing/generating calls.
-		Jump targets can be to absolute addresses or other abstract instructions.
-		Generating initial trampolines instructions may have no maxSize and be to absolute addresses.
-		Otherwise instructions must have a machineCodeSize which must be kept to."
-	<inline: true>
-	| jumpTarget instrOffset|
-	<var: #jumpTarget type: #'AbstractInstruction *'>
-	jumpTarget := self longJumpTargetAddress.
-	instrOffset := self at: 0 moveCw: jumpTarget intoR: ConcreteIPReg.
-	"blx ConcreteIPReg"
-	self machineCodeAt: instrOffset put: (self blx: ConcreteIPReg).
-	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1463,11 +1467,13 @@ CogARMCompiler >> dispatchConcretize [
 		[FillFromWord]			-> [^self concretizeFillFromWord].
 		[Nop]					-> [^self concretizeNop].
 		"Control"
+		[CallFull]					-> [^self concretizeCallFull].
 		[Call]						-> [^self concretizeCall].
 		[JumpR]						-> [^self concretizeJumpR].
-		[JumpLong]					-> [^self concretizeConditionalJumpLong: AL].
-		[JumpLongZero]			-> [^self concretizeConditionalJumpLong: EQ].
-		[JumpLongNonZero]		-> [^self concretizeConditionalJumpLong: NE].
+		[JumpFull]					-> [^self concretizeJumpFull].
+		[JumpLong]					-> [^self concretizeConditionalJump: AL].
+		[JumpLongZero]			-> [^self concretizeConditionalJump: EQ].
+		[JumpLongNonZero]		-> [^self concretizeConditionalJump: NE].
 		[Jump]						-> [^self concretizeConditionalJump: AL].
 		[JumpZero]					-> [^self concretizeConditionalJump: EQ].
 		[JumpNonZero]				-> [^self concretizeConditionalJump: NE].
@@ -1917,8 +1923,9 @@ CogARMCompiler >> isCallPreceedingReturnPC: mcpc [
 
 { #category : #testing }
 CogARMCompiler >> isInImmediateJumpRange: operand [
+	"ARM calls and jumps span +/- 32 mb, more than enough for intra-zone calls and jumps."
 	<var: #operand type: #'unsigned long'>
-	^operand signedIntFromLong between: -33554432 and: 33554428
+	^operand signedIntFromLong between: -16r2000000 and: 16r1FFFFFC
 ]
 
 { #category : #testing }
@@ -1937,8 +1944,8 @@ CogARMCompiler >> isPCDependent [
 
 { #category : #accessing }
 CogARMCompiler >> jumpLongByteSize [
-	self flag: 'for the moment the Cogit understands only a Jump vs JumpLong distinction where JumpLong spans the 32-bit address space.  But this leads to 20-byte branches.  What we need to distingush between is variable sized jumps ("short" jumps, which is what Jump means now), fixed size jumops within the code zone and fixed size jumps within the 32-bit address space.'.
-	^20
+	"ARM calls and jumps span +/- 32 mb, more than enough for intra-zone calls and jumps."
+	^4
 ]
 
 { #category : #accessing }
@@ -2310,6 +2317,31 @@ CogARMCompiler >> rewriteCallAt: callSiteReturnAddress target: callTargetAddress
 ]
 
 { #category : #'inline cacheing' }
+CogARMCompiler >> rewriteCallFullAt: callSiteReturnAddress target: callTargetAddress [
+	"Rewrite a full call instruction to call to a different target.  This variant
+	 is used to rewrite cached primitive calls.   Answer the extent of the
+	 code change which is used to compute the range of the icache to flush."
+	<var: #callSiteReturnAddress type: #usqInt>
+	<var: #callTargetAddress type: #usqInt>
+	"cogit disassembleFrom: callSiteReturnAddress - 40 to: callSiteReturnAddress + 9"
+
+	"check that the instruction involved is actually a call BL ip (reg 12)
+	(CogARMCompiler new bl: 16) hex"
+	self assert: ((objectMemory longAt:  callSiteReturnAddress - 4) bitAnd: 16rFE000000) = 16rEB000000.
+	
+	"The callTargetAddress is loaded byte by byte."
+	objectMemory byteAt: callSiteReturnAddress - 20 put: (callTargetAddress >> 24 bitAnd: 16rFF).
+	objectMemory byteAt: callSiteReturnAddress - 16 put: (callTargetAddress >> 16 bitAnd: 16rFF).
+	objectMemory byteAt: callSiteReturnAddress - 12 put: (callTargetAddress >> 8 bitAnd: 16rFF).
+	objectMemory byteAt: callSiteReturnAddress - 8 put: (callTargetAddress  bitAnd: 16rFF).
+
+	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
+	"self cCode: ''
+		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress - 1]."
+	^20
+]
+
+{ #category : #'inline cacheing' }
 CogARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag target: callTargetAddress [
 	"Rewrite an inline cache to call a different target for a new tag.  This variant is used
 	 to link unlinked sends in ceSend:to:numArgs: et al.  Answer the extent of the code
@@ -2343,7 +2375,7 @@ CogARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag targ
 ]
 
 { #category : #'inline cacheing' }
-CogARMCompiler >> rewriteJumpLongAt: callSiteReturnAddress target: callTargetAddress [
+CogARMCompiler >> rewriteJumpFullAt: callSiteReturnAddress target: callTargetAddress [
 	"Rewrite a long jump instruction to jump to a different target.  This variant
 	 is used to rewrite cached primitive calls.   Answer the extent of the
 	 code change which is used to compute the range of the icache to flush."
@@ -2430,35 +2462,21 @@ CogARMCompiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 	 instruction's address ((which are both still their virtual addresses), but the
 	 span of a jump to a preceeding instruction or to an absolute address is
 	 between that instruction's address (which by now is its eventual absolute
-	 address) or absolute address and eventualAbsoluteAddress."
+	 address) or absolute address and eventualAbsoluteAddress.
 
-	| target maximumSpan abstractInstruction |
-	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	 ARM is simple; the 26-bit call/jump range means no short jumps.  This routine
+	 only has to determine the targets of jumps, not determine sizes."
+
 	opcode = AlignmentNops ifTrue:
 		[| alignment |
 		 address := eventualAbsoluteAddress.
 		 alignment := operands at: 0.
 		 ^machineCodeSize := (eventualAbsoluteAddress + (alignment - 1) bitAnd: alignment negated)
 							   - eventualAbsoluteAddress].
-	self assert: (self isJump or: [opcode = Call]).
+	self assert: (self isJump or: [opcode = Call or: [opcode = CallFull]]).
 	self isJump ifTrue: [self resolveJumpTarget].
-	target := operands at: 0.
-	abstractInstruction := cogit cCoerceSimple: target to: #'AbstractInstruction *'.
-	"maximumSpan calculation copied from CogIA32Compiler TODO: extract method?"
-	(self isAnInstruction: abstractInstruction)
-		ifTrue:
-			[maximumSpan := abstractInstruction address
-							- (((cogit abstractInstruction: self follows: abstractInstruction)
-								ifTrue: [eventualAbsoluteAddress]
-								ifFalse: [address]) + 2)]
-		ifFalse:
-			[maximumSpan := target - (eventualAbsoluteAddress + 2)].
 	address := eventualAbsoluteAddress.
-	^machineCodeSize := opcode = Call 
-				ifTrue: [(self isInImmediateJumpRange: maximumSpan) ifTrue: [4] ifFalse: [20]]
-				ifFalse: [(self isLongJump not and: [self isInImmediateJumpRange: maximumSpan])
-								ifTrue: [4]
-								ifFalse: [20]] "load address to register, add"
+	^machineCodeSize := maxSize
 ]
 
 { #category : #accessing }
