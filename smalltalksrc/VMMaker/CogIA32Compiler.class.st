@@ -207,12 +207,12 @@ CogIA32Compiler >> computeMaximumSize [
 		[XCHGMwrR]			-> [^maxSize := 7].
 		[XCHGRR]				-> [^maxSize := 2].
 		"Control"
-		[Call]					-> [^maxSize := 5].
 		[CallFull]				-> [^maxSize := 5].
+		[Call]					-> [^maxSize := 5].
 		[JumpR]					-> [^maxSize := 2].
-		[Jump]					-> [self resolveJumpTarget. ^maxSize := 5].
 		[JumpFull]				-> [self resolveJumpTarget. ^maxSize := 5].
 		[JumpLong]				-> [self resolveJumpTarget. ^maxSize := 5].
+		[Jump]					-> [self resolveJumpTarget. ^maxSize := 5].
 		[JumpZero]				-> [self resolveJumpTarget. ^maxSize := 6].
 		[JumpNonZero]			-> [self resolveJumpTarget. ^maxSize := 6].
 		[JumpNegative]			-> [self resolveJumpTarget. ^maxSize := 6].
@@ -2141,10 +2141,10 @@ CogIA32Compiler >> dispatchConcretize [
 		[Call]					-> [^self concretizeCall].
 		[CallFull]				-> [^self concretizeCall].
 		[JumpR]					-> [^self concretizeJumpR].
-		[JumpFull]				-> [^self concretizeJumpLong].
-		[JumpLong]				-> [^self concretizeJumpLong].
-		[JumpLongZero]		-> [^self concretizeConditionalJumpLong: 16r4].
-		[JumpLongNonZero]	-> [^self concretizeConditionalJumpLong: 16r5].
+		[JumpFull]				-> [^self concretizeJumpFull].
+		[JumpLong]				-> [^self concretizeJump].
+		[JumpLongZero]		-> [^self concretizeConditionalJump: 16r4].
+		[JumpLongNonZero]	-> [^self concretizeConditionalJump: 16r5].
 		[Jump]					-> [^self concretizeJump].
 		"Table B-1 Intel® 64 and IA-32 Architectures Software Developer's Manual Volume 1: Basic Architecture"
 		[JumpZero]				-> [^self concretizeConditionalJump: 16r4].
