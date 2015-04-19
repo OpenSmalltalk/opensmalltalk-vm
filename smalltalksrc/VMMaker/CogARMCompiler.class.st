@@ -1987,6 +1987,12 @@ CogARMCompiler >> instructionIsBX: instr [
 	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: 16r0FFFFFF0) = 16r12FFF10]
 ]
 
+{ #category : #testing }
+CogARMCompiler >> instructionIsOR: instr [
+	"is this an ORR instruction?"
+	^(instr >> 21 bitAnd: 16rF) = 16rC
+]
+
 { #category : #disassembly }
 CogARMCompiler >> instructionSizeAt: pc [
 	"Answer the instruction size at pc.Simple on ARM ;-)"
@@ -2165,11 +2171,19 @@ CogARMCompiler >> leafCallStackPointerDelta [
 
 { #category : #'inline cacheing' }
 CogARMCompiler >> literalBeforeFollowingAddress: followingAddress [
-	"Answer the long constant loaded by a MOV/ORR/ORR/ORR sequence just before this address:"
-	^  ((objectMemory byteAt: followingAddress - 16) << 24)
-	+  ((objectMemory byteAt: followingAddress - 12) << 16)
-	+  ((objectMemory byteAt: followingAddress - 8) << 8)
-	+   (objectMemory byteAt: followingAddress - 4) 
+	"Answer the long constant loaded by a MOV/ORR/ORR/ORR
+	 or MOV/ORR/ORR/ORR/PUSH  sequence, just before this address:"
+	^(self instructionIsOR: (objectMemory longAt: followingAddress - 4))
+		ifTrue:
+			[   ((objectMemory byteAt: followingAddress - 16) << 24)
+			+  ((objectMemory byteAt: followingAddress - 12) << 16)
+			+  ((objectMemory byteAt: followingAddress - 8) << 8)
+			+   (objectMemory byteAt: followingAddress - 4)]
+		ifFalse:
+			[   ((objectMemory byteAt: followingAddress - 20) << 24)
+			+  ((objectMemory byteAt: followingAddress - 16) << 16)
+			+  ((objectMemory byteAt: followingAddress - 12) << 8)
+			+   (objectMemory byteAt: followingAddress - 8)]
 ]
 
 { #category : #accessing }
