@@ -389,7 +389,7 @@ CogARMCompiler >> computeMaximumSize [
 		caseOf: {
 		"Noops & Pseudo Ops"
 		[Label]					-> [^maxSize := 0].
-		[AlignmentNops]		-> [^maxSize := (operands at: 0) - 1].
+		[AlignmentNops]		-> [^maxSize := (operands at: 0) - 4].
 		[Fill16]					-> [^maxSize := 4].
 		[Fill32]					-> [^maxSize := 4].
 		[FillFromWord]			-> [^maxSize := 4].
