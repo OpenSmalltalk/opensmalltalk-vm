@@ -60,7 +60,6 @@ CMakeVMGeneratorForSqueak >> generateByTemplate [
 	"attempt to move way from string based writing to  template based. Think Seaside renderOn composition"
 	| extPlugins intPlugins |
 	self flag: 'tty'. "refactor so that the cascade reflects CMake terminilogy"
-self break.
 	output := String new writeStream.
 	config templates: OrderedCollection new. 
 	config 
@@ -77,6 +76,7 @@ self break.
 		standardIncludes;                       "<---"
 		setGlobalOptionsAfterDetermineSystem: self;    
 		extraVMSettings: self;                "<--catch-all method. os/platform specific"
+break;
 		setCoreSources: self;
 		setPlatformSources: self;
 		setCrossSources: self;

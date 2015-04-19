@@ -74,12 +74,50 @@ Linux64x86w32BitSqueakCogV3Config >> availableBuildTypes [
 
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitSqueakCogV3Config >> cmakeAddDefinitionsBuild [
+	|definitions|
+	definitions:=#(
+	 '-DNDEBUG'          
+ 	 '-DDEBUGVM=0'
+	 ' -DLSB_FIRST=1'
+	 '-D_GNU_SOURCE'
+ 	 '-D_FILE_OFFSET_BITS=64'
+"	  '-DUSE_GLOBAL_STRUCT=0'"
+ 	 '-DCOGMTVM=0') .
+
 	(enabledebugmessages)
 		ifTrue:[	templates 
 		addLast:((CMakeMessage new) message: (self class name) , 'cmakeAddDefinitionsBuild')
 	] .
 	templates
-		addLast:((CMakeAddDefinitions new) definitions: (self compilerDefinitions asOrderedCollection)). 
+		addLast:((CMakeAddDefinitions new) definitions: definitions). 
+
+"	templates
+		addLast:((CMakeAddDefinitions new) definitions: (self compilerDefinitions asOrderedCollection)). <--this was the old pharo deprecated legacy code approach that is unsuitable for the multiple buildTypes each Configuration must support"
+
+
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitSqueakCogV3Config >> cmakeAddDefinitionsBuildAssert [
+	|definitions|
+"copy-n-paste from /build.linux32x86/squeak.cog.v3/build.assert/mvm  file"
+	definitions:=#(
+	 '-DDEBUGVM=0'
+       '-D_GNU_SOURCE' 
+       '-D_FILE_OFFSET_BITS=64' 
+        '-DCOGMTVM=0'
+	) .
+
+	(enabledebugmessages)
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: (self class name) , 'cmakeAddDefinitionsBuildAssert')
+	] .
+	templates
+		addLast:((CMakeAddDefinitions new) definitions: definitions). 
+
+"	templates
+		addLast:((CMakeAddDefinitions new) definitions: (self compilerDefinitions asOrderedCollection)). <--this was the old pharo deprecated legacy code approach that is unsuitable for the multiple buildTypes each Configuration must support"
+
 
 ]
 
@@ -142,6 +180,9 @@ Linux64x86w32BitSqueakCogV3Config >> cogitClass [
 
 { #category : #compiling }
 Linux64x86w32BitSqueakCogV3Config >> compilerDefinitions [
+	
+	self deprecated: 'Legacy method from pharo approach. We need different definitions for each buildType'.
+
 	^#(
 	 '-DNDEBUG'          
  	 '-DDEBUGVM=0'

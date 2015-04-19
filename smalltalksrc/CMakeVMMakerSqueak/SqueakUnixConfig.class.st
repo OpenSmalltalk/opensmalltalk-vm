@@ -479,6 +479,7 @@ SqueakUnixConfig >> configIanPiumartasTemplates [
 		addLast: ((CMakeSetConfigDefine new) variable: 'OS_TYPE' value:'\"${platformName}\"');  "defined in INCLUDE(directories.cmake) in CMakeLists.txt"
 		addLast: ((CMakeVersion new) version: '1.2.3.4');
 		addLast: ((CMakeSet new) variable:'without-gl' value: ''); 
+		addLast: ((CMakeSetConfigDefine new) variable: 'NoDbgRegParms' value:''); 
 		addLast: ((CMakeCompilerIsGNUCC new));
 		addLast:((CMakeMessage new) message:'Tests');
 		addLast:(CMakeTestBigEndian new);

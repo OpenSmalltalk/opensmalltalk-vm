@@ -1496,7 +1496,8 @@ CPlatformConfigForSqueak >> cogitClass [
 
 { #category : #compiling }
 CPlatformConfigForSqueak >> compilerDefinitions [
-	"-DNDEBUG -DGNU_SOURCE...etc feed these into cmakeAddDefinitions"
+	"-DNDEBUG -DGNU_SOURCE...etc . cmakeAddDefinitions(buildType) replaces this"
+	self deprecated: 'Legacy method from pharo approach. We need different definitions for each buildType'.
 	self	subclassResponsibility
 ]
 

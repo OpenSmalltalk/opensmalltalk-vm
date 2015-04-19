@@ -66,6 +66,8 @@ SqueakMacintoshConfig >> cmakeWriteDirectoriesDotCmake: aMaker [
 
 { #category : #compiling }
 SqueakMacintoshConfig >> compilerDefinitions [
+	self deprecated: 'Legacy method from pharo approach. We need different definitions for each buildType'.
+
 	self flag:'tty'. "cut-n-paste from representative pharo macOS configs"
 	^ { 
 		'-DCOGMTVM=0'. 
