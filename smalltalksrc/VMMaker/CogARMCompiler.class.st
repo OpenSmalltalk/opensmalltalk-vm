@@ -261,7 +261,7 @@ CogARMCompiler >> ands: destReg rn: srcReg imm: immediate ror: rot [
 	^self type: 1 op: AndOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
-{ #category : #'generate machine code - concretize' }
+{ #category : #'generate machine code - support' }
 CogARMCompiler >> at: offset moveCw: constant intoR: destReg [
 	"This loads aWord into the inter-opcode temporary register. Because most ARM instruction enable using a (8-12bit) offset relative to a register, the LS Byte can be included in that instruction, saving one instruction. This is done in a decorator, e.g. CmpCqR"
 	"Generates:along the lines of
@@ -821,24 +821,6 @@ CogARMCompiler >> concretizeConditionalJump: conditionCode [
  	self assert: (self isInImmediateJumpRange: offset).
 	self machineCodeAt: 0 put: (self cond: conditionCode br: 0 offset: offset). "B offset"
 	^machineCodeSize := 4
-]
-
-{ #category : #'generate machine code - concretize' }
-CogARMCompiler >> concretizeConditionalJumpFull: conditionCode [
-	"Will get inlined into concretizeAt: switch."
-	"Sizing/generating jumps.
-		Jump targets can be to absolute addresses or other abstract instructions.
-		Generating initial trampolines instructions may have no maxSize and be to absolute addresses.
-		Otherwise instructions must have a machineCodeSize which must be kept to."
-	<inline: true>
-	| jumpTarget instrOffset|
-	<var: #jumpTarget type: #'AbstractInstruction *'>
-	jumpTarget := self longJumpTargetAddress.
-	instrOffset := self at: 0 moveCw: jumpTarget intoR: ConcreteIPReg.
-	self assert: instrOffset = 16.
-	"bx RISCTempReg"
-	self machineCodeAt: instrOffset put: (self cond: conditionCode bx: 0 target: ConcreteIPReg).
-	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1420,20 +1402,27 @@ CogARMCompiler >> concretizePushCq [
 CogARMCompiler >> concretizePushCw [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| word  instrOffset |
-	word := (operands at: 0) - (address + 8).
-	
-	self rotateable8bitImmediate: word
-		ifTrue: [ :rot :immediate |
-			self machineCodeAt: 0 put: (self add: ConcreteIPReg rn: PC imm: immediate ror: rot).
-			instrOffset := 4]
-		ifFalse: [self rotateable8bitImmediate: word negated
-				ifTrue: [ :rot :immediate |
-					self machineCodeAt: 0 put: (self sub: ConcreteIPReg rn: PC imm: immediate ror: rot).
-					instrOffset := 4]
-				ifFalse: [instrOffset := self at: 0 moveCw: word intoR: ConcreteIPReg]].
-		self machineCodeAt: instrOffset put: (self pushR: ConcreteIPReg).
-	^machineCodeSize := instrOffset +4
+	| operand instrOffset distance |
+	operand := operands at: 0.
+	instrOffset := 0.
+	"First try and encode as a pc-relative reference..."
+	(cogit addressIsInCodeZone: operand) ifTrue:
+		[distance := operand  - (address + 8).
+		 self rotateable8bitImmediate: distance
+		 	ifTrue: [ :rot :immediate |
+		 		self machineCodeAt: 0 put: (self add: ConcreteIPReg rn: PC imm: immediate ror: rot).
+		 		instrOffset := 4]
+		 	ifFalse:
+		 		[self rotateable8bitImmediate: distance negated
+		 			ifTrue: [ :rot :immediate |
+		 				self machineCodeAt: 0 put: (self sub: ConcreteIPReg rn: PC imm: immediate ror: rot).
+		 				instrOffset := 4]
+				ifFalse: [instrOffset := 0]]].
+	"If this fails, use the conventional and painfully long 4 instruction sequence."
+	instrOffset = 0 ifTrue:
+		[instrOffset := self at: 0 moveCw: operand intoR: ConcreteIPReg].
+	self machineCodeAt: instrOffset put: (self pushR: ConcreteIPReg).
+	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -2032,14 +2021,6 @@ CogARMCompiler >> is8BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: fa
 ]
 
 { #category : #testing }
-CogARMCompiler >> isAddressRelativeToPC: pcAddress [
-	"Support for addressing the method relative to the PC."
-	^pcAddress notNil
-	  and: [pcAddress <= address
-	  and: [address - pcAddress < (1 << 12)]]
-]
-
-{ #category : #testing }
 CogARMCompiler >> isAddressRelativeToVarBase: varAddress [
 	"Support for addressing variables off the dedicated VarBaseReg"
 	^varAddress notNil
@@ -2087,15 +2068,6 @@ CogARMCompiler >> isJumpAt: pc [
 CogARMCompiler >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction."
 	^self isJump or: [opcode = AlignmentNops or: [opcode = Call]]
-]
-
-{ #category : #'abstract instructions' }
-CogARMCompiler >> isPCRelativeAddress: operand [
-	"Provided the receiver's address has been determined we can
-	 answer if operand can be accessed via pc-relative addressing."
-
-	self assert: address notNil.
-	^operand between: address + 8 - (1 << 12 - 1) and: address + 8 + (1 << 12 - 1)
 ]
 
 { #category : #accessing }
@@ -2382,13 +2354,15 @@ CogARMCompiler >> mov: destReg rn: srcReg [
 	^self type: 0 op: MoveOpcode set: 0 rn: 0 rd: destReg shifterOperand: srcReg
 ]
 
-{ #category : #'abstract instructions' }
+{ #category : #'generate machine code - support' }
 CogARMCompiler >> movePCRelative: operand into: reg [
-"Load a pc relative value into the register"
-	| offset sign |
-	offset := operand - address +8.
-	sign := offset > 0 ifTrue:[1] ifFalse:[0].
-	self ldr: reg rn: PC plus: sign imm: offset abs
+	"Load a pc relative value into the register"
+	| offset sign instr |
+	offset := operand - (address + 8).
+	sign := offset >= 0 ifTrue: [1] ifFalse: [0].
+	instr := self ldr: reg rn: PC plus: sign imm: offset abs.
+	self machineCodeAt: 0 put: instr.
+	^4
 ]
 
 { #category : #'ARM convenience instructions' }
@@ -2413,7 +2387,7 @@ CogARMCompiler >> nameForRegister: reg [ "<Integer>"
 		ifNone: [super nameForRegister: reg]
 ]
 
-{ #category : #'generate machine code - concretize' }
+{ #category : #'generate machine code - support' }
 CogARMCompiler >> nopsFrom: startAddr to: endAddr [
 "fill with MOV R0, R0 no-op instructions"
 	self assert: endAddr - startAddr + 1 \\ 4 = 0.
@@ -2440,7 +2414,7 @@ CogARMCompiler >> orr: destReg imm: immediate8bitValue ror: rot [
 	^self type: 1 op: 16rC set: 0 rn: destReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate8bitValue)
 ]
 
-{ #category : #'generate machine code - concretize' }
+{ #category : #'generate machine code' }
 CogARMCompiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
 	| nullBytes |
 	nullBytes := (endAddr - startAddr + 1) \\ 4.
@@ -2484,6 +2458,24 @@ CogARMCompiler >> relocateCallBeforeReturnPC: retpc by: delta [
 		 distanceDiv4 := instr bitAnd: 16rFFFFFF.
 		 distanceDiv4 := distanceDiv4 + (delta // 4).
 		 objectMemory longAt: retpc - 4 put: ((instr bitAnd: 16rFF000000) bitOr: (delta bitAnd: 16rFFFFFF))]
+]
+
+{ #category : #'inline cacheing' }
+CogARMCompiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
+	"If possible we generate the method address using pc-relative addressing.
+	 If so we don't need to relocate it in code.  So check if pc-relative code was
+	 generated, and if not, adjust a long sequence."
+	| location |
+	(self isPCRelativeValueLoad: (objectMemory longAt: pc - 8)) ifFalse:
+		[location :=    ((objectMemory byteAt: pc - 20) << 24)
+					+  ((objectMemory byteAt: pc - 16) << 16)
+					+  ((objectMemory byteAt: pc - 12) << 8)
+					+   (objectMemory byteAt: pc - 8).
+		 location := location + delta.
+		objectMemory byteAt: pc - 20 put: (location >> 24 bitAnd: 16rFF).
+		objectMemory byteAt: pc - 16 put: (location >> 16 bitAnd: 16rFF).
+		objectMemory byteAt: pc - 12 put: (location >> 8 bitAnd: 16rFF).
+		objectMemory byteAt: pc - 8 put: (location  bitAnd: 16rFF)]
 ]
 
 { #category : #'inline cacheing' }
