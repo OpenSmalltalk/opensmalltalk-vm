@@ -175,6 +175,25 @@ CogARMCompiler class >> initialize [
 			at: classVarName put: value + LastRTLCode - 1]
 ]
 
+{ #category : #translation }
+CogARMCompiler class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
+	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an AbstractInstruction struct."
+	"{CogAbstractInstruction. CogIA32Compiler. CogARMCompiler} do:
+		[:c| Transcript print: c; cr. c printTypedefOn: Transcript]"
+	(self filteredInstVarNames copyWithout: 'machineCode'), #('machineCode') do:
+		[:ivn|
+		ivn ~= 'bcpc' ifTrue:
+			[aBinaryBlock
+				value: ivn
+				value: (ivn caseOf: {
+							['address']			-> [#'unsigned long'].
+							['machineCode']	-> [{#'unsigned long'. '[', self basicNew machineCodeWords printString, ']'}].
+							['operands']		-> [{#'unsigned long'. '[', NumOperands, ']'}].
+							['dependent']		-> ['struct _AbstractInstruction *']}
+						otherwise:
+							[#'unsigned char'])]]
+]
+
 { #category : #accessing }
 CogARMCompiler class >> orOpcode [
 	^OrOpcode
@@ -307,16 +326,17 @@ CogARMCompiler >> bl: offset [
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> blx: targetReg [
-"Branch&link to the address in targetReg. Return address is in LR
+	"Branch&link to the address in targetReg. Return address is in LR
 	BX targetReg"
+	<inline: true>
 	^self cond: AL bx: 1 target: targetReg
 
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> bx: targetReg [
-"Branch to address in targetReg.
-	BX targetReg"
+	"Branch to address in targetReg. BX targetReg"
+	<inline: true>
 	^self cond: AL bx: 0 target: targetReg
 
 ]
@@ -328,6 +348,17 @@ CogARMCompiler >> cResultRegister [
 	^R0
 ]
 
+{ #category : #'inline cacheing' }
+CogARMCompiler >> callFullTargetFromReturnAddress: callSiteReturnAddress [
+	"Answer the address that the call immediately preceeding callSiteReturnAddress will jump to."
+	"this is also used by #jumpLongTargetBeforeFollowingAddress: and so we check for both call and jump related instructions; later on we can use simpler tests once it feels safe to assume we get here always with a call/jump in the proper place"
+	| call |
+	call := self instructionBeforeAddress: callSiteReturnAddress.
+	self assert: ((self instructionIsBX: call) or: [self instructionIsBLX: call]).
+	"A Long Call/Jump. Extract the value saved to RISCTempReg from all the instructions before."
+	^self extract32BitOperandFrom4InstructionsPreceeding: callSiteReturnAddress - 4
+]
+
 { #category : #accessing }
 CogARMCompiler >> callInstructionByteSize [
 	"ARM calls and jumps span +/- 32 mb, more than enough for intra-zone calls and jumps."
@@ -337,19 +368,12 @@ CogARMCompiler >> callInstructionByteSize [
 { #category : #'inline cacheing' }
 CogARMCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 	"Answer the address that the call immediately preceeding callSiteReturnAddress will jump to."
-	"this is also used by #jumpLongTargetBeforeFollowingAddress: and so we check for both call and jump related instructions; later on we can use simpler tests once it feels safe to assume we get here always with a call/jump in the proper place"
+	"this is also used by #jumpLongTargetBeforeFollowingAddress:."
 	| callDistance call |
 	call := self instructionBeforeAddress: callSiteReturnAddress.
-	self assert: call ~= 0. "andeq r0, r0 will not be generated, not even as nops"
-	((self instructionIsB: call) or:[self instructionIsBL: call])
-		ifTrue: [ "a short call/jump" callDistance := self extractOffsetFromBL: call.
-			^callSiteReturnAddress + 4 + callDistance signedIntFromLong].
-	
-	((self instructionIsBX: call) or:[self instructionIsBLX: call])
-		ifTrue:["A Long Call/Jump. Extract the value saved to RISCTempReg from all the instructions before."
-			^self extractOffsetFromBXAt: callSiteReturnAddress - 4].
-	self halt
-	
+	self assert: ((self instructionIsB: call) or: [self instructionIsBL: call]).
+	callDistance := self extractOffsetFromBL: call.
+	^callSiteReturnAddress + 4 + callDistance signedIntFromLong
 ]
 
 { #category : #accessing }
@@ -943,7 +967,7 @@ CogARMCompiler >> concretizeJumpFull [
 	jumpTarget := self longJumpTargetAddress.
 	instrOffset := self at: 0 moveCw: jumpTarget intoR: ConcreteIPReg.
 	"bx ConcreteIPReg"
-	self machineCodeAt: instrOffset put: (self cond: AL bx: 0 target: ConcreteIPReg).
+	self machineCodeAt: instrOffset put: (self bx: ConcreteIPReg).
 	^machineCodeSize := instrOffset + 4
 ]
 
@@ -1700,8 +1724,18 @@ CogARMCompiler >> dispatchConcretize [
 ]
 
 { #category : #testing }
+CogARMCompiler >> extract32BitOperandFrom4InstructionsPreceeding: addr [
+	<inline: true>
+	^(objectMemory byteAt: addr -4) 
+	 + ((objectMemory byteAt: addr - 8) << 8) 
+	 + ((objectMemory byteAt: addr - 12) << 16) 
+	 + ((objectMemory byteAt: addr - 16) << 24)
+]
+
+{ #category : #testing }
 CogARMCompiler >> extractOffsetFromBL: instr [
-"we are told this is a BL <offset> instruction, so work out the offset it encodes"
+	"we are told this is a BL <offset> instruction, so work out the offset it encodes"
+	<inline: true>
 	| relativeJump |
 	relativeJump := instr bitAnd: 16r00FFFFFF.
 	relativeJump := (relativeJump bitAt: 24) = 1 
@@ -1710,20 +1744,19 @@ CogARMCompiler >> extractOffsetFromBL: instr [
 	^relativeJump
 ]
 
-{ #category : #testing }
-CogARMCompiler >> extractOffsetFromBXAt: addr [
-"this should return the long call/jump target"
-	^(objectMemory byteAt: addr -4) 
-		+ ((objectMemory byteAt: addr - 8) << 8) 
-		+ ((objectMemory byteAt: addr - 12) << 16) 
-		+ ((objectMemory byteAt: addr - 16) << 24)
-]
-
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> fmstat [
 	"unconditional transfer FP status to cpsr to choose jumps etc. Manually fudged for now"
 	<inline: true>
 	^16rEF1FA10
+]
+
+{ #category : #abi }
+CogARMCompiler >> fullCallsAreRelative [
+	"Answer if CallFull and/or JumpFull are relative and hence need relocating on method
+	 compation. If so, they are annotated with IsRelativeCall in methods and relocated in
+	 relocateIfCallOrMethodReference:mcpc:delta:"
+	^false
 ]
 
 { #category : #abi }
@@ -1949,15 +1982,35 @@ CogARMCompiler >> hasVarBaseRegister [
 	^true "r10/sl"
 ]
 
+{ #category : #'generate machine code' }
+CogARMCompiler >> initialize [
+	"This method intializes the Smalltalk instance.  The C instance is merely a struct and doesn't need initialization."
+	<doNotGenerate>
+	operands := CArrayAccessor on: (Array new: NumOperands).
+	machineCode := CArrayAccessor on: (Array new: self machineCodeWords)
+]
+
 { #category : #'inline cacheing' }
 CogARMCompiler >> inlineCacheTagAt: callSiteReturnAddress [
 	"Answer the inline cache tag for the return address of a send."
-	^self literalBeforeFollowingAddress: callSiteReturnAddress - 4
+	self assert: (self instructionIsBL: (self instructionBeforeAddress: callSiteReturnAddress)).
+	^self extract32BitOperandFrom4InstructionsPreceeding: callSiteReturnAddress - 4
+]
+
+{ #category : #testing }
+CogARMCompiler >> insert32BitOperand: operand into4InstructionsPreceeding: addr [
+	<inline: true>
+	objectMemory
+		byteAt: addr -   4 put: (operand			bitAnd: 16rFF);
+		byteAt: addr -   8 put: (operand >>   8	bitAnd: 16rFF);
+		byteAt: addr - 12 put: (operand >> 16	bitAnd: 16rFF);
+		byteAt: addr - 16 put: (operand >> 24	bitAnd: 16rFF)
 ]
 
 { #category : #'inline cacheing' }
 CogARMCompiler >> instructionBeforeAddress: followingAddress [
 	"Answer the instruction immediately preceeding followingAddress."
+	<inline: true>
 	^objectMemory longAt: followingAddress -4
 ]
 
@@ -2163,17 +2216,9 @@ CogARMCompiler >> leafCallStackPointerDelta [
 CogARMCompiler >> literalBeforeFollowingAddress: followingAddress [
 	"Answer the long constant loaded by a MOV/ORR/ORR/ORR
 	 or MOV/ORR/ORR/ORR/PUSH  sequence, just before this address:"
-	^(self instructionIsOR: (objectMemory longAt: followingAddress - 4))
-		ifTrue:
-			[   ((objectMemory byteAt: followingAddress - 16) << 24)
-			+  ((objectMemory byteAt: followingAddress - 12) << 16)
-			+  ((objectMemory byteAt: followingAddress - 8) << 8)
-			+   (objectMemory byteAt: followingAddress - 4)]
-		ifFalse:
-			[   ((objectMemory byteAt: followingAddress - 20) << 24)
-			+  ((objectMemory byteAt: followingAddress - 16) << 16)
-			+  ((objectMemory byteAt: followingAddress - 12) << 8)
-			+   (objectMemory byteAt: followingAddress - 8)]
+	^(self instructionIsOR: (self instructionBeforeAddress: followingAddress))
+		ifTrue: [self extract32BitOperandFrom4InstructionsPreceeding: followingAddress]
+		ifFalse: [self extract32BitOperandFrom4InstructionsPreceeding: followingAddress - 4]
 ]
 
 { #category : #accessing }
@@ -2186,20 +2231,14 @@ CogARMCompiler >> loadLiteralByteSize [
 CogARMCompiler >> machineCodeAt: anOffset [
 	"read aWord from machineCode, with little endian"
 	<inline: true>
-	^((machineCode at: anOffset"+0")"<< 0" bitOr: (machineCode at: anOffset + 1) << 8) 
-		bitOr: ((machineCode at: anOffset + 2) << 16 bitOr: (machineCode at: anOffset + 3) << 24)
-
+	^machineCode at: anOffset // 4
 ]
 
 { #category : #accessing }
 CogARMCompiler >> machineCodeAt: anOffset put: aWord [
 	"add aWord to machineCode, with little endian"
 	<inline: true>
-	machineCode
-		at: anOffset + 3 put: (16rFF bitAnd: aWord >> 24);
-		at: anOffset + 2 put: (16rFF bitAnd: aWord >> 16);
-		at: anOffset + 1 put: (16rFF bitAnd: aWord >> 8);
-		at: anOffset"+ 0"put: (16rFF bitAnd: aWord">> 0")
+	machineCode at: anOffset // 4 put: aWord
 ]
 
 { #category : #'generate machine code' }
@@ -2212,6 +2251,18 @@ CogARMCompiler >> machineCodeBytes [
 			orr R3, R3, #<addressByte4>, 0
 			cmp R?, R3"
 	^20
+]
+
+{ #category : #'generate machine code' }
+CogARMCompiler >> machineCodeWords [
+	"Answer the maximum number of words of machine code generated for any abstract instruction.
+	 e.g. CmpCwR =>
+			mov R3, #<addressByte1>, 12
+			orr R3, R3, #<addressByte2>, 8
+			orr R3, R3, #<addressByte3>, 4
+			orr R3, R3, #<addressByte4>, 0
+			cmp R?, R3"
+	^5
 ]
 
 { #category : #'abstract instructions' }
@@ -2414,6 +2465,16 @@ CogARMCompiler >> orr: destReg imm: immediate8bitValue ror: rot [
 	^self type: 1 op: 16rC set: 0 rn: destReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate8bitValue)
 ]
 
+{ #category : #'inline cacheing' }
+CogARMCompiler >> outputMachineCodeAt: address [
+	"By default move machine code a byte at a time
+	  Subclasses with coarser granularity can override as desired."
+	<inline: true>
+	0 to: machineCodeSize - 1 by: 4 do:
+		[:j|
+		objectMemory longAt: address + j put: (machineCode at: j // 4)]
+]
+
 { #category : #'generate machine code' }
 CogARMCompiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
 	| nullBytes |
@@ -2454,7 +2515,8 @@ CogARMCompiler >> relocateCallBeforeReturnPC: retpc by: delta [
 	| instr distanceDiv4 |
 	self assert: delta \\ 4 = 0.
 	delta ~= 0 ifTrue:
-		[instr := objectMemory longAt: retpc - 4.
+		[instr := self instructionBeforeAddress: retpc.
+		 self assert: ((self instructionIsB: instr) or: [self instructionIsBL: instr]).
 		 distanceDiv4 := instr bitAnd: 16rFFFFFF.
 		 distanceDiv4 := distanceDiv4 + (delta // 4).
 		 objectMemory longAt: retpc - 4 put: ((instr bitAnd: 16rFF000000) bitOr: (delta bitAnd: 16rFFFFFF))]
@@ -2466,16 +2528,10 @@ CogARMCompiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
 	 If so we don't need to relocate it in code.  So check if pc-relative code was
 	 generated, and if not, adjust a long sequence."
 	| location |
-	(self isPCRelativeValueLoad: (objectMemory longAt: pc - 8)) ifFalse:
-		[location :=    ((objectMemory byteAt: pc - 20) << 24)
-					+  ((objectMemory byteAt: pc - 16) << 16)
-					+  ((objectMemory byteAt: pc - 12) << 8)
-					+   (objectMemory byteAt: pc - 8).
+	(self isPCRelativeValueLoad: (self instructionBeforeAddress: pc - 4)) ifFalse:
+		[location := self extract32BitOperandFrom4InstructionsPreceeding: pc - 4.
 		 location := location + delta.
-		objectMemory byteAt: pc - 20 put: (location >> 24 bitAnd: 16rFF).
-		objectMemory byteAt: pc - 16 put: (location >> 16 bitAnd: 16rFF).
-		objectMemory byteAt: pc - 12 put: (location >> 8 bitAnd: 16rFF).
-		objectMemory byteAt: pc - 8 put: (location  bitAnd: 16rFF)]
+		 self insert32BitOperand: location into4InstructionsPreceeding: pc - 4]
 ]
 
 { #category : #'inline cacheing' }
@@ -2508,23 +2564,24 @@ CogARMCompiler >> rewriteCallFullAt: callSiteReturnAddress target: callTargetAdd
 	"Rewrite a callFull instruction to jump to a different target.  This variant
 	 is used to rewrite cached primitive calls.   Answer the extent of the
 	 code change which is used to compute the range of the icache to flush."
+	<inline: true>
+	^self
+		rewriteFullTransferAt: callSiteReturnAddress
+		target: callTargetAddress
+		expectedInstruction: 16rE12FFF3C
+]
+
+{ #category : #'inline cacheing' }
+CogARMCompiler >> rewriteFullTransferAt: callSiteReturnAddress target: callTargetAddress expectedInstruction: expectedInstruction [
+	"Rewrite a CallFull or JumpFull instruction to transfer to a different target.
+	 This variant is used to rewrite cached primitive calls.   Answer the extent
+	 of the code change which is used to compute the range of the icache to flush."
 	<var: #callSiteReturnAddress type: #usqInt>
 	<var: #callTargetAddress type: #usqInt>
-	"cogit disassembleFrom: callSiteReturnAddress - 40 to: callSiteReturnAddress + 9"
-
-	"check that the instruction involved is actually a long jump BX ip (reg 12)
-	(CogARMCompiler new blx: 12) hex '16rE12FFF3C'"
-	self assert: (objectMemory longAt:  callSiteReturnAddress - 4) = 16rE12FFF3C .
-	
-	"The callTargetAddress is loaded byte by byte."
-	objectMemory byteAt: callSiteReturnAddress - 20 put: (callTargetAddress >> 24 bitAnd: 16rFF).
-	objectMemory byteAt: callSiteReturnAddress - 16 put: (callTargetAddress >> 16 bitAnd: 16rFF).
-	objectMemory byteAt: callSiteReturnAddress - 12 put: (callTargetAddress >> 8 bitAnd: 16rFF).
-	objectMemory byteAt: callSiteReturnAddress - 8 put: (callTargetAddress  bitAnd: 16rFF).
-
-	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
-	"self cCode: ''
-		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress - 1]."
+	"cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress - 1"
+	self assert: (self instructionBeforeAddress: callSiteReturnAddress) = expectedInstruction.
+	self insert32BitOperand: callTargetAddress into4InstructionsPreceeding: callSiteReturnAddress - 4.
+	self assert: (self callFullTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
 	^20
 ]
 
@@ -2538,24 +2595,17 @@ CogARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag targ
 	<var: #callSiteReturnAddress type: #usqInt>
 	<var: #callTargetAddress type: #usqInt>
 	| call callDistance |
-	"cogit disassembleFrom: callSiteReturnAddress - 40 to: callSiteReturnAddress + 9"
 	false
 		ifTrue: [self assert: callTargetAddress >= cogit minCallAddress]
 		ifFalse: [callTargetAddress >= cogit minCallAddress ifFalse:
 					[self error: 'linking callsite to invalid address']].
 	callDistance := (callTargetAddress - (callSiteReturnAddress + 8 "pc offset"- 4 "return offset")) signedIntToLong.
-	
-	self assert: (self isInImmediateJumpRange: callDistance). "we don't support long call updates, yet"
+	self assert: (self isInImmediateJumpRange: callDistance). "we don't support long call updates here"
 	call := self bl: callDistance.
-	objectMemory longAt:  callSiteReturnAddress - 4 put: call.
-	
-	"The cacheTag is loaded byte by byte. Each byte needs to be encoded with minimal right ring rotation. See also #at:moveCw:intoR:"
-	objectMemory byteAt: callSiteReturnAddress - 20 put: (cacheTag >> 24 bitAnd: 16rFF).
-	objectMemory byteAt: callSiteReturnAddress - 16 put: (cacheTag >> 16 bitAnd: 16rFF).
-	objectMemory byteAt: callSiteReturnAddress - 12 put: (cacheTag >> 8 bitAnd: 16rFF).
-	objectMemory byteAt: callSiteReturnAddress - 8 put: (cacheTag  bitAnd: 16rFF).
-
+	objectMemory longAt: callSiteReturnAddress - 4 put: call.
+	self insert32BitOperand: cacheTag into4InstructionsPreceeding: callSiteReturnAddress - 4.
 	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
+	self assert: (self extract32BitOperandFrom4InstructionsPreceeding: callSiteReturnAddress - 4) = cacheTag.
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress - 1]."
 	^20
@@ -2566,24 +2616,11 @@ CogARMCompiler >> rewriteJumpFullAt: callSiteReturnAddress target: callTargetAdd
 	"Rewrite a full jump instruction to jump to a different target.  This variant
 	 is used to rewrite cached primitive calls.   Answer the extent of the
 	 code change which is used to compute the range of the icache to flush."
-	<var: #callSiteReturnAddress type: #usqInt>
-	<var: #callTargetAddress type: #usqInt>
-	"cogit disassembleFrom: callSiteReturnAddress - 40 to: callSiteReturnAddress + 9"
-
-	"check that the instruction involved is actually a long jump BX ip (reg 12)
-	(CogARMCompiler new bx: 12) hex"
-	self assert: (objectMemory longAt:  callSiteReturnAddress - 4) = 16rE12FFF1C .
-	
-	"The callTargetAddress is loaded byte by byte."
-	objectMemory byteAt: callSiteReturnAddress - 20 put: (callTargetAddress >> 24 bitAnd: 16rFF).
-	objectMemory byteAt: callSiteReturnAddress - 16 put: (callTargetAddress >> 16 bitAnd: 16rFF).
-	objectMemory byteAt: callSiteReturnAddress - 12 put: (callTargetAddress >> 8 bitAnd: 16rFF).
-	objectMemory byteAt: callSiteReturnAddress - 8 put: (callTargetAddress  bitAnd: 16rFF).
-
-	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
-	"self cCode: ''
-		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress - 1]."
-	^20
+	<inline: true>
+	^self
+		rewriteFullTransferAt: callSiteReturnAddress
+		target: callTargetAddress
+		expectedInstruction: 16rE12FFF1C
 ]
 
 { #category : #testing }
