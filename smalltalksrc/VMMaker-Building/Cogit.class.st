@@ -1351,7 +1351,9 @@ Cogit >> CallFullRT: callTarget [
 	 See also Call which calls within our *code* space"
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self annotateCall: (self CallFull: callTarget)
+	^backEnd fullCallsAreRelative
+		ifTrue: [self annotateCall: (self CallFull: callTarget)]
+		ifFalse: [self CallFull: callTarget]
 ]
 
 { #category : #'method map' }
@@ -1590,7 +1592,9 @@ Cogit >> JumpFullRT: callTarget [
 	 See also JumpLong et al. which jump within our *code* space"
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self annotateCall: (self JumpFull: callTarget)
+	^backEnd fullCallsAreRelative
+		ifTrue: [self annotateCall: (self JumpFull: callTarget)]
+		ifFalse: [self JumpFull: callTarget]
 ]
 
 { #category : #'abstract instructions' }
@@ -8007,10 +8011,8 @@ Cogit >> outputInstructionsAt: startAddress [
 		[:i| | abstractInstruction |
 		abstractInstruction := self abstractInstructionAt: i.
 		self assert: abstractInstruction address = absoluteAddress.
-		0 to: abstractInstruction machineCodeSize - 1 do:
-			[:j|
-			objectMemory byteAt: absoluteAddress put: (abstractInstruction machineCode at: j).
-			absoluteAddress := absoluteAddress + 1]].
+		abstractInstruction outputMachineCodeAt: absoluteAddress.
+		absoluteAddress := absoluteAddress + abstractInstruction machineCodeSize].
 	^absoluteAddress
 ]
 

@@ -145,6 +145,12 @@ CogIA32Compiler >> cResultRegister [
 	^self abstractRegisterForConcreteRegister: EAX
 ]
 
+{ #category : #'inline cacheing' }
+CogIA32Compiler >> callFullTargetFromReturnAddress: callSiteReturnAddress [
+	"Answer the address the call immediately preceeding callSiteReturnAddress will jump to."
+	^self callTargetFromReturnAddress: callSiteReturnAddress
+]
+
 { #category : #accessing }
 CogIA32Compiler >> callInstructionByteSize [
 	^5
@@ -2239,6 +2245,14 @@ CogIA32Compiler >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<
 	 virtual addresses (e.g. a debugger using memory-mapping to access a debugee).
 	 Using the macro avoids an unnecessary call."
 	self halt: #ceFlushICache
+]
+
+{ #category : #abi }
+CogIA32Compiler >> fullCallsAreRelative [
+	"Answer if CallFull and/or JumpFull are relative and hence need relocating on method
+	 compation. If so, they are annotated with IsRelativeCall in methods and relocated in
+	 relocateIfCallOrMethodReference:mcpc:delta:"
+	^true
 ]
 
 { #category : #'abstract instructions' }
