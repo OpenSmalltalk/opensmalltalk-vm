@@ -1447,7 +1447,7 @@ CogARMCompiler >> concretizeRetN [
 	offset = 0 ifTrue:
 		[self machineCodeAt: 0 put: (self mov: PC rn: LR). "pop	{pc}"
 		^machineCodeSize := 4].
-	self assert: offset < 32. "We have an 8 bit immediate. If needed, we could rotate it less than 30 bit."
+	self assert: offset < 255. "We have an 8 bit immediate. If needed, we could rotate it less than 30 bit."
 
 	self machineCodeAt: 0 put: (self add: SP rn: SP imm: offset  ror: 0).
 	self machineCodeAt: 4 put: (self mov: PC rn: LR).  "pop	{pc}"
@@ -2184,6 +2184,12 @@ CogARMCompiler >> literalBeforeFollowingAddress: followingAddress [
 			+  ((objectMemory byteAt: followingAddress - 16) << 16)
 			+  ((objectMemory byteAt: followingAddress - 12) << 8)
 			+   (objectMemory byteAt: followingAddress - 8)]
+]
+
+{ #category : #accessing }
+CogARMCompiler >> loadLiteralByteSize [
+	"Answer the byte size of a MoveCwR opcode's corresponding machine code"
+	^16
 ]
 
 { #category : #accessing }

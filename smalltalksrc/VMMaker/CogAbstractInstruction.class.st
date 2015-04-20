@@ -898,6 +898,11 @@ CogAbstractInstruction >> relocateJumpLongBeforeFollowingAddress: pc by: delta [
 	self relocateCallBeforeReturnPC: pc by: delta
 ]
 
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> relocateMethodReferenceBeforeAddress: pc by: delta [
+	self relocateCallBeforeReturnPC: pc by: delta
+]
+
 { #category : #'generate machine code' }
 CogAbstractInstruction >> resolveJumpTarget [
 	<var: #fixup type: #'BytecodeFixup *'>
