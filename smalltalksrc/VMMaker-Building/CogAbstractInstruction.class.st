@@ -670,6 +670,14 @@ CogAbstractInstruction >> isPCDependent [
 	^self subclassResponsibility
 ]
 
+{ #category : #testing }
+CogAbstractInstruction >> isPCRelativeValueLoad: instr [
+	"add ip, pc, blah->  '16rE28FC000'
+	 sub ip, pc, blah -> '16rE24FC000'"
+	^(instr bitAnd: 16rFFFFF000) = 16rE28FC000
+	  or: [(instr bitAnd: 16rFFFFF000) = 16rE24FC000]
+]
+
 { #category : #accessing }
 CogAbstractInstruction >> jmpTarget: anAbstractInstruction [
 	"Set the target of a jump instruction.  These all have the target in the first operand."
@@ -900,7 +908,10 @@ CogAbstractInstruction >> relocateJumpLongBeforeFollowingAddress: pc by: delta [
 
 { #category : #'inline cacheing' }
 CogAbstractInstruction >> relocateMethodReferenceBeforeAddress: pc by: delta [
-	self relocateCallBeforeReturnPC: pc by: delta
+	"On some processors the method reference is a load constant and
+	 hence needs changing when methods are moved.  On others the
+	 method reference is pc-relative and hence nothing needs to happen."
+	self subclassResponsibility
 ]
 
 { #category : #'generate machine code' }

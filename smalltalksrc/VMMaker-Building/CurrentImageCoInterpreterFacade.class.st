@@ -127,7 +127,8 @@ CurrentImageCoInterpreterFacade >> argumentCountOf: anOop [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> argumentCountOfMethodHeader: aSmallIntegerOop [
-	^(headerToMethodMap at: aSmallIntegerOop) numArgs
+	"a.k.a. (headerToMethodMap at: aSmallIntegerOop) numArgs"
+	^coInterpreter argumentCountOfMethodHeader: aSmallIntegerOop
 ]
 
 { #category : #accessing }
@@ -944,7 +945,8 @@ CurrentImageCoInterpreterFacade >> startPCOfMethod: anOop [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> startPCOfMethodHeader: aSmallIntegerOop [
-	^(headerToMethodMap at: aSmallIntegerOop) initialPC - 1
+	"a.k.a. (headerToMethodMap at: aSmallIntegerOop) initialPC - 1"
+	^coInterpreter startPCOfMethodHeader: aSmallIntegerOop
 ]
 
 { #category : #accessing }
@@ -984,13 +986,9 @@ CurrentImageCoInterpreterFacade >> tempCountOf: anOop [
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> temporaryCountOfMethodHeader: header [
-	^(CompiledMethod
-			newMethod: 8
-			header: (header <= SmallInteger maxVal
-						ifTrue: [header]
-						ifFalse: [(header bitAnd: SmallInteger maxVal) + SmallInteger minVal]))
-		numTemps
+CurrentImageCoInterpreterFacade >> temporaryCountOfMethodHeader: aSmallIntegerOop [
+	"a.k.a. (headerToMethodMap at: aSmallIntegerOop) numTemps"
+	^coInterpreter temporaryCountOfMethodHeader: aSmallIntegerOop
 ]
 
 { #category : #accessing }
