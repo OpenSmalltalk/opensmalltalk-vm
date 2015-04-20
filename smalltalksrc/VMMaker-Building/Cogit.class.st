@@ -8566,7 +8566,7 @@ Cogit >> relocateCallsInClosedPIC: cPIC [
 	pc := pc - cPICCaseSize.
 	"Finally relocate the load of the PIC and the jump to the overflow routine ceCPICMiss:receiver:"
 	backEnd relocateMethodReferenceBeforeAddress: pc + backEnd loadLiteralByteSize by: delta.
-	backEnd relocateJumpBeforeFollowingAddress: pc + cPICEndSize by: delta negated
+	backEnd relocateJumpLongBeforeFollowingAddress: pc + cPICEndSize by: delta negated
 ]
 
 { #category : #compaction }
