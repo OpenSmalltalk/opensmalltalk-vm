@@ -390,6 +390,14 @@ CogAbstractInstruction >> dependent: anInstruction [
 ]
 
 { #category : #abi }
+CogAbstractInstruction >> fullCallsAreRelative [
+	"Answer if CallFull and/or JumpFull are relative and hence need relocating on method
+	 compation. If so, they are annotated with IsRelativeCall in methods and relocated in
+	 relocateIfCallOrMethodReference:mcpc:delta:"
+	self subclassResponsibility
+]
+
+{ #category : #abi }
 CogAbstractInstruction >> genAlignCStackSavingRegisters: saveRegs numArgs: numArgs wordAlignment: alignment [ 
 	| wordsPushedModAlignment delta |
 	wordsPushedModAlignment := ((saveRegs ifTrue: [self numberOfSaveableRegisters] ifFalse: [0])
@@ -742,7 +750,7 @@ CogAbstractInstruction >> loadLiteralByteSize [
 { #category : #'generate machine code' }
 CogAbstractInstruction >> longJumpTargetAddress [
 	<inline: true> "Since it's an extraction from other methods."
-	"This needs to be digfferent from jumpTargetAddress because long jumps can
+	"This needs to be different from jumpTargetAddress because long jumps can
 	be to absolute addresses and hence we can't assert that the jump target is sane."
 	| jumpTarget |
 	<var: #jumpTarget type: #'AbstractInstruction *'>
@@ -854,6 +862,16 @@ CogAbstractInstruction >> operands: anObject [
 	operands := anObject
 ]
 
+{ #category : #encoding }
+CogAbstractInstruction >> outputMachineCodeAt: address [
+	"By default move machine code a byte at a time
+	  Subclasses with coarser granularity can override as desired."
+	<inline: true>
+	0 to: machineCodeSize - 1 do:
+		[:j|
+		objectMemory byteAt: address + j put: (machineCode at: j)]
+]
+
 { #category : #printing }
 CogAbstractInstruction >> printStateOn: aStream [
 	| opcodeName orneryOperands format |
@@ -934,6 +952,13 @@ CogAbstractInstruction >> rewriteCallFullAt: callSiteReturnAddress target: callT
 	 Answer the extent of the code change which is used to compute the range of the icache to flush.
 	 This defaults to rewriteCallAt:target:; processors that differentiate between Call and CallFull will override."
 	^self rewriteCallAt: callSiteReturnAddress target: callTargetAddress
+]
+
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> rewriteInlineCacheTag: cacheTag at: callSiteReturnAddress [
+	"Rewrite an inline cache with a new tag.  This variant is used
+	 by the garbage collector."
+	self subclassResponsibility
 ]
 
 { #category : #'full run-time support' }
