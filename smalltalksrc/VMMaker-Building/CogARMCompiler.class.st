@@ -1420,11 +1420,20 @@ CogARMCompiler >> concretizePushCq [
 CogARMCompiler >> concretizePushCw [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| word instrOffset|
-	word := operands at: 0.
-	instrOffset := self at: 0 moveCw: word intoR: ConcreteIPReg.
-	self machineCodeAt: instrOffset put: (self pushR: ConcreteIPReg).
-	^machineCodeSize := instrOffset + 4
+	| word  instrOffset |
+	word := (operands at: 0) - (address + 8).
+	
+	self rotateable8bitImmediate: word
+		ifTrue: [ :rot :immediate |
+			self machineCodeAt: 0 put: (self add: ConcreteIPReg rn: PC imm: immediate ror: rot).
+			instrOffset := 4]
+		ifFalse: [self rotateable8bitImmediate: word negated
+				ifTrue: [ :rot :immediate |
+					self machineCodeAt: 0 put: (self sub: ConcreteIPReg rn: PC imm: immediate ror: rot).
+					instrOffset := 4]
+				ifFalse: [instrOffset := self at: 0 moveCw: word intoR: ConcreteIPReg]].
+		self machineCodeAt: instrOffset put: (self pushR: ConcreteIPReg).
+	^machineCodeSize := instrOffset +4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -2080,6 +2089,15 @@ CogARMCompiler >> isPCDependent [
 	^self isJump or: [opcode = AlignmentNops or: [opcode = Call]]
 ]
 
+{ #category : #'abstract instructions' }
+CogARMCompiler >> isPCRelativeAddress: operand [
+	"Provided the receiver's address has been determined we can
+	 answer if operand can be accessed via pc-relative addressing."
+
+	self assert: address notNil.
+	^operand between: address + 8 - (1 << 12 - 1) and: address + 8 + (1 << 12 - 1)
+]
+
 { #category : #accessing }
 CogARMCompiler >> jumpLongByteSize [
 "	Branch/Call ranges.  Jump[Cond] can be generated as short as possible.  Call/Jump[Cond]Long must be generated
@@ -2362,6 +2380,15 @@ CogARMCompiler >> mov: destReg rn: srcReg [
 "	MOV destReg, srcReg"
 
 	^self type: 0 op: MoveOpcode set: 0 rn: 0 rd: destReg shifterOperand: srcReg
+]
+
+{ #category : #'abstract instructions' }
+CogARMCompiler >> movePCRelative: operand into: reg [
+"Load a pc relative value into the register"
+	| offset sign |
+	offset := operand - address +8.
+	sign := offset > 0 ifTrue:[1] ifFalse:[0].
+	self ldr: reg rn: PC plus: sign imm: offset abs
 ]
 
 { #category : #'ARM convenience instructions' }
@@ -2685,6 +2712,14 @@ CogARMCompiler >> strb: srcReg rn: baseReg rm: offsetReg [
 "	STRB srcReg, [baseReg, + offsetReg] 
 	The contents of offsetReg are assumed to be correctly signed"
 	^self memMxr: AL reg: srcReg  base: baseReg p: 1 u: 1 b: 1 w: 0 l: 0 rm: offsetReg
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> sub: destReg rn: srcReg imm: immediate ror: rot [
+"	Remember the ROR is doubled by the cpu so use 30>>1 etc
+	SUB destReg, srcReg, #immediate ROR rot"
+
+	^self type: 1 op: 2 set: 0 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
 { #category : #'ARM convenience instructions' }
