@@ -658,7 +658,7 @@ CogARMCompiler >> concretizeAlignmentNops [
 	"fill any slots with NOPs - in this case mov  r0, r0 - which is the NOP I always used to use"
 	self assert: machineCodeSize \\ 4 = 0.
 	0 to: machineCodeSize - 1 by: 4 do:
-		[:p| machineCode at: p put: 16rE1A00000]
+		[:p| self machineCodeAt: p put: 16rE1A00000]
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -828,11 +828,10 @@ CogARMCompiler >> concretizeConditionalInstruction [
 	cond := nil.
 	self dispatchConcretize.
 	cond := savedCond.
-	3 to: machineCodeSize by: 4 do:
-		[:i| | topByte |
-		 topByte := machineCode at: i.
-		 self assert: (topByte bitClear: 15) = 0.
-		 machineCode at: i put: cond << 4 + topByte]
+	0 to: machineCodeSize-1 by: 4 do:
+		[:i| | instr |
+		instr := (self machineCodeAt: i) bitClear: 16rF<<28.
+		self machineCodeAt: i put: (instr bitOr: (cond bitAnd: 16rF)<<28)]
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -946,10 +945,7 @@ CogARMCompiler >> concretizeFill32 [
 	| word |
 	<var: #word type: #'unsigned long'>
 	word := operands at: 0.
-	machineCode at: 0 put: (word bitAnd: 16rFF).
-	machineCode at: 1 put: (word >> 8bitAnd: 16rFF)..
-	machineCode at: 2 put: (word >> 16bitAnd: 16rFF)..
-	machineCode at: 3 put: (word >> 24bitAnd: 16rFF)..
+	self machineCodeAt: 0 put: word.
 	^machineCodeSize := 4
 ]
 
@@ -1505,7 +1501,7 @@ CogARMCompiler >> concretizeSqrtRd [
 CogARMCompiler >> concretizeStop [
 "generate a BKPT instruction. We could, given a good enough creative impulse and an over-active sense of humour, add some numerically encoded witticism to this instruction in bits 8-19 & 0-3. It has no effect on the execution but can be a way to specify which breakpoint has been hit etc."
 	<inline: true>
-	machineCode at: 0 put: (AL <<28 bitOr: (16r42 <<20 bitOr:(7<<4))).
+	self machineCodeAt: 0 put: (AL <<28 bitOr: (16r42 <<20 bitOr:(7<<4))).
 	^machineCodeSize := 4
 ]
 
