@@ -2521,7 +2521,7 @@ CogARMCompiler >> relocateCallBeforeReturnPC: retpc by: delta [
 		 self assert: ((self instructionIsB: instr) or: [self instructionIsBL: instr]).
 		 distanceDiv4 := instr bitAnd: 16rFFFFFF.
 		 distanceDiv4 := distanceDiv4 + (delta // 4).
-		 objectMemory longAt: retpc - 4 put: ((instr bitAnd: 16rFF000000) bitOr: (delta bitAnd: 16rFFFFFF))]
+		 objectMemory longAt: retpc - 4 put: ((instr bitAnd: 16rFF000000) bitOr: (distanceDiv4 bitAnd: 16rFFFFFF))]
 ]
 
 { #category : #'inline cacheing' }
