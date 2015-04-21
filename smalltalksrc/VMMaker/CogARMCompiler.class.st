@@ -1113,10 +1113,7 @@ CogARMCompiler >> concretizeMoveCqR [
 CogARMCompiler >> concretizeMoveCwR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| constant destReg |
-	constant := operands at: 0.
-	destReg := self concreteRegister: (operands at: 1).
-	^machineCodeSize :=self at: 0 moveCw: constant intoR: destReg
+	^machineCodeSize := self loadCwInto: (self concreteRegister: (operands at: 1))
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1425,25 +1422,8 @@ CogARMCompiler >> concretizePushCq [
 CogARMCompiler >> concretizePushCw [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| operand instrOffset distance |
-	operand := operands at: 0.
-	instrOffset := 0.
-	"First try and encode as a pc-relative reference..."
-	(cogit addressIsInCodeZone: operand) ifTrue:
-		[distance := operand  - (address + 8).
-		 self rotateable8bitImmediate: distance
-		 	ifTrue: [ :rot :immediate |
-		 		self machineCodeAt: 0 put: (self add: ConcreteIPReg rn: PC imm: immediate ror: rot).
-		 		instrOffset := 4]
-		 	ifFalse:
-		 		[self rotateable8bitImmediate: distance negated
-		 			ifTrue: [ :rot :immediate |
-		 				self machineCodeAt: 0 put: (self sub: ConcreteIPReg rn: PC imm: immediate ror: rot).
-		 				instrOffset := 4]
-				ifFalse: [instrOffset := 0]]].
-	"If this fails, use the conventional and painfully long 4 instruction sequence."
-	instrOffset = 0 ifTrue:
-		[instrOffset := self at: 0 moveCw: operand intoR: ConcreteIPReg].
+	| instrOffset |
+	instrOffset := self loadCwInto: ConcreteIPReg.
 	self machineCodeAt: instrOffset put: (self pushR: ConcreteIPReg).
 	^machineCodeSize := instrOffset + 4
 ]
@@ -2043,6 +2023,13 @@ CogARMCompiler >> instructionIsOR: instr [
 	^(instr >> 21 bitAnd: 16rF) = 16rC
 ]
 
+{ #category : #testing }
+CogARMCompiler >> instructionIsPush: instr [
+	"is this a push -str r??, [sp, #-4] -  instruction?"
+	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension"
+	  and: [(instr bitAnd: 16rFFF0FFF) = 16r52D0004]
+]
+
 { #category : #disassembly }
 CogARMCompiler >> instructionSizeAt: pc [
 	"Answer the instruction size at pc.Simple on ARM ;-)"
@@ -2220,10 +2207,41 @@ CogARMCompiler >> literalBeforeFollowingAddress: followingAddress [
 		ifFalse: [self extract32BitOperandFrom4InstructionsPreceeding: followingAddress - 4]
 ]
 
+{ #category : #'generate machine code - support' }
+CogARMCompiler >> loadCwInto: destReg [
+	"Load the operand into the destination register, answering
+	 the size of the instructions generated to do so."
+	| operand distance |
+	operand := operands at: 0.
+	"First try and encode as a pc-relative reference..."
+	(cogit addressIsInCodeZone: operand) ifTrue:
+		[distance := operand  - (address + 8).
+		 self rotateable8bitImmediate: distance
+		 	ifTrue: [ :rot :immediate |
+		 		self machineCodeAt: 0 put: (self add: destReg rn: PC imm: immediate ror: rot).
+		 		^4]
+		 	ifFalse:
+		 		[self rotateable8bitImmediate: distance negated
+		 			ifTrue: [ :rot :immediate |
+		 				self machineCodeAt: 0 put: (self sub: destReg rn: PC imm: immediate ror: rot).
+		 				^4]
+					ifFalse: []]].
+	"If this fails, use the conventional and painfully long 4 instruction sequence."
+	^self at: 0 moveCw: operand intoR: destReg
+]
+
 { #category : #accessing }
 CogARMCompiler >> loadLiteralByteSize [
 	"Answer the byte size of a MoveCwR opcode's corresponding machine code"
 	^16
+]
+
+{ #category : #accessing }
+CogARMCompiler >> loadPICLiteralByteSize [
+	"Answer the byte size of a MoveCwR opcode's corresponding machine code
+	 when the argument is a PIC.  This is for the self-reference at the end of a
+	 closed PIC.  On ARM this is a single instruction pc-relative register load."
+	^4
 ]
 
 { #category : #accessing }
@@ -2404,17 +2422,6 @@ CogARMCompiler >> mov: destReg rn: srcReg [
 	^self type: 0 op: MoveOpcode set: 0 rn: 0 rd: destReg shifterOperand: srcReg
 ]
 
-{ #category : #'generate machine code - support' }
-CogARMCompiler >> movePCRelative: operand into: reg [
-	"Load a pc relative value into the register"
-	| offset sign instr |
-	offset := operand - (address + 8).
-	sign := offset >= 0 ifTrue: [1] ifFalse: [0].
-	instr := self ldr: reg rn: PC plus: sign imm: offset abs.
-	self machineCodeAt: 0 put: instr.
-	^4
-]
-
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> movs: destReg rn: srcReg [
 "	MOVS destReg, srcReg"
@@ -2524,12 +2531,18 @@ CogARMCompiler >> relocateCallBeforeReturnPC: retpc by: delta [
 CogARMCompiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
 	"If possible we generate the method address using pc-relative addressing.
 	 If so we don't need to relocate it in code.  So check if pc-relative code was
-	 generated, and if not, adjust a long sequence."
-	| location |
-	(self isPCRelativeValueLoad: (self instructionBeforeAddress: pc - 4)) ifFalse:
-		[location := self extract32BitOperandFrom4InstructionsPreceeding: pc - 4.
-		 location := location + delta.
-		 self insert32BitOperand: location into4InstructionsPreceeding: pc - 4]
+	 generated, and if not, adjust a long sequence.  There are two cases, a push
+	 or a register load.  If a push, then there is a register load, but in the instruction
+	 before."
+	| pcPreceedingLoad reference |
+	pcPreceedingLoad := (self instructionIsPush: (self instructionBeforeAddress: pc))
+							ifTrue: [pc - 4]
+							ifFalse: [pc].
+	"If the load is not done via pc-relative addressing we have to relocate."
+	(self isPCRelativeValueLoad: (self instructionBeforeAddress: pcPreceedingLoad)) ifFalse:
+		[reference := self extract32BitOperandFrom4InstructionsPreceeding: pcPreceedingLoad.
+		 reference := reference + delta.
+		 self insert32BitOperand: reference into4InstructionsPreceeding: pcPreceedingLoad]
 ]
 
 { #category : #'inline cacheing' }
@@ -2746,7 +2759,7 @@ CogARMCompiler >> sub: destReg rn: srcReg imm: immediate ror: rot [
 "	Remember the ROR is doubled by the cpu so use 30>>1 etc
 	SUB destReg, srcReg, #immediate ROR rot"
 
-	^self type: 1 op: 2 set: 0 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
+	^self type: 1 op: SubOpcode set: 0 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
 { #category : #'ARM convenience instructions' }
