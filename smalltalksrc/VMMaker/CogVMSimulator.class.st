@@ -3712,6 +3712,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 									cmp: (objectMemory numBytesOf: m selector)) = 0]]) ifTrue:
 						[cogit printCogMethod: m]]]];
 		add: 'print cog method for...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit printCogMethodFor: pc]];
+		add: 'print cog method header for...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit printCogMethodHeaderFor: pc]];
 		add: 'print trampoline table' target: cogit action: #printTrampolineTable;
 		add: 'print prim trace log' action: #dumpPrimTraceLog;
 		add: 'report recent instructions' target: cogit action: #reportLastNInstructions;
