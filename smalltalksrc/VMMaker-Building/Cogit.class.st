@@ -2138,7 +2138,7 @@ Cogit >> addressIsInCodeZone: address [
 	"N.B. We /don't/ write this as address between: codeBase and: methodZone limitZony in case we're
 	 testing an address in a method whose code has yet to be allocated and is hence >= methodZone limitZony"
 	^address asUnsignedInteger >= codeBase
-	  and: [address < methodZone youngReferrers]
+	  and: [address < (methodZone youngReferrers ifNil: [0])]
 ]
 
 { #category : #testing }
@@ -4091,7 +4091,7 @@ Cogit >> compileClosedPICPrototype [
 		self JumpLongZero: 16rCA5E10 + (h * 16).
 		h = 1 ifTrue:
 			[endCPICCase1 := self Label]].
-	self MoveCw: 16rAB5CE55 R: ClassReg.
+	self MoveCw: methodZoneBase R: ClassReg.
 	self JumpLong: (self cPICMissTrampolineFor: numArgs).
 	^0
 ]
@@ -8595,7 +8595,7 @@ Cogit >> relocateCallsInClosedPIC: cPIC [
 	self assert: cPIC cPICNumCases > 0.
 	pc := pc - cPICCaseSize.
 	"Finally relocate the load of the PIC and the jump to the overflow routine ceCPICMiss:receiver:"
-	backEnd relocateMethodReferenceBeforeAddress: pc + backEnd loadLiteralByteSize by: delta.
+	backEnd relocateMethodReferenceBeforeAddress: pc + backEnd loadPICLiteralByteSize by: delta.
 	backEnd relocateJumpLongBeforeFollowingAddress: pc + cPICEndSize by: delta negated
 ]
 

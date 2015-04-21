@@ -729,10 +729,9 @@ CogAbstractInstruction >> isPCDependent [
 
 { #category : #testing }
 CogAbstractInstruction >> isPCRelativeValueLoad: instr [
-	"add ip, pc, blah->  '16rE28FC000'
-	 sub ip, pc, blah -> '16rE24FC000'"
-	^(instr bitAnd: 16rFFFFF000) = 16rE28FC000
-	  or: [(instr bitAnd: 16rFFFFF000) = 16rE24FC000]
+	<var: 'instr' type: #'unsigned int'>
+	"add xx, pc, blah or sub xx, pc, blah"
+	^(instr >> 16) = 16rE28F or: [instr >> 16 = 16rE24F]
 ]
 
 { #category : #accessing }
@@ -793,6 +792,14 @@ CogAbstractInstruction >> labelOffset [
 { #category : #accessing }
 CogAbstractInstruction >> loadLiteralByteSize [
 	"Answer the byte size of a MoveCwR opcode's corresponding machine code"
+	self subclassResponsibility
+]
+
+{ #category : #accessing }
+CogAbstractInstruction >> loadPICLiteralByteSize [
+	"Answer the byte size of a MoveCwR opcode's corresponding machine code
+	 when the argument is a PIC.  This is for the self-reference at the end of a
+	 closed PIC."
 	self subclassResponsibility
 ]
 

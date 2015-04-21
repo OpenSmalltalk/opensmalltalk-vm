@@ -2798,6 +2798,15 @@ CogIA32Compiler >> loadLiteralByteSize [
 	^5
 ]
 
+{ #category : #accessing }
+CogIA32Compiler >> loadPICLiteralByteSize [
+	"Answer the byte size of a MoveCwR opcode's corresponding machine code
+	 when the argument is a PIC.  This is for the self-reference at the end of a
+	 closed PIC."
+	<inline: true>
+	^self loadLiteralByteSize
+]
+
 { #category : #'generate machine code' }
 CogIA32Compiler >> machineCodeBytes [
 	"Answer the maximum number of bytes of machine code generated for any abstract instruction.
