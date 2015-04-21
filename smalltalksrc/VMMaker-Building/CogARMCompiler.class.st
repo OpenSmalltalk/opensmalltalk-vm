@@ -404,6 +404,13 @@ CogARMCompiler >> canMulRR [
 	^true
 ]
 
+{ #category : #accessing }
+CogARMCompiler >> codeGranularity [
+	"Answer the size in bytes of a unit of machine code."
+	<inline: true>
+	^4
+]
+
 { #category : #'generate machine code' }
 CogARMCompiler >> computeMaximumSize [
 	"Because we don't use Thumb, each ARM instruction has 4 bytes. Some abstract opcodes need more than one instruction. We only handle those in this caseOf: and let the default return 4"
@@ -2462,13 +2469,12 @@ CogARMCompiler >> orr: destReg imm: immediate8bitValue ror: rot [
 ]
 
 { #category : #'inline cacheing' }
-CogARMCompiler >> outputMachineCodeAt: address [
-	"By default move machine code a byte at a time
-	  Subclasses with coarser granularity can override as desired."
+CogARMCompiler >> outputMachineCodeAt: targetAddress [
+	"Override to move machine code a word at a time."
 	<inline: true>
 	0 to: machineCodeSize - 1 by: 4 do:
 		[:j|
-		objectMemory longAt: address + j put: (machineCode at: j // 4)]
+		objectMemory longAt: targetAddress + j put: (machineCode at: j // 4)]
 ]
 
 { #category : #'generate machine code' }

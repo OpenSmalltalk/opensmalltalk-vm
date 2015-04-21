@@ -700,19 +700,23 @@ Cogit class >> implicitReturnTypeFor: aSelector [
 
 { #category : #'class initialization' }
 Cogit class >> initializeAnnotationConstants [
-	"These form the method map for a cog method.  Each annotated instruction has a
-	 byte in the map, and each byte in the map has two parts.  In the least signficant
-	 bits are a byte distance from the start of the method or previous map entry.  In
-	 the most signficant bits are the type of annotation at the point reached.  A null
-	 byte ends the map.
+	"These form the method map for a cog method.  The map defines which addresses
+	 in a machine code method are ones with important functions, such as being a send
+	 site or being a reference to a heap object.  Each annotated instruction has a byte
+	 in the map, and each byte in the map has two parts.  In the least signficant bits are
+	 a distance in codeGranularity units from the start of the method or the previous
+	 map entry, except for the IsAnnotationExtension type.  In the most signficant bits
+	 are the type of annotation at the point reached.  A null byte ends the map.  The
+	 first mapped location is a distance from the cmNoCheckEntryOffset.
 
 	 The map occurs at the end of a method (*), in reverse, so that its start is found
 	 by adding the method's block size.  If the distance between two mapped
 	 instructions will not fit in the displacement field then one or more displacement
-	 entries are placed in the map to bridge the gap.  There are either unit displacement
-	 bytes or * 32 displacement bytes. (* if methods have performance counters then
-	 the map preceedes the counters and so one finds the map by adding the block
-	 size and subtracting numCounters * sizeof(counter)).
+	 entries are placed in the map to bridge the gap.  There is a * 32 displacement
+	 units type for spanning large gaps.  The displacements are in codeGranularity
+	 units so that processors like e.g. ARM, with 4-byte instructions, do not have overly
+	 large maps.  In [practice maps are very compact, but they should be as quick to
+	 navigate as possible, and hence be as compact as possible.
 
 	 There is only one kind of call annotation that serves for all calls from machine
 	 code. There are several kinds of call, sends, super sends, calls of the generated
@@ -725,11 +729,12 @@ Cogit class >> initializeAnnotationConstants [
 
 	 Sends can be distinguished from run-time or direct primitive calls based on address;
 	 only sends have their target between methodZoneBase and methodZone freeStart.
-	 We used to distinguish normal sends from super sends because normal sends link to
-	 the checked entry-point, whereas super sends link to the unchecked entry-point, and
-	 both entry points have different alignment.  But now we use the IsAnnotationExtension
-	 to label sends other than normal sends.  For these ``exotic'' sends there is both an
-	 IsAnnotationExtension annotation and an IsSendCall annotation.
+	 We used to distinguish normal sends from super sends based on alignment of
+	 entry-point, because normal sends link to the checked entry-point, whereas super sends
+	 link to the unchecked entry-point, and both entry points have different alignments.
+	 But now we use the IsAnnotationExtension to label sends other than normal sends.
+	 For these ``exotic'' sends there is both an IsAnnotationExtension annotation and an
+	 IsSendCall annotation.
 
 	 While run-time calls can be distinguished from direct primitive calls on the basis
 	 of address there is no need to do so.  They are merely calls to locations that
@@ -741,7 +746,7 @@ Cogit class >> initializeAnnotationConstants [
 	"self initializeAnnotationConstants"
 
 	AnnotationShift := 5.
-	IsDisplacementX2N := 0.	"N.B. 0 byet ends the map"
+	IsDisplacementX2N := 0.	"N.B. A 0 byte ends the map"
 	IsAnnotationExtension := 1.	"Used to extend IsSendCall with different codes for exotic send types."
 	IsObjectReference := 2.
 	IsAbsPCReference := 3.
@@ -859,7 +864,9 @@ Cogit class >> initializeErrorCodes [
 	ShouldNotJIT := -8.
 	MaxNegativeErrorCode := ShouldNotJIT.
 	"Internal errors returned by generator routines to other generator routines"
-	BadRegisterSet := 1
+	BadRegisterSet := 1.
+	"Internal successes answered by CogObjectRepresentation to JIT, etc"
+	UnfailingPrimitive := 2.
 ]
 
 { #category : #'class initialization' }
@@ -4800,9 +4807,10 @@ Cogit >> findMapLocationForMcpc: targetMcpc inMethod: cogMethod [
 	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
 		[annotation := mapByte >> AnnotationShift.
 		 annotation ~= IsAnnotationExtension ifTrue:
-			[mcpc := mcpc + (annotation = IsDisplacementX2N
-								ifTrue: [mapByte - DisplacementX2N << AnnotationShift]
-								ifFalse: [mapByte bitAnd: DisplacementMask])].
+			[mcpc := mcpc + (backEnd codeGranularity
+								* (annotation = IsDisplacementX2N
+									ifTrue: [mapByte - DisplacementX2N << AnnotationShift]
+									ifFalse: [mapByte bitAnd: DisplacementMask]))].
 		 mcpc >= targetMcpc ifTrue:
 			[self assert: mcpc = targetMcpc.
 			 annotation = IsDisplacementX2N ifTrue:
@@ -5807,7 +5815,7 @@ Cogit >> generateInstructionsAt: eventualAbsoluteAddress [
 
 { #category : #'method map' }
 Cogit >> generateMapAt: addressOrNull start: startAddress [
-	"Generate the method map at addressrNull (or compute it if adressOrNull is null).
+	"Generate the method map at addressrNull (or compute it if addressOrNull is null).
 	 Answer the length of the map in byes.  Each entry in the map is in two parts.  In the
 	 least signficant bits are a displacement of how far from the start or previous entry,
 	 unless it is an IsAnnotationExtension byte, in which case those bits are the extension.
@@ -5821,7 +5829,7 @@ Cogit >> generateMapAt: addressOrNull start: startAddress [
 		[:i| | annotation mcpc delta maxDelta mapEntry |
 		 annotation := self addressOf: (annotations at: i).
 		 mcpc := annotation instruction address + annotation instruction machineCodeSize.
-		 [(delta := mcpc - location) > DisplacementMask] whileTrue:
+		 [(delta := mcpc - location / backEnd codeGranularity) > DisplacementMask] whileTrue:
 			[maxDelta := (delta min: MaxX2NDisplacement) bitClear: DisplacementMask.
 			 self assert: maxDelta >> AnnotationShift <= DisplacementMask.
 			 addressOrNull ifNotNil:
@@ -5832,7 +5840,7 @@ Cogit >> generateMapAt: addressOrNull start: startAddress [
 					  byte: maxDelta >> AnnotationShift + DisplacementX2N
 					  at: addressOrNull - length
 					  for: mcpc].
-			 location := location + maxDelta.
+			 location := location + (maxDelta * backEnd codeGranularity).
 			 length := length + 1].
 		 addressOrNull ifNotNil:
 			[mapEntry := delta + ((annotation annotation min: IsSendCall) << AnnotationShift).
@@ -5841,7 +5849,7 @@ Cogit >> generateMapAt: addressOrNull start: startAddress [
 				  byte: mapEntry
 				  at: addressOrNull - length
 				  for: mcpc].
-		 location := location + delta.
+		 location := location + (delta * backEnd codeGranularity)..
 		 length := length + 1.
 		 annotation annotation > IsSendCall ifTrue: "Add the necessary IsAnnotationExtension"
 			[addressOrNull ifNotNil:
@@ -6885,7 +6893,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 			ifTrue:
 				[| annotation nextBcpc isBackwardBranch |
 				annotation := mapByte >> AnnotationShift.
-				mcpc := mcpc + (mapByte bitAnd: DisplacementMask).
+				mcpc := mcpc + ((mapByte bitAnd: DisplacementMask) * backEnd codeGranularity).
 				(self isPCMappedAnnotation: annotation) ifTrue:
 					[[byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
 					  descriptor := self generatorAt: byte.
@@ -6918,7 +6926,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 				[self assert: (mapByte >> AnnotationShift = IsDisplacementX2N
 							or: [mapByte >> AnnotationShift = IsAnnotationExtension]).
 				 mapByte < (IsAnnotationExtension << AnnotationShift) ifTrue:
-					[mcpc := mcpc + (mapByte - DisplacementX2N << AnnotationShift)]].
+					[mcpc := mcpc + ((mapByte - DisplacementX2N << AnnotationShift) * backEnd codeGranularity)]].
 		 map := map - 1].
 	^0
 ]
@@ -6939,10 +6947,10 @@ Cogit >> mapFor: cogMethod performAllMapEntriesUntil: functionSymbol arg: arg [
 	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
 		[mapByte >= FirstAnnotation
 			ifTrue:
-				[mcpc := mcpc + (mapByte bitAnd: DisplacementMask)]
+				[mcpc := mcpc + ((mapByte bitAnd: DisplacementMask) * backEnd codeGranularity)]
 			ifFalse:
 				[mapByte < (IsAnnotationExtension << AnnotationShift) ifTrue:
-					[mcpc := mcpc + (mapByte - DisplacementX2N << AnnotationShift)]].
+					[mcpc := mcpc + ((mapByte - DisplacementX2N << AnnotationShift) * backEnd codeGranularity)]].
 		 result := self perform: functionSymbol
 					   with: mapByte >> AnnotationShift
 					   with: (self cCoerceSimple: mcpc to: #'char *')
@@ -6965,7 +6973,7 @@ Cogit >> mapFor: cogMethod performUntil: functionSymbol arg: arg [
 	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
 		[mapByte >= FirstAnnotation
 			ifTrue:
-				[mcpc := mcpc + (mapByte bitAnd: DisplacementMask).
+				[mcpc := mcpc + ((mapByte bitAnd: DisplacementMask) * backEnd codeGranularity).
 				 "If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it."
 				 ((annotation := mapByte >> AnnotationShift) = IsSendCall
 				  and: [(mapByte := objectMemory byteAt: map - 1) >> AnnotationShift = IsAnnotationExtension]) ifTrue:
@@ -6979,7 +6987,7 @@ Cogit >> mapFor: cogMethod performUntil: functionSymbol arg: arg [
 					[^result]]
 			ifFalse:
 				[mapByte < (IsAnnotationExtension << AnnotationShift) ifTrue:
-					[mcpc := mcpc + (mapByte - DisplacementX2N << AnnotationShift)]].
+					[mcpc := mcpc + ((mapByte - DisplacementX2N << AnnotationShift) * backEnd codeGranularity)]].
 		 map := map - 1].
 	^0
 ]
@@ -8282,9 +8290,10 @@ Cogit >> printPCMapPairsFor: cogMethod on: aStream [
 	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
 		[annotation := mapByte >> AnnotationShift.
 		 annotation ~= IsAnnotationExtension ifTrue:
-			[mcpc := mcpc + (annotation = IsDisplacementX2N
-								ifTrue: [mapByte - DisplacementX2N << AnnotationShift]
-								ifFalse: [mapByte bitAnd: DisplacementMask])].
+			[mcpc := mcpc + (backEnd codeGranularity
+								* (annotation = IsDisplacementX2N
+									ifTrue: [mapByte - DisplacementX2N << AnnotationShift]
+									ifFalse: [mapByte bitAnd: DisplacementMask]))].
 		 aStream ensureCr.
 		 map printOn: aStream base: 16.
 		 aStream nextPutAll: ': '.

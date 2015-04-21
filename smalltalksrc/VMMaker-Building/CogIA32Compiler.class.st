@@ -184,6 +184,13 @@ CogIA32Compiler >> canMulRR [
 	^true
 ]
 
+{ #category : #accessing }
+CogIA32Compiler >> codeGranularity [
+	"Answer the size in bytes of a unit of machine code."
+	<inline: true>
+	^1
+]
+
 { #category : #'generate machine code' }
 CogIA32Compiler >> computeMaximumSize [
 	"Compute the maximum size for each opcode.  This allows jump offsets to
@@ -2147,8 +2154,8 @@ CogIA32Compiler >> dispatchConcretize [
 		[Call]					-> [^self concretizeCall].
 		[CallFull]				-> [^self concretizeCall].
 		[JumpR]					-> [^self concretizeJumpR].
-		[JumpFull]				-> [^self concretizeJumpFull].
-		[JumpLong]				-> [^self concretizeJump].
+		[JumpFull]				-> [^self concretizeJumpLong].
+		[JumpLong]				-> [^self concretizeJumpLong].
 		[JumpLongZero]		-> [^self concretizeConditionalJump: 16r4].
 		[JumpLongNonZero]	-> [^self concretizeConditionalJump: 16r5].
 		[Jump]					-> [^self concretizeJump].

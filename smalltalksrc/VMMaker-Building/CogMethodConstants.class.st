@@ -24,6 +24,7 @@ Class {
 		'PrimCallNeedsNewMethod',
 		'PrimCallNeedsPrimitiveFunction',
 		'ShouldNotJIT',
+		'UnfailingPrimitive',
 		'UnimplementedPrimitive',
 		'YoungSelectorInPIC'
 	],
