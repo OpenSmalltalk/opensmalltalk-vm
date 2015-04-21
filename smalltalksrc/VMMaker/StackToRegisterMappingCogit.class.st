@@ -2224,7 +2224,9 @@ StackToRegisterMappingCogit >> genPrimitiveCharacterValue [
 	| r |
 	(r := objectRepresentation genInnerPrimitiveCharacterValue: 0) < 0 ifTrue:
 		[^r].
-	^self compileFallbackToInterpreterPrimitive
+	^r = UnfailingPrimitive
+		ifTrue: [0]
+		ifFalse: [self compileFallbackToInterpreterPrimitive]
 ]
 
 { #category : #'primitive generators' }

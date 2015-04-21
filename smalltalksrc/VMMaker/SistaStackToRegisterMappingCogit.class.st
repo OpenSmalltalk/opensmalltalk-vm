@@ -677,7 +677,9 @@ SistaStackToRegisterMappingCogit >> initializeCodeZoneFrom: startAddress upTo: e
 
 { #category : #'method map' }
 SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc withAnnotationPerformUntil: functionSymbol arg: arg [
-	"A version of mapFor:bcpc:performUntil:arg: that passes the annotation instead of the isBackwardBranch flag."
+	"A version of mapFor:bcpc:performUntil:arg: that passes the annotation instead of the isBackwardBranch
+	 flag. Evaluate functionSymbol for each mcpc, bcpc pair in the map until the function returns non-zero,
+	 answering that result, or 0 if it fails to.  This works only for frameful methods"
 	<var: #cogMethod type: #'CogBlockMethod *'>
 	<var: #functionSymbol declareC: 'sqInt (*functionSymbol)(BytecodeDescriptor *desc, sqInt annotation, char *mcpc, sqInt bcpc, void *arg)'>
 	<var: #arg type: #'void *'>
@@ -744,7 +746,7 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc withAnnota
 			ifTrue:
 				[| nextBcpc |
 				annotation := mapByte >> AnnotationShift.
-				mcpc := mcpc + (mapByte bitAnd: DisplacementMask).
+				mcpc := mcpc + ((mapByte bitAnd: DisplacementMask) * backEnd codeGranularity).
 				(self isPCMappedAnnotation: annotation) ifTrue:
 					[(annotation = IsSendCall
 					  and: [(mapByte := objectMemory byteAt: map - 1) >> AnnotationShift = IsAnnotationExtension]) ifTrue:
@@ -779,7 +781,7 @@ SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc withAnnota
 				[self assert: (mapByte >> AnnotationShift = IsDisplacementX2N
 							or: [mapByte >> AnnotationShift = IsAnnotationExtension]).
 				 mapByte < (IsAnnotationExtension << AnnotationShift) ifTrue:
-					[mcpc := mcpc + (mapByte - DisplacementX2N << AnnotationShift)]].
+					[mcpc := mcpc + ((mapByte - DisplacementX2N << AnnotationShift) * backEnd codeGranularity)]].
 		 map := map - 1].
 	^0
 ]

@@ -2256,7 +2256,9 @@ SimpleStackBasedCogit >> genPrimitiveCharacterValue [
 	| r |
 	(r := objectRepresentation genInnerPrimitiveCharacterValue: objectMemory wordSize) < 0 ifTrue:
 		[^r].
-	^self compileFallbackToInterpreterPrimitive
+	^r = UnfailingPrimitive
+		ifTrue: [0]
+		ifFalse: [self compileFallbackToInterpreterPrimitive]
 ]
 
 { #category : #'primitive generators' }
