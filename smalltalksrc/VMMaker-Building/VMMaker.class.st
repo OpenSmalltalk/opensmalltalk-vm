@@ -351,11 +351,13 @@ VMMaker class >> generateAllSpurConfigurationsUnderVersionControl [
 
 { #category : #configurations }
 VMMaker class >> generateAllSqueakConfigurationsUnderVersionControl [
-	self generateSqueakCogVM;
+	self generateSqueakStackVM;
+		generateSqueakCogVM;
 		generateSqueakCogMTVM;
+		generateSqueakSpurStackVM;
+		generateSqueakSpurStack64VM;
 		generateSqueakSpurCogVM;
 		generateSqueakSpurCogSistaVM
-
 ]
 
 { #category : #configurations }
