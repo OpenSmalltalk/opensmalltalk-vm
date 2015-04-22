@@ -1092,7 +1092,8 @@ VMMaker >> for64BitVM [
 
 { #category : #'generate sources' }
 VMMaker >> generateCogitFileFor: cogitClass [
-	"Translate the Smalltalk description of the virtual machine into C.  If 'self doInlining' is true, small method bodies are inlined to reduce procedure call overhead.  On the PPC, this results in a factor of three speedup with only 30% increase in code size.  Subclasses can use specialised versions of CCodeGenerator and interpreterClass."
+	"Translate the Smalltalk description of the Cogit into C, if required.  Ensure that
+	 inferTypesForImplicitlyTypedVariablesAndMethods was done, and answer the code generator."
 
 	| cg |
 	cg := [self buildCodeGeneratorForCogit]
@@ -1103,9 +1104,9 @@ VMMaker >> generateCogitFileFor: cogitClass [
 					ifFalse: [(ex respondsTo: #rearmHandlerDuring:)
 								ifTrue: [ex rearmHandlerDuring: [ex pass]]
 								ifFalse: [ex pass]]].
-	self needsToRegenerateCogitFile ifFalse: [^cg].
 
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
+	self needsToRegenerateCogitFile ifFalse: [^nil].
 
 	cg vmClass preGenerationHook: cg.
 	cg storeCodeOnFile: (self sourceFilePathFor: cogitClass processorSpecificSourceFileName) doInlining: cogitClass doInlining.
