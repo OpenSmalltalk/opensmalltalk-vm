@@ -67,6 +67,12 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #translation }
+CogAbstractInstruction class >> ISA [
+	"Answer the name of the ISA the receiver's subclass implements."
+	^self subclassResponsibility
+]
+
 { #category : #'simulation only' }
 CogAbstractInstruction class >> byteSizeForSimulator: aVMClass [
 	"Answer an approximation of the byte size of an AbstractInstruction struct.
@@ -82,6 +88,13 @@ CogAbstractInstruction class >> byteSizeForSimulator: aVMClass [
 { #category : #'instance creation' }
 CogAbstractInstruction class >> for: aCogit [
 	^self new cogit: aCogit
+]
+
+{ #category : #translation }
+CogAbstractInstruction class >> identifyingPredefinedMacros [
+	"Answer the predefined macros that identify the processors a subclass handles, if any.
+	 If the subclass isn't yet ready for production (a work in progress) simply answer nil."
+	^nil
 ]
 
 { #category : #'class initialization' }
@@ -123,6 +136,12 @@ CogAbstractInstruction class >> isAccessor: aSelector [
 	   and: [super isAccessor: aSelector]
 ]
 
+{ #category : #translation }
+CogAbstractInstruction class >> moduleName [
+	"CogAbstractInstruction subclasses collect: [:ea| ea moduleName]"
+	^'cogit', self ISA
+]
+
 { #category : #'debug printing' }
 CogAbstractInstruction class >> nameForOpcode: opcode [ "<Integer>"
 	^(CogRTLOpcodes nameForOpcode: opcode)
@@ -152,6 +171,12 @@ CogAbstractInstruction class >> specificOpcodes [
 { #category : #translation }
 CogAbstractInstruction class >> structTypeName [
 	^'AbstractInstruction'
+]
+
+{ #category : #translation }
+CogAbstractInstruction class >> translateableSubclasses [
+	"CogAbstractInstruction translateableSubclasses"
+	^self subclasses select: [:compilerClass| compilerClass identifyingPredefinedMacros notNil]
 ]
 
 { #category : #translation }
@@ -727,13 +752,6 @@ CogAbstractInstruction >> isPCDependent [
 	^self subclassResponsibility
 ]
 
-{ #category : #testing }
-CogAbstractInstruction >> isPCRelativeValueLoad: instr [
-	<var: 'instr' type: #'unsigned int'>
-	"add xx, pc, blah or sub xx, pc, blah"
-	^(instr >> 16) = 16rE28F or: [instr >> 16 = 16rE24F]
-]
-
 { #category : #accessing }
 CogAbstractInstruction >> jmpTarget: anAbstractInstruction [
 	"Set the target of a jump instruction.  These all have the target in the first operand."
@@ -921,13 +939,13 @@ CogAbstractInstruction >> operands: anObject [
 ]
 
 { #category : #encoding }
-CogAbstractInstruction >> outputMachineCodeAt: address [
+CogAbstractInstruction >> outputMachineCodeAt: targetAddress [
 	"By default move machine code a byte at a time
 	  Subclasses with coarser granularity can override as desired."
 	<inline: true>
 	0 to: machineCodeSize - 1 do:
 		[:j|
-		objectMemory byteAt: address + j put: (machineCode at: j)]
+		objectMemory byteAt: targetAddress + j put: (machineCode at: j)]
 ]
 
 { #category : #printing }
