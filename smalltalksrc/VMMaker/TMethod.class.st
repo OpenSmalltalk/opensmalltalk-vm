@@ -827,13 +827,14 @@ TMethod >> fetchRcvrExpr [
 ]
 
 { #category : #utilities }
-TMethod >> findReadBeforeAssignedIn: variables [
+TMethod >> findReadBeforeAssignedIn: variables in: aCodeGen [
 	| readBeforeAssigned |
 	readBeforeAssigned := Set new.
 	parseTree
 		addReadBeforeAssignedIn: variables
 		to: readBeforeAssigned
-		assignments: Set new.
+		assignments: Set new
+		in: aCodeGen.
 	^readBeforeAssigned
 ]
 
@@ -2115,7 +2116,9 @@ TMethod >> removeUnusedTempsAndNilIfRequiredIn: aCodeGen [
 	"reset the locals to be only those still referred to"
 	locals := locals select: [:e| refs includes: e].
 	(locals notEmpty
-	 and: [(readBeforeAssigned := (self findReadBeforeAssignedIn: locals)) notEmpty]) ifTrue:
+	 and: [aCodeGen
+			pushScope: declarations
+			while: [(readBeforeAssigned := (self findReadBeforeAssignedIn: locals in: aCodeGen)) notEmpty]]) ifTrue:
 		[readBeforeAssigned := readBeforeAssigned reject:
 			[:v| | d | "don't initialize externa and/or arrays"
 			 d := self declarationAt: v.
