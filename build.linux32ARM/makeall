@@ -1,6 +1,6 @@
 #!/bin/bash
 trap 'exit 2' HUP INT PIPE TERM
-for d in squeak.*; do
+for d in newspeak.* squeak.*; do
 	if test -d "$d"; then
 		(cd $d;./makeallclean "$@")
 	else
