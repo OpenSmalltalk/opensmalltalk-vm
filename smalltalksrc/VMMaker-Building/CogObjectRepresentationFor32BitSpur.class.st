@@ -288,8 +288,9 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 
 	cogit RetN: 0.
 	
-	jumpNeedScavenge jmpTarget:
-		(cogit backEnd saveAndRestoreLinkRegAround: [cogit CallRT: ceScheduleScavengeTrampoline]). "We need to push the LR here for ARM, and pop it back after the callRT:"
+	jumpNeedScavenge jmpTarget: cogit Label.
+	cogit backEnd saveAndRestoreLinkRegAround:
+		[cogit CallRT: ceScheduleScavengeTrampoline].
 	cogit Jump: continuation.
 	^0
 ]
