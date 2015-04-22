@@ -381,6 +381,12 @@ CogMethodZone >> freeStart: zoneLimit [
 	^mzFreeStart := zoneLimit
 ]
 
+{ #category : #initialization }
+CogMethodZone >> initialize [
+	"Make youngReferrers arithmetic for addressIsInCodeZone:"
+	youngReferrers := 0
+]
+
 { #category : #'young referers' }
 CogMethodZone >> kosherYoungReferrers [
 	"Answer that all entries in youngReferrers are in-use and have the cmRefersToYoung flag set.

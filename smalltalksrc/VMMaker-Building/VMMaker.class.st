@@ -390,8 +390,7 @@ VMMaker class >> generateEitherSqueakCogVM [
 	| coInterpreterClass |
 	coInterpreterClass := self chooseCoInterpreterClassIfAbsent: [^self].
 	^self generateSqueakCogVMWithInterpreterClass: coInterpreterClass
-		  options: #( ISA IA32),
-					((coInterpreterClass includesBehavior: CoInterpreterMT)
+		  options: ((coInterpreterClass includesBehavior: CoInterpreterMT)
 						ifTrue: [#(COGMTVM true)]
 						ifFalse: [#()])
 ]
@@ -404,8 +403,7 @@ VMMaker class >> generateNewspeakSpurCogVM [
 		and: StackToRegisterMappingCogit
 		with: #(	ObjectMemory Spur32BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
-				NewspeakVM true
-				ISA IA32)
+				NewspeakVM true)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/nsspursrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation
@@ -493,7 +491,6 @@ VMMaker class >> generateSqueakSpurCogSistaVM [
 		with: #(	SistaVM true
 				ObjectMemory Spur32BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
-				ISA IA32
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/spursistasrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
@@ -506,8 +503,7 @@ VMMaker class >> generateSqueakSpurCogVM [
 	^VMMaker
 		generate: CoInterpreter
 		and: StackToRegisterMappingCogit
-		with: #(	ObjectMemory Spur32BitCoMemoryManager
-				ISA IA32)
+		with: #(ObjectMemory Spur32BitCoMemoryManager)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/spursrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#()
@@ -684,6 +680,17 @@ VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil with: optionsPa
 	maker externalModules addAll: inclusions.
 	^maker
 
+]
+
+{ #category : #utilities }
+VMMaker class >> oldFileNamed: aFilename [
+	"Always output files in unix lf format.
+		A single format is friendlier to e.g. external version control systems.
+		The Microsoft and old MacOS classic C compilers all accept lf format files."
+
+	^(MultiByteFileStream oldFileNamed: aFilename)
+		lineEndConvention: #lf;
+		yourself
 ]
 
 { #category : #accessing }
@@ -1084,11 +1091,10 @@ VMMaker >> for64BitVM [
 ]
 
 { #category : #'generate sources' }
-VMMaker >> generateCogitFile [
+VMMaker >> generateCogitFileFor: cogitClass [
 	"Translate the Smalltalk description of the virtual machine into C.  If 'self doInlining' is true, small method bodies are inlined to reduce procedure call overhead.  On the PPC, this results in a factor of three speedup with only 30% increase in code size.  Subclasses can use specialised versions of CCodeGenerator and interpreterClass."
 
-	| cg cogitClass |
-	(cogitClass := self interpreterClass cogitClass) ifNil: [^nil].
+	| cg |
 	cg := [self buildCodeGeneratorForCogit]
 			on: Notification
 			do: [:ex|
@@ -1102,7 +1108,21 @@ VMMaker >> generateCogitFile [
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
 
 	cg vmClass preGenerationHook: cg.
-	cg storeCodeOnFile: (self sourceFilePathFor: cogitClass sourceFileName) doInlining: cogitClass doInlining.
+	cg storeCodeOnFile: (self sourceFilePathFor: cogitClass processorSpecificSourceFileName) doInlining: cogitClass doInlining.
+	^cg
+]
+
+{ #category : #'generate sources' }
+VMMaker >> generateCogitFiles [
+	"Translate the Smalltalk description of the virtual machine into C.  If 'self doInlining' is true, small method bodies are inlined to reduce procedure call overhead.  On the PPC, this results in a factor of three speedup with only 30% increase in code size.  Subclasses can use specialised versions of CCodeGenerator and interpreterClass."
+
+	| cogitClass cg |
+	(cogitClass := self interpreterClass cogitClass) ifNil: [^nil].
+	self generateCogitIncludeFileFor: cogitClass.
+	CogAbstractInstruction translateableSubclasses do:
+		[:compilerClass|
+		optionsDictionary at: #ISA put: compilerClass ISA.
+		cg := self generateCogitFileFor: cogitClass].
 	cg vmClass additionalHeadersDo:
 		[:headerName :headerContents| | filePath |
 		 filePath := self coreVMDirectory fullNameFor: headerName.
@@ -1111,6 +1131,20 @@ VMMaker >> generateCogitFile [
 	cogitClass apiExportHeaderName ifNotNil:
 		[cg storeAPIExportHeader: cogitClass apiExportHeaderName
 			OnFile: (self sourceFilePathFor: cogitClass apiExportHeaderName)]
+]
+
+{ #category : #'generate sources' }
+VMMaker >> generateCogitIncludeFileFor: cogitClass [
+	"Generate the skeletal cogit.c that includes the processor-specific cogit files."
+
+	| code fileName file |
+	code := Cogit generateCodeStringForCogitDotC.
+	fileName := self coreVMDirectory fullNameFor: cogitClass sourceFileName.
+	((self coreVMDirectory fileExists: cogitClass sourceFileName)
+	and: [(self class oldFileNamed: fileName) contents = code]) ifFalse:
+		[file := self class forceNewFileNamed: fileName.
+		 [file nextPutAll: code] ensure:
+			[file close]]
 ]
 
 { #category : #'generate sources' }
@@ -1274,7 +1308,7 @@ VMMaker >> generateMainVM [
 	 code is generated."
 
 	self generateInterpreterFile;
-		generateCogitFile;
+		generateCogitFiles;
 		processFilesForCoreVM;
 		generateInternalPlugins;
 		generateExportsFile
@@ -1582,12 +1616,14 @@ VMMaker >> needsToRegenerateCogitFile [
 	tStamp := cogitClasses inject: 0 into: [:tS :cl| tS max: cl timeStamp].
 
 	"don't translate if the file is newer than my timeStamp"
-	(self coreVMDirectory entryAt: cogitClass sourceFileName ifAbsent: [nil]) ifNotNil:
+	(self coreVMDirectory entryAt: cogitClass processorSpecificSourceFileName ifAbsent: [nil]) ifNotNil:
 		[:fstat|
 		tStamp < fstat modificationTime ifTrue:
-			[^self confirm: 'The ', self configurationNameIfAny, cogitClass printString, ' classes have not been modified since\ the source file was last generated.\Do you still want to regenerate it?' withCRs]].
+			[^self confirm: ('The ', self configurationNameIfAny, cogitClass printString,
+							', ', cogitClass activeCompilerClass, '\classes have not been modified since the ',
+							cogitClass processorSpecificSourceFileName,
+							' source file\was last generated.  Do you still want to regenerate it?') withCRs]].
 	^true
-
 ]
 
 { #category : #initialize }
