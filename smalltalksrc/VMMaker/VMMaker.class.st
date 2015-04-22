@@ -1106,7 +1106,7 @@ VMMaker >> generateCogitFileFor: cogitClass [
 								ifFalse: [ex pass]]].
 
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
-	self needsToRegenerateCogitFile ifFalse: [^nil].
+	self needsToRegenerateCogitFile ifFalse: [^cg].
 
 	cg vmClass preGenerationHook: cg.
 	cg storeCodeOnFile: (self sourceFilePathFor: cogitClass processorSpecificSourceFileName) doInlining: cogitClass doInlining.
