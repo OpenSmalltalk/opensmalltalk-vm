@@ -62,6 +62,17 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #translation }
+CogIA32Compiler class >> ISA [
+	"Answer the name of the ISA the receiver implements."
+	^#IA32
+]
+
+{ #category : #translation }
+CogIA32Compiler class >> identifyingPredefinedMacros [
+	^#('_M_I386' '_X86_' 'i386' 'i486' 'i586' 'i686' '__i386__' '__386__' 'X86' 'I386')
+]
+
 { #category : #'class initialization' }
 CogIA32Compiler class >> initialize [
 	"Initialize various IA32/x86 instruction-related constants.

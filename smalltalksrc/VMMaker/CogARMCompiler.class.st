@@ -10,7 +10,7 @@ Class {
 	#name : #CogARMCompiler,
 	#superclass : #CogAbstractInstruction,
 	#instVars : [
-		'cond'
+		'conditionOrNil'
 	],
 	#classVars : [
 		'AL',
@@ -79,6 +79,12 @@ CogARMCompiler class >> IPReg [
 	^ConcreteIPReg
 ]
 
+{ #category : #translation }
+CogARMCompiler class >> ISA [
+	"Answer the name of the ISA the receiver implements."
+	^#ARMv5
+]
+
 { #category : #accessing }
 CogARMCompiler class >> VarBaseReg [
 	"Answer the number of the reg we use to hold the base address of CoInterpreter variables"
@@ -87,9 +93,14 @@ CogARMCompiler class >> VarBaseReg [
 
 { #category : #translation }
 CogARMCompiler class >> filteredInstVarNames [
-	"Edit such that cond is amongst the char size vars opcode machineCodeSize and maxSize."
-	^(super filteredInstVarNames copyWithout: 'cond')
-		copyReplaceFrom: 4 to: 3 with: #('cond')
+	"Edit such that conditionOrNil is amongst the char size vars opcode machineCodeSize and maxSize."
+	^(super filteredInstVarNames copyWithout: 'conditionOrNil')
+		copyReplaceFrom: 4 to: 3 with: #('conditionOrNil')
+]
+
+{ #category : #translation }
+CogARMCompiler class >> identifyingPredefinedMacros [
+	^#('__ARM_ARCH__' '__arm__' '__arm32__' 'ARM32')
 ]
 
 { #category : #'class initialization' }
@@ -642,7 +653,8 @@ CogARMCompiler >> concretizeAddCqR [
 					reg := self concreteRegister: (operands at: 1).
 					self machineCodeAt: 0 put: (self subs: reg rn: reg imm: immediate ror: rot).
 					^machineCodeSize := 4]
-				ifFalse: [^self concretizeDataOperationCwR: 4]]
+				ifFalse: [^self concretizeDataOperationCwR: 4]].
+	^0 "to keep Slang happy"
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -695,7 +707,8 @@ CogARMCompiler >> concretizeAndCqR [
 							"Then AND reg, temp reg, lsr #(32-hb)"
 							 self machineCodeAt: 4 put:(self dataOpType: AndOpcode rd: reg rn: reg rm: ConcreteIPReg lsr: (32-hb )).
 							^machineCodeSize :=8]
-						ifFalse: [^self concretizeDataOperationCwR: AndOpcode]]]
+						ifFalse: [^self concretizeDataOperationCwR: AndOpcode]]].
+	^0 "to keep Slang happy"
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -734,7 +747,8 @@ CogARMCompiler >> concretizeAndCqRR [
 							 self machineCodeAt: 4 put: (self dataOpType: AndOpcode rd: dstReg rn: srcReg rm: ConcreteIPReg lsr: 32 - hb).
 							^machineCodeSize := 8]
 						ifFalse:
-							[^self concretizeDataOperationCwR: AndOpcode]]]
+							[^self concretizeDataOperationCwR: AndOpcode]]].
+	^0 "to keep Slang happy"
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -823,15 +837,15 @@ CogARMCompiler >> concretizeConditionalInstruction [
 	"Concretize the current instruction, but with a condition."
 	<returnTypeC: #void>
 	| savedCond |
-	self assert: cond notNil.
-	savedCond := cond.
-	cond := nil.
+	self assert: conditionOrNil notNil.
+	savedCond := conditionOrNil.
+	conditionOrNil := nil.
 	self dispatchConcretize.
-	cond := savedCond.
+	conditionOrNil := savedCond.
 	0 to: machineCodeSize-1 by: 4 do:
 		[:i| | instr |
 		instr := (self machineCodeAt: i) bitClear: 16rF<<28.
-		self machineCodeAt: i put: (instr bitOr: (cond bitAnd: 16rF)<<28)]
+		self machineCodeAt: i put: (instr bitOr: (conditionOrNil bitAnd: 16rF)<<28)]
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -881,6 +895,7 @@ CogARMCompiler >> concretizeDataOperationCqR: armOpcode [
 							 self machineCodeAt: 4 put:(self dataOpType: armOpcode rd: rd  rn: rn rm: ConcreteIPReg lsr: (32-hb)).
 							^machineCodeSize :=8]].
 					^self concretizeDataOperationCwR: armOpcode].
+	^0 "to keep Slang happy"
 	
 ]
 
@@ -1000,12 +1015,13 @@ CogARMCompiler >> concretizeLoadEffectiveAddressMwrR [
 			self machineCodeAt: 0 
 				"add destReg, srcReg, #immediate ROR rot"
 				put: (self add: destReg rn: srcReg imm: immediate ror: rot<<1).
-			^machineCodeSize := 4]
+			machineCodeSize := 4]
 		ifFalse:
 			[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg.
 			"add destReg, srcReg, ConcreteIPReg"
 			self machineCodeAt: 16 put: (self add: destReg rn: srcReg rm: ConcreteIPReg).
-			^machineCodeSize := instrOffset + 4 ]
+			machineCodeSize := instrOffset + 4].
+	^machineCodeSize "to keep Slang happy"
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1105,8 +1121,8 @@ CogARMCompiler >> concretizeMoveCqR [
 				ifTrue: [ :rot :immediate |
 					self machineCodeAt: 0 put: (self mvn: reg imm: immediate ror: rot).
 					^machineCodeSize := 4]
-				ifFalse: [^self concretizeMoveCwR]]
-	
+				ifFalse: [^self concretizeMoveCwR]].
+	^0 "to keep Slang happy"
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1138,7 +1154,8 @@ CogARMCompiler >> concretizeMoveM16rR [
 			[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg.
 			"ldrh destReg, [srcReg, ConcreteIPReg]"
 			self machineCodeAt: instrOffset put: (self ldrh: destReg rn: srcReg rm: ConcreteIPReg).
-			^machineCodeSize := instrOffset + 4 ]
+			^machineCodeSize := instrOffset + 4 ].
+	^0 "to keep Slang happy"
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1172,7 +1189,8 @@ CogARMCompiler >> concretizeMoveMbrR [
 					[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg].
 			 "ldrb destReg, [srcReg, ConcreteIPReg]"
 			 self machineCodeAt: instrOffset put: (self ldrb: destReg rn: srcReg rm: ConcreteIPReg).
-			 ^machineCodeSize := instrOffset + 4]
+			 ^machineCodeSize := instrOffset + 4].
+	^0 "to keep Slang happy"
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1193,7 +1211,8 @@ CogARMCompiler >> concretizeMoveMwrR [
 			[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg.
 			"ldr destReg, [srcReg, ConcreteIPReg]"
 			self machineCodeAt: instrOffset put: (self ldr: destReg rn: srcReg rm: ConcreteIPReg).
-			^machineCodeSize := instrOffset + 4]
+			^machineCodeSize := instrOffset + 4].
+	^0 "to keep Slang happy"
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1238,7 +1257,8 @@ CogARMCompiler >> concretizeMoveRMbr [
 					[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg].
 			"strb 	srcReg, [baseReg, ConcreteIPReg]"
 			self machineCodeAt: instrOffset put: (self strb: srcReg rn: baseReg rm: ConcreteIPReg).
-			^machineCodeSize := instrOffset + 4 ]
+			^machineCodeSize := instrOffset + 4 ].
+	^0 "to keep Slang happy"
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1259,7 +1279,8 @@ CogARMCompiler >> concretizeMoveRMwr [
 			[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg.
 			"str srcReg, [baseReg, ConcreteIPReg]"
 			self machineCodeAt: instrOffset put: (self str: srcReg rn: baseReg rm: ConcreteIPReg).
-			^machineCodeSize := instrOffset + 4]
+			^machineCodeSize := instrOffset + 4].
+	^0 "to keep Slang happy"
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1502,7 +1523,8 @@ CogARMCompiler >> concretizeSubCqR [
 					reg := self concreteRegister: (operands at: 1).
 					self machineCodeAt: 0 put: (self adds: reg rn: reg imm: immediate ror: rot).
 					^machineCodeSize := 4]
-				ifFalse: [^self concretizeDataOperationCwR: 2]]
+				ifFalse: [^self concretizeDataOperationCwR: 2]].
+	^0 "to keep Slang happy"
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1521,17 +1543,8 @@ CogARMCompiler >> concretizeTstCqR [
 			reg := self concreteRegister: (operands at: 1).
 			self machineCodeAt: 0 put: (self tst: reg rn: reg imm: immediate ror: rot).
 			^machineCodeSize := 4]
-		ifFalse: [^self concretizeDataOperationCwR: 8]
-]
-
-{ #category : #accessing }
-CogARMCompiler >> cond [
-	^cond
-]
-
-{ #category : #accessing }
-CogARMCompiler >> cond: condCode [
-	^cond := condCode
+		ifFalse: [^self concretizeDataOperationCwR: 8].
+	^0 "to keep Slang happy"
 ]
 
 { #category : #encoding }
@@ -1573,13 +1586,23 @@ CogARMCompiler >> cond: conditionCode type: type op: flagsOrOpcode set: doUpdate
 	^(self cond: conditionCode type: type op: flagsOrOpcode set: doUpdateStatusRegister rn: sourceRegister rd: targetRegister) bitOr: (so bitAnd: 16rFFF)
 ]
 
+{ #category : #accessing }
+CogARMCompiler >> condition [
+	^conditionOrNil
+]
+
+{ #category : #accessing }
+CogARMCompiler >> condition: condCode [
+	^conditionOrNil := condCode
+]
+
 { #category : #'ARM convenience instructions' }
-CogARMCompiler >> dataOpType: opcode rd: destReg rn: srcReg rm: addReg lsr: shft [
+CogARMCompiler >> dataOpType: armOpcode rd: destReg rn: srcReg rm: addReg lsr: shft [
 "return an {opcode} destReg, srcReg, addReg lsl #shft"
 "important detail - a 0 shft requires setting the shift-type code to 0 to avoid potential instruction confusion"
 	shft = 0
-		ifTrue:[^self type: 0 op: opcode set: 1 rn: srcReg rd: destReg shifterOperand: addReg]
-		ifFalse:[^self type: 0 op: opcode set: 1 rn: srcReg rd: destReg shifterOperand: ((shft <<7 bitOr: 32) bitOr:  addReg)]
+		ifTrue:[^self type: 0 op: armOpcode set: 1 rn: srcReg rd: destReg shifterOperand: addReg]
+		ifFalse:[^self type: 0 op: armOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((shft <<7 bitOr: 32) bitOr:  addReg)]
 ]
 
 { #category : #'generate machine code' }
@@ -1589,7 +1612,7 @@ CogARMCompiler >> dispatchConcretize [
 	 to get around the branch size limits in the SqueakV3 (blue book derived)
 	 bytecode set."
 	<returnTypeC: #void>
-	cond ifNotNil:
+	conditionOrNil ifNotNil:
 		[self concretizeConditionalInstruction.
 		 ^self].
 		 
@@ -1791,7 +1814,6 @@ CogARMCompiler >> genMulR: regSource R: regDest [
 	"Use SMULL to produce a 64-bit result, implicitly in TempReg,RISCTempReg.
 	 Test the top word for 0 or 1 and set oVerflow if not equal.  Move result in
 	 TempReg into regDest."
-	<var: #inst type: #AbstractInstruction>
 
 	cogit
 		gen: SMULL operand: regSource operand: regDest; "result in TempReg,RISCTempReg"
@@ -2040,9 +2062,10 @@ CogARMCompiler >> instructionSizeAt: pc [
 CogARMCompiler >> is12BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: falseAlternativeBlock [
 	"For LDR and STR, there is an instruction allowing for one instruction encoding if the offset is encodable in signed 12 bit form. pass the trueBlock the value and a 1-bit flag to tell it the sign.
 	The falseBlock can do whatever it needs to, typically building the constant as a full 32bit value and then ld/st with that as a register offset"
+	<inline: true>
 	constant abs <= 4095 "(2 raisedTo: 12)-1"
-		ifTrue: [
-			constant >= 0 
+		ifTrue:
+			[constant >= 0 
 				ifTrue: [trueAlternativeBlock value: 1 value: constant]
 				ifFalse: [trueAlternativeBlock value: 0 value: constant abs]]
 		ifFalse: falseAlternativeBlock
@@ -2051,9 +2074,10 @@ CogARMCompiler >> is12BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: f
 { #category : #testing }
 CogARMCompiler >> is8BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: falseAlternativeBlock [
 	"For extended LDR and STR for half & double, there is an instruction allowing for one instruction encoding if the offset is encodable in 8 bit."
+	<inline: true>
 	constant abs <= 255 "(2 raisedTo: 8)-1"
-		ifTrue: [
-			constant >= 0 
+		ifTrue:
+			[constant >= 0 
 				ifTrue: [trueAlternativeBlock value: 1 value: constant]
 				ifFalse: [trueAlternativeBlock value: 0 value: constant abs]]
 		ifFalse: falseAlternativeBlock
@@ -2107,6 +2131,13 @@ CogARMCompiler >> isJumpAt: pc [
 CogARMCompiler >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction."
 	^self isJump or: [opcode = AlignmentNops or: [opcode = Call]]
+]
+
+{ #category : #testing }
+CogARMCompiler >> isPCRelativeValueLoad: instr [
+	<var: 'instr' type: #'unsigned int'>
+	"add xx, pc, blah or sub xx, pc, blah"
+	^(instr >> 16) = 16rE28F or: [instr >> 16 = 16rE24F]
 ]
 
 { #category : #accessing }
