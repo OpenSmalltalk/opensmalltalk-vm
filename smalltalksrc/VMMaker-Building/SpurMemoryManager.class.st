@@ -8074,7 +8074,7 @@ SpurMemoryManager >> nilUnmarkedWeaklingSlots [
 	 Finally, empty the weaklingStack."
 	<inline: #never> "for profiling"
 	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: 'nilling...'; flush].
-	self assert: self allOldMarkedWeakObjectsOnWeaklingStack.
+	self eassert: self allOldMarkedWeakObjectsOnWeaklingStack.
 	weaklingStack = nilObj ifTrue:
 		[^self].
 	self objStack: weaklingStack from: 0 do:

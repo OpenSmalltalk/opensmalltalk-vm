@@ -9,7 +9,7 @@ Class {
 }
 
 { #category : #utilities }
-TStmtListNode >> addReadBeforeAssignedIn: variables to: readBeforeAssigned assignments: assigned [
+TStmtListNode >> addReadBeforeAssignedIn: variables to: readBeforeAssigned assignments: assigned in: aCodeGen [
 	"Add any variables in variables that are read before written to readBeforeAssigned.
 	 Add unconditional assignments to assigned.  For convenience answer assigned."
 	self
@@ -21,8 +21,11 @@ TStmtListNode >> addReadBeforeAssignedIn: variables to: readBeforeAssigned assig
 			(node isVariable
 			 and: [(variables includes: node name)
 			 and: [(assigned includes: node name) not
-			 and: [(parent notNil and: [parent isAssignment and: [parent variable == node]]) not]]]) ifTrue:
-				[readBeforeAssigned add: node name]]
+			 and: [(node structTargetKindIn: aCodeGen) isNil
+			 and: [(parent notNil and: [parent isAssignment and: [parent variable == node]]) not]]]]) ifTrue:
+				[node name = 'theCalloutState' ifTrue:
+					[self halt].
+				 readBeforeAssigned add: node name]]
 		unless:
 			[:node :parent| | conditionalAssignments mayHaveSideEffects |
 			node isSend
@@ -44,7 +47,8 @@ TStmtListNode >> addReadBeforeAssignedIn: variables to: readBeforeAssigned assig
 							 (TStmtListNode new setStatements: {node receiver}; yourself)
 								addReadBeforeAssignedIn: variables
 								to: readBeforeAssigned
-								assignments: assigned.
+								assignments: assigned
+								in: aCodeGen.
 							 "Now find read-before-written in each arm, and collect the assignments to spot those assigned in both arms"
 							 conditionalAssignments :=
 								node args
@@ -54,7 +58,8 @@ TStmtListNode >> addReadBeforeAssignedIn: variables to: readBeforeAssigned assig
 											[block
 												addReadBeforeAssignedIn: variables
 												to: readBeforeAssigned
-												assignments: assigned copy]]
+												assignments: assigned copy
+												in: aCodeGen]]
 									thenSelect: [:each| each notNil].
 							 "add to assigned those variables written to in both arms"
 							 conditionalAssignments size = 2 ifTrue:
