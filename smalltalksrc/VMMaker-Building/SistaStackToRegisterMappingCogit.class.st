@@ -273,7 +273,7 @@ SistaStackToRegisterMappingCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytec
 								
 	| reg literal distance targetFixUp |
 	
-	reg := self allocateOneRegister.
+	reg := self allocateRegForStackTopEntry.
 	self ssTop popToReg: reg.
 	
 	literal := self getLiteral: (extA * 256 + byte1).
@@ -315,7 +315,7 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	self ssPop: 1.
 	desc popToReg: TempReg.
 
-	counterReg := self allocateRegisterNotConflictingWith: 0.
+	counterReg := self allocateAnyReg.
 	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	counterIndex := counterIndex + 1.
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
@@ -493,7 +493,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 					ifFalse: [self OrR: ReceiverResultReg R: TempReg]]].
 	jumpNotSmallInts := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 
-	counterReg := self allocateRegisterNotConflictingWith: (self registerMaskFor: ReceiverResultReg and: Arg0Reg). "Use this as the count reg, can't conflict with the registers for the arg and the receiver"
+	counterReg := self allocateRegNotConflictingWith: (self registerMaskFor: ReceiverResultReg and: Arg0Reg). "Use this as the count reg, can't conflict with the registers for the arg and the receiver"
 	self ssAllocateRequiredReg: counterReg. "Use this as the count reg."
 	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
@@ -565,15 +565,15 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 		ifTrue: 
 			[unforwardRcvr
 				ifTrue:
-					[self allocateTwoRegistersInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
+					[self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
 					 self ssTop popToReg: argReg.
 					 (self ssValue:1) popToReg: rcvrReg]
 				ifFalse:
-					[argReg := self allocateOneRegister.
+					[argReg := self allocateRegForStackTopEntry.
 					 self ssTop popToReg: argReg]]
 		ifFalse:
 			[self assert: unforwardRcvr.
-			 rcvrReg := self allocateOneRegister.
+			 rcvrReg := self allocateRegForStackEntryAt: 1.
 			 (self ssValue:1) popToReg: rcvrReg].
 		
 	argReg ifNotNil: [ regMask := self registerMaskFor: regMask ].
@@ -592,7 +592,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 							+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
 	postBranchPC := nextPC + branchDescriptor numBytes.
 
-	counterReg := self allocateRegisterNotConflictingWith: regMask. "Use this as the count reg, can't conflict with the registers for the arg and the receiver of #==."
+	counterReg := self allocateRegNotConflictingWith: regMask. "Use this as the count reg, can't conflict with the registers for the arg and the receiver of #==."
 	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
 	self assert: objectMemory wordSize = CounterBytes.
