@@ -1103,7 +1103,7 @@ VMMaker >> generateCogitFileFor: cogitClass [
 					ifFalse: [(ex respondsTo: #rearmHandlerDuring:)
 								ifTrue: [ex rearmHandlerDuring: [ex pass]]
 								ifFalse: [ex pass]]].
-	self needsToRegenerateCogitFile ifFalse: [^nil].
+	self needsToRegenerateCogitFile ifFalse: [^cg].
 
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
 
@@ -1137,11 +1137,12 @@ VMMaker >> generateCogitFiles [
 VMMaker >> generateCogitIncludeFileFor: cogitClass [
 	"Generate the skeletal cogit.c that includes the processor-specific cogit files."
 
-	| code fileName file |
+	| code fileName file fileCode |
 	code := Cogit generateCodeStringForCogitDotC.
 	fileName := self coreVMDirectory fullNameFor: cogitClass sourceFileName.
 	((self coreVMDirectory fileExists: cogitClass sourceFileName)
-	and: [(self class oldFileNamed: fileName) contents = code]) ifFalse:
+	and: [fileCode := (self class oldFileNamed: fileName) contentsOfEntireFile.
+		(fileCode allButFirst: (fileCode indexOf: $#)) = (code allButFirst: (code indexOf: $#))]) ifFalse:
 		[file := self class forceNewFileNamed: fileName.
 		 [file nextPutAll: code] ensure:
 			[file close]]
