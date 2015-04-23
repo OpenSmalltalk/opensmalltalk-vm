@@ -279,6 +279,10 @@ SistaStackToRegisterMappingCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytec
 								
 	| reg literal distance targetFixUp |
 	
+	"We loose the information of in which register is stack top 
+	when jitting the branch target so we need to flush everything. 
+	We could use a fixed register here...."
+	self ssFlushTo: simStackPtr.
 	reg := self allocateRegForStackTopEntry.
 	self ssTop popToReg: reg.
 	
