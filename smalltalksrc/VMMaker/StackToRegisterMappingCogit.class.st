@@ -3385,6 +3385,9 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextReceiverVaria
 	| jmpSingle jmpDone valueReg |
 	<var: #jmpSingle type: #'AbstractInstruction *'>
 	<var: #jmpDone type: #'AbstractInstruction *'>
+	"The reason we need a frame here is that assigning to an inst var of a context may
+	 involve wholesale reorganization of stack pages, and the only way to preserve the
+	 execution state of an activation in that case is if it has a frame."
 	self assert: needsFrame.
 	self ssFlushUpThroughReceiverVariable: slotIndex.
 	"Note that ReceiverResultReg remains live after both
@@ -3467,6 +3470,13 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remoteTempIndex [
 	<inline: false>
 	| topReg topSpilled tempVectReg |
+	"The only reason we assert needsFrame here is that in a frameless method
+	 ReceiverResultReg must and does contain only self, but the ceStoreCheck
+	 trampoline expects the target of the store to be in ReceiverResultReg.  So
+	 in a frameless method we would have a conflict between the receiver and
+	 the temote temp store, unless we we smart enough to realise that
+	 ReceiverResultReg was unused after the literal variable store, unlikely given
+	 that methods return self by default."
 	self assert: needsFrame.
 	optStatus isReceiverResultRegLive: false.
 	"N.B.  No need to check the stack for references because we generate code for
