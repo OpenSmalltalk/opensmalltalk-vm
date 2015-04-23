@@ -246,15 +246,11 @@ SistaStackToRegisterMappingCogit >> fillInOPICHeader: pic size: size numArgs: nu
 ]
 
 { #category : #'bytecode generators' }
-SistaStackToRegisterMappingCogit >> genDirectEqualsEqualsArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg [
+SistaStackToRegisterMappingCogit >> genDirectEqualsEqualsNoBranchArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg [
 	<inline: true>
 	| label jumpEqual jumpNotEqual |
 	label := self Label.
-	unforwardArg 
-		ifFalse: [ self CmpCq: self ssTop constant R: rcvrReg ]
-		ifTrue: [ unforwardRcvr
-			ifFalse: [ self CmpCq: (self ssValue: 1) constant R: argReg ]
-			ifTrue: [ self CmpR: argReg R: rcvrReg ] ].	 
+	self genEqualsEqualsComparisonArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg.
 	self ssPop: 2.
 	jumpEqual := self JumpZero: 0.
 	 unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ].
@@ -265,6 +261,16 @@ SistaStackToRegisterMappingCogit >> genDirectEqualsEqualsArg: unforwardArg rcvr:
 	 jumpNotEqual jmpTarget: self Label.
 	 self ssPushRegister: rcvrReg.
 	 ^0
+]
+
+{ #category : #'bytecode generators' }
+SistaStackToRegisterMappingCogit >> genEqualsEqualsComparisonArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg [
+	<inline: true>
+	unforwardArg 
+		ifFalse: [ self CmpCq: self ssTop constant R: rcvrReg ]
+		ifTrue: [ unforwardRcvr
+			ifFalse: [ self CmpCq: (self ssValue: 1) constant R: argReg ]
+			ifTrue: [ self CmpR: argReg R: rcvrReg ] ].	 
 ]
 
 { #category : #'bytecode generators' }
@@ -575,22 +581,20 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 			 rcvrReg := self allocateRegForStackEntryAt: 1.
 			 (self ssValue:1) popToReg: rcvrReg].
 		
-	argReg ifNotNil: [ regMask := self registerMaskFor: regMask ].
+	argReg ifNotNil: [ regMask := self registerMaskFor: argReg ].
 	rcvrReg ifNotNil: [ regMask := regMask bitOr: (self registerMaskFor: rcvrReg) ].
 	
-	"Here we can use Cq because the constant does not need to be annotated"
 	self assert: (unforwardArg not or: [argReg notNil]).
 	self assert: (unforwardRcvr not or: [rcvrReg notNil]).
 	
 	"Only interested in inlining if followed by a conditional branch."
 	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
-		[^ self genDirectEqualsEqualsArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg].
+		[^ self genDirectEqualsEqualsNoBranchArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg].
 
 	targetBytecodePC := nextPC
 							+ branchDescriptor numBytes
 							+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
 	postBranchPC := nextPC + branchDescriptor numBytes.
-
 	counterReg := self allocateRegNotConflictingWith: regMask. "Use this as the count reg, can't conflict with the registers for the arg and the receiver of #==."
 	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
@@ -606,34 +610,30 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	
 	label := self Label.
 	
-	unforwardArg 
-		ifFalse: [ self CmpCq: self ssTop constant R: rcvrReg ]
-		ifTrue: [ unforwardRcvr
-			ifFalse: [ self CmpCq: (self ssValue: 1) constant R: argReg ]
-			ifTrue: [ self CmpR: argReg R: rcvrReg ] ].	
+	self genEqualsEqualsComparisonArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg.
 	
-	self ssPop: 2.
-	branchDescriptor isBranchTrue ifTrue: 
-		[ fixup := self ensureNonMergeFixupAt: postBranchPC - initialPC.
-		self JumpZero: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-		unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label  ].
-		unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ] ].
-	branchDescriptor isBranchFalse ifTrue: 
-		[ fixup := self ensureNonMergeFixupAt: targetBytecodePC - initialPC.
-		self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
-		unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ].
-		unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ] ].
+	self ssPop: 2. "pop by 2 temporarily  for the fixups"
+	branchDescriptor isBranchTrue 
+		ifTrue: 
+			[ fixup := self ensureNonMergeFixupAt: postBranchPC - initialPC.
+			self JumpZero: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger. ]
+		ifFalse: 
+			[ fixup := self ensureNonMergeFixupAt: targetBytecodePC - initialPC.
+			self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger. ].
+	unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label  ].
+	unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ].
 	self ssPop: -2. 
 	
 	"the jump has not been taken and forwarders have been followed."
 	self SubCq: 1 R: counterReg. "Count untaken"
 	self MoveR: counterReg Aw: counterAddress. "write back"
-	self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
+	self Jump: fixup.
 	
 	countTripped jmpTarget: self Label.
 	
 	"inlined version of #== ignoring the branchDescriptor if the counter trips to have normal state for the optimizer"
-	^ self genDirectEqualsEqualsArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg
+	self genDirectEqualsEqualsNoBranchArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg.
+	^ 0
 ]
 
 { #category : #'bytecode generators' }
