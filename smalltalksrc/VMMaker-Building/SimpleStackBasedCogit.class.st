@@ -3364,6 +3364,13 @@ SimpleStackBasedCogit >> genStoreAndPopTemporaryVariableBytecode [
 SimpleStackBasedCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 	<inline: false>
 	| association |
+	"The only reason we assert needsFrame here is that in a frameless method
+	 ReceiverResultReg must and does contain only self, but the ceStoreCheck
+	 trampoline expects the target of the store to be in ReceiverResultReg.  So
+	 in a frameless method we would have a conflict between the receiver and
+	 the literal store, unless we we smart enough to realise that ReceiverResultReg
+	 was unused after the literal variable store, unlikely given that methods
+	 return self by default."
 	self assert: needsFrame.
 	association := self getLiteral: litVarIndex.
 	self annotate: (self MoveCw: association R: ReceiverResultReg) objRef: association.
@@ -3389,6 +3396,9 @@ SimpleStackBasedCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: s
 	| jmpSingle jmpDone |
 	<var: #jmpSingle type: #'AbstractInstruction *'>
 	<var: #jmpDone type: #'AbstractInstruction *'>
+	"The reason we need a frame here is that assigning to an inst var of a context may
+	 involve wholesale reorganization of stack pages, and the only way to preserve the
+	 execution state of an activation in that case is if it has a frame."
 	self assert: needsFrame.
 	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
 	objectRepresentation
@@ -3436,6 +3446,13 @@ SimpleStackBasedCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 { #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remoteTempIndex [
 	<inline: false>
+	"The only reason we assert needsFrame here is that in a frameless method
+	 ReceiverResultReg must and does contain only self, but the ceStoreCheck
+	 trampoline expects the target of the store to be in ReceiverResultReg.  So
+	 in a frameless method we would have a conflict between the receiver and
+	 the temote temp store, unless we we smart enough to realise that
+	 ReceiverResultReg was unused after the literal variable store, unlikely given
+	 that methods return self by default."
 	self assert: needsFrame.
 	popBoolean
 		ifTrue: [self PopR: ClassReg]
