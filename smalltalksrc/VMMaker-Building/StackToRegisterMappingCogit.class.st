@@ -818,8 +818,7 @@ StackToRegisterMappingCogit >> allocateRegForStackTopThreeEntriesInto: trinaryBl
 		[ thirdIsReceiver 
 			ifTrue:
 				[ rThird := ReceiverResultReg.  "Free ReceiverResultReg if it was not free"
-				(self register: ReceiverResultReg isInMask: self liveRegisters) ifTrue: 
-					[ self ssAllocateRequiredReg: ReceiverResultReg ].
+				self ssAllocateRequiredReg: ReceiverResultReg.
 				optStatus isReceiverResultRegLive: false ]
 			ifFalse: [ rThird := self allocateRegNotConflictingWith: topRegistersMask ].
 		topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: rThird) ].
@@ -1370,6 +1369,7 @@ StackToRegisterMappingCogit >> freeAnyRegNotConflictingWith: regMask [
 	Assertion Failure if regMask has already all the registers"
 	<var: #desc type: #'CogSimStackEntry *'>
 	| reg index |
+	self assert: needsFrame.
 	index := simSpillBase max: 0.
 	[reg isNil and: [index < simStackPtr] ] whileTrue: 
 		[ | desc |
@@ -1813,40 +1813,6 @@ StackToRegisterMappingCogit >> genExternalizePointersForPrimitiveCall [
 	" Override to push the register receiver and register arguments, if any."
 	self genPushRegisterArgs.
 	^super genExternalizePointersForPrimitiveCall
-]
-
-{ #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genFramelessStorePop: popBoolean ReceiverVariable: slotIndex [
-	<inline: false>
-	| topReg valueReg |
-	self assert: needsFrame not.
-	self ssFlushUpThroughReceiverVariable: slotIndex.
-	"Avoid store check for immediate values"
-	(objectRepresentation isUnannotatableConstant: self ssTop) ifTrue:
-		[self ensureReceiverResultRegContainsSelf.
-		 self ssStorePop: popBoolean toPreferredReg: TempReg.
-		 traceStores > 0 ifTrue:
-			[backEnd saveAndRestoreLinkRegAround:
-				[self CallRT: ceTraceStoreTrampoline]].
-		 ^objectRepresentation
-			genStoreImmediateInSourceReg: TempReg
-			slotIndex: slotIndex
-			destReg: ReceiverResultReg].
-	(topReg := self ssTop registerOrNil) isNil ifTrue:
-		[topReg := ClassReg].
-	valueReg := self ssStorePop: popBoolean toPreferredReg: topReg.
-	"Note that ReceiverResultReg remains live after ceStoreCheckTrampoline."
-	self ensureReceiverResultRegContainsSelf.
-	 traceStores > 0 ifTrue:
-		[self MoveR: valueReg R: TempReg.
-		 backEnd saveAndRestoreLinkRegAround:
-			[self CallRT: ceTraceStoreTrampoline]].
-	^objectRepresentation
-		genStoreSourceReg: valueReg
-		slotIndex: slotIndex
-		destReg: ReceiverResultReg
-		scratchReg: TempReg
-		inFrame: false
 ]
 
 { #category : #'bytecode generator support' }
@@ -3389,9 +3355,6 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 		
 		
 	topReg := self allocateRegForStackTopEntryNotConflictingWith: (self registerMaskFor: ReceiverResultReg).
-	self ssPop: 1.
-	self ssAllocateCallReg: topReg. "for the ceStoreCheck call in genStoreSourceReg:... below"
-	self ssPush: 1.
 	self ssStorePop: popBoolean toReg: topReg.
 	optStatus isReceiverResultRegLive: false.
 	self ssAllocateCallReg: ReceiverResultReg. "for ceStoreCheck call in genStoreSourceReg: has to be ReceiverResultReg"
@@ -3450,34 +3413,40 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextReceiverVaria
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 	<inline: false>
-	| topReg valueReg |
-	needsFrame ifFalse:
-		[^self genFramelessStorePop: popBoolean ReceiverVariable: slotIndex].
+	^ needsFrame 
+		ifFalse: 
+			[ self 
+				genStorePop: popBoolean 
+				ReceiverVariable: slotIndex 
+				traceBlock: [ backEnd saveAndRestoreLinkRegAround: [self CallRT: ceTraceStoreTrampoline] ] ]
+		ifTrue: 
+			[ self 
+				genStorePop: popBoolean 
+				ReceiverVariable: slotIndex 
+				traceBlock: [ self CallRT: ceTraceStoreTrampoline ] ]
+]
+
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex traceBlock: block [
+	<inline: true>
+	| topReg |
 	self ssFlushUpThroughReceiverVariable: slotIndex.
 	"Avoid store check for immediate values"
 	(objectRepresentation isUnannotatableConstant: self ssTop) ifTrue:
 		[self ensureReceiverResultRegContainsSelf.
-		 self ssStorePop: popBoolean toPreferredReg: TempReg.
-		 traceStores > 0 ifTrue:
-			[self CallRT: ceTraceStoreTrampoline].
+		 self ssStorePop: popBoolean toReg: TempReg.
+		 traceStores > 0 ifTrue: [block value].
 		 ^objectRepresentation
 			genStoreImmediateInSourceReg: TempReg
 			slotIndex: slotIndex
 			destReg: ReceiverResultReg].
-	((topReg := self ssTop registerOrNil) isNil
-	 or: [topReg = ReceiverResultReg]) ifTrue:
-		[topReg := ClassReg].
-	self ssPop: 1.
-	self ssAllocateCallReg: topReg. "for the ceStoreCheck call in genStoreSourceReg:... below"
-	self ssPush: 1.
-	valueReg := self ssStorePop: popBoolean toPreferredReg: topReg.
-	valueReg = ReceiverResultReg ifTrue:
-		[self MoveR: valueReg R: topReg].
+	topReg := self allocateRegForStackTopEntryNotConflictingWith: (self registerMaskFor: ReceiverResultReg).
+	self ssStorePop: popBoolean toReg: topReg.
 	"Note that ReceiverResultReg remains live after ceStoreCheckTrampoline."
 	self ensureReceiverResultRegContainsSelf.
 	 traceStores > 0 ifTrue:
 		[self MoveR: topReg R: TempReg.
-		 self CallRT: ceTraceStoreTrampoline].
+		 block value].
 	^objectRepresentation
 		genStoreSourceReg: topReg
 		slotIndex: slotIndex
@@ -3489,33 +3458,33 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remoteTempIndex [
 	<inline: false>
-	| topReg valueReg topSpilled |
+	| topReg topSpilled tempVectReg |
 	self assert: needsFrame.
 	optStatus isReceiverResultRegLive: false.
 	"N.B.  No need to check the stack for references because we generate code for
 	 remote temp loads that stores the result in a register, deferring only the register push."
 	"Avoid store check for immediate values"
 	(objectRepresentation isUnannotatableConstant: self ssTop) ifTrue:
-		[self ssAllocateRequiredReg: ReceiverResultReg.
-		 self MoveMw: (self frameOffsetOfTemporary: remoteTempIndex) r: FPReg R: ReceiverResultReg.
-		 self ssStorePop: popBoolean toPreferredReg: TempReg.
+		[ tempVectReg := self allocateAnyReg.
+		 self MoveMw: (self frameOffsetOfTemporary: remoteTempIndex) r: FPReg R: tempVectReg.
+		 self ssStorePop: popBoolean toReg: TempReg.
 		 traceStores > 0 ifTrue:
-			[self CallRT: ceTraceStoreTrampoline].
+			[ tempVectReg = ReceiverResultReg ifFalse: 
+					[ self ssAllocateRequiredReg: ReceiverResultReg.
+					optStatus isReceiverResultRegLive: false.
+					self MoveR: tempVectReg R: ReceiverResultReg ].
+			self CallRT: ceTraceStoreTrampoline].
 		 ^objectRepresentation
 			genStoreImmediateInSourceReg: TempReg
 			slotIndex: slotIndex
-			destReg: ReceiverResultReg].
-	((topReg := self ssTop registerOrNil) isNil
-	 or: [topReg = ReceiverResultReg]) ifTrue:
-		[topReg := ClassReg].
+			destReg: tempVectReg].
+	topReg := self allocateRegForStackTopEntryNotConflictingWith: (self registerMaskFor: ReceiverResultReg).
 	self ssPop: 1.
 	"for the ceStoreCheck call in genStoreSourceReg:... below"
 	self ssAllocateCallReg: topReg and: ReceiverResultReg.
 	self ssPush: 1.
 	topSpilled := self ssTop spilled.
-	valueReg := self ssStorePop: (popBoolean or: [topSpilled]) toPreferredReg: topReg.
-	valueReg = ReceiverResultReg ifTrue:
-		[self MoveR: valueReg R: topReg].
+	self ssStorePop: (popBoolean or: [topSpilled]) toReg: topReg.
 	popBoolean ifFalse:
 		[topSpilled ifFalse: [self ssPop: 1].
 		 self ssPushRegister: topReg].
