@@ -3429,16 +3429,18 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 			[ self 
 				genStorePop: popBoolean 
 				ReceiverVariable: slotIndex 
-				traceBlock: [ backEnd saveAndRestoreLinkRegAround: [self CallRT: ceTraceStoreTrampoline] ] ]
+				traceBlock: [ backEnd saveAndRestoreLinkRegAround: [self CallRT: ceTraceStoreTrampoline] ]
+				inFrame: needsFrame ]
 		ifTrue: 
 			[ self 
 				genStorePop: popBoolean 
 				ReceiverVariable: slotIndex 
-				traceBlock: [ self CallRT: ceTraceStoreTrampoline ] ]
+				traceBlock: [ self CallRT: ceTraceStoreTrampoline ]
+				inFrame: needsFrame ]
 ]
 
 { #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex traceBlock: block [
+StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex traceBlock: block inFrame: boolean [
 	<inline: true>
 	| topReg |
 	self ssFlushUpThroughReceiverVariable: slotIndex.
@@ -3463,7 +3465,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 		slotIndex: slotIndex
 		destReg: ReceiverResultReg
 		scratchReg: TempReg
-		inFrame: true
+		inFrame: boolean
 ]
 
 { #category : #'bytecode generator support' }
