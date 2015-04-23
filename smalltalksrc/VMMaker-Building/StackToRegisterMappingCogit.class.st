@@ -1803,13 +1803,11 @@ StackToRegisterMappingCogit >> genExternalizePointersForPrimitiveCall [
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genFramelessStorePop: popBoolean ReceiverVariable: slotIndex [
 	<inline: false>
-	| topReg valueReg constVal |
+	| topReg valueReg |
 	self assert: needsFrame not.
 	self ssFlushUpThroughReceiverVariable: slotIndex.
 	"Avoid store check for immediate values"
-	constVal := self ssTop maybeConstant.
-	(self ssTop type = SSConstant
-	 and: [(objectRepresentation shouldAnnotateObjectReference: constVal) not]) ifTrue:
+	(objectRepresentation isUnannotatableConstant: self ssTop) ifTrue:
 		[self ensureReceiverResultRegContainsSelf.
 		 self ssStorePop: popBoolean toPreferredReg: TempReg.
 		 traceStores > 0 ifTrue:
@@ -3350,17 +3348,15 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 	<inline: false>
-	| topReg valueReg association constVal |
+	| topReg valueReg association |
 	self flag: 'with better register allocation this wouldn''t need a frame.  e.g. use SendNumArgs instead of ReceiverResultReg'.
 	self assert: needsFrame.
 	optStatus isReceiverResultRegLive: false.
 	"N.B.  No need to check the stack for references because we generate code for
 	 literal variable loads that stores the result in a register, deferring only the register push."
 	association := self getLiteral: litVarIndex.
-	constVal := self ssTop maybeConstant.
 	"Avoid store check for immediate values"
-	(self ssTop type = SSConstant
-	 and: [(objectRepresentation shouldAnnotateObjectReference: constVal) not]) ifTrue:
+	(objectRepresentation isUnannotatableConstant: self ssTop) ifTrue:
 		[self ssAllocateRequiredReg: ReceiverResultReg.
 		self genMoveConstant: association R: ReceiverResultReg.
 		 objectRepresentation
@@ -3438,14 +3434,12 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextReceiverVaria
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 	<inline: false>
-	| topReg valueReg constVal |
+	| topReg valueReg |
 	needsFrame ifFalse:
 		[^self genFramelessStorePop: popBoolean ReceiverVariable: slotIndex].
 	self ssFlushUpThroughReceiverVariable: slotIndex.
 	"Avoid store check for immediate values"
-	constVal := self ssTop maybeConstant.
-	(self ssTop type = SSConstant
-	 and: [(objectRepresentation shouldAnnotateObjectReference: constVal) not]) ifTrue:
+	(objectRepresentation isUnannotatableConstant: self ssTop) ifTrue:
 		[self ensureReceiverResultRegContainsSelf.
 		 self ssStorePop: popBoolean toPreferredReg: TempReg.
 		 traceStores > 0 ifTrue:
@@ -3479,15 +3473,13 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remoteTempIndex [
 	<inline: false>
-	| topReg valueReg constVal topSpilled |
+	| topReg valueReg topSpilled |
 	self assert: needsFrame.
 	optStatus isReceiverResultRegLive: false.
 	"N.B.  No need to check the stack for references because we generate code for
 	 remote temp loads that stores the result in a register, deferring only the register push."
 	"Avoid store check for immediate values"
-	constVal := self ssTop maybeConstant.
-	(self ssTop type = SSConstant
-	 and: [(objectRepresentation shouldAnnotateObjectReference: constVal) not]) ifTrue:
+	(objectRepresentation isUnannotatableConstant: self ssTop) ifTrue:
 		[self ssAllocateRequiredReg: ReceiverResultReg.
 		 self MoveMw: (self frameOffsetOfTemporary: remoteTempIndex) r: FPReg R: ReceiverResultReg.
 		 self ssStorePop: popBoolean toPreferredReg: TempReg.
@@ -4826,8 +4818,9 @@ StackToRegisterMappingCogit >> ssStorePop: popBoolean toPreferredReg: preferredR
 	| actualReg |
 	actualReg := preferredReg.
 	popBoolean
-		ifTrue: [(self ssTop type = SSRegister and: [self ssTop spilled not])
-					ifTrue: [self assert: self ssTop annotateUse not.
+		ifTrue: [(self ssTop type = SSRegister "and: [self ssTop spilled not]")
+					ifTrue: [self assert: self ssTop spilled not.
+							self assert: self ssTop annotateUse not.
 							actualReg := self ssTop register]
 					ifFalse: [self ssTop popToReg: preferredReg].
 				self ssPop: 1]

@@ -494,7 +494,6 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	jumpNotSmallInts := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 
 	counterReg := self allocateRegNotConflictingWith: (self registerMaskFor: ReceiverResultReg and: Arg0Reg). "Use this as the count reg, can't conflict with the registers for the arg and the receiver"
-	self ssAllocateRequiredReg: counterReg. "Use this as the count reg."
 	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
 	self assert: objectMemory wordSize = CounterBytes.
