@@ -2998,11 +2998,9 @@ StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCom
 	objectRepresentation genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
 	self CmpRd: DPFPReg1 Rd: DPFPReg0.
 	jumpCond := self perform: jumpFPOpcodeGenerator with: 0. "FP jumps are a little weird"
-	self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
-		objRef: objectMemory falseObject.
+	self genMoveFalseR: ReceiverResultReg.
 	self RetN: 0.
-	jumpCond jmpTarget: (self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
-							objRef: objectMemory trueObject).
+	jumpCond jmpTarget: (self genMoveTrueR: ReceiverResultReg).
 	self RetN: 0.
 
 	objectRepresentation smallIntegerIsOnlyImmediateType
