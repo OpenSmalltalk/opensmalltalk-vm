@@ -771,17 +771,32 @@ StackToRegisterMappingCogit >> allocateAnyReg [
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> allocateRegForStackEntryAt: index [
 	<inline: true>
+	^ self allocateRegForStackEntryAt: index notConflictingWith: 0
+	
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> allocateRegForStackEntryAt: index notConflictingWith: regMask [
 	<var: #stackEntry type: #'CogSimStackEntry *'>
 	| stackEntry |
 	stackEntry := self ssValue: index.
-	stackEntry type = SSRegister ifTrue: [ ^ stackEntry register].
-	^ self allocateAnyReg
+	(stackEntry type = SSRegister and: [ (self register: stackEntry register isInMask: regMask) not ]) ifTrue: 
+		[ ^ stackEntry register].
+	^ self allocateRegNotConflictingWith: regMask
 	
 ]
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> allocateRegForStackTopEntry [
+	<inline: true>
 	^ self allocateRegForStackEntryAt: 0
+	
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> allocateRegForStackTopEntryNotConflictingWith: regMask [	
+	<inline: true>
+	^ self allocateRegForStackEntryAt: 0 notConflictingWith: regMask
 	
 ]
 
@@ -828,9 +843,9 @@ StackToRegisterMappingCogit >> allocateRegForStackTopTwoEntriesInto: binaryBlock
 	topRegistersMask := 0.
 	
 	self ssTop type = SSRegister ifTrue: 
-		[ topRegistersMask := self registerMaskFor: (rTop := self ssTop register)].
+		[ rTop := self ssTop register].
 	(self ssValue: 1) type = SSRegister ifTrue: 
-		[ topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: (rNext := (self ssValue: 1) register))].
+		[ topRegistersMask := self registerMaskFor: (rNext := (self ssValue: 1) register)].
 	
 	rTop ifNil: [ rTop := self allocateRegNotConflictingWith: topRegistersMask ].
 	
@@ -3348,38 +3363,41 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 	<inline: false>
-	| topReg valueReg association |
-	self flag: 'with better register allocation this wouldn''t need a frame.  e.g. use SendNumArgs instead of ReceiverResultReg'.
-	self assert: needsFrame.
-	optStatus isReceiverResultRegLive: false.
+	| topReg assocReg association |
 	"N.B.  No need to check the stack for references because we generate code for
 	 literal variable loads that stores the result in a register, deferring only the register push."
 	association := self getLiteral: litVarIndex.
+	
 	"Avoid store check for immediate values"
-	(objectRepresentation isUnannotatableConstant: self ssTop) ifTrue:
-		[self ssAllocateRequiredReg: ReceiverResultReg.
-		self genMoveConstant: association R: ReceiverResultReg.
-		 objectRepresentation
-			genEnsureObjInRegNotForwarded: ReceiverResultReg
-			scratchReg: TempReg.
-		 self ssStorePop: popBoolean toPreferredReg: TempReg.
-		 traceStores > 0 ifTrue:
-			[self CallRT: ceTraceStoreTrampoline].
-		 ^objectRepresentation
-			genStoreImmediateInSourceReg: TempReg
-			slotIndex: ValueIndex
-			destReg: ReceiverResultReg].
-	((topReg := self ssTop registerOrNil) isNil
-	 or: [topReg = ReceiverResultReg]) ifTrue:
-		[topReg := ClassReg].
+	(objectRepresentation isUnannotatableConstant: self ssTop) 
+		ifTrue:
+			[ assocReg := self allocateAnyReg.
+			self genMoveConstant: association R: assocReg.
+			 objectRepresentation
+				genEnsureObjInRegNotForwarded: assocReg
+				scratchReg: TempReg.
+			self ssStorePop: popBoolean toReg: TempReg.
+			 traceStores > 0 ifTrue:
+				[ assocReg = ReceiverResultReg ifFalse: 
+					[ self ssAllocateRequiredReg: ReceiverResultReg.
+					optStatus isReceiverResultRegLive: false.
+					self MoveR: assocReg R: ReceiverResultReg ].
+				self CallRT: ceTraceStoreTrampoline].
+			 ^objectRepresentation
+				genStoreImmediateInSourceReg: TempReg
+				slotIndex: ValueIndex
+				destReg: assocReg ]
+			ifFalse: [ self assert: needsFrame. "because ReceiverResult reg is used for storeCheckTrampoline" ].
+		
+		
+	topReg := self allocateRegForStackTopEntryNotConflictingWith: (self registerMaskFor: ReceiverResultReg).
 	self ssPop: 1.
 	self ssAllocateCallReg: topReg. "for the ceStoreCheck call in genStoreSourceReg:... below"
 	self ssPush: 1.
-	valueReg := self ssStorePop: popBoolean toPreferredReg: topReg.
-	valueReg = ReceiverResultReg ifTrue:
-		[self MoveR: valueReg R: topReg].
-	self ssAllocateCallReg: ReceiverResultReg.
-	self annotate: (self MoveCw: association R: ReceiverResultReg) objRef: association.
+	self ssStorePop: popBoolean toReg: topReg.
+	optStatus isReceiverResultRegLive: false.
+	self ssAllocateCallReg: ReceiverResultReg. "for ceStoreCheck call in genStoreSourceReg: has to be ReceiverResultReg"
+	self genMoveConstant: association R: ReceiverResultReg.
 	objectRepresentation genEnsureObjInRegNotForwarded: ReceiverResultReg scratchReg: TempReg.
 	traceStores > 0 ifTrue:
 		[self MoveR: topReg R: TempReg.
@@ -4813,22 +4831,27 @@ StackToRegisterMappingCogit >> ssPushRegister: reg [
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssStorePop: popBoolean toPreferredReg: preferredReg [
 	"Store or pop the top simulated stack entry to a register.
-	 Pop to preferredReg if the entry is not itself a register.
+	 Use preferredReg if the entry is not itself a register.
 	 Answer the actual register the result ends up in."
 	| actualReg |
 	actualReg := preferredReg.
+	self ssTop type = SSRegister ifTrue: 
+		[ self assert: self ssTop annotateUse not.
+		self assert: self ssTop spilled not.
+		actualReg := self ssTop register].
+	self ssStorePop: popBoolean toReg: actualReg. "generates nothing if ssTop is already in actualReg"
+	^ actualReg
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> ssStorePop: popBoolean toReg: reg [
+	"Store or pop the top simulated stack entry to a register.
+	N.B.: popToReg: and storeToReg: does not generate anything if 
+	it moves a register to the same register."	
 	popBoolean
-		ifTrue: [(self ssTop type = SSRegister "and: [self ssTop spilled not]")
-					ifTrue: [self assert: self ssTop spilled not.
-							self assert: self ssTop annotateUse not.
-							actualReg := self ssTop register]
-					ifFalse: [self ssTop popToReg: preferredReg].
+		ifTrue: [self ssTop popToReg: reg.
 				self ssPop: 1]
-		ifFalse: [self ssTop type = SSRegister
-					ifTrue: [self assert: self ssTop annotateUse not.
-							actualReg := self ssTop register]
-					ifFalse: [self ssTop storeToReg: preferredReg]].
-	^actualReg
+		ifFalse: [self ssTop storeToReg: reg].
 ]
 
 { #category : #'simulation stack' }
