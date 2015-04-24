@@ -768,6 +768,32 @@ StackToRegisterMappingCogit >> allocateAnyReg [
 	^ self allocateRegNotConflictingWith: 0
 ]
 
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> allocateEqualsEqualsRegistersArgNeedsReg: argNeedsReg rcvrNeedsReg: rcvrNeedsReg into: binaryBlock [
+	<inline: true>
+	| argReg rcvrReg |
+	self assert: (argNeedsReg or: [rcvrNeedsReg]).
+	argNeedsReg
+		ifTrue: 
+			[rcvrNeedsReg
+				ifTrue:
+					[self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
+					 self ssTop popToReg: argReg.
+					 (self ssValue: 1) popToReg: rcvrReg]
+				ifFalse:
+					[argReg := self allocateRegForStackTopEntry.
+					 self ssTop popToReg: argReg]]
+		ifFalse:
+			[self assert: rcvrNeedsReg.
+			rcvrReg := self allocateRegForStackEntryAt: 1.
+			(self ssValue:1) popToReg: rcvrReg].
+		
+	self assert: (argNeedsReg not or: [argReg notNil]).
+	self assert: (rcvrNeedsReg not or: [rcvrReg notNil]).
+	
+	binaryBlock value: rcvrReg value: argReg.
+]
+
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> allocateRegForStackEntryAt: index [
 	<inline: true>
@@ -1354,6 +1380,34 @@ StackToRegisterMappingCogit >> evaluate: descriptor at: pc [
 	self perform: descriptor generator
 ]
 
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> extractMaybeBranchDescriptorInto: fourArgBlock [
+	"Looks one instruction ahead of the current bytecodePC and answers its bytecode descriptor and its pc.
+	If the instruction found is a branch, also answers the pc after the branch and the pc targetted by the branch"
+	| primDescriptor nextPC nExts branchDescriptor targetBytecodePC postBranchPC |
+	<var: #primDescriptor type: #'BytecodeDescriptor *'>
+	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
+	
+	primDescriptor := self generatorAt: byte0.
+
+	nextPC := bytecodePC + primDescriptor numBytes.
+	nExts := 0.
+	[branchDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + bytecodeSetOffset.
+	 branchDescriptor isExtension] whileTrue:
+		[nExts := nExts + 1.
+		 nextPC := nextPC + branchDescriptor numBytes].
+
+	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse: 
+		[ ^ fourArgBlock value: branchDescriptor value: nextPC value: 0 value: 0 ].
+	
+	targetBytecodePC := nextPC
+							+ branchDescriptor numBytes
+							+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
+	postBranchPC := nextPC + branchDescriptor numBytes.
+	
+	fourArgBlock value: branchDescriptor value: nextPC value: postBranchPC value: targetBytecodePC
+]
+
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> fixupAt: index [
 	<cmacro: '(index) (&fixups[index])'>
@@ -1445,21 +1499,14 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 { #category : #'inline primitive generators' }
 StackToRegisterMappingCogit >> genBinaryInlineComparison: opTrue opFalse: opFalse destReg: destReg [
 	"Inlined comparison. opTrue = jump for true and opFalse = jump for false"
-	| nextPC branchDescriptor nExts |	
-	nextPC := bytecodePC + 3.
-	nExts := 0.	
-	[branchDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + bytecodeSetOffset.
-	 branchDescriptor isExtension] whileTrue:
-		[nExts := nExts + 1.
-	 	 nextPC := nextPC + branchDescriptor numBytes].
+	| nextPC branchDescriptor targetBytecodePC postBranchPC |	
+		
+	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
+		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
+	
 	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse])
 		ifTrue: "This is the path where the inlined comparison is followed immediately by a branch"
-			[| targetBytecodePC postBranchPC |
-			targetBytecodePC := nextPC
-					+ branchDescriptor numBytes
-					+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
-			postBranchPC := nextPC + branchDescriptor numBytes.
-			(self fixupAt: nextPC - initialPC) targetInstruction = 0
+			[ (self fixupAt: nextPC - initialPC) targetInstruction = 0
 				ifTrue: "The next instruction is dead.  we can skip it."
 					[deadCode := true.
 				 	 self ensureFixupAt: targetBytecodePC - initialPC.
@@ -1748,6 +1795,60 @@ StackToRegisterMappingCogit >> genDoubleComparison: jumpOpcodeGenerator invert: 
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt jmpTarget: jumpFail getJmpTarget].
 	^0
+]
+
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genEqualsEqualsComparisonArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg [
+	"Generates the Cmp instruction for #==. The instruction is different if one of the operands is a constant.
+	In the case of the v3 memory manager, the constant could be annotable." 
+	<inline: true>
+	argIsConstant 
+		ifTrue: [ self genCompConstant: self ssTop constant R: rcvrReg ]
+		ifFalse: [ rcvrIsConstant
+			ifTrue: [ self genCompConstant: (self ssValue: 1) constant R: argReg ]
+			ifFalse: [ self CmpR: argReg R: rcvrReg ] ].
+]
+
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genEqualsEqualsForwarderChecksArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg label: label fixup: fixup canBeDead: canBeDead [
+	"This code generates the forwarders checks if #== is followed by a branch. The forwarders checks need to jump back to the comparison (label) if
+	a forwarder is found, else jump forward to the correct place, the postBranch or branch target (fixup), if this is the last forwarder check, or jump to 
+	the next forwarder checkif there are 2, or just fall through if it needs to jump to the postBranch and that the branch is dead code"
+	<inline: true>
+	unforwardArg ifTrue: [ (canBeDead or: [ unforwardRcvr ]) 
+		ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ]
+		ifFalse: [ objectRepresentation 
+			genEnsureOopInRegNotForwarded: argReg 
+			scratchReg: TempReg 
+			ifForwarder: label
+			ifNotForwarder: fixup ] ].
+	unforwardRcvr ifTrue: [ canBeDead 
+		ifTrue: [objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ]
+		ifFalse: [objectRepresentation 
+			genEnsureOopInRegNotForwarded: rcvrReg 
+			scratchReg: TempReg 
+			ifForwarder: label
+			ifNotForwarder: fixup ] ]
+]
+
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genEqualsEqualsNoBranchArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg [
+	"Generates the machine code for #== in the case where the instruction is not followed by a branch"
+	<var: #jumpEqual type: #'AbstractInstruction *'>
+	<var: #jumpNotEqual type: #'AbstractInstruction *'>
+	| label jumpEqual jumpNotEqual |
+	label := self Label.
+	self genEqualsEqualsComparisonArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg.
+	self ssPop: 2.
+	jumpEqual := self JumpZero: 0.
+	 argIsConstant ifFalse: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ].
+	 rcvrIsConstant ifFalse: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ].
+	 self genMoveFalseR: rcvrReg.
+	 jumpNotEqual := self Jump: 0.
+	 jumpEqual jmpTarget: (self genMoveTrueR: rcvrReg).
+	 jumpNotEqual jmpTarget: self Label.
+	 self ssPushRegister: rcvrReg.
+	 ^0
 ]
 
 { #category : #'bytecode generators' }
@@ -3099,7 +3200,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorClass [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSpecialSelectorComparison [
-	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor nExts
+	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor
 	  rcvrIsInt argIsInt rcvrInt argInt result jumpNotSmallInts inlineCAB annotateInst |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
@@ -3131,12 +3232,9 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 											ifTrue: [objectMemory trueObject]
 											ifFalse: [objectMemory falseObject])].
 
-	nextPC := bytecodePC + primDescriptor numBytes.
-	nExts := 0.
-	[branchDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + (byte0 bitAnd: 256).
-	 branchDescriptor isExtension] whileTrue:
-		[nExts := nExts + 1.
-		 nextPC := nextPC + branchDescriptor numBytes].
+	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
+		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
+
 	"Only interested in inlining if followed by a conditional branch."
 	inlineCAB := branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse].
 	"Further, only interested in inlining = and ~= if there's a SmallInteger constant involved.
@@ -3146,10 +3244,6 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	inlineCAB ifFalse:
 		[^self genSpecialSelectorSend].
 
-	targetBytecodePC := nextPC
-							+ branchDescriptor numBytes
-							+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
-	postBranchPC := nextPC + branchDescriptor numBytes.
 	argIsInt
 		ifTrue:
 			[(self ssValue: 1) popToReg: ReceiverResultReg.
@@ -3207,77 +3301,40 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
-	| primDescriptor nextPC nExts branchDescriptor unforwardRcvr argReg targetBytecodePC
-	unforwardArg  rcvrReg jumpNotEqual jumpEqual postBranchPC label fixup |
+	| nextPC branchDescriptor unforwardRcvr argReg targetBytecodePC
+	unforwardArg  rcvrReg postBranchPC label fixup |
 	<var: #fixup type: #'BytecodeFixup *'>
-	<var: #jumpEqual type: #'AbstractInstruction *'>
-	<var: #jumpNotEqual type: #'AbstractInstruction *'>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	
-	primDescriptor := self generatorAt: byte0.
+	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
+		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
 
-	nextPC := bytecodePC + primDescriptor numBytes.
-	nExts := 0.
-	[branchDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + bytecodeSetOffset.
-	 branchDescriptor isExtension] whileTrue:
-		[nExts := nExts + 1.
-		 nextPC := nextPC + branchDescriptor numBytes].
-	"If branching the stack must be flushed for the merge"
-	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifTrue:
-		[self ssFlushTo: simStackPtr - 2].
-
+	"If an operand is an annotable constant, it may be forwarded, so we need to store it into a 
+	register so the forwarder check can jump back to the comparison after unforwarding the constant.
+	However, if one of the operand is an unnanotable constant, does not allocate a register for it 
+	(machine code will use operations on constants) and does not generate forwarder checks."
 	unforwardRcvr := (objectRepresentation isUnannotatableConstant: (self ssValue: 1)) not.
 	unforwardArg := (objectRepresentation isUnannotatableConstant: self ssTop) not.
 
-	"if the rcvr or the arg is an annotable constant, we need to push it to a register 
-	else the forwarder check can't jump back to the comparison after unforwarding the constant"
-	unforwardArg
-		ifTrue: 
-			[unforwardRcvr
-				ifTrue:
-					[self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
-					 self ssTop popToReg: argReg.
-					 (self ssValue:1) popToReg: rcvrReg]
-				ifFalse:
-					[argReg := self allocateRegForStackTopEntry.
-					 self ssTop popToReg: argReg]]
-		ifFalse:
-			[self assert: unforwardRcvr.
-			 rcvrReg := self allocateRegForStackEntryAt: 1.
-			 (self ssValue:1) popToReg: rcvrReg].
-
-	label := self Label.
-	
-	"Here we can use Cq because the constant does not need to be annotated"
-	self assert: (unforwardArg not or: [argReg notNil]).
-	self assert: (unforwardRcvr not or: [rcvrReg notNil]).
-	unforwardArg 
-		ifFalse: [ self CmpCq: self ssTop constant R: rcvrReg ]
-		ifTrue: [ unforwardRcvr
-			ifFalse: [ self CmpCq: (self ssValue: 1) constant R: argReg ]
-			ifTrue: [ self CmpR: argReg R: rcvrReg ] ].
-			 
-	self ssPop: 2.
+	self 
+		allocateEqualsEqualsRegistersArgNeedsReg: unforwardArg 
+		rcvrNeedsReg: unforwardRcvr 
+		into: [ :rcvr :arg | rcvrReg:= rcvr. argReg := arg ].
 
 	"If not followed by a branch, resolve to true or false."
 	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
-		[jumpEqual := self JumpZero: 0.
-		 unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ].
-		 unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ].
-		 self genMoveFalseR: rcvrReg.
-		 jumpNotEqual := self Jump: 0.
-		 jumpEqual jmpTarget: (self genMoveTrueR: rcvrReg).
-		 jumpNotEqual jmpTarget: self Label.
-		 self ssPushRegister: rcvrReg.
-		 ^0].
+		[^ self genEqualsEqualsNoBranchArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg].
+	
+	"If branching the stack must be flushed for the merge"
+	self ssFlushTo: simStackPtr - 2.
+	
+	label := self Label.
+	self genEqualsEqualsComparisonArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
+	self ssPop: 2.
 
 	"Further since there is a following conditional jump bytecode, define
 	 non-merge fixups and leave the cond bytecode to set the mergeness."
-	targetBytecodePC := nextPC
-							+ branchDescriptor numBytes
-							+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
-	postBranchPC := nextPC + branchDescriptor numBytes.
 	(self fixupAt: nextPC - initialPC) targetInstruction = 0
 		ifTrue: "The next instruction is dead.  we can skip it."
 			[deadCode := true.
@@ -3290,37 +3347,25 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 	branchDescriptor isBranchTrue ifTrue: 
 		[ deadCode ifFalse: [ fixup := self ensureNonMergeFixupAt: postBranchPC - initialPC ].
 		self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-		unforwardArg ifTrue: [ (deadCode or: [ unforwardRcvr ]) 
-			ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ]
-			ifFalse: [ objectRepresentation 
-				genEnsureOopInRegNotForwarded: argReg 
-				scratchReg: TempReg 
-				ifForwarder: label
-				ifNotForwarder: fixup ] ].
-		unforwardRcvr ifTrue: [ deadCode 
-			ifTrue: [objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ]
-			ifFalse: [objectRepresentation 
-				genEnsureOopInRegNotForwarded: rcvrReg 
-				scratchReg: TempReg 
-				ifForwarder: label
-				ifNotForwarder: fixup ] ] ].
+		self 
+			genEqualsEqualsForwarderChecksArg: unforwardArg 
+			rcvr: unforwardRcvr 
+			argReg: argReg 
+			rcvrReg: rcvrReg 
+			label: label 
+			fixup: fixup 
+			canBeDead: deadCode ].
 	branchDescriptor isBranchFalse ifTrue: 
 		[ fixup := self ensureNonMergeFixupAt: targetBytecodePC - initialPC.
 		self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
-		unforwardArg ifTrue: [ unforwardRcvr 
-			ifFalse: [objectRepresentation 
-				genEnsureOopInRegNotForwarded: argReg 
-				scratchReg: TempReg 
-				ifForwarder: label
-				ifNotForwarder: fixup ]
-			ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ] ].
-		unforwardRcvr ifTrue: 
-			[ objectRepresentation 
-				genEnsureOopInRegNotForwarded: rcvrReg 
-				scratchReg: TempReg 
-				ifForwarder: label
-				ifNotForwarder: fixup ].
-		"Not reached"].
+		self 
+			genEqualsEqualsForwarderChecksArg: unforwardArg 
+			rcvr: unforwardRcvr 
+			argReg: argReg 
+			rcvrReg: rcvrReg 
+			label: label 
+			fixup: fixup 
+			canBeDead: false].
 	^0
 ]
 
@@ -3341,8 +3386,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 	association := self getLiteral: litVarIndex.
 	
 	"Avoid store check for immediate values"
-	(objectRepresentation isUnannotatableConstant: self ssTop) 
-		ifTrue:
+	(objectRepresentation isUnannotatableConstant: self ssTop) ifTrue:
 			[ assocReg := self allocateAnyReg.
 			self genMoveConstant: association R: assocReg.
 			 objectRepresentation
@@ -3358,9 +3402,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 			 ^objectRepresentation
 				genStoreImmediateInSourceReg: TempReg
 				slotIndex: ValueIndex
-				destReg: assocReg ]
-			ifFalse: [ self assert: needsFrame. "because ReceiverResult reg is used for storeCheckTrampoline" ].
-		
+				destReg: assocReg ].
 		
 	topReg := self allocateRegForStackTopEntryNotConflictingWith: (self registerMaskFor: ReceiverResultReg).
 	self ssStorePop: popBoolean toReg: topReg.
@@ -3499,10 +3541,6 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At:
 			slotIndex: slotIndex
 			destReg: tempVectReg].
 	topReg := self allocateRegForStackTopEntryNotConflictingWith: (self registerMaskFor: ReceiverResultReg).
-	self ssPop: 1.
-	"for the ceStoreCheck call in genStoreSourceReg:... below"
-	self ssAllocateCallReg: topReg and: ReceiverResultReg.
-	self ssPush: 1.
 	topSpilled := self ssTop spilled.
 	self ssStorePop: (popBoolean or: [topSpilled]) toReg: topReg.
 	popBoolean ifFalse:
@@ -3638,69 +3676,38 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genVanillaSpecialSelectorEqualsEquals [
-	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor nExts
-	  jumpEqual jumpNotEqual rcvrReg argReg argIsConstant rcvrIsConstant  |
-	<var: #jumpEqual type: #'AbstractInstruction *'>
-	<var: #jumpNotEqual type: #'AbstractInstruction *'>
+	| nextPC postBranchPC targetBytecodePC branchDescriptor
+	  rcvrReg argReg argIsConstant rcvrIsConstant  |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
-	primDescriptor := self generatorAt: byte0.
-
-	nextPC := bytecodePC + primDescriptor numBytes.
-	nExts := 0.
-	[branchDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + bytecodeSetOffset.
-	 branchDescriptor isExtension] whileTrue:
-		[nExts := nExts + 1.
-		 nextPC := nextPC + branchDescriptor numBytes].
-	"If branching the stack must be flushed for the merge"
-	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifTrue:
-		[self ssFlushTo: simStackPtr - 2].
-
-	"Don't use ReceiverResultReg for receiver to keep ReceiverResultReg live.
-	 Optimize e.g. rcvr == nil, the common case for ifNil: et al."
+	
+	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
+		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
 	
 	argIsConstant := self ssTop type = SSConstant.
-	rcvrIsConstant := argIsConstant and: [ (self ssValue:1) type = SSConstant ].
+	"they can't be both constants because we do not have instructions manipulating two constants, 
+	if this is the case, which can happen due to annotable constants that can be moved in memory 
+	with become and therefore can't resolve #== at compilation time, still write the rcvr into a 
+	register as if it was not a constant. It's uncommon anyway."
+	rcvrIsConstant := argIsConstant not and: [(self ssValue: 1) type = SSConstant]. 
 	
-	argIsConstant
-		ifFalse: 
-			[rcvrIsConstant
-				ifFalse:
-					[self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
-					 self ssTop popToReg: argReg.
-					 (self ssValue:1) popToReg: rcvrReg]
-				ifTrue:
-					[argReg := self allocateRegForStackTopEntry.
-					 self ssTop popToReg: argReg]]
-		ifTrue:
-			[self assert: rcvrIsConstant not.
-			 rcvrReg := self allocateRegForStackEntryAt: 1.
-			 (self ssValue:1) popToReg: rcvrReg].
+	self 
+		allocateEqualsEqualsRegistersArgNeedsReg: argIsConstant not 
+		rcvrNeedsReg: rcvrIsConstant not 
+		into: [ :rcvr :arg | rcvrReg:= rcvr. argReg := arg ].
 	
-	argIsConstant 
-		ifTrue: [ self genCompConstant: self ssTop constant R: rcvrReg ]
-		ifFalse: [ rcvrIsConstant
-			ifTrue: [ self genCompConstant: (self ssValue: 1) constant R: argReg ]
-			ifFalse: [ self CmpR: argReg R: rcvrReg ] ].
-		
-	self ssPop: 2.
-
 	"If not followed by a branch, resolve to true or false."
 	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
-		[jumpNotEqual := self JumpNonZero: 0.
-		 self genMoveTrueR: rcvrReg.
-		 jumpEqual := self Jump: 0.
-		 jumpNotEqual jmpTarget: (self genMoveFalseR: rcvrReg).
-		 jumpEqual jmpTarget: self Label.
-		 self ssPushRegister: rcvrReg.
-		 ^0].
+		[ ^ self genEqualsEqualsNoBranchArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg].
+	
+	"If branching the stack must be flushed for the merge"
+	self ssFlushTo: simStackPtr - 2.
+	
+	self genEqualsEqualsComparisonArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg.
+	self ssPop: 2.
 
 	"Further since there is a following conditional jump bytecode, define
 	 non-merge fixups and leave the cond bytecode to set the mergeness."
-	targetBytecodePC := nextPC
-							+ branchDescriptor numBytes
-							+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
-	postBranchPC := nextPC + branchDescriptor numBytes.
 	(self fixupAt: nextPC - initialPC) targetInstruction = 0
 		ifTrue: "The next instruction is dead.  we can skip it."
 			[deadCode := true.
