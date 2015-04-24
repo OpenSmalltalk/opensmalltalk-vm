@@ -118,6 +118,13 @@ CogObjectRepresentation >> genEnsureOopInRegNotForwarded: reg scratchReg: scratc
 	^0
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch jumpBackTo: instruction [
+	"Make sure that the oop in reg is not forwarded.  By default there is
+	 nothing to do.  Subclasses for memory managers that forward will override."
+	^0
+]
+
 { #category : #'bytecode generator support' }
 CogObjectRepresentation >> genGetActiveContextNumArgs: numArgs large: isLargeContext inBlock: isInBlock [
 	"Get the active context into ReceiverResultReg, creating it if necessary."
