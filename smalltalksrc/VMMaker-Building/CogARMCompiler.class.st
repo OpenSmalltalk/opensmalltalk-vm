@@ -23,6 +23,7 @@ Class {
 		'CArg2Reg',
 		'CArg3Reg',
 		'CC',
+		'CMPSMULL',
 		'CPSRReg',
 		'CS',
 		'CmpOpcode',
@@ -173,7 +174,7 @@ CogARMCompiler class >> initialize [
 	"Specific instructions"
 	LastRTLCode isNil ifTrue:
 		[CogRTLOpcodes initialize].
-	specificOpcodes := #(SMULL MSR MRS LDMFD STMFD BICCqR).
+	specificOpcodes := #(SMULL MSR MRS LDMFD STMFD BICCqR CMPSMULL).
 	refs := (thisContext method literals select: [:l| l isVariableBinding and: [classPool includesKey: l key]]) collect:
 				[:ea| ea key].
 	(classPool keys reject: [:k| (specificOpcodes includes: k) or: [refs includes: k]]) do:
@@ -412,7 +413,7 @@ CogARMCompiler >> canDivQuoRem [
 { #category : #testing }
 CogARMCompiler >> canMulRR [
 	<inline: true>
-	^true
+	^false
 ]
 
 { #category : #accessing }
@@ -444,6 +445,8 @@ CogARMCompiler >> computeMaximumSize [
 											ifTrue: [:r :i| maxSize := 4]
 											ifFalse: [maxSize := 20]].
 		[SMULL]				-> [^maxSize := 4].
+		[MSR]					-> [^maxSize := 4].
+		[CMPSMULL]			-> [^maxSize := 4]. "special compare for genMulR:R: usage"
 		"Control"
 		[Call]					-> [^maxSize := 4].
 		[CallFull]				-> [^maxSize := 20].
@@ -794,6 +797,20 @@ CogARMCompiler >> concretizeAt: actualAddress [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeCMPSMULL [
+	"Generate a CMP a, b, ASR #31 instruction, specifically for comparing the resutls of SMULLs in genMulR:R:"
+	| hiReg loReg |
+	hiReg := self concreteRegister: (operands at: 0).
+	loReg := self concreteRegister: (operands at: 1).
+	self machineCodeAt: 0
+		put: (self type: 0 op: CmpOpcode set: 1 rn: hiReg rd: 0)
+			+ (31<<7) "the shift amount"
+			+ (2<<5) "the shift type - ASR"
+			+ loReg.
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeCall [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -878,7 +895,7 @@ CogARMCompiler >> concretizeDataOperationCqR: armOpcode [
 	|val rd rn |
 	val := operands at: 0.
 	rn := self concreteRegister: (operands at: 1).
-	rd := opcode = CmpOpcode ifTrue: [0] ifFalse:[rn].
+	rd := opcode = CmpOpcode ifTrue: [0] ifFalse:[rn]. "Extra note - if ever a version of this code wants to NOT set the Set flag - Cmp must always have it set or it will pretend to be a SMALALBT and Very Bad Things might happen"
 
 	self  rotateable8bitImmediate: val 
 		ifTrue: [:rot :immediate |
@@ -1080,6 +1097,21 @@ CogARMCompiler >> concretizeLogicalShiftRightRR [
 	"cond 000 1101 0 0000 dest dist 0011 srcR"
 	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 1 rn: 0 rd: destReg 
 									shifterOperand: (distReg << 8 bitOr: (48 bitOr: destReg))).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeMSR [
+	"Generate an MSR CPSR_f, #flags instruction.
+Note that we only have business with the NZCV flags so we use
+N -> 8
+Z -> 4
+C -> 2
+V -> 1.
+You don't want to mess with this too much."
+	|  flags |
+	flags := self concreteRegister: (operands at: 0).
+	self machineCodeAt: 0 put: (self msr: flags).
 	^machineCodeSize := 4
 ]
 
@@ -1478,16 +1510,17 @@ CogARMCompiler >> concretizeRetN [
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeSMULL [
-	| srcReg destReg hiReg loReg |
-	srcReg := self concreteRegister: (operands at: 0).
-	destReg := self concreteRegister: (operands at: 1).
-	hiReg := self concreteRegister: RISCTempReg.
-	loReg := self concreteRegister: TempReg.
+	| srcA srcB hiResultReg loResultReg |
+	"Generate an SMULL loResultReg, hiResultReg, srcA, srcB instruction"
+	srcA := self concreteRegister: (operands at: 0).
+	"NOTE: srcB contains the other mutiplicand at this point. It is OK to use it as the destination for the low part of the result and in fact this saves us moving it later"
+	loResultReg := srcB := self concreteRegister: (operands at: 1).
+	hiResultReg := self concreteRegister: RISCTempReg.
 	self machineCodeAt: 0
-		put: (self type: 0 op: 6 set: 0 rn: hiReg rd: loReg)
-			+ (srcReg << 8)
+		put: (self type: 0 op: 6 set: 0 rn: hiResultReg rd: loResultReg)
+			+ (srcA << 8)
 			+ (9 << 4)
-			+ destReg.
+			+ srcB.
 	^machineCodeSize := 4
 ]
 
@@ -1628,6 +1661,8 @@ CogARMCompiler >> dispatchConcretize [
 		[LDMFD]				-> [^self concretizeLDMFD].
 		[STMFD]				-> [^self concretizeSTMFD].
 		[SMULL]				-> [^self concretizeSMULL]	.
+		[CMPSMULL]				-> [^self concretizeCMPSMULL].
+		[MSR]						-> [^self concretizeMSR].
 		[BICCqR]					-> [^self concretizeDataOperationCqR: BicOpcode].
 		"Control"
 		[Call]						-> [^self concretizeCall]. "call code within code space"
@@ -1811,15 +1846,13 @@ CogARMCompiler >> genLoadStackPointers [
 
 { #category : #'abstract instructions' }
 CogARMCompiler >> genMulR: regSource R: regDest [
-	"Use SMULL to produce a 64-bit result, implicitly in TempReg,RISCTempReg.
-	 Test the top word for 0 or 1 and set oVerflow if not equal.  Move result in
-	 TempReg into regDest."
+	"Use SMULL to produce a 64-bit result, explicitly in RISCTempReg,regDest.
+	 By comparing RISCTempReg with regDest ASR 31(which effectively makes it 0 or -1) we know that the result being EQ means the hi reg and the top bit of the lo reg are the same - ie no overflow. The condition code can then be forced to oVerflow by use of MSR APSR_nzcvq, #1, lsl 28"
 
 	cogit
-		gen: SMULL operand: regSource operand: regDest; "result in TempReg,RISCTempReg"
-		gen: AddCqR operand: 1 operand: RISCTempReg; "turn -1,0 into 0,1"
-		gen: AddCqR operand: -1 operand: RISCTempReg; "turn 0,1 into not oVerflow"
-		gen: MoveRR operand: TempReg operand: regDest
+		gen: SMULL operand: regSource operand: regDest; "result in RISCTempReg,regDest"
+		gen: CMPSMULL operand: RISCTempReg operand: regDest;
+		gen: MSR operand: 1
 ]
 
 { #category : #abi }
@@ -2460,6 +2493,18 @@ CogARMCompiler >> movs: destReg rn: srcReg [
 	^self type: 0 op: MoveOpcode set: 1 rn: 0 rd: destReg shifterOperand: srcReg
 ]
 
+{ #category : #encoding }
+CogARMCompiler >> msr: flags [
+"Generate an MSR CPSR_f, #flags instruction.
+Note that 
+a) CPSR_f is equivalent to APSR_nzcvq (ARM ARM DDI0406A p A8-209 & A2-14)
+b) We only have business with the NZCV flags so the generated instruction shifts the flags value <<28 - which is a ROR 4"
+
+	^16r1328F000
+	+ (2 "rotate rights are in units of 2, remember" << 8)
+	+ (flags bitAnd: 16rF) " to make sure we don't have silly values here"
+]
+
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> mvn: destReg imm: immediate8bitValue ror: rot [
 	"Remember the ROR is doubled by the cpu so use 30>>1 etc.
@@ -2651,6 +2696,13 @@ CogARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag targ
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress - 1]."
 	^20
+]
+
+{ #category : #'inline cacheing' }
+CogARMCompiler >> rewriteInlineCacheTag: cacheTag at: callSiteReturnAddress [
+	"Rewrite an inline cache with a new tag.  This variant is used
+	 by the garbage collector."
+	self insert32BitOperand: cacheTag into4InstructionsPreceeding: callSiteReturnAddress -4
 ]
 
 { #category : #'inline cacheing' }
