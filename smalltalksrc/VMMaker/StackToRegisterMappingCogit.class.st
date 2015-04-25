@@ -1810,28 +1810,6 @@ StackToRegisterMappingCogit >> genEqualsEqualsComparisonArgIsConstant: argIsCons
 ]
 
 { #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genEqualsEqualsForwarderChecksArg: unforwardArg rcvr: unforwardRcvr argReg: argReg rcvrReg: rcvrReg label: label fixup: fixup canBeDead: canBeDead [
-	"This code generates the forwarders checks if #== is followed by a branch. The forwarders checks need to jump back to the comparison (label) if
-	a forwarder is found, else jump forward to the correct place, the postBranch or branch target (fixup), if this is the last forwarder check, or jump to 
-	the next forwarder checkif there are 2, or just fall through if it needs to jump to the postBranch and that the branch is dead code"
-	<inline: true>
-	unforwardArg ifTrue: [ (canBeDead or: [ unforwardRcvr ]) 
-		ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ]
-		ifFalse: [ objectRepresentation 
-			genEnsureOopInRegNotForwarded: argReg 
-			scratchReg: TempReg 
-			ifForwarder: label
-			ifNotForwarder: fixup ] ].
-	unforwardRcvr ifTrue: [ canBeDead 
-		ifTrue: [objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ]
-		ifFalse: [objectRepresentation 
-			genEnsureOopInRegNotForwarded: rcvrReg 
-			scratchReg: TempReg 
-			ifForwarder: label
-			ifNotForwarder: fixup ] ]
-]
-
-{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genEqualsEqualsNoBranchArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg [
 	"Generates the machine code for #== in the case where the instruction is not followed by a branch"
 	<var: #jumpEqual type: #'AbstractInstruction *'>
@@ -3320,28 +3298,29 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 			[self ssPushConstant: objectMemory trueObject]. "dummy value"
 
 	self assert: (unforwardArg or: [ unforwardRcvr ]).
-	branchDescriptor isBranchTrue ifTrue: 
-		[ deadCode ifFalse: [ fixup := self ensureNonMergeFixupAt: postBranchPC - initialPC ].
-		self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-		self 
-			genEqualsEqualsForwarderChecksArg: unforwardArg 
-			rcvr: unforwardRcvr 
-			argReg: argReg 
-			rcvrReg: rcvrReg 
-			label: label 
-			fixup: fixup 
-			canBeDead: deadCode ].
-	branchDescriptor isBranchFalse ifTrue: 
-		[ fixup := self ensureNonMergeFixupAt: targetBytecodePC - initialPC.
-		self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
-		self 
-			genEqualsEqualsForwarderChecksArg: unforwardArg 
-			rcvr: unforwardRcvr 
-			argReg: argReg 
-			rcvrReg: rcvrReg 
-			label: label 
-			fixup: fixup 
-			canBeDead: false].
+	branchDescriptor isBranchTrue 
+		ifTrue: 
+			[ fixup := self ensureNonMergeFixupAt: postBranchPC - initialPC.
+			self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger ]
+		ifFalse: "branchDescriptor is branchFalse"
+			[ fixup := self ensureNonMergeFixupAt: targetBytecodePC - initialPC.
+			self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ].
+	"The forwarders checks need to jump back to the comparison (label) if a forwarder is found, else 
+	jump forward either to the next forwarder check or to the postBranch or branch target (fixup)."
+	unforwardArg ifTrue: 
+		[ unforwardRcvr
+			ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ]
+			ifFalse: [ objectRepresentation 
+				genEnsureOopInRegNotForwarded: argReg 
+				scratchReg: TempReg 
+				ifForwarder: label
+				ifNotForwarder: fixup ] ].
+	unforwardRcvr ifTrue: 
+		[ objectRepresentation 
+			genEnsureOopInRegNotForwarded: rcvrReg 
+			scratchReg: TempReg 
+			ifForwarder: label
+			ifNotForwarder: fixup ].
 	^0
 ]
 
