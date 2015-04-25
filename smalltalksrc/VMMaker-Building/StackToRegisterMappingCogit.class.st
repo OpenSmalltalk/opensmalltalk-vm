@@ -2046,30 +2046,6 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 		appendOpcodes: true
 ]
 
-{ #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genMoveConstant: constant R: reg [
-	<inline: true>
-	^ (objectRepresentation shouldAnnotateObjectReference: constant)
-		ifTrue: [ (self annotate: (self MoveCw: constant R: reg) objRef: constant) ]
-		ifFalse: [ self MoveCq: constant R: reg ]
-	
-	
-]
-
-{ #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genMoveFalseR: reg [
-	<inline: true>
-	^ self genMoveConstant: objectMemory falseObject R: reg
-	
-]
-
-{ #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genMoveTrueR: reg [
-	<inline: true>
-	^ self genMoveConstant: objectMemory trueObject R: reg
-	
-]
-
 { #category : #'inline primitive generators' }
 StackToRegisterMappingCogit >> genNullaryInlinePrimitive: prim [
 	"Nullary inline primitives."
