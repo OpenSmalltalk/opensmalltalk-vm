@@ -3305,6 +3305,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 		ifFalse: "branchDescriptor is branchFalse"
 			[ fixup := self ensureNonMergeFixupAt: targetBytecodePC - initialPC.
 			self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ].
+		
 	"The forwarders checks need to jump back to the comparison (label) if a forwarder is found, else 
 	jump forward either to the next forwarder check or to the postBranch or branch target (fixup)."
 	unforwardArg ifTrue: 
@@ -3321,6 +3322,9 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 			scratchReg: TempReg 
 			ifForwarder: label
 			ifNotForwarder: fixup ].
+		
+	"Not reached, execution flow have jumped to fixup"
+	
 	^0
 ]
 
@@ -3671,9 +3675,13 @@ StackToRegisterMappingCogit >> genVanillaSpecialSelectorEqualsEquals [
 			 self ensureFixupAt: postBranchPC - initialPC]
 		ifFalse:
 			[self ssPushConstant: objectMemory trueObject]. "dummy value"
+		
 	self gen: (branchDescriptor isBranchTrue ifTrue: [JumpZero] ifFalse: [JumpNonZero])
 		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-		deadCode ifFalse: [self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC)].
+
+	"If the branch is dead, then we can just fall through postBranchPC (only a nop in-between), else 
+	we need to jump over the code of the branch"
+	deadCode ifFalse: [self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC)].
 	^0
 ]
 
