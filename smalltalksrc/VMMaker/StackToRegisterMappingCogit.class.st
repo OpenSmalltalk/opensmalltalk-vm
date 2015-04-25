@@ -3407,7 +3407,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 	topReg := self allocateRegForStackTopEntryNotConflictingWith: (self registerMaskFor: ReceiverResultReg).
 	self ssStorePop: popBoolean toReg: topReg.
 	optStatus isReceiverResultRegLive: false.
-	self ssAllocateCallReg: ReceiverResultReg. "for ceStoreCheck call in genStoreSourceReg: has to be ReceiverResultReg"
+	self ssAllocateRequiredReg: ReceiverResultReg. "for ceStoreCheck call in genStoreSourceReg: has to be ReceiverResultReg"
 	self genMoveConstant: association R: ReceiverResultReg.
 	objectRepresentation genEnsureObjInRegNotForwarded: ReceiverResultReg scratchReg: TempReg.
 	traceStores > 0 ifTrue:
@@ -3436,7 +3436,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextReceiverVaria
 	 ceStoreContextInstVarTrampoline and ceStoreCheckTrampoline."
 	self ensureReceiverResultRegContainsSelf.
 	self ssPop: 1.
-	self ssAllocateCallReg: ClassReg and: SendNumArgsReg. "for the ceStoreCheck call in genStoreSourceReg:... below"
+	self ssAllocateCallReg: ClassReg and: SendNumArgsReg. "for ceStoreContextInstVarTrampoline"
 	self ssPush: 1.
 	objectRepresentation
 		genLoadSlot: SenderIndex
@@ -3522,7 +3522,6 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At:
 	 ReceiverResultReg was unused after the literal variable store, unlikely given
 	 that methods return self by default."
 	self assert: needsFrame.
-	optStatus isReceiverResultRegLive: false.
 	"N.B.  No need to check the stack for references because we generate code for
 	 remote temp loads that stores the result in a register, deferring only the register push."
 	"Avoid store check for immediate values"
@@ -3546,6 +3545,8 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At:
 	popBoolean ifFalse:
 		[topSpilled ifFalse: [self ssPop: 1].
 		 self ssPushRegister: topReg].
+	self ssAllocateRequiredReg: ReceiverResultReg.
+	optStatus isReceiverResultRegLive: false.
 	self MoveMw: (self frameOffsetOfTemporary: remoteTempIndex) r: FPReg R: ReceiverResultReg.
 	 traceStores > 0 ifTrue:
 		[self MoveR: topReg R: TempReg.
