@@ -227,7 +227,7 @@ CogObjectRepresentationFor32BitSpur >> genGetActiveContextLarge: isLarge inBlock
 				AddCq: 2 R: TempReg; "+2 for saved fp and saved pc"
 				MoveXwr: TempReg R: FPReg R: TempReg]
 		ifFalse:
-			[cogit MoveCw: objectMemory nilObject R: TempReg].
+			[cogit genMoveConstant: objectMemory nilObject R: TempReg].
 	cogit MoveR: TempReg Mw: objectMemory baseHeaderSize + (ClosureIndex * objectMemory bytesPerOop) r: ReceiverResultReg.
 
 	"Set the receiver"
@@ -1671,7 +1671,7 @@ CogObjectRepresentationFor32BitSpur >> genNewArrayOfSize: size initialized: init
 		MoveCq: header >> 32 R: TempReg;
 		MoveR: TempReg Mw: 4 r: ReceiverResultReg.
 	(initialized and: [size > 0]) ifTrue:
-		[cogit MoveCw: objectMemory nilObject R: TempReg.
+		[cogit genMoveConstant: objectMemory nilObject R: TempReg.
 		 1 to: size do:
 			[:i| cogit MoveR: TempReg Mw: i * 4 + 4 r: ReceiverResultReg]].
 	cogit
