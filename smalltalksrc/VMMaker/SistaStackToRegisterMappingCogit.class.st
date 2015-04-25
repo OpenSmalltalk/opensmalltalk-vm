@@ -245,6 +245,24 @@ SistaStackToRegisterMappingCogit >> fillInOPICHeader: pic size: size numArgs: nu
 	^super fillInOPICHeader: pic size: size numArgs: numArgs selector: selector
 ]
 
+{ #category : #'bytecode generator support' }
+SistaStackToRegisterMappingCogit >> genExecutionCountLogicInto: trinaryBlock counterRegNotConflictingWith: regMask [
+	<var: #countTripped type: #'AbstractInstruction *'>
+	<inline: true>
+	| counterReg counterAddress countTripped |
+	counterReg := self allocateRegNotConflictingWith: regMask.
+	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
+	self flag: 'will need to use MoveAw32:R: if 64 bits'.
+	self assert: objectMemory wordSize = CounterBytes.
+	self MoveAw: counterAddress R: counterReg.
+	self SubCq: 16r10000 R: counterReg. "Count executed"
+	"If counter trips simply abort the comparison continuing to the following
+	 branch *without* writing back.  A double decrement will not trip the second time."
+	countTripped := self JumpCarry: 0.
+	self MoveR: counterReg Aw: counterAddress. "write back"
+	trinaryBlock value: counterReg value: counterAddress value: countTripped
+]
+
 { #category : #'bytecode generators' }
 SistaStackToRegisterMappingCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
 	"SistaV1: *	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
@@ -275,6 +293,14 @@ SistaStackToRegisterMappingCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytec
 ]
 
 { #category : #'bytecode generator support' }
+SistaStackToRegisterMappingCogit >> genFallsThroughCountLogicCounterReg: counterReg counterAddress: counterAddress [
+	<inline: true>
+	"Gen this when the branch has not been taken and forwarders have been followed."
+	self SubCq: 1 R: counterReg. "Count untaken"
+	self MoveR: counterReg Aw: counterAddress. "write back"
+]
+
+{ #category : #'bytecode generator support' }
 SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	"The heart of performance counting in Sista.  Conditional branches are 6 times less
 	 frequent than sends and can provide basic block frequencies (send counters can't).
@@ -296,17 +322,16 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	desc := self ssTop.
 	self ssPop: 1.
 	desc popToReg: TempReg.
-
-	counterReg := self allocateAnyReg.
-	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
+	
+	self 
+		genExecutionCountLogicInto: [ :cReg :cAddress :countTripBranch | 
+			counterReg := cReg. 
+			counterAddress := cAddress. 
+			countTripped := countTripBranch ] 
+		counterRegNotConflictingWith: 0.
 	counterIndex := counterIndex + 1.
-	self flag: 'will need to use MoveAw32:R: if 64 bits'.
-	self assert: objectMemory wordSize = CounterBytes.
-	retry := self MoveAw: counterAddress R: counterReg.
-	self SubCq: 16r10000 R: counterReg. "Count executed"
-	"Don't write back if we trip; avoids wrapping count back to initial value, and if we trip we don't execute."
-	countTripped := self JumpCarry: 0.
-	self MoveR: counterReg Aw: counterAddress. "write back"
+	
+	retry := self Label.
 
 	"Cunning trick by LPD.  If true and false are contiguous subtract the smaller.
 	 Correct result is either 0 or the distance between them.  If result is not 0 or
@@ -315,8 +340,7 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	self annotate: (self SubCw: boolean R: TempReg) objRef: boolean.
 	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
 
-	self SubCq: 1 R: counterReg. "Count untaken"
-	self MoveR: counterReg Aw: counterAddress. "write back"
+	self genFallsThroughCountLogicCounterReg: counterReg counterAddress: counterAddress.
 
 	self CmpCq: (boolean == objectMemory falseObject
 					ifTrue: [objectMemory trueObject - objectMemory falseObject]
@@ -468,16 +492,12 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 					ifFalse: [self OrR: ReceiverResultReg R: TempReg]]].
 	jumpNotSmallInts := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 
-	counterReg := self allocateRegNotConflictingWith: (self registerMaskFor: ReceiverResultReg and: Arg0Reg). "Use this as the count reg, can't conflict with the registers for the arg and the receiver"
-	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
-	self flag: 'will need to use MoveAw32:R: if 64 bits'.
-	self assert: objectMemory wordSize = CounterBytes.
-	self MoveAw: counterAddress R: counterReg.
-	self SubCq: 16r10000 R: counterReg. "Count executed"
-	"If counter trips simply abort the inlined comparison and send continuing to the following
-	 branch *without* writing back.  A double decrement will not trip the second time."
-	countTripped := self JumpCarry: 0.
-	self MoveR: counterReg Aw: counterAddress. "write back"
+	self 
+		genExecutionCountLogicInto: [ :cReg :cAddress :countTripBranch | 
+			counterReg := cReg. 
+			counterAddress := cAddress. 
+			countTripped := countTripBranch ] 
+		counterRegNotConflictingWith: (self registerMaskFor: ReceiverResultReg and: Arg0Reg).
 
 	argIsInt
 		ifTrue: [annotateInst
@@ -490,10 +510,12 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 				ifTrue: [primDescriptor opcode]
 				ifFalse: [self inverseBranchFor: primDescriptor opcode])
 		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-	self SubCq: 1 R: counterReg. "Count untaken"
-	self MoveR: counterReg Aw: counterAddress. "write back"
+		
+	self genFallsThroughCountLogicCounterReg: counterReg counterAddress: counterAddress.
+	
 	self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
 	countTripped jmpTarget: (jumpNotSmallInts jmpTarget: self Label).
+	
 	argIsInt ifTrue:
 		[self MoveCq: argInt R: Arg0Reg].
 	^self genMarshalledSend: (coInterpreter specialSelector: byte0 - self firstSpecialSelectorBytecodeOffset)
@@ -540,17 +562,13 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	"Only interested in inlining if followed by a conditional branch."
 	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
 		[^ self genEqualsEqualsNoBranchArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg].
-
-	counterReg := self allocateRegNotConflictingWith: regMask. "Use this as the count reg, can't conflict with the registers for the arg and the receiver of #==."
-	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
-	self flag: 'will need to use MoveAw32:R: if 64 bits'.
-	self assert: objectMemory wordSize = CounterBytes.
-	self MoveAw: counterAddress R: counterReg.
-	self SubCq: 16r10000 R: counterReg. "Count executed"
-	"If counter trips simply abort the inlined comparison and send continuing to the following
-	 branch *without* writing back.  A double decrement will not trip the second time."
-	countTripped := self JumpCarry: 0.
-	self MoveR: counterReg Aw: counterAddress. "write back"
+	
+	self 
+		genExecutionCountLogicInto: [ :cReg :cAddress :countTripBranch | 
+			counterReg := cReg. 
+			counterAddress := cAddress. 
+			countTripped := countTripBranch ] 
+		counterRegNotConflictingWith: regMask.
 	
 	self assert: (unforwardArg or: [ unforwardRcvr ]).
 	
@@ -573,11 +591,8 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ].
 	self ssPop: -2. 
 	
-	"the jump has not been taken and forwarders have been followed."
-	self SubCq: 1 R: counterReg. "Count untaken"
-	self MoveR: counterReg Aw: counterAddress. "write back"
+	self genFallsThroughCountLogicCounterReg: counterReg counterAddress: counterAddress.
 	self Jump: fixup.
-	
 	countTripped jmpTarget: self Label.
 	
 	"inlined version of #== ignoring the branchDescriptor if the counter trips to have normal state for the optimizer"
