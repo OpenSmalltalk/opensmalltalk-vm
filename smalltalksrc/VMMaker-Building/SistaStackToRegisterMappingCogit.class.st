@@ -113,6 +113,17 @@ SistaStackToRegisterMappingCogit class >> initializeWithOptions: optionsDictiona
 	MaxCounterValue := (1 << 16) - 1
 ]
 
+{ #category : #'simulation stack' }
+SistaStackToRegisterMappingCogit >> allocateRegPreferringCalleeSavedNotConflictingWith: regMask [
+	"If there are multiple free registers, choose one which is callee saved,
+	else just allocate a register not conflicting with regMask"
+	| reg |
+	reg := backEnd availableRegisterOrNilFor: ((self liveRegisters bitOr: regMask) bitOr: callerSavedRegMask).
+	^ reg
+		ifNil: [ self allocateRegNotConflictingWith: regMask ]
+		ifNotNil: [ reg ]
+]
+
 { #category : #'compile abstract instructions' }
 SistaStackToRegisterMappingCogit >> compileBlockBodies [
 	"override to maintain counterIndex when recompiling blocks; sigh."
@@ -246,11 +257,10 @@ SistaStackToRegisterMappingCogit >> fillInOPICHeader: pic size: size numArgs: nu
 ]
 
 { #category : #'bytecode generator support' }
-SistaStackToRegisterMappingCogit >> genExecutionCountLogicInto: trinaryBlock counterRegNotConflictingWith: regMask [
+SistaStackToRegisterMappingCogit >> genExecutionCountLogicInto: binaryBlock counterReg: counterReg [
 	<var: #countTripped type: #'AbstractInstruction *'>
 	<inline: true>
-	| counterReg counterAddress countTripped |
-	counterReg := self allocateRegNotConflictingWith: regMask.
+	| counterAddress countTripped |
 	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
 	self flag: 'will need to use MoveAw32:R: if 64 bits'.
 	self assert: objectMemory wordSize = CounterBytes.
@@ -260,7 +270,7 @@ SistaStackToRegisterMappingCogit >> genExecutionCountLogicInto: trinaryBlock cou
 	 branch *without* writing back.  A double decrement will not trip the second time."
 	countTripped := self JumpCarry: 0.
 	self MoveR: counterReg Aw: counterAddress. "write back"
-	trinaryBlock value: counterReg value: counterAddress value: countTripped
+	binaryBlock value: counterAddress value: countTripped
 ]
 
 { #category : #'bytecode generators' }
@@ -272,9 +282,9 @@ SistaStackToRegisterMappingCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytec
 	"We loose the information of in which register is stack top 
 	when jitting the branch target so we need to flush everything. 
 	We could use a fixed register here...."
-	self ssFlushTo: simStackPtr.
-	reg := self allocateRegForStackTopEntry.
+	reg := self self allocateRegForStackEntryAt: 0.
 	self ssTop popToReg: reg.
+	self ssFlushTo: simStackPtr. "flushed but the value is still in reg"
 	
 	literal := self getLiteral: (extA * 256 + byte1).
 	extA := 0.
@@ -323,16 +333,16 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	self ssPop: 1.
 	desc popToReg: TempReg.
 	
+	"We prefer calleeSaved to avoid saving it across the trap trip trampoline"
+	counterReg := self allocateRegPreferringCalleeSavedNotConflictingWith: 0. 
+	retry := self Label.
 	self 
-		genExecutionCountLogicInto: [ :cReg :cAddress :countTripBranch | 
-			counterReg := cReg. 
+		genExecutionCountLogicInto: [ :cAddress :countTripBranch | 
 			counterAddress := cAddress. 
 			countTripped := countTripBranch ] 
-		counterRegNotConflictingWith: 0.
+		counterReg: counterReg.
 	counterIndex := counterIndex + 1.
 	
-	retry := self Label.
-
 	"Cunning trick by LPD.  If true and false are contiguous subtract the smaller.
 	 Correct result is either 0 or the distance between them.  If result is not 0 or
 	 their distance send mustBeBoolean."
@@ -348,14 +358,23 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 		R: TempReg.
 	ok := self JumpZero: 0.
 	self MoveCq: 0 R: counterReg. "if counterReg is 0 this is a mustBeBoolean, not a counter trip."
+	
+	"If counterReg is caller saved then save it"
+	(self register: counterReg isInMask: callerSavedRegMask) ifTrue: [ self PushR: counterReg ].
+	
 	countTripped jmpTarget:
 		(self CallRT: (boolean == objectMemory falseObject
 						ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
 						ifFalse: [ceSendMustBeBooleanAddTrueTrampoline])).
+						
 	"If we're in an image which hasn't got the Sista code loaded then the ceCounterTripped:
 	 trampoline will return directly to machine code, returning the boolean.  So the code should
 	 jump back to the retry point. The trampoline makes sure that TempReg has been reloaded."
 	self annotateBytecode: self Label.
+	
+	"If counterReg is caller saved then restore it"
+	(self register: counterReg isInMask: callerSavedRegMask) ifTrue: [ self PopR: counterReg ].
+	
 	self Jump: retry.
 	ok jmpTarget: self Label.
 	^0
@@ -492,12 +511,12 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 					ifFalse: [self OrR: ReceiverResultReg R: TempReg]]].
 	jumpNotSmallInts := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 
+	counterReg := self allocateRegNotConflictingWith: (self registerMaskFor: ReceiverResultReg and: Arg0Reg).
 	self 
-		genExecutionCountLogicInto: [ :cReg :cAddress :countTripBranch | 
-			counterReg := cReg. 
+		genExecutionCountLogicInto: [ :cAddress :countTripBranch | 
 			counterAddress := cAddress. 
 			countTripped := countTripBranch ] 
-		counterRegNotConflictingWith: (self registerMaskFor: ReceiverResultReg and: Arg0Reg).
+		counterReg: counterReg.
 
 	argIsInt
 		ifTrue: [annotateInst
@@ -563,12 +582,12 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
 		[^ self genEqualsEqualsNoBranchArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg].
 	
+	counterReg := self allocateRegNotConflictingWith: regMask.
 	self 
-		genExecutionCountLogicInto: [ :cReg :cAddress :countTripBranch | 
-			counterReg := cReg. 
+		genExecutionCountLogicInto: [ :cAddress :countTripBranch | 
 			counterAddress := cAddress. 
 			countTripped := countTripBranch ] 
-		counterRegNotConflictingWith: regMask.
+		counterReg: counterReg.
 	
 	self assert: (unforwardArg or: [ unforwardRcvr ]).
 	
