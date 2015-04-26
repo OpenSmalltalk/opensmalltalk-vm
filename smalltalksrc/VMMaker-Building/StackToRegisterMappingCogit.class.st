@@ -762,12 +762,6 @@ StackToRegisterMappingCogit >> addBlockStartAt: bytecodepc numArgs: numArgs numC
 	^blockStart
 ]
 
-{ #category : #'simulation stack' }
-StackToRegisterMappingCogit >> allocateAnyReg [
-	< inline: true >
-	^ self allocateRegNotConflictingWith: 0
-]
-
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> allocateEqualsEqualsRegistersArgNeedsReg: argNeedsReg rcvrNeedsReg: rcvrNeedsReg into: binaryBlock [
 	<inline: true>
@@ -781,7 +775,7 @@ StackToRegisterMappingCogit >> allocateEqualsEqualsRegistersArgNeedsReg: argNeed
 					 self ssTop popToReg: argReg.
 					 (self ssValue: 1) popToReg: rcvrReg]
 				ifFalse:
-					[argReg := self allocateRegForStackTopEntry.
+					[argReg := self self allocateRegForStackEntryAt: 0.
 					 self ssTop popToReg: argReg]]
 		ifFalse:
 			[self assert: rcvrNeedsReg.
@@ -796,6 +790,8 @@ StackToRegisterMappingCogit >> allocateEqualsEqualsRegistersArgNeedsReg: argNeed
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> allocateRegForStackEntryAt: index [
+	"If the stack entry is already in a register, answers it,
+	else allocate a new register for it"
 	<inline: true>
 	^ self allocateRegForStackEntryAt: index notConflictingWith: 0
 	
@@ -803,6 +799,8 @@ StackToRegisterMappingCogit >> allocateRegForStackEntryAt: index [
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> allocateRegForStackEntryAt: index notConflictingWith: regMask [
+	"If the stack entry is already in a register not conflicting with regMask, answers it,
+	else allocate a new register not conflicting with reg mask"
 	<var: #stackEntry type: #'CogSimStackEntry *'>
 	| stackEntry |
 	stackEntry := self ssValue: index.
@@ -813,21 +811,10 @@ StackToRegisterMappingCogit >> allocateRegForStackEntryAt: index notConflictingW
 ]
 
 { #category : #'simulation stack' }
-StackToRegisterMappingCogit >> allocateRegForStackTopEntry [
-	<inline: true>
-	^ self allocateRegForStackEntryAt: 0
-	
-]
-
-{ #category : #'simulation stack' }
-StackToRegisterMappingCogit >> allocateRegForStackTopEntryNotConflictingWith: regMask [	
-	<inline: true>
-	^ self allocateRegForStackEntryAt: 0 notConflictingWith: regMask
-	
-]
-
-{ #category : #'simulation stack' }
 StackToRegisterMappingCogit >> allocateRegForStackTopThreeEntriesInto: trinaryBlock thirdIsReceiver: thirdIsReceiver [
+	"Answers registers for the 3 top values on stack. If the values are already in registers, answers
+	these registers, else allocate registers not conflicting with each others.
+	If thirdIsReceiver is true, allocate ReceiverResultReg for stackTop - 2 (for ceStoreCheck)."
 	<inline: true>
 	| topRegistersMask rTop rNext rThird |
 	
@@ -862,6 +849,8 @@ StackToRegisterMappingCogit >> allocateRegForStackTopThreeEntriesInto: trinaryBl
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> allocateRegForStackTopTwoEntriesInto: binaryBlock [
+	"Answers registers for the 2 top values on stack. If the values are already in registers, answers
+	these registers, else allocate registers not conflicting with each others."
 	<inline: true>
 	| topRegistersMask rTop rNext |
 	
@@ -1443,7 +1432,7 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#binaryInlinePrimitive:"
 	| ra val untaggedVal adjust |
-	ra := self allocateRegForStackTopEntry.
+	ra := self self allocateRegForStackEntryAt: 0.
 	self ssTop popToReg: ra.
 	self ssPop: 1.
 	val := self ssTop constant.
@@ -1534,7 +1523,7 @@ StackToRegisterMappingCogit >> genBinaryVarOpConstInlinePrimitive: prim [
 	| rr val untaggedVal |
 	val := self ssTop constant.
 	self ssPop: 1.
-	rr := self allocateRegForStackTopEntry.
+	rr := self self allocateRegForStackEntryAt: 0.
 	self ssTop popToReg: rr.
 	self ssPop: 1.
 	untaggedVal := val - objectMemory smallIntegerTag.
@@ -2684,7 +2673,7 @@ StackToRegisterMappingCogit >> genPushLiteral: literal [
 StackToRegisterMappingCogit >> genPushLiteralVariable: literalIndex [
 	<inline: false>
 	| association freeReg |
-	freeReg := self allocateAnyReg.
+	freeReg := self allocateRegNotConflictingWith: 0.
 	association := self getLiteral: literalIndex.
 	"N.B. Do _not_ use ReceiverResultReg to avoid overwriting receiver in assignment in frameless methods."
 	"So far descriptors are not rich enough to describe the entire dereference so generate the register
@@ -2723,7 +2712,7 @@ StackToRegisterMappingCogit >> genPushMaybeContextReceiverVariable: slotIndex [
 	self assert: needsFrame.
 	self ssAllocateCallReg: ReceiverResultReg and: SendNumArgsReg.
 	self ensureReceiverResultRegContainsSelf.
-	((self registerMaskFor: ReceiverResultReg) anyMask: callerSavedRegMask) ifTrue:
+	(self register: ReceiverResultReg isInMask: callerSavedRegMask) ifTrue:
 		["We have no way of reloading ReceiverResultReg since we need the inst var value as the result."
 		optStatus isReceiverResultRegLive: false].
 	"See CoInterpreter>>contextInstructionPointer:frame: for an explanation
@@ -3346,7 +3335,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 	
 	"Avoid store check for immediate values"
 	(objectRepresentation isUnannotatableConstant: self ssTop) ifTrue:
-			[ assocReg := self allocateAnyReg.
+			[ assocReg := self allocateRegNotConflictingWith: 0.
 			self genMoveConstant: association R: assocReg.
 			 objectRepresentation
 				genEnsureObjInRegNotForwarded: assocReg
@@ -3363,7 +3352,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 				slotIndex: ValueIndex
 				destReg: assocReg ].
 		
-	topReg := self allocateRegForStackTopEntryNotConflictingWith: (self registerMaskFor: ReceiverResultReg).
+	topReg := self allocateRegForStackEntryAt: 0 notConflictingWith: (self registerMaskFor: ReceiverResultReg).
 	self ssStorePop: popBoolean toReg: topReg.
 	optStatus isReceiverResultRegLive: false.
 	self ssAllocateRequiredReg: ReceiverResultReg. "for ceStoreCheck call in genStoreSourceReg: has to be ReceiverResultReg"
@@ -3454,7 +3443,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 			genStoreImmediateInSourceReg: TempReg
 			slotIndex: slotIndex
 			destReg: ReceiverResultReg].
-	topReg := self allocateRegForStackTopEntryNotConflictingWith: (self registerMaskFor: ReceiverResultReg).
+	topReg := self allocateRegForStackEntryAt: 0 notConflictingWith: (self registerMaskFor: ReceiverResultReg).
 	self ssStorePop: popBoolean toReg: topReg.
 	"Note that ReceiverResultReg remains live after ceStoreCheckTrampoline."
 	self ensureReceiverResultRegContainsSelf.
@@ -3485,7 +3474,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At:
 	 remote temp loads that stores the result in a register, deferring only the register push."
 	"Avoid store check for immediate values"
 	(objectRepresentation isUnannotatableConstant: self ssTop) ifTrue:
-		[ tempVectReg := self allocateAnyReg.
+		[ tempVectReg := self allocateRegNotConflictingWith: 0.
 		 self MoveMw: (self frameOffsetOfTemporary: remoteTempIndex) r: FPReg R: tempVectReg.
 		 self ssStorePop: popBoolean toReg: TempReg.
 		 traceStores > 0 ifTrue:
@@ -3498,7 +3487,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At:
 			genStoreImmediateInSourceReg: TempReg
 			slotIndex: slotIndex
 			destReg: tempVectReg].
-	topReg := self allocateRegForStackTopEntryNotConflictingWith: (self registerMaskFor: ReceiverResultReg).
+	topReg := self allocateRegForStackEntryAt: 0 notConflictingWith: (self registerMaskFor: ReceiverResultReg).
 	topSpilled := self ssTop spilled.
 	self ssStorePop: (popBoolean or: [topSpilled]) toReg: topReg.
 	popBoolean ifFalse:
@@ -3573,7 +3562,7 @@ StackToRegisterMappingCogit >> genUnaryInlinePrimitive: prim [
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#unaryInlinePrimitive:"
 	| rcvrReg resultReg |
-	rcvrReg := self allocateRegForStackTopEntry.
+	rcvrReg := self allocateRegForStackEntryAt: 0.
 	resultReg := self allocateRegNotConflictingWith: (self registerMaskFor: rcvrReg).
 	self ssTop popToReg: rcvrReg.
 	self ssPop: 1.
@@ -4372,7 +4361,7 @@ StackToRegisterMappingCogit >> returnRegForStoreCheck [
 	 reload ReceiverResultReg cheaply.  Otherwise we don't care about the result
 	 and use the cResultRegister, effectively a no-op (see compileTrampoline...)"
 
-	^((self registerMaskFor: ReceiverResultReg) anyMask: callerSavedRegMask)
+	^(self register: ReceiverResultReg isInMask: callerSavedRegMask)
 		ifTrue: [ReceiverResultReg]
 		ifFalse: [backEnd cResultRegister]
 ]
