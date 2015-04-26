@@ -1374,6 +1374,7 @@ StackToRegisterMappingCogit >> extractMaybeBranchDescriptorInto: fourArgBlock [
 	"Looks one instruction ahead of the current bytecodePC and answers its bytecode descriptor and its pc.
 	If the instruction found is a branch, also answers the pc after the branch and the pc targetted by the branch"
 	| primDescriptor nextPC nExts branchDescriptor targetBytecodePC postBranchPC |
+	<inline: true>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	
