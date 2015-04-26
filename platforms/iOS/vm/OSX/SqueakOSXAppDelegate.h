@@ -40,19 +40,22 @@
 #import "sqSqueakAppDelegate.h"
 #import "sqSqueakOSXApplication.h"
 #import "sqSqueakOSXNSView.h"
-@protocol NSApplicationDelegate <NSObject> @end
 
 @class sqSqueakMainApplication;
+@class sqSqueakOSXScreenAndWindow;
 
 @interface SqueakOSXAppDelegate : sqSqueakAppDelegate <NSApplicationDelegate> {
-    NSWindow *window;
-	sqSqueakOSXNSView	 *mainView;
+    NSWindow *__weak window;
+	sqSqueakOSXNSView	 *__weak mainView;
 	BOOL checkForFileNameOnFirstParm;
 	NSString *possibleImageNameAtLaunchTime;
+    sqSqueakOSXScreenAndWindow *windowHandler;
 }
 
-@property (nonatomic,assign) IBOutlet NSWindow *window;
-@property (nonatomic,assign) IBOutlet sqSqueakOSXNSView *mainView;
-@property (nonatomic,retain) NSString *possibleImageNameAtLaunchTime;
+@property (nonatomic,weak) IBOutlet NSWindow *window;
+@property (nonatomic,weak) IBOutlet sqSqueakOSXNSView *mainView;
+@property (nonatomic,strong) NSString *possibleImageNameAtLaunchTime;
 @property (nonatomic,assign) BOOL checkForFileNameOnFirstParm;
+@property (nonatomic, strong) sqSqueakOSXScreenAndWindow *windowHandler;
+
 @end

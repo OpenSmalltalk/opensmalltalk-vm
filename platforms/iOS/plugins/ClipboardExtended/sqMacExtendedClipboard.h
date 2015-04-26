@@ -29,10 +29,15 @@
  */
 /* The virtual machine proxy definition */
 #include "sqVirtualMachine.h"
+#ifdef BUILD_FOR_OSX
+typedef NSPasteboard * CLIPBOARDTYPE;
+#else
+typedef UIPasteboard * CLIPBOARDTYPE;
+#endif
 
-void sqPasteboardClear( void * inPasteboard );
-sqInt sqPasteboardGetItemCount ( void *inPasteboard );
-sqInt sqPasteboardCopyItemFlavorsitemNumber (  void *inPasteboard, sqInt formatNumber );
+void sqPasteboardClear( CLIPBOARDTYPE inPasteboard );
+sqInt sqPasteboardGetItemCount ( CLIPBOARDTYPE inPasteboard );
+sqInt sqPasteboardCopyItemFlavorsitemNumber (  CLIPBOARDTYPE inPasteboard, sqInt formatNumber );
 void * sqCreateClipboard( void );
-void sqPasteboardPutItemFlavordatalengthformatTypeformatLength ( void *inPasteboard, char* inData, sqInt dataLength, char* format, sqInt formatLength);
-sqInt sqPasteboardCopyItemFlavorDataformatformatLength ( void* inPasteboard, char* format, sqInt formatLength);
+void sqPasteboardPutItemFlavordatalengthformatTypeformatLength ( CLIPBOARDTYPE inPasteboard, char* inData, sqInt dataLength, char* format, sqInt formatLength);
+sqInt sqPasteboardCopyItemFlavorDataformatformatLength ( CLIPBOARDTYPE inPasteboard, char* format, sqInt formatLength);

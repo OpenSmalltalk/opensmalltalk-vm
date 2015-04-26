@@ -43,7 +43,7 @@ such third-party acknowledgments.
 }
 - (void) parseInfoPlist;
 
-@property (nonatomic,retain) NSUserDefaults* defaults;
+@property (nonatomic,strong) NSUserDefaults* defaults;
 @property (nonatomic,assign) BOOL	SqueakUseFileMappedMMAP;
 
 @end

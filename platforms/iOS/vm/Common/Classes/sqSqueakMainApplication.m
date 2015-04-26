@@ -75,7 +75,7 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (sqSqueakInfoPlistInterface *) newSqSqueakInfoPlistInterfaceCreation {
-	return [sqSqueakInfoPlistInterface new];
+	return [[sqSqueakInfoPlistInterface alloc] init];
 }
 
 - (void) fetchPreferences {
@@ -111,23 +111,25 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (void) setupEventQueue {
-	eventQueue = [Queue new];
+	eventQueue = [[Queue alloc] init];
 }
 
 - (void) setupBrowserLogic {
 }
 
 - (void) setupSoundLogic {
-	soundInterfaceLogic = [sqSqueakSoundCoreAudio new];
+	soundInterfaceLogic = [[sqSqueakSoundCoreAudio alloc] init];
 }
 
 - (sqSqueakFileDirectoryInterface *) newFileDirectoryInterfaceInstance {
-	return [sqSqueakFileDirectoryInterface new];
+	return [[sqSqueakFileDirectoryInterface alloc] init];
 }
 
 - (void) runSqueak {
-	NSAutoreleasePool * pool = [NSAutoreleasePool new]; //Needed since this is a worker thread, see comments in NSAutoreleasePool Class Reference about Threads
-	
+    @autoreleasepool {
+	extern BOOL gQuitNowRightNow;
+	gQuitNowRightNow=false;
+
 	[self setupFloat];  //JMM We have code for intel and powerpc float, but arm? 
 	[self setupErrorRecovery];
 	[self fetchPreferences];
@@ -135,7 +137,6 @@ extern sqInt interpret(void);  //This is a VM Callback
 	fileDirectoryLogic = [self newFileDirectoryInterfaceInstance];
 	[self setVMPathFromApplicationDirectory];
 	if (![self.fileDirectoryLogic setWorkingDirectory]) {
-		[pool drain];
 		return;
 	}
 	
@@ -153,12 +154,10 @@ extern sqInt interpret(void);  //This is a VM Callback
 		[self findImageViaBundleOrPreferences];
 	
 	if ([self ImageNameIsEmpty]) {
-		[pool drain];
 		return;
 	}
 	
 	if (![self readImageIntoMemory]) {
-		[pool drain];
 		return;
 	}
 	
@@ -170,8 +169,13 @@ extern sqInt interpret(void);  //This is a VM Callback
 	[gDelegateApp makeMainWindow];
 	
 	interpret();
-	[pool drain];  //may not return here, could call exit() via quit image
-	[self release];
+    [self tearDown];
+    }
+	[NSThread exit];
+}
+
+- (void) tearDown{
+    
 }
 
 - (void) MenuBarRestore {
@@ -190,14 +194,13 @@ void sqMacMemoryFree(void);
 }
 
 - (void)dealloc {
-	[infoPlistInterfaceLogic release];
-	[soundInterfaceLogic release];
-	[vmPathStringURL release];
-	[imageNameURL release];
-	[fileDirectoryLogic release];
-	[eventQueue release];
+//	[infoPlistInterfaceLogic release];
+//	[soundInterfaceLogic release];
+//	[vmPathStringURL release];
+//	[imageNameURL release];
+//	[fileDirectoryLogic release];
+//	[eventQueue release];
 	sqMacMemoryFree();
-	[super dealloc];
 }
 
 @end

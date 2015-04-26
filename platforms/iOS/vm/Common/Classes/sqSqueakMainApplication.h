@@ -71,19 +71,21 @@
 - (void) setupBrowserLogic;
 - (void) setupSoundLogic;
 - (void) runSqueak;
+- (void) tearDown;
 - (void) MenuBarRestore;
 - (void) ioExit;
 - (void) ioExitWithErrorCode: (int) ec;
 - (sqSqueakFileDirectoryInterface *) newFileDirectoryInterfaceInstance;
+- (void) imageNamePut:(const char *) sqImageName;
 
-@property (nonatomic,retain) NSURL* vmPathStringURL;
-@property (nonatomic,retain) sqSqueakInfoPlistInterface* infoPlistInterfaceLogic;
-@property (nonatomic,retain) sqSqueakSoundCoreAudio* soundInterfaceLogic;
-@property (nonatomic,retain) NSURL* imageNameURL;
+@property (nonatomic,strong) NSURL* vmPathStringURL;
+@property (nonatomic,strong) sqSqueakInfoPlistInterface* infoPlistInterfaceLogic;
+@property (nonatomic,strong) sqSqueakSoundCoreAudio* soundInterfaceLogic;
+@property (nonatomic,strong) NSURL* imageNameURL;
 @property (nonatomic,assign) sqInt inputSemaphoreIndex;
 @property (nonatomic,assign) NSStringEncoding currentVMEncoding;
-@property (nonatomic,retain) Queue* eventQueue;
-@property (nonatomic,retain) sqSqueakFileDirectoryInterface * fileDirectoryLogic;
-@property (nonatomic,retain) NSMutableArray* argsArguments;
+@property (nonatomic,strong) Queue* eventQueue;
+@property (nonatomic,strong) sqSqueakFileDirectoryInterface * fileDirectoryLogic;
+@property (nonatomic,strong) NSMutableArray* argsArguments;
 @end
 

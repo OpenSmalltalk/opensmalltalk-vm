@@ -39,5 +39,5 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 
 #import "sqSqueakIPhoneApplication.h" 
 
-@interface sqSqueakIPhoneApplication (imageReadWrite) 
+@interface sqSqueakIPhoneApplication (imageReadWrite)
 @end

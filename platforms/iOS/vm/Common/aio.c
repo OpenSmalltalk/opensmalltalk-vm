@@ -31,6 +31,7 @@
  */
 
 #include "sqaio.h"
+#include "sqMemoryAccess.h"
 
 #ifdef HAVE_CONFIG_H
 
@@ -122,8 +123,6 @@
 #endif
 
 #define _DO_FLAG_TYPE()	_DO(AIO_R, rd) _DO(AIO_W, wr) _DO(AIO_X, ex)
-
-static int one= 1;
 
 static aioHandler  rdHandler[FD_SETSIZE];
 static aioHandler  wrHandler[FD_SETSIZE];
@@ -219,8 +218,8 @@ int aioPoll(int microSeconds)
 	if (maxFd == 0) 
 		return 0;
 #endif
-
-	ms= (int) ioMSecs();
+    extern sqInt ioMSecs(void);
+	ms= (sqInt) ioMSecs();
 
   for (;;)
     {

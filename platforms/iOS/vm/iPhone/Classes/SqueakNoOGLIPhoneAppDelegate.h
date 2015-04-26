@@ -57,10 +57,10 @@ such third-party acknowledgments.
 - (void)applicationDidReceiveMemoryWarning:(UIApplication *)application;      // try to clean up as much memory as possible. next step is to terminate app
 - (void) zoomToOrientation:(UIInterfaceOrientation)o animated:(BOOL)animated;
 
-@property (nonatomic,retain) UIWindow *window;
-@property (nonatomic,retain) SqueakUIView *mainView;
-@property (nonatomic,retain) UIScrollView *scrollView;
-@property (nonatomic,retain) SqueakUIController *viewController;
-@property (nonatomic,retain) sqiPhoneScreenAndWindow *screenAndWindow;
+@property (nonatomic,strong) UIWindow *window;
+@property (nonatomic,strong) SqueakUIView *mainView;
+@property (nonatomic,strong) UIScrollView *scrollView;
+@property (nonatomic,strong) SqueakUIController *viewController;
+@property (nonatomic,strong) sqiPhoneScreenAndWindow *screenAndWindow;
 @end
 

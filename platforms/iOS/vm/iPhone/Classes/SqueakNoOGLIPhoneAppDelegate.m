@@ -56,21 +56,22 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 @synthesize screenAndWindow;
 
 - (sqSqueakMainApplication *) makeApplicationInstance {
-	return [sqSqueakIPhoneApplication new];
+	return [[sqSqueakIPhoneApplication alloc] init];
 }
 
-- (void)applicationDidFinishLaunching:(UIApplication *)application {	
+- (BOOL)application: (UIApplication *)application didFinishLaunchingWithOptions: (NSDictionary*) launchOptions {
 	
-#warning this is wrong, need to get shared application
 	gDelegateApp = self;	
 	mainView = null;
 	scrollView = null;
+	application.idleTimerDisabled = YES;
 	
 	squeakApplication = [self makeApplicationInstance];
-	screenAndWindow =  [sqiPhoneScreenAndWindow new];
+	screenAndWindow =  [[sqiPhoneScreenAndWindow alloc] init];
 	[self.squeakApplication setupEventQueue];
 	[self singleThreadStart];
 	//[self workerThreadStart];
+	return YES;
 
 }
 
@@ -81,13 +82,9 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 
 - (id) createPossibleWindow {
 	if (gDelegateApp.mainView == nil) {
-		NSAutoreleasePool * pool = [NSAutoreleasePool new];
-		NSMethodSignature * methodSignature = [gDelegateApp methodSignatureForSelector:@selector(makeMainWindowOnMainThread)];
-		NSInvocation *redrawInv = [NSInvocation invocationWithMethodSignature: methodSignature];
-		[redrawInv setTarget: gDelegateApp];
-		[redrawInv setSelector:@selector(makeMainWindowOnMainThread)];
-		[redrawInv performSelectorOnMainThread: @selector(invoke) withObject: nil waitUntilDone: YES];				
-		[pool drain];	
+		@autoreleasepool {
+            [gDelegateApp makeMainWindowOnMainThread];
+		}	
 	}
 	return self.window;
 }
@@ -165,7 +162,7 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 		self.scrollView.autoresizesSubviews=YES;
 		self.scrollView.autoresizingMask=(UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth);	
 
-		self.viewController = [SqueakUIController new];
+		self.viewController = [[SqueakUIController alloc] init];
 		self.viewController.view = self.scrollView;
 		
 		
@@ -174,64 +171,83 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 		[window addSubview: self.scrollView];
 		
 	} else {
-		CGRect fakeScreenSize = mainScreenSize;
-		mainView = [[[self whatRenderCanWeUse] alloc] initWithFrame: fakeScreenSize];
+		mainView = [[[self whatRenderCanWeUse] alloc] initWithFrame: [[UIScreen mainScreen] applicationFrame]];
 		self.mainView.clearsContextBeforeDrawing = NO;
 		[self.mainView setMultipleTouchEnabled: YES];
-		self.viewController = [SqueakUIController new];
+		self.viewController = [[SqueakUIController alloc] init];
 		self.viewController.view = self.mainView;
+        [self.mainView setTranslatesAutoresizingMaskIntoConstraints: NO];
 		[window addSubview: self.mainView];
+        NSLayoutConstraint *lConstraint =[NSLayoutConstraint
+                                          constraintWithItem: self.mainView
+                                          attribute:NSLayoutAttributeLeft
+                                          relatedBy:NSLayoutRelationEqual
+                                          toItem: window
+                                          attribute:NSLayoutAttributeLeft
+                                          multiplier:1
+                                          constant:0];
+        NSLayoutConstraint *rConstraint =[NSLayoutConstraint
+                                          constraintWithItem: self.mainView
+                                          attribute:NSLayoutAttributeRight
+                                          relatedBy:NSLayoutRelationEqual
+                                          toItem:window
+                                          attribute:NSLayoutAttributeRight
+                                          multiplier:1
+                                          constant:0];
+        NSLayoutConstraint *tConstraint =[NSLayoutConstraint
+                                          constraintWithItem: self.mainView
+                                          attribute:NSLayoutAttributeTop
+                                          relatedBy:NSLayoutRelationEqual
+                                          toItem:window
+                                          attribute:NSLayoutAttributeTop
+                                          multiplier:1
+                                          constant:0];
+        NSLayoutConstraint *bConstraint =[NSLayoutConstraint
+                                          constraintWithItem: self.mainView
+                                          attribute:NSLayoutAttributeBottom
+                                          relatedBy:NSLayoutRelationEqual
+                                          toItem:window
+                                          attribute:NSLayoutAttributeBottom
+                                          multiplier:1
+                                          constant:0];
+        [window addConstraint:lConstraint];
+        [window addConstraint:rConstraint];
+        [window addConstraint:tConstraint];
+        [window addConstraint:bConstraint];
 	}
 	
 	[window makeKeyAndVisible];
 	
 }
 
-- (void)dealloc {
-	[mainView release];
-	[scrollView release];
-	[viewController release];
-	[window release];
-	[screenAndWindow release];
-	[super dealloc];
-}
 
 - (void)accelerometer:(UIAccelerometer *)accelerometer didAccelerate:(UIAcceleration *)acceleration {
-	NSMutableArray* data = [NSMutableArray new];
+	NSMutableArray* data = [NSMutableArray arrayWithCapacity:2];
 	
-	[acceleration retain]; 
-	[data addObject: [NSNumber numberWithInteger: 2]];
+	[data addObject: @2];
 	[data addObject: acceleration];
 	[[[self squeakApplication] eventQueue] addItem: data];
-	[data release];
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
 - (void)locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error {
-	NSMutableArray* data = [NSMutableArray new];
+	NSMutableArray* data = [NSMutableArray arrayWithCapacity:3];
 
-	[manager retain]; 
-	[error retain]; 
-	[data addObject: [NSNumber numberWithInteger: 3]];
+	[data addObject: @3];
 	[data addObject: manager];
 	[data addObject: error];
 	[[[self squeakApplication] eventQueue] addItem: data];
-	[data release];
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)oldLocation {
-	NSMutableArray* data = [NSMutableArray new];
+	NSMutableArray* data = [NSMutableArray arrayWithCapacity: 4];
 
-	[manager retain]; 
-	[newLocation retain]; 
-	[oldLocation retain]; 
-	[data addObject: [NSNumber numberWithInteger: 4]];
+	[data addObject: @4];
 	[data addObject: manager];
 	[data addObject: newLocation];
 	[data addObject: oldLocation];
 	[[[self squeakApplication] eventQueue] addItem: data];
-	[data release];
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
@@ -241,11 +257,10 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 	 on the VM level. It could be some Object-C thing is going on, like URL fetching, or JPEG rendering,
 	 if so the squeak application can decide what to do, or ignore it which leads to death in a few seconds */
 	
-	NSMutableArray* data = [NSMutableArray new];
+	NSMutableArray* data = [NSMutableArray arrayWithCapacity:2];
 	
-	[data addObject: [NSNumber numberWithInteger: 5]];
+	[data addObject: @5];
 	[[[self squeakApplication] eventQueue] addItem: data];
-	[data release];
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 

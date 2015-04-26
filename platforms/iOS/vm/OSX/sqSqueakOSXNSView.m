@@ -73,25 +73,27 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
     return[[NSOpenGLPixelFormat alloc] initWithAttributes:attrs];
 }
 
-- (void)awakeFromNib {
-	self = [self initWithFrame: self.frame pixelFormat: [[self class] defaultPixelFormat] ];
-	inputMark = NSMakeRange(NSNotFound, 0);
-	inputSelection = NSMakeRange(0, 0);
-    [self registerForDraggedTypes: [NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
-	//	NSLog(@"registerForDraggedTypes");
-	dragInProgress = NO;
-	dragCount = 0;
-	dragItems = NULL;
-	clippyIsEmpty = YES;
-	colorspace = CGColorSpaceCreateDeviceRGB();
-	[self initializeSqueakColorMap];
+- (instancetype)initWithFrame:(NSRect)frameRect pixelFormat:(NSOpenGLPixelFormat*)format {
+
+    if (self = [super initWithFrame: frameRect pixelFormat: format]) {
+        inputMark = NSMakeRange(NSNotFound, 0);
+        inputSelection = NSMakeRange(0, 0);
+        [self registerForDraggedTypes: @[NSFilenamesPboardType]];
+        //	NSLog(@"registerForDraggedTypes");
+        dragInProgress = NO;
+        dragCount = 0;
+        dragItems = NULL;
+        clippyIsEmpty = YES;
+        colorspace = CGColorSpaceCreateDeviceRGB();
+        [self initializeSqueakColorMap];
+    }
+    return self;
 }
 
 - (void) initializeVariables {
 }
 
 - (void) dealloc {
-    [super dealloc];
 	free(colorMap32);
 	CGColorSpaceRelease(colorspace);
 }
@@ -128,7 +130,10 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 
 - (void) viewDidEndLiveResize {
 //	[self.window setShowsResizeIndicator: NO];
-	[((sqSqueakOSXApplication*) gDelegateApp.squeakApplication).squeakCursor performSelectorOnMainThread: @selector(set) withObject: nil waitUntilDone: NO];	
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [((sqSqueakOSXApplication*) gDelegateApp.squeakApplication).squeakCursor  set];
+    });
+
 }
 
 - (void) drawImageUsingClip: (CGRect) clip {
@@ -386,7 +391,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	
-	NSArray *down = [[NSArray alloc] initWithObjects: theEvent,nil];
 	@synchronized(self) {
 		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
 		NSString *possibleConversion = [theEvent characters];
@@ -398,7 +402,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		self.lastSeenKeyBoardStrokeDetails = NULL;
 		[self keyUp: theEvent]; 
 	}
-	[down release];
 }
 
 -(void)keyDown:(NSEvent*)theEvent {
@@ -412,7 +415,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		[self interpretKeyEvents: down];
 		self.lastSeenKeyBoardStrokeDetails = NULL;
 	}
-	[down release];
 }
 
 -(void)keyUp:(NSEvent*)theEvent {
@@ -436,7 +438,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	self.lastSeenKeyBoardModifierDetails = aKeyBoardStrokeDetails;
-	[aKeyBoardStrokeDetails release];
 }
 
 - (void)doCommandBySelector:(SEL)aSelector {
@@ -649,9 +650,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		for (NSString *item in images ){
 			NSURL *url = [NSURL fileURLWithPath:[[NSBundle mainBundle] bundlePath]];
 			LSLaunchURLSpec launchSpec;
-			launchSpec.appURL = (CFURLRef)url;
+			launchSpec.appURL = (CFURLRef)CFBridgingRetain(url);
 			launchSpec.passThruParams = NULL;
-			launchSpec.itemURLs = (CFArrayRef) [NSArray arrayWithObject:[NSURL fileURLWithPath: item]];
+			launchSpec.itemURLs = (__bridge CFArrayRef) @[[NSURL fileURLWithPath: item]];
 			launchSpec.launchFlags = kLSLaunchDefaults | kLSLaunchNewInstance;
 			launchSpec.asyncRefCon = NULL;
 			
@@ -671,7 +672,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		return NULL;
 	if (index < 1 || index > [self.dragItems count])
 		return NULL;
-	NSString *filePath = [self.dragItems objectAtIndex: (NSUInteger) index - 1];
+	NSString *filePath = (self.dragItems)[(NSUInteger) index - 1];
 	return filePath;
 }
 
@@ -739,5 +740,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		CGReleaseDisplayFadeReservation(fadeToken);
 	} 
 }
+
+- (void) preDrawThelayers {
+}
+
 
 @end

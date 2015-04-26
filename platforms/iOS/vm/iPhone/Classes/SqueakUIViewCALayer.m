@@ -73,14 +73,19 @@ static void MyProviderReleaseData (
 	}
 }
 
-- (CGImageRef) createImageFrom: (void *) dispBitsIndex affectedT: (int) affectedT affectedB: (int) affectedB affectedL: (int) affectedL affectedR: (int) affectedR height: (int) height width: (int) width {
+- (CGImageRef) allocImageFrom: (void *) dispBitsIndex affectedT: (int) affectedT affectedB: (int) affectedB affectedL: (int) affectedL affectedR: (int) affectedR height: (int) height width: (int) width {
 	const size_t depth = 32;
 	size_t 	pitch = ((((width)*(depth) + 31) >> 5) << 2);
 	
 	size_t totalSize = pitch * (affectedB-affectedT)-affectedL*4;
 	CGDataProviderRef provider =  CGDataProviderCreateWithData (NULL,(void*)dispBitsIndex+ pitch*affectedT + affectedL*4,(size_t) totalSize,MyProviderReleaseData);
+    
+    int affectedW = affectedR-affectedL;
+    int affectedH = affectedB-affectedT;
+    
+    if( affectedW <= 0|| affectedH <= 0) {return NULL;}
 	
-	CGImageRef image = CGImageCreate((size_t) affectedR-affectedL,(size_t) affectedB-affectedT, (size_t) 8 /* bitsPerComponent */,
+	CGImageRef image = CGImageCreate((size_t) affectedW,(size_t) affectedH, (size_t) 8 /* bitsPerComponent */,
 									 (size_t) depth /* bitsPerPixel */, 
 									 (size_t) pitch, colorspace, 
 									 (CGBitmapInfo) kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Host , 
@@ -99,27 +104,30 @@ static void MyProviderReleaseData (
 	}
 }
 
-- (void) drawThelayers {
-	sqInt formObj = interpreterProxy->displayObject();
-	sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);	
+
+- (void) preDrawThelayers{
+    sqInt formObj = interpreterProxy->displayObject();
+	sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);
 	void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
-	squeakTheDisplayBits = (void*) dispBitsIndex;	
-	
+	squeakTheDisplayBits = (void*) dispBitsIndex;
+}
+
+
+- (void) drawThelayers {
 	[CATransaction begin];
-	[CATransaction setValue: [NSNumber numberWithBool:YES] forKey: kCATransactionDisableActions];
+	[CATransaction setValue: @YES forKey: kCATransactionDisableActions];
 	for (int v=0;v<4;v++) {
 		for (int h=0;h<4;h++) {
 			if (dirty[v][h]) {
 				CGRect rect = myLayer[v][h].frame;
-				CGImageRef x= [self createImageFrom: squeakTheDisplayBits 
+				CGImageRef x= [self allocImageFrom: squeakTheDisplayBits
 										  affectedT: rect.origin.y 
 										  affectedB: rect.origin.y+rect.size.height 
 										  affectedL: rect.origin.x 
 										  affectedR: rect.origin.x+rect.size.width 
 											 height: (int) dividedHeight*4 
 											  width: (int) dividedWidth*4];
-				myLayer[v][h].contents = (id)x; 
-				CGImageRelease(x);
+				myLayer[v][h].contents = (id)CFBridgingRelease(x);
 				dirty[v][h] = NO;
 			}
 		}

@@ -111,7 +111,7 @@ static int buttonState=0;
 	[super pumpRunLoop];
 	
 	 NSEvent *event;
-	 while (event = [NSApp nextEventMatchingMask: NSAnyEventMask untilDate: nil inMode: NSEventTrackingRunLoopMode dequeue: YES])
+	 while ((event = [NSApp nextEventMatchingMask: NSAnyEventMask untilDate: nil inMode: NSEventTrackingRunLoopMode dequeue: YES]))
 		 [NSApp sendEvent: event];
 	
 	
@@ -136,8 +136,8 @@ static int buttonState=0;
 }
 
 - (void ) processAsOldEventOrComplexEvent: (id) event placeIn: (sqInputEvent *) evt {
-	if ([[event objectAtIndex: 0] intValue] == 1) {
-		[(NSData *)[event objectAtIndex: 1] getBytes: evt length: sizeof(sqInputEvent)];
+	if ([event[0] intValue] == 1) {
+		[(NSData *)event[1] getBytes: evt length: sizeof(sqInputEvent)];
 		if (evt->type == EventTypeKeyboard) {
 //			NSLog(@"keyboard pc %i cc %i uc %i m %i",((sqKeyboardEvent *)evt)->pressCode,((sqKeyboardEvent *) evt)->charCode,((sqKeyboardEvent *) evt)->utf32Code,((sqKeyboardEvent *) evt)->modifiers);
 		}
@@ -146,11 +146,10 @@ static int buttonState=0;
 }
 
 - (void) pushEventToQueue: (sqInputEvent *) evt {	
-	NSMutableArray* data = [NSMutableArray new];
-	[data addObject: [NSNumber numberWithInteger: 1]];
+    NSMutableArray* data = [NSMutableArray arrayWithCapacity: 2];
+	[data addObject: @1];
 	[data addObject: [NSData  dataWithBytes:(const void *) evt length: sizeof(sqInputEvent)]];
 	[eventQueue addItem: data];
-	[data release];	
 }
 
 - (void) recordCharEvent:(NSString *) unicodeString fromView: (sqSqueakOSXNSView *) mainView {
@@ -189,7 +188,6 @@ static int buttonState=0;
 		NSString *lookupString = [[NSString alloc] initWithCharacters: &unicode length: 1];
 		[lookupString getBytes: &macRomanCharacter maxLength: 1 usedLength: NULL encoding: NSMacOSRomanStringEncoding
 					   options: 0 range: picker remainingRange: NULL];
-		[lookupString release];
 		
 		evt.pressCode = EventKeyDown;
 		unsigned short keyCodeRemembered = evt.charCode;

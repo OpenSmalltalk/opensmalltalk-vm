@@ -60,15 +60,15 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) 
 		return;
-	NSAutoreleasePool * pool = [NSAutoreleasePool new];
+	@autoreleasepool {
 	 
-	NSBitmapImageRep *bitmap= [[[NSBitmapImageRep alloc]
+	NSBitmapImageRep *bitmap= [[NSBitmapImageRep alloc]
 			 initWithBitmapDataPlanes:  NULL pixelsWide: 16 pixelsHigh: 16
 			 bitsPerSample: 1 samplesPerPixel: 2
 			 hasAlpha: YES isPlanar: YES
 			 colorSpaceName: NSCalibratedBlackColorSpace
 			 bytesPerRow: 2
-			 bitsPerPixel: 0] autorelease];
+			 bitsPerPixel: 0];
 
     unsigned char*      planes[5];
 	[bitmap getBitmapDataPlanes:planes];
@@ -93,7 +93,7 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 		mask[i*2 + 1]= (word >> 16) & 0xFF;
 	}
 
-	NSImage *image = [[NSImage new] autorelease];
+	NSImage *image = [[NSImage alloc] init];
 	[image addRepresentation: bitmap];
 	
 	
@@ -109,9 +109,11 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 	
 	if (!gSqueakHeadless || browserActiveAndDrawingContextOkAndInFullScreenMode()) {
 		self.squeakHasCursor = YES;
-		[self.squeakCursor performSelectorOnMainThread: @selector(set) withObject: nil waitUntilDone: NO];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.squeakCursor set];
+        });
 	}
-	[pool drain];
+	}
 }
 
 - (sqInt) ioSetCursorARGB: (sqInt) cursorBitsIndex extentX: (sqInt) extentX extentY: (sqInt) extentY
@@ -121,15 +123,15 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 	if (browserActiveAndDrawingContextOk() && !browserActiveAndDrawingContextOkAndInFullScreenMode()) 
 		return 0;
 	
-	NSAutoreleasePool *pool= [[NSAutoreleasePool alloc] init];
+	@autoreleasepool {
 	
-	NSBitmapImageRep *bitmap= [[[NSBitmapImageRep alloc]
+	NSBitmapImageRep *bitmap= [[NSBitmapImageRep alloc]
 								initWithBitmapDataPlanes: NULL pixelsWide: extentX pixelsHigh: extentY
 								bitsPerSample: 8 samplesPerPixel: 4
 								hasAlpha: YES isPlanar: NO
 								colorSpaceName: NSCalibratedRGBColorSpace
 								bytesPerRow: extentX * 4
-								bitsPerPixel: 0] autorelease];
+								bitsPerPixel: 0];
 	unsigned int *planes[5];
 	[bitmap getBitmapDataPlanes: (unsigned char **) planes];
 	unsigned int *src= (unsigned int*) pointerForOop(cursorBitsIndex);
@@ -142,14 +144,16 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 		*dst= (*src & 0xFF00FF00) | ((*src & 0x000000FF) << 16) | ((*src & 0x00FF0000) >> 16); // BGRA to RGBA
 #endif
 	}
-	NSImage  *image= [[[NSImage alloc] init] autorelease];
+	NSImage  *image= [[NSImage alloc] init];
 	[image addRepresentation: bitmap];
 	NSPoint hotSpot= { -offsetX, -offsetY };
 	self.squeakHasCursor = YES;
 	self.squeakCursor = nil;
 	squeakCursor= [[NSCursor alloc] initWithImage: image hotSpot: hotSpot];
-	[self.squeakCursor performSelectorOnMainThread: @selector(set) withObject: nil waitUntilDone: NO];
-	[pool drain];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.squeakCursor set];
+        });
+	}
 	return 1;
 }
 @end

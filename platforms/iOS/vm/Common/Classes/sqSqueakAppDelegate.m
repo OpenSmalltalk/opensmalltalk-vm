@@ -42,7 +42,7 @@ such third-party acknowledgments.
 #import "sqMacHostWindow.h"
 
 @implementation sqSqueakAppDelegate
-@synthesize squeakApplication;
+@synthesize squeakApplication,squeakThread;
 
 - (void) makeMainWindow {
 	
@@ -60,7 +60,7 @@ such third-party acknowledgments.
 	width  = ((unsigned) getSavedWindowSize()) >> 16;
 	height = getSavedWindowSize() & 0xFFFF;
 	windowBlock = AddWindowBlock();
-	windowBlock-> handle = createdWindow;
+	windowBlock->handle = createdWindow;
 	windowBlock->context = nil;
 	windowBlock->updateArea = CGRectZero;
 	width  = (usqInt) ioScreenSize() >> 16;
@@ -88,14 +88,14 @@ such third-party acknowledgments.
 
 - (void) workerThreadStart {
 	// Run the squeak process in a worker thread
-	NSThread* myThread = [[NSThread alloc] initWithTarget: self.squeakApplication
+	squeakThread = [[NSThread alloc] initWithTarget: self.squeakApplication
 												 selector: @selector(runSqueak)
 												   object:nil];
 #if COGVM
-	[myThread setStackSize: [myThread stackSize]*4];
+	[squeakThread setStackSize: [squeakThread stackSize]*4];
 #endif
 	
-	[myThread start];
+	[squeakThread start];
 }
 
 - (void) singleThreadStart {
@@ -106,13 +106,9 @@ such third-party acknowledgments.
 									  target: self.squeakApplication
 									argument: nil 
 									   order: 1 
-									   modes: [NSArray arrayWithObject: NSDefaultRunLoopMode]];		
+									   modes: @[NSDefaultRunLoopMode]];		
 }
 
-- (void)dealloc {
-	[squeakApplication release];
-	[super dealloc];
-}
 
 
 @end

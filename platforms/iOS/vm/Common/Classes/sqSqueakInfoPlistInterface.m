@@ -55,9 +55,9 @@ such third-party acknowledgments.
 	return;
 }
 
-- (void)dealloc {
-	[super dealloc];
-	[defaults release];
-}
+//- (void)dealloc {
+//	[super dealloc];
+//	[defaults release];
+//}
 
 @end

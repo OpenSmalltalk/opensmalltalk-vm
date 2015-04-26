@@ -47,10 +47,10 @@ SqueakOSXAppDelegate *gDelegateApp;
 
 @implementation SqueakOSXAppDelegate
 
-@synthesize window,mainView,possibleImageNameAtLaunchTime,checkForFileNameOnFirstParm;
+@synthesize window,mainView,possibleImageNameAtLaunchTime,checkForFileNameOnFirstParm,windowHandler;
 
 - (sqSqueakMainApplication *) makeApplicationInstance {
-	return [sqSqueakOSXApplication new];
+	return [[sqSqueakOSXApplication alloc] init];
 }
 
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification {
@@ -59,22 +59,22 @@ SqueakOSXAppDelegate *gDelegateApp;
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     [Crashlytics startWithAPIKey:@"add501476623fc20212a60334cd537d16dfd566f"];
-	NSAutoreleasePool * pool = [NSAutoreleasePool new];
-	gDelegateApp = self;	
-	squeakApplication = [self makeApplicationInstance];
-	sqSqueakOSXScreenAndWindow *windowHandler = [sqSqueakOSXScreenAndWindow new];
-	windowHandler.mainViewOnWindow = self.mainView;
-	self.mainView.windowLogic = windowHandler;
-	windowHandler.windowIndex = 1;
-	[windowHandler.mainViewOnWindow initializeVariables];
-	self.window.delegate =  windowHandler;
-	self.window.contentResizeIncrements = NSMakeSize(8.0f,8.0f);
-	[self.squeakApplication setupEventQueue];
-	
-	[self singleThreadStart];
+	@autoreleasepool {
+		gDelegateApp = self;	
+		squeakApplication = [self makeApplicationInstance];
+		self.windowHandler = [[sqSqueakOSXScreenAndWindow alloc] init];
+		windowHandler.mainViewOnWindow = self.mainView;
+		self.mainView.windowLogic = windowHandler;
+		windowHandler.windowIndex = 1;
+		[windowHandler.mainViewOnWindow initializeVariables];
+		self.window.delegate =  windowHandler;
+		self.window.contentResizeIncrements = NSMakeSize(8.0f,8.0f);
+		[self.squeakApplication setupEventQueue];
+		
+		[self singleThreadStart];
 //	[self workerThreadStart];
 	
-	[pool drain];
+	}
 	
 }
 
@@ -163,9 +163,9 @@ SqueakOSXAppDelegate *gDelegateApp;
 		if ([(sqSqueakOSXApplication*)self.squeakApplication isImageFile: fileName] == YES) {
 			NSURL *url = [NSURL fileURLWithPath:[[NSBundle mainBundle] bundlePath]];
 			LSLaunchURLSpec launchSpec;
-			launchSpec.appURL = (CFURLRef)url;
+			launchSpec.appURL = (CFURLRef)CFBridgingRetain(url);
 			launchSpec.passThruParams = NULL;
-			launchSpec.itemURLs = (CFArrayRef)[NSArray arrayWithObject:[NSURL fileURLWithPath: fileName]];
+			launchSpec.itemURLs = (__bridge CFArrayRef)@[[NSURL fileURLWithPath: fileName]];
 			launchSpec.launchFlags = kLSLaunchDefaults | kLSLaunchNewInstance;
 			launchSpec.asyncRefCon = NULL;
 		

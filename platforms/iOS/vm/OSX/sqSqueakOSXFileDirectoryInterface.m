@@ -74,13 +74,13 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 - (NSString *)resolvedAliasFiles:(NSString *)filePath {
 	NSArray *compoents = [[filePath stringByStandardizingPath] pathComponents];
 	NSString *thisComponent;
-	NSString *path = [[NSString new] autorelease];
+	NSString *path = [[NSString alloc] init];
 	for (thisComponent in compoents) {
 		path = [path stringByAppendingPathComponent:thisComponent];
 		if (![[NSFileManager defaultManager] fileExistsAtPath:path])
 			continue;
 		LSItemInfoRecord infoRec;
-		LSCopyItemInfoForURL((CFURLRef) [NSURL fileURLWithPath:path], kLSRequestBasicFlagsOnly, &infoRec);
+		LSCopyItemInfoForURL((__bridge CFURLRef) [NSURL fileURLWithPath:path], kLSRequestBasicFlagsOnly, &infoRec);
 		if (infoRec.flags & kLSItemInfoIsAliasFile)
 			path = [[self resolveAliasAtPath:path] stringByResolvingSymlinksInPath];
 	}
@@ -98,9 +98,9 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 		FSResolveAliasFileWithMountFlags(&aliasRef, true, &targetIsFolder, &wasAliased, kResolveAliasFileNoUI) != noErr)
 		return nil;
 	
-	if (url = (NSURL *)CFURLCreateFromFSRef(kCFAllocatorDefault, &aliasRef)) {
+	if ((url = (NSURL *)CFBridgingRelease(CFURLCreateFromFSRef(kCFAllocatorDefault, &aliasRef)))) {
 		outString = [url path];
-		CFRelease(url);
+		CFRelease((__bridge CFTypeRef)(url));
 		return outString;
 	}
 	

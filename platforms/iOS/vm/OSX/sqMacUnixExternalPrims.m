@@ -110,14 +110,14 @@ static void *tryLoading(NSString *dirNameString, char *moduleName)
 	void        *handle= NULL;
 	NSString    *libName;
 	
-	libName = [dirNameString stringByAppendingPathComponent: [NSString stringWithUTF8String: moduleName]];
+	libName = [dirNameString stringByAppendingPathComponent: @(moduleName)];
 	libName = [libName stringByAppendingPathExtension: @"bundle/Contents/MacOS/"];
-	libName = [libName stringByAppendingPathComponent: [NSString stringWithUTF8String: moduleName]];
+	libName = [libName stringByAppendingPathComponent: @(moduleName)];
 	handle = tryLoadingInternals(libName);
 	if (handle) 
 		return handle;
 	
-	libName = [dirNameString stringByAppendingPathComponent: [NSString stringWithUTF8String: moduleName]];
+	libName = [dirNameString stringByAppendingPathComponent: @(moduleName)];
 	handle = tryLoadingInternals(libName);
 	if (handle) 
 		return handle;
@@ -131,9 +131,9 @@ static void *tryLoading(NSString *dirNameString, char *moduleName)
 
 	for (prefix= prefixes;  *prefix;  ++prefix)
 		for (suffix= suffixes;  *suffix;  ++suffix)		{
-			libName = [dirNameString stringByAppendingPathComponent: [NSString stringWithUTF8String: *prefix]];
-			libName = [libName stringByAppendingString: [NSString stringWithUTF8String: moduleName]];
-			libName = [libName stringByAppendingPathExtension: [NSString stringWithUTF8String: *suffix]];
+			libName = [dirNameString stringByAppendingPathComponent: @(*prefix)];
+			libName = [libName stringByAppendingString: @(moduleName)];
+			libName = [libName stringByAppendingPathExtension: @(*suffix)];
 
 			handle = tryLoadingInternals(libName);
 			if (handle) 
@@ -147,10 +147,10 @@ static void *tryLoading(NSString *dirNameString, char *moduleName)
  *  the primitive!).
  */
 void *ioLoadModule(char *pluginName) {
-	NSAutoreleasePool * pool = [NSAutoreleasePool new];
-	void* result = ioLoadModuleRaw(pluginName);
-	[pool drain];
-	return result;
+	@autoreleasepool {
+		void* result = ioLoadModuleRaw(pluginName);
+		return result;
+	}
 }
 	
 void *ioLoadModuleRaw(char *pluginName)
@@ -206,9 +206,8 @@ void *ioLoadModuleRaw(char *pluginName)
 			struct FSRef frameworksFolderRef;
 			OSErr err = FSFindFolder(kSystemDomain, kFrameworksFolderType, false, &frameworksFolderRef);
 #pragma unused(err)
-			NSURL *myURLRef = (NSURL *) CFURLCreateFromFSRef(kCFAllocatorDefault, &frameworksFolderRef);
-			systemFolder = [[myURLRef path] retain];
-			CFRelease(myURLRef);
+			NSURL *myURLRef = (NSURL *) CFBridgingRelease(CFURLCreateFromFSRef(kCFAllocatorDefault, &frameworksFolderRef));
+			systemFolder = [myURLRef path];
 		}
 		
 		pluginNameLength = strlen(pluginName);
@@ -218,19 +217,19 @@ void *ioLoadModuleRaw(char *pluginName)
 			if (strcmp(workingData,".framework") == 0) {
 				strncpy(workingData,pluginName,pluginNameLength-10);
 				workingData[pluginNameLength-10] = 0x00;
-				path = [vmDirPath stringByAppendingPathComponent: [NSString stringWithUTF8String: pluginName]];
+				path = [vmDirPath stringByAppendingPathComponent: @(pluginName)];
 				if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly) {
-					path2 = [path stringByAppendingPathComponent: [NSString stringWithUTF8String: workingData]];
+					path2 = [path stringByAppendingPathComponent: @(workingData)];
 					if ((handle = tryLoadingInternals(path2)))
 						return handle;
 				} else {
 					if ((handle= tryLoading(path, workingData)))
 						return handle;
 				}
-				path = [pluginDirPath stringByAppendingPathComponent: [NSString stringWithUTF8String: pluginName]];
+				path = [pluginDirPath stringByAppendingPathComponent: @(pluginName)];
 
 				if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly) {
-					path2 = [path stringByAppendingPathComponent: [NSString stringWithUTF8String: workingData]];
+					path2 = [path stringByAppendingPathComponent: @(workingData)];
 					if ((handle = tryLoadingInternals(path2)))
 						return handle;
 				} else {
@@ -238,9 +237,9 @@ void *ioLoadModuleRaw(char *pluginName)
 						return handle;
 				}
 
-				path = [systemFolder stringByAppendingPathComponent: [NSString stringWithUTF8String: pluginName]];
+				path = [systemFolder stringByAppendingPathComponent: @(pluginName)];
 				if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly) {
-					path2 = [path stringByAppendingPathComponent: [NSString stringWithUTF8String: workingData]];
+					path2 = [path stringByAppendingPathComponent: @(workingData)];
 					if ((handle = tryLoadingInternals(path2)))
 						return handle;
 				} else {
@@ -254,13 +253,13 @@ void *ioLoadModuleRaw(char *pluginName)
 			return NULL;
 		
 		for (framework= frameworks;  *framework;  ++framework) {
-			path = [[systemFolder stringByAppendingPathComponent: [NSString stringWithUTF8String: *framework]]
-					stringByAppendingPathComponent: [NSString stringWithUTF8String: pluginName]];
+			path = [[systemFolder stringByAppendingPathComponent: @(*framework)]
+					stringByAppendingPathComponent: @(pluginName)];
 			if ((handle= tryLoading(path, pluginName)))
 				return handle;
 			
-			path = [systemFolder stringByAppendingPathComponent: [NSString stringWithUTF8String: *framework]];
-			path = [path stringByAppendingPathComponent: [NSString stringWithUTF8String: pluginName]];
+			path = [systemFolder stringByAppendingPathComponent: @(*framework)];
+			path = [path stringByAppendingPathComponent: @(pluginName)];
 			path = [path stringByAppendingPathExtension: @"framework"];
 			
 			if ((handle= tryLoading(path, pluginName)))

@@ -52,8 +52,8 @@
 	self.inputFormat = calloc(1,sizeof(AudioStreamBasicDescription));
 	self.outputBuffers = calloc((unsigned)kNumberOfBuffers,sizeof(AudioQueueBufferRef));
 	self.inputBuffers = calloc((unsigned) kNumberOfBuffers,sizeof(AudioQueueBufferRef));
-	soundOutQueue = [Queue new];
-	soundInQueue = [Queue new];
+	soundOutQueue = [[Queue alloc] init];
+	soundInQueue = [[Queue alloc] init];
 	return 1;
 }
 

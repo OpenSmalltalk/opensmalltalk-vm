@@ -53,6 +53,11 @@ sqInt ioProcessEvents(void) {
 	
 	aioPoll(0);		
 	
+	if ([[NSThread currentThread] isCancelled]) {
+		gQuitNowRightNow = YES;
+		return 0;
+	}
+	
 	if ([getMainWindowDelegate() forceUpdateFlush]) {
 		[getMainWindowDelegate() ioForceDisplayUpdate];
 	}

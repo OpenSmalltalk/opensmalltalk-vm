@@ -31,6 +31,7 @@ extern sqExport SoundGenerationPlugin_exports[];
 extern sqExport SoundPlugin_exports[];
 extern sqExport StarSqueakPlugin_exports[];
 extern sqExport SurfacePlugin_exports[];
+extern sqExport UUIDPlugin_exports[];
 
 sqExport *pluginExports[] = {
 	vm_exports,
@@ -41,14 +42,16 @@ sqExport *pluginExports[] = {
 	B2DPlugin_exports,
 	BitBltPlugin_exports,
 	DSAPrims_exports,
+#ifdef BUILD_FOR_OSX
 	DropPlugin_exports,
+    JoystickTabletPlugin_exports,
+#endif
 	FFTPlugin_exports,
 	FilePlugin_exports,
 	FloatArrayPlugin_exports,
 	GeniePlugin_exports,
 	JPEGReadWriter2Plugin_exports,
 	JPEGReaderPlugin_exports,
-	JoystickTabletPlugin_exports,
 	Klatt_exports,
 	LargeIntegers_exports,
 	LocalePlugin_exports,
@@ -56,12 +59,15 @@ sqExport *pluginExports[] = {
 	MiscPrimitivePlugin_exports,
 	RePlugin_exports,
 	SecurityPlugin_exports,
+#ifdef BUILD_FOR_OSX
 	SerialPlugin_exports,
+#endif
 	SocketPlugin_exports,
 	SoundCodecPrims_exports,
 	SoundGenerationPlugin_exports,
 	SoundPlugin_exports,
 	StarSqueakPlugin_exports,
 	SurfacePlugin_exports,
+    UUIDPlugin_exports,
 	NULL
 };

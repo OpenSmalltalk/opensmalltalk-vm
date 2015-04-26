@@ -61,51 +61,50 @@ sqInt	windowActive=1;
 	}
 	
 	if ([event isKindOfClass: [NSArray class]]) {
-		if ([[event objectAtIndex: 0] intValue] == 1) {
-			[self buildTouchEventComplexObject: [event objectAtIndex: 2] forType:  [event objectAtIndex: 1] placeIn: (sqComplexEvent *) evt];
+		if ([event[0] intValue] == 1) {
+			[self buildTouchEventComplexObject: event[2] forType:  event[1] placeIn: (sqComplexEvent *) evt];
 			return;
 		}
-		if ([[event objectAtIndex: 0] intValue] == 2) { // acceleration dataa
-			[self buildAccelerationEventComplexObject: [event objectAtIndex: 1] placeIn: (sqComplexEvent *) evt];
+		if ([event[0] intValue] == 2) { // acceleration dataa
+			[self buildAccelerationEventComplexObject: event[1] placeIn: (sqComplexEvent *) evt];
 			return;
 		}
-		if ([[event objectAtIndex: 0] intValue] == 3) { // location data error
+		if ([event[0] intValue] == 3) { // location data error
 			[self buildLocationEventComplexObject: event placeIn: (sqComplexEvent *) evt];
 			return;
 		}
-		if ([[event objectAtIndex: 0] intValue] == 4) { // location data 
+		if ([event[0] intValue] == 4) { // location data 
 			[self buildLocationEventComplexObject: event placeIn: (sqComplexEvent *) evt];
 			return;
 		}
-		if ([[event objectAtIndex: 0] intValue] == 5) { // memory warning  
+		if ([event[0] intValue] == 5) { // memory warning  
 			[self buildApplicationEventComplexObject: event placeIn: (sqComplexEvent *) evt];
 			return;
 		}
-		if ([[event objectAtIndex: 0] intValue] == 6) { // termination warning 
+		if ([event[0] intValue] == 6) { // termination warning 
 			[self buildApplicationEventComplexObject: event placeIn: (sqComplexEvent *) evt];
 			return;
 		}
 		
-		if ([[event objectAtIndex: 0] intValue] == 7) { // keyboard 
-			[(NSData *)[event objectAtIndex: 1] getBytes: evt length: sizeof(sqInputEvent)];
+		if ([event[0] intValue] == 7) { // keyboard 
+			[(NSData *)event[1] getBytes: evt length: sizeof(sqInputEvent)];
 			return;
 		}
 
-		if ([[event objectAtIndex: 0] intValue] == 8) { // window 
-			[(NSData *)[event objectAtIndex: 1] getBytes: evt length: sizeof(sqWindowEvent)];
+		if ([event[0] intValue] == 8) { // window 
+			[(NSData *)event[1] getBytes: evt length: sizeof(sqWindowEvent)];
 			return;
 		}
 	}
 }
 
 - (void) recordTouchEvent:(NSSet *) touches type: (UITouchPhase) phase {
-	NSMutableArray* data = [NSMutableArray new];
+    NSMutableArray* data = [NSMutableArray arrayWithCapacity: 3];
 	
-	[data addObject: [NSNumber numberWithInteger: 1]];
-	[data addObject: [NSNumber numberWithInteger: (signed) phase]];
+	[data addObject: @1];
+	[data addObject: @((signed) phase)];
 	[data addObject: touches];
 	[eventQueue addItem: data];
-	[data release];
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 

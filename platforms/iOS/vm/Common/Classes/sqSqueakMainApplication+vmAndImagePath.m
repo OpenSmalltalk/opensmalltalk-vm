@@ -80,7 +80,7 @@ extern sqSqueakAppDelegate *gDelegateApp;
 	
 	if (!sqImageName) 
 		return;
-	self.imageNameURL = [NSURL fileURLWithPath: [NSString stringWithUTF8String: sqImageName] isDirectory: NO];
+	self.imageNameURL = [NSURL fileURLWithPath: @(sqImageName) isDirectory: NO];
 }
 
 - (const char *) getVMPath {

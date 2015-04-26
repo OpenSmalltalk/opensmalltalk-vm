@@ -88,6 +88,7 @@ size_t sqImageFileReadEntireImage(void *ptr, size_t elementSize, size_t count, F
 #define sqImageFileReadEntireImage(memoryAddress, elementSize,  length, fileStream) \
 sqImageFileReadEntireImage(memoryAddress, elementSize, length, fileStream)
 #else
+#include <dlfcn.h>
 #define sqImageFileReadEntireImage(memoryAddress, elementSize,  length, fileStream) length 
 #endif
 

@@ -80,11 +80,11 @@ void mtfsfi(unsigned long long fpscr) {}
 }
 
 - (sqSqueakFileDirectoryInterface *) newFileDirectoryInterfaceInstance {
-	return [sqSqueakOSXFileDirectoryInterface new];
+	return [[sqSqueakOSXFileDirectoryInterface alloc] init];
 }
 
 - (sqSqueakInfoPlistInterface *) newSqSqueakInfoPlistInterfaceCreation {
-	return [sqSqueakOSXInfoPlistInterface new];
+	return [[sqSqueakOSXInfoPlistInterface alloc] init];
 }
 
 - (void) doHeadlessSetup {
@@ -98,7 +98,7 @@ void mtfsfi(unsigned long long fpscr) {}
 	bzero(&info, sizeof(ProcessInfoRec));
 	info.processInfoLength = sizeof(ProcessInfoRec);
 	GetProcessInformation(&psn,&info);
-	if ((info.processMode & modeOnlyBackground) && TransformProcessType != NULL) {
+	if (info.processMode & modeOnlyBackground) {
 		OSStatus returnCode = TransformProcessType(& psn, kProcessTransformToForegroundApplication);
 #pragma unused(returnCode)
 		SetFrontProcess(&psn);		
@@ -110,7 +110,7 @@ void mtfsfi(unsigned long long fpscr) {}
 }
 
 - (void) setupSoundLogic {
-	self.soundInterfaceLogic = [sqSqueakOSXSoundCoreAudio new];
+	self.soundInterfaceLogic = [[sqSqueakOSXSoundCoreAudio alloc] init];
  	[(sqSqueakOSXSoundCoreAudio *) self.soundInterfaceLogic soundInitOverride];
 
 	snd_Start(2644, 22050, 1, 0);
@@ -128,7 +128,7 @@ void mtfsfi(unsigned long long fpscr) {}
 
 - (NSInteger) parseArgument: (NSString *) argData peek: (NSString *) peek {
 	
-	if ([argData compare: @"--"] == NSOrderedSame) {
+	if ([argData isEqualToString: @"--"]) {
 		return 1;
 	}
 
@@ -139,16 +139,16 @@ void mtfsfi(unsigned long long fpscr) {}
 	NS_HANDLER;
 	NS_ENDHANDLER;
 	
-	if ([argData compare: @"-help"] == NSOrderedSame) {
+	if ([argData isEqualToString: @"-help"]) {
 		[self usage];
 		return 1;
 	}
-	if ([argData compare: @"-headless"] == NSOrderedSame) {
+	if ([argData isEqualToString: @"-headless"]) {
 		extern BOOL gSqueakHeadless;
 		gSqueakHeadless = YES;
 		return 1;
 	}
-	if ([argData compare: @"-memory"] == NSOrderedSame) {
+	if ([argData isEqualToString: @"-memory"]) {
 		gMaxHeapSize = (usqInt) [self strtobkm: [peek UTF8String]];
 		return 2;
 	}
@@ -167,13 +167,13 @@ void mtfsfi(unsigned long long fpscr) {}
 	NSUInteger i,result;
 	BOOL optionsCompleted = NO;
 	for (i=0; i<[revisedArgs count]; i++) {
-		NSString *argData = [revisedArgs objectAtIndex:i];
-		NSString *peek = (i == ([revisedArgs count] - 1)) ? @"" : [revisedArgs objectAtIndex:i+1];
-		if ([argData compare: @"--"] == NSOrderedSame) {
+		NSString *argData = revisedArgs[i];
+		NSString *peek = (i == ([revisedArgs count] - 1)) ? @"" : revisedArgs[i+1];
+		if ([argData isEqualToString: @"--"]) {
 			optionsCompleted = YES;
 			continue;
 		}
-		if (!optionsCompleted && [[argData substringToIndex: 1] compare: @"-"] != NSOrderedSame) {
+		if (!optionsCompleted && ![[argData substringToIndex: 1] isEqualToString: @"-"]) {
 			optionsCompleted = YES;
 			continue;
 		}
@@ -190,7 +190,6 @@ void mtfsfi(unsigned long long fpscr) {}
 		}
 		
 	}
-	[revisedArgs release];
 }
 
 - (long long) strtobkm: (const char *) str {
@@ -210,11 +209,11 @@ void mtfsfi(unsigned long long fpscr) {}
 
 - (void) parseEnv: (NSDictionary *) env {
 #warning untested!
-	NSString *imageNameString = [env objectForKey: @"SQUEAK_IMAGE"];
+	NSString *imageNameString = env[@"SQUEAK_IMAGE"];
 	if (imageNameString) {
 		[(sqSqueakOSXInfoPlistInterface*) self.infoPlistInterfaceLogic setOverrideSqueakImageName: imageNameString];
 	}
-	NSString *memoryString = [env objectForKey: @"SQUEAK_MEMORY"];
+	NSString *memoryString = env[@"SQUEAK_MEMORY"];
 	if (memoryString) {
 		gMaxHeapSize = (usqInt) [self strtobkm: [memoryString UTF8String]];
 	}

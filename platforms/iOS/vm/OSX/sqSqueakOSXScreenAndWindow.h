@@ -39,13 +39,10 @@
 #import "sqSqueakScreenAndWindow.h"
 #import "sqSqueakOSXNSView.h"
 
-@protocol NSWindowDelegate <NSObject> @end
-
-
 @interface sqSqueakOSXScreenAndWindow : sqSqueakScreenAndWindow  <NSWindowDelegate>{
 	sqSqueakOSXNSView	 *mainViewOnWindow;
 }
 
-@property (nonatomic,retain)  sqSqueakOSXNSView *mainViewOnWindow;
+@property (nonatomic,strong)  sqSqueakOSXNSView *mainViewOnWindow;
 
 @end

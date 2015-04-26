@@ -60,7 +60,7 @@ extern struct VirtualMachine* interpreterProxy;
 	
 	if (indexNumber < 0)	/* VM argument */ {
 		if (-indexNumber <= [self.argsArguments count])
-			return (char *) [self.argsArguments objectAtIndex: (NSUInteger) (-indexNumber - 1)];
+            return (char *) [(self.argsArguments)[(NSUInteger) (indexNumber - 1)] cStringUsingEncoding: [self currentVMEncoding]];
 	}
 	else {
 		switch (indexNumber) {
@@ -94,7 +94,7 @@ extern struct VirtualMachine* interpreterProxy;
 				
 			default: 
 				if ((indexNumber - 2) > 0 && ((indexNumber - 2) < [self.argsArguments count]))
-					return (char *) [[self.argsArguments objectAtIndex: (NSUInteger) (indexNumber - 2)] cStringUsingEncoding: [self currentVMEncoding]];
+					return (char *) [(self.argsArguments)[(NSUInteger) (indexNumber - 2)] cStringUsingEncoding: [self currentVMEncoding]];
 		}
 	}
 	interpreterProxy->success(false);

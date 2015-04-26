@@ -31,35 +31,33 @@
 #include "sqMacExtendedClipboard.h"
 #import <Cocoa/Cocoa.h>
 
-
 extern struct VirtualMachine* interpreterProxy;
 
-void sqPasteboardClear(void *inPasteboard )
+void sqPasteboardClear(CLIPBOARDTYPE inPasteboard )
 {
 	NSArray *arrayOfTypes = [[NSArray alloc] init];
 	
-	[(NSPasteboard*) inPasteboard declareTypes: arrayOfTypes owner: nil];
-	[arrayOfTypes release];
+	[inPasteboard declareTypes: arrayOfTypes owner: nil];
 
 }
 
-sqInt sqPasteboardGetItemCount (void *inPasteboard )
+sqInt sqPasteboardGetItemCount (CLIPBOARDTYPE inPasteboard )
 {
-	return [[(NSPasteboard *)inPasteboard types] count];
+	return [[inPasteboard types] count];
 }
 
-sqInt sqPasteboardCopyItemFlavorsitemNumber (  void *inPasteboard, sqInt formatNumber )
+sqInt sqPasteboardCopyItemFlavorsitemNumber (  CLIPBOARDTYPE inPasteboard, sqInt formatNumber )
 {
 
 	sqInt formatTypeLength;
 	sqInt flavorCount;
 	
-	flavorCount =  [[(NSPasteboard *)inPasteboard types] count];
+	flavorCount =  [[inPasteboard types] count];
 	if (formatNumber > flavorCount) {
 		return interpreterProxy->nilObject();
 	}
 	
-	NSString *formatType = [[(NSPasteboard *)inPasteboard types] objectAtIndex: formatNumber-1];
+	NSString *formatType = [inPasteboard types][formatNumber-1];
 	
 	const char *utf8data = [formatType UTF8String];
 	formatTypeLength = strlen(utf8data);
@@ -72,42 +70,35 @@ sqInt sqPasteboardCopyItemFlavorsitemNumber (  void *inPasteboard, sqInt formatN
 
 void * sqCreateClipboard( void )
 {
-	return (void*) [NSPasteboard generalPasteboard];
+	return (__bridge void*) [NSPasteboard generalPasteboard];
 }
 
-void sqPasteboardPutItemFlavordatalengthformatTypeformatLength ( void *inPasteboard, char* inData, sqInt dataLength, char* format, sqInt formatLength)
+void sqPasteboardPutItemFlavordatalengthformatTypeformatLength ( CLIPBOARDTYPE inPasteboard, char* inData, sqInt dataLength, char* format, sqInt formatLength)
 {	
 	NSString *formatType = [[NSString alloc] initWithBytes: format length: formatLength encoding:  NSUTF8StringEncoding];
 	NSData* data = [[NSData alloc ] initWithBytes: inData length: dataLength];
 	NSArray *arrayOfTypes = [[NSArray alloc] initWithObjects: formatType,nil];
 
-	[(NSPasteboard *)inPasteboard declareTypes: arrayOfTypes owner: nil];
-	[(NSPasteboard *)inPasteboard setData: data forType: formatType];
+	[inPasteboard declareTypes: arrayOfTypes owner: nil];
+	[inPasteboard setData: data forType: formatType];
 
-	[arrayOfTypes release];
-	[data release];
-	[formatType release];
 }
 	
-sqInt sqPasteboardCopyItemFlavorDataformatformatLength ( void *inPasteboard, char* format, sqInt formatLength)
+sqInt sqPasteboardCopyItemFlavorDataformatformatLength ( CLIPBOARDTYPE inPasteboard, char* format, sqInt formatLength)
 {
 	NSString *formatType = [[NSString alloc] initWithBytes: format length: formatLength encoding:  NSUTF8StringEncoding];
 	NSArray *arrayOfTypes = [[NSArray alloc] initWithObjects: formatType,nil];
-	NSString     *type= [(NSPasteboard *)inPasteboard availableTypeFromArray: arrayOfTypes];
+	NSString     *type= [inPasteboard availableTypeFromArray: arrayOfTypes];
 														
 	if (type == NULL) {
-		[formatType  release];
-		[arrayOfTypes release];
 		return interpreterProxy->nilObject();
 	}		
 
-	NSData *dataBuffer = [(NSPasteboard *)inPasteboard dataForType: type];
+	NSData *dataBuffer = [inPasteboard dataForType: type];
 	sqInt dataLength = [dataBuffer length];
 	sqInt outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), dataLength );
 	char *outDataPtr = (char *) interpreterProxy->firstIndexableField(outData);
 	[dataBuffer getBytes: outDataPtr];
 
-	[formatType release];
-	[arrayOfTypes release];
 	return outData;
 }

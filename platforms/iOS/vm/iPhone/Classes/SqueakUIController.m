@@ -54,11 +54,10 @@ static	sqWindowEvent evt;
 }
 
 - (void) pushEventToQueue {	
-	NSMutableArray* data = [NSMutableArray new];
-	[data addObject: [NSNumber numberWithInteger: 8]];
+	NSMutableArray* data = [NSMutableArray arrayWithCapacity:2];
+	[data addObject: @8];
 	[data addObject: [NSData  dataWithBytes:(const void *) &evt length: sizeof(sqInputEvent)]];
 	[[gDelegateApp.squeakApplication eventQueue]  addItem: data];
-	[data release];	
 }
 
 
@@ -98,7 +97,10 @@ static	sqWindowEvent evt;
 //	gDelegateApp.mainView.frame = f;
 //	[gDelegateApp.scrollView sizeToFit];
 
-	[self performSelector: @selector(pushEventToQueue) withObject: nil afterDelay: 1.0]; 
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self pushEventToQueue];
+    });
+
 
 }
 

@@ -66,6 +66,16 @@ static const char *moduleName =
 	"ClipboardExtendedPlugin 28 March 2015 (e)"
 #endif
 ;
+
+typedef void * CLIPBOARDTYPE;
+
+void sqPasteboardClear( void * inPasteboard );
+sqInt sqPasteboardGetItemCount ( CLIPBOARDTYPE inPasteboard );
+sqInt sqPasteboardCopyItemFlavorsitemNumber (   CLIPBOARDTYPE inPasteboard, sqInt formatNumber );
+void * sqCreateClipboard( void );
+void sqPasteboardPutItemFlavordatalengthformatTypeformatLength ( CLIPBOARDTYPE inPasteboard, char* inData, sqInt dataLength, char* format, sqInt formatLength);
+sqInt sqPasteboardCopyItemFlavorDataformatformatLength ( CLIPBOARDTYPE inPasteboard, char* format, sqInt formatLength);
+
 static sqInt simulator;
 
 

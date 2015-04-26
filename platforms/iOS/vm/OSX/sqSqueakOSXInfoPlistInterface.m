@@ -125,31 +125,31 @@ extern int gSqueakUseFileMappedMMAP;
 }
 
 - (void) setInfoPlistNSStringValueFrom: (NSDictionary*) dict key: (NSString *) key  default: (NSString*) defaultString using: (SEL) selector{
-	NSString *str = [dict objectForKey: key];
+	NSString *str = dict[key];
 	str = (str) ? str : defaultString;
 	[self performSelectorOnMainThread: selector withObject: str waitUntilDone: YES];
 }
 
 - (void) setInfoPlistNumberValueFrom: (NSDictionary*) dict key: (NSString *) key  default: (NSInteger) defaultInteger using: (SEL) selector{
-	NSNumber *num = [dict objectForKey: key];
-	num = (num) ? num : [NSNumber numberWithInteger: defaultInteger];
+	NSNumber *num = dict[key];
+	num = (num) ? num : @(defaultInteger);
 	[self performSelectorOnMainThread: selector withObject: num waitUntilDone: YES];
 }
 
 - (void) setInfoPlistFloatNumberValueFrom: (NSDictionary*) dict key: (NSString *) key  default: (float) defaultFloat using: (SEL) selector{
-	NSNumber *num = [dict objectForKey: key];
-	num = (num) ? num : [NSNumber numberWithFloat: defaultFloat];
+	NSNumber *num = dict[key];
+	num = (num) ? num : @(defaultFloat);
 	[self performSelectorOnMainThread: selector withObject: num waitUntilDone: YES];
 }
 
 - (void) setInfoPlistBooleanValueFrom: (NSDictionary*) dict key: (NSString *) key  default: (BOOL) defaultBool using: (SEL) selector{
-	NSNumber *num = [dict objectForKey: key];
-	num = (num) ? num : [NSNumber numberWithBool: defaultBool];
+	NSNumber *num = dict[key];
+	num = (num) ? num : @(defaultBool);
 	[self performSelectorOnMainThread: selector withObject: num waitUntilDone: YES];
 }
 
 - (void) setInfoPlistNumberValueForMouseX: (NSInteger) x Y: (NSInteger) y from: (NSDictionary*) dict key: (NSString *) key  default: (NSInteger) number browser: (BOOL) browser {
-	NSNumber *num = [dict objectForKey: key];
+	NSNumber *num = dict[key];
 	NSInteger numberAsInteger = (num) ? [num integerValue] : number;
 	if (browser) {
 		SqueakBrowserMouseMappings[x][y] = numberAsInteger;
@@ -186,52 +186,52 @@ extern int gSqueakUseFileMappedMMAP;
 
 
 - (void) parseInfoPlist {
-	NSAutoreleasePool * pool = [NSAutoreleasePool new];
+	@autoreleasepool {
 	
-	NSBundle *mainBundle = [NSBundle mainBundle];
-	NSDictionary *dict = [mainBundle infoDictionary]; 
-	
-	[self setInfoPlistNumberValueFrom: dict key: @"SqueakNumStackPages" default: 0 using: @selector(setOverrideSqueakNumStackPages:)];
-	[self setInfoPlistNumberValueFrom: dict key: @"SqueakEdenBytes" default: 0 using: @selector(setOverrideSqueakEdenBytes:)];
+		NSBundle *mainBundle = [NSBundle mainBundle];
+		NSDictionary *dict = [mainBundle infoDictionary]; 
+		
+		[self setInfoPlistNumberValueFrom: dict key: @"SqueakNumStackPages" default: 0 using: @selector(setOverrideSqueakNumStackPages:)];
+		[self setInfoPlistNumberValueFrom: dict key: @"SqueakEdenBytes" default: 0 using: @selector(setOverrideSqueakEdenBytes:)];
 
-	[self setInfoPlistNumberValueFrom: dict key: @"SqueakDebug" default: 0 using: @selector(setOverrideSqueakDebug:)];
-	[self setInfoPlistBooleanValueFrom: dict key: @"SqueakQuitOnQuitAppleEvent" default: NO using: @selector(setOverrideSqueakQuitOnQuitAppleEvent:)];
-	[self setInfoPlistBooleanValueFrom: dict key: @"SqueakUseFileMappedMMAP" default: NO using: @selector(setOverrideSqueakUseFileMappedMMAP:)];
-	[self setInfoPlistNumberValueFrom: dict key: @"SqueakMaxHeapSize" default: 512*1024*1024 using: @selector(setOverrideSqueakMaxHeapSize:)];
-	[self setInfoPlistNumberValueFrom: dict key: @"SqueakUIFlushPrimaryDeferNMilliseconds" default: 20 using: @selector(setOverrideSqueakUIFlushPrimaryDeferNMilliseconds:)];
-	[self setInfoPlistFloatNumberValueFrom: dict key: @"SqueakUIFadeForFullScreenInSeconds" default: 1.5 using: @selector(setOverrideSqueakUIFadeForFullScreenInSeconds:)];
+		[self setInfoPlistNumberValueFrom: dict key: @"SqueakDebug" default: 0 using: @selector(setOverrideSqueakDebug:)];
+		[self setInfoPlistBooleanValueFrom: dict key: @"SqueakQuitOnQuitAppleEvent" default: NO using: @selector(setOverrideSqueakQuitOnQuitAppleEvent:)];
+		[self setInfoPlistBooleanValueFrom: dict key: @"SqueakUseFileMappedMMAP" default: NO using: @selector(setOverrideSqueakUseFileMappedMMAP:)];
+		[self setInfoPlistNumberValueFrom: dict key: @"SqueakMaxHeapSize" default: 512*1024*1024 using: @selector(setOverrideSqueakMaxHeapSize:)];
+		[self setInfoPlistNumberValueFrom: dict key: @"SqueakUIFlushPrimaryDeferNMilliseconds" default: 20 using: @selector(setOverrideSqueakUIFlushPrimaryDeferNMilliseconds:)];
+		[self setInfoPlistFloatNumberValueFrom: dict key: @"SqueakUIFadeForFullScreenInSeconds" default: 1.5 using: @selector(setOverrideSqueakUIFadeForFullScreenInSeconds:)];
 
-	[self setInfoPlistNSStringValueFrom: dict key: @"SqueakUnTrustedDirectory" default: @"/foobar/tooBar/forSqueak/bogus/" using: @selector(setOverrideSqueakUnTrustedDirectory:)];
-	[self setInfoPlistNSStringValueFrom: dict key: @"SqueakTrustedDirectory" default: @"/foobar/tooBar/forSqueak/bogus/" using: @selector(setOverrideSqueakTrustedDirectory:)];
-	[self setInfoPlistNSStringValueFrom: dict key: @"SqueakResourceDirectory" default: NULL using: @selector(setSqueakResourceDirectory:)];
-	[self setInfoPlistBooleanValueFrom: dict key: @"SqueakPluginsBuiltInOrLocalOnly" default: YES using: @selector(setOverrideSqueakPluginsBuiltInOrLocalOnly:)];
-	[self setInfoPlistBooleanValueFrom: dict key: @"SqueakExplicitWindowOpenNeeded" default: NO using: @selector(setOverrideSqueakExplicitWindowOpenNeeded:)];
-	[self setInfoPlistNSStringValueFrom: dict key: @"SqueakImageName" default: @"Squeak.image" using: @selector(setOverrideSqueakImageName:)];
-	[self setInfoPlistNumberValueForMouseX: 0 Y: 1 from: dict key: @"SqueakMouseNoneButton1" default: 1 browser: NO];
-	[self setInfoPlistNumberValueForMouseX: 0 Y: 2 from: dict key: @"SqueakMouseNoneButton2" default: 3 browser: NO];
-	[self setInfoPlistNumberValueForMouseX: 0 Y: 3 from: dict key: @"SqueakMouseNoneButton3" default: 2 browser: NO];
-	[self setInfoPlistNumberValueForMouseX: 1 Y: 1 from: dict key: @"SqueakMouseCmdButton1" default: 3 browser: NO];
-	[self setInfoPlistNumberValueForMouseX: 1 Y: 2 from: dict key: @"SqueakMouseCmdButton2" default: 3 browser: NO];
-	[self setInfoPlistNumberValueForMouseX: 1 Y: 3 from: dict key: @"SqueakMouseCmdButton3" default: 2 browser: NO];
-	[self setInfoPlistNumberValueForMouseX: 2 Y: 1 from: dict key: @"SqueakMouseOptionButton1" default: 2 browser: NO];
-	[self setInfoPlistNumberValueForMouseX: 2 Y: 2 from: dict key: @"SqueakMouseOptionButton2" default: 3 browser: NO];
-	[self setInfoPlistNumberValueForMouseX: 2 Y: 3 from: dict key: @"SqueakMouseOptionButton3" default: 2 browser: NO];
-	[self setInfoPlistNumberValueForMouseX: 3 Y: 1 from: dict key: @"SqueakMouseControlButton1" default: 1 browser: NO];
-	[self setInfoPlistNumberValueForMouseX: 3 Y: 2 from: dict key: @"SqueakMouseControlButton2" default: 3 browser: NO];
-	[self setInfoPlistNumberValueForMouseX: 3 Y: 3 from: dict key: @"SqueakMouseControlButton3" default: 2 browser: NO];
-	[self setInfoPlistNumberValueForMouseX: 0 Y: 1 from: dict key: @"SqueakBrowserMouseNoneButton1" default: 1 browser: YES];
-	[self setInfoPlistNumberValueForMouseX: 0 Y: 2 from: dict key: @"SqueakBrowserMouseNoneButton2" default: 3 browser: YES];
-	[self setInfoPlistNumberValueForMouseX: 0 Y: 3 from: dict key: @"SqueakBrowserMouseNoneButton3" default: 2 browser: YES];
-	[self setInfoPlistNumberValueForMouseX: 1 Y: 1 from: dict key: @"SqueakBrowserMouseCmdButton1" default: 3 browser: YES];
-	[self setInfoPlistNumberValueForMouseX: 1 Y: 2 from: dict key: @"SqueakBrowserMouseCmdButton2" default: 3 browser: YES];
-	[self setInfoPlistNumberValueForMouseX: 1 Y: 3 from: dict key: @"SqueakBrowserMouseCmdButton3" default: 2 browser: YES];
-	[self setInfoPlistNumberValueForMouseX: 2 Y: 1 from: dict key: @"SqueakBrowserMouseOptionButton1" default: 2 browser: YES];
-	[self setInfoPlistNumberValueForMouseX: 2 Y: 2 from: dict key: @"SqueakBrowserMouseOptionButton2" default: 3 browser: YES];
-	[self setInfoPlistNumberValueForMouseX: 2 Y: 3 from: dict key: @"SqueakBrowserMouseOptionButton3" default: 2 browser: YES];
-	[self setInfoPlistNumberValueForMouseX: 3 Y: 1 from: dict key: @"SqueakBrowserMouseControlButton1" default: 1 browser: YES];
-	[self setInfoPlistNumberValueForMouseX: 3 Y: 2 from: dict key: @"SqueakBrowserMouseControlButton2" default: 3 browser: YES];
-	[self setInfoPlistNumberValueForMouseX: 3 Y: 3 from: dict key: @"SqueakBrowserMouseControlButton3" default: 2 browser: YES];
-	[pool drain];
+		[self setInfoPlistNSStringValueFrom: dict key: @"SqueakUnTrustedDirectory" default: @"/foobar/tooBar/forSqueak/bogus/" using: @selector(setOverrideSqueakUnTrustedDirectory:)];
+		[self setInfoPlistNSStringValueFrom: dict key: @"SqueakTrustedDirectory" default: @"/foobar/tooBar/forSqueak/bogus/" using: @selector(setOverrideSqueakTrustedDirectory:)];
+		[self setInfoPlistNSStringValueFrom: dict key: @"SqueakResourceDirectory" default: NULL using: @selector(setSqueakResourceDirectory:)];
+		[self setInfoPlistBooleanValueFrom: dict key: @"SqueakPluginsBuiltInOrLocalOnly" default: YES using: @selector(setOverrideSqueakPluginsBuiltInOrLocalOnly:)];
+		[self setInfoPlistBooleanValueFrom: dict key: @"SqueakExplicitWindowOpenNeeded" default: NO using: @selector(setOverrideSqueakExplicitWindowOpenNeeded:)];
+		[self setInfoPlistNSStringValueFrom: dict key: @"SqueakImageName" default: @"Squeak.image" using: @selector(setOverrideSqueakImageName:)];
+		[self setInfoPlistNumberValueForMouseX: 0 Y: 1 from: dict key: @"SqueakMouseNoneButton1" default: 1 browser: NO];
+		[self setInfoPlistNumberValueForMouseX: 0 Y: 2 from: dict key: @"SqueakMouseNoneButton2" default: 3 browser: NO];
+		[self setInfoPlistNumberValueForMouseX: 0 Y: 3 from: dict key: @"SqueakMouseNoneButton3" default: 2 browser: NO];
+		[self setInfoPlistNumberValueForMouseX: 1 Y: 1 from: dict key: @"SqueakMouseCmdButton1" default: 3 browser: NO];
+		[self setInfoPlistNumberValueForMouseX: 1 Y: 2 from: dict key: @"SqueakMouseCmdButton2" default: 3 browser: NO];
+		[self setInfoPlistNumberValueForMouseX: 1 Y: 3 from: dict key: @"SqueakMouseCmdButton3" default: 2 browser: NO];
+		[self setInfoPlistNumberValueForMouseX: 2 Y: 1 from: dict key: @"SqueakMouseOptionButton1" default: 2 browser: NO];
+		[self setInfoPlistNumberValueForMouseX: 2 Y: 2 from: dict key: @"SqueakMouseOptionButton2" default: 3 browser: NO];
+		[self setInfoPlistNumberValueForMouseX: 2 Y: 3 from: dict key: @"SqueakMouseOptionButton3" default: 2 browser: NO];
+		[self setInfoPlistNumberValueForMouseX: 3 Y: 1 from: dict key: @"SqueakMouseControlButton1" default: 1 browser: NO];
+		[self setInfoPlistNumberValueForMouseX: 3 Y: 2 from: dict key: @"SqueakMouseControlButton2" default: 3 browser: NO];
+		[self setInfoPlistNumberValueForMouseX: 3 Y: 3 from: dict key: @"SqueakMouseControlButton3" default: 2 browser: NO];
+		[self setInfoPlistNumberValueForMouseX: 0 Y: 1 from: dict key: @"SqueakBrowserMouseNoneButton1" default: 1 browser: YES];
+		[self setInfoPlistNumberValueForMouseX: 0 Y: 2 from: dict key: @"SqueakBrowserMouseNoneButton2" default: 3 browser: YES];
+		[self setInfoPlistNumberValueForMouseX: 0 Y: 3 from: dict key: @"SqueakBrowserMouseNoneButton3" default: 2 browser: YES];
+		[self setInfoPlistNumberValueForMouseX: 1 Y: 1 from: dict key: @"SqueakBrowserMouseCmdButton1" default: 3 browser: YES];
+		[self setInfoPlistNumberValueForMouseX: 1 Y: 2 from: dict key: @"SqueakBrowserMouseCmdButton2" default: 3 browser: YES];
+		[self setInfoPlistNumberValueForMouseX: 1 Y: 3 from: dict key: @"SqueakBrowserMouseCmdButton3" default: 2 browser: YES];
+		[self setInfoPlistNumberValueForMouseX: 2 Y: 1 from: dict key: @"SqueakBrowserMouseOptionButton1" default: 2 browser: YES];
+		[self setInfoPlistNumberValueForMouseX: 2 Y: 2 from: dict key: @"SqueakBrowserMouseOptionButton2" default: 3 browser: YES];
+		[self setInfoPlistNumberValueForMouseX: 2 Y: 3 from: dict key: @"SqueakBrowserMouseOptionButton3" default: 2 browser: YES];
+		[self setInfoPlistNumberValueForMouseX: 3 Y: 1 from: dict key: @"SqueakBrowserMouseControlButton1" default: 1 browser: YES];
+		[self setInfoPlistNumberValueForMouseX: 3 Y: 2 from: dict key: @"SqueakBrowserMouseControlButton2" default: 3 browser: YES];
+		[self setInfoPlistNumberValueForMouseX: 3 Y: 3 from: dict key: @"SqueakBrowserMouseControlButton3" default: 2 browser: YES];
+	}
 }
 
 @end

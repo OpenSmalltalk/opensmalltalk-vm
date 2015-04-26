@@ -40,6 +40,7 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 #import "sqSqueakScreenAndWindow.h"
 #import "sqSqueakMainApplication+screen.h"
 #import "sqMacHostWindow.h"
+
 #ifdef BUILD_FOR_OSX
 #import "SqueakOSXAppDelegate.h"
 extern SqueakOSXAppDelegate *gDelegateApp;
@@ -64,7 +65,7 @@ void MyProviderReleaseData (
 @synthesize windowIndex;
 @synthesize blip,squeakUIFlushPrimaryDeferNMilliseconds,forceUpdateFlush,lastFlushTime,displayIsDirty;
 
-- (id)init {
+- (instancetype)init {
     self = [super init];
     if (self) {
         // Initialization code here.
@@ -112,11 +113,13 @@ void MyProviderReleaseData (
 	lastFlushTime = [NSDate timeIntervalSinceReferenceDate];
 	self.displayIsDirty = NO;
 	self.forceUpdateFlush = NO;
-	if ([NSThread isMainThread]) 
+    
+	[[self getMainView] preDrawThelayers];
+    
+
+    dispatch_async(dispatch_get_main_queue(), ^{
 		[[self getMainView] drawThelayers];
-	else {
-		[[self getMainView] performSelectorOnMainThread: @selector(drawThelayers) withObject: nil waitUntilDone: NO];
-	}
+    });
 }
 
 - (void) ioForceDisplayUpdate {
@@ -200,6 +203,8 @@ void MyProviderReleaseData (
 }
 
 - (void)dealloc {
-	[super dealloc];
+	if (blip) {
+		[blip invalidate];
+	}
 }
 @end

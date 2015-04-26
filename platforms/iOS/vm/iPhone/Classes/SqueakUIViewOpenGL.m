@@ -41,7 +41,7 @@
 
 // A class extension to declare private methods
 @interface SqueakUIViewOpenGL ()
-@property (nonatomic, retain) EAGLContext *context;
+@property (nonatomic, strong) EAGLContext *context;
 @end
 
 const GLfloat spriteTexcoords[] = {
@@ -58,7 +58,7 @@ const GLfloat spriteTexcoords[] = {
     return [CAEAGLLayer class];
 }
 
-- (id)initWithFrame:(CGRect) aFrame {
+- (instancetype)initWithFrame:(CGRect) aFrame {
 	self = [super initWithFrame: aFrame];
 	clippyIsEmpty = YES;
 	syncNeeded = NO;
@@ -66,16 +66,13 @@ const GLfloat spriteTexcoords[] = {
 	// Get the layer
 	CAEAGLLayer *eaglLayer = (CAEAGLLayer *)self.layer;
 	eaglLayer.opaque = YES;
-	eaglLayer.drawableProperties = [NSDictionary dictionaryWithObjectsAndKeys:
-									[NSNumber numberWithBool:NO], kEAGLDrawablePropertyRetainedBacking,
-									kEAGLColorFormatRGBA8, kEAGLDrawablePropertyColorFormat,
-									nil];
+	eaglLayer.drawableProperties = @{kEAGLDrawablePropertyRetainedBacking: @NO,
+									kEAGLDrawablePropertyColorFormat: kEAGLColorFormatRGBA8};
 	
 	//other choice is kEAGLColorFormatRGB565
 	
 	context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES1];        
 	if (!context || ![EAGLContext setCurrentContext:context]) {
-		[self release];
 		return nil;
 	}
 
@@ -121,8 +118,6 @@ const GLfloat spriteTexcoords[] = {
     if ([EAGLContext currentContext] == context)
         [EAGLContext setCurrentContext:nil];
     
-    self.context = nil;
-    [super dealloc];
 }
 
 - (void)layoutSubviews {

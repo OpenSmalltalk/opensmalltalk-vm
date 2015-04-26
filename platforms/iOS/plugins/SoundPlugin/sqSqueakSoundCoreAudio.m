@@ -40,15 +40,14 @@
 #define SqueakFrameSize	4	// guaranteed (see class SoundPlayer)
 extern struct VirtualMachine* interpreterProxy;
 
-void MyAudioQueueOutputCallback (void *inUserData,
+void MyAudioQueueOutputCallback (sqSqueakSoundCoreAudio *inUserData,
 AudioQueueRef        inAQ,
 								 AudioQueueBufferRef  inBuffer);
 
-void MyAudioQueueOutputCallback (void *inUserData,
+void MyAudioQueueOutputCallback (sqSqueakSoundCoreAudio *myInstance,
 								 AudioQueueRef        inAQ,
 								 AudioQueueBufferRef  inBuffer) {
 	
-	sqSqueakSoundCoreAudio * myInstance = ( sqSqueakSoundCoreAudio *)inUserData;
 	soundAtom	*atom = [myInstance.soundOutQueue returnOldest];
 	
 	if (!atom) {
@@ -60,7 +59,6 @@ void MyAudioQueueOutputCallback (void *inUserData,
 			atom = [myInstance.soundOutQueue returnAndRemoveOldest];
 			inBuffer->mAudioDataByteSize = (int) atom.byteCount;
 			memcpy(inBuffer->mAudioData,atom.data,atom.byteCount);
-			[atom release];
 //NSLog(@"%i Fill sound buffer with %i bytesA",ioMSecs(),inBuffer->mAudioDataByteSize);
 		} else {
 			inBuffer->mAudioDataByteSize = (int) MIN(atom.byteCount - atom.startOffset,inBuffer->mAudioDataBytesCapacity);
@@ -68,7 +66,6 @@ void MyAudioQueueOutputCallback (void *inUserData,
 			atom.startOffset = atom.startOffset + inBuffer->mAudioDataByteSize;
 			if (atom.startOffset == atom.byteCount) {
 				atom = [myInstance.soundOutQueue returnAndRemoveOldest]; //ignore now it's empty
-				[atom release];
 			}
 //NSLog(@"%i Fill sound buffer with %i bytesB",ioMSecs(),inBuffer->mAudioDataByteSize);
 		}
@@ -87,7 +84,7 @@ void	MyAudioQueuePropertyListenerProc (  void *              inUserData,
 {
 	sqInt	isRunning;
 	UInt32 size = sizeof(isRunning);
-	sqSqueakSoundCoreAudio * myInstance = ( sqSqueakSoundCoreAudio *)inUserData;
+	sqSqueakSoundCoreAudio * myInstance = (__bridge  sqSqueakSoundCoreAudio *)inUserData;
 
 	AudioQueueGetProperty (inAQ, kAudioQueueProperty_IsRunning, &isRunning, &size);
 	myInstance.outputIsRunning = isRunning;
@@ -111,7 +108,7 @@ void MyAudioQueueInputCallback (
 								UInt32                              inNumberPacketDescriptions,
 								const AudioStreamPacketDescription  *inPacketDescs) {
 	
-	sqSqueakSoundCoreAudio * myInstance = ( sqSqueakSoundCoreAudio *)inUserData;
+	sqSqueakSoundCoreAudio * myInstance = (__bridge  sqSqueakSoundCoreAudio *)inUserData;
 	
 	if (!myInstance.inputIsRunning) 
 		return;
@@ -119,7 +116,6 @@ void MyAudioQueueInputCallback (
 	if (inNumberPacketDescriptions > 0) {
 		soundAtom *atom = [[soundAtom alloc] initWith: inBuffer->mAudioData count: inBuffer->mAudioDataByteSize];
 		[myInstance.soundInQueue addItem: atom];
-		[atom release];
     }
 	
 	AudioQueueEnqueueBuffer (inAQ,
@@ -136,7 +132,7 @@ void MyAudioQueueInputCallback (
 @synthesize	byteCount;
 @synthesize	startOffset;
 
-- initWith: (char*) buffer count: (usqInt) bytes {
+- (instancetype) initWith: (char*) buffer count: (usqInt) bytes {
 	data = malloc(bytes);
 	memcpy(data,buffer,bytes);
 	byteCount = bytes;
@@ -149,7 +145,6 @@ void MyAudioQueueInputCallback (
 	data = 0;
 	byteCount = 0;
 	startOffset = 0;
-	[super dealloc];
 }
 
 @end
@@ -182,8 +177,8 @@ void MyAudioQueueInputCallback (
 	self.inputFormat = calloc(1,sizeof(AudioStreamBasicDescription));
 	self.outputBuffers = calloc((unsigned)kNumberOfBuffers,sizeof(AudioQueueBufferRef));
 	self.inputBuffers = calloc((unsigned) kNumberOfBuffers,sizeof(AudioQueueBufferRef));
-	soundOutQueue = [Queue new];
-	soundInQueue = [Queue new];
+	soundOutQueue = [[Queue alloc] init];
+	soundInQueue = [[Queue alloc] init];
 	return 1;
 }
 
@@ -221,14 +216,14 @@ void MyAudioQueueInputCallback (
 	
 	/* we want to create a new audio queue only if we have to */
 	
-	if (self.outputAudioQueue == nil || (memcmp(&check,self.outputFormat,sizeof(AudioStreamBasicDescription) != 0))) {	
+	if (self.outputAudioQueue == nil || (memcmp(&check,self.outputFormat,(size_t)(sizeof(AudioStreamBasicDescription) != 0)))) {	
 		AudioQueueRef newQueue;
 		//NSLog(@"%i create new audioqueue",ioMSecs());
 		if (self.outputAudioQueue) 
 			[self snd_StopAndDispose];
 		*self.outputFormat = check;
-		result =  AudioQueueNewOutput (self.outputFormat, &MyAudioQueueOutputCallback,
-								   (void*) self,
+		result =  AudioQueueNewOutput (self.outputFormat, (void*) &MyAudioQueueOutputCallback,
+								   (__bridge void*) self,
 								   NULL,
 								   NULL,
 								   0,
@@ -238,7 +233,7 @@ void MyAudioQueueInputCallback (
 			return interpreterProxy->primitiveFail();
 		self.outputAudioQueue = newQueue;
 	
-		AudioQueueAddPropertyListener (self.outputAudioQueue, kAudioQueueProperty_IsRunning, MyAudioQueuePropertyListenerProc, self);
+		AudioQueueAddPropertyListener (self.outputAudioQueue, kAudioQueueProperty_IsRunning, MyAudioQueuePropertyListenerProc, (__bridge void *)(self));
 	
 		self.bufferSizeForOutput = (unsigned) (SqueakFrameSize * nChannels * frameCount * 2);
 		int i;
@@ -285,7 +280,7 @@ void MyAudioQueueInputCallback (
 	OSStatus result  = AudioQueueDispose (self.outputAudioQueue,true);
 #pragma unused(result)
 	self.outputAudioQueue = nil;
-	self.soundOutQueue = [Queue new];
+	self.soundOutQueue = [[Queue alloc] init];
 	return 1;
 }
 
@@ -314,7 +309,6 @@ void MyAudioQueueInputCallback (
 		
 	soundAtom *atom = [[soundAtom alloc] initWith: arrayIndex+startIndex count: (unsigned) (byteCount-startIndex)];
 	[self.soundOutQueue addItem: atom];
-	[atom release];
 	
 	if (!self.outputIsRunning) {
 		int i;
@@ -365,7 +359,7 @@ void MyAudioQueueInputCallback (
 	AudioQueueRef newQueue;
 	
 	OSStatus result =  AudioQueueNewInput (self.inputFormat, &MyAudioQueueInputCallback,
-								   (void*) self,
+								   (__bridge void*) self,
 								   NULL,
 								   NULL,
 								   0,
@@ -401,7 +395,7 @@ void MyAudioQueueInputCallback (
 		return 0;
 	result = AudioQueueDispose (self.inputAudioQueue,true);
 	self.inputAudioQueue = nil;
-	self.soundInQueue = [Queue new];
+	self.soundInQueue = [[Queue alloc] init];
 	return 1;
 }
 
@@ -429,7 +423,6 @@ void MyAudioQueueInputCallback (
 		atom = [self.soundInQueue returnAndRemoveOldest];
 		memcpy(arrayIndex+start,atom.data,atom.byteCount);
 		count= MIN(atom.byteCount, bufferSizeInBytes - start);
-		[atom release];
 		return count / (SqueakFrameSize / 2) / self.inputChannels;
 	} else {
 		count= MIN(atom.byteCount-atom.startOffset, bufferSizeInBytes - start);
@@ -437,7 +430,6 @@ void MyAudioQueueInputCallback (
 		atom.startOffset = atom.startOffset + (count);
 		if (atom.startOffset == atom.byteCount) {
 			atom = [self.soundInQueue returnAndRemoveOldest]; //ignore now it's empty
-			[atom release];
 		}
 		return count / (SqueakFrameSize / 2) / self.inputChannels;
 	}

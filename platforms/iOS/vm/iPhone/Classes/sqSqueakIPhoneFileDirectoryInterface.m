@@ -45,7 +45,7 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 
 - (BOOL) setWorkingDirectory {
 	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES); 
-	NSString *documentsDirectory = [paths objectAtIndex:0]; 
+	NSString *documentsDirectory = paths[0]; 
 	BOOL results = [[NSFileManager defaultManager] changeCurrentDirectoryPath: documentsDirectory];
 	return results;
 }
@@ -54,7 +54,7 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 	NSFileManager * fileMgr = [NSFileManager defaultManager];
 	NSDictionary * fileAttributes = [fileMgr fileAttributesAtPath: filePath traverseLink: NO];
 	if (fileAttributes) {
-		if ([[fileAttributes objectForKey: NSFileTypeSymbolicLink] boolValue]) {
+		if ([fileAttributes[NSFileTypeSymbolicLink] boolValue]) {
 			NSString* targetFilePath = [fileMgr destinationOfSymbolicLinkAtPath: filePath error: NULL];
 			if (targetFilePath) {
 				filePath = targetFilePath;
