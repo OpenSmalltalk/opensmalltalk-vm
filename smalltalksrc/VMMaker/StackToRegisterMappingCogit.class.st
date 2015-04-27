@@ -775,7 +775,7 @@ StackToRegisterMappingCogit >> allocateEqualsEqualsRegistersArgNeedsReg: argNeed
 					 self ssTop popToReg: argReg.
 					 (self ssValue: 1) popToReg: rcvrReg]
 				ifFalse:
-					[argReg := self self allocateRegForStackEntryAt: 0.
+					[argReg := self allocateRegForStackEntryAt: 0.
 					 self ssTop popToReg: argReg]]
 		ifFalse:
 			[self assert: rcvrNeedsReg.
