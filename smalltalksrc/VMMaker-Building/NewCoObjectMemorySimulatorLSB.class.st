@@ -61,6 +61,11 @@ NewCoObjectMemorySimulatorLSB >> halfWordLowInLong32: long32 [
 ]
 
 { #category : #'memory access' }
+NewCoObjectMemorySimulatorLSB >> intAt: byteAddress put: a32BitValue [
+	^self longAt: byteAddress put: (a32BitValue bitAnd: 16rFFFFFFFF)
+]
+
+{ #category : #'memory access' }
 NewCoObjectMemorySimulatorLSB >> long64At: byteAddress [
 	"memory is a Bitmap, a 32-bit indexable array of bits"
 	| hiWord loWord |
