@@ -1387,13 +1387,13 @@ StackToRegisterMappingCogit >> extractMaybeBranchDescriptorInto: fourArgBlock [
 		[nExts := nExts + 1.
 		 nextPC := nextPC + branchDescriptor numBytes].
 
-	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse: 
-		[ ^ fourArgBlock value: branchDescriptor value: nextPC value: 0 value: 0 ].
-	
-	targetBytecodePC := nextPC
+	targetBytecodePC := postBranchPC := 0.
+
+	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifTrue: 
+		[ targetBytecodePC := nextPC
 							+ branchDescriptor numBytes
 							+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
-	postBranchPC := nextPC + branchDescriptor numBytes.
+		postBranchPC := nextPC + branchDescriptor numBytes ].
 	
 	fourArgBlock value: branchDescriptor value: nextPC value: postBranchPC value: targetBytecodePC
 ]
@@ -3248,8 +3248,8 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 	| nextPC branchDescriptor unforwardRcvr argReg targetBytecodePC
 	unforwardArg  rcvrReg postBranchPC label fixup |
 	<var: #fixup type: #'BytecodeFixup *'>
-	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
+	<var: #label type: #'AbstractInstruction *'>
 	
 	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
 		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
@@ -3628,7 +3628,6 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 StackToRegisterMappingCogit >> genVanillaSpecialSelectorEqualsEquals [
 	| nextPC postBranchPC targetBytecodePC branchDescriptor
 	  rcvrReg argReg argIsConstant rcvrIsConstant  |
-	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	
 	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
