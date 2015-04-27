@@ -282,7 +282,7 @@ SistaStackToRegisterMappingCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytec
 	"We loose the information of in which register is stack top 
 	when jitting the branch target so we need to flush everything. 
 	We could use a fixed register here...."
-	reg := self self allocateRegForStackEntryAt: 0.
+	reg := self allocateRegForStackEntryAt: 0.
 	self ssTop popToReg: reg.
 	self ssFlushTo: simStackPtr. "flushed but the value is still in reg"
 	
