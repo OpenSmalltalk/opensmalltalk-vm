@@ -15,11 +15,11 @@ DIR=$RemoteRoot/$DATE
 echo ssh -x $RemoteUser mkdir $DIR
 ssh -x $RemoteUser mkdir $DIR
 echo scp -p $BASENAME.image $BASENAME.changes $BASENAME.sum "$@" $RemoteUser:$DIR
-scp -p $BASENAME.image $BASENAME.changes "$@" $RemoteUser:$DIR
+scp -p $BASENAME.image $BASENAME.changes $BASENAME.sum "$@" $RemoteUser:$DIR
 echo ssh $RemoteUser chmod a-w $DIR/* \\\; ls -al $DIR
 ssh $RemoteUser chmod a-w $DIR/* \; ls -al $DIR
-echo ssh $RemoteUser rm $RemoteRoot/{$BASENAME.image,$BASENAME.changes}
-ssh $RemoteUser rm $RemoteRoot/{$BASENAME.image,$BASENAME.changes}
+echo ssh $RemoteUser rm $RemoteRoot/{$BASENAME.image,$BASENAME.changes,$BASENAME.sum}
+ssh $RemoteUser rm $RemoteRoot/{$BASENAME.image,$BASENAME.changes,$BASENAME.sum}
 echo ssh $RemoteUser cd $RemoteRoot \\\; ln -s $DATE/{$BASENAME.image,$BASENAME.changes} .
 ssh $RemoteUser cd $RemoteRoot \; ln -s $DATE/{$BASENAME.image,$BASENAME.changes,$BASENAME.sum} .
 ssh $RemoteUser ls -l $RemoteRoot $RemoteRoot/$DATE
