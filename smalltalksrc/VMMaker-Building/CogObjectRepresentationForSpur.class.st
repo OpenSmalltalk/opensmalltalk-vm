@@ -38,6 +38,7 @@ CogObjectRepresentationForSpur >> branchIf: reg notInstanceOfBehavior: classObj 
 	 through. Cannot change the value of reg (may be used afterwards)."
 	| classIndex |
 	<inline: true>
+	<var: #targetFixUp type: #'AbstractInstruction *'>
 	classIndex := objectMemory classTagForClass: classObj.
 	(objectMemory isImmediateClass: classObj)
 		ifTrue:
@@ -57,7 +58,7 @@ CogObjectRepresentationForSpur >> branchIf: reg notInstanceOfBehaviors: arrayObj
 	 otherwise fall-through. reg should not be edited."
 	
 	| allImmediate noneImmediate immediateMask numNonImmediates classObj |
-	<inline: true>
+	<var: #targetFixUp type: #'AbstractInstruction *'>
 	
 	"let me tell you all about it, let me falsify"
 	allImmediate := true. noneImmediate := true. immediateMask := 0. numNonImmediates := 0.
@@ -301,14 +302,14 @@ CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg:
 	cogit Jump: fwdJumpTarget.
 	finished := nonFwdJumpTargetOrZero = 0
 		ifTrue: [ cogit Label ]
-		ifFalse: [ nonFwdJumpTargetOrZero ].
+		ifFalse: [ self cCoerceSimple: nonFwdJumpTargetOrZero to: #'AbstractInstruction *' ].
 	skip jmpTarget: (ok jmpTarget: finished).
 	^0
 ]
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch jumpBackTo: instruction [
-	<inline: true>
+	<var: #instruction type: #'AbstractInstruction *'>
 	^ self 
 		genEnsureOopInRegNotForwarded: reg 
 		scratchReg: scratch 
@@ -925,7 +926,10 @@ CogObjectRepresentationForSpur >> maybeMarkCounters: theCounters [
 { #category : #'sista support' }
 CogObjectRepresentationForSpur >> mixed: numNonImmediates branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
 	| jmpImmediate jumps label numCases classObj index |
+	<var: #label type: #'AbstractInstruction *'>
+	<var: #jmpImmediate type: #'AbstractInstruction *'>
 	<var: #jumps type: #'AbstractInstruction **'>
+	<var: #targetFixUp type: #'AbstractInstruction *'>
 	numCases := objectMemory numSlotsOf: arrayObj.
 	cogit MoveR: reg R: TempReg.
 	jmpImmediate := self genJumpImmediateInScratchReg: TempReg.
@@ -969,7 +973,8 @@ CogObjectRepresentationForSpur >> mixed: numNonImmediates branchIf: reg notInsta
 CogObjectRepresentationForSpur >> noneImmediateBranchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
 	"All classes in arrayObj are not immediate"
 	| label numJumps jumps classObj |
-	<inline: true>
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	<var: #label type: #'AbstractInstruction *'>
 	<var: #jumps type: #'AbstractInstruction **'>
 	cogit MoveR: reg R: TempReg.
 	jumps := self alloca: (objectMemory numSlotsOf: arrayObj) type: (self cCode: [#'AbstractInstruction *'] inSmalltalk: [cogit backEnd class])..

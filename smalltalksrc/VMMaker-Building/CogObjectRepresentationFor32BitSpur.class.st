@@ -14,6 +14,7 @@ CogObjectRepresentationFor32BitSpur class >> defaultObjectMemoryClass [
 CogObjectRepresentationFor32BitSpur >> allImmediate: immediateMask branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
 	| jmpImmediate |
 	< inline: true>	
+	<var: #targetFixUp type: #'AbstractInstruction *'>
 	self assert: immediateMask = objectMemory tagMask.
 	cogit MoveR: reg R: TempReg.
 	jmpImmediate := self genJumpNotImmediateInScratchReg: TempReg.
@@ -44,6 +45,7 @@ CogObjectRepresentationFor32BitSpur >> branch2CasesIf: reg notInstanceOfBehavior
 CogObjectRepresentationFor32BitSpur >> branchIf: reg hasNotImmediateTag: classIndex target: targetFixUp [
 	| jmpImmediate|
 	<inline: true>
+	<var: #targetFixUp type: #'AbstractInstruction *'>
 	cogit MoveR: reg R: TempReg.
 	classIndex = objectMemory smallIntegerTag ifTrue:
 		[jmpImmediate := self genJumpNotSmallIntegerInScratchReg: TempReg].
