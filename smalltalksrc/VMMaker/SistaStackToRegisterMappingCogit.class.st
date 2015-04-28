@@ -644,7 +644,6 @@ SistaStackToRegisterMappingCogit >> generateSistaRuntime [
 { #category : #'method introspection' }
 SistaStackToRegisterMappingCogit >> getJumpTargetPCAt: pc [
 	<api>
-	<returnTypeC: #sqInt>
 	^backEnd jumpTargetPCAt: pc
 ]
 
