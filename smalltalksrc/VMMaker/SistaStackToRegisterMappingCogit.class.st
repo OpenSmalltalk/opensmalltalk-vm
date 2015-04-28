@@ -291,7 +291,7 @@ SistaStackToRegisterMappingCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytec
 	distance := extB * 256 + byte2.
 	extB := 0.
 	
-	targetFixUp := (self ensureFixupAt: bytecodePC + 3 + distance - initialPC) asUnsignedInteger.
+	targetFixUp := self cCoerceSimple: (self ensureFixupAt: bytecodePC + 3 + distance - initialPC) to: #'AbstractInstruction *'..
 		
 	(objectMemory isArrayNonImm: literal)
 		ifTrue: [objectRepresentation branchIf: reg notInstanceOfBehaviors: literal target: targetFixUp]
@@ -454,7 +454,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 
-	(coInterpreter isOptimizedMethod: methodObj) ifTrue: [ ^ super genSpecialSelectorComparison ].
+	(coInterpreter isOptimizedMethod: methodObj) ifTrue: [ ^ self genUnoptimizedSpecialSelectorComparison ].
 
 	self ssFlushTo: simStackPtr - 2.
 	primDescriptor := self generatorAt: byte0.
@@ -553,6 +553,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	  counterAddress countTripped unforwardArg unforwardRcvr argReg rcvrReg regMask |
 	<var: #fixup type: #'BytecodeFixup *'>
 	<var: #countTripped type: #'AbstractInstruction *'>
+	<var: #label type: #'AbstractInstruction *'>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 
@@ -622,13 +623,16 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 { #category : #'bytecode generators' }
 SistaStackToRegisterMappingCogit >> genUnconditionalTrapBytecode [
 	"SistaV1: *	217		Trap"
-	"Use ssFlushNoUpdateTo: so we continue compiling as if the stack had not been flushed . 
-	(typically, this kind of trap is in a branch)  
-	Control does not return after the ceClassTrapTrampoline call."
-	self ssFlushNoUpdateTo: simStackPtr.
+	self ssFlushTo: simStackPtr.
 	self CallRT: ceTrapTrampoline.
 	self annotateBytecode: self Label.
 	^0
+]
+
+{ #category : #'bytecode generators' }
+SistaStackToRegisterMappingCogit >> genUnoptimizedSpecialSelectorComparison [
+	"This method is there because if I put directly the super send in genSpecialSelectorComparison Slang does not correctly translte the code to C, it does not correctly type one of the branchDescriptor to BytecodeDescriptor"
+	^ super genSpecialSelectorComparison
 ]
 
 { #category : #initialization }
@@ -640,6 +644,7 @@ SistaStackToRegisterMappingCogit >> generateSistaRuntime [
 { #category : #'method introspection' }
 SistaStackToRegisterMappingCogit >> getJumpTargetPCAt: pc [
 	<api>
+	<returnTypeC: #sqInt>
 	^backEnd jumpTargetPCAt: pc
 ]
 
@@ -1070,23 +1075,4 @@ SistaStackToRegisterMappingCogit >> scanMethod [
 			ifFalse: [nExts := extA := extB := 0].
 		 prevBCDescriptor := descriptor].
 	^numBlocks
-]
-
-{ #category : #'simulation stack' }
-SistaStackToRegisterMappingCogit >> ssFlushNoUpdateTo: index [
-	"This version of ssFlushTo: does /not/ update the simulation stack; it merely generates the spill code.
-	 It is used to spill all values to the stack on a rare failing branch (the class trap) when we don't want to
-	 flush the stack on the main path and hence mustn't update the simulation stack if there is no spill."
-	<var: 'copiedEntry' type: #CogSimStackEntry>
-	self assert: needsFrame.
-	methodOrBlockNumTemps to: simSpillBase - 1 do:
-		[:i| self assert: (self simStackAt: i) spilled].
-	simSpillBase <= index ifTrue:
-		[(simSpillBase max: 0) to: index do:
-			[:i| | copiedEntry |
-			copiedEntry := self cCode: [simStack at: index]
-								inSmalltalk: [(simStack at: index) copy].
-			copiedEntry
-				ensureSpilledAt: (self frameOffsetOfTemporary: i)
-				from: FPReg]]
 ]
