@@ -177,7 +177,7 @@ NewCoObjectMemory >> methodHeaderOf: methodObj [
 		ifFalse:
 			[self assert: header asUnsignedInteger < coInterpreter heapBase.
 			 self assert: (coInterpreter cCoerceSimple: header to: #'CogMethod *') objectHeader
-						= self nullHeaderForMachineCodeMethod..
+						= self nullHeaderForMachineCodeMethod.
 			(coInterpreter cCoerceSimple: header to: #'CogMethod *') methodHeader]
 ]
 
@@ -194,7 +194,7 @@ NewCoObjectMemory >> noCheckMethodHeaderOf: methodObj [
 		ifFalse:
 			[self assert: header asUnsignedInteger < coInterpreter heapBase.
 			 self assert: (coInterpreter cCoerceSimple: header to: #'CogMethod *') objectHeader
-						= self nullHeaderForMachineCodeMethod..
+						= self nullHeaderForMachineCodeMethod.
 			(coInterpreter cCoerceSimple: header to: #'CogMethod *') methodHeader]
 ]
 
