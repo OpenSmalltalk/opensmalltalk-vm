@@ -13,7 +13,7 @@ CogObjectRepresentationFor64BitSpur class >> defaultObjectMemoryClass [
 { #category : #'sista support' }
 CogObjectRepresentationFor64BitSpur >> allImmediate: immediateMask branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
 	| incorrectTag tag1 tag2 |
-	< inline: true>		
+	<var: #targetFixUp type: #'AbstractInstruction *'>
 	cogit MoveR: reg R: TempReg.
 	(self genJumpNotImmediateInScratchReg: TempReg) jmpTarget: targetFixUp. 
 	immediateMask = objectMemory tagMask ifFalse: 
