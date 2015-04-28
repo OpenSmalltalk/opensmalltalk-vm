@@ -556,7 +556,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 	"SimpleStackBasedCogit initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid"
 	"StackToRegisterMappingCogit initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid"
 
-	super initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid..
+	super initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid.
 	numPushNilsFunction := #v3or4:Num:Push:Nils:.
 	pushNilSizeFunction := #v3or4PushNilSize:numInitialNils:
 ]
@@ -3584,7 +3584,7 @@ StackToRegisterMappingCogit >> genUnaryInlinePrimitive: prim [
 					"06		unchecked doubleWord64Type format numDoubleWords"
 				  }
 		otherwise:
-			[^EncounteredUnknownBytecode]..
+			[^EncounteredUnknownBytecode].
 	self ssPushRegister: resultReg.
 	^0
 ]

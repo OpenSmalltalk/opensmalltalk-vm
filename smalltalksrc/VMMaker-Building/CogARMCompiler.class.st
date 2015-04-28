@@ -2203,7 +2203,9 @@ CogARMCompiler >> jumpTargetPCAt: pc [
 	operand := word bitAnd: 16rFFFFFF.
 	(operand anyMask: 16r800000) ifTrue:
 		[operand := operand - 16r1000000].
-	^operand * 4 + pc + 8 bitAnd: cogit addressSpaceMask
+	^self
+		cCode: [operand * 4 + pc + 8]
+		inSmalltalk: [operand * 4 + pc + 8 bitAnd: cogit addressSpaceMask]
 ]
 
 { #category : #'ARM convenience instructions' }

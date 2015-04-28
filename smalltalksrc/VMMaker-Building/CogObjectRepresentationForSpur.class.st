@@ -935,7 +935,7 @@ CogObjectRepresentationForSpur >> mixed: numNonImmediates branchIf: reg notInsta
 	jmpImmediate := self genJumpImmediateInScratchReg: TempReg.
 	
 	"Rcvr is non immediate"
-	jumps := self alloca: numNonImmediates type: (self cCode: [#'AbstractInstruction *'] inSmalltalk: [cogit backEnd class])..
+	jumps := self alloca: numNonImmediates type: (self cCode: [#'AbstractInstruction *'] inSmalltalk: [cogit backEnd class]).
 	self genGetClassIndexOfNonImm: reg into: TempReg.
 	index := 0.
 	0 to: numCases - 1 do:
@@ -977,7 +977,7 @@ CogObjectRepresentationForSpur >> noneImmediateBranchIf: reg notInstanceOfBehavi
 	<var: #label type: #'AbstractInstruction *'>
 	<var: #jumps type: #'AbstractInstruction **'>
 	cogit MoveR: reg R: TempReg.
-	jumps := self alloca: (objectMemory numSlotsOf: arrayObj) type: (self cCode: [#'AbstractInstruction *'] inSmalltalk: [cogit backEnd class])..
+	jumps := self alloca: (objectMemory numSlotsOf: arrayObj) type: (self cCode: [#'AbstractInstruction *'] inSmalltalk: [cogit backEnd class]).
 	(self genJumpImmediateInScratchReg: TempReg) jmpTarget: targetFixUp.
 	self genGetClassIndexOfNonImm: reg into: TempReg.
 	0 to: (numJumps := objectMemory numSlotsOf: arrayObj) - 1 do:

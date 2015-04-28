@@ -4080,7 +4080,7 @@ SpurMemoryManager >> ensureRoomOnObjStackAt: objStackRootIndex [
 										format: self wordIndexableFormat
 										classIndex: self wordSizeClassIndexPun.
 				 freeOrNewPage ifNil: [self error: 'no memory to allocate or extend obj stack'].
-				 self storePointer: ObjStackFreex ofObjStack: freeOrNewPage withValue: 0..
+				 self storePointer: ObjStackFreex ofObjStack: freeOrNewPage withValue: 0.
 				 marking ifTrue: [self setIsMarkedOf: freeOrNewPage to: true]].
 		 self storePointer: ObjStackMyx ofObjStack: freeOrNewPage withValue: objStackRootIndex;
 			  storePointer: ObjStackNextx ofObjStack: freeOrNewPage withValue: (stackOrNil = nilObj ifTrue: [0] ifFalse: [stackOrNil]);
@@ -4160,7 +4160,7 @@ SpurMemoryManager >> enterIntoClassTable: aBehavior [
 	 minorIndex to: self classTablePageSize - 1 do:
 		[:i|
 		(self fetchPointer: i ofObject: page) = nilObj ifTrue:
-			[classTableIndex := majorIndex << self classTableMajorIndexShift + i..
+			[classTableIndex := majorIndex << self classTableMajorIndexShift + i.
 			 "classTableIndex must never index the first page, which is reserved for classes known to the VM."
 			 self assert: classTableIndex >= (1 << self classTableMajorIndexShift).
 			 self storePointer: i
@@ -8313,7 +8313,7 @@ SpurMemoryManager >> numSlotsOf: objOop [
 	self flag: #endianness.
 	"numSlotsOf: should not be applied to free or forwarded objects."
 	self assert: (self classIndexOf: objOop) > self isForwardedObjectClassIndexPun.
-	numSlots := self rawNumSlotsOf: objOop..
+	numSlots := self rawNumSlotsOf: objOop.
 	^numSlots = self numSlotsMask	"overflow slots; (2^32)-1 slots are plenty"
 		ifTrue: [self rawOverflowSlotsOf: objOop]
 		ifFalse: [numSlots]
@@ -8324,7 +8324,7 @@ SpurMemoryManager >> numSlotsOfAny: objOop [
 	"A private internal version of numSlotsOf: that is happy to be applied to free or forwarded objects."
 	<returnTypeC: #usqInt>
 	| numSlots |
-	numSlots := self rawNumSlotsOf: objOop..
+	numSlots := self rawNumSlotsOf: objOop.
 	^numSlots = self numSlotsMask
 		ifTrue: [self rawOverflowSlotsOf: objOop] "overflow slots; (2^32)-1 slots are plenty"
 		ifFalse: [numSlots]
@@ -9957,7 +9957,7 @@ SpurMemoryManager >> setHiddenRootsObj: anOop [
 	hiddenRootsObj := anOop.
 	self cCode: [self assert: self validClassTableRootPages]
 		inSmalltalk: [numClassTablePages ifNotNil:
-						[self assert: self validClassTableRootPages]]..
+						[self assert: self validClassTableRootPages]].
 	classTableFirstPage := self fetchPointer: 0 ofObject: hiddenRootsObj.
 	self assert: (self numSlotsOf: classTableFirstPage) - 1 = self classTableMinorIndexMask.
 	"Set classTableIndex to the start of the last used page (excepting first page).
