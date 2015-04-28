@@ -240,7 +240,7 @@ Spur32BitCoMemoryManager >> methodHeaderOf: methodObj [
 		ifFalse:
 			[self assert: header asUnsignedInteger < newSpaceStart.
 			 self assert: (coInterpreter cCoerceSimple: header to: #'CogMethod *') objectHeader
-						= self nullHeaderForMachineCodeMethod..
+						= self nullHeaderForMachineCodeMethod.
 			(coInterpreter cCoerceSimple: header to: #'CogMethod *') methodHeader]
 ]
 
