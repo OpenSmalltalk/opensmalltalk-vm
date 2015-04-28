@@ -8246,15 +8246,6 @@ Cogit >> printMapEntry: annotation mcpc: mcpc args: tupleOfStreamCodeRangesAndMe
 	^0
 ]
 
-{ #category : #'method map' }
-Cogit >> printMcpc: mcpc Bcpc: bcpc on: aStream [
-	<doNotGenerate>
-	aStream ensureCr.
-	mcpc printOn: aStream base: 16.
-	aStream space; tab; print: bcpc; cr; flush.
-	^0
-]
-
 { #category : #disassembly }
 Cogit >> printMethodHeader: cogMethod on: aStream [
 	<doNotGenerate>
