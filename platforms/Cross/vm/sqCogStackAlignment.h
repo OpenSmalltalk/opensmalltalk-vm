@@ -41,7 +41,7 @@ extern unsigned long getfp();
 	 */
 #  if __GNUC__
 #   define getfp() ({ register unsigned long fp;					\
-					  asm volatile ("mov %0, r11 : "=r"(fp) : );	\
+					  asm volatile ("mov %0, r11" : "=r"(fp) : );	\
 					  fp; })
 #  else
 extern unsigned long getfp();
