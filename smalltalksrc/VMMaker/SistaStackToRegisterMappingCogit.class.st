@@ -434,7 +434,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 
-	(coInterpreter isOptimizedMethod: methodObj) ifTrue: [ ^ self genUnoptimizedSpecialSelectorComparison ].
+	(coInterpreter isOptimizedMethod: methodObj) ifTrue: [ ^ self genSpecialSelectorComparisonWithoutCounters ].
 
 	self ssFlushTo: simStackPtr - 2.
 	primDescriptor := self generatorAt: byte0.
@@ -523,6 +523,12 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 ]
 
 { #category : #'bytecode generators' }
+SistaStackToRegisterMappingCogit >> genSpecialSelectorComparisonWithoutCounters [
+	"This method is there because if I put directly the super send in genSpecialSelectorComparison Slang does not correctly translte the code to C, it does not correctly type one of the branchDescriptor to BytecodeDescriptor"
+	^ super genSpecialSelectorComparison
+]
+
+{ #category : #'bytecode generators' }
 SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 	"Override to count inlined branches if followed by a conditional branch.
 	 We borrow the following conditional branch's counter and when about to
@@ -537,7 +543,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 
-	((coInterpreter isOptimizedMethod: methodObj) or: [needsFrame not]) ifTrue: [ ^ super genSpecialSelectorEqualsEquals ].
+	((coInterpreter isOptimizedMethod: methodObj) or: [needsFrame not]) ifTrue: [ ^ self genSpecialSelectorEqualsEqualsWithForwardersWithoutCounters ].
 
 	regMask := 0.
 	
@@ -598,6 +604,12 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	"inlined version of #== ignoring the branchDescriptor if the counter trips to have normal state for the optimizer"
 	self genEqualsEqualsNoBranchArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
 	^ 0
+]
+
+{ #category : #'bytecode generators' }
+SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwardersWithoutCounters [
+	"This method is there because if I put directly the super send in genSpecialSelectorComparison Slang does not correctly translte the code to C, it does not correctly type one of the branchDescriptor to BytecodeDescriptor"
+	^ super genSpecialSelectorEqualsEqualsWithForwarders
 ]
 
 { #category : #'bytecode generators' }
