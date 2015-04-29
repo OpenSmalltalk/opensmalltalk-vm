@@ -1748,7 +1748,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 			[result := objectMemory integerObjectOf: self getDesiredCogCodeSize.
 			self setDesiredCogCodeSize: arg.
 			self initPrimCall]].
-	(index = 48 and: [self isCog]) ifTrue:
+	index = 48 ifTrue:
 		[(arg >= 0) ifTrue:
 			[result := objectMemory integerObjectOf: self getCogVMFlags.
 			self initPrimCall. "i.e. setCogVMFlags: can fail"
