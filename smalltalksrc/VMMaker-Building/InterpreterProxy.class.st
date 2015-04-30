@@ -790,9 +790,10 @@ InterpreterProxy >> primitiveFail [
 { #category : #other }
 InterpreterProxy >> primitiveFailFor: reasonCode [
 	"Set specific primitive failure.
-	 N.B. primitiveFailFor: PrimNoErr is expected to clear the primFailCode."
-	(self confirm:'A primitive is failing -- Stop simulation?') ifTrue:[self halt].
-	^primFailCode := reasonCode
+	N.B. primitiveFailFor: PrimNoErr is expected to clear the primFailCode.
+	Primitive 255 is called to indicate that we are currently simulating a primitive that should fail and the VM should handle that case appropriately (if supported by the VM)."
+	<primitive: 255>
+	^ primFailCode := reasonCode
 ]
 
 { #category : #other }
