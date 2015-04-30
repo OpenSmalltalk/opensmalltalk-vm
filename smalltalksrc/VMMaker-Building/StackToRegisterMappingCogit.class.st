@@ -1943,6 +1943,11 @@ StackToRegisterMappingCogit >> genJumpTo: targetBytecodePC [
 	^super genJumpTo: targetBytecodePC
 ]
 
+{ #category : #'primitive generators' }
+StackToRegisterMappingCogit >> genLoadArgAtDepth: n into: reg [
+	self shouldNotImplement
+]
+
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genMarshalledSend: selector numArgs: numArgs sendTable: sendTable [
 	<inline: false>
@@ -4296,6 +4301,11 @@ StackToRegisterMappingCogit >> prevInstIsPCAnnotated [
 	^false
 ]
 
+{ #category : #'primitive generators' }
+StackToRegisterMappingCogit >> primRetNOffsetFor: nargs [
+	self shouldNotImplement
+]
+
 { #category : #'simulation only' }
 StackToRegisterMappingCogit >> printSimStack [
 	<doNotGenerate>
@@ -4316,12 +4326,6 @@ StackToRegisterMappingCogit >> printSimStack [
 StackToRegisterMappingCogit >> pushNilSize: aMethodObj numInitialNils: numInitialNils [
 	<inline: true>
 	^self perform: pushNilSizeFunction with: aMethodObj with: numInitialNils
-]
-
-{ #category : #'simulation stack' }
-StackToRegisterMappingCogit >> register: reg isInMask: mask [
-	<inline: true>
-	^ mask anyMask: (self registerMaskFor: reg)
 ]
 
 { #category : #'compile abstract instructions' }
@@ -4350,20 +4354,6 @@ StackToRegisterMappingCogit >> reinitializeFixupsFrom: start through: end [
 				 pc := pc + descriptor numBytes + distance]
 			ifFalse: [pc := pc + descriptor numBytes].
 		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]]
-]
-
-{ #category : #trampolines }
-StackToRegisterMappingCogit >> returnRegForStoreCheck [
-	"We must ensure the ReceiverResultReg is live across the store check so that
-	 we can store into receiver inst vars in a frameless method since self exists
-	 only in ReceiverResultReg in a frameless method.  So if ReceiverResultReg is
-	 caller-saved we use the fact that ceStoreCheck: answers its argument to
-	 reload ReceiverResultReg cheaply.  Otherwise we don't care about the result
-	 and use the cResultRegister, effectively a no-op (see compileTrampoline...)"
-
-	^(self register: ReceiverResultReg isInMask: callerSavedRegMask)
-		ifTrue: [ReceiverResultReg]
-		ifFalse: [backEnd cResultRegister]
 ]
 
 { #category : #'compile abstract instructions' }

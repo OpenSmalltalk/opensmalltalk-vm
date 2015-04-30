@@ -1704,7 +1704,6 @@ CoInterpreter >> ceNonLocalReturn: returnValue [
 	 top frame has its instruction pointer on top of stack.  An interior
 	 frame has its instruction pointer in the caller frame. We need to
 	 peel back any frames on the page until we get to the correct frame."
-	self flag: 'currently caller pushes result'. "(in machine code)"
 	framePointer = frameToReturnTo
 		ifTrue:
 			[instructionPointer := self popStack]

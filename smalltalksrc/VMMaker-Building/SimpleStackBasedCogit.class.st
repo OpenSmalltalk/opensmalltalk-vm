@@ -1121,7 +1121,6 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 			self MoveMw: (backEnd hasLinkRegister ifTrue: [0] ifFalse: [objectMemory wordSize])
 				r: SPReg
 				R: ReceiverResultReg.
-			self flag: 'currently caller pushes result'.
 			self RetN: objectMemory wordSize].	"return to caller, popping receiver"
 
 	(flags anyMask: PrimCallCollectsProfileSamples) ifTrue:
@@ -1387,7 +1386,7 @@ SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: pre
 	<var: #jumpFailCheck type: #'AbstractInstruction *'>
 	<var: #doOp type: #'AbstractInstruction *'>
 	<var: #fail type: #'AbstractInstruction *'>
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: TempReg.
 	objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
 	self MoveR: TempReg R: ClassReg.
 	jumpImmediate := objectRepresentation genJumpImmediateInScratchReg: TempReg.
@@ -1405,8 +1404,7 @@ SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: pre
 					scratchReg: ClassReg
 					scratchReg: TempReg.
 	self MoveR: SendNumArgsReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpImmediate jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg].
@@ -1438,7 +1436,7 @@ SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator invert: invert
 	<var: #compare type: #'AbstractInstruction *'>
 	<var: #jumpFail type: #'AbstractInstruction *'>
 
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: TempReg.
 	objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
 	self MoveR: TempReg R: ClassReg.
 	jumpImmediate := objectRepresentation genJumpImmediateInScratchReg: TempReg.
@@ -1451,10 +1449,9 @@ SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator invert: invert
 		ifFalse: [compare := self CmpRd: DPFPReg1 Rd: DPFPReg0].
 	jumpCond := self perform: jumpOpcodeGenerator with: 0. "FP jumps are a little weird"
 	self genMoveFalseR: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpCond jmpTarget: (self genMoveTrueR: ReceiverResultReg).
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpImmediate jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg].
@@ -1854,6 +1851,15 @@ SimpleStackBasedCogit >> genJumpTo: targetBytecodePC [
 	^0
 ]
 
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genLoadArgAtDepth: n into: reg [
+	"Load an argument at depth from top-of-stack (0 relative) into a register.
+	 The actual offset depends on whether there's a link register or not."
+	self MoveMw: (backEnd hasLinkRegister ifTrue: [n] ifFalse: [n + 1]) * objectMemory wordSize
+		r: SPReg
+		R: reg
+]
+
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genLongJumpIfFalse [
 	| distance target |
@@ -2061,7 +2067,6 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 		ifFalse:
 			[self MoveMw: objectMemory wordSize r: SPReg R: ReceiverResultReg.	"Fetch result from stack"
 			 self PushR: ClassReg].											"Restore return pc on CISCs"
-	self flag: 'currently caller pushes result'.
 	self RetN: objectMemory wordSize.	"return to caller, popping receiver"
 
 	profiling ifTrue:
@@ -2083,7 +2088,7 @@ SimpleStackBasedCogit >> genPrimitiveAdd [
 	| jumpNotSI jumpOvfl |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpOvfl type: #'AbstractInstruction *'>
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ClassReg.
@@ -2091,8 +2096,7 @@ SimpleStackBasedCogit >> genPrimitiveAdd [
 	self AddR: ClassReg R: TempReg.
 	jumpOvfl := self JumpOverflow: 0.
 	self MoveR: TempReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpOvfl jmpTarget: (jumpNotSI jmpTarget: self Label).
 	^0
 ]
@@ -2103,9 +2107,9 @@ SimpleStackBasedCogit >> genPrimitiveAsCharacter [
 	na := coInterpreter argumentCountOf: methodObj.
 	na <= 1 ifTrue:
 		[na = 1 ifTrue:
-			[self MoveMw: objectMemory wordSize r: SPReg R: Arg0Reg].
+			[self genLoadArgAtDepth: 0 into: Arg0Reg].
 		 (r := objectRepresentation
-				genInnerPrimitiveAsCharacter: 0
+				genInnerPrimitiveAsCharacter: (self primRetNOffsetFor: na)
 				inReg: (na = 0 ifTrue: [ReceiverResultReg] ifFalse: [Arg0Reg])) < 0 ifTrue:
 			[^r]].
 	^self compileFallbackToInterpreterPrimitive
@@ -2127,8 +2131,7 @@ SimpleStackBasedCogit >> genPrimitiveAsFloat [
 					scratchReg: ClassReg
 					scratchReg: TempReg.
 	self MoveR: SendNumArgsReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize.
+	self RetN: (self primRetNOffsetFor: 0).
 	jumpFailAlloc jmpTarget: self Label.
 	^self compileFallbackToInterpreterPrimitive
 ]
@@ -2136,8 +2139,8 @@ SimpleStackBasedCogit >> genPrimitiveAsFloat [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveAt [
 	| r |
-	self MoveMw: objectMemory wordSize r: SPReg R: Arg0Reg.
-	(r := objectRepresentation genInnerPrimitiveAt: objectMemory wordSize * 2) < 0 ifTrue:
+	self genLoadArgAtDepth: 0 into: Arg0Reg.
+	(r := objectRepresentation genInnerPrimitiveAt: (self primRetNOffsetFor: 1)) < 0 ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
 ]
@@ -2145,9 +2148,9 @@ SimpleStackBasedCogit >> genPrimitiveAt [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveAtPut [
 	| r |
-	self MoveMw: objectMemory wordSize * 2 r: SPReg R: Arg0Reg.
-	self MoveMw: objectMemory wordSize r: SPReg R: Arg1Reg.
-	((r := objectRepresentation genInnerPrimitiveAtPut: objectMemory wordSize * 3) < 0
+	self genLoadArgAtDepth: 1 into: Arg0Reg.
+	self genLoadArgAtDepth: 0 into: Arg1Reg.
+	((r := objectRepresentation genInnerPrimitiveAtPut: (self primRetNOffsetFor: 2)) < 0
 	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
@@ -2157,13 +2160,12 @@ SimpleStackBasedCogit >> genPrimitiveAtPut [
 SimpleStackBasedCogit >> genPrimitiveBitAnd [
 	| jumpNotSI |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: Arg0Reg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	"Whether the SmallInteger tags are zero or non-zero, anding them together will preserve them."
 	self AndR: ClassReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpNotSI jmpTarget: self Label.
 	^0
 ]
@@ -2172,13 +2174,12 @@ SimpleStackBasedCogit >> genPrimitiveBitAnd [
 SimpleStackBasedCogit >> genPrimitiveBitOr [
 	| jumpNotSI |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	"Whether the SmallInteger tags are zero or non-zero, oring them together will preserve them."
 	self OrR: ClassReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpNotSI jmpTarget: self Label.
 	^0
 ]
@@ -2227,7 +2228,7 @@ nonInt:
 	<var: #jumpNegative type: #'AbstractInstruction *'>
 	<var: #jumpTooBig type: #'AbstractInstruction *'>
 	<var: #jumpInRange type: #'AbstractInstruction *'>
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
@@ -2244,14 +2245,14 @@ nonInt:
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ReceiverResultReg.
 	self LogicalShiftLeftR: ClassReg R: ReceiverResultReg.
 	objectRepresentation genAddSmallIntegerTagsTo: ReceiverResultReg.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpNegative jmpTarget: (self NegateR: ClassReg).
 	self CmpCq: objectRepresentation numSmallIntegerBits R: ClassReg. "N.B. FLAGS := ClassReg - 31"
 	jumpInRange := self JumpLessOrEqual: 0.
 	self MoveCq: objectRepresentation numSmallIntegerBits R: ClassReg.
 	jumpInRange jmpTarget: (self ArithmeticShiftRightR: ClassReg R: ReceiverResultReg).
 	objectRepresentation genSetSmallIntegerTagsIn: ReceiverResultReg.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpNotSI jmpTarget: (jumpTooBig jmpTarget: (jumpOvfl jmpTarget: self Label)).
 	^0
 ]
@@ -2260,14 +2261,13 @@ nonInt:
 SimpleStackBasedCogit >> genPrimitiveBitXor [
 	| jumpNotSI |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into:TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	"Clear one or the other tag so that xoring will preserve them."
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ClassReg.
 	self XorR: ClassReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpNotSI jmpTarget: self Label.
 	^0
 ]
@@ -2275,7 +2275,7 @@ SimpleStackBasedCogit >> genPrimitiveBitXor [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveCharacterValue [
 	| r |
-	(r := objectRepresentation genInnerPrimitiveCharacterValue: objectMemory wordSize) < 0 ifTrue:
+	(r := objectRepresentation genInnerPrimitiveCharacterValue: (self primRetNOffsetFor: 0)) < 0 ifTrue:
 		[^r].
 	^r = UnfailingPrimitive
 		ifTrue: [0]
@@ -2298,8 +2298,7 @@ SimpleStackBasedCogit >> genPrimitiveClass [
 			scratchReg: TempReg
 			instRegIsReceiver: methodOrBlockNumArgs = 0.
 		 self MoveR: ClassReg R: ReceiverResultReg].
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize.
+	self RetN: (self primRetNOffsetFor: 0).
 	^0
 ]
 
@@ -2347,7 +2346,7 @@ SimpleStackBasedCogit >> genPrimitiveDiv [
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpExact type: #'AbstractInstruction *'>
 	<var: #jumpSameSign type: #'AbstractInstruction *'>
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	self MoveR: TempReg R: Arg1Reg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
@@ -2372,8 +2371,7 @@ SimpleStackBasedCogit >> genPrimitiveDiv [
 	jumpSameSign jmpTarget: (convert := self Label).
 	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	"test for overflow; the only case is SmallInteger minVal // -1"
 	jumpExact jmpTarget:
 		(self CmpCq: (1 << (objectRepresentation numSmallIntegerBits - 1)) R: TempReg).
@@ -2389,7 +2387,7 @@ SimpleStackBasedCogit >> genPrimitiveDivide [
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpInexact type: #'AbstractInstruction *'>
 	<var: #jumpOverflow type: #'AbstractInstruction *'>
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
@@ -2407,8 +2405,7 @@ SimpleStackBasedCogit >> genPrimitiveDivide [
 	jumpOverflow := self JumpGreaterOrEqual: 0.
 	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpOverflow jmpTarget: (jumpInexact jmpTarget: (jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label))).
 	^0
 ]
@@ -2478,8 +2475,7 @@ SimpleStackBasedCogit >> genPrimitiveFloatSquareRoot [
 					scratchReg: ClassReg
 					scratchReg: TempReg.
 	self MoveR: SendNumArgsReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize.
+	self RetN: (self primRetNOffsetFor: 0).
 	jumpFailAlloc jmpTarget: self Label.
 	^self compileFallbackToInterpreterPrimitive
 ]
@@ -2505,16 +2501,16 @@ SimpleStackBasedCogit >> genPrimitiveIdentical [
 		receiver (also in ResultReceiverReg)
 		arg
 		return address"
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: Arg0Reg.
 	^objectRepresentation
-		genInnerPrimitiveIdentical: objectMemory wordSize * 2
+		genInnerPrimitiveIdentical: (self primRetNOffsetFor: 1)
 		orNotIf: false
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveIdentityHash [
 	| r |
-	(r := objectRepresentation genInnerPrimitiveIdentityHash: objectMemory wordSize) < 0 ifTrue:
+	(r := objectRepresentation genInnerPrimitiveIdentityHash: (self primRetNOffsetFor: 0)) < 0 ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
 ]
@@ -2536,7 +2532,7 @@ SimpleStackBasedCogit >> genPrimitiveMod [
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpExact type: #'AbstractInstruction *'>
 	<var: #jumpSameSign type: #'AbstractInstruction *'>
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ClassReg.
@@ -2558,8 +2554,7 @@ SimpleStackBasedCogit >> genPrimitiveMod [
 	jumpSameSign jmpTarget: (jumpExact jmpTarget: self Label).
 	objectRepresentation genSetSmallIntegerTagsIn: ClassReg.
 	self MoveR: ClassReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label).
 	^0
 ]
@@ -2569,7 +2564,7 @@ SimpleStackBasedCogit >> genPrimitiveMultiply [
 	| jumpNotSI jumpOvfl |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpOvfl type: #'AbstractInstruction *'>
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
@@ -2579,8 +2574,7 @@ SimpleStackBasedCogit >> genPrimitiveMultiply [
 	jumpOvfl := self JumpOverflow: 0.
 	objectRepresentation genSetSmallIntegerTagsIn: ClassReg.
 	self MoveR: ClassReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpOvfl jmpTarget: (jumpNotSI jmpTarget: self Label).
 	^0
 ]
@@ -2588,7 +2582,7 @@ SimpleStackBasedCogit >> genPrimitiveMultiply [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNew [
 	| r |
-	((r := objectRepresentation genInnerPrimitiveNew: objectMemory wordSize) < 0
+	((r := objectRepresentation genInnerPrimitiveNew: (self primRetNOffsetFor: 0)) < 0
 	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
 	"Call the interpreter primitive either when the machine-code primitive
@@ -2599,7 +2593,7 @@ SimpleStackBasedCogit >> genPrimitiveNew [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNewMethod [
 	| r |
-	((r := objectRepresentation genInnerPrimitiveNewMethod: 2 * objectMemory wordSize) < 0
+	((r := objectRepresentation genInnerPrimitiveNewMethod: (self primRetNOffsetFor: 2)) < 0
 	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
 	"Call the interpreter primitive either when the machine-code primitive
@@ -2610,7 +2604,7 @@ SimpleStackBasedCogit >> genPrimitiveNewMethod [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNewWithArg [
 	| r |
-	((r := objectRepresentation genInnerPrimitiveNewWithArg: objectMemory wordSize) < 0
+	((r := objectRepresentation genInnerPrimitiveNewWithArg: (self primRetNOffsetFor: 1)) < 0
 	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
 	"Call the interpreter primitive either when the machine-code primitive
@@ -2629,9 +2623,9 @@ SimpleStackBasedCogit >> genPrimitiveNotIdentical [
 		receiver (also in ResultReceiverReg)
 		arg
 		return address"
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: Arg0Reg.
 	^objectRepresentation
-		genInnerPrimitiveIdentical: objectMemory wordSize * 2
+		genInnerPrimitiveIdentical: (self primRetNOffsetFor: 1)
 		orNotIf: true
 ]
 
@@ -2641,7 +2635,7 @@ SimpleStackBasedCogit >> genPrimitiveQuo [
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpOverflow type: #'AbstractInstruction *'>
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
@@ -2658,8 +2652,7 @@ SimpleStackBasedCogit >> genPrimitiveQuo [
 	jumpOverflow := self JumpGreaterOrEqual: 0.
 	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpOverflow jmpTarget: (jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label)).
 	^0
 ]
@@ -2667,7 +2660,7 @@ SimpleStackBasedCogit >> genPrimitiveQuo [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveSize [
 	| r |
-	(r := objectRepresentation genInnerPrimitiveSize: objectMemory wordSize) < 0 ifTrue:
+	(r := objectRepresentation genInnerPrimitiveSize: (self primRetNOffsetFor: 0)) < 0 ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
 ]
@@ -2675,8 +2668,8 @@ SimpleStackBasedCogit >> genPrimitiveSize [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveStringAt [
 	| r |
-	self MoveMw: objectMemory wordSize r: SPReg R: Arg0Reg.
-	(r := objectRepresentation genInnerPrimitiveStringAt: objectMemory wordSize * 2) < 0 ifTrue:
+	self genLoadArgAtDepth: 0 into: Arg0Reg.
+	(r := objectRepresentation genInnerPrimitiveStringAt: (self primRetNOffsetFor: 1)) < 0 ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
 ]
@@ -2684,9 +2677,9 @@ SimpleStackBasedCogit >> genPrimitiveStringAt [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveStringAtPut [
 	| r |
-	self MoveMw: objectMemory wordSize * 2 r: SPReg R: Arg0Reg.
-	self MoveMw: objectMemory wordSize r: SPReg R: Arg1Reg.
-	((r := objectRepresentation genInnerPrimitiveStringAtPut: objectMemory wordSize * 3) < 0
+	self genLoadArgAtDepth: 1 into: Arg0Reg.
+	self genLoadArgAtDepth: 0 into: Arg1Reg.
+	((r := objectRepresentation genInnerPrimitiveStringAtPut: (self primRetNOffsetFor: 2)) < 0
 	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
 	^self compileFallbackToInterpreterPrimitive
@@ -2701,7 +2694,7 @@ SimpleStackBasedCogit >> genPrimitiveSubtract [
 	| jumpNotSI jumpOvfl |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpOvfl type: #'AbstractInstruction *'>
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	self MoveR: ReceiverResultReg R: TempReg.
@@ -2709,8 +2702,7 @@ SimpleStackBasedCogit >> genPrimitiveSubtract [
 	jumpOvfl := self JumpOverflow: 0.
 	objectRepresentation genAddSmallIntegerTagsTo: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpOvfl jmpTarget: (jumpNotSI jmpTarget: self Label).
 	^0
 ]
@@ -3028,7 +3020,6 @@ SimpleStackBasedCogit >> genReturnNil [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genReturnNilFromBlock [
 	self assert: inBlock.
-	self flag: 'currently caller pushes result'.
 	self genMoveConstant: objectMemory nilObject R: ReceiverResultReg.
 	^self genBlockReturn
 ]
@@ -3040,7 +3031,6 @@ SimpleStackBasedCogit >> genReturnReceiver [
 				args
 		sp->	ret pc.
 	 Return pops receiver and arguments off the stack.  Callee pushes the result."
-	self flag: 'currently caller pushes result'.
 	needsFrame ifTrue:
 		[self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg].
 	^self genUpArrowReturn
@@ -3049,7 +3039,6 @@ SimpleStackBasedCogit >> genReturnReceiver [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genReturnTopFromBlock [
 	self assert: inBlock.
-	self flag: 'currently caller pushes result'.
 	self PopR: ReceiverResultReg.
 	^self genBlockReturn
 ]
@@ -3057,7 +3046,6 @@ SimpleStackBasedCogit >> genReturnTopFromBlock [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genReturnTopFromMethod [
 	"Return pops receiver and arguments off the stack.  Callee pushes the result."
-	self flag: 'currently caller pushes result'.
 	self PopR: ReceiverResultReg.
 	^self genUpArrowReturn
 ]
@@ -3104,7 +3092,6 @@ SimpleStackBasedCogit >> genSend: selector numArgs: numArgs sendTable: sendTable
 	self MoveCw: selector R: ClassReg.
 	self annotate: (self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1)))
 		with: annotation.
-	self flag: 'currently caller pushes result'.
 	self PushR: ReceiverResultReg.
 	^0
 ]
@@ -3243,16 +3230,15 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode [
 	| jumpFail jumpTrue |
 	<var: #jumpFail type: #'AbstractInstruction *'>
 	<var: #jumpTrue type: #'AbstractInstruction *'>
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpFail := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	self CmpR: ClassReg R: ReceiverResultReg. "N.B. FLAGS := RRReg - ClassReg"
 	jumpTrue := self gen: jumpOpcode.
 	self genMoveFalseR: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpTrue jmpTarget: (self genMoveTrueR: ReceiverResultReg).
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpFail jmpTarget: self Label.
 	^0
 ]
@@ -3272,16 +3258,15 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCompariso
 	<var: #jumpFail type: #'AbstractInstruction *'>
 	backEnd hasDoublePrecisionFloatingPointSupport ifFalse:
 		[^self genSmallIntegerComparison: jumpOpcode].
-	self MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+	self genLoadArgAtDepth: 0 into: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpDouble := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	self CmpR: ClassReg R: ReceiverResultReg. "N.B. FLAGS := RRReg - ClassReg"
 	jumpTrue := self gen: jumpOpcode.
 	self genMoveFalseR: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpTrue jmpTarget: (self genMoveTrueR: ReceiverResultReg).
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	
 	"Argument may be a Float : let us check or fail"
 	jumpDouble jmpTarget: self Label.
@@ -3300,10 +3285,9 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCompariso
 	self CmpRd: DPFPReg1 Rd: DPFPReg0.
 	jumpCond := self perform: jumpFPOpcodeGenerator with: 0. "FP jumps are a little weird"
 	self genMoveFalseR: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 	jumpCond jmpTarget: (self genMoveTrueR: ReceiverResultReg).
-	self RetN: objectMemory wordSize * 2.
+	self RetN: (self primRetNOffsetFor: 1).
 
 	objectRepresentation smallIntegerIsOnlyImmediateType
 		ifTrue: [jumpFail jmpTarget: self Label]
@@ -3330,11 +3314,11 @@ SimpleStackBasedCogit >> genSpecialSelectorEqualsEquals [
 	<var: #jumpPush type: #'AbstractInstruction *'>
 	self PopR: Arg0Reg.
 	objectRepresentation
-		genEnsureObjInRegNotForwarded: Arg0Reg
+		genEnsureOopInRegNotForwarded: Arg0Reg
 		scratchReg: TempReg.
 	self MoveMw: 0 r: SPReg R: ClassReg.
 	objectRepresentation
-		genEnsureObjInRegNotForwarded: ClassReg
+		genEnsureOopInRegNotForwarded: ClassReg
 		scratchReg: TempReg.
 	self CmpR: Arg0Reg R: ClassReg.
 	jumpNotEqual := self JumpNonZero: 0.
@@ -3517,7 +3501,6 @@ SimpleStackBasedCogit >> genUpArrowReturn [
 				args
 		sp->	ret pc.
 	 Return pops receiver and arguments off the stack.  Callee pushes the result."
-	self flag: 'currently caller pushes result'.
 	inBlock ifTrue:
 		[self assert: needsFrame.
 		 self annotateBytecode: (self CallRT: ceNonLocalReturnTrampoline).
@@ -3653,6 +3636,13 @@ SimpleStackBasedCogit >> picAbortTrampolineFor: numArgs [
 	^cePICAbortTrampoline
 ]
 
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> primRetNOffsetFor: nargs [
+	"Answer how many bytes to cut back the stack to remove the receiver
+	 and arguments after an invocation of a primitive with nargs arguments. "
+	^nargs + 1 * objectMemory wordSize
+]
+
 { #category : #'external primitive support' }
 SimpleStackBasedCogit >> recordCallOffsetIn: cogMethod of: callLabelArg [
 	<api>
@@ -3671,10 +3661,24 @@ SimpleStackBasedCogit >> recordCallOffsetIn: cogMethod of: callLabelArg [
 		ifFalse: [self assert: (offsetTable at: cogMethod cmNumArgs) = offset]
 ]
 
+{ #category : #'simulation stack' }
+SimpleStackBasedCogit >> register: reg isInMask: mask [
+	<inline: true>
+	^ mask anyMask: (self registerMaskFor: reg)
+]
+
 { #category : #trampolines }
 SimpleStackBasedCogit >> returnRegForStoreCheck [
-	"See the subclass for explanation."
-	^backEnd cResultRegister
+	"We must ensure the ReceiverResultReg is live across the store check so that
+	 we can store into receiver inst vars in a frameless method since self exists
+	 only in ReceiverResultReg in a frameless method.  So if ReceiverResultReg is
+	 caller-saved we use the fact that ceStoreCheck: answers its argument to
+	 reload ReceiverResultReg cheaply.  Otherwise we don't care about the result
+	 and use the cResultRegister, effectively a no-op (see compileTrampoline...)"
+
+	^(self register: ReceiverResultReg isInMask: callerSavedRegMask)
+		ifTrue: [ReceiverResultReg]
+		ifFalse: [backEnd cResultRegister]
 ]
 
 { #category : #'external primitive support' }
