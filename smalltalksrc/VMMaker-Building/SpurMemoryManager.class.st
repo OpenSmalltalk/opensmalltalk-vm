@@ -7140,7 +7140,7 @@ SpurMemoryManager >> lookupAddress: address [
 	<doNotGenerate>
 	| fmt size string class classSize maybeThisClass classNameIndex thisClassIndex |
 	((self addressCouldBeObj: address)
-	 and: [(self classIndexOf: address) > 0]) ifFalse:
+	 and: [(thisClassIndex := self classIndexOf: address) > 0]) ifFalse:
 		[^address = scavengeThreshold ifTrue:
 			['scavengeThreshold']].
 	address - self baseHeaderSize = hiddenRootsObj ifTrue:
@@ -7153,7 +7153,7 @@ SpurMemoryManager >> lookupAddress: address [
 	and: [(size between: 1 and: 64)
 	and: [Scanner isLiteralSymbol: (string := (0 to: size - 1) collect: [:i| Character value: (self fetchByte: i ofObject: address)])]]) ifTrue:
 		[^'#', (ByteString withAll: string)].
-	class := self fetchClassOfNonImm: address.
+	class := self noCheckClassAtIndex: thisClassIndex.
 	(class isNil or: [class = nilObj]) ifTrue:
 		[^nil].
 	"address is either a class or a metaclass, or an instance of a class or invalid.  determine which."
