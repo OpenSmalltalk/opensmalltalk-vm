@@ -379,9 +379,7 @@ SistaStackToRegisterMappingCogit >> genMustBeBooleanTrampolineFor: boolean calle
 	jumpMBB := self JumpZero: 0.
 	"Open-code self compileTrampolineFor: #ceCounterTripped: numArgs: 1 arg: TempReg ...
 	 so we can restore ResultReceiverReg."
-	backEnd hasLinkRegister ifTrue:
-		[self PushR: LinkReg].
-	self genSmalltalkToCStackSwitch.
+	self genSmalltalkToCStackSwitch: true.
 	self
 		compileCallFor: #ceCounterTripped:
 		numArgs: 1
