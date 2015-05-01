@@ -331,13 +331,14 @@ EncoderForNewsqueakV4 class >> isSendAt: pc in: method [
 	 **	238		11101110	i i i i i j j j	Send Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments
 	 **	239		11101111	i i i i i j j j	Send To Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments
 	 **	240		11110000	i i i i i j j j	Send To Absent Implicit Receiver Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments
-	 **	241		11110001	i i i i i j j j	Send To Absent Dynamic Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-
+	 **	241		11110001	i i i i i j j j	Send To Absent Dynamic Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments
+	 **	245		11110101	i i i i i j j j	Send To Absent Self Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments
+	 ** 254	 		11111110	i i i i i j j j	kkkkkkkk	Send To Absent Outer Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments Depth kkkkkkkk"
 	| byte |
 	byte := self nonExtensionBytecodeAt: pc in: method.
-	^byte >= 80
-	  and: [byte <= 175
-		 or: [byte <= 241 and: [byte >= 238]]]
+	^(((byte >= 80 and: [byte <= 175])
+		or: [byte <= 241 and: [byte >= 238]])
+		or: [byte == 245] or: [byte == 254])
 ]
 
 { #category : #'instruction stream support' }
@@ -504,7 +505,9 @@ EncoderForNewsqueakV4 class >> selectorToSendOrItselfFor: anInstructionStream in
 	238		11101110	i i i i i j j j	Send Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments
 	239		11101111	i i i i i j j j	Send To Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments
 	240		11110000	i i i i i j j j	Send To Absent Implicit Receiver Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments
-	241		11110001	i i i i i j j j	Send To Absent Dynamic Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
+	241		11110001	i i i i i j j j	Send To Absent Dynamic Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments
+	245		11110101	i i i i i j j j	Send To Absent Self Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments
+	254	 	11111110	i i i i i j j j	kkkkkkkk	Send To Absent Outer Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments Depth kkkkkkkk"
 
 	| byte |
 	byte := method at: pc.
@@ -526,8 +529,8 @@ EncoderForNewsqueakV4 class >> selectorToSendOrItselfFor: anInstructionStream in
 						 method literalAt: index + 1]
 					ifFalse: [anInstructionStream]]].
 		^anInstructionStream].
-	byte > 241 ifTrue:
-		[^anInstructionStream].
+	(byte <= 241 or: [byte == 245 or: [byte == 254]])
+		ifFalse: [^anInstructionStream].
 	"they could be extended..."
 	^self extensionsFor: pc in: method into:
 		[:extA :extB :nExtBytes| | index |
