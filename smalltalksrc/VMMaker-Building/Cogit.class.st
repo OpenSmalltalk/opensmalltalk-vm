@@ -4321,11 +4321,7 @@ Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: r
 	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
 	<var: #aRoutine type: #'void *'>
 	<inline: false>
-	"If on an ARM-like RISC processor, the return address needs to be pushed to the
-	 stack so that the interpreter sees the same stack layout as on CISC."
-	(pushLinkReg and: [backEnd hasLinkRegister]) ifTrue:
-		[self PushR: LinkReg].
-	self genSmalltalkToCStackSwitch.
+	self genSmalltalkToCStackSwitch: pushLinkReg.
 	self
 		compileCallFor: aRoutine
 		numArgs: numArgs
@@ -5474,7 +5470,11 @@ Cogit >> genSafeTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: re
 ]
 
 { #category : #'trampoline support' }
-Cogit >> genSmalltalkToCStackSwitch [
+Cogit >> genSmalltalkToCStackSwitch: pushLinkReg [
+	"If the client requires, then on an ARM-like RISC processor, the return address needs to
+	 be pushed to the stack so that the interpreter sees the same stack layout as on CISC."
+	(backEnd hasLinkRegister and: [pushLinkReg]) ifTrue:
+		[self PushR: LinkReg].
 	backEnd genSaveStackPointers.
 	cFramePointerInUse
 		ifTrue: [backEnd genLoadCStackPointers]
