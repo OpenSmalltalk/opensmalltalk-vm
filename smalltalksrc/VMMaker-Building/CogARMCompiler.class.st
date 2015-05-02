@@ -302,6 +302,7 @@ CogARMCompiler >> at: offset moveCw: constant intoR: destReg [
 	ORR destReg, destReg, #<constantByte0>, 0
 	with minimal choice of the rotation (last digit)"
 	"The same area can be modified multiple times, because the opperation is (inclusive) or."
+	 <var: 'constant' type: #usqInt>
 	<inline: true>
 	"self assert: destReg < 12."
 
@@ -1620,12 +1621,14 @@ CogARMCompiler >> cond: conditionCode type: type op: flagsOrOpcode set: doUpdate
 ]
 
 { #category : #accessing }
-CogARMCompiler >> condition [
+CogARMCompiler >> conditionOrNil [
+"has to be named oddly like this to satisfay i-var code gen translating rules"
 	^conditionOrNil
 ]
 
 { #category : #accessing }
-CogARMCompiler >> condition: condCode [
+CogARMCompiler >> conditionOrNil: condCode [
+"has to be named oddly like this to satisfay i-var code gen translating rules"
 	^conditionOrNil := condCode
 ]
 
@@ -1658,8 +1661,6 @@ CogARMCompiler >> dispatchConcretize [
 		[FillFromWord]			-> [^self concretizeFillFromWord].
 		[Nop]					-> [^self concretizeNop].
 		"ARM Specific Control/Data Movement" 
-		[LDMFD]				-> [^self concretizeLDMFD].
-		[STMFD]				-> [^self concretizeSTMFD].
 		[SMULL]				-> [^self concretizeSMULL]	.
 		[CMPSMULL]				-> [^self concretizeCMPSMULL].
 		[MSR]						-> [^self concretizeMSR].
@@ -1775,10 +1776,17 @@ CogARMCompiler >> extractOffsetFromBL: instr [
 	<inline: true>
 	| relativeJump |
 	relativeJump := instr bitAnd: 16r00FFFFFF.
-	relativeJump := (relativeJump bitAt: 24) = 1 
+	relativeJump := ((relativeJump bitAnd: 1<<24) >> 24) = 1
 						ifTrue: [((relativeJump bitOr: 16r3F000000) << 2) signedIntFromLong]
 						ifFalse: [relativeJump << 2].
 	^relativeJump
+]
+
+{ #category : #'inline cacheing' }
+CogARMCompiler >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<Integer>"
+	<cmacro: '(me,startAddress,endAddress) __clear_cache((char*) startAddress, (char*) (endAddress + 4))'>
+	"On ARM we almost certainly need to flush and wash hands. On linux we use __clear_cache (see http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code for a decent example) and remember that the end address is *exclusive* so we add 4 for now"
+	self halt: #ceFlushICache
 ]
 
 { #category : #'ARM convenience instructions' }
@@ -1807,6 +1815,11 @@ CogARMCompiler >> genAlignCStackSavingRegisters: saveRegs numArgs: numArgs wordA
 		[delta := alignment - wordsPushedModAlignment.
 		 cogit SubCq: delta * 4 R: SPReg].
 	^0
+]
+
+{ #category : #'abstract instructions' }
+CogARMCompiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstractRegQuotient Rem: abstractRegRemainder [
+"Currently no instruction level support for divide on ARM. See also #canDivQuoRem"
 ]
 
 { #category : #assertions }
@@ -1935,6 +1948,13 @@ CogARMCompiler >> genRestoreRegs [
 	"Restore the general purpose registers for a trampoline call."
 	"Restore none, because the ARM ABI only defines callee saved registers, no caller-saved regs."
 	"cogit gen: LDMFD operand: 16r7F"
+]
+
+{ #category : #abi }
+CogARMCompiler >> genRestoreRegsExcept: abstractReg [
+	"Restore the general purpose registers except for abstractReg for a trampoline call."
+	"Restore none, because the ARM ABI only defines callee saved registers, no caller-saved regs."
+
 ]
 
 { #category : #abi }
@@ -2128,12 +2148,6 @@ CogARMCompiler >> isAddressRelativeToVarBase: varAddress [
 CogARMCompiler >> isBigEndian [
 	<inline: true>
 	^false
-]
-
-{ #category : #testing }
-CogARMCompiler >> isBranch: anInstruction [
-
-	^ (anInstruction >> 24 bitAnd: 16r0E) = 16rA
 ]
 
 { #category : #testing }
@@ -2534,6 +2548,14 @@ CogARMCompiler >> nopsFrom: startAddr to: endAddr [
 			byteAt: p+3 put: 16rE1]
 ]
 
+{ #category : #'inline cacheing' }
+CogARMCompiler >> numICacheFlushOpcodes [
+	"ARM needs to do icache flushing when code is written"
+	"for now return 0 to skip it and probably blow up"
+	^0
+	
+]
+
 { #category : #abi }
 CogARMCompiler >> numberOfSaveableRegisters [
 	"Answer the number of registers to be saved in a trampoline call that saves registers.
@@ -2807,6 +2829,15 @@ CogARMCompiler >> stackPageInterruptHeadroomBytes [
 	^128 "32 words"
 ]
 
+{ #category : #'inline cacheing' }
+CogARMCompiler >> storeLiteral: literal beforeFollowingAddress: followingAddress [
+	"Rewrite the long constant loaded by a MOV/ORR/ORR/ORR
+	 or MOV/ORR/ORR/ORR/PUSH  sequence, just before this address:"
+	^(self instructionIsOR: (self instructionBeforeAddress: followingAddress))
+		ifTrue: [self insert32BitOperand: literal into4InstructionsPreceeding: followingAddress]
+		ifFalse: [self insert32BitOperand: literal into4InstructionsPreceeding: followingAddress - 4]
+]
+
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> str: destReg rn: baseReg plus: u imm: immediate12bitValue [
 "	STR destReg, [baseReg, 'u' immediate12bitValue] u=0 -> subtract imm; =1 -> add imm "
@@ -2880,5 +2911,6 @@ CogARMCompiler >> type: type op: flagsOrOpcode set: doUpdateStatusRegister rn:  
 { #category : #simulation }
 CogARMCompiler >> wantsNearAddressFor: anObject [
 	"A hack hook to allow ARM to override the simulated address for the short-cut trampolines"
+	<doNotGenerate>
 	^anObject isSymbol and: [anObject beginsWith: 'ceShortCut']
 ]

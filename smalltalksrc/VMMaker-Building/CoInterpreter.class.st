@@ -7059,6 +7059,13 @@ CoInterpreter >> validStackPageBaseFrame: aPage [
 	^true
 ]
 
+{ #category : #'cog jit support' }
+CoInterpreter >> varBaseAddress [
+	<api>
+	<returnTypeC: #usqInt>
+	^(self addressOf: stackPointer) asUnsignedInteger - 16r42
+]
+
 { #category : #'frame access' }
 CoInterpreter >> voidVMStateForSnapshotFlushingExternalPrimitivesIf: flushExtPrims [
 	"Make sure that all VM state that affects the heap contents is voided so that the heap is
