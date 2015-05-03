@@ -72,6 +72,31 @@
 		9458525C10F043EB001401E7 /* sqSqueakIPhoneApplication+clipboard.m in Sources */ = {isa = PBXBuildFile; fileRef = 9458525B10F043EB001401E7 /* sqSqueakIPhoneApplication+clipboard.m */; };
 		945C95FF0E97084C00529DC1 /* aio.c in Sources */ = {isa = PBXBuildFile; fileRef = 94883B2A0E0C2A5E005A4738 /* aio.c */; };
 		9463943F0E95845000015851 /* squeakSUnitTester.m in Sources */ = {isa = PBXBuildFile; fileRef = 9463943E0E95845000015851 /* squeakSUnitTester.m */; };
+		9463C1BF1AEE13F3009C5CE5 /* ADPCMCodecPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658E40DDD03FE00358328 /* ADPCMCodecPlugin.c */; };
+		9463C1C01AEE145C009C5CE5 /* B2DPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658E60DDD03FE00358328 /* B2DPlugin.c */; };
+		9463C1C11AEE1472009C5CE5 /* BMPReadWriterPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658EC0DDD03FE00358328 /* BMPReadWriterPlugin.c */; };
+		9463C1C21AEE149A009C5CE5 /* BitBltPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658EA0DDD03FE00358328 /* BitBltPlugin.c */; };
+		9463C1C31AEE14CD009C5CE5 /* DSAPrims.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658F00DDD03FE00358328 /* DSAPrims.c */; };
+		9463C1C41AEE14DF009C5CE5 /* DropPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 946DA8D210C0C30D00F26F56 /* DropPlugin.c */; };
+		9463C1C51AEE150B009C5CE5 /* FFTPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658F20DDD03FE00358328 /* FFTPlugin.c */; };
+		9463C1C61AEE154A009C5CE5 /* FilePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658F40DDD03FE00358328 /* FilePlugin.c */; };
+		9463C1C71AEE155A009C5CE5 /* FloatArrayPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658F60DDD03FE00358328 /* FloatArrayPlugin.c */; };
+		9463C1C81AEE156E009C5CE5 /* GeniePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658F80DDD03FE00358328 /* GeniePlugin.c */; };
+		9463C1C91AEE157B009C5CE5 /* JPEGReadWriter2Plugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E659000DDD03FE00358328 /* JPEGReadWriter2Plugin.c */; };
+		9463C1CA1AEE1588009C5CE5 /* JPEGReaderPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658FE0DDD03FE00358328 /* JPEGReaderPlugin.c */; };
+		9463C1CB1AEE1594009C5CE5 /* Klatt.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E659020DDD03FE00358328 /* Klatt.c */; };
+		9463C1CC1AEE15AD009C5CE5 /* Matrix2x3Plugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E659060DDD03FE00358328 /* Matrix2x3Plugin.c */; };
+		9463C1CD1AEE15BC009C5CE5 /* MiscPrimitivePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6590A0DDD03FE00358328 /* MiscPrimitivePlugin.c */; };
+		9463C1CE1AEE15C5009C5CE5 /* RePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6590C0DDD03FE00358328 /* RePlugin.c */; };
+		9463C1CF1AEE15EE009C5CE5 /* SecurityPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6590E0DDD03FE00358328 /* SecurityPlugin.c */; };
+		9463C1D01AEE15FB009C5CE5 /* SoundCodecPrims.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E659120DDD03FE00358328 /* SoundCodecPrims.c */; };
+		9463C1D11AEE1607009C5CE5 /* SoundPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E659160DDD03FE00358328 /* SoundPlugin.c */; };
+		9463C1D21AEE1618009C5CE5 /* StarSqueakPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6591A0DDD03FE00358328 /* StarSqueakPlugin.c */; };
+		9463C1D31AEE1630009C5CE5 /* SoundGenerationPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E659140DDD03FE00358328 /* SoundGenerationPlugin.c */; };
+		9463C1D41AEE1688009C5CE5 /* chartables.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E65A290DDD053900358328 /* chartables.c */; };
+		9463C1D51AEE168C009C5CE5 /* get.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E65A2B0DDD053900358328 /* get.c */; };
+		9463C1D61AEE168F009C5CE5 /* pcre.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E65A2E0DDD053900358328 /* pcre.c */; };
+		9463C1D71AEE1693009C5CE5 /* study.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E65A340DDD053900358328 /* study.c */; };
 		946DA8D310C0C30D00F26F56 /* DropPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 946DA8D210C0C30D00F26F56 /* DropPlugin.c */; };
 		946DA91510C0C71100F26F56 /* sqSqueakOSXDropAPI.m in Sources */ = {isa = PBXBuildFile; fileRef = 946DA91410C0C71100F26F56 /* sqSqueakOSXDropAPI.m */; };
 		946DAA0010C0D35500F26F56 /* sqMacUnixExternalPrims.m in Sources */ = {isa = PBXBuildFile; fileRef = 946DA9FF10C0D35500F26F56 /* sqMacUnixExternalPrims.m */; };
@@ -2596,9 +2621,11 @@
 				9487742810C64DD800E4AEC5 /* Error.c in Sources */,
 				9487742910C64DD800E4AEC5 /* jcapimin.c in Sources */,
 				9487742A10C64DD800E4AEC5 /* jcapistd.c in Sources */,
+				9463C1CF1AEE15EE009C5CE5 /* SecurityPlugin.c in Sources */,
 				942875511AEC5624007958BD /* ObjectiveCPlugin.c in Sources */,
 				9487742B10C64DD800E4AEC5 /* jccoefct.c in Sources */,
 				9487742C10C64DD800E4AEC5 /* jccolor.c in Sources */,
+				9463C1BF1AEE13F3009C5CE5 /* ADPCMCodecPlugin.c in Sources */,
 				9487742D10C64DD800E4AEC5 /* jcdctmgr.c in Sources */,
 				9487742E10C64DD800E4AEC5 /* jchuff.c in Sources */,
 				9487742F10C64DD800E4AEC5 /* jcinit.c in Sources */,
@@ -2611,6 +2638,7 @@
 				9487743610C64DD800E4AEC5 /* jcprepct.c in Sources */,
 				9487743710C64DD800E4AEC5 /* jcsample.c in Sources */,
 				9487743810C64DD800E4AEC5 /* jctrans.c in Sources */,
+				9463C1C31AEE14CD009C5CE5 /* DSAPrims.c in Sources */,
 				9487743910C64DD800E4AEC5 /* jdapimin.c in Sources */,
 				94C3176C1AD49B020096E59D /* sqUnixLocale.c in Sources */,
 				9487743A10C64DD800E4AEC5 /* jdapistd.c in Sources */,
@@ -2620,7 +2648,10 @@
 				9487743E10C64DD800E4AEC5 /* jdcolor.c in Sources */,
 				9487743F10C64DD800E4AEC5 /* jddctmgr.c in Sources */,
 				9487744010C64DD800E4AEC5 /* jdhuff.c in Sources */,
+				9463C1C21AEE149A009C5CE5 /* BitBltPlugin.c in Sources */,
+				9463C1C81AEE156E009C5CE5 /* GeniePlugin.c in Sources */,
 				9487744110C64DD800E4AEC5 /* jdinput.c in Sources */,
+				9463C1CE1AEE15C5009C5CE5 /* RePlugin.c in Sources */,
 				9487744210C64DD800E4AEC5 /* jdmainct.c in Sources */,
 				94C3175E1AD49A030096E59D /* sqUnixSerial.c in Sources */,
 				9487744310C64DD800E4AEC5 /* jdmarker.c in Sources */,
@@ -2633,12 +2664,15 @@
 				9487744910C64DD800E4AEC5 /* jdtrans.c in Sources */,
 				9487744A10C64DD800E4AEC5 /* jerror.c in Sources */,
 				9487744B10C64DD800E4AEC5 /* jfdctflt.c in Sources */,
+				9463C1CB1AEE1594009C5CE5 /* Klatt.c in Sources */,
+				9463C1D41AEE1688009C5CE5 /* chartables.c in Sources */,
 				9487744C10C64DD800E4AEC5 /* jfdctfst.c in Sources */,
 				9487744D10C64DD800E4AEC5 /* jfdctint.c in Sources */,
 				9487744E10C64DD800E4AEC5 /* jidctflt.c in Sources */,
 				9487744F10C64DD800E4AEC5 /* jidctfst.c in Sources */,
 				9487745010C64DD800E4AEC5 /* jidctint.c in Sources */,
 				9487745110C64DD800E4AEC5 /* jidctred.c in Sources */,
+				9463C1CD1AEE15BC009C5CE5 /* MiscPrimitivePlugin.c in Sources */,
 				9487745210C64DD800E4AEC5 /* jmemdatadst.c in Sources */,
 				9487745310C64DD800E4AEC5 /* jmemdatasrc.c in Sources */,
 				9487745410C64DD800E4AEC5 /* jmemmgr.c in Sources */,
@@ -2647,12 +2681,15 @@
 				9487745710C64DD800E4AEC5 /* jquant2.c in Sources */,
 				9487745810C64DD800E4AEC5 /* jutils.c in Sources */,
 				9487745910C64DD800E4AEC5 /* b3dAlloc.c in Sources */,
+				9463C1C91AEE157B009C5CE5 /* JPEGReadWriter2Plugin.c in Sources */,
 				9487745A10C64DD800E4AEC5 /* b3dDraw.c in Sources */,
 				9487745B10C64DD800E4AEC5 /* b3dInit.c in Sources */,
+				9463C1D61AEE168F009C5CE5 /* pcre.c in Sources */,
 				9487745C10C64DD800E4AEC5 /* b3dMain.c in Sources */,
 				94D921591AC6327200A5970F /* interp.c in Sources */,
 				9487745D10C64DD800E4AEC5 /* b3dRemap.c in Sources */,
 				9487745E10C64DD800E4AEC5 /* sqSoundCodecPluginBasicPrims.c in Sources */,
+				9463C1D01AEE15FB009C5CE5 /* SoundCodecPrims.c in Sources */,
 				9487746310C64DD800E4AEC5 /* sqUnixUUID.c in Sources */,
 				94D9215B1AC6337D00A5970F /* sqManualSurface.c in Sources */,
 				9487746410C64DD800E4AEC5 /* sqSqueakMainApplication+imageReadWrite.m in Sources */,
@@ -2662,23 +2699,30 @@
 				9487746910C64DD800E4AEC5 /* sqMacV2Time.c in Sources */,
 				9487746A10C64DD800E4AEC5 /* sqSqueakFileDirectoryAPI.m in Sources */,
 				9487746B10C64DD800E4AEC5 /* sqSqueakFileDirectoryInterface.m in Sources */,
+				9463C1D21AEE1618009C5CE5 /* StarSqueakPlugin.c in Sources */,
 				9487746C10C64DD800E4AEC5 /* sqSqueakMainApp.m in Sources */,
 				94C3175A1AD499630096E59D /* sqUnixAsynchFile.c in Sources */,
 				9487746D10C64DD800E4AEC5 /* sqSqueakMainApplication+vmAndImagePath.m in Sources */,
 				9487746E10C64DD800E4AEC5 /* sqSqueakMainApplication.m in Sources */,
 				9487746F10C64DD800E4AEC5 /* sqSqueakAttributesAPI.m in Sources */,
 				9487747010C64DD800E4AEC5 /* sqSqueakEventsAPI.m in Sources */,
+				9463C1C01AEE145C009C5CE5 /* B2DPlugin.c in Sources */,
 				9487747110C64DD800E4AEC5 /* sqSqueakScreenAndWindow.m in Sources */,
 				9487747210C64DD800E4AEC5 /* sqSqueakAppDelegate.m in Sources */,
 				9487747310C64DD800E4AEC5 /* sqSqueakVmAndImagePathAPI.m in Sources */,
 				9487747410C64DD800E4AEC5 /* sqSqueakMainApplication+attributes.m in Sources */,
+				9463C1D11AEE1607009C5CE5 /* SoundPlugin.c in Sources */,
 				9487747610C64DD800E4AEC5 /* sqUnixSocket.c in Sources */,
 				9487747710C64DD800E4AEC5 /* sqSqueakMainApplication+events.m in Sources */,
 				9487747810C64DD800E4AEC5 /* sqSqueakSoundAPI.m in Sources */,
 				9487747910C64DD800E4AEC5 /* sqSqueakMainApplication+sound.m in Sources */,
+				9463C1C61AEE154A009C5CE5 /* FilePlugin.c in Sources */,
 				9487747A10C64DD800E4AEC5 /* sqSqueakInfoPlistInterface.m in Sources */,
+				9463C1D31AEE1630009C5CE5 /* SoundGenerationPlugin.c in Sources */,
+				9463C1C11AEE1472009C5CE5 /* BMPReadWriterPlugin.c in Sources */,
 				9487747C10C64DD800E4AEC5 /* squeakSUnitTester.m in Sources */,
 				9487747D10C64DD800E4AEC5 /* aio.c in Sources */,
+				9463C1CA1AEE1588009C5CE5 /* JPEGReaderPlugin.c in Sources */,
 				9487747F10C64DD800E4AEC5 /* sqSqueakSoundCoreAudioAPI.m in Sources */,
 				9487748010C64DD800E4AEC5 /* sqSqueakSoundCoreAudio.m in Sources */,
 				9487748110C64DD800E4AEC5 /* squeakProxy.m in Sources */,
@@ -2689,11 +2733,14 @@
 				9487748510C64DD800E4AEC5 /* sqMacSecurity.c in Sources */,
 				9487748610C64DD800E4AEC5 /* sqSqueakOSXApplication.m in Sources */,
 				9487748910C64DD800E4AEC5 /* sqSqueakOSXFileDirectoryInterface.m in Sources */,
+				9463C1C71AEE155A009C5CE5 /* FloatArrayPlugin.c in Sources */,
 				9487748A10C64DD800E4AEC5 /* sqSqueakOSXApplication+attributes.m in Sources */,
+				9463C1C41AEE14DF009C5CE5 /* DropPlugin.c in Sources */,
 				94C3176A1AD49B020096E59D /* sqUnixJoystickTablet.c in Sources */,
 				9487748B10C64DD800E4AEC5 /* sqSqueakOSXInfoPlistInterface.m in Sources */,
 				9487748C10C64DD800E4AEC5 /* sqSqueakOSXApplication+imageReadWrite.m in Sources */,
 				9487748D10C64DD800E4AEC5 /* sqSqueakOSXScreenAndWindow.m in Sources */,
+				9463C1D51AEE168C009C5CE5 /* get.c in Sources */,
 				9487748E10C64DD800E4AEC5 /* sqSqueakOSXNSView.m in Sources */,
 				9487748F10C64DD800E4AEC5 /* macintoshosxextra.c in Sources */,
 				9487749010C64DD800E4AEC5 /* sqSqueakOSXApplication+cursor.m in Sources */,
@@ -2707,17 +2754,20 @@
 				9487749610C64DD800E4AEC5 /* sqSqueakOSXClipboardAPI.m in Sources */,
 				9487749710C64DD800E4AEC5 /* sqSqueakOSXApplication+clipboard.m in Sources */,
 				9487749810C64DD800E4AEC5 /* sqSqueakOSXSoundCoreAudio.m in Sources */,
+				9463C1C51AEE150B009C5CE5 /* FFTPlugin.c in Sources */,
 				9487749A10C64DD800E4AEC5 /* sqSqueakOSXDropAPI.m in Sources */,
 				9487749B10C64DD800E4AEC5 /* sqMacUnixExternalPrims.m in Sources */,
 				94D921561AC6320300A5970F /* SocketPlugin.c in Sources */,
 				94C315341AD4949B0096E59D /* AsynchFilePlugin.c in Sources */,
 				94C317541AD495CD0096E59D /* LocalePlugin.c in Sources */,
+				9463C1CC1AEE15AD009C5CE5 /* Matrix2x3Plugin.c in Sources */,
 				9402DD6010CE0C16005C2102 /* SqViewBitmapConversion.m in Sources */,
 				9402DD7010CE0E91005C2102 /* SqViewClut.m in Sources */,
 				94D3654F10CEC86C00805023 /* BitMapConversionLogicFromX11.c in Sources */,
 				944069CE10E6B63200353B27 /* MacMenubarPlugin.c in Sources */,
 				94B9533510E6BD7100DC476A /* MacMenuOS9ToOSX.m in Sources */,
 				94C317511AD495CD0096E59D /* JoystickTabletPlugin.c in Sources */,
+				9463C1D71AEE1693009C5CE5 /* study.c in Sources */,
 				94584FDB10F02378001401E7 /* sqMacExtendedClipboard.m in Sources */,
 				943B9CA11235C5120056205E /* sqMacHostWindow.m in Sources */,
 			);
@@ -2749,7 +2799,6 @@
 		947E5F3610A9FD0400D3B69E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_STRCPY = YES;
 				COPY_PHASE_STRIP = NO;
@@ -2761,7 +2810,6 @@
 				HEADER_SEARCH_PATHS = /usr/include/uuid;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx;
 				SEPARATE_STRIP = YES;
 			};
 			name = Debug;
@@ -2787,6 +2835,15 @@
 					"ISQUEAK_IMAGE=\"iPhone\"",
 					"ISQUEAK_SOURCES=\"PharoV10\"",
 				);
+				"GCC_PREPROCESSOR_DEFINITIONS[sdk=*]" = (
+					TARGET_OS_IS_IPHONE,
+					USE_INLINE_MEMORY_ACCESSORS,
+					HAVE_SYS_TIME_H,
+					HAVE_NANOSLEEP,
+					SQUEAK_BUILTIN_PLUGIN,
+					"ISQUEAK_IMAGE=\"iPhone\"",
+					"ISQUEAK_SOURCES=\"PharoV10\"",
+				);
 				GCC_THUMB_SUPPORT = "";
 				INFOPLIST_FILE = "Info-iPhone.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
@@ -2802,7 +2859,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -2821,15 +2877,11 @@
 					HAVE_SYS_TIME_H,
 					HAVE_NANOSLEEP,
 					SQUEAK_BUILTIN_PLUGIN,
-					NO_ISNAN,
+					"SQ_VI_BYTES_PER_WORD=4",
 				);
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				INFOPLIST_FILE = "SqueakPureObjc-Info.plist";
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
-				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = Squeak;
-				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
@@ -2837,7 +2889,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "iPhone Distribution: Corporate Smalltalk Consulting Ltd";
@@ -2856,25 +2907,17 @@
 					HAVE_SYS_TIME_H,
 					HAVE_NANOSLEEP,
 					SQUEAK_BUILTIN_PLUGIN,
-					NO_ISNAN,
+					"SQ_VI_BYTES_PER_WORD=4",
 				);
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				"GCC_VERSION[arch=i386]" = com.apple.compilers.llvm.clang.1_0;
-				"GCC_VERSION[arch=ppc]" = com.apple.compilers.llvm.clang.1_0;
-				"GCC_VERSION[arch=x86_64]" = com.apple.compilers.llvm.clang.1_0;
 				INFOPLIST_FILE = "SqueakPureObjc-Info.plist";
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
-				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = Squeak;
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "3a8c5546-20a8-40a9-afb4-4218872c980c";
-				SDKROOT = macosx;
 			};
 			name = Distribution;
 		};
 		9480CD150E5C7D9300C32178 /* Distribution */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_STRCPY = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -2886,7 +2929,6 @@
 				HEADER_SEARCH_PATHS = /usr/include/uuid;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "65867c1c-f0f6-4de4-84cd-3e77826cb368";
-				SDKROOT = macosx;
 				SEPARATE_STRIP = YES;
 			};
 			name = Distribution;
@@ -2928,10 +2970,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
@@ -2946,14 +2986,13 @@
 					HAVE_SYS_TIME_H,
 					HAVE_NANOSLEEP,
 					SQUEAK_BUILTIN_PLUGIN,
+					"SQ_VI_BYTES_PER_WORD=8",
 				);
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				INFOPLIST_FILE = "SqueakPureObjc-Info 64x64.plist";
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_CFLAGS = "";
 				PRODUCT_NAME = Squeak;
-				SDKROOT = macosx;
+				VALID_ARCHS = x86_64;
 			};
 			name = Debug;
 		};
@@ -2961,11 +3000,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CODE_SIGN_IDENTITY = "Developer ID Application";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Developer ID Application";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "iPhone Distribution: Corporate Smalltalk Consulting Ltd (DTYH6QWG79)";
 				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
@@ -2976,20 +3013,18 @@
 				GCC_PREFIX_HEADER = SqueakPureObjc_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					BUILD_FOR_OSX,
-					USE_INLINE_MEMORY_ACCESSORS,
 					HAVE_SYS_TIME_H,
 					HAVE_NANOSLEEP,
 					SQUEAK_BUILTIN_PLUGIN,
-					NO_ISNAN,
+					"SQ_VI_BYTES_PER_WORD=8",
+					USE_INLINE_MEMORY_ACCESSORS,
 				);
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				INFOPLIST_FILE = "SqueakPureObjc-Info 64x64.plist";
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_CFLAGS = "";
 				PRODUCT_NAME = Squeak;
-				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
-				SDKROOT = macosx;
+				"PROVISIONING_PROFILE[sdk=macosx*]" = "3a8c5546-20a8-40a9-afb4-4218872c980c";
+				VALID_ARCHS = x86_64;
 			};
 			name = Distribution;
 		};

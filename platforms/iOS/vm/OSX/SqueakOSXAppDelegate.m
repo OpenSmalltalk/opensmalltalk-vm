@@ -70,7 +70,8 @@ SqueakOSXAppDelegate *gDelegateApp;
 		self.window.delegate =  windowHandler;
 		self.window.contentResizeIncrements = NSMakeSize(8.0f,8.0f);
 		[self.squeakApplication setupEventQueue];
-		
+        extern sqInt initializeImageFormatVersionIfNeeded(void);
+        initializeImageFormatVersionIfNeeded();
 		[self singleThreadStart];
 //	[self workerThreadStart];
 	
