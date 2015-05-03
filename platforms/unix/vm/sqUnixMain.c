@@ -834,6 +834,9 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 # elif __sun__ && __i386__
       void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
       void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
+# elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
+			void *fp = (void *)(uap ? uap->uc_mcontext.arm_fp: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.arm_sp: 0);
 # elif __x86_64__
 #	error Currently this VM must be build as a 32-bit binary.
 #	error See section 3e in unixbuild/HowToBuild.
@@ -910,6 +913,16 @@ printRegisterState(ucontext_t *uap)
 			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
 			regs[REG_RIP]);
 	return regs[REG_RIP];
+# elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
+	struct sigcontext *regs = &uap->uc_mcontext;
+	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
+	        "\t r4 0x%08x r5 0x%08x r6 0x%08x r7 0x%08x\n"
+	        "\t r8 0x%08x r9 0x%08x r10 0x%08x fp 0x%08x\n"
+	        "\t ip 0x%08x sp 0x%08x lr 0x%08x pc 0x%08x\n",
+	        regs->arm_r0,regs->arm_r1,regs->arm_r2,regs->arm_r3,
+	        regs->arm_r4,regs->arm_r5,regs->arm_r6,regs->arm_r7,
+	        regs->arm_r8,regs->arm_r9,regs->arm_r10,regs->arm_fp,
+	        regs->arm_ip, regs->arm_sp, regs->arm_lr, regs->arm_pc);
 #else
 	printf("don't know how to derive register state from a ucontext_t on this platform\n");
 	return 0;
@@ -2105,7 +2118,12 @@ isCFramePointerInUse()
 	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
 }
 # endif /* defined(i386) || defined(__i386) || defined(__i386__) */
-
+# if defined(__arm__) || defined(__arm32__) || defined(ARM32)
+/* Currently pretty sure fp is used but prepared to be shown wrong */
+ int
+isCFramePointerInUse()
+{ return true; }
+#endif /* defined(__arm__) || defined(__arm32__) || defined(ARM32) */
 /* Answer an approximation of the size of the redzone (if any).  Do so by
  * sending a signal to the process and computing the difference between the
  * stack pointer in the signal handler and that in the caller. Assumes stacks
