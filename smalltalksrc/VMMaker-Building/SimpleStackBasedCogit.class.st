@@ -2159,7 +2159,7 @@ SimpleStackBasedCogit >> genPrimitiveAtPut [
 SimpleStackBasedCogit >> genPrimitiveBitAnd [
 	| jumpNotSI |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	self genLoadArgAtDepth: 0 into: Arg0Reg.
+	self genLoadArgAtDepth: 0 into: TempReg.
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	"Whether the SmallInteger tags are zero or non-zero, anding them together will preserve them."
