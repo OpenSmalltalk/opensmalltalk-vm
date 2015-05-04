@@ -1137,12 +1137,13 @@ CogARMCompiler >> concretizeMoveAwR [
 CogARMCompiler >> concretizeMoveCqR [
 	"Will get inlined into concretizeAt: switch."
 	"If the quick constant is in fact a shiftable 8bit, generate the apropriate MOV, otherwise do what is necessary for a whole word."
+	<var: #word type: #sqInt>
 	<inline: true>
 	|word reg|
 	word := operands at: 0.
 	reg := self concreteRegister: (operands at: 1).
 	self 
-		rotateable8bitImmediate: (operands at: 0) 
+		rotateable8bitImmediate: word 
 		ifTrue: [:rot :immediate |
 			self machineCodeAt: 0 put: (self mov: reg imm: immediate ror: rot).
 			^machineCodeSize := 4]
@@ -1172,6 +1173,7 @@ CogARMCompiler >> concretizeMoveM16rR [
 	or 
 	move offset to ConcreteIPReg
 	ldrh destReg, [srcReg, ConcreteIPReg]"
+	<var: #offset type: #sqInt>
 	<inline: true>
 	| srcReg offset destReg instrOffset|
 	offset := operands at: 0.
@@ -1202,6 +1204,7 @@ CogARMCompiler >> concretizeMoveM64rRd [
 CogARMCompiler >> concretizeMoveMbrR [
 	"Will get inlined into concretizeAt: switch."
 	"ldrb destReg, [srcReg, #immediate] or ldrb destReg, [srcReg, ConcreteIPReg]"
+	<var: #offset type: #sqInt>
 	<inline: true>
 	| srcReg offset destReg instrOffset|
 	offset := operands at: 0.
@@ -1229,6 +1232,7 @@ CogARMCompiler >> concretizeMoveMbrR [
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveMwrR [
 	"Will get inlined into concretizeAt: switch."
+	<var: #offset type: #sqInt>
 	<inline: true>
 	| srcReg offset destReg instrOffset|
 	offset := operands at: 0.
@@ -1270,6 +1274,7 @@ CogARMCompiler >> concretizeMoveRAw [
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveRMbr [
 	"Will get inlined into concretizeAt: switch."
+	<var: #offset type: #sqInt>
 	<inline: true>
 	| srcReg offset baseReg instrOffset|
 	srcReg := self concreteRegister: (operands at: 0).
@@ -1297,6 +1302,7 @@ CogARMCompiler >> concretizeMoveRMbr [
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveRMwr [
 	"Will get inlined into concretizeAt: switch."
+	<var: #offset type: #sqInt>
 	<inline: true>
 	| srcReg offset baseReg instrOffset|
 	srcReg := self concreteRegister: (operands at: 0).
@@ -1496,6 +1502,7 @@ CogARMCompiler >> concretizePushR [
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeRetN [
 	"Will get inlined into concretizeAt: switch."
+	<var: #offset type: #sqInt>
 	<inline: true>
 	| offset |
 	offset := operands at: 0.
@@ -1544,15 +1551,18 @@ CogARMCompiler >> concretizeStop [
 CogARMCompiler >> concretizeSubCqR [
 	"Will get inlined into concretizeAt: switch."
 	"Try whether the quick constant is a small negative number. If it is, optimize."
+	<var: #word type: #sqInt>
 	<inline: true>
-	self rotateable8bitImmediate: (operands at: 0)
+	| word |
+	word := operands at: 0.
+	self rotateable8bitImmediate: word
 		ifTrue: [ :rot :immediate | | reg |
 			reg := self concreteRegister: (operands at: 1).
 			self machineCodeAt: 0 put: (self subs: reg rn: reg imm: immediate ror: rot).
 			^machineCodeSize := 4]
 		ifFalse: [
-			"before building a full load of a big cinstant, see if we can do an add of the constant negated"
-			self rotateable8bitImmediate: (operands at: 0) negated
+			"before building a full load of a big constant, see if we can do an add of the constant negated"
+			self rotateable8bitImmediate: word negated
 				ifTrue: [ :rot :immediate | | reg |
 					reg := self concreteRegister: (operands at: 1).
 					self machineCodeAt: 0 put: (self adds: reg rn: reg imm: immediate ror: rot).
@@ -2138,6 +2148,8 @@ CogARMCompiler >> is8BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: fa
 
 { #category : #testing }
 CogARMCompiler >> isAddressRelativeToVarBase: varAddress [
+	<inline: true>
+	<var: #varAddress type: #sqInt>
 	"Support for addressing variables off the dedicated VarBaseReg"
 	^varAddress notNil
 	  and: [varAddress >= cogit varBaseAddress
