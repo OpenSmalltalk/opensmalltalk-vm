@@ -2146,12 +2146,16 @@ SimpleStackBasedCogit >> genPrimitiveAt [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveAtPut [
-	| r |
+	| savedIndex r |
+	savedIndex := opcodeIndex.
 	self genLoadArgAtDepth: 1 into: Arg0Reg.
 	self genLoadArgAtDepth: 0 into: Arg1Reg.
 	((r := objectRepresentation genInnerPrimitiveAtPut: (self primRetNOffsetFor: 2)) < 0
 	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
+	"If primitive is unimplemented, discard arg load."
+	r = UnimplementedPrimitive ifTrue:
+		[opcodeIndex := savedIndex].
 	^self compileFallbackToInterpreterPrimitive
 ]
 
@@ -2591,10 +2595,15 @@ SimpleStackBasedCogit >> genPrimitiveNew [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNewMethod [
-	| r |
+	| savedIndex r |
+	savedIndex := opcodeIndex.
+	self genLoadArgAtDepth: 0 into: Arg0Reg.
 	((r := objectRepresentation genInnerPrimitiveNewMethod: (self primRetNOffsetFor: 2)) < 0
 	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
+	"If primitive is unimplemented, discard arg load."
+	r = UnimplementedPrimitive ifTrue:
+		[opcodeIndex := savedIndex].
 	"Call the interpreter primitive either when the machine-code primitive
 	 fails, or if the machine-code primitive is unimplemented."
 	^self compileFallbackToInterpreterPrimitive
@@ -2602,10 +2611,15 @@ SimpleStackBasedCogit >> genPrimitiveNewMethod [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNewWithArg [
-	| r |
+	| savedIndex r |
+	savedIndex := opcodeIndex.
+	self genLoadArgAtDepth: 0 into: Arg0Reg.
 	((r := objectRepresentation genInnerPrimitiveNewWithArg: (self primRetNOffsetFor: 1)) < 0
 	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
+	"If primitive is unimplemented, discard arg load."
+	r = UnimplementedPrimitive ifTrue:
+		[opcodeIndex := savedIndex].
 	"Call the interpreter primitive either when the machine-code primitive
 	 fails, or if the machine-code primitive is unimplemented."
 	^self compileFallbackToInterpreterPrimitive
@@ -2675,12 +2689,16 @@ SimpleStackBasedCogit >> genPrimitiveStringAt [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveStringAtPut [
-	| r |
+	| savedIndex r |
+	savedIndex := opcodeIndex.
 	self genLoadArgAtDepth: 1 into: Arg0Reg.
 	self genLoadArgAtDepth: 0 into: Arg1Reg.
 	((r := objectRepresentation genInnerPrimitiveStringAtPut: (self primRetNOffsetFor: 2)) < 0
 	 and: [r ~= UnimplementedPrimitive]) ifTrue:
 		[^r].
+	"If primitive is unimplemented, discard arg load."
+	r = UnimplementedPrimitive ifTrue:
+		[opcodeIndex := savedIndex].
 	^self compileFallbackToInterpreterPrimitive
 ]
 
