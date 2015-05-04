@@ -2149,7 +2149,7 @@ CogARMCompiler >> is8BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: fa
 { #category : #testing }
 CogARMCompiler >> isAddressRelativeToVarBase: varAddress [
 	<inline: true>
-	<var: #varAddress type: #sqInt>
+	<var: #varAddress type: #usqInt>
 	"Support for addressing variables off the dedicated VarBaseReg"
 	^varAddress notNil
 	  and: [varAddress >= cogit varBaseAddress
