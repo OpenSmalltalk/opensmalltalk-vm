@@ -52,7 +52,8 @@ Class {
 		'counters',
 		'counterIndex',
 		'initialCounterValue',
-		'ceTrapTrampoline'
+		'ceTrapTrampoline',
+		'branchReachedOnlyForCounterTrip'
 	],
 	#classVars : [
 		'CounterBytes',
@@ -231,6 +232,55 @@ SistaStackToRegisterMappingCogit >> fillInOPICHeader: pic size: size numArgs: nu
 ]
 
 { #category : #'bytecode generator support' }
+SistaStackToRegisterMappingCogit >> genCounterTripOnlyJumpIf: boolean to: targetBytecodePC [ 
+	"Specific version if the branch is only reached while falling through if the counter trips after an inlined #== branch. We do not regenerate the counter logic in this case to avoid 24 bytes instructions."
+	
+	<var: #ok type: #'AbstractInstruction *'>
+	<var: #mustBeBooleanTrampoline type: #'AbstractInstruction *'>
+
+	| ok mustBeBooleanTrampoline |
+
+	self ssFlushTo: simStackPtr - 1.
+	
+	self ssTop popToReg: TempReg.
+	
+	self ssPop: 1.
+
+	counterIndex := counterIndex + 1. "counters are increased / decreased in the inlined branch"
+
+	"We need SendNumArgsReg because of the mustBeBooleanTrampoline"
+	self ssAllocateRequiredReg: SendNumArgsReg.
+	self MoveCq: 1 R: SendNumArgsReg.
+	
+	"The first time this is reached, it calls necessarily the counter trip for the trampoline because SendNumArgsReg is non zero"
+	mustBeBooleanTrampoline := self CallRT: (boolean == objectMemory falseObject
+						ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
+						ifFalse: [ceSendMustBeBooleanAddTrueTrampoline]).
+
+	self annotateBytecode: self Label.
+
+	"Cunning trick by LPD.  If true and false are contiguous subtract the smaller.
+	 Correct result is either 0 or the distance between them.  If result is not 0 or
+	 their distance send mustBeBoolean."
+	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
+	self annotate: (self SubCw: boolean R: TempReg) objRef: boolean.
+	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
+
+	self CmpCq: (boolean == objectMemory falseObject
+					ifTrue: [objectMemory trueObject - objectMemory falseObject]
+					ifFalse: [objectMemory falseObject - objectMemory trueObject])
+		R: TempReg.
+		
+	ok := self JumpZero: 0.
+	self MoveCq: 0 R: SendNumArgsReg. "if counterReg is 0 this is a mustBeBoolean, not a counter trip."		
+
+	self Jump: mustBeBooleanTrampoline.
+	
+	ok jmpTarget: self Label.
+	^0
+]
+
+{ #category : #'bytecode generator support' }
 SistaStackToRegisterMappingCogit >> genExecutionCountLogicInto: binaryBlock counterReg: counterReg [
 	<var: #countTripped type: #'AbstractInstruction *'>
 	<inline: true>
@@ -294,18 +344,20 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 decrements the lower half.  N.B. We *do not* eliminate dead branches (true ifTrue:/true ifFalse:)
 	 so that scanning for send and branch data is simplified and that branch data is correct."
 	<inline: false>
-	| desc ok counterAddress countTripped retry |
+	| ok counterAddress countTripped retry |
 	<var: #ok type: #'AbstractInstruction *'>
-	<var: #desc type: #'CogSimStackEntry *'>
 	<var: #retry type: #'AbstractInstruction *'>
 	<var: #countTripped type: #'AbstractInstruction *'>
 
 	(coInterpreter isOptimizedMethod: methodObj) ifTrue: [ ^ super genJumpIf: boolean to: targetBytecodePC ].
+	
+	branchReachedOnlyForCounterTrip ifTrue: 
+		[ branchReachedOnlyForCounterTrip := false.
+		^ self genCounterTripOnlyJumpIf: boolean to: targetBytecodePC ].
 
 	self ssFlushTo: simStackPtr - 1.
-	desc := self ssTop.
+	self ssTop popToReg: TempReg.
 	self ssPop: 1.
-	desc popToReg: TempReg.
 
 	"We need SendNumArgsReg because of the mustBeBooleanTrampoline"
 	self ssAllocateRequiredReg: SendNumArgsReg.
@@ -333,7 +385,7 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 		R: TempReg.
 	ok := self JumpZero: 0.
 	self MoveCq: 0 R: SendNumArgsReg. "if counterReg is 0 this is a mustBeBoolean, not a counter trip."
-
+	
 	countTripped jmpTarget:
 		(self CallRT: (boolean == objectMemory falseObject
 						ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
@@ -591,6 +643,9 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	
 	"inlined version of #== ignoring the branchDescriptor if the counter trips to have normal state for the optimizer"
 	self genEqualsEqualsNoBranchArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
+	
+	(self fixupAt: nextPC - initialPC) targetInstruction = 0 ifTrue: [ branchReachedOnlyForCounterTrip := true ].
+	
 	^ 0
 ]
 
@@ -630,6 +685,7 @@ SistaStackToRegisterMappingCogit >> getJumpTargetPCAt: pc [
 { #category : #initialization }
 SistaStackToRegisterMappingCogit >> initialize [
 	super initialize.
+	branchReachedOnlyForCounterTrip := false.
 	cogMethodSurrogateClass := (objectMemory ifNil: [self class objectMemoryClass]) wordSize = 4
 										ifTrue: [CogSistaMethodSurrogate32]
 										ifFalse: [CogSistaMethodSurrogate64]
