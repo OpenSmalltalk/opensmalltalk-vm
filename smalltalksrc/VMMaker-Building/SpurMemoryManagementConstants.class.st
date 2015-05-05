@@ -3,10 +3,11 @@ Class {
 	#superclass : #SharedPool,
 	#classVars : [
 		'DontTenure',
-		'DontTenureButDoUnmark',
 		'MarkOnTenure',
+		'MaxRTRefCount',
 		'TenureByAge',
-		'TenureByClass'
+		'TenureByClass',
+		'TenureToShrinkRT'
 	],
 	#category : #'VMMaker-SpurMemoryManager'
 }

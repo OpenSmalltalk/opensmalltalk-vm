@@ -1948,6 +1948,14 @@ StackInterpreterSimulator >> primitiveSuspend [
 	^ super primitiveSuspend
 ]
 
+{ #category : #'system control primitives' }
+StackInterpreterSimulator >> primitiveVMParameter [
+	(self stackTop = (objectMemory integerObjectOf: 9)
+	 or: [self stackTop = (objectMemory integerObjectOf: 52)]) ifTrue:
+		[self halt].
+	^super primitiveVMParameter
+]
+
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> primitiveWait [
 	"Catch errors before we start the whole morphic error process"
