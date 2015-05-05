@@ -109,6 +109,7 @@ Class {
 		'previousRememberedSetSize',
 		'rememberedSetRedZone',
 		'rememberedSetLimit',
+		'refCountToShrinkRT',
 		'weakList',
 		'ephemeronList',
 		'tenureCriterion',
@@ -142,9 +143,10 @@ SpurGenerationScavenger class >> initialize [
 	"SpurGenerationScavenger initialize"
 	TenureByAge := 1.
 	TenureByClass := 2.
-	DontTenure := 3.
-	DontTenureButDoUnmark := 4.
-	MarkOnTenure := 5
+	TenureToShrinkRT := 3.
+	DontTenure := 4.
+	MarkOnTenure := 5.
+	MaxRTRefCount := 7 "The field comprised of {isGrey,isPinned,isRemembered}"
 ]
 
 { #category : #translation }
@@ -198,6 +200,15 @@ SpurGenerationScavenger >> allFutureSpaceEntitiesDo: aBlock [
 		 objOop := manager objectAfter: objOop limit: limit]
 ]
 
+{ #category : #'remembered set' }
+SpurGenerationScavenger >> allNewSpaceObjectsHaveZeroRTRefCount [
+	manager allNewSpaceObjectsDo:
+		[:obj|
+		(manager rtRefCountOf: obj) > 0 ifTrue:
+			[^false]].
+	^true
+]
+
 { #category : #'weakness and ephemerality' }
 SpurGenerationScavenger >> allWeakSurvivorsOnWeakList [
 	self allFutureSpaceEntitiesDo:
@@ -211,6 +222,35 @@ SpurGenerationScavenger >> allWeakSurvivorsOnWeakList [
 { #category : #accessing }
 SpurGenerationScavenger >> coInterpreter: aCoInterpreter [
 	coInterpreter := aCoInterpreter
+]
+
+{ #category : #'remembered set' }
+SpurGenerationScavenger >> computeRefCountToShrinkRT [
+	"Some time in every scavenger's life there may come a time when someone writes code that stresses
+	 the remembered table.  One might conclude that if the remembered table is full, then the right thing
+	 to do is simply to tenure everything, emptying the remembered table.  Bt in some circumstances this
+	 can be counter-productive, and result in the same situation arising soon after tenuring everything.
+	 Instead, we can try and selectively prune the remembered table, tenuring only those objects that
+	 are referenced by many objects in the remembered table.  That's what this algorithm does.  It
+	 reference counts young objects referenced from the remembered set, and then sets a threshold
+	 used to tenure objects oft referenced from the remembered set, thereby allowing  the remembered
+	 set to shrink, while not tenuring everything.
+
+	 Once in a network monitoring application in a galaxy not dissimilar from the one this code inhabits,
+	 a tree of nodes referring to large integers was in precisely this situation.  The nodes were old, and
+	 the integers were in new space.  Some of the nodes referred to shared numbers, some their own
+	 unique numbers.  The numbers were updated frequently. Were new space simply tenured when the
+	 remembered table was full, the remembered table would soon fill up as new numbers were computed.
+	 Only by selectively pruning the remembered table of nodes that shared data, was a balance achieved
+	 whereby the remembered table population was kept small, and tenuring rates were low."
+	<inline: #never>
+	| counts |
+	<var: 'counts' declareC: 'long counts[MaxRTRefCount + 1]'>
+	self cCode: '' inSmalltalk: [counts := CArrayAccessor on: (Array new: MaxRTRefCount + 1)].
+	self assert: self allNewSpaceObjectsHaveZeroRTRefCount.
+	self referenceCountRememberedReferents.
+	self totalRememberedReferentCounts: counts.
+	self setRefCountToShrinkRT: counts
 ]
 
 { #category : #scavenger }
@@ -265,62 +305,9 @@ SpurGenerationScavenger >> copyToFutureSpace: survivor bytes: bytesInObject [
 	newStart := futureSurvivorStart.
 	futureSurvivorStart := futureSurvivorStart + bytesInObject.
 	manager mem: newStart asVoidPointer cp: startOfSurvivor asVoidPointer y: bytesInObject.
+	tenureCriterion = TenureToShrinkRT ifTrue:
+		[manager rtRefCountOf: newStart + (survivor - startOfSurvivor) put: 0].
 	^newStart + (survivor - startOfSurvivor)
-]
-
-{ #category : #scavenger }
-SpurGenerationScavenger >> copyToOldSpace: survivor [
-	"Copy survivor to oldSpace.  Answer the new oop of the object."
-	<inline: true>
-	| nTenures numSlots hash newOop |
-	nTenures := statTenures.
-	self flag: 'why not just pass header??'.
-	numSlots := manager numSlotsOf: survivor.
-	hash := manager rawHashBitsOf: survivor.
-	newOop := manager
-					allocateSlotsInOldSpace: numSlots
-					format: (manager formatOf: survivor)
-					classIndex: (manager classIndexOf: survivor).
-	newOop ifNil:
-		[manager growOldSpaceByAtLeast: 0. "grow by growHeadroom"
-		 newOop := manager
-					allocateSlotsInOldSpace: numSlots
-					format: (manager formatOf: survivor)
-					classIndex: (manager classIndexOf: survivor).
-		 newOop ifNil:
-			[self error: 'out of memory']].
-	manager
-		mem: (newOop + manager baseHeaderSize) asVoidPointer
-		cp: (survivor + manager baseHeaderSize) asVoidPointer
-		y: numSlots * manager wordSize.
-	(manager hasPointerFields: survivor) ifTrue:
-		[self remember: newOop].
-	hash ~= 0 ifTrue:
-		[manager setHashBitsOf: newOop to: hash].
-	statTenures := nTenures + 1.
-	^newOop
-]
-
-{ #category : #scavenger }
-SpurGenerationScavenger >> copyToOldSpace: survivor bytes: bytesInObject [
-	"Copy survivor to oldSpace.  Answer the new oop of the object."
-	<inline: true>
-	| nTenures startOfSurvivor newStart newOop |
-	nTenures := statTenures.
-	startOfSurvivor := manager startOfObject: survivor.
-	newStart := manager allocateOldSpaceChunkOfBytes: bytesInObject.
-	newStart ifNil:
-		[manager growOldSpaceByAtLeast: 0. "grow by growHeadroom"
-		 newStart := manager allocateOldSpaceChunkOfBytes: bytesInObject.
-		 newStart ifNil:
-			[self error: 'out of memory']].
-	manager checkFreeSpace.
-	manager mem: newStart asVoidPointer cp: startOfSurvivor asVoidPointer y: bytesInObject.
-	newOop := newStart + (survivor - startOfSurvivor).
-	(manager hasPointerFields: survivor) ifTrue:
-		[self remember: newOop].
-	statTenures := nTenures + 1.
-	^newOop
 ]
 
 { #category : #scavenger }
@@ -330,8 +317,9 @@ SpurGenerationScavenger >> copyToOldSpace: survivor bytes: bytesInObject format:
 	| nTenures startOfSurvivor newStart newOop |
 	self assert: (formatOfSurvivor = (manager formatOf: survivor)
 				and: [((manager isMarked: survivor) not or: [tenureCriterion = MarkOnTenure])
-				and: [(manager isPinned: survivor) not
-				and: [(manager isRemembered: survivor) not]]]).
+				and: [tenureCriterion = TenureToShrinkRT
+					or: [(manager isPinned: survivor) not
+						and: [(manager isRemembered: survivor) not]]]]).
 	nTenures := statTenures.
 	startOfSurvivor := manager startOfObject: survivor.
 	newStart := manager allocateOldSpaceChunkOfBytes: bytesInObject.
@@ -343,11 +331,24 @@ SpurGenerationScavenger >> copyToOldSpace: survivor bytes: bytesInObject format:
 	"manager checkFreeSpace."
 	manager mem: newStart asVoidPointer cp: startOfSurvivor asVoidPointer y: bytesInObject.
 	newOop := newStart + (survivor - startOfSurvivor).
-	(manager isAnyPointerFormat: formatOfSurvivor) ifTrue:
-		[self remember: newOop].
-	tenureCriterion = MarkOnTenure ifTrue:
-		[manager setIsMarkedOf: newOop to: true].
+	tenureCriterion >= (TenureToShrinkRT min: MarkOnTenure) ifTrue:
+		[tenureCriterion = TenureToShrinkRT ifTrue:
+			[manager rtRefCountOf: newOop put: 0].
+		 tenureCriterion = MarkOnTenure ifTrue:
+			[manager setIsMarkedOf: newOop to: true]].
 	statTenures := nTenures + 1.
+	(manager isAnyPointerFormat: formatOfSurvivor) ifTrue:
+		["A very quick and dirty scan to find young referents.  If we misidentify bytes
+		  in a CompiledMethod as young we don't care; it's unlikely, and a subsequent
+		  scan of the rt will filter the object out.  But it's good to filter here because
+		  otherwise an attempt to shrink the RT may simply fill it up with new objects,
+		  and here the data is likely in the cache."
+		 manager baseHeaderSize to: bytesInObject - (survivor - startOfSurvivor) - manager wordSize by: manager wordSize do:
+			[:p| | field |
+			field := manager longAt: survivor + p.
+			(manager isReallyYoung: field) ifTrue:
+				[self remember: newOop.
+				 ^newOop]]].
 	^newOop
 ]
 
@@ -572,7 +573,7 @@ SpurGenerationScavenger >> getRawTenuringThreshold [
 	^tenureThreshold
 ]
 
-{ #category : #'store check' }
+{ #category : #'remembered set' }
 SpurGenerationScavenger >> growRememberedSet [
 	| obj numSlots newObj base |
 	<inline: false> "Don't ruin locality in remember:"
@@ -596,8 +597,8 @@ SpurGenerationScavenger >> growRememberedSet [
 			setIsMarkedOf: obj to: false].
 	manager freeObject: obj.
 	rememberedSet := base.
-	rememberedSetLimit := numSlots * 2.
-	rememberedSetRedZone := rememberedSetLimit * 3 + 3 // 4
+	rememberedSetLimit := manager numSlotsOf: newObj.
+	self setRememberedSetRedZone
 ]
 
 { #category : #initialization }
@@ -628,7 +629,7 @@ SpurGenerationScavenger >> initializeRememberedSet [
 	rememberedSet := manager firstIndexableField: obj.
 	rememberedSetSize := 0.
 	rememberedSetLimit := manager numSlotsOf: obj.
-	rememberedSetRedZone := rememberedSetLimit * 3 + 3 // 4
+	self setRememberedSetRedZone
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -888,6 +889,24 @@ SpurGenerationScavenger >> processWeaklings [
 		weakList := nil]
 ]
 
+{ #category : #'remembered set' }
+SpurGenerationScavenger >> referenceCountRememberedReferents [
+	"Reference count each referent of the remembered table using the rtRefCount
+	 field comprised of isGrey,isPinned,isRemembered.  i.e. produce a reference
+	 count from 1 to 7 in all objects accessible from the RT."
+	<inline: true>
+	0 to: rememberedSetSize - 1 do:
+		[:i| | elephant |
+		elephant := rememberedSet at: i.
+		0 to: (manager numPointerSlotsOf: elephant) - 1 do:
+			[:j| | referent refCount |
+			referent := manager fetchPointer: j ofObject: elephant.
+			(manager isReallyYoung: referent) ifTrue:
+				[refCount := manager rtRefCountOf: referent.
+				 (refCount := refCount + 1) <= MaxRTRefCount ifTrue:
+					[manager rtRefCountOf: referent put: refCount]]]]
+]
+
 { #category : #'store check' }
 SpurGenerationScavenger >> remember: objOop [
 	"Add the argument to the remembered set and set its isRemembered bit to true.
@@ -905,6 +924,12 @@ SpurGenerationScavenger >> remember: objOop [
 	(rememberedSetSize := rememberedSetSize + 1) >= rememberedSetRedZone ifTrue:
 		[manager scheduleScavenge].
 	^objOop
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> rememberedSetLimit [
+	<cmacro: '() GIV(rememberedSetLimit)'>
+	^rememberedSetLimit
 ]
 
 { #category : #accessing }
@@ -935,6 +960,7 @@ SpurGenerationScavenger >> scavenge: tenuringCriterion [
 
 	 Answer the limit of pastSpace, to allow the memory manager to bounds check survivors."
 	tenureCriterion := tenuringCriterion.
+	self strategizeToLimitRememberedTable.
 	self scavengeLoop.
 	self processWeaklings.
 	self computeTenuringThreshold.
@@ -1207,6 +1233,30 @@ SpurGenerationScavenger >> setRawTenuringThreshold: threshold [
 	tenureThreshold := threshold
 ]
 
+{ #category : #'remembered set' }
+SpurGenerationScavenger >> setRefCountToShrinkRT: counts [
+	"Choose a refCount that will shrink the rt by at least  half."
+	<var: 'counts' declareC: 'long counts[MaxRTRefCount + 1]'>
+	<inline: true>
+	| i count |
+	count := 0.
+	i := MaxRTRefCount + 1.
+	[count < (rememberedSetSize // 2)  and: [(i := i - 1) >= 0]] whileTrue:
+		[count := count + (counts at: i)].
+	refCountToShrinkRT := i max: 0
+]
+
+{ #category : #'remembered set' }
+SpurGenerationScavenger >> setRememberedSetRedZone [
+	| fudge |
+	<inline: true>
+	"fudge is a minimum below which we don't care about growing the RT.
+	 It is chosen so that with a default 4Mb new space, the RT is not considered
+	 full until it has from 512 to 1024 entries."
+	fudge := eden limit - eden start / manager wordSize // 1024.
+	rememberedSetRedZone := rememberedSetLimit * 3 // 4 max: fudge
+]
+
 { #category : #scavenger }
 SpurGenerationScavenger >> shouldBeTenured: survivor [
 	"Answer if an object should be tenured.  The default policy tenuring policy
@@ -1226,15 +1276,23 @@ SpurGenerationScavenger >> shouldBeTenured: survivor [
 				[survivor < tenureThreshold]. 
 			[TenureByClass] ->
 				[(manager classIndexOf: survivor) = tenuringClassIndex].
-			[DontTenureButDoUnmark]	->
-				[manager setIsMarkedOf: survivor to: false.
-				 false]  }
+			[TenureToShrinkRT]	->
+				[(manager rtRefCountOf: survivor) >= refCountToShrinkRT]  }
 		otherwise: [false]
 ]
 
 { #category : #accessing }
 SpurGenerationScavenger >> statTenures [
 	^statTenures
+]
+
+{ #category : #'remembered set' }
+SpurGenerationScavenger >> strategizeToLimitRememberedTable [
+	<inline: true>
+	(tenureCriterion = TenureByAge
+	 and: [rememberedSetSize >= rememberedSetRedZone]) ifTrue:
+		[tenureCriterion := TenureToShrinkRT.
+		 self computeRefCountToShrinkRT]
 ]
 
 { #category : #accessing }
@@ -1245,4 +1303,21 @@ SpurGenerationScavenger >> tenuringClassIndex [
 { #category : #accessing }
 SpurGenerationScavenger >> tenuringClassIndex: anInteger [
 	tenuringClassIndex := anInteger
+]
+
+{ #category : #'remembered set' }
+SpurGenerationScavenger >> totalRememberedReferentCounts: counts [
+	<var: 'counts' declareC: 'long counts[MaxRTRefCount + 1]'>
+	<inline: true>
+	0 to: MaxRTRefCount do:
+		[:i| counts at: i put: 0].
+	0 to: rememberedSetSize - 1 do:
+		[:i| | elephant |
+		elephant := rememberedSet at: i.
+		0 to: (manager numPointerSlotsOf: elephant) - 1 do:
+			[:j| | referent refCount |
+			referent := manager fetchPointer: j ofObject: elephant.
+			(manager isReallyYoung: referent) ifTrue:
+				[refCount := manager rtRefCountOf: referent.
+				 counts at: refCount put: (counts at: refCount) + 1]]]
 ]

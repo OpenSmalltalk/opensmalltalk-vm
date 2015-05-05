@@ -5738,9 +5738,8 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	segmentManager collapseSegmentsPostSwizzle.
 	self computeFreeSpacePostSwizzle.
 	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart, free space"
-	"self bootstrapping ifFalse:
-		["self initializeNewSpaceVariables.
-		 scavenger initializeRememberedSet"]".
+	self initializeNewSpaceVariables.
+	scavenger initializeRememberedSet.
 	segmentManager checkSegments.
 
 	numCompactionPasses := CompactionPassesForGC.
@@ -9695,11 +9694,13 @@ SpurMemoryManager >> reverseSmallListHeads [
 
 { #category : #scavenger }
 SpurMemoryManager >> rootTableCapacity [
-	^self numSlotsOf: self rememberedSetObj
+	<cmacro: '() GIV(rememberedSetLimit)'>
+	^scavenger rememberedSetLimit
 ]
 
 { #category : #accessing }
 SpurMemoryManager >> rootTableCount [
+	<cmacro: '() GIV(rememberedSetSize)'>
 	^scavenger rememberedSetSize
 ]
 
@@ -9716,6 +9717,20 @@ SpurMemoryManager >> roundUpHeapSize: heapSize [
 	^(heapSize anyMask: (1 << bit - 1))
 		ifTrue: [(heapSize bitClear: (1 << bit - 1)) + (1 << bit)]
 		ifFalse: [heapSize]
+]
+
+{ #category : #'gc - scavenging' }
+SpurMemoryManager >> rtRefCountOf: obj [
+	"Answer the rt reference count of obj; this is the three bit field comprised
+	 of isGrey,isPinned,isRemembered.  See computeRefCountToShrinkRT."
+	^(self longAt: obj) >> self rememberedBitShift bitAnd: MaxRTRefCount
+]
+
+{ #category : #'gc - scavenging' }
+SpurMemoryManager >> rtRefCountOf: obj put: refCount [
+	"Set the rt reference count of obj; this is the three bit field comprised
+	 of isGrey,isPinned,isRemembered.  See computeRefCountToShrinkRT."
+	self subclassResponsibility
 ]
 
 { #category : #'debug support' }
