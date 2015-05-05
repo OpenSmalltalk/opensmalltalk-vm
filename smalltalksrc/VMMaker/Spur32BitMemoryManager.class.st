@@ -767,6 +767,18 @@ Spur32BitMemoryManager >> rawOverflowSlotsOf: objOop put: numSlots [
 ]
 
 { #category : #'header access' }
+Spur32BitMemoryManager >> rtRefCountOf: obj put: refCount [
+	"Set the rt reference count of obj; this is the three bit field comprised
+	 of isGrey,isPinned,isRemembered.  See computeRefCountToShrinkRT."
+	| header |
+	self assert: (refCount between: 0 and: MaxRTRefCount).
+	header := self longAt: obj.
+	header := header bitAnd: (7 << self rememberedBitShift) bitInvert32.
+	header := header + (refCount << self rememberedBitShift).
+	self longAt: obj put: header
+]
+
+{ #category : #'header access' }
 Spur32BitMemoryManager >> set: objOop classIndexTo: classIndex formatTo: format [
 	"0 = 0 sized objects (UndefinedObject True False et al)
 	 1 = non-indexable objects with inst vars (Point et al)
