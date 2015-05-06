@@ -4155,7 +4155,7 @@ Cogit >> compileCogMethod: selector [
 					ifTrue: [initialPC - 1]
 					ifFalse: [objectMemory numBytesOf: methodObj].
 	numBytecodes := endPC - initialPC + 1.
-	self allocateOpcodes: (numBytecodes + extra) * 10
+	self allocateOpcodes: (numBytecodes + extra) * self estimateOfAbstractOpcodesPerBytecodes
 		bytecodes: numBytecodes
 		ifFail: [^coInterpreter cCoerceSimple: MethodTooBig to: #'CogMethod *'].
 	(numBlocks := self scanMethod) < 0 ifTrue:
@@ -4622,6 +4622,12 @@ Cogit >> entryOffset [
 	<api>
 	<cmacro: '() cmEntryOffset'>
 	^cmEntryOffset
+]
+
+{ #category : #accessing }
+Cogit >> estimateOfAbstractOpcodesPerBytecodes [
+	<inline: true>
+	^ 10
 ]
 
 { #category : #'bytecode generators' }
