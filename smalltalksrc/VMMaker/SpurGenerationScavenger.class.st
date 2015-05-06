@@ -244,13 +244,16 @@ SpurGenerationScavenger >> computeRefCountToShrinkRT [
 	 Only by selectively pruning the remembered table of nodes that shared data, was a balance achieved
 	 whereby the remembered table population was kept small, and tenuring rates were low."
 	<inline: #never>
-	| counts |
-	<var: 'counts' declareC: 'long counts[MaxRTRefCount + 1]'>
-	self cCode: '' inSmalltalk: [counts := CArrayAccessor on: (Array new: MaxRTRefCount + 1)].
+	| population |
+	<var: 'population' declareC: 'long population[MaxRTRefCount + 1]'>
+	self cCode: [self me: population ms: 0 et: (self sizeof: #long) * (MaxRTRefCount + 1)]
+		inSmalltalk: [population := CArrayAccessor on: (Array new: MaxRTRefCount + 1 withAll: 0)].
 	self assert: self allNewSpaceObjectsHaveZeroRTRefCount.
-	self referenceCountRememberedReferents.
-	self totalRememberedReferentCounts: counts.
-	self setRefCountToShrinkRT: counts
+	self referenceCountRememberedReferents: population.
+	self setRefCountToShrinkRT: population
+
+	"For debugging:
+	(manager allNewSpaceObjectsDo: [:o| manager rtRefCountOf: o put: 0])"
 ]
 
 { #category : #scavenger }
@@ -890,10 +893,10 @@ SpurGenerationScavenger >> processWeaklings [
 ]
 
 { #category : #'remembered set' }
-SpurGenerationScavenger >> referenceCountRememberedReferents [
-	"Reference count each referent of the remembered table using the rtRefCount
-	 field comprised of isGrey,isPinned,isRemembered.  i.e. produce a reference
-	 count from 1 to 7 in all objects accessible from the RT."
+SpurGenerationScavenger >> referenceCountRememberedReferents: population [
+	"Both reference count young objects reachable from the RT,
+	 and count the populations of each ref count, in a single pass."
+	<var: 'population' declareC: 'long population[MaxRTRefCount + 1]'>
 	<inline: true>
 	0 to: rememberedSetSize - 1 do:
 		[:i| | elephant |
@@ -903,8 +906,12 @@ SpurGenerationScavenger >> referenceCountRememberedReferents [
 			referent := manager fetchPointer: j ofObject: elephant.
 			(manager isReallyYoung: referent) ifTrue:
 				[refCount := manager rtRefCountOf: referent.
-				 (refCount := refCount + 1) <= MaxRTRefCount ifTrue:
-					[manager rtRefCountOf: referent put: refCount]]]]
+				 refCount < MaxRTRefCount ifTrue:
+					[refCount > 0 ifTrue:
+						[population at: refCount put: (population at: refCount) - 1].
+					 refCount := refCount + 1.
+					 manager rtRefCountOf: referent put: refCount.
+					 population at: refCount put: (population at: refCount) + 1]]]].
 ]
 
 { #category : #'store check' }
@@ -1234,15 +1241,20 @@ SpurGenerationScavenger >> setRawTenuringThreshold: threshold [
 ]
 
 { #category : #'remembered set' }
-SpurGenerationScavenger >> setRefCountToShrinkRT: counts [
-	"Choose a refCount that will shrink the rt by at least  half."
-	<var: 'counts' declareC: 'long counts[MaxRTRefCount + 1]'>
+SpurGenerationScavenger >> setRefCountToShrinkRT: population [
+	"Choose a refCount that should shrink the rt by at least  half.
+	 i.e. find the maximum reference count that half the population have at least."
+	<var: 'population' declareC: 'long population[MaxRTRefCount + 1]'>
 	<inline: true>
-	| i count |
+	| entirePopulation i count |
+	self assert: (population at: 0) = 0.
+	entirePopulation := 0.
+	1 to: MaxRTRefCount do:
+		[:j| entirePopulation := entirePopulation + (population at: j)].
 	count := 0.
 	i := MaxRTRefCount + 1.
-	[count < (rememberedSetSize // 2)  and: [(i := i - 1) >= 0]] whileTrue:
-		[count := count + (counts at: i)].
+	[count < (entirePopulation // 2) and: [(i := i - 1) >= 0]] whileTrue:
+		[count := count + (population at: i)].
 	refCountToShrinkRT := i max: 0
 ]
 
@@ -1303,21 +1315,4 @@ SpurGenerationScavenger >> tenuringClassIndex [
 { #category : #accessing }
 SpurGenerationScavenger >> tenuringClassIndex: anInteger [
 	tenuringClassIndex := anInteger
-]
-
-{ #category : #'remembered set' }
-SpurGenerationScavenger >> totalRememberedReferentCounts: counts [
-	<var: 'counts' declareC: 'long counts[MaxRTRefCount + 1]'>
-	<inline: true>
-	0 to: MaxRTRefCount do:
-		[:i| counts at: i put: 0].
-	0 to: rememberedSetSize - 1 do:
-		[:i| | elephant |
-		elephant := rememberedSet at: i.
-		0 to: (manager numPointerSlotsOf: elephant) - 1 do:
-			[:j| | referent refCount |
-			referent := manager fetchPointer: j ofObject: elephant.
-			(manager isReallyYoung: referent) ifTrue:
-				[refCount := manager rtRefCountOf: referent.
-				 counts at: refCount put: (counts at: refCount) + 1]]]
 ]
