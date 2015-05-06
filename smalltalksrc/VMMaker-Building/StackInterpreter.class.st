@@ -6364,7 +6364,8 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 		[:i| | thePage theFP callerFP ptr oop |
 		thePage := stackPages stackPageAt: i.
 		thePage isFree ifFalse:
-			[theFP := thePage  headFP.
+			[self assert: (self ifCurrentStackPageHasValidHeadPointers: thePage).
+			 theFP := thePage  headFP.
 			 "Skip the instruction pointer on top of stack of inactive pages."
 			 theIPPtr := thePage = stackPage ifTrue: [0] ifFalse: [thePage headSP asUnsignedInteger].
 			 [self assert: (thePage addressIsInPage: theFP).
@@ -7074,6 +7075,21 @@ StackInterpreter >> ifBackwardsCheckForEvents: offset [
 		 self checkForEventsMayContextSwitch: true.
 		 self browserPluginReturnIfNeeded.
 		 self internalizeIPandSP]
+]
+
+{ #category : #'stack pages' }
+StackInterpreter >> ifCurrentStackPageHasValidHeadPointers: thePage [
+	"If thePage is the stackPage and the stackPointer and/or the framePointer are pointing within it,
+	 answer if thePage's heapSP and headFP are equal to the stackPointer and framePointer respectively."
+	<var: #thePage type: #'StackPage *'>
+	thePage = stackPage ifTrue:
+		[(thePage addressIsInPage: framePointer) ifTrue:
+			[thePage headFP ~= framePointer ifTrue:
+				[^false]].
+		(thePage addressIsInPage: stackPointer) ifTrue:
+			[thePage headSP ~= stackPointer ifTrue:
+				[^false]]].
+	^true
 ]
 
 { #category : #'debug support' }
@@ -8924,7 +8940,8 @@ StackInterpreter >> mapStackPages [
 		[:i| | thePage theSP theFP callerFP theIPPtr theIP oop |
 		thePage := stackPages stackPageAt: i.
 		thePage isFree ifFalse:
-			[theSP := thePage headSP.
+			[self assert: (self ifCurrentStackPageHasValidHeadPointers: thePage).
+			 theSP := thePage headSP.
 			 theFP := thePage  headFP.
 			 "Skip the instruction pointer on top of stack of inactive pages."
 			 thePage = stackPage
@@ -9066,6 +9083,7 @@ StackInterpreter >> markAndTraceStackPage: thePage [
 	<inline: false>
 
 	self assert: (stackPages isFree: thePage) not.
+	self assert: (self ifCurrentStackPageHasValidHeadPointers: thePage).
 	self assert: thePage trace ~= StackPageTraced.
 	thePage trace: StackPageTraced.
 
