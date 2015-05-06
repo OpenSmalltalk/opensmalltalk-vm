@@ -3207,7 +3207,8 @@ CoInterpreter >> externalInstVar: offset ofContext: aContext [
 		 ^(offset = InstructionPointerIndex
 		    and: [(objectMemory isIntegerObject: value)
 		    and: [value signedIntFromLong < 0]])
-			ifTrue: [self mustMapMachineCodePC: (objectMemory integerValueOf: value)
+			ifTrue: [self externalWriteBackHeadFramePointers.
+					self mustMapMachineCodePC: (objectMemory integerValueOf: value)
 						context: aContext]
 			ifFalse: [value]].
 
@@ -3357,11 +3358,12 @@ CoInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 		[:i| | thePage theSP theFP callerFP oop offset |
 		thePage := stackPages stackPageAt: i.
 		thePage isFree ifFalse:
-			[theFP := thePage  headFP.
+			[self assert: (self ifCurrentStackPageHasValidHeadPointers: thePage).
+			 theFP := thePage headFP.
 			 theIPPtr := thePage = stackPage ifTrue: [0] ifFalse: [thePage headSP asUnsignedInteger].
 			 [self assert: (thePage addressIsInPage: theFP).
 			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr asVoidPointer]).
-			 (self isMachineCodeFrame: theFP)
+			  (self isMachineCodeFrame: theFP)
 				ifTrue:
 					[oop := stackPages longAt: theFP + FoxMFReceiver.
 					 (objectMemory isOopForwarded: oop) ifTrue:
@@ -4652,7 +4654,8 @@ CoInterpreter >> mapStackPages [
 		[:i| | thePage theSP theFP frameRcvrOffset callerFP theIPPtr theIP oop |
 		thePage := stackPages stackPageAt: i.
 		thePage isFree ifFalse:
-			[theSP := thePage headSP.
+			[self assert: (self ifCurrentStackPageHasValidHeadPointers: thePage).
+			 theSP := thePage headSP.
 			 theFP := thePage  headFP.
 			 "Skip the instruction pointer on top of stack of inactive pages."
 			 thePage = stackPage
@@ -4830,6 +4833,7 @@ CoInterpreter >> markAndTraceStackPage: thePage [
 	<inline: false>
 
 	self assert: (stackPages isFree: thePage) not.
+	self assert: (self ifCurrentStackPageHasValidHeadPointers: thePage).
 	self assert: thePage trace ~= StackPageTraced.
 	thePage trace: StackPageTraced.
 
@@ -4896,6 +4900,7 @@ CoInterpreter >> markCogMethodsAndReferentsOnPage: thePage [
 	<var: #callerFP type: #'char *'>
 	<inline: false>
 	self assert: (stackPages isFree: thePage) not.
+	self assert: (self ifCurrentStackPageHasValidHeadPointers: thePage).
 	theFP := thePage headFP.
 	"Skip the instruction pointer on top of stack of inactive pages."
 	[(self isMachineCodeFrame: theFP) ifTrue:

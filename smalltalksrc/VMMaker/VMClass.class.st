@@ -823,71 +823,65 @@ VMClass >> objectRepresentationClass [
 
 { #category : #'oop comparison' }
 VMClass >> oop: anOop isGreaterThan: otherOop [
-	"Compare two oop values, treating them as object memory locations.
-	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
-	method will be inlined during C translation."
-	<inline: true>
-	^(self cCoerce: anOop to: #usqInt)
-		> (self cCoerce: otherOop to: #usqInt)
+	"Compare two oop values, treating them as object memory locations; i.e. use unsigned comparisons.
+	 Use a macro, instead of #cCoerce:to: to provide fast simulation and inline code in conditionals,
+	 since the inliner doesn't inline in condtionals."
+	<cmacro: '(anOop,otherOop) ((usqInt)(anOop) > (usqInt)(otherOop))'>
+	^anOop > otherOop
 ]
 
 { #category : #'oop comparison' }
 VMClass >> oop: anOop isGreaterThan: baseOop andLessThan: limitOop [
-	"Compare two oop values, treating them as object memory locations.
-	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
-	method will be inlined during C translation."
-	<inline: true>
-	^(self cCoerce: anOop to: #usqInt) > (self cCoerce: baseOop to: #usqInt)
-	  and: [(self cCoerce: anOop to: #usqInt) < (self cCoerce: limitOop to: #usqInt)]
+	"Compare two oop values, treating them as object memory locations; i.e. use unsigned comparisons.
+	 Use a macro, instead of #cCoerce:to: to provide fast simulation and inline code in conditionals,
+	 since the inliner doesn't inline in condtionals."
+	<cmacro: '(anOop,baseOop,limitOop) ((usqInt)(anOop) > (usqInt)(baseOop) && (usqInt)(anOop) < (usqInt)(limitOop))'>
+	^anOop > baseOop and: [anOop < limitOop]
 ]
 
 { #category : #'oop comparison' }
 VMClass >> oop: anOop isGreaterThanOrEqualTo: otherOop [
-	"Compare two oop values, treating them as object memory locations.
-	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
-	method will be inlined during C translation."
-	<inline: true>
-	^(self cCoerce: anOop to: #usqInt)
-		>= (self cCoerce: otherOop to: #usqInt)
+	"Compare two oop values, treating them as object memory locations; i.e. use unsigned comparisons.
+	 Use a macro, instead of #cCoerce:to: to provide fast simulation and inline code in conditionals,
+	 since the inliner doesn't inline in condtionals."
+	<cmacro: '(anOop,otherOop) ((usqInt)(anOop) >= (usqInt)(otherOop))'>
+	^anOop >= otherOop
 ]
 
 { #category : #'oop comparison' }
 VMClass >> oop: anOop isGreaterThanOrEqualTo: baseOop andLessThan: limitOop [
-	"Compare two oop values, treating them as object memory locations.
-	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
-	method will be inlined during C translation."
-	<inline: true>
-	^(self cCoerce: anOop to: #usqInt) >= (self cCoerce: baseOop to: #usqInt)
-	  and: [(self cCoerce: anOop to: #usqInt) < (self cCoerce: limitOop to: #usqInt)]
+	"Compare two oop values, treating them as object memory locations; i.e. use unsigned comparisons.
+	 Use a macro, instead of #cCoerce:to: to provide fast simulation and inline code in conditionals,
+	 since the inliner doesn't inline in condtionals."
+	<cmacro: '(anOop,baseOop,limitOop) ((usqInt)(anOop) >= (usqInt)(baseOop) && (usqInt)(anOop) < (usqInt)(limitOop))'>
+	^anOop >= baseOop and: [anOop < limitOop]
 ]
 
 { #category : #'oop comparison' }
 VMClass >> oop: anOop isGreaterThanOrEqualTo: baseOop andLessThanOrEqualTo: limitOop [
-	"Compare two oop values, treating them as object memory locations.
-	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
-	method will be inlined during C translation."
-	<inline: true>
-	^(self cCoerce: anOop to: #usqInt) >= (self cCoerce: baseOop to: #usqInt)
-	  and: [(self cCoerce: anOop to: #usqInt) <= (self cCoerce: limitOop to: #usqInt)]
+	"Compare two oop values, treating them as object memory locations; i.e. use unsigned comparisons.
+	 Use a macro, instead of #cCoerce:to: to provide fast simulation and inline code in conditionals,
+	 since the inliner doesn't inline in condtionals."
+	<cmacro: '(anOop,baseOop,limitOop) ((usqInt)(anOop) >= (usqInt)(baseOop) && (usqInt)(anOop) <= (usqInt)(limitOop))'>
+	^anOop >= baseOop and: [anOop <= limitOop]
 ]
 
 { #category : #'oop comparison' }
 VMClass >> oop: anOop isLessThan: otherOop [
-	"Compare two oop values, treating them as object memory locations.
-	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
-	method will be inlined during C translation."
-	<inline: true>
-	^(self cCoerce: anOop to: #usqInt) < (self cCoerce: otherOop to: #usqInt)
+	"Compare two oop values, treating them as object memory locations; i.e. use unsigned comparisons.
+	 Use a macro, instead of #cCoerce:to: to provide fast simulation and inline code in conditionals,
+	 since the inliner doesn't inline in condtionals."
+	<cmacro: '(anOop,otherOop) ((usqInt)(anOop) < (usqInt)(otherOop))'>
+	^anOop < otherOop
 ]
 
 { #category : #'oop comparison' }
 VMClass >> oop: anOop isLessThanOrEqualTo: otherOop [
-	"Compare two oop values, treating them as object memory locations.
-	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
-	method will be inlined during C translation."
-	<inline: true>
-	^(self cCoerce: anOop to: #usqInt)
-		<= (self cCoerce: otherOop to: #usqInt)
+	"Compare two oop values, treating them as object memory locations; i.e. use unsigned comparisons.
+	 Use a macro, instead of #cCoerce:to: to provide fast simulation and inline code in conditionals,
+	 since the inliner doesn't inline in condtionals."
+	<cmacro: '(anOop,otherOop) ((usqInt)(anOop) <= (usqInt)(otherOop))'>
+	^anOop <= otherOop
 ]
 
 { #category : #'memory access' }
