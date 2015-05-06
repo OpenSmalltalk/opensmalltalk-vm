@@ -189,6 +189,14 @@ SistaStackToRegisterMappingCogit >> disassembleMethod: surrogateOrAddress on: aS
 		 aStream flush]
 ]
 
+{ #category : #accessing }
+SistaStackToRegisterMappingCogit >> estimateOfAbstractOpcodesPerBytecodes [
+	"Due to the counter logic, the estimation is higher"
+	<inline: true>
+	self flag: 'we could fix that when #== generates less instructions'.
+	^ 14
+]
+
 { #category : #'generate machine code' }
 SistaStackToRegisterMappingCogit >> fillInCPICHeader: pic size: size numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector [
 	pic counters: 0.
