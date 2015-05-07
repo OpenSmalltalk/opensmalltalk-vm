@@ -64,8 +64,18 @@ extern sqSqueakAppDelegate *gDelegateApp;
 @synthesize infoPlistInterfaceLogic;
 @synthesize soundInterfaceLogic;
 @synthesize argsArguments;
+@synthesize commandLineArguments;
+@synthesize noHandlers;
 
 extern sqInt interpret(void);  //This is a VM Callback
+
+- (id) init {
+    self = [super init];
+    if (self) {
+        [self setNoHandlers: NO];
+    }
+    return self;
+}
 
 - (void) setupFloat {
 }
@@ -74,12 +84,24 @@ extern sqInt interpret(void);  //This is a VM Callback
 	signal(SIGSEGV, sigsegv);
 }
 
+- (void) setInfoPlistInterfaceLogic:(sqSqueakInfoPlistInterface *)anObject {
+    infoPlistInterfaceLogic = anObject;
+}
+
+- (sqSqueakInfoPlistInterface *) infoPlistInterfaceLogic {
+    if (!infoPlistInterfaceLogic) {
+        [self fetchPreferences];
+    }
+    
+    return infoPlistInterfaceLogic;
+}
+
 - (sqSqueakInfoPlistInterface *) newSqSqueakInfoPlistInterfaceCreation {
 	return [[sqSqueakInfoPlistInterface alloc] init];
 }
 
 - (void) fetchPreferences {
-	infoPlistInterfaceLogic = [self newSqSqueakInfoPlistInterfaceCreation];
+	self.infoPlistInterfaceLogic = [self newSqSqueakInfoPlistInterfaceCreation];
 	[infoPlistInterfaceLogic parseInfoPlist]; 
 	currentVMEncoding = NSUTF8StringEncoding;
 }
@@ -95,6 +117,7 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (void) setupMenus {
+//    nothing to do so far since the menu is setup in the MainMenu.nib file
 }
 
 - (void) setupTimers {
@@ -112,6 +135,10 @@ extern sqInt interpret(void);  //This is a VM Callback
 
 - (void) setupEventQueue {
 	eventQueue = [[Queue alloc] init];
+}
+
+- (void) attachToSignals {
+//  Override in subclasses
 }
 
 - (void) setupBrowserLogic {
@@ -141,18 +168,17 @@ extern sqInt interpret(void);  //This is a VM Callback
 	}
 	
 	[self parseUnixArgs];
-	
+	[self attachToSignals];
+    
 	//JMM here we parse the unixArgs
 	//JMM now we wait for the open document apple events (normally)
-	
-	[self doHeadlessSetup];
-	//JMM after wait normally if headless and no imageName then exit -42
-	
+	   
 	[self doMemorySetup];
 	
-	if ([self ImageNameIsEmpty]) 
+	if ([self ImageNameIsEmpty]) {
 		[self findImageViaBundleOrPreferences];
-	
+	}
+
 	if ([self ImageNameIsEmpty]) {
 		return;
 	}
@@ -161,7 +187,12 @@ extern sqInt interpret(void);  //This is a VM Callback
 		return;
 	}
 	
-	[self setupMenus];
+    // The headless setup is now after the image setup on purpose. This is in order to be
+    // able to select an image with the popup even when running headless
+	[self doHeadlessSetup];
+
+    
+    [self setupMenus];
 	[self setupTimers];
 	[self setupAIO];
 	[self setupBrowserLogic];
@@ -169,16 +200,13 @@ extern sqInt interpret(void);  //This is a VM Callback
 	[gDelegateApp makeMainWindow];
 	
 	interpret();
-    [self tearDown];
     }
-	[NSThread exit];
 }
 
-- (void) tearDown{
-    
-}
 
 - (void) MenuBarRestore {
+    //    nothing to do so far since the menu is setup in the MainMenu.nib file
+    
 }
 
 void sqMacMemoryFree(void);
@@ -194,12 +222,6 @@ void sqMacMemoryFree(void);
 }
 
 - (void)dealloc {
-//	[infoPlistInterfaceLogic release];
-//	[soundInterfaceLogic release];
-//	[vmPathStringURL release];
-//	[imageNameURL release];
-//	[fileDirectoryLogic release];
-//	[eventQueue release];
 	sqMacMemoryFree();
 }
 

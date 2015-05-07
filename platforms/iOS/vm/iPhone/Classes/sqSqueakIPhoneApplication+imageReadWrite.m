@@ -40,8 +40,6 @@
 #import "sqSqueakIPhoneApplication+imageReadWrite.h"
 #import "sqMacV2Memory.h"
 #import "sqSqueakIPhoneInfoPlistInterface.h"
-#import "SqueakNoOGLIPhoneAppDelegate.h"
-#import "sqSqueakAppDelegate.h"
 
 #define QUOTEME_(x) #x
 #define QUOTEME(x) QUOTEME_(x)
@@ -77,14 +75,7 @@
 	 Apple syncs the iphone data to via iTunes yet */
 	
 	const char	*imageNameCharactersInDocumentPath = [dfm fileSystemRepresentationWithPath: documentsImagePath];
-        size_t length = strlen(imageNameCharactersInDocumentPath);
-        if (length > 0 && (length < PATH_MAX)) {
-            strncpy(imageName,imageNameCharactersInDocumentPath,(size_t) length); //This does not need to be strlcpy since the data is not null terminated
-            imageName[length] = 0x00;		//Ensure we nil terminate the image name string
-            extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
-            [gDelegateApp.squeakApplication imageNamePut:imageName];
-        }
-
+	imageNamePutLength((sqInt) imageNameCharactersInDocumentPath, strlen(imageNameCharactersInDocumentPath)); 
 	
 	NSString * likelySourceFilePath = [dfm destinationOfSymbolicLinkAtPath: documentsSourcesPath error: &error];
 
@@ -111,9 +102,8 @@
 		return;
 	} else {
 
-		NSString* bundleImagePath = [[NSBundle mainBundle] pathForResource:@QUOTEDIMAGE ofType:@"image"]; 
+		NSString* bundleImagePath = [[NSBundle mainBundle] pathForResource:@QUOTEDIMAGE ofType:@"image"];
 		BOOL writeable = [(sqSqueakIPhoneInfoPlistInterface*)[self infoPlistInterfaceLogic] imageIsWriteable];
-		
 		if (writeable) {
 			NSString* documentsChangesPath = [documentsPath stringByAppendingPathComponent: [@QUOTEDIMAGE stringByAppendingString: @".changes"]];
 			NSString* bundleChangesPath = [[NSBundle mainBundle] pathForResource:@QUOTEDIMAGE ofType:@"changes"]; 
@@ -122,19 +112,15 @@
 			if (!copyOk) {
 				return;
 			}
-			copyOk = [dfm copyItemAtPath: bundleChangesPath toPath: documentsChangesPath error: &error];
+            //Changes file can be nil
+            if (bundleChangesPath) {
+                copyOk = [dfm copyItemAtPath: bundleChangesPath toPath: documentsChangesPath error: &error];
+            }
 		} else {
 			const char	*imageNameCharacters = [dfm fileSystemRepresentationWithPath: bundleImagePath];
-            size_t length = strlen(imageNameCharacters);
-            if (length > 0 && (length < PATH_MAX)) {
-                strncpy(imageName,imageNameCharacters,(size_t) length); //This does not need to be strlcpy since the data is not null terminated
-                imageName[length] = 0x00;		//Ensure we nil terminate the image name string
-                extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
-                [gDelegateApp.squeakApplication imageNamePut:imageName];
-            }
+			imageNamePutLength((sqInt) imageNameCharacters, strlen(imageNameCharacters));
 		}
 	}
-    }
 }
 @end
 

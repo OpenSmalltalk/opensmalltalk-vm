@@ -41,5 +41,6 @@
 @interface sqSqueakMainApplication (events)
 - (void) ioGetNextEvent: (sqInputEvent *) evt;
 - (void) processAsOldEventOrComplexEvent: (id) event placeIn: (sqInputEvent *) evt;
+- (void) pumpRunLoopEventSendAndSignal:(BOOL)signal;
 - (void) pumpRunLoop;
 @end

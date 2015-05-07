@@ -366,7 +366,7 @@
 		9487748B10C64DD800E4AEC5 /* sqSqueakOSXInfoPlistInterface.m in Sources */ = {isa = PBXBuildFile; fileRef = 94BCAE6810ACA10100F87527 /* sqSqueakOSXInfoPlistInterface.m */; };
 		9487748C10C64DD800E4AEC5 /* sqSqueakOSXApplication+imageReadWrite.m in Sources */ = {isa = PBXBuildFile; fileRef = 94C887FA10ADCEFC007CB39E /* sqSqueakOSXApplication+imageReadWrite.m */; };
 		9487748D10C64DD800E4AEC5 /* sqSqueakOSXScreenAndWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 94C88BDE10AF3C52007CB39E /* sqSqueakOSXScreenAndWindow.m */; };
-		9487748E10C64DD800E4AEC5 /* sqSqueakOSXNSView.m in Sources */ = {isa = PBXBuildFile; fileRef = 94C2068910AF4F53002F4160 /* sqSqueakOSXNSView.m */; };
+		9487748E10C64DD800E4AEC5 /* sqSqueakOSXOpenGLView.m in Sources */ = {isa = PBXBuildFile; fileRef = 94C2068910AF4F53002F4160 /* sqSqueakOSXOpenGLView.m */; };
 		9487748F10C64DD800E4AEC5 /* macintoshosxextra.c in Sources */ = {isa = PBXBuildFile; fileRef = 94C3682510AFA39A0041953A /* macintoshosxextra.c */; };
 		9487749010C64DD800E4AEC5 /* sqSqueakOSXApplication+cursor.m in Sources */ = {isa = PBXBuildFile; fileRef = 94C3687710AFA77F0041953A /* sqSqueakOSXApplication+cursor.m */; };
 		9487749110C64DD800E4AEC5 /* sqSqueakCursorAPI.m in Sources */ = {isa = PBXBuildFile; fileRef = 94C3687C10AFA8300041953A /* sqSqueakCursorAPI.m */; };
@@ -409,7 +409,7 @@
 		94BCE78C0DDDF61200F38F31 /* sqUnixUUID.c in Sources */ = {isa = PBXBuildFile; fileRef = 94BCE7870DDDF61200F38F31 /* sqUnixUUID.c */; };
 		94BD817011C8A58D00556751 /* sqManualSurface.c in Sources */ = {isa = PBXBuildFile; fileRef = 94BD816F11C8A58D00556751 /* sqManualSurface.c */; };
 		94BD817311C8A59A00556751 /* sqManualSurface.c in Sources */ = {isa = PBXBuildFile; fileRef = 94BD816F11C8A58D00556751 /* sqManualSurface.c */; };
-		94C2068A10AF4F53002F4160 /* sqSqueakOSXNSView.m in Sources */ = {isa = PBXBuildFile; fileRef = 94C2068910AF4F53002F4160 /* sqSqueakOSXNSView.m */; };
+		94C2068A10AF4F53002F4160 /* sqSqueakOSXOpenGLView.m in Sources */ = {isa = PBXBuildFile; fileRef = 94C2068910AF4F53002F4160 /* sqSqueakOSXOpenGLView.m */; };
 		94C208F910AF7262002F4160 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94C208F810AF7262002F4160 /* QuartzCore.framework */; };
 		94C315321AD4949B0096E59D /* AsynchFilePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94C315311AD4949B0096E59D /* AsynchFilePlugin.c */; };
 		94C315331AD4949B0096E59D /* AsynchFilePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94C315311AD4949B0096E59D /* AsynchFilePlugin.c */; };
@@ -712,6 +712,7 @@
 		948EC38F1155312600B08A4F /* MainWindow-iPad.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = "MainWindow-iPad.xib"; path = "Resources-iPad/MainWindow-iPad.xib"; sourceTree = "<group>"; };
 		9492452F10BA43AA00E726F5 /* SqueakOSXApplication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SqueakOSXApplication.h; path = vm/OSX/SqueakOSXApplication.h; sourceTree = "<group>"; };
 		9492453010BA43AA00E726F5 /* SqueakOSXApplication.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SqueakOSXApplication.m; path = vm/OSX/SqueakOSXApplication.m; sourceTree = "<group>"; };
+		9493B5FF1AF6DD0700EFB5A3 /* SqueakPureObjc.profdata */ = {isa = PBXFileReference; lastKnownFileType = file; path = SqueakPureObjc.profdata; sourceTree = "<group>"; };
 		949E5DB50DE3AB6A007388E0 /* SqueakUIView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SqueakUIView.h; sourceTree = "<group>"; };
 		949E5DB60DE3AB6A007388E0 /* SqueakUIView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SqueakUIView.m; sourceTree = "<group>"; };
 		94A0E8440DE5EB6E0071C8B9 /* sqSqueakMainApplication+attributes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "sqSqueakMainApplication+attributes.h"; path = "vm/Common/Classes/sqSqueakMainApplication+attributes.h"; sourceTree = "<group>"; };
@@ -752,8 +753,8 @@
 		94BCEA2B0DDE0C1600F38F31 /* sqMacHostWindow.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacHostWindow.c; sourceTree = "<group>"; };
 		94BCEAF20DDE16B400F38F31 /* sqMacSecurity.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacSecurity.c; sourceTree = "<group>"; };
 		94BD816F11C8A58D00556751 /* sqManualSurface.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqManualSurface.c; sourceTree = "<group>"; };
-		94C2068810AF4F53002F4160 /* sqSqueakOSXNSView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqSqueakOSXNSView.h; path = vm/OSX/sqSqueakOSXNSView.h; sourceTree = "<group>"; };
-		94C2068910AF4F53002F4160 /* sqSqueakOSXNSView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = sqSqueakOSXNSView.m; path = vm/OSX/sqSqueakOSXNSView.m; sourceTree = "<group>"; };
+		94C2068810AF4F53002F4160 /* sqSqueakOSXOpenGLView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqSqueakOSXOpenGLView.h; path = vm/OSX/sqSqueakOSXOpenGLView.h; sourceTree = "<group>"; };
+		94C2068910AF4F53002F4160 /* sqSqueakOSXOpenGLView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = sqSqueakOSXOpenGLView.m; path = vm/OSX/sqSqueakOSXOpenGLView.m; sourceTree = "<group>"; };
 		94C208F810AF7262002F4160 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = /System/Library/Frameworks/QuartzCore.framework; sourceTree = "<absolute>"; };
 		94C315311AD4949B0096E59D /* AsynchFilePlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = AsynchFilePlugin.c; sourceTree = "<group>"; };
 		94C315C91AD495B40096E59D /* JoystickTabletPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JoystickTabletPlugin.h; sourceTree = "<group>"; };
@@ -1026,6 +1027,7 @@
 				94C36C9710B0CF290041953A /* Info-iPhone.plist */,
 				947E5F9F10A9FFA000D3B69E /* SqueakPureObjc-Info.plist */,
 				948774B110C64DD800E4AEC5 /* SqueakPureObjc-Info 64x64.plist */,
+				9493B5FE1AF6DD0700EFB5A3 /* OptimizationProfiles */,
 			);
 			name = CustomTemplate;
 			sourceTree = "<group>";
@@ -1371,8 +1373,8 @@
 				94C887FA10ADCEFC007CB39E /* sqSqueakOSXApplication+imageReadWrite.m */,
 				94C88BDD10AF3C52007CB39E /* sqSqueakOSXScreenAndWindow.h */,
 				94C88BDE10AF3C52007CB39E /* sqSqueakOSXScreenAndWindow.m */,
-				94C2068810AF4F53002F4160 /* sqSqueakOSXNSView.h */,
-				94C2068910AF4F53002F4160 /* sqSqueakOSXNSView.m */,
+				94C2068810AF4F53002F4160 /* sqSqueakOSXOpenGLView.h */,
+				94C2068910AF4F53002F4160 /* sqSqueakOSXOpenGLView.m */,
 				9402DD6F10CE0E91005C2102 /* SqViewClut.m */,
 				94B8F54E10CF677800F0DD6B /* SqViewClut.h */,
 				94D3654D10CEC86C00805023 /* BitMapConversionLogicFromX11.h */,
@@ -1413,6 +1415,14 @@
 				948EC38F1155312600B08A4F /* MainWindow-iPad.xib */,
 			);
 			name = "Resources-iPad";
+			sourceTree = "<group>";
+		};
+		9493B5FE1AF6DD0700EFB5A3 /* OptimizationProfiles */ = {
+			isa = PBXGroup;
+			children = (
+				9493B5FF1AF6DD0700EFB5A3 /* SqueakPureObjc.profdata */,
+			);
+			path = OptimizationProfiles;
 			sourceTree = "<group>";
 		};
 		94B9528410E6B79E00DC476A /* MacMenubarPlugin */ = {
@@ -2580,7 +2590,7 @@
 				94BCAE6910ACA10100F87527 /* sqSqueakOSXInfoPlistInterface.m in Sources */,
 				94C887FB10ADCEFC007CB39E /* sqSqueakOSXApplication+imageReadWrite.m in Sources */,
 				94C88BDF10AF3C52007CB39E /* sqSqueakOSXScreenAndWindow.m in Sources */,
-				94C2068A10AF4F53002F4160 /* sqSqueakOSXNSView.m in Sources */,
+				94C2068A10AF4F53002F4160 /* sqSqueakOSXOpenGLView.m in Sources */,
 				94C3682610AFA39A0041953A /* macintoshosxextra.c in Sources */,
 				94C3687810AFA77F0041953A /* sqSqueakOSXApplication+cursor.m in Sources */,
 				94C3687D10AFA8300041953A /* sqSqueakCursorAPI.m in Sources */,
@@ -2741,7 +2751,7 @@
 				9487748C10C64DD800E4AEC5 /* sqSqueakOSXApplication+imageReadWrite.m in Sources */,
 				9487748D10C64DD800E4AEC5 /* sqSqueakOSXScreenAndWindow.m in Sources */,
 				9463C1D51AEE168C009C5CE5 /* get.c in Sources */,
-				9487748E10C64DD800E4AEC5 /* sqSqueakOSXNSView.m in Sources */,
+				9487748E10C64DD800E4AEC5 /* sqSqueakOSXOpenGLView.m in Sources */,
 				9487748F10C64DD800E4AEC5 /* macintoshosxextra.c in Sources */,
 				9487749010C64DD800E4AEC5 /* sqSqueakOSXApplication+cursor.m in Sources */,
 				9487749110C64DD800E4AEC5 /* sqSqueakCursorAPI.m in Sources */,
@@ -2970,6 +2980,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_USE_OPTIMIZATION_PROFILE = YES;
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -2990,6 +3002,7 @@
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				INFOPLIST_FILE = "SqueakPureObjc-Info 64x64.plist";
+				LD_GENERATE_MAP_FILE = YES;
 				OTHER_CFLAGS = "";
 				PRODUCT_NAME = Squeak;
 				VALID_ARCHS = x86_64;
@@ -3000,6 +3013,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_USE_OPTIMIZATION_PROFILE = YES;
 				CODE_SIGN_IDENTITY = "Developer ID Application";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "iPhone Distribution: Corporate Smalltalk Consulting Ltd (DTYH6QWG79)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -3021,6 +3036,7 @@
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				INFOPLIST_FILE = "SqueakPureObjc-Info 64x64.plist";
+				LD_GENERATE_MAP_FILE = YES;
 				OTHER_CFLAGS = "";
 				PRODUCT_NAME = Squeak;
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "3a8c5546-20a8-40a9-afb4-4218872c980c";

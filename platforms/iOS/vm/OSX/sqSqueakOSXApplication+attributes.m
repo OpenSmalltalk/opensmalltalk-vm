@@ -48,7 +48,7 @@ extern struct VirtualMachine* interpreterProxy;
 	//indexNumber is a postive/negative number
 #warning to test
 	switch (indexNumber) {
-		case 1001: /* OS type: "unix", "win32", "mac", ... */
+        case 1001: /* OS type: "unix", "win32", "mac", ... */
 			return "Mac OS";
 			 
 		case 1002:  { /* OS name: "solaris2.5" on unix, "win95" on win32, ... */

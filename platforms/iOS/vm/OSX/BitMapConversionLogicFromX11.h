@@ -18,6 +18,9 @@ void copyImage16To32(short *fromImageData, int *toImageData, int width, int heig
 void copyImage8To32(int *fromImageData, int *toImageData, int width, int height,
 					int affectedL, int affectedT, int affectedR, int affectedB, unsigned int *colorMap);
 
+void copyImage4To32(int *fromImageData, int *toImageData, int width, int height,
+                    int affectedL, int affectedT, int affectedR, int affectedB, unsigned int * stColors);
+
 void copyImage2To32(int *fromImageData, int *toImageData, int width, int height,
 					int affectedL, int affectedT, int affectedR, int affectedB, unsigned int * stColors);
 

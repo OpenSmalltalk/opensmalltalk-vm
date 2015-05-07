@@ -100,7 +100,6 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 	
 	if ((url = (NSURL *)CFBridgingRelease(CFURLCreateFromFSRef(kCFAllocatorDefault, &aliasRef)))) {
 		outString = [url path];
-		CFRelease((__bridge CFTypeRef)(url));
 		return outString;
 	}
 	

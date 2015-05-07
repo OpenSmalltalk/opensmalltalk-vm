@@ -62,7 +62,9 @@ const GLfloat spriteTexcoords[] = {
 	self = [super initWithFrame: aFrame];
 	clippyIsEmpty = YES;
 	syncNeeded = NO;
-
+ 
+    [self setContentScaleFactor: [[UIScreen mainScreen] scale]];
+ 
 	// Get the layer
 	CAEAGLLayer *eaglLayer = (CAEAGLLayer *)self.layer;
 	eaglLayer.opaque = YES;

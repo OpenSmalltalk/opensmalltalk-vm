@@ -38,6 +38,10 @@
 #import "sqSqueakMainApplication+sound.h"
 
 @implementation sqSqueakMainApplication (sound)
+
 - (void) ioBeep {
+#ifdef BUILD_FOR_OSX
+    NSBeep();
+#endif
 }
 @end

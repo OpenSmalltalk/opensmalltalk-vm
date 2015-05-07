@@ -1,5 +1,5 @@
 //
-//  sqSqueakOSXNSView.h
+//  sqSqueakOSXOpenGLView.h
 //  SqueakPureObjc
 //
 //  Created by John M McIntosh on 09-11-14.
@@ -43,7 +43,7 @@
 @class sqSqueakOSXScreenAndWindow;
 #import "sq.h"
 
-@interface sqSqueakOSXNSView : NSOpenGLView <NSTextInputClient> {
+@interface sqSqueakOSXOpenGLView : NSOpenGLView <NSTextInputClient> {
 	sqSqueakOSXScreenAndWindow *__weak windowLogic;
 	NSTrackingRectTag squeakTrackingRectForCursor;
 	NSRange inputMark;

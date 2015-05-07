@@ -31,10 +31,10 @@ permission to use it under an MIT license.
 
 
 
-#import "sqSqueakOSXNSView.h"
+#import "sqSqueakOSXOpenGLView.h"
 #import "BitMapConversionLogicFromX11.h"
 
-@interface sqSqueakOSXNSView(BitmapConversion)
+@interface sqSqueakOSXOpenGLView(BitmapConversion)
 
 -(CGImageRef)extractPixels_1_to_32:(void*)srcBits 
 					 srcPixelWidth:(int)srcPixelWidth height: (int) height

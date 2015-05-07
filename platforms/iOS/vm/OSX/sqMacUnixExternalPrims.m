@@ -169,7 +169,8 @@ void *ioLoadModuleRaw(char *pluginName)
     }
 	
 	/* first, look in the "<Squeak VM directory>Plugins" directory for the library */
-	NSString *pluginDirPath = [[gDelegateApp.squeakApplication.vmPathStringURL path] stringByAppendingPathComponent: @"Plugins/"];
+	NSString *pluginDirPath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent: @"Contents/MacOS/Plugins"];
+	// [[gDelegateApp.squeakApplication.vmPathStringURL path] stringByAppendingPathComponent: @"Plugins/"];
 	NSString *vmDirPath = [[NSBundle mainBundle] resourcePath];
 
 	if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly) {
@@ -274,11 +275,18 @@ void *ioLoadModuleRaw(char *pluginName)
 /*  Find a function in a loaded module.  Answer 0 if not found (do NOT
  *  fail the primitive!).
  */
-void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
+#if SPURVM
+void *
+ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle,
+											sqInt *accessorDepthPtr)
+#else
+void *
+ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
+#endif
 {
   char buf[NAME_MAX+1];
- 
-  snprintf(buf, sizeof(buf), "%s", lookupName);
+
+  snprintf(buf, sizeof(buf), "%s", lookupName); 
   void *fn = dlsym(moduleHandle, buf);
 
   dprintf((stderr, "ioFindExternalFunctionIn(%s, %ld)\n",lookupName, (long) moduleHandle));
@@ -291,6 +299,20 @@ void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 	char *why = dlerror();
     fprintf(stderr, "ioFindExternalFunctionIn(%s, %p):\n  %s\n",lookupName, moduleHandle, why);
 	}
+
+#if SPURVM
+  if (fn && accessorDepthPtr) {
+	signed char *accessorDepthVarPtr;
+	snprintf(buf+strlen(buf), sizeof(buf), "AccessorDepth");
+	accessorDepthVarPtr = dlsym(moduleHandle, buf);
+	/* The Slang machinery assumes accessor depth defaults to -1, which
+	 * means "no accessor depth".  It saves space not outputting -1 depths.
+	 */
+	*accessorDepthPtr = accessorDepthVarPtr
+							? *accessorDepthVarPtr
+							: -1;
+  }
+#endif /* SPURVM */
 
   return fn;
 }

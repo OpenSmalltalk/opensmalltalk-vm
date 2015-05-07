@@ -38,6 +38,8 @@ such third-party acknowledgments.
 */
 //
 
-void sigsegv(int ignore);
+void attachToSignals();
+
+void sigsegv(int sig, siginfo_t *info, void *uap);
 void mtfsfi(unsigned long long fpscr);
 void fldcw(unsigned int cw);

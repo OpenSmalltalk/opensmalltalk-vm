@@ -35,7 +35,7 @@ extern struct VirtualMachine* interpreterProxy;
 
 void sqPasteboardClear(CLIPBOARDTYPE inPasteboard )
 {
-	NSArray *arrayOfTypes = [[NSArray alloc] init];
+	NSArray *arrayOfTypes = [NSArray array];
 	
 	inPasteboard.items =  arrayOfTypes;
 }

@@ -76,7 +76,7 @@ sqInt ioSizeOfWindow(wIndexType windowIndex)
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }
 
-int ioPositionOfNativeDisplay(unsigned long windowHandle)
+sqInt ioPositionOfNativeDisplay(unsigned long windowHandle)
 {
 	sqInt w=0, h=0;
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */

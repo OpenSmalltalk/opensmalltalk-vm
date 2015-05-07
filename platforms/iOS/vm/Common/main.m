@@ -39,8 +39,16 @@ such third-party acknowledgments.
 #ifdef BUILD_FOR_OSX
 #import <Cocoa/Cocoa.h>
 
-int main(int argc, char *argv[])
+int main(int argc, char **argv, char **envp)
 {	
+	extern int argCnt;
+	extern char **argVec;
+	extern char **envVec;
+	
+	argCnt = argc;
+	argVec= argv;
+	envVec = envp;
+	
     return NSApplicationMain(argc,  (const char **) argv);
 }
 #else

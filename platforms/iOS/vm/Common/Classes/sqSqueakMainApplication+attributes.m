@@ -39,6 +39,9 @@
 
 #import "sqSqueakMainApplication+attributes.h"
 #import "sqSqueakMainApplication+vmAndImagePath.h"
+#if COGVM
+#include "sqSCCSVersion.h"
+#endif
 
 extern struct VirtualMachine* interpreterProxy;
 
@@ -55,46 +58,74 @@ extern struct VirtualMachine* interpreterProxy;
 		strncpy(byteArrayIndex, [self getAttribute: indexNumber], (size_t) length); //This does not need to be strlcpy
 }
 
-- (const char *) getAttribute:(sqInt)indexNumber {
-	//indexNumber is a postive/negative number
+- (char *) interpreterVersionString {
+	static char data[255];
+	bzero(data,sizeof(data));
+	strlcat(data,interpreterVersion,sizeof(data));
+	strlcat(data," ",sizeof(data));
+	NSString *versionString =[[NSBundle mainBundle] objectForInfoDictionaryKey: @"CFBundleVersion"];
 	
-	if (indexNumber < 0)	/* VM argument */ {
-		if (-indexNumber <= [self.argsArguments count])
-            return (char *) [(self.argsArguments)[(NSUInteger) (indexNumber - 1)] cStringUsingEncoding: [self currentVMEncoding]];
-	}
-	else {
+	if (versionString == nil)
+		return data;
+	const char *versonStringAsCString =  [versionString cStringUsingEncoding: [self currentVMEncoding]];
+	
+	if (versonStringAsCString == nil)
+		return data;
+	
+	strlcat(data,versonStringAsCString,sizeof(data));
+	
+	return data;
+}
+
+- (const char *) getAttribute:(sqInt)indexNumber {
+	//indexNumber is a postive/negative number	
+	if (indexNumber < 0) /* VM argument */ {
+#ifndef TARGET_OS_IS_IPHONE        
+        if (-indexNumber < ([self.commandLineArguments count] - 1)) {
+			return (char *) [[self.commandLineArguments objectAtIndex: -indexNumber] cStringUsingEncoding:[self currentVMEncoding]];
+		}
+#endif
+	} else {
 		switch (indexNumber) {
 			case 0: 
-				return (char *) [self getVMPath];
+                return [[[[NSBundle mainBundle] executablePath] precomposedStringWithCanonicalMapping] UTF8String];
 
-			case 1: 
-				return (char *) [self getImageName];
-				
-			case 1004:  { /* Interpreter version string */
-				
-				static char data[255];
-				bzero(data,sizeof(data));
-				strlcat(data,interpreterVersion,sizeof(data));
-				strlcat(data," ",sizeof(data));
-				NSString *versionString =[[NSBundle mainBundle] objectForInfoDictionaryKey: @"CFBundleVersion"];
-				if (versionString == nil)
-					return data;
-				const char *versonStringAsCString =  [ versionString cStringUsingEncoding: [self currentVMEncoding]];
-				if (versonStringAsCString == nil)
-					return data;
-				strlcat(data,versonStringAsCString,sizeof(data));
-				return data;
-			}
+			case 1:
+				return [self getImageName];
 
+            case 1004:  /* Interpreter version string */
+				return [self interpreterVersionString];
+			
+            case 1009: {/* source tree version info */
+#if COGVM
+				return sourceVersionString();
+#else
+                static char data[255];
+                bzero(data,sizeof(data));
+                strlcat(data,interpreterVersion,sizeof(data));
+                strlcat(data," ",sizeof(data));
+                NSString *versionString =[[NSBundle mainBundle] objectForInfoDictionaryKey: @"CFBundleVersion"];
+                if (versionString == nil)
+                    return data;
+                const char *versonStringAsCString =  [ versionString cStringUsingEncoding: [self currentVMEncoding]];
+                if (versonStringAsCString == nil)
+                    return data;
+                strlcat(data,versonStringAsCString,sizeof(data));
+                return data;
+#endif
+            }
 			case 1201: /* macintosh file name size */
 				return "255";
 
 			case 1202: /* macintosh file error peek */
 				return "0";
-				
-			default: 
-				if ((indexNumber - 2) > 0 && ((indexNumber - 2) < [self.argsArguments count]))
-					return (char *) [(self.argsArguments)[(NSUInteger) (indexNumber - 2)] cStringUsingEncoding: [self currentVMEncoding]];
+			
+			default: {
+				int indexOfArg = indexNumber - 1;
+				if (indexOfArg < [self.argsArguments count]) {
+					return (char *) [[self.argsArguments objectAtIndex: (NSUInteger) indexOfArg] cStringUsingEncoding:[self currentVMEncoding]];			
+				}
+			}
 		}
 	}
 	interpreterProxy->success(false);

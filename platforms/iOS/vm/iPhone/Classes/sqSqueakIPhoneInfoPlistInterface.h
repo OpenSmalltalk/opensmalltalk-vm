@@ -44,4 +44,6 @@ Sept-02-08  1.03b1  setup useScrollingView
 - (BOOL) imageIsWriteable;
 - (BOOL) useScrollingView;
 - (NSInteger) memorySize;
+- (BOOL) useWorkerThread;
+- (BOOL) useWebViewAsUI;
 @end

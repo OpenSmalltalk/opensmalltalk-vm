@@ -1,3 +1,4 @@
+
 //
 //  SqueakNoOGLIPhoneAppDelegate.m
 //  SqueakNoOGLIPhone
@@ -47,6 +48,10 @@ such third-party acknowledgments.
 extern struct	VirtualMachine* interpreterProxy;
 SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 
+@interface SqueakNoOGLIPhoneAppDelegate()
+@property(nonatomic, retain) UIWebView *webView;
+@end
+
 @implementation SqueakNoOGLIPhoneAppDelegate
 
 @synthesize window;
@@ -60,7 +65,7 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 }
 
 - (BOOL)application: (UIApplication *)application didFinishLaunchingWithOptions: (NSDictionary*) launchOptions {
-	
+#error JMM notes not tested after integration yet 2015 May 7th
 	gDelegateApp = self;	
 	mainView = null;
 	scrollView = null;
@@ -69,10 +74,15 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 	squeakApplication = [self makeApplicationInstance];
 	screenAndWindow =  [[sqiPhoneScreenAndWindow alloc] init];
 	[self.squeakApplication setupEventQueue];
-	[self singleThreadStart];
-	//[self workerThreadStart];
-	return YES;
+    if ([self.info useWorkerThread] || [self.info useWebViewAsUI]) {
+        [self workerThreadStart];
+    } else {
+        [self singleThreadStart];
+    }
+}
 
+- (void)loadUrl:(NSString *)aString {
+    [self.webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:aString]]];
 }
 
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView
@@ -113,10 +123,15 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 //	return  (hasGL_APPLE_texture_2D_limited_npot) ? [SqueakUIViewOpenGL class] : [SqueakUIViewCALayer class];
 
     // The device must be running running iOS 3.2 or later.
+    //Esteban >>
+    /*
     NSString *reqSysVer = @"3.2";
     NSString *currSysVer = [[UIDevice currentDevice] systemVersion];
     BOOL osVersionSupported = ([currSysVer compare:reqSysVer options:NSNumericSearch] != NSOrderedAscending);
 	return  (osVersionSupported) ? [SqueakUIViewOpenGL class] : [SqueakUIViewCALayer class];
+    */
+     return [SqueakUIViewCALayer class];
+    //Esteban <<
 }
 
 - (void) makeMainWindowOnMainThread
@@ -129,9 +144,11 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 	// The application frame includes the status area if needbe. 
 
 	CGRect mainScreenSize = [[UIScreen mainScreen] applicationFrame];
-	
-	BOOL useScrollingView = [(sqSqueakIPhoneInfoPlistInterface*)self.squeakApplication.infoPlistInterfaceLogic useScrollingView];
-	
+	    
+    self.viewController = [SqueakUIController new];
+    [window setRootViewController:self.viewController];
+        
+	BOOL useScrollingView = [self.info useScrollingView];
 	if (useScrollingView) {
 		scrollView = [[UIScrollView alloc ] initWithFrame: mainScreenSize];
 
@@ -162,8 +179,7 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 		self.scrollView.autoresizesSubviews=YES;
 		self.scrollView.autoresizingMask=(UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth);	
 
-		self.viewController = [[SqueakUIController alloc] init];
-		self.viewController.view = self.scrollView;
+		self.viewController.view = self.scrollView;		
 		
 		
 		[self zoomToOrientation: UIInterfaceOrientationPortrait animated: NO];
@@ -171,55 +187,38 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 		[window addSubview: self.scrollView];
 		
 	} else {
-		mainView = [[[self whatRenderCanWeUse] alloc] initWithFrame: [[UIScreen mainScreen] applicationFrame]];
+		CGRect fakeScreenSize = mainScreenSize;
+		mainView = [[[self whatRenderCanWeUse] alloc] initWithFrame: fakeScreenSize];
 		self.mainView.clearsContextBeforeDrawing = NO;
 		[self.mainView setMultipleTouchEnabled: YES];
-		self.viewController = [[SqueakUIController alloc] init];
 		self.viewController.view = self.mainView;
-        [self.mainView setTranslatesAutoresizingMaskIntoConstraints: NO];
 		[window addSubview: self.mainView];
-        NSLayoutConstraint *lConstraint =[NSLayoutConstraint
-                                          constraintWithItem: self.mainView
-                                          attribute:NSLayoutAttributeLeft
-                                          relatedBy:NSLayoutRelationEqual
-                                          toItem: window
-                                          attribute:NSLayoutAttributeLeft
-                                          multiplier:1
-                                          constant:0];
-        NSLayoutConstraint *rConstraint =[NSLayoutConstraint
-                                          constraintWithItem: self.mainView
-                                          attribute:NSLayoutAttributeRight
-                                          relatedBy:NSLayoutRelationEqual
-                                          toItem:window
-                                          attribute:NSLayoutAttributeRight
-                                          multiplier:1
-                                          constant:0];
-        NSLayoutConstraint *tConstraint =[NSLayoutConstraint
-                                          constraintWithItem: self.mainView
-                                          attribute:NSLayoutAttributeTop
-                                          relatedBy:NSLayoutRelationEqual
-                                          toItem:window
-                                          attribute:NSLayoutAttributeTop
-                                          multiplier:1
-                                          constant:0];
-        NSLayoutConstraint *bConstraint =[NSLayoutConstraint
-                                          constraintWithItem: self.mainView
-                                          attribute:NSLayoutAttributeBottom
-                                          relatedBy:NSLayoutRelationEqual
-                                          toItem:window
-                                          attribute:NSLayoutAttributeBottom
-                                          multiplier:1
-                                          constant:0];
-        [window addConstraint:lConstraint];
-        [window addConstraint:rConstraint];
-        [window addConstraint:tConstraint];
-        [window addConstraint:bConstraint];
 	}
-	
-	[window makeKeyAndVisible];
-	
+    
+    if ([self.info useWebViewAsUI]) {
+        [self prepareWebView];
+    }
+    
+	[window makeKeyAndVisible];	
 }
 
+- (void)prepareWebView {
+    self.webView = [[[UIWebView alloc] initWithFrame: [window bounds]] autorelease];
+    [self.webView setAutoresizingMask:
+        UIViewAutoresizingFlexibleBottomMargin
+        | UIViewAutoresizingFlexibleHeight
+        | UIViewAutoresizingFlexibleLeftMargin
+        | UIViewAutoresizingFlexibleRightMargin
+        | UIViewAutoresizingFlexibleTopMargin
+        | UIViewAutoresizingFlexibleWidth ];
+    
+    [self.viewController setView:self.webView];
+    [window addSubview:self.webView];
+}
+
+- (sqSqueakIPhoneInfoPlistInterface *)info {
+    return (sqSqueakIPhoneInfoPlistInterface *)self.squeakApplication.infoPlistInterfaceLogic;
+}
 
 - (void)accelerometer:(UIAccelerometer *)accelerometer didAccelerate:(UIAcceleration *)acceleration {
 	NSMutableArray* data = [NSMutableArray arrayWithCapacity:2];

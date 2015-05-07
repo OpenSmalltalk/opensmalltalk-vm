@@ -56,7 +56,8 @@ sqInt createWindowWidthheightoriginXyattrlength(sqInt w,sqInt h,sqInt x,sqInt y,
 }
 
 sqInt closeWindow(sqInt windowIndex) {
-	NSWindow	*windowHandle = windowHandleFromIndex(windowIndex);
+	NSWindow	*windowHandle;
+	windowHandle = windowHandleFromIndex(windowIndex);
 	if(windowHandle == NULL) 
 		return 0;
 	windowBlockFromIndex(windowIndex)->context = NULL;
@@ -83,7 +84,7 @@ sqInt ioSizeOfWindow(wIndexType windowIndex)
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }
 
-int ioPositionOfNativeDisplay(unsigned long windowHandle)
+sqInt ioPositionOfNativeDisplay(unsigned long windowHandle)
 {
 	sqInt w=0, h=0;
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
@@ -91,10 +92,17 @@ int ioPositionOfNativeDisplay(unsigned long windowHandle)
 
 sqInt ioSizeOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 {
+    NSWindow *window = [[NSApplication sharedApplication] mainWindow];
+    NSRect rect = [window frame];
+    rect.size.width = x;
+    rect.size.height = y;
+    [window setFrame:rect display:YES];    
 	return (0);  /* w is high 16 bits; h is low 16 bits */
 }
 
 sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) {
+    NSString *title = [[NSString alloc] initWithBytes:newTitle length:sizeOfTitle encoding:NSUTF8StringEncoding];
+    [[[NSApplication sharedApplication] mainWindow] setTitle:title];
 	return 1;
 }
 

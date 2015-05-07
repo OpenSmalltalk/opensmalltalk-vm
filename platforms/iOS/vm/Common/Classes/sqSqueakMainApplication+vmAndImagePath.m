@@ -47,13 +47,14 @@ extern sqSqueakAppDelegate *gDelegateApp;
 @implementation sqSqueakMainApplication (vmAndImagePath) 
 
 - (void) setVMPathFromApplicationDirectory {
+    // in the default case return /Applications otherwise the path the .app is contained in
 	self.vmPathStringURL = [NSURL fileURLWithPath: [[[NSBundle mainBundle] bundlePath] stringByDeletingLastPathComponent]];
 }
 
 - (BOOL) ImageNameIsEmpty {
 	if (self.imageNameURL) 
-		return false;
-	return true;
+		return NO;
+	return YES;
 }
 
 - (const char *) getImageName {
@@ -63,7 +64,6 @@ extern sqSqueakAppDelegate *gDelegateApp;
 - (void) imageNameGet:(char *) sqImageName length:(sqInt)length {
 	//sqImageName is actually the address of where to put the data
 	//length is how many bytes the target can hold
-	
 	if (!sqImageName) 
 		return;
 	
@@ -84,7 +84,7 @@ extern sqSqueakAppDelegate *gDelegateApp;
 }
 
 - (const char *) getVMPath {
-	return [[[[self vmPathStringURL] path] precomposedStringWithCanonicalMapping] UTF8String];
+    return [[[[self vmPathStringURL] path] precomposedStringWithCanonicalMapping] UTF8String];
 }
 
 - (void) vmPathGet:(char *) sqVMPath length:(sqInt)length {

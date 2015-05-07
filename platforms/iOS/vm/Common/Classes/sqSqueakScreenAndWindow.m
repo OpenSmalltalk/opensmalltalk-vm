@@ -71,6 +71,7 @@ void MyProviderReleaseData (
         // Initialization code here.
 		squeakUIFlushPrimaryDeferNMilliseconds = 0.0f;
 		forceUpdateFlush = NO;
+#warning why is this YES in Pharo?
 		displayIsDirty = NO;
 	}
     return self;
@@ -104,9 +105,12 @@ void MyProviderReleaseData (
 }
 
 - (sqInt) ioHasDisplayDepth: (sqInt) depth {
-	if (depth == 32) 
+	if (depth == 2 || depth ==  4 || depth == 8 || depth == 16 || depth == 32 ||
+        depth == -2 || depth ==  -4 || depth == -8 || depth == -16 || depth == -32) { 
 		return true;
-	return false;
+    } else {
+        return false;
+    }
 }
 
 - (void) ioForceDisplayUpdateActual {
@@ -137,7 +141,6 @@ void MyProviderReleaseData (
 					windowIndex: (int) passedWindowIndex {
 	
 	static CGColorSpaceRef colorspace = NULL;
-	sqInt 		pitch;
 	windowDescriptorBlock *targetWindowBlock = windowBlockFromIndex(passedWindowIndex);	
 	
 	if (colorspace == NULL) {
@@ -157,9 +160,6 @@ void MyProviderReleaseData (
 		return 0;
 	}
 	
-	
-	pitch = ((((width)*(depth) + 31) >> 5) << 2);
-		
 	CGRect clip = CGRectMake((CGFloat)affectedL,(CGFloat)(height-affectedB), (CGFloat)(affectedR-affectedL), (CGFloat)(affectedB-affectedT));
 	[gDelegateApp.mainView drawImageUsingClip: clip];
 

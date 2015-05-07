@@ -51,11 +51,13 @@
 	NSURL*		imageNameURL;
 	NSStringEncoding	currentVMEncoding;
 	NSMutableArray *argsArguments;
+	NSMutableArray                  *commandLineArguments;
 	sqSqueakFileDirectoryInterface* fileDirectoryLogic;
 	sqSqueakInfoPlistInterface*		infoPlistInterfaceLogic;
 	sqSqueakSoundCoreAudio*			soundInterfaceLogic;
 	sqInt	inputSemaphoreIndex;		//event semaphore for VM thread
 	Queue* eventQueue;						//event queue for user events from UI thread
+    BOOL                            noHandlers;
 }
 - (void) setupFloat;
 - (void) setupErrorRecovery;
@@ -64,6 +66,7 @@
 - (void) doHeadlessSetup;
 - (void) doMemorySetup;
 - (void) parseUnixArgs;
+- (void) attachToSignals;
 - (void) setupMenus;
 - (void) setupTimers;
 - (void) setupAIO;
@@ -71,13 +74,12 @@
 - (void) setupBrowserLogic;
 - (void) setupSoundLogic;
 - (void) runSqueak;
-- (void) tearDown;
 - (void) MenuBarRestore;
 - (void) ioExit;
 - (void) ioExitWithErrorCode: (int) ec;
 - (sqSqueakFileDirectoryInterface *) newFileDirectoryInterfaceInstance;
-- (void) imageNamePut:(const char *) sqImageName;
 
+@property BOOL noHandlers;
 @property (nonatomic,strong) NSURL* vmPathStringURL;
 @property (nonatomic,strong) sqSqueakInfoPlistInterface* infoPlistInterfaceLogic;
 @property (nonatomic,strong) sqSqueakSoundCoreAudio* soundInterfaceLogic;
@@ -87,5 +89,6 @@
 @property (nonatomic,strong) Queue* eventQueue;
 @property (nonatomic,strong) sqSqueakFileDirectoryInterface * fileDirectoryLogic;
 @property (nonatomic,strong) NSMutableArray* argsArguments;
+@property (nonatomic,strong) NSMutableArray*commandLineArguments;
 @end
 

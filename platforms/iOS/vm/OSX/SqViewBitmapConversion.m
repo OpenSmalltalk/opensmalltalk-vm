@@ -30,7 +30,8 @@
  */
 #import "SqViewBitmapConversion.h"
 
-@implementation sqSqueakOSXNSView(BitmapConversion)
+
+@implementation sqSqueakOSXOpenGLView(BitmapConversion)
 
 #define debug(a)
 

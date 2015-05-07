@@ -82,10 +82,25 @@ sqInt dir_Delimitor(void)
 	//API Documented
 	return DELIMITERInt;
 }
+sqInt dir_Lookup2(char *pathString, sqInt pathStringLength, sqInt index,
+                  /* outputs */
+                  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+                  sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink);
 
 sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
 /* outputs: */  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
-				 sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
+                 sqInt *isDirectory, squeakFileOffsetType *sizeIfFile) {
+    sqInt posixPermissions;
+    sqInt isSymlink;
+    sqInt status = dir_Lookup2(pathString, pathStringLength, index, name, nameLength, creationDate, modificationDate, isDirectory, sizeIfFile,&posixPermissions,&isSymlink);
+    return status;
+}
+
+
+sqInt dir_Lookup2(char *pathString, sqInt pathStringLength, sqInt index,
+                 /* outputs */
+                 char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+				 sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
 {
 	//API Documented
 	/* Lookup the index-th entry of the directory with the given path, starting
@@ -107,26 +122,34 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
 			length: nameLength 
 			creationDate: creationDate 
 			modificationDate: modificationDate
-			isDirectory: isDirectory 
-			sizeIfFile: sizeIfFile];
+			isDirectory: isDirectory
+			sizeIfFile: sizeIfFile
+            posixPermissions: posixPermissions
+            isSymlink: isSymlink];
 	return status;
 }
 
 sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString, sqInt nameStringLength,
 /* outputs: */  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
-					  sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
+					  sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
 {
+	
+	/*Implementation notes
+	 if pathStringLength = 0 then we use the current working directory
+	 if pathStringLength > 0 then we resolve the pathString and alias */
 	sqInt status =
 	[gDelegateApp.squeakApplication.fileDirectoryLogic dir_EntryLookup: pathString 
 														   length: pathStringLength 
 															returnName: nameString
 													  returnNameLength: nameStringLength	
-															 name:  name
+															 name: name
 														   length: nameLength 
 													 creationDate: creationDate 
 												 modificationDate: modificationDate
-													  isDirectory: isDirectory 
-													   sizeIfFile: sizeIfFile];
+													  isDirectory: isDirectory
+													   sizeIfFile: sizeIfFile
+                                                 posixPermissions: posixPermissions
+                                                        isSymlink: isSymlink];
 	return status;
 }
 

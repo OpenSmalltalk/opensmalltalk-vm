@@ -1,5 +1,5 @@
 //
-//  sqSqueakOSXNSView.m
+//  sqSqueakOSXOpenGLView.m
 //  SqueakPureObjc
 //
 //  Created by John M McIntosh on 09-11-14.
@@ -39,7 +39,7 @@
 //
 #import <QuartzCore/QuartzCore.h>
 
-#import "sqSqueakOSXNSView.h"
+#import "sqSqueakOSXOpenGLView.h"
 #import "sqSqueakOSXScreenAndWindow.h"
 #import "SqueakOSXAppDelegate.h"
 #import "sqSqueakOSXApplication+events.h"
@@ -58,7 +58,7 @@ static NSString *stringWithCharacter(unichar character) {
 	return [NSString stringWithCharacters: &character length: 1];
 }
 
-@implementation sqSqueakOSXNSView
+@implementation sqSqueakOSXOpenGLView
 @synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
 lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
 
@@ -73,21 +73,28 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
     return[[NSOpenGLPixelFormat alloc] initWithAttributes:attrs];
 }
 
-- (instancetype)initWithFrame:(NSRect)frameRect pixelFormat:(NSOpenGLPixelFormat*)format {
+- (id)initWithFrame:(NSRect)frameRect {
+    self = [self initWithFrame:frameRect pixelFormat:[[self class] defaultPixelFormat]];
 
-    if (self = [super initWithFrame: frameRect pixelFormat: format]) {
-        inputMark = NSMakeRange(NSNotFound, 0);
-        inputSelection = NSMakeRange(0, 0);
-        [self registerForDraggedTypes: @[NSFilenamesPboardType]];
-        //	NSLog(@"registerForDraggedTypes");
-        dragInProgress = NO;
-        dragCount = 0;
-        dragItems = NULL;
-        clippyIsEmpty = YES;
-        colorspace = CGColorSpaceCreateDeviceRGB();
-        [self initializeSqueakColorMap];
-    }
+    [self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+    [self setAutoresizesSubviews:YES];
+    
+    [self initialize];
+
     return self;
+}
+
+- (void)initialize {
+	inputMark = NSMakeRange(NSNotFound, 0);
+	inputSelection = NSMakeRange(0, 0);
+    [self registerForDraggedTypes: [NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
+	//	NSLog(@"registerForDraggedTypes");
+	dragInProgress = NO;
+	dragCount = 0;
+	dragItems = NULL;
+	clippyIsEmpty = YES;
+	colorspace = CGColorSpaceCreateDeviceRGB();
+	[self initializeSqueakColorMap];
 }
 
 - (void) initializeVariables {
@@ -148,6 +155,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 - (void) drawThelayers {
+    extern BOOL gSqueakHeadless;
+	if (gSqueakHeadless) {
+        firstDrawCompleted = YES;
+        return;
+    }
 	if (syncNeeded) { 
 		[self drawRect: NSRectFromCGRect(clippy)];
 		syncNeeded = NO;
@@ -234,7 +246,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 - (void)update  // moved or resized
 {
 	NSRect rect;
-	
+	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
+    
 	[super update];
 	
 	[[self openGLContext] makeCurrentContext];
@@ -253,10 +266,15 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
     glLoadIdentity(); 
 	
 	[self setNeedsDisplay:true];
+
+    if (oldContext != nil) {
+        [oldContext makeCurrentContext];
+    }
 }
 
 - (void)reshape	// scrolled, moved or resized
 {
+	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
 	NSRect rect;
 	
 	[super reshape];
@@ -276,11 +294,16 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
     glLoadIdentity();
 	
 	[self setNeedsDisplay:true];
+    
+    if (oldContext != nil) {
+        [oldContext makeCurrentContext];
+    }
 }
 
 -(void)drawRect:(NSRect)rect
 {
 //	NSLog(@" draw %f %f %f %f",rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);
+	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
 	sqInt formObj = interpreterProxy->displayObject();
 	sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);	
 	void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
@@ -293,7 +316,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		}
 		[self loadTexturesFrom:dispBitsIndex subRectangle: rect];
 		[self defineQuad:rect];
-  }
+    }
+    
+    if (oldContext != nil) {
+        [oldContext makeCurrentContext];
+    }
 }
 
 - (void)mouseEntered:(NSEvent *)theEvent {
@@ -409,7 +436,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	
-	NSArray *down = [[NSArray alloc] initWithObjects: theEvent,nil];
+	NSArray *down = @[theEvent];
 	@synchronized(self) {
 		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
 		[self interpretKeyEvents: down];

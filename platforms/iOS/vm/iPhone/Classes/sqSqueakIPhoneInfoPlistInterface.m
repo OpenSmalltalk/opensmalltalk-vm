@@ -111,4 +111,23 @@ NSString * kmemorySize_preferenceKey = @"memorySize_preference";
 - (NSInteger) memorySize {
 	return [defaults integerForKey: kmemorySize_preferenceKey];
 }
+
+- (NSString *)stringFromInfo:(NSString *)key defaultValue:(NSString *)defaultValue{
+    NSDictionary *info = [[NSBundle mainBundle] infoDictionary];
+    NSString *value = info[key];
+    if(value != nil)
+        return value;
+    else
+        return defaultValue;
+}
+
+- (BOOL) useWorkerThread {
+	NSString *value = [self stringFromInfo:@"VMWorkerThread" defaultValue:@"NO"];
+    return [value boolValue];
+}
+
+- (BOOL) useWebViewAsUI {
+	NSString *value = [self stringFromInfo:@"WebViewAsUI" defaultValue:@"NO"];
+    return [value boolValue];
+}
 @end

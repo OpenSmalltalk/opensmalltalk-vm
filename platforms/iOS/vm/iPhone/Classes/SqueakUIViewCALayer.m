@@ -79,13 +79,8 @@ static void MyProviderReleaseData (
 	
 	size_t totalSize = pitch * (affectedB-affectedT)-affectedL*4;
 	CGDataProviderRef provider =  CGDataProviderCreateWithData (NULL,(void*)dispBitsIndex+ pitch*affectedT + affectedL*4,(size_t) totalSize,MyProviderReleaseData);
-    
-    int affectedW = affectedR-affectedL;
-    int affectedH = affectedB-affectedT;
-    
-    if( affectedW <= 0|| affectedH <= 0) {return NULL;}
 	
-	CGImageRef image = CGImageCreate((size_t) affectedW,(size_t) affectedH, (size_t) 8 /* bitsPerComponent */,
+	CGImageRef image = CGImageCreate((size_t) affectedR-affectedL,(size_t) affectedB-affectedT, (size_t) 8 /* bitsPerComponent */,
 									 (size_t) depth /* bitsPerPixel */, 
 									 (size_t) pitch, colorspace, 
 									 (CGBitmapInfo) kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Host , 
