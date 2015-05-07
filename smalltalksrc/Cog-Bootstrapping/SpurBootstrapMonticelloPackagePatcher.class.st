@@ -147,8 +147,8 @@ SpurBootstrapMonticelloPackagePatcher >> classDefinitionFor: className type: typ
 					detect: [:d| d isClassDefinition and: [d className = className]]
 					ifNone:
 						[self assert: (#(BoxedFloat64 SmallFloat64) includes: className).
-						 MCClassDefinition
-							name: className
+						 MCClassDefinition new
+							initializeWithName: className
 							superclassName: #Float
 							traitComposition: '{}'
 							classTraitComposition: '{}'
@@ -175,7 +175,8 @@ SpurBootstrapMonticelloPackagePatcher >> classDefinitionFor: className type: typ
 { #category : #'private-accessing' }
 SpurBootstrapMonticelloPackagePatcher >> compiledMethodClassDefinition [
 	^MCAddition of: 
-		(MCClassDefinition name: #CompiledMethod
+		(MCClassDefinition new
+			initializeWithName: #CompiledMethod
 			superclassName: #ByteArray
 			category: #'Kernel-Methods'
 			instVarNames: #()
@@ -337,8 +338,8 @@ SpurBootstrapMonticelloPackagePatcher >> modifiedFloatDefinitionsIn: definitions
 							and: 59]]]].
 	^(floatPrims collect:
 		[:d|
-		 MCMethodDefinition 
-			className: d className
+		 MCMethodDefinition new
+			initializeWithClassName: d className
 			classIsMeta: false
 			selector: d selector
 			category: d category
@@ -346,8 +347,8 @@ SpurBootstrapMonticelloPackagePatcher >> modifiedFloatDefinitionsIn: definitions
 			source: d source, 'DELETEME']),
 	 (floatPrims collect:
 		[:d|
-		 MCMethodDefinition 
-			className: #BoxedFloat64
+		 MCMethodDefinition new
+			initializeWithClassName: #BoxedFloat64
 			classIsMeta: false
 			selector: d selector
 			category: d category
@@ -355,8 +356,8 @@ SpurBootstrapMonticelloPackagePatcher >> modifiedFloatDefinitionsIn: definitions
 			source: d source]),
 	 (floatPrims collect:
 		[:d|
-		 MCMethodDefinition 
-			className: #SmallFloat64
+		 MCMethodDefinition new
+			initializeWithClassName: #SmallFloat64
 			classIsMeta: false
 			selector: d selector
 			category: d category
@@ -405,8 +406,8 @@ SpurBootstrapMonticelloPackagePatcher >> packagesAndPatches [
 		 source := method getSourceFromFile asString allButFirst: method selector size - selector size.
 		 source first ~= selector first ifTrue:
 			[source replaceFrom: 1 to: selector size with: selector startingAt: 1].
-		 definition := MCAddition of: (MCMethodDefinition
-										className: className
+		 definition := MCAddition of: (MCMethodDefinition new
+										initializeWithClassName: className
 										classIsMeta: isMeta
 										selector: selector
 										category: (category ifNil: [SpurBootstrap
@@ -554,8 +555,8 @@ SpurBootstrapMonticelloPackagePatcher >> patchDefinition: aMCMethodDefinition wi
 					parseMethod: aMCMethodDefinition source
 					onError: [:str :pos | self halt].
 	aRBParseTreeRewriter executeTree: parseTree.
-	^MCMethodDefinition 
-		className: aMCMethodDefinition className
+	^MCMethodDefinition new
+		initializeWithClassName: aMCMethodDefinition className
 		classIsMeta:aMCMethodDefinition classIsMeta
 		selector: aMCMethodDefinition selector
 		category: aMCMethodDefinition category
