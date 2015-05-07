@@ -400,7 +400,8 @@ SpurBootstrapMonticelloPackagePatcher >> packagesAndPatches [
 					[methodReference := (class >> selector) methodReference.
 					 category := methodReference category].
 				 package := (methodReference isNil
-							  or: [methodReference category = Categorizer default])
+							  or: [methodReference category = Categorizer default
+							  or: [methodReference category first = $*]]) "This for Scorch's override of InstructionClient>>classPrimitive:"
 								ifTrue: [PackageOrganizer default packageOfClass: class]
 								ifFalse: [PackageOrganizer default packageOfMethod: methodReference]].
 		 source := method getSourceFromFile asString allButFirst: method selector size - selector size.
@@ -453,8 +454,8 @@ SpurBootstrapMonticelloPackagePatcher >> patchAndUploadAllInTrunk [
 	"Look for all versions in the default repository that have patched versions there-in.
 	 Download and patch them and upload the patched versions (overwriting the older ones)."
 	"(SpurBootstrapMonticelloPackagePatcher new
-		from: 'spurpackages'
-		to: 'trunkpackages')
+		from: 'trunkpackages'
+		to: 'spurpackages')
 			patchAndUploadAllInTrunk"
 	| seed trunk sourceRepo cacheRepo |
 	seed := 'Are you really sure you want to do this?\It should happen only once!' withCRs.
@@ -470,7 +471,9 @@ SpurBootstrapMonticelloPackagePatcher >> patchAndUploadAllInTrunk [
 		latestBranches := self packages collect:
 							[:package|
 							(trunk versionNamesForPackageNamed: package name, '.spur') detectMin: [:vn | vn asMCVersionName versionNumber]].
-		latestUnbranched := latestBranches collect: [:verName| (trunk versionNamed: (verName copyReplaceAll: '.spur' with: '') asMCVersionName) info ancestors first versionName].
+		latestUnbranched := latestBranches collect:
+								[:verName|
+								(trunk versionNamed: (verName copyReplaceAll: '.spur' with: '') asMCVersionName) info ancestors first versionName].
 		((trunk possiblyNewerVersionsOfAnyOf: latestUnbranched)
 			reject: [:unpatched| unpatched includesSubString: '.spur'])
 			do: [:unpatched|
@@ -711,6 +714,7 @@ SpurBootstrapMonticelloPackagePatcher >> trunk [
 
 { #category : #'repository population' }
 SpurBootstrapMonticelloPackagePatcher >> uploadFrom: localRepo to: uploadRepository [
+	self break.
 	localRepo allVersionsDo:
 		[:version|
 		(uploadRepository includesVersionNamed: version info name) ifFalse:
