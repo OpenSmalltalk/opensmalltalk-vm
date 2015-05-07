@@ -485,7 +485,7 @@ SpurBootstrapMonticelloPackagePatcher >> patchAndUploadAllInTrunk [
 		((trunk possiblyNewerVersionsOfAnyOf: latestUnbranched)
 			reject: [:unpatched| unpatched includesSubString: '.spur'])
 			do: [:unpatched|
-				"it is claimed that whether a repository contains a .mcz or a .mcd is irrelevant.  At least for the cache repositoriy that's not true."
+				"it is claimed that whether a repository contains a .mcz or a .mcd is irrelevant.  At least for the cache repository that's not true."
 				sourceRepo storeVersion: (self cachedNonDiffyVersionNamed: unpatched from: trunk)].
 		 self patchAsNeeded.
 		 self uploadFrom: (MCDirectoryRepository directory: destDir) to: trunk]
