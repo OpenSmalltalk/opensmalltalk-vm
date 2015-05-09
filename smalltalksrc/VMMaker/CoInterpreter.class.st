@@ -2532,12 +2532,11 @@ CoInterpreter >> commonCallerReturn [
 ]
 
 { #category : #'message sending' }
-CoInterpreter >> commonSend [
+CoInterpreter >> commonSend: lookupRule [
 	"Send a message, starting lookup with the receiver's class."
 	"Assume: messageSelector and argumentCount have been set, and that 
 	the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
-	<sharedCodeNamed: 'commonSend' inCase: #singleExtendedSendBytecode>
 	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
 	cogit recordSendTrace ifTrue:
 		[self recordTrace: (objectMemory classForClassTag: lkupClassTag)
@@ -2546,7 +2545,7 @@ CoInterpreter >> commonSend [
 		cogit printOnTrace ifTrue:
 			[self printActivationNameForSelector: messageSelector
 				startClass: (objectMemory classForClassTag: lkupClassTag); cr]].
-	self internalFindNewMethod.
+	self internalFindNewMethod: lookupRule.
 	self internalExecuteNewMethod.
 	self fetchNextBytecode
 ]
@@ -4143,7 +4142,7 @@ CoInterpreter >> internalExecuteNewMethod [
 ]
 
 { #category : #'message sending' }
-CoInterpreter >> internalFindNewMethod [
+CoInterpreter >> internalFindNewMethod: lookupRule [
 	"Find the compiled method to be run when the current messageSelector is
 	 sent to the given class, setting the values of newMethod and primitiveIndex."
 	| ok |

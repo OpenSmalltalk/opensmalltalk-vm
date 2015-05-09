@@ -9,6 +9,11 @@ Class {
 	#name : #VMMethodCacheConstants,
 	#superclass : #SharedPool,
 	#classVars : [
+		'LookupRuleDynamicSuper',
+		'LookupRuleImplicit',
+		'LookupRuleMNU',
+		'LookupRuleOrdinary',
+		'LookupRuleSelf',
 		'MethodCacheClass',
 		'MethodCacheEntries',
 		'MethodCacheEntrySize',
