@@ -1514,7 +1514,7 @@ CogVMSimulator >> internalCannotReturn: resultOop [
 ]
 
 { #category : #testing }
-CogVMSimulator >> internalFindNewMethod [
+CogVMSimulator >> internalFindNewMethod: lookupRule [
 "
 	| cName |
 	traceOn ifTrue:
@@ -1537,7 +1537,7 @@ CogVMSimulator >> internalFindNewMethod [
 		messageQueue == nil ifTrue: [messageQueue := OrderedCollection new].
 		messageQueue addLast: (self stringOf: messageSelector)].
 "
-	^super internalFindNewMethod
+	^super internalFindNewMethod: lookupRule
 ]
 
 { #category : #'debugging traps' }
