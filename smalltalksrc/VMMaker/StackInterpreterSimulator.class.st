@@ -855,7 +855,7 @@ StackInterpreterSimulator >> internalCannotReturn: resultOop [
 ]
 
 { #category : #testing }
-StackInterpreterSimulator >> internalFindNewMethod [
+StackInterpreterSimulator >> internalFindNewMethod: lookupRule [
 "
 	| cName |
 	traceOn ifTrue:
@@ -881,7 +881,7 @@ StackInterpreterSimulator >> internalFindNewMethod [
 		messageQueue == nil ifTrue: [messageQueue := OrderedCollection new].
 		messageQueue addLast: (self stringOf: messageSelector)].
 "
-	super internalFindNewMethod
+	super internalFindNewMethod: lookupRule
 ]
 
 { #category : #'debugging traps' }
