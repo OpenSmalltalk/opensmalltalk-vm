@@ -1,0 +1,7 @@
+//
+// Prefix header for all source files of the 'SqueakPureObjC' target in the 'SqueakPureObjC' project
+//
+
+#ifdef __OBJC__
+    #import <Cocoa/Cocoa.h>
+#endif
