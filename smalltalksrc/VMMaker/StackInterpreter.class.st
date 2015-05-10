@@ -2486,7 +2486,7 @@ StackInterpreter >> bytecodePrimAt [
 			 messageSelector := self specialSelector: 16.
 			 (self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
 				[argumentCount := 1.
-				 ^self commonSend: LookupRuleOrdinary].
+				 ^self commonSend].
 			 primitiveFunctionPointer == #primitiveAt
 				ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: false]
 				ifFalse:
@@ -2494,7 +2494,7 @@ StackInterpreter >> bytecodePrimAt [
 						ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: true]
 						ifFalse:
 							[argumentCount := 1.
-							 ^self commonSend: LookupRuleOrdinary]]].
+							 ^self commonSend]]].
 		 self successful ifTrue:
 			[result := self commonVariable: rcvr at: (objectMemory integerValueOf: index) cacheIndex: atIx].
 		 self successful ifTrue:
@@ -2534,7 +2534,7 @@ StackInterpreter >> bytecodePrimAtPut [
 			 messageSelector := self specialSelector: 17.
 			 (self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
 				[argumentCount := 2.
-				 ^self commonSend: LookupRuleOrdinary].
+				 ^self commonSend].
 			 primitiveFunctionPointer == #primitiveAtPut
 				ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: false]
 				ifFalse:
@@ -2542,7 +2542,7 @@ StackInterpreter >> bytecodePrimAtPut [
 						ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: true]
 						ifFalse:
 							[argumentCount := 2.
-							 ^self commonSend: LookupRuleOrdinary]]].
+							 ^self commonSend]]].
 		 self successful ifTrue:
 			[self commonVariable: rcvr at: (objectMemory integerValueOf: index) put: value cacheIndex: atIx].
 		 self successful ifTrue:
@@ -4282,6 +4282,21 @@ StackInterpreter >> commonReturn [
 ]
 
 { #category : #'send bytecodes' }
+StackInterpreter >> commonSend [
+	"Send a message, starting lookup with the receiver's class."
+	"Assume: messageSelector and argumentCount have been set, and that 
+	the receiver and arguments have been pushed onto the stack,"
+	"Note: This method is inlined into the interpreter dispatch loop."
+	<sharedCodeInCase: #singleExtendedSendBytecode>
+	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
+	self printSends ifTrue:
+		[self printActivationNameForSelector: messageSelector startClass: (objectMemory classForClassTag: lkupClassTag); cr].
+	self internalFindNewMethod: LookupRuleOrdinary.
+	self internalExecuteNewMethod.
+	self fetchNextBytecode
+]
+
+{ #category : #'send bytecodes' }
 StackInterpreter >> commonSend: lookupRule [
 	"Send a message, starting lookup with the receiver's class."
 	"Assume: messageSelector and argumentCount have been set, and that 
@@ -4630,7 +4645,7 @@ StackInterpreter >> directedSuperclassSend [
 	 self pushed on the stack."
 	self ensureReceiverUnforwarded.
 	self assert: lkupClassTag ~= objectMemory nilObject.
-	self commonSend: LookupRuleOrdinary
+	self commonSend
 ]
 
 { #category : #'message sending' }
@@ -5304,7 +5319,7 @@ StackInterpreter >> extSendBytecode [
 	rcvr := self internalStackValue: argumentCount.
 	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
 	self assert: (objectMemory classForClassTag: lkupClassTag) ~= objectMemory nilObject.
-	self commonSend: LookupRuleOrdinary
+	self commonSend
 ]
 
 { #category : #'send bytecodes' }
@@ -9815,7 +9830,7 @@ StackInterpreter >> normalSend [
 	rcvr := self internalStackValue: argumentCount.
 	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
 	self assert: lkupClassTag ~= objectMemory nilObject.
-	self commonSend: LookupRuleOrdinary
+	self commonSend
 ]
 
 { #category : #'miscellaneous bytecodes' }
@@ -12632,7 +12647,7 @@ StackInterpreter >> sendLiteralSelector0ArgsBytecode [
 	rcvr := self internalStackValue: 0.
 	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
 	self assert: lkupClassTag ~= objectMemory nilObject.
-	self commonSend: LookupRuleOrdinary
+	self commonSend
 ]
 
 { #category : #'send bytecodes' }
@@ -12644,7 +12659,7 @@ StackInterpreter >> sendLiteralSelector1ArgBytecode [
 	rcvr := self internalStackValue: 1.
 	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
 	self assert: lkupClassTag ~= objectMemory nilObject.
-	self commonSend: LookupRuleOrdinary
+	self commonSend
 ]
 
 { #category : #'send bytecodes' }
@@ -12656,7 +12671,7 @@ StackInterpreter >> sendLiteralSelector2ArgsBytecode [
 	rcvr := self internalStackValue: 2.
 	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
 	self assert: lkupClassTag ~= objectMemory nilObject.
-	self commonSend: LookupRuleOrdinary
+	self commonSend
 ]
 
 { #category : #'debug support' }
@@ -13936,7 +13951,7 @@ StackInterpreter >> superclassSend [
 	 self pushed on the stack."
 	self ensureReceiverUnforwarded.
 	self assert: lkupClassTag ~= objectMemory nilObject.
-	self commonSend: LookupRuleOrdinary
+	self commonSend
 ]
 
 { #category : #'debug support' }
