@@ -456,7 +456,7 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForNewsqueak [
 
 		"System Primitives (110-119)"
 		(110 genPrimitiveIdentical 1)
-		(111 genPrimitiveClass)
+		(111 genPrimitiveClass -1)			"For VMMirror support 1 argument classOf: as well as class"
 		"(112 primitiveBytesLeft)"
 		"(113 primitiveQuit)"
 		"(114 primitiveExitToDebugger)"
@@ -2287,21 +2287,26 @@ SimpleStackBasedCogit >> genPrimitiveCharacterValue [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveClass [
-	"Stack looks like
-		receiver (also in ReceiverResultReg)
-		return address"
+	NewspeakVM
+		ifTrue:
+			[methodOrBlockNumArgs > 0 ifTrue:
+				[methodOrBlockNumArgs > 1 ifTrue:
+					[^self compileFallbackToInterpreterPrimitive].
+			 self genLoadArgAtDepth: 0 into: ReceiverResultReg]]
+		ifFalse:
+			[self assert: methodOrBlockNumArgs = 0].
 	(objectRepresentation
 			genGetClassObjectOf: ReceiverResultReg
 			into: ReceiverResultReg
 			scratchReg: TempReg
-			instRegIsReceiver: methodOrBlockNumArgs = 0) = BadRegisterSet ifTrue:
+			instRegIsReceiver: (NewspeakVM ifTrue: [methodOrBlockNumArgs = 0] ifFalse: [true])) = BadRegisterSet ifTrue:
 		[objectRepresentation
 			genGetClassObjectOf: ReceiverResultReg
 			into: ClassReg
 			scratchReg: TempReg
-			instRegIsReceiver: methodOrBlockNumArgs = 0.
+			instRegIsReceiver: (NewspeakVM ifTrue: [methodOrBlockNumArgs = 0] ifFalse: [true]).
 		 self MoveR: ClassReg R: ReceiverResultReg].
-	self RetN: (self primRetNOffsetFor: 0).
+	self RetN: (self primRetNOffsetFor: methodOrBlockNumArgs).
 	^0
 ]
 

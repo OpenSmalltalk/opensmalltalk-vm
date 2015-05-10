@@ -331,6 +331,11 @@ CurrentImageCoInterpreterFacade >> firstLongFormat [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> fixedFieldsFieldWidth [
+	^objectMemory fixedFieldsFieldWidth
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> formatOfClass: classOop [
 	^self subclassResponsibility
 ]
@@ -371,6 +376,11 @@ CurrentImageCoInterpreterFacade >> getCheckAllocFiller [
 CurrentImageCoInterpreterFacade >> headerIndicatesAlternateBytecodeSet: methodHeader [
 	"A negative header selects the alternate bytecode set."
 	^(self objectForOop: methodHeader) < 0
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> identityHashHalfWordMask [
+	^objectMemory identityHashHalfWordMask
 ]
 
 { #category : #accessing }
@@ -693,6 +703,11 @@ CurrentImageCoInterpreterFacade >> noAssertHeaderOf: aMethodOop [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> nonIndexablePointerFormat [
+	^objectMemory nonIndexablePointerFormat
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> nullHeaderForMachineCodeMethod [
 	^objectMemory nullHeaderForMachineCodeMethod
 ]
@@ -711,6 +726,11 @@ CurrentImageCoInterpreterFacade >> numBytesOf: objOop [
 			on: MessageNotUnderstood
 			do: [:ex| obj class isBytes ifTrue: [1] ifFalse: [Smalltalk wordSize]].
 	^obj basicSize * elementSize
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> numSlotsHalfShift [
+	^objectMemory numSlotsHalfShift
 ]
 
 { #category : #accessing }

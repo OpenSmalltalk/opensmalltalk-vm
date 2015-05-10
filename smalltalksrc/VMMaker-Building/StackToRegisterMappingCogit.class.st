@@ -2259,28 +2259,26 @@ StackToRegisterMappingCogit >> genPrimitiveCharacterValue [
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveClass [
-	"Depending on argument count the argument is either
-		0 args: ReceiverResultReg
-		1 args: Arg0Reg
-		N args: top of stack (assuming 1 reg arg for now)"
 	| reg |
-	methodOrBlockNumArgs = 1
+	reg := ReceiverResultReg.
+	NewspeakVM
 		ifTrue:
-			[reg := Arg0Reg]
-		ifFalse:
 			[methodOrBlockNumArgs > 0 ifTrue:
-				[self MoveMw: objectMemory wordSize r: SPReg R: ReceiverResultReg].
-			reg := ReceiverResultReg].
+				[methodOrBlockNumArgs > 1 ifTrue:
+					[^self compileFallbackToInterpreterPrimitive].
+				 reg := Arg0Reg]]
+		ifFalse:
+			[self assert: methodOrBlockNumArgs = 0].
 	(objectRepresentation
 			genGetClassObjectOf: reg
 			into: ReceiverResultReg
 			scratchReg: TempReg
-			instRegIsReceiver: methodOrBlockNumArgs = 0) = BadRegisterSet ifTrue:
+			instRegIsReceiver: (NewspeakVM ifTrue: [methodOrBlockNumArgs = 0] ifFalse: [true])) = BadRegisterSet ifTrue:
 		[objectRepresentation
 			genGetClassObjectOf: reg
 			into: ClassReg
 			scratchReg: TempReg
-			instRegIsReceiver: methodOrBlockNumArgs = 0.
+			instRegIsReceiver: (NewspeakVM ifTrue: [methodOrBlockNumArgs = 0] ifFalse: [true]).
 		 self MoveR: ClassReg R: ReceiverResultReg].
 	self RetN: 0.
 	^0

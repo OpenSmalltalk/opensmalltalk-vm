@@ -242,9 +242,9 @@ CogObjectRepresentationForSpur >> genEnsureObjInRegNotForwarded: reg scratchReg:
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genEnsureObjInRegNotForwarded: reg scratchReg: scratch updatingMw: offset r: baseReg [
-	"Make sure that the object in reg is not forwarded, and update the field reg[offset] is
-	 updated if the object in reg is forwarded.
-	 Use the fact that isForwardedObjectClassIndexPun is a power of two to save an instruction."
+	"Make sure that the object in reg is not forwarded, and the field reg[offset] is updated
+	 if the object in reg is forwarded. Use the fact that isForwardedObjectClassIndexPun is
+	 a power of two to save an instruction."
 	| loop imm ok |
 	<var: #ok type: #'AbstractInstruction *'>
 	<var: #imm type: #'AbstractInstruction *'>
@@ -365,7 +365,7 @@ CogObjectRepresentationForSpur >> genGetClassIndexOfNonImm: sourceReg into: dest
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genGetClassObjectOf: instReg into: destReg scratchReg: scratchReg instRegIsReceiver: instRegIsReceiver [
-	"Fetch the instance's class into destReg.  If the instance is forwarded, follow forwarding."
+	"Fetch the instance's class into destReg.  If the instance is not the receiver and is forwarded, follow forwarding."
 	| jumpIsImm jumpNotForwarded loop |
 	<var: #jumpIsImm type: #'AbstractInstruction *'>
 	<var: #jumpNotForwarded type: #'AbstractInstruction *'>
