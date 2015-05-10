@@ -22,7 +22,7 @@
 		<key>fa1542d4-bde8-0310-ad64-8ed1123d492a++2954</key>
 		<string>../../../..</string>
 		<key>fa1542d4-bde8-0310-ad64-8ed1123d492a++5922</key>
-		<string>../../../..platforms/Cross/plugins/</string>
+		<string>../../../..platforms/Cross/plugins</string>
 	</dict>
 	<key>IDESourceControlProjectRepositoryRootDictionary</key>
 	<dict>
