@@ -62,9 +62,9 @@
 @property (nonatomic,assign) BOOL	SqueakPluginsBuiltInOrLocalOnly;
 @property (nonatomic,assign) BOOL	SqueakExplicitWindowOpenNeeded;
 @property (nonatomic,assign) usqInt	SqueakMaxHeapSize;
-@property (nonatomic,retain) NSURL*		SqueakUnTrustedDirectory;
-@property (nonatomic,retain) NSURL*		SqueakTrustedDirectory;
-@property (nonatomic,retain) NSURL*		SqueakResourceDirectory;
+@property (nonatomic,strong) NSURL*		SqueakUnTrustedDirectory;
+@property (nonatomic,strong) NSURL*		SqueakTrustedDirectory;
+@property (nonatomic,strong) NSURL*		SqueakResourceDirectory;
 @property (nonatomic,assign) NSTimeInterval	SqueakUIFlushPrimaryDeferNMilliseconds;
 @property (nonatomic,assign) float		SqueakUIFadeForFullScreenInSeconds;
 

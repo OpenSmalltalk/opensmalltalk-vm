@@ -35,6 +35,12 @@
 #ifndef __sq_config_h
 #define __sq_config_h
 
+/* explicit image width */
+
+#define	HAVE_INTERP_H 1
+#define HAVE_UUID_GENERATE 1
+#define HAVE_UUID_UUID_H 1
+
 /* package options */
 
 #define	USE_X11 1
@@ -93,6 +99,8 @@
 /* #undef	HAVE_GL_GL_H */
 #define	HAVE_OPENGL_GL_H 1
 
+/* #undef	NEED_SUNOS_H */
+
 /* system calls/library functions */
 
 #define	AT_EXIT atexit
@@ -126,6 +134,11 @@
 #else
 #define	SIZEOF_VOID_P 4
 #endif
+
+#ifdef __aarch64__
+#define	SIZEOF_VOID_P 8
+#endif
+
 /* structures */
 
 #define	HAVE_TM_GMTOFF 1
@@ -164,11 +177,16 @@
 #endif
 
 #define HAVE_LIBDL 1
+/* #undef	DOUBLE_WORD_ALIGNMENT */
 /* #undef	DOUBLE_WORD_ORDER */
 
 /* damage containment */
 
 #define	DARWIN 1
+
+#ifdef NEED_SUNOS_H
+# include "sunos.h"
+#endif
 
 /* other configured variables */
 

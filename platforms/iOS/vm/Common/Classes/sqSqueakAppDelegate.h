@@ -44,15 +44,16 @@ such third-party acknowledgments.
 
 @interface sqSqueakAppDelegate : NSObject {
 	sqSqueakMainApplication *squeakApplication;
+     NSThread *squeakThread;
 }
-@property (nonatomic,retain) sqSqueakMainApplication *squeakApplication;
+@property (nonatomic,strong) sqSqueakMainApplication *squeakApplication;
+@property (nonatomic, strong) NSThread *squeakThread;
 
 - (void) makeMainWindowOnMainThread ;
 - (void) makeMainWindow;
 - (id) createPossibleWindow;
-- (NSTimeInterval) squeakUIFlushPrimaryDeferNMilliseconds;
-- (sqSqueakMainApplication *) makeApplicationInstance;
 - (void) workerThreadStart;
 - (void) singleThreadStart;
-
+- (NSTimeInterval) squeakUIFlushPrimaryDeferNMilliseconds;
+- (sqSqueakMainApplication *) makeApplicationInstance;
 @end

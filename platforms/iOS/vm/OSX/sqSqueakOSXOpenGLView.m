@@ -48,6 +48,8 @@
 #import "sqVirtualMachine.h"
 
 //#import <OpenGL/CGLMacro.h>
+#import <OpenGL/gl.h>
+#import <OpenGL/Opengl.h>
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;
@@ -82,11 +84,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
     return self;
 }
 
-- (void)awakeFromNib {
-	self = [self initWithFrame: self.frame pixelFormat: [[self class] defaultPixelFormat] ];
-    [self initialize];
-}
-
 - (void)initialize {
 	inputMark = NSMakeRange(NSNotFound, 0);
 	inputSelection = NSMakeRange(0, 0);
@@ -104,7 +101,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 - (void) dealloc {
-    [super dealloc];
 	free(colorMap32);
 	CGColorSpaceRelease(colorspace);
 }
@@ -141,7 +137,10 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 
 - (void) viewDidEndLiveResize {
 //	[self.window setShowsResizeIndicator: NO];
-	[((sqSqueakOSXApplication*) gDelegateApp.squeakApplication).squeakCursor performSelectorOnMainThread: @selector(set) withObject: nil waitUntilDone: NO];	
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [((sqSqueakOSXApplication*) gDelegateApp.squeakApplication).squeakCursor  set];
+    });
+
 }
 
 - (void) drawImageUsingClip: (CGRect) clip {
@@ -171,8 +170,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	}
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
-		if (getFullScreenFlag() == 0)
+		if (getFullScreenFlag() == 0) {
 			[self.window makeKeyAndOrderFront: self];
+        }
 	}
 }
 
@@ -418,7 +418,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	
-	NSArray *down = [[NSArray alloc] initWithObjects: theEvent,nil];
 	@synchronized(self) {
 		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
 		NSString *possibleConversion = [theEvent characters];
@@ -430,7 +429,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		self.lastSeenKeyBoardStrokeDetails = NULL;
 		[self keyUp: theEvent]; 
 	}
-	[down release];
 }
 
 -(void)keyDown:(NSEvent*)theEvent {
@@ -438,13 +436,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	
-	NSArray *down = [[NSArray alloc] initWithObjects: theEvent,nil];
+	NSArray *down = @[theEvent];
 	@synchronized(self) {
 		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
 		[self interpretKeyEvents: down];
 		self.lastSeenKeyBoardStrokeDetails = NULL;
 	}
-	[down release];
 }
 
 -(void)keyUp:(NSEvent*)theEvent {
@@ -468,7 +465,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	self.lastSeenKeyBoardModifierDetails = aKeyBoardStrokeDetails;
-	[aKeyBoardStrokeDetails release];
 }
 
 - (void)doCommandBySelector:(SEL)aSelector {
@@ -484,54 +480,72 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 #define encode(c, k,  s) 		 if (aSelector == @selector(s)) { unicode = c; keyCode = k; unicodeString = [NSString stringWithCharacters: &unicode length: 1]; } 
 //http://developer.apple.com/documentation/mac/Text/Text-571.html
 	
-	encode(  8, 51,         deleteBackward:)
-	else encode( 8, 51,     deleteWordBackward:) 
-    else encode(127, 51,    deleteForward:)
-    else encode(127, 51,    deleteWordForward:)
-    else encode( 8, 51,     deleteBackwardByDecomposingPreviousCharacter:) 
-    else encode( (isFunctionKey ? 3: 13), (isFunctionKey ? 76: 36), insertNewline:) 
-    else encode( 13, 36,    insertLineBreak:) 
-    else encode( 13, 36,    insertNewlineIgnoringFieldEditor:) 
-    else encode(  9, 48,    insertTab:)
-    else encode(  9, 48,    insertBacktab:)
-    else encode(  9, 48,    insertTabIgnoringFieldEditor:)
-    else encode( 28, 123,   moveLeft:)
-    else encode( 29, 124,   moveRight:)
-    else encode( 30, 126,   moveUp:)
-    else encode( 31, 125,   moveDown:)
-    else encode( 30, 126,   moveBackward:)
-    else encode( 31, 125,   moveForward:)
-    else encode( 28, 123,   moveLeftAndModifySelection:)
-    else encode( 29, 124,   moveRightAndModifySelection:)
-    else encode( 30, 126,   moveUpAndModifySelection:)
-    else encode( 31, 125,   moveDownAndModifySelection:)
-    else encode( 28, 123,   moveWordLeftAndModifySelection:)
-    else encode( 29, 124,   moveWordRightAndModifySelection:)
-    else encode( 28, 123,   moveWordLeft:)
-    else encode( 29, 124,   moveWordRight:)
-    else encode( 30, 126,   moveParagraphBackwardAndModifySelection:)
-    else encode( 31, 125,   moveParagraphForwardAndModifySelection:)																										
-    else encode( 11, 116,   pageUp:)
-    else encode( 12, 121,   pageDown:)
-    else encode( 11, 116,   pageUpAndModifySelection:)
-    else encode( 12, 121,   pageDownAndModifySelection:)
-    else encode( (isFunctionKey ? 11 : 30), (isFunctionKey ? 116 : 126), scrollPageUp:)
-    else encode( (isFunctionKey ? 12 : 31), (isFunctionKey ? 121 : 125), scrollPageDown:)
-    else encode(  1, 115,   moveToBeginningOfDocument:)
-    else encode(  4, 119,   moveToEndOfDocument:)
-    else encode(  (isFunctionKey ? 1 : 28), (isFunctionKey ? 115 : 123), moveToLeftEndOfLine:)
-    else encode(  (isFunctionKey ? 4 : 29), (isFunctionKey ? 119 : 124), moveToRightEndOfLine:)
-    else encode(  (isFunctionKey ? 1 : 28), (isFunctionKey ? 115 : 123), moveToLeftEndOfLineAndModifySelection:)
-    else encode(  (isFunctionKey ? 4 : 29), (isFunctionKey ? 119 : 124), moveToRightEndOfLineAndModifySelection:)
-    else encode(  1, 115,   scrollToBeginningOfDocument:)
-    else encode(  4, 119,   scrollToEndOfDocument:)
-    else encode(  1, 115,   moveToBeginningOfDocumentAndModifySelection:)
-    else encode(  4, 119,   moveToEndOfDocumentAndModifySelection:)
-    else encode( 27, 53,    cancelOperation:)
-    else encode( 27, 53,    cancel:)
-    else encode( 27, 53,    complete:)
-    else encode( 27, 71,    delete:)
-    else return;
+	encode(  8, 51, deleteBackward:)
+	else encode( 8, 51, deleteWordBackward:) 
+		else encode(127, 51, deleteForward:)
+			else encode(127, 51, deleteWordForward:)
+				else encode( 8, 51, deleteBackwardByDecomposingPreviousCharacter:) 
+				
+				
+				else encode( (isFunctionKey ? 3: 13), (isFunctionKey ? 76: 36), insertNewline:) 
+					else encode( 13, 36, insertLineBreak:) 
+						else encode( 13, 36, insertNewlineIgnoringFieldEditor:) 
+							
+							else encode(  9, 48, insertTab:)
+								else encode(  9, 48, insertBacktab:)
+									else encode(  9, 48, insertTabIgnoringFieldEditor:)
+										
+										else encode( 28, 123,  moveLeft:)
+											else encode( 29, 124, moveRight:)
+												else encode( 30, 126, moveUp:)
+													else encode( 31, 125, moveDown:)
+																
+														else encode( 30, 126, moveBackward:)
+															else encode( 31, 125, moveForward:)
+																else encode( 28, 123, moveLeftAndModifySelection:)
+																	else encode( 29, 124, moveRightAndModifySelection:)
+																
+																		else encode( 30, 126, moveUpAndModifySelection:)
+																			else encode( 31, 125, moveDownAndModifySelection:)
+																				else encode( 28, 123, moveWordLeftAndModifySelection:)
+																					else encode( 29, 124, moveWordRightAndModifySelection:)
+																
+																						else encode( 28, 123, moveWordLeft:)
+																							else encode( 29, 124, moveWordRight:)
+																								else encode( 30, 126, moveParagraphBackwardAndModifySelection:)
+																									else encode( 31, 125, moveParagraphForwardAndModifySelection:)
+																										
+																										else encode( 11, 116, pageUp:)
+																											else encode( 12, 121, pageDown:)
+																
+																												else encode( 11, 116, pageUpAndModifySelection:)
+																													else encode( 12, 121, pageDownAndModifySelection:)
+																
+																														else encode( (isFunctionKey ? 11 : 30), (isFunctionKey ? 116 : 126), scrollPageUp:)
+																															else encode( (isFunctionKey ? 12 : 31), (isFunctionKey ? 121 : 125), scrollPageDown:)
+																																
+																																else encode(  1, 115, moveToBeginningOfDocument:)
+																																	else encode(  4, 119, moveToEndOfDocument:)
+																
+																																		else encode(  (isFunctionKey ? 1 : 28), (isFunctionKey ? 115 : 123), moveToLeftEndOfLine:)
+																																			else encode(  (isFunctionKey ? 4 : 29), (isFunctionKey ? 119 : 124), moveToRightEndOfLine:)
+																																				
+																																				else encode(  (isFunctionKey ? 1 : 28), (isFunctionKey ? 115 : 123), moveToLeftEndOfLineAndModifySelection:)
+																																					else encode(  (isFunctionKey ? 4 : 29), (isFunctionKey ? 119 : 124), moveToRightEndOfLineAndModifySelection:)
+																																						
+																																				else encode(  1, 115, scrollToBeginningOfDocument:)
+																																					else encode(  4, 119, scrollToEndOfDocument:)
+																
+																																				else encode(  1, 115, moveToBeginningOfDocumentAndModifySelection:)
+																																					else encode(  4, 119, moveToEndOfDocumentAndModifySelection:)
+																																						
+			 																																			
+																																						else encode( 27, 53, cancelOperation:)
+																																							else encode( 27, 53, cancel:)
+																																								else encode( 27, 53, complete:)
+																																									else encode( 27, 71, delete:)
+																																								else 
+																																									return;
 	
 	@synchronized(self) {
 		keyBoardStrokeDetails *aKeyBoardStrokeDetails = [[keyBoardStrokeDetails alloc] init];
@@ -631,7 +645,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	self.dragCount = (int) [self countNumberOfNoneSqueakImageFilesInDraggedFiles: info];
 	
 	if (self.dragCount)
-		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragEnter numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view:self];
+		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragEnter numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex];
 	
 	return NSDragOperationGeneric;
 }
@@ -639,14 +653,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 - (NSDragOperation) draggingUpdated: (id<NSDraggingInfo>)info
 {
 	if (self.dragCount)
-		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragMove numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view:self];
+		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragMove numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex];
 	return NSDragOperationGeneric;
 }
 
 - (void) draggingExited: (id<NSDraggingInfo>)info
 {
 	if (self.dragCount)
-		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragLeave numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view:self];
+		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragLeave numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex];
 	self.dragCount = 0;
 	self.dragInProgress = NO;
 	self.dragItems = NULL;
@@ -655,7 +669,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 - (BOOL) performDragOperation: (id<NSDraggingInfo>)info {
 	if (self.dragCount) {
 		self.dragItems = [self filterOutSqueakImageFilesFromDraggedFiles: info];
-		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view:self];
+		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex];
 	} 
 	
 	NSArray *images = [self filterSqueakImageFilesFromDraggedFiles: info];
@@ -663,9 +677,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		for (NSString *item in images ){
 			NSURL *url = [NSURL fileURLWithPath:[[NSBundle mainBundle] bundlePath]];
 			LSLaunchURLSpec launchSpec;
-			launchSpec.appURL = (CFURLRef)url;
+			launchSpec.appURL = (CFURLRef)CFBridgingRetain(url);
 			launchSpec.passThruParams = NULL;
-			launchSpec.itemURLs = (CFArrayRef) [NSArray arrayWithObject:[NSURL fileURLWithPath: item]];
+			launchSpec.itemURLs = (__bridge CFArrayRef) @[[NSURL fileURLWithPath: item]];
 			launchSpec.launchFlags = kLSLaunchDefaults | kLSLaunchNewInstance;
 			launchSpec.asyncRefCon = NULL;
 			
@@ -685,7 +699,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		return NULL;
 	if (index < 1 || index > [self.dragItems count])
 		return NULL;
-	NSString *filePath = [self.dragItems objectAtIndex: (NSUInteger) index - 1];
+	NSString *filePath = (self.dragItems)[(NSUInteger) index - 1];
 	return filePath;
 }
 
@@ -753,5 +767,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		CGReleaseDisplayFadeReservation(fadeToken);
 	} 
 }
+
+- (void) preDrawThelayers {
+}
+
 
 @end

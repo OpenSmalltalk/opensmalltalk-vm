@@ -3,18 +3,15 @@ INTERNAL_PLUGINS = \
 AioPlugin \
 ADPCMCodecPlugin \
 AsynchFilePlugin \
-B3DAcceleratorPlugin \
 B2DPlugin \
 BitBltPlugin \
 BMPReadWriterPlugin \
-ClipboardExtendedPlugin \
 ZipPlugin \
 DropPlugin \
 DSAPrims \
 FFTPlugin \
 FilePlugin \
 IA32ABI \
-InternetConfigPlugin \
 JoystickTabletPlugin \
 JPEGReaderPlugin \
 JPEGReadWriter2Plugin \
@@ -23,7 +20,6 @@ LargeIntegers \
 LocalePlugin \
 MacMenubarPlugin \
 Matrix2x3Plugin \
-MIDIPlugin \
 MiscPrimitivePlugin \
 RePlugin \
 SecurityPlugin \
@@ -36,3 +32,8 @@ StarSqueakPlugin \
 SurfacePlugin \
 UUIDPlugin \
 VMProfileMacSupportPlugin \
+
+#B3DAcceleratorPlugin \
+#ClipboardExtendedPlugin \
+#MIDIPlugin \
+#InternetConfigPlugin \

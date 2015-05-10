@@ -55,9 +55,10 @@ int main(int argc, char **argv, char **envp)
 #import <UIKit/UIKit.h>
 
 int main(int argc, char *argv[]) {
-	NSAutoreleasePool * pool = [NSAutoreleasePool new];
-	int retVal = UIApplicationMain(argc, argv, nil, nil);
-	[pool drain];
-	return retVal;
+	
+	@autoreleasepool {
+		int retVal = UIApplicationMain(argc, argv, nil, nil);
+		return retVal;
+	}
 }
 #endif 

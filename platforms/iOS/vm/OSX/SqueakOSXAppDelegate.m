@@ -41,6 +41,7 @@
 #import "sqSqueakOSXScreenAndWindow.h"
 #import "sqMacHostWindow.h"
 #import "sqSqueakOSXInfoPlistInterface.h"
+#import <Crashlytics/Crashlytics.h>
 
 #ifndef USE_CORE_GRAPHICS
 #  import "sqSqueakOSXOpenGLView.h"
@@ -50,17 +51,15 @@
 #  define ContentViewClass sqSqueakOSXCGView
 #endif
 
+
 SqueakOSXAppDelegate *gDelegateApp;
 
 @implementation SqueakOSXAppDelegate
 
-@synthesize window;
-@synthesize mainView;
-@synthesize possibleImageNameAtLaunchTime;
-@synthesize checkForFileNameOnFirstParm;
+@synthesize window,mainView,possibleImageNameAtLaunchTime,checkForFileNameOnFirstParm,windowHandler;
 
 - (sqSqueakMainApplication *) makeApplicationInstance {
-	return [sqSqueakOSXApplication new];
+	return [[sqSqueakOSXApplication alloc] init];
 }
 
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification {
@@ -68,15 +67,22 @@ SqueakOSXAppDelegate *gDelegateApp;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
-	NSAutoreleasePool * pool = [NSAutoreleasePool new];
-	gDelegateApp = self;	
-	squeakApplication = [self makeApplicationInstance];
-    [self.squeakApplication setupEventQueue];
-	
-	[self singleThreadStart];
+   [Crashlytics startWithAPIKey:@"add501476623fc20212a60334cd537d16dfd566f"];
+	@autoreleasepool {
+		gDelegateApp = self;	
+		squeakApplication = [self makeApplicationInstance];
+		self.windowHandler = [[sqSqueakOSXScreenAndWindow alloc] init];
+		windowHandler.mainViewOnWindow = self.mainView;
+		self.mainView.windowLogic = windowHandler;
+		windowHandler.windowIndex = 1;
+		[windowHandler.mainViewOnWindow initializeVariables];
+		self.window.delegate =  windowHandler;
+		self.window.contentResizeIncrements = NSMakeSize(8.0f,8.0f);
+		[self.squeakApplication setupEventQueue];
+		[self singleThreadStart];
 //	[self workerThreadStart];
 	
-	[pool drain];
+	}
 	
 }
 
@@ -107,13 +113,51 @@ SqueakOSXAppDelegate *gDelegateApp;
 	resetFrame.origin.y	= 0.0f;
 	resetFrame.size.width = width;
 	resetFrame.size.height = height;
-	[[self window] setAcceptsMouseMovedEvents: YES];
-	[[self window] useOptimizedDrawing: YES];
-	[[self window] setTitle: [[[[self squeakApplication] imageNameURL] path] lastPathComponent]];
-	[[self window] setRepresentedURL: [[self squeakApplication] imageNameURL]];
-	[[self window] setInitialFirstResponder: [self mainView]];
-	[[self window] setShowsResizeIndicator: NO];
-    
+    [self.window setAcceptsMouseMovedEvents: YES];
+	[self.window useOptimizedDrawing: YES];
+	[self.window setTitle: [[[[self squeakApplication] imageNameURL] path] lastPathComponent]];
+	[self.window setRepresentedURL: [[self squeakApplication] imageNameURL]];
+	[self.window setInitialFirstResponder: [self mainView]];
+	[self.window setShowsResizeIndicator: NO];
+
+	extern sqInt getFullScreenFlag(void);
+#if (SQ_VI_BYTES_PER_WORD == 4)
+	NSPanel *panel;
+	if (sizeof(void*) == 8) {
+		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 64/32 bits 5.7b3 (21)",
+												 @"Only use this VM for testing, it lacks mac menu integration.",
+												 @"Dismiss",
+												 nil,
+												 nil);
+	} else {
+        return;
+	}
+#else
+#if COGVM
+#error bad
+#endif
+	NSPanel *panel;
+	if (sizeof(long) == 8) {
+		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 64/64 bits 5.7b3 (21)",
+									@"Only use this VM for testing, it lacks mac menu integration.",
+									@"Dismiss",
+									nil,
+									nil);
+	} else {
+		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 32/64 bits 5.7b3 (21)",
+							   @"Only use this VM for testing, it lacks mac menu integration.",
+							   @"Dismiss",
+							   nil,
+							   nil);
+	}
+	
+#endif
+	
+	NSRect frame= [panel frame];
+	frame.size.width *= 1.5f;
+	[panel setFrame: frame display: NO];
+	[NSApp runModalForWindow: panel];
+	[panel close];
 }
 
 -(void) setupMainView {
@@ -121,13 +165,12 @@ SqueakOSXAppDelegate *gDelegateApp;
     //It can right now, I have two implementations to pick (CoreGraphics or OpenGL), muy more/different could be added 
     //in the future. 
     
-    NSView<sqSqueakOSXView> *view = [[ContentViewClass alloc] initWithFrame:[[self window] frame]];
-    [self setMainView:view];
+    NSView *view = [[ContentViewClass alloc] initWithFrame:[[self window] frame]];
+    self.mainView = (id) view;
     [[self window] setContentView: view];
     
-	sqSqueakOSXScreenAndWindow *windowHandler = [sqSqueakOSXScreenAndWindow new];	
-    [windowHandler setMainViewOnWindow: view];
-	[view setWindowLogic: windowHandler];
+    [windowHandler setMainViewOnWindow: (sqSqueakOSXOpenGLView *) view];
+	[(sqSqueakOSXOpenGLView *) view setWindowLogic: windowHandler];
 	[windowHandler setWindowIndex: 1];
 	[[windowHandler mainViewOnWindow] initializeVariables];
 	[[self window] setDelegate:windowHandler];
@@ -150,13 +193,14 @@ SqueakOSXAppDelegate *gDelegateApp;
 		if ([(sqSqueakOSXApplication*)self.squeakApplication isImageFile: fileName] == YES) {
 			NSURL *url = [NSURL fileURLWithPath:[[NSBundle mainBundle] bundlePath]];
 			LSLaunchURLSpec launchSpec;
-			launchSpec.appURL = (CFURLRef)url;
+			launchSpec.appURL = (CFURLRef)CFBridgingRetain(url);
 			launchSpec.passThruParams = NULL;
-			launchSpec.itemURLs = (CFArrayRef)[NSArray arrayWithObject:[NSURL fileURLWithPath: fileName]];
+			launchSpec.itemURLs = (__bridge CFArrayRef)@[[NSURL fileURLWithPath: fileName]];
 			launchSpec.launchFlags = kLSLaunchDefaults | kLSLaunchNewInstance;
 			launchSpec.asyncRefCon = NULL;
 		
 			OSErr err = LSOpenFromURLSpec(&launchSpec, NULL);
+//			NSLog(@"error %i",err);
 #pragma unused(err)
 		}
 	}

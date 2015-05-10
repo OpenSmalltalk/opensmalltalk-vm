@@ -132,8 +132,8 @@ such third-party acknowledgments.
     if (nameStringLength <= 0 || pathStringLength <= 0)
         return BAD_PATH;
         
-	directoryPath = [[[NSString alloc] initWithBytes: pathString length: (NSUInteger) pathStringLength encoding: NSUTF8StringEncoding] autorelease];
-    fileName      = [[[NSString alloc] initWithBytes: nameString length: (NSUInteger) nameStringLength encoding: NSUTF8StringEncoding] autorelease];
+	directoryPath = [[NSString alloc] initWithBytes: pathString length: (NSUInteger) pathStringLength encoding: NSUTF8StringEncoding];
+    fileName      = [[NSString alloc] initWithBytes: nameString length: (NSUInteger) nameStringLength encoding: NSUTF8StringEncoding];
 	
     if (![directoryPath hasSuffix: @"/"]) {
         directoryPath = [directoryPath stringByAppendingString: @"/"];
@@ -189,7 +189,7 @@ such third-party acknowledgments.
 	}
 	
 	if (pathStringLength > 0) {
-		directoryPath = [[[NSString alloc] initWithBytes: pathString length: (NSUInteger) pathStringLength encoding: NSUTF8StringEncoding] autorelease];
+		directoryPath = [[NSString alloc] initWithBytes: pathString length: (NSUInteger) pathStringLength encoding: NSUTF8StringEncoding];
     }
 	if (directoryPath == NULL) {
 		return BAD_PATH;
@@ -223,7 +223,7 @@ such third-party acknowledgments.
 	if (index < 1 || (NSUInteger) index > [directoryContentsForDirLookup count])
 		return NO_MORE_ENTRIES;
 	
-	filePath = [ directoryContentsForDirLookup objectAtIndex: (NSUInteger) (index-1)];
+	filePath = directoryContentsForDirLookup[(NSUInteger) (index-1)];
 	filePath = [[ lastPathForDirLookup stringByAppendingString: @"/"] stringByAppendingString: filePath] ;
 	fileName = [[filePath lastPathComponent] precomposedStringWithCanonicalMapping];
 	strlcpy(name,[fileName UTF8String], 256);
@@ -261,7 +261,6 @@ such third-party acknowledgments.
 	NSError *error;
 	ok = [fileMgr createDirectoryAtPath: directoryPath withIntermediateDirectories: NO attributes: NULL error: &error];
 
-	[directoryPath release];
 	return ok;
 }
 
@@ -288,7 +287,6 @@ such third-party acknowledgments.
 	if (directoryContentsForDirLookupCheck == NULL || ([directoryContentsForDirLookupCheck count])) {
 		/* We don't recursive delete directory, that is too dangerous, let the squeak programmer do it 
 		 which is why if the directory content count is > 0 we abort the delete */
-		[directoryPath release];
 		return 0;
 	}
 	
@@ -303,8 +301,6 @@ such third-party acknowledgments.
 	if (lastPathForDirLookup) {
 		self.lastPathForDirLookup = NULL;		
 	}
-	
-	[directoryPath release];
 	return ok;
 }
 
@@ -332,12 +328,11 @@ such third-party acknowledgments.
 	NSError *error;
 	NSDictionary * fileAttributes = [fileMgr  attributesOfItemAtPath:filePath error:&error];
 	
-	[filePath release];
 	if (!fileAttributes) 
 		return 0;
 	
-	NSNumber	*typeCode	= [fileAttributes objectForKey: NSFileHFSTypeCode];
-	NSNumber	*creatorCode = [fileAttributes objectForKey: NSFileHFSCreatorCode];
+	NSNumber	*typeCode	= fileAttributes[NSFileHFSTypeCode];
+	NSNumber	*creatorCode = fileAttributes[NSFileHFSCreatorCode];
 	if (creatorCode == NULL || typeCode == NULL) 
 		return 0;
 	
@@ -366,30 +361,17 @@ such third-party acknowledgments.
 		return 0;
 	}
 	
-	NSNumber	*typeCode,*creatorCode;
-	typeCode = [NSNumber numberWithUnsignedLong: CFSwapInt32HostToBig(*((uint32_t *) fType))];
-	creatorCode = [NSNumber numberWithUnsignedLong: CFSwapInt32HostToBig(*((uint32_t *) fCreator))];
+	NSNumber *typeCode = [NSNumber numberWithUnsignedLong: CFSwapInt32HostToBig(*((uint32_t *) fType))];
+	NSNumber *creatorCode = [NSNumber numberWithUnsignedLong: CFSwapInt32HostToBig(*((uint32_t *) fCreator))];
 
-	NSMutableDictionary *fileAttributes = [NSMutableDictionary new];
 	
-	[fileAttributes setObject: typeCode forKey: NSFileHFSTypeCode];
-	[fileAttributes setObject: creatorCode forKey: NSFileHFSCreatorCode];
-	
-	BOOL ok=[fileMgr  setAttributes: fileAttributes ofItemAtPath: filePath 
+    BOOL ok=[fileMgr  setAttributes:  @{ NSFileHFSTypeCode : typeCode, NSFileHFSCreatorCode: creatorCode} ofItemAtPath: filePath
 													 error: NULL];
-	[fileAttributes release];
-	[filePath release];
 	return ok;
 }
 
 - (NSString *) resolvedAliasFiles: (NSString *) filePath {
 	return filePath;
-}
-
-- (void)dealloc {
-	[super dealloc];
-	[lastPathForDirLookup release];
-	[directoryContentsForDirLookup release];
 }
 
 @end

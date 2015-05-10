@@ -125,31 +125,31 @@ extern int gSqueakUseFileMappedMMAP;
 }
 
 - (void) setInfoPlistNSStringValueFrom: (NSDictionary*) dict key: (NSString *) key  default: (NSString*) defaultString using: (SEL) selector{
-	NSString *str = [dict objectForKey: key];
+	NSString *str = dict[key];
 	str = (str) ? str : defaultString;
 	[self performSelectorOnMainThread: selector withObject: str waitUntilDone: YES];
 }
 
 - (void) setInfoPlistNumberValueFrom: (NSDictionary*) dict key: (NSString *) key  default: (NSInteger) defaultInteger using: (SEL) selector{
-	NSNumber *num = [dict objectForKey: key];
-	num = (num) ? num : [NSNumber numberWithInteger: defaultInteger];
+	NSNumber *num = dict[key];
+	num = (num) ? num : @(defaultInteger);
 	[self performSelectorOnMainThread: selector withObject: num waitUntilDone: YES];
 }
 
 - (void) setInfoPlistFloatNumberValueFrom: (NSDictionary*) dict key: (NSString *) key  default: (float) defaultFloat using: (SEL) selector{
-	NSNumber *num = [dict objectForKey: key];
-	num = (num) ? num : [NSNumber numberWithFloat: defaultFloat];
+	NSNumber *num = dict[key];
+	num = (num) ? num : @(defaultFloat);
 	[self performSelectorOnMainThread: selector withObject: num waitUntilDone: YES];
 }
 
 - (void) setInfoPlistBooleanValueFrom: (NSDictionary*) dict key: (NSString *) key  default: (BOOL) defaultBool using: (SEL) selector{
-	NSNumber *num = [dict objectForKey: key];
-	num = (num) ? num : [NSNumber numberWithBool: defaultBool];
+	NSNumber *num = dict[key];
+	num = (num) ? num : @(defaultBool);
 	[self performSelectorOnMainThread: selector withObject: num waitUntilDone: YES];
 }
 
 - (void) setInfoPlistNumberValueForMouseX: (NSInteger) x Y: (NSInteger) y from: (NSDictionary*) dict key: (NSString *) key  default: (NSInteger) number browser: (BOOL) browser {
-	NSNumber *num = [dict objectForKey: key];
+	NSNumber *num = dict[key];
 	NSInteger numberAsInteger = (num) ? [num integerValue] : number;
 	if (browser) {
 		SqueakBrowserMouseMappings[x][y] = numberAsInteger;
@@ -186,20 +186,20 @@ extern int gSqueakUseFileMappedMMAP;
 
 
 - (void) parseInfoPlist {
-	NSAutoreleasePool * pool = [NSAutoreleasePool new];
+	@autoreleasepool {
 	
-	NSBundle *mainBundle = [NSBundle mainBundle];
-	NSDictionary *dict = [mainBundle infoDictionary]; 
-	
-	[self setInfoPlistNumberValueFrom: dict key: @"SqueakNumStackPages" default: 0 using: @selector(setOverrideSqueakNumStackPages:)];
-	[self setInfoPlistNumberValueFrom: dict key: @"SqueakEdenBytes" default: 0 using: @selector(setOverrideSqueakEdenBytes:)];
+		NSBundle *mainBundle = [NSBundle mainBundle];
+		NSDictionary *dict = [mainBundle infoDictionary]; 
+		
+		[self setInfoPlistNumberValueFrom: dict key: @"SqueakNumStackPages" default: 0 using: @selector(setOverrideSqueakNumStackPages:)];
+		[self setInfoPlistNumberValueFrom: dict key: @"SqueakEdenBytes" default: 0 using: @selector(setOverrideSqueakEdenBytes:)];
 
-	[self setInfoPlistNumberValueFrom: dict key: @"SqueakDebug" default: 0 using: @selector(setOverrideSqueakDebug:)];
-	[self setInfoPlistBooleanValueFrom: dict key: @"SqueakQuitOnQuitAppleEvent" default: NO using: @selector(setOverrideSqueakQuitOnQuitAppleEvent:)];
-	[self setInfoPlistBooleanValueFrom: dict key: @"SqueakUseFileMappedMMAP" default: NO using: @selector(setOverrideSqueakUseFileMappedMMAP:)];
-	[self setInfoPlistNumberValueFrom: dict key: @"SqueakMaxHeapSize" default: 512*1024*1024 using: @selector(setOverrideSqueakMaxHeapSize:)];
-	[self setInfoPlistNumberValueFrom: dict key: @"SqueakUIFlushPrimaryDeferNMilliseconds" default: 20 using: @selector(setOverrideSqueakUIFlushPrimaryDeferNMilliseconds:)];
-	[self setInfoPlistFloatNumberValueFrom: dict key: @"SqueakUIFadeForFullScreenInSeconds" default: 1.5 using: @selector(setOverrideSqueakUIFadeForFullScreenInSeconds:)];
+		[self setInfoPlistNumberValueFrom: dict key: @"SqueakDebug" default: 0 using: @selector(setOverrideSqueakDebug:)];
+		[self setInfoPlistBooleanValueFrom: dict key: @"SqueakQuitOnQuitAppleEvent" default: NO using: @selector(setOverrideSqueakQuitOnQuitAppleEvent:)];
+		[self setInfoPlistBooleanValueFrom: dict key: @"SqueakUseFileMappedMMAP" default: NO using: @selector(setOverrideSqueakUseFileMappedMMAP:)];
+		[self setInfoPlistNumberValueFrom: dict key: @"SqueakMaxHeapSize" default: 512*1024*1024 using: @selector(setOverrideSqueakMaxHeapSize:)];
+		[self setInfoPlistNumberValueFrom: dict key: @"SqueakUIFlushPrimaryDeferNMilliseconds" default: 20 using: @selector(setOverrideSqueakUIFlushPrimaryDeferNMilliseconds:)];
+		[self setInfoPlistFloatNumberValueFrom: dict key: @"SqueakUIFadeForFullScreenInSeconds" default: 1.5 using: @selector(setOverrideSqueakUIFadeForFullScreenInSeconds:)];
 
 	[self setInfoPlistNSStringValueFrom: dict key: @"SqueakUnTrustedDirectory" default: @"/foobar/tooBar/forSqueak/bogus/" using: @selector(setOverrideSqueakUnTrustedDirectory:)];
 	[self setInfoPlistNSStringValueFrom: dict key: @"SqueakTrustedDirectory" default: @"/foobar/tooBar/forSqueak/bogus/" using: @selector(setOverrideSqueakTrustedDirectory:)];
@@ -241,7 +241,7 @@ extern int gSqueakUseFileMappedMMAP;
     if(!gSqueakHeadless) {
         gSqueakHeadless = [[mainBundle objectForInfoDictionaryKey:@"LSBackgroundOnly"] boolValue];
     }
-	[pool drain];
+    }
 }
 
 @end

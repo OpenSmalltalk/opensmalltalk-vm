@@ -44,7 +44,7 @@
 	NSCursor         *squeakCursor;
 	BOOL			squeakHasCursor;
 }
-@property (nonatomic,retain) NSCursor	*squeakCursor;
+@property (nonatomic,strong) NSCursor	*squeakCursor;
 @property (nonatomic,assign) BOOL		squeakHasCursor;
 
 - (NSInteger) parseArgument: (NSString *) argData peek: (NSString *) peek;

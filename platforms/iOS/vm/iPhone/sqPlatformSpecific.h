@@ -85,7 +85,10 @@ sqAllocateMemoryMac(heapSize, minimumMemory, fileStream, headerSize)
 
 #ifdef BUILD_FOR_OSX
 size_t sqImageFileReadEntireImage(void *ptr, size_t elementSize, size_t count, FILE * f);
+#define sqImageFileReadEntireImage(memoryAddress, elementSize,  length, fileStream) \
+sqImageFileReadEntireImage(memoryAddress, elementSize, length, fileStream)
 #else
+#include <dlfcn.h>
 #define sqImageFileReadEntireImage(memoryAddress, elementSize,  length, fileStream) length 
 #endif
 
@@ -117,7 +120,7 @@ int plugInNotifyUser(char *msg);
 
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);
 
-#if COGVM || defined(HAVE_NATIVEBOOST) 
+#if COGVM
 extern void sqMakeMemoryExecutableFromTo(unsigned long, unsigned long);
 extern void sqMakeMemoryNotExecutableFromTo(unsigned long, unsigned long);
 

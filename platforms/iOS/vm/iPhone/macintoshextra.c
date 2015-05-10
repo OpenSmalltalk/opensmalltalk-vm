@@ -21,9 +21,9 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth, double hScale, d
 	return true;
 }
 
-//void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle) {return 0;}
-//void *ioLoadModule(char *pluginName) {return 0;}
-//sqInt ioFreeModule(void *moduleHandle){return 0;}
+void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle) {return 0;}
+void *ioLoadModule(char *pluginName) {return 0;}
+sqInt ioFreeModule(void *moduleHandle){return 0;}
 
 sqInt ioGetButtonState() {return 0;}
 sqInt ioGetKeystroke() {return -1;}
@@ -39,7 +39,7 @@ sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt
 sqInt ioSetDisplayMode( sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag) {return 0;}
 
 //int plugInTimeToReturn(void) {
-//    return 0;
+//    return false;
 //}
 
 int clearProfile(void){return 0;}														

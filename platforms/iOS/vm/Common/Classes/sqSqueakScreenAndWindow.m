@@ -40,6 +40,7 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 #import "sqSqueakScreenAndWindow.h"
 #import "sqSqueakMainApplication+screen.h"
 #import "sqMacHostWindow.h"
+
 #ifdef BUILD_FOR_OSX
 #import "SqueakOSXAppDelegate.h"
 extern SqueakOSXAppDelegate *gDelegateApp;
@@ -64,12 +65,13 @@ void MyProviderReleaseData (
 @synthesize windowIndex;
 @synthesize blip,squeakUIFlushPrimaryDeferNMilliseconds,forceUpdateFlush,lastFlushTime,displayIsDirty;
 
-- (id)init {
+- (instancetype)init {
     self = [super init];
     if (self) {
         // Initialization code here.
 		squeakUIFlushPrimaryDeferNMilliseconds = 0.0f;
-		forceUpdateFlush = YES;
+		forceUpdateFlush = NO;
+#warning why is this YES in Pharo?
 		displayIsDirty = NO;
 	}
     return self;
@@ -102,7 +104,6 @@ void MyProviderReleaseData (
 	return 32;
 }
 
-
 - (sqInt) ioHasDisplayDepth: (sqInt) depth {
 	if (depth == 2 || depth ==  4 || depth == 8 || depth == 16 || depth == 32 ||
         depth == -2 || depth ==  -4 || depth == -8 || depth == -16 || depth == -32) { 
@@ -112,17 +113,21 @@ void MyProviderReleaseData (
     }
 }
 
-
-- (void) ioForceDisplayUpdate {
+- (void) ioForceDisplayUpdateActual {
 	lastFlushTime = [NSDate timeIntervalSinceReferenceDate];
 	self.displayIsDirty = NO;
 	self.forceUpdateFlush = NO;
+    
+	[[self getMainView] preDrawThelayers];
+    
 
-	if ([NSThread isMainThread]) 
+    dispatch_async(dispatch_get_main_queue(), ^{
 		[[self getMainView] drawThelayers];
-	else {
-		[[self getMainView] performSelectorOnMainThread: @selector(drawThelayers) withObject: nil waitUntilDone: NO];
-	}
+    });
+}
+
+- (void) ioForceDisplayUpdate {
+	[self ioForceDisplayUpdateActual];
 }
 
 - (int)   ioShowDisplayOnWindowActual: (unsigned char*) dispBitsIndex
@@ -155,8 +160,6 @@ void MyProviderReleaseData (
 		return 0;
 	}
 	
-	
-		
 	CGRect clip = CGRectMake((CGFloat)affectedL,(CGFloat)(height-affectedB), (CGFloat)(affectedR-affectedL), (CGFloat)(affectedB-affectedT));
 	[gDelegateApp.mainView drawImageUsingClip: clip];
 
@@ -200,6 +203,8 @@ void MyProviderReleaseData (
 }
 
 - (void)dealloc {
-	[super dealloc];
+	if (blip) {
+		[blip invalidate];
+	}
 }
 @end

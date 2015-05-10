@@ -48,7 +48,7 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 
 @implementation sqiPhoneScreenAndWindow
 
-- (id)init {
+- (instancetype)init {
     self = [super init];
     if (self) {
         self.windowIndex = 1;
@@ -60,8 +60,5 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 	return gDelegateApp.mainView;
 }
 
-- (void)dealloc {
-	[super dealloc];
-}
 
 @end

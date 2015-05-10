@@ -59,7 +59,7 @@
 @implementation sqSqueakIPhoneApplication (imageReadWrite) 
 
 - (void) findImageViaBundleOrPreferences {
-	NSAutoreleasePool * pool = [NSAutoreleasePool new];
+	@autoreleasepool {
 	NSFileManager *dfm = [NSFileManager defaultManager];
 	NSString* documentsPath = [dfm currentDirectoryPath];  //This should point to the Documents folder via a previous setup
 	NSString* documentsImagePath = [documentsPath stringByAppendingPathComponent: [@QUOTEDIMAGE stringByAppendingString: @".image"]];
@@ -99,7 +99,6 @@
 	}
 	
 	if (fileExists) {
-		[pool drain];
 		return;
 	} else {
 
@@ -111,7 +110,6 @@
 			
 			copyOk = [dfm copyItemAtPath: bundleImagePath toPath: documentsImagePath error: &error];
 			if (!copyOk) {
-				[pool drain];
 				return;
 			}
             //Changes file can be nil
@@ -123,7 +121,6 @@
 			imageNamePutLength((sqInt) imageNameCharacters, strlen(imageNameCharacters));
 		}
 	}
-	[pool drain];
 }
 @end
 

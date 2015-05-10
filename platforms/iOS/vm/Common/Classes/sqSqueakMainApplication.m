@@ -70,8 +70,10 @@ extern sqSqueakAppDelegate *gDelegateApp;
 extern sqInt interpret(void);  //This is a VM Callback
 
 - (id) init {
-    [super init];
-    [self setNoHandlers: NO];
+    self = [super init];
+    if (self) {
+        [self setNoHandlers: NO];
+    }
     return self;
 }
 
@@ -95,7 +97,7 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (sqSqueakInfoPlistInterface *) newSqSqueakInfoPlistInterfaceCreation {
-	return [sqSqueakInfoPlistInterface new];
+	return [[sqSqueakInfoPlistInterface alloc] init];
 }
 
 - (void) fetchPreferences {
@@ -105,7 +107,7 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (void) doHeadlessSetup {
-    //gSqueakHeadless = NO;
+	gSqueakHeadless = false;
 }
 
 - (void) doMemorySetup {
@@ -132,7 +134,7 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (void) setupEventQueue {
-	eventQueue = [Queue new];
+	eventQueue = [[Queue alloc] init];
 }
 
 - (void) attachToSignals {
@@ -143,23 +145,25 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (void) setupSoundLogic {
-	soundInterfaceLogic = [sqSqueakSoundCoreAudio new];
+	soundInterfaceLogic = [[sqSqueakSoundCoreAudio alloc] init];
 }
 
 - (sqSqueakFileDirectoryInterface *) newFileDirectoryInterfaceInstance {
-	return [sqSqueakFileDirectoryInterface new];
+	return [[sqSqueakFileDirectoryInterface alloc] init];
 }
 
 - (void) runSqueak {
-	NSAutoreleasePool * pool = [NSAutoreleasePool new]; //Needed since this is a worker thread, see comments in NSAutoreleasePool Class Reference about Threads
-	
+    @autoreleasepool {
+	extern BOOL gQuitNowRightNow;
+	gQuitNowRightNow=false;
+
 	[self setupFloat];  //JMM We have code for intel and powerpc float, but arm? 
 	[self setupErrorRecovery];
-    
+	[self fetchPreferences];
+	
 	fileDirectoryLogic = [self newFileDirectoryInterfaceInstance];
 	[self setVMPathFromApplicationDirectory];
 	if (![self.fileDirectoryLogic setWorkingDirectory]) {
-		[pool drain];
 		return;
 	}
 	
@@ -176,12 +180,10 @@ extern sqInt interpret(void);  //This is a VM Callback
 	}
 
 	if ([self ImageNameIsEmpty]) {
-		[pool drain];
 		return;
 	}
 	
 	if (![self readImageIntoMemory]) {
-		[pool drain];
 		return;
 	}
 	
@@ -195,13 +197,12 @@ extern sqInt interpret(void);  //This is a VM Callback
 	[self setupAIO];
 	[self setupBrowserLogic];
 	[self setupSoundLogic];
-    
-    [gDelegateApp makeMainWindow];   	
-    
+	[gDelegateApp makeMainWindow];
+	
 	interpret();
-	[pool drain];  //may not return here, could call exit() via quit image
-	[self release];
+    }
 }
+
 
 - (void) MenuBarRestore {
     //    nothing to do so far since the menu is setup in the MainMenu.nib file
@@ -221,14 +222,7 @@ void sqMacMemoryFree(void);
 }
 
 - (void)dealloc {
-	[infoPlistInterfaceLogic release];
-	[soundInterfaceLogic release];
-	[vmPathStringURL release];
-	[imageNameURL release];
-	[fileDirectoryLogic release];
-	[eventQueue release];
 	sqMacMemoryFree();
-	[super dealloc];
 }
 
 @end

@@ -193,7 +193,6 @@
 		941A3B5A09AA144000C9D25A /* sq.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFDC02EB4E0A0100013C /* sq.h */; };
 		941A3B5B09AA144000C9D25A /* sqVirtualMachine.h in Headers */ = {isa = PBXBuildFile; fileRef = F5F8AFDF02EB4E0A0100013C /* sqVirtualMachine.h */; };
 		941A3B6709AA144000C9D25A /* interp.h in Headers */ = {isa = PBXBuildFile; fileRef = 948214FE080E3ABE0061C2AB /* interp.h */; };
-		941A3B7209AA144000C9D25A /* Squeak.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DC0300584000A80109 /* Squeak.icns */; };
 		941A3B7309AA144000C9D25A /* SqueakChanges.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DD0300584000A80109 /* SqueakChanges.icns */; };
 		941A3B7409AA144000C9D25A /* SqueakImage.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DE0300584000A80109 /* SqueakImage.icns */; };
 		941A3B7509AA144000C9D25A /* SqueakPlugin.icns in Resources */ = {isa = PBXBuildFile; fileRef = 664A73DF0300584000A80109 /* SqueakPlugin.icns */; };
@@ -320,8 +319,6 @@
 		0192233A00CCBFCBC0A80109 /* AGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AGL.framework; path = /System/Library/Frameworks/AGL.framework; sourceTree = "<absolute>"; };
 		087740A300C6A47FC0A80109 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = /System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<absolute>"; };
 		087740A700C6A4EDC0A80109 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = /System/Library/Frameworks/OpenGL.framework; sourceTree = "<absolute>"; };
-		664A73DB0300584000A80109 /* Squeak VM.r */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.rez; path = "Squeak VM.r"; sourceTree = "<group>"; };
-		664A73DC0300584000A80109 /* Squeak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Squeak.icns; sourceTree = "<group>"; };
 		664A73DD0300584000A80109 /* SqueakChanges.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakChanges.icns; sourceTree = "<group>"; };
 		664A73DE0300584000A80109 /* SqueakImage.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakImage.icns; sourceTree = "<group>"; };
 		664A73DF0300584000A80109 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = SqueakPlugin.icns; sourceTree = "<group>"; };
@@ -745,9 +742,7 @@
 		08773F0500C6A1C4C0A80109 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				664A73DB0300584000A80109 /* Squeak VM.r */,
 				DAFA08930AA64625008DF459 /* GreenCogSqueak.icns */,
-				664A73DC0300584000A80109 /* Squeak.icns */,
 				664A73DD0300584000A80109 /* SqueakChanges.icns */,
 				664A73DE0300584000A80109 /* SqueakImage.icns */,
 				664A73DF0300584000A80109 /* SqueakPlugin.icns */,
@@ -1708,7 +1703,7 @@
 				941A3B5B09AA144000C9D25A /* sqVirtualMachine.h in Headers */,
 				941A3B6709AA144000C9D25A /* interp.h in Headers */,
 				94002C4409EB18EF003C4BF2 /* sqMemoryAccess.h in Headers */,
-				9426FF2009F489D200ECEDDC /* reconfig.h in Headers */,
+				9426FF2009F489D200ECEDDC /* reConfig.h in Headers */,
 				9426FF2209F489D200ECEDDC /* internal.h in Headers */,
 				9426FF2409F489D200ECEDDC /* pcre.h in Headers */,
 				9426FF2509F489D200ECEDDC /* rePlugin.h in Headers */,
@@ -1796,6 +1791,7 @@
 				941A3B2C09AA144000C9D25A /* Headers */,
 				941A3B7109AA144000C9D25A /* Resources */,
 				733AC8E70FEAAE29007C6206 /* ShellScript */,
+				9422C3B01AFFE30E00448DC0 /* ShellScript */,
 				941A3B7A09AA144000C9D25A /* Sources */,
 				941A3BFA09AA144000C9D25A /* Frameworks */,
 				941A3C0409AA144000C9D25A /* Rez */,
@@ -1813,6 +1809,14 @@
 /* Begin PBXProject section */
 		08773EB400C6A1C4C0A80109 /* Project object */ = {
 			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0630;
+				TargetAttributes = {
+					941A3B2B09AA144000C9D25A = {
+						DevelopmentTeam = DTYH6QWG79;
+					};
+				};
+			};
 			buildConfigurationList = 94D95B1D0923E6810034C6F0 /* Build configuration list for PBXProject "CoreVM" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
@@ -1838,7 +1842,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				941A3B7209AA144000C9D25A /* Squeak.icns in Resources */,
 				941A3B7309AA144000C9D25A /* SqueakChanges.icns in Resources */,
 				941A3B7409AA144000C9D25A /* SqueakImage.icns in Resources */,
 				941A3B7509AA144000C9D25A /* SqueakPlugin.icns in Resources */,
@@ -1884,6 +1887,19 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "$SRCROOT/mkNamedPrims.sh $SRCROOT/plugins.int >$SRCROOT/sqNamedPrims.h\n";
+		};
+		9422C3B01AFFE30E00448DC0 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "./Crashlytics.framework/run add501476623fc20212a60334cd537d16dfd566f 13e3689c06f20298b962843af75360f1ab580a821134076b9e2309f73b72c5f1";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -2072,9 +2088,9 @@
 		73BCFAF20EFB043300B7BA8D /* Assert */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = x86_64;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
-				DEBUGGING_SYMBOLS = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 1;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -2087,30 +2103,18 @@
 					SQUEAK_BUILTIN_PLUGIN,
 					HAVE_SYS_TIME_H,
 				);
-				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1 = "TZ=\\\"$TZ\\\"";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_UNKNOWN_PRAGMAS = NO;
-				HEADER_SEARCH_PATHS = (
-					/Developer/Headers/FlatCarbon,
-					$SRCROOT,
-				);
 				INFOPLIST_FILE = CoreVM.plist;
-				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_LDFLAGS = "";
-				OTHER_REZFLAGS = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = Squeak;
-				SECTORDER_FLAGS = "";
-				UNSTRIPPED_PRODUCT = YES;
-				WARNING_CFLAGS = "";
 				WRAPPER_EXTENSION = app;
-				ZERO_LINK = NO;
 			};
 			name = Assert;
 		};
 		73BCFAF30EFB043300B7BA8D /* Assert */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = x86_64;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUGVM=0",
 					"USE_GLOBAL_STRUCT=0",
@@ -2125,16 +2129,17 @@
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
 				);
-				SDKROOT = macosx10.6;
+				SDKROOT = macosx;
+				VALID_ARCHS = x86_64;
 			};
 			name = Assert;
 		};
 		941A3C0809AA144000C9D25A /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = x86_64;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
-				DEBUGGING_SYMBOLS = YES;
 				GCC_DYNAMIC_NO_PIC = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
@@ -2151,7 +2156,6 @@
 					HAVE_SYS_TIME_H,
 					"EXTERNALPRIMSDEBUG=1",
 				);
-				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1 = "TZ=\\\"$TZ\\\"";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
@@ -2162,32 +2166,22 @@
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = (
-					/Developer/Headers/FlatCarbon,
-					$SRCROOT,
-				);
 				INFOPLIST_FILE = CoreVM.plist;
-				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_LDFLAGS = "";
-				OTHER_REZFLAGS = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = Squeak;
-				WARNING_CFLAGS = "";
 				WRAPPER_EXTENSION = app;
-				ZERO_LINK = NO;
 			};
 			name = Development;
 		};
 		941A3C0909AA144000C9D25A /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = x86_64;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = YES;
-				GCC_AUTO_VECTORIZATION = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_ENABLE_SSE3_EXTENSIONS = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
-				GCC_MODEL_TUNING = "";
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = fast;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
 					"DEBUGVM=0",
@@ -2198,37 +2192,25 @@
 					HAVE_SYS_TIME_H,
 				);
 				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS = "$(GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS_QUOTED_FOR_TARGET_1)";
-				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS_QUOTED_FOR_TARGET_1 = "BUILD_VERSION=\"\\\"Squeak Stack Spur OS/X 5.0.0\\\"\"";
-				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1 = "TZ=\\\"$TZ\\\"";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_UNROLL_LOOPS = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNKNOWN_PRAGMAS = NO;
-				HEADER_SEARCH_PATHS = (
-					/Developer/Headers/FlatCarbon,
-					$SRCROOT,
-				);
 				INFOPLIST_FILE = CoreVM.plist;
-				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_LDFLAGS = "";
-				OTHER_REZFLAGS = "";
-				PER_ARCH_CFLAGS_x86_64 = "-O3  -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium4  -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS";
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = Squeak;
-				SECTORDER_FLAGS = "";
-				WARNING_CFLAGS = "";
 				WRAPPER_EXTENSION = app;
-				ZERO_LINK = NO;
 			};
 			name = Deployment;
 		};
 		941A3C0A09AA144000C9D25A /* DeploymentSymbols */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = x86_64;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
-				DEBUGGING_SYMBOLS = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_OPTIMIZATION_LEVEL = fast;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
 					"DEBUGVM=0",
@@ -2239,30 +2221,18 @@
 					SQUEAK_BUILTIN_PLUGIN,
 					HAVE_SYS_TIME_H,
 				);
-				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_TARGET_1 = "TZ=\\\"$TZ\\\"";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_UNKNOWN_PRAGMAS = NO;
-				HEADER_SEARCH_PATHS = (
-					/Developer/Headers/FlatCarbon,
-					$SRCROOT,
-				);
 				INFOPLIST_FILE = CoreVM.plist;
-				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_LDFLAGS = "";
-				OTHER_REZFLAGS = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = Squeak;
-				SECTORDER_FLAGS = "";
-				UNSTRIPPED_PRODUCT = YES;
-				WARNING_CFLAGS = "";
 				WRAPPER_EXTENSION = app;
-				ZERO_LINK = NO;
 			};
 			name = DeploymentSymbols;
 		};
 		94D95B1E0923E6810034C6F0 /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = x86_64;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUGVM=1",
 					"USE_GLOBAL_STRUCT=0",
@@ -2278,14 +2248,14 @@
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
 				);
-				SDKROOT = macosx10.6;
+				SDKROOT = macosx;
+				VALID_ARCHS = x86_64;
 			};
 			name = Development;
 		};
 		94D95B1F0923E6810034C6F0 /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = x86_64;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
 					"DEBUGVM=0",
@@ -2296,19 +2266,19 @@
 					TARGET_API_MAC_CARBON,
 				);
 				GCC_PREPROCESSOR_DEFINITIONS_QUOTED_FOR_PROJECT_1 = "TZ=\\\"$TZ\\\"";
-				GCC_VERSION = 4.2;
+				GCC_VERSION = "";
 				HEADER_SEARCH_PATHS = (
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
 				);
-				SDKROOT = macosx10.6;
+				SDKROOT = macosx;
+				VALID_ARCHS = x86_64;
 			};
 			name = Deployment;
 		};
 		94D95B200923E6810034C6F0 /* DeploymentSymbols */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = x86_64;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
 					"USE_GLOBAL_STRUCT=0",
@@ -2322,7 +2292,8 @@
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
 				);
-				SDKROOT = macosx10.6;
+				SDKROOT = macosx;
+				VALID_ARCHS = x86_64;
 			};
 			name = DeploymentSymbols;
 		};

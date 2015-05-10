@@ -36,6 +36,7 @@
  such third-party acknowledgments.
  */
 
+//
 #import "sqSqueakAppDelegate.h"
 #import "sqSqueakEventsAPI.h"
 #import "sqSqueakMainApplication+events.h"
@@ -47,11 +48,15 @@ extern struct	VirtualMachine* interpreterProxy;
 extern BOOL gQuitNowRightNow;
 extern sqSqueakScreenAndWindow *getMainWindowDelegate();
 
-sqInt ioProcessEvents(void) {
+void nativeIoProcessEvents(void) {
+
 	//API Documented
-	
-	aioPoll(0);		
-	
+		
+    if ([[NSThread currentThread] isCancelled]) {
+        gQuitNowRightNow = YES;
+        ioExit();  //This might not return, might call exittoshell
+    }
+
 	if ([getMainWindowDelegate() forceUpdateFlush]) {
 		[getMainWindowDelegate() ioForceDisplayUpdate];
 	}
@@ -65,8 +70,19 @@ sqInt ioProcessEvents(void) {
 	if (gQuitNowRightNow) {
 		ioExit();  //This might not return, might call exittoshell
 	}
-	
-	return 0;
+}
+
+void (*ioProcessEventsHandler) (void) = nativeIoProcessEvents;
+
+extern void setIoProcessEventsHandler(void * handler) {
+    ioProcessEventsHandler = (void(*)()) handler;
+}
+
+sqInt ioProcessEvents(void) {
+    aioPoll(0);
+    if(ioProcessEventsHandler)
+        ioProcessEventsHandler();
+    return 0;
 }
 
 sqInt ioSetInputSemaphore(sqInt semaIndex) {

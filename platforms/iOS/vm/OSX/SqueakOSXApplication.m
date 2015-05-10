@@ -48,9 +48,9 @@
 
 		NSWindow *who = [anEvent window];
 		sqSqueakOSXScreenAndWindow *squeakScreenWindow = (sqSqueakOSXScreenAndWindow *) who.delegate;
-		NSView<sqSqueakOSXView> *view;
+		sqSqueakOSXOpenGLView *view;
 		if (squeakScreenWindow)
-			view = [squeakScreenWindow mainViewOnWindow ];
+			view = squeakScreenWindow.mainViewOnWindow;
 		else
 			view = [who contentView];
 	   [view fakeKeyDownUp: anEvent];

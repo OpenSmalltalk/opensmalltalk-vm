@@ -44,5 +44,4 @@
     NSBeep();
 #endif
 }
-
 @end

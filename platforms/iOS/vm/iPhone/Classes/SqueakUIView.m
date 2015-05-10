@@ -49,17 +49,15 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 @implementation SqueakUIView : UIView ;
 @synthesize squeakTheDisplayBits;
 
-- (id)initWithFrame:(CGRect) aFrame {
+- (instancetype)initWithFrame:(CGRect) aFrame {
 	self = [super initWithFrame: aFrame];
 	self.autoresizingMask = UIViewAutoresizingFlexibleRightMargin|UIViewAutoresizingFlexibleBottomMargin|UIViewAutoresizingFlexibleHeight|UIViewAutoresizingFlexibleWidth;
 	colorspace = CGColorSpaceCreateDeviceRGB();
 	return self;
 }
 
-- (void) dealloc {
-    [super dealloc];
-//	if (colorspace)
-//		CGColorSpaceRelease(colorspace);	
+
+- (void) preDrawThelayers{
 }
 
 - (void) drawThelayers {
@@ -115,11 +113,10 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 }
 
 - (void) pushEventToQueue: (sqInputEvent *) evt {	
-	NSMutableArray* data = [NSMutableArray new];
-	[data addObject: [NSNumber numberWithInteger: 7]];
+	NSMutableArray* data = [NSMutableArray arrayWithCapacity: 2];
+	[data addObject: @7];
 	[data addObject: [NSData  dataWithBytes:(const void *) evt length: sizeof(sqInputEvent)]];
 	[[gDelegateApp.squeakApplication eventQueue]  addItem: data];
-	[data release];	
 }
 
 - (int) figureOutKeyCode: (unichar) unicode {
@@ -154,7 +151,6 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 		NSString *lookupString = [[NSString alloc] initWithCharacters: &unicode length: 1];
 		[lookupString getBytes: &macRomanCharacter maxLength: 1 usedLength: NULL encoding: NSMacOSRomanStringEncoding
 					   options: 0 range: picker remainingRange: NULL];
-		[lookupString release];
 		
 		// LF -> CR
 		if (macRomanCharacter == 10) {

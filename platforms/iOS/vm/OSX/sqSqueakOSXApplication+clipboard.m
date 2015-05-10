@@ -50,7 +50,7 @@ static char * clipboard=NULL;
 
 - (sqInt) clipboardSize {
 	NSPasteboard *pboard= [NSPasteboard generalPasteboard];
-	NSString     *type= [pboard availableTypeFromArray: [NSArray arrayWithObject: NSStringPboardType]];
+	NSString     *type= [pboard availableTypeFromArray: @[NSStringPboardType]];
 	if (clipboard) free(clipboard);
 	clipboard = NULL;
 	if (type != NULL) {
@@ -75,9 +75,8 @@ static char * clipboard=NULL;
 - (void) clipboardWrite: (sqInt) count from: (char *)byteArrayIndex  startingAt:  (sqInt) startIndex {
 	NSPasteboard      *pboard= [NSPasteboard generalPasteboard];
 	NSString * string = [[NSString alloc] initWithBytes: byteArrayIndex length:(NSUInteger)count encoding: NSUTF8StringEncoding];
-	[pboard declareTypes: [NSArray arrayWithObject: NSStringPboardType] owner: nil];
+	[pboard declareTypes: @[NSStringPboardType] owner: nil];
 	[pboard setString: string forType: NSStringPboardType];
-	[string release];
 }
 
 @end

@@ -89,8 +89,8 @@ static const int kNumberOfBuffers=4;
 @property (nonatomic) AudioStreamBasicDescription* inputFormat;
 @property (nonatomic) AudioQueueBufferRef * outputBuffers;
 @property (nonatomic) AudioQueueBufferRef * inputBuffers;
-@property (nonatomic,retain) Queue* soundOutQueue;
-@property (nonatomic,retain) Queue* soundInQueue;
+@property (nonatomic,strong) Queue* soundOutQueue;
+@property (nonatomic,strong) Queue* soundInQueue;
 @end
 
 @interface soundAtom : NSObject {
@@ -98,7 +98,7 @@ static const int kNumberOfBuffers=4;
 	usqInt	byteCount;
 	usqInt	startOffset;
 }
-- (id) initWith: (char*) buffer count: (usqInt) bytes;
+- (instancetype) initWith: (char*) buffer count: (usqInt) bytes;
 
 @property (nonatomic,assign) char *	data;
 @property (nonatomic,assign) usqInt byteCount;

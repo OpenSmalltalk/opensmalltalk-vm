@@ -43,14 +43,16 @@ such third-party acknowledgments.
 //
 
 #import "sqSqueakAppDelegate.h"
-
 #import "sq.h"
 #import "sqSqueakMainApp.h"
 #import "sqMacV2Memory.h"
 #import <limits.h>
+#import "sqPlatformSpecific.h"
 
-
+#if COGVM
 #import "sqSCCSVersion.h"
+#else
+#endif
 
 #if !defined(NOEXECINFO)
 # include <execinfo.h>
@@ -80,6 +82,7 @@ extern BOOL NSApplicationLoad(void);
 /* Print an error message, possibly a stack trace, and exit. */
 /* Disable Intel compiler inlining of error which is used for breakpoints */
 #pragma auto_inline off
+#if COGVM || STACKVM
 void
 error(char *msg)
 {
@@ -98,7 +101,9 @@ error(char *msg)
 	else
 		printf("\nCan't dump Smalltalk stack. Not in VM thread\n");
 	printf("\nMost recent primitives\n");
-	dumpPrimTraceLog();
+#if COGVM
+    dumpPrimTraceLog();
+#endif
 	abort();
 }
 #pragma auto_inline on
@@ -122,7 +127,9 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	static sqInt printingStack = false;
     
 	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
-	printf("%s\n\n", sourceVersionString());
+#if COGVM
+    printf("%s\n\n", sourceVersionString());
+#endif
     
 #if !defined(NOEXECINFO)
 	printf("C stack backtrace:\n");
@@ -194,7 +201,6 @@ getCrashDumpFilenameInto(char *buf)
     strcpy(slash ? slash + 1 : buf, "crash.dmp");
 }
 
-
 void
 sigusr1(int sig, siginfo_t *info, void *uap)
 {
@@ -235,6 +241,23 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 	reportStackState("Segmentation fault", ctimebuf, 0, uap);
 	abort();
 }
+#else
+
+void sigsegv(int sig, siginfo_t *info, void *uap)
+{
+    
+    /* error("Segmentation fault"); */
+    static int printingStack= 0;
+    
+    printf("\nSegmentation fault\n\ns");
+    if (!printingStack)
+    {
+        printingStack= 1;
+        printAllStacks();
+    }
+    abort();
+}
+#endif
 
 /*
  * End of signal handlers
@@ -242,6 +265,7 @@ sigsegv(int sig, siginfo_t *info, void *uap)
  */
 
 void attachToSignals() {
+#if COGVM
 	struct sigaction sigusr1_handler_action, sigsegv_handler_action;
         
     sigsegv_handler_action.sa_sigaction = sigsegv;
@@ -253,6 +277,7 @@ void attachToSignals() {
     sigusr1_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
     sigemptyset(&sigusr1_handler_action.sa_mask);
     (void)sigaction(SIGUSR1, &sigusr1_handler_action, 0);
+#endif
 }
 
 sqInt ioExit(void) {

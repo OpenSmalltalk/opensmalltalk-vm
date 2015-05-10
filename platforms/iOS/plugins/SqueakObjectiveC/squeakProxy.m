@@ -44,7 +44,7 @@
 //
 
 #import "squeakProxy.h"
-
+#include <dlfcn.h>
 
 @implementation SqueakProxy
 
@@ -56,7 +56,7 @@
 @synthesize target;
 @synthesize callbackid;
 
-- (id) initWithSemaphore: (sqInt) squeakSem protocolNSString: (NSString *) nameString target: aTarget
+- (instancetype) initWithSemaphore: (sqInt) squeakSem protocolNSString: (NSString *) nameString target: aTarget
 {
 	sem = squeakSem;
 	if (nameString)
@@ -69,7 +69,6 @@
 	} else {
 		NSObject *dummy = [[NSObject alloc] init];
 		[self setTarget: dummy];
-		[dummy release];
 	}
 	
 	lockForSqueak = [[NSConditionLock alloc] initWithCondition: 0];
@@ -80,7 +79,7 @@
 	return self;
 }
 
-#include <dlfcn.h>
+
 - (void) forwardInvocation: (NSInvocation*) anInvocation
 {
 	NSDate *timeout;
@@ -88,7 +87,7 @@
 	//	NSLog(@"currentThread: %@", [NSThread currentThread]);
 	SEL selector = [anInvocation selector];
 	NSString *selectorString = NSStringFromSelector(selector);
-	if (![sigs objectForKey: selectorString]) {
+	if (!sigs[selectorString]) {
 		[anInvocation invokeWithTarget: target];
 		return;
 	}
@@ -97,8 +96,7 @@
 	{ 
 		// NSLog(@"inside lock 0");
 		[lockForSqueak unlockWithCondition: 1];
-		[timeout release];
-		invocation = [anInvocation retain];
+		invocation = anInvocation;
 		
 		// NSLog(@"signalling squeak");
 		interpreterProxy->signalSemaphoreWithIndex(sem);
@@ -109,16 +107,12 @@
 		if([lockForSqueak lockWhenCondition: 2 beforeDate: (timeout = [[NSDate alloc] initWithTimeIntervalSinceNow: 5.0])])
 		{
 			// NSLog(@"inside lock 2");
-			[timeout release];
-			[invocation release];
 			invocation = nil;
 			[lockForSqueak unlockWithCondition: 0];
 		}
 		else
 		{
 			// NSLog(@"failed lock 2");
-			[timeout release];
-			[invocation release];
 			invocation = nil;
 			[lockForSqueak unlockWithCondition: 0];
 		}
@@ -126,7 +120,6 @@
 	}
 	else
 	{
-		[timeout release];
 		//NSLog(@"failed lock 0");
 	}
 }
@@ -145,7 +138,7 @@
 	
 	NSString *selectorString = NSStringFromSelector (selector);
 	
-	if (sigAsString = [sigs objectForKey: selectorString]) {
+	if (sigAsString = sigs[selectorString]) {
 		
 		if (protocol) {
 			struct objc_method_description methodDescription;
@@ -176,7 +169,7 @@
 	
 	NSString *which = NSStringFromSelector(selector);
 	
-	if ([sigs objectForKey: which]) 
+	if (sigs[which]) 
 		return true;
 	
 	return false;
@@ -194,13 +187,6 @@
 	isCarbonVM = YES;
 }
 
-- (void) dealloc
-{
-	[lockForSqueak release];
-	[sigs release];
-	[target release];
-	[super dealloc];
-}
 
 @end
 

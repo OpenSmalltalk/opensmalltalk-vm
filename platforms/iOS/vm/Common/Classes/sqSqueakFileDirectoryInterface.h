@@ -85,9 +85,9 @@ such third-party acknowledgments.
 							  fCreator: (char *) fCreator;
 - (NSString *) resolvedAliasFiles: (NSString *) filePath;
 
-@property (nonatomic,retain) NSString* lastPathForDirLookup;
+@property (nonatomic,strong) NSString* lastPathForDirLookup;
 @property (nonatomic,assign) NSInteger lastIndexForDirLookup;
-@property (nonatomic,retain) NSArray * directoryContentsForDirLookup;
+@property (nonatomic,strong) NSArray * directoryContentsForDirLookup;
 
 @end
 

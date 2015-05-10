@@ -146,8 +146,8 @@ static int buttonState=0;
 }
 
 - (void ) processAsOldEventOrComplexEvent: (id) event placeIn: (sqInputEvent *) evt {
-	if ([[event objectAtIndex: 0] intValue] == 1) {
-		[(NSData *)[event objectAtIndex: 1] getBytes: evt length: sizeof(sqInputEvent)];
+	if ([event[0] intValue] == 1) {
+		[(NSData *)event[1] getBytes: evt length: sizeof(sqInputEvent)];
 		if (evt->type == EventTypeKeyboard) {
 //			NSLog(@"keyboard pc %i cc %i uc %i m %i",((sqKeyboardEvent *)evt)->pressCode,((sqKeyboardEvent *) evt)->charCode,((sqKeyboardEvent *) evt)->utf32Code,((sqKeyboardEvent *) evt)->modifiers);
 		}
@@ -156,16 +156,13 @@ static int buttonState=0;
 }
 
 - (void) pushEventToQueue: (sqInputEvent *) evt {	
-	NSMutableArray* data = [NSMutableArray new];
-
-//	NSLog(@"sqSqueakOSXApplication+events.m>>pushEventToQueue:");
-	[data addObject: [NSNumber numberWithInteger: 1]];
+    NSMutableArray* data = [NSMutableArray arrayWithCapacity: 2];
+	[data addObject: @1];
 	[data addObject: [NSData  dataWithBytes:(const void *) evt length: sizeof(sqInputEvent)]];
 	[eventQueue addItem: data];
-	[data release];	
 }
 
-- (void) recordCharEvent:(NSString *) unicodeString fromView: (NSView<sqSqueakOSXView> *) mainView {
+- (void) recordCharEvent:(NSString *) unicodeString fromView: (sqSqueakOSXOpenGLView *) mainView {
 	sqKeyboardEvent evt;
 	unichar unicode;
 	unsigned char macRomanCharacter;
@@ -173,7 +170,6 @@ static int buttonState=0;
 	NSRange picker;
 	NSUInteger totaLength;
 	
-//	NSLog(@"sqSqueakOSXApplication+events>>recordCharEvent:fromView:");
 	evt.type = EventTypeKeyboard;
 	evt.timeStamp = (int) ioMSecs();
 	picker.location = 0;
@@ -184,9 +180,9 @@ static int buttonState=0;
 		
 		unicode = [unicodeString characterAtIndex: i];
 		
-		if ([mainView lastSeenKeyBoardStrokeDetails]) {
-			evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: [[mainView lastSeenKeyBoardStrokeDetails] modifierFlags]];
-			evt.charCode = [[mainView lastSeenKeyBoardStrokeDetails] keyCode];
+		if (mainView.lastSeenKeyBoardStrokeDetails) {
+			evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: mainView.lastSeenKeyBoardStrokeDetails.modifierFlags];
+			evt.charCode = mainView.lastSeenKeyBoardStrokeDetails.keyCode;
 		} else {
 			evt.modifiers = 0;
 			evt.charCode = 0;
@@ -202,13 +198,12 @@ static int buttonState=0;
 		NSString *lookupString = [[NSString alloc] initWithCharacters: &unicode length: 1];
 		[lookupString getBytes: &macRomanCharacter maxLength: 1 usedLength: NULL encoding: NSMacOSRomanStringEncoding
 					   options: 0 range: picker remainingRange: NULL];
-		[lookupString release];
 		
 		evt.pressCode = EventKeyDown;
 		unsigned short keyCodeRemembered = evt.charCode;
 		evt.utf32Code = 0;
 		evt.reserved1 = 0;
-		evt.windowIndex = (int)[[mainView windowLogic] windowIndex];
+		evt.windowIndex = (int)  mainView.windowLogic.windowIndex;
 		[self pushEventToQueue: (sqInputEvent *)&evt];
 		
 		evt.charCode =	macRomanCharacter;
@@ -218,7 +213,7 @@ static int buttonState=0;
 		
 		[self pushEventToQueue: (sqInputEvent *) &evt];
 		
-		if (i > 1 || ![mainView lastSeenKeyBoardStrokeDetails]) {
+		if (i > 1 || !mainView.lastSeenKeyBoardStrokeDetails) {
 			evt.pressCode = EventKeyUp;
 			evt.charCode = keyCodeRemembered;
 			evt.utf32Code = 0;
@@ -230,7 +225,7 @@ static int buttonState=0;
 
 }
 
-- (void) recordKeyDownEvent:(NSEvent *)theEvent fromView: (NSView<sqSqueakOSXView>*) aView {
+- (void) recordKeyDownEvent:(NSEvent *)theEvent fromView: (sqSqueakOSXOpenGLView *) aView {
 	sqKeyboardEvent evt;
 	
 	evt.type = EventTypeKeyboard;
@@ -246,7 +241,7 @@ static int buttonState=0;
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
-- (void) recordKeyUpEvent:(NSEvent *)theEvent fromView: (NSView<sqSqueakOSXView>*) aView {
+- (void) recordKeyUpEvent:(NSEvent *)theEvent fromView: (sqSqueakOSXOpenGLView *) aView {
 	sqKeyboardEvent evt;
 	
 	evt.type = EventTypeKeyboard;
@@ -256,13 +251,13 @@ static int buttonState=0;
 	evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: [theEvent modifierFlags]];
 	evt.utf32Code = 0;
 	evt.reserved1 = 0;
-	evt.windowIndex = (int)[[aView windowLogic] windowIndex];
+	evt.windowIndex = (int) aView.windowLogic.windowIndex;
 	[self pushEventToQueue: (sqInputEvent *) &evt];
 
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
-- (void) recordMouseEvent:(NSEvent *)theEvent fromView: (NSView<sqSqueakOSXView> *) aView{
+- (void) recordMouseEvent:(NSEvent *)theEvent fromView: (sqSqueakOSXOpenGLView *) aView{
 	sqMouseEvent evt;
 	
 	evt.type = EventTypeMouse;
@@ -281,24 +276,24 @@ static int buttonState=0;
 #else
 	evt.reserved1 = 0;
 #endif 
-	evt.windowIndex = (int) [[aView windowLogic] windowIndex];
+	evt.windowIndex = (int) aView.windowLogic.windowIndex;
 	
 	[self pushEventToQueue:(sqInputEvent *) &evt];
 //NSLog(@"mouse hit x %i y %i buttons %i mods %i",evt.x,evt.y,evt.buttons,evt.modifiers);
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 						   
-- (void) recordWheelEvent:(NSEvent *) theEvent fromView: (NSView<sqSqueakOSXView> *) aView{
+- (void) recordWheelEvent:(NSEvent *) theEvent fromView: (sqSqueakOSXOpenGLView *) aView{
 		
 	[self recordMouseEvent: theEvent fromView: aView];
 	CGFloat x = [theEvent deltaX];
 	CGFloat y = [theEvent deltaY];
 
 	if (x != 0.0f) {
-		[self fakeMouseWheelKeyboardEventsKeyCode: (x < 0 ? 124 : 123) ascii: (x < 0 ? 29 : 28) windowIndex:(int)[[aView windowLogic] windowIndex]];
+		[self fakeMouseWheelKeyboardEventsKeyCode: (x < 0 ? 124 : 123) ascii: (x < 0 ? 29 : 28) windowIndex:  (int) aView.windowLogic.windowIndex];
 	}
 	if (y != 0.0f) {
-		[self fakeMouseWheelKeyboardEventsKeyCode: (y < 0 ? 125 : 126) ascii: (y < 0 ? 31 : 30) windowIndex:(int)[[aView windowLogic] windowIndex]];
+		[self fakeMouseWheelKeyboardEventsKeyCode: (y < 0 ? 125 : 126) ascii: (y < 0 ? 31 : 30) windowIndex: (int) aView.windowLogic.windowIndex];
 	}
 }
 		  
@@ -311,7 +306,7 @@ static int buttonState=0;
 	evt.charCode = keyCode;
 	evt.utf32Code = 0;
 	evt.reserved1 = 0;
-	evt.modifiers = modifierMap[(controlKey >> 8)];
+	evt.modifiers = modifierMap[((controlKey | optionKey | cmdKey | shiftKey) >> 8)];
 	evt.windowIndex = windowIndex;
 	[self pushEventToQueue:(sqInputEvent *) &evt];
 

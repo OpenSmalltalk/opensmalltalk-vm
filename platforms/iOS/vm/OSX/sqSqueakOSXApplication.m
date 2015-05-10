@@ -42,6 +42,19 @@
 #import "sqSqueakOSXInfoPlistInterface.h"
 #import "sqSqueakOSXSoundCoreAudio.h"
 #import "sqSqueakSoundCoreAudioAPI.h"
+#import "sqSqueakOSXApplication+imageReadWrite.h"
+
+#if !defined(IMAGE_DIALECT_NAME)
+# if NewspeakVM
+#	define IMAGE_DIALECT_NAME "Newspeak"
+#	define DEFAULT_IMAGE_NAME "newspeak.image"
+#	define IMAGE_ENV_NAME "NEWSPEAK_IMAGE"
+# else
+#	define IMAGE_DIALECT_NAME "Squeak"
+#	define DEFAULT_IMAGE_NAME "squeak.image"
+#	define IMAGE_ENV_NAME "SQUEAK_IMAGE"
+# endif
+#endif
 
 usqInt gMaxHeapSize=(512*1024*1024)+(4*1024*1024); //Last part are "eden bytes" needed in the new startup
 
@@ -80,11 +93,11 @@ void mtfsfi(unsigned long long fpscr) {}
 }
 
 - (sqSqueakFileDirectoryInterface *) newFileDirectoryInterfaceInstance {
-	return [sqSqueakOSXFileDirectoryInterface new];
+	return [[sqSqueakOSXFileDirectoryInterface alloc] init];
 }
 
 - (sqSqueakInfoPlistInterface *) newSqSqueakInfoPlistInterfaceCreation {
-	return [sqSqueakOSXInfoPlistInterface new];
+	return [[sqSqueakOSXInfoPlistInterface alloc] init];
 }
 
 - (void) doHeadlessSetup {
@@ -113,7 +126,7 @@ void mtfsfi(unsigned long long fpscr) {}
 }
 
 - (void) setupSoundLogic {
-	self.soundInterfaceLogic = [sqSqueakOSXSoundCoreAudio new];
+	self.soundInterfaceLogic = [[sqSqueakOSXSoundCoreAudio alloc] init];
  	[(sqSqueakOSXSoundCoreAudio *) self.soundInterfaceLogic soundInitOverride];
 
 	snd_Start(2644, 22050, 1, 0);
@@ -137,7 +150,7 @@ void mtfsfi(unsigned long long fpscr) {}
 
 - (NSInteger) parseArgument: (NSString *) argData peek: (NSString *) peek {
 	
-	if ([argData compare: @"--"] == NSOrderedSame) {
+	if ([argData isEqualToString: @"--"]) {
 		return 1;
 	}
 
@@ -147,25 +160,32 @@ void mtfsfi(unsigned long long fpscr) {}
 		}
 	NS_HANDLER;
 	NS_ENDHANDLER;
-
-	if ([argData compare: @"--help"] == NSOrderedSame) {
+	
+	if ([argData isEqualToString: @"-help"]) {
 		[self usage];
 		exit(0);
 		return 1;
 	}
-	if ([argData compare: @"--headless"] == NSOrderedSame) {
+	if ([argData isEqualToString: @"-headless"]) {
 		extern BOOL gSqueakHeadless;
-        gSqueakHeadless = YES;
+		gSqueakHeadless = YES;
 		return 1;
 	}
+
     if ([argData compare: @"--nohandlers"] == NSOrderedSame){
         [self setNoHandlers: YES];
         return 1;
     }
-	if ([argData compare: @"--memory"] == NSOrderedSame) {
+
+	if ([argData isEqualToString: @"-memory"]) {
 		gMaxHeapSize = (usqInt) [self strtobkm: [peek UTF8String]];
 		return 2;
 	}
+    
+    if ([argData isEqualToString: @"-NSDocumentRevisionsDebugMode"]) {
+        return 2;
+    }
+    
 	return 0;
 }
 
@@ -181,21 +201,21 @@ void mtfsfi(unsigned long long fpscr) {}
 	NSUInteger i,result;
 	BOOL optionsCompleted = NO;
 	for (i=0; i<[revisedArgs count]; i++) {
-		NSString *argData = [revisedArgs objectAtIndex:i];
-		NSString *peek = (i == ([revisedArgs count] - 1)) ? @"" : [revisedArgs objectAtIndex:i+1];
-		if ([argData compare: @"--"] == NSOrderedSame) {
+		NSString *argData = revisedArgs[i];
+		NSString *peek = (i == ([revisedArgs count] - 1)) ? @"" : revisedArgs[i+1];
+		if ([argData isEqualToString: @"--"]) {
 			optionsCompleted = YES;
 			continue;
 		}
-		if (!optionsCompleted && [[argData substringToIndex: 1] compare: @"-"] != NSOrderedSame) {
+		if (!optionsCompleted && ![[argData substringToIndex: 1] isEqualToString: @"-"]) {
 			optionsCompleted = YES;
-			
 			//guessing first parameter as image name
 			if ([argData compare: @"--"] != NSOrderedSame) {
                 [self setImageNamePathIfItWasReadable:argData];
 			} else {
 				continue;
 			}
+			continue;
 		}
 		if (optionsCompleted) {
 			[self.argsArguments addObject: argData];
@@ -211,7 +231,6 @@ void mtfsfi(unsigned long long fpscr) {}
 		}
 		
 	}
-	[revisedArgs release];
 }
 
 - (long long) strtobkm: (const char *) str {
@@ -230,11 +249,12 @@ void mtfsfi(unsigned long long fpscr) {}
 }
 
 - (void) parseEnv: (NSDictionary *) env {
-	NSString *imageNameString = [env objectForKey: @"retain"];
+#warning untested!
+	NSString *imageNameString = env[@"SQUEAK_IMAGE"];
 	if (imageNameString) {
 		[(sqSqueakOSXInfoPlistInterface*) self.infoPlistInterfaceLogic setOverrideSqueakImageName: imageNameString];
 	}
-	NSString *memoryString = [env objectForKey: @"SQUEAK_MEMORY"];
+	NSString *memoryString = env[@"SQUEAK_MEMORY"];
 	if (memoryString) {
 		gMaxHeapSize = (usqInt) [self strtobkm: [memoryString UTF8String]];
 	}
@@ -259,7 +279,7 @@ void mtfsfi(unsigned long long fpscr) {}
 
 - (void) printUsageNotes
 {
-	printf("  If `--memory' is not specified then the heap will grow dynamically.\n");
+	printf("  If `-memory' is not specified then the heap will grow dynamically.\n");
 	printf("  <argument>s are ignored, but are processed by the Squeak image.\n");
 	printf("  The first <argument> normally names a Squeak `script' to execute.\n");
 	printf("  Precede <arguments> by `--' to use default image.\n");

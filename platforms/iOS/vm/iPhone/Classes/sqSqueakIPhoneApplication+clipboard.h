@@ -44,4 +44,7 @@
 - (sqInt) clipboardSize;
 - (void) clipboardRead: (sqInt) count into: (char *)byteArrayIndex  startingAt: (sqInt) startIndex;
 - (void) clipboardWrite: (sqInt) count from: (char *)byteArrayIndex  startingAt:  (sqInt) startIndex;
+- (sqInt) clipboardSize16;
+- (void) clipboardRead16: (sqInt) count into: (char *)byteArrayIndex  startingAt: (sqInt) startIndex;
+- (void) clipboardWrite16: (sqInt) count from: (char *)byteArrayIndex  startingAt:  (sqInt) startIndex;
 @end

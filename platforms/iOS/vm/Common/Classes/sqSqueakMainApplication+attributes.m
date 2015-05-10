@@ -39,7 +39,9 @@
 
 #import "sqSqueakMainApplication+attributes.h"
 #import "sqSqueakMainApplication+vmAndImagePath.h"
+#if COGVM
 #include "sqSCCSVersion.h"
+#endif
 
 extern struct VirtualMachine* interpreterProxy;
 
@@ -91,12 +93,27 @@ extern struct VirtualMachine* interpreterProxy;
 			case 1:
 				return [self getImageName];
 
-			case 1004: /* Interpreter version string */
+            case 1004:  /* Interpreter version string */
 				return [self interpreterVersionString];
 			
-			case 1009: /* source tree version info */
+            case 1009: {/* source tree version info */
+#if COGVM
 				return sourceVersionString();
-
+#else
+                static char data[255];
+                bzero(data,sizeof(data));
+                strlcat(data,interpreterVersion,sizeof(data));
+                strlcat(data," ",sizeof(data));
+                NSString *versionString =[[NSBundle mainBundle] objectForInfoDictionaryKey: @"CFBundleVersion"];
+                if (versionString == nil)
+                    return data;
+                const char *versonStringAsCString =  [ versionString cStringUsingEncoding: [self currentVMEncoding]];
+                if (versonStringAsCString == nil)
+                    return data;
+                strlcat(data,versonStringAsCString,sizeof(data));
+                return data;
+#endif
+            }
 			case 1201: /* macintosh file name size */
 				return "255";
 

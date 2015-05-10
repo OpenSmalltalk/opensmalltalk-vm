@@ -30,12 +30,13 @@
  */
 #import "SqViewBitmapConversion.h"
 
+
 @implementation sqSqueakOSXOpenGLView(BitmapConversion)
 
 #define debug(a)
 
 #define CHECKANDRETURN(expr) \
-	{ NSBitmapImageRep* bitmap=expr; if(bitmap!=NULL){ CGImageRef ref = [bitmap CGImage]; [bitmap release]; return(ref);}\
+	{ NSBitmapImageRep* bitmap=expr; if(bitmap!=NULL){ CGImageRef ref = [bitmap CGImage]; return(ref);}\
         NSLog(@"initData:%08x\npixelsWide:%d\npixelsHigh:%d\nbitsPerSample:%d\nsamplesPerPixel:%d\nhasAlpha:%d\nisPlanar:%d\ncolorSpaceName:%@\nbytesPerRow:%d\nbitsPerPixel:%d\n",\
 				(int)dBits,right-left,bottom-top,bitsPerSample,\
 				samplesPerPixel,NO,NO,colorSpace,bytesPerRow,bitsPerPixel);\

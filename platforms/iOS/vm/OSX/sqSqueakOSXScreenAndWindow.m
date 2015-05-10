@@ -41,6 +41,7 @@
 #import "sqMacHostWindow.h"
 #import "sqSqueakOSXInfoPlistInterface.h"
 #import "SqViewBitmapConversion.h"
+#import "sqSqueakOSXApplication+events.h"
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 
@@ -51,17 +52,13 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 	return self.mainViewOnWindow;
 }
 
-- (void) dealloc {
-	[mainViewOnWindow release];
-	[super dealloc];
-}
 
-- (void)  ioSetFullScreen: (sqInt)fullScreen {
-	[[self getMainView] ioSetFullScreen:fullScreen];
+- (void)  ioSetFullScreen: (sqInt) fullScreen {
+	[[self getMainView] ioSetFullScreen: fullScreen];
 }
 
 - (BOOL)windowShouldClose:(id)window {
-	[gDelegateApp.squeakApplication recordWindowEvent:WindowEventClose window:window];
+	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordWindowEvent: WindowEventClose window: window];
 	return NO;
 }
 @end

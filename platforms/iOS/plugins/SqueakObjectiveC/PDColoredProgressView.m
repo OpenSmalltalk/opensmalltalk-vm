@@ -104,15 +104,10 @@
 }
 
 - (void) setTintColor: (UIColor *) aColor {
-	[_tintColor release];
-	_tintColor = [aColor retain];
+	_tintColor = aColor;
 }
 
 
-- (void)dealloc {
-    [super dealloc];
-	[_tintColor release];
-}
 
 
 @end

@@ -47,16 +47,12 @@
 }
 
 - (BOOL) readImageIntoMemory {
-	NSAutoreleasePool * pool = [NSAutoreleasePool new];
+			@autoreleasepool {
 	const char * characterPathForImage = (const char *) [[NSFileManager defaultManager] fileSystemRepresentationWithPath: [self.imageNameURL path]];
 	sqImageFile f;
-
- 
 	if (!characterPathForImage)  {
-		[pool drain];
 		return NO;
 	}
-
 	f = sqImageFileOpen(characterPathForImage, "rb");
 	if (f == 0) {
 		fprintf(stderr, "Failed to open image named %s", characterPathForImage);
@@ -80,7 +76,7 @@
 #endif
 	readImageFromFileHeapSizeStartingAt(f, memory, (squeakFileOffsetType) 0);  //This is a VM Callback
 	sqImageFileClose(f);
-	[pool drain];
+            }
 	return YES;
 }
 @end

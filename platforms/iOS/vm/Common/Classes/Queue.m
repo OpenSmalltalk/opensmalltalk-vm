@@ -52,6 +52,8 @@ Copyright (C) 2007 Apple Inc. All Rights Reserved.
 
 */
 
+/* Arc version */
+
 #import "Queue.h"
 
 
@@ -59,7 +61,7 @@ Copyright (C) 2007 Apple Inc. All Rights Reserved.
 
 // Initialize a empty mutable array for queue items
 // which we can fill
-- (id) init
+- (instancetype) init
 {
 	self = [super init];
 	{
@@ -78,7 +80,6 @@ Copyright (C) 2007 Apple Inc. All Rights Reserved.
 	anObject = [mItemArray lastObject];
 	if (anObject)
 	{
-		[anObject retain];
 		[mItemArray removeLastObject];		
 	}
 		}
@@ -113,11 +114,5 @@ Copyright (C) 2007 Apple Inc. All Rights Reserved.
 	return mItemArray;
 }
 
-- (void) dealloc
-{
-	[mItemArray release];
-	
-	[super dealloc];
-}
 
 @end

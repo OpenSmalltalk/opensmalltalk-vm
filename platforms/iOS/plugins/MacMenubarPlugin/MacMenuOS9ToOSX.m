@@ -21,7 +21,7 @@ Boolean ioCheckMenuHandle(MenuHandle menuHandle) {
 MenuRef GetMenuHandle(MenuID menuID){
 	NSMenu *mainMenu = [[NSApplication sharedApplication] mainMenu];
 	NSMenuItem *menuRef =  [mainMenu itemAtIndex: menuID];
-	MenuRef handle = (MenuRef)menuRef;
+	MenuRef handle = (__bridge MenuRef)menuRef;
 	return handle; 
 };
 
@@ -222,7 +222,7 @@ GetItemCmd(
 
 MenuID  GetMenuID(MenuRef menu){
 	NSMenu *mainMenu = [[NSApplication sharedApplication] mainMenu];
-	NSMenuItem *menuItem = (NSMenuItem *) menu;
+	NSMenuItem *menuItem = (__bridge NSMenuItem *) menu;
 	return (MenuID) [mainMenu indexOfItem: menuItem]; 
 };
 
@@ -273,6 +273,6 @@ OSStatus GetIndMenuItemWithCommandID(
 							MenuItemIndex *  outIndex){
 
 	NSMenu *mainMenu = [[NSApplication sharedApplication] mainMenu];
-	NSMenuItem *inputMenu = (NSMenuItem *) inMenu;
+	NSMenuItem *inputMenu = (__bridge NSMenuItem *) inMenu;
 	OSType		inputCommandID = inCommandID;
 };
