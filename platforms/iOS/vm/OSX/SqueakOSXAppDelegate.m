@@ -136,7 +136,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 #if COGVM
 #error bad
 #endif
-	NSPanel *panel;
+/*	NSPanel *panel;
 	if (sizeof(long) == 8) {
 		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 64/64 bits 5.7b3 (21)",
 									@"Only use this VM for testing, it lacks mac menu integration.",
@@ -150,14 +150,15 @@ SqueakOSXAppDelegate *gDelegateApp;
 							   nil,
 							   nil);
 	}
-	
+*/
 #endif
 	
-	NSRect frame= [panel frame];
+/*	NSRect frame= [panel frame];
 	frame.size.width *= 1.5f;
 	[panel setFrame: frame display: NO];
 	[NSApp runModalForWindow: panel];
 	[panel close];
+*/
 }
 
 -(void) setupMainView {

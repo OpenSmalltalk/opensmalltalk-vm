@@ -118,7 +118,6 @@
 		9487746510C64DD800E4AEC5 /* sqSqueakMainApplication+screen.m in Sources */ = {isa = PBXBuildFile; fileRef = 94A0E9830DE5F1FE0071C8B9 /* sqSqueakMainApplication+screen.m */; };
 		9487746710C64DD800E4AEC5 /* sqVirtualMachine.c in Sources */ = {isa = PBXBuildFile; fileRef = 9424FF600DDCB1C7009912BF /* sqVirtualMachine.c */; };
 		9487746810C64DD800E4AEC5 /* Queue.m in Sources */ = {isa = PBXBuildFile; fileRef = 9452D5D80E044A9D000AD792 /* Queue.m */; };
-		9487746910C64DD800E4AEC5 /* sqMacV2Time.c in Sources */ = {isa = PBXBuildFile; fileRef = 9452D5D90E044A9D000AD792 /* sqMacV2Time.c */; };
 		9487746A10C64DD800E4AEC5 /* sqSqueakFileDirectoryAPI.m in Sources */ = {isa = PBXBuildFile; fileRef = 9452D5DC0E044A9D000AD792 /* sqSqueakFileDirectoryAPI.m */; };
 		9487746B10C64DD800E4AEC5 /* sqSqueakFileDirectoryInterface.m in Sources */ = {isa = PBXBuildFile; fileRef = 9452D5DE0E044A9D000AD792 /* sqSqueakFileDirectoryInterface.m */; };
 		9487746C10C64DD800E4AEC5 /* sqSqueakMainApp.m in Sources */ = {isa = PBXBuildFile; fileRef = 9452D5DF0E044A9D000AD792 /* sqSqueakMainApp.m */; };
@@ -179,7 +178,6 @@
 		949382731B00176A00C802B2 /* sqUnixVMProfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 949382701B00176A00C802B2 /* sqUnixVMProfile.c */; };
 		949382751B0017CC00C802B2 /* aio.c in Sources */ = {isa = PBXBuildFile; fileRef = 949382741B0017CC00C802B2 /* aio.c */; };
 		949382771B001B9F00C802B2 /* Crashlytics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 949382761B001B9F00C802B2 /* Crashlytics.framework */; };
-		949382781B001C2900C802B2 /* CoreVM.plist in Resources */ = {isa = PBXBuildFile; fileRef = 9422C3B61AFFFB3400448DC0 /* CoreVM.plist */; };
 		949382791B001C7A00C802B2 /* sqSqueakOSXInfoPlistInterface.m in Sources */ = {isa = PBXBuildFile; fileRef = 94BCAE6810ACA10100F87527 /* sqSqueakOSXInfoPlistInterface.m */; };
 		9493827A1B001C7E00C802B2 /* sqSqueakInfoPlistInterface.m in Sources */ = {isa = PBXBuildFile; fileRef = 9412CAE50E6C05EC00DB8625 /* sqSqueakInfoPlistInterface.m */; };
 		94B9533510E6BD7100DC476A /* MacMenuOS9ToOSX.m in Sources */ = {isa = PBXBuildFile; fileRef = 94B9533410E6BD7100DC476A /* MacMenuOS9ToOSX.m */; };
@@ -191,6 +189,7 @@
 		94C317621AD49A320096E59D /* SerialPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94C317601AD49A320096E59D /* SerialPlugin.c */; };
 		94C3176A1AD49B020096E59D /* sqUnixJoystickTablet.c in Sources */ = {isa = PBXBuildFile; fileRef = 94C317661AD49B020096E59D /* sqUnixJoystickTablet.c */; };
 		94C3176C1AD49B020096E59D /* sqUnixLocale.c in Sources */ = {isa = PBXBuildFile; fileRef = 94C317681AD49B020096E59D /* sqUnixLocale.c */; };
+		94CECF0D1B00253800E57F1B /* sqMacV2Time.c in Sources */ = {isa = PBXBuildFile; fileRef = 9452D5D90E044A9D000AD792 /* sqMacV2Time.c */; };
 		94D3654F10CEC86C00805023 /* BitMapConversionLogicFromX11.c in Sources */ = {isa = PBXBuildFile; fileRef = 94D3654E10CEC86C00805023 /* BitMapConversionLogicFromX11.c */; };
 		94D921551AC631AF00A5970F /* UUIDPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6591D0DDD03FE00358328 /* UUIDPlugin.c */; };
 		94D921561AC6320300A5970F /* SocketPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E659100DDD03FE00358328 /* SocketPlugin.c */; };
@@ -1843,7 +1842,6 @@
 				9487740210C64DD800E4AEC5 /* SqueakPlugin.icns in Resources */,
 				9422C3B91AFFFB6000448DC0 /* Images.xcassets in Resources */,
 				9487740310C64DD800E4AEC5 /* SqueakProject.icns in Resources */,
-				949382781B001C2900C802B2 /* CoreVM.plist in Resources */,
 				9487740410C64DD800E4AEC5 /* SqueakScript.icns in Resources */,
 				9487740510C64DD800E4AEC5 /* SqueakSources.icns in Resources */,
 				9487740610C64DD800E4AEC5 /* Credits.rtf in Resources */,
@@ -1952,6 +1950,7 @@
 				9487744F10C64DD800E4AEC5 /* jidctfst.c in Sources */,
 				9487745010C64DD800E4AEC5 /* jidctint.c in Sources */,
 				9487745110C64DD800E4AEC5 /* jidctred.c in Sources */,
+				94CECF0D1B00253800E57F1B /* sqMacV2Time.c in Sources */,
 				949382421B000E1700C802B2 /* sqHeapMap.c in Sources */,
 				9463C1CD1AEE15BC009C5CE5 /* MiscPrimitivePlugin.c in Sources */,
 				9487745210C64DD800E4AEC5 /* jmemdatadst.c in Sources */,
@@ -1980,7 +1979,6 @@
 				9487746510C64DD800E4AEC5 /* sqSqueakMainApplication+screen.m in Sources */,
 				9487746710C64DD800E4AEC5 /* sqVirtualMachine.c in Sources */,
 				9487746810C64DD800E4AEC5 /* Queue.m in Sources */,
-				9487746910C64DD800E4AEC5 /* sqMacV2Time.c in Sources */,
 				9487746A10C64DD800E4AEC5 /* sqSqueakFileDirectoryAPI.m in Sources */,
 				9487746B10C64DD800E4AEC5 /* sqSqueakFileDirectoryInterface.m in Sources */,
 				9463C1D21AEE1618009C5CE5 /* StarSqueakPlugin.c in Sources */,
@@ -2091,7 +2089,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = /usr/include/uuid;
-				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
 				SEPARATE_STRIP = YES;
 				VALID_ARCHS = x86_64;
@@ -2110,7 +2108,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = /usr/include/uuid;
-				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "65867c1c-f0f6-4de4-84cd-3e77826cb368";
 				SEPARATE_STRIP = YES;
 				VALID_ARCHS = x86_64;
@@ -2149,6 +2147,7 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				INFOPLIST_FILE = "$(SRCROOT)/CoreVM.plist";
 				LD_GENERATE_MAP_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_CFLAGS = "";
 				PRODUCT_NAME = Squeak;
 				VALID_ARCHS = x86_64;
@@ -2184,6 +2183,7 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				INFOPLIST_FILE = "$(SRCROOT)/CoreVM.plist";
 				LD_GENERATE_MAP_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_CFLAGS = "";
 				PRODUCT_NAME = Squeak;
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "3a8c5546-20a8-40a9-afb4-4218872c980c";
