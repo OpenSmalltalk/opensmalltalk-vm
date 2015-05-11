@@ -2259,26 +2259,25 @@ StackToRegisterMappingCogit >> genPrimitiveCharacterValue [
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveClass [
+	"Primitive class must be variadic for objectClass:"
 	| reg |
-	reg := ReceiverResultReg.
-	NewspeakVM
+	methodOrBlockNumArgs > 0
 		ifTrue:
-			[methodOrBlockNumArgs > 0 ifTrue:
-				[methodOrBlockNumArgs > 1 ifTrue:
-					[^self compileFallbackToInterpreterPrimitive].
-				 reg := Arg0Reg]]
+			[methodOrBlockNumArgs > 1 ifTrue:
+				[^self compileFallbackToInterpreterPrimitive].
+			 reg := Arg0Reg]
 		ifFalse:
-			[self assert: methodOrBlockNumArgs = 0].
+			[reg := ReceiverResultReg].
 	(objectRepresentation
 			genGetClassObjectOf: reg
 			into: ReceiverResultReg
 			scratchReg: TempReg
-			instRegIsReceiver: (NewspeakVM ifTrue: [methodOrBlockNumArgs = 0] ifFalse: [true])) = BadRegisterSet ifTrue:
+			instRegIsReceiver: methodOrBlockNumArgs = 0) = BadRegisterSet ifTrue:
 		[objectRepresentation
 			genGetClassObjectOf: reg
 			into: ClassReg
 			scratchReg: TempReg
-			instRegIsReceiver: (NewspeakVM ifTrue: [methodOrBlockNumArgs = 0] ifFalse: [true]).
+			instRegIsReceiver: methodOrBlockNumArgs = 0.
 		 self MoveR: ClassReg R: ReceiverResultReg].
 	self RetN: 0.
 	^0
