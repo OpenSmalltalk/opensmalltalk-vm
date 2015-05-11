@@ -14,9 +14,9 @@ VMXCP=CoreVM
 SFP=SqueakFFIPrims
 KEEP=
 
-USAGE="usage: `basename $0` -[admskh?]"
+USAGE="usage: `basename $0` -[adpskh?]"
 
-while getopts 'adskh?' opt $@; do
+while getopts 'adp:skh?' opt $@; do
 	case $opt in
 	a)		BUILD_CONFIGURATION=Assert
 			NSD_BUILD_CONFIGURATION=Development
@@ -26,6 +26,7 @@ while getopts 'adskh?' opt $@; do
 			NSD_BUILD_CONFIGURATION=Development
 			XCD_BUILD_CONFIGURATION=Debug
 			DEST=Debug;;
+	p)		VMXCP="$OPTARG";;
 	s)		BUILD_CONFIGURATION=DeploymentSymbols
 			DEST=Fast;;
 	k)		KEEP=1;;
