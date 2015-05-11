@@ -120,9 +120,9 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 		
 		// At this point we did not find a file name in the resources or in the vm directory or via a set image name
 		if (!fileIsReadable) {
-            dispatch_sync(dispatch_get_main_queue(), ^{
+ //           dispatch_sync(dispatch_get_main_queue(), ^{
                 [self attempToOpenImageFromOpenPanel];
-            });
+ //           });
 		}
 		
 		return;
