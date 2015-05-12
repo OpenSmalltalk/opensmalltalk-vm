@@ -496,8 +496,8 @@ SpurBootstrapMonticelloPackagePatcher >> patchAndUploadNewer [
 	"Look for unbranched versions on the default repository that are newer than the
 	 image''s versions. Download and patch them and upload the patched versions."
 	"(SpurBootstrapMonticelloPackagePatcher new
-		from: 'spurpackages'
-		to: 'trunkpackages')
+		from: 'trunkpackages'
+		to: 'spurpackages')
 			patchAndUploadNewer"
 	| repo sourceRepo |
 	sourceDir deleteLocalFiles.
@@ -523,8 +523,8 @@ SpurBootstrapMonticelloPackagePatcher >> patchAndUploadUnpatchedInTrunk [
 	 latest patched versions there-in. Download and patch them and upload the patched
 	 versions."
 	"(SpurBootstrapMonticelloPackagePatcher new
-		from: 'spurpackages'
-		to: 'trunkpackages')
+		from: 'trunkpackages'
+		to: 'spurpackages')
 			patchAndUploadUnpatchedInTrunk"
 	| trunk sourceRepo cacheRepo |
 	sourceDir assureExistence; deleteLocalFiles.
@@ -554,9 +554,23 @@ SpurBootstrapMonticelloPackagePatcher >> patchAsNeeded [
 	self packagesAndPatches keysAndValuesDo:
 		[:package :patches|
 		 (self filesForPackage: package in: sourceDir) do:
-			[:packageFile|
-			 (destDir includesKey: packageFile) ifFalse:
-				[self patchPackage: packageFile with: patches for: package]]]
+			[:packageFile| | spurPackageFile |
+			 spurPackageFile := self spurBranchNameForInfo: packageFile package: package.
+			 ((destDir includesKey: packageFile) or: [destDir includesKey: spurPackageFile])
+				ifTrue:
+					[Transcript
+						cr; nextPutAll: destDir fullName; nextPutAll: ' contains either ';
+						nextPutAll: packageFile; nextPutAll: ' or '; nextPutAll: spurPackageFile;
+						nextPutAll: '; not saving'; flush]
+				ifFalse:
+					[self patchPackage: packageFile with: patches for: package]]]
+
+	"| patcher |
+	 patcher := SpurBootstrapMonticelloPackagePatcher new
+					from: 'trunkpackages'
+					to: 'spurpackages'.
+	patcher trunk cacheAllFileNamesDuring:
+		[patcher patchAsNeeded]"
 ]
 
 { #category : #patching }
@@ -601,10 +615,11 @@ SpurBootstrapMonticelloPackagePatcher >> patchPackage: packageFileName with: pat
 ]
 
 { #category : #patching }
-SpurBootstrapMonticelloPackagePatcher >> patches: patches forSnapshot: snapshot [
+SpurBootstrapMonticelloPackagePatcher >> patches: basePatches forSnapshot: snapshot [
 	"Add modified class defs for Character, SmallInteger, Float, BoxedFloat64, SmallFloat64 and COmpiledMethod.
 	 Remove ObjectHistory and ObjectHistoryMark (which Spur does not support)."
-	| defs |
+	| patches defs |
+	patches  := basePatches copy.
 	defs := snapshot definitions.
 	(defs anySatisfy: [:d| d isClassDefinition and: [d className == #Character]]) ifTrue:
 		[patches
@@ -672,8 +687,10 @@ SpurBootstrapMonticelloPackagePatcher >> repositoryForUrl: url [
 ]
 
 { #category : #patching }
-SpurBootstrapMonticelloPackagePatcher >> spurBranchNameForInfo: versionInfo package: package [
-	^versionInfo name copyReplaceAll: package name with: package name, '.spur'
+SpurBootstrapMonticelloPackagePatcher >> spurBranchNameForInfo: versionInfoOrString package: package [
+	^(versionInfoOrString isString
+		ifTrue: [versionInfoOrString]
+		ifFalse: [versionInfoOrString name]) copyReplaceAll: package name with: package name, '.spur'
 ]
 
 { #category : #configurations }
