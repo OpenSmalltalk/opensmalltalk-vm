@@ -537,6 +537,12 @@ SpurBootstrapPrototypes >> CharacterPROTOTYPEasciiValue [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrapPrototypes >> CharacterPROTOTYPEcomeFullyUpOnReload: smartRefStream [
+	"Now Characters are immediates, this can be deleted."
+	<remove>
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrapPrototypes >> CharacterPROTOTYPEcopy [
 	"Answer the receiver, because Characters are unique."
 	^self
