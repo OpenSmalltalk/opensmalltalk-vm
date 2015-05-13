@@ -2122,7 +2122,16 @@ isCFramePointerInUse()
 /* Currently pretty sure fp is used but prepared to be shown wrong */
  int
 isCFramePointerInUse()
-{ return true; }
+{
+	extern unsigned long CStackPointer, CFramePointer;
+	extern void (*ceCaptureCStackPointers)(void);
+	unsigned long currentCSP = CStackPointer;
+
+	currentCSP = CStackPointer;
+	ceCaptureCStackPointers();
+	assert(CStackPointer < currentCSP);
+	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
+}
 #endif /* defined(__arm__) || defined(__arm32__) || defined(ARM32) */
 /* Answer an approximation of the size of the redzone (if any).  Do so by
  * sending a signal to the process and computing the difference between the
