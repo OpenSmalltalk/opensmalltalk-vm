@@ -40,8 +40,10 @@ extern unsigned long getfp();
 	 * ARM DUI 0041C Page 9-7
 	 */
 #  if __GNUC__
-#   define getfp() ({ register unsigned long fp;					\
-					  asm volatile ("mov %0, r11" : "=r"(fp) : );	\
+/ * # define getsp() ({ void *sp; asm volatile ("mov %0, %%sp" : "=r"(sp) : ); sp;}) */
+
+#   define getfp() ({ unsigned long fp;					\
+					  asm volatile ("mov %0, %%fp" : "=r"(fp) : );	\
 					  fp; })
 #  else
 extern unsigned long getfp();
