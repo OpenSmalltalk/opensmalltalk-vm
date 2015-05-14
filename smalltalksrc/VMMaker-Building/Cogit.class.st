@@ -4039,9 +4039,10 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: c
 		ifTrue:
 			[operand := 0.
 			 targetEntry := ((coInterpreter cogMethodOf: case1Method) asInteger + cmNoCheckEntryOffset) asVoidPointer]
-		ifFalse:
-			[self assert: (case1Method isNil or: [(objectMemory isYoungObject: case1Method) not]).
-			 operand := case1Method.
+		ifFalse: "We do not scavenge PICs, hence we cannot cache the MNU method if it is in new space."
+			[operand := (case1Method isNil or: [objectMemory isYoungObject: case1Method])
+							ifTrue: [0]
+							ifFalse: [case1Method].
 			 targetEntry := case1Method isNil ifTrue: [picMNUAbort] ifFalse: [picInterpretAbort]].
 
 	jumpNext := self compileCPICEntry.
@@ -4220,11 +4221,15 @@ Cogit >> compileMNUCPIC: cPIC methodOperand: methodOperand numArgs: numArgs [
 	"Compile the code for a one-case MNU PIC that calls ceMNUFromPIC for case0Tag
 	 The tag for case0 is at the send site and so doesn't need to be generated."
 	<var: #cPIC type: #'CogMethod *'>
-	| jumpNext |
+	| jumpNext operand |
 	<var: #jumpNext type: #'AbstractInstruction *'>
 	self compilePICAbort: numArgs.
 	jumpNext := self compileCPICEntry.
-	self MoveCw: methodOperand R: SendNumArgsReg.
+	"We do not scavenge PICs, hence we cannot cache the MNU method if it is in new space."
+	operand := (methodOperand isNil or: [objectMemory isYoungObject: methodOperand])
+					ifTrue: [0]
+					ifFalse: [methodOperand].
+	self MoveCw: operand R: SendNumArgsReg.
 	self JumpLong: picMNUAbort asInteger.
 	jumpNext jmpTarget: (self MoveCw: cPIC asInteger R: ClassReg).
 	self JumpLong: (self cPICMissTrampolineFor: numArgs).
