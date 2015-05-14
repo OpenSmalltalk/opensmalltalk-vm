@@ -2765,7 +2765,7 @@ CogARMCompiler >> rotateable8bitImmediate: constant ifTrue: trueAlternativeBlock
 	2 to: 30 by: 2 do:
 		[:i |
 		(constant bitAnd: ((16rFF <<i bitAnd:16rFFFFFFFF) bitOr: 16rFF>>(32-i))) = constant ifTrue:
-			[^trueAlternativeBlock value: 32 - i value: constant >> i]].
+			[^trueAlternativeBlock value: 32 - i value: ((constant >> i) bitOr: (constant <<(32 - i) bitAnd:16rFFFFFFFF))]].
 	^falseAlternativeBlock value
 ]
 
