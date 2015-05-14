@@ -4498,8 +4498,8 @@ StackToRegisterMappingCogit >> setInterpreter: aCoInterpreter [
 	simSelf := CogSimStackEntry new cogit: self.
 	optStatus := CogSSOptStatus new.
 
-	debugFixupBreaks := Set new.
-	debugBytecodePointers := Set new.
+	debugFixupBreaks := self class initializationOptions at: #debugFixupBreaks ifAbsent: [Set new].
+	debugBytecodePointers := self class initializationOptions at: #debugBytecodePointers ifAbsent: [Set new].
 
 	numPushNilsFunction := self class numPushNilsFunction.
 	pushNilSizeFunction := self class pushNilSizeFunction
