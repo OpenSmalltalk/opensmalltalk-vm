@@ -108,6 +108,7 @@ CogObjectRepresentation >> genCreateClosureAt: bcpc numArgs: numArgs numCopied: 
 CogObjectRepresentation >> genEnsureObjInRegNotForwarded: reg scratchReg: scratch [
 	"Make sure that the object in reg is not forwarded.  By default there is
 	 nothing to do.  Subclasses for memory managers that forward will override."
+	<inline: true>
 	^0
 ]
 
@@ -116,6 +117,7 @@ CogObjectRepresentation >> genEnsureObjInRegNotForwarded: reg scratchReg: scratc
 	"Make sure that the non-immediate oop in reg is not forwarded, updating the field
 	 at offset from baseReg.  By default there is nothing to do.  Subclasses for memory
 	 managers that forward will override."
+	<inline: true>
 	^0
 ]
 
@@ -123,6 +125,7 @@ CogObjectRepresentation >> genEnsureObjInRegNotForwarded: reg scratchReg: scratc
 CogObjectRepresentation >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch [
 	"Make sure that the oop in reg is not forwarded.  By default there is
 	 nothing to do.  Subclasses for memory managers that forward will override."
+	<inline: true>
 	^0
 ]
 
@@ -130,6 +133,7 @@ CogObjectRepresentation >> genEnsureOopInRegNotForwarded: reg scratchReg: scratc
 CogObjectRepresentation >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch ifForwarder: fwdJumpTarget ifNotForwarder: nonFwdJumpTargetOrZero [
 	"Make sure that the oop in reg is not forwarded.  By default there is
 	 nothing to do.  Subclasses for memory managers that forward will override."
+	<inline: true>
 	^0
 ]
 
@@ -137,6 +141,8 @@ CogObjectRepresentation >> genEnsureOopInRegNotForwarded: reg scratchReg: scratc
 CogObjectRepresentation >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch jumpBackTo: instruction [
 	"Make sure that the oop in reg is not forwarded.  By default there is
 	 nothing to do.  Subclasses for memory managers that forward will override."
+	<var: #instruction type: #'AbstractInstruction *'>
+	<inline: true>
 	^0
 ]
 
