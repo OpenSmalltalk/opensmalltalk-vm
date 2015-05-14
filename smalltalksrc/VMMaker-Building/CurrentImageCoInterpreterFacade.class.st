@@ -126,9 +126,11 @@ CurrentImageCoInterpreterFacade >> argumentCountOf: anOop [
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> argumentCountOfMethodHeader: aSmallIntegerOop [
-	"a.k.a. (headerToMethodMap at: aSmallIntegerOop) numArgs"
-	^coInterpreter argumentCountOfMethodHeader: aSmallIntegerOop
+CurrentImageCoInterpreterFacade >> argumentCountOfMethodHeader: headerIntegerOop [
+	^(headerToMethodMap at: headerIntegerOop) numArgs
+	"a.k.a.
+	^coInterpreter argumentCountOfMethodHeader: headerIntegerOop,
+	 but only if the CompiledMethod header formats match"
 ]
 
 { #category : #accessing }
@@ -585,7 +587,10 @@ CurrentImageCoInterpreterFacade >> literalCountOf: anOop [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> literalCountOfMethodHeader: headerIntegerOop [
-	^objectMemory literalCountOfMethodHeader: headerIntegerOop
+	^(headerToMethodMap at: headerIntegerOop) numLiterals
+	"a.k.a.
+	^coInterpreter literalCountOfMethodHeader: aSmallIntegerOop,
+	 but only if the CompiledMethod header formats match"
 ]
 
 { #category : #accessing }
@@ -968,9 +973,11 @@ CurrentImageCoInterpreterFacade >> startPCOfMethod: anOop [
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> startPCOfMethodHeader: aSmallIntegerOop [
-	"a.k.a. (headerToMethodMap at: aSmallIntegerOop) initialPC - 1"
-	^coInterpreter startPCOfMethodHeader: aSmallIntegerOop
+CurrentImageCoInterpreterFacade >> startPCOfMethodHeader: headerIntegerOop [
+	^(headerToMethodMap at: headerIntegerOop) initialPC - 1
+	"a.k.a.
+	^coInterpreter startPCOfMethodHeader: headerIntegerOop,
+	 but only if the CompiledMethod header formats match"
 ]
 
 { #category : #accessing }
@@ -1010,9 +1017,11 @@ CurrentImageCoInterpreterFacade >> tempCountOf: anOop [
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> temporaryCountOfMethodHeader: aSmallIntegerOop [
-	"a.k.a. (headerToMethodMap at: aSmallIntegerOop) numTemps"
-	^coInterpreter temporaryCountOfMethodHeader: aSmallIntegerOop
+CurrentImageCoInterpreterFacade >> temporaryCountOfMethodHeader: headerIntegerOop [
+	^(headerToMethodMap at: headerIntegerOop) numTemps
+	"a.k.a.
+	^coInterpreter temporaryCountOfMethodHeader: headerIntegerOop,
+	 but only if the CompiledMethod header formats match"
 ]
 
 { #category : #accessing }
