@@ -40,7 +40,7 @@ extern unsigned long getfp();
 	 * ARM DUI 0041C Page 9-7
 	 */
 #  if __GNUC__
-/ * # define getsp() ({ void *sp; asm volatile ("mov %0, %%sp" : "=r"(sp) : ); sp;}) */
+/* # define getsp() ({ void *sp; asm volatile ("mov %0, %%sp" : "=r"(sp) : ); sp;}) */
 
 #   define getfp() ({ unsigned long fp;					\
 					  asm volatile ("mov %0, %%fp" : "=r"(fp) : );	\
@@ -67,7 +67,7 @@ extern unsigned long (*ceGetSP)(); /* provided by Cogit */
 	extern sqInt cFramePointerInUse;										\
 	if (cFramePointerInUse)													\
 		assert((getfp() & STACK_ALIGN_MASK) == STACK_FP_ALIGN_BYTES);		\
-	assert((ceGetSP() & STACK_ALIGN_MASK) == STACK_FP_ALIGN_BYTES);			\
+	assert((ceGetSP() & STACK_ALIGN_MASK) == 0);	\
 } while (0)
 # endif
 #else /* defined(STACK_ALIGN_BYTES) */
