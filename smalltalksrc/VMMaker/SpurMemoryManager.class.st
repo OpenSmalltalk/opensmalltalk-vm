@@ -3995,7 +3995,7 @@ SpurMemoryManager >> emptyObjStack: objStack [
 	| nextPage nextNextPage |
 	objStack = nilObj ifTrue:
 		[^self].
-	self eassert: (self isValidObjStack: objStack).
+	self eassert: [self isValidObjStack: objStack].
 	self storePointer: ObjStackTopx ofObjStack: objStack withValue: 0.
 	nextPage := self fetchPointer: ObjStackNextx ofObject: objStack.
 	[nextPage ~= 0] whileTrue:
@@ -4007,7 +4007,7 @@ SpurMemoryManager >> emptyObjStack: objStack [
 		 self storePointer: ObjStackFreex ofObjStack: objStack withValue: nextPage.
 		 nextPage := nextNextPage].
 	self storePointer: ObjStackNextx ofObjStack: objStack withValue: 0.
-	self eassert: (self isValidObjStack: objStack)
+	self eassert: [self isValidObjStack: objStack]
 ]
 
 { #category : #accessing }
@@ -6169,7 +6169,7 @@ SpurMemoryManager >> isContextNonImm: oop [
 SpurMemoryManager >> isEmptyObjStack: objStack [
 	objStack = nilObj ifTrue:
 		[^true].
-	self eassert: (self isValidObjStack: objStack).
+	self eassert: [self isValidObjStack: objStack].
 	^0 = (self fetchPointer: ObjStackTopx ofObject: objStack)
 	  and: [0 = (self fetchPointer: ObjStackNextx ofObject: objStack)]
 ]
@@ -7150,7 +7150,8 @@ SpurMemoryManager >> lookupAddress: address [
 		[^address caseOf: { [nilObj] -> ['nil']. [trueObj] -> ['true']. [falseObj] -> ['false'] } otherwise: []].
 	((fmt between: self firstByteFormat and: self firstCompiledMethodFormat - 1) "indexable byte fields"
 	and: [(size between: 1 and: 64)
-	and: [Scanner isLiteralSymbol: (string := (0 to: size - 1) collect: [:i| Character value: (self fetchByte: i ofObject: address)])]]) ifTrue:
+	and: [(Scanner isLiteralSymbol: (string := (0 to: size - 1) collect: [:i| Character value: (self fetchByte: i ofObject: address)]))
+		or: [NewspeakVM and: [string noneSatisfy: [:c| c isSeparator or: [c asInteger > 126]]]]]]) ifTrue:
 		[^'#', (ByteString withAll: string)].
 	class := self noCheckClassAtIndex: thisClassIndex.
 	(class isNil or: [class = nilObj]) ifTrue:
@@ -8073,7 +8074,7 @@ SpurMemoryManager >> nilUnmarkedWeaklingSlots [
 	 Finally, empty the weaklingStack."
 	<inline: #never> "for profiling"
 	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: 'nilling...'; flush].
-	self eassert: self allOldMarkedWeakObjectsOnWeaklingStack.
+	self eassert: [self allOldMarkedWeakObjectsOnWeaklingStack].
 	weaklingStack = nilObj ifTrue:
 		[^self].
 	self objStack: weaklingStack from: 0 do:
@@ -8121,7 +8122,7 @@ SpurMemoryManager >> noCheckClassAtIndex: classIndex [
 SpurMemoryManager >> noCheckPush: objOop onObjStack: objStack [
 	"Push an element on an objStack.  Split from push:onObjStack: for testing."
 	| topx |
-	self eassert: (self isValidObjStack: objStack).
+	self eassert: [self isValidObjStack: objStack].
 	self cCode: [] "for debugging markAndTrace: set (MarkStackRecord := OrderedCollection new)"
 		inSmalltalk:
 			[(self fetchPointer: ObjStackMyx ofObject: objStack) = MarkStackRootIndex ifTrue:
@@ -8444,7 +8445,7 @@ SpurMemoryManager >> objStack: objStack from: start do: aBlock [
 	 unstable if aBlock causes elements to be removed."
 	<inline: true>
 	| size objStackPage numToEnumerate |
-	self eassert: (self isValidObjStack: weaklingStack).
+	self eassert: [self isValidObjStack: weaklingStack].
 	size := self fetchPointer: ObjStackTopx ofObject: objStack.
 	objStackPage := self fetchPointer: ObjStackNextx ofObject: objStack.
 	[objStackPage ~= 0] whileTrue:
@@ -8798,7 +8799,7 @@ SpurMemoryManager >> pop: nItems thenPush: oop [
 { #category : #'obj stacks' }
 SpurMemoryManager >> popObjStack: objStack [
 	| topx top nextPage myx |
-	self eassert: (self isValidObjStack: objStack).
+	self eassert: [self isValidObjStack: objStack].
 	topx := self fetchPointer: ObjStackTopx ofObject: objStack.
 	topx = 0 ifTrue:
 		[self assert: (self fetchPointer: ObjStackNextx ofObject: objStack) = 0.
@@ -8825,9 +8826,9 @@ SpurMemoryManager >> popObjStack: objStack [
 			 self storePointer: ObjStackNextx ofObjStack: objStack withValue: 0.
 			 myx := self fetchPointer: ObjStackMyx ofObject: objStack.
 			 self updateRootOfObjStackAt: myx with: nextPage.
-			 self eassert: (self isValidObjStack: nextPage)]
+			 self eassert: [self isValidObjStack: nextPage]]
 		ifFalse:
-			[self eassert: (self isValidObjStack: objStack)].
+			[self eassert: [self isValidObjStack: objStack]].
 	^top
 ]
 
