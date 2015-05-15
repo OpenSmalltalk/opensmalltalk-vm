@@ -3622,7 +3622,7 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 	address := self addressOfEndOfCase: cPIC cPICNumCases - 1 inCPIC: cPIC.
 	size := self generateInstructionsAt: address.
 	end := self outputInstructionsAt: address.
-	processor flushICacheFrom: address to: cPIC asInteger + closedPICSize.
+	processor flushICacheFrom: cPIC asInteger to: cPIC asInteger + closedPICSize.
 	cPIC cPICNumCases: cPIC cPICNumCases + 1.
 	^0
 ]
@@ -4715,6 +4715,7 @@ Cogit >> fillInCPICHeader: pic size: size numArgs: numArgs numCases: numCases ha
 	self assert: pic cPICNumCases = numCases.
 	self assert: (backEnd callTargetFromReturnAddress: pic asInteger + missOffset) = (self picAbortTrampolineFor: numArgs).
 	self assert: size = (methodZone roundUpLength: size).
+	processor flushICacheFrom: pic asUnsignedInteger to: pic asUnsignedInteger + size.
 	^pic
 ]
 
@@ -4764,6 +4765,7 @@ Cogit >> fillInMethodHeader: method size: size selector: selector [
 	self assert: (backEnd callTargetFromReturnAddress: method asInteger + missOffset)
 				= (self methodAbortTrampolineFor: method cmNumArgs).
 	self assert: size = (methodZone roundUpLength: size).
+	processor flushICacheFrom: method asUnsignedInteger to: method asUnsignedInteger + size.
 	^method
 ]
 
@@ -4790,6 +4792,7 @@ Cogit >> fillInOPICHeader: pic size: size numArgs: numArgs selector: selector [
 	self assert: pic cmNumArgs = numArgs.
 	self assert: (backEnd callTargetFromReturnAddress: pic asInteger + missOffset) = (self picAbortTrampolineFor: numArgs).
 	self assert: size = (methodZone roundUpLength: size).
+	processor flushICacheFrom: pic asUnsignedInteger to: pic asUnsignedInteger + size.
 	^pic
 ]
 
@@ -5705,6 +5708,7 @@ Cogit >> generateCaptureCStackPointers: captureFramePointer [
 				self MoveR: TempReg Aw: self cStackPointerAddress].
 	self RetN: 0.
 	self outputInstructionsForGeneratedRuntimeAt: startAddress.
+	processor flushICacheFrom: startAddress to: methodZoneBase.
 	self recordGeneratedRunTime: 'ceCaptureCStackPointers' address: startAddress.
 	ceCaptureCStackPointers := self cCoerceSimple: startAddress to: #'void (*)(void)'
 ]
@@ -5770,7 +5774,6 @@ Cogit >> generateCogMethod: selector [
 	postCompileHook notNil ifTrue:
 		[self perform: postCompileHook with: method with: primInvokeLabel.
 		 postCompileHook := nil].
-	processor flushICacheFrom: startAddress to: startAddress + headerSize + codeSize.
 	^method
 ]
 

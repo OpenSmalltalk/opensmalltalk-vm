@@ -63,6 +63,8 @@ Class {
 		'TraceIsFromMachineCode',
 		'TraceOwnVM',
 		'TracePreemptDisowningThread',
+		'TracePrimitiveFailure',
+		'TracePrimitiveRetry',
 		'TraceSources',
 		'TraceStackOverflow',
 		'TraceThreadSwitch',
@@ -268,6 +270,8 @@ CoInterpreter class >> initializeMiscConstants [
 	TraceVMCallback := self objectMemoryClass basicNew integerObjectOf: 11.
 	TraceVMCallbackReturn := self objectMemoryClass basicNew integerObjectOf: 12.
 	TraceStackOverflow := self objectMemoryClass basicNew integerObjectOf: 13.
+	TracePrimitiveFailure := self objectMemoryClass basicNew integerObjectOf: 14.
+	TracePrimitiveRetry := self objectMemoryClass basicNew integerObjectOf: 15.
 
 	TraceIsFromMachineCode := 1.
 	TraceIsFromInterpreter := 2.
@@ -2294,6 +2298,19 @@ CoInterpreter >> checkCogCompiledCodeCompactionCalledFor [
 		[self commenceCogCompiledCodeCompaction]
 ]
 
+{ #category : #'primitive support' }
+CoInterpreter >> checkForAndFollowForwardedPrimitiveState [
+	"Override to log"
+	<option: #SpurObjectMemory>
+	| found |
+	cogit recordPrimTrace ifTrue:
+		[self fastLogPrim: TracePrimitiveFailure].
+	found := super checkForAndFollowForwardedPrimitiveState.
+	(found and: [cogit recordPrimTrace]) ifTrue:
+		[self fastLogPrim: TracePrimitiveRetry].
+	^found
+]
+
 { #category : #'object memory support' }
 CoInterpreter >> checkLogIntegrity [
 	"Check the log for leaks.  The trace log is a circular buffer of pairs of entries.
@@ -3258,11 +3275,12 @@ CoInterpreter >> externalizeIPandSP [
 ]
 
 { #category : #'debug support' }
-CoInterpreter >> fastLogPrim: aSelector [
+CoInterpreter >> fastLogPrim: aSelectorOrImmediate [
 	"Fast tracing of named primitives.  primTraceLogIndex is a byte variable.
+	 aSelectorOrImmediate is a selector oop or one of TraceCodeCompaction et al.
 	 primTraceLog has 256 entries.  In C the + 1 below is hence implicitly modulo 256."
 	<inline: true>
-	primTraceLog at: primTraceLogIndex put: aSelector.
+	primTraceLog at: primTraceLogIndex put: aSelectorOrImmediate.
 	self primTraceLogIndex: primTraceLogIndex + 1
 ]
 
@@ -5107,7 +5125,9 @@ CoInterpreter >> maybeTraceStackOverflow [
 			thing: TraceStackOverflow
 			source: ((self isMachineCodeFrame: framePointer)
 						ifTrue: [TraceIsFromMachineCode]
-						ifFalse: [TraceIsFromInterpreter])]
+						ifFalse: [TraceIsFromInterpreter])].
+	cogit recordPrimTrace ifTrue:
+		[self fastLogPrim: TraceStackOverflow]
 ]
 
 { #category : #'cog jit support' }
@@ -5998,6 +6018,12 @@ CoInterpreter >> printPrimLogEntryAt: i [
 				[self print: '**FullGC**'. ^nil].
 			 intOrSelector = TraceCodeCompaction ifTrue:
 				[self print: '**CompactCode**'. ^nil].
+			 intOrSelector = TraceStackOverflow ifTrue:
+				[self print: '**StackOverflow**'. ^nil].
+			 intOrSelector = TracePrimitiveFailure ifTrue:
+				[self print: '**PrimitiveFailure**'. ^nil].
+			 intOrSelector = TracePrimitiveRetry ifTrue:
+				[self print: '**PrimitiveRetry**'. ^nil].
 			 self print: '???']
 		ifFalse:
 			[intOrSelector = 0
