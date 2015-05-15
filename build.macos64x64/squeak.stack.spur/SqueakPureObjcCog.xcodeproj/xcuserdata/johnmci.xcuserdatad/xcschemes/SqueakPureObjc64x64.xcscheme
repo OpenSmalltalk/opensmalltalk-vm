@@ -16,7 +16,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "948773F910C64DD800E4AEC5"
                BuildableName = "Squeak.app"
-               BlueprintName = "SqueakPureObjc64*64"
+               BlueprintName = "SqueakPureObjc64x64"
                ReferencedContainer = "container:SqueakPureObjc.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -34,7 +34,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "948773F910C64DD800E4AEC5"
             BuildableName = "Squeak.app"
-            BlueprintName = "SqueakPureObjc64*64"
+            BlueprintName = "SqueakPureObjc64x64"
             ReferencedContainer = "container:SqueakPureObjcCog.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -56,7 +56,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "948773F910C64DD800E4AEC5"
             BuildableName = "Squeak.app"
-            BlueprintName = "SqueakPureObjc64*64"
+            BlueprintName = "SqueakPureObjc64x64"
             ReferencedContainer = "container:SqueakPureObjcCog.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -92,7 +92,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "948773F910C64DD800E4AEC5"
             BuildableName = "Squeak.app"
-            BlueprintName = "SqueakPureObjc64*64"
+            BlueprintName = "SqueakPureObjc64x64"
             ReferencedContainer = "container:SqueakPureObjc.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
