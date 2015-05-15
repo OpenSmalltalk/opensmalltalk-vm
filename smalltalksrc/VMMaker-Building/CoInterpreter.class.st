@@ -1580,9 +1580,12 @@ CoInterpreter >> ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr [
 		primitiveIndex := self primitiveIndexOf: aMethodObj.
 		primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: objectMemory nilObject.
 		^self interpretMethodFromMachineCode].
+	"handleMNU:InMachineCodeTo:classForMessage: assumes lkupClass is set, since every other use is
+	 after a lookupMethodNoMNUEtcInClass: call, which sets lkupClass.  Here we must set it manually.
+	 Global variables.  Bah!"
 	self handleMNU: SelectorDoesNotUnderstand
 		InMachineCodeTo: rcvr
-		classForMessage: (objectMemory fetchClassOf: rcvr).
+		classForMessage: (lkupClass := objectMemory fetchClassOf: rcvr).
 	"NOTREACHED"
 	self assert: false
 ]
