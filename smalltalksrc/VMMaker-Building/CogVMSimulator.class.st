@@ -383,7 +383,7 @@ CogVMSimulator >> ceCounterTripped: condition [
 { #category : #trampolines }
 CogVMSimulator >> ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr [
 	| cPIC |
-	cPIC := self cCoerceSimple: self popStack - cogit mnuOffset to: #'CogMethod *'.
+	cPIC := self cCoerceSimple: self stackTop - cogit mnuOffset to: #'CogMethod *'.
 	self assert: (cPIC cmType = CMClosedPIC or: [cPIC cmType = CMOpenPIC]).
 	self mnuBreakpoint: cPIC selector receiver: nil.
 	^super ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr
@@ -3764,6 +3764,23 @@ CogVMSimulator >> validOop: oop [
 	(self longAt: oop) = 4 ifTrue: [^ false].
 	(objectMemory headerType: oop) = 2 ifTrue: [^ false].	"Free object"
 	^ true
+]
+
+{ #category : #'debug support' }
+CogVMSimulator >> veryDeepCopyWith: deepCopier [
+	"Override to short-circuit the copying of any VMPluginCodeGenerators referenced from mappedPluginEntries and
+	 uniqueIndices. These can in turn hold onto Monticello state, resulting in a huge ammount of unnecessary copying."
+	deepCopier references
+		at: mappedPluginEntries ifAbsentPut: [mappedPluginEntries];
+		at: uniqueIndices ifAbsentPut: [uniqueIndices].
+	mappedPluginEntries do:
+		[:tuple|
+		[:sim :sel :block :argCount|
+		deepCopier references at: block ifAbsentPut: [block]] valueWithArguments: tuple].
+	uniqueIndices keysDo:
+		[:block|
+		deepCopier references at: block ifAbsentPut: [block]].
+	^super veryDeepCopyWith: deepCopier
 ]
 
 { #category : #'multi-threading simulation switch' }
