@@ -947,6 +947,18 @@ SpurMemoryManager class >> isNonArgumentImplicitReceiverVariableName: aString [
 ]
 
 { #category : #translation }
+SpurMemoryManager class >> isSameLevelObjectAccessor: selector [
+	"For accessor depth calculation, answer if selector doesn't traverse into an object, merely deriving a pointer from it."
+	^#(arrayValueOf: firstFixedField: firstIndexableField:) includes: selector
+]
+
+{ #category : #translation }
+SpurMemoryManager class >> isTerminalObjectAccessor: selector [
+	"For accessor depth calculation, answer if selector doesn't answer another object object; merely a value."
+	^#(byteSizeOf: fetchFloat:ofObject: fetchInteger:ofObject: fetchLong32:ofObject: instanceSizeOf: slotSizeOf: stSizeOf:) includes: selector
+]
+
+{ #category : #translation }
 SpurMemoryManager class >> mustBeGlobal: var [
 	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM support code."
 
