@@ -7,11 +7,19 @@
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
 *
+*   UPDATES:
+*     1) Support for long path names added by using UNC prefix in that case
+*        (Marcel Taeumel, Hasso Plattner Institute, Postdam, Germany)
+*
 *****************************************************************************/
 #include <windows.h>
+
 #include "sq.h"
+#include "../plugins/FilePlugin/sqWin32File.h"
 
 extern struct VirtualMachine *interpreterProxy;
+
+#define FAIL() { return interpreterProxy->primitiveFail(); }
 
 /***
 	The interface to the directory primitive is path based.
@@ -32,7 +40,7 @@ int caseSensitiveFileMode = 0;
 
 int hasCaseSensitiveDuplicate(WCHAR *path) {
   WCHAR *src, *dst, *prev;
-  WCHAR findPath[MAX_PATH];
+  WCHAR* findPath = NULL;
   WIN32_FIND_DATAW findData; /* cached find data */
   HANDLE findHandle = 0; /* cached find handle */
 
@@ -41,15 +49,17 @@ int hasCaseSensitiveDuplicate(WCHAR *path) {
   if(!path) return 0;
   if(*path == 0) return 0;
 
+  findPath = (WCHAR*)alloca((wcslen(path) + 1) * sizeof(WCHAR));
+
   /* figure out the root of the path (we can't test it) */
   dst = findPath;
   src = path;
   *dst++ = *src++;
   *dst++ = *src++;
-  if(path[0] == '\\' && path[1] == '\\') {
-    /* \\server\name */
-    while(*src != 0 && *src != '\\') *dst++ = *src++;
-  } else if(path[1] != ':' || path[2] != '\\') {
+  if(path[0] == L'\\' && path[1] == L'\\') {
+    /* \\server\name resp. an UNC path */
+    while(*src != 0 && *src != L'\\') *dst++ = *src++;
+  } else if(path[1] != L':' || path[2] != L'\\') {
     /* Oops??? What is this??? */
     printf("hasCaseSensitiveDuplicate: Unrecognized path root\n");
     return 0;
@@ -60,12 +70,12 @@ int hasCaseSensitiveDuplicate(WCHAR *path) {
      potential mismatches */
   while(true) {
     /* skip backslashes */
-    while(*src != 0 && *src == '\\') src++;
+    while(*src != 0 && *src == L'\\') src++;
     if(!*src) return 0; /* we're done */
     /* copy next path component into findPath */
-    *dst++ = '\\';
+    *dst++ = L'\\';
     prev = dst;
-    while(*src != 0 && *src != '\\') *dst++ = *src++;
+    while(*src != 0 && *src != L'\\') *dst++ = *src++;
     *dst = 0;
     /* now let's go find it */
     findHandle = FindFirstFileW(findPath, &findData);
@@ -110,13 +120,11 @@ DWORD convertToSqueakTime(SYSTEMTIME st)
 
 int dir_Create(char *pathString, int pathLength)
 {
-  WCHAR win32Path[MAX_PATH];
-  int sz;
-  /* convert the file name into a null-terminated C string */
-  sz = MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, NULL, 0);
-  if(sz > MAX_PATH) return 0;
-  MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, win32Path, sz);
-  win32Path[sz] = 0;
+  WCHAR *win32Path = NULL;
+
+  /* convert the path name into a null-terminated C string */
+  ALLOC_WIN32_PATH(win32Path, pathString, pathLength);
+
   return CreateDirectoryW(win32Path,NULL);
 }
 
@@ -140,9 +148,10 @@ int dir_Lookup(char *pathString, int pathLength, int index,
   static WIN32_FIND_DATAW findData; /* cached find data */
   static HANDLE findHandle = 0; /* cached find handle */
   static int lastIndex = 0; /* cached last index */
-  static WCHAR lastString[MAX_PATH+1]; /* cached last path */
+  static WCHAR *lastString = NULL; /* cached last path */
   static int lastStringLength = 0; /* cached length of last path */
-  WCHAR win32Path[MAX_PATH];
+  WCHAR *win32Path = NULL;
+  int win32PathLength = 0;
   FILETIME fileTime;
   SYSTEMTIME sysTime;
   int i, sz;
@@ -155,15 +164,18 @@ int dir_Lookup(char *pathString, int pathLength, int index,
   *isDirectory      = false;
   *sizeIfFile       = 0;
 
+  /* convert the path name into a null-terminated C string */
+  ALLOC_WIN32_PATH(win32Path, pathString, pathLength);
+  win32PathLength = wcslen(win32Path);
+
   /* check for a dir cache hit (but NEVER on the top level) */
-  if(pathLength && 
-     lastStringLength == pathLength && 
+  if(win32PathLength > 0 && 
+     lastStringLength == win32PathLength && 
      lastIndex + 1 == index) {
-    for(i=0;i<pathLength; i++) {
-      if(lastString[i] != pathString[i])
-	break;
+    for(i=0;i<win32PathLength; i++) {
+      if(lastString[i] != win32Path[i]) break;
     }
-    if(i == pathLength) {
+    if(i == win32PathLength) {
       lastIndex = index;
       index = 2;
       goto dirCacheHit;
@@ -178,7 +190,7 @@ int dir_Lookup(char *pathString, int pathLength, int index,
 
 #if !defined(_WIN32_WCE)
   /* Like Unix, Windows CE does not have drive letters */
-  if(pathLength == 0) { 
+  if(win32PathLength == 0) { 
     /* we're at the top of the file system --- return possible drives */
     int mask;
 
@@ -201,26 +213,29 @@ int dir_Lookup(char *pathString, int pathLength, int index,
 #endif /* !defined(_WIN32_WCE) */
 
   /* cache the path */
-  for(i=0; i < pathLength;i++)
-    lastString[i] = pathString[i];
-  lastString[pathLength] = 0;
-  lastStringLength = pathLength;
+  if(lastString) free(lastString);
+  lastString = (WCHAR*)calloc(win32PathLength+1, sizeof(WCHAR));
+//  wcscpy_s(lastString, win32PathLength, win32Path);
+  wcscpy(lastString, win32Path);
+  lastString[win32PathLength] = 0;
+  lastStringLength = win32PathLength;
 
-  /* convert the path to a win32 string */
-  sz = MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, NULL, 0);
-  if(sz > MAX_PATH) return BAD_PATH;
-  MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, win32Path, sz);
-  win32Path[sz] = 0;
 
   if(hasCaseSensitiveDuplicate(win32Path)) {
     lastStringLength = 0;
     return BAD_PATH;
   }
-  if(win32Path[sz-1] != '\\') {
-    win32Path[sz++] = '\\';
-  }
-  win32Path[sz++] = '*';
-  win32Path[sz] = 0;
+
+  /* Ensure trailing delimiter and add wildcard pattern. */
+  if(win32Path[win32PathLength-1] != L'\\') {
+    win32PathLength += 2;
+  } else {
+    win32PathLength++;
+  };
+  REALLOC_WIN32_PATH(win32Path, win32PathLength);
+  win32Path[win32PathLength-1-1] = L'\\';
+  win32Path[win32PathLength-1] = L'*';
+  win32Path[win32PathLength] = 0; // Not needed. See REALLOC_WIN32_PATH.
 
   /* and go looking for entries */
   findHandle = FindFirstFileW(win32Path,&findData);
@@ -231,9 +246,9 @@ int dir_Lookup(char *pathString, int pathLength, int index,
   }
   while(1) {
     /* check for '.' or '..' directories */
-    if(findData.cFileName[0] == '.')
+    if(findData.cFileName[0] == L'.')
       if(findData.cFileName[1] == 0 ||
-	 (findData.cFileName[1] == '.' &&
+	 (findData.cFileName[1] == L'.' &&
 	  findData.cFileName[2] == 0))
 	index = index + 1; /* hack us back to the last index */
     if(index <= 1) break;
@@ -283,7 +298,8 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
 
   HANDLE findHandle;
   WIN32_FILE_ATTRIBUTE_DATA winAttrs;
-  WCHAR win32Path[MAX_PATH];
+  WCHAR *win32Path = NULL;
+  int win32PathLength = 0;
   FILETIME fileTime;
   SYSTEMTIME sysTime;
   int i, sz, fsz;
@@ -296,9 +312,13 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
   *isDirectory      = false;
   *sizeIfFile       = 0;
 
+  /* convert the path name into a null-terminated C string */
+  ALLOC_WIN32_PATH(win32Path, pathString, pathLength);
+  win32PathLength = wcslen(win32Path);
+
 #if !defined(_WIN32_WCE)
   /* Like Unix, Windows CE does not have drive letters */
-  if (pathLength == 0) { 
+  if (win32PathLength == 0) { 
     /* we're at the top of the file system --- return possible drives */
     char drive = toupper(nameString[0]);
     int mask;
@@ -323,27 +343,23 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
   }
 #endif /* !defined(_WIN32_WCE) */
 
-  /* convert the path to a win32 string */
-  sz = MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, NULL, 0);
-  if (sz > MAX_PATH) return BAD_PATH;
-  MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, win32Path, sz);
-  win32Path[sz] = 0;
-
   if (hasCaseSensitiveDuplicate(win32Path)) {
     return BAD_PATH;
   }
-  if(win32Path[sz-1] != '\\') {
-    win32Path[sz++] = '\\';
-  }
 
+  /* Ensure trailing delimiter and add filename. */
+  if(win32Path[win32PathLength-1] != L'\\') win32PathLength++;
   fsz = MultiByteToWideChar(CP_UTF8, 0, nameString, nameStringLength, NULL, 0);
-  if (fsz + sz > MAX_PATH) return BAD_PATH;
-  MultiByteToWideChar(CP_UTF8, 0, nameString, nameStringLength, &(win32Path[sz]), fsz);
-  sz = sz + fsz;
-  win32Path[sz] = 0;
+  sz = win32PathLength;
+  win32PathLength += fsz;
+  if(win32PathLength >= 32767) FAIL();
+  REALLOC_WIN32_PATH(win32Path, win32PathLength);
+  win32Path[win32PathLength-fsz-1] = L'\\';
+  MultiByteToWideChar(CP_UTF8, 0, nameString, nameStringLength, win32Path+sz, fsz); 
+  win32Path[win32PathLength] = 0; // Not needed. See REALLOC_WIN32_PATH.
 
   if(!GetFileAttributesExW(win32Path, 0, &winAttrs)) {
-	return NO_MORE_ENTRIES;
+  	return NO_MORE_ENTRIES;
   }
  
   memcpy(name, nameString, nameStringLength);
@@ -380,18 +396,16 @@ dir_GetMacFileTypeAndCreator(char *filename, int filenameSize,
 			     char *fType, char *fCreator)
 {
   /* Win32 files are untyped, and the creator is correct by default */
-  return interpreterProxy->primitiveFail();
+  FAIL();
 }
 
 int dir_Delete(char *pathString, int pathLength) {
   /* Delete the existing directory with the given path. */
-  WCHAR win32Path[MAX_PATH];
-  int sz;
+  WCHAR *win32Path = NULL;
+
   /* convert the file name into a null-terminated C string */
-  sz = MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, NULL, 0);
-  if(sz > MAX_PATH) return 0;
-  MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, win32Path, sz);
-  win32Path[sz] = 0;
+  ALLOC_WIN32_PATH(win32Path, pathString, pathLength);
+
   if(hasCaseSensitiveDuplicate(win32Path)) return false;
   return RemoveDirectoryW(win32Path) == 0 ? false : true;
 }
