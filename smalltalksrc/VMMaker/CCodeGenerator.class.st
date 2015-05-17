@@ -168,7 +168,8 @@ CCodeGenerator >> accessorDepthForChain: chain [ "OrderedCollection"
 	accessorDepth := 0.
 	chain do:
 		[:node|
-		 (node isAssignment and: [node expression isVariable]) ifFalse:
+		 ((node isAssignment and: [node expression isVariable])
+		  or: [node isSend and: [SpurMemoryManager isSameLevelObjectAccessor: node selector]]) ifFalse:
 			[accessorDepth := accessorDepth + 1]].
 	^accessorDepth
 ]
@@ -249,9 +250,10 @@ CCodeGenerator >> accessorsAndAssignmentsForMethod: method actuals: actualParame
 							 accessors addAll: subAccessors.
 							 assignments addAll: subAssignments]]]].
 		(node isAssignment
+		 and: [(node expression isSend and: [SpurMemoryManager isTerminalObjectAccessor: node expression selector]) not
 		 and: [(roots includes: node expression)
 			or: [(accessors includes: node expression)
-			or: [node expression isVariable and: [node expression name ~= 'nil']]]]) ifTrue:
+			or: [node expression isVariable and: [node expression name ~= 'nil']]]]]) ifTrue:
 			[assignments add: node]].
 	^aTrinaryBlock
 		value: roots
@@ -3481,6 +3483,17 @@ CCodeGenerator >> isNonArgumentImplicitReceiverVariableName: aString [
 { #category : #'spur primitive compilation' }
 CCodeGenerator >> isObjectAccessor: selector given: interpreterClass [
 	^interpreterClass isObjectAccessor: selector
+]
+
+{ #category : #'type inference' }
+CCodeGenerator >> isSimpleType: aType [
+	"For the purposes of the read-before-written initializer, answer if
+	 aType is simple, e.g. not a structure, and array or an opaque type."
+	^aType last = $*
+	  or: [#(	sqInt usqInt sqLong usqLong
+			int #'unsigned int' double float
+			short #'unsigned short'
+			char #'unsigned char' #'signed char') includes: aType]
 ]
 
 { #category : #'spur primitive compilation' }
