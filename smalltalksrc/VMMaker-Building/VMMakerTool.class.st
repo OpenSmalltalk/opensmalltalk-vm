@@ -218,15 +218,15 @@ VMMakerTool >> buildCenterRows [
 	color1 := Color blue veryMuchLighter.
 	color2 := Color green veryMuchLighter.
 	rows := Morph new color: Color transparent;
-				 layoutPolicy: TableLayout new;
-				 vResizing: #spaceFill;
-				 extent: 550 @ (TextStyle defaultFont height * 8);
-				 hResizing: #spaceFill;
-				 listDirection: #topToBottom;
+				layoutPolicy: TableLayout new;
+				vResizing: #spaceFill;
+				extent: 550 @ (TextStyle defaultFont height * 14);
+				hResizing: #spaceFill;
+				listDirection: #topToBottom;
 				borderStyle: (BorderStyle complexAltRaised width: 2);
-				 wrapDirection: #none;
-				 wrapCentering: #center;
-				 yourself.
+				wrapDirection: #none;
+				wrapCentering: #center;
+				yourself.
 	rows
 		addMorphBack: ((self
 				entryRowWithLabel: 'Interpreter class name:'
