@@ -7,6 +7,12 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
+{ #category : #testing }
+TDefineNode >> constantNumbericValueOrNil [
+	"Override so that named constants don't get elided."
+	^nil
+]
+
 { #category : #'C code generation' }
 TDefineNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	"Emit a C literal."
