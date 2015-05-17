@@ -6263,16 +6263,16 @@ StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 	<var: #theSP type: #'char *'>
 	<inline: false>
 	<var: #ptr type: #'char *'>
-	theFP + (self frameStackedReceiverOffset: theFP)
-		to: theFP + FoxCallerSavedIP + objectMemory wordSize
+	theSP
+		to: (self frameReceiverLocation: theFP)
 		by: objectMemory wordSize
 		do: [:ptr| | oop |
 			oop := stackPages longAt: ptr.
 			((objectMemory isNonImmediate: oop)
 			 and: [objectMemory isForwarded: oop]) ifTrue:
 				[stackPages longAt: ptr put: (objectMemory followForwarded: oop)]].
-	theSP
-		to: (self frameReceiverLocation: theFP)
+	theFP + FoxCallerSavedIP + objectMemory wordSize
+		to: theFP + (self frameStackedReceiverOffset: theFP)
 		by: objectMemory wordSize
 		do: [:ptr| | oop |
 			oop := stackPages longAt: ptr.
@@ -10362,15 +10362,15 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 	"Check if number of arguments is reasonable; MaxNumArgs isn't available
 	 so just use LargeContextSize"
 	arraySize := objectMemory numSlotsOf: argumentArray.
-	arraySize > LargeContextSlots ifTrue:
+	arraySize > (LargeContextSlots - CtxtTempFrameStart) ifTrue:
 		[^self primitiveFailFor: PrimErrBadNumArgs].
 
 	performArgCount := argumentCount.
 	"Push newMethod to save it in case of failure,
-	 then push the actual receiver and args out of the array."
+	 then push the actual receiver and the args in the array."
 	self push: newMethod.
 	self push: actualReceiver.
-	"Copy the arguments to the stack, and execute"
+	"Copy the arguments to the stack, in case of MNU, and lookup"
 	1 to: arraySize do:
 		[:index| self push: (objectMemory fetchPointer: index - 1 ofObject: argumentArray)].
 	argumentCount := arraySize.
@@ -10389,7 +10389,14 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 	"Only test CompiledMethods for argument count - any other objects playacting as CMs will have to take their chances"
 	((objectMemory isOopCompiledMethod: newMethod)
 	  and: [(self argumentCountOf: newMethod) ~= argumentCount]) ifTrue:
-		["Restore the state by popping all those array entries and pushing back the selector and array, and fail"
+		["Restore the state by popping the array entries, the actual receiver and the saved
+		  newMethod, leaving the selector and array, and fail.  N.B.  If an MNU has happened
+		  then argumentCount will match newMethod, so this code will not be reached."
+		 "These asserts check that an MNU has not occurred if the argumentCount doesn't match the newMethod."
+		 self assert: (self stackTop = (arraySize = 0
+											ifTrue: [actualReceiver]
+											ifFalse: [(objectMemory fetchPointer: arraySize - 1 ofObject: argumentArray)])).
+		 self assert:  argumentCount = arraySize.
 		 self pop: arraySize + 1.
 		 newMethod := self popStack.
 		 ^self primitiveFailFor: PrimErrBadNumArgs].
@@ -13592,7 +13599,7 @@ StackInterpreter >> stackObjectValue: offset [
 { #category : #'stack pages' }
 StackInterpreter >> stackPageByteSize [
 	"Answer a page size that is a power-of-two and contains a useful number of frames.
-	 Room for 512 bytes of frames gives around 40 frames a page which is a
+	 Room for 256 slots for frames gives around 40 frames a page which is a
 	 good compromise between overflow rate and latency in divorcing a page."
 	<inline: false>
 	| pageBytes largeSize smallSize |
@@ -13611,12 +13618,14 @@ StackInterpreter >> stackPageByteSize [
 
 { #category : #'stack pages' }
 StackInterpreter >> stackPageFrameBytes [
-	"Answer a byte size that accomodates a useful number of frames.
-	 512 bytes is room for around 40 frames a page which is a good
-	 compromise between overflow rate and latency in divorcing a page."
-	^objectMemory bytesPerOop = 8
-		ifTrue: [1024]
-		ifFalse: [512]
+	"Answer a byte size that accomodates a useful number of frames.  The minimum frame size is
+	 7 slots in the StackInterpreter, and 6 slots in the CoInterpreter, and the maximum size is 56 + 7
+	 slots in the StackInterpreter and 56 + 8 slots in the CoInterpreter. 256 slots gives from 4 to 36
+	 frames in the StackInterpreter and from 4 to 42 in the CoInterpreter. Hence 2048 bytes in 32-bits
+	 and 4096 bytes in 64-bits; a compromise between overflow rate and latency in divorcing a page."
+	"Defining as a macro simplifies hand editing the C for experiments..."
+	<cmacro: '() (256 * BytesPerWord)'>
+	^256 * objectMemory wordSize
 ]
 
 { #category : #'stack pages' }

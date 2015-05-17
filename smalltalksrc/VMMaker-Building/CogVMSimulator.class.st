@@ -3686,7 +3686,10 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print registers' action: [cogit processor printRegistersOn: transcript];
 		add: 'print register map' action: [cogit printRegisterMapOn: transcript];
 		add: 'disassemble method/trampoline...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit disassembleCodeAt: pc]];
-		add: 'disassemble method/trampoline at pc' action: [cogit disassembleCodeAt: cogit processor pc];
+		add: 'disassemble method/trampoline at pc' action:
+			[cogit disassembleCodeAt: ((cogit methodZone methodFor: cogit processor pc) = 0
+											ifTrue: [instructionPointer]
+											ifFalse: [cogit processor pc])];
 		add: 'disassemble ext head frame method' action: [cogit disassembleMethod: (self frameMethod: framePointer)];
 		add: 'print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self printOop: oop]];
 		add: 'long print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self longPrintOop: oop]];

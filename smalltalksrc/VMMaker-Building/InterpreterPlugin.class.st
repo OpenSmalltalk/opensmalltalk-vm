@@ -530,6 +530,7 @@ InterpreterPlugin >> strlen: aCString [
 InterpreterPlugin >> translatedPrimitiveArgument: index ofType: cTypeString using: aCCodeGenerator [
 	| oop |
 	oop := interpreterProxy stackValue: interpreterProxy methodArgumentCount - index.
+	(interpreterProxy isOopForwarded: oop) ifTrue: [^nil]. 
 	cTypeString last == $* ifTrue:
 		[^ObjectProxyForTranslatedPrimitiveSimulation new
 			interpreter: interpreterProxy

@@ -217,15 +217,17 @@ CCodeGenerator >> accessorsAndAssignmentsForMethod: method actuals: actualParame
 	actualParameters with: method args do:
 		[:actual :argName|
 		 (actual isVariable or: [actual isSend]) ifTrue:
-			[assignments add: (TAssignmentNode new
+			[(actual isSend and: [self isStackAccessor: actual selector given: interpreterClass]) ifTrue:
+				[roots add: actual].
+			assignments add: (TAssignmentNode new
 									setVariable: (TVariableNode new setName: argName)
 									expression: actual)]].
 	method parseTree nodesDo:
 		[:node|
 		node isSend ifTrue:
-			[(interpreterClass isStackAccessor: node selector) ifTrue:
+			[(self isStackAccessor: node selector given: interpreterClass) ifTrue:
 				[roots add: node].
-			 (interpreterClass isObjectAccessor: node selector) ifTrue:
+			 (self isObjectAccessor: node selector given: interpreterClass) ifTrue:
 				[accessors add: node].
 			 (self accessorDepthDeterminationFollowsSelfSends
 			  and: [node receiver isVariable
@@ -3474,6 +3476,16 @@ CCodeGenerator >> isNonArgumentImplicitReceiverVariableName: aString [
 	    or: [vmClass
 			ifNil: [#('interpreterProxy' 'self') includes: aString]
 	 		ifNotNil: [vmClass isNonArgumentImplicitReceiverVariableName: aString]]
+]
+
+{ #category : #'spur primitive compilation' }
+CCodeGenerator >> isObjectAccessor: selector given: interpreterClass [
+	^interpreterClass isObjectAccessor: selector
+]
+
+{ #category : #'spur primitive compilation' }
+CCodeGenerator >> isStackAccessor: selector given: interpreterClass [
+	^interpreterClass isStackAccessor: selector
 ]
 
 { #category : #inlining }
