@@ -5248,7 +5248,7 @@ Cogit >> genInnerPICAbortTrampoline: name [
 		arg: nil
 		arg: nil
 		saveRegs: false
-		pushLinkReg: true
+		pushLinkReg: false
 		resultReg: nil.
 	jumpMNUCase jmpTarget: self Label.
 	^self genTrampolineFor: #ceMNUFromPICMNUMethod:receiver:
@@ -5259,7 +5259,7 @@ Cogit >> genInnerPICAbortTrampoline: name [
 		arg: nil
 		arg: nil
 		saveRegs: false
-		pushLinkReg: true
+		pushLinkReg: false
 		resultReg: nil
 		appendOpcodes: true
 ]
@@ -5400,6 +5400,8 @@ Cogit >> genPICAbortTrampoline [
 	 MNU dispatch in a closed PIC.  It distinguishes the two by testing
 	 ClassReg.  If the register is zero then this is an MNU."
 	opcodeIndex := 0.
+	backEnd hasLinkRegister ifTrue:
+		[self PushR: LinkReg].
 	^self genInnerPICAbortTrampoline: 'cePICAbort'
 ]
 
