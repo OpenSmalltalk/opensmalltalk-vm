@@ -612,6 +612,35 @@ TMethod >> endsWithReturn [
 	^parseTree endsWithReturn
 ]
 
+{ #category : #transformations }
+TMethod >> ensureToByDoLoopLimitIsSafeAndEfficient: node in: aCodeGen [
+	"For both safety and efficiency, make sure that to:[by:]do: loops
+	 with complex limits have a variable to hold the limit expression.
+	 In C the limit expression is evaluated each time round the loop
+	 so if the loop has side-effects (which it usually will), the C compiler
+	 may not be able to optimize the limit expression itself."
+	| limitExpr hasSideEffects |
+	 limitExpr := node args first.
+	 hasSideEffects := limitExpr anySatisfy:
+						[:subNode|
+						subNode isSend
+						and: [(aCodeGen isBuiltinSelector: subNode selector) not
+						and: [(subNode isStructSendIn: aCodeGen) not]]].
+	 node args size = 4
+		ifTrue:
+			[hasSideEffects
+				ifTrue: [locals add: node args last name]
+				ifFalse: [node arguments: node args allButLast]]
+		ifFalse: "If the expression is complex but as yet there is no limit variable, add it"
+			[hasSideEffects ifTrue:
+				[| var |
+				 var := self unusedNamePrefixedBy: 'toDoLimit' avoiding: locals. "N.B. adds it to locals!!"
+				 node arguments: node args, {TVariableNode new setName: var; yourself}.
+				 declarations
+					at: node args third args first
+					ifPresent: [:decl| self declarationAt: var put: (self typeFor: node args third args first in: aCodeGen), ' ', var]]]
+]
+
 { #category : #inlining }
 TMethod >> exitVar: exitVar label: exitLabel [
 	"Replace each return statement in this method with an assignment to the
@@ -1790,6 +1819,7 @@ TMethod >> postCopy [
 TMethod >> prepareMethodIn: aCodeGen [
 	"Record sends of builtin operators, map sends of the special selector dispatchOn:in:
 	 with case statement nodes, and map sends of caseOf:[otherwise:] to switch statements.
+	 Declare limit variables for to:[by:]do: loops with limits that potentially have side-effects.
 	 As a hack also update the types of variables introduced to implement cascades correctly.
 	 This has to be done at the same time as this is done, so why not piggy back here?"
 	extraVariableNumber ifNotNil:
@@ -1810,18 +1840,8 @@ TMethod >> prepareMethodIn: aCodeGen [
 						ifTrue:
 							[node isBuiltinOperator: true.
 							"If a to:by:do:'s limit has side-effects, declare the limit variable, otherwise delete it from the args"
-							 (node selector = #to:by:do:
-							  and: [node args size = 4]) ifTrue:
-								[| limitExpr |
-								 limitExpr := node args first.
-								 (limitExpr anySatisfy:
-										[:subNode|
-										subNode isSend
-										and: [(aCodeGen isBuiltinSelector: subNode selector) not
-										and: [(subNode isStructSendIn: aCodeGen) not]]])
-									ifTrue: [locals add: node args last name]
-									ifFalse:
-										[node arguments: node args allButLast]]]
+							 node selector = #to:by:do: ifTrue:
+								[self ensureToByDoLoopLimitIsSafeAndEfficient: node in: aCodeGen]]
 						ifFalse:
 							[(CaseStatements includes: node selector) ifTrue:
 								[parent replaceNodesIn: (Dictionary newFromPairs: { node. self buildCaseStmt: node in: aCodeGen})].
