@@ -2119,10 +2119,11 @@ TMethod >> removeUnusedTempsAndNilIfRequiredIn: aCodeGen [
 	 and: [aCodeGen
 			pushScope: declarations
 			while: [simplyTypedLocals := locals select:
-											[:ea|
-											(self typeFor: ea in: aCodeGen)
-												ifNil: [false]
-												ifNotNil: [:type| aCodeGen isSimpleType: type]].
+											[:var|
+											 declarations
+												at: var
+												ifPresent: [:decl| aCodeGen isSimpleType: (aCodeGen extractTypeFor: var fromDeclaration: decl)]
+												ifAbsent: [true]].
 				(readBeforeAssigned := (self findReadBeforeAssignedIn: simplyTypedLocals in: aCodeGen)) notEmpty]]) ifTrue:
 		[readBeforeAssigned := readBeforeAssigned reject:
 			[:v| | d | "don't initialize externs, arrays or the explicitly initialized."
