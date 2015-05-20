@@ -220,6 +220,7 @@ VMClass class >> initializeMiscConstants [
 
 	"Use ifAbsentPut: so that they will get copied back to the
 	 VMMaker's options and dead code will likely be eliminated."
+	PharoVM := initializationOptions at: #PharoVM ifAbsentPut: [false].
 	NewspeakVM := initializationOptions at: #NewspeakVM ifAbsentPut: [false].
 	SistaVM := initializationOptions at: #SistaVM ifAbsentPut: [false].
 	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsentPut: [false].
@@ -291,6 +292,11 @@ VMClass class >> interpreterClass [
 	^self isInterpreterClass ifTrue: [self]
 ]
 
+{ #category : #accessing }
+VMClass class >> interpreterVersion [ 
+	^ self subclassResponsibility
+]
+
 { #category : #translation }
 VMClass class >> isAcceptableAncilliaryClass: aClass [
 	^true
@@ -330,6 +336,11 @@ VMClass class >> isPluginClass [
 VMClass class >> isStructClass [
 	"The various VMStructType classes override this."
 	^false
+]
+
+{ #category : #accessing }
+VMClass class >> memoryManagerVersion [ 
+	^ self subclassResponsibility
 ]
 
 { #category : #translation }
