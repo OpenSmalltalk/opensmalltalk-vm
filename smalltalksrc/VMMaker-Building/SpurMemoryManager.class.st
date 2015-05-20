@@ -3081,10 +3081,10 @@ SpurMemoryManager >> checkOopIntegrity: obj named: name index: i [
 
 { #category : #'simulation only' }
 SpurMemoryManager >> checkTraversableSortedFreeList [
-	| prevFree freeChunk |
+	| prevFree prevPrevFree freeChunk |
 	<api>
 	<inline: false>
-	prevFree := 0.
+	prevFree := prevPrevFree := 0.
 	freeChunk := firstFreeChunk.
 	self allOldSpaceEntitiesDo:
 		[:o| | objOop next limit |
@@ -3096,9 +3096,11 @@ SpurMemoryManager >> checkTraversableSortedFreeList [
 			 objOop := freeChunk.
 			 [self oop: (objOop := self objectAfter: objOop) isLessThan: limit] whileTrue:
 				[self assert: (self isFreeObject: objOop) not].
+			 prevPrevFree := prevFree.
 			 prevFree := freeChunk.
 			 freeChunk := next]].
 	self assert: prevFree = lastFreeChunk.
+	self assert: (self nextInSortedFreeListLink: lastFreeChunk given: 0) = prevPrevFree.
 	self assert: freeChunk = 0.
 	^true
 ]
