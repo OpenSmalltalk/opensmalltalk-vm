@@ -2728,16 +2728,9 @@ CogVMSimulator >> primitiveDirectoryEntry [
 		[self halt.
 		^self primitiveFail].
 
-	PharoVM 
-		ifTrue: [  
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
+	result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
 				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4) fileSize: (array at: 5)
-				posixPermissions: (array at: 6) isSymlink: (array at: 7) ]
-		ifFalse: [ 
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
-				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4) fileSize: (array at: 5) ].
+				isDir: (array at: 4)  fileSize: (array at: 5).
 	self pop: 3.
 	self push: result
 ]
@@ -2760,17 +2753,9 @@ CogVMSimulator >> primitiveDirectoryLookup [
 		["self halt."
 		^self primitiveFail].
 
-	PharoVM
-		ifTrue: [  
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
+	result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
 				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4) fileSize: (array at: 5)
-				posixPermissions: (array at: 6) isSymlink: (array at: 7) ]
-		ifFalse: [ 
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
-				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4) fileSize: (array at: 5) ].
-			
+				isDir: (array at: 4)  fileSize: (array at: 5).
 	self pop: 3 thenPush: result
 ]
 
