@@ -1962,7 +1962,9 @@ StackToRegisterMappingCogit >> genMarshalledSend: selector numArgs: numArgs send
 	"Deal with stale super sends; see SpurMemoryManager's class comment."
 	(self annotationIsForUncheckedEntryPoint: annotation) ifTrue:
 		[objectRepresentation genEnsureOopInRegNotForwarded: ReceiverResultReg scratchReg: TempReg].
-	numArgs > 2 ifTrue:
+	"0 through (NumSendTrampolines - 2) numArgs sends have the arg count implciti in the trampoline.
+	 The last send trampoline (NumSendTrampolines - 1) passes numArgs in SendNumArgsReg."
+	numArgs >= (NumSendTrampolines - 1) ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
 	(BytecodeSetHasDirectedSuperSend
 	 and: [annotation = IsDirectedSuperSend]) ifTrue:

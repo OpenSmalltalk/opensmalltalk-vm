@@ -1162,7 +1162,7 @@ CCodeGenerator >> emitCFunctionPrototypes: methodList on: aStream [
 	"Feel free to add equivalents for other compilers"
 	vmClass notNil ifTrue:
 		[NoRegParmsInAssertVMs ifTrue:
-			[aStream nextPutAll: '\\#if !PRODUCTION && defined(__GNUC__) && !(defined(__MINGW32__) || defined(__MINGW64__)) && !defined(NoDbgRegParms)\# define NoDbgRegParms __attribute__ ((regparm (0)))\#endif' withCRs.
+			[aStream nextPutAll: '\\#if !PRODUCTION && defined(__GNUC__) && !defined(NoDbgRegParms)\# define NoDbgRegParms __attribute__ ((regparm (0)))\#endif' withCRs.
 			 aStream nextPutAll: '\\#if !defined(NoDbgRegParms)\# define NoDbgRegParms /*empty*/\#endif\\' withCRs].
 		 aStream nextPutAll: '\\#if defined(__GNUC__) && !defined(NeverInline)\# define NeverInline __attribute__ ((noinline))\#endif' withCRs.
 		 aStream nextPutAll: '\\#if !defined(NeverInline)\# define NeverInline /*empty*/\#endif\\' withCRs].
@@ -1357,7 +1357,6 @@ CCodeGenerator >> emitGlobalCVariablesOn: aStream [
 	"Store the global variable declarations on the given stream."
 
 	aStream cr; nextPutAll: '/*** Global Variables ***/'; cr.
-	
 	(self sortStrings: (variables select: [:v| vmClass mustBeGlobal: v])) do:
 		[:var | | varString decl |
 		varString := var asString.
@@ -1366,12 +1365,9 @@ CCodeGenerator >> emitGlobalCVariablesOn: aStream [
 			ifTrue:
 				[aStream nextPutAll: decl; cr]
 			ifFalse:
-				[
-				((decl includesSubString: ' private ')
+				[((decl includesSubString: ' private ')
 				  "or: [decl beginsWith: 'static']") ifFalse: "work-around hack to prevent localization of variables only referenced once."
-					[
-					(decl beginsWith: 'static') ifFalse: [aStream nextPutAll: 'VM_EXPORT '].
-					(decl includes: $=) ifTrue:
+					[(decl includes: $=) ifTrue:
 						[decl := decl copyFrom: 1 to: (decl indexOf: $=) - 1].
 					aStream
 						nextPutAll: decl;
@@ -3344,13 +3340,6 @@ CCodeGenerator >> instVarNamesForClass: aClass [
 					[:ivn| vmClass isNonArgumentImplicitReceiverVariableName: ivn]]
 ]
 
-{ #category : #accessing }
-CCodeGenerator >> interpreterVersion [
-	| memoryManagerVersion |
-	memoryManagerVersion := (self options at: #ObjectMemory ifAbsent: [ #ObjectMemory ]) asClass memoryManagerVersion.
-	^ self vmClass interpreterVersion, '[', memoryManagerVersion,']'
-]
-
 { #category : #'C translation support' }
 CCodeGenerator >> is64BitIntegralVariable: node typeInto: aBlock [
 	| decl |
@@ -3510,11 +3499,6 @@ CCodeGenerator >> isSimpleType: aType [
 { #category : #'spur primitive compilation' }
 CCodeGenerator >> isStackAccessor: selector given: interpreterClass [
 	^interpreterClass isStackAccessor: selector
-]
-
-{ #category : #testing }
-CCodeGenerator >> isThreadedVM [
-	^ self vmClass isThreadedVM
 ]
 
 { #category : #inlining }
@@ -4057,9 +4041,9 @@ CCodeGenerator >> printUnboundVariableReferenceWarnings [
 
 { #category : #'type inference' }
 CCodeGenerator >> promoteArithmeticTypes: firstType and: secondType [
-	"Answer the return type for an arithmetic sendThis is so that the inliner can still
-	 inline simple expressions.  Deal with pointer arithmetic, floating point arithmetic
-	 and promotion."
+	"Answer the return type for an arithmetic send.  This is so that the inliner can still inline
+	 simple expressions.  Deal with pointer arithmetic, floating point arithmetic and promotion."
+	| firstSize secondSize |
 	((#(#double float) includes: firstType)
 	 or: [#(#double float) includes: secondType]) ifTrue:
 		[^(firstType = #float and: [secondType = #float])
@@ -4068,10 +4052,38 @@ CCodeGenerator >> promoteArithmeticTypes: firstType and: secondType [
 	"deal with unknowns, answering nil."
 	(firstType isNil or: [secondType isNil]) ifTrue:
 		[^nil].
-	"deal with promotion; answer the longest type, defaulting to the recever if they're the same"
-	^(self sizeOfIntegralCType: firstType) >= (self sizeOfIntegralCType: secondType)
-		ifTrue: [firstType]
-		ifFalse: [secondType]
+	"Deal with promotion; answer the longest type, defaulting to the recever if they're the same.
+	 See e.g. section 6.3.1.8 Usual arithmetic conversions, from the C99 standard:
+		Otherwise, the integer promotions are performed on both operands
+		Then the following rules are applied to the promoted operands:
+
+			If both operands have the same type, then no further conversion is needed.
+
+			Otherwise, if both operands have signed integer types or both have unsigned integer
+			types, the operand with the type of lesser integer conversion rank is converted to the
+			type of the operand with greater rank.
+
+			Otherwise, if the operand that has unsigned integer type has rank greater or equal to
+			the rank of the type of the other operand, then the operand with signed integer type
+			is converted to the type of the operand with unsigned integer type.
+
+			Otherwise, if the type of the operand with signed integer type can represent all of the
+			values of the type of the operand with unsigned integer type, then the operand with
+			unsigned integer type is converted to the type of the operand with signed integer type.
+
+			Otherwise, both operands are converted to the unsigned integer type corresponding to
+			the type of the operand with signed integer type.
+
+	It is important to choose deterministically to get stable source generation.  So if the types have
+	the same size but differ in signedness we choose the unsigned type, which is in partial agreement
+	with the above"
+	^(firstSize := self sizeOfIntegralCType: firstType) = (secondSize := self sizeOfIntegralCType: secondType)
+		ifTrue:
+			[(firstType first = $u)
+				ifTrue: [firstType]
+				ifFalse: [(secondType first = $u) ifTrue: [secondType] ifFalse: [firstType]]]
+		ifFalse:
+			[firstSize > secondSize ifTrue: [firstType] ifFalse: [secondType]]
 ]
 
 { #category : #inlining }

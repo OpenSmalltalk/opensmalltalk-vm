@@ -274,10 +274,8 @@ InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFla
 
 	"don't translate if the file is newer than my timeStamp"
 	(directory entryAt: fname ifAbsent: nil) ifNotNil:
-		[:fstat| | mTime |
-		mTime := fstat modificationTime.
-		(mTime isKindOf: DateAndTime) ifTrue: [ mTime := mTime asSeconds ].
-		 (self allCodeOlderThan: mTime) ifTrue:
+		[:fstat|
+		 (self allCodeOlderThan: fstat modificationTime) ifTrue:
 			[^nil]].
 
 	self initialize.

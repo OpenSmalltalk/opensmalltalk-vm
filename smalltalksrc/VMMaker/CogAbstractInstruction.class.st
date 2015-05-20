@@ -62,6 +62,7 @@ Class {
 		'NumOperands'
 	],
 	#pools : [
+		'CogCompilationConstants',
 		'CogRTLOpcodes'
 	],
 	#category : #'VMMaker-JIT'
