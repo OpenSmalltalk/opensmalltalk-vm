@@ -107,12 +107,7 @@ CurrentImageCoInterpreterFacade >> addressCouldBeOop: anOop [
 
 { #category : #labels }
 CurrentImageCoInterpreterFacade >> addressForLabel: l [
-	^variables
-		at: l
-		ifAbsentPut:
-			[(self isLabelRelativeToCogitVarBaseReg: l)
-				ifTrue: [cogit fakeAddressFor: l index: variables size + 48]
-				ifFalse: [variables size * 4 + self variablesBase]]
+	^variables at: l ifAbsentPut: [variables size * 4 + self variablesBase]
 ]
 
 { #category : #accessing }
@@ -1037,6 +1032,12 @@ CurrentImageCoInterpreterFacade >> transcript [
 { #category : #'object map' }
 CurrentImageCoInterpreterFacade >> trueObject [
 	^objectMap at: true
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> varBaseAddress [
+	"This value is chosen for ARM, which has the ability to do 12-bit relative addresses from the var base register."
+	^(variables at: 'stackLimit') - (1 << 11)
 ]
 
 { #category : #private }

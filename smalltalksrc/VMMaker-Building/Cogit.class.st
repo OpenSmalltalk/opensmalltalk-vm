@@ -284,7 +284,6 @@ Class {
 		'NSSendIsPCAnnotated',
 		'NumObjRefsInRuntime',
 		'NumOopsPerNSC',
-		'NumSendTrampolines',
 		'NumTrampolines',
 		'ProcessorClass'
 	],
@@ -2180,6 +2179,12 @@ Cogit >> addressIsInCodeZone: address [
 ]
 
 { #category : #testing }
+Cogit >> addressIsInCurrentCompilation: address [
+	^address asUnsignedInteger >= methodLabel address
+	  and: [address < (methodLabel address + (1 << 16))]
+]
+
+{ #category : #testing }
 Cogit >> addressIsInFixups: address [
 	<var: #address type: #'AbstractInstruction *'>
 	^self cCode: 'address >= (AbstractInstruction *)&fixups[0] && address < (AbstractInstruction *)&fixups[numAbstractOpcodes]'
@@ -3392,7 +3397,8 @@ Cogit >> codeRangesFor: cogMethod [
 				from: cogMethod asInteger + (self sizeof: CogMethod)
 				to: end
 				cogMethod: cogMethod
-				startpc: (coInterpreter startPCOfMethodHeader: cogMethod methodHeader) }].
+				startpc: (cogMethod cmType ~= CMOpenPIC ifTrue:
+							[coInterpreter startPCOfMethodHeader: cogMethod methodHeader]) }].
 	pc := blockEntry := cogMethod blockEntryOffset + cogMethod asInteger.
 	starts := OrderedCollection with: cogMethod.
 	[pc < end] whileTrue:
@@ -3633,7 +3639,7 @@ Cogit >> cogMNUPICSelector: selector receiver: rcvr methodOperand: methodOperand
 	"Attempt to create a one-case PIC for an MNU.
 	 The tag for the case is at the send site and so doesn't need to be generated."
 	<returnTypeC: #'CogMethod *'>
-	| startAddress headerSize size end |
+	| startAddress size end |
 	((objectMemory isYoung: selector)
 	 or: [(objectRepresentation inlineCacheTagForInstance: rcvr) = self picAbortDiscriminatorValue]) ifTrue:
 		[^0].
@@ -3656,16 +3662,15 @@ Cogit >> cogMNUPICSelector: selector receiver: rcvr methodOperand: methodOperand
 		methodOperand: methodOperand
 		numArgs: numArgs.
 	self computeMaximumSizes.
-	headerSize := self sizeof: CogMethod.
-	size := self generateInstructionsAt: startAddress + headerSize.
-	end := self outputInstructionsAt: startAddress + headerSize.
+	methodLabel concretizeAt: startAddress.
+	size := self generateInstructionsAt: startAddress + (self sizeof: CogMethod).
+	end := self outputInstructionsAt: startAddress + (self sizeof: CogMethod).
 	"The missOffset is the same as the interpretOffset. On RISCs it includes an additional instruction."
 	self assert: missOffset = ((backEnd hasLinkRegister ifTrue: [backEnd callInstructionByteSize] ifFalse: [0])
 								+ picInterpretAbort address + picInterpretAbort machineCodeSize - startAddress).
 	self assert: startAddress + cmEntryOffset = entry address.
 	^self
 		fillInCPICHeader: (self cCoerceSimple: startAddress to: #'CogMethod *')
-		size: closedPICSize
 		numArgs: numArgs
 		numCases: 1
 		hasMNUCase: true
@@ -3761,7 +3766,7 @@ Cogit >> cogOpenPICSelector: selector numArgs: numArgs [
 	 Should become a probe of the first-level method lookup cache followed by a
 	 call of ceSendFromOpenPIC: if the probe fails."
 	<returnTypeC: #'CogMethod *'>
-	| startAddress headerSize codeSize mapSize end |
+	| startAddress codeSize mapSize end |
 	coInterpreter
 		compilationBreak: selector
 		point: (objectMemory numBytesOf: selector)
@@ -3778,15 +3783,13 @@ Cogit >> cogOpenPICSelector: selector numArgs: numArgs [
 	self compileOpenPIC: selector numArgs: numArgs.
 	self computeMaximumSizes.
 	methodLabel concretizeAt: startAddress.
-	headerSize := self sizeof: CogMethod.
-	codeSize := self generateInstructionsAt: startAddress + headerSize.
+	codeSize := self generateInstructionsAt: startAddress + (self sizeof: CogMethod).
 	mapSize := self generateMapAt: startAddress + openPICSize - 1 start: startAddress + cmNoCheckEntryOffset.
 	self assert: entry address - startAddress = cmEntryOffset.
-	self assert: headerSize + codeSize + mapSize <= openPICSize.
-	end := self outputInstructionsAt: startAddress + headerSize.
+	self assert: (methodZone roundUpLength: (self sizeof: CogMethod) + codeSize) + (methodZone roundUpLength: mapSize) <= openPICSize.
+	end := self outputInstructionsAt: startAddress + (self sizeof: CogMethod).
 	^self
 		fillInOPICHeader: (self cCoerceSimple: startAddress to: #'CogMethod *')
-		size: openPICSize
 		numArgs: numArgs
 		selector: selector 
 ]
@@ -3801,7 +3804,7 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 		- a CompiledMethod; link to ceMNUFromPICMNUMethod:receiver:"
 	<var: #case0CogMethod type: #'CogMethod *'>
 	<returnTypeC: #'CogMethod *'>
-	| startAddress headerSize size end |
+	| startAddress size end |
 	(objectMemory isYoung: selector) ifTrue:
 		[^self cCoerceSimple: YoungSelectorInPIC to: #'CogMethod *'].
 	coInterpreter
@@ -3824,9 +3827,9 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 		isMNUCase: isMNUCase
 		numArgs: numArgs.
 	self computeMaximumSizes.
-	headerSize := self sizeof: CogMethod.
-	size := self generateInstructionsAt: startAddress + headerSize.
-	end := self outputInstructionsAt: startAddress + headerSize.
+	methodLabel concretizeAt: startAddress.
+	size := self generateInstructionsAt: startAddress + (self sizeof: CogMethod).
+	end := self outputInstructionsAt: startAddress + (self sizeof: CogMethod).
 	"The missOffset is the same as the interpretOffset. On RISCs it includes an additional instruction."
 	self assert: missOffset = ((backEnd hasLinkRegister ifTrue: [backEnd callInstructionByteSize] ifFalse: [0])
 								+ picInterpretAbort address + picInterpretAbort machineCodeSize - startAddress).
@@ -3835,7 +3838,6 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 	self assert: endCPICCase1 address = (startAddress + firstCPICCaseOffset + cPICCaseSize).
 	^self
 		fillInCPICHeader: (self cCoerceSimple: startAddress to: #'CogMethod *')
-		size: closedPICSize
 		numArgs: numArgs
 		numCases: 2
 		hasMNUCase: isMNUCase
@@ -4665,6 +4667,13 @@ Cogit >> fakeAddressFor: anObject index: index [
 					ifFalse: [self allButTopBitOfAddressSpaceMask])
 ]
 
+{ #category : #accessing }
+Cogit >> fakeVarBaseAddress [
+	"We expect simulatedAddresses to have around 40 entries.  48 is hopefully a good maximum."
+	<doNotGenerate>
+	^self fakeAddressFor: nil index: 48
+]
+
 { #category : #'generate machine code' }
 Cogit >> fillInBlockHeadersAt: startAddress [
 	"Fill in the block headers now we know the exact layout of the code."
@@ -4693,13 +4702,14 @@ Cogit >> fillInBlockHeadersAt: startAddress [
 ]
 
 { #category : #'generate machine code' }
-Cogit >> fillInCPICHeader: pic size: size numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector [
+Cogit >> fillInCPICHeader: pic numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector [
 	<returnTypeC: #'CogMethod *'>
 	<var: #pic type: #'CogMethod *'>
+	<inline: true>
 	self assert: (objectMemory isYoung: selector) not.
 	pic cmType: CMClosedPIC.
 	pic objectHeader: 0.
-	pic blockSize: size.
+	pic blockSize: closedPICSize.
 	pic methodObject: 0.
 	pic methodHeader: 0.
 	pic selector: selector.
@@ -4714,8 +4724,8 @@ Cogit >> fillInCPICHeader: pic size: size numArgs: numArgs numCases: numCases ha
 	self assert: pic cmNumArgs = numArgs.
 	self assert: pic cPICNumCases = numCases.
 	self assert: (backEnd callTargetFromReturnAddress: pic asInteger + missOffset) = (self picAbortTrampolineFor: numArgs).
-	self assert: size = (methodZone roundUpLength: size).
-	processor flushICacheFrom: pic asUnsignedInteger to: pic asUnsignedInteger + size.
+	self assert: closedPICSize = (methodZone roundUpLength: closedPICSize).
+	processor flushICacheFrom: pic asUnsignedInteger to: pic asUnsignedInteger + closedPICSize.
 	^pic
 ]
 
@@ -4770,12 +4780,13 @@ Cogit >> fillInMethodHeader: method size: size selector: selector [
 ]
 
 { #category : #'generate machine code' }
-Cogit >> fillInOPICHeader: pic size: size numArgs: numArgs selector: selector [
+Cogit >> fillInOPICHeader: pic numArgs: numArgs selector: selector [
 	<returnTypeC: #'CogMethod *'>
 	<var: #pic type: #'CogMethod *'>
+	<inline: true>
 	pic cmType: CMOpenPIC.
 	pic objectHeader: 0.
-	pic blockSize: size.
+	pic blockSize: openPICSize.
 	"pic methodObject: 0.""This is also the nextOpenPIC link so don't initialize it"
 	methodZone addToOpenPICList: pic.
 	pic methodHeader: 0.
@@ -4791,8 +4802,8 @@ Cogit >> fillInOPICHeader: pic size: size numArgs: numArgs selector: selector [
 	self assert: pic selector = selector.
 	self assert: pic cmNumArgs = numArgs.
 	self assert: (backEnd callTargetFromReturnAddress: pic asInteger + missOffset) = (self picAbortTrampolineFor: numArgs).
-	self assert: size = (methodZone roundUpLength: size).
-	processor flushICacheFrom: pic asUnsignedInteger to: pic asUnsignedInteger + size.
+	self assert: openPICSize = (methodZone roundUpLength: openPICSize).
+	processor flushICacheFrom: pic asUnsignedInteger to: pic asUnsignedInteger + openPICSize.
 	^pic
 ]
 
@@ -5720,15 +5731,14 @@ Cogit >> generateClosedPICPrototype [
 	"Generate the prototype ClosedPIC to determine how much space as full PIC takes.
 	 When we first allocate a closed PIC it only has one or two cases and we want to grow it.
 	 So we have to determine how big a full one is before hand."
-	| headerSize |
 	numPICCases := 6.
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: numPICCases * 7 bytecodes: 0.
 	self compileClosedPICPrototype.
 	self computeMaximumSizes.
-	headerSize := self sizeof: CogMethod.
-	closedPICSize := headerSize + (self generateInstructionsAt: methodZoneBase + headerSize).
+	methodLabel concretizeAt: methodZoneBase.
+	closedPICSize := (self sizeof: CogMethod) + (self generateInstructionsAt: methodZoneBase + (self sizeof: CogMethod)).
 	firstCPICCaseOffset := endCPICCase0 address - methodZoneBase.
 	cPICCaseSize := endCPICCase1 address - endCPICCase0 address.
 	cPICEndSize := closedPICSize - (numPICCases - 1 * cPICCaseSize + firstCPICCaseOffset).
@@ -6018,23 +6028,27 @@ Cogit >> generateOpenPICPrototype [
 	"Generate the prototype ClosedPIC to determine how much space as full PIC takes.
 	 When we first allocate a closed PIC it only has one or two cases and we want to grow it.
 	 So we have to determine how big a full one is before hand."
-	| headerSize codeSize mapSize |
+	| codeSize mapSize |
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: 100 bytecodes: 0.
-	"Ned a real selector here so that the map accomodates the annotations for the selector."
+	methodLabel
+		address: methodZoneBase;
+		dependent: nil.
+	"Need a real selector here so that the map accomodates the annotations for the selector.
+	 Use self numRegArgs to generate the longest possible code sequence due to
+	 genPushRegisterArgsForNumArgs:"
 	self compileOpenPIC: (coInterpreter specialSelector: 0) numArgs: self numRegArgs.
 	self computeMaximumSizes.
-	headerSize := self sizeof: CogMethod.
 	methodLabel concretizeAt: methodZoneBase.
-	codeSize := self generateInstructionsAt: methodZoneBase + headerSize.
+	codeSize := self generateInstructionsAt: methodZoneBase + (self sizeof: CogMethod).
 	mapSize := self generateMapAt: nil start: methodZoneBase + cmNoCheckEntryOffset.
-	openPICSize := (methodZone roundUpLength: headerSize + codeSize) + (methodZone roundUpLength: mapSize).
+	openPICSize := (methodZone roundUpLength: (self sizeof: CogMethod) + codeSize) + (methodZone roundUpLength: mapSize).
 	"self cCode: ''
 		inSmalltalk:
 			[| end |
 			 end := self outputInstructionsAt: methodZoneBase + headerSize.
-			 self disassembleFrom: methodZoneBase + headerSize to: end - 1.
+			 self disassembleFrom: methodZoneBase + (self sizeof: CogMethod) to: end - 1.
 			 self halt]"
 ]
 
@@ -6162,6 +6176,7 @@ Cogit >> generateTrampolines [
 	 Read the class-side method trampolines for documentation on the various trampolines"
 	| methodZoneStart |
 	methodZoneStart := methodZoneBase.
+	methodLabel address: methodZoneStart.
 	self allocateOpcodes: 80 bytecodes: 0.
 	initialPC := 0.
 	endPC := numAbstractOpcodes - 1.
@@ -7823,6 +7838,12 @@ Cogit >> method: methodA hasSameCodeAs: methodB checkPenultimate: comparePenulti
 	^true
 ]
 
+{ #category : #accessing }
+Cogit >> methodLabel [
+	<cmacro: '() methodLabel'>
+	^methodLabel
+]
+
 { #category : #'simulation only' }
 Cogit >> methodZone [
 	<doNotGenerate>
@@ -9108,7 +9129,9 @@ Cogit >> setInterpreter: aCoInterpreter [
 	simulatedVariableGetters := Dictionary new.
 	simulatedVariableSetters := Dictionary new.
 	traceStores := 0.
-	traceFlags := 8. "record prim trace on by default (see Cogit class>>decareCVarsIn:)"
+	traceFlags := (self class initializationOptions at: #recordPrimTrace ifAbsent: [true])
+					ifTrue: [8] "record prim trace on by default (see Cogit class>>decareCVarsIn:)"
+					ifFalse: [0].
 	debugPrimCallStackOffset := 0.
 	singleStep := printRegisters := printInstructions := clickConfirm := false.
 	breakBlock ifNil: [self breakPC: breakPC].
@@ -10078,8 +10101,7 @@ Cogit >> updateMaybeObjRefAt: mcpc [
 Cogit >> varBaseAddress [
 	"We expect simulatedAddresses to have around 40 entries.  48 is hopefully a good maximum."
 	<doNotGenerate>
-	^self cCode: [coInterpreter varBaseAddress]
-		inSmalltalk: [self fakeAddressFor: nil index: 48]
+	^coInterpreter varBaseAddress
 ]
 
 { #category : #'jit - api' }

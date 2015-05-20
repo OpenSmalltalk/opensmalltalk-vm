@@ -198,9 +198,9 @@ SistaStackToRegisterMappingCogit >> estimateOfAbstractOpcodesPerBytecodes [
 ]
 
 { #category : #'generate machine code' }
-SistaStackToRegisterMappingCogit >> fillInCPICHeader: pic size: size numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector [
+SistaStackToRegisterMappingCogit >> fillInCPICHeader: pic numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector [
 	pic counters: 0.
-	^super fillInCPICHeader: pic size: size numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector
+	^super fillInCPICHeader: pic numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector
 ]
 
 { #category : #'generate machine code' }
@@ -234,9 +234,9 @@ SistaStackToRegisterMappingCogit >> fillInMethodHeader: method size: size select
 ]
 
 { #category : #'generate machine code' }
-SistaStackToRegisterMappingCogit >> fillInOPICHeader: pic size: size numArgs: numArgs selector: selector [
+SistaStackToRegisterMappingCogit >> fillInOPICHeader: pic numArgs: numArgs selector: selector [
 	pic counters: 0.
-	^super fillInOPICHeader: pic size: size numArgs: numArgs selector: selector
+	^super fillInOPICHeader: pic numArgs: numArgs selector: selector
 ]
 
 { #category : #'bytecode generator support' }

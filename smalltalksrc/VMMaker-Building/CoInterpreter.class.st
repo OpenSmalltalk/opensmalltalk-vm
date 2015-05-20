@@ -7119,7 +7119,8 @@ CoInterpreter >> validStackPageBaseFrame: aPage [
 CoInterpreter >> varBaseAddress [
 	<api>
 	<returnTypeC: #usqInt>
-	^(self addressOf: stackPointer) asUnsignedInteger - 16r42
+	^self cCode: [(self addressOf: stackPointer) asUnsignedInteger - 16r42]
+		inSmalltalk: [cogit fakeVarBaseAddress]
 ]
 
 { #category : #'frame access' }
