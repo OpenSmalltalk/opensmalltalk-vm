@@ -1162,7 +1162,7 @@ CCodeGenerator >> emitCFunctionPrototypes: methodList on: aStream [
 	"Feel free to add equivalents for other compilers"
 	vmClass notNil ifTrue:
 		[NoRegParmsInAssertVMs ifTrue:
-			[aStream nextPutAll: '\\#if !PRODUCTION && defined(__GNUC__) && !defined(NoDbgRegParms)\# define NoDbgRegParms __attribute__ ((regparm (0)))\#endif' withCRs.
+			[aStream nextPutAll: '\\#if !PRODUCTION && defined(__GNUC__) && !(defined(__MINGW32__) || defined(__MINGW64__)) && !defined(NoDbgRegParms)\# define NoDbgRegParms __attribute__ ((regparm (0)))\#endif' withCRs.
 			 aStream nextPutAll: '\\#if !defined(NoDbgRegParms)\# define NoDbgRegParms /*empty*/\#endif\\' withCRs].
 		 aStream nextPutAll: '\\#if defined(__GNUC__) && !defined(NeverInline)\# define NeverInline __attribute__ ((noinline))\#endif' withCRs.
 		 aStream nextPutAll: '\\#if !defined(NeverInline)\# define NeverInline /*empty*/\#endif\\' withCRs].
@@ -1357,6 +1357,7 @@ CCodeGenerator >> emitGlobalCVariablesOn: aStream [
 	"Store the global variable declarations on the given stream."
 
 	aStream cr; nextPutAll: '/*** Global Variables ***/'; cr.
+	
 	(self sortStrings: (variables select: [:v| vmClass mustBeGlobal: v])) do:
 		[:var | | varString decl |
 		varString := var asString.
@@ -1365,9 +1366,12 @@ CCodeGenerator >> emitGlobalCVariablesOn: aStream [
 			ifTrue:
 				[aStream nextPutAll: decl; cr]
 			ifFalse:
-				[((decl includesSubString: ' private ')
+				[
+				((decl includesSubString: ' private ')
 				  "or: [decl beginsWith: 'static']") ifFalse: "work-around hack to prevent localization of variables only referenced once."
-					[(decl includes: $=) ifTrue:
+					[
+					(decl beginsWith: 'static') ifFalse: [aStream nextPutAll: 'VM_EXPORT '].
+					(decl includes: $=) ifTrue:
 						[decl := decl copyFrom: 1 to: (decl indexOf: $=) - 1].
 					aStream
 						nextPutAll: decl;
@@ -3340,6 +3344,13 @@ CCodeGenerator >> instVarNamesForClass: aClass [
 					[:ivn| vmClass isNonArgumentImplicitReceiverVariableName: ivn]]
 ]
 
+{ #category : #accessing }
+CCodeGenerator >> interpreterVersion [
+	| memoryManagerVersion |
+	memoryManagerVersion := (self options at: #ObjectMemory ifAbsent: [ #ObjectMemory ]) asClass memoryManagerVersion.
+	^ self vmClass interpreterVersion, '[', memoryManagerVersion,']'
+]
+
 { #category : #'C translation support' }
 CCodeGenerator >> is64BitIntegralVariable: node typeInto: aBlock [
 	| decl |
@@ -3499,6 +3510,11 @@ CCodeGenerator >> isSimpleType: aType [
 { #category : #'spur primitive compilation' }
 CCodeGenerator >> isStackAccessor: selector given: interpreterClass [
 	^interpreterClass isStackAccessor: selector
+]
+
+{ #category : #testing }
+CCodeGenerator >> isThreadedVM [
+	^ self vmClass isThreadedVM
 ]
 
 { #category : #inlining }
