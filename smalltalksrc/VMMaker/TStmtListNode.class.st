@@ -1,0 +1,390 @@
+Class {
+	#name : #TStmtListNode,
+	#superclass : #TParseNode,
+	#instVars : [
+		'arguments',
+		'statements'
+	],
+	#category : #'VMMaker-Translation to C'
+}
+
+{ #category : #utilities }
+TStmtListNode >> addReadBeforeAssignedIn: variables to: readBeforeAssigned assignments: assigned in: aCodeGen [
+	"Add any variables in variables that are read before written to readBeforeAssigned.
+	 Add unconditional assignments to assigned.  For convenience answer assigned."
+	self
+		nodesWithParentsDo:
+			[:node :parent|
+			(node isAssignment
+			 and: [variables includes: node variable name]) ifTrue:
+				[assigned add: node variable name].
+			(node isVariable
+			 and: [(variables includes: node name)
+			 and: [(assigned includes: node name) not
+			 and: [(node structTargetKindIn: aCodeGen) isNil
+			 and: [(parent notNil and: [parent isAssignment and: [parent variable == node]]) not]]]]) ifTrue:
+				[node name = 'theCalloutState' ifTrue:
+					[self halt].
+				 readBeforeAssigned add: node name]]
+		unless:
+			[:node :parent| | conditionalAssignments mayHaveSideEffects |
+			node isSend
+				ifTrue:
+					["First deal with implicit assignments..."
+					node isValueExpansion ifTrue:
+						[assigned addAll: node receiver args].
+					(#(mem:cp:y: mem:mo:ve:) includes: node selector) ifTrue:
+						[assigned add: (node args first detect: [:subnode| subnode isVariable]) name].
+					(#(to:do: to:by:do:) includes: node selector) ifTrue:
+						[assigned addAll: (node args at: node selector numArgs) args.
+						 mayHaveSideEffects := node args size = 4. "See TMethod>>prepareMethodIn:"
+						 mayHaveSideEffects ifTrue:
+							[assigned add: node args last name]].
+					"Then deal with read-before-written in the arms of conditionals..."
+					(#(ifTrue: ifFalse: ifNil: ifNotNil:) intersection: node selector keywords) notEmpty
+						ifTrue:
+							["First find assignments in the expression..."
+							 (TStmtListNode new setStatements: {node receiver}; yourself)
+								addReadBeforeAssignedIn: variables
+								to: readBeforeAssigned
+								assignments: assigned
+								in: aCodeGen.
+							 "Now find read-before-written in each arm, and collect the assignments to spot those assigned in both arms"
+							 conditionalAssignments :=
+								node args
+									collect:
+										[:block|
+										block isStmtList ifTrue:
+											[block
+												addReadBeforeAssignedIn: variables
+												to: readBeforeAssigned
+												assignments: assigned copy
+												in: aCodeGen]]
+									thenSelect: [:each| each notNil].
+							 "add to assigned those variables written to in both arms"
+							 conditionalAssignments size = 2 ifTrue:
+								[conditionalAssignments := conditionalAssignments collect: [:set| set difference: assigned].
+								 assigned addAll: (conditionalAssignments first intersection: conditionalAssignments last)].
+							 true]
+						ifFalse:
+							[false]]
+				ifFalse:
+					[false]].
+	^assigned
+]
+
+{ #category : #accessing }
+TStmtListNode >> args [
+
+	^arguments
+]
+
+{ #category : #transformations }
+TStmtListNode >> assignLastExpressionTo: variableNode [
+	"Destructively transform the receiver so that its last expression is assigned to the argument."
+	| index |
+	index := statements findLast: [:expr| (expr isGoTo or: [expr isLabel]) not].
+	statements
+		at: index
+		put: (TAssignmentNode new
+				setVariable: variableNode
+				expression: (statements at: index))
+]
+
+{ #category : #transformations }
+TStmtListNode >> bindVariableUsesIn: aDictionary [
+
+	statements := statements collect: [ :s | s bindVariableUsesIn: aDictionary ].
+]
+
+{ #category : #transformations }
+TStmtListNode >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen [
+	"Answer either the receiver, if it contains no references to the given variables, or a new node with the given variables rebound."
+	| newStatements |
+	newStatements := statements collect: [:s| s bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold in: codeGen].
+	^newStatements = statements
+		ifTrue: [self]
+		ifFalse:
+			[self shallowCopy
+				setStatements: newStatements;
+				yourself]
+]
+
+{ #category : #transformations }
+TStmtListNode >> bindVariablesIn: aDictionary [
+
+	statements := statements collect: [ :s | s bindVariablesIn: aDictionary ].
+]
+
+{ #category : #'C code generation' }
+TStmtListNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen [
+
+	| statementWasComment |
+	statements size = 1 ifTrue:
+		[^statements first emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen].
+	statementWasComment := false.
+	aStream nextPut: $(. "N.B.  Comma binds weakest of all C operators."
+	statements
+		do:
+			[:s |
+			s emitCCommentOn: aStream level: level.
+			s emitCCodeAsArgumentOn: aStream level: level + 1 generator: aCodeGen.
+			statementWasComment := s isComment]
+		separatedBy:
+			[((self endsWithCloseBracket: aStream)
+			  or: [statementWasComment]) ifFalse: [aStream nextPut: $,].
+			aStream crtab: level].
+	aStream nextPut: $)
+]
+
+{ #category : #'C code generation' }
+TStmtListNode >> emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen [
+	^self emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen
+]
+
+{ #category : #'C code generation' }
+TStmtListNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
+
+	self emitCCodeOn: aStream prependToEnd: nil level: level generator: aCodeGen
+
+]
+
+{ #category : #'C code generation' }
+TStmtListNode >> emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level generator: aCodeGen [
+	self emitCCommentOn: aStream level: level.
+	statements withIndexDo:
+		[:s :idx|
+		s isStmtList ifFalse:
+			[s emitCCommentOn: aStream level: level].
+		aStream peekLast ~~ Character tab ifTrue:
+			[aStream tab: level].
+		(aNodeOrNil notNil
+		 and: [idx = statements size])
+			ifTrue:
+				[s emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level generator: aCodeGen]
+			ifFalse:
+				[s emitCCodeOn: aStream level: level generator: aCodeGen].
+		(self stream: aStream endsWithAnyOf: '};') ifFalse:
+			[s needsTrailingSemicolon ifTrue:
+				[aStream nextPut: $;]].
+		aStream cr].
+
+]
+
+{ #category : #testing }
+TStmtListNode >> endsWithCloseBracket: aStream [
+	"Answer true if the given stream ends in a $} character."
+
+	| ch pos |
+	ch := (pos := aStream position) > 0 ifTrue:
+			[aStream class = WriteStream "i.e. nested in StreamContents"
+				ifTrue: [aStream originalContents at: pos]
+				ifFalse: [aStream position: pos - 1; next]].
+	^ ch = $}
+
+]
+
+{ #category : #testing }
+TStmtListNode >> endsWithReturn [
+	"Answer true if the last statement of this lock is a return."
+
+	^statements last isReturn or: [statements last isReturningIf]
+]
+
+{ #category : #testing }
+TStmtListNode >> isNilStmtListNode [
+
+	|stmt|
+	statements size = 1 ifFalse: [^false].
+	stmt := statements at: 1.
+	^ stmt isVariable and: [stmt name = 'nil']
+]
+
+{ #category : #testing }
+TStmtListNode >> isStmtList [
+
+	^true
+]
+
+{ #category : #enumerating }
+TStmtListNode >> nodesDo: aBlock [
+	"Apply aBlock to all nodes in the receiver.
+	 N.B. This is assumed to be bottom-up, leaves first."
+	statements do: [ :s | s nodesDo: aBlock ].	
+	aBlock value: self
+]
+
+{ #category : #enumerating }
+TStmtListNode >> nodesDo: aBlock parent: parent [
+	"Apply aBlock to all nodes in the receiver with each node's parent.
+	 N.B. This is assumed to be bottom-up, leaves first."
+	statements do: [:s| s nodesDo: aBlock parent: self].
+	aBlock value: self value: parent
+]
+
+{ #category : #enumerating }
+TStmtListNode >> nodesDo: aBlock parent: parent unless: cautionaryBlock [
+
+	(cautionaryBlock value: self value: parent) ifTrue: [^self].
+	statements do: [ :s | s nodesDo: aBlock parent: self unless: cautionaryBlock].
+	aBlock value: self value: parent
+]
+
+{ #category : #enumerating }
+TStmtListNode >> nodesDo: aBlock unless: cautionaryBlock [
+
+	(cautionaryBlock value: self) ifTrue: [^self].
+	statements do: [ :s | s nodesDo: aBlock unless: cautionaryBlock ].	
+	aBlock value: self
+]
+
+{ #category : #enumerating }
+TStmtListNode >> nodesDo: aBlock value: parent [
+	"Apply aBlock to all nodes in the receiver with each node's parent.
+	 N.B. This is assumed to be bottom-up, leaves first."
+	statements do: [:s| s nodesDo: aBlock parent: self.].	
+	aBlock value: self value: parent
+]
+
+{ #category : #copying }
+TStmtListNode >> postCopy [
+
+	arguments := arguments copy.
+	statements := statements collect: [ :s | s copy ]
+]
+
+{ #category : #printing }
+TStmtListNode >> printOn: aStream level: level [
+
+	aStream nextPut: $[.
+	(arguments notNil and: [arguments notEmpty]) ifTrue:
+		[arguments do: [ :arg | aStream nextPutAll: ' :'; nextPutAll: arg].
+		 aStream nextPutAll: ' | '].
+	self printStatementsOn: aStream level: level.
+	aStream nextPut: $]
+]
+
+{ #category : #printing }
+TStmtListNode >> printStatementsOn: aStream level: level [
+
+	statements size > 1 ifTrue: [ aStream crtab: level + 1 ].
+	1 to: statements size do: [ :i |
+		(statements at: i) printOn: aStream level: level.
+		i = statements size ifTrue: [
+			(statements size > 1) ifTrue: [
+				aStream crtab: level.
+			].
+		] ifFalse: [
+			aStream nextPut: $.; crtab: level + 1.
+		].
+	].
+]
+
+{ #category : #transformations }
+TStmtListNode >> removeAssertions [
+	| newStatements |
+	newStatements := OrderedCollection new: statements size.
+	statements do: [ :stmt |
+		stmt isAssertion ifFalse: [
+			newStatements add: (stmt removeAssertions; yourself).
+		]
+	].
+	self setStatements: newStatements asArray
+]
+
+{ #category : #'inlining support' }
+TStmtListNode >> renameLabelsForInliningInto: aTMethod [
+	"TMethod already has a method for this; hijack it..."
+	| labels |
+	labels := OrderedCollection new.
+	self nodesDo:
+		[:node| node isLabel ifTrue: [labels add: node label]].
+	TMethod new
+		parseTree: self;
+		labels: labels;
+		renameLabelsForInliningInto: aTMethod
+]
+
+{ #category : #transformations }
+TStmtListNode >> replaceChild: aNode with: bNode [ 
+	statements := Array streamContents:
+					[:s|
+					statements do:
+						[:node|
+						node == aNode
+							ifTrue:
+								[bNode isStmtList
+									ifTrue: [s nextPutAll: bNode statements]
+									ifFalse: [s nextPut: bNode]]
+							ifFalse: [s nextPut: node]]]
+]
+
+{ #category : #transformations }
+TStmtListNode >> replaceNodesIn: aDictionary [
+
+	^aDictionary at: self ifAbsent: [
+		statements := statements collect: [ :s | s replaceNodesIn: aDictionary ].
+		self]
+]
+
+{ #category : #accessing }
+TStmtListNode >> setArguments: argList [
+
+	arguments := argList.
+]
+
+{ #category : #accessing }
+TStmtListNode >> setArguments: argList statements: statementList [
+	"Initialize this method using the given information."
+
+	arguments := argList.
+	statements := statementList.
+]
+
+{ #category : #accessing }
+TStmtListNode >> setStatements: stmtList [
+
+	statements := stmtList asOrderedCollection.
+]
+
+{ #category : #inlining }
+TStmtListNode >> shouldExpand [
+	^(statements detect: [:stmt| stmt isInline]) shouldExpand
+]
+
+{ #category : #accessing }
+TStmtListNode >> statements [
+
+	^statements
+]
+
+{ #category : #testing }
+TStmtListNode >> stream: aStream endsWithAnyOf: characters [
+	"Answer if the given stream ends in any of the characters, ignoring whitespace."
+	| pos ch popped |
+	pos := aStream position.
+	aStream class = WriteStream ifTrue: "i.e. nested in StreamContents"
+		[[pos > 0] whileTrue:
+			[ch := aStream originalContents at: pos.
+			 ch isSeparator ifFalse:
+				[^characters includes: ch].
+			 pos := pos - 1].
+		 ^false].
+
+	popped := OrderedCollection new.
+	[pos > 0] whileTrue:
+		[ch := popped addFirst: (aStream position: pos - 1; peek).
+		 ch isSeparator ifFalse:
+			[popped notEmpty ifTrue: "it almost always is"
+				["*don't* use nextPutAll: to work around a bug in UTF8TextConverter
+				  >>nextPut:toStream: which avoids line-end conversion; sigh."
+				 popped do:
+					[:c| aStream nextPut: c]].
+			 ^characters includes: ch].
+		 pos := pos - 1].
+	"*don't* use nextPutAll: to work around a bug in UTF8TextConverter>>
+	 nextPut:toStream: which avoids line-end conversion; sigh."
+	popped do:
+		[:c| aStream nextPut: c].
+	^false
+]
