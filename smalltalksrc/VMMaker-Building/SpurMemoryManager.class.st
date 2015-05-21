@@ -3085,6 +3085,8 @@ SpurMemoryManager >> checkTraversableSortedFreeList [
 	<api>
 	<inline: false>
 	prevFree := prevPrevFree := 0.
+	firstFreeChunk = 0 ifTrue:
+		[^lastFreeChunk = 0].
 	freeChunk := firstFreeChunk.
 	self allOldSpaceEntitiesDo:
 		[:o| | objOop next limit |
@@ -5485,12 +5487,12 @@ SpurMemoryManager >> inOrderPrintFreeTree: freeChunk printList: printNextList [
 	| next |
 	(next := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: freeChunk) ~= 0 ifTrue:
 		[self inOrderPrintFreeTree: next printList: printNextList].
-	self printFreeChunk: freeChunk isNextChunk: false.
+	self printFreeChunk: freeChunk printAsTreeNode: true.
 	printNextList ifTrue:
 		[next := freeChunk.
 		 [(next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: next) ~= 0] whileTrue:
 			[coInterpreter tab.
-			 self printFreeChunk: next isNextChunk: true]].
+			 self printFreeChunk: next printAsTreeNode: false]].
 	(next := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: freeChunk) ~= 0 ifTrue:
 		[self inOrderPrintFreeTree: next printList: printNextList]
 ]
@@ -8060,7 +8062,7 @@ SpurMemoryManager >> nextInSortedFreeListLink: freeChunk given: prevFree [
 		The Art of Computer Programming, Vol 1, D.E. Knuth, 3rd Ed, Sec 2.2.4 `Circular Lists', exercise. 18
 		http://en.wikipedia.org/wiki/XOR_linked_list."
 	<api>
-	^(self fetchPointer: self freeChunkNextIndex ofFreeChunk: freeChunk) bitXor: prevFree
+	^((self fetchPointer: self freeChunkNextIndex ofFreeChunk: freeChunk) bitXor: prevFree) asUnsignedInteger
 ]
 
 { #category : #'primitive support' }
@@ -9002,11 +9004,11 @@ SpurMemoryManager >> printForwarders [
 { #category : #'debug printing' }
 SpurMemoryManager >> printFreeChunk: freeChunk [
 	<api>
-	self printFreeChunk: freeChunk isNextChunk: false
+	self printFreeChunk: freeChunk printAsTreeNode: true
 ]
 
 { #category : #'debug printing' }
-SpurMemoryManager >> printFreeChunk: freeChunk isNextChunk: isNextChunk [
+SpurMemoryManager >> printFreeChunk: freeChunk printAsTreeNode: printAsTreeNode [
 	| numBytes |
 	numBytes := self bytesInObject: freeChunk.
 	coInterpreter
@@ -9015,7 +9017,7 @@ SpurMemoryManager >> printFreeChunk: freeChunk isNextChunk: isNextChunk [
 		print: ' next '; printHexPtrnp: (self fetchPointer: self freeChunkNextIndex
 											ofFreeChunk: freeChunk).
 	(numBytes >= (self numFreeLists * self allocationUnit)
-	 and: [isNextChunk not]) ifTrue:
+	 and: [printAsTreeNode]) ifTrue:
 		[coInterpreter
 			print: ' ^ '; printHexPtrnp: (self fetchPointer: self freeChunkParentIndex
 											ofFreeChunk: freeChunk);
@@ -9337,6 +9339,26 @@ SpurMemoryManager >> printReferencesTo: anOop [
 			[anOop = (self fetchPointer: i ofMaybeForwardedObject: obj) ifTrue:
 				[coInterpreter printHex: obj; print: ' @ '; printNum: i; space; printOopShort: obj; cr.
 				 i := 0]]]
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printSortedFreeList [
+	<api>
+	| freeChunk prevFree nextFree |
+	(firstFreeChunk > 0 and: [lastFreeChunk > firstFreeChunk]) ifFalse:
+		[coInterpreter print: 'sorted free list empty or corrupt'; cr.
+		 ^self].
+	freeChunk := firstFreeChunk.
+	prevFree := 0.
+	[((self addressCouldBeObj: freeChunk)
+	 and: [self isFreeObject: freeChunk]) ifFalse:
+		[coInterpreter printHexnp: freeChunk; print: ' is not a free chunk!' ; cr.
+		 ^self].
+	 self printFreeChunk: freeChunk printAsTreeNode: false.
+	 freeChunk ~= lastFreeChunk] whileTrue:
+		[nextFree := self nextInSortedFreeListLink: freeChunk given: prevFree.
+		 prevFree := freeChunk.
+		 freeChunk := nextFree]
 ]
 
 { #category : #'class table' }
