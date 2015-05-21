@@ -6,7 +6,7 @@ AsynchFilePlugin \
 B2DPlugin \
 BitBltPlugin \
 BMPReadWriterPlugin \
-CroquetPlugin \
+#CroquetPlugin \
 ZipPlugin \
 DropPlugin \
 DSAPrims \
@@ -15,7 +15,7 @@ FileCopyPlugin \
 FilePlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
-IA32ABI \
+#IA32ABI \
 JoystickTabletPlugin \
 JPEGReaderPlugin \
 JPEGReadWriter2Plugin \
