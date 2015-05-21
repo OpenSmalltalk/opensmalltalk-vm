@@ -95,20 +95,20 @@ CoInterpreter class >> apiExportHeaderName [
 { #category : #translation }
 CoInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	"Override to avoid repeating StackInterpreter's declarations and add our own extensions"
-	| threaded |
 	self class == thisContext methodClass ifFalse: [^self]. "Don't duplicate decls in subclasses"
-	threaded := aCCodeGenerator vmClass isThreadedVM.
 	aCCodeGenerator
 		addHeaderFile:'"sqCogStackAlignment.h"';
 		addHeaderFile:'"cogmethod.h"'.
 	NewspeakVM ifTrue:
 		[aCCodeGenerator addHeaderFile:'"nssendcache.h"'].
 	aCCodeGenerator
-		addHeaderFile: (threaded ifTrue: ['"cointerpmt.h"'] ifFalse: ['"cointerp.h"']);
+		addHeaderFile: (aCCodeGenerator isThreadedVM 
+			ifTrue: ['"cointerpmt.h"'] 
+			ifFalse: ['"cointerp.h"']);
 		addHeaderFile:'"cogit.h"'.
 	aCCodeGenerator vmClass
 		declareInterpreterVersionIn: aCCodeGenerator
-		defaultName: (threaded ifTrue: ['Cog MT'] ifFalse: ['Cog']).
+		defaultName: aCCodeGenerator interpreterVersion.
 	aCCodeGenerator
 		var: #heapBase type: #usqInt;
 		var: #statCodeCompactionUsecs type: #usqLong;
@@ -342,6 +342,11 @@ CoInterpreter class >> interpreterMachineCodeTransitions [
 	 a primitive whether the primitive call is from machine code, as it should be; it isn't a
 	 concern of the primitive.  Hence KISS says ``no machine-code invocation of primitives
 	 from the interpreter''."
+]
+
+{ #category : #accessing }
+CoInterpreter class >> interpreterVersion [ 
+	^ 'Cog'
 ]
 
 { #category : #translation }
@@ -3975,10 +3980,19 @@ CoInterpreter >> initStackPagesAndInterpret [
 							cCode: [self alloca: stackPagesBytes]
 							inSmalltalk: [stackPages initializeWithByteSize: stackPagesBytes for: self].
 	self cCode: [self me: theStackMemory ms: 0 et: stackPagesBytes].
-	self sqMakeMemoryNotExecutableFrom: objectMemory startOfMemory asUnsignedInteger
-		To: objectMemory memoryLimit asUnsignedInteger.
-	self sqMakeMemoryNotExecutableFrom: theStackMemory asUnsignedInteger
+	self cppIf: #PHAROVM_USE_EXECUTABLE_MEMORY 
+		ifTrue:  [
+			self 
+				sqMakeMemoryExecutableFrom: objectMemory startOfMemory asUnsignedInteger
+				To: objectMemory memoryLimit asUnsignedInteger ]
+		ifFalse: [ 
+			self 
+				sqMakeMemoryNotExecutableFrom: objectMemory startOfMemory asUnsignedInteger
+				To: objectMemory memoryLimit asUnsignedInteger ].
+	self 
+		sqMakeMemoryNotExecutableFrom: theStackMemory asUnsignedInteger
 		To: theStackMemory asUnsignedInteger + stackPagesBytes.
+	
 	stackPages
 		initializeStack: theStackMemory
 		numSlots: stackPagesBytes / objectMemory wordSize

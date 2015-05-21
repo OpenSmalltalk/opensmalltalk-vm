@@ -141,6 +141,21 @@ FilePluginSimulator >> makeDirEntryName: entryName size: entryNameSize
 
 ]
 
+{ #category : #'file primitives' }
+FilePluginSimulator >> makeDirEntryName: entryName size: entryNameSize createDate: createDate modDate: modifiedDate isDir: dirFlag fileSize: fileSize posixPermissions: posixPermissions isSymlink: symlinkFlag [
+	<option: #PharoVM>
+	
+	^interpreterProxy
+		makeDirEntryName: entryName 
+		size: entryNameSize
+		createDate: createDate 
+		modDate: modifiedDate
+		isDir: dirFlag 
+		fileSize: fileSize
+		posixPermissions: posixPermissions
+		isSymlink: symlinkFlag
+]
+
 { #category : #simulation }
 FilePluginSimulator >> primitiveDirectoryEntry [
 	^interpreterProxy interpreter primitiveDirectoryEntry
