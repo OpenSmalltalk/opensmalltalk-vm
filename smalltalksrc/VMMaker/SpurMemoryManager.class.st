@@ -958,6 +958,11 @@ SpurMemoryManager class >> isTerminalObjectAccessor: selector [
 	^#(byteSizeOf: fetchFloat:ofObject: fetchInteger:ofObject: fetchLong32:ofObject: instanceSizeOf: slotSizeOf: stSizeOf:) includes: selector
 ]
 
+{ #category : #accessing }
+SpurMemoryManager class >> memoryManagerVersion [ 
+	^ 'Spur'
+]
+
 { #category : #translation }
 SpurMemoryManager class >> mustBeGlobal: var [
 	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM support code."
