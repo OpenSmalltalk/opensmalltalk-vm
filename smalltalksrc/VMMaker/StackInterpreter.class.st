@@ -1340,11 +1340,6 @@ StackInterpreter class >> initializeWithOptions: optionsDictionary [
 	self initializeStreamIndices
 ]
 
-{ #category : #accessing }
-StackInterpreter class >> interpreterVersion [ 
-	^ 'Stack'
-]
-
 { #category : #translation }
 StackInterpreter class >> isInterpreterClass [
 	^true
