@@ -98,11 +98,6 @@ CoInterpreterMT class >> initializeSchedulerIndices [
 
 ]
 
-{ #category : #accessing }
-CoInterpreterMT class >> interpreterVersion [ 
-	^ 'Cog MT'
-]
-
 { #category : #translation }
 CoInterpreterMT class >> isNonArgumentImplicitReceiverVariableName: aString [
 	^'cogThreadManager' = aString
