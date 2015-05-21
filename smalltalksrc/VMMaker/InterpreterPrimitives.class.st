@@ -1849,7 +1849,7 @@ InterpreterPrimitives >> primitiveGetLogDirectory [
 { #category : #'I/O primitives' }
 InterpreterPrimitives >> primitiveGetNextEvent [
 	"Primitive. Return the next input event from the VM event queue."
-	| evtBuf arg value |
+	| evtBuf arg value eventTypeIs |
 	<var: #evtBuf declareC:'int evtBuf[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }'>
 	self cCode:'' inSmalltalk:[evtBuf := CArrayAccessor on: (IntegerArray new: 8)].
 	arg := self stackTop.
@@ -1859,20 +1859,29 @@ InterpreterPrimitives >> primitiveGetNextEvent [
 	self successful ifFalse:[^nil].
 
 	"Event type"
+	eventTypeIs := evtBuf at: 0.
 	self storeInteger: 0 ofObject: arg withValue: (evtBuf at: 0).
 	self successful ifFalse:[^nil].
 
-	"Event time stamp"
-	self storeInteger: 1 ofObject: arg withValue: ((evtBuf at: 1) bitAnd: MillisecondClockMask).
-	self successful ifFalse:[^nil].
+	"Event is Complex, assume evtBuf is populated correctly and return"
+	eventTypeIs = 6 
+		ifTrue: [ 
+			1 to: 7 do: [:i |
+				value := evtBuf at: i.
+				self storePointer: i ofObject: arg withValue: value]]
+	ifFalse: [
+		"Event time stamp"
+		self storeInteger: 1 ofObject: arg withValue: ((evtBuf at: 1) bitAnd: MillisecondClockMask).
+		self successful ifFalse:[^nil].	
 
-	"Event arguments"
-	2 to: 7 do:[:i|
-		value := evtBuf at: i.
-		(objectMemory isIntegerValue: value)
-			ifTrue:[self storeInteger: i ofObject: arg withValue: value]
-			ifFalse:[value := self positive32BitIntegerFor: value.
-				objectMemory storePointer: i ofObject: arg withValue: value]].
+		"Event arguments"
+		2 to: 7 do:[:i|
+			value := evtBuf at: i.
+			(objectMemory isIntegerValue: value)
+				ifTrue:[self storeInteger: i ofObject: arg withValue: value]
+				ifFalse:[
+					value := self positive32BitIntegerFor: value.
+					objectMemory storePointer: i ofObject: arg withValue: value] ] ].
 
 	self successful ifFalse:[^nil].
 	self pop: 1
@@ -2014,6 +2023,19 @@ InterpreterPrimitives >> primitiveIdentityHash [
 		ifTrue: [self primitiveFail]
 		ifFalse: [self pop: argumentCount + 1
 					thenPushInteger: (objectMemory hashBitsOf: thisReceiver)]
+]
+
+{ #category : #'other primitives' }
+InterpreterPrimitives >> primitiveImageFormatVersion [
+	"Answer an integer identifying the type of image. The image version number may
+	identify the format of the image (e.g. 32 or 64-bit word size) or specific requirements
+	of the image (e.g. block closure support required).
+	
+	This is a named (not numbered) primitive in the null module (ie the VM)"
+
+	<export: true>
+	self pop: 1 thenPush: (self positive32BitIntegerFor: self imageFormatVersion)
+
 ]
 
 { #category : #'other primitives' }
