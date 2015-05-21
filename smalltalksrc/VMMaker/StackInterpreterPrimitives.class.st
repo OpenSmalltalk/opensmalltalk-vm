@@ -430,7 +430,7 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 				FromModule: moduleName + objectMemory baseHeaderSize
 				OfLength: moduleLength.
 	addr = 0 ifTrue:
-		[^self primitiveFailFor: PrimErrNotFound ]. "could not find function; answer generic failure (see below)"
+		[^self primitiveFailFor: -1]. "could not find function; answer generic failure (see below)"
 
 	"Cannot fail this primitive from now on.  Can only fail the external primitive."
 	tempOop := objectMemory
