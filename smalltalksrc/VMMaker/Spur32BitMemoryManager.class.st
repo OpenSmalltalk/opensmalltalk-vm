@@ -25,11 +25,6 @@ Spur32BitMemoryManager class >> numSmallIntegerTagBits [
 	^1
 ]
 
-{ #category : #'accessing class hierarchy' }
-Spur32BitMemoryManager class >> objectRepresentationClass [
-	^CogObjectRepresentationFor32BitSpur
-]
-
 { #category : #'simulation only' }
 Spur32BitMemoryManager class >> simulatorClass [
 	^Spur32BitMMLESimulator
