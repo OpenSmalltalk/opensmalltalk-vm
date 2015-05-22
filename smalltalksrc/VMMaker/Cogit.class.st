@@ -491,7 +491,6 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator removeConstant: #COGMTVM. "this should be defined at compile time"
 	aCCodeGenerator
 		addHeaderFile:'<stddef.h>'; "for e.g. offsetof"
-		addHeaderFile:'<setjmp.h>';
 		addHeaderFile:'"sqCogStackAlignment.h"';
 		addHeaderFile:'"dispdbg.h"'; "must preceed cointerp.h & cogit.h otherwise NoDbgRegParms gets screwed up"
 		addHeaderFile:'"cogmethod.h"'.
@@ -5733,6 +5732,9 @@ Cogit >> generateClosedPICPrototype [
 	 When we first allocate a closed PIC it only has one or two cases and we want to grow it.
 	 So we have to determine how big a full one is before hand."
 	numPICCases := 6.
+	methodLabel
+		address: methodZoneBase;
+		dependent: nil.
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: numPICCases * 7 bytecodes: 0.
