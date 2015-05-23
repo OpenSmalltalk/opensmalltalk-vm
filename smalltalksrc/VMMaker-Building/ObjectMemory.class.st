@@ -427,6 +427,11 @@ ObjectMemory class >> maxSmallInteger [
 	^1073741823
 ]
 
+{ #category : #accessing }
+ObjectMemory class >> memoryManagerVersion [ 
+	^ 'SqueakV3'
+]
+
 { #category : #translation }
 ObjectMemory class >> minSmallInteger [
 	^-1073741824
@@ -1927,6 +1932,9 @@ ObjectMemory >> finalizeReference: oop [
 				ifFalse: [oopGone := (self isMarked: weakOop) not].
 			oopGone ifTrue: "Store nil in the pointer and signal the  interpreter"
 				[self longAt: oop + i put: nilObj.
+				self 
+					cppIf: PharoVM 
+					ifTrue: [ numFields >= 2 ifTrue: [ self weakFinalizerCheck: oop ] ].
 				self signalFinalization: oop]]]
 ]
 
@@ -2353,6 +2361,14 @@ ObjectMemory >> gcBiasToGrowThreshold: aValue [
 { #category : #accessing }
 ObjectMemory >> gcStartUsecs [
 	^gcStartUsecs
+]
+
+{ #category : #accessing }
+ObjectMemory >> getHeapGrowthToSizeGCRatio [
+	"For compatibility with spur object memory"
+	<option: #PharoVM>
+	<returnTypeC: #float>
+	^ 0
 ]
 
 { #category : #contexts }
@@ -3188,6 +3204,23 @@ ObjectMemory >> isImmutableWhileForwarding: oop [
 			[self fwdBlockValidate: fwdBlock].
 		header := self longAt: fwdBlock + self wordSize].
 	^(header bitAnd: ImmutabilityBit) ~= 0
+]
+
+{ #category : #finalization }
+ObjectMemory >> isInFinalizationList: oop head: listHead [
+	"it is known that oop's first fixed slot points to an instance of special object - ClassWeakFinalizer ,
+	so it is safe to assume that we can iterate over it to figure out if oop is already in that list"
+	<option: #PharoVM>
+	| listItem |
+
+	listItem := listHead.
+	
+	[ listItem == self nilObject ] whileFalse: [
+		listItem == oop ifTrue: [ ^ true ].
+		listItem := self fetchPointer: 1 ofObject: listItem.   
+	].
+	^ false
+
 ]
 
 { #category : #'plugin support' }
@@ -4510,12 +4543,20 @@ ObjectMemory >> readHeapFromImageFile: f dataBytes: numBytes [
 	"Read numBytes of image data from f into memory at memoryBaseForImageRead.
 	 Answer the number of bytes written."
 	<var: #f type: #sqImageFile>
-	^self cCode:
-			[self
-				sq: (self pointerForOop: self memoryBaseForImageRead)
-				Image: (self sizeof: #char)
-				File: numBytes
-				Read: f]
+	^self cCode: [
+		self cppIf: PharoVM
+			ifTrue: [  
+				self
+					sq: (self pointerForOop: self memoryBaseForImageRead)
+					Image: (self sizeof: #char)
+					File: numBytes
+					ReadEntireImage: f ]
+			ifFalse: [ 
+				self
+					sq: (self pointerForOop: self memoryBaseForImageRead)
+					Image: (self sizeof: #char)
+					File: numBytes
+					Read: f] ]
 		inSmalltalk:
 			[(f	readInto: memory
 				startingAt: self memoryBaseForImageRead // 4 + 1

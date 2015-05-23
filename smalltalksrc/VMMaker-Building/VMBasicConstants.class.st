@@ -50,6 +50,7 @@ Class {
 		'IMMUTABILITY',
 		'MULTIPLEBYTECODESETS',
 		'NewspeakVM',
+		'PharoVM',
 		'PrimErrBadArgument',
 		'PrimErrBadIndex',
 		'PrimErrBadMethod',

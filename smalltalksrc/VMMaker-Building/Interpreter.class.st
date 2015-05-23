@@ -8947,7 +8947,12 @@ Interpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imageO
 	self sqImageFile: f Seek: headerStart + headerSize.
 
 	"read in the image in bulk, then swap the bytes if necessary"
-	bytesRead := self cCode: 'sqImageFileRead(pointerForOop(memory), sizeof(unsigned char), dataSize, f)'.
+	self 
+		cppIf: PharoVM 
+		ifTrue: [  
+			bytesRead := self cCode: 'sqImageFileReadEntireImage(pointerForOop(memory), sizeof(unsigned char), dataSize, f)' ]
+		ifFalse: [ 
+			bytesRead := self cCode: 'sqImageFileRead(pointerForOop(memory), sizeof(unsigned char), dataSize, f)' ].
 	bytesRead ~= dataSize ifTrue: [self unableToReadImageError].
 
 	swapBytes ifTrue: [self reverseBytesInImage].
