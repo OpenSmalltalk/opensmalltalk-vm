@@ -1621,8 +1621,10 @@ VMMaker >> needsToRegenerateCogitFile [
 
 	"don't translate if the file is newer than my timeStamp"
 	(self coreVMDirectory entryAt: cogitClass processorSpecificSourceFileName ifAbsent: [nil]) ifNotNil:
-		[:fstat|
-		tStamp < fstat modificationTime ifTrue:
+		[:fstat| | mTime |
+		mTime := fstat modificationTime.
+		mTime isInteger ifFalse: [mTime := mTime asSeconds].
+		tStamp < mTime ifTrue:
 			[^self confirm: ('The ', self configurationNameIfAny, cogitClass printString,
 							', ', cogitClass activeCompilerClass, '\classes have not been modified since the ',
 							cogitClass processorSpecificSourceFileName,
@@ -1646,8 +1648,10 @@ VMMaker >> needsToRegenerateInterpreterFile [
 
 	"don't translate if the file is newer than my timeStamp"
 	(self coreVMDirectory entryAt: self interpreterFilename ifAbsent: [nil]) ifNotNil:
-		[:fstat|
-		tStamp < fstat modificationTime ifTrue:
+		[:fstat| | mTime |
+		mTime := fstat modificationTime.
+		mTime isInteger ifFalse: [mTime := mTime asSeconds].
+		tStamp < mTime ifTrue:
 			[^self confirm: 'The ', self configurationNameIfAny, 'interpreter classes have not been modified since\ the interpreter file was last generated.\Do you still want to regenerate the source file?' withCRs]].
 	^true
 

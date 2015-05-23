@@ -3602,6 +3602,7 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 		point: (objectMemory numBytesOf: cPIC selector)
 		isMNUCase: isMNUCase.
 	self allocateOpcodes: 5 bytecodes: 0.
+	methodLabel address: cPIC asUnsignedInteger; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self assert: (objectRepresentation inlineCacheTagIsYoung: caseNTag) not.
 	"Caller patches to open pic if caseNMethod is young."
 	self assert: (caseNMethod notNil and: [(objectMemory isYoung: caseNMethod) not]).
@@ -3621,9 +3622,8 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 	self CmpCw: caseNTag R: TempReg.
 	self MoveCw: operand R: SendNumArgsReg.
 	self JumpLongZero: target.
-	self MoveCw: cPIC asInteger R: ClassReg.
+	self MoveCw: cPIC asUnsignedInteger R: ClassReg.
 	self JumpLong: (self cPICMissTrampolineFor: cPIC cmNumArgs).
-
 	self computeMaximumSizes.
 	address := self addressOfEndOfCase: cPIC cPICNumCases - 1 inCPIC: cPIC.
 	size := self generateInstructionsAt: address.
@@ -3652,17 +3652,14 @@ Cogit >> cogMNUPICSelector: selector receiver: rcvr methodOperand: methodOperand
 	startAddress = 0 ifTrue:
 		[coInterpreter callForCogCompiledCodeCompaction.
 		 ^0].
-	methodLabel
-		address: startAddress;
-		dependent: nil.
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: numPICCases * 7 bytecodes: 0.
+	methodLabel address: startAddress; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self compileMNUCPIC: (self cCoerceSimple: startAddress to: #'CogMethod *')
 		methodOperand: methodOperand
 		numArgs: numArgs.
 	self computeMaximumSizes.
-	methodLabel concretizeAt: startAddress.
 	size := self generateInstructionsAt: startAddress + (self sizeof: CogMethod).
 	end := self outputInstructionsAt: startAddress + (self sizeof: CogMethod).
 	"The missOffset is the same as the interpretOffset. On RISCs it includes an additional instruction."
@@ -3814,12 +3811,10 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 	startAddress := methodZone allocate: closedPICSize.
 	startAddress = 0 ifTrue:
 		[^self cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
-	methodLabel
-		address: startAddress;
-		dependent: nil.
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: numPICCases * 7 bytecodes: 0.
+	methodLabel address: startAddress; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self compileCPIC: (self cCoerceSimple: startAddress to: #'CogMethod *')
 		Case0: case0CogMethod
 		Case1Method: case1MethodOrNil
@@ -3827,7 +3822,6 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 		isMNUCase: isMNUCase
 		numArgs: numArgs.
 	self computeMaximumSizes.
-	methodLabel concretizeAt: startAddress.
 	size := self generateInstructionsAt: startAddress + (self sizeof: CogMethod).
 	end := self outputInstructionsAt: startAddress + (self sizeof: CogMethod).
 	"The missOffset is the same as the interpretOffset. On RISCs it includes an additional instruction."
@@ -4054,7 +4048,7 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: c
 	jumpNext jmpTarget: endCPICCase0.
 	self MoveCw: operand R: SendNumArgsReg.
 	self JumpLongZero: (isMNUCase ifTrue: [picMNUAbort] ifFalse: [targetEntry]) asInteger.
-	endCPICCase1 := self MoveCw: cPIC asInteger R: ClassReg.
+	endCPICCase1 := self MoveCw: cPIC asUnsignedInteger R: ClassReg.
 	self JumpLong: (self cPICMissTrampolineFor: numArgs).
 	^0
 
@@ -4117,6 +4111,7 @@ Cogit >> compileClosedPICPrototype [
 	"Compile the abstract instructions for a full closed PIC used to initialize closedPICSize.
 	 The loads into SendNumArgsReg are those for optional method objects which may be
 	 used in MNU cases."
+	<inline: true>
 	| numArgs jumpNext |
 	<var: #jumpNext type: #'AbstractInstruction *'>
 	numArgs := 0.
@@ -4132,7 +4127,7 @@ Cogit >> compileClosedPICPrototype [
 		self JumpLongZero: 16rCA5E10 + (h * 16).
 		h = 1 ifTrue:
 			[endCPICCase1 := self Label]].
-	self MoveCw: methodZoneBase R: ClassReg.
+	self MoveCw: methodLabel address R: ClassReg.
 	self JumpLong: (self cPICMissTrampolineFor: numArgs).
 	^0
 ]
@@ -4233,7 +4228,7 @@ Cogit >> compileMNUCPIC: cPIC methodOperand: methodOperand numArgs: numArgs [
 					ifFalse: [methodOperand].
 	self MoveCw: operand R: SendNumArgsReg.
 	self JumpLong: picMNUAbort asInteger.
-	jumpNext jmpTarget: (self MoveCw: cPIC asInteger R: ClassReg).
+	jumpNext jmpTarget: (self MoveCw: cPIC asUnsignedInteger R: ClassReg).
 	self JumpLong: (self cPICMissTrampolineFor: numArgs).
 	^0
 
@@ -5732,15 +5727,12 @@ Cogit >> generateClosedPICPrototype [
 	 When we first allocate a closed PIC it only has one or two cases and we want to grow it.
 	 So we have to determine how big a full one is before hand."
 	numPICCases := 6.
-	methodLabel
-		address: methodZoneBase;
-		dependent: nil.
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: numPICCases * 7 bytecodes: 0.
+	methodLabel address: methodZoneBase; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self compileClosedPICPrototype.
 	self computeMaximumSizes.
-	methodLabel concretizeAt: methodZoneBase.
 	closedPICSize := (self sizeof: CogMethod) + (self generateInstructionsAt: methodZoneBase + (self sizeof: CogMethod)).
 	firstCPICCaseOffset := endCPICCase0 address - methodZoneBase.
 	cPICCaseSize := endCPICCase1 address - endCPICCase0 address.

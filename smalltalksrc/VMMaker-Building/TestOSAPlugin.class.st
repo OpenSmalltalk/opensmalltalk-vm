@@ -9,12 +9,8 @@ Class {
 
 { #category : #'as yet unclassified' }
 TestOSAPlugin class >> declareCVarsIn: cg [
+	cg addHeaderFile: '<Carbon/Carbon.h>'.
 
-	cg addHeaderFile: '<AppleEvents.h>'.
-	cg addHeaderFile: '<AppleScript.h>'.
-	cg addHeaderFile: '<OSA.h>'.
-	cg addHeaderFile: '<OSAGeneric.h>'.
-	cg addHeaderFile: '<Script.h>'.
 ]
 
 { #category : #translation }

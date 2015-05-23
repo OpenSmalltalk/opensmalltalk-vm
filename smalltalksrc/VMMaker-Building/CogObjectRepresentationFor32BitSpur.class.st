@@ -330,7 +330,7 @@ CogObjectRepresentationFor32BitSpur >> genGetInlineCacheClassTagFrom: sourceReg 
 	 the receiver's classIndex.
 	 If forEntry is true answer the entry label at which control is to enter (cmEntryOffset).
 	 If forEntry is false, control enters at the start.
-	If forEntry is false, generate something like this:
+	 If forEntry is true, generate something like this:
 		Limm:
 			andl $0x1, rDest
 			j Lcmp
@@ -341,7 +341,7 @@ CogObjectRepresentationFor32BitSpur >> genGetInlineCacheClassTagFrom: sourceReg 
 			movl 0(%edx), rDest
 			andl $0x3fffff, rDest
 		Lcmp:
-	 If forEntry is true, generate something like the following.
+	 If forEntry is false, generate something like the following.
 	 At least on a 2.2GHz Intel Core i7 the following is slightly faster than the above,
 	 136m sends/sec vs 130m sends/sec for nfib in tinyBenchmarks
 		Lentry:
