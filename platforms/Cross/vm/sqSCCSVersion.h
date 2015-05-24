@@ -97,3 +97,29 @@ sourceVersionString(char separator)
 	}
 	return sourceVersion;
 }
+
+
+#if VERSION_PROGRAM
+# include "sq.h"
+
+int
+main(int argc, char *argv[])
+{
+	char vm_version[] = VM_VERSION;
+
+	if (argc == 2 && !strcmp(argv[1], "VM_VERSION"))
+		printf("%s\n", vm_version);
+	else if (argc == 2 && !strcmp(argv[1], "VM_MAJOR"))
+		printf("%.*s\n", strchr(vm_version,'.') - vm_version, vm_version);
+	else if (argc == 2 && !strcmp(argv[1], "VM_MINOR"))
+		printf("%s\n", strchr(vm_version,'.') + 1, vm_version);
+	else if (argc == 2 && !strcmp(argv[1], "VM_RELEASE"))
+		printf("%s\n", revisionAsString());
+	else if (argc == 2 && !strcmp(argv[1], "VERSION_TAG"))
+		printf("%s.%s\n", vm_version, revisionAsString());
+	else
+		return 1;
+
+	return 0;
+}
+#endif /* VERSION_PROGRAM */

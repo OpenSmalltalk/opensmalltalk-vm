@@ -15,7 +15,7 @@ uninstall : uninstall-squeak uninstall-plugins uninstall-doc $(uninstall_nps)
 
 # squeak
 
-install-squeak : $(squeak)
+install-squeak : $(squeak) getversion
 	$(MKINSTALLDIRS) $(ROOT)$(plgdir)
 	$(MKINSTALLDIRS) $(ROOT)$(bindir)
 	$(INSTALL_PROG) $(squeak) $(ROOT)$(plgdir)
@@ -25,7 +25,7 @@ install-squeak : $(squeak)
 	  $(INSTALL_DATA) $(ICONS) $(ROOT)$(VM_APP_ICONS); \
 	fi
 
-uninstall-squeak : .force
+uninstall-squeak : getversion .force
 	if test -n "$(VM_APP_ICONS)"; then \
 	  $(UNINSTALL) $(ROOT)$(VM_APP_ICONS); \
 	fi
@@ -34,7 +34,7 @@ uninstall-squeak : .force
 
 # plugins
 
-install-plugins : plugins
+install-plugins : plugins getversion
 	$(MKINSTALLDIRS) $(ROOT)$(plgdir)
 	@list='$(PLUGINS_LA)'; for p in $$list; do \
 	  if test -f */$$p; then \
@@ -44,7 +44,7 @@ install-plugins : plugins
 	done
 	-rm $(ROOT)$(plgdir)/*.la
 
-uninstall-plugins : .force
+uninstall-plugins : getversion .force
 	@list='$(PLUGINS_LA)'; for p in $$list; do \
 	  filename=$(ROOT)/$(plgdir)/`basename $$p .la`;\
 	  if test -f $$filename; then \
@@ -92,7 +92,7 @@ install-image : inisqueak $(topdir)/Squeak$(SQ_VERSION).image.gz $(topdir)/Squea
 	  rm -f inisqueak; \
 	  $(LN_S) $$path/inisqueak .; )
 
-uninstall-image :
+uninstall-image : getversion
 	@$(UNINSTALL) $(ROOT)$(plgdir) Squeak$(SQ_VERSION).image.gz
 	@$(UNINSTALL) $(ROOT)$(plgdir) Squeak$(SQ_VERSION).changes.gz
 	@$(UNINSTALL) $(ROOT)$(plgdir) inisqueak
@@ -108,8 +108,8 @@ uninstall-sources :
 
 # npsqueak
 
-install-npsqueak : npsqueak .force
+install-npsqueak : npsqueak getversion .force
 	$(SHELL) -ec 'cd nps; $(MAKE) install ROOT=$(ROOT) VM_VERSION=$(VM_VERSION) plgdir=$(plgdir) bindir=$(bindir) imgdir=$(imgdir)'
 
-uninstall-npsqueak : npsqueak .force
+uninstall-npsqueak : npsqueak getversion .force
 	$(SHELL) -ec 'cd nps; $(MAKE) uninstall ROOT=$(ROOT) VM_VERSION=$(VM_VERSION) plgdir=$(plgdir) bindir=$(bindir) imgdir=$(imgdir)'

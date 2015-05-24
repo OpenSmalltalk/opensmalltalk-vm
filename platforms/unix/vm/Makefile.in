@@ -71,7 +71,7 @@ $(blddir)/sqNamedPrims.h:	$(vmmcfg)/plugins.int
 
 sqNamedPrims$o : $(blddir)/sqNamedPrims.h
 
-# rebuild sqExtPrims sqUnixMain (VM_VERSION) if config.h changes
+# rebuild sqExtPrims sqUnixMain if config.h changes
 
 sqUnixExternalPrims$o sqUnixMain$o : ../config.h $(topdir)/platforms/unix/vm/dlfcn-dyld.c
 

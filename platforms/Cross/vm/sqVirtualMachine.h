@@ -1,10 +1,16 @@
 #ifndef _SqueakVM_H
 #define _SqueakVM_H
 
-/* We expect interp.h to define VM_PROXY_MAJOR & VM_PROXY_MINOR appropriately
- * for the VM generated with it.
+/* We expect interp.h to define VM_PROXY_MAJOR & VM_PROXY_MINOR, and other
+ * defines such as STACKVM, appropriately for the VM generated with it.
  */
 #include "interp.h"
+
+#if SPURVM
+# define VM_VERSION "5.0"
+#else
+# define VM_VERSION "4.5"
+#endif
 
 #ifndef VM_PROXY_MAJOR
 /* Increment the following number if you change the order of

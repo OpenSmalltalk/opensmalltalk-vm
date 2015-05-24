@@ -1,6 +1,6 @@
 # make.cfg.in -- mf fragment for configured variables		-*- makefile -*-
 # 
-#   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+#   Copyright (C) 1996-2015 by Ian Piumarta and other authors/contributors
 #                              listed elsewhere in this file.
 #   All rights reserved.
 #   
@@ -20,27 +20,17 @@
 #   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 #   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-#   SOFTWARE.
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+#	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+#	DEALINGS IN THE SOFTWARE.
 
 # Author: Ian.Piumarta@inria.fr
 # 
-# Last edited: Tue Jan 26 11:48:03 PST 2010 by eliot
+# Last edited: Fri May 22 11:16:24 PDT 2015 by eliot
 
 MAKEFLAGS=	--no-print-directory
 
 @SET_MAKE@
-
-VM_MAJOR=	@VM_MAJOR@
-VM_MINOR=	@VM_MINOR@
-VM_RELEASE=	@VM_RELEASE@
-VM_VERSION=	@VM_VERSION@
-
-SQ_MAJOR=	@SQ_MAJOR@
-SQ_MINOR=	@SQ_MINOR@
-SQ_UPDATE=	@SQ_UPDATE@
-SQ_VERSION=	@SQ_VERSION@
 
 DEVEL=		@DEVEL@
 

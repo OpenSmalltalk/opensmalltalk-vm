@@ -39,10 +39,13 @@
 
 /* Note: All pluggable primitives are defined as
 	EXPORT(int) somePrimitive(void)
-   If the platform requires special declaration modifiers, the EXPORT
-   macro can be redefined.
+   All non-static variables in the VM and plugins are declared as
+	VM_EXPORT type var
+   If the platform requires special declaration modifiers, the EXPORT and
+   VM_EXPORT macros can be redefined.
 */
 #define EXPORT(returnType) returnType
+#define VM_EXPORT
 
 /* Image save/restore macros. */
 

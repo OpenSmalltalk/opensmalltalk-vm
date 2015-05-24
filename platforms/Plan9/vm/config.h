@@ -121,8 +121,6 @@
 
 /* other configured variables */
 
-#define SQ_VERSION "4.5"
-#define VM_VERSION "4.5"
 #define VM_LIBDIR ""
 #define VM_MODULE_PREFIX ""
 #define VM_BUILD_STRING "Plan9 built on "__DATE__" "__TIME__

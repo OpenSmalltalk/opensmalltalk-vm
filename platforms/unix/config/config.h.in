@@ -161,8 +161,6 @@
 
 /* other configured variables */
 
-#undef SQ_VERSION
-#undef VM_VERSION
 #undef VM_MODULE_PREFIX
 #undef VM_DLSYM_PREFIX
 #undef VM_X11DIR

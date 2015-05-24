@@ -20,3 +20,8 @@
 #else
 # define VMBIGENDIAN 0
 #endif
+
+#if defined(__GNUC__)
+# define PlatformNoDbgRegParms __attribute__ ((regparm (0)))
+# define NeverInline __attribute__ ((noinline))
+#endif

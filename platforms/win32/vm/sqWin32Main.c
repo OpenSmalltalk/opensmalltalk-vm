@@ -18,6 +18,7 @@
 #include <float.h>
 #include <ole2.h>
 #include "sq.h"
+#include "sqWin32Prefs.h"
 #include "sqAssert.h"
 #include "sqWin32Backtrace.h"
 #include "sqSCCSVersion.h"
@@ -925,7 +926,7 @@ extern char *__cogitBuildInfo;
     fprintf(f,"\n%s", gdInfoString);
 
     /* print VM version information */
-    fprintf(f,"\nVM Version: %s\n", VM_VERSION);
+    fprintf(f,"\nVM Version: %s\n", VM_VERSION_TEXT);
 #if STACKVM
     fprintf(f,"Interpreter Build: %s\n", __interpBuildInfo);
 # if COGVM

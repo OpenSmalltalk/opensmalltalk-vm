@@ -124,21 +124,21 @@ AC_SUBST(SQ_MINOR)
 AC_SUBST(SQ_UPDATE)
 AC_SUBST(SQ_VERSION)
 
-VM_VERSION=${VM_MAJOR}.${VM_MINOR}-${VM_RELEASE}
+#VM_VERSION=${VM_MAJOR}.${VM_MINOR}-${VM_RELEASE}
 
-AC_DEFINE_UNQUOTED(VM_VERSION, "${VM_VERSION}")
+#AC_DEFINE_UNQUOTED(VM_VERSION, "${VM_VERSION}")
 
-AC_SUBST(VM_MAJOR)
-AC_SUBST(VM_MINOR)
-AC_SUBST(VM_RELEASE)
-AC_SUBST(VM_VERSION)
+#AC_SUBST(VM_MAJOR)
+#AC_SUBST(VM_MINOR)
+#AC_SUBST(VM_RELEASE)
+#AC_SUBST(VM_VERSION)
 
 # libdir contains ${exec_prefix}, so we have to default and expand early
 test "x$prefix" = xNONE && prefix=$ac_default_prefix
 test "x$exec_prefix" = xNONE && exec_prefix='${prefix}'
 imgdir=`eval echo ${libdir}/squeak`
 expanded_relative_imgdir=`eval echo lib/squeak/${VM_VERSION}`
-plgdir='${imgdir}/'`eval echo ${VM_VERSION}`
+plgdir='${imgdir}/`./getversion VERSION_TAG`'
 
 AC_SUBST(imgdir)
 AC_SUBST(expanded_relative_imgdir)

@@ -45,7 +45,10 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #  undef EXPORT
 #  define EXPORT(returnType) __declspec( dllexport ) returnType
+#  undef VM_EXPORT
+#  define VM_EXPORT __declspec( dllexport ) 
 #endif 
+
 #if defined(_MSC_VER) || defined(__MINGW32__)
 # define fabsf(x)    ((float)fabs((double)(x)))
 #endif

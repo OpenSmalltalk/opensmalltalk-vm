@@ -26,7 +26,7 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: Tue Mar  2 16:59:47 PST 2010 by eliot
+# Last edited: Sat May 23 18:45:43 PDT 2015 by eliot
 
 @make_cfg@
 @make_prg@
@@ -58,6 +58,10 @@ version.o : version.c
 version.c : $(SQLIBS)
 	${cfgdir}/verstamp version.c $(CC)
 
+
+getversion : ${cfgdir}/getversion.c
+	$(CC) -o getversion $(CFLAGS) $(INCLUDES) ${cfgdir}/getversion.c
+
 plugins : config.sh $(PLUGINS_LA)
 
 # nuke everything but plugins.int & plugins.ext
@@ -73,16 +77,17 @@ nps :
 	mkdir nps
 	$(SHELL) -ec 'cd nps; ln -s $(topdir)/platforms/unix/npsqueak/* .'
 
-nps/npsqueak.so : nps
+nps/npsqueak.so : nps getversion
 	$(SHELL) -ec 'cd nps; $(MAKE) plgdir=$(plgdir) bindir=$(bindir) imgdir=$(imgdir)'
 
 # OSX app bundle
 
 osxdir=$(topdir)/platforms/unix/vm-display-Quartz
-app=Squeak-$(VM_MAJOR).$(VM_MINOR)-$(VM_RELEASE).app
+#app=Squeak-$(VM_MAJOR).$(VM_MINOR)-$(VM_RELEASE).app
+app=Squeak-`./getversion VM_MAJOR`.`./getversion VM_MINOR`-`./getversion VM_RELEASE`.app
 appdir=$(app)/Contents
 
-Squeak.app : squeak plugins Info.plist
+Squeak.app : squeak plugins Info.plist getversion
 	/bin/rm -rf $(app)
 	mkdir -p			$(appdir)/MacOS
 	cp -p  squeak			$(appdir)/MacOS/.
@@ -94,10 +99,8 @@ Squeak.app : squeak plugins Info.plist
 	cp -pr $(osxdir)/Resources	$(appdir)/.
 	-find $(app) -name '*~' | xargs rm -f
 
-bndl_version=${VM_VERSION} (${SQ_VERSION})
-
-Info.plist : $(osxdir)/Info.plist.in $(osxdir)/mkinfo
-	$(osxdir)/mkinfo $(osxdir)/Info.plist.in Info.plist.tmp "${bndl_version}"
+Info.plist : $(osxdir)/Info.plist.in $(osxdir)/mkinfo getversion
+	$(osxdir)/mkinfo $(osxdir)/Info.plist.in Info.plist.tmp "`./getversion VM_VERSION`"
 	mv Info.plist.tmp Info.plist
 
 # OSX plugin bundle
@@ -125,8 +128,8 @@ NPSqueak : config.sh $(SQLIBS) version.o $(NPOBJS)
 
 # manual page
 
-squeak.1 : $(topdir)/platforms/unix/doc/squeak.1
-	$(cfgdir)/mkman $(VM_MAJOR) $(VM_VERSION) \
+squeak.1 : $(topdir)/platforms/unix/doc/squeak.1 getversion
+	$(cfgdir)/mkman `./getversion VM_MAJOR` `./getversion VM_VERSION` \
 	  $(bindir) $(imgdir) $(plgdir) $(mandir) $(docdir) \
 	  < $(topdir)/platforms/unix/doc/squeak.1 > $@
 

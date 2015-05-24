@@ -25,17 +25,6 @@ int readableFormat(int imageVersion);
 #define FINALLY
 #endif
 
-#ifndef SQ_IMAGE_VERSION_MAJOR
-#define SQ_IMAGE_VERSION_MAJOR 3
-#endif
-#ifndef SQ_IMAGE_VERSION_MINOR
-#define SQ_IMAGE_VERSION_MINOR 0
-#endif
-
-#if (SQ_IMAGE_VERSION_MAJOR < 2)
-#error "These files are only for Squeak >= 2.0"
-#endif
-
 #define NO_TABLET
 
 
@@ -234,9 +223,6 @@ int sqMain(int argc, char *argv[]);
 #ifndef VERSION
 #define VERSION ""
 #endif
-
-#define VM_VERSION TEXT("Cog VM 4.0.0 (release) from ") TEXT(__DATE__) \
-	TEXT("\n") TEXT("Compiler: ") TEXT(COMPILER) TEXT(VERSION)
 
 /********************************************************/
 /* image reversal functions                             */

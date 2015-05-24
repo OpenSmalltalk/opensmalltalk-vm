@@ -34,4 +34,20 @@ void TrackPrefsMenu(void);
 void CreatePrefsMenu(void);
 void HandlePrefsMenu(int);
 
+#if COGVM
+# define NICKNAME "Cog"
+#elif STACKVM
+# define NICKNAME "Stack"
+#else
+# define NICKNAME "Interpreter"
+#endif
+#if SPURVM
+# define NICKNAME_EXTRA " Spur VM "
+#else
+# define NICKNAME_EXTRA " VM "
+#endif
+
+#define VM_VERSION_TEXT TEXT(NICKNAME NICKNAME_EXTRA VM_VERSION) \
+		TEXT(" (release) from ") TEXT(__DATE__) TEXT("\n") \
+		TEXT("Compiler: ") TEXT(COMPILER) TEXT(VERSION)
 #endif

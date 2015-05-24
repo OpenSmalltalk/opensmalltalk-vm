@@ -31,3 +31,8 @@
 #endif
 
 #define VMBIGENDIAN 0
+
+#if defined(__GNUC__) && (__GNUC__ == 3 || (!defined(__MINGW32__) && !defined(__MINGW64__)))
+# define PlatformNoDbgRegParms __attribute__ ((regparm (0)))
+# define NeverInline __attribute__ ((noinline))
+#endif
