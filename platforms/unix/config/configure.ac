@@ -401,7 +401,7 @@ test -f a.out && rm a.out
 # Create the build environment
 
 AC_CONFIG_HEADER(config.h)
-AC_CONFIG_FILES(mkconfig make.cfg make.int make.ext make.prg inisqueak squeak.sh bin.squeak.sh Makefile)
+AC_CONFIG_FILES(mkconfig make.cfg make.int make.ext make.prg inisqueak Makefile)
 AC_CONFIG_COMMANDS([default],[
   chmod +x mkconfig inisqueak
   ${SHELL} -ec "./mkconfig; ${cfgdir}/mktargets; ${cfgdir}/mkmf"],[

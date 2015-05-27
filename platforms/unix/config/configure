@@ -29291,7 +29291,7 @@ test -f a.out && rm a.out
 
           ac_config_headers="$ac_config_headers config.h"
 
-                                                                                          ac_config_files="$ac_config_files mkconfig make.cfg make.int make.ext make.prg inisqueak squeak.sh bin.squeak.sh Makefile"
+                                                                      ac_config_files="$ac_config_files mkconfig make.cfg make.int make.ext make.prg inisqueak Makefile"
 
           ac_config_commands="$ac_config_commands default"
 
@@ -29839,8 +29839,6 @@ do
   "make.ext" ) CONFIG_FILES="$CONFIG_FILES make.ext" ;;
   "make.prg" ) CONFIG_FILES="$CONFIG_FILES make.prg" ;;
   "inisqueak" ) CONFIG_FILES="$CONFIG_FILES inisqueak" ;;
-  "squeak.sh" ) CONFIG_FILES="$CONFIG_FILES squeak.sh" ;;
-  "bin.squeak.sh" ) CONFIG_FILES="$CONFIG_FILES bin.squeak.sh" ;;
   "Makefile" ) CONFIG_FILES="$CONFIG_FILES Makefile" ;;
   "default" ) CONFIG_COMMANDS="$CONFIG_COMMANDS default" ;;
   "config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;

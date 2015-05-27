@@ -69,6 +69,13 @@ plugins : config.sh $(PLUGINS_LA)
 reallyclean:
 	for f in *; do case "$$f" in plugins.[ie][nx]t|mvm) ;; *) rm -rf $$f; esac; done
 
+# unix launch scripts
+squeak.sh: ${cfgdir}/squeak.sh.in getversion
+	sed "s|.expanded_relative_imgdir.|lib/squeak/`./getversion VERSION_TAG`|" <${cfgdir}/squeak.sh.in >squeak.sh
+
+bin.squeak.sh: ${cfgdir}/bin.squeak.sh.in getversion
+	sed "s|.expanded_relative_imgdir.|lib/squeak/`./getversion VERSION_TAG`|" <${cfgdir}/bin.squeak.sh.in >bin.squeak.sh
+
 # npsqueak
 
 npsqueak : nps/npsqueak.so

@@ -15,7 +15,7 @@ uninstall : uninstall-squeak uninstall-plugins uninstall-doc $(uninstall_nps)
 
 # squeak
 
-install-squeak : $(squeak) getversion
+install-squeak : $(squeak) $(squeaksh) $(binsqueaksh) getversion
 	$(MKINSTALLDIRS) $(ROOT)$(plgdir)
 	$(MKINSTALLDIRS) $(ROOT)$(bindir)
 	$(INSTALL_PROG) $(squeak) $(ROOT)$(plgdir)
