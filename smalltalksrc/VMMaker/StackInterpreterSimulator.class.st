@@ -1658,7 +1658,9 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 		setHeapBase: heapBase
 		memoryLimit: heapBase + heapSize
 		endOfMemory: heapBase + dataSize. "bogus for Spur"
-	objectMemory memory: (Bitmap new: objectMemory memoryLimit // 4).
+	objectMemory memory: (((self endianness == #little) 
+		ifTrue: [ LittleEndianBitmap ]
+		ifFalse: [ Bitmap ]) new: objectMemory memoryLimit // 4).
 
 	"read in the image in bulk, then swap the bytes if necessary"
 	f position: headerSize.
