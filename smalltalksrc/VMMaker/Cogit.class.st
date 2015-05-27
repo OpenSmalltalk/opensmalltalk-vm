@@ -2782,7 +2782,7 @@ Cogit >> cPICHasForwardedClass: cPIC [
 		- backEnd jumpLongConditionalByteSize.
 	2 to: cPIC cPICNumCases do:
 		[:i| | classIndex |
-		classIndex := backEnd inlineCacheTagAt: pc.
+		classIndex := backEnd literalBeforeFollowingAddress: pc - backEnd loadLiteralByteSize.
 		(objectMemory isForwardedClassIndex: classIndex) ifTrue:
 			[^true].
 		pc := pc + cPICCaseSize].
@@ -3323,10 +3323,11 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 	offsetToLiteral := backEnd jumpLongByteSize.
 	1 to: cPIC cPICNumCases do:
 		[:i|
-		object := backEnd literalBeforeFollowingAddress: pc - offsetToLiteral - backEnd loadLiteralByteSize.
-		((objectRepresentation couldBeObject: object)
-		 and: [(objectMemory isMarked: object) not]) ifTrue:
-			[^true].
+		objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
+			[object := backEnd literalBeforeFollowingAddress: pc - offsetToLiteral - backEnd loadLiteralByteSize.
+			 ((objectRepresentation couldBeObject: object)
+			  and: [(objectMemory isMarked: object) not]) ifTrue:
+				[^true]].
 		object := backEnd literalBeforeFollowingAddress: pc - offsetToLiteral.
 		((objectRepresentation couldBeObject: object)
 		 and: [(objectMemory isMarked: object) not]) ifTrue:
@@ -7070,8 +7071,9 @@ Cogit >> mapObjectReferencesInClosedPIC: cPIC [
 	pc := pc + cPICCaseSize.
 	2 to: cPIC cPICNumCases do:
 		[:i|
-		(self updateMaybeObjRefAt: pc - backEnd jumpLongConditionalByteSize - backEnd loadLiteralByteSize) ifTrue:
-			[refersToYoung := true].
+		objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
+			[(self updateMaybeObjRefAt: pc - backEnd jumpLongConditionalByteSize - backEnd loadLiteralByteSize) ifTrue:
+				[refersToYoung := true]].
 		(self updateMaybeObjRefAt: pc - backEnd jumpLongConditionalByteSize) ifTrue:
 			[refersToYoung := true].
 		pc := pc + cPICCaseSize].

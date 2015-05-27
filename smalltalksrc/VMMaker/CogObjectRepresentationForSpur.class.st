@@ -777,6 +777,7 @@ CogObjectRepresentationForSpur >> inlineCacheTagIsYoung: cacheTag [
 
 { #category : #'in-line cacheing' }
 CogObjectRepresentationForSpur >> inlineCacheTagsMayBeObjects [
+	<inline: true>
 	^false
 ]
 
