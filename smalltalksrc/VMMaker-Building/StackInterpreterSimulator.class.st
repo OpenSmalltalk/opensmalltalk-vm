@@ -1658,7 +1658,9 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 		setHeapBase: heapBase
 		memoryLimit: heapBase + heapSize
 		endOfMemory: heapBase + dataSize. "bogus for Spur"
-	objectMemory memory: (Bitmap new: objectMemory memoryLimit // 4).
+	objectMemory memory: (((self endianness == #little) 
+		ifTrue: [ LittleEndianBitmap ]
+		ifFalse: [ Bitmap ]) new: objectMemory memoryLimit // 4).
 
 	"read in the image in bulk, then swap the bytes if necessary"
 	f position: headerSize.
@@ -2787,12 +2789,13 @@ StackInterpreterSimulator >> validOop: oop [
 StackInterpreterSimulator >> veryDeepCopyWith: deepCopier [
 	"Override to short-circuit the copying of any VMPluginCodeGenerators referenced from mappedPluginEntries.
 	 These can in turn hold onto Monticello state, resulting in a huge ammount of unnecessary copying."
-	deepCopier references
-		at: mappedPluginEntries ifAbsentPut: [mappedPluginEntries].
-	mappedPluginEntries do:
-		[:tuple|
-		[:sim :sel :block :argCount|
-		deepCopier references at: block ifAbsentPut: [block]] valueWithArguments: tuple].
+	self objectMemory hasSpurMemoryManagerAPI ifTrue: 
+		[deepCopier references
+			at: mappedPluginEntries ifAbsentPut: [mappedPluginEntries].
+		mappedPluginEntries do:
+			[:tuple|
+			[:sim :sel :block :argCount|
+			deepCopier references at: block ifAbsentPut: [block]] valueWithArguments: tuple]].
 	^super veryDeepCopyWith: deepCopier
 ]
 
