@@ -3612,13 +3612,13 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 			[operand := 0.
 			 target := (coInterpreter cogMethodOf: caseNMethod) asInteger + cmNoCheckEntryOffset]
 		ifFalse:
-			[isMNUCase ifTrue:
-				[cPIC cpicHasMNUCase: true].
-			 operand := caseNMethod.
-			 target := cPIC asInteger
-					+ (isMNUCase
-						ifTrue: [self sizeof: CogMethod]
-						ifFalse: [self interpretOffset - backEnd callInstructionByteSize])].
+			[operand := caseNMethod.
+			 isMNUCase
+				ifTrue:
+					[cPIC cpicHasMNUCase: true.
+					 target := cPIC asInteger + (self sizeof: CogMethod)]
+				ifFalse:
+					[target := cPIC asInteger + self picInterpretAbortOffset]].
 	self CmpCw: caseNTag R: TempReg.
 	self MoveCw: operand R: SendNumArgsReg.
 	self JumpLongZero: target.
@@ -5737,7 +5737,8 @@ Cogit >> generateClosedPICPrototype [
 	firstCPICCaseOffset := endCPICCase0 address - methodZoneBase.
 	cPICCaseSize := endCPICCase1 address - endCPICCase0 address.
 	cPICEndSize := closedPICSize - (numPICCases - 1 * cPICCaseSize + firstCPICCaseOffset).
-	closedPICSize := methodZone roundUpLength: closedPICSize
+	closedPICSize := methodZone roundUpLength: closedPICSize.
+	self assert: picInterpretAbort address = (methodLabel address + self picInterpretAbortOffset)
 	"self cCode: ''
 		inSmalltalk:
 			[| end |
@@ -8163,6 +8164,15 @@ Cogit >> picAbortDiscriminatorValue [
 	 or interpretation in the closed PIC aborts."
 	<inline: true>
 	^0
+]
+
+{ #category : #debugging }
+Cogit >> picInterpretAbortOffset [
+	"Answer the start of the abort sequence for invoking the interpreter in a closed PIC."
+	^self interpretOffset
+	 - (backEnd hasLinkRegister
+		ifTrue: [backEnd pushLinkRegisterByteSize + backEnd callInstructionByteSize]
+		ifFalse: [backEnd callInstructionByteSize])
 ]
 
 { #category : #'profiling primitives' }
