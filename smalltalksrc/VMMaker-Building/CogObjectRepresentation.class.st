@@ -281,6 +281,7 @@ CogObjectRepresentation >> inlineCacheTagIsYoung: cacheTag [
 
 { #category : #'in-line cacheing' }
 CogObjectRepresentation >> inlineCacheTagsMayBeObjects [
+	<inline: true>
 	^self subclassResponsibility
 ]
 
