@@ -834,6 +834,7 @@ CogObjectRepresentationForSqueakV3 >> inlineCacheTagIsYoung: cacheTag [
 
 { #category : #'in-line cacheing' }
 CogObjectRepresentationForSqueakV3 >> inlineCacheTagsMayBeObjects [
+	<inline: true>
 	^true
 ]
 
