@@ -93,7 +93,12 @@ CogObjectRepresentation >> freeCounters: theCounters [
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genCmpClassFloatCompactIndexR: reg [
-	^cogit CmpCq: ClassFloatCompactIndex R: SendNumArgsReg.
+	^cogit CmpCq: ClassFloatCompactIndex R: reg
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genCmpClassMethodContextCompactIndexR: reg [
+	^cogit CmpCq: ClassMethodContextCompactIndex R: reg
 ]
 
 { #category : #'bytecode generator support' }

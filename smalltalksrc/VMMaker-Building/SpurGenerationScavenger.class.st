@@ -1228,11 +1228,13 @@ SpurGenerationScavenger >> setCorpseOffsetOf: corpse to: offset [
 				setFormatOf: corpse
 					to: (offset bitAnd: manager formatMask)]
 		ifFalse: "So we use the single assignment"
-			[self long64At: corpse
-				put: (self headerForSlots: (self rawNumSlotsOf: corpse)
+			[manager
+				long64At: corpse
+				put: (manager
+						headerForSlots: (manager rawNumSlotsOf: corpse)
 						hash: (offset >> manager formatFieldWidthShift)
 						format: (offset bitAnd: manager formatMask)
-						classIndex: self isForwardedObjectClassIndexPun)]
+						classIndex: manager isForwardedObjectClassIndexPun)]
 ]
 
 { #category : #accessing }
