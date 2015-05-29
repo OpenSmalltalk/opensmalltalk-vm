@@ -636,6 +636,11 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveStringAt: retNOffset [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpImmediate: aRegister [
+	^self genJumpSmallInteger: aRegister
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genJumpImmediateInScratchReg: aRegister [
 	^self genJumpSmallIntegerInScratchReg: aRegister
 ]
@@ -645,6 +650,13 @@ CogObjectRepresentationForSqueakV3 >> genJumpNotSmallIntegerInScratchReg: aRegis
 	<returnTypeC: #'AbstractInstruction *'>
 	cogit AndCq: 1 R: aRegister.
 	^cogit JumpZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpSmallInteger: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit TstCq: 1 R: aRegister.
+	^cogit JumpNonZero: 0
 ]
 
 { #category : #'compile abstract instructions' }

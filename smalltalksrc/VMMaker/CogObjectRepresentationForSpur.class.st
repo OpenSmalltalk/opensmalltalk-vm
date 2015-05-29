@@ -582,6 +582,13 @@ CogObjectRepresentationForSpur >> genJumpCharacterInScratchReg: reg [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genJumpImmediate: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit TstCq: objectMemory tagMask R: aRegister.
+	^cogit JumpNonZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genJumpImmediateInScratchReg: aRegister [
 	<returnTypeC: #'AbstractInstruction *'>
 	cogit AndCq: objectMemory tagMask R: aRegister.
@@ -593,6 +600,13 @@ CogObjectRepresentationForSpur >> genJumpNotCharacterInScratchReg: reg [
 	cogit AndCq: objectMemory tagMask R: reg.
 	cogit CmpCq: objectMemory characterTag R: reg.
 	^cogit JumpNonZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genJumpNotImmediate: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit TstCq: objectMemory tagMask R: aRegister.
+	^cogit JumpZero: 0
 ]
 
 { #category : #'compile abstract instructions' }
