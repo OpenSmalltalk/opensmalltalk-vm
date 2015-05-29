@@ -13462,18 +13462,18 @@ StackInterpreter >> spurPostBecomeAction: theBecomeEffectsFlags [
 	 that a pointer object was becommed."
 	<option: #SpurObjectMemory>
 	<inline: false> "For VM profiling"
-	self followForwardingPointersInStackZone: theBecomeEffectsFlags.
 	self flushAtCache.
 	theBecomeEffectsFlags ~= 0 ifTrue:
 		[(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 			[self followForwardedMethodsInMethodCache.
-			 self followForwardedMethodsInMethodZone]. "for CoInterpreter"
+			 self followForwardedMethodsInMethodZone]. "for CoInterpreter; must preceed followForwardingPointersInStackZone:"
 		 (theBecomeEffectsFlags anyMask: BecameActiveClassFlag) ifTrue:
 			[self flushBecommedClassesInMethodCache.
 			 self flushBecommedClassesInMethodZone]. "for CoInterpreter"
 		 self followForwardingPointersInScheduler.
 		 self followForwardingPointersInSpecialObjectsArray.
-		 self followForwardingPointersInProfileState]
+		 self followForwardingPointersInProfileState].
+	self followForwardingPointersInStackZone: theBecomeEffectsFlags
 ]
 
 { #category : #'indexing primitive support' }
