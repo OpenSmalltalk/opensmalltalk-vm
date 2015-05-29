@@ -3316,8 +3316,9 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 	<var: #cPIC type: #'CogMethod *'>
 	| pc offsetToLiteral object entryPoint targetMethod |
 	<var: #targetMethod type: #'CogMethod *'>
-	(objectMemory isMarked: cPIC selector)  ifFalse:
-		[^true].
+	(objectMemory isImmediate: cPIC selector) ifFalse:
+		[(objectMemory isMarked: cPIC selector) ifFalse:
+			[^true]].
 	pc := cPIC asInteger + firstCPICCaseOffset.
 	"First jump is unconditional; subsequent ones are conditional"
 	offsetToLiteral := backEnd jumpLongByteSize.
@@ -5007,7 +5008,8 @@ Cogit >> freePICsWithFreedTargets [
 { #category : #'jit - api' }
 Cogit >> freeUnmarkedMachineCode [
 	"Free machine-code methods whose compiled methods are unmarked
-	 and open PICs whose selectors are not marked."
+	 and open PICs whose selectors are not marked, and closed PICs that
+	 refer to unmarked objects."
 	<api>
 	<option: #SpurObjectMemory>
 	| cogMethod freedMethod |
@@ -5022,6 +5024,10 @@ Cogit >> freeUnmarkedMachineCode [
 		 (cogMethod cmType = CMOpenPIC
 		  and: [(objectMemory isImmediate: cogMethod selector) not
 		  and: [(objectMemory isMarked: cogMethod selector) not]]) ifTrue:
+			[freedMethod := true.
+			 methodZone freeMethod: cogMethod].
+		 (cogMethod cmType = CMClosedPIC
+		  and: [self closedPICRefersToUnmarkedObject: cogMethod]) ifTrue:
 			[freedMethod := true.
 			 methodZone freeMethod: cogMethod].
 		 cogMethod := methodZone methodAfter: cogMethod].

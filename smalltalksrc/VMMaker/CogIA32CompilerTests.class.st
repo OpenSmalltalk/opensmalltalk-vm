@@ -50,6 +50,26 @@ CogIA32CompilerTests >> strip: aFancyDisassembledInstruction [
 ]
 
 { #category : #tests }
+CogIA32CompilerTests >> testAndCqR [
+	"self new testAndCqR"
+	CogIA32CompilerForTests registersWithNamesDo:
+		[:reg :regname|
+		#(16r1 16r3 16r7 16r555555 16rAAAAAA) do:
+			[:const| | inst len|
+			inst := self gen: AndCqR operand: const operand: reg.
+			len := inst concretizeAt: 0.
+			self processor
+				disassembleInstructionAt: 0
+				In: inst machineCode object
+				into: [:str :sz| | plainJane herIntended |
+					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
+					plainJane := self strip: str.
+					herIntended := 'andl $0x', (const printStringBase: 16 length: 8 padded: true), ', ', regname.
+					self assert: (plainJane match: herIntended).
+					self assert: len = sz]]]
+]
+
+{ #category : #tests }
 CogIA32CompilerTests >> testArithmeticShiftRightRR [
 	"CogIA32CompilerTests new testArithmeticShiftRightRR"
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
@@ -479,6 +499,35 @@ CogIA32CompilerTests >> testMul [
 					map keysAndValuesDo:
 						[:accessor :value|
 						self assert: value = (self processor perform: accessor)]]]]
+]
+
+{ #category : #tests }
+CogIA32CompilerTests >> testTstCqR [
+	"self new testTstCqR"
+	CogIA32CompilerForTests registersWithNamesDo:
+		[:reg :theRegname|
+		#(16r1 16r3 16r7 16r555555 16rAAAAAA) do:
+			[:const| | op regname inst len constString|
+			inst := self gen: TstCqR operand: const operand: reg.
+			len := inst concretizeAt: 0.
+			((inst isQuick: const) and: [reg < 4])
+				ifTrue:
+					[op := 'testb'.
+					 regname := #('%al' '%cl' '%dl' '%bl') at: reg + 1.
+					 constString := const printStringBase: 16 length: 2 padded: true]
+				ifFalse:
+					[op := 'testl'.
+					 regname := theRegname.
+					 constString := const printStringBase: 16 length: 8 padded: true].
+			self processor
+				disassembleInstructionAt: 0
+				In: inst machineCode object
+				into: [:str :sz| | plainJane herIntended |
+					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
+					plainJane := self strip: str.
+					herIntended := op, ' $0x', constString, ', ', regname.
+					self assert: (plainJane match: herIntended).
+					self assert: len = sz]]]
 ]
 
 { #category : #tests }

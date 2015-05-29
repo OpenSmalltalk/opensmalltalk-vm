@@ -294,6 +294,11 @@ CogIA32Compiler >> computeMaximumSize [
 											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
 														ifTrue: [5]
 														ifFalse: [6]]].
+		[TstCqR]		-> [^maxSize := ((self isQuick: (operands at: 0)) and: [(self concreteRegister: (operands at: 1)) < 4])
+											ifTrue: [3]
+											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
+														ifTrue: [5]
+														ifFalse: [6]]].
 		[AddCwR]		-> [^maxSize := (self concreteRegister: (operands at: 1)) = EAX
 														ifTrue: [5]
 														ifFalse: [6]].
@@ -2020,6 +2025,37 @@ CogIA32Compiler >> concretizeSubRR [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeTstCqR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| mask reg |
+	mask := operands at: 0.
+	reg := self concreteRegister: (operands at: 1).
+	((self isQuick: mask) and: [reg < 4]) ifTrue:
+		[machineCode
+			at: 0 put: 16rF6;
+			at: 1 put: (self mod: ModReg RM: reg RO: 0);
+			at: 2 put: (mask bitAnd: 16rFF).
+		 ^machineCodeSize := 3].
+	reg = EAX ifTrue:
+		[machineCode
+			at: 0 put: 16rA9;
+			at: 1 put: (mask bitAnd: 16rFF);
+			at: 2 put: (mask >> 8 bitAnd: 16rFF);
+			at: 3 put: (mask >> 16 bitAnd: 16rFF);
+			at: 4 put: (mask >> 24 bitAnd: 16rFF).
+		 ^machineCodeSize := 5].
+	machineCode
+		at: 0 put: 16rF7;
+		at: 1 put: (self mod: ModReg RM: reg RO: 0);
+		at: 2 put: (mask bitAnd: 16rFF);
+		at: 3 put: (mask >> 8 bitAnd: 16rFF);
+		at: 4 put: (mask >> 16 bitAnd: 16rFF);
+		at: 5 put: (mask >> 24 bitAnd: 16rFF).
+	 ^machineCodeSize := 6
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeXCHGAwR [
 	<inline: true>
 	| addressOperand reg |
@@ -2205,6 +2241,7 @@ CogIA32Compiler >> dispatchConcretize [
 		[AndCqR]					-> [^self concretizeAndCqR].
 		[AndCwR]					-> [^self concretizeAndCwR].
 		[AndRR]						-> [^self concretizeAndRR].
+		[TstCqR]					-> [^self concretizeTstCqR].
 		[CmpCqR]					-> [^self concretizeCmpCqR].
 		[CmpCwR]					-> [^self concretizeCmpCwR].
 		[CmpRR]					-> [^self concretizeCmpRR].
