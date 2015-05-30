@@ -2342,7 +2342,7 @@ SimpleStackBasedCogit >> genPrimitiveClosureValue [
 	jumpFail2 := self JumpNonZero: 0.
 	objectRepresentation genLoadSlot: MethodIndex sourceReg: ClassReg destReg: SendNumArgsReg.
 	jumpFail3 := objectRepresentation genJumpImmediate: SendNumArgsReg.
-	objectRepresentation genGetFormatOf: SendNumArgsReg into: TempReg baseHeaderIntoScratch: nil.
+	objectRepresentation genGetFormatOf: SendNumArgsReg into: TempReg.
 	self CmpCq: objectMemory firstCompiledMethodFormat R: TempReg.
 	jumpFail4 := self JumpLess: 0.
 	objectRepresentation genLoadSlot: HeaderIndex sourceReg: SendNumArgsReg destReg: ClassReg.

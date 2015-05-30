@@ -553,11 +553,9 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	<var: #jumpWordsOutOfBounds type: #'AbstractInstruction *'>
 	<var: #jumpFixedFieldsOutOfBounds type: #'AbstractInstruction *'>
 
-	cogit MoveR: ReceiverResultReg R: TempReg.
-	jumpImmediate := self genJumpImmediateInScratchReg: TempReg.
-	cogit MoveR: Arg0Reg R: TempReg.
+	jumpImmediate := self genJumpImmediate: ReceiverResultReg.
 	cogit MoveR: Arg0Reg R: Arg1Reg.
-	jumpBadIndex := self genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg.
 	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
 	cogit SubCq: 1 R: Arg1Reg. "1-rel => 0-rel"
 
@@ -702,10 +700,8 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	<var: #jumpWordsOutOfBounds type: #'AbstractInstruction *'>
 	<var: #jumpNotIndexablePointers type: #'AbstractInstruction *'>
 
-	cogit MoveR: ReceiverResultReg R: TempReg.
-	jumpImmediate := self genJumpImmediateInScratchReg: TempReg.
-	cogit MoveR: Arg0Reg R: TempReg.
-	jumpBadIndex := self genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpImmediate := self genJumpImmediate: ReceiverResultReg.
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg.
 	self genConvertSmallIntegerToIntegerInReg: Arg0Reg.
 	cogit SubCq: 1 R: Arg0Reg. "1-rel => 0-rel"
 
@@ -848,15 +844,14 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveIdentityHash: retNoffset
 	<var: #jumpSI type: #'AbstractInstruction *'>
 	<var: #jumpImm type: #'AbstractInstruction *'>
 	<var: #jumpNotSet type: #'AbstractInstruction *'>
-	cogit MoveR: ReceiverResultReg R: ClassReg.
-	jumpImm := self genJumpImmediateInScratchReg: ClassReg.
+	jumpImm := self genJumpImmediate: ReceiverResultReg.
 	self genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: TempReg.
 	cogit CmpCq: ConstZero R: TempReg.
 	jumpNotSet := cogit JumpZero: 0.
 	cogit MoveR: TempReg R: ReceiverResultReg.
 	ret := cogit RetN: retNoffset.
-	jumpImm jmpTarget: (cogit MoveR: ReceiverResultReg R: ClassReg).
-	jumpSI := self genJumpSmallIntegerInScratchReg: ClassReg.
+	jumpImm jmpTarget: cogit Label.
+	jumpSI := self genJumpSmallInteger: ReceiverResultReg.
 	jumpSI jmpTarget: ret.
 	self genConvertCharacterToSmallIntegerInReg: ReceiverResultReg.
 	cogit Jump: ret.
@@ -1318,8 +1313,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	self genGetHashFieldNonImmOf: ReceiverResultReg into: halfHeaderReg.
 	jumpUnhashed := cogit JumpZero: 0.
 	"get index and fail if not a +ve integer"
-	cogit MoveR: Arg0Reg R: TempReg.
-	jumpNElementsNonInt := self genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNElementsNonInt := self genJumpNotSmallInteger: Arg0Reg.
 	"get class's format inst var for inst spec (format field)"
 	self genLoadSlot: InstanceSpecificationIndex sourceReg: ReceiverResultReg destReg: instSpecReg.
 	cogit LogicalShiftRightCq: objectMemory fixedFieldsFieldWidth + self numSmallIntegerTagBits R: instSpecReg.
@@ -1450,9 +1444,8 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 	<var: #jumpShortsOutOfBounds type: #'AbstractInstruction *'>
 	<var: #jumpWordsOutOfBounds type: #'AbstractInstruction *'>
 
-	cogit MoveR: Arg0Reg R: TempReg.
 	cogit MoveR: Arg0Reg R: Arg1Reg.
-	jumpBadIndex := self genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg.
 	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
 	cogit SubCq: 1 R: Arg1Reg. "1-rel => 0-rel"
 
@@ -1530,8 +1523,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAt: retNoffset [
 { #category : #'primitive generators' }
 CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset [
 	"Implement the guts of primitiveStringAtPut"
-	| formatReg jumpImmediate jumpBadIndex jumpBadArg
-	  jumpWordsDone jumpBytesOutOfRange
+	| formatReg jumpBadIndex jumpBadArg jumpWordsDone jumpBytesOutOfRange
 	  jumpIsBytes jumpNotString jumpIsCompiledMethod
 	  jumpBytesOutOfBounds jumpWordsOutOfBounds jumpShortsUnsupported |
 	<inline: true>
@@ -1539,16 +1531,12 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset 
 	<var: #jumpBadArg type: #'AbstractInstruction *'>
 	<var: #jumpIsBytes type: #'AbstractInstruction *'>
 	<var: #jumpBadIndex type: #'AbstractInstruction *'>
-	<var: #jumpImmediate type: #'AbstractInstruction *'>
 	<var: #jumpWordsDone type: #'AbstractInstruction *'>
 	<var: #jumpBytesOutOfBounds type: #'AbstractInstruction *'>
 	<var: #jumpShortsUnsupported type: #'AbstractInstruction *'>
 	<var: #jumpWordsOutOfBounds type: #'AbstractInstruction *'>
 
-	cogit MoveR: ReceiverResultReg R: TempReg.
-	jumpImmediate := self genJumpImmediateInScratchReg: TempReg.
-	cogit MoveR: Arg0Reg R: TempReg.
-	jumpBadIndex := self genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg.
 	cogit MoveR: Arg1Reg R: TempReg.
 	jumpBadArg := self genJumpNotCharacterInScratchReg: TempReg.
 	self genConvertSmallIntegerToIntegerInReg: Arg0Reg.
@@ -1630,9 +1618,16 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset 
 	cogit AddCq: 1 R: Arg0Reg. "0-rel => 1-rel"
 	self genConvertIntegerToSmallIntegerInReg: Arg0Reg.
 
-	jumpBadIndex jmpTarget: (jumpImmediate jmpTarget: cogit Label).
+	jumpBadIndex jmpTarget: cogit Label.
 
 	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genJumpNotSmallInteger: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit TstCq: 1 R: aRegister.
+	^cogit JumpZero: 0
 ]
 
 { #category : #'compile abstract instructions' }
