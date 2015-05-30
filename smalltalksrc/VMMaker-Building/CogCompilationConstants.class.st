@@ -8,7 +8,8 @@ Class {
 		'SSConstant',
 		'SSIllegal',
 		'SSRegister',
-		'SSSpill'
+		'SSSpill',
+		'UnimplementedOperation'
 	],
 	#category : #'VMMaker-JIT'
 }

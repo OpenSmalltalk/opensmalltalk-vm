@@ -897,8 +897,9 @@ Cogit class >> initializeErrorCodes [
 	MaxNegativeErrorCode := ShouldNotJIT.
 	"Internal errors returned by generator routines to other generator routines"
 	BadRegisterSet := 1.
+	UnimplementedOperation := 2.
 	"Internal successes answered by CogObjectRepresentation to JIT, etc"
-	UnfailingPrimitive := 2.
+	UnfailingPrimitive := 3
 ]
 
 { #category : #'class initialization' }

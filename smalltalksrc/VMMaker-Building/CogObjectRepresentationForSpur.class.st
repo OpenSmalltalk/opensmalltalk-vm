@@ -432,9 +432,10 @@ CogObjectRepresentationForSpur >> genGetDoubleValueOf: srcReg into: destFPReg [
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genGetFormatOf: sourceReg into: destReg baseHeaderIntoScratch: scratchReg [
-	self genGetBits: objectMemory formatMask ofFormatByteOf: sourceReg into: destReg baseHeaderIntoScratch: scratchReg.
-	^0
+CogObjectRepresentationForSpur >> genGetFormatOf: srcReg into: destReg [
+	"Get the format field of the object in srcReg into destReg.
+	 srcReg may equal destReg."
+	^self genGetBits: objectMemory formatMask ofFormatByteOf: srcReg into: destReg baseHeaderIntoScratch: nil
 ]
 
 { #category : #'compile abstract instructions' }
@@ -473,8 +474,7 @@ CogObjectRepresentationForSpur >> genInnerPrimitiveAsCharacter: retNOffset inReg
 	<var: 'jumpNotInt' type: #'AbstractInstruction *'>
 	<var: 'jumpOutOfRange' type: #'AbstractInstruction *'>
 	reg ~= ReceiverResultReg ifTrue:
-		[cogit MoveR: reg R: TempReg.
-		 jumpNotInt := self genJumpNotSmallIntegerInScratchReg: TempReg].
+		[jumpNotInt := self genJumpNotSmallInteger: reg].
 	cogit MoveR: reg R: TempReg.
 	self genConvertSmallIntegerToIntegerInReg: TempReg.
 	cogit CmpCq: (1 << 30) - 1 R: TempReg.
@@ -501,8 +501,7 @@ CogObjectRepresentationForSpur >> genInnerPrimitiveIdentical: retNoffset orNotIf
 	| jumpImmediate jumpCmp |
 	<var: #jumpCmp type: #'AbstractInstruction *'>
 	<var: #jumpImmediate type: #'AbstractInstruction *'>
-	cogit MoveR: Arg0Reg R: TempReg.
-	jumpImmediate := self genJumpImmediateInScratchReg: TempReg.
+	jumpImmediate := self genJumpImmediate: Arg0Reg.
 	self genEnsureObjInRegNotForwarded: Arg0Reg scratchReg: TempReg.
 	jumpImmediate jmpTarget:
 		(cogit CmpR: Arg0Reg R: ReceiverResultReg).
@@ -557,10 +556,9 @@ CogObjectRepresentationForSpur >> genInnerPrimitiveSize: retNoffset [
 	| jumpImm jumpNotIndexable jumpIsContext |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
 	<var: #jumpImm type: #'AbstractInstruction *'>
-	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
 	<var: #jumpIsContext type: #'AbstractInstruction *'>
-	cogit MoveR: ReceiverResultReg R: TempReg.
-	jumpImm := self genJumpImmediateInScratchReg: TempReg.
+	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
+	jumpImm := self genJumpImmediate: ReceiverResultReg.
 	self
 		genGetSizeOf: ReceiverResultReg
 		into: ClassReg

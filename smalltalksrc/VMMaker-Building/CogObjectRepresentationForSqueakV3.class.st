@@ -324,6 +324,18 @@ CogObjectRepresentationForSqueakV3 >> genGetFixedFieldsOfPointerNonInt: instReg 
 	^0
 ]
 
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSqueakV3 >> genGetFormatOf: srcReg into: destReg [
+	"Get the format field of the object in srcReg into destReg.
+	 srcReg may equal destReg."
+	<inline: true>
+	cogit
+		MoveMw: 0 r: srcReg R: destReg;
+		LogicalShiftRightCq: objectMemory instFormatFieldLSB R: destReg;
+		AndCq: self instFormatFieldMask R: destReg.
+	^0
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genGetHashFieldNonImmOf: instReg asSmallIntegerInto: destReg [
 	"Fetch the instance's identity hash into destReg, encoded as a SmallInteger."
@@ -458,11 +470,9 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 	<var: #jumpFmtLt8 type: #'AbstractInstruction *'>
 	<var: #jumpFmtGt11 type: #'AbstractInstruction *'>
 	<var: #jumpLarge type: #'AbstractInstruction *'>
-	cogit MoveR: ReceiverResultReg R: TempReg.
-	jumpSI := self genJumpSmallIntegerInScratchReg: TempReg.
-	cogit MoveR: Arg0Reg R: TempReg.
+	jumpSI := self genJumpSmallInteger: ReceiverResultReg.
 	cogit MoveR: Arg0Reg R: Arg1Reg.
-	jumpNotSI := self genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg.
 	self
 		genGetSizeOf: ReceiverResultReg
 		into: ClassReg
@@ -548,8 +558,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveIdentical: retNoffset orN
 CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveIdentityHash: retNOffset [
 	| jumpSI |
 	<var: #jumpSI type: #'AbstractInstruction *'>
-	cogit MoveR: ReceiverResultReg R: ClassReg.
-	jumpSI := self genJumpSmallIntegerInScratchReg: ClassReg.
+	jumpSI := self genJumpSmallInteger: ReceiverResultReg.
 	self genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: TempReg.
 	cogit MoveR: TempReg R: ReceiverResultReg.
 	cogit RetN: retNOffset.
@@ -562,10 +571,9 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveSize: retNoffset [
 	| jumpSI jumpNotIndexable jumpIsContext |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
 	<var: #jumpSI type: #'AbstractInstruction *'>
-	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
 	<var: #jumpIsContext type: #'AbstractInstruction *'>
-	cogit MoveR: ReceiverResultReg R: TempReg.
-	jumpSI := self genJumpSmallIntegerInScratchReg: TempReg.
+	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
+	jumpSI := self genJumpSmallInteger: ReceiverResultReg.
 	self
 		genGetSizeOf: ReceiverResultReg
 		into: ClassReg
@@ -581,19 +589,15 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveSize: retNoffset [
 
 { #category : #'primitive generators' }
 CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveStringAt: retNOffset [
-	| jumpSI jumpNotSI jumpNotByteIndexable jumpBounds jumpShortHeader jumpSkip |
+	| jumpNotSI jumpNotByteIndexable jumpBounds jumpShortHeader jumpSkip |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
-	<var: #jumpSI type: #'AbstractInstruction *'>
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpNotByteIndexable type: #'AbstractInstruction *'>
 	<var: #jumpBounds type: #'AbstractInstruction *'>
 	<var: #jumpShortHeader type: #'AbstractInstruction *'>
 	<var: #jumpSkip type: #'AbstractInstruction *'>
-	cogit MoveR: ReceiverResultReg R: TempReg.
-	jumpSI := self genJumpSmallIntegerInScratchReg: TempReg.
-	cogit MoveR: Arg0Reg R: TempReg.
 	cogit MoveR: Arg0Reg R: Arg1Reg.
-	jumpNotSI := self genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg.
 	cogit
 		MoveMw: 0 r: ReceiverResultReg R: TempReg;	"self baseHeader: receiver"
 		MoveR: TempReg R: ClassReg;					"copy header word; we'll need it later"
@@ -627,11 +631,10 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveStringAt: retNOffset [
 		AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: ReceiverResultReg.
 	cogit MoveXwr: ReceiverResultReg R: Arg0Reg R: ReceiverResultReg.
 	cogit RetN: retNOffset.
-	jumpSI jmpTarget:
-	(jumpNotSI jmpTarget:
+	jumpNotSI jmpTarget:
 	(jumpNotByteIndexable jmpTarget:
 	(jumpBounds jmpTarget:
-		cogit Label))).
+		cogit Label)).
 	^0
 ]
 
@@ -643,6 +646,19 @@ CogObjectRepresentationForSqueakV3 >> genJumpImmediate: aRegister [
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genJumpImmediateInScratchReg: aRegister [
 	^self genJumpSmallIntegerInScratchReg: aRegister
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpNotImmediate: aRegister [
+	<inline: true>
+	^self genJumpNotSmallInteger: aRegister
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpNotSmallInteger: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit TstCq: 1 R: aRegister.
+	^cogit JumpZero: 0
 ]
 
 { #category : #'compile abstract instructions' }

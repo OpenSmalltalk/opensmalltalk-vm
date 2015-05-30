@@ -158,6 +158,13 @@ CogObjectRepresentation >> genGetActiveContextNumArgs: numArgs large: isLargeCon
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genGetFormatOf: srcReg into: destReg [
+	"Get the format field of the object in srcReg into destReg.
+	 srcReg may equal destReg."
+	self subclassResponsibility
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genGetInlineCacheClassTagFrom: sourceReg into: destReg forEntry: forEntry [
 	"Extract the inline cache tag for the object in sourceReg into destReg. The inline cache tag
 	 for a given object is the value loaded in inline caches to distinguish objects of different
@@ -228,6 +235,43 @@ CogObjectRepresentation >> genInnerPrimitiveNewWithArg: retNoffset [
 CogObjectRepresentation >> genInnerPrimitiveStringAtPut: retNoffset [
 	"subclasses override if they can"
 	^cogit unimplementedPrimitive
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genJumpImmediate: aRegister [
+	"Generate a compare and branch to test if aRegister contains an immediate.
+	 Answer the jump."
+	<returnTypeC: #'AbstractInstruction *'>
+	self subclassResponsibility
+	
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genJumpNotImmediate: aRegister [
+	"Generate a compare and branch to test if aRegister contains a non-immediate.
+	 Answer the jump."
+	<returnTypeC: #'AbstractInstruction *'>
+	self subclassResponsibility
+	
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genJumpNotSmallInteger: aRegister [
+	"Generate a compare and branch to test if aRegister contains other than a SmallInteger.
+	 Answer the jump, or UnimplementedOperation if this cannot be done with a single register."
+	<returnTypeC: #'AbstractInstruction *'>
+	<inline: true>
+	^cogit cCoerceSimple: UnimplementedOperation to: #'AbstractInstruction *'
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genJumpSmallInteger: aRegister [
+	"Generate a compare and branch to test if aRegister contains a SmallInteger.
+	 Answer the jump, or UnimplementedOperation if this cannot be done with
+	 a single register."
+	<returnTypeC: #'AbstractInstruction *'>
+	<inline: true>
+	^cogit cCoerceSimple: UnimplementedOperation to: #'AbstractInstruction *'
 ]
 
 { #category : #'bytecode generator support' }

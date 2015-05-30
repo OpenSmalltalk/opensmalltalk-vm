@@ -210,11 +210,11 @@ VMClass class >> initializeMiscConstants [
 		[omc := initializationOptions at: #ObjectMemory put: self defaultObjectMemoryClass name].
 	initializationOptions
 		at: #SqueakV3ObjectMemory	"the good ole default"
-			put: (omc
+			ifAbsentPut: (omc
 					ifNil: [true]
 					ifNotNil: [(Smalltalk at: omc) includesBehavior: ObjectMemory]);
 		at: #SpurObjectMemory		"the new contender"
-			put: (omc
+			ifAbsentPut: (omc
 					ifNil: [false]
 					ifNotNil: [(Smalltalk at: omc) includesBehavior: SpurMemoryManager]).
 
