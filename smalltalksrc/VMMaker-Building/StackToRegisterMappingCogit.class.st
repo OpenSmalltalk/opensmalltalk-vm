@@ -1230,7 +1230,7 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 
 	"Last probe missed.  Call ceSendFromInLineCacheMiss: to do the full lookup."
 	jumpSelectorMiss jmpTarget: self Label.
-	backEnd genPushRegisterArgsForNumArgs: numArgs.
+	backEnd genPushRegisterArgsForNumArgs: numArgs scratchReg: SendNumArgsReg.
 	self genSmalltalkToCStackSwitch: true.
 	methodLabel addDependent: (self annotateAbsolutePCRef: (self MoveCw: methodLabel asInteger R: SendNumArgsReg)).
 	self 
@@ -1734,7 +1734,7 @@ StackToRegisterMappingCogit >> genDoubleArithmetic: arithmeticOperator preOpChec
 	jumpFailClass jmpTarget: self Label.
 	preOpCheckOrNil ifNotNil:
 		[jumpFailCheck jmpTarget: jumpFailClass getJmpTarget].
-	backEnd genPushRegisterArgsForNumArgs: methodOrBlockNumArgs.
+	backEnd genPushRegisterArgsForNumArgs: methodOrBlockNumArgs scratchReg: SendNumArgsReg.
 	jumpFailClass := self Jump: 0.
 	jumpImmediate jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
@@ -2052,7 +2052,7 @@ StackToRegisterMappingCogit >> genPICMissTrampolineFor: numArgs [
 	startAddress := methodZoneBase.
 	opcodeIndex := 0.
 	"N.B. a closed PIC jumps to the miss routine, not calls it, so there is only one retpc on the stack."
-	backEnd genPushRegisterArgsForNumArgs: numArgs.
+	backEnd genPushRegisterArgsForNumArgs: numArgs scratchReg: SendNumArgsReg.
 	self genTrampolineFor: #ceCPICMiss:receiver:
 		called: (self trampolineName: 'cePICMiss' numArgs: (numArgs <= self numRegArgs ifTrue: [numArgs] ifFalse: [-1]))
 		numArgs: 2
@@ -2806,7 +2806,7 @@ StackToRegisterMappingCogit >> genPushRegisterArgs [
 	 single machine-code frame format which saves us a lot of work."
 	(regArgsHaveBeenPushed
 	 or: [methodOrBlockNumArgs > self numRegArgs]) ifFalse:
-		[backEnd genPushRegisterArgsForNumArgs: methodOrBlockNumArgs.
+		[backEnd genPushRegisterArgsForNumArgs: methodOrBlockNumArgs scratchReg: SendNumArgsReg.
 		regArgsHaveBeenPushed := true]
 ]
 
@@ -2933,7 +2933,7 @@ StackToRegisterMappingCogit >> genSendTrampolineFor: aRoutine numArgs: numArgs c
 	<inline: false>
 	startAddress := methodZoneBase.
 	opcodeIndex := 0.
-	backEnd genPushRegisterArgsForNumArgs: numArgs.
+	backEnd genPushRegisterArgsForNumArgs: numArgs scratchReg: SendNumArgsReg.
 	self genTrampolineFor: aRoutine
 		called: aString
 		numArgs: 3
@@ -2958,7 +2958,7 @@ StackToRegisterMappingCogit >> genSendTrampolineFor: aRoutine numArgs: numArgs c
 	<inline: false>
 	startAddress := methodZoneBase.
 	opcodeIndex := 0.
-	backEnd genPushRegisterArgsForNumArgs: numArgs.
+	backEnd genPushRegisterArgsForNumArgs: numArgs scratchReg: SendNumArgsReg.
 	self genTrampolineFor: aRoutine
 		called: aString
 		numArgs: 4
