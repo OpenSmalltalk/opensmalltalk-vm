@@ -5366,7 +5366,8 @@ Cogit >> genNSSendTrampolineFor: aRoutine numArgs: numArgs called: aString [
 		scratchReg: TempReg
 		updatingMw: FoxMFReceiver
 		r: FPReg.
-	backEnd genPushRegisterArgsForNumArgs: numArgs.
+	self numRegArgs > 0 ifTrue:
+		[backEnd genPushRegisterArgsForNumArgs: numArgs scratchReg: TempReg].
 	^self
 		genTrampolineFor: aRoutine
 		called: aString
