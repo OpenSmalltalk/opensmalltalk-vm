@@ -291,7 +291,7 @@ block()
 
 	printf("blocking e.g. to allow attaching debugger\n");
 	printf("pid: %d pwd: %s vm:%s\n",
-			(int)getpid(), argVec[0], getcwd(pwd,PATH_MAX+1));
+			(int)getpid(), getcwd(pwd,PATH_MAX+1), argVec[0]);
 	while (1) {
 		while_away_the_hours.tv_sec = 3600;
 		nanosleep(&while_away_the_hours, 0);
