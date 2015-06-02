@@ -116,7 +116,7 @@ main(int argc, char *argv[])
 	else if (argc == 2 && !strcmp(argv[1], "VM_RELEASE"))
 		printf("%s\n", revisionAsString());
 	else if (argc == 2 && !strcmp(argv[1], "VERSION_TAG"))
-		printf("%s.%s\n", vm_version, revisionAsString());
+		printf("%s-%s\n", vm_version, revisionAsString());
 	else
 		return 1;
 
