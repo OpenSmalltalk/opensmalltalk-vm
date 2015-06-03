@@ -3057,7 +3057,7 @@ Cogit >> ceSICMiss: receiver [
 			 pic asInteger = InsufficientCodeSpace ifTrue:
 				[coInterpreter callForCogCompiledCodeCompaction].
 			^coInterpreter ceSendFromInLineCacheMiss: targetMethod].
-		 processor flushICacheFrom: pic asInteger to: pic asInteger + closedPICSize].
+		 processor flushICacheFrom: pic asUnsignedInteger to: pic asUnsignedInteger + closedPICSize].
 	"Relink the send site to the pic.  If to an open PIC then reset the cache tag to the selector,
 	 for the benefit of the cacheTag assert check in checkIfValidObjectRef:pc:cogMethod:."
 	extent := pic cmType = CMOpenPIC
@@ -3070,7 +3070,7 @@ Cogit >> ceSICMiss: receiver [
 					[backEnd
 						rewriteCallAt: outerReturn
 						target: pic asInteger + cmEntryOffset].
-	processor flushICacheFrom: outerReturn - 1 - extent to: outerReturn - 1.
+	processor flushICacheFrom: outerReturn  - extent to: outerReturn .
 	"Jump back into the pic at its entry in case this is an MNU (newTargetMethodOrNil is nil)"
 	coInterpreter
 		executeCogPIC: pic
@@ -3631,7 +3631,7 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 	address := self addressOfEndOfCase: cPIC cPICNumCases - 1 inCPIC: cPIC.
 	size := self generateInstructionsAt: address.
 	end := self outputInstructionsAt: address.
-	processor flushICacheFrom: cPIC asInteger to: cPIC asInteger + closedPICSize.
+	processor flushICacheFrom: cPIC asUnsignedInteger to: cPIC asUnsignedInteger + closedPICSize.
 	cPIC cPICNumCases: cPIC cPICNumCases + 1.
 	^0
 ]
@@ -3881,7 +3881,7 @@ Cogit >> compactCogCompiledCode [
 	methodZone compactCompiledCode.
 	self assert: self allMethodsHaveCorrectHeader.
 	self assert: methodZone kosherYoungReferrers.
-	processor flushICacheFrom: methodZoneBase to: methodZone freeStart
+	processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone freeStart asUnsignedInteger
 ]
 
 { #category : #'simulation only' }
@@ -5735,7 +5735,7 @@ Cogit >> generateCaptureCStackPointers: captureFramePointer [
 				self MoveR: TempReg Aw: self cStackPointerAddress].
 	self RetN: 0.
 	self outputInstructionsForGeneratedRuntimeAt: startAddress.
-	processor flushICacheFrom: startAddress to: methodZoneBase.
+	processor flushICacheFrom: startAddress asUnsignedInteger to: methodZoneBase asUnsignedInteger.
 	self recordGeneratedRunTime: 'ceCaptureCStackPointers' address: startAddress.
 	ceCaptureCStackPointers := self cCoerceSimple: startAddress to: #'void (*)(void)'
 ]
@@ -6157,7 +6157,7 @@ Cogit >> generateTrampolines [
 
 	"finish up"
 	self recordGeneratedRunTime: 'methodZoneBase' address: methodZoneBase.
-	processor flushICacheFrom: methodZoneStart to: methodZoneBase
+	processor flushICacheFrom: methodZoneStart asUnsignedInteger to: methodZoneBase asUnsignedInteger
 ]
 
 { #category : #initialization }
@@ -6736,8 +6736,8 @@ Cogit >> linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod of
 				tag: inlineCacheTag
 				target: address.
 	processor
-		flushICacheFrom: callSiteReturnAddress - 1 - extent
-		to: callSiteReturnAddress - 1
+		flushICacheFrom: callSiteReturnAddress asUnsignedInteger - extent
+		to: callSiteReturnAddress asUnsignedInteger
 ]
 
 { #category : #analysis }
@@ -7154,7 +7154,7 @@ Cogit >> mapObjectReferencesInMachineCodeForBecome [
 	freedPIC ifTrue:
 		[self unlinkSendsToFree].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
-		[processor flushICacheFrom: codeBase to: methodZone limitZony asInteger]
+		[processor flushICacheFrom: codeBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]
 ]
 
 { #category : #'garbage collection' }
@@ -7188,7 +7188,7 @@ Cogit >> mapObjectReferencesInMachineCodeForFullGC [
 		cogMethod := methodZone methodAfter: cogMethod].
 	methodZone pruneYoungReferrers.
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
-		[processor flushICacheFrom: codeBase to: methodZone limitZony asInteger]
+		[processor flushICacheFrom: codeBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]
 ]
 
 { #category : #'garbage collection' }
@@ -7230,7 +7230,7 @@ Cogit >> mapObjectReferencesInMachineCodeForYoungGC [
 		 pointer := pointer + objectMemory wordSize].
 	methodZone pruneYoungReferrers.
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
-		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
+		[processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]
 ]
 
 { #category : #'simulation only' }
@@ -7307,7 +7307,7 @@ Cogit >> markAndTraceMachineCodeForNewSpaceGC [
 	objectMemory leakCheckNewSpaceGC ifTrue:
 		[self assert: self allMachineCodeObjectReferencesValid].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
-		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
+		[processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]
 ]
 
 { #category : #'jit - api' }
@@ -7334,7 +7334,7 @@ Cogit >> markAndTraceMachineCodeOfMarkedMethods [
 	objectMemory leakCheckFullGC ifTrue:
 		[self assert: self allMachineCodeObjectReferencesValid].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
-		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
+		[processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]
 ]
 
 { #category : #'jit - api' }
@@ -7416,7 +7416,7 @@ Cogit >> markAndTraceOrFreeMachineCodeForFullGC [
 	objectMemory leakCheckFullGC ifTrue:
 		[self assert: self allMachineCodeObjectReferencesValid].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
-		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
+		[processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]
 ]
 
 { #category : #'garbage collection' }
@@ -8119,7 +8119,7 @@ Cogit >> patchToOpenPICFor: selector numArgs: numArgs receiver: receiver [
 				tag: selector
 				target: oPIC asInteger + cmEntryOffset.
 	processor
-		flushICacheFrom: outerReturn - 1 - extent to: outerReturn - 1;
+		flushICacheFrom: outerReturn asUnsignedInteger - extent to: outerReturn asUnsignedInteger;
 		flushICacheFrom: oPIC asInteger to: oPIC asInteger + openPICSize.
 	"Jump into the oPIC at its entry"
 	coInterpreter executeCogMethod: oPIC fromLinkedSendWithReceiver: receiver.
@@ -9749,7 +9749,7 @@ Cogit >> unlinkAllSends [
 					[methodZone freeMethod: cogMethod]].
 		cogMethod := methodZone methodAfter: cogMethod].
 	"After updating inline caches we need to flush the icache."
-	processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger
+	processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger
 ]
 
 { #category : #'in-line cacheing' }
@@ -9957,7 +9957,7 @@ Cogit >> unlinkSendsLinkedForInvalidClasses [
 		ifTrue: [self unlinkSendsToFree]
 		ifFalse:
 			[codeModified ifTrue: "After possibly updating inline caches we need to flush the icache."
-				[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]]
+				[processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]]
 ]
 
 { #category : #'jit - api' }
@@ -10007,7 +10007,7 @@ Cogit >> unlinkSendsOf: selector isMNUSelector: isMNUSelector [
 				 arg: selector].
 		cogMethod := methodZone methodAfter: cogMethod].
 	codeModified ifTrue: "After possibly updating inline caches we need to flush the icache."
-		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
+		[processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]
 ]
 
 { #category : #'jit - api' }
@@ -10043,7 +10043,7 @@ Cogit >> unlinkSendsTo: targetMethodObject andFreeIf: freeIfTrue [
 		ifTrue: [self unlinkSendsToFree]
 		ifFalse:
 			[codeModified ifTrue: "After possibly updating inline caches we need to flush the icache."
-				[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]]
+				[processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]]
 ]
 
 { #category : #'garbage collection' }
@@ -10066,7 +10066,7 @@ Cogit >> unlinkSendsToFree [
 					[self assert: (self noTargetsFreeInClosedPIC: cogMethod)]].
 		cogMethod := methodZone methodAfter: cogMethod].
 	codeModified ifTrue: "After possibly updating inline caches we need to flush the icache."
-		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
+		[processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]
 ]
 
 { #category : #'multi-threading' }
