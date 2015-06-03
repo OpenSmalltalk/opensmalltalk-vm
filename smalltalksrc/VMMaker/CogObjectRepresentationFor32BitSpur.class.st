@@ -16,8 +16,7 @@ CogObjectRepresentationFor32BitSpur >> allImmediate: immediateMask branchIf: reg
 	< inline: true>	
 	<var: #targetFixUp type: #'AbstractInstruction *'>
 	self assert: immediateMask = objectMemory tagMask.
-	cogit MoveR: reg R: TempReg.
-	jmpImmediate := self genJumpNotImmediateInScratchReg: TempReg.
+	jmpImmediate := self genJumpNotImmediate: reg.
 	jmpImmediate jmpTarget: targetFixUp.
 	^0
 ]
@@ -701,7 +700,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	<var: #jumpNotIndexablePointers type: #'AbstractInstruction *'>
 
 	jumpImmediate := self genJumpImmediate: ReceiverResultReg.
-	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg.
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	self genConvertSmallIntegerToIntegerInReg: Arg0Reg.
 	cogit SubCq: 1 R: Arg0Reg. "1-rel => 0-rel"
 
@@ -768,8 +767,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	jumpNotPointers jmpTarget:
 		(cogit CmpCq: objectMemory firstCompiledMethodFormat R: formatReg).
 	jumpIsCompiledMethod := cogit JumpAboveOrEqual: 0.
-	cogit MoveR: Arg1Reg R: TempReg.
-	jumpNonSmallIntegerValue := self genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNonSmallIntegerValue := self genJumpNotSmallInteger: Arg1Reg scratchReg: TempReg.
 					cogit CmpCq: objectMemory firstByteFormat R: formatReg.
 	jumpIsBytes := cogit JumpAboveOrEqual: 0.
 					cogit CmpCq: objectMemory firstShortFormat R: formatReg.
@@ -894,8 +892,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNew: retNoffset [
 	cogit MoveAw: objectMemory freeStartAddress R: Arg1Reg.
 
 	"validate class arg; sigh, this mirror crap hobbles unfairly; there is a better way with selector namespaces..."
-	cogit MoveR: Arg0Reg R: TempReg.
-	jumpImmediate := self genJumpImmediateInScratchReg: TempReg.
+	jumpImmediate := self genJumpImmediate: Arg0Reg.
 
 	"Is the class arg pointers with at least 3 fields?"
 	self genGetFormatOf: Arg0Reg
@@ -914,9 +911,9 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNew: retNoffset [
 
 	"get class's format inst var for both inst spec (format field) and num fixed fields"
 	self genLoadSlot: InstanceSpecificationIndex sourceReg: Arg0Reg destReg: instSpecReg.
-	cogit MoveR: instSpecReg R: TempReg.
-	jumpBadFormat := self genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpBadFormat := self genJumpNotSmallInteger: instSpecReg scratchReg: TempReg.
 	self genConvertSmallIntegerToIntegerInReg: instSpecReg.
+	cogit MoveR: instSpecReg R: TempReg.
 	cogit LogicalShiftRightCq: objectMemory fixedFieldsFieldWidth R: TempReg.
 	cogit AndCq: objectMemory formatMask R: TempReg.
 	cogit AndCq: objectMemory fixedFieldsOfClassFormatMask R: instSpecReg.
@@ -1024,12 +1021,10 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNewWithArg: retNof
 	maxSlots := objectMemory numSlotsMask - 1.
 
 	"check size and fail if not a +ve integer"
-	cogit MoveR: Arg1Reg R: TempReg.
-	jumpNElementsNonInt := self genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNElementsNonInt := self genJumpNotSmallInteger: Arg1Reg scratchReg: TempReg.
 
 	"Is the class arg pointers with at least 3 fields?"
-	cogit MoveR: Arg0Reg R: TempReg.
-	jumpImmediate := self genJumpImmediateInScratchReg: TempReg.
+	jumpImmediate := self genJumpImmediate: Arg0Reg.
 
 	self genGetFormatOf: Arg0Reg
 		into: TempReg
