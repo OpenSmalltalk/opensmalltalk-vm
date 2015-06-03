@@ -118,15 +118,6 @@ CogObjectRepresentation >> genEnsureObjInRegNotForwarded: reg scratchReg: scratc
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentation >> genEnsureObjInRegNotForwarded: reg scratchReg: scratch updatingMw: offset r: baseReg [
-	"Make sure that the non-immediate oop in reg is not forwarded, updating the field
-	 at offset from baseReg.  By default there is nothing to do.  Subclasses for memory
-	 managers that forward will override."
-	<inline: true>
-	^0
-]
-
-{ #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch [
 	"Make sure that the oop in reg is not forwarded.  By default there is
 	 nothing to do.  Subclasses for memory managers that forward will override."
@@ -149,6 +140,24 @@ CogObjectRepresentation >> genEnsureOopInRegNotForwarded: reg scratchReg: scratc
 	<var: #instruction type: #'AbstractInstruction *'>
 	<inline: true>
 	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch updatingMw: offset r: baseReg [
+	"Make sure that the oop in reg is not forwarded, updating the field at offset from baseReg.
+	 By default there is nothing to do.  Subclasses for memory managers that forward will override."
+	<inline: true>
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch updatingSlot: index in: objReg [
+	"Make sure that the oop in reg is not forwarded, updating the slot in objReg with the value."
+	<inline: true>
+	^self genEnsureOopInRegNotForwarded: reg
+		scratchReg: scratch
+		updatingMw: index * objectMemory wordSize + objectMemory baseHeaderSize
+		r: objReg
 ]
 
 { #category : #'bytecode generator support' }
@@ -265,6 +274,14 @@ CogObjectRepresentation >> genJumpNotSmallInteger: aRegister [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genJumpNotSmallInteger: aRegister scratchReg: scratch [
+	"Generate a compare and branch to test if aRegister contains other than a SmallInteger.
+	 Answer the jump.  Use scratch if required.  Subclasses will override if scratch is needed."
+	<returnTypeC: #'AbstractInstruction *'>
+	^self genJumpNotSmallInteger: aRegister
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genJumpSmallInteger: aRegister [
 	"Generate a compare and branch to test if aRegister contains a SmallInteger.
 	 Answer the jump, or UnimplementedOperation if this cannot be done with
@@ -272,6 +289,23 @@ CogObjectRepresentation >> genJumpSmallInteger: aRegister [
 	<returnTypeC: #'AbstractInstruction *'>
 	<inline: true>
 	^cogit cCoerceSimple: UnimplementedOperation to: #'AbstractInstruction *'
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genJumpSmallInteger: aRegister scratchReg: scratch [
+	"Generate a compare and branch to test if aRegister contains a SmallInteger.
+	 Answer the jump.  Use scratch if required.  Subclasses will override if scratch is needed."
+	<returnTypeC: #'AbstractInstruction *'>
+	^self genJumpSmallInteger: aRegister
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genLoadSlot: index sourceReg: sourceReg destReg: destReg [
+	cogit
+		MoveMw: index * objectMemory wordSize + objectMemory baseHeaderSize
+		r: sourceReg
+		R: destReg.
+	^0
 ]
 
 { #category : #'bytecode generator support' }

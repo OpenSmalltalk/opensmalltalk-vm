@@ -515,10 +515,10 @@ CoInterpreter >> activateNewClosureMethod: blockClosure numArgs: numArgs mayCont
 	 and to create an appropriate frame layout."
 	| numCopied outerContext theMethod methodHeader inInterpreter closureIP switched |
 	<inline: true>
-	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
+	outerContext := objectMemory followField: ClosureOuterContextIndex ofObject: blockClosure.
 	self assert: outerContext ~= blockClosure.
 	numCopied := self copiedValueCountOfClosure: blockClosure.
-	theMethod := objectMemory fetchPointer: MethodIndex ofObject: outerContext.
+	theMethod := objectMemory followField: MethodIndex ofObject: outerContext.
 	methodHeader := self rawHeaderOf: theMethod.
 	(self isCogMethodReference: methodHeader) ifTrue:
 		[^self executeCogBlock: (self cogMethodOf: theMethod)
@@ -568,7 +568,7 @@ CoInterpreter >> activateNewClosureMethod: blockClosure numArgs: numArgs mayCont
 	self push: objectMemory nilObject. "FxThisContext field"
 	self push: (self encodeFrameFieldHasContext: false isBlock: true numArgs: numArgs).
 	self push: 0. "FoxIFSavedIP"
-	self push: (objectMemory fetchPointer: ReceiverIndex ofObject: outerContext).
+	self push: (objectMemory followField: ReceiverIndex ofObject: outerContext).
 
 	"Copy the copied values..."
 	0 to: numCopied - 1 do:

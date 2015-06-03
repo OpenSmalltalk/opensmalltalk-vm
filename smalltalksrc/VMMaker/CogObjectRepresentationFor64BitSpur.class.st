@@ -14,8 +14,7 @@ CogObjectRepresentationFor64BitSpur class >> defaultObjectMemoryClass [
 CogObjectRepresentationFor64BitSpur >> allImmediate: immediateMask branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
 	| incorrectTag tag1 tag2 |
 	<var: #targetFixUp type: #'AbstractInstruction *'>
-	cogit MoveR: reg R: TempReg.
-	(self genJumpNotImmediateInScratchReg: TempReg) jmpTarget: targetFixUp. 
+	(self genJumpNotImmediate: reg) jmpTarget: targetFixUp. 
 	immediateMask = objectMemory tagMask ifFalse: 
 		[ "TempReg holds the rcvr tag"
 		"In this case one immediate tag out of the three is not present in arrayObj. 
@@ -97,6 +96,24 @@ CogObjectRepresentationFor64BitSpur >> genFetchIndexRegister: indexReg from: tab
 	cogit genMoveConstant: tableObj R: destReg.
 	cogit MoveXwr: indexReg R: destReg R: destReg.
 	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genJumpNotSmallInteger: reg scratchReg: scratch [
+	"Generate a compare and branch to test if aRegister contains other than a SmallInteger.
+	 Answer the jump.  Override since scratch is needed."
+	cogit AndCq: objectMemory tagMask R: reg R: scratch.
+	cogit CmpCq: objectMemory smallIntegerTag R: scratch.
+	^cogit JumpNonZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genJumpSmallInteger: reg scratchReg: scratch [
+	"Generate a compare and branch to test if aRegister contains a SmallInteger.
+	 Answer the jump.  Override since scratch is needed."
+	cogit AndCq: objectMemory tagMask R: reg R: scratch.
+	cogit CmpCq: objectMemory smallIntegerTag R: scratch.
+	^cogit JumpZero: 0
 ]
 
 { #category : #'in-line cacheing' }

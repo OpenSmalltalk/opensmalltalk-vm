@@ -1185,10 +1185,8 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 		r: ClassReg
 		R: SendNumArgsReg.
 	"If the method is compiled jump to its unchecked entry-point, otherwise interpret it."
-	objectRepresentation
-		genLoadSlot: HeaderIndex sourceReg: SendNumArgsReg destReg: TempReg.
-	self MoveR: TempReg R: ClassReg.
-	jumpBCMethod := objectRepresentation genJumpSmallIntegerInScratchReg: TempReg.
+	objectRepresentation genLoadSlot: HeaderIndex sourceReg: SendNumArgsReg destReg: ClassReg.
+	jumpBCMethod := objectRepresentation genJumpImmediate: ClassReg.
 	jumpBCMethod jmpTarget: picInterpretAbort.
 	self AddCq: cmNoCheckEntryOffset R: ClassReg.
 	self JumpR: ClassReg.
@@ -1709,10 +1707,9 @@ StackToRegisterMappingCogit >> genDoubleArithmetic: arithmeticOperator preOpChec
 	<var: #jumpNonInt type: #'AbstractInstruction *'>
 	<var: #jumpFailCheck type: #'AbstractInstruction *'>
 	<var: #doOp type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: TempReg.
 	objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
 	self MoveR: Arg0Reg R: ClassReg.
-	jumpImmediate := objectRepresentation genJumpImmediateInScratchReg: TempReg.
+	jumpImmediate := objectRepresentation genJumpImmediate: Arg0Reg.
 	objectRepresentation genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
 	objectRepresentation genCmpClassFloatCompactIndexR: SendNumArgsReg.
 	jumpFailClass := self JumpNonZero: 0.
@@ -1738,7 +1735,7 @@ StackToRegisterMappingCogit >> genDoubleArithmetic: arithmeticOperator preOpChec
 	jumpFailClass := self Jump: 0.
 	jumpImmediate jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
-		[jumpNonInt := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg].
+		[jumpNonInt := objectRepresentation genJumpNotSmallInteger: Arg0Reg].
 	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
 	self ConvertR: ClassReg Rd: DPFPReg1.
 	self Jump: doOp.
@@ -1762,9 +1759,8 @@ StackToRegisterMappingCogit >> genDoubleComparison: jumpOpcodeGenerator invert: 
 	<var: #jumpCond type: #'AbstractInstruction *'>
 	<var: #compare type: #'AbstractInstruction *'>
 	<var: #jumpFail type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: TempReg.
 	objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
-	jumpImmediate := objectRepresentation genJumpImmediateInScratchReg: TempReg.
+	jumpImmediate := objectRepresentation genJumpImmediate: Arg0Reg.
 	objectRepresentation genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
 	objectRepresentation genCmpClassFloatCompactIndexR: SendNumArgsReg.
 	jumpFail := self JumpNonZero: 0.
@@ -1779,7 +1775,7 @@ StackToRegisterMappingCogit >> genDoubleComparison: jumpOpcodeGenerator invert: 
 	self RetN: 0.
 	jumpImmediate jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
-		[jumpNonInt := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg].
+		[jumpNonInt := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg].
 	objectRepresentation genConvertSmallIntegerToIntegerInReg: Arg0Reg.
 	self ConvertR: Arg0Reg Rd: DPFPReg1.
 	self Jump: compare.
@@ -2081,9 +2077,8 @@ StackToRegisterMappingCogit >> genPrimitiveAdd [
 	| jumpNotSI jumpOvfl |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpOvfl type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: TempReg.
 	self MoveR: Arg0Reg R: ClassReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ClassReg.
 	self AddR: ReceiverResultReg R: ClassReg.
 	jumpOvfl := self JumpOverflow: 0.
@@ -2145,8 +2140,7 @@ StackToRegisterMappingCogit >> genPrimitiveAtPut [
 StackToRegisterMappingCogit >> genPrimitiveBitAnd [
 	| jumpNotSI |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: TempReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"Whether the SmallInteger tags are zero or non-zero, oring them together will preserve them."
 	self AndR: Arg0Reg R: ReceiverResultReg.
 	self RetN: 0.
@@ -2158,8 +2152,7 @@ StackToRegisterMappingCogit >> genPrimitiveBitAnd [
 StackToRegisterMappingCogit >> genPrimitiveBitOr [
 	| jumpNotSI |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: TempReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"Whether the SmallInteger tags are zero or non-zero, oring them together will preserve them."
 	self OrR: Arg0Reg R: ReceiverResultReg.
 	self RetN: 0.
@@ -2211,9 +2204,8 @@ nonInt:
 	<var: #jumpTooBig type: #'AbstractInstruction *'>
 	<var: #jumpInRange type: #'AbstractInstruction *'>
 	self assert: self numRegArgs >= 1.
-	self MoveR: Arg0Reg R: TempReg.
 	self MoveR: Arg0Reg R: ClassReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
 	(self lastOpcode setsConditionCodesFor: JumpNegative) ifFalse:
 		[self CmpCq: 0 R: ClassReg]. "N.B. FLAGS := ClassReg - 0"
@@ -2244,8 +2236,7 @@ nonInt:
 StackToRegisterMappingCogit >> genPrimitiveBitXor [
 	| jumpNotSI |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: TempReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"Clear one or the other tag so that xoring will preserve them."
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: Arg0Reg.
 	self XorR: Arg0Reg R: ReceiverResultReg.
@@ -2309,10 +2300,9 @@ StackToRegisterMappingCogit >> genPrimitiveDiv [
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpExact type: #'AbstractInstruction *'>
 	<var: #jumpSameSign type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: TempReg.
 	self MoveR: Arg0Reg R: ClassReg.
 	self MoveR: Arg0Reg R: Arg1Reg.
-	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
 	 overflow case doesn't actually overflow the machine instruction."
 	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
@@ -2350,9 +2340,8 @@ StackToRegisterMappingCogit >> genPrimitiveDivide [
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpInexact type: #'AbstractInstruction *'>
 	<var: #jumpOverflow type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: TempReg.
 	self MoveR: Arg0Reg R: ClassReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
 	 overflow case doesn't actually overflow the machine instruction."
 	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
@@ -2415,9 +2404,8 @@ StackToRegisterMappingCogit >> genPrimitiveMod [
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpExact type: #'AbstractInstruction *'>
 	<var: #jumpSameSign type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: TempReg.
 	self MoveR: Arg0Reg R: ClassReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ClassReg.
 	jumpZero := self JumpZero: 0.
 	self MoveR: ClassReg R: Arg1Reg.
@@ -2447,10 +2435,9 @@ StackToRegisterMappingCogit >> genPrimitiveMultiply [
 	| jumpNotSI jumpOvfl |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpOvfl type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: TempReg.
 	self MoveR: Arg0Reg R: ClassReg.
 	self MoveR: ReceiverResultReg R: Arg1Reg.
-	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg..
 	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: Arg1Reg.
 	self MulR: Arg1Reg R: ClassReg.
@@ -2535,9 +2522,8 @@ StackToRegisterMappingCogit >> genPrimitiveQuo [
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpOverflow type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: TempReg.
 	self MoveR: Arg0Reg R: ClassReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
 	 overflow case doesn't actually overflow the machine instruction."
 	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
@@ -2588,8 +2574,7 @@ StackToRegisterMappingCogit >> genPrimitiveSubtract [
 	| jumpNotSI jumpOvfl |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpOvfl type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: TempReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	self MoveR: ReceiverResultReg R: TempReg.
 	self SubR: Arg0Reg R: TempReg.
 	jumpOvfl := self JumpOverflow: 0.
@@ -2978,8 +2963,7 @@ StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode [
 	| jumpFail jumpTrue |
 	<var: #jumpFail type: #'AbstractInstruction *'>
 	<var: #jumpTrue type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: TempReg.
-	jumpFail := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpFail := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	self CmpR: Arg0Reg R: ReceiverResultReg. "N.B. FLAGS := RRReg - Arg0Reg"
 	jumpTrue := self gen: jumpOpcode.
 	self genMoveFalseR: ReceiverResultReg.
@@ -3003,8 +2987,7 @@ StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCom
 	<var: #jumpFail type: #'AbstractInstruction *'>
 	backEnd hasDoublePrecisionFloatingPointSupport ifFalse:
 		[^self genSmallIntegerComparison: jumpOpcode].
-	self MoveR: Arg0Reg R: TempReg.
-	jumpDouble := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	jumpDouble := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	self CmpR: Arg0Reg R: ReceiverResultReg. "N.B. FLAGS := RRReg - Arg0Reg"
 	jumpTrue := self gen: jumpOpcode.
 	self genMoveFalseR: ReceiverResultReg.
@@ -3015,8 +2998,7 @@ StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCom
 	"Argument may be a Float : let us check or fail"
 	jumpDouble jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
-		[self MoveR: ClassReg R: TempReg.
-		 jumpNonInt := objectRepresentation genJumpImmediateInScratchReg: TempReg].
+		[jumpNonInt := objectRepresentation genJumpImmediate: Arg0Reg].
 	objectRepresentation genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
 	objectRepresentation genCmpClassFloatCompactIndexR: SendNumArgsReg.
 	jumpFail := self JumpNonZero: 0.
