@@ -44,8 +44,7 @@ CogObjectRepresentationForSpur >> branchIf: reg notInstanceOfBehavior: classObj 
 		ifTrue:
 			[self branchIf: reg hasNotImmediateTag: classIndex target: targetFixUp ]
 		ifFalse:
-			[cogit MoveR: reg R: TempReg.
-			(self genJumpImmediateInScratchReg: TempReg) jmpTarget: targetFixUp.
+			[(self genJumpImmediate: reg) jmpTarget: targetFixUp.
 			 self genGetClassIndexOfNonImm: reg into: TempReg.
 			 self genCmpClassIndex: classIndex R: TempReg.
 			 cogit JumpNonZero: targetFixUp ].
@@ -241,35 +240,6 @@ CogObjectRepresentationForSpur >> genEnsureObjInRegNotForwarded: reg scratchReg:
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genEnsureObjInRegNotForwarded: reg scratchReg: scratch updatingMw: offset r: baseReg [
-	"Make sure that the object in reg is not forwarded, and the field reg[offset] is updated
-	 if the object in reg is forwarded. Use the fact that isForwardedObjectClassIndexPun is
-	 a power of two to save an instruction."
-	| loop imm ok |
-	<var: #ok type: #'AbstractInstruction *'>
-	<var: #imm type: #'AbstractInstruction *'>
-	<var: #loop type: #'AbstractInstruction *'>
-	self assert: reg ~= scratch.
-	loop := cogit Label.
-	cogit MoveR: reg R: scratch.
-	imm := self genJumpImmediateInScratchReg: scratch.
-	"notionally
-		self genGetClassIndexOfNonImm: reg into: scratch.
-		cogit CmpCq: objectMemory isForwardedObjectClassIndexPun R: TempReg.
-	 but the following is an instruction shorter:"
-	cogit MoveMw: 0 r: reg R: scratch.
-	cogit
-		AndCq: objectMemory classIndexMask - objectMemory isForwardedObjectClassIndexPun
-		R: scratch.
-	ok := cogit JumpNonZero:  0.
-	self genLoadSlot: 0 sourceReg: reg destReg: reg.
-	cogit MoveR: reg Mw: offset r: baseReg.
-	cogit Jump: loop.
-	ok jmpTarget: (imm jmpTarget: cogit Label).
-	^0
-]
-
-{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch [
 	^ self 
 		genEnsureOopInRegNotForwarded: reg 
@@ -281,14 +251,13 @@ CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg:
 CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch ifForwarder: fwdJumpTarget ifNotForwarder: nonFwdJumpTargetOrZero [
 	"Make sure that the oop in reg is not forwarded.  
 	 Use the fact that isForwardedObjectClassIndexPun is a power of two to save an instruction."
-	| skip ok finished |
+	| imm ok finished |
 	<inline: true>
 	<var: #ok type: #'AbstractInstruction *'>
-	<var: #skip type: #'AbstractInstruction *'>
+	<var: #imm type: #'AbstractInstruction *'>
 	<var: #finished type: #'AbstractInstruction *'>
 	self assert: reg ~= scratch.
-	cogit MoveR: reg R: scratch.
-	skip := self genJumpImmediateInScratchReg: scratch.
+	imm := self genJumpImmediate: reg.
 	"notionally
 		self genGetClassIndexOfNonImm: reg into: scratch.
 		cogit CmpCq: objectMemory isForwardedObjectClassIndexPun R: TempReg.
@@ -303,7 +272,7 @@ CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg:
 	finished := nonFwdJumpTargetOrZero = 0
 		ifTrue: [ cogit Label ]
 		ifFalse: [ self cCoerceSimple: nonFwdJumpTargetOrZero to: #'AbstractInstruction *' ].
-	skip jmpTarget: (ok jmpTarget: finished).
+	imm jmpTarget: (ok jmpTarget: finished).
 	^0
 ]
 
@@ -315,6 +284,34 @@ CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg:
 		scratchReg: scratch 
 		ifForwarder: instruction
 		ifNotForwarder: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch updatingMw: offset r: baseReg [
+	"Make sure that the oop in reg is not forwarded, and the field reg[offset] is updated
+	 if the object in reg is forwarded.  Use the fact that isForwardedObjectClassIndexPun is
+	 a power of two to save an instruction."
+	| loop imm ok |
+	<var: #ok type: #'AbstractInstruction *'>
+	<var: #imm type: #'AbstractInstruction *'>
+	<var: #loop type: #'AbstractInstruction *'>
+	self assert: reg ~= scratch.
+	loop := cogit Label.
+	imm := self genJumpImmediate: reg.
+	"notionally
+		self genGetClassIndexOfNonImm: reg into: scratch.
+		cogit CmpCq: objectMemory isForwardedObjectClassIndexPun R: TempReg.
+	 but the following is an instruction shorter:"
+	cogit MoveMw: 0 r: reg R: scratch.
+	cogit
+		AndCq: objectMemory classIndexMask - objectMemory isForwardedObjectClassIndexPun
+		R: scratch.
+	ok := cogit JumpNonZero:  0.
+	self genLoadSlot: 0 sourceReg: reg destReg: reg.
+	cogit MoveR: reg Mw: offset r: baseReg.
+	cogit Jump: loop.
+	ok jmpTarget: (imm jmpTarget: cogit Label).
+	^0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -612,15 +609,6 @@ CogObjectRepresentationForSpur >> genJumpNotImmediateInScratchReg: aRegister [
 	<returnTypeC: #'AbstractInstruction *'>
 	cogit AndCq: objectMemory tagMask R: aRegister.
 	^cogit JumpZero: 0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genLoadSlot: index sourceReg: sourceReg destReg: destReg [
-	cogit
-		MoveMw: index * objectMemory wordSize + objectMemory baseHeaderSize
-		r: sourceReg
-		R: destReg.
-	^0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -944,8 +932,7 @@ CogObjectRepresentationForSpur >> mixed: numNonImmediates branchIf: reg notInsta
 	<var: #jumps type: #'AbstractInstruction **'>
 	<var: #targetFixUp type: #'AbstractInstruction *'>
 	numCases := objectMemory numSlotsOf: arrayObj.
-	cogit MoveR: reg R: TempReg.
-	jmpImmediate := self genJumpImmediateInScratchReg: TempReg.
+	jmpImmediate := self genJumpImmediate: reg.
 	
 	"Rcvr is non immediate"
 	jumps := self alloca: numNonImmediates type: (self cCode: [#'AbstractInstruction *'] inSmalltalk: [cogit backEnd class]).
@@ -989,9 +976,8 @@ CogObjectRepresentationForSpur >> noneImmediateBranchIf: reg notInstanceOfBehavi
 	<var: #targetFixUp type: #'AbstractInstruction *'>
 	<var: #label type: #'AbstractInstruction *'>
 	<var: #jumps type: #'AbstractInstruction **'>
-	cogit MoveR: reg R: TempReg.
 	jumps := self alloca: (objectMemory numSlotsOf: arrayObj) type: (self cCode: [#'AbstractInstruction *'] inSmalltalk: [cogit backEnd class]).
-	(self genJumpImmediateInScratchReg: TempReg) jmpTarget: targetFixUp.
+	(self genJumpImmediate: reg) jmpTarget: targetFixUp.
 	self genGetClassIndexOfNonImm: reg into: TempReg.
 	0 to: (numJumps := objectMemory numSlotsOf: arrayObj) - 1 do:
 		[:i|

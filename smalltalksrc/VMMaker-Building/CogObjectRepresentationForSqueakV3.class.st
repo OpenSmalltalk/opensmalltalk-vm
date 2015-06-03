@@ -682,12 +682,6 @@ CogObjectRepresentationForSqueakV3 >> genJumpSmallIntegerInScratchReg: aRegister
 	^cogit JumpNonZero: 0
 ]
 
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genLoadSlot: index sourceReg: sourceReg destReg: destReg [
-	cogit MoveMw: index * objectMemory wordSize + objectMemory baseHeaderSize r: sourceReg R: destReg.
-	^0
-]
-
 { #category : #'bytecode generator support' }
 CogObjectRepresentationForSqueakV3 >> genNewArrayOfSize: size initialized: initialized [
 	"Generate a call to code that allocates a new Array of size.
