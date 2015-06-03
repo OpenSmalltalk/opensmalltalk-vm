@@ -5355,7 +5355,17 @@ Cogit >> genNSSendTrampolineFor: aRoutine numArgs: numArgs called: aString [
 	self CmpCq: 0 R: TempReg.
 	jumpItsTheReceiverStupid := self JumpZero: 0.
 	self MoveR: TempReg R: ReceiverResultReg.
-	"We don't patch stack(-numArgs). See comment in ceImplicitReceiverSend:receiver:"
+	"Now set the stacked receiver, if needed.  If there are reg args this is
+	 not required; see genPushRegisterArgsForNumArgs:numArgs: below."
+	(self numRegArgs = 0 or: [numArgs > self numRegArgs]) ifTrue:
+		[numArgs >= (NumSendTrampolines - 1)
+			ifTrue: "arbitrary argument count"
+				[self MoveMw: NSCNumArgsIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
+				 backEnd hasLinkRegister ifFalse:
+					[self AddCq: 1 R: TempReg]..
+				 self MoveR: ReceiverResultReg Xwr: TempReg R: SPReg]
+			ifFalse: "Known argument count"
+				[self MoveR: TempReg Mw: (backEnd hasLinkRegister ifTrue: [0] ifFalse: [1]) + numArgs * objectMemory wordSize r: SPReg]].
 	jumpItsTheReceiverStupid jmpTarget: self Label.
 	self MoveMw: NSCTargetIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
 	self JumpR: TempReg.
@@ -5961,7 +5971,7 @@ Cogit >> generateNewspeakRuntime [
 Cogit >> generateNewspeakSendTrampolines [
 	"Self send, dynamic super send, implicit receiver send, and outer send"
 	<option: #NewspeakVM>
-	0 to: NumSendTrampolines - 2 do:
+	0 to: NumSendTrampolines - 1 do:
 		[:numArgs|
 		selfSendTrampolines
 			at: numArgs
@@ -5969,16 +5979,9 @@ Cogit >> generateNewspeakSendTrampolines [
 					  called: (self trampolineName: 'ceSelfSend' numArgs: numArgs)
 					  arg: ClassReg
 					  arg: ReceiverResultReg
-					  arg: numArgs)].
-	selfSendTrampolines
-		at: NumSendTrampolines - 1
-		put: (self genTrampolineFor: #ceSelfSend:to:numArgs:
-					called: (self trampolineName: 'ceSelfSend' numArgs: -1)
-					arg: ClassReg
-					arg: ReceiverResultReg
-					arg: SendNumArgsReg).
+					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 
-	0 to: NumSendTrampolines - 2 do:
+	0 to: NumSendTrampolines - 1 do:
 		[:numArgs|
 		dynamicSuperSendTrampolines
 			at: numArgs
@@ -5986,16 +5989,9 @@ Cogit >> generateNewspeakSendTrampolines [
 					  called: (self trampolineName: 'ceDynSuperSend' numArgs: numArgs)
 					  arg: ClassReg
 					  arg: ReceiverResultReg
-					  arg: numArgs)].
-	dynamicSuperSendTrampolines
-		at: NumSendTrampolines - 1
-		put: (self genTrampolineFor: #ceDynamicSuperSend:to:numArgs:
-					called: (self trampolineName: 'ceDynSuperSend' numArgs: -1)
-					arg: ClassReg
-					arg: ReceiverResultReg
-					arg: SendNumArgsReg).
+					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 
-	0 to: NumSendTrampolines - 2 do:
+	0 to: NumSendTrampolines - 1 do:
 		[:numArgs|
 		implicitReceiverSendTrampolines
 			at: numArgs
@@ -6003,14 +5999,8 @@ Cogit >> generateNewspeakSendTrampolines [
 				genNSSendTrampolineFor: #ceImplicitReceiverSend:receiver:
 				numArgs: numArgs
 				called: (self trampolineName: 'ceImplicitReceiverSend' numArgs: numArgs))].
-	implicitReceiverSendTrampolines
-		at: NumSendTrampolines - 1
-		put: (self 
-			genNSSendTrampolineFor: #ceImplicitReceiverSend:receiver:
-			numArgs: self numRegArgs + 1
-			called: (self trampolineName: 'ceImplicitReceiverSend' numArgs: -1)).
 
-	0 to: NumSendTrampolines - 2 do:
+	0 to: NumSendTrampolines - 1 do:
 		[:numArgs|
 		outerSendTrampolines
 			at: numArgs
@@ -6018,12 +6008,6 @@ Cogit >> generateNewspeakSendTrampolines [
 				genNSSendTrampolineFor: #ceOuterSend:receiver:
 				numArgs: numArgs
 				called: (self trampolineName: 'ceOuterSend' numArgs: numArgs))].
-	outerSendTrampolines
-		at: NumSendTrampolines - 1
-		put: (self 
-			genNSSendTrampolineFor: #ceOuterSend:receiver:
-			numArgs: self numRegArgs + 1
-			called: (self trampolineName: 'ceOuterSend' numArgs: -1)).
 
 
 ]
@@ -6092,7 +6076,7 @@ Cogit >> generateRunTimeTrampolines [
 
 { #category : #initialization }
 Cogit >> generateSendTrampolines [
-	0 to: NumSendTrampolines - 2 do:
+	0 to: NumSendTrampolines - 1 do:
 		[:numArgs|
 		ordinarySendTrampolines
 			at: numArgs
@@ -6101,20 +6085,12 @@ Cogit >> generateSendTrampolines [
 					  arg: ClassReg
 					  arg: 0
 					  arg: ReceiverResultReg
-					  arg: numArgs)].
-	ordinarySendTrampolines
-		at: NumSendTrampolines - 1
-		put: (self genTrampolineFor: #ceSend:super:to:numArgs:
-					called: (self trampolineName: 'ceSend' numArgs: -1)
-					arg: ClassReg
-					arg: 0
-					arg: ReceiverResultReg
-					arg: SendNumArgsReg).
+					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 
 	"Generate these in the middle so they are within [firstSend, lastSend]."
 	self cppIf: NewspeakVM ifTrue: [self generateNewspeakSendTrampolines].
 	self cppIf: BytecodeSetHasDirectedSuperSend ifTrue:
-		[0 to: NumSendTrampolines - 2 do:
+		[0 to: NumSendTrampolines - 1 do:
 			[:numArgs|
 			directedSuperSendTrampolines
 				at: numArgs
@@ -6123,17 +6099,9 @@ Cogit >> generateSendTrampolines [
 						  arg: ClassReg
 						  arg: TempReg
 						  arg: ReceiverResultReg
-						  arg: numArgs)].
-		directedSuperSendTrampolines
-			at: NumSendTrampolines - 1
-			put: (self genTrampolineFor: #ceSend:above:to:numArgs:
-						called: (self trampolineName: 'ceDirectedSuperSend' numArgs: -1)
-						arg: ClassReg
-						arg: TempReg
-						arg: ReceiverResultReg
-						arg: SendNumArgsReg)].
+						  arg: (self numArgsOrSendNumArgsReg: numArgs))]].
 
-	0 to: NumSendTrampolines - 2 do:
+	0 to: NumSendTrampolines - 1 do:
 		[:numArgs|
 		superSendTrampolines
 			at: numArgs
@@ -6142,15 +6110,7 @@ Cogit >> generateSendTrampolines [
 					  arg: ClassReg
 					  arg: 1
 					  arg: ReceiverResultReg
-					  arg: numArgs)].
-	superSendTrampolines
-		at: NumSendTrampolines - 1
-		put: (self genTrampolineFor: #ceSend:super:to:numArgs:
-					called: (self trampolineName: 'ceSuperSend' numArgs: -1)
-					arg: ClassReg
-					arg: 1
-					arg: ReceiverResultReg
-					arg: SendNumArgsReg).
+					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 	firstSend := ordinarySendTrampolines at: 0.
 	lastSend := superSendTrampolines at: NumSendTrampolines - 1
 ]
@@ -8019,6 +7979,15 @@ Cogit >> nsSendCacheSurrogateAt: address [
 		cogit: self
 ]
 
+{ #category : #initialization }
+Cogit >> numArgsOrSendNumArgsReg: numArgs [
+	"The send trampolines have different versions for different arg counts, with special
+	 cases for 0 through NumSendTrampolines - 2, and a general case for more, passing
+	 the arg count in SendNumArgsReg.  This computes the relevant argument."
+	<inline: true>
+	^numArgs <= (NumSendTrampolines - 2) ifTrue: [numArgs] ifFalse: [SendNumArgsReg]
+]
+
 { #category : #accessing }
 Cogit >> objectMemory [
 	<doNotGenerate>
@@ -9718,16 +9687,27 @@ Cogit >> traceStores: aBooleanOrInteger [
 
 { #category : #initialization }
 Cogit >> trampolineName: routinePrefix numArgs: numArgs [
+	^self trampolineName: routinePrefix numArgs: numArgs limit: NumSendTrampolines - 2
+]
+
+{ #category : #initialization }
+Cogit >> trampolineName: routinePrefix numArgs: numArgs limit: argsLimit [
 	"Malloc a string with the contents for the trampoline table"
+	<inline: true>
 	<returnTypeC: #'char *'>
 	<var: #routinePrefix type: #'char *'>
 	| theString |
 	<var: #theString type: #'char *'>
 	self cCode: '' inSmalltalk:
-		[^routinePrefix, (numArgs >= 0 ifTrue: [numArgs printString] ifFalse: ['N']), 'Args'].
+		[^routinePrefix, (numArgs <= argsLimit ifTrue: [numArgs printString] ifFalse: ['N']), 'Args'].
 	theString := self malloc: (self strlen: routinePrefix) + 6.
-	self s: theString pr: '%s%cArgs' in: routinePrefix tf: (numArgs >= 0 ifTrue: [$0 + numArgs] ifFalse: [$N]).
+	self s: theString pr: '%s%cArgs' in: routinePrefix tf: (numArgs <= argsLimit ifTrue: [$0 + numArgs] ifFalse: [$N]).
 	^theString
+]
+
+{ #category : #initialization }
+Cogit >> trampolineName: routinePrefix numRegArgs: numArgs [
+	^self trampolineName: routinePrefix numArgs: numArgs limit: self numRegArgs
 ]
 
 { #category : #'multi-threading' }
