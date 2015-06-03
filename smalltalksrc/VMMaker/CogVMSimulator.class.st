@@ -2434,7 +2434,7 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 						ifTrue: [desiredCogCodeSize]
 						ifFalse:
 							[hdrCogCodeSize = 0
-									ifTrue: [self defaultCogCodeSize]
+									ifTrue: [cogit defaultCogCodeSize]
 									ifFalse: [hdrCogCodeSize]].
 	desiredCogCodeSize := hdrCogCodeSize.
 	self assert: f position = (objectMemory wordSize = 4 ifTrue: [40] ifFalse: [64]).
