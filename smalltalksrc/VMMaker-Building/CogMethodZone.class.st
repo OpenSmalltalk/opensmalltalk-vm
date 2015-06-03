@@ -183,6 +183,20 @@ CogMethodZone >> clearCogCompiledCode [
 	self manageFrom: baseAddress to: limitAddress
 ]
 
+{ #category : #compaction }
+CogMethodZone >> clearSavedPICUsageCount: cogMethod [
+	"For Sista, where we want PICs to last so they can be observed, we need to keep PICs unless
+	 they are definitely unused.  So we need to identify unused PICs.  So in planCompact, zero the
+	 usage counts of all PICs, saving the actual usage count in blockEntryOffset.  Then in
+	 relocateMethodsPreCompaction (actually in relocateIfCallOrMethodReference:mcpc:delta:)
+	 restore the usage counts of used PICs.  Finally in compactCompiledCode, clear the blockEntryOffset
+	 of the unused PICs; they will then have a zero count and be reclaimed in the next code compaction."
+	<var: #cogMethod type: #'CogMethod *'>
+	<option: #SistaVM>
+	cogMethod cmType = CMClosedPIC ifTrue:
+		[cogMethod blockEntryOffset: 0]
+]
+
 { #category : #printing }
 CogMethodZone >> cogMethodsSelect: aBlock [
 	<doNotGenerate>
@@ -224,6 +238,8 @@ CogMethodZone >> compactCompiledCode [
 				  and: [(coInterpreter rawHeaderOf: source methodObject) asInteger ~= source asInteger]) ifTrue:
 					[source nextMethodOrIRCs: unpairedMethodList.
 					 unpairedMethodList := source asUnsignedInteger]].
+		 SistaVM ifTrue:
+			[self clearSavedPICUsageCount: source].
 		 source cmType = CMOpenPIC ifTrue:
 			[source nextOpenPIC: openPICList asUnsignedInteger.
 			 openPICList := source].
@@ -253,7 +269,9 @@ CogMethodZone >> compactCompiledCode [
 								[dest nextMethodOrIRCs: unpairedMethodList.
 								 unpairedMethodList := dest asUnsignedInteger]]]
 				ifFalse:
-					[dest cmType = CMOpenPIC ifTrue:
+					[SistaVM ifTrue:
+						[self clearSavedPICUsageCount: dest].
+					dest cmType = CMOpenPIC ifTrue:
 						[dest nextOpenPIC: openPICList asUnsignedInteger.
 						 openPICList := dest]].
 			 dest cmUsageCount > 0 ifTrue:
@@ -339,7 +357,7 @@ CogMethodZone >> freeMethod: cogMethod [
 
 { #category : #compaction }
 CogMethodZone >> freeOlderMethodsForCompaction [
-	"Free methods, preferring older methods for compaction, up to some fraction."
+	"Free methods, preferring older methods for compaction, up to some fraction, currently a quarter."
 	| zoneSize amountToFree initialFreeSpace freedSoFar freeableUsage cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	zoneSize := limitAddress - baseAddress.
@@ -349,11 +367,10 @@ CogMethodZone >> freeOlderMethodsForCompaction [
 	freeableUsage := 0.
 	[self cCode: ''
 		inSmalltalk: [coInterpreter transcript nextPutAll: 'freeing methods with usage '; print: freeableUsage; cr; flush].
-	 cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	 cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
 	 [cogMethod asUnsignedInteger < mzFreeStart
 	  and: [freedSoFar < amountToFree]] whileTrue:
-		[(cogMethod cmType = CMMethod
-		  and: [cogMethod cmUsageCount <= freeableUsage]) ifTrue:
+		[(self shouldFreeMethod: cogMethod given: freeableUsage) ifTrue:
 			[self freeMethod: cogMethod.
 			 freedSoFar := freedSoFar + cogMethod blockSize].
 		 cogMethod := self methodAfter: cogMethod].
@@ -540,18 +557,27 @@ CogMethodZone >> openPICWithSelector: aSelector [
 
 { #category : #compaction }
 CogMethodZone >> planCompaction [
-	"Some metods have been freed.  Compute how much each survivor needs to
-	 move during the ensuing compaction and record it in the objectHeader field."
+	"Some methods have been freed.  Compute how much each survivor needs to
+	 move during the ensuing compaction and record it in the objectHeader field.
+
+	 For Sista, where we want PICs to last so they can be observed, we need to keep PICs unless
+	 they are definitely unused.  So we need to identify unused PICs.  So in planCompact, zero the
+	 usage counts of all PICs, saving the actual usage count in blockEntryOffset.  Then in
+	 relocateMethodsPreCompaction (actually in relocateIfCallOrMethodReference:mcpc:delta:)
+	 restore the usage counts of used PICs.  Finally in compactCompiledCode, clear the blockEntryOffset
+	 of the unused PICs; they will then have a zero count and be reclaimed in the next code compaction."
 	| delta cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	delta := 0.
-	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
 	[cogMethod asUnsignedInteger < mzFreeStart] whileTrue:
 		[cogMethod cmType = CMFree
 			ifTrue: [delta := delta - cogMethod blockSize]
 			ifFalse:
 				[self assert: (cogit cogMethodDoesntLookKosher: cogMethod) = 0.
-				 cogMethod objectHeader: delta].
+				 cogMethod objectHeader: delta.
+				 SistaVM ifTrue:
+					[self savePICUsageCount: cogMethod]].
 		 cogMethod := self methodAfter: cogMethod]
 ]
 
@@ -723,6 +749,25 @@ CogMethodZone >> relocateAndPruneYoungReferrers [
 	"self assert: self kosherYoungReferrers"
 ]
 
+{ #category : #compaction }
+CogMethodZone >> relocateMethodsPreCompaction [
+	"All surviving methods have had the amount they are going to relocate by
+	 stored in their objectHeader fields.  Relocate all relative calls so that after
+	 the compaction of both the method containing each call and the call target
+	 the calls invoke the same target."
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < mzFreeStart] whileTrue:
+		[cogMethod cmType ~= CMFree ifTrue:
+			[cogMethod cmType = CMClosedPIC
+				ifTrue: [cogit relocateCallsInClosedPIC: cogMethod]
+				ifFalse: [cogit relocateCallsAndSelfReferencesInMethod: cogMethod]].
+		 cogMethod := self methodAfter: cogMethod].
+	self relocateAndPruneYoungReferrers.
+	^true
+]
+
 { #category : #accessing }
 CogMethodZone >> removeFromOpenPICList: anOpenPIC [
 	<var: #anOpenPIC type: #'CogMethod *'>
@@ -763,6 +808,23 @@ CogMethodZone >> removeFromUnpairedMethodList: aCogMethod [
 		  prevMethod := self cCoerceSimple: prevMethod nextMethodOrIRCs to: #'CogMethod *']
 ]
 
+{ #category : #compaction }
+CogMethodZone >> restorePICUsageCount: cogMethod [
+	"For Sista, where we want PICs to last so they can be observed, we need to keep PICs unless
+	 they are definitely unused.  So we need to identify unused PICs.  So in planCompact, zero the
+	 usage counts of all PICs, saving the actual usage count in blockEntryOffset.  Then in
+	 relocateMethodsPreCompaction (actually in relocateIfCallOrMethodReference:mcpc:delta:)
+	 restore the usage counts of used PICs.  Finally in compactCompiledCode, clear the blockEntryOffset
+	 of the unused PICs; they will then have a zero count and be reclaimed in the next code compaction."
+	<var: #cogMethod type: #'CogMethod *'>
+	<option: #SistaVM>
+	(cogMethod cmType = CMClosedPIC
+	 and: [cogMethod blockEntryOffset ~= 0]) ifTrue:
+		[cogMethod
+			cmUsageCount: cogMethod blockEntryOffset;
+			blockEntryOffset: 0]
+]
+
 { #category : #accessing }
 CogMethodZone >> roundUpAddress: address [
 	<returnTypeC: #'void *'>
@@ -776,6 +838,22 @@ CogMethodZone >> roundUpLength: numBytes [
 	^numBytes + 7 bitAnd: -8
 ]
 
+{ #category : #compaction }
+CogMethodZone >> savePICUsageCount: cogMethod [
+	"For Sista, where we want PICs to last so they can be observed, we need to keep PICs unless
+	 they are definitely unused.  So we need to identify unused PICs.  So in planCompact, zero the
+	 usage counts of all PICs, saving the actual usage count in blockEntryOffset.  Then in
+	 relocateMethodsPreCompaction (actually in relocateIfCallOrMethodReference:mcpc:delta:)
+	 restore the usage counts of used PICs.  Finally in compactCompiledCode, clear the blockEntryOffset
+	 of the unused PICs; they will then have a zero count and be reclaimed in the next code compaction."
+	<var: #cogMethod type: #'CogMethod *'>
+	<option: #SistaVM>
+	cogMethod cmType = CMClosedPIC ifTrue:
+		[cogMethod
+			blockEntryOffset: cogMethod cmUsageCount;
+			cmUsageCount: 0]
+]
+
 { #category : #initialization }
 CogMethodZone >> setInterpreter: aCoInterpreter objectRepresentation: anObjectRepresentation cogit: aCogit [
 	<doNotGenerate>
@@ -783,6 +861,29 @@ CogMethodZone >> setInterpreter: aCoInterpreter objectRepresentation: anObjectRe
 	objectRepresentation := anObjectRepresentation.
 	cogit := aCogit.
 	objectMemory := aCoInterpreter objectMemory
+]
+
+{ #category : #compaction }
+CogMethodZone >> shouldFreeMethod: cogMethod given: freeableUsage [
+	"Answer if cogMethod should be freed in the current pass of freeOlderMethodsForCompaction.
+
+	 For Sista, where we want PICs to last so they can be observed, we need to keep PICs unless
+	 they are definitely unused.  So we need to identify unused PICs.  So in planCompact, zero the
+	 usage counts of all PICs, saving the actual usage count in blockEntryOffset.  Then in
+	 relocateMethodsPreCompaction (actually in relocateIfCallOrMethodReference:mcpc:delta:)
+	 restore the usage counts of used PICs.  Finally in compactCompiledCode, clear the blockEntryOffset
+	 of the unused PICs; they will then have a zero count and be reclaimed in the next code compaction."
+	<var: #cogMethod type: #'CogMethod *'>
+	<inline: true>
+	^SistaVM
+		ifTrue:
+			[cogMethod cmType = CMMethod
+			 	ifTrue: [cogMethod cmUsageCount <= freeableUsage]
+				ifFalse: [cogMethod cmType ~= CMFree
+						  and: [cogMethod cmUsageCount = 0]]]
+		ifFalse:
+			[cogMethod cmType ~= CMFree
+			  and: [cogMethod cmUsageCount <= freeableUsage]]
 ]
 
 { #category : #'jit - api' }

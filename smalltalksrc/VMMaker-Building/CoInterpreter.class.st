@@ -2740,14 +2740,6 @@ CoInterpreter >> createClosureNumArgs: numArgs numCopied: numCopied startpc: ini
 	^newClosure
 ]
 
-{ #category : #initialization }
-CoInterpreter >> defaultCogCodeSize [
-	"Return the default number of bytes to allocate for native code at startup.
-	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
-	<inline: false>
-	^1024 * 1400
-]
-
 { #category : #'process primitive support' }
 CoInterpreter >> deferStackLimitSmashAround: functionSymbol [
 	"Defer smashes of the stackLimit around the call of functionSymbol (for assert checks)"
@@ -6209,7 +6201,7 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 						ifTrue: [desiredCogCodeSize]
 						ifFalse:
 							[hdrCogCodeSize = 0
-									ifTrue: [self defaultCogCodeSize]
+									ifTrue: [cogit defaultCogCodeSize]
 									ifFalse: [hdrCogCodeSize]].
 	hdrEdenBytes		:= self getWord32FromFile: f swap: swapBytes.
 	objectMemory edenBytes: (desiredEdenBytes ~= 0

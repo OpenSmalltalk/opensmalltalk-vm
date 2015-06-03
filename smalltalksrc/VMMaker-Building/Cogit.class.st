@@ -3070,7 +3070,7 @@ Cogit >> ceSICMiss: receiver [
 					[backEnd
 						rewriteCallAt: outerReturn
 						target: pic asInteger + cmEntryOffset].
-	processor flushICacheFrom: outerReturn  - extent to: outerReturn .
+	processor flushICacheFrom: outerReturn asUnsignedInteger - 1 - extent to: outerReturn asUnsignedInteger - 1.
 	"Jump back into the pic at its entry in case this is an MNU (newTargetMethodOrNil is nil)"
 	coInterpreter
 		executeCogPIC: pic
@@ -3877,11 +3877,13 @@ Cogit >> compactCogCompiledCode [
 	self freePICsWithFreedTargets.
 	methodZone planCompaction.
 	coInterpreter updateStackZoneReferencesToCompiledCodePreCompaction.
-	self relocateMethodsPreCompaction.
+	methodZone relocateMethodsPreCompaction.
 	methodZone compactCompiledCode.
 	self assert: self allMethodsHaveCorrectHeader.
 	self assert: methodZone kosherYoungReferrers.
-	processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone freeStart asUnsignedInteger
+	processor
+		flushICacheFrom: methodZoneBase asUnsignedInteger
+		to: methodZone freeStart asUnsignedInteger
 ]
 
 { #category : #'simulation only' }
@@ -4391,6 +4393,14 @@ Cogit >> computeMaximumSizes [
 Cogit >> cr [
 	<cmacro: '() putchar(''\n'')'>
 	coInterpreter transcript cr; flush
+]
+
+{ #category : #accessing }
+Cogit >> defaultCogCodeSize [
+	"Return the default number of bytes to allocate for native code at startup.
+	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
+	<doNotGenerate>
+	^backEnd defaultCogCodeSize
 ]
 
 { #category : #disassembly }
@@ -6736,8 +6746,8 @@ Cogit >> linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod of
 				tag: inlineCacheTag
 				target: address.
 	processor
-		flushICacheFrom: callSiteReturnAddress asUnsignedInteger - extent
-		to: callSiteReturnAddress asUnsignedInteger
+		flushICacheFrom: callSiteReturnAddress asUnsignedInteger - 1 - extent
+		to: callSiteReturnAddress asUnsignedInteger - 1
 ]
 
 { #category : #analysis }
@@ -8119,8 +8129,8 @@ Cogit >> patchToOpenPICFor: selector numArgs: numArgs receiver: receiver [
 				tag: selector
 				target: oPIC asInteger + cmEntryOffset.
 	processor
-		flushICacheFrom: outerReturn asUnsignedInteger - extent to: outerReturn asUnsignedInteger;
-		flushICacheFrom: oPIC asInteger to: oPIC asInteger + openPICSize.
+		flushICacheFrom: outerReturn asUnsignedInteger - 1 - extent to: outerReturn asUnsignedInteger - 1;
+		flushICacheFrom: oPIC asUnsignedInteger to: oPIC asUnsignedInteger + openPICSize.
 	"Jump into the oPIC at its entry"
 	coInterpreter executeCogMethod: oPIC fromLinkedSendWithReceiver: receiver.
 	"NOTREACHED"
@@ -8705,10 +8715,12 @@ Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
 			annotation: annotation
 			into: [:offset :sendTable|
 				 targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
-				 targetMethod cmType = CMMethod ifTrue: "send target not freed; just relocate."
+				 targetMethod cmType ~= CMFree ifTrue: "send target not freed; just relocate."
 					[backEnd
 						relocateCallBeforeReturnPC: mcpc asInteger
 						by: (delta - targetMethod objectHeader) negated.
+					 SistaVM ifTrue: "See comment in planCompaction"
+						[methodZone restorePICUsageCount: targetMethod].
 					 ^0].
 				 "Target was freed; map back to an unlinked send; but include this method's reocation"
 				 unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
@@ -8727,25 +8739,6 @@ Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
 		[backEnd relocateMethodReferenceBeforeAddress: mcpc asInteger by: delta].
 
 	^0 "keep scanning"
-]
-
-{ #category : #compaction }
-Cogit >> relocateMethodsPreCompaction [
-	"All surviving methods have had the amount they are going to relocate by
-	 stored in their objectHeader fields.  Relocate all relative calls so that after
-	 the compaction of both the method containing each call and the call target
-	 the calls invoke the same target."
-	| cogMethod |
-	<var: #cogMethod type: #'CogMethod *'>
-	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
-	[cogMethod < methodZone limitZony] whileTrue:
-		[cogMethod cmType ~= CMFree ifTrue:
-			[cogMethod cmType = CMClosedPIC
-				ifTrue: [self relocateCallsInClosedPIC: cogMethod]
-				ifFalse: [self relocateCallsAndSelfReferencesInMethod: cogMethod]].
-		 cogMethod := methodZone methodAfter: cogMethod].
-	methodZone relocateAndPruneYoungReferrers.
-	^true
 ]
 
 { #category : #'garbage collection' }
