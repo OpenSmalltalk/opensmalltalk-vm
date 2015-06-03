@@ -1653,7 +1653,7 @@ StackToRegisterMappingCogit >> genCallPICEnilopmartNumArgs: numArgs [
 	enilopmart := methodZoneBase.
 	methodZoneBase := self alignUptoRoutineBoundary: endAddress.
 	backEnd nopsFrom: endAddress to: methodZoneBase - 1.
-	self recordGeneratedRunTime: (self trampolineName: 'ceCallPIC' numArgs: numArgs) address: enilopmart.
+	self recordGeneratedRunTime: (self trampolineName: 'ceCallPIC' numRegArgs: numArgs) address: enilopmart.
 	^self cCoerceSimple: enilopmart to: #'void (*)(void)'
 ]
 
@@ -2012,7 +2012,7 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 	jumpSICMiss jmpTarget: self Label.
 	backEnd genPushRegisterArgsForAbortMissNumArgs: numArgs.
 	^self genTrampolineFor: #ceSICMiss:
-		called: (self trampolineName: 'ceMethodAbort' numArgs: (numArgs <= self numRegArgs ifTrue: [numArgs] ifFalse: [-1]))
+		called: (self trampolineName: 'ceMethodAbort' numRegArgs: numArgs)
 		numArgs: 1
 		arg: ReceiverResultReg
 		arg: nil
@@ -2042,7 +2042,7 @@ StackToRegisterMappingCogit >> genPICAbortTrampolineFor: numArgs [
 	 ClassReg.  If the register is zero then this is an MNU."
 	opcodeIndex := 0. 
 	backEnd genPushRegisterArgsForAbortMissNumArgs: numArgs.
-	^self genInnerPICAbortTrampoline: (self trampolineName: 'cePICAbort' numArgs: (numArgs <= self numRegArgs ifTrue: [numArgs] ifFalse: [-1]))
+	^self genInnerPICAbortTrampoline: (self trampolineName: 'cePICAbort' numRegArgs: numArgs)
 ]
 
 { #category : #initialization }
@@ -2054,7 +2054,7 @@ StackToRegisterMappingCogit >> genPICMissTrampolineFor: numArgs [
 	"N.B. a closed PIC jumps to the miss routine, not calls it, so there is only one retpc on the stack."
 	backEnd genPushRegisterArgsForNumArgs: numArgs scratchReg: SendNumArgsReg.
 	self genTrampolineFor: #ceCPICMiss:receiver:
-		called: (self trampolineName: 'cePICMiss' numArgs: (numArgs <= self numRegArgs ifTrue: [numArgs] ifFalse: [-1]))
+		called: (self trampolineName: 'cePICMiss' numRegArgs: numArgs)
 		numArgs: 2
 		arg: ClassReg
 		arg: ReceiverResultReg
@@ -2882,8 +2882,8 @@ StackToRegisterMappingCogit >> genSendAbsentImplicitOrOuter: selector numArgs: n
 
 	self ssAllocateCallReg: SendNumArgsReg.
 
-	"This leaves the method receiver on the stack, which might not be the implicit receiver. But we care
-	 not: the callee will use ReceiverResultReg to build its frame, not the value beneath the arguments."
+	"This may leave the method receiver on the stack, which might not be the implicit receiver.
+	 But the lookup trampoline will establish an on-stack receiver once it locates it."
 	self marshallAbsentReceiverSendArguments: numArgs.
 
 	"Load the cache last so it is a fixed distance from the call."
@@ -3743,8 +3743,6 @@ StackToRegisterMappingCogit >> generateEnilopmarts [
 StackToRegisterMappingCogit >> generateMissAbortTrampolines [
 	"Generate the run-time entries for the various method and PIC entry misses and aborts.
 	 Read the class-side method trampolines for documentation on the various trampolines"
-
-	"Slang needs these apparently superfluous asSymbol sends."
 	0 to: self numRegArgs + 1 do:
 		[:numArgs|
 		methodAbortTrampolines
@@ -3764,10 +3762,10 @@ StackToRegisterMappingCogit >> generateMissAbortTrampolines [
 
 { #category : #initialization }
 StackToRegisterMappingCogit >> generateNewspeakSendTrampolines [
-	"Self send, dynamic super send, and implicit receiver send. TODO: outer send."
+	"Self send, dynamic super send, implicit receiver send, and outer send."
 	"Override to generate code to push the register arg(s) for <= numRegArg arity sends."
 	<option: #NewspeakVM>
-	0 to: NumSendTrampolines - 2 do:
+	0 to: NumSendTrampolines - 1 do:
 		[:numArgs|
 		selfSendTrampolines
 			at: numArgs
@@ -3776,17 +3774,9 @@ StackToRegisterMappingCogit >> generateNewspeakSendTrampolines [
 					  called: (self trampolineName: 'ceSelfSend' numArgs: numArgs)
 					  arg: ClassReg
 					  arg: ReceiverResultReg
-					  arg: numArgs)].
-	selfSendTrampolines
-		at: NumSendTrampolines - 1
-		put: (self genSendTrampolineFor: #ceSelfSend:to:numArgs:
-					numArgs: self numRegArgs + 1
-					called: (self trampolineName: 'ceSelfSend' numArgs: -1)
-					arg: ClassReg
-					arg: ReceiverResultReg
-					arg: SendNumArgsReg).
+					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 
-	0 to: NumSendTrampolines - 2 do:
+	0 to: NumSendTrampolines - 1 do:
 		[:numArgs|
 		dynamicSuperSendTrampolines
 			at: numArgs
@@ -3795,17 +3785,9 @@ StackToRegisterMappingCogit >> generateNewspeakSendTrampolines [
 					  called: (self trampolineName: 'ceDynSuperSend' numArgs: numArgs)
 					  arg: ClassReg
 					  arg: ReceiverResultReg
-					  arg: numArgs)].
-	dynamicSuperSendTrampolines
-		at: NumSendTrampolines - 1
-		put: (self genSendTrampolineFor: #ceDynamicSuperSend:to:numArgs:
-					numArgs: self numRegArgs + 1
-					called: (self trampolineName: 'ceDynSuperSend' numArgs: -1)
-					arg: ClassReg
-					arg: ReceiverResultReg
-					arg: SendNumArgsReg).
+					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 
-	0 to: NumSendTrampolines - 2 do:
+	0 to: NumSendTrampolines - 1 do:
 		[:numArgs|
 		implicitReceiverSendTrampolines
 			at: numArgs
@@ -3813,33 +3795,21 @@ StackToRegisterMappingCogit >> generateNewspeakSendTrampolines [
 				genNSSendTrampolineFor: #ceImplicitReceiverSend:receiver:
 				numArgs: numArgs
 				called: (self trampolineName: 'ceImplicitReceiverSend' numArgs: numArgs))].
-	implicitReceiverSendTrampolines
-		at: NumSendTrampolines - 1
-		put: (self 
-			genNSSendTrampolineFor: #ceImplicitReceiverSend:receiver:
-			numArgs: self numRegArgs + 1
-			called: (self trampolineName: 'ceImplicitReceiverSend' numArgs: -1)).
 
-	0 to: NumSendTrampolines - 2 do:
+	0 to: NumSendTrampolines - 1 do:
 		[:numArgs|
 		outerSendTrampolines
 			at: numArgs
 			put: (self 
 				genNSSendTrampolineFor: #ceOuterSend:receiver:
 				numArgs: numArgs
-				called: (self trampolineName: 'ceOuterSend' numArgs: numArgs))].
-	outerSendTrampolines
-		at: NumSendTrampolines - 1
-		put: (self 
-			genNSSendTrampolineFor: #ceOuterSend:receiver:
-			numArgs: self numRegArgs + 1
-			called: (self trampolineName: 'ceOuterSend' numArgs: -1)).
+				called: (self trampolineName: 'ceOuterSend' numArgs: numArgs))]
 ]
 
 { #category : #initialization }
 StackToRegisterMappingCogit >> generateSendTrampolines [
 	"Override to generate code to push the register arg(s) for <= numRegArg arity sends."
-	0 to: NumSendTrampolines - 2 do:
+	0 to: NumSendTrampolines - 1 do:
 		[:numArgs|
 		ordinarySendTrampolines
 			at: numArgs
@@ -3849,21 +3819,12 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 					  arg: ClassReg
 					  arg: 0
 					  arg: ReceiverResultReg
-					  arg: numArgs)].
-	ordinarySendTrampolines
-		at: NumSendTrampolines - 1
-		put: (self genSendTrampolineFor: #ceSend:super:to:numArgs:
-					numArgs: self numRegArgs + 1
-					called: (self trampolineName: 'ceSend' numArgs: -1)
-					arg: ClassReg
-					arg: 0
-					arg: ReceiverResultReg
-					arg: SendNumArgsReg).
+					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 
 	"Generate these in the middle so they are within [firstSend, lastSend]."
 	self cppIf: NewspeakVM ifTrue: [self generateNewspeakSendTrampolines].
 	self cppIf: BytecodeSetHasDirectedSuperSend ifTrue:
-		[0 to: NumSendTrampolines - 2 do:
+		[0 to: NumSendTrampolines - 1 do:
 			[:numArgs|
 			directedSuperSendTrampolines
 				at: numArgs
@@ -3873,18 +3834,9 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 						  arg: ClassReg
 						  arg: TempReg
 						  arg: ReceiverResultReg
-						  arg: numArgs)].
-		directedSuperSendTrampolines
-			at: NumSendTrampolines - 1
-			put: (self genSendTrampolineFor: #ceSend:above:to:numArgs:
-						numArgs: self numRegArgs + 1
-						called: (self trampolineName: 'ceDirectedSuperSend' numArgs: -1)
-						arg: ClassReg
-						arg: TempReg
-						arg: ReceiverResultReg
-						arg: SendNumArgsReg)].
+						  arg: (self numArgsOrSendNumArgsReg: numArgs))]].
 
-	0 to: NumSendTrampolines - 2 do:
+	0 to: NumSendTrampolines - 1 do:
 		[:numArgs|
 		superSendTrampolines
 			at: numArgs
@@ -3894,16 +3846,7 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 					  arg: ClassReg
 					  arg: 1
 					  arg: ReceiverResultReg
-					  arg: numArgs)].
-	superSendTrampolines
-		at: NumSendTrampolines - 1
-		put: (self genSendTrampolineFor: #ceSend:super:to:numArgs:
-					numArgs: self numRegArgs + 1
-					called: (self trampolineName: 'ceSuperSend' numArgs: -1)
-					arg: ClassReg
-					arg: 1
-					arg: ReceiverResultReg
-					arg: SendNumArgsReg).
+					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 	firstSend := ordinarySendTrampolines at: 0.
 	lastSend := superSendTrampolines at: NumSendTrampolines - 1
 ]
