@@ -3173,8 +3173,8 @@ SimpleStackBasedCogit >> genSendAbsentImplicitOrOuter: selector numArgs: numArgs
 	self assert: (objectMemory isInOldSpace: nsSendCache).
 	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs depth: depth.
 
-	"This leaves the method receiver on the stack, which might not be the implicit receiver. But we care
-	 not: the callee will use ReceiverResultReg to build its frame, not the value beneath the arguments."
+	"This leaves the method receiver on the stack, which might not be the implicit receiver.
+	 But the lookup trampoline will establish the on-stack receiver once it locates it."
 	self marshallAbsentReceiverSendArguments: numArgs.
 
 	"Load the cache last so it is a fixed distance from the call."
