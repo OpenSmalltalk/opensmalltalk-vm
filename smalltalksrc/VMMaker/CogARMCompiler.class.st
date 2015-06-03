@@ -1652,14 +1652,6 @@ CogARMCompiler >> dataOpType: armOpcode rd: destReg rn: srcReg rm: addReg lsr: s
 		ifFalse:[^self type: 0 op: armOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((shft <<7 bitOr: 32) bitOr:  addReg)]
 ]
 
-{ #category : #accessing }
-CogARMCompiler >> defaultCogCodeSize [
-	"Return the default number of bytes to allocate for native code at startup.
-	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
-	<api>
-	^1024 * 1400
-]
-
 { #category : #'generate machine code' }
 CogARMCompiler >> dispatchConcretize [
 	"Attempt to generate concrete machine code for the instruction at address.
@@ -2014,6 +2006,14 @@ CogARMCompiler >> generalPurposeRegisterMap [
 			#r10. R10.
 			#r11. R11.
 			#r12. R12	}
+]
+
+{ #category : #accessing }
+CogARMCompiler >> getDefaultCogCodeSize [
+	"Return the default number of bytes to allocate for native code at startup.
+	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
+	<inline: true>
+	^1024 * 1400
 ]
 
 { #category : #testing }
