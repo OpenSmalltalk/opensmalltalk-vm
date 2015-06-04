@@ -18,6 +18,7 @@ Class {
 		'isMapped',
 		'isMappedInBlock',
 		'isExtension',
+		'isInstVarRef',
 		'hasIRC'
 	],
 	#category : #'VMMaker-JIT'
@@ -27,7 +28,10 @@ Class {
 CogBytecodeDescriptor class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a BytecodeDescriptor struct."
 
-	self instVarNames do:
+	"With hasIRC there are 9 flag bits.  Excluding hasIRC in non-Newspeak VMs keeps the descriptor compact."
+	(NewspeakVM
+		ifTrue: [self instVarNames]
+		ifFalse: [self instVarNames copyWithout: 'hasIRC']) do:
 		[:ivn|
 		aBinaryBlock
 			value: ivn
@@ -133,6 +137,20 @@ CogBytecodeDescriptor >> isExtension: anObject [
 	"Set the value of isExtension"
 
 	^isExtension := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isInstVarRef [
+	"Answer the value of isInstVarRef"
+
+	^ isInstVarRef
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isInstVarRef: anObject [
+	"Set the value of isInstVarRef"
+
+	^isInstVarRef := anObject
 ]
 
 { #category : #accessing }
