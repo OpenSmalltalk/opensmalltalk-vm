@@ -242,7 +242,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
  are inlined only to instances of classes for which there will always be a method.'.
 	self generatorTableFrom: #(
 		"1 byte bytecodes"
-		(1    0   15 genPushReceiverVariableBytecode needsFrameNever: 1)
+		(1    0   15 genPushReceiverVariableBytecode isInstVarRef needsFrameNever: 1)
 		(1  16   31 genPushLiteralVariable16CasesBytecode needsFrameNever: 1)
 		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
 		(1  64   75 genPushTemporaryVariableBytecode needsFrameIfMod16GENumArgs: 1)
@@ -272,7 +272,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(1 144 159 genSendLiteralSelector2ArgsBytecode isMapped)
 		(1 160 175	genSendAbsentImplicit0ArgsBytecode isMapped hasIRC)
 
-		(1 176 183 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
+		(1 176 183 genStoreAndPopReceiverVariableBytecode isInstVarRef needsFrameNever: -1) "N.B. not frameless if immutability"
 		(1 184 191 genStoreAndPopTemporaryVariableBytecode)
 
 		(1 192 199 genShortUnconditionalJump	branch v3:ShortForward:Branch:Distance:)
@@ -293,16 +293,16 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		"2 byte bytecodes"
 		(2 224 224 extABytecode extension					needsFrameNever: 0)
 		(2 225 225 extBBytecode extension					needsFrameNever: 0)
-		(2 226 226 genExtPushReceiverVariableBytecode)
+		(2 226 226 genExtPushReceiverVariableBytecode isInstVarRef)
 		(2 227 227 genExtPushLiteralVariableBytecode		needsFrameNever: 1)
 		(2 228 228 genExtPushLiteralBytecode					needsFrameNever: 1)
 		(2 229 229 genExtPushIntegerBytecode				needsFrameNever: 1)
 		(2 230 230 genLongPushTemporaryVariableBytecode)
 		(2 231 231 genPushNewArrayBytecode)
-		(2 232 232 genExtStoreReceiverVariableBytecode)
+		(2 232 232 genExtStoreReceiverVariableBytecode isInstVarRef)
 		(2 233 233 genExtStoreLiteralVariableBytecode)
 		(2 234 234 genLongStoreTemporaryVariableBytecode)
-		(2 235 235 genExtStoreAndPopReceiverVariableBytecode)
+		(2 235 235 genExtStoreAndPopReceiverVariableBytecode isInstVarRef)
 		(2 236 236 genExtStoreAndPopLiteralVariableBytecode)
 		(2 237 237 genLongStoreAndPopTemporaryVariableBytecode)
 
@@ -348,18 +348,18 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 	self generatorTableFrom: #(
 		"1 byte bytecodes"
 		"pushes"
-		(1    0   15 genPushReceiverVariableBytecode			needsFrameNever: 1)
-		(1  16   31 genPushLitVarDirSup16CasesBytecode	needsFrameNever: 1)
-		(1  32   63 genPushLiteralConstantBytecode			needsFrameNever: 1)
-		(1  64   75 genPushTemporaryVariableBytecode		needsFrameIfMod16GENumArgs: 1)
-		(1  76   76 genPushReceiverBytecode					needsFrameNever: 1)
-		(1  77   77 genPushConstantTrueBytecode				needsFrameNever: 1)
-		(1  78   78 genPushConstantFalseBytecode			needsFrameNever: 1)
-		(1  79   79 genPushConstantNilBytecode				needsFrameNever: 1)
-		(1  80   80 genPushConstantZeroBytecode				needsFrameNever: 1)
-		(1  81   81 genPushConstantOneBytecode				needsFrameNever: 1)
+		(1    0   15 genPushReceiverVariableBytecode isInstVarRef		needsFrameNever: 1)
+		(1  16   31 genPushLitVarDirSup16CasesBytecode				needsFrameNever: 1)
+		(1  32   63 genPushLiteralConstantBytecode					needsFrameNever: 1)
+		(1  64   75 genPushTemporaryVariableBytecode				needsFrameIfMod16GENumArgs: 1)
+		(1  76   76 genPushReceiverBytecode							needsFrameNever: 1)
+		(1  77   77 genPushConstantTrueBytecode						needsFrameNever: 1)
+		(1  78   78 genPushConstantFalseBytecode					needsFrameNever: 1)
+		(1  79   79 genPushConstantNilBytecode						needsFrameNever: 1)
+		(1  80   80 genPushConstantZeroBytecode						needsFrameNever: 1)
+		(1  81   81 genPushConstantOneBytecode						needsFrameNever: 1)
 		(1  82   82 genExtPushPseudoVariable)
-		(1  83   83 duplicateTopBytecode						needsFrameNever: 1)
+		(1  83   83 duplicateTopBytecode								needsFrameNever: 1)
 
 		(1  84   87 unknownBytecode)
 
@@ -402,7 +402,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 													v3:ShortForward:Branch:Distance:)
 
 		"stores"
-		(1 200 207 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
+		(1 200 207 genStoreAndPopReceiverVariableBytecode isInstVarRef needsFrameNever: -1) "N.B. not frameless if immutability"
 		(1 208 215 genStoreAndPopTemporaryVariableBytecode)
 
 		(1 216 216 genPopStackBytecode needsFrameNever: -1)
@@ -416,7 +416,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(2 225 225 extBBytecode extension)
 
 		"pushes"
-		(2 226 226 genExtPushReceiverVariableBytecode)		"Needs a frame for context inst var access"
+		(2 226 226 genExtPushReceiverVariableBytecode isInstVarRef)		"Needs a frame for context inst var access"
 		(2 227 227 genExtPushLitVarDirSupBytecode			needsFrameNever: 1)
 		(2 228 228 genExtPushLiteralBytecode					needsFrameNever: 1)
 		(2 229 229 genLongPushTemporaryVariableBytecode)
@@ -439,10 +439,10 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(2 239 239 genExtJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
 
 		"stores"
-		(2 240 240 genExtStoreAndPopReceiverVariableBytecode)
+		(2 240 240 genExtStoreAndPopReceiverVariableBytecode isInstVarRef)
 		(2 241 241 genExtStoreAndPopLiteralVariableBytecode)
 		(2 242 242 genLongStoreAndPopTemporaryVariableBytecode)
-		(2 243 243 genExtStoreReceiverVariableBytecode)
+		(2 243 243 genExtStoreReceiverVariableBytecode isInstVarRef)
 		(2 244 244 genExtStoreLiteralVariableBytecode)
 		(2 245 245 genLongStoreTemporaryVariableBytecode)
 
@@ -476,11 +476,11 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
  selectors either because in the Cointerpreter they are not inlined or because they
  are inlined only to instances of classes for which there will always be a method.'.
 	self generatorTableFrom: #(
-		(1    0   15 genPushReceiverVariableBytecode needsFrameNever: 1)
+		(1    0   15 genPushReceiverVariableBytecode isInstVarRef needsFrameNever: 1)
 		(1  16   31 genPushTemporaryVariableBytecode needsFrameIfMod16GENumArgs: 1)
 		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
 		(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1)
-		(1  96 103 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1) "N.B. not frameless if immutability"
+		(1  96 103 genStoreAndPopReceiverVariableBytecode isInstVarRef needsFrameNever: -1) "N.B. not frameless if immutability"
 		(1 104 111 genStoreAndPopTemporaryVariableBytecode)
 		(1 112 112 genPushReceiverBytecode needsFrameNever: 1)
 		(1 113 113 genPushConstantTrueBytecode needsFrameNever: 1)
@@ -497,12 +497,12 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 
 		(1 126 127 unknownBytecode)
 
-		(2 128 128 extendedPushBytecode)
-		(2 129 129 extendedStoreBytecode)
-		(2 130 130 extendedStoreAndPopBytecode)
+		(2 128 128 extendedPushBytecode isInstVarRef) "well, maybe inst var ref"
+		(2 129 129 extendedStoreBytecode isInstVarRef) "well, maybe inst var ref"
+		(2 130 130 extendedStoreAndPopBytecode isInstVarRef) "well, maybe inst var ref"
 		(2 131 131 genExtendedSendBytecode isMapped)
-		(3 132 132 doubleExtendedDoAnythingBytecode isMapped)
-		(2 133 133 genExtendedSuperBytecode isMapped)
+		(3 132 132 doubleExtendedDoAnythingBytecode isMapped) "well, maybe inst var ref"
+		(2 133 133 genExtendedSuperBytecode isInstVarRef isMapped)
 		(2 134 134 genSecondExtendedSendBytecode isMapped)
 		(1 135 135 genPopStackBytecode needsFrameNever: -1)
 		(1 136 136 duplicateTopBytecode needsFrameNever: 1)
@@ -571,13 +571,6 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 ]
 
 { #category : #'class initialization' }
-StackToRegisterMappingCogit class >> initializeNumTrampolines [
-	NumTrampolines := 52
-						+ (NewspeakVM ifTrue: [18] ifFalse: [0])
-						+ (BytecodeSetHasDirectedSuperSend ifTrue: [4] ifFalse: [0])
-]
-
-{ #category : #'class initialization' }
 StackToRegisterMappingCogit class >> initializeSimStackConstants [
 	"The simulation stack is used to delay code generation until operands are consumed by
 	 some operation, thereby avoiding pushing operands to the real stack and enabling
@@ -620,6 +613,14 @@ StackToRegisterMappingCogit class >> numPushNilsFunction [
 	"Answer the value of numPushNilsFunction"
 
 	^numPushNilsFunction
+]
+
+{ #category : #accessing }
+StackToRegisterMappingCogit class >> numTrampolines [
+	^super numTrampolines + 12 "includes register args aborts"
+
+	"Cogit withAllSubclasses collect: [:c| {c. (c instVarNames select: [:ea| ea beginsWith: 'ce']) size}]"
+	"self instVarNames select: [:ea| ea beginsWith: 'ce']"
 ]
 
 { #category : #accessing }
@@ -758,6 +759,7 @@ StackToRegisterMappingCogit >> addBlockStartAt: bytecodepc numArgs: numArgs numC
 		numCopied: numCopied;
 		numInitialNils: 0;
 		stackCheckLabel: nil;
+		hasInstVarRef: false;
 		span: span.
 	^blockStart
 ]
@@ -4323,6 +4325,7 @@ StackToRegisterMappingCogit >> scanBlock: blockStart [
 			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
 				ifTrue: [needsFrame := true]
 				ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]].
+		 objectRepresentation maybeNoteDescriptor: descriptor blockStart: blockStart.
 		 (pushingNils
 		  and: [descriptor isExtension not]) ifTrue:
 			["Count the initial number of pushed nils acting as temp initializers.  We can't tell

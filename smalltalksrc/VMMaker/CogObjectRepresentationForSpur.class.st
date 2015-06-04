@@ -6,7 +6,8 @@ Class {
 		'ceSmallActiveContextInMethodTrampoline',
 		'ceSmallActiveContextInBlockTrampoline',
 		'ceLargeActiveContextInMethodTrampoline',
-		'ceLargeActiveContextInBlockTrampoline'
+		'ceLargeActiveContextInBlockTrampoline',
+		'ceStoreCheckContextReceiverTrampoline'
 	],
 	#pools : [
 		'VMBytecodeConstants',
@@ -14,6 +15,11 @@ Class {
 	],
 	#category : #'VMMaker-JIT'
 }
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur class >> numTrampolines [
+	^super numTrampolines + 6
+]
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> allYoungObjectsAgeInFullGC [
@@ -295,7 +301,7 @@ CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg:
 	<var: #ok type: #'AbstractInstruction *'>
 	<var: #imm type: #'AbstractInstruction *'>
 	<var: #loop type: #'AbstractInstruction *'>
-	self assert: reg ~= scratch.
+	self assert: (reg ~= scratch and: [baseReg ~= scratch]).
 	loop := cogit Label.
 	imm := self genJumpImmediate: reg.
 	"notionally
@@ -309,6 +315,43 @@ CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg:
 	ok := cogit JumpNonZero:  0.
 	self genLoadSlot: 0 sourceReg: reg destReg: reg.
 	cogit MoveR: reg Mw: offset r: baseReg.
+	cogit Jump: loop.
+	ok jmpTarget: (imm jmpTarget: cogit Label).
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch updatingSlot: index in: objReg [
+	"Make sure that the oop in reg is not forwarded, updating the slot in objReg with the value."
+	| loop imm ok |
+	<var: #ok type: #'AbstractInstruction *'>
+	<var: #imm type: #'AbstractInstruction *'>
+	<var: #loop type: #'AbstractInstruction *'>
+	"Open-code
+		self genEnsureOopInRegNotForwarded: reg
+			scratchReg: scratch
+			updatingMw: index * objectMemory wordSize + objectMemory baseHeaderSize
+			r: objReg.
+	 to avoid calling the store check unless the receiver is forwarded."
+	self assert: (reg ~= scratch and: [objReg ~= scratch]).
+	loop := cogit Label.
+	imm := self genJumpImmediate: reg.
+	"notionally
+		self genGetClassIndexOfNonImm: reg into: scratch.
+		cogit CmpCq: objectMemory isForwardedObjectClassIndexPun R: TempReg.
+	 but the following is an instruction shorter:"
+	cogit MoveMw: 0 r: reg R: scratch.
+	cogit
+		AndCq: objectMemory classIndexMask - objectMemory isForwardedObjectClassIndexPun
+		R: scratch.
+	ok := cogit JumpNonZero:  0.
+	self genLoadSlot: 0 sourceReg: reg destReg: reg.
+	cogit MoveR: reg Mw: index * objectMemory wordSize + objectMemory baseHeaderSize r: objReg.
+
+	"Check that we're meeting the contract of ceStoreCheckContextReceiverTrampoline."
+	self assert: (reg = Arg0Reg and: [scratch = TempReg and: [objReg = ReceiverResultReg]]).
+	cogit CallRT: ceStoreCheckContextReceiverTrampoline.
+
 	cogit Jump: loop.
 	ok jmpTarget: (imm jmpTarget: cogit Label).
 	^0
@@ -637,6 +680,22 @@ CogObjectRepresentationForSpur >> genSpecialSelectorEqualsEqualsGuts [
 	^ cogit genSpecialSelectorEqualsEqualsWithForwarders
 ]
 
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> genStoreCheckContextReceiverTrampoline [
+	<var: #aString type: #'char *'>
+	"Create a trampoline to store-check the update of the receiver in a closure's
+	 outerContext in compileBlockFrameBuild:."
+	| startAddress |
+	startAddress := cogit methodZoneBase.
+	cogit zeroOpcodeIndex.
+	self genStoreCheckReceiverReg: ReceiverResultReg valueReg: Arg0Reg scratchReg: TempReg inFrame: false.
+	cogit RetN: 0.
+	cogit outputInstructionsForGeneratedRuntimeAt: startAddress.
+	cogit recordGeneratedRunTime: 'ceStoreCheckContextReceiver' address: startAddress.
+	cogit recordRunTimeObjectReferences.
+	^startAddress
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: valueReg scratchReg: scratchReg inFrame: inFrame [
 	"Generate the code for a store check of valueReg into destReg."
@@ -740,6 +799,7 @@ CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
 									called: 'ceStoreCheckTrampoline'
 									arg: ReceiverResultReg
 									result: cogit returnRegForStoreCheck.
+	ceStoreCheckContextReceiverTrampoline := self genStoreCheckContextReceiverTrampoline.
 	ceScheduleScavengeTrampoline := cogit
 											genSafeTrampolineFor: #ceScheduleScavenge
 											called: 'ceScheduleScavengeTrampoline'.
@@ -922,6 +982,17 @@ CogObjectRepresentationForSpur >> maybeMarkCounters: theCounters [
 	<inline: true>
 	theCounters ~= 0 ifTrue:
 		[objectMemory markAndTrace: theCounters - objectMemory baseHeaderSize]
+]
+
+{ #category : #compilation }
+CogObjectRepresentationForSpur >> maybeNoteDescriptor: descriptor blockStart: blockStart [
+	"Override to note inst var refs in blocks.  Used to avoid checking
+	 for forwarded receivers in blocks that don't refer to inst vars."
+	<var: #blockStart type: #'BlockStart *'>
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	<inline: true>
+	descriptor isInstVarRef ifTrue:
+		[blockStart hasInstVarRef: true]
 ]
 
 { #category : #'sista support' }
