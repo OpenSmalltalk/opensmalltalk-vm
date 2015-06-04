@@ -32,6 +32,11 @@ CogObjectRepresentationForSqueakV3 class >> initialize [
 	RootBitDigitLength := RootBit digitLength
 ]
 
+{ #category : #accessing }
+CogObjectRepresentationForSqueakV3 class >> numTrampolines [
+	^super numTrampolines + 4
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> allYoungObjectsAgeInFullGC [
 	^true

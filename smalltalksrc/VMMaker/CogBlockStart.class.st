@@ -13,7 +13,8 @@ Class {
 		'startpc',
 		'entryLabel',
 		'stackCheckLabel',
-		'span'
+		'span',
+		'hasInstVarRef'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -83,6 +84,18 @@ CogBlockStart >> fillInstruction: anObject [
 ]
 
 { #category : #accessing }
+CogBlockStart >> hasInstVarRef [
+
+	^ hasInstVarRef
+]
+
+{ #category : #accessing }
+CogBlockStart >> hasInstVarRef: anObject [
+
+	^hasInstVarRef := anObject
+]
+
+{ #category : #accessing }
 CogBlockStart >> numArgs [
 	"Answer the value of numArgs"
 
@@ -132,6 +145,7 @@ CogBlockStart >> printStateOn: aStream [
 		nextPutAll: 'numArgs: '; print: numArgs;
 		nextPutAll: ' numCopied: '; print: numCopied;
 		nextPutAll: ' numInitialNils: '; print: numInitialNils;
+		nextPutAll: ' hasInstVarRef: '; print: hasInstVarRef;
 		nextPutAll: ' startpc: '; print: startpc;
 		nextPutAll: ' span: '; print: span;
 		nextPut: $)

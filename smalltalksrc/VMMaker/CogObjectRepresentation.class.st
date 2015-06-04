@@ -34,6 +34,11 @@ CogObjectRepresentation class >> implicitReturnTypeFor: aSelector [
 	^#void
 ]
 
+{ #category : #accessing }
+CogObjectRepresentation class >> numTrampolines [
+	^1
+]
+
 { #category : #translation }
 CogObjectRepresentation class >> typeForSelf [
 	^#implicit
@@ -154,6 +159,8 @@ CogObjectRepresentation >> genEnsureOopInRegNotForwarded: reg scratchReg: scratc
 CogObjectRepresentation >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch updatingSlot: index in: objReg [
 	"Make sure that the oop in reg is not forwarded, updating the slot in objReg with the value."
 	<inline: true>
+	self flag: 'not safe unless there''s also a store check!!'.
+	self assert: false.
 	^self genEnsureOopInRegNotForwarded: reg
 		scratchReg: scratch
 		updatingMw: index * objectMemory wordSize + objectMemory baseHeaderSize
@@ -445,6 +452,15 @@ CogObjectRepresentation >> maybeMarkCounters: theCounters [
 	 to avoid them being garbage collected.  This is the hook through which that happens.
 	 By default, do nothing."
 	<var: #theCounters type: #usqInt>
+	<inline: true>
+]
+
+{ #category : #compilation }
+CogObjectRepresentation >> maybeNoteDescriptor: descriptor blockStart: blockStart [
+	"A hook for the object representation to set state in a blockStart during scanBlock:.
+	 By default do nothing.  Subclasses that need to do something special will override."
+	<var: #blockStart type: #'BlockStart *'>
+	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<inline: true>
 ]
 
