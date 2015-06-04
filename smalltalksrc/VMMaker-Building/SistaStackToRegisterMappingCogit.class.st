@@ -85,18 +85,19 @@ SistaStackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 ]
 
 { #category : #'class initialization' }
-SistaStackToRegisterMappingCogit class >> initializeNumTrampolines [
-	NumTrampolines := 53
-						+ (NewspeakVM ifTrue: [18] ifFalse: [0])
-						+ (BytecodeSetHasDirectedSuperSend ifTrue: [4] ifFalse: [0])
-]
-
-{ #category : #'class initialization' }
 SistaStackToRegisterMappingCogit class >> initializeWithOptions: optionsDictionary [
 
 	super initializeWithOptions: optionsDictionary.
 	CounterBytes := 4.
 	MaxCounterValue := (1 << 16) - 1
+]
+
+{ #category : #accessing }
+SistaStackToRegisterMappingCogit class >> numTrampolines [
+	^super numTrampolines + 1
+
+	"Cogit withAllSubclasses collect: [:c| {c. (c instVarNames select: [:ea| ea beginsWith: 'ce']) size}]"
+	"self instVarNames select: [:ea| ea beginsWith: 'ce']"
 ]
 
 { #category : #'compile abstract instructions' }

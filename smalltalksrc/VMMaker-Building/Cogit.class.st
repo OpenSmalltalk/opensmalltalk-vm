@@ -689,11 +689,12 @@ Cogit class >> generatorTableFrom: anArray [
 						isBranchTrue: (tuple includes: #isBranchTrue);
 						isBranchFalse: (tuple includes: #isBranchFalse);
 						isExtension: (tuple includes: #extension);
-						hasIRC: (tuple includes: #hasIRC);
+						isInstVarRef: (tuple includes: #isInstVarRef);	"for Spur"
+						hasIRC: (tuple includes: #hasIRC);			"for Newspeak"
 						yourself.
-		"As a hack to cut down on descriptor flags, use opcode to tag unusedBytecode for
-		 scanning. Currently descriptors are exactly 16 bytes with all 8 flag bits used.  As
-		 another hack to eliminate a test in scanMethod mark unknows as extensions."
+		"As a hack to cut down on descriptor flags, use opcode to tag unusedBytecode for scanning.
+		 Currently descriptors are exactly 16 bytes with all 8 flag bits used (in Newspeak at least 17 bytes,
+		 9 flag bits).  As another hack to eliminate a test in scanMethod mark unknowns as extensions."
 		descriptor generator == #unknownBytecode ifTrue:
 			[descriptor opcode: Nop; isExtension: true].
 		descriptor isBlockCreation ifTrue:
@@ -939,6 +940,14 @@ Cogit class >> initializeMiscConstants [
 ]
 
 { #category : #'class initialization' }
+Cogit class >> initializeNumTrampolines [
+	NumTrampolines := self numTrampolines
+						+ self objectRepresentationClass numTrampolines
+						+ (NewspeakVM ifTrue: [18] ifFalse: [0])
+						+ (BytecodeSetHasDirectedSuperSend ifTrue: [4] ifFalse: [0])
+]
+
+{ #category : #'class initialization' }
 Cogit class >> initializePrimitiveTable [
 	NewspeakVM
 		ifTrue: [self initializePrimitiveTableForNewsqueak]
@@ -1019,6 +1028,13 @@ Cogit class >> notesAndQueries [
 		inconvenience since we scan anyway to divorce or widow married contexts."
 ]
 
+{ #category : #accessing }
+Cogit class >> numTrampolines [
+	^35 "27 + 4 each for self and super sends"
+
+	"self withAllSubclasses collect: [:c| {c. (c instVarNames select: [:ea| ea beginsWith: 'ce']) size}]"
+]
+
 { #category : #translation }
 Cogit class >> preGenerationHook: aCCodeGenerator [
 	"Perform any last-minute changes to the code generator immediately
@@ -1089,17 +1105,17 @@ Cogit class >> structureOfACogMethod [
 	 checked entry point that checks the receiver is of the right class, and this code ends in the unchecked
 	 entry point.  Following this is either primitive code, followed by frame building code, or frame-building
 	 code, or, for frameless methods, the code for the frameless method.  Following that is the code for the
-	 method.  If the mehtrod contains blocks  then followng the method code will be a CMBlock header,
+	 method.  If the method contains blocks  then followng the method code will be a CMBlock header,
 	 followed by code for the block, for each block, and following this will be the block dispatch code,
-	 which is pointed to by the blockEntryOffset field in the CogMethod.
+	 which is indexed by the blockEntryOffset field in the CogMethod.
 
-	 Following either the return in the method, or the block dispatch, is the meta data which identifies
-	 intersting points in the machine code.  This meta data starts at the end of the structure and is read
-	 backwards towards the start of the method, and is terminated by a null byte.  So the blockSize is
-	 used to find the start of the metadata.  The metadata reveals where object references, sends and
-	 pc-mapping points exist in the machine code.  The metadata is parsed when garbage collecting to
-	 find and update object references, and when unlinking sends for method cache flushing.."
-	 
+	 Following either the return in the method, or the block dispatch, is the method map, the meta data which
+	 identifies interesting points in the machine code.  The map starts at the end of the structure and is read
+	 backwards towards the last instruftion of the method, and is terminated by a null byte.  So the blockSize
+	 is used to find the start of the map.  The map reveals where object references, sends and pc-mapping
+	 points exist in the machine code.  The map is parsed when garbage collecting to find and update object
+	 references, and when unlinking sends for method cache flushing, and to convert between bytecode and
+	 machine code pcs by scanning both bytecode and machine code looking for matching points in the map."
 ]
 
 { #category : #'class initialization' }
@@ -2139,6 +2155,7 @@ Cogit >> addBlockStartAt: bcpc numArgs: numArgs numCopied: numCopied span: span 
 		numArgs: numArgs;
 		numCopied: numCopied;
 		stackCheckLabel: nil;
+		hasInstVarRef: false;
 		span: span.
 	^blockStart
 ]
@@ -4010,11 +4027,6 @@ Cogit >> compileBlockEntry: blockStart [
 ]
 
 { #category : #'compile abstract instructions' }
-Cogit >> compileBlockFrameBuild: blockStart [
-	self subclassResponsibility
-]
-
-{ #category : #'compile abstract instructions' }
 Cogit >> compileBlockFramelessEntry: blockStart [
 	self subclassResponsibility
 ]
@@ -4704,6 +4716,7 @@ Cogit >> fillInBlockHeadersAt: startAddress [
 			startpc: blockStart startpc;
 			cmType: CMBlock;
 			cmNumArgs: blockStart numArgs;
+			cbUsesInstVars: blockStart hasInstVarRef;
 			stackCheckOffset: (blockStart stackCheckLabel = nil
 								ifTrue: [0]
 								ifFalse: [blockStart stackCheckLabel address - blockStart fakeHeader address])]
@@ -8325,11 +8338,17 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 			 cogMethod stackCheckOffset > 0 ifTrue:
 				[aStream nextPut: $/.
 				 cogMethod asInteger + cogMethod stackCheckOffset printOn: aStream base: 16].
-			cogMethod cmType ~= CMBlock ifTrue:
-				[aStream
-					crtab;
-					nextPutAll: 'cmRefersToYoung: ';
-					nextPutAll: (cogMethod cmRefersToYoung ifTrue: ['yes'] ifFalse: ['no'])].
+			cogMethod cmType = CMBlock
+				ifTrue:
+					[aStream
+						crtab;
+						nextPutAll: 'cbUsesInstVars ';
+						nextPutAll: (cogMethod cbUsesInstVars ifTrue: ['yes'] ifFalse: ['no'])]
+				ifFalse:
+					[aStream
+						crtab;
+						nextPutAll: 'cmRefersToYoung: ';
+						nextPutAll: (cogMethod cmRefersToYoung ifTrue: ['yes'] ifFalse: ['no'])].
 			cogMethod cmType = CMMethod ifTrue:
 				[([cogMethod nextMethodOrIRCs] on: MessageNotUnderstood do: [:ex| nil]) ifNotNil:
 					[:nmoircs| aStream crtab; nextPutAll: 'nextMethodOrIRCs: '.
@@ -8876,6 +8895,7 @@ Cogit >> scanBlock: blockStart [
 			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
 				ifTrue: [needsFrame := true]
 				ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]].
+		 objectRepresentation maybeNoteDescriptor: descriptor blockStart: blockStart.
 		 pc := self nextBytecodePCFor: descriptor at: pc exts: nExts in: methodObj.
 		 descriptor isExtension
 			ifTrue: [nExts := nExts + 1]
