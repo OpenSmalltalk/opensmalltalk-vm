@@ -682,7 +682,6 @@ CogObjectRepresentationForSpur >> genSpecialSelectorEqualsEqualsGuts [
 
 { #category : #initialization }
 CogObjectRepresentationForSpur >> genStoreCheckContextReceiverTrampoline [
-	<var: #aString type: #'char *'>
 	"Create a trampoline to store-check the update of the receiver in a closure's
 	 outerContext in compileBlockFrameBuild:."
 	| startAddress |
