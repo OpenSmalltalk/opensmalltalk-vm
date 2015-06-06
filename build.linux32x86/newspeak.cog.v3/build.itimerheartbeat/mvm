@@ -20,6 +20,8 @@ case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			rm config.h; test -f Makefile && make reallyclean
 esac
+test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -p ../../plugins.int .)
+test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
 test -f config.h || ../../../platforms/unix/config/configure \
 		--with-src=nscogsrc --without-vm-display-fbdev --without-npsqueak \
 	CC="gcc -m32" \

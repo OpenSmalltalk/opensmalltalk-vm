@@ -64,10 +64,11 @@ getversion : ${cfgdir}/getversion.c ${topdir}/platforms/Cross/vm/sqSCCSVersion.h
 
 plugins : config.sh $(PLUGINS_LA)
 
-# nuke everything but plugins.int & plugins.ext
+# nuke everything but the mvm script; plugins.ext and plugins.int are assumed
+# to be copied from the parent or grandparent directory
 
 reallyclean:
-	for f in *; do case "$$f" in plugins.[ie][nx]t|mvm) ;; *) rm -rf $$f; esac; done
+	for f in *; do case "$$f" in mvm) ;; *) rm -rf $$f; esac; done
 
 # unix launch scripts
 squeak.sh: ${cfgdir}/squeak.sh.in getversion
