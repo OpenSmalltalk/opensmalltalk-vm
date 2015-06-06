@@ -3087,7 +3087,7 @@ Cogit >> ceSICMiss: receiver [
 					[backEnd
 						rewriteCallAt: outerReturn
 						target: pic asInteger + cmEntryOffset].
-	processor flushICacheFrom: outerReturn asUnsignedInteger - 1 - extent to: outerReturn asUnsignedInteger - 1.
+	processor flushICacheFrom: outerReturn asUnsignedInteger - extent to: outerReturn asUnsignedInteger.
 	"Jump back into the pic at its entry in case this is an MNU (newTargetMethodOrNil is nil)"
 	coInterpreter
 		executeCogPIC: pic
@@ -6759,8 +6759,8 @@ Cogit >> linkSendAt: callSiteReturnAddress in: sendingMethod to: targetMethod of
 				tag: inlineCacheTag
 				target: address.
 	processor
-		flushICacheFrom: callSiteReturnAddress asUnsignedInteger - 1 - extent
-		to: callSiteReturnAddress asUnsignedInteger - 1
+		flushICacheFrom: callSiteReturnAddress asUnsignedInteger  - extent
+		to: callSiteReturnAddress asUnsignedInteger 
 ]
 
 { #category : #analysis }
@@ -7547,7 +7547,7 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 				ifFalse:  "cacheTag is selector"
 					[(objectRepresentation
 							markAndTraceCacheTagLiteral: cacheTag
-							in: cogMethod
+							in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
 							atpc: mcpc asUnsignedInteger) ifTrue:
 						[codeModified := true]]]].
 
@@ -8142,7 +8142,7 @@ Cogit >> patchToOpenPICFor: selector numArgs: numArgs receiver: receiver [
 				tag: selector
 				target: oPIC asInteger + cmEntryOffset.
 	processor
-		flushICacheFrom: outerReturn asUnsignedInteger - 1 - extent to: outerReturn asUnsignedInteger - 1;
+		flushICacheFrom: outerReturn asUnsignedInteger - extent to: outerReturn asUnsignedInteger;
 		flushICacheFrom: oPIC asUnsignedInteger to: oPIC asUnsignedInteger + openPICSize.
 	"Jump into the oPIC at its entry"
 	coInterpreter executeCogMethod: oPIC fromLinkedSendWithReceiver: receiver.
@@ -9700,6 +9700,8 @@ Cogit >> traceStores: aBooleanOrInteger [
 
 { #category : #initialization }
 Cogit >> trampolineName: routinePrefix numArgs: numArgs [
+	<returnTypeC: #'char *'>
+	<var: #routinePrefix type: #'char *'>
 	^self trampolineName: routinePrefix numArgs: numArgs limit: NumSendTrampolines - 2
 ]
 
@@ -9720,6 +9722,8 @@ Cogit >> trampolineName: routinePrefix numArgs: numArgs limit: argsLimit [
 
 { #category : #initialization }
 Cogit >> trampolineName: routinePrefix numRegArgs: numArgs [
+	<returnTypeC: #'char *'>
+	<var: #routinePrefix type: #'char *'>
 	^self trampolineName: routinePrefix numArgs: numArgs limit: self numRegArgs
 ]
 
