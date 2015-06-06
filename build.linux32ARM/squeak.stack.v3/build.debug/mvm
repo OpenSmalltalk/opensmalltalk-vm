@@ -16,8 +16,8 @@ esac
 test -f config.h || ../../../platforms/unix/config/configure \
 	--with-src=stacksrc --with-plugins=src/plugins --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak --enable-fast-bitblt \
-	CC="gcc " \
-	CXX="g++ " \
+	CC=gcc \
+	CXX=g++ \
 	CFLAGS="$OPT -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS" \
 	LIBS="-lpthread -luuid -lasound" \
 	LDFLAGS=-Wl,-z,now

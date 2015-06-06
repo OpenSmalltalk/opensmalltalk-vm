@@ -17,8 +17,8 @@ test -f config.h || ../../../platforms/unix/config/configure \
    --with-vmversion=5.0 \
 	--with-src=spurstacksrc --with-plugins=src/plugins --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak --enable-fast-bitblt \
-	CC="gcc " \
-	CXX="g++ " \
+	CC=gcc \
+	CXX=g++ \
 	CFLAGS="$OPT -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64" \
 	LIBS="-lpthread -luuid" \
 	LDFLAGS=-Wl,-z,now
@@ -26,4 +26,4 @@ rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag and Raspbian lacks `readlinks`
-make install-squeak install-plugins prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
+make -j4 install-squeak install-plugins prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG

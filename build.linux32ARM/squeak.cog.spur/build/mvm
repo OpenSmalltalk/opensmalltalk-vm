@@ -1,11 +1,7 @@
 #!/bin/bash
 # Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=cogspurlinuxhtARM
-# Some gcc versions create a broken VM using -O2
-case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
-3.4.*)	OPT="-g -O1 -DNDEBUG -DDEBUGVM=0";;
-*)		OPT="-g -O2 -DNDEBUG -DDEBUGVM=0";;
-esac
+OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -20,9 +16,9 @@ esac
 test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
 		--without-vm-display-fbdev --with-vmversion=5.0 \
 		--with-src=spursrc --with-plugins=src/plugins \
-	CC="gcc " \
-	CXX="g++ " \
-	CFLAGS="$OPT  -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS -DCOGMTVM=0" \
+	CC=gcc \
+	CXX=g++ \
+	CFLAGS="$OPT -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS -DCOGMTVM=0" \
 	LIBS="-lpthread -luuid -lasound" \
 	LDFLAGS=-Wl,-z,now
 rm -f vm/sqUnixMain.o # nuke version info
