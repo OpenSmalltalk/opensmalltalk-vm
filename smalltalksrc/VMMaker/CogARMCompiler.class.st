@@ -67,6 +67,7 @@ Class {
 		'SP',
 		'STMFD',
 		'SubOpcode',
+		'TstOpcode',
 		'VC',
 		'VS',
 		'XorOpcode'
@@ -164,9 +165,10 @@ CogARMCompiler class >> initialize [
 	MoveNotOpcode := 15.
 	OrOpcode := 12.
 	RsbOpcode := 3.
-	SubOpcode := 2.
-	XorOpcode := 1.
 	SMLALOpcode := 7.
+	SubOpcode := 2.
+	TstOpcode := 8.
+	XorOpcode := 1.
 
 	CPSRReg := 16.
 	OverflowFlag := 1 << 28.
@@ -174,7 +176,7 @@ CogARMCompiler class >> initialize [
 	"Specific instructions"
 	LastRTLCode isNil ifTrue:
 		[CogRTLOpcodes initialize].
-	specificOpcodes := #(SMULL MSR MRS LDMFD STMFD BICCqR CMPSMULL).
+	specificOpcodes := #(SMULL MSR MRS LDMFD STMFD CMPSMULL).
 	refs := (thisContext method literals select: [:l| l isVariableBinding and: [classPool includesKey: l key]]) collect:
 				[:ea| ea key].
 	(classPool keys reject: [:k| (specificOpcodes includes: k) or: [refs includes: k]]) do:
@@ -292,27 +294,6 @@ CogARMCompiler >> ands: destReg rn: srcReg imm: immediate ror: rot [
 	^self type: 1 op: AndOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
-{ #category : #'generate machine code - support' }
-CogARMCompiler >> at: offset moveCw: constant intoR: destReg [
-	"This loads aWord into the inter-opcode temporary register. Because most ARM instruction enable using a (8-12bit) offset relative to a register, the LS Byte can be included in that instruction, saving one instruction. This is done in a decorator, e.g. CmpCqR"
-	"Generates:along the lines of
-	MOV destReg, #<constantByte3>, 12
-	ORR destReg, destReg, #<constantByte2>, 8
-	ORR destReg, destReg, #<constantByte1>, 4
-	ORR destReg, destReg, #<constantByte0>, 0
-	with minimal choice of the rotation (last digit)"
-	"The same area can be modified multiple times, because the opperation is (inclusive) or."
-	 <var: 'constant' type: #usqInt>
-	<inline: true>
-	"self assert: destReg < 12."
-
-	self machineCodeAt: offset put: (self mov: destReg imm: (constant >>24 bitAnd: 16rFF) ror: 8).
-	self machineCodeAt: offset +4 put: (self orr: destReg imm: (constant >> 16 bitAnd: 16rFF) ror: 16).
-	self machineCodeAt: offset +8 put: (self orr: destReg imm: (constant >> 8 bitAnd: 16rFF) ror: 24).
-	self machineCodeAt: offset +12 put: (self orr: destReg imm: (constant bitAnd: 16rFF) ror: 0).
-	^16
-]
-
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> b: offset [
 "return a B offset instruction; offset is signed 24bits of WORD offset, so +_32Mbyte range
@@ -365,11 +346,7 @@ CogARMCompiler >> cResultRegister [
 CogARMCompiler >> callFullTargetFromReturnAddress: callSiteReturnAddress [
 	"Answer the address that the call immediately preceeding callSiteReturnAddress will jump to."
 	"this is also used by #jumpLongTargetBeforeFollowingAddress: and so we check for both call and jump related instructions; later on we can use simpler tests once it feels safe to assume we get here always with a call/jump in the proper place"
-	| call |
-	call := self instructionBeforeAddress: callSiteReturnAddress.
-	self assert: ((self instructionIsBX: call) or: [self instructionIsBLX: call]).
-	"A Long Call/Jump. Extract the value saved to RISCTempReg from all the instructions before."
-	^self extract32BitOperandFrom4InstructionsPreceeding: callSiteReturnAddress - 4
+	^self subclassResponsibility
 ]
 
 { #category : #accessing }
@@ -427,34 +404,25 @@ CogARMCompiler >> codeGranularity [
 
 { #category : #'generate machine code' }
 CogARMCompiler >> computeMaximumSize [
-	"Because we don't use Thumb, each ARM instruction has 4 bytes. Some abstract opcodes need more than one instruction. We only handle those in this caseOf: and let the default return 4"
-	
-	
+	"Because we don't use Thumb, each ARM instruction has 4 bytes. Many abstract opcodes need more than one instruction.
+	 Instructions that refer to constants and/or literals depend on literals being stored in-line or out-of-line."
+
 	opcode
 		caseOf: {
 		"Noops & Pseudo Ops"
 		[Label]					-> [^maxSize := 0].
+		[Literal]					-> [^maxSize := 4].
 		[AlignmentNops]		-> [^maxSize := (operands at: 0) - 4].
 		[Fill16]					-> [^maxSize := 4].
 		[Fill32]					-> [^maxSize := 4].
 		[FillFromWord]			-> [^maxSize := 4].
 		[Nop]					-> [^maxSize := 4].
-		"ARM Specific Control/Data Movement"
-		[BICCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
-		[TstCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
-		[SMULL]				-> [^maxSize := 4].
-		[MSR]					-> [^maxSize := 4].
-		[CMPSMULL]			-> [^maxSize := 4]. "special compare for genMulR:R: usage"
 		"Control"
 		[Call]					-> [^maxSize := 4].
-		[CallFull]				-> [^maxSize := 20].
+		[CallFull]				-> [^maxSize := self literalLoadInstructionBytes + 4].
 		[JumpR]					-> [^maxSize := 4].
 		[Jump]					-> [^maxSize := 4].
-		[JumpFull]				-> [^maxSize := 20].
+		[JumpFull]				-> [^maxSize := self literalLoadInstructionBytes + 4].
 		[JumpLong]				-> [^maxSize := 4].
 		[JumpZero]				-> [^maxSize := 4].
 		[JumpNonZero]			-> [^maxSize := 4].
@@ -482,39 +450,51 @@ CogARMCompiler >> computeMaximumSize [
 		[JumpFPLessOrEqual]	-> [^maxSize := 8].
 		[JumpFPOrdered]		-> [^maxSize := 8].
 		[JumpFPUnordered]		-> [^maxSize := 8].
-		[RetN]					-> [^(operands at: 0) = 0 
-										ifTrue: [maxSize := 4]
-										ifFalse: [maxSize := 8]].
+		[RetN]					-> [^maxSize := (operands at: 0) = 0 ifTrue: [4] ifFalse: [8]].
 		[Stop]					-> [^maxSize := 4].
 
 		"Arithmetic"
 		[AddCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
 											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
+											ifFalse:
+												[self rotateable8bitImmediate: (operands at: 0) negated
+													ifTrue: [:r :i| maxSize := 4]
+													ifFalse: [maxSize := self literalLoadInstructionBytes + 4]]].
 		[AndCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
 											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
+											ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
 		[AndCqRR]				-> [^self rotateable8bitImmediate: (operands at: 0)
 											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
+											ifFalse:
+												[| val invVal |
+												invVal := (val := operands at: 0) < 0 ifTrue: [-1 - val] ifFalse: [val bitInvert32].
+												self rotateable8bitImmediate: invVal
+													ifTrue: [:r :i| maxSize := 4]
+													ifFalse: [maxSize := self literalLoadInstructionBytes + 4]]].
 		[CmpCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
 											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
+											ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
 		[OrCqR]					-> [^self rotateable8bitImmediate: (operands at: 0)
 											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
+											ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
 		[SubCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
 											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
+											ifFalse:
+												[self rotateable8bitImmediate: (operands at: 0) negated
+													ifTrue: [:r :i| maxSize := 4]
+													ifFalse: [maxSize := self literalLoadInstructionBytes + 4]]].
+		[TstCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
+											ifTrue: [:r :i| maxSize := 4]
+											ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
 		[XorCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
 											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
-		[AddCwR]				-> [^maxSize := 20].
-		[AndCwR]				-> [^maxSize := 20].
-		[CmpCwR]				-> [^maxSize := 20].
-		[OrCwR]				-> [^maxSize := 20].
-		[SubCwR]				-> [^maxSize := 20].
-		[XorCwR]				-> [^maxSize := 20].
+											ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
+		[AddCwR]				-> [^maxSize := self literalLoadInstructionBytes + 4].
+		[AndCwR]				-> [^maxSize := self literalLoadInstructionBytes + 4].
+		[CmpCwR]				-> [^maxSize := self literalLoadInstructionBytes + 4].
+		[OrCwR]				-> [^maxSize := self literalLoadInstructionBytes + 4].
+		[SubCwR]				-> [^maxSize := self literalLoadInstructionBytes + 4].
+		[XorCwR]				-> [^maxSize := self literalLoadInstructionBytes + 4].
 		[AddRR]					-> [^maxSize := 4].
 		[AndRR]					-> [^maxSize := 4].
 		[CmpRR]				-> [^maxSize := 4].
@@ -525,67 +505,85 @@ CogARMCompiler >> computeMaximumSize [
 		[LoadEffectiveAddressMwrR]
 									-> [^self rotateable8bitImmediate: (operands at: 0)
 											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
+											ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
 
 		[LogicalShiftLeftCqR]		-> [^maxSize := 4].
-		[LogicalShiftRightCqR]		->  [^maxSize := 4].
+		[LogicalShiftRightCqR]		-> [^maxSize := 4].
 		[ArithmeticShiftRightCqR]	-> [^maxSize := 4].
-		[LogicalShiftLeftRR]			->  [^maxSize := 4].
-		[LogicalShiftRightRR]		->  [^maxSize := 4].
+		[LogicalShiftLeftRR]			-> [^maxSize := 4].
+		[LogicalShiftRightRR]		-> [^maxSize := 4].
 		[ArithmeticShiftRightRR]		-> [^maxSize := 4].
-		[AddRdRd]			-> [^maxSize := 4].
-		[CmpRdRd]			-> [^maxSize := 4].
-		[SubRdRd]			-> [^maxSize := 4].
-		[MulRdRd]			-> [^maxSize := 4].
-		[DivRdRd]			-> [^maxSize := 4].
-		[SqrtRd]			-> [^maxSize := 4].		
+		[AddRdRd]					-> [^maxSize := 4].
+		[CmpRdRd]					-> [^maxSize := 4].
+		[SubRdRd]					-> [^maxSize := 4].
+		[MulRdRd]					-> [^maxSize := 4].
+		[DivRdRd]					-> [^maxSize := 4].
+		[SqrtRd]					-> [^maxSize := 4].
+		"ARM Specific Arithmetic"
+		[SMULL]				-> [^maxSize := 4].
+		[MSR]					-> [^maxSize := 4].
+		[CMPSMULL]			-> [^maxSize := 4]. "special compare for genMulR:R: usage"
 		"Data Movement"						
-		[MoveCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-										ifTrue: [:r :i| maxSize := 4]
-										ifFalse: [maxSize := 16]].
-		[MoveCwR]				-> [^maxSize := 16].
+		[MoveCqR]				-> [^self literalLoadInstructionBytes = 4
+										ifTrue: [maxSize := self literalLoadInstructionBytes]
+										ifFalse:
+											[self rotateable8bitImmediate: (operands at: 0)
+												ifTrue: [:r :i| maxSize := 4]
+												ifFalse:
+													[| val invVal |
+													invVal := (val := operands at: 0) < 0 ifTrue: [-1 - val] ifFalse: [val bitInvert32].
+													self rotateable8bitImmediate: invVal
+														ifTrue: [:r :i| maxSize := 4]
+														ifFalse: [maxSize := self literalLoadInstructionBytes]]]].
+		[MoveCwR]				-> [^maxSize := self literalLoadInstructionBytes].
 		[MoveRR]				-> [^maxSize := 4].
-		[MoveRdRd]		-> [^maxSize := 4].
+		[MoveRdRd]				-> [^maxSize := 4].
 		[MoveAwR]				-> [^maxSize := (self isAddressRelativeToVarBase: (operands at: 0))
 													ifTrue: [4]
-													ifFalse: [20]].
+													ifFalse: [self literalLoadInstructionBytes + 4]].
 		[MoveRAw]				-> [^maxSize := (self isAddressRelativeToVarBase: (operands at: 1))
 													ifTrue: [4]
-													ifFalse: [20]].
-		[MoveRMwr]			-> [self is12BitValue: (operands at: 1)
-										ifTrue: [ :u :i | ^maxSize := 4]
-										ifFalse: [ ^maxSize := 20 ]].
-		[MoveRdM64r]	-> [^maxSize := 20]. 
-		[MoveMbrR]				-> [self is12BitValue: (operands at: 0)
-										ifTrue: [ :u :i | ^maxSize := 4]
-										ifFalse: [ ^maxSize := 20 ]].
-		[MoveRMbr]				-> [self is12BitValue: (operands at: 1)
-										ifTrue: [ :u :i | ^maxSize := 4]
-										ifFalse: [ ^maxSize := 20 ]].
+													ifFalse: [self literalLoadInstructionBytes + 4]].
+		[MoveRMwr]			-> [^self is12BitValue: (operands at: 1)
+										ifTrue: [:u :i| maxSize := 4]
+										ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
+		[MoveRdM64r]			-> [^maxSize := self literalLoadInstructionBytes + 4]. 
+		[MoveMbrR]				-> [^self is12BitValue: (operands at: 0)
+										ifTrue: [:u :i| maxSize := 4]
+										ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
+		[MoveRMbr]				-> [^self is12BitValue: (operands at: 1)
+										ifTrue: [:u :i| maxSize := 4]
+										ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
 		[MoveM16rR]			-> [^self rotateable8bitImmediate: (operands at: 0)
 											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := 20]].
-		[MoveM64rRd]	-> [^maxSize := 20].
-		[MoveMwrR]			-> [self is12BitValue: (operands at: 0)
-										ifTrue: [ :u :i | ^maxSize := 4]
-										ifFalse: [ ^maxSize := 20 ]].
+											ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
+		[MoveM64rRd]			-> [^maxSize := self literalLoadInstructionBytes + 4].
+		[MoveMwrR]			-> [^self is12BitValue: (operands at: 0)
+										ifTrue: [:u :i| maxSize := 4]
+										ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
 		[MoveXbrRR]			-> [^maxSize := 4].
 		[MoveRXbrR]			-> [^maxSize := 4].
 		[MoveXwrRR]			-> [^maxSize := 4].
 		[MoveRXwrR]			-> [^maxSize := 4].
 		[PopR]					-> [^maxSize := 4].
 		[PushR]					-> [^maxSize := 4].
-		[PushCw]				-> [^maxSize := 20].
-		[PushCq]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 8]
-											ifFalse: [maxSize := 20]].
+		[PushCw]				-> [^maxSize := self literalLoadInstructionBytes + 4].
+		[PushCq]				-> [^self literalLoadInstructionBytes = 4
+										ifTrue: [maxSize := self literalLoadInstructionBytes + 4]
+										ifFalse:
+											[self rotateable8bitImmediate: (operands at: 0)
+												ifTrue: [:r :i| maxSize := 8]
+												ifFalse:
+													[| val invVal |
+													invVal := (val := operands at: 0) < 0 ifTrue: [-1 - val] ifFalse: [val bitInvert32].
+													self rotateable8bitImmediate: invVal
+														ifTrue: [:r :i| maxSize := 8]
+														ifFalse: [maxSize := self literalLoadInstructionBytes + 4]]]].
 		[PrefetchAw] 			-> [^maxSize := (self isAddressRelativeToVarBase: (operands at: 1))
 													ifTrue: [4]
-													ifFalse: [20]].
+													ifFalse: [self literalLoadInstructionBytes + 4]].
 		"Conversion"
-		[ConvertRRd]	-> [^maxSize := 4].
-
-
+		[ConvertRRd]			-> [^maxSize := 4].
 		}.
 	^0 "to keep C compiler quiet"
 
@@ -658,7 +656,7 @@ CogARMCompiler >> concretizeAddCqR [
 					reg := self concreteRegister: (operands at: 1).
 					self machineCodeAt: 0 put: (self subs: reg rn: reg imm: immediate ror: rot).
 					^machineCodeSize := 4]
-				ifFalse: [^self concretizeDataOperationCwR: 4]].
+				ifFalse: [^self concretizeDataOperationCwR: AddOpcode]].
 	^0 "to keep Slang happy"
 ]
 
@@ -837,10 +835,10 @@ CogARMCompiler >> concretizeCallFull [
 	| jumpTarget instrOffset|
 	<var: #jumpTarget type: #'AbstractInstruction *'>
 	jumpTarget := self longJumpTargetAddress.
-	instrOffset := self at: 0 moveCw: jumpTarget intoR: ConcreteIPReg.
+	instrOffset := self moveCw: jumpTarget intoR: ConcreteIPReg.
 	"blx ConcreteIPReg"
 	self machineCodeAt: instrOffset put: (self blx: ConcreteIPReg).
-	self assert: instrOffset = 16.
+	self assert: instrOffset = self literalLoadInstructionBytes.
 	^machineCodeSize := instrOffset + 4
 ]
 
@@ -927,7 +925,7 @@ CogARMCompiler >> concretizeDataOperationCwR: armOpcode [
 	constant := operands at: 0.
 	rn := (self concreteRegister: (operands at: 1)).
 	rd := armOpcode = CmpOpcode ifTrue: [0] ifFalse:[rn].
-	instrOffset := self at: 0 moveCw: constant intoR: ConcreteIPReg.
+	instrOffset := self moveCw: constant intoR: ConcreteIPReg.
 	self machineCodeAt: instrOffset 
 		put: (self type: 0 op: armOpcode set: 1 rn: rn rd: rd shifterOperand: ConcreteIPReg).
 	^machineCodeSize := instrOffset + 4
@@ -998,7 +996,7 @@ CogARMCompiler >> concretizeJumpFull [
 	| jumpTarget instrOffset|
 	<var: #jumpTarget type: #'AbstractInstruction *'>
 	jumpTarget := self longJumpTargetAddress.
-	instrOffset := self at: 0 moveCw: jumpTarget intoR: ConcreteIPReg.
+	instrOffset := self moveCw: jumpTarget intoR: ConcreteIPReg.
 	"bx ConcreteIPReg"
 	self machineCodeAt: instrOffset put: (self bx: ConcreteIPReg).
 	^machineCodeSize := instrOffset + 4
@@ -1036,7 +1034,7 @@ CogARMCompiler >> concretizeLoadEffectiveAddressMwrR [
 				put: (self add: destReg rn: srcReg imm: immediate ror: rot<<1).
 			machineCodeSize := 4]
 		ifFalse:
-			[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg.
+			[instrOffset := self moveCw: offset intoR: ConcreteIPReg.
 			"add destReg, srcReg, ConcreteIPReg"
 			self machineCodeAt: 16 put: (self add: destReg rn: srcReg rm: ConcreteIPReg).
 			machineCodeSize := instrOffset + 4].
@@ -1128,7 +1126,7 @@ CogARMCompiler >> concretizeMoveAwR [
 		[self machineCodeAt: 0 put: (self ldr: destReg rn: ConcreteVarBaseReg plusImm: srcAddr - cogit varBaseAddress).
 		 ^machineCodeSize := 4].
 	"load the address into ConcreteIPReg"
-	instrOffset := self at: 0 moveCw: srcAddr intoR: ConcreteIPReg.
+	instrOffset := self moveCw: srcAddr intoR: ConcreteIPReg.
 	"We *could* overwrite the last instruction above with a LDR a, b, last-byte-of-srcAddr BUT that would break if we change to loading literals instead of forming long constants"
 	self machineCodeAt: instrOffset put: (self ldr: destReg rn: ConcreteIPReg plusImm: 0).
 	^machineCodeSize := instrOffset + 4
@@ -1187,7 +1185,7 @@ CogARMCompiler >> concretizeMoveM16rR [
 				put: (self ldrh: destReg rn: srcReg plus: u imm: immediate).
 			^machineCodeSize := 4]
 		ifFalse:
-			[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg.
+			[instrOffset := self moveCw: offset intoR: ConcreteIPReg.
 			"ldrh destReg, [srcReg, ConcreteIPReg]"
 			self machineCodeAt: instrOffset put: (self ldrh: destReg rn: srcReg rm: ConcreteIPReg).
 			^machineCodeSize := instrOffset + 4 ].
@@ -1223,7 +1221,7 @@ CogARMCompiler >> concretizeMoveMbrR [
 					[self machineCodeAt: 0 put: (self adds: ConcreteIPReg rn: ConcreteVarBaseReg imm: offset - cogit varBaseAddress ror: 0).
 					 instrOffset := 4]
 				ifFalse:
-					[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg].
+					[instrOffset := self moveCw: offset intoR: ConcreteIPReg].
 			 "ldrb destReg, [srcReg, ConcreteIPReg]"
 			 self machineCodeAt: instrOffset put: (self ldrb: destReg rn: srcReg rm: ConcreteIPReg).
 			 ^machineCodeSize := instrOffset + 4].
@@ -1246,7 +1244,7 @@ CogARMCompiler >> concretizeMoveMwrR [
 				put: (self ldr: destReg rn: srcReg plus: u imm: immediate).
 			^machineCodeSize := 4]
 		ifFalse:
-			[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg.
+			[instrOffset := self moveCw: offset intoR: ConcreteIPReg.
 			"ldr destReg, [srcReg, ConcreteIPReg]"
 			self machineCodeAt: instrOffset put: (self ldr: destReg rn: srcReg rm: ConcreteIPReg).
 			^machineCodeSize := instrOffset + 4].
@@ -1266,7 +1264,7 @@ CogARMCompiler >> concretizeMoveRAw [
 		[self machineCodeAt: 0 put: (self str: srcReg rn: ConcreteVarBaseReg plusImm: destAddr - cogit varBaseAddress).
 		 ^machineCodeSize := 4].
 	"load the address into ConcreteIPReg"
-	instrOffset := self at: 0 moveCw: destAddr intoR: ConcreteIPReg.
+	instrOffset := self moveCw: destAddr intoR: ConcreteIPReg.
 	"We *could* overwrite the last instruction above with a LDR a, b, last-byte-of-srcAddr BUT that would break if we change to loading literals instead of forming long constants"
 	self machineCodeAt: instrOffset put: (self str: srcReg rn: ConcreteIPReg plusImm: 0).
 	^machineCodeSize := instrOffset + 4
@@ -1293,7 +1291,7 @@ CogARMCompiler >> concretizeMoveRMbr [
 					[self machineCodeAt: 0 put: (self adds: ConcreteIPReg rn: ConcreteVarBaseReg imm: offset - cogit varBaseAddress ror: 0).
 					 instrOffset := 4]
 				ifFalse:
-					[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg].
+					[instrOffset := self moveCw: offset intoR: ConcreteIPReg].
 			"strb 	srcReg, [baseReg, ConcreteIPReg]"
 			self machineCodeAt: instrOffset put: (self strb: srcReg rn: baseReg rm: ConcreteIPReg).
 			^machineCodeSize := instrOffset + 4 ].
@@ -1316,7 +1314,7 @@ CogARMCompiler >> concretizeMoveRMwr [
 				put: (self str: srcReg rn: baseReg plus: u imm: immediate).
 			^machineCodeSize := 4]
 		ifFalse:
-			[instrOffset := self at: 0 moveCw: offset intoR: ConcreteIPReg.
+			[instrOffset := self moveCw: offset intoR: ConcreteIPReg.
 			"str srcReg, [baseReg, ConcreteIPReg]"
 			self machineCodeAt: instrOffset put: (self str: srcReg rn: baseReg rm: ConcreteIPReg).
 			^machineCodeSize := instrOffset + 4].
@@ -1449,7 +1447,7 @@ CogARMCompiler >> concretizePrefetchAw [
 	(self isAddressRelativeToVarBase: addressOperand) ifTrue:
 		[self machineCodeAt: 0 put: (self pld: ConcreteVarBaseReg plus: 1 offset: addressOperand - cogit varBaseAddress).
 		 ^machineCodeSize := 4].
-	instrOffset := self at: 0 moveCw: addressOperand intoR: ConcreteIPReg.
+	instrOffset := self moveCw: addressOperand intoR: ConcreteIPReg.
 	"pld	[ConcreteIPReg]"
 	self machineCodeAt: instrOffset put: (self pld: ConcreteIPReg plus: 1offset: 0).
 	^machineCodeSize := instrOffset + 4
@@ -1473,8 +1471,8 @@ CogARMCompiler >> concretizePushCq [
 			self rotateable8bitImmediate: invVal
 				ifTrue: [ :rot :immediate |
 					self machineCodeAt: 0 put: (self mvn: ConcreteIPReg imm: immediate ror: rot).
-					^machineCodeSize := 4]
-				ifFalse: [instrOffset := self at: 0 moveCw: word intoR: ConcreteIPReg]].
+					instrOffset := 4]
+				ifFalse: [instrOffset := self moveCw: word intoR: ConcreteIPReg]].
 	self machineCodeAt: instrOffset put: (self pushR: ConcreteIPReg).
 	^machineCodeSize := instrOffset + 4
 ]
@@ -1568,7 +1566,7 @@ CogARMCompiler >> concretizeSubCqR [
 					reg := self concreteRegister: (operands at: 1).
 					self machineCodeAt: 0 put: (self adds: reg rn: reg imm: immediate ror: rot).
 					^machineCodeSize := 4]
-				ifFalse: [^self concretizeDataOperationCwR: 2]].
+				ifFalse: [^self concretizeDataOperationCwR: SubOpcode]].
 	^0 "to keep Slang happy"
 ]
 
@@ -1588,7 +1586,7 @@ CogARMCompiler >> concretizeTstCqR [
 			reg := self concreteRegister: (operands at: 1).
 			self machineCodeAt: 0 put: (self tst: reg rn: reg imm: immediate ror: rot).
 			^machineCodeSize := 4]
-		ifFalse: [^self concretizeDataOperationCwR: 8].
+		ifFalse: [^self concretizeDataOperationCwR: TstOpcode].
 	^0 "to keep Slang happy"
 ]
 
@@ -1666,16 +1664,12 @@ CogARMCompiler >> dispatchConcretize [
 	opcode caseOf: {
 		"Noops & Pseudo Ops"
 		[Label]					-> [^self concretizeLabel].
+		[Literal]					-> [^self concretizeLiteral].
 		[AlignmentNops]		-> [^self concretizeAlignmentNops].
 		[Fill16]					-> [^self concretizeFill16].
 		[Fill32]					-> [^self concretizeFill32].
 		[FillFromWord]			-> [^self concretizeFillFromWord].
 		[Nop]					-> [^self concretizeNop].
-		"ARM Specific Control/Data Movement" 
-		[SMULL]				-> [^self concretizeSMULL]	.
-		[CMPSMULL]				-> [^self concretizeCMPSMULL].
-		[MSR]						-> [^self concretizeMSR].
-		[BICCqR]					-> [^self concretizeDataOperationCqR: BicOpcode].
 		"Control"
 		[Call]						-> [^self concretizeCall]. "call code within code space"
 		[CallFull]					-> [^self concretizeCallFull]. "call code anywhere in address space"
@@ -1746,6 +1740,10 @@ CogARMCompiler >> dispatchConcretize [
 		[ArithmeticShiftRightRR]			-> [^self concretizeArithmeticShiftRightRR].
 		[LogicalShiftLeftRR]				-> [^self concretizeLogicalShiftLeftRR].
 		[LogicalShiftRightRR]			-> [^self concretizeLogicalShiftRightRR].
+		"ARM Specific Arithmetic" 
+		[SMULL]			-> [^self concretizeSMULL]	.
+		[CMPSMULL]		-> [^self concretizeCMPSMULL].
+		[MSR]				-> [^self concretizeMSR].
 		"Data Movement"
 		[MoveCqR]			-> [^self concretizeMoveCqR].
 		[MoveCwR]			-> [^self concretizeMoveCwR].
@@ -1770,15 +1768,6 @@ CogARMCompiler >> dispatchConcretize [
 		[PrefetchAw]		-> [^self concretizePrefetchAw].
 		"Conversion"
 		[ConvertRRd]		-> [^self concretizeConvertRRd]}
-]
-
-{ #category : #testing }
-CogARMCompiler >> extract32BitOperandFrom4InstructionsPreceeding: addr [
-	<inline: true>
-	^(objectMemory byteAt: addr -4) 
-	 + ((objectMemory byteAt: addr - 8) << 8) 
-	 + ((objectMemory byteAt: addr - 12) << 16) 
-	 + ((objectMemory byteAt: addr - 16) << 24)
 ]
 
 { #category : #testing }
@@ -2066,18 +2055,7 @@ CogARMCompiler >> initialize [
 { #category : #'inline cacheing' }
 CogARMCompiler >> inlineCacheTagAt: callSiteReturnAddress [
 	"Answer the inline cache tag for the return address of a send."
-	self assert: (self instructionIsBL: (self instructionBeforeAddress: callSiteReturnAddress)).
-	^self extract32BitOperandFrom4InstructionsPreceeding: callSiteReturnAddress - 4
-]
-
-{ #category : #testing }
-CogARMCompiler >> insert32BitOperand: operand into4InstructionsPreceeding: addr [
-	<inline: true>
-	objectMemory
-		byteAt: addr -   4 put: (operand			bitAnd: 16rFF);
-		byteAt: addr -   8 put: (operand >>   8	bitAnd: 16rFF);
-		byteAt: addr - 12 put: (operand >> 16	bitAnd: 16rFF);
-		byteAt: addr - 16 put: (operand >> 24	bitAnd: 16rFF)
+	^self subclassResponsibility
 ]
 
 { #category : #'inline cacheing' }
@@ -2138,9 +2116,9 @@ CogARMCompiler >> is12BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: f
 	constant abs <= 4095 "(2 raisedTo: 12)-1"
 		ifTrue:
 			[constant >= 0 
-				ifTrue: [trueAlternativeBlock value: 1 value: constant]
-				ifFalse: [trueAlternativeBlock value: 0 value: constant abs]]
-		ifFalse: falseAlternativeBlock
+				ifTrue: [^trueAlternativeBlock value: 1 value: constant]
+				ifFalse: [^trueAlternativeBlock value: 0 value: constant abs]]
+		ifFalse: [^falseAlternativeBlock value]
 ]
 
 { #category : #testing }
@@ -2193,12 +2171,6 @@ CogARMCompiler >> isJumpAt: pc [
 	instr := objectMemory long32At: pc.
 	^(self instructionIsB: instr)
 	  or: [self instructionIsBX: instr]
-]
-
-{ #category : #testing }
-CogARMCompiler >> isPCDependent [
-	"Answer if the receiver is a pc-dependent instruction."
-	^self isJump or: [opcode = AlignmentNops or: [opcode = Call]]
 ]
 
 { #category : #testing }
@@ -2301,11 +2273,16 @@ CogARMCompiler >> leafCallStackPointerDelta [
 
 { #category : #'inline cacheing' }
 CogARMCompiler >> literalBeforeFollowingAddress: followingAddress [
-	"Answer the long constant loaded by a MOV/ORR/ORR/ORR
-	 or MOV/ORR/ORR/ORR/PUSH, or MOV/ORR/ORR/ORR/CMP sequence, just before this address:"
-	^(self instructionIsOR: (self instructionBeforeAddress: followingAddress))
-		ifTrue: [self extract32BitOperandFrom4InstructionsPreceeding: followingAddress]
-		ifFalse: [self extract32BitOperandFrom4InstructionsPreceeding: followingAddress - 4]
+	"Answer the constant loaded by the instruction sequence just before this address:"
+	^self subclassResponsibility
+]
+
+{ #category : #accessing }
+CogARMCompiler >> literalLoadInstructionBytes [
+	"Answer the size of a literal load instruction (which may or may not include the size of the literal).
+	 This differs between in-line and out-of-line literal generation."
+	<inline: true>
+	^self subclassResponsibility
 ]
 
 { #category : #'generate machine code - support' }
@@ -2328,7 +2305,7 @@ CogARMCompiler >> loadCwInto: destReg [
 		 				^4]
 					ifFalse: []]].
 	"If this fails, use the conventional and painfully long 4 instruction sequence."
-	^self at: 0 moveCw: operand intoR: destReg
+	^self moveCw: operand intoR: destReg
 ]
 
 { #category : #accessing }
@@ -2523,6 +2500,14 @@ CogARMCompiler >> mov: destReg rn: srcReg [
 	^self type: 0 op: MoveOpcode set: 0 rn: 0 rd: destReg shifterOperand: srcReg
 ]
 
+{ #category : #'generate machine code - support' }
+CogARMCompiler >> moveCw: constant intoR: destReg [
+	"Emit a load of aWord into destReg.  Answer the number of bytes of machine code generated."
+	 <var: 'constant' type: #usqInt>
+	<inline: true>
+	^self subclassResponsibility
+]
+
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> movs: destReg rn: srcReg [
 "	MOVS destReg, srcReg"
@@ -2553,7 +2538,7 @@ CogARMCompiler >> mvn: destReg imm: immediate8bitValue ror: rot [
 CogARMCompiler >> nameForRegister: reg [ "<Integer>"
 	
 	<doNotGenerate>
-	^#(LR SP PC CArg0Reg CArg0Reg CArg1Reg CArg2Reg CArg3Reg) detect: [:sym| (self class classPool at: sym) = reg] 
+	^#(LR SP PC CArg0Reg CArg0Reg CArg1Reg CArg2Reg CArg3Reg) detect: [:sym| (thisContext method methodClass classPool at: sym) = reg] 
 		ifNone: [super nameForRegister: reg]
 ]
 
@@ -2655,15 +2640,7 @@ CogARMCompiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
 	 generated, and if not, adjust a long sequence.  There are two cases, a push
 	 or a register load.  If a push, then there is a register load, but in the instruction
 	 before."
-	| pcPreceedingLoad reference |
-	pcPreceedingLoad := (self instructionIsPush: (self instructionBeforeAddress: pc))
-							ifTrue: [pc - 4]
-							ifFalse: [pc].
-	"If the load is not done via pc-relative addressing we have to relocate."
-	(self isPCRelativeValueLoad: (self instructionBeforeAddress: pcPreceedingLoad)) ifFalse:
-		[reference := self extract32BitOperandFrom4InstructionsPreceeding: pcPreceedingLoad.
-		 reference := reference + delta.
-		 self insert32BitOperand: reference into4InstructionsPreceeding: pcPreceedingLoad]
+	^self subclassResponsibility
 ]
 
 { #category : #'inline cacheing' }
@@ -2708,13 +2685,7 @@ CogARMCompiler >> rewriteFullTransferAt: callSiteReturnAddress target: callTarge
 	"Rewrite a CallFull or JumpFull instruction to transfer to a different target.
 	 This variant is used to rewrite cached primitive calls.   Answer the extent
 	 of the code change which is used to compute the range of the icache to flush."
-	<var: #callSiteReturnAddress type: #usqInt>
-	<var: #callTargetAddress type: #usqInt>
-	"cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress - 1"
-	self assert: (self instructionBeforeAddress: callSiteReturnAddress) = expectedInstruction.
-	self insert32BitOperand: callTargetAddress into4InstructionsPreceeding: callSiteReturnAddress - 4.
-	self assert: (self callFullTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
-	^20
+	^self subclassResponsibility
 ]
 
 { #category : #'inline cacheing' }
@@ -2723,31 +2694,14 @@ CogARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag targ
 	 to link unlinked sends in ceSend:to:numArgs: et al.  Answer the extent of the code
 	 change which is used to compute the range of the icache to flush."
 	
-	"chacheTag contains an oop to the selector which need be loaded before jumping"
-	<var: #callSiteReturnAddress type: #usqInt>
-	<var: #callTargetAddress type: #usqInt>
-	| call callDistance |
-	false
-		ifTrue: [self assert: callTargetAddress >= cogit minCallAddress]
-		ifFalse: [callTargetAddress >= cogit minCallAddress ifFalse:
-					[self error: 'linking callsite to invalid address']].
-	callDistance := (callTargetAddress - (callSiteReturnAddress + 8 "pc offset"- 4 "return offset")) signedIntToLong.
-	self assert: (self isInImmediateJumpRange: callDistance). "we don't support long call updates here"
-	call := self bl: callDistance.
-	objectMemory longAt: callSiteReturnAddress - 4 put: call.
-	self insert32BitOperand: cacheTag into4InstructionsPreceeding: callSiteReturnAddress - 4.
-	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
-	self assert: (self extract32BitOperandFrom4InstructionsPreceeding: callSiteReturnAddress - 4) = cacheTag.
-	"self cCode: ''
-		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress - 1]."
-	^20
+	^self subclassResponsibility
 ]
 
 { #category : #'inline cacheing' }
 CogARMCompiler >> rewriteInlineCacheTag: cacheTag at: callSiteReturnAddress [
 	"Rewrite an inline cache with a new tag.  This variant is used
 	 by the garbage collector."
-	self insert32BitOperand: cacheTag into4InstructionsPreceeding: callSiteReturnAddress -4
+	^self subclassResponsibility
 ]
 
 { #category : #'inline cacheing' }
@@ -2815,33 +2769,6 @@ CogARMCompiler >> shiftSetsConditionCodesFor: aConditionalJumpOpcode [
 		otherwise: [self halt: 'unhandled opcode in setsConditionCodesFor:'. false]
 ]
 
-{ #category : #'generate machine code' }
-CogARMCompiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
-	"Size a jump and set its address.  The target may be another instruction
-	 or an absolute address.  On entry the address inst var holds our virtual
-	 address. On exit address is set to eventualAbsoluteAddress, which is
-	 where this instruction will be output.  The span of a jump to a following
-	 instruction is therefore between that instruction's address and this
-	 instruction's address ((which are both still their virtual addresses), but the
-	 span of a jump to a preceeding instruction or to an absolute address is
-	 between that instruction's address (which by now is its eventual absolute
-	 address) or absolute address and eventualAbsoluteAddress.
-
-	 ARM is simple; the 26-bit call/jump range means no short jumps.  This routine
-	 only has to determine the targets of jumps, not determine sizes."
-
-	opcode = AlignmentNops ifTrue:
-		[| alignment |
-		 address := eventualAbsoluteAddress.
-		 alignment := operands at: 0.
-		 ^machineCodeSize := (eventualAbsoluteAddress + (alignment - 1) bitAnd: alignment negated)
-							   - eventualAbsoluteAddress].
-	self assert: (self isJump or: [opcode = Call or: [opcode = CallFull]]).
-	self isJump ifTrue: [self resolveJumpTarget].
-	address := eventualAbsoluteAddress.
-	^machineCodeSize := maxSize
-]
-
 { #category : #accessing }
 CogARMCompiler >> stackPageInterruptHeadroomBytes [
 	"Return a minimum amount of headroom for each stack page (in bytes).  In a
@@ -2852,11 +2779,8 @@ CogARMCompiler >> stackPageInterruptHeadroomBytes [
 
 { #category : #'inline cacheing' }
 CogARMCompiler >> storeLiteral: literal beforeFollowingAddress: followingAddress [
-	"Rewrite the long constant loaded by a MOV/ORR/ORR/ORR
-	 or MOV/ORR/ORR/ORR/PUSH  sequence, just before this address:"
-	^(self instructionIsOR: (self instructionBeforeAddress: followingAddress))
-		ifTrue: [self insert32BitOperand: literal into4InstructionsPreceeding: followingAddress]
-		ifFalse: [self insert32BitOperand: literal into4InstructionsPreceeding: followingAddress - 4]
+	"Rewrite the long constant loaded by the instruction sequence just before this address:"
+	^self subclassResponsibility
 ]
 
 { #category : #'ARM convenience instructions' }

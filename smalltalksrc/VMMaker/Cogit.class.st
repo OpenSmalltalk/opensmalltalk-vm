@@ -140,6 +140,7 @@ Class {
 		'hasYoungReferent',
 		'primitiveIndex',
 		'backEnd',
+		'literalsManager',
 		'callerSavedRegMask',
 		'postCompileHook',
 		'primInvokeLabel',
@@ -305,7 +306,13 @@ Class {
 
 { #category : #translation }
 Cogit class >> activeCompilerClass [
-	^CogAbstractInstruction subclasses detect: [:compilerClass| compilerClass ISA == (initializationOptions at: #ISA)]
+	^initializationOptions
+		at: #CogCompilerClass
+		ifPresent: [:compilerClassName| Smalltalk classNamed: compilerClassName]
+		ifAbsent:
+			[CogAbstractInstruction subclasses detect:
+				[:compilerClass|
+				 compilerClass ISA == (initializationOptions at: #ISA)]]
 ]
 
 { #category : #translation }
@@ -917,7 +924,7 @@ Cogit class >> initializeMiscConstants [
 	ProcessorClass := (initializationOptions at: #ISA ifAbsentPut: [#IA32]) caseOf: {
 							[#IA32] 	->	[BochsIA32Alien].
 							[#ARMv5]	->	[GdbARMAlien]. }.
-
+	CogCompilerClass := self activeCompilerClass.
 	"Our criterion for which methods to JIT is literal count.  The default value is 60 literals or less."
 	MaxLiteralCountForCompile := initializationOptions at: #MaxLiteralCountForCompile ifAbsent: [60].
 	"we special-case 0, 1 & 2 argument sends, N is numArgs >= 3"
@@ -1311,14 +1318,14 @@ Cogit class >> typeForSelf [
 Cogit >> AddCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: AddCqR operand: quickConstant operand: reg
+	^self gen: AddCqR quickConstant: quickConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> AddCw: wordConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: AddCwR operand: wordConstant operand: reg
+	^self gen: AddCwR literal: wordConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
@@ -1346,7 +1353,7 @@ Cogit >> AlignmentNops: alignment [
 Cogit >> AndCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: AndCqR operand: quickConstant operand: reg
+	^self gen: AndCqR quickConstant: quickConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
@@ -1356,9 +1363,9 @@ Cogit >> AndCq: quickConstant R: srcReg R: destReg [
 	| first |
 	<var: 'first' type: #'AbstractInstruction *'>
 	backEnd hasThreeAddressArithmetic ifTrue:
-		[^self gen: AndCqRR operand: quickConstant operand: srcReg operand: destReg].
+		[^self gen: AndCqRR quickConstant: quickConstant operand: srcReg operand: destReg].
 	first := self gen: MoveRR operand: srcReg operand: destReg.
-	self gen: AndCqR operand: quickConstant operand: destReg.
+	self gen: AndCqR quickConstant: quickConstant operand: destReg.
 	^first
 ]
 
@@ -1366,7 +1373,7 @@ Cogit >> AndCq: quickConstant R: srcReg R: destReg [
 Cogit >> AndCw: wordConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: AndCwR operand: wordConstant operand: reg
+	^self gen: AndCwR literal: wordConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
@@ -1401,7 +1408,7 @@ Cogit >> Call: callTarget [
 Cogit >> CallFull: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: CallFull operand: jumpTarget
+	^self gen: CallFull literal: jumpTarget
 ]
 
 { #category : #'method map' }
@@ -1460,14 +1467,14 @@ Cogit >> CallRT: callTarget registersToBeSavedMask: registersToBeSaved [
 Cogit >> CmpCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: CmpCqR operand: quickConstant operand: reg
+	^self gen: CmpCqR quickConstant: quickConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> CmpCw: wordConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: CmpCwR operand: wordConstant operand: reg
+	^self gen: CmpCwR literal: wordConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
@@ -1642,7 +1649,7 @@ Cogit >> JumpFPNotEqual: jumpTarget [
 Cogit >> JumpFull: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: JumpFull operand: jumpTarget
+	^self gen: JumpFull literal: jumpTarget
 ]
 
 { #category : #'method map' }
@@ -1785,7 +1792,7 @@ Cogit >> Label [
 Cogit >> LoadEffectiveAddressMw: offset r: baseReg R: destReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: LoadEffectiveAddressMwrR operand: offset operand: baseReg operand: destReg
+	^self gen: LoadEffectiveAddressMwrR quickConstant: offset operand: baseReg operand: destReg
 ]
 
 { #category : #'abstract instructions' }
@@ -1820,35 +1827,35 @@ Cogit >> LogicalShiftRightR: reg1 R: reg2 [
 Cogit >> MoveAw: address R: reg [ 
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: MoveAwR operand: address operand: reg
+	^self gen: MoveAwR literal: address operand: reg
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> MoveCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: MoveCqR operand: quickConstant operand: reg
+	^self gen: MoveCqR quickConstant: quickConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> MoveCw: wordConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: MoveCwR operand: wordConstant operand: reg
+	^self gen: MoveCwR literal: wordConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> MoveM16: offset r: baseReg R: destReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: MoveM16rR operand: offset operand: baseReg operand: destReg
+	^self gen: MoveM16rR quickConstant: offset operand: baseReg operand: destReg
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> MoveM64: offset r: baseReg Rd: destDPReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: MoveM64rRd operand: offset operand: baseReg operand: destDPReg
+	^self gen: MoveM64rRd quickConstant: offset operand: baseReg operand: destDPReg
 ]
 
 { #category : #'abstract instructions' }
@@ -1856,35 +1863,35 @@ Cogit >> MoveMb: offset r: baseReg R: destReg [
 	"N.B.  This instruction is guaranteed to zero-extend the byte into destReg."
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: MoveMbrR operand: offset operand: baseReg operand: destReg
+	^self gen: MoveMbrR quickConstant: offset operand: baseReg operand: destReg
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> MoveMw: offset r: baseReg R: destReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: MoveMwrR operand: offset operand: baseReg operand: destReg
+	^self gen: MoveMwrR quickConstant: offset operand: baseReg operand: destReg
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> MoveR: reg Aw: address [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: MoveRAw operand: reg operand: address
+	^self gen: MoveRAw operand: reg literal: address
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> MoveR: sourceReg Mb: offset r: baseReg [ 
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: MoveRMbr operand: sourceReg operand: offset operand: baseReg
+	^self gen: MoveRMbr operand: sourceReg quickConstant: offset operand: baseReg
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> MoveR: sourceReg Mw: offset r: baseReg [ 
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: MoveRMwr operand: sourceReg operand: offset operand: baseReg
+	^self gen: MoveRMwr operand: sourceReg quickConstant: offset operand: baseReg
 ]
 
 { #category : #'abstract instructions' }
@@ -1912,7 +1919,7 @@ Cogit >> MoveR: sourceReg Xwr: indexReg R: baseReg [
 Cogit >> MoveRd: sourceDPReg M64: offset r: baseReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: MoveRdM64r operand: sourceDPReg operand: offset operand: baseReg
+	^self gen: MoveRdM64r operand: sourceDPReg quickConstant: offset operand: baseReg
 ]
 
 { #category : #'abstract instructions' }
@@ -1971,14 +1978,14 @@ Cogit >> Nop [
 Cogit >> OrCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: OrCqR operand: quickConstant operand: reg
+	^self gen: OrCqR quickConstant: quickConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> OrCw: wordConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: OrCwR operand: wordConstant operand: reg
+	^self gen: OrCwR literal: wordConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
@@ -1999,21 +2006,21 @@ Cogit >> PopR: reg [
 Cogit >> PrefetchAw: address [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: PrefetchAw operand: address
+	^self gen: PrefetchAw literal: address
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> PushCq: wordConstant [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: PushCq operand: wordConstant
+	^self gen: PushCq quickConstant: wordConstant
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> PushCw: wordConstant [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: PushCw operand: wordConstant
+	^self gen: PushCw literal: wordConstant
 ]
 
 { #category : #'abstract instructions' }
@@ -2048,14 +2055,14 @@ Cogit >> Stop [
 Cogit >> SubCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: SubCqR operand: quickConstant operand: reg
+	^self gen: SubCqR quickConstant: quickConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> SubCw: wordConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: SubCwR operand: wordConstant operand: reg
+	^self gen: SubCwR literal: wordConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
@@ -2076,14 +2083,14 @@ Cogit >> SubRd: dpreg1 Rd: dpreg2 [
 Cogit >> TstCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: TstCqR operand: quickConstant operand: reg
+	^self gen: TstCqR quickConstant: quickConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> XorCw: wordConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: XorCwR operand: wordConstant operand: reg
+	^self gen: XorCwR literal: wordConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
@@ -2345,7 +2352,7 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes [
 	numAbstractOpcodes := numberOfAbstractOpcodes.
 	abstractOpcodes := CArrayAccessor on:
 						((1 to: numAbstractOpcodes) collect:
-							[:ign| processor abstractInstructionCompilerClass for: self]).
+							[:ign| CogCompilerClass for: self]).
 	fixups := CArrayAccessor on:
 						((1 to: numAbstractOpcodes) collect:
 							[:ign| self bytecodeFixupClass new]).
@@ -2387,7 +2394,7 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes i
 	numAbstractOpcodes := numberOfAbstractOpcodes.
 	abstractOpcodes := CArrayAccessor on:
 						((1 to: numAbstractOpcodes) collect:
-							[:ign| processor abstractInstructionCompilerClass for: self]).
+							[:ign| CogCompilerClass for: self]).
 	fixups := CArrayAccessor on:
 						((1 to: numAbstractOpcodes) collect:
 							[:ign| self bytecodeFixupClass new]).
@@ -2765,7 +2772,7 @@ Cogit >> cCoerceSimple: value to: cTypeString [
 		[^self nsSendCacheSurrogateAt: value asUnsignedInteger].
 	(cTypeString == #'AbstractInstruction *'
 	 and: [value isBehavior]) ifTrue:
-		[^processor abstractInstructionCompilerClass].
+		[^CogCompilerClass].
 	^super cCoerceSimple: value to: cTypeString
 ]
 
@@ -3622,6 +3629,7 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 		point: (objectMemory numBytesOf: cPIC selector)
 		isMNUCase: isMNUCase.
 	self allocateOpcodes: 5 bytecodes: 0.
+	literalsManager resetLiterals: 5.
 	methodLabel address: cPIC asUnsignedInteger; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self assert: (objectRepresentation inlineCacheTagIsYoung: caseNTag) not.
 	"Caller patches to open pic if caseNMethod is young."
@@ -3675,6 +3683,7 @@ Cogit >> cogMNUPICSelector: selector receiver: rcvr methodOperand: methodOperand
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: numPICCases * 7 bytecodes: 0.
+	literalsManager resetLiterals: numPICCases * 2.
 	methodLabel address: startAddress; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self compileMNUCPIC: (self cCoerceSimple: startAddress to: #'CogMethod *')
 		methodOperand: methodOperand
@@ -3797,6 +3806,7 @@ Cogit >> cogOpenPICSelector: selector numArgs: numArgs [
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: 100 bytecodes: 0.
+	literalsManager resetLiterals: 10.
 	self compileOpenPIC: selector numArgs: numArgs.
 	self computeMaximumSizes.
 	methodLabel concretizeAt: startAddress.
@@ -3834,6 +3844,7 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: numPICCases * 7 bytecodes: 0.
+	literalsManager resetLiterals: numPICCases * 2.
 	methodLabel address: startAddress; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self compileCPIC: (self cCoerceSimple: startAddress to: #'CogMethod *')
 		Case0: case0CogMethod
@@ -3958,6 +3969,7 @@ Cogit >> compileAbstractInstructionsFrom: start through: end [
 		 opcodeIndex = nextOpcodeIndex ifTrue:
 			[self Label].
 		 fixup targetInstruction: (self abstractInstructionAt: nextOpcodeIndex)].
+	 self maybeDumpLiterals: descriptor.
 	 bytecodePC := self nextBytecodePCFor: descriptor at: bytecodePC exts: nExts in: methodObj.
 	 result = 0 and: [bytecodePC <= end]]
 		whileTrue:
@@ -4173,6 +4185,7 @@ Cogit >> compileCogMethod: selector [
 	self allocateOpcodes: (numBytecodes + extra) * self estimateOfAbstractOpcodesPerBytecodes
 		bytecodes: numBytecodes
 		ifFail: [^coInterpreter cCoerceSimple: MethodTooBig to: #'CogMethod *'].
+	literalsManager resetLiterals: (objectMemory literalCountOf: methodObj).
 	(numBlocks := self scanMethod) < 0 ifTrue:
 		[^coInterpreter cCoerceSimple: numBlocks to: #'CogMethod *'].
 	numCleanBlocks := self scanForCleanBlocks.
@@ -4365,6 +4378,7 @@ Cogit >> computeEntryOffsets [
 	| sendMissCall |
 	<var: 'sendMissCall' type: #'AbstractInstruction *'>
 	self allocateOpcodes: 24 bytecodes: 0.
+	literalsManager resetLiterals: 5.
 	methodOrBlockNumArgs := 0.
 	sendMissCall := self compileAbort.
 	self compileEntry.
@@ -5074,6 +5088,32 @@ Cogit >> gen: opcode [ "<Integer>"
 ]
 
 { #category : #'compile abstract instructions' }
+Cogit >> gen: opcode "<Integer>" literal: operand [ "<Integer|CogAbstractInstruction>"
+	"Literals are constants that either represent objects on the heap that may get updated by
+	 the garbage collector, or pc-relative spans that may get changed by code compaction, and
+	 must hence always be encoded in a form that allows updating to refer to a different value."
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	^literalsManager
+		checkLiteral: operand
+		forInstruction: (self gen: opcode operand: operand)
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> gen: opcode "<Integer>" literal: operandOne "<Integer>" operand: operandTwo [ "<Integer|CogAbstractInstruction>"
+	"Literals are constants that either represent objects on the heap that may get updated by
+	 the garbage collector, or pc-relative spans that may get changed by code compaction, and
+	 must hence always be encoded in a form that allows updating to refer to a different value."
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	^literalsManager
+		checkLiteral: operandOne
+		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo)
+]
+
+{ #category : #'compile abstract instructions' }
 Cogit >> gen: opcode "<Integer>" operand: operand [ "<Integer|CogAbstractInstruction>"
 	| abstractInstruction |
 	<inline: false>
@@ -5089,7 +5129,20 @@ Cogit >> gen: opcode "<Integer>" operand: operand [ "<Integer|CogAbstractInstruc
 ]
 
 { #category : #'compile abstract instructions' }
-Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstruction>"  operand: operandTwo [ "<Integer|CogAbstractInstruction>"
+Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstruction>" literal: operandTwo [ "<Integer>"
+	"Literals are constants that either represent objects on the heap that may get updated by
+	 the garbage collector, or pc-relative spans that may get changed by code compaction, and
+	 must hence always be encoded in a form that allows updating to refer to a different value."
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	^literalsManager
+		checkLiteral: operandTwo
+		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo)
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstruction>" operand: operandTwo [ "<Integer|CogAbstractInstruction>"
 	| abstractInstruction |
 	<inline: false>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -5105,7 +5158,7 @@ Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstru
 ]
 
 { #category : #'compile abstract instructions' }
-Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstruction>"  operand: operandTwo "<Integer|CogAbstractInstruction>" operand: operandThree [ "<Integer|CogAbstractInstruction>"
+Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstruction>" operand: operandTwo "<Integer|CogAbstractInstruction>" operand: operandThree [ "<Integer|CogAbstractInstruction>"
 	| abstractInstruction |
 	<inline: false>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -5119,6 +5172,61 @@ Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstru
 	abstractInstruction operands at: 2 put: operandThree.
 	self cCode: '' inSmalltalk: [abstractInstruction bcpc: bytecodePC].
 	^abstractInstruction
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstruction>" quickConstant: operandTwo [ "Integer>"
+	"Quick constants are those the back end is free to encode as compactly as possible."
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	^literalsManager
+		checkQuickConstant: operandTwo
+		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo)
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstruction>" quickConstant: operandTwo "<Integer>" operand: operandThree [ "<Integer|CogAbstractInstruction>"
+	"Quick constants are those the back end is free to encode as compactly as possible.""<Integer|CogAbstractInstruction>"
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	^literalsManager
+		checkQuickConstant: operandTwo
+		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo operand: operandThree)
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> gen: opcode "<Integer>" quickConstant: operand [ "<Integer>"
+	"Quick constants are those the back end is free to encode as compactly as possible."
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	^literalsManager
+		checkQuickConstant: operand
+		forInstruction: (self gen: opcode operand: operand)
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> gen: opcode "<Integer>" quickConstant: operandOne "<Integer>" operand: operandTwo [ "<Integer|CogAbstractInstruction>"
+	"Quick constants are those the back end is free to encode as compactly as possible."
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	^literalsManager
+		checkQuickConstant: operandOne
+		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo)
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> gen: opcode "<Integer>" quickConstant: operandOne "<Integer>" operand: operandTwo "<Integer|CogAbstractInstruction>" operand: operandThree [ "<Integer|CogAbstractInstruction>"
+	"Quick constants are those the back end is free to encode as compactly as possible.""<Integer|CogAbstractInstruction>"
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	^literalsManager
+		checkQuickConstant: operandOne
+		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo operand: operandThree)
 ]
 
 { #category : #initialization }
@@ -5171,6 +5279,7 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 and: regArg3 forCall: forCall ca
 	regArg2 ifNotNil: [self PopR: regArg2].
 	self PopR: regArg1.
 	self genEnilopmartReturn: forCall.
+	literalsManager dumpLiterals.
 	self computeMaximumSizes.
 	size := self generateInstructionsAt: methodZoneBase.
 	endAddress := self outputInstructionsAt: methodZoneBase.
@@ -5252,6 +5361,7 @@ Cogit >> genGetLeafCallStackPointer [
 	| startAddress |
 	<inline: false>
 	self allocateOpcodes: 32 bytecodes: 0.
+	literalsManager resetLiterals: 5.
 	initialPC := 0.
 	endPC := numAbstractOpcodes - 1.
 	startAddress := methodZoneBase.
@@ -5717,7 +5827,7 @@ Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs arg:
 	<inline: false>
 	startAddress := methodZoneBase.
 	appendBoolean ifFalse:
-		[opcodeIndex := 0].
+		[self zeroOpcodeIndex].
 	self compileTrampolineFor: aRoutine
 		numArgs: numArgs
 		arg: regOrConst0
@@ -5745,6 +5855,7 @@ Cogit >> generateCaptureCStackPointers: captureFramePointer [
 	| startAddress |
 	<inline: false>
 	self allocateOpcodes: 32 bytecodes: 0.
+	literalsManager resetLiterals: 5.
 	initialPC := 0.
 	endPC := numAbstractOpcodes - 1.
 	startAddress := methodZoneBase.
@@ -5772,6 +5883,7 @@ Cogit >> generateClosedPICPrototype [
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: numPICCases * 7 bytecodes: 0.
+	literalsManager resetLiterals: numPICCases * 2.
 	methodLabel address: methodZoneBase; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self compileClosedPICPrototype.
 	self computeMaximumSizes.
@@ -6044,6 +6156,7 @@ Cogit >> generateOpenPICPrototype [
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: 100 bytecodes: 0.
+	literalsManager resetLiterals: 10.
 	methodLabel
 		address: methodZoneBase;
 		dependent: nil.
@@ -6199,6 +6312,7 @@ Cogit >> generateVMOwnerLockFunctions [
 			ceTryLockVMOwner := self cCoerceSimple: startAddress to: #'unsigned long (*)(void)'.
 
 			opcodeIndex := 0.
+			literalsManager resetLiterals: 1.
 			initialPC := 0.
 			endPC := numAbstractOpcodes - 1.
 			startAddress := methodZoneBase.
@@ -6242,6 +6356,13 @@ Cogit >> getLiteral: litIndex [
 	maxLitIndex < litIndex ifTrue:
 		[maxLitIndex := litIndex].
 	^coInterpreter literal: litIndex ofMethod: methodObj
+]
+
+{ #category : #accessing }
+Cogit >> getOpcodeIndex [
+	"Access for the literal manager."
+	<inline: true>
+	^opcodeIndex
 ]
 
 { #category : #'translation support' }
@@ -6447,15 +6568,14 @@ Cogit >> initialize [
 
 { #category : #initialization }
 Cogit >> initializeBackend [
-	"A hook for the StackToregisterMappingCogit to override.
-	 We just initialize the methodLabel here because backEnd is static."
 	methodLabel machineCodeSize: 0.
 	methodLabel opcode: Label.
 	methodLabel operands at: 0 put: 0.
 	methodLabel operands at: 1 put: 0. "label offset"
 	callerSavedRegMask := backEnd callerSavedRegisterMask.
 	backEnd hasVarBaseRegister ifTrue:
-		[self assert: ((self registerMaskFor: VarBaseReg) noMask: callerSavedRegMask)]
+		[self assert: ((self registerMaskFor: VarBaseReg) noMask: callerSavedRegMask)].
+	literalsManager allocateLiterals: 4; resetLiterals: 4
 ]
 
 { #category : #initialization }
@@ -7666,6 +7786,16 @@ Cogit >> maybeAllocAndInitIRCs [
 			[^true]
 ]
 
+{ #category : #'compile abstract instructions' }
+Cogit >> maybeDumpLiterals: descriptor [
+	<inline: true>
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	((literalsManager mustDumpLiterals: opcodeIndex)
+	  or: [descriptor isUnconditionalBranch
+	  or: [descriptor isReturn]]) ifTrue:
+		[literalsManager dumpLiterals]
+]
+
 { #category : #debugging }
 Cogit >> maybeFreeCogMethodDoesntLookKosher: cogMethod [
 	"Check that the header fields are consistent with the type.
@@ -7696,6 +7826,7 @@ Cogit >> maybeGenerateCheckFeatures [
 	backEnd numCheckFeaturesOpcodes = 0 ifTrue:
 		[^nil].
 	self allocateOpcodes: backEnd numCheckFeaturesOpcodes bytecodes: 0.
+	literalsManager resetLiterals: 1.
 	initialPC := 0.
 	endPC := numAbstractOpcodes - 1.
 	startAddress := methodZoneBase.
@@ -7712,6 +7843,7 @@ Cogit >> maybeGenerateICacheFlush [
 	backEnd numICacheFlushOpcodes = 0 ifTrue:
 		[^nil].
 	self allocateOpcodes: backEnd numICacheFlushOpcodes bytecodes: 0.
+	literalsManager resetLiterals: 1.
 	initialPC := 0.
 	endPC := numAbstractOpcodes - 1.
 	startAddress := methodZoneBase.
@@ -8104,6 +8236,7 @@ Cogit >> outputInstructionsForGeneratedRuntimeAt: startAddress [
 	"Output instructions generated for one of the generated run-time routines, a trampoline, etc"
 	| size endAddress |
 	<inline: false>
+	literalsManager dumpLiterals.
 	self computeMaximumSizes.
 	size := self generateInstructionsAt: startAddress.
 	endAddress := self outputInstructionsAt: startAddress.
@@ -9132,8 +9265,9 @@ Cogit >> setInterpreter: aCoInterpreter [
 	debugPrimCallStackOffset := 0.
 	singleStep := printRegisters := printInstructions := clickConfirm := false.
 	breakBlock ifNil: [self breakPC: breakPC].
-	(backEnd := processor abstractInstructionCompilerClass new) cogit: self.
-	(methodLabel := processor abstractInstructionCompilerClass new) cogit: self.
+	backEnd := CogCompilerClass for: self.
+	methodLabel := CogCompilerClass for: self.
+	(literalsManager := backEnd class literalsManagerClass new) cogit: self.
 	ordinarySendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
 	superSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
 	BytecodeSetHasDirectedSuperSend ifTrue:
@@ -10167,5 +10301,6 @@ Cogit >> withAnnotation: annotation pc: mcpc evaluate: aBinaryBlock [
 { #category : #accessing }
 Cogit >> zeroOpcodeIndex [
 	"Access for the object representations when they need to prepend code to trampolines."
-	opcodeIndex := 0
+	opcodeIndex := 0.
+	literalsManager resetLiterals: 1
 ]

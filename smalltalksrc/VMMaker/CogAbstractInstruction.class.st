@@ -78,11 +78,10 @@ CogAbstractInstruction class >> ISA [
 CogAbstractInstruction class >> byteSizeForSimulator: aVMClass [
 	"Answer an approximation of the byte size of an AbstractInstruction struct.
 	 This is for estimating the alloca in allocateOpcodes:bytecodes:ifFail:"
-	| concreteClass ptrsize |
-	concreteClass := aVMClass processor abstractInstructionCompilerClass.
+	| ptrsize |
 	ptrsize := aVMClass sizeof: #'void *'.
-	^concreteClass instSize - 4 "cogit, objectMemory et al" * ptrsize
-	+ concreteClass basicNew machineCodeBytes
+	^CogCompilerClass instSize - 4 "cogit, objectMemory et al" * ptrsize
+	+ CogCompilerClass basicNew machineCodeBytes
 		roundTo: ptrsize
 ]
 
@@ -135,6 +134,13 @@ CogAbstractInstruction class >> isAbstract [
 CogAbstractInstruction class >> isAccessor: aSelector [
 	^(#(cogit coInterpreter objectMemory) includes: aSelector) not
 	   and: [super isAccessor: aSelector]
+]
+
+{ #category : #'accessing class hierarchy' }
+CogAbstractInstruction class >> literalsManagerClass [
+	"Answer the manager that generates in-line literals;
+	 subclasses that use out-of-line literals override."
+	^InLineLiteralsManager
 ]
 
 { #category : #translation }
@@ -805,10 +811,10 @@ CogAbstractInstruction >> jumpTargetAddress [
 
 { #category : #'generate machine code' }
 CogAbstractInstruction >> labelOffset [
-	"To arrange that the block method field pushed in a block entry has
-	 its MFMethodFlagIsBlockFlag bit set we provide labels with an offset.
-	 The offset for the fakeHeader reference is MFMethodFlagIsBlockFlag.
-	 See compileBlockFrameBuild:"
+	"Hack:  To arrange that the block method field pushed in a block entry has
+	 its MFMethodFlagIsBlockFlag bit set we provide labels with an offset.  The
+	 offset for the fakeHeader reference is MFMethodFlagIsBlockFlag.  See
+	 compileBlockFrameBuild:"
 	^operands at: 1
 ]
 
@@ -932,6 +938,24 @@ CogAbstractInstruction >> opcode: value [
 ]
 
 { #category : #accessing }
+CogAbstractInstruction >> operand0: operand [
+	<inline: true>
+	operands at: 0 put: operand
+]
+
+{ #category : #accessing }
+CogAbstractInstruction >> operand1: operand [
+	<inline: true>
+	operands at: 1 put: operand
+]
+
+{ #category : #accessing }
+CogAbstractInstruction >> operand2: operand [
+	<inline: true>
+	operands at: 2 put: operand
+]
+
+{ #category : #accessing }
 CogAbstractInstruction >> operands [
 	^operands
 ]
@@ -985,7 +1009,9 @@ CogAbstractInstruction >> printStateOn: aStream [
 			[0 to: machineCodeSize - 1 by: self codeGranularity do:
 				[:i|
 				 aStream space.
-				 (self machineCodeAt: i) printOn: aStream base: 16]]].
+				 (self machineCodeAt: i)
+					ifNil: [aStream nextPut: $.]
+					ifNotNil: [:mc| mc printOn: aStream base: 16]]]].
 	address ifNotNil:
 		[aStream nextPut: $@.
 		 address printOn: aStream base: 16].
@@ -1070,6 +1096,21 @@ CogAbstractInstruction >> setLabelOffset: aValue [
 { #category : #testing }
 CogAbstractInstruction >> setsConditionCodesFor: aConditionalJumpOpcode [
 	"Answer if the receiver's opcode sets the condition codes correctly for the given conditional jump opcode."
+	self subclassResponsibility
+]
+
+{ #category : #'generate machine code' }
+CogAbstractInstruction >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
+	"Size a jump and set its address.  The target may be another instruction
+	 or an absolute address.  On entry the address inst var holds our virtual
+	 address. On exit address is set to eventualAbsoluteAddress, which is
+	 where this instruction will be output.  The span of a jump to a following
+	 instruction is therefore between that instruction's address and this
+	 instruction's address ((which are both still their virtual addresses), but the
+	 span of a jump to a preceeding instruction or to an absolute address is
+	 between that instruction's address (which by now is its eventual absolute
+	 address) or absolute address and eventualAbsoluteAddress."
+
 	self subclassResponsibility
 ]
 

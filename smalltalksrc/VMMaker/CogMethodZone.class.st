@@ -424,7 +424,7 @@ CogMethodZone >> kosherYoungReferrers [
 ]
 
 { #category : #accessing }
-CogMethodZone >> limitZony [ "Let us salute Andrei Tarkovski and his movie Stalker"
+CogMethodZone >> limitZony [ "Let us salute Andrei Tarkovsky and his movie Stalker"
 	<cmacro: '() ((CogMethod *)mzFreeStart)'>
 	^mzFreeStart
 ]
@@ -758,7 +758,7 @@ CogMethodZone >> relocateMethodsPreCompaction [
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
-	[cogMethod < (cogit cCoerceSimple: mzFreeStart to: #'CogMethod *')] whileTrue:
+	[cogMethod asUnsignedInteger] whileTrue:
 		[cogMethod cmType ~= CMFree ifTrue:
 			[cogMethod cmType = CMClosedPIC
 				ifTrue: [cogit relocateCallsInClosedPIC: cogMethod]

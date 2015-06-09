@@ -141,10 +141,7 @@ SistaStackToRegisterMappingCogit >> compileBlockBodies [
 				 self cCode: 'bzero(abstractOpcodes + initialOpcodeIndex,
 									(opcodeIndex - initialOpcodeIndex) * sizeof(AbstractInstruction))'
 					inSmalltalk: [initialOpcodeIndex to: opcodeIndex - 1 do:
-									[:i|
-									abstractOpcodes
-										at: i
-										put: (processor abstractInstructionCompilerClass for: self)]].
+									[:i| abstractOpcodes at: i put: (CogCompilerClass for: self)]].
 				 opcodeIndex := initialOpcodeIndex.
 				 annotationIndex := initialAnnotationIndex.
 				 counterIndex := initialCounterIndex.
