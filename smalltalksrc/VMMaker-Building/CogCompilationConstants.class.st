@@ -3,6 +3,7 @@ Class {
 	#superclass : #SharedPool,
 	#classVars : [
 		'BadRegisterSet',
+		'CogCompilerClass',
 		'NumSendTrampolines',
 		'SSBaseOffset',
 		'SSConstant',
