@@ -1032,6 +1032,7 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 		 opcodeIndex = nextOpcodeIndex ifTrue:
 			[self Label].
 		 fixup targetInstruction: (self abstractInstructionAt: nextOpcodeIndex)].
+	 self maybeDumpLiterals: descriptor.
 	 bytecodePC := self nextBytecodePCFor: descriptor at: bytecodePC exts: nExts in: methodObj.
 	 result = 0 and: [bytecodePC <= end]] whileTrue:
 		[nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
@@ -1078,10 +1079,7 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 				 self cCode: 'bzero(abstractOpcodes + initialOpcodeIndex,
 									(opcodeIndex - initialOpcodeIndex) * sizeof(AbstractInstruction))'
 					inSmalltalk: [initialOpcodeIndex to: opcodeIndex - 1 do:
-									[:i|
-									abstractOpcodes
-										at: i
-										put: (processor abstractInstructionCompilerClass for: self)]].
+									[:i| abstractOpcodes at: i put: (CogCompilerClass for: self)]].
 				 opcodeIndex := initialOpcodeIndex.
 				 annotationIndex := initialAnnotationIndex.
 				 self cppIf: #NewspeakVM ifTrue:
