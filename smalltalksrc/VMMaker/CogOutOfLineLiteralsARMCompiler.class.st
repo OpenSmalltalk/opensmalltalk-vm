@@ -11,6 +11,7 @@ CogOutOfLineLiteralsARMCompiler class >> literalsManagerClass [
 
 { #category : #'generate machine code' }
 CogOutOfLineLiteralsARMCompiler >> concretizeLiteral [
+	"Generate an out-of-line literal.  Copy the value and any annotation from the stand-in in the literals manager."
 	| literalAsInstruction literal |
 	<var: #jumpTarget type: #'AbstractInstruction *'>
 	literalAsInstruction := cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'.
@@ -19,6 +20,9 @@ CogOutOfLineLiteralsARMCompiler >> concretizeLiteral [
 				ifFalse: [self cCode: [literalAsInstruction asUnsignedInteger]
 							inSmalltalk: [literalAsInstruction]].
 	self assert: (dependent notNil and: [dependent opcode = Literal and: [dependent address = address]]).
+	dependent annotation ifNotNil:
+		[self assert: annotation isNil.
+		 annotation := dependent annotation].
 	self machineCodeAt: 0 put: literal
 ]
 
@@ -114,8 +118,14 @@ CogOutOfLineLiteralsARMCompiler >> sizePCDependentInstructionAt: eventualAbsolut
 	 between that instruction's address (which by now is its eventual absolute
 	 address) or absolute address and eventualAbsoluteAddress.
 
-	 ARM is simple; the 26-bit call/jump range means no short jumps.  This routine
-	 only has to determine the targets of jumps, not determine sizes."
+	 ARM is simple; the 26-bit call/jump range means no short jumps.  This
+	 routine only has to determine the targets of jumps, not determine sizes.
+
+	 This version also deals with out-of-line literals.  If this is the real literal,
+	 update the stand-in in literalsManager with the address (because instructions
+	 referring to the literal are referring to the stand-in).  If this is annotated with
+	 IsObjectReference transfer the annotation to the stand-in, whence it will be
+	 transferred to the real literal, simplifying update of literals."
 
 	opcode = AlignmentNops ifTrue:
 		[| alignment |
@@ -127,8 +137,12 @@ CogOutOfLineLiteralsARMCompiler >> sizePCDependentInstructionAt: eventualAbsolut
 				or: [dependent notNil and: [dependent opcode = Literal]]]]).
 	self isJump ifTrue: [self resolveJumpTarget].
 	address := eventualAbsoluteAddress.
-	(opcode = Literal and: [dependent notNil and: [dependent opcode = Literal]]) ifTrue:
-		[dependent address: address].
+	(dependent notNil and: [dependent opcode = Literal]) ifTrue:
+		[opcode = Literal ifTrue:
+			[dependent address: address].
+		 annotation = cogit getIsObjectReference ifTrue:
+			[dependent annotation: annotation.
+			 annotation := nil]].
 	^machineCodeSize := maxSize
 ]
 
@@ -149,13 +163,17 @@ CogOutOfLineLiteralsARMCompiler >> usesOutOfLineLiteral [
 		[JumpFull]		-> [^true].
 		"Arithmetic"
 		[AddCqR]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
-		[AndCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
-		[AndCqRR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
-		[CmpCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
+		[AndCqR]		-> [^self rotateable8bitBitwiseImmediate: (operands at: 0)
+								ifTrue: [:r :i :n| false]
+								ifFalse: [1 << (operands at: 0) highBit ~= ((operands at: 0) + 1)]].
+		[AndCqRR]		-> [^self rotateable8bitBitwiseImmediate: (operands at: 0)
+								ifTrue: [:r :i :n| false]
+								ifFalse: [1 << (operands at: 0) highBit ~= ((operands at: 0) + 1)]].
+		[CmpCqR]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
 		[OrCqR]			-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
-		[SubCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
+		[SubCqR]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
 		[TstCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
-		[XorCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
+		[XorCqR]		-> [^self rotateable8bitBitwiseImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
 		[AddCwR]		-> [^true].
 		[AndCwR]		-> [^true].
 		[CmpCwR]		-> [^true].
