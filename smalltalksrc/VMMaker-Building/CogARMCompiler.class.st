@@ -97,7 +97,7 @@ CogARMCompiler class >> VarBaseReg [
 CogARMCompiler class >> filteredInstVarNames [
 	"Edit such that conditionOrNil is amongst the char size vars opcode machineCodeSize and maxSize."
 	^(super filteredInstVarNames copyWithout: 'conditionOrNil')
-		copyReplaceFrom: 4 to: 3 with: #('conditionOrNil')
+		copyReplaceFrom: 5 to: 4 with: #('conditionOrNil')
 ]
 
 { #category : #translation }
@@ -192,22 +192,9 @@ CogARMCompiler class >> initialize [
 ]
 
 { #category : #translation }
-CogARMCompiler class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
-	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an AbstractInstruction struct."
-	"{CogAbstractInstruction. CogIA32Compiler. CogARMCompiler} do:
-		[:c| Transcript print: c; cr. c printTypedefOn: Transcript]"
-	(self filteredInstVarNames copyWithout: 'machineCode'), #('machineCode') do:
-		[:ivn|
-		ivn ~= 'bcpc' ifTrue:
-			[aBinaryBlock
-				value: ivn
-				value: (ivn caseOf: {
-							['address']			-> [#'unsigned long'].
-							['machineCode']	-> [{#'unsigned long'. '[', self basicNew machineCodeWords printString, ']'}].
-							['operands']		-> [{#'unsigned long'. '[', NumOperands, ']'}].
-							['dependent']		-> ['struct _AbstractInstruction *']}
-						otherwise:
-							[#'unsigned char'])]]
+CogARMCompiler class >> machineCodeDeclaration [
+	"Answer the declaration for the machineCode array."
+	^{#'unsigned long'. '[', self basicNew machineCodeWords printString, ']'}
 ]
 
 { #category : #accessing }
@@ -540,14 +527,9 @@ CogARMCompiler >> computeMaximumSize [
 		[MoveCqR]				-> [^self literalLoadInstructionBytes = 4
 										ifTrue: [self literalLoadInstructionBytes]
 										ifFalse:
-											[self rotateable8bitImmediate: (operands at: 0)
-												ifTrue: [:r :i| 4]
-												ifFalse:
-													[| val invVal |
-													invVal := (val := operands at: 0) < 0 ifTrue: [-1 - val] ifFalse: [val bitInvert32].
-													self rotateable8bitImmediate: invVal
-														ifTrue: [:r :i| 4]
-														ifFalse: [self literalLoadInstructionBytes]]]].
+											[self rotateable8bitBitwiseImmediate: (operands at: 0)
+												ifTrue: [:r :i :n| 4]
+												ifFalse: [self literalLoadInstructionBytes]]].
 		[MoveCwR]				-> [^self literalLoadInstructionBytes = 4
 										ifTrue: [self literalLoadInstructionBytes]
 										ifFalse:
@@ -596,14 +578,9 @@ CogARMCompiler >> computeMaximumSize [
 		[PushCq]				-> [^self literalLoadInstructionBytes = 4
 										ifTrue: [self literalLoadInstructionBytes + 4]
 										ifFalse:
-											[self rotateable8bitImmediate: (operands at: 0)
-												ifTrue: [:r :i| 8]
-												ifFalse:
-													[| val invVal |
-													invVal := (val := operands at: 0) < 0 ifTrue: [-1 - val] ifFalse: [val bitInvert32].
-													self rotateable8bitImmediate: invVal
-														ifTrue: [:r :i| 8]
-														ifFalse: [self literalLoadInstructionBytes + 4]]]].
+											[self rotateable8bitBitwiseImmediate: (operands at: 0)
+												ifTrue: [:r :i :n| 8]
+												ifFalse: [self literalLoadInstructionBytes + 4]]].
 		[PrefetchAw] 			-> [^(self isAddressRelativeToVarBase: (operands at: 0))
 										ifTrue: [4]
 										ifFalse: [self literalLoadInstructionBytes + 4]].
@@ -1486,22 +1463,19 @@ CogARMCompiler >> concretizePrefetchAw [
 CogARMCompiler >> concretizePushCq [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| word instrOffset|
+	| word instrOffset |
 	word := operands at: 0.
 	self 
-		rotateable8bitImmediate: word 
-		ifTrue: [:rot :immediate |
-			self machineCodeAt: 0 put: (self mov: ConcreteIPReg imm: immediate ror: rot).
+		rotateable8bitBitwiseImmediate: word 
+		ifTrue:
+			[:rot :immediate :invert|
+			self machineCodeAt: 0
+				put: (invert
+						ifTrue: [self mvn: ConcreteIPReg imm: immediate ror: rot]
+						ifFalse: [self mov: ConcreteIPReg imm: immediate ror: rot]).
 			instrOffset := 4]
-		ifFalse:[|invVal|
-			word <0
-				ifTrue:[invVal := -1 - word]
-				ifFalse:[invVal := word bitInvert32].
-			self rotateable8bitImmediate: invVal
-				ifTrue: [ :rot :immediate |
-					self machineCodeAt: 0 put: (self mvn: ConcreteIPReg imm: immediate ror: rot).
-					instrOffset := 4]
-				ifFalse: [instrOffset := self moveCw: word intoR: ConcreteIPReg]].
+		ifFalse:
+			[instrOffset := self moveCw: word intoR: ConcreteIPReg].
 	self machineCodeAt: instrOffset put: (self pushR: ConcreteIPReg).
 	^machineCodeSize := instrOffset + 4
 ]

@@ -142,6 +142,12 @@ CogIA32Compiler class >> initialize [
 			at: classVarName put: value + LastRTLCode - 1]
 ]
 
+{ #category : #translation }
+CogIA32Compiler class >> machineCodeDeclaration [
+	"Answer the declaration for the machineCode array."
+	^{#'unsigned char'. '[', self basicNew machineCodeBytes printString, ']'}
+]
+
 { #category : #verification }
 CogIA32Compiler class >> specificOpcodes [
 	"Answer the processor-specific opcodes for this class.
