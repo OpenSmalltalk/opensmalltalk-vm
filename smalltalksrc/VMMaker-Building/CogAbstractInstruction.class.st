@@ -732,7 +732,9 @@ CogAbstractInstruction >> isAFixup: fixupOrAddress [
 { #category : #testing }
 CogAbstractInstruction >> isAnInstruction: addressOrInstruction [
 	<var: #addressOrInstruction type: #'AbstractInstruction *'>
-	^cogit addressIsInInstructions: addressOrInstruction
+	<inline: true>
+	^(cogit addressIsInInstructions: addressOrInstruction)
+	  or: [addressOrInstruction == cogit methodLabel]
 ]
 
 { #category : #testing }
@@ -1011,7 +1013,11 @@ CogAbstractInstruction >> printStateOn: aStream [
 				 aStream space.
 				 (self machineCodeAt: i)
 					ifNil: [aStream nextPut: $.]
-					ifNotNil: [:mc| mc printOn: aStream base: 16]]]].
+					ifNotNil:
+						[:mc|
+						mc isInteger
+							ifTrue: [mc printOn: aStream base: 16]
+							ifFalse: [mc printOn: aStream]]]]].
 	address ifNotNil:
 		[aStream nextPut: $@.
 		 address printOn: aStream base: 16].

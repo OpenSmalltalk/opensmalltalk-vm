@@ -16,7 +16,6 @@ Class {
 		'AL',
 		'AddOpcode',
 		'AndOpcode',
-		'BICCqR',
 		'BicOpcode',
 		'CArg0Reg',
 		'CArg1Reg',
@@ -26,6 +25,7 @@ Class {
 		'CMPSMULL',
 		'CPSRReg',
 		'CS',
+		'CmpNotOpcode',
 		'CmpOpcode',
 		'ConcreteIPReg',
 		'ConcreteVarBaseReg',
@@ -157,10 +157,12 @@ CogARMCompiler class >> initialize [
 	LE := 13.
 	AL := 14.
 
+	"Table A3-2 in sec A3.4 Data-processing instructions of the AARM."
 	AddOpcode := 	4.
 	AndOpcode := 0.
 	BicOpcode := 14.
 	CmpOpcode := 10.
+	CmpNotOpcode := 11.
 	MoveOpcode := 13.
 	MoveNotOpcode := 15.
 	OrOpcode := 12.
@@ -307,7 +309,7 @@ CogARMCompiler >> bics: destReg rn: srcReg imm: immediate ror: rot [
 "Remember the ROR is doubled by the cpu so use 30>>1 etc
 	BICS destReg, srcReg, #immediate ROR #rot"
 
-	^self type: 1 op: 14 set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
+	^self type: 1 op: BicOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
 { #category : #'ARM convenience instructions' }
@@ -404,186 +406,209 @@ CogARMCompiler >> codeGranularity [
 
 { #category : #'generate machine code' }
 CogARMCompiler >> computeMaximumSize [
-	"Because we don't use Thumb, each ARM instruction has 4 bytes. Many abstract opcodes need more than one instruction.
-	 Instructions that refer to constants and/or literals depend on literals being stored in-line or out-of-line."
+	"Because we don't use Thumb, each ARM instruction has 4 bytes. Many
+	 abstract opcodes need more than one instruction. Instructions that refer
+	 to constants and/or literals depend on literals being stored in-line or out-of-line.
+
+	 N.B.  The ^N forms are to get around the bytecode compiler's long branch
+	 limits which are exceeded when each case jumps around the otherwise."
 
 	opcode
 		caseOf: {
 		"Noops & Pseudo Ops"
-		[Label]					-> [^maxSize := 0].
-		[Literal]					-> [^maxSize := 4].
-		[AlignmentNops]		-> [^maxSize := (operands at: 0) - 4].
-		[Fill16]					-> [^maxSize := 4].
-		[Fill32]					-> [^maxSize := 4].
-		[FillFromWord]			-> [^maxSize := 4].
-		[Nop]					-> [^maxSize := 4].
+		[Label]					-> [^0].
+		[Literal]					-> [^4].
+		[AlignmentNops]		-> [^(operands at: 0) - 4].
+		[Fill16]					-> [^4].
+		[Fill32]					-> [^4].
+		[FillFromWord]			-> [^4].
+		[Nop]					-> [^4].
 		"Control"
-		[Call]					-> [^maxSize := 4].
-		[CallFull]				-> [^maxSize := self literalLoadInstructionBytes + 4].
-		[JumpR]					-> [^maxSize := 4].
-		[Jump]					-> [^maxSize := 4].
-		[JumpFull]				-> [^maxSize := self literalLoadInstructionBytes + 4].
-		[JumpLong]				-> [^maxSize := 4].
-		[JumpZero]				-> [^maxSize := 4].
-		[JumpNonZero]			-> [^maxSize := 4].
-		[JumpNegative]			-> [^maxSize := 4].
-		[JumpNonNegative]		-> [^maxSize := 4].
-		[JumpOverflow]			-> [^maxSize := 4].
-		[JumpNoOverflow]		-> [^maxSize := 4].
-		[JumpCarry]			-> [^maxSize := 4].
-		[JumpNoCarry]			-> [^maxSize := 4].
-		[JumpLess]				-> [^maxSize := 4].
-		[JumpGreaterOrEqual]	-> [^maxSize := 4].
-		[JumpGreater]			-> [^maxSize := 4].
-		[JumpLessOrEqual]		-> [^maxSize := 4].
-		[JumpBelow]			-> [^maxSize := 4].
-		[JumpAboveOrEqual]	-> [^maxSize := 4].
-		[JumpAbove]			-> [^maxSize := 4].
-		[JumpBelowOrEqual]	-> [^maxSize := 4].
-		[JumpLongZero]		-> [^maxSize := 4].
-		[JumpLongNonZero]	-> [^maxSize := 4].
-		[JumpFPEqual]			-> [^maxSize := 8].
-		[JumpFPNotEqual]		-> [^maxSize := 8].
-		[JumpFPLess]			-> [^maxSize := 8].
-		[JumpFPGreaterOrEqual]-> [^maxSize := 8].
-		[JumpFPGreater]		-> [^maxSize := 8].
-		[JumpFPLessOrEqual]	-> [^maxSize := 8].
-		[JumpFPOrdered]		-> [^maxSize := 8].
-		[JumpFPUnordered]		-> [^maxSize := 8].
-		[RetN]					-> [^maxSize := (operands at: 0) = 0 ifTrue: [4] ifFalse: [8]].
-		[Stop]					-> [^maxSize := 4].
+		[Call]					-> [^4].
+		[CallFull]				-> [^self literalLoadInstructionBytes + 4].
+		[JumpR]					-> [^4].
+		[Jump]					-> [^4].
+		[JumpFull]				-> [^self literalLoadInstructionBytes + 4].
+		[JumpLong]				-> [^4].
+		[JumpZero]				-> [^4].
+		[JumpNonZero]			-> [^4].
+		[JumpNegative]			-> [^4].
+		[JumpNonNegative]		-> [^4].
+		[JumpOverflow]			-> [^4].
+		[JumpNoOverflow]		-> [^4].
+		[JumpCarry]			-> [^4].
+		[JumpNoCarry]			-> [^4].
+		[JumpLess]				-> [^4].
+		[JumpGreaterOrEqual]	-> [^4].
+		[JumpGreater]			-> [^4].
+		[JumpLessOrEqual]		-> [^4].
+		[JumpBelow]			-> [^4].
+		[JumpAboveOrEqual]	-> [^4].
+		[JumpAbove]			-> [^4].
+		[JumpBelowOrEqual]	-> [^4].
+		[JumpLongZero]		-> [^4].
+		[JumpLongNonZero]	-> [^4].
+		[JumpFPEqual]			-> [^8].
+		[JumpFPNotEqual]		-> [^8].
+		[JumpFPLess]			-> [^8].
+		[JumpFPGreaterOrEqual]-> [^8].
+		[JumpFPGreater]		-> [^8].
+		[JumpFPLessOrEqual]	-> [^8].
+		[JumpFPOrdered]		-> [^8].
+		[JumpFPUnordered]		-> [^8].
+		[RetN]					-> [^(operands at: 0) = 0 ifTrue: [4] ifFalse: [8]].
+		[Stop]					-> [^4].
 
 		"Arithmetic"
-		[AddCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse:
-												[self rotateable8bitImmediate: (operands at: 0) negated
-													ifTrue: [:r :i| maxSize := 4]
-													ifFalse: [maxSize := self literalLoadInstructionBytes + 4]]].
-		[AndCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
-		[AndCqRR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse:
-												[| val invVal |
-												invVal := (val := operands at: 0) < 0 ifTrue: [-1 - val] ifFalse: [val bitInvert32].
-												self rotateable8bitImmediate: invVal
-													ifTrue: [:r :i| maxSize := 4]
-													ifFalse: [maxSize := self literalLoadInstructionBytes + 4]]].
-		[CmpCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
+		[AddCqR]				-> [^self rotateable8bitSignedImmediate: (operands at: 0)
+										ifTrue: [:r :i :n| 4]
+										ifFalse: [self literalLoadInstructionBytes + 4]].
+		[AndCqR]				-> [^self rotateable8bitBitwiseImmediate: (operands at: 0)
+										ifTrue: [:r :i :n| 4]
+										ifFalse:
+											[self literalLoadInstructionBytes = 4
+												ifTrue: [8]
+												ifFalse:
+													[1 << (operands at: 0) highBit = ((operands at: 0) + 1)
+														ifTrue: [8]
+														ifFalse: [self literalLoadInstructionBytes + 4]]]].
+		[AndCqRR]				-> [^self rotateable8bitBitwiseImmediate: (operands at: 0)
+										ifTrue: [:r :i :n| 4]
+										ifFalse:
+											[self literalLoadInstructionBytes = 4
+												ifTrue: [8]
+												ifFalse:
+													[1 << (operands at: 0) highBit = ((operands at: 0) + 1)
+														ifTrue: [8]
+														ifFalse: [self literalLoadInstructionBytes + 4]]]].
+		[CmpCqR]				-> [^self rotateable8bitSignedImmediate: (operands at: 0)
+											ifTrue: [:r :i :n| 4]
+											ifFalse: [self literalLoadInstructionBytes + 4]].
 		[OrCqR]					-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
-		[SubCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse:
-												[self rotateable8bitImmediate: (operands at: 0) negated
-													ifTrue: [:r :i| maxSize := 4]
-													ifFalse: [maxSize := self literalLoadInstructionBytes + 4]]].
+											ifTrue: [:r :i| 4]
+											ifFalse: [self literalLoadInstructionBytes + 4]].
+		[SubCqR]				-> [^self rotateable8bitSignedImmediate: (operands at: 0)
+											ifTrue: [:r :i :n| 4]
+											ifFalse: [self literalLoadInstructionBytes + 4]].
 		[TstCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
-		[XorCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
-		[AddCwR]				-> [^maxSize := self literalLoadInstructionBytes + 4].
-		[AndCwR]				-> [^maxSize := self literalLoadInstructionBytes + 4].
-		[CmpCwR]				-> [^maxSize := self literalLoadInstructionBytes + 4].
-		[OrCwR]				-> [^maxSize := self literalLoadInstructionBytes + 4].
-		[SubCwR]				-> [^maxSize := self literalLoadInstructionBytes + 4].
-		[XorCwR]				-> [^maxSize := self literalLoadInstructionBytes + 4].
-		[AddRR]					-> [^maxSize := 4].
-		[AndRR]					-> [^maxSize := 4].
-		[CmpRR]				-> [^maxSize := 4].
-		[OrRR]					-> [^maxSize := 4].
-		[XorRR]					-> [^maxSize := 4].
-		[SubRR]					-> [^maxSize := 4].
-		[NegateR]				-> [^maxSize := 4].
+											ifTrue: [:r :i| 4]
+											ifFalse: [self literalLoadInstructionBytes + 4]].
+		[XorCqR]				-> [^self rotateable8bitBitwiseImmediate: (operands at: 0)
+										ifTrue: [:r :i :n| 4]
+										ifFalse:
+											[self literalLoadInstructionBytes = 4
+												ifTrue: [8]
+												ifFalse:
+													[1 << (operands at: 0) highBit = ((operands at: 0) + 1)
+														ifTrue: [8]
+														ifFalse: [self literalLoadInstructionBytes + 4]]]].
+		[AddCwR]				-> [^self literalLoadInstructionBytes + 4].
+		[AndCwR]				-> [^self literalLoadInstructionBytes + 4].
+		[CmpCwR]				-> [^self literalLoadInstructionBytes + 4].
+		[OrCwR]				-> [^self literalLoadInstructionBytes + 4].
+		[SubCwR]				-> [^self literalLoadInstructionBytes + 4].
+		[XorCwR]				-> [^self literalLoadInstructionBytes + 4].
+		[AddRR]					-> [^4].
+		[AndRR]					-> [^4].
+		[CmpRR]				-> [^4].
+		[OrRR]					-> [^4].
+		[XorRR]					-> [^4].
+		[SubRR]					-> [^4].
+		[NegateR]				-> [^4].
 		[LoadEffectiveAddressMwrR]
 									-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
+											ifTrue: [:r :i| 4]
+											ifFalse: [self literalLoadInstructionBytes + 4]].
 
-		[LogicalShiftLeftCqR]		-> [^maxSize := 4].
-		[LogicalShiftRightCqR]		-> [^maxSize := 4].
-		[ArithmeticShiftRightCqR]	-> [^maxSize := 4].
-		[LogicalShiftLeftRR]			-> [^maxSize := 4].
-		[LogicalShiftRightRR]		-> [^maxSize := 4].
-		[ArithmeticShiftRightRR]		-> [^maxSize := 4].
-		[AddRdRd]					-> [^maxSize := 4].
-		[CmpRdRd]					-> [^maxSize := 4].
-		[SubRdRd]					-> [^maxSize := 4].
-		[MulRdRd]					-> [^maxSize := 4].
-		[DivRdRd]					-> [^maxSize := 4].
-		[SqrtRd]					-> [^maxSize := 4].
+		[LogicalShiftLeftCqR]		-> [^4].
+		[LogicalShiftRightCqR]		-> [^4].
+		[ArithmeticShiftRightCqR]	-> [^4].
+		[LogicalShiftLeftRR]			-> [^4].
+		[LogicalShiftRightRR]		-> [^4].
+		[ArithmeticShiftRightRR]		-> [^4].
+		[AddRdRd]					-> [^4].
+		[CmpRdRd]					-> [^4].
+		[SubRdRd]					-> [^4].
+		[MulRdRd]					-> [^4].
+		[DivRdRd]					-> [^4].
+		[SqrtRd]					-> [^4].
 		"ARM Specific Arithmetic"
-		[SMULL]				-> [^maxSize := 4].
-		[MSR]					-> [^maxSize := 4].
-		[CMPSMULL]			-> [^maxSize := 4]. "special compare for genMulR:R: usage"
+		[SMULL]				-> [^4].
+		[MSR]					-> [^4].
+		[CMPSMULL]			-> [^4]. "special compare for genMulR:R: usage"
 		"Data Movement"						
 		[MoveCqR]				-> [^self literalLoadInstructionBytes = 4
-										ifTrue: [maxSize := self literalLoadInstructionBytes]
+										ifTrue: [self literalLoadInstructionBytes]
 										ifFalse:
 											[self rotateable8bitImmediate: (operands at: 0)
-												ifTrue: [:r :i| maxSize := 4]
+												ifTrue: [:r :i| 4]
 												ifFalse:
 													[| val invVal |
 													invVal := (val := operands at: 0) < 0 ifTrue: [-1 - val] ifFalse: [val bitInvert32].
 													self rotateable8bitImmediate: invVal
-														ifTrue: [:r :i| maxSize := 4]
-														ifFalse: [maxSize := self literalLoadInstructionBytes]]]].
-		[MoveCwR]				-> [^maxSize := self literalLoadInstructionBytes].
-		[MoveRR]				-> [^maxSize := 4].
-		[MoveRdRd]				-> [^maxSize := 4].
-		[MoveAwR]				-> [^maxSize := (self isAddressRelativeToVarBase: (operands at: 0))
+														ifTrue: [:r :i| 4]
+														ifFalse: [self literalLoadInstructionBytes]]]].
+		[MoveCwR]				-> [^self literalLoadInstructionBytes = 4
+										ifTrue: [self literalLoadInstructionBytes]
+										ifFalse:
+											[((self isAnInstruction: (operands at: 0)) "i.e. a label, which by definition will be in the current compilation."
+											   or: [cogit addressIsInCurrentCompilation: (operands at: 0)])
+												ifTrue: [4]
+												ifFalse: [self literalLoadInstructionBytes]]].
+		[MoveRR]				-> [^4].
+		[MoveRdRd]				-> [^4].
+		[MoveAwR]				-> [^(self isAddressRelativeToVarBase: (operands at: 0))
 													ifTrue: [4]
 													ifFalse: [self literalLoadInstructionBytes + 4]].
-		[MoveRAw]				-> [^maxSize := (self isAddressRelativeToVarBase: (operands at: 1))
+		[MoveRAw]				-> [^(self isAddressRelativeToVarBase: (operands at: 1))
 													ifTrue: [4]
 													ifFalse: [self literalLoadInstructionBytes + 4]].
 		[MoveRMwr]			-> [^self is12BitValue: (operands at: 1)
-										ifTrue: [:u :i| maxSize := 4]
-										ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
-		[MoveRdM64r]			-> [^maxSize := self literalLoadInstructionBytes + 4]. 
+										ifTrue: [:u :i| 4]
+										ifFalse: [self literalLoadInstructionBytes + 4]].
+		[MoveRdM64r]			-> [^self literalLoadInstructionBytes + 4]. 
 		[MoveMbrR]				-> [^self is12BitValue: (operands at: 0)
-										ifTrue: [:u :i| maxSize := 4]
-										ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
+										ifTrue: [:u :i| 4]
+										ifFalse: [self literalLoadInstructionBytes + 4]].
 		[MoveRMbr]				-> [^self is12BitValue: (operands at: 1)
-										ifTrue: [:u :i| maxSize := 4]
-										ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
+										ifTrue: [:u :i| 4]
+										ifFalse: [self literalLoadInstructionBytes + 4]].
 		[MoveM16rR]			-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| maxSize := 4]
-											ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
-		[MoveM64rRd]			-> [^maxSize := self literalLoadInstructionBytes + 4].
+											ifTrue: [:r :i| 4]
+											ifFalse: [self literalLoadInstructionBytes + 4]].
+		[MoveM64rRd]			-> [^self literalLoadInstructionBytes + 4].
 		[MoveMwrR]			-> [^self is12BitValue: (operands at: 0)
-										ifTrue: [:u :i| maxSize := 4]
-										ifFalse: [maxSize := self literalLoadInstructionBytes + 4]].
-		[MoveXbrRR]			-> [^maxSize := 4].
-		[MoveRXbrR]			-> [^maxSize := 4].
-		[MoveXwrRR]			-> [^maxSize := 4].
-		[MoveRXwrR]			-> [^maxSize := 4].
-		[PopR]					-> [^maxSize := 4].
-		[PushR]					-> [^maxSize := 4].
-		[PushCw]				-> [^maxSize := self literalLoadInstructionBytes + 4].
+										ifTrue: [:u :i| 4]
+										ifFalse: [self literalLoadInstructionBytes + 4]].
+		[MoveXbrRR]			-> [^4].
+		[MoveRXbrR]			-> [^4].
+		[MoveXwrRR]			-> [^4].
+		[MoveRXwrR]			-> [^4].
+		[PopR]					-> [^4].
+		[PushR]					-> [^4].
+		[PushCw]				-> [^self literalLoadInstructionBytes = 4
+										ifTrue: [self literalLoadInstructionBytes + 4]
+										ifFalse:
+											[((self isAnInstruction: (operands at: 0)) "i.e. a label, which by definition will be in the current compilation."
+											   or: [cogit addressIsInCurrentCompilation: (operands at: 0)])
+												ifTrue: [8]
+												ifFalse: [self literalLoadInstructionBytes + 4]]].
 		[PushCq]				-> [^self literalLoadInstructionBytes = 4
-										ifTrue: [maxSize := self literalLoadInstructionBytes + 4]
+										ifTrue: [self literalLoadInstructionBytes + 4]
 										ifFalse:
 											[self rotateable8bitImmediate: (operands at: 0)
-												ifTrue: [:r :i| maxSize := 8]
+												ifTrue: [:r :i| 8]
 												ifFalse:
 													[| val invVal |
 													invVal := (val := operands at: 0) < 0 ifTrue: [-1 - val] ifFalse: [val bitInvert32].
 													self rotateable8bitImmediate: invVal
-														ifTrue: [:r :i| maxSize := 8]
-														ifFalse: [maxSize := self literalLoadInstructionBytes + 4]]]].
-		[PrefetchAw] 			-> [^maxSize := (self isAddressRelativeToVarBase: (operands at: 1))
-													ifTrue: [4]
-													ifFalse: [self literalLoadInstructionBytes + 4]].
+														ifTrue: [:r :i| 8]
+														ifFalse: [self literalLoadInstructionBytes + 4]]]].
+		[PrefetchAw] 			-> [^(self isAddressRelativeToVarBase: (operands at: 0))
+										ifTrue: [4]
+										ifFalse: [self literalLoadInstructionBytes + 4]].
 		"Conversion"
-		[ConvertRRd]			-> [^maxSize := 4].
+		[ConvertRRd]			-> [^4].
 		}.
 	^0 "to keep C compiler quiet"
 
@@ -641,26 +666,6 @@ CogARMCompiler >> concreteRegister: registerIndex [
 ]
 
 { #category : #'generate machine code - concretize' }
-CogARMCompiler >> concretizeAddCqR [
-	"Will get inlined into concretizeAt: switch."
-	"Try whether the quick constant is a small negative number. If it is, optimize."
-	<inline: true>
-	self rotateable8bitImmediate: (operands at: 0)
-		ifTrue: [ :rot :immediate | | reg |
-			reg := self concreteRegister: (operands at: 1).
-			self machineCodeAt: 0 put: (self adds: reg rn: reg imm: immediate ror: rot).
-			^machineCodeSize := 4]
-		ifFalse: [
-			self rotateable8bitImmediate: (operands at: 0) negated
-				ifTrue: [ :rot :immediate | |reg|
-					reg := self concreteRegister: (operands at: 1).
-					self machineCodeAt: 0 put: (self subs: reg rn: reg imm: immediate ror: rot).
-					^machineCodeSize := 4]
-				ifFalse: [^self concretizeDataOperationCwR: AddOpcode]].
-	^0 "to keep Slang happy"
-]
-
-{ #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeAddRdRd [
 	self assert: false.
 	self notYetImplemented
@@ -677,80 +682,32 @@ CogARMCompiler >> concretizeAlignmentNops [
 ]
 
 { #category : #'generate machine code - concretize' }
-CogARMCompiler >> concretizeAndCqR [
-	"Will get inlined into concretizeAt: switch."
-	"AND is very important since it's used to mask all sorts of flags in the jit. We take special care to try to find fast ways to make the masks"
-	<inline: true>
-	|val|
-	val := operands at: 0.
-	self rotateable8bitImmediate: val
-		ifTrue: [ :rot :immediate | | reg |
-			reg := self concreteRegister: (operands at: 1).
-			self machineCodeAt: 0 put: (self ands: reg rn: reg imm: immediate ror: rot).
-			^machineCodeSize := 4]
-		ifFalse: [
-			"see if the constant bit-inverted makes a quick value and if so BIC it instead
-			If the value is -ve, we 2s complement it instead"
-			|invVal|
-			val <0
-				ifTrue:[invVal := -1 - val]
-				ifFalse:[invVal := val bitInvert32].
-			self rotateable8bitImmediate: invVal
-				ifTrue: [ :rot :immediate | |reg|
-					reg := self concreteRegister: (operands at: 1).
-					self machineCodeAt: 0 put: (self bics: reg rn: reg imm: immediate ror: rot).
-					^machineCodeSize := 4]
-				ifFalse: ["let's try to see if the constant can be made from a simple shift of 0xFFFFFFFF"
-					|hb reg|
-					reg := self concreteRegister: (operands at: 1).
-					hb := (operands at: 0) highBit.
-					1 << hb = (val +1)
-						ifTrue: [ "MVN temp reg, 0, making 0xffffffff"
-							self machineCodeAt: 0 put:(self mvn: ConcreteIPReg imm: 0 ror: 0).
-							"Then AND reg, temp reg, lsr #(32-hb)"
-							 self machineCodeAt: 4 put:(self dataOpType: AndOpcode rd: reg rn: reg rm: ConcreteIPReg lsr: (32-hb )).
-							^machineCodeSize :=8]
-						ifFalse: [^self concretizeDataOperationCwR: AndOpcode]]].
-	^0 "to keep Slang happy"
-]
-
-{ #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeAndCqRR [
 	"Will get inlined into concretizeAt: switch."
-	"AND is very important since it's used to mask all sorts of flags in the jit. We take special care to try to find fast ways to make the masks"
+	"AND is very important since it's used to mask all sorts of flags in the jit. We take special care to try to find compact ways to make the masks"
 	<inline: true>
 	| val srcReg dstReg |
 	val := operands at: 0.
 	srcReg := self concreteRegister: (operands at: 1).
 	dstReg := self concreteRegister: (operands at: 2).
-	self rotateable8bitImmediate: val
+	self rotateable8bitBitwiseImmediate: val
 		ifTrue:
-			[ :rot :immediate |
-			self machineCodeAt: 0 put: (self ands: dstReg rn: srcReg imm: immediate ror: rot).
+			[:rot :immediate :invert|
+			self machineCodeAt: 0 put: (invert
+											ifTrue: [self bics: dstReg rn: srcReg imm: immediate ror: rot]
+											ifFalse: [self ands: dstReg rn: srcReg imm: immediate ror: rot]).
 			^machineCodeSize := 4]
-		ifFalse:
-			["see if the constant bit-inverted makes a quick value and if so BIC it instead
-			If the value is -ve, we 2s complement it instead"
-			|invVal|
-			invVal := val < 0
-						ifTrue:[-1 - val]
-						ifFalse:[val bitInvert32].
-			self rotateable8bitImmediate: invVal
-				ifTrue:
-					[ :rot :immediate |
-					self machineCodeAt: 0 put: (self bics: dstReg rn: srcReg imm: immediate ror: rot).
-					^machineCodeSize := 4]
-				ifFalse: "let's try to see if the constant can be made from a simple shift of 0xFFFFFFFF"
-					[| hb |
-					hb := (operands at: 0) highBit.
-					1 << hb = (val +1)
-						ifTrue: "MVN temp reg, 0, making 0xffffffff"
-							[self machineCodeAt: 0 put:(self mvn: ConcreteIPReg imm: 0 ror: 0).
-							"Then AND reg, temp reg, lsr #(32-hb)"
-							 self machineCodeAt: 4 put: (self dataOpType: AndOpcode rd: dstReg rn: srcReg rm: ConcreteIPReg lsr: 32 - hb).
-							^machineCodeSize := 8]
-						ifFalse:
-							[^self concretizeDataOperationCwR: AndOpcode]]].
+		ifFalse: "let's try to see if the constant can be made from a simple shift of 0xFFFFFFFF"
+			[| hb |
+			hb := (operands at: 0) highBit.
+			1 << hb = (val +1)
+				ifTrue: "MVN temp reg, 0, making 0xffffffff"
+					[self machineCodeAt: 0 put:(self mvn: ConcreteIPReg imm: 0 ror: 0).
+					"Then AND reg, temp reg, lsr #(32-hb)"
+					 self machineCodeAt: 4 put: (self dataOpType: AndOpcode rd: dstReg rn: srcReg rm: ConcreteIPReg lsr: 32 - hb).
+					^machineCodeSize := 8]
+				ifFalse:
+					[^self concretizeDataOperationCwR: AndOpcode]].
 	^0 "to keep Slang happy"
 ]
 
@@ -986,6 +943,41 @@ CogARMCompiler >> concretizeFillFromWord [
 	self assert: false.
 	self notYetImplemented
 
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeInvertibleDataOperationCqR: armOpcode [
+	"Will get inlined into concretizeAt: switch."
+	"Xor == 1, And == 0, Or == 12, Bic == 14"
+	<inline: true>
+	| val rn |
+	val := operands at: 0.
+	rn := self concreteRegister: (operands at: 1).
+	self deny: opcode = CmpOpcode.
+
+	self rotateable8bitBitwiseImmediate: val 
+		ifTrue:
+			[:rot :immediate : invert|
+			self machineCodeAt: 0
+				put: (self
+						type: 1
+						op: (invert ifTrue: [self inverseOpcodeFor: armOpcode] ifFalse: [armOpcode])
+						set: 1
+						rn: rn
+						rd: rn
+						shifterOperand: (rot >> 1"in this usage we have to halve the rot value" << 8 bitOr: immediate)).
+			^machineCodeSize := 4]
+		ifFalse: "let's try to see if the constant can be made from a simple shift of 0xFFFFFFFF"
+			[val > 0 ifTrue:
+				[| hb |
+				hb := val highBit.
+				1 << hb = (val +1) ifTrue: "MVN temp,  #0, making 0xffffffff"
+					[self machineCodeAt: 0 put: (self mvn: ConcreteIPReg imm: 0 ror: 0).
+					 "Then armOpcode reg, temp reg, lsr #(32-hb)"
+					 self machineCodeAt: 4 put: (self dataOpType: armOpcode rd: rn  rn: rn rm: ConcreteIPReg lsr: 32 - hb).
+					^machineCodeSize := 8]].
+			 ^self concretizeDataOperationCwR: armOpcode].
+	^0 "to keep Slang happy"
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1418,6 +1410,43 @@ CogARMCompiler >> concretizeNegateR [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeNegateableDataOperationCqR: armOpcode [
+	"Will get inlined into concretizeAt: switch."
+	"4 == Add, 2 == Sub, 10 = Cmp"
+	<inline: true>
+	| val rd rn |
+	val := operands at: 0.
+	rn := self concreteRegister: (operands at: 1).
+	"Extra note - if ever a version of this code wants to NOT set the Set flag
+	 - Cmp must always have it set or it will pretend to be a SMALALBT and Very Bad Things might happen."
+	rd := opcode = CmpOpcode ifTrue: [0] ifFalse: [rn].
+
+	self rotateable8bitSignedImmediate: val 
+		ifTrue:
+			[:rot :immediate : negate|
+			self machineCodeAt: 0
+				put: (self
+						type: 1
+						op: (negate ifTrue: [self inverseOpcodeFor: armOpcode] ifFalse: [armOpcode])
+						set: 1
+						rn: rn
+						rd: rd
+						shifterOperand: (rot >> 1"in this usage we have to halve the rot value" << 8 bitOr: immediate)).
+			^machineCodeSize := 4]
+		ifFalse: "let's try to see if the constant can be made from a simple shift of 0xFFFFFFFF"
+			[val > 0 ifTrue:
+				[| hb |
+				hb := val highBit.
+				1 << hb = (val +1) ifTrue: "MVN temp,  #0, making 0xffffffff"
+					[self machineCodeAt: 0 put:(self mvn: ConcreteIPReg imm: 0 ror: 0).
+					 "Then armOpcode reg, temp reg, lsr #(32-hb)"
+					 self machineCodeAt: 4 put:(self dataOpType: armOpcode rd: rd  rn: rn rm: ConcreteIPReg lsr: 32 - hb).
+					^machineCodeSize := 8]].
+			 ^self concretizeDataOperationCwR: armOpcode].
+	^0 "to keep Slang happy"
+]
+
+{ #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeNop [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1706,32 +1735,32 @@ CogARMCompiler >> dispatchConcretize [
 		[RetN]						-> [^self concretizeRetN].
 		[Stop]						-> [^self concretizeStop].
 		"Arithmetic"
-		[AddCqR]					-> [^self concretizeAddCqR].
-		[AddCwR]					-> [^self concretizeDataOperationCwR: AddOpcode].
-		[AddRR]						-> [^self concretizeDataOperationRR: AddOpcode].
-		[AddRdRd]					-> [^self concretizeAddRdRd].
-		[AndCqR]					-> [^self concretizeAndCqR].
+		[AddCqR]					-> [^self concretizeNegateableDataOperationCqR: AddOpcode].
+		[AndCqR]					-> [^self concretizeInvertibleDataOperationCqR: AndOpcode].
 		[AndCqRR]					-> [^self concretizeAndCqRR].
+		[CmpCqR]					-> [^self concretizeNegateableDataOperationCqR: CmpOpcode].
+		[OrCqR]						-> [^self concretizeDataOperationCqR: OrOpcode].
+		[SubCqR]					-> [^self concretizeSubCqR].
+		[TstCqR]					-> [^self concretizeTstCqR].
+		[XorCqR]					-> [^self concretizeInvertibleDataOperationCqR: XorOpcode].
+		[AddCwR]					-> [^self concretizeDataOperationCwR: AddOpcode].
 		[AndCwR]					-> [^self concretizeDataOperationCwR: AndOpcode].
-		[AndRR]						-> [^self concretizeDataOperationRR: AndOpcode].
-		[CmpCqR]					-> [^self concretizeDataOperationCqR: CmpOpcode].
 		[CmpCwR]					-> [^self concretizeDataOperationCwR: CmpOpcode].
+		[OrCwR]					-> [^self concretizeDataOperationCwR: OrOpcode].
+		[SubCwR]					-> [^self concretizeDataOperationCwR: SubOpcode].
+		[XorCwR]					-> [^self concretizeDataOperationCwR: XorOpcode].
+		[AddRR]						-> [^self concretizeDataOperationRR: AddOpcode].
+		[AndRR]						-> [^self concretizeDataOperationRR: AndOpcode].
 		[CmpRR]					-> [^self concretizeDataOperationRR: CmpOpcode].
+		[OrRR]						-> [^self concretizeDataOperationRR: OrOpcode].
+		[SubRR]						-> [^self concretizeDataOperationRR: SubOpcode].
+		[XorRR]						-> [^self concretizeDataOperationRR: XorOpcode].
+		[AddRdRd]					-> [^self concretizeAddRdRd].
 		[CmpRdRd]					-> [^self concretizeCmpRdRd].
 		[DivRdRd]					-> [^self concretizeDivRdRd].
 		[MulRdRd]					-> [^self concretizeMulRdRd].
-		[OrCqR]						-> [^self concretizeDataOperationCqR: OrOpcode].
-		[OrCwR]					-> [^self concretizeDataOperationCwR: OrOpcode].
-		[OrRR]						-> [^self concretizeDataOperationRR: OrOpcode].
-		[SubCqR]					-> [^self concretizeSubCqR].
-		[SubCwR]					-> [^self concretizeDataOperationCwR: SubOpcode].
-		[SubRR]						-> [^self concretizeDataOperationRR: SubOpcode].
 		[SubRdRd]					-> [^self concretizeSubRdRd].
 		[SqrtRd]					-> [^self concretizeSqrtRd].
-		[TstCqR]					-> [^self concretizeTstCqR].
-		[XorCqR]						-> [^self concretizeDataOperationCqR: XorOpcode].
-		[XorCwR]						-> [^self concretizeDataOperationCwR: XorOpcode].
-		[XorRR]							-> [^self concretizeDataOperationRR: XorOpcode].
 		[NegateR]						-> [^self concretizeNegateR].
 		[LoadEffectiveAddressMwrR]	-> [^self concretizeLoadEffectiveAddressMwrR].
 		[ArithmeticShiftRightCqR]		-> [^self concretizeArithmeticShiftRightCqR].
@@ -1997,14 +2026,6 @@ CogARMCompiler >> generalPurposeRegisterMap [
 			#r12. R12	}
 ]
 
-{ #category : #accessing }
-CogARMCompiler >> getDefaultCogCodeSize [
-	"Return the default number of bytes to allocate for native code at startup.
-	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
-	<inline: true>
-	^1024 * 1400
-]
-
 { #category : #testing }
 CogARMCompiler >> hasDoublePrecisionFloatingPointSupport [
 	"might be true, but is for the forseeable future disabled"
@@ -2106,6 +2127,21 @@ CogARMCompiler >> instructionIsPush: instr [
 CogARMCompiler >> instructionSizeAt: pc [
 	"Answer the instruction size at pc.Simple on ARM ;-)"
 	^4
+]
+
+{ #category : #'generate machine code - support' }
+CogARMCompiler >> inverseOpcodeFor: opcode [
+	"Several of the opcodes are inverses.  Answer the inverse for an opcode if it has one.
+	 See Table A3-2 in sec A3.4 Data-processing instructions of the AARM."
+	^opcode caseOf: {
+			[AddOpcode]		->	[SubOpcode].
+			[AndOpcode]		->	[BicOpcode].
+			[BicOpcode]		->	[AndOpcode].
+			[CmpOpcode]		->	[CmpNotOpcode].
+			[MoveOpcode]		->	[MoveNotOpcode].
+			[MoveNotOpcode]	->	[MoveOpcode].
+			[SubOpcode]		->	[AddOpcode] }
+		otherwise: [self error: 'opcode has no inverse']
 ]
 
 { #category : #testing }
@@ -2291,20 +2327,21 @@ CogARMCompiler >> loadCwInto: destReg [
 	 the size of the instructions generated to do so."
 	| operand distance |
 	operand := operands at: 0.
+	(self isAnInstruction: operand) ifTrue:
+		[operand := (cogit cCoerceSimple: operand to: #'AbstractInstruction *') address].
 	"First try and encode as a pc-relative reference..."
 	(cogit addressIsInCurrentCompilation: operand) ifTrue:
 		[distance := operand - (address + 8).
-		 self rotateable8bitImmediate: distance
-		 	ifTrue: [ :rot :immediate |
-		 		self machineCodeAt: 0 put: (self add: destReg rn: PC imm: immediate ror: rot).
+		 self rotateable8bitSignedImmediate: distance
+		 	ifTrue:
+				[:rot :immediate :negate|
+		 		 self machineCodeAt: 0 put: (negate
+												ifTrue: [self sub: destReg rn: PC imm: immediate ror: rot]
+												ifFalse: [self add: destReg rn: PC imm: immediate ror: rot]).
 		 		^4]
 		 	ifFalse:
-		 		[self rotateable8bitImmediate: distance negated
-		 			ifTrue: [ :rot :immediate |
-		 				self machineCodeAt: 0 put: (self sub: destReg rn: PC imm: immediate ror: rot).
-		 				^4]
-					ifFalse: []]].
-	"If this fails, use the conventional and painfully long 4 instruction sequence."
+		 		[self deny: (self isAnInstruction: (operands at: 0))]].
+	"If this fails, use the conventional literal load sequence."
 	^self moveCw: operand intoR: destReg
 ]
 
@@ -2717,6 +2754,32 @@ CogARMCompiler >> rewriteJumpFullAt: callSiteReturnAddress target: callTargetAdd
 ]
 
 { #category : #testing }
+CogARMCompiler >> rotateable8bitBitwiseImmediate: constant ifTrue: trueAlternativeBlock ifFalse: falseAlternativeBlock [
+	<inline: true>
+	"Invoke trueAlternativeBlock with shift, value and inverted if constant can be represented
+	 by a possibly rotated 8-bit constant, otherwise invoke falseAlternativeBlock. For data
+	 processing operands, there is the immediate shifter_operand variant,  where an 8 bit value
+	 is ring shifted _right_ by i. This is only suitable for quick constants (Cq), which won't change."
+	| value |
+	value := constant.
+	[(value bitAnd: 16rFF) = value ifTrue:
+		[^trueAlternativeBlock value: 0 value: value value: constant ~= value].
+	 2 to: 30 by: 2 do:
+		[:i |
+		(value bitAnd: ((16rFF <<i bitAnd:16rFFFFFFFF) bitOr: 16rFF>>(32-i))) = value ifTrue:
+			[^trueAlternativeBlock
+				value: 32 - i
+				value: ((value >> i) bitOr: (value <<(32 - i) bitAnd:16rFFFFFFFF))
+				value: constant ~= value]].
+	 value = constant]
+		whileTrue:
+			[value := constant < 0
+						ifTrue:[-1 - constant]
+						ifFalse:[constant bitInvert32]].
+	^falseAlternativeBlock value
+]
+
+{ #category : #testing }
 CogARMCompiler >> rotateable8bitImmediate: constant ifTrue: trueAlternativeBlock ifFalse: falseAlternativeBlock [
 	<inline: true>
 	"For data processing operands, there is the immediate shifter_operand variant, 
@@ -2729,6 +2792,30 @@ CogARMCompiler >> rotateable8bitImmediate: constant ifTrue: trueAlternativeBlock
 		[:i |
 		(constant bitAnd: ((16rFF <<i bitAnd:16rFFFFFFFF) bitOr: 16rFF>>(32-i))) = constant ifTrue:
 			[^trueAlternativeBlock value: 32 - i value: ((constant >> i) bitOr: (constant <<(32 - i) bitAnd:16rFFFFFFFF))]].
+	^falseAlternativeBlock value
+]
+
+{ #category : #testing }
+CogARMCompiler >> rotateable8bitSignedImmediate: constant ifTrue: trueAlternativeBlock ifFalse: falseAlternativeBlock [
+	<inline: true>
+	"Invoke trueAlternativeBlock with shift, value and negated if constant can be represented
+	 by a possibly rotated 8-bit constant, otherwise invoke falseAlternativeBlock. For data
+	 processing operands, there is the immediate shifter_operand variant,  where an 8 bit value
+	 is ring shifted _right_ by i. This is only suitable for quick constants (Cq), which won't change."
+	| value |
+	value := constant.
+	[(value bitAnd: 16rFF) = value ifTrue:
+		[^trueAlternativeBlock value: 0 value: value value: constant ~= value].
+	 2 to: 30 by: 2 do:
+		[:i |
+		(value bitAnd: ((16rFF <<i bitAnd:16rFFFFFFFF) bitOr: 16rFF>>(32-i))) = value ifTrue:
+			[^trueAlternativeBlock
+				value: 32 - i
+				value: ((value >> i) bitOr: (value <<(32 - i) bitAnd:16rFFFFFFFF))
+				value: constant ~= value]].
+	 value = constant and: [constant ~= 0]]
+		whileTrue:
+			[value := constant negated].
 	^falseAlternativeBlock value
 ]
 
@@ -2837,7 +2924,7 @@ CogARMCompiler >> tst: ignored rn: srcReg imm: immediate ror: rot [
 "also note that TST has no destReg
 	TST srcReg, #immediate ROR rot"
 
-	^self type: 1 op: 8 set: 1 rn: srcReg rd: 0 shifterOperand: ((rot>>1) <<8 bitOr: immediate)
+	^self type: 1 op: TstOpcode set: 1 rn: srcReg rd: 0 shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
 { #category : #encoding }
