@@ -127,8 +127,8 @@ OutOfLineLiteralsManager >> locateLiteral: aLiteral [
 { #category : #testing }
 OutOfLineLiteralsManager >> mustDumpLiterals: opcodeIndex [
 	<inline: true>
-	^cogit opcodeIndex >= firstOpcodeIndex
-	  and: [cogit opcodeIndex - firstOpcodeIndex >= cogit backEnd outOfLineLiteralOpcodeLimit]
+	^cogit getOpcodeIndex >= firstOpcodeIndex
+	  and: [cogit getOpcodeIndex - firstOpcodeIndex >= cogit backEnd outOfLineLiteralOpcodeLimit]
 ]
 
 { #category : #initialization }

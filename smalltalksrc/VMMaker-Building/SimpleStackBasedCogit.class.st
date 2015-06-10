@@ -1957,7 +1957,7 @@ SimpleStackBasedCogit >> genMoveTrueR: reg [
 SimpleStackBasedCogit >> genMustBeBooleanTrampolineFor: boolean called: trampolineName [
 	<var: #trampolineName type: #'char *'>
 	<inline: false>
-	opcodeIndex := 0.
+	self zeroOpcodeIndex.
 	"If the objectRepresentation does want true & false to be mobile then we need to record these addresses."
 	self assert: (objectRepresentation shouldAnnotateObjectReference: boolean) not.
 	self AddCq: boolean R: TempReg.
@@ -1989,7 +1989,7 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 	<var: #jmpSample type: #'AbstractInstruction *'>
 	<var: #continuePostSample type: #'AbstractInstruction *'>
 	<var: #jmpFail type: #'AbstractInstruction *'>
-	opcodeIndex := 0.
+	self zeroOpcodeIndex.
 
 	profiling ifTrue:
 		["Test nextProfileTick for being non-zero and call checkProfileTick: if so.
