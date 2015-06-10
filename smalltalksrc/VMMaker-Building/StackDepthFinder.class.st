@@ -166,6 +166,13 @@ StackDepthFinder >> jump: delta if: condition [
 	self doJump: delta
 ]
 
+{ #category : #'instruction decoding' }
+StackDepthFinder >> jumpOrPop: delta IfNotInstanceOf: behaviors [
+	"Conditional Jump bytecode."
+	self doJump: delta.
+	self drop.
+]
+
 { #category : #private }
 StackDepthFinder >> method: method pc: startpc [
 	super method: method pc: startpc.
@@ -403,6 +410,11 @@ StackDepthFinder >> storeIntoRemoteTemp: remoteTempIndex inVectorAt: tempVectorI
 StackDepthFinder >> storeIntoTemporaryVariable: offset [ 
 	"Store Top Of Stack Into Temporary Variable Of Method bytecode."
 
+]
+
+{ #category : #'instruction decoding' }
+StackDepthFinder >> trap [
+	
 ]
 
 { #category : #'instruction decoding' }
