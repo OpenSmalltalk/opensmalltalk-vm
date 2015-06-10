@@ -50,6 +50,7 @@ Class {
 		'opcode',
 		'machineCodeSize',
 		'maxSize',
+		'annotation',
 		'machineCode',
 		'operands',
 		'address',
@@ -107,10 +108,6 @@ CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlo
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an AbstractInstruction struct."
 	"{CogAbstractInstruction. CogIA32Compiler. CogARMCompiler} do:
 		[:c| Transcript print: c; cr. c printTypedefOn: Transcript]"
-	| machineCodeBytes |
-	machineCodeBytes := self ==  CogAbstractInstruction
-								ifTrue: [0]
-								ifFalse: [self basicNew machineCodeBytes].
 	(self filteredInstVarNames copyWithout: 'machineCode'), #('machineCode') do:
 		[:ivn|
 		ivn ~= 'bcpc' ifTrue:
@@ -118,7 +115,7 @@ CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlo
 				value: ivn
 				value: (ivn caseOf: {
 							['address']			-> [#'unsigned long'].
-							['machineCode']	-> [{#'unsigned char'. '[', machineCodeBytes printString, ']'}].
+							['machineCode']	-> [self machineCodeDeclaration].
 							['operands']		-> [{#'unsigned long'. '[', NumOperands, ']'}].
 							['dependent']		-> ['struct _AbstractInstruction *']}
 						otherwise:
@@ -141,6 +138,12 @@ CogAbstractInstruction class >> literalsManagerClass [
 	"Answer the manager that generates in-line literals;
 	 subclasses that use out-of-line literals override."
 	^InLineLiteralsManager
+]
+
+{ #category : #translation }
+CogAbstractInstruction class >> machineCodeDeclaration [
+	"Answer a dummy declaration.  Subclasses will override to provgide the real one."
+	^#(#'unsigned char' '[4]')
 ]
 
 { #category : #translation }
@@ -313,6 +316,16 @@ CogAbstractInstruction >> address [
 { #category : #accessing }
 CogAbstractInstruction >> address: theAddress [
 	^address := theAddress
+]
+
+{ #category : #accessing }
+CogAbstractInstruction >> annotation [
+	^annotation
+]
+
+{ #category : #accessing }
+CogAbstractInstruction >> annotation: aByte [
+	^annotation := aByte
 ]
 
 { #category : #coercion }

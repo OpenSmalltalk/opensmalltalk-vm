@@ -1044,7 +1044,7 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 StackToRegisterMappingCogit >> compileBlockBodies [
 	<inline: false>
 	| result compiledBlocksCount blockStart savedNeedsFrame savedNumArgs savedNumTemps
-	  initialStackPtr initialOpcodeIndex initialAnnotationIndex initialIndexOfIRC |
+	  initialStackPtr initialOpcodeIndex initialIndexOfIRC |
 	<var: #blockStart type: #'BlockStart *'>
 	self assert: blockCount > 0.
 	"scanBlock: in compileBlockEntry: sets both of these appropriately for each block."
@@ -1057,7 +1057,6 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 		[blockStart := self blockStartAt: compiledBlocksCount.
 		 self scanBlock: blockStart.
 		 initialOpcodeIndex := opcodeIndex.
-		 initialAnnotationIndex := annotationIndex.
 		 self cppIf: #NewspeakVM ifTrue:
 			[initialIndexOfIRC := indexOfIRC].
 		 [self compileBlockEntry: blockStart.
@@ -1068,7 +1067,8 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 		  "If the final simStackPtr is less than the initial simStackPtr then scanBlock: over-
 		   estimated the number of initial nils (because it assumed one or more pushNils to
 		   produce an operand were pushNils to initialize temps.  This is very rare, so
-		   compensate by checking, adjusting numInitialNils and recompiling the block body."
+		   compensate by checking, adjusting numInitialNils and recompiling the block body.
+		   N.B.  No need to reinitialize the literalsManager because it answers existing literals."
 		  initialStackPtr = simStackPtr]
 			whileFalse:
 				[self assert: initialStackPtr > simStackPtr.
@@ -1081,7 +1081,6 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 					inSmalltalk: [initialOpcodeIndex to: opcodeIndex - 1 do:
 									[:i| abstractOpcodes at: i put: (CogCompilerClass for: self)]].
 				 opcodeIndex := initialOpcodeIndex.
-				 annotationIndex := initialAnnotationIndex.
 				 self cppIf: #NewspeakVM ifTrue:
 					[indexOfIRC := initialIndexOfIRC]].
 		compiledBlocksCount := compiledBlocksCount + 1].
@@ -1967,8 +1966,7 @@ StackToRegisterMappingCogit >> genMarshalledSend: selector numArgs: numArgs send
 	 and: [annotation = IsDirectedSuperSend]) ifTrue:
 		[self genMoveConstant: tempOop R: TempReg].
 	self MoveCw: selector R: ClassReg.
-	self annotate: (self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1)))
-		with: annotation.
+	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation.
 	optStatus isReceiverResultRegLive: false.
 	^self ssPushRegister: ReceiverResultReg
 ]
@@ -4224,18 +4222,14 @@ StackToRegisterMappingCogit >> picAbortTrampolineFor: numArgs [
 
 { #category : #testing }
 StackToRegisterMappingCogit >> prevInstIsPCAnnotated [
-	| annotation prevIndex prevInst |
-	<var: #annotation type: #'InstructionAnnotation *'>
+	| prevIndex prevInst |
 	<var: #prevInst type: #'AbstractInstruction *'>
-	annotationIndex > 0 ifFalse:
-		[^false].
-	annotation := self addressOf: (annotations at: annotationIndex - 1).
-	(self isPCMappedAnnotation: annotation annotation) ifFalse:
+	opcodeIndex > 0 ifFalse:
 		[^false].
 	prevIndex := opcodeIndex - 1.
 	[prevIndex <= 0 ifTrue: [^false].
 	 prevInst := self abstractInstructionAt: prevIndex.
-	 annotation instruction = prevInst ifTrue:
+	 (self isPCMappedAnnotation: (prevInst annotation ifNil: [0])) ifTrue:
 		[^true].
 	 prevInst opcode = Label]
 		whileTrue:
