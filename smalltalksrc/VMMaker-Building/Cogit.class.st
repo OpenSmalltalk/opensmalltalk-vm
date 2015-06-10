@@ -171,7 +171,6 @@ Class {
 		'openPICSize',
 		'fixups',
 		'abstractOpcodes',
-		'annotations',
 		'generatorTable',
 		'primitiveGeneratorTable',
 		'byte0',
@@ -182,7 +181,6 @@ Class {
 		'bytecodeSetOffset',
 		'opcodeIndex',
 		'numAbstractOpcodes',
-		'annotationIndex',
 		'blockStarts',
 		'blockCount',
 		'labelCounter',
@@ -347,7 +345,6 @@ Cogit class >> ancilliaryClasses: options [
 		CogBlockStart.
 		CogBytecodeDescriptor.
 		CogBytecodeFixup.
-		CogInstructionAnnotation.
 		CogPrimitiveDescriptor.
 		CogBlockMethod.
 		CogMethod },
@@ -2367,12 +2364,10 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes [
 	<cmacro: '(numberOfAbstractOpcodes,numberOfBytecodes) do { \
 		int opcodeSize = sizeof(AbstractInstruction) * (numAbstractOpcodes = (numberOfAbstractOpcodes)); \
 		int fixupSize = sizeof(BytecodeFixup) * numAbstractOpcodes; \
-		int annotationSize = sizeof(InstructionAnnotation) * ((numAbstractOpcodes + 3) / 4); \
-		abstractOpcodes = alloca(opcodeSize + fixupSize + annotationSize); \
+		abstractOpcodes = alloca(opcodeSize + fixupSize); \
 		bzero(abstractOpcodes, opcodeSize + fixupSize); \
 		fixups = (void *)((char *)abstractOpcodes + opcodeSize); \
-		annotations = (void *)((char *)fixups + fixupSize); \
-		opcodeIndex = labelCounter = annotationIndex = 0; \
+		opcodeIndex = labelCounter = 0; \
 } while (0)'>
 	numAbstractOpcodes := numberOfAbstractOpcodes.
 	abstractOpcodes := CArrayAccessor on:
@@ -2381,10 +2376,7 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes [
 	fixups := CArrayAccessor on:
 						((1 to: numAbstractOpcodes) collect:
 							[:ign| self bytecodeFixupClass new]).
-	annotations := CArrayAccessor on:
-						((1 to: numAbstractOpcodes + 3 // 4) collect:
-							[:ign| CogInstructionAnnotation new]).
-	opcodeIndex := labelCounter := annotationIndex := 0
+	opcodeIndex := labelCounter := 0
 ]
 
 { #category : #initialization }
@@ -2401,20 +2393,17 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes i
 	<cmacro: '(numberOfAbstractOpcodes,numberOfBytecodes,failBlock) do { \
 		int opcodeSize = sizeof(AbstractInstruction) * (numAbstractOpcodes = (numberOfAbstractOpcodes)); \
 		int fixupSize = sizeof(BytecodeFixup) * numAbstractOpcodes; \
-		int annotationSize = sizeof(InstructionAnnotation) * ((numAbstractOpcodes + 3) / 4); \
-		int allocSize = opcodeSize + fixupSize + annotationSize; \
+		int allocSize = opcodeSize + fixupSize; \
 		if (allocSize > MaxStackAllocSize) failBlock; \
 		abstractOpcodes = alloca(allocSize); \
 		bzero(abstractOpcodes, opcodeSize + fixupSize); \
 		fixups = (void *)((char *)abstractOpcodes + opcodeSize); \
-		annotations = (void *)((char *)fixups + fixupSize); \
-		opcodeIndex = labelCounter = annotationIndex = 0; \
+		opcodeIndex = labelCounter = 0; \
 } while (0)'>
-	| opcodeSize fixupSize annotationSize allocSize |
+	| opcodeSize fixupSize allocSize |
 	opcodeSize := (self sizeof: CogAbstractInstruction) * numberOfAbstractOpcodes.
 	fixupSize := (self sizeof: CogBytecodeFixup) * numberOfAbstractOpcodes.
-	annotationSize := (self sizeof: CogInstructionAnnotation) * ((numberOfAbstractOpcodes + 3) / 4).
-	allocSize := opcodeSize + fixupSize + annotationSize.
+	allocSize := opcodeSize + fixupSize.
 	allocSize > MaxStackAllocSize ifTrue: [^failBlock value].
 	numAbstractOpcodes := numberOfAbstractOpcodes.
 	abstractOpcodes := CArrayAccessor on:
@@ -2423,10 +2412,7 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes i
 	fixups := CArrayAccessor on:
 						((1 to: numAbstractOpcodes) collect:
 							[:ign| self bytecodeFixupClass new]).
-	annotations := CArrayAccessor on:
-						((1 to: numAbstractOpcodes + 3 // 4) collect:
-							[:ign| CogInstructionAnnotation new]).
-	opcodeIndex := labelCounter := annotationIndex := 0
+	opcodeIndex := labelCounter := 0
 ]
 
 { #category : #'method map' }
@@ -2436,21 +2422,7 @@ Cogit >> annotate: abstractInstruction objRef: anOop [
 	(objectRepresentation shouldAnnotateObjectReference: anOop) ifTrue:
 		[(objectMemory isYoungObject: anOop) ifTrue:
 			[hasYoungReferent := true].
-		^self annotate: abstractInstruction with: IsObjectReference].
-	^abstractInstruction
-]
-
-{ #category : #'method map' }
-Cogit >> annotate: abstractInstruction with: annotationFlag [ "<Integer>"
-	<var: #abstractInstruction type: #'AbstractInstruction *'>
-	<returnTypeC: #'AbstractInstruction *'>
-	| annotation |
-	<var: #annotation type: #'InstructionAnnotation *'>
-	annotation := self addressOf: (annotations at: annotationIndex).
-	annotationIndex := annotationIndex + 1.
-	annotation
-		instruction: abstractInstruction;
-		annotation: annotationFlag.
+		 abstractInstruction annotation: IsObjectReference].
 	^abstractInstruction
 ]
 
@@ -2459,7 +2431,8 @@ Cogit >> annotateAbsolutePCRef: abstractInstruction [
 	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	<returnTypeC: #'AbstractInstruction *'>
 	<inline: true>
-	^self annotate: abstractInstruction with: IsAbsPCReference
+	abstractInstruction annotation: IsAbsPCReference.
+	^abstractInstruction
 ]
 
 { #category : #'method map' }
@@ -2467,7 +2440,8 @@ Cogit >> annotateBytecode: abstractInstruction [
 	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	<returnTypeC: #'AbstractInstruction *'>
 	<inline: true>
-	^self annotate: abstractInstruction with: HasBytecodePC
+	abstractInstruction annotation: HasBytecodePC.
+	^abstractInstruction
 ]
 
 { #category : #'method map' }
@@ -2475,7 +2449,8 @@ Cogit >> annotateCall: abstractInstruction [
 	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	<returnTypeC: #'AbstractInstruction *'>
 	<inline: true>
-	^self annotate: abstractInstruction with: IsRelativeCall
+	abstractInstruction annotation: IsRelativeCall.
+	^abstractInstruction
 ]
 
 { #category : #'method map' }
@@ -2483,7 +2458,8 @@ Cogit >> annotateNewspeakSend: abstractInstruction [
 	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	<returnTypeC: #'AbstractInstruction *'>
 	<inline: true>
-	^self annotate: abstractInstruction with: IsNSSendCall
+	abstractInstruction annotation: IsNSSendCall.
+	^abstractInstruction
 ]
 
 { #category : #'method map' }
@@ -6061,50 +6037,57 @@ Cogit >> generateMapAt: addressOrNull start: startAddress [
 	 In the most signficant bits are the type of annotation at the point reached.  A null
 	 byte ends the map."
 	| length location |
-	<var: #annotation type: #'InstructionAnnotation *'>
+	<var: #instruction type: #'AbstractInstruction *'>
 	length := 0.
 	location := startAddress.
-	0 to: annotationIndex - 1 do:
-		[:i| | annotation mcpc delta maxDelta mapEntry |
-		 annotation := self addressOf: (annotations at: i).
-		 mcpc := annotation instruction address + annotation instruction machineCodeSize.
-		 [(delta := mcpc - location / backEnd codeGranularity) > DisplacementMask] whileTrue:
-			[maxDelta := (delta min: MaxX2NDisplacement) bitClear: DisplacementMask.
-			 self assert: maxDelta >> AnnotationShift <= DisplacementMask.
+	0 to: opcodeIndex - 1 do:
+		[:i| | instruction mcpc delta maxDelta mapEntry |
+		instruction := self abstractInstructionAt: i.
+		instruction annotation ifNotNil:
+			[:annotation|
+			 self flag: 'if this is moved into e.g. CogAbstractInstruction>>annotationAddress then e.g. a push const can annotate the lit synth instr, not the reg push'.
+			 mcpc := instruction address + instruction machineCodeSize.
+			 [(delta := mcpc - location / backEnd codeGranularity) > DisplacementMask] whileTrue:
+				[maxDelta := (delta min: MaxX2NDisplacement) bitClear: DisplacementMask.
+				 self assert: maxDelta >> AnnotationShift <= DisplacementMask.
+				 addressOrNull ifNotNil:
+					[objectMemory
+						byteAt: addressOrNull - length
+						put: maxDelta >> AnnotationShift + DisplacementX2N.
+					 self traceMap: IsDisplacementX2N
+						instruction: instruction
+						byte: maxDelta >> AnnotationShift + DisplacementX2N
+						at: addressOrNull - length
+						for: mcpc].
+				 location := location + (maxDelta * backEnd codeGranularity).
+				 length := length + 1].
 			 addressOrNull ifNotNil:
-				[objectMemory
-					byteAt: addressOrNull - length
-					put: maxDelta >> AnnotationShift + DisplacementX2N.
-				 self traceMap: IsDisplacementX2N
-					  byte: maxDelta >> AnnotationShift + DisplacementX2N
-					  at: addressOrNull - length
-					  for: mcpc].
-			 location := location + (maxDelta * backEnd codeGranularity).
-			 length := length + 1].
-		 addressOrNull ifNotNil:
-			[mapEntry := delta + ((annotation annotation min: IsSendCall) << AnnotationShift).
-			 objectMemory byteAt: addressOrNull - length put: mapEntry.
-			 self traceMap: annotation
-				  byte: mapEntry
-				  at: addressOrNull - length
-				  for: mcpc].
-		 location := location + (delta * backEnd codeGranularity).
-		 length := length + 1.
-		 annotation annotation > IsSendCall ifTrue: "Add the necessary IsAnnotationExtension"
-			[addressOrNull ifNotNil:
-				[mapEntry := IsAnnotationExtension << AnnotationShift + (annotation annotation - IsSendCall).
+				[mapEntry := delta + ((annotation min: IsSendCall) << AnnotationShift).
 				 objectMemory byteAt: addressOrNull - length put: mapEntry.
 				 self traceMap: annotation
-					  byte: mapEntry
-					  at: addressOrNull - length
-					  for: mcpc].
-			 length := length + 1]].
+					instruction: instruction
+					byte: mapEntry
+					at: addressOrNull - length
+					for: mcpc].
+			 location := location + (delta * backEnd codeGranularity).
+			 length := length + 1.
+			 annotation > IsSendCall ifTrue: "Add the necessary IsAnnotationExtension"
+				[addressOrNull ifNotNil:
+					[mapEntry := IsAnnotationExtension << AnnotationShift + (annotation - IsSendCall).
+					 objectMemory byteAt: addressOrNull - length put: mapEntry.
+					 self traceMap: annotation
+						instruction: instruction
+						byte: mapEntry
+						at: addressOrNull - length
+						for: mcpc].
+				 length := length + 1]]].
 	addressOrNull ifNotNil:
 		[objectMemory byteAt: addressOrNull - length put: MapEnd.
 		 self traceMap: MapEnd
-			  byte: MapEnd
-			  at: addressOrNull - length
-			  for: 0].
+			instruction: nil
+			byte: MapEnd
+			at: addressOrNull - length
+			for: 0].
 	^length + 1
 ]
 
@@ -6374,6 +6357,12 @@ Cogit >> getCStackPointer [
 	<cmacro: '() CStackPointer'>
 	"and in the simulator we use..."
 	^objectMemory longAt: coInterpreter inMemoryCStackPointerAddress
+]
+
+{ #category : #'method map' }
+Cogit >> getIsObjectReference [
+	<cmacro: '() IsObjectReference'>
+	^IsObjectReference
 ]
 
 { #category : #'compile abstract instructions' }
@@ -8727,21 +8716,19 @@ Cogit >> recordRegisters [
 
 { #category : #initialization }
 Cogit >> recordRunTimeObjectReferences [
-	| annotation |
-	<var: #annotation type: #'InstructionAnnotation *'>
-	0 to: annotationIndex - 1 do:
-		[:i|
-		annotation := self addressOf: (annotations at: i).
-		annotation annotation = IsObjectReference ifTrue:
+	<var: #instruction type: #'AbstractInstruction *'>
+	0 to: opcodeIndex - 1 do:
+		[:i| | instruction |
+		instruction := self abstractInstructionAt: i.
+		instruction annotation = IsObjectReference ifTrue:
 			[self assert: runtimeObjectRefIndex < NumObjRefsInRuntime.
 			 self assert: hasYoungReferent not.
 			 hasYoungReferent ifTrue:
 				[self error: 'attempt to generate run-time routine containing young object reference.  Cannot initialize Cogit run-time.'].
 			 objectReferencesInRuntime
 				at: runtimeObjectRefIndex
-				put: (annotation instruction address + annotation instruction machineCodeSize) asInteger.
-			 runtimeObjectRefIndex := runtimeObjectRefIndex + 1]].
-	annotationIndex := 0
+				put: (instruction address + instruction machineCodeSize) asInteger.
+			 runtimeObjectRefIndex := runtimeObjectRefIndex + 1]]
 ]
 
 { #category : #debugging }
@@ -9826,24 +9813,23 @@ Cogit >> traceLinkedSendOffset [
 ]
 
 { #category : #'method map' }
-Cogit >> traceMap: annotation byte: byte at: address for: mcpc [
-	<cmacro: '(ig,no,re,d) 0'>
-	| s code bytecode |
+Cogit >> traceMap: annotation instruction: instruction byte: byte at: address for: mcpc [
+	<cmacro: '(ig,no,r,e,d) 0'>
+	| s bytecode |
 	(compilationTrace anyMask: 16) ifTrue:
-		[code := annotation isInteger ifTrue: [annotation] ifFalse: [annotation annotation].
-		(s := coInterpreter transcript)
+		[(s := coInterpreter transcript)
 			ensureCr;
-			print: code; nextPut: $/; nextPutAll: byte hex; space;
+			print: annotation; nextPut: $/; nextPutAll: byte hex; space;
 			nextPutAll: address hex; space; nextPutAll: mcpc hex; space;
-			nextPutAll: (AnnotationConstantNames detect: [:name| (Cogit classPool at: name ifAbsent: []) = code]); cr; flush.
-		(annotation isInteger not
-		 and: [annotation instruction bcpc isInteger]) ifTrue:
-			[s tab; print: annotation instruction bcpc; nextPut: $/.
-			 annotation instruction bcpc printOn: s base: 16.
+			nextPutAll: (AnnotationConstantNames detect: [:name| (Cogit classPool at: name ifAbsent: []) = annotation]); cr; flush.
+		(instruction notNil
+		 and: [instruction bcpc isInteger]) ifTrue:
+			[s tab; print: instruction bcpc; nextPut: $/.
+			 instruction bcpc printOn: s base: 16.
 			 s space.
-			 annotation instruction printStateOn: s.
+			 instruction printStateOn: s.
 			 s space.
-			 bytecode := objectMemory fetchByte: annotation instruction bcpc ofObject: methodObj.
+			 bytecode := objectMemory fetchByte: instruction bcpc ofObject: methodObj.
 			 bytecode := bytecode + (self bytecodeSetOffsetForHeader: (objectMemory methodHeaderOf: methodObj)).
 			 (self generatorAt: bytecode) printStateOn: s.
 			 s cr; flush]]

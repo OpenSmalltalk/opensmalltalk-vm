@@ -3146,8 +3146,7 @@ SimpleStackBasedCogit >> genSend: selector numArgs: numArgs sendTable: sendTable
 	 and: [annotation = IsDirectedSuperSend]) ifTrue:
 		[self genMoveConstant: tempOop R: TempReg].
 	self MoveCw: selector R: ClassReg.
-	self annotate: (self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1)))
-		with: annotation.
+	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation.
 	self PushR: ReceiverResultReg.
 	^0
 ]
