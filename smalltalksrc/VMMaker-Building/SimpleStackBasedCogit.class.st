@@ -3835,6 +3835,16 @@ SimpleStackBasedCogit >> v4: descriptor Long: pc Branch: nExts Distance: aMethod
 ]
 
 { #category : #'span functions' }
+SimpleStackBasedCogit >> v4: descriptor Long: pc BranchIfNotInstanceOf: nExts Distance: aMethodObj [
+	"**	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	| extBValue |
+	self assert: nExts >= 0.
+	self parseV4Exts: nExts priorTo: pc in: aMethodObj into: [:ea :eb| extBValue := eb].
+	^(objectMemory fetchByte: pc + 2 ofObject: aMethodObj) + (extBValue << 8)
+]
+
+{ #category : #'span functions' }
 SimpleStackBasedCogit >> v4: descriptor LongForward: pc Branch: nExts Distance: aMethodObj [
 	"242		11110010	i i i i i i i i	Jump i i i i i i i i (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)"
 	"243		11110011	i i i i i i i i	Pop and Jump 0n True i i i i i i i i (+ Extend A * 256)"
