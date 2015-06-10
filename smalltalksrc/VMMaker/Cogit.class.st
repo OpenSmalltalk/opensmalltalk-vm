@@ -344,8 +344,6 @@ Cogit class >> ancilliaryClasses: options [
 	ProcessorClass ifNil:
 		[Cogit initializeMiscConstants].
 	^{	CogMethodZone.
-		CogAbstractInstruction.
-		self activeCompilerClass.
 		CogBlockStart.
 		CogBytecodeDescriptor.
 		CogBytecodeFixup.
@@ -353,6 +351,7 @@ Cogit class >> ancilliaryClasses: options [
 		CogPrimitiveDescriptor.
 		CogBlockMethod.
 		CogMethod },
+	(self activeCompilerClass withAllSuperclasses copyUpThrough: CogAbstractInstruction),
 	((options at: #NewspeakVM ifAbsent: [false])
 		ifTrue: [{NewspeakCogMethod. NSSendCache}]
 		ifFalse: [#()])
@@ -918,7 +917,7 @@ Cogit class >> initializeMiscConstants [
 		ifTrue:
 			[EagerInstructionDecoration := initializationOptions at: #EagerInstructionDecoration]
 		ifFalse:
-			[EagerInstructionDecoration isNil ifTrue:
+			[EagerInstructionDecoration ifNil:
 				[EagerInstructionDecoration := false]]. "speeds up single stepping but could lose fidelity"
 
 	ProcessorClass := (initializationOptions at: #ISA ifAbsentPut: [#IA32]) caseOf: {
@@ -1513,6 +1512,32 @@ Cogit >> DivRd: dpreg1 Rd: dpreg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: DivRdRd operand: dpreg1 operand: dpreg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> DumpJumpLong: jumpTarget [
+	"Convenience conflation of JumpLong: & dumpLiterals for PIC generation.
+	 Literals must be dumped early and often to keep each PIC case the same size."
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	| inst |
+	<var: 'inst' type: #'AbstractInstruction *'>
+	inst := self gen: JumpLong operand: jumpTarget asInteger.
+	literalsManager dumpLiterals.
+	^inst
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> DumpJumpLongZero: jumpTarget [
+	"Convenience conflation of JumpLongZero: & dumpLiterals for PIC generation.
+	 Literals must be dumped early and often to keep each PIC case the same size."
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	| inst |
+	<var: 'inst' type: #'AbstractInstruction *'>
+	inst := self gen: JumpLongZero operand: jumpTarget asInteger.
+	literalsManager dumpLiterals.
+	^inst
 ]
 
 { #category : #'abstract instructions' }
@@ -3649,7 +3674,7 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 					[target := cPIC asInteger + self picInterpretAbortOffset]].
 	self CmpCw: caseNTag R: TempReg.
 	self MoveCw: operand R: SendNumArgsReg.
-	self JumpLongZero: target.
+	self DumpJumpLongZero: target.
 	self MoveCw: cPIC asUnsignedInteger R: ClassReg.
 	self JumpLong: (self cPICMissTrampolineFor: cPIC cmNumArgs).
 	self computeMaximumSizes.
@@ -3682,7 +3707,7 @@ Cogit >> cogMNUPICSelector: selector receiver: rcvr methodOperand: methodOperand
 		 ^0].
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
-	self allocateOpcodes: numPICCases * 7 bytecodes: 0.
+	self allocateOpcodes: numPICCases * 9 bytecodes: 0.
 	literalsManager resetLiterals: numPICCases * 2.
 	methodLabel address: startAddress; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self compileMNUCPIC: (self cCoerceSimple: startAddress to: #'CogMethod *')
@@ -3843,7 +3868,7 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 		[^self cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
-	self allocateOpcodes: numPICCases * 7 bytecodes: 0.
+	self allocateOpcodes: numPICCases * 9 bytecodes: 0.
 	literalsManager resetLiterals: numPICCases * 2.
 	methodLabel address: startAddress; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self compileCPIC: (self cCoerceSimple: startAddress to: #'CogMethod *')
@@ -4072,11 +4097,11 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: c
 
 	jumpNext := self compileCPICEntry.
 	self MoveCw: 0 R: SendNumArgsReg.
-	self JumpLong: case0CogMethod asInteger + cmNoCheckEntryOffset.
+	self DumpJumpLong: case0CogMethod asInteger + cmNoCheckEntryOffset.
 	endCPICCase0 := self CmpCw: case1Tag R: TempReg.
 	jumpNext jmpTarget: endCPICCase0.
 	self MoveCw: operand R: SendNumArgsReg.
-	self JumpLongZero: (isMNUCase ifTrue: [picMNUAbort] ifFalse: [targetEntry]) asInteger.
+	self DumpJumpLongZero: (isMNUCase ifTrue: [picMNUAbort] ifFalse: [targetEntry]) asInteger.
 	endCPICCase1 := self MoveCw: cPIC asUnsignedInteger R: ClassReg.
 	self JumpLong: (self cPICMissTrampolineFor: numArgs).
 	^0
@@ -4147,13 +4172,13 @@ Cogit >> compileClosedPICPrototype [
 	self compilePICAbort: numArgs.
 	jumpNext := self compileCPICEntry.
 	self MoveCw: 16r5EAF00D R: SendNumArgsReg.
-	self JumpLong: methodZoneBase + 16rCA5E10.
+	self DumpJumpLong: methodZoneBase + 16rCA5E10.
 	jumpNext jmpTarget: (endCPICCase0 := self Label).
 	1 to: numPICCases - 1 do:
 		[:h|
 		self CmpCw: 16rBABE1F15+h R: TempReg.
 		self MoveCw: 16rBADA550 + h R: SendNumArgsReg.
-		self JumpLongZero: 16rCA5E10 + (h * 16).
+		self DumpJumpLongZero: 16rCA5E10 + (h * 16).
 		h = 1 ifTrue:
 			[endCPICCase1 := self Label]].
 	self MoveCw: methodLabel address R: ClassReg.
@@ -4257,7 +4282,7 @@ Cogit >> compileMNUCPIC: cPIC methodOperand: methodOperand numArgs: numArgs [
 					ifTrue: [0]
 					ifFalse: [methodOperand].
 	self MoveCw: operand R: SendNumArgsReg.
-	self JumpLong: picMNUAbort asInteger.
+	self DumpJumpLong: picMNUAbort asInteger.
 	jumpNext jmpTarget: (self MoveCw: cPIC asUnsignedInteger R: ClassReg).
 	self JumpLong: (self cPICMissTrampolineFor: numArgs).
 	^0
@@ -4405,14 +4430,15 @@ Cogit >> computeMaximumSizes [
 	<inline: false>
 	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	| relativeAddress |
+	literalsManager dumpLiterals.
 	relativeAddress := 0.
 	0 to: opcodeIndex - 1 do:
 		[:i| | abstractInstruction |
 		abstractInstruction := self abstractInstructionAt: i.
-		abstractInstruction address: relativeAddress.
-		abstractInstruction computeMaximumSize.
-		relativeAddress := relativeAddress + abstractInstruction maxSize].
-
+		abstractInstruction
+			address: relativeAddress;
+			maxSize: abstractInstruction computeMaximumSize.
+		relativeAddress := relativeAddress + abstractInstruction maxSize]
 ]
 
 { #category : #printing }
@@ -5231,7 +5257,7 @@ Cogit >> gen: opcode "<Integer>" quickConstant: operandOne "<Integer>" operand: 
 
 { #category : #initialization }
 Cogit >> genCheckForInterruptsTrampoline [
-	opcodeIndex := 0.
+	self zeroOpcodeIndex.
 	"if we have a link register we will assume that it does not get automatically pushed onto the stack
 	and thus there is no need to pop it before saving to instructionPointerAddress"
 	backEnd hasLinkRegister
@@ -5272,14 +5298,13 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 and: regArg3 forCall: forCall ca
 	<returnTypeC: #'void (*genEnilopmartForandandforCallcalled(sqInt regArg1, sqInt regArg2, sqInt regArg3, sqInt forCall, char *trampolineName))(void)'>
 
 	| size endAddress enilopmart |
-	opcodeIndex := 0.
+	self zeroOpcodeIndex.
 	backEnd maybeEstablishVarBase. "Must happen first; value may be used in genLoadStackPointers"
 	backEnd genLoadStackPointers.
 	regArg3 ifNotNil: [self PopR: regArg3].
 	regArg2 ifNotNil: [self PopR: regArg2].
 	self PopR: regArg1.
 	self genEnilopmartReturn: forCall.
-	literalsManager dumpLiterals.
 	self computeMaximumSizes.
 	size := self generateInstructionsAt: methodZoneBase.
 	endAddress := self outputInstructionsAt: methodZoneBase.
@@ -5435,7 +5460,7 @@ Cogit >> genMethodAbortTrampoline [
 	 receiver must always contain an object (and hence be non-zero) on SIC miss."
 	| jumpSICMiss |
 	<var: #jumpSICMiss type: #'AbstractInstruction *'>
-	opcodeIndex := 0.
+	self zeroOpcodeIndex.
 	self CmpCq: 0 R: ReceiverResultReg.
 	jumpSICMiss := self JumpNonZero: 0.
 
@@ -5476,7 +5501,7 @@ Cogit >> genNSSendTrampolineFor: aRoutine numArgs: numArgs called: aString [
 	| jumpMiss jumpItsTheReceiverStupid |
 	<var: #jumpMiss type: #'AbstractInstruction *'>
 	<var: #jumpItsTheReceiverStupid type: #'AbstractInstruction *'>
-	opcodeIndex := 0.
+	self zeroOpcodeIndex.
 	objectRepresentation
 		genGetInlineCacheClassTagFrom: ReceiverResultReg
 		into: ClassReg
@@ -5527,7 +5552,7 @@ Cogit >> genNSSendTrampolineFor: aRoutine numArgs: numArgs called: aString [
 
 { #category : #initialization }
 Cogit >> genNonLocalReturnTrampoline [
-	opcodeIndex := 0.
+	self zeroOpcodeIndex.
 	"write the return address to the coInterpreter instructionPointerAddress;
 	 following the CallRT to this CISCs will have pushed it on the stack, so pop it first; RISCs will have it in
 	 their link register so just write it directly."
@@ -5557,7 +5582,7 @@ Cogit >> genPICAbortTrampoline [
 	 target or a call of ceMNUFromPICMNUMethod:receiver: to handle an
 	 MNU dispatch in a closed PIC.  It distinguishes the two by testing
 	 ClassReg.  If the register is zero then this is an MNU."
-	opcodeIndex := 0.
+	self zeroOpcodeIndex.
 	backEnd hasLinkRegister ifTrue:
 		[self PushR: LinkReg].
 	^self genInnerPICAbortTrampoline: 'cePICAbort'
@@ -5882,7 +5907,7 @@ Cogit >> generateClosedPICPrototype [
 	numPICCases := 6.
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
-	self allocateOpcodes: numPICCases * 7 bytecodes: 0.
+	self allocateOpcodes: numPICCases * 9 bytecodes: 0.
 	literalsManager resetLiterals: numPICCases * 2.
 	methodLabel address: methodZoneBase; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self compileClosedPICPrototype.
@@ -5912,7 +5937,7 @@ Cogit >> generateCogMethod: selector [
 	| codeSize headerSize mapSize totalSize startAddress result method |
 	<var: #method type: #'CogMethod *'>
 	headerSize := self sizeof: CogMethod.
-	methodLabel address: headerSize negated.
+	methodLabel address: methodZone freeStart.
 	self computeMaximumSizes.
 	methodLabel concretizeAt: methodZone freeStart.
 	codeSize := self generateInstructionsAt: methodLabel address + headerSize.
@@ -6303,6 +6328,7 @@ Cogit >> generateVMOwnerLockFunctions [
 	self cppIf: COGMTVM
 		ifTrue:
 			[self allocateOpcodes: backEnd numLowLevelLockOpcodes bytecodes: 0.
+			self zeroOpcodeIndex.
 			initialPC := 0.
 			endPC := numAbstractOpcodes - 1.
 			startAddress := methodZoneBase.
@@ -6311,8 +6337,7 @@ Cogit >> generateVMOwnerLockFunctions [
 			self recordGeneratedRunTime: 'ceTryLockVMOwner' address: startAddress.
 			ceTryLockVMOwner := self cCoerceSimple: startAddress to: #'unsigned long (*)(void)'.
 
-			opcodeIndex := 0.
-			literalsManager resetLiterals: 1.
+			self zeroOpcodeIndex.
 			initialPC := 0.
 			endPC := numAbstractOpcodes - 1.
 			startAddress := methodZoneBase.
@@ -8236,8 +8261,8 @@ Cogit >> outputInstructionsForGeneratedRuntimeAt: startAddress [
 	"Output instructions generated for one of the generated run-time routines, a trampoline, etc"
 	| size endAddress |
 	<inline: false>
-	literalsManager dumpLiterals.
 	self computeMaximumSizes.
+	methodLabel address: startAddress. "for addressIsInCurrentCompilation:"
 	size := self generateInstructionsAt: startAddress.
 	endAddress := self outputInstructionsAt: startAddress.
 	self assert: startAddress + size = endAddress.

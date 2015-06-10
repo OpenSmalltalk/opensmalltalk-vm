@@ -24,6 +24,14 @@ CogInLineLiteralsARMCompiler >> extract32BitOperandFrom4InstructionsPreceeding: 
 	 + ((objectMemory byteAt: addr - 16) << 24)
 ]
 
+{ #category : #accessing }
+CogInLineLiteralsARMCompiler >> getDefaultCogCodeSize [
+	"Return the default number of bytes to allocate for native code at startup.
+	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
+	<inline: true>
+	^1024 * 1536
+]
+
 { #category : #'inline cacheing' }
 CogInLineLiteralsARMCompiler >> inlineCacheTagAt: callSiteReturnAddress [
 	"Answer the inline cache tag for the return address of a send."
@@ -44,7 +52,7 @@ CogInLineLiteralsARMCompiler >> insert32BitOperand: operand into4InstructionsPre
 { #category : #testing }
 CogInLineLiteralsARMCompiler >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction."
-	^self isJump or: [opcode = AlignmentNops or: [opcode = Call]]
+	^self isJump or: [opcode = AlignmentNops]
 ]
 
 { #category : #'inline cacheing' }

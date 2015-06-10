@@ -11,15 +11,32 @@ CogOutOfLineLiteralsARMCompiler class >> literalsManagerClass [
 
 { #category : #'generate machine code' }
 CogOutOfLineLiteralsARMCompiler >> concretizeLiteral [
+	| literalAsInstruction literal |
+	<var: #jumpTarget type: #'AbstractInstruction *'>
+	literalAsInstruction := cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'.
+	literal := (self isAnInstruction: literalAsInstruction)
+				ifTrue: [literalAsInstruction address]
+				ifFalse: [self cCode: [literalAsInstruction asUnsignedInteger]
+							inSmalltalk: [literalAsInstruction]].
 	self assert: (dependent notNil and: [dependent opcode = Literal and: [dependent address = address]]).
-	self machineCodeAt: 0 put: (operands at: 0)
+	self machineCodeAt: 0 put: literal
+]
+
+{ #category : #accessing }
+CogOutOfLineLiteralsARMCompiler >> getDefaultCogCodeSize [
+	"Return the default number of bytes to allocate for native code at startup.
+	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
+	<inline: true>
+	^1024 * 1280
 ]
 
 { #category : #testing }
 CogOutOfLineLiteralsARMCompiler >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction.  With out-of-line literals any instruction
 	 that refers to a literal depends on the address of the literal, so add them in addition to the jumps."
-	^self isJump or: [opcode = AlignmentNops or: [opcode = Call or: [dependent notNil and: [dependent opcode = Literal]]]]
+	^self isJump
+	  or: [opcode = AlignmentNops
+	  or: [dependent notNil and: [dependent opcode = Literal]]]
 ]
 
 { #category : #accessing }
@@ -44,8 +61,20 @@ CogOutOfLineLiteralsARMCompiler >> moveCw: constant intoR: destReg [
 	 Literals are stored out-of-line; emit a LDR with the relevant offset."
 	 <var: 'constant' type: #usqInt>
 	<inline: true>
-	self machineCodeAt: 0 put: (self ldr: destReg rn: PC plusImm: address - dependent address).
+	self assert: (cogit addressIsInCurrentCompilation: dependent address).
+	self machineCodeAt: 0
+		put: (self
+				ldr: destReg
+				rn: PC
+				plus: (dependent address >= (address + 8) ifTrue: [1] ifFalse: [0])
+				imm: (dependent address - (address + 8)) abs).
 	^machineCodeSize := 4
+]
+
+{ #category : #'compile abstract instructions' }
+CogOutOfLineLiteralsARMCompiler >> outOfLineLiteralOpcodeLimit [
+	"The maximum offset in a LDR is 1<<12.  Be conservative."
+	^1<<(11-2)
 ]
 
 { #category : #'generate machine code' }
@@ -102,7 +131,7 @@ CogOutOfLineLiteralsARMCompiler >> usesOutOfLineLiteral [
 		[CallFull]		-> [^true].
 		[JumpFull]		-> [^true].
 		"Arithmetic"
-		[AddCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
+		[AddCqR]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
 		[AndCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[AndCqRR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[CmpCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
@@ -120,17 +149,19 @@ CogOutOfLineLiteralsARMCompiler >> usesOutOfLineLiteral [
 						-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		"Data Movement"						
 		[MoveCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
-		[MoveCwR]		-> [^true].
+		[MoveCwR]		-> [^((self isAnInstruction: (operands at: 0)) "i.e. a label, which by definition will be in the current compilation."
+							  or: [cogit addressIsInCurrentCompilation: (operands at: 0)]) not].
 		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		[MoveRAw]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
 		[MoveRMwr]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:u :i| false] ifFalse: [true]].
-		[MoveRdM64r]	-> [^true]. 
+		[MoveRdM64r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:u :i| false] ifFalse: [true]]. 
 		[MoveMbrR]		-> [^self is12BitValue: (operands at: 0) ifTrue: [:u :i| false] ifFalse: [true]].
 		[MoveRMbr]		-> [^self is12BitValue: (operands at: 1) ifTrue: [:u :i| false] ifFalse: [true]].
 		[MoveM16rR]	-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
-		[MoveM64rRd]	-> [^true].
+		[MoveM64rRd]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:u :i| false] ifFalse: [true]].
 		[MoveMwrR]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:u :i| false] ifFalse: [true]].
-		[PushCw]		-> [^true].
+		[PushCw]		-> [^((self isAnInstruction: (operands at: 0)) "i.e. a label, which by definiion will be in the current compilation."
+							  or: [cogit addressIsInCurrentCompilation: (operands at: 0)]) not].
 		[PushCq]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[PrefetchAw] 	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		}
