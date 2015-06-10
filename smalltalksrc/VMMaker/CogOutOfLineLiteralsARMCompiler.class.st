@@ -30,6 +30,11 @@ CogOutOfLineLiteralsARMCompiler >> getDefaultCogCodeSize [
 	^1024 * 1280
 ]
 
+{ #category : #'inline cacheing' }
+CogOutOfLineLiteralsARMCompiler >> inlineCacheTagAt: address [ 
+	^objectMemory longAt: (self pcRelativeAddressAt: address - 8)
+]
+
 { #category : #testing }
 CogOutOfLineLiteralsARMCompiler >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction.  With out-of-line literals any instruction
@@ -75,6 +80,18 @@ CogOutOfLineLiteralsARMCompiler >> moveCw: constant intoR: destReg [
 CogOutOfLineLiteralsARMCompiler >> outOfLineLiteralOpcodeLimit [
 	"The maximum offset in a LDR is 1<<12.  Be conservative."
 	^1<<(11-2)
+]
+
+{ #category : #'inline cacheing' }
+CogOutOfLineLiteralsARMCompiler >> pcRelativeAddressAt: address [
+	"Extract the address of the ldr rX, [pc, #NNN] instruction at address"
+	| inst offset |
+	inst := objectMemory longAt: address.
+	self assert: (inst bitAnd: 16rFF5F0000) = (self ldr: 0 rn: PC plus: 0 imm: 0).
+	offset := inst bitAnd: 16rFFF.
+	^address + 8 + ((inst anyMask: 1 << 23)
+						ifTrue: [offset]
+						ifFalse: [offset negated])
 ]
 
 { #category : #'generate machine code' }
