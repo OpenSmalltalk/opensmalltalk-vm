@@ -35,7 +35,7 @@ CogOutOfLineLiteralsARMCompiler >> getDefaultCogCodeSize [
 ]
 
 { #category : #'inline cacheing' }
-CogOutOfLineLiteralsARMCompiler >> inlineCacheTagAt: address [ 
+CogOutOfLineLiteralsARMCompiler >> inlineCacheTagAt: address [
 	^objectMemory longAt: (self pcRelativeAddressAt: address - 8)
 ]
 
@@ -46,6 +46,22 @@ CogOutOfLineLiteralsARMCompiler >> isPCDependent [
 	^self isJump
 	  or: [opcode = AlignmentNops
 	  or: [dependent notNil and: [dependent opcode = Literal]]]
+]
+
+{ #category : #'generate machine code' }
+CogOutOfLineLiteralsARMCompiler >> isSharable [
+	"Hack:  To know if a literal should be unique (not shared) mark the second operand."
+	<inline: true>
+	self assert: opcode = Literal.
+	^(operands at: 1) isNil
+]
+
+{ #category : #'generate machine code' }
+CogOutOfLineLiteralsARMCompiler >> isUnique [
+	"Hack:  To know if a literal should be unique (not shared) mark the second operand."
+	<inline: true>
+	self assert: opcode = Literal.
+	^(operands at: 1) notNil
 ]
 
 { #category : #accessing }
@@ -61,6 +77,7 @@ CogOutOfLineLiteralsARMCompiler >> literalOpcodeIndex [
 	"Hack:  To know how far away a literal is from its referencing instruction we store
 	 its opcodeIndex, or -1, if as yet unassigned, in the second operand of the literal."
 	<inline: true>
+	self assert: opcode = Literal.
 	^operands at: 2
 ]
 
@@ -98,11 +115,42 @@ CogOutOfLineLiteralsARMCompiler >> pcRelativeAddressAt: address [
 						ifFalse: [offset negated])
 ]
 
+{ #category : #'inline cacheing' }
+CogOutOfLineLiteralsARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag target: callTargetAddress [
+	"Rewrite an inline cache to call a different target for a new tag.  This variant is used
+	 to link unlinked sends in ceSend:to:numArgs: et al.  Answer the extent of the code
+	 change which is used to compute the range of the icache to flush."
+	<var: #callSiteReturnAddress type: #usqInt>
+	<var: #callTargetAddress type: #usqInt>
+	| call callDistance |
+	callTargetAddress >= cogit minCallAddress ifFalse:
+		[self error: 'linking callsite to invalid address'].
+	callDistance := (callTargetAddress - (callSiteReturnAddress + 8 "pc offset"- 4 "return offset")) signedIntToLong.
+	self assert: (self isInImmediateJumpRange: callDistance). "we don't support long call updates here"
+	call := self bl: callDistance.
+	objectMemory
+		longAt: callSiteReturnAddress - 4 put: call;
+		longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: cacheTag.
+	self assert: (self inlineCacheTagAt: callSiteReturnAddress) = cacheTag.
+	"self cCode: ''
+		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress - 1]."
+	^4
+]
+
+{ #category : #'generate machine code' }
+CogOutOfLineLiteralsARMCompiler >> setIsUnique [
+	"Hack:  To know if a literal should be unique (not shared) mark the second operand."
+	<inline: true>
+	self assert: opcode = Literal.
+	^operands at: 1 put: true
+]
+
 { #category : #'generate machine code' }
 CogOutOfLineLiteralsARMCompiler >> setLiteralOpcodeIndex: index [
 	"Hack:  To know how far away a literal is from its referencing instruction we store
 	 its opcodeIndex, or -1, if as yet unassigned, in the second operand of the literal."
 	<inline: true>
+	self assert: opcode = Literal.
 	^operands at: 2 put: index
 ]
 
