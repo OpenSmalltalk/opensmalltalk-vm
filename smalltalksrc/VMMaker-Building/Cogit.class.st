@@ -3137,7 +3137,7 @@ Cogit >> checkIfValidOopRef: annotation pc: mcpc cogMethod: cogMethod [
 	<var: #nsSendCache type: #'NSSendCache *'>
 	annotation = IsObjectReference ifTrue:
 		[| literal |
-		 literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
+		 literal := literalsManager fetchLiteralAtAnnotatedAddress: mcpc asUnsignedInteger using: backEnd.
 		 (objectRepresentation checkValidOopReference: literal) ifFalse:
 			[coInterpreter print: 'object ref leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 			^1]].
@@ -3187,7 +3187,7 @@ Cogit >> checkIfValidOopRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 	<var: #nsSendCache type: #'NSSendCache *'>
 	| literal entryPoint |
 	annotation = IsObjectReference ifTrue:
-		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
+		[literal := literalsManager fetchLiteralAtAnnotatedAddress: mcpc asUnsignedInteger using: backEnd.
 		 (self asserta: (objectRepresentation checkValidOopReference: literal)) ifFalse:
 			[^1].
 		((objectRepresentation couldBeObject: literal)
@@ -6059,8 +6059,8 @@ Cogit >> generateMapAt: addressOrNull start: startAddress [
 		instruction := self abstractInstructionAt: i.
 		instruction annotation ifNotNil:
 			[:annotation|
-			 self flag: 'if this is moved into e.g. CogAbstractInstruction>>annotationAddress then e.g. a push const can annotate the lit synth instr, not the reg push'.
-			 mcpc := instruction address + instruction machineCodeSize.
+			 literalsManager assertValidAnnotation: annotation for: instruction.
+			 mcpc := instruction mapEntryAddress.
 			 [(delta := mcpc - location / backEnd codeGranularity) > DisplacementMask] whileTrue:
 				[maxDelta := (delta min: MaxX2NDisplacement) bitClear: DisplacementMask.
 				 self assert: maxDelta >> AnnotationShift <= DisplacementMask.
@@ -7598,7 +7598,7 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 	<var: #nsSendCache type: #'NSSendCache *'>
 	| literal |
 	annotation = IsObjectReference ifTrue:
-		[literal := backEnd literalBeforeFollowingAddress: mcpc asUnsignedInteger.
+		[literal := literalsManager fetchLiteralAtAnnotatedAddress: mcpc asUnsignedInteger using: backEnd.
 		 (objectRepresentation
 				markAndTraceLiteral: literal
 				in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
@@ -7643,7 +7643,7 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 	<var: #nsSendCache type: #'NSSendCache *'>
 	| literal |
 	annotation = IsObjectReference ifTrue:
-		[literal := backEnd literalBeforeFollowingAddress: mcpc asUnsignedInteger.
+		[literal := literalsManager fetchLiteralAtAnnotatedAddress: mcpc asUnsignedInteger using: backEnd.
 		 (objectRepresentation
 				markAndTraceLiteral: literal
 				in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
@@ -7748,7 +7748,7 @@ Cogit >> markYoungObjects: annotation pc: mcpc method: cogMethod [
 	<var: #nsSendCache type: #'NSSendCache *'>
 	| literal |
 	annotation = IsObjectReference ifTrue:
-		[literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
+		[literal := literalsManager fetchLiteralAtAnnotatedAddress: mcpc asUnsignedInteger using: backEnd.
 		 objectRepresentation markAndTraceLiteralIfYoung: literal].
 
 	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
@@ -8927,11 +8927,11 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 	<var: #nsSendCache type: #'NSSendCache *'>
 	annotation = IsObjectReference ifTrue:
 		[| literal mappedLiteral |
-		 literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
+		 literal := literalsManager fetchLiteralAtAnnotatedAddress: mcpc asUnsignedInteger using: backEnd.
 		 (objectRepresentation couldBeObject: literal) ifTrue:
 			[mappedLiteral := objectRepresentation remapObject: literal.
 			 literal ~= mappedLiteral ifTrue:
-				[backEnd storeLiteral: mappedLiteral beforeFollowingAddress: mcpc asInteger.
+				[literalsManager storeLiteral: mappedLiteral atAnnotatedAddress: mcpc asUnsignedInteger using: backEnd.
 				 codeModified := true].
 			 (hasYoungPtr ~= 0
 			  and: [objectMemory isYoung: mappedLiteral]) ifTrue:
