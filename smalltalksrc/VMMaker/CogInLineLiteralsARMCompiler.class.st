@@ -130,8 +130,6 @@ CogInLineLiteralsARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag:
 	"Rewrite an inline cache to call a different target for a new tag.  This variant is used
 	 to link unlinked sends in ceSend:to:numArgs: et al.  Answer the extent of the code
 	 change which is used to compute the range of the icache to flush."
-	
-	"chacheTag contains an oop to the selector which need be loaded before jumping"
 	<var: #callSiteReturnAddress type: #usqInt>
 	<var: #callTargetAddress type: #usqInt>
 	| call callDistance |

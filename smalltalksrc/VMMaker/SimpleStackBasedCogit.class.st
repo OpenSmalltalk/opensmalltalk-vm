@@ -3035,11 +3035,9 @@ SimpleStackBasedCogit >> genQuickReturnConst [
 	| constant |
 	constant := coInterpreter quickPrimitiveConstantFor: primitiveIndex.
 	self annotate:
-			(self gen: ((objectRepresentation isImmediate: constant)
-						ifTrue: [MoveCqR]
-						ifFalse: [MoveCwR])
-				operand: constant
-				operand: ReceiverResultReg)
+			((objectRepresentation isImmediate: constant)
+				ifTrue: [self MoveCq: constant R: ReceiverResultReg]
+				ifFalse: [self MoveCw: constant R: ReceiverResultReg])
 		objRef: constant.
 	^self genUpArrowReturn
 ]
@@ -3145,7 +3143,7 @@ SimpleStackBasedCogit >> genSend: selector numArgs: numArgs sendTable: sendTable
 	(BytecodeSetHasDirectedSuperSend
 	 and: [annotation = IsDirectedSuperSend]) ifTrue:
 		[self genMoveConstant: tempOop R: TempReg].
-	self MoveCw: selector R: ClassReg.
+	self MoveUniqueCw: selector R: ClassReg.
 	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation.
 	self PushR: ReceiverResultReg.
 	^0
@@ -3191,7 +3189,7 @@ SimpleStackBasedCogit >> genSendAbsentImplicitOrOuter: selector numArgs: numArgs
 	self marshallAbsentReceiverSendArguments: numArgs.
 
 	"Load the cache last so it is a fixed distance from the call."
-	self MoveCw: nsSendCache R: SendNumArgsReg.
+	self MoveUniqueCw: nsSendCache R: SendNumArgsReg.
 	self CallNewspeakSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
 
 	self PushR: ReceiverResultReg.
