@@ -1635,7 +1635,7 @@ char *getVersionInfo(int verbose)
 #else
 # define INTERP_BUILD interpreterVersion
 #endif
-  extern int   vm_serial;
+  extern char *revisionAsString();
   extern char *vm_date, *cc_version, *ux_version;
   char *info= (char *)malloc(4096);
   info[0]= '\0';
@@ -1665,7 +1665,7 @@ char *getVersionInfo(int verbose)
 
   if (verbose)
     sprintf(info+strlen(info), IMAGE_DIALECT_NAME " VM version: ");
-  sprintf(info+strlen(info), "%s #%d", VM_VERSION, vm_serial);
+  sprintf(info+strlen(info), "%s-%s ", VM_VERSION, revisionAsString());
 #if defined(USE_XSHM)
   sprintf(info+strlen(info), " XShm");
 #endif
