@@ -514,7 +514,11 @@ TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPr
 	export 
 		ifTrue:[aStream nextPutAll: 'EXPORT('; nextPutAll: returnType; nextPut: $)]
 		ifFalse:
-			[self isStatic ifTrue:[aStream nextPutAll: 'static '].
+			[self isStatic
+				ifTrue: [aStream nextPutAll: 'static ']
+				ifFalse:
+					[isPrototype ifTrue:
+						[aStream nextPutAll: 'extern ']].
 			 (isPrototype or: [inline ~~ #always]) ifFalse: [aStream nextPutAll: 'inline '].
 			 aStream nextPutAll: returnType].
 	isPrototype ifTrue: [aStream space] ifFalse: [aStream cr].

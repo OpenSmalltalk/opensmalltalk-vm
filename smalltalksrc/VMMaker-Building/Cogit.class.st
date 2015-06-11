@@ -341,14 +341,15 @@ Cogit class >> additionalSelectorTables [
 Cogit class >> ancilliaryClasses: options [
 	ProcessorClass ifNil:
 		[Cogit initializeMiscConstants].
-	^{	CogMethodZone.
+	^(self activeCompilerClass withAllSuperclasses copyUpThrough: CogAbstractInstruction),
+	  {	CogMethodZone.
 		CogBlockStart.
 		CogBytecodeDescriptor.
 		CogBytecodeFixup.
 		CogPrimitiveDescriptor.
 		CogBlockMethod.
-		CogMethod },
-	(self activeCompilerClass withAllSuperclasses copyUpThrough: CogAbstractInstruction),
+		CogMethod.
+		self activeCompilerClass literalsManagerClass},
 	((options at: #NewspeakVM ifAbsent: [false])
 		ifTrue: [{NewspeakCogMethod. NSSendCache}]
 		ifFalse: [#()])
@@ -548,7 +549,6 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			as: #'AbstractInstruction *'
 				in: aCCodeGenerator.
 	aCCodeGenerator
-		declareVar: #annotations type: #'InstructionAnnotation *';
 		declareVar: #blockStarts type: #'BlockStart *';
 		declareVar: #fixups type: #'BytecodeFixup *'.
 	aCCodeGenerator
@@ -986,7 +986,7 @@ Cogit class >> isCogitClass [
 { #category : #translation }
 Cogit class >> isNonArgumentImplicitReceiverVariableName: aString [
 	^#('cogit' 'coInterpreter'
-		'methodZone'
+		'methodZone' 'literalsManager'
 		'objectMemory' 'objectRepresentation' 'manager') includes: aString
 ]
 
@@ -1520,7 +1520,7 @@ Cogit >> DumpJumpLong: jumpTarget [
 	| inst |
 	<var: 'inst' type: #'AbstractInstruction *'>
 	inst := self gen: JumpLong operand: jumpTarget asInteger.
-	literalsManager dumpLiterals.
+	literalsManager dumpLiterals: false.
 	^inst
 ]
 
@@ -1533,7 +1533,7 @@ Cogit >> DumpJumpLongZero: jumpTarget [
 	| inst |
 	<var: 'inst' type: #'AbstractInstruction *'>
 	inst := self gen: JumpLongZero operand: jumpTarget asInteger.
-	literalsManager dumpLiterals.
+	literalsManager dumpLiterals: false.
 	^inst
 ]
 
@@ -4416,7 +4416,7 @@ Cogit >> computeMaximumSizes [
 	<inline: false>
 	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	| relativeAddress |
-	literalsManager dumpLiterals.
+	literalsManager dumpLiterals: false.
 	relativeAddress := 0.
 	0 to: opcodeIndex - 1 do:
 		[:i| | abstractInstruction |
@@ -5106,7 +5106,6 @@ Cogit >> gen: opcode "<Integer>" literal: operand [ "<Integer|CogAbstractInstruc
 	 must hence always be encoded in a form that allows updating to refer to a different value."
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	^literalsManager
 		checkLiteral: operand
 		forInstruction: (self gen: opcode operand: operand)
@@ -5119,7 +5118,6 @@ Cogit >> gen: opcode "<Integer>" literal: operandOne "<Integer>" operand: operan
 	 must hence always be encoded in a form that allows updating to refer to a different value."
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	^literalsManager
 		checkLiteral: operandOne
 		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo)
@@ -5147,7 +5145,6 @@ Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstru
 	 must hence always be encoded in a form that allows updating to refer to a different value."
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	^literalsManager
 		checkLiteral: operandTwo
 		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo)
@@ -5191,7 +5188,6 @@ Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstru
 	"Quick constants are those the back end is free to encode as compactly as possible."
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	^literalsManager
 		checkQuickConstant: operandTwo
 		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo)
@@ -5202,7 +5198,6 @@ Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstru
 	"Quick constants are those the back end is free to encode as compactly as possible.""<Integer|CogAbstractInstruction>"
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	^literalsManager
 		checkQuickConstant: operandTwo
 		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo operand: operandThree)
@@ -5213,7 +5208,6 @@ Cogit >> gen: opcode "<Integer>" quickConstant: operand [ "<Integer>"
 	"Quick constants are those the back end is free to encode as compactly as possible."
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	^literalsManager
 		checkQuickConstant: operand
 		forInstruction: (self gen: opcode operand: operand)
@@ -5224,7 +5218,6 @@ Cogit >> gen: opcode "<Integer>" quickConstant: operandOne "<Integer>" operand: 
 	"Quick constants are those the back end is free to encode as compactly as possible."
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	^literalsManager
 		checkQuickConstant: operandOne
 		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo)
@@ -5235,7 +5228,6 @@ Cogit >> gen: opcode "<Integer>" quickConstant: operandOne "<Integer>" operand: 
 	"Quick constants are those the back end is free to encode as compactly as possible.""<Integer|CogAbstractInstruction>"
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	^literalsManager
 		checkQuickConstant: operandOne
 		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo operand: operandThree)
@@ -5248,7 +5240,6 @@ Cogit >> gen: opcode "<Integer>" uniqueLiteral: operandOne "<Integer>" operand: 
 	 must hence always be encoded in a form that allows updating to refer to a different value."
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	^literalsManager
 		uniqueLiteral: operandOne
 		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo)
@@ -7830,7 +7821,8 @@ Cogit >> maybeDumpLiterals: descriptor [
 	((literalsManager mustDumpLiterals: opcodeIndex)
 	  or: [descriptor isUnconditionalBranch
 	  or: [descriptor isReturn]]) ifTrue:
-		[literalsManager dumpLiterals]
+		[literalsManager dumpLiterals: (descriptor isUnconditionalBranch
+										or: [descriptor isReturn]) not]
 ]
 
 { #category : #debugging }
