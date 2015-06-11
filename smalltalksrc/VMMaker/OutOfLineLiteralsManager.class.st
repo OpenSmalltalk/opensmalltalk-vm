@@ -9,6 +9,7 @@ Class {
 	#superclass : #VMClass,
 	#instVars : [
 		'cogit',
+		'objectMemory',
 		'firstOpcodeIndex',
 		'nextLiteralIndex',
 		'lastDumpedLiteralIndex',
@@ -59,6 +60,14 @@ OutOfLineLiteralsManager >> allocateLiterals: initialNumLiterals [
 		 literalsSize := initialNumLiterals]
 ]
 
+{ #category : #'generate machine code' }
+OutOfLineLiteralsManager >> assertValidAnnotation: annotation for: instruction [
+	"Insist that the IsObjectReference applies only to out-of-line literals."
+	<var: #instruction type: #'AbstractInstruction *'>
+	<inline: true>
+	self assert: (annotation ~= cogit getIsObjectReference or: [instruction opcode = Literal])
+]
+
 { #category : #'compile abstract instructions' }
 OutOfLineLiteralsManager >> checkLiteral: literal forInstruction: anInstruction [
 	<var: #anInstruction type: #'AbstractInstruction *'>
@@ -81,6 +90,7 @@ OutOfLineLiteralsManager >> checkQuickConstant: literal forInstruction: anInstru
 OutOfLineLiteralsManager >> cogit: aCogit [
 	<doNotGenerate>
 	cogit := aCogit.
+	objectMemory := aCogit objectMemory.
 	literalsSize := 0
 ]
 
@@ -104,6 +114,15 @@ OutOfLineLiteralsManager >> dumpLiterals: generateBranchAround [
 
 	firstOpcodeIndex := cogit getOpcodeIndex.
 	lastDumpedLiteralIndex := nextLiteralIndex
+]
+
+{ #category : #'garbage collection' }
+OutOfLineLiteralsManager >> fetchLiteralAtAnnotatedAddress: address using: instruction [
+	"With out-of-line literals, the IsObjectReference annotation refers to
+	 the start of the literal and hence access the memory directly."
+	<var: 'instruction' type: #'AbstractInstruction *'>
+	<inline: true>
+	^objectMemory longAt: address
 ]
 
 { #category : #'compile abstract instructions' }
@@ -170,6 +189,16 @@ OutOfLineLiteralsManager >> resetLiterals: numLiteralsHint [
 			[0 to: literalsSize - 1 do: [:i| literals at: i put: nil]].
 	firstOpcodeIndex := 1 << 16. "an impossibly high value"
 	nextLiteralIndex := lastDumpedLiteralIndex := 0
+]
+
+{ #category : #'garbage collection' }
+OutOfLineLiteralsManager >> storeLiteral: literal atAnnotatedAddress: address using: instruction [
+	"With out-of-line literals, the IsObjectReference annotation refers to
+	 the start of the literal and hence access the memory directly."
+	<var: 'address' type: #usqInt>
+	<var: 'instruction' type: #'AbstractInstruction *'>
+	<inline: true>
+	objectMemory longAt: address put: literal
 ]
 
 { #category : #'compile abstract instructions' }

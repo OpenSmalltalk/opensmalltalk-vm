@@ -12,6 +12,12 @@ InLineLiteralsManager >> allocateLiterals: initialNumLiterals [
 	<inline: true>
 ]
 
+{ #category : #'generate machine code' }
+InLineLiteralsManager >> assertValidAnnotation: annotation for: instruction [
+	<var: #instruction type: #'AbstractInstruction *'>
+	<inline: true>
+]
+
 { #category : #'compile abstract instructions' }
 InLineLiteralsManager >> checkLiteral: literal forInstruction: anInstruction [
 	<var: #anInstruction type: #'AbstractInstruction *'>
@@ -38,6 +44,16 @@ InLineLiteralsManager >> dumpLiterals: generateBranchAround [
 	<inline: true>
 ]
 
+{ #category : #'garbage collection' }
+InLineLiteralsManager >> fetchLiteralAtAnnotatedAddress: address using: instruction [
+	"Normally literals are embedded in instructions and the annotation is at the start of
+	 the following instruction, to cope with literals embedded in variable-length instructions,
+	 since, e.g. on x86, the literal typically comes at the end of the instruction."
+	<var: 'instruction' type: #'AbstractInstruction *'>
+	<inline: true>
+	^instruction literalBeforeFollowingAddress: address
+]
+
 { #category : #testing }
 InLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 	<inline: true>
@@ -47,6 +63,17 @@ InLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 { #category : #initialization }
 InLineLiteralsManager >> resetLiterals: numLiteralsHint [
 	<inline: true>
+]
+
+{ #category : #'garbage collection' }
+InLineLiteralsManager >> storeLiteral: literal atAnnotatedAddress: address using: instruction [
+	"Normally literals are embedded in instructions and the annotation is at the start of
+	 the following instruction, to cope with literals embedded in variable-length instructions,
+	 since, e.g. on x86, the literal typically comes at the end of the instruction."
+	<var: 'address' type: #usqInt>
+	<var: 'instruction' type: #'AbstractInstruction *'>
+	<inline: true>
+	^instruction storeLiteral: literal beforeFollowingAddress: address
 ]
 
 { #category : #'compile abstract instructions' }
