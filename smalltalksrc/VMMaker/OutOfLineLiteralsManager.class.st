@@ -85,16 +85,23 @@ OutOfLineLiteralsManager >> cogit: aCogit [
 ]
 
 { #category : #'compile abstract instructions' }
-OutOfLineLiteralsManager >> dumpLiterals [
+OutOfLineLiteralsManager >> dumpLiterals: generateBranchAround [
 	"Output all pending literal instructions, making the originals dependents of the generated ones
 	 so that a later pass will copy the address of each generated literl inst to its original in literals,
 	 and hence allow the instruction using the literal to compute the correct address.."
-	| litInst |
+	| jump litInst |
+	<var: 'jump' type: #'AbstractInstruction *'>
 	<var: 'litInst' type: #'AbstractInstruction *'>
+
+	generateBranchAround ifTrue:
+		[jump := cogit Jump: 0].
 	lastDumpedLiteralIndex to: nextLiteralIndex - 1 do:
 		[:i|
 		litInst := self literalInstructionAt: i.
 		(cogit gen: Literal operand: (litInst operands at: 0)) dependent: litInst].
+	generateBranchAround ifTrue:
+		[jump jmpTarget: cogit Label].
+
 	firstOpcodeIndex := cogit getOpcodeIndex.
 	lastDumpedLiteralIndex := nextLiteralIndex
 ]
@@ -148,10 +155,10 @@ OutOfLineLiteralsManager >> locateLiteral: aLiteral [
 ]
 
 { #category : #testing }
-OutOfLineLiteralsManager >> mustDumpLiterals: opcodeIndex [
+OutOfLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 	<inline: true>
-	^cogit getOpcodeIndex >= firstOpcodeIndex
-	  and: [cogit getOpcodeIndex - firstOpcodeIndex >= cogit backEnd outOfLineLiteralOpcodeLimit]
+	^currentOpcodeIndex >= firstOpcodeIndex
+	  and: [currentOpcodeIndex - firstOpcodeIndex >= cogit backEnd outOfLineLiteralOpcodeLimit]
 ]
 
 { #category : #initialization }

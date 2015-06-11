@@ -34,12 +34,12 @@ InLineLiteralsManager >> cogit: aCogit [
 ]
 
 { #category : #'compile abstract instructions' }
-InLineLiteralsManager >> dumpLiterals [
+InLineLiteralsManager >> dumpLiterals: generateBranchAround [
 	<inline: true>
 ]
 
 { #category : #testing }
-InLineLiteralsManager >> mustDumpLiterals: opcodeIndex [
+InLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 	<inline: true>
 	^false
 ]
