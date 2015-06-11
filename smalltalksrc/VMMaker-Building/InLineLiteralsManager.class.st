@@ -48,3 +48,11 @@ InLineLiteralsManager >> mustDumpLiterals: opcodeIndex [
 InLineLiteralsManager >> resetLiterals: numLiteralsHint [
 	<inline: true>
 ]
+
+{ #category : #'compile abstract instructions' }
+InLineLiteralsManager >> uniqueLiteral: literal forInstruction: anInstruction [
+	<var: #anInstruction type: #'AbstractInstruction *'>
+	<returnTypeC: #'AbstractInstruction *'>
+	<inline: true>
+	^anInstruction
+]

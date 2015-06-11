@@ -1965,7 +1965,7 @@ StackToRegisterMappingCogit >> genMarshalledSend: selector numArgs: numArgs send
 	(BytecodeSetHasDirectedSuperSend
 	 and: [annotation = IsDirectedSuperSend]) ifTrue:
 		[self genMoveConstant: tempOop R: TempReg].
-	self MoveCw: selector R: ClassReg.
+	self MoveUniqueCw: selector R: ClassReg.
 	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation.
 	optStatus isReceiverResultRegLive: false.
 	^self ssPushRegister: ReceiverResultReg
@@ -2871,7 +2871,7 @@ StackToRegisterMappingCogit >> genSendAbsentImplicitOrOuter: selector numArgs: n
 	self marshallAbsentReceiverSendArguments: numArgs.
 
 	"Load the cache last so it is a fixed distance from the call."
-	self MoveCw: nsSendCache R: SendNumArgsReg.
+	self MoveUniqueCw: nsSendCache R: SendNumArgsReg.
 	self CallNewspeakSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
 
 	optStatus isReceiverResultRegLive: false.
