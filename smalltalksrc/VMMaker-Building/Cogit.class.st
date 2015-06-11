@@ -1952,6 +1952,16 @@ Cogit >> MoveRd: dpreg1 Rd: dpreg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> MoveUniqueCw: wordConstant R: reg [
+	"If the backEnd is using out-of-line literals then those for inline caches cannot be shared, and
+	 this method ensures the instruction has its own unique label.  If the backEnd is using
+	 in-line literals then the literal is unique anyway and this is equivalent to MoveCw:R:"
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MoveCwR uniqueLiteral: wordConstant operand: reg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> MoveXbr: indexReg R: baseReg R: destReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -3629,7 +3639,7 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 		compilationBreak: cPIC selector
 		point: (objectMemory numBytesOf: cPIC selector)
 		isMNUCase: isMNUCase.
-	self allocateOpcodes: 5 bytecodes: 0.
+	self allocateOpcodes: 8 bytecodes: 0.
 	literalsManager resetLiterals: 5.
 	methodLabel address: cPIC asUnsignedInteger; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self assert: (objectRepresentation inlineCacheTagIsYoung: caseNTag) not.
@@ -3649,7 +3659,7 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 				ifFalse:
 					[target := cPIC asInteger + self picInterpretAbortOffset]].
 	self CmpCw: caseNTag R: TempReg.
-	self MoveCw: operand R: SendNumArgsReg.
+	self MoveUniqueCw: operand R: SendNumArgsReg.
 	self DumpJumpLongZero: target.
 	self MoveCw: cPIC asUnsignedInteger R: ClassReg.
 	self JumpLong: (self cPICMissTrampolineFor: cPIC cmNumArgs).
@@ -4072,11 +4082,11 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag: c
 			 targetEntry := case1Method isNil ifTrue: [picMNUAbort] ifFalse: [picInterpretAbort]].
 
 	jumpNext := self compileCPICEntry.
-	self MoveCw: 0 R: SendNumArgsReg.
+	self MoveUniqueCw: 0 R: SendNumArgsReg.
 	self DumpJumpLong: case0CogMethod asInteger + cmNoCheckEntryOffset.
 	endCPICCase0 := self CmpCw: case1Tag R: TempReg.
 	jumpNext jmpTarget: endCPICCase0.
-	self MoveCw: operand R: SendNumArgsReg.
+	self MoveUniqueCw: operand R: SendNumArgsReg.
 	self DumpJumpLongZero: (isMNUCase ifTrue: [picMNUAbort] ifFalse: [targetEntry]) asInteger.
 	endCPICCase1 := self MoveCw: cPIC asUnsignedInteger R: ClassReg.
 	self JumpLong: (self cPICMissTrampolineFor: numArgs).
@@ -4147,13 +4157,13 @@ Cogit >> compileClosedPICPrototype [
 	numArgs := 0.
 	self compilePICAbort: numArgs.
 	jumpNext := self compileCPICEntry.
-	self MoveCw: 16r5EAF00D R: SendNumArgsReg.
+	self MoveUniqueCw: 16r5EAF00D R: SendNumArgsReg.
 	self DumpJumpLong: methodZoneBase + 16rCA5E10.
 	jumpNext jmpTarget: (endCPICCase0 := self Label).
 	1 to: numPICCases - 1 do:
 		[:h|
 		self CmpCw: 16rBABE1F15+h R: TempReg.
-		self MoveCw: 16rBADA550 + h R: SendNumArgsReg.
+		self MoveUniqueCw: 16rBADA550 + h R: SendNumArgsReg.
 		self DumpJumpLongZero: 16rCA5E10 + (h * 16).
 		h = 1 ifTrue:
 			[endCPICCase1 := self Label]].
@@ -4257,7 +4267,7 @@ Cogit >> compileMNUCPIC: cPIC methodOperand: methodOperand numArgs: numArgs [
 	operand := (methodOperand isNil or: [objectMemory isYoungObject: methodOperand])
 					ifTrue: [0]
 					ifFalse: [methodOperand].
-	self MoveCw: operand R: SendNumArgsReg.
+	self MoveUniqueCw: operand R: SendNumArgsReg.
 	self DumpJumpLong: picMNUAbort asInteger.
 	jumpNext jmpTarget: (self MoveCw: cPIC asUnsignedInteger R: ClassReg).
 	self JumpLong: (self cPICMissTrampolineFor: numArgs).
@@ -5229,6 +5239,19 @@ Cogit >> gen: opcode "<Integer>" quickConstant: operandOne "<Integer>" operand: 
 	^literalsManager
 		checkQuickConstant: operandOne
 		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo operand: operandThree)
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> gen: opcode "<Integer>" uniqueLiteral: operandOne "<Integer>" operand: operandTwo [ "<Integer|CogAbstractInstruction>"
+	"Literals are constants that either represent objects on the heap that may get updated by
+	 the garbage collector, or pc-relative spans that may get changed by code compaction, and
+	 must hence always be encoded in a form that allows updating to refer to a different value."
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	^literalsManager
+		uniqueLiteral: operandOne
+		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo)
 ]
 
 { #category : #initialization }

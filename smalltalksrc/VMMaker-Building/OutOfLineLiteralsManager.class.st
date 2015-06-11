@@ -22,6 +22,28 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #'compile abstract instructions' }
+OutOfLineLiteralsManager >> allocateLiteral: aLiteral [
+	"Allocate a n unsharable Literal instruction for the literal and answer it."
+	<returnTypeC: #'AbstractInstruction *'>
+	<inline: true>
+	| litInst |
+	<var: 'litInst' type: #'AbstractInstruction *'>
+	nextLiteralIndex >= literalsSize ifTrue:
+		[self allocateLiterals: literalsSize + 8].
+	litInst := self literalInstructionAt: nextLiteralIndex.
+	litInst
+		opcode: Literal;
+		operand0: aLiteral;
+		setIsUnique;
+		setLiteralOpcodeIndex: -1. "means as-yet-unassigned; see literalInstructionInRange:"
+	nextLiteralIndex := nextLiteralIndex + 1.
+	"Record the opcodeIndex of the first dependent instructuon (the first instruction that references an out-of-line literal)"
+	firstOpcodeIndex > cogit getOpcodeIndex ifTrue:
+		[firstOpcodeIndex := cogit getOpcodeIndex - 1].
+	^litInst
+]
+
 { #category : #initialization }
 OutOfLineLiteralsManager >> allocateLiterals: initialNumLiterals [
 	<inline: true>
@@ -108,7 +130,8 @@ OutOfLineLiteralsManager >> locateLiteral: aLiteral [
 		[:i|
 		litInst := self literalInstructionAt: i.
 		((litInst operands at: 0) = aLiteral
-		 and: [self literalInstructionInRange: litInst]) ifTrue:
+		 and: [litInst isSharable
+		 and: [self literalInstructionInRange: litInst]]) ifTrue:
 			[^litInst]].
 	nextLiteralIndex >= literalsSize ifTrue:
 		[self allocateLiterals: literalsSize + 8].
@@ -140,4 +163,14 @@ OutOfLineLiteralsManager >> resetLiterals: numLiteralsHint [
 			[0 to: literalsSize - 1 do: [:i| literals at: i put: nil]].
 	firstOpcodeIndex := 1 << 16. "an impossibly high value"
 	nextLiteralIndex := lastDumpedLiteralIndex := 0
+]
+
+{ #category : #'compile abstract instructions' }
+OutOfLineLiteralsManager >> uniqueLiteral: literal forInstruction: anInstruction [
+	<var: #anInstruction type: #'AbstractInstruction *'>
+	<returnTypeC: #'AbstractInstruction *'>
+	<inline: true>
+	self assert: anInstruction usesOutOfLineLiteral.
+	anInstruction dependent: (self allocateLiteral: literal).
+	^anInstruction
 ]
