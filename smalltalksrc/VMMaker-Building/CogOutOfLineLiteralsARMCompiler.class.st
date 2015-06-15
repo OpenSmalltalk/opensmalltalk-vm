@@ -130,6 +130,20 @@ CogOutOfLineLiteralsARMCompiler >> pcRelativeAddressAt: address [
 ]
 
 { #category : #'inline cacheing' }
+CogOutOfLineLiteralsARMCompiler >> rewriteFullTransferAt: callSiteReturnAddress target: callTargetAddress expectedInstruction: expectedInstruction [
+	"Rewrite a CallFull or JumpFull instruction to transfer to a different target.
+	 This variant is used to rewrite cached primitive calls.   Answer the extent
+	 of the code change which is used to compute the range of the icache to flush."
+	<var: #callSiteReturnAddress type: #usqInt>
+	<var: #callTargetAddress type: #usqInt>
+	self assert: (self instructionBeforeAddress: callSiteReturnAddress) = expectedInstruction.
+	objectMemory longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: callTargetAddress.
+	"self cCode: ''
+		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 8 to: (self pcRelativeAddressAt: callSiteReturnAddress - 8)]."
+	^0
+]
+
+{ #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag target: callTargetAddress [
 	"Rewrite an inline cache to call a different target for a new tag.  This variant is used
 	 to link unlinked sends in ceSend:to:numArgs: et al.  Answer the extent of the code
@@ -147,7 +161,7 @@ CogOutOfLineLiteralsARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress t
 		longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: cacheTag.
 	self assert: (self inlineCacheTagAt: callSiteReturnAddress) = cacheTag.
 	"self cCode: ''
-		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress - 1]."
+		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 8 to: (self pcRelativeAddressAt: callSiteReturnAddress - 8)]."
 	^4
 ]
 
@@ -206,6 +220,12 @@ CogOutOfLineLiteralsARMCompiler >> sizePCDependentInstructionAt: eventualAbsolut
 			[dependent annotation: annotation.
 			 annotation := nil]].
 	^machineCodeSize := maxSize
+]
+
+{ #category : #'inline cacheing' }
+CogOutOfLineLiteralsARMCompiler >> storeLiteral: literal beforeFollowingAddress: followingAddress [
+	"Rewrite the literal in the instruction immediately preceeding followingAddress."
+	objectMemory longAt: (self pcRelativeAddressAt: followingAddress - 4) put: literal
 ]
 
 { #category : #'generate machine code' }
