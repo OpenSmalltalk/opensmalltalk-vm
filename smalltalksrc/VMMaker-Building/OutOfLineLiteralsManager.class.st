@@ -143,7 +143,7 @@ OutOfLineLiteralsManager >> literalInstructionInRange: litInst [
 	| opcodeIdx |
 	opcodeIdx := litInst literalOpcodeIndex.
 	^opcodeIdx asInteger < 0
-	  or: [self assert cogit getOpcodeIndex >= opcodeIdx.
+	  or: [self assert: cogit getOpcodeIndex >= opcodeIdx.
 		cogit getOpcodeIndex - opcodeIdx < cogit backEnd outOfLineLiteralOpcodeLimit]
 ]
 
