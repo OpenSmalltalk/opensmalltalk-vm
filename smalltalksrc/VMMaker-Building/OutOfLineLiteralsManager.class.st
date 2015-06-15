@@ -26,6 +26,11 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #translation }
+OutOfLineLiteralsManager class >> declareCVarsIn: aCCodeGenerator [
+	aCCodeGenerator var: 'literals' type: #'AbstractInstruction *'
+]
+
 { #category : #'compile abstract instructions' }
 OutOfLineLiteralsManager >> allocateLiteral: aLiteral [
 	"Allocate a n unsharable Literal instruction for the literal and answer it."
