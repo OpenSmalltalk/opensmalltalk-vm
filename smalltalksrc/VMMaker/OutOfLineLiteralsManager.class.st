@@ -14,7 +14,10 @@ Class {
 		'nextLiteralIndex',
 		'lastDumpedLiteralIndex',
 		'literals',
-		'literalsSize'
+		'literalsSize',
+		'savedFirstOpcodeIndex',
+		'savedNextLiteralIndex',
+		'savedLastDumpedLiteralIndex'
 	],
 	#pools : [
 		'CogCompilationConstants',
@@ -180,6 +183,13 @@ OutOfLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 	  and: [currentOpcodeIndex - firstOpcodeIndex >= cogit backEnd outOfLineLiteralOpcodeLimit]
 ]
 
+{ #category : #'compile abstract instructions' }
+OutOfLineLiteralsManager >> resetForBlockCompile [
+	firstOpcodeIndex := savedFirstOpcodeIndex.
+	nextLiteralIndex := savedNextLiteralIndex.
+	lastDumpedLiteralIndex := savedLastDumpedLiteralIndex
+]
+
 { #category : #initialization }
 OutOfLineLiteralsManager >> resetLiterals: numLiteralsHint [
 	<inline: true>
@@ -189,6 +199,13 @@ OutOfLineLiteralsManager >> resetLiterals: numLiteralsHint [
 			[0 to: literalsSize - 1 do: [:i| literals at: i put: nil]].
 	firstOpcodeIndex := 1 << 16. "an impossibly high value"
 	nextLiteralIndex := lastDumpedLiteralIndex := 0
+]
+
+{ #category : #'compile abstract instructions' }
+OutOfLineLiteralsManager >> saveForBlockCompile [
+	savedFirstOpcodeIndex := firstOpcodeIndex.
+	savedNextLiteralIndex := nextLiteralIndex.
+	savedLastDumpedLiteralIndex := lastDumpedLiteralIndex
 ]
 
 { #category : #'garbage collection' }

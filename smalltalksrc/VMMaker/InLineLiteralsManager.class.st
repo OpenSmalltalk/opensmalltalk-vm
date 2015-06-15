@@ -60,8 +60,18 @@ InLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 	^false
 ]
 
+{ #category : #'compile abstract instructions' }
+InLineLiteralsManager >> resetForBlockCompile [
+	<inline: true>
+]
+
 { #category : #initialization }
 InLineLiteralsManager >> resetLiterals: numLiteralsHint [
+	<inline: true>
+]
+
+{ #category : #'compile abstract instructions' }
+InLineLiteralsManager >> saveForBlockCompile [
 	<inline: true>
 ]
 

@@ -44,7 +44,9 @@ CogSSOptStatus >> printStateOn: aStream [
 			nextPut: $(;
 			print: isReceiverResultRegLive;
 			space.
-		ssEntry printStateOn: aStream.
+		ssEntry
+			ifNil: [aStream nextPutAll: 'ssEntry is nil']
+			ifNotNil: [ssEntry printStateOn: aStream].
 		aStream nextPut: $)]
 ]
 
