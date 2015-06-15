@@ -3616,7 +3616,7 @@ CoInterpreter >> functionForPrimitiveExternalCall: methodObj [
 	<returnTypeC: 'void (*functionForPrimitiveExternalCall(sqInt methodObj))(void)'>
 	| lit index functionPointer |
 	<var: #functionPointer declareC: #'void (*functionPointer)(void)'>
-	cogit setPostCompileHook: #recordCallOffsetIn:of:.
+	cogit setPostCompileHook: #recordCallOffsetIn:.
 	(objectMemory literalCountOf: methodObj) > 0 ifFalse:
 		[^#primitiveExternalCall].
 	lit := self literal: 0 ofMethod: methodObj. 
