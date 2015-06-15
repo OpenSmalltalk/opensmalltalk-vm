@@ -574,7 +574,10 @@ CogARMCompiler >> computeMaximumSize [
 											[((self isAnInstruction: (operands at: 0)) "i.e. a label, which by definition will be in the current compilation."
 											   or: [cogit addressIsInCurrentCompilation: (operands at: 0)])
 												ifTrue: [8]
-												ifFalse: [self literalLoadInstructionBytes + 4]]].
+												ifFalse:
+													[self rotateable8bitBitwiseImmediate: (operands at: 0)
+														ifTrue: [:r :i :n| 8]
+														ifFalse: [self literalLoadInstructionBytes + 4]]]].
 		[PushCq]				-> [^self literalLoadInstructionBytes = 4
 										ifTrue: [self literalLoadInstructionBytes + 4]
 										ifFalse:
@@ -953,7 +956,7 @@ CogARMCompiler >> concretizeInvertibleDataOperationCqR: armOpcode [
 					 "Then armOpcode reg, temp reg, lsr #(32-hb)"
 					 self machineCodeAt: 4 put: (self dataOpType: armOpcode rd: rn  rn: rn rm: ConcreteIPReg lsr: 32 - hb).
 					^machineCodeSize := 8]].
-			 ^self concretizeDataOperationCwR: armOpcode].
+			 ^self concretizeDataOperationCqR: armOpcode].
 	^0 "to keep Slang happy"
 ]
 
@@ -1484,8 +1487,24 @@ CogARMCompiler >> concretizePushCq [
 CogARMCompiler >> concretizePushCw [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| instrOffset |
-	instrOffset := self loadCwInto: ConcreteIPReg.
+	| word instrOffset |
+	word := operands at: 0.	
+	((self isAnInstruction: word)
+	 or: [cogit addressIsInCurrentCompilation: word])
+		ifTrue:
+			[instrOffset := self loadCwInto: ConcreteIPReg]
+		ifFalse:
+			[self 
+				rotateable8bitBitwiseImmediate: word 
+				ifTrue:
+					[:rot :immediate :invert|
+					self machineCodeAt: 0
+						put: (invert
+								ifTrue: [self mvn: ConcreteIPReg imm: immediate ror: rot]
+								ifFalse: [self mov: ConcreteIPReg imm: immediate ror: rot]).
+					instrOffset := 4]
+				ifFalse:
+					[instrOffset := self loadCwInto: ConcreteIPReg]].
 	self machineCodeAt: instrOffset put: (self pushR: ConcreteIPReg).
 	^machineCodeSize := instrOffset + 4
 ]

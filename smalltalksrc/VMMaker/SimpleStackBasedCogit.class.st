@@ -5,8 +5,11 @@ Class {
 	#name : #SimpleStackBasedCogit,
 	#superclass : #Cogit,
 	#instVars : [
+		'primSetFunctionLabel',
+		'primInvokeLabel',
 		'externalPrimCallOffsets',
-		'externalPrimJumpOffsets'
+		'externalPrimJumpOffsets',
+		'externalSetPrimOffsets'
 	],
 	#pools : [
 		'VMMethodCacheConstants',
@@ -46,7 +49,11 @@ SimpleStackBasedCogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #externalPrimCallOffsets
 			declareC: 'sqInt externalPrimCallOffsets[MaxNumArgs + 1]';
 		var: #externalPrimJumpOffsets
-			declareC: 'sqInt externalPrimJumpOffsets[MaxNumArgs + 1]'
+			declareC: 'sqInt externalPrimJumpOffsets[MaxNumArgs + 1]';
+		var: #externalSetPrimOffsets
+			declareC: 'sqInt externalSetPrimOffsets[MaxNumArgs + 1]';
+		var: #primSetFunctionLabel type: #'AbstractInstruction *';
+		var: #primInvokeLabel type: #'AbstractInstruction *'
 ]
 
 { #category : #'class initialization' }
@@ -1067,6 +1074,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 	"If required, set primitiveFunctionPointer and newMethod"
 	(flags anyMask: PrimCallNeedsPrimitiveFunction) ifTrue:
 		[self MoveCw: primitiveRoutine asInteger R: TempReg.
+		 primSetFunctionLabel :=
 		 self MoveR: TempReg Aw: coInterpreter primitiveFunctionPointerAddress].
 	(flags anyMask: PrimCallNeedsNewMethod+PrimCallMayCallBack) ifTrue:
 		["The ceActivateFailingPrimitiveMethod: machinery can't handle framelessness."
@@ -3695,18 +3703,19 @@ SimpleStackBasedCogit >> primRetNOffsetFor: nargs [
 ]
 
 { #category : #'external primitive support' }
-SimpleStackBasedCogit >> recordCallOffsetIn: cogMethod of: callLabelArg [
+SimpleStackBasedCogit >> recordCallOffsetIn: cogMethod [
 	<api>
 	<var: #cogMethod type: #'CogMethod *'>
-	<var: #callLabelArg type: #'void *'>
-	| callLabel offset offsetTable |
-	<var: #callLabel type: #'AbstractInstruction *'>
+	| offset offsetTable |
 	<var: #offsetTable type: #'sqInt *'>
-	callLabel := callLabelArg. "this function is exported but AbstractInstruction isn't; hence pun through void *"
-	offsetTable := (backEnd isCallPreceedingReturnPC: callLabel address asUnsignedInteger)
+	offset := primSetFunctionLabel address - cogMethod asInteger.
+	(externalSetPrimOffsets at: cogMethod cmNumArgs) isNil
+		ifTrue: [externalSetPrimOffsets at: cogMethod cmNumArgs put: offset]
+		ifFalse: [self assert: (externalSetPrimOffsets at: cogMethod cmNumArgs) = offset].
+	offsetTable := (backEnd isCallPreceedingReturnPC: primInvokeLabel address asUnsignedInteger)
 						ifTrue: [externalPrimCallOffsets]
 						ifFalse: [externalPrimJumpOffsets].
-	offset := callLabel address - cogMethod asInteger.
+	offset := primInvokeLabel address - cogMethod asInteger.
 	(offsetTable at: cogMethod cmNumArgs) isNil
 		ifTrue: [offsetTable at: cogMethod cmNumArgs put: offset]
 		ifFalse: [self assert: (offsetTable at: cogMethod cmNumArgs) = offset]
@@ -3743,8 +3752,13 @@ SimpleStackBasedCogit >> rewritePrimInvocationIn: cogMethod to: primFunctionPoin
 					primitiveIndexOfMethod: cogMethod methodObject
 					header: cogMethod methodHeader.
 	flags := coInterpreter primitivePropertyFlags: primIndex.
+	(flags anyMask: PrimCallNeedsPrimitiveFunction) ifTrue:
+		[backEnd
+			storeLiteral: primFunctionPointer asUnsignedInteger
+			beforeFollowingAddress: cogMethod asUnsignedInteger
+									+ (externalSetPrimOffsets at: cogMethod cmNumArgs)].
 	"See compileInterpreterPrimitive:"
-	(flags bitAnd: PrimCallMayCallBack) ~= 0
+	(flags anyMask: PrimCallMayCallBack)
 		ifTrue:
 			[address := cogMethod asUnsignedInteger
 						+ (externalPrimJumpOffsets at: cogMethod cmNumArgs).
@@ -3759,7 +3773,9 @@ SimpleStackBasedCogit >> rewritePrimInvocationIn: cogMethod to: primFunctionPoin
 						rewriteCallFullAt: address
 						target: (self cCode: [primFunctionPointer asUnsignedInteger]
 									inSmalltalk: [self simulatedTrampolineFor: primFunctionPointer])].
-	processor flushICacheFrom: address asUnsignedInteger to: address asUnsignedInteger + extent
+	processor
+		flushICacheFrom: cogMethod asUnsignedInteger + cmNoCheckEntryOffset
+		to: address asUnsignedInteger + extent
 ]
 
 { #category : #initialization }
@@ -3770,7 +3786,8 @@ SimpleStackBasedCogit >> setInterpreter: aCoInterpreter [
 	<doNotGenerate>
 	super setInterpreter: aCoInterpreter.
 	externalPrimJumpOffsets := CArrayAccessor on: (Array new: MaxNumArgs + 1).
-	externalPrimCallOffsets := CArrayAccessor on: (Array new: MaxNumArgs + 1)
+	externalPrimCallOffsets := CArrayAccessor on: (Array new: MaxNumArgs + 1).
+	externalSetPrimOffsets := CArrayAccessor on: (Array new: MaxNumArgs + 1)
 ]
 
 { #category : #'span functions' }
