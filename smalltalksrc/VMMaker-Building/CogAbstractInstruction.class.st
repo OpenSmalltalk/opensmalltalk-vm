@@ -86,6 +86,11 @@ CogAbstractInstruction class >> byteSizeForSimulator: aVMClass [
 		roundTo: ptrsize
 ]
 
+{ #category : #translation }
+CogAbstractInstruction class >> defaultCompilerClass [
+	^self
+]
+
 { #category : #'instance creation' }
 CogAbstractInstruction class >> for: aCogit [
 	^self new cogit: aCogit
