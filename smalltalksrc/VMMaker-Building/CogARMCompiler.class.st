@@ -94,6 +94,11 @@ CogARMCompiler class >> VarBaseReg [
 ]
 
 { #category : #translation }
+CogARMCompiler class >> defaultCompilerClass [
+	^CogOutOfLineLiteralsARMCompiler
+]
+
+{ #category : #translation }
 CogARMCompiler class >> filteredInstVarNames [
 	"Edit such that conditionOrNil is amongst the char size vars opcode machineCodeSize and maxSize."
 	^(super filteredInstVarNames copyWithout: 'conditionOrNil')

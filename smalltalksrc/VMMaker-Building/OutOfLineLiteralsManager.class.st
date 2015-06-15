@@ -140,11 +140,11 @@ OutOfLineLiteralsManager >> literalInstructionAt: index [
 OutOfLineLiteralsManager >> literalInstructionInRange: litInst [
 	"A literal is in range if its opcode index is within outOfLineLiteralOpcodeLimit, or if
 	 its index has yet to be assigned."
-	| opcodeIndex |
-	opcodeIndex := litInst literalOpcodeIndex.
-	^opcodeIndex asInteger < 0
-	  or: [self assert cogit opcodeIndex >= opcodeIndex.
-		cogit getOpcodeIndex - opcodeIndex < cogit backEnd outOfLineLiteralOpcodeLimit]
+	| opcodeIdx |
+	opcodeIdx := litInst literalOpcodeIndex.
+	^opcodeIdx asInteger < 0
+	  or: [self assert cogit getOpcodeIndex >= opcodeIdx.
+		cogit getOpcodeIndex - opcodeIdx < cogit backEnd outOfLineLiteralOpcodeLimit]
 ]
 
 { #category : #'compile abstract instructions' }
