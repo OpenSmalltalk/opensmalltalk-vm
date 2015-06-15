@@ -291,7 +291,10 @@ VMStructType class >> printTypedefOn: aStream [
 		nextPut: $;;
 		cr.
 	self name ~= self structTypeName ifTrue:
-		[aStream cr; nextPutAll: '#define '; nextPutAll: self name; space; nextPutAll: self structTypeName; cr].
+		[(self withAllSuperclasses copyUpThrough: (self class whichClassIncludesSelector: #structTypeName) theNonMetaClass) do:
+			[:structClass|
+			 aStream cr; nextPutAll: '#define '; nextPutAll: structClass name; space; nextPutAll: self structTypeName].
+		 aStream cr].
 	aStream flush
 ]
 
