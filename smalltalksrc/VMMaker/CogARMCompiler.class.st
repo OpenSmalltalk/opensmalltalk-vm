@@ -196,6 +196,11 @@ CogARMCompiler class >> initialize [
 			at: classVarName put: value + LastRTLCode - 1]
 ]
 
+{ #category : #testing }
+CogARMCompiler class >> isAbstract [
+	^self == CogARMCompiler
+]
+
 { #category : #translation }
 CogARMCompiler class >> machineCodeDeclaration [
 	"Answer the declaration for the machineCode array."
