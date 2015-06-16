@@ -882,7 +882,7 @@ SistaStackToRegisterMappingCogit >> picDataFor: descriptor Annotation: annotatio
 			sendTable = superSendTrampolines ifTrue:
 				[methodClassIfSuper := coInterpreter methodClassOf: (self cCoerceSimple: cogMethodArg to: #'CogMethod *') methodObject].
 			sendTable = directedSuperSendTrampolines ifTrue:
-				[association := backEnd literalBeforeInlineCacheTagAt: mcpc.
+				[association := backEnd literalBeforeInlineCacheTagAt: mcpc asUnsignedInteger.
 				 methodClassIfSuper := objectRepresentation valueOfAssociation: association].
 			tuple := self picDataForSendTo: targetMethod
 						methodClassIfSuper: methodClassIfSuper
