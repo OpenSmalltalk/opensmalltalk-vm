@@ -10,6 +10,7 @@ Class {
 	#instVars : [
 		'cogit',
 		'objectMemory',
+		'objectRepresentation',
 		'firstOpcodeIndex',
 		'nextLiteralIndex',
 		'lastDumpedLiteralIndex',
@@ -29,6 +30,11 @@ Class {
 { #category : #translation }
 OutOfLineLiteralsManager class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator var: 'literals' type: #'AbstractInstruction *'
+]
+
+{ #category : #translation }
+OutOfLineLiteralsManager class >> isNonArgumentImplicitReceiverVariableName: aString [
+	^Cogit isNonArgumentImplicitReceiverVariableName: aString
 ]
 
 { #category : #'compile abstract instructions' }
@@ -104,6 +110,7 @@ OutOfLineLiteralsManager >> cogit: aCogit [
 	<doNotGenerate>
 	cogit := aCogit.
 	objectMemory := aCogit objectMemory.
+	objectRepresentation := aCogit objectRepresentation.
 	literalsSize := 0
 ]
 
@@ -138,9 +145,26 @@ OutOfLineLiteralsManager >> fetchLiteralAtAnnotatedAddress: address using: instr
 	^objectMemory longAt: address
 ]
 
+{ #category : #'garbage collection' }
+OutOfLineLiteralsManager >> literalBytesFollowingBranchInClosedPIC [
+	<inline: true>
+	"With Spur the class tag is always 32-bits and the literal is bytesPerOop.
+	 With V3 the class and literal are both bytesPerOop."
+	^objectRepresentation inlineCacheTagsMayBeObjects
+		ifTrue: [objectMemory bytesPerOop * 2]
+		ifFalse: [objectMemory bytesPerOop + 4]
+]
+
+{ #category : #'garbage collection' }
+OutOfLineLiteralsManager >> literalBytesFollowingJumpInClosedPIC [
+	<inline: true>
+	^objectMemory bytesPerOop
+]
+
 { #category : #'compile abstract instructions' }
 OutOfLineLiteralsManager >> literalInstructionAt: index [
 	<cmacro: '(index) (&literals[index])'>
+	<returnTypeC: #'AbstractInstruction *'>
 	^(literals at: index)
 		ifNil: [literals at: index put: (CogCompilerClass for: cogit)]
 		ifNotNil: [:litInst| litInst]
@@ -148,8 +172,9 @@ OutOfLineLiteralsManager >> literalInstructionAt: index [
 
 { #category : #testing }
 OutOfLineLiteralsManager >> literalInstructionInRange: litInst [
-	"A literal is in range if its opcode index is within outOfLineLiteralOpcodeLimit, or if
-	 its index has yet to be assigned."
+	"A literal is in range if its opcode index is within outOfLineLiteralOpcodeLimit,
+	 or if its index has yet to be assigned."
+	<var: 'litInst' type: #'AbstractInstruction *'>
 	| opcodeIdx |
 	opcodeIdx := litInst literalOpcodeIndex.
 	^opcodeIdx asInteger < 0
