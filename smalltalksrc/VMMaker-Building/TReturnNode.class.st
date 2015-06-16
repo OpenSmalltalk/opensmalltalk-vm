@@ -39,18 +39,32 @@ TReturnNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	 or: [expression isCaseStmt]) ifTrue:
 		[^expression emitCCodeOn: aStream addToEndOfCases: self level: level generator: aCodeGen].
 
-	('void' = aCodeGen currentMethod returnType) ifTrue: [
-		"If the function is void, don't say 'return x' instead say ' x; return' "
-		expression isLeaf ifFalse: [
-			expression emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen.	
-			aStream nextPut: $;; crtab: level.
-		].
-		aStream nextPutAll: 'return'.
-	] ifFalse: [
-		aStream nextPutAll: 'return'.
-		aStream space.
-		expression emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen
-	].
+	(expression isSend and: [expression isValueExpansion]) ifTrue:
+		[^self emitValueExpansionOn: aStream level: level generator: aCodeGen].
+
+	'void' = aCodeGen currentMethod returnType ifTrue: "If the function is void, don't say 'return x' instead say ' x; return' "
+		[expression isLeaf ifFalse:
+			[expression emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen.	
+			 aStream nextPut: $;; crtab: level].
+		 aStream nextPutAll: 'return'.
+		 ^self].
+	aStream nextPutAll: 'return '.
+	expression emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen
+]
+
+{ #category : #'C code generation' }
+TReturnNode >> emitValueExpansionOn: aStream level: level generator: aCodeGen [
+	| stmtList lastStmt copy |
+	self assert: (expression isSend and: [expression isValueExpansion]).
+	stmtList := expression receiver.
+	lastStmt := stmtList statements last.
+	lastStmt isReturn ifTrue:
+		[^expression emitCCodeOn: aStream level: level generator: aCodeGen].
+	copy := stmtList copy.
+	copy statements
+		at: stmtList statements size
+		put: (TReturnNode new setExpression: lastStmt).
+	copy emitCCodeOn: aStream level: level generator: aCodeGen
 ]
 
 { #category : #testing }
