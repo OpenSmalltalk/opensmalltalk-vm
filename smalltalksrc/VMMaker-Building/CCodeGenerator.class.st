@@ -3014,8 +3014,8 @@ CCodeGenerator >> globalsAsSet [
 CCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
 	"Eliminate signed/unsigned conflicts in aSetOfTypes"
 	| sqs usqs |
-	#(char short int #'unsigned char' #'unsigned short' #'unsigned int')
-		with: #(sqInt sqInt sqInt #usqInt #usqInt #usqInt)
+	#(char short int #'unsigned char' #'unsigned short' #'unsigned int' #'unsigned long')
+		with: #(sqInt sqInt sqInt #usqInt #usqInt #usqInt #usqInt)
 		do: [:type :replacement|
 			(aSetOfTypes includes: type) ifTrue:
 				[aSetOfTypes remove: type; add: replacement]].
