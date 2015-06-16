@@ -94,6 +94,11 @@ OutOfLineLiteralsManager >> checkQuickConstant: literal forInstruction: anInstru
 	^anInstruction
 ]
 
+{ #category : #'garbage collection' }
+OutOfLineLiteralsManager >> classRefInClosedPICAt: mcpc [
+	^objectMemory longAt: mcpc - objectMemory bytesPerOop
+]
+
 { #category : #initialization }
 OutOfLineLiteralsManager >> cogit: aCogit [
 	<doNotGenerate>
@@ -188,6 +193,11 @@ OutOfLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 	  and: [currentOpcodeIndex - firstOpcodeIndex >= cogit backEnd outOfLineLiteralOpcodeLimit]
 ]
 
+{ #category : #'garbage collection' }
+OutOfLineLiteralsManager >> objRefInClosedPICAt: mcpc [
+	^objectMemory longAt: mcpc
+]
+
 { #category : #'compile abstract instructions' }
 OutOfLineLiteralsManager >> resetForBlockCompile [
 	firstOpcodeIndex := savedFirstOpcodeIndex.
@@ -214,11 +224,25 @@ OutOfLineLiteralsManager >> saveForBlockCompile [
 ]
 
 { #category : #'garbage collection' }
+OutOfLineLiteralsManager >> storeClassRef: classObj inClosedPICAt: address [
+	<var: #address type: #usqInt>
+	<inline: true>
+	objectMemory longAt: address - objectMemory bytesPerOop put: classObj
+]
+
+{ #category : #'garbage collection' }
 OutOfLineLiteralsManager >> storeLiteral: literal atAnnotatedAddress: address using: instruction [
 	"With out-of-line literals, the IsObjectReference annotation refers to
 	 the start of the literal and hence access the memory directly."
 	<var: 'address' type: #usqInt>
 	<var: 'instruction' type: #'AbstractInstruction *'>
+	<inline: true>
+	objectMemory longAt: address put: literal
+]
+
+{ #category : #'garbage collection' }
+OutOfLineLiteralsManager >> storeObjRef: literal inClosedPICAt: address [
+	<var: #address type: #usqInt>
 	<inline: true>
 	objectMemory longAt: address put: literal
 ]

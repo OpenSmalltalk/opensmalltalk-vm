@@ -4,6 +4,10 @@ An InLineLiteralsManager is a dummy class that understands the OutOfLineLiterals
 Class {
 	#name : #InLineLiteralsManager,
 	#superclass : #VMClass,
+	#instVars : [
+		'cogit',
+		'backEnd'
+	],
 	#category : #'VMMaker-JIT'
 }
 
@@ -34,9 +38,17 @@ InLineLiteralsManager >> checkQuickConstant: literal forInstruction: anInstructi
 	^anInstruction
 ]
 
+{ #category : #'garbage collection' }
+InLineLiteralsManager >> classRefInClosedPICAt: mcpc [
+	<inline: true>
+	^backEnd literalBeforeFollowingAddress: mcpc - backEnd loadLiteralByteSize
+]
+
 { #category : #initialization }
 InLineLiteralsManager >> cogit: aCogit [
 	<doNotGenerate>
+	cogit := aCogit.
+	backEnd := aCogit backEnd
 ]
 
 { #category : #'compile abstract instructions' }
@@ -60,6 +72,12 @@ InLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 	^false
 ]
 
+{ #category : #'garbage collection' }
+InLineLiteralsManager >> objRefInClosedPICAt: mcpc [
+	<inline: true>
+	^cogit backEnd literalBeforeFollowingAddress: mcpc
+]
+
 { #category : #'compile abstract instructions' }
 InLineLiteralsManager >> resetForBlockCompile [
 	<inline: true>
@@ -76,6 +94,13 @@ InLineLiteralsManager >> saveForBlockCompile [
 ]
 
 { #category : #'garbage collection' }
+InLineLiteralsManager >> storeClassRef: classObj inClosedPICAt: address [
+	<var: #address type: #usqInt>
+	<inline: true>
+	backEnd storeLiteral: classObj beforeFollowingAddress: address - backEnd loadLiteralByteSize
+]
+
+{ #category : #'garbage collection' }
 InLineLiteralsManager >> storeLiteral: literal atAnnotatedAddress: address using: instruction [
 	"Normally literals are embedded in instructions and the annotation is at the start of
 	 the following instruction, to cope with literals embedded in variable-length instructions,
@@ -84,6 +109,13 @@ InLineLiteralsManager >> storeLiteral: literal atAnnotatedAddress: address using
 	<var: 'instruction' type: #'AbstractInstruction *'>
 	<inline: true>
 	^instruction storeLiteral: literal beforeFollowingAddress: address
+]
+
+{ #category : #'garbage collection' }
+InLineLiteralsManager >> storeObjRef: literal inClosedPICAt: address [
+	<var: #address type: #usqInt>
+	<inline: true>
+	backEnd storeLiteral: literal beforeFollowingAddress: address
 ]
 
 { #category : #'compile abstract instructions' }
