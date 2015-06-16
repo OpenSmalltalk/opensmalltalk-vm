@@ -354,7 +354,7 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 		[:tMethod|
 		self withOptionalVerbiageFor: tMethod selector
 			on: aStream
-			do: [aStream cr; nextPutAll: 'extern '.
+			do: [aStream cr.
 				tMethod static: false; export: false; emitCFunctionPrototype: aStream generator: self.
 				aStream nextPut: $;]
 			ifOptionalDo:
