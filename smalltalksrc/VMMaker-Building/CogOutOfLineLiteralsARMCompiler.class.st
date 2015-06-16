@@ -13,7 +13,6 @@ CogOutOfLineLiteralsARMCompiler class >> literalsManagerClass [
 CogOutOfLineLiteralsARMCompiler >> concretizeLiteral [
 	"Generate an out-of-line literal.  Copy the value and any annotation from the stand-in in the literals manager."
 	| literalAsInstruction literal |
-	<var: #jumpTarget type: #'AbstractInstruction *'>
 	literalAsInstruction := cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'.
 	literal := (self isAnInstruction: literalAsInstruction)
 				ifTrue: [literalAsInstruction address]
@@ -130,6 +129,24 @@ CogOutOfLineLiteralsARMCompiler >> pcRelativeAddressAt: instrAddress [
 ]
 
 { #category : #'inline cacheing' }
+CogOutOfLineLiteralsARMCompiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
+	"If possible we generate the method address using pc-relative addressing.
+	 If so we don't need to relocate it in code.  So check if pc-relative code was
+	 generated, and if not, adjust a load literal.  There are two cases, a push
+	 or a register load.  If a push, then there is a register load, but in the instruction
+	 before."
+	| pcPreceedingLoad reference litAddr |
+	pcPreceedingLoad := (self instructionIsPush: (self instructionBeforeAddress: pc))
+							ifTrue: [pc - 4]
+							ifFalse: [pc].
+	"If the load is not done via pc-relative addressing we have to relocate."
+	(self isPCRelativeValueLoad: (self instructionBeforeAddress: pcPreceedingLoad)) ifFalse:
+		[litAddr := self pcRelativeAddressAt: pcPreceedingLoad.
+		 reference := objectMemory longAt: litAddr.
+		 objectMemory longAt: litAddr put: reference + delta]
+]
+
+{ #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMCompiler >> rewriteFullTransferAt: callSiteReturnAddress target: callTargetAddress expectedInstruction: expectedInstruction [
 	"Rewrite a CallFull or JumpFull instruction to transfer to a different target.
 	 This variant is used to rewrite cached primitive calls.   Answer the extent
@@ -163,6 +180,14 @@ CogOutOfLineLiteralsARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress t
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 8 to: (self pcRelativeAddressAt: callSiteReturnAddress - 8)]."
 	^4
+]
+
+{ #category : #'inline cacheing' }
+CogOutOfLineLiteralsARMCompiler >> rewriteInlineCacheTag: cacheTag at: callSiteReturnAddress [
+	"Rewrite an inline cache with a new tag.  This variant is used
+	 by the garbage collector."
+	<inline: true>
+	objectMemory longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: cacheTag
 ]
 
 { #category : #'generate machine code' }
@@ -266,7 +291,7 @@ CogOutOfLineLiteralsARMCompiler >> usesOutOfLineLiteral [
 						-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		"Data Movement"						
 		[MoveCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
-		[MoveCwR]		-> [^((self isAnInstruction: (operands at: 0)) "i.e. a label, which by definition will be in the current compilation."
+		[MoveCwR]		-> [^((self isAnInstruction: (cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *')) "i.e. a label, which by definition will be in the current compilation."
 							  or: [cogit addressIsInCurrentCompilation: (operands at: 0)]) not].
 		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		[MoveRAw]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
@@ -277,7 +302,7 @@ CogOutOfLineLiteralsARMCompiler >> usesOutOfLineLiteral [
 		[MoveM16rR]	-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[MoveM64rRd]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:u :i| false] ifFalse: [true]].
 		[MoveMwrR]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:u :i| false] ifFalse: [true]].
-		[PushCw]		-> [^((self isAnInstruction: (operands at: 0)) "i.e. a label, which by definiion will be in the current compilation."
+		[PushCw]		-> [^((self isAnInstruction: (cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *')) "i.e. a label, which by definiion will be in the current compilation."
 							  or: [cogit addressIsInCurrentCompilation: (operands at: 0)]) not].
 		[PushCq]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[PrefetchAw] 	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].

@@ -543,7 +543,7 @@ CogARMCompiler >> computeMaximumSize [
 		[MoveCwR]				-> [^self literalLoadInstructionBytes = 4
 										ifTrue: [self literalLoadInstructionBytes]
 										ifFalse:
-											[((self isAnInstruction: (operands at: 0)) "i.e. a label, which by definition will be in the current compilation."
+											[((self isAnInstruction: (cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *')) "i.e. a label, which by definition will be in the current compilation."
 											   or: [cogit addressIsInCurrentCompilation: (operands at: 0)])
 												ifTrue: [4]
 												ifFalse: [self literalLoadInstructionBytes]]].
@@ -581,7 +581,7 @@ CogARMCompiler >> computeMaximumSize [
 		[PushCw]				-> [^self literalLoadInstructionBytes = 4
 										ifTrue: [self literalLoadInstructionBytes + 4]
 										ifFalse:
-											[((self isAnInstruction: (operands at: 0)) "i.e. a label, which by definition will be in the current compilation."
+											[((self isAnInstruction: (cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *')) "i.e. a label, which by definition will be in the current compilation."
 											   or: [cogit addressIsInCurrentCompilation: (operands at: 0)])
 												ifTrue: [8]
 												ifFalse:
@@ -1499,7 +1499,7 @@ CogARMCompiler >> concretizePushCw [
 	<inline: true>
 	| word instrOffset |
 	word := operands at: 0.	
-	((self isAnInstruction: word)
+	((self isAnInstruction: (cogit cCoerceSimple: word to: #'AbstractInstruction *'))
 	 or: [cogit addressIsInCurrentCompilation: word])
 		ifTrue:
 			[instrOffset := self loadCwInto: ConcreteIPReg]
@@ -2332,7 +2332,7 @@ CogARMCompiler >> loadCwInto: destReg [
 	 the size of the instructions generated to do so."
 	| operand distance |
 	operand := operands at: 0.
-	(self isAnInstruction: operand) ifTrue:
+	(self isAnInstruction: (cogit cCoerceSimple: operand to: #'AbstractInstruction *')) ifTrue:
 		[operand := (cogit cCoerceSimple: operand to: #'AbstractInstruction *') address].
 	"First try and encode as a pc-relative reference..."
 	(cogit addressIsInCurrentCompilation: operand) ifTrue:
@@ -2345,7 +2345,7 @@ CogARMCompiler >> loadCwInto: destReg [
 												ifFalse: [self add: destReg rn: PC imm: immediate ror: rot]).
 		 		^4]
 		 	ifFalse:
-		 		[self deny: (self isAnInstruction: (operands at: 0))]].
+		 		[self deny: (self isAnInstruction: (cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'))]].
 	"If this fails, use the conventional literal load sequence."
 	^self moveCw: operand intoR: destReg
 ]
@@ -2676,16 +2676,6 @@ CogARMCompiler >> relocateCallBeforeReturnPC: retpc by: delta [
 ]
 
 { #category : #'inline cacheing' }
-CogARMCompiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
-	"If possible we generate the method address using pc-relative addressing.
-	 If so we don't need to relocate it in code.  So check if pc-relative code was
-	 generated, and if not, adjust a long sequence.  There are two cases, a push
-	 or a register load.  If a push, then there is a register load, but in the instruction
-	 before."
-	^self subclassResponsibility
-]
-
-{ #category : #'inline cacheing' }
 CogARMCompiler >> rewriteCallAt: callSiteReturnAddress target: callTargetAddress [
 	"Rewrite a call instruction to call a different target.  This variant is used to link PICs
 	 in ceSendMiss et al, and to rewrite cached primitive calls.   Answer the extent of
@@ -2736,13 +2726,6 @@ CogARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag targ
 	 to link unlinked sends in ceSend:to:numArgs: et al.  Answer the extent of the code
 	 change which is used to compute the range of the icache to flush."
 	
-	^self subclassResponsibility
-]
-
-{ #category : #'inline cacheing' }
-CogARMCompiler >> rewriteInlineCacheTag: cacheTag at: callSiteReturnAddress [
-	"Rewrite an inline cache with a new tag.  This variant is used
-	 by the garbage collector."
 	^self subclassResponsibility
 ]
 

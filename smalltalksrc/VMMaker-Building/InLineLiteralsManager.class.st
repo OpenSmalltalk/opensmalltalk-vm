@@ -5,11 +5,15 @@ Class {
 	#name : #InLineLiteralsManager,
 	#superclass : #VMClass,
 	#instVars : [
-		'cogit',
-		'backEnd'
+		'cogit'
 	],
 	#category : #'VMMaker-JIT'
 }
+
+{ #category : #translation }
+InLineLiteralsManager class >> isNonArgumentImplicitReceiverVariableName: aString [
+	^Cogit isNonArgumentImplicitReceiverVariableName: aString
+]
 
 { #category : #initialization }
 InLineLiteralsManager >> allocateLiterals: initialNumLiterals [
@@ -41,14 +45,13 @@ InLineLiteralsManager >> checkQuickConstant: literal forInstruction: anInstructi
 { #category : #'garbage collection' }
 InLineLiteralsManager >> classRefInClosedPICAt: mcpc [
 	<inline: true>
-	^backEnd literalBeforeFollowingAddress: mcpc - backEnd loadLiteralByteSize
+	^cogit backEnd literalBeforeFollowingAddress: mcpc - cogit backEnd loadLiteralByteSize
 ]
 
 { #category : #initialization }
 InLineLiteralsManager >> cogit: aCogit [
 	<doNotGenerate>
-	cogit := aCogit.
-	backEnd := aCogit backEnd
+	cogit := aCogit
 ]
 
 { #category : #'compile abstract instructions' }
@@ -64,6 +67,18 @@ InLineLiteralsManager >> fetchLiteralAtAnnotatedAddress: address using: instruct
 	<var: 'instruction' type: #'AbstractInstruction *'>
 	<inline: true>
 	^instruction literalBeforeFollowingAddress: address
+]
+
+{ #category : #'garbage collection' }
+InLineLiteralsManager >> literalBytesFollowingBranchInClosedPIC [
+	<inline: true>
+	^0
+]
+
+{ #category : #'garbage collection' }
+InLineLiteralsManager >> literalBytesFollowingJumpInClosedPIC [
+	<inline: true>
+	^0
 ]
 
 { #category : #testing }
@@ -97,7 +112,7 @@ InLineLiteralsManager >> saveForBlockCompile [
 InLineLiteralsManager >> storeClassRef: classObj inClosedPICAt: address [
 	<var: #address type: #usqInt>
 	<inline: true>
-	backEnd storeLiteral: classObj beforeFollowingAddress: address - backEnd loadLiteralByteSize
+	cogit backEnd storeLiteral: classObj beforeFollowingAddress: address - cogit backEnd loadLiteralByteSize
 ]
 
 { #category : #'garbage collection' }
@@ -115,7 +130,7 @@ InLineLiteralsManager >> storeLiteral: literal atAnnotatedAddress: address using
 InLineLiteralsManager >> storeObjRef: literal inClosedPICAt: address [
 	<var: #address type: #usqInt>
 	<inline: true>
-	backEnd storeLiteral: literal beforeFollowingAddress: address
+	cogit backEnd storeLiteral: literal beforeFollowingAddress: address
 ]
 
 { #category : #'compile abstract instructions' }
