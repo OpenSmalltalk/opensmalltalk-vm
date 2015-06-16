@@ -567,7 +567,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #trampolineAddresses
 			declareC: 'static char *trampolineAddresses[NumTrampolines*2]';
 		var: #objectReferencesInRuntime
-			declareC: 'static sqInt objectReferencesInRuntime[NumObjRefsInRuntime]';
+			declareC: 'static usqInt objectReferencesInRuntime[NumObjRefsInRuntime]';
 		var: #labelCounter
 			type: #int;
 		var: #traceFlags
@@ -2236,7 +2236,7 @@ Cogit >> addressIsInCodeZone: address [
 { #category : #testing }
 Cogit >> addressIsInCurrentCompilation: address [
 	^address asUnsignedInteger >= methodLabel address
-	  and: [address < (methodLabel address + (1 << 16))]
+	  and: [address asUnsignedInteger < (methodLabel address + (1 << 16))]
 ]
 
 { #category : #testing }
@@ -2816,7 +2816,7 @@ Cogit >> cPICHasForwardedClass: cPIC [
 		- backEnd jumpLongConditionalByteSize.
 	2 to: cPIC cPICNumCases do:
 		[:i| | classIndex |
-		classIndex := backEnd literalBeforeFollowingAddress: pc - backEnd loadLiteralByteSize.
+		classIndex := literalsManager classRefInClosedPICAt: pc.
 		(objectMemory isForwardedClassIndex: classIndex) ifTrue:
 			[^true].
 		pc := pc + cPICCaseSize].
@@ -3346,7 +3346,7 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 	"Answer if the ClosedPIC refers to any unmarked objects or freed/freeable target methods,
 	 applying markAndTraceOrFreeCogMethod:firstVisit: to those targets to determine if freed/freeable."
 	<var: #cPIC type: #'CogMethod *'>
-	| pc offsetToLiteral object entryPoint targetMethod |
+	| pc offsetToLiteral offsetToJump object entryPoint targetMethod |
 	<var: #targetMethod type: #'CogMethod *'>
 	(objectMemory isImmediate: cPIC selector) ifFalse:
 		[(objectMemory isMarked: cPIC selector) ifFalse:
@@ -3354,19 +3354,21 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 	pc := cPIC asInteger + firstCPICCaseOffset.
 	"First jump is unconditional; subsequent ones are conditional"
 	offsetToLiteral := backEnd jumpLongByteSize.
+	offsetToJump := literalsManager literalBytesFollowingJumpInClosedPIC.
 	1 to: cPIC cPICNumCases do:
 		[:i|
 		objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
-			[object := backEnd literalBeforeFollowingAddress: pc - offsetToLiteral - backEnd loadLiteralByteSize.
+			[object := literalsManager classRefInClosedPICAt: pc - offsetToLiteral.
 			 ((objectRepresentation couldBeObject: object)
 			  and: [(objectMemory isMarked: object) not]) ifTrue:
 				[^true]].
-		object := backEnd literalBeforeFollowingAddress: pc - offsetToLiteral.
+		object := literalsManager objRefInClosedPICAt: pc - offsetToLiteral.
 		((objectRepresentation couldBeObject: object)
 		 and: [(objectMemory isMarked: object) not]) ifTrue:
 			[^true].
-		entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
+		entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc - offsetToJump.
 		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
+		self assert: (entryPoint > methodZoneBase and: [entryPoint < methodZone freeStart]).
 		(entryPoint asUnsignedInteger < cPIC asUnsignedInteger
 		 or: [entryPoint asUnsignedInteger > (cPIC asUnsignedInteger + cPIC blockSize) asUnsignedInteger]) ifTrue:
 			[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
@@ -3376,6 +3378,7 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 				  firstVisit: targetMethod asUnsignedInteger > pc asUnsignedInteger) ifTrue:
 				[^true]].
 		offsetToLiteral := backEnd jumpLongConditionalByteSize.
+		offsetToJump := literalsManager literalBytesFollowingBranchInClosedPIC.
 		pc := pc + cPICCaseSize].
 	^false
 ]
@@ -7206,7 +7209,7 @@ Cogit >> mapObjectReferencesInClosedPIC: cPIC [
 	2 to: cPIC cPICNumCases do:
 		[:i|
 		objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
-			[(self updateMaybeClassRefAt: pc - backEnd jumpLongConditionalByteSize) ifTrue:
+			[(self updateMaybeClassRefInClosedPICAt: pc - backEnd jumpLongConditionalByteSize) ifTrue:
 				[refersToYoung := true]].
 		(self updateMaybeObjRefInClosedPICAt: pc - backEnd jumpLongConditionalByteSize) ifTrue:
 			[refersToYoung := true].
@@ -7220,10 +7223,10 @@ Cogit >> mapObjectReferencesInGeneratedRuntime [
 	0 to: runtimeObjectRefIndex - 1 do:
 		[:i| | mcpc literal mappedLiteral |
 		 mcpc := objectReferencesInRuntime at: i.
-		 literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
+		 literal := literalsManager fetchLiteralAtAnnotatedAddress: mcpc using: backEnd.
 		 mappedLiteral := objectRepresentation remapObject: literal.
 		 mappedLiteral ~= literal ifTrue:
-			[backEnd storeLiteral: mappedLiteral beforeFollowingAddress: mcpc.
+			[literalsManager storeLiteral: mappedLiteral atAnnotatedAddress: mcpc using: backEnd.
 			 codeModified := true]]
 ]
 
@@ -7509,7 +7512,7 @@ Cogit >> markAndTraceObjectReferencesInGeneratedRuntime [
 	0 to: runtimeObjectRefIndex - 1 do:
 		[:i| | mcpc literal |
 		 mcpc := objectReferencesInRuntime at: i.
-		 literal := backEnd literalBeforeFollowingAddress: mcpc asUnsignedInteger.
+		 literal := literalsManager fetchLiteralAtAnnotatedAddress: mcpc using: backEnd.
 		 objectRepresentation
 			markAndTraceLiteral: literal
 			in: (self cCoerceSimple: nil to: #'CogMethod *')
@@ -8737,7 +8740,7 @@ Cogit >> recordRunTimeObjectReferences [
 				[self error: 'attempt to generate run-time routine containing young object reference.  Cannot initialize Cogit run-time.'].
 			 objectReferencesInRuntime
 				at: runtimeObjectRefIndex
-				put: (instruction address + instruction machineCodeSize) asInteger.
+				put: instruction mapEntryAddress asUnsignedInteger.
 			 runtimeObjectRefIndex := runtimeObjectRefIndex + 1]]
 ]
 
@@ -8934,7 +8937,7 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 
 	self cppIf: NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
 		[| nsSendCache oop mappedOop |
-		nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
+		nsSendCache := self nsSendCacheFromReturnAddress: mcpc.
 		oop := nsSendCache selector.	
 		mappedOop := objectRepresentation remapObject: oop.
 		oop ~= mappedOop ifTrue:
@@ -8957,7 +8960,7 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 			  and: [objectRepresentation couldBeObject: cacheTag]) ifTrue:
 				[mappedCacheTag := objectRepresentation remapObject: cacheTag.
 				 cacheTag ~= mappedCacheTag ifTrue:
-					[backEnd rewriteInlineCacheTag: mappedCacheTag at: mcpc asInteger.
+					[backEnd rewriteInlineCacheTag: mappedCacheTag at: mcpc asUnsignedInteger.
 					 codeModified := true].
 				 (hasYoungPtr ~= 0
 				  and: [objectMemory isYoung: mappedCacheTag]) ifTrue:
