@@ -53,7 +53,7 @@ OutOfLineLiteralsManager >> allocateLiteral: aLiteral [
 		setIsUnique;
 		setLiteralOpcodeIndex: -1. "means as-yet-unassigned; see literalInstructionInRange:"
 	nextLiteralIndex := nextLiteralIndex + 1.
-	"Record the opcodeIndex of the first dependent instructuon (the first instruction that references an out-of-line literal)"
+	"Record the opcodeIndex of the first dependent instruction (the first instruction that references an out-of-line literal)"
 	firstOpcodeIndex > cogit getOpcodeIndex ifTrue:
 		[firstOpcodeIndex := cogit getOpcodeIndex - 1].
 	^litInst
@@ -62,15 +62,38 @@ OutOfLineLiteralsManager >> allocateLiteral: aLiteral [
 { #category : #initialization }
 OutOfLineLiteralsManager >> allocateLiterals: initialNumLiterals [
 	<inline: true>
+	| newLiterals newInst existingInst |
+	<var: 'newInst' type: #'AbstractInstruction *'>
+	<var: 'existingInst' type: #'AbstractInstruction *'>
+	<var: 'newLiterals' type: #'AbstractInstruction *'>
 	initialNumLiterals > literalsSize ifTrue:
-		[self cCode:
-				[literals := self re: literals alloc: initialNumLiterals * (self sizeof: CogAbstractInstruction)]
-			inSmalltalk:
-				[| newLiterals |
-				 newLiterals := Array new: initialNumLiterals.
-				 literals ifNotNil:
-					[:existingLiterals| newLiterals replaceFrom: 1 to: literalsSize with: existingLiterals object startingAt: 1].
-				 literals := CArrayAccessor on: newLiterals].
+		[newLiterals := self cCode:
+								[self c: initialNumLiterals alloc: (self sizeof: CogAbstractInstruction)]
+							inSmalltalk:
+								[CArrayAccessor on: ((1 to: initialNumLiterals) collect: [:i| CogCompilerClass for: cogit])].
+		 "Must copy across state (not using realloc, cuz...) and
+		  must also update existing instructions to refer to the new ones...
+		  It's either this or modify all generation routines to be able to retry
+		  with more literals after running out of literals."
+		 literals ifNotNil:
+			[0 to: nextLiteralIndex - 1 do:
+				[:i|
+				existingInst := self literalInstructionAt: i.
+				newInst := self addressOf: (newLiterals at: i).
+				newInst
+					opcode: Literal;
+					operand0: (existingInst operands at: 0);
+					setLiteralOpcodeIndex: existingInst literalOpcodeIndex.
+				self assert: existingInst dependent isNil.
+				existingInst dependent: newInst].
+			0 to: cogit getOpcodeIndex - 1 do:
+				[:i|
+				existingInst := cogit abstractInstructionAt: i.
+				(existingInst dependent notNil
+				 and: [existingInst dependent opcode = Literal]) ifTrue:
+					[existingInst dependent: existingInst dependent dependent]]].
+		 self cCode: [self free: literals] inSmalltalk: [].
+		 literals := newLiterals.
 		 literalsSize := initialNumLiterals]
 ]
 
@@ -102,6 +125,7 @@ OutOfLineLiteralsManager >> checkQuickConstant: literal forInstruction: anInstru
 
 { #category : #'garbage collection' }
 OutOfLineLiteralsManager >> classRefInClosedPICAt: mcpc [
+	<inline: true>
 	^objectMemory longAt: mcpc - objectMemory bytesPerOop
 ]
 
@@ -205,7 +229,7 @@ OutOfLineLiteralsManager >> locateLiteral: aLiteral [
 		operand0: aLiteral;
 		setLiteralOpcodeIndex: -1. "means as-yet-unassigned; see literalInstructionInRange:"
 	nextLiteralIndex := nextLiteralIndex + 1.
-	"Record the opcodeIndex of the first dependent instructuon (the first instruction that references an out-of-line literal)"
+	"Record the opcodeIndex of the first dependent instruction (the first instruction that references an out-of-line literal)"
 	firstOpcodeIndex > cogit getOpcodeIndex ifTrue:
 		[firstOpcodeIndex := cogit getOpcodeIndex - 1].
 	^litInst
@@ -220,6 +244,7 @@ OutOfLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 
 { #category : #'garbage collection' }
 OutOfLineLiteralsManager >> objRefInClosedPICAt: mcpc [
+	<inline: true>
 	^objectMemory longAt: mcpc
 ]
 
