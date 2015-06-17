@@ -1386,6 +1386,7 @@ static int vm_parseArgument(int argc, char **argv)
   else if (!strcmp(argv[0], "-nohandlers"))	{ installHandlers= 0;	return 1; }
   else if (!strcmp(argv[0], "-blockonerror")) { blockOnError = 1; return 1; }
   else if (!strcmp(argv[0], "-blockonwarn")) { erroronwarn = blockOnError = 1; return 1; }
+  else if (!strcmp(argv[0], "-exitonwarn")) { erroronwarn = 1; return 1; }
   else if (!strcmp(argv[0], "-timephases")) {
 	printPhaseTime(1);
 	return 1; }
@@ -1553,6 +1554,7 @@ static void vm_printUsage(void)
 #endif
   printf("  -blockonerror         on error or segv block, not exit.  useful for attaching gdb\n");
   printf("  -blockonwarn          on warning block, don't warn.  useful for attaching gdb\n");
+  printf("  -exitonwarn           treat warnings as errors, exiting on warn\n");
 #if 1
   printf("Deprecated:\n");
 # if !STACKVM
