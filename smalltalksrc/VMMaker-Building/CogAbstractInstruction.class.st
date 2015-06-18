@@ -418,6 +418,19 @@ CogAbstractInstruction >> canMulRR [
 	^self subclassResponsibility
 ]
 
+{ #category : #initialization }
+CogAbstractInstruction >> cloneLiteralFrom: existingLiteral [
+	"For out-of-line literal support, clone a literal from a literal."
+	<var: 'existingLiteral' type: #'AbstractInstruction *'>
+	self assert: (existingLiteral opcode = Literal and: [dependent isNil]).
+	opcode := Literal.
+	annotation := existingLiteral annotation.
+	operands
+		at: 0 put: (existingLiteral operands at: 0);
+		at: 1 put: (existingLiteral operands at: 1);
+		at: 2 put: (existingLiteral operands at: 2)
+]
+
 { #category : #accessing }
 CogAbstractInstruction >> codeGranularity [
 	"Answer the size in bytes of a unit of machine code."
@@ -741,6 +754,30 @@ CogAbstractInstruction >> initialize [
 	machineCode := CArrayAccessor on: (ByteArray new: self machineCodeBytes)
 ]
 
+{ #category : #initialization }
+CogAbstractInstruction >> initializeSharableLiteral: literal [
+	"For out-of-line literal support, initialize a sharable literal."
+	opcode := Literal.
+	dependent := nil. "separate := nil for Slang"
+	annotation := nil.
+	operands
+		at: 0 put: literal;
+		at: 1 put: true;		"isSharable/isUnique not"
+		at: 2 put: -1			"opcodeIndex"
+]
+
+{ #category : #initialization }
+CogAbstractInstruction >> initializeUniqueLiteral: literal [
+	"For out-of-line literal support, initialize an unsharable literal."
+	opcode := Literal.
+	dependent := nil. "separate := nil for Slang"
+	annotation := nil.
+	operands
+		at: 0 put: literal;
+		at: 1 put: false;		"isSharable/isUnique not"
+		at: 2 put: -1			"opcodeIndex"
+]
+
 { #category : #testing }
 CogAbstractInstruction >> isAFixup: fixupOrAddress [
 	<var: #fixupOrAddress type: #'void *'>
@@ -998,7 +1035,7 @@ CogAbstractInstruction >> operands: anObject [
 	operands := anObject
 ]
 
-{ #category : #encoding }
+{ #category : #'generate machine code' }
 CogAbstractInstruction >> outputMachineCodeAt: targetAddress [
 	"By default move machine code a byte at a time
 	  Subclasses with coarser granularity can override as desired."
@@ -1088,7 +1125,7 @@ CogAbstractInstruction >> resolveJumpTarget [
 		 self jmpTarget: fixup targetInstruction]
 ]
 
-{ #category : #'full run-time support' }
+{ #category : #'full transfer run-time support' }
 CogAbstractInstruction >> rewriteCallFullAt: callSiteReturnAddress target: callTargetAddress [
 	"Rewrite a CallFull instruction to call a different target.  This variant is used to rewrite cached primitive calls.
 	 Answer the extent of the code change which is used to compute the range of the icache to flush.
@@ -1103,7 +1140,7 @@ CogAbstractInstruction >> rewriteInlineCacheTag: cacheTag at: callSiteReturnAddr
 	self subclassResponsibility
 ]
 
-{ #category : #'full run-time support' }
+{ #category : #'full transfer run-time support' }
 CogAbstractInstruction >> rewriteJumpFullAt: callSiteReturnAddress target: callTargetAddress [
 	"Rewrite a JumpFull instruction to jump to a different target.  This variant is used to rewrite cached primitive calls.
 	 Answer the extent of the code change which is used to compute the range of the icache to flush.
