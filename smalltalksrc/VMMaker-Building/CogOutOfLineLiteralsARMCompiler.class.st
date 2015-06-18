@@ -55,14 +55,6 @@ CogOutOfLineLiteralsARMCompiler >> isSharable [
 	^operands at: 1
 ]
 
-{ #category : #'generate machine code' }
-CogOutOfLineLiteralsARMCompiler >> isUnique [
-	"Hack:  To know if a literal should be unique (not shared) mark the second operand."
-	<inline: true>
-	self assert: opcode = Literal.
-	^(operands at: 1) not
-]
-
 { #category : #accessing }
 CogOutOfLineLiteralsARMCompiler >> literalLoadInstructionBytes [
 	"Answer the size of a literal load instruction (which does not include the size of the literal).
@@ -188,31 +180,6 @@ CogOutOfLineLiteralsARMCompiler >> rewriteInlineCacheTag: cacheTag at: callSiteR
 	 by the garbage collector."
 	<inline: true>
 	objectMemory longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: cacheTag
-]
-
-{ #category : #'generate machine code' }
-CogOutOfLineLiteralsARMCompiler >> setIsSharable [
-	"Hack:  To know if a literal should be unique (not shared) mark the second operand."
-	<inline: true>
-	self assert: opcode = Literal.
-	^operands at: 1 put: true
-]
-
-{ #category : #'generate machine code' }
-CogOutOfLineLiteralsARMCompiler >> setIsUnique [
-	"Hack:  To know if a literal should be unique (not shared) mark the second operand."
-	<inline: true>
-	self assert: opcode = Literal.
-	^operands at: 1 put: false
-]
-
-{ #category : #'generate machine code' }
-CogOutOfLineLiteralsARMCompiler >> setLiteralOpcodeIndex: index [
-	"Hack:  To know how far away a literal is from its referencing instruction we store
-	 its opcodeIndex, or -1, if as yet unassigned, in the second operand of the literal."
-	<inline: true>
-	self assert: opcode = Literal.
-	^operands at: 2 put: index
 ]
 
 { #category : #'generate machine code' }

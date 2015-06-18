@@ -47,12 +47,7 @@ OutOfLineLiteralsManager >> allocateLiteral: aLiteral [
 	nextLiteralIndex >= literalsSize ifTrue:
 		[self allocateLiterals: literalsSize + 8].
 	litInst := self literalInstructionAt: nextLiteralIndex.
-	litInst
-		opcode: Literal;
-		operand0: aLiteral;
-		setIsUnique;
-		setLiteralOpcodeIndex: -1; "means as-yet-unassigned; see literalInstructionInRange:"
-		dependent: nil.
+	litInst initializeUniqueLiteral: aLiteral.
 	nextLiteralIndex := nextLiteralIndex + 1.
 	"Record the opcodeIndex of the first dependent instruction (the first instruction that references an out-of-line literal)"
 	firstOpcodeIndex > cogit getOpcodeIndex ifTrue:
@@ -81,10 +76,7 @@ OutOfLineLiteralsManager >> allocateLiterals: initialNumLiterals [
 				[:i|
 				existingInst := self literalInstructionAt: i.
 				newInst := self addressOf: (newLiterals at: i).
-				newInst
-					opcode: Literal;
-					operand0: (existingInst operands at: 0);
-					setLiteralOpcodeIndex: existingInst literalOpcodeIndex.
+				newInst cloneLiteralFrom: existingInst.
 				self assert: existingInst dependent isNil.
 				existingInst dependent: newInst].
 			0 to: cogit getOpcodeIndex - 1 do:
@@ -225,12 +217,7 @@ OutOfLineLiteralsManager >> locateLiteral: aLiteral [
 	nextLiteralIndex >= literalsSize ifTrue:
 		[self allocateLiterals: literalsSize + 8].
 	litInst := self literalInstructionAt: nextLiteralIndex.
-	litInst
-		opcode: Literal;
-		operand0: aLiteral;
-		setIsSharable;
-		setLiteralOpcodeIndex: -1; "means as-yet-unassigned; see literalInstructionInRange:"
-		dependent: nil.
+	litInst initializeSharableLiteral: aLiteral.
 	nextLiteralIndex := nextLiteralIndex + 1.
 	"Record the opcodeIndex of the first dependent instruction (the first instruction that references an out-of-line literal)"
 	firstOpcodeIndex > cogit getOpcodeIndex ifTrue:
