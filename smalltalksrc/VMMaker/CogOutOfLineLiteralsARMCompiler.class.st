@@ -52,7 +52,7 @@ CogOutOfLineLiteralsARMCompiler >> isSharable [
 	"Hack:  To know if a literal should be unique (not shared) mark the second operand."
 	<inline: true>
 	self assert: opcode = Literal.
-	^(operands at: 1) isNil
+	^operands at: 1
 ]
 
 { #category : #'generate machine code' }
@@ -60,7 +60,7 @@ CogOutOfLineLiteralsARMCompiler >> isUnique [
 	"Hack:  To know if a literal should be unique (not shared) mark the second operand."
 	<inline: true>
 	self assert: opcode = Literal.
-	^(operands at: 1) notNil
+	^(operands at: 1) not
 ]
 
 { #category : #accessing }
@@ -191,11 +191,19 @@ CogOutOfLineLiteralsARMCompiler >> rewriteInlineCacheTag: cacheTag at: callSiteR
 ]
 
 { #category : #'generate machine code' }
-CogOutOfLineLiteralsARMCompiler >> setIsUnique [
+CogOutOfLineLiteralsARMCompiler >> setIsSharable [
 	"Hack:  To know if a literal should be unique (not shared) mark the second operand."
 	<inline: true>
 	self assert: opcode = Literal.
 	^operands at: 1 put: true
+]
+
+{ #category : #'generate machine code' }
+CogOutOfLineLiteralsARMCompiler >> setIsUnique [
+	"Hack:  To know if a literal should be unique (not shared) mark the second operand."
+	<inline: true>
+	self assert: opcode = Literal.
+	^operands at: 1 put: false
 ]
 
 { #category : #'generate machine code' }
