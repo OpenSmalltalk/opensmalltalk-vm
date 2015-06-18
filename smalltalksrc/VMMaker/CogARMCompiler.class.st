@@ -2619,7 +2619,7 @@ CogARMCompiler >> orr: destReg imm: immediate8bitValue ror: rot [
 	^self type: 1 op: OrOpcode set: 0 rn: destReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate8bitValue)
 ]
 
-{ #category : #'inline cacheing' }
+{ #category : #'generate machine code' }
 CogARMCompiler >> outputMachineCodeAt: targetAddress [
 	"Override to move machine code a word at a time."
 	<inline: true>
