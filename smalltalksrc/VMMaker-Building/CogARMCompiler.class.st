@@ -28,6 +28,7 @@ Class {
 		'CmpNotOpcode',
 		'CmpOpcode',
 		'ConcreteIPReg',
+		'ConcretePCReg',
 		'ConcreteVarBaseReg',
 		'EQ',
 		'GE',
@@ -88,6 +89,11 @@ CogARMCompiler class >> ISA [
 ]
 
 { #category : #accessing }
+CogARMCompiler class >> PCReg [
+	^ConcretePCReg
+]
+
+{ #category : #accessing }
 CogARMCompiler class >> VarBaseReg [
 	"Answer the number of the reg we use to hold the base address of CoInterpreter variables"
 	^ConcreteVarBaseReg
@@ -144,6 +150,7 @@ CogARMCompiler class >> initialize [
 
 	ConcreteVarBaseReg := 10.
 	ConcreteIPReg := 12. "IP, The Intra-Procedure-call scratch register."
+	ConcretePCReg := 15.
 	
 	"Condition Codes. Note that cc=16rF is NOT ALLOWED as a condition; it specifies an extension instruction. See e.g.ARM_ARM v5 DDI01001.pdf A3.2.1"
 	EQ := 0.
