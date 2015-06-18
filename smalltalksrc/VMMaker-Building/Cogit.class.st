@@ -2361,66 +2361,65 @@ Cogit >> allocateBlockStarts: numBlocks [
 { #category : #initialization }
 Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes [
 	"Allocate the various arrays needed to compile abstract instructions.
-	 This needs to be a macro since the arrays are alloca'ed (stack allocated)
-	 to ensure their being freed when compilation is done.
 	 Notionally we only need as many fixups as there are bytecodes.  But we
 	 reuse fixups to record pc-dependent instructions in generateInstructionsAt:
 	 and so need at least as many as there are abstract opcodes.
 
+	 This *must* be inlined since the arrays are alloca'ed (stack allocated)
+	 so that they are freed when compilation is done.
+
 	 N.B. We do one single alloca to save embarrassing C optimizers that
 	 generate incorrect code as both gcc and the intel compiler do on x86."
-	<cmacro: '(numberOfAbstractOpcodes,numberOfBytecodes) do { \
-		int opcodeSize = sizeof(AbstractInstruction) * (numAbstractOpcodes = (numberOfAbstractOpcodes)); \
-		int fixupSize = sizeof(BytecodeFixup) * numAbstractOpcodes; \
-		abstractOpcodes = alloca(opcodeSize + fixupSize); \
-		bzero(abstractOpcodes, opcodeSize + fixupSize); \
-		fixups = (void *)((char *)abstractOpcodes + opcodeSize); \
-		opcodeIndex = labelCounter = 0; \
-} while (0)'>
+	<inline: true>
 	numAbstractOpcodes := numberOfAbstractOpcodes.
-	abstractOpcodes := CArrayAccessor on:
-						((1 to: numAbstractOpcodes) collect:
-							[:ign| CogCompilerClass for: self]).
-	fixups := CArrayAccessor on:
-						((1 to: numAbstractOpcodes) collect:
-							[:ign| self bytecodeFixupClass new]).
-	opcodeIndex := labelCounter := 0
+	self
+		cCode:
+			[| opcodeSize fixupSize|
+			 opcodeSize := (self sizeof: CogAbstractInstruction) * numAbstractOpcodes.
+			 fixupSize := (self sizeof: CogBytecodeFixup) * numAbstractOpcodes.
+			 abstractOpcodes := self alloca: opcodeSize + fixupSize.
+			 self b: abstractOpcodes zero: opcodeSize + fixupSize.
+			 fixups := (abstractOpcodes asUnsignedInteger + opcodeSize) asVoidPointer]
+		inSmalltalk:
+			[abstractOpcodes := CArrayAccessor on:
+									 ((1 to: numAbstractOpcodes) collect: [:ign| CogCompilerClass for: self]).
+			 fixups := CArrayAccessor on:
+						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass new])].
+	self zeroOpcodeIndex.
+	labelCounter := 0
 ]
 
 { #category : #initialization }
 Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes ifFail: failBlock [
-	"Allocate the various arrays needed to compile abstract instructions.
-	 This needs to be a macro since the arrays are alloca'ed (stack allocated)
-	 to ensure their being freed when compilation is done.
-	 Notionally we only need as many fixups as there are bytecodes.  But we
-	 reuse fixups to record pc-dependent instructions in generateInstructionsAt:
-	 and so need at least as many as there are abstract opcodes.
+	"Allocate the various arrays needed to compile abstract instructions, failing if the size
+	 needed is considered too high.  Notionally we only need as many fixups as there are
+	 bytecodes.  But we reuse fixups to record pc-dependent instructions in
+	 generateInstructionsAt: and so need at least as many as there are abstract opcodes.
+
+	 This *must* be inlined since the arrays are alloca'ed (stack allocated)
+	 so that they are freed when compilation is done.
 
 	 N.B. We do one single alloca to save embarrassing C optimizers that
 	 generate incorrect code as both gcc and the intel compiler do on x86."
-	<cmacro: '(numberOfAbstractOpcodes,numberOfBytecodes,failBlock) do { \
-		int opcodeSize = sizeof(AbstractInstruction) * (numAbstractOpcodes = (numberOfAbstractOpcodes)); \
-		int fixupSize = sizeof(BytecodeFixup) * numAbstractOpcodes; \
-		int allocSize = opcodeSize + fixupSize; \
-		if (allocSize > MaxStackAllocSize) failBlock; \
-		abstractOpcodes = alloca(allocSize); \
-		bzero(abstractOpcodes, opcodeSize + fixupSize); \
-		fixups = (void *)((char *)abstractOpcodes + opcodeSize); \
-		opcodeIndex = labelCounter = 0; \
-} while (0)'>
+	<inline: true>
 	| opcodeSize fixupSize allocSize |
-	opcodeSize := (self sizeof: CogAbstractInstruction) * numberOfAbstractOpcodes.
-	fixupSize := (self sizeof: CogBytecodeFixup) * numberOfAbstractOpcodes.
+	numAbstractOpcodes := numberOfAbstractOpcodes.
+	opcodeSize := (self sizeof: CogAbstractInstruction) * numAbstractOpcodes.
+	fixupSize := (self sizeof: CogBytecodeFixup) * numAbstractOpcodes.
 	allocSize := opcodeSize + fixupSize.
 	allocSize > MaxStackAllocSize ifTrue: [^failBlock value].
-	numAbstractOpcodes := numberOfAbstractOpcodes.
-	abstractOpcodes := CArrayAccessor on:
-						((1 to: numAbstractOpcodes) collect:
-							[:ign| CogCompilerClass for: self]).
-	fixups := CArrayAccessor on:
-						((1 to: numAbstractOpcodes) collect:
-							[:ign| self bytecodeFixupClass new]).
-	opcodeIndex := labelCounter := 0
+	self
+		cCode:
+			[abstractOpcodes := self alloca: allocSize.
+			 self b: abstractOpcodes zero: allocSize.
+			 fixups := (abstractOpcodes asUnsignedInteger + opcodeSize) asVoidPointer]
+		inSmalltalk:
+			[abstractOpcodes := CArrayAccessor on:
+									 ((1 to: numAbstractOpcodes) collect: [:ign| CogCompilerClass for: self]).
+			 fixups := CArrayAccessor on:
+						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass new])].
+	self zeroOpcodeIndex.
+	labelCounter := 0
 ]
 
 { #category : #'method map' }
@@ -3639,7 +3638,6 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 		point: (objectMemory numBytesOf: cPIC selector)
 		isMNUCase: isMNUCase.
 	self allocateOpcodes: 8 bytecodes: 0.
-	literalsManager resetLiterals: 5.
 	methodLabel address: cPIC asUnsignedInteger; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self assert: (objectRepresentation inlineCacheTagIsYoung: caseNTag) not.
 	"Caller patches to open pic if caseNMethod is young."
@@ -3693,7 +3691,6 @@ Cogit >> cogMNUPICSelector: selector receiver: rcvr methodOperand: methodOperand
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: numPICCases * 9 bytecodes: 0.
-	literalsManager resetLiterals: numPICCases * 2.
 	methodLabel address: startAddress; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self compileMNUCPIC: (self cCoerceSimple: startAddress to: #'CogMethod *')
 		methodOperand: methodOperand
@@ -3816,7 +3813,6 @@ Cogit >> cogOpenPICSelector: selector numArgs: numArgs [
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: 100 bytecodes: 0.
-	literalsManager resetLiterals: 10.
 	self compileOpenPIC: selector numArgs: numArgs.
 	self computeMaximumSizes.
 	methodLabel concretizeAt: startAddress.
@@ -3854,7 +3850,6 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: numPICCases * 9 bytecodes: 0.
-	literalsManager resetLiterals: numPICCases * 2.
 	methodLabel address: startAddress; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self compileCPIC: (self cCoerceSimple: startAddress to: #'CogMethod *')
 		Case0: case0CogMethod
@@ -4194,7 +4189,6 @@ Cogit >> compileCogMethod: selector [
 	self allocateOpcodes: (numBytecodes + extra) * self estimateOfAbstractOpcodesPerBytecodes
 		bytecodes: numBytecodes
 		ifFail: [^coInterpreter cCoerceSimple: MethodTooBig to: #'CogMethod *'].
-	literalsManager resetLiterals: (objectMemory literalCountOf: methodObj).
 	(numBlocks := self scanMethod) < 0 ifTrue:
 		[^coInterpreter cCoerceSimple: numBlocks to: #'CogMethod *'].
 	numCleanBlocks := self scanForCleanBlocks.
@@ -4387,7 +4381,6 @@ Cogit >> computeEntryOffsets [
 	| sendMissCall |
 	<var: 'sendMissCall' type: #'AbstractInstruction *'>
 	self allocateOpcodes: 24 bytecodes: 0.
-	literalsManager resetLiterals: 5.
 	methodOrBlockNumArgs := 0.
 	sendMissCall := self compileAbort.
 	self compileEntry.
@@ -5374,7 +5367,6 @@ Cogit >> genGetLeafCallStackPointer [
 	| startAddress |
 	<inline: false>
 	self allocateOpcodes: 32 bytecodes: 0.
-	literalsManager resetLiterals: 5.
 	initialPC := 0.
 	endPC := numAbstractOpcodes - 1.
 	startAddress := methodZoneBase.
@@ -5868,7 +5860,6 @@ Cogit >> generateCaptureCStackPointers: captureFramePointer [
 	| startAddress |
 	<inline: false>
 	self allocateOpcodes: 32 bytecodes: 0.
-	literalsManager resetLiterals: 5.
 	initialPC := 0.
 	endPC := numAbstractOpcodes - 1.
 	startAddress := methodZoneBase.
@@ -5896,7 +5887,6 @@ Cogit >> generateClosedPICPrototype [
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: numPICCases * 9 bytecodes: 0.
-	literalsManager resetLiterals: numPICCases * 2.
 	methodLabel address: methodZoneBase; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self compileClosedPICPrototype.
 	self computeMaximumSizes.
@@ -6176,7 +6166,6 @@ Cogit >> generateOpenPICPrototype [
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: 100 bytecodes: 0.
-	literalsManager resetLiterals: 10.
 	methodLabel
 		address: methodZoneBase;
 		dependent: nil.
@@ -6601,7 +6590,7 @@ Cogit >> initializeBackend [
 	callerSavedRegMask := backEnd callerSavedRegisterMask.
 	backEnd hasVarBaseRegister ifTrue:
 		[self assert: ((self registerMaskFor: VarBaseReg) noMask: callerSavedRegMask)].
-	literalsManager allocateLiterals: 4; resetLiterals: 4
+	literalsManager allocateLiterals: 4; resetLiterals
 ]
 
 { #category : #initialization }
@@ -7853,7 +7842,6 @@ Cogit >> maybeGenerateCheckFeatures [
 	backEnd numCheckFeaturesOpcodes = 0 ifTrue:
 		[^nil].
 	self allocateOpcodes: backEnd numCheckFeaturesOpcodes bytecodes: 0.
-	literalsManager resetLiterals: 1.
 	initialPC := 0.
 	endPC := numAbstractOpcodes - 1.
 	startAddress := methodZoneBase.
@@ -7870,7 +7858,6 @@ Cogit >> maybeGenerateICacheFlush [
 	backEnd numICacheFlushOpcodes = 0 ifTrue:
 		[^nil].
 	self allocateOpcodes: backEnd numICacheFlushOpcodes bytecodes: 0.
-	literalsManager resetLiterals: 1.
 	initialPC := 0.
 	endPC := numAbstractOpcodes - 1.
 	startAddress := methodZoneBase.
@@ -10342,5 +10329,5 @@ Cogit >> withAnnotation: annotation pc: mcpc evaluate: aBinaryBlock [
 Cogit >> zeroOpcodeIndex [
 	"Access for the object representations when they need to prepend code to trampolines."
 	opcodeIndex := 0.
-	literalsManager resetLiterals: 1
+	literalsManager resetLiterals
 ]

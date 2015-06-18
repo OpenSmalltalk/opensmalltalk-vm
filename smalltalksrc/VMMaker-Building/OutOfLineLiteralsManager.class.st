@@ -39,7 +39,7 @@ OutOfLineLiteralsManager class >> isNonArgumentImplicitReceiverVariableName: aSt
 
 { #category : #'compile abstract instructions' }
 OutOfLineLiteralsManager >> allocateLiteral: aLiteral [
-	"Allocate a n unsharable Literal instruction for the literal and answer it."
+	"Allocate an unsharable Literal instruction for the literal and answer it."
 	<returnTypeC: #'AbstractInstruction *'>
 	<inline: true>
 	| litInst |
@@ -51,7 +51,8 @@ OutOfLineLiteralsManager >> allocateLiteral: aLiteral [
 		opcode: Literal;
 		operand0: aLiteral;
 		setIsUnique;
-		setLiteralOpcodeIndex: -1. "means as-yet-unassigned; see literalInstructionInRange:"
+		setLiteralOpcodeIndex: -1; "means as-yet-unassigned; see literalInstructionInRange:"
+		dependent: nil.
 	nextLiteralIndex := nextLiteralIndex + 1.
 	"Record the opcodeIndex of the first dependent instruction (the first instruction that references an out-of-line literal)"
 	firstOpcodeIndex > cogit getOpcodeIndex ifTrue:
@@ -209,7 +210,7 @@ OutOfLineLiteralsManager >> literalInstructionInRange: litInst [
 { #category : #'compile abstract instructions' }
 OutOfLineLiteralsManager >> locateLiteral: aLiteral [
 	"Search for a Literal instruction that is in-range and answer it.  Otherwise
-	 allocate a new Literal instruction for the literal and answer it."
+	 allocate a new sharable Literal instruction for the literal and answer it."
 	<returnTypeC: #'AbstractInstruction *'>
 	<inline: false>
 	| litInst |
@@ -227,7 +228,9 @@ OutOfLineLiteralsManager >> locateLiteral: aLiteral [
 	litInst
 		opcode: Literal;
 		operand0: aLiteral;
-		setLiteralOpcodeIndex: -1. "means as-yet-unassigned; see literalInstructionInRange:"
+		setIsSharable;
+		setLiteralOpcodeIndex: -1; "means as-yet-unassigned; see literalInstructionInRange:"
+		dependent: nil.
 	nextLiteralIndex := nextLiteralIndex + 1.
 	"Record the opcodeIndex of the first dependent instruction (the first instruction that references an out-of-line literal)"
 	firstOpcodeIndex > cogit getOpcodeIndex ifTrue:
@@ -248,7 +251,7 @@ OutOfLineLiteralsManager >> objRefInClosedPICAt: mcpc [
 	^objectMemory longAt: mcpc
 ]
 
-{ #category : #'compile abstract instructions' }
+{ #category : #initialization }
 OutOfLineLiteralsManager >> resetForBlockCompile [
 	firstOpcodeIndex := savedFirstOpcodeIndex.
 	nextLiteralIndex := savedNextLiteralIndex.
@@ -256,17 +259,13 @@ OutOfLineLiteralsManager >> resetForBlockCompile [
 ]
 
 { #category : #initialization }
-OutOfLineLiteralsManager >> resetLiterals: numLiteralsHint [
+OutOfLineLiteralsManager >> resetLiterals [
 	<inline: true>
-	self cCode:
-			[self me: literals ms: 0 et: literalsSize * (self sizeof: CogAbstractInstruction)]
-		inSmalltalk:
-			[0 to: literalsSize - 1 do: [:i| literals at: i put: nil]].
 	firstOpcodeIndex := 1 << 16. "an impossibly high value"
 	nextLiteralIndex := lastDumpedLiteralIndex := 0
 ]
 
-{ #category : #'compile abstract instructions' }
+{ #category : #initialization }
 OutOfLineLiteralsManager >> saveForBlockCompile [
 	savedFirstOpcodeIndex := firstOpcodeIndex.
 	savedNextLiteralIndex := nextLiteralIndex.

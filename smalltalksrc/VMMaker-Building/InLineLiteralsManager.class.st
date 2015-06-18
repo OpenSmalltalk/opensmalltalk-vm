@@ -99,7 +99,7 @@ InLineLiteralsManager >> resetForBlockCompile [
 ]
 
 { #category : #initialization }
-InLineLiteralsManager >> resetLiterals: numLiteralsHint [
+InLineLiteralsManager >> resetLiterals [
 	<inline: true>
 ]
 
