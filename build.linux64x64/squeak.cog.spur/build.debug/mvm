@@ -1,7 +1,7 @@
 #!/bin/bash
 # debug Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=debug/cogspur64linuxht
-OPT="-g3 -O0 -DDEBUGVM=1"
+OPT="-g3 -O0 -fwrapv -DDEBUGVM=1"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

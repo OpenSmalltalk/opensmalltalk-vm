@@ -1,7 +1,7 @@
 #!/bin/bash
 # assert Stack Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=assert/stkspurlinuxhtARM
-OPT="-g3 -O1 -DDEBUGVM=0"
+OPT="-g3 -O1 -fwrapv -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

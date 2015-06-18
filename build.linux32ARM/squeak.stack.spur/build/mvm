@@ -1,7 +1,7 @@
 #!/bin/bash
 # Stack Spur VM and threaded heartbeat
 INSTALLDIR=stkspurlinuxhtARM
-OPT="-g -O3 -DNDEBUG -DDEBUGVM=0 -DNO_VM_PROFILE=1"
+OPT="-g -O3 -fwrapv -DNDEBUG -DDEBUGVM=0 -DNO_VM_PROFILE=1"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
