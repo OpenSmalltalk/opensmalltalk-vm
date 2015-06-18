@@ -79,7 +79,7 @@ CogProcessorAlien >> disassembleFrom: startAddress to: endAddress in: memory for
 	| address |
 	address := startAddress.
 	[address <= endAddress] whileTrue:
-		[[:sizeArg :stringArg| | size string |
+		[[:sizeArg :stringArg| | size string index offset |
 		size := sizeArg.
 		string := stringArg.
 		(aSymbolManager labelForPC: address) ifNotNil:
@@ -87,17 +87,31 @@ CogProcessorAlien >> disassembleFrom: startAddress to: endAddress in: memory for
 		(labelDictionary at: address ifAbsent: []) ifNotNil:
 			[:label|
 			label isArray
-				ifTrue: [aStream
-							nextPutAll: label first;
-							nextPut: $:; cr;
-							nextPutAll: (address printStringBase: 16 length: 8 padded: true) asLowercase;
-							nextPut: $:; space;
-							nextPutAll: (aSymbolManager perform: label second with: address) asString.
+				ifTrue: [label first == #literal
+							ifTrue:
+								[aStream
+									nextPutAll: (address printStringBase: 16 length: 8 padded: true) asLowercase;
+									nextPut: $:; space;
+									nextPutAll: (aSymbolManager lookupAddress: (aSymbolManager objectMemory longAt: address))]
+							ifFalse:
+								[aStream
+									nextPutAll: label first;
+									nextPut: $:; cr;
+									nextPutAll: (address printStringBase: 16 length: 8 padded: true) asLowercase;
+									nextPut: $:; space;
+									nextPutAll: (aSymbolManager perform: label second with: address) asString].
 						string := nil.
 						size := label third]
 				ifFalse: [aStream nextPutAll: label; nextPut: $:; cr]].
 		string ifNotNil:
-			[aStream nextPutAll: (self decorateDisassembly: string for: aSymbolManager fromAddress: address)].
+			[aStream nextPutAll: (self decorateDisassembly: string for: aSymbolManager fromAddress: address).
+			 ((string includesSubString: ': ldr ')
+			  and: [(index := string indexOfSubCollection: ' [pc, #' startingAt: 1) > 0]) ifTrue:
+				[offset := Integer readFrom: (ReadStream on: string from: index + 6 to: string size).
+				 offset := address + 8 + offset.
+				 labelDictionary
+					at: offset
+					ifAbsentPut: []]].
 		aStream cr; flush.
 		address := address + size]
 			valueWithArguments: (self

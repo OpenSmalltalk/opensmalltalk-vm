@@ -187,14 +187,20 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager from
 					[operand := (self perform: (self registerStateGetters at: (word bitAnd: 15) + 1))]]
 		ifFalse:
 			[(self instructionIsAnyLoadStore: word)
-				ifTrue: [|baseR|
+				ifTrue:
+					[|baseR lit|
 					"first see if this is a load via the varBase register - quick access globals. We'll trust
 					that nobody makes a nasty instruction that uses this reg in a mean way" 
 					operand := (baseR := (word >> 16 bitAnd: 15)) = CogARMCompiler VarBaseReg
 									ifTrue: [aSymbolManager varBaseAddress + (word bitAnd: 1 << 12 - 1)]
 									ifFalse: [self pc = address ifTrue:
 												[(self register: baseR) + (self extractOffsetFromLoadStore: word)]].
-
+					"See if this is a pc-relative literal load"
+					baseR = CogARMCompiler PCReg ifTrue:
+						[lit := memory longAt: (aSymbolManager backEnd pcRelativeAddressAt: address).
+						 ^(aSymbolManager lookupAddress: lit)
+							ifNotNil: [:label| anInstructionString, ' ', label]
+							ifNil: [anInstructionString, ' ', lit hex]].
 					"look for SP operations -pop/push"
 					 (self instructionIsPush: word) ifTrue: "push - "
 						[|srcR|
@@ -210,14 +216,15 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager from
 						[^anInstructionString, '; Save SP to ', (addressinatorBlock value: operand)]]
 				ifFalse:
 					["check for SP changers not relating to read/writing data"
-					(self instructionIsAlignSP: word) ifTrue:
+					 (self instructionIsAlignSP: word) ifTrue:
 						[^anInstructionString, ' ALIGN SP ', (self pc = address ifTrue: [self sp hex] ifFalse: [''])].
-					(self instructionIsAddSP: word) ifTrue:
+					 (self instructionIsAddSP: word) ifTrue:
 						[^anInstructionString, ' ADD ', (word bitAnd: 16rFF) asString,' to SP ', (self pc = address ifTrue: ['= ' , self sp hex] ifFalse: [''])].
 
-					"check for the end of a mov/orr/orr/orr set filling a reg with a const"
-					opcode := word >> 21 bitAnd: 16rF.
-					 opcode ~= CogARMCompiler orOpcode ifTrue:
+					 "check for the end of a mov/orr/orr/orr set filling a reg with a const"
+					 opcode := word >> 21 bitAnd: 16rF.
+					 (opcode ~= CogARMCompiler orOpcode
+					  or: [aSymbolManager cogit backEnd literalLoadInstructionBytes = 4]) ifTrue:
 						[^anInstructionString].
 					 rotate := word >> 8 bitAnd: 16rF.
 					 mode := word >> 25 bitAnd: 7.
@@ -227,6 +234,65 @@ GdbARMAlien >> decorateDisassembly: anInstructionString for: aSymbolManager from
 					 operand := aSymbolManager backEnd literalBeforeFollowingAddress: address + 4]].
 	"is there an interesting address with this?"
 	^anInstructionString, (addressinatorBlock value: operand)
+]
+
+{ #category : #disassembly }
+GdbARMAlien >> disassembleFrom: startAddress to: endAddress in: memory for: aSymbolManager "<Cogit>" labels: labelDictionary on: aStream [
+	| address |
+	address := startAddress.
+	[address <= endAddress] whileTrue:
+		[[:sizeArg :stringArg| | size string index offset |
+		size := sizeArg.
+		string := stringArg.
+		(aSymbolManager labelForPC: address) ifNotNil:
+			[:label| aStream nextPutAll: label; nextPut: $:; cr].
+		(labelDictionary at: address ifAbsent: []) ifNotNil:
+			[:label|
+			label isArray
+				ifTrue: [label first == #literal
+							ifTrue:
+								[label size = 4 ifTrue:
+									[aStream nextPutAll: label last; nextPut: $:; cr].
+								 aStream
+									nextPutAll: (address printStringBase: 16 length: 8 padded: true) asLowercase;
+									nextPut: $:; space;
+									nextPutAll: ((aSymbolManager objectMemory longAt: address) printStringBase: 16 length: 8 padded: true) asLowercase.
+								 (aSymbolManager lookupAddress: (aSymbolManager objectMemory longAt: address)) ifNotNil:
+									[:name| aStream space; nextPutAll: name]]
+							ifFalse:
+								[aStream
+									nextPutAll: label first;
+									nextPut: $:; cr;
+									nextPutAll: (address printStringBase: 16 length: 8 padded: true) asLowercase;
+									nextPut: $:; space;
+									nextPutAll: (aSymbolManager perform: label second with: address) asString].
+						string := nil.
+						size := label third]
+				ifFalse: [aStream nextPutAll: label; nextPut: $:; cr]].
+		string ifNotNil:
+			[aStream nextPutAll: (self decorateDisassembly: string for: aSymbolManager fromAddress: address).
+			 (string includesSubString: ': ldr	') ifTrue:"i.e. colon space 'ldr' tab" 
+				[(index := string indexOfSubCollection: ' [pc, #' startingAt: 1) > 0
+					ifTrue:
+						[offset := Integer readFrom: (ReadStream on: string from: index + 7 to: (string indexOf: $] startingAt: index + 7) - 1)]
+					ifFalse:
+						[(string indexOfSubCollection: ' [pc]' startingAt: 1) > 0 ifTrue:
+							[offset := 0]].
+				 offset ifNotNil:
+					[offset := address + 8 + offset.
+					 labelDictionary
+						at: offset
+						ifPresent:
+							[:entry|
+							entry isString
+								ifTrue: [labelDictionary at: offset put: {#literal. offset. 4. entry}]
+								ifFalse: [self assert: (entry isArray and: [entry first == #literal])]]
+						ifAbsentPut: [{#literal. offset. 4}]]]].
+		aStream cr; flush.
+		address := address + size]
+			valueWithArguments: (self
+									primitiveDisassembleAt: address
+									inMemory: memory)]
 ]
 
 { #category : #accessing }
