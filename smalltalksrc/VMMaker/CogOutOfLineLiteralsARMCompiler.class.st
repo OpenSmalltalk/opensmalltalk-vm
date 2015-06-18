@@ -18,11 +18,14 @@ CogOutOfLineLiteralsARMCompiler >> concretizeLiteral [
 				ifTrue: [literalAsInstruction address]
 				ifFalse: [self cCode: [literalAsInstruction asUnsignedInteger]
 							inSmalltalk: [literalAsInstruction]].
-	self assert: (dependent notNil and: [dependent opcode = Literal and: [dependent address = address]]).
+	self assert: (dependent notNil and: [dependent opcode = Literal]).
 	dependent annotation ifNotNil:
 		[self assert: annotation isNil.
 		 annotation := dependent annotation].
-	self machineCodeAt: 0 put: literal
+	dependent address ifNotNil: [self assert: dependent address = address].
+	dependent address: address.
+	self machineCodeAt: 0 put: literal.
+	machineCodeSize := 4
 ]
 
 { #category : #accessing }
@@ -44,7 +47,7 @@ CogOutOfLineLiteralsARMCompiler >> isPCDependent [
 	 that refers to a literal depends on the address of the literal, so add them in addition to the jumps."
 	^self isJump
 	  or: [opcode = AlignmentNops
-	  or: [dependent notNil and: [dependent opcode = Literal]]]
+	  or: [opcode ~= Literal and: [dependent notNil and: [dependent opcode = Literal]]]]
 ]
 
 { #category : #'generate machine code' }
@@ -93,6 +96,7 @@ CogOutOfLineLiteralsARMCompiler >> moveCw: constant intoR: destReg [
 	 <var: 'constant' type: #usqInt>
 	<inline: true>
 	self assert: (cogit addressIsInCurrentCompilation: dependent address).
+	self assert: (dependent address - (address + 8)) abs < (1<<12).
 	self machineCodeAt: 0
 		put: (self
 				ldr: destReg
@@ -104,8 +108,9 @@ CogOutOfLineLiteralsARMCompiler >> moveCw: constant intoR: destReg [
 
 { #category : #'compile abstract instructions' }
 CogOutOfLineLiteralsARMCompiler >> outOfLineLiteralOpcodeLimit [
-	"The maximum offset in a LDR is 1<<12.  Be conservative."
-	^1<<(11-2)
+	"The maximum offset in a LDR is (1<<12)-1, or (1<<10)-1 instructions.
+	 Be a little conservative."
+	^1<<(12-2) - 4
 ]
 
 { #category : #'inline cacheing' }
@@ -180,6 +185,15 @@ CogOutOfLineLiteralsARMCompiler >> rewriteInlineCacheTag: cacheTag at: callSiteR
 	 by the garbage collector."
 	<inline: true>
 	objectMemory longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: cacheTag
+]
+
+{ #category : #'generate machine code' }
+CogOutOfLineLiteralsARMCompiler >> setLiteralOpcodeIndex: index [
+	"Hack:  To know how far away a literal is from its referencing instruction we store
+	 its opcodeIndex, or -1, if as yet unassigned, in the second operand of the literal."
+	<inline: true>
+	self assert: opcode = Literal.
+	operands at: 2 put: index
 ]
 
 { #category : #'generate machine code' }
