@@ -422,7 +422,7 @@ CogAbstractInstruction >> canMulRR [
 CogAbstractInstruction >> cloneLiteralFrom: existingLiteral [
 	"For out-of-line literal support, clone a literal from a literal."
 	<var: 'existingLiteral' type: #'AbstractInstruction *'>
-	self assert: (existingLiteral opcode = Literal and: [dependent isNil]).
+	self assert: (existingLiteral opcode = Literal and: [dependent isNil and: [address isNil]]).
 	opcode := Literal.
 	annotation := existingLiteral annotation.
 	operands
@@ -758,8 +758,9 @@ CogAbstractInstruction >> initialize [
 CogAbstractInstruction >> initializeSharableLiteral: literal [
 	"For out-of-line literal support, initialize a sharable literal."
 	opcode := Literal.
-	dependent := nil. "separate := nil for Slang"
-	annotation := nil.
+	annotation := nil. "separate := nil for Slang"
+	address := nil.
+	dependent := nil.
 	operands
 		at: 0 put: literal;
 		at: 1 put: true;		"isSharable/isUnique not"
@@ -770,8 +771,9 @@ CogAbstractInstruction >> initializeSharableLiteral: literal [
 CogAbstractInstruction >> initializeUniqueLiteral: literal [
 	"For out-of-line literal support, initialize an unsharable literal."
 	opcode := Literal.
-	dependent := nil. "separate := nil for Slang"
-	annotation := nil.
+	annotation := nil. "separate := nil for Slang"
+	address := nil.
+	dependent := nil.
 	operands
 		at: 0 put: literal;
 		at: 1 put: false;		"isSharable/isUnique not"
