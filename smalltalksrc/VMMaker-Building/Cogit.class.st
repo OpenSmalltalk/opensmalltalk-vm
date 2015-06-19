@@ -2857,14 +2857,19 @@ Cogit >> cPICHasFreedTargets: cPIC [
 		[:i|
 		entryPoint := literalsManager cPICCase: i jumpTargetBefore: pc.
 		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
-		(entryPoint < cPIC asInteger
-		 or: [entryPoint > (cPIC asInteger + cPIC blockSize)]) ifTrue:
+		(cPIC containsAddress: entryPoint) ifFalse:
 			[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 			 self assert: (targetMethod cmType = CMMethod or: [targetMethod cmType = CMFree]).
 			 targetMethod cmType = CMFree ifTrue:
 				[^true]].
 		pc := pc + cPICCaseSize].
 	^false
+]
+
+{ #category : #'in-line cacheing' }
+Cogit >> cPICPrototypeCaseOffset [
+	"Whimsey; we want 16rCA5E10 + cPICPrototypeCaseOffset to be somewhere in the middle of the zone."
+	^methodZoneBase + methodZone youngReferrers / 2 -  16rCA5E10
 ]
 
 { #category : #'trampoline support' }
@@ -3370,7 +3375,7 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 	"Answer if the ClosedPIC refers to any unmarked objects or freed/freeable target methods,
 	 applying markAndTraceOrFreeCogMethod:firstVisit: to those targets to determine if freed/freeable."
 	<var: #cPIC type: #'CogMethod *'>
-	| pc offsetToLiteral offsetToJump object entryPoint targetMethod |
+	| pc offsetToLiteral object entryPoint targetMethod |
 	<var: #targetMethod type: #'CogMethod *'>
 	(objectMemory isImmediate: cPIC selector) ifFalse:
 		[(objectMemory isMarked: cPIC selector) ifFalse:
@@ -3378,7 +3383,6 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 	pc := cPIC asInteger + firstCPICCaseOffset.
 	"First jump is unconditional; subsequent ones are conditional"
 	offsetToLiteral := backEnd jumpLongByteSize.
-	offsetToJump := literalsManager literalBytesFollowingJumpInClosedPIC.
 	1 to: cPIC cPICNumCases do:
 		[:i|
 		objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
@@ -3390,19 +3394,17 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 		((objectRepresentation couldBeObject: object)
 		 and: [(objectMemory isMarked: object) not]) ifTrue:
 			[^true].
-		entryPoint := literalsManager cPICCase: i jumpTargetBefore: pc - offsetToJump.
+		offsetToLiteral := backEnd jumpLongConditionalByteSize.
+		entryPoint := literalsManager cPICCase: i jumpTargetBefore: pc.
 		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
 		self assert: (entryPoint > methodZoneBase and: [entryPoint < methodZone freeStart]).
-		(entryPoint asUnsignedInteger < cPIC asUnsignedInteger
-		 or: [entryPoint asUnsignedInteger > (cPIC asUnsignedInteger + cPIC blockSize) asUnsignedInteger]) ifTrue:
+		(cPIC containsAddress: entryPoint) ifFalse:
 			[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 			 self assert: (targetMethod cmType = CMMethod
 						or: [targetMethod cmType = CMFree]).
 			 (self markAndTraceOrFreeCogMethod: targetMethod
 				  firstVisit: targetMethod asUnsignedInteger > pc asUnsignedInteger) ifTrue:
 				[^true]].
-		offsetToLiteral := backEnd jumpLongConditionalByteSize.
-		offsetToJump := literalsManager literalBytesFollowingBranchInClosedPIC.
 		pc := pc + cPICCaseSize].
 	^false
 ]
@@ -4184,13 +4186,13 @@ Cogit >> compileClosedPICPrototype [
 	self compilePICAbort: numArgs.
 	jumpNext := self compileCPICEntry.
 	self MoveUniqueCw: 16r5EAF00D R: SendNumArgsReg.
-	self DumpJumpLong: methodZoneBase + 16rCA5E10.
+	self DumpJumpLong: self cPICPrototypeCaseOffset + 16rCA5E10.
 	jumpNext jmpTarget: (endCPICCase0 := self Label).
 	1 to: numPICCases - 1 do:
 		[:h|
 		self CmpCw: 16rBABE1F15+h R: TempReg.
 		self MoveUniqueCw: 16rBADA550 + h R: SendNumArgsReg.
-		self DumpJumpLongZero: 16rCA5E10 + (h * 16).
+		self DumpJumpLongZero: self cPICPrototypeCaseOffset + 16rCA5E10 + (h * 16).
 		h = 1 ifTrue:
 			[endCPICCase1 := self Label]].
 	self MoveCw: methodLabel address R: ClassReg.
@@ -4704,6 +4706,38 @@ Cogit >> entryOffset [
 Cogit >> estimateOfAbstractOpcodesPerBytecodes [
 	<inline: true>
 	^ 10
+]
+
+{ #category : #'garbage collection' }
+Cogit >> expectedClosedPICPrototype: cPIC [
+	"Answer 0 if the ClosedPIC is as expected from compileClosedPICPrototype,
+	 otherwise answer an error code identifying the first discrepancy found."
+	<var: #cPIC type: #'CogMethod *'>
+	| pc offsetToLiteral object entryPoint |
+	pc := cPIC asInteger + firstCPICCaseOffset.
+	"First jump is unconditional; subsequent ones are conditional"
+	offsetToLiteral := backEnd jumpLongByteSize.
+	1 to: numPICCases do:
+		[:i|
+		i > 1 ifTrue:
+			[object := literalsManager classRefInClosedPICAt: pc - offsetToLiteral.
+			 object = (16rBABE1F15 + i - 1) ifFalse:
+				[^1]].
+		object := literalsManager objRefInClosedPICAt: pc - offsetToLiteral.
+		object = (i = 1
+					ifTrue: [16r5EAF00D]
+					ifFalse: [16rBADA550 + i - 1]) ifFalse:
+			[^2].
+		offsetToLiteral := backEnd jumpLongConditionalByteSize.
+		entryPoint := literalsManager cPICCase: i jumpTargetBefore: pc.
+		entryPoint = (self cPICPrototypeCaseOffset + 16rCA5E10 + (i - 1 * 16)) ifFalse:
+				[^3].
+		pc := pc + cPICCaseSize].
+	pc := pc - cPICCaseSize.
+	entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc + cPICEndSize.
+	entryPoint = (self cPICMissTrampolineFor: 0) ifFalse:
+		[^4].
+	^0
 ]
 
 { #category : #'bytecode generators' }
@@ -5915,6 +5949,8 @@ Cogit >> generateClosedPICPrototype [
 	"Generate the prototype ClosedPIC to determine how much space as full PIC takes.
 	 When we first allocate a closed PIC it only has one or two cases and we want to grow it.
 	 So we have to determine how big a full one is before hand."
+	| cPIC |
+	<var: 'cPIC' type: #'CogMethod *'>
 	numPICCases := 6.
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
@@ -5922,17 +5958,18 @@ Cogit >> generateClosedPICPrototype [
 	methodLabel address: methodZoneBase; dependent: nil. "for pc-relative MoveCw: cPIC R: ClassReg"
 	self compileClosedPICPrototype.
 	self computeMaximumSizes.
+	cPIC := (self cCoerceSimple: methodZoneBase to: #'CogMethod *').
 	closedPICSize := (self sizeof: CogMethod) + (self generateInstructionsAt: methodZoneBase + (self sizeof: CogMethod)).
+	self outputInstructionsAt: methodZoneBase + (self sizeof: CogMethod).
 	firstCPICCaseOffset := endCPICCase0 address - methodZoneBase.
 	cPICCaseSize := endCPICCase1 address - endCPICCase0 address.
 	cPICEndSize := closedPICSize - (numPICCases - 1 * cPICCaseSize + firstCPICCaseOffset).
 	closedPICSize := methodZone roundUpLength: closedPICSize.
-	self assert: picInterpretAbort address = (methodLabel address + self picInterpretAbortOffset)
+	self assert: picInterpretAbort address = (methodLabel address + self picInterpretAbortOffset).
+	self assert: (self expectedClosedPICPrototype: cPIC) = 0
 	"self cCode: ''
 		inSmalltalk:
-			[| end |
-			 end := self outputInstructionsAt: methodZoneBase + headerSize.
-			 self disassembleFrom: methodZoneBase + headerSize to: end - 1.
+			[self disassembleFrom: methodZoneBase + (self sizeof: CogMethod) to: methodZoneBase + closedPICSize - 1.
 			 self halt]"
 ]
 
@@ -8119,8 +8156,7 @@ Cogit >> noTargetsFreeInClosedPIC: cPIC [
 		[:i|
 		entryPoint := literalsManager cPICCase: i jumpTargetBefore: pc.
 		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
-		(entryPoint < cPIC asInteger
-		 or: [entryPoint > (cPIC asInteger + cPIC blockSize)]) ifTrue:
+		(cPIC containsAddress: entryPoint) ifFalse:
 			[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 			 targetMethod cmType ~= CMMethod ifTrue:
 				[^false]].
@@ -8311,16 +8347,6 @@ Cogit >> patchToOpenPICFor: selector numArgs: numArgs receiver: receiver [
 	^true
 ]
 
-{ #category : #disassembly }
-Cogit >> pc: address isWithinMethod: cogMethod [
-	<api>
-	<var: #address type: #'char *'>
-	<var: #cogMethod type: #'CogMethod *'>
-	^address asInteger
-		between: cogMethod asInteger + (self sizeof: CogMethod)
-		and: cogMethod asInteger + cogMethod blockSize
-]
-
 { #category : #accessing }
 Cogit >> picAbortDiscriminatorValue [
 	"This value is used to decide between MNU processing
@@ -8462,9 +8488,8 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 				[^self printMethodHeader: (self cogMethodOrBlockSurrogateAt: cogMethod) on: aStream]].
 	aStream ensureCr.
 	cogMethod asInteger printOn: aStream base: 16.
-	aStream crtab.
 	cogMethod cmType = CMMethod ifTrue:
-		[aStream nextPutAll: 'objhdr: '.
+		[aStream crtab; nextPutAll: 'objhdr: '.
 		cogMethod objectHeader printOn: aStream base: 16].
 	cogMethod cmType = CMBlock ifTrue:
 		[aStream nextPutAll: 'homemth: '.
@@ -8476,19 +8501,21 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 	(cogMethod cmType ~= 0 and: [cogMethod cmType ~= CMBlock]) ifTrue:
 		[aStream crtab; nextPutAll: 'blksiz: '.
 		cogMethod blockSize printOn: aStream base: 16.
-		aStream crtab; nextPutAll: 'method: '.
-		cogMethod methodObject printOn: aStream base: 16.
-		aStream crtab; nextPutAll: 'mthhdr: '.
-		cogMethod methodHeader printOn: aStream base: 16.
+		cogMethod cmType = CMMethod ifTrue:
+			[aStream crtab; nextPutAll: 'method: '.
+			 cogMethod methodObject printOn: aStream base: 16.
+			 aStream crtab; nextPutAll: 'mthhdr: '.
+			 cogMethod methodHeader printOn: aStream base: 16].
 		aStream crtab; nextPutAll: 'selctr: '.
 		cogMethod selector printOn: aStream base: 16.
 		(coInterpreter lookupAddress: cogMethod selector) ifNotNil:
 			[:string| aStream nextPut: $=; nextPutAll: string].
-		aStream crtab; nextPutAll: 'blkentry: '.
-		cogMethod blockEntryOffset printOn: aStream base: 16.
-		cogMethod blockEntryOffset ~= 0 ifTrue:
-			[aStream nextPutAll: ' => '.
-			 cogMethod asInteger + cogMethod blockEntryOffset printOn: aStream base: 16]].
+		cogMethod cmType = CMMethod ifTrue:
+			[aStream crtab; nextPutAll: 'blkentry: '.
+			 cogMethod blockEntryOffset printOn: aStream base: 16.
+			 cogMethod blockEntryOffset ~= 0 ifTrue:
+				[aStream nextPutAll: ' => '.
+				 cogMethod asInteger + cogMethod blockEntryOffset printOn: aStream base: 16]]].
 	cogMethod cmType = CMClosedPIC
 		ifTrue:
 			[aStream crtab; nextPutAll: 'cPICNumCases: '.
@@ -8836,8 +8863,7 @@ Cogit >> relocateCallsInClosedPIC: cPIC [
 		[:i|
 		entryPoint := literalsManager cPICCase: i jumpTargetBefore: pc.
 		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
-		(entryPoint < cPIC asInteger
-		 or: [entryPoint > (cPIC asInteger + cPIC blockSize)]) ifTrue:
+		(cPIC containsAddress: entryPoint) ifFalse:
 			[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 			 self assert: targetMethod cmType = CMMethod.
 			 literalsManager
