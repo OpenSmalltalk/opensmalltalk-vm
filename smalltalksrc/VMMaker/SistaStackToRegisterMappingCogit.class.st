@@ -1016,7 +1016,7 @@ SistaStackToRegisterMappingCogit >> populate: tuple withPICInfoFor: cPIC firstCa
 																		- backEnd loadLiteralByteSize].
 		classOop := objectRepresentation classForInlineCacheTag: cacheTag.
 		objectMemory storePointer: i * 2 - 1 ofObject: tuple withValue: classOop.
-		entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
+		entryPoint := literalsManager cPICCase: i jumpTargetBefore: pc.
 		"Find target from jump.  A jump to the MNU entry-point should collect #doesNotUnderstand:"
 		(entryPoint asUnsignedInteger < cPIC asUnsignedInteger
 		 or: [entryPoint asUnsignedInteger > (cPIC asUnsignedInteger + cPIC blockSize) asUnsignedInteger])

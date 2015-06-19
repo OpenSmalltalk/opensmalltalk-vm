@@ -2225,6 +2225,31 @@ Cogit >> addCogMethodsToHeapMap [
 		cogMethod := methodZone methodAfter: cogMethod]
 ]
 
+{ #category : #'method map' }
+Cogit >> addToMap: annotation instruction: instruction byte: byte at: address for: mcpc [
+	<inline: true>
+	objectMemory byteAt: address put: byte.
+	self cCode: [] inSmalltalk:
+		[| s bytecode |
+		(compilationTrace anyMask: 16) ifTrue:
+			[(s := coInterpreter transcript)
+				ensureCr;
+				print: annotation; nextPut: $/; nextPutAll: byte hex; space;
+				nextPutAll: address hex; space; nextPutAll: mcpc hex; space;
+				nextPutAll: (AnnotationConstantNames detect: [:name| (Cogit classPool at: name ifAbsent: []) = annotation]); cr; flush.
+			(instruction notNil
+			 and: [instruction bcpc isInteger]) ifTrue:
+				[s tab; print: instruction bcpc; nextPut: $/.
+				 instruction bcpc printOn: s base: 16.
+				 s space.
+				 instruction printStateOn: s.
+				 s space.
+				 bytecode := objectMemory fetchByte: instruction bcpc ofObject: methodObj.
+				 bytecode := bytecode + (self bytecodeSetOffsetForHeader: (objectMemory methodHeaderOf: methodObj)).
+				 (self generatorAt: bytecode) printStateOn: s.
+				 s cr; flush]]]
+]
+
 { #category : #testing }
 Cogit >> addressIsInCodeZone: address [
 	"N.B. We /don't/ write this as address between: codeBase and: methodZone limitZony in case we're
@@ -2236,7 +2261,7 @@ Cogit >> addressIsInCodeZone: address [
 { #category : #testing }
 Cogit >> addressIsInCurrentCompilation: address [
 	^address asUnsignedInteger >= methodLabel address
-	  and: [address asUnsignedInteger < (methodLabel address + (1 << 16))]
+	  and: [address asUnsignedInteger < methodZone youngReferrers]
 ]
 
 { #category : #testing }
@@ -2799,7 +2824,7 @@ Cogit >> cPIC: cPIC HasTarget: targetMethod [
 	pc := cPIC asInteger + firstCPICCaseOffset.
 	1 to: cPIC cPICNumCases do:
 		[:i|
-		target = (backEnd jumpLongTargetBeforeFollowingAddress: pc) ifTrue:
+		target = (literalsManager cPICCase: i jumpTargetBefore: pc) ifTrue:
 			[^true].
 		pc := pc + cPICCaseSize].
 	^false
@@ -2830,7 +2855,7 @@ Cogit >> cPICHasFreedTargets: cPIC [
 	pc := cPIC asInteger + firstCPICCaseOffset.
 	1 to: cPIC cPICNumCases do:
 		[:i|
-		entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
+		entryPoint := literalsManager cPICCase: i jumpTargetBefore: pc.
 		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
 		(entryPoint < cPIC asInteger
 		 or: [entryPoint > (cPIC asInteger + cPIC blockSize)]) ifTrue:
@@ -3365,7 +3390,7 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 		((objectRepresentation couldBeObject: object)
 		 and: [(objectMemory isMarked: object) not]) ifTrue:
 			[^true].
-		entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc - offsetToJump.
+		entryPoint := literalsManager cPICCase: i jumpTargetBefore: pc - offsetToJump.
 		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
 		self assert: (entryPoint > methodZoneBase and: [entryPoint < methodZone freeStart]).
 		(entryPoint asUnsignedInteger < cPIC asUnsignedInteger
@@ -3897,7 +3922,14 @@ Cogit >> cogitPostGCAction: gcMode [
 { #category : #disassembly }
 Cogit >> collectMapEntry: annotation address: mcpc into: aDictionary [
 	<doNotGenerate>
-	aDictionary at: mcpc put: (self class annotationConstantNames at: annotation + 1).
+	aDictionary
+		at: mcpc
+		ifPresent:
+			[:extant|
+			aDictionary
+				at: mcpc
+				put: extant, ':\' withCRs, (self class annotationConstantNames at: annotation + 1)]
+		ifAbsentPut: [self class annotationConstantNames at: annotation + 1].
 	^0
 ]
 
@@ -6053,10 +6085,7 @@ Cogit >> generateMapAt: addressOrNull start: startAddress [
 				[maxDelta := (delta min: MaxX2NDisplacement) bitClear: DisplacementMask.
 				 self assert: maxDelta >> AnnotationShift <= DisplacementMask.
 				 addressOrNull ifNotNil:
-					[objectMemory
-						byteAt: addressOrNull - length
-						put: maxDelta >> AnnotationShift + DisplacementX2N.
-					 self traceMap: IsDisplacementX2N
+					[self addToMap: IsDisplacementX2N
 						instruction: instruction
 						byte: maxDelta >> AnnotationShift + DisplacementX2N
 						at: addressOrNull - length
@@ -6065,31 +6094,16 @@ Cogit >> generateMapAt: addressOrNull start: startAddress [
 				 length := length + 1].
 			 addressOrNull ifNotNil:
 				[mapEntry := delta + ((annotation min: IsSendCall) << AnnotationShift).
-				 objectMemory byteAt: addressOrNull - length put: mapEntry.
-				 self traceMap: annotation
-					instruction: instruction
-					byte: mapEntry
-					at: addressOrNull - length
-					for: mcpc].
+				 self addToMap: annotation instruction: instruction byte: mapEntry at: addressOrNull - length for: mcpc].
 			 location := location + (delta * backEnd codeGranularity).
 			 length := length + 1.
 			 annotation > IsSendCall ifTrue: "Add the necessary IsAnnotationExtension"
 				[addressOrNull ifNotNil:
 					[mapEntry := IsAnnotationExtension << AnnotationShift + (annotation - IsSendCall).
-					 objectMemory byteAt: addressOrNull - length put: mapEntry.
-					 self traceMap: annotation
-						instruction: instruction
-						byte: mapEntry
-						at: addressOrNull - length
-						for: mcpc].
+					 self addToMap: annotation instruction: instruction byte: mapEntry at: addressOrNull - length for: mcpc].
 				 length := length + 1]]].
 	addressOrNull ifNotNil:
-		[objectMemory byteAt: addressOrNull - length put: MapEnd.
-		 self traceMap: MapEnd
-			instruction: nil
-			byte: MapEnd
-			at: addressOrNull - length
-			for: 0].
+		[self addToMap: MapEnd instruction: nil byte: MapEnd at: addressOrNull - length for: 0].
 	^length + 1
 ]
 
@@ -6602,13 +6616,13 @@ Cogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	minValidCallAddress := (codeBase min: coInterpreter interpretAddress)
 								min: coInterpreter primitiveFailAddress.
 	self initializeBackend.
+	methodZone manageFrom: methodZoneBase to: endAddress.
 	self maybeGenerateCheckFeatures.
 	self maybeGenerateICacheFlush.
 	self generateVMOwnerLockFunctions.
 	ceGetSP := self cCoerceSimple: self genGetLeafCallStackPointer to: #'unsigned long (*)(void)'.
 	self generateStackPointerCapture.
 	self generateTrampolines.
-	self cCode: '' inSmalltalk: [methodZone zoneEnd: endAddress]. "so that simulator works"
 	methodZone manageFrom: methodZoneBase to: endAddress.
 	self computeEntryOffsets.
 	self generateClosedPICPrototype.
@@ -8103,7 +8117,7 @@ Cogit >> noTargetsFreeInClosedPIC: cPIC [
 	pc := cPIC asInteger + firstCPICCaseOffset.
 	1 to: cPIC cPICNumCases do:
 		[:i|
-		entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
+		entryPoint := literalsManager cPICCase: i jumpTargetBefore: pc.
 		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
 		(entryPoint < cPIC asInteger
 		 or: [entryPoint > (cPIC asInteger + cPIC blockSize)]) ifTrue:
@@ -8820,14 +8834,15 @@ Cogit >> relocateCallsInClosedPIC: cPIC [
 	pc := cPIC asInteger + firstCPICCaseOffset.
 	1 to: cPIC cPICNumCases do:
 		[:i|
-		entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
+		entryPoint := literalsManager cPICCase: i jumpTargetBefore: pc.
 		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
 		(entryPoint < cPIC asInteger
 		 or: [entryPoint > (cPIC asInteger + cPIC blockSize)]) ifTrue:
 			[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 			 self assert: targetMethod cmType = CMMethod.
-			 backEnd
-				relocateJumpLongBeforeFollowingAddress: pc
+			 literalsManager
+				cPICCase: i
+				relocateJumpLongBefore: pc
 				by: (delta - targetMethod objectHeader) negated].
 		pc := pc + cPICCaseSize].
 	self assert: cPIC cPICNumCases > 0.
@@ -9810,29 +9825,6 @@ Cogit >> traceLinkedSendOffset [
 	 + (backEnd hasLinkRegister
 		ifTrue: [backEnd pushLinkRegisterByteSize]
 		ifFalse: [0])
-]
-
-{ #category : #'method map' }
-Cogit >> traceMap: annotation instruction: instruction byte: byte at: address for: mcpc [
-	<cmacro: '(ig,no,r,e,d) 0'>
-	| s bytecode |
-	(compilationTrace anyMask: 16) ifTrue:
-		[(s := coInterpreter transcript)
-			ensureCr;
-			print: annotation; nextPut: $/; nextPutAll: byte hex; space;
-			nextPutAll: address hex; space; nextPutAll: mcpc hex; space;
-			nextPutAll: (AnnotationConstantNames detect: [:name| (Cogit classPool at: name ifAbsent: []) = annotation]); cr; flush.
-		(instruction notNil
-		 and: [instruction bcpc isInteger]) ifTrue:
-			[s tab; print: instruction bcpc; nextPut: $/.
-			 instruction bcpc printOn: s base: 16.
-			 s space.
-			 instruction printStateOn: s.
-			 s space.
-			 bytecode := objectMemory fetchByte: instruction bcpc ofObject: methodObj.
-			 bytecode := bytecode + (self bytecodeSetOffsetForHeader: (objectMemory methodHeaderOf: methodObj)).
-			 (self generatorAt: bytecode) printStateOn: s.
-			 s cr; flush]]
 ]
 
 { #category : #debugging }

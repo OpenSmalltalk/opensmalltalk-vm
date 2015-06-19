@@ -26,6 +26,20 @@ InLineLiteralsManager >> assertValidAnnotation: annotation for: instruction [
 	<inline: true>
 ]
 
+{ #category : #'closed PIC parsing' }
+InLineLiteralsManager >> cPICCase: caseIndex jumpTargetBefore: pc [
+	<inline: true>
+	^cogit backEnd jumpLongTargetBeforeFollowingAddress: pc
+]
+
+{ #category : #'closed PIC parsing' }
+InLineLiteralsManager >> cPICCase: caseIndex relocateJumpLongBefore: pc by: delta [
+	<inline: true>
+	cogit backEnd
+		relocateJumpLongBeforeFollowingAddress: pc
+		by: delta
+]
+
 { #category : #'compile abstract instructions' }
 InLineLiteralsManager >> checkLiteral: literal forInstruction: anInstruction [
 	<var: #anInstruction type: #'AbstractInstruction *'>
