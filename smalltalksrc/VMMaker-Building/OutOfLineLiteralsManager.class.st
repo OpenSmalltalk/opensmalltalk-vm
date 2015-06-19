@@ -143,9 +143,12 @@ OutOfLineLiteralsManager >> checkQuickConstant: literal forInstruction: anInstru
 ]
 
 { #category : #'garbage collection' }
-OutOfLineLiteralsManager >> classRefInClosedPICAt: mcpc [
+OutOfLineLiteralsManager >> classRefInClosedPICAt: address [
 	<inline: true>
-	^objectMemory longAt: mcpc - objectMemory bytesPerOop
+	"If inline cache tags are not objects they will be 32-bit values."
+	^objectRepresentation inlineCacheTagsMayBeObjects
+		ifTrue: [objectMemory long32At: address - 4]
+		ifFalse: [objectMemory longAt: address - objectMemory bytesPerOop]
 ]
 
 { #category : #initialization }
@@ -187,22 +190,6 @@ OutOfLineLiteralsManager >> fetchLiteralAtAnnotatedAddress: address using: instr
 	<var: 'instruction' type: #'AbstractInstruction *'>
 	<inline: true>
 	^objectMemory longAt: address
-]
-
-{ #category : #'garbage collection' }
-OutOfLineLiteralsManager >> literalBytesFollowingBranchInClosedPIC [
-	<inline: true>
-	"With Spur the class tag is always 32-bits and the literal is bytesPerOop.
-	 With V3 the class and literal are both bytesPerOop."
-	^objectRepresentation inlineCacheTagsMayBeObjects
-		ifTrue: [objectMemory bytesPerOop * 2]
-		ifFalse: [objectMemory bytesPerOop + 4]
-]
-
-{ #category : #'garbage collection' }
-OutOfLineLiteralsManager >> literalBytesFollowingJumpInClosedPIC [
-	<inline: true>
-	^objectMemory bytesPerOop
 ]
 
 { #category : #'compile abstract instructions' }
@@ -260,9 +247,9 @@ OutOfLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 ]
 
 { #category : #'garbage collection' }
-OutOfLineLiteralsManager >> objRefInClosedPICAt: mcpc [
+OutOfLineLiteralsManager >> objRefInClosedPICAt: address [
 	<inline: true>
-	^objectMemory longAt: mcpc
+	^objectMemory longAt: address
 ]
 
 { #category : #initialization }
@@ -290,7 +277,10 @@ OutOfLineLiteralsManager >> saveForBlockCompile [
 OutOfLineLiteralsManager >> storeClassRef: classObj inClosedPICAt: address [
 	<var: #address type: #usqInt>
 	<inline: true>
-	objectMemory longAt: address - objectMemory bytesPerOop put: classObj
+	"If inline cache tags are not objects they will be 32-bit values."
+	objectRepresentation inlineCacheTagsMayBeObjects
+		ifTrue: [objectMemory long32At: address - 4 put: classObj]
+		ifFalse: [objectMemory longAt: address - objectMemory bytesPerOop]
 ]
 
 { #category : #'garbage collection' }

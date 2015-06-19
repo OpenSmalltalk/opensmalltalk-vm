@@ -96,6 +96,13 @@ CogMethod >> blockSize: anObject [
 	^blockSize := anObject
 ]
 
+{ #category : #testing }
+CogMethod >> containsAddress: address [
+	<inline: true>
+	^self asUnsignedInteger <= address asUnsignedInteger
+	  and: [self asUnsignedInteger + self blockSize >= address asUnsignedInteger]
+]
+
 { #category : #accessing }
 CogMethod >> methodHeader [
 	"Answer the value of methodHeader"

@@ -1018,14 +1018,13 @@ SistaStackToRegisterMappingCogit >> populate: tuple withPICInfoFor: cPIC firstCa
 		objectMemory storePointer: i * 2 - 1 ofObject: tuple withValue: classOop.
 		entryPoint := literalsManager cPICCase: i jumpTargetBefore: pc.
 		"Find target from jump.  A jump to the MNU entry-point should collect #doesNotUnderstand:"
-		(entryPoint asUnsignedInteger < cPIC asUnsignedInteger
-		 or: [entryPoint asUnsignedInteger > (cPIC asUnsignedInteger + cPIC blockSize) asUnsignedInteger])
+		(cPIC containsAddress: entryPoint)
 			ifTrue:
+				[value := objectMemory splObj: SelectorDoesNotUnderstand]
+			ifFalse:
 				[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 				 self assert: targetMethod cmType = CMMethod.
-				 value := targetMethod methodObject]
-			ifFalse:
-				[value := objectMemory splObj: SelectorDoesNotUnderstand].
+				 value := targetMethod methodObject].
 		objectMemory storePointer: i * 2 ofObject: tuple withValue: value.
 		pc := pc + cPICCaseSize]
 ]
