@@ -98,6 +98,32 @@ OutOfLineLiteralsManager >> assertValidAnnotation: annotation for: instruction [
 	self assert: (annotation ~= cogit getIsObjectReference or: [instruction opcode = Literal])
 ]
 
+{ #category : #'closed PIC parsing' }
+OutOfLineLiteralsManager >> cPICCase: caseIndex jumpTargetBefore: pc [
+	<inline: true>
+	"With Spur the class tag is always 32-bits and the literal is bytesPerOop.
+	 With V3 the class and literal are both bytesPerOop."
+	^cogit backEnd jumpLongTargetBeforeFollowingAddress: pc - (caseIndex <= 1
+																		ifTrue: [objectMemory bytesPerOop]
+																		ifFalse: [objectRepresentation inlineCacheTagsMayBeObjects
+																					ifTrue: [objectMemory bytesPerOop * 2]
+																					ifFalse: [objectMemory bytesPerOop + 4]])
+]
+
+{ #category : #'closed PIC parsing' }
+OutOfLineLiteralsManager >> cPICCase: caseIndex relocateJumpLongBefore: pc by: delta [
+	<inline: true>
+	"With Spur the class tag is always 32-bits and the literal is bytesPerOop.
+	 With V3 the class and literal are both bytesPerOop."
+	cogit backEnd
+		relocateJumpLongBeforeFollowingAddress: pc - (caseIndex <= 1
+															ifTrue: [objectMemory bytesPerOop]
+															ifFalse: [objectRepresentation inlineCacheTagsMayBeObjects
+																		ifTrue: [objectMemory bytesPerOop * 2]
+																		ifFalse: [objectMemory bytesPerOop + 4]])
+		by: delta
+]
+
 { #category : #'compile abstract instructions' }
 OutOfLineLiteralsManager >> checkLiteral: literal forInstruction: anInstruction [
 	<var: #anInstruction type: #'AbstractInstruction *'>
