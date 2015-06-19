@@ -106,6 +106,13 @@ CogMethodSurrogate >> cPICNumCases: n [
 	^self stackCheckOffset: n
 ]
 
+{ #category : #testing }
+CogMethodSurrogate >> containsAddress: address [
+	"Simulation only; N.B. this will error if used on block method surrogates."
+	^address <= address asUnsignedInteger
+	  and: [address + self blockSize >= address asUnsignedInteger]
+]
+
 { #category : #comparing }
 CogMethodSurrogate >> isZero [
 	^address = 0
