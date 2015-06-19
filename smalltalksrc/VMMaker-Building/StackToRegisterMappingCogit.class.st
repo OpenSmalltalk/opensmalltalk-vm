@@ -3609,7 +3609,8 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 	 Return pops receiver and arguments off the stack.  Callee pushes the result."
 	inBlock ifTrue:
 		[self assert: needsFrame. 
-		 self annotateBytecode: (self CallRT: ceNonLocalReturnTrampoline).
+		 self CallRT: ceNonLocalReturnTrampoline.
+		 self annotateBytecode: self Label.
 		 ^0].
 	needsFrame
 		ifTrue:

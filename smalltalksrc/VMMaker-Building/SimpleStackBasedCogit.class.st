@@ -1835,7 +1835,8 @@ SimpleStackBasedCogit >> genJumpBackTo: targetBytecodePC [
 	self MoveAw: coInterpreter stackLimitAddress R: TempReg.
 	self CmpR: TempReg R: SPReg. "N.B. FLAGS := SPReg - TempReg"
 	self JumpAboveOrEqual: (self fixupAt: targetBytecodePC - initialPC).
-	self annotateBytecode: (self CallRT: ceCheckForInterruptTrampoline).
+	self CallRT: ceCheckForInterruptTrampoline.
+	self annotateBytecode: self Label.
 	self Jump: (self fixupAt: targetBytecodePC - initialPC).
 	^0
 ]
@@ -3562,7 +3563,8 @@ SimpleStackBasedCogit >> genUpArrowReturn [
 	 Return pops receiver and arguments off the stack.  Callee pushes the result."
 	inBlock ifTrue:
 		[self assert: needsFrame.
-		 self annotateBytecode: (self CallRT: ceNonLocalReturnTrampoline).
+		 self CallRT: ceNonLocalReturnTrampoline.
+		 self annotateBytecode: self Label.
 		 ^0].
 	needsFrame ifTrue:
 		[self MoveR: FPReg R: SPReg.
