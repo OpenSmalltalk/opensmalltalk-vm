@@ -330,6 +330,7 @@ CogAbstractInstruction >> annotation [
 
 { #category : #accessing }
 CogAbstractInstruction >> annotation: aByte [
+	self assert: (annotation isNil or: [annotation = aByte]).
 	^annotation := aByte
 ]
 
