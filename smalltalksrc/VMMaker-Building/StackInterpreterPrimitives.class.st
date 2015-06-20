@@ -569,10 +569,10 @@ StackInterpreterPrimitives >> primitiveExecuteMethodArgsArray [
 	argumentCount > 2 ifTrue: "CompiledMethod class>>receiver:withArguments:executeMethod:
 								SqueakObjectPrimitives class>>receiver:withArguments:apply:
 								VMMirror>>ifFail:object:with:executeMethod: et al"
-		[argumentCount > 4 ifTrue:
+		[rcvr := self stackValue: 2.
+		 (argumentCount > 4
+		  or: [objectMemory isOopForwarded: rcvr]) ifTrue:
 			[^self primitiveFailFor: PrimErrUnsupported].
-		rcvr := self stackValue: 2.
-		rcvr := objectMemory followMaybeForwarded: rcvr.
 		self stackValue: argumentCount put: rcvr]. "replace actual receiver with desired receiver"
 	"and push the actual arguments"
 	self pop: argumentCount.
