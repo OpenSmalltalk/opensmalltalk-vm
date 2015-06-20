@@ -4111,11 +4111,13 @@ StackInterpreter >> commonAt: stringy [
 	<inline: true> "to get it inlined in primitiveAt and primitiveStringAt"
 	self initPrimCall.
 	rcvr := self stackValue: 1.
+	index := self stackTop.
 	(objectMemory isImmediate: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrInappropriate].
-	index := self stackTop.
 	"No need to test for large positive integers here.  No object has 1g elements"
-	(objectMemory isIntegerObject: index) ifFalse:
+	((objectMemory isNonIntegerObject: index)
+	 or: [argumentCount > 1 "e.g. object:basicAt:"
+		 and: [objectMemory isObjectForwarded: rcvr]]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	result := self stObject: rcvr at: index.
@@ -4133,14 +4135,16 @@ StackInterpreter >> commonAtPut: stringy [
 	 inlining produces much better performance than using the at cache here."
 	| value index rcvr |
 	<inline: true> "to get it inlined in primitiveAtPut and primitiveStringAtPut"
-	value := self stackTop.
 	self initPrimCall.
 	rcvr := self stackValue: 2.
-	(objectMemory isNonImmediate: rcvr) ifFalse:
-		[^self primitiveFailFor: PrimErrInappropriate].
 	index := self stackValue: 1.
+	value := self stackTop.
+	(objectMemory isImmediate: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrInappropriate].
 	"No need to test for large positive integers here.  No object has 1g elements"
-	(objectMemory isIntegerObject: index) ifFalse:
+	((objectMemory isNonIntegerObject: index)
+	 or: [argumentCount > 2 "e.g. object:basicAt:put:"
+		 and: [objectMemory isObjectForwarded: rcvr]]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	stringy

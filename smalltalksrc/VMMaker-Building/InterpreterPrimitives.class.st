@@ -513,9 +513,13 @@ InterpreterPrimitives >> primitiveAdoptInstance [
 	 differs from the size that an instance of the argument's class should have."
 	| rcvr arg err |
 
-	arg := self stackObjectValue: 0.
-	rcvr := self stackObjectValue: 1.
-	self successful ifFalse:[^nil].
+	arg := self stackTop.
+	rcvr := self stackValue: 1.
+	((objectMemory isImmediate: arg)
+	 or: [argumentCount > 1
+		and: [(objectMemory isImmediate: rcvr)
+			or: [(self objCouldBeClassObj: rcvr) not]]]) ifTrue:
+		[^self primitiveFailFor: PrimErrBadArgument].
 
 	err := objectMemory changeClassOf: arg to: rcvr.
 	err = 0
@@ -534,6 +538,12 @@ InterpreterPrimitives >> primitiveAllInstances [
 
 	<export: true>
 	| result |
+	self cppIf: NewspeakVM
+		ifTrue: "For the mirror prims check that the class obj is actually a valid class."
+			[(argumentCount < 1
+			  or: [(objectMemory isNonImmediate: self stackTop)
+				  and: [self objCouldBeClassObj: self stackTop]]) ifFalse:
+				[self primitiveFailFor: PrimErrBadArgument]].
 	result := objectMemory allInstancesOf: self stackTop.
 	(objectMemory isIntegerObject: result) ifTrue:
 		[objectMemory growToAccomodateContainerWithNumSlots: (objectMemory integerValueOf: result).
@@ -761,8 +771,14 @@ InterpreterPrimitives >> primitiveBeep [
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveBehaviorHash [
 	| hashOrError |
-	self assert: ((objectMemory isNonImmediate: self stackTop)
-				 and: [self addressCouldBeClassObj: self stackTop]).
+	argumentCount > 0
+		ifTrue:
+			[((objectMemory isNonImmediate: self stackTop)
+			  and: [self addressCouldBeClassObj: self stackTop]) ifFalse:
+				[^self primitiveFailFor: PrimErrBadArgument]]
+		ifFalse:
+			[self assert: ((objectMemory isNonImmediate: self stackTop)
+						  and: [self addressCouldBeClassObj: self stackTop])].
 	hashOrError := objectMemory ensureBehaviorHash: self stackTop.
 	hashOrError >= 0
 		ifTrue: [self pop: argumentCount + 1 thenPushInteger: hashOrError]
@@ -1015,9 +1031,12 @@ InterpreterPrimitives >> primitiveChangeClass [
 InterpreterPrimitives >> primitiveClass [
 	| instance |
 	instance := self stackTop.
-	argumentCount > 0 ifTrue:
-		[instance := objectMemory followMaybeForwarded: instance].
-	self pop: argumentCount + 1 thenPush: (objectMemory fetchClassOf: instance)
+	(argumentCount > 0
+	 and: [objectMemory isOopForwarded: instance])
+		ifTrue:
+			[self primitiveFail]
+		ifFalse:
+			[self pop: argumentCount + 1 thenPush: (objectMemory fetchClassOf: instance)]
 ]
 
 { #category : #'process primitives' }
@@ -1097,7 +1116,10 @@ InterpreterPrimitives >> primitiveClone [
 		ifTrue:
 			[newCopy := rcvr]
 		ifFalse:
-			[newCopy := objectMemory clone: rcvr.
+			[(argumentCount = 0
+			  or: [(objectMemory isObjectForwarded: rcvr) not])
+				ifTrue: [newCopy := objectMemory clone: rcvr]
+				ifFalse: [newCopy := 0].
 			 newCopy = 0 ifTrue: "not enough memory most likely"
 				[^self primitiveFail]].
 	self pop: argumentCount + 1 thenPush: newCopy
@@ -2006,20 +2028,22 @@ InterpreterPrimitives >> primitiveIdentical [
 	| thisObject otherObject |
 	otherObject := self stackValue: 1.
 	thisObject := self stackTop.
-	(objectMemory isOopForwarded: otherObject) ifTrue:
-		[self assert: argumentCount > 1.
-		 otherObject := objectMemory followForwarded: thisObject].
-	self assert: (objectMemory isOopForwarded: otherObject) not.
-	(objectMemory isOopForwarded: thisObject) ifTrue:
-		[thisObject := objectMemory followForwarded: thisObject].
-	self pop: argumentCount + 1 thenPushBool: thisObject = otherObject
+	((objectMemory isOopForwarded: otherObject)
+	 or: [argumentCount > 1
+		 and: [objectMemory isOopForwarded: thisObject]])
+		ifTrue:
+			[self primitiveFailFor: PrimErrBadArgument]
+		ifFalse:
+			[self pop: argumentCount + 1 thenPushBool: thisObject = otherObject]
 ]
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveIdentityHash [
 	| thisReceiver |
 	thisReceiver := self stackTop.
-	(objectMemory isImmediate: thisReceiver)
+	((objectMemory isImmediate: thisReceiver)
+	 or: [argumentCount > 0
+		 and: [objectMemory isObjectForwarded: thisReceiver]])
 		ifTrue: [self primitiveFail]
 		ifFalse: [self pop: argumentCount + 1
 					thenPushInteger: (objectMemory hashBitsOf: thisReceiver)]
@@ -2134,10 +2158,13 @@ InterpreterPrimitives >> primitiveInputWord [
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveInstVarAt [
 	| index rcvr hdr fmt totalLength fixedFields value |
-	index := self stackIntegerValue: 0.
+	index := self stackTop.
 	rcvr := self stackValue: 1.
-	self successful ifFalse:
+	((objectMemory isNonIntegerObject: index)
+	 or: [argumentCount > 1 "e.g. object:instVarAt:"
+		and: [objectMemory isOopForwarded: rcvr]]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadArgument].
+	index := objectMemory integerValueOf: index.
 	hdr := self baseHeader: rcvr.
 	fmt := objectMemory formatOfHeader: hdr.
 	totalLength := self lengthOf: rcvr baseHeader: hdr format: fmt.
@@ -2152,10 +2179,13 @@ InterpreterPrimitives >> primitiveInstVarAt [
 InterpreterPrimitives >> primitiveInstVarAtPut [
 	| newValue index rcvr hdr fmt totalLength fixedFields |
 	newValue := self stackTop.
-	index := self stackIntegerValue: 1.
+	index := self stackValue: 1.
 	rcvr := self stackValue: 2.
-	self successful ifFalse:
+	((objectMemory isNonIntegerObject: index)
+	 or: [argumentCount > 2 "e.g. object:instVarAt:put:"
+		and: [objectMemory isOopForwarded: rcvr]]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadArgument].
+	index := objectMemory integerValueOf: index.
 	hdr := objectMemory baseHeader: rcvr.
 	fmt := objectMemory formatOfHeader: hdr.
 	totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
@@ -2679,6 +2709,11 @@ InterpreterPrimitives >> primitiveMultiplyLargeIntegers [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveNew [
+	self cppIf: NewspeakVM
+		ifTrue: "For the mirror prims check that the class obj is actually a valid class."
+			[(argumentCount < 1
+			  or: [self addressCouldBeClassObj: self stackTop]) ifFalse:
+				[self primitiveFailFor: PrimErrBadArgument]].
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
 			["Allocate a new fixed-size instance.  Fail if the allocation would leave
@@ -2925,12 +2960,16 @@ InterpreterPrimitives >> primitivePathToUsing [
 { #category : #'control primitives' }
 InterpreterPrimitives >> primitivePerformInSuperclass [
 	| lookupClass rcvr currentClass |
-	lookupClass := self stackTop.
 	rcvr := self stackValue: 3.
+	lookupClass := self stackTop.
+	(argumentCount > 3 "e.g. object:perform:withArguments:inClass:"
+	 and: [objectMemory isOopForwarded: rcvr]) ifTrue:
+		[^self primitiveFail].
 	currentClass := objectMemory fetchClassOf: rcvr.
 	[currentClass ~= lookupClass] whileTrue:
 		[currentClass := self superclassOf: currentClass.
-		 currentClass = objectMemory nilObject ifTrue: [^self primitiveFailFor: PrimErrBadArgument]].
+		 currentClass = objectMemory nilObject ifTrue:
+			[^self primitiveFailFor: PrimErrBadArgument]].
 
 	self primitiveObject: rcvr "a.k.a. self stackValue: 3"
 		perform: (self stackValue: 2)
@@ -3974,6 +4013,12 @@ InterpreterPrimitives >> primitiveSnapshotEmbedded [
 InterpreterPrimitives >> primitiveSomeInstance [
 	| class instance |
 	class := self stackTop.
+	self cppIf: NewspeakVM
+		ifTrue: "For the mirror prims check that the class obj is actually a valid class."
+			[(argumentCount < 1
+			  or: [(objectMemory isNonImmediate: class)
+				  and: [self objCouldBeClassObj: class]]) ifFalse:
+				[self primitiveFailFor: PrimErrBadArgument]].
 	instance := objectMemory initialInstanceOf: class.
 	instance
 		ifNil: [self primitiveFail]
