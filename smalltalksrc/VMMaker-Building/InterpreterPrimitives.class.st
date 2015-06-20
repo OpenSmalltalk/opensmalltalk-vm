@@ -1117,7 +1117,7 @@ InterpreterPrimitives >> primitiveClone [
 			[newCopy := rcvr]
 		ifFalse:
 			[(argumentCount = 0
-			  or: [(objectMemory isObjectForwarded: rcvr) not])
+			  or: [(objectMemory isForwarded: rcvr) not])
 				ifTrue: [newCopy := objectMemory clone: rcvr]
 				ifFalse: [newCopy := 0].
 			 newCopy = 0 ifTrue: "not enough memory most likely"
@@ -2043,7 +2043,7 @@ InterpreterPrimitives >> primitiveIdentityHash [
 	thisReceiver := self stackTop.
 	((objectMemory isImmediate: thisReceiver)
 	 or: [argumentCount > 0
-		 and: [objectMemory isObjectForwarded: thisReceiver]])
+		 and: [objectMemory isForwarded: thisReceiver]])
 		ifTrue: [self primitiveFail]
 		ifFalse: [self pop: argumentCount + 1
 					thenPushInteger: (objectMemory hashBitsOf: thisReceiver)]
