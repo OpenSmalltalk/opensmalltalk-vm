@@ -221,7 +221,10 @@ StackInterpreterPrimitives >> primitiveClone [
 				ifTrue:
 					[newCopy := self cloneContext: rcvr]
 				ifFalse:
-					[newCopy := objectMemory clone: rcvr].
+					[(argumentCount = 0
+					  or: [(objectMemory isObjectForwarded: rcvr) not])
+						ifTrue: [newCopy := objectMemory clone: rcvr]
+						ifFalse: [newCopy := 0]].
 			newCopy = 0 ifTrue:
 				[^self primitiveFailFor: PrimErrNoMemory]].
 	self pop: argumentCount + 1 thenPush: newCopy
@@ -554,7 +557,7 @@ StackInterpreterPrimitives >> primitiveExecuteMethodArgsArray [
 	 receiver and args.  Allow for up to two extra arguments (e.g. for mirror primitives).
 	 Set primitiveFunctionPointer because no cache lookup has been done for the
 	 method, and hence primitiveFunctionPointer is stale."
-	| methodArgument argCnt argumentArray primitiveIndex |
+	| methodArgument argCnt rcvr argumentArray primitiveIndex |
 	methodArgument := self stackTop.
 	argumentArray := self stackValue: 1.
 	((objectMemory isOopCompiledMethod: methodArgument)
@@ -564,11 +567,13 @@ StackInterpreterPrimitives >> primitiveExecuteMethodArgsArray [
 	argCnt = (objectMemory numSlotsOf: argumentArray) ifFalse:
 		[^self primitiveFailFor: PrimErrBadNumArgs].
 	argumentCount > 2 ifTrue: "CompiledMethod class>>receiver:withArguments:executeMethod:
-								SqueakObjectPrimitives class >> receiver:withArguments:apply:
+								SqueakObjectPrimitives class>>receiver:withArguments:apply:
 								VMMirror>>ifFail:object:with:executeMethod: et al"
 		[argumentCount > 4 ifTrue:
 			[^self primitiveFailFor: PrimErrUnsupported].
-		self stackValue: argumentCount put: (self stackValue: 2)]. "replace actual receiver with desired receiver"
+		rcvr := self stackValue: 2.
+		rcvr := objectMemory followMaybeForwarded: rcvr.
+		self stackValue: argumentCount put: rcvr]. "replace actual receiver with desired receiver"
 	"and push the actual arguments"
 	self pop: argumentCount.
 	0 to: argCnt - 1 do:
@@ -807,10 +812,13 @@ StackInterpreterPrimitives >> primitiveIncrementalGC [
 { #category : #'object access primitives' }
 StackInterpreterPrimitives >> primitiveInstVarAt [
 	| index rcvr hdr fmt totalLength fixedFields value |
-	index := self stackIntegerValue: 0.
+	index := self stackTop.
 	rcvr := self stackValue: 1.
-	self successful ifFalse:
+	((objectMemory isNonIntegerObject: index)
+	 or: [argumentCount > 1 "e.g. object:instVarAt:"
+		and: [objectMemory isOopForwarded: rcvr]]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadArgument].
+	index := objectMemory integerValueOf: index.
 	hdr := objectMemory baseHeader: rcvr.
 	fmt := objectMemory formatOfHeader: hdr.
 	totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
@@ -828,10 +836,13 @@ StackInterpreterPrimitives >> primitiveInstVarAt [
 StackInterpreterPrimitives >> primitiveInstVarAtPut [
 	| newValue index rcvr hdr fmt totalLength fixedFields |
 	newValue := self stackTop.
-	index := self stackIntegerValue: 1.
+	index := self stackValue: 1.
 	rcvr := self stackValue: 2.
-	self successful ifFalse:
+	((objectMemory isNonIntegerObject: index)
+	 or: [argumentCount > 2 "e.g. object:instVarAt:put:"
+		and: [objectMemory isOopForwarded: rcvr]]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadArgument].
+	index := objectMemory integerValueOf: index.
 	hdr := objectMemory baseHeader: rcvr.
 	fmt := objectMemory formatOfHeader: hdr.
 	totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
