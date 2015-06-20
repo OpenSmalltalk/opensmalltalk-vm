@@ -222,7 +222,7 @@ StackInterpreterPrimitives >> primitiveClone [
 					[newCopy := self cloneContext: rcvr]
 				ifFalse:
 					[(argumentCount = 0
-					  or: [(objectMemory isObjectForwarded: rcvr) not])
+					  or: [(objectMemory isForwarded: rcvr) not])
 						ifTrue: [newCopy := objectMemory clone: rcvr]
 						ifFalse: [newCopy := 0]].
 			newCopy = 0 ifTrue:
