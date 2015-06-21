@@ -27,12 +27,13 @@ Class {
 		'framePointer',
 		'localReturnValue',
 		'localAbsentReceiver',
+		'localAbsentReceiverOrZero',
 		'extA',
 		'extB',
 		'primitiveFunctionPointer',
 		'methodCache',
+		'nsMethodCache',
 		'atCache',
-		'isPrivateSend',
 		'lkupClassTag',
 		'lkupClass',
 		'methodDictLinearSearchLimit',
@@ -116,13 +117,13 @@ Class {
 		'BytecodeEncoderClassName',
 		'BytecodeTable',
 		'CacheProbeMax',
-		'CheckPrivacyViolations',
 		'DirBadPath',
 		'DirEntryFound',
 		'DirNoMoreEntries',
 		'DumpStackOnLowSpace',
 		'EnclosingMixinIndex',
 		'EnclosingObjectIndex',
+		'EnforceAccessControl',
 		'FailImbalancedPrimitives',
 		'LongStoreBytecode',
 		'MaxExternalPrimitiveTableSize',
@@ -217,7 +218,8 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		in: aCCodeGenerator.
 	aCCodeGenerator removeVariable: 'stackPages'.  "this is an implicit receiver in the translated code."
 	NewspeakVM ifFalse:
-		[aCCodeGenerator removeVariable: 'localAbsentReceiver'].
+		[aCCodeGenerator removeVariable: 'localAbsentReceiver'.
+		 aCCodeGenerator removeVariable: 'localAbsentReceiverOrZero'].
 	"This defines bytecodeSetSelector as 0 if MULTIPLEBYTECODESETS
 	 is not defined, for the benefit of the interpreter on slow machines."
 	aCCodeGenerator addConstantForBinding: (self bindingOf: #MULTIPLEBYTECODESETS).
@@ -229,6 +231,9 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #methodCache
 		declareC: 'long methodCache[MethodCacheSize + 1 /* ', (MethodCacheSize + 1) printString, ' */]'.
+	aCCodeGenerator
+		var: #nsMethodCache
+		declareC: 'long nsMethodCache[NSMethodCacheSize + 1 /* ', (NSMethodCacheSize + 1) printString, ' */]'.
 	aCCodeGenerator
 		var: #atCache
 		declareC: 'sqInt atCache[AtCacheTotalSize + 1 /* ', (AtCacheTotalSize + 1) printString, ' */]'.
@@ -250,8 +255,6 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 				array: vmClass primitiveAccessorDepthTable]
 		ifFalse:
 			[aCCodeGenerator removeVariable: #primitiveAccessorDepthTable].
-	(NewspeakVM and: [CheckPrivacyViolations]) ifFalse:
-		[aCCodeGenerator removeVariable: #isPrivateSend].
 	aCCodeGenerator
 		var: #primitiveFunctionPointer
 		declareC: 'void (*primitiveFunctionPointer)()'.
@@ -710,7 +713,9 @@ StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosuresSistaV1H
 StackInterpreter class >> initializeCaches [
 
 	| atCacheEntrySize |
-	MethodCacheEntries := 1024. 
+	NewspeakVM
+		ifTrue: [MethodCacheEntries := 512]
+		ifFalse: [MethodCacheEntries := 1024].
 	MethodCacheSelector := 1.
 	MethodCacheClass := 2.
 	MethodCacheMethod := 3.
@@ -719,6 +724,18 @@ StackInterpreter class >> initializeCaches [
 	MethodCacheMask := (MethodCacheEntries - 1) * MethodCacheEntrySize.
 	MethodCacheSize := MethodCacheEntries * MethodCacheEntrySize.
 	CacheProbeMax := 3.
+
+	NSMethodCacheEntries := 512.
+	NSMethodCacheSelector := 1.
+	NSMethodCacheClassTag := 2.
+	NSMethodCacheCallingMethod := 3.
+	NSMethodCacheDepthOrLookupRule := 4.
+	NSMethodCacheTargetMethod := 5.
+	NSMethodCachePrimFunction := 6.
+	NSMethodCacheActualReceiver := 7.
+	NSMethodCacheEntrySize := 8.	"Must be power of two for masking scheme."
+	NSMethodCacheMask := NSMethodCacheEntries - 1 * NSMethodCacheEntrySize.
+	NSMethodCacheSize := NSMethodCacheEntries * NSMethodCacheEntrySize.
 
 	AtCacheEntries := 8.  "Must be a power of two"
 	AtCacheOop := 1.
@@ -930,7 +947,7 @@ StackInterpreter class >> initializeMiscConstants [
 	MaxJumpBuf := 32. "max. callback depth"
 	FailImbalancedPrimitives := initializationOptions at: #FailImbalancedPrimitives ifAbsentPut: [true].
 
-	CheckPrivacyViolations := initializationOptions at: #CheckPrivacyViolations ifAbsentPut: [false]
+	EnforceAccessControl := initializationOptions at: #EnforceAccessControl ifAbsentPut: [false]
 ]
 
 { #category : #initialization }
@@ -1777,7 +1794,9 @@ StackInterpreter >> accessModifierOfMethodHeader: header [
 		 01 private
 		 10 protected
 		 11 undefined"
-	^header >> MethodHeaderFlagBitPosition bitAnd: 3
+	^self cppIf: EnforceAccessControl
+		ifTrue: [header >> MethodHeaderFlagBitPosition bitAnd: 3]
+		ifFalse: [AccessModifierPublic]
 ]
 
 { #category : #'control primitives' }
@@ -1919,6 +1938,55 @@ StackInterpreter >> addNewMethodToCache: classObj [
 	1 to: CacheProbeMax-1 do:
 		[:p | probe := (hash >> p) bitAnd: MethodCacheMask.
 		methodCache at: probe + MethodCacheSelector put: 0]
+]
+
+{ #category : #'method lookup cache' }
+StackInterpreter >> addNewMethodToNSCache: rule [
+	<option: #NewspeakVM>
+	<inline: false>
+	| classObj probe hash primitiveIndex |
+	classObj := lkupClass.
+	hash := (messageSelector bitXor: lkupClassTag) bitXor: (method bitXor: rule).
+	self deny: rule = LookupRuleOrdinary.
+
+	(objectMemory isOopCompiledMethod: newMethod)
+		ifTrue:
+			[primitiveIndex := self primitiveIndexOf: newMethod.
+			 primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: classObj]
+		ifFalse:
+			[self assert: ((objectMemory isNonImmediate: newMethod)
+						  and: [objectMemory isForwarded: newMethod]) not.
+			 primitiveFunctionPointer := #primitiveInvokeObjectAsMethod].
+
+	0 to: CacheProbeMax-1 do:
+		[:p | probe := (hash >> p) bitAnd: NSMethodCacheMask.
+		(nsMethodCache at: probe + NSMethodCacheSelector) = 0 ifTrue:
+			["Found an empty entry -- use it"
+			nsMethodCache at: probe + NSMethodCacheSelector put: messageSelector.
+			nsMethodCache at: probe + NSMethodCacheClassTag put: lkupClassTag. "(objectMemory classTagForClass: classObj)."
+			nsMethodCache at: probe + NSMethodCacheCallingMethod put: method.
+			nsMethodCache at: probe + NSMethodCacheDepthOrLookupRule put: rule.
+			nsMethodCache at: probe + NSMethodCacheTargetMethod put: newMethod.
+			nsMethodCache at: probe + NSMethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #long).
+			nsMethodCache at: probe + NSMethodCacheActualReceiver put: localAbsentReceiverOrZero.
+			"lastMethodCacheProbeWrite := probe." "this for primitiveExternalMethod"
+			^self]].
+
+	"OK, we failed to find an entry -- install at the first slot..."
+	probe := hash bitAnd: NSMethodCacheMask.  "first probe"
+	nsMethodCache at: probe + NSMethodCacheSelector put: messageSelector.
+	nsMethodCache at: probe + NSMethodCacheClassTag put: lkupClassTag. "(objectMemory classTagForClass: classObj)."
+	nsMethodCache at: probe + NSMethodCacheCallingMethod put: method.
+	nsMethodCache at: probe + NSMethodCacheDepthOrLookupRule put: rule.
+	nsMethodCache at: probe + NSMethodCacheTargetMethod put: newMethod.
+	nsMethodCache at: probe + NSMethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #long).
+	nsMethodCache at: probe + NSMethodCacheActualReceiver put: localAbsentReceiverOrZero.
+	"lastMethodCacheProbeWrite := probe. ""this for primitiveExternalMethod"
+
+	"...and zap the following entries"
+	1 to: CacheProbeMax-1 do:
+		[:p | probe := (hash >> p) bitAnd: NSMethodCacheMask.
+		nsMethodCache at: probe + NSMethodCacheSelector put: 0]
 ]
 
 { #category : #'plugin support' }
@@ -2491,7 +2559,7 @@ StackInterpreter >> bytecodePrimAt [
 			 messageSelector := self specialSelector: 16.
 			 (self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
 				[argumentCount := 1.
-				 ^self commonSend].
+				 ^self commonSendOrdinary].
 			 primitiveFunctionPointer == #primitiveAt
 				ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: false]
 				ifFalse:
@@ -2499,7 +2567,7 @@ StackInterpreter >> bytecodePrimAt [
 						ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: true]
 						ifFalse:
 							[argumentCount := 1.
-							 ^self commonSend]]].
+							 ^self commonSendOrdinary]]].
 		 self successful ifTrue:
 			[result := self commonVariable: rcvr at: (objectMemory integerValueOf: index) cacheIndex: atIx].
 		 self successful ifTrue:
@@ -2539,7 +2607,7 @@ StackInterpreter >> bytecodePrimAtPut [
 			 messageSelector := self specialSelector: 17.
 			 (self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
 				[argumentCount := 2.
-				 ^self commonSend].
+				 ^self commonSendOrdinary].
 			 primitiveFunctionPointer == #primitiveAtPut
 				ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: false]
 				ifFalse:
@@ -2547,7 +2615,7 @@ StackInterpreter >> bytecodePrimAtPut [
 						ifTrue: [self install: rcvr inAtCache: atCache at: atIx string: true]
 						ifFalse:
 							[argumentCount := 2.
-							 ^self commonSend]]].
+							 ^self commonSendOrdinary]]].
 		 self successful ifTrue:
 			[self commonVariable: rcvr at: (objectMemory integerValueOf: index) put: value cacheIndex: atIx].
 		 self successful ifTrue:
@@ -4291,7 +4359,37 @@ StackInterpreter >> commonReturn [
 ]
 
 { #category : #'send bytecodes' }
-StackInterpreter >> commonSend [
+StackInterpreter >> commonSendDynamicSuper [
+	"Assume: messageSelector and argumentCount have been set, and that 
+	the receiver and arguments have been pushed onto the stack,"
+	"Note: This method is inlined into the interpreter dispatch loop."
+	<sharedCodeInCase: #extSendAbsentDynamicSuperBytecode>
+	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
+	self printSends ifTrue:
+		[self printActivationNameForSelector: messageSelector startClass: (objectMemory classForClassTag: lkupClassTag); cr].
+	self internalFindNewMethodDynamicSuper.
+	self shuffleArgumentsAndStoreAbsentReceiver: localAbsentReceiver.
+	self internalExecuteNewMethod.
+	self fetchNextBytecode
+]
+
+{ #category : #'send bytecodes' }
+StackInterpreter >> commonSendImplicitReceiver [
+	"Assume: messageSelector and argumentCount have been set, and that 
+	the receiver and arguments have been pushed onto the stack,"
+	"Note: This method is inlined into the interpreter dispatch loop."
+	<sharedCodeInCase: #extSendAbsentImplicitBytecode>
+	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
+	self printSends ifTrue:
+		[self printActivationNameForSelector: messageSelector startClass: (objectMemory classForClassTag: lkupClassTag); cr].
+	self internalFindNewMethodImplicitReceiver.
+	self shuffleArgumentsAndStoreAbsentReceiver: localAbsentReceiver.
+	self internalExecuteNewMethod.
+	self fetchNextBytecode
+]
+
+{ #category : #'send bytecodes' }
+StackInterpreter >> commonSendOrdinary [
 	"Send a message, starting lookup with the receiver's class."
 	"Assume: messageSelector and argumentCount have been set, and that 
 	the receiver and arguments have been pushed onto the stack,"
@@ -4300,59 +4398,24 @@ StackInterpreter >> commonSend [
 	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
 	self printSends ifTrue:
 		[self printActivationNameForSelector: messageSelector startClass: (objectMemory classForClassTag: lkupClassTag); cr].
-	self internalFindNewMethod: LookupRuleOrdinary.
+	self internalFindNewMethodOrdinary.
 	self internalExecuteNewMethod.
 	self fetchNextBytecode
 ]
 
 { #category : #'send bytecodes' }
-StackInterpreter >> commonSend: lookupRule [
-	"Send a message, starting lookup with the receiver's class."
+StackInterpreter >> commonSendOuter: depth [
 	"Assume: messageSelector and argumentCount have been set, and that 
 	the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
-	"<sharedCodeInCase: #singleExtendedSendBytecode>"
+	"<sharedCodeInCase: #extSendAbsentOuterBytecode>"
 	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
 	self printSends ifTrue:
 		[self printActivationNameForSelector: messageSelector startClass: (objectMemory classForClassTag: lkupClassTag); cr].
-	self internalFindNewMethod: lookupRule.
+	self internalFindNewMethodOuter: depth.
+	self shuffleArgumentsAndStoreAbsentReceiver: localAbsentReceiver.
 	self internalExecuteNewMethod.
 	self fetchNextBytecode
-]
-
-{ #category : #'send bytecodes' }
-StackInterpreter >> commonSendAbsent: lookupRule [
-	"Send an absent receiver message, shuffling arguments and inserting the absent
-	 receiver for the send.  Assume: messageSelector and argumentCount have been
-	 set, and that the arguments but not the receiver have been pushed onto the stack,"
-	"Note: This method is inlined into the interpreter dispatch loop."
-	"160-175	1010 i i i i				Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments"
-	"240		11110000	i i i i i j j j	Send To Absent Implicit Receiver Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	"245		 11110101 i i i i i j j j	Send To Self Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	"254		 11111110 i i i i i j j j	kkkkkkkk Send To Enclosing Object at Depth kkkkkkkk Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	"<sharedCodeInCase: #extSendAbsentImplicitBytecode>"
-	self shuffleArgumentsAndStoreAbsentReceiver: localAbsentReceiver.
-	lkupClassTag := objectMemory fetchClassTagOf: localAbsentReceiver.
-	self assert: (objectMemory classForClassTag: lkupClassTag) ~= objectMemory nilObject.
-	CheckPrivacyViolations ifTrue:
-            [isPrivateSend := true].
-	self commonSend: lookupRule
-]
-
-{ #category : #'send bytecodes' }
-StackInterpreter >> commonSendAbsentImplicit [
-	"Send a message to the implicit receiver for that message."
-	"Assume: messageSelector and argumentCount have been set, and that 
-	the arguments but not the receiver have been pushed onto the stack,"
-	"Note: This method is inlined into the interpreter dispatch loop."
-	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments"
-	"240		11110000	i i i i i j j j	Send To Absent Implicit Receiver Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	<sharedCodeInCase: #extSendAbsentImplicitBytecode>
-	localAbsentReceiver := self
-								implicitReceiverFor: self receiver
-								mixin: (self methodClassOf: method)
-								implementing: messageSelector.
-	self commonSendAbsent: LookupRuleImplicit
 ]
 
 { #category : #'indexing primitive support' }
@@ -4654,7 +4717,7 @@ StackInterpreter >> directedSuperclassSend [
 	 self pushed on the stack."
 	self ensureReceiverUnforwarded.
 	self assert: lkupClassTag ~= objectMemory nilObject.
-	self commonSend
+	self commonSendOrdinary
 ]
 
 { #category : #'message sending' }
@@ -5253,21 +5316,13 @@ StackInterpreter >> extReturnTopFromBlock [
 { #category : #'send bytecodes' }
 StackInterpreter >> extSendAbsentDynamicSuperBytecode [
 	"241		11110001	i i i i i j j j	Send To Dynamic Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	| byte mClassMixin mixinApplication |
+	| byte |
 	byte := self fetchByte.
 	messageSelector := self literal: (byte >> 3) + (extA << 5).
 	extA := 0.
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
-	self shuffleArgumentsAndStoreAbsentReceiver: self receiver.
-	mClassMixin := self methodClassOf: method.
-	mixinApplication := self 
-							findApplicationOfTargetMixin: mClassMixin
-							startingAtBehavior: (objectMemory fetchClassOf: self receiver).
-	lkupClassTag := objectMemory classTagForClass: (self superclassOf: mixinApplication).
-	CheckPrivacyViolations ifTrue:
-            [isPrivateSend := true].
-	self commonSend: LookupRuleDynamicSuper
+	self commonSendDynamicSuper
 ]
 
 { #category : #'send bytecodes' }
@@ -5279,7 +5334,7 @@ StackInterpreter >> extSendAbsentImplicitBytecode [
 	extA := 0.
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
-	self commonSendAbsentImplicit
+	self commonSendImplicitReceiver.
 ]
 
 { #category : #'send bytecodes' }
@@ -5292,13 +5347,7 @@ StackInterpreter >> extSendAbsentOuterBytecode [
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
 	depth := self fetchByte.
-	localAbsentReceiver := self 
-							enclosingObjectAt: depth
-							withObject: self receiver 
-							withMixin: (self methodClassOf: method).
-	CheckPrivacyViolations ifTrue:
-            [isPrivateSend := true].
-	self commonSendAbsent: depth
+	self commonSendOuter: depth
 ]
 
 { #category : #'send bytecodes' }
@@ -5310,10 +5359,7 @@ StackInterpreter >> extSendAbsentSelfBytecode [
 	extA := 0.
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
-	localAbsentReceiver := self receiver.
-	CheckPrivacyViolations ifTrue:
-            [isPrivateSend := true].
-	self commonSendAbsent: LookupRuleSelf
+	self commonSendOuter: 0
 ]
 
 { #category : #'send bytecodes' }
@@ -5327,7 +5373,7 @@ StackInterpreter >> extSendBytecode [
 	extB := 0.
 	rcvr := self internalStackValue: argumentCount.
 	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
-	self commonSend
+	self commonSendOrdinary
 ]
 
 { #category : #'send bytecodes' }
@@ -5804,8 +5850,16 @@ StackInterpreter >> findApplicationOfTargetMixin: targetMixin startingAtBehavior
 	mixinApplication := aBehavior.
 	[mixinApplication = objectMemory nilObject
 	 or: [mixinApplication = targetMixin
-	 or: [(mixin := objectMemory fetchPointer: MixinIndex ofObject: mixinApplication) = targetMixin]]] whileFalse:
-		[mixinApplication := objectMemory fetchPointer: SuperclassIndex ofObject: mixinApplication].
+	 or: [(mixin := objectMemory followObjField: MixinIndex ofObject: mixinApplication) = targetMixin]]] whileFalse:
+		[mixinApplication := objectMemory followObjField: SuperclassIndex ofObject: mixinApplication].
+
+	mixinApplication = objectMemory nilObject ifTrue: [
+		self print: 'looking for '; cr.
+		self longPrintOop: targetMixin; cr.
+		self print: ' in behavior '; cr.
+		self longPrintOop: aBehavior; cr.
+	].
+
 	^mixinApplication
 ]
 
@@ -6232,6 +6286,8 @@ StackInterpreter >> flushMethodCache [
 	"Flush the method cache. The method cache is flushed on every programming change and garbage collect."
 
 	1 to: MethodCacheSize do: [ :i | methodCache at: i put: 0 ].
+	self cppIf: NewspeakVM 
+		ifTrue: [1 to: NSMethodCacheSize do: [ :i | nsMethodCache at: i put: 0 ]].
 	lastMethodCacheProbeWrite := 0. "this for primitiveExternalMethod"
 	self flushAtCache.
 ]
@@ -6253,6 +6309,8 @@ StackInterpreter >> flushMethodCacheFrom: memStart to: memEnd [
 										and: [self oop: (methodCache at: probe + MethodCacheMethod) isLessThan: memEnd]])
 						ifTrue: [methodCache at: probe + MethodCacheSelector put: 0]].
 			probe := probe + MethodCacheEntrySize].
+	self cppIf: NewspeakVM 
+		ifTrue: [1 to: NSMethodCacheSize do: [ :i | nsMethodCache at: i put: 0 ]].
 	self flushAtCache
 ]
 
@@ -7351,7 +7409,6 @@ StackInterpreter >> initialize [
 	jmpDepth := 0.
 	longRunningPrimitiveStartUsecs := longRunningPrimitiveStopUsecs := 0.
 	maxExtSemTabSizeSet := false.
-	isPrivateSend := false.
 	statForceInterruptCheck := statStackOverflow := statCheckForEvents :=
 	statProcessSwitch := statIOProcessEvents := statStackPageDivorce := 0
 ]
@@ -7448,6 +7505,50 @@ StackInterpreter >> inlineLookupInMethodCacheSel: selector classTag: classTag [
 			[newMethod := methodCache at: probe + MethodCacheMethod.
 			primitiveFunctionPointer := self cCoerceSimple: (methodCache at: probe + MethodCachePrimFunction)
 											to: #'void (*)()'.
+			^true	"found entry in cache; done"].
+
+	^false
+]
+
+{ #category : #'method lookup cache' }
+StackInterpreter >> inlineLookupInNSMethodCacheSel: selector classTag: classTag method: callingMethod lookupRule: lookupRule [
+	"Like inlineLookupInMethodCacheSel:classTag:, but the cache is additionally key'd by the calling method and lookupRule/depth and additionally answers localAbsentReceiverOrZero."
+
+	| hash probe |
+	<inline: true>
+	hash := (selector bitXor: classTag) bitXor: (callingMethod bitXor: lookupRule).
+
+	probe := hash bitAnd: NSMethodCacheMask.  "first probe"
+	(((((nsMethodCache at: probe + NSMethodCacheSelector) = selector) and:
+		[(nsMethodCache at: probe + NSMethodCacheClassTag) = classTag]) and:
+		[(nsMethodCache at: probe + NSMethodCacheCallingMethod) = callingMethod]) and:
+		[(nsMethodCache at: probe + NSMethodCacheDepthOrLookupRule) = lookupRule]) ifTrue:
+			[newMethod := nsMethodCache at: probe + NSMethodCacheTargetMethod.
+			primitiveFunctionPointer := self cCoerceSimple: (nsMethodCache at: probe + NSMethodCachePrimFunction)
+											to: #'void (*)()'.
+			localAbsentReceiverOrZero := nsMethodCache at: probe + NSMethodCacheActualReceiver.
+			^true	"found entry in cache; done"].
+
+	probe := (hash >> 1) bitAnd: NSMethodCacheMask.  "second probe"
+	(((((nsMethodCache at: probe + NSMethodCacheSelector) = selector) and:
+		[(nsMethodCache at: probe + NSMethodCacheClassTag) = classTag]) and:
+		[(nsMethodCache at: probe + NSMethodCacheCallingMethod) = callingMethod]) and:
+		[(nsMethodCache at: probe + NSMethodCacheDepthOrLookupRule) = lookupRule]) ifTrue:
+			[newMethod := nsMethodCache at: probe + NSMethodCacheTargetMethod.
+			primitiveFunctionPointer := self cCoerceSimple: (nsMethodCache at: probe + NSMethodCachePrimFunction)
+											to: #'void (*)()'.
+			localAbsentReceiverOrZero := nsMethodCache at: probe + NSMethodCacheActualReceiver.
+			^true	"found entry in cache; done"].
+
+	probe := (hash >> 2) bitAnd: NSMethodCacheMask.
+	(((((nsMethodCache at: probe + NSMethodCacheSelector) = selector) and:
+		[(nsMethodCache at: probe + NSMethodCacheClassTag) = classTag]) and:
+		[(nsMethodCache at: probe + NSMethodCacheCallingMethod) = callingMethod]) and:
+		[(nsMethodCache at: probe + NSMethodCacheDepthOrLookupRule) = lookupRule]) ifTrue:
+			[newMethod := nsMethodCache at: probe + NSMethodCacheTargetMethod.
+			primitiveFunctionPointer := self cCoerceSimple: (nsMethodCache at: probe + NSMethodCachePrimFunction)
+											to: #'void (*)()'.
+			localAbsentReceiverOrZero := nsMethodCache at: probe + NSMethodCacheActualReceiver.
 			^true	"found entry in cache; done"].
 
 	^false
@@ -7819,7 +7920,65 @@ StackInterpreter >> internalExecuteNewMethod [
 ]
 
 { #category : #'message sending' }
-StackInterpreter >> internalFindNewMethod: lookupRule [
+StackInterpreter >> internalFindNewMethodDynamicSuper [
+	"Find the compiled method to be run when the current messageSelector is sent to the superclass of the class where the current method was looked up, setting the values of 'newMethod' and 'primitiveIndex'."
+	<inline: true>
+	localAbsentReceiver := self receiver.
+	self deny: (objectMemory isOopForwarded: localAbsentReceiver).
+	lkupClassTag := objectMemory fetchClassTagOf: localAbsentReceiver.
+
+	(self inlineLookupInNSMethodCacheSel: messageSelector classTag: lkupClassTag method: method lookupRule: LookupRuleDynamicSuper)
+	 ifFalse:
+		[ | actualLookupRule |
+		"entry was not found in the cache; look it up the hard way"
+		 self externalizeIPandSP.
+		 ((objectMemory isOopForwarded: messageSelector)
+		  or: [objectMemory isForwardedClassTag: lkupClassTag]) ifTrue:
+			[(objectMemory isOopForwarded: messageSelector) ifTrue:
+				[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
+			 (objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
+				[lkupClassTag := self handleForwardedSendFaultForTag: lkupClassTag].
+			"(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifTrue:
+				[^nil]"].
+		 lkupClass := objectMemory classForClassTag: lkupClassTag.
+		 actualLookupRule := self lookupDynamicSuperSend.
+		 self internalizeIPandSP.
+		 self addNewMethodToNSCache: actualLookupRule].
+
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> internalFindNewMethodImplicitReceiver [
+	"Find the compiled method to be run when the for an implicit receiver send of messageSelector, setting the values of 'newMethod' and 'primitiveIndex'."
+	<inline: true>
+	localAbsentReceiver := self receiver.
+	self deny: (objectMemory isOopForwarded: localAbsentReceiver).
+	lkupClassTag := objectMemory fetchClassTagOf: localAbsentReceiver.
+
+	(self inlineLookupInNSMethodCacheSel: messageSelector classTag: lkupClassTag method: method lookupRule: LookupRuleImplicit)
+	 ifTrue:
+		[localAbsentReceiverOrZero = 0 ifFalse: [localAbsentReceiver := localAbsentReceiverOrZero.]]
+	 ifFalse:
+		[ | actualLookupRule |
+		"entry was not found in the cache; look it up the hard way"
+		 self externalizeIPandSP.
+		 ((objectMemory isOopForwarded: messageSelector)
+		  or: [objectMemory isForwardedClassTag: lkupClassTag]) ifTrue:
+			[(objectMemory isOopForwarded: messageSelector) ifTrue:
+				[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
+			 (objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
+				[lkupClassTag := self handleForwardedSendFaultForTag: lkupClassTag].
+			"(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifTrue:
+				[^nil]"].
+		 lkupClass := objectMemory classForClassTag: lkupClassTag.
+		 actualLookupRule := self lookupImplicitReceiverSend.
+		 self internalizeIPandSP.
+		 self addNewMethodToNSCache: actualLookupRule].
+
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> internalFindNewMethodOrdinary [
 	"Find the compiled method to be run when the current messageSelector is sent to the class 'lkupClass', setting the values of 'newMethod' and 'primitiveIndex'."
 	<inline: true>
 	(self inlineLookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifFalse:
@@ -7834,12 +7993,42 @@ StackInterpreter >> internalFindNewMethod: lookupRule [
 			(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifTrue:
 				[^nil]].
 		 lkupClass := objectMemory classForClassTag: lkupClassTag.
-		 self lookupMethodInClass: lkupClass.
+		 self cppIf: #NewspeakVM
+			ifTrue: [self lookupOrdinarySend]
+			ifFalse: [self lookupMethodInClass: lkupClass].
 		 self internalizeIPandSP.
 		 self addNewMethodToCache: lkupClass].
-	"Clear the flag set in commonSendAbsent and tested in lookupMethodInClass:"
-	(NewspeakVM and: [CheckPrivacyViolations]) ifTrue:
-		[isPrivateSend := false].
+
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> internalFindNewMethodOuter: depth [
+	"Find the compiled method to be run when the current messageSelector is sent to the depth'th enclosing object w/r/t the mixin of the current method, setting the values of 'newMethod' and 'primitiveIndex'."
+	<inline: true>
+	localAbsentReceiver := self receiver.
+	self deny: (objectMemory isOopForwarded: localAbsentReceiver).
+	lkupClassTag := objectMemory fetchClassTagOf: localAbsentReceiver.
+
+	(self inlineLookupInNSMethodCacheSel: messageSelector classTag: lkupClassTag method: method lookupRule: depth)
+	 ifTrue:
+		[localAbsentReceiverOrZero = 0 ifFalse: [localAbsentReceiver := localAbsentReceiverOrZero.]]
+	 ifFalse:
+		[ | actualLookupRule |
+		"entry was not found in the cache; look it up the hard way"
+		 self externalizeIPandSP.
+		 ((objectMemory isOopForwarded: messageSelector)
+		  or: [objectMemory isForwardedClassTag: lkupClassTag]) ifTrue:
+			[(objectMemory isOopForwarded: messageSelector) ifTrue:
+				[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
+			 (objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
+				[lkupClassTag := self handleForwardedSendFaultForTag: lkupClassTag].
+			"(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifTrue:
+				[^nil]"].
+		 lkupClass := objectMemory classForClassTag: lkupClassTag.
+		 actualLookupRule := self lookupOuterSend: depth.
+		 self internalizeIPandSP.
+		 self addNewMethodToNSCache: actualLookupRule].
+
 ]
 
 { #category : #'return bytecodes' }
@@ -8631,6 +8820,120 @@ StackInterpreter >> longUnconditionalJump [
 	self fetchNextBytecode
 ]
 
+{ #category : #'message sending' }
+StackInterpreter >> lookupDnuAbsent [
+	"An absent receiver send lookup failed. Replace the arguments on the stack with
+	 a Message and lookup #doesNotUndestand:.
+	IN: lkupClass
+	IN: messageSelector
+	IN: argumentCount
+	OUT: newMethod
+	OUT: primitiveIndex
+	RESULT: LookupRuleMNU"
+
+	| currentClass dictionary found |
+	self createActualMessageTo: lkupClass.
+	lkupClass := objectMemory fetchClassOf: localAbsentReceiver.
+	messageSelector := objectMemory splObj: SelectorDoesNotUnderstand.
+	currentClass := lkupClass.
+	[currentClass ~= objectMemory nilObject] whileTrue:
+		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
+		found := self lookupMethodInDictionary: dictionary.
+		found ifTrue: [^LookupRuleMNU].
+		currentClass := self superclassOf: currentClass].
+
+	self error: 'Recursive not understood error encountered'
+
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> lookupDnuPresent [
+	"A present receiver send lookup failed. Replace the arguments on the stack with
+	 a Message and lookup #doesNotUndestand:.
+	IN: lkupClass
+	IN: messageSelector
+	IN: argumentCount
+	OUT: newMethod
+	OUT: primitiveIndex
+	RESULT: LookupRuleMNU"
+
+	| currentClass dictionary found |
+	self createActualMessageTo: lkupClass.
+	messageSelector := objectMemory splObj: SelectorDoesNotUnderstand.
+	currentClass := lkupClass.
+	[currentClass ~= objectMemory nilObject] whileTrue:
+		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
+		found := self lookupMethodInDictionary: dictionary.
+		found ifTrue: [^LookupRuleMNU].
+		currentClass := self superclassOf: currentClass].
+
+	self error: 'Recursive not understood error encountered'
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> lookupDynamicSuperSend [
+	"Do the full lookup for a Newspeak super send.
+	IN: messageSelector
+	IN: argumentCount
+	OUT: localAbsentReceiver
+	OUT: newMethod
+	OUT: primitiveIndex
+	RESULT: LookupRuleDynamicSuper or LookupRuleMNU"
+
+	| methodMixin methodMixinApplication |
+	localAbsentReceiver := self receiver.
+	methodMixin := self methodClassOf: method.
+	methodMixinApplication := self
+		findApplicationOfTargetMixin: methodMixin
+		startingAtBehavior: (objectMemory fetchClassOf: localAbsentReceiver).
+	lkupClass := self superclassOf: methodMixinApplication. "For use by MNU"
+	^self lookupProtected: messageSelector startingAt: lkupClass rule: LookupRuleDynamicSuper
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> lookupImplicitReceiverSend [
+	"Do the full lookup for an implicit receiver send.
+	IN: messageSelector
+	IN: argumentCount
+	OUT: localAbsentReceiver
+	OUT: localAbsentReceiverOrZero
+	OUT: newMethod
+	OUT: primitiveIndex
+	RESULT: LookupRuleImplicit or LookupRuleMNU"
+
+	| methodReceiver candidateReceiver candidateMixin candidateMixinApplication dictionary found |
+	messageSelector := objectMemory followMaybeForwarded: messageSelector.
+	methodReceiver := self receiver.
+	candidateReceiver := methodReceiver.
+	self deny: (objectMemory isForwarded: method).
+	candidateMixin := self methodClassOf: method.
+	localAbsentReceiverOrZero := 0.
+	[self deny: (objectMemory isForwarded: candidateMixin).
+	self deny: (objectMemory isForwarded: candidateReceiver).
+	candidateMixinApplication := self
+		findApplicationOfTargetMixin: candidateMixin
+		startingAtBehavior: (objectMemory fetchClassOf: candidateReceiver).
+	self deny: (candidateMixinApplication = 0).
+	self deny: (candidateMixinApplication = objectMemory nilObject).
+	self deny: (objectMemory isForwarded: candidateMixinApplication).
+	self assert: (self addressCouldBeClassObj: candidateMixinApplication).
+	dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: candidateMixinApplication.
+	found := self lookupMethodInDictionary: dictionary.
+	found ifTrue:
+		[localAbsentReceiver := candidateReceiver.
+		^self lookupLexical: messageSelector from: candidateMixin rule: LookupRuleImplicit].
+	candidateMixin := objectMemory followObjField: EnclosingMixinIndex ofObject: candidateMixin.
+	self deny: (objectMemory isForwarded: candidateMixin).
+	candidateMixin = objectMemory nilObject]
+		whileFalse:
+			[localAbsentReceiverOrZero := candidateReceiver := objectMemory followObjField: EnclosingObjectIndex ofObject: candidateMixinApplication].
+	"There is no lexically visible method, so the implicit receiver is the method receiver."
+	localAbsentReceiverOrZero := 0.
+	localAbsentReceiver := methodReceiver.
+	lkupClass := objectMemory fetchClassOf: methodReceiver. "For use by MNU"
+	^self lookupProtected: messageSelector startingAt: lkupClass rule: LookupRuleImplicit.
+]
+
 { #category : #'method lookup cache' }
 StackInterpreter >> lookupInMethodCacheSel: selector classTag: classTag [
 	"This method implements a simple method lookup cache.  If an entry for the given
@@ -8638,6 +8941,22 @@ StackInterpreter >> lookupInMethodCacheSel: selector classTag: classTag [
 	 'primitiveFunctionPointer' and answer true. Otherwise, answer false."
 	<inline: false>
 	^self inlineLookupInMethodCacheSel: selector classTag: classTag
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> lookupLexical: selector from: mixin rule: rule [
+	"A shared part of the lookup for implicit receiver sends that found a lexically visible
+	method, and self and outer sends."
+	| receiverClass mixinApplication dictionary found |
+	receiverClass := objectMemory fetchClassOf: localAbsentReceiver.
+	lkupClass := receiverClass. "For use by MNU"
+	mixinApplication := self findApplicationOfTargetMixin: mixin startingAtBehavior: receiverClass.
+	dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: mixinApplication.
+	found := self lookupMethodInDictionary: dictionary.
+	(found and: [(self accessModifierOfMethod: newMethod) = AccessModifierPrivate])
+		ifTrue: [^rule].
+	^self lookupProtected: selector startingAt: receiverClass rule: rule
+
 ]
 
 { #category : #'message sending' }
@@ -8692,9 +9011,7 @@ StackInterpreter >> lookupMethodInClass: class [
 			self sendBreakpoint: messageSelector receiver: nil.
 			^self lookupMethodInClass: (self superclassOf: currentClass)].
 		found := self lookupMethodInDictionary: dictionary.
-		found ifTrue:
-			[self maybeCheckPrivacyOfNewMethod: currentClass.
-			 ^currentClass].
+		found ifTrue: [^currentClass].
 		currentClass := self superclassOf: currentClass].
 
 	"Could not find #doesNotUnderstand: -- unrecoverable error."
@@ -8770,7 +9087,6 @@ StackInterpreter >> lookupMethodNoMNUEtcInClass: class [
 	 for the error selector to use on failure rather than performing MNU processing etc."
 	| currentClass dictionary |
 	<inline: false>
-
 	currentClass := class.
 	[currentClass ~= objectMemory nilObject] whileTrue:
 		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
@@ -8783,6 +9099,72 @@ StackInterpreter >> lookupMethodNoMNUEtcInClass: class [
 		currentClass := self superclassOf: currentClass].
 	lkupClass := class.
 	^SelectorDoesNotUnderstand
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> lookupOrdinarySend [
+	"Do the full lookup for an ordinary send (i.e., a Newspeak or Smalltalk ordinary send or a Smalltalk super send).
+	IN: lkupClass
+	IN: messageSelector
+	IN: argumentCount
+	OUT: newMethod
+	OUT: primitiveIndex
+	RESULT: LookupOrdinary or LookupDNU"
+
+	| currentClass dictionary found |
+	self assert: (self addressCouldBeClassObj: lkupClass).
+	currentClass := lkupClass.
+	[currentClass ~= objectMemory nilObject] whileTrue:
+		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
+		found := self lookupMethodInDictionary: dictionary.
+		found ifTrue:
+			[(self accessModifierOfMethod: newMethod) == AccessModifierPublic
+				ifTrue: [^self].
+			(self accessModifierOfMethod: newMethod) == AccessModifierProtected
+				ifTrue: [^self lookupDnuPresent]].
+		currentClass := self superclassOf: currentClass].
+	^self lookupDnuPresent
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> lookupOuterSend: depth [
+	"Do the full lookup for a self or outer send.
+	IN: messageSelector
+	IN: argumentCount
+	OUT: localAbsentReceiver
+	OUT: localAbsentReceiverOrZero
+	OUT: newMethod
+	OUT: primitiveIndex
+	RESULT: [depth] or LookupRuleMNU"
+
+	| targetMixin count mixinApplication |
+	localAbsentReceiver := self receiver.
+	localAbsentReceiverOrZero := 0.
+	targetMixin := self methodClassOf: method.
+	count := 0.
+	[count < depth] whileTrue:
+		[count := count + 1.
+		mixinApplication := self
+			findApplicationOfTargetMixin: targetMixin
+			startingAtBehavior: (objectMemory fetchClassOf: localAbsentReceiver).
+		localAbsentReceiverOrZero := localAbsentReceiver := objectMemory followObjField: EnclosingObjectIndex ofObject: mixinApplication.
+		targetMixin := objectMemory followObjField: EnclosingMixinIndex ofObject: targetMixin].
+	^self lookupLexical: messageSelector from: targetMixin rule: depth
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> lookupProtected: selector startingAt: mixinApplication rule: rule [
+	"A shared part of the lookup for self, outer or implicit receiver sends that did not find a
+	private lexically visible method, and (Newspeak) super sends."
+	| lookupClass dictionary found |
+	lookupClass := mixinApplication.
+	[lookupClass = objectMemory nilObject] whileFalse:
+		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: lookupClass.
+		found := self lookupMethodInDictionary: dictionary.
+		(found and: [(self accessModifierOfMethod: newMethod) ~= AccessModifierPrivate])
+			ifTrue: [^rule].
+		lookupClass := self superclassOf: lookupClass].
+	^self lookupDnuAbsent
 ]
 
 { #category : #'debug support' }
@@ -9392,19 +9774,6 @@ StackInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 
 ]
 
-{ #category : #'message sending' }
-StackInterpreter >> maybeCheckPrivacyOfNewMethod: currentClass [
-	<inline: true>
-	(NewspeakVM
-	  and: [CheckPrivacyViolations
-	  and: [isPrivateSend not
-	  and: [messageSelector ~= (objectMemory splObj: SelectorDoesNotUnderstand)
-	  and: [(self accessModifierOfMethod: newMethod) ~= AccessModifierPublic]]]]) ifTrue:
-		[self print: (self nameOfClass: currentClass); space.
-		 self printStringOf: (messageSelector); print: ' from '.
-		 self printStringOf: (self maybeSelectorOfMethod: method); cr]
-]
-
 { #category : #'primitive support' }
 StackInterpreter >> maybeFailForLastObjectOverwrite [
 	<inline: true>
@@ -9838,7 +10207,7 @@ StackInterpreter >> normalSend [
 	rcvr := self internalStackValue: argumentCount.
 	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
 	self assert: lkupClassTag ~= objectMemory nilObject.
-	self commonSend
+	self commonSendOrdinary
 ]
 
 { #category : #'miscellaneous bytecodes' }
@@ -12555,7 +12924,7 @@ StackInterpreter >> sendAbsentImplicit0ArgsBytecode [
 	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments"
 	messageSelector := self literal: (currentBytecode bitAnd: 16rF).
 	argumentCount := 0.
-	self commonSendAbsentImplicit
+	self commonSendImplicitReceiver
 ]
 
 { #category : #'debug support' }
@@ -12662,7 +13031,7 @@ StackInterpreter >> sendLiteralSelector0ArgsBytecode [
 	rcvr := self internalStackValue: 0.
 	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
 	self assert: lkupClassTag ~= objectMemory nilObject.
-	self commonSend
+	self commonSendOrdinary
 ]
 
 { #category : #'send bytecodes' }
@@ -12674,7 +13043,7 @@ StackInterpreter >> sendLiteralSelector1ArgBytecode [
 	rcvr := self internalStackValue: 1.
 	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
 	self assert: lkupClassTag ~= objectMemory nilObject.
-	self commonSend
+	self commonSendOrdinary
 ]
 
 { #category : #'send bytecodes' }
@@ -12686,7 +13055,7 @@ StackInterpreter >> sendLiteralSelector2ArgsBytecode [
 	rcvr := self internalStackValue: 2.
 	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
 	self assert: lkupClassTag ~= objectMemory nilObject.
-	self commonSend
+	self commonSendOrdinary
 ]
 
 { #category : #'debug support' }
@@ -13968,7 +14337,7 @@ StackInterpreter >> superclassSend [
 	 self pushed on the stack."
 	self ensureReceiverUnforwarded.
 	self assert: lkupClassTag ~= objectMemory nilObject.
-	self commonSend
+	self commonSendOrdinary
 ]
 
 { #category : #'debug support' }
