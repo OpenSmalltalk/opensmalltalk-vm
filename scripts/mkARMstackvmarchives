@@ -4,15 +4,14 @@
 IFS="	
 "
 
-case `uname -m` in
-   armv6* )  armarch="v6";;
-   armv7* )  armarch="v7";;
-        * )  echo "Error: this script is for ARM only."
-             exit 1;;
-esac
+#case `uname -m` in
+#   armv6* )  armarch="v6";;
+#   armv7* )  armarch="v7";;
+#        * )  echo "Error: this script is for ARM only."
+#             exit 1;;
+#esac
 
 cd `dirname $0`/../products
-SQB=squeak.stack.v3
 REV=
 TAG=
 EXES=

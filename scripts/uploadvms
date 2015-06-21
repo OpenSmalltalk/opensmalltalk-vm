@@ -10,6 +10,7 @@ LCOG=
 LTCOG=
 LSPUR=
 LTSPUR=
+LASPUR=
 MCOG=
 MTCOG=
 MSPUR=
@@ -36,6 +37,7 @@ function all () {
 	LCOG=1
 	LTCOG=1
 	LSPUR=1
+	LASPUR=1
 	MCOG=1
 	MTCOG=1
 	MSPUR=1
@@ -59,10 +61,10 @@ else
 		-archives)	JustUpload=JustUpload;;
 		-all)	all;;
 		-spur)	CheckDMG=1;CheckMSI=1;
-				LSPUR=1;MSPUR=1;WSPUR=1;LNSSPUR=1;MNSSPUR=1;WNSSPUR=1;;
+				LSPUR=1;LASPUR=1;MSPUR=1;WSPUR=1;LNSSPUR=1;MNSSPUR=1;WNSSPUR=1;;
 		-c)		LCOG=1;LTCOG=1;MCOG=1;MTCOG=1;WCOG=1;WMTCOG=1;
-				LSPUR=1;MSPUR=1;WSPUR=1;;
-		-cl)	LCOG=1;LTCOG=1;LSPUR=1;;
+				LSPUR=1;LASPUR=1;MSPUR=1;WSPUR=1;;
+		-cl)	LCOG=1;LTCOG=1;LSPUR=1;LASPUR=1;;
 		-cm)	MCOG=1;MTCOG=1;MSPUR=1;;
 		-cw)	WCOG=1;WTCOG=1;WSPUR=1;;
 		-ctl)	LTCOG=1;;
@@ -75,7 +77,7 @@ else
 				CheckMSI=1;;
 		-n)		LNSCOG=1;LNSSPUR=1;MNSCOG=1;MNSSPUR=1;WNSCOG=1;WNSSPUR=1;
 				CheckDMG=1;CheckMSI=1;;
-		-l)		LCOG=1;LTCOG=1;LSPUR=1;LNSCOG=1;LNSSPUR=1;;
+		-l)		LCOG=1;LTCOG=1;LSPUR=1;LASPUR=1;LNSCOG=1;LNSSPUR=1;;
 		-m)		MCOG=1;MTCOG=1;MSPUR=1;MNSCOG=1;MNSSPUR=1;
 				CheckDMG=1;;
 		-w)		WCOG=1;WTCOG=1;WSPUR=1;WNSCOG=1;WNSSPUR=1;
@@ -113,6 +115,7 @@ ARCHIVES=
 test -n "$LCOG" && ARCHIVES="$ARCHIVES	coglinux-$TAG.tgz	coglinuxht-$TAG.tgz"
 test -n "$LTCOG" && ARCHIVES="$ARCHIVES	cogmtlinuxht-$TAG.tgz"
 test -n "$LSPUR" && ARCHIVES="$ARCHIVES	cogspurlinux-$TAG.tgz	cogspurlinuxht-$TAG.tgz"
+test -n "$LASPUR" && ARCHIVES="$ARCHIVES	cogspurlinuxhtARM-$TAG.tgz"
 test -n "$LTSPUR" && ARCHIVES="$ARCHIVES	cogspurmtlinuxht-$TAG.tgz"
 test -n "$MCOG" && ARCHIVES="$ARCHIVES	Cog.app-$TAG.tgz	CogSpur.app-$TAG.tgz"
 test -n "$MTCOG" && ARCHIVES="$ARCHIVES	CogMT.app-$TAG.tgz"

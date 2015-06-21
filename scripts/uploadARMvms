@@ -5,12 +5,12 @@ RemoteRoot=mirandabanda.org/files/Cog/VM
 IFS="	
 "
 
-case `uname -m` in
-   armv6* )  ARMARCH="v6";;
-   armv7* )  ARMARCH="v7";;
-        * )  echo "Error: this script is for ARM only."
-             exit 1;;
-esac
+#case `uname -m` in
+#   armv6* )  ARMARCH="v6";;
+#   armv7* )  ARMARCH="v7";;
+#        * )  echo "Error: this script is for ARM only."
+#             exit 1;;
+#esac
 
 REV=
 TAG=
