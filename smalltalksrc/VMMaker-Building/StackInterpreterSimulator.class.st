@@ -769,6 +769,7 @@ StackInterpreterSimulator >> initialize [
 	ConstMinusOne := objectMemory integerObjectOf: -1.
 
 	methodCache := Array new: MethodCacheSize.
+	nsMethodCache := Array new: NSMethodCacheSize.
 	atCache := Array new: AtCacheTotalSize.
 	self flushMethodCache.
 	gcSemaphoreIndex := 0.
@@ -855,7 +856,7 @@ StackInterpreterSimulator >> internalCannotReturn: resultOop [
 ]
 
 { #category : #testing }
-StackInterpreterSimulator >> internalFindNewMethod: lookupRule [
+StackInterpreterSimulator >> internalFindNewMethodOrdinary [
 "
 	| cName |
 	traceOn ifTrue:
@@ -881,7 +882,7 @@ StackInterpreterSimulator >> internalFindNewMethod: lookupRule [
 		messageQueue == nil ifTrue: [messageQueue := OrderedCollection new].
 		messageQueue addLast: (self stringOf: messageSelector)].
 "
-	super internalFindNewMethod: lookupRule
+	super internalFindNewMethodOrdinary
 ]
 
 { #category : #'debugging traps' }
