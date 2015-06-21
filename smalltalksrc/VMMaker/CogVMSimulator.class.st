@@ -1383,6 +1383,7 @@ CogVMSimulator >> initialize [
 	enableCog := true.
 
 	methodCache := Array new: MethodCacheSize.
+	nsMethodCache := Array new: NSMethodCacheSize.
 	atCache := Array new: AtCacheTotalSize.
 	self flushMethodCache.
 	cogCompiledCodeCompactionCalledFor := false.
@@ -1517,7 +1518,7 @@ CogVMSimulator >> internalCannotReturn: resultOop [
 ]
 
 { #category : #testing }
-CogVMSimulator >> internalFindNewMethod: lookupRule [
+CogVMSimulator >> internalFindNewMethodOrdinary [
 "
 	| cName |
 	traceOn ifTrue:
@@ -1540,7 +1541,7 @@ CogVMSimulator >> internalFindNewMethod: lookupRule [
 		messageQueue == nil ifTrue: [messageQueue := OrderedCollection new].
 		messageQueue addLast: (self stringOf: messageSelector)].
 "
-	^super internalFindNewMethod: lookupRule
+	^super internalFindNewMethodOrdinary
 ]
 
 { #category : #'debugging traps' }
