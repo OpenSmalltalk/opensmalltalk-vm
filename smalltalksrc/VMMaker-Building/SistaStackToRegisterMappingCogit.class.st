@@ -190,8 +190,7 @@ SistaStackToRegisterMappingCogit >> disassembleMethod: surrogateOrAddress on: aS
 SistaStackToRegisterMappingCogit >> estimateOfAbstractOpcodesPerBytecodes [
 	"Due to the counter logic, the estimation is higher"
 	<inline: true>
-	self flag: 'we could fix that when #== generates less instructions'.
-	^ 14
+	^ 11
 ]
 
 { #category : #'generate machine code' }
@@ -580,12 +579,14 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	 inline the comparison we decrement the counter (without writing it back)
 	 and if it trips simply abort the inlining, falling back to the normal send which
 	 will then continue to the conditional branch which will trip and enter the abort."
-	| nextPC postBranchPC targetBytecodePC branchDescriptor label counterReg fixup
+	| nextPC postBranchPC targetBytecodePC branchDescriptor counterReg fixup resultReg jumpEqual jumpNotEqual
 	  counterAddress countTripped unforwardArg unforwardRcvr argReg rcvrReg regMask |
 	<var: #fixup type: #'BytecodeFixup *'>
 	<var: #countTripped type: #'AbstractInstruction *'>
 	<var: #label type: #'AbstractInstruction *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
+	<var: #jumpEqual type: #'AbstractInstruction *'>
+	<var: #jumpNotEqual type: #'AbstractInstruction *'>
 
 	((coInterpreter isOptimizedMethod: methodObj) or: [needsFrame not]) ifTrue: [ ^ self genSpecialSelectorEqualsEqualsWithForwardersWithoutCounters ].
 
@@ -613,6 +614,9 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
 		[^ self genEqualsEqualsNoBranchArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg].
 	
+	unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg ].
+	unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg ].
+	
 	counterReg := self allocateRegNotConflictingWith: regMask.
 	self 
 		genExecutionCountLogicInto: [ :cAddress :countTripBranch | 
@@ -625,11 +629,10 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	"If branching the stack must be flushed for the merge"
 	self ssFlushTo: simStackPtr - 2.
 	
-	label := self Label.
-	
 	self genEqualsEqualsComparisonArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
 	
-	self ssPop: 2. "pop by 2 temporarily  for the fixups"
+	self ssPop: 2.
+	
 	branchDescriptor isBranchTrue 
 		ifTrue: 
 			[ fixup := self ensureNonMergeFixupAt: postBranchPC - initialPC.
@@ -637,16 +640,24 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 		ifFalse: 
 			[ fixup := self ensureNonMergeFixupAt: targetBytecodePC - initialPC.
 			self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger. ].
-	unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label  ].
-	unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ].
-	self ssPop: -2. 
 	
 	self genFallsThroughCountLogicCounterReg: counterReg counterAddress: counterAddress.
 	self Jump: fixup.
+	
 	countTripped jmpTarget: self Label.
 	
 	"inlined version of #== ignoring the branchDescriptor if the counter trips to have normal state for the optimizer"
-	self genEqualsEqualsNoBranchArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
+	self ssPop: -2. 
+	self genEqualsEqualsComparisonArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
+	self ssPop: 2. 
+		
+	resultReg := rcvrReg ifNil: [ argReg ].
+	jumpEqual := self JumpZero: 0.
+	self genMoveFalseR: resultReg.
+	jumpNotEqual := self Jump: 0.
+	jumpEqual jmpTarget: (self genMoveTrueR: resultReg).
+	jumpNotEqual jmpTarget: self Label.
+	self ssPushRegister: resultReg.
 	
 	(self fixupAt: nextPC - initialPC) targetInstruction = 0 ifTrue: [ branchReachedOnlyForCounterTrip := true ].
 	
