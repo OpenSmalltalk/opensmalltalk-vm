@@ -579,7 +579,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	 inline the comparison we decrement the counter (without writing it back)
 	 and if it trips simply abort the inlining, falling back to the normal send which
 	 will then continue to the conditional branch which will trip and enter the abort."
-	| nextPC postBranchPC targetBytecodePC branchDescriptor counterReg fixup resultReg jumpEqual jumpNotEqual
+	| nextPC postBranchPC targetBytecodePC branchDescriptor counterReg fixup jumpEqual jumpNotEqual
 	  counterAddress countTripped unforwardArg unforwardRcvr argReg rcvrReg regMask |
 	<var: #fixup type: #'BytecodeFixup *'>
 	<var: #countTripped type: #'AbstractInstruction *'>
@@ -650,14 +650,15 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	self ssPop: -2. 
 	self genEqualsEqualsComparisonArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
 	self ssPop: 2. 
-		
-	resultReg := rcvrReg ifNil: [ argReg ].
+	
+	"This code necessarily directly falls through the jumpIf: code which pops the top of the stack into TempReg. 
+	We therefore directly assign the result to TempReg to save one move instruction"
 	jumpEqual := self JumpZero: 0.
-	self genMoveFalseR: resultReg.
+	self genMoveFalseR: TempReg.
 	jumpNotEqual := self Jump: 0.
-	jumpEqual jmpTarget: (self genMoveTrueR: resultReg).
+	jumpEqual jmpTarget: (self genMoveTrueR: TempReg).
 	jumpNotEqual jmpTarget: self Label.
-	self ssPushRegister: resultReg.
+	self ssPushRegister: TempReg.
 	
 	(self fixupAt: nextPC - initialPC) targetInstruction = 0 ifTrue: [ branchReachedOnlyForCounterTrip := true ].
 	
