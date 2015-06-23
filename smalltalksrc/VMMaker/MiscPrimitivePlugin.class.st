@@ -20,6 +20,7 @@ MiscPrimitivePlugin class >> monticelloDescription [
 { #category : #translation }
 MiscPrimitivePlugin class >> translatedPrimitives [
 	"an assorted list of various primitives"
+	PharoVM ifTrue: [ ^ self translatedPrimitivesForPharo ].
 	^#(
 		(Bitmap compress:toByteArray:)
 		(Bitmap decompress:fromByteArray:at:)
@@ -48,6 +49,23 @@ MiscPrimitivePlugin class >> translatedPrimitives [
 									selector: pair last]);
 						yourself].
 	SystemNavigation default browseMessageList: tps asArray sort name: 'Translated Primitives' "
+]
+
+{ #category : #translation }
+MiscPrimitivePlugin class >> translatedPrimitivesForPharo [
+	^#(
+		(Bitmap compress:toByteArray:)
+		(Bitmap decompress:fromByteArray:at:)
+		(Bitmap encodeBytesOf:in:at:)
+		(Bitmap encodeInt:in:at:)
+		(ByteString compare:with:collated:)
+		(ByteString translate:from:to:table:)	
+		(ByteString findFirstInString:inSet:startingAt:)
+		(ByteString indexOfAscii:inString:startingAt:)
+		(String findSubstringViaPrimitive:in:startingAt:matchTable:)
+		(ByteArray hashBytes:startingWith:)
+		(SampledSound convert8bitSignedFrom:to16Bit:)
+	)
 ]
 
 { #category : #'helper functions' }
