@@ -1,0 +1,103 @@
+"
+I am a shared pool for basic constants upon which the VM as a whole depends.
+
+self ensureClassPool.
+self classPool declare: #BytesPerWord from: VMSqueakV3ObjectRepresentationConstants classPool.
+self classPool declare: #BaseHeaderSize from: VMSqueakV3ObjectRepresentationConstants classPool
+(ObjectMemory classPool keys select: [:k| k beginsWith: 'Byte']) do:
+	[:k| self classPool declare: k from: ObjectMemory classPool]
+"
+Class {
+	#name : #VMBasicConstants,
+	#superclass : #SharedPool,
+	#classVars : [
+		'BaseHeaderSize',
+		'Byte0Mask',
+		'Byte0Shift',
+		'Byte1Mask',
+		'Byte1Shift',
+		'Byte1ShiftNegated',
+		'Byte2Mask',
+		'Byte2Shift',
+		'Byte3Mask',
+		'Byte3Shift',
+		'Byte3ShiftNegated',
+		'Byte4Mask',
+		'Byte4Shift',
+		'Byte4ShiftNegated',
+		'Byte5Mask',
+		'Byte5Shift',
+		'Byte5ShiftNegated',
+		'Byte6Mask',
+		'Byte6Shift',
+		'Byte7Mask',
+		'Byte7Shift',
+		'Byte7ShiftNegated',
+		'Bytes3to0Mask',
+		'Bytes7to4Mask',
+		'BytesPerOop',
+		'BytesPerWord',
+		'COGMTVM',
+		'COGVM',
+		'DisownVMLockOutFullGC',
+		'DoAssertionChecks',
+		'DoExpensiveAssertionChecks',
+		'GCModeBecome',
+		'GCModeFull',
+		'GCModeImageSegment',
+		'GCModeIncremental',
+		'GCModeNewSpace',
+		'IMMUTABILITY',
+		'MULTIPLEBYTECODESETS',
+		'NewspeakVM',
+		'PharoVM',
+		'PrimErrBadArgument',
+		'PrimErrBadIndex',
+		'PrimErrBadMethod',
+		'PrimErrBadNumArgs',
+		'PrimErrBadReceiver',
+		'PrimErrGenericFailure',
+		'PrimErrInappropriate',
+		'PrimErrLimitExceeded',
+		'PrimErrNamedInternal',
+		'PrimErrNoCMemory',
+		'PrimErrNoMemory',
+		'PrimErrNoModification',
+		'PrimErrNotFound',
+		'PrimErrObjectIsPinned',
+		'PrimErrObjectMayMove',
+		'PrimErrUnsupported',
+		'PrimErrWritePastObject',
+		'PrimNoErr',
+		'STACKVM',
+		'SistaVM',
+		'VMBIGENDIAN'
+	],
+	#category : #'VMMaker-Interpreter'
+}
+
+{ #category : #'C translation' }
+VMBasicConstants class >> mostBasicConstantNames [
+	"c.f. mostBasicConstantSelectors"
+	^#(BaseHeaderSize BytesPerWord BytesPerOop ShiftForWord BytesPerWord)
+]
+
+{ #category : #'C translation' }
+VMBasicConstants class >> mostBasicConstantSelectors [
+	"c.f. mostBasicConstantNames"
+	^#(	baseHeaderSize wordSize bytesPerOop shiftForWord
+		bytesPerWord "bytesPerWord isn't used, but kept for history"
+		minSmallInteger maxSmallInteger)
+]
+
+{ #category : #'C translation' }
+VMBasicConstants class >> valueOfBasicSelector: selector [
+	"Answer the numberic value of a basic constant accessed via the selector.
+	 Answer nil if selector is not a basic constant accessor."
+	"self mostBasicConstantSelectors collect: [:s| {s. self valueOfBasicSelector: s}]"
+	| index key |
+	^((index := self mostBasicConstantSelectors indexOf: selector) > 0
+	  and: [(key := self mostBasicConstantNames at: index ifAbsent: []) notNil
+	  and: [self includesKey: key]]) ifTrue:
+		[classPool at: key]
+]

@@ -1,0 +1,942 @@
+"
+I am a simple allocator/deallocator for the native code zone.  I also manage the youngReferers list, which contains methods that may refer to one or more young objects, and the openPICList which is a linked list of all open PICs in the zone.
+
+Instance Variables
+	baseAddress:								<Integer address>
+	coInterpreter:								<CoInterpreter>
+	cogit:										<Cogit>
+	limitAddress:								<Integer address>
+	methodBytesFreedSinceLastCompaction:	<Integer>
+	methodCount:								<Integer>
+	mzFreeStart:								<Integer address>
+	objectMemory:								<NewCoObjectMemory|SpurCoMemoryManager>
+	objectRepresentation:						<CogObjectRepresentation:>
+	openPICList:								<CogMethod *|nil>
+	unpairedMethodList:						<CogMethod *|nil>
+	youngReferrers:							<Integer address>
+
+baseAddress
+	- the lowest address in the native method zone
+
+coInterpreter
+	- simulation-only
+
+cogit
+	- simulation-only
+
+limitAddress
+	- the address immediately following the native method zone
+
+methodBytesFreedSinceLastCompaction
+	- a count of the bytes in methods freed since the last compaction of the native method zone, used to answer the used bytes in the zone
+
+methodCount
+	- a count of the number of methods in the native method zone
+
+mzFreeStart
+	- the start of free space in the zone
+
+objectMemory
+	- simulation-only
+
+objectRepresentation
+	- simulation-only
+
+openPICList
+	- the head of the list of open PICs
+
+unpairedMethodList
+	- the head of the list of Cog methods with no associated CompiledMethod object (Newspeak only)
+
+youngReferrers
+	- the pointer to the start of an array of pointers to CogMethods that refer to young objects.  May contain false positives.  Occupies the top of the zone from youngReferrers up to limitAddress
+
+"
+Class {
+	#name : #CogMethodZone,
+	#superclass : #CogClass,
+	#instVars : [
+		'youngReferrers',
+		'methodCount',
+		'openPICList',
+		'mzFreeStart',
+		'baseAddress',
+		'limitAddress',
+		'methodBytesFreedSinceLastCompaction',
+		'coInterpreter',
+		'objectRepresentation',
+		'cogit',
+		'objectMemory',
+		'unpairedMethodList'
+	],
+	#pools : [
+		'CogMethodConstants',
+		'VMBasicConstants'
+	],
+	#category : #'VMMaker-JIT'
+}
+
+{ #category : #translation }
+CogMethodZone class >> declareCVarsIn: aCCodeGenerator [
+	aCCodeGenerator
+		removeVariable: 'coInterpreter';
+		removeVariable: 'objectRepresentation'.
+	
+	self declareC: #(youngReferrers mzFreeStart baseAddress limitAddress unpairedMethodList)
+		as: #usqInt
+		in: aCCodeGenerator
+]
+
+{ #category : #translation }
+CogMethodZone class >> implicitReturnTypeFor: aSelector [
+	"Answer the return type for methods that don't have an explicit return."
+	^#void
+]
+
+{ #category : #translation }
+CogMethodZone class >> isNonArgumentImplicitReceiverVariableName: aString [
+	^#('self' 'coInterpreter' 'objectRepresentation') includes: aString
+]
+
+{ #category : #translation }
+CogMethodZone class >> typeForSelf [
+	^#implicit
+]
+
+{ #category : #'young referers' }
+CogMethodZone >> addAllToYoungReferrers [
+	<api>
+	<returnTypeC: #void>
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[(cogMethod cmType = CMMethod
+		  or: [cogMethod cmType = CMOpenPIC]) ifTrue:
+			[self ensureInYoungReferrers: cogMethod].
+		 cogMethod := self methodAfter: cogMethod]
+]
+
+{ #category : #accessing }
+CogMethodZone >> addToOpenPICList: anOpenPIC [
+	<var: #anOpenPIC type: #'CogMethod *'>
+	self assert: anOpenPIC cmType = CMOpenPIC.
+	self assert: (openPICList == nil
+				or: [openPICList cmType = CMOpenPIC]).
+	anOpenPIC nextOpenPIC: openPICList asUnsignedInteger.
+	openPICList := anOpenPIC
+]
+
+{ #category : #accessing }
+CogMethodZone >> addToUnpairedMethodList: aCogMethod [
+	<option: #NewspeakVM>
+	<var: #aCogMethod type: #'CogMethod *'>
+	self assert: aCogMethod cmType = CMMethod.
+	self assert: (cogit noAssertMethodClassAssociationOf: aCogMethod methodObject) = objectMemory nilObject.
+	self assert: (unpairedMethodList == nil
+				or: [(self cCoerceSimple: unpairedMethodList to: #'CogMethod *') cmType = CMMethod]).
+	aCogMethod nextMethodOrIRCs: unpairedMethodList.
+	unpairedMethodList := aCogMethod asUnsignedInteger
+]
+
+{ #category : #'young referers' }
+CogMethodZone >> addToYoungReferrers: cogMethod [
+	<var: #cogMethod type: #'CogMethod *'>
+	self assert: youngReferrers <= limitAddress.
+	self assert: (self occurrencesInYoungReferrers: cogMethod) = 0.
+	self assert: cogMethod cmRefersToYoung.
+	self assert: (youngReferrers <= limitAddress
+				and: [youngReferrers >= (limitAddress - (methodCount * objectMemory wordSize))]).
+	(self asserta: limitAddress - (methodCount * objectMemory wordSize) >= mzFreeStart) ifFalse:
+		[self error: 'no room on youngReferrers list'].
+	youngReferrers := youngReferrers - objectMemory wordSize.
+	objectMemory longAt: youngReferrers put: cogMethod asUnsignedInteger
+]
+
+{ #category : #allocating }
+CogMethodZone >> allocate: numBytes [
+	| roundedBytes allocation |
+	roundedBytes := numBytes + 7 bitAnd: -8.
+	mzFreeStart + roundedBytes >= (limitAddress - (methodCount * objectMemory wordSize)) ifTrue:
+		[^0].
+	allocation := mzFreeStart.
+	mzFreeStart := mzFreeStart + roundedBytes.
+	methodCount := methodCount + 1.
+	self cCode: '' inSmalltalk:
+		[(cogit breakPC isInteger
+		   and: [cogit breakPC between: allocation and: mzFreeStart]) ifTrue:
+			[cogit singleStep: true]].
+	^allocation
+]
+
+{ #category : #'jit - api' }
+CogMethodZone >> clearCogCompiledCode [
+	"Free all methods"
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	self cppIf: NewspeakVM ifTrue: [unpairedMethodList := nil].
+	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod asUnsignedInteger < mzFreeStart] whileTrue:
+		[cogMethod cmType = CMMethod ifTrue:
+			[self freeMethod: cogMethod].
+		 cogMethod := self methodAfter: cogMethod].
+	self manageFrom: baseAddress to: limitAddress
+]
+
+{ #category : #compaction }
+CogMethodZone >> clearSavedPICUsageCount: cogMethod [
+	"For Sista, where we want PICs to last so they can be observed, we need to keep PICs unless
+	 they are definitely unused.  So we need to identify unused PICs.  So in planCompact, zero the
+	 usage counts of all PICs, saving the actual usage count in blockEntryOffset.  Then in
+	 relocateMethodsPreCompaction (actually in relocateIfCallOrMethodReference:mcpc:delta:)
+	 restore the usage counts of used PICs.  Finally in compactCompiledCode, clear the blockEntryOffset
+	 of the unused PICs; they will then have a zero count and be reclaimed in the next code compaction."
+	<var: #cogMethod type: #'CogMethod *'>
+	<option: #SistaVM>
+	cogMethod cmType = CMClosedPIC ifTrue:
+		[cogMethod blockEntryOffset: 0]
+]
+
+{ #category : #printing }
+CogMethodZone >> cogMethodsSelect: aBlock [
+	<doNotGenerate>
+	| cogMethod cogMethods |
+	cogMethods := OrderedCollection new: 256.
+	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[(aBlock value: cogMethod) ifTrue:
+			[cogMethods addLast: cogMethod].
+		 cogMethod := self methodAfter: cogMethod].
+	^cogMethods
+]
+
+{ #category : #'simulation only' }
+CogMethodZone >> cogit [
+	"This is for the sizeof: CogMethod hook that allows different cogit classes to use differet CogMethod variants."
+	<doNotGenerate>
+	^cogit
+]
+
+{ #category : #compaction }
+CogMethodZone >> compactCompiledCode [
+	| objectHeaderValue source dest bytes |
+	<var: #source type: #'CogMethod *'>
+	<var: #dest type: #'CogMethod *'>
+	objectHeaderValue := objectMemory nullHeaderForMachineCodeMethod.
+	source := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	openPICList := nil.
+	methodCount := 0.
+	self cppIf: NewspeakVM ifTrue: [unpairedMethodList := nil].
+	[source < self limitZony
+	 and: [source cmType ~= CMFree]] whileTrue:
+		[self assert: (cogit cogMethodDoesntLookKosher: source) = 0.
+		 source objectHeader: objectHeaderValue.
+		 source cmUsageCount > 0 ifTrue:
+			[source cmUsageCount: source cmUsageCount // 2].
+		 self cppIf: NewspeakVM ifTrue:
+				[(source cmType = CMMethod
+				  and: [(coInterpreter rawHeaderOf: source methodObject) asInteger ~= source asInteger]) ifTrue:
+					[source nextMethodOrIRCs: unpairedMethodList.
+					 unpairedMethodList := source asUnsignedInteger]].
+		 SistaVM ifTrue:
+			[self clearSavedPICUsageCount: source].
+		 source cmType = CMOpenPIC ifTrue:
+			[source nextOpenPIC: openPICList asUnsignedInteger.
+			 openPICList := source].
+		 methodCount := methodCount + 1.
+		 source := self methodAfter: source].
+	source >= self limitZony ifTrue:
+		[^self halt: 'no free methods; cannot compact.'].
+	dest := source.
+	[source < self limitZony] whileTrue:
+		[self assert: (cogit maybeFreeCogMethodDoesntLookKosher: source) = 0.
+		 bytes := source blockSize.
+		 source cmType ~= CMFree ifTrue:
+			[methodCount := methodCount + 1.
+			 objectMemory mem: dest mo: source ve: bytes.
+			 dest objectHeader: objectHeaderValue.
+			 dest cmType = CMMethod
+				ifTrue:
+					["For non-Newspeak there should be a one-to-one mapping between bytecoded and
+					  cog methods.  For Newspeak not necessarily, but only for anonymous accessors."
+					"Only update the original method's header if it is referring to this CogMethod."
+					 (coInterpreter rawHeaderOf: dest methodObject) asInteger = source asInteger
+						ifTrue:
+							[coInterpreter rawHeaderOf: dest methodObject put: dest asInteger]
+						ifFalse:
+							[self assert: (cogit noAssertMethodClassAssociationOf: dest methodObject) = objectMemory nilObject.
+							 self cppIf: NewspeakVM ifTrue:
+								[dest nextMethodOrIRCs: unpairedMethodList.
+								 unpairedMethodList := dest asUnsignedInteger]]]
+				ifFalse:
+					[SistaVM ifTrue:
+						[self clearSavedPICUsageCount: dest].
+					dest cmType = CMOpenPIC ifTrue:
+						[dest nextOpenPIC: openPICList asUnsignedInteger.
+						 openPICList := dest]].
+			 dest cmUsageCount > 0 ifTrue:
+				[dest cmUsageCount: dest cmUsageCount // 2].
+			 dest := coInterpreter
+								cCoerceSimple: dest asUnsignedInteger + bytes
+								to: #'CogMethod *'].
+		 source := coInterpreter
+							cCoerceSimple: source asUnsignedInteger + bytes
+							to: #'CogMethod *'].
+	mzFreeStart := dest asUnsignedInteger.
+	methodBytesFreedSinceLastCompaction := 0
+]
+
+{ #category : #'young referers' }
+CogMethodZone >> ensureInYoungReferrers: cogMethod [
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod cmRefersToYoung ifFalse:
+		[self assert: (self occurrencesInYoungReferrers: cogMethod) = 0.
+		 cogMethod cmRefersToYoung: true.
+		 self addToYoungReferrers: cogMethod]
+]
+
+{ #category : #accessing }
+CogMethodZone >> findPreviouslyCompiledVersionOf: aMethodObj with: aSelectorOop [
+	"Newspeak uses a set of methods to implement accessors, a setter and a getter for
+	 each inst var offset (e.g. 0 to 255).  These accessors are installed under the relevant
+	 selectors in different method dictionaries as required.  These methods effectively
+	 have multiple selectors.  The current inline cache design stores the selector of a
+	 linked send in the header of the target method.  So this requires a one-to-many
+	 mapping of bytecoded method to cog method, with the bytecoded method referring
+	 directly to only one cog method, which will have a specific selector, not necessarily
+	 the right one.  It is therefore worth-while searching for a cog method on this bytecoded
+	 method that has the right selector.  To speed up the search we maintain all such unpaired
+	 methods on the unpairedMethodList, which is linked through nextMethodOrIRCs."
+	<returnTypeC: #'CogMethod *'>
+	<option: #NewspeakVM>
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	((coInterpreter methodHasCogMethod: aMethodObj)
+	 and: [(coInterpreter methodClassAssociationOf: aMethodObj) = objectMemory nilObject]) ifTrue:
+		[cogMethod := self cCoerceSimple: unpairedMethodList to: #'CogMethod *'.
+		[cogMethod notNil] whileTrue:
+			[self assert: cogMethod cmType = CMMethod.
+			 (cogMethod selector = aSelectorOop
+			  and: [cogMethod methodObject = aMethodObj]) ifTrue:
+				[^cogMethod].
+			 cogMethod := self cCoerceSimple: cogMethod nextMethodOrIRCs to: #'CogMethod *']].
+	^nil
+]
+
+{ #category : #compaction }
+CogMethodZone >> freeMethod: cogMethod [
+	<api>
+	<var: #cogMethod type: #'CogMethod *'>
+	<inline: false>
+	self assert: cogMethod cmType ~= CMFree.
+	self assert: ((cogit cogMethodDoesntLookKosher: cogMethod) = 0
+				 or: [(cogit cogMethodDoesntLookKosher: cogMethod) = 23
+					 and: [(cogit cCoerceSimple: cogMethod methodObject to: #'CogMethod *') cmType = CMFree]]).
+	cogMethod cmType = CMMethod ifTrue:
+		["For non-Newspeak there should ne a one-to-one mapping between bytecoded and
+		  cog methods.  For Newspeak not necessarily, but only for anonymous accessors."
+		"Only reset the original method's header if it is referring to this CogMethod."
+		 (coInterpreter rawHeaderOf: cogMethod methodObject) asInteger = cogMethod asInteger
+			ifTrue:
+				[coInterpreter rawHeaderOf: cogMethod methodObject put: cogMethod methodHeader.
+				 self cppIf: NewspeakVM ifTrue:
+					[(objectRepresentation canPinObjects and: [cogMethod nextMethodOrIRCs ~= 0]) ifTrue:
+						[objectRepresentation freeIRCs: cogMethod nextMethodOrIRCs]]]
+			ifFalse:
+				[self assert: (cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject.
+				 self cppIf: NewspeakVM ifTrue:
+					[self removeFromUnpairedMethodList: cogMethod]].
+		 cogit maybeFreeCountersOf: cogMethod].
+	cogMethod cmType = CMOpenPIC ifTrue:
+		[self removeFromOpenPICList: cogMethod].
+	cogMethod cmRefersToYoung: false.
+	cogMethod cmType: CMFree.
+	methodBytesFreedSinceLastCompaction := methodBytesFreedSinceLastCompaction
+												+ cogMethod blockSize
+]
+
+{ #category : #compaction }
+CogMethodZone >> freeOlderMethodsForCompaction [
+	"Free methods, preferring older methods for compaction, up to some fraction, currently a quarter."
+	| zoneSize amountToFree initialFreeSpace freedSoFar freeableUsage cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	zoneSize := limitAddress - baseAddress.
+	initialFreeSpace := limitAddress - mzFreeStart + methodBytesFreedSinceLastCompaction.
+	freedSoFar := initialFreeSpace.
+	amountToFree := zoneSize // 4. "4 needs to be e.g. a start-up parameter"
+	freeableUsage := 0.
+	[self cCode: ''
+		inSmalltalk: [coInterpreter transcript nextPutAll: 'freeing methods with usage '; print: freeableUsage; cr; flush].
+	 cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
+	 [cogMethod asUnsignedInteger < mzFreeStart
+	  and: [freedSoFar < amountToFree]] whileTrue:
+		[(self shouldFreeMethod: cogMethod given: freeableUsage) ifTrue:
+			[self freeMethod: cogMethod.
+			 freedSoFar := freedSoFar + cogMethod blockSize].
+		 cogMethod := self methodAfter: cogMethod].
+	 freedSoFar < amountToFree
+	 and: [(freeableUsage := freeableUsage + 1) < CMMaxUsageCount]] whileTrue.
+	self cCode: ''
+		inSmalltalk: [coInterpreter transcript
+						nextPutAll: 'Compaction freeing '; print: freedSoFar;
+						nextPutAll: ' of '; print: zoneSize;
+						nextPutAll: ' (target: '; print: amountToFree;
+						nextPutAll: ' (newly freed: '; print: freedSoFar - initialFreeSpace;
+						cr; flush]
+]
+
+{ #category : #accessing }
+CogMethodZone >> freeStart [
+	"declared as a macro so as not to conflict with the memory manager's freeStart."
+	<cmacro: '() mzFreeStart'>
+	^mzFreeStart
+]
+
+{ #category : #accessing }
+CogMethodZone >> freeStart: zoneLimit [
+	<doNotGenerate>
+	^mzFreeStart := zoneLimit
+]
+
+{ #category : #initialization }
+CogMethodZone >> initialize [
+	"Make youngReferrers arithmetic for addressIsInCodeZone:"
+	youngReferrers := 0
+]
+
+{ #category : #'young referers' }
+CogMethodZone >> kosherYoungReferrers [
+	"Answer that all entries in youngReferrers are in-use and have the cmRefersToYoung flag set.
+	 Used to check that the youngreferrers pruning routines work correctly."
+	| pointer cogMethod |
+	<var: #pointer type: #usqInt>
+	<var: #cogMethod type: #'CogMethod *'>
+	(youngReferrers > limitAddress
+	 or: [youngReferrers < mzFreeStart]) ifTrue:
+		[^false].
+	pointer := youngReferrers.
+	[pointer < limitAddress] whileTrue:
+		[cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: pointer) to: #'CogMethod *'.
+		 (cogMethod cmType ~= CMFree and: [cogMethod cmRefersToYoung]) ifFalse:
+			[^false].
+		 pointer := pointer + objectMemory wordSize].
+	^true
+]
+
+{ #category : #accessing }
+CogMethodZone >> limitZony [ "Let us salute Andrei Tarkovsky and his movie Stalker"
+	<cmacro: '() ((CogMethod *)mzFreeStart)'>
+	^mzFreeStart
+]
+
+{ #category : #initialization }
+CogMethodZone >> manageFrom: theStartAddress to: theLimitAddress [
+	<returnTypeC: #void>
+	mzFreeStart := baseAddress := theStartAddress.
+	youngReferrers := limitAddress := theLimitAddress.
+	openPICList := nil.
+	self cppIf: NewspeakVM ifTrue: [unpairedMethodList := nil].
+	methodBytesFreedSinceLastCompaction := 0.
+	methodCount := 0
+]
+
+{ #category : #accessing }
+CogMethodZone >> methodAfter: cogMethod [
+	<var: #cogMethod type: #'CogMethod *'>
+	<inline: true>
+	^coInterpreter
+		cCoerceSimple: (self roundUpLength: cogMethod asInteger + cogMethod blockSize)
+		to: #'CogMethod *'
+]
+
+{ #category : #accessing }
+CogMethodZone >> methodBytesFreedSinceLastCompaction [
+	<cmacro: '() methodBytesFreedSinceLastCompaction'>
+	^methodBytesFreedSinceLastCompaction
+]
+
+{ #category : #'jit - api' }
+CogMethodZone >> methodFor: address [
+	<api>
+	<returnTypeC: #'CogMethod *'>
+	<var: #address type: #'void *'>
+	| cogMethod nextMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	<var: #nextMethod type: #'CogMethod *'>
+	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony
+	 and: [cogMethod asUnsignedInteger <= address asUnsignedInteger]] whileTrue:
+		[nextMethod := self methodAfter: cogMethod.
+		 nextMethod = cogMethod ifTrue:
+			[^0].
+		 (address asUnsignedInteger >= cogMethod asUnsignedInteger
+		  and: [address asUnsignedInteger < nextMethod asUnsignedInteger]) ifTrue:
+			[^cogMethod].
+		 cogMethod := nextMethod].
+	^0
+]
+
+{ #category : #'simulation only' }
+CogMethodZone >> methods [
+	<doNotGenerate>
+	| methods |
+	methods := OrderedCollection new.
+	self methodsDo:
+		[:m| methods addLast: m].
+	^methods
+]
+
+{ #category : #'simulation only' }
+CogMethodZone >> methodsDo: aBlock [
+	<doNotGenerate>
+	| cogMethod |
+	cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[cogMethod cmType ~= CMFree ifTrue:
+			[aBlock value: cogMethod].
+		 cogMethod := self methodAfter: cogMethod]
+	"<api>
+	<returnTypeC: #void>
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[cogMethod cmType ~= CMFree ifTrue:
+			[aBlock value: cogMethod].
+		 cogMethod := self methodAfter: cogMethod]"
+]
+
+{ #category : #accessing }
+CogMethodZone >> numMethods [
+	^methodCount
+]
+
+{ #category : #'jit - api' }
+CogMethodZone >> numMethodsOfType: cogMethodType [
+	<api>
+	| n cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	n := 0.
+	cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[cogMethod cmType = cogMethodType ifTrue:
+			[n := n + 1].
+		 cogMethod := self methodAfter: cogMethod].
+	^n
+]
+
+{ #category : #'young referers' }
+CogMethodZone >> occurrencesInYoungReferrers: cogMethod [
+	<var: #cogMethod type: #'CogMethod *'>
+	| count pointer |
+	<var: #pointer type: #usqInt>
+	self assert: youngReferrers <= limitAddress.
+	count := 0.
+	pointer := youngReferrers.
+	[pointer < limitAddress] whileTrue:
+		[cogMethod asInteger = (objectMemory longAt: pointer) ifTrue:
+			[count := count + 1].
+		 pointer := pointer + objectMemory wordSize].
+	^count
+]
+
+{ #category : #accessing }
+CogMethodZone >> openPICWithSelector: aSelector [
+	| openPIC |
+	<var: #openPIC type: #'CogMethod *'>
+	<returnTypeC: #'CogMethod *'>
+	openPIC := openPICList.
+	[(openPIC == nil
+	  or: [openPIC selector = aSelector]) ifTrue:
+		[^openPIC].
+	 "N.B. Use self rather than coInterpreter to avoid attempting to cast nil.
+	  Conversion to CogMethod done in the nextOpenPIC accessor."
+	 openPIC := self cCoerceSimple: openPIC nextOpenPIC to: #'CogMethod *'.
+	 true] whileTrue
+]
+
+{ #category : #compaction }
+CogMethodZone >> planCompaction [
+	"Some methods have been freed.  Compute how much each survivor needs to
+	 move during the ensuing compaction and record it in the objectHeader field.
+
+	 For Sista, where we want PICs to last so they can be observed, we need to keep PICs unless
+	 they are definitely unused.  So we need to identify unused PICs.  So in planCompact, zero the
+	 usage counts of all PICs, saving the actual usage count in blockEntryOffset.  Then in
+	 relocateMethodsPreCompaction (actually in relocateIfCallOrMethodReference:mcpc:delta:)
+	 restore the usage counts of used PICs.  Finally in compactCompiledCode, clear the blockEntryOffset
+	 of the unused PICs; they will then have a zero count and be reclaimed in the next code compaction."
+	| delta cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	delta := 0.
+	cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod asUnsignedInteger < mzFreeStart] whileTrue:
+		[cogMethod cmType = CMFree
+			ifTrue: [delta := delta - cogMethod blockSize]
+			ifFalse:
+				[self assert: (cogit cogMethodDoesntLookKosher: cogMethod) = 0.
+				 cogMethod objectHeader: delta.
+				 SistaVM ifTrue:
+					[self savePICUsageCount: cogMethod]].
+		 cogMethod := self methodAfter: cogMethod]
+]
+
+{ #category : #printing }
+CogMethodZone >> printCogMethods [
+	<api>
+	<returnTypeC: #void>
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[coInterpreter printCogMethod: cogMethod.
+		 cogMethod := self methodAfter: cogMethod]
+]
+
+{ #category : #printing }
+CogMethodZone >> printCogMethodsOfType: cmType [
+	<api>
+	<returnTypeC: #void>
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[cogMethod cmType = cmType ifTrue:
+			[coInterpreter printCogMethod: cogMethod].
+		 cogMethod := self methodAfter: cogMethod]
+]
+
+{ #category : #printing }
+CogMethodZone >> printCogMethodsWithMethod: methodOop [
+	<api>
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[(cogMethod cmType ~= CMFree
+		  and: [cogMethod methodObject = methodOop]) ifTrue:
+			[coInterpreter printCogMethod: cogMethod].
+		 cogMethod := self methodAfter: cogMethod]
+]
+
+{ #category : #printing }
+CogMethodZone >> printCogMethodsWithPrimitive: primIdx [
+	<api>
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[(cogMethod cmType ~= CMFree
+		  and: [primIdx = (coInterpreter primitiveIndexOfMethod: cogMethod methodObject
+							header: cogMethod methodHeader)]) ifTrue:
+			[coInterpreter printCogMethod: cogMethod].
+		 cogMethod := self methodAfter: cogMethod]
+]
+
+{ #category : #printing }
+CogMethodZone >> printCogMethodsWithSelector: selectorOop [
+	<api>
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[(cogMethod cmType ~= CMFree
+		  and: [cogMethod selector = selectorOop]) ifTrue:
+			[coInterpreter printCogMethod: cogMethod].
+		 cogMethod := self methodAfter: cogMethod]
+]
+
+{ #category : #printing }
+CogMethodZone >> printCogYoungReferrers [
+	<api>
+	<returnTypeC: #void>
+	| pointer cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	pointer := youngReferrers.
+	[pointer < limitAddress] whileTrue:
+		[cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: pointer) to: #'CogMethod *'.
+		 cogMethod cmRefersToYoung ifFalse:
+			[coInterpreter print: '*'].
+		 cogMethod cmType = CMFree ifTrue:
+			[coInterpreter print: '!'].
+		 (cogMethod cmRefersToYoung and: [cogMethod cmType ~= CMFree]) ifFalse:
+			[coInterpreter print: ' '].
+		 coInterpreter printCogMethod: cogMethod.
+		 pointer := pointer + objectMemory wordSize]
+]
+
+{ #category : #accessing }
+CogMethodZone >> printOpenPICList [
+	<api>
+	| openPIC |
+	<var: #openPIC type: #'CogMethod *'>
+	openPIC := openPICList.
+	[openPIC == nil] whileFalse:
+		[self printCogMethod: openPIC.
+		 openPIC := self cCoerceSimple: openPIC nextOpenPIC to: #'CogMethod *']
+]
+
+{ #category : #'young referers' }
+CogMethodZone >> pruneYoungReferrers [
+	| source dest next |
+	<var: #source type: #usqInt>
+	<var: #dest type: #usqInt>
+	<var: #next type: #usqInt>
+	<inline: false>
+
+	self assert: youngReferrers <= limitAddress.
+	youngReferrers = limitAddress ifTrue:
+		[^nil].
+	dest := limitAddress.
+	[next := dest - objectMemory wordSize.
+	 next >= youngReferrers
+	 and: [(coInterpreter cCoerceSimple: (objectMemory longAt: next) to: #'CogMethod *') cmRefersToYoung]] whileTrue:
+		[dest := next].
+	self assert: dest >= youngReferrers.
+	source := dest - objectMemory wordSize.
+	[source >= youngReferrers] whileTrue:
+		[(coInterpreter cCoerceSimple: (objectMemory longAt: source) to: #'CogMethod *') cmRefersToYoung ifTrue:
+			[self assert: source < (dest - objectMemory wordSize).
+			 objectMemory longAt: (dest := dest - objectMemory wordSize) put: (objectMemory longAt: source)].
+		 source := source - objectMemory wordSize].
+	youngReferrers := dest.
+	self assert: self kosherYoungReferrers
+]
+
+{ #category : #'jit - api' }
+CogMethodZone >> quickClearCogCompiledCode [
+	"Quick, for in-image testing"
+	<doNotGenerate>
+	mzFreeStart := baseAddress.
+	self clearCogCompiledCode
+]
+
+{ #category : #'young referers' }
+CogMethodZone >> relocateAndPruneYoungReferrers [
+	| source dest next cogMethod |
+	<var: #source type: #usqInt>
+	<var: #dest type: #usqInt>
+	<var: #next type: #usqInt>
+	<var: #cogMethod type: #'CogMethod *'>
+	<inline: false>
+
+	self assert: youngReferrers <= limitAddress.
+	youngReferrers = limitAddress ifTrue:
+		[^nil].
+	dest := limitAddress.
+	[next := dest - objectMemory wordSize.
+	 next >= youngReferrers
+	 and: [(cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: next) to: #'CogMethod *') cmType ~= CMFree
+	 and: [cogMethod cmRefersToYoung]]] whileTrue:
+		[cogMethod objectHeader ~= 0 ifTrue:
+			[coInterpreter longAt: next put: cogMethod asInteger + cogMethod objectHeader].
+		 dest := next].
+	self assert: dest >= youngReferrers.
+	source := dest - objectMemory wordSize.
+	[source >= youngReferrers] whileTrue:
+		[cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: source) to: #'CogMethod *'.
+		 (cogMethod cmType ~= CMFree
+		  and: [cogMethod cmRefersToYoung]) ifTrue:
+			[self assert: source < (dest - objectMemory wordSize).
+			 cogMethod objectHeader ~= 0 ifTrue:
+				[cogMethod := coInterpreter
+									cCoerceSimple: cogMethod asInteger + cogMethod objectHeader asInteger
+									to: #'CogMethod *'].
+			 objectMemory longAt: (dest := dest - objectMemory wordSize) put: cogMethod asInteger].
+		 source := source - objectMemory wordSize].
+	youngReferrers := dest.
+	"this assert must be deferred until after compaction.  See the end of compactCogCompiledCode"
+	"self assert: self kosherYoungReferrers"
+]
+
+{ #category : #compaction }
+CogMethodZone >> relocateMethodsPreCompaction [
+	"All surviving methods have had the amount they are going to relocate by
+	 stored in their objectHeader fields.  Relocate all relative calls so that after
+	 the compaction of both the method containing each call and the call target
+	 the calls invoke the same target."
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod asUnsignedInteger < mzFreeStart] whileTrue:
+		[cogMethod cmType ~= CMFree ifTrue:
+			[cogMethod cmType = CMClosedPIC
+				ifTrue: [cogit relocateCallsInClosedPIC: cogMethod]
+				ifFalse: [cogit relocateCallsAndSelfReferencesInMethod: cogMethod]].
+		 cogMethod := self methodAfter: cogMethod].
+	self relocateAndPruneYoungReferrers.
+	^true
+]
+
+{ #category : #accessing }
+CogMethodZone >> removeFromOpenPICList: anOpenPIC [
+	<var: #anOpenPIC type: #'CogMethod *'>
+	| prevPIC |
+	<var: #prevPIC type: #'CogMethod *'>
+	self assert: anOpenPIC cmType = CMOpenPIC.
+	anOpenPIC = openPICList ifTrue:
+		["N.B. Use self rather than coInterpreter to avoid attempting to cast nil.
+		  Conversion to CogMethod done in the nextOpenPIC accessor."
+		 openPICList := self cCoerceSimple: anOpenPIC nextOpenPIC to: #'CogMethod *'.
+		 ^nil].
+	prevPIC := openPICList.
+	[self assert: (prevPIC ~~ nil
+				and: [prevPIC cmType = CMOpenPIC]).
+	 prevPIC nextOpenPIC = anOpenPIC asInteger ifTrue:
+		[prevPIC nextOpenPIC: anOpenPIC nextOpenPIC.
+		 ^nil].
+	  prevPIC := self cCoerceSimple: prevPIC nextOpenPIC to: #'CogMethod *'.
+	  true] whileTrue
+]
+
+{ #category : #accessing }
+CogMethodZone >> removeFromUnpairedMethodList: aCogMethod [
+	<option: #NewspeakVM>
+	<var: #aCogMethod type: #'CogMethod *'>
+	| prevMethod |
+	<var: #prevMethod type: #'CogMethod *'>
+	self assert: aCogMethod cmType = CMMethod.
+	aCogMethod asUnsignedInteger = unpairedMethodList ifTrue:
+		[unpairedMethodList := aCogMethod nextMethodOrIRCs.
+		 ^nil].
+	prevMethod := self cCoerceSimple: unpairedMethodList to: #'CogMethod *'.
+	[prevMethod notNil] whileTrue:
+		[self assert: (prevMethod ~~ nil and: [prevMethod cmType = CMMethod]).
+		 prevMethod nextMethodOrIRCs = aCogMethod asUnsignedInteger ifTrue:
+			[prevMethod nextMethodOrIRCs: aCogMethod nextMethodOrIRCs.
+			 ^nil].
+		  prevMethod := self cCoerceSimple: prevMethod nextMethodOrIRCs to: #'CogMethod *']
+]
+
+{ #category : #compaction }
+CogMethodZone >> restorePICUsageCount: cogMethod [
+	"For Sista, where we want PICs to last so they can be observed, we need to keep PICs unless
+	 they are definitely unused.  So we need to identify unused PICs.  So in planCompact, zero the
+	 usage counts of all PICs, saving the actual usage count in blockEntryOffset.  Then in
+	 relocateMethodsPreCompaction (actually in relocateIfCallOrMethodReference:mcpc:delta:)
+	 restore the usage counts of used PICs.  Finally in compactCompiledCode, clear the blockEntryOffset
+	 of the unused PICs; they will then have a zero count and be reclaimed in the next code compaction."
+	<var: #cogMethod type: #'CogMethod *'>
+	<option: #SistaVM>
+	(cogMethod cmType = CMClosedPIC
+	 and: [cogMethod blockEntryOffset ~= 0]) ifTrue:
+		[cogMethod
+			cmUsageCount: cogMethod blockEntryOffset;
+			blockEntryOffset: 0]
+]
+
+{ #category : #accessing }
+CogMethodZone >> roundUpAddress: address [
+	<returnTypeC: #'void *'>
+	<var: #address type: #'void *'>
+	^self cCoerce: ((self cCoerce: address to: 'unsigned long') + 7 bitAnd: -8) to: #'void *'
+]
+
+{ #category : #accessing }
+CogMethodZone >> roundUpLength: numBytes [
+	<cmacro: '(numBytes) ((numBytes) + 7 & -8)'>
+	^numBytes + 7 bitAnd: -8
+]
+
+{ #category : #compaction }
+CogMethodZone >> savePICUsageCount: cogMethod [
+	"For Sista, where we want PICs to last so they can be observed, we need to keep PICs unless
+	 they are definitely unused.  So we need to identify unused PICs.  So in planCompact, zero the
+	 usage counts of all PICs, saving the actual usage count in blockEntryOffset.  Then in
+	 relocateMethodsPreCompaction (actually in relocateIfCallOrMethodReference:mcpc:delta:)
+	 restore the usage counts of used PICs.  Finally in compactCompiledCode, clear the blockEntryOffset
+	 of the unused PICs; they will then have a zero count and be reclaimed in the next code compaction."
+	<var: #cogMethod type: #'CogMethod *'>
+	<option: #SistaVM>
+	cogMethod cmType = CMClosedPIC ifTrue:
+		[cogMethod
+			blockEntryOffset: cogMethod cmUsageCount;
+			cmUsageCount: 0]
+]
+
+{ #category : #initialization }
+CogMethodZone >> setInterpreter: aCoInterpreter objectRepresentation: anObjectRepresentation cogit: aCogit [
+	<doNotGenerate>
+	coInterpreter := aCoInterpreter.
+	objectRepresentation := anObjectRepresentation.
+	cogit := aCogit.
+	objectMemory := aCoInterpreter objectMemory
+]
+
+{ #category : #compaction }
+CogMethodZone >> shouldFreeMethod: cogMethod given: freeableUsage [
+	"Answer if cogMethod should be freed in the current pass of freeOlderMethodsForCompaction.
+
+	 For Sista, where we want PICs to last so they can be observed, we need to keep PICs unless
+	 they are definitely unused.  So we need to identify unused PICs.  So in planCompact, zero the
+	 usage counts of all PICs, saving the actual usage count in blockEntryOffset.  Then in
+	 relocateMethodsPreCompaction (actually in relocateIfCallOrMethodReference:mcpc:delta:)
+	 restore the usage counts of used PICs.  Finally in compactCompiledCode, clear the blockEntryOffset
+	 of the unused PICs; they will then have a zero count and be reclaimed in the next code compaction."
+	<var: #cogMethod type: #'CogMethod *'>
+	<inline: true>
+	^SistaVM
+		ifTrue:
+			[cogMethod cmType = CMMethod
+			 	ifTrue: [cogMethod cmUsageCount <= freeableUsage]
+				ifFalse: [cogMethod cmType ~= CMFree
+						  and: [cogMethod cmUsageCount = 0]]]
+		ifFalse:
+			[cogMethod cmType ~= CMFree
+			  and: [cogMethod cmUsageCount <= freeableUsage]]
+]
+
+{ #category : #'jit - api' }
+CogMethodZone >> voidYoungReferrersPostTenureAll [
+	<var: #cogMethod type: #'CogMethod *'>
+	| pointer cogMethod |
+	<var: #pointer type: #usqInt>
+	<var: #cogMethod type: #'CogMethod *'>
+	self assert: youngReferrers <= limitAddress.
+	pointer := youngReferrers.
+	[pointer < limitAddress] whileTrue:
+		[cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: pointer) to: #'CogMethod *'.
+		 cogMethod cmType ~= CMFree ifTrue:
+			[cogMethod cmRefersToYoung: false].
+		 pointer := pointer + objectMemory wordSize].
+	youngReferrers := limitAddress
+]
+
+{ #category : #'debug printing' }
+CogMethodZone >> whereIsMaybeCodeThing: anOop [
+	<api>
+	<returnTypeC: 'char *'>
+	(self oop: anOop isGreaterThanOrEqualTo: cogit cogCodeBase andLessThan: limitAddress) ifTrue:
+		[(self oop: anOop isLessThan: cogit minCogMethodAddress) ifTrue:
+			[^' is in generated runtime'].
+		 (self oop: anOop isLessThan: mzFreeStart) ifTrue:
+			[^' is in generated methods'].
+		 (self oop: anOop isLessThan: youngReferrers) ifTrue:
+			[^' is in code zone'].
+		 ^' is in young referrers'].
+	^nil
+]
+
+{ #category : #'young referers' }
+CogMethodZone >> youngReferrers [
+	<cmacro: '() youngReferrers'>
+	^youngReferrers
+]
+
+{ #category : #accessing }
+CogMethodZone >> zoneEnd [
+	<inline: true>
+	^limitAddress
+]
+
+{ #category : #'simulation only' }
+CogMethodZone >> zoneEnd: zoneEnd [
+	<doNotGenerate> 
+	limitAddress := zoneEnd
+]
+
+{ #category : #accessing }
+CogMethodZone >> zoneFree [
+	<inline: true>
+	^mzFreeStart
+]
