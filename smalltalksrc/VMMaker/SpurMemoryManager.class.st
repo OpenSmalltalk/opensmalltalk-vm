@@ -11140,9 +11140,9 @@ SpurMemoryManager >> topOfObjStack: objStack [
 	| topx |
 	"This assert is tricky.  push:onObjStack: may call topOfObjStack: just after pushing an
 	 empty page on the stack, and will ask if the second page is valid."
-	self assert: (self isValidObjStackPage: objStack
+	self eassert: [self isValidObjStackPage: objStack
 					myIndex: (self fetchPointer: ObjStackMyx ofObject: objStack)
-					firstPage: (objStack = (self fetchPointer: (self fetchPointer: ObjStackMyx ofObject: objStack) ofObject: hiddenRootsObj))).
+					firstPage: (objStack = (self fetchPointer: (self fetchPointer: ObjStackMyx ofObject: objStack) ofObject: hiddenRootsObj))].
 	topx := self fetchPointer: ObjStackTopx ofObject: objStack.
 	topx = 0 ifTrue:
 		[self assert: (self fetchPointer: ObjStackNextx ofObject: objStack) = 0.
