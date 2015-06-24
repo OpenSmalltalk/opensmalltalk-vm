@@ -1081,3 +1081,8 @@ VMClass >> strlen: aCString [
 VMClass >> unalignedAccessError [
 	^self error: 'unaligned access'
 ]
+
+{ #category : #'debug support' }
+VMClass >> unreachable [
+	self error: 'UNREACHABLE'
+]

@@ -3071,17 +3071,19 @@ Cogit >> ceSICMiss: receiver [
 		 "Avoid the effort of implementing PICs for the relatively high dynamic frequency
 		  self send and simply rebind the send site (for now)."
 		 annotation = IsNSSelfSend ifTrue:
-			[^coInterpreter
+			[coInterpreter
 				ceSelfSend: targetMethod selector
 				to: receiver
-				numArgs: targetMethod cmNumArgs].
+				numArgs: targetMethod cmNumArgs.
+			self unreachable].
 		 "Avoid the effort of implementing PICs for the relatively low dynamic frequency
 		  dynamic super send and simply rebind the send site."
 		 annotation = IsNSDynamicSuperSend ifTrue:
-			[^coInterpreter
+			[coInterpreter
 				ceDynamicSuperSend: targetMethod selector
 				to: receiver
-				numArgs: targetMethod cmNumArgs]].
+				numArgs: targetMethod cmNumArgs.
+			self unreachable]].
 	self assert: targetMethod asInteger + cmEntryOffset = entryPoint.
 
 	self lookup: targetMethod selector
