@@ -1351,9 +1351,9 @@ StackInterpreterSimulator >> lookupMethodInClass: class [
 ]
 
 { #category : #'callback support' }
-StackInterpreterSimulator >> lookupMethodNoMNUEtcInClass: class [
+StackInterpreterSimulator >> lookupOrdinaryNoMNUEtcInClass: class [
 	lookupCount := lookupCount + 1.
-	^super lookupMethodNoMNUEtcInClass: class
+	^super lookupOrdinaryNoMNUEtcInClass: class
 ]
 
 { #category : #'file primitives' }

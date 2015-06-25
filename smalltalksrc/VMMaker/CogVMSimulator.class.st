@@ -2109,9 +2109,9 @@ CogVMSimulator >> lookupMethodInClass: class [
 ]
 
 { #category : #'callback support' }
-CogVMSimulator >> lookupMethodNoMNUEtcInClass: class [
+CogVMSimulator >> lookupOrdinaryNoMNUEtcInClass: class [
 	lookupCount := lookupCount + 1.
-	^super lookupMethodNoMNUEtcInClass: class
+	^super lookupOrdinaryNoMNUEtcInClass: class
 ]
 
 { #category : #'frame access' }
