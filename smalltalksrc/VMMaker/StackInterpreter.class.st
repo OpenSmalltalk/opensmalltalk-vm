@@ -9140,7 +9140,7 @@ StackInterpreter >> lookupOrdinaryNoMNUEtcInClass: class [
 					[(self accessModifierOfMethod: newMethod) == AccessModifierPublic
 						ifTrue: [self addNewMethodToCache: class. ^0].
 					(self accessModifierOfMethod: newMethod) == AccessModifierProtected
-						ifTrue: [^SelectorDoesNotUnderstand]]]
+						ifTrue: [lkupClass := class. ^SelectorDoesNotUnderstand]]]
 			ifFalse:
 				[found ifTrue: [self addNewMethodToCache: class. ^0]].
 		currentClass := self superclassOf: currentClass].
