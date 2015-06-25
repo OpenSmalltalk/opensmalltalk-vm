@@ -1348,7 +1348,7 @@ CoInterpreter >> ceCounterTripped: condition [
 					compactClassIndex: ClassMethodContextCompactIndex.
 	(self lookupInMethodCacheSel: counterTrippedSelector classTag: classTag) ifFalse:
 	 	[messageSelector := counterTrippedSelector.
-		 (self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
+		 (self lookupOrdinaryNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 			[cogit resetCountersIn: (self mframeHomeMethod: framePointer).
 			 ^condition]].
 
@@ -1980,7 +1980,7 @@ CoInterpreter >> ceSend: selector above: startAssociationArg to: rcvr numArgs: n
 					to: rcvr
 					numArgs: numArgs].
 			 messageSelector := selector.
-			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
+			 (errSelIdx := self lookupOrdinaryNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 				[(errSelIdx = SelectorDoesNotUnderstand
 				  and: [(cogMethod := cogit cogMNUPICSelector: messageSelector
 											receiver: rcvr
@@ -2078,7 +2078,7 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 					to: (self handleForwardedSendFaultForReceiver: rcvr stackDelta: 1 "skip return pc")
 					numArgs: numArgs].
 			 messageSelector := selector.
-			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
+			 (errSelIdx := self lookupOrdinaryNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 				[(errSelIdx = SelectorDoesNotUnderstand
 				  and: [(cogMethod := cogit cogMNUPICSelector: messageSelector
 											receiver: rcvr
@@ -2157,7 +2157,7 @@ CoInterpreter >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 				selector: selector]
 		ifFalse:
 			[messageSelector := selector.
-			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
+			 (errSelIdx := self lookupOrdinaryNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: (objectMemory classForClassTag: classTag).
 				"NOTREACHED"
 				self assert: false]].
@@ -2198,7 +2198,7 @@ CoInterpreter >> ceSendFromInLineCacheMiss: cogMethodOrPIC [
 				[self handleForwardedSendFaultForReceiver: rcvr stackDelta: 1 "skip return pc".
 				 ^self ceSendFromInLineCacheMiss: cogMethodOrPIC].
 			 messageSelector := cogMethodOrPIC selector.
-			 (errSelIdx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
+			 (errSelIdx := self lookupOrdinaryNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: (objectMemory classForClassTag: classTag).
 				"NOTREACHED"
 				self assert: false]].
@@ -3299,7 +3299,7 @@ CoInterpreter >> fastLogPrim: aSelectorOrImmediate [
 CoInterpreter >> findNewMethodInClassTag: classTagArg [
 	"Find the compiled method to be run when the current messageSelector is
 	 sent to the given classTag, setting the values of newMethod and primitiveIndex."
-	| ok class classTag |
+	| ok classTag |
 	<inline: false>
 	ok := self lookupInMethodCacheSel: messageSelector classTag: classTagArg.
 	ok	ifTrue:
@@ -3317,9 +3317,12 @@ CoInterpreter >> findNewMethodInClassTag: classTagArg [
 				ok ifTrue:
 					[^self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]].
 			 "entry was not found in the cache; look it up the hard way "
-			 class := objectMemory classForClassTag: classTag.
-			 self lookupMethodInClass: class.
-			 self addNewMethodToCache: class]
+			 lkupClass := objectMemory classForClassTag: classTag.
+			 self cppIf: #NewspeakVM
+				ifTrue: [self lookupOrdinarySend]
+				ifFalse: [self lookupMethodInClass: lkupClass].
+			 self lookupMethodInClass: lkupClass.
+			 self addNewMethodToCache: lkupClass]
 ]
 
 { #category : #'object memory support' }
@@ -3786,7 +3789,7 @@ CoInterpreter >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage:
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: messageSelector]
 		ifFalse:
-			[errSelIdx := self lookupMethodNoMNUEtcInClass: (classForThisMessage := lkupClass).
+			[errSelIdx := self lookupMNUInClass: (classForThisMessage := lkupClass).
 			 errSelIdx ~= 0 ifTrue:
 				[selectorIndex = SelectorDoesNotUnderstand ifTrue:
 					[self error: 'Recursive not understood error encountered'].
@@ -4196,7 +4199,9 @@ CoInterpreter >> internalFindNewMethodOrdinary [
 				(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifTrue:
 					[^self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]].
 			lkupClass := objectMemory classForClassTag: lkupClassTag.
-			self lookupMethodInClass: lkupClass.
+			self cppIf: #NewspeakVM
+				ifTrue: [self lookupOrdinarySend]
+				ifFalse: [self lookupMethodInClass: lkupClass].
 			self internalizeIPandSP.
 			self addNewMethodToCache: lkupClass]
 ]
@@ -4444,23 +4449,6 @@ CoInterpreter >> longStoreTemporaryVariableBytecode [
 	self itemporary: index in: localFP put: self internalStackTop
 ]
 
-{ #category : #'cog jit support' }
-CoInterpreter >> lookup: selector receiver: rcvr [
-	<api>
-	"Lookup selector in rcvr, without doing MNU processing, and answer either a
-	 method or an error code if the message was not understood.  Used to populate closed PICs."
-	| classTag erridx |
-	"self printFrame: stackPage headFP WithSP: stackPage headSP"
-	"self printStringOf: selector"
-	classTag := objectMemory fetchClassTagOf: rcvr.
-	(self lookupInMethodCacheSel: selector classTag: classTag) ifFalse:
-		[messageSelector := selector.
-		 (erridx := self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
-			[self assert: erridx <= self maxLookupNoMNUErrorCode.
-			 ^erridx]].
-	^newMethod
-]
-
 { #category : #simulation }
 CoInterpreter >> lookupAddress: address [
 	"If address appears to be that of a Symbol or a few well-known objects (such as classes) answer it, otherwise answer nil.
@@ -4528,6 +4516,50 @@ CoInterpreter >> lookupLexicalNoMNU: selector from: mixin rule: rule [
 		ifTrue: [^0].
 	^self lookupProtectedNoMNU: selector startingAt: receiverClass rule: rule
 
+]
+
+{ #category : #'cog jit support' }
+CoInterpreter >> lookupMNU: selector receiver: rcvr [
+	<api>
+	"Lookup selector in rcvr, without doing MNU processing, and answer either a
+	 method or an error code if the message was not understood.  Used to populate closed PICs."
+	| classTag inCache erridx |
+	"self printFrame: stackPage headFP WithSP: stackPage headSP"
+	"self printStringOf: selector"
+	classTag := objectMemory fetchClassTagOf: rcvr.
+	self cppIf: #NewspeakVM
+	  	ifTrue:
+			[inCache := (self
+				inlineLookupInNSMethodCacheSel: selector
+				classTag: classTag
+				method: 0
+				lookupRule: LookupRuleMNU)]
+		ifFalse:
+			[inCache := self lookupInMethodCacheSel: selector classTag: classTag].
+	inCache ifFalse:
+		[messageSelector := selector.
+		 erridx := self lookupMNUInClass: (objectMemory classForClassTag: classTag).
+		 erridx ~= 0 ifTrue:
+			[self assert: erridx <= self maxLookupNoMNUErrorCode.
+			 ^erridx]].
+	^newMethod
+]
+
+{ #category : #'cog jit support' }
+CoInterpreter >> lookupOrdinary: selector receiver: rcvr [
+	<api>
+	"Lookup selector in rcvr, without doing MNU processing, and answer either a
+	 method or an error code if the message was not understood.  Used to populate closed PICs."
+	| classTag erridx |
+	"self printFrame: stackPage headFP WithSP: stackPage headSP"
+	"self printStringOf: selector"
+	classTag := objectMemory fetchClassTagOf: rcvr.
+	(self lookupInMethodCacheSel: selector classTag: classTag) ifFalse:
+		[messageSelector := selector.
+		 (erridx := self lookupOrdinaryNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
+			[self assert: erridx <= self maxLookupNoMNUErrorCode.
+			 ^erridx]].
+	^newMethod
 ]
 
 { #category : #'message sending' }

@@ -406,7 +406,7 @@ VMMaker class >> generateNewspeakSpurCogVM [
 		with: #(	ObjectMemory Spur32BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
 				NewspeakVM true
-				EnforceAccessControl false)
+				EnforceAccessControl true)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/nsspursrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation

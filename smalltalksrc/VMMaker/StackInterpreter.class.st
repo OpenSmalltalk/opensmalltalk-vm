@@ -6031,7 +6031,7 @@ StackInterpreter >> findNewMethodInClassTag: classTagArg [
 	"Find the compiled method to be run when the current 
 	messageSelector is sent to the given class, setting the values 
 	of 'newMethod' and 'primitiveIndex'."
-	| ok class classTag |
+	| ok classTag |
 	<inline: false>
 	ok := self lookupInMethodCacheSel: messageSelector classTag: classTagArg.
 	ok ifFalse: "entry was not found in the cache; look it up the hard way "
@@ -6045,9 +6045,11 @@ StackInterpreter >> findNewMethodInClassTag: classTagArg [
 			ok := self lookupInMethodCacheSel: messageSelector classTag: classTag.
 			ok ifTrue:
 				[^nil]].
-		 class := objectMemory classForClassTag: classTag.
-		 self lookupMethodInClass: class.
-		 self addNewMethodToCache: class]
+ 		 lkupClass := objectMemory classForClassTag: classTag.
+		 self cppIf: #NewspeakVM
+				ifTrue: [self lookupOrdinarySend]
+				ifFalse: [self lookupMethodInClass: lkupClass].
+		 self addNewMethodToCache: lkupClass]
 ]
 
 { #category : #'frame access' }
@@ -8950,6 +8952,27 @@ StackInterpreter >> lookupLexical: selector from: mixin rule: rule [
 ]
 
 { #category : #'message sending' }
+StackInterpreter >> lookupMNUInClass: class [
+	"Lookup messageSelector in class.  Answer 0 on success. Answer the splObj: index
+	 for the error selector to use on failure rather than performing MNU processing etc."
+	| currentClass dictionary found |
+	<inline: false>
+	currentClass := class.
+	[currentClass ~= objectMemory nilObject] whileTrue:
+		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
+		 dictionary = objectMemory nilObject ifTrue:
+			[lkupClass := self superclassOf: currentClass.
+			 ^SelectorCannotInterpret].
+		found := self lookupMethodInDictionary: dictionary.
+		self cppIf: #NewspeakVM
+			ifTrue: [found ifTrue: [lkupClass := class. self addNewMethodToNSCache: LookupRuleMNU. ^0]]
+			ifFalse: [found ifTrue: [self addNewMethodToCache: class. ^0]].
+		currentClass := self superclassOf: currentClass].
+	lkupClass := class.
+	^SelectorDoesNotUnderstand
+]
+
+{ #category : #'message sending' }
 StackInterpreter >> lookupMethodFor: selector InDictionary: dictionary [
 	"Lookup the argument selector in aDictionary and answer either the
 	 method or nil, if not found.
@@ -9075,7 +9098,7 @@ StackInterpreter >> lookupMethodInDictionary: dictionary [
 StackInterpreter >> lookupMethodNoMNUEtcInClass: class [
 	"Lookup messageSelector in class.  Answer 0 on success. Answer the splObj: index
 	 for the error selector to use on failure rather than performing MNU processing etc."
-	| currentClass dictionary |
+	| currentClass dictionary found |
 	<inline: false>
 	currentClass := class.
 	[currentClass ~= objectMemory nilObject] whileTrue:
@@ -9083,9 +9106,43 @@ StackInterpreter >> lookupMethodNoMNUEtcInClass: class [
 		 dictionary = objectMemory nilObject ifTrue:
 			[lkupClass := self superclassOf: currentClass.
 			 ^SelectorCannotInterpret].
-		 (self lookupMethodInDictionary: dictionary) ifTrue:
-			[self addNewMethodToCache: class.
-			 ^0].
+		found := self lookupMethodInDictionary: dictionary.
+		self cppIf: #NewspeakVM
+			ifTrue:
+				[found ifTrue:
+					[(self accessModifierOfMethod: newMethod) == AccessModifierPublic
+						ifTrue: [self addNewMethodToCache: class. ^0].
+					(self accessModifierOfMethod: newMethod) == AccessModifierProtected
+						ifTrue: [^SelectorDoesNotUnderstand]]]
+			ifFalse:
+				[found ifTrue: [self addNewMethodToCache: class. ^0]].
+		currentClass := self superclassOf: currentClass].
+	lkupClass := class.
+	^SelectorDoesNotUnderstand
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> lookupOrdinaryNoMNUEtcInClass: class [
+	"Lookup messageSelector in class.  Answer 0 on success. Answer the splObj: index
+	 for the error selector to use on failure rather than performing MNU processing etc."
+	| currentClass dictionary found |
+	<inline: false>
+	currentClass := class.
+	[currentClass ~= objectMemory nilObject] whileTrue:
+		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
+		 dictionary = objectMemory nilObject ifTrue:
+			[lkupClass := self superclassOf: currentClass.
+			 ^SelectorCannotInterpret].
+		found := self lookupMethodInDictionary: dictionary.
+		self cppIf: #NewspeakVM
+			ifTrue:
+				[found ifTrue:
+					[(self accessModifierOfMethod: newMethod) == AccessModifierPublic
+						ifTrue: [self addNewMethodToCache: class. ^0].
+					(self accessModifierOfMethod: newMethod) == AccessModifierProtected
+						ifTrue: [^SelectorDoesNotUnderstand]]]
+			ifFalse:
+				[found ifTrue: [self addNewMethodToCache: class. ^0]].
 		currentClass := self superclassOf: currentClass].
 	lkupClass := class.
 	^SelectorDoesNotUnderstand
@@ -12955,7 +13012,7 @@ StackInterpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regs
 	messageSelector := self splObj: SelectorInvokeCallback.
 	argumentCount := 4.
 	(self lookupInMethodCacheSel: messageSelector classTag: classTag) ifFalse:
-	 	[(self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
+	 	[(self lookupOrdinaryNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 			[^false]].
 	((self argumentCountOf: newMethod) = 4
 	and: [primitiveFunctionPointer = 0]) ifFalse:
@@ -12990,7 +13047,7 @@ StackInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 	classTag := self fetchClassTagOfNonImm: (self splObj: ClassAlien).
 	messageSelector := self splObj: SelectorInvokeCallback.
 	(self lookupInMethodCacheSel: messageSelector classTag: classTag) ifFalse:
-	 	[(self lookupMethodNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
+	 	[(self lookupOrdinaryNoMNUEtcInClass: (objectMemory classForClassTag: classTag)) ~= 0 ifTrue:
 			[^false]].
 	primitiveFunctionPointer ~= 0 ifTrue:
 		[^false].
