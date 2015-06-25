@@ -1084,5 +1084,6 @@ VMClass >> unalignedAccessError [
 
 { #category : #'debug support' }
 VMClass >> unreachable [
+	<inline: true>
 	self error: 'UNREACHABLE'
 ]
