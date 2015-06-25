@@ -7343,6 +7343,7 @@ StackInterpreter >> initialCleanup [
 	 Since we won't be loading such images (being a closure only VM) we only have to
 	 deal with external primitives.  Since references to external plugins in methods are
 	 cleaned up in snapshotCleanUp only initialize the tables, not visit each method."
+	<inline: true>
 	self flushMethodCache.
 	self flushExternalPrimitiveTable
 ]
@@ -7420,7 +7421,6 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 		[breakSelectorLength ifNil:
 			[breakSelectorLength := objectMemory minSmallInteger]].
 	methodDictLinearSearchLimit := 8.
-	self flushMethodCache.
 	self initialCleanup.
 	profileSemaphore := profileProcess := profileMethod := objectMemory nilObject.
 	interruptKeycode := 2094. "cmd-. as used for Mac but no other OS"
@@ -8826,7 +8826,7 @@ StackInterpreter >> lookupDnuPresent [
 	OUT: newMethod
 	OUT: primitiveIndex
 	RESULT: LookupRuleMNU"
-
+	<option: #NewspeakVM>
 	| currentClass dictionary found |
 	self createActualMessageTo: lkupClass.
 	messageSelector := objectMemory splObj: SelectorDoesNotUnderstand.
@@ -9100,7 +9100,7 @@ StackInterpreter >> lookupOrdinarySend [
 	OUT: newMethod
 	OUT: primitiveIndex
 	RESULT: LookupOrdinary or LookupDNU"
-
+	<option: #NewspeakVM>
 	| currentClass dictionary found |
 	self assert: (self addressCouldBeClassObj: lkupClass).
 	currentClass := lkupClass.
