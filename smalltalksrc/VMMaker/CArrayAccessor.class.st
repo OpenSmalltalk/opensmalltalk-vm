@@ -54,6 +54,15 @@ CArrayAccessor >> cPtrAsOop [
 ]
 
 { #category : #accessing }
+CArrayAccessor >> floatAt: index [ 
+	^ (self at: index) isFloat
+		ifTrue: [self at: index]
+		ifFalse: [Float
+				fromIEEE32Bit: (self at: index)]
+
+]
+
+{ #category : #accessing }
 CArrayAccessor >> long32At: index [
 	| idx |
 	idx := (offset + index) // 4 + 1.
