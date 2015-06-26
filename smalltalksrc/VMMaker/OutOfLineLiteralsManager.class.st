@@ -138,7 +138,7 @@ OutOfLineLiteralsManager >> checkQuickConstant: literal forInstruction: anInstru
 	<var: #anInstruction type: #'AbstractInstruction *'>
 	<returnTypeC: #'AbstractInstruction *'>
 	anInstruction usesOutOfLineLiteral ifTrue:
-		[anInstruction dependent: (self locateLiteral: literal)].
+		[anInstruction dependent: (self locateLiteral: (self cCode: [literal] inSmalltalk: [literal bitAnd: 16rFFFFFFFF]))].
 	^anInstruction
 ]
 
