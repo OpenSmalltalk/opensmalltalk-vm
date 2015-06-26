@@ -30,6 +30,14 @@ Class {
 		'ConcreteIPReg',
 		'ConcretePCReg',
 		'ConcreteVarBaseReg',
+		'D0',
+		'D1',
+		'D2',
+		'D3',
+		'D4',
+		'D5',
+		'D6',
+		'D7',
 		'EQ',
 		'GE',
 		'GT',
@@ -126,6 +134,7 @@ CogARMCompiler class >> initialize [
 	super initialize.
 	self ~~ CogARMCompiler ifTrue: [^self].
 	
+	"ARM general registers"
 	R0 := 0.
 	R1 := 1.
 	R2 := 2.
@@ -142,6 +151,16 @@ CogARMCompiler class >> initialize [
 	SP := 13.
 	LR := 14.
 	PC := 15.
+	"ARM VFP Double precision floating point registers"
+	D0 := 0.
+	D1 := 1.
+	D2 := 2.
+	D3 := 3.
+	D4 := 4.
+	D5 := 5.
+	D6 := 6.
+	D7 := 7.
+	
 	
 	CArg0Reg := 0.
 	CArg1Reg := 1.
@@ -605,7 +624,7 @@ CogARMCompiler >> computeMaximumSize [
 										ifTrue: [4]
 										ifFalse: [self literalLoadInstructionBytes + 4]].
 		"Conversion"
-		[ConvertRRd]			-> [^4].
+		[ConvertRRd]			-> [^8].
 		}.
 	^0 "to keep C compiler quiet"
 
@@ -627,6 +646,27 @@ CogARMCompiler >> concreteCallerSavedRegisterMask [
 	 The caller-saved registers are those that are not callee-saved and not reserved for hardware/abi uses,
 	 i..e r0-r3, r9 & r12."
 	^2r1001000001111
+]
+
+{ #category : #encoding }
+CogARMCompiler >> concreteDPFPRegister: registerIndex [
+	 "Map a possibly abstract double-precision floating-point register into a concrete one.
+	  Abstract registers (defined in CogAbstractOpcodes) are all negative.  If registerIndex
+	  is negative assume it is an abstract register."
+
+	^registerIndex
+		caseOf: {
+			[DPFPReg0]	-> [D0].
+			[DPFPReg1]	-> [D1].
+			[DPFPReg2]	-> [D2].
+			[DPFPReg3]	-> [D3].
+			[DPFPReg4]	-> [D4].
+			[DPFPReg5]	-> [D5].
+			[DPFPReg6]	-> [D6].
+			[DPFPReg7]	-> [D7] }
+		otherwise:
+			[self assert: (registerIndex between: D0 and: D7).
+			 registerIndex]
 ]
 
 { #category : #encoding }
@@ -664,9 +704,15 @@ CogARMCompiler >> concreteRegister: registerIndex [
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeAddRdRd [
-	self assert: false.
-	self notYetImplemented
-
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	"Add FP regRHS to FP regLHS and stick result in FP regLHS"
+	| regLHS regRHS |
+	regRHS := self concreteDPFPRegister: (operands at: 0).
+	regLHS := self concreteDPFPRegister: (operands at: 1).
+	machineCode at: 0 put:(self faddd: regLHS with: regRHS).
+	^machineCodeSize := 4
+	
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -798,8 +844,15 @@ CogARMCompiler >> concretizeCallFull [
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeCmpRdRd [
-	self assert: false.
-	self notYetImplemented
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	"Compare FP regB with FP regA and leave the FP status reg ready to be transferred back to ARM with next instruction"
+	| regB regA |
+	regA := self concreteDPFPRegister: (operands at:0).
+	regB := self concreteDPFPRegister: (operands at: 1).
+	machineCode at: 0 put:(self fcmpFrom: regB to: regA).
+	^machineCodeSize := 4
+		
 
 ]
 
@@ -836,8 +889,15 @@ CogARMCompiler >> concretizeConditionalJump: conditionCode [
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeConvertRRd [
-	self assert: false.
-	self notYetImplemented
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| srcReg destReg |
+	srcReg := self concreteRegister: (operands at:0).
+	destReg := self concreteDPFPRegister: (operands at: 1).
+	machineCode at: 0 put:(self fmsrFrom: srcReg to: 9).
+	machineCode at: 1 put: (self fsitodFrom: 9 to: destReg). "probably not quite right"
+	^machineCodeSize := 8
+		
 
 ]
 
@@ -901,9 +961,15 @@ CogARMCompiler >> concretizeDataOperationRR: armOpcode [
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeDivRdRd [
-	self assert: false.
-	self notYetImplemented
-
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	"FP divide regLHS by regRHS and stick result in regLHS"
+	| regLHS regRHS |
+	regRHS := self concreteDPFPRegister: (operands at: 0).
+	regLHS := self concreteDPFPRegister: (operands at: 1).
+	machineCode at: 0 put:(self fdivd: regLHS by: regRHS).
+	^machineCodeSize := 4
+	
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -911,9 +977,9 @@ CogARMCompiler >> concretizeFPConditionalJump: conditionCode [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| offset |
-	self assert: (operands at: 0) ~= 0.
-	offset := ((operands at: 0) - (address + 8)) signedIntFromLong "signed-conversion for range assertion".
-	self assert: offset <= 33554428 & (offset >= -33554432).
+	"transfer the FP status to ARM cpsr and then jump accordingly"
+	offset := self computeJumpTargetOffsetPlus: 8+4 "pc is always 2 instr ahead plus add another to refer to the actual branch".
+ 	self assert: (self isInImmediateJumpRange: offset).
 	self machineCodeAt: 0 put: self fmstat. "FMSTAT: copy the FPSCR to CPSR"
 	self machineCodeAt: 4 put: (self cond: conditionCode br: 0 offset: offset). "B offset"
 	^machineCodeSize := 8
@@ -1183,8 +1249,16 @@ CogARMCompiler >> concretizeMoveM16rR [
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveM64rRd [
-	self assert: false.
-	self notYetImplemented
+	"Will get inlined into concretizeAt: switch."	
+	<inline: true>
+	"Load a float from srcReg+offset into FP destReg"
+	| srcReg offset destReg u|
+	offset := operands at: 0.
+	u := offset >0 ifTrue:[1] ifFalse:[0].
+	srcReg := self concreteRegister: (operands at: 1).
+	destReg := self concreteDPFPRegister: (operands at: 2).
+	machineCode at: 0 put: (self fldd: destReg rn: srcReg plus: u imm: offset>>2).
+	^machineCodeSize := 4
 
 ]
 
@@ -1354,8 +1428,17 @@ CogARMCompiler >> concretizeMoveRXwrR [
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveRdM64r [
-	self assert: false.
-	self notYetImplemented
+	"Will get inlined into concretizeAt: switch."	
+	<inline: true>
+	"Store FP fpReg to dstReg+offset"
+	| dstReg offset fpReg u|
+	offset := operands at: 1.
+	u := offset >0 ifTrue:[1] ifFalse:[0].
+	dstReg := self concreteRegister: (operands at: 2).
+	fpReg := self concreteDPFPRegister: (operands at: 0).
+	machineCode at: 0 put: (self fstd: fpReg rn: dstReg plus: u imm: offset>>2).
+	^machineCodeSize := 4
+
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1390,9 +1473,15 @@ CogARMCompiler >> concretizeMoveXwrRR [
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMulRdRd [
-	self assert: false.
-	self notYetImplemented
-
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	"FP multiply regLHS by regRHS and stick result in regLHS"
+	| regLHS regRHS |
+	regRHS := self concreteDPFPRegister: (operands at: 0).
+	regLHS := self concreteDPFPRegister: (operands at: 1).
+	machineCode at: 0 put:(self fmuld: regLHS with: regRHS).
+	^machineCodeSize := 4
+	
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1572,9 +1661,14 @@ CogARMCompiler >> concretizeSMULL [
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeSqrtRd [
-	self assert: false.
-	self notYetImplemented
-
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	"Square root of FP regLHS into regLHS"
+	| regLHS  |
+	regLHS := self concreteDPFPRegister: (operands at: 1).
+	machineCode at: 0 put:(self fsqrtd: regLHS).
+	^machineCodeSize := 4
+	
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1611,9 +1705,15 @@ CogARMCompiler >> concretizeSubCqR [
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeSubRdRd [
-	self assert: false.
-	self notYetImplemented
-
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| regLHS regRHS |
+	"Subtract FP regRHS from FP regLHS and leave the result in FP regLHS"
+	regRHS := self concreteDPFPRegister: (operands at: 0).
+	regLHS := self concreteDPFPRegister: (operands at: 1).
+	machineCode at: 0 put:(self fsubd: regLHS with: regRHS).
+	^machineCodeSize := 4
+	
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1821,6 +1921,42 @@ CogARMCompiler >> extractOffsetFromBL: instr [
 	^relativeJump
 ]
 
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> faddd: destReg with: srcReg [
+"FADDD or VADD instruction to add double srcReg to double destReg and stick result in double destReg
+ARM_ARM v5 DDI 01001.pdf pp. C4-6"
+	<inline: true>
+	^((2r11101110001100000000101100000000 bitOr: destReg<<16 ) bitOr: destReg<<12) bitOr: srcReg
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> fcmpFrom: regA to: regB [
+"FCMP or VCMP instruction to compare two fpu double registers.
+ARM_ARM v5 DDI 01001.pdf pp. C4-10"
+	<inline: true>
+	^(2r11101110101101000000101101000000 bitOr:(regA <<12)) bitOr: regB
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> fdivd: dividend by: divisor [
+"FDIVD or VDIV instruction to divide double dividend by double divisor and stick result in double dividend
+ARM_ARM v5 DDI 01001.pdf pp. C4-32"
+	<inline: true>
+	^((2r11101110100000000000101100000000 bitOr: dividend<<16 ) bitOr: dividend<<12) bitOr: divisor
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> fldd: destReg rn: srcReg plus: u imm: immediate8bitValue [
+"FLDD or VLDR instruction to move a value from address in an ARM srcReg +/- offset<<2 to an fpu double destReg
+ARM_ARM v5 DDI 01001.pdf pp. C4-36"
+	<inline: true>
+	"Note that
+		offset is <<2 to make byte address 
+		u =1 -> srcReg + offset<<2
+		u=0 -> srgREg - offset<<2"
+	^(((2r11101101000100000000101100000000 bitOr:(srcReg <<16)) bitOr: destReg<<12) bitOr: u<<23) bitOr: immediate8bitValue
+]
+
 { #category : #'inline cacheing' }
 CogARMCompiler >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<Integer>"
 	<cmacro: '(me,startAddress,endAddress) __clear_cache((char*) startAddress, (char*) (endAddress ))'>
@@ -1829,10 +1965,69 @@ CogARMCompiler >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<I
 ]
 
 { #category : #'ARM convenience instructions' }
-CogARMCompiler >> fmstat [
-	"unconditional transfer FP status to cpsr to choose jumps etc. Manually fudged for now"
+CogARMCompiler >> fmsrFrom: regA to: regB [
+"FMSR or VMSR instruction to move a value from an ARM reg to an fpu double register ready for conversion
+ARM_ARM v5 DDI 01001.pdf pp. C4-68"
 	<inline: true>
-	^16rEF1FA10
+	|destReg|
+	"the dest reg bits are spread out a little"
+	destReg := (regB >>1) <<16 bitOr:(regB bitAnd: 1) << 7.
+	^(2r11101110000000000000101000010000 bitOr:(regA <<12)) bitOr: destReg
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> fmstat [
+	"FMSTAT or VMRS unconditional transfer FP status to cpsr to choose jumps etc.
+	ARM_ARM v5 DDI 01001.pdf pp. C4-72"
+	<inline: true>
+	^2r11101110111100011111101000010000
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> fmuld: destReg with: srcReg [
+"FMULD or VMUL instruction to multiply double srcReg by double destReg and stick result in double destReg
+ARM_ARM v5 DDI 01001.pdf pp. C4-73"
+	<inline: true>
+	^((2r11101110001000000000101100000000 bitOr: destReg<<16 ) bitOr: destReg<<12) bitOr: srcReg
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> fsitodFrom: regA to: regB [
+"FSITOD or VCVT instruction to move convert an integer value to an fpu double
+ARM_ARM v5 DDI 01001.pdf pp. C4-95"
+	<inline: true>
+	|srcReg|
+	"the src reg bits are spread out a little"
+	srcReg := (regA >>1) bitOr:(regA bitAnd: 1) << 5.
+	^(2r11101110101110000000101111000000 bitOr: srcReg ) bitOr: regB<<12
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> fsqrtd: destReg [
+"FSQRTD or VSQRT instruction to square root double dividend destReg and stick result in double destReg
+ARM_ARM v5 DDI 01001.pdf pp. C4-97"
+	<inline: true>
+	^((2r11101110101100010000101111000000 ) bitOr: destReg<<12) bitOr: destReg
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> fstd: destReg rn: srcReg plus: u imm: immediate8bitValue [
+"FSTD or VSTR instruction to move a value to address in an ARM srcReg +/- offset<<2 from an fpu double destReg
+ARM_ARM v5 DDI 01001.pdf pp. C4-101"
+	<inline: true>
+	"Note that
+		offset is <<2 to make byte address 
+		u =1 -> srcReg + offset<<2
+		u=0 -> srgREg - offset<<2"
+	^(((2r11101101000000000000101100000000 bitOr:(srcReg <<16)) bitOr: destReg<<12) bitOr: u<<23) bitOr: immediate8bitValue
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> fsubd: destReg with: srcReg [
+"FSUBD or VSUB instruction to subtract double srcReg from double destREg and stick result in double destReg
+ARM_ARM v5 DDI 01001.pdf pp. C4-112"
+	<inline: true>
+	^((2r11101110001100000000101101000000 bitOr: destReg<<16 ) bitOr: destReg<<12) bitOr: srcReg
 ]
 
 { #category : #abi }
@@ -2040,7 +2235,7 @@ CogARMCompiler >> generalPurposeRegisterMap [
 CogARMCompiler >> hasDoublePrecisionFloatingPointSupport [
 	"might be true, but is for the forseeable future disabled"
 	<inline: true>
-	^false
+	^true
 ]
 
 { #category : #testing }
@@ -2339,6 +2534,7 @@ CogARMCompiler >> loadCwInto: destReg [
 	 the size of the instructions generated to do so."
 	| operand distance |
 	operand := operands at: 0.
+	self cCode:[] inSmalltalk:[operand := operand bitAnd: 16rFFFFFFFF]. "Need to clamp the value to a word size since one or two usages actually generate double sized values and rely upon the C code to narrow it within the running VM"
 	(self isAnInstruction: (cogit cCoerceSimple: operand to: #'AbstractInstruction *')) ifTrue:
 		[operand := (cogit cCoerceSimple: operand to: #'AbstractInstruction *') address].
 	"First try and encode as a pc-relative reference..."
