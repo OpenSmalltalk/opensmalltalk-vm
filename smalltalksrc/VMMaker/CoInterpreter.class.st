@@ -4511,10 +4511,9 @@ CoInterpreter >> lookupLexicalNoMNU: selector from: mixin rule: rule [
 	mixinApplication := self findApplicationOfTargetMixin: mixin startingAtBehavior: receiverClass.
 	dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: mixinApplication.
 	found := self lookupMethodInDictionary: dictionary.
-	(found and: [(self accessModifierOfMethod: newMethod) = AccessModifierPrivate])
-		ifTrue: [^0].
+	(found and: [(self isPrivateMethod: newMethod)]) ifTrue:
+		[^0].
 	^self lookupProtectedNoMNU: selector startingAt: receiverClass rule: rule
-
 ]
 
 { #category : #'cog jit support' }

@@ -891,6 +891,17 @@ CCodeGenerator >> computeKernelReturnTypes [
 		 pointerForOop: #'char *' oopForPointer: #sqInt)
 ]
 
+{ #category : #public }
+CCodeGenerator >> const: constName declareC: declarationString [
+	"Record the given C declaration for a constant."
+
+	constants
+		at: constName asString
+		put: (TDefineNode new
+				setName: constName asString
+				value: declarationString)
+]
+
 { #category : #accessing }
 CCodeGenerator >> currentMethod [
 	^currentMethod

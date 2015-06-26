@@ -217,11 +217,16 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		as: #'StackPage *'
 		in: aCCodeGenerator.
 	aCCodeGenerator removeVariable: 'stackPages'.  "this is an implicit receiver in the translated code."
-	NewspeakVM ifFalse:
-		[aCCodeGenerator
-			removeVariable: 'localAbsentReceiver';
-			removeVariable: 'localAbsentReceiverOrZero';
-			removeVariable: 'nsMethodCache'].
+	NewspeakVM
+		ifTrue:
+			[aCCodeGenerator
+				const: #EnforceAccessControl
+				declareC: ('#if !defined(EnforceAccessControl) /* Allow EnforceAccessControl to be overridden on the compiler command line */\# define EnforceAccessControl ', (aCCodeGenerator cLiteralFor: EnforceAccessControl),'\#endif') withCRs]
+		ifFalse:
+			[aCCodeGenerator
+				removeVariable: 'localAbsentReceiver';
+				removeVariable: 'localAbsentReceiverOrZero';
+				removeVariable: 'nsMethodCache'].
 	"This defines bytecodeSetSelector as 0 if MULTIPLEBYTECODESETS
 	 is not defined, for the benefit of the interpreter on slow machines."
 	aCCodeGenerator addConstantForBinding: (self bindingOf: #MULTIPLEBYTECODESETS).
@@ -1785,18 +1790,20 @@ StackInterpreter >> abstractDetailedSymbolicMethod: aMethod [
 { #category : #'compiled methods' }
 StackInterpreter >> accessModifierOfMethod: methodObj [
 	<option: #NewspeakVM>
+	<inline: true>
 	^self accessModifierOfMethodHeader: (objectMemory methodHeaderOf: methodObj)
 ]
 
 { #category : #'compiled methods' }
 StackInterpreter >> accessModifierOfMethodHeader: header [
 	<option: #NewspeakVM>
+	<inline: true>
 	"accessModifier bits:
 		 00 public
 		 01 private
 		 10 protected
 		 11 undefined"
-	^self cppIf: EnforceAccessControl
+	^EnforceAccessControl
 		ifTrue: [header >> MethodHeaderFlagBitPosition bitAnd: 3]
 		ifFalse: [AccessModifierPublic]
 ]
@@ -8221,19 +8228,22 @@ StackInterpreter >> isPrimitiveFunctionPointerAnIndex [
 { #category : #'compiled methods' }
 StackInterpreter >> isPrivateMethod: methodObj [
 	<option: #NewspeakVM>
-	^(self accessModifierOfMethod: methodObj) = 1
+	<inline: true>
+	^(self accessModifierOfMethod: methodObj) = AccessModifierPrivate
 ]
 
 { #category : #'compiled methods' }
 StackInterpreter >> isProtectedMethod: methodObj [
 	<option: #NewspeakVM>
-	^(self accessModifierOfMethod: methodObj) = 2
+	<inline: true>
+	^(self accessModifierOfMethod: methodObj) = AccessModifierProtected
 ]
 
 { #category : #'compiled methods' }
 StackInterpreter >> isPublicMethod: methodObj [
 	<option: #NewspeakVM>
-	^(self accessModifierOfMethod: methodObj) = 0
+	<inline: true>
+	^(self accessModifierOfMethod: methodObj) = AccessModifierPublic
 ]
 
 { #category : #'compiled methods' }
@@ -8806,8 +8816,8 @@ StackInterpreter >> lookupLexical: selector from: mixin rule: rule [
 	mixinApplication := self findApplicationOfTargetMixin: mixin startingAtBehavior: receiverClass.
 	dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: mixinApplication.
 	found := self lookupMethodInDictionary: dictionary.
-	(found and: [(self accessModifierOfMethod: newMethod) = AccessModifierPrivate])
-		ifTrue: [^rule].
+	(found and: [(self isPrivateMethod: newMethod)]) ifTrue:
+		[^rule].
 	^self lookupProtected: selector startingAt: receiverClass rule: rule
 
 ]
@@ -8967,17 +8977,18 @@ StackInterpreter >> lookupMethodNoMNUEtcInClass: class [
 		 dictionary = objectMemory nilObject ifTrue:
 			[lkupClass := self superclassOf: currentClass.
 			 ^SelectorCannotInterpret].
-		found := self lookupMethodInDictionary: dictionary.
-		self cppIf: #NewspeakVM
+		 found := self lookupMethodInDictionary: dictionary.
+		 self cppIf: #NewspeakVM
 			ifTrue:
 				[found ifTrue:
-					[(self accessModifierOfMethod: newMethod) == AccessModifierPublic
-						ifTrue: [self addNewMethodToCache: class. ^0].
-					(self accessModifierOfMethod: newMethod) == AccessModifierProtected
-						ifTrue: [^SelectorDoesNotUnderstand]]]
+					[(self isPublicMethod: newMethod) ifTrue:
+						[self addNewMethodToCache: class. ^0].
+					(self isProtectedMethod: newMethod) ifTrue:
+						[^SelectorDoesNotUnderstand]]]
 			ifFalse:
-				[found ifTrue: [self addNewMethodToCache: class. ^0]].
-		currentClass := self superclassOf: currentClass].
+				[found ifTrue:
+					[self addNewMethodToCache: class. ^0]].
+		 currentClass := self superclassOf: currentClass].
 	lkupClass := class.
 	^SelectorDoesNotUnderstand
 ]
@@ -8998,12 +9009,13 @@ StackInterpreter >> lookupOrdinaryNoMNUEtcInClass: class [
 		self cppIf: #NewspeakVM
 			ifTrue:
 				[found ifTrue:
-					[(self accessModifierOfMethod: newMethod) == AccessModifierPublic
-						ifTrue: [self addNewMethodToCache: class. ^0].
-					(self accessModifierOfMethod: newMethod) == AccessModifierProtected
-						ifTrue: [lkupClass := class. ^SelectorDoesNotUnderstand]]]
+					[(self isPublicMethod: newMethod) ifTrue:
+						[self addNewMethodToCache: class. ^0].
+					(self isProtectedMethod: newMethod) ifTrue:
+						[lkupClass := class. ^SelectorDoesNotUnderstand]]]
 			ifFalse:
-				[found ifTrue: [self addNewMethodToCache: class. ^0]].
+				[found ifTrue:
+					[self addNewMethodToCache: class. ^0]].
 		currentClass := self superclassOf: currentClass].
 	lkupClass := class.
 	^SelectorDoesNotUnderstand
@@ -9026,10 +9038,10 @@ StackInterpreter >> lookupOrdinarySend [
 		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
 		found := self lookupMethodInDictionary: dictionary.
 		found ifTrue:
-			[(self accessModifierOfMethod: newMethod) == AccessModifierPublic
-				ifTrue: [^self].
-			(self accessModifierOfMethod: newMethod) == AccessModifierProtected
-				ifTrue: [^self lookupDnuPresent]].
+			[(self isPublicMethod: newMethod) ifTrue:
+				[^self].
+			(self isProtectedMethod: newMethod) ifTrue:
+				[^self lookupDnuPresent]].
 		currentClass := self superclassOf: currentClass].
 	^self lookupDnuPresent
 ]
@@ -11295,7 +11307,7 @@ StackInterpreter >> printMethodCacheFor: thing [
 			[self cCode: [] inSmalltalk: [self transcript ensureCr].
 			 self printNum: i; cr; tab.
 			 (objectMemory isBytesNonImm: s)
-				ifTrue: [self cCode: 'printf("%x %.*s\n", s, numBytesOf(s), (char *)firstIndexableField(s))'
+				ifTrue: [self cCode: 'printf("%lx %.*s\n", s, numBytesOf(s), (char *)firstIndexableField(s))'
 						inSmalltalk: [self printHex: s; space; print: (self stringOf: s); cr]]
 				ifFalse: [self shortPrintOop: s].
 			 self tab.
