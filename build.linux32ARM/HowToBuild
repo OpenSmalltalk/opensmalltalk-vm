@@ -252,4 +252,11 @@ Ubuntu
 sudo apt-get install libcairo2-dev   
 sudo apt-get install libpango1.0-dev
 
+Raspbian
+sudo apt-get install libcairo2-dev   
+sudo apt-get install libpango1.0-dev
+sudo apt-get install libssl-dev
+sudo apt-get install uuid-dev uuid-runtime
+sudo apt-get install libasound2-dev
+
 More advice and examples for other distros gratefully received.
