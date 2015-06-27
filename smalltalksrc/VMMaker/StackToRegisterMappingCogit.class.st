@@ -910,6 +910,13 @@ StackToRegisterMappingCogit >> anyReferencesToRegister: reg inTopNItems: n [
 	^false
 ]
 
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> availableRegNotConflictingWith: regMask [
+	<inline: true>
+	"If there's a free register, answer it, otherwise answer nil."
+	^backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: regMask)
+]
+
 { #category : #'simulation only' }
 StackToRegisterMappingCogit >> bytecodeFixupClass [
 	<doNotGenerate>
@@ -2798,12 +2805,13 @@ StackToRegisterMappingCogit >> genPushRegisterArgs [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genPushRemoteTempLongBytecode [
-	| newReg |
+	| newReg freeReg |
 	newReg := self allocateRegNotConflictingWith: 0.
-	self MoveMw: (self frameOffsetOfTemporary: byte2) r: FPReg R: newReg.
+	freeReg := self availableRegNotConflictingWith: (self registerMaskFor: newReg).
+	self MoveMw: (self frameOffsetOfTemporary: byte2) r: FPReg R: (freeReg ifNil: newReg).
 	objectRepresentation
 		genLoadSlot: byte1
-		sourceReg: newReg
+		sourceReg: (freeReg ifNil: newReg)
 		destReg: newReg.
 	^self ssPushRegister: newReg
 ]
