@@ -2805,13 +2805,12 @@ StackToRegisterMappingCogit >> genPushRegisterArgs [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genPushRemoteTempLongBytecode [
-	| newReg freeReg |
+	| newReg |
 	newReg := self allocateRegNotConflictingWith: 0.
-	freeReg := self availableRegNotConflictingWith: (self registerMaskFor: newReg).
-	self MoveMw: (self frameOffsetOfTemporary: byte2) r: FPReg R: (freeReg ifNil: newReg).
+	self MoveMw: (self frameOffsetOfTemporary: byte2) r: FPReg R: newReg.
 	objectRepresentation
 		genLoadSlot: byte1
-		sourceReg: (freeReg ifNil: newReg)
+		sourceReg: newReg
 		destReg: newReg.
 	^self ssPushRegister: newReg
 ]
