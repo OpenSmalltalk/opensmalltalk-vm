@@ -58,8 +58,8 @@ if [ -n "$CL" ]; then
 	done
 fi
 if [ -n "$NL" ]; then
-	set -- nscogspurlinux nscogspurlinuxht
-	for archive in nsvmspurlinux nsvmspurlinuxht; do
+	set -- nscogspurlinux nscogspurlinuxht nscogspurlinuxhtARM
+	for archive in nsvmspurlinux nsvmspurlinuxht nsvmspurlinuxhtARM; do
 		rm -rf $archive-$TAG.tgz
 		echo $1 '=>' $archive-$TAG.tgz
 		COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $1

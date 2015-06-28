@@ -1,0 +1,72 @@
+#!/bin/sh
+# Create one or more linux archives from VM trees in products.
+# Output a check of version numbers etc to products/MLALOG
+IFS="	
+"
+cd `dirname $0`/../products
+
+REV=
+TAG=
+EXES=
+
+while [ -n "$1" ]; do
+	case $1 in
+	-r)		shift;REV="$1";;
+	-t)		shift;TAG="$1";;
+	-?|-h)  echo usage: $0 [-r REV -t TAG] [directories]
+			exit 0;;
+	-*)	echo usage: $0 [-r REV -t TAG] [directories]
+		exit 1;;
+	*)	break
+	esac
+done
+test -n "$REV" || REV=`grep 'SvnRawRevisionString.*Rev:' ../platforms/Cross/vm/sqSCCSVersion.h \
+	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
+test -n "$TAG" || TAG=`date +%y.%U.`$REV
+echo REV=$REV TAG=$TAG
+
+if [ $# = 0 ]; then
+	for f in *linux*/lib/*/*-$REV; do
+		d="`dirname \`dirname \\\`dirname $f\\\`\``"
+		case $d in
+		nscog*)	archive="`echo $d |  | sed 's/nscog/nsvm/'`";;
+		*)		archive=$d
+		esac
+		exe="`basename \`dirname $f\``"
+		rm -rf $archive-$TAG.tgz
+		echo $d '=>' $archive-$TAG.tgz
+		COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $d
+		EXES="$EXES	$d/lib/$exe/[0-9.-]*/$exe"
+	done
+else
+	for d in $*; do
+		d="`basename $d`" # allow products/blah
+		if [ -d "$d" ]; then
+			f=$d/lib/*/*-$REV
+			if [ -d $f ]; then
+				exe="`basename \`dirname $f\``"
+				case $d in
+				nscog*)	archive="`echo $d |  | sed 's/nscog/nsvm/'`";;
+				*)		archive=$d
+				esac
+				rm -rf $archive-$TAG.tgz
+				echo $d '=>' $archive-$TAG.tgz
+				COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $d
+				EXES="$EXES	$d/lib/$exe/[0-9.-]*/$exe"
+			else
+				echo $0: could not find bin dir in $archive
+			fi
+		else
+			echo $0: could not find directory $archive
+		fi
+	done
+fi
+echo $EXES
+for vm in $EXES
+do
+	echo
+	echo checking $vm version
+	strings - $vm | egrep '\$Rev: |Interp.*VMMaker|Cogit.*VMMaker| built on ' | sed 's/ uuid:.*//'
+	echo checking $vm for asserts
+	strings - $vm | grep "assert[^0-9]*[0-9][0-9][0-9]"
+done 2>&1 | tee MLALOG
