@@ -3127,7 +3127,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorClass [
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor
-	  rcvrIsInt argIsInt rcvrInt argInt result jumpNotSmallInts inlineCAB annotateInst |
+	  rcvrIsInt argIsInt argInt jumpNotSmallInts inlineCAB annotateInst |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
@@ -3136,27 +3136,10 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	argIsInt := self ssTop type = SSConstant
 				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
 	rcvrIsInt := (self ssValue: 1) type = SSConstant
-				 and: [objectMemory isIntegerObject: (rcvrInt := (self ssValue: 1) constant)].
+				 and: [objectMemory isIntegerObject: (self ssValue: 1) constant].
 
 	(argIsInt and: [rcvrIsInt]) ifTrue:
-		[self cCode: '' inSmalltalk: "In Simulator ints are unsigned..."
-				[rcvrInt := objectMemory integerValueOf: rcvrInt.
-				argInt := objectMemory integerValueOf: argInt].
-		 primDescriptor opcode caseOf: {
-			[JumpLess]				-> [result := rcvrInt < argInt].
-			[JumpLessOrEqual]		-> [result := rcvrInt <= argInt].
-			[JumpGreater]			-> [result := rcvrInt > argInt].
-			[JumpGreaterOrEqual]	-> [result := rcvrInt >= argInt].
-			[JumpZero]				-> [result := rcvrInt = argInt].
-			[JumpNonZero]			-> [result := rcvrInt ~= argInt] }.
-		 "Must enter any annotatedConstants into the map"
-		 self annotateBytecodeIfAnnotated: (self ssValue: 1).
-		 self annotateBytecodeIfAnnotated: self ssTop.
-		 "Must annotate the bytecode for correct pc mapping."
-		 self ssPop: 2.
-		 ^self ssPushAnnotatedConstant: (result
-											ifTrue: [objectMemory trueObject]
-											ifFalse: [objectMemory falseObject])].
+		[^ self genStaticallyResolvedSpecialSelectorComparison].
 
 	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
 		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
@@ -3297,6 +3280,34 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 	"Not reached, execution flow have jumped to fixup"
 	
 	^0
+]
+
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genStaticallyResolvedSpecialSelectorComparison [
+	"Assumes both operands are ints"
+	<var: #primDescriptor type: #'BytecodeDescriptor *'>
+	| rcvrInt argInt primDescriptor result |
+	primDescriptor := self generatorAt: byte0.
+	argInt := self ssTop constant.
+	rcvrInt := (self ssValue: 1) constant.
+	self cCode: '' inSmalltalk: "In Simulator ints are unsigned..."
+		[rcvrInt := objectMemory integerValueOf: rcvrInt.
+		argInt := objectMemory integerValueOf: argInt].
+	 primDescriptor opcode caseOf: {
+		[JumpLess]				-> [result := rcvrInt < argInt].
+		[JumpLessOrEqual]		-> [result := rcvrInt <= argInt].
+		[JumpGreater]			-> [result := rcvrInt > argInt].
+		[JumpGreaterOrEqual]	-> [result := rcvrInt >= argInt].
+		[JumpZero]				-> [result := rcvrInt = argInt].
+		[JumpNonZero]			-> [result := rcvrInt ~= argInt] }.
+	 "Must enter any annotatedConstants into the map"
+	 self annotateBytecodeIfAnnotated: (self ssValue: 1).
+	 self annotateBytecodeIfAnnotated: self ssTop.
+	 "Must annotate the bytecode for correct pc mapping."
+	 self ssPop: 2.
+	 ^self ssPushAnnotatedConstant: (result
+			ifTrue: [objectMemory trueObject]
+			ifFalse: [objectMemory falseObject])
 ]
 
 { #category : #'bytecode generator support' }
