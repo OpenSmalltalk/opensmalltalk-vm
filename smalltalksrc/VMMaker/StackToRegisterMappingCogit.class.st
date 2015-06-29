@@ -3509,11 +3509,11 @@ StackToRegisterMappingCogit >> genTrinaryInlinePrimitive: prim [
 
 	| ra1 ra2 rr adjust needsStoreCheck |
 	"The store check requires rr to be ReceiverResultReg"
+	needsStoreCheck := (objectRepresentation isUnannotatableConstant: self ssTop) not.
 	self 
 		allocateRegForStackTopThreeEntriesInto: [:rTop :rNext :rThird | ra2 := rTop. ra1 := rNext. rr := rThird ] 
-		thirdIsReceiver: prim = 0.
+		thirdIsReceiver: (prim = 0 and: [ needsStoreCheck ]).
 	self assert: (rr ~= ra1 and: [rr ~= ra2 and: [ra1 ~= ra2]]).
-	needsStoreCheck := (objectRepresentation isUnannotatableConstant: self ssTop) not.
 	self ssTop popToReg: ra2.
 	self ssPop: 1.
 	self ssTop popToReg: ra1.
@@ -4558,18 +4558,25 @@ StackToRegisterMappingCogit >> ssFlushTo: index [
 ]
 
 { #category : #'simulation stack' }
+StackToRegisterMappingCogit >> ssFlushUpThrough: unaryBlock [
+	"Any occurrences on the stack of the value being stored (which is the top of stack)
+	 must be flushed, and hence any values colder than them stack."
+	<inline: true>
+	simStackPtr - 1 to: (simSpillBase max: 0) by: -1 do:
+		[ :index |
+		(unaryBlock value: (self simStackAt: index)) ifTrue: [ ^ self ssFlushTo: index ] ]
+]
+
+{ #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssFlushUpThroughReceiverVariable: slotIndex [
 	"Any occurrences on the stack of the value being stored (which is the top of stack)
 	 must be flushed, and hence any values colder than them stack."
 	<var: #desc type: #'CogSimStackEntry *'>
-	simStackPtr - 1 to: (simSpillBase max: 0) by: -1 do:
-		[:index| | desc |
-		desc := self simStackAt: index.
-		(desc type = SSBaseOffset
-		 and: [desc register = ReceiverResultReg
-		 and: [desc offset = (objectRepresentation slotOffsetOfInstVarIndex: slotIndex)]]) ifTrue:
-			[self ssFlushTo: index.
-			 ^self]]
+	self ssFlushUpThrough: 
+		[ :desc |  
+			desc type = SSBaseOffset
+			 and: [desc register = ReceiverResultReg
+			 and: [desc offset = (objectRepresentation slotOffsetOfInstVarIndex: slotIndex) ] ] ]
 ]
 
 { #category : #'simulation stack' }
@@ -4577,13 +4584,7 @@ StackToRegisterMappingCogit >> ssFlushUpThroughRegister: reg [
 	"Any occurrences on the stack of the register must be
 	 flushed, and hence any values colder than them stack."
 	<var: #desc type: #'CogSimStackEntry *'>
-	simStackPtr - 1 to: (simSpillBase max: 0) by: -1 do:
-		[:index| | desc |
-		desc := self simStackAt: index.
-		(desc type = SSRegister
-		 and: [desc register = reg]) ifTrue:
-			[self ssFlushTo: index.
-			 ^self]]
+	self ssFlushUpThrough: [ :desc | desc type = SSRegister and: [ desc register = reg ] ]
 ]
 
 { #category : #'simulation stack' }
@@ -4591,14 +4592,11 @@ StackToRegisterMappingCogit >> ssFlushUpThroughTemporaryVariable: tempIndex [
 	"Any occurrences on the stack of the value being stored (which is the top of stack)
 	 must be flushed, and hence any values colder than them stack."
 	<var: #desc type: #'CogSimStackEntry *'>
-	simStackPtr - 1 to: simSpillBase by: -1 do:
-		[:index| | desc |
-		desc := self simStackAt: index.
-		(desc type = SSBaseOffset
-		 and: [desc register = FPReg
-		 and: [desc offset = (self frameOffsetOfTemporary: tempIndex)]]) ifTrue:
-			[self ssFlushTo: index.
-			 ^self]]
+	self ssFlushUpThrough: 
+		[ :desc |
+			desc type = SSBaseOffset
+		 	and: [desc register = FPReg
+		 	and: [desc offset = (self frameOffsetOfTemporary: tempIndex) ] ] ]
 ]
 
 { #category : #'simulation stack' }
@@ -4616,8 +4614,7 @@ StackToRegisterMappingCogit >> ssPush: n [
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssPushAnnotatedConstant: literal [
 	self ssPush: 1.
-	simSpillBase > simStackPtr ifTrue:
-		[simSpillBase := simStackPtr max: 0].
+	self updateSimSpillBase.
 	self ssTop
 		type: SSConstant;
 		annotateUse: true;
@@ -4630,8 +4627,7 @@ StackToRegisterMappingCogit >> ssPushAnnotatedConstant: literal [
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssPushBase: reg offset: offset [
 	self ssPush: 1.
-	simSpillBase > simStackPtr ifTrue:
-		[simSpillBase := simStackPtr max: 0].
+	self updateSimSpillBase.
 	self ssTop
 		type: SSBaseOffset;
 		spilled: false;
@@ -4645,8 +4641,7 @@ StackToRegisterMappingCogit >> ssPushBase: reg offset: offset [
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssPushConstant: literal [
 	self ssPush: 1.
-	simSpillBase > simStackPtr ifTrue:
-		[simSpillBase := simStackPtr max: 0].
+	self updateSimSpillBase.
 	self ssTop
 		type: SSConstant;
 		spilled: false;
@@ -4678,16 +4673,14 @@ StackToRegisterMappingCogit >> ssPushDesc: simStackEntry [
 				spilled: false;
 				annotateUse: false;
 				bcptr: bytecodePC].
-	simSpillBase > simStackPtr ifTrue:
-		[simSpillBase := simStackPtr max: 0].
+	self updateSimSpillBase.
 	^0
 ]
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssPushRegister: reg [
 	self ssPush: 1.
-	simSpillBase > simStackPtr ifTrue:
-		[simSpillBase := simStackPtr max: 0].
+	self updateSimSpillBase.
 	self ssTop
 		type: SSRegister;
 		spilled: false;
@@ -4874,6 +4867,12 @@ StackToRegisterMappingCogit >> tryCollapseTempVectorInitializationOfSize: slots 
 					+ pushValueDesc numBytes
 					+ storeValueDesc numBytes.
 	^true
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> updateSimSpillBase [
+	simSpillBase > simStackPtr ifTrue:
+		[simSpillBase := simStackPtr max: 0].
 ]
 
 { #category : #'span functions' }
