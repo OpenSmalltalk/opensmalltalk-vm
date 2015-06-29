@@ -1353,13 +1353,10 @@ StackToRegisterMappingCogit >> ensureNonMergeFixupAt: targetIndex [
 StackToRegisterMappingCogit >> ensureReceiverResultRegContainsSelf [
 	needsFrame
 		ifTrue:
-			[(optStatus isReceiverResultRegLive
-			 and: [optStatus ssEntry = (self addressOf: simSelf)]) ifFalse:
+			[optStatus isReceiverResultRegLive ifFalse:
 				[self ssAllocateRequiredReg: ReceiverResultReg.
 				 (self addressOf: simSelf) storeToReg: ReceiverResultReg].
-			optStatus
-				isReceiverResultRegLive: true;
-				ssEntry: (self addressOf: simSelf)]
+			optStatus isReceiverResultRegLive: true]
 		ifFalse:
 			[self assert: (simSelf type = SSRegister
 						  and: [simSelf register = ReceiverResultReg]).
@@ -2754,8 +2751,7 @@ StackToRegisterMappingCogit >> genPushNewArrayBytecode [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genPushReceiverBytecode [
-	(optStatus isReceiverResultRegLive
-	  and: [optStatus ssEntry = (self addressOf: simSelf)]) ifTrue:
+	optStatus isReceiverResultRegLive ifTrue:
 		[^self ssPushRegister: ReceiverResultReg].
 	^self ssPushDesc: simSelf
 ]
@@ -2806,9 +2802,8 @@ StackToRegisterMappingCogit >> genReturnReceiver [
 	"In a frameless method ReceiverResultReg already contains self.
 	 In a frameful method, ReceiverResultReg /may/ contain self."
 	needsFrame ifTrue:
-		[(optStatus isReceiverResultRegLive
-		  and: [optStatus ssEntry = (self addressOf: simSelf)]) ifFalse:
-			[self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg]].
+		[ optStatus isReceiverResultRegLive ifFalse:
+			[ (self addressOf: simSelf) storeToReg: ReceiverResultReg]].
 	^self genUpArrowReturn
 ]
 
@@ -3847,13 +3842,15 @@ StackToRegisterMappingCogit >> generateTracingTrampolines [
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> initSimStackForFramefulMethod: startpc [
 	<var: #desc type: #'CogSimStackEntry *'>
-	optStatus isReceiverResultRegLive: false.
 	simSelf
 		type: SSBaseOffset;
 		spilled: true;
 		annotateUse: false;
 		register: FPReg;
 		offset: FoxMFReceiver.
+	optStatus 
+		isReceiverResultRegLive: false;
+		ssEntry: (self addressOf: simSelf).
 	simSpillBase := methodOrBlockNumTemps. "N.B. Includes num args"
 	simStackPtr := simSpillBase - 1.
 	"args"
