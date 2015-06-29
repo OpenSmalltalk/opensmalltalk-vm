@@ -911,7 +911,7 @@ StackToRegisterMappingCogit >> anyReferencesToRegister: reg inTopNItems: n [
 ]
 
 { #category : #'simulation stack' }
-StackToRegisterMappingCogit >> availableRegNotConflictingWith: regMask [
+StackToRegisterMappingCogit >> availableRegOrNilNotConflictingWith: regMask [
 	<inline: true>
 	"If there's a free register, answer it, otherwise answer nil."
 	^backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: regMask)
@@ -1842,47 +1842,9 @@ StackToRegisterMappingCogit >> genExtPushClosureBytecode [
 		span: byte2 + (extB << 8).
 	extA := extB := 0.
 
-	objectRepresentation createsClosuresInline ifTrue:
-		[self assert: objectRepresentation getActiveContextAllocatesInMachineCode.
-		 optStatus isReceiverResultRegLive: false.
-		 self ssAllocateCallReg: ReceiverResultReg
-			and: SendNumArgsReg
-			and: ClassReg.
-		 objectRepresentation
-			genNoPopCreateClosureAt: startpc + 1 "1 relative"
-			numArgs: numArgs
-			numCopied: numCopied
-			contextNumArgs: methodOrBlockNumArgs
-			large: (coInterpreter methodNeedsLargeContext: methodObj)
-			inBlock: inBlock.
-		 1 to: numCopied do:
-			[:i| | reg |
-			 reg := self ssStorePop: true toPreferredReg: TempReg.
-			 objectRepresentation
-				genStoreSourceReg: reg
-				slotIndex: ClosureFirstCopiedValueIndex + numCopied - i
-				intoNewObjectInDestReg: ReceiverResultReg].
-		 ^self ssPushRegister: ReceiverResultReg].
-
-	numCopied > 0 ifTrue:
-		[self ssFlushTo: simStackPtr].
-	optStatus isReceiverResultRegLive: false.
-	objectRepresentation getActiveContextAllocatesInMachineCode
-		ifTrue: [self ssAllocateCallReg: ReceiverResultReg
-					and: SendNumArgsReg
-					and: ClassReg]
-		ifFalse: [self ssAllocateCallReg: SendNumArgsReg
-					and: ReceiverResultReg].
-	objectRepresentation
-		genCreateClosureAt: startpc + 1 "1 relative"
-		numArgs: numArgs
-		numCopied: numCopied
-		contextNumArgs: methodOrBlockNumArgs
-		large: (coInterpreter methodNeedsLargeContext: methodObj)
-		inBlock: inBlock.
-	numCopied > 0 ifTrue:
-		[self ssPop: numCopied].
-	^self ssPushRegister: ReceiverResultReg
+	^ objectRepresentation createsClosuresInline
+		ifTrue: [ self genInlineClosure: startpc numArgs: numArgs numCopied: numCopied ]
+		ifFalse: [ self genOutlineClosure: startpc numArgs: numArgs numCopied: numCopied ]
 ]
 
 { #category : #'trampoline support' }
@@ -1890,6 +1852,32 @@ StackToRegisterMappingCogit >> genExternalizePointersForPrimitiveCall [
 	" Override to push the register receiver and register arguments, if any."
 	self genPushRegisterArgs.
 	^super genExternalizePointersForPrimitiveCall
+]
+
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genInlineClosure: startpc numArgs: numArgs numCopied: numCopied [
+	<inline: true>
+	self assert: objectRepresentation getActiveContextAllocatesInMachineCode.
+	 optStatus isReceiverResultRegLive: false.
+	 self ssAllocateCallReg: ReceiverResultReg
+		and: SendNumArgsReg
+		and: ClassReg.
+	 objectRepresentation
+		genNoPopCreateClosureAt: startpc + 1 "1 relative"
+		numArgs: numArgs
+		numCopied: numCopied
+		contextNumArgs: methodOrBlockNumArgs
+		large: (coInterpreter methodNeedsLargeContext: methodObj)
+		inBlock: inBlock.
+	 1 to: numCopied do:
+		[:i| | reg |
+		 reg := self ssStorePop: true toPreferredReg: TempReg.
+		 objectRepresentation
+			genStoreSourceReg: reg
+			slotIndex: ClosureFirstCopiedValueIndex + numCopied - i
+			intoNewObjectInDestReg: ReceiverResultReg].
+	 ^self ssPushRegister: ReceiverResultReg
+
 ]
 
 { #category : #'bytecode generator support' }
@@ -2035,6 +2023,31 @@ StackToRegisterMappingCogit >> genNullaryInlinePrimitive: prim [
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#nullaryInlinePrimitive:"
 
 	^EncounteredUnknownBytecode
+]
+
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genOutlineClosure: startpc numArgs: numArgs numCopied: numCopied [
+	<inline: true>
+	numCopied > 0 ifTrue:
+		[self ssFlushTo: simStackPtr].
+	optStatus isReceiverResultRegLive: false.
+	objectRepresentation getActiveContextAllocatesInMachineCode
+		ifTrue: [self ssAllocateCallReg: ReceiverResultReg
+					and: SendNumArgsReg
+					and: ClassReg]
+		ifFalse: [self ssAllocateCallReg: SendNumArgsReg
+					and: ReceiverResultReg].
+	objectRepresentation
+		genCreateClosureAt: startpc + 1 "1 relative"
+		numArgs: numArgs
+		numCopied: numCopied
+		contextNumArgs: methodOrBlockNumArgs
+		large: (coInterpreter methodNeedsLargeContext: methodObj)
+		inBlock: inBlock.
+	numCopied > 0 ifTrue:
+		[self ssPop: numCopied].
+	^self ssPushRegister: ReceiverResultReg
+
 ]
 
 { #category : #initialization }
@@ -2623,47 +2636,11 @@ StackToRegisterMappingCogit >> genPushClosureCopyCopiedValuesBytecode [
 		numCopied: (numCopied := byte1 >> 4)
 		span: (byte2 << 8) + byte3.
 
-	objectRepresentation createsClosuresInline ifTrue:
-		[self assert: objectRepresentation getActiveContextAllocatesInMachineCode.
-		 optStatus isReceiverResultRegLive: false.
-		 self ssAllocateCallReg: ReceiverResultReg
-			and: SendNumArgsReg
-			and: ClassReg.
-		 objectRepresentation
-			genNoPopCreateClosureAt: startpc + 1 "1 relative"
-			numArgs: numArgs
-			numCopied: numCopied
-			contextNumArgs: methodOrBlockNumArgs
-			large: (coInterpreter methodNeedsLargeContext: methodObj)
-			inBlock: inBlock.
-		 1 to: numCopied do:
-			[:i| | reg |
-			 reg := self ssStorePop: true toPreferredReg: TempReg.
-			 objectRepresentation
-				genStoreSourceReg: reg
-				slotIndex: ClosureFirstCopiedValueIndex + numCopied - i
-				intoNewObjectInDestReg: ReceiverResultReg].
-		 ^self ssPushRegister: ReceiverResultReg].
+	^ objectRepresentation createsClosuresInline 
+		ifTrue: [ self genInlineClosure: startpc numArgs: numArgs numCopied: numCopied ]
+		ifFalse: [ self genOutlineClosure: startpc numArgs: numArgs numCopied: numCopied ]
 
-	numCopied > 0 ifTrue:
-		[self ssFlushTo: simStackPtr].
-	optStatus isReceiverResultRegLive: false.
-	objectRepresentation getActiveContextAllocatesInMachineCode
-		ifTrue: [self ssAllocateCallReg: ReceiverResultReg
-					and: SendNumArgsReg
-					and: ClassReg]
-		ifFalse: [self ssAllocateCallReg: SendNumArgsReg
-					and: ReceiverResultReg].
-	objectRepresentation
-		genCreateClosureAt: startpc + 1 "1 relative"
-		numArgs: numArgs
-		numCopied: numCopied
-		contextNumArgs: methodOrBlockNumArgs
-		large: (coInterpreter methodNeedsLargeContext: methodObj)
-		inBlock: inBlock.
-	numCopied > 0 ifTrue:
-		[self ssPop: numCopied].
-	^self ssPushRegister: ReceiverResultReg
+	
 ]
 
 { #category : #'bytecode generator support' }
@@ -2805,14 +2782,15 @@ StackToRegisterMappingCogit >> genPushRegisterArgs [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genPushRemoteTempLongBytecode [
-	| newReg |
-	newReg := self allocateRegNotConflictingWith: 0.
-	self MoveMw: (self frameOffsetOfTemporary: byte2) r: FPReg R: newReg.
+	| tempVectReg remoteTempReg |
+	tempVectReg := self allocateRegNotConflictingWith: 0.
+	self MoveMw: (self frameOffsetOfTemporary: byte2) r: FPReg R: tempVectReg.
+	remoteTempReg := (self availableRegOrNilNotConflictingWith: (self registerMaskFor: tempVectReg)) ifNil: [ tempVectReg ].
 	objectRepresentation
 		genLoadSlot: byte1
-		sourceReg: newReg
-		destReg: newReg.
-	^self ssPushRegister: newReg
+		sourceReg: tempVectReg
+		destReg: remoteTempReg.
+	^self ssPushRegister: remoteTempReg
 ]
 
 { #category : #'bytecode generator support' }
