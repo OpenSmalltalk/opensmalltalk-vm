@@ -1607,7 +1607,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
   return 0;
 }
 
-static int
+static long
 strtobkm(const char *str)
 {
 	char *suffix;
@@ -1780,6 +1780,16 @@ parseVMArgument(int argc, char *argv[])
 		reportStackHeadroom = 1;
 		return 1; }
 #endif /* COGVM */
+#if SPURVM
+    else if (!strcmp(argv[0], "-maxoldspace")) { 
+		extern unsigned long maxOldSpaceSize;
+		maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
+		return 2; }
+    else if (!strncmp(argv[0], "-maxoldspace:", 13)) { 
+		extern unsigned long maxOldSpaceSize;
+		maxOldSpaceSize = (unsigned long)strtobkm(argv[0]+13);	 
+		return 2; }
+#endif
 
   /* NOTE: the following flags are "undocumented" */
 	else if (argc > 1 && !strcmp(argv[0], "-browserWindow")) {

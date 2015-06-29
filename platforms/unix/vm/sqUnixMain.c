@@ -1259,7 +1259,8 @@ static void loadModules(void)
 /* built-in main vm module */
 
 
-static int strtobkm(const char *str)
+static long
+strtobkm(const char *str)
 {
   char *suffix;
   long value= strtol(str, &suffix, 10);
@@ -1493,6 +1494,12 @@ static int vm_parseArgument(int argc, char **argv)
 		reportStackHeadroom = 1;
 		return 1; }
 #endif /* COGVM */
+#if SPURVM
+      else if (!strcmp(argv[0], "-maxoldspace")) { 
+		extern unsigned long maxOldSpaceSize;
+		maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
+		return 2; }
+#endif
       else if (!strcmp(argv[0], "-textenc")) {
 		int i, len = strlen(argv[1]);
 		char *buf = (char *)alloca(len + 1);
@@ -1551,6 +1558,9 @@ static void vm_printUsage(void)
   printf("  -cogmaxlits <n>       set max number of literals for methods compiled to machine code\n");
   printf("  -cogminjumps <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");
   printf("  -reportheadroom       report unused stack headroom on exit\n");
+#endif
+#if SPURVM
+  printf("  -maxoldspace <size>[mk]    set max size of old space memory to bytes\n");
 #endif
   printf("  -blockonerror         on error or segv block, not exit.  useful for attaching gdb\n");
   printf("  -blockonwarn          on warning block, don't warn.  useful for attaching gdb\n");

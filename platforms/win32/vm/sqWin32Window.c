@@ -3212,6 +3212,9 @@ int printUsage(int level)
                    TEXT("\n\t-reportheadroom\t(report unused stack headroom on exit)")
                    TEXT("\n\t-dpcso: bytes \t(stack offset for prim calls for debug)")
 #endif /* COGVM */
+#if SPURVM
+                   TEXT("\n\t-maxoldspace: bytes \t(set max size of old space memory to bytes)")
+#endif
                    );
       break;
     case 2: /* No image found */

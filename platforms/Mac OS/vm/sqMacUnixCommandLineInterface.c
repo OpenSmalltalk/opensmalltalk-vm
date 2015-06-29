@@ -55,7 +55,7 @@ static void parseArguments(int argc, char **argv);
 static int parseArgument(int argc, char **argv);
 static void usage(void);
 static void parseEnvironment(void);
-static int strtobkm(const char *str);
+static long strtobkm(const char *str);
 static usqLong strtolbkm(const char *str);
 static void printUsage(void);
 static void printUsageNotes(void);
@@ -270,8 +270,14 @@ static int parseArgument(int argc, char **argv)
 		reportStackHeadroom = 1;
 		return 1; }
 #endif /* COGVM */
+#if SPURVM
+      else if (!strcmp(argv[0], "-maxoldspace")) { 
+		extern unsigned long maxOldSpaceSize;
+		maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
+		return 2; }
+#endif
       else if (!strcmp(argv[0], "-pathenc")) { 
-		setEncodingType(argv[1]); 
+		setEncodingType(argv[1]);
 		return 2; }
       else if (!strcmp(argv[0], "-browserPipes")) {
 		extern int		 gSqueakBrowserPipes[]; /* read/write fd for browser communication */
@@ -332,6 +338,9 @@ static void printUsage(void)
   printf("  -cogminjumps <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");
   printf("  -reportheadroom       report unused stack headroom on exit\n");
 #endif
+#if SPURVM
+  printf("  -maxoldspace <size>[mk]      set max size of old space memory to bytes\n");
+#endif
   printf("  -pathenc <enc>        set encoding for pathnames (default: %s)\n",
 		getEncodingType(gCurrentVMEncoding));
 
@@ -358,7 +367,7 @@ static void outOfMemory(void)
   exit(1);
 }
 
-static int
+static long
 strtobkm(const char *str)
 {
   char *suffix;
