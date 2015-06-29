@@ -1638,7 +1638,7 @@ SpurBootstrap >> rehashImage [
 		[:class| | classIndex |
 		sim messageSelector: rehashSym.
 		"Lookup rehash but don't be fooled by ProtoObject>>rehash, which is just ^self."
-		((sim lookupMethodNoMNUEtcInClass: class) = 0
+		((sim lookupOrdinaryNoMNUEtcInClass: class) = 0
 		 and: [(sim isQuickPrimitiveIndex: (sim primitiveIndexOf: (sim instVarNamed: 'newMethod'))) not]) ifTrue:
 			[n := n + 1.
 			 classIndex := newHeap rawHashBitsOf: class.
