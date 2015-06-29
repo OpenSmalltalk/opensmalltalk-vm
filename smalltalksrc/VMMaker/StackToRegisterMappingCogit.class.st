@@ -1839,9 +1839,11 @@ StackToRegisterMappingCogit >> genExtPushClosureBytecode [
 		span: byte2 + (extB << 8).
 	extA := extB := 0.
 
-	^ objectRepresentation createsClosuresInline
+	objectRepresentation createsClosuresInline
 		ifTrue: [ self genInlineClosure: startpc numArgs: numArgs numCopied: numCopied ]
-		ifFalse: [ self genOutlineClosure: startpc numArgs: numArgs numCopied: numCopied ]
+		ifFalse: [ self genOutlineClosure: startpc numArgs: numArgs numCopied: numCopied ].
+		
+	^ 0
 ]
 
 { #category : #'trampoline support' }
@@ -1873,7 +1875,7 @@ StackToRegisterMappingCogit >> genInlineClosure: startpc numArgs: numArgs numCop
 			genStoreSourceReg: reg
 			slotIndex: ClosureFirstCopiedValueIndex + numCopied - i
 			intoNewObjectInDestReg: ReceiverResultReg].
-	 ^self ssPushRegister: ReceiverResultReg
+	 self ssPushRegister: ReceiverResultReg
 
 ]
 
@@ -2043,7 +2045,7 @@ StackToRegisterMappingCogit >> genOutlineClosure: startpc numArgs: numArgs numCo
 		inBlock: inBlock.
 	numCopied > 0 ifTrue:
 		[self ssPop: numCopied].
-	^self ssPushRegister: ReceiverResultReg
+	self ssPushRegister: ReceiverResultReg
 
 ]
 
@@ -2633,9 +2635,11 @@ StackToRegisterMappingCogit >> genPushClosureCopyCopiedValuesBytecode [
 		numCopied: (numCopied := byte1 >> 4)
 		span: (byte2 << 8) + byte3.
 
-	^ objectRepresentation createsClosuresInline 
+	objectRepresentation createsClosuresInline 
 		ifTrue: [ self genInlineClosure: startpc numArgs: numArgs numCopied: numCopied ]
-		ifFalse: [ self genOutlineClosure: startpc numArgs: numArgs numCopied: numCopied ]
+		ifFalse: [ self genOutlineClosure: startpc numArgs: numArgs numCopied: numCopied ].
+		
+	^ 0
 
 	
 ]
