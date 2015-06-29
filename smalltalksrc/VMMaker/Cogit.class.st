@@ -8494,7 +8494,7 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 		[aStream crtab; nextPutAll: 'objhdr: '.
 		cogMethod objectHeader printOn: aStream base: 16].
 	cogMethod cmType = CMBlock ifTrue:
-		[aStream nextPutAll: 'homemth: '.
+		[aStream crtab; nextPutAll: 'homemth: '.
 		cogMethod cmHomeMethod asUnsignedInteger printOn: aStream base: 16.
 		aStream crtab; nextPutAll: 'startpc: '; print: cogMethod startpc].
 	aStream

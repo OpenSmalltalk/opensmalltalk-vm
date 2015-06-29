@@ -116,7 +116,9 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> formatShift [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> getScavengeThreshold [
-	^objectMemory getScavengeThreshold ifNil: [16r24680]
+	^variables
+		at: 'scavengeThreshold'
+		ifAbsentPut: [objectMemory getScavengeThreshold ifNil: [16r24680]]
 ]
 
 { #category : #accessing }

@@ -176,7 +176,8 @@ Spur32BitCoMemoryManager >> initializeFreeSpaceForFacadeFrom: base to: limit [
 	"c.f. initializeFreeSpacePostLoad: freeListObj."
 	| freeListObj freeBytes |
 	newSpaceLimit := oldSpaceStart := freeStart := base.
-	endOfMemory := scavengeThreshold := limit.
+	endOfMemory := limit.
+	scavengeThreshold := limit * 3 // 4.
 	segmentManager initSegmentForInImageCompilationFrom: base to: limit.
 	freeListObj := self allocateSlots: self numFreeLists
 						format: self wordIndexableFormat
