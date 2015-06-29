@@ -575,6 +575,7 @@ Class {
 		'extraRoots',
 		'lowSpaceThreshold',
 		'totalFreeOldSpace',
+		'maxOldSpaceSize',
 		'firstFreeChunk',
 		'lastFreeChunk',
 		'numCompactionPasses',
@@ -700,7 +701,8 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 		var: #unscannedEphemerons type: #SpurContiguousObjStack;
 		var: #heapGrowthToSizeGCRatio type: #float;
 		var: #heapSizeAtPreviousGC type: #usqInt;
-		var: #totalFreeOldSpace type: #usqInt.
+		var: #totalFreeOldSpace type: #usqInt;
+		var: #maxOldSpaceSize type: #'unsigned long'.
 	aCCodeGenerator
 		var: #remapBuffer
 		declareC: 'sqInt remapBuffer[RemapBufferSize + 1 /* ', (RemapBufferSize + 1) printString, ' */]'.
@@ -967,7 +969,7 @@ SpurMemoryManager class >> memoryManagerVersion [
 SpurMemoryManager class >> mustBeGlobal: var [
 	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM support code."
 
-	^'checkForLeaks' = var
+	^#('checkForLeaks' 'maxOldSpaceSize') includes: var
 ]
 
 { #category : #accessing }
@@ -5225,16 +5227,27 @@ SpurMemoryManager >> growHeadroom: aValue [
 SpurMemoryManager >> growOldSpaceByAtLeast: minAmmount [
 	"Attempt to grow memory by at least minAmmount.
 	 Answer the size of the new segment, or nil if the attempt failed."
-	| ammount |
+	| ammount headroom total |
 	<var: #segInfo type: #'SpurSegmentInfo *'>
 	"statGrowMemory counts attempts, not successes."
-	statGrowMemory := statGrowMemory + 1.
-	"we need to include overhead for a new object header plus the segment bridge."
+	statGrowMemory := statGrowMemory + 1."we need to include overhead for a new object header plus the segment bridge."
 	ammount := minAmmount + (self baseHeaderSize * 2 + self bridgeSize).
 	"round up to the nearest power of two."
 	ammount := 1 << (ammount - 1) highBit.
 	"and grow by at least growHeadroom."
 	ammount := ammount max: growHeadroom.
+
+	"Now apply the maxOldSpaceSize limit, if one is in effect."
+	maxOldSpaceSize > 0 ifTrue:
+		[total := segmentManager totalBytesInSegments.
+		 total >= maxOldSpaceSize ifTrue:
+			[^nil].
+		 headroom := maxOldSpaceSize - total.
+		 headroom < ammount ifTrue:
+			[headroom < (minAmmount + (self baseHeaderSize * 2 + self bridgeSize)) ifTrue:
+				[^nil].
+			 ammount := headroom]].
+		 
 	^(segmentManager addSegmentOfSize: ammount) ifNotNil:
 		[:segInfo|
 		 self assimilateNewSegment: segInfo.
@@ -5246,6 +5259,10 @@ SpurMemoryManager >> growOldSpaceByAtLeast: minAmmount [
 		 self checkFreeSpace.
 		 segmentManager checkSegments.
 		 segInfo segSize]
+	
+
+maxOldSpaceSize
+totalBytesInSegments
 ]
 
 { #category : #'growing/shrinking memory' }
@@ -5680,6 +5697,8 @@ SpurMemoryManager >> initialize [
 	heapMap := CogCheck32BitHeapMap new.
 
 	"N.B. We *don't* initialize extraRoots because we don't simulate it."
+
+	maxOldSpaceSize := self class initializationOptions at: #maxOldSpaceSize ifAbsent: [0]
 ]
 
 { #category : #snapshot }
@@ -7706,6 +7725,12 @@ SpurMemoryManager >> maxCInteger [
 { #category : #accessing }
 SpurMemoryManager >> maxIdentityHash [
 	^self identityHashHalfWordMask
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> maxOldSpaceSize [
+	<cmacro: '() maxOldSpaceSize'>
+	^maxOldSpaceSize
 ]
 
 { #category : #instantiation }
@@ -10070,6 +10095,13 @@ SpurMemoryManager >> setLastSegment: segInfo [
 		[endOfMemory := currentEnd.
 		 freeOldSpaceStart > currentEnd ifTrue:
 			[freeOldSpaceStart :=currentEnd]]
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> setMaxOldSpaceSize: limit [
+	<var: #limit type: #'unsigned long'>
+	maxOldSpaceSize := limit.
+	^0
 ]
 
 { #category : #'free space' }

@@ -1501,7 +1501,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		37	number of marked objects for Roots of the world, not including Root Table entries for current IGC/FGC (read-only)
 		38	milliseconds taken by current IGC (read-only)
 		39	Number of finalization signals for Weak Objects pending when current IGC/FGC completed (read-only)
-		40	BytesPerWord for this image
+		40	BytesPerOop for this image
 		41	imageFormatVersion for the VM
 		42	number of stack pages in use
 		43	desired number of stack pages (stored in image file header, max 65535)
@@ -1527,7 +1527,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		64	the number of methods that currently have jitted machine-code
 		65	whether the VM supports MULTIPLE_BYTECODE_SETS or not.
 		66	the byte size of a stack page
-		67 - 69 reserved for more Cog-related info
+		67	the max allowed size of old space (Spur only; nil otherwise; 0 implies no limit except that of the underlying platform)
+		68 - 69 reserved for more Cog-related info
 		70	the vmProxyMajorVersion (the interpreterProxy VM_MAJOR_VERSION)
 		71	the vmProxyMinorVersion (the interpreterProxy VM_MINOR_VERSION)
 	Note: Thanks to Ian Piumarta for this primitive."
@@ -1607,7 +1608,10 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 63	ofObject: result withValue: self getCogMethodCount.
 		objectMemory storePointerUnchecked: 64	ofObject: result withValue: (objectMemory booleanObjectOf: MULTIPLEBYTECODESETS).
 		objectMemory storePointerUnchecked: 65	ofObject: result withValue: (objectMemory integerObjectOf: self stackPageByteSize).
-		"67 to 69 (66 to: 68) reserved for more Cog-related info"
+		objectMemory hasSpurMemoryManagerAPI ifTrue:
+			[objectMemory
+				storePointerUnchecked: 66 ofObject: result withValue: (objectMemory integerObjectOf: objectMemory maxOldSpaceSize)].
+		"68 to 69 (67 to: 68) reserved for more Cog-related info"
 		objectMemory
 			storePointerUnchecked: 69
 			ofObject: result
@@ -1693,6 +1697,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 64	ifTrue: [result := self getCogMethodCount].
 		arg = 65	ifTrue: [result := objectMemory booleanObjectOf: MULTIPLEBYTECODESETS].
 		arg = 66	ifTrue: [result := objectMemory integerObjectOf: self stackPageByteSize].
+		(arg = 67
+		 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
+			[result := objectMemory integerObjectOf: objectMemory maxOldSpaceSize].
 		"(arg between: 67 and: 69) ifTrue: [result := objectMemory nilObject]." "reserved for more Cog-related info"
 		arg = 70 ifTrue: [result := self integerObjectOf: (self cCode: 'VM_PROXY_MAJOR' inSmalltalk: [self class vmProxyMajorVersion])].
 		arg = 71 ifTrue: [result := self integerObjectOf: (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self class vmProxyMinorVersion])].
@@ -1774,6 +1781,12 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 	 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
 		[result := objectMemory floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio.
 		 primFailCode := objectMemory setHeapGrowthToSizeGCRatio: (objectMemory floatValueOf: arg)].
+
+	(index = 67
+	 and: [arg >= 0
+	 and: [objectMemory hasSpurMemoryManagerAPI]]) ifTrue:
+		[result := objectMemory integerObjectOf: objectMemory maxOldSpaceSize.
+		 primFailCode := objectMemory setMaxOldSpaceSize: arg].
 
 	self successful ifTrue:
 		[self pop: 3 thenPush: result.  "return old value"
