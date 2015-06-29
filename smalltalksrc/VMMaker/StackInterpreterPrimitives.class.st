@@ -1712,7 +1712,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 	index := self stackValue: 1.
 	(objectMemory isIntegerObject: index) ifFalse: [^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
-	(index < 1 or: [index > 63]) ifTrue: [^self primitiveFailFor: PrimErrBadIndex].
+	(index < 1 or: [index > paramsArraySize]) ifTrue: [^self primitiveFailFor: PrimErrBadIndex].
 	(objectMemory isIntegerObject: arg)
 		ifTrue: [arg := objectMemory integerValueOf: arg]
 		ifFalse:
