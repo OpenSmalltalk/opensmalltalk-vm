@@ -923,6 +923,11 @@ SpurMemoryManager class >> initializeSpurObjectRepresentationConstants [
 SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 	"SpurMemoryManager initializeWithOptions: Dictionary new"
 
+	{self}, (self ancilliaryClasses: optionsDictionary) do:
+		[:aSuperclass|
+		 aSuperclass withAllSubclasses do:
+			[:class| class initializationOptions: optionsDictionary]].
+
 	super initializeWithOptions: optionsDictionary.
 	self initialize.
 	self initBytesPerWord: (self == SpurMemoryManager
