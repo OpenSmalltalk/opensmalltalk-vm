@@ -571,7 +571,8 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	<var: #jumpEqual type: #'AbstractInstruction *'>
 	<var: #jumpNotEqual type: #'AbstractInstruction *'>
 
-	((coInterpreter isOptimizedMethod: methodObj) or: [needsFrame not]) ifTrue: [ ^ self genSpecialSelectorEqualsEqualsWithForwardersWithoutCounters ].
+	((coInterpreter isOptimizedMethod: methodObj) or: [needsFrame not]) ifTrue:
+		[^super genSpecialSelectorEqualsEqualsWithForwarders].
 
 	regMask := 0.
 	
@@ -646,12 +647,6 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders
 	(self fixupAt: nextPC - initialPC) targetInstruction = 0 ifTrue: [ branchReachedOnlyForCounterTrip := true ].
 	
 	^ 0
-]
-
-{ #category : #'bytecode generators' }
-SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwardersWithoutCounters [
-	"This method is there because if I put directly the super send in genSpecialSelectorComparison Slang does not correctly translte the code to C, it does not correctly type one of the branchDescriptor to BytecodeDescriptor"
-	^ super genSpecialSelectorEqualsEqualsWithForwarders
 ]
 
 { #category : #'bytecode generators' }

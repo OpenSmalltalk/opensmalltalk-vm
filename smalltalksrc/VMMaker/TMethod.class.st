@@ -2216,7 +2216,7 @@ TMethod >> renameLabelsUsing: aDictionary [
 TMethod >> renameVariablesUsing: aDictionary [
 	"Rename all variables according to old->new mappings of the given dictionary."
 
-	| newDecls |
+	| newDecls newProperties |
 	"map args and locals"
 	args := args collect: [ :arg | aDictionary at: arg ifAbsent: [ arg ]].
 	locals := locals collect: [ :v | aDictionary at: v ifAbsent: [ v ]].
@@ -2236,6 +2236,14 @@ TMethod >> renameVariablesUsing: aDictionary [
 							ifFalse: [decl])]
 			ifNil: [newDecls at: oldName put: decl]].
 	self newDeclarations: newDecls.
+
+	newProperties := properties copy.
+	newProperties pragmas do:
+		[:pragma| | mappedArgs |
+		mappedArgs := pragma arguments collect: [:arg| arg isString ifTrue: [aDictionary at: arg ifAbsent: arg] ifFalse: [arg]].
+		mappedArgs ~= pragma arguments ifTrue:
+			[pragma setArguments: mappedArgs]].
+	self properties: newProperties.
 
 	"map variable names in parse tree"
 	parseTree nodesDo:
@@ -2471,12 +2479,12 @@ TMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
 							superTMethod definingClass name, '>>', aSelector,
 							(String with: $. with: Character cr),
 							'For super expansions to be translated correctly each argument must be a variable with the same name as the corresponding argument in the super method.'].
-			self mergePropertiesOfSuperMethod: superTMethod.
 			(commonVars := superTMethod locals intersection: self locals) notEmpty ifTrue:
 				[varMap := Dictionary new.
 				 commonVars do:
 					[:k| varMap at: k put: (superTMethod unusedNamePrefixedBy: k avoiding: self allLocals)].
 				 superTMethod renameVariablesUsing: varMap].
+			self mergePropertiesOfSuperMethod: superTMethod.
 			self assert: (superTMethod locals allSatisfy: [:var| (self locals includes: var) not]).
 			locals addAll: superTMethod locals.
 			superTMethod declarations keysAndValuesDo:
