@@ -1888,7 +1888,8 @@ StackInterpreter >> addLastLink: proc toList: aList [
 	"Add the given process to the end of the given linked list
 	 and set the backpointer of process to its new list."
 	| lastLink |
-	self assert: (objectMemory isForwarded: aList) not.
+	self deny: (objectMemory isForwarded: proc).
+	self deny: (objectMemory isForwarded: aList).
 	self assert: (objectMemory fetchPointer: NextLinkIndex ofObject: proc) = objectMemory nilObject.
 	(self isEmptyList: aList)
 		ifTrue: [objectMemory storePointer: FirstLinkIndex ofObject: aList withValue: proc]
@@ -6396,10 +6397,14 @@ StackInterpreter >> followForwardingPointersInScheduler [
 	"the GC follows pointers in the special objects array for us."
 	self assert: (objectMemory isForwarded: schedAssoc) not.
 
-	sched := objectMemory followObjField: ValueIndex ofObject: schedAssoc.
+	"Make sure the active process has been followed."
+	self followForwardedObjectFields: schedAssoc toDepth: 1.
+
+	sched := objectMemory fetchPointer: ValueIndex ofObject: schedAssoc.
 
 	procLists := objectMemory followObjField: ProcessListsIndex ofObject: sched.
 
+	"Follow all links in the process list to ensure the lists are valid."
 	0 to: (objectMemory numSlotsOf: procLists) - 1 do:
 		[:i| | list first last next |
 		list := objectMemory followObjField: i ofObject: procLists.
@@ -12421,44 +12426,52 @@ StackInterpreter >> remapCallbackState [
 StackInterpreter >> removeFirstLinkOfList: aList [ 
 	"Remove the first process from the given linked list."
 	| first last next |
-	self assert: (objectMemory isForwarded: aList) not.
+	self deny: (objectMemory isForwarded: aList).
 	first := objectMemory fetchPointer: FirstLinkIndex ofObject: aList.
 	last := objectMemory fetchPointer: LastLinkIndex ofObject: aList.
+	self deny: (objectMemory isForwarded: first).
+	self deny: (objectMemory isForwarded: last).
 	first = last
-		ifTrue: [objectMemory storePointer: FirstLinkIndex ofObject: aList withValue: objectMemory nilObject.
-			objectMemory storePointer: LastLinkIndex ofObject: aList withValue: objectMemory nilObject]
-		ifFalse: [next := objectMemory fetchPointer: NextLinkIndex ofObject: first.
-			objectMemory storePointer: FirstLinkIndex ofObject: aList withValue: next].
-	objectMemory storePointer: NextLinkIndex ofObject: first withValue: objectMemory nilObject.
-	^ first
+		ifTrue:
+			[objectMemory
+				storePointerUnchecked: FirstLinkIndex ofObject: aList withValue: objectMemory nilObject;
+				storePointerUnchecked: LastLinkIndex ofObject: aList withValue: objectMemory nilObject]
+		ifFalse:
+			[next := objectMemory fetchPointer: NextLinkIndex ofObject: first.
+			 objectMemory storePointer: FirstLinkIndex ofObject: aList withValue: next].
+	objectMemory storePointerUnchecked: NextLinkIndex ofObject: first withValue: objectMemory nilObject.
+	^first
 ]
 
 { #category : #'process primitive support' }
 StackInterpreter >> removeProcess: aProcess fromList: aList [ 
 	"Remove a given process from a linked list. May fail if aProcess is not on the list."
 	| firstLink lastLink nextLink tempLink |
-	self assert: (objectMemory isForwarded: aList) not.
+	self deny: (objectMemory isForwarded: aProcess).
+	self deny: (objectMemory isForwarded: aList).
 	firstLink := objectMemory fetchPointer: FirstLinkIndex ofObject: aList.
 	lastLink := objectMemory fetchPointer: LastLinkIndex ofObject: aList.
-	aProcess  = firstLink ifTrue:[
-		nextLink := objectMemory fetchPointer: NextLinkIndex ofObject: aProcess .
-		objectMemory storePointer: FirstLinkIndex ofObject: aList withValue: nextLink.
-		aProcess  = lastLink ifTrue:[
-			objectMemory storePointer: LastLinkIndex ofObject: aList withValue: objectMemory nilObject.
-		].
-	] ifFalse:[
-		tempLink := firstLink.
-		[tempLink = objectMemory nilObject ifTrue:[^self success: false]. "fail"
-		nextLink := objectMemory fetchPointer: NextLinkIndex ofObject: tempLink.
-		nextLink = aProcess] whileFalse:[
-			tempLink := objectMemory fetchPointer: NextLinkIndex ofObject: tempLink.
-		].
-		nextLink := objectMemory fetchPointer: NextLinkIndex ofObject: aProcess.
-		objectMemory storePointer: NextLinkIndex ofObject: tempLink withValue: nextLink.
-		aProcess  = lastLink ifTrue:[
-			objectMemory storePointer: LastLinkIndex ofObject: aList withValue: tempLink.
-		].
-	].
+	self deny: (objectMemory isForwarded: firstLink).
+	self deny: (objectMemory isForwarded: lastLink).
+	aProcess  = firstLink
+		ifTrue:
+			[nextLink := objectMemory fetchPointer: NextLinkIndex ofObject: aProcess.
+			 self deny: (objectMemory isForwarded: nextLink).
+			 objectMemory storePointer: FirstLinkIndex ofObject: aList withValue: nextLink.
+			 aProcess  = lastLink ifTrue:
+				[objectMemory storePointerUnchecked: LastLinkIndex ofObject: aList withValue: objectMemory nilObject]]
+		ifFalse:
+			[tempLink := firstLink.
+			 [self deny: (objectMemory isForwarded: tempLink).
+			  tempLink = objectMemory nilObject ifTrue:
+				[self primitiveFail. ^self].
+			  nextLink := objectMemory fetchPointer: NextLinkIndex ofObject: tempLink.
+			  nextLink = aProcess] whileFalse:
+				[tempLink := objectMemory fetchPointer: NextLinkIndex ofObject: tempLink].
+			 nextLink := objectMemory fetchPointer: NextLinkIndex ofObject: aProcess.
+			 objectMemory storePointer: NextLinkIndex ofObject: tempLink withValue: nextLink.
+			 aProcess  = lastLink ifTrue:
+				[objectMemory storePointer: LastLinkIndex ofObject: aList withValue: tempLink]].
 	objectMemory storePointer: NextLinkIndex ofObject: aProcess withValue: objectMemory nilObject
 ]
 
@@ -13734,9 +13747,11 @@ StackInterpreter >> spurPostBecomeAction: theBecomeEffectsFlags [
 		 (theBecomeEffectsFlags anyMask: BecameActiveClassFlag) ifTrue:
 			[self flushBecommedClassesInMethodCache.
 			 self flushBecommedClassesInMethodZone]. "for CoInterpreter"
-		 self followForwardingPointersInScheduler.
-		 self followForwardingPointersInSpecialObjectsArray.
-		 self followForwardingPointersInProfileState].
+		 (theBecomeEffectsFlags anyMask: BecamePointerObjectFlag) ifTrue:
+			[self followForwardingPointersInScheduler.
+			 self followForwardingPointersInSpecialObjectsArray].
+		 (theBecomeEffectsFlags anyMask: BecamePointerObjectFlag + BecameCompiledMethodFlag) ifTrue:
+			[self followForwardingPointersInProfileState]].
 	self followForwardingPointersInStackZone: theBecomeEffectsFlags
 ]
 
