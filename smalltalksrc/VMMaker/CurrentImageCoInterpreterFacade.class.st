@@ -489,6 +489,11 @@ CurrentImageCoInterpreterFacade >> isImmediate: anOop [
 	^objectMemory isImmediate: anOop
 ]
 
+{ #category : #testing }
+CurrentImageCoInterpreterFacade >> isInOldSpace: address [
+	^objectMemory isInOldSpace: address
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> isIntegerObject: anOop [
 	^objectMemory isIntegerObject: anOop

@@ -37,6 +37,14 @@ CogOutOfLineLiteralsARMCompiler >> getDefaultCogCodeSize [
 ]
 
 { #category : #'inline cacheing' }
+CogOutOfLineLiteralsARMCompiler >> implicitReceiveCacheAt: callSiteReturnAddress [
+	"Answer the implicit receiver cache for the return address
+	 of a call to one of the ceImplicitReceiver... trampolines."
+	<inline: true>
+	^objectMemory longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8)
+]
+
+{ #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMCompiler >> inlineCacheTagAt: followingAddress [
 	^objectMemory longAt: (self pcRelativeAddressAt: followingAddress - 8)
 ]
