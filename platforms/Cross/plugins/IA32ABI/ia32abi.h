@@ -40,6 +40,8 @@ extern sqInt callIA32DoubleReturn  (SIGNATURE);
 # define INT_REG_ARGS long,long,long,long,long,long,
 #elif defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
 # define INT_REG_ARGS long,long,long,long,long,long,long,long,
+#elif defined(__ARM_ARCH__) || defined(__arm__) || defined(__arm32__) || defined(ARM32)
+# define INT_REG_ARGS long,long,long,long,
 #endif
 extern long  thunkEntry (INT_REG_ARGS void *,long *);
 extern void *allocateExecutablePage(long *pagesize);
