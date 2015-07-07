@@ -41,12 +41,13 @@ CogOutOfLineLiteralsARMCompiler >> implicitReceiveCacheAt: callSiteReturnAddress
 	"Answer the implicit receiver cache for the return address
 	 of a call to one of the ceImplicitReceiver... trampolines."
 	<inline: true>
-	^objectMemory longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8)
+	^objectMemory longAt: (self pcRelativeAddressAt: (callSiteReturnAddress - 8) asUnsignedInteger)
 ]
 
 { #category : #'inline cacheing' }
-CogOutOfLineLiteralsARMCompiler >> inlineCacheTagAt: followingAddress [
-	^objectMemory longAt: (self pcRelativeAddressAt: followingAddress - 8)
+CogOutOfLineLiteralsARMCompiler >> inlineCacheTagAt: callSiteReturnAddress [
+	<inline: true>
+	^objectMemory longAt: (self pcRelativeAddressAt: (callSiteReturnAddress - 8) asUnsignedInteger)
 ]
 
 { #category : #testing }
