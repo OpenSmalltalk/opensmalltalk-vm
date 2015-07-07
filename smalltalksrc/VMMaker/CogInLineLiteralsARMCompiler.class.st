@@ -33,6 +33,14 @@ CogInLineLiteralsARMCompiler >> getDefaultCogCodeSize [
 ]
 
 { #category : #'inline cacheing' }
+CogInLineLiteralsARMCompiler >> implicitReceiveCacheAt: callSiteReturnAddress [
+	"Answer the implicit receiver cache for the return address
+	 of a call to one of the ceImplicitReceiver... trampolines."
+	self assert: (self instructionIsBL: (self instructionBeforeAddress: callSiteReturnAddress)).
+	^self extract32BitOperandFrom4InstructionsPreceeding: callSiteReturnAddress - 4
+]
+
+{ #category : #'inline cacheing' }
 CogInLineLiteralsARMCompiler >> inlineCacheTagAt: callSiteReturnAddress [
 	"Answer the inline cache tag for the return address of a send."
 	self assert: (self instructionIsBL: (self instructionBeforeAddress: callSiteReturnAddress)).
