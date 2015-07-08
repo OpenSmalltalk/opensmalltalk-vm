@@ -121,12 +121,6 @@ Object >> primitive: primName [
 ]
 
 { #category : #'*VMMaker-translation support' }
-Object >> remapOop: oopOrList in: aBlock [
-	"For translation only; noop when running in Smalltalk."
-	^aBlock value
-]
-
-{ #category : #'*VMMaker-translation support' }
 Object >> returnTypeC: typeString [
 	"For translation only; noop when running in Smalltalk."
 ]

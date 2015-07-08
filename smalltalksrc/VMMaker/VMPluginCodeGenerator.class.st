@@ -207,6 +207,53 @@ VMPluginCodeGenerator >> generateInterpreterProxyFunctionDeference: aNode on: aS
 	aStream cr; nextPutAll: '#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */'.
 ]
 
+{ #category : #'C translation' }
+VMPluginCodeGenerator >> generateRemapOopIn: aNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream cr; nextPutAll: '#if SPURVM'; cr.
+	self generateSpurRemapOopIn: aNode on: aStream indent: level.
+	aStream cr; nextPutAll: '#else /* SPURVM */'; cr.
+	self generateV3RemapOopIn: aNode on: aStream indent: level.
+	aStream cr; nextPutAll: '#endif /* SPURVM */'; cr
+]
+
+{ #category : #'C translation' }
+VMPluginCodeGenerator >> generateSpurRemapOopIn: aNode on: aStream indent: level [
+	"Generate just the block argument for this message as Spur does not GC on allocation."
+
+	aNode args second emitCCodeOn: aStream level: level generator: self
+]
+
+{ #category : #'C translation' }
+VMPluginCodeGenerator >> generateV3RemapOopIn: aNode on: aStream indent: level [
+	"Generate call on remapOop: for the variable oopOrList (or all of the
+	 variables in oopOrList) before evaluating aBlock, and restore them after.
+	 This keeps the oops valid if, as V3 will, there is a GC on allocation."
+
+	| idList |
+	pluginFunctionsUsed add: #pushRemappableOop:; add: #popRemappableOop.
+	idList := aNode args first nameOrValue.
+	idList class == Array ifFalse: [idList := Array with: idList].
+	idList do:
+		[:each | 
+		 aStream
+			tab: level;
+			nextPutAll: 'pushRemappableOop(';
+			nextPutAll: each asString;
+			nextPutAll: ');']
+		separatedBy: [aStream cr].
+	aStream cr.
+	aNode args second emitCCodeOn: aStream level: level generator: self.
+	level timesRepeat: [aStream tab].
+	idList reversed do:
+		[:each |
+		 aStream 
+			nextPutAll: each asString;
+			nextPutAll: ' = popRemappableOop()']
+		separatedBy: [aStream nextPut: $;; crtab: level]
+]
+
 { #category : #'type inference' }
 VMPluginCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
 	"Eliminate signed/unsigned conflicts in aSetOfTypes.  Override to
@@ -230,7 +277,9 @@ VMPluginCodeGenerator >> initializeCTranslationDictionary [
 	super initializeCTranslationDictionary.
 	translationDict
 		at: #expandDereferenceInterpreterProxyFunctionTable
-		put: #generateInterpreterProxyFunctionDeference:on:indent:
+			put: #generateInterpreterProxyFunctionDeference:on:indent:;
+		at: #remapOop:in:
+			put: #generateRemapOopIn:on:indent:
 ]
 
 { #category : #testing }

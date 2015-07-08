@@ -657,29 +657,30 @@ ThreadedFFIPlugin >> ffiContentsOfHandle: oop errCode: errCode [
 
 { #category : #'callout support' }
 ThreadedFFIPlugin >> ffiCreateIntegralResultOop: retVal ofAtomicType: atomicType in: calloutState [
+	<inline: true>
 	<var: #calloutState type: #'CalloutState *'>
 	<var: #retVal type: #usqLong>
 	"Callout support. Return the appropriate oop for the given atomic type"
 	| shift value mask byteSize |
 	self assert: atomicType < FFITypeSingleFloat.
 
-	atomicType = FFITypeBool ifTrue:[
-			"Make sure bool honors the byte size requested"
-			byteSize := calloutState ffiRetHeader bitAnd: FFIStructSizeMask.
-			value := byteSize = 4
-						ifTrue:[retVal]
-						ifFalse:[retVal bitAnd: 1 << (byteSize * 8) - 1].
-			^value = 0
-				ifTrue:[interpreterProxy falseObject]
-				ifFalse:[interpreterProxy trueObject]].
-	atomicType <= FFITypeSignedInt ifTrue:[
-		"these are all generall integer returns"
-		atomicType <= FFITypeSignedShort ifTrue:[
-			"byte/short. first extract partial word, then sign extend"
+	atomicType = FFITypeBool ifTrue:
+		["Make sure bool honors the byte size requested"
+		 byteSize := calloutState ffiRetHeader bitAnd: FFIStructSizeMask.
+		 value := byteSize = (self sizeof: retVal)
+					ifTrue:[retVal]
+					ifFalse:[retVal bitAnd: 1 << (byteSize * 8) - 1].
+		 ^value = 0
+			ifTrue:[interpreterProxy falseObject]
+			ifFalse:[interpreterProxy trueObject]].
+	atomicType <= FFITypeSignedInt ifTrue:
+		["these are all generall integer returns"
+		atomicType <= FFITypeSignedShort ifTrue:
+			["byte/short. first extract partial word, then sign extend"
 			shift := (atomicType >> 1) * 8. "# of significant bits"
 			value := retVal bitAnd: (1 << shift - 1). 
-			(atomicType anyMask: 1) ifTrue:[
-				"make the guy signed"
+			(atomicType anyMask: 1) ifTrue:
+				["make the guy signed"
 				mask := 1 << (shift-1).
 				value := (value bitAnd: mask-1) - (value bitAnd: mask)].
 			^interpreterProxy integerObjectOf: value].
@@ -1161,35 +1162,31 @@ ThreadedFFIPlugin >> ffiReturnPointer: retVal ofType: retType in: calloutState [
 		(atomicType >> 1) = (FFITypeSignedChar >> 1) ifTrue: "String return"
 			[^self ffiReturnCStringFrom: (self cCoerceSimple: retVal to: #usqInt)].
 		"generate external data"
-		interpreterProxy pushRemappableOop: retType.
-		oop := interpreterProxy 
-				instantiateClass: interpreterProxy classExternalAddress 
-				indexableSize: 4.
-		ptr := interpreterProxy firstIndexableField: oop.
-		ptr at: 0 put: (self cCoerceSimple: retVal to: #sqInt).
-		interpreterProxy pushRemappableOop: oop. "preserve for gc"
-		retOop := interpreterProxy 
-				instantiateClass: interpreterProxy classExternalData 
-				indexableSize: 0.
-		oop := interpreterProxy popRemappableOop. "external address"
-		interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
-		oop := interpreterProxy popRemappableOop. "return type"
-		interpreterProxy storePointer: 1 ofObject: retOop withValue: oop.
+		self remapOop: retType in:
+			[oop := interpreterProxy
+						instantiateClass: interpreterProxy classExternalAddress 
+						indexableSize: 4.
+			ptr := interpreterProxy firstIndexableField: oop.
+			ptr at: 0 put: (self cCoerceSimple: retVal to: #sqInt).
+			self remapOop: oop in:
+				[retOop := interpreterProxy 
+								instantiateClass: interpreterProxy classExternalData 
+								indexableSize: 0].
+			interpreterProxy storePointer: 0 ofObject: retOop withValue: oop].
+		interpreterProxy storePointer: 1 ofObject: retOop withValue: retType.
 		^interpreterProxy methodReturnValue: retOop].
 	"non-atomic pointer return"
-	interpreterProxy pushRemappableOop: retClass. "preserve for gc"
 	classOop := (calloutState ffiRetHeader anyMask: FFIFlagStructure)
 					ifTrue:[interpreterProxy classByteArray]
 					ifFalse:[interpreterProxy classExternalAddress].
-	oop := interpreterProxy 
-			instantiateClass: classOop
-			indexableSize: 4.
+	self remapOop: retClass in:
+		[oop := interpreterProxy 
+					instantiateClass: classOop
+					indexableSize: 4].
 	ptr := interpreterProxy firstIndexableField: oop.
 	ptr at: 0 put: (self cCoerceSimple: retVal to: #sqInt).
-	retClass := interpreterProxy popRemappableOop. "return class"
-	interpreterProxy pushRemappableOop: oop. "preserve for gc"
-	retOop := interpreterProxy instantiateClass: retClass indexableSize: 0.
-	oop := interpreterProxy popRemappableOop. "external address"
+	self remapOop: oop in:
+		[retOop := interpreterProxy instantiateClass: retClass indexableSize: 0].
 	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
 	^interpreterProxy methodReturnValue: retOop
 ]
