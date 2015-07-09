@@ -9,4 +9,5 @@ LocalePlugin \
 UnicodePlugin \
 UnixOSProcessPlugin \
 UUIDPlugin \
+WeDoPlugin \
 XDisplayControlPlugin

@@ -6,6 +6,7 @@ AsynchFilePlugin \
 B2DPlugin \
 BitBltPlugin \
 BMPReadWriterPlugin \
+CameraPlugin \
 #CroquetPlugin \
 ZipPlugin \
 DropPlugin \
@@ -14,9 +15,9 @@ FFTPlugin \
 FileCopyPlugin \
 FilePlugin \
 FloatArrayPlugin \
-FloatMathPlugin \
+#FloatMathPlugin \
 #IA32ABI \
-JoystickTabletPlugin \
+#JoystickTabletPlugin \
 JPEGReaderPlugin \
 JPEGReadWriter2Plugin \
 Klatt \
@@ -26,6 +27,7 @@ MIDIPlugin \
 MiscPrimitivePlugin \
 Mpeg3Plugin \
 RePlugin \
+ScratchPlugin \
 SecurityPlugin \
 SerialPlugin \
 SocketPlugin \
