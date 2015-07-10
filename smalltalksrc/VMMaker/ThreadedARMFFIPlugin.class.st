@@ -120,11 +120,12 @@ ThreadedARMFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: call
 	(calloutState ffiRetHeader anyMask: FFIFlagPointer+FFIFlagStructure) ifTrue:
 		["Note: Order is important here since FFIFlagPointer + FFIFlagStructure is used to represent
 		 'typedef void* VoidPointer' and VoidPointer must be returned as pointer *not* as struct."
-		^(calloutState ffiRetHeader anyMask: FFIFlagPointer)
+		 (calloutState ffiRetHeader anyMask: FFIFlagPointer)
 			ifTrue:
-				[self ffiReturnPointer: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState]
+				[oop := self ffiReturnPointer: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState]
 			ifFalse:
-				[self ffiReturnStruct: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState]].
+				[oop := self ffiReturnStruct: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
+		 ^oop].
 	
 	(atomicType >> 1) = (FFITypeSingleFloat > 1)
 		ifTrue:
@@ -169,7 +170,7 @@ ThreadedARMFFIPlugin >> ffiPushPointer: pointer in: calloutState [
 	<inline: true>
 	calloutState integerRegisterIndex < NumIntRegArgs
 		ifTrue:
-			[calloutState integerRegisters at: calloutState integerRegisterIndex put: pointer.
+			[calloutState integerRegisters at: calloutState integerRegisterIndex put: pointer asInteger.
 			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
 		ifFalse:
 			[calloutState currentArg + 4 > calloutState limit ifTrue:

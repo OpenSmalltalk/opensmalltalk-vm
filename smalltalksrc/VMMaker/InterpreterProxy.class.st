@@ -1045,7 +1045,7 @@ InterpreterProxy >> synthesizeStackFor: receiver with: args [
 
 { #category : #other }
 InterpreterProxy >> tenuringIncrementalGC [
-	<returnTypeC: #sqInt>
+	<returnTypeC: #void>
 	Smalltalk forceTenuring; garbageCollectMost
 ]
 
