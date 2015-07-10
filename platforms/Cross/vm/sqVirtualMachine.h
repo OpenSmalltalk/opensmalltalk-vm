@@ -202,8 +202,8 @@ typedef struct VirtualMachine {
 	sqInt (*classExternalFunction)(void);
 	sqInt (*classExternalLibrary)(void);
 	sqInt (*classExternalStructure)(void);
-	sqInt (*ioLoadModuleOfLength)(sqInt modIndex, sqInt modLength);
-	sqInt (*ioLoadSymbolOfLengthFromModule)(sqInt fnIndex, sqInt fnLength, sqInt handle);
+	void *(*ioLoadModuleOfLength)(sqInt modIndex, sqInt modLength);
+	void *(*ioLoadSymbolOfLengthFromModule)(sqInt fnIndex, sqInt fnLength, sqInt handle);
 	sqInt (*isInMemory)(sqInt address);
 
 #endif

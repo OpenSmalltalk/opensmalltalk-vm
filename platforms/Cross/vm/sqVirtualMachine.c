@@ -165,8 +165,8 @@ sqInt classExternalData(void);
 sqInt classExternalFunction(void);
 sqInt classExternalLibrary(void);
 sqInt classExternalStructure(void);
-sqInt ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength);
-sqInt ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, sqInt moduleHandle);
+void *ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength);
+void *ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, sqInt moduleHandle);
 sqInt isInMemory(sqInt address);
 sqInt classAlien(void); /* Alien FFI */
 sqInt classUnsafeAlien(void); /* Alien FFI */
