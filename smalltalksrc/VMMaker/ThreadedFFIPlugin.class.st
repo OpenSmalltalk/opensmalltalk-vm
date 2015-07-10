@@ -1435,7 +1435,7 @@ ThreadedFFIPlugin >> primitiveFFIAllocate [
 			indexableSize: 4.
 	ptr := interpreterProxy firstIndexableField: oop.
 	ptr at: 0 put: addr.
-	interpreterProxy pop: 2 thenPush: oop
+	^interpreterProxy pop: 2 thenPush: oop
 ]
 
 { #category : #primitives }
@@ -1475,7 +1475,7 @@ ThreadedFFIPlugin >> primitiveFFIDoubleAtPut [
 	interpreterProxy failed ifTrue:[^0].
 	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
 	self cCode:'((int*)addr)[1] = ((int*)(&floatValue))[1]'.
-	interpreterProxy pop: 3 thenPush: floatOop
+	^interpreterProxy pop: 3 thenPush: floatOop
 ]
 
 { #category : #primitives }
@@ -1512,7 +1512,7 @@ ThreadedFFIPlugin >> primitiveFFIFloatAtPut [
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 4.
 	interpreterProxy failed ifTrue:[^0].
 	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
-	interpreterProxy pop: 3 thenPush: floatOop
+	^interpreterProxy pop: 3 thenPush: floatOop
 ]
 
 { #category : #primitives }
@@ -1582,7 +1582,7 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAt [
 					ifTrue:[interpreterProxy signed32BitIntegerFor: value]
 					ifFalse:[interpreterProxy positive32BitIntegerFor: value].
 	].
-	interpreterProxy pop: 4 thenPush: value
+	^interpreterProxy pop: 4 thenPush: value
 ]
 
 { #category : #primitives }
@@ -1619,7 +1619,7 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAtPut [
 			ifFalse:[	self cCode: '*((short int *) addr) = value' 
 						inSmalltalk: [interpreterProxy shortAt: addr put: value]].
 	] ifFalse:[interpreterProxy longAt: addr put: value].
-	interpreterProxy pop: 5 thenPush: valueOop
+	^interpreterProxy pop: 5 thenPush: valueOop
 ]
 
 { #category : #primitives }
