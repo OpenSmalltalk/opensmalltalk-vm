@@ -6446,13 +6446,33 @@ Cogit >> halt: aString [
 ]
 
 { #category : #'simulation only' }
+Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: evaluable [
+	self assert: aProcessorSimulationTrap type = #call.
+	processor
+		simulateLeafCallOf: aProcessorSimulationTrap address
+		nextpc: aProcessorSimulationTrap nextpc
+		memory: coInterpreter memory.
+	self recordInstruction: {'(simulated call of '. aProcessorSimulationTrap address. '/'. evaluable selector. ')'}.
+	evaluable valueWithArguments: (processor
+										postCallArgumentsNumArgs: evaluable numArgs
+										in: coInterpreter memory).
+	self recordInstruction: {'(simulated return to '. processor retpcIn: coInterpreter memory. ')'}.
+	processor
+		smashCallerSavedRegistersWithValuesFrom: 16r80000000 by: objectMemory wordSize;
+		simulateLeafReturnIn: coInterpreter memory
+]
+
+{ #category : #'simulation only' }
 Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 	<doNotGenerate>
 	| evaluable function result savedFramePointer savedStackPointer savedArgumentCount rpc |
 	evaluable := simulatedTrampolines at: aProcessorSimulationTrap address.
-	function := evaluable
-					isBlock ifTrue: ['aBlock; probably some plugin primitive']
-					ifFalse: [evaluable selector].
+	function := evaluable isBlock
+					ifTrue: ['aBlock; probably some plugin primitive']
+					ifFalse:
+						[evaluable receiver == backEnd ifTrue:
+							[^self handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: evaluable].
+						 evaluable selector].
 	function ~~ #ceBaseFrameReturn: ifTrue:
 		[coInterpreter assertValidExternalStackPointers].
 	(function beginsWith: 'ceShort') ifTrue:
