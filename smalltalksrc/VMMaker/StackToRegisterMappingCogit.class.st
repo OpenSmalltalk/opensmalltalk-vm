@@ -2648,7 +2648,7 @@ StackToRegisterMappingCogit >> genPushClosureCopyCopiedValuesBytecode [
 StackToRegisterMappingCogit >> genPushEnclosingObjectAt: level [
 	"Uncached push enclosing object"
 	optStatus isReceiverResultRegLive: false.
-	self ssAllocateCallReg: SendNumArgsReg.
+	self ssAllocateCallReg: SendNumArgsReg and: ReceiverResultReg.
 	self MoveCq: level R: SendNumArgsReg.
 	self CallRT: ceEnclosingObjectTrampoline.
 	^self ssPushRegister: ReceiverResultReg
