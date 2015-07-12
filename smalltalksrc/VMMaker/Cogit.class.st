@@ -6447,6 +6447,7 @@ Cogit >> halt: aString [
 
 { #category : #'simulation only' }
 Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: evaluable [
+
 	self assert: aProcessorSimulationTrap type = #call.
 	processor
 		simulateLeafCallOf: aProcessorSimulationTrap address
@@ -6458,7 +6459,7 @@ Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: 
 										in: coInterpreter memory).
 	self recordInstruction: {'(simulated return to '. processor retpcIn: coInterpreter memory. ')'}.
 	processor
-		smashCallerSavedRegistersWithValuesFrom: 16r80000000 by: objectMemory wordSize;
+		smashABICallerSavedRegistersWithValuesFrom: 16r80000000 by: objectMemory wordSize;
 		simulateLeafReturnIn: coInterpreter memory
 ]
 
@@ -9615,7 +9616,9 @@ Cogit >> simulatedTrampolineFor: selectorOrAddress [
 										ifTrue: [coInterpreter]
 										ifFalse: [(objectMemory respondsTo: selectorOrAddress)
 											ifTrue: [objectMemory]
-											ifFalse: [self notify: 'cannot find receiver for ', selectorOrAddress]]])
+											ifFalse: [(backEnd respondsTo: selectorOrAddress)
+												ifTrue:[backEnd]
+												ifFalse:[self notify: 'cannot find receiver for ', selectorOrAddress]]]])
 				selector: selectorOrAddress
 				arguments: (1 to: selectorOrAddress numArgs) asArray].
 	^address
