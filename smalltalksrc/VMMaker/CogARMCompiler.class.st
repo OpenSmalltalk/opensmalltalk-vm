@@ -303,6 +303,23 @@ CogARMCompiler >> adds: destReg rn: srcReg imm: immediate ror: rot [
 	^self type: 1 op: AddOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
 
+{ #category : #simulation }
+CogARMCompiler >> aeabiDiv: dividend Mod: divisor [
+"simulate the __aeabi_idivmod call"
+	|result|
+
+	cogit processor r0: (result :=dividend quo: divisor).
+	cogit processor r1: (dividend rem: divisor).
+	^result
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> aeabiDivModFunctionAddr [
+"return the address of the __aeabi_idivmod() call provided by the ARM low level libs to do an integer divide that returns the quo in R0 and rem in R1"
+	<var: #'__aeabi_idivmod' declareC: 'extern void __aeabi_idivmod(int dividend, ind divisor)'>
+	^self cCode: '__aeabi_idivmod' inSmalltalk:[#aeabiDiv:Mod:]
+]
+
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> and: destReg rn: srcReg imm: immediate ror: rot [
 "Remember the ROR is doubled by the cpu so use 30>>1 etc
@@ -410,7 +427,7 @@ CogARMCompiler >> callerSavedRegisterMask [
 { #category : #testing }
 CogARMCompiler >> canDivQuoRem [
 	<inline: true>
-	^false
+	^true
 ]
 
 { #category : #testing }
@@ -2054,6 +2071,38 @@ CogARMCompiler >> genAlignCStackSavingRegisters: saveRegs numArgs: numArgs wordA
 { #category : #'abstract instructions' }
 CogARMCompiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstractRegQuotient Rem: abstractRegRemainder [
 "Currently no instruction level support for divide on ARM. See also #canDivQuoRem"
+	| rDividend rDivisor rQuotient rRemainder divRemFunctionAddr |
+
+	self assert: abstractRegDividend ~= abstractRegDivisor.
+	self assert: abstractRegQuotient ~= abstractRegRemainder.
+	rDividend := self concreteRegister: abstractRegDividend.
+	rDivisor := self concreteRegister: abstractRegDivisor.
+	rDividend = CArg0Reg ifFalse:[
+		"we need to move the value in rDividend to CArg0Reg. Best to double check if rDivisor is already using it first"
+		rDivisor = CArg0Reg ifTrue:[ "oh dear; we also need to move rDivisor's value out of the way first.. I'll move it to CArg1Reg and if some nitwit has managed to put rDividend there they deserve the crash"
+			rDividend = CArg1Reg ifTrue:[self error: 'register choices in genDivR:R:Quo:Rem: made life impossible'].
+			cogit MoveR: rDivisor R: CArg1Reg.
+			"and update rDivisor or we get buggerd by the next clause"
+			rDivisor := CArg1Reg].
+		cogit MoveR: rDividend R: CArg0Reg.
+	].
+	rDivisor = CArg1Reg ifFalse:[
+		cogit MoveR: rDivisor R: CArg1Reg].
+	divRemFunctionAddr := self aeabiDivModFunctionAddr.
+	cogit backEnd saveAndRestoreLinkRegAround:
+		[cogit CallFullRT: (self cCode: [divRemFunctionAddr asUnsignedInteger]
+					   inSmalltalk: [cogit simulatedTrampolineFor: divRemFunctionAddr])].
+	"Now we need to move the r0/1 results back to rQuotient & rRemainder"
+	rQuotient := self concreteRegister: abstractRegQuotient.
+	rRemainder := self concreteRegister: abstractRegRemainder.
+	rQuotient = CArg0Reg ifFalse:["oh good grief, not again"
+		cogit MoveR: CArg0Reg R: rQuotient.
+		rQuotient = CArg1Reg ifTrue:[self error: 'register choices in genDivR:R:Quo:Rem: made life impossible'] ].
+	rRemainder = CArg1Reg  ifFalse:[
+		cogit MoveR: CArg1Reg R: rRemainder].
+	
+				
+
 ]
 
 { #category : #assertions }
