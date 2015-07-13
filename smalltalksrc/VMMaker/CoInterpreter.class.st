@@ -1369,89 +1369,74 @@ CoInterpreter >> ceCounterTripped: condition [
 ]
 
 { #category : #trampolines }
-CoInterpreter >> ceDynamicSuperSend: selector to: rcvr numArgs: numArgs [
-	"Entry-point for an unlinked dynamic super send in a CogMethod.  Smalltalk stack looks like
-					receiver
-					args
-		head sp ->	sender return pc
-		
-	If an MNU then defer to handleMNUInMachineCodeTo:... which will dispatch the MNU and
-	may choose to allocate a closed PIC with a fast MNU dispatch for this send.  Otherwise
-	attempt to link the send site as efficiently as possible.  All link attempts may fail; e.g.
-	because we're out of code memory.
-
-	Continue execution via either executeMethod or interpretMethodFromMachineCode:
-	depending on whether the target method is cogged or not."
+CoInterpreter >> ceDynamicSuperSend: cacheAddress receiver: methodReceiver [
+	"A dynamic super send cache missed."
+	| nsSendCache methodReceiverClassTag cogMethod errSelIdx |
 	<api>
 	<option: #NewspeakVM>
-	| classTag errSelIdx cogMethod |
 	<inline: false>
+	<var: #nsSendCache type: #'NSSendCache *'>
 	<var: #cogMethod type: #'CogMethod *'>
-	<var: #newCogMethod type: #'CogMethod *'>
 
 	cogit assertCStackWellAligned.
-	self assert: (objectMemory addressCouldBeOop: rcvr).
-	self sendBreakpoint: selector receiver: rcvr.
+	self assert: (objectMemory addressCouldBeOop: methodReceiver).
+	self deny: (objectMemory isOopForwarded: methodReceiver).
 
-	classTag := objectMemory fetchClassTagOf: rcvr.
-	messageSelector := selector.
-	argumentCount := numArgs.
+	nsSendCache := self cCoerceSimple: cacheAddress to: #'NSSendCache *'.
+	messageSelector := nsSendCache selector.
+	argumentCount := nsSendCache numArgs.
 	method := (self mframeHomeMethod: framePointer) methodObject.
+
+	self assert: (self stackValue: argumentCount + 1 "ret addr") = methodReceiver.
+
+	methodReceiverClassTag := objectMemory fetchClassTagOf: methodReceiver.
 
 	(self
 		inlineLookupInNSMethodCacheSel: messageSelector
-		classTag: classTag
+		classTag: methodReceiverClassTag
 		method: method
 		lookupRule: LookupRuleDynamicSuper)
 			ifTrue:
-				["check for coggability because method is in the cache"
-				self
-					ifAppropriateCompileToNativeCode: newMethod
-					selector: selector]
+				[self assert: localAbsentReceiverOrZero = 0.
+				"check for coggability because method is in the cache"
+				self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]
 			ifFalse:
-				[(objectMemory isOopForwarded: selector) ifTrue:
-					[self
-						ceDynamicSuperSend: (self handleForwardedSelectorFaultFor: selector)
-						to: rcvr
-						numArgs: numArgs.
-					self unreachable].
-				 (objectMemory isForwardedClassTag: classTag) ifTrue:
-					[self
-						ceDynamicSuperSend: selector
-						to: (self handleForwardedSendFaultForReceiver: rcvr stackDelta: 1 "skip return pc")
-						numArgs: numArgs.
-					self unreachable].
-				lkupClassTag := classTag.
-				errSelIdx := self lookupDynamicSuperSendNoMNU: rcvr.
+				[self deny: (objectMemory isOopForwarded: messageSelector).
+				self deny: (objectMemory isForwardedClassTag: methodReceiverClassTag).
+				lkupClassTag := methodReceiverClassTag.
+				errSelIdx := self lookupDynamicSuperSendNoMNU: methodReceiver.
 				errSelIdx ~= 0 ifTrue:
 					[self assert: errSelIdx == SelectorDoesNotUnderstand.
 					self handleMNU: errSelIdx 
-						InMachineCodeTo: rcvr
-						classForMessage: (objectMemory classForClassTag: classTag).
+						InMachineCodeTo: methodReceiver
+						classForMessage: (objectMemory classForClassTag: methodReceiverClassTag).
 					self unreachable].
-				self addNewMethodToNSCache: LookupRuleSelf].
+				self addNewMethodToNSCache: LookupRuleDynamicSuper].
 
-	"Method found and has a cog method.  Attempt to link to it."
-	(self maybeMethodHasCogMethod: newMethod) ifTrue:
-		[cogMethod := self cogMethodOf: newMethod.
-		 cogMethod selector = objectMemory nilObject
-			ifTrue: [cogit setSelectorOf: cogMethod to: selector]
-			ifFalse:
-				["Deal with anonymous accessors, e.g. in Newspeak.  The cogMethod may not have the correct
-				  selector.  If not, try and compile a new method with the correct selector."
-				 cogMethod selector ~= selector ifTrue:
-					[(cogit cog: newMethod selector: selector) ifNotNil:
-						[:newCogMethod| cogMethod := newCogMethod]]].
-		 cogMethod selector = selector ifTrue:
-			[cogit
-				linkSendAt: (stackPages longAt: stackPointer)
-				in: (self mframeHomeMethod: framePointer)
-				to: cogMethod
-				offset: cogit entryOffset
-				receiver: rcvr].
-		 instructionPointer := self popStack.
-		 self executeNewMethod.
-		 self unreachable].
+	(self maybeMethodHasCogMethod: newMethod) 
+		ifTrue: [
+			cogMethod := self cogMethodOf: newMethod.
+			cogMethod selector = objectMemory nilObject
+				ifTrue: [cogit setSelectorOf: cogMethod to: messageSelector]
+				ifFalse: ["Deal with anonymous accessors, e.g. in Newspeak.
+					The cogMethod may not have the
+					correct selector. If not, try and compile a new method
+					with the correct selector."
+					cogMethod selector ~= messageSelector ifTrue: [
+							(cogit cog: newMethod selector: messageSelector)
+								ifNotNil: [:newCogMethod | cogMethod := newCogMethod]]].
+			cogMethod selector = messageSelector
+				ifTrue:
+					[cogit
+						linkNSSendCache: nsSendCache 
+						classTag: methodReceiverClassTag
+						enclosingObject: 0
+						target: cogMethod
+						caller: self mframeHomeMethodExport]
+				ifFalse: ["Out of code memory. Fall through to interpret."].
+			instructionPointer := self popStack.
+			self executeNewMethod.
+			self unreachable].
 	instructionPointer := self popStack.
 	self interpretMethodFromMachineCode.
 	self unreachable.
@@ -1849,89 +1834,74 @@ CoInterpreter >> ceReturnToInterpreter: anOop [
 ]
 
 { #category : #trampolines }
-CoInterpreter >> ceSelfSend: selector to: rcvr numArgs: numArgs [
-	"Entry-point for an unlinked self send in a CogMethod.  Smalltalk stack looks like
-					receiver
-					args
-		head sp ->	sender return pc
-		
-	If an MNU then defer to handleMNUInMachineCodeTo:... which will dispatch the MNU and
-	may choose to allocate a closed PIC with a fast MNU dispatch for this send.  Otherwise
-	attempt to link the send site as efficiently as possible.  All link attempts may fail; e.g.
-	because we're out of code memory.
-
-	Continue execution via either executeMethod or interpretMethodFromMachineCode:
-	depending on whether the target method is cogged or not."
+CoInterpreter >> ceSelfSend: cacheAddress receiver: methodReceiver [
+	"A self send cache missed."
+	| nsSendCache methodReceiverClassTag cogMethod errSelIdx |
 	<api>
 	<option: #NewspeakVM>
-	| classTag errSelIdx cogMethod |
 	<inline: false>
+	<var: #nsSendCache type: #'NSSendCache *'>
 	<var: #cogMethod type: #'CogMethod *'>
-	<var: #newCogMethod type: #'CogMethod *'>
 
 	cogit assertCStackWellAligned.
-	self assert: (objectMemory addressCouldBeOop: rcvr).
-	self sendBreakpoint: selector receiver: rcvr.
+	self assert: (objectMemory addressCouldBeOop: methodReceiver).
+	self deny: (objectMemory isOopForwarded: methodReceiver).
 
-	classTag := objectMemory fetchClassTagOf: rcvr.
-	messageSelector := selector.
-	argumentCount := numArgs.
+	nsSendCache := self cCoerceSimple: cacheAddress to: #'NSSendCache *'.
+	messageSelector := nsSendCache selector.
+	argumentCount := nsSendCache numArgs.
 	method := (self mframeHomeMethod: framePointer) methodObject.
+
+	self assert: (self stackValue: argumentCount + 1 "ret addr") = methodReceiver.
+
+	methodReceiverClassTag := objectMemory fetchClassTagOf: methodReceiver.
 
 	(self
 		inlineLookupInNSMethodCacheSel: messageSelector
-		classTag: classTag
+		classTag: methodReceiverClassTag
 		method: method
 		lookupRule: LookupRuleSelf)
 			ifTrue:
-				["check for coggability because method is in the cache"
-				self
-					ifAppropriateCompileToNativeCode: newMethod
-					selector: selector]
+				[self assert: localAbsentReceiverOrZero = 0.
+				"check for coggability because method is in the cache"
+				self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]
 			ifFalse:
-				[(objectMemory isOopForwarded: selector) ifTrue:
-					[self
-						ceSelfSend: (self handleForwardedSelectorFaultFor: selector)
-						to: rcvr
-						numArgs: numArgs.
-					self unreachable].
-			 	(objectMemory isForwardedClassTag: classTag) ifTrue:
-					[self
-						ceSelfSend: selector
-						to: (self handleForwardedSendFaultForReceiver: rcvr stackDelta: 1 "skip return pc")
-						numArgs: numArgs.
-					self unreachable].
-				lkupClassTag := classTag.
-				errSelIdx := self lookupOuterSendNoMNU: rcvr depth: 0.
+				[self deny: (objectMemory isOopForwarded: messageSelector).
+				self deny: (objectMemory isForwardedClassTag: methodReceiverClassTag).
+				lkupClassTag := methodReceiverClassTag.
+				errSelIdx := self lookupOuterSendNoMNU: methodReceiver depth: 0.
 				errSelIdx ~= 0 ifTrue:
 					[self assert: errSelIdx == SelectorDoesNotUnderstand.
 					self handleMNU: errSelIdx 
-						InMachineCodeTo: rcvr
-						classForMessage: (objectMemory classForClassTag: classTag).
+						InMachineCodeTo: methodReceiver
+						classForMessage: (objectMemory classForClassTag: methodReceiverClassTag).
 					self unreachable].
 				self addNewMethodToNSCache: LookupRuleSelf].
 
-	"Method found and has a cog method.  Attempt to link to it."
-	(self maybeMethodHasCogMethod: newMethod) ifTrue:
-		[cogMethod := self cogMethodOf: newMethod.
-		 cogMethod selector = objectMemory nilObject
-			ifTrue: [cogit setSelectorOf: cogMethod to: selector]
-			ifFalse:
-				["Deal with anonymous accessors, e.g. in Newspeak.  The cogMethod may not have the correct
-				  selector.  If not, try and compile a new method with the correct selector."
-				 cogMethod selector ~= selector ifTrue:
-					[(cogit cog: newMethod selector: selector) ifNotNil:
-						[:newCogMethod| cogMethod := newCogMethod]]].
-		 cogMethod selector = selector ifTrue:
-			[cogit
-				linkSendAt: (stackPages longAt: stackPointer)
-				in: (self mframeHomeMethod: framePointer)
-				to: cogMethod
-				offset: cogit entryOffset
-				receiver: rcvr].
-		 instructionPointer := self popStack.
-		 self executeNewMethod.
-		 self unreachable].
+	(self maybeMethodHasCogMethod: newMethod) 
+		ifTrue: [
+			cogMethod := self cogMethodOf: newMethod.
+			cogMethod selector = objectMemory nilObject
+				ifTrue: [cogit setSelectorOf: cogMethod to: messageSelector]
+				ifFalse: ["Deal with anonymous accessors, e.g. in Newspeak.
+					The cogMethod may not have the
+					correct selector. If not, try and compile a new method
+					with the correct selector."
+					cogMethod selector ~= messageSelector ifTrue: [
+							(cogit cog: newMethod selector: messageSelector)
+								ifNotNil: [:newCogMethod | cogMethod := newCogMethod]]].
+			cogMethod selector = messageSelector
+				ifTrue:
+					[cogit
+						linkNSSendCache: nsSendCache 
+						classTag: methodReceiverClassTag
+						enclosingObject: 0
+						target: cogMethod
+						caller: self mframeHomeMethodExport]
+				ifFalse: ["Out of code memory. Fall through to interpret."].
+			instructionPointer := self popStack.
+			self executeNewMethod.
+			self unreachable].
 	instructionPointer := self popStack.
 	self interpretMethodFromMachineCode.
 	self unreachable.

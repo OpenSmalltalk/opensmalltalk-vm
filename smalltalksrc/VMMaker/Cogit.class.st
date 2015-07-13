@@ -3059,31 +3059,6 @@ Cogit >> ceSICMiss: receiver [
 	entryPoint := backEnd callTargetFromReturnAddress: outerReturn.
 
 	self assert: targetMethod selector ~= objectMemory nilObject.
-	self cppIf: NewspeakVM ifTrue:
-		[| callerMethod annotation |
-		 self assert: targetMethod asInteger + cmEntryOffset = entryPoint.
-		 callerMethod := coInterpreter mframeHomeMethod: coInterpreter getFramePointer.
-		 self assert: (outerReturn
-						between: callerMethod asUnsignedInteger + cmNoCheckEntryOffset
-						and: callerMethod asUnsignedInteger + callerMethod blockSize).
-		 annotation := self annotationForMcpc: outerReturn in: callerMethod.
-		 self assert: annotation >= IsSendCall.
-		 "Avoid the effort of implementing PICs for the relatively high dynamic frequency
-		  self send and simply rebind the send site (for now)."
-		 annotation = IsNSSelfSend ifTrue:
-			[coInterpreter
-				ceSelfSend: targetMethod selector
-				to: receiver
-				numArgs: targetMethod cmNumArgs.
-			self unreachable].
-		 "Avoid the effort of implementing PICs for the relatively low dynamic frequency
-		  dynamic super send and simply rebind the send site."
-		 annotation = IsNSDynamicSuperSend ifTrue:
-			[coInterpreter
-				ceDynamicSuperSend: targetMethod selector
-				to: receiver
-				numArgs: targetMethod cmNumArgs.
-			self unreachable]].
 	self assert: targetMethod asInteger + cmEntryOffset = entryPoint.
 
 	self lookup: targetMethod selector
@@ -5540,7 +5515,7 @@ Cogit >> genMethodAbortTrampoline [
 ]
 
 { #category : #initialization }
-Cogit >> genNSSendTrampolineFor: aRoutine numArgs: numArgs called: aString [
+Cogit >> genNSSendTrampolineFor: aRoutine numArgs: numArgs enclosingObjectCheck: eoCheckFlag called: aString [
 	"ReceiverResultReg: method receiver
 	SendNumArgsReg: the NSSendCache cache"
 	<option: #NewspeakVM>
@@ -5557,22 +5532,25 @@ Cogit >> genNSSendTrampolineFor: aRoutine numArgs: numArgs called: aString [
 	self MoveMw: NSCClassTagIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
 	self CmpR: ClassReg R: TempReg.
 	jumpMiss := self JumpNonZero: 0.
-	self MoveMw: NSCEnclosingObjectIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
-	self CmpCq: 0 R: TempReg.
-	jumpItsTheReceiverStupid := self JumpZero: 0.
-	self MoveR: TempReg R: ReceiverResultReg.
-	"Now set the stacked receiver, if needed.  If there are reg args this is
-	 not required; see genPushRegisterArgsForNumArgs:numArgs: below."
-	(self numRegArgs = 0 or: [numArgs > self numRegArgs]) ifTrue:
-		[numArgs >= (NumSendTrampolines - 1)
-			ifTrue: "arbitrary argument count"
-				[self MoveMw: NSCNumArgsIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
-				 backEnd hasLinkRegister ifFalse:
-					[self AddCq: 1 R: TempReg]..
-				 self MoveR: ReceiverResultReg Xwr: TempReg R: SPReg]
-			ifFalse: "Known argument count"
-				[self MoveR: TempReg Mw: (backEnd hasLinkRegister ifTrue: [0] ifFalse: [1]) + numArgs * objectMemory wordSize r: SPReg]].
-	jumpItsTheReceiverStupid jmpTarget: self Label.
+
+	eoCheckFlag ifTrue:
+		[self MoveMw: NSCEnclosingObjectIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
+		self CmpCq: 0 R: TempReg.
+		jumpItsTheReceiverStupid := self JumpZero: 0.
+		self MoveR: TempReg R: ReceiverResultReg.
+		"Now set the stacked receiver, if needed.  If there are reg args this is
+		 not required; see genPushRegisterArgsForNumArgs:numArgs: below."
+		(self numRegArgs = 0 or: [numArgs > self numRegArgs]) ifTrue:
+			[numArgs >= (NumSendTrampolines - 1)
+				ifTrue: "arbitrary argument count"
+					[self MoveMw: NSCNumArgsIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
+					 backEnd hasLinkRegister ifFalse:
+						[self AddCq: 1 R: TempReg]..
+					 self MoveR: ReceiverResultReg Xwr: TempReg R: SPReg]
+				ifFalse: "Known argument count"
+					[self MoveR: TempReg Mw: (backEnd hasLinkRegister ifTrue: [0] ifFalse: [1]) + numArgs * objectMemory wordSize r: SPReg]].
+		jumpItsTheReceiverStupid jmpTarget: self Label].
+
 	self MoveMw: NSCTargetIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
 	self JumpR: TempReg.
 
@@ -5594,7 +5572,7 @@ Cogit >> genNSSendTrampolineFor: aRoutine numArgs: numArgs called: aString [
 		arg: nil
 		saveRegs: false
 		pushLinkReg: true
-		resultReg: ReceiverResultReg  "Never happens?"
+		resultReg: nil
 		appendOpcodes: true
 ]
 
@@ -6173,21 +6151,19 @@ Cogit >> generateNewspeakSendTrampolines [
 		[:numArgs|
 		selfSendTrampolines
 			at: numArgs
-			put: (self genTrampolineFor: #ceSelfSend:to:numArgs:
-					  called: (self trampolineName: 'ceSelfSend' numArgs: numArgs)
-					  arg: ClassReg
-					  arg: ReceiverResultReg
-					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
+			put: (self 
+				genNSSendTrampolineFor: #ceSelfSend:receiver:
+				numArgs: numArgs enclosingObjectCheck: false
+				called: (self trampolineName: 'ceSelfSend' numArgs: numArgs))].
 
 	0 to: NumSendTrampolines - 1 do:
 		[:numArgs|
 		dynamicSuperSendTrampolines
 			at: numArgs
-			put: (self genTrampolineFor: #ceDynamicSuperSend:to:numArgs:
-					  called: (self trampolineName: 'ceDynSuperSend' numArgs: numArgs)
-					  arg: ClassReg
-					  arg: ReceiverResultReg
-					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
+			put: (self 
+				genNSSendTrampolineFor: #ceDynamicSuperSend:receiver:
+				numArgs: numArgs enclosingObjectCheck: false
+				called: (self trampolineName: 'ceDynamicSuperSend' numArgs: numArgs))].
 
 	0 to: NumSendTrampolines - 1 do:
 		[:numArgs|
@@ -6195,7 +6171,7 @@ Cogit >> generateNewspeakSendTrampolines [
 			at: numArgs
 			put: (self 
 				genNSSendTrampolineFor: #ceImplicitReceiverSend:receiver:
-				numArgs: numArgs
+				numArgs: numArgs enclosingObjectCheck: true
 				called: (self trampolineName: 'ceImplicitReceiverSend' numArgs: numArgs))].
 
 	0 to: NumSendTrampolines - 1 do:
@@ -6204,7 +6180,7 @@ Cogit >> generateNewspeakSendTrampolines [
 			at: numArgs
 			put: (self 
 				genNSSendTrampolineFor: #ceOuterSend:receiver:
-				numArgs: numArgs
+				numArgs: numArgs enclosingObjectCheck: true
 				called: (self trampolineName: 'ceOuterSend' numArgs: numArgs))].
 
 
