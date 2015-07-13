@@ -596,7 +596,9 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 	(self organization listAtCategoryNamed: #'abstract instructions') do:
 		[:s|
 		aCCodeGenerator addSelectorTranslation: s to: 'g', (aCCodeGenerator cFunctionNameFor: s)].
-	aCCodeGenerator addSelectorTranslation: #halt: to: 'haltmsg'
+	aCCodeGenerator addSelectorTranslation: #halt: to: 'haltmsg'.
+
+	self activeCompilerClass declareCVarsIn: aCCodeGenerator
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -6447,7 +6449,6 @@ Cogit >> halt: aString [
 
 { #category : #'simulation only' }
 Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: evaluable [
-	<doNotGenerate>
 
 	self assert: aProcessorSimulationTrap type = #call.
 	processor
