@@ -87,6 +87,12 @@ GdbARMAlien >> cResultRegister: aValue [
 ]
 
 { #category : #'accessing-abstract' }
+GdbARMAlien >> callerABISavedSmashRegisterAccessors [
+"limited list of registers to clear out when simulating a naBI call; we need R1 sometimes since many abi calls return 2 results or maybe a 64bit dual-reg value, and LR has to be left alone becasue a leaf call doesn't push it"
+	^#( r2: r3: )
+]
+
+{ #category : #'accessing-abstract' }
 GdbARMAlien >> callerSavedSmashRegisterAccessors [
 	^#(r0: r1: r2: r3: lr:)
 ]
@@ -1306,6 +1312,14 @@ GdbARMAlien >> sl [
 GdbARMAlien >> sl: anUnsignedInteger [
 
 	^self unsignedLongAt: 53 put: anUnsignedInteger
+]
+
+{ #category : #'accessing-abstract' }
+GdbARMAlien >> smashABICallerSavedRegistersWithValuesFrom: base by: step [
+	self callerABISavedSmashRegisterAccessors
+	   withIndexDo:
+		[:accessor :index|
+		self perform: accessor with: index - 1 * step + base]
 ]
 
 { #category : #'accessing-abstract' }
