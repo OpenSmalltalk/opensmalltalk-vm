@@ -6447,6 +6447,7 @@ Cogit >> halt: aString [
 
 { #category : #'simulation only' }
 Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: evaluable [
+	<doNotGenerate>
 
 	self assert: aProcessorSimulationTrap type = #call.
 	processor
