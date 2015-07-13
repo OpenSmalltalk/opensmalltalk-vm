@@ -127,13 +127,13 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(2 238 238 genExtSendBytecode isMapped)
 		(2 239 239 genExtSendSuperBytecode isMapped)
 		(2 240 240 genExtSendAbsentImplicitBytecode isMapped hasIRC)
-		(2 241 241 genExtSendAbsentDynamicSuperBytecode isMapped)
+		(2 241 241 genExtSendAbsentDynamicSuperBytecode isMapped hasIRC)
 
 		(2 242 242 genExtUnconditionalJump	branch isMapped "because of interrupt check" v4:Long:Branch:Distance:)
 		(2 243 243 genExtJumpIfTrue			branch isBranchTrue isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
 		(2 244 244 genExtJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
 
-		(2 245 245 genExtSendAbsentSelfBytecode isMapped)
+		(2 245 245 genExtSendAbsentSelfBytecode isMapped hasIRC)
 
 		(2 246 248	unknownBytecode)
 
@@ -1984,6 +1984,30 @@ SimpleStackBasedCogit >> genMustBeBooleanTrampolineFor: boolean called: trampoli
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genNSSend: selector numArgs: numArgs depth: depth sendTable: sendTable [
+	<var: #sendTable type: #'sqInt *'>
+	| nsSendCache |
+	(objectMemory isYoung: selector) ifTrue:
+		[hasYoungReferent := true].
+
+	nsSendCache := theIRCs + (NumOopsPerNSC * objectMemory bytesPerOop * indexOfIRC).
+	indexOfIRC := indexOfIRC + 1.
+	self assert: (objectMemory isInOldSpace: nsSendCache).
+	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs depth: depth.
+
+	"This leaves the method receiver on the stack, which might not be the implicit receiver.
+	 But the lookup trampoline will establish the on-stack receiver once it locates it."
+	self marshallAbsentReceiverSendArguments: numArgs.
+
+	"Load the cache last so it is a fixed distance from the call."
+	self MoveUniqueCw: nsSendCache R: SendNumArgsReg.
+	self CallNewspeakSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
+
+	self PushR: ReceiverResultReg.
+	^0
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPopStackBytecode [
 	self AddCq: objectMemory wordSize R: SPReg.
 	^0
@@ -3161,8 +3185,11 @@ SimpleStackBasedCogit >> genSend: selector numArgs: numArgs sendTable: sendTable
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendAbsentDynamicSuper: selector numArgs: numArgs [
 	<inline: false>
-	self marshallAbsentReceiverSendArguments: numArgs.
-	^self genSend: selector numArgs: numArgs sendTable: dynamicSuperSendTrampolines
+	^self
+		genNSSend: selector
+		numArgs: numArgs
+		depth: LookupRuleDynamicSuper
+		sendTable: dynamicSuperSendTrampolines
 ]
 
 { #category : #'bytecode generators' }
@@ -3175,41 +3202,17 @@ SimpleStackBasedCogit >> genSendAbsentImplicit0ArgsBytecode [
 SimpleStackBasedCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
 	<inline: false>
 	^self
-		genSendAbsentImplicitOrOuter: selector
+		genNSSend: selector
 		numArgs: numArgs
-		depth: 255 "Unused"
+		depth: LookupRuleImplicit
 		sendTable: implicitReceiverSendTrampolines
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSendAbsentImplicitOrOuter: selector numArgs: numArgs depth: depth sendTable: sendTable [
-	<var: #sendTable type: #'sqInt *'>
-	| nsSendCache |
-	(objectMemory isYoung: selector) ifTrue:
-		[hasYoungReferent := true].
-
-	nsSendCache := theIRCs + (NumOopsPerNSC * objectMemory bytesPerOop * indexOfIRC).
-	indexOfIRC := indexOfIRC + 1.
-	self assert: (objectMemory isInOldSpace: nsSendCache).
-	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs depth: depth.
-
-	"This leaves the method receiver on the stack, which might not be the implicit receiver.
-	 But the lookup trampoline will establish the on-stack receiver once it locates it."
-	self marshallAbsentReceiverSendArguments: numArgs.
-
-	"Load the cache last so it is a fixed distance from the call."
-	self MoveUniqueCw: nsSendCache R: SendNumArgsReg.
-	self CallNewspeakSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
-
-	self PushR: ReceiverResultReg.
-	^0
 ]
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendAbsentOuter: selector numArgs: numArgs depth: depth [
 	<inline: false>
 	^self
-		genSendAbsentImplicitOrOuter: selector
+		genNSSend: selector
 		numArgs: numArgs
 		depth: depth
 		sendTable: outerSendTrampolines
@@ -3218,8 +3221,11 @@ SimpleStackBasedCogit >> genSendAbsentOuter: selector numArgs: numArgs depth: de
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendAbsentSelf: selector numArgs: numArgs [
 	<inline: false>
-	self marshallAbsentReceiverSendArguments: numArgs.
-	^self genSend: selector numArgs: numArgs sendTable: selfSendTrampolines
+	^self
+		genNSSend: selector
+		numArgs: numArgs
+		depth: LookupRuleSelf
+		sendTable: selfSendTrampolines
 ]
 
 { #category : #'bytecode generator support' }
