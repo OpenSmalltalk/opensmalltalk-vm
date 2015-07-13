@@ -309,13 +309,13 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(2 238 238 genExtSendBytecode isMapped)
 		(2 239 239 genExtSendSuperBytecode isMapped)
 		(2 240 240 genExtSendAbsentImplicitBytecode isMapped hasIRC)
-		(2 241 241 genExtSendAbsentDynamicSuperBytecode isMapped)
+		(2 241 241 genExtSendAbsentDynamicSuperBytecode isMapped hasIRC)
 
 		(2 242 242 genExtUnconditionalJump	branch isMapped "because of interrupt check" v4:Long:Branch:Distance:)
 		(2 243 243 genExtJumpIfTrue			branch isBranchTrue isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
 		(2 244 244 genExtJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
 
-		(2 245 245	genExtSendAbsentSelfBytecode isMapped)
+		(2 245 245	genExtSendAbsentSelfBytecode isMapped hasIRC)
 
 		(2 246 248	unknownBytecode)
 
@@ -2015,6 +2015,33 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 		appendOpcodes: true
 ]
 
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genNSSend: selector numArgs: numArgs depth: depth sendTable: sendTable [
+	<var: #sendTable type: #'sqInt *'>
+	| nsSendCache |
+	(objectMemory isYoung: selector) ifTrue:
+		[hasYoungReferent := true].
+
+	nsSendCache := theIRCs + (NumOopsPerNSC * objectMemory bytesPerOop * indexOfIRC).
+	indexOfIRC := indexOfIRC + 1.
+	self assert: (objectMemory isInOldSpace: nsSendCache).
+	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs depth: depth.
+
+	self ssAllocateCallReg: SendNumArgsReg.
+
+	"This may leave the method receiver on the stack, which might not be the implicit receiver.
+	 But the lookup trampoline will establish an on-stack receiver once it locates it."
+	self marshallAbsentReceiverSendArguments: numArgs.
+
+	"Load the cache last so it is a fixed distance from the call."
+	self MoveUniqueCw: nsSendCache R: SendNumArgsReg.
+	self CallNewspeakSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
+
+	optStatus isReceiverResultRegLive: false.
+	self ssPushRegister: ReceiverResultReg.
+	^0
+]
+
 { #category : #'inline primitive generators' }
 StackToRegisterMappingCogit >> genNullaryInlinePrimitive: prim [
 	"Nullary inline primitives."
@@ -2831,47 +2858,6 @@ StackToRegisterMappingCogit >> genReturnTopFromMethod [
 StackToRegisterMappingCogit >> genSend: selector numArgs: numArgs [
 	self marshallSendArguments: numArgs.
 	^self genMarshalledSend: selector numArgs: numArgs sendTable: ordinarySendTrampolines
-]
-
-{ #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genSendAbsentDynamicSuper: selector numArgs: numArgs [
-	<inline: false>
-	self marshallAbsentReceiverSendArguments: numArgs.
-	^self genMarshalledSend: selector numArgs: numArgs sendTable: dynamicSuperSendTrampolines
-]
-
-{ #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genSendAbsentImplicitOrOuter: selector numArgs: numArgs depth: depth sendTable: sendTable [
-	<var: #sendTable type: #'sqInt *'>
-	| nsSendCache |
-	(objectMemory isYoung: selector) ifTrue:
-		[hasYoungReferent := true].
-
-	nsSendCache := theIRCs + (NumOopsPerNSC * objectMemory bytesPerOop * indexOfIRC).
-	indexOfIRC := indexOfIRC + 1.
-	self assert: (objectMemory isInOldSpace: nsSendCache).
-	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs depth: depth.
-
-	self ssAllocateCallReg: SendNumArgsReg.
-
-	"This may leave the method receiver on the stack, which might not be the implicit receiver.
-	 But the lookup trampoline will establish an on-stack receiver once it locates it."
-	self marshallAbsentReceiverSendArguments: numArgs.
-
-	"Load the cache last so it is a fixed distance from the call."
-	self MoveUniqueCw: nsSendCache R: SendNumArgsReg.
-	self CallNewspeakSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
-
-	optStatus isReceiverResultRegLive: false.
-	self ssPushRegister: ReceiverResultReg.
-	^0
-]
-
-{ #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genSendAbsentSelf: selector numArgs: numArgs [
-	<inline: false>
-	self marshallAbsentReceiverSendArguments: numArgs.
-	^self genMarshalledSend: selector numArgs: numArgs sendTable: selfSendTrampolines
 ]
 
 { #category : #'bytecode generator support' }
@@ -3739,52 +3725,6 @@ StackToRegisterMappingCogit >> generateMissAbortTrampolines [
 		picMissTrampolines
 			at: numArgs
 			put: (self genPICMissTrampolineFor: numArgs)]
-]
-
-{ #category : #initialization }
-StackToRegisterMappingCogit >> generateNewspeakSendTrampolines [
-	"Self send, dynamic super send, implicit receiver send, and outer send."
-	"Override to generate code to push the register arg(s) for <= numRegArg arity sends."
-	<option: #NewspeakVM>
-	0 to: NumSendTrampolines - 1 do:
-		[:numArgs|
-		selfSendTrampolines
-			at: numArgs
-			put: (self genSendTrampolineFor: #ceSelfSend:to:numArgs:
-					  numArgs: numArgs
-					  called: (self trampolineName: 'ceSelfSend' numArgs: numArgs)
-					  arg: ClassReg
-					  arg: ReceiverResultReg
-					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
-
-	0 to: NumSendTrampolines - 1 do:
-		[:numArgs|
-		dynamicSuperSendTrampolines
-			at: numArgs
-			put: (self genSendTrampolineFor: #ceDynamicSuperSend:to:numArgs:
-					  numArgs: numArgs
-					  called: (self trampolineName: 'ceDynSuperSend' numArgs: numArgs)
-					  arg: ClassReg
-					  arg: ReceiverResultReg
-					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
-
-	0 to: NumSendTrampolines - 1 do:
-		[:numArgs|
-		implicitReceiverSendTrampolines
-			at: numArgs
-			put: (self 
-				genNSSendTrampolineFor: #ceImplicitReceiverSend:receiver:
-				numArgs: numArgs
-				called: (self trampolineName: 'ceImplicitReceiverSend' numArgs: numArgs))].
-
-	0 to: NumSendTrampolines - 1 do:
-		[:numArgs|
-		outerSendTrampolines
-			at: numArgs
-			put: (self 
-				genNSSendTrampolineFor: #ceOuterSend:receiver:
-				numArgs: numArgs
-				called: (self trampolineName: 'ceOuterSend' numArgs: numArgs))]
 ]
 
 { #category : #initialization }
