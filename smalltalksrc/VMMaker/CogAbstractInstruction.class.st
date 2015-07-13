@@ -87,6 +87,11 @@ CogAbstractInstruction class >> byteSizeForSimulator: aVMClass [
 ]
 
 { #category : #translation }
+CogAbstractInstruction class >> declareCVarsIn: aCCodeGenerator [
+	"Do nothing; subclasses that need to can add code in their own version."
+]
+
+{ #category : #translation }
 CogAbstractInstruction class >> defaultCompilerClass [
 	^self
 ]
