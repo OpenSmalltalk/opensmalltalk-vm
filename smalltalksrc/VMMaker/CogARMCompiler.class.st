@@ -306,6 +306,7 @@ CogARMCompiler >> adds: destReg rn: srcReg imm: immediate ror: rot [
 { #category : #simulation }
 CogARMCompiler >> aeabiDiv: dividend Mod: divisor [
 "simulate the __aeabi_idivmod call"
+	<doNotGenerate>
 	|result|
 
 	cogit processor r0: (result :=dividend quo: divisor).
@@ -316,8 +317,8 @@ CogARMCompiler >> aeabiDiv: dividend Mod: divisor [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> aeabiDivModFunctionAddr [
 "return the address of the __aeabi_idivmod() call provided by the ARM low level libs to do an integer divide that returns the quo in R0 and rem in R1"
-	<var: #'__aeabi_idivmod' declareC: 'extern void __aeabi_idivmod(int dividend, ind divisor)'>
-	^self cCode: '__aeabi_idivmod' inSmalltalk:[#aeabiDiv:Mod:]
+	<returnTypeC: #usqInt>
+	^self cCode: '(usqInt)__aeabi_idivmod' inSmalltalk:[#aeabiDiv:Mod:]
 ]
 
 { #category : #'ARM convenience instructions' }
@@ -2072,7 +2073,7 @@ CogARMCompiler >> genAlignCStackSavingRegisters: saveRegs numArgs: numArgs wordA
 CogARMCompiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstractRegQuotient Rem: abstractRegRemainder [
 "Currently no instruction level support for divide on ARM. See also #canDivQuoRem"
 	| rDividend rDivisor rQuotient rRemainder divRemFunctionAddr |
-
+	<var: #divRemFunctionAddr type: #usqInt>
 	self assert: abstractRegDividend ~= abstractRegDivisor.
 	self assert: abstractRegQuotient ~= abstractRegRemainder.
 	rDividend := self concreteRegister: abstractRegDividend.
@@ -2317,14 +2318,6 @@ CogARMCompiler >> hasVarBaseRegister [
 	 the base of commonly-accessed variables. On ARM we use R10 for this."
 	<inline: true>
 	^true "r10/sl"
-]
-
-{ #category : #'generate machine code' }
-CogARMCompiler >> initialize [
-	"This method intializes the Smalltalk instance.  The C instance is merely a struct and doesn't need initialization."
-	<doNotGenerate>
-	operands := CArrayAccessor on: (Array new: NumOperands).
-	machineCode := CArrayAccessor on: (Array new: self machineCodeWords)
 ]
 
 { #category : #'inline cacheing' }
