@@ -2315,7 +2315,6 @@ StackToRegisterMappingCogit >> genPrimitiveClosureValue [
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveDiv [
 	| jumpNotSI jumpZero jumpExact jumpSameSign convert |
-	"this is for primitive 12"
 	<var: #convert type: #'AbstractInstruction *'>
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
@@ -2357,7 +2356,6 @@ StackToRegisterMappingCogit >> genPrimitiveDiv [
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveDivide [
 	| jumpNotSI jumpZero jumpInexact jumpOverflow |
-	"this is for primitive 10"
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpInexact type: #'AbstractInstruction *'>
@@ -2422,7 +2420,6 @@ StackToRegisterMappingCogit >> genPrimitiveIdentityHash [
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveMod [
 	| jumpNotSI jumpZero jumpExact jumpSameSign |
-	"this is for primitive 11"
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpExact type: #'AbstractInstruction *'>
@@ -2542,7 +2539,6 @@ StackToRegisterMappingCogit >> genPrimitiveNotIdentical [
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveQuo [
 	| jumpNotSI jumpZero jumpOverflow |
-	"this is for primitive 13"
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpOverflow type: #'AbstractInstruction *'>
