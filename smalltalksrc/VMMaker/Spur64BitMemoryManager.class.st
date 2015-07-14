@@ -803,6 +803,18 @@ Spur64BitMemoryManager >> negativeSmallFloatZero [
 	^self smallFloatSignBit + self smallFloatTag
 ]
 
+{ #category : #simulation }
+Spur64BitMemoryManager >> newInputEventAccessorOfSize: numElements [
+	<doNotGenerate>
+	self flag: #endianness.
+	^(CPluggableAccessor on: (IntegerArray new: 16))
+		atBlock: [:obj :idx| (obj at: idx - 1 * 2) + ((obj at: idx - 1 * 2 + 1) << 32)]
+		atPutBlock: [:obj :idx :val|
+					obj at: idx - 1 * 2 put: (val bitAnd: 16rFFFFFFFF).
+					obj at: idx - 1 * 2 + 1 put: val >> 32.
+					val]
+]
+
 { #category : #'free space' }
 Spur64BitMemoryManager >> numFreeLists [
 	"Answer the number of free lists.  We use freeListsMask, a bitmap, to avoid

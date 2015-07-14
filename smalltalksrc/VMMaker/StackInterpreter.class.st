@@ -4898,6 +4898,7 @@ StackInterpreter >> doSignalSemaphoreWithIndex: index [
 	<api>
 	| xArray sema |
 	xArray := objectMemory splObj: ExternalObjectsArray.
+	self assert: (objectMemory isArray: xArray).
 	sema := objectMemory fetchPointer: index - 1 ofObject: xArray. "Note: semaphore indices are 1-based"
 	self assert: (objectMemory isOopForwarded: sema) not.
 	^(objectMemory isSemaphoreOop: sema)

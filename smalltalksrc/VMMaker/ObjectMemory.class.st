@@ -3951,6 +3951,12 @@ ObjectMemory >> minSmallInteger [
 	^-1073741824
 ]
 
+{ #category : #simulation }
+ObjectMemory >> newInputEventAccessorOfSize: numElements [
+	<doNotGenerate>
+	^CArrayAccessor on: (IntegerArray new: 8)
+]
+
 { #category : #'header access' }
 ObjectMemory >> newObjectHash [
 	"Answer a new 16-bit pseudo-random number for use as an identity hash."

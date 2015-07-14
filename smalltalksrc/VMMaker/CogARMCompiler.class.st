@@ -2324,16 +2324,12 @@ CogARMCompiler >> hasVarBaseRegister [
 	^true "r10/sl"
 ]
 
-{ #category : #initialization }
+{ #category : #'generate machine code' }
 CogARMCompiler >> initialize [
-	"This method intializes the Smalltalk instance. The C instance is
-	merely a struct and doesn't need initialization."
+	"This method intializes the Smalltalk instance.  The C instance is merely a struct and doesn't need initialization."
 	<doNotGenerate>
-	operands := CArrayAccessor
-				on: (Array new: NumOperands).
-	machineCode := CArrayAccessor
-				on: (Array new: self machineCodeWords)
-
+	operands := CArrayAccessor on: (Array new: NumOperands).
+	machineCode := CArrayAccessor on: (Array new: self machineCodeWords)
 ]
 
 { #category : #'inline cacheing' }
