@@ -679,6 +679,12 @@ Spur32BitMemoryManager >> minSmallInteger [
 	^-16r40000000
 ]
 
+{ #category : #simulation }
+Spur32BitMemoryManager >> newInputEventAccessorOfSize: numElements [
+	<doNotGenerate>
+	^CArrayAccessor on: (IntegerArray new: 8)
+]
+
 { #category : #'free space' }
 Spur32BitMemoryManager >> numFreeLists [
 	"Answer the number of free lists.  We use freeListsMask, a bitmap, to avoid
