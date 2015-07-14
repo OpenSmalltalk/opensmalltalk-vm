@@ -1,21 +1,13 @@
 "
-A StackInterpreterSimulatorMorphicModel handles Morphic callbacks and UI  for (some parts of ) the StackInterpreterSimulator.
+A SimulatorMorphicModel handles Morphic callbacks and UI  for (some parts of ) the simulator.
 
 I   handle event forwarding management..
 
 Currently, I am a listener to HandMorphs>>addPrimitiveEventListener. 
-I am added as a listener by StackInterpreterSimulatorMorph>>displayView (which probably  needs to change. tty)
-
-
-instance vars:
-
-stepping   when true the vm is running, but the user is stepping throught the stack--like a debugger. (not implemented: tty)
-
-
-sharedPools: EventSensorConstants
+I am added as a listener by SimulatorMorph>>displayView (which probably  needs to change. tty)
 "
 Class {
-	#name : #StackInterpreterSimulatorMorphicModel,
+	#name : #SimulatorMorphicModel,
 	#superclass : #Model,
 	#instVars : [
 		'vm',
@@ -30,7 +22,7 @@ Class {
 }
 
 { #category : #'class initialization' }
-StackInterpreterSimulatorMorphicModel class >> initialize [
+SimulatorMorphicModel class >> initialize [
 	"I want to keep it launchable by script only for now.
 	Eliot has a bunch of options that aren't really feasible for a Morphic first approach.
 	"
@@ -41,7 +33,7 @@ StackInterpreterSimulatorMorphicModel class >> initialize [
 ]
 
 { #category : #'instance creation' }
-StackInterpreterSimulatorMorphicModel class >> on: aStackInterpreterSimulator title: aString transcript: aTranscriptStream [
+SimulatorMorphicModel class >> on: aStackInterpreterSimulator title: aString transcript: aTranscriptStream [
 	| simmodel |
 	simmodel := self new.
 	simmodel 
@@ -52,7 +44,7 @@ StackInterpreterSimulatorMorphicModel class >> on: aStackInterpreterSimulator ti
 ]
 
 { #category : #'class initialization' }
-StackInterpreterSimulatorMorphicModel class >> registerInFlaps [
+SimulatorMorphicModel class >> registerInFlaps [
 "	Flaps 
 		registerQuad: 
 			{ #StackInterpreterSimulator. 
@@ -64,7 +56,7 @@ StackInterpreterSimulatorMorphicModel class >> registerInFlaps [
 ]
 
 { #category : #'class initialization' }
-StackInterpreterSimulatorMorphicModel class >> registerInOpenMenu [
+SimulatorMorphicModel class >> registerInOpenMenu [
 	(TheWorldMenu respondsTo: #registerOpenCommand:) ifTrue: [
 		TheWorldMenu unregisterOpenCommand: 'StackInterpreter Simulator'.
 		TheWorldMenu registerOpenCommand: {'StackInterpreter Simulator'. {self. #open}}].
@@ -72,111 +64,105 @@ StackInterpreterSimulatorMorphicModel class >> registerInOpenMenu [
 ]
 
 { #category : #'class initialization' }
-StackInterpreterSimulatorMorphicModel class >> registerWindowColor [
+SimulatorMorphicModel class >> registerWindowColor [
 	(Preferences windowColorFor: self name) = Color white
 		ifTrue: [ Preferences setWindowColorFor: self name to: (Color colorFrom: self windowColorSpecification brightColor) ].
 ]
 
 { #category : #'class initialization' }
-StackInterpreterSimulatorMorphicModel class >> unload [
+SimulatorMorphicModel class >> unload [
 	self 
 		unregisterFromOpenMenu;
 		unregisterFromFlaps.
 ]
 
 { #category : #'class initialization' }
-StackInterpreterSimulatorMorphicModel class >> unregisterFromFlaps [
+SimulatorMorphicModel class >> unregisterFromFlaps [
 	"Flaps 
 		unregisterQuadsWithReceiver: self;
 		replaceToolsFlap"
 ]
 
 { #category : #'class initialization' }
-StackInterpreterSimulatorMorphicModel class >> unregisterFromOpenMenu [
+SimulatorMorphicModel class >> unregisterFromOpenMenu [
 	 (TheWorldMenu respondsTo: #registerOpenCommand:)
 		ifTrue: [TheWorldMenu unregisterOpenCommand: 'StackInterpreter Simulator'].
 
 ]
 
 { #category : #'window color' }
-StackInterpreterSimulatorMorphicModel class >> windowColorSpecification [
+SimulatorMorphicModel class >> windowColorSpecification [
 	"Answer a WindowColorSpec object that declares my preference"
 
 	^ WindowColorSpec classSymbol: self name wording: 'StackInterpreter Simulator' brightColor: #(0.645 1.0 1.0)	pastelColor: #(0.886 1.0 1.0) helpMessage: 'A tool for simulating a Stack Interpreter Virtual Machine.'
 ]
 
 { #category : #accessing }
-StackInterpreterSimulatorMorphicModel >> bounds [
+SimulatorMorphicModel >> bounds [
 	^morph bounds.
 ]
 
 { #category : #'user interface' }
-StackInterpreterSimulatorMorphicModel >> byteCountText [
+SimulatorMorphicModel >> byteCountText [
 	^vm byteCountText
 ]
 
 { #category : #'user interface - squeakJS' }
-StackInterpreterSimulatorMorphicModel >> currentContextStack [
+SimulatorMorphicModel >> currentContextStack [
 	self flag: 'tty'.
 	^ 'Current Context Stack' printString asText
 ]
 
 { #category : #accessing }
-StackInterpreterSimulatorMorphicModel >> displayForm [
+SimulatorMorphicModel >> displayForm [
 	^ vm displayForm
 ]
 
 { #category : #accessing }
-StackInterpreterSimulatorMorphicModel >> displayView [
+SimulatorMorphicModel >> displayView [
 	^ vm displayView
 ]
 
 { #category : #accessing }
-StackInterpreterSimulatorMorphicModel >> displayView: anImageMorph [
+SimulatorMorphicModel >> displayView: anImageMorph [
 	vm displayView: anImageMorph
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> forceInterruptCheck [
+SimulatorMorphicModel >> forceInterruptCheck [
 	vm forceInterruptCheck
 "^UserDialogBoxMorph inform: 'Toggle Transcript' title: 'TODO:'"
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> fullDisplayUpdate [
+SimulatorMorphicModel >> fullDisplayUpdate [
 	vm fullDisplayUpdate
 "^UserDialogBoxMorph inform: 'Toggle Transcript' title: 'TODO:'"
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> hack [
+SimulatorMorphicModel >> hack [
 	UserDialogBoxMorph inform: (morph bounds printString) title: 'Hack:'
 ]
 
 { #category : #'event-forwarding' }
-StackInterpreterSimulatorMorphicModel >> handleListenEvent: aMorphicEvent [
-"The StackInterpreterSimulatorImageMorph  regsitered me (a StackInterpreterSimulatorMorphicModel ) with HandMorph>>addEventListener
+SimulatorMorphicModel >> handleListenEvent: aMorphicEvent [
+"The SimulatorImageMorph  regsitered me (a SimulatorMorphicModel ) with HandMorph>>addEventListener
 HandMorph then broadcasts events to all registered listeners at this method. See HandMorph>>sendListenPrimitiveEvent
 "
-	|evtBuf xtranslated ytranslated|
-	morph
-		ifNotNil:[
-			evtBuf := (StackInterpreterSimulatorEventTransformer default) degenerateEvent: aMorphicEvent. 
-			((evtBuf at: 1) = EventTypeMouse) & (morph bounds containsPoint: aMorphicEvent position)
-				ifTrue:[
-						xtranslated :=  (evtBuf at:3) - (morph bounds left) - 2 .  "<--heh"  
-						ytranslated :=  (evtBuf at:4) - (morph bounds top). 
-						evtBuf at: 3 put: xtranslated.
-						evtBuf at: 4 put: ytranslated.
-						vm queueForwardedEvent: evtBuf]]
-
-
-
-
+	| evtBuf xtranslated ytranslated |
+	morph ifNotNil:
+		[evtBuf := SimulatorEventTransformer default degenerateEvent: aMorphicEvent. 
+		 ((evtBuf at: 1) = EventTypeMouse and: [morph bounds containsPoint: aMorphicEvent position]) ifTrue:
+			[xtranslated :=  (evtBuf at:3) - (morph bounds left) - 2 .  "<--heh"  
+			ytranslated :=  (evtBuf at:4) - (morph bounds top). 
+			evtBuf at: 3 put: xtranslated.
+			evtBuf at: 4 put: ytranslated.
+			vm queueForwardedEvent: evtBuf]]
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> help [
+SimulatorMorphicModel >> help [
 	"Open up a workspace with explanatory info in it about the StackInterpreterSimulator"
 	Workspace new
 		contents: self helpText;
@@ -184,39 +170,39 @@ StackInterpreterSimulatorMorphicModel >> help [
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> helpText [
+SimulatorMorphicModel >> helpText [
 	^(String streamContents: [:str |
 		str nextPutAll:
 'Stack Intepreter Simulator Help Contents Go Here.']) translated
 ]
 
 { #category : #'user interface' }
-StackInterpreterSimulatorMorphicModel >> initialExtent [
+SimulatorMorphicModel >> initialExtent [
 	^ 1286@938
 ]
 
 { #category : #'initialize-release' }
-StackInterpreterSimulatorMorphicModel >> initialize [
+SimulatorMorphicModel >> initialize [
 	
 	title := 'StackInterpreter Simulator (Beta))'.
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> ioExit [
+SimulatorMorphicModel >> ioExit [
 	vm ioExit
 	displayView activeHand removeEventListener: self model.	"This is a bug as the user in vm ioExit may have cancelled the confirm t.m."
 "^UserDialogBoxMorph inform: 'Toggle Transcript' title: 'TODO:'"
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> loadImage [
+SimulatorMorphicModel >> loadImage [
 	^UserDialogBoxMorph inform: 'load image' title: 'TODO:'
 ]
 
 { #category : #accessing }
-StackInterpreterSimulatorMorphicModel >> morph [
+SimulatorMorphicModel >> morph [
 	"I need the bounds of my morph for filtering mouse events.
-       If there is a canned way of doing this besides this tight binding to my StackInterpreterSimulatorMorph,
+       If there is a canned way of doing this besides this tight binding to my SimulatorMorph,
 	then please refactor me.
 
       see my protocol event-forwarding for the gory details"
@@ -225,9 +211,9 @@ StackInterpreterSimulatorMorphicModel >> morph [
 ]
 
 { #category : #accessing }
-StackInterpreterSimulatorMorphicModel >> morph: aMorph [
+SimulatorMorphicModel >> morph: aMorph [
 	"I need the bounds of my morph for filtering mouse events.
-       If there is a canned way of doing this besides this tight binding to my StackInterpreterSimulatorMorph,
+       If there is a canned way of doing this besides this tight binding to my SimulatorMorph,
 	then please refactor me.
 
       see my protocol event-forwarding for the gory details"
@@ -236,23 +222,23 @@ StackInterpreterSimulatorMorphicModel >> morph: aMorph [
 ]
 
 { #category : #'user interface - squeakJS' }
-StackInterpreterSimulatorMorphicModel >> onItemClicked: anItem [
+SimulatorMorphicModel >> onItemClicked: anItem [
 	"I am an item in the current context display on the SqueakJS tree view".
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> options [
+SimulatorMorphicModel >> options [
 ^UserDialogBoxMorph inform: 'Options Popup--need checkboxes?' title: 'TODO:'
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> over [
+SimulatorMorphicModel >> over [
 	stepping:=true.
 ^UserDialogBoxMorph inform: 'Step Over' title: 'TODO:'
 ]
 
 { #category : #'user interface - squeakJS' }
-StackInterpreterSimulatorMorphicModel >> processesAndContextStack [
+SimulatorMorphicModel >> processesAndContextStack [
 	"just a stub. see top right panel at http://lively-web.org/users/bert/squeak.html  for what I intend to present"
 	self flag: 'tty'.
 	^ 'Processes and ContextStack' printString asText
@@ -260,29 +246,29 @@ StackInterpreterSimulatorMorphicModel >> processesAndContextStack [
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> reset [
+SimulatorMorphicModel >> reset [
 	^UserDialogBoxMorph inform: 'Reset' title: 'TODO:'
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> return [
+SimulatorMorphicModel >> return [
 ^UserDialogBoxMorph inform: 'Return' title: 'TODO:'
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> run [
+SimulatorMorphicModel >> run [
 	stepping:=false.
 	vm run
 "^UserDialogBoxMorph inform: 'Run' title: 'TODO:'"
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> send [
+SimulatorMorphicModel >> send [
 ^UserDialogBoxMorph inform: 'Send' title: 'TODO:'
 ]
 
 { #category : #'user interface - squeakJS' }
-StackInterpreterSimulatorMorphicModel >> specialObjectsAndActiveContext [
+SimulatorMorphicModel >> specialObjectsAndActiveContext [
 	"just a stub. see top left panel at http://lively-web.org/users/bert/squeak.html  for what I intend to present"
 	self flag: 'tty'.
 	^ 'Special Objects and Active Context' printString asText
@@ -290,58 +276,58 @@ StackInterpreterSimulatorMorphicModel >> specialObjectsAndActiveContext [
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> step [
+SimulatorMorphicModel >> step [
 	stepping:=true.
 ^UserDialogBoxMorph inform: 'Step' title: 'TODO:'
 ]
 
 { #category : #accessing }
-StackInterpreterSimulatorMorphicModel >> stepping [
+SimulatorMorphicModel >> stepping [
 	^stepping
 ]
 
 { #category : #accessing }
-StackInterpreterSimulatorMorphicModel >> stepping: aBoolean [
+SimulatorMorphicModel >> stepping: aBoolean [
 	stepping := aBoolean
 ]
 
 { #category : #accessing }
-StackInterpreterSimulatorMorphicModel >> title: aString [
+SimulatorMorphicModel >> title: aString [
 	title := aString
 ]
 
 { #category : #'buttons callbacks' }
-StackInterpreterSimulatorMorphicModel >> toggleTranscript [
+SimulatorMorphicModel >> toggleTranscript [
 	vm toggleTranscriptForSimulatorMorph: self transcript.
 "^UserDialogBoxMorph inform: 'Toggle Transcript' title: 'TODO:'"
 ]
 
 { #category : #accessing }
-StackInterpreterSimulatorMorphicModel >> transcript [
+SimulatorMorphicModel >> transcript [
 	^vm transcript
 ]
 
 { #category : #accessing }
-StackInterpreterSimulatorMorphicModel >> transcript: aTranscriptStream [
+SimulatorMorphicModel >> transcript: aTranscriptStream [
 	vm transcript: aTranscriptStream.
 ]
 
 { #category : #'user interface' }
-StackInterpreterSimulatorMorphicModel >> utilitiesMenu: aMenuMorph [ 
+SimulatorMorphicModel >> utilitiesMenu: aMenuMorph [ 
 	^vm utilitiesMenu: aMenuMorph
 ]
 
 { #category : #accessing }
-StackInterpreterSimulatorMorphicModel >> vm [
+SimulatorMorphicModel >> vm [
 	^vm
 ]
 
 { #category : #accessing }
-StackInterpreterSimulatorMorphicModel >> vm: aVMSimulator [
+SimulatorMorphicModel >> vm: aVMSimulator [
 	vm := aVMSimulator
 ]
 
 { #category : #'user interface' }
-StackInterpreterSimulatorMorphicModel >> windowTitle [
+SimulatorMorphicModel >> windowTitle [
 	^ title translated
 ]

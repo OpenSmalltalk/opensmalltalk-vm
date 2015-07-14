@@ -1,17 +1,14 @@
 "
-A StackInterpreterSimulatorEventUnwrapper takes events as wrapped by HandMorph and converts them to a form a StackInterpreterSimulator can deal with.
+A SimulatorEventTransformer takes events as wrapped by HandMorph and converts them to a form a StackInterpreterSimulator can deal with.
 
 See HandMorph >> handleEvent to see what the wrapping entails.
-See HandMorph >> ProcessEvents  or EventSensor >> fetchMoreEvents for examples of what an unwrapped event looks like when given to the system
-
-
-for pre-wrapping
+See HandMorph >> ProcessEvents  or EventSensor >> fetchMoreEvents for examples of what an unwrapped event looks like when given to the system for pre-wrapping.
 
 Instance Variables
 
 "
 Class {
-	#name : #StackInterpreterSimulatorEventTransformer,
+	#name : #SimulatorEventTransformer,
 	#superclass : #Object,
 	#classVars : [
 		'Default'
@@ -23,12 +20,17 @@ Class {
 }
 
 { #category : #'initialize-release' }
-StackInterpreterSimulatorEventTransformer class >> default [
+SimulatorEventTransformer class >> default [
 	^Default ifNil:[Default := self new]
 ]
 
+{ #category : #accessing }
+SimulatorEventTransformer class >> eventTypeMouse [
+	^EventTypeMouse
+]
+
 { #category : #'event transformation' }
-StackInterpreterSimulatorEventTransformer >> degenerateEvent: aMorphicEvent [
+SimulatorEventTransformer >> degenerateEvent: aMorphicEvent [
 	"tty. Bert had mentioned a distinction between events and polling events and that Morphic could handle both.
 	I don't know what he is talking about."	
 	| evt type |
@@ -48,7 +50,7 @@ StackInterpreterSimulatorEventTransformer >> degenerateEvent: aMorphicEvent [
 ]
 
 { #category : #'event transformation' }
-StackInterpreterSimulatorEventTransformer >> degenerateKeyboardEvent: aMorphicEvent [
+SimulatorEventTransformer >> degenerateKeyboardEvent: aMorphicEvent [
 	| evt |
 	"see HandMorph>>generateKeyboardEvent and EventSensor class comment"
 	evt := {2 . 0 . 0 . 0 . 0. 0 . 0 . 0}.
@@ -65,7 +67,7 @@ StackInterpreterSimulatorEventTransformer >> degenerateKeyboardEvent: aMorphicEv
 ]
 
 { #category : #'event transformation' }
-StackInterpreterSimulatorEventTransformer >> degenerateMouseButtonEvent: aMorphicEvent [
+SimulatorEventTransformer >> degenerateMouseButtonEvent: aMorphicEvent [
 	| evt |
 	"see HandMorph>>generateMouseEvent"
 	evt := {1 . 0 . 0 . 0 . 0. 0 . 0 . 0}.
@@ -82,7 +84,7 @@ StackInterpreterSimulatorEventTransformer >> degenerateMouseButtonEvent: aMorphi
 ]
 
 { #category : #'event transformation' }
-StackInterpreterSimulatorEventTransformer >> degenerateMouseEvent: aMorphicEvent [
+SimulatorEventTransformer >> degenerateMouseEvent: aMorphicEvent [
 	"see HandMorph>>generateMouseEvent"
 
 	(aMorphicEvent type) = #mouseMove
@@ -97,7 +99,7 @@ StackInterpreterSimulatorEventTransformer >> degenerateMouseEvent: aMorphicEvent
 ]
 
 { #category : #'event transformation' }
-StackInterpreterSimulatorEventTransformer >> degenerateMouseMoveEvent: aMorphicEvent [
+SimulatorEventTransformer >> degenerateMouseMoveEvent: aMorphicEvent [
 	| evt |
 	"see HandMorph>>generateMouseEvent"
 	evt := {1 . 0 . 0 . 0 . 0. 0 . 0 . 0}.

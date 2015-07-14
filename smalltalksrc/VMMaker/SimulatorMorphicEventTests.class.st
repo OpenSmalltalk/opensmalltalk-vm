@@ -1,5 +1,5 @@
 Class {
-	#name : #StackInterpreterSimulatorMorphicEventTests,
+	#name : #SimulatorMorphicEventTests,
 	#superclass : #TestCase,
 	#pools : [
 		'EventSensorConstants'
@@ -8,32 +8,32 @@ Class {
 }
 
 { #category : #'test event' }
-StackInterpreterSimulatorMorphicEventTests >> testKeyEventDegeneration [
+SimulatorMorphicEventTests >> testKeyEventDegeneration [
 	|aMorphicEvent evtBuf type|
 	aMorphicEvent := HandMorph new generateKeyboardEvent: {2 . 0. 0. 0. 0. 0. 0. 0}.
-	evtBuf := (StackInterpreterSimulatorEventTransformer default) degenerateEvent: aMorphicEvent. 
+	evtBuf := SimulatorEventTransformer default degenerateEvent: aMorphicEvent. 
 	type := evtBuf at:1.
 	self assert:(type = EventTypeKeyboard).
 
 ]
 
 { #category : #'test event' }
-StackInterpreterSimulatorMorphicEventTests >> testMouseEventDegeneration [
+SimulatorMorphicEventTests >> testMouseEventDegeneration [
 	|aMorphicEvent evtBuf type|
 	"see class comment in EventSensor browse"
 	aMorphicEvent := HandMorph new generateMouseEvent: {1 . 0. 0. 0. 0. 0. 0. 0}.
-	evtBuf := (StackInterpreterSimulatorEventTransformer default) degenerateEvent: aMorphicEvent. 
+	evtBuf := SimulatorEventTransformer default degenerateEvent: aMorphicEvent. 
 	type := evtBuf at:1.
 	self assert:(type = EventTypeMouse).
 
 ]
 
 { #category : #'test event' }
-StackInterpreterSimulatorMorphicEventTests >> testNullEventDegeneration [
+SimulatorMorphicEventTests >> testNullEventDegeneration [
 	|aMorphicEvent evtBuf type|
 	"Test a bad morphic event returns a null event"	"see class comment in EventSensor browse"
 	aMorphicEvent := UserInputEvent new.
-	evtBuf := (StackInterpreterSimulatorEventTransformer default) degenerateEvent: aMorphicEvent. 
+	evtBuf := SimulatorEventTransformer default degenerateEvent: aMorphicEvent. 
 	type := evtBuf at:1.
 	self assert:(type = EventTypeNone).
 
@@ -41,7 +41,18 @@ StackInterpreterSimulatorMorphicEventTests >> testNullEventDegeneration [
 ]
 
 { #category : #'test tight coupling' }
-StackInterpreterSimulatorMorphicEventTests >> testStackInterpreterSimulatorDisplayViewAccess [
+SimulatorMorphicEventTests >> testSimulatorDisplayViewAccess [
+	"There is tight coupling between the morph,model and vm simulator on the simulators displayView variable
+	 this test makes sure it is accesible and is an ImageMorph."
+	
+self assert: ((SystemNavigation allImplementorsOf: #displayView localTo: StackInterpreterSimulator) size = 1).
+self assert: ((SystemNavigation allImplementorsOf: #displayView: localTo: StackInterpreterSimulator)size = 1).
+
+
+]
+
+{ #category : #'test tight coupling' }
+SimulatorMorphicEventTests >> testStackInterpreterSimulatorDisplayViewAccess [
 	"There is tight coupling between the morph,model and vm simulator on the simulators displayView variable
 	 this test makes sure it is accesible and is an ImageMorph."
 	
