@@ -2324,6 +2324,18 @@ CogARMCompiler >> hasVarBaseRegister [
 	^true "r10/sl"
 ]
 
+{ #category : #initialization }
+CogARMCompiler >> initialize [
+	"This method intializes the Smalltalk instance. The C instance is
+	merely a struct and doesn't need initialization."
+	<doNotGenerate>
+	operands := CArrayAccessor
+				on: (Array new: NumOperands).
+	machineCode := CArrayAccessor
+				on: (Array new: self machineCodeWords)
+
+]
+
 { #category : #'inline cacheing' }
 CogARMCompiler >> inlineCacheTagAt: callSiteReturnAddress [
 	"Answer the inline cache tag for the return address of a send."
