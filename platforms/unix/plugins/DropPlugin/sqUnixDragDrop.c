@@ -48,6 +48,22 @@ extern struct VirtualMachine  *interpreterProxy;
 extern int		       uxDropFileCount;
 extern char		     **uxDropFileNames;
 
+#if defined(SQUEAK_INTERNAL_PLUGIN)
+extern SQFile * fileValueOf(sqInt objectPointer);
+#else
+/*	Return a pointer to the first byte of of the SQFile data structure file
+	record within
+	anSQFileRecord, which is expected to be a ByteArray of size
+	self>>fileRecordSize. 
+ */
+
+	/* OSProcessPlugin>>#fileValueOf: */
+static SQFile *
+fileValueOf(sqInt anSQFileRecord)
+{
+	return interpreterProxy->arrayValueOf(anSQFileRecord);
+}
+#endif /* defined(SQUEAK_INTERNAL_PLUGIN) */
 
 sqInt dropInit(void)     { return 1; }
 sqInt dropShutdown(void) { return 1; }

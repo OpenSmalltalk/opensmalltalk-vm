@@ -185,11 +185,13 @@ doSignalExternalSemaphores(int externalSemaphoreTableSize)
 {
 	int i, switched;
 
+	sqLowLevelMFence();
 	if (!checkSignalRequests)
 		return 0;
 
 	switched = 0;
 	checkSignalRequests = 0;
+	sqLowLevelMFence();
 
 	if (useTideA) {
 		useTideA = 0;
