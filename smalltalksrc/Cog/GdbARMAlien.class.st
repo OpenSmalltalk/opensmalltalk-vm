@@ -86,17 +86,6 @@ GdbARMAlien >> cResultRegister: aValue [
 	self r0: aValue
 ]
 
-{ #category : #'accessing-abstract' }
-GdbARMAlien >> callerABISavedSmashRegisterAccessors [
-"limited list of registers to clear out when simulating a naBI call; we need R1 sometimes since many abi calls return 2 results or maybe a 64bit dual-reg value, and LR has to be left alone becasue a leaf call doesn't push it"
-	^#( r2: r3: )
-]
-
-{ #category : #'accessing-abstract' }
-GdbARMAlien >> callerSavedSmashRegisterAccessors [
-	^#(r0: r1: r2: r3: lr:)
-]
-
 { #category : #accessing }
 GdbARMAlien >> cflag [
 "The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
@@ -1316,16 +1305,18 @@ GdbARMAlien >> sl: anUnsignedInteger [
 
 { #category : #'accessing-abstract' }
 GdbARMAlien >> smashABICallerSavedRegistersWithValuesFrom: base by: step [
-	self callerABISavedSmashRegisterAccessors
-	   withIndexDo:
+	"limited list of registers to clear out when simulating an ABI call.
+	 Smash neither R0 nor R1 since many abi calls return 2 results or a 64-bit dual-reg value.
+	 LR has to be left alone becasue a leaf call doesn't push it."
+
+	#(r2: r3:) withIndexDo:
 		[:accessor :index|
 		self perform: accessor with: index - 1 * step + base]
 ]
 
 { #category : #'accessing-abstract' }
 GdbARMAlien >> smashCallerSavedRegistersWithValuesFrom: base by: step [
-	self callerSavedSmashRegisterAccessors
-	   withIndexDo:
+	#(r0: r1: r2: r3: lr:) withIndexDo:
 		[:accessor :index|
 		self perform: accessor with: index - 1 * step + base]
 ]
