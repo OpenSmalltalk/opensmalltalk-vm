@@ -697,6 +697,21 @@ StackInterpreterSimulator >> halfWordLowInLong32: long32 [
 	^self subclassResponsibility
 ]
 
+{ #category : #'I/O primitives support' }
+StackInterpreterSimulator >> handleListenEvent: aMorphicEvent [
+	"openAsMorph regsitered me for listen events via HandMorph>>addEventListener.
+	Transform the listen event and add it to my event queue."
+	| evtBuf xtranslated ytranslated |
+	evtBuf := SimulatorEventTransformer default degenerateEvent: aMorphicEvent.
+	(evtBuf first = SimulatorEventTransformer eventTypeMouse
+	 and: [displayView bounds containsPoint: aMorphicEvent position]) ifTrue:
+		[xtranslated := (evtBuf at:3) - displayView bounds left - 2. "<--heh"
+		 ytranslated := (evtBuf at:4) - displayView bounds top.
+		 evtBuf at: 3 put: xtranslated.
+		 evtBuf at: 4 put: ytranslated].
+	self queueForwardedEvent: evtBuf
+]
+
 { #category : #'debug support' }
 StackInterpreterSimulator >> headerStart: oop [
 
@@ -938,12 +953,12 @@ StackInterpreterSimulator >> ioGetMaxExtSemTableSize [
 { #category : #'I/O primitives' }
 StackInterpreterSimulator >> ioGetNextEvent: evtBuf [
 	| evt |
-	"StackInterpreterSimulatorMorphicModel browse"
+	"SimulatorMorphicModel browse"
 	eventQueue ifNil:
 		[^self primitiveFail].
 	eventQueue isEmpty ifFalse:
 		[evt :=  eventQueue next.
-		 1 to: evt size do:
+		 1 to: evtBuf size do:
 			[:i| (evt at: i) ifNotNil: [:val| evtBuf at: (i - 1) put: val]]]
 ]
 
@@ -1493,7 +1508,8 @@ StackInterpreterSimulator >> openAsMorph [
 	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
 
 	window addMorph: (displayView := ImageMorph new image: displayForm)
-		frame: (0@0 corner: 1@0.8).
+			frame: (0@0 corner: 1@0.8).
+	displayView activeHand addEventListener: self.
 
 	transcript := TranscriptStream on: (String new: 10000).
 	window addMorph: (PluggableTextMorph
@@ -1524,7 +1540,8 @@ StackInterpreterSimulator >> openAsMorphNoTranscript [
 	window := (SystemWindow labelled: 'Simulation of ' , localImageName) model: self.
 
 	window addMorph: (displayView := ImageMorph new image: displayForm)
-		frame: (0@0 corner: 1@0.95).
+			frame: (0@0 corner: 1@0.95).
+	displayView activeHand addEventListener: self.
 
 	window addMorph: (PluggableTextMorph on: self
 						text: #byteCountText accept: nil
@@ -1542,30 +1559,28 @@ StackInterpreterSimulator >> openAsMorphNoTranscript [
 ]
 
 { #category : #UI }
-StackInterpreterSimulator >> openAsStackInterpreterSimulatorMorph [
+StackInterpreterSimulator >> openAsSimulatorMorph [
 	"Open a morphic view on this simulation. ala Bert Freudenberg's
 	SqueakJS http://lively-web.org/users/bert/squeak.html	"
 	| localImageName borderWidth window |
 	localImageName := imageName
-				ifNil: [' synthetic image']
-				ifNotNil: [FileDirectory default localNameFor: imageName].
+							ifNil: [' synthetic image']
+							ifNotNil: [FileDirectory default localNameFor: imageName].
 
-	transcript := TranscriptStream
-				on: (String new: 10000).
+	transcript := TranscriptStream on: (String new: 10000).
 
-	window := StackInterpreterSimulatorMorph	
+	window := SimulatorMorph	
 					withVMSimulator: self 
 					title: 'Simulation of ' , localImageName, ' (beta)'
 					transcript: transcript.				
 
-	borderWidth := [StackInterpreterSimulatorMorph borderWidth
-			"Squeak 4.1"]
-				on: MessageNotUnderstood
-				do: [:ex | 0].
+	borderWidth := [SimulatorMorph borderWidth] "Squeak 4.1"
+						on: MessageNotUnderstood
+						do: [:ex | 0].
 	"3.8"
 	borderWidth := borderWidth + window borderWidth.
 	window openInWorldExtent: (self desiredDisplayExtent + (2 * borderWidth) + (0 @ window labelHeight) * (1 @ (1 / 0.8))) rounded.
-	^ window
+	^window
 ]
 
 { #category : #initialization }
@@ -2219,11 +2234,11 @@ StackInterpreterSimulator >> pushMaybeContextReceiverVariable: index [
 	^super pushMaybeContextReceiverVariable: index
 ]
 
-{ #category : #'event forwarding' }
-StackInterpreterSimulator >> queueForwardedEvent:evt [
-	eventQueue isNil
-		ifTrue:[eventQueue := SharedQueue new].
-	eventQueue nextPut: evt.
+{ #category : #'I/O primitives support' }
+StackInterpreterSimulator >> queueForwardedEvent: event [
+	eventQueue ifNil:
+		[eventQueue := SharedQueue new].
+	eventQueue nextPut: event
 ]
 
 { #category : #'debug support' }

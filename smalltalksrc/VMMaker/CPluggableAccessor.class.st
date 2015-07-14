@@ -6,7 +6,8 @@ Class {
 	#superclass : #CArrayAccessor,
 	#instVars : [
 		'readBlock',
-		'writeBlock'
+		'writeBlock',
+		'objectSize'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -30,4 +31,14 @@ CPluggableAccessor >> at: index put: value [
 CPluggableAccessor >> atBlock: rBlock atPutBlock: wBlock [
 	readBlock := rBlock.
 	writeBlock := wBlock
+]
+
+{ #category : #initialize }
+CPluggableAccessor >> objectSize: n [
+	objectSize := n
+]
+
+{ #category : #accessing }
+CPluggableAccessor >> size [
+	^objectSize ifNil: [super size]
 ]
