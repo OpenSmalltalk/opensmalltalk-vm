@@ -72,7 +72,8 @@ Class {
 		'externalSemaphoreSignalResponses',
 		'extSemTabSize',
 		'debugStackDepthDictionary',
-		'performFilters'
+		'performFilters',
+		'eventQueue'
 	],
 	#classVars : [
 		'ByteCountsPerMicrosecond'
@@ -1415,6 +1416,7 @@ CogVMSimulator >> initialize [
 	printSends := printFrameAtEachStep := printBytecodeAtEachStep := false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
 	displayForm := fakeForm := 'Display has not yet been installed' asDisplayText form.
+	eventQueue := SharedQueue new.
 	suppressHeartbeatFlag := deferSmash := deferredSmash := false.
 	systemAttributes := Dictionary new.
 	primTraceLog := CArrayAccessor on: (Array new: 256 withAll: 0).
@@ -1625,9 +1627,14 @@ CogVMSimulator >> ioGetMaxExtSemTableSize [
 
 { #category : #'I/O primitives' }
 CogVMSimulator >> ioGetNextEvent: evtBuf [
-
-	self primitiveFail.
-
+	| evt |
+	"SimulatorMorphicModel browse"
+	eventQueue ifNil:
+		[^self primitiveFail].
+	eventQueue isEmpty ifFalse:
+		[evt :=  eventQueue next.
+		 1 to: evt size do:
+			[:i| (evt at: i) ifNotNil: [:val| evtBuf at: (i - 1) put: val]]]
 ]
 
 { #category : #'I/O primitives' }
@@ -2337,7 +2344,8 @@ CogVMSimulator >> openAsMorph [
 	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
 
 	window addMorph: (displayView := ImageMorph new image: displayForm)
-		frame: (0@0 corner: 1@0.8).
+			frame: (0@0 corner: 1@0.8).
+	displayView activeHand addEventListener: self.
 
 	transcript := TranscriptStream on: (String new: 10000).
 	window addMorph: (PluggableTextMorph
@@ -2368,7 +2376,8 @@ CogVMSimulator >> openAsMorphNoTranscript [
 	window := (SystemWindow labelled: 'Simulation of ' , localImageName) model: self.
 
 	window addMorph: (displayView := ImageMorph new image: displayForm)
-		frame: (0@0 corner: 1@0.95).
+			frame: (0@0 corner: 1@0.95).
+	displayView activeHand addEventListener: self.
 
 	window addMorph: (PluggableTextMorph on: self
 						text: #byteCountText accept: nil
