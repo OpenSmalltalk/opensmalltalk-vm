@@ -1,16 +1,14 @@
 "
-A StackInterpreterSimulatorMorph is a copy of PreferenceBrowserMorph that has been mangled into something that will support the StackInterpreterSimulator.
-
-I provide some UI features inspired by  Bert Freudenberg's Lively Squeak VM at http://lively-web.org/users/bert/squeak.html
+A SimulatorMorph is a copy of PreferenceBrowserMorph that has been mangled into something that will support the simulator.  I provide some UI features inspired by Bert Freudenberg's Lively Squeak VM at http://lively-web.org/users/bert/squeak.html.
 
 See class protocol 'documentation' for examples of invoking me.
 
-My model is StackInterpreterSimulatorMorphicModel. 
-My model has a reference to the StackInterpreterSimulator and itermediates all (?) interaction with it.
+My model is SimulatorMorphicModel. 
+My model has a reference to the Simulator and itermediates all (?) interaction with it.
 
-The StackInterpreterSimulator renders the simulated World on a StackInterpreterSimulatorImageMorph that I contain. 
+The simulator renders the simulated World on a SimulatorImageMorph that I contain. 
 
-There is some cruft (tight coupling via direct references along all three layers UI-Model-VM )in me that exists to support Eliot's original StackInterpreterSimulator>>openAsMorph functionality and use-case.
+There is some cruft (tight coupling via direct references along all three layers UI-Model-VM) in me that exists to support Eliot's original Simulator>>openAsMorph functionality and use-case.
 Rumors that said cruft is an artifact of tty's rudimentary Morphic skills are entirely credible.
 
 I hold out the barest glimmer of hope that Bert Freudenberg's SqueakJS functionality can be integrated into my functionality as well. 
@@ -20,7 +18,7 @@ I am not amenable to Flaps or the WorldMenu as there is a lot of pre-run configu
 Managing that ability with a GUI is counter-productive. If said functionality is desired in the future, then inspiration can be gleaned by cut-n-paste from PreferenceBrowser and PreferenceBrowserModel.
 "
 Class {
-	#name : #StackInterpreterSimulatorMorph,
+	#name : #SimulatorMorph,
 	#superclass : #SystemWindow,
 	#instVars : [
 		'loadButton',
@@ -50,7 +48,7 @@ Class {
 }
 
 { #category : #documentation }
-StackInterpreterSimulatorMorph class >> ttyOne [
+SimulatorMorph class >> ttyOne [
 "Script tty uses to run the stackIntepreter using this class"
 | vm |
 Transcript clear.
@@ -58,7 +56,7 @@ vm := StackInterpreterSimulator newWithOptions: #(#STACKVM).
 vm openOn: '/home/tty/usr/src/smalltalk/buildCogDevelopmentImageCog.app/Contents/Resources/targets/Squeak4.5.image'.
 "vm setBreakSelector: #&."
 vm 
-	openAsStackInterpreterSimulatorMorph "; 
+	openAsSimulatorMorph "; 
 	toggleTranscript;
 	halt;
 	run"
@@ -66,15 +64,15 @@ vm
 ]
 
 { #category : #'instance creation' }
-StackInterpreterSimulatorMorph class >> withVMSimulator: aStackInterpreterSimulatorMorphicModel title: aString transcript: aTranscript [
-	^self new initializeWithVMSimulator: aStackInterpreterSimulatorMorphicModel title: aString aTranscript: aTranscript;
+SimulatorMorph class >> withVMSimulator: aSimulatorMorphicModel title: aString transcript: aTranscript [
+	^self new initializeWithVMSimulator: aSimulatorMorphicModel title: aString aTranscript: aTranscript;
 		yourself.
 		
 
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> basicButton [
+SimulatorMorph >> basicButton [
 	| button |
 	button := SimpleButtonMorph new.
 	button
@@ -91,13 +89,13 @@ StackInterpreterSimulatorMorph >> basicButton [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> buttonRowLayoutFrame [ 
+SimulatorMorph >> buttonRowLayoutFrame [ 
 	^LayoutFrame fractions: (0@0 corner: 1@0) offsets: (0@0 corner: 0@ (TextStyle defaultFont height * 2.5))
 
 ]
 
 { #category : #'submorphs - squeakJS' }
-StackInterpreterSimulatorMorph >> callStackPanel [
+SimulatorMorph >> callStackPanel [
 	"If any Morphic gurus exist, please have at it."
 	^callStackPanel ifNil: 
 		[callStackPanel :=  (PluggableTextMorph
@@ -117,7 +115,7 @@ StackInterpreterSimulatorMorph >> callStackPanel [
 ]
 
 { #category : #'submorphs - simulator panel' }
-StackInterpreterSimulatorMorph >> commandPanel [
+SimulatorMorph >> commandPanel [
 	self flag: 'tty'. "does this hybrid of PreferenceBrowser layout and Simulato openAsMorph stuff make sense?"
 	^commandPanel ifNil: 
 		[commandPanel :=  (PluggableTextMorph
@@ -136,7 +134,7 @@ StackInterpreterSimulatorMorph >> commandPanel [
 ]
 
 { #category : #'submorphs - squeakJS' }
-StackInterpreterSimulatorMorph >> contextPanel [
+SimulatorMorph >> contextPanel [
 	"This should show the currentContext and Special Objects array. as seen at SqueakJS
 	  Doing that requires real talent. talent tty is lacking at the moment
 							on: [ Array with:  (MorphWithSubmorphsWrapper with: self)  ]	
@@ -162,33 +160,27 @@ StackInterpreterSimulatorMorph >> contextPanel [
 ]
 
 { #category : #'submorphs - simulator display view' }
-StackInterpreterSimulatorMorph >> displayView [
+SimulatorMorph >> displayView [
 	"The VM SImulator draws directly on an imageMorph named displayView
 	  displayView is housed on a Form named displayForm
 	   displayForm is initialized in StackInterpreterSimulator >> initialize.
-	  see StackInterpreterSimulator >>openAsMorph for original constructs.
-	"
+	  see StackInterpreterSimulator >>openAsMorph for original constructs."
 	^displayView ifNil: 
-		[displayView :=  (StackInterpreterSimulatorImageMorph new image: (model vm displayForm)). 
-		(self model) displayView: displayView.					
-		(self model) morph: displayView. "<-- N.B.. morph bounds are used to filter events in the model. tty"
+		[displayView :=  SimulatorImageMorph new image: model vm displayForm. 
+		self model displayView: displayView.					
+		self model morph: displayView. "<-- N.B.. morph bounds are used to filter events in the model. tty"
 	      displayView activeHand addEventListener: self model.		
-					
+
  		displayView		
 			color: Color transparent;
 			hResizing: #spaceFill;
 			vResizing: #spaceFill;
 			cellInset: 5;
-			yourself
-			].
-
-
-	
-
+			yourself]
 ]
 
 { #category : #'submorphs - simulator display view' }
-StackInterpreterSimulatorMorph >> displayViewLayoutFrame [ 
+SimulatorMorph >> displayViewLayoutFrame [ 
 	| squeakJSFrame buttonFrame simulatorFrame|
 	"if any Morphic guru's understand layouts and offsets, please fix this. tty"
 	buttonFrame := self buttonRowLayoutFrame.
@@ -199,14 +191,14 @@ StackInterpreterSimulatorMorph >> displayViewLayoutFrame [
 ]
 
 { #category : #geometry }
-StackInterpreterSimulatorMorph >> extent: aPoint [
+SimulatorMorph >> extent: aPoint [
 	super extent: aPoint.
 	self fullBounds.
 
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> forceInterruptCheckButton [
+SimulatorMorph >> forceInterruptCheckButton [
 	self flag: 'tty'.
 	^forceInterruptCheckButton ifNil: 
 		[forceInterruptCheckButton := self basicButton 
@@ -217,7 +209,7 @@ StackInterpreterSimulatorMorph >> forceInterruptCheckButton [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> fullDisplayUpdateButton [
+SimulatorMorph >> fullDisplayUpdateButton [
 	self flag: 'tty'.
 	^fullDisplayUpdateButton ifNil: 
 		[fullDisplayUpdateButton := self basicButton 
@@ -228,7 +220,7 @@ StackInterpreterSimulatorMorph >> fullDisplayUpdateButton [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> hackButton [
+SimulatorMorph >> hackButton [
 	self flag: 'tty'.
 	^hackButton ifNil: 
 		[hackButton := self basicButton 
@@ -239,7 +231,7 @@ StackInterpreterSimulatorMorph >> hackButton [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> helpButton [
+SimulatorMorph >> helpButton [
 	^helpButton ifNil: 
 		[helpButton := self basicButton 
 						label: 'help' translated; 
@@ -250,12 +242,10 @@ StackInterpreterSimulatorMorph >> helpButton [
 ]
 
 { #category : #initialization }
-StackInterpreterSimulatorMorph >> initializeWithVMSimulator: aStackInterpreterSimulator title: aString aTranscript: aTranscript [
-	|model|
+SimulatorMorph >> initializeWithVMSimulator: aStackInterpreterSimulator title: aString aTranscript: aTranscript [
 	self flag: 'tty'. "need to get the layout right at this point. resizers and scroll bars would be nice. Layout offsets need a gimlet eye as well"
-	model := StackInterpreterSimulatorMorphicModel on: aStackInterpreterSimulator title: aString transcript: aTranscript. 
 	self 
-		model: model;
+		model: (SimulatorMorphicModel on: aStackInterpreterSimulator title: aString transcript: aTranscript);
 		clipSubmorphs: true;
 		setLabel: self model windowTitle;
 		name: aString;
@@ -263,11 +253,11 @@ StackInterpreterSimulatorMorph >> initializeWithVMSimulator: aStackInterpreterSi
 		addMorph: self squeakJSRow fullFrame: self squeakJSRowLayoutFrame;
 		addMorph: self simulatorPanel fullFrame: self simulatorLayoutFrame;
 		addMorph: self displayView fullFrame: self displayViewLayoutFrame.	
-	^self		
+	^self
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> ioExitButton [
+SimulatorMorph >> ioExitButton [
 	self flag: 'tty'.
 	^ioExitButton ifNil: 
 		[ioExitButton := self basicButton 
@@ -278,7 +268,7 @@ StackInterpreterSimulatorMorph >> ioExitButton [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> loadButton [
+SimulatorMorph >> loadButton [
 	^loadButton ifNil: 
 		[loadButton := self basicButton 
 						label: 'Load Image' translated; 
@@ -288,7 +278,7 @@ StackInterpreterSimulatorMorph >> loadButton [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> newButtonRow [
+SimulatorMorph >> newButtonRow [
 	^BorderedMorph new
 		color: Color transparent;
 		cellInset: 2;
@@ -331,7 +321,7 @@ StackInterpreterSimulatorMorph >> newButtonRow [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> newSeparator [
+SimulatorMorph >> newSeparator [
 	^BorderedMorph new
 		borderWidth: 2;
 		borderColor: Color transparent;
@@ -343,7 +333,7 @@ StackInterpreterSimulatorMorph >> newSeparator [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> newTransparentFiller [
+SimulatorMorph >> newTransparentFiller [
 	^Morph new
 		color: Color transparent;
 		vResizing: #spaceFill;
@@ -352,7 +342,7 @@ StackInterpreterSimulatorMorph >> newTransparentFiller [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> optionsButton [
+SimulatorMorph >> optionsButton [
 	^optionsButton ifNil: 
 		[optionsButton := self basicButton 
 						label: 'VM Options' translated; 
@@ -362,7 +352,7 @@ StackInterpreterSimulatorMorph >> optionsButton [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> overButton [
+SimulatorMorph >> overButton [
 	^overButton ifNil: 
 		[overButton := self basicButton 
 						label: 'Over' translated; 
@@ -372,7 +362,7 @@ StackInterpreterSimulatorMorph >> overButton [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> resetButton [
+SimulatorMorph >> resetButton [
 	^resetButton ifNil: 
 		[resetButton := self basicButton 
 						label: 'Reset' translated; 
@@ -382,7 +372,7 @@ StackInterpreterSimulatorMorph >> resetButton [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> returnButton [
+SimulatorMorph >> returnButton [
 	self flag: 'tty'.
 	^returnButton ifNil: 
 		[returnButton := self basicButton 
@@ -393,7 +383,7 @@ StackInterpreterSimulatorMorph >> returnButton [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> runButton [
+SimulatorMorph >> runButton [
 	self flag: 'tty'.
 	^runButton ifNil: 
 		[runButton := self basicButton 
@@ -404,7 +394,7 @@ StackInterpreterSimulatorMorph >> runButton [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> sendButton [
+SimulatorMorph >> sendButton [
 	self flag: 'tty'.
 	^sendButton ifNil: 
 		[sendButton := self basicButton 
@@ -415,7 +405,7 @@ StackInterpreterSimulatorMorph >> sendButton [
 ]
 
 { #category : #'submorphs - simulator panel' }
-StackInterpreterSimulatorMorph >> simulatorLayoutFrame [ 
+SimulatorMorph >> simulatorLayoutFrame [ 
 	| squeakJSFrame buttonFrame |
 	"I don't understand offsets in the LayoutFrame. I just fiddled until it looked ok. If anybody knows what they are doing, please refactor."
 	self flag: 'tty'.
@@ -427,7 +417,7 @@ StackInterpreterSimulatorMorph >> simulatorLayoutFrame [
 ]
 
 { #category : #'submorphs - simulator panel' }
-StackInterpreterSimulatorMorph >> simulatorPanel [
+SimulatorMorph >> simulatorPanel [
 	"standard controls from StackInterpreterSimulator >> openAsMorph"
 	^BorderedMorph new
 		color: Color transparent;
@@ -445,7 +435,7 @@ StackInterpreterSimulatorMorph >> simulatorPanel [
 ]
 
 { #category : #'submorphs - squeakJS' }
-StackInterpreterSimulatorMorph >> squeakJSRow [
+SimulatorMorph >> squeakJSRow [
 	"row fo SqueakJS context, stack and call-stack panels"
 	^BorderedMorph new
 		color: Color blue;
@@ -464,13 +454,13 @@ StackInterpreterSimulatorMorph >> squeakJSRow [
 ]
 
 { #category : #'submorphs - squeakJS' }
-StackInterpreterSimulatorMorph >> squeakJSRowLayoutFrame [ 
+SimulatorMorph >> squeakJSRowLayoutFrame [ 
 	^LayoutFrame fractions: (0@0.8 corner: 1@1) offsets: (0@0.8 corner: 1@ (TextStyle defaultFont height * 2.5))
 
 ]
 
 { #category : #'submorphs - squeakJS' }
-StackInterpreterSimulatorMorph >> stackPanel [
+SimulatorMorph >> stackPanel [
 	"If any Morphic gurus exist, please have at it."
 	^stackPanel ifNil: 
 		[stackPanel :=  (PluggableTextMorph
@@ -490,7 +480,7 @@ StackInterpreterSimulatorMorph >> stackPanel [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> stepButton [
+SimulatorMorph >> stepButton [
 	self flag: 'tty'.
 	^stepButton ifNil: 
 		[stepButton := self basicButton 
@@ -501,7 +491,7 @@ StackInterpreterSimulatorMorph >> stepButton [
 ]
 
 { #category : #'submorphs - buttons' }
-StackInterpreterSimulatorMorph >> toggleTranscriptButton [
+SimulatorMorph >> toggleTranscriptButton [
 	"tty I dont like this. I have diabled the button"
 	self flag: 'tty'.
 	^toggleTranscriptButton ifNil: 
@@ -513,7 +503,7 @@ StackInterpreterSimulatorMorph >> toggleTranscriptButton [
 ]
 
 { #category : #'submorphs - simulator panel' }
-StackInterpreterSimulatorMorph >> transcriptPanel [
+SimulatorMorph >> transcriptPanel [
 	self flag: 'tty'. "does this hybrid of PreferenceBrowser layout and Simulato openAsMorph stuff make sense?"
 	^transcriptPanel ifNil: 
 		[transcriptPanel := (PluggableTextMorph
