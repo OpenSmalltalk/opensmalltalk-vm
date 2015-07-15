@@ -3048,7 +3048,6 @@ Cogit >> ceSICMiss: receiver [
 	| pic innerReturn outerReturn entryPoint targetMethod newTargetMethodOrNil errorSelectorOrNil cacheTag extent result |
 	<var: #pic type: #'CogMethod *'>
 	<var: #targetMethod type: #'CogMethod *'>
-	<var: #callerMethod type: #'CogMethod *'>
 	"Whether we can relink to a PIC or not we need to pop off the inner return and identify the target method."
 	innerReturn := coInterpreter popStack asUnsignedInteger.
 	targetMethod := self cCoerceSimple: innerReturn - missOffset to: #'CogMethod *'.
