@@ -764,6 +764,39 @@ StackToRegisterMappingCogit >> addBlockStartAt: bytecodepc numArgs: numArgs numC
 	^blockStart
 ]
 
+{ #category : #'primitive generators' }
+StackToRegisterMappingCogit >> adjustArgumentsForPerform: numArgs [
+	"Generate code to adjust the possibly stacked arguments immediately
+	 before jumping to a method looked up by a perform primitive."
+	self assert: self numRegArgs <= 2.
+	self assert: numArgs >= 1.
+	numArgs <= self numRegArgs ifTrue:
+		[numArgs = 2 ifTrue:
+			[self MoveR: Arg1Reg R: Arg0Reg].
+		 ^self].
+
+	self numRegArgs + 1 = numArgs ifTrue:
+		[backEnd hasLinkRegister
+			ifTrue:
+				[self numRegArgs = 2 ifTrue:
+					[self PopR: Arg1Reg].
+				 self PopR: Arg0Reg]
+			ifFalse:
+				[self PopR: TempReg. "save retpc"
+				 self numRegArgs = 2 ifTrue:
+					[self PopR: Arg1Reg].
+				 self MoveMw: 0 r: SPReg R: Arg0Reg.
+				 self MoveR: TempReg Mw: 0 r: SPReg].
+		 ^self].
+
+	"e.g.	Receiver				Receiver
+			Selector/Arg0	=>		Arg1
+			Arg1					Arg2
+	 		Arg2			sp->	Arg3
+	 sp->	Arg3"
+	super adjustArgumentsForPerform: numArgs
+]
+
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> allocateEqualsEqualsRegistersArgNeedsReg: argNeedsReg rcvrNeedsReg: rcvrNeedsReg into: binaryBlock [
 	<inline: true>
@@ -1155,100 +1188,6 @@ StackToRegisterMappingCogit >> compileFrameBuild [
 	self genPushRegisterArgs.
 	super compileFrameBuild.
 	self initSimStackForFramefulMethod: initialPC
-]
-
-{ #category : #'in-line cacheing' }
-StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
-	"Compile the code for an open PIC.  Perform a probe of the first-level method
-	 lookup cache followed by a call of ceSendFromInLineCacheMiss: if the probe fails.
-	 Override to push the register args when calling ceSendFromInLineCacheMiss:"
-	| jumpSelectorMiss jumpClassMiss itsAHit jumpBCMethod |
-	<var: #jumpSelectorMiss type: #'AbstractInstruction *'>
-	<var: #jumpClassMiss type: #'AbstractInstruction *'>
-	<var: #itsAHit type: #'AbstractInstruction *'>
-	<var: #jumpBCMethod type: #'AbstractInstruction *'>
-	self compilePICAbort: numArgs.
-	entry := objectRepresentation genGetClassTagOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
-
-	"Do first of three probes.  See CoInterpreter>>lookupInMethodCacheSel:classTag:"
-	self flag: #lookupInMethodCacheSel:classTag:. "so this method shows up as a sender of lookupInMethodCacheSel:class:"
-	self MoveR: ClassReg R: SendNumArgsReg.
-	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
-	self LogicalShiftLeftCq: objectMemory shiftForWord R: ClassReg.
-	self AndCq: MethodCacheMask << objectMemory shiftForWord R: ClassReg.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << objectMemory shiftForWord)
-		r: ClassReg
-		R: TempReg.
-	self annotate: (self CmpCw: selector R: TempReg) objRef: selector.
-	jumpSelectorMiss := self JumpNonZero: 0.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << objectMemory shiftForWord)
-		r: ClassReg
-		R: TempReg.
-	self CmpR: SendNumArgsReg R: TempReg.
-	jumpClassMiss := self JumpNonZero: 0.
-
-	itsAHit := self Label.
-	"Fetch the method.  The interpret trampoline requires the bytecoded method in SendNumArgsReg"
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheMethod << objectMemory shiftForWord)
-		r: ClassReg
-		R: SendNumArgsReg.
-	"If the method is compiled jump to its unchecked entry-point, otherwise interpret it."
-	objectRepresentation genLoadSlot: HeaderIndex sourceReg: SendNumArgsReg destReg: ClassReg.
-	jumpBCMethod := objectRepresentation genJumpImmediate: ClassReg.
-	jumpBCMethod jmpTarget: picInterpretAbort.
-	self AddCq: cmNoCheckEntryOffset R: ClassReg.
-	self JumpR: ClassReg.
-
-	"First probe missed.  Do second of three probes.  Shift hash right one and retry."
-	jumpSelectorMiss jmpTarget: (jumpClassMiss jmpTarget: self Label).
-	self MoveR: SendNumArgsReg R: ClassReg.
-	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
-	self LogicalShiftLeftCq: objectMemory shiftForWord - 1 R: ClassReg.
-	self AndCq: MethodCacheMask << objectMemory shiftForWord R: ClassReg.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << objectMemory shiftForWord)
-		r: ClassReg
-		R: TempReg.
-	self annotate: (self CmpCw: selector R: TempReg) objRef: selector.
-	jumpSelectorMiss := self JumpNonZero: 0.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << objectMemory shiftForWord)
-		r: ClassReg
-		R: TempReg.
-	self CmpR: SendNumArgsReg R: TempReg.
-	self JumpZero: itsAHit.
-
-	"Second probe missed.  Do last probe.  Shift hash right two and retry."
-	jumpSelectorMiss jmpTarget: self Label.
-	self MoveR: SendNumArgsReg R: ClassReg.
-	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
-	objectMemory shiftForWord > 2 ifTrue:
-		[self LogicalShiftLeftCq: objectMemory shiftForWord - 1 R: ClassReg].
-	self AndCq: MethodCacheMask << objectMemory shiftForWord R: ClassReg.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << objectMemory shiftForWord)
-		r: ClassReg
-		R: TempReg.
-	self annotate: (self CmpCw: selector R: TempReg) objRef: selector.
-	jumpSelectorMiss := self JumpNonZero: 0.
-	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheClass << objectMemory shiftForWord)
-		r: ClassReg
-		R: TempReg.
-	self CmpR: SendNumArgsReg R: TempReg.
-	self JumpZero: itsAHit.
-
-	"Last probe missed.  Call ceSendFromInLineCacheMiss: to do the full lookup."
-	jumpSelectorMiss jmpTarget: self Label.
-	backEnd genPushRegisterArgsForNumArgs: numArgs scratchReg: SendNumArgsReg.
-	self genSmalltalkToCStackSwitch: true.
-	methodLabel addDependent: (self annotateAbsolutePCRef: (self MoveCw: methodLabel asInteger R: SendNumArgsReg)).
-	self 
-		compileCallFor: #ceSendFromInLineCacheMiss:
-		numArgs: 1
-		arg: SendNumArgsReg
-		arg: nil
-		arg: nil
-		arg: nil
-		resultReg: nil
-		saveRegs: false
-	"Note that this call does not return."
 ]
 
 { #category : #'simulation only' }
@@ -2561,6 +2500,19 @@ StackToRegisterMappingCogit >> genPrimitiveNotIdentical [
 	^objectRepresentation
 		genInnerPrimitiveIdentical: 0
 		orNotIf: true
+]
+
+{ #category : #'primitive generators' }
+StackToRegisterMappingCogit >> genPrimitivePerform [
+	"Generate an in-line perform primitive.  The lookup code requires the selector to be in Arg0Reg.
+	 adjustArgumentsForPerform: adjusts the arguments once genLookupForPerformNumArgs:
+	 has generated the code for the lookup."
+	methodOrBlockNumArgs > self numRegArgs ifTrue:
+		[self MoveMw: (backEnd hasLinkRegister ifTrue: [methodOrBlockNumArgs - 1] ifFalse: [methodOrBlockNumArgs]) * objectMemory wordSize r: SPReg R: Arg0Reg].
+	self genLookupForPerformNumArgs: methodOrBlockNumArgs.
+	^self compileInterpreterPrimitive: (coInterpreter
+										functionPointerForCompiledMethod: methodObj
+										primitiveIndex: primitiveIndex)
 ]
 
 { #category : #'primitive generators' }
