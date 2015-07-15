@@ -1207,6 +1207,25 @@ CogVMSimulator >> halfWordLowInLong32: long32 [
 	^self subclassResponsibility
 ]
 
+{ #category : #'I/O primitives support' }
+CogVMSimulator >> handleListenEvent: aMorphicEvent [
+	"openAsMorph regsitered me for listen events via HandMorph>>addEventListener.
+	Transform the listen event and add it to my event queue."
+	(aMorphicEvent isMouse or: [aMorphicEvent isKeyboard]) ifFalse:
+		[^self].
+	(SimulatorEventTransformer default degenerateEvent: aMorphicEvent) ifNotNil:
+		[:evtBuf|
+		 (evtBuf first = SimulatorEventTransformer eventTypeMouse
+		  and: [displayView bounds containsPoint: aMorphicEvent position]) ifTrue:
+			[| xtranslated ytranslated |
+			 xtranslated := (evtBuf at:3) - displayView bounds left - 2. "<--heh"
+			 ytranslated := (evtBuf at:4) - displayView bounds top.
+			 evtBuf at: 3 put: xtranslated.
+			 evtBuf at: 4 put: ytranslated].
+		 evtBuf at: 8 put: 1. "windowIndex"
+		 self queueForwardedEvent: evtBuf]
+]
+
 { #category : #'message sending' }
 CogVMSimulator >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage: classForMessage [
 	selectorIndex = SelectorCannotInterpret ifTrue:
@@ -3152,6 +3171,13 @@ CogVMSimulator >> printStringOf: oop on: aStream [
 		i := i + 1.
 	].
 	aStream flush
+]
+
+{ #category : #'I/O primitives support' }
+CogVMSimulator >> queueForwardedEvent: event [
+	eventQueue ifNil:
+		[eventQueue := SharedQueue new].
+	eventQueue nextPut: event
 ]
 
 { #category : #'multi-threading simulation switch' }
