@@ -60,6 +60,7 @@ Class {
 		'quitBlock',
 		'transcript',
 		'displayView',
+		'eventTransformer',
 		'printFrameAtEachStep',
 		'printBytecodeAtEachStep',
 		'systemAttributes',
@@ -1209,21 +1210,11 @@ CogVMSimulator >> halfWordLowInLong32: long32 [
 
 { #category : #'I/O primitives support' }
 CogVMSimulator >> handleListenEvent: aMorphicEvent [
-	"openAsMorph regsitered me for listen events via HandMorph>>addEventListener.
+	"openAsMorph[NoTranscript] regsitered me for listen events via HandMorph>>addEventListener.
 	Transform the listen event and add it to my event queue."
-	(aMorphicEvent isMouse or: [aMorphicEvent isKeyboard]) ifFalse:
-		[^self].
-	(SimulatorEventTransformer default degenerateEvent: aMorphicEvent) ifNotNil:
-		[:evtBuf|
-		 (evtBuf first = SimulatorEventTransformer eventTypeMouse
-		  and: [displayView bounds containsPoint: aMorphicEvent position]) ifTrue:
-			[| xtranslated ytranslated |
-			 xtranslated := (evtBuf at:3) - displayView bounds left - 2. "<--heh"
-			 ytranslated := (evtBuf at:4) - displayView bounds top.
-			 evtBuf at: 3 put: xtranslated.
-			 evtBuf at: 4 put: ytranslated].
-		 evtBuf at: 8 put: 1. "windowIndex"
-		 self queueForwardedEvent: evtBuf]
+	((aMorphicEvent isMouse or: [aMorphicEvent isKeyboard])
+	 and: [displayView bounds containsPoint: aMorphicEvent position]) ifTrue:
+		[eventTransformer degenerateEvent: aMorphicEvent for: self]
 ]
 
 { #category : #'message sending' }
@@ -1789,7 +1780,9 @@ CogVMSimulator >> ioRelinquishProcessorForMicroseconds: microseconds [
 	 If we're simulating threading we're in difficulties.  We need a UI process
 	 (to run activities such as fill-in-the-blanks) but we also need an independent
 	 thread of control to run this VM thread.  So we need to fork a new UI process."
-	Display reverse: (0@0 extent: 16@16).
+	Display reverse: ((displayView
+						ifNil: [0@0]
+						ifNotNil: [displayView bounds origin]) extent: 16@16).
 	Sensor peekEvent ifNotNil:
 		[self forceInterruptCheck].
 	Processor activeProcess == Project uiProcess ifTrue:
@@ -2362,9 +2355,10 @@ CogVMSimulator >> openAsMorph [
 							ifNil: [' synthetic image'].
 	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
 
-	window addMorph: (displayView := ImageMorph new image: displayForm)
+	window addMorph: (displayView := SimulatorImageMorph new image: displayForm)
 			frame: (0@0 corner: 1@0.8).
 	displayView activeHand addEventListener: self.
+	eventTransformer := SimulatorEventTransformer new.
 
 	transcript := TranscriptStream on: (String new: 10000).
 	window addMorph: (PluggableTextMorph
@@ -2394,9 +2388,10 @@ CogVMSimulator >> openAsMorphNoTranscript [
 	localImageName := FileDirectory default localNameFor: imageName.
 	window := (SystemWindow labelled: 'Simulation of ' , localImageName) model: self.
 
-	window addMorph: (displayView := ImageMorph new image: displayForm)
+	window addMorph: (displayView := SimulatorImageMorph new image: displayForm)
 			frame: (0@0 corner: 1@0.95).
 	displayView activeHand addEventListener: self.
+	eventTransformer := SimulatorEventTransformer new.
 
 	window addMorph: (PluggableTextMorph on: self
 						text: #byteCountText accept: nil
