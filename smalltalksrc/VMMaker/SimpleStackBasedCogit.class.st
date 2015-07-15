@@ -729,7 +729,6 @@ SimpleStackBasedCogit >> adjustArgumentsForPerform: numArgs [
 	 		Arg2			sp->	retpc
 	 sp->	retpc"
 
-	self break.
 	(backEnd hasLinkRegister ifTrue: [numArgs - 2] ifFalse: [numArgs - 1]) to: 0 by: -1 do:
 		[:index|
 		self MoveMw: index * objectMemory wordSize r: SPReg R: TempReg.
