@@ -1,16 +1,39 @@
 "
-A SimulatorImageMorph is an ImageMorph The StackInterpreterSimulator paints its world on me.  If tty can get event forwarding working along the HandMorph->StackInterpreterSimulatorMorphicModel->StackInterpreterSimulator path, then then I don't need to exist.  If event forwarding attempt above fails, then I may need to handle it.
-
-
-Instance Variables
-
-
+A SimulatorImageMorph is an ImageMorph that suppresses halos.
 "
 Class {
 	#name : #SimulatorImageMorph,
 	#superclass : #ImageMorph,
-	#instVars : [
-		'eventForwarder'
-	],
 	#category : #'VMMaker-InterpreterSimulation-Morphic'
 }
+
+{ #category : #'event handling' }
+SimulatorImageMorph >> handleMouseDown: anEvent [
+	anEvent wasHandled: true
+]
+
+{ #category : #'event handling' }
+SimulatorImageMorph >> handleMouseEnter: anEvent [
+	anEvent wasHandled: true
+]
+
+{ #category : #'event handling' }
+SimulatorImageMorph >> handleMouseLeave: anEvent [
+	^super handleMouseLeave: anEvent
+]
+
+{ #category : #'event handling' }
+SimulatorImageMorph >> handleMouseOver: anEvent [
+	anEvent wasHandled: true
+]
+
+{ #category : #'event handling' }
+SimulatorImageMorph >> handleMouseUp: anEvent [
+	anEvent wasHandled: true
+]
+
+{ #category : #'event handling' }
+SimulatorImageMorph >> handlerForMouseDown: anEvent [
+	"Override all mouse button shenanigans like halos by handling any and all mouse down events."
+	^self
+]
