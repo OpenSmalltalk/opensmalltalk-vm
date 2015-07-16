@@ -2,7 +2,7 @@
  *  armia32abicc.c
  *
  * Support for Call-outs and Call-backs from the Plugin on ARM.
- *  Written by Eliot Miranda 07/15.
+ *  Written by Eliot Miranda & Ryan Macnak, 07/15.
  */
 
 #include <stdlib.h> /* for valloc */
@@ -22,79 +22,95 @@
 # define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+#define STACK_ALIGN_BYTES 8
+#define NUM_REG_ARGS 4
+#define NUM_DREG_ARGS 8
+
 #ifdef SQUEAK_BUILTIN_PLUGIN
 extern
-#endif 
+#endif
 struct VirtualMachine* interpreterProxy;
 
 #ifdef _MSC_VER
 # define alloca _alloca
 #endif
-#if __GNUC__
-# define setsp(sp) asm volatile ("ldr %%sp, %0" : : "m"(sp))
-# define getsp() ({ void *sp; asm volatile ("movl %%sp,%0" : "=r"(sp) : ); sp;})
-#endif
-#if __linux__
-# define STACK_ALIGN_BYTES 16
-#endif
 
-#if !defined(setsp)
-# define setsp(ignored) 0
-#endif
+#define RoundUpPowerOfTwo(value, modulus)                                      \
+  (((value) + (modulus) - 1) & ~((modulus) - 1))
 
-#define moduloPOT(m,v) (((v)+(m)-1) & ~((m)-1))
-#define alignModuloPOT(m,v) ((void *)moduloPOT(m,(unsigned long)(v)))
+#define IsAlignedPowerOfTwo(value, modulus)                                    \
+  (((value) & ((modulus) - 1)) == 0)
 
-#define objIsAlien(anOop) (interpreterProxy->includesBehaviorThatOf(interpreterProxy->fetchClassOf(anOop), interpreterProxy->classAlien()))
-#define objIsUnsafeAlien(anOop) (interpreterProxy->includesBehaviorThatOf(interpreterProxy->fetchClassOf(anOop), interpreterProxy->classUnsafeAlien()))
+#define objIsAlien(anOop)                                                      \
+    (interpreterProxy->includesBehaviorThatOf(                                 \
+      interpreterProxy->fetchClassOf(anOop),                                   \
+      interpreterProxy->classAlien()))
 
-#define sizeField(alien) (*(long *)pointerForOop((sqInt)(alien) + BaseHeaderSize))
-#define dataPtr(alien) pointerForOop((sqInt)(alien) + BaseHeaderSize + BytesPerOop)
-#if 0 /* obsolete after adding pointer Aliens with size field == 0 */
-# define isIndirectOrPointer(alien) (sizeField(alien) <= 0)
-# define startOfData(alien) (isIndirectOrPointer(alien)		\
-								? *(void **)dataPtr(alien)	\
-								:  (void  *)dataPtr(alien))
-#endif
-#define isIndirect(alien) (sizeField(alien) < 0)
-#define startOfParameterData(alien) (isIndirect(alien)	\
-									? *(void **)dataPtr(alien)	\
-									:  (void  *)dataPtr(alien))
-#define isIndirectSize(size) ((size) < 0)
-#define startOfDataWithSize(alien,size) (isIndirectSize(size)	\
-								? *(void **)dataPtr(alien)		\
-								:  (void  *)dataPtr(alien))
+#define objIsUnsafeAlien(anOop)                                                \
+    (interpreterProxy->includesBehaviorThatOf(                                 \
+      interpreterProxy->fetchClassOf(anOop),                                   \
+      interpreterProxy->classUnsafeAlien()))
 
-#define isSmallInt(oop) ((oop)&1)
-#define intVal(oop) (((long)(oop))>>1)
+#define sizeField(alien)                                                       \
+    (*(long*)pointerForOop((sqInt)(alien) + BaseHeaderSize))
+
+#define dataPtr(alien)                                                         \
+    pointerForOop((sqInt)(alien) + BaseHeaderSize + BytesPerOop)
+
+#define isIndirect(alien)                                                      \
+    (sizeField(alien) < 0)
+
+#define startOfParameterData(alien)                                            \
+    (isIndirect(alien)  ? *(void **)dataPtr(alien)                             \
+                        :  (void  *)dataPtr(alien))
+
+#define isIndirectSize(size)                                                   \
+    ((size) < 0)
+
+#define startOfDataWithSize(alien, size)                                       \
+    (isIndirectSize(size) ? *(void **)dataPtr(alien)	                       \
+                          :  (void  *)dataPtr(alien))
+
+#define isSmallInt(oop)                                                        \
+    ((oop)&1)
+
+#define intVal(oop)                                                            \
+    (((long)(oop))>>1)
 
 /*
- * Call a foreign function that answers an integral result in %eax (and
- * possibly %edx) according to IA32-ish ABI rules.
+ * Call a foreign function that answers an integral result in r0 according to
+ * ARM EABI rules.
  */
-sqInt
-callIA32IntegralReturn(SIGNATURE) {
-long long (*f)(long a,long b,long c,long d), r;
+sqInt callIA32IntegralReturn(SIGNATURE) {
+  long (*f)(long r0, long r1, long r2, long r3,
+            double d0, double d1, double d2, double d3,
+            double d4, double d5, double d6, double d7);
+  long r;
 #include "dabusinessARM.h"
 }
 
 /*
  * Call a foreign function that answers a single-precision floating-point
- * result in %f0 according to IA32-ish ABI rules.
+ * result in VFP's s0 according to ARM EABI rules.
  */
-sqInt
-callIA32FloatReturn(SIGNATURE) {
-float (*f)(long a,long b,long c,long d), r;
+sqInt callIA32FloatReturn(SIGNATURE) {
+  float (*f)(long r0, long r1, long r2, long r3,
+             double d0, double d1, double d2, double d3,
+             double d4, double d5, double d6, double d7);
+  float r;
 #include "dabusinessARM.h"
 }
 
 /*
  * Call a foreign function that answers a double-precision floating-point
- * result in %f0 according to IA32-ish ABI rules.
+ * result in VFP's d0 according to ARM EABI rules.
  */
 sqInt
 callIA32DoubleReturn(SIGNATURE) {
-double (*f)(long a,long b,long c,long d), r;
+  double (*f)(long r0, long r1, long r2, long r3,
+              double d0, double d1, double d2, double d3,
+              double d4, double d5, double d6, double d7);
+  double r;
 #include "dabusinessARM.h"
 }
 
@@ -112,109 +128,92 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
 #define getRMCC(t) mostRecentCallbackContext
 #define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
 
+extern void error(char *s);
+
 /*
- * Entry-point for call-back thunks.  Args are thunk address and stack pointer,
- * where the stack pointer is pointing one word below the return address of the
- * thunk's callee, 4 bytes below the thunk's first argument.  The stack is:
- *		callback
- *		arguments
- *		retpc (thunk) <--\
- *		address of retpc-/        <--\
- *		address of address of ret pc-/
- *		thunkp
- * esp->retpc (thunkEntry)
+ * Entry-point for call-back thunks.  Args are register args, thunk address
+ * and stack pointer.
+ * The stack is:
+ *     stackp
+ * sp->thunk address
  *
- * The stack pointer is pushed twice to keep the stack alignment to 16 bytes, a
- * requirement on platforms using SSE2 such as Mac OS X, and harmless elsewhere.
- *
- * This function's roles are to use setjmp/longjmp to save the call point
- * and return to it, to correct C stack pointer alignment if necessary (see
+ * This function's roles are to collect any register arguments (including
+ * floating point), to use setjmp/longjmp to save the point of call and
+ * return to it, to correct C stack pointer alignment if necessary (see
  * STACK_ALIGN_HACK), and to return any of the various values from the callback.
- *
- * Looking forward to support for x86-64, which typically has 6 register
- * arguments, the function would take 8 arguments, the 6 register args as
- * longs, followed by the thunkp and stackp passed on the stack.  The register
- * args would get copied into a struct on the stack. A pointer to the struct
- * is then passed as an element of the VMCallbackContext.
  */
 long
-thunkEntry(long r0, long r1, long r2, long r3, void *thunkp, long *stackp)
+thunkEntry(long r0, long r1, long r2, long r3,
+			double d0, double d1, double d2, double d3,
+			double d4, double d5, double d6, double d7,
+			void* thunkp, long* stackp)
 {
-	VMCallbackContext vmcc;
-	VMCallbackContext *previousCallbackContext;
-	int flags, returnType;
-	long regArgs[4];
+  VMCallbackContext vmcc;
+  VMCallbackContext* previousCallbackContext;
+  int flags;
+  int returnType;
+  long regArgs[NUM_REG_ARGS];
+  double dregArgs[NUM_DREG_ARGS];
 
-#if STACK_ALIGN_HACK
-  { void *sp = getsp();
-    int offset = (unsigned long)sp & (STACK_ALIGN_BYTES - 1);
-	if (offset) {
-# if __GNUC__
-		asm("sub %0,%%sp" : : "m"(offset));
-# else
-#  error need to subtract offset from esp
-# endif
-		sp = getsp();
-		assert(!((unsigned long)sp & (STACK_ALIGN_BYTES - 1)));
-	}
+  regArgs[0] = r0;
+  regArgs[1] = r1;
+  regArgs[2] = r2;
+  regArgs[3] = r3;
+
+  dregArgs[0] = d0;
+  dregArgs[1] = d1;
+  dregArgs[2] = d2;
+  dregArgs[3] = d3;
+  dregArgs[4] = d4;
+  dregArgs[5] = d5;
+  dregArgs[6] = d6;
+  dregArgs[7] = d7;
+
+  flags = interpreterProxy->ownVM(0);
+  if (flags < 0) {
+    fprintf(stderr,"Warning; callback failed to own the VM\n");
+    return -1;
   }
-#endif /* STACK_ALIGN_HACK */
 
-	regArgs[0] = r0; regArgs[1] = r1; regArgs[2] = r2; regArgs[3] = r3;
+  if ((returnType = setjmp(vmcc.trampoline)) == 0) {
+    previousCallbackContext = getRMCC();
+    setRMCC(&vmcc);
+    vmcc.thunkp = thunkp;
+    vmcc.stackp = stackp + 2; /* skip address of retpc & retpc (thunk) */
+    vmcc.intregargsp = regArgs;
+    vmcc.floatregargsp = dregArgs;
+    interpreterProxy->sendInvokeCallbackContext(&vmcc);
+    fprintf(stderr,"Warning; callback failed to invoke\n");
+    setRMCC(previousCallbackContext);
+    interpreterProxy->disownVM(flags);
+    return -1;
+  }
 
-	if ((flags = interpreterProxy->ownVM(0)) < 0) {
-		fprintf(stderr,"Warning; callback failed to own the VM\n");
-		return -1;
-	}
+  setRMCC(previousCallbackContext);
+  interpreterProxy->disownVM(flags);
 
-	if (!(returnType = setjmp(vmcc.trampoline))) {
-		previousCallbackContext = getRMCC();
-		setRMCC(&vmcc);
-		vmcc.thunkp = thunkp;
-		vmcc.stackp = stackp + 2; /* skip address of retpc & retpc (thunk) */
-		vmcc.intregargsp = regArgs;
-		vmcc.floatregargsp = 0;
-		interpreterProxy->sendInvokeCallbackContext(&vmcc);
-		fprintf(stderr,"Warning; callback failed to invoke\n");
-		setRMCC(previousCallbackContext);
-		interpreterProxy->disownVM(flags);
-		return -1;
-	}
-	setRMCC(previousCallbackContext);
-	interpreterProxy->disownVM(flags);
+  switch (returnType) {
+  case retword: {
+    return vmcc.rvs.valword;
+  }
+  case retword64: {
+    long long* valint64Ptr = (long long*)&vmcc.rvs.valleint64;
+    return *valint64Ptr;
+  }
+  case retdouble: {
+    double valflt64 = vmcc.rvs.valflt64;
+    error("Callback return double unimplemented");
+    return 0;
+  }
+  case retstruct: {
+    // wrong
+    memcpy( (void *)(stackp[1]), vmcc.rvs.valstruct.addr, vmcc.rvs.valstruct.size);
+    return stackp[1];
+  }
+  }
 
-	switch (returnType) {
-
-	case retword:	return vmcc.rvs.valword;
-
-	case retword64: {
-		long vhigh = vmcc.rvs.valleint64.high;
-#if __GNUC__
-				asm("ldr %%r1,%0" : : "m"(vhigh));
-#else
-# error need to load r1 with vmcc.rvs.valleint64.high on this compiler
-#endif
-				return vmcc.rvs.valleint64.low;
-	}
-
-	case retdouble: {
-		double valflt64 = vmcc.rvs.valflt64;
-#if 0
-# error need to load float return register with vmcc.rvs.valflt64 on this compiler
-#else
-		extern void error(char *s);
-		error("need to load float return register with vmcc.rvs.valflt64 on this compiler");
-#endif
-				return 0;
-	}
-
-	case retstruct:	memcpy( (void *)(stackp[1]),
-							vmcc.rvs.valstruct.addr,
-							vmcc.rvs.valstruct.size);
-					return stackp[1];
-	}
-	fprintf(stderr,"Warning; invalid callback return type\n");
-	return 0;
+  fprintf(stderr, "Warning; invalid callback return type\n");
+  return 0;
 }
 
 /*
