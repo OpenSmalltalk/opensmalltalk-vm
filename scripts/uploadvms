@@ -192,9 +192,11 @@ N.B. For Squeak/Pharo/Croquet please use the archives whose names begin with
      non-blocking FFI calls.  The archives containing "Spur" or "spur" are
      VMs using the new Spur object representation and garbage collector and
      should be used with Spur-format Squeak/Pharo/Croquet or Newspeak images.
+     Newspeak has moved to Spur and no longer supports non-Spur versions.
 
+     Linux
      There are two variants of the Linux VMs; those ending in "ht" have a
-     heartbeat thread, while those that don't, use an interval timer for the
+     heartbeat thread, while those that don't use an interval timer for the
      heartbeat (the Windows and Mac VMs have a threaded heartbeat).  The
      threaded heartbeat is better (for example, signals from the interval timer
      interfere with system calls, etc), but to use it one must have a kernel
@@ -215,8 +217,17 @@ sudo cp /etc/security/limits.d/squeak.conf /etc/security/limits.d/nsvm.conf
 
      Only new processes will have the new security settings. Users must log
      out and log back in for the limits to take effect.  Services must stop
-     and then restart for the changes to take effect.
+     and then restart for the changes to take effect.  To use this VM as a
+     daemon, e.g. under daemontools, you'll need to raise the limit manually.
+     Make sure you're using bash and before your launch command, raise the max
+     thread priority limit with ulimit -r 2, e.g. versions of the following
+     script will work on ubuntu
+        #!/bin/bash
+        cd /path/to/squeak/directory
+        ulimit -r 2
+        exec setuidgid <account> ./coglinuxht/squeak -vm display-null -vm sound-null squeak.image
 
+     Windows
      The Windows VMs are "dpiAware", which means that by default the display is
      not scaled and display pixels are mapped 1 to 1 to the screen.  If this
      behaviour is not desired you can enable scaling by either editing the
