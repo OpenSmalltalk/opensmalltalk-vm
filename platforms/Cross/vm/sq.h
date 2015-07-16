@@ -513,6 +513,14 @@ sqInt ioSetInputSemaphore(sqInt semaIndex);
 /* Retrieve the next input event from the OS. */
 sqInt ioGetNextEvent(sqInputEvent *evt);
 
+/* Log the event procesing chain. */
+#if defined(DEBUG_EVENT_CHAIN)
+# define LogEventChain(parms) fprintf parms
+# define dbgEvtChF stderr
+#else
+# define LogEventChain(parms) 0
+#endif
+
 /* Image file and VM path names. */
 extern char imageName[];
 char *getImageName(void);

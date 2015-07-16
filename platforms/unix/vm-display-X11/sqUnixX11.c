@@ -4834,6 +4834,7 @@ static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 
 static sqInt display_ioProcessEvents(void)
 {
+  LogEventChain((dbgEvtChF,"ioPE."));
   handleEvents();
   aioPoll(0);
   return 0;

@@ -266,6 +266,7 @@ static sqInt display_ioGetNextEvent(sqInputEvent *evt)
 {
   if (iebEmptyP())
     ioProcessEvents();
+  LogEventChain((dbgEvtChF,"ioGNE%s",iebEmptyP()?"_":"!\n"));
   if (iebEmptyP())
        return false;
   *evt= inputEventBuffer[iebOut];
