@@ -7,6 +7,12 @@ Class {
 	#category : #'VMMaker-InterpreterSimulation-Morphic'
 }
 
+{ #category : #geometry }
+SimulatorImageMorph >> extent: aPoint [
+	"Override to restore the default resizing behaviour."
+	^self perform: #extent: withArguments: {aPoint} inSuperclass: ImageMorph superclass
+]
+
 { #category : #'event handling' }
 SimulatorImageMorph >> handleMouseDown: anEvent [
 	anEvent wasHandled: true
