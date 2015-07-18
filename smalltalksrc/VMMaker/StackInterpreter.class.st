@@ -6299,31 +6299,32 @@ StackInterpreter >> flushMethodCache [
 	"Flush the method cache. The method cache is flushed on every programming change and garbage collect."
 
 	1 to: MethodCacheSize do: [ :i | methodCache at: i put: 0 ].
-	self cppIf: NewspeakVM 
-		ifTrue: [1 to: NSMethodCacheSize do: [ :i | nsMethodCache at: i put: 0 ]].
+	NewspeakVM ifTrue:
+		[1 to: NSMethodCacheSize do: [ :i | nsMethodCache at: i put: 0 ]].
 	lastMethodCacheProbeWrite := 0. "this for primitiveExternalMethod"
-	self flushAtCache.
+	self flushAtCache
 ]
 
 { #category : #'method lookup cache' }
 StackInterpreter >> flushMethodCacheFrom: memStart to: memEnd [ 
 	"Flush entries in the method cache only if the oop address is within the given memory range. 
-	This reduces overagressive cache clearing. Note the AtCache is fully flushed, 70% of the time 
+	This reduces over-aggressive cache clearing. Note the AtCache is fully flushed, 70% of the time 
 	cache entries live in newspace, new objects die young"
 	| probe |
 	probe := 0.
-	1 to: MethodCacheEntries do: [:i | 
-			(methodCache at: probe + MethodCacheSelector) = 0
-				ifFalse: [((((self oop: (methodCache at: probe + MethodCacheSelector) isGreaterThanOrEqualTo: memStart)
-										and: [self oop: (methodCache at: probe + MethodCacheSelector) isLessThan: memEnd])
-									or: [(self oop: (methodCache at: probe + MethodCacheClass) isGreaterThanOrEqualTo: memStart)
-											and: [self oop: (methodCache at: probe + MethodCacheClass) isLessThan: memEnd]])
-								or: [(self oop: (methodCache at: probe + MethodCacheMethod) isGreaterThanOrEqualTo: memStart)
-										and: [self oop: (methodCache at: probe + MethodCacheMethod) isLessThan: memEnd]])
-						ifTrue: [methodCache at: probe + MethodCacheSelector put: 0]].
+	1 to: MethodCacheEntries do:
+		[:i | 
+		(methodCache at: probe + MethodCacheSelector) = 0 ifFalse:
+			[((((self oop: (methodCache at: probe + MethodCacheSelector) isGreaterThanOrEqualTo: memStart)
+				 and: [self oop: (methodCache at: probe + MethodCacheSelector) isLessThan: memEnd])
+			 or: [(self oop: (methodCache at: probe + MethodCacheClass) isGreaterThanOrEqualTo: memStart)
+				 and: [self oop: (methodCache at: probe + MethodCacheClass) isLessThan: memEnd]])
+			 or: [(self oop: (methodCache at: probe + MethodCacheMethod) isGreaterThanOrEqualTo: memStart)
+				 and: [self oop: (methodCache at: probe + MethodCacheMethod) isLessThan: memEnd]]) ifTrue:
+				[methodCache at: probe + MethodCacheSelector put: 0]].
 			probe := probe + MethodCacheEntrySize].
-	self cppIf: NewspeakVM 
-		ifTrue: [1 to: NSMethodCacheSize do: [ :i | nsMethodCache at: i put: 0 ]].
+	NewspeakVM ifTrue:
+		[1 to: NSMethodCacheSize do: [ :i | nsMethodCache at: i put: 0]].
 	self flushAtCache
 ]
 
@@ -7839,7 +7840,7 @@ StackInterpreter >> internalFindNewMethodOrdinary [
 			(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifTrue:
 				[^nil]].
 		 lkupClass := objectMemory classForClassTag: lkupClassTag.
-		 self cppIf: #NewspeakVM
+		 NewspeakVM
 			ifTrue: [self lookupOrdinarySend]
 			ifFalse: [self lookupMethodInClass: lkupClass].
 		 self internalizeIPandSP.
@@ -9801,17 +9802,15 @@ StackInterpreter >> methodClassOf: methodPointer [
 	<api>
 	"Using a read barrier here simplifies the become implementation and costs very little
 	 because the class index and ValueIndex of the association almost certainly share a cache line."
-	^self cppIf: NewspeakVM
+	| literal |
+	literal := self followLiteral: (objectMemory literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
+	^NewspeakVM
 		ifTrue:
-			[| literal |
-			 literal := self followLiteral: (objectMemory literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
-			 literal = objectMemory nilObject
+			[literal = objectMemory nilObject
 				ifTrue: [literal]
 				ifFalse: [objectMemory followField: ValueIndex ofObject: literal]]
 		ifFalse:
-			[| literal |
-			 literal := self followLiteral: (objectMemory literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
-			 self assert: ((objectMemory isPointers: literal) and: [(objectMemory numSlotsOf: literal) > ValueIndex]).
+			[self assert: ((objectMemory isPointers: literal) and: [(objectMemory numSlotsOf: literal) > ValueIndex]).
 			 objectMemory followField: ValueIndex ofObject: literal]
 ]
 

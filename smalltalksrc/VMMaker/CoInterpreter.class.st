@@ -4168,7 +4168,7 @@ CoInterpreter >> internalFindNewMethodOrdinary [
 				(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifTrue:
 					[^self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]].
 			lkupClass := objectMemory classForClassTag: lkupClassTag.
-			self cppIf: #NewspeakVM
+			NewspeakVM
 				ifTrue: [self lookupOrdinarySend]
 				ifFalse: [self lookupMethodInClass: lkupClass].
 			self internalizeIPandSP.
@@ -7163,7 +7163,7 @@ CoInterpreter >> validInstructionPointer: instrPointer inMethod: aMethod framePo
 			 theInstrPointer := self iframeSavedIP: fp]
 		ifFalse:
 			[theInstrPointer := instrPointer.
-			self cppIf: NewspeakVM
+			 NewspeakVM
 				ifTrue:
 					[(self isMachineCodeFrame: fp) ifTrue:
 						[cogMethod := self mframeHomeMethod: fp.

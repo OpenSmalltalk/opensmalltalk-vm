@@ -174,7 +174,7 @@ CogMethodZone >> clearCogCompiledCode [
 	"Free all methods"
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	self cppIf: NewspeakVM ifTrue: [unpairedMethodList := nil].
+	NewspeakVM ifTrue: [unpairedMethodList := nil].
 	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	[cogMethod asUnsignedInteger < mzFreeStart] whileTrue:
 		[cogMethod cmType = CMMethod ifTrue:
@@ -226,14 +226,14 @@ CogMethodZone >> compactCompiledCode [
 	source := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	openPICList := nil.
 	methodCount := 0.
-	self cppIf: NewspeakVM ifTrue: [unpairedMethodList := nil].
+	NewspeakVM ifTrue: [unpairedMethodList := nil].
 	[source < self limitZony
 	 and: [source cmType ~= CMFree]] whileTrue:
 		[self assert: (cogit cogMethodDoesntLookKosher: source) = 0.
 		 source objectHeader: objectHeaderValue.
 		 source cmUsageCount > 0 ifTrue:
 			[source cmUsageCount: source cmUsageCount // 2].
-		 self cppIf: NewspeakVM ifTrue:
+		 NewspeakVM ifTrue:
 				[(source cmType = CMMethod
 				  and: [(coInterpreter rawHeaderOf: source methodObject) asInteger ~= source asInteger]) ifTrue:
 					[source nextMethodOrIRCs: unpairedMethodList.
@@ -265,7 +265,7 @@ CogMethodZone >> compactCompiledCode [
 							[coInterpreter rawHeaderOf: dest methodObject put: dest asInteger]
 						ifFalse:
 							[self assert: (cogit noAssertMethodClassAssociationOf: dest methodObject) = objectMemory nilObject.
-							 self cppIf: NewspeakVM ifTrue:
+							 NewspeakVM ifTrue:
 								[dest nextMethodOrIRCs: unpairedMethodList.
 								 unpairedMethodList := dest asUnsignedInteger]]]
 				ifFalse:
@@ -339,12 +339,12 @@ CogMethodZone >> freeMethod: cogMethod [
 		 (coInterpreter rawHeaderOf: cogMethod methodObject) asInteger = cogMethod asInteger
 			ifTrue:
 				[coInterpreter rawHeaderOf: cogMethod methodObject put: cogMethod methodHeader.
-				 self cppIf: NewspeakVM ifTrue:
+				 NewspeakVM ifTrue:
 					[(objectRepresentation canPinObjects and: [cogMethod nextMethodOrIRCs ~= 0]) ifTrue:
 						[objectRepresentation freeIRCs: cogMethod nextMethodOrIRCs]]]
 			ifFalse:
 				[self assert: (cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject.
-				 self cppIf: NewspeakVM ifTrue:
+				 NewspeakVM ifTrue:
 					[self removeFromUnpairedMethodList: cogMethod]].
 		 cogit maybeFreeCountersOf: cogMethod].
 	cogMethod cmType = CMOpenPIC ifTrue:
@@ -435,7 +435,7 @@ CogMethodZone >> manageFrom: theStartAddress to: theLimitAddress [
 	mzFreeStart := baseAddress := theStartAddress.
 	youngReferrers := limitAddress := theLimitAddress.
 	openPICList := nil.
-	self cppIf: NewspeakVM ifTrue: [unpairedMethodList := nil].
+	NewspeakVM ifTrue: [unpairedMethodList := nil].
 	methodBytesFreedSinceLastCompaction := 0.
 	methodCount := 0
 ]
