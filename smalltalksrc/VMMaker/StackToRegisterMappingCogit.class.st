@@ -3695,8 +3695,8 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 
 	"Generate these in the middle so they are within [firstSend, lastSend]."
-	self cppIf: NewspeakVM ifTrue: [self generateNewspeakSendTrampolines].
-	self cppIf: BytecodeSetHasDirectedSuperSend ifTrue:
+	NewspeakVM ifTrue: [self generateNewspeakSendTrampolines].
+	BytecodeSetHasDirectedSuperSend ifTrue:
 		[0 to: NumSendTrampolines - 1 do:
 			[:numArgs|
 			directedSuperSendTrampolines
