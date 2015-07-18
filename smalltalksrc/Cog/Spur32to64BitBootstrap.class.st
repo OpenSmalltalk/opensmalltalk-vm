@@ -425,6 +425,7 @@ Spur32to64BitBootstrap >> writeSnapshot: imageFileName headerFlags: headerFlags 
 	interpreter64
 		setImageHeaderFlagsFrom: headerFlags;
 		setDisplayForm: nil;
+		setSavedWindowSize: savedWindowSize;
 		imageName: imageFileName;
 		writeImageFileIO.
 	Transcript cr; show: 'Done!'
