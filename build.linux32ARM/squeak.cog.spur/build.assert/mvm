@@ -19,7 +19,7 @@ test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak 
 		--without-vm-display-fbdev --with-vmversion=5.0 \
 		--with-src=spursrc --with-plugins=src/plugins \
 		--without-vm-display-fbdev --without-npsqueak --enable-fast-bitblt \
-	CC=gcc \
+	CC="gcc -march=armv6 -mfpu=vfp -mfloat-abi=hard" \
 	CXX=g++ \
 	CFLAGS="$OPT -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS -DCOGMTVM=0" \
 	LIBS="-lpthread -luuid -lasound" \
