@@ -75,8 +75,8 @@ such third-party acknowledgments.
               creationDate:(sqInt *)creationDate
           modificationDate:(sqInt *)modificationDate
                 sizeIfFile:(off_t *)sizeIfFile
-          posixPermissions:(sqInt *)posixPermissions
-                 isSymlink:(sqInt *)isSymlink {
+          posixPermissions:(sqInt *)posixPermissionsp
+                 isSymlink:(sqInt *)isSymlinkp {
     
 	//This minics the unix port where we resolve the file name, but the symbolic file lookup can fail. 
 	//The unix port says, oh file was there, but stat/lstat fails, so mmm kinda continue
@@ -84,23 +84,24 @@ such third-party acknowledgments.
 	
 	NSDictionary *fileAttributes;
     NSError *error;
-    
+    int isSymlink;
 	fileAttributes        = [fileMgr attributesOfItemAtPath: filePath error: &error];
     if (!fileAttributes) {
         return BAD_PATH;
     }
-    
-    *isSymlink        = [[fileAttributes objectForKey: NSFileType] isEqualToString: NSFileTypeSymbolicLink] ? 1 : 0;
-    if(*isSymlink) {
+   
+	isSymlink = [[fileAttributes objectForKey: NSFileType] isEqualToString: NSFileTypeSymbolicLink] ? 1 : 0;
+    if (isSymlinkp) *isSymlinkp = isSymlink;
+    if(isSymlink)
         //I need to check if symlink points to a directory
         *isDirectory  = [self linkIsDirectory:filePath fileManager:fileMgr];
-    } else {
+    else
         *isDirectory  = [[fileAttributes objectForKey: NSFileType] isEqualToString: NSFileTypeDirectory] ? 1 : 0;
-	}
     *creationDate     = convertToSqueakTime([fileAttributes objectForKey: NSFileCreationDate ]);
 	*modificationDate = convertToSqueakTime([fileAttributes objectForKey: NSFileModificationDate]);
 	*sizeIfFile       = [[fileAttributes objectForKey: NSFileSize] integerValue];
-	*posixPermissions = [[fileAttributes objectForKey: NSFilePosixPermissions] shortValue];
+	if (posixPermissionsp)
+		*posixPermissionsp = [[fileAttributes objectForKey: NSFilePosixPermissions] shortValue];
 	
 	/* POSSIBLE IPHONE BUG CHECK */
 	if (*creationDate == 0) 
