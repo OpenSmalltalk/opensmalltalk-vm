@@ -239,54 +239,54 @@ sqInt ioProcessEvents(void);
 /* generic input event */
 typedef struct sqInputEvent
 {
-  int type;			/* type of event; either one of EventTypeXXX */
-  unsigned int timeStamp;	/* time stamp */
-  /* the interpretation of the following fields depend on the type of the event */
-  int unused1;
-  int unused2;
-  int unused3;
-  int unused4;
-  int unused5;
-  int windowIndex;		/* SmallInteger used in image to identify a host window structure */
+  long type;			/* type of event; either one of EventTypeXXX */
+  unsigned long timeStamp;	/* time stamp */
+  /* the longerpretation of the following fields depend on the type of the event */
+  long unused1;
+  long unused2;
+  long unused3;
+  long unused4;
+  long unused5;
+  long windowIndex;		/* SmallInteger used in image to identify a host window structure */
 } sqInputEvent;
 
 /* mouse input event */
 typedef struct sqMouseEvent
 {
-  int type;			/* EventTypeMouse */
-  unsigned int timeStamp;	/* time stamp */
-  int x;			/* mouse position x */
-  int y;			/* mouse position y */
-  int buttons;			/* combination of xxxButtonBit */
-  int modifiers;		/* combination of xxxKeyBit */
-  int reserved1;		/* reserved for future use */
-  int windowIndex;		/* host window structure */
+  long type;			/* EventTypeMouse */
+  unsigned long timeStamp;	/* time stamp */
+  long x;			/* mouse position x */
+  long y;			/* mouse position y */
+  long buttons;			/* combination of xxxButtonBit */
+  long modifiers;		/* combination of xxxKeyBit */
+  long reserved1;		/* reserved for future use */
+  long windowIndex;		/* host window structure */
 } sqMouseEvent;
 
 /* keyboard input event */
 typedef struct sqKeyboardEvent
 {
-  int type;			/* EventTypeKeyboard */
-  unsigned int timeStamp;	/* time stamp */
-  int charCode;			/* character code in Mac Roman encoding */
-  int pressCode;		/* press code; any of EventKeyXXX */
-  int modifiers;		/* combination of xxxKeyBit */
-  int utf32Code;		/* UTF-32 unicode value */
-  int reserved1;		/* reserved for future use */
-  int windowIndex;		/* host window structure */
+  long type;			/* EventTypeKeyboard */
+  unsigned long timeStamp;	/* time stamp */
+  long charCode;			/* character code in Mac Roman encoding */
+  long pressCode;		/* press code; any of EventKeyXXX */
+  long modifiers;		/* combination of xxxKeyBit */
+  long utf32Code;		/* UTF-32 unicode value */
+  long reserved1;		/* reserved for future use */
+  long windowIndex;		/* host window structure */
 } sqKeyboardEvent;
 
 /* drop files event */
 typedef struct sqDragDropFilesEvent
 {
-  int type;			/* EventTypeDropFiles */
-  unsigned int timeStamp;	/* time stamp */
-  int dragType;			/* one of DragXXX (see below) */
-  int x;			/* mouse position x */
-  int y;			/* mouse position y */
-  int modifiers;		/* combination of xxxKeyBit */
-  int numFiles;			/* number of files in transaction */
-  int windowIndex;		/* host window structure */
+  long type;			/* EventTypeDropFiles */
+  unsigned long timeStamp;	/* time stamp */
+  long dragType;			/* one of DragXXX (see below) */
+  long x;			/* mouse position x */
+  long y;			/* mouse position y */
+  long modifiers;		/* combination of xxxKeyBit */
+  long numFiles;			/* number of files in transaction */
+  long windowIndex;		/* host window structure */
 } sqDragDropFilesEvent;
 
 #define DragEnter	1 /* drag operation from OS entered Squeak window */
@@ -298,29 +298,29 @@ typedef struct sqDragDropFilesEvent
 /* menu event */
 typedef struct sqMenuEvent
 {
-  int type;			/* type of event; EventTypeMenu */
-  unsigned int timeStamp;	/* time stamp */
-  /* the interpretation of the following fields depend on the type  of the event */
-  int menu;			/* platform-dependent to indicate which menu was picked */
-  int menuItem;			/* given a menu having 1 to N items this maps to the menu item number */
-  int reserved1;		/* reserved for future use */
-  int reserved2;		/* reserved for future use */
-  int reserved3;		/* reserved for future use */
-  int windowIndex;		/* host window structure */
+  long type;			/* type of event; EventTypeMenu */
+  unsigned long timeStamp;	/* time stamp */
+  /* the longerpretation of the following fields depend on the type  of the event */
+  long menu;			/* platform-dependent to indicate which menu was picked */
+  long menuItem;			/* given a menu having 1 to N items this maps to the menu item number */
+  long reserved1;		/* reserved for future use */
+  long reserved2;		/* reserved for future use */
+  long reserved3;		/* reserved for future use */
+  long windowIndex;		/* host window structure */
 } sqMenuEvent;
 
 /* window action event */
 typedef struct sqWindowEvent
 {
-  int type;			/* type of event;  EventTypeWindow */
-  unsigned int timeStamp;	/* time stamp */
-  /* the interpretation of the following fields depend on the type  of the event */
-  int action;		        /* one of WindowEventXXX (see below) */
-  int value1;			/* used for rectangle edges */
-  int value2;			/* used for rectangle edges */
-  int value3;			/* used for rectangle edges */
-  int value4;			/* used for rectangle edges */
-  int windowIndex;		/* host window structure */
+  long type;			/* type of event;  EventTypeWindow */
+  unsigned long timeStamp;	/* time stamp */
+  /* the longerpretation of the following fields depend on the type  of the event */
+  long action;		        /* one of WindowEventXXX (see below) */
+  long value1;			/* used for rectangle edges */
+  long value2;			/* used for rectangle edges */
+  long value3;			/* used for rectangle edges */
+  long value4;			/* used for rectangle edges */
+  long windowIndex;		/* host window structure */
 } sqWindowEvent;
 
 #define WindowEventMetricChange	1 /* size or position of window changed - value1-4 are left/top/right/bottom values */
@@ -332,15 +332,15 @@ typedef struct sqWindowEvent
 
 typedef struct sqComplexEvent
 	{
-		int type;			/* type of event;  EventTypeComplex */
-		unsigned int timeStamp;	/* time stamp */
-		/* the interpretation of the following fields depend on the type  of the event */
-		int action;		        /* one of ComplexEventXXX (see below) */
-		usqInt objectPointer;	/* used to point to object */
-		int unused1;			/*  */
-		int unused2;			/*  */
-		int unused3;			/*  */
-		int windowIndex;	/* host window structure */
+		long type;			/* type of event;  EventTypeComplex */
+		unsigned long timeStamp;	/* time stamp */
+		/* the longerpretation of the following fields depend on the type  of the event */
+		long action;		        /* one of ComplexEventXXX (see below) */
+		long objectPointer;	/* used to point to object (usqInt object pointer) */
+		long unused1;			/*  */
+		long unused2;			/*  */
+		long unused3;			/*  */
+		long windowIndex;	/* host window structure */
 	} sqComplexEvent;
 
 #define ComplexEventTypeTouchsDown	1 /*  */
