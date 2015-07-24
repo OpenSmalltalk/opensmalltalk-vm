@@ -51,21 +51,27 @@ test -n "$TAG" || TAG=`date +%y.%U.`$REV
 echo REV=$REV TAG=$TAG
 
 if [ -n "$CL" ]; then
-	for archive in coglinux coglinuxht cogmtlinuxht; do
-		rm -rf $archive-$TAG.tgz
-		echo $archive '=>' $archive-$TAG.tgz
-		COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $archive
-		EXES="$EXES	$archive/lib/squeak/[0-9.-]*/squeak"
+	for d in . assert debug; do
+		(cd $d
+		for archive in coglinux coglinuxht cogmtlinuxht; do
+			rm -rf $archive-$TAG.tgz
+			echo $archive '=>' $archive-$TAG.tgz
+			COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $archive
+			EXES="$EXES	$archive/lib/squeak/[0-9.-]*/squeak"
+		done)
 	done
 fi
 if [ -n "$NL" ]; then
-	set -- nscoglinux nscoglinuxht
-	for archive in nsvmlinux nsvmlinuxht; do
-		rm -rf $archive-$TAG.tgz
-		echo $1 '=>' $archive-$TAG.tgz
-		COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $1
-		EXES="$EXES	$1/lib/nsvm/[0-9.-]*/nsvm"
-		shift
+	for d in . assert debug; do
+		(cd $d
+		set -- nscoglinux nscoglinuxht
+		for archive in nsvmlinux nsvmlinuxht; do
+			rm -rf $archive-$TAG.tgz
+			echo $1 '=>' $archive-$TAG.tgz
+			COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $1
+			EXES="$EXES	$1/lib/nsvm/[0-9.-]*/nsvm"
+			shift
+		done)
 	done
 fi
 if [ -n "$CM" ]; then

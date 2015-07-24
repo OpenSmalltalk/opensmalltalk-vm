@@ -46,7 +46,7 @@ else
 			if [ -d $f ]; then
 				exe="`basename \`dirname $f\``"
 				case $d in
-				nscog*)	archive="`echo $d |  | sed 's/nscog/nsvm/'`";;
+				nscog*)	archive="`echo $d | sed 's/nscog/nsvm/'`";;
 				*)		archive=$d
 				esac
 				rm -rf $archive-$TAG.tgz
