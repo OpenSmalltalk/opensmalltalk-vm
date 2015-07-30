@@ -1,4 +1,16 @@
-/* sqWin32SSL.c: SqueakSSL implementation for Windows */
+/****************************************************************************
+*   PROJECT: SqueakSSL implementation for Windows
+*   FILE:    sqWin32SSL.c
+*   CONTENT: SSL platform functions
+*
+*   AUTHORS:  Andreas Raab (ar)
+*
+*             Marcel Taeumel (mt)
+*               Hasso Plattner Institute, Postdam, Germany
+*             Tobias Pape (topa)
+*               Hasso Plattner Institute, Postdam, Germany
+*****************************************************************************/
+
 #include <windows.h>
 #include <errno.h>
 #include <malloc.h>
@@ -18,6 +30,7 @@ typedef struct sqSSL {
 
 	char *certName;
 	char *peerName;
+	char *serverName;
 
 	CredHandle sslCred;
 	CtxtHandle sslCtxt;
@@ -126,7 +139,7 @@ static sqInt sqSetupCert(sqSSL *ssl, char *certName, int server) {
 	char  bFriendlyName[MAX_NAME_SIZE];
 
 	if(certName) {
-		hStore = CertOpenSystemStore(0, "MY");
+		hStore = CertOpenSystemStore(0, L"MY");
 		if(!hStore) {
 			if(ssl->loglevel) printf("sqSetupCert: CertOpenSystemStore failed\n");
 			return 0;
@@ -199,7 +212,9 @@ static int sqExtractPeerName(sqSSL *ssl) {
 	PCERT_NAME_INFO certInfo = NULL;
 	PCERT_RDN_ATTR certAttr = NULL;
 	DWORD dwSize = 0;
-	char tmpBuf[1024];
+	int cbPeerName = 0;
+	LPTSTR tmpBuf = NULL;
+	DWORD cchTmpBuf = 0;
 
 	if(ssl->peerName) {
 		free(ssl->peerName);
@@ -214,32 +229,21 @@ static int sqExtractPeerName(sqSSL *ssl) {
 		return 0;
 	}
 
-	/* Figure out the size of the blob */
-	if(!CryptDecodeObject(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, X509_NAME,
-		certHandle->pCertInfo->Subject.pbData,
-		certHandle->pCertInfo->Subject.cbData,
-		0, NULL, &dwSize)) {
-			if(ssl->loglevel) printf("sqExtractPeerName: CryptDecodeObject failed\n");
-			return 0;
-	}
-	
-	/* Get the contents */
-	certInfo = alloca(dwSize);
-	if(!CryptDecodeObject(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, X509_NAME, 
-		certHandle->pCertInfo->Subject.pbData,
-		certHandle->pCertInfo->Subject.cbData,
-		0, certInfo, &dwSize)) {
-			if(ssl->loglevel) printf("sqExtractPeerName: CryptDecodeObject failed\n");
-			return 0;
-	}
+	/* Extract CN from certificate */
+	cchTmpBuf = CertGetNameString(certHandle, CERT_NAME_ATTR_TYPE, 0, szOID_COMMON_NAME, NULL, 0);
+	tmpBuf = (LPTSTR)alloca(cchTmpBuf * sizeof(TCHAR));
+	CertGetNameString(certHandle, CERT_NAME_ATTR_TYPE, 0, szOID_COMMON_NAME, tmpBuf, cchTmpBuf);
 
-	/* Fetch the CN from the cert */
-	certAttr = CertFindRDNAttr(szOID_COMMON_NAME, certInfo);
-	if(certAttr == NULL) return 0;
-
-	/* Translate from RDN to string */
-	if(CertRDNValueToStr(CERT_RDN_PRINTABLE_STRING, &certAttr->Value, tmpBuf, sizeof(tmpBuf)) == 0) return 0;
+#ifdef _UNICODE
+	/* Convert wide to UTF8 */
+	cbPeerName = WideCharToMultiByte(CP_UTF8, 0, tmpBuf, -1, NULL, 0, NULL, NULL);
+	if (cbPeerName == 0) return 0;
+	ssl->peerName = calloc(1, cbPeerName);
+	WideCharToMultiByte(CP_UTF8, 0, tmpBuf, -1, ssl->peerName, cbPeerName, NULL, NULL);
+#else
 	ssl->peerName = _strdup(tmpBuf);
+#endif
+	
 	if(ssl->loglevel) printf("sqExtractPeerName: Peer name is %s\n", ssl->peerName);
 
 	CertFreeCertificateContext(certHandle);
@@ -401,6 +405,7 @@ sqInt sqDestroySSL(sqInt handle) {
 
 	if(ssl->certName) free(ssl->certName);
 	if(ssl->peerName) free(ssl->peerName);
+	if(ssl->serverName) free(ssl->serverName);
 	if(ssl->dataBuf) free(ssl->dataBuf);
 
 	free(ssl);
@@ -423,6 +428,8 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 	SCHANNEL_CRED sc_cred = { 0 };
 	ULONG sslFlags, retFlags;
 	sqSSL *ssl = sslFromHandle(handle);
+	LPTSTR serverName = NULL;
+	int ccServerName = 0;
 
 	/* Verify state of session */
 	if(ssl == NULL || (ssl->state != SQSSL_UNUSED && ssl->state != SQSSL_CONNECTING)) {
@@ -433,9 +440,10 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		/* resize the data buffer */
 		ssl->dataMax += (srcLen < 4096) ? (4096) : (srcLen+1024);
 		ssl->dataBuf = realloc(ssl->dataBuf, ssl->dataMax);
-		if(!ssl->dataBuf) return SQSSL_OUT_OF_MEMORY;
+		if (!ssl->dataBuf) return SQSSL_OUT_OF_MEMORY;
 	}
-	if(ssl->loglevel) printf("sqConnectSSL: input token %d bytes\n", srcLen);
+	if(ssl->loglevel) 
+		printf("sqConnectSSL: input token %d bytes\n", srcLen);
 	memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
 	ssl->dataLen += srcLen;
 
@@ -470,18 +478,32 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 
 	if(ssl->loglevel) printf("sqConnectSSL: Input to InitSecCtxt is %d bytes\n", ssl->dataLen);
 
+#ifdef _UNICODE
+	if(ssl->serverName) {
+		ccServerName = MultiByteToWideChar(CP_UTF8, 0, ssl->serverName, -1, NULL, 0);
+		if (ccServerName == 0) {
+			return SQSSL_GENERIC_ERROR;
+		}
+		serverName = (LPTSTR)alloca(ccServerName * sizeof(TCHAR));
+		if (MultiByteToWideChar(CP_UTF8, 0, ssl->serverName, -1, serverName, ccServerName) == 0) {
+			return SQSSL_GENERIC_ERROR;
+		}
+	}
+#else
+	if(ssl->serverName) serverName = ssl->serverName;
+#endif
+
 	if(ssl->state == SQSSL_UNUSED) {
 		ssl->state = SQSSL_CONNECTING;
 
-		if(!sqSetupCert(ssl, ssl->certName, 0)) 
-			/* FIXME. We need a different error code here. */
+		if (!sqSetupCert(ssl, ssl->certName, 0)) {
 			return SQSSL_GENERIC_ERROR;
-
-		ret = InitializeSecurityContext(&ssl->sslCred, NULL, NULL,
+		}
+		ret = InitializeSecurityContext(&ssl->sslCred, NULL, serverName,
 										sslFlags, 0, 0, NULL, 0, &ssl->sslCtxt,
 										&ssl->sbdOut, &retFlags, NULL);
 	} else {
-		ret = InitializeSecurityContext(&ssl->sslCred, &ssl->sslCtxt, NULL,
+		ret = InitializeSecurityContext(&ssl->sslCred, &ssl->sslCtxt, serverName,
 										sslFlags, 0, 0, &ssl->sbdIn, 0, NULL,
 										&ssl->sbdOut, &retFlags, NULL);
 	}
@@ -516,11 +538,11 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 					memmove(ssl->dataBuf, ssl->dataBuf + (ssl->dataLen - extra), extra);
 					ssl->dataLen = extra;
 				} else ssl->dataLen = 0;
-
+				
 				/* Don't return zero (SQSSL_OK) when more data is needed */
 				return count ? count : SQSSL_NEED_MORE_DATA;
 			default:
-				if(ssl->loglevel) printf("Unexpected return code %d\n", ret);
+				if(ssl->loglevel) printf("Unexpected return code %lu\n", (unsigned long)ret);
 				return SQSSL_GENERIC_ERROR;
 		}
 	}
@@ -799,6 +821,7 @@ char* sqGetStringPropertySSL(sqInt handle, int propID) {
 	switch(propID) {
 		case SQSSL_PROP_PEERNAME:  return ssl->peerName;
 		case SQSSL_PROP_CERTNAME:  return ssl->certName;
+		case SQSSL_PROP_SERVERNAME: return ssl->serverName;
 		default:
 			if(ssl->loglevel) printf("sqGetStringPropertySSL: Unknown property ID %d\n", propID);
 			return NULL;
@@ -838,7 +861,7 @@ static sqInt sqAddPfxCertToStore(char *pfxData, sqInt pfxLen, char *passData, sq
 	if(!pfxStore) return 0;
 
 	/* And copy the certificates to MY store */
-	myStore = CertOpenSystemStore(0, "MY");
+	myStore = CertOpenSystemStore(0, L"MY");
 	pContext = NULL;
 	while(pContext = CertEnumCertificatesInStore(pfxStore, pContext)) {
 		CertAddCertificateContextToStore(myStore, pContext, CERT_STORE_ADD_REPLACE_EXISTING, NULL);
@@ -865,16 +888,27 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char *propName, sqInt pro
 	if(propLen) {
 	  property = calloc(1, propLen+1);
 	  memcpy(property, propName, propLen);
+	  property[propLen] = '\0';
 	};
 
-	if(ssl->loglevel) printf("sqSetStringPropertySSL(%d): %s\n", propID, property);
+	if(ssl->loglevel) printf("sqSetStringPropertySSL(%d): %s\n", propID, property ? property : "(null)");
 
 	switch(propID) {
-		case SQSSL_PROP_CERTNAME: ssl->certName = property; break;
+		case SQSSL_PROP_CERTNAME:
+			if(ssl->certName) free(ssl->certName);
+			ssl->certName = property;
+			break;
+		case SQSSL_PROP_SERVERNAME:
+			if(ssl->serverName) free(ssl->serverName);
+			ssl->serverName = property;
+			break;
 		/* Platform specific: Adds a .PFX file to MY certificate store w/o password.
 		   Useful for installing the default test certificate in SqueakSSL. */
-		case 10001: return sqAddPfxCertToStore(propName, propLen, NULL, 0);
-		default: 
+		case 10001:
+			if(property) free(property);
+			return sqAddPfxCertToStore(propName, propLen, NULL, 0);
+		default:
+			if(property) free(property);
 			if(ssl->loglevel) printf("sqSetStringPropertySSL: Unknown property ID %d\n", propID);
 			return 0;
 	}
@@ -894,7 +928,7 @@ int sqGetIntPropertySSL(sqInt handle, int propID) {
 	switch(propID) {
 		case SQSSL_PROP_SSLSTATE: return ssl->state;
 		case SQSSL_PROP_CERTSTATE: return ssl->certFlags;
-		case SQSSL_PROP_VERSION: return 1;
+		case SQSSL_PROP_VERSION: return SQSSL_VERSION;
 		case SQSSL_PROP_LOGLEVEL: return ssl->loglevel;
 		default:
 			if(ssl->loglevel) printf("sqGetIntPropertySSL: Unknown property ID %d\n", propID);
@@ -911,6 +945,7 @@ int sqGetIntPropertySSL(sqInt handle, int propID) {
 	Returns: Non-zero if successful.
 */
 sqInt sqSetIntPropertySSL(sqInt handle, sqInt propID, sqInt propValue) {
+
 	sqSSL *ssl = sslFromHandle(handle);
 	if(ssl == NULL) return 0;
 
@@ -920,5 +955,5 @@ sqInt sqSetIntPropertySSL(sqInt handle, sqInt propID, sqInt propValue) {
 			if(ssl->loglevel) printf("sqSetIntPropertySSL: Unknown property ID %d\n", propID);
 			return 0;
 	}
-	return 0;
+	return 1;
 }
