@@ -37,7 +37,7 @@ static sqSSL *sslFromHandle(sqInt handle) {
 sqInt sqCopyBioSSL(sqSSL *ssl, BIO *bio, char *dstBuf, sqInt dstLen) {
   int nbytes = BIO_ctrl_pending(bio);
 
-  if(ssl->loglevel) printf("sqCopyBioSSL: %d bytes pending; buffer size %d\n", 
+  if(ssl->loglevel) printf("sqCopyBioSSL: %d bytes pending; buffer size %ld\n", 
 	 nbytes, dstLen);
   if(nbytes > dstLen) return -1;
   return BIO_read(bio, dstBuf, dstLen);
@@ -439,7 +439,7 @@ sqInt sqGetIntPropertySSL(sqInt handle, sqInt propID) {
 	switch(propID) {
 		case SQSSL_PROP_SSLSTATE: return ssl->state;
 		case SQSSL_PROP_CERTSTATE: return ssl->certFlags;
-		case SQSSL_PROP_VERSION: return 1;
+		case SQSSL_PROP_VERSION: return SQSSL_VERSION;
 		case SQSSL_PROP_LOGLEVEL: return ssl->loglevel;
 		default:
 			if(ssl->loglevel) printf("sqGetIntPropertySSL: Unknown property ID %d\n", propID);
@@ -462,7 +462,7 @@ sqInt sqSetIntPropertySSL(sqInt handle, sqInt propID, sqInt propValue) {
 	switch(propID) {
 		case SQSSL_PROP_LOGLEVEL: ssl->loglevel = propValue; break;
 		default:
-			if(ssl->loglevel) printf("sqSetIntPropertySSL: Unknown property ID %d\n", propID);
+			if(ssl->loglevel) printf("sqSetIntPropertySSL: Unknown property ID %ld\n", propID);
 			return 0;
 	}
 	return 1;
