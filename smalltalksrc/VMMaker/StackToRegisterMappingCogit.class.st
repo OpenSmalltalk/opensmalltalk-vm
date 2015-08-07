@@ -2900,7 +2900,7 @@ StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode [
 ]
 
 { #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode orDoubleComparison: jumpFPOpcodeGenerator [
+StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode orDoubleComparison: jumpFPOpcodeGenerator invert: invertComparison [
 	"Stack looks like
 		return address"
 	| jumpDouble jumpNonInt jumpFail jumpTrue jumpCond |
@@ -2932,7 +2932,9 @@ StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCom
 	objectRepresentation genConvertSmallIntegerToIntegerInReg: ReceiverResultReg.
 	self ConvertR: ReceiverResultReg Rd: DPFPReg0.
 	objectRepresentation genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
-	self CmpRd: DPFPReg1 Rd: DPFPReg0.
+	invertComparison "May need to invert for NaNs"
+		ifTrue: [self CmpRd: DPFPReg0 Rd: DPFPReg1]
+		ifFalse: [self CmpRd: DPFPReg1 Rd: DPFPReg0].
 	jumpCond := self perform: jumpFPOpcodeGenerator with: 0. "FP jumps are a little weird"
 	self genMoveFalseR: ReceiverResultReg.
 	self RetN: 0.

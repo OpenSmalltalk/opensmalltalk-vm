@@ -2769,8 +2769,7 @@ CogVMSimulator >> primitiveDirectoryEntry [
 			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
 				createDate: (array at: 2) modDate: (array at: 3)
 				isDir: (array at: 4) fileSize: (array at: 5) ].
-	self pop: 3.
-	self push: result
+	self pop: 3 thenPush: result
 ]
 
 { #category : #'file primitives' }

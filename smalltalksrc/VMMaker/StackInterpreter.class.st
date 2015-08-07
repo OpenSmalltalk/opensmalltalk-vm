@@ -11614,15 +11614,25 @@ StackInterpreter >> printStackCallStackOf: aContextOrProcessOrFrame [
 
 { #category : #'debug printing' }
 StackInterpreter >> printStackPage: page [
+	<inline: true>
+	self printStackPage: page useCount: -1
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> printStackPage: page useCount: n [
 	<inline: false>
 	<var: #page type: #'StackPage *'>
 	self print: 'page '; printHexPtr: (self cCode: [page] inSmalltalk: [page baseAddress]);
-		print: ' ('; printNum: (stackPages pageIndexFor: page realStackLimit);
-		print: ')  (trace: '; printNum: page trace; printChar: $).
+		print: ' ('; printNum: (stackPages pageIndexFor: page realStackLimit).
+	n >= 0 ifTrue:
+		[self print: ','; printNum: n].
+	self print: ')  (trace: '; printNum: page trace; printChar: $).
 	(stackPages isFree: page) ifTrue:
 		[self print: ' (free)'].
 	page = stackPages mostRecentlyUsedPage ifTrue:
 		[self print: ' (MRU)'].
+	page prevPage = stackPages mostRecentlyUsedPage ifTrue:
+		[self print: ' (LRU)'].
 	self cr; tab; print: 'ba: ';
 		printHexPtr: page baseAddress; print: ' - sl: ';
 		printHexPtr: page realStackLimit; print: ' - sl-so: ';
@@ -11652,13 +11662,14 @@ StackInterpreter >> printStackPageList [
 
 { #category : #'debug printing' }
 StackInterpreter >> printStackPageListInUse [
-	| page |
+	| page n |
 	<inline: false>
 	<var: #page type: #'StackPage *'>
 	page := stackPages mostRecentlyUsedPage.
+	n := 0.
 	[(stackPages isFree: page) ifFalse:
-		[self printStackPage: page.
-		 self cr].
+		[self printStackPage: page useCount: n; cr.
+		 n := n + 1].
 	 (page := page prevPage) ~= stackPages mostRecentlyUsedPage] whileTrue
 ]
 
@@ -11672,11 +11683,13 @@ StackInterpreter >> printStackPages [
 
 { #category : #'debug printing' }
 StackInterpreter >> printStackPagesInUse [
+	| n |
+	n := 0.
 	0 to: numStackPages - 1 do:
 		[:i|
 		(stackPages isFree: (stackPages stackPageAt: i)) ifFalse:
-			[self printStackPage: (stackPages stackPageAt: i).
-			 self cr]]
+			[self printStackPage: (stackPages stackPageAt: i) useCount: n; cr.
+			 n := n + 1]]
 ]
 
 { #category : #'object memory support' }
