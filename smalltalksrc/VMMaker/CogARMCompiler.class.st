@@ -1960,6 +1960,14 @@ ARM_ARM v5 DDI 01001.pdf pp. C4-10"
 ]
 
 { #category : #'ARM convenience instructions' }
+CogARMCompiler >> fcmpeFrom: regA to: regB [
+	"FCMPE or VCMPE instruction to compare two fpu double registers.
+	 ARM_ARM v5 DDI 01001.pdf pp. C4-12"
+	<inline: true>
+	^(2r11101110101101000000101111000000 bitOr: (regA <<12)) bitOr: regB
+]
+
+{ #category : #'ARM convenience instructions' }
 CogARMCompiler >> fdivd: dividend by: divisor [
 "FDIVD or VDIV instruction to divide double dividend by double divisor and stick result in double dividend
 ARM_ARM v5 DDI 01001.pdf pp. C4-32"

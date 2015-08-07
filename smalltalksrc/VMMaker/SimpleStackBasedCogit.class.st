@@ -2589,7 +2589,9 @@ SimpleStackBasedCogit >> genPrimitiveDivide [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveEqual [
-	^self genSmallIntegerComparison: JumpZero orDoubleComparison: #JumpFPEqual: asSymbol
+	^self genSmallIntegerComparison: JumpZero
+		orDoubleComparison: #JumpFPEqual:
+		invert: false
 ]
 
 { #category : #'primitive generators' }
@@ -2664,12 +2666,16 @@ SimpleStackBasedCogit >> genPrimitiveFloatSubtract [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveGreaterOrEqual [
-	^self genSmallIntegerComparison: JumpGreaterOrEqual orDoubleComparison: #JumpFPGreaterOrEqual: asSymbol
+	^self genSmallIntegerComparison: JumpGreaterOrEqual
+		orDoubleComparison: #JumpFPGreaterOrEqual:
+		invert: false
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveGreaterThan [
-	^self genSmallIntegerComparison: JumpGreater orDoubleComparison: #JumpFPGreater: asSymbol
+	^self genSmallIntegerComparison: JumpGreater
+		orDoubleComparison: #JumpFPGreater:
+		invert: false
 ]
 
 { #category : #'primitive generators' }
@@ -2694,12 +2700,18 @@ SimpleStackBasedCogit >> genPrimitiveIdentityHash [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveLessOrEqual [
-	^self genSmallIntegerComparison: JumpLessOrEqual orDoubleComparison: #JumpFPLessOrEqual: asSymbol
+	^self
+		genSmallIntegerComparison: JumpLessOrEqual
+		orDoubleComparison: #JumpFPGreater:
+		invert: true
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveLessThan [
-	^self genSmallIntegerComparison: JumpLess orDoubleComparison: #JumpFPLess: asSymbol
+	^self
+		genSmallIntegerComparison: JumpLess
+		orDoubleComparison: #JumpFPGreaterOrEqual:
+		invert: true
 ]
 
 { #category : #'primitive generators' }
@@ -2801,7 +2813,9 @@ SimpleStackBasedCogit >> genPrimitiveNewWithArg [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNotEqual [
-	^self genSmallIntegerComparison: JumpNonZero orDoubleComparison: #JumpFPNotEqual: asSymbol
+	^self genSmallIntegerComparison: JumpNonZero
+		orDoubleComparison: #JumpFPNotEqual:
+		invert: false
 ]
 
 { #category : #'primitive generators' }
@@ -3428,7 +3442,7 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode [
 ]
 
 { #category : #'primitive generators' }
-SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode orDoubleComparison: jumpFPOpcodeGenerator [
+SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode orDoubleComparison: jumpFPOpcodeGenerator invert: invertComparison [
 	"Stack looks like
 		receiver (also in ResultReceiverReg)
 		arg
@@ -3464,7 +3478,9 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCompariso
 	objectRepresentation genConvertSmallIntegerToIntegerInReg: TempReg.
 	self ConvertR: TempReg Rd: DPFPReg0.
 	objectRepresentation genGetDoubleValueOf: ClassReg into: DPFPReg1.
-	self CmpRd: DPFPReg1 Rd: DPFPReg0.
+	invertComparison "May need to invert for NaNs"
+		ifTrue: [self CmpRd: DPFPReg0 Rd: DPFPReg1]
+		ifFalse: [self CmpRd: DPFPReg1 Rd: DPFPReg0].
 	jumpCond := self perform: jumpFPOpcodeGenerator with: 0. "FP jumps are a little weird"
 	self genMoveFalseR: ReceiverResultReg.
 	self RetN: (self primRetNOffsetFor: 1).
