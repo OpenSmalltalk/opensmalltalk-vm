@@ -17,7 +17,7 @@
 
 /* Begin PBXFileReference section */
 		32BAE0B30371A71500C91783 /* SqueakSSL_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SqueakSSL_Prefix.pch; sourceTree = "<group>"; };
-		73027B6A17012E5F0086D8E4 /* SqueakSSL.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SqueakSSL.c; path = ../../../src/plugins/SqueakSSL/SqueakSSL.c; sourceTree = SOURCE_ROOT; };
+		73027B6A17012E5F0086D8E4 /* SqueakSSL.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SqueakSSL.c; path = ../../../nsspursrc/plugins/SqueakSSL/SqueakSSL.c; sourceTree = SOURCE_ROOT; };
 		732D9F4117012B6E00E25893 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = /System/Library/Frameworks/Security.framework; sourceTree = "<absolute>"; };
 		732D9F4217012B6E00E25893 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = /System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<absolute>"; };
 		73811791170128D400CB30CE /* sq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sq.h; path = ../../../platforms/Cross/vm/sq.h; sourceTree = SOURCE_ROOT; };
