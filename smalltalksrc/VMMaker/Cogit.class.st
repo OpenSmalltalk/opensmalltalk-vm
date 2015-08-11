@@ -1669,7 +1669,7 @@ Cogit >> JumpFPNotEqual: jumpTarget [
 Cogit >> JumpFull: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: JumpFull literal: jumpTarget
+	^self gen: JumpFull literal: jumpTarget asInteger
 ]
 
 { #category : #'method map' }

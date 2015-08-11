@@ -2702,7 +2702,7 @@ SimpleStackBasedCogit >> genPrimitiveIdentityHash [
 SimpleStackBasedCogit >> genPrimitiveLessOrEqual [
 	^self
 		genSmallIntegerComparison: JumpLessOrEqual
-		orDoubleComparison: #JumpFPGreater:
+		orDoubleComparison: #JumpFPGreaterOrEqual:
 		invert: true
 ]
 
@@ -2710,7 +2710,7 @@ SimpleStackBasedCogit >> genPrimitiveLessOrEqual [
 SimpleStackBasedCogit >> genPrimitiveLessThan [
 	^self
 		genSmallIntegerComparison: JumpLess
-		orDoubleComparison: #JumpFPGreaterOrEqual:
+		orDoubleComparison: #JumpFPGreater:
 		invert: true
 ]
 
