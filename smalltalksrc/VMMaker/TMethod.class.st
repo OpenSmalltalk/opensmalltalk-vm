@@ -172,7 +172,7 @@ TMethod >> argAssignmentsFor: meth send: aSendNode in: aCodeGen [
 		 argList := {aSendNode receiver}, aSendNode args].
 	
 	stmtList := OrderedCollection new: argList size.
-	substitutionDict := Dictionary new: 100.
+	substitutionDict := Dictionary new: argList size.
 	meth args with: argList do:
 		[ :argName :exprNode |
 		(self isNode: exprNode substitutableFor: argName inMethod: meth in: aCodeGen)
