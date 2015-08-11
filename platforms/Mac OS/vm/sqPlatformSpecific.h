@@ -116,6 +116,17 @@ void CopyPascalStringToC(ConstStr255Param src, char* dst);
 void CopyCStringToPascal(const char* src, Str255 dst);
 #endif
 
+
+/* C99 vs C89 restrict or not */
+#if __STDC_VERSION__ < 199901L
+# if __GNUC__
+#	define restrict __restrict
+# else
+#	define restrict /*nada*/
+# endif
+#endif
+
+
 /* Macro for inlined functions.
 	As of 1.7, clang elides the original, even though global.
 	gcc & icc don't elide the original

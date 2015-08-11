@@ -288,13 +288,13 @@ sqInt sqCreateSSL(void)
     }
 
     if (handle >= handleMax) {
-        int delta = 100;
+        const int delta = 100;
+		int i;
         /* Resize the handle buffer */
         handleBuf = (sqSSL**)realloc(handleBuf,
                                      (handleMax + delta) * sizeof(sqSSL*));
-        for (int i = handleMax; i < handleMax + delta; i++) {
+        for (i = handleMax; i < handleMax + delta; i++)
             handleBuf[i] = NULL;
-        }
         handleMax += delta;
     }
     handleBuf[handle] = ssl;

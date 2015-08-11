@@ -266,7 +266,7 @@ printRegisterState(ucontext_t *uap)
 			regs->__eax, regs->__ebx, regs->__ecx, regs->__edx,
 			regs->__edi, regs->__edi, regs->__ebp, regs->__esp,
 			regs->__eip);
-	return regs->__eip;
+	return (void *)(regs->__eip);
 #elif __APPLE__ && __MACH__ && __i386__
 	_STRUCT_X86_THREAD_STATE32 *regs = &uap->uc_mcontext->ss;
 	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
@@ -275,7 +275,7 @@ printRegisterState(ucontext_t *uap)
 			regs->eax, regs->ebx, regs->ecx, regs->edx,
 			regs->edi, regs->edi, regs->ebp, regs->esp,
 			regs->eip);
-	return regs->eip;
+	return (void *)(regs->eip);
 #else
 	printf("don't know how to derive register state from a ucontext_t on this platform\n");
 	return 0;
