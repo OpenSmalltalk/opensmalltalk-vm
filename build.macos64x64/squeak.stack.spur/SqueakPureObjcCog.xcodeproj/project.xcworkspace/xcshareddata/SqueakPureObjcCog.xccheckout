@@ -7,7 +7,7 @@
 	<key>IDESourceControlProjectIdentifier</key>
 	<string>3D2D6A47-5629-4BC5-9C59-4C1A9F137CF6</string>
 	<key>IDESourceControlProjectName</key>
-	<string>project</string>
+	<string>SqueakPureObjcCog</string>
 	<key>IDESourceControlProjectOriginsDictionary</key>
 	<dict>
 		<key>fa1542d4-bde8-0310-ad64-8ed1123d492a++2954</key>
@@ -16,13 +16,13 @@
 		<string>http://squeakvm.org/svn/squeak/trunk/platforms/Cross/plugins</string>
 	</dict>
 	<key>IDESourceControlProjectPath</key>
-	<string>build.macos64x64/squeak.stack.spur/SqueakPureObjcCog.xcodeproj/project.xcworkspace</string>
+	<string>build.macos64x64/squeak.stack.spur/SqueakPureObjcCog.xcodeproj</string>
 	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
 	<dict>
 		<key>fa1542d4-bde8-0310-ad64-8ed1123d492a++2954</key>
 		<string>../../../..</string>
 		<key>fa1542d4-bde8-0310-ad64-8ed1123d492a++5922</key>
-		<string>../../../..platforms/Cross/plugins</string>
+		<string>../../../..platforms/Cross/plugins/</string>
 	</dict>
 	<key>IDESourceControlProjectRepositoryRootDictionary</key>
 	<dict>
@@ -32,7 +32,7 @@
 		<string>http://squeakvm.org/svn/squeak</string>
 	</dict>
 	<key>IDESourceControlProjectURL</key>
-	<string>http://squeakvm.org/svn/squeak/branches/Cog/build.macos64x64/squeak.stack.spur/SqueakPureObjcCog.xcodeproj/project.xcworkspace</string>
+	<string>http://squeakvm.org/svn/squeak/branches/Cog/build.macos64x64/squeak.stack.spur/SqueakPureObjcCog.xcodeproj</string>
 	<key>IDESourceControlProjectVersion</key>
 	<integer>111</integer>
 	<key>IDESourceControlProjectWCCIdentifier</key>

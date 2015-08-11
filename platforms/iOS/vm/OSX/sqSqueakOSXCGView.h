@@ -45,7 +45,7 @@
 #import "sq.h"
 
 @interface sqSqueakOSXCGView : NSView <sqSqueakOSXView, NSTextInputClient> {
-	sqSqueakOSXScreenAndWindow *windowLogic;
+	sqSqueakOSXScreenAndWindow *__weak windowLogic;
 	NSTrackingRectTag squeakTrackingRectForCursor;
 	NSRange inputMark;
 	NSRange inputSelection;
@@ -69,7 +69,7 @@
 @property (nonatomic,assign) BOOL dragInProgress;
 @property (nonatomic,assign) int dragCount;
 @property (nonatomic,retain) NSMutableArray* dragItems;
-@property (nonatomic,assign) sqSqueakOSXScreenAndWindow *windowLogic;
+@property (nonatomic,weak) sqSqueakOSXScreenAndWindow *windowLogic;
 @property (nonatomic,assign) NSRect	savedScreenBoundsAtTimeOfFullScreen;
 
 //Initialization

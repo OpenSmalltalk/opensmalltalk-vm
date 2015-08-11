@@ -89,7 +89,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 
 - (void)awakeFromNib {
 	//self = [self initWithFrame: self.frame pixelFormat: [[self class] defaultPixelFormat] ];
-    self = [self initWithFrame: self.frame];
+//    self = [self initWithFrame: self.frame];
     [self initialize];
 }
 
@@ -107,8 +107,10 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 - (void) initializeVariables {
 }
 
+- (void) preDrawThelayers{
+}
+
 - (void) dealloc {
-    [super dealloc];
 	free(colorMap32);
 	CGColorSpaceRelease(colorspace);
 }
@@ -349,7 +351,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		self.lastSeenKeyBoardStrokeDetails = NULL;
 		[self keyUp: theEvent]; 
 	}
-	[down release];
 }
 
 -(void)keyDown:(NSEvent*)theEvent {
@@ -364,7 +365,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		[self interpretKeyEvents: down];
 		self.lastSeenKeyBoardStrokeDetails = NULL;
 	}
-	[down release];
 }
 
 -(void)keyUp:(NSEvent*)theEvent {
@@ -393,7 +393,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	self.lastSeenKeyBoardModifierDetails = aKeyBoardStrokeDetails;
 	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordKeyDownEvent: theEvent fromView: self];
-	[aKeyBoardStrokeDetails release];
 }
 
 - (void)doCommandBySelector:(SEL)aSelector {
@@ -561,7 +560,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	self.dragCount = (int) [self countNumberOfNoneSqueakImageFilesInDraggedFiles: info];
 	
 	if (self.dragCount)
-		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragEnter numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view: self];
+		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragEnter numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex];
 	
 	return NSDragOperationGeneric;
 }
@@ -569,14 +568,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 - (NSDragOperation) draggingUpdated: (id<NSDraggingInfo>)info
 {
 	if (self.dragCount)
-		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragMove numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view:self];
+		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragMove numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex];
 	return NSDragOperationGeneric;
 }
 
 - (void) draggingExited: (id<NSDraggingInfo>)info
 {
 	if (self.dragCount)
-		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragLeave numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view:self];
+		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragLeave numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex];
 	self.dragCount = 0;
 	self.dragInProgress = NO;
 	self.dragItems = NULL;
@@ -585,7 +584,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 - (BOOL) performDragOperation: (id<NSDraggingInfo>)info {
 	if (self.dragCount) {
 		self.dragItems = [self filterOutSqueakImageFilesFromDraggedFiles: info];
-		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view:self];
+		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex];
 	} 
 	
 	NSArray *images = [self filterSqueakImageFilesFromDraggedFiles: info];
@@ -593,9 +592,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		for (NSString *item in images ){
 			NSURL *url = [NSURL fileURLWithPath:[[NSBundle mainBundle] bundlePath]];
 			LSLaunchURLSpec launchSpec;
-			launchSpec.appURL = (CFURLRef)url;
+			launchSpec.appURL = (__bridge CFURLRef)url;
 			launchSpec.passThruParams = NULL;
-			launchSpec.itemURLs = (CFArrayRef) [NSArray arrayWithObject:[NSURL fileURLWithPath: item]];
+			launchSpec.itemURLs = (__bridge CFArrayRef) [NSArray arrayWithObject:[NSURL fileURLWithPath: item]];
 			launchSpec.launchFlags = kLSLaunchDefaults | kLSLaunchNewInstance;
 			launchSpec.asyncRefCon = NULL;
 			
