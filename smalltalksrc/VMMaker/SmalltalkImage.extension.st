@@ -1,21 +1,18 @@
 Extension { #name : #SmalltalkImage }
 
 { #category : #'*VMMaker-Interpreter' }
-SmalltalkImage >> simulatePrimitive: aPrimitive args: args [ 
-	"simulate primitives in RSqueak"
-	"IMAGE_NAME"
-	aPrimitive = 121
-		ifTrue: [^ self getSystemAttribute: 1].
-	"SNAPSHOT"
-	aPrimitive = 97
-		ifTrue: [Smalltalk
-				at: #SystemTracer2
-				ifPresent: [:st | ^ st writeImage: Smalltalk imageName]].
-	"SNAPSHOT_EMBEDDED"
-	aPrimitive = 247
-		ifTrue: [Smalltalk
-				at: #SystemTracer2
-				ifPresent: [:st | ^ st writeImage: Smalltalk imageName]].
-	^ InterpreterProxy new primitiveFailFor: 255
-
+SmalltalkImage >> simulatePrimitive: aPrimitive args: args [
+    "simulate primitives in RSqueak"
+    "SNAPSHOT"
+    (aPrimitive = 97 or: [aPrimitive = 247])
+        ifTrue: [
+            Smalltalk at: #SystemTracer2 ifPresent: [:st |
+                |resuming|
+                Smalltalk processStartUpList: false.
+                [resuming := (st writeImage: Smalltalk imageName interactive: false) isStartingClone.]
+                    on: FileExistsException
+                    do: [ :e | e resume: (e fileClass forceNewFileNamed: e fileName)].
+                Smalltalk processShutDownList: false.
+                ^resuming]].
+    ^InterpreterProxy new primitiveFailFor: 255.
 ]
