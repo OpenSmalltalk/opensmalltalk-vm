@@ -380,7 +380,8 @@ sqInt sqCreateSSL(void) {
 		if(handleBuf[handle] == NULL) break;
 
 	if(handle >= handleMax) {
-		int i, delta = 100;
+		const int delta = 100;
+		int i;
 		/* Resize the handle buffer */
 		handleBuf = realloc(handleBuf, (handleMax+delta)*sizeof(void*));
 		for(i = handleMax; i < handleMax+delta; i++)
