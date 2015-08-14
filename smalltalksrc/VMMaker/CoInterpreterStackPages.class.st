@@ -9,18 +9,30 @@ mostRecentlyUsedPage-->used page<->used page<->used page<->used page<--leastRece
 
 In fact we don't need the least-recently-used page, and so it is only present conceptually.  The point is that there is a possibly empty but contiguous sequence of free pages starting at mostRecentlyUsedPage nextPage.  New pages are allocated preferentially from the free page next to the MRUP.
 If there are no free pages then (effectively) the LRUP's frames are flushed to contexts and it is used instead.
+
+Instance Variables
+	maxStackAddress:		<Integer>
+	minStackAddress:		<Integer>
+	pageMap:				<Dictionary>
+	stackBasePlus1:		<Integer>
+
+maxStackAddress
+	- the maximum valid byte address in the stack zone
+
+minStackAddress
+	- the minimum valid byte address in the stack zone
+
+pageMap
+	- a map from address to the CogStackPageSurrogate for that address
+
+stackBasePlus1
+	- the address of the 2nd byte in the stack memory, used for mapping stack addresses to page indices
 "
 Class {
 	#name : #CoInterpreterStackPages,
-	#superclass : #CogClass,
+	#superclass : #CogStackPages,
 	#instVars : [
-		'coInterpreter',
-		'objectMemory',
 		'stackBasePlus1',
-		'pages',
-		'mostRecentlyUsedPage',
-		'overflowLimit',
-		'bytesPerPage',
 		'pageMap',
 		'minStackAddress',
 		'maxStackAddress'
@@ -34,26 +46,10 @@ Class {
 { #category : #translation }
 CoInterpreterStackPages class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
-		var: #mostRecentlyUsedPage type: #'StackPage *';
 		var: #stackBasePlus1 type: #'char *';
-		var: #pages type: #'StackPage *'.
-	aCCodeGenerator
-		removeVariable: 'coInterpreter'; "These are simulation/debugging things only"
-		removeVariable: 'objectMemory'; "These are simulation/debugging things only"
 		removeVariable: 'pageMap'; "These are simulation/debugging things only"
 		removeVariable: 'maxStackAddress'; "These are simulation/debugging things only"
-		removeVariable: 'minStackAddress'; "These are simulation/debugging things only"
-		removeMethodForSelector: #memIndexFor:
-]
-
-{ #category : #assertions }
-CoInterpreterStackPages >> allPagesFree [
-	^pages allSatisfy: [:page| page isFree]
-]
-
-{ #category : #'memory access' }
-CoInterpreterStackPages >> byteAt: byteAddress [ "<Integer>" 
-	self subclassResponsibility
+		removeVariable: 'minStackAddress' "These are simulation/debugging things only"
 ]
 
 { #category : #assertions }
@@ -65,51 +61,6 @@ CoInterpreterStackPages >> couldBeFramePointer: pointer [
 				between: (stackBasePlus1 - 1) asUnsignedInteger
 				and: (self cCode: [pages asUnsignedInteger]
 							inSmalltalk: [(self stackPageAt: 0) asUnsignedInteger])]
-]
-
-{ #category : #initialization }
-CoInterpreterStackPages >> extraStackBytes [
-	"See initializeStack:numSlots:pageSize:stackLimitOffset:stackPageHeadroom:
-	``Because stack pages grow down...''"
-	^objectMemory wordSize
-]
-
-{ #category : #'page access' }
-CoInterpreterStackPages >> freeStackPage: aPage [ "<InterpreterStackPage>"
-	"MRUP-->used page<->used page<->used page<->used page<--LRUP
-	               ^                        <-next-prev->                         ^
-	                |                                                                       |
-	                v                        <-prev-next->                         v
-	                free page<->free page<->free page<->free page"
-	<var: #aPage type: #'StackPage *'>
-	<inline: false>
-	self freeStackPageNoAssert: aPage.
-	self assert: self pageListIsWellFormed
-]
-
-{ #category : #'page access' }
-CoInterpreterStackPages >> freeStackPageNoAssert: aPage [ "<InterpreterStackPage>"
-	"MRUP-->used page<->used page<->used page<->used page<--LRUP
-	               ^                        <-next-prev->                         ^
-	                |                                                                       |
-	                v                        <-prev-next->                         v
-	                free page<->free page<->free page<->free page"
-	<var: #aPage type: #'StackPage *'>
-	<returnTypeC: #void>
-	| prev |
-	<var: #prev type: #'StackPage *'>
-	aPage baseFP: 0.
-	aPage == mostRecentlyUsedPage ifTrue:
-		[mostRecentlyUsedPage := mostRecentlyUsedPage prevPage.
-		 ^nil].
-	(prev := aPage prevPage) isFree ifTrue:
-		[^nil].
-	prev nextPage: aPage nextPage.
-	aPage nextPage prevPage: prev.
-	aPage nextPage: mostRecentlyUsedPage nextPage.
-	mostRecentlyUsedPage nextPage prevPage: aPage.
-	aPage prevPage: mostRecentlyUsedPage.
-	mostRecentlyUsedPage nextPage: aPage
 ]
 
 { #category : #initialization }
@@ -127,7 +78,7 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 		inSmalltalk:
 			[self assert: objectMemory startOfMemory - coInterpreter cogCodeSize - Cogit guardPageSize - coInterpreter methodCacheSize - coInterpreter primTraceLogSize - coInterpreter rumpCStackSize
 					= (stackSlots * objectMemory wordSize roundUpTo: objectMemory allocationUnit)].
-	structStackPageSize := coInterpreter sizeof: InterpreterStackPage.
+	structStackPageSize := coInterpreter sizeof: CogStackPage.
 	bytesPerPage := slotsPerPage * objectMemory wordSize.
 	numPages := coInterpreter numStkPages.
 
@@ -140,7 +91,7 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 					[pageMap := Dictionary new.
 					 ((0 to: numPages - 1) collect:
 						[:i|
-						 InterpreterStackPage surrogateClass new
+						 CogStackPage surrogateClass new
 							address: pageStructBase + (i * structStackPageSize)
 							simulator: coInterpreter
 							zoneBase: coInterpreter stackZoneBase
@@ -210,20 +161,12 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 { #category : #initialization }
 CoInterpreterStackPages >> initializeWithByteSize: byteSize "<Integer>" for: anInterpreter [ "<CoInterpreter>" "^<Array of: <Integer>"
 	"Initialize the stackPages memory for simulation.  To keep access monitoring
-	 in one place we defer to the coInterpreter for accessing memory."
+	 in one place we defer to the coInterpreter for accessing memory.  Answer the
+	 base address of th ememory."
 	<doNotGenerate>
 	coInterpreter := anInterpreter.
 	objectMemory := coInterpreter objectMemory.
 	^anInterpreter stackZoneBase
-]
-
-{ #category : #'page access' }
-CoInterpreterStackPages >> isFree: thePage [
-	"This is an anachronism.  Previously Slang couldn't generate the method correctly
-	 from e.g. CogStackPageSurrogate>>isFree since Slang didn't do substitution on self.
-	 Now it does, but there are still callers of isFree: so we keep this for simulation."
-	<doNotGenerate>
-	^thePage baseFP = 0
 ]
 
 { #category : #'memory access' }
@@ -242,103 +185,10 @@ CoInterpreterStackPages >> longAt: byteAddress put: a32BitValue [
 ]
 
 { #category : #'page access' }
-CoInterpreterStackPages >> markStackPageLeastMostRecentlyUsed: page [ "<InterpreterStackPage>"
-	"This method is used to move a page to the end of the used pages.
-	 This is to keep asserts checking pageListIsWellFormed happy."
-
-	"MRUP-->used page<->used page<->used page<->used page<--LRUP
-	               ^                        <-next-prev->                         ^
-	                |                                                                       |
-	                v                        <-prev-next->                         v
-	                free page<->free page<->free page<->free page"
-
-	<var: #page type: #'StackPage *'>
-	<returnTypeC: #void>
-	| lastUsedPage |
-	<var: #lastUsedPage type: #'StackPage *'>
-	self assert: page = mostRecentlyUsedPage nextPage.
-	lastUsedPage := page nextPage.
-	[lastUsedPage isFree] whileTrue:
-		[lastUsedPage := lastUsedPage nextPage].
-	lastUsedPage nextPage = page ifTrue:
-		[^nil].
-	page prevPage nextPage: page nextPage.
-	page nextPage prevPage: page prevPage.
-	lastUsedPage prevPage nextPage: page.
-	page prevPage: lastUsedPage prevPage.
-	page nextPage: lastUsedPage.
-	lastUsedPage prevPage: page.
-	self assert: self pageListIsWellFormed
-]
-
-{ #category : #'page access' }
-CoInterpreterStackPages >> markStackPageMostRecentlyUsed: page [ "<InterpreterStackPage>"
-	"MRUP-->used page<->used page<->used page<->used page<--LRUP
-	               ^                        <-next-prev->                         ^
-	                |                                                                       |
-	                v                        <-prev-next->                         v
-	                free page<->free page<->free page<->free page"
-	<var: #page type: #'StackPage *'>
-	<returnTypeC: #void>
-	page == mostRecentlyUsedPage ifTrue:
-		[^nil].
-	"Common case; making new page most recently used."
-	page prevPage == mostRecentlyUsedPage ifTrue:
-		[mostRecentlyUsedPage := page.
-		 self assert: self pageListIsWellFormed.
-		 ^nil].
-	page prevPage nextPage: page nextPage.
-	page nextPage prevPage: page prevPage.
-	mostRecentlyUsedPage nextPage prevPage: page.
-	page prevPage: mostRecentlyUsedPage.
-	page nextPage: mostRecentlyUsedPage nextPage.
-	mostRecentlyUsedPage nextPage: page.
-	mostRecentlyUsedPage := page.
-	self assert: self pageListIsWellFormed
-]
-
-{ #category : #'page access' }
-CoInterpreterStackPages >> markStackPageNextMostRecentlyUsed: page [ "<InterpreterStackPage>"
-	"This method is used to move a page to a position in the list such that it cannot
-	 be deallocated when a new page is allocated, without changing the most recently
-	 used page.  There must be at least 3 pages in the system.  So making the page
-	 the MRU's prevPage is sufficient to ensure it won't be deallocated."
-
-	"MRUP-->used page<->used page<->used page<->used page<--LRUP
-	               ^                        <-next-prev->                         ^
-	                |                                                                       |
-	                v                        <-prev-next->                         v
-	                free page<->free page<->free page<->free page"
-
-	<var: #page type: #'StackPage *'>
-	<returnTypeC: #void>
-	self assert: page ~~ mostRecentlyUsedPage.
-	page nextPage == mostRecentlyUsedPage ifTrue:
-		[^nil].
-	page prevPage nextPage: page nextPage.
-	page nextPage prevPage: page prevPage.
-	mostRecentlyUsedPage prevPage nextPage: page.
-	page prevPage: mostRecentlyUsedPage prevPage.
-	page nextPage: mostRecentlyUsedPage.
-	mostRecentlyUsedPage prevPage: page.
-	self assert: self pageListIsWellFormed
-]
-
-{ #category : #'page access' }
 CoInterpreterStackPages >> memIndexFor: byteAddress [
+	"Map an address into the stack zone into a word index into the slots in the stack zone."
+	<doNotGenerate>
 	^(self oopForPointer: byteAddress) - coInterpreter stackZoneBase - 1 // objectMemory wordSize + 1
-]
-
-{ #category : #'page access' }
-CoInterpreterStackPages >> mostRecentlyUsedPage [
-	<cmacro: '() GIV(mostRecentlyUsedPage)'>
-	<returnTypeC: #'StackPage *'> "this is to guide Slang's inliner"
-	^mostRecentlyUsedPage
-]
-
-{ #category : #'page access' }
-CoInterpreterStackPages >> overflowLimit [
-	^overflowLimit
 ]
 
 { #category : #'page access' }
@@ -362,97 +212,6 @@ CoInterpreterStackPages >> pageIndexFor: pointer "<Integer>" stackBasePlus1: stk
 	^pointer - stkBasePlus1 // pageByteSize
 ]
 
-{ #category : #assertions }
-CoInterpreterStackPages >> pageListIsWellFormed [
-	"Answer if the stack page list is well-formed.
-	 MRUP-->used page<->used page<->used page<->used page<--LRUP
-	               ^                        <-next-prev->                         ^
-	                |                                                                       |
-	                v                        <-prev-next->                         v
-	                free page<->free page<->free page<->free page"
-	| ok page count limit |
-	<inline: false>
-	<var: #page type: #'StackPage *'>
-	ok := true.
-	page := mostRecentlyUsedPage nextPage.
-	count := 1.
-	limit := coInterpreter numStkPages * 2.
-	[page isFree
-	 and: [page ~= mostRecentlyUsedPage
-	 and: [count <= limit]]] whileTrue:
-		[(self asserta: page nextPage prevPage == page) ifFalse:
-			[ok := false].
-		 page := page nextPage.
-		 count := count + 1].
-	[page ~= mostRecentlyUsedPage
-	 and: [count <= limit]] whileTrue:
-		[(self asserta: page nextPage prevPage == page) ifFalse:
-			[ok := false].
-		 (self asserta: page isFree not)
-			ifTrue:
-				[(self asserta: ((page addressIsInPage: page baseFP)
-								and: [page addressIsInPage: page headSP])) ifFalse:
-					[ok := false]]
-			ifFalse:
-				[ok := false].
-		 page := page nextPage.
-		 count := count + 1].
-	(self asserta: count = coInterpreter numStkPages) ifFalse:
-		[ok := false].
-	^ok
-]
-
-{ #category : #accessing }
-CoInterpreterStackPages >> pages [
-	<doNotGenerate>
-	^pages
-]
-
-{ #category : #initialization }
-CoInterpreterStackPages >> setInterpreter: anInterpreter [
-	"Initialize the stackPages memory for simulation.  To keep access monitoring
-	 in one place we defer to the coInterpreter for accessing memory."
-	<doNotGenerate>
-	coInterpreter := anInterpreter.
-	objectMemory := coInterpreter objectMemory
-]
-
-{ #category : #assertions }
-CoInterpreterStackPages >> somePageHasHeadFrameFP: theFP [
-	^pages anySatisfy: [:page| page headFP = theFP]
-]
-
-{ #category : #'page access' }
-CoInterpreterStackPages >> stackPageAt: index [
-	"Answer the page for a page index.
-	 N.B.  This is a zero-relative index."
-	<returnTypeC: #'StackPage *'>
-	^self stackPageAt: index pages: pages
-]
-
-{ #category : #'page access' }
-CoInterpreterStackPages >> stackPageAt: index pages: thePages [
-	"Answer the page for a page index.
-	 N.B.  This is a zero-relative index."
-	<cmacro: '(index,pages) ((pages) + (index))'>
-	<returnTypeC: #'StackPage *'> "for Slang..."
-	^thePages at: index + 1
-]
-
-{ #category : #initialization }
-CoInterpreterStackPages >> stackPageClass [
-	<doNotGenerate>
-	^InterpreterStackPage
-]
-
-{ #category : #'page access' }
-CoInterpreterStackPages >> stackPageFor: pointer [ "<Integer>"
-	<inline: true>
-	<var: #pointer type: #'void *'>
-	<returnTypeC: #'StackPage *'>
-	^self stackPageAt: (self pageIndexFor: pointer)
-]
-
 { #category : #accessing }
 CoInterpreterStackPages >> surrogateAtAddress: anAddress [
 	<doNotGenerate>
@@ -461,6 +220,7 @@ CoInterpreterStackPages >> surrogateAtAddress: anAddress [
 
 { #category : #'debug printing' }
 CoInterpreterStackPages >> whereIsMaybeStackThing: anOop [
+	"If anOop is an address within the stack zone answer a string stating that, otherwise answer nil."
 	<returnTypeC: 'char *'>
 	(self oop: anOop
 		isGreaterThanOrEqualTo: (stackBasePlus1 - 1)

@@ -1,8 +1,8 @@
 "
-I am a class that helps organize the StackInterpreter's collection of stack pages.  I represent the control block for a single stack page in the collection of stack pages represented by an InterpreterStackPages instance.
+I am a class that helps organize the StackInterpreter's collection of stack pages.  I represent the control block for a single stack page in the collection of stack pages represented by an InterpreterStackPages or CoInterpreterStackPages instance.
 "
 Class {
-	#name : #InterpreterStackPage,
+	#name : #CogStackPage,
 	#superclass : #VMStructType,
 	#instVars : [
 		'stackLimit',
@@ -24,17 +24,17 @@ Class {
 }
 
 { #category : #translation }
-InterpreterStackPage class >> alignedByteSize [
+CogStackPage class >> alignedByteSize [
 	^self surrogateClass alignedByteSize
 ]
 
 { #category : #translation }
-InterpreterStackPage class >> alignedByteSizeOf: anObject forClient: aVMClass [
+CogStackPage class >> alignedByteSizeOf: anObject forClient: aVMClass [
 	^self surrogateClass alignedByteSize
 ]
 
 { #category : #translation }
-InterpreterStackPage class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
+CogStackPage class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a StackPage struct."
 
 	self allInstVarNames do:
@@ -51,125 +51,125 @@ InterpreterStackPage class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock
 ]
 
 { #category : #translation }
-InterpreterStackPage class >> structTypeName [
+CogStackPage class >> structTypeName [
 	^'StackPage' "Drop initial Cog or Interpreter"
 ]
 
 { #category : #'simulation only' }
-InterpreterStackPage class >> surrogateClass [
+CogStackPage class >> surrogateClass [
 	^BytesPerWord = 4
 		ifTrue: [CogStackPageSurrogate32]
 		ifFalse: [CogStackPageSurrogate64]
 ]
 
 { #category : #'simulation only' }
-InterpreterStackPage >> address [
+CogStackPage >> address [
 	<doNotGenerate>
 	^baseAddress
 ]
 
 { #category : #testing }
-InterpreterStackPage >> addressIsInPage: address [
+CogStackPage >> addressIsInPage: address [
 	<var: #address type: #'char *'>
 	"For assert-checking"
 	^lastAddress < address and: [address < baseAddress]
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> baseAddress [
+CogStackPage >> baseAddress [
 	^baseAddress
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> baseAddress: anAddress [
+CogStackPage >> baseAddress: anAddress [
 	^baseAddress := anAddress
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> baseFP [
+CogStackPage >> baseFP [
 	"Answer the value of baseFP"
 
 	^ baseFP
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> baseFP: pointer [ "<Integer>"
+CogStackPage >> baseFP: pointer [ "<Integer>"
 	"Set the value of baseFP"
 	self assert: (pointer = 0 or: [pointer < baseAddress and: [realStackLimit < pointer]]).
 	^baseFP := pointer
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> headFP [
+CogStackPage >> headFP [
 	"Answer the value of headFP"
 
 	^headFP
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> headFP: pointer [ "<Integer>"
+CogStackPage >> headFP: pointer [ "<Integer>"
 	"Set the value of headFP"
 	^headFP := pointer
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> headSP [
+CogStackPage >> headSP [
 	"Answer the value of headSP"
 
 	^headSP
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> headSP: pointer [ "<Integer>"
+CogStackPage >> headSP: pointer [ "<Integer>"
 	"Set the value of headSP"
 	^headSP := pointer
 ]
 
 { #category : #testing }
-InterpreterStackPage >> isFree [
+CogStackPage >> isFree [
 	^baseFP = 0
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> lastAddress [
+CogStackPage >> lastAddress [
 	^lastAddress
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> lastAddress: anAddress [
+CogStackPage >> lastAddress: anAddress [
 	^lastAddress := anAddress
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> nextPage [
+CogStackPage >> nextPage [
 	"Answer the value of nextPage"
 
 	^ nextPage
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> nextPage: anObject [
+CogStackPage >> nextPage: anObject [
 	"Set the value of nextPage"
 
 	^nextPage := anObject
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> prevPage [
+CogStackPage >> prevPage [
 	"Answer the value of prevPage"
 
 	^ prevPage
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> prevPage: anObject [
+CogStackPage >> prevPage: anObject [
 	"Set the value of prevPage"
 
 	^prevPage := anObject
 ]
 
 { #category : #printing }
-InterpreterStackPage >> printOn: aStream [
+CogStackPage >> printOn: aStream [
 	<doNotGenerate>
 	super printOn: aStream.
 	aStream nextPut: $@; print: baseAddress; space.
@@ -179,35 +179,35 @@ InterpreterStackPage >> printOn: aStream [
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> realStackLimit [
+CogStackPage >> realStackLimit [
 	"Answer the value of realStackLimit"
 
 	^ realStackLimit
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> realStackLimit: anObject [
+CogStackPage >> realStackLimit: anObject [
 	"Set the value of realStackLimit"
 
 	^realStackLimit := anObject
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> stackLimit [
+CogStackPage >> stackLimit [
 	"Answer the value of stackLimit"
 
 	^ stackLimit
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> stackLimit: anObject [
+CogStackPage >> stackLimit: anObject [
 	"Set the value of stackLimit"
 
 	^stackLimit := anObject
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> trace [
+CogStackPage >> trace [
 	"Answer the page's trace state.
 	 0 = untraced.  1 = should be traced. 2 = has been traced.
 	-1 = invalid (for assertions)"
@@ -215,7 +215,7 @@ InterpreterStackPage >> trace [
 ]
 
 { #category : #accessing }
-InterpreterStackPage >> trace: anInteger [
+CogStackPage >> trace: anInteger [
 	"Set the page's trace state.
 	 0 = untraced.  1 = should be traced. 2 = has been traced.
 	-1 = invalid (for assertions)"
