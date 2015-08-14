@@ -174,8 +174,9 @@ StackInterpreter class >> ancilliaryClasses: options [
 	"Answer any extra classes to be included in the translation."
 	^{	self objectMemoryClass.
 		VMCallbackContext.
+		CogStackPages.
 		InterpreterStackPages.
-		InterpreterStackPage }
+		CogStackPage }
 ]
 
 { #category : #constants }
@@ -4338,7 +4339,7 @@ StackInterpreter >> commonReturn [
 					[thePage := stackPages stackPageFor: theFP.
 					 theFP ~= thePage headFP ifTrue:
 						["Since we've just deallocated a page we know that newStackPage won't deallocate an existing one."
-						 self moveFramesIn: thePage through: (self findFrameAbove: theFP inPage: thePage) toPage: self newStackPage].
+						 self moveFramesIn: thePage through: (self findFrameAbove: theFP inPage: thePage) toPage: stackPages newStackPage].
 					 currentCtx := self frameCallerContext: thePage baseFP.
 					 stackPages freeStackPage: thePage]
 				ifFalse:
@@ -4515,7 +4516,7 @@ StackInterpreter >> computeStackZoneSize [
 	self cCode: [] inSmalltalk:
 		[stackPages ifNil:
 			[stackPages := self stackPagesClass new setInterpreter: self]].
-	^numStackPages * ((self sizeof: InterpreterStackPage) + self stackPageByteSize)
+	^numStackPages * ((self sizeof: CogStackPage) + self stackPageByteSize)
 	 + stackPages extraStackBytes
 ]
 
@@ -5540,7 +5541,7 @@ StackInterpreter >> externalDivorceFrame: theFP andContext: ctxt [
 		ifTrue: "If we're divorcing the top frame we can simply peel it off."
 			[theIP := stackPages longAt: thePage headSP]
 		ifFalse: "othewise move all frames above to a new stack and then peel the frame off."
-			[newPage := self newStackPage.
+			[newPage := stackPages newStackPage.
 			 theIP := self oopForPointer: (self frameCallerSavedIP: frameAbove).
 			 frameAbove := self moveFramesIn: thePage through: frameAbove toPage: newPage.
 			 onCurrent
@@ -5701,7 +5702,7 @@ StackInterpreter >> externalSetStackPageAndPointersForSuspendedContextOfProcess:
 			 thePage := stackPages stackPageFor: theFrame.
 			 theFrame ~= thePage headFP ifTrue:
 				["explicit assignment of suspendedContext can cause switch to interior frame."
-				 newPage := self newStackPage.
+				 newPage := stackPages newStackPage.
 				 self moveFramesIn: thePage
 					through: (self findFrameAbove: theFrame inPage: thePage)
 					toPage: newPage.
@@ -7063,7 +7064,7 @@ StackInterpreter >> handleStackOverflow [
 			 extraFramesToMoveOnOverflow := 0].
 
 	self ensureCallerContext: theFP.
-	newPage := self newStackPage.
+	newPage := stackPages newStackPage.
 	self moveFramesIn: stackPage through: theFP toPage: newPage.
 	self setStackPageAndLimit: newPage.
 	framePointer := stackPage headFP.
@@ -9097,7 +9098,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	self assert: (objectMemory isContext: aContext).
 	self assert: (self isSingleContext: aContext).
 	self assert: (objectMemory goodContextSize: aContext).
-	page := self newStackPage.
+	page := stackPages newStackPage.
 	pointer := page baseAddress.
 	theIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
 	theMethod := objectMemory followObjField: MethodIndex ofObject: aContext.
@@ -9253,11 +9254,13 @@ StackInterpreter >> mapStackPages [
 	<var: #theFP type: #'char *'>
 	<var: #callerFP type: #'char *'>
 	<var: #theIPPtr type: #'char *'>
+	stackPages countStackPagesMap.
 	0 to: numStackPages - 1 do:
 		[:i| | thePage theSP theFP callerFP theIPPtr theIP oop |
 		thePage := stackPages stackPageAt: i.
 		thePage isFree ifFalse:
 			[self assert: (self ifCurrentStackPageHasValidHeadPointers: thePage).
+			 stackPages countLivePageWhenMapping.
 			 theSP := thePage headSP.
 			 theFP := thePage  headFP.
 			 "Skip the instruction pointer on top of stack of inactive pages."
@@ -10005,23 +10008,6 @@ StackInterpreter >> nameOfClass: classOop [
 	^objectMemory firstIndexableField: maybeNameOop
 ]
 
-{ #category : #'stack pages' }
-StackInterpreter >> newStackPage [
-	"MRUP-->used page<->used page<->used page<->used page<--LRUP
-	               ^                        <-next-prev->                         ^
-	                |                                                                       |
-	                v                        <-prev-next->                         v
-	                free page<->free page<->free page<->free page"
-	| lruOrFree |
-	<var: #lruOrFree type: #'StackPage *'>
-	<returnTypeC: #'StackPage *'>
-	lruOrFree := stackPages mostRecentlyUsedPage nextPage.
-	(stackPages isFree: lruOrFree) ifTrue:
-		[^lruOrFree].
-	self divorceFramesIn: lruOrFree.
-	^lruOrFree
-]
-
 { #category : #'compiled methods' }
 StackInterpreter >> noAssertHeaderOf: methodPointer [
 	^objectMemory fetchPointer: HeaderIndex ofObject: methodPointer
@@ -10128,6 +10114,7 @@ StackInterpreter >> numSlotsOfMarriedContext: aContext [
 
 { #category : #'stack pages' }
 StackInterpreter >> numStkPages [
+	<inline: true>
 	^numStackPages
 ]
 
@@ -14151,7 +14138,7 @@ StackInterpreter >> storeSenderOfFrame: theFP withValue: anOop [
 	onCurrentPage ifFalse:
 		["Make sure the frame's page isn't divorced when a new page is allocated."
 		 stackPages markStackPageNextMostRecentlyUsed: thePage].
-	newPage := self newStackPage.
+	newPage := stackPages newStackPage.
 	theMovedFP := self moveFramesIn: thePage through: theFP toPage: newPage.
 	onCurrentPage
 		ifTrue: [self setStackPageAndLimit: newPage]

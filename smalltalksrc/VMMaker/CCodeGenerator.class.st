@@ -4605,13 +4605,6 @@ CCodeGenerator >> structClasses [
 	^structClasses
 ]
 
-{ #category : #accessing }
-CCodeGenerator >> structClasses: classes [
-	structClasses := classes.
-	structClasses do:
-		[:structClass| self addStructClass: structClass]
-]
-
 { #category : #utilities }
 CCodeGenerator >> structClassesForTranslationClasses: classes [
 	"Answer in superclass order (any superclass precedes any subclass)
