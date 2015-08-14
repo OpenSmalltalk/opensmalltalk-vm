@@ -894,7 +894,7 @@ CoInterpreter >> baseFrameReturn [
 					  Make the interior frame the top frame."
 					 frameAbove := self findFrameAbove: theFP inPage: thePage.
 					 "Since we've just deallocated a page we know that newStackPage won't deallocate an existing one."
-					 newPage := self newStackPage.
+					 newPage := stackPages newStackPage.
 					 self assert: newPage = stackPage.
 					 self moveFramesIn: thePage through: frameAbove toPage: newPage.
 					 stackPages markStackPageMostRecentlyUsed: newPage.
@@ -1195,7 +1195,7 @@ CoInterpreter >> ceBaseFrameReturn: returnValue [
 					  Make the interior frame the top frame."
 					 frameAbove := self findFrameAbove: framePointer inPage: thePage.
 					 "Since we've just deallocated a page we know that newStackPage won't deallocate an existing one."
-					 newPage := self newStackPage.
+					 newPage := stackPages newStackPage.
 					 self assert: newPage = stackPage.
 					 self moveFramesIn: thePage through: frameAbove toPage: newPage.
 					 stackPages markStackPageMostRecentlyUsed: newPage.
@@ -4602,7 +4602,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 				ifTrue: [objectMemory integerValueOf: theIP]
 				ifFalse: [HasBeenReturnedFromMCPC].
 	theMethod := objectMemory followObjField: MethodIndex ofObject: aContext.
-	page := self newStackPage.
+	page := stackPages newStackPage.
 	"first word on stack is caller context of base frame"
 	stackPages
 		longAt: (pointer := page baseAddress)
@@ -4784,11 +4784,13 @@ CoInterpreter >> mapStackPages [
 	<var: #frameRcvrOffset type: #'char *'>
 	<var: #callerFP type: #'char *'>
 	<var: #theIPPtr type: #'char *'>
+	stackPages countStackPagesMap.
 	0 to: numStackPages - 1 do:
 		[:i| | thePage theSP theFP frameRcvrOffset callerFP theIPPtr theIP oop |
 		thePage := stackPages stackPageAt: i.
 		thePage isFree ifFalse:
 			[self assert: (self ifCurrentStackPageHasValidHeadPointers: thePage).
+			 stackPages countLivePageWhenMapping.
 			 theSP := thePage headSP.
 			 theFP := thePage  headFP.
 			 "Skip the instruction pointer on top of stack of inactive pages."

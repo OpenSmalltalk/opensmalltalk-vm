@@ -3772,7 +3772,7 @@ SimpleStackBasedCogit >> marshallAbsentReceiverSendArguments: numArgs [
 			self PushR: TempReg.
 			2 to: numArgs do:
 				[:index|
-				self MoveMw: index * BytesPerWord r: SPReg R: TempReg.
+				self MoveMw: index * objectMemory wordSize r: SPReg R: TempReg.
 				self MoveR: TempReg Mw: index - 1 * BytesPerWord r: SPReg].
 			self MoveR: ReceiverResultReg Mw: numArgs * BytesPerWord r: SPReg].
 ]
