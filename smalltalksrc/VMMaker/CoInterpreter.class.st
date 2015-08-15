@@ -4784,13 +4784,14 @@ CoInterpreter >> mapStackPages [
 	<var: #frameRcvrOffset type: #'char *'>
 	<var: #callerFP type: #'char *'>
 	<var: #theIPPtr type: #'char *'>
-	stackPages countStackPagesMap.
+	| numLivePages |
+	numLivePages := 0.
 	0 to: numStackPages - 1 do:
 		[:i| | thePage theSP theFP frameRcvrOffset callerFP theIPPtr theIP oop |
 		thePage := stackPages stackPageAt: i.
 		thePage isFree ifFalse:
 			[self assert: (self ifCurrentStackPageHasValidHeadPointers: thePage).
-			 stackPages countLivePageWhenMapping.
+			 numLivePages := numLivePages + 1.
 			 theSP := thePage headSP.
 			 theFP := thePage  headFP.
 			 "Skip the instruction pointer on top of stack of inactive pages."
@@ -4845,7 +4846,8 @@ CoInterpreter >> mapStackPages [
 				[oop := stackPages longAt: theSP.
 				 (objectMemory shouldRemapOop: oop) ifTrue:
 					[stackPages longAt: theSP put: (objectMemory remapObj: oop)].
-				 theSP := theSP + objectMemory wordSize]]]
+				 theSP := theSP + objectMemory wordSize]]].
+	stackPages recordLivePagesOnMapping: numLivePages
 ]
 
 { #category : #'debug support' }
