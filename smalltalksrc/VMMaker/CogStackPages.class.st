@@ -58,7 +58,8 @@ Class {
 		'overflowLimit',
 		'bytesPerPage',
 		'statNumMaps',
-		'statPageCountWhenMappingSum'
+		'statPageCountWhenMappingSum',
+		'statMaxPageCountWhenMapping'
 	],
 	#pools : [
 		'VMBasicConstants'
@@ -85,18 +86,6 @@ CogStackPages >> allPagesFree [
 { #category : #'memory access' }
 CogStackPages >> byteAt: byteAddress [ "<Integer>" 
 	self subclassResponsibility
-]
-
-{ #category : #accessing }
-CogStackPages >> countLivePageWhenMapping [
-	<inline: true>
-	statPageCountWhenMappingSum := statPageCountWhenMappingSum + 1
-]
-
-{ #category : #accessing }
-CogStackPages >> countStackPagesMap [
-	<inline: true>
-	statNumMaps := statNumMaps + 1
 ]
 
 { #category : #initialization }
@@ -147,7 +136,7 @@ CogStackPages >> freeStackPageNoAssert: aPage [ "<InterpreterStackPage>"
 { #category : #initialization }
 CogStackPages >> initialize [
 	"Here we can initialize the variables C initializes to zero.  #initialize methods do /not/ get translated."
-	statNumMaps := statPageCountWhenMappingSum := 0
+	statNumMaps := statPageCountWhenMappingSum := statMaxPageCountWhenMapping := 0
 ]
 
 { #category : #initialization }
@@ -348,6 +337,14 @@ CogStackPages >> pages [
 	^pages
 ]
 
+{ #category : #statistics }
+CogStackPages >> recordLivePagesOnMapping: numLivePages [
+	<inline: true>
+	statNumMaps := statNumMaps + 1.
+	statPageCountWhenMappingSum := statPageCountWhenMappingSum + numLivePages.
+	statMaxPageCountWhenMapping := statMaxPageCountWhenMapping max: numLivePages
+]
+
 { #category : #initialization }
 CogStackPages >> setInterpreter: anInterpreter [
 	"Initialize the stackPages memory for simulation.  To keep access monitoring
@@ -394,6 +391,12 @@ CogStackPages >> stackPageFor: pointer [ "<Integer>"
 CogStackPages >> statAverageLivePagesWhenMapping [
 	<returnTypeC: #double>
 	^statPageCountWhenMappingSum asFloat / statNumMaps
+]
+
+{ #category : #statistics }
+CogStackPages >> statMaxPageCountWhenMapping [
+	<cmacro: '() GIV(statMaxPageCountWhenMapping)'>
+	^statMaxPageCountWhenMapping
 ]
 
 { #category : #'debug printing' }
