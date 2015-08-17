@@ -864,7 +864,9 @@ InterpreterPrimitives >> primitiveBitOrLargeIntegers [
 ]
 
 { #category : #'arithmetic integer primitives' }
-InterpreterPrimitives >> primitiveBitShift [ 
+InterpreterPrimitives >> primitiveBitShift [
+	"Perform a bitShift.  In 32-bits deal only with non-negative 32-bit integers.
+	  In 64-bits deal with signed 64-bit quantities (max (2^63)-1)."
 	| integerReceiver integerArgument shifted |
 	<var: #integerReceiver type: #sqInt>
 	integerArgument := self stackTop.
@@ -889,7 +891,9 @@ InterpreterPrimitives >> primitiveBitShift [
 			ifFalse: "Right shift -- OK to lose bits"
 				[integerArgument >= objectMemory numSmallIntegerBits negated ifFalse:
 					[^self primitiveFail].
-				 shifted := integerReceiver >>> (0 - integerArgument)].
+				 shifted := objectMemory wordSize = 4
+								ifTrue: [integerReceiver >> (0 - integerArgument)]
+								ifFalse: [integerReceiver >>> (0 - integerArgument)]].
 		shifted := objectMemory wordSize = 4
 					ifTrue: [self positive32BitIntegerFor: shifted]
 					ifFalse:
