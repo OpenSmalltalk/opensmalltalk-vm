@@ -884,12 +884,12 @@ InterpreterPrimitives >> primitiveBitShift [
 				shifted := integerReceiver << integerArgument.
 				integerReceiver = (objectMemory wordSize = 4
 									ifTrue: [shifted >> integerArgument]
-									ifFalse: [shifted >>> integerArgument])  ifFalse:
+									ifFalse: [shifted >>> integerArgument]) ifFalse:
 					[^self primitiveFail]]
 			ifFalse: "Right shift -- OK to lose bits"
 				[integerArgument >= objectMemory numSmallIntegerBits negated ifFalse:
 					[^self primitiveFail].
-				 shifted := integerReceiver >> (0 - integerArgument)].
+				 shifted := integerReceiver >>> (0 - integerArgument)].
 		shifted := objectMemory wordSize = 4
 					ifTrue: [self positive32BitIntegerFor: shifted]
 					ifFalse:
