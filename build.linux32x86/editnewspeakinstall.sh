@@ -2,8 +2,8 @@
 # Edit the installed directory tree to rename squeak to nsvm and install source
 INSTALLDIR="$1"
 cd $INSTALLDIR
-SOURCE=../../sources/SqueakV41.sources
-test -f $SOURCE || SOURCE=../../../sources/SqueakV41.sources
+SOURCE=../../sources/SqueakV50.sources
+test -f $SOURCE || SOURCE=../../../sources/SqueakV50.sources
 if [ -f squeak ]; then
 	mv squeak nsvm
 	ex -u NONE "+g/squeak/s/squeak/nsvm/g" +w +q nsvm
