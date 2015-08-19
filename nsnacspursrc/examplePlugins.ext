@@ -1,0 +1,4 @@
+# This is an example external plugin list.
+# Edit plugins.ext in vm build dir to specify the external plugins to be built.
+EXTERNAL_PLUGINS = \
+SqueakSSL
