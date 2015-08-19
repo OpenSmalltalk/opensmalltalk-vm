@@ -311,6 +311,12 @@ VMMaker class >> generateAllConfigurationsUnderVersionControl [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateAllGlueConfigurationsUnderVersionControl [
+	self generateGlueSpurStackVM;
+		generateGlueSpurCogVM
+]
+
+{ #category : #configurations }
 VMMaker class >> generateAllNewspeakConfigurationsUnderVersionControl [
 	self generateNewspeakSpurStackVM;
 		generateNewspeakSpurStack64VM;
@@ -395,6 +401,36 @@ VMMaker class >> generateEitherSqueakCogVM [
 		  options: ((coInterpreterClass includesBehavior: CoInterpreterMT)
 						ifTrue: [#(COGMTVM true)]
 						ifFalse: [#()])
+]
+
+{ #category : #configurations }
+VMMaker class >> generateGlueSpurCogVM [
+	"No primitives since we can use those from the Cog Spur Newspeak VM"
+	^VMMaker
+		generate: CoInterpreter
+		and: StackToRegisterMappingCogit
+		with: #(	ObjectMemory Spur32BitCoMemoryManager
+				MULTIPLEBYTECODESETS true
+				NewspeakVM true
+				EnforceAccessControl false)
+		to: (FileDirectory default directoryNamed: self sourceTree, '/nsnacspursrc') fullName
+		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
+		including: #()
+]
+
+{ #category : #configurations }
+VMMaker class >> generateGlueSpurStackVM [
+	"No primitives since we can use those from the Cog Spur Newspeak VM"
+	^VMMaker
+		generate: StackInterpreter
+		with: #(	ObjectMemory Spur32BitMemoryManager
+				MULTIPLEBYTECODESETS true
+				NewspeakVM true
+				FailImbalancedPrimitives false
+				EnforceAccessControl false)
+		to: (FileDirectory default directoryNamed: self sourceTree, '/nsnacspurstacksrc') fullName
+		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
+		including: #()
 ]
 
 { #category : #configurations }
