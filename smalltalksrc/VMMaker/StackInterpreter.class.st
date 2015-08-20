@@ -11637,8 +11637,7 @@ StackInterpreter >> printStackPageListInUse [
 	page := stackPages mostRecentlyUsedPage.
 	n := 0.
 	[(stackPages isFree: page) ifFalse:
-		[self printStackPage: page useCount: n; cr.
-		 n := n + 1].
+		[self printStackPage: page useCount: (n := n + 1); cr].
 	 (page := page prevPage) ~= stackPages mostRecentlyUsedPage] whileTrue
 ]
 
@@ -11657,8 +11656,7 @@ StackInterpreter >> printStackPagesInUse [
 	0 to: numStackPages - 1 do:
 		[:i|
 		(stackPages isFree: (stackPages stackPageAt: i)) ifFalse:
-			[self printStackPage: (stackPages stackPageAt: i) useCount: n; cr.
-			 n := n + 1]]
+			[self printStackPage: (stackPages stackPageAt: i) useCount: (n := n + 1); cr]]
 ]
 
 { #category : #'object memory support' }
