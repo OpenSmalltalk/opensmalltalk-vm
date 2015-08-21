@@ -2383,13 +2383,16 @@ SpurMemoryManager >> arrayValueOf: arrayOop [
 ]
 
 { #category : #'image segment in/out' }
-SpurMemoryManager >> assignClassIndicesAndPinFrom: segmentStart to: segmentLimit outPointers: outPointerArray [
+SpurMemoryManager >> assignClassIndicesAndPinFrom: segmentStart to: segmentLimit outPointers: outPointerArray filling: loadedObjectsArray [
 	"This is part of loadImageSegmentFrom:outPointers:.
 	 Make a final pass, assigning the real class indices and/or pinning pinned objects."
-	| objOop |
+	| fillIdx objOop |
 	objOop := self objectStartingAt: segmentStart.
+	fillIdx := 0.
 	[objOop < segmentLimit] whileTrue:
 		[| classRef classOop classIndex |
+		 self storePointerUnchecked: fillIdx ofObject: loadedObjectsArray withValue: objOop.
+		 fillIdx := fillIdx + 1.
 		 "In the segment, class indices are offset indexes into the segment data,
 		  or into outPointers.  See mapOopsFrom:to:outPointers:outHashes:."
 		 classRef := (self classIndexOf: objOop) - self firstClassIndexPun.
@@ -7058,13 +7061,13 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 
 	"This primitive will load a binary image segment created by primitiveStoreImageSegment.
 	 It expects the outPointer array to be of the proper size, and the wordArray to be well formed.
-	 It will return as its value the original array of roots, and the erstwhile segmentWordArray will
-	 have been truncated to a size of one word, i.e. retaining the version stamp.  If this primitive
-	 should fail, the segmentWordArray will, sadly, have been reduced to an unrecognizable and
-	 unusable jumble.  But what more could you have done with it anyway?"
+	 It will return as its value the original array of roots, and the segmentWordArray will become an
+	 array of the loaded objects.  If this primitive should fail, the segmentWordArray will, sadly, have
+	 been reduced to an unrecognizable and unusable jumble.  But what more could you have done
+	 with it anyway?"
 
 	<inline: false>
-	| segmentLimit segmentStart segVersion errorCode |
+	| segmentLimit segmentStart segVersion errorCode numLoadedObjects loadedObjectsArray |
 
 	segmentLimit := self numSlotsOf: segmentWordArray.
 	(self objectBytesForSlots: segmentLimit) < (self allocationUnit "version info" + self baseHeaderSize "one object header") ifTrue:
@@ -7102,8 +7105,12 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 	"scan through mapping oops and validating class references. Defer entering any
 	 class objects into the class table and/or pinning objects until a second pass."
 	errorCode := self mapOopsAndValidateClassRefsFrom: segmentStart to: segmentLimit outPointers: outPointerArray.
-	errorCode ~= 0 ifTrue:
+	errorCode > 0 ifTrue:
 		[^errorCode].
+	numLoadedObjects := errorCode negated.
+	loadedObjectsArray := self allocateSlots: numLoadedObjects format: self arrayFormat classIndex: ClassArrayCompactIndex.
+	loadedObjectsArray ifNil:
+		[^PrimErrNoMemory].
 
 	"Scan for classes contained in the segment, entering them into the class table.
 	 Classes are at the front, after the root array and have the remembered bit set."
@@ -7111,13 +7118,16 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 	errorCode ~= 0 ifTrue:
 		[^errorCode].
 
-	"Make a final pass, assigning class indices and/or pinning pinned objects"
-	self assignClassIndicesAndPinFrom: segmentStart to: segmentLimit outPointers: outPointerArray.
+	"Make a final pass, assigning class indices and/or pinning pinned objects and collecting the loaded objects in loadedObjectsArray"
+	self assignClassIndicesAndPinFrom: segmentStart to: segmentLimit outPointers: outPointerArray filling: loadedObjectsArray.
 
-	"Finally evaporate the container, leaving the newly loaded objects in place."
+	"Evaporate the container, leaving the newly loaded objects in place."
 	(self hasOverflowHeader: segmentWordArray)
 		ifTrue: [self rawOverflowSlotsOf: segmentWordArray put: self allocationUnit / self bytesPerOop]
 		ifFalse: [self rawNumSlotsOf: segmentWordArray put: self allocationUnit / self bytesPerOop].
+
+	"Finally forward the segmentWordArray to the loadedObjectsArray"
+	self forward: segmentWordArray to: loadedObjectsArray.
 	
 	self runLeakCheckerFor: GCModeImageSegment.
 
@@ -7257,11 +7267,13 @@ SpurMemoryManager >> mapOopsAndValidateClassRefsFrom: segmentStart to: segmentLi
 	 Scan through mapping oops and validating class references.  Defer
 	 entering any class objects into the class table and/or pinning objects
 	 until the second pass in assignClassIndicesAndPinFrom:to:outPointers:."
-	| numOutPointers objOop |
+	| numOutPointers numSegObjs objOop |
 	numOutPointers := self numSlotsOf: outPointerArray.
+	numSegObjs := 0.
 	objOop := self objectStartingAt: segmentStart.
 	[objOop < segmentLimit] whileTrue:
 		[| classIndex hash oop mappedOop |
+		 numSegObjs := numSegObjs + 1.
 		 (self isMarked: objOop) ifTrue:
 			[^PrimErrInappropriate].
 		 classIndex := (self classIndexOf: objOop) - self firstClassIndexPun.
@@ -7295,7 +7307,7 @@ SpurMemoryManager >> mapOopsAndValidateClassRefsFrom: segmentStart to: segmentLi
 							[^PrimErrBadIndex]].
 				 self storePointerUnchecked: i ofObject: objOop withValue: mappedOop]].
 		 objOop := self objectAfter: objOop limit: segmentLimit].
-	^0
+	^numSegObjs negated
 ]
 
 { #category : #'image segment in/out' }
