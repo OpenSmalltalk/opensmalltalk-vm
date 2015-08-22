@@ -192,7 +192,7 @@ N.B. For Squeak/Pharo/Croquet please use the archives whose names begin with
      non-blocking FFI calls.  The archives containing "Spur" or "spur" are
      VMs using the new Spur object representation and garbage collector and
      should be used with Spur-format Squeak/Pharo/Croquet or Newspeak images.
-     Newspeak has moved to Spur and no longer supports non-Spur versions.
+     Squeak V5 and Newspeak have moved to Spur.
 
      Linux
      There are two variants of the Linux VMs; those ending in "ht" have a

@@ -5,7 +5,7 @@
 # edit and run ./links to get .app and sources, then run make
 
 SOURCES := yes
-SOURCEFILENAME1 := $(shell echo ~/Squeak/SqueakV41.sources)
+SOURCEFILENAME1 := ../../../sources/SqueakV50.sources
 DOCUMENTATION_DIR := doc
 
 include branding.gmk
@@ -21,7 +21,7 @@ $(foreach var,$(BRANDING),$(eval $(call ESCAPE_VAR,$(var))))
 $(VM_LOCALIZED_NAME_ESC).app: ../Fast.app
 	rm -rf $(VM_LOCALIZED_NAME_ESC).app
 	cp -R ../Fast.app $(VM_LOCALIZED_NAME_ESC).app
-	-ln $(SOURCEFILENAME1) $(VM_LOCALIZED_NAME_ESC).app/Contents/Resources
+	ln $(SOURCEFILENAME1) $(VM_LOCALIZED_NAME_ESC).app/Contents/Resources
 
 # Cab contents:
 VM_BUNDLE := $(VM_LOCALIZED_NAME_ESC).app
