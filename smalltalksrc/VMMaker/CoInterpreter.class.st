@@ -1403,14 +1403,15 @@ CoInterpreter >> ceDynamicSuperSend: cacheAddress receiver: methodReceiver [
 			ifFalse:
 				[self deny: (objectMemory isOopForwarded: messageSelector).
 				self deny: (objectMemory isForwardedClassTag: methodReceiverClassTag).
-				lkupClassTag := methodReceiverClassTag.
 				errSelIdx := self lookupDynamicSuperSendNoMNU: methodReceiver.
 				errSelIdx ~= 0 ifTrue:
 					[self assert: errSelIdx == SelectorDoesNotUnderstand.
+					self assert: localAbsentReceiver == methodReceiver.
 					self handleMNU: errSelIdx 
 						InMachineCodeTo: methodReceiver
-						classForMessage: (objectMemory classForClassTag: methodReceiverClassTag).
+						classForMessage: lkupClass.
 					self unreachable].
+				lkupClassTag := methodReceiverClassTag.
 				self addNewMethodToNSCache: LookupRuleDynamicSuper].
 
 	(self maybeMethodHasCogMethod: newMethod) 
@@ -1489,14 +1490,15 @@ CoInterpreter >> ceImplicitReceiverSend: cacheAddress receiver: methodReceiver [
 			ifFalse:
 				[self deny: (objectMemory isOopForwarded: messageSelector).
 				self deny: (objectMemory isForwardedClassTag: methodReceiverClassTag).
-				lkupClassTag := methodReceiverClassTag.
 				errSelIdx := self lookupImplicitReceiverSendNoMNU: methodReceiver.
 				errSelIdx ~= 0 ifTrue:
 					[self assert: errSelIdx == SelectorDoesNotUnderstand.
+					self assert: localAbsentReceiver == methodReceiver.
 					self handleMNU: errSelIdx 
 						InMachineCodeTo: methodReceiver
-						classForMessage: (objectMemory classForClassTag: methodReceiverClassTag).
+						classForMessage: lkupClass.
 					self unreachable].
+				lkupClassTag := methodReceiverClassTag.
 				self addNewMethodToNSCache: LookupRuleImplicit].
 
 	"Fix stacked receiver."
@@ -1766,18 +1768,16 @@ CoInterpreter >> ceOuterSend: cacheAddress receiver: methodReceiver [
 			ifFalse:
 				[self deny: (objectMemory isOopForwarded: messageSelector).
 				self deny: (objectMemory isForwardedClassTag: methodReceiverClassTag).
-				lkupClassTag := methodReceiverClassTag. "Successful lookup cached under the sender's class"
 				errSelIdx := self lookupOuterSendNoMNU: methodReceiver depth: depth.
 				errSelIdx ~= 0 ifTrue:
 					[self assert: errSelIdx == SelectorDoesNotUnderstand.
 					"Fix stacked receiver."
 					self stackValue: argumentCount + 1 "ret addr" put: localAbsentReceiver.
-					"Failed lookup continues with the enclosing object's class"
-					lkupClassTag := objectMemory classForClassTag: localAbsentReceiver.
 					self handleMNU: errSelIdx 
 						InMachineCodeTo: localAbsentReceiver
-						classForMessage: lkupClassTag.
+						classForMessage: lkupClass.
 					self unreachable].
+				lkupClassTag := methodReceiverClassTag. "Successful lookup cached under the sender's class"
 				self addNewMethodToNSCache: depth].
 
 	"Fix stacked receiver."
@@ -1872,14 +1872,15 @@ CoInterpreter >> ceSelfSend: cacheAddress receiver: methodReceiver [
 			ifFalse:
 				[self deny: (objectMemory isOopForwarded: messageSelector).
 				self deny: (objectMemory isForwardedClassTag: methodReceiverClassTag).
-				lkupClassTag := methodReceiverClassTag.
 				errSelIdx := self lookupOuterSendNoMNU: methodReceiver depth: 0.
 				errSelIdx ~= 0 ifTrue:
 					[self assert: errSelIdx == SelectorDoesNotUnderstand.
+					self assert: localAbsentReceiver == methodReceiver.
 					self handleMNU: errSelIdx 
 						InMachineCodeTo: methodReceiver
-						classForMessage: (objectMemory classForClassTag: methodReceiverClassTag).
+						classForMessage: lkupClass.
 					self unreachable].
+				lkupClassTag := methodReceiverClassTag.
 				self addNewMethodToNSCache: LookupRuleSelf].
 
 	(self maybeMethodHasCogMethod: newMethod) 
