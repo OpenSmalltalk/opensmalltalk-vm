@@ -8672,56 +8672,6 @@ StackInterpreter >> longUnconditionalJump [
 ]
 
 { #category : #'message sending' }
-StackInterpreter >> lookupDnuAbsent [
-	"An absent receiver send lookup failed. Replace the arguments on the stack with
-	 a Message and lookup #doesNotUndestand:.
-	IN: lkupClass
-	IN: messageSelector
-	IN: argumentCount
-	OUT: newMethod
-	OUT: primitiveIndex
-	RESULT: LookupRuleMNU"
-
-	| currentClass dictionary found |
-	self createActualMessageTo: lkupClass.
-	lkupClass := objectMemory fetchClassOf: localAbsentReceiver.
-	messageSelector := objectMemory splObj: SelectorDoesNotUnderstand.
-	currentClass := lkupClass.
-	[currentClass ~= objectMemory nilObject] whileTrue:
-		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
-		found := self lookupMethodInDictionary: dictionary.
-		found ifTrue: [^LookupRuleMNU].
-		currentClass := self superclassOf: currentClass].
-
-	self error: 'Recursive not understood error encountered'
-
-]
-
-{ #category : #'message sending' }
-StackInterpreter >> lookupDnuPresent [
-	"A present receiver send lookup failed. Replace the arguments on the stack with
-	 a Message and lookup #doesNotUndestand:.
-	IN: lkupClass
-	IN: messageSelector
-	IN: argumentCount
-	OUT: newMethod
-	OUT: primitiveIndex
-	RESULT: LookupRuleMNU"
-	<option: #NewspeakVM>
-	| currentClass dictionary found |
-	self createActualMessageTo: lkupClass.
-	messageSelector := objectMemory splObj: SelectorDoesNotUnderstand.
-	currentClass := lkupClass.
-	[currentClass ~= objectMemory nilObject] whileTrue:
-		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
-		found := self lookupMethodInDictionary: dictionary.
-		found ifTrue: [^LookupRuleMNU].
-		currentClass := self superclassOf: currentClass].
-
-	self error: 'Recursive not understood error encountered'
-]
-
-{ #category : #'message sending' }
 StackInterpreter >> lookupDynamicSuperSend [
 	"Do the full lookup for a Newspeak super send.
 	IN: messageSelector
@@ -8738,7 +8688,7 @@ StackInterpreter >> lookupDynamicSuperSend [
 	methodMixinApplication := self
 		findApplicationOfTargetMixin: methodMixin
 		startingAtBehavior: (objectMemory fetchClassOf: localAbsentReceiver).
-	lkupClass := self superclassOf: methodMixinApplication. "For use by MNU"
+	lkupClass := self superclassOf: methodMixinApplication. "MNU lookup starts here."
 	^self lookupProtected: messageSelector startingAt: lkupClass rule: LookupRuleDynamicSuper
 ]
 
@@ -8782,7 +8732,7 @@ StackInterpreter >> lookupImplicitReceiverSend [
 	"There is no lexically visible method, so the implicit receiver is the method receiver."
 	localAbsentReceiverOrZero := 0.
 	localAbsentReceiver := methodReceiver.
-	lkupClass := objectMemory fetchClassOf: methodReceiver. "For use by MNU"
+	lkupClass := objectMemory fetchClassOf: methodReceiver. "MNU lookup starts here."
 	^self lookupProtected: messageSelector startingAt: lkupClass rule: LookupRuleImplicit.
 ]
 
@@ -8801,13 +8751,40 @@ StackInterpreter >> lookupLexical: selector from: mixin rule: rule [
 	method, and self and outer sends."
 	| receiverClass mixinApplication dictionary found |
 	receiverClass := objectMemory fetchClassOf: localAbsentReceiver.
-	lkupClass := receiverClass. "For use by MNU"
+	lkupClass := receiverClass. "MNU lookup starts here."
 	mixinApplication := self findApplicationOfTargetMixin: mixin startingAtBehavior: receiverClass.
 	dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: mixinApplication.
 	found := self lookupMethodInDictionary: dictionary.
 	(found and: [(self isPrivateMethod: newMethod)]) ifTrue:
 		[^rule].
 	^self lookupProtected: selector startingAt: receiverClass rule: rule
+
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> lookupMNU [
+	"A send lookup failed. Replace the arguments on the stack with a Message and lookup
+	 #doesNotUndestand: starting at lkupClass. Note that MNU lookup ignores access modifiers.
+	 This makes it different from an ordinary send of #doesNotUnderstand:, which must only
+	 find public methods.
+	IN: lkupClass
+	IN: messageSelector
+	IN: argumentCount
+	OUT: newMethod
+	OUT: primitiveIndex
+	RESULT: LookupRuleMNU"
+
+	| currentClass dictionary found |
+	self createActualMessageTo: lkupClass.
+	messageSelector := objectMemory splObj: SelectorDoesNotUnderstand.
+	currentClass := lkupClass.
+	[currentClass ~= objectMemory nilObject] whileTrue:
+		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
+		found := self lookupMethodInDictionary: dictionary.
+		found ifTrue: [^LookupRuleMNU].
+		currentClass := self superclassOf: currentClass].
+
+	self error: 'Recursive not understood error encountered'
 
 ]
 
@@ -8990,7 +8967,7 @@ StackInterpreter >> lookupOrdinarySend [
 	IN: argumentCount
 	OUT: newMethod
 	OUT: primitiveIndex
-	RESULT: LookupOrdinary or LookupDNU"
+	RESULT: LookupRuleOrdinary or LookupRuleMNU"
 	<option: #NewspeakVM>
 	| currentClass dictionary found |
 	self assert: (self addressCouldBeClassObj: lkupClass).
@@ -9000,11 +8977,11 @@ StackInterpreter >> lookupOrdinarySend [
 		found := self lookupMethodInDictionary: dictionary.
 		found ifTrue:
 			[(self isPublicMethod: newMethod) ifTrue:
-				[^self].
+				[^LookupRuleOrdinary].
 			(self isProtectedMethod: newMethod) ifTrue:
-				[^self lookupDnuPresent]].
+				[^self lookupMNU]].
 		currentClass := self superclassOf: currentClass].
-	^self lookupDnuPresent
+	^self lookupMNU
 ]
 
 { #category : #'message sending' }
@@ -9037,15 +9014,15 @@ StackInterpreter >> lookupOuterSend: depth [
 StackInterpreter >> lookupProtected: selector startingAt: mixinApplication rule: rule [
 	"A shared part of the lookup for self, outer or implicit receiver sends that did not find a
 	private lexically visible method, and (Newspeak) super sends."
-	| lookupClass dictionary found |
-	lookupClass := mixinApplication.
-	[lookupClass = objectMemory nilObject] whileFalse:
-		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: lookupClass.
+	| currentClass dictionary found |
+	currentClass := mixinApplication.
+	[currentClass = objectMemory nilObject] whileFalse:
+		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
 		found := self lookupMethodInDictionary: dictionary.
 		(found and: [(self isPrivateMethod: newMethod) not]) ifTrue:
-			[^0].
-		lookupClass := self superclassOf: lookupClass].
-	^self lookupDnuAbsent
+			[^rule].
+		currentClass := self superclassOf: currentClass].
+	^self lookupMNU
 ]
 
 { #category : #'debug support' }

@@ -4451,7 +4451,7 @@ CoInterpreter >> lookupDynamicSuperSendNoMNU: methodReceiver [
 	methodMixinApplication := self
 		findApplicationOfTargetMixin: methodMixin
 		startingAtBehavior: (objectMemory fetchClassOf: localAbsentReceiver).
-	lkupClass := self superclassOf: methodMixinApplication. "For use by MNU"
+	lkupClass := self superclassOf: methodMixinApplication. "MNU lookup starts here."
 	^self lookupProtectedNoMNU: messageSelector startingAt: lkupClass rule: LookupRuleDynamicSuper
 ]
 
@@ -4494,7 +4494,7 @@ CoInterpreter >> lookupImplicitReceiverSendNoMNU: methodReceiver [
 	"There is no lexically visible method, so the implicit receiver is the method receiver."
 	localAbsentReceiverOrZero := 0.
 	localAbsentReceiver := methodReceiver.
-	lkupClass := objectMemory fetchClassOf: methodReceiver. "For use by MNU"
+	lkupClass := objectMemory fetchClassOf: methodReceiver. "MNU lookup starts here."
 	^self lookupProtectedNoMNU: messageSelector startingAt: lkupClass rule: LookupRuleImplicit.
 ]
 
@@ -4504,7 +4504,7 @@ CoInterpreter >> lookupLexicalNoMNU: selector from: mixin rule: rule [
 	method, and self and outer sends."
 	| receiverClass mixinApplication dictionary found |
 	receiverClass := objectMemory fetchClassOf: localAbsentReceiver.
-	lkupClass := receiverClass. "For use by MNU"
+	lkupClass := receiverClass. "MNU lookup starts here."
 	mixinApplication := self findApplicationOfTargetMixin: mixin startingAtBehavior: receiverClass.
 	dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: mixinApplication.
 	found := self lookupMethodInDictionary: dictionary.
@@ -4587,14 +4587,14 @@ CoInterpreter >> lookupOuterSendNoMNU: methodReceiver depth: depth [
 CoInterpreter >> lookupProtectedNoMNU: selector startingAt: mixinApplication rule: rule [
 	"A shared part of the lookup for self, outer or implicit receiver sends that did not find a
 	private lexically visible method, and (Newspeak) super sends."
-	| lookupClass dictionary found |
-	lookupClass := mixinApplication.
-	[lookupClass = objectMemory nilObject] whileFalse:
-		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: lookupClass.
+	| currentClass dictionary found |
+	currentClass := mixinApplication.
+	[currentClass = objectMemory nilObject] whileFalse:
+		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
 		found := self lookupMethodInDictionary: dictionary.
 		(found and: [(self isPrivateMethod: newMethod) not]) ifTrue:
 			[^0].
-		lookupClass := self superclassOf: lookupClass].
+		currentClass := self superclassOf: currentClass].
 	^SelectorDoesNotUnderstand
 ]
 
