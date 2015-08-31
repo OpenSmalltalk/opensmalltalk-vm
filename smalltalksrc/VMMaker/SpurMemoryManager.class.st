@@ -20,7 +20,7 @@ Instance Variables
 	coInterpreter				<StackInterpreter|CoInterpreter (StackInterpreterSimulator|CogVMSimulator)>
 	edenBytes					<Integer>
 	endOfMemory				<Integer address>
-	ephemeronQueue			<Integer objStack oop>
+	mournQueue			<Integer objStack oop>
 	extraRootCount			<Integer>
 	extraRoots					<Array of: oop>
 	falseObj					<Integer oop>
@@ -105,8 +105,8 @@ edenBytes
 endOfMemory
 	- the address past the last oldSpace segment
 
-ephemeronQueue
-	- the oopStack holding triggered ephemerons
+mournQueue
+	- the oopStack holding triggered ephemerons, and, depending on finalization scheme, bereaved weak arrays
 
 extraRootCount
 	- the count of extra roots
@@ -151,7 +151,7 @@ heapSizeAtPreviousGC
 	- the size of the heap at the most recent GC, used to decide if a full GC is needed after a scavenge.  See heapGrowthToSizeGCRatio.
 
 hiddenRootsObj
-	- the root page of the class table and some other toos (e.g. the ephemeron queue). its first
+	- the root page of the class table and some other roots (e.g. the mourn queue). its first
 	  numClassTablePages elements are pages containing classes. Remaining slots hold other
 	  roots the VM needs.  Must be the fifth object in oldSpace.
 
@@ -162,7 +162,7 @@ lastFreeChunk
 	- the free chunk at the highest address discovered during global gc's sweep through the heap.  used in compaction.
 
 lastHash
-	- the last object hash value.  a pseudo-random number generator.
+	- the last object hash value.  the seed to the pseudo-random number generator for identity hashes.
 
 lowSpaceThreshold
 	- the ammount of free memory below which the low space condition should be signalled.
@@ -547,7 +547,7 @@ Class {
 		'classTableIndex',
 		'numClassTablePages',
 		'endOfMemory',
-		'ephemeronQueue',
+		'mournQueue',
 		'unscannedEphemerons',
 		'objStackInvalidBecause',
 		'invalidObjStackPage',
@@ -603,12 +603,12 @@ Class {
 		'BitsPerByte',
 		'CompactionPassesForGC',
 		'CompactionPassesForSnapshot',
-		'EphemeronQueueRootIndex',
 		'ExtraRootsSize',
 		'FirstValidClassIndex',
 		'MarkObjectsForEnumerationPrimitives',
 		'MarkStackRecord',
 		'MarkStackRootIndex',
+		'MournQueueRootIndex',
 		'ObjStackFixedSlots',
 		'ObjStackFreex',
 		'ObjStackLimit',
@@ -791,10 +791,10 @@ SpurMemoryManager class >> initialize [
 	ObjStackLimit := ObjStackPageSlots - ObjStackFixedSlots.
 	"The hiddenHootsObject contains the classTable pages and up to 8 additional objects.
 	 Currently we use four; the three objStacks, the mark stack, the weaklings and the
-	 ephemeron queue, and the rememberedSet."
+	 mourn queue, and the rememberedSet."
 	MarkStackRootIndex := self basicNew classTableRootSlots.
 	WeaklingStackRootIndex := MarkStackRootIndex + 1.
-	EphemeronQueueRootIndex := MarkStackRootIndex + 2.
+	MournQueueRootIndex := MarkStackRootIndex + 2.
 	RememberedSetRootIndex := MarkStackRootIndex + 3.
 
 	MarkObjectsForEnumerationPrimitives := false.
@@ -3823,6 +3823,14 @@ SpurMemoryManager >> defaultEdenBytes [
 	^4 * 1024 * 1024
 ]
 
+{ #category : #'weakness and ephemerality' }
+SpurMemoryManager >> dequeueMourner [
+	"Answer the top mourner (ephemeron or weak array) from the queue or
+	 nil if the queue is empty. We don't care about order; ephemerons are
+	 fired in an arbitrary order based on where they are in the heap."
+	^self popObjStack: mournQueue
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> detachFreeObject: freeChunk [
 	"This is a rare operation, so its efficiency isn't critical.
@@ -4213,11 +4221,6 @@ SpurMemoryManager >> ephemeronFormat [
 	^5
 ]
 
-{ #category : #'spur bootstrap' }
-SpurMemoryManager >> ephemeronQueue [
-	^ephemeronQueue
-]
-
 { #category : #'debug support' }
 SpurMemoryManager >> existInstancesInNewSpaceOf: classObj [
 	| classIndex |
@@ -4462,8 +4465,7 @@ SpurMemoryManager >> fireAllUnscannedEphemerons [
 	self assert: self allUnscannedEphemeronsAreActive.
 	unscannedEphemerons start to: unscannedEphemerons top - self wordSize do:
 		[:p|
-		self queueEphemeron: (self longAt: p)].
-	coInterpreter forceInterruptCheck
+		coInterpreter fireEphemeron: (self longAt: p)]
 ]
 
 { #category : #'object enumeration' }
@@ -4756,7 +4758,7 @@ SpurMemoryManager >> followForwardedObjStacks [
 	 So they need their slots followed."
 	self followForwardedInObjStack: markStack atIndex: MarkStackRootIndex.
 	self followForwardedInObjStack: weaklingStack atIndex: WeaklingStackRootIndex.
-	self followForwardedInObjStack: ephemeronQueue atIndex: EphemeronQueueRootIndex
+	self followForwardedInObjStack: mournQueue atIndex: MournQueueRootIndex
 ]
 
 { #category : #forwarding }
@@ -5776,7 +5778,7 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	self setHiddenRootsObj: (self objectAfter: freeListObj).
 	markStack := self swizzleObjStackAt: MarkStackRootIndex.
 	weaklingStack := self swizzleObjStackAt: WeaklingStackRootIndex.
-	ephemeronQueue := self swizzleObjStackAt: EphemeronQueueRootIndex.
+	mournQueue := self swizzleObjStackAt: MournQueueRootIndex.
 	self assert: self validObjStacks.
 	self assert: (self isEmptyObjStack: markStack).
 	self assert: (self isEmptyObjStack: weaklingStack).
@@ -7495,9 +7497,10 @@ SpurMemoryManager >> markAndTraceExtraRoots [
 { #category : #'gc - global' }
 SpurMemoryManager >> markAndTraceHiddenRoots [
 	"The hidden roots hold both the class table pages and the obj stacks,
-	 and hence need special treatment.
-	 The obj stacks must be marked specially; their pages must be marked,
-	 but only the contents of the ephemeronQueue should be marked.
+	 and hence need special treatment.  The obj stacks must be marked
+	 specially; their pages must be marked, but only the contents of the
+	 mournQueue should be marked.
+
 	 If a class table page is weak we can mark and trace the hiddenRoots,
 	 which will not trace through class table pages because they are weak.
 	 But if class table pages are strong, we must mark the pages and *not*
@@ -7506,7 +7509,7 @@ SpurMemoryManager >> markAndTraceHiddenRoots [
 
 	self markAndTraceObjStack: markStack andContents: false.
 	self markAndTraceObjStack: weaklingStack andContents: false.
-	self markAndTraceObjStack: ephemeronQueue andContents: true.
+	self markAndTraceObjStack: mournQueue andContents: true.
 
 	self setIsMarkedOf: self rememberedSetObj to: true.
 	self setIsMarkedOf: self freeListsObj to: true.
@@ -7836,6 +7839,11 @@ SpurMemoryManager >> minSmallInteger [
 	self subclassResponsibility
 ]
 
+{ #category : #'spur bootstrap' }
+SpurMemoryManager >> mournQueue [
+	^mournQueue
+]
+
 { #category : #compaction }
 SpurMemoryManager >> moveARunOfObjectsStartingAt: startAddress upTo: limit [ 
 	"Move the sequence of movable objects starting at startAddress.  Answer the start
@@ -8143,7 +8151,7 @@ SpurMemoryManager >> nilUnmarkedWeaklingSlots [
 		[:weakling| | anyUnmarked |
 		anyUnmarked := self nilUnmarkedWeaklingSlotsIn: weakling.
 		anyUnmarked ifTrue:
-			[coInterpreter signalFinalization: weakling]].
+			[coInterpreter fireFinalization: weakling]].
 	self emptyObjStack: weaklingStack
 ]
 
@@ -9501,9 +9509,28 @@ SpurMemoryManager >> pushRemappableOop: oop [
 
 { #category : #'weakness and ephemerality' }
 SpurMemoryManager >> queueEphemeron: anEphemeron [
+	"Add the ephemeron to the queue and make it non-ephemeral, to avoid subsequent firing.
+	 Alas this means that other ephemerons on the same object not identified in this sccavenge
+	 or GC will not fire until later.  But that's life."
 	self assert: ((self isNonImmediate: anEphemeron)
 				and: [(self formatOf: anEphemeron) = self ephemeronFormat]).
-	self push: anEphemeron onObjStack: ephemeronQueue
+	self deny: (self is: anEphemeron onObjStack: mournQueue).
+	self push: anEphemeron onObjStack: mournQueue.
+	self setFormatOf: anEphemeron to: self nonIndexablePointerFormat
+]
+
+{ #category : #'weakness and ephemerality' }
+SpurMemoryManager >> queueMourner: anEphemeronOrWeakArray [
+	"Add the ephemeron to the queue and make it non-ephemeral, to avoid subsequent firing.
+	 Alas this means that other ephemerons on the same object not identified in this sccavenge
+	 or GC will not fire until later.  But that's life."
+	self assert: ((self isNonImmediate: anEphemeronOrWeakArray)
+				and: [(self formatOf: anEphemeronOrWeakArray) = self ephemeronFormat
+				   or: [(self formatOf: anEphemeronOrWeakArray) = self weakArrayFormat]]).
+	self deny: (self is: anEphemeronOrWeakArray onObjStack: mournQueue).
+	self push: anEphemeronOrWeakArray onObjStack: mournQueue.
+	(self formatOf: anEphemeronOrWeakArray) = self ephemeronFormat ifTrue:
+		[self setFormatOf: anEphemeronOrWeakArray to: self nonIndexablePointerFormat]
 ]
 
 { #category : #'interpreter access' }
@@ -10875,7 +10902,7 @@ SpurMemoryManager >> storePointer: fieldIndex ofObjStack: objStackPage withValue
 		inSmalltalk:
 			[fieldIndex caseOf: {
 				[ObjStackTopx]		->	[self assert: (thang between: 0 and: ObjStackLimit)].
-				[ObjStackMyx]		->	[self assert: (thang between: MarkStackRootIndex and: EphemeronQueueRootIndex)].
+				[ObjStackMyx]		->	[self assert: (thang between: MarkStackRootIndex and: MournQueueRootIndex)].
 				[ObjStackFreex]	->	[self assert: (thang = 0
 														or: [(self addressCouldBeObj: thang)
 															and: [(self numSlotsOfAny: thang) = ObjStackPageSlots
@@ -11487,9 +11514,9 @@ SpurMemoryManager >> updateRootOfObjStackAt: objStackRootIndex with: newRootPage
 		ofObject: hiddenRootsObj
 		withValue: newRootPage.
 	objStackRootIndex caseOf: {
-		[MarkStackRootIndex]			->	[markStack := newRootPage].
-		[WeaklingStackRootIndex]		->	[weaklingStack := newRootPage].
-		[EphemeronQueueRootIndex]	->	[ephemeronQueue := newRootPage] }.
+		[MarkStackRootIndex]		->	[markStack := newRootPage].
+		[WeaklingStackRootIndex]	->	[weaklingStack := newRootPage].
+		[MournQueueRootIndex]	->	[mournQueue := newRootPage] }.
 	^newRootPage
 ]
 
@@ -11569,7 +11596,7 @@ SpurMemoryManager >> validFreeTreeChunk: chunk parent: parent [
 SpurMemoryManager >> validObjStacks [
 	^(markStack = nilObj or: [self isValidObjStack: markStack])
 	  and: [(weaklingStack = nilObj or: [self isValidObjStack: weaklingStack])
-	  and: [ephemeronQueue = nilObj or: [self isValidObjStack: ephemeronQueue]]]
+	  and: [mournQueue = nilObj or: [self isValidObjStack: mournQueue]]]
 ]
 
 { #category : #'memory access' }
