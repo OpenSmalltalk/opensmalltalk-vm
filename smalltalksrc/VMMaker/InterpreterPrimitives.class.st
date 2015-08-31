@@ -57,7 +57,8 @@ Class {
 		'profileProcess',
 		'profileSemaphore',
 		'nextProfileTick',
-		'preemptionYields'
+		'preemptionYields',
+		'newFinalization'
 	],
 	#classVars : [
 		'CrossedX',
@@ -1600,6 +1601,14 @@ InterpreterPrimitives >> primitiveFailFor: reasonCode [
 InterpreterPrimitives >> primitiveFailureCode [
 	<api>
 	^primFailCode
+]
+
+{ #category : #'memory space primitives' }
+InterpreterPrimitives >> primitiveFetchNextMourner [
+	<option: #SpurObjectMemory>
+	objectMemory dequeueMourner
+		ifNil: [self primitiveFailFor: PrimErrNotFound]
+		ifNotNil: [:mourner| self pop: 1 thenPush: mourner]
 ]
 
 { #category : #'control primitives' }

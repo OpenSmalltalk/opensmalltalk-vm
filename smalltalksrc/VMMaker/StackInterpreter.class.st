@@ -965,7 +965,7 @@ StackInterpreter class >> initializePointIndices [
 ]
 
 { #category : #initialization }
-StackInterpreter class >> initializePrimitiveTable [ 
+StackInterpreter class >> initializePrimitiveTable [
 	"This table generates a C function address table used in slowPrimitiveResponse along with dispatchFunctionPointerOn:in:"
 	"self initializePrimitiveTable"
 
@@ -1165,7 +1165,7 @@ StackInterpreter class >> initializePrimitiveTable [
 		"SpurMemoryManager primitives"
 		(170 primitiveAsCharacter)
 		(171 primitiveImmediateAsInteger)
-		(172 primitiveFail)
+		(172 primitiveFetchNextMourner)
 		(173 primitiveSlotAt)		"c.f. (73 primitiveInstVarAt)"
 		(174 primitiveSlotAtPut)	"c.f. (74 primitiveInstVarAtPut)"
 		(175 primitiveBehaviorHash)
@@ -1224,7 +1224,7 @@ StackInterpreter class >> initializePrimitiveTable [
 		(221 primitiveClosureValueNoContextSwitch) "valueNoContextSwitch"
 		(222 primitiveClosureValueNoContextSwitch) "valueNoContextSwitch:"
 
-		(223 229 primitiveFail)	"reserved for Cog primitives (see 228 & 229 in CoInterpreterMTS"
+		(223 229 primitiveFail)	"reserved for Cog primitives (see 228 & 229 in CoInterpreterMT"
 
 		(230 primitiveRelinquishProcessor)
 		(231 primitiveForceDisplayUpdate)
@@ -1268,9 +1268,8 @@ StackInterpreter class >> initializePrimitiveTable [
 		(264 519 nil) "primitiveLoadInstVar"
 
 		(520 primitiveFail)
-		"MIDI Primitives (521-539) - NO LONGER INDEXED"
-		(521 529 primitiveFail)
-		(530 539 primitiveFail)  "reserved for extended MIDI primitives"
+		(521 529 primitiveFail) "Reserved for Spur primitives"
+		(530 539 primitiveFail)
 
 		(540 primitiveFail)
 		(541 primitiveSmallFloatAdd)
@@ -6196,8 +6195,16 @@ StackInterpreter >> findUnwindThroughContext: homeContext [
 { #category : #finalization }
 StackInterpreter >> fireEphemeron: ephemeron [
 	<option: #SpurObjectMemory>
-	objectMemory queueEphemeron: ephemeron.
-	self forceInterruptCheck
+	objectMemory queueMourner: ephemeron.
+	self signalFinalization: ephemeron
+]
+
+{ #category : #finalization }
+StackInterpreter >> fireFinalization: weakling [
+	<option: #SpurObjectMemory>
+	newFinalization ifTrue:
+		[objectMemory queueMourner: weakling].
+	self signalFinalization: weakling
 ]
 
 { #category : #'compiled methods' }
@@ -6814,8 +6821,15 @@ StackInterpreter >> getCogMethodCount [
 { #category : #'internal interpreter access' }
 StackInterpreter >> getCogVMFlags [
 	"Answer an array of flags indicating various properties of the Cog VM.
-	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue"
+	 These are the same as the image header flags shifted right two bits (excluding float order and full screen flags).
+	 Bit 0: specific to CoInterpreterMT
+	 Bit 1: specific to CoInterpreter
+	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue
+	 Bit 3: specific to CoInterpreterMT
+	 Bit 4: if set, implies the new finalizartion scheme where WeakArrays are queued"
 	^objectMemory integerObjectOf: (preemptionYields ifTrue: [0] ifFalse: [4])
+									+ (newFinalization ifTrue: [16] ifFalse: [0])
+									+ (imageHeaderFlags >> 2 bitClear: 4 + 16)
 ]
 
 { #category : #'interpreter shell' }
@@ -6867,7 +6881,8 @@ StackInterpreter >> getImageHeaderFlags [
 	^fullScreenFlag "0 or 1"
 	+ (VMBIGENDIAN ifTrue: [0] ifFalse: [2]) "this is the imageFloatsLittleEndian flag"
 	+ (preemptionYields ifTrue: [0] ifFalse: [16r10])
-	+ (imageHeaderFlags bitClear: 16r13) "these are any flags we do not recognize"
+	+ (newFinalization ifTrue: [0] ifFalse: [16r40])
+	+ (imageHeaderFlags bitClear: 16r53) "these are any flags we do not recognize"
 ]
 
 { #category : #'plugin primitive support' }
@@ -12952,10 +12967,12 @@ StackInterpreter >> setCheckAllocFiller: aBool [
 { #category : #'internal interpreter access' }
 StackInterpreter >> setCogVMFlags: flags [
 	"Set an array of flags indicating various properties of the Cog VM.
-	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue"
-	flags asUnsignedInteger > 7 ifTrue:
+	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue
+	 Bit 4: if set, implies the new finalizartion scheme where WeakArrays are queued"
+	flags asUnsignedInteger > 31 ifTrue:
 		[^self primitiveFailFor: PrimErrUnsupported].
-	preemptionYields := (flags bitAnd: 4) = 0
+	preemptionYields := (flags bitAnd: 4) = 0.
+	newFinalization := (flags bitAnd: 16) ~= 0
 ]
 
 { #category : #'internal interpreter access' }
@@ -13003,7 +13020,8 @@ StackInterpreter >> setImageHeaderFlagsFrom: headerFlags [
 	imageHeaderFlags := headerFlags. "so as to preserve unrecognised flags."
 	fullScreenFlag := headerFlags bitAnd: 1.
 	imageFloatsBigEndian := (headerFlags bitAnd: 2) = 0 ifTrue: [1] ifFalse: [0].
-	preemptionYields := (headerFlags bitAnd: 16) = 0
+	preemptionYields := (headerFlags bitAnd: 16) = 0.
+	newFinalization := (headerFlags bitAnd: 64) ~= 0.
 ]
 
 { #category : #'primitive support' }
