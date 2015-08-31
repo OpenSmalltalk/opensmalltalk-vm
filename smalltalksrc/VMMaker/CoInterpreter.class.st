@@ -24,11 +24,9 @@ Class {
 		'statCodeCompactionCount',
 		'statCodeCompactionUsecs',
 		'lastUncoggableInterpretedBlockMethod',
-		'processHasThreadId',
 		'flagInterpretedMethods',
 		'maxLiteralCountForCompile',
-		'minBackwardJumpCountForCompile',
-		'noThreadingOfGUIThread'
+		'minBackwardJumpCountForCompile'
 	],
 	#classVars : [
 		'CSCallbackEnter',
@@ -3673,13 +3671,16 @@ CoInterpreter >> getCogMethodCount [
 { #category : #'internal interpreter access' }
 CoInterpreter >> getCogVMFlags [
 	"Answer an array of flags indicating various properties of the Cog VM.
-	 Bit 0: implies the image's Process class has threadId as its 3rd inst var (zero relative)
+	 These are the same as the image header flags shifted right two bits (excluding float order and full screen flags).
+	 Bit 0: specific to CoInterpreterMT
 	 Bit 1: if set, methods that are interpreted will have the flag bit set in their header
-	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue"
-	^objectMemory integerObjectOf: (processHasThreadId ifTrue: [1] ifFalse: [0])
-						+ (flagInterpretedMethods ifTrue: [2] ifFalse: [0])
-						+ (preemptionYields ifTrue: [0] ifFalse: [4])
-						+ (noThreadingOfGUIThread ifTrue: [8] ifFalse: [0])
+	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue
+	 Bit 3: specific to CoInterpreterMT
+	 Bit 4: if set, implies preempting a process does not put it to the back of its run queue"
+	^objectMemory integerObjectOf: (flagInterpretedMethods ifTrue: [2] ifFalse: [0])
+									+ (preemptionYields ifTrue: [0] ifFalse: [4])
+									+ (newFinalization ifTrue: [16] ifFalse: [0])
+									+ (imageHeaderFlags >> 2 bitClear: 2 + 4 + 16)
 ]
 
 { #category : #'interpreter shell' }
@@ -3717,11 +3718,10 @@ CoInterpreter >> getImageHeaderFlags [
 	"Answer the flags that are contained in the 7th long of the image header."
 	^fullScreenFlag "0 or 1"
 	+ (VMBIGENDIAN ifTrue: [0] ifFalse: [2]) "this is the imageFloatsLittleEndian flag"
-	+ (processHasThreadId ifTrue: [4] ifFalse: [0])
 	+ (flagInterpretedMethods ifTrue: [8] ifFalse: [0])
-	+ (preemptionYields ifTrue: [0] ifFalse: [16])
-	+ (noThreadingOfGUIThread ifTrue: [32] ifFalse: [0])
-	+ (imageHeaderFlags bitClear: 63) "these are any flags we do not recognize"
+	+ (preemptionYields ifTrue: [0] ifFalse: [16r10])
+	+ (newFinalization ifTrue: [0] ifFalse: [16r40])
+	+ (imageHeaderFlags bitClear: 16r5B) "these are any flags we do not recognize"
 ]
 
 { #category : #'message sending' }
@@ -6701,12 +6701,11 @@ CoInterpreter >> setCogVMFlags: flags [
 	 Bit 1: if set, methods that are interpreted will have the flag bit set in their header
 	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue
 	 Bit 3: if set, implies a threaded VM will not dosown the VM if owned by the GUI thread."
-	flags asUnsignedInteger > 15 ifTrue:
+	flags asUnsignedInteger > 31 ifTrue:
 		[^self primitiveFailFor: PrimErrUnsupported].
-	processHasThreadId := (flags bitAnd: 1) ~= 0.
 	flagInterpretedMethods := (flags bitAnd: 2) ~= 0.
 	preemptionYields := (flags bitAnd: 4) = 0.
-	noThreadingOfGUIThread := (flags bitAnd: 8) ~= 0
+	newFinalization := (flags bitAnd: 16) ~= 0
 ]
 
 { #category : #'internal interpreter access' }
@@ -6729,10 +6728,9 @@ CoInterpreter >> setImageHeaderFlagsFrom: headerFlags [
 	imageHeaderFlags := headerFlags. "so as to preserve unrecognised flags."
 	fullScreenFlag := headerFlags bitAnd: 1.
 	imageFloatsBigEndian := (headerFlags bitAnd: 2) = 0 ifTrue: [1] ifFalse: [0].
-	processHasThreadId := (headerFlags bitAnd: 4) ~= 0.
 	flagInterpretedMethods := (headerFlags bitAnd: 8) ~= 0.
 	preemptionYields := (headerFlags bitAnd: 16) = 0.
-	noThreadingOfGUIThread := (headerFlags bitAnd: 32) ~= 0.
+	newFinalization := (headerFlags bitAnd: 64) ~= 0.
 
 	(SistaVM and: [flagInterpretedMethods]) ifTrue:
 		[self print: 'warning, flagInterpretedMethods inoperable in Sista VMs.'; cr]
