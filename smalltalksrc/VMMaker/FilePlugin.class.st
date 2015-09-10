@@ -27,16 +27,12 @@ Class {
 { #category : #translation }
 FilePlugin class >> declareCVarsIn: aCCodeGenerator [
 
-	aCCodeGenerator var: 'sCCPfn'	type: 'void *'.
-	aCCodeGenerator var: 'sCDPfn'	type: 'void *'.
-	aCCodeGenerator var: 'sCGFTfn'	type: 'void *'.
-	aCCodeGenerator var: 'sCLPfn'	type: 'void *'.
-	aCCodeGenerator var: 'sCSFTfn'	type: 'void *'.
-	aCCodeGenerator var: 'sDFAfn'	type: 'void *'.
-	aCCodeGenerator var: 'sCDFfn'	type: 'void *'.
-	aCCodeGenerator var: 'sCOFfn'	type: 'void *'.
-	aCCodeGenerator var: 'sCRFfn'	type: 'void *'.
-	aCCodeGenerator var: 'sHFAfn'	type: 'void *'.
+	self declareC:  #('sCCPfn' 'sCDFfn' 'sCDPfn' 'sCGFTfn' 'sCLPfn' 'sCOFfn' 'sCRFfn' 'sCSFTfn' 'sDFAfn' 'sHFAfn')
+		as: #'void *'
+		in: aCCodeGenerator.
+	aCCodeGenerator
+		const: #PharoVM
+		declareC: ('#if !defined(PharoVM) /* Allow PharoVM to be overridden on the compiler command line */\# define PharoVM 0\#endif') withCRs.
 	aCCodeGenerator addHeaderFile: '"FilePlugin.h"'
 ]
 
