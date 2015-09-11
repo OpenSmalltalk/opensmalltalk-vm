@@ -162,7 +162,8 @@ ioHighResClock(void)
   sqLong value = 0;
 #if defined(__GNUC__) && ( defined(i386) || defined(__i386) || defined(__i386__)  \
 			|| defined(i486) || defined(__i486) || defined (__i486__) \
-			|| defined(intel) || defined(x86) || defined(i86pc) )
+			|| defined(intel) || defined(x86) || defined(i86pc) \
+			|| defined(x86_64) || defined(__x86_64) || defined (__x86_64__))
     __asm__ __volatile__ ("rdtsc" : "=A"(value));
 #elif defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
 	/* tpr - do nothing for now; needs input from eliot to decide further */
@@ -255,23 +256,23 @@ ioUTCMicrosecondsNow() { return currentUTCMicroseconds(); }
 usqLong
 ioLocalMicrosecondsNow() { return currentUTCMicroseconds() + vmGMTOffset; };
 
-int
+sqInt
 ioMSecs() { return millisecondClock; }
 
 /* Note: ioMicroMSecs returns *milli*seconds */
-int ioMicroMSecs(void) { return microToMilliseconds(currentUTCMicroseconds()); }
+sqInt ioMicroMSecs(void) { return microToMilliseconds(currentUTCMicroseconds()); }
 
 /* returns the local wall clock time */
-int
+sqInt
 ioSeconds(void) { return get64(localMicrosecondClock) / MicrosecondsPerSecond; }
 
-int
+sqInt
 ioSecondsNow(void) { return ioLocalMicrosecondsNow() / MicrosecondsPerSecond; }
 
-int
+sqInt
 ioUTCSeconds(void) { return get64(utcMicrosecondClock) / MicrosecondsPerSecond; }
 
-int
+sqInt
 ioUTCSecondsNow(void) { return currentUTCMicroseconds() / MicrosecondsPerSecond; }
 
 /*
@@ -279,7 +280,7 @@ ioUTCSecondsNow(void) { return currentUTCMicroseconds() / MicrosecondsPerSecond;
  * On Unix use dpy->ioRelinquishProcessorForMicroseconds
  */
 #if macintoshSqueak
-int
+sqInt
 ioRelinquishProcessorForMicroseconds(int microSeconds)
 {
     long	realTimeToWait;

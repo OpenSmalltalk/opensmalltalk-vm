@@ -258,23 +258,24 @@ ioUTCMicrosecondsNow() { return currentUTCMicroseconds(); }
 usqLong
 ioLocalMicrosecondsNow() { return currentUTCMicroseconds() + vmGMTOffset; };
 
-int
+sqInt
 ioMSecs() { return millisecondClock; }
 
 /* Note: ioMicroMSecs returns *milli*seconds */
-int ioMicroMSecs(void) { return microToMilliseconds(currentUTCMicroseconds()); }
+sqInt
+ioMicroMSecs(void) { return microToMilliseconds(currentUTCMicroseconds()); }
 
 /* returns the local wall clock time */
-int
+sqInt
 ioSeconds(void) { return get64(localMicrosecondClock) / MicrosecondsPerSecond; }
 
-int
+sqInt
 ioSecondsNow(void) { return ioLocalMicrosecondsNow() / MicrosecondsPerSecond; }
 
-int
+sqInt
 ioUTCSeconds(void) { return get64(utcMicrosecondClock) / MicrosecondsPerSecond; }
 
-int
+sqInt
 ioUTCSecondsNow(void) { return currentUTCMicroseconds() / MicrosecondsPerSecond; }
 
 /*
@@ -282,7 +283,7 @@ ioUTCSecondsNow(void) { return currentUTCMicroseconds() / MicrosecondsPerSecond;
  * On Unix use dpy->ioRelinquishProcessorForMicroseconds
  */
 #if macintoshSqueak
-int
+sqInt
 ioRelinquishProcessorForMicroseconds(int microSeconds)
 {
     long	realTimeToWait;

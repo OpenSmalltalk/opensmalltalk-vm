@@ -53,7 +53,8 @@
 static DWORD dwTimerPeriod = 0;
 static DWORD timerID = 0;
 
-int ioOldMSecs()
+int
+ioOldMSecs()
 {
   /* Make sure the value fits into Squeak SmallIntegers */
 #ifndef _WIN32_WCE
@@ -256,20 +257,20 @@ sqInt
 ioMSecs() { return millisecondClock; }
 
 /* Note: ioMicroMSecs returns *milli*seconds */
-int
+sqInt
 ioMicroMSecs(void) { return microToMilliseconds(ioUTCMicrosecondsNow()); }
 
 /* returns the local wall clock time */
-int
+sqInt
 ioSeconds(void) { return get64(localMicrosecondClock) / MicrosecondsPerSecond; }
 
-int
+sqInt
 ioSecondsNow(void) { return ioLocalMicrosecondsNow() / MicrosecondsPerSecond; }
 
-int
+sqInt
 ioUTCSeconds(void) { return get64(utcMicrosecondClock) / MicrosecondsPerSecond; }
 
-int
+sqInt
 ioUTCSecondsNow(void) { return ioUTCMicrosecondsNow() / MicrosecondsPerSecond; }
 
 
