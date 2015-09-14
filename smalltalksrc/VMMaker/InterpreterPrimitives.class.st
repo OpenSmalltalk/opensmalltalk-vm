@@ -348,14 +348,19 @@ InterpreterPrimitives >> positive32BitValueOf: oop [
 	| value ok sz |
 	(objectMemory isIntegerObject: oop) ifTrue:
 		[value := objectMemory integerValueOf: oop.
-		 value < 0 ifTrue: [self primitiveFail. value := 0].
+		 (value < 0
+		  or: [objectMemory wordSize > 4
+		  and: [self cCode: [(self cCoerceSimple: value to: #'unsigned int') ~= value]
+					inSmalltalk: [value >> 32 ~= 0]]]) ifTrue:
+			[self primitiveFail. value := 0].
 		 ^value].
 
 	(objectMemory isNonIntegerImmediate: oop) ifTrue:
 		[self primitiveFail.
 		 ^0].
 
-	ok := objectMemory isClassOfNonImm: oop
+	ok := objectMemory
+			isClassOfNonImm: oop
 			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
 			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
 	ok ifFalse:
@@ -3424,6 +3429,22 @@ InterpreterPrimitives >> primitiveSetLogDirectory [
 	self successful ifTrue:[self pop: self methodArgumentCount]
 ]
 
+{ #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveSetOrHasIdentityHash [
+	| hash oldHash thisReceiver |
+	argumentCount = 0 ifTrue:
+		[| hasHash |
+		 hasHash := (objectMemory isNonImmediate: self stackTop)
+						and: [objectMemory hasIdentityHash: self stackTop].
+		 self pop: argumentCount + 1 thenPushBool: hasHash].
+	hash := self stackIntegerValue: 0.
+	thisReceiver := self stackObjectValue: 1.
+	self successful ifTrue:
+		[oldHash := objectMemory hashBitsOf: thisReceiver.
+		 objectMemory setHashBitsOf: thisReceiver to: hash.
+		 self pop: argumentCount + 1 thenPushInteger: oldHash]
+]
+
 { #category : #'I/O primitives' }
 InterpreterPrimitives >> primitiveSetWindowLabel [
 	"Primitive. Set the OS window's label"
@@ -4569,16 +4590,27 @@ InterpreterPrimitives >> signed32BitValueOf: oop [
 	<inline: false>
 	<returnTypeC: #int>
 	<var: #value type: #int>
+	<var: #value64 type: #long>
 	(objectMemory isIntegerObject: oop) ifTrue:
-		[^objectMemory integerValueOf: oop].
+		[objectMemory wordSize = 4
+			ifTrue:
+				[^objectMemory integerValueOf: oop]
+			ifFalse: "Must fail for SmallIntegers with digitLength > 4"
+				[| value64 |
+				 value64 := objectMemory integerValueOf: oop.
+				 (self cCode: [(self cCoerceSimple: value64 to: #int) ~= value64]
+						inSmalltalk: [value64 >> 31 ~= 0 and: [value64 >> 31 ~= -1]]) ifTrue:
+					[self primitiveFail. value64 := 0].
+				 ^value64]].
 
 	(objectMemory isNonIntegerImmediate: oop) ifTrue:
 		[self primitiveFail.
 		 ^0].
 
-	ok := objectMemory isClassOfNonImm: oop
-					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
-					compactClassIndex: ClassLargePositiveIntegerCompactIndex.
+	ok := objectMemory
+			isClassOfNonImm: oop
+			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
+			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
 	ok
 		ifTrue: [negative := false]
 		ifFalse:

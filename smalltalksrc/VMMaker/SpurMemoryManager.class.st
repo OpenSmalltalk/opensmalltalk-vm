@@ -5281,6 +5281,13 @@ SpurMemoryManager >> growToAccomodateContainerWithNumSlots: numSlots [
 ]
 
 { #category : #'header access' }
+SpurMemoryManager >> hasIdentityHash: objOop [
+	<inline: true>
+	^self cCode: [self rawHashBitsOf: objOop]
+		inSmalltalk: [(self rawHashBitsOf: objOop) ~= 0]
+]
+
+{ #category : #'header access' }
 SpurMemoryManager >> hasOverflowHeader: objOop [
 	^(self rawNumSlotsOf: objOop) = self numSlotsMask
 ]
