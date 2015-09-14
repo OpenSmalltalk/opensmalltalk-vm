@@ -2417,6 +2417,13 @@ ObjectMemory >> hasForwardingBlock: objOop [
 	^self isMarked: objOop
 ]
 
+{ #category : #'header access' }
+ObjectMemory >> hasIdentityHash: objOop [
+	"Objects gain their identityHash on instantiation in V3."
+	<inline: true>
+	^true
+]
+
 { #category : #'object format' }
 ObjectMemory >> hasSixtyFourBitImmediates [
 	"The V3 64-bit memory manager has 64-bit oops, but its SmallIntegers only have

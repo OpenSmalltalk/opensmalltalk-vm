@@ -1154,7 +1154,7 @@ StackInterpreter class >> initializePrimitiveTable [
 		"File Primitives (150-169) - NO LONGER INDEXED"
 		(150 159 primitiveFail)
 		(160 primitiveAdoptInstance)
-		(161 primitiveSetIdentityHash)
+		(161 primitiveSetOrHasIdentityHash)
 		(162 164 primitiveFail)			"reserved for immutablity primitives"
 		(165 primitiveIntegerAt)		"hacked in here for now"
 		(166 primitiveIntegerAtPut)
