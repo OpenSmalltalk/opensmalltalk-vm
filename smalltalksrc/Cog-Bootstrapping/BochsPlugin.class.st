@@ -23,8 +23,9 @@ Class {
 { #category : #translation }
 BochsPlugin class >> declareCVarsIn: aCCodeGenerator [
 	"prevInterruptCheckChain lives in sqBochsIA32|X64Plugin.c"
-	super declareCVarsIn: aCCodeGenerator.
-	aCCodeGenerator removeVariable: 'prevInterruptCheckChain'
+	self ~~ BochsPlugin ifTrue:
+		[super declareCVarsIn: aCCodeGenerator.
+		 aCCodeGenerator removeVariable: 'prevInterruptCheckChain']
 ]
 
 { #category : #translation }
@@ -38,7 +39,7 @@ BochsPlugin class >> shouldBeTranslated [
 	"Is this class intended to be translated as a plugin, perhaps specific to a platform?
 	 Most subclasses should answer true, but some such as simulation-only versions
 	 should answer false for various reasons."
-	^self ~~ BochsPlugin
+	^super shouldBeTranslated and: [self ~~ BochsPlugin]
 ]
 
 { #category : #interruption }
