@@ -465,7 +465,7 @@ TMethod >> emitCCodeOn: aStream generator: aCodeGen [
 
 	aCodeGen currentMethod: self.
 	self emitCCommentOn: aStream.	"place method comment and method name before function."
-	aStream crtab; nextPutAll: '/* '; nextPutAll: self definingClass name; nextPutAll: '>>#'; nextPutAll: self selector; nextPutAll: ' */'.	
+	aStream crtab; nextPutAll: '/* '; nextPutAll: self definingClass name; nextPutAll: '>>#'; nextPutAll: self smalltalkSelector; nextPutAll: ' */'.	
 	aStream cr. 
 	self emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: false.
 	aStream cr; nextPut: ${.
@@ -2371,6 +2371,12 @@ TMethod >> shouldIncorporatePragmaFromSuperMethod: aPragma [
 			and: [(p argumentAt: 1) = (aPragma argumentAt: 1)]]]) ifTrue:
 		[^true].
 	^false
+]
+
+{ #category : #accessing }
+TMethod >> smalltalkSelector [
+	"Answer the selector of the original Smalltalk method, not any mangled one."
+	^selector
 ]
 
 { #category : #accessing }

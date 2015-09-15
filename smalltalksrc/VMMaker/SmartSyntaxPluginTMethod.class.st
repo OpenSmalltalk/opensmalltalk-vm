@@ -461,6 +461,12 @@ SmartSyntaxPluginTMethod >> setSelector: sel definingClass: class args: argList 
 
 ]
 
+{ #category : #accessing }
+SmartSyntaxPluginTMethod >> smalltalkSelector [
+	"Answer the selector of the original Smalltalk method, not any mangled one."
+	^fullSelector ifNil: [selector]
+]
+
 { #category : #'primitive compilation' }
 SmartSyntaxPluginTMethod >> vmNameString [
 	"return the string to use as the vm name in code generated for this method"

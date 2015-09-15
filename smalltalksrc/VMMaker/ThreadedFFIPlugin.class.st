@@ -696,10 +696,7 @@ ThreadedFFIPlugin >> ffiCreateIntegralResultOop: retVal ofAtomicType: atomicType
 				ifTrue:[interpreterProxy signed64BitIntegerFor: retVal] "signed return"
 				ifFalse:[interpreterProxy positive64BitIntegerFor: retVal]]
 		ifFalse:
-			[interpreterProxy characterObjectOf:
-				(retVal bitAnd: (self cppIf: #SPURVM
-									ifTrue: [Byte0Mask]
-									ifFalse: [255]))]
+			[interpreterProxy characterObjectOf: (retVal bitAnd: Byte0Mask)]
 ]
 
 { #category : #'callout support' }
