@@ -88,8 +88,8 @@ SmartSyntaxInterpreterPlugin >> simulator: aSmartSyntaxPluginSimulator [
 
 { #category : #debugging }
 SmartSyntaxInterpreterPlugin >> sqAssert: aBool [ 
-	self
-		debugCode: [aBool
-				ifFalse: [self error: 'Assertion failed!'].
-			^ aBool]
+	self debugCode:
+		[aBool ifFalse:
+			[self error: 'Assertion failed!']].
+	^aBool
 ]
