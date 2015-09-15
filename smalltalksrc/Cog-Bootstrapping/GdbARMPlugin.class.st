@@ -28,6 +28,7 @@ GdbARMPlugin class >> hasHeaderFile [
 
 { #category : #interruption }
 GdbARMPlugin >> forceStopOnInterrupt [
+	<returnTypeC: #void>
 	interpreterProxy getInterruptPending ifTrue:
 		[self forceStopRunning]
 ]
@@ -63,7 +64,7 @@ GdbARMPlugin >> primitiveDisassembleAt: address "<Integer>" InMemory: memory [ "
 		[interpreterProxy popRemappableOop.
 		 ^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	logObjData := interpreterProxy arrayValueOf: logObj.
-	self cCode: 'memcpy(logObjData, log, logLen)' inSmalltalk: [logObjData. log].
+	self mem: logObjData cp: log y: logLen.
 	resultObj := interpreterProxy popRemappableOop.
 	interpreterProxy
 		storePointer: 0
@@ -102,7 +103,7 @@ GdbARMPlugin >> primitiveErrorAndLog [
 
 		resultObj := interpreterProxy popRemappableOop.
 		logObjData := interpreterProxy arrayValueOf: logObj.
-		self cCode: 'memcpy(logObjData, log, logLen)' inSmalltalk: [logObjData. log].
+		self mem: logObjData cp: log y: logLen.
 		interpreterProxy storePointer: 1 ofObject: resultObj withValue: logObj].
 	interpreterProxy pop: 1 thenPush: resultObj
 ]

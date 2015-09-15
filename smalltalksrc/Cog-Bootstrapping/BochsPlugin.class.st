@@ -44,6 +44,7 @@ BochsPlugin class >> shouldBeTranslated [
 
 { #category : #interruption }
 BochsPlugin >> forceStopOnInterrupt [
+	<returnTypeC: #void>
 	interpreterProxy getInterruptPending ifTrue:
 		[self forceStopRunning]
 ]
@@ -53,10 +54,13 @@ BochsPlugin >> primitiveDisassembleAt: address "<Integer>" InMemory: memory [ "<
 	"Return an Array of the instruction length and its decompilation as a string for the instruction at address in memory."
 	| cpuAlien cpu instrLenOrErr resultObj log logLen logObj logObjData |
 	<var: #cpu type: #'void *'>
+	<var: #log type: #'char *'>
+	<var: #logLen type: #long>
+	<var: #logObjData type: #'char *'>
 	cpuAlien := self primitive: #primitiveDisassembleAtInMemory
 					parameters: #(Unsigned WordsOrBytes)
 					receiver: #Oop.
-	(cpu := self startOfData: cpuAlien) = 0 ifTrue:
+	(cpu := self cCoerceSimple: (self startOfData: cpuAlien) to: #'void *') = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	instrLenOrErr := self disassembleFor: cpu
 						At: address
@@ -79,7 +83,7 @@ BochsPlugin >> primitiveDisassembleAt: address "<Integer>" InMemory: memory [ "<
 		[interpreterProxy popRemappableOop.
 		 ^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	logObjData := interpreterProxy arrayValueOf: logObj.
-	self cCode: 'memcpy(logObjData, log, logLen)' inSmalltalk: [logObjData. log].
+	self mem: logObjData cp: log y: logLen.
 	resultObj := interpreterProxy popRemappableOop.
 	interpreterProxy
 		storePointer: 0
@@ -94,6 +98,7 @@ BochsPlugin >> primitiveDisassembleAt: address "<Integer>" InMemory: memory [ "<
 BochsPlugin >> primitiveErrorAndLog [
 	| log logLen resultObj logObj logObjData |
 	<var: #log type: #'char *'>
+	<var: #logLen type: #long>
 	<var: #logObjData type: #'char *'>
 	self primitive: #primitiveErrorAndLog parameters: #().
 
@@ -118,7 +123,7 @@ BochsPlugin >> primitiveErrorAndLog [
 
 		resultObj := interpreterProxy popRemappableOop.
 		logObjData := interpreterProxy arrayValueOf: logObj.
-		self cCode: 'memcpy(logObjData, log, logLen)' inSmalltalk: [logObjData. log].
+		self mem: logObjData cp: log y: logLen.
 		interpreterProxy storePointer: 1 ofObject: resultObj withValue: logObj].
 	interpreterProxy pop: 1 thenPush: resultObj
 ]
@@ -127,11 +132,11 @@ BochsPlugin >> primitiveErrorAndLog [
 BochsPlugin >> primitiveFlushICacheFrom: startAddress "<Integer>" To: endAddress [ "<Integer>"
 	"Flush the icache in the requested range"
 	| cpuAlien cpu |
-	<var: #cpu type: 'void *'>
+	<var: #cpu type: #'void *'>
 	cpuAlien := self primitive: #primitiveFlushICacheFromTo
 					parameters: #(Unsigned Unsigned)
 					receiver: #Oop.
-	(cpu := self startOfData: cpuAlien) = 0 ifTrue:
+	(cpu := self cCoerceSimple: (self startOfData: cpuAlien) to: #'void *') = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	self flushICache: cpu From: startAddress To: endAddress
 ]
@@ -139,10 +144,10 @@ BochsPlugin >> primitiveFlushICacheFrom: startAddress "<Integer>" To: endAddress
 { #category : #primitives }
 BochsPlugin >> primitiveNewCPU [
 	| cpu |
-	<var: #cpu type: 'void *'>
+	<var: #cpu type: #'void *'>
 	self primitive: #primitiveNewCPU parameters: #().
 
-	cpu := self cCode: 'newCPU()' inSmalltalk: [0].
+	cpu := self newCPU.
 	cpu = 0 ifTrue:
 		[^interpreterProxy primitiveFail].
 	interpreterProxy
@@ -155,9 +160,9 @@ BochsPlugin >> primitiveNewCPU [
 { #category : #primitives }
 BochsPlugin >> primitiveResetCPU [
 	| cpuAlien cpu maybeErr |
-	<var: #cpu type: 'void *'>
+	<var: #cpu type: #'void *'>
 	cpuAlien := self primitive: #primitiveResetCPU parameters: #() receiver: #Oop.
-	(cpu := self startOfData: cpuAlien) = 0 ifTrue:
+	(cpu := self cCoerceSimple: (self startOfData: cpuAlien) to: #'void *') = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	maybeErr := self resetCPU: cpu.
 	maybeErr ~= 0 ifTrue:
@@ -173,7 +178,7 @@ BochsPlugin >> primitiveRunInMemory: memory "<Bitmap|ByteArray|WordArray>" minim
 	cpuAlien := self primitive: #primitiveRunInMemoryMinAddressMaxAddressReadWrite
 					parameters: #(WordsOrBytes Unsigned Unsigned Unsigned)
 					receiver: #Oop.
-	(cpu := self startOfData: cpuAlien) = 0 ifTrue:
+	(cpu := self cCoerceSimple: (self startOfData: cpuAlien) to: #'void *') = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	prevInterruptCheckChain := interpreterProxy setInterruptCheckChain: #forceStopOnInterrupt asSymbol.
 	prevInterruptCheckChain = #forceStopOnInterrupt asSymbol ifTrue:
@@ -198,7 +203,7 @@ BochsPlugin >> primitiveRunInMemory: memory "<Bitmap|ByteArray|WordArray>" minim
 	cpuAlien := self primitive: #primitiveRunInMemoryMinimumAddressReadWrite
 					parameters: #(WordsOrBytes Unsigned Unsigned)
 					receiver: #Oop.
-	(cpu := self startOfData: cpuAlien) = 0 ifTrue:
+	(cpu := self cCoerceSimple: (self startOfData: cpuAlien) to: #'void *') = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	prevInterruptCheckChain := interpreterProxy setInterruptCheckChain: #forceStopOnInterrupt asSymbol.
 	prevInterruptCheckChain = #forceStopOnInterrupt asSymbol ifTrue:
@@ -222,7 +227,7 @@ BochsPlugin >> primitiveSingleStepInMemory: memory "<Bitmap|ByteArray|WordArray>
 	cpuAlien := self primitive: #primitiveSingleStepInMemoryMinAddressMaxAddressReadWrite
 					parameters: #(WordsOrBytes Unsigned Unsigned Unsigned)
 					receiver: #Oop.
-	(cpu := self startOfData: cpuAlien) = 0 ifTrue:
+	(cpu := self cCoerceSimple: (self startOfData: cpuAlien) to: #'void *') = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	memorySize := interpreterProxy byteSizeOf: memory cPtrAsOop.
 	maybeErr := self singleStepCPU: cpu
@@ -243,7 +248,7 @@ BochsPlugin >> primitiveSingleStepInMemory: memory "<Bitmap|ByteArray|WordArray>
 	cpuAlien := self primitive: #primitiveSingleStepInMemoryMinimumAddressReadWrite
 					parameters: #(WordsOrBytes Unsigned Unsigned)
 					receiver: #Oop.
-	(cpu := self startOfData: cpuAlien) = 0 ifTrue:
+	(cpu := self cCoerceSimple: (self startOfData: cpuAlien) to: #'void *') = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	maybeErr := self singleStepCPU: cpu
 					In: memory
