@@ -465,7 +465,7 @@ ThreadedFFIPlugin >> ffiAtomicArgByReference: oop Class: oopClass in: calloutSta
 		[(isString
 		  or: [oopClass = interpreterProxy classByteArray]) ifTrue:"String/Symbol/ByteArray"
 			[^self ffiPushPointer: (interpreterProxy firstIndexableField: oop) in: calloutState].
-		isAlien ifTrue:
+		(isAlien or: [oopClass = interpreterProxy classExternalAddress]) ifTrue:
 			[^self ffiPushPointer: (self pointerForOop: (self startOfData: oop)) in: calloutState].
 		atomicType = FFITypeVoid ifFalse:
 			[^FFIErrorCoercionFailed]].
@@ -698,7 +698,7 @@ ThreadedFFIPlugin >> ffiCreateIntegralResultOop: retVal ofAtomicType: atomicType
 		ifFalse:
 			[interpreterProxy characterObjectOf:
 				(retVal bitAnd: (self cppIf: #SPURVM
-									ifTrue: [16rFFFFFFFF]
+									ifTrue: [Byte0Mask]
 									ifFalse: [255]))]
 ]
 
