@@ -763,7 +763,7 @@ CCodeGenerator >> checkForGlobalUsage: vars in: aTMethod [
 	aTMethod clearReferencesToGlobalStruct.
 	(aTMethod locals select: [:l| self reservedWords includes: l]) do:
 		[:l| | em |
-		em := aTMethod definingClass name, '>>', aTMethod selector, ' has variable that is a C reserved word: ', l.
+		em := aTMethod definingClass name, '>>', aTMethod smalltalkSelector, ' has variable that is a C reserved word: ', l.
 		self error: em.
 		self logger cr; nextPutAll: em; cr; flush]
 ]
