@@ -35,7 +35,7 @@ ThreadedIA32FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: cal
 		[self setsp: calloutState argVector].
 
 	atomicType := self atomicTypeOf: calloutState ffiRetHeader.
-	(atomicType >> 1) = (FFITypeSingleFloat > 1)
+	(atomicType >> 1) = (FFITypeSingleFloat >> 1)
 		ifTrue:
 			[floatRet := self dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'double (*)()')]
 		ifFalse:
@@ -58,7 +58,7 @@ ThreadedIA32FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: cal
 				[oop := self ffiReturnStruct: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
 		 ^oop].
 	
-	(atomicType >> 1) = (FFITypeSingleFloat > 1)
+	(atomicType >> 1) = (FFITypeSingleFloat >> 1)
 		ifTrue:
 			[oop := interpreterProxy floatObjectOf: floatRet]
 		ifFalse:
