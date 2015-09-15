@@ -49,4 +49,7 @@ export LDFLAGS
 # clgd54xx == Cirrus Logic GD54xx video card
 
 # avoid conflict with squeak unix build's config.h
-ln -s config.h bochsconfig.h
+echo cp config.h bochsconfig.h
+cp config.h bochsconfig.h
+
+echo "and don't forget to run ../bochs/makeem"

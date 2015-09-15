@@ -6,7 +6,7 @@
 
 # build cpu/libcpu.a disasm/libdisasm.a fpu/libfpu.a using
 # $ ./conf.COG
-# $ ../../../processors/IA32/bochs/makeem
+# $ ../../processors/IA32/bochs/makeem
 
 set echo
 # CFLAGS="-pipe -O3 -fomit-frame-pointer -finline-functions -falign-loops=16 -falign-jumps=16 -falign-functions=16 -falign-labels=16 -falign-loops-max-skip=15 -falign-jumps-max-skip=15 -fprefetch-loop-arrays $CFLAGS"
@@ -23,7 +23,7 @@ export CPPFLAGS
 export CXXFLAGS
 export LDFLAGS
 
-../../../processors/IA32/bochs/configure \
+../../processors/IA32/bochs/configure \
 	--enable-Cog \
 	--enable-cpu-level=6 \
 	--enable-sse=2 \
@@ -46,3 +46,9 @@ export LDFLAGS
 # acpi == Advanced Configuration and Power Interface
 # pci == Peripheral Component Interconnect local bus
 # clgd54xx == Cirrus Logic GD54xx video card
+
+# avoid conflict with squeak unix build's config.h
+echo cp config.h bochsconfig.h
+cp config.h bochsconfig.h
+
+echo "and don't forget to run ../../processors/IA32/bochs/makeem"
