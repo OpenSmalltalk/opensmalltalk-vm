@@ -27,6 +27,69 @@ CogARMCompilerTests >> concreteCompilerClass [
 	^CogARMCompilerForTests
 ]
 
+{ #category : #private }
+CogARMCompilerTests >> disassembleInstructionAt: index In: inst into: binaryBlock [
+	"Manage the fact that in the simulator inst machineCode object is an Array and the disassembler requires a ByteArray or some such."
+	^self processor
+		disassembleInstructionAt: index
+		In: (self memoryAsBytes: inst machineCode object)
+		into: binaryBlock
+]
+
+{ #category : #'generating machine code' }
+CogARMCompilerTests >> generateInstructions [
+	"See Cogit>>computeMaximumSizes, generateInstructionsAt: & outputInstructionsAt:.
+	 This is a pure Smalltalk (non-Slang) version of that trio of methods.
+	 The wrinkle here is that in teh simulator a CogARMInstruction's machien code is a simple Array of integers, not a ByteArray of four byte quads."
+	| address pcDependentInstructions instructions |
+	address := 0.
+	pcDependentInstructions := OrderedCollection new.
+	opcodes do:
+		[:abstractInstruction|
+		abstractInstruction
+			address: address;
+			maxSize: abstractInstruction computeMaximumSize.
+		address := address + abstractInstruction maxSize].
+	address := 0.
+	opcodes do:
+		[:abstractInstruction|
+		abstractInstruction isPCDependent
+			ifTrue:
+				[abstractInstruction sizePCDependentInstructionAt: address.
+				 pcDependentInstructions addLast: abstractInstruction.
+				 address := address + abstractInstruction machineCodeSize]
+			ifFalse:
+				[address := abstractInstruction concretizeAt: address]].
+	pcDependentInstructions do:
+		[:abstractInstruction|
+		abstractInstruction concretizeAt: abstractInstruction address].
+	instructions := Array new: address / 4.
+	address := 0.
+	opcodes do:
+		[:abstractInstruction|
+		self assert: abstractInstruction address / 4 = address.
+		0 to: abstractInstruction machineCodeSize - 1 by: 4 do:
+			[:j|
+			instructions at: address + 1 put: (abstractInstruction machineCode at: j / 4).
+			address := address + 1]].
+	^instructions
+]
+
+{ #category : #private }
+CogARMCompilerTests >> memoryAsBytes: aByteArrayOrArray [
+	"Manage the fact that in the simulator inst machineCode object is an Array and the disassembler requires a ByteArray or some such."
+	| bytes |
+	aByteArrayOrArray isArray ifFalse:
+		[^aByteArrayOrArray].
+	bytes := ByteArray new: aByteArrayOrArray size * 4.
+	1 to: aByteArrayOrArray size do:
+		[:i|
+		(aByteArrayOrArray at: i) ifNotNil:
+			[:word|
+			bytes unsignedLongAt: i - 1* 4 + 1 put: word]].
+	^bytes
+]
+
 { #category : #accessing }
 CogARMCompilerTests >> processor [
 	processor ifNil:
@@ -53,9 +116,9 @@ CogARMCompilerTests >> testAdd [
 			[:n| | inst len |
 			inst := self gen: AddCqR operand: n operand: reg.
 			len := inst concretizeAt: 0.
-			self processor
+			self
 				disassembleInstructionAt: 0
-				In: inst machineCode object
+				In: inst
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
 					herIntended := 'adds	', regName, ', ', regName, ', #', n asString.
@@ -67,40 +130,40 @@ CogARMCompilerTests >> testAdd [
 			[:n| | inst len |
 			inst := self gen: AddCwR operand: n operand: reg.
 			len := inst concretizeAt: 0.
-			self processor
+			self
 				disassembleInstructionAt: 0
-				In: inst machineCode object
+				In: inst
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'mov	sl, #', (n bitAnd: 16rFF << 24) signedIntFromLong asString.
+					herIntended := 'mov	ip, #', (n bitAnd: 16rFF << 24) signedIntFromLong asString.
 					self assert: (plainJane match: herIntended)].
-			self processor
+			self
 				disassembleInstructionAt: 4
-				In: inst machineCode object
+				In: inst
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'orr	sl, sl, #', (n bitAnd: 16rFF << 16) asString.
+					herIntended := 'orr	ip, ip, #', (n bitAnd: 16rFF << 16) asString.
 					self assert: (plainJane match: herIntended)].
-			self processor
+			self
 				disassembleInstructionAt: 8
-				In: inst machineCode object
+				In: inst
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'orr	sl, sl, #', (n bitAnd: 16rFF << 8) signedIntFromLong asString.
+					herIntended := 'orr	ip, ip, #', (n bitAnd: 16rFF << 8) signedIntFromLong asString.
 					self assert: (plainJane match: herIntended)].
-			self processor
+			self
 				disassembleInstructionAt: 12
-				In: inst machineCode object
+				In: inst
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'orr	sl, sl, #', (n bitAnd: 16rFF) asString.
+					herIntended := 'orr	ip, ip, #', (n bitAnd: 16rFF) asString.
 					self assert: (plainJane match: herIntended)].
-			self processor
+			self
 				disassembleInstructionAt: 16
-				In: inst machineCode object
+				In: inst
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'adds	', regName, ', ', regName, ', sl'.
+					herIntended := 'adds	', regName, ', ', regName, ', ip'.
 					self assert: (plainJane match: herIntended)]]]
 
 ]
@@ -201,9 +264,9 @@ CogARMCompilerTests >> testPrefetchAw [
 		[:n| | inst len |
 		inst := self gen: PrefetchAw operand: n.
 		len := inst concretizeAt: 0.
-		self processor
+		self
 			disassembleInstructionAt: 12
-			In: inst machineCode object
+			In: inst
 			into: [:str :sz| | plainJane herIntended |
 				"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 				plainJane := self strip: str.
@@ -221,9 +284,9 @@ CogARMCompilerTests >> testPushR [
 		[:r :name | | inst len |
 		inst := self gen: PushR operand: r.
 		len := inst concretizeAt: 0.
-		self processor
+		self
 			disassembleInstructionAt: 0
-			In: inst machineCode object
+			In: inst
 			into: [:str :sz| | plainJane herIntended |
 				"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 				plainJane := self strip: str.
@@ -241,9 +304,9 @@ CogARMCompilerTests >> testRetN [
 		[:n| | inst len |
 		inst := self gen: RetN operand: n.
 		len := inst concretizeAt: 0.
-		self processor
+		self
 			disassembleInstructionAt: 0
-			In: inst machineCode object
+			In: inst
 			into: [:str :sz| | plainJane  |
 				"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 				plainJane := self strip: str.
@@ -254,16 +317,16 @@ CogARMCompilerTests >> testRetN [
 		[:n| | inst len |
 		inst := self gen: RetN operand: n * 4.
 		len := inst concretizeAt: 0.
-		self processor
+		self
 			disassembleInstructionAt: 0
-			In: inst machineCode object
+			In: inst
 			into: [:str :sz| | plainJane herIntended |
 				plainJane := self strip: str.
 				herIntended := 'add	sp, sp, #', (n * 4 )asString.
 				self assert: (plainJane match: herIntended)].
-		self processor
+		self
 			disassembleInstructionAt: 4
-			In: inst machineCode object
+			In: inst
 			into: [:str :sz| | plainJane |
 				plainJane := self strip: str.
 				self assert: (plainJane match: 'mov	pc, lr').		

@@ -31,6 +31,12 @@ CogIA32CompilerTests >> concreteCompilerClass [
 	^CogIA32CompilerForTests
 ]
 
+{ #category : #'generating machine code' }
+CogIA32CompilerTests >> methodLabel [
+	"There is no methodLabel in test code."
+	^nil
+]
+
 { #category : #accessing }
 CogIA32CompilerTests >> processor [
 	processor ifNil:
