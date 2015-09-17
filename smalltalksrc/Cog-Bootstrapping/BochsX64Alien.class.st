@@ -15,6 +15,13 @@ BochsX64Alien class >> dataSize [
 	^22672
 ]
 
+{ #category : #'instance creation' }
+BochsX64Alien class >> primitiveNewCPU [
+	"Answer the address of a new Bochs C++ class bx_cpu_c/BX_CPU_C x64 (x86-64) CPU emulator instance."
+	<primitive: 'primitiveNewCPU' module: 'BochsX64Plugin'>
+	^self primitiveFailed
+]
+
 { #category : #'Cog API' }
 BochsX64Alien >> abstractInstructionCompilerClass [
 	^CogX64Compiler
@@ -267,6 +274,13 @@ BochsX64Alien >> rdx [
 { #category : #accessing }
 BochsX64Alien >> rdx: anUnsignedInteger [
 	^self unsignedLongLongAt: 485 put: anUnsignedInteger
+]
+
+{ #category : #primitives }
+BochsX64Alien >> reset [
+	self primitiveResetCPU.
+	"Enable SSE extensions by setting the OSFXSR (Operating System FXSAVE/FXRSTOR Support) bit"
+	self cr4: (self cr4 bitOr: 1 << 9)
 ]
 
 { #category : #accessing }
