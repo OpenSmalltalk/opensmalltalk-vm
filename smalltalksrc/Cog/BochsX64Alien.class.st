@@ -306,6 +306,11 @@ BochsX64Alien >> rflags [
 ]
 
 { #category : #accessing }
+BochsX64Alien >> rflags: anUnsignedInteger [
+	^self unsignedLongLongAt: 621 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
 BochsX64Alien >> rip [
 	^self unsignedLongLongAt: 597
 ]
