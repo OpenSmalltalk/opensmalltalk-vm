@@ -88,7 +88,7 @@ AbstractInstructionTests >> coInterpreter [
 	^nil
 ]
 
-{ #category : #'generating machine code' }
+{ #category : #accessing }
 AbstractInstructionTests >> concreteCompilerClass [
 	"Answer the concreate subclass of CogAbstractInstruction the concrete test class is testing."
 	self subclassResponsibility
@@ -99,7 +99,7 @@ AbstractInstructionTests >> disassembleOpcodesIn: memory to: aStream [
 	self processor
 		disassembleFrom: opcodes first address
 		to: opcodes last address + opcodes last machineCodeSize - 1
-		in: memory
+		in: (self memoryAsBytes: memory)
 		on: aStream
 ]
 
@@ -198,7 +198,7 @@ AbstractInstructionTests >> pairs: aRange do: aBinaryBlock [
 	aRange do: [:a| aRange do: [:b| aBinaryBlock value: a value: b]]
 ]
 
-{ #category : #'generating machine code' }
+{ #category : #accessing }
 AbstractInstructionTests >> processor [
 	self subclassResponsibility
 ]
