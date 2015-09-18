@@ -22,7 +22,7 @@ BOCHSAPI BX_CPU_C bx_cpu;
 
 extern "C" {
 
-#include "BochsIA32Plugin.h"
+#include "BochsX64Plugin.h"
 
 static int            cpu_has_been_reset = 0;
 
@@ -53,9 +53,9 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 	int
 	resetCPU(void *cpu)
 	{
-		BX_CPU_C *anx86 = (BX_CPU_C *)cpu;
+		BX_CPU_C *anx64 = (BX_CPU_C *)cpu;
 
-		if (anx86 != &bx_cpu)
+		if (anx64 != &bx_cpu)
 			return BadCPUInstance;
 
 		blidx = 0;
@@ -64,30 +64,41 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		bx_cpu.SetCR0(0x80000001); // Enter protected mode
 		// Origin the code, data & stack segments at 0
 		bx_cpu.parse_selector(0x0000,&bx_cpu.sregs[BX_SEG_REG_CS].selector);
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.base = 0;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.d_b  = 1; // 32-bit seg
+		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.base  = 0;
+		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.d_b   = 1; // 32-bit seg
+		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.l     = 1; // 64-bit seg
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = 0xffff;
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled = 0xffffffff;
 		bx_cpu.parse_selector(0x0000,&bx_cpu.sregs[BX_SEG_REG_DS].selector);
-		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.base = 0;
-		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.d_b  = 1; // 32-bit seg
+		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.base  = 0;
+		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.d_b   = 1; // 32-bit seg
+		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.l     = 1; // 64-bit seg
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit = 0xffff;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit_scaled = 0xffffffff;
 		bx_cpu.parse_selector(0x0000,&bx_cpu.sregs[BX_SEG_REG_SS].selector);
-		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.base = 0;
-		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.d_b  = 1; // 32-bit seg
+		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.base  = 0;
+		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.d_b   = 1; // 32-bit seg
+		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.l     = 1; // 64-bit seg
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = 0xffff;
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit_scaled = 0xffffffff;
 
-		bx_cpu.gen_reg[BX_32BIT_REG_EAX].dword.erx = 0;
-		bx_cpu.gen_reg[BX_32BIT_REG_EBX].dword.erx = 0;
-		bx_cpu.gen_reg[BX_32BIT_REG_ECX].dword.erx = 0;
-		bx_cpu.gen_reg[BX_32BIT_REG_EDX].dword.erx = 0;
-		bx_cpu.gen_reg[BX_32BIT_REG_EDI].dword.erx = 0;
-		bx_cpu.gen_reg[BX_32BIT_REG_ESI].dword.erx = 0;
-		bx_cpu.gen_reg[BX_32BIT_REG_EBP].dword.erx = 0;
-		bx_cpu.gen_reg[BX_32BIT_REG_ESP].dword.erx = 0;
-		bx_cpu.gen_reg[BX_32BIT_REG_EIP].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RAX].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RBX].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RCX].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RDX].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RSP].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RBP].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RSI].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RDI].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R8].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R9].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R10].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R11].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R12].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R13].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R14].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R15].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RIP].dword.erx = 0;
 		return 0;
 	}
 
@@ -96,16 +107,16 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 									void *memory, ulong byteSize,
 									ulong minAddr, ulong minWriteMaxExecAddr)
 	{
-		BX_CPU_C *anx86 = (BX_CPU_C *)cpu;
+		BX_CPU_C *anx64 = (BX_CPU_C *)cpu;
 
-		if (anx86 != &bx_cpu)
+		if (anx64 != &bx_cpu)
 			return BadCPUInstance;
 		theMemory = (unsigned char *)memory;
 		theMemorySize = byteSize;
 		minReadAddress = minAddr;
 		minWriteAddress = minWriteMaxExecAddr;
-		if ((theErrorAcorn = setjmp(anx86->jmp_buf_env)) != 0) {
-			anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx = anx86->prev_rip;
+		if ((theErrorAcorn = setjmp(anx64->jmp_buf_env)) != 0) {
+			anx64->gen_reg[BX_64BIT_REG_RIP].dword.erx = anx64->prev_rip;
 			return theErrorAcorn;
 		}
 
@@ -117,9 +128,9 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
-		anx86->eipFetchPtr = theMemory;
-		anx86->eipPageWindowSize = minWriteMaxExecAddr;
-		anx86->cpu_single_step();
+		anx64->eipFetchPtr = theMemory;
+		anx64->eipPageWindowSize = minWriteMaxExecAddr;
+		anx64->cpu_single_step();
 
 		return blidx == 0 ? 0 : SomethingLoggedError;
 	}
@@ -128,16 +139,16 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory, ulong byteSize,
 									ulong minAddr, ulong minWriteMaxExecAddr)
 	{
-		BX_CPU_C *anx86 = (BX_CPU_C *)cpu;
+		BX_CPU_C *anx64 = (BX_CPU_C *)cpu;
 
-		if (anx86 != &bx_cpu)
+		if (anx64 != &bx_cpu)
 			return BadCPUInstance;
 		theMemory = (unsigned char *)memory;
 		theMemorySize = byteSize;
 		minReadAddress = minAddr;
 		minWriteAddress = minWriteMaxExecAddr;
-		if ((theErrorAcorn = setjmp(anx86->jmp_buf_env)) != 0) {
-			anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx = anx86->prev_rip;
+		if ((theErrorAcorn = setjmp(anx64->jmp_buf_env)) != 0) {
+			anx64->gen_reg[BX_64BIT_REG_RIP].dword.erx = anx64->prev_rip;
 			return theErrorAcorn;
 		}
 
@@ -149,12 +160,12 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
-		anx86->eipFetchPtr = theMemory;
-		anx86->eipPageWindowSize = minWriteMaxExecAddr;
+		anx64->eipFetchPtr = theMemory;
+		anx64->eipPageWindowSize = minWriteMaxExecAddr;
 		bx_pc_system.kill_bochs_request = 0;
-		anx86->cpu_loop(0 /* = "run forever" until exception or interupt */);
-		if (anx86->stop_reason != STOP_NO_REASON) {
-			anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx = anx86->prev_rip;
+		anx64->cpu_loop(0 /* = "run forever" until exception or interupt */);
+		if (anx64->stop_reason != STOP_NO_REASON) {
+			anx64->gen_reg[BX_64BIT_REG_RIP].dword.erx = anx64->prev_rip;
 			if (theErrorAcorn == NoError)
 				theErrorAcorn = ExecutionError;
 			return theErrorAcorn;
@@ -177,7 +188,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 	disassembleForAtInSize(void *cpu, ulong laddr,
 							void *memory, ulong byteSize)
 	{
-		BX_CPU_C *anx86 = (BX_CPU_C *)cpu;
+		BX_CPU_C *anx64 = (BX_CPU_C *)cpu;
 
 		Bit8u  instr_buf[16];
 		size_t i=0;
@@ -195,9 +206,9 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		i = sprintf(bochs_log, "%08lx: ", laddr);
 		bx_disassemble.set_syntax_att();
 		unsigned isize = bx_disassemble.disasm(
-							anx86->sregs[BX_SEG_REG_CS].cache.u.segment.d_b,
-							anx86->cpu_mode == BX_MODE_LONG_64,
-							anx86->get_segment_base(BX_SEG_REG_CS), laddr,
+							anx64->sregs[BX_SEG_REG_CS].cache.u.segment.d_b,
+							anx64->sregs[BX_SEG_REG_CS].cache.u.segment.l,
+							anx64->get_segment_base(BX_SEG_REG_CS), laddr,
 							instr_buf,
 							bochs_log+i);
 		if (isize <= remainsInPage) {
@@ -304,6 +315,10 @@ void BX_CPU_C::TLB_init(void)
 }
 
 void BX_CPU_C::TLB_flush(void)
+{
+}
+
+void BX_CPU_C::TLB_flushNonGlobal(void)
 {
 }
 
@@ -545,7 +560,7 @@ logfunctions::logfunctions(void) {}
 
 logfunctions::~logfunctions() {}
 
-#define sprintlog(fmt, ap) \
+#define sprintlog(fmt,ap) \
 do { \
 	va_list ap; \
 	va_start(ap, fmt); \
