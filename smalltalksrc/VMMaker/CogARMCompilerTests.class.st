@@ -15,13 +15,6 @@ CogARMCompilerTests >> assertCheckQuickArithOpCodeSize: bytes [
 	self assert: bytes <= 4
 ]
 
-{ #category : #'cogit compiler compatibility' }
-CogARMCompilerTests >> assertSaneJumpTarget: jumpTarget [
-	<var: #jumpTarget type: #'AbstractInstruction *'>
-
-	self assert: (self addressIsInInstructions: jumpTarget)
-]
-
 { #category : #accessing }
 CogARMCompilerTests >> concreteCompilerClass [
 	^CogARMCompilerForTests
