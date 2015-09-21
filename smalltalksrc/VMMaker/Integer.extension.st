@@ -96,6 +96,17 @@ Integer >> signedBitShift: anInteger [
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
+Integer >> signedInt64FromLong [
+	"Self is a signed or unsigned 32-bit integer"
+
+	| sign |
+	self < 0 ifTrue: [^self].
+	sign := self bitAnd: 16r8000000000000000.
+	sign = 0 ifTrue: [^ self].
+	^ self - sign - sign
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
 Integer >> signedIntFromLong [
 	"Self is a signed or unsigned 32-bit integer"
 
@@ -124,6 +135,16 @@ Integer >> signedIntToLong [
 	self >= 0
 		ifTrue: [^ self]
 		ifFalse: [^ self + 16r80000000 + 16r80000000]
+
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> signedIntToLong64 [
+	"Produces a 64-bit value in twos-comp form.  Sorry no error checking"
+
+	self >= 0
+		ifTrue: [^ self]
+		ifFalse: [^ self + 16r8000000000000000 + 16r8000000000000000]
 
 ]
 
