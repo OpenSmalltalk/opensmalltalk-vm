@@ -183,10 +183,10 @@ CogX64Compiler >> computeMaximumSize [
 		[XCHGMwrR]			-> [^7].
 		[XCHGRR]				-> [^2]."
 		"Control"
-		[CallFull]					-> [^5].
+		[CallFull]					-> [^12].
 		[Call]						-> [^5].
 		[JumpR]						-> [^2].
-		[JumpFull]					-> [self resolveJumpTarget. ^5].
+		[JumpFull]					-> [self resolveJumpTarget. ^12].
 		[JumpLong]					-> [self resolveJumpTarget. ^5].
 		[Jump]						-> [self resolveJumpTarget. ^5].
 		[JumpZero]					-> [self resolveJumpTarget. ^6].
@@ -254,15 +254,15 @@ CogX64Compiler >> computeMaximumSize [
 		[CmpCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
 		[OrCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
 		[SubCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[XorCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[AddRR]			-> [^2].
-		[AndRR]			-> [^2].
-		[CmpRR]		-> [^2].
-		[OrRR]			-> [^2].
-		[XorRR]			-> [^2].
-		[SubRR]			-> [^2].
-		[NegateR]		-> [^2].
-		[LoadEffectiveAddressMwrR]
+		[XorCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]]."
+		[AddRR]			-> [^3].
+		[AndRR]			-> [^3].
+		[CmpRR]		-> [^3].
+		[OrRR]			-> [^3].
+		[XorRR]			-> [^3].
+		[SubRR]			-> [^3].
+		[NegateR]		-> [^3].
+		"[LoadEffectiveAddressMwrR]
 						-> [^((self isQuick: (operands at: 0))
 											ifTrue: [3]
 											ifFalse: [6])
@@ -282,11 +282,11 @@ CogX64Compiler >> computeMaximumSize [
 		[DivRdRd]					-> [^4].
 		[SqrtRd]					-> [^4]."
 		"Data Movement"
-		"[MoveCqR]		-> [^(operands at: 0) = 0 ifTrue: [2] ifFalse: [5]].
-		[MoveCwR]		-> [^5].
-		[MoveRR]		-> [^2].
+		[MoveCqR]		-> [^(operands at: 0) = 0 ifTrue: [3] ifFalse: [(self is32BitSignedImmediate: (operands at: 0)) ifTrue: [7] ifFalse: [10]]].
+		[MoveCwR]		-> [^10].
+		[MoveRR]		-> [^3].
 		[MoveRdRd]		-> [^4].
-		[MoveAwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
+		"[MoveAwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
 		[MoveRAw]		-> [^(self concreteRegister: (operands at: 0)) = EAX ifTrue: [5] ifFalse: [6]].
 		[MoveRMwr]	-> [^((self isQuick: (operands at: 1))
 											ifTrue: [3]
@@ -405,6 +405,130 @@ CogX64Compiler >> concretizeAt: actualAddress [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeCmpRR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| regLHS regRHS |
+	"CmpRR RHS LHS computes LHS - RHS, i.e. apparently reversed.  You have to think subtract."
+	regRHS := self concreteRegister: (operands at: 0).
+	regLHS := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: (self rexR: regLHS x: 0 b: regRHS);
+		at: 1 put: 16r39;
+		at: 2 put: (self mod: ModReg RM: regLHS RO: regRHS).
+	^machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeConditionalJump: conditionCode [
+	"Will get inlined into concretizeAt: switch."
+	"Sizing/generating jumps.
+		Jump targets can be to absolute addresses or other abstract instructions.
+		Generating initial trampolines instructions may have no maxSize and be to absolute addresses.
+		Otherwise instructions must have a machineCodeSize which must be kept to."
+	<inline: true>
+	| offset |
+	offset := self computeJumpTargetOffsetPlus: 2.
+	(machineCodeSize = 0 "size not determined because no sizeJump pass; generating initial trampolines"
+		ifTrue: [self isQuick: offset]
+		ifFalse: [machineCodeSize = 2]) ifTrue:
+		[machineCode
+			at: 0 put: 16r70 + conditionCode;
+			at: 1 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := 2].
+	^self concretizeConditionalJumpLong: conditionCode
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeJump [
+	"Will get inlined into concretizeAt: switch."
+	"Sizing/generating jumps.
+		Jump targets can be to absolute addresses or other abstract instructions.
+		Generating initial trampolines instructions may have no maxSize and be to absolute addresses.
+		Otherwise instructions must have a machineCodeSize which must be kept to."
+	<inline: true>
+	| jumpTarget offset |
+	<var: #jumpTarget type: #'AbstractInstruction *'>
+	jumpTarget := cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'.
+	cogit assertSaneJumpTarget: jumpTarget.
+	(self isAnInstruction: jumpTarget) ifTrue:
+		[jumpTarget := cogit cCoerceSimple: jumpTarget address to: #'AbstractInstruction *'].
+	self assert: jumpTarget ~= 0.
+	offset := jumpTarget signedIntFromLong - (address + 2) signedIntFromLong.
+	(machineCodeSize = 0 "size not determined because no sizeJump pass; generating initial trampolines"
+		ifTrue: [self isQuick: offset]
+		ifFalse: [machineCodeSize = 2]) ifTrue:
+		[machineCode
+			at: 0 put: 16rEB;
+			at: 1 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := 2].
+	offset := jumpTarget signedIntFromLong - (address + 5) signedIntFromLong.
+	machineCode
+		at: 0 put: 16rE9;
+		at: 1 put: (offset bitAnd: 16rFF);
+		at: 2 put: (offset >> 8 bitAnd: 16rFF);
+		at: 3 put: (offset >> 16 bitAnd: 16rFF);
+		at: 4 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 5
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveCqR [
+	"Will get inlined into concretizeAt: switch.
+	 On x64 we can short-cut mov 0, reg using xor, and use 32-bit displacement, signed or unsigned, if possible."
+	<inline: true>
+	| value reg |
+	value := operands at: 0.
+	(self is32BitSignedImmediate: value) ifFalse:
+		[^self concretizeMoveCwR].
+	reg := self concreteRegister: (operands at: 1).
+	machineCode at: 0 put: (self rexR: reg x: 0 b: reg).
+	value = 0 ifTrue:
+		[machineCode
+			at: 1 put: 16r31;
+			at: 2 put: (self mod: ModReg RM: reg RO: reg).
+		^machineCodeSize := 3].
+	machineCode
+		at: 1 put: 16rC7;
+		at: 2 put: (self mod: ModReg RM: reg RO: reg);
+		at: 3 put: (value bitAnd: 16rFF);
+		at: 4 put: (value >> 8 bitAnd: 16rFF);
+		at: 5 put: (value >> 16 bitAnd: 16rFF);
+		at: 6 put: (value >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 7
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveCwR [
+	"Will get inlined into concretizeAt: switch.
+	 Note that for quick constants, xor reg,reg, movq r8 may be shorter.
+	 We don't consider it worthwhile for other  than 0."
+	<inline: true>
+	| value reg |
+	value := operands at: 0.
+	reg := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: (self rexR: reg x: 0 b: reg);
+		at: 1 put: 16rB8 + (reg bitAnd: 7);
+		at: 2 put: (value bitAnd: 16rFF);
+		at: 3 put: (value >> 8 bitAnd: 16rFF);
+		at: 4 put: (value >> 16 bitAnd: 16rFF);
+		at: 5 put: (value >> 24 bitAnd: 16rFF);
+		at: 6 put: (value >> 32 bitAnd: 16rFF);
+		at: 7 put: (value >> 40 bitAnd: 16rFF);
+		at: 8 put: (value >> 48 bitAnd: 16rFF);
+		at: 9 put: (value >> 56 bitAnd: 16rFF).
+	^machineCodeSize := 10
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeNop [
+	<inline: true>
+	machineCode at: 0 put: 16r90.
+	^machineCodeSize := 1
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> dispatchConcretize [
 	"Attempt to generate concrete machine code for the instruction at address.
 	 This is the inner dispatch of concretizeAt: actualAddress which exists only
@@ -435,9 +559,9 @@ CogX64Compiler >> dispatchConcretize [
 		[XCHGRR]				-> [^self concretizeXCHGRR].
 		"Control"
 		[Call]					-> [^self concretizeCall].
-		[CallFull]				-> [^self concretizeCall].
+		[CallFull]				-> [^self concretizeCallFull].
 		[JumpR]					-> [^self concretizeJumpR].
-		[JumpFull]				-> [^self concretizeJumpLong].
+		[JumpFull]				-> [^self concretizeJumpFull].
 		[JumpLong]				-> [^self concretizeJumpLong].
 		[JumpLongZero]		-> [^self concretizeConditionalJump: 16r4].
 		[JumpLongNonZero]	-> [^self concretizeConditionalJump: 16r5].
@@ -528,6 +652,11 @@ CogX64Compiler >> dispatchConcretize [
 ]
 
 { #category : #testing }
+CogX64Compiler >> is32BitSignedImmediate: a64BitUnsignedOperand [
+	^(a64BitUnsignedOperand >> 31) signedIntFromLong between: -1 and: 0
+]
+
+{ #category : #testing }
 CogX64Compiler >> isQuick: operand [
 	<var: #operand type: #'unsigned long'>
 	^operand signedIntFromLong between: -128 and: 127
@@ -536,8 +665,8 @@ CogX64Compiler >> isQuick: operand [
 { #category : #'generate machine code' }
 CogX64Compiler >> machineCodeBytes [
 	"Answer the maximum number of bytes of machine code generated for any abstract instruction.
-	 e.g. lock movsd  0x400(%rsp),%xmm4 => f0 f2 0f 10 a4 24 00 04 00 00"
-	^10
+	 e.g. movq $0x12345678ABCDEF0, %rax; jmp *%rax => 48 B8 F0 DE BC 9A 78 56 34 12 FF E0"
+	^12
 ]
 
 { #category : #encoding }

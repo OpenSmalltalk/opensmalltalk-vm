@@ -200,7 +200,8 @@ CogRTLOpcodes class >> initialize [
 	span 16Mb, the maximum size of the code zone.  This allows e.g. ARM to use single-word call and jump instructions
 	for most calls and jumps.  CallFull/JumpFull must also be generated in the same number of bytes irrespective of
 	displacement for the same reason, but they must be able to span the full (32-bit or 64-bit) address space because
-	they are used to call code in the C runtime, which may be distant from the code zone."
+	they are used to call code in the C runtime, which may be distant from the code zone.  CallFull/JumpFull are allowed
+	to use the cResultRegister as a scratch if required (e.g. on x64 where there is no direct 64-bit call or jump)."
 
 	| opcodeNames refs |
 	self flag: 'GPRegMin and GPRegMax are poorly thought-out and should instead defer to the backEnd for allocateable registers.'.

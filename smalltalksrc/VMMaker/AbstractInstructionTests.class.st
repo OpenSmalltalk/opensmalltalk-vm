@@ -76,6 +76,13 @@ AbstractInstructionTests >> assertCheckQuickArithOpCodeSize: bytes [
 	self subclassResponsibility
 ]
 
+{ #category : #'cogit compatibility' }
+AbstractInstructionTests >> assertSaneJumpTarget: jumpTarget [
+	<var: #jumpTarget type: #'AbstractInstruction *'>
+
+	self assert: (self addressIsInInstructions: jumpTarget)
+]
+
 { #category : #'generating machine code' }
 AbstractInstructionTests >> cCoerceSimple: anAbstractOpcode to: aSymbol [
 	"hack compatibility with Cogit"
@@ -428,8 +435,8 @@ AbstractInstructionTests >> runBinaryConditionalJumps: assertPrintBar [
 			[:a :b| | taken |
 			self processor
 				reset;
-				perform: reg2 with: a signedIntToLong;
-				perform: reg3 with: b signedIntToLong.
+				perform: reg2 with: a signedIntToLong64;
+				perform: reg3 with: b signedIntToLong64.
 			[self processor singleStepIn: memory.
 			 self processor pc ~= nop address] whileTrue.
 			taken := (self processor perform: reg1) = 1.
