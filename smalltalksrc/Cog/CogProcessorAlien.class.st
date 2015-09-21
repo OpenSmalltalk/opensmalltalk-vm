@@ -64,6 +64,18 @@ CogProcessorAlien >> callOpcode [
 	self subclassResponsibility.
 ]
 
+{ #category : #'tests support' }
+CogProcessorAlien >> convertIntegerToInternal: anInteger [
+	"Default conversion for 32-bit processors.  64-bit processors override."
+	^anInteger signedIntToLong
+]
+
+{ #category : #'tests support' }
+CogProcessorAlien >> convertInternalToInteger: unsigned [
+	"Default conversion for 32-bit processors.  64-bit processors override."
+	^unsigned signedIntFromLong
+]
+
 { #category : #disassembly }
 CogProcessorAlien >> decorateDisassembly: anInstructionString for: aSymbolManager [ "<Cogit>"
 	^self subclassResponsibility
