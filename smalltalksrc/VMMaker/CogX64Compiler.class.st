@@ -219,12 +219,12 @@ CogX64Compiler >> computeMaximumSize [
 		[Stop]						-> [^1].
 
 		"Arithmetic"
-		"[AddCqR]		-> [^(self isQuick: (operands at: 0))
-											ifTrue: [3]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
-														ifTrue: [5]
-														ifFalse: [6]]].
-		[AndCqR]		-> [^(self isQuick: (operands at: 0))
+		[AddCqR]		-> [^(self isQuick: (operands at: 0))
+											ifTrue: [4]
+											ifFalse: [(self concreteRegister: (operands at: 1)) = RAX
+														ifTrue: [6]
+														ifFalse: [7]]].
+		"[AndCqR]		-> [^(self isQuick: (operands at: 0))
 											ifTrue: [3]
 											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
 														ifTrue: [5]
@@ -271,7 +271,7 @@ CogX64Compiler >> computeMaximumSize [
 											ifFalse: [0])].
 		[LogicalShiftLeftCqR]		-> [^(operands at: 0) = 1 ifTrue: [2] ifFalse: [3]].
 		[LogicalShiftRightCqR]		-> [^(operands at: 0) = 1 ifTrue: [2] ifFalse: [3]].
-		[ArithmeticShiftRightCqR]	-> [^(operands at: 0) = 1 ifTrue: [2] ifFalse: [3]].
+		[ArithmeticShiftRightCqR]	-> [^(operands at: 0) = 1 ifTrue: [2] ifFalse: [3]]."
 		[LogicalShiftLeftRR]			-> [^self computeShiftRRSize].
 		[LogicalShiftRightRR]		-> [^self computeShiftRRSize].
 		[ArithmeticShiftRightRR]		-> [^self computeShiftRRSize].
@@ -280,7 +280,7 @@ CogX64Compiler >> computeMaximumSize [
 		[SubRdRd]					-> [^4].
 		[MulRdRd]					-> [^4].
 		[DivRdRd]					-> [^4].
-		[SqrtRd]					-> [^4]."
+		[SqrtRd]					-> [^4].
 		"Data Movement"
 		[MoveCqR]		-> [^(operands at: 0) = 0 ifTrue: [3] ifFalse: [(self is32BitSignedImmediate: (operands at: 0)) ifTrue: [7] ifFalse: [10]]].
 		[MoveCwR]		-> [^10].
@@ -360,6 +360,58 @@ CogX64Compiler >> computeMaximumSize [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> computeShiftRRSize [
+	"On the x86 the only instructions that shift by the value of a
+	 register require the shift count to be  in %ecx.  So we may
+	 have to use swap instructions to get the count into ecx."
+	| shiftCountReg |
+	shiftCountReg := self concreteRegister: (operands at: 0).
+	shiftCountReg = RCX ifTrue:
+		[^maxSize := 3].
+	^maxSize := shiftCountReg = RAX
+					ifTrue: [2 "XCHG RAX,r2" + 3 "Sxx" + 2 "XCHG RAX,r2"]
+					ifFalse: [3 "XCHG r1,r2" + 3 "Sxx" + 3 "XCHG r1,r2"]
+]
+
+{ #category : #encoding }
+CogX64Compiler >> concreteDPFPRegister: registerIndex [
+	 "Map a possibly abstract double-precision floating-point register into a concrete one.
+	  Abstract registers (defined in CogAbstractOpcodes) are all negative.  If registerIndex
+	  is negative assume it is an abstract register.
+
+	[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2A: Instruction Set Reference, A-M"
+
+	^registerIndex
+		caseOf: {
+			[DPFPReg0]	-> [XMM0L / 2].
+			[DPFPReg1]	-> [XMM1L / 2].
+			[DPFPReg2]	-> [XMM2L / 2].
+			[DPFPReg3]	-> [XMM3L / 2].
+			[DPFPReg4]	-> [XMM4L / 2].
+			[DPFPReg5]	-> [XMM5L / 2].
+			[DPFPReg6]	-> [XMM6L / 2].
+			[DPFPReg7]	-> [XMM7L / 2] }
+		otherwise:
+			[self assert: (registerIndex between: XMM0L and: XMM7L).
+			 self assert: (registerIndex bitAnd: 1) = 0.
+			 registerIndex / 2]
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeAddRR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| regLHS regRHS |
+	regLHS := self concreteRegister: (operands at: 0).
+	regRHS := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: (self rexR: regRHS x: 0 b: regLHS);
+		at: 1 put: 16r03;
+		at: 2 put: (self mod: ModReg RM: regLHS RO: regRHS).
+	^machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeAndCqR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -394,6 +446,49 @@ CogX64Compiler >> concretizeAndCqR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeArithmeticShiftRightRR [
+	"On the x64 the only instructions that shift by the value of a
+	 register require the shift count to be  in %ecx.  So we may
+	 have to use swap instructions to get the count into %ecx."
+	<inline: true>
+	| shiftCountReg destReg regToShift |
+	shiftCountReg := self concreteRegister: (operands at: 0).
+	destReg := self concreteRegister: (operands at: 1).
+	shiftCountReg = RCX ifTrue:
+		[machineCode
+			at: 0 put: (self rexR: 0 x: 0 b: destReg);
+			at: 1 put: 16rD3;
+			at: 2 put: (self mod: ModReg RM: destReg RO: 7).
+		 ^machineCodeSize := 3].
+	regToShift := destReg = shiftCountReg
+					ifTrue: [RCX]
+					ifFalse: [destReg = RCX
+								ifTrue: [shiftCountReg]
+								ifFalse: [destReg]].
+	shiftCountReg = RAX ifTrue:
+		[machineCode
+			at: 0 put: 16r48;
+			at: 1 put: 16r90 + RCX; "XCHG RAX,RCX"
+			at: 2 put: (self rexR: 0 x: 0 b: regToShift);
+			at: 3 put: 16rD3;			"SAR RCX,RAX"
+			at: 4 put: (self mod: ModReg RM: regToShift RO: 7);
+			at: 5 put: 16r48;
+			at: 6 put: 16r90 + RCX. "XCHG RAX,RCX"
+		 ^machineCodeSize := 7].
+	machineCode
+		at: 0 put: (self rexR: shiftCountReg x: 0 b: RCX);		"XCHG R?X,RCX"
+		at: 1 put: 16r87;
+		at: 2 put: (self mod: ModReg RM: RCX RO: shiftCountReg);
+		at: 3 put: (self rexR: 0 x: 0 b: regToShift);			"SAR RCX,R!X"
+		at: 4 put: 16rD3;
+		at: 5 put: (self mod: ModReg RM: regToShift RO: 7);
+		at: 6 put: (self rexR: shiftCountReg x: 0 b: RCX);		"XCHG R?X,RCX"
+		at: 7 put: 16r87;
+		at: 8 put: (self mod: ModReg RM: RCX RO: shiftCountReg).
+	^machineCodeSize := 9
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeAt: actualAddress [
 	"Generate concrete machine code for the instruction at actualAddress,
 	 setting machineCodeSize, and answer the following address."
@@ -413,10 +508,27 @@ CogX64Compiler >> concretizeCmpRR [
 	regRHS := self concreteRegister: (operands at: 0).
 	regLHS := self concreteRegister: (operands at: 1).
 	machineCode
-		at: 0 put: (self rexR: regLHS x: 0 b: regRHS);
+		at: 0 put: (self rexR: regRHS x: 0 b: regLHS);
 		at: 1 put: 16r39;
 		at: 2 put: (self mod: ModReg RM: regLHS RO: regRHS).
 	^machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeCmpRdRd [
+	"Will get inlined into concretizeAt: switch.
+	 We use UCOMISD (see p 4-260 [2])"
+	<inline: true>
+	| regLHS regRHS |
+	"CmpRR RHS LHS computes LHS - RHS, i.e. apparently reversed.  You have to think subtract."
+	regRHS := self concreteDPFPRegister: (operands at: 0).
+	regLHS := self concreteDPFPRegister: (operands at: 1).
+	machineCode
+		at: 0 put: 16r66;
+		at: 1 put: 16r0F;
+		at: 2 put: 16r2E;
+		at: 3 put: (self mod: ModReg RM: regRHS RO: regLHS).
+	^machineCodeSize := 4
 ]
 
 { #category : #'generate machine code' }
@@ -522,10 +634,66 @@ CogX64Compiler >> concretizeMoveCwR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeNegateR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| reg |
+	reg := self concreteRegister: (operands at: 0).
+	machineCode
+		at: 0 put: (self rexR: reg x: 0 b: reg);
+		at: 1 put: 16rF7;
+		at: 2 put: (self mod: ModReg RM: reg RO: 3).
+	^machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeNop [
 	<inline: true>
 	machineCode at: 0 put: 16r90.
 	^machineCodeSize := 1
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeSEE2OpRdRd: opCode [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| regLHS regRHS |
+	regRHS := self concreteDPFPRegister: (operands at: 0).
+	regLHS := self concreteDPFPRegister: (operands at: 1).
+	machineCode
+		at: 0 put: 16rF2;
+		at: 1 put: 16r0F;
+		at: 2 put: opCode;
+		at: 3 put: (self mod: ModReg RM: regRHS RO: regLHS).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeSqrtRd [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| reg |
+	reg := self concreteDPFPRegister: (operands at: 0).
+	machineCode
+		at: 0 put: 16rF2;
+		at: 1 put: 16r0F;
+		at: 2 put: 16r51;
+		at: 3 put: (self mod: ModReg RM: reg RO: reg).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeSubRR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| regLHS regRHS |
+	regLHS := self concreteRegister: (operands at: 0).
+	regRHS := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: (self rexR: regRHS x: 0 b: regLHS);
+		at: 1 put: 16r2b;
+		at: 2 put: (self mod: ModReg RM: regLHS RO: regRHS).
+	^machineCodeSize := 3
 ]
 
 { #category : #'generate machine code' }
@@ -649,6 +817,11 @@ CogX64Compiler >> dispatchConcretize [
 		[PrefetchAw]		-> [^self concretizePrefetchAw].
 		"Conversion"
 		[ConvertRRd]		-> [^self concretizeConvertRRd] }
+]
+
+{ #category : #testing }
+CogX64Compiler >> hasDoublePrecisionFloatingPointSupport [
+	^true
 ]
 
 { #category : #testing }

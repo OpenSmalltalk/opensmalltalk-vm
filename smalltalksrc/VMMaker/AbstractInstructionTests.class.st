@@ -194,6 +194,13 @@ AbstractInstructionTests >> generateInstructions [
 	^instructions
 ]
 
+{ #category : #private }
+AbstractInstructionTests >> memoryAsBytes: aByteArray [
+	"Simply answer the ByteArray.  Subclasses that represent instruction
+	 data using Array shou;ld override to convert appropriately."
+	^aByteArray
+]
+
 { #category : #accessing }
 AbstractInstructionTests >> objectMemory [
 	"hack for testing"
@@ -317,8 +324,8 @@ AbstractInstructionTests >> runAddRR: assertPrintBar [
 				[:a :b| | bogus |
 				self processor
 					reset;
-					perform: srsetter with: a signedIntToLong;
-					perform: drsetter with: b signedIntToLong.
+					perform: srsetter with: (processor convertIntegerToInternal: a);
+					perform: drsetter with: (processor convertIntegerToInternal: b).
 				[[processor pc < len] whileTrue:
 					[self processor singleStepIn: memory]]
 					on: Error
@@ -326,7 +333,7 @@ AbstractInstructionTests >> runAddRR: assertPrintBar [
 				"self processor printRegistersOn: Transcript.
 				 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr"
 				assertPrintBar
-					ifTrue: [self assert: processor pc = inst machineCodeSize]
+					ifTrue: [self assert: processor pc equals: inst machineCodeSize]
 					ifFalse: [bogus := processor pc ~= inst machineCodeSize].
 				self concreteCompilerClass dataRegistersWithAccessorsDo:
 					[:ireg :getter :setter| | expected |
@@ -338,15 +345,15 @@ AbstractInstructionTests >> runAddRR: assertPrintBar [
 												ifTrue: [a]
 												ifFalse: [0]].
 					assertPrintBar
-						ifTrue: [self assert: (self processor perform: getter) signedIntFromLong = expected]
+						ifTrue: [self assert: (self processor convertInternalToInteger: (self processor perform: getter)) equals: expected]
 						ifFalse:
-							[(self processor perform: getter) signedIntFromLong ~= expected ifTrue:
+							[(self processor convertInternalToInteger: (self processor perform: getter)) ~= expected ifTrue:
 								[bogus := true]]].
 					assertPrintBar ifFalse:
 						[Transcript
 							nextPutAll: drgetter; nextPut: $(; print: b; nextPutAll: ') + ';
 							nextPutAll: srgetter; nextPut: $(; print: a; nextPutAll: ') = ';
-							print: (self processor perform: drgetter) signedIntFromLong; cr; flush.
+							print: (self processor convertInternalToInteger: (self processor perform: drgetter)); cr; flush.
 						 bogus ifTrue:
 							[self processor printRegistersOn: Transcript.
 							 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr]]]]]
@@ -370,8 +377,8 @@ AbstractInstructionTests >> runArithmeticShiftRightRR: assertPrintBar [
 				(a >= 0 and: [sreg ~= dreg or: [b >= 0]]) ifTrue:
 					[self processor
 						reset;
-						perform: srsetter with: a signedIntToLong;
-						perform: drsetter with: b signedIntToLong.
+						perform: srsetter with: (processor convertIntegerToInternal: a);
+						perform: drsetter with: (processor convertIntegerToInternal: b).
 					[self processor singleStepIn: memory.
 					 self processor pc ~= inst machineCodeSize] whileTrue.
 					"self processor printRegistersOn: Transcript.
@@ -389,15 +396,15 @@ AbstractInstructionTests >> runArithmeticShiftRightRR: assertPrintBar [
 													ifTrue: [a]
 													ifFalse: [0]].
 						assertPrintBar
-							ifTrue: [self assert: (self processor perform: getter) signedIntFromLong = expected]
+							ifTrue: [self assert: (self processor convertInternalToInteger: (self processor perform: getter)) equals: expected]
 							ifFalse:
-								[(self processor perform: getter) signedIntFromLong ~= expected ifTrue:
-									[bogus := true]]].
+								[(self processor convertInternalToInteger: (self processor perform: getter)) ~= expected ifTrue:
+								[bogus := true]]].
 						assertPrintBar ifFalse:
 							[Transcript
 								nextPutAll: drgetter; nextPut: $(; print: b; nextPutAll: ') >> ';
 								nextPutAll: srgetter; nextPut: $(; print: a; nextPutAll: ') = ';
-								print: (self processor perform: drgetter) signedIntFromLong; cr; flush.
+								print: (self processor convertInternalToInteger: (self processor perform: drgetter)); cr; flush.
 							 bogus ifTrue:
 								[self processor printRegistersOn: Transcript.
 								 self processor disassembleFrom: 0 to: inst machineCodeSize in: memory on: Transcript]]]]]]
@@ -435,16 +442,16 @@ AbstractInstructionTests >> runBinaryConditionalJumps: assertPrintBar [
 			[:a :b| | taken |
 			self processor
 				reset;
-				perform: reg2 with: a signedIntToLong64;
-				perform: reg3 with: b signedIntToLong64.
+				perform: reg2 with: (processor convertIntegerToInternal: a);
+				perform: reg3 with: (processor convertIntegerToInternal: b).
 			[self processor singleStepIn: memory.
 			 self processor pc ~= nop address] whileTrue.
 			taken := (self processor perform: reg1) = 1.
 			assertPrintBar
 				ifTrue:
-					[self assert: taken = (signednessOrResult == #unsigned
-											ifTrue: [(a bitAnd: mask) perform: relation with: (b bitAnd: mask)]
-											ifFalse: [a perform: relation with: b])]
+					[self assert: taken equals: (signednessOrResult == #unsigned
+												ifTrue: [(a bitAnd: mask) perform: relation with: (b bitAnd: mask)]
+												ifFalse: [a perform: relation with: b])]
 				ifFalse:
 					[Transcript
 						nextPutAll: reg2; nextPut: $(; print: a; nextPutAll: ') '; nextPutAll: relation; space;
@@ -750,8 +757,8 @@ AbstractInstructionTests >> runSubRR: assertPrintBar [
 				[:a :b| | bogus |
 				self processor
 					reset;
-					perform: srsetter with: a signedIntToLong;
-					perform: drsetter with: b signedIntToLong.
+					perform: srsetter with: (processor convertIntegerToInternal: a);
+					perform: drsetter with: (processor convertIntegerToInternal: b).
 				[[processor pc < len] whileTrue:
 					[self processor singleStepIn: memory]]
 					on: Error
@@ -772,15 +779,15 @@ AbstractInstructionTests >> runSubRR: assertPrintBar [
 														ifTrue: [a]
 														ifFalse: [0]]].
 					assertPrintBar
-						ifTrue: [self assert: (self processor perform: getter) signedIntFromLong = expected]
+						ifTrue: [self assert: (self processor convertInternalToInteger: (self processor perform: getter)) equals: expected]
 						ifFalse:
-							[(self processor perform: getter) signedIntFromLong ~= expected ifTrue:
+							[(self processor convertInternalToInteger: (self processor perform: getter)) ~= expected ifTrue:
 								[bogus := true]]].
 					assertPrintBar ifFalse:
 						[Transcript
 							nextPutAll: drgetter; nextPut: $(; print: b; nextPutAll: ') - ';
 							nextPutAll: srgetter; nextPut: $(; print: a; nextPutAll: ') = ';
-							print: (self processor perform: drgetter) signedIntFromLong; cr; flush.
+							print: (self processor convertInternalToInteger: (self processor perform: drgetter)); cr; flush.
 						 bogus ifTrue:
 							[self processor printRegistersOn: Transcript.
 							 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr]]]]]
@@ -821,18 +828,18 @@ AbstractInstructionTests >> testNegateR [
 			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
 			self processor
 				reset;
-				perform: rsetter with: a signedIntToLong.
+				perform: rsetter with: (processor convertIntegerToInternal: a).
 			[[processor pc < len] whileTrue:
 				[self processor singleStepIn: memory]]
 				on: Error
 				do: [:ex| ].
 			"self processor printRegistersOn: Transcript.
 			 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr"
-			self assert: processor pc = inst machineCodeSize.
+			self assert: processor pc equals: inst machineCodeSize.
 			self concreteCompilerClass dataRegistersWithAccessorsDo:
 				[:ireg :getter :setter| | expected |
 				expected := getter == rgetter ifTrue: [ a negated ] ifFalse: [0].
-				self assert: (self processor perform: getter) signedIntFromLong = expected]]]
+				self assert: (processor convertInternalToInteger: (processor perform: getter)) equals: expected]]]
 ]
 
 { #category : #tests }
