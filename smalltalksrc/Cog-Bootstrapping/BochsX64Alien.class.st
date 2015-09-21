@@ -82,6 +82,28 @@ BochsX64Alien >> cr4: anUnsignedInteger [
 	^self unsignedLongLongAt: 1253 put: anUnsignedInteger
 ]
 
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> fp [
+	^self rbp
+]
+
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> fp: anAddress [
+	"Set whatever the processor considers its frame pointer to anAddress."
+	self rbp: anAddress
+]
+
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> pc [
+	^self rip
+]
+
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> pc: anAddress [
+	"Set whatever the processor considers its program counter to anAddress."
+	self rip: anAddress
+]
+
 { #category : #primitives }
 BochsX64Alien >> primitiveDisassembleAt: address inMemory: memoryArray [ "<Bitmap|ByteArray>"
 	"Answer an Array of the size and the disassembled code string for the instruction at the current instruction pointer in memory."
@@ -358,6 +380,17 @@ BochsX64Alien >> saveRsp [
 { #category : #accessing }
 BochsX64Alien >> saveRsp: anUnsignedInteger [
 	^self unsignedLongAt: 1921 put: anUnsignedInteger
+]
+
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> sp [
+	^self rsp
+]
+
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> sp: anAddress [
+	"Set whatever the processor considers its stack pointer to anAddress."
+	self rsp: anAddress
 ]
 
 { #category : #accessing }
