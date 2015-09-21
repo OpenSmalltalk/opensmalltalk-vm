@@ -61,7 +61,6 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		blidx = 0;
 #define RESET_FROM_COG BX_RESET_HARDWARE + 1
 		bx_cpu.reset(RESET_FROM_COG);
-		bx_cpu.SetCR0(0x80000001); // Enter protected mode
 		// Origin the code, data & stack segments at 0
 		bx_cpu.parse_selector(0x0000,&bx_cpu.sregs[BX_SEG_REG_CS].selector);
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.base  = 0;
@@ -99,7 +98,11 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		bx_cpu.gen_reg[BX_64BIT_REG_R14].dword.erx = 0;
 		bx_cpu.gen_reg[BX_64BIT_REG_R15].dword.erx = 0;
 		bx_cpu.gen_reg[BX_64BIT_REG_RIP].dword.erx = 0;
-		return 0;
+		bx_cpu.efer.set_LMA(1); /* Hack.  The old version we use have doesn't support set_EFER */
+		bx_cpu.SetCR0(0x80000101); // Enter protected mode
+		return bx_cpu.cpu_mode == BX_MODE_LONG_64
+				? 0
+				: InitializationError;
 	}
 
 	int
