@@ -224,32 +224,32 @@ CogX64Compiler >> computeMaximumSize [
 											ifFalse: [(self concreteRegister: (operands at: 1)) = RAX
 														ifTrue: [6]
 														ifFalse: [7]]].
-		"[AndCqR]		-> [^(self isQuick: (operands at: 0))
-											ifTrue: [3]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
-														ifTrue: [5]
-														ifFalse: [6]]].
+		[AndCqR]		-> [^(self isQuick: (operands at: 0))
+											ifTrue: [4]
+											ifFalse: [(self concreteRegister: (operands at: 1)) = RAX
+														ifTrue: [6]
+														ifFalse: [7]]].
 		[CmpCqR]		-> [^(self isQuick: (operands at: 0))
-											ifTrue: [3]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
-														ifTrue: [5]
-														ifFalse: [6]]].
+											ifTrue: [4]
+											ifFalse: [(self concreteRegister: (operands at: 1)) = RAX
+														ifTrue: [6]
+														ifFalse: [7]]].
 		[OrCqR]			-> [^(self isQuick: (operands at: 0))
-											ifTrue: [3]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
-														ifTrue: [5]
-														ifFalse: [6]]].
+											ifTrue: [4]
+											ifFalse: [(self concreteRegister: (operands at: 1)) = RAX
+														ifTrue: [6]
+														ifFalse: [7]]].
 		[SubCqR]		-> [^(self isQuick: (operands at: 0))
-											ifTrue: [3]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
-														ifTrue: [5]
-														ifFalse: [6]]].
-		[TstCqR]		-> [^((self isQuick: (operands at: 0)) and: [(self concreteRegister: (operands at: 1)) < 4])
-											ifTrue: [3]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
-														ifTrue: [5]
-														ifFalse: [6]]].
-		[AddCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
+											ifTrue: [4]
+											ifFalse: [(self concreteRegister: (operands at: 1)) = RAX
+														ifTrue: [6]
+														ifFalse: [7]]].
+		[TstCqR]		-> [^(self isQuick: (operands at: 0))
+											ifTrue: [4]
+											ifFalse: [(self concreteRegister: (operands at: 1)) = RAX
+														ifTrue: [6]
+														ifFalse: [7]]].
+		"[AddCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
 		[AndCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
 		[CmpCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
 		[OrCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
@@ -398,6 +398,40 @@ CogX64Compiler >> concreteDPFPRegister: registerIndex [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeAddCqR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| mask reg |
+	mask := operands at: 0.
+	reg := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: (self rexR: 0 x: 0 b: reg).
+	(self isQuick: mask) ifTrue:
+		[machineCode
+			at: 1 put: 16r83;
+			at: 2 put: (self mod: ModReg RM: reg RO: 0);
+			at: 3 put: (mask bitAnd: 16rFF).
+		 ^machineCodeSize := 4].
+	self assert: mask >> 32 = 0.
+	reg = RAX ifTrue:
+		[machineCode
+			at: 1 put: 16r05;
+			at: 2 put: (mask bitAnd: 16rFF);
+			at: 3 put: (mask >> 8 bitAnd: 16rFF);
+			at: 4 put: (mask >> 16 bitAnd: 16rFF);
+			at: 5 put: (mask >> 24 bitAnd: 16rFF).
+		 ^machineCodeSize := 6].
+	machineCode
+		at: 1 put: 16r81;
+		at: 2 put: (self mod: ModReg RM: reg RO: 0);
+		at: 3 put: (mask bitAnd: 16rFF);
+		at: 4 put: (mask >> 8 bitAnd: 16rFF);
+		at: 5 put: (mask >> 16 bitAnd: 16rFF);
+		at: 6 put: (mask >> 24 bitAnd: 16rFF).
+	 ^machineCodeSize := 7
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeAddRR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -497,6 +531,40 @@ CogX64Compiler >> concretizeAt: actualAddress [
 	self dispatchConcretize.
 	self assert: (maxSize = nil or: [maxSize >= machineCodeSize]).
 	^actualAddress + machineCodeSize
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeCmpCqR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| value reg |
+	value := operands at: 0.
+	reg := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: (self rexR: 0 x: 0 b: reg).
+	(self isQuick: value) ifTrue:
+		[machineCode
+			at: 1 put: 16r83;
+			at: 2 put: (self mod: ModReg RM: reg RO: 7);
+			at: 3 put: (value bitAnd: 16rFF).
+		 ^machineCodeSize := 4].
+	self assert: value >> 32 = 0.
+	reg = RAX ifTrue:
+		[machineCode
+			at: 1 put: 16r3D;
+			at: 2 put: (value bitAnd: 16rFF);
+			at: 3 put: (value >> 8 bitAnd: 16rFF);
+			at: 4 put: (value >> 16 bitAnd: 16rFF);
+			at: 5 put: (value >> 24 bitAnd: 16rFF).
+		 ^machineCodeSize := 6].
+	machineCode
+		at: 1 put: 16r81;
+		at: 2 put: (self mod: ModReg RM: reg RO: 7);
+		at: 3 put: (value bitAnd: 16rFF);
+		at: 4 put: (value >> 8 bitAnd: 16rFF);
+		at: 5 put: (value >> 16 bitAnd: 16rFF);
+		at: 6 put: (value >> 24 bitAnd: 16rFF).
+	 ^machineCodeSize := 7
 ]
 
 { #category : #'generate machine code' }
@@ -680,6 +748,40 @@ CogX64Compiler >> concretizeSqrtRd [
 		at: 2 put: 16r51;
 		at: 3 put: (self mod: ModReg RM: reg RO: reg).
 	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeSubCqR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| value reg |
+	value := operands at: 0.
+	reg := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: (self rexR: 0 x: 0 b: reg).
+	(self isQuick: value) ifTrue:
+		[machineCode
+			at: 1 put: 16r83;
+			at: 2 put: (self mod: ModReg RM: reg RO: 5);
+			at: 3 put: (value bitAnd: 16rFF).
+		 ^machineCodeSize := 4].
+	self assert: value >> 32 = 0.
+	reg = RAX ifTrue:
+		[machineCode
+			at: 1 put: 16r2D;
+			at: 2 put: (value bitAnd: 16rFF);
+			at: 3 put: (value >> 8 bitAnd: 16rFF);
+			at: 4 put: (value >> 16 bitAnd: 16rFF);
+			at: 5 put: (value >> 24 bitAnd: 16rFF).
+		 ^machineCodeSize := 6].
+	machineCode
+		at: 1 put: 16r81;
+		at: 2 put: (self mod: ModReg RM: reg RO: 5);
+		at: 3 put: (value bitAnd: 16rFF);
+		at: 4 put: (value >> 8 bitAnd: 16rFF);
+		at: 5 put: (value >> 16 bitAnd: 16rFF);
+		at: 6 put: (value >> 24 bitAnd: 16rFF).
+	 ^machineCodeSize := 7
 ]
 
 { #category : #'generate machine code' }

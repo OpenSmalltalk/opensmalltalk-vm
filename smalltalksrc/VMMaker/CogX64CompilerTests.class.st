@@ -4,6 +4,16 @@ Class {
 	#category : #'VMMaker-Tests'
 }
 
+{ #category : #running }
+CogX64CompilerTests >> assertCheckLongArithOpCodeSize: bytes [
+	self assert: bytes > 5
+]
+
+{ #category : #running }
+CogX64CompilerTests >> assertCheckQuickArithOpCodeSize: bytes [
+	self assert: bytes <= 4
+]
+
 { #category : #accessing }
 CogX64CompilerTests >> concreteCompilerClass [
 	^CogX64CompilerForTests
