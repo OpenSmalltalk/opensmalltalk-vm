@@ -237,7 +237,7 @@ AbstractInstructionTests >> runAddCqR: assertPrintBar [
 			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
 			self processor
 				reset;
-				perform: rsetter with: b signedIntToLong.
+				perform: rsetter with: (processor convertIntegerToInternal: b).
 			[[processor pc < len] whileTrue:
 				[self processor singleStepIn: memory]]
 				on: Error
@@ -245,21 +245,21 @@ AbstractInstructionTests >> runAddCqR: assertPrintBar [
 			"self processor printRegistersOn: Transcript.
 			 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr"
 			assertPrintBar
-				ifTrue: [self assert: processor pc = inst machineCodeSize.
+				ifTrue: [self assert: processor pc equals: inst machineCodeSize.
 						self assertCheckQuickArithOpCodeSize: inst machineCodeSize]
 				ifFalse: [bogus := processor pc ~= inst machineCodeSize].
 			self concreteCompilerClass dataRegistersWithAccessorsDo:
 				[:ireg :getter :setter| | expected |
 				expected := getter == rgetter ifTrue: [a + b] ifFalse: [0].
 				assertPrintBar
-					ifTrue: [self assert: (self processor perform: getter) signedIntFromLong = expected]
+					ifTrue: [self assert: (self processor convertInternalToInteger: (self processor perform: getter)) equals: expected]
 					ifFalse:
-						[(self processor perform: getter) signedIntFromLong ~= expected ifTrue:
+						[(self processor convertInternalToInteger: (self processor perform: getter)) ~= expected ifTrue:
 							[bogus := true]]].
 				assertPrintBar ifFalse:
 					[Transcript
 						nextPutAll: rgetter; nextPut: $(; print: b; nextPutAll: ') + '; print: a; nextPutAll: ' = ';
-						print: (self processor perform: rgetter) signedIntFromLong; cr; flush.
+						print: (self processor convertInternalToInteger: (self processor perform: rgetter)); cr; flush.
 					 bogus ifTrue:
 						[self processor printRegistersOn: Transcript.
 						 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr]]]]
@@ -504,7 +504,7 @@ AbstractInstructionTests >> runBinaryConditionalJumpsViaCmpCqR: assertPrintBar [
 				[:a| | taken expected |
 				self processor
 					reset;
-					perform: reg2 with: a signedIntToLong.
+					perform: reg2 with: (processor convertIntegerToInternal: a).
 				[self processor singleStepIn: memory.
 				 self processor pc ~= nop address] whileTrue.
 				taken := (self processor perform: reg1) = 1.
@@ -513,7 +513,7 @@ AbstractInstructionTests >> runBinaryConditionalJumpsViaCmpCqR: assertPrintBar [
 								ifFalse: [a perform: relation with: b].
 				assertPrintBar
 					ifTrue:
-						[self assert: taken = expected]
+						[self assert: taken equals: expected]
 					ifFalse:
 						[Transcript
 							nextPutAll: 'CmpCqR '; print: b; space; nextPutAll: reg2; tab; tab;
@@ -567,7 +567,7 @@ AbstractInstructionTests >> runBinaryConditionalJumpsViaSubCqR: assertPrintBar [
 				[:a| | taken result expected |
 				self processor
 					reset;
-					perform: setreg2 with: a signedIntToLong.
+					perform: setreg2 with: (self processor convertIntegerToInternal: a).
 				[self processor singleStepIn: memory.
 				 self processor pc ~= nop address] whileTrue.
 				taken := (self processor perform: reg1) = 1.
@@ -671,7 +671,7 @@ AbstractInstructionTests >> runSubCqR: assertPrintBar [
 			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
 			self processor
 				reset;
-				perform: rsetter with: b signedIntToLong.
+				perform: rsetter with: (processor convertIntegerToInternal: b).
 			[[processor pc < len] whileTrue:
 				[self processor singleStepIn: memory]]
 				on: Error
@@ -686,14 +686,14 @@ AbstractInstructionTests >> runSubCqR: assertPrintBar [
 				[:ireg :getter :setter| | expected |
 				expected := getter == rgetter ifTrue: [b - a] ifFalse: [0].
 				assertPrintBar
-					ifTrue: [self assert: (self processor perform: getter) signedIntFromLong = expected]
+					ifTrue: [self assert: (self processor convertInternalToInteger: (self processor perform: getter)) equals: expected]
 					ifFalse:
-						[(self processor perform: getter) signedIntFromLong ~= expected ifTrue:
+						[(self processor convertInternalToInteger: (self processor perform: getter)) ~= expected ifTrue:
 							[bogus := true]]].
 				assertPrintBar ifFalse:
 					[Transcript
 						nextPutAll: rgetter; nextPut: $(; print: b; nextPutAll: ') - '; print: a; nextPutAll: ' = ';
-						print: (self processor perform: rgetter) signedIntFromLong; cr; flush.
+						print: (self processor convertInternalToInteger: (self processor perform: rgetter)); cr; flush.
 					 bogus ifTrue:
 						[self processor printRegistersOn: Transcript.
 						 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr]]]]
