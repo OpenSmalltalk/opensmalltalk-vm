@@ -8,6 +8,7 @@
 #define PanicError 4
 #define UnsupportedOperationError 5
 #define SomethingLoggedError 6
+#define InitializationError 7
 
 #if !defined(ulong)
 typedef unsigned long ulong;
