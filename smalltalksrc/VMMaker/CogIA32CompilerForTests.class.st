@@ -63,8 +63,27 @@ CogIA32CompilerForTests >> concreteRegister: value [
 	^value
 ]
 
+{ #category : #'generate machine code' }
+CogIA32CompilerForTests >> concretizeAt: actualAddress [
+	"Override to check maxSize and machineCodeSize"
+
+	| result |
+	maxSize ifNil: [maxSize := self computeMaximumSize].
+	result := super concretizeAt: actualAddress.
+	self assert: (maxSize notNil
+				and: [self isPCDependent
+						ifTrue: [maxSize >= machineCodeSize]
+						ifFalse: [maxSize = machineCodeSize]]).
+	^result
+]
+
 { #category : #testing }
 CogIA32CompilerForTests >> hasSSE2Instructions [
 	"Answer if we support SSE2"
 	^true
+]
+
+{ #category : #accessing }
+CogIA32CompilerForTests >> machineCodeAt: anOffset [
+	^machineCode at: anOffset
 ]
