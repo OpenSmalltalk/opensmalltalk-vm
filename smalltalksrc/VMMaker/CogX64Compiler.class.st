@@ -174,19 +174,22 @@ CogX64Compiler >> computeMaximumSize [
 		[FillFromWord]			-> [^4].
 		[Nop]					-> [^1].
 		"Specific Control/Data Movement"
-		"[CDQ]					-> [^1].
-		[IDIVR]					-> [^2].
-		[IMULRR]				-> [^3].
+		[CDQ]					-> [^2].
+		[IDIVR]					-> [^3].
+		[IMULRR]				-> [^4].
 		[CPUID]					-> [^2].
-		[CMPXCHGAwR]			-> [^7].
-		[CMPXCHGMwrR]		-> [^8].
+		[CMPXCHGAwR]			-> [^8].
+		[CMPXCHGMwrR]		-> [^9].
 		[LFENCE]				-> [^3].
 		[MFENCE]				-> [^3].
 		[SFENCE]				-> [^3].
 		[LOCK]					-> [^1].
-		[XCHGAwR]				-> [^6].
-		[XCHGMwrR]			-> [^7].
-		[XCHGRR]				-> [^2]."
+		"[XCHGAwR]				-> [^6].
+		[XCHGMwrR]			-> [^7]."
+		[XCHGRR]				-> [^((self concreteRegister: (operands at: 0)) = RAX
+									   or: [(self concreteRegister: (operands at: 1)) = RAX])
+											ifTrue: [2]
+											ifFalse: [3]].
 		"Control"
 		[CallFull]					-> [^12].
 		[Call]						-> [^5].
@@ -231,11 +234,11 @@ CogX64Compiler >> computeMaximumSize [
 		[SubCqR]		-> [^self computeSizeOfArithCqR].
 		[TstCqR]		-> [^self computeSizeOfArithCqR].
 		[AddCwR]		-> [^self computeSizeOfArithCwR].
-		[AndCwR]		-> [^self computeSizeOfCwR].
-		[CmpCwR]		-> [^self computeSizeOfCwR].
-		[OrCwR]		-> [^self computeSizeOfCwR].
-		[SubCwR]		-> [^self computeSizeOfCwR].
-		[XorCwR]		-> [^self computeSizeOfCwR].
+		[AndCwR]		-> [^self computeSizeOfArithCwR].
+		[CmpCwR]		-> [^self computeSizeOfArithCwR].
+		[OrCwR]		-> [^self computeSizeOfArithCwR].
+		[SubCwR]		-> [^self computeSizeOfArithCwR].
+		[XorCwR]		-> [^self computeSizeOfArithCwR].
 		[AddRR]			-> [^3].
 		[AndRR]			-> [^3].
 		[CmpRR]		-> [^3].
@@ -268,14 +271,17 @@ CogX64Compiler >> computeMaximumSize [
 		[MoveRR]		-> [^3].
 		[MoveRdRd]		-> [^4].
 		"[MoveAwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[MoveRAw]		-> [^(self concreteRegister: (operands at: 0)) = EAX ifTrue: [5] ifFalse: [6]].
+		[MoveRAw]		-> [^(self concreteRegister: (operands at: 0)) = EAX ifTrue: [5] ifFalse: [6]]."
 		[MoveRMwr]	-> [^((self isQuick: (operands at: 1))
-											ifTrue: [3]
-											ifFalse: [6])
-										+ ((self concreteRegister: (operands at: 2)) = ESP
-											ifTrue: [1]
-											ifFalse: [0])].
-		[MoveRdM64r]	-> [^((self isQuick: (operands at: 1))
+									ifTrue: [((operands at: 1) = 0
+											and: [((self concreteRegister: (operands at: 2)) bitAnd: 7) ~= RBP])
+												ifTrue: [3]
+												ifFalse: [4]]
+									ifFalse: [7])
+								+ (((self concreteRegister: (operands at: 2)) bitAnd: 7) = RSP
+									ifTrue: [1]
+									ifFalse: [0])].
+		"[MoveRdM64r]	-> [^((self isQuick: (operands at: 1))
 											ifTrue: [5]
 											ifFalse: [8])
 										+ ((self concreteRegister: (operands at: 2)) = ESP
@@ -329,12 +335,12 @@ CogX64Compiler >> computeMaximumSize [
 		[MoveRXwrR]	-> [self assert: (self concreteRegister: (operands at: 1)) ~= ESP.
 							^(self concreteRegister: (operands at: 2)) = EBP
 											ifTrue: [4]
-											ifFalse: [3]].
-		[PopR]			-> [^1].
-		[PushR]			-> [^1].
+											ifFalse: [3]]."
+		[PopR]			-> [^(self concreteRegister: (operands at: 0)) < 8 ifTrue: [1] ifFalse: [2]].
+		[PushR]			-> [^(self concreteRegister: (operands at: 0)) < 8 ifTrue: [1] ifFalse: [2]].
 		[PushCq]		-> [^(self isQuick: (operands at: 0)) ifTrue: [2] ifFalse: [5]].
-		[PushCw]		-> [^5].
-		[PrefetchAw]	-> [^self hasSSEInstructions ifTrue: [7] ifFalse: [0]]."
+		[PushCw]		-> [^self computeSizeOfArithCwR - 1].
+		[PrefetchAw]	-> [^self hasSSEInstructions ifTrue: [12] ifFalse: [0]].
 		"Conversion"
 		"[ConvertRRd]	-> [^4]" }.
 	^0 "to keep C compiler quiet"
@@ -521,6 +527,16 @@ CogX64Compiler >> concretizeArithmeticShiftRightRR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeCDQ [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	machineCode
+		at: 0 put: 16r48;
+		at: 1 put: 16r99.
+	^machineCodeSize := 2
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeCmpCqR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -607,6 +623,19 @@ CogX64Compiler >> concretizeConditionalJump: conditionCode [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeIDIVR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| regDivisor |
+	regDivisor := self concreteRegister: (operands at: 0).
+	machineCode
+		at: 0 put: (self rexR: regDivisor x: 0 b: 0);
+		at: 1 put: 16rF7;
+		at: 2 put: (self mod: ModReg RM: regDivisor RO: 7).
+	^machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeJump [
 	"Will get inlined into concretizeAt: switch."
 	"Sizing/generating jumps.
@@ -689,6 +718,70 @@ CogX64Compiler >> concretizeMoveCwR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveRMwr [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| srcReg offset destReg |
+	srcReg := self concreteRegister: (operands at: 0).
+	offset := operands at: 1.
+	destReg := self concreteRegister: (operands at: 2).
+	machineCode
+		at: 0 put: (self rexR: srcReg x: 0 b: destReg);
+		at: 1 put: 16r89.
+	(destReg ~= RSP and: [destReg ~= R12]) ifTrue:
+		[(offset = 0 and: [destReg ~= RBP and: [destReg ~= R13]]) ifTrue:
+			[machineCode
+				at: 2 put: (self mod: ModRegInd RM: destReg RO: srcReg).
+			 ^machineCodeSize := 3].
+		 (self isQuick: offset) ifTrue:
+			[machineCode
+				at: 2 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+				at: 3 put: (offset bitAnd: 16rFF).
+			 ^machineCodeSize := 4].
+		machineCode
+			at: 2 put: (self mod: ModRegRegDisp32 RM: destReg RO: srcReg);
+			at: 3 put: (offset bitAnd: 16rFF);
+			at: 4 put: (offset >> 8 bitAnd: 16rFF);
+			at: 5 put: (offset >> 16 bitAnd: 16rFF);
+			at: 6 put: (offset >> 24 bitAnd: 16rFF).
+		^machineCodeSize := 7].
+	"RSP:"
+	offset = 0 ifTrue:
+		[machineCode
+			at: 2 put: (self mod: ModRegInd RM: destReg RO: srcReg);
+			at: 3 put: (self s: SIB1 i: 4 b: destReg).
+		 ^machineCodeSize := 4].
+	(self isQuick: offset) ifTrue:
+		[machineCode
+			at: 2 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+			at: 3 put: (self s: SIB1 i: 4 b: destReg);
+			at: 4 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := 5].
+	machineCode
+		at: 2 put: (self mod: ModRegRegDisp32 RM: destReg RO: srcReg);
+		at: 3 put: (self s: SIB1 i: 4 b: destReg);
+		at: 4 put: (offset bitAnd: 16rFF);
+		at: 5 put: (offset >> 8 bitAnd: 16rFF);
+		at: 6 put: (offset >> 16 bitAnd: 16rFF);
+		at: 7 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 8
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveRR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| srcReg destReg |
+	srcReg := self concreteRegister: (operands at: 0).
+	destReg := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: (self rexR: srcReg x: 0 b: destReg);
+		at: 1 put: 16r89;
+		at: 2 put: (self mod: ModReg RM: destReg RO: srcReg).
+	^machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeNegateR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -706,6 +799,34 @@ CogX64Compiler >> concretizeNop [
 	<inline: true>
 	machineCode at: 0 put: 16r90.
 	^machineCodeSize := 1
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizePopR [
+	<inline: true>
+	| reg |
+	reg := self concreteRegister: (operands at: 0).
+	reg < 8 ifTrue:
+		[machineCode at: 0 put: 16r58 + reg.
+		^machineCodeSize := 1].
+	machineCode
+		at: 0 put: 16r41;
+		at: 1 put: 16r58 + (reg - 8).
+	^machineCodeSize := 2
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizePushR [
+	<inline: true>
+	| reg |
+	reg := self concreteRegister: (operands at: 0).
+	reg < 8 ifTrue:
+		[machineCode at: 0 put: 16r50 + reg.
+		^machineCodeSize := 1].
+	machineCode
+		at: 0 put: 16r41;
+		at: 1 put: 16r50 + (reg - 8).
+	^machineCodeSize := 2
 ]
 
 { #category : #'generate machine code' }
@@ -817,6 +938,25 @@ CogX64Compiler >> concretizeTstCqR [
 		at: 5 put: (value >> 16 bitAnd: 16rFF);
 		at: 6 put: (value >> 24 bitAnd: 16rFF).
 	 ^machineCodeSize := 7
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeXCHGRR [
+	| r1 r2 |
+	r1 := self concreteRegister: (operands at: 0).
+	r2 := self concreteRegister: (operands at: 1).
+	r2 = RAX ifTrue:
+		[r2 := r1. r1 := RAX].
+	r1 = RAX ifTrue:
+		[machineCode
+			at: 0 put: (self rexR: 0 x: 0 b: r2);
+			at: 1 put: 16r90 + (r2 \\ 8).
+		 ^machineCodeSize := 2].
+	machineCode
+		at: 0 put: (self rexR: r1 x: 0 b: r2);
+		at: 1 put: 87;
+		at: 2 put: (self mod: r2 RM: 0 RO: r1).
+	^machineCodeSize := 3
 ]
 
 { #category : #'generate machine code' }
@@ -951,62 +1091,62 @@ CogX64Compiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstra
 	rDivisor := self concreteRegister: abstractRegDivisor.
 	rQuotient := self concreteRegister: abstractRegQuotient.
 	rRemainder := self concreteRegister: abstractRegRemainder.
-	"IDIV r does a signed divide of EDX:EAX by r, EAX := Quotient, EDX := Remainder.
-	 Since we must sign extend the dividend into EDX we must substitute another register if EDX is an input"
-	(rDividend = EDX or: [rDivisor = EDX]) ifTrue:
+	"IDIV r does a signed divide of RDX:RAX by r, RAX := Quotient, RDX := Remainder.
+	 Since we must sign extend the dividend into RDX we must substitute another register if RDX is an input."
+	(rDividend = RDX or: [rDivisor = RDX]) ifTrue:
 		[| rUnused |
 		"Slang, sigh..."
-		rUnused := EAX.
-		[rUnused <= EDI] whileTrue:
-			[(rUnused ~= ESP and: [rUnused ~= EBP and: [rUnused ~= EDX
+		rUnused := RAX.
+		[rUnused <= RDI] whileTrue:
+			[(rUnused ~= RSP and: [rUnused ~= RBP and: [rUnused ~= RDX
 			  and: [rUnused ~= rDividend and: [rUnused ~= rDivisor
 			  and: [rUnused ~= rQuotient and: [rUnused ~= rRemainder]]]]]]) ifTrue:
 				[cogit PushR: rUnused.
-				cogit MoveR: EDX R: rUnused.
-				rDividend = EDX
+				cogit MoveR: RDX R: rUnused.
+				rDividend = RDX
 					ifTrue: [self genDivR: rDivisor R: rUnused Quo: rQuotient Rem: rRemainder]
 					ifFalse: [self genDivR: rUnused R: rDividend Quo: rQuotient Rem: rRemainder].
 				cogit PopR: rUnused.
 				^self].
 			  rUnused := rUnused + 1].
 		self error: 'couldn''t find unused register in genDivR:R:Quo:Rem:'].
-	"If either output does not include EAX or EDX we must save and restore EAX and/or EDX."
-	(saveRestoreEAX := rQuotient ~= EAX and: [rRemainder ~= EAX]) ifTrue:
-		[cogit PushR: EAX].
-	(saveRestoreEDX := rQuotient ~= EDX and: [rRemainder ~= EDX]) ifTrue:
-		[cogit PushR: EDX].
+	"If either output does not include RAX or RDX we must save and restore RAX and/or RDX."
+	(saveRestoreEAX := rQuotient ~= RAX and: [rRemainder ~= RAX]) ifTrue:
+		[cogit PushR: RAX].
+	(saveRestoreEDX := rQuotient ~= RDX and: [rRemainder ~= RDX]) ifTrue:
+		[cogit PushR: RDX].
 	saveRestoreExchanged := -1.
-	rDividend ~= EAX ifTrue:
-		[rDivisor = EAX
+	rDividend ~= RAX ifTrue:
+		[rDivisor = RAX
 			ifTrue: [((rDividend ~= rQuotient and: [rDividend ~= rRemainder])
-					and: [rDividend ~= EDX or: [saveRestoreEDX not]]) ifTrue:
+					and: [rDividend ~= RDX or: [saveRestoreEDX not]]) ifTrue:
 						[cogit PushR: (saveRestoreExchanged := rDividend)].
 					cogit gen: XCHGRR operand: rDivisor operand: rDividend]
-			ifFalse: [cogit MoveR: rDividend R: EAX]].
-	"CDQ sign-extends EAX into EDX as required for IDIV"
+			ifFalse: [cogit MoveR: rDividend R: RAX]].
+	"CDQ sign-extends RAX into RDX as required for IDIV"
 	cogit gen: CDQ.
-	cogit gen: IDIVR operand: (rDivisor = EAX ifTrue: [rDividend] ifFalse: [rDivisor]).
+	cogit gen: IDIVR operand: (rDivisor = RAX ifTrue: [rDividend] ifFalse: [rDivisor]).
 	"Must not overwrite result while juggling"
-	(rQuotient = EDX and: [rRemainder = EAX])
+	(rQuotient = RDX and: [rRemainder = RAX])
 		ifTrue: [cogit gen: XCHGRR operand: rQuotient operand: rRemainder]
 		ifFalse:
-			[rQuotient = EDX
+			[rQuotient = RDX
 				ifTrue:
-					[rRemainder ~= EDX ifTrue:
-						[cogit MoveR: EDX R: rRemainder].
-					rQuotient ~= EAX ifTrue:
-						[cogit MoveR: EAX R: rQuotient]]
+					[rRemainder ~= RDX ifTrue:
+						[cogit MoveR: RDX R: rRemainder].
+					rQuotient ~= RAX ifTrue:
+						[cogit MoveR: RAX R: rQuotient]]
 				ifFalse:
-					[rQuotient ~= EAX ifTrue:
-						[cogit MoveR: EAX R: rQuotient].
-					rRemainder ~= EDX ifTrue:
-						[cogit MoveR: EDX R: rRemainder]]].
+					[rQuotient ~= RAX ifTrue:
+						[cogit MoveR: RAX R: rQuotient].
+					rRemainder ~= RDX ifTrue:
+						[cogit MoveR: RDX R: rRemainder]]].
 	saveRestoreExchanged >= 0 ifTrue:
 		[cogit PopR: saveRestoreExchanged].
 	saveRestoreEDX ifTrue:
-		[cogit PopR: EDX].
+		[cogit PopR: RDX].
 	saveRestoreEAX ifTrue:
-		[cogit PopR: EAX]
+		[cogit PopR: RAX]
 ]
 
 { #category : #'abstract instructions' }
@@ -1115,4 +1255,9 @@ CogX64Compiler >> rexw: width64 "<Boolean>" r: reg "<0-15>" x: sibReg "<0-15>"  
 	regBits := ((reg bitAnd: 8) >> 1) + ((sibReg bitAnd: 8) >> 2) + ((fieldReg bitAnd: 8) >> 3).
 	^(width64 or: [regBits ~= 0]) ifTrue:
 		[(width64 ifTrue: [16r48] ifFalse: [16r40]) + regBits]
+]
+
+{ #category : #encoding }
+CogX64Compiler >> s: scale i: indexReg b: baseReg [ 
+	^scale << 6 + ((indexReg bitAnd: 7) << 3) + (baseReg bitAnd: 7)
 ]
