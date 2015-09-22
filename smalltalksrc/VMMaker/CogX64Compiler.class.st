@@ -154,6 +154,11 @@ CogX64Compiler class >> machineCodeDeclaration [
 	^{#'unsigned char'. '[', self basicNew machineCodeBytes printString, ']'}
 ]
 
+{ #category : #accessing }
+CogX64Compiler >> codeGranularity [
+	^1
+]
+
 { #category : #'generate machine code' }
 CogX64Compiler >> computeMaximumSize [
 	"Compute the maximum size for each opcode.  This allows jump offsets to
@@ -781,6 +786,40 @@ CogX64Compiler >> concretizeSubRR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeTstCqR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| value reg |
+	value := operands at: 0.
+	reg := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: (self rexR: 0 x: 0 b: reg).
+	(self isQuick: value) ifTrue:
+		[machineCode
+			at: 1 put: 16rF6;
+			at: 2 put: (self mod: ModReg RM: reg RO: 0);
+			at: 3 put: (value bitAnd: 16rFF).
+		 ^machineCodeSize := 4].
+	self assert: value >> 32 = 0.
+	reg = RAX ifTrue:
+		[machineCode
+			at: 1 put: 16rA9;
+			at: 2 put: (value bitAnd: 16rFF);
+			at: 3 put: (value >> 8 bitAnd: 16rFF);
+			at: 4 put: (value >> 16 bitAnd: 16rFF);
+			at: 5 put: (value >> 24 bitAnd: 16rFF).
+		 ^machineCodeSize := 6].
+	machineCode
+		at: 1 put: 16rF7;
+		at: 2 put: (self mod: ModReg RM: reg RO: 0);
+		at: 3 put: (value bitAnd: 16rFF);
+		at: 4 put: (value >> 8 bitAnd: 16rFF);
+		at: 5 put: (value >> 16 bitAnd: 16rFF);
+		at: 6 put: (value >> 24 bitAnd: 16rFF).
+	 ^machineCodeSize := 7
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> dispatchConcretize [
 	"Attempt to generate concrete machine code for the instruction at address.
 	 This is the inner dispatch of concretizeAt: actualAddress which exists only
@@ -1024,6 +1063,25 @@ CogX64Compiler >> is32BitSignedImmediate: a64BitUnsignedOperand [
 CogX64Compiler >> isQuick: operand [
 	<var: #operand type: #'unsigned long'>
 	^operand signedIntFromLong between: -128 and: 127
+]
+
+{ #category : #accessing }
+CogX64Compiler >> jmpTarget: anAbstractInstruction [
+	"Set the target of a jump instruction.  These all have the target in the first operand.
+	 Override to cope with JumpFPNotEqual where because of IEEE NaN conformance and
+	 the behaviour of COMISD/UCOMISD we generate two jumps to the same target."
+	| aDependent |
+	<var: #aDependent type: #'AbstractInstruction *'>
+	aDependent := dependent.
+	[aDependent notNil] whileTrue:
+		[aDependent jmpTarget: anAbstractInstruction.
+		 aDependent := aDependent dependent].
+	^super jmpTarget: anAbstractInstruction
+]
+
+{ #category : #accessing }
+CogX64Compiler >> machineCodeAt: anOffset [
+	^machineCode at: anOffset
 ]
 
 { #category : #'generate machine code' }
