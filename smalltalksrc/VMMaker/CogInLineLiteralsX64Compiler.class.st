@@ -4,6 +4,12 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #'generate machine code' }
+CogInLineLiteralsX64Compiler >> computeSizeOfArithCwR [
+	<inline: true>
+	^10 "MoveCwR" +  3 "ArithRR"
+]
+
 { #category : #testing }
 CogInLineLiteralsX64Compiler >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction."
