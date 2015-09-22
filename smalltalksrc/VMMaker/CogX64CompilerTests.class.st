@@ -172,8 +172,9 @@ CogX64CompilerTests >> testDivQuoRem [
 					memory atAllPut: 0; replaceFrom: 1 to: instructions size with: instructions startingAt: 1; at: instructions size + 1 put: self processor nopOpcode.
 					#(-768 -456 -123 123 456 789)
 						with: #(987 654 321 -321 -654 -987)
-						do: [:dd :dv| "| calc |
-							calc := ((dd quo: dv) bitAnd: 16rFFFFFFFF) hex, ' := ', (dd bitAnd: 16rFFFFFFFF) hex, ' quo: ', (dv bitAnd: 16rFFFFFFFF) hex, '. ', ((dd rem: dv) bitAnd: 16rFFFFFFFF) hex, ' := ', (dd bitAnd: 16rFFFFFFFF) hex, ' rem: ', (dv bitAnd: 16rFFFFFFFF) hex.
+						do: [:dd :dv| "| calc mask |
+							mask := 16rFFFFFFFFFFFFFFFF.
+							calc := ((dd quo: dv) bitAnd: mask) hex, ' := ', (dd bitAnd: mask) hex, ' quo: ', (dv bitAnd: mask) hex, '. ', ((dd rem: dv) bitAnd: mask) hex, ' := ', (dd bitAnd: mask) hex, ' rem: ', (dv bitAnd: mask) hex.
 							calc := calc."
 							"Transcript cr; cr; nextPutAll: op; cr; nextPutAll: calc; cr.
 							 self processor
@@ -327,22 +328,44 @@ CogX64CompilerTests >> testMoveRMbr [
 
 { #category : #tests }
 CogX64CompilerTests >> testMoveRMwr [
-	"self new testMoveRM0wr"
+	"self new testMoveRMwr"
 	self concreteCompilerClass registersWithNamesDo:
 		[:sreg :srname|
 		self concreteCompilerClass registersWithNamesDo:
 			[:dreg :drname| | inst len |
-			inst := self gen: MoveRMwr operand: sreg operand: 0 operand: dreg.
-			len := inst concretizeAt: 0.
-			self processor
-				disassembleInstructionAt: 0
-				In: inst machineCode object
-				into: [:str :sz| | plainJane herIntended |
-					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
-					plainJane := self strip: str.
-					herIntended := 'movl ', srname, ', (',drname,')'.
-					self assert: (plainJane match: herIntended).
-					self assert: len = sz]]]
+			#(0 64 65536) do:
+				[:offset|
+				inst := self gen: MoveRMwr operand: sreg operand: offset operand: dreg.
+				len := inst concretizeAt: 0.
+				self processor
+					disassembleInstructionAt: 0
+					In: inst machineCode object
+					into: [:str :sz| | plainJane herIntended |
+						"Convert e.g. '00000000: movq %rax, 0x2(%rax) : 48 89 40 02' to  'movl %rax, 0x2(%rax)'"
+						plainJane := self strip: str.
+						herIntended := 'movq ', srname, ', ', (offset = 0 ifTrue: [''] ifFalse: ['0x', (offset printStringBase: 16 length: 16 padded: true)]), '(',drname,')'.
+						self assert: (plainJane match: herIntended).
+						self assert: len = sz]]]]
+
+	"| failures |
+	 failures := Dictionary new.
+	 self concreteCompilerClass registersWithNamesDo:
+		[:sreg :srname|
+		self concreteCompilerClass registersWithNamesDo:
+			[:dreg :drname| | inst len |
+			#(0 64 65536) do:
+				[:offset|
+				inst := self gen: MoveRMwr operand: sreg operand: offset operand: dreg.
+				len := inst concretizeAt: 0.
+				self processor
+					disassembleInstructionAt: 0
+					In: inst machineCode object
+					into: [:str :sz| | plainJane herIntended |
+						plainJane := self strip: str.
+						herIntended := 'movq ', srname, ', ', (offset = 0 ifTrue: [''] ifFalse: ['0x', (offset printStringBase: 16 length: 16 padded: true)]), '(',drname,')'.
+						((plainJane match: herIntended) and: [len = sz]) ifFalse:
+							[failures at: herIntended put: plainJane]]]]].
+	 failures"
 ]
 
 { #category : #tests }
