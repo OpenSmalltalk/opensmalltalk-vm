@@ -4,6 +4,11 @@ Class {
 	#category : #'VMMaker-Tests'
 }
 
+{ #category : #'abstract instructions' }
+CogX64CompilerTests >> Label [
+	^self gen: Label operand: opcodes size
+]
+
 { #category : #running }
 CogX64CompilerTests >> assertCheckLongArithOpCodeSize: bytes [
 	self assert: bytes > 5
@@ -17,6 +22,12 @@ CogX64CompilerTests >> assertCheckQuickArithOpCodeSize: bytes [
 { #category : #accessing }
 CogX64CompilerTests >> concreteCompilerClass [
 	^CogX64CompilerForTests
+]
+
+{ #category : #accessing }
+CogX64CompilerTests >> methodLabel [
+	"There is no methodLabel in test code."
+	^nil
 ]
 
 { #category : #accessing }
@@ -52,7 +63,7 @@ CogX64CompilerTests >> testAndCqR [
 				into: [:str :sz| | plainJane herIntended |
 					"Convert e.g. '00000000: movl %rax, 0x2(%rax) : 48 89 40 02' to  'movl %rax, 0x2(%rax)'"
 					plainJane := self strip: str.
-					herIntended := 'andl $0x', (const printStringBase: 16 length: 16 padded: true), ', ', regname.
+					herIntended := 'andq $0x', (const printStringBase: 16 length: 16 padded: true), ', ', regname.
 					self assert: (plainJane match: herIntended).
 					self assert: len = sz]]]
 ]
@@ -70,8 +81,8 @@ CogX64CompilerTests >> testArithmeticShiftRightRR [
 								ifTrue: [3]
 								ifFalse:
 									[srgetter = #rax
-										ifTrue: [5]
-										ifFalse: [7]])
+										ifTrue: [7]
+										ifFalse: [9]])
 			"self processor disassembleFrom: 0 to: inst machineCodeSize in: inst machineCode object on: Transcript"]]
 ]
 
@@ -455,15 +466,17 @@ CogX64CompilerTests >> testTstCqR [
 			[:const| | op regname inst len constString|
 			inst := self gen: TstCqR operand: const operand: reg.
 			len := inst concretizeAt: 0.
-			((inst isQuick: const) and: [reg < 4])
+			(inst isQuick: const)
 				ifTrue:
 					[op := 'testb'.
-					 regname := #('%al' '%cl' '%dl' '%bl') at: reg + 1.
+					 regname := reg < 8
+									ifTrue: [#('%al' '%cl' '%dl' '%bl' '%spl' '%bpl' '%sil' '%dil') at: reg + 1]
+									ifFalse: [theRegname, 'b'].
 					 constString := const printStringBase: 16 length: 2 padded: true]
 				ifFalse:
-					[op := 'testl'.
+					[op := 'testq'.
 					 regname := theRegname.
-					 constString := const printStringBase: 16 length: 8 padded: true].
+					 constString := const printStringBase: 16 length: 16 padded: true].
 			self processor
 				disassembleInstructionAt: 0
 				In: inst machineCode object
