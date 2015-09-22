@@ -31,3 +31,17 @@ CogARMCompilerForTests class >> registersWithNamesDo: aBinaryBlock [
 		with: #('r0' 'r1' 'r2' 'r3' 'r4' 'r5' 'r6' 'r7' 'r8' 'r9' 'sl' 'fp' 'ip' 'sp' 'lr' 'pc')
 		do: aBinaryBlock
 ]
+
+{ #category : #'generate machine code' }
+CogARMCompilerForTests >> concretizeAt: actualAddress [
+	"Override to check maxSize and machineCodeSize"
+
+	| result |
+	maxSize ifNil: [maxSize := self computeMaximumSize].
+	result := super concretizeAt: actualAddress.
+	self assert: (maxSize notNil
+				and: [self isPCDependent
+						ifTrue: [maxSize >= machineCodeSize]
+						ifFalse: [maxSize = machineCodeSize]]).
+	^result
+]
