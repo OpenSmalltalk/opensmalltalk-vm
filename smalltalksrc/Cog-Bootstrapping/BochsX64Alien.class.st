@@ -15,6 +15,28 @@ BochsX64Alien class >> dataSize [
 	^22672
 ]
 
+{ #category : #'class initialization' }
+BochsX64Alien class >> initialize [
+	"BochsX64Alien initialize"
+	| it |
+	it := self basicNew.
+	PostBuildStackDelta := 0.
+	OpcodeExceptionMap := Array new: 256 withAll: #handleExecutionPrimitiveFailureAt:in:.
+	OpcodeExceptionMap
+		at: 1 + it callOpcode			put: #handleCallFailureAt:in:;
+		at: 1 + it jmpOpcode			put: #handleJmpFailureAt:in:;
+		at: 1 + it retOpcode			put: #handleRetFailureAt:in:;
+		at: 1 + it movALObOpcode	put: #handleMovALObFailureAt:in:;
+		at: 1 + it movObALOpcode	put: #handleMovObALFailureAt:in:;
+		at: 1 + it movGvEvOpcode	put: #handleMovGvEvFailureAt:in:;
+		at: 1 + it movEvGvOpcode	put: #handleMovEvGvFailureAt:in:;
+		at: 1 + it movGbEbOpcode	put: #handleMovGbEbFailureAt:in:;
+		at: 1 + it movEbGbOpcode	put: #handleMovEbGbFailureAt:in:.
+	ExtendedOpcodeExceptionMap := Array new: 256 withAll: #handleExecutionPrimitiveFailureAt:in:.
+	ExtendedOpcodeExceptionMap
+		at: 1 + it movGvEbOpcode put: #handleMovGvEbFailureAt:in:
+]
+
 { #category : #'instance creation' }
 BochsX64Alien class >> primitiveNewCPU [
 	"Answer the address of a new Bochs C++ class bx_cpu_c/BX_CPU_C x64 (x86-64) CPU emulator instance."
@@ -30,6 +52,13 @@ BochsX64Alien >> abstractInstructionCompilerClass [
 { #category : #'Cog API' }
 BochsX64Alien >> bitsInWord [
 	^64
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> callOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A2, pA8"
+	^16rE8
 ]
 
 { #category : #'tests support' }
@@ -103,6 +132,109 @@ BochsX64Alien >> fp [
 BochsX64Alien >> fp: anAddress [
 	"Set whatever the processor considers its frame pointer to anAddress."
 	self rbp: anAddress
+]
+
+{ #category : #'error handling' }
+BochsX64Alien >> handleExecutionPrimitiveFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
+	"Handle an execution primitive failure for an unhandled opcode."
+	^self reportPrimitiveFailure
+]
+
+{ #category : #'error handling' }
+BochsX64Alien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray>" minimumAddress: minimumAddress [
+	"Handle an execution primitive failure.  Convert out-of-range call and absolute
+	 memory read into register instructions into ProcessorSimulationTrap signals."
+	"self printIntegerRegistersOn: Transcript"
+	"self printRegistersOn: Transcript"
+	| pc opcode offset |
+	((pc := self rip) between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
+		[opcode := memoryArray byteAt: pc + (offset := 1).
+		 (opcode bitAnd: 16rF8) = self rexPrefix ifTrue: "skip rex prefix if present"
+			[opcode := memoryArray byteAt: pc + (offset := 2)].
+		 opcode ~= 16r0f ifTrue:
+			[^self
+				perform: (OpcodeExceptionMap at: opcode + 1)
+				with: pc
+				with: memoryArray].
+		 opcode := memoryArray byteAt: pc + offset + 1.
+		 ^self
+				perform: (ExtendedOpcodeExceptionMap at: opcode + 1)
+				with: pc
+				with: memoryArray].
+	^self reportPrimitiveFailure
+]
+
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> integerRegisterState [
+	^{	self rax. self rbx. self rcx. self rdx. self rsp. self rbp. self rsi. self rdi.
+		self r8. self r9. self r10. self r11. self r12. self r13. self r14. self r15.
+		self rip. self rflags }
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> jmpOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A2, pA8"
+	^16rE9
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> lockPrefix [
+	^16rF0
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> movALObOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A2, pA7"
+	^16rA1
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> movEbGbOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A2"
+	^16r88
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> movEvGvOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A2, pA8"
+	^16r89
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> movGbEbOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A2"
+	^16r8A
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> movGvEbOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A3, pA14"
+	^16rB6
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> movGvEvOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A2, pA8"
+	^16r8B
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> movObALOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A2, pA7"
+	^16rA3
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> nopOpcode [
+	^16r90
 ]
 
 { #category : #'accessing-abstract' }
@@ -210,6 +342,12 @@ BochsX64Alien >> printFields: fields inRegisterState: registerStateVector on: aS
 									 aStream nextPut: $)]]].
 						(fields at: index + 1) ~~ #cr ifTrue:
 							[aStream tab]]]
+]
+
+{ #category : #printing }
+BochsX64Alien >> printIntegerRegistersOn: aStream [
+	self printRegisterState: self integerRegisterState on: aStream.
+	aStream flush
 ]
 
 { #category : #printing }
@@ -399,6 +537,18 @@ BochsX64Alien >> reset [
 	self primitiveResetCPU.
 	"Enable SSE extensions by setting the OSFXSR (Operating System FXSAVE/FXRSTOR Support) bit"
 	self cr4: (self cr4 bitOr: 1 << 9)
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> retOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A2, pA7"
+	^16rC3
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> rexPrefix [
+	^16r48
 ]
 
 { #category : #accessing }
