@@ -219,42 +219,18 @@ CogX64Compiler >> computeMaximumSize [
 		[Stop]						-> [^1].
 
 		"Arithmetic"
-		[AddCqR]		-> [^(self isQuick: (operands at: 0))
-											ifTrue: [4]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = RAX
-														ifTrue: [6]
-														ifFalse: [7]]].
-		[AndCqR]		-> [^(self isQuick: (operands at: 0))
-											ifTrue: [4]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = RAX
-														ifTrue: [6]
-														ifFalse: [7]]].
-		[CmpCqR]		-> [^(self isQuick: (operands at: 0))
-											ifTrue: [4]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = RAX
-														ifTrue: [6]
-														ifFalse: [7]]].
-		[OrCqR]			-> [^(self isQuick: (operands at: 0))
-											ifTrue: [4]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = RAX
-														ifTrue: [6]
-														ifFalse: [7]]].
-		[SubCqR]		-> [^(self isQuick: (operands at: 0))
-											ifTrue: [4]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = RAX
-														ifTrue: [6]
-														ifFalse: [7]]].
-		[TstCqR]		-> [^(self isQuick: (operands at: 0))
-											ifTrue: [4]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = RAX
-														ifTrue: [6]
-														ifFalse: [7]]].
-		"[AddCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[AndCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[CmpCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[OrCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[SubCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[XorCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]]."
+		[AddCqR]		-> [^self computeSizeOfArithCqR].
+		[AndCqR]		-> [^self computeSizeOfArithCqR].
+		[CmpCqR]		-> [^self computeSizeOfArithCqR].
+		[OrCqR]			-> [^self computeSizeOfArithCqR].
+		[SubCqR]		-> [^self computeSizeOfArithCqR].
+		[TstCqR]		-> [^self computeSizeOfArithCqR].
+		[AddCwR]		-> [^self computeSizeOfArithCwR].
+		[AndCwR]		-> [^self computeSizeOfCwR].
+		[CmpCwR]		-> [^self computeSizeOfCwR].
+		[OrCwR]		-> [^self computeSizeOfCwR].
+		[SubCwR]		-> [^self computeSizeOfCwR].
+		[XorCwR]		-> [^self computeSizeOfCwR].
 		[AddRR]			-> [^3].
 		[AndRR]			-> [^3].
 		[CmpRR]		-> [^3].
@@ -371,6 +347,23 @@ CogX64Compiler >> computeShiftRRSize [
 	^maxSize := shiftCountReg = RAX
 					ifTrue: [2 "XCHG RAX,r2" + 3 "Sxx" + 2 "XCHG RAX,r2"]
 					ifFalse: [3 "XCHG r1,r2" + 3 "Sxx" + 3 "XCHG r1,r2"]
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> computeSizeOfArithCqR [
+	"With CqR we assume constants are 32-bits or less."
+	<inline: true>
+	^(self isQuick: (operands at: 0))
+		ifTrue: [4]
+		ifFalse: [(self concreteRegister: (operands at: 1)) = RAX
+					ifTrue: [6]
+					ifFalse: [7]]
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> computeSizeOfArithCwR [
+	"The implementation depends on in-line or out-of-line literals."
+	^self subclassResponsibility
 ]
 
 { #category : #encoding }
@@ -520,17 +513,6 @@ CogX64Compiler >> concretizeArithmeticShiftRightRR [
 		at: 7 put: 16r87;
 		at: 8 put: (self mod: ModReg RM: RCX RO: shiftCountReg).
 	^machineCodeSize := 9
-]
-
-{ #category : #'generate machine code' }
-CogX64Compiler >> concretizeAt: actualAddress [
-	"Generate concrete machine code for the instruction at actualAddress,
-	 setting machineCodeSize, and answer the following address."
-
-	address := actualAddress.
-	self dispatchConcretize.
-	self assert: (maxSize = nil or: [maxSize >= machineCodeSize]).
-	^actualAddress + machineCodeSize
 ]
 
 { #category : #'generate machine code' }
@@ -921,6 +903,113 @@ CogX64Compiler >> dispatchConcretize [
 		[ConvertRRd]		-> [^self concretizeConvertRRd] }
 ]
 
+{ #category : #'abstract instructions' }
+CogX64Compiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstractRegQuotient Rem: abstractRegRemainder [
+	| rDividend rDivisor rQuotient rRemainder saveRestoreEAX saveRestoreEDX saveRestoreExchanged |
+	self assert: abstractRegDividend ~= abstractRegDivisor.
+	self assert: abstractRegQuotient ~= abstractRegRemainder.
+	rDividend := self concreteRegister: abstractRegDividend.
+	rDivisor := self concreteRegister: abstractRegDivisor.
+	rQuotient := self concreteRegister: abstractRegQuotient.
+	rRemainder := self concreteRegister: abstractRegRemainder.
+	"IDIV r does a signed divide of EDX:EAX by r, EAX := Quotient, EDX := Remainder.
+	 Since we must sign extend the dividend into EDX we must substitute another register if EDX is an input"
+	(rDividend = EDX or: [rDivisor = EDX]) ifTrue:
+		[| rUnused |
+		"Slang, sigh..."
+		rUnused := EAX.
+		[rUnused <= EDI] whileTrue:
+			[(rUnused ~= ESP and: [rUnused ~= EBP and: [rUnused ~= EDX
+			  and: [rUnused ~= rDividend and: [rUnused ~= rDivisor
+			  and: [rUnused ~= rQuotient and: [rUnused ~= rRemainder]]]]]]) ifTrue:
+				[cogit PushR: rUnused.
+				cogit MoveR: EDX R: rUnused.
+				rDividend = EDX
+					ifTrue: [self genDivR: rDivisor R: rUnused Quo: rQuotient Rem: rRemainder]
+					ifFalse: [self genDivR: rUnused R: rDividend Quo: rQuotient Rem: rRemainder].
+				cogit PopR: rUnused.
+				^self].
+			  rUnused := rUnused + 1].
+		self error: 'couldn''t find unused register in genDivR:R:Quo:Rem:'].
+	"If either output does not include EAX or EDX we must save and restore EAX and/or EDX."
+	(saveRestoreEAX := rQuotient ~= EAX and: [rRemainder ~= EAX]) ifTrue:
+		[cogit PushR: EAX].
+	(saveRestoreEDX := rQuotient ~= EDX and: [rRemainder ~= EDX]) ifTrue:
+		[cogit PushR: EDX].
+	saveRestoreExchanged := -1.
+	rDividend ~= EAX ifTrue:
+		[rDivisor = EAX
+			ifTrue: [((rDividend ~= rQuotient and: [rDividend ~= rRemainder])
+					and: [rDividend ~= EDX or: [saveRestoreEDX not]]) ifTrue:
+						[cogit PushR: (saveRestoreExchanged := rDividend)].
+					cogit gen: XCHGRR operand: rDivisor operand: rDividend]
+			ifFalse: [cogit MoveR: rDividend R: EAX]].
+	"CDQ sign-extends EAX into EDX as required for IDIV"
+	cogit gen: CDQ.
+	cogit gen: IDIVR operand: (rDivisor = EAX ifTrue: [rDividend] ifFalse: [rDivisor]).
+	"Must not overwrite result while juggling"
+	(rQuotient = EDX and: [rRemainder = EAX])
+		ifTrue: [cogit gen: XCHGRR operand: rQuotient operand: rRemainder]
+		ifFalse:
+			[rQuotient = EDX
+				ifTrue:
+					[rRemainder ~= EDX ifTrue:
+						[cogit MoveR: EDX R: rRemainder].
+					rQuotient ~= EAX ifTrue:
+						[cogit MoveR: EAX R: rQuotient]]
+				ifFalse:
+					[rQuotient ~= EAX ifTrue:
+						[cogit MoveR: EAX R: rQuotient].
+					rRemainder ~= EDX ifTrue:
+						[cogit MoveR: EDX R: rRemainder]]].
+	saveRestoreExchanged >= 0 ifTrue:
+		[cogit PopR: saveRestoreExchanged].
+	saveRestoreEDX ifTrue:
+		[cogit PopR: EDX].
+	saveRestoreEAX ifTrue:
+		[cogit PopR: EAX]
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> genJumpFPEqual: jumpTarget [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #jumpTarget type: #'void *'>
+	| jumpUnordered jumpToTarget |
+	<var: #jumpUnordered type: #'AbstractInstruction *'>
+	<var: #jumpToTarget type: #'AbstractInstruction *'>
+	jumpUnordered := cogit gen: JumpFPUnordered.
+	jumpToTarget := cogit gen: JumpFPEqual operand: jumpTarget asInteger.
+	jumpUnordered jmpTarget: cogit Label.
+	^jumpToTarget
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> genJumpFPNotEqual: jumpTarget [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #jumpTarget type: #'void *'>
+	| jumpUnordered jumpToTarget |
+	<var: #jumpUnordered type: #'AbstractInstruction *'>
+	<var: #jumpToTarget type: #'AbstractInstruction *'>
+	jumpToTarget := cogit gen: JumpFPNotEqual operand: jumpTarget asInteger.
+	jumpUnordered := cogit gen: JumpFPUnordered operand: jumpTarget asInteger.
+	jumpToTarget addDependent: jumpUnordered.
+	^jumpToTarget
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> genMulR: regSource R: regDest [
+	cogit gen: IMULRR operand: regSource operand: regDest
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> genSubstituteReturnAddress: retpc [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit PushCw: retpc
+]
+
 { #category : #testing }
 CogX64Compiler >> hasDoublePrecisionFloatingPointSupport [
 	^true
@@ -942,6 +1031,11 @@ CogX64Compiler >> machineCodeBytes [
 	"Answer the maximum number of bytes of machine code generated for any abstract instruction.
 	 e.g. movq $0x12345678ABCDEF0, %rax; jmp *%rax => 48 B8 F0 DE BC 9A 78 56 34 12 FF E0"
 	^12
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> maybeEstablishVarBase [
+	"The receiver does not have a VarBaseReg; do nothing."
 ]
 
 { #category : #encoding }

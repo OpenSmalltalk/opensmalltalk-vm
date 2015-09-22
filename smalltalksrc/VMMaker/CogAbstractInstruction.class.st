@@ -145,6 +145,15 @@ CogAbstractInstruction class >> literalsManagerClass [
 	^InLineLiteralsManager
 ]
 
+{ #category : #printing }
+CogAbstractInstruction class >> localNameForOpcode: opcode [
+	^(self classPool keyAtValue: opcode ifAbsent: nil)
+		ifNotNil: [:opcodeName| opcodeName]
+		ifNil: [self == CogAbstractInstruction
+				ifTrue: [opcode printString]
+				ifFalse: [superclass localNameForOpcode: opcode]]
+]
+
 { #category : #translation }
 CogAbstractInstruction class >> machineCodeDeclaration [
 	"Answer a dummy declaration.  Subclasses will override to provgide the real one."
@@ -163,9 +172,7 @@ CogAbstractInstruction class >> nameForOpcode: opcode [ "<Integer>"
 		ifNotNil:
 			[:opcodeName| opcodeName]
 		ifNil:
-			[(self classPool keyAtValue: opcode ifAbsent: [])
-				ifNotNil: [:opcodeName| opcodeName]
-				ifNil: [opcode printString]]
+			[self localNameForOpcode: opcode]
 ]
 
 { #category : #translation }
@@ -459,7 +466,11 @@ CogAbstractInstruction >> computeJumpTargetOffsetPlus: anPCOffset [
 CogAbstractInstruction >> concretizeAt: actualAddress [
 	"Generate concrete machine code for the instruction at actualAddress,
 	 setting machineCodeSize, and answer the following address."
-	self subclassResponsibility
+
+	address := actualAddress.
+	self dispatchConcretize.
+	self assert: (maxSize = nil or: [maxSize >= machineCodeSize]).
+	^actualAddress + machineCodeSize
 ]
 
 { #category : #'generate machine code' }
@@ -1052,7 +1063,7 @@ CogAbstractInstruction >> outputMachineCodeAt: targetAddress [
 CogAbstractInstruction >> printStateOn: aStream [
 	| opcodeName orneryOperands format |
 	<doNotGenerate> "Smalltalk-side only"
-	opcode isNil ifTrue:
+	opcode ifNil:
 		[^self].
 	aStream space; nextPut: $(; nextPutAll: (opcodeName := self class nameForOpcode: opcode).
 	orneryOperands := operands isCObjectAccessor

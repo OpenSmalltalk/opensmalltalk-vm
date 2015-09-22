@@ -228,14 +228,21 @@ CogIA32Compiler >> computeMaximumSize [
 		[IMULRR]				-> [^3].
 		[CPUID]					-> [^2].
 		[CMPXCHGAwR]			-> [^7].
-		[CMPXCHGMwrR]		-> [^8].
+		[CMPXCHGMwrR]		-> [^(self concreteRegister: (operands at: 1)) = ESP
+										ifTrue: [(self isQuick: (operands at: 0)) ifTrue: [5] ifFalse: [8]]
+										ifFalse: [(self isQuick: (operands at: 0)) ifTrue: [4] ifFalse: [7]]].
 		[LFENCE]				-> [^3].
 		[MFENCE]				-> [^3].
 		[SFENCE]				-> [^3].
 		[LOCK]					-> [^1].
 		[XCHGAwR]				-> [^6].
-		[XCHGMwrR]			-> [^7].
-		[XCHGRR]				-> [^2].
+		[XCHGMwrR]			-> [^(self concreteRegister: (operands at: 1)) = ESP
+										ifTrue: [(self isQuick: (operands at: 0)) ifTrue: [4] ifFalse: [7]]
+										ifFalse: [(self isQuick: (operands at: 0)) ifTrue: [3] ifFalse: [6]]].
+		[XCHGRR]				-> [^((self concreteRegister: (operands at: 0)) = EAX
+									   or: [(self concreteRegister: (operands at: 1)) = EAX])
+										ifTrue: [1]
+										ifFalse: [2]].
 		"Control"
 		[CallFull]					-> [^5].
 		[Call]						-> [^5].
@@ -343,35 +350,29 @@ CogIA32Compiler >> computeMaximumSize [
 		[MoveAwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
 		[MoveRAw]		-> [^(self concreteRegister: (operands at: 0)) = EAX ifTrue: [5] ifFalse: [6]].
 		[MoveRMwr]	-> [^((self isQuick: (operands at: 1))
-											ifTrue: [3]
-											ifFalse: [6])
-										+ ((self concreteRegister: (operands at: 2)) = ESP
-											ifTrue: [1]
-											ifFalse: [0])].
+									ifTrue: [((operands at: 1) = 0
+											and: [(self concreteRegister: (operands at: 2)) ~= EBP])
+												ifTrue: [2]
+												ifFalse: [3]]
+									ifFalse: [6])
+								+ ((self concreteRegister: (operands at: 2)) = ESP
+									ifTrue: [1]
+									ifFalse: [0])].
 		[MoveRdM64r]	-> [^((self isQuick: (operands at: 1))
 											ifTrue: [5]
 											ifFalse: [8])
 										+ ((self concreteRegister: (operands at: 2)) = ESP
 											ifTrue: [1]
 											ifFalse: [0])].
-		[MoveMbrR]		-> [^((self isQuick: (operands at: 0))
-											ifTrue: [4]
-											ifFalse: [7])
-										+ ((self concreteRegister: (operands at: 1)) = ESP
-											ifTrue: [1]
-											ifFalse: [0])].
-		[MoveRMbr]		-> [^((self isQuick: (operands at: 1))
-											ifTrue: [3]
-											ifFalse: [6])
-										+ ((self concreteRegister: (operands at: 2)) = ESP
-											ifTrue: [1]
-											ifFalse: [0])].
-		[MoveM16rR]	-> [^((self isQuick: (operands at: 0))
-											ifTrue: [4]
-											ifFalse: [7])
-										+ ((self concreteRegister: (operands at: 1)) = ESP
-											ifTrue: [1]
-											ifFalse: [0])].
+		[MoveMbrR]		-> [^(self concreteRegister: (operands at: 1)) = ESP
+								ifTrue: [(self isQuick: (operands at: 0)) ifTrue: [5] ifFalse: [8]]
+								ifFalse: [(self isQuick: (operands at: 0)) ifTrue: [4] ifFalse: [7]]].
+		[MoveRMbr]		-> [^(self concreteRegister: (operands at: 2)) = ESP
+								ifTrue: [7]
+								ifFalse: [(self isQuick: (operands at: 1)) ifTrue: [3] ifFalse: [6]]].
+		[MoveM16rR]	-> [^(self concreteRegister: (operands at: 1)) = ESP
+								ifTrue: [(self isQuick: (operands at: 0)) ifTrue: [5] ifFalse: [8]]
+								ifFalse: [(self isQuick: (operands at: 0)) ifTrue: [4] ifFalse: [7]]].
 		[MoveM64rRd]	-> [^((self isQuick: (operands at: 0))
 											ifTrue: [5]
 											ifFalse: [8])
@@ -379,11 +380,14 @@ CogIA32Compiler >> computeMaximumSize [
 											ifTrue: [1]
 											ifFalse: [0])].
 		[MoveMwrR]		-> [^((self isQuick: (operands at: 0))
-											ifTrue: [3]
-											ifFalse: [6])
-										+ ((self concreteRegister: (operands at: 1)) = ESP
-											ifTrue: [1]
-											ifFalse: [0])].
+									ifTrue: [((operands at: 0) = 0
+											and: [(self concreteRegister: (operands at: 1)) ~= EBP])
+												ifTrue: [2]
+												ifFalse: [3]]
+									ifFalse: [6])
+								+ ((self concreteRegister: (operands at: 1)) = ESP
+									ifTrue: [1]
+									ifFalse: [0])].
 		[MoveXbrRR]	-> [self assert: (self concreteRegister: (operands at: 0)) ~= ESP.
 							^(self concreteRegister: (operands at: 1)) = EBP
 											ifTrue: [5]
@@ -678,17 +682,6 @@ CogIA32Compiler >> concretizeArithmeticShiftRightRR [
 		at: 4 put: 16r87;		"XCHG E?X,ECX"
 		at: 5 put: (self mod: ModReg RM: ECX RO: shiftCountReg).
 	^machineCodeSize := 6
-]
-
-{ #category : #'generate machine code' }
-CogIA32Compiler >> concretizeAt: actualAddress [
-	"Generate concrete machine code for the instruction at actualAddress,
-	 setting machineCodeSize, and answer the following address."
-
-	address := actualAddress.
-	self dispatchConcretize.
-	self assert: (maxSize = nil or: [maxSize >= machineCodeSize]).
-	^actualAddress + machineCodeSize
 ]
 
 { #category : #'generate machine code' }
