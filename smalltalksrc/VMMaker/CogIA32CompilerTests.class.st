@@ -24,7 +24,7 @@ CogIA32CompilerTests >> concreteCompilerClass [
 	^CogIA32CompilerForTests
 ]
 
-{ #category : #'generating machine code' }
+{ #category : #accessing }
 CogIA32CompilerTests >> methodLabel [
 	"There is no methodLabel in test code."
 	^nil
