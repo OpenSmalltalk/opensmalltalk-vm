@@ -123,6 +123,11 @@ BochsX64Alien >> cr4: anUnsignedInteger [
 	^self unsignedLongLongAt: 1253 put: anUnsignedInteger
 ]
 
+{ #category : #execution }
+BochsX64Alien >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<Integer>"
+	self primitiveFlushICacheFrom: startAddress To: endAddress
+]
+
 { #category : #'accessing-abstract' }
 BochsX64Alien >> fp [
 	^self rbp
@@ -162,6 +167,20 @@ BochsX64Alien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArr
 				with: pc
 				with: memoryArray].
 	^self reportPrimitiveFailure
+]
+
+{ #category : #'processor setup' }
+BochsX64Alien >> initializeStackFor: aCogit [
+	"Different cpus need different stack alignment etc, so handle the details here."
+	"This is for testing.  On many OS's the stack must remain aligned;
+	 e.g. IA32 using SSE requires 16 byte alignment."
+	| stackAlignment |
+	stackAlignment := 16.
+	aCogit setStackAlignment: stackAlignment expectedSPOffset: 0 expectedFPOffset: 8.
+	self assert: stackAlignment isPowerOfTwo.
+	PostBuildStackDelta :=  stackAlignment > 8
+								ifTrue: [stackAlignment - 8]
+								ifFalse: [0]
 ]
 
 { #category : #'accessing-abstract' }
@@ -609,6 +628,13 @@ BochsX64Alien >> saveRsp [
 { #category : #accessing }
 BochsX64Alien >> saveRsp: anUnsignedInteger [
 	^self unsignedLongAt: 1921 put: anUnsignedInteger
+]
+
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> setFramePointer: framePointer stackPointer: stackPointer [
+	"Initialize the processor's frame and stack pointers"
+	self rbp: framePointer.
+	self rsp: stackPointer
 ]
 
 { #category : #'accessing-abstract' }
