@@ -88,7 +88,7 @@ CurrentImageCoInterpreterFacade class >> objectRepresentationClass [
 { #category : #labels }
 CurrentImageCoInterpreterFacade >> addLabel: l [
 	(variables includesKey: l) ifFalse:
-		[variables at: l put: variables size * 4 + 65536]
+		[variables at: l put: variables size * objectMemory wordSize + 65536]
 ]
 
 { #category : #'debug support' }
@@ -107,7 +107,7 @@ CurrentImageCoInterpreterFacade >> addressCouldBeOop: anOop [
 
 { #category : #labels }
 CurrentImageCoInterpreterFacade >> addressForLabel: l [
-	^variables at: l ifAbsentPut: [variables size * 4 + self variablesBase]
+	^variables at: l ifAbsentPut: [variables size * objectMemory wordSize + self variablesBase]
 ]
 
 { #category : #accessing }

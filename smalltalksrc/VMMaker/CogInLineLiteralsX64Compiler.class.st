@@ -4,10 +4,86 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #private }
+CogInLineLiteralsX64Compiler >> abstractRegisterForConcreteRegister: reg [
+	(self concreteRegister: TempReg) = reg ifTrue: [^TempReg].
+	(self concreteRegister: ReceiverResultReg) = reg ifTrue: [^ReceiverResultReg].
+	(self concreteRegister: ClassReg) = reg ifTrue: [^ClassReg].
+	(self concreteRegister: SendNumArgsReg) = reg ifTrue: [^SendNumArgsReg].
+	(self concreteRegister: Arg0Reg) = reg ifTrue: [^Arg0Reg].
+	(self concreteRegister: Arg1Reg) = reg ifTrue: [^Arg1Reg].
+	(self concreteRegister: FPReg) = reg ifTrue: [^FPReg].
+	(self concreteRegister: SPReg) = reg ifTrue: [^SPReg].
+	(self concreteRegister: RISCTempReg) = reg ifTrue: [^RISCTempReg].
+	(self concreteRegister: VarBaseReg) = reg ifTrue: [^VarBaseReg].
+	(self concreteRegister: Scratch0Reg) = reg ifTrue: [^Scratch0Reg].
+	(self concreteRegister: Scratch1Reg) = reg ifTrue: [^Scratch1Reg].
+	(self concreteRegister: Scratch2Reg) = reg ifTrue: [^Scratch2Reg].
+	(self concreteRegister: Scratch3Reg) = reg ifTrue: [^Scratch3Reg].
+	(self concreteRegister: Scratch4Reg) = reg ifTrue: [^Scratch4Reg].
+	(self concreteRegister: Scratch5Reg) = reg ifTrue: [^Scratch5Reg].
+	self error: 'could not find abstract register'.
+	^0
+
+	"({	TempReg. ReceiverResultReg. ClassReg. SendNumArgsReg. Arg0Reg. Arg1Reg.
+		FPReg. SPReg.
+		RISCTempReg. VarBaseReg.
+		Scratch0Reg. Scratch1Reg. Scratch2Reg. Scratch3Reg. Scratch4Reg. Scratch5Reg. } collect: [:i| self basicNew concreteRegister: i]) sort"
+
+	"While the below works fine in Smalltalk it of course doesn't work in C ;)"
+	
+	"^reg caseOf: {
+		[self concreteRegister: TempReg] -> [TempReg].
+		[self concreteRegister: ReceiverResultReg] -> [ReceiverResultReg].
+		[self concreteRegister: ClassReg] -> [ClassReg].
+		[self concreteRegister: SendNumArgsReg] -> [SendNumArgsReg].
+		[self concreteRegister: Arg0Reg] -> [Arg0Reg].
+		[self concreteRegister: Arg1Reg] -> [Arg1Reg].
+		[self concreteRegister: FPReg] -> [FPReg].
+		[self concreteRegister: SPReg] -> [SPReg] }"
+]
+
 { #category : #'generate machine code' }
 CogInLineLiteralsX64Compiler >> computeSizeOfArithCwR [
 	<inline: true>
 	^10 "MoveCwR" +  3 "ArithRR"
+]
+
+{ #category : #encoding }
+CogInLineLiteralsX64Compiler >> concreteRegister: registerIndex [
+	 "Map a possibly abstract register into a concrete one.  Abstract registers
+	  (defined in CogAbstractOpcodes) are all negative.  If registerIndex is
+	 negative assume it is an abstract register.
+
+	[1] Figure 3.4 Register Usage in
+		System V Application Binary Interface
+		AMD64 Architecture Processor Supplement
+
+
+	N.B. RAX RCX & RDX are caller-save (scratch) registers.  Hence we use RCX for class and RDX for
+		receiver/result since these are written in all normal sends."
+
+	^registerIndex
+		caseOf: {
+			[TempReg]				-> [RAX].
+			[ClassReg]				-> [RCX].
+			[ReceiverResultReg]	-> [RDX].
+			[SendNumArgsReg]		-> [R9].
+			[SPReg]					-> [RSP].
+			[FPReg]					-> [RBP].
+			[Arg0Reg]				-> [RSI].
+			[Arg1Reg]				-> [RDI].
+			[VarBaseReg]			-> [RBX]. "Must be callee saved"
+			[RISCTempReg]			-> [R8].
+			[Scratch0Reg]			-> [R10].
+			[Scratch1Reg]			-> [R11].
+			[Scratch2Reg]			-> [R12].
+			[Scratch3Reg]			-> [R13].
+			[Scratch4Reg]			-> [R14].
+			[Scratch5Reg]			-> [R15] }
+		otherwise:
+			[self assert: (registerIndex between: RAX and: R15).
+			 registerIndex]
 ]
 
 { #category : #testing }
