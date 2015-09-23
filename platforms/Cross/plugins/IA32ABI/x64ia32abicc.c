@@ -2,7 +2,7 @@
  *  x86ia32abicc.c
  *
  * Support for Call-outs and Call-backs from the Plugin on x86_64.
- *  Written by Eliot Miranda 12/14
+ *  Written by Eliot Miranda 12/14, Ryan Macnak 9/15
  *
  * Based on
  *      System V Application Binary Interface
@@ -13,6 +13,7 @@
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 # include "windows.h" /* for GetSystemInfo & VirtualAlloc */
+# error Windows doesn't use the SystemV ABI
 #elif __APPLE__ && __MACH__
 # include <sys/mman.h> /* for mprotect */
 # if OBJC_DEBUG /* define this to get debug info for struct objc_class et al */
@@ -45,6 +46,9 @@ void *getbaz() { return baz; }
 # define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+#define NUM_REG_ARGS 6
+#define NUM_DREG_ARGS 8
+
 #ifdef SQUEAK_BUILTIN_PLUGIN
 extern
 #endif 
@@ -54,14 +58,17 @@ struct VirtualMachine* interpreterProxy;
 # define setsp(sp) asm volatile ("movq %0,%%rsp" : : "m"(sp))
 # define getsp() ({ void *sp; asm volatile ("movq %%rsp,%0" : "=r"(sp) : ); sp;})
 #endif
-#define STACK_ALIGN_BYTES 32 /* x64ABI 3.2.2 */
+#define STACK_ALIGN_BYTES 32 /* 32 if a 256-bit argument is passed; 16 otherwise */
 
 #if !defined(setsp)
 # define setsp(ignored) 0
 #endif
 
-#define moduloPOT(m,v) (((v)+(m)-1) & ~((m)-1))
-#define alignModuloPOT(m,v) ((void *)moduloPOT(m,(unsigned long)(v)))
+#define RoundUpPowerOfTwo(value, modulus)                                      \
+  (((value) + (modulus) - 1) & ~((modulus) - 1))
+
+#define IsAlignedPowerOfTwo(value, modulus)                                    \
+  (((value) & ((modulus) - 1)) == 0)
 
 #define objIsAlien(anOop) (interpreterProxy->includesBehaviorThatOf(interpreterProxy->fetchClassOf(anOop), interpreterProxy->classAlien()))
 #define objIsUnsafeAlien(anOop) (interpreterProxy->includesBehaviorThatOf(interpreterProxy->fetchClassOf(anOop), interpreterProxy->classUnsafeAlien()))
@@ -84,9 +91,11 @@ struct VirtualMachine* interpreterProxy;
  * Call a foreign function that answers an integral result in %rax (and
  * possibly %rdx?) according to x64-ish ABI rules.
  */
-sqInt
-callIA32IntegralReturn(SIGNATURE) {
-long (*f)(), r;
+sqInt callIA32IntegralReturn(SIGNATURE) {
+  long (*f)(long rdi, long rsi, long rdx, long rcx, long r8, long r9,
+            double xmm0, double xmm1, double xmm2, double xmm3,
+            double xmm4, double xmm5, double xmm6, double xmm7);
+  long r;
 #include "dax64business.h"
 }
 
@@ -94,8 +103,11 @@ long (*f)(), r;
  * Call a foreign function that answers a single-precision floating-point
  * result in %xmm0 according to x64-ish ABI rules.
  */
-sqInt
-callIA32FloatReturn(SIGNATURE) { float (*f)(), r;
+sqInt callIA32FloatReturn(SIGNATURE) {
+  float (*f)(long rdi, long rsi, long rdx, long rcx, long r8, long r9,
+             double xmm0, double xmm1, double xmm2, double xmm3,
+             double xmm4, double xmm5, double xmm6, double xmm7);
+  float r;
 #include "dax64business.h"
 }
 
@@ -103,8 +115,11 @@ callIA32FloatReturn(SIGNATURE) { float (*f)(), r;
  * Call a foreign function that answers a double-precision floating-point
  * result in %xmm0 according to x64-ish ABI rules.
  */
-sqInt
-callIA32DoubleReturn(SIGNATURE) { double (*f)(), r;
+sqInt callIA32DoubleReturn(SIGNATURE) {
+  double (*f)(long rdi, long rsi, long rdx, long rcx, long r8, long r9,
+              double xmm0, double xmm1, double xmm2, double xmm3,
+              double xmm4, double xmm5, double xmm6, double xmm7);
+  double r;
 #include "dax64business.h"
 }
 
