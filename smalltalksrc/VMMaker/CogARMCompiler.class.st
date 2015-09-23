@@ -259,12 +259,14 @@ CogARMCompiler >> abstractRegisterForConcreteRegister: reg [
 	(self concreteRegister: RISCTempReg) = reg ifTrue: [^RISCTempReg].
 	(self concreteRegister: PCReg) = reg ifTrue: [^PCReg].
 	(self concreteRegister: VarBaseReg) = reg ifTrue: [^VarBaseReg].
+	(self concreteRegister: Scratch0Reg) = reg ifTrue: [^Scratch0Reg].
 	self error: 'could not find abstract register'.
 	^0
 
 	"({	TempReg. ReceiverResultReg. ClassReg. SendNumArgsReg. Arg0Reg. Arg1Reg.
 		FPReg. SPReg.
-		LinkReg. RISCTempReg. PCReg. VarBaseReg} collect: [:i| self basicNew concreteRegister: i]) sort"
+		LinkReg. RISCTempReg. PCReg. VarBaseReg.
+		Scratch0Reg } collect: [:i| self basicNew concreteRegister: i]) sort"
 
 	"While the below works fine in Smalltalk it of course doesn't work in C ;)"
 	
@@ -704,7 +706,7 @@ CogARMCompiler >> concreteRegister: registerIndex [
 	 R10 is used as temporary inside a single abstract opcode implementation"
 	"R0-R3 are used when calling back to the interpreter. Using them would require
 	 saving and restoring their values, so they are omitted so far. R12 is the only
-	 unused register at the moment.."
+	 scratch register at the moment.."
 	^registerIndex
 		caseOf: {
 			[TempReg]				-> [R0].
@@ -717,6 +719,7 @@ CogARMCompiler >> concreteRegister: registerIndex [
 			[Arg1Reg]				-> [R5].
 			[VarBaseReg]			-> [ConcreteVarBaseReg]. "Must be callee saved"
 			[RISCTempReg]			-> [ConcreteIPReg]. "a.k.a. IP"
+			[Scratch0Reg]			-> [R12].
 			[LinkReg]				-> [LR]. "R14"
 			[PCReg]					-> [PC] "R15" }
 		otherwise:
@@ -2788,6 +2791,14 @@ l -> load (1) or store (0)"
 		bitOr:((baseReg bitAnd: 16rF) <<16
 		bitOr:((destReg bitAnd: 16rF) <<12
 		bitOr: (immediate12bitValue bitAnd: 16rFFF)))))))
+]
+
+{ #category : #accessing }
+CogARMCompiler >> minAbstractGeneralPurposeReg [
+	"Answer the smallest index of an abstract general-purpose register used by this compiler.
+	 N.B.  Abstract registers are negative numbers."
+	<inline: true>
+	^Scratch0Reg
 ]
 
 { #category : #'ARM convenience instructions' }

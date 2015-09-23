@@ -464,7 +464,7 @@ CogIA32Compiler >> concreteRegister: registerIndex [
 	[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2A: Instruction Set Reference, A-M
 
 
-	N.B. EAX ECX & EDX are caller-save (scratch) registers.  Hence we use ECX for class and EDC for
+	N.B. EAX ECX & EDX are caller-save (scratch) registers.  Hence we use ECX for class and EDX for
 		receiver/result since these are written in all normal sends.  EBX ESI & EDI are callee-save."
 
 	^registerIndex
@@ -2854,6 +2854,14 @@ CogIA32Compiler >> machineCodeBytes [
 { #category : #'abstract instructions' }
 CogIA32Compiler >> maybeEstablishVarBase [
 	"The receiver does not have a VarBaseReg; do nothing."
+]
+
+{ #category : #accessing }
+CogIA32Compiler >> minAbstractGeneralPurposeReg [
+	"Answer the smallest index of an abstract general-purpose register used by this compiler.
+	 N.B.  Abstract registers are negative numbers."
+	<inline: true>
+	^Arg1Reg
 ]
 
 { #category : #encoding }
