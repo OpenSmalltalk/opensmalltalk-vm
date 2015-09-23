@@ -43,8 +43,6 @@ Class {
 		'FillFromWord',
 		'FirstJump',
 		'FirstShortJump',
-		'GPRegMax',
-		'GPRegMin',
 		'Jump',
 		'JumpAbove',
 		'JumpAboveOrEqual',
@@ -116,9 +114,6 @@ Class {
 		'MoveXbrRR',
 		'MoveXowrR',
 		'MoveXwrRR',
-		'MulCqR',
-		'MulCwR',
-		'MulRR',
 		'MulRdRd',
 		'NegateR',
 		'Nop',
@@ -135,6 +130,14 @@ Class {
 		'ReceiverResultReg',
 		'RetN',
 		'SPReg',
+		'Scratch0Reg',
+		'Scratch1Reg',
+		'Scratch2Reg',
+		'Scratch3Reg',
+		'Scratch4Reg',
+		'Scratch5Reg',
+		'Scratch6Reg',
+		'Scratch7Reg',
 		'SendNumArgsReg',
 		'SqrtRd',
 		'Stop',
@@ -204,34 +207,43 @@ CogRTLOpcodes class >> initialize [
 	to use the cResultRegister as a scratch if required (e.g. on x64 where there is no direct 64-bit call or jump)."
 
 	| opcodeNames refs |
-	self flag: 'GPRegMin and GPRegMax are poorly thought-out and should instead defer to the backEnd for allocateable registers.'.
 	"A small fixed set of abstract registers are defined and used in code generation
 	 for Smalltalk code, and executes on stack pages in the stack zone.
 	 These are mapped to processor-specific registers by concreteRegister:"
 	FPReg := -1.	"A frame pointer is used for Smalltalk frames."
 	SPReg := -2.
-	ReceiverResultReg := GPRegMax := -3. "The receiver at point of send, and return value from a send"
+	ReceiverResultReg := -3.		"The receiver at point of send, and return value of a send"
 	TempReg := -4.
-	ClassReg := -5.							"The inline send cache class tag is in this register, loaded at the send site"
-	SendNumArgsReg := -6.				"Sends > 2 args set the arg count in this reg"
-	Arg0Reg := -7.							"In the StackToregisterMappingCogit 1 & 2 arg sends marshall into these registers."
-	Arg1Reg := GPRegMin := -8.
+	ClassReg := -5.					"The inline send cache class tag is in this register, loaded at the send site"
+	SendNumArgsReg := -6.		"Sends > 2 args set the arg count in this reg"
+	Arg0Reg := -7.					"In the StackToRegisterMappingCogit 1 & 2 arg sends marshall into these registers."
+	Arg1Reg := -8.
+
+	"A small fixed set of abstract scratch registers for register-rich machines (ARM can use 1, x64 can use 6)."
+	Scratch0Reg := -9.
+	Scratch1Reg := -10.
+	Scratch2Reg := -11.
+	Scratch3Reg := -12.
+	Scratch4Reg := -13.
+	Scratch5Reg := -14.
+	Scratch6Reg := -15.
+	Scratch7Reg := -16.
+
+	"RISC-specific registers"
+	LinkReg := -17.
+	RISCTempReg := -18.	"Used to synthesize CISC instructions from multiple RISC instructions."
+	PCReg := -19.
+	VarBaseReg := -20.		"If useful, points to base of interpreter variables."
 
 	"Floating-point registers"
-	DPFPReg0 := -9.
-	DPFPReg1 := -10.
-	DPFPReg2 := -11.
-	DPFPReg3 := -12.
-	DPFPReg4 := -13.
-	DPFPReg5 := -14.
-	DPFPReg6 := -15.
-	DPFPReg7 := -16.
-
-	"RISC-specific"
-	LinkReg := -17.
-	RISCTempReg := -18.
-	PCReg := -19.
-	VarBaseReg := -20. "If useful, points to base of interpreter variables."
+	DPFPReg0 := -21.
+	DPFPReg1 := -22.
+	DPFPReg2 := -23.
+	DPFPReg3 := -24.
+	DPFPReg4 := -25.
+	DPFPReg5 := -26.
+	DPFPReg6 := -27.
+	DPFPReg7 := -28.
 
 	opcodeNames := #("Noops & Pseudo Ops"
 						Label
@@ -305,9 +317,9 @@ CogRTLOpcodes class >> initialize [
 						LogicalShiftRightCqR LogicalShiftRightRR
 						LogicalShiftLeftCqR LogicalShiftLeftRR
 
-						CmpRR AddRR SubRR AndRR OrRR XorRR MulRR
-						CmpCqR AddCqR SubCqR AndCqR OrCqR TstCqR XorCqR MulCqR
-						CmpCwR AddCwR SubCwR AndCwR OrCwR XorCwR MulCwR
+						CmpRR AddRR SubRR AndRR OrRR XorRR
+						CmpCqR AddCqR SubCqR AndCqR OrCqR TstCqR XorCqR
+						CmpCwR AddCwR SubCwR AndCwR OrCwR XorCwR
 
 						AndCqRR
 
