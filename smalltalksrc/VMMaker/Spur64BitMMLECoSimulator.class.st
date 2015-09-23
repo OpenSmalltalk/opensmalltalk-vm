@@ -1,6 +1,6 @@
 Class {
-	#name : #Spur64BitMMLESimulator,
-	#superclass : #Spur64BitMemoryManager,
+	#name : #Spur64BitMMLECoSimulator,
+	#superclass : #Spur64BitCoMemoryManager,
 	#instVars : [
 		'parent',
 		'bootstrapping'
@@ -9,18 +9,18 @@ Class {
 }
 
 { #category : #accessing }
-Spur64BitMMLESimulator >> bootstrapping [
+Spur64BitMMLECoSimulator >> bootstrapping [
 	^bootstrapping
 ]
 
 { #category : #accessing }
-Spur64BitMMLESimulator >> bootstrapping: aBoolean [
+Spur64BitMMLECoSimulator >> bootstrapping: aBoolean [
 	bootstrapping := aBoolean.
 	segmentManager initForBootstrap
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> byteAt: byteAddress [
+Spur64BitMMLECoSimulator >> byteAt: byteAddress [
 	| lowBits long32 |
 	lowBits := byteAddress bitAnd: 3.
 	long32 := self long32At: byteAddress - lowBits.
@@ -33,7 +33,7 @@ Spur64BitMMLESimulator >> byteAt: byteAddress [
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> byteAt: byteAddress put: byte [
+Spur64BitMMLECoSimulator >> byteAt: byteAddress put: byte [
 	| lowBits long32 longAddress |
 	lowBits := byteAddress bitAnd: 3.
 	longAddress := byteAddress - lowBits.
@@ -49,7 +49,7 @@ Spur64BitMMLESimulator >> byteAt: byteAddress put: byte [
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> byteAtPointer: pointer [
+Spur64BitMMLECoSimulator >> byteAtPointer: pointer [
 	"This gets implemented by Macros in C, where its types will also be checked.
 	 pointer is a raw address."
 
@@ -57,23 +57,40 @@ Spur64BitMMLESimulator >> byteAtPointer: pointer [
 ]
 
 { #category : #'debug support' }
-Spur64BitMMLESimulator >> eek [
+Spur64BitMMLECoSimulator >> classTableFirstPage [
+	^classTableFirstPage
+]
+
+{ #category : #initialization }
+Spur64BitMMLECoSimulator >> coInterpreter: aCoInterpreter cogit: aCogit [
+	coInterpreter := aCoInterpreter.
+	cogit := aCogit.
+	scavenger coInterpreter: aCoInterpreter
+]
+
+{ #category : #'simulation only' }
+Spur64BitMMLECoSimulator >> cogCodeBase [
+	^Cogit guardPageSize
+]
+
+{ #category : #'debug support' }
+Spur64BitMMLECoSimulator >> eek [
 	self halt
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> endianness [
+Spur64BitMMLECoSimulator >> endianness [
 	^#little
 ]
 
 { #category : #'float primitives' }
-Spur64BitMMLESimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
+Spur64BitMMLECoSimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 	aFloat at: 2 put: (self long32At: floatBitsAddress).
 	aFloat at: 1 put: (self long32At: floatBitsAddress+4)
 ]
 
 { #category : #'object access' }
-Spur64BitMMLESimulator >> fetchPointer: fieldIndex ofObject: objOop [
+Spur64BitMMLECoSimulator >> fetchPointer: fieldIndex ofObject: objOop [
 	self assert: (self isForwarded: objOop) not.
 	self assert: (fieldIndex >= 0 and: [fieldIndex < (self numSlotsOfAny: objOop)
 				or: [fieldIndex = 0 "forwarders and free objs"]]).
@@ -81,7 +98,7 @@ Spur64BitMMLESimulator >> fetchPointer: fieldIndex ofObject: objOop [
 ]
 
 { #category : #'object format' }
-Spur64BitMMLESimulator >> firstIndexableField: objOop [
+Spur64BitMMLECoSimulator >> firstIndexableField: objOop [
 	"NOTE: overridden from SpurMemoryManager to add coercion to CArray, so please duplicate any changes.
 	 There are only two important cases, both for objects with named inst vars, i.e. formats 2,3 & 5.
 	 The first indexable field for formats 2 & 5 is the slot count (by convention, even though that's off the end
@@ -115,13 +132,14 @@ Spur64BitMMLESimulator >> firstIndexableField: objOop [
 				ifFalse: ["byte objects (including CompiledMethod" #'char *'])
 ]
 
-{ #category : #'spur bootstrap' }
-Spur64BitMMLESimulator >> freeLists [
-	^freeLists
+{ #category : #accessing }
+Spur64BitMMLECoSimulator >> freeStart [
+	"freeStart = 16r1163E0 ifTrue: [self halt]."
+	^super freeStart
 ]
 
 { #category : #'gc - global' }
-Spur64BitMMLESimulator >> globalGarbageCollect [
+Spur64BitMMLECoSimulator >> globalGarbageCollect [
 	"If we're /not/ a clone, clone the VM and push it over the cliff.
 	 If it survives, destroy the clone and continue.  We should be OK until next time."
 	parent ifNil:
@@ -132,7 +150,7 @@ Spur64BitMMLESimulator >> globalGarbageCollect [
 ]
 
 { #category : #'growing/shrinking memory' }
-Spur64BitMMLESimulator >> growOldSpaceByAtLeast: minAmmount [
+Spur64BitMMLECoSimulator >> growOldSpaceByAtLeast: minAmmount [
 	"Attempt to grow memory by at least minAmmount.
 	 Answer the size of the new segment, or nil if the attempt failed.
 	 Override to not grow during the Spur image bootstrap."
@@ -141,21 +159,21 @@ Spur64BitMMLESimulator >> growOldSpaceByAtLeast: minAmmount [
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> halfWordHighInLong32: long32 [
+Spur64BitMMLECoSimulator >> halfWordHighInLong32: long32 [
 	"Used by Balloon"
 
 	^long32 bitAnd: 16rFFFF
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> halfWordLowInLong32: long32 [
+Spur64BitMMLECoSimulator >> halfWordLowInLong32: long32 [
 	"Used by Balloon"
 
 	^long32 bitShift: -16
 ]
 
 { #category : #'header format' }
-Spur64BitMMLESimulator >> headerForSlots: numSlots format: formatField classIndex: classIndex [
+Spur64BitMMLECoSimulator >> headerForSlots: numSlots format: formatField classIndex: classIndex [
 	"The header format in LSB is
 	 MSB:	| 2 bits				|
 			| 22: identityHash	|
@@ -171,54 +189,37 @@ Spur64BitMMLESimulator >> headerForSlots: numSlots format: formatField classInde
 ]
 
 { #category : #'debug support' }
-Spur64BitMMLESimulator >> heapMapAtWord: address [
-	^heapMap heapMapAtWord: address
-]
-
-{ #category : #compaction }
-Spur64BitMMLESimulator >> inSortedFreeListLink: freeChunk to: nextFree given: prevFree [
-	"thisContext sender selector = #sweepToCoallesceFreeSpaceForPigCompactFrom: ifTrue:
-		[| pit |
-			pit := [:label :thing|
-					coInterpreter print: label; space; printHex: thing.
-					(thing ~= 0 and: [self isFreeObject: thing]) ifTrue:
-						[coInterpreter print: ' (free) ']].
-			pit value: 'link ' value: freeChunk.
-			pit value: ' to ' value: nextFree.
-			pit value: ' from ' value: prevFree.
-			coInterpreter cr]."
-	"freeChunk = 16r10B0730 ifTrue:
-		[self halt]."
-	super inSortedFreeListLink: freeChunk to: nextFree given: prevFree
+Spur64BitMMLECoSimulator >> heapMapAtWord: address [
+	^heapMap heapMapAtWord: address asInteger
 ]
 
 { #category : #initialization }
-Spur64BitMMLESimulator >> initialize [
+Spur64BitMMLECoSimulator >> initialize [
 	super initialize.
 	bootstrapping := false
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> intAt: byteAddress put: a64BitValue [
+Spur64BitMMLECoSimulator >> intAt: byteAddress put: a64BitValue [
 	^self long32At: byteAddress put: (a64BitValue bitAnd: 16rFFFFFFFF)
 ]
 
 { #category : #'image segment in/out' }
-Spur64BitMMLESimulator >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray [
+Spur64BitMMLECoSimulator >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray [
 	self leakCheckImageSegments ifTrue:
 		[self halt].
 	^super loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> long32At: byteAddress [
+Spur64BitMMLECoSimulator >> long32At: byteAddress [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 	byteAddress \\ 4 ~= 0 ifTrue: [self unalignedAccessError].
 	^memory at: byteAddress // 4 + 1
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> long32At: byteAddress put: a32BitValue [
+Spur64BitMMLECoSimulator >> long32At: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 	"(byteAddress = 16r183FB00 and: [a32BitValue = 16r3FFFFC]) ifTrue:
 		[self halt]."
@@ -229,7 +230,7 @@ Spur64BitMMLESimulator >> long32At: byteAddress put: a32BitValue [
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> long64At: byteAddress [
+Spur64BitMMLECoSimulator >> long64At: byteAddress [
 	"memory is a Bitmap, a 32-bit indexable array of bits"
 	| hiWord loWord |
 	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
@@ -241,7 +242,7 @@ Spur64BitMMLESimulator >> long64At: byteAddress [
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> long64At: byteAddress put: a64BitValue [
+Spur64BitMMLECoSimulator >> long64At: byteAddress put: a64BitValue [
 	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
 	self
 		long32At: byteAddress put: (a64BitValue bitAnd: 16rffffffff);
@@ -250,21 +251,21 @@ Spur64BitMMLESimulator >> long64At: byteAddress put: a64BitValue [
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> longAt: byteAddress [
+Spur64BitMMLECoSimulator >> longAt: byteAddress [
 	"Answer the 64-bit word at byteAddress which must be 0 mod 4."
 
 	^self long64At: byteAddress
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> longAt: byteAddress put: a64BitValue [
+Spur64BitMMLECoSimulator >> longAt: byteAddress put: a64BitValue [
 	"Store the 64-bit value at byteAddress which must be 0 mod 4."
 	"byteAddress = 16r1F5AE8 ifTrue: [self halt]."
 	^self long64At: byteAddress put: a64BitValue
 ]
 
 { #category : #'gc - global' }
-Spur64BitMMLESimulator >> markAndTrace: objOop [
+Spur64BitMMLECoSimulator >> markAndTrace: objOop [
 	"objOop = 16rB26020 ifTrue: [self halt].
 	objOop = 16rB25FD8 ifTrue: [self halt].
 	objOop = 16rB26010 ifTrue: [self halt]."
@@ -272,7 +273,7 @@ Spur64BitMMLESimulator >> markAndTrace: objOop [
 ]
 
 { #category : #snapshot }
-Spur64BitMMLESimulator >> memoryBaseForImageRead [
+Spur64BitMMLECoSimulator >> memoryBaseForImageRead [
 	"Answer the address to read the image into.  Override so that when bootstrapping,
 	 the segmentManager's segments are undisturbed in adjustSegmentSwizzlesBy:"
 	^bootstrapping
@@ -280,55 +281,41 @@ Spur64BitMMLESimulator >> memoryBaseForImageRead [
 		ifFalse: [super memoryBaseForImageRead]
 ]
 
-{ #category : #compaction }
-Spur64BitMMLESimulator >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
-	| result |.
-	"self checkTraversableSortedFreeList."
-	result := super moveARunOfObjectsStartingAt: startAddress upTo: limit.
-	"self checkTraversableSortedFreeList."
-	^result
-]
-
 { #category : #initialization }
-Spur64BitMMLESimulator >> nextLongFrom: aStream [
+Spur64BitMMLECoSimulator >> nextLongFrom: aStream [
 	"Read a 32- or 64-bit quantity from the given (binary) stream."
 
 	^aStream nextLittleEndianNumber: self wordSize
 ]
 
 { #category : #initialization }
-Spur64BitMMLESimulator >> nextWord32From: aStream [
+Spur64BitMMLECoSimulator >> nextWord32From: aStream [
 	"Read a 32-bit quantity from the given (binary) stream."
 
 	^aStream nextLittleEndianNumber: 4
 ]
 
-{ #category : #'spur bootstrap' }
-Spur64BitMMLESimulator >> numClassTablePages [
-	^numClassTablePages
-]
-
 { #category : #accessing }
-Spur64BitMMLESimulator >> parent [
+Spur64BitMMLECoSimulator >> parent [
 
 	^ parent
 ]
 
 { #category : #accessing }
-Spur64BitMMLESimulator >> parent: anObject [
+Spur64BitMMLECoSimulator >> parent: anObject [
 
 	parent := anObject
 ]
 
 { #category : #'image segment in/out' }
-Spur64BitMMLESimulator >> return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes [
+Spur64BitMMLECoSimulator >> return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes [
 	self leakCheckImageSegments ifTrue:
 		[self halt: errCode printString].
 	^super return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes
 ]
 
 { #category : #'debug support' }
-Spur64BitMMLESimulator >> runLeakCheckerFor: gcModes excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
+Spur64BitMMLECoSimulator >> runLeakCheckerFor: gcModes excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
 	(coInterpreter displayView isNil
 	 and: [gcModes anyMask: checkForLeaks]) ifTrue:
 		[coInterpreter transcript nextPutAll: 'leak-checking...'; flush].
@@ -339,22 +326,23 @@ Spur64BitMMLESimulator >> runLeakCheckerFor: gcModes excludeUnmarkedNewSpaceObjs
 ]
 
 { #category : #'generation scavenging' }
-Spur64BitMMLESimulator >> scavengingGCTenuringIf: tenuringCriterion [
+Spur64BitMMLECoSimulator >> scavengingGCTenuringIf: tenuringCriterion [
 	"Run the scavenger."
 	"self halt: (statScavenges + 1) printString, ((statScavenges between: 9 and: 19)
 													ifTrue: ['th']
 													ifFalse: [#('st' 'nd' 'rd') at: (statScavenges + 1) \\ 10 ifAbsent: 'th']), ' scavenge'."
-													
-	"statFullGCs > 0 ifTrue:
-		[self halt]."
 	^super scavengingGCTenuringIf: tenuringCriterion
 ]
 
+{ #category : #'free space' }
+Spur64BitMMLECoSimulator >> setFree: o [
+	"o = 16rB34D40 ifTrue: [self halt]."
+	super setFree: o
+]
+
 { #category : #'header access' }
-Spur64BitMMLESimulator >> setIsMarkedOf: objOop to: aBoolean [
+Spur64BitMMLECoSimulator >> setIsMarkedOf: objOop to: aBoolean [
 	"objOop = 16rB26020 ifTrue: [self halt]."
-	"(#(16r1971D0 16r196EE0 16r197048 16r197148) includes: objOop) ifTrue:
-		[self halt]."
 	super setIsMarkedOf: objOop to: aBoolean.
 	"(aBoolean
 	 and: [(self isContextNonImm: objOop)
@@ -366,7 +354,7 @@ Spur64BitMMLESimulator >> setIsMarkedOf: objOop to: aBoolean [
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> shortAt: byteAddress [
+Spur64BitMMLECoSimulator >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
 	| lowBits long |
 	lowBits := byteAddress bitAnd: 2.
@@ -377,7 +365,7 @@ Spur64BitMMLESimulator >> shortAt: byteAddress [
 ]
 
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> shortAt: byteAddress put: a16BitValue [
+Spur64BitMMLECoSimulator >> shortAt: byteAddress put: a16BitValue [
     "Return the half-word at byteAddress which must be even."
 	| lowBits long longAddress |
 	lowBits := byteAddress bitAnd: 2.
@@ -395,20 +383,50 @@ Spur64BitMMLESimulator >> shortAt: byteAddress put: a16BitValue [
 ]
 
 { #category : #'float primitives' }
-Spur64BitMMLESimulator >> storeFloatAt: floatBitsAddress from: aFloat [
+Spur64BitMMLECoSimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 	self long32At: floatBitsAddress put: (aFloat at: 2).
 	self long32At: floatBitsAddress+4 put: (aFloat at: 1)
 ]
 
 { #category : #'image segment in/out' }
-Spur64BitMMLESimulator >> storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots [
+Spur64BitMMLECoSimulator >> storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots [
 	self leakCheckImageSegments ifTrue:
 		[self halt].
 	^super storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots
 ]
 
+{ #category : #'ad-hoc tests' }
+Spur64BitMMLECoSimulator >> testObjStackDo [
+	| size them seqA seqB seqC rs |
+	ExpensiveAsserts := true.
+	self initializeWeaklingStack; emptyObjStack: weaklingStack.
+	self assert: (self topOfObjStack: weaklingStack) isNil.
+	self assert: (self capacityOfObjStack: weaklingStack) >= ObjStackLimit.
+	seqA := (1 to: ObjStackLimit * 5 // 2) collect: [:i| self integerObjectOf: i].
+	seqA do: [:it| self noCheckPush: it onObjStack: weaklingStack].
+	them := Set new.
+	size := self objStack: weaklingStack from: 0 do: [:it| them add: it].
+	self assert: size = seqA size.
+	self assert: (them asSortedCollection asArray = seqA).
+	self assert: (self isValidObjStack: weaklingStack).
+	seqB := (ObjStackLimit * 5 // 2 + 1 to: ObjStackLimit * 10 // 2) collect: [:i| self integerObjectOf: i].
+	self assert: seqA size = seqB size.
+	rs := seqB readStream.
+	them := Set new.
+	size := self objStack: weaklingStack from: 0 do:
+				[:it|
+				them add: it.
+				self noCheckPush: rs next onObjStack: weaklingStack].
+	self assert: size = seqA size.
+	self assert: rs atEnd.
+	self objStack: weaklingStack from: size do:
+		[:it| them add: it].
+	seqC := (seqA, seqB) sort.
+	self assert: them asSortedCollection asArray = seqC
+]
+
 { #category : #'memory access' }
-Spur64BitMMLESimulator >> vmEndianness [
+Spur64BitMMLECoSimulator >> vmEndianness [
 	"1 = big, 0 = little"
 	^0
 ]

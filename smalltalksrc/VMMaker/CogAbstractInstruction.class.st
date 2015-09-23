@@ -959,6 +959,14 @@ CogAbstractInstruction >> mapEntryAddress [
 ]
 
 { #category : #accessing }
+CogAbstractInstruction >> maxAbstractGeneralPurposeReg [
+	"Answer the largest index of an abstract general-purpose register used by this compiler.
+	 N.B.  Abstract registers are negative numbers."
+	<inline: true>
+	^ReceiverResultReg
+]
+
+{ #category : #accessing }
 CogAbstractInstruction >> maxSize [
 	"N.B. This is a byte size."
 	^maxSize
@@ -974,6 +982,14 @@ CogAbstractInstruction >> maxSize: size [ "<signed byte>"
 CogAbstractInstruction >> maybeEstablishVarBase [
 	"If the receiver has a VarBaseReg, generate the code to set it to its value."
 	self subclassResponsibility
+]
+
+{ #category : #accessing }
+CogAbstractInstruction >> minAbstractGeneralPurposeReg [
+	"Answer the smallest index of an abstract general-purpose register used by this compiler.
+	 N.B.  Abstract registers are negative numbers."
+	<inline: true>
+	^self subclassResponsibility
 ]
 
 { #category : #printing }

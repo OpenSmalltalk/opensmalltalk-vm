@@ -916,6 +916,7 @@ Cogit class >> initializeMiscConstants [
 				[EagerInstructionDecoration := false]]. "speeds up single stepping but could lose fidelity"
 
 	ProcessorClass := (initializationOptions at: #ISA ifAbsentPut: [#IA32]) caseOf: {
+							[#X64] 		->	[BochsX64Alien].
 							[#IA32] 	->	[BochsIA32Alien].
 							[#ARMv5]	->	[GdbARMAlien]. }.
 	CogCompilerClass := self activeCompilerClass.
@@ -1440,7 +1441,7 @@ Cogit >> CallRT: callTarget registersToBeSavedMask: registersToBeSaved [
 	<var: 'lastInst' type: #'AbstractInstruction *'>
 	callerSavedRegsToBeSaved := callerSavedRegMask bitAnd: registersToBeSaved.
 
-	GPRegMax to: GPRegMin by: -1 do:
+	backEnd maxAbstractGeneralPurposeReg to: backEnd minAbstractGeneralPurposeReg by: -1 do:
 		[:reg|
 		(reg ~= TempReg
 		 and: [callerSavedRegsToBeSaved anyMask: (self registerMaskFor: reg)]) ifTrue:
@@ -1448,7 +1449,7 @@ Cogit >> CallRT: callTarget registersToBeSavedMask: registersToBeSaved [
 	
 	lastInst := self CallRT: callTarget.
 
-	GPRegMin to: GPRegMax do:
+	backEnd minAbstractGeneralPurposeReg to: backEnd maxAbstractGeneralPurposeReg do:
 		[:reg|
 		(reg ~= TempReg
 		 and: [callerSavedRegsToBeSaved anyMask: (self registerMaskFor: reg)]) ifTrue:
@@ -8819,6 +8820,27 @@ Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6
 	"Answer a bit mask identifying the symbolic registers.
 	 Registers are negative numbers."
 	^((((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)) bitOr: 1 << (1 - reg5)) bitOr: 1 << (1 - reg6)
+]
+
+{ #category : #'register management' }
+Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 [
+	"Answer a bit mask identifying the symbolic registers.
+	 Registers are negative numbers."
+	^(((((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)) bitOr: 1 << (1 - reg5)) bitOr: 1 << (1 - reg6)) bitOr: 1 << (1 - reg7)
+]
+
+{ #category : #'register management' }
+Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 [
+	"Answer a bit mask identifying the symbolic registers.
+	 Registers are negative numbers."
+	^((((((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)) bitOr: 1 << (1 - reg5)) bitOr: 1 << (1 - reg6)) bitOr: 1 << (1 - reg7)) bitOr: 1 << (1 - reg8)
+]
+
+{ #category : #'register management' }
+Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 and: reg9 [
+	"Answer a bit mask identifying the symbolic registers.
+	 Registers are negative numbers."
+	^(((((((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)) bitOr: 1 << (1 - reg5)) bitOr: 1 << (1 - reg6)) bitOr: 1 << (1 - reg7)) bitOr: 1 << (1 - reg8)) bitOr: 1 << (1 - reg9)
 ]
 
 { #category : #disassembly }
