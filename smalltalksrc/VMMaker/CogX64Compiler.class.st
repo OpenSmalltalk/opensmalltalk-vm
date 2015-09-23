@@ -289,8 +289,12 @@ CogX64Compiler >> computeMaximumSize [
 		[MoveCwR]		-> [^10].
 		[MoveRR]		-> [^3].
 		[MoveRdRd]		-> [^4].
-		"[MoveAwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[MoveRAw]		-> [^(self concreteRegister: (operands at: 0)) = EAX ifTrue: [5] ifFalse: [6]]."
+		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0))
+								ifTrue: [7]
+								ifFalse: [(self concreteRegister: (operands at: 1)) = RAX ifTrue: [10] ifFalse: [14]]].
+		[MoveRAw]		-> [^(self isAddressRelativeToVarBase: (operands at: 1))
+								ifTrue: [7]
+								ifFalse: [(self concreteRegister: (operands at: 0)) = RAX ifTrue: [10] ifFalse: [14]]].
 		[MoveRMwr]	-> [^((self isQuick: (operands at: 1))
 									ifTrue: [((operands at: 1) = 0
 											and: [((self concreteRegister: (operands at: 2)) bitAnd: 7) ~= RBP])
@@ -691,6 +695,54 @@ CogX64Compiler >> concretizeJump [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveAwR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| addressOperand reg offset save0 save1 |
+	addressOperand := operands at: 0.
+	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
+		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
+	(self isAddressRelativeToVarBase: addressOperand) ifTrue:
+		[save0 := operands at: 0.
+		 save1 := operands at: 1.
+		 operands
+			at: 0 put: addressOperand - cogit varBaseAddress;
+			at: 1 put: VarBaseReg;
+			at: 2 put: save1.
+		 self concretizeMoveMwrR.
+		 operands
+			at: 0 put: save0;
+			at: 1 put: save1;
+			at: 2 put: 0.
+		^machineCodeSize].
+	reg := self concreteRegister: (operands at: 1).
+	reg = RAX
+		ifTrue: [offset := 0]
+		ifFalse:
+			[machineCode
+				at: 0 put: (self rexR: 0 x: 0 b: reg);
+				at: 1 put: 16r90 + (reg \\ 8).
+			 offset := 2].
+	machineCode
+		at: 0 + offset put: 16r48;
+		at: 1 + offset put: 16rA1;
+		at: 2 + offset put: (addressOperand bitAnd: 16rFF);
+		at: 3 + offset put: (addressOperand >> 8 bitAnd: 16rFF);
+		at: 4 + offset put: (addressOperand >> 16 bitAnd: 16rFF);
+		at: 5 + offset put: (addressOperand >> 24 bitAnd: 16rFF);
+		at: 6 + offset put: (addressOperand >> 32 bitAnd: 16rFF);
+		at: 7 + offset put: (addressOperand >> 40 bitAnd: 16rFF);
+		at: 8 + offset put: (addressOperand >> 48 bitAnd: 16rFF);
+		at: 9 + offset put: (addressOperand >> 56 bitAnd: 16rFF).
+	reg = RAX ifTrue:
+		[^machineCodeSize := 10].
+	machineCode
+		at: 12 put: (machineCode at: 0);
+		at: 13 put: (machineCode at: 1).
+	^machineCodeSize := 14
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveCqR [
 	"Will get inlined into concretizeAt: switch.
 	 On x64 we can short-cut mov 0, reg using xor, and use 32-bit displacement, signed or unsigned, if possible."
@@ -787,6 +839,51 @@ CogX64Compiler >> concretizeMoveMwrR [
 		at: 6 put: (offset >> 16 bitAnd: 16rFF);
 		at: 7 put: (offset >> 24 bitAnd: 16rFF).
 	^machineCodeSize := 8
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveRAw [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| addressOperand reg offset save1 |
+	reg := self concreteRegister: (operands at: 0).
+	addressOperand := operands at: 1.
+	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
+		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
+	(self isAddressRelativeToVarBase: addressOperand) ifTrue:
+		[save1 := operands at: 1.
+		 operands
+			at: 1 put: addressOperand - cogit varBaseAddress;
+			at: 2 put: VarBaseReg.
+		 self concretizeMoveRMwr.
+		 operands
+			at: 1 put: save1;
+			at: 2 put: 0.
+		^machineCodeSize].
+	reg = RAX
+		ifTrue: [offset := 0]
+		ifFalse:
+			[machineCode
+				at: 0 put: (self rexR: 0 x: 0 b: reg);
+				at: 1 put: 16r90 + (reg \\ 8).
+			 offset := 2].
+	machineCode
+		at: 0 + offset put: 16r48;
+		at: 1 + offset put: 16rA3;
+		at: 2 + offset put: (addressOperand bitAnd: 16rFF);
+		at: 3 + offset put: (addressOperand >> 8 bitAnd: 16rFF);
+		at: 4 + offset put: (addressOperand >> 16 bitAnd: 16rFF);
+		at: 5 + offset put: (addressOperand >> 24 bitAnd: 16rFF);
+		at: 6 + offset put: (addressOperand >> 32 bitAnd: 16rFF);
+		at: 7 + offset put: (addressOperand >> 40 bitAnd: 16rFF);
+		at: 8 + offset put: (addressOperand >> 48 bitAnd: 16rFF);
+		at: 9 + offset put: (addressOperand >> 56 bitAnd: 16rFF).
+	reg = RAX ifTrue:
+		[^machineCodeSize := 10].
+	machineCode
+		at: 12 put: (machineCode at: 0);
+		at: 13 put: (machineCode at: 1).
+	^machineCodeSize := 14
 ]
 
 { #category : #'generate machine code' }
@@ -899,6 +996,22 @@ CogX64Compiler >> concretizePushR [
 		at: 0 put: 16r41;
 		at: 1 put: 16r50 + (reg - 8).
 	^machineCodeSize := 2
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeRetN [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| offset |
+	offset := operands at: 0.
+	offset = 0 ifTrue:
+		[machineCode at: 0 put: 16rC3.
+		^machineCodeSize := 1].
+	machineCode
+		at: 0 put: 16rC2;
+		at: 1 put: (offset bitAnd: 16rFF);
+		at: 2 put: (offset >> 8).
+	^machineCodeSize := 3
 ]
 
 { #category : #'generate machine code' }
@@ -1154,6 +1267,11 @@ CogX64Compiler >> dispatchConcretize [
 		[ConvertRRd]		-> [^self concretizeConvertRRd] }
 ]
 
+{ #category : #abi }
+CogX64Compiler >> fullCallsAreRelative [
+	^false
+]
+
 { #category : #'abstract instructions' }
 CogX64Compiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstractRegQuotient Rem: abstractRegRemainder [
 	| rDividend rDivisor rQuotient rRemainder saveRestoreEAX saveRestoreEDX saveRestoreExchanged |
@@ -1221,6 +1339,13 @@ CogX64Compiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstra
 		[cogit PopR: RAX]
 ]
 
+{ #category : #assertions }
+CogX64Compiler >> genGetLeafCallStackPointerFunction [
+	cogit
+		MoveR: RSP R: RAX;
+		RetN: 0
+]
+
 { #category : #'abstract instructions' }
 CogX64Compiler >> genJumpFPEqual: jumpTarget [
 	<inline: true>
@@ -1249,9 +1374,92 @@ CogX64Compiler >> genJumpFPNotEqual: jumpTarget [
 	^jumpToTarget
 ]
 
+{ #category : #'smalltalk calling convention' }
+CogX64Compiler >> genLoadCStackPointers [
+	"Load the frame and stack pointer registers with those of the C stack,
+	 effecting a switch to the C stack.  Used when machine code calls into
+	 the CoInterpreter run-time (e.g. to invoke interpreter primitives)."
+	cogit MoveAw: cogit cStackPointerAddress R: SPReg.
+	cogit MoveAw: cogit cFramePointerAddress R: FPReg.
+	^0
+]
+
+{ #category : #'smalltalk calling convention' }
+CogX64Compiler >> genLoadStackPointers [
+	"Switch back to the Smalltalk stack. Assign SPReg first
+	 because typically it is used immediately afterwards."
+	cogit MoveAw: cogit stackPointerAddress R: SPReg.
+	cogit MoveAw: cogit framePointerAddress R: FPReg.
+	^0
+]
+
 { #category : #'abstract instructions' }
 CogX64Compiler >> genMulR: regSource R: regDest [
 	cogit gen: IMULRR operand: regSource operand: regDest
+]
+
+{ #category : #abi }
+CogX64Compiler >> genPassConst: constant asArgument: zeroRelativeArgIndex [
+	zeroRelativeArgIndex caseOf: {
+		[0] -> [cogit MoveCq: constant R: RDI].
+		[1] -> [cogit MoveCq: constant R: RSI].
+		[2] -> [cogit MoveCq: constant R: RDX].
+		[3] -> [cogit MoveCq: constant R: RCX].}.
+	^0
+]
+
+{ #category : #abi }
+CogX64Compiler >> genPassReg: abstractRegister asArgument: zeroRelativeArgIndex [
+	zeroRelativeArgIndex caseOf: {
+		[0] -> [cogit MoveR: abstractRegister R: RDI].
+		[1] -> [cogit MoveR: abstractRegister R: RSI].
+		[2] -> [cogit MoveR: abstractRegister R: RDX].
+		[3] -> [cogit MoveR: abstractRegister R: RCX].}.
+	^0
+]
+
+{ #category : #'smalltalk calling convention' }
+CogX64Compiler >> genPushRegisterArgsForNumArgs: numArgs scratchReg: scratchReg [
+	"Ensure that the register args are pushed before the retpc for arity <= self numRegArgs.  This
+	 isn't as clumsy on a RISC.  But putting the receiver and args above the return address
+	 means the CoInterpreter has a single machine-code frame format which saves us a lot of work.
+	 N.B. Take great care to /not/ smash TempReg, which is used in directed send marshalling.
+	 We could use XCHG to swap the ReceiverResultReg and top-of-stack return address, pushing the
+	 the ret pc (now in ReceiverResultReg) later, but XCHG is very slow.  We can use SendNumArgsReg
+	 because it is only live in sends of arity >= (NumSendTrampolines - 1)."
+	self assert: cogit numRegArgs < (NumSendTrampolines - 1).
+	numArgs <= cogit numRegArgs ifTrue:
+		[self assert: cogit numRegArgs <= 2.
+		 false "these two variants show the same performance on Intel Core i7, but the second one may be shorter."
+			ifTrue:
+				[cogit MoveMw: 0 r: SPReg R: scratchReg. "Save return pc"
+				 numArgs > 0 ifTrue:
+					[cogit PushR: Arg0Reg.
+					 numArgs > 1 ifTrue:
+						[cogit PushR: Arg1Reg]].
+				 cogit PushR: scratchReg.
+				 cogit MoveR: ReceiverResultReg Mw: objectMemory wordSize * (1 + numArgs) r: SPReg]
+			ifFalse:
+				["a.k.a.
+					cogit gen: XCHGMwrR operand: 0 operand: SPReg operand: ReceiverResultReg.
+				  but XCHG is slow."
+				 cogit MoveMw: 0 r: SPReg R: scratchReg. "Save return pc"
+				 cogit MoveR: ReceiverResultReg Mw: 0 r: SPReg.
+				 numArgs > 0 ifTrue:
+					[cogit PushR: Arg0Reg.
+					 numArgs > 1 ifTrue:
+						[cogit PushR: Arg1Reg]].
+				 cogit PushR: scratchReg]] "Restore return address"
+]
+
+{ #category : #'smalltalk calling convention' }
+CogX64Compiler >> genSaveStackPointers [
+	"Save the frame and stack pointer registers to the framePointer
+	 and stackPointer variables.  Used to save the machine code frame
+	 for use by the run-time when calling into the CoInterpreter run-time."
+	cogit MoveR: FPReg Aw: cogit framePointerAddress.
+	cogit MoveR: SPReg Aw: cogit stackPointerAddress.
+	^0
 ]
 
 { #category : #'abstract instructions' }
@@ -1267,8 +1475,24 @@ CogX64Compiler >> hasDoublePrecisionFloatingPointSupport [
 ]
 
 { #category : #testing }
+CogX64Compiler >> hasLinkRegister [
+	^false
+]
+
+{ #category : #testing }
 CogX64Compiler >> is32BitSignedImmediate: a64BitUnsignedOperand [
 	^(a64BitUnsignedOperand >> 31) signedIntFromLong between: -1 and: 0
+]
+
+{ #category : #testing }
+CogX64Compiler >> isAddressRelativeToVarBase: varAddress [
+	<inline: true>
+	<var: #varAddress type: #usqInt>
+	"Support for addressing variables off the dedicated VarBaseReg.  Allow for 16k of variables.
+	 The x64 supports 32-bit offsets, but we choose not to address everything from VarBaseReg."
+	^varAddress notNil
+	  and: [varAddress >= cogit varBaseAddress
+	  and: [varAddress - cogit varBaseAddress < (1 << 14)]]
 ]
 
 { #category : #testing }
@@ -1291,6 +1515,15 @@ CogX64Compiler >> jmpTarget: anAbstractInstruction [
 	^super jmpTarget: anAbstractInstruction
 ]
 
+{ #category : #abi }
+CogX64Compiler >> leafCallStackPointerDelta [
+	"Answer the delta from the stack pointer after a call to the stack pointer
+	 immediately prior to the call.  This is used to compute the stack pointer
+	 immediately prior to  call from within a leaf routine, which in turn is used
+	 to capture the c stack pointer to use in trampolines back into the C run-time."
+	^8
+]
+
 { #category : #accessing }
 CogX64Compiler >> machineCodeAt: anOffset [
 	^machineCode at: anOffset
@@ -1299,8 +1532,8 @@ CogX64Compiler >> machineCodeAt: anOffset [
 { #category : #'generate machine code' }
 CogX64Compiler >> machineCodeBytes [
 	"Answer the maximum number of bytes of machine code generated for any abstract instruction.
-	 e.g. movq $0x12345678ABCDEF0, %rax; jmp *%rax => 48 B8 F0 DE BC 9A 78 56 34 12 FF E0"
-	^12
+	 e.g. xchg %rdx, %rax; movq $0x12345678ABCDEF0, %(rax); xchg %rdx, %rax => 48 92 48 A3 F0 DE BC 9A 78 56 34 12 48 92"
+	^14
 ]
 
 { #category : #'abstract instructions' }
@@ -1311,6 +1544,12 @@ CogX64Compiler >> maybeEstablishVarBase [
 { #category : #encoding }
 CogX64Compiler >> mod: mod RM: regMode RO: regOpcode [
 	^mod << 6 + ((regOpcode bitAnd: 7) << 3) + (regMode bitAnd: 7)
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> nopsFrom: startAddr to: endAddr [
+	startAddr to: endAddr do:
+		[:p| objectMemory byteAt: p put: 16r90]
 ]
 
 { #category : #encoding }
