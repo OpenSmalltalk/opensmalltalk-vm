@@ -3,14 +3,14 @@
 # really useful for VMMaker simulation testing.
 . ./envvars.sh
 
-if [ ! -f trunk46-spur.image -o ! -f trunk46-spur.changes ]; then
-	./getlatestspurtrunkimage.sh
+if [ ! -f trunk50.image -o ! -f trunk50.changes ]; then
+	./updatespurimage.sh
 fi
 
-./ensureSqueakV41sources.sh
+./ensureSqueakV50sources.sh
 
-cp -p trunk46-spur.image spurreader.image
-cp -p trunk46-spur.changes spurreader.changes
+cp -p trunk50.image spurreader.image
+cp -p trunk50.changes spurreader.changes
 
 . ./getGoodSpurVM.sh
 

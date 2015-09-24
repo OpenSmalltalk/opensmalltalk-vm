@@ -3,8 +3,10 @@
 
 ./updatespurimage.sh
 
-cp -p trunk46-spur.image SpurVMMaker.image
-cp -p trunk46-spur.changes SpurVMMaker.changes
+cp -p trunk50.image SpurVMMaker.image
+cp -p trunk50.changes SpurVMMaker.changes
+
+. ./getGoodSpurVM.sh
 
 echo $VM SpurVMMaker.image BuildSqueakSpurTrunkVMMakerImage.st
 $VM SpurVMMaker.image BuildSqueakSpurTrunkVMMakerImage.st

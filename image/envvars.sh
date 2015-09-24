@@ -3,6 +3,10 @@ SQUEAK45APP=Squeak-4.5-All-in-One.app
 SQUEAK45RESOURCES=$SQUEAK45APP/Contents/Resources
 SQUEAK45=$SQUEAK45RESOURCES/Squeak4.5-13680
 
+SQUEAK50APP=Squeak-5.0-All-in-One/Squeak-5.0-All-in-One.app
+SQUEAK50RESOURCES=$SQUEAK50APP/Contents/Resources
+SQUEAK50=$SQUEAK50RESOURCES/Squeak5.0-15113
+
 # N.B. uname -r (OSREL) is not to be trusted on Mac OS X;
 # my 10.6.8 system reports its version as 10.8.0.  eem, june '14
 

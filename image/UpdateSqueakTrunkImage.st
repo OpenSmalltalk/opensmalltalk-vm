@@ -1,1 +1,1 @@
-"Simply update, assuming the update stream is set correctly."[MCMcmUpdater updateFromServer] valueSupplyingAnswer: true.Smalltalk snapshot: true andQuit: true
+[MCMcmUpdater	defaultUpdateURL: 'http://source.squeak.org/trunk';	updateFromServer] valueSupplyingAnswer: true.Smalltalk snapshot: true andQuit: true

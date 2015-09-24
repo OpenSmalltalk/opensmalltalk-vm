@@ -1,26 +1,26 @@
 #!/bin/sh
-# Sets the VM env var to the r3354 Cog Spur VM for the current platform.
+# Sets the VM env var to the r3427 Cog Spur VM for the current platform.
 # will download and install the VM in this directory if necessary.
 
-TAG=15.20.3354
-REV=3354
-LSBINDIR=5.0-3354
+TAG=15.33.3427
+REV=3427
+LSBINDIR=5.0-3427
 URL=http://www.mirandabanda.org/files/Cog/VM/VM.r$REV/
 
 . ./envvars.sh
 
 case "$OS" in
 Darwin) get_vm_from_tar \
-            CogSpur.app/Contents/MacOS/Squeak 4858caf533bcac30301b63b4a2b03dee \
-            CogSpur.app-$TAG.tgz 69dfd7c4af7c5c1323b57f8df1945759
+            CogSpur.app/Contents/MacOS/Squeak 2a6014096316edd4ad40d123300513b4 \
+            CogSpur.app-$TAG.tgz be907df0efa93bf6be1a2b42a71a9f8c
         VM=CogSpur.app/Contents/MacOS/Squeak;;
 Linux) get_vm_from_tar \
-        cogspurlinuxht/lib/squeak/$LSBINDIR/squeak e7ef9060beedb0e3d049de685d269eb1 \
-        cogspurlinuxht-$TAG.tgz 7d91b75be4f17ea0ea836eba5237fa10
+        cogspurlinuxht/lib/squeak/$LSBINDIR/squeak f41f0912d83dc51b772eb01e96fa4f86 \
+        cogspurlinuxht-$TAG.tgz 3a5007971e3e4f24b4f8404e09a2a5c0
     VM=cogspurlinuxht/squeak;;
 CYGWIN*) get_vm_from_zip \
-            cogspurwin/SqueakConsole.exe f0cf0edce87d42cf1cc7bd8afc4ed8ca \
-            cogspurwin-$TAG.zip 75d735ce6f9b4368662e21b26de1ae11
+            cogspurwin/SqueakConsole.exe 91e6d35064ad7153011d36c9e9a81fe6 \
+            cogspurwin-$TAG.zip 8aa98b6261cfe36258d1e09c54143a32
     VM=cogspurwin/SqueakConsole.exe;;
 *)  echo "don't know how to run Squeak on your system.  bailing out." 1>&2; exit 2
 esac
