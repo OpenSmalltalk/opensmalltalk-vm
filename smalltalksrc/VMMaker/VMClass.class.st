@@ -141,12 +141,6 @@ VMClass class >> defaultObjectMemoryClass [
 ]
 
 { #category : #translation }
-VMClass class >> emitExportPragma [	
-	"#pragma export -- seems only to have been for CodeWarrior on Mac."
-	^false
-]
-
-{ #category : #translation }
 VMClass class >> exportAPISelectors: options [
 	^self exportAPISelectorsFor: self
 ]
