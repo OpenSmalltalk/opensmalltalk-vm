@@ -2,26 +2,27 @@ Class {
 	#name : #TMethod,
 	#superclass : #Object,
 	#instVars : [
-		'selector',
-		'returnType',
 		'args',
-		'locals',
-		'declarations',
-		'primitive',
-		'parseTree',
-		'labels',
-		'writtenToGlobalVarsCache',
-		'complete',
-		'export',
-		'static',
-		'inline',
-		'sharedLabel',
-		'sharedCase',
 		'comment',
+		'complete',
+		'declarations',
 		'definingClass',
+		'export',
+		'extraVariableNumber',
 		'globalStructureBuildMethodHasFoo',
+		'inline',
+		'labels',
+		'locals',
+		'parseTree',
+		'primitive',
 		'properties',
-		'extraVariableNumber'
+		'returnType',
+		'selector',
+		'sharedCase',
+		'sharedLabel',
+		'static',
+		'writtenToGlobalVarsCache',
+		'functionAttributes'
 	],
 	#classVars : [
 		'CaseStatements'
@@ -34,6 +35,13 @@ TMethod class >> initialize [
 	"TMethod initialize"	
 	CaseStatements := IdentitySet new: 10.
 	CaseStatements addAll: #(dispatchOn:in: dispatchOn:in:with: dispatchOn:in:with:with:).
+]
+
+{ #category : #accessing }
+TMethod >> addFunctionAttribute: aString [
+	functionAttributes := functionAttributes
+							ifNil: [aString]
+							ifNotNil: [functionAttributes, ' ', aString]
 ]
 
 { #category : #accessing }
@@ -521,6 +529,8 @@ TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPr
 						[aStream nextPutAll: 'extern ']].
 			 (isPrototype or: [inline ~~ #always]) ifFalse: [aStream nextPutAll: 'inline '].
 			 aStream nextPutAll: returnType].
+	functionAttributes ifNotNil:
+		[aStream space; nextPutAll: functionAttributes].
 	isPrototype ifTrue: [aStream space] ifFalse: [aStream cr].
 	(returnType last = $)
 	and: [returnType includesSubString: (aCodeGen cFunctionNameFor: selector)]) ifTrue:
@@ -917,6 +927,16 @@ TMethod >> freeVariableReferences [
 	locals do: [ :var | refs remove: var asString ifAbsent: [] ].
 	#('self' 'nil' 'true' 'false') do: [ :var | refs remove: var ifAbsent: [] ].
 	^refs
+]
+
+{ #category : #accessing }
+TMethod >> functionAttributes [
+	^functionAttributes
+]
+
+{ #category : #accessing }
+TMethod >> functionAttributes: aString [
+	functionAttributes := aString
 ]
 
 { #category : #'type inference' }
