@@ -1,0 +1,39 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "fa1542d4-bde8-0310-ad64-8ed1123d492a++2954",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+    "fa1542d4-bde8-0310-ad64-8ed1123d492a++5922" : {
+      "DVTSourceControlWorkingCopyRepositoryBranchesLocationKey" : "branches",
+      "DVTSourceControlWorkingCopyRepositoryTagsLocationKey" : "tags",
+      "DVTSourceControlWorkingCopyRepositoryPrimaryBranchLocationKey" : "trunk"
+    },
+    "fa1542d4-bde8-0310-ad64-8ed1123d492a++2954" : {
+      "DVTSourceControlWorkingCopyRepositoryBranchesLocationKey" : "branches",
+      "DVTSourceControlWorkingCopyRepositoryTagsLocationKey" : "tags",
+      "DVTSourceControlWorkingCopyRepositoryPrimaryBranchLocationKey" : "trunk"
+    }
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "fa1542d4-bde8-0310-ad64-8ed1123d492a++5922" : 0,
+    "fa1542d4-bde8-0310-ad64-8ed1123d492a++2954" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "A4A87DD8-90CF-49B4-9E64-4190AA8C59BF",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "fa1542d4-bde8-0310-ad64-8ed1123d492a++5922" : "Cog\/platforms\/Cross\/plugins\/",
+    "fa1542d4-bde8-0310-ad64-8ed1123d492a++2954" : "Cog\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "SqueakCogSpur32x86",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "build.macos32x86\/squeak.cog.spur\/SqueakCogSpur32x86.xcworkspace",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "http:\/\/squeakvm.org\/svn\/squeak",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Subversion",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "fa1542d4-bde8-0310-ad64-8ed1123d492a++2954"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "http:\/\/squeakvm.org\/svn\/squeak",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Subversion",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "fa1542d4-bde8-0310-ad64-8ed1123d492a++5922"
+    }
+  ]
+}
