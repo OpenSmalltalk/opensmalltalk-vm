@@ -3,9 +3,7 @@
 # really useful for VMMaker simulation testing.
 . ./envvars.sh
 
-if [ ! -f trunk50.image -o ! -f trunk50.changes ]; then
-	./updatespurimage.sh
-fi
+./updatespurimage.sh
 
 ./ensureSqueakV50sources.sh
 
