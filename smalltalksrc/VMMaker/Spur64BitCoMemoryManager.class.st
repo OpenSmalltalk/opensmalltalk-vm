@@ -63,15 +63,6 @@ Spur64BitCoMemoryManager >> assimilateNewSegment: segInfo [
 ]
 
 { #category : #trampolines }
-Spur64BitCoMemoryManager >> ceClassAtIndex: classIndex [
-	<api>
-	| result |
-	result := self classAtIndex: classIndex.
-	self assert: (coInterpreter addressCouldBeClassObj: result).
-	^result
-]
-
-{ #category : #trampolines }
 Spur64BitCoMemoryManager >> ceScheduleScavenge [
 	<api>
 	self assert: freeStart >= scavengeThreshold.
