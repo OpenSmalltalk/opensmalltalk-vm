@@ -579,7 +579,6 @@
 		94F478C61BB527440069E57B /* cointerp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cointerp.h; path = ../../spursrc/vm/cointerp.h; sourceTree = "<group>"; };
 		94F478C71BB527440069E57B /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../spursrc/vm/interp.h; sourceTree = "<group>"; };
 		94F478CA1BB52D3A0069E57B /* cogitIA32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cogitIA32.c; path = ../../spursrc/vm/cogitIA32.c; sourceTree = "<group>"; };
-		94F478CB1BB52D3A0069E57B /* cointerp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cointerp.c; path = ../../spursrc/vm/cointerp.c; sourceTree = "<group>"; };
 		94F478CC1BB52D3A0069E57B /* exampleSqNamedPrims.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = exampleSqNamedPrims.h; path = ../../spursrc/vm/exampleSqNamedPrims.h; sourceTree = "<group>"; };
 		94F478CD1BB52D3A0069E57B /* vmCallback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = vmCallback.h; path = ../../spursrc/vm/vmCallback.h; sourceTree = "<group>"; };
 		94F8798F0E6C0C7E00662DEA /* sqSqueakIPhoneInfoPlistInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSqueakIPhoneInfoPlistInterface.h; sourceTree = "<group>"; };
@@ -1274,7 +1273,6 @@
 			isa = PBXGroup;
 			children = (
 				94F478CA1BB52D3A0069E57B /* cogitIA32.c */,
-				94F478CB1BB52D3A0069E57B /* cointerp.c */,
 				94F478CC1BB52D3A0069E57B /* exampleSqNamedPrims.h */,
 				94F478CD1BB52D3A0069E57B /* vmCallback.h */,
 				94F478C21BB527440069E57B /* cogit.c */,
