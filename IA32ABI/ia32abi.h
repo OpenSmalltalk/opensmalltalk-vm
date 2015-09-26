@@ -38,6 +38,9 @@ extern sqInt callIA32DoubleReturn  (SIGNATURE);
 # define INT_REG_ARGS /* none */
 # define DBL_REG_ARGS /* none */
 #elif defined(__amd64__) || defined(__x86_64__) || defined(__amd64) || defined(__x86_64)
+/* Since the System V and Windows ABIs differ w.r.t. double parameters we don't
+ * specify any DBL_REG_ARGS, even though on Unix there are eight.
+ */
 # define INT_REG_ARGS long,long,long,long,long,long,
 # define DBL_REG_ARGS /* none */
 #elif defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
@@ -48,8 +51,6 @@ extern sqInt callIA32DoubleReturn  (SIGNATURE);
 # define DBL_REG_ARGS double,double,double,double,double,double,double,double,
 #endif
 extern long  thunkEntry (INT_REG_ARGS DBL_REG_ARGS void *,long *);
-//JMM extern long thunkEntry(long a0, long a1, long a2, long a3, long a4, long a5,
-//                       void *thunkp, long *stackp);
 extern void *allocateExecutablePage(long *pagesize);
 extern VMCallbackContext *getMostRecentCallbackContext(void);
 
