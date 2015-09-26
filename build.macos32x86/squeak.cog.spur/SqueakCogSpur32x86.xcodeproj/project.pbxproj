@@ -163,7 +163,7 @@
 		949382451B000FBD00C802B2 /* AioPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 949382441B000FBD00C802B2 /* AioPlugin.c */; };
 		9493824B1B00103A00C802B2 /* IA32ABI.c in Sources */ = {isa = PBXBuildFile; fileRef = 949382471B00103A00C802B2 /* IA32ABI.c */; };
 		9493824D1B00103A00C802B2 /* VMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 949382491B00103A00C802B2 /* VMProfileMacSupportPlugin.c */; };
-		949382661B00121000C802B2 /* x64ia32abicc.c in Sources */ = {isa = PBXBuildFile; fileRef = 949382601B00121000C802B2 /* x64ia32abicc.c */; };
+		949382661B00121000C802B2 /* ia32abicc.c in Sources */ = {isa = PBXBuildFile; fileRef = 949382601B00121000C802B2 /* ia32abicc.c */; };
 		949382711B00176A00C802B2 /* sqUnixHeartbeat.c in Sources */ = {isa = PBXBuildFile; fileRef = 9493826E1B00176A00C802B2 /* sqUnixHeartbeat.c */; };
 		949382721B00176A00C802B2 /* sqUnixThreads.c in Sources */ = {isa = PBXBuildFile; fileRef = 9493826F1B00176A00C802B2 /* sqUnixThreads.c */; };
 		949382731B00176A00C802B2 /* sqUnixVMProfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 949382701B00176A00C802B2 /* sqUnixVMProfile.c */; };
@@ -366,8 +366,8 @@
 		949382471B00103A00C802B2 /* IA32ABI.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = IA32ABI.c; path = IA32ABI/IA32ABI.c; sourceTree = "<group>"; };
 		949382491B00103A00C802B2 /* VMProfileMacSupportPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = VMProfileMacSupportPlugin.c; path = VMProfileMacSupportPlugin/VMProfileMacSupportPlugin.c; sourceTree = "<group>"; };
 		9493824E1B0010E000C802B2 /* InternetConfigPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = InternetConfigPlugin.h; path = InternetConfigPlugin/InternetConfigPlugin.h; sourceTree = "<group>"; };
-		9493825F1B00121000C802B2 /* dax64business.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dax64business.h; sourceTree = "<group>"; };
-		949382601B00121000C802B2 /* x64ia32abicc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = x64ia32abicc.c; sourceTree = "<group>"; };
+		9493825F1B00121000C802B2 /* dabusiness.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dabusiness.h; sourceTree = "<group>"; };
+		949382601B00121000C802B2 /* ia32abicc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ia32abicc.c; sourceTree = "<group>"; };
 		949382681B00131B00C802B2 /* ia32abi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ia32abi.h; sourceTree = "<group>"; };
 		9493826A1B00137200C802B2 /* B3DAcceleratorPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = B3DAcceleratorPlugin.h; sourceTree = "<group>"; };
 		9493826B1B00137200C802B2 /* sqOpenGLRenderer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqOpenGLRenderer.c; sourceTree = "<group>"; };
@@ -1029,8 +1029,8 @@
 			isa = PBXGroup;
 			children = (
 				949382681B00131B00C802B2 /* ia32abi.h */,
-				9493825F1B00121000C802B2 /* dax64business.h */,
-				949382601B00121000C802B2 /* x64ia32abicc.c */,
+				9493825F1B00121000C802B2 /* dabusiness.h */,
+				949382601B00121000C802B2 /* ia32abicc.c */,
 			);
 			path = IA32ABI;
 			sourceTree = "<group>";
@@ -1673,7 +1673,7 @@
 				94502E951BB609AC00EA8942 /* sqUnixSpurMemory.c in Sources */,
 				9487744310C64DD800E4AEC5 /* jdmarker.c in Sources */,
 				949382751B0017CC00C802B2 /* aio.c in Sources */,
-				949382661B00121000C802B2 /* x64ia32abicc.c in Sources */,
+				949382661B00121000C802B2 /* ia32abicc.c in Sources */,
 				9487744410C64DD800E4AEC5 /* jdmaster.c in Sources */,
 				9487744510C64DD800E4AEC5 /* jdmerge.c in Sources */,
 				9487744610C64DD800E4AEC5 /* jdphuff.c in Sources */,
