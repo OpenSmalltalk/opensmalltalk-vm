@@ -44,4 +44,4 @@ such third-party acknowledgments.
 *///
 
 usqInt	sqGetAvailableMemory(void);
-void	sqMacMemoryFree(void);
+void	sqMacMemoryFree();

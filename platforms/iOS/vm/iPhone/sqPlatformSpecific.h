@@ -79,9 +79,16 @@ void		sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength);
 void		sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength);
 #undef allocateMemoryMinimumImageFileHeaderSize
 #undef sqImageFileReadEntireImage
+#if SPURVM
+extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
+# define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
+sqAllocateMemory(minimumMemory, heapSize)
+# define sqMacMemoryFree() 
+#else
 usqInt sqAllocateMemoryMac(usqInt desiredHeapSize,sqInt minHeapSize, FILE * f,usqInt headersize);
 #define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
 sqAllocateMemoryMac(heapSize, minimumMemory, fileStream, headerSize)
+#endif
 
 #ifdef BUILD_FOR_OSX
 size_t sqImageFileReadEntireImage(void *ptr, size_t elementSize, size_t count, FILE * f);

@@ -37,9 +37,11 @@
 //
 
 #import "sqSqueakMainApplication+imageReadWrite.h"
-#import "sqMacV2Memory.h"
+
 #ifdef SPURVM
 #  include <sys/stat.h>
+#else
+#import "sqMacV2Memory.h"
 #endif
 
 @implementation sqSqueakMainApplication (imageReadWrite) 

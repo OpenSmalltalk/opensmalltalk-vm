@@ -209,7 +209,11 @@ extern sqInt interpret(void);  //This is a VM Callback
     
 }
 
-void sqMacMemoryFree(void);
+#if COGVM
+    void sqMacMemoryFree();
+#else
+    void sqMacMemoryFree(void);
+#endif
 
 - (void) ioExit {
 	[self ioExitWithErrorCode: 0];

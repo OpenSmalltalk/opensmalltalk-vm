@@ -68,9 +68,12 @@ SqueakOSXAppDelegate *gDelegateApp;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
-//   [Crashlytics startWithAPIKey:@"add501476623fc20212a60334cd537d16dfd566f"];
    
+#if defined(i386) || defined(__i386) || defined(__i386__)
+#else
+    //   [Crashlytics startWithAPIKey:@"add501476623fc20212a60334cd537d16dfd566f"];
     [Fabric with:@[[Crashlytics class]]];
+#endif
 	
     @autoreleasepool {
 		gDelegateApp = self;	

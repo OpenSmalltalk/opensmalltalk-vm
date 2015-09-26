@@ -45,13 +45,13 @@ such third-party acknowledgments.
 #import "sqSqueakAppDelegate.h"
 #import "sq.h"
 #import "sqSqueakMainApp.h"
-#import "sqMacV2Memory.h"
 #import <limits.h>
 #import "sqPlatformSpecific.h"
 
 #if COGVM
 #import "sqSCCSVersion.h"
 #else
+#import "sqMacV2Memory.h"
 #endif
 
 #if !defined(NOEXECINFO)
@@ -128,7 +128,7 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
     
 	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
 #if COGVM
-    printf("%s\n\n", sourceVersionString());
+    printf("%s\n\n", sourceVersionString('\n'));
 #endif
     
 #if !defined(NOEXECINFO)

@@ -98,7 +98,7 @@ extern struct VirtualMachine* interpreterProxy;
 			
             case 1009: {/* source tree version info */
 #if COGVM
-				return sourceVersionString();
+				return sourceVersionString(' ');
 #else
                 static char data[255];
                 bzero(data,sizeof(data));
