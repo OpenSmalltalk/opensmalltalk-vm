@@ -155,6 +155,13 @@ CogX64Compiler class >> machineCodeDeclaration [
 ]
 
 { #category : #accessing }
+CogX64Compiler >> cResultRegister [
+	"Answer the abstract register for the C result register.
+	 Only partially implemented.  Works on x64 since TempReg = RAX = C result reg."
+	^self abstractRegisterForConcreteRegister: RAX
+]
+
+{ #category : #accessing }
 CogX64Compiler >> callerSavedRegisterMask [
 	"See e.g. Figure 3.4 Register Usage in
 		System V Application Binary Interface
@@ -309,20 +316,17 @@ CogX64Compiler >> computeMaximumSize [
 											ifFalse: [8])
 										+ ((self concreteRegister: (operands at: 2)) = ESP
 											ifTrue: [1]
-											ifFalse: [0])].
+											ifFalse: [0])]."
 		[MoveMbrR]		-> [^((self isQuick: (operands at: 0))
-											ifTrue: [4]
-											ifFalse: [7])
-										+ ((self concreteRegister: (operands at: 1)) = ESP
+											ifTrue: [5]
+											ifFalse: [8])
+										+ ((self concreteRegister: (operands at: 1)) = RSP
 											ifTrue: [1]
 											ifFalse: [0])].
-		[MoveRMbr]		-> [^((self isQuick: (operands at: 1))
-											ifTrue: [3]
-											ifFalse: [6])
-										+ ((self concreteRegister: (operands at: 2)) = ESP
-											ifTrue: [1]
-											ifFalse: [0])].
-		[MoveM16rR]	-> [^((self isQuick: (operands at: 0))
+		[MoveRMbr]		-> [^(self concreteRegister: (operands at: 2)) = RSP
+								ifTrue: [8]
+								ifFalse: [(self isQuick: (operands at: 1)) ifTrue: [4] ifFalse: [7]]].
+		"[MoveM16rR]	-> [^((self isQuick: (operands at: 0))
 											ifTrue: [4]
 											ifFalse: [7])
 										+ ((self concreteRegister: (operands at: 1)) = ESP
@@ -563,6 +567,46 @@ CogX64Compiler >> concretizeCDQ [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeCall [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| offset |
+	self assert: (operands at: 0) ~= 0.
+	offset := (operands at: 0) signedIntFromLong - (address + 5) signedIntFromLong.
+	machineCode
+		at: 0 put: 16rE8;
+		at: 1 put: (offset bitAnd: 16rFF);
+		at: 2 put: (offset >> 8 bitAnd: 16rFF);
+		at: 3 put: (offset >> 16 bitAnd: 16rFF);
+		at: 4 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 5
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeCallFull [
+	"Since CallFull (and JumpFull) is used to invoke code in dynamically-loaded plugins it shouldn't
+	 assume that code will be loaded within 2Gb of the code zone.  Hence generate a full 64-bit call,
+	 movabsq 0x123456789abcdef0, %rax; callq %rax."
+	<inline: true>
+	| operand |
+	operand := operands at: 0.
+	machineCode
+		at: 0 put: 16r48;
+		at: 1 put: 16rA1;
+		at: 2 put: (operand bitAnd: 16rFF);
+		at: 3 put: (operand >> 8 bitAnd: 16rFF);
+		at: 4 put: (operand >> 16 bitAnd: 16rFF);
+		at: 5 put: (operand >> 24 bitAnd: 16rFF);
+		at: 6 put: (operand >> 32 bitAnd: 16rFF);
+		at: 7 put: (operand >> 40 bitAnd: 16rFF);
+		at: 8 put: (operand >> 48 bitAnd: 16rFF);
+		at: 9 put: (operand >> 56 bitAnd: 16rFF);
+		at: 10 put: 16rFF;
+		at: 11 put: (self mod: 3 RM: RAX RO: 2).
+	^machineCodeSize := 12
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeCmpCqR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -695,6 +739,30 @@ CogX64Compiler >> concretizeJump [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeJumpFull [
+	"Since JumpFull (and CallFull) is used to invoke code in dynamically-loaded plugins it shouldn't
+	 assume that code will be loaded within 2Gb of the code zone.  Hence generate a full 64-bit call,
+	 movabsq 0x123456789abcdef0, %rax; callq %rax."
+	<inline: true>
+	| operand |
+	operand := operands at: 0.
+	machineCode
+		at: 0 put: 16r48;
+		at: 1 put: 16rA1;
+		at: 2 put: (operand bitAnd: 16rFF);
+		at: 3 put: (operand >> 8 bitAnd: 16rFF);
+		at: 4 put: (operand >> 16 bitAnd: 16rFF);
+		at: 5 put: (operand >> 24 bitAnd: 16rFF);
+		at: 6 put: (operand >> 32 bitAnd: 16rFF);
+		at: 7 put: (operand >> 40 bitAnd: 16rFF);
+		at: 8 put: (operand >> 48 bitAnd: 16rFF);
+		at: 9 put: (operand >> 56 bitAnd: 16rFF);
+		at: 10 put: 16rFF;
+		at: 11 put: (self mod: 4 RM: RAX RO: 2).
+	^machineCodeSize := 12
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveAwR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -760,7 +828,7 @@ CogX64Compiler >> concretizeMoveCqR [
 		^machineCodeSize := 3].
 	machineCode
 		at: 1 put: 16rC7;
-		at: 2 put: (self mod: ModReg RM: reg RO: reg);
+		at: 2 put: (self mod: ModReg RM: reg RO: 0);
 		at: 3 put: (value bitAnd: 16rFF);
 		at: 4 put: (value >> 8 bitAnd: 16rFF);
 		at: 5 put: (value >> 16 bitAnd: 16rFF);
@@ -789,6 +857,50 @@ CogX64Compiler >> concretizeMoveCwR [
 		at: 8 put: (value >> 48 bitAnd: 16rFF);
 		at: 9 put: (value >> 56 bitAnd: 16rFF).
 	^machineCodeSize := 10
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveMbrR [
+	"N.B. The Cogit compiler makes no assumption about the upper bits being set to zero.
+	 It will clear the register before hand if necessary."
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| srcReg offset destReg |
+	offset := operands at: 0.
+	srcReg := self concreteRegister: (operands at: 1).
+	destReg := self concreteRegister: (operands at: 2).
+	machineCode
+		at: 0 put: (self rexR: destReg x: 0 b: srcReg);
+		at: 1 put: 16r0f;
+		at: 2 put: 16rb6.
+	srcReg ~= RSP ifTrue:
+		[(self isQuick: offset) ifTrue:
+			[machineCode
+				at: 3 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+				at: 4 put: (offset bitAnd: 16rFF).
+			 ^machineCodeSize := 5].
+		machineCode
+			at: 3 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg);
+			at: 4 put: (offset bitAnd: 16rFF);
+			at: 5 put: (offset >> 8 bitAnd: 16rFF);
+			at: 6 put: (offset >> 16 bitAnd: 16rFF);
+			at: 7 put: (offset >> 24 bitAnd: 16rFF).
+		^machineCodeSize := 8].
+	"RSP:"
+	(self isQuick: offset) ifTrue:
+		[machineCode
+			at: 3 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+			at: 4 put: (self s: SIB1 i: 4 b: srcReg);
+			at: 5 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := 6].
+	machineCode
+		at: 3 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg);
+		at: 4 put: (self s: SIB1 i: 4 b: srcReg);
+		at: 5 put: (offset bitAnd: 16rFF);
+		at: 6 put: (offset >> 8 bitAnd: 16rFF);
+		at: 7 put: (offset >> 16 bitAnd: 16rFF);
+		at: 8 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 9
 ]
 
 { #category : #'generate machine code' }
@@ -1415,26 +1527,82 @@ CogX64Compiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 ar
 	 registers do not get overwritten.  Yes, this is evil, but it's so nice to continue to use RCX & RDX."
 	<inline: true>
 	numArgs = 0 ifTrue: [^self].
-	regOrConst0 < 0
+	regOrConst0 >= 0
 		ifTrue: [cogit MoveCq: regOrConst0 R: RDI]
-		ifFalse: [cogit MoveR: regOrConst0 R: RDI].
+		ifFalse:
+			[(self concreteRegister: regOrConst0) ~= RDI ifTrue:
+				[cogit MoveR: regOrConst0 R: RDI]].
 	numArgs = 1 ifTrue: [^self].
-	regOrConst1 < 0
+	regOrConst1 >= 0
 		ifTrue: [cogit MoveCq: regOrConst1 R: RSI]
-		ifFalse: [cogit MoveR: regOrConst1 R: RSI].
+		ifFalse:
+			[(self concreteRegister: regOrConst1) ~= RSI ifTrue:
+				[cogit MoveR: regOrConst1 R: RSI]].
 	numArgs = 2 ifTrue: [^self].
-	regOrConst2 < 0
+	regOrConst2 >= 0
 		ifTrue: [cogit MoveCq: regOrConst2 R: RDX]
-		ifFalse: [cogit MoveR: regOrConst2 R: RDX].
+		ifFalse:
+			[(self concreteRegister: regOrConst2) ~= RDX ifTrue:
+				[cogit MoveR: regOrConst2 R: RDX]].
 	numArgs = 3 ifTrue: [^self].
-	regOrConst3 < 0
+	regOrConst3 >= 0
 		ifTrue: [cogit MoveCq: regOrConst3 R: RCX]
-		ifFalse: [cogit MoveR: regOrConst3 R: RCX]
+		ifFalse:
+			[(self concreteRegister: regOrConst3) ~= RCX ifTrue:
+				[cogit MoveR: regOrConst3 R: RCX]]
 ]
 
 { #category : #'abstract instructions' }
 CogX64Compiler >> genMulR: regSource R: regDest [
 	cogit gen: IMULRR operand: regSource operand: regDest
+]
+
+{ #category : #'smalltalk calling convention' }
+CogX64Compiler >> genPushRegisterArgsForAbortMissNumArgs: numArgs [
+	"Ensure that the register args are pushed before the outer and
+	 inner retpcs at an entry miss for arity <= self numRegArgs.  The
+	 outer retpc is that of a call at a send site.  The inner is the call
+	 from a method or PIC abort/miss to the trampoline."
+
+	"This won't be as clumsy on a RISC.  But putting the receiver and
+	 args above the return address means the CoInterpreter has a
+	 single machine-code frame format which saves us a lot of work."
+
+	"Iff there are register args convert
+		base	->	outerRetpc		(send site retpc)
+		sp		->	innerRetpc		(PIC abort/miss retpc)
+	 to
+		base	->	receiver
+					(arg0)
+					(arg1)
+					outerRetpc
+		sp		->	innerRetpc		(PIC abort/miss retpc)"
+	numArgs <= cogit numRegArgs ifTrue:
+		[self assert: cogit numRegArgs <= 2.
+		 numArgs = 0 ifTrue:
+			[cogit MoveMw: 0 r: SPReg R: TempReg.
+			 cogit PushR: TempReg.
+			 cogit MoveMw: objectMemory wordSize * 2 r: SPReg R: TempReg.
+			 cogit MoveR: TempReg Mw: objectMemory wordSize r: SPReg.
+			 cogit MoveR: ReceiverResultReg Mw: 2 * objectMemory wordSize r: SPReg.
+			 ^self].
+		 numArgs = 1 ifTrue:
+			[cogit MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+			 cogit PushR: TempReg.
+			 cogit MoveMw: objectMemory wordSize r: SPReg R: TempReg.
+			 cogit PushR: TempReg.
+			 cogit MoveR: ReceiverResultReg Mw: 3 * objectMemory wordSize r: SPReg.
+			 cogit MoveR: Arg0Reg Mw: 2 * objectMemory wordSize r: SPReg.
+			 ^self].
+		 numArgs = 2 ifTrue:
+			[cogit PushR: Arg1Reg.
+			 cogit MoveMw: objectMemory wordSize * 2 r: SPReg R: TempReg.
+			 cogit PushR: TempReg.
+			 cogit MoveMw: objectMemory wordSize * 2 r: SPReg R: TempReg.
+			 cogit PushR: TempReg.
+			 cogit MoveR: ReceiverResultReg Mw: 4 * objectMemory wordSize r: SPReg.
+			 cogit MoveR: Arg0Reg Mw: 3 * objectMemory wordSize r: SPReg.
+			 ^self]]
 ]
 
 { #category : #'smalltalk calling convention' }
@@ -1469,6 +1637,49 @@ CogX64Compiler >> genPushRegisterArgsForNumArgs: numArgs scratchReg: scratchReg 
 					 numArgs > 1 ifTrue:
 						[cogit PushR: Arg1Reg]].
 				 cogit PushR: scratchReg]] "Restore return address"
+]
+
+{ #category : #abi }
+CogX64Compiler >> genRestoreRegs [
+	"Restore the general purpose registers for a trampoline call.
+	 c.f. genSaveRegisters"
+	cogit
+		PopR: RAX;
+		PopR: RBX;
+		PopR: RCX;
+		PopR: RDX;
+		PopR: RSI;
+		PopR: RDI;
+		PopR: R8;
+		PopR: R9;
+		PopR: R10;
+		PopR: R11;
+		PopR: R12;
+		PopR: R13;
+		PopR: R14;
+		PopR: R15.
+	^0
+]
+
+{ #category : #abi }
+CogX64Compiler >> genSaveRegisters [
+	"Save the general purpose registers for a trampoline call."
+	cogit
+		PushR: R15;
+		PushR: R14;
+		PushR: R13;
+		PushR: R12;
+		PushR: R11;
+		PushR: R10;
+		PushR: R9;
+		PushR: R8;
+		PushR: RDI;
+		PushR: RSI;
+		PushR: RDX;
+		PushR: RCX;
+		PushR: RBX;
+		PushR: RAX.
+	^0
 ]
 
 { #category : #'smalltalk calling convention' }
@@ -1512,6 +1723,12 @@ CogX64Compiler >> isAddressRelativeToVarBase: varAddress [
 	^varAddress notNil
 	  and: [varAddress >= cogit varBaseAddress
 	  and: [varAddress - cogit varBaseAddress < (1 << 14)]]
+]
+
+{ #category : #testing }
+CogX64Compiler >> isBigEndian [
+	<inline: true>
+	^false
 ]
 
 { #category : #testing }
@@ -1560,6 +1777,14 @@ CogX64Compiler >> maybeEstablishVarBase [
 	"The receiver does not have a VarBaseReg; do nothing."
 ]
 
+{ #category : #accessing }
+CogX64Compiler >> minAbstractGeneralPurposeReg [
+	"Answer the smallest index of an abstract general-purpose register used by this compiler.
+	 N.B.  Abstract registers are negative numbers."
+	<inline: true>
+	^Scratch5Reg
+]
+
 { #category : #encoding }
 CogX64Compiler >> mod: mod RM: regMode RO: regOpcode [
 	^mod << 6 + ((regOpcode bitAnd: 7) << 3) + (regMode bitAnd: 7)
@@ -1569,6 +1794,14 @@ CogX64Compiler >> mod: mod RM: regMode RO: regOpcode [
 CogX64Compiler >> nopsFrom: startAddr to: endAddr [
 	startAddr to: endAddr do:
 		[:p| objectMemory byteAt: p put: 16r90]
+]
+
+{ #category : #abi }
+CogX64Compiler >> numberOfSaveableRegisters [
+	"Answer the number of registers to be saved in a trampoline call that saves registers.
+	 See genSaveRegisters"
+	<cmacro: '(self) 14'>
+	^14
 ]
 
 { #category : #encoding }
@@ -1590,4 +1823,12 @@ CogX64Compiler >> rexw: width64 "<Boolean>" r: reg "<0-15>" x: sibReg "<0-15>"  
 { #category : #encoding }
 CogX64Compiler >> s: scale i: indexReg b: baseReg [ 
 	^scale << 6 + ((indexReg bitAnd: 7) << 3) + (baseReg bitAnd: 7)
+]
+
+{ #category : #abi }
+CogX64Compiler >> saveAndRestoreLinkRegAround: aBlock [
+	"If the processor's ABI includes a link register, generate instructions
+	 to save and restore it around aBlock, which is assumed to generate code."
+	<inline: true>
+	^aBlock value
 ]
