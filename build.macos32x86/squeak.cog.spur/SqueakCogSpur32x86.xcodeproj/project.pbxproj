@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		9402DD6010CE0C16005C2102 /* SqViewBitmapConversion.m in Sources */ = {isa = PBXBuildFile; fileRef = 9402DD5F10CE0C16005C2102 /* SqViewBitmapConversion.m */; };
 		9402DD7010CE0E91005C2102 /* SqViewClut.m in Sources */ = {isa = PBXBuildFile; fileRef = 9402DD6F10CE0E91005C2102 /* SqViewClut.m */; };
-		9422C3B21AFFF94100448DC0 /* GreenCogSqueak.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9422C3B11AFFF94100448DC0 /* GreenCogSqueak.icns */; };
 		9422C3B51AFFFAC500448DC0 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9422C3B31AFFFAC500448DC0 /* Localizable.strings */; };
 		943B9CA11235C5120056205E /* sqMacHostWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 943B9C9E1235C5120056205E /* sqMacHostWindow.m */; };
 		94502E951BB609AC00EA8942 /* sqUnixSpurMemory.c in Sources */ = {isa = PBXBuildFile; fileRef = 94502E941BB609AC00EA8942 /* sqUnixSpurMemory.c */; settings = {ASSET_TAGS = (); }; };
@@ -41,7 +40,6 @@
 		9463C1D61AEE168F009C5CE5 /* pcre.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E65A2E0DDD053900358328 /* pcre.c */; };
 		9463C1D71AEE1693009C5CE5 /* study.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E65A340DDD053900358328 /* study.c */; };
 		948773FC10C64DD800E4AEC5 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 947E64DC10AA18FE00D3B69E /* MainMenu.xib */; };
-		948773FE10C64DD800E4AEC5 /* Squeak.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414421E10BC89440088F8AC /* Squeak.icns */; };
 		948773FF10C64DD800E4AEC5 /* SqueakChanges.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414421F10BC89440088F8AC /* SqueakChanges.icns */; };
 		9487740010C64DD800E4AEC5 /* SqueakGeneric.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414422010BC89440088F8AC /* SqueakGeneric.icns */; };
 		9487740110C64DD800E4AEC5 /* SqueakImage.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414422110BC89440088F8AC /* SqueakImage.icns */; };
@@ -240,7 +238,6 @@
 		940CE8550DFCE2D200EBA91B /* SqueakUIController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SqueakUIController.m; sourceTree = "<group>"; };
 		9412CAE40E6C05EC00DB8625 /* sqSqueakInfoPlistInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqSqueakInfoPlistInterface.h; path = vm/Common/Classes/sqSqueakInfoPlistInterface.h; sourceTree = "<group>"; };
 		9412CAE50E6C05EC00DB8625 /* sqSqueakInfoPlistInterface.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = sqSqueakInfoPlistInterface.m; path = vm/Common/Classes/sqSqueakInfoPlistInterface.m; sourceTree = "<group>"; };
-		9414421E10BC89440088F8AC /* Squeak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = Squeak.icns; path = OSX/Squeak.icns; sourceTree = "<group>"; };
 		9414421F10BC89440088F8AC /* SqueakChanges.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakChanges.icns; path = OSX/SqueakChanges.icns; sourceTree = "<group>"; };
 		9414422010BC89440088F8AC /* SqueakGeneric.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakGeneric.icns; path = OSX/SqueakGeneric.icns; sourceTree = "<group>"; };
 		9414422110BC89440088F8AC /* SqueakImage.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakImage.icns; path = OSX/SqueakImage.icns; sourceTree = "<group>"; };
@@ -251,7 +248,6 @@
 		941724420F36624C0031AF33 /* squeakProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = squeakProxy.m; sourceTree = "<group>"; };
 		941724430F36624C0031AF33 /* squeakProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = squeakProxy.h; sourceTree = "<group>"; };
 		94210B280E956AC200C1A314 /* ObjectiveCPlugin.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.objc; fileEncoding = 4; name = ObjectiveCPlugin.c; path = ObjectiveCPlugin/ObjectiveCPlugin.c; sourceTree = "<group>"; };
-		9422C3B11AFFF94100448DC0 /* GreenCogSqueak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = GreenCogSqueak.icns; path = "../../Mac OS/Resources/GreenCogSqueak.icns"; sourceTree = "<group>"; };
 		9422C3B41AFFFAC500448DC0 /* English */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = English; path = Common/English.lproj/Localizable.strings; sourceTree = "<group>"; };
 		9424FF5B0DDCB1C7009912BF /* sqGnu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqGnu.h; path = ../../platforms/iOS/vm/Common/sqGnu.h; sourceTree = SOURCE_ROOT; };
 		9424FF5C0DDCB1C7009912BF /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMemoryAccess.h; sourceTree = "<group>"; };
@@ -280,6 +276,7 @@
 		943001270E0D5D670040BB27 /* sqSqueakIPhoneApplication+imageReadWrite.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "sqSqueakIPhoneApplication+imageReadWrite.m"; sourceTree = "<group>"; };
 		943001A30E0D600C0040BB27 /* sqSqueakIPhoneFileDirectoryInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSqueakIPhoneFileDirectoryInterface.h; sourceTree = "<group>"; };
 		943001A40E0D600C0040BB27 /* sqSqueakIPhoneFileDirectoryInterface.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = sqSqueakIPhoneFileDirectoryInterface.m; sourceTree = "<group>"; };
+		943005C71BB7312300D08AF8 /* SqueakCogSpur32x86.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = SqueakCogSpur32x86.plist; sourceTree = SOURCE_ROOT; };
 		94329ECA12275FFA0090298B /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		943B9C9E1235C5120056205E /* sqMacHostWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = sqMacHostWindow.m; sourceTree = "<group>"; };
 		943B9C9F1235C5120056205E /* sqMacHostWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacHostWindow.h; sourceTree = "<group>"; };
@@ -575,7 +572,6 @@
 		94E65A2F0DDD053900358328 /* pcre.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pcre.h; sourceTree = "<group>"; };
 		94E65A300DDD053900358328 /* rePlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rePlugin.h; sourceTree = "<group>"; };
 		94E65A340DDD053900358328 /* study.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = study.c; sourceTree = "<group>"; };
-		94F478C01BB4E17E0069E57B /* SqueakCogSpur32x86.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = SqueakCogSpur32x86.plist; path = ../../../build.macos32x86/squeak.cog.spur/SqueakCogSpur32x86.plist; sourceTree = "<group>"; };
 		94F478C21BB527440069E57B /* cogit.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cogit.c; path = ../../spursrc/vm/cogit.c; sourceTree = "<group>"; };
 		94F478C31BB527440069E57B /* cogit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cogit.h; path = ../../spursrc/vm/cogit.h; sourceTree = "<group>"; };
 		94F478C41BB527440069E57B /* cogmethod.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cogmethod.h; path = ../../spursrc/vm/cogmethod.h; sourceTree = "<group>"; };
@@ -693,8 +689,6 @@
 				94FA4CE41BB4DE1400C1BE8F /* Images-2.xcassets */,
 				9422C3B31AFFFAC500448DC0 /* Localizable.strings */,
 				947E64DC10AA18FE00D3B69E /* MainMenu.xib */,
-				9422C3B11AFFF94100448DC0 /* GreenCogSqueak.icns */,
-				9414421E10BC89440088F8AC /* Squeak.icns */,
 				9414421F10BC89440088F8AC /* SqueakChanges.icns */,
 				9414422010BC89440088F8AC /* SqueakGeneric.icns */,
 				9414422110BC89440088F8AC /* SqueakImage.icns */,
@@ -703,7 +697,7 @@
 				9414422410BC89440088F8AC /* SqueakScript.icns */,
 				9414422510BC89440088F8AC /* SqueakSources.icns */,
 				94D16CAF10BCF96B00A69A89 /* Credits.rtf */,
-				94F478C01BB4E17E0069E57B /* SqueakCogSpur32x86.plist */,
+				943005C71BB7312300D08AF8 /* SqueakCogSpur32x86.plist */,
 			);
 			name = Resources;
 			path = ../../platforms/iOS/vm;
@@ -1592,8 +1586,6 @@
 				948773FC10C64DD800E4AEC5 /* MainMenu.xib in Resources */,
 				9422C3B51AFFFAC500448DC0 /* Localizable.strings in Resources */,
 				94FA4CE51BB4DE1400C1BE8F /* Images-2.xcassets in Resources */,
-				9422C3B21AFFF94100448DC0 /* GreenCogSqueak.icns in Resources */,
-				948773FE10C64DD800E4AEC5 /* Squeak.icns in Resources */,
 				948773FF10C64DD800E4AEC5 /* SqueakChanges.icns in Resources */,
 				9487740010C64DD800E4AEC5 /* SqueakGeneric.icns in Resources */,
 				9487740110C64DD800E4AEC5 /* SqueakImage.icns in Resources */,
@@ -1895,14 +1887,9 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					BUILD_FOR_OSX,
 					USE_INLINE_MEMORY_ACCESSORS,
-					HAVE_SYS_TIME_H,
 					HAVE_NANOSLEEP,
 					SQUEAK_BUILTIN_PLUGIN,
-					"SQ_VI_BYTES_PER_WORD=8",
-					"USE_GLOBAL_STRUCT=0",
 					"DEBUGVM=1",
-					"VM_LABEL(foo)=0",
-					"EXTERNALPRIMSDEBUG=1",
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				INFOPLIST_FILE = SqueakCogSpur32x86.plist;
@@ -1934,10 +1921,8 @@
 				GCC_PREFIX_HEADER = ../../platforms/iOS/vm/SqueakPureObjc_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					BUILD_FOR_OSX,
-					HAVE_SYS_TIME_H,
 					HAVE_NANOSLEEP,
 					SQUEAK_BUILTIN_PLUGIN,
-					"SQ_VI_BYTES_PER_WORD=8",
 					USE_INLINE_MEMORY_ACCESSORS,
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
