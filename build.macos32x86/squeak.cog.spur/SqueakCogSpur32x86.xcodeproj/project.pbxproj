@@ -172,8 +172,6 @@
 		9493827A1B001C7E00C802B2 /* sqSqueakInfoPlistInterface.m in Sources */ = {isa = PBXBuildFile; fileRef = 9412CAE50E6C05EC00DB8625 /* sqSqueakInfoPlistInterface.m */; };
 		94B9533510E6BD7100DC476A /* MacMenuOS9ToOSX.m in Sources */ = {isa = PBXBuildFile; fileRef = 94B9533410E6BD7100DC476A /* MacMenuOS9ToOSX.m */; };
 		94BB096E1BB47DDB0016BFDF /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB096B1BB47DDB0016BFDF /* Security.framework */; settings = {ASSET_TAGS = (); }; };
-		94BB096F1BB47DDB0016BFDF /* Fabric.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB096C1BB47DDB0016BFDF /* Fabric.framework */; settings = {ASSET_TAGS = (); }; };
-		94BB09701BB47DDB0016BFDF /* Crashlytics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB096D1BB47DDB0016BFDF /* Crashlytics.framework */; settings = {ASSET_TAGS = (); }; };
 		94BB09721BB47F9B0016BFDF /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB09711BB47F9B0016BFDF /* libz.tbd */; };
 		94BB09741BB47FB20016BFDF /* libstdc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB09731BB47FB20016BFDF /* libstdc++.tbd */; };
 		94BB09761BB47FCD0016BFDF /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB09751BB47FCD0016BFDF /* libc++.tbd */; };
@@ -401,8 +399,6 @@
 		94B9533310E6BD7100DC476A /* MacMenuOS9ToOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MacMenuOS9ToOSX.h; sourceTree = "<group>"; };
 		94B9533410E6BD7100DC476A /* MacMenuOS9ToOSX.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MacMenuOS9ToOSX.m; sourceTree = "<group>"; };
 		94BB096B1BB47DDB0016BFDF /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
-		94BB096C1BB47DDB0016BFDF /* Fabric.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Fabric.framework; sourceTree = "<group>"; };
-		94BB096D1BB47DDB0016BFDF /* Crashlytics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Crashlytics.framework; sourceTree = "<group>"; };
 		94BB09711BB47F9B0016BFDF /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		94BB09731BB47FB20016BFDF /* libstdc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libstdc++.tbd"; path = "usr/lib/libstdc++.tbd"; sourceTree = SDKROOT; };
 		94BB09751BB47FCD0016BFDF /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
@@ -598,7 +594,6 @@
 				94BB09761BB47FCD0016BFDF /* libc++.tbd in Frameworks */,
 				94BB09741BB47FB20016BFDF /* libstdc++.tbd in Frameworks */,
 				94BB09721BB47F9B0016BFDF /* libz.tbd in Frameworks */,
-				94BB096F1BB47DDB0016BFDF /* Fabric.framework in Frameworks */,
 				9487749D10C64DD800E4AEC5 /* Cocoa.framework in Frameworks */,
 				9487749E10C64DD800E4AEC5 /* Foundation.framework in Frameworks */,
 				9487749F10C64DD800E4AEC5 /* AudioToolbox.framework in Frameworks */,
@@ -607,7 +602,6 @@
 				948774A210C64DD800E4AEC5 /* ApplicationServices.framework in Frameworks */,
 				94BB096E1BB47DDB0016BFDF /* Security.framework in Frameworks */,
 				948774A310C64DD800E4AEC5 /* QuartzCore.framework in Frameworks */,
-				94BB09701BB47DDB0016BFDF /* Crashlytics.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -709,8 +703,6 @@
 				94BB09731BB47FB20016BFDF /* libstdc++.tbd */,
 				94BB09711BB47F9B0016BFDF /* libz.tbd */,
 				94BB096B1BB47DDB0016BFDF /* Security.framework */,
-				94BB096C1BB47DDB0016BFDF /* Fabric.framework */,
-				94BB096D1BB47DDB0016BFDF /* Crashlytics.framework */,
 				947E61C410AA03DC00D3B69E /* AppKit.framework */,
 				947E61C210AA03C300D3B69E /* Cocoa.framework */,
 				945550000DF1BC6A00FB176B /* AudioToolbox.framework */,
@@ -1609,7 +1601,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "./Crashlytics.framework/run add501476623fc20212a60334cd537d16dfd566f 13e3689c06f20298b962843af75360f1ab580a821134076b9e2309f73b72c5f1";
+			shellScript = "";
 		};
 		949382371B0006CC00C802B2 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -1622,7 +1614,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "$SRCROOT/mkNamedPrims.sh $SRCROOT/plugins.int >$SRCROOT/sqNamedPrims.h\n./Fabric.framework/run add501476623fc20212a60334cd537d16dfd566f 13e3689c06f20298b962843af75360f1ab580a821134076b9e2309f73b72c5f1";
+			shellScript = "$SRCROOT/mkNamedPrims.sh $SRCROOT/plugins.int >$SRCROOT/sqNamedPrims.h";
 		};
 /* End PBXShellScriptBuildPhase section */
 

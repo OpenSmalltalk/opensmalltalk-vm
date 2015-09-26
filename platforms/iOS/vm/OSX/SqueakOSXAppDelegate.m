@@ -41,8 +41,11 @@
 #import "sqSqueakOSXScreenAndWindow.h"
 #import "sqMacHostWindow.h"
 #import "sqSqueakOSXInfoPlistInterface.h"
+#if defined(i386) || defined(__i386) || defined(__i386__)
+#else
 #import <Fabric/Fabric.h>
 #import <Crashlytics/Crashlytics.h>
+#endif
 
 #ifndef USE_CORE_GRAPHICS
 #  import "sqSqueakOSXOpenGLView.h"
