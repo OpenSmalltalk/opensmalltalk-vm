@@ -88,6 +88,19 @@ CogObjectRepresentationFor64BitSpur >> fetchImmediateTagOtherThanTag1: tag1 tag2
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genConvertIntegerToSmallIntegerInReg: reg [
+	cogit LogicalShiftLeftCq: self numTagBits R: reg.
+	cogit AddCq: 1 R: reg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genConvertSmallIntegerToIntegerInReg: reg [
+	cogit ArithmeticShiftRightCq: self numTagBits R: reg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genFetchIndexRegister: indexReg from: tableObj into: destReg [
 	"indexReg contains the 1-relative index of an element in tableObj.
 	 Since BaseHeaderSize = BytesPerOop we can use it as a
@@ -114,6 +127,16 @@ CogObjectRepresentationFor64BitSpur >> genJumpSmallInteger: reg scratchReg: scra
 	cogit AndCq: objectMemory tagMask R: reg R: scratch.
 	cogit CmpCq: objectMemory smallIntegerTag R: scratch.
 	^cogit JumpZero: 0
+]
+
+{ #category : #initialization }
+CogObjectRepresentationFor64BitSpur >> genLoadHeaderIntoNewInstance: header [
+	"Generate the instructions to move the constant header into a new instance pointed to by ReceiverResultReg."
+	<inline: true>
+	self flag: #endianness.
+	cogit
+		MoveCq: header R: TempReg;
+		MoveR: TempReg Mw: 0 r: ReceiverResultReg
 ]
 
 { #category : #'in-line cacheing' }
@@ -143,6 +166,11 @@ CogObjectRepresentationFor64BitSpur >> log2BytesPerWord [
 	^3
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> numCharacterBits [
+	^61
+]
+
 { #category : #'sista support' }
 CogObjectRepresentationFor64BitSpur >> numCountersFor: theCounters [
 	<var: #theCounters type: #usqInt>
@@ -151,6 +179,17 @@ CogObjectRepresentationFor64BitSpur >> numCountersFor: theCounters [
 		[^0].
 	objOop := theCounters - objectMemory baseHeaderSize.
 	^2 * (objectMemory numSlotsOf: objOop)
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> numSmallIntegerBits [
+	^61
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> numTagBits [
+	<inline: true>
+	^3
 ]
 
 { #category : #'debug support' }
