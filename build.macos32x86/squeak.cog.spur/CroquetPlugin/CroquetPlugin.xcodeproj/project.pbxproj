@@ -153,9 +153,15 @@
 /* Begin PBXProject section */
 		089C1669FE841209C02AAC07 /* Project object */ = {
 			isa = PBXProject;
+			attributes = {
+			};
 			buildConfigurationList = 4FADC23708B4156C00ABE55E /* Build configuration list for PBXProject "CroquetPlugin" */;
 			compatibilityVersion = "Xcode 2.4";
+			developmentRegion = English;
 			hasScannedForEncodings = 1;
+			knownRegions = (
+				en,
+			);
 			mainGroup = 089C166AFE841209C02AAC07 /* CroquetPlugin */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -249,7 +255,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PREBINDING = NO;
-				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
@@ -267,10 +273,10 @@
 					NO_ISNAN,
 				);
 				GCC_USE_GCC3_PFE_SUPPORT = NO;
-				GCC_VERSION = 4.2;
+				GCC_VERSION = "";
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCarbon;
+				HEADER_SEARCH_PATHS = "";
 				ICC_FP_MODEL = source;
 				ICC_FP_SPECULATION = off;
 				ICC_OPTLEVEL = speedHLO;
@@ -278,7 +284,7 @@
 				ICC_OTHER_CPLUSPLUSFLAGS = "$(ICC_OTHER_CFLAGS) $(OTHER_CPLUSPLUSFLAGS)";
 				OTHER_CFLAGS = "$(OTHER_CFLAGS)";
 				PREBINDING = NO;
-				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				SDKROOT = macosx;
 			};
 			name = Release;
 		};

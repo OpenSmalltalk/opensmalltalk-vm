@@ -3,11 +3,10 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 42;
+	objectVersion = 46;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		73662FE70F53864E00C64E7F /* interp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spursrc/vm/interp.h; sourceTree = SOURCE_ROOT; };
 		7308DE370B9614A4003B7CCD /* UnixOSProcessPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 7308DE360B9614A4003B7CCD /* UnixOSProcessPlugin.c */; };
 		8D01CCCE0486CAD60068D4B7 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 08EA7FFBFE8413EDC02AAC07 /* Carbon.framework */; };
 /* End PBXBuildFile section */
@@ -17,6 +16,7 @@
 		08EA7FFBFE8413EDC02AAC07 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
 		7308DE360B9614A4003B7CCD /* UnixOSProcessPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = UnixOSProcessPlugin.c; path = ../../../src/plugins/UnixOSProcessPlugin/UnixOSProcessPlugin.c; sourceTree = "<group>"; };
 		73662FE60F53864E00C64E7F /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = Cross/vm/sqMemoryAccess.h; sourceTree = "<group>"; };
+		73662FE70F53864E00C64E7F /* interp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spursrc/vm/interp.h; sourceTree = SOURCE_ROOT; };
 		73662FE80F53864E00C64E7F /* config.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = config.h; path = "Mac OS/vm/config.h"; sourceTree = "<group>"; };
 		73662FE90F53864E00C64E7F /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqConfig.h; path = "Mac OS/vm/sqConfig.h"; sourceTree = "<group>"; };
 		73662FEA0F53864E00C64E7F /* sqPlatformSpecific.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqPlatformSpecific.h; path = "Mac OS/vm/sqPlatformSpecific.h"; sourceTree = "<group>"; };
@@ -134,8 +134,11 @@
 /* Begin PBXProject section */
 		089C1669FE841209C02AAC07 /* Project object */ = {
 			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0700;
+			};
 			buildConfigurationList = 4FADC23708B4156C00ABE55E /* Build configuration list for PBXProject "UnixOSProcessPlugin" */;
-			compatibilityVersion = "Xcode 2.4";
+			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 1;
 			knownRegions = (
@@ -189,7 +192,7 @@
 		4FADC23408B4156C00ABE55E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -209,8 +212,8 @@
 					"$(inherited)",
 				);
 				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.UnixOSProcessPlugin;
 				PRODUCT_NAME = UnixOSProcessPlugin;
-				USER_HEADER_SEARCH_PATHS = "/Developer/Headers/FlatCarbon \"$(SRCROOT)/../../../../../platforms/Mac OS/vm\" \"$(SRCROOT)/../../../vm\" \"$(SRCROOT)/../../vm\" \"$(SRCROOT)/../../../../Cross/vm\" \"$(SRCROOT)/../../../../Cross/plugins/FilePlugin\" \"$(SRCROOT)/../../../../Cross/plugins/SocketPlugin\" $(inherited)";
 				WRAPPER_EXTENSION = bundle;
 				ZERO_LINK = YES;
 			};
@@ -219,7 +222,7 @@
 		4FADC23508B4156C00ABE55E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				COMBINE_HIDPI_IMAGES = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS = (
@@ -237,8 +240,8 @@
 					"$(inherited)",
 				);
 				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.UnixOSProcessPlugin;
 				PRODUCT_NAME = UnixOSProcessPlugin;
-				USER_HEADER_SEARCH_PATHS = "/Developer/Headers/FlatCarbon \"$(SRCROOT)/../../../../../platforms/Mac OS/vm\" \"$(SRCROOT)/../../../vm\" \"$(SRCROOT)/../../vm\" \"$(SRCROOT)/../../../../Cross/vm\" \"$(SRCROOT)/../../../../Cross/plugins/FilePlugin\" \"$(SRCROOT)/../../../../Cross/plugins/SocketPlugin\" $(inherited)";
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
@@ -246,25 +249,29 @@
 		4FADC23808B4156C00ABE55E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				ENABLE_TESTABILITY = YES;
 				GCC_DEBUGGING_SYMBOLS = full;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_VERSION = 4.2;
+				GCC_VERSION = "";
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
-				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
 		4FADC23908B4156C00ABE55E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				GCC_VERSION = 4.2;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				GCC_VERSION = "";
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PREBINDING = NO;
-				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				SDKROOT = macosx;
 			};
 			name = Release;
 		};
