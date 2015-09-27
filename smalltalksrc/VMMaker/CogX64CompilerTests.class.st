@@ -277,9 +277,10 @@ CogX64CompilerTests >> testMoveMbrR [
 				self processor
 					disassembleInstructionAt: 0
 					In: inst machineCode object
-					into: [:str :sz| | plainJane herIntended |
+					into: [:str :sz| | plainJane herIntended po |
+						po := offset bitAnd: 1 << self processor bitsInWord - 1.
 						plainJane := self strip: str.
-						herIntended := 'movzbl 0x', (offset hex allButFirst: 3), '(', srname, '), ', drname.
+						herIntended := 'movzbq ', (offset = 0 ifTrue: [''] ifFalse: ['0x', (po printStringBase: 16 length: 16 padded: true)]), '(', srname, '), ', drname.
 						self assert: (plainJane match: herIntended).
 						self assert: len = sz]]]]
 ]
@@ -434,6 +435,31 @@ CogX64CompilerTests >> testMoveRMwr [
 ]
 
 { #category : #tests }
+CogX64CompilerTests >> testMoveRXwrR [
+	"self new testMoveXwrRR"
+	self concreteCompilerClass registersWithNamesDo:
+		[:idxreg :irname|
+			irname ~= '%rsp' ifTrue:
+				[self concreteCompilerClass registersWithNamesDo:
+					[:basereg :brname|
+					self concreteCompilerClass registersWithNamesDo:
+						[:sreg :srname|
+						((1 to: 19 by: 3) collect: [:po2| 2 raisedToInteger: po2]) do:
+							[:offset| | inst len |
+							inst := self gen: MoveRXwrR operand: sreg operand: idxreg operand: basereg.
+							len := inst concretizeAt: 0.
+							self processor
+								disassembleInstructionAt: 0
+								In: inst machineCode object
+								into: [:str :sz| | plainJane herIntended |
+									"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
+									plainJane := self strip: str.
+									herIntended := 'movq ', srname, ', (', brname, ',', irname, ',8)'.
+									self assert: (plainJane match: herIntended).
+									self assert: len = sz]]]]]]
+]
+
+{ #category : #tests }
 CogX64CompilerTests >> testMoveRdM64r [
 	"self new testMoveRdM64r"
 	self concreteCompilerClass xmmRegistersWithNamesDo:
@@ -484,7 +510,7 @@ CogX64CompilerTests >> testMoveXwrRR [
 	"self new testMoveXwrRR"
 	self concreteCompilerClass registersWithNamesDo:
 		[:idxreg :irname|
-			irname ~= '%esp' ifTrue:
+			irname ~= '%rsp' ifTrue:
 				[self concreteCompilerClass registersWithNamesDo:
 					[:basereg :brname|
 					self concreteCompilerClass registersWithNamesDo:
@@ -499,7 +525,7 @@ CogX64CompilerTests >> testMoveXwrRR [
 								into: [:str :sz| | plainJane herIntended |
 									"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 									plainJane := self strip: str.
-									herIntended := 'movl (', brname, ',', irname, ',4), ',drname.
+									herIntended := 'movq (', brname, ',', irname, ',8), ',drname.
 									self assert: (plainJane match: herIntended).
 									self assert: len = sz]]]]]]
 ]
