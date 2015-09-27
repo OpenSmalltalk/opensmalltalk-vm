@@ -336,7 +336,6 @@
 		946BCE010959347500803517 /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				ENABLE_TESTABILITY = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -347,7 +346,6 @@
 		946BCE020959347500803517 /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				SDKROOT = macosx;
 			};
 			name = Deployment;
@@ -355,7 +353,6 @@
 		946BCE030959347500803517 /* Default */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				SDKROOT = macosx;
 			};
 			name = Default;
@@ -369,13 +366,13 @@
 				GCC_MODEL_TUNING = "";
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
 				INFOPLIST_FILE = "Mpeg3Plugin-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				OTHER_CFLAGS = (
 					"-fPIC",
 					"-DNOPTHREADS",
 				);
-				OTHER_LDFLAGS = "";
 				PKGINFO_FILE_CONTENTS = BNDLFAST;
 				PREBINDING = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.Mpeg3Plugin;
@@ -396,11 +393,11 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
 				GCC_UNROLL_LOOPS = YES;
 				INFOPLIST_FILE = "Mpeg3Plugin-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				OTHER_CFLAGS = "-DNOPTHREADS";
-				OTHER_LDFLAGS = "";
 				PREBINDING = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.Mpeg3Plugin;
 				PRODUCT_NAME = Mpeg3Plugin;
@@ -415,9 +412,9 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
 				INFOPLIST_FILE = "Mpeg3Plugin-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
-				OTHER_LDFLAGS = "";
 				PREBINDING = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.Mpeg3Plugin;
 				PRODUCT_NAME = Mpeg3Plugin;
