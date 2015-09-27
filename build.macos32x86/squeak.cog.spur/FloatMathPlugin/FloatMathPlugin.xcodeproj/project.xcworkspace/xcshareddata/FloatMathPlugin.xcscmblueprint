@@ -1,0 +1,35 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "fa1542d4-bde8-0310-ad64-8ed1123d492a++2954",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+    "fa1542d4-bde8-0310-ad64-8ed1123d492a++5922" : {
+
+    },
+    "fa1542d4-bde8-0310-ad64-8ed1123d492a++2954" : {
+
+    }
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "fa1542d4-bde8-0310-ad64-8ed1123d492a++5922" : 0,
+    "fa1542d4-bde8-0310-ad64-8ed1123d492a++2954" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "70752591-B2B8-4E02-96D2-4B73570249E0",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "fa1542d4-bde8-0310-ad64-8ed1123d492a++5922" : "Cog\/platforms\/Cross\/plugins\/",
+    "fa1542d4-bde8-0310-ad64-8ed1123d492a++2954" : "Cog\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "FloatMathPlugin",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "build.macos32x86\/squeak.cog.spur\/FloatMathPlugin\/FloatMathPlugin.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "http:\/\/squeakvm.org\/svn\/squeak",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Subversion",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "fa1542d4-bde8-0310-ad64-8ed1123d492a++2954"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "http:\/\/squeakvm.org\/svn\/squeak",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Subversion",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "fa1542d4-bde8-0310-ad64-8ed1123d492a++5922"
+    }
+  ]
+}
