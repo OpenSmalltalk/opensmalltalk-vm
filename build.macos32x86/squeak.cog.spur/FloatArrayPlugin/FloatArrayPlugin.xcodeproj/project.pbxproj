@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 42;
+	objectVersion = 46;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -132,9 +132,16 @@
 /* Begin PBXProject section */
 		089C1669FE841209C02AAC07 /* Project object */ = {
 			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0700;
+			};
 			buildConfigurationList = 4FADC23708B4156C00ABE55E /* Build configuration list for PBXProject "FloatArrayPlugin" */;
-			compatibilityVersion = "Xcode 2.4";
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
 			hasScannedForEncodings = 1;
+			knownRegions = (
+				en,
+			);
 			mainGroup = 089C166AFE841209C02AAC07 /* FloatArrayPlugin */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -169,6 +176,7 @@
 		4FADC23408B4156C00ABE55E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -178,6 +186,7 @@
 				GCC_PREFIX_HEADER = FloatArrayPlugin_Prefix.pch;
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
+				PRODUCT_BUNDLE_IDENTIFIER = com.apple.carbonbundletemplate;
 				PRODUCT_NAME = FloatArrayPlugin;
 				WRAPPER_EXTENSION = bundle;
 				ZERO_LINK = YES;
@@ -187,7 +196,7 @@
 		4FADC23508B4156C00ABE55E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				COMBINE_HIDPI_IMAGES = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_MODEL_TUNING = G4;
 				GCC_OPTIMIZATION_LEVEL = s;
@@ -215,6 +224,7 @@
 					"-mno-fused-madd",
 					"$(OTHER_CFLAGS)",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.apple.carbonbundletemplate;
 				PRODUCT_NAME = FloatArrayPlugin;
 				WRAPPER_EXTENSION = bundle;
 			};
@@ -223,17 +233,20 @@
 		4FADC23808B4156C00ABE55E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				ENABLE_TESTABILITY = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH = NO;
 				PREBINDING = NO;
-				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
 		4FADC23908B4156C00ABE55E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(NATIVE_ARCH)";
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_SYMBOL_SEPARATION = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
@@ -244,18 +257,19 @@
 					NO_ISNAN,
 				);
 				GCC_USE_GCC3_PFE_SUPPORT = NO;
-				GCC_VERSION = 4.2;
+				GCC_VERSION = "";
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCarbon;
+				HEADER_SEARCH_PATHS = "";
 				ICC_FP_MODEL = source;
 				ICC_FP_SPECULATION = off;
 				ICC_OPTLEVEL = speedHLO;
 				ICC_OTHER_CFLAGS = "$(OTHER_CFLAGS)";
 				ICC_OTHER_CPLUSPLUSFLAGS = "$(ICC_OTHER_CFLAGS) $(OTHER_CPLUSPLUSFLAGS)";
+				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "$(OTHER_CFLAGS)";
 				PREBINDING = NO;
-				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				SDKROOT = macosx;
 			};
 			name = Release;
 		};
