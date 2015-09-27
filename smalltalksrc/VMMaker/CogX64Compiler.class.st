@@ -1710,6 +1710,13 @@ CogX64Compiler >> hasLinkRegister [
 ]
 
 { #category : #testing }
+CogX64Compiler >> hasThreeAddressArithmetic [
+	"Answer if the receiver supports three-address arithmetic instructions"
+	<inline: true>
+	^false
+]
+
+{ #category : #testing }
 CogX64Compiler >> is32BitSignedImmediate: a64BitUnsignedOperand [
 	^(a64BitUnsignedOperand >> 31) signedIntFromLong between: -1 and: 0
 ]
