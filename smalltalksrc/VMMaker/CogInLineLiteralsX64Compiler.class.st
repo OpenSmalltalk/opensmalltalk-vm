@@ -86,10 +86,128 @@ CogInLineLiteralsX64Compiler >> concreteRegister: registerIndex [
 			 registerIndex]
 ]
 
+{ #category : #'generate machine code' }
+CogInLineLiteralsX64Compiler >> concretizeArithCwR: opcode [
+	| value reg |
+	value := operands at: 0.
+	reg := self concreteRegister: (operands at: 1).
+	machineCode
+		at:  0 put: (self rexR: RISCTempReg x: 0 b: RISCTempReg);
+		at:  1 put: 16rB8 + (RISCTempReg bitAnd: 7);
+		at:  2 put: (value bitAnd: 16rFF);
+		at:  3 put: (value >> 8 bitAnd: 16rFF);
+		at:  4 put: (value >> 16 bitAnd: 16rFF);
+		at:  5 put: (value >> 24 bitAnd: 16rFF);
+		at:  6 put: (value >> 32 bitAnd: 16rFF);
+		at:  7 put: (value >> 40 bitAnd: 16rFF);
+		at:  8 put: (value >> 48 bitAnd: 16rFF);
+		at:  9 put: (value >> 56 bitAnd: 16rFF);
+		at: 10 put: (self rexR: RISCTempReg x: 0 b: reg);
+		at: 11 put: opcode;
+		at: 12 put: (self mod: ModReg RM: reg RO: RISCTempReg).
+	^machineCodeSize := 13
+]
+
+{ #category : #'generate machine code' }
+CogInLineLiteralsX64Compiler >> concretizeMoveCwR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| value reg |
+	value := operands at: 0.
+	reg := self concreteRegister: (operands at: 1).
+	machineCode
+		at:  0 put: (self rexR: reg x: 0 b: reg);
+		at:  1 put: 16rB8 + (reg bitAnd: 7);
+		at:  2 put: (value bitAnd: 16rFF);
+		at:  3 put: (value >> 8 bitAnd: 16rFF);
+		at:  4 put: (value >> 16 bitAnd: 16rFF);
+		at:  5 put: (value >> 24 bitAnd: 16rFF);
+		at:  6 put: (value >> 32 bitAnd: 16rFF);
+		at:  7 put: (value >> 40 bitAnd: 16rFF);
+		at:  8 put: (value >> 48 bitAnd: 16rFF);
+		at:  9 put: (value >> 56 bitAnd: 16rFF);
+		at: 10 put: 16r90. "Add a nop to disambiguate between MoveCwR/PushCwR and ArithCwR, which ends with a (self mod: ModReg RM: 0 RO: 0)"
+	self assert: (self mod: ModReg RM: 0 RO: 0) > 16r90.
+	^machineCodeSize := 11
+]
+
+{ #category : #'generate machine code' }
+CogInLineLiteralsX64Compiler >> concretizePushCw [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| value |
+	value := operands at: 0.
+	machineCode
+		at: 0 put: 16r68;
+		at: 1 put: (value >> 8 bitAnd: 16rFF);
+		at: 2 put: (value >> 16 bitAnd: 16rFF);
+		at: 3 put: (value >> 24 bitAnd: 16rFF);
+		at: 4 put: (value >> 32 bitAnd: 16rFF);
+		at: 5 put: (value >> 40 bitAnd: 16rFF);
+		at: 6 put: (value >> 48 bitAnd: 16rFF);
+		at: 7 put: (value >> 56 bitAnd: 16rFF);
+		at: 8 put: 16r90. "Add a nop to disambiguate between MoveCwR/PushCwR and ArithCwR, which ends with a (self mod: ModReg RM: 0 RO: 0)"
+	self assert: (self mod: ModReg RM: 0 RO: 0) > 16r90.
+	^machineCodeSize := 9
+]
+
+{ #category : #'inline cacheing' }
+CogInLineLiteralsX64Compiler >> inlineCacheTagAt: callSiteReturnAddress [
+	"Answer the inline cache tag for the return address of a send."
+	^self thirtyTwoBitLiteralBefore: callSiteReturnAddress - 5
+]
+
 { #category : #testing }
 CogInLineLiteralsX64Compiler >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction."
 	^self isJump or: [opcode = AlignmentNops]
+]
+
+{ #category : #'inline cacheing' }
+CogInLineLiteralsX64Compiler >> literalBeforeFollowingAddress: followingAddress [
+	"Answer the literal embedded in the instruction immediately preceeding followingAddress.
+	 This is used in the MoveCwR and CmpCwR cases; these are distinguished by a nop following
+	 the literal load in MoveCwR, and a (self mod: ModReg RM: rX RO: rY) following the CmpCwR."
+	| base |
+	base := followingAddress - ((objectMemory byteAt: followingAddress - 1) = 16r90
+									ifTrue: [9]
+									ifFalse: [11]).
+	^self cCode: [objectMemory unalignedLongAt: base]
+		inSmalltalk:
+			[   (objectMemory byteAt: base)
+			+ ((objectMemory byteAt: base + 1) << 8)
+			+ ((objectMemory byteAt: base + 2) << 16)
+			+ ((objectMemory byteAt: base + 3) << 24)
+			+ ((objectMemory byteAt: base + 4) << 32)
+			+ ((objectMemory byteAt: base + 5) << 40)
+			+ ((objectMemory byteAt: base + 6) << 48)
+			+ ((objectMemory byteAt: base + 7) << 52)]
+]
+
+{ #category : #accessing }
+CogInLineLiteralsX64Compiler >> loadLiteralByteSize [
+	<inline: true>
+	^self moveCwRByteSize
+]
+
+{ #category : #accessing }
+CogInLineLiteralsX64Compiler >> moveCwRByteSize [
+	"With in-line literals we use an 11 byte sequence for loading a 64-bit immediate,
+	 which is one more than strictly necessary.  We plant a nop at the end of the
+	 sequence to allow us to distinguish between this and the
+	 (self mod: ModReg RM: rX RO: rY) at the end of an ArithCwR sequence."
+	<inline: true>
+	^11
+]
+
+{ #category : #accessing }
+CogInLineLiteralsX64Compiler >> pushCwByteSize [
+	"With in-line literals we use an 9 byte sequence for loading a 64-bit immediate,
+	 which is one more than strictly necessary.  We plant a nop at the end of the
+	 sequence to allow us to distinguish between this and the
+	 (self mod: ModReg RM: rX RO: rY) at the end of an ArithCwR sequence."
+	<inline: true>
+	^9
 ]
 
 { #category : #'generate machine code' }
@@ -133,8 +251,8 @@ CogInLineLiteralsX64Compiler >> sizePCDependentInstructionAt: eventualAbsoluteAd
 												ifFalse: [6]]]
 							ifFalse:
 								[opcode caseOf:
-									{	[JumpLong]	->	[5].
-										[JumpFull]	->	[12].
-										[Call]		->	[5].
-										[CallFull]	->	[12] }]
+									{	[JumpLong]				->	[5].
+										[JumpFull]				->	[12].
+										[JumpLongZero]		->	[6].
+										[JumpLongNonZero]	->	[6] }]
 ]
