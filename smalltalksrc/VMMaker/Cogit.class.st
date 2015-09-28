@@ -495,7 +495,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		addHeaderFile:'<stddef.h>'; "for e.g. offsetof"
 		addHeaderFile:'"sqCogStackAlignment.h"';
-		addHeaderFile:'"dispdbg.h"'; "must preceed cointerp.h & cogit.h otherwise NoDbgRegParms gets screwed up"
+		addHeaderFile:'"dispdbg.h"'; "must precede cointerp.h & cogit.h otherwise NoDbgRegParms gets screwed up"
 		addHeaderFile:'"cogmethod.h"'.
 	NewspeakVM ifTrue:
 		[aCCodeGenerator addHeaderFile:'"nssendcache.h"'].
@@ -963,7 +963,7 @@ Cogit class >> initializeWithOptions: optionsDictionary [
 		 aSuperclass withAllSubclasses do:
 			[:class| class initializationOptions: optionsDictionary]].
 	super initializeWithOptions: optionsDictionary.
-	self initializeMiscConstants. "must preceed other initialization."
+	self initializeMiscConstants. "must precede other initialization."
 	self initializeErrorCodes.
 	self initializeCogMethodConstants.
 	self initializeAnnotationConstants.
@@ -6924,9 +6924,9 @@ Cogit >> isSendAnnotation: annotation [
 { #category : #'jit - api' }
 Cogit >> isSendReturnPC: retpc [
 	<api>
-	"Answer if the instruction preceeding retpc is a call instruction."
+	"Answer if the instruction preceding retpc is a call instruction."
 	| target |
-	(backEnd isCallPreceedingReturnPC: retpc) ifFalse:
+	(backEnd isCallprecedingReturnPC: retpc) ifFalse:
 		[^false].
 	target := backEnd callTargetFromReturnAddress: retpc.
 	^(target between: firstSend and: lastSend)

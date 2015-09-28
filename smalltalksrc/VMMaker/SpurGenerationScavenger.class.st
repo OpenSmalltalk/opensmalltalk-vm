@@ -715,7 +715,7 @@ SpurGenerationScavenger >> newSpaceStart: startAddress newSpaceBytes: totalBytes
 	self assert: totalBytes - actualEdenBytes - survivorBytes - survivorBytes < manager allocationUnit.
 
 	"for tenuring we require older objects below younger objects.  since allocation
-	 grows up this means that the survivor spaces must preceed eden."
+	 grows up this means that the survivor spaces must precede eden."
 
 	pastSpace start: startAddress; limit: startAddress + survivorBytes.
 	futureSpace start: pastSpace limit; limit: pastSpace limit + survivorBytes.

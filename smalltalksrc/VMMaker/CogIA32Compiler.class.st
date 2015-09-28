@@ -170,7 +170,7 @@ CogIA32Compiler >> cResultRegister [
 
 { #category : #'inline cacheing' }
 CogIA32Compiler >> callFullTargetFromReturnAddress: callSiteReturnAddress [
-	"Answer the address the call immediately preceeding callSiteReturnAddress will jump to."
+	"Answer the address the call immediately preceding callSiteReturnAddress will jump to."
 	^self callTargetFromReturnAddress: callSiteReturnAddress
 ]
 
@@ -181,7 +181,7 @@ CogIA32Compiler >> callInstructionByteSize [
 
 { #category : #'inline cacheing' }
 CogIA32Compiler >> callTargetFromReturnAddress: callSiteReturnAddress [
-	"Answer the address the call immediately preceeding callSiteReturnAddress will jump to."
+	"Answer the address the call immediately preceding callSiteReturnAddress will jump to."
 	| callDistance |
 	callDistance := self literalBeforeFollowingAddress: callSiteReturnAddress.
 	^callSiteReturnAddress + callDistance signedIntFromLong
@@ -2805,7 +2805,7 @@ CogIA32Compiler >> jumpLongConditionalByteSize [
 
 { #category : #'inline cacheing' }
 CogIA32Compiler >> jumpLongTargetBeforeFollowingAddress: mcpc [ 
-	"Answer the target address for the long jump immediately preceeding mcpc"
+	"Answer the target address for the long jump immediately preceding mcpc"
 	^self callTargetFromReturnAddress: mcpc
 ]
 
@@ -2843,7 +2843,7 @@ CogIA32Compiler >> leafCallStackPointerDelta [
 
 { #category : #'inline cacheing' }
 CogIA32Compiler >> literalBeforeFollowingAddress: followingAddress [
-	"Answer the literal embedded in the instruction immediately preceeding followingAddress."
+	"Answer the literal embedded in the instruction immediately preceding followingAddress."
 	^  ((objectMemory byteAt: followingAddress - 1) << 24)
 	+  ((objectMemory byteAt: followingAddress - 2) << 16)
 	+  ((objectMemory byteAt: followingAddress - 3) << 8)
@@ -3118,7 +3118,7 @@ CogIA32Compiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 	 where this instruction will be output.  The span of a jump to a following
 	 instruction is therefore between that instruction's address and this
 	 instruction's address ((which are both still their virtual addresses), but the
-	 span of a jump to a preceeding instruction or to an absolute address is
+	 span of a jump to a preceding instruction or to an absolute address is
 	 between that instruction's address (which by now is its eventual absolute
 	 address) or absolute address and eventualAbsoluteAddress."
 
@@ -3172,7 +3172,7 @@ CogIA32Compiler >> stackPageInterruptHeadroomBytes [
 
 { #category : #'inline cacheing' }
 CogIA32Compiler >> storeLiteral: literal beforeFollowingAddress: followingAddress [
-	"Rewrite the literal in the instruction immediately preceeding followingAddress."
+	"Rewrite the literal in the instruction immediately preceding followingAddress."
 	objectMemory
 		byteAt: followingAddress - 1 put: (literal >> 24 bitAnd: 16rFF);
 		byteAt: followingAddress - 2 put: (literal >> 16 bitAnd: 16rFF);
