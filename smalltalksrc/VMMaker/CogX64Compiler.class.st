@@ -466,6 +466,15 @@ CogX64Compiler >> concretizeAddRR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeAlignmentNops [
+	<inline: true>
+	self flag: 'if performance is an issue generate longer nops'.
+	0 to: machineCodeSize - 1 do:
+		[:i|
+		machineCode at: i put: 16r90]
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeArithCqRWithRO: regOpcode raxOpcode: raxOpcode [
 	"Will get inlined into concretizeAt: switch."
 	<inline: false>
