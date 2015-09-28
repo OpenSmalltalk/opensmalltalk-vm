@@ -638,6 +638,11 @@ CogObjectRepresentationForSpur >> genGetClassObjectOfClassIndex: instReg into: d
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genGetClassTagOf: instReg into: destReg scratchReg: scratchReg [
+	^self genGetInlineCacheClassTagFrom: instReg into: destReg forEntry: true
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genGetCompactClassIndexNonImmOf: instReg into: destReg [
 	"Fetch the instance's class index into destReg."
 	^self genGetClassIndexOfNonImm: instReg into: destReg

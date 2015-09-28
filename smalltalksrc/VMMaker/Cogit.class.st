@@ -4758,6 +4758,7 @@ Cogit >> estimateOfAbstractOpcodesPerBytecodes [
 Cogit >> expectedClosedPICPrototype: cPIC [
 	"Answer 0 if the ClosedPIC is as expected from compileClosedPICPrototype,
 	 otherwise answer an error code identifying the first discrepancy found."
+	"self disassembleFrom: methodZoneBase + (self sizeof: CogMethod) to: methodZoneBase + closedPICSize"
 	<var: #cPIC type: #'CogMethod *'>
 	| pc offsetToLiteral object entryPoint |
 	pc := cPIC asInteger + firstCPICCaseOffset.
