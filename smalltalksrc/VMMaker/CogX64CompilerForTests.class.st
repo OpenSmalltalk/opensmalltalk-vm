@@ -5,6 +5,13 @@ Class {
 }
 
 { #category : #'test support' }
+CogX64CompilerForTests class >> byteRegistersWithNamesDo: aBinaryBlock [
+	self registers
+		with: #('%al' '%cl' '%dl' '%bl' '%spl' '%bpl' '%sil' '%dil' '%r8b' '%r9b' '%r10b' '%r11b' '%r12b' '%r13b' '%r14b' '%r15b')
+		do: aBinaryBlock
+]
+
+{ #category : #'test support' }
 CogX64CompilerForTests class >> dataRegistersWithAccessorsDo: aTrinaryBlock [
 	self registers withIndexDo:
 		[:reg :i|

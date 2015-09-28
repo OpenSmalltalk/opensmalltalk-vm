@@ -383,9 +383,10 @@ CogX64CompilerTests >> testMoveRMbr [
 					self processor
 						disassembleInstructionAt: 0
 						In: inst machineCode object
-						into: [:str :sz| | plainJane herIntended |
+						into: [:str :sz| | plainJane herIntended po |
 							plainJane := self strip: str.
-							herIntended := 'movb ', brname, ', 0x', (offset hex allButFirst: 3), '(', drname, ')'.
+							po := offset bitAnd: 1 << self processor bitsInWord - 1.
+							herIntended := 'movb ', brname, (offset = 0 ifTrue: [', '] ifFalse: [', 0x', (po printStringBase: 16 length: 16 padded: true)]), '(', drname, ')'.
 							self assert: (plainJane match: herIntended).
 							self assert: len = sz]]]]]
 ]
