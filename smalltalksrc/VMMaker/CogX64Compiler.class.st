@@ -174,7 +174,7 @@ CogX64Compiler >> callInstructionByteSize [
 
 { #category : #'inline cacheing' }
 CogX64Compiler >> callTargetFromReturnAddress: callSiteReturnAddress [
-	"Answer the address the call immediately preceeding callSiteReturnAddress will jump to."
+	"Answer the address the call immediately preceding callSiteReturnAddress will jump to."
 	| callDistance |
 	callDistance := self thirtyTwoBitLiteralBefore: callSiteReturnAddress.
 	^callSiteReturnAddress + callDistance signedIntFromLong
@@ -1942,7 +1942,7 @@ CogX64Compiler >> jumpLongConditionalByteSize [
 
 { #category : #'inline cacheing' }
 CogX64Compiler >> jumpLongTargetBeforeFollowingAddress: mcpc [ 
-	"Answer the target address for the long jump immediately preceeding mcpc"
+	"Answer the target address for the long jump immediately preceding mcpc"
 	^self callTargetFromReturnAddress: mcpc
 ]
 

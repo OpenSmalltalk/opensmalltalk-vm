@@ -829,7 +829,7 @@ NewspeakInterpreter class >> initializeWithOptions: optionsDictionary [
 	"NewspeakInterpreter initializeWithOptions: Dictionary new"
 
 	super initializeWithOptions: optionsDictionary.  "initialize ObjectMemory constants"
-	self initializeMiscConstants. "must preceed other initialization."
+	self initializeMiscConstants. "must precede other initialization."
 	self initializeAssociationIndex.
 	self initializeBytecodeTable.
 	self initializeCaches.
@@ -3555,7 +3555,7 @@ NewspeakInterpreter >> ifValidWriteBackStack: theCFP Pointers: theCSP Save: save
 
 { #category : #'image save/restore' }
 NewspeakInterpreter >> imageFormatCompatibilityVersion [
-	"This VM is backward-compatible with the immediately preceeding non-closure version."
+	"This VM is backward-compatible with the immediately preceding non-closure version."
 
 	self wordSize == 4
 		ifTrue: [^6502]
@@ -5547,7 +5547,7 @@ NewspeakInterpreter >> primitiveByteArrayNByteIntegerAt [
 { #category : #'memory space primitives' }
 NewspeakInterpreter >> primitiveBytesLeft [
 	"Reports bytes available at this moment. For more meaningful 
-	results, calls to this primitive should be preceeded by a full 
+	results, calls to this primitive should be precedeed by a full 
 	or incremental garbage collection."
 	| aBool |
 	self methodArgumentCount = 0
