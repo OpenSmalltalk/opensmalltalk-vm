@@ -139,7 +139,7 @@ StackToRegisterMappingCogit class >> callingConvention [
 
 	 To save the CoInterpreter from change we shuffle the retpc and push the register args in
 	 the prolog so that the frame format is unchanged by register args.  Also, the trampolines for
-	 unlinked sends do the same, as does the code preceeding an interpreter primitive.  It turns
+	 unlinked sends do the same, as does the code preceding an interpreter primitive.  It turns
 	 out that this protocol is faster than always pushing arguments.  Comparing benchFib with the
 	 shuffling protocol against an always-push protocol on a 2.66 GHz Core i7 (MacBook Pro) , the
 	 shuffling protocol is 6.3% faster than the always push protocol.
@@ -709,9 +709,9 @@ StackToRegisterMappingCogit class >> stackToRegisterMapping [
 		7	L2:
 
 	In the first case we can know the merge base at L2 by propagating the merge base from 4 jump L2, which
-	preceeds the target of 2 jumpCond L1.  i.e. the merge base at 7 L2 is the stack pointer at 4 jump L2, which
-	preceeds the target of 2 jumpCond L1.  So at 2 jumpCond L1 we copy the stack pointer to the merge base
-	at 5 L1, /and/ to the preceeding 4 jump L2, and when we reach 4 jump L2, propagate the merge base to 7 L2.
+	precedes the target of 2 jumpCond L1.  i.e. the merge base at 7 L2 is the stack pointer at 4 jump L2, which
+	precedes the target of 2 jumpCond L1.  So at 2 jumpCond L1 we copy the stack pointer to the merge base
+	at 5 L1, /and/ to the preceding 4 jump L2, and when we reach 4 jump L2, propagate the merge base to 7 L2.
 
 	 Since we're conscious of JIT performance we restrict the live register search range by maintaining
 	 simSpillBase, which is the index of the unspilled entry furthest from the end of simulation stack.
@@ -1766,7 +1766,7 @@ StackToRegisterMappingCogit >> genEqualsEqualsNoBranchArgIsConstant: argIsConsta
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genExtPushClosureBytecode [
 	"Block compilation.  At this point in the method create the block.  Note its start
-	 and defer generating code for it until after the method and any other preceeding
+	 and defer generating code for it until after the method and any other preceding
 	 blocks.  The block's actual code will be compiled later."
 	"253		11111101 eei i i kkk	jjjjjjjj		Push Closure Num Copied iii (+ Ext A // 16 * 8) Num Args kkk (+ Ext A \\ 16 * 8) BlockSize jjjjjjjj (+ Ext B * 256). ee = num extensions"
 	| startpc numArgs numCopied |
@@ -2603,7 +2603,7 @@ StackToRegisterMappingCogit >> genPushActiveContextBytecode [
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genPushClosureCopyCopiedValuesBytecode [
 	"Block compilation.  At this point in the method create the block.  Note its start
-	 and defer generating code for it until after the method and any other preceeding
+	 and defer generating code for it until after the method and any other preceding
 	 blocks.  The block's actual code will be compiled later."
 	"143   10001111 llllkkkk jjjjjjjj iiiiiiii	Push Closure Num Copied llll Num Args kkkk BlockSize jjjjjjjjiiiiiiii"
 	| startpc numArgs numCopied |

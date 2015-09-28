@@ -786,7 +786,7 @@ Interpreter class >> initializeWithOptions: optionsDictionary [
 	"Interpreter initializeWithOptions: Dictionary new"
 
 	super initializeWithOptions: optionsDictionary.  "initialize ObjectMemory constants"
-	self initializeMiscConstants. "must preceed other initialization."
+	self initializeMiscConstants. "must precede other initialization."
 	self initializeAssociationIndex.
 	self initializeBytecodeTable.
 	self initializeCaches.
@@ -3234,7 +3234,7 @@ Interpreter >> getThisSessionID [
 
 { #category : #'image save/restore' }
 Interpreter >> imageFormatCompatibilityVersion [
-	"This VM is backward-compatible with the immediately preceeding non-closure version."
+	"This VM is backward-compatible with the immediately preceding non-closure version."
 
 	self wordSize == 4
 		ifTrue: [^6502]
@@ -4939,7 +4939,7 @@ Interpreter >> primitiveBlockCopy [
 { #category : #'memory space primitives' }
 Interpreter >> primitiveBytesLeft [
 	"Reports bytes available at this moment. For more meaningful 
-	results, calls to this primitive should be preceeded by a full 
+	results, calls to this primitive should be precedeed by a full 
 	or incremental garbage collection."
 	| aBool |
 	self methodArgumentCount = 0

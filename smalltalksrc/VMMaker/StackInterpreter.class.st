@@ -1345,7 +1345,7 @@ StackInterpreter class >> initializeWithOptions: optionsDictionary [
 	"StackInterpreter initializeWithOptions: Dictionary new"
 
 	super initializeWithOptions: optionsDictionary.
-	self initializeMiscConstants. "must preceed other initialization."
+	self initializeMiscConstants. "must precede other initialization."
 	self initializeAssociationIndex.
 	self initializeBytecodeTable.
 	self initializeCaches.
@@ -7257,7 +7257,7 @@ StackInterpreter >> iframeMethod: theFP [
 
 { #category : #'image save/restore' }
 StackInterpreter >> imageFormatCompatibilityVersion [
-	"This VM is backward-compatible with the immediately preceeding version."
+	"This VM is backward-compatible with the immediately preceding version."
 
 	^objectMemory wordSize == 4 ifTrue: [6504] ifFalse: [68002]
 ]
@@ -7392,7 +7392,7 @@ StackInterpreter >> initialPCForHeader: methodHeader method: theMethod [
 { #category : #initialization }
 StackInterpreter >> initialize [
 	"Here we can initialize the variables C initializes to zero.  #initialize methods do /not/ get translated."
-	checkAllocFiller := false. "must preceed initializeObjectMemory:"
+	checkAllocFiller := false. "must precede initializeObjectMemory:"
 	primFailCode := 0.
 	stackLimit := 0. "This is also the initialization flag for the stack system."
 	stackPage := overflowedPage := 0.
@@ -13720,7 +13720,7 @@ StackInterpreter >> spurPostBecomeAction: theBecomeEffectsFlags [
 	theBecomeEffectsFlags ~= 0 ifTrue:
 		[(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 			[self followForwardedMethodsInMethodCache.
-			 self followForwardedMethodsInMethodZone]. "for CoInterpreter; must preceed followForwardingPointersInStackZone:"
+			 self followForwardedMethodsInMethodZone]. "for CoInterpreter; must precede followForwardingPointersInStackZone:"
 		 (theBecomeEffectsFlags anyMask: BecameActiveClassFlag) ifTrue:
 			[self flushBecommedClassesInMethodCache.
 			 self flushBecommedClassesInMethodZone]. "for CoInterpreter"
