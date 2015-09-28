@@ -16,7 +16,7 @@ CogInLineLiteralsARMCompiler >> callFullTargetFromReturnAddress: callSiteReturnA
 ]
 
 { #category : #testing }
-CogInLineLiteralsARMCompiler >> extract32BitOperandFrom4InstructionsPreceeding: addr [
+CogInLineLiteralsARMCompiler >> extract32BitOperandFrom4InstructionsPreceding: addr [
 	<inline: true>
 	^(objectMemory byteAt: addr -4) 
 	 + ((objectMemory byteAt: addr - 8) << 8) 
@@ -37,18 +37,18 @@ CogInLineLiteralsARMCompiler >> implicitReceiveCacheAt: callSiteReturnAddress [
 	"Answer the implicit receiver cache for the return address
 	 of a call to one of the ceImplicitReceiver... trampolines."
 	self assert: (self instructionIsBL: (self instructionBeforeAddress: callSiteReturnAddress)).
-	^self extract32BitOperandFrom4InstructionsPreceeding: callSiteReturnAddress - 4
+	^self extract32BitOperandFrom4InstructionsPreceding: callSiteReturnAddress - 4
 ]
 
 { #category : #'inline cacheing' }
 CogInLineLiteralsARMCompiler >> inlineCacheTagAt: callSiteReturnAddress [
 	"Answer the inline cache tag for the return address of a send."
 	self assert: (self instructionIsBL: (self instructionBeforeAddress: callSiteReturnAddress)).
-	^self extract32BitOperandFrom4InstructionsPreceeding: callSiteReturnAddress - 4
+	^self extract32BitOperandFrom4InstructionsPreceding: callSiteReturnAddress - 4
 ]
 
 { #category : #testing }
-CogInLineLiteralsARMCompiler >> insert32BitOperand: operand into4InstructionsPreceeding: addr [
+CogInLineLiteralsARMCompiler >> insert32BitOperand: operand into4InstructionsPreceding: addr [
 	<inline: true>
 	objectMemory
 		byteAt: addr -   4 put: (operand			bitAnd: 16rFF);
@@ -68,8 +68,8 @@ CogInLineLiteralsARMCompiler >> literalBeforeFollowingAddress: followingAddress 
 	"Answer the long constant loaded by a MOV/ORR/ORR/ORR
 	 or MOV/ORR/ORR/ORR/PUSH, or MOV/ORR/ORR/ORR/CMP sequence, just before this address:"
 	^(self instructionIsOR: (self instructionBeforeAddress: followingAddress))
-		ifTrue: [self extract32BitOperandFrom4InstructionsPreceeding: followingAddress]
-		ifFalse: [self extract32BitOperandFrom4InstructionsPreceeding: followingAddress - 4]
+		ifTrue: [self extract32BitOperandFrom4InstructionsPreceding: followingAddress]
+		ifFalse: [self extract32BitOperandFrom4InstructionsPreceding: followingAddress - 4]
 ]
 
 { #category : #accessing }
@@ -114,9 +114,9 @@ CogInLineLiteralsARMCompiler >> relocateMethodReferenceBeforeAddress: pc by: del
 							ifFalse: [pc].
 	"If the load is not done via pc-relative addressing we have to relocate."
 	(self isPCRelativeValueLoad: (self instructionBeforeAddress: pcPreceedingLoad)) ifFalse:
-		[reference := self extract32BitOperandFrom4InstructionsPreceeding: pcPreceedingLoad.
+		[reference := self extract32BitOperandFrom4InstructionsPreceding: pcPreceedingLoad.
 		 reference := reference + delta.
-		 self insert32BitOperand: reference into4InstructionsPreceeding: pcPreceedingLoad]
+		 self insert32BitOperand: reference into4InstructionsPreceding: pcPreceedingLoad]
 ]
 
 { #category : #'inline cacheing' }
@@ -128,7 +128,7 @@ CogInLineLiteralsARMCompiler >> rewriteFullTransferAt: callSiteReturnAddress tar
 	<var: #callTargetAddress type: #usqInt>
 	"cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress - 1"
 	self assert: (self instructionBeforeAddress: callSiteReturnAddress) = expectedInstruction.
-	self insert32BitOperand: callTargetAddress into4InstructionsPreceeding: callSiteReturnAddress - 4.
+	self insert32BitOperand: callTargetAddress into4InstructionsPreceding: callSiteReturnAddress - 4.
 	self assert: (self callFullTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
 	^20
 ]
@@ -149,9 +149,9 @@ CogInLineLiteralsARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag:
 	self assert: (self isInImmediateJumpRange: callDistance). "we don't support long call updates here"
 	call := self bl: callDistance.
 	objectMemory longAt: callSiteReturnAddress - 4 put: call.
-	self insert32BitOperand: cacheTag into4InstructionsPreceeding: callSiteReturnAddress - 4.
+	self insert32BitOperand: cacheTag into4InstructionsPreceding: callSiteReturnAddress - 4.
 	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
-	self assert: (self extract32BitOperandFrom4InstructionsPreceeding: callSiteReturnAddress - 4) = cacheTag.
+	self assert: (self extract32BitOperandFrom4InstructionsPreceding: callSiteReturnAddress - 4) = cacheTag.
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 20 to: callSiteReturnAddress - 1]."
 	^20
@@ -161,7 +161,7 @@ CogInLineLiteralsARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag:
 CogInLineLiteralsARMCompiler >> rewriteInlineCacheTag: cacheTag at: callSiteReturnAddress [
 	"Rewrite an inline cache with a new tag.  This variant is used
 	 by the garbage collector."
-	self insert32BitOperand: cacheTag into4InstructionsPreceeding: callSiteReturnAddress -4
+	self insert32BitOperand: cacheTag into4InstructionsPreceding: callSiteReturnAddress -4
 ]
 
 { #category : #'generate machine code' }
@@ -196,6 +196,6 @@ CogInLineLiteralsARMCompiler >> storeLiteral: literal beforeFollowingAddress: fo
 	"Rewrite the long constant loaded by a MOV/ORR/ORR/ORR
 	 or MOV/ORR/ORR/ORR/PUSH  sequence, just before this address:"
 	^(self instructionIsOR: (self instructionBeforeAddress: followingAddress))
-		ifTrue: [self insert32BitOperand: literal into4InstructionsPreceeding: followingAddress]
-		ifFalse: [self insert32BitOperand: literal into4InstructionsPreceeding: followingAddress - 4]
+		ifTrue: [self insert32BitOperand: literal into4InstructionsPreceding: followingAddress]
+		ifFalse: [self insert32BitOperand: literal into4InstructionsPreceding: followingAddress - 4]
 ]

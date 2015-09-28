@@ -2745,7 +2745,7 @@ CogIA32Compiler >> isBigEndian [
 ]
 
 { #category : #testing }
-CogIA32Compiler >> isCallPreceedingReturnPC: mcpc [
+CogIA32Compiler >> isCallPrecedingReturnPC: mcpc [
 	"Assuming mcpc is a return pc answer if the instruction before it is a call."
 	^(objectMemory byteAt: mcpc - 5) = 16rE8
 ]
