@@ -1,8 +1,22 @@
 Class {
 	#name : #CogInLineLiteralsX64Compiler,
 	#superclass : #CogX64Compiler,
+	#classVars : [
+		'ConcreteRISCTempReg'
+	],
 	#category : #'VMMaker-JIT'
 }
+
+{ #category : #'class initialization' }
+CogInLineLiteralsX64Compiler class >> initialize [
+	ConcreteRISCTempReg := self basicNew concreteRegister: RISCTempReg
+]
+
+{ #category : #testing }
+CogInLineLiteralsX64Compiler class >> isConcreteRISCTempRegister: concreteRegister [
+	"For tests to filter-out bogus values left in the ConcreteRISCTempRegister, if any."
+	^concreteRegister = ConcreteRISCTempReg
+]
 
 { #category : #private }
 CogInLineLiteralsX64Compiler >> abstractRegisterForConcreteRegister: reg [
@@ -92,8 +106,8 @@ CogInLineLiteralsX64Compiler >> concretizeArithCwR: opcode [
 	value := operands at: 0.
 	reg := self concreteRegister: (operands at: 1).
 	machineCode
-		at:  0 put: (self rexR: RISCTempReg x: 0 b: RISCTempReg);
-		at:  1 put: 16rB8 + (RISCTempReg bitAnd: 7);
+		at:  0 put: (self rexR: ConcreteRISCTempReg x: 0 b: ConcreteRISCTempReg);
+		at:  1 put: 16rB8 + (ConcreteRISCTempReg bitAnd: 7);
 		at:  2 put: (value bitAnd: 16rFF);
 		at:  3 put: (value >> 8 bitAnd: 16rFF);
 		at:  4 put: (value >> 16 bitAnd: 16rFF);
@@ -102,9 +116,9 @@ CogInLineLiteralsX64Compiler >> concretizeArithCwR: opcode [
 		at:  7 put: (value >> 40 bitAnd: 16rFF);
 		at:  8 put: (value >> 48 bitAnd: 16rFF);
 		at:  9 put: (value >> 56 bitAnd: 16rFF);
-		at: 10 put: (self rexR: RISCTempReg x: 0 b: reg);
+		at: 10 put: (self rexR: reg x: 0 b: ConcreteRISCTempReg);
 		at: 11 put: opcode;
-		at: 12 put: (self mod: ModReg RM: reg RO: RISCTempReg).
+		at: 12 put: (self mod: ModReg RM: ConcreteRISCTempReg RO: reg).
 	^machineCodeSize := 13
 ]
 
@@ -138,17 +152,21 @@ CogInLineLiteralsX64Compiler >> concretizePushCw [
 	| value |
 	value := operands at: 0.
 	machineCode
-		at: 0 put: 16r68;
-		at: 1 put: (value >> 8 bitAnd: 16rFF);
-		at: 2 put: (value >> 16 bitAnd: 16rFF);
-		at: 3 put: (value >> 24 bitAnd: 16rFF);
-		at: 4 put: (value >> 32 bitAnd: 16rFF);
-		at: 5 put: (value >> 40 bitAnd: 16rFF);
-		at: 6 put: (value >> 48 bitAnd: 16rFF);
-		at: 7 put: (value >> 56 bitAnd: 16rFF);
-		at: 8 put: 16r90. "Add a nop to disambiguate between MoveCwR/PushCwR and ArithCwR, which ends with a (self mod: ModReg RM: 0 RO: 0)"
-	self assert: (self mod: ModReg RM: 0 RO: 0) > 16r90.
-	^machineCodeSize := 9
+		at:  0 put: (self rexR: ConcreteRISCTempReg x: 0 b: ConcreteRISCTempReg);
+		at:  1 put: 16rB8 + (ConcreteRISCTempReg bitAnd: 7);
+		at:  2 put: (value bitAnd: 16rFF);
+		at:  3 put: (value >> 8 bitAnd: 16rFF);
+		at:  4 put: (value >> 16 bitAnd: 16rFF);
+		at:  5 put: (value >> 24 bitAnd: 16rFF);
+		at:  6 put: (value >> 32 bitAnd: 16rFF);
+		at:  7 put: (value >> 40 bitAnd: 16rFF);
+		at:  8 put: (value >> 48 bitAnd: 16rFF);
+		at:  9 put: (value >> 56 bitAnd: 16rFF);
+		at: 10 put: 16r41;
+		at: 11 put: 16r50 + (ConcreteRISCTempReg - 8). "The 50 will disambiguate between MoveCwR, PushCwR and ArithCwR, which ends with a (self mod: ModReg RM: 0 RO: 0)"
+		self assert: ConcreteRISCTempReg >= 8.
+	self assert: (self mod: ModReg RM: 0 RO: 0) > 16r57.
+	^machineCodeSize := 12
 ]
 
 { #category : #'inline cacheing' }
@@ -165,13 +183,18 @@ CogInLineLiteralsX64Compiler >> isPCDependent [
 
 { #category : #'inline cacheing' }
 CogInLineLiteralsX64Compiler >> literalBeforeFollowingAddress: followingAddress [
-	"Answer the literal embedded in the instruction immediately preceeding followingAddress.
-	 This is used in the MoveCwR and CmpCwR cases; these are distinguished by a nop following
-	 the literal load in MoveCwR, and a (self mod: ModReg RM: rX RO: rY) following the CmpCwR."
-	| base |
-	base := followingAddress - ((objectMemory byteAt: followingAddress - 1) = 16r90
-									ifTrue: [9]
-									ifFalse: [11]).
+	"Answer the literal embedded in the instruction immediately preceding followingAddress.
+	 This is used in the MoveCwR, PushCwR and CmpCwR cases; these are distinguished by a
+	 nop following the literal load in MoveCwR, a 16r50 + reg ending the PushCwR sequence, and
+	 a (self mod: ModReg RM: rX RO: rY) ending the CmpCwR sequence, which is at least 16rC0."
+	| lastByte base |
+	lastByte := objectMemory byteAt: followingAddress - 1.
+	base := followingAddress - (lastByte <= 16r90
+									ifTrue:
+										[lastByte = 16r90
+											ifTrue: [9]		"MoveCwR"
+											ifFalse: [10]]	"PushCwR"
+									ifFalse: [11]).			"ArithCwR"
 	^self cCode: [objectMemory unalignedLongAt: base]
 		inSmalltalk:
 			[   (objectMemory byteAt: base)
@@ -202,12 +225,12 @@ CogInLineLiteralsX64Compiler >> moveCwRByteSize [
 
 { #category : #accessing }
 CogInLineLiteralsX64Compiler >> pushCwByteSize [
-	"With in-line literals we use an 9 byte sequence for loading a 64-bit immediate,
-	 which is one more than strictly necessary.  We plant a nop at the end of the
-	 sequence to allow us to distinguish between this and the
-	 (self mod: ModReg RM: rX RO: rY) at the end of an ArithCwR sequence."
+	"With in-line literals we use a 12 byte sequence for loading a 64-bit immediate, which
+	 is one more than strictly necessary.  The sequence ends with a 16r50 + reg opcode
+	 (PushR) to allow us to distinguish between this and the (self mod: ModReg RM: rX RO: rY)
+	 at the end of an ArithCwR sequence."
 	<inline: true>
-	^9
+	^12
 ]
 
 { #category : #'generate machine code' }
@@ -255,4 +278,31 @@ CogInLineLiteralsX64Compiler >> sizePCDependentInstructionAt: eventualAbsoluteAd
 										[JumpFull]				->	[12].
 										[JumpLongZero]		->	[6].
 										[JumpLongNonZero]	->	[6] }]
+]
+
+{ #category : #'inline cacheing' }
+CogInLineLiteralsX64Compiler >> storeLiteral: literal beforeFollowingAddress: followingAddress [
+	"Rewrite the literal in the instruction immediately preceding followingAddress.
+	 This is used in the MoveCwR, PushCwR and CmpCwR cases; these are distinguished by a
+	 nop following the literal load in MoveCwR, a 16r50 + reg ending the PushCwR sequence, and
+	 a (self mod: ModReg RM: rX RO: rY) ending the CmpCwR sequence, which is at least 16rC0."
+	| lastByte base |
+	lastByte := objectMemory byteAt: followingAddress - 1.
+	base := followingAddress - (lastByte <= 16r90
+									ifTrue:
+										[lastByte = 16r90
+											ifTrue: [9]		"MoveCwR"
+											ifFalse: [10]]	"PushCwR"
+									ifFalse: [11]).			"ArithCwR"
+	self cCode: [objectMemory unalignedLongAt: base put: literal]
+		inSmalltalk:
+			[objectMemory
+				byteAt: base put: (literal bitAnd: 16rFF);
+				byteAt: base + 1 put: ((literal >> 8) bitAnd: 16rFF);
+				byteAt: base + 2 put: ((literal >> 16) bitAnd: 16rFF);
+				byteAt: base + 3 put: ((literal >> 24) bitAnd: 16rFF);
+				byteAt: base + 4 put: ((literal >> 32) bitAnd: 16rFF);
+				byteAt: base + 5 put: ((literal >> 40) bitAnd: 16rFF);
+				byteAt: base + 6 put: ((literal >> 48) bitAnd: 16rFF);
+				byteAt: base + 7 put: ((literal >> 52) bitAnd: 16rFF)]
 ]

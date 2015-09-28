@@ -142,6 +142,12 @@ CogIA32Compiler class >> initialize [
 			at: classVarName put: value + LastRTLCode - 1]
 ]
 
+{ #category : #testing }
+CogIA32Compiler class >> isConcreteRISCTempRegister: concreteRegister [
+	"For tests to filter-out bogus values left in the ConcreteRISCTempRegister, if any."
+	^false
+]
+
 { #category : #translation }
 CogIA32Compiler class >> machineCodeDeclaration [
 	"Answer the declaration for the machineCode array."
