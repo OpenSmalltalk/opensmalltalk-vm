@@ -836,7 +836,7 @@ CogAbstractInstruction >> isBigEndian [
 ]
 
 { #category : #testing }
-CogAbstractInstruction >> isCallPreceedingReturnPC: mcpc [
+CogAbstractInstruction >> isCallPrecedingReturnPC: mcpc [
 	"Assuming mcpc is a return pc answer if the instruction before it is a call."
 	^self subclassResponsibility
 ]
