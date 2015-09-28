@@ -190,7 +190,7 @@ TMethod >> argAssignmentsFor: meth send: aSendNode in: aCodeGen [
 					put: (aCodeGen
 							node: exprNode
 							typeCompatibleWith: argName
-							inliningInto: meth selector
+							inliningInto: meth
 							in: self).
 				 locals remove: argName]
 			ifFalse:
@@ -200,7 +200,7 @@ TMethod >> argAssignmentsFor: meth send: aSendNode in: aCodeGen [
 						expression: (aCodeGen
 										node: exprNode copy
 										typeCompatibleWith: argName
-										inliningInto: meth selector
+										inliningInto: meth
 										in: self))]].
 	meth parseTree: (meth parseTree bindVariablesIn: substitutionDict).
 	^stmtList
@@ -412,6 +412,11 @@ TMethod >> computePossibleSideEffectsInto: writtenToVars visited: visitedSelecto
 { #category : #accessing }
 TMethod >> declarationAt: aVariableName [
 	^declarations at: aVariableName ifAbsent: [#sqInt, ' ', aVariableName]
+]
+
+{ #category : #accessing }
+TMethod >> declarationAt: aVariableName ifAbsent: absentBlock [
+	^declarations at: aVariableName ifAbsent: absentBlock
 ]
 
 { #category : #accessing }
@@ -1368,6 +1373,16 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 						ifFalse: [(self typeFor: exitVar in: aCodeGen) ifNil: [#sqInt]].
 		(exitType = #void or: [exitType = meth returnType]) ifFalse:
 			[meth propagateReturnIn: aCodeGen]].
+
+	"Propagate any unusual argument types to untyped argument variables"
+	methArgs
+		with: aSendNode args
+		do: [:formal :actual|
+			(meth declarationAt: formal ifAbsent: nil) ifNil:
+				[(self typeFor: actual in: aCodeGen) ifNotNil:
+					[:type|
+					type ~= #sqInt ifTrue:
+						[meth declarationAt: formal put: type, ' ', formal]]]].
 
 	meth renameVarsForInliningInto: self except: #() in: aCodeGen.
 	meth renameLabelsForInliningInto: self.
