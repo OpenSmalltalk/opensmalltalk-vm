@@ -145,13 +145,13 @@ CogOutOfLineLiteralsARMCompiler >> relocateMethodReferenceBeforeAddress: pc by: 
 	 generated, and if not, adjust a load literal.  There are two cases, a push
 	 or a register load.  If a push, then there is a register load, but in the instruction
 	 before."
-	| pcPreceedingLoad reference litAddr |
-	pcPreceedingLoad := (self instructionIsPush: (self instructionBeforeAddress: pc))
+	| pcPrecedingLoad reference litAddr |
+	pcPrecedingLoad := (self instructionIsPush: (self instructionBeforeAddress: pc))
 							ifTrue: [pc - 4]
 							ifFalse: [pc].
 	"If the load is not done via pc-relative addressing we have to relocate."
-	(self isPCRelativeValueLoad: (self instructionBeforeAddress: pcPreceedingLoad)) ifFalse:
-		[litAddr := self pcRelativeAddressAt: pcPreceedingLoad.
+	(self isPCRelativeValueLoad: (self instructionBeforeAddress: pcPrecedingLoad)) ifFalse:
+		[litAddr := self pcRelativeAddressAt: pcPrecedingLoad.
 		 reference := objectMemory longAt: litAddr.
 		 objectMemory longAt: litAddr put: reference + delta]
 ]
