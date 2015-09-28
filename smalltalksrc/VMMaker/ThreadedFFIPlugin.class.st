@@ -138,7 +138,7 @@ ThreadedFFIPlugin class >> preambleCCode [
 #  define STACK_ALIGN_BYTES 16
 # elif defined(powerpc) || defined(__powerpc__) || defined(_POWER) || defined(__POWERPC__) || defined(__PPC__)
 #  define STACK_ALIGN_BYTES 16
-# elif defined(__sparc64__) || defined(__sparcv9__) || defined(__sparc_v9__) /* must preceed 32-bit sparc defs */
+# elif defined(__sparc64__) || defined(__sparcv9__) || defined(__sparc_v9__) /* must precede 32-bit sparc defs */
 #  define STACK_ALIGN_BYTES 16
 # elif defined(sparc) || defined(__sparc__) || defined(__sparclite__)
 #  define STACK_ALIGN_BYTES 8

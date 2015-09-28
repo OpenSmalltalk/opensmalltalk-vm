@@ -56,7 +56,7 @@ Spur32BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 	<inline: true>
 	| numBytes newObj |
 	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
-	 16 bytes otherwise (num slots in preceeding word).
+	 16 bytes otherwise (num slots in preceding word).
 	 Objects always have at least one slot, for the forwarding pointer,
 	 and are multiples of 8 bytes in length."
 	numSlots >= self numSlotsMask

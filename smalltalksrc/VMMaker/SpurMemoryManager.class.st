@@ -1794,7 +1794,7 @@ SpurMemoryManager >> allocateNewSpaceSlots: numSlots format: formatField classIn
 	 scavengeThreshold and a scavenge is not already scheduled, schedule a scavenge."
 	| numBytes newObj |
 	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
-	 16 bytes otherwise (num slots in preceeding word).
+	 16 bytes otherwise (num slots in preceding word).
 	 Objects always have at least one slot, for the forwarding pointer,
 	 and are multiples of 8 bytes in length."
 	numSlots >= self numSlotsMask
@@ -2460,7 +2460,7 @@ SpurMemoryManager >> baseHeader: obj [
 { #category : #'header format' }
 SpurMemoryManager >> baseHeaderSize [
 	"Object headers are 8 bytes in length if the slot size fits in the slot size field (max implies overflow),
-	 16 bytes otherwise (slot size in preceeding word)."
+	 16 bytes otherwise (slot size in preceding word)."
 	^8
 ]
 
@@ -7382,7 +7382,7 @@ SpurMemoryManager >> markAccessibleObjectsAndFireEphemerons [
 
 	marking := true.
 	"This must come first to enable stack page reclamation.  It clears
-	  the trace flags on stack pages and so must preceed any marking.
+	  the trace flags on stack pages and so must precede any marking.
 	  Otherwise it will clear the trace flags of reached pages."
 	coInterpreter initStackPageGC.
 	self markAndTraceHiddenRoots.

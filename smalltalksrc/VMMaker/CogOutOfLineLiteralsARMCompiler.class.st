@@ -217,7 +217,7 @@ CogOutOfLineLiteralsARMCompiler >> sizePCDependentInstructionAt: eventualAbsolut
 	 where this instruction will be output.  The span of a jump to a following
 	 instruction is therefore between that instruction's address and this
 	 instruction's address ((which are both still their virtual addresses), but the
-	 span of a jump to a preceeding instruction or to an absolute address is
+	 span of a jump to a preceding instruction or to an absolute address is
 	 between that instruction's address (which by now is its eventual absolute
 	 address) or absolute address and eventualAbsoluteAddress.
 
@@ -251,7 +251,7 @@ CogOutOfLineLiteralsARMCompiler >> sizePCDependentInstructionAt: eventualAbsolut
 
 { #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMCompiler >> storeLiteral: literal beforeFollowingAddress: followingAddress [
-	"Rewrite the literal in the instruction immediately preceeding followingAddress."
+	"Rewrite the literal in the instruction immediately preceding followingAddress."
 	objectMemory longAt: (self pcRelativeAddressAt: followingAddress - 4) put: literal
 ]
 

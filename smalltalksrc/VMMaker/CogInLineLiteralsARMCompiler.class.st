@@ -6,13 +6,13 @@ Class {
 
 { #category : #'inline cacheing' }
 CogInLineLiteralsARMCompiler >> callFullTargetFromReturnAddress: callSiteReturnAddress [
-	"Answer the address that the call immediately preceeding callSiteReturnAddress will jump to."
+	"Answer the address that the call immediately preceding callSiteReturnAddress will jump to."
 	"this is also used by #jumpLongTargetBeforeFollowingAddress: and so we check for both call and jump related instructions; later on we can use simpler tests once it feels safe to assume we get here always with a call/jump in the proper place"
 	| call |
 	call := self instructionBeforeAddress: callSiteReturnAddress.
 	self assert: ((self instructionIsBX: call) or: [self instructionIsBLX: call]).
 	"A Long Call/Jump. Extract the value saved to RISCTempReg from all the instructions before."
-	^self extract32BitOperandFrom4InstructionsPreceeding: callSiteReturnAddress - 4
+	^self extract32BitOperandFrom4Instructionspreceding: callSiteReturnAddress - 4
 ]
 
 { #category : #testing }
@@ -172,7 +172,7 @@ CogInLineLiteralsARMCompiler >> sizePCDependentInstructionAt: eventualAbsoluteAd
 	 where this instruction will be output.  The span of a jump to a following
 	 instruction is therefore between that instruction's address and this
 	 instruction's address ((which are both still their virtual addresses), but the
-	 span of a jump to a preceeding instruction or to an absolute address is
+	 span of a jump to a preceding instruction or to an absolute address is
 	 between that instruction's address (which by now is its eventual absolute
 	 address) or absolute address and eventualAbsoluteAddress.
 

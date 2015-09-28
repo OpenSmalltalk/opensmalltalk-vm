@@ -399,7 +399,7 @@ CogARMCompiler >> cResultRegister [
 
 { #category : #'inline cacheing' }
 CogARMCompiler >> callFullTargetFromReturnAddress: callSiteReturnAddress [
-	"Answer the address that the call immediately preceeding callSiteReturnAddress will jump to."
+	"Answer the address that the call immediately preceding callSiteReturnAddress will jump to."
 	"this is also used by #jumpLongTargetBeforeFollowingAddress: and so we check for both call and jump related instructions; later on we can use simpler tests once it feels safe to assume we get here always with a call/jump in the proper place"
 	^self subclassResponsibility
 ]
@@ -412,7 +412,7 @@ CogARMCompiler >> callInstructionByteSize [
 
 { #category : #'inline cacheing' }
 CogARMCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
-	"Answer the address that the call immediately preceeding callSiteReturnAddress will jump to."
+	"Answer the address that the call immediately preceding callSiteReturnAddress will jump to."
 	"this is also used by #jumpLongTargetBeforeFollowingAddress:."
 	| callDistance call |
 	call := self instructionBeforeAddress: callSiteReturnAddress.
@@ -2366,7 +2366,7 @@ CogARMCompiler >> inlineCacheTagAt: callSiteReturnAddress [
 
 { #category : #'inline cacheing' }
 CogARMCompiler >> instructionBeforeAddress: followingAddress [
-	"Answer the instruction immediately preceeding followingAddress."
+	"Answer the instruction immediately preceding followingAddress."
 	<inline: true>
 	^objectMemory longAt: followingAddress -4
 ]
@@ -2521,7 +2521,7 @@ CogARMCompiler >> jumpLongConditionalByteSize [
 
 { #category : #'inline cacheing' }
 CogARMCompiler >> jumpLongTargetBeforeFollowingAddress: mcpc [ 
-	"Answer the target address for the long jump immediately preceeding mcpc"
+	"Answer the target address for the long jump immediately preceding mcpc"
 	^self callTargetFromReturnAddress: mcpc
 ]
 
