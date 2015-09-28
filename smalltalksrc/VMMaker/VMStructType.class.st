@@ -126,7 +126,7 @@ VMStructType class >> filteredInstVarNames [
 { #category : #'code generation' }
 VMStructType class >> getter: getter bitPosition: bitPosition bitWidth: bitWidth type: typeOrNil [
 	^String streamContents:
-		[:s| | startByte endByte alignedPowerOf2 shift bool |
+		[:s| | startByte endByte alignedPowerOf2 shift |
 		startByte := bitPosition // 8.
 		endByte := bitPosition + bitWidth - 1 // 8.
 		shift := bitPosition \\ 8.
@@ -146,7 +146,7 @@ VMStructType class >> getter: getter bitPosition: bitPosition bitWidth: bitWidth
 		s nextPutAll: 'memory unsigned';
 		   nextPutAll: (#('Byte' 'Short' 'Long' 'Long')
 							at: endByte - startByte + 1
-							ifAbsent: ['LongLong']);
+							ifAbsent: ['Long64']);
 		  nextPutAll: 'At: address + '; print: startByte + 1.
 		(self offsetForInstVar: getter) ifNotNil:
 			[:offsetExpr| s nextPutAll: ' + '; nextPutAll: offsetExpr].
@@ -338,7 +338,7 @@ VMStructType class >> setter: getter bitPosition: bitPosition bitWidth: bitWidth
 		accessor := 'unsigned'
 					, (#('Byte' 'Short' 'Long' 'Long')
 							at: endByte - startByte + 1
-							ifAbsent: ['LongLong'])
+							ifAbsent: ['Long64'])
 					, 'At: address + '.
 		(self offsetForInstVar: getter) ifNotNil:
 			[:offsetExpr| accessor := accessor, offsetExpr, ' + '].
