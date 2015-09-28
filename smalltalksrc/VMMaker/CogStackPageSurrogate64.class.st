@@ -30,105 +30,105 @@ CogStackPageSurrogate64 class >> alignedByteSize [
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> baseAddress [
-	^memory unsignedLongLongAt: address + 33
+	^memory long64At: address + 33
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> baseAddress: aValue [
 	self assert: (address + 32 >= zoneBase and: [address + 39 < zoneLimit]).
-	^memory unsignedLongLongAt: address + 33 put: aValue
+	^memory long64At: address + 33 put: aValue
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> baseFP [
-	^memory unsignedLongLongAt: address + 25
+	^memory long64At: address + 25
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> baseFP: aValue [
 	self assert: (address + 24 >= zoneBase and: [address + 31 < zoneLimit]).
-	^memory unsignedLongLongAt: address + 25 put: aValue
+	^memory long64At: address + 25 put: aValue
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> headFP [
-	^memory unsignedLongLongAt: address + 17
+	^memory long64At: address + 17
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> headFP: aValue [
 	self assert: (address + 16 >= zoneBase and: [address + 23 < zoneLimit]).
-	^memory unsignedLongLongAt: address + 17 put: aValue
+	^memory long64At: address + 17 put: aValue
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> headSP [
-	^memory unsignedLongLongAt: address + 9
+	^memory long64At: address + 9
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> headSP: aValue [
 	self assert: (address + 8 >= zoneBase and: [address + 15 < zoneLimit]).
-	^memory unsignedLongLongAt: address + 9 put: aValue
+	^memory long64At: address + 9 put: aValue
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> lastAddress [
-	^memory unsignedLongLongAt: address + 49
+	^memory long64At: address + 49
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> lastAddress: aValue [
 	self assert: (address + 48 >= zoneBase and: [address + 35 < zoneLimit]).
-	^memory unsignedLongLongAt: address + 49 put: aValue
+	^memory long64At: address + 49 put: aValue
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> nextPage [
-	^stackPages surrogateAtAddress: (memory unsignedLongLongAt: address + 65)
+	^stackPages surrogateAtAddress: (memory long64At: address + 65)
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> nextPage: aValue [
 	self assert: (address + 64 >= zoneBase and: [address + 71 < zoneLimit]).
 	^memory
-		unsignedLongLongAt: address + 65
+		long64At: address + 65
 		put: aValue asInteger
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> prevPage [
-	^stackPages surrogateAtAddress: (memory unsignedLongLongAt: address + 73)
+	^stackPages surrogateAtAddress: (memory long64At: address + 73)
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> prevPage: aValue [
 	self assert: (address + 72 >= zoneBase and: [address + 79 < zoneLimit]).
 	^memory
-		unsignedLongLongAt: address + 73
+		long64At: address + 73
 		put: aValue asInteger
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> realStackLimit [
-	^memory unsignedLongLongAt: address + 41
+	^memory long64At: address + 41
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> realStackLimit: aValue [
 	self assert: (address + 40 >= zoneBase and: [address + 47 < zoneLimit]).
-	^memory unsignedLongLongAt: address + 41 put: aValue
+	^memory long64At: address + 41 put: aValue
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> stackLimit [
-	^memory unsignedLongLongAt: address + 1
+	^memory long64At: address + 1
 ]
 
 { #category : #accessing }
 CogStackPageSurrogate64 >> stackLimit: aValue [
 	self assert: (address >= zoneBase and: [address + 7 < zoneLimit]).
-	^memory unsignedLongLongAt: address + 1 put: aValue
+	^memory long64At: address + 1 put: aValue
 ]
 
 { #category : #accessing }
