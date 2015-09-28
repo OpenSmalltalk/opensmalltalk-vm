@@ -73,6 +73,12 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #accessing }
+CogX64Compiler class >> VarBaseReg [
+	"Answer the number of the reg we use to hold the base address of CoInterpreter variables"
+	^RBX
+]
+
 { #category : #'class initialization' }
 CogX64Compiler class >> initialize [
 	"Initialize various x64 instruction-related constants.
@@ -335,13 +341,16 @@ CogX64Compiler >> computeMaximumSize [
 								+ (((self concreteRegister: (operands at: 2)) bitAnd: 7) = RSP
 									ifTrue: [1]
 									ifFalse: [0])].
-		"[MoveM16rR]	-> [^((self isQuick: (operands at: 0))
-											ifTrue: [4]
-											ifFalse: [7])
-										+ ((self concreteRegister: (operands at: 1)) = ESP
-											ifTrue: [1]
-											ifFalse: [0])].
-		[MoveM64rRd]	-> [^((self isQuick: (operands at: 0))
+		[MoveM16rR]	-> [^((self isQuick: (operands at: 0))
+									ifTrue: [((operands at: 0) = 0
+											and: [((self concreteRegister: (operands at: 1)) bitAnd: 7) ~= RBP])
+												ifTrue: [4]
+												ifFalse: [5]]
+									ifFalse: [8])
+								+ (((self concreteRegister: (operands at: 1)) bitAnd: 7) = RSP
+									ifTrue: [1]
+									ifFalse: [0])].
+		"[MoveM64rRd]	-> [^((self isQuick: (operands at: 0))
 											ifTrue: [5]
 											ifFalse: [8])
 										+ ((self concreteRegister: (operands at: 1)) = ESP
@@ -683,6 +692,17 @@ CogX64Compiler >> concretizeJumpFull [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeJumpR [
+	<inline: true>
+	| reg |
+	reg := self concreteRegister: (operands at: 0).
+	machineCode
+		at: 0 put: 16rFF;
+		at: 1 put: (self mod: ModReg RM: reg RO: 4).
+	^machineCodeSize := 2
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveAwR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -695,7 +715,7 @@ CogX64Compiler >> concretizeMoveAwR [
 		 save1 := operands at: 1.
 		 operands
 			at: 0 put: addressOperand - cogit varBaseAddress;
-			at: 1 put: VarBaseReg;
+			at: 1 put: RBX;
 			at: 2 put: save1.
 		 self concretizeMoveMwrR.
 		 operands
@@ -777,6 +797,59 @@ CogX64Compiler >> concretizeMoveCwR [
 		at: 8 put: (value >> 48 bitAnd: 16rFF);
 		at: 9 put: (value >> 56 bitAnd: 16rFF).
 	^machineCodeSize := 10
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveM16rR [
+	"N.B. The Cogit compiler makes no assumption about the upper bits being set to zero.
+	 It will clear the register before hand if necessary."
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| srcReg offset destReg |
+	offset := operands at: 0.
+	srcReg := self concreteRegister: (operands at: 1).
+	destReg := self concreteRegister: (operands at: 2).
+	machineCode
+		at: 0 put: (self rexR: destReg x: 0 b: srcReg);
+		at: 1 put: 16r0f;
+		at: 2 put: 16rb7.
+	(srcReg ~= RSP and: [srcReg ~= R12]) ifTrue:
+		[(offset = 0 and: [destReg ~= RBP and: [destReg ~= R13]]) ifTrue:
+			[machineCode
+				at: 3 put: (self mod: ModRegInd RM: srcReg RO: destReg).
+			 ^machineCodeSize := 4].
+		 (self isQuick: offset) ifTrue:
+			[machineCode
+				at: 3 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+				at: 4 put: (offset bitAnd: 16rFF).
+			 ^machineCodeSize := 5].
+		machineCode
+			at: 3 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg);
+			at: 4 put: (offset bitAnd: 16rFF);
+			at: 5 put: (offset >> 8 bitAnd: 16rFF);
+			at: 6 put: (offset >> 16 bitAnd: 16rFF);
+			at: 7 put: (offset >> 24 bitAnd: 16rFF).
+		^machineCodeSize := 8].
+	"RSP & R12:"
+	(offset = 0 and: [destReg ~= RBP and: [destReg ~= R13]]) ifTrue:
+		[machineCode
+			at: 3 put: (self mod: ModRegInd RM: srcReg RO: destReg);
+			at: 4 put: (self s: SIB1 i: 4 b: srcReg).
+		 ^machineCodeSize := 5].
+	(self isQuick: offset) ifTrue:
+		[machineCode
+			at: 3 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+			at: 4 put: (self s: SIB1 i: 4 b: srcReg);
+			at: 5 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := 6].
+	machineCode
+		at: 3 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg);
+		at: 4 put: (self s: SIB1 i: 4 b: srcReg);
+		at: 5 put: (offset bitAnd: 16rFF);
+		at: 6 put: (offset >> 8 bitAnd: 16rFF);
+		at: 7 put: (offset >> 16 bitAnd: 16rFF);
+		at: 8 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 9
 ]
 
 { #category : #'generate machine code' }
@@ -895,7 +968,7 @@ CogX64Compiler >> concretizeMoveRAw [
 		[save1 := operands at: 1.
 		 operands
 			at: 1 put: addressOperand - cogit varBaseAddress;
-			at: 2 put: VarBaseReg.
+			at: 2 put: RBX.
 		 self concretizeMoveRMwr.
 		 operands
 			at: 1 put: save1;
@@ -1697,6 +1770,13 @@ CogX64Compiler >> genPushRegisterArgsForNumArgs: numArgs scratchReg: scratchReg 
 ]
 
 { #category : #abi }
+CogX64Compiler >> genRemoveNArgsFromStack: n [
+	"This is a no-op on x64 since the ABI passes up to 6 args in registers and trampolines currently observe a limit of 4."
+	self assert: n <= 6.
+	^0
+]
+
+{ #category : #abi }
 CogX64Compiler >> genRestoreRegs [
 	"Restore the general purpose registers for a trampoline call.
 	 c.f. genSaveRegisters"
@@ -1838,7 +1918,8 @@ CogX64Compiler >> machineCodeBytes [
 
 { #category : #'abstract instructions' }
 CogX64Compiler >> maybeEstablishVarBase [
-	"The receiver does not have a VarBaseReg; do nothing."
+	"The receiver has a VarBaseReg; generate the code to set it to its value."
+	cogit MoveCq: cogit varBaseAddress R: VarBaseReg
 ]
 
 { #category : #accessing }
