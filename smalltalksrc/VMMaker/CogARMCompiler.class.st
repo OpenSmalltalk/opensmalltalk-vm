@@ -227,6 +227,12 @@ CogARMCompiler class >> isAbstract [
 	^self == CogARMCompiler
 ]
 
+{ #category : #testing }
+CogARMCompiler class >> isConcreteRISCTempRegister: concreteRegister [
+	"For tests to filter-out bogus values left in the ConcreteRISCTempRegister, if any."
+	^concreteRegister = ConcreteIPReg
+]
+
 { #category : #translation }
 CogARMCompiler class >> machineCodeDeclaration [
 	"Answer the declaration for the machineCode array."

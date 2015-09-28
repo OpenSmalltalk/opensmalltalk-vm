@@ -4,6 +4,12 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #testing }
+CogOutOfLineLiteralsX64Compiler class >> isConcreteRISCTempRegister: concreteRegister [
+	"For tests to filter-out bogus values left in the ConcreteRISCTempRegister, if any."
+	^false
+]
+
 { #category : #encoding }
 CogOutOfLineLiteralsX64Compiler >> concreteRegister: registerIndex [
 	 "Map a possibly abstract register into a concrete one.  Abstract registers

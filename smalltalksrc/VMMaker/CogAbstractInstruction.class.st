@@ -138,6 +138,12 @@ CogAbstractInstruction class >> isAccessor: aSelector [
 	   and: [super isAccessor: aSelector]
 ]
 
+{ #category : #testing }
+CogAbstractInstruction class >> isConcreteRISCTempRegister: concreteRegister [
+	"For tests to filter-out bogus values left in the ConcreteRISCTempRegister, if any."
+	^self subclassResponsibility
+]
+
 { #category : #'accessing class hierarchy' }
 CogAbstractInstruction class >> literalsManagerClass [
 	"Answer the manager that generates in-line literals;
