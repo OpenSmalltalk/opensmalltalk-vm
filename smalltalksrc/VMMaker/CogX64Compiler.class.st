@@ -168,6 +168,19 @@ CogX64Compiler >> cResultRegister [
 ]
 
 { #category : #accessing }
+CogX64Compiler >> callInstructionByteSize [
+	^5
+]
+
+{ #category : #'inline cacheing' }
+CogX64Compiler >> callTargetFromReturnAddress: callSiteReturnAddress [
+	"Answer the address the call immediately preceeding callSiteReturnAddress will jump to."
+	| callDistance |
+	callDistance := self thirtyTwoBitLiteralBefore: callSiteReturnAddress.
+	^callSiteReturnAddress + callDistance signedIntFromLong
+]
+
+{ #category : #accessing }
 CogX64Compiler >> callerSavedRegisterMask [
 	"See e.g. Figure 3.4 Register Usage in
 		System V Application Binary Interface
@@ -298,8 +311,8 @@ CogX64Compiler >> computeMaximumSize [
 		[DivRdRd]					-> [^4].
 		[SqrtRd]					-> [^4].
 		"Data Movement"
-		[MoveCqR]		-> [^(operands at: 0) = 0 ifTrue: [3] ifFalse: [(self is32BitSignedImmediate: (operands at: 0)) ifTrue: [7] ifFalse: [10]]].
-		[MoveCwR]		-> [^10].
+		[MoveCqR]		-> [^(operands at: 0) = 0 ifTrue: [3] ifFalse: [(self is32BitSignedImmediate: (operands at: 0)) ifTrue: [7] ifFalse: [self moveCwRByteSize]]].
+		[MoveCwR]		-> [^self moveCwRByteSize].
 		[MoveRR]		-> [^3].
 		[MoveRdRd]		-> [^4].
 		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0))
@@ -389,7 +402,7 @@ CogX64Compiler >> computeMaximumSize [
 		[PopR]			-> [^(self concreteRegister: (operands at: 0)) < 8 ifTrue: [1] ifFalse: [2]].
 		[PushR]			-> [^(self concreteRegister: (operands at: 0)) < 8 ifTrue: [1] ifFalse: [2]].
 		[PushCq]		-> [^(self isQuick: (operands at: 0)) ifTrue: [2] ifFalse: [5]].
-		[PushCw]		-> [^self computeSizeOfArithCwR - 1].
+		[PushCw]		-> [^self pushCwByteSize].
 		[PrefetchAw]	-> [^self hasSSEInstructions ifTrue: [12] ifFalse: [0]].
 		"Conversion"
 		"[ConvertRRd]	-> [^4]" }.
@@ -701,6 +714,30 @@ CogX64Compiler >> concretizeJumpFull [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeJumpLong [
+	"Will get inlined into concretizeAt: switch."
+	"Sizing/generating jumps.
+		Jump targets can be to absolute addresses or other abstract instructions.
+		Generating initial trampolines instructions may have no maxSize and be to absolute addresses.
+		Otherwise instructions must have a machineCodeSize which must be kept to."
+	<inline: true>
+	| jumpTarget offset |
+	<var: #jumpTarget type: #'AbstractInstruction *'>
+	jumpTarget := cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'.
+	(self isAnInstruction: jumpTarget) ifTrue:
+		[jumpTarget := cogit cCoerceSimple: jumpTarget address to: #'AbstractInstruction *'].
+	self assert: jumpTarget ~= 0.
+	offset := jumpTarget signedIntFromLong - (address + 5) signedIntFromLong.
+	machineCode
+		at: 0 put: 16rE9;
+		at: 1 put: (offset bitAnd: 16rFF);
+		at: 2 put: (offset >> 8 bitAnd: 16rFF);
+		at: 3 put: (offset >> 16 bitAnd: 16rFF);
+		at: 4 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 5
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeJumpR [
 	<inline: true>
 	| reg |
@@ -787,25 +824,7 @@ CogX64Compiler >> concretizeMoveCqR [
 
 { #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveCwR [
-	"Will get inlined into concretizeAt: switch.
-	 Note that for quick constants, xor reg,reg, movq r8 may be shorter.
-	 We don't consider it worthwhile for other  than 0."
-	<inline: true>
-	| value reg |
-	value := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: (self rexR: reg x: 0 b: reg);
-		at: 1 put: 16rB8 + (reg bitAnd: 7);
-		at: 2 put: (value bitAnd: 16rFF);
-		at: 3 put: (value >> 8 bitAnd: 16rFF);
-		at: 4 put: (value >> 16 bitAnd: 16rFF);
-		at: 5 put: (value >> 24 bitAnd: 16rFF);
-		at: 6 put: (value >> 32 bitAnd: 16rFF);
-		at: 7 put: (value >> 40 bitAnd: 16rFF);
-		at: 8 put: (value >> 48 bitAnd: 16rFF);
-		at: 9 put: (value >> 56 bitAnd: 16rFF).
-	^machineCodeSize := 10
+	self subclassResponsibility
 ]
 
 { #category : #'generate machine code' }
@@ -1462,30 +1481,30 @@ CogX64Compiler >> dispatchConcretize [
 		[Stop]						-> [^self concretizeStop].
 		"Arithmetic"
 		[AddCqR]					-> [^self concretizeArithCqRWithRO: 0 raxOpcode: 15r05].
-		[AddCwR]					-> [^self concretizeAddCwR].
+		[AddCwR]					-> [^self concretizeArithCwR: 16r03].
 		[AddRR]						-> [^self concretizeAddRR].
 		[AddRdRd]					-> [^self concretizeSEE2OpRdRd: 16r58].
 		[AndCqR]					-> [^self concretizeArithCqRWithRO: 4 raxOpcode: 16r25].
-		[AndCwR]					-> [^self concretizeAndCwR].
+		[AndCwR]					-> [^self concretizeArithCwR: 16r23].
 		[AndRR]						-> [^self concretizeAndRR].
 		[TstCqR]					-> [^self concretizeTstCqR].
 		[CmpCqR]					-> [^self concretizeArithCqRWithRO: 7 raxOpcode: 16r3D].
-		[CmpCwR]					-> [^self concretizeCmpCwR].
+		[CmpCwR]					-> [^self concretizeArithCwR: 16r39].
 		[CmpRR]					-> [^self concretizeCmpRR].
 		[CmpRdRd]					-> [^self concretizeCmpRdRd].
 		[DivRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5E].
 		[MulRdRd]					-> [^self concretizeSEE2OpRdRd: 16r59].
 		[OrCqR]						-> [^self concretizeArithCqRWithRO: 1 raxOpcode: 16r0D].
-		[OrCwR]					-> [^self concretizeOrCwR].
+		[OrCwR]					-> [^self concretizeArithCwR: 16r0B].
 		[OrRR]						-> [^self concretizeOrRR].
 		[SubCqR]					-> [^self concretizeArithCqRWithRO: 5 raxOpcode: 16r2D].
-		[SubCwR]					-> [^self concretizeSubCwR].
+		[SubCwR]					-> [^self concretizeArithCwR: 16r2B].
 		[SubRR]						-> [^self concretizeSubRR].
 		[SubRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5C].
-		[SqrtRd]						-> [^self concretizeSqrtRd].
-		[XorCwR]						-> [^self concretizeXorCwR].
-		[XorRR]							-> [^self concretizeXorRR].
-		[NegateR]						-> [^self concretizeNegateR].
+		[SqrtRd]					-> [^self concretizeSqrtRd].
+		[XorCwR]					-> [^self concretizeArithCwR: 16r33].
+		[XorRR]						-> [^self concretizeXorRR].
+		[NegateR]					-> [^self concretizeNegateR].
 		[LoadEffectiveAddressMwrR]	-> [^self concretizeLoadEffectiveAddressMwrR].
 		[ArithmeticShiftRightCqR]		-> [^self concretizeShiftCqRegOpcode: 7].
 		[LogicalShiftRightCqR]			-> [^self concretizeShiftCqRegOpcode: 5].
@@ -1904,6 +1923,28 @@ CogX64Compiler >> jmpTarget: anAbstractInstruction [
 	^super jmpTarget: anAbstractInstruction
 ]
 
+{ #category : #accessing }
+CogX64Compiler >> jumpLongByteSize [
+"	Branch/Call ranges.  Jump[Cond] can be generated as short as possible.  Call/Jump[Cond]Long must be generated
+	in the same number of bytes irrespective of displacement since their targets may be updated, but they need only
+	span 16Mb, the maximum size of the code zone.  This allows e.g. ARM to use single-word call and jump instructions
+	for most calls and jumps.  CallFull/JumpFull must also be generated in the same number of bytes irrespective of
+	displacement for the same reason, but they must be able to span the full (32-bit or 64-bit) address space because
+	they are used to call code in the C runtime, which may be distant from the code zone"
+	^5
+]
+
+{ #category : #accessing }
+CogX64Compiler >> jumpLongConditionalByteSize [
+	^6
+]
+
+{ #category : #'inline cacheing' }
+CogX64Compiler >> jumpLongTargetBeforeFollowingAddress: mcpc [ 
+	"Answer the target address for the long jump immediately preceeding mcpc"
+	^self callTargetFromReturnAddress: mcpc
+]
+
 { #category : #abi }
 CogX64Compiler >> leafCallStackPointerDelta [
 	"Answer the delta from the stack pointer after a call to the stack pointer
@@ -1944,6 +1985,12 @@ CogX64Compiler >> mod: mod RM: regMode RO: regOpcode [
 	^mod << 6 + ((regOpcode bitAnd: 7) << 3) + (regMode bitAnd: 7)
 ]
 
+{ #category : #accessing }
+CogX64Compiler >> moveCwRByteSize [
+	<inline: true>
+	self subclassResponsibility
+]
+
 { #category : #'generate machine code' }
 CogX64Compiler >> nopsFrom: startAddr to: endAddr [
 	startAddr to: endAddr do:
@@ -1956,6 +2003,17 @@ CogX64Compiler >> numberOfSaveableRegisters [
 	 See genSaveRegisters"
 	<cmacro: '(self) 14'>
 	^14
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
+	self nopsFrom: startAddr to: endAddr
+]
+
+{ #category : #accessing }
+CogX64Compiler >> pushCwByteSize [
+	<inline: true>
+	self subclassResponsibility
 ]
 
 { #category : #encoding }
@@ -1985,4 +2043,14 @@ CogX64Compiler >> saveAndRestoreLinkRegAround: aBlock [
 	 to save and restore it around aBlock, which is assumed to generate code."
 	<inline: true>
 	^aBlock value
+]
+
+{ #category : #'inline cacheing' }
+CogX64Compiler >> thirtyTwoBitLiteralBefore: followingAddress [
+	<inline: true>
+	^self cCode: [objectMemory unalignedLong32At: followingAddress - 5]
+		inSmalltalk: [   ((objectMemory byteAt: followingAddress - 1) << 24)
+					+ ((objectMemory byteAt: followingAddress - 2) << 16)
+					+ ((objectMemory byteAt: followingAddress - 3) << 8)
+					+  (objectMemory byteAt: followingAddress - 4)]
 ]

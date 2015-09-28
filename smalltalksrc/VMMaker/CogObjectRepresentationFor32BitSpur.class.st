@@ -116,11 +116,6 @@ CogObjectRepresentationFor32BitSpur >> genFetchIndexRegister: indexReg from: tab
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationFor32BitSpur >> genGetClassTagOf: instReg into: destReg scratchReg: scratchReg [
-	^self genGetInlineCacheClassTagFrom: instReg into: destReg forEntry: true
-]
-
-{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genGetHashFieldNonImmOf: instReg asSmallIntegerInto: destReg [
 	"Fetch the instance's identity hash into destReg, encoded as a SmallInteger."
 	"Get header word in scratchReg"

@@ -11,12 +11,12 @@ NewspeakCogMethodSurrogate64 class >> alignedByteSize [
 
 { #category : #accessing }
 NewspeakCogMethodSurrogate64 >> nextMethodOrIRCs [
-	^memory unsignedLongLongAt: address + 33 + baseHeaderSize
+	^memory long64At: address + 33 + baseHeaderSize
 ]
 
 { #category : #accessing }
 NewspeakCogMethodSurrogate64 >> nextMethodOrIRCs: aValue [
 	^memory
-		unsignedLongLongAt: address + baseHeaderSize + 33
+		long64At: address + baseHeaderSize + 33
 		put: aValue
 ]
