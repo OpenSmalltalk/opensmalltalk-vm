@@ -806,13 +806,14 @@ CogX64Compiler >> concretizeMoveCqR [
 	(self is32BitSignedImmediate: value) ifFalse:
 		[^self concretizeMoveCwR].
 	reg := self concreteRegister: (operands at: 1).
-	machineCode at: 0 put: (self rexR: reg x: 0 b: reg).
 	value = 0 ifTrue:
 		[machineCode
+			at: 0 put: (self rexR: reg x: 0 b: reg);
 			at: 1 put: 16r31;
 			at: 2 put: (self mod: ModReg RM: reg RO: reg).
 		^machineCodeSize := 3].
 	machineCode
+		at: 0 put: (self rexR: reg x: 0 b: 0);
 		at: 1 put: 16rC7;
 		at: 2 put: (self mod: ModReg RM: reg RO: 0);
 		at: 3 put: (value bitAnd: 16rFF);
