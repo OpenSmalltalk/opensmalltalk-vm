@@ -11,72 +11,72 @@ NSSendCacheSurrogate64 class >> alignedByteSize [
 
 { #category : #accessing }
 NSSendCacheSurrogate64 >> classTag [
-	^memory long64At: address + 1
+	^memory unsignedLongLongAt: address + 1
 ]
 
 { #category : #accessing }
 NSSendCacheSurrogate64 >> classTag: aValue [
 	^memory
-		long64At: address + 1
+		unsignedLongLongAt: address + 1
 		put: aValue
 ]
 
 { #category : #accessing }
 NSSendCacheSurrogate64 >> depth [
-	^memory long64At: address + 41
+	^memory unsignedLongLongAt: address + 41
 ]
 
 { #category : #accessing }
 NSSendCacheSurrogate64 >> depth: aValue [
 	^memory
-		long64At: address + 41
+		unsignedLongLongAt: address + 41
 		put: aValue
 ]
 
 { #category : #accessing }
 NSSendCacheSurrogate64 >> enclosingObject [
-	^memory long64At: address + 9
+	^memory unsignedLongLongAt: address + 9
 ]
 
 { #category : #accessing }
 NSSendCacheSurrogate64 >> enclosingObject: aValue [
 	^memory
-		long64At: address + 9
+		unsignedLongLongAt: address + 9
 		put: aValue
 ]
 
 { #category : #accessing }
 NSSendCacheSurrogate64 >> numArgs [
-	^memory long64At: address + 33
+	^memory unsignedLongLongAt: address + 33
 ]
 
 { #category : #accessing }
 NSSendCacheSurrogate64 >> numArgs: aValue [
 	^memory
-		long64At: address + 33
+		unsignedLongLongAt: address + 33
 		put: aValue
 ]
 
 { #category : #accessing }
 NSSendCacheSurrogate64 >> selector [
-	^memory long64At: address + 25
+	^memory unsignedLongLongAt: address + 25
 ]
 
 { #category : #accessing }
 NSSendCacheSurrogate64 >> selector: aValue [
 	^memory
-		long64At: address + 25
+		unsignedLongLongAt: address + 25
 		put: aValue
 ]
 
 { #category : #accessing }
 NSSendCacheSurrogate64 >> target [
-	^memory long64At: address + 17
+	^memory unsignedLongLongAt: address + 17
 ]
 
 { #category : #accessing }
 NSSendCacheSurrogate64 >> target: aValue [
 	^memory
-		long64At: address + 17
+		unsignedLongLongAt: address + 17
 		put: aValue
 ]
