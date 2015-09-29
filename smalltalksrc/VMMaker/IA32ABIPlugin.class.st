@@ -682,7 +682,7 @@ IA32ABIPlugin >> primSignedLongAt [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	value := self longAt: addr.
+	value := self long32At: addr.
 	valueOop := interpreterProxy signed32BitIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
@@ -706,7 +706,7 @@ IA32ABIPlugin >> primSignedLongAtPut [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	self longAt: addr put: value.
+	self long32At: addr put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
 
@@ -811,6 +811,51 @@ IA32ABIPlugin >> primSignedShortAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
 	self shortAt: addr put: value.
+	^interpreterProxy methodReturnValue: valueOop
+]
+
+{ #category : #'primitives-accessing' }
+IA32ABIPlugin >> primSignedWordAt [
+	"Answer the signed word starting at the given byte offset (little endian)."
+	"<Alien> signedWordAt: index <Integer> ^<Integer>
+		<primitive: 'primSignedWordAt' error: errorCode module: 'IA32ABI'>"
+	| byteOffset rcvr startAddr addr value valueOop |
+	<export: true>
+
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
+	rcvr := interpreterProxy stackObjectValue: 1.
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	(self index: byteOffset length: interpreterProxy bytesPerOop inRange: rcvr) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
+	value := self longAt: addr.
+	valueOop := interpreterProxy signedMachineIntegerValueOf: value.
+	^interpreterProxy methodReturnValue: valueOop
+]
+
+{ #category : #'primitives-accessing' }
+IA32ABIPlugin >> primSignedWordAtPut [
+	"Store a signed integer into the word starting at the given byte offset (little endian)."
+	"<Alien> signedWordAt: index <Integer> put: value <Integer> ^<Integer>
+		<primitive: 'primSignedWordAtPut' error: errorCode module: 'IA32ABI'>"
+	| byteOffset rcvr startAddr addr value valueOop |
+	<export: true>
+
+	valueOop := interpreterProxy stackValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
+	rcvr := interpreterProxy stackObjectValue: 2.
+	value := interpreterProxy signedMachineIntegerValueOf: valueOop.
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	(self index: byteOffset length: interpreterProxy bytesPerOop inRange: rcvr) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
+	self longAt: addr put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
 
@@ -973,7 +1018,7 @@ IA32ABIPlugin >> primUnsignedLongAt [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	value := self longAt: addr.
+	value := self long32At: addr.
 	valueOop := interpreterProxy positive32BitIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
@@ -997,7 +1042,7 @@ IA32ABIPlugin >> primUnsignedLongAtPut [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	self longAt: addr put: value.
+	self long32At: addr put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
 
@@ -1102,6 +1147,51 @@ IA32ABIPlugin >> primUnsignedShortAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
 	self shortAt: addr put: value.
+	^interpreterProxy methodReturnValue: valueOop
+]
+
+{ #category : #'primitives-accessing' }
+IA32ABIPlugin >> primUnsignedWordAt [
+	"Answer the unsigned word starting at the given byte offset (little endian)."
+	"<Alien> unsignedWordAt: index <Integer> ^<Integer>
+		<primitive: 'primUnsignedWordAt' error: errorCode module: 'IA32ABI'>"
+	| byteOffset rcvr startAddr addr value valueOop |
+	<export: true>
+
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
+	rcvr := interpreterProxy stackObjectValue: 1.
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	(self index: byteOffset length: interpreterProxy bytesPerOop inRange: rcvr) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
+	value := self longAt: addr.
+	valueOop := interpreterProxy positiveMachineIntegerFor: value.
+	^interpreterProxy methodReturnValue: valueOop
+]
+
+{ #category : #'primitives-accessing' }
+IA32ABIPlugin >> primUnsignedWordAtPut [
+	"Store an unsigned integer into 32 bits starting at the given byte offset (little endian)."
+	"<Alien> unsignedWordAt: index <Integer> put: value <Integer> ^<Integer>
+		<primitive: 'primUnsignedWordAtPut' error: errorCode module: 'IA32ABI'>"
+	| byteOffset rcvr startAddr addr value valueOop |
+	<export: true>
+
+	valueOop := interpreterProxy stackValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
+	rcvr := interpreterProxy stackObjectValue: 2.
+	value := interpreterProxy positiveMachineIntegerValueOf: valueOop.
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	(self index: byteOffset length: interpreterProxy bytesPerOop inRange: rcvr) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
+	self longAt: addr put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
 
