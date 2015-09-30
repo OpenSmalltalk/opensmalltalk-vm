@@ -2734,6 +2734,7 @@ StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'long print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self longPrintOop: oop]];
 		addLine;
 		add: 'inspect object memory' target: objectMemory action: #inspect;
+		add: 'run leak checker' action: [Cursor execute showWhile: [self runLeakChecker]];
 		add: 'inspect interpreter' action: #inspect;
 		addLine;
 		add: 'set break count...' action: [|s| s := UIManager default request: 'break count (dec)'.

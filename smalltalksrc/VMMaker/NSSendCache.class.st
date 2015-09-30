@@ -16,7 +16,7 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'class initialization' }
 NSSendCache class >> initialize [
 	"self initialize"
 	(Smalltalk classNamed: #NSSendCacheSurrogate32) ifNotNil:
@@ -27,7 +27,7 @@ NSSendCache class >> initialize [
 		self checkGenerateSurrogate: scs64 bytesPerWord: 8]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #translation }
 NSSendCache class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 
 	self allInstVarNames do:

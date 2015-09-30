@@ -611,7 +611,7 @@ CoInterpreterMT >> getCogVMFlags [
 	 Bit 1: if set, methods that are interpreted will have the flag bit set in their header
 	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue
 	 Bit 3: if set, implies the GUI will run on the first thread and event queues will not be accessed from other threads
-	 Bit 4: if set, implies the new finalizartion scheme where WeakArrays are queued"
+	 Bit 4: if set, implies the new finalization scheme where WeakArrays are queued"
 	^objectMemory integerObjectOf: (processHasThreadId ifTrue: [1] ifFalse: [0])
 									+ (flagInterpretedMethods ifTrue: [2] ifFalse: [0])
 									+ (preemptionYields ifTrue: [0] ifFalse: [4])
@@ -1245,7 +1245,8 @@ CoInterpreterMT >> setCogVMFlags: flags [
 	 Bit 0: if set, implies the image's Process class has threadId as its 3rd inst var (zero relative)
 	 Bit 1: if set, methods that are interpreted will have the flag bit set in their header
 	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue
-	 Bit 3: if set, implies a threaded VM will not dosown the VM if owned by the GUI thread."
+	 Bit 3: if set, implies a threaded VM will not dosown the VM if owned by the GUI thread
+	 Bit 4: if set, implies the new finalization scheme where WeakArrays are queued"
 	flags asUnsignedInteger > 31 ifTrue:
 		[^self primitiveFailFor: PrimErrUnsupported].
 	processHasThreadId := (flags bitAnd: 1) ~= 0.
