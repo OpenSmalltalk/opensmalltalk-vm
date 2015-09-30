@@ -6826,7 +6826,7 @@ StackInterpreter >> getCogVMFlags [
 	 Bit 1: specific to CoInterpreter
 	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue
 	 Bit 3: specific to CoInterpreterMT
-	 Bit 4: if set, implies the new finalizartion scheme where WeakArrays are queued"
+	 Bit 4: if set, implies the new finalization scheme where WeakArrays are queued"
 	^objectMemory integerObjectOf: (preemptionYields ifTrue: [0] ifFalse: [4])
 									+ (newFinalization ifTrue: [16] ifFalse: [0])
 									+ (imageHeaderFlags >> 2 bitClear: 4 + 16)
@@ -12708,6 +12708,17 @@ StackInterpreter >> roomToPushNArgs: n [
 			[^n <= (LargeContextSlots - CtxtTempFrameStart)]
 ]
 
+{ #category : #simulation }
+StackInterpreter >> runLeakChecker [
+	<doNotGenerate>
+	| oldCheckForLeaks |
+	oldCheckForLeaks := objectMemory checkForLeaks.
+	objectMemory setCheckForLeaks: -1.
+	[objectMemory runLeakCheckerFor: GCModeIncremental]
+		ensure:
+			[objectMemory setCheckForLeaks: oldCheckForLeaks]
+]
+
 { #category : #'frame access' }
 StackInterpreter >> safeFindFrameAbove: theFP on: thePage startingFrom: startFrame [
 	"Search for the previous frame to theFP (the frame that theFP calls).
@@ -12968,7 +12979,7 @@ StackInterpreter >> setCheckAllocFiller: aBool [
 StackInterpreter >> setCogVMFlags: flags [
 	"Set an array of flags indicating various properties of the Cog VM.
 	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue
-	 Bit 4: if set, implies the new finalizartion scheme where WeakArrays are queued"
+	 Bit 4: if set, implies the new finalization scheme where WeakArrays are queued"
 	flags asUnsignedInteger > 31 ifTrue:
 		[^self primitiveFailFor: PrimErrUnsupported].
 	preemptionYields := (flags bitAnd: 4) = 0.

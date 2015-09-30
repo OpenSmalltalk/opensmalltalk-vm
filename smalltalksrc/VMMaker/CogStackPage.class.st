@@ -34,6 +34,17 @@ CogStackPage class >> alignedByteSizeOf: anObject forClient: aVMClass [
 ]
 
 { #category : #translation }
+CogStackPage class >> initialize [
+	"self initialize"
+	(Smalltalk classNamed: #CogStackPageSurrogate32) ifNotNil:
+		[:csps32|
+		self checkGenerateSurrogate: csps32 bytesPerWord: 4].
+	(Smalltalk classNamed: #CogStackPageSurrogate64) ifNotNil:
+		[:csps64|
+		self checkGenerateSurrogate: csps64 bytesPerWord: 8]
+]
+
+{ #category : #translation }
 CogStackPage class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a StackPage struct."
 
