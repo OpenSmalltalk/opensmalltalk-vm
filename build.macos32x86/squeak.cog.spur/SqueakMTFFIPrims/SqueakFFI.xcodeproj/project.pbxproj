@@ -7,11 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		730BD72A10AA26FB0023C110 /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spursrc/vm/interp.h; sourceTree = SOURCE_ROOT; };
 		458E6DD111C6D5850024C822 /* sqManualSurface.c in Sources */ = {isa = PBXBuildFile; fileRef = 458E6DD011C6D5850024C822 /* sqManualSurface.c */; };
 		730BD72610AA25350023C110 /* SqueakFFIPrims.c in Sources */ = {isa = PBXBuildFile; fileRef = 730BD72510AA25350023C110 /* SqueakFFIPrims.c */; };
 		730BD72810AA26D00023C110 /* sqFFIPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 730BD72710AA26D00023C110 /* sqFFIPlugin.c */; };
-		730BD73110AA277B0023C110 /* SqueakPlugin.icns in Resources */ = {isa = PBXBuildFile; fileRef = 730BD73010AA277B0023C110 /* SqueakPlugin.icns */; };
 		7386749111ED15E500E5B738 /* sqFFITestFuncs.c in Sources */ = {isa = PBXBuildFile; fileRef = 7386749011ED15E500E5B738 /* sqFFITestFuncs.c */; };
 		8D576314048677EA00EA77CD /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0AA1909FFE8422F4C02AAC07 /* CoreFoundation.framework */; };
 /* End PBXBuildFile section */
@@ -22,9 +20,9 @@
 		730BD72510AA25350023C110 /* SqueakFFIPrims.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 4; name = SqueakFFIPrims.c; path = ../../../src/plugins/SqueakFFIPrims/SqueakFFIPrims.c; sourceTree = SOURCE_ROOT; };
 		730BD72710AA26D00023C110 /* sqFFIPlugin.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 4; name = sqFFIPlugin.c; path = ../../../platforms/Cross/plugins/SqueakFFIPrims/sqFFIPlugin.c; sourceTree = SOURCE_ROOT; };
 		730BD72910AA26EF0023C110 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = "../../../platforms/Mac OS/vm/config.h"; sourceTree = SOURCE_ROOT; };
+		730BD72A10AA26FB0023C110 /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spursrc/vm/interp.h; sourceTree = SOURCE_ROOT; };
 		730BD72D10AA27410023C110 /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
 		730BD72F10AA27590023C110 /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
-		730BD73010AA277B0023C110 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakPlugin.icns; path = ../resources/ProjectBuilder/SqueakPlugin.icns; sourceTree = SOURCE_ROOT; };
 		733EFEAC10B4D31C00A2FDA5 /* sqFFI.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = sqFFI.h; path = ../../../platforms/Cross/plugins/SqueakFFIPrims/sqFFI.h; sourceTree = SOURCE_ROOT; };
 		7386749011ED15E500E5B738 /* sqFFITestFuncs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqFFITestFuncs.c; path = ../../../platforms/Cross/plugins/SqueakFFIPrims/sqFFITestFuncs.c; sourceTree = SOURCE_ROOT; };
 		739A636B10AA442600F87ADB /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqConfig.h; path = "../../../platforms/Mac OS/vm/sqConfig.h"; sourceTree = SOURCE_ROOT; };
@@ -69,7 +67,6 @@
 		089C167CFE841241C02AAC07 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				730BD73010AA277B0023C110 /* SqueakPlugin.icns */,
 				8D576317048677EA00EA77CD /* Info.plist */,
 			);
 			name = Resources;
@@ -129,9 +126,15 @@
 /* Begin PBXProject section */
 		089C1669FE841209C02AAC07 /* Project object */ = {
 			isa = PBXProject;
+			attributes = {
+			};
 			buildConfigurationList = 1DEB911E08733D790010E9CD /* Build configuration list for PBXProject "SqueakFFI" */;
 			compatibilityVersion = "Xcode 3.0";
+			developmentRegion = English;
 			hasScannedForEncodings = 1;
+			knownRegions = (
+				en,
+			);
 			mainGroup = 089C166AFE841209C02AAC07 /* SqueakFFI */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -146,7 +149,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				730BD73110AA277B0023C110 /* SqueakPlugin.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -170,29 +172,25 @@
 		1DEB911B08733D790010E9CD /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"COGMTVM=1",
-				);
+				GCC_PREPROCESSOR_DEFINITIONS = "COGMTVM=1";
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				PRODUCT_NAME = SqueakFFIPrims;
 				WRAPPER_EXTENSION = bundle;
-				ZERO_LINK = YES;
 			};
 			name = Development;
 		};
 		1DEB911C08733D790010E9CD /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_OPTIMIZATION_LEVEL = 2;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"COGMTVM=1",
-				);
+				GCC_PREPROCESSOR_DEFINITIONS = "COGMTVM=1";
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				PRODUCT_NAME = SqueakFFIPrims;
@@ -204,20 +202,17 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
-				GCC_DEBUGGING_SYMBOLS = full;
 				GCC_ENABLE_OBJC_EXCEPTIONS = NO;
-				GCC_MODEL_TUNING = "";
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"COGMTVM=1",
-				);
+				GCC_PREPROCESSOR_DEFINITIONS = "COGMTVM=1";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_CFLAGS = "-fno-omit-frame-pointer";
-				PREBINDING = NO;
-				SDKROOT = "$(DEVELOPER_SDK_DIR)/MacOSX10.5.sdk";
+				SDKROOT = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
+				VALID_ARCHS = i386;
 			};
 			name = Development;
 		};
@@ -228,18 +223,16 @@
 				DEAD_CODE_STRIPPING = YES;
 				GCC_ENABLE_OBJC_EXCEPTIONS = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_MODEL_TUNING = "";
 				GCC_OPTIMIZATION_LEVEL = 2;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"COGMTVM=1",
-				);
+				GCC_PREPROCESSOR_DEFINITIONS = "COGMTVM=1";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				OTHER_CFLAGS = "-fno-omit-frame-pointer";
-				PREBINDING = NO;
-				SDKROOT = "$(DEVELOPER_SDK_DIR)/MacOSX10.5.sdk";
+				SDKROOT = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
+				VALID_ARCHS = i386;
 			};
 			name = Deployment;
 		};

@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		949199FD098186FB000FC37A /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66DF6C8201D7DF7E00A80119 /* Carbon.framework */; };
-		A2181C0E10814EC700B8FC7A /* dct.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BC910814EC700B8FC7A /* dct.c */; };
+		94C941F71BBB2384005D3CFF /* dct.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BC910814EC700B8FC7A /* dct.c */; settings = {ASSET_TAGS = (); }; };
 		A2181C0F10814EC700B8FC7A /* header.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BCA10814EC700B8FC7A /* header.c */; };
 		A2181C1010814EC700B8FC7A /* layer1.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BCC10814EC700B8FC7A /* layer1.c */; };
 		A2181C1110814EC700B8FC7A /* layer2.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BCD10814EC700B8FC7A /* layer2.c */; };
@@ -297,7 +297,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A2181C0E10814EC700B8FC7A /* dct.c in Sources */,
 				A2181C0F10814EC700B8FC7A /* header.c in Sources */,
 				A2181C1010814EC700B8FC7A /* layer1.c in Sources */,
 				A2181C1110814EC700B8FC7A /* layer2.c in Sources */,
@@ -319,6 +318,7 @@
 				A2181C2D10814EC700B8FC7A /* idct.c in Sources */,
 				A2181C2E10814EC700B8FC7A /* macroblocks.c in Sources */,
 				A2181C3210814EC700B8FC7A /* mmxtest.c in Sources */,
+				94C941F71BBB2384005D3CFF /* dct.c in Sources */,
 				A2181C3310814EC700B8FC7A /* motion.c in Sources */,
 				A2181C3410814EC700B8FC7A /* mpeg3video.c in Sources */,
 				A2181C3510814EC700B8FC7A /* output.c in Sources */,
@@ -336,69 +336,69 @@
 		946BCE010959347500803517 /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				ENABLE_TESTABILITY = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = TARGET_API_MAC_OSX;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "";
+				VALID_ARCHS = i386;
 			};
 			name = Development;
 		};
 		946BCE020959347500803517 /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				GCC_PREPROCESSOR_DEFINITIONS = TARGET_API_MAC_OSX;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				SDKROOT = macosx;
+				VALID_ARCHS = i386;
 			};
 			name = Deployment;
 		};
 		946BCE030959347500803517 /* Default */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				GCC_PREPROCESSOR_DEFINITIONS = TARGET_API_MAC_OSX;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				SDKROOT = macosx;
+				VALID_ARCHS = i386;
 			};
 			name = Default;
 		};
 		949199E509818612000FC37A /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = YES;
+				COMBINE_HIDPI_IMAGES = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_MODEL_TUNING = "";
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
-				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
 				INFOPLIST_FILE = "Mpeg3Plugin-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
-				OTHER_CFLAGS = (
-					"-fPIC",
-					"-DNOPTHREADS",
-				);
-				PKGINFO_FILE_CONTENTS = BNDLFAST;
-				PREBINDING = NO;
+				OTHER_CFLAGS = "-DNOPTHREADS";
 				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.Mpeg3Plugin;
 				PRODUCT_NAME = Mpeg3Plugin;
 				USER_HEADER_SEARCH_PATHS = "../../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg/**";
 				WRAPPER_EXTENSION = bundle;
-				ZERO_LINK = YES;
 			};
 			name = Development;
 		};
 		949199E609818612000FC37A /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = YES;
+				COMBINE_HIDPI_IMAGES = NO;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
-				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
 				GCC_UNROLL_LOOPS = YES;
 				INFOPLIST_FILE = "Mpeg3Plugin-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				OTHER_CFLAGS = "-DNOPTHREADS";
-				PREBINDING = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.Mpeg3Plugin;
 				PRODUCT_NAME = Mpeg3Plugin;
 				USER_HEADER_SEARCH_PATHS = "../../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg/**";
@@ -409,17 +409,15 @@
 		949199E709818612000FC37A /* Default */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				COMBINE_HIDPI_IMAGES = YES;
+				COMBINE_HIDPI_IMAGES = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
-				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
 				INFOPLIST_FILE = "Mpeg3Plugin-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
-				PREBINDING = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.Mpeg3Plugin;
 				PRODUCT_NAME = Mpeg3Plugin;
+				USER_HEADER_SEARCH_PATHS = "../../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg/**";
 				WRAPPER_EXTENSION = bundle;
-				ZERO_LINK = YES;
 			};
 			name = Default;
 		};
