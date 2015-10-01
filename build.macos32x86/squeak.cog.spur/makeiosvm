@@ -1,15 +1,17 @@
 #!/bin/bash
 # Build a "complete" Mac VM consisting of CoreVM/CoreMTVM + Plugins.
-# By default build the Deployment configuration into $APP (Squeak.app)
+# By default build the Deployment configuration into $DEST$VMAPP (CocoaSqueak.app)
 IFS='	
 '
 BUILD_CONFIGURATION=Deployment
 NSD_BUILD_CONFIGURATION=Deployment
 XCD_BUILD_CONFIGURATION=Release
 APP=Squeak.app
-OBJDIR=Squeak.build/Objects-normal/i386
+# build/SqueakCogSpur32x86.build/Debug/SqueakCogSpur32x86.build/Objects-normal
+#OBJDIR=Squeak.build/Objects-normal/i386
+OBJDIR=SqueakCogSpur32x86.build/Objects-normal/i386
 VMAPP=".app"
-DEST="Squeak"
+DEST="CocoaSqueak"
 VMXCP=SqueakCogSpur32x86
 SFP=SqueakFFIPrims
 KEEP=
@@ -21,16 +23,16 @@ while getopts 'admskh?' opt $@; do
 	a)		BUILD_CONFIGURATION=Assert
 			NSD_BUILD_CONFIGURATION=Development
 			XCD_BUILD_CONFIGURATION=Debug
-			DEST=Assert;;
-	d)		BUILD_CONFIGURATION=Development
+			DEST=CocoaAssert;;
+	d)		BUILD_CONFIGURATION=Debug
 			NSD_BUILD_CONFIGURATION=Development
 			XCD_BUILD_CONFIGURATION=Debug
-			DEST=Debug;;
+			DEST=CocoaDebug;;
 	m)		VMAPP="MT.app";
 			VMXCP=SqueakCogSpur32x86MT;
 			SFP=SqueakMTFFIPrims;;
 	s)		BUILD_CONFIGURATION=DeploymentSymbols
-			DEST=Fast;;
+			DEST=CocoaFast;;
 	k)		KEEP=1;;
 	h|\?|*)	echo $USAGE
 			echo '	build the vm (defaults to a Deployment version)'
@@ -50,11 +52,6 @@ if [ -z "$DEVELOPER_SDK_DIR" ]; then
 fi
 test -d "$DEVELOPER_SDK_DIR" || echo '$DEVELOPER_SDK_DIR' "$DEVELOPER_SDK_DIR" does not exist \(needed by $SFP project\)
 export DEVELOPER_SDK_DIR
-#if [ ! -d "$DEVELOPER_SDK_DIR/MacOSX10.5.sdk" ]; then
-#	if [ -d "$DEVELOPER_SDK_DIR/MacOSX10.4u.sdk" ]; then
-#		export SDKROOT="$DEVELOPER_SDK_DIR/MacOSX10.4u.sdk"
-#	fi
-#fi
 
 test "$KEEP" = 1 || rm -rf "$DEST"/* "$DEST"/.??*
 
