@@ -1395,6 +1395,9 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 				 objectRepresentation genAddSmallIntegerTagsTo: ra].
 
 		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
+		[16] -> [ self AndR: val R: ra ].
+		[17] -> [ self OrR: val R: ra ].
+		[18] -> [ self XorR: untaggedVal R: ra. ].
 
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
 		"CmpCqR is SubRCq so everything is reversed, but because no CmpRCq things are reversed again and we invert the sense of the jumps."
@@ -1483,6 +1486,9 @@ StackToRegisterMappingCogit >> genBinaryVarOpConstInlinePrimitive: prim [
 				 objectRepresentation genAddSmallIntegerTagsTo: rr].
 
 		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
+		[16] -> [ self AndR: val R: rr ].
+		[17] -> [ self OrR: val R: rr ].
+		[18] -> [ self XorR: untaggedVal R: rr. ].
 
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
 		"CmpCqR is SubRCq so everything is reversed."
@@ -1534,6 +1540,11 @@ StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 				 objectRepresentation genAddSmallIntegerTagsTo: rr].
 
 		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
+		[16] -> [ self AndR: ra R: rr ].
+		[17] -> [ self OrR: ra R: rr ].
+		[18] -> [objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ra. 
+				self XorR: ra R: rr. ].
+
 
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
 		"CmpCqR is SubRCq so everything is reversed."
