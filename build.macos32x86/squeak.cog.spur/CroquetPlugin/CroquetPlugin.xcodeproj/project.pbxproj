@@ -246,7 +246,6 @@
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				OTHER_CFLAGS = (
-					"-mno-fused-madd",
 					"$(OTHER_CFLAGS)",
 				);
 				PRODUCT_NAME = CroquetPlugin;
