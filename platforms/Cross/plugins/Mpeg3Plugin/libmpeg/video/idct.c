@@ -69,7 +69,7 @@
  */
 
  
-inline 
+
 int mpeg3video_idctrow(short *blk)
 {
 	int x0, x1, x2, x3, x4, x5, x6, x7, x8;
@@ -133,7 +133,6 @@ int mpeg3video_idctrow(short *blk)
  */
 
 
-inline
 int mpeg3video_idctcol(short *blk)
 {
   int x0, x1, x2, x3, x4, x5, x6, x7, x8;
