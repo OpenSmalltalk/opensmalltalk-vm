@@ -792,7 +792,7 @@ int mpeg3audio_imdct_init(mpeg3audio_t *audio)
 }
 
 
-inline void swap_cmplx(mpeg3_complex_t *a, mpeg3_complex_t *b)
+void swap_cmplx(mpeg3_complex_t *a, mpeg3_complex_t *b)
 {
 	mpeg3_complex_t tmp;
 

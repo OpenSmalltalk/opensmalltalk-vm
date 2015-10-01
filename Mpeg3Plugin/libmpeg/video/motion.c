@@ -64,9 +64,6 @@ static inline void mpeg3video_calc_mv(int *pred, int r_size, int motion_code, in
 int *dmvector, * differential motion vector *
 int mvx, int mvy  * decoded mv components (always in field format) *
 */
-#if !defined(sun)
-INLINE
-#endif
 void mpeg3video_calc_dmv(mpeg3video_t *video, 
 		int DMV[][2], 
 		int *dmvector, 
