@@ -48,3 +48,12 @@ ByteArray >> longAt: byteIndex [
 ByteArray >> longAt: byteIndex put: aValue [
 	^self signedLongAt: byteIndex put: aValue
 ]
+
+{ #category : #'*VMMaker-printing' }
+ByteArray >> storeOn: aStream base: base [
+	aStream nextPutAll: '#['.
+	self
+		do: [:each| each storeOn: aStream base: base]
+		separatedBy: [aStream nextPut: $ ].
+	aStream nextPut: $]
+]
