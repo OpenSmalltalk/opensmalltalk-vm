@@ -2,5 +2,6 @@
 trap 'exit 2' HUP INT PIPE TERM
 for d in `dirname $0`/build*; do
 	(cd $d
-	 echo y | ./mvm "$@")
+	 echo y | ./mvm "$@") &
 done
+wait
