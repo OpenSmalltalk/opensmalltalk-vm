@@ -3071,9 +3071,11 @@ CogIA32Compiler >> setsConditionCodesFor: aConditionalJumpOpcode [
 
 { #category : #testing }
 CogIA32Compiler >> shiftSetsConditionCodesFor: aConditionalJumpOpcode [
-	"OF flag only guaranteed to be set for 1-bit shifts.  See [1] p 490"
-	^(opcode = ArithmeticShiftRightCqR or: [opcode = LogicalShiftLeftCqR])
-	   and: [(operands at: 0) = 1]
+	"OF flag only guaranteed to be set for 1-bit shifts.  See [1] p 490.
+	 Only SF, ZF & PF set according to result.  Since the question is currently
+	 asked only for Zero and Negative use the following simplification."
+	<inline: true>
+	^(aConditionalJumpOpcode between: JumpZero and: JumpNonNegative)
 ]
 
 { #category : #disassembly }
