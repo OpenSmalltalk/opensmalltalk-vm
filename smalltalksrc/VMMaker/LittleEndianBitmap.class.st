@@ -61,23 +61,52 @@ LittleEndianBitmap >> byteAt: byteAddress put: byte [
 
 { #category : #accessing }
 LittleEndianBitmap >> long64At: byteAddress [
-	"memory is a Bitmap, a 32-bit indexable array of bits"
-	| hiWord loWord |
-	byteAddress - 1 \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
-	loWord := self at: byteAddress - 1 // 4 + 1.
-	hiWord := self at: byteAddress - 1 // 4 + 2.
-	^hiWord = 0
-		ifTrue: [loWord]
-		ifFalse: [(hiWord signedIntFromLong bitShift: 32) + loWord]
+	| lowBits hiWord loWord midWord mask wordIndex result signBit |
+	wordIndex := byteAddress - 1 // 4 + 1.
+	(lowBits := byteAddress - 1 \\ 4) = 0 ifTrue:
+		[loWord := self at: wordIndex.
+		 hiWord := self at: wordIndex + 1.
+		 ^hiWord = 0
+			ifTrue: [loWord]
+			ifFalse: [(hiWord signedIntFromLong bitShift: 32) + loWord]].
+	"There will always be three accesses; two partial words and a full word in the middle"
+	mask := 16rFFFFFFFF bitShift: 4 - lowBits * -8.
+	loWord := (self at: wordIndex) bitAnd: mask bitInvert32.
+	midWord := self at: wordIndex + 1.
+	hiWord := (self at: wordIndex + 2) bitAnd: mask.
+	result := loWord bitShift: lowBits * -8.
+	midWord ~= 0 ifTrue:
+		[result := result + (midWord bitShift: (4 - lowBits * 8))].
+	hiWord ~= 0 ifTrue:
+		[signBit := 1 << (lowBits * 8 - 1).
+		 (signBit anyMask: hiWord) ifTrue:
+			[hiWord := hiWord - signBit - signBit].
+		 result := result + (hiWord bitShift: (4 - lowBits + 4 * 8))].
+	^result
 ]
 
 { #category : #accessing }
-LittleEndianBitmap >> long64At: byteAddress put: a64BitValue [
-	byteAddress - 1 \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
-	self
-		longAt: byteAddress put: (a64BitValue bitAnd: 16rffffffff);
-		longAt: byteAddress + 4 put: a64BitValue >> 32.
-	^a64BitValue
+LittleEndianBitmap >> long64At: byteIndex put: aValue [
+	| lowBits mask wordIndex |
+	(lowBits := byteIndex - 1 \\ 4) = 0 ifTrue:
+		[self "N.B. Do the access that can fail first, before altering the receiver"
+			longAt: byteIndex + 4 put: (aValue bitShift: -32);
+			unsignedLongAt: byteIndex put: (aValue bitAnd: 16rffffffff).
+		^aValue].
+	"There will always be three accesses; two partial words and a full word in the middle"
+	wordIndex := byteIndex - 1 // 4 + 1.
+	aValue < 0
+		ifTrue:
+			[(aValue bitShift: -32) < -2147483648 ifTrue:
+				[^self errorImproperStore]]
+		ifFalse:
+			[16r7FFFFFFF < (aValue bitShift: -32) ifTrue:
+				[^self errorImproperStore]].
+	mask := 16rFFFFFFFF bitShift: 4 - lowBits * -8.
+	self at: wordIndex put: (((self at: wordIndex) bitAnd: mask) bitXor: ((aValue bitShift: lowBits * 8) bitAnd: mask bitInvert32)).
+	self at: wordIndex + 1 put: ((aValue bitShift: 4 - lowBits * -8) bitAnd: 16rFFFFFFFF).
+	self at: wordIndex + 2 put: (((self at: wordIndex + 2) bitAnd: mask bitInvert32) bitXor: ((aValue bitShift: 4 - lowBits + 4 * -8) bitAnd: mask)).
+	^aValue
 ]
 
 { #category : #accessing }
@@ -97,12 +126,12 @@ LittleEndianBitmap >> longAt: byteIndex bigEndian: bigEndian [
 		ifFalse:
 			[word0 := self at: wordIndex.
 			 word1 := self at: wordIndex + 1.
-			 value := 16rFFFFFFFF bitAnd: word0 >> (lowBits * 8) + (word1 << (4 - lowBits * 8))].
+			 value := 16rFFFFFFFF bitAnd: (word0 bitShift: lowBits * -8) + (word1 bitShift: 4 - lowBits * 8)].
 	bigEndian ifTrue:
-		[value := (value >> 24 bitAnd: 16rFF)
-				 + (value >> 8 bitAnd: 16rFF00)
- 				 + ((value bitAnd: 16rFF00) << 8)
-				 + ((value bitAnd: 16rFF) << 24)].
+		[value := ((value bitShift: -24) bitAnd: 16rFF)
+				 + ((value bitShift: -8) bitAnd: 16rFF00)
+ 				 + ((value bitAnd: 16rFF00) bitShift: 8)
+				 + ((value bitAnd: 16rFF) bitShift: 24)].
 	(16r80000000 bitAnd: value) ~= 0 ifTrue:
 		[value := (16r7FFFFFFF bitAnd: value) - 16r80000000].
 	^value
@@ -125,20 +154,22 @@ LittleEndianBitmap >> longAt: byteIndex bigEndian: bigEndian [
 { #category : #accessing }
 LittleEndianBitmap >> longAt: byteIndex put: aValue [
 	"Compatibility with the ByteArray method of the same name."
-	| lowBits wordIndex value mask |
+	| lowBits wordIndex mask |
 	lowBits := byteIndex - 1 bitAnd: 3.
 	wordIndex := byteIndex - 1 // 4 + 1.
-	value := aValue < 0
-				ifTrue: [16rFFFFFFFF bitAnd: aValue]
-				ifFalse: [16rFFFFFFFF < aValue ifTrue:
-							[self errorImproperStore].
-						aValue].
+	aValue < 0
+		ifTrue:
+			[aValue < -2147483648 ifTrue:
+				[^self errorImproperStore]]
+		ifFalse:
+			[16r7FFFFFFF < aValue ifTrue:
+				[^self errorImproperStore]].
 	lowBits = 0 ifTrue:
-		[self at: wordIndex put: value.
+		[self at: wordIndex put: (16rFFFFFFFF bitAnd: aValue).
 		 ^aValue].
-	mask := 16rFFFFFFFF bitAnd: 16rFFFFFFFF << (lowBits * 8).
-	self at: wordIndex put: (((self at: wordIndex) bitAnd: mask bitInvert) bitXor: (value << (lowBits * 8) bitAnd: mask)).
-	self at: wordIndex + 1 put: (((self at: wordIndex + 1) bitAnd: mask) bitXor: (value >> (4 - lowBits * 8) bitAnd: mask bitInvert)).
+	mask := 16rFFFFFFFF bitShift: lowBits * -8.
+	self at: wordIndex put: (((self at: wordIndex) bitAnd: mask) bitXor: ((aValue bitShift: lowBits * 8) bitAnd: mask bitInvert32)).
+	self at: wordIndex + 1 put: (((self at: wordIndex + 1) bitAnd: mask bitInvert32) bitXor: ((aValue bitShift: 4 - lowBits * -8) bitAnd: mask)).
 	^aValue
 
 	"(1 to: 8) collect:
@@ -162,16 +193,16 @@ LittleEndianBitmap >> longAt: byteIndex put: aValue bigEndian: bigEndian [
 							[self errorImproperStore].
 						aValue].
 	bigEndian ifTrue:
-		[value := (value >> 24 bitAnd: 16rFF)
-				 + (value >> 8 bitAnd: 16rFF00)
- 				 + ((value bitAnd: 16rFF00) << 8)
-				 + ((value bitAnd: 16rFF) << 24)].
+		[value := ((value bitShift: -24) bitAnd: 16rFF)
+				 + ((value bitShift: -8) bitAnd: 16rFF00)
+ 				 + ((value bitAnd: 16rFF00) bitShift: 8)
+				 + ((value bitAnd: 16rFF) bitShift: 24)].
 	lowBits = 0 ifTrue:
 		[self at: wordIndex put: value.
 		 ^aValue].
-	mask := 16rFFFFFFFF bitAnd: 16rFFFFFFFF << (lowBits * 8).
-	self at: wordIndex put: (((self at: wordIndex) bitAnd: mask bitInvert) bitXor: (value << (lowBits * 8) bitAnd: mask)).
-	self at: wordIndex + 1 put: (((self at: wordIndex + 1) bitAnd: mask) bitXor: (value >> (4 - lowBits * 8) bitAnd: mask bitInvert)).
+	mask := 16rFFFFFFFF bitShift: lowBits * -8.
+	self at: wordIndex put: (((self at: wordIndex) bitAnd: mask) bitXor: ((value bitShift: lowBits * 8) bitAnd: mask bitInvert32)).
+	self at: wordIndex + 1 put: (((self at: wordIndex + 1) bitAnd: mask bitInvert32) bitXor: ((value bitShift: 4 - lowBits * -8) bitAnd: mask)).
 	^aValue
 
 	"(1 to: 8) collect:
@@ -217,6 +248,49 @@ LittleEndianBitmap >> unsignedByteAt: byteAddress put: byte [
 ]
 
 { #category : #accessing }
+LittleEndianBitmap >> unsignedLong64At: byteAddress [
+	"memory is a Bitmap, a 32-bit indexable array of bits"
+	| lowBits hiWord loWord midWord mask wordIndex result |
+	wordIndex := byteAddress - 1 // 4 + 1.
+	(lowBits := byteAddress - 1 \\ 4) = 0 ifTrue:
+		[loWord := self at: wordIndex.
+		 hiWord := self at: wordIndex + 1.
+		 ^hiWord = 0
+			ifTrue: [loWord]
+			ifFalse: [(hiWord bitShift: 32) + loWord]].
+	"There will always be three accesses; two partial words and a full word in the middle"
+	mask := 16rFFFFFFFF bitShift: 4 - lowBits * -8.
+	loWord := (self at: wordIndex) bitAnd: mask bitInvert32.
+	midWord := self at: wordIndex + 1.
+	hiWord := (self at: wordIndex + 2) bitAnd: mask.
+	result := loWord bitShift: lowBits * -8.
+	midWord ~= 0 ifTrue:
+		[result := result + (midWord bitShift: (4 - lowBits * 8))].
+	hiWord ~= 0 ifTrue:
+		[result := result + (hiWord bitShift: (4 - lowBits + 4 * 8))].
+	^result
+]
+
+{ #category : #accessing }
+LittleEndianBitmap >> unsignedLong64At: byteIndex put: aValue [
+	| lowBits mask wordIndex |
+	(lowBits := byteIndex - 1 \\ 4) = 0 ifTrue:
+		[self "N.B. Do the access that can fail first, before altering the receiver"
+			unsignedLongAt: byteIndex + 4 put: (aValue bitShift: -32);
+			unsignedLongAt: byteIndex put: (aValue bitAnd: 16rffffffff).
+		^aValue].
+	"There will always be three accesses; two partial words and a full word in the middle"
+	wordIndex := byteIndex - 1 // 4 + 1.
+	(aValue bitShift: -64) ~= 0 ifTrue:
+		[^self errorImproperStore].
+	mask := 16rFFFFFFFF bitShift: 4 - lowBits * -8.
+	self at: wordIndex put: (((self at: wordIndex) bitAnd: mask) bitXor: ((aValue bitShift: lowBits * 8) bitAnd: mask bitInvert32)).
+	self at: wordIndex + 1 put: ((aValue bitShift: 4 - lowBits * -8) bitAnd: 16rFFFFFFFF).
+	self at: wordIndex + 2 put: (((self at: wordIndex + 2) bitAnd: mask bitInvert32) bitXor: ((aValue bitShift: 4 - lowBits + 4 * -8) bitAnd: mask)).
+	^aValue
+]
+
+{ #category : #accessing }
 LittleEndianBitmap >> unsignedLongAt: byteIndex [
 	"Compatiblity with the ByteArray & Alien methods of the same name."
 	^(byteIndex - 1 bitAnd: 3) = 0
@@ -236,12 +310,12 @@ LittleEndianBitmap >> unsignedLongAt: byteIndex bigEndian: bigEndian [
 		ifFalse:
 			[word0 := self at: wordIndex.
 			 word1 := self at: wordIndex + 1.
-			 value := 16rFFFFFFFF bitAnd: word0 >> (lowBits * 8) + (word1 << (4 - lowBits * 8))].
+			 value := 16rFFFFFFFF bitAnd: (word0 bitShift: lowBits * -8) + (word1 bitShift: 4 - lowBits * 8)].
 	bigEndian ifTrue:
-		[value := (value >> 24 bitAnd: 16rFF)
-				 + (value >> 8 bitAnd: 16rFF00)
- 				 + ((value bitAnd: 16rFF00) << 8)
-				 + ((value bitAnd: 16rFF) << 24)].
+		[value := ((value bitShift: -24) bitAnd: 16rFF)
+				 + ((value bitShift: -8) bitAnd: 16rFF00)
+ 				 + ((value bitAnd: 16rFF00) bitShift: 8)
+				 + ((value bitAnd: 16rFF) bitShift: 24)].
 	^value
 
 	"| bm ba |
@@ -262,9 +336,14 @@ LittleEndianBitmap >> unsignedLongAt: byteIndex bigEndian: bigEndian [
 { #category : #accessing }
 LittleEndianBitmap >> unsignedLongAt: byteIndex put: aValue [
 	"Compatiblity with the ByteArray & Alien methods of the same name."
-	^(byteIndex - 1 bitAnd: 3) = 0
-		ifTrue: [self at: byteIndex - 1 // 4 + 1 put: aValue]
-		ifFalse: [self notYetImplemented]
+	| lowBits mask wordIndex |
+	wordIndex := byteIndex - 1 // 4 + 1.
+	(lowBits := byteIndex - 1 bitAnd: 3) = 0 ifTrue:
+		[^self at: wordIndex put: aValue].
+	mask := 16rFFFFFFFF bitShift: lowBits * -8.
+	self at: wordIndex put: (((self at: wordIndex) bitAnd: mask) bitXor: ((aValue bitShift: 4 - lowBits * 8) bitAnd: mask bitInvert32)).
+	self at: wordIndex + 1 put: (((self at: wordIndex + 1) bitAnd: mask bitInvert32) bitXor: (16rFFFFFFFF bitAnd: ((aValue bitShift: lowBits * -8) bitAnd: mask))).
+	^aValue
 ]
 
 { #category : #accessing }

@@ -6542,6 +6542,9 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 	savedStackPointer := coInterpreter stackPointer.
 	savedArgumentCount := coInterpreter argumentCount.
 	result := ["self halt: evaluable selector."
+		   	   ((printRegisters or: [printInstructions]) and: [clickConfirm]) ifTrue:
+			 	[(self confirm: 'skip run-time call?') ifFalse:
+					[self halt]].
 			   evaluable valueWithArguments: (processor
 												postCallArgumentsNumArgs: evaluable numArgs
 												in: coInterpreter memory)]
