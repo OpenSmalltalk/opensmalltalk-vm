@@ -291,3 +291,8 @@ FilePluginSimulator >> sqFileStdioHandlesInto: anArray [
 		at: 3 put: 2.
 	^7
 ]
+
+{ #category : #simulation }
+FilePluginSimulator >> sqFileSync: file [
+	^file sync
+]

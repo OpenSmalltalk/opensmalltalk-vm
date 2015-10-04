@@ -797,6 +797,16 @@ FilePlugin >> primitiveFileStdioHandles [
 ]
 
 { #category : #'file primitives' }
+FilePlugin >> primitiveFileSync [
+	| file |
+	<var: 'file' type: 'SQFile *'>
+	<export: true>
+	file := self fileValueOf: (interpreterProxy stackValue: 0).
+	interpreterProxy failed ifFalse:[self sqFileSync: file].
+	interpreterProxy failed ifFalse: [interpreterProxy pop: 1].
+]
+
+{ #category : #'file primitives' }
 FilePlugin >> primitiveFileTruncate [
 "ftruncate is not an ansi function so we have a macro to point to a suitable platform implementation" 
 	| truncatePosition file |
