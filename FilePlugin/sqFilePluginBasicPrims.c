@@ -487,6 +487,17 @@ sqFileFlush(SQFile *f) {
 }
 
 sqInt
+sqFileSync(SQFile *f) {
+
+	if (!sqFileValid(f))
+		return interpreterProxy->success(false);
+	pentry(sqFileSync);
+	if (fsync(fileno(getFile(f))) != 0)
+		return interpreterProxy->success(false);
+	return 1;
+}
+
+sqInt
 sqFileTruncate(SQFile *f,squeakFileOffsetType offset) {
 
 	if (!sqFileValid(f))
