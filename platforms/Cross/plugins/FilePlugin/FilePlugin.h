@@ -52,6 +52,7 @@ squeakFileOffsetType sqFileSize(SQFile *f);
 sqInt   sqFileValid(SQFile *f);
 size_t  sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex);
 sqInt   sqFileFlush(SQFile *f);
+sqInt   sqFileSync(SQFile *f);
 sqInt   sqFileTruncate(SQFile *f,squeakFileOffsetType offset);
 sqInt   sqFileThisSession(void);
 sqInt   sqFileStdioHandlesInto(SQFile files[3]);
@@ -61,10 +62,25 @@ sqInt   sqFileStdioHandlesInto(SQFile files[3]);
 sqInt dir_Create(char *pathString, sqInt pathStringLength);
 sqInt dir_Delete(char *pathString, sqInt pathStringLength);
 sqInt dir_Delimitor(void);
+#if PharoVM
+sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
+		/* outputs: */
+		char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+		sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink);
+sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString, sqInt nameStringLength,
+		/* outputs: */
+		char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+		sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink);
+#else
 sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
 		/* outputs: */
 		char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
 		sqInt *isDirectory, squeakFileOffsetType *sizeIfFile);
+sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString, sqInt nameStringLength,
+		/* outputs: */
+		char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+		sqInt *isDirectory, squeakFileOffsetType *sizeIfFile);
+#endif
 sqInt dir_PathToWorkingDir(char *pathName, sqInt pathNameMax);
 sqInt dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator);
 sqInt dir_GetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator);
