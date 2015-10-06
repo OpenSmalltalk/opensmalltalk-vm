@@ -311,8 +311,14 @@ CogX64Compiler >> computeMaximumSize [
 		[DivRdRd]					-> [^4].
 		[SqrtRd]					-> [^4].
 		"Data Movement"
-		[MoveCqR]		-> [^(operands at: 0) = 0 ifTrue: [3] ifFalse: [(self is32BitSignedImmediate: (operands at: 0)) ifTrue: [7] ifFalse: [self moveCwRByteSize]]].
+		[MoveCqR]		-> [^(operands at: 0) = 0
+								ifTrue: [3]
+								ifFalse:
+									[(self is32BitSignedImmediate: (operands at: 0))
+										ifTrue: [7]
+										ifFalse: [self moveCwRByteSize]]].
 		[MoveCwR]		-> [^self moveCwRByteSize].
+		[MoveC32R]	-> [^7]. "N.B. Always inlined."
 		[MoveRR]		-> [^3].
 		[MoveRdRd]		-> [^4].
 		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0))
@@ -378,17 +384,19 @@ CogX64Compiler >> computeMaximumSize [
 								+ (((self concreteRegister: (operands at: 1)) bitAnd: 7) = RSP
 									ifTrue: [1]
 									ifFalse: [0])].
-		"[MoveXbrRR]	-> [self assert: (self concreteRegister: (operands at: 0)) ~= ESP.
-							^(self concreteRegister: (operands at: 1)) = EBP
-											ifTrue: [5]
-											ifFalse: [4]].
-		[MoveRXbrR]	->	[self assert: (self concreteRegister: (operands at: 1)) ~= ESP.
-							^((self concreteRegister: (operands at: 2)) = EBP
-											ifTrue: [4]
-											ifFalse: [3])
-										+ ((self concreteRegister: (operands at: 0)) >= 4
-											ifTrue: [2]
-											ifFalse: [0])]."
+		[MoveXbrRR]	-> [self assert: (self concreteRegister: (operands at: 0)) ~= RSP.
+							^((self concreteRegister: (operands at: 1)) bitAnd: 7) = RBP
+											ifTrue: [6]
+											ifFalse: [5]].
+		[MoveRXbrR]	->	[self assert: (self concreteRegister: (operands at: 1)) ~= RSP.
+							^(((self concreteRegister: (operands at: 0)) < 8
+							   and: [(self concreteRegister: (operands at: 1)) < 8
+							   and: [(self concreteRegister: (operands at: 2)) < 8]])
+								ifTrue: [3]
+								ifFalse: [4])
+							+ (((self concreteRegister: (operands at: 2)) bitAnd: 7) = RBP
+											ifTrue: [1]
+											ifFalse: [0])].
 		[MoveXwrRR]	-> [self assert: (self concreteRegister: (operands at: 0)) ~= RSP.
 							^((self concreteRegister: (operands at: 1)) = RBP
 							   or: [(self concreteRegister: (operands at: 1)) = R13])
@@ -797,6 +805,24 @@ CogX64Compiler >> concretizeMoveAwR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveC32R [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| value reg |
+	value := operands at: 0.
+	reg := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: (self rexR: 0 x: 0 b: reg);
+		at: 1 put: 16rC7;
+		at: 2 put: (self mod: ModReg RM: reg RO: 0);
+		at: 3 put: (value bitAnd: 16rFF);
+		at: 4 put: (value >> 8 bitAnd: 16rFF);
+		at: 5 put: (value >> 16 bitAnd: 16rFF);
+		at: 6 put: (value >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 7
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveCqR [
 	"Will get inlined into concretizeAt: switch.
 	 On x64 we can short-cut mov 0, reg using xor, and use 32-bit displacement, signed or unsigned, if possible."
@@ -1144,6 +1170,32 @@ CogX64Compiler >> concretizeMoveRR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveRXbrR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| index base dest offset |
+	index := self concreteRegister: (operands at: 0).
+	base := self concreteRegister: (operands at: 1).
+	dest := self concreteRegister: (operands at: 2).
+	offset := 0.
+	(dest >= 8 or: [base >= 8 or: [index >= 8]]) ifTrue:
+		[machineCode at: 0 put: (self rexR: dest x: index b: base).
+		 offset := 1].
+	machineCode
+		at: 0 + offset put: 16r88.
+	(base ~= RBP and: [base ~= R13]) ifTrue:
+		[machineCode
+			at: 1 + offset put: (self mod: ModRegInd RM: 4 RO: dest);
+			at: 2 + offset put: (self s: SIB1 i: index b: base).
+		 ^machineCodeSize := 3 + offset].
+	machineCode
+		at: 1 + offset put: (self mod: ModRegRegDisp8 RM: 4 RO: dest);
+		at: 2 + offset put: (self s: SIB1 i: index b: base);
+		at: 3 + offset put: 0.
+	 ^machineCodeSize := 4 + offset
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveRXwrR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1165,6 +1217,30 @@ CogX64Compiler >> concretizeMoveRXwrR [
 		at: 3 put: (self s: SIB8 i: index b: base);
 		at: 4 put: 0.
 	 ^machineCodeSize := 5
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveXbrRR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| index base dest |
+	index := self concreteRegister: (operands at: 0).
+	base := self concreteRegister: (operands at: 1).
+	dest := self concreteRegister: (operands at: 2).
+	machineCode
+		at: 0 put: (self rexR: dest x: index b: base);
+		at: 1 put: 16r0F;
+		at: 2 put: 16rB6.
+	(base ~= RBP and: [base ~= R13]) ifTrue:
+		[machineCode
+			at: 3 put: (self mod: ModRegInd RM: 4 RO: dest);
+			at: 4 put: (self s: SIB1 i: index b: base).
+		 ^machineCodeSize := 5].
+	machineCode
+		at: 3 put: (self mod: ModRegRegDisp8 RM: 4 RO: dest);
+		at: 4 put: (self s: SIB1 i: index b: base);
+		at: 5 put: 0.
+	 ^machineCodeSize := 6
 ]
 
 { #category : #'generate machine code' }
@@ -1515,6 +1591,7 @@ CogX64Compiler >> dispatchConcretize [
 		"Data Movement"
 		[MoveCqR]			-> [^self concretizeMoveCqR].
 		[MoveCwR]			-> [^self concretizeMoveCwR].
+		[MoveC32R]			-> [^self concretizeMoveC32R].
 		[MoveRR]			-> [^self concretizeMoveRR].
 		[MoveAwR]			-> [^self concretizeMoveAwR].
 		[MoveRAw]			-> [^self concretizeMoveRAw].

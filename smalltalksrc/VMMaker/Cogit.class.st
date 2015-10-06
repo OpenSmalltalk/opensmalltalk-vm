@@ -247,6 +247,7 @@ Class {
 		'AltBlockCreationBytecodeSize',
 		'AltFirstSpecialSelector',
 		'AltNSSendIsPCAnnotated',
+		'AltNumSpecialSelectors',
 		'AnnotationConstantNames',
 		'AnnotationShift',
 		'AnnotationsWithBytecodePCs',
@@ -282,6 +283,7 @@ Class {
 		'NSSendIsPCAnnotated',
 		'NumObjRefsInRuntime',
 		'NumOopsPerNSC',
+		'NumSpecialSelectors',
 		'NumTrampolines',
 		'ProcessorClass'
 	],
@@ -860,6 +862,7 @@ Cogit class >> initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid [
 	AltBlockCreationBytecodeSize := BlockCreationBytecodeSize.
 	AltNSSendIsPCAnnotated := NSSendIsPCAnnotated.
 	AltFirstSpecialSelector := FirstSpecialSelector.
+	AltNumSpecialSelectors := NumSpecialSelectors.
 	self initializeBytecodeTableForSqueakV3PlusClosures.
 	v3Table := generatorTable.
 	generatorTable := CArrayAccessor on: v3Table object, v4Table object
@@ -876,6 +879,7 @@ Cogit class >> initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid [
 	v1Table := generatorTable.
 	AltBlockCreationBytecodeSize := BlockCreationBytecodeSize.
 	AltFirstSpecialSelector := FirstSpecialSelector.
+	AltNumSpecialSelectors := NumSpecialSelectors.
 	self initializeBytecodeTableForSqueakV3PlusClosures.
 	v3Table := generatorTable.
 	generatorTable := CArrayAccessor on: v3Table object, v1Table object
@@ -920,6 +924,8 @@ Cogit class >> initializeMiscConstants [
 							[#IA32] 	->	[BochsIA32Alien].
 							[#ARMv5]	->	[GdbARMAlien]. }.
 	CogCompilerClass := self activeCompilerClass.
+	(CogCompilerClass withAllSuperclasses copyUpTo: CogAbstractInstruction) do:
+		[:compilerClass| compilerClass initialize].
 	"Our criterion for which methods to JIT is literal count.  The default value is 60 literals or less."
 	MaxLiteralCountForCompile := initializationOptions at: #MaxLiteralCountForCompile ifAbsent: [60].
 	"we special-case 0, 1 & 2 argument sends, N is numArgs >= 3"
@@ -1543,6 +1549,21 @@ Cogit >> CallRT: callTarget registersToBeSavedMask: registersToBeSaved [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> CmpC32: wordConstant R: reg [
+	"Generate a CmpC32R instruction to compare a 32-bit constant with a
+	 register.  If this is a 32-bit platform, simply generate a CmpCwR instruction,
+	 to avoid needless duplication in the 32-bit code generators.."
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self
+		gen: (objectMemory wordSize = 8
+				ifTrue: [CmpC32R]
+				ifFalse: [CmpCwR])
+		literal: wordConstant
+		operand: reg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> CmpCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -1936,6 +1957,21 @@ Cogit >> MoveAw: address R: reg [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> MoveC32: wordConstant R: reg [
+	"Generate a MoveC32R instruction to move a 32-bit constant into a register.
+	 If this is a 32-bit platform, simply generate a MoveCwR instruction, to avoid
+	 needless duplication in the 32-bit code generators.."
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self
+		gen: (objectMemory wordSize = 8
+				ifTrue: [MoveC32R]
+				ifFalse: [MoveCwR])
+		literal: wordConstant
+		operand: reg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> MoveCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2032,6 +2068,24 @@ Cogit >> MoveRd: dpreg1 Rd: dpreg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: MoveRdRd operand: dpreg1 operand: dpreg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> MoveUniqueC32: wordConstant R: reg [
+	"Generate a MoveC32R instruction to move a 32-bit constant into a register.
+	 If the backEnd is using out-of-line literals then those for inline caches cannot be shared,
+	 and this method ensures the instruction has its own unique label.  If the backEnd is using
+	 in-line literals then the literal is unique anyway and this is equivalent to MoveC32:R:.
+	 If this is a 32-bit platform, simply generate a MoveCwR instruction, to avoid
+	 needless duplication in the 32-bit code generators.."
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self
+		gen: (objectMemory wordSize = 8
+				ifTrue: [MoveC32R]
+				ifFalse: [MoveCwR])
+		uniqueLiteral: wordConstant
+		operand: reg
 ]
 
 { #category : #'abstract instructions' }
@@ -5543,6 +5597,44 @@ Cogit >> genLoadCStackPointersForPrimCall [
 	^0
 ]
 
+{ #category : #'in-line cacheing' }
+Cogit >> genLoadInlineCache: selectorIndex [
+	"The in-line cache for a send is implemented as a constant load into ClassReg.
+	 We always use a 32-bit load, even in 64-bits.
+
+	 In the initial (unlinked) state the in-line cache is notionally loaded with the selector.
+	 But since in 64-bits an arbitrary selector oop won't fit in a 32-bit constant load, we
+	 instead load the cache with the selector's index, either into the literal frame of the
+	 current method, or into the special selector array.  Negative values are 1-relative
+	 indices into the special selector array.
+
+	 When a send is linked, the load of the selector, or selector index, is overwritten with a
+	 load of the receiver's class, or class tag.  Hence, the 64-bit VM is currently constrained
+	 to use class indices as cache tags.  If out-of-line literals are used, distinct caches /must
+	 not/ share acche locations, for if they do, send cacheing will be confused by the sharing.
+	 Hence we use the MoveUniqueC32:R: instruction that will not share literal locations."
+
+	| cacheValue |
+	self assert: (selectorIndex < 0
+					ifTrue: [selectorIndex negated between: 1 and: self numSpecialSelectors]
+					ifFalse: [selectorIndex between: 0 and: (objectMemory literalCountOf: methodObj) - 1]).
+
+	objectMemory wordSize = 8
+		ifTrue:
+			[cacheValue := selectorIndex]
+		ifFalse:
+			[| selector |
+			 selector := selectorIndex < 0
+							ifTrue: [(coInterpreter specialSelector: -1 - selectorIndex)]
+							ifFalse: [self getLiteral: selectorIndex].
+			 self assert: (objectMemory addressCouldBeOop: selector).
+			 (objectMemory isYoung: selector) ifTrue:
+				[hasYoungReferent := true].
+			 cacheValue := selector].
+
+	self MoveUniqueC32: cacheValue R: ClassReg
+]
+
 { #category : #initialization }
 Cogit >> genMethodAbortTrampoline [
 	"Generate the abort for a method.  This abort performs either a call of ceSICMiss:
@@ -8546,7 +8638,7 @@ Cogit >> printMapEntry: annotation mcpc: mcpc args: tupleOfStreamCodeRangesAndMe
 				print: (self bytecodePCFor: mcpc startBcpc: codeRange startpc in: subMethod)].
 		(self isSendAnnotation: annotation) ifTrue:
 			[| sel |
-			sel := self selectorForSendAt: mcpc annotation: annotation.
+			sel := self selectorForSendAt: mcpc annotation: annotation in: cogMethod methodObject.
 			sel isInteger ifTrue:
 				[sel := self lookupAddress: sel].
 			sel isString ifTrue:
@@ -9270,7 +9362,7 @@ Cogit >> scanMethod [
 ]
 
 { #category : #'simulation only' }
-Cogit >> selectorForSendAt: mcpc annotation: annotation [
+Cogit >> selectorForSendAt: mcpc annotation: annotation in: aCompiledMethod [
 	<doNotGenerate>
 	| entryPoint offset targetMethod selector |
 	entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
@@ -9283,7 +9375,10 @@ Cogit >> selectorForSendAt: mcpc annotation: annotation [
 						targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
 						targetMethod selector]
 					ifFalse:
-						[backEnd inlineCacheTagAt: mcpc].
+						[objectMemory wordSize = 8
+							ifTrue: [self selectorFromSelectorIndex: (backEnd inlineCacheTagAt: mcpc) signedIntToLong
+										in: aCompiledMethod]
+							ifFalse: [backEnd inlineCacheTagAt: mcpc]].
 	^(annotation ~= IsNSSendCall and: [coInterpreter isCurrentImageFacade])
 		ifTrue: [coInterpreter objectForOop: selector]
 		ifFalse: [selector]
@@ -9297,6 +9392,14 @@ Cogit >> selectorForSendBefore: bcpc in: aCompiledMethod [
 	is := InstructionStream on: aCompiledMethod.
 	is pc: (aCompiledMethod pcPreviousTo: bcpc + 1). "bcpc is 0-rel"
 	^(sel := is selectorToSendOrSelf) ~~ is ifTrue: [sel]
+]
+
+{ #category : #'in-line cacheing' }
+Cogit >> selectorFromSelectorIndex: selectorIndex in: aCompiledMethod [
+	<inline: true>
+	^selectorIndex < 0
+		ifTrue: [(coInterpreter specialSelector: -1 - selectorIndex)]
+		ifFalse: [coInterpreter literal: selectorIndex ofMethod: aCompiledMethod]
 ]
 
 { #category : #analysis }
@@ -9928,7 +10031,7 @@ Cogit >> testMcToBcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cogMet
 				self assert: (mcpc = mappedpc or: [prevMcpc = mappedpc]).
 				(self isSendAnnotation: annotation) ifTrue:
 					[| mcSelector bcSelector |
-					mcSelector := self selectorForSendAt: mcpc annotation: annotation.
+					mcSelector := self selectorForSendAt: mcpc annotation: annotation in: aCompiledMethod.
 					"sends map to the following pc.  need to find the selector for the previous pc"
 					bcSelector := self selectorForSendBefore: bcpc in: bcMethod.
 					self assert: mcSelector = bcSelector]].

@@ -62,6 +62,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 
 	NSSendIsPCAnnotated := false. "IsNSSendCall used by SendAbsentImplicit"
 	FirstSpecialSelector := 80.
+	NumSpecialSelectors := 32.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -154,6 +155,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 
 	BytecodeSetHasDirectedSuperSend := true.
 	FirstSpecialSelector := 96.
+	NumSpecialSelectors := 32.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -271,6 +273,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSqueakV3PlusClosures [
 	"SimpleStackBasedCogit initializeBytecodeTableForSqueakV3PlusClosures"
 
 	FirstSpecialSelector := 176.
+	NumSpecialSelectors := 32.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -1296,9 +1299,9 @@ SimpleStackBasedCogit >> doubleExtendedDoAnythingBytecode [
 	| opType |
 	opType := byte1 >> 5.
 	opType = 0 ifTrue:
-		[^self genSend: (self getLiteral: byte2) numArgs: (byte1 bitAnd: 31)].
+		[^self genSend: byte2 numArgs: (byte1 bitAnd: 31)].
 	opType = 1 ifTrue:
-		[^self genSendSuper: (self getLiteral: byte2) numArgs: (byte1 bitAnd: 31)].
+		[^self genSendSuper: byte2 numArgs: (byte1 bitAnd: 31)].
 	"We need a map entry for this bytecode for correct parsing.
 	 The sends will get an IsSend entry anyway.  The other cases need a
 	 fake one.  We could of course special case the scanning but that's silly."
@@ -1681,7 +1684,7 @@ SimpleStackBasedCogit >> genExtSendAbsentDynamicSuperBytecode [
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
-	^self genSendAbsentDynamicSuper: (self getLiteral: litIndex) numArgs: nArgs
+	^self genSendAbsentDynamicSuper: litIndex numArgs: nArgs
 ]
 
 { #category : #'bytecode generators' }
@@ -1692,7 +1695,7 @@ SimpleStackBasedCogit >> genExtSendAbsentImplicitBytecode [
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
-	^self genSendAbsentImplicit: (self getLiteral: litIndex) numArgs: nArgs
+	^self genSendAbsentImplicit: litIndex numArgs: nArgs
 ]
 
 { #category : #'bytecode generators' }
@@ -1704,7 +1707,7 @@ SimpleStackBasedCogit >> genExtSendAbsentOuterBytecode [
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
 	depth := byte2.
-	^self genSendAbsentOuter: (self getLiteral: litIndex) numArgs: nArgs depth: depth
+	^self genSendAbsentOuter: litIndex numArgs: nArgs depth: depth
 
 ]
 
@@ -1716,7 +1719,7 @@ SimpleStackBasedCogit >> genExtSendAbsentSelfBytecode [
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
-	^self genSendAbsentSelf: (self getLiteral: litIndex) numArgs: nArgs
+	^self genSendAbsentSelf: litIndex numArgs: nArgs
 ]
 
 { #category : #'bytecode generators' }
@@ -1727,7 +1730,7 @@ SimpleStackBasedCogit >> genExtSendBytecode [
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
-	^self genSend: (self getLiteral: litIndex) numArgs: nArgs
+	^self genSend: litIndex numArgs: nArgs
 ]
 
 { #category : #'bytecode generators' }
@@ -1741,8 +1744,8 @@ SimpleStackBasedCogit >> genExtSendSuperBytecode [
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
 	^isDirected
-		ifTrue: [self genSendDirectedSuper: (self getLiteral: litIndex) numArgs: nArgs]
-		ifFalse: [self genSendSuper: (self getLiteral: litIndex) numArgs: nArgs]
+		ifTrue: [self genSendDirectedSuper: litIndex numArgs: nArgs]
+		ifFalse: [self genSendSuper: litIndex numArgs: nArgs]
 ]
 
 { #category : #'bytecode generators' }
@@ -1816,12 +1819,12 @@ SimpleStackBasedCogit >> genExtUnconditionalJump [
 SimpleStackBasedCogit >> genExtendedSendBytecode [
 	"Can use any of the first 32 literals for the selector and pass up to 7 arguments."
 
-	^self genSend: (self getLiteral: (byte1 bitAnd: 16r1F)) numArgs: byte1 >> 5
+	^self genSend: (byte1 bitAnd: 16r1F) numArgs: byte1 >> 5
 ]
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtendedSuperBytecode [
-	^self genSendSuper: (self getLiteral: (byte1 bitAnd: 16r1F)) numArgs: byte1 >> 5
+	^self genSendSuper: (byte1 bitAnd: 16r1F) numArgs: byte1 >> 5
 ]
 
 { #category : #'primitive generators' }
@@ -2088,9 +2091,12 @@ SimpleStackBasedCogit >> genMustBeBooleanTrampolineFor: boolean called: trampoli
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genNSSend: selector numArgs: numArgs depth: depth sendTable: sendTable [
+SimpleStackBasedCogit >> genNSSend: selectorIndex numArgs: numArgs depth: depth sendTable: sendTable [
 	<var: #sendTable type: #'sqInt *'>
-	| nsSendCache |
+	| selector nsSendCache |
+	self assert: (selectorIndex between: 0 and: (objectMemory literalCountOf: methodObj) - 1).
+	selector := self getLiteral: selectorIndex.
+	self assert: (objectMemory addressCouldBeOop: selector).	
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 
@@ -3276,26 +3282,23 @@ SimpleStackBasedCogit >> genReturnTrue [
 SimpleStackBasedCogit >> genSecondExtendedSendBytecode [
 	"Can use any of the first 64 literals for the selector and pass up to 3 arguments."
 
-	^self genSend: (self getLiteral: (byte1 bitAnd: 16r3F)) numArgs: byte1 >> 6
+	^self genSend: (byte1 bitAnd: 16r3F) numArgs: byte1 >> 6
 ]
 
 { #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> genSend: selector numArgs: numArgs [
+SimpleStackBasedCogit >> genSend: selectorIndex numArgs: numArgs [
 	<inline: true>
-	^self genSend: selector numArgs: numArgs sendTable: ordinarySendTrampolines
+	^self genSend: selectorIndex numArgs: numArgs sendTable: ordinarySendTrampolines
 ]
 
 { #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> genSend: selector numArgs: numArgs sendTable: sendTable [
+SimpleStackBasedCogit >> genSend: selectorIndex numArgs: numArgs sendTable: sendTable [
 	<inline: false>
 	<var: #sendTable type: #'sqInt *'>
 	| annotation |
-	(objectMemory isYoung: selector) ifTrue:
-		[hasYoungReferent := true].
 	self assert: needsFrame.
 	annotation := self annotationForSendTable: sendTable.
 	self assert: (numArgs between: 0 and: 255). "say"
-	self assert: (objectMemory addressCouldBeOop: selector).
 	self MoveMw: numArgs * objectMemory wordSize r: SPReg R: ReceiverResultReg.
 	"Deal with stale super sends; see SpurMemoryManager's class comment."
 	(self annotationIsForUncheckedEntryPoint: annotation) ifTrue:
@@ -3307,17 +3310,17 @@ SimpleStackBasedCogit >> genSend: selector numArgs: numArgs sendTable: sendTable
 	(BytecodeSetHasDirectedSuperSend
 	 and: [annotation = IsDirectedSuperSend]) ifTrue:
 		[self genMoveConstant: tempOop R: TempReg].
-	self MoveUniqueCw: selector R: ClassReg.
+	self genLoadInlineCache: selectorIndex.
 	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation.
 	self PushR: ReceiverResultReg.
 	^0
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSendAbsentDynamicSuper: selector numArgs: numArgs [
+SimpleStackBasedCogit >> genSendAbsentDynamicSuper: selectorIndex numArgs: numArgs [
 	<inline: false>
 	^self
-		genNSSend: selector
+		genNSSend: selectorIndex
 		numArgs: numArgs
 		depth: LookupRuleDynamicSuper
 		sendTable: dynamicSuperSendTrampolines
@@ -3326,34 +3329,34 @@ SimpleStackBasedCogit >> genSendAbsentDynamicSuper: selector numArgs: numArgs [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendAbsentImplicit0ArgsBytecode [
 	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments."
-	^self genSendAbsentImplicit: (self getLiteral: (byte0 bitAnd: 15)) numArgs: 0
+	^self genSendAbsentImplicit: (byte0 bitAnd: 15) numArgs: 0
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSendAbsentImplicit: selector numArgs: numArgs [
+SimpleStackBasedCogit >> genSendAbsentImplicit: selectorIndex numArgs: numArgs [
 	<inline: false>
 	^self
-		genNSSend: selector
+		genNSSend: selectorIndex
 		numArgs: numArgs
 		depth: LookupRuleImplicit
 		sendTable: implicitReceiverSendTrampolines
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSendAbsentOuter: selector numArgs: numArgs depth: depth [
+SimpleStackBasedCogit >> genSendAbsentOuter: selectorIndex numArgs: numArgs depth: depth [
 	<inline: false>
 	^self
-		genNSSend: selector
+		genNSSend: selectorIndex
 		numArgs: numArgs
 		depth: depth
 		sendTable: outerSendTrampolines
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSendAbsentSelf: selector numArgs: numArgs [
+SimpleStackBasedCogit >> genSendAbsentSelf: selectorIndex numArgs: numArgs [
 	<inline: false>
 	^self
-		genNSSend: selector
+		genNSSend: selectorIndex
 		numArgs: numArgs
 		depth: LookupRuleSelf
 		sendTable: selfSendTrampolines
@@ -3368,17 +3371,17 @@ SimpleStackBasedCogit >> genSendDirectedSuper: selector numArgs: numArgs [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendLiteralSelector0ArgsBytecode [
-	^self genSend: (self getLiteral: (byte0 bitAnd: 15)) numArgs: 0
+	^self genSend: (byte0 bitAnd: 15) numArgs: 0
 ]
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendLiteralSelector1ArgBytecode [
-	^self genSend: (self getLiteral: (byte0 bitAnd: 15)) numArgs: 1
+	^self genSend: (byte0 bitAnd: 15) numArgs: 1
 ]
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendLiteralSelector2ArgsBytecode [
-	^self genSend: (self getLiteral: (byte0 bitAnd: 15)) numArgs: 2
+	^self genSend: (byte0 bitAnd: 15) numArgs: 2
 ]
 
 { #category : #'bytecode generator support' }
@@ -3531,11 +3534,10 @@ SimpleStackBasedCogit >> genSpecialSelectorEqualsEquals [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSpecialSelectorSend [
-	| index selector numArgs |
+	| index numArgs |
 	index := byte0 - self firstSpecialSelectorBytecodeOffset.
-	selector := coInterpreter specialSelector: index.
 	numArgs := coInterpreter specialSelectorNumArgs: index.
-	^self genSend: selector numArgs: numArgs
+	^self genSend: index negated - 1 numArgs: numArgs
 ]
 
 { #category : #'bytecode generators' }
@@ -3714,15 +3716,6 @@ SimpleStackBasedCogit >> genUpArrowReturn [
 	^0
 ]
 
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genV4SpecialSelectorSend [
-	| index selector numArgs |
-	index := byte0 - 80.
-	selector := coInterpreter specialSelector: index.
-	numArgs := coInterpreter specialSelectorNumArgs: index.
-	^self genSend: selector numArgs: numArgs
-]
-
 { #category : #initialization }
 SimpleStackBasedCogit >> generateMissAbortTrampolines [
 	"Generate the run-time entries for the various method and PIC entry misses and aborts.
@@ -3805,6 +3798,14 @@ SimpleStackBasedCogit >> methodAbortTrampolineFor: numArgs [
 SimpleStackBasedCogit >> numRegArgs [
 	<api>
 	^0
+]
+
+{ #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> numSpecialSelectors [
+	<inline: true>
+	^self cppIf: MULTIPLEBYTECODESETS
+		ifTrue: [bytecodeSetOffset = 256 ifTrue: [AltNumSpecialSelectors] ifFalse: [NumSpecialSelectors]]
+		ifFalse: [NumSpecialSelectors]
 ]
 
 { #category : #'span functions' }

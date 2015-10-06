@@ -233,6 +233,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 	pushNilSizeFunction := #v4PushNilSize:numInitialNils:.
 	NSSendIsPCAnnotated := true. "IsNSSendCall used by SendAbsentImplicit"
 	FirstSpecialSelector := 80.
+	NumSpecialSelectors := 32.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -338,6 +339,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 	pushNilSizeFunction := #sistaV1PushNilSize:numInitialNils:.
 	BytecodeSetHasDirectedSuperSend := true.
 	FirstSpecialSelector := 96.
+	NumSpecialSelectors := 32.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -468,6 +470,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 	numPushNilsFunction := #v3:Num:Push:Nils:.
 	pushNilSizeFunction := #v3PushNilSize:numInitialNils:.
 	FirstSpecialSelector := 176.
+	NumSpecialSelectors := 32.
 	self flag:
 'Special selector send class must be inlined to agree with the interpreter, which
  inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
@@ -1205,9 +1208,9 @@ StackToRegisterMappingCogit >> doubleExtendedDoAnythingBytecode [
 	| opType |
 	opType := byte1 >> 5.
 	opType = 0 ifTrue:
-		[^self genSend: (self getLiteral: byte2) numArgs: (byte1 bitAnd: 31)].
+		[^self genSend: byte2 numArgs: (byte1 bitAnd: 31)].
 	opType = 1 ifTrue:
-		[^self genSendSuper: (self getLiteral: byte2) numArgs: (byte1 bitAnd: 31)].
+		[^self genSendSuper: byte2 numArgs: (byte1 bitAnd: 31)].
 	"We need a map entry for this bytecode for correct parsing.
 	 The sends will get an IsSend entry anyway.  The other cases need a
 	 fake one.  We could of course special case the scanning but that's silly."
@@ -1894,12 +1897,10 @@ StackToRegisterMappingCogit >> genLoadArgAtDepth: n into: reg [
 ]
 
 { #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genMarshalledSend: selector numArgs: numArgs sendTable: sendTable [
+StackToRegisterMappingCogit >> genMarshalledSend: selectorIndex numArgs: numArgs sendTable: sendTable [
 	<inline: false>
 	<var: #sendTable type: #'sqInt *'>
 	| annotation |
-	(objectMemory isYoung: selector) ifTrue:
-		[hasYoungReferent := true].
 	self assert: needsFrame.
 	annotation := self annotationForSendTable: sendTable.
 	"Deal with stale super sends; see SpurMemoryManager's class comment."
@@ -1912,7 +1913,7 @@ StackToRegisterMappingCogit >> genMarshalledSend: selector numArgs: numArgs send
 	(BytecodeSetHasDirectedSuperSend
 	 and: [annotation = IsDirectedSuperSend]) ifTrue:
 		[self genMoveConstant: tempOop R: TempReg].
-	self MoveUniqueCw: selector R: ClassReg.
+	self genLoadInlineCache: selectorIndex.
 	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation.
 	optStatus isReceiverResultRegLive: false.
 	^self ssPushRegister: ReceiverResultReg
@@ -1967,9 +1968,12 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 ]
 
 { #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genNSSend: selector numArgs: numArgs depth: depth sendTable: sendTable [
+StackToRegisterMappingCogit >> genNSSend: selectorIndex numArgs: numArgs depth: depth sendTable: sendTable [
 	<var: #sendTable type: #'sqInt *'>
-	| nsSendCache |
+	| selector nsSendCache |
+	self assert: (selectorIndex between: 0 and: (objectMemory literalCountOf: methodObj) - 1).
+	selector := self getLiteral: selectorIndex.
+	self assert: (objectMemory addressCouldBeOop: selector).	
 	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 
@@ -2819,30 +2823,30 @@ StackToRegisterMappingCogit >> genReturnTopFromMethod [
 ]
 
 { #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genSend: selector numArgs: numArgs [
+StackToRegisterMappingCogit >> genSend: selectorIndex numArgs: numArgs [
 	self marshallSendArguments: numArgs.
-	^self genMarshalledSend: selector numArgs: numArgs sendTable: ordinarySendTrampolines
+	^self genMarshalledSend: selectorIndex numArgs: numArgs sendTable: ordinarySendTrampolines
 ]
 
 { #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genSendDirectedSuper: selector numArgs: numArgs [
+StackToRegisterMappingCogit >> genSendDirectedSuper: selectorIndex numArgs: numArgs [
 	self assert: self ssTop type = SSConstant.
 	tempOop := self ssTop constant.
 	self ssPop: 1.
 	self marshallSendArguments: numArgs.
-	^self genMarshalledSend: selector numArgs: numArgs sendTable: directedSuperSendTrampolines
+	^self genMarshalledSend: selectorIndex numArgs: numArgs sendTable: directedSuperSendTrampolines
 ]
 
 { #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genSendDynamicSuper: selector numArgs: numArgs [
+StackToRegisterMappingCogit >> genSendDynamicSuper: selectorIndex numArgs: numArgs [
 	self marshallSendArguments: numArgs.
-	^self genMarshalledSend: selector numArgs: numArgs sendTable: dynamicSuperSendTrampolines
+	^self genMarshalledSend: selectorIndex numArgs: numArgs sendTable: dynamicSuperSendTrampolines
 ]
 
 { #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genSendSuper: selector numArgs: numArgs [
+StackToRegisterMappingCogit >> genSendSuper: selectorIndex numArgs: numArgs [
 	self marshallSendArguments: numArgs.
-	^self genMarshalledSend: selector numArgs: numArgs sendTable: superSendTrampolines
+	^self genMarshalledSend: selectorIndex numArgs: numArgs sendTable: superSendTrampolines
 ]
 
 { #category : #initialization }
@@ -2937,7 +2941,7 @@ StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode orDoubleCom
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 	| primDescriptor rcvrIsConst argIsConst rcvrIsInt argIsInt rcvrInt argInt result
-	 jumpNotSmallInts jumpContinue annotateInst instToAnnotate |
+	 jumpNotSmallInts jumpContinue annotateInst instToAnnotate index |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
 	<var: #jumpContinue type: #'AbstractInstruction *'>
@@ -3031,9 +3035,8 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 	argIsInt ifTrue:
 		[annotateInst ifTrue: [self annotateBytecode: instToAnnotate].
 		 self MoveCq: argInt R: Arg0Reg].
-	self genMarshalledSend: (coInterpreter specialSelector: byte0 - self firstSpecialSelectorBytecodeOffset)
-		numArgs: 1
-		sendTable: ordinarySendTrampolines.
+	index := byte0 - self firstSpecialSelectorBytecodeOffset.
+	self genMarshalledSend: index negated - 1 numArgs: 1 sendTable: ordinarySendTrampolines.
 	jumpContinue jmpTarget: self Label.
 	^0
 ]
@@ -3059,7 +3062,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorClass [
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor
-	  rcvrIsInt argIsInt argInt jumpNotSmallInts inlineCAB annotateInst |
+	  rcvrIsInt argIsInt argInt jumpNotSmallInts inlineCAB annotateInst index |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
@@ -3114,9 +3117,8 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	jumpNotSmallInts jmpTarget: self Label.
 	argIsInt ifTrue:
 		[self MoveCq: argInt R: Arg0Reg].
-	^self genMarshalledSend: (coInterpreter specialSelector: byte0 - self firstSpecialSelectorBytecodeOffset)
-		numArgs: 1
-		sendTable: ordinarySendTrampolines.
+	index := byte0 - self firstSpecialSelectorBytecodeOffset.
+	^self genMarshalledSend: index negated - 1 numArgs: 1 sendTable: ordinarySendTrampolines
 ]
 
 { #category : #'bytecode generators' }
