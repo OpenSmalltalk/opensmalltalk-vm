@@ -595,7 +595,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	jumpWordsOutOfBounds := cogit JumpBelowOrEqual: 0.
 	cogit MoveR: Arg1Reg R: TempReg.
 	self genConvertSmallIntegerToIntegerInReg: TempReg.
-	(self lastOpcode setsConditionCodesFor: JumpNegative) ifFalse:
+	(cogit lastOpcode setsConditionCodesFor: JumpNegative) ifFalse:
 		[self CmpCq: 0 R: ClassReg]. "N.B. FLAGS := ClassReg - 0"
 	jumpNegative := cogit JumpNegative: 0.
 	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg0Reg.
