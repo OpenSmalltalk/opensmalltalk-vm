@@ -29,8 +29,11 @@
 
 #include <errno.h>
 #include "sq.h"
+
 #ifndef NO_STD_FILE_SUPPORT
+
 #include "FilePlugin.h"
+#include <limits.h> /* for PATH_MAX */
 
 /***
 	The state of a file is kept in the following structure,
@@ -144,33 +147,43 @@ sqInt
 sqFileClose(SQFile *f) {
 	/* Close the given file. */
 
+	int result;
+
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
-	fclose(getFile(f));
+
+	result = fclose(getFile(f));
 	setFile(f, 0);
 	f->sessionID = 0;
 	f->writable = false;
 	setSize(f, 0);
 	f->lastOp = UNCOMMITTED;
+
+	/*
+	 * fclose() can fail for the same reasons fflush() or write() can so
+	 * errors must be checked
+	 */
+	if (result != 0)
+		return interpreterProxy->success(false);
+
 	return 1;
 }
 
 sqInt
 sqFileDeleteNameSize(char* sqFileName, sqInt sqFileNameSize) {
-	char cFileName[1000];
+	char cFileName[PATH_MAX];
 	int err;
 
-	if (sqFileNameSize >= 1000) {
+	if (sqFileNameSize >= sizeof(cFileName))
 		return interpreterProxy->success(false);
-	}
 
 	/* copy the file name into a null-terminated C string */
 	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cFileName, sqFileName, sqFileNameSize, false);
 
 	err = remove(cFileName);
-	if (err) {
+	if (err)
 		return interpreterProxy->success(false);
-	}
+
 	return 1;
 }
 
@@ -218,17 +231,18 @@ sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 	   Squeak must take care of any line-end character mapping.
 	*/
 
-	char cFileName[1001];
+	char cFileName[PATH_MAX];
 
 	/* don't open an already open file */
 	if (sqFileValid(f))
 		return interpreterProxy->success(false);
 
 	/* copy the file name into a null-terminated C string */
-	if (sqFileNameSize > 1000) {
+	if (sqFileNameSize >= sizeof(cFileName))
 		return interpreterProxy->success(false);
-	}
-	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cFileName, sqFileName, sqFileNameSize, true);
+	/* can fail when alias resolution is enabled */
+	if (interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cFileName, sqFileName, sqFileNameSize, true) != 0)
+		return interpreterProxy->success(false);
 
 	if (writeFlag) {
 		/* First try to open an existing file read/write: */
@@ -284,12 +298,12 @@ sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 }
 
 /*
- * Fill-in files with handles for stdin, stdout and stderr as available and
+ * Fill-in files with 3 handles for stdin, stdout and stderr as available and
  * answer a bit-mask of the availability, 1 corresponding to stdin, 2 to stdout
  * and 4 to stderr, with 0 on error or unavailablity.
  */
 sqInt
-sqFileStdioHandlesInto(SQFile files[3])
+sqFileStdioHandlesInto(SQFile files[])
 {
 	/* streams connected to a terminal are supposed to be line-buffered anyway.
 	 * And for some reason this has no effect on e.g. Mac OS X.  So use
@@ -418,22 +432,20 @@ sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startInde
 
 sqInt
 sqFileRenameOldSizeNewSize(char* oldNameIndex, sqInt oldNameSize, char* newNameIndex, sqInt newNameSize) {
-	char cOldName[1000], cNewName[1000];
+	char cOldName[PATH_MAX], cNewName[PATH_MAX];
 	int err;
 
-	if ((oldNameSize >= 1000) || (newNameSize >= 1000)) {
+	if ((oldNameSize >= sizeof(cOldName)) || (newNameSize >= sizeof(cNewName)))
 		return interpreterProxy->success(false);
-	}
 
 	/* copy the file names into null-terminated C strings */
 	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cOldName, oldNameIndex, oldNameSize, false);
-
 	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cNewName, newNameIndex, newNameSize, false);
 
 	err = rename(cOldName, cNewName);
-	if (err) {
+	if (err)
 		return interpreterProxy->success(false);
-	}
+
 	return 1;
 }
 
@@ -478,16 +490,26 @@ sqFileSize(SQFile *f) {
 
 sqInt
 sqFileFlush(SQFile *f) {
+	/* Flush stdio buffers of file */
 
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
 	pentry(sqFileFlush);
-	fflush(getFile(f));
+
+	/*
+	 * fflush() can fail for the same reasons write() can so errors must be checked but
+	 * sqFileFlush() must support being called on readonly files for historical reasons
+	 * so EBADF is ignored
+	 */
+	if (fflush(getFile(f)) != 0 && errno != EBADF)
+		return interpreterProxy->success(false);
+
 	return 1;
 }
 
 sqInt
 sqFileSync(SQFile *f) {
+	/* Flush kernel-level buffers of any written/flushed data to disk */
 
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
@@ -499,7 +521,6 @@ sqFileSync(SQFile *f) {
 
 sqInt
 sqFileTruncate(SQFile *f,squeakFileOffsetType offset) {
-
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
  	if (sqFTruncate(getFile(f), offset))
@@ -507,7 +528,6 @@ sqFileTruncate(SQFile *f,squeakFileOffsetType offset) {
 	setSize(f, ftell(getFile(f)));
 	return 1;
 }
-
 
 sqInt
 sqFileValid(SQFile *f) {
