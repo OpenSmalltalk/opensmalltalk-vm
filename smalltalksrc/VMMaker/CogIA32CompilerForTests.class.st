@@ -5,6 +5,13 @@ Class {
 }
 
 { #category : #'test support' }
+CogIA32CompilerForTests class >> byteRegistersWithNamesDo: aBinaryBlock [
+	(self registers first: 4)
+		with: #('%al' '%cl' '%dl' '%bl')
+		do: aBinaryBlock
+]
+
+{ #category : #'test support' }
 CogIA32CompilerForTests class >> dataRegistersWithAccessorsDo: aTrinaryBlock [
 	self registers withIndexDo:
 		[:reg :i|

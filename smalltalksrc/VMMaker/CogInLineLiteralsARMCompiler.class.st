@@ -15,6 +15,14 @@ CogInLineLiteralsARMCompiler >> callFullTargetFromReturnAddress: callSiteReturnA
 	^self extract32BitOperandFrom4Instructionspreceding: callSiteReturnAddress - 4
 ]
 
+{ #category : #initialization }
+CogInLineLiteralsARMCompiler >> cogit: aCogit [
+	<doNotGenerate>
+	"There is no support for synthesizing 64-bit constants using inline instructions in this code generator."
+	self assert: aCogit objectMemory wordSize = 4.
+	super cogit: aCogit
+]
+
 { #category : #testing }
 CogInLineLiteralsARMCompiler >> extract32BitOperandFrom4InstructionsPreceding: addr [
 	<inline: true>
