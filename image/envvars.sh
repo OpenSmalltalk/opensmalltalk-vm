@@ -29,6 +29,11 @@ test "$OS" = Darwin || function quietmd5 () { /usr/bin/md5sum "$1" | sed 's/ .*$
 test "$OS" = Darwin && function geturl () { FILE=`basename "$1"`; curl -C - "`echo $1 | sed 's/ /%20/g'`" -o "$FILE"; }
 test "$OS" = Darwin || function geturl () { wget -c "$1"; }
 
+if [ "$OS" != Darwin -a ! -x "`which wget`" ]; then
+	echo "cannot find wget. wget for Windows is available from http://gnuwin32.sourceforge.net/packages/wget.htm, probably as http://downloads.sourceforge.net/gnuwin32/wget-1.11.4-1-setup.exe" 1>&2
+	exit
+fi
+
 if unzip --help >/dev/null; then
 	true
 else
