@@ -23,11 +23,11 @@ else
 	OSREL=`uname -r | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*$/\1.\2.\3/'`
 fi
 
-test "$OS" = Darwin && function quietmd5 () { /sbin/md5 -q "$1" 2>/dev/null; }
-test "$OS" = Darwin || function quietmd5 () { /usr/bin/md5sum "$1" | sed 's/ .*$//' 2>/dev/null; }
+test "$OS" = Darwin && function quietmd5 { /sbin/md5 -q "$1" 2>/dev/null; }
+test "$OS" = Darwin || function quietmd5 { /usr/bin/md5sum "$1" | sed 's/ .*$//' 2>/dev/null; }
 
-test "$OS" = Darwin && function geturl () { FILE=`basename "$1"`; curl -C - "`echo $1 | sed 's/ /%20/g'`" -o "$FILE"; }
-test "$OS" = Darwin || function geturl () { wget -c "$1"; }
+test "$OS" = Darwin && function geturl { FILE=`basename "$1"`; curl -C - "`echo $1 | sed 's/ /%20/g'`" -o "$FILE"; }
+test "$OS" = Darwin || function geturl { wget -c "$1"; }
 
 if [ "$OS" != Darwin -a ! -x "`which wget`" ]; then
 	echo "cannot find wget. wget for Windows is available from http://gnuwin32.sourceforge.net/packages/wget.htm, probably as http://downloads.sourceforge.net/gnuwin32/wget-1.11.4-1-setup.exe" 1>&2
@@ -41,7 +41,7 @@ else
 	exit 1
 fi
 
-function get_vm_from_tar() # VM VMHASH VMARC VMARCHASH
+function get_vm_from_tar # VM VMHASH VMARC VMARCHASH
 {	VM="$1"
 	VMDIR=`echo $VM | sed 's/\/.*//'`
 	VMHASH="$2"
@@ -64,7 +64,7 @@ function get_vm_from_tar() # VM VMHASH VMARC VMARCHASH
 	fi
 }
 
-function get_vm_from_zip() # VM VMHASH VMARC VMARCHASH
+function get_vm_from_zip # VM VMHASH VMARC VMARCHASH
 {	VM="$1"
 	VMDIR=`echo $VM | sed 's/\/.*//'`
 	VMHASH="$2"
