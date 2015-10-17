@@ -23,7 +23,7 @@ Class {
 	#category : #'VMMaker-JITSimulation'
 }
 
-{ #category : #'instance creation' }
+{ #category : #accessing }
 CogStackPageSurrogate32 class >> alignedByteSize [
 	^40
 ]
@@ -91,9 +91,19 @@ CogStackPageSurrogate32 >> nextPage [
 { #category : #accessing }
 CogStackPageSurrogate32 >> nextPage: aValue [
 	self assert: (address + 32 >= zoneBase and: [address + 35 < zoneLimit]).
-	^memory
-		unsignedLongAt: address + 33
-		put: aValue asInteger
+	memory unsignedLongAt: address + 33 put: aValue asInteger.
+	^aValue
+]
+
+{ #category : #accessing }
+CogStackPageSurrogate32 >> padToWord [
+	^memory longAt: address + 33
+]
+
+{ #category : #accessing }
+CogStackPageSurrogate32 >> padToWord: aValue [
+	self assert: (address + 32 >= zoneBase and: [address + 35 < zoneLimit]).
+	^memory longAt: address + 33 put: aValue
 ]
 
 { #category : #accessing }
@@ -104,9 +114,8 @@ CogStackPageSurrogate32 >> prevPage [
 { #category : #accessing }
 CogStackPageSurrogate32 >> prevPage: aValue [
 	self assert: (address + 36 >= zoneBase and: [address + 39 < zoneLimit]).
-	^memory
-		unsignedLongAt: address + 37
-		put: aValue asInteger
+	memory unsignedLongAt: address + 37 put: aValue asInteger.
+	^aValue
 ]
 
 { #category : #accessing }
@@ -127,8 +136,8 @@ CogStackPageSurrogate32 >> stackLimit [
 
 { #category : #accessing }
 CogStackPageSurrogate32 >> stackLimit: aValue [
-	self assert: (address >= zoneBase and: [address + 3 < zoneLimit]).
-	^memory unsignedLongAt: address + 1 put: aValue signedIntToLong
+	self assert: (address + 0 >= zoneBase and: [address + 3 < zoneLimit]).
+	^memory unsignedLongAt: address + 1 put: aValue
 ]
 
 { #category : #accessing }

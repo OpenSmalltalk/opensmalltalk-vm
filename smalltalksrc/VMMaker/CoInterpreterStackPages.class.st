@@ -178,10 +178,10 @@ CoInterpreterStackPages >> longAt: byteAddress [
 ]
 
 { #category : #'memory access' }
-CoInterpreterStackPages >> longAt: byteAddress put: a32BitValue [
+CoInterpreterStackPages >> longAt: byteAddress put: a32Or64BitValue [
 	<doNotGenerate>
 	self assert: (byteAddress >= minStackAddress and: [byteAddress < maxStackAddress]).
-	^objectMemory longAt: byteAddress put: a32BitValue
+	^objectMemory longAt: byteAddress put: a32Or64BitValue
 ]
 
 { #category : #'page access' }

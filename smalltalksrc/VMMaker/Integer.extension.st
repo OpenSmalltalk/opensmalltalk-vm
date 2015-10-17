@@ -96,25 +96,39 @@ Integer >> signedBitShift: anInteger [
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
+Integer >> signedIntFromChar [
+	"Self is an unsigned 8-bit integer in twos-comp form"
+
+	| shortBits |
+	shortBits := self bitAnd: 16rFF.
+	^(self bitAnd: 16r80) "sign bit" = 0
+		ifTrue: [shortBits]
+		ifFalse: [shortBits - 16r100]
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
 Integer >> signedIntFromLong [
 	"Self is a signed or unsigned 32-bit integer"
 
-	| sign |
-	self < 0 ifTrue: [^self].
-	sign := self bitAnd: 16r80000000.
-	sign = 0 ifTrue: [^ self].
-	^ self - sign - sign
+	| bits |
+	(self >= -1073741824 and: [self <= 1073741823]) ifTrue: "These are known to be SmallIntegers..."
+		[^self].
+	bits := self bitAnd: 16rFFFFFFFF.
+	(bits digitAt: 4) <= 16r7F ifTrue: [^bits].
+	^bits - 16r100000000
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> signedIntFromLong64 [
 	"Self is a signed or unsigned 64-bit integer"
 
-	| sign |
-	self < 0 ifTrue: [^self].
-	sign := self bitAnd: 16r8000000000000000.
-	sign = 0 ifTrue: [^self].
-	^self - sign - sign
+	| bits |
+	"This case is handled by the SmallInteger subclass..."
+	"(self >= -1073741824 and: [self <= 1073741823]) ifTrue:
+		[^self]."
+	bits := self bitAnd: 16rFFFFFFFFFFFFFFFF.
+	(bits digitAt: 8) <= 16r7F ifTrue: [^bits].
+	^bits - 16r10000000000000000
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
@@ -129,28 +143,29 @@ Integer >> signedIntFromShort [
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
+Integer >> signedIntToChar [
+	"Produces an 8-bit value in twos-comp form. Truncates if out-of-range as per a C cast"
+
+	^self bitAnd: 16rFF
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
 Integer >> signedIntToLong [
-	"Produces a 32-bit value in twos-comp form.  Sorry no error checking"
+	"Produces a 32-bit value in twos-comp form. Truncates if out-of-range as per a C cast"
 
-	self >= 0
-		ifTrue: [^ self]
-		ifFalse: [^ self + 16r80000000 + 16r80000000]
-
+	^self bitAnd: 16rFFFFFFFF
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> signedIntToLong64 [
-	"Produces a 64-bit value in twos-comp form.  Sorry no error checking"
+	"Produces a 64-bit value in twos-comp form. Truncates if out-of-range as per a C cast"
 
-	self >= 0
-		ifTrue: [^ self]
-		ifFalse: [^ self + 16r8000000000000000 + 16r8000000000000000]
-
+	^self bitAnd: 16rFFFFFFFFFFFFFFFF
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> signedIntToShort [
-	"Produces a 16-bit value (0-65k) in twos-comp form.  Sorry no error checking"
+	"Produces a 16-bit value in twos-comp form. Truncates if out-of-range as per a C cast"
 
 	^self bitAnd: 16rFFFF
 ]
