@@ -5258,7 +5258,7 @@ CoInterpreter >> maybeTraceStackOverflow [
 CoInterpreter >> methodCacheAddress [
 	<api>
 	<returnTypeC: #'void *'>
-	^self cCode: [methodCache] inSmalltalk: [methodCache offset - 1 * objectMemory wordSize]
+	^self cCode: [methodCache] inSmalltalk: [methodCache address]
 ]
 
 { #category : #'compiled methods' }
