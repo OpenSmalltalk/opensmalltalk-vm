@@ -17,6 +17,11 @@ CObjectAccessor class >> alignedByteSizeOf: aCObjectAccessor forClient: aVMClass
 	^aCObjectAccessor object size
 ]
 
+{ #category : #debugger }
+CObjectAccessor class >> defaultIntegerBaseInDebugger [
+	^VMClass defaultIntegerBaseInDebugger
+]
+
 { #category : #'instance creation' }
 CObjectAccessor class >> on: anObject [
 	^self new setObject: anObject
