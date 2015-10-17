@@ -4,11 +4,11 @@ I am used to simulate accesses to the methodCache so it can live partly in memor
 "
 Class {
 	#name : #CMethodCacheAccessor,
-	#superclass : #CObjectAccessor,
+	#superclass : #CArrayOfLongsAccessor,
 	#instVars : [
 		'methodCacheArray',
-		'functionPointerIndex',
-		'entrySize'
+		'entrySize',
+		'functionPointerIndex'
 	],
 	#category : #'VMMaker-JITSimulation'
 }
@@ -19,23 +19,26 @@ CMethodCacheAccessor >> at: index [
 	 pointers are Smalltalk symbols (under simulation primitive dispatch is done via perform:)."
 	index - 1 \\ entrySize = functionPointerIndex ifTrue:
 		[^methodCacheArray at: index].
-	^object at: index + offset
+	^objectMemory longAt: index * elementByteSize + address
 ]
 
 { #category : #accessing }
 CMethodCacheAccessor >> at: index put: value [
 	"The special handling of functionPointerIndex is necessary because in simulation function
 	 pointers are Smalltalk symbols (under simulation primitive dispatch is done via perform:)."
+	(index = 16r44F and: [value = 16r1D]) ifTrue:
+		[self halt].
 	index - 1 \\ entrySize = functionPointerIndex ifTrue:
-		[^methodCacheArray at: index put: value].
-	^object at: index + offset put: value
+		[objectMemory longAt: index * elementByteSize + address put: (0 = value ifTrue: [value] ifFalse: [value identityHash]).
+		 ^methodCacheArray at: index put: value].
+	^objectMemory longAt: index * elementByteSize + address put: value
 ]
 
 { #category : #'initialize-release' }
-CMethodCacheAccessor >> memory: anObject offset: baseIndex array: cacheArray functionPointerIndex: fpIndex entrySize: esz [
-	object := anObject.
-	offset := baseIndex.
+CMethodCacheAccessor >> objectMemory: anObjectMemory at: anAddress array: cacheArray functionPointerIndex: fpIndex entrySize: wordsPerCacheEntry [
+	self objectMemory: anObjectMemory
+		at: anAddress - anObjectMemory wordSize. "implicit -1 for indices in at:[put:]; the MethodCache is one-relative"
 	methodCacheArray := cacheArray.
 	functionPointerIndex := fpIndex - 1.
-	entrySize := esz
+	entrySize := wordsPerCacheEntry
 ]
