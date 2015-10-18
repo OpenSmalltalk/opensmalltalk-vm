@@ -170,6 +170,11 @@ BochsX64Alien >> decorateDisassembly: anInstructionString for: aSymbolManager [ 
 		ifNotNil: [i1 := string lastIndexOf: $:. string copyReplaceFrom: i1 - 1 to: i1 - 2 with: extra]
 ]
 
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> endianness [
+	^#little
+]
+
 { #category : #execution }
 BochsX64Alien >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<Integer>"
 	self primitiveFlushICacheFrom: startAddress To: endAddress
@@ -441,6 +446,13 @@ BochsX64Alien >> printRegisterState: registerStateVector on: aStream [
 		on: aStream
 ]
 
+{ #category : #execution }
+BochsX64Alien >> pushWord: aValue in: aMemory [
+	| sp |
+	sp := (self rsp: self rsp - 8).
+	aMemory long64At: sp + 1 put: aValue
+]
+
 { #category : #accessing }
 BochsX64Alien >> r10 [
 	^self unsignedLongLongAt: 549
@@ -682,6 +694,17 @@ BochsX64Alien >> setFramePointer: framePointer stackPointer: stackPointer [
 	"Initialize the processor's frame and stack pointers"
 	self rbp: framePointer.
 	self rsp: stackPointer
+]
+
+{ #category : #execution }
+BochsX64Alien >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
+	self pushWord: nextpc in: aMemory.
+	self rip: address
+]
+
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> smashRegisterAccessors [
+	^#(rax: rbx: rcx: rdx: rsi: rdi: r8: r9: r10: r11: r12: r13: r14: r15:)
 ]
 
 { #category : #'accessing-abstract' }
