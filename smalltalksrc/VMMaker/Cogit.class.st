@@ -232,16 +232,18 @@ Class {
 		'debugPrimCallStackOffset',
 		'ceTryLockVMOwner',
 		'ceUnlockVMOwner',
-		'cogMethodSurrogateClass',
-		'cogBlockMethodSurrogateClass',
 		'extA',
 		'extB',
+		'tempOop',
 		'numIRCs',
 		'indexOfIRC',
 		'theIRCs',
 		'implicitReceiverSendTrampolines',
+		'cogMethodSurrogateClass',
+		'cogBlockMethodSurrogateClass',
 		'nsSendCacheSurrogateClass',
-		'tempOop'
+		'CStackPointer',
+		'CFramePointer'
 	],
 	#classVars : [
 		'AltBlockCreationBytecodeSize',
@@ -2954,7 +2956,9 @@ Cogit >> cCoerceSimple: value to: cTypeString [
 { #category : #'trampoline support' }
 Cogit >> cFramePointerAddress [
 	<cmacro: '() ((unsigned long)&CFramePointer)'>
-	^coInterpreter inMemoryCFramePointerAddress
+	^(backEnd wantsNearAddressFor: #CFramePointer)
+		ifTrue: [self simulatedReadWriteVariableAddress: #getCFramePointer in: self]
+		ifFalse: [coInterpreter inMemoryCFramePointerAddress]
 ]
 
 { #category : #'in-line cacheing' }
@@ -3017,7 +3021,9 @@ Cogit >> cPICPrototypeCaseOffset [
 { #category : #'trampoline support' }
 Cogit >> cStackPointerAddress [
 	<cmacro: '() ((unsigned long)&CStackPointer)'>
-	^coInterpreter inMemoryCStackPointerAddress
+	^(backEnd wantsNearAddressFor: #CStackPointer)
+		ifTrue: [self simulatedReadWriteVariableAddress: #getCStackPointer in: self]
+		ifFalse: [coInterpreter inMemoryCStackPointerAddress]
 ]
 
 { #category : #debugging }
@@ -6544,7 +6550,9 @@ Cogit >> getCFramePointer [
 	<api>
 	<cmacro: '() CFramePointer'>
 	"and in the simulator we use..."
-	^objectMemory longAt: coInterpreter inMemoryCFramePointerAddress
+	^(backEnd wantsNearAddressFor: #CFramePointer)
+		ifTrue: [CFramePointer]
+		ifFalse: [objectMemory longAt: coInterpreter inMemoryCFramePointerAddress]
 ]
 
 { #category : #accessing }
@@ -6552,7 +6560,9 @@ Cogit >> getCStackPointer [
 	<api>
 	<cmacro: '() CStackPointer'>
 	"and in the simulator we use..."
-	^objectMemory longAt: coInterpreter inMemoryCStackPointerAddress
+	^(backEnd wantsNearAddressFor: #CStackPointer)
+		ifTrue: [CStackPointer]
+		ifFalse: [objectMemory longAt: coInterpreter inMemoryCStackPointerAddress]
 ]
 
 { #category : #'method map' }
@@ -6868,9 +6878,8 @@ Cogit >> initializeProcessor [
 	lastNInstructions := OrderedCollection new.
 	processor initializeStackFor: self.
 	self initializeProcessorStack: coInterpreter rumpCStackAddress.
-	objectMemory
-		longAt: self cFramePointerAddress put: processor fp;
-		longAt: self cStackPointerAddress put: processor sp.
+	self setCFramePointer: processor fp.
+	self setCStackPointer: processor sp.
 	threadManager ifNotNil:
 		[processor := MultiProcessor for: processor coInterpreter: coInterpreter]
 ]
@@ -9449,9 +9458,11 @@ Cogit >> setCFramePointer: aFramePointer [
 	<api>
 	<cmacro: '(theFP) (CFramePointer = (void *)(theFP))'>
 	"and in the simulator we use..."
-	^objectMemory
-		longAt: coInterpreter inMemoryCFramePointerAddress
-		put: aFramePointer
+	^(backEnd wantsNearAddressFor: #CFramePointer)
+		ifTrue: [CFramePointer]
+		ifFalse: [objectMemory
+					longAt: coInterpreter inMemoryCFramePointerAddress
+					put: aFramePointer]
 ]
 
 { #category : #accessing }
@@ -9459,9 +9470,11 @@ Cogit >> setCStackPointer: aStackPointer [
 	<api>
 	<cmacro: '(theSP) (CStackPointer = (void *)(theSP))'>
 	"and in the simulator we use..."
-	^objectMemory
-		longAt: coInterpreter inMemoryCStackPointerAddress
-		put: aStackPointer
+	^(backEnd wantsNearAddressFor: #CStackPointer)
+		ifTrue: [CStackPointer]
+		ifFalse: [objectMemory
+					longAt: coInterpreter inMemoryCStackPointerAddress
+					put: aStackPointer]
 ]
 
 { #category : #'simulation only' }
@@ -9773,7 +9786,9 @@ Cogit >> simulatedReadWriteVariableAddress: getter in: receiver [
 		at: address
 		ifAbsentPut:
 			[| setter |
-			setter := (getter, ':') asSymbol.
+			setter := (((getter beginsWith: 'get')
+						ifTrue: ['s', getter allButFirst]
+						ifFalse: [getter]), ':') asSymbol.
 			[:value| receiver perform: setter with: value]].
 	^address
 ]

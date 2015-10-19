@@ -2914,6 +2914,11 @@ CogIA32Compiler >> numCheckFeaturesOpcodes [
 ]
 
 { #category : #accessing }
+CogIA32Compiler >> numIntRegArgs [
+	^0
+]
+
+{ #category : #accessing }
 CogIA32Compiler >> numLowLevelLockOpcodes [
 	"push $ebx
 	 movl #0, %eax
