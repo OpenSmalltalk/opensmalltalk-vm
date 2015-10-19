@@ -133,8 +133,8 @@ such third-party acknowledgments.
     if (nameStringLength <= 0 || pathStringLength <= 0)
         return BAD_PATH;
         
-	directoryPath = [[NSString alloc] initWithBytes: pathString length: (NSUInteger) pathStringLength encoding: NSUTF8StringEncoding];
-    fileName      = [[NSString alloc] initWithBytes: nameString length: (NSUInteger) nameStringLength encoding: NSUTF8StringEncoding];
+	directoryPath = [[[NSString alloc] initWithBytes: pathString length: (NSUInteger) pathStringLength encoding: NSUTF8StringEncoding] AUTORELEASEOBJ];
+    fileName      = [[[NSString alloc] initWithBytes: nameString length: (NSUInteger) nameStringLength encoding: NSUTF8StringEncoding] AUTORELEASEOBJ];
 	
     if (![directoryPath hasSuffix: @"/"]) {
         directoryPath = [directoryPath stringByAppendingString: @"/"];
@@ -190,7 +190,7 @@ such third-party acknowledgments.
 	}
 	
 	if (pathStringLength > 0) {
-		directoryPath = [[NSString alloc] initWithBytes: pathString length: (NSUInteger) pathStringLength encoding: NSUTF8StringEncoding];
+		directoryPath = [[[NSString alloc] initWithBytes: pathString length: (NSUInteger) pathStringLength encoding: NSUTF8StringEncoding] AUTORELEASEOBJ];
     }
 	if (directoryPath == NULL) {
 		return BAD_PATH;

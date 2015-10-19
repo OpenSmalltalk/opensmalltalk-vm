@@ -5,3 +5,14 @@
 #ifdef __OBJC__
     #import <Cocoa/Cocoa.h>
 #endif
+
+#if __has_feature(objc_arc)
+#define RELEASEOBJ
+#define RETAINOBJ
+#define AUTORELEASEOBJ
+#else
+#define RELEASEOBJ release
+#define RETAINOBJ retain
+#define AUTORELEASEOBJ autorelease
+
+#endif

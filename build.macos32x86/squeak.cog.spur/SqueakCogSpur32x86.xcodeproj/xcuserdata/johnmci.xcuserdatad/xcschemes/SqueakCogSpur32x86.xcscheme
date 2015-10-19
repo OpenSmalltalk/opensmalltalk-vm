@@ -64,6 +64,11 @@
          </BuildableReference>
       </BuildableProductRunnable>
       <AdditionalOptions>
+         <AdditionalOption
+            key = "NSZombieEnabled"
+            value = "YES"
+            isEnabled = "YES">
+         </AdditionalOption>
       </AdditionalOptions>
    </LaunchAction>
    <ProfileAction
@@ -80,8 +85,8 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "948773F910C64DD800E4AEC5"
             BuildableName = "Squeak.app"
-            BlueprintName = "SqueakPureObjc64x64"
-            ReferencedContainer = "container:SqueakPureObjc.xcodeproj">
+            BlueprintName = "SqueakCogSpur32x86"
+            ReferencedContainer = "container:SqueakCogSpur32x86.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

@@ -86,13 +86,25 @@ sqInt dir_Lookup2(char *pathString, sqInt pathStringLength, sqInt index,
                   /* outputs */
                   char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
                   sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink);
+#if !defined(PharoVM)
+# define PharoVM 0
+#endif
 
+#if PharoVM
 sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
-/* outputs: */  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
-                 sqInt *isDirectory, squeakFileOffsetType *sizeIfFile) {
-    sqInt posixPermissions;
-    sqInt isSymlink;
-    sqInt status = dir_Lookup2(pathString, pathStringLength, index, name, nameLength, creationDate, modificationDate, isDirectory, sizeIfFile,&posixPermissions,&isSymlink);
+                 /* outputs: */
+                 char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+                 sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissionsVar, sqInt *isSymlinkVar)
+#else
+sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
+                 /* outputs: */
+                 char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+                 sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
+#define posixPermissionsVar nil
+#define isSymlinkVar nil
+#endif
+{
+    sqInt status = dir_Lookup2(pathString, pathStringLength, index, name, nameLength, creationDate, modificationDate, isDirectory, sizeIfFile,posixPermissionsVar,isSymlinkVar);
     return status;
 }
 
@@ -129,13 +141,19 @@ sqInt dir_Lookup2(char *pathString, sqInt pathStringLength, sqInt index,
 	return status;
 }
 
+#if PharoVM
 sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString, sqInt nameStringLength,
-/* outputs: */  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
-					  sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
-{
-#if !defined(PharoVM)
-# define PharoVM 0
+                      /* outputs: */
+                      char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+                      sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissionsVar, sqInt *isSymlinkVar)
+#else
+sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString, sqInt nameStringLength,
+                      /* outputs: */
+                      char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+                      sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
 #endif
+{
+
 	/*Implementation notes
 	 if pathStringLength = 0 then we use the current working directory
 	 if pathStringLength > 0 then we resolve the pathString and alias */
@@ -151,8 +169,8 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString
 				 modificationDate: modificationDate
 					  isDirectory: isDirectory
 					   sizeIfFile: sizeIfFile
-				 posixPermissions: (PharoVM ? posixPermissions : 0)
-						isSymlink: (PharoVM ? isSymlink : 0)];
+				 posixPermissions: (PharoVM ? posixPermissionsVar : nil)
+						isSymlink:  (PharoVM ? isSymlinkVar : nil)];
 	return status;
 }
 
@@ -175,16 +193,20 @@ NSString* createFilePathFromString(char * aFilenameString,
 									sqInt filenameLength, sqInt resolveAlias) {
 	NSString * filePath = [[NSString alloc] initWithBytes: aFilenameString length: (NSUInteger) filenameLength encoding: NSUTF8StringEncoding];
 	if (!filePath) {
+        [filePath RELEASEOBJ];
 		return NULL;
 	}
 	
+    NSString *oldFilePath = filePath;
 	if (resolveAlias) {
 		filePath = [gDelegateApp.squeakApplication.fileDirectoryLogic resolvedAliasFiles: filePath];
+        [oldFilePath RELEASEOBJ];
 	} else {
 		NSString *owningDirectoryPath = [filePath stringByDeletingLastPathComponent];
 		NSString *newFilePath = [gDelegateApp.squeakApplication.fileDirectoryLogic resolvedAliasFiles: owningDirectoryPath];
 		filePath = [newFilePath stringByAppendingPathComponent: [filePath lastPathComponent]];
 	}
+    [oldFilePath RELEASEOBJ];
 	return filePath;
 }
 

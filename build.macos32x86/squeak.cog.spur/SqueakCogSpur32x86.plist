@@ -380,7 +380,7 @@
 	<key>CFBundleExecutable</key>
 	<string>Squeak</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak Stack 5.0.0 http://www.mirandabanda.org</string>
+	<string>Squeak Cog Spur http://www.mirandabanda.org</string>
 	<key>CFBundleIdentifier</key>
 	<string>org.squeak.osx6464.cog</string>
 	<key>CFBundleInfoDictionaryVersion</key>

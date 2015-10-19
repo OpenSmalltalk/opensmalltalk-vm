@@ -208,7 +208,7 @@ void *ioLoadModuleRaw(char *pluginName)
 			OSErr err = FSFindFolder(kSystemDomain, kFrameworksFolderType, false, &frameworksFolderRef);
 #pragma unused(err)
 			NSURL *myURLRef = (NSURL *) CFBridgingRelease(CFURLCreateFromFSRef(kCFAllocatorDefault, &frameworksFolderRef));
-			systemFolder = [myURLRef path];
+			systemFolder = [[myURLRef path] RETAINOBJ];
 		}
 		
 		pluginNameLength = strlen(pluginName);
