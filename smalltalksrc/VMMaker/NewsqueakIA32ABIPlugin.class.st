@@ -55,13 +55,11 @@ NewsqueakIA32ABIPlugin class >> simulatorClass [
 
 { #category : #'private-support' }
 NewsqueakIA32ABIPlugin >> index: byteIndex length: length inRange: rcvr [
-	"Answer if the indices byteIndex to byteIndex + length - 1 are valid zero-relative indices into the rcvr.
-	 N.B.  This code only works when translated because asUnisgnedInteger only works for non-negative
-	 values. Hence the override in NewsqueakIA32ABIPluginSimulator."
+	"Answer if the indices byteIndex to byteIndex + length - 1 are valid zero-relative indices into the rcvr."
 	| dataSize |
 	<inline: true>
-	^(dataSize := self sizeField: rcvr) = 0
-	   or: [byteIndex asUnsignedInteger + length <= dataSize abs]
+	dataSize := self sizeField: rcvr.
+	^dataSize = 0 or: [byteIndex >= 0 and: [(byteIndex + length) <= dataSize abs]]
 ]
 
 { #category : #'private-support' }
