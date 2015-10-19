@@ -202,7 +202,7 @@ NewsqueakIA32ABIPlugin >> primAllocateExecutablePage [
 		[^interpreterProxy primitiveFailFor: PrimErrNoCMemory].
 	alien := interpreterProxy
 				instantiateClass: interpreterProxy classAlien
-				indexableSize: 8.
+				indexableSize: 2 * interpreterProxy bytesPerOop.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	ptr := interpreterProxy firstIndexableField: alien.
@@ -691,7 +691,7 @@ NewsqueakIA32ABIPlugin >> primSignedLongAt [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	value := self longAt: addr.
+	value := self long32At: addr.
 	valueOop := interpreterProxy signed32BitIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
@@ -717,7 +717,7 @@ NewsqueakIA32ABIPlugin >> primSignedLongAtPut [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	self longAt: addr put: value.
+	self long32At: addr put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
 
@@ -830,6 +830,53 @@ NewsqueakIA32ABIPlugin >> primSignedShortAtPut [
 ]
 
 { #category : #'primitives-accessing' }
+NewsqueakIA32ABIPlugin >> primSignedWordAt [
+	"Answer the signed word starting at the given byte offset (little endian)."
+	"<Alien> signedWordAt: index <Integer> ^<Integer>
+		<primitive: 'primSignedWordAt' error: errorCode module: 'IA32ABI'>"
+	| byteOffset rcvr startAddr addr value valueOop |
+	<export: true>
+
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
+	rcvr := interpreterProxy stackObjectValue: 1.
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	(self index: byteOffset length: interpreterProxy bytesPerOop inRange: rcvr) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
+	value := self longAt: addr.
+	valueOop := interpreterProxy signedMachineIntegerValueOf: value.
+	^interpreterProxy methodReturnValue: valueOop
+]
+
+{ #category : #'primitives-accessing' }
+NewsqueakIA32ABIPlugin >> primSignedWordAtPut [
+	"Store a signed integer into the word starting at the given byte offset (little endian)."
+	"<Alien> signedWordAt: index <Integer> put: value <Integer> ^<Integer>
+		<primitive: 'primSignedWordAtPut' error: errorCode module: 'IA32ABI'>"
+	| byteOffset rcvr startAddr addr value valueOop |
+	<export: true>
+
+	valueOop := interpreterProxy stackValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
+	rcvr := interpreterProxy stackObjectValue: 2.
+	value := interpreterProxy signedMachineIntegerValueOf: valueOop.
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	(self index: byteOffset length: interpreterProxy bytesPerOop inRange: rcvr) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
+	self longAt: addr put: value.
+	^interpreterProxy methodReturnValue: valueOop
+]
+
+{ #category : #'primitives-accessing' }
 NewsqueakIA32ABIPlugin >> primSizeField [
 	"Answer the signed 32- or 64-bit integer comprising the size field (the first 32- or 64-bit field)."
 	"<Alien> primSizeField ^<Integer>
@@ -907,7 +954,7 @@ NewsqueakIA32ABIPlugin >> primStrlenThroughPointerAtIndex [
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: interpreterProxy bytesPerOop inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	addr := (self startOfData: rcvr) + byteOffset.
 	ptr := self cCoerce: (self longAt: addr) to: #'char *'.
@@ -992,7 +1039,7 @@ NewsqueakIA32ABIPlugin >> primUnsignedLongAt [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	value := self longAt: addr.
+	value := self long32At: addr.
 	valueOop := interpreterProxy positive32BitIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
@@ -1018,7 +1065,7 @@ NewsqueakIA32ABIPlugin >> primUnsignedLongAtPut [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	self longAt: addr put: value.
+	self long32At: addr put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
 
@@ -1127,6 +1174,53 @@ NewsqueakIA32ABIPlugin >> primUnsignedShortAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
 	self shortAt: addr put: value.
+	^interpreterProxy methodReturnValue: valueOop
+]
+
+{ #category : #'primitives-accessing' }
+NewsqueakIA32ABIPlugin >> primUnsignedWordAt [
+	"Answer the unsigned word starting at the given byte offset (little endian)."
+	"<Alien> unsignedWordAt: index <Integer> ^<Integer>
+		<primitive: 'primUnsignedWordAt' error: errorCode module: 'IA32ABI'>"
+	| byteOffset rcvr startAddr addr value valueOop |
+	<export: true>
+
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
+	rcvr := interpreterProxy stackObjectValue: 1.
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	(self index: byteOffset length: interpreterProxy bytesPerOop inRange: rcvr) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
+	value := self longAt: addr.
+	valueOop := interpreterProxy positiveMachineIntegerFor: value.
+	^interpreterProxy methodReturnValue: valueOop
+]
+
+{ #category : #'primitives-accessing' }
+NewsqueakIA32ABIPlugin >> primUnsignedWordAtPut [
+	"Store an unsigned integer into 32 bits starting at the given byte offset (little endian)."
+	"<Alien> unsignedWordAt: index <Integer> put: value <Integer> ^<Integer>
+		<primitive: 'primUnsignedWordAtPut' error: errorCode module: 'IA32ABI'>"
+	| byteOffset rcvr startAddr addr value valueOop |
+	<export: true>
+
+	valueOop := interpreterProxy stackValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
+	rcvr := interpreterProxy stackObjectValue: 2.
+	value := interpreterProxy positiveMachineIntegerValueOf: valueOop.
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	(self index: byteOffset length: interpreterProxy bytesPerOop inRange: rcvr) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
+	(startAddr := self startOfData: rcvr) = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	addr := startAddr + byteOffset.
+	self longAt: addr put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
 
