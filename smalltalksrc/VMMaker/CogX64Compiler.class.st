@@ -411,7 +411,7 @@ CogX64Compiler >> computeMaximumSize [
 		[PushR]			-> [^(self concreteRegister: (operands at: 0)) < 8 ifTrue: [1] ifFalse: [2]].
 		[PushCq]		-> [^(self isQuick: (operands at: 0)) ifTrue: [2] ifFalse: [5]].
 		[PushCw]		-> [^self pushCwByteSize].
-		[PrefetchAw]	-> [^self hasSSEInstructions ifTrue: [12] ifFalse: [0]].
+		[PrefetchAw]	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [7] ifFalse: [0]].
 		"Conversion"
 		"[ConvertRRd]	-> [^4]" }.
 	^0 "to keep C compiler quiet"
@@ -1302,6 +1302,25 @@ CogX64Compiler >> concretizePopR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizePrefetchAw [
+	"We support only prefetches for addresses that are variables relative to VarBase"
+	| operand offset |
+	operand := operands at: 0.
+	(self isAddressRelativeToVarBase: operand) ifFalse:
+		[^machineCodeSize := 0].
+	offset := operand - cogit varBaseAddress.
+	machineCode
+		at: 0 put: 16r0f;
+		at: 1 put: 16r18;
+		at: 2 put: 16r93;
+		at: 3 put: (offset bitAnd: 16rFF);
+		at: 4 put: (offset >> 16 bitAnd: 16rFF);
+		at: 5 put: (offset >> 8 bitAnd: 16rFF);
+		at: 6 put: offset >> 24.
+	^machineCodeSize := 7
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizePushR [
 	<inline: true>
 	| reg |
@@ -2069,10 +2088,23 @@ CogX64Compiler >> moveCwRByteSize [
 	self subclassResponsibility
 ]
 
+{ #category : #printing }
+CogX64Compiler >> nameForRegister: reg [ "<Integer>"
+	<doNotGenerate>
+	(reg between: 0 and: 15) ifTrue:
+		[^#(RAX RCX RDX RBX RSP RBP RSI RDI R8 R9 R10 R11 R12 R13 R14 R15) at: reg + 1].
+	^super nameForRegister: reg
+]
+
 { #category : #'generate machine code' }
 CogX64Compiler >> nopsFrom: startAddr to: endAddr [
 	startAddr to: endAddr do:
 		[:p| objectMemory byteAt: p put: 16r90]
+]
+
+{ #category : #accessing }
+CogX64Compiler >> numIntRegArgs [
+	^6
 ]
 
 { #category : #abi }
@@ -2131,4 +2163,11 @@ CogX64Compiler >> thirtyTwoBitLiteralBefore: followingAddress [
 					+ ((objectMemory byteAt: followingAddress - 2) << 16)
 					+ ((objectMemory byteAt: followingAddress - 3) << 8)
 					+  (objectMemory byteAt: followingAddress - 4)]
+]
+
+{ #category : #simulation }
+CogX64Compiler >> wantsNearAddressFor: anObject [
+	"A hack hook to allow x64 to address CStackPointer and CFramePointer relative to VarBaseReg."
+	<doNotGenerate>
+	^anObject isSymbol and: ['C*Pointer' match: anObject]
 ]
