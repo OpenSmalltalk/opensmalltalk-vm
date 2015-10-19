@@ -530,6 +530,10 @@ CogAbstractInstruction >> fullCallsAreRelative [
 { #category : #abi }
 CogAbstractInstruction >> genAlignCStackSavingRegisters: saveRegs numArgs: numArgs wordAlignment: alignment [ 
 	| wordsPushedModAlignment delta |
+	self numIntRegArgs >= (saveRegs
+								ifTrue: [self numberOfSaveableRegisters + numArgs]
+								ifFalse: [numArgs])  ifTrue:
+		[^0].
 	wordsPushedModAlignment := ((saveRegs ifTrue: [self numberOfSaveableRegisters] ifFalse: [0])
 									+ numArgs)
 									\\ alignment.
@@ -1036,6 +1040,11 @@ CogAbstractInstruction >> numICacheFlushOpcodes [
 	^0
 ]
 
+{ #category : #accessing }
+CogAbstractInstruction >> numIntRegArgs [
+	^self subclassResponsibility
+]
+
 { #category : #'multi-threading' }
 CogAbstractInstruction >> numLowLevelLockOpcodes [
 	self subclassResponsibility
@@ -1315,6 +1324,7 @@ CogAbstractInstruction >> updateLabel: labelInstruction [
 
 { #category : #simulation }
 CogAbstractInstruction >> wantsNearAddressFor: anObject [
-	"A hack hook to allow ARM to override the simulated address for the short-cut trampolines"
+	"A hack hook to allow ARM to override the simulated address for the short-cut trampolines,
+	 and to allow x64 to address CStackPointer and CFramePointer relative to VarBaseReg."
 	^false
 ]

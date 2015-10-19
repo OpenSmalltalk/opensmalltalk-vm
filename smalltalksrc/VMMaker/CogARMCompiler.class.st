@@ -2869,9 +2869,11 @@ CogARMCompiler >> mvn: destReg imm: immediate8bitValue ror: rot [
 
 { #category : #printing }
 CogARMCompiler >> nameForRegister: reg [ "<Integer>"
-	
 	<doNotGenerate>
-	^#(LR SP PC CArg0Reg CArg0Reg CArg1Reg CArg2Reg CArg3Reg) detect: [:sym| (thisContext method methodClass classPool at: sym) = reg] 
+	reg < 0 ifTrue:
+		[^super nameForRegister: reg].
+	^#(LR SP PC CArg0Reg CArg0Reg CArg1Reg CArg2Reg CArg3Reg)
+		detect: [:sym| (thisContext method methodClass classPool at: sym) = reg] 
 		ifNone: [super nameForRegister: reg]
 ]
 
@@ -2893,6 +2895,11 @@ CogARMCompiler >> numICacheFlushOpcodes [
 	"for now return 0 to skip it and probably blow up"
 	^0
 	
+]
+
+{ #category : #accessing }
+CogARMCompiler >> numIntRegArgs [
+	^4
 ]
 
 { #category : #abi }
