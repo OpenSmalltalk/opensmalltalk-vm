@@ -375,4 +375,11 @@ such third-party acknowledgments.
 	return filePath;
 }
 
+- (void)dealloc {
+    SUPERDEALLOC
+    [lastPathForDirLookup RELEASEOBJ];
+    [directoryContentsForDirLookup RELEASEOBJ];
+}
+
+
 @end

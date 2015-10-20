@@ -44,6 +44,11 @@ such third-party acknowledgments.
 @implementation sqSqueakAppDelegate
 @synthesize squeakApplication,squeakThread;
 
+- (void)dealloc {
+    [squeakApplication RELEASEOBJ];
+    SUPERDEALLOC
+}
+
 - (void) makeMainWindow {
 	
 	/*Beware creating a main window must be done on main thread it will not work from this interpreter squeak thread */

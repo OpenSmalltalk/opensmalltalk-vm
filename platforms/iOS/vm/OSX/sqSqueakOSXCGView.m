@@ -73,7 +73,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		NSOpenGLPFABackingStore,
 		0
     };
-    return[[NSOpenGLPixelFormat alloc] initWithAttributes:attrs];
+    return[[[NSOpenGLPixelFormat alloc] initWithAttributes:attrs] AUTORELEASEOBJ];
 }
 
 - (id)initWithFrame:(NSRect)frameRect {
@@ -113,6 +113,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 - (void) dealloc {
 	free(colorMap32);
 	CGColorSpaceRelease(colorspace);
+    SUPERDEALLOC
 }
 
 - (BOOL) acceptsFirstResponder {
@@ -334,11 +335,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	//http://www.internet4classrooms.com/mac_ext.gif
 	//http://developer.apple.com/legacy/mac/library/documentation/mac/Text/Text-571.html
 	
-	keyBoardStrokeDetails *aKeyBoardStrokeDetails = [[keyBoardStrokeDetails alloc] init];
+	keyBoardStrokeDetails *aKeyBoardStrokeDetails = [[[keyBoardStrokeDetails alloc] init] AUTORELEASEOBJ];
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	
-	NSArray *down = [[NSArray alloc] initWithObjects: theEvent,nil];
+	NSArray *down = [[[NSArray alloc] initWithObjects: theEvent,nil] AUTORELEASEOBJ];
 	@synchronized(self) {
 		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
 
@@ -354,11 +355,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 -(void)keyDown:(NSEvent*)theEvent {
-	keyBoardStrokeDetails *aKeyBoardStrokeDetails = [[keyBoardStrokeDetails alloc] init];
+	keyBoardStrokeDetails *aKeyBoardStrokeDetails = [[[keyBoardStrokeDetails alloc] init] AUTORELEASEOBJ];
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	
-	NSArray *down = [[NSArray alloc] initWithObjects: theEvent,nil];
+	NSArray *down = [[[NSArray alloc] initWithObjects: theEvent,nil] AUTORELEASEOBJ];
 //	NSLog(@"sqSqueakOSXCGView.m>>keyDown:");
 	@synchronized(self) {
 		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
@@ -388,7 +389,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 
 - (void)flagsChanged:(NSEvent *)theEvent {
 //	NSLog(@"sqSqueakOSXCGView.m>>flagsChanged -- %d, %d", [theEvent keyCode], [theEvent modifierFlags] );
-	keyBoardStrokeDetails *aKeyBoardStrokeDetails = [[keyBoardStrokeDetails alloc] init];
+	keyBoardStrokeDetails *aKeyBoardStrokeDetails = [[[keyBoardStrokeDetails alloc] init] AUTORELEASEOBJ];
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	self.lastSeenKeyBoardModifierDetails = aKeyBoardStrokeDetails;
@@ -463,7 +464,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
     else return;
 	
 	@synchronized(self) {
-		keyBoardStrokeDetails *aKeyBoardStrokeDetails = [[keyBoardStrokeDetails alloc] init];
+		keyBoardStrokeDetails *aKeyBoardStrokeDetails = [[[keyBoardStrokeDetails alloc] init] AUTORELEASEOBJ];
 		aKeyBoardStrokeDetails.keyCode = keyCode;
 		aKeyBoardStrokeDetails.modifierFlags = self.lastSeenKeyBoardModifierDetails.modifierFlags;
 		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;

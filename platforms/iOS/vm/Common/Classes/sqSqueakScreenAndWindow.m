@@ -206,5 +206,6 @@ void MyProviderReleaseData (
 	if (blip) {
 		[blip invalidate];
 	}
+    SUPERDEALLOC
 }
 @end

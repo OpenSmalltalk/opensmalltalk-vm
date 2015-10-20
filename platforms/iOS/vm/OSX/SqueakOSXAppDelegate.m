@@ -63,7 +63,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 @synthesize window,mainView,possibleImageNameAtLaunchTime,checkForFileNameOnFirstParm,windowHandler;
 
 - (sqSqueakMainApplication *) makeApplicationInstance {
-	return [[sqSqueakOSXApplication alloc] init];
+	return [[[sqSqueakOSXApplication alloc] init] AUTORELEASEOBJ];
 }
 
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification {
@@ -80,8 +80,8 @@ SqueakOSXAppDelegate *gDelegateApp;
 	
     @autoreleasepool {
 		gDelegateApp = self;	
-		squeakApplication = [self makeApplicationInstance];
-		self.windowHandler = [[sqSqueakOSXScreenAndWindow alloc] init];
+		self.squeakApplication = [self makeApplicationInstance];
+		self.windowHandler = [[[sqSqueakOSXScreenAndWindow alloc] init] AUTORELEASEOBJ];
 		windowHandler.mainViewOnWindow = self.mainView;
 		self.mainView.windowLogic = windowHandler;
 		windowHandler.windowIndex = 1;
@@ -176,7 +176,7 @@ SqueakOSXAppDelegate *gDelegateApp;
     //It can right now, I have two implementations to pick (CoreGraphics or OpenGL), muy more/different could be added 
     //in the future. 
     
-    NSView *view = [[ContentViewClass alloc] initWithFrame:[[self window] frame]];
+    NSView *view = [[[ContentViewClass alloc] initWithFrame:[[self window] frame]] AUTORELEASEOBJ];
     self.mainView = (id) view;
     [[self window] setContentView: view];
     

@@ -52,6 +52,10 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 	return self.mainViewOnWindow;
 }
 
+- (void) dealloc {
+    [mainViewOnWindow RELEASEOBJ];
+    SUPERDEALLOC
+}
 
 - (void)  ioSetFullScreen: (sqInt) fullScreen {
 	[[self getMainView] ioSetFullScreen: fullScreen];

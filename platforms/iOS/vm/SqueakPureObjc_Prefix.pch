@@ -14,5 +14,5 @@
 #define RELEASEOBJ release
 #define RETAINOBJ retain
 #define AUTORELEASEOBJ autorelease
-
+#define SUPERDEALLOC [super dealloc];
 #endif

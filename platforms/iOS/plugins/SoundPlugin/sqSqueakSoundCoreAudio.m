@@ -114,7 +114,7 @@ void MyAudioQueueInputCallback (
 		return;
 	
 	if (inNumberPacketDescriptions > 0) {
-		soundAtom *atom = [[soundAtom alloc] initWith: inBuffer->mAudioData count: inBuffer->mAudioDataByteSize];
+		soundAtom *atom = [[[soundAtom alloc] initWith: inBuffer->mAudioData count: inBuffer->mAudioDataByteSize] AUTORELEASEOBJ];
 		[myInstance.soundInQueue addItem: atom];
     }
 	
@@ -145,6 +145,7 @@ void MyAudioQueueInputCallback (
 	data = 0;
 	byteCount = 0;
 	startOffset = 0;
+    SUPERDEALLOC
 }
 
 @end
@@ -280,7 +281,7 @@ void MyAudioQueueInputCallback (
 	OSStatus result  = AudioQueueDispose (self.outputAudioQueue,true);
 #pragma unused(result)
 	self.outputAudioQueue = nil;
-	self.soundOutQueue = [[Queue alloc] init];
+	self.soundOutQueue = [[[Queue alloc] init] AUTORELEASEOBJ];
 	return 1;
 }
 
@@ -307,7 +308,7 @@ void MyAudioQueueInputCallback (
 		return interpreterProxy->primitiveFail();
 	//NSLog(@"%i sound place samples on queue frames %i startIndex %i count %i",ioMSecs(),frameCount,startIndex,byteCount-startIndex);
 		
-	soundAtom *atom = [[soundAtom alloc] initWith: arrayIndex+startIndex count: (unsigned) (byteCount-startIndex)];
+	soundAtom *atom = [[[soundAtom alloc] initWith: arrayIndex+startIndex count: (unsigned) (byteCount-startIndex)] AUTORELEASEOBJ];
 	[self.soundOutQueue addItem: atom];
 	
 	if (!self.outputIsRunning) {
@@ -395,7 +396,7 @@ void MyAudioQueueInputCallback (
 		return 0;
 	result = AudioQueueDispose (self.inputAudioQueue,true);
 	self.inputAudioQueue = nil;
-	self.soundInQueue = [[Queue alloc] init];
+	self.soundInQueue = [[[Queue alloc] init] AUTORELEASEOBJ];
 	return 1;
 }
 

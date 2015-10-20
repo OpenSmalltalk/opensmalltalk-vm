@@ -71,6 +71,12 @@ Copyright (C) 2007 Apple Inc. All Rights Reserved.
 	return self;
 }
 
+- (void) dealloc
+{
+    [mItemArray RELEASEOBJ];
+    SUPERDEALLOC
+}
+
 // Returns (and removes) the oldest item in the queue
 -(id)returnAndRemoveOldest
 {

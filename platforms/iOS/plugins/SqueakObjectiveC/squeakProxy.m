@@ -71,8 +71,8 @@
 		[self setTarget: dummy];
 	}
 	
-	lockForSqueak = [[NSConditionLock alloc] initWithCondition: 0];
-	sigs = [[NSMutableDictionary alloc] initWithCapacity: 10];
+	self.lockForSqueak = [[NSConditionLock alloc] initWithCondition: 0];
+	self.sigs = [[NSMutableDictionary alloc] initWithCapacity: 10];
 	isCarbonVM = NO;
 	callbackid = 0;
 	
@@ -92,11 +92,11 @@
 		return;
 	}
 	
-	if([lockForSqueak lockWhenCondition: 0 beforeDate: (timeout = [[NSDate alloc] initWithTimeIntervalSinceNow: 3.0])])
+	if([lockForSqueak lockWhenCondition: 0 beforeDate: (timeout = [[[NSDate alloc] initWithTimeIntervalSinceNow: 3.0] AUTORELEASEOBJ])])
 	{ 
 		// NSLog(@"inside lock 0");
 		[lockForSqueak unlockWithCondition: 1];
-		invocation = anInvocation;
+		invocation = [anInvocation RETAINOBJ];
 		
 		// NSLog(@"signalling squeak");
 		interpreterProxy->signalSemaphoreWithIndex(sem);
@@ -104,7 +104,7 @@
 		if (isCarbonVM)
 			interpreterProxy->callbackEnter(&callbackid);
 		
-		if([lockForSqueak lockWhenCondition: 2 beforeDate: (timeout = [[NSDate alloc] initWithTimeIntervalSinceNow: 5.0])])
+		if([lockForSqueak lockWhenCondition: 2 beforeDate: (timeout = [[[NSDate alloc] initWithTimeIntervalSinceNow: 5.0] AUTORELEASEOBJ])] )
 		{
 			// NSLog(@"inside lock 2");
 			invocation = nil;
@@ -187,6 +187,13 @@
 	isCarbonVM = YES;
 }
 
+- (void) dealloc
+{
+    [lockForSqueak RELEASEOBJ];
+    [sigs RELEASEOBJ];
+    [target RELEASEOBJ];
+    SUPERDEALLOC
+}
 
 @end
 

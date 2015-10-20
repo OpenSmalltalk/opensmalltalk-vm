@@ -74,7 +74,7 @@ static char * clipboard=NULL;
 
 - (void) clipboardWrite: (sqInt) count from: (char *)byteArrayIndex  startingAt:  (sqInt) startIndex {
 	NSPasteboard      *pboard= [NSPasteboard generalPasteboard];
-	NSString * string = [[NSString alloc] initWithBytes: byteArrayIndex length:(NSUInteger)count encoding: NSUTF8StringEncoding];
+	NSString * string = [[[NSString alloc] initWithBytes: byteArrayIndex length:(NSUInteger)count encoding: NSUTF8StringEncoding] AUTORELEASEOBJ];
 	[pboard declareTypes: @[NSStringPboardType] owner: nil];
 	[pboard setString: string forType: NSStringPboardType];
 }

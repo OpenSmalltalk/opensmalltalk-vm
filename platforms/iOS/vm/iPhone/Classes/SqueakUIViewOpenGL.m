@@ -119,7 +119,8 @@ const GLfloat spriteTexcoords[] = {
 - (void)dealloc {        
     if ([EAGLContext currentContext] == context)
         [EAGLContext setCurrentContext:nil];
-    
+    self.context = nil;
+    SUPERDEALLOC
 }
 
 - (void)layoutSubviews {

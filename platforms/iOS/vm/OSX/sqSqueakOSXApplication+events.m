@@ -195,7 +195,7 @@ static int buttonState=0;
             }
 		}
 		
-		NSString *lookupString = [[NSString alloc] initWithCharacters: &unicode length: 1];
+		NSString *lookupString = [[[NSString alloc] initWithCharacters: &unicode length: 1] AUTORELEASEOBJ];
 		[lookupString getBytes: &macRomanCharacter maxLength: 1 usedLength: NULL encoding: NSMacOSRomanStringEncoding
 					   options: 0 range: picker remainingRange: NULL];
 		

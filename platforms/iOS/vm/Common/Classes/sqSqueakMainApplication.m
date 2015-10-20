@@ -227,6 +227,7 @@ extern sqInt interpret(void);  //This is a VM Callback
 
 - (void)dealloc {
 	sqMacMemoryFree();
+    SUPERDEALLOC
 }
 
 @end
