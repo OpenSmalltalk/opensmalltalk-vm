@@ -17,6 +17,10 @@
 *   UPDATES:
 *     1) Support for long path names added by using UNC prefix in that case
 *        (Marcel Taeumel, Hasso Plattner Institute, Postdam, Germany)
+*     2) Try to remove the read-only attribute from a file before calling
+*        DeleteFile. DeleteFile cannot delete read-only files (see comment
+*        in sqFileDeleteNameSize).
+*        (Max Leske)
 *
 *****************************************************************************/
 #include <windows.h>
@@ -118,6 +122,20 @@ sqInt sqFileDeleteNameSize(char* fileNameIndex, sqInt fileNameSize) {
 
   if(hasCaseSensitiveDuplicate(win32Path))
     FAIL();
+
+  /* DeleteFile will not delete a file with the read-only attribute set
+  (e.g. -r--r--r--, see https://msdn.microsoft.com/en-us/library/windows/desktop/aa363915(v=vs.85).aspx).
+  To ensure that this works the same way as on *nix platforms we need to
+  remove the read-only attribute (which might fail if the current user
+  doesn't own the file).
+    Also note that DeleteFile cannot *effectively* delete a file as long as
+  there are other processes that hold open handles to that file. The function
+  will still report success since the file is *marked* for deletion (no new
+  handles can be opened. See the URL mentioned above for reference).
+  This will lead to problems during a recursive delete operation since now
+  the parent directory wont be empty. */
+  SetFileAttributesW(win32Path, FILE_ATTRIBUTE_NORMAL);
+
   if(!DeleteFileW(win32Path))
     FAIL();
   
@@ -302,7 +320,7 @@ sqInt sqFileSync(SQFile *f) {
    * sqFileFlush uses FlushFileBuffers which is equivalent to fsync on windows
    * as long as WriteFile is used directly and no other buffering is done.
    */
-  return sqFileFlush(SQFile *f);
+  return sqFileFlush(f);
 }
 
 sqInt sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
