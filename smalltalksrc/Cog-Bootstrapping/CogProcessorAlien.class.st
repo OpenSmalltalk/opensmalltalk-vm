@@ -11,6 +11,11 @@ Class {
 	#category : #'Cog-Processors'
 }
 
+{ #category : #debugger }
+CogProcessorAlien class >> defaultIntegerBaseInDebugger [
+	^16
+]
+
 { #category : #'class initialization' }
 CogProcessorAlien class >> initialize [
 	SavedState := WeakIdentityKeyDictionary new.
