@@ -19,6 +19,11 @@ Class {
 	#category : #'Cog-Processors'
 }
 
+{ #category : #debugger }
+ProcessorSimulationTrap class >> defaultIntegerBaseInDebugger [
+	^16
+]
+
 { #category : #'instance creation' }
 ProcessorSimulationTrap class >> pc: pc nextpc: nextpc address: address type: type [
 	^self new

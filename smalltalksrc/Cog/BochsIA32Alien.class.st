@@ -69,11 +69,6 @@ BochsIA32Alien class >> dataSize [
 	^18096
 ]
 
-{ #category : #debugger }
-BochsIA32Alien class >> defaultIntegerBaseInDebugger [
-	^16
-]
-
 { #category : #'class initialization' }
 BochsIA32Alien class >> initialize [
 	"BochsIA32Alien initialize"
@@ -894,7 +889,7 @@ BochsIA32Alien >> registerState [
 
 { #category : #'accessing-abstract' }
 BochsIA32Alien >> registerStateGetters [
-	^#(	eax ebx ecx edx esp ebp esi edi eip eflags
+	^#(	eax ecx edx ebx esp ebp esi edi eip eflags
 		xmm0low xmm1low xmm2low xmm3low
 		xmm4low xmm5low xmm6low xmm7low )
 ]
@@ -906,7 +901,7 @@ BochsIA32Alien >> registerStatePCIndex [
 
 { #category : #'accessing-abstract' }
 BochsIA32Alien >> registerStateSetters [
-	^#(	eax: ebx: ecx: edx: esp: ebp: esi: edi: eip: eflags:
+	^#(	eax: ecx: edx: ebx: esp: ebp: esi: edi: eip: eflags:
 		xmm0low: xmm1low: xmm2low: xmm3low:
 		xmm4low: xmm5low: xmm6low: xmm7low: )
 ]
