@@ -2,20 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>Fabric</key>
-	<dict>
-		<key>APIKey</key>
-		<string>add501476623fc20212a60334cd537d16dfd566f</string>
-		<key>Kits</key>
-		<array>
-			<dict>
-				<key>KitInfo</key>
-				<dict/>
-				<key>KitName</key>
-				<string>Crashlytics</string>
-			</dict>
-		</array>
-	</dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleDocumentTypes</key>
@@ -382,7 +368,7 @@
 	<key>CFBundleGetInfoString</key>
 	<string>Squeak Cog Spur http://www.mirandabanda.org</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.squeak.osx6464.cog</string>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -394,13 +380,31 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>6</string>
+	<string>7</string>
+	<key>Fabric</key>
+	<dict>
+		<key>APIKey</key>
+		<string>add501476623fc20212a60334cd537d16dfd566f</string>
+		<key>Kits</key>
+		<array>
+			<dict>
+				<key>KitInfo</key>
+				<dict/>
+				<key>KitName</key>
+				<string>Crashlytics</string>
+			</dict>
+		</array>
+	</dict>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.developer-tools</string>
 	<key>LSBackgroundOnly</key>
 	<false/>
 	<key>LSMinimumSystemVersion</key>
 	<string>${MACOSX_DEPLOYMENT_TARGET}</string>
+	<key>NSMainNibFile</key>
+	<string>MainMenu</string>
+	<key>NSPrincipalClass</key>
+	<string>SqueakOSXApplication</string>
 	<key>SqueakBrowserMouseCmdButton1</key>
 	<integer>3</integer>
 	<key>SqueakBrowserMouseCmdButton2</key>
@@ -465,6 +469,12 @@
 	<integer>2</integer>
 	<key>SqueakPluginsBuiltInOrLocalOnly</key>
 	<false/>
+	<key>SqueakResourceDirectory</key>
+	<string></string>
+	<key>SqueakTrustedDirectory</key>
+	<string>/foobar/tooBar/forSqueak/bogus/</string>
+	<key>SqueakUIFadeForFullScreenInSeconds</key>
+	<real>0.5</real>
 	<key>SqueakUIFlushPrimaryDeferNMilliseconds</key>
 	<integer>20</integer>
 	<key>SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds</key>
@@ -475,24 +485,16 @@
 	<true/>
 	<key>SqueakUnTrustedDirectory</key>
 	<string>~/Library/Preferences/Squeak/Internet/Untrusted/</string>
+	<key>SqueakUseFileMappedMMAP</key>
+	<false/>
 	<key>SqueakWindowAttribute</key>
-	<data>ggAAHw==</data>
+	<data>
+	ggAAHw==
+	</data>
 	<key>SqueakWindowHasTitle</key>
 	<true/>
 	<key>SqueakWindowType</key>
 	<integer>6</integer>
-	<key>SqueakResourceDirectory</key>
-	<string></string>
-	<key>SqueakTrustedDirectory</key>
-	<string>/foobar/tooBar/forSqueak/bogus/</string>
-	<key>NSMainNibFile</key>
-	<string>MainMenu</string>
-	<key>NSPrincipalClass</key>
-	<string>SqueakOSXApplication</string>
-	<key>SqueakUseFileMappedMMAP</key>
-	<false/>
-	<key>SqueakUIFadeForFullScreenInSeconds</key>
-	<real>0.5</real>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
