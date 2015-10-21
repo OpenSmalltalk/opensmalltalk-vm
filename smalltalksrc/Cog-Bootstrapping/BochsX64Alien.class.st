@@ -21,20 +21,21 @@ BochsX64Alien class >> initialize [
 	| it |
 	it := self basicNew.
 	PostBuildStackDelta := 0.
-	OpcodeExceptionMap := Array new: 256 withAll: #handleExecutionPrimitiveFailureAt:in:.
+	OpcodeExceptionMap := Array new: 256 withAll: #handleExecutionPrimitiveFailureAt:in:rex:.
 	OpcodeExceptionMap
-		at: 1 + it callOpcode			put: #handleCallFailureAt:in:;
-		at: 1 + it jmpOpcode			put: #handleJmpFailureAt:in:;
-		at: 1 + it retOpcode			put: #handleRetFailureAt:in:;
-		at: 1 + it movALObOpcode	put: #handleMovALObFailureAt:in:;
-		at: 1 + it movObALOpcode	put: #handleMovObALFailureAt:in:;
-		at: 1 + it movGvEvOpcode	put: #handleMovGvEvFailureAt:in:;
-		at: 1 + it movEvGvOpcode	put: #handleMovEvGvFailureAt:in:;
-		at: 1 + it movGbEbOpcode	put: #handleMovGbEbFailureAt:in:;
-		at: 1 + it movEbGbOpcode	put: #handleMovEbGbFailureAt:in:.
-	ExtendedOpcodeExceptionMap := Array new: 256 withAll: #handleExecutionPrimitiveFailureAt:in:.
+		at: 1 + it callOpcode			put: #handleCallFailureAt:in:rex:;
+		at: 1 + it jmpOpcode			put: #handleJmpFailureAt:in:rex:;
+		at: 1 + it retOpcode			put: #handleRetFailureAt:in:rex:;
+		at: 1 + it movALObOpcode	put: #handleMovALObFailureAt:in:rex:;
+		at: 1 + it movObALOpcode	put: #handleMovObALFailureAt:in:rex:;
+		at: 1 + it movGvEvOpcode	put: #handleMovGvEvFailureAt:in:rex:;
+		at: 1 + it movEvGvOpcode	put: #handleMovEvGvFailureAt:in:rex:;
+		at: 1 + it movGbEbOpcode	put: #handleMovGbEbFailureAt:in:rex:;
+		at: 1 + it movEbGbOpcode	put: #handleMovEbGbFailureAt:in:rex:;
+		at: 1 + 16rFF				put: #handleGroup5FailureAt:in:rex:. "Table A6 One-Byte and Two-Byte Opcode ModRM Extensions"
+	ExtendedOpcodeExceptionMap := Array new: 256 withAll: #handleExecutionPrimitiveFailureAt:in:rex:.
 	ExtendedOpcodeExceptionMap
-		at: 1 + it movGvEbOpcode put: #handleMovGvEbFailureAt:in:
+		at: 1 + it movGvEbOpcode put: #handleMovGvEbFailureAt:in:rex:
 ]
 
 { #category : #'instance creation' }
@@ -192,7 +193,21 @@ BochsX64Alien >> fp: anAddress [
 ]
 
 { #category : #'error handling' }
-BochsX64Alien >> handleExecutionPrimitiveFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
+BochsX64Alien >> handleCallFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
+	"Convert an execution primitive failure for a call into a ProcessorSimulationTrap signal."
+	| relativeJump |
+	self assert: rexByteOrNil isNil.
+	relativeJump := memoryArray longAt: pc + 2 bigEndian: false.
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 5
+			address: (pc + 5 + relativeJump) signedIntToLong64
+			type: #call)
+		signal
+]
+
+{ #category : #'error handling' }
+BochsX64Alien >> handleExecutionPrimitiveFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
 	"Handle an execution primitive failure for an unhandled opcode."
 	^self reportPrimitiveFailure
 ]
@@ -203,22 +218,230 @@ BochsX64Alien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArr
 	 memory read into register instructions into ProcessorSimulationTrap signals."
 	"self printIntegerRegistersOn: Transcript"
 	"self printRegistersOn: Transcript"
-	| pc opcode offset |
+	| pc opcode rexByte offset |
 	((pc := self rip) between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
 		[opcode := memoryArray byteAt: pc + (offset := 1).
 		 (opcode bitAnd: 16rF8) = self rexPrefix ifTrue: "skip rex prefix if present"
-			[opcode := memoryArray byteAt: pc + (offset := 2)].
+			[rexByte := opcode.
+			 opcode := memoryArray byteAt: pc + (offset := 2)].
 		 opcode ~= 16r0f ifTrue:
 			[^self
 				perform: (OpcodeExceptionMap at: opcode + 1)
 				with: pc
-				with: memoryArray].
+				with: memoryArray
+				with: rexByte].
 		 opcode := memoryArray byteAt: pc + offset + 1.
 		 ^self
 				perform: (ExtendedOpcodeExceptionMap at: opcode + 1)
 				with: pc
-				with: memoryArray].
+				with: memoryArray
+				with: rexByte].
 	^self reportPrimitiveFailure
+]
+
+{ #category : #'as yet unclassified' }
+BochsX64Alien >> handleGroup5FailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
+	"Convert an execution primitive failure for a group 5 instruction into the relevant ProcessorSimulationTrap signal."
+	| modrmByte getter |
+	self assert: rexByteOrNil isNil.
+	modrmByte := memoryArray byteAt: pc + 2.
+	(modrmByte >> 3 bitAnd: 7)
+		caseOf: {
+			[2 "Call Ev"]	->	[getter := self registerStateGetters at: (modrmByte bitAnd: 7) + 1.
+							^(ProcessorSimulationTrap
+									pc: pc
+									nextpc: pc + 2
+									address: (self perform: getter)
+									type: #call)
+								signal] }
+]
+
+{ #category : #'error handling' }
+BochsX64Alien >> handleJmpFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
+	"Convert an execution primitive failure for a jmp into a ProcessorSimulationTrap signal."
+	|  relativeJump |
+	self assert: rexByteOrNil isNil.
+	relativeJump := memoryArray longAt: pc + 2 bigEndian: false.
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 5
+			address: (pc + 5 + relativeJump) signedIntToLong64
+			type: #jump)
+		signal
+]
+
+{ #category : #'error handling' }
+BochsX64Alien >> handleMovALObFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
+	"Convert an execution primitive failure for a read into rax/eax into a ProcessorSimulationTrap signal."
+	rexByteOrNil ifNotNil:
+		[^(ProcessorSimulationTrap
+				pc: pc
+				nextpc: pc + 10
+				address: (memoryArray unsignedLong64At: pc + 3)
+				type: #read
+				accessor: #rax:)
+			signal].
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 5
+			address: (memoryArray unsignedLongAt: pc + 2)
+			type: #read
+			accessor: #eax:)
+		signal
+]
+
+{ #category : #'error handling' }
+BochsX64Alien >> handleMovEbGbFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
+	"Convert an execution primitive failure for a byte register write into a ProcessorSimulationTrap signal."
+	| modrmByte |
+	self shouldBeImplemented.
+	^(((modrmByte := memoryArray byteAt: pc + 2) bitAnd: 16rC0) = 16r80) "ModRegRegDisp32"
+		ifTrue:
+			[(ProcessorSimulationTrap
+					pc: pc
+					nextpc: pc + 6
+					address: ((self perform: (#(eax ecx edx ebx esp ebp esi edi) at: (modrmByte bitAnd: 7) + 1))
+							+ (memoryArray unsignedLongAt: pc + 3 bigEndian: false)
+								bitAnd: 16rFFFFFFFF)
+					type: #write
+					accessor: (#(al cl dl bl ah ch dh bh) at: ((modrmByte >> 3 bitAnd: 7) + 1)))
+				signal]
+		ifFalse:
+			[self reportPrimitiveFailure]
+]
+
+{ #category : #'error handling' }
+BochsX64Alien >> handleMovEvGvFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
+	"Convert an execution primitive failure for a register write into a ProcessorSimulationTrap signal."
+	| modrmByte getter base offset |
+	self assert: rexByteOrNil notNil.
+	modrmByte := memoryArray byteAt: pc + 3.
+	getter := self registerStateGetters at: ((modrmByte >> 3 bitAnd: 7) + ((rexByteOrNil bitAnd: 4) << 1) + 1).
+	(modrmByte bitAnd: 16rC7) = 16r5 ifTrue: "ModRegInd & disp32"
+		[^(ProcessorSimulationTrap
+				pc: pc
+				nextpc: pc + 7
+				address: (memoryArray unsignedLongAt: pc + 4 bigEndian: false)
+				type: #write
+				accessor: getter)
+			signal].
+	(modrmByte bitAnd: 16rC0) = 16r80 ifTrue: "ModRegRegDisp8"
+		[offset := memoryArray longAt: pc + 4 bigEndian: false.
+		 base := self registerStateGetters at: ((modrmByte bitAnd: 7) + ((rexByteOrNil bitAnd: 1) << 3) + 1).
+		 ^(ProcessorSimulationTrap
+				pc: pc
+				nextpc: pc + 7
+				address: (self perform: base) + offset
+				type: #write
+				accessor: getter)
+			signal].
+	^self reportPrimitiveFailure
+]
+
+{ #category : #'error handling' }
+BochsX64Alien >> handleMovGbEbFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
+	"Convert an execution primitive failure for a byte register load into a ProcessorSimulationTrap signal."
+	| modrmByte |
+	self shouldBeImplemented.
+	^(((modrmByte := memoryArray byteAt: pc + 2) bitAnd: 16rC0) = 16r80) "ModRegRegDisp32"
+		ifTrue:
+			[(ProcessorSimulationTrap
+					pc: pc
+					nextpc: pc + 6
+					address: ((self perform: (#(eax ecx edx ebx esp ebp esi edi) at: (modrmByte bitAnd: 7) + 1))
+							+ (memoryArray unsignedLongAt: pc + 3 bigEndian: false)
+								bitAnd: 16rFFFFFFFF)
+					type: #read
+					accessor: (#(al: cl: dl: bl: ah: ch: dh: bh:) at: ((modrmByte >> 3 bitAnd: 7) + 1)))
+				signal]
+		ifFalse:
+			[self reportPrimitiveFailure]
+]
+
+{ #category : #'error handling' }
+BochsX64Alien >> handleMovGvEbFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
+	"Convert an execution primitive failure for a register load into a ProcessorSimulationTrap signal."
+	| modrmByte mode srcIsSP srcVal dst offset |
+	self shouldBeImplemented.
+	modrmByte := memoryArray byteAt: pc + 3.
+	mode := modrmByte >> 6 bitAnd: 3.
+	srcIsSP := (modrmByte bitAnd: 7) = 4.
+	srcVal := self perform: (#(eax ecx edx ebx esp ebp esi edi) at: (modrmByte bitAnd: 7) + 1).
+	dst := #(eax: ecx: edx: ebx: esp: ebp: esi: edi:) at: ((modrmByte >> 3 bitAnd: 7) + 1).
+	mode = 1 ifTrue: "ModRegRegDisp8"
+		[offset := memoryArray byteAt: pc + (srcIsSP ifTrue: [5] ifFalse: [4]). "1-relative"
+		 offset > 127 ifTrue: [offset := offset - 256].
+		 ^(ProcessorSimulationTrap
+					pc: pc
+					nextpc: pc + (srcIsSP ifTrue: [5] ifFalse: [4])
+					address: ((srcVal + offset) bitAnd: 16rFFFFFFFF)
+					type: #read
+					accessor: dst)
+				signal].
+	mode = 2 ifTrue: "ModRegRegDisp32"
+		[offset := memoryArray unsignedLongAt: pc + (srcIsSP ifTrue: [5] ifFalse: [4]). "1-relative"
+		 ^(ProcessorSimulationTrap
+					pc: pc
+					nextpc: pc + (srcIsSP ifTrue: [8] ifFalse: [7])
+					address: ((srcVal + offset) bitAnd: 16rFFFFFFFF)
+					type: #read
+					accessor: dst)
+				signal].
+	^self reportPrimitiveFailure
+]
+
+{ #category : #'error handling' }
+BochsX64Alien >> handleMovGvEvFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
+	"Convert an execution primitive failure for a register load into a ProcessorSimulationTrap signal."
+	| modrmByte getter setter offset |
+	self assert: rexByteOrNil notNil.
+	modrmByte := memoryArray byteAt: pc + 3.
+	setter := self registerStateSetters at: ((modrmByte >> 3 bitAnd: 7) + ((rexByteOrNil bitAnd: 4) << 1) + 1).
+	(modrmByte bitAnd: 16rC7) = 16r5 ifTrue: "ModRegInd & disp32"
+		[^(ProcessorSimulationTrap
+				pc: pc
+				nextpc: pc + 7
+				address: (memoryArray unsignedLongAt: pc + 4 bigEndian: false)
+				type: #read
+				accessor: setter)
+			signal].
+	(modrmByte bitAnd: 16rC0) = 16r80 ifTrue: "ModRegRegDisp8"
+		[offset := memoryArray longAt: pc + 4 bigEndian: false.
+		 getter := self registerStateGetters at: ((modrmByte bitAnd: 7) + ((rexByteOrNil bitAnd: 1) << 3) + 1).
+		 ^(ProcessorSimulationTrap
+				pc: pc
+				nextpc: pc + 7
+				address: (self perform: getter) + offset
+				type: #read
+				accessor: setter)
+			signal].
+	^self reportPrimitiveFailure
+]
+
+{ #category : #'error handling' }
+BochsX64Alien >> handleMovObALFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
+	"Convert an execution primitive failure for a write of eax into a ProcessorSimulationTrap signal."
+	self shouldBeImplemented.
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 5
+			address: (memoryArray unsignedLongAt: pc + 2 bigEndian: false)
+			type: #write
+			accessor: #eax)
+		signal
+]
+
+{ #category : #'error handling' }
+BochsX64Alien >> handleRetFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
+	"Convert an execution primitive failure for a ret into a ProcessorSimulationTrap signal."
+	self shouldBeImplemented.
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 1
+			address: (memoryArray unsignedLongAt: self esp + 1)
+			type: #return
+			accessor: #eip:)
+		signal
 ]
 
 { #category : #'processor setup' }
@@ -317,6 +540,19 @@ BochsX64Alien >> pc [
 BochsX64Alien >> pc: anAddress [
 	"Set whatever the processor considers its program counter to anAddress."
 	self rip: anAddress
+]
+
+{ #category : #execution }
+BochsX64Alien >> postCallArgumentsNumArgs: numArgs "<Integer>" in: memory [ "<ByteArray|Bitmap>"
+	"Answer an argument vector of the requested size after a vanilla
+	 ABI call.  On X86 this simply means accessing register arguments.
+	 For compatibility with Cog/Slang we answer unsigned values."
+	self assert: numArgs <= 4. "Microsoft & System V agree for the first 4 reg args oinly"
+	^((CogX64Compiler ABI == #SysV
+				ifTrue: [#(rdi rsi rdx rcx r8 r9)]
+				ifFalse: [#(rdi rsi r8 r9)]) copyFrom: 1 to: numArgs) collect:
+		[:getter|
+		self perform: getter]
 ]
 
 { #category : #primitives }
@@ -438,6 +674,29 @@ BochsX64Alien >> printRegisterState: registerStateVector on: aStream [
 						r8 r9 r10 r11 cr
 						r12 r13 r14 r15 cr
 						rip rflags cr
+						xmm0low xmm1low cr
+						xmm2low xmm3low cr
+						xmm4low xmm5low cr
+						xmm6low xmm7low cr )])
+		inRegisterState: registerStateVector
+		on: aStream
+]
+
+{ #category : #printing }
+BochsX64Alien >> printRegisterStateExceptPC: registerStateVector on: aStream [
+	self printFields:
+			((registerStateVector size < 34
+			  or: [(19 to: 34) allSatisfy: [:i| (registerStateVector at: i) isZero]])
+				ifTrue:
+					[#(	rax rbx rcx rdx cr
+						rsp rbp rsi rdi cr
+						r8 r9 r10 r11 cr
+						r12 r13 r14 r15 cr)]
+				ifFalse:
+					[#(	rax rbx rcx rdx cr
+						rsp rbp rsi rdi cr
+						r8 r9 r10 r11 cr
+						r12 r13 r14 r15 cr
 						xmm0low xmm1low cr
 						xmm2low xmm3low cr
 						xmm4low xmm5low cr
@@ -603,8 +862,21 @@ BochsX64Alien >> registerState [
 ]
 
 { #category : #'accessing-abstract' }
+BochsX64Alien >> registerStateGetters [
+	^#(rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r10 r11 r12 r13 r14 r15
+		rip rflags
+		xmm0low xmm1low xmm2low xmm3low
+		xmm4low xmm5low xmm6low xmm7low )
+]
+
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> registerStatePCIndex [
+	^17
+]
+
+{ #category : #'accessing-abstract' }
 BochsX64Alien >> registerStateSetters [
-	^#(rax: rbx: rcx: rdx: rsp: rbp: rsi: rdi: r8: r9: r10: r11: r12: r13: r14: r15:
+	^#(rax: rcx: rdx: rbx: rsp: rbp: rsi: rdi: r8: r9: r10: r11: r12: r13: r14: r15:
 		rip: rflags:
 		xmm0low: xmm1low: xmm2low: xmm3low:
 		xmm4low: xmm5low: xmm6low: xmm7low: )
@@ -694,6 +966,19 @@ BochsX64Alien >> setFramePointer: framePointer stackPointer: stackPointer [
 	"Initialize the processor's frame and stack pointers"
 	self rbp: framePointer.
 	self rsp: stackPointer
+]
+
+{ #category : #execution }
+BochsX64Alien >> simulateCallOf: address nextpc: nextpc memory: aMemory [
+	"Simulate a frame-building call of address.  Build a frame since
+	a) this is used for calls into the run-time which are unlikely to be leaf-calls, and
+	b) stack alignment needs to be realistic for assert checking for platforms such as Mac OS X"
+	self pushWord: nextpc in: aMemory.
+	self pushWord: self rbp in: aMemory.
+	self rbp: self rsp.
+	PostBuildStackDelta ~= 0 ifTrue:
+		[self rsp: self rsp - PostBuildStackDelta].
+	self rip: address
 ]
 
 { #category : #execution }

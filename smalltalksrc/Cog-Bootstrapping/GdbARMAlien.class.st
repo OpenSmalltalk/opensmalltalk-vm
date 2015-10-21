@@ -29,11 +29,6 @@ GdbARMAlien class >> dataSize [
 	^1536
 ]
 
-{ #category : #debugger }
-GdbARMAlien class >> defaultIntegerBaseInDebugger [
-	^16
-]
-
 { #category : #'class initialization' }
 GdbARMAlien class >> initialize [
 	"GdbARMAlien initialize"
