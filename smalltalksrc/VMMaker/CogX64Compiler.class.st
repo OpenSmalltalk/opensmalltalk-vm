@@ -14,6 +14,7 @@ Class {
 	#name : #CogX64Compiler,
 	#superclass : #CogAbstractInstruction,
 	#classVars : [
+		'ABI',
 		'CDQ',
 		'CMPXCHGAwR',
 		'CMPXCHGMwrR',
@@ -74,6 +75,12 @@ Class {
 }
 
 { #category : #accessing }
+CogX64Compiler class >> ABI [
+	"Answer the name of the supported ABI, #SysV or #MSVC"
+	^ABI
+]
+
+{ #category : #accessing }
 CogX64Compiler class >> VarBaseReg [
 	"Answer the number of the reg we use to hold the base address of CoInterpreter variables"
 	^RBX
@@ -88,6 +95,9 @@ CogX64Compiler class >> initialize [
 
 	| specificOpcodes refs |
 	self ~~ CogX64Compiler ifTrue: [^self].
+
+	ABI ifNil:
+		[ABI := #SysV]. "Default ABI; other choice is #MSVC"
 
 	RAX := 0.
 	RCX := 1.  "Were they completely mad or simply sadistic?"
@@ -1767,10 +1777,10 @@ CogX64Compiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 ar
 
 	 Run-time calls have no more than four arguments, so chosen so that on ARM, where in its C ABI the
 	 first four integer arguments are passed in registers, all arguments can be passed in registers.  We
-	 defer to the back end to generate this code not so much that teh back end knows whether it uses
+	 defer to the back end to generate this code not so much that the back end knows whether it uses
 	 the stack or registers to pass arguments (it does, but...). In fact we defer for an extremely evil reason.
 	 Doing so allows the x64 (where up to 6 args are passed) to assign the register arguments in an order
-	 that allows some of the argument registers to be used for specificabstract  registers, specifically
+	 that allows some of the argument registers to be used for specific abstract  registers, specifically
 	 ReceiverResultReg and ClassReg.  This is evil, evil, evil, but also its really nice to keep using the old
 	 register assignments the principal author has grown accustomed to.
 
@@ -1794,17 +1804,31 @@ CogX64Compiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 ar
 			[(self concreteRegister: regOrConst1) ~= RSI ifTrue:
 				[cogit MoveR: regOrConst1 R: RSI]].
 	numArgs = 2 ifTrue: [^self].
-	regOrConst2 >= 0
-		ifTrue: [cogit MoveCq: regOrConst2 R: RDX]
-		ifFalse:
-			[(self concreteRegister: regOrConst2) ~= RDX ifTrue:
-				[cogit MoveR: regOrConst2 R: RDX]].
-	numArgs = 3 ifTrue: [^self].
-	regOrConst3 >= 0
-		ifTrue: [cogit MoveCq: regOrConst3 R: RCX]
-		ifFalse:
-			[(self concreteRegister: regOrConst3) ~= RCX ifTrue:
-				[cogit MoveR: regOrConst3 R: RCX]]
+	self cppIf: ABI == #SysV ifTrue:
+		[regOrConst2 >= 0
+			ifTrue: [cogit MoveCq: regOrConst2 R: RDX]
+			ifFalse:
+				[(self concreteRegister: regOrConst2) ~= RDX ifTrue:
+					[cogit MoveR: regOrConst2 R: RDX]].
+		 numArgs = 3 ifTrue: [^self].
+		 regOrConst3 >= 0
+				ifTrue: [cogit MoveCq: regOrConst3 R: RCX]
+				ifFalse:
+					[(self concreteRegister: regOrConst3) ~= RCX ifTrue:
+						[cogit MoveR: regOrConst3 R: RCX]]].
+	self cppIf: ABI == #MSVC ifTrue:
+		[regOrConst2 >= 0
+			ifTrue: [cogit MoveCq: regOrConst2 R: R8]
+			ifFalse:
+				[(self concreteRegister: regOrConst2) ~= R8 ifTrue:
+					[cogit MoveR: regOrConst2 R: R8]].
+		 numArgs = 3 ifTrue: [^self].
+		 regOrConst3 >= 0
+				ifTrue: [cogit MoveCq: regOrConst3 R: R9]
+				ifFalse:
+					[(self concreteRegister: regOrConst3) ~= R9 ifTrue:
+						[cogit MoveR: regOrConst3 R: R9]]].
+	self assert: numArgs <= 4
 ]
 
 { #category : #'abstract instructions' }
@@ -1980,7 +2004,9 @@ CogX64Compiler >> hasThreeAddressArithmetic [
 
 { #category : #testing }
 CogX64Compiler >> is32BitSignedImmediate: a64BitUnsignedOperand [
-	^(a64BitUnsignedOperand >> 31) signedIntFromLong between: -1 and: 0
+	^self cCode: [(self cCoerceSimple: a64BitUnsignedOperand to: #int) = (self cCoerceSimple: a64BitUnsignedOperand to: #long)]
+		inSmalltalk: [((a64BitUnsignedOperand >> 32) signedIntFromLong between: -1 and: 0)
+					and: [(a64BitUnsignedOperand >> 31) signedIntFromLong between: -1 and: 0]]
 ]
 
 { #category : #testing }
@@ -2079,6 +2105,13 @@ CogX64Compiler >> minAbstractGeneralPurposeReg [
 
 { #category : #encoding }
 CogX64Compiler >> mod: mod RM: regMode RO: regOpcode [
+	"See ModR/M byte & opcode syntax
+	 In addition to the notation shown above in 'Mnemonic Syntax' on page 43,
+	 the following notation indicates the size and type of operands in the syntax of an instruction opcode:
+		/digit	Indicates that the ModRM byte specifies only one register or memory (r/m) operand.
+				The digit is specified by the ModRM reg field and is used as an instruction-opcode extension.
+				Valid digit values range from 0 to 7.
+		/r		Indicates that the ModRM byte specifies both a register operand and a reg/mem (register or memory) operand."
 	^mod << 6 + ((regOpcode bitAnd: 7) << 3) + (regMode bitAnd: 7)
 ]
 
