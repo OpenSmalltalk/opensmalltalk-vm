@@ -542,14 +542,9 @@ GdbARMAlien >> ifflags: unsignedInteger [
 
 { #category : #'processor setup' }
 GdbARMAlien >> initializeStackFor: aCogit [
-"Different cpus need different stack alignment etc, so handle the details here."
-	| stackAlignment |
-	stackAlignment := 8.
-	aCogit setStackAlignment: stackAlignment expectedSPOffset: 0 expectedFPOffset: 0.
-	self assert: stackAlignment isPowerOfTwo.
-	PostBuildStackDelta :=  stackAlignment > 8
-								ifTrue: [stackAlignment - 8]
-								ifFalse: [0]
+	"Different cpus need different stack alignment etc, so handle the details here."
+	aCogit setStackAlignment: 8 expectedSPOffset: 0 expectedFPOffset: 0.
+	PostBuildStackDelta := 0
 ]
 
 { #category : #testing }
