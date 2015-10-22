@@ -1627,7 +1627,7 @@ CogObjectRepresentationFor32BitSpur >> numSmallIntegerBits [
 	^31
 ]
 
-{ #category : #'primitive generators' }
+{ #category : #'object representation' }
 CogObjectRepresentationFor32BitSpur >> numSmallIntegerTagBits [
 	^1
 ]
