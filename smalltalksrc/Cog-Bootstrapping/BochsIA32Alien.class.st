@@ -585,8 +585,7 @@ BochsIA32Alien >> initializeStackFor: aCogit [
 	| stackAlignment |
 	stackAlignment := 16.
 	aCogit setStackAlignment: stackAlignment expectedSPOffset: 0 expectedFPOffset: 8.
-	self assert: stackAlignment isPowerOfTwo.
-	PostBuildStackDelta :=  stackAlignment > 8
+	PostBuildStackDelta := stackAlignment > 8
 								ifTrue: [stackAlignment - 8]
 								ifFalse: [0]
 ]
