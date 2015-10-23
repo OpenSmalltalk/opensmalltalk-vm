@@ -395,7 +395,7 @@ CogMethodZone >> freeStart [
 { #category : #accessing }
 CogMethodZone >> freeStart: zoneLimit [
 	<doNotGenerate>
-	^mzFreeStart := zoneLimit
+	^baseAddress := mzFreeStart := zoneLimit
 ]
 
 { #category : #initialization }
