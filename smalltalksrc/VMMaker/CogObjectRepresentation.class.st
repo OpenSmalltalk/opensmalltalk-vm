@@ -446,6 +446,16 @@ CogObjectRepresentation >> maybeCompileRetry: retryInst onPrimitiveFail: primInd
 	 By default do nothing."
 ]
 
+{ #category : #initialization }
+CogObjectRepresentation >> maybeGenerateSelectorIndexDereferenceRoutine [
+	"If required, generate the routine that converts selector indices into selector objects.
+	 If it exists, it is called from the send trampolines.
+	 If the selector index is negative, convert it into a positive index into the
+	 special selectors array and index that.  Otherwise, index the current method.
+	 This is only required on 64-bit platforms."
+	<inline: true>
+]
+
 { #category : #'sista support' }
 CogObjectRepresentation >> maybeMarkCounters: theCounters [
 	"In SIsta Spur counters are held on the heap in pinned objects which must be marked
@@ -489,6 +499,14 @@ CogObjectRepresentation >> resetCountersIn: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	<api>
 	self subclassResponsibility
+]
+
+{ #category : #'calling convention' }
+CogObjectRepresentation >> selectorIndexDereferenceRoutine [
+	"If the object representation is 64-bits, selectors must be accessed via indices in the inline caches.
+	 Answer the routine that will map from indices to selector objects if so, otherwise nil."
+	<inline: true>
+	^nil
 ]
 
 { #category : #initialization }

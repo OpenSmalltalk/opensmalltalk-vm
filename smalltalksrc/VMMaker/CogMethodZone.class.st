@@ -153,6 +153,11 @@ CogMethodZone >> addToYoungReferrers: cogMethod [
 	objectMemory longAt: youngReferrers put: cogMethod asUnsignedInteger
 ]
 
+{ #category : #accessing }
+CogMethodZone >> alignment [
+	^8
+]
+
 { #category : #allocating }
 CogMethodZone >> allocate: numBytes [
 	| roundedBytes allocation |
