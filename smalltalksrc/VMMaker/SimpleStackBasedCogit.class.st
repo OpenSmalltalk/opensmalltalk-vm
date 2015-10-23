@@ -3363,10 +3363,10 @@ SimpleStackBasedCogit >> genSendAbsentSelf: selectorIndex numArgs: numArgs [
 ]
 
 { #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> genSendDirectedSuper: selector numArgs: numArgs [
+SimpleStackBasedCogit >> genSendDirectedSuper: selectorIndex numArgs: numArgs [
 	<inline: false>
 	"N.B. genPushLiteralVariableGivenDirectedSuper: has already loaded tempOop with the association."
-	^self genSend: selector numArgs: numArgs sendTable: directedSuperSendTrampolines
+	^self genSend: selectorIndex numArgs: numArgs sendTable: directedSuperSendTrampolines
 ]
 
 { #category : #'bytecode generators' }
@@ -3385,9 +3385,9 @@ SimpleStackBasedCogit >> genSendLiteralSelector2ArgsBytecode [
 ]
 
 { #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> genSendSuper: selector numArgs: numArgs [
+SimpleStackBasedCogit >> genSendSuper: selectorIndex numArgs: numArgs [
 	<inline: false>
-	^self genSend: selector numArgs: numArgs sendTable: superSendTrampolines
+	^self genSend: selectorIndex numArgs: numArgs sendTable: superSendTrampolines
 ]
 
 { #category : #'bytecode generators' }
