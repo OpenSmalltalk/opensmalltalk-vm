@@ -54,6 +54,11 @@ BochsX64Alien >> bitsInWord [
 	^64
 ]
 
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> cResultRegister: aValue [
+	^self rax: aValue
+]
+
 { #category : #opcodes }
 BochsX64Alien >> callOpcode [
 	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
@@ -410,12 +415,23 @@ BochsX64Alien >> handleMovGvEvFailureAt: pc "<Integer>" in: memoryArray "<Bitmap
 				type: #read
 				accessor: setter)
 			signal].
-	(modrmByte bitAnd: 16rC0) = 16r80 ifTrue: "ModRegRegDisp8"
+	getter := self registerStateGetters at: ((modrmByte bitAnd: 7) + ((rexByteOrNil bitAnd: 1) << 3) + 1).
+	(modrmByte bitAnd: 16rC0) = 16r80 ifTrue: "ModRegRegDisp32"
 		[offset := memoryArray longAt: pc + 4 bigEndian: false.
-		 getter := self registerStateGetters at: ((modrmByte bitAnd: 7) + ((rexByteOrNil bitAnd: 1) << 3) + 1).
 		 ^(ProcessorSimulationTrap
 				pc: pc
 				nextpc: pc + 7
+				address: (self perform: getter) + offset
+				type: #read
+				accessor: setter)
+			signal].
+	(modrmByte bitAnd: 16rC0) = 16r40 ifTrue: "ModRegRegDisp8"
+		[offset := memoryArray byteAt: pc + 4.
+		 offset > 16r7F ifTrue:
+			[offset := offset - 16r100].
+		 ^(ProcessorSimulationTrap
+				pc: pc
+				nextpc: pc + 4
 				address: (self perform: getter) + offset
 				type: #read
 				accessor: setter)
