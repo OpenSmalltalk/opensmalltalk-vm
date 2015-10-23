@@ -133,10 +133,16 @@ BochsX64Alien >> decorateDisassembly: anInstructionString for: aSymbolManager [ 
 	(i1 := string indexOfSubCollection: '%ds:0x') > 0 ifTrue:
 		[i2 := i1 + 6.
 		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
-		 (string copyFrom: i2 to: (i2 + 5 min: string size)) = '(%rbx)' ifTrue:
+		 (v := string copyFrom: i2 to: (i2 + 5 min: string size)) = '(%rbx)' ifTrue:
 			[v := Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16.
 		 	 (aSymbolManager lookupAddress: aSymbolManager varBaseAddress + v) ifNotNil:
 				[:varName| extra := ' = ', varName]].
+		 v = '(%rip)' ifTrue:
+			[v := string size - (string indexOf: $: startingAt: i2 + 5) - 1 / 3. "Count number of instruction bytes to find size of instruction"
+			 v := v + (Integer readFrom: (ReadStream on: string from: 1 to: 8) base: 16). "Add address of instruction"
+			 v := v + (Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16) signedIntFromLong64. "Add offset to yield pc-relative address"
+		 	 (aSymbolManager lookupAddress: v) ifNotNil:
+				[:methodName| extra := ' = ', methodName]].
 		 string := string
 					copyReplaceFrom: i1
 					to: i2 - 1
