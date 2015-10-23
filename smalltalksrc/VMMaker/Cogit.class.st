@@ -2418,7 +2418,9 @@ Cogit >> addressIsInFixups: address [
 { #category : #testing }
 Cogit >> addressIsInInstructions: address [
 	<var: #address type: #'AbstractInstruction *'>
-	^self cCode: 'address >= &abstractOpcodes[0] && address < &abstractOpcodes[opcodeIndex]'
+	^self cCode: '!((unsigned)((address) & BytesPerWord-1)) \
+				&& (address) >= &abstractOpcodes[0] \
+				&& (address) < &abstractOpcodes[opcodeIndex]'
 		inSmalltalk: [(abstractOpcodes object identityIndexOf: address) between: 1 and: opcodeIndex]
 ]
 
@@ -7239,18 +7241,21 @@ Cogit >> lookupAddress: address [
 { #category : #disassembly }
 Cogit >> lookupCHexString: aCHexString [ 
 	<doNotGenerate>
-	| pastLastZero |
+	| pastLastZero shortened |
 	(aCHexString beginsWith: '0x') ifFalse:
 		[^aCHexString].
+	pastLastZero := aCHexString findFirst: [:c| c ~= $0 and: [c ~= $x]].
+	shortened := pastLastZero = 0
+					ifTrue: ['0x0']
+					ifFalse:
+						[(aCHexString size >= 16 and: [pastLastZero >= 4])
+							ifTrue: [aCHexString copyReplaceFrom: 3 to: pastLastZero - 1 with: '']
+							ifFalse: [aCHexString]].
 	^(self lookupAddress: (Number
-								readFrom: (ReadStream on: aCHexString from: 3 to: aCHexString size)
+								readFrom: (ReadStream on: shortened from: 3 to: shortened size)
 								base: 16))
-		ifNotNil: [:string| aCHexString, '=', string]
-		ifNil: [pastLastZero := aCHexString findFirst: [:c| c ~= $0 and: [c ~= $x]].
-			pastLastZero = 0 ifTrue: [pastLastZero := aCHexString size + 1].
-			(aCHexString size >= 16 and: [pastLastZero >= 4])
-				ifTrue: [aCHexString copyReplaceFrom: 3 to: pastLastZero - 1 with: '']
-				ifFalse: [aCHexString]]
+		ifNotNil: [:string| shortened, '=', string]
+		ifNil: [shortened]
 ]
 
 { #category : #'method map' }
