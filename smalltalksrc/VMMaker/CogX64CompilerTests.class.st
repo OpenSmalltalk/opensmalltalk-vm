@@ -242,7 +242,7 @@ CogX64CompilerTests >> testMoveAwR [
 			self assert: len = totalsz]]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #tests }
 CogX64CompilerTests >> testMoveC32R [
 	"self new testMoveMwrR"
 	self concreteCompilerClass registersWithNamesDo:

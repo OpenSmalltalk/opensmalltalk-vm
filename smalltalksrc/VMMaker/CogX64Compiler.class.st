@@ -327,7 +327,9 @@ CogX64Compiler >> computeMaximumSize [
 									[(self is32BitSignedImmediate: (operands at: 0))
 										ifTrue: [7]
 										ifFalse: [self moveCwRByteSize]]].
-		[MoveCwR]		-> [^self moveCwRByteSize].
+		[MoveCwR]		-> [^(self inCurrentCompilation: (operands at: 0))
+								ifTrue: [7]
+								ifFalse: [self moveCwRByteSize]].
 		[MoveC32R]	-> [^7]. "N.B. Always inlined."
 		[MoveRR]		-> [^3].
 		[MoveRdRd]		-> [^4].
@@ -420,7 +422,9 @@ CogX64Compiler >> computeMaximumSize [
 		[PopR]			-> [^(self concreteRegister: (operands at: 0)) < 8 ifTrue: [1] ifFalse: [2]].
 		[PushR]			-> [^(self concreteRegister: (operands at: 0)) < 8 ifTrue: [1] ifFalse: [2]].
 		[PushCq]		-> [^(self isQuick: (operands at: 0)) ifTrue: [2] ifFalse: [5]].
-		[PushCw]		-> [^self pushCwByteSize].
+		[PushCw]		-> [^(self inCurrentCompilation: (operands at: 0))
+								ifTrue: [6]
+								ifFalse: [self pushCwByteSize]].
 		[PrefetchAw]	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [7] ifFalse: [0]].
 		"Conversion"
 		"[ConvertRRd]	-> [^4]" }.
@@ -890,7 +894,7 @@ CogX64Compiler >> concretizeMoveCqR [
 			at: 2 put: (self mod: ModReg RM: reg RO: reg).
 		^machineCodeSize := 3].
 	machineCode
-		at: 0 put: (self rexR: reg x: 0 b: 0);
+		at: 0 put: (self rexR: 0 x: 0 b: reg);
 		at: 1 put: 16rC7;
 		at: 2 put: (self mod: ModReg RM: reg RO: 0);
 		at: 3 put: (value bitAnd: 16rFF);
