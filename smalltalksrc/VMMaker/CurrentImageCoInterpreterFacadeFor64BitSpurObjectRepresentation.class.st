@@ -13,3 +13,8 @@ CurrentImageCoInterpreterFacadeFor64BitSpurObjectRepresentation class >> objectM
 CurrentImageCoInterpreterFacadeFor64BitSpurObjectRepresentation class >> objectRepresentationClass [
 	^CogObjectRepresentationFor64BitSpur
 ]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeFor64BitSpurObjectRepresentation >> specialObjectsArrayAddress [
+	^self addressForLabel: #specialObjectsOop
+]

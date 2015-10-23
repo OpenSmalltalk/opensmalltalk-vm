@@ -4842,6 +4842,20 @@ StackInterpreter >> divorceFramesIn: aStackPage [
 	aStackPage baseFP: 0
 ]
 
+{ #category : #simulation }
+StackInterpreter >> doItContext [
+	"This is for the bottom-right-hand pane in the simulator window."
+	<doNotGenerate>
+	^nil
+]
+
+{ #category : #simulation }
+StackInterpreter >> doItReceiver [
+	"This is for the bottom-right-hand pane in the simulator window."
+	<doNotGenerate>
+	^self
+]
+
 { #category : #'arithmetic primitive support' }
 StackInterpreter >> doPrimitiveDiv: rcvr by: arg [
 	"Rounds negative results towards negative infinity, rather than zero."
