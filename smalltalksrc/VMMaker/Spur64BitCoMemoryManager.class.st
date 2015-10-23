@@ -265,6 +265,13 @@ Spur64BitCoMemoryManager >> smallIntegerTag [
 	^1
 ]
 
+{ #category : #'trampoline support' }
+Spur64BitCoMemoryManager >> specialObjectsArrayAddress [
+	<api>
+	^self cCode: [(self addressOf: specialObjectsOop) asUnsignedInteger]
+		inSmalltalk: [cogit simulatedVariableAddress: #specialObjectsOop in: self]
+]
+
 { #category : #accessing }
 Spur64BitCoMemoryManager >> startOfMemory [
 	"Return the start of object memory.  This is immediately after the native code zone.

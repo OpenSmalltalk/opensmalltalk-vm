@@ -2860,6 +2860,8 @@ StackToRegisterMappingCogit >> genSendTrampolineFor: aRoutine numArgs: numArgs c
 	startAddress := methodZoneBase.
 	self zeroOpcodeIndex.
 	backEnd genPushRegisterArgsForNumArgs: numArgs scratchReg: SendNumArgsReg.
+	objectRepresentation selectorIndexDereferenceRoutine ifNotNil:
+		[:routine| self Call: routine].
 	self genTrampolineFor: aRoutine
 		called: aString
 		numArgs: 4

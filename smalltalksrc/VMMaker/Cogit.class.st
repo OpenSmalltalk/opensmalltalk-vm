@@ -6496,6 +6496,7 @@ Cogit >> generateTrampolines [
 	initialPC := 0.
 	endPC := numAbstractOpcodes - 1.
 	hasYoungReferent := false.
+	objectRepresentation maybeGenerateSelectorIndexDereferenceRoutine.
 	self generateSendTrampolines.
 	self generateMissAbortTrampolines.
 	objectRepresentation generateObjectRepresentationTrampolines.
@@ -6719,7 +6720,7 @@ Cogit >> handleReadSimulationTrap: aProcessorSimulationTrap [
 						ifAbsent:
 							[(simulatedTrampolines includesKey: address)
 								ifTrue: [address]
-								ifFalse: [simulatedVariableGetters errorKeyNotFound]]) value asInteger.
+								ifFalse: [simulatedVariableGetters errorKeyNotFound: address]]) value asInteger.
 	accessor := aProcessorSimulationTrap registerAccessor.
 	processor
 		perform: accessor
@@ -9407,7 +9408,7 @@ Cogit >> selectorForSendAt: mcpc annotation: annotation in: aCompiledMethod [
 						targetMethod selector]
 					ifFalse:
 						[objectMemory wordSize = 8
-							ifTrue: [self selectorFromSelectorIndex: (backEnd inlineCacheTagAt: mcpc) signedIntToLong
+							ifTrue: [self selectorFromSelectorIndex: (backEnd inlineCacheTagAt: mcpc) signedIntFromLong
 										in: aCompiledMethod]
 							ifFalse: [backEnd inlineCacheTagAt: mcpc]].
 	^(annotation ~= IsNSSendCall and: [coInterpreter isCurrentImageFacade])

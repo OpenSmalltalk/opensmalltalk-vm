@@ -1,6 +1,9 @@
 Class {
 	#name : #CogObjectRepresentationFor64BitSpur,
 	#superclass : #CogObjectRepresentationForSpur,
+	#instVars : [
+		'ceDereferenceSelectorIndex'
+	],
 	#category : #'VMMaker-JIT'
 }
 
@@ -414,6 +417,12 @@ CogObjectRepresentationFor64BitSpur >> genLoadHeaderIntoNewInstance: header [
 		MoveR: TempReg Mw: 0 r: ReceiverResultReg
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genRemoveSmallIntegerTagsInScratchReg: scratchReg [
+	cogit SubCq: 1 R: scratchReg.
+	^0
+]
+
 { #category : #'in-line cacheing' }
 CogObjectRepresentationFor64BitSpur >> illegalClassTag [
 	<inline: true>
@@ -439,6 +448,40 @@ CogObjectRepresentationFor64BitSpur >> inlineCacheTagForInstance: oop [
 { #category : #initialization }
 CogObjectRepresentationFor64BitSpur >> log2BytesPerWord [
 	^3
+]
+
+{ #category : #initialization }
+CogObjectRepresentationFor64BitSpur >> maybeGenerateSelectorIndexDereferenceRoutine [
+	"Generate the routine that converts selector indices into selector objects.
+	 It is called from the send trampolines.
+	 If the selector index is negative, convert it into a positive index into the
+	 special selectors array and index that.  Otherwise, index the current method."
+	| jumpNegative |
+	<var: 'jumpNegative' type: #'AbstractInstruction *'>
+	cogit zeroOpcodeIndex.
+	cogit CmpCq: 0 R: ClassReg.
+	jumpNegative := cogit JumpLess: 0.
+	cogit
+		MoveMw: FoxMethod r: FPReg R: Scratch0Reg;
+		AddCq: 2 R: ClassReg; "Change selector index to 1-relative, skipping the method header"
+		AndCq: methodZone alignment negated R: Scratch0Reg;
+		MoveMw: (cogit offset: CogMethod of: #methodObject) r: Scratch0Reg R: Scratch1Reg;
+		MoveXwr: ClassReg R: Scratch1Reg R: ClassReg;
+		RetN: 0.
+	jumpNegative jmpTarget: cogit Label.
+	cogit
+		NegateR: ClassReg;
+		LogicalShiftLeftCq: 1 R: ClassReg;
+		MoveAw: objectMemory specialObjectsArrayAddress R: Scratch0Reg;
+		SubCq: 1 R: ClassReg;
+		MoveMw: SpecialSelectors + 1 * objectMemory wordSize r: Scratch0Reg R: Scratch1Reg; "Index, including header size"
+		MoveXwr: ClassReg R: Scratch1Reg R: ClassReg;
+		RetN: 0.
+	ceDereferenceSelectorIndex := cogit methodZoneBase.
+	cogit
+		outputInstructionsForGeneratedRuntimeAt: ceDereferenceSelectorIndex;
+		recordGeneratedRunTime: 'ceDereferenceSelectorIndex' address: ceDereferenceSelectorIndex;
+		recordRunTimeObjectReferences
 ]
 
 { #category : #'compile abstract instructions' }
@@ -470,6 +513,14 @@ CogObjectRepresentationFor64BitSpur >> numSmallIntegerTagBits [
 CogObjectRepresentationFor64BitSpur >> numTagBits [
 	<inline: true>
 	^3
+]
+
+{ #category : #'calling convention' }
+CogObjectRepresentationFor64BitSpur >> selectorIndexDereferenceRoutine [
+	"If the object representation is 64-bits, selectors must be accessed via indices in the inline caches.
+	 Answer the routine that will map from indices to selector objects if so, otherwise nil."
+	<inline: true>
+	^ceDereferenceSelectorIndex
 ]
 
 { #category : #'debug support' }
