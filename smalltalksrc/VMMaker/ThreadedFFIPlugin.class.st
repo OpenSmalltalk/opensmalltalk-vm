@@ -274,7 +274,7 @@ ThreadedFFIPlugin >> ffiAddressOf: rcvr startingAt: byteOffset size: byteSize [
 		(rcvrSize = 4) ifFalse:[^interpreterProxy primitiveFail].
 		addr := interpreterProxy fetchPointer: 0 ofObject: rcvr.
 		"don't you dare to read from object memory!"
-		(addr == 0 or:[interpreterProxy isInMemory: addr])
+		(addr == 0 "or:[interpreterProxy isInMemory: addr]")
 			ifTrue:[^interpreterProxy primitiveFail].
 	] ifFalse:[
 		(byteOffset+byteSize-1 <= rcvrSize)
@@ -425,7 +425,9 @@ ThreadedFFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass in: calloutS
 ThreadedFFIPlugin >> ffiAtomicArgByReference: oop Class: oopClass in: calloutState [
 	<var: #calloutState type: #'CalloutState *'>
 	"Support for generic callout. Prepare a pointer reference to an atomic type for callout.
-	 Note: for type 'void*' we allow ByteArray/String/Symbol, wordVariableSubclass or Alien."
+	 Note: 
+		for type 'void*' we allow ByteArray/String/Symbol, wordVariableSubclass, Alien or ExternalAddress.
+		for other types we allow ByteArray, wordVariableSubclass, Alien or ExternalAddress."
 	| atomicType isString isAlien |
 	<inline: true>
 	atomicType := self atomicTypeOf: calloutState ffiArgHeader.
@@ -462,20 +464,25 @@ ThreadedFFIPlugin >> ffiAtomicArgByReference: oop Class: oopClass in: calloutSta
 
 	(atomicType = FFITypeVoid or:[(atomicType >> 1) = (FFITypeSignedByte >> 1)]) ifTrue:
 		"byte* -- see comment on string above"
-		[(isString
-		  or: [oopClass = interpreterProxy classByteArray]) ifTrue:"String/Symbol/ByteArray"
+		[(isString or: [oopClass = interpreterProxy classByteArray]) ifTrue: "String/Symbol/ByteArray"
 			[^self ffiPushPointer: (interpreterProxy firstIndexableField: oop) in: calloutState].
-		(isAlien or: [oopClass = interpreterProxy classExternalAddress]) ifTrue:
+		(oopClass = interpreterProxy classExternalAddress) ifTrue: 
+			[^self ffiPushPointer: (self longAt: oop + interpreterProxy baseHeaderSize) in: calloutState].
+		isAlien ifTrue:
 			[^self ffiPushPointer: (self pointerForOop: (self startOfData: oop)) in: calloutState].
 		atomicType = FFITypeVoid ifFalse:
 			[^FFIErrorCoercionFailed]].
 		"note: type void falls through"
 
-	(atomicType <= FFITypeSignedInt "void/short/int"
-	or:[atomicType = FFITypeSingleFloat]) ifTrue:
-		["require a word subclass to work"
-		(interpreterProxy isWords: oop) ifTrue:
-			[^self ffiPushPointer: (interpreterProxy firstIndexableField: oop) in: calloutState]].
+	"I can push pointers to any type (take for instance calls who receive int* output arguments, etc.)
+	 but I need to store them into a ByteArray, ExternalAddress or Alien"
+	(atomicType <= FFITypeDoubleFloat) ifTrue:
+		[((interpreterProxy isWords: oop) or: [oopClass = interpreterProxy classByteArray]) ifTrue:
+			[^self ffiPushPointer: (interpreterProxy firstIndexableField: oop) in: calloutState].
+		(oopClass = interpreterProxy classExternalAddress) ifTrue: 
+			[^self ffiPushPointer: (self longAt: oop + interpreterProxy baseHeaderSize) in: calloutState].
+		isAlien ifTrue:
+			[^self ffiPushPointer: (self pointerForOop: (self startOfData: oop)) in: calloutState]].
 
 	^FFIErrorCoercionFailed
 ]
