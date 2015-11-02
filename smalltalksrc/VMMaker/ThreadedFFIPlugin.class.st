@@ -266,6 +266,7 @@ ThreadedFFIPlugin >> externalFunctionHasStackSizeSlot [
 ThreadedFFIPlugin >> ffiAddressOf: rcvr startingAt: byteOffset size: byteSize [
 "return an int of the address of the byteSize slot (byte, short, int, whatever) at byteOffset in rcvr. Nominally intended for use with ExternalAddress objects, this code will work (for obscure historical reasons) with plain Byte or Word Arrays as well. "
 	| rcvrClass rcvrSize addr |
+	self flag: 'This needs more thought.  It is 32-bit specific.  What about 64-bit platforms?'.
 	(interpreterProxy isBytes: rcvr) ifFalse:[^interpreterProxy primitiveFail].
 	(byteOffset > 0) ifFalse:[^interpreterProxy primitiveFail].
 	rcvrClass := interpreterProxy fetchClassOf: rcvr.
@@ -273,8 +274,9 @@ ThreadedFFIPlugin >> ffiAddressOf: rcvr startingAt: byteOffset size: byteSize [
 	rcvrClass = interpreterProxy classExternalAddress ifTrue:[
 		(rcvrSize = 4) ifFalse:[^interpreterProxy primitiveFail].
 		addr := interpreterProxy fetchPointer: 0 ofObject: rcvr.
+		self flag: 'This needs more thought.  Instead of always allowing this couldn''t we allow it only if the address is associated with a pinned object?'.
 		"don't you dare to read from object memory!"
-		(addr == 0 "or:[interpreterProxy isInMemory: addr]")
+		(addr = 0 "or: [interpreterProxy isInMemory: addr]")
 			ifTrue:[^interpreterProxy primitiveFail].
 	] ifFalse:[
 		(byteOffset+byteSize-1 <= rcvrSize)
