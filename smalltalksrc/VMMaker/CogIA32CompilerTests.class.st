@@ -203,6 +203,26 @@ CogIA32CompilerTests >> testDivQuoRem [
 ]
 
 { #category : #tests }
+CogIA32CompilerTests >> testMoveAbR [
+	"self new testMoveAbR"
+	CogIA32CompilerForTests byteRegistersWithNamesDo:
+		[:reg :regname|
+		#(16r555555 16rAAAAAA) do:
+			[:addr| | inst len |
+			inst := self gen: MoveAbR operand: addr operand: reg.
+			len := inst concretizeAt: 0.
+			self processor
+				disassembleInstructionAt: 0
+				In: inst machineCode object
+				into: [:str :sz| | plainJane herIntended |
+					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
+					plainJane := self strip: str.
+					herIntended := 'movb 0x', (addr hex allButFirst: 3), ', ', regname.
+					self assert: (plainJane match: herIntended).
+					self assert: len = sz]]]
+]
+
+{ #category : #tests }
 CogIA32CompilerTests >> testMoveAwR [
 	"self new testMoveAwR"
 	CogIA32CompilerForTests registersWithNamesDo:
@@ -305,6 +325,25 @@ CogIA32CompilerTests >> testMoveMwrR [
 						((plainJane match: herIntended) and: [len = sz]) ifFalse:
 							[failures at: herIntended put: plainJane]]]]].
 	 failures"
+]
+
+{ #category : #tests }
+CogIA32CompilerTests >> testMoveRAb [
+	"self new testMoveRAb"
+	CogIA32CompilerForTests byteRegistersWithNamesDo:
+		[:reg :regname|
+		#(16r555555 16rAAAAAA) do:
+			[:addr| | inst len |
+			inst := self gen: MoveRAb operand: reg operand: addr.
+			len := inst concretizeAt: 0.
+			self processor
+				disassembleInstructionAt: 0
+				In: inst machineCode object
+				into: [:str :sz| | plainJane herIntended |
+					plainJane := self strip: str.
+					herIntended := 'movb ', regname, ', 0x', (addr hex allButFirst: 3).
+					self assert: (plainJane match: herIntended).
+					self assert: len = sz]]]
 ]
 
 { #category : #tests }

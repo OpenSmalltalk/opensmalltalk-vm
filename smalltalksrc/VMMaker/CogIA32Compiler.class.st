@@ -355,6 +355,8 @@ CogIA32Compiler >> computeMaximumSize [
 		[MoveRdRd]		-> [^4].
 		[MoveAwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
 		[MoveRAw]		-> [^(self concreteRegister: (operands at: 0)) = EAX ifTrue: [5] ifFalse: [6]].
+		[MoveAbR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
+		[MoveRAb]		-> [^(self concreteRegister: (operands at: 0)) = EAX ifTrue: [5] ifFalse: [6]].
 		[MoveRMwr]	-> [^((self isQuick: (operands at: 1))
 									ifTrue: [((operands at: 1) = 0
 											and: [(self concreteRegister: (operands at: 2)) ~= EBP])
@@ -1180,6 +1182,33 @@ CogIA32Compiler >> concretizeLogicalShiftRightCqR [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeMoveAbR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| addressOperand reg |
+	addressOperand := operands at: 0.
+	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
+		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
+	reg := self concreteRegister: (operands at: 1).
+	reg = EAX ifTrue:
+		[machineCode
+			at: 0 put: 16rA0;
+			at: 1 put: (addressOperand bitAnd: 16rFF);
+			at: 2 put: (addressOperand >> 8 bitAnd: 16rFF);
+			at: 3 put: (addressOperand >> 16 bitAnd: 16rFF);
+			at: 4 put: (addressOperand >> 24 bitAnd: 16rFF).
+			^machineCodeSize := 5].
+	machineCode
+		at: 0 put: 16r8A;
+		at: 1 put: (self mod: ModRegInd RM: 5 RO: reg);
+		at: 2 put: (addressOperand bitAnd: 16rFF);
+		at: 3 put: (addressOperand >> 8 bitAnd: 16rFF);
+		at: 4 put: (addressOperand >> 16 bitAnd: 16rFF);
+		at: 5 put: (addressOperand >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 6
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeMoveAwR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1432,6 +1461,33 @@ CogIA32Compiler >> concretizeMoveMwrR [
 		at: 5 put: (offset >> 16 bitAnd: 16rFF);
 		at: 6 put: (offset >> 24 bitAnd: 16rFF).
 	^machineCodeSize := 7
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeMoveRAb [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| addressOperand reg |
+	reg := self concreteRegister: (operands at: 0).
+	addressOperand := operands at: 1.
+	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
+		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
+	reg = EAX ifTrue:
+		[machineCode
+			at: 0 put: 16rA2;
+			at: 1 put: (addressOperand bitAnd: 16rFF);
+			at: 2 put: (addressOperand >> 8 bitAnd: 16rFF);
+			at: 3 put: (addressOperand >> 16 bitAnd: 16rFF);
+			at: 4 put: (addressOperand >> 24 bitAnd: 16rFF).
+			^machineCodeSize := 5].
+	machineCode
+		at: 0 put: 16r88;
+		at: 1 put: (self mod: ModRegInd RM: 5 RO: reg);
+		at: 2 put: (addressOperand bitAnd: 16rFF);
+		at: 3 put: (addressOperand >> 8 bitAnd: 16rFF);
+		at: 4 put: (addressOperand >> 16 bitAnd: 16rFF);
+		at: 5 put: (addressOperand >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 6
 ]
 
 { #category : #'generate machine code' }
@@ -2250,6 +2306,8 @@ CogIA32Compiler >> dispatchConcretize [
 		[MoveRR]			-> [^self concretizeMoveRR].
 		[MoveAwR]			-> [^self concretizeMoveAwR].
 		[MoveRAw]			-> [^self concretizeMoveRAw].
+		[MoveAbR]			-> [^self concretizeMoveAbR].
+		[MoveRAb]			-> [^self concretizeMoveRAb].
 		[MoveMbrR]			-> [^self concretizeMoveMbrR].
 		[MoveRMbr]			-> [^self concretizeMoveRMbr].
 		[MoveM16rR]		-> [^self concretizeMoveM16rR].
