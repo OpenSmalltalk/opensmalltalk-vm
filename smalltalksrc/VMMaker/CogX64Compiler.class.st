@@ -339,7 +339,14 @@ CogX64Compiler >> computeMaximumSize [
 		[MoveRAw]		-> [^(self isAddressRelativeToVarBase: (operands at: 1))
 								ifTrue: [7]
 								ifFalse: [(self concreteRegister: (operands at: 0)) = RAX ifTrue: [10] ifFalse: [14]]].
-		[MoveRMwr]	-> [^((self isQuick: (operands at: 1))
+		[MoveAbR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0))
+								ifTrue: [7]
+								ifFalse: [(self concreteRegister: (operands at: 1)) = RAX ifTrue: [10] ifFalse: [14]]].
+		[MoveRAb]		-> [^(self isAddressRelativeToVarBase: (operands at: 1))
+								ifTrue: [7]
+								ifFalse: [(self concreteRegister: (operands at: 0)) = RAX ifTrue: [10] ifFalse: [14]]].
+		[MoveRMwr]	-> [self assert: (self is32BitSignedImmediate: (operands at: 1)).
+							^((self isQuick: (operands at: 1))
 									ifTrue: [((operands at: 1) = 0
 											and: [((self concreteRegister: (operands at: 2)) bitAnd: 7) ~= RBP])
 												ifTrue: [3]
@@ -354,7 +361,8 @@ CogX64Compiler >> computeMaximumSize [
 										+ ((self concreteRegister: (operands at: 2)) = ESP
 											ifTrue: [1]
 											ifFalse: [0])]."
-		[MoveMbrR]		-> [^((self isQuick: (operands at: 0))
+		[MoveMbrR]		-> [self assert: (self is32BitSignedImmediate: (operands at: 0)).
+							^((self isQuick: (operands at: 0))
 									ifTrue: [((operands at: 0) = 0
 											and: [((self concreteRegister: (operands at: 1)) bitAnd: 7) ~= RBP])
 												ifTrue: [4]
@@ -363,7 +371,8 @@ CogX64Compiler >> computeMaximumSize [
 								+ (((self concreteRegister: (operands at: 1)) bitAnd: 7) = RSP
 									ifTrue: [1]
 									ifFalse: [0])].
-		[MoveRMbr]		-> [^((self isQuick: (operands at: 1))
+		[MoveRMbr]		-> [self assert: (self is32BitSignedImmediate: (operands at: 1)).
+							^((self isQuick: (operands at: 1))
 									ifTrue: [((operands at: 1) = 0
 											and: [((self concreteRegister: (operands at: 0)) bitAnd: 7) ~= RBP])
 												ifTrue: [3]
@@ -387,7 +396,8 @@ CogX64Compiler >> computeMaximumSize [
 										+ ((self concreteRegister: (operands at: 1)) = ESP
 											ifTrue: [1]
 											ifFalse: [0])]."
-		[MoveMwrR]		-> [^((self isQuick: (operands at: 0))
+		[MoveMwrR]		-> [self assert: (self is32BitSignedImmediate: (operands at: 0)).
+								^((self isQuick: (operands at: 0))
 									ifTrue: [((operands at: 0) = 0
 											and: [((self concreteRegister: (operands at: 1)) bitAnd: 7) ~= RBP])
 												ifTrue: [3]
@@ -423,7 +433,7 @@ CogX64Compiler >> computeMaximumSize [
 		[PushR]			-> [^(self concreteRegister: (operands at: 0)) < 8 ifTrue: [1] ifFalse: [2]].
 		[PushCq]		-> [^(self isQuick: (operands at: 0)) ifTrue: [2] ifFalse: [5]].
 		[PushCw]		-> [^(self inCurrentCompilation: (operands at: 0))
-								ifTrue: [6]
+								ifTrue: [9]
 								ifFalse: [self pushCwByteSize]].
 		[PrefetchAw]	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [7] ifFalse: [0]].
 		"Conversion"
@@ -812,6 +822,54 @@ CogX64Compiler >> concretizeLoadEffectiveAddressMwrR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveAbR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| addressOperand reg offset save0 save1 |
+	addressOperand := operands at: 0.
+	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
+		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
+	(self isAddressRelativeToVarBase: addressOperand) ifTrue:
+		[save0 := operands at: 0.
+		 save1 := operands at: 1.
+		 operands
+			at: 0 put: addressOperand - cogit varBaseAddress;
+			at: 1 put: RBX;
+			at: 2 put: save1.
+		 self concretizeMoveMbrR.
+		 operands
+			at: 0 put: save0;
+			at: 1 put: save1;
+			at: 2 put: 0.
+		^machineCodeSize].
+	reg := self concreteRegister: (operands at: 1).
+	reg = RAX
+		ifTrue: [offset := 0]
+		ifFalse:
+			[machineCode
+				at: 0 put: (self rexR: 0 x: 0 b: reg);
+				at: 1 put: 16r90 + (reg \\ 8).
+			 offset := 2].
+	machineCode
+		at: 0 + offset put: 16r48;
+		at: 1 + offset put: 16rA0;
+		at: 2 + offset put: (addressOperand bitAnd: 16rFF);
+		at: 3 + offset put: (addressOperand >> 8 bitAnd: 16rFF);
+		at: 4 + offset put: (addressOperand >> 16 bitAnd: 16rFF);
+		at: 5 + offset put: (addressOperand >> 24 bitAnd: 16rFF);
+		at: 6 + offset put: (addressOperand >> 32 bitAnd: 16rFF);
+		at: 7 + offset put: (addressOperand >> 40 bitAnd: 16rFF);
+		at: 8 + offset put: (addressOperand >> 48 bitAnd: 16rFF);
+		at: 9 + offset put: (addressOperand >> 56 bitAnd: 16rFF).
+	reg = RAX ifTrue:
+		[^machineCodeSize := 10].
+	machineCode
+		at: 12 put: (machineCode at: 0);
+		at: 13 put: (machineCode at: 1).
+	^machineCodeSize := 14
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveAwR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1063,6 +1121,51 @@ CogX64Compiler >> concretizeMoveMwrR [
 		at: 6 put: (offset >> 16 bitAnd: 16rFF);
 		at: 7 put: (offset >> 24 bitAnd: 16rFF).
 	^machineCodeSize := 8
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveRAb [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| addressOperand reg offset save1 |
+	reg := self concreteRegister: (operands at: 0).
+	addressOperand := operands at: 1.
+	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
+		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
+	(self isAddressRelativeToVarBase: addressOperand) ifTrue:
+		[save1 := operands at: 1.
+		 operands
+			at: 1 put: addressOperand - cogit varBaseAddress;
+			at: 2 put: RBX.
+		 self concretizeMoveRMbr.
+		 operands
+			at: 1 put: save1;
+			at: 2 put: 0.
+		^machineCodeSize].
+	reg = RAX
+		ifTrue: [offset := 0]
+		ifFalse:
+			[machineCode
+				at: 0 put: (self rexR: 0 x: 0 b: reg);
+				at: 1 put: 16r90 + (reg \\ 8).
+			 offset := 2].
+	machineCode
+		at: 0 + offset put: 16r48;
+		at: 1 + offset put: 16rA2;
+		at: 2 + offset put: (addressOperand bitAnd: 16rFF);
+		at: 3 + offset put: (addressOperand >> 8 bitAnd: 16rFF);
+		at: 4 + offset put: (addressOperand >> 16 bitAnd: 16rFF);
+		at: 5 + offset put: (addressOperand >> 24 bitAnd: 16rFF);
+		at: 6 + offset put: (addressOperand >> 32 bitAnd: 16rFF);
+		at: 7 + offset put: (addressOperand >> 40 bitAnd: 16rFF);
+		at: 8 + offset put: (addressOperand >> 48 bitAnd: 16rFF);
+		at: 9 + offset put: (addressOperand >> 56 bitAnd: 16rFF).
+	reg = RAX ifTrue:
+		[^machineCodeSize := 10].
+	machineCode
+		at: 12 put: (machineCode at: 0);
+		at: 13 put: (machineCode at: 1).
+	^machineCodeSize := 14
 ]
 
 { #category : #'generate machine code' }
@@ -1665,10 +1768,12 @@ CogX64Compiler >> dispatchConcretize [
 		"Data Movement"
 		[MoveCqR]			-> [^self concretizeMoveCqR].
 		[MoveCwR]			-> [^self concretizeMoveCwR].
-		[MoveC32R]			-> [^self concretizeMoveC32R].
+		[MoveC32R]		-> [^self concretizeMoveC32R].
 		[MoveRR]			-> [^self concretizeMoveRR].
 		[MoveAwR]			-> [^self concretizeMoveAwR].
 		[MoveRAw]			-> [^self concretizeMoveRAw].
+		[MoveAbR]			-> [^self concretizeMoveAbR].
+		[MoveRAb]			-> [^self concretizeMoveRAb].
 		[MoveMbrR]			-> [^self concretizeMoveMbrR].
 		[MoveRMbr]			-> [^self concretizeMoveRMbr].
 		[MoveM16rR]		-> [^self concretizeMoveM16rR].

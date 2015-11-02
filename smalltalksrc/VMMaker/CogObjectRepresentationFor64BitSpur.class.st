@@ -166,7 +166,6 @@ CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveNew: retNoffset [
 	<var: 'jumpVariableOrEphemeron' type: #'AbstractInstruction *'>
 
 	"header will contain classIndex/class's hash & format & numSlots/fixed size and finally fill value (nilObject)."
-	self break.
 	headerReg := fillReg := SendNumArgsReg.
 	"inst spec will hold class's instance specification, then byte size and finally end of new object."
 	instSpecReg := byteSizeReg := ClassReg.
@@ -261,7 +260,6 @@ CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	<var: 'jumpNElementsNonInt' type: #'AbstractInstruction *'>
 
 	"header will contain classIndex/class's hash & format & numSlots/fixed size"
-	self break.
 	headerReg := SendNumArgsReg.
 	"Assume there's an available scratch register on 64-bit machines"
 	fillReg := Scratch0Reg.

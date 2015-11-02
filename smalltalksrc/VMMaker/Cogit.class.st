@@ -1954,6 +1954,13 @@ Cogit >> LogicalShiftRightR: reg1 R: reg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> MoveAb: address R: reg [ 
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MoveAbR literal: address operand: reg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> MoveAw: address R: reg [ 
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2016,6 +2023,13 @@ Cogit >> MoveMw: offset r: baseReg R: destReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: MoveMwrR quickConstant: offset operand: baseReg operand: destReg
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> MoveR: reg Ab: address [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MoveRAb operand: reg literal: address
 ]
 
 { #category : #'abstract instructions' }
@@ -2418,7 +2432,7 @@ Cogit >> addressIsInFixups: address [
 { #category : #testing }
 Cogit >> addressIsInInstructions: address [
 	<var: #address type: #'AbstractInstruction *'>
-	^self cCode: '!((((unsigned)address) & BytesPerWord-1)) \
+	^self cCode: '!((unsigned)(address) & BytesPerWord-1) \
 				&& (address) >= &abstractOpcodes[0] \
 				&& (address) < &abstractOpcodes[opcodeIndex]'
 		inSmalltalk: [(abstractOpcodes object identityIndexOf: address) between: 1 and: opcodeIndex]

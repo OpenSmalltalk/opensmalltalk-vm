@@ -9,6 +9,12 @@ CogX64CompilerTests >> Label [
 	^self gen: Label operand: opcodes size
 ]
 
+{ #category : #accessing }
+CogX64CompilerTests >> addressIsInCurrentCompilation: address [ 
+	^self currentCompilationBase <= address
+	  and: [address - self currentCompilationBase < 1024]
+]
+
 { #category : #running }
 CogX64CompilerTests >> assertCheckLongArithOpCodeSize: bytes [
 	self assert: bytes > 5
@@ -22,6 +28,11 @@ CogX64CompilerTests >> assertCheckQuickArithOpCodeSize: bytes [
 { #category : #accessing }
 CogX64CompilerTests >> concreteCompilerClass [
 	^CogX64CompilerForTests
+]
+
+{ #category : #accessing }
+CogX64CompilerTests >> currentCompilationBase [
+	^16r8000
 ]
 
 { #category : #accessing }
@@ -204,6 +215,46 @@ CogX64CompilerTests >> testDivQuoRem [
 ]
 
 { #category : #tests }
+CogX64CompilerTests >> testMoveAbR [
+	"self neb testMoveAbR"
+	self concreteCompilerClass byteRegistersWithNamesDo:
+		[:reg :regname| | reg64name |
+		reg64name := self processor registerStateGetters at: reg + 1.
+		#(16r555555 16rAAAAAA 16r5A5A5A5A5A5A) do:
+			[:addr| | inst len totalsz |
+			inst := self gen: MoveAbR operand: addr operand: reg.
+			len := inst concretizeAt: 0.
+			totalsz := 0.
+			regname ~= '%al' ifTrue:
+				[self processor
+					disassembleInstructionAt: 0
+					In: inst machineCode object
+					into: [:str :sz| | plainJane herIntended |
+						plainJane := self strip: str.
+						herIntended := 'xchgq %rax, %', reg64name.
+						self assert: (plainJane match: herIntended).
+						totalsz := sz]].
+			self processor
+				disassembleInstructionAt: totalsz
+				In: inst machineCode object
+				into: [:str :sz| | plainJane herIntended |
+					plainJane := self strip: str.
+					herIntended := 'movb 0x', (addr printStringBase: 16 length: 16 padded: true), ', %al'.
+					self assert: (plainJane match: herIntended).
+					totalsz := totalsz + sz].
+			regname ~= '%al' ifTrue:
+				[self processor
+					disassembleInstructionAt: totalsz
+					In: inst machineCode object
+					into: [:str :sz| | plainJane herIntended |
+						plainJane := self strip: str.
+						herIntended := 'xchgq %rax, %', reg64name.
+						self assert: (plainJane match: herIntended).
+						totalsz := totalsz + sz]].
+			self assert: len = totalsz]]
+]
+
+{ #category : #tests }
 CogX64CompilerTests >> testMoveAwR [
 	"self new testMoveAwR"
 	self concreteCompilerClass registersWithNamesDo:
@@ -349,6 +400,46 @@ CogX64CompilerTests >> testMoveMwrR [
 ]
 
 { #category : #tests }
+CogX64CompilerTests >> testMoveRAb [
+	"self new testMoveRAb"
+	self concreteCompilerClass byteRegistersWithNamesDo:
+		[:reg :regname| | reg64name |
+		reg64name := self processor registerStateGetters at: reg + 1.
+		#(16r555555 16rAAAAAA 16r5A5A5A5A5A5A) do:
+			[:addr| | inst len totalsz |
+			inst := self gen: MoveRAb operand: reg operand: addr.
+			len := inst concretizeAt: 0.
+			totalsz := 0.
+			regname ~= '%al' ifTrue:
+				[self processor
+					disassembleInstructionAt: 0
+					In: inst machineCode object
+					into: [:str :sz| | plainJane herIntended |
+						plainJane := self strip: str.
+						herIntended := 'xchgq %rax, %', reg64name.
+						self assert: (plainJane match: herIntended).
+						totalsz := sz]].
+			self processor
+				disassembleInstructionAt: totalsz
+				In: inst machineCode object
+				into: [:str :sz| | plainJane herIntended |
+					plainJane := self strip: str.
+					herIntended := 'movb %al, 0x', (addr printStringBase: 16 length: 16 padded: true).
+					self assert: (plainJane match: herIntended).
+					totalsz := totalsz + sz].
+			regname ~= '%al' ifTrue:
+				[self processor
+					disassembleInstructionAt: totalsz
+					In: inst machineCode object
+					into: [:str :sz| | plainJane herIntended |
+						plainJane := self strip: str.
+						herIntended := 'xchgq %rax, %', reg64name.
+						self assert: (plainJane match: herIntended).
+						totalsz := totalsz + sz]].
+			self assert: len = totalsz]]
+]
+
+{ #category : #tests }
 CogX64CompilerTests >> testMoveRAw [
 	"self new testMoveRAw"
 	self concreteCompilerClass registersWithNamesDo:
@@ -385,6 +476,35 @@ CogX64CompilerTests >> testMoveRAw [
 						self assert: (plainJane match: herIntended).
 						totalsz := totalsz + sz]].
 			self assert: len = totalsz]]
+]
+
+{ #category : #'as yet unclassified' }
+CogX64CompilerTests >> testMoveRIPRelativeCwR [
+	"test rip-relative constant generation"
+	"self new testMoveRIPRelativeCwR"
+	
+	| memory |
+	memory := ByteArray new: 16.
+	{self currentCompilationBase. self currentCompilationBase + 512} do:
+		[:n| | inst len |
+		self concreteCompilerClass dataRegistersWithAccessorsDo: 
+			[ :r :rgetter :rset |
+			inst := self gen: MoveCwR operand: n operand: r.
+			len := inst concretizeAt: 0.
+			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			self processor
+				reset.
+			[[processor pc < len] whileTrue:
+				[self processor singleStepIn: memory]]
+				on: Error
+				do: [:ex| ].
+			self concreteCompilerClass dataRegistersWithAccessorsDo:
+				[:ireg :getter :setter| | expected |
+				expected := getter == rgetter ifTrue: [n] ifFalse: [0].
+				self assert: (self processor perform: getter) = expected].
+			self assert: self processor pc = inst machineCodeSize]]
+
+	"processor disassembleFrom: 0 to: inst machineCodeSize in: memory on: Transcript"
 ]
 
 { #category : #tests }
