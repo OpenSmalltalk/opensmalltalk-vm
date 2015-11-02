@@ -45,7 +45,7 @@ such third-party acknowledgments.
 @synthesize squeakApplication,squeakThread;
 
 - (void)dealloc {
-    [squeakApplication RELEASEOBJ];
+    RELEASEOBJ(squeakApplication);
     SUPERDEALLOC
 }
 

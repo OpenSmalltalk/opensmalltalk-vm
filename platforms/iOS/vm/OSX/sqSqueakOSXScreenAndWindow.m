@@ -53,7 +53,7 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 }
 
 - (void) dealloc {
-    [mainViewOnWindow RELEASEOBJ];
+    RELEASEOBJ(mainViewOnWindow);
     SUPERDEALLOC
 }
 

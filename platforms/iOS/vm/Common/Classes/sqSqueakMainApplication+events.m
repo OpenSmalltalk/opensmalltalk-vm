@@ -76,6 +76,7 @@
 		@autoreleasepool {
             [self processAsOldEventOrComplexEvent: event placeIn: evt];
         }
+        RELEASEOBJ(event);
 	}
 	
 }

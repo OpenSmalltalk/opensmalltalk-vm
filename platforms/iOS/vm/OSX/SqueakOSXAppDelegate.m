@@ -43,8 +43,8 @@
 #import "sqSqueakOSXInfoPlistInterface.h"
 #if defined(i386) || defined(__i386) || defined(__i386__)
 #else
-#import <Fabric/Fabric.h>
-#import <Crashlytics/Crashlytics.h>
+//#import <Fabric/Fabric.h>
+//#import <Crashlytics/Crashlytics.h>
 #endif
 
 #ifndef USE_CORE_GRAPHICS
@@ -63,7 +63,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 @synthesize window,mainView,possibleImageNameAtLaunchTime,checkForFileNameOnFirstParm,windowHandler;
 
 - (sqSqueakMainApplication *) makeApplicationInstance {
-	return [[[sqSqueakOSXApplication alloc] init] AUTORELEASEOBJ];
+	return AUTORELEASEOBJ([[sqSqueakOSXApplication alloc] init]);
 }
 
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification {
@@ -75,13 +75,13 @@ SqueakOSXAppDelegate *gDelegateApp;
 #if defined(i386) || defined(__i386) || defined(__i386__)
 #else
     //   [Crashlytics startWithAPIKey:@"add501476623fc20212a60334cd537d16dfd566f"];
-    [Fabric with:@[[Crashlytics class]]];
+    //[Fabric with:@[[Crashlytics class]]];
 #endif
 	
     @autoreleasepool {
 		gDelegateApp = self;	
 		self.squeakApplication = [self makeApplicationInstance];
-		self.windowHandler = [[[sqSqueakOSXScreenAndWindow alloc] init] AUTORELEASEOBJ];
+		self.windowHandler = AUTORELEASEOBJ([[sqSqueakOSXScreenAndWindow alloc] init]);
 		windowHandler.mainViewOnWindow = self.mainView;
 		self.mainView.windowLogic = windowHandler;
 		windowHandler.windowIndex = 1;
@@ -176,7 +176,7 @@ SqueakOSXAppDelegate *gDelegateApp;
     //It can right now, I have two implementations to pick (CoreGraphics or OpenGL), muy more/different could be added 
     //in the future. 
     
-    NSView *view = [[[ContentViewClass alloc] initWithFrame:[[self window] frame]] AUTORELEASEOBJ];
+    NSView *view = AUTORELEASEOBJ([[ContentViewClass alloc] initWithFrame:[[self window] frame]]);
     self.mainView = (id) view;
     [[self window] setContentView: view];
     

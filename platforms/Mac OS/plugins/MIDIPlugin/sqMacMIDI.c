@@ -290,7 +290,7 @@ int sqMIDIGetPortDirectionality(int portNum) {
 	}
 }
 
-int sqMIDIGetPortName(int portNum, int namePtr, int length) {
+int sqMIDIGetPortName(int portNum, char * namePtr, int length) {
 /* Copy the name of the given MIDI port into the string at the given
    address. Copy at most length characters, and return the number of
    characters copied. Fail if there is no port of the given number.*/
@@ -427,7 +427,7 @@ int sqMIDIParameter(int whichParameter, int modify, int newValue) {
 	return 0;
 }
 
-int sqMIDIPortReadInto(int portNum, int count, int bufferPtr) {
+int sqMIDIPortReadInto(int portNum, int count, char * bufferPtr) {
 /* bufferPtr is the address of the first byte of a Smalltalk
    ByteArray of the given length. Copy up to (length - 4) bytes
    of incoming MIDI data into that buffer, preceded by a 4-byte
@@ -456,7 +456,7 @@ int sqMIDIPortReadInto(int portNum, int count, int bufferPtr) {
 	return bytesRead + 4;
 }
 
-int sqMIDIPortWriteFromAt(int portNum, int count, int bufferPtr, int time) {
+int sqMIDIPortWriteFromAt(int portNum, int count, char *bufferPtr, int time) {
 /* bufferPtr is the address of the first byte of a Smalltalk
    ByteArray of the given length. Send its contents to the given
    port when the MIDI clock reaches the given time. If time equals

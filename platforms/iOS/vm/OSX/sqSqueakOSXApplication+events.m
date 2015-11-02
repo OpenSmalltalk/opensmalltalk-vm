@@ -156,10 +156,7 @@ static int buttonState=0;
 }
 
 - (void) pushEventToQueue: (sqInputEvent *) evt {	
-    NSMutableArray* data = [NSMutableArray arrayWithCapacity: 2];
-	[data addObject: @1];
-	[data addObject: [NSData  dataWithBytes:(const void *) evt length: sizeof(sqInputEvent)]];
-	[eventQueue addItem: data];
+	[eventQueue addItem: @[@1,[NSData  dataWithBytes:(const void *) evt length: sizeof(sqInputEvent)]]];
 }
 
 - (void) recordCharEvent:(NSString *) unicodeString fromView: (sqSqueakOSXOpenGLView *) mainView {
@@ -195,7 +192,7 @@ static int buttonState=0;
             }
 		}
 		
-		NSString *lookupString = [[[NSString alloc] initWithCharacters: &unicode length: 1] AUTORELEASEOBJ];
+		NSString *lookupString = AUTORELEASEOBJ([[NSString alloc] initWithCharacters: &unicode length: 1]);
 		[lookupString getBytes: &macRomanCharacter maxLength: 1 usedLength: NULL encoding: NSMacOSRomanStringEncoding
 					   options: 0 range: picker remainingRange: NULL];
 		

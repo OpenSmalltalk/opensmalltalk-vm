@@ -191,7 +191,7 @@ sqInt dir_Delete(char *pathString, sqInt pathStringLength){
 
 NSString* createFilePathFromString(char * aFilenameString,
 									sqInt filenameLength, sqInt resolveAlias) {
-	NSString * filePath = [[[NSString alloc] initWithBytes: aFilenameString length: (NSUInteger) filenameLength encoding: NSUTF8StringEncoding] AUTORELEASEOBJ];
+	NSString * filePath = AUTORELEASEOBJ([[NSString alloc] initWithBytes: aFilenameString length: (NSUInteger) filenameLength encoding: NSUTF8StringEncoding]);
 	if (!filePath) {
 		return NULL;
 	}
@@ -203,7 +203,7 @@ NSString* createFilePathFromString(char * aFilenameString,
 		NSString *newFilePath = [gDelegateApp.squeakApplication.fileDirectoryLogic resolvedAliasFiles: owningDirectoryPath];
 		filePath = [newFilePath stringByAppendingPathComponent: [filePath lastPathComponent]];
 	}
-    [filePath RETAINOBJ];
+
 	return filePath;
 }
 

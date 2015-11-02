@@ -64,7 +64,7 @@
 	copyImage1To32(srcBits, dBits, srcPixelWidth, height, left, top, right, bottom,colorMap);
 	
 	
-	CHECKANDRETURN([[[NSBitmapImageRep alloc] initWithBitmapDataPlanes:(unsigned char **)&dBits
+	CHECKANDRETURN(AUTORELEASEOBJ([[NSBitmapImageRep alloc] initWithBitmapDataPlanes:(unsigned char **)&dBits
 														   pixelsWide:right-left
 														   pixelsHigh:bottom-top
 														bitsPerSample:bitsPerSample
@@ -73,7 +73,7 @@
 															 isPlanar:NO
 													   colorSpaceName:colorSpace
 														  bytesPerRow:bytesPerRow
-														 bitsPerPixel:bitsPerPixel] AUTORELEASEOBJ]);
+														 bitsPerPixel:bitsPerPixel]));
 }//extractPixels_1_to_32;
 
 
@@ -96,7 +96,7 @@
 	copyImage2To32(srcBits, dBits, srcPixelWidth, height, left, top, right, bottom,colorMap);
 	
 	
-	CHECKANDRETURN([[[NSBitmapImageRep alloc] initWithBitmapDataPlanes:(unsigned char **)&dBits
+	CHECKANDRETURN(AUTORELEASEOBJ([[NSBitmapImageRep alloc] initWithBitmapDataPlanes:(unsigned char **)&dBits
 														   pixelsWide:right-left
 														   pixelsHigh:bottom-top
 														bitsPerSample:bitsPerSample
@@ -105,7 +105,7 @@
 															 isPlanar:NO
 													   colorSpaceName:colorSpace
 														  bytesPerRow:bytesPerRow
-														 bitsPerPixel:bitsPerPixel] AUTORELEASEOBJ]);
+														 bitsPerPixel:bitsPerPixel]));
 }//extractPixels_2_to_32;
 
 -(CGImageRef)extractPixels_4_to_32:(void*)srcBits 
@@ -127,7 +127,7 @@
 	copyImage4To32(srcBits, dBits, srcPixelWidth, height, left, top, right, bottom,colorMap);
 	
 	
-	CHECKANDRETURN([[[NSBitmapImageRep alloc] initWithBitmapDataPlanes:(unsigned char **)&dBits
+	CHECKANDRETURN(AUTORELEASEOBJ([[NSBitmapImageRep alloc] initWithBitmapDataPlanes:(unsigned char **)&dBits
 														   pixelsWide:right-left
 														   pixelsHigh:bottom-top
 														bitsPerSample:bitsPerSample
@@ -136,7 +136,7 @@
 															 isPlanar:NO
 													   colorSpaceName:colorSpace
 														  bytesPerRow:bytesPerRow
-														 bitsPerPixel:bitsPerPixel] AUTORELEASEOBJ]);
+														 bitsPerPixel:bitsPerPixel]));
 }//extractPixels_4_to_32;
 
 
@@ -159,7 +159,7 @@
 		copyImage8To32(srcBits, dBits, srcPixelWidth, height, left, top, right, bottom,colorMap);
 		
 		
-		CHECKANDRETURN([[[NSBitmapImageRep alloc] initWithBitmapDataPlanes:(unsigned char **)&dBits
+		CHECKANDRETURN(AUTORELEASEOBJ([[NSBitmapImageRep alloc] initWithBitmapDataPlanes:(unsigned char **)&dBits
 				pixelsWide:right-left
 				pixelsHigh:bottom-top
 				bitsPerSample:bitsPerSample
@@ -168,7 +168,7 @@
 				isPlanar:NO
 				colorSpaceName:colorSpace
 				bytesPerRow:bytesPerRow
-				bitsPerPixel:bitsPerPixel] AUTORELEASEOBJ]);
+				bitsPerPixel:bitsPerPixel]));
 	}//extractPixels_8_to_32;
 	
 
@@ -189,7 +189,7 @@
 	
 	copyImage16To32(srcBits, dBits, srcPixelWidth, height, left, top, right, bottom);
 	
-	CHECKANDRETURN([[[NSBitmapImageRep alloc] initWithBitmapDataPlanes:(unsigned char **)&dBits
+	CHECKANDRETURN(AUTORELEASEOBJ([[NSBitmapImageRep alloc] initWithBitmapDataPlanes:(unsigned char **)&dBits
 														   pixelsWide:right-left
 														   pixelsHigh:bottom-top
 														bitsPerSample:bitsPerSample
@@ -198,7 +198,7 @@
 															 isPlanar:NO
 													   colorSpaceName:colorSpace
 														  bytesPerRow:bytesPerRow
-														 bitsPerPixel:bitsPerPixel] AUTORELEASEOBJ]);
+														 bitsPerPixel:bitsPerPixel]));
 }//extractPixels_16_to_32;
 
 -(CGImageRef)computeBitmapFromBitsIndex:(void*)srcBits

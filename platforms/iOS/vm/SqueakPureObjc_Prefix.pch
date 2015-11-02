@@ -7,12 +7,13 @@
 #endif
 
 #if __has_feature(objc_arc)
-#define RELEASEOBJ
-#define RETAINOBJ
-#define AUTORELEASEOBJ
+#define RELEASEOBJ(x)
+#define RETAINOBJ(x) x
+#define AUTORELEASEOBJ(x) x
+#define SUPERDEALLOC
 #else
-#define RELEASEOBJ release
-#define RETAINOBJ retain
-#define AUTORELEASEOBJ autorelease
+#define RELEASEOBJ(x) [x release]
+#define RETAINOBJ(x) [x retain]
+#define AUTORELEASEOBJ(x) [x autorelease]
 #define SUPERDEALLOC [super dealloc];
 #endif

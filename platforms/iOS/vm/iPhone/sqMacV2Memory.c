@@ -167,6 +167,7 @@ sqMemoryExtraBytesLeft(sqInt includingSwap) {
 	return gMaxHeapSize - gHeapSize;
 }
 
+#ifndef SPURVM
 void 
 sqMacMemoryFree() {
 	if (gSqueakUseFileMappedMMAP) {
@@ -174,6 +175,7 @@ sqMacMemoryFree() {
 		munmap(startOfmmapForANONMemory,freeSpaceRoundedUpToPageSize);
 	}
 }
+#endif
 
 #ifdef BUILD_FOR_OSX
 size_t 
@@ -249,4 +251,36 @@ sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
 	if (munmap(addr, sz) != 0)
 		perror("sqDeallocateMemorySegment... munmap");
 }
+
+static int mmax(size_t x, size_t y) { return (x > y) ? x : y; }
+
+
+/* Answer the address of minHeapSize rounded up to page size bytes of memory. */
+usqInt
+sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
+{
+    char *hint, *address, *alloc;
+    unsigned long alignment, allocBytes;
+    
+    if (pageSize) {
+        fprintf(stderr, "sqAllocateMemory: already called\n");
+        exit(1);
+    }
+    pageSize = getpagesize();
+    pageMask = ~(pageSize - 1);
+    
+    hint = sbrk(0);
+    
+    alignment = mmax(pageSize,1024*1024);
+    address = (char *)(((usqInt)hint + alignment - 1) & ~(alignment - 1));
+    
+    alloc = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto
+    (roundUpToPage(desiredHeapSize), address, &allocBytes);
+    if (!alloc) {
+        fprintf(stderr, "sqAllocateMemory: initial alloc failed!\n");
+        exit(errno);
+    }
+    return (usqInt)alloc;
+}
+
 #endif /* SPURVM */

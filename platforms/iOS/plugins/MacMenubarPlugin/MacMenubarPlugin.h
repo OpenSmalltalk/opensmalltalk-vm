@@ -34,7 +34,7 @@ typedef void*           MenuRef;
 
 
 Boolean ioCheckMenuHandle(MenuHandle menuHandle);
-#define TARGET_API_MAC_CARBON 1
+//#define TARGET_API_MAC_CARBON 1
 #define kHICommandHide 'hide'
 
 MenuRef GetMenuHandle(MenuID menuID);

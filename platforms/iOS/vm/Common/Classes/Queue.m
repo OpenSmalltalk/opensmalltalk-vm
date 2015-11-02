@@ -73,7 +73,7 @@ Copyright (C) 2007 Apple Inc. All Rights Reserved.
 
 - (void) dealloc
 {
-    [mItemArray RELEASEOBJ];
+    RELEASEOBJ(mItemArray);
     SUPERDEALLOC
 }
 
@@ -86,6 +86,7 @@ Copyright (C) 2007 Apple Inc. All Rights Reserved.
 	anObject = [mItemArray lastObject];
 	if (anObject)
 	{
+        RETAINOBJ(anObject);
 		[mItemArray removeLastObject];		
 	}
 		}

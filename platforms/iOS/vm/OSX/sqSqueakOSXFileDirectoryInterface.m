@@ -74,7 +74,7 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 - (NSString *)resolvedAliasFiles:(NSString *)filePath {
 	NSArray *compoents = [[filePath stringByStandardizingPath] pathComponents];
 	NSString *thisComponent;
-	NSString *path = [[[NSString alloc] init] AUTORELEASEOBJ];
+	NSString *path = AUTORELEASEOBJ([[NSString alloc] init]);
 	for (thisComponent in compoents) {
 		path = [path stringByAppendingPathComponent:thisComponent];
 		if (![[NSFileManager defaultManager] fileExistsAtPath:path])

@@ -7,6 +7,7 @@
 //
 
 #import "MacMenuOS9ToOSX.h"
+#import <Cocoa/Cocoa.h>
 
 
 Boolean ioCheckMenuHandle(MenuHandle menuHandle) {

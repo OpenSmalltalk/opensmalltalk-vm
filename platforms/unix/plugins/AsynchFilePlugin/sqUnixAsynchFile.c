@@ -140,7 +140,7 @@ INLINE static FilePtr newFileRec(int fd, int sema)
   return fp;
 }
 
-INLINE static allocateBuffer(struct FileBuf *buf, int size)
+INLINE static int allocateBuffer(struct FileBuf *buf, int size)
 {
   if (buf->capacity >= size)
     return 1;

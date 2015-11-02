@@ -75,8 +75,8 @@ void * sqCreateClipboard( void )
 
 void sqPasteboardPutItemFlavordatalengthformatTypeformatLength ( CLIPBOARDTYPE inPasteboard, char* inData, sqInt dataLength, char* format, sqInt formatLength)
 {
-    NSString *formatType = [[[NSString alloc] initWithBytes: format length: formatLength encoding:  NSUTF8StringEncoding] AUTORELEASEOBJ];
-    NSData* data = [[[NSData alloc ] initWithBytes: inData length: dataLength] AUTORELEASEOBJ];
+    NSString *formatType = AUTORELEASEOBJ([[NSString alloc] initWithBytes: format length: formatLength encoding:  NSUTF8StringEncoding]);
+    NSData* data = AUTORELEASEOBJ([[NSData alloc ] initWithBytes: inData length: dataLength]);
     NSArray *arrayOfTypes = @[formatType];
     
     [inPasteboard declareTypes: arrayOfTypes owner: nil];
@@ -86,7 +86,7 @@ void sqPasteboardPutItemFlavordatalengthformatTypeformatLength ( CLIPBOARDTYPE i
 
 sqInt sqPasteboardCopyItemFlavorDataformatformatLength ( CLIPBOARDTYPE inPasteboard, char* format, sqInt formatLength)
 {
-    NSString *formatType = [[[NSString alloc] initWithBytes: format length: formatLength encoding:  NSUTF8StringEncoding] AUTORELEASEOBJ];
+    NSString *formatType = AUTORELEASEOBJ([[NSString alloc] initWithBytes: format length: formatLength encoding:  NSUTF8StringEncoding]);
     NSArray *arrayOfTypes = @[formatType];
     NSString     *type= [inPasteboard availableTypeFromArray: arrayOfTypes];
     

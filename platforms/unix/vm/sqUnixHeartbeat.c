@@ -463,9 +463,9 @@ ioHeartbeatMilliseconds() { return beatMilliseconds; }
 unsigned long
 ioHeartbeatFrequency(int resetStats)
 {
-	unsigned duration = (ioUTCMicroseconds() - get64(frequencyMeasureStart))
+	unsigned long duration = (ioUTCMicroseconds() - get64(frequencyMeasureStart))
 						/ MicrosecondsPerSecond;
-	unsigned frequency = duration ? heartbeats / duration : 0;
+	unsigned long frequency = duration ? heartbeats / duration : 0;
 
 	if (resetStats) {
 		unsigned long long zero = 0;

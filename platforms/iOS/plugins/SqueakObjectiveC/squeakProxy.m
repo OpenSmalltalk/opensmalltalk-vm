@@ -92,11 +92,11 @@
 		return;
 	}
 	
-	if([lockForSqueak lockWhenCondition: 0 beforeDate: (timeout = [[[NSDate alloc] initWithTimeIntervalSinceNow: 3.0] AUTORELEASEOBJ])])
+	if([lockForSqueak lockWhenCondition: 0 beforeDate: (timeout = AUTORELEASEOBJ([[NSDate alloc] initWithTimeIntervalSinceNow: 3.0]))])
 	{ 
 		// NSLog(@"inside lock 0");
 		[lockForSqueak unlockWithCondition: 1];
-		invocation = [anInvocation RETAINOBJ];
+		invocation = RETAINOBJ(anInvocation);
 		
 		// NSLog(@"signalling squeak");
 		interpreterProxy->signalSemaphoreWithIndex(sem);
@@ -104,7 +104,7 @@
 		if (isCarbonVM)
 			interpreterProxy->callbackEnter(&callbackid);
 		
-		if([lockForSqueak lockWhenCondition: 2 beforeDate: (timeout = [[[NSDate alloc] initWithTimeIntervalSinceNow: 5.0] AUTORELEASEOBJ])] )
+		if([lockForSqueak lockWhenCondition: 2 beforeDate: (timeout = AUTORELEASEOBJ([[NSDate alloc] initWithTimeIntervalSinceNow: 5.0]))] )
 		{
 			// NSLog(@"inside lock 2");
 			invocation = nil;
@@ -189,9 +189,9 @@
 
 - (void) dealloc
 {
-    [lockForSqueak RELEASEOBJ];
-    [sigs RELEASEOBJ];
-    [target RELEASEOBJ];
+    RELEASEOBJ(lockForSqueak);
+    RELEASEOBJ(sigs);
+    RELEASEOBJ(target);
     SUPERDEALLOC
 }
 

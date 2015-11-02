@@ -30,6 +30,7 @@
 /* The virtual machine proxy definition */
 #include "sqVirtualMachine.h"
 #ifdef BUILD_FOR_OSX
+#import <Cocoa/Cocoa.h>
 typedef NSPasteboard * CLIPBOARDTYPE;
 #else
 typedef UIPasteboard * CLIPBOARDTYPE;

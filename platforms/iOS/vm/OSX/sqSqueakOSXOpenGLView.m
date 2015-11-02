@@ -70,7 +70,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		NSOpenGLPFABackingStore,
 		0
     };
-    return[[[NSOpenGLPixelFormat alloc] initWithAttributes:attrs] AUTORELEASEOBJ];
+    return AUTORELEASEOBJ([[NSOpenGLPixelFormat alloc] initWithAttributes:attrs]);
 }
 
 - (id)initWithFrame:(NSRect)frameRect {
@@ -415,7 +415,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	//http://www.internet4classrooms.com/mac_ext.gif
 	//http://developer.apple.com/legacy/mac/library/documentation/mac/Text/Text-571.html
 	
-	keyBoardStrokeDetails *aKeyBoardStrokeDetails = [[[keyBoardStrokeDetails alloc] init] AUTORELEASEOBJ];
+	keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	
@@ -433,7 +433,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 -(void)keyDown:(NSEvent*)theEvent {
-	keyBoardStrokeDetails *aKeyBoardStrokeDetails = [[[keyBoardStrokeDetails alloc] init] AUTORELEASEOBJ];
+	keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	
@@ -462,7 +462,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 - (void)flagsChanged:(NSEvent *)theEvent {
-	keyBoardStrokeDetails *aKeyBoardStrokeDetails = [[[keyBoardStrokeDetails alloc] init] AUTORELEASEOBJ];
+	keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	self.lastSeenKeyBoardModifierDetails = aKeyBoardStrokeDetails;
@@ -549,7 +549,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 																																									return;
 	
 	@synchronized(self) {
-		keyBoardStrokeDetails *aKeyBoardStrokeDetails = [[[keyBoardStrokeDetails alloc] init] AUTORELEASEOBJ];
+		keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
 		aKeyBoardStrokeDetails.keyCode = keyCode;
 		aKeyBoardStrokeDetails.modifierFlags = self.lastSeenKeyBoardModifierDetails.modifierFlags;
 		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;

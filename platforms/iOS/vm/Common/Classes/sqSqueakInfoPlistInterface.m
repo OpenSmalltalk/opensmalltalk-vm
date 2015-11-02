@@ -56,7 +56,7 @@ such third-party acknowledgments.
 }
 
 - (void)dealloc {
-    [defaults RELEASEOBJ];
+    RELEASEOBJ(defaults);
     SUPERDEALLOC
 }
 

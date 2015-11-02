@@ -11,9 +11,9 @@
 		9402DD7010CE0E91005C2102 /* SqViewClut.m in Sources */ = {isa = PBXBuildFile; fileRef = 9402DD6F10CE0E91005C2102 /* SqViewClut.m */; };
 		9422C3B51AFFFAC500448DC0 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9422C3B31AFFFAC500448DC0 /* Localizable.strings */; };
 		943B9CA11235C5120056205E /* sqMacHostWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 943B9C9E1235C5120056205E /* sqMacHostWindow.m */; };
-		944154941BD595710062FCDE /* sqMacUnixExternalPrims.m in Sources */ = {isa = PBXBuildFile; fileRef = 946DA9FF10C0D35500F26F56 /* sqMacUnixExternalPrims.m */; settings = {ASSET_TAGS = (); }; };
-		94502E951BB609AC00EA8942 /* sqUnixSpurMemory.c in Sources */ = {isa = PBXBuildFile; fileRef = 94502E941BB609AC00EA8942 /* sqUnixSpurMemory.c */; settings = {ASSET_TAGS = (); }; };
-		94502E971BB71A9200EA8942 /* sqSqueakMainApplication+imageReadWrite.m in Sources */ = {isa = PBXBuildFile; fileRef = 94A0E8840DE5EF430071C8B9 /* sqSqueakMainApplication+imageReadWrite.m */; settings = {ASSET_TAGS = (); }; };
+		944154941BD595710062FCDE /* sqMacUnixExternalPrims.m in Sources */ = {isa = PBXBuildFile; fileRef = 946DA9FF10C0D35500F26F56 /* sqMacUnixExternalPrims.m */; };
+		94502E951BB609AC00EA8942 /* sqUnixSpurMemory.c in Sources */ = {isa = PBXBuildFile; fileRef = 94502E941BB609AC00EA8942 /* sqUnixSpurMemory.c */; };
+		94502E971BB71A9200EA8942 /* sqSqueakMainApplication+imageReadWrite.m in Sources */ = {isa = PBXBuildFile; fileRef = 94A0E8840DE5EF430071C8B9 /* sqSqueakMainApplication+imageReadWrite.m */; };
 		94584FDB10F02378001401E7 /* sqMacExtendedClipboard.m in Sources */ = {isa = PBXBuildFile; fileRef = 94584FD910F02378001401E7 /* sqMacExtendedClipboard.m */; };
 		9463C1BF1AEE13F3009C5CE5 /* ADPCMCodecPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658E40DDD03FE00358328 /* ADPCMCodecPlugin.c */; };
 		9463C1C01AEE145C009C5CE5 /* B2DPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658E60DDD03FE00358328 /* B2DPlugin.c */; };
@@ -171,11 +171,11 @@
 		949382791B001C7A00C802B2 /* sqSqueakOSXInfoPlistInterface.m in Sources */ = {isa = PBXBuildFile; fileRef = 94BCAE6810ACA10100F87527 /* sqSqueakOSXInfoPlistInterface.m */; };
 		9493827A1B001C7E00C802B2 /* sqSqueakInfoPlistInterface.m in Sources */ = {isa = PBXBuildFile; fileRef = 9412CAE50E6C05EC00DB8625 /* sqSqueakInfoPlistInterface.m */; };
 		94B9533510E6BD7100DC476A /* MacMenuOS9ToOSX.m in Sources */ = {isa = PBXBuildFile; fileRef = 94B9533410E6BD7100DC476A /* MacMenuOS9ToOSX.m */; };
-		94BB096E1BB47DDB0016BFDF /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB096B1BB47DDB0016BFDF /* Security.framework */; settings = {ASSET_TAGS = (); }; };
+		94BB096E1BB47DDB0016BFDF /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB096B1BB47DDB0016BFDF /* Security.framework */; };
 		94BB09721BB47F9B0016BFDF /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB09711BB47F9B0016BFDF /* libz.tbd */; };
 		94BB09741BB47FB20016BFDF /* libstdc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB09731BB47FB20016BFDF /* libstdc++.tbd */; };
 		94BB09761BB47FCD0016BFDF /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB09751BB47FCD0016BFDF /* libc++.tbd */; };
-		94BB09781BB480AC0016BFDF /* HostWindowPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658FA0DDD03FE00358328 /* HostWindowPlugin.c */; settings = {ASSET_TAGS = (); }; };
+		94BB09781BB480AC0016BFDF /* HostWindowPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658FA0DDD03FE00358328 /* HostWindowPlugin.c */; };
 		94C315341AD4949B0096E59D /* AsynchFilePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94C315311AD4949B0096E59D /* AsynchFilePlugin.c */; };
 		94C317511AD495CD0096E59D /* JoystickTabletPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94C317491AD495CD0096E59D /* JoystickTabletPlugin.c */; };
 		94C317541AD495CD0096E59D /* LocalePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94C3174B1AD495CD0096E59D /* LocalePlugin.c */; };
@@ -191,14 +191,14 @@
 		94D921571AC6321800A5970F /* LargeIntegers.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E659040DDD03FE00358328 /* LargeIntegers.c */; };
 		94D921581AC6321E00A5970F /* ZipPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6591F0DDD03FE00358328 /* ZipPlugin.c */; };
 		94D9215B1AC6337D00A5970F /* sqManualSurface.c in Sources */ = {isa = PBXBuildFile; fileRef = 94BD816F11C8A58D00556751 /* sqManualSurface.c */; };
-		94F478C91BB527440069E57B /* gcc3x-cointerp.c in Sources */ = {isa = PBXBuildFile; fileRef = 94F478C51BB527440069E57B /* gcc3x-cointerp.c */; settings = {ASSET_TAGS = (); }; };
-		94F478D01BB52D8D0069E57B /* cogitIA32.c in Sources */ = {isa = PBXBuildFile; fileRef = 94F478CA1BB52D3A0069E57B /* cogitIA32.c */; settings = {ASSET_TAGS = (); }; };
-		94FA4CD51BB4D43900C1BE8F /* b3dAlloc.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E659980DDD053900358328 /* b3dAlloc.c */; settings = {ASSET_TAGS = (); }; };
-		94FA4CD61BB4D43900C1BE8F /* b3dDraw.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6599A0DDD053900358328 /* b3dDraw.c */; settings = {ASSET_TAGS = (); }; };
-		94FA4CD71BB4D43900C1BE8F /* b3dMain.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6599C0DDD053900358328 /* b3dMain.c */; settings = {ASSET_TAGS = (); }; };
-		94FA4CD81BB4D43900C1BE8F /* b3dRemap.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6599D0DDD053900358328 /* b3dRemap.c */; settings = {ASSET_TAGS = (); }; };
+		94F478C91BB527440069E57B /* gcc3x-cointerp.c in Sources */ = {isa = PBXBuildFile; fileRef = 94F478C51BB527440069E57B /* gcc3x-cointerp.c */; };
+		94F478D01BB52D8D0069E57B /* cogitIA32.c in Sources */ = {isa = PBXBuildFile; fileRef = 94F478CA1BB52D3A0069E57B /* cogitIA32.c */; };
+		94FA4CD51BB4D43900C1BE8F /* b3dAlloc.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E659980DDD053900358328 /* b3dAlloc.c */; };
+		94FA4CD61BB4D43900C1BE8F /* b3dDraw.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6599A0DDD053900358328 /* b3dDraw.c */; };
+		94FA4CD71BB4D43900C1BE8F /* b3dMain.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6599C0DDD053900358328 /* b3dMain.c */; };
+		94FA4CD81BB4D43900C1BE8F /* b3dRemap.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6599D0DDD053900358328 /* b3dRemap.c */; };
 		94FA4CE31BB4DD9000C1BE8F /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94329ECA12275FFA0090298B /* OpenGL.framework */; };
-		94FA4CE51BB4DE1400C1BE8F /* Images-2.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 94FA4CE41BB4DE1400C1BE8F /* Images-2.xcassets */; settings = {ASSET_TAGS = (); }; };
+		94FA4CE51BB4DE1400C1BE8F /* Images-2.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 94FA4CE41BB4DE1400C1BE8F /* Images-2.xcassets */; };
 		94FE5EC31B7A6232000D6014 /* sqSqueakOSXCGView.m in Sources */ = {isa = PBXBuildFile; fileRef = 94FE5EC21B7A6232000D6014 /* sqSqueakOSXCGView.m */; };
 /* End PBXBuildFile section */
 
@@ -1862,7 +1862,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_OBJC_ARC = NO;
 				CLANG_USE_OPTIMIZATION_PROFILE = NO;
-				CODE_SIGN_IDENTITY = "Developer ID Application";
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1886,7 +1885,7 @@
 				OTHER_CFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.osx3286.cog;
 				PRODUCT_NAME = Squeak;
-				PROVISIONING_PROFILE = "a81f3cd0-20de-4e0b-b7a8-a98bcd57ec0c";
+				PROVISIONING_PROFILE = "";
 			};
 			name = Debug;
 		};
@@ -1897,7 +1896,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_OBJC_ARC = NO;
 				CLANG_USE_OPTIMIZATION_PROFILE = NO;
-				CODE_SIGN_IDENTITY = "Developer ID Application";
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",

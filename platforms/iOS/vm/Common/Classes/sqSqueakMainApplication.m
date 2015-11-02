@@ -209,10 +209,12 @@ extern sqInt interpret(void);  //This is a VM Callback
     
 }
 
+#ifndef SPURVM
 #if COGVM
     void sqMacMemoryFree();
 #else
     void sqMacMemoryFree(void);
+#endif
 #endif
 
 - (void) ioExit {

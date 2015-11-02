@@ -126,7 +126,7 @@ void mtfsfi(unsigned long long fpscr) {}
 }
 
 - (void) setupSoundLogic {
-	self.soundInterfaceLogic = [[[sqSqueakOSXSoundCoreAudio alloc] init] AUTORELEASEOBJ];
+	self.soundInterfaceLogic = AUTORELEASEOBJ([[sqSqueakOSXSoundCoreAudio alloc] init]);
  	[(sqSqueakOSXSoundCoreAudio *) self.soundInterfaceLogic soundInitOverride];
 
 	snd_Start(2644, 22050, 1, 0);
@@ -195,7 +195,7 @@ void mtfsfi(unsigned long long fpscr) {}
 	
 	if ([args count] < 2) 
 		return;
-	NSMutableArray *revisedArgs = [[args mutableCopyWithZone: NULL] AUTORELEASEOBJ];
+	NSMutableArray *revisedArgs = AUTORELEASEOBJ([args mutableCopyWithZone: NULL]);
 	[revisedArgs removeObjectAtIndex:0];
 	
 	NSUInteger i,result;
