@@ -337,7 +337,7 @@ error:
 }
 
 int isSerialPortDev(char *s) {
-	return isPrefix("ttyusb", s);
+	return isPrefix("ttyusb", s) || isPrefix("ttyAMA", s);
 }
 
 int isPrefix(char *prefix, char *s) {

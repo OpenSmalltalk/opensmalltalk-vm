@@ -30,7 +30,12 @@
  * Reformatted for and integrated into Squeak build by: ian at
  * squeakland dot oh are gee
  * 
- * Last edited: 2009-08-19 04:39:12 by piumarta on emilia-2.local
+ * Modified for Scratch on Raspberry Pi by Manabu Sugiura
+ * - Compatibility of MIDI instruments on Raspbian
+ * - YAMAHA NSX-1 and NSX-39
+ *   http://yamaha-webmusic.github.io/nsx1-apps/specs/ANMW820A-001-10-j.pdf
+ *
+ * Last edited: 2014-09-17 22:33:32 by manabu on raspberrypi
  */
 
 /*** MIDI Parameters (used with sqMIDIParameter function) ***/
@@ -143,6 +148,33 @@ char argumentBytes[128] = {
   3, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
+/* Phonetic Symbols Buffer for YAMAHA NSX-1 */ 
+char ps[128];
+int ps_index = 0;
+
+/* Port information Buffers 
+
+Sample:
+-MIDI settings
+% acconet -o
+Port  Client name   Port name
+14:0  Midi Through  Midi Through Port-0
+20:0  NSX-39        NSX-39 MIDI 1
+128:0 TiMidity      TiMidity port 0
+128:1 TiMidity      TiMidity port 1
+128:2 TiMidity      TiMidity port 2
+128:3 TiMidity      TiMidity port 3
+
+-Port information Buffers
+portIds[14,20,128,128,128,128]
+portNums[0,0,0,1,2,3] 
+*/
+
+#define MAX_PORT_COUNT 256
+int portIds[MAX_PORT_COUNT]; // client ids
+int portNums[MAX_PORT_COUNT]; // port numbers
+int portTypes[MAX_PORT_COUNT] = {0}; // now ignore input client
+
 static void performMIDICmd(snd_seq_event_t *ev, int cmdByte, int arg1, int arg2);
 static void processMIDIByte(snd_seq_event_t *ev, int aByte);
 static void startMIDICommand(snd_seq_event_t *ev, int cmdByte);
@@ -155,23 +187,29 @@ extern struct VirtualMachine *interpreterProxy;
 */
 int sqMIDIClosePort(int portNum)
 {
-  int ret= 0;
+  int ret = 0;
+  snd_seq_event_t ev;
 
-  if (portNum == 0)
-    {
-      if (out_port >= 0)
-	ret= snd_seq_delete_simple_port(seq, out_port);
+  if(portTypes[portNum] == 0){
+    if (out_port >= 0) {
+      char all_note_off[] = {MIDI_CMD_CONTROL, 0x7b, 0x00};
+      snd_seq_ev_set_sysex(&ev, sizeof(all_note_off), all_note_off);
+      snd_seq_ev_set_direct(&ev);
+      snd_seq_ev_set_source(&ev, 0);
+      snd_seq_ev_set_dest(&ev, portIds[portNum], 0);
+      snd_seq_event_output(seq, &ev);
+      snd_seq_drain_output(seq);
+      ret = snd_seq_delete_simple_port(seq, out_port);
       out_port= -1;
     }
-  else if (portNum == 1)
-    {
-      if (in_port >= 0)
+  } else if (portTypes[portNum] == 1) {
+    if (in_port >= 0) {
 	ret= snd_seq_delete_simple_port(seq, in_port);
       in_port= -1;
     }
-  else
+  } else {
     return interpreterProxy->success(false);
-
+  } 
   return ret;
 }
 
@@ -197,8 +235,40 @@ int sqMIDIGetClock(void)
 int sqMIDIGetPortCount(void)
 {
   DPRINTF("sqMIDIGetPortCount\n");
+  snd_seq_client_info_t *cinfo;
+  snd_seq_port_info_t *pinfo;
+  
+  snd_seq_client_info_alloca(&cinfo);
+  snd_seq_client_info_set_client(cinfo, -1);
+  
+  int cap;
+  int count = 0;
+  int client;
+  
+  while (snd_seq_query_next_client(seq, cinfo) >= 0 ){
+    client = snd_seq_client_info_get_client(cinfo);
+
+    snd_seq_port_info_alloca(&pinfo);
+    snd_seq_port_info_set_client(pinfo, client);
+    snd_seq_port_info_set_port(pinfo, -1);
+    
+    // while the next port is available
+    while (snd_seq_query_next_port(seq, pinfo) >= 0) {
+      cap = snd_seq_port_info_get_capability(pinfo);
+      // select output ports
+      if ((cap & SND_SEQ_PORT_CAP_SUBS_WRITE) != 0 && snd_seq_client_id(seq) != snd_seq_port_info_get_client(pinfo)) {
+	if (snd_seq_client_id(seq) != snd_seq_port_info_get_client(pinfo)) { 
+	  if (count < MAX_PORT_COUNT && strcmp(snd_seq_client_info_get_name(cinfo), "Midi Through") != 0) { //skip Midi Through port
+	    portIds[count] = snd_seq_port_info_get_client(pinfo);
+	    portNums[count] = snd_seq_port_info_get_port(pinfo);
+	    count++;
+	  }
+	}
+      }
+    }
+  }
   success(true);
-  return 1;
+  return count; 
 }
 
 /* Return an integer indicating the directionality of the given
@@ -207,10 +277,11 @@ int sqMIDIGetPortCount(void)
 */
 int sqMIDIGetPortDirectionality(int portNum)
 {
-  switch (portNum)
+  switch(portTypes[portNum])
     {
     case 0:	return 2;
-    case 1:	return 1;
+    case 1:	return 1; //TODO: modify
+    default:    return 0;
     }
   return interpreterProxy->success(false);
 }
@@ -221,17 +292,23 @@ int sqMIDIGetPortDirectionality(int portNum)
 */
 int sqMIDIGetPortName(int portNum, int namePtr, int length)
 {
-  static char *userName[] = { "out", "in" };
+  int count;
+  snd_seq_client_info_t *cinfo;
+  char name[128];
+  char portNumStr[128];
 
-  if (portNum == 0 || portNum == 1)
-    {
-      int count= strlen(userName[portNum]);
+  snd_seq_client_info_alloca(&cinfo);
+  snd_seq_client_info_set_client(cinfo, -1);
+  snd_seq_get_any_client_info(seq, portIds[portNum], cinfo);
+  sprintf(portNumStr, "%d", portNums[portNum]);
+  sprintf(name, "%s <port:%s>", snd_seq_client_info_get_name(cinfo) , portNumStr);
+  count = strlen(name);
       if (count > length) count= length;
-      memcpy((void *)namePtr, userName, count);
+  memcpy((void *)namePtr, name, count);
+  
+  success(true);
       return count;
     }
-  return interpreterProxy->success(false);
-}
 
 /* Open the given port, if possible.  If non-zero, readSemaphoreIndex
    specifies the index in the external objects array of a semaphore to
@@ -245,9 +322,9 @@ int sqMIDIGetPortName(int portNum, int namePtr, int length)
 int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate)
 {
   DPRINTF(("sqMIDIOpenPort(%d, %d, %d)\n", portNum, readSemaIndex, interfaceClockRate));
+  out_port = -1;
   int type= SND_SEQ_PORT_TYPE_APPLICATION;
-
-  switch (portNum)
+  switch (portTypes[portNum])
     {
     case 0:
       if (out_port < 0)
@@ -259,6 +336,12 @@ int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate)
 	      success(false);
 	      return 0;
 	    }
+	  
+	  if (snd_seq_connect_to(seq, out_port, portIds[portNum], 0) < 0)
+            {
+              success(false);
+              return 0;
+            }
 	}
       break;
 
@@ -282,7 +365,7 @@ int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate)
   snd_seq_queue_tempo_t *tempo= 0;
   snd_seq_queue_tempo_alloca(&tempo);
   snd_seq_queue_tempo_set_tempo(tempo, interfaceClockRate);
-  snd_seq_set_queue_tempo(seq, queue, tempo);
+  snd_seq_set_queue_tempo(seq, queue,  (snd_seq_queue_tempo_t*)tempo);
 
   success(true);
   return 0;
@@ -333,7 +416,7 @@ int sqMIDIParameter(int whichParameter, int modify, int newValue)
 	  {
 	    snd_seq_queue_tempo_t *tempo= 0;
 	    snd_seq_queue_tempo_alloca(&tempo);
-	    snd_seq_get_queue_tempo(seq, queue, &tempo);
+	    snd_seq_get_queue_tempo(seq, queue, tempo);
 	    return snd_seq_queue_tempo_get_tempo(tempo) / 1000.0;
 	  }
 	  break;
@@ -380,7 +463,7 @@ int sqMIDIParameter(int whichParameter, int modify, int newValue)
 	  snd_seq_queue_tempo_t *tempo= 0;
 	  snd_seq_queue_tempo_alloca(&tempo);
 	  snd_seq_queue_tempo_set_tempo(tempo, 1000.0 * newValue);
-	  snd_seq_set_queue_tempo(seq, queue, tempo);
+	  snd_seq_set_queue_tempo(seq, queue, (snd_seq_queue_tempo_t*)tempo);
 	}
 	break;
 
@@ -420,8 +503,7 @@ int sqMIDIPortReadInto(int portNum, int count, int bufferPtr)
 */
 int sqMIDIPortWriteFromAt(int portNum, int count, int bufferPtr, int time)
 {
-  if (portNum == 0)
-    {
+  if (portTypes[portNum] == 0 || portTypes[portNum] == 1) {
       int i;
       snd_seq_event_t ev;
       unsigned char *bytePtr= (unsigned char *)bufferPtr;
@@ -449,8 +531,7 @@ int sqMIDIPortWriteFromAt(int portNum, int count, int bufferPtr, int time)
 
 int midiInit(void)
 {
-  if (snd_seq_open(&seq, "default", SND_SEQ_OPEN_INPUT|SND_SEQ_OPEN_OUTPUT, 0) < 0)
-    {
+  if (snd_seq_open(&seq, "default", SND_SEQ_OPEN_INPUT|SND_SEQ_OPEN_OUTPUT, 0) < 0) {
       success(false);
       return 0;
     }
@@ -533,6 +614,7 @@ static void performMIDICmd(snd_seq_event_t *ev, int cmdByte, int arg1, int arg2)
 
 static void processMIDIByte(snd_seq_event_t *ev, int aByte)
 {
+  int i;
   if (aByte > 247) return;	/* skip all real-time messages */
 
   switch (state)
@@ -577,6 +659,8 @@ static void processMIDIByte(snd_seq_event_t *ev, int aByte)
       if (aByte < 128)
 	{
 	  /* skip a system exclusive data byte */
+       	  ps[ps_index] = aByte;
+          ps_index++;
 	}
       else
 	{
@@ -588,6 +672,13 @@ static void processMIDIByte(snd_seq_event_t *ev, int aByte)
 		{
 		  processMIDIByte(ev, aByte);	/* if not endSysExclusive, byte is the start the next command */
 		}
+              else{
+		  ps[ps_index] = aByte;
+                  ps_index++;
+		  //ev->type = SND_SEQ_EVENT_SYSEX;
+                  snd_seq_ev_set_sysex(ev, ps_index +1 , ps);
+		  ps_index = 0;
+	      }
 	    }
 	}
       break;
@@ -619,6 +710,10 @@ static void startMIDICommand(snd_seq_event_t *ev, int cmdByte)
     case 3:	/* start a variable length 'system exclusive' command */
       /* a system exclusive command clears running status */
       lastCmdByte= 0;
+      if(cmdByte == 240){
+        ps[ps_index] = cmdByte;
+	ps_index++;
+      }
       state= sysExclusive;
       break;
     }
