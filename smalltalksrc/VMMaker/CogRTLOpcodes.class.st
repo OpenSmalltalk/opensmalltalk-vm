@@ -195,7 +195,7 @@ CogRTLOpcodes class >> initialize [
 	although it can be used to do arithmetic.
 
 	Not all of the definitions in opcodeDefinitions below are implemented.  In particular we do not implement the
-	 XowrR scaled index addressing mode since it requires 4 operands.
+	XowrR scaled index addressing mode since it requires 4 operands.
 
 	Note that there are no generic division instructions defined, but a processor may define some.
 
@@ -205,7 +205,11 @@ CogRTLOpcodes class >> initialize [
 	for most calls and jumps.  CallFull/JumpFull must also be generated in the same number of bytes irrespective of
 	displacement for the same reason, but they must be able to span the full (32-bit or 64-bit) address space because
 	they are used to call code in the C runtime, which may be distant from the code zone.  CallFull/JumpFull are allowed
-	to use the cResultRegister as a scratch if required (e.g. on x64 where there is no direct 64-bit call or jump)."
+	to use the cResultRegister as a scratch if required (e.g. on x64 where there is no direct 64-bit call or jump).
+
+	Byte reads.  If the concrete compiler class answers true to byteReadsZeroExtend then byte reads must zero-extend
+	the byte read into the destination register.  If not, the other bits of the register should be left undisturbed and the
+	Cogit will add an instruction to zero the register as required.  Under no circumstances should byte reads sign-extend."
 
 	| opcodeNames refs |
 	"A small fixed set of abstract registers are defined and used in code generation
