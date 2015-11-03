@@ -161,6 +161,16 @@ CogIA32Compiler class >> specificOpcodes [
 	^(self class >> #initialize) literals detect: [:l| l isArray and: [l includes: #LOCK]]
 ]
 
+{ #category : #testing }
+CogIA32Compiler >> byteReadsZeroExtend [
+	"Answer if a byte read, via MoveAbR, MoveMbrR, or MoveXbrRR zero-extends
+	 into the full register, or merely affects the least significant 8 bits of the
+	 the register.  By default the code generator assumes that byte reads
+	 to not zero extend.  Note that byte reads /must not/ sign extend.
+	 On x86 we always use movzbl"
+	^true
+]
+
 { #category : #accessing }
 CogIA32Compiler >> cResultRegister [
 	"Answer the abstract register for the C result register.
@@ -355,7 +365,7 @@ CogIA32Compiler >> computeMaximumSize [
 		[MoveRdRd]		-> [^4].
 		[MoveAwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
 		[MoveRAw]		-> [^(self concreteRegister: (operands at: 0)) = EAX ifTrue: [5] ifFalse: [6]].
-		[MoveAbR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
+		[MoveAbR]		-> [^7].
 		[MoveRAb]		-> [^(self concreteRegister: (operands at: 0)) = EAX ifTrue: [5] ifFalse: [6]].
 		[MoveRMwr]	-> [^((self isQuick: (operands at: 1))
 									ifTrue: [((operands at: 1) = 0
@@ -1183,6 +1193,7 @@ CogIA32Compiler >> concretizeLogicalShiftRightCqR [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeMoveAbR [
+	"N.B. we zero-extend because we state byteReadsZeroExtend."
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| addressOperand reg |
@@ -1190,22 +1201,15 @@ CogIA32Compiler >> concretizeMoveAbR [
 	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
 		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
 	reg := self concreteRegister: (operands at: 1).
-	reg = EAX ifTrue:
-		[machineCode
-			at: 0 put: 16rA0;
-			at: 1 put: (addressOperand bitAnd: 16rFF);
-			at: 2 put: (addressOperand >> 8 bitAnd: 16rFF);
-			at: 3 put: (addressOperand >> 16 bitAnd: 16rFF);
-			at: 4 put: (addressOperand >> 24 bitAnd: 16rFF).
-			^machineCodeSize := 5].
 	machineCode
-		at: 0 put: 16r8A;
-		at: 1 put: (self mod: ModRegInd RM: 5 RO: reg);
-		at: 2 put: (addressOperand bitAnd: 16rFF);
-		at: 3 put: (addressOperand >> 8 bitAnd: 16rFF);
-		at: 4 put: (addressOperand >> 16 bitAnd: 16rFF);
-		at: 5 put: (addressOperand >> 24 bitAnd: 16rFF).
-	^machineCodeSize := 6
+		at: 0 put: 16r0F;
+		at: 1 put: 16rB6;
+		at: 2 put: (self mod: ModRegInd RM: 5 RO: reg);
+		at: 3 put: (addressOperand bitAnd: 16rFF);
+		at: 4 put: (addressOperand >> 8 bitAnd: 16rFF);
+		at: 5 put: (addressOperand >> 16 bitAnd: 16rFF);
+		at: 6 put: (addressOperand >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 7
 ]
 
 { #category : #'generate machine code' }
@@ -1364,8 +1368,7 @@ CogIA32Compiler >> concretizeMoveM64rRd [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeMoveMbrR [
-	"N.B. The Cogit compiler makes no assumption about the upper bits being set to zero.
-	 It will clear the register before hand if necessary."
+	"N.B. we zero-extend because we state byteReadsZeroExtend."
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| srcReg offset destReg |
@@ -1726,6 +1729,7 @@ CogIA32Compiler >> concretizeMoveRdM64r [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeMoveXbrRR [
+	"N.B. we zero-extend because we state byteReadsZeroExtend."
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| index base dest |
