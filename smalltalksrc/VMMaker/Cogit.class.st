@@ -4201,13 +4201,18 @@ Cogit >> compileBlockEntry: blockStart [
 	self AlignmentNops: self blockAlignment.
 	blockStart fakeHeader: self Label.
 	(self sizeof: CogBlockMethod) caseOf:
-		{ [2 * objectMemory wordSize]	"ObjectMemory"
+		{ [8]					"ObjectMemory"
 			->	[self Fill32: 0.		"gets filled in later with the homeOffset and startpc"
 				 self Fill32: 0].		"gets filled in later with numArgs et al"
-		   [3 * objectMemory wordSize]	"Spur"
+		   [12]					"Spur 32-bit"
 			->	[self Fill32: 0.		"gets filled in later with the homeOffset and startpc"
 				 self Fill32: 0.		"is left fallow"
 				 self Fill32: 0].		"gets filled in later with numArgs et al"
+		   [16]					"Spur 64-bit"
+			->	[self Fill32: 0.		"gets filled in later with the homeOffset and startpc"
+				 self Fill32: 0.		"is left fallow"
+				 self Fill32: 0.		"gets filled in later with numArgs et al"
+				 self Fill32: 0].
 		}.
 	blockStart entryLabel: self Label.
 	needsFrame
