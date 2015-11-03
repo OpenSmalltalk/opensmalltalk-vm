@@ -583,7 +583,7 @@ CogX64Compiler >> concretizeCall [
 CogX64Compiler >> concretizeCallFull [
 	"Since CallFull (and JumpFull) is used to invoke code in dynamically-loaded plugins it shouldn't
 	 assume that code will be loaded within 2Gb of the code zone.  Hence generate a full 64-bit call,
-	 movabsq 0x123456789abcdef0, %rax; callq %rax."
+	 movabsq 0x123456789abcdef0, %rax; callq *%rax."
 	<inline: true>
 	| operand |
 	operand := operands at: 0.
@@ -599,7 +599,7 @@ CogX64Compiler >> concretizeCallFull [
 		at: 8 put: (operand >> 48 bitAnd: 16rFF);
 		at: 9 put: (operand >> 56 bitAnd: 16rFF);
 		at: 10 put: 16rFF;
-		at: 11 put: (self mod: 3 RM: RAX RO: 2).
+		at: 11 put: (self mod: ModReg RM: RAX RO: 2).
 	^machineCodeSize := 12
 ]
 
@@ -676,6 +676,19 @@ CogX64Compiler >> concretizeConditionalJumpLong: conditionCode [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeFill32 [
+	<inline: true>
+	| word |
+	<var: #word type: #'unsigned long'>
+	word := operands at: 0.
+	machineCode at: 0 put: (word bitAnd: 16rFF).
+	machineCode at: 1 put: word >> 8.
+	machineCode at: 2 put: word >> 16.
+	machineCode at: 3 put: word >> 24.
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeIDIVR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -725,7 +738,7 @@ CogX64Compiler >> concretizeJump [
 CogX64Compiler >> concretizeJumpFull [
 	"Since JumpFull (and CallFull) is used to invoke code in dynamically-loaded plugins it shouldn't
 	 assume that code will be loaded within 2Gb of the code zone.  Hence generate a full 64-bit call,
-	 movabsq 0x123456789abcdef0, %rax; callq %rax."
+	 movabsq 0x123456789abcdef0, %rax; jmpq *%rax."
 	<inline: true>
 	| operand |
 	operand := operands at: 0.
@@ -741,7 +754,7 @@ CogX64Compiler >> concretizeJumpFull [
 		at: 8 put: (operand >> 48 bitAnd: 16rFF);
 		at: 9 put: (operand >> 56 bitAnd: 16rFF);
 		at: 10 put: 16rFF;
-		at: 11 put: (self mod: 4 RM: RAX RO: 2).
+		at: 11 put: (self mod: ModReg RM: RAX RO: 4).
 	^machineCodeSize := 12
 ]
 
@@ -1432,7 +1445,7 @@ CogX64Compiler >> concretizeNegateR [
 	| reg |
 	reg := self concreteRegister: (operands at: 0).
 	machineCode
-		at: 0 put: (self rexR: reg x: 0 b: reg);
+		at: 0 put: (self rexR: 0 x: 0 b: reg);
 		at: 1 put: 16rF7;
 		at: 2 put: (self mod: ModReg RM: reg RO: 3).
 	^machineCodeSize := 3
@@ -2174,6 +2187,21 @@ CogX64Compiler >> isAddressRelativeToVarBase: varAddress [
 CogX64Compiler >> isBigEndian [
 	<inline: true>
 	^false
+]
+
+{ #category : #disassembly }
+CogX64Compiler >> isJumpAt: pc [
+	| op |
+	op := objectMemory byteAt: pc.
+	^  (op between: 16r70 and: 16r7F) "short conditional jumps"
+	or: [op = 16rE9 "long unconditional jump"
+	or: [op = 16rEB "short unconditional jump"
+	or: [(op = 16r0F "long conditional jumps"
+		and: [(objectMemory byteAt: pc + 1) between: 16r80 and: 16r8F])
+	or: [op = 16r48 "full unconditional jumps"
+		and: [(objectMemory byteAt: pc + 1) = 16rA1
+		and: [(objectMemory byteAt: pc + 10) = 16rFF
+		and: [(objectMemory byteAt: pc + 11) = 16rE0]]]]]]]
 ]
 
 { #category : #testing }
