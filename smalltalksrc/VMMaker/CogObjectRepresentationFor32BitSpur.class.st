@@ -1517,16 +1517,17 @@ CogObjectRepresentationFor32BitSpur >> genNoPopCreateClosureAt: bcpc numArgs: nu
 	"Create a closure with the given startpc, numArgs and numCopied
 	 within a context with ctxtNumArgs, large if isLargeCtxt that is in a
 	 block if isInBlock.  Do /not/ initialize the copied values."
-	| slotSize header skip |
+	| numSlots byteSize header skip |
 	<var: #skip type: #'AbstractInstruction *'>
 
 	"First get thisContext into ReceiverResultRega and thence in ClassReg."
 	self genGetActiveContextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock.
 	cogit MoveR: ReceiverResultReg R: ClassReg.
 
-	slotSize := ClosureFirstCopiedValueIndex + numCopied.
+	numSlots := ClosureFirstCopiedValueIndex + numCopied.
+	byteSize := objectMemory smallObjectBytesForSlots: numSlots.
 	header := objectMemory
-					headerForSlots: slotSize
+					headerForSlots: numSlots
 					format: objectMemory indexablePointersFormat
 					classIndex: ClassBlockClosureCompactIndex.
 	cogit
@@ -1535,8 +1536,7 @@ CogObjectRepresentationFor32BitSpur >> genNoPopCreateClosureAt: bcpc numArgs: nu
 		MoveR: TempReg Mw: 0 r: ReceiverResultReg;
 		MoveCq: header >> 32 R: TempReg;
 		MoveR: TempReg Mw: 4 r: ReceiverResultReg;
-		MoveR: ReceiverResultReg R: TempReg;
-		AddCq: (objectMemory smallObjectBytesForSlots: slotSize) R: TempReg;
+		LoadEffectiveAddressMw: byteSize r: ReceiverResultReg R: TempReg;
 		MoveR: TempReg Aw: objectMemory freeStartAddress;
 		CmpCq: objectMemory getScavengeThreshold R: TempReg.
 	skip := cogit JumpBelow: 0.

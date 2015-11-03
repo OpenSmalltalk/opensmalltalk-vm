@@ -365,9 +365,9 @@ CogX64Compiler >> computeMaximumSize [
 							^((self isQuick: (operands at: 0))
 									ifTrue: [((operands at: 0) = 0
 											and: [((self concreteRegister: (operands at: 1)) bitAnd: 7) ~= RBP])
-												ifTrue: [4]
-												ifFalse: [5]]
-									ifFalse: [8])
+												ifTrue: [3]
+												ifFalse: [4]]
+									ifFalse: [7])
 								+ (((self concreteRegister: (operands at: 1)) bitAnd: 7) = RSP
 									ifTrue: [1]
 									ifFalse: [0])].
@@ -408,8 +408,8 @@ CogX64Compiler >> computeMaximumSize [
 									ifFalse: [0])].
 		[MoveXbrRR]	-> [self assert: (self concreteRegister: (operands at: 0)) ~= RSP.
 							^((self concreteRegister: (operands at: 1)) bitAnd: 7) = RBP
-											ifTrue: [6]
-											ifFalse: [5]].
+											ifTrue: [5]
+											ifFalse: [4]].
 		[MoveRXbrR]	->	[self assert: (self concreteRegister: (operands at: 1)) ~= RSP.
 							^(((self concreteRegister: (operands at: 0)) < 8
 							   and: [(self concreteRegister: (operands at: 1)) < 8
@@ -823,6 +823,8 @@ CogX64Compiler >> concretizeLoadEffectiveAddressMwrR [
 
 { #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveAbR [
+	"N.B. The Cogit makes no assumption about the upper bits being set to zero because we
+	 deny byteReadsZeroExtend.  The cogit will clear the register before hand if necessary."
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| addressOperand reg offset save0 save1 |
@@ -1022,8 +1024,8 @@ CogX64Compiler >> concretizeMoveM16rR [
 
 { #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveMbrR [
-	"N.B. The Cogit compiler makes no assumption about the upper bits being set to zero.
-	 It will clear the register before hand if necessary."
+	"N.B. The Cogit makes no assumption about the upper bits being set to zero because we
+	 deny byteReadsZeroExtend.  The cogit will clear the register before hand if necessary."
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| srcReg offset destReg |
@@ -1032,45 +1034,44 @@ CogX64Compiler >> concretizeMoveMbrR [
 	destReg := self concreteRegister: (operands at: 2).
 	machineCode
 		at: 0 put: (self rexR: destReg x: 0 b: srcReg);
-		at: 1 put: 16r0f;
-		at: 2 put: 16rb6.
+		at: 1 put: 16r8A.
 	(srcReg ~= RSP and: [srcReg ~= R12]) ifTrue:
-		[(offset = 0 and: [destReg ~= RBP and: [destReg ~= R13]]) ifTrue:
+		[(offset = 0 and: [srcReg ~= RBP and: [srcReg ~= R13]]) ifTrue:
 			[machineCode
-				at: 3 put: (self mod: ModRegInd RM: srcReg RO: destReg).
+				at: 2 put: (self mod: ModRegInd RM: srcReg RO: destReg).
+			 ^machineCodeSize := 3].
+		(self isQuick: offset) ifTrue:
+			[machineCode
+				at: 2 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+				at: 3 put: (offset bitAnd: 16rFF).
 			 ^machineCodeSize := 4].
-		 (self isQuick: offset) ifTrue:
-			[machineCode
-				at: 3 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
-				at: 4 put: (offset bitAnd: 16rFF).
-			 ^machineCodeSize := 5].
 		machineCode
-			at: 3 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg);
-			at: 4 put: (offset bitAnd: 16rFF);
-			at: 5 put: (offset >> 8 bitAnd: 16rFF);
-			at: 6 put: (offset >> 16 bitAnd: 16rFF);
-			at: 7 put: (offset >> 24 bitAnd: 16rFF).
-		^machineCodeSize := 8].
-	"RSP & R12:"
-	(offset = 0 and: [destReg ~= RBP and: [destReg ~= R13]]) ifTrue:
+			at: 2 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg);
+			at: 3 put: (offset bitAnd: 16rFF);
+			at: 4 put: (offset >> 8 bitAnd: 16rFF);
+			at: 5 put: (offset >> 16 bitAnd: 16rFF);
+			at: 6 put: (offset >> 24 bitAnd: 16rFF).
+		^machineCodeSize := 7].
+	"RSP:"
+	offset = 0 ifTrue:
 		[machineCode
-			at: 3 put: (self mod: ModRegInd RM: srcReg RO: destReg);
-			at: 4 put: (self s: SIB1 i: 4 b: srcReg).
-		 ^machineCodeSize := 5].
+			at: 2 put: (self mod: ModRegInd RM: srcReg RO: destReg);
+			at: 3 put: (self s: SIB1 i: 4 b: srcReg).
+		 ^machineCodeSize := 4].
 	(self isQuick: offset) ifTrue:
 		[machineCode
-			at: 3 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
-			at: 4 put: (self s: SIB1 i: 4 b: srcReg);
-			at: 5 put: (offset bitAnd: 16rFF).
-		 ^machineCodeSize := 6].
+			at: 2 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+			at: 3 put: (self s: SIB1 i: 4 b: srcReg);
+			at: 4 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := 5].
 	machineCode
-		at: 3 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg);
-		at: 4 put: (self s: SIB1 i: 4 b: srcReg);
-		at: 5 put: (offset bitAnd: 16rFF);
-		at: 6 put: (offset >> 8 bitAnd: 16rFF);
-		at: 7 put: (offset >> 16 bitAnd: 16rFF);
-		at: 8 put: (offset >> 24 bitAnd: 16rFF).
-	^machineCodeSize := 9
+		at: 2 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg);
+		at: 3 put: (self s: SIB1 i: 4 b: srcReg);
+		at: 4 put: (offset bitAnd: 16rFF);
+		at: 5 put: (offset >> 8 bitAnd: 16rFF);
+		at: 6 put: (offset >> 16 bitAnd: 16rFF);
+		at: 7 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 8
 ]
 
 { #category : #'generate machine code' }
@@ -1387,18 +1388,17 @@ CogX64Compiler >> concretizeMoveXbrRR [
 	dest := self concreteRegister: (operands at: 2).
 	machineCode
 		at: 0 put: (self rexR: dest x: index b: base);
-		at: 1 put: 16r0F;
-		at: 2 put: 16rB6.
+		at: 1 put: 16r8A.
 	(base ~= RBP and: [base ~= R13]) ifTrue:
 		[machineCode
-			at: 3 put: (self mod: ModRegInd RM: 4 RO: dest);
-			at: 4 put: (self s: SIB1 i: index b: base).
-		 ^machineCodeSize := 5].
+			at: 2 put: (self mod: ModRegInd RM: 4 RO: dest);
+			at: 3 put: (self s: SIB1 i: index b: base).
+		 ^machineCodeSize := 4].
 	machineCode
-		at: 3 put: (self mod: ModRegRegDisp8 RM: 4 RO: dest);
-		at: 4 put: (self s: SIB1 i: index b: base);
-		at: 5 put: 0.
-	 ^machineCodeSize := 6
+		at: 2 put: (self mod: ModRegRegDisp8 RM: 4 RO: dest);
+		at: 3 put: (self s: SIB1 i: index b: base);
+		at: 4 put: 0.
+	 ^machineCodeSize := 5
 ]
 
 { #category : #'generate machine code' }
