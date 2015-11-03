@@ -22,14 +22,55 @@ VMStructType class >> alignedByteSizeOf: objectSymbolOrClass forClient: aVMClass
 ]
 
 { #category : #'code generation' }
-VMStructType class >> checkGenerateFieldAccessors: fieldSpecs bitPosition: firstBitPosition in: surrogateClass [
-	| bitPosition alignedByteSize currentOffset code |
-	bitPosition := firstBitPosition.
-	fieldSpecs do:
+VMStructType class >> changedAccesorsForSurrogate: surrogateClass bytesPerWord: bytesPerWord [
+	"Answer the changed accessor methods for the fields of the receiver and the alignedByteSize class method."
+
+	"{CogBlockMethod changedAccesorsForSurrogate: CogBlockMethodSurrogate32 bytesPerWord: 4.
+	 CogMethod changedAccesorsForSurrogate: CogMethodSurrogate32 bytesPerWord: 4.
+	 CogBlockMethod changedAccesorsForSurrogate: CogBlockMethodSurrogate64 bytesPerWord: 8.
+	 CogMethod changedAccesorsForSurrogate: CogMethodSurrogate64 bytesPerWord: 8}"
+
+	^Dictionary withAll: ((self fieldAccessorSourceFor: surrogateClass bytesPerWord: bytesPerWord) associationsSelect:
+		[:a| a value ~= a key sourceString])
+]
+
+{ #category : #'code generation' }
+VMStructType class >> checkGenerateSurrogate: surrogateClass bytesPerWord: bytesPerWord [
+	"Check the accessor methods for the fields of the receiver and if necessary install new
+	 or updated versions in the surrogate class alpng with the alignedByteSize class method."
+
+	"CogBlockMethod checkGenerateSurrogate: CogBlockMethodSurrogate32 bytesPerWord: 4.
+	 CogMethod checkGenerateSurrogate: CogMethodSurrogate32 bytesPerWord: 4.
+	 CogBlockMethod checkGenerateSurrogate: CogBlockMethodSurrogate64 bytesPerWord: 8.
+	 CogMethod checkGenerateSurrogate: CogMethodSurrogate64 bytesPerWord: 8"
+	| accessors |
+	accessors := self fieldAccessorSourceFor: surrogateClass bytesPerWord: bytesPerWord.
+	accessors keysAndValuesDo:
+		[:mr :source|
+		source ~= mr sourceString ifTrue:
+			[mr actualClass compile: source classified: #accessing]]
+
+	"Dictionary withAll: ((self fieldAccessorSourceFor: surrogateClass bytesPerWord: bytesPerWord) associationsSelect:
+		[:a| a value ~= a key sourceString])"
+]
+
+{ #category : #'code generation' }
+VMStructType class >> fieldAccessorSourceFor: surrogateClass bytesPerWord: bytesPerWord [
+	"Answer a Dictionary of MethodReference to source for the accessors of the inst vars of the
+	 receiver and the alignedByteSize class method in surrogateClass with the given word size."
+
+	"{CogBlockMethod fieldAccessorSourceFor: CogBlockMethodSurrogate32 bytesPerWord: 4.
+	 CogMethod fieldAccessorSourceFor: CogMethodSurrogate32 bytesPerWord: 4.
+	 CogBlockMethod fieldAccessorSourceFor: CogBlockMethodSurrogate64 bytesPerWord: 8.
+	 CogMethod fieldAccessorSourceFor: CogMethodSurrogate64 bytesPerWord: 8}"
+	| methods bitPosition alignedByteSize currentOffset |
+	methods := Dictionary new.
+	bitPosition := 0.
+	(self fieldAccessorsForBytesPerWord: bytesPerWord) do:
 		[:spec|
 		"reset the bitPosition if the offset expression changes."
 		currentOffset ~= (self offsetForInstVar: spec first) ifTrue:
-			[bitPosition := firstBitPosition.
+			[bitPosition := 0.
 			 currentOffset := self offsetForInstVar: spec first].
 		"If the accessor is already defined in a superclass don't redefine it in the subclass.
 		 We assume it is correctly defined in the superclass."
@@ -39,37 +80,27 @@ VMStructType class >> checkGenerateFieldAccessors: fieldSpecs bitPosition: first
 				ifNotNil: [:implementingClass|
 						self assert: (implementingClass inheritsFrom: Object).
 						implementingClass == surrogateClass]]) ifTrue:
-			[code := self getter: spec first
-						 bitPosition: bitPosition
-						 bitWidth: spec second
-						 type: (spec at: 3 ifAbsent: []).
-			 code ~= (surrogateClass sourceCodeAt: spec first asSymbol ifAbsent: ['']) asString ifTrue:
-				[surrogateClass compile: code classified: #accessing].
-			 code := self setter: spec first
-						 bitPosition: bitPosition
-						 bitWidth: spec second
-						 type: (spec at: 3 ifAbsent: []).
-			 code ~= (surrogateClass sourceCodeAt: (spec first, ':') asSymbol ifAbsent: ['']) asString ifTrue:
-				[surrogateClass compile: code classified: #accessing]].
+			[methods
+				at: (MethodReference class: surrogateClass selector: spec first asSymbol)
+					put: (self getter: spec first
+							 bitPosition: bitPosition
+							 bitWidth: spec second
+							 type: (spec at: 3 ifAbsent: []));
+				at: (MethodReference class: surrogateClass selector: (spec first, ':') asSymbol)
+					put: (self setter: spec first
+							 bitPosition: bitPosition
+							 bitWidth: spec second
+							 type: (spec at: 3 ifAbsent: []))].
 		bitPosition := bitPosition + spec second].
-	alignedByteSize := bitPosition / 8.
+	alignedByteSize := (self roundUpBitPosition: bitPosition toWordBoundary: bytesPerWord) / 8.
 	self assert: alignedByteSize isInteger.
-	code := 'alignedByteSize'
-			, (String with: Character cr with: Character tab with: $^)
-			, alignedByteSize printString,
-			(currentOffset ifNil: [''] ifNotNil: [' + self ', currentOffset]).
-	code ~= (surrogateClass class sourceCodeAt: #alignedByteSize) asString ifTrue:
-		[surrogateClass class compile: code classified: #accessing]
-]
-
-{ #category : #'code generation' }
-VMStructType class >> checkGenerateSurrogate: class bytesPerWord: bytesPerWord [
-	self checkGenerateFieldAccessors: (self fieldAccessorsForBytesPerWord: bytesPerWord)
-		bitPosition: 0
-		in: class
-
-	"CogBlockMethod checkGenerateSurrogate: CogBlockMethodSurrogate32 bytesPerWord: 4.
-	 CogMethod checkGenerateSurrogate: CogMethodSurrogate32 bytesPerWord: 4"
+	methods
+		at: (MethodReference class: surrogateClass class selector: #alignedByteSize)
+			put: #alignedByteSize
+				, (String with: Character cr with: Character tab with: $^)
+				, alignedByteSize printString,
+				(currentOffset ifNil: [''] ifNotNil: [' + self ', currentOffset]).
+	^methods
 ]
 
 { #category : #'code generation' }
@@ -325,6 +356,11 @@ VMStructType class >> returnTypeForAccessor: aSelector [
 
 
 	"InterpreterStackPage returnTypeForAccessor: #nextPage:"
+]
+
+{ #category : #'code generation' }
+VMStructType class >> roundUpBitPosition: bitPosition toWordBoundary: bytesPerWord [
+	^bitPosition + 7 // 8 + bytesPerWord - 1 // bytesPerWord * bytesPerWord * 8
 ]
 
 { #category : #'code generation' }

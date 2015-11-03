@@ -209,7 +209,9 @@ CogRTLOpcodes class >> initialize [
 
 	Byte reads.  If the concrete compiler class answers true to byteReadsZeroExtend then byte reads must zero-extend
 	the byte read into the destination register.  If not, the other bits of the register should be left undisturbed and the
-	Cogit will add an instruction to zero the register as required.  Under no circumstances should byte reads sign-extend."
+	Cogit will add an instruction to zero the register as required.  Under no circumstances should byte reads sign-extend.
+
+	16-bit (and on 64-bits, 32-bit) reads.  These /are/ expected to always zero-extend."
 
 	| opcodeNames refs |
 	"A small fixed set of abstract registers are defined and used in code generation
