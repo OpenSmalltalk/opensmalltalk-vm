@@ -6,7 +6,7 @@ Class {
 
 { #category : #accessing }
 CogBlockMethodSurrogate64 class >> alignedByteSize [
-	^4 + self baseHeaderSize
+	^8 + self baseHeaderSize
 ]
 
 { #category : #accessing }
