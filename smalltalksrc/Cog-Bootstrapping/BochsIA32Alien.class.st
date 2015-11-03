@@ -81,7 +81,9 @@ BochsIA32Alien class >> initialize [
 		at: 1 + it jmpOpcode			put: #handleJmpFailureAt:in:;
 		at: 1 + it retOpcode			put: #handleRetFailureAt:in:;
 		at: 1 + it movALObOpcode	put: #handleMovALObFailureAt:in:;
+		at: 1 + it movAXOvOpcode	put: #handleMovAXOvFailureAt:in:;
 		at: 1 + it movObALOpcode	put: #handleMovObALFailureAt:in:;
+		at: 1 + it movOvAXOpcode	put: #handleMovOvAXFailureAt:in:;
 		at: 1 + it movGvEvOpcode	put: #handleMovGvEvFailureAt:in:;
 		at: 1 + it movEvGvOpcode	put: #handleMovEvGvFailureAt:in:;
 		at: 1 + it movGbEbOpcode	put: #handleMovGbEbFailureAt:in:;
@@ -440,6 +442,18 @@ BochsIA32Alien >> handleJmpFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|
 
 { #category : #'error handling' }
 BochsIA32Alien >> handleMovALObFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
+	"Convert an execution primitive failure for a read into al into a ProcessorSimulationTrap signal."
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 5
+			address: (memoryArray unsignedLongAt: pc + 2 bigEndian: false)
+			type: #read
+			accessor: #al:)
+		signal
+]
+
+{ #category : #'error handling' }
+BochsIA32Alien >> handleMovAXOvFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a read into eax into a ProcessorSimulationTrap signal."
 	^(ProcessorSimulationTrap
 			pc: pc
@@ -453,20 +467,26 @@ BochsIA32Alien >> handleMovALObFailureAt: pc "<Integer>" in: memoryArray [ "<Bit
 { #category : #'error handling' }
 BochsIA32Alien >> handleMovEbGbFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a byte register write into a ProcessorSimulationTrap signal."
-	| modrmByte |
-	^(((modrmByte := memoryArray byteAt: pc + 2) bitAnd: 16rC0) = 16r80) "ModRegRegDisp32"
-		ifTrue:
-			[(ProcessorSimulationTrap
-					pc: pc
-					nextpc: pc + 6
-					address: ((self perform: (#(eax ecx edx ebx esp ebp esi edi) at: (modrmByte bitAnd: 7) + 1))
-							+ (memoryArray unsignedLongAt: pc + 3 bigEndian: false)
-								bitAnd: 16rFFFFFFFF)
-					type: #write
-					accessor: (#(al cl dl bl ah ch dh bh) at: ((modrmByte >> 3 bitAnd: 7) + 1)))
-				signal]
-		ifFalse:
-			[self reportPrimitiveFailure]
+	| modrmByte address |
+	modrmByte := memoryArray byteAt: pc + 2.
+	(modrmByte bitAnd: 7) ~= 4 ifTrue: "MoveRMbr with r = ESP requires an SIB byte"
+		[address := (modrmByte bitAnd: 16rC0)
+					caseOf: {
+						[0 "ModRegInd"]
+						->	[memoryArray unsignedLongAt: pc + 3 bigEndian: false].
+						[16r80 "ModRegRegDisp32"]
+						->	[(self perform: (#(eax ecx edx ebx esp ebp esi edi) at: (modrmByte bitAnd: 7) + 1))
+								+ (memoryArray unsignedLongAt: pc + 3 bigEndian: false)
+								bitAnd: 16rFFFFFFFF] }
+					otherwise: [^self reportPrimitiveFailure].
+		^(ProcessorSimulationTrap
+				pc: pc
+				nextpc: pc + 6
+				address: address
+				type: #write
+				accessor: (#(al cl dl bl ah ch dh bh) at: ((modrmByte >> 3 bitAnd: 7) + 1)))
+			signal].
+	^self reportPrimitiveFailure
 ]
 
 { #category : #'error handling' }
@@ -489,20 +509,24 @@ BochsIA32Alien >> handleMovEvGvFailureAt: pc "<Integer>" in: memoryArray [ "<Bit
 { #category : #'error handling' }
 BochsIA32Alien >> handleMovGbEbFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a byte register load into a ProcessorSimulationTrap signal."
-	| modrmByte |
-	^(((modrmByte := memoryArray byteAt: pc + 2) bitAnd: 16rC0) = 16r80) "ModRegRegDisp32"
-		ifTrue:
-			[(ProcessorSimulationTrap
-					pc: pc
-					nextpc: pc + 6
-					address: ((self perform: (#(eax ecx edx ebx esp ebp esi edi) at: (modrmByte bitAnd: 7) + 1))
-							+ (memoryArray unsignedLongAt: pc + 3 bigEndian: false)
-								bitAnd: 16rFFFFFFFF)
-					type: #read
-					accessor: (#(al: cl: dl: bl: ah: ch: dh: bh:) at: ((modrmByte >> 3 bitAnd: 7) + 1)))
-				signal]
-		ifFalse:
-			[self reportPrimitiveFailure]
+	| modrmByte address |
+	modrmByte := memoryArray byteAt: pc + 2.
+	address := (modrmByte bitAnd: 16rC0)
+					caseOf: {
+						[0 "ModRegInd"]
+						->	[memoryArray unsignedLongAt: pc + 3 bigEndian: false].
+						[16r80 "ModRegRegDisp32"]
+						->	[(self perform: (#(eax ecx edx ebx esp ebp esi edi) at: (modrmByte bitAnd: 7) + 1))
+								+ (memoryArray unsignedLongAt: pc + 3 bigEndian: false)
+								bitAnd: 16rFFFFFFFF] }
+					otherwise: [^self reportPrimitiveFailure].
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 6
+			address: address
+			type: #read
+			accessor: (#(al: cl: dl: bl: ah: ch: dh: bh:) at: ((modrmByte >> 3 bitAnd: 7) + 1)))
+		signal
 ]
 
 { #category : #'error handling' }
@@ -511,16 +535,25 @@ BochsIA32Alien >> handleMovGvEbFailureAt: pc "<Integer>" in: memoryArray [ "<Bit
 	| modrmByte mode srcIsSP srcVal dst offset |
 	modrmByte := memoryArray byteAt: pc + 3.
 	mode := modrmByte >> 6 bitAnd: 3.
+	dst := #(eax: ecx: edx: ebx: esp: ebp: esi: edi:) at: ((modrmByte >> 3 bitAnd: 7) + 1).
+	mode = 0 ifTrue: "ModRegInd"
+		[offset := memoryArray unsignedLongAt: pc + 4. "1-relative"
+		 ^(ProcessorSimulationTrap
+					pc: pc
+					nextpc: pc + 7
+					address: offset
+					type: #read
+					accessor: dst)
+				signal].
 	srcIsSP := (modrmByte bitAnd: 7) = 4.
 	srcVal := self perform: (#(eax ecx edx ebx esp ebp esi edi) at: (modrmByte bitAnd: 7) + 1).
-	dst := #(eax: ecx: edx: ebx: esp: ebp: esi: edi:) at: ((modrmByte >> 3 bitAnd: 7) + 1).
 	mode = 1 ifTrue: "ModRegRegDisp8"
 		[offset := memoryArray byteAt: pc + (srcIsSP ifTrue: [5] ifFalse: [4]). "1-relative"
 		 offset > 127 ifTrue: [offset := offset - 256].
 		 ^(ProcessorSimulationTrap
 					pc: pc
 					nextpc: pc + (srcIsSP ifTrue: [5] ifFalse: [4])
-					address: ((srcVal + offset) bitAnd: 16rFFFFFFFF)
+					address: (srcVal + offset bitAnd: 16rFFFFFFFF)
 					type: #read
 					accessor: dst)
 				signal].
@@ -529,7 +562,7 @@ BochsIA32Alien >> handleMovGvEbFailureAt: pc "<Integer>" in: memoryArray [ "<Bit
 		 ^(ProcessorSimulationTrap
 					pc: pc
 					nextpc: pc + (srcIsSP ifTrue: [8] ifFalse: [7])
-					address: ((srcVal + offset) bitAnd: 16rFFFFFFFF)
+					address: (srcVal + offset bitAnd: 16rFFFFFFFF)
 					type: #read
 					accessor: dst)
 				signal].
@@ -555,6 +588,18 @@ BochsIA32Alien >> handleMovGvEvFailureAt: pc "<Integer>" in: memoryArray [ "<Bit
 
 { #category : #'error handling' }
 BochsIA32Alien >> handleMovObALFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
+	"Convert an execution primitive failure for a byte write of al into a ProcessorSimulationTrap signal."
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 5
+			address: (memoryArray unsignedLongAt: pc + 2 bigEndian: false)
+			type: #write
+			accessor: #al)
+		signal
+]
+
+{ #category : #'error handling' }
+BochsIA32Alien >> handleMovOvAXFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Convert an execution primitive failure for a write of eax into a ProcessorSimulationTrap signal."
 	^(ProcessorSimulationTrap
 			pc: pc
@@ -617,6 +662,13 @@ BochsIA32Alien >> lockPrefix [
 BochsIA32Alien >> movALObOpcode [
 	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
 		table A2, pA7"
+	^16rA0
+]
+
+{ #category : #opcodes }
+BochsIA32Alien >> movAXOvOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A2, pA7"
 	^16rA1
 ]
 
@@ -657,6 +709,13 @@ BochsIA32Alien >> movGvEvOpcode [
 
 { #category : #opcodes }
 BochsIA32Alien >> movObALOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A2, pA7"
+	^16rA2
+]
+
+{ #category : #opcodes }
+BochsIA32Alien >> movOvAXOpcode [
 	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
 		table A2, pA7"
 	^16rA3
