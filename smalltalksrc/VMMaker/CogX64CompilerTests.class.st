@@ -210,7 +210,7 @@ CogX64CompilerTests >> testDivQuoRem [
 								at: rrget put: (self processor convertIntegerToInternal: (dd rem: dv)).
 							map keysAndValuesDo:
 								[:accessor :value|
-								self assert: value = (self processor perform: accessor)]]]]]].
+								self assert: value equals: (self processor perform: accessor)]]]]]].
 	^ops
 ]
 
@@ -618,6 +618,31 @@ CogX64CompilerTests >> testMoveRdM64r [
 						herIntended := 'movsd ', srname, ', 0x', (offset hex allButFirst: 3), '(', drname, ')'.
 						self assert: (plainJane match: herIntended).
 						self assert: len = sz]]]]
+]
+
+{ #category : #tests }
+CogX64CompilerTests >> testMoveX32rRR [
+	"self new testMoveX32rRR"
+	self concreteCompilerClass registersWithNamesDo:
+		[:idxreg :irname|
+			irname ~= '%rsp' ifTrue:
+				[self concreteCompilerClass registersWithNamesDo:
+					[:basereg :brname|
+					self concreteCompilerClass doubleWordRegistersWithNamesDo:
+						[:dreg :drname|
+						((1 to: 19 by: 3) collect: [:po2| 2 raisedToInteger: po2]) do:
+							[:offset| | inst len |
+							inst := self gen: MoveX32rRR operand: idxreg operand: basereg operand: dreg.
+							len := inst concretizeAt: 0.
+							self processor
+								disassembleInstructionAt: 3
+								In: inst machineCode object
+								into: [:str :sz| | plainJane herIntended |
+									"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
+									plainJane := self strip: str.
+									herIntended := 'movl (', brname, ',', irname, ',4), ',drname.
+									self assert: (plainJane match: herIntended).
+									self assert: len - 3 = sz]]]]]]
 ]
 
 { #category : #tests }

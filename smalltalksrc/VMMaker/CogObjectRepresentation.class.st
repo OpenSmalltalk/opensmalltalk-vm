@@ -204,6 +204,12 @@ CogObjectRepresentation >> genInnerPrimitiveAsCharacter: retNOffset inReg: reg [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentation >> genInnerPrimitiveAt: retNoffset [
+	"Implement the guts of primitiveAt"
+	^self subclassResponsibility
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveAtPut: retNoffset [
 	"subclasses override if they can"
 	^cogit unimplementedPrimitive

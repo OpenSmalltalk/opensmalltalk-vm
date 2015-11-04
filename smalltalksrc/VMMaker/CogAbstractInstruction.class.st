@@ -528,6 +528,22 @@ CogAbstractInstruction >> dependent: anInstruction [
 	^dependent := anInstruction
 ]
 
+{ #category : #'full transfer run-time support' }
+CogAbstractInstruction >> disassemble [
+	<doNotGenerate>
+	self disassembleOn: Transcript
+]
+
+{ #category : #'full transfer run-time support' }
+CogAbstractInstruction >> disassembleOn: aStream [
+	<doNotGenerate>
+	cogit processor
+		disassembleFrom: 0
+		to: machineCodeSize - 1
+		in: machineCode object
+		on: aStream
+]
+
 { #category : #abi }
 CogAbstractInstruction >> fullCallsAreRelative [
 	"Answer if CallFull and/or JumpFull are relative and hence need relocating on method
