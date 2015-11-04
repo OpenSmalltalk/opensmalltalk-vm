@@ -2117,6 +2117,13 @@ Cogit >> MoveUniqueCw: wordConstant R: reg [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> MoveX32r: indexReg R: baseReg R: destReg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MoveX32rRR operand: indexReg operand: baseReg operand: destReg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> MoveXbr: indexReg R: baseReg R: destReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
