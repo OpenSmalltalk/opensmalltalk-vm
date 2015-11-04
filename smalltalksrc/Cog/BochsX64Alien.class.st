@@ -175,7 +175,15 @@ BochsX64Alien >> decorateDisassembly: anInstructionString for: aSymbolManager [ 
 		[string := string
 					copyReplaceFrom: i1 + 1
 					to: i2 - 1
-					with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 1 to: i2 - 1))].
+					with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 1 to: i2 - 1)).
+		 i1 := string indexOfSubCollection: '+0x'. "calls & jumps"
+		 i1 > 0 ifTrue:
+			[v := Integer readFrom: (i2 := ReadStream on: string from: i1 + 3 to: string size) base: 16.
+			 v := ((v bitAnd: (1 bitShift: 63) - 1) - (v bitAnd: (1 bitShift: 63))) printStringRadix: 16.
+			 v := v first = $1
+					ifTrue: [v copyReplaceFrom: 1 to: 3 with: '+0x']
+					ifFalse: [v copyReplaceFrom: 2 to: 4 with: '0x'].
+			 string := string copyReplaceFrom: i1 to: i2 position with: v]].
 	^extra
 		ifNil: [string]
 		ifNotNil: [i1 := string lastIndexOf: $:. string copyReplaceFrom: i1 - 1 to: i1 - 2 with: extra]
