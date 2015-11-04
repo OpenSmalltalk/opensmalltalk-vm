@@ -15,6 +15,11 @@ CurrentImageCoInterpreterFacadeFor64BitSpurObjectRepresentation class >> objectR
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeFor64BitSpurObjectRepresentation >> smallFloatTag [
+	^objectMemory smallFloatTag
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeFor64BitSpurObjectRepresentation >> specialObjectsArrayAddress [
 	^self addressForLabel: #specialObjectsOop
 ]

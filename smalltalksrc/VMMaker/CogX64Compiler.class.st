@@ -308,9 +308,9 @@ CogX64Compiler >> computeMaximumSize [
 								+ (((self concreteRegister: (operands at: 1)) bitAnd: 7) = RSP
 									ifTrue: [1]
 									ifFalse: [0])].
-		[LogicalShiftLeftCqR]		-> [^(operands at: 0) = 1 ifTrue: [3] ifFalse: [4]].
-		[LogicalShiftRightCqR]		-> [^(operands at: 0) = 1 ifTrue: [3] ifFalse: [4]].
-		[ArithmeticShiftRightCqR]	-> [^(operands at: 0) = 1 ifTrue: [3] ifFalse: [4]].
+		[LogicalShiftLeftCqR]		-> [^self computeShiftCqRegSize].
+		[LogicalShiftRightCqR]		-> [^self computeShiftCqRegSize].
+		[ArithmeticShiftRightCqR]	-> [^self computeShiftCqRegSize].
 		[LogicalShiftLeftRR]			-> [^self computeShiftRRSize].
 		[LogicalShiftRightRR]		-> [^self computeShiftRRSize].
 		[ArithmeticShiftRightRR]		-> [^self computeShiftRRSize].
@@ -439,6 +439,21 @@ CogX64Compiler >> computeMaximumSize [
 		"Conversion"
 		"[ConvertRRd]	-> [^4]" }.
 	^0 "to keep C compiler quiet"
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> computeShiftCqRegSize [
+	"Immediate shifts are limited to a maximum of 31."
+	<inline: true>
+	| distance |
+	distance := operands at: 0.
+	distance = 1 ifTrue:
+		[^3].
+	distance <= 31 ifTrue:
+		[^4].
+	distance = 32 ifTrue:
+		[^7].
+	^8
 ]
 
 { #category : #'generate machine code' }
@@ -1541,7 +1556,8 @@ CogX64Compiler >> concretizeShiftCqRegOpcode: regOpcode [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| distance reg |
-	distance := (operands at: 0) min: 31.
+	distance := operands at: 0.
+	self assert: (distance between: 1 and: 63).
 	reg := self concreteRegister: (operands at: 1).
 	machineCode
 		at: 0 put: (self rexR: 0 x: 0 b: reg).
@@ -1553,8 +1569,19 @@ CogX64Compiler >> concretizeShiftCqRegOpcode: regOpcode [
 	machineCode
 		at: 1 put: 16rC1;
 		at: 2 put: (self mod: ModReg RM: reg RO: regOpcode);
-		at: 3 put: distance.
-	^machineCodeSize := 4
+		at: 3 put: (distance min: 31).
+	distance <= 31 ifTrue:
+		[^machineCodeSize := 4].
+	distance = 32 ifTrue:
+		[machineCode
+			at: 4 put: 16rD1;
+			at: 5 put: (self mod: ModReg RM: reg RO: regOpcode).
+		 ^machineCodeSize := 7].
+	machineCode
+		at: 4 put: 16rC1;
+		at: 5 put: (self mod: ModReg RM: reg RO: regOpcode);
+		at: 6 put: distance - 31.
+	^machineCodeSize := 8
 ]
 
 { #category : #'generate machine code' }
