@@ -2165,6 +2165,42 @@ CogX64Compiler >> hasThreeAddressArithmetic [
 	^false
 ]
 
+{ #category : #disassembly }
+CogX64Compiler >> instructionSizeAt: pc [
+	"Answer the instruction size at pc. This is used in method disassembly
+	 to decode the jumps in block dispatch to discover where block methods
+	 occur within a larger method.   This is very far from a full decode."
+	| op |
+	op := objectMemory byteAt: pc.
+	(op bitAnd: 16rF8) = 16r48 ifTrue:
+		[^1 + (self instructionSizeAt: pc + 1)].
+	^op caseOf:
+		{	[16r0F]	->	[self twoByteInstructionSizeAt: pc].
+			[16r3D]	->	[5]. "cmp EAX,imm32"
+			[16r70]	->	[2]. "short conditional jumps"
+			[16r71]	->	[2].
+			[16r72]	->	[2].
+			[16r73]	->	[2].
+			[16r74]	->	[2].
+			[16r75]	->	[2].
+			[16r76]	->	[2].
+			[16r77]	->	[2].
+			[16r78]	->	[2].
+			[16r79]	->	[2].
+			[16r7A]	->	[2].
+			[16r7B]	->	[2].
+			[16r7C]	->	[2].
+			[16r7D]	->	[2].
+			[16r7E]	->	[2].
+			[16r7F]	->	[2].
+			[16r83]	->	[self sizeImmediateGroup1: op at: pc].
+			[16r89]	->	[2]. "MOV Eb,Gb"
+			[16r8B]	->	[self sizeHasModrm: op at: pc].
+			[16r90]	->	[1]. "nop"
+			[16rE9] ->	[5]. "long unconditional jump"
+			[16rEB] ->	[2] "short unconditional jump" }
+]
+
 { #category : #testing }
 CogX64Compiler >> is32BitSignedImmediate: a64BitUnsignedOperand [
 	^self cCode: [(self cCoerceSimple: a64BitUnsignedOperand to: #int) = (self cCoerceSimple: a64BitUnsignedOperand to: #long)]
@@ -2244,6 +2280,24 @@ CogX64Compiler >> jumpLongConditionalByteSize [
 CogX64Compiler >> jumpLongTargetBeforeFollowingAddress: mcpc [ 
 	"Answer the target address for the long jump immediately preceding mcpc"
 	^self callTargetFromReturnAddress: mcpc
+]
+
+{ #category : #disassembly }
+CogX64Compiler >> jumpTargetPCAt: pc [
+	<returnTypeC: #usqInt>
+	| size byte offset |
+	size := self instructionSizeAt: pc.
+	size = 2
+		ifTrue:
+			[byte := objectMemory byteAt: pc + 1.
+			 offset := (byte bitAnd: 16r80) = 0 ifTrue: [byte] ifFalse: [byte - 256]]
+		ifFalse:
+			[byte := objectMemory byteAt: pc + size - 1.
+			 offset := (byte bitAnd: 16r80) = 0 ifTrue: [byte] ifFalse: [byte - 256].
+			 offset := offset << 8 + (objectMemory byteAt: pc + size - 2).
+			 offset := offset << 8 + (objectMemory byteAt: pc + size - 3).
+			 offset := offset << 8 + (objectMemory byteAt: pc + size - 4)].
+	^pc + size + offset
 ]
 
 { #category : #abi }
@@ -2398,6 +2452,26 @@ CogX64Compiler >> saveAndRestoreLinkRegAround: aBlock [
 	^aBlock value
 ]
 
+{ #category : #disassembly }
+CogX64Compiler >> sizeHasModrm: op at: pc [
+	| modrm mod ro rm |
+	modrm := objectMemory byteAt: pc + 1.
+	mod := modrm >> 6.
+	ro := modrm >> 3 bitAnd: 7.
+	rm := modrm bitAnd: 7.
+	mod = 3 ifTrue:
+		[^2].
+	rm ~= 4 ifTrue: "no SIB byte"
+		[^mod caseOf:
+		   {	[0]	->	[rm = 5
+						ifTrue: [6] "reg or 32-bit displacement"
+						ifFalse: [3]].
+			[1]	->	[3]. "8-bit displacement"
+			[2]	->	[6] }].
+	self halt: 'fall through in sizeHasModrm:at:'.
+	^0
+]
+
 { #category : #'inline cacheing' }
 CogX64Compiler >> thirtyTwoBitLiteralBefore: followingAddress [
 	<inline: true>
@@ -2406,6 +2480,14 @@ CogX64Compiler >> thirtyTwoBitLiteralBefore: followingAddress [
 					+ ((objectMemory byteAt: followingAddress - 2) << 16)
 					+ ((objectMemory byteAt: followingAddress - 3) << 8)
 					+  (objectMemory byteAt: followingAddress - 4)]
+]
+
+{ #category : #disassembly }
+CogX64Compiler >> twoByteInstructionSizeAt: pc [
+	| op |
+	op := objectMemory byteAt: pc + 1. 
+	^(op bitAnd: 16rF0) caseOf:
+		{	[16r80]	->	[6 "long conditional jumps"] }
 ]
 
 { #category : #simulation }

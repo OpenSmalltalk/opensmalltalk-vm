@@ -1466,90 +1466,15 @@ CogObjectRepresentationFor32BitSpur >> genJumpSmallIntegerInScratchReg: aRegiste
 ]
 
 { #category : #initialization }
-CogObjectRepresentationFor32BitSpur >> genLoadHeaderIntoNewInstance: header [
-	"Generate the instructions to move the constant header into a new instance pointed to by ReceiverResultReg."
+CogObjectRepresentationFor32BitSpur >> genLoadHeader: header intoNewInstance: rcvrReg using: scratchReg [
+	"Generate the instructions to move the constant header into a new instance pointed to by rcvrReg."
 	<inline: true>
 	self flag: #endianness.
 	cogit
-		MoveCq: (self low32BitsOf: header) R: TempReg;
-		MoveR: TempReg Mw: 0 r: ReceiverResultReg;
-		MoveCq: header >> 32 R: TempReg;
-		MoveR: TempReg Mw: 4 r: ReceiverResultReg
-]
-
-{ #category : #'bytecode generator support' }
-CogObjectRepresentationFor32BitSpur >> genNewArrayOfSize: size initialized: initialized [
-	"Generate a call to code that allocates a new Array of size.
-	 The Array should be initialized with nils iff initialized is true.
-	 The size arg is passed in SendNumArgsReg, the result
-	 must come back in ReceiverResultReg."
-	| header skip |
-	<var: #skip type: #'AbstractInstruction *'>
-	self assert: size < objectMemory numSlotsMask.
-	header := objectMemory
-					headerForSlots: size
-					format: objectMemory arrayFormat
-					classIndex: ClassArrayCompactIndex.
-	self flag: #endianness.
-	cogit
-		MoveAw: objectMemory freeStartAddress R: ReceiverResultReg;
-		MoveCq: (self low32BitsOf: header) R: TempReg;
-		MoveR: TempReg Mw: 0 r: ReceiverResultReg;
-		MoveCq: header >> 32 R: TempReg;
-		MoveR: TempReg Mw: 4 r: ReceiverResultReg.
-	(initialized and: [size > 0]) ifTrue:
-		[cogit genMoveConstant: objectMemory nilObject R: TempReg.
-		 1 to: size do:
-			[:i| cogit MoveR: TempReg Mw: i * 4 + 4 r: ReceiverResultReg]].
-	cogit
-		MoveR: ReceiverResultReg R: TempReg;
-		AddCq: (objectMemory smallObjectBytesForSlots: size) R: TempReg;
-		MoveR: TempReg Aw: objectMemory freeStartAddress;
-		CmpCq: objectMemory getScavengeThreshold R: TempReg.
-	skip := cogit JumpBelow: 0.
-	cogit CallRT: ceScheduleScavengeTrampoline.
-	skip jmpTarget: cogit Label.
-	^0
-]
-
-{ #category : #'bytecode generator support' }
-CogObjectRepresentationFor32BitSpur >> genNoPopCreateClosureAt: bcpc numArgs: numArgs numCopied: numCopied contextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock [
-	"Create a closure with the given startpc, numArgs and numCopied
-	 within a context with ctxtNumArgs, large if isLargeCtxt that is in a
-	 block if isInBlock.  Do /not/ initialize the copied values."
-	| numSlots byteSize header skip |
-	<var: #skip type: #'AbstractInstruction *'>
-
-	"First get thisContext into ReceiverResultRega and thence in ClassReg."
-	self genGetActiveContextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock.
-	cogit MoveR: ReceiverResultReg R: ClassReg.
-
-	numSlots := ClosureFirstCopiedValueIndex + numCopied.
-	byteSize := objectMemory smallObjectBytesForSlots: numSlots.
-	header := objectMemory
-					headerForSlots: numSlots
-					format: objectMemory indexablePointersFormat
-					classIndex: ClassBlockClosureCompactIndex.
-	cogit
-		MoveAw: objectMemory freeStartAddress R: ReceiverResultReg;
-		MoveCq: (self low32BitsOf: header) R: TempReg;
-		MoveR: TempReg Mw: 0 r: ReceiverResultReg;
-		MoveCq: header >> 32 R: TempReg;
-		MoveR: TempReg Mw: 4 r: ReceiverResultReg;
-		LoadEffectiveAddressMw: byteSize r: ReceiverResultReg R: TempReg;
-		MoveR: TempReg Aw: objectMemory freeStartAddress;
-		CmpCq: objectMemory getScavengeThreshold R: TempReg.
-	skip := cogit JumpBelow: 0.
-	cogit CallRT: ceScheduleScavengeTrampoline.
-	skip jmpTarget: cogit Label.
-
-	cogit
-		MoveR: ClassReg Mw: ClosureOuterContextIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg;
-		MoveCq: (objectMemory integerObjectOf: bcpc) R: TempReg;
-		MoveR: TempReg Mw: ClosureStartPCIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg;
-		MoveCq: (objectMemory integerObjectOf: numArgs) R: TempReg;
-		MoveR: TempReg Mw: ClosureNumArgsIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg.
-	^0
+		MoveCq: (self low32BitsOf: header) R: scratchReg;
+		MoveR: scratchReg Mw: 0 r: rcvrReg;
+		MoveCq: header >> 32 R: scratchReg;
+		MoveR: scratchReg Mw: 4 r: rcvrReg
 ]
 
 { #category : #'compile abstract instructions' }

@@ -189,14 +189,7 @@ CogObjectRepresentationForSpur >> genAllocFloatValue: dpreg into: resultReg scra
 	cogit CmpCq: objectMemory getScavengeThreshold R: scratch1.
 	jumpFail := cogit JumpAboveOrEqual: 0.
 	cogit MoveR: scratch1 Aw: objectMemory freeStartAddress.
-	cogit MoveCq: newFloatHeader R: scratch2.
-	objectMemory wordSize = objectMemory baseHeaderSize
-		ifTrue: [cogit MoveR: scratch2 Mw: 0 r: resultReg]
-		ifFalse:
-			[self flag: #endianness.
-			 cogit MoveCq: newFloatHeader >> 32 R: scratch1.
-			 cogit MoveR: scratch2 Mw: 0 r: resultReg.
-			 cogit MoveR: scratch1 Mw: objectMemory wordSize r: resultReg].
+	self genLoadHeader: newFloatHeader intoNewInstance: resultReg using: scratch1.
 	cogit MoveRd: dpreg M64: objectMemory baseHeaderSize r: resultReg.
 	^jumpFail
 ]
@@ -427,7 +420,7 @@ CogObjectRepresentationForSpur >> genGetActiveContextLarge: isLarge inBlock: isI
 					classIndex: ClassMethodContextCompactIndex.
 	self flag: #endianness.
 	cogit MoveAw: objectMemory freeStartAddress R: ReceiverResultReg.
-	self genLoadHeaderIntoNewInstance: header.
+	self genLoadHeader: header intoNewInstance: ReceiverResultReg using: TempReg.
 	cogit
 		MoveR: ReceiverResultReg R: TempReg;
 		AddCq: (objectMemory smallObjectBytesForSlots: slotSize) R: TempReg;
@@ -840,9 +833,78 @@ CogObjectRepresentationForSpur >> genJumpNotImmediateInScratchReg: aRegister [
 ]
 
 { #category : #initialization }
-CogObjectRepresentationForSpur >> genLoadHeaderIntoNewInstance: header [
-	"Generate the instructions to move the constant header into a new instance pointed to by ReceiverResultReg."
-	^self subclassResponsibility
+CogObjectRepresentationForSpur >> genLoadHeader: header intoNewInstance: rcvrReg using: scratchReg [
+	"Generate the instructions to move the constant header into a new instance pointed to by rcvrReg."
+	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSpur >> genNewArrayOfSize: size initialized: initialized [
+	"Generate a call to code that allocates a new Array of size.
+	 The Array should be initialized with nils iff initialized is true.
+	 The size arg is passed in SendNumArgsReg, the result
+	 must come back in ReceiverResultReg."
+	| header skip |
+	<var: #skip type: #'AbstractInstruction *'>
+	self assert: size < objectMemory numSlotsMask.
+	header := objectMemory
+					headerForSlots: size
+					format: objectMemory arrayFormat
+					classIndex: ClassArrayCompactIndex.
+	cogit MoveAw: objectMemory freeStartAddress R: ReceiverResultReg.
+	self genLoadHeader: header intoNewInstance: ReceiverResultReg using: TempReg.
+	(initialized and: [size > 0]) ifTrue:
+		[cogit genMoveConstant: objectMemory nilObject R: TempReg.
+		 0 to: size - 1 do:
+			[:i| cogit MoveR: TempReg
+					Mw: i * objectMemory wordSize + objectMemory baseHeaderSize
+					r: ReceiverResultReg]].
+	cogit
+		LoadEffectiveAddressMw: (objectMemory smallObjectBytesForSlots: size) r: ReceiverResultReg R: TempReg;
+		MoveR: TempReg Aw: objectMemory freeStartAddress;
+		CmpCq: objectMemory getScavengeThreshold R: TempReg.
+	skip := cogit JumpBelow: 0.
+	cogit CallRT: ceScheduleScavengeTrampoline.
+	skip jmpTarget: cogit Label.
+	^0
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSpur >> genNoPopCreateClosureAt: bcpc numArgs: numArgs numCopied: numCopied contextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock [
+	"Create a closure with the given startpc, numArgs and numCopied
+	 within a context with ctxtNumArgs, large if isLargeCtxt that is in a
+	 block if isInBlock.  Do /not/ initialize the copied values."
+	| numSlots byteSize header skip |
+	<var: #skip type: #'AbstractInstruction *'>
+
+	"First get thisContext into ReceiverResultRega and thence in ClassReg."
+	self genGetActiveContextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock.
+	cogit MoveR: ReceiverResultReg R: ClassReg.
+
+	numSlots := ClosureFirstCopiedValueIndex + numCopied.
+	byteSize := objectMemory smallObjectBytesForSlots: numSlots.
+	header := objectMemory
+					headerForSlots: numSlots
+					format: objectMemory indexablePointersFormat
+					classIndex: ClassBlockClosureCompactIndex.
+	cogit MoveAw: objectMemory freeStartAddress R: ReceiverResultReg.
+	self genLoadHeader: header intoNewInstance: ReceiverResultReg using: TempReg.
+	cogit
+		LoadEffectiveAddressMw: byteSize r: ReceiverResultReg R: TempReg;
+		MoveR: TempReg Aw: objectMemory freeStartAddress;
+		CmpCq: objectMemory getScavengeThreshold R: TempReg.
+	skip := cogit JumpBelow: 0.
+	cogit CallRT: ceScheduleScavengeTrampoline.
+	skip jmpTarget: cogit Label.
+
+	cogit
+		MoveR: ClassReg Mw: ClosureOuterContextIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg;
+		MoveCq: (objectMemory integerObjectOf: bcpc) R: TempReg;
+		MoveR: TempReg Mw: ClosureStartPCIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg;
+		MoveCq: (objectMemory integerObjectOf: numArgs) R: TempReg;
+		MoveR: TempReg Mw: ClosureNumArgsIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg.
+	^0
 ]
 
 { #category : #'compile abstract instructions' }
