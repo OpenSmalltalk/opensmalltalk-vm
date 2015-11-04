@@ -32,6 +32,13 @@ CogX64CompilerForTests class >> dataRegistersWithAccessorsExcept: accessorsToExc
 ]
 
 { #category : #'test support' }
+CogX64CompilerForTests class >> doubleWordRegistersWithNamesDo: aBinaryBlock [
+	self registers
+		with: #('%eax' '%ecx' '%edx' '%ebx' '%esp' '%ebp' '%esi' '%edi' '%r8d' '%r9d' '%r10d' '%r11d' '%r12d' '%r13d' '%r14d' '%r15d')
+		do: aBinaryBlock
+]
+
+{ #category : #'test support' }
 CogX64CompilerForTests class >> fp64RegistersWithAccessorsDo: aTrinaryBlock [
 	self fp64registers withIndexDo:
 		[:reg :i|
