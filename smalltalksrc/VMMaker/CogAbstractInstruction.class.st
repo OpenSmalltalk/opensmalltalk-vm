@@ -829,6 +829,14 @@ CogAbstractInstruction >> initializeUniqueLiteral: literal [
 		at: 2 put: -1			"opcodeIndex"
 ]
 
+{ #category : #disassembly }
+CogAbstractInstruction >> instructionSizeAt: pc [
+	"Answer the instruction size at pc. This is used in method disassembly
+	 to decode the jumps in block dispatch to discover where block methods
+	 occur within a larger method."
+	^4
+]
+
 { #category : #testing }
 CogAbstractInstruction >> isAFixup: fixupOrAddress [
 	<var: #fixupOrAddress type: #'void *'>
