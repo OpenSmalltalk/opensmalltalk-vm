@@ -91,6 +91,13 @@ CogObjectRepresentationFor64BitSpur >> fetchImmediateTagOtherThanTag1: tag1 tag2
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genConvertCharacterToSmallIntegerInReg: reg [
+	"Convert the SmallInteger in reg to a Character, assuming
+	 the SmallInteger's value is a valid character."
+	cogit SubCq: objectMemory characterTag - objectMemory smallIntegerTag R: reg
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genConvertIntegerToSmallIntegerInReg: reg [
 	cogit LogicalShiftLeftCq: self numTagBits R: reg.
 	cogit AddCq: 1 R: reg.
@@ -117,12 +124,12 @@ CogObjectRepresentationFor64BitSpur >> genFetchIndexRegister: indexReg from: tab
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genGetHashFieldNonImmOf: instReg asSmallIntegerInto: destReg [
 	"Fetch the instance's identity hash into destReg, encoded as a SmallInteger."
-	"Get header word in scratchReg"
-	cogit MoveMw: 0 r: instReg R: destReg.
-	"Shift and mask the field leaving room for the SmallInteger tag."
-	cogit LogicalShiftRightCq: objectMemory identityHashFullWordShift R: destReg.
-	cogit AndCq: objectMemory identityHashHalfWordMask R: destReg.
-	self genConvertIntegerToSmallIntegerInReg: destReg.
+	cogit
+		MoveMw: 0 r: instReg R: destReg;
+		"Shift and mask the field leaving room for the SmallInteger tag."
+		LogicalShiftRightCq: objectMemory identityHashFullWordShift - objectMemory numTagBits R: destReg;
+		AndCq: objectMemory identityHashHalfWordMask << objectMemory numTagBits R: destReg;
+		AddCq: objectMemory smallIntegerTag R: destReg.
 	^0
 ]
 
@@ -160,28 +167,23 @@ CogObjectRepresentationFor64BitSpur >> genGetInlineCacheClassTagFrom: sourceReg 
 
 { #category : #'primitive generators' }
 CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveIdentityHash: retNoffset [
-	| jumpImm jumpSI jumpSF jumpNotSet ret |
-	<var: #jumpSI type: #'AbstractInstruction *'>
+	| jumpImm jumpSF jumpNotSet ret |
 	<var: #jumpSF type: #'AbstractInstruction *'>
 	<var: #jumpImm type: #'AbstractInstruction *'>
 	<var: #jumpNotSet type: #'AbstractInstruction *'>
-	jumpImm := self genJumpImmediate: ReceiverResultReg.
+	jumpImm := self genJumpImmediate: ReceiverResultReg. "uses TstCqR"
 	self genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: TempReg.
 	cogit CmpCq: ConstZero R: TempReg.
 	jumpNotSet := cogit JumpZero: 0.
 	cogit MoveR: TempReg R: ReceiverResultReg.
 	ret := cogit RetN: retNoffset.
 	jumpImm jmpTarget: cogit Label.
-	jumpSI := self genJumpSmallInteger: ReceiverResultReg.
-	jumpSI asInteger = UnimplementedOperation ifTrue:
-		[cogit MoveR: ReceiverResultReg R: TempReg.
-		 jumpSI := self genJumpSmallIntegerInScratchReg: TempReg].
-	jumpSI jmpTarget: ret.
-	"Fail SmallFloat because their hash uses rotatedFloatBitsOf: the oop"
-	jumpSF := self genJumpSmallFloat: ReceiverResultReg.
-	jumpSF asInteger = UnimplementedOperation ifTrue:
-		[cogit MoveR: ReceiverResultReg R: TempReg.
-		 jumpSI := self genJumpSmallFloatInScratchReg: TempReg].
+	jumpSF := cogit "Fail SmallFloat because their hash uses rotatedFloatBitsOf: the oop"
+		AndCq: objectMemory tagMask R: ReceiverResultReg R: TempReg;
+		CmpCq: objectMemory smallIntegerTag R: TempReg;
+		JumpZero: ret;
+		CmpCq: objectMemory characterTag R: TempReg;
+		JumpNonZero: 0.
 	self genConvertCharacterToSmallIntegerInReg: ReceiverResultReg.
 	cogit Jump: ret.
 	jumpNotSet jmpTarget: (jumpSF jmpTarget: cogit Label).
@@ -425,6 +427,20 @@ CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genJumpNotSmallFloat: reg scratchReg: scratch [
+	"Generate a compare and branch to test if aRegister contains other than a SmallFloat.
+	 Answer the jump."
+	cogit AndCq: objectMemory tagMask R: reg R: scratch.
+	cogit CmpCq: objectMemory smallFloatTag R: scratch.
+	^cogit JumpNonZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genJumpNotSmallFloatInScratchReg: aRegister [
+	^self genJumpNotSmallFloat: aRegister scratchReg: TempReg
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genJumpNotSmallInteger: reg scratchReg: scratch [
 	"Generate a compare and branch to test if aRegister contains other than a SmallInteger.
 	 Answer the jump.  Override since scratch is needed."
@@ -439,12 +455,41 @@ CogObjectRepresentationFor64BitSpur >> genJumpNotSmallIntegerInScratchReg: aRegi
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genJumpSmallFloat: aRegister [
+	"Generate a compare and branch to test if aRegister contains a SmallFloat.
+	 Answer the jump, or UnimplementedOperation if this cannot be done with
+	 a single register."
+	<returnTypeC: #'AbstractInstruction *'>
+	<inline: true>
+	^cogit cCoerceSimple: UnimplementedOperation to: #'AbstractInstruction *'
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genJumpSmallFloat: reg scratchReg: scratch [
+	"Generate a compare and branch to test if aRegister contains a SmallFloat.
+	 Answer the jump.  Override since scratch is needed."
+	cogit AndCq: objectMemory tagMask R: reg R: scratch.
+	cogit CmpCq: objectMemory smallFloatTag R: scratch.
+	^cogit JumpZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genJumpSmallFloatInScratchReg: aRegister [
+	^self genJumpSmallFloat: aRegister scratchReg: TempReg
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genJumpSmallInteger: reg scratchReg: scratch [
 	"Generate a compare and branch to test if aRegister contains a SmallInteger.
 	 Answer the jump.  Override since scratch is needed."
 	cogit AndCq: objectMemory tagMask R: reg R: scratch.
 	cogit CmpCq: objectMemory smallIntegerTag R: scratch.
 	^cogit JumpZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genJumpSmallIntegerInScratchReg: aRegister [
+	^self genJumpSmallInteger: aRegister scratchReg: TempReg
 ]
 
 { #category : #initialization }

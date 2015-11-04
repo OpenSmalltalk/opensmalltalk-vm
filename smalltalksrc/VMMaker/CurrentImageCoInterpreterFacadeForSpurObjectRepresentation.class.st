@@ -127,6 +127,11 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> headerForSlots: nu
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> identityHashFullWordShift [
+	^objectMemory identityHashFullWordShift
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> isForwardedObjectClassIndexPun [
 	^objectMemory isForwardedObjectClassIndexPun
 ]
@@ -140,6 +145,11 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> isImmediateClass: 
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> numSlotsMask [
 	^objectMemory numSlotsMask
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> numTagBits [
+	^objectMemory numTagBits
 ]
 
 { #category : #accessing }
