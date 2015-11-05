@@ -48,8 +48,12 @@
 #import "sqVirtualMachine.h"
 
 //#import <OpenGL/CGLMacro.h>
-#import <OpenGL/gl.h>
-#import <OpenGL/Opengl.h>
+# import <OpenGL/gl.h>
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
+# import <OpenGL/OpenGL.h>
+#else
+# import <OpenGL/Opengl.h>
+#endif
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;
