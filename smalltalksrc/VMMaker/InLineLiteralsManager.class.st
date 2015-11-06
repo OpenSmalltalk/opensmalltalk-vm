@@ -27,12 +27,6 @@ InLineLiteralsManager >> assertValidAnnotation: annotation for: instruction [
 ]
 
 { #category : #'closed PIC parsing' }
-InLineLiteralsManager >> cPICCase: caseIndex jumpTargetBefore: pc [
-	<inline: true>
-	^cogit backEnd jumpLongTargetBeforeFollowingAddress: pc
-]
-
-{ #category : #'closed PIC parsing' }
 InLineLiteralsManager >> cPICCase: caseIndex relocateJumpLongBefore: pc by: delta [
 	<inline: true>
 	cogit backEnd
@@ -73,6 +67,12 @@ InLineLiteralsManager >> dumpLiterals: generateBranchAround [
 	<inline: true>
 ]
 
+{ #category : #'closed PIC parsing' }
+InLineLiteralsManager >> endSizeOffset [
+	"return the offset need from the cPICEndSize in order to point to just after the last instruction - here that means 0"
+	^0
+]
+
 { #category : #'garbage collection' }
 InLineLiteralsManager >> fetchLiteralAtAnnotatedAddress: address using: instruction [
 	"Normally literals are embedded in instructions and the annotation is at the start of
@@ -103,6 +103,12 @@ InLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 
 { #category : #'garbage collection' }
 InLineLiteralsManager >> objRefInClosedPICAt: mcpc [
+	"'mcpc' refers to the jump/branch instruction at the end of
+	each cpic case. The method objRef is the method object referenced by the
+	movI $0x0bada553, %ebx 
+	or
+	ldr    r6, [pc, #64]    ; 0x000017d4 16rBADA553
+	type instruction preceeding this"
 	<inline: true>
 	^cogit backEnd literalBeforeFollowingAddress: mcpc
 ]
@@ -142,6 +148,11 @@ InLineLiteralsManager >> storeLiteral: literal atAnnotatedAddress: address using
 
 { #category : #'garbage collection' }
 InLineLiteralsManager >> storeObjRef: literal inClosedPICAt: address [
+	"'mcpc' refers to the jump/branch instruction at the end of
+	each cpic case. The objRef is the literal referenced by the
+	movI $0x0bada553, %ebx or
+	ldr    r6, [pc, #64]    ; 0x000017d4 16rBADA553
+	type instruction preceeding this"
 	<var: #address type: #usqInt>
 	<inline: true>
 	cogit backEnd storeLiteral: literal beforeFollowingAddress: address

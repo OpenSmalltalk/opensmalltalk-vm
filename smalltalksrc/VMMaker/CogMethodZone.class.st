@@ -677,7 +677,7 @@ CogMethodZone >> printOpenPICList [
 	<var: #openPIC type: #'CogMethod *'>
 	openPIC := openPICList.
 	[openPIC == nil] whileFalse:
-		[self printCogMethod: openPIC.
+		[coInterpreter printCogMethod: openPIC.
 		 openPIC := self cCoerceSimple: openPIC nextOpenPIC to: #'CogMethod *']
 ]
 

@@ -67,6 +67,12 @@ CogOutOfLineLiteralsARMCompiler >> isSharable [
 	^operands at: 1
 ]
 
+{ #category : #'inline cacheing' }
+CogOutOfLineLiteralsARMCompiler >> literalBeforeFollowingAddress: followingAddress [
+	"Return the literal referenced by the instruction immediately preceding followingAddress."
+	^objectMemory longAt: (self pcRelativeAddressAt: (self instructionAddressBefore: followingAddress))
+]
+
 { #category : #accessing }
 CogOutOfLineLiteralsARMCompiler >> literalLoadInstructionBytes [
 	"Answer the size of a literal load instruction (which does not include the size of the literal).
@@ -157,9 +163,30 @@ CogOutOfLineLiteralsARMCompiler >> relocateMethodReferenceBeforeAddress: pc by: 
 ]
 
 { #category : #'inline cacheing' }
+CogOutOfLineLiteralsARMCompiler >> rewriteCPICCaseAt: followingAddress tag: newTag objRef: newObjRef target: newTarget [
+	"rewrite the three values involved in a CPIC case. Used by the create & extend cpcic methods"
+
+	"ARM CPIC cases are
+	ldr TempReg, [pc relative -> tag]
+	cmp TempReg0, TempReg 
+	ldr SendNumArgs, [pc relative -> obj ref]
+	beq target"
+	"rewite the tag via the first ldr"	
+	objectMemory longAt: (self pcRelativeAddressAt: followingAddress - 16) put: newTag.
+
+	"write the obj ref/operand via the second ldr"
+	objectMemory longAt: (self pcRelativeAddressAt: followingAddress - 8) put: newObjRef.
+	
+	"write the jump address for the new target address"
+	self rewriteJumpLongAt: followingAddress target: newTarget
+]
+
+{ #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMCompiler >> rewriteFullTransferAt: callSiteReturnAddress target: callTargetAddress expectedInstruction: expectedInstruction [
 	"Rewrite a CallFull or JumpFull instruction to transfer to a different target.
-	 This variant is used to rewrite cached primitive calls.   Answer the extent
+	 This variant is used to rewrite cached primitive calls where we load the target address into ip
+	and use the 'bx ip' or 'blx ip' instruction for the actual jump or call.
+	Answer the extent
 	 of the code change which is used to compute the range of the icache to flush."
 	<var: #callSiteReturnAddress type: #usqInt>
 	<var: #callTargetAddress type: #usqInt>
@@ -184,7 +211,7 @@ CogOutOfLineLiteralsARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress t
 	self assert: (self isInImmediateJumpRange: callDistance). "we don't support long call updates here"
 	call := self bl: callDistance.
 	objectMemory
-		longAt: callSiteReturnAddress - 4 put: call;
+		longAt: (self instructionAddressBefore: callSiteReturnAddress ) put: call;
 		longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: cacheTag.
 	self assert: (self inlineCacheTagAt: callSiteReturnAddress) = cacheTag.
 	"self cCode: ''
@@ -252,7 +279,7 @@ CogOutOfLineLiteralsARMCompiler >> sizePCDependentInstructionAt: eventualAbsolut
 { #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMCompiler >> storeLiteral: literal beforeFollowingAddress: followingAddress [
 	"Rewrite the literal in the instruction immediately preceding followingAddress."
-	objectMemory longAt: (self pcRelativeAddressAt: followingAddress - 4) put: literal
+	objectMemory longAt: (self pcRelativeAddressAt: (self instructionAddressBefore: followingAddress )) put: literal
 ]
 
 { #category : #'generate machine code' }

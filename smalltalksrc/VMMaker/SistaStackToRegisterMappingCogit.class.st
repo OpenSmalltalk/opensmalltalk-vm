@@ -995,9 +995,10 @@ SistaStackToRegisterMappingCogit >> populate: tuple withPICInfoFor: cPIC firstCa
 	<var: #cPIC type: #'CogMethod *'>
 	| pc cacheTag classOop entryPoint targetMethod value |
 	<var: #targetMethod type: #'CogMethod *'>
-	pc := cPIC asInteger + firstCPICCaseOffset.
+
 	1 to: cPIC cPICNumCases do:
 		[:i|
+		pc := self addressOfEndOfCase: i inCPIC: cPIC.
 		cacheTag := i = 1
 						ifTrue: [firstCacheTag]
 						ifFalse: [backEnd literalBeforeFollowingAddress: pc
@@ -1005,7 +1006,7 @@ SistaStackToRegisterMappingCogit >> populate: tuple withPICInfoFor: cPIC firstCa
 																		- backEnd loadLiteralByteSize].
 		classOop := objectRepresentation classForInlineCacheTag: cacheTag.
 		objectMemory storePointer: i * 2 - 1 ofObject: tuple withValue: classOop.
-		entryPoint := literalsManager cPICCase: i jumpTargetBefore: pc.
+		entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
 		"Find target from jump.  A jump to the MNU entry-point should collect #doesNotUnderstand:"
 		(cPIC containsAddress: entryPoint)
 			ifTrue:
@@ -1014,8 +1015,7 @@ SistaStackToRegisterMappingCogit >> populate: tuple withPICInfoFor: cPIC firstCa
 				[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 				 self assert: targetMethod cmType = CMMethod.
 				 value := targetMethod methodObject].
-		objectMemory storePointer: i * 2 ofObject: tuple withValue: value.
-		pc := pc + cPICCaseSize]
+		objectMemory storePointer: i * 2 ofObject: tuple withValue: value ]
 ]
 
 { #category : #tests }

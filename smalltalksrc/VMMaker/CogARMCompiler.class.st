@@ -315,10 +315,13 @@ CogARMCompiler >> adds: destReg rn: srcReg imm: immediate ror: rot [
 CogARMCompiler >> aeabiDiv: dividend Mod: divisor [
 "simulate the __aeabi_idivmod call"
 	<doNotGenerate>
-	|result|
+	|result top bottom|
 
-	cogit processor r0: (result :=dividend quo: divisor).
-	cogit processor r1: (dividend rem: divisor).
+	top:= dividend signedIntFromLong.
+	bottom := divisor signedIntFromLong.
+	
+	cogit processor r0: (result :=(top quo: bottom) signedIntToLong).
+	cogit processor r1: (top rem: bottom) signedIntToLong.
 	^result
 ]
 
@@ -418,7 +421,7 @@ CogARMCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 	call := self instructionBeforeAddress: callSiteReturnAddress.
 	self assert: ((self instructionIsB: call) or: [self instructionIsBL: call]).
 	callDistance := self extractOffsetFromBL: call.
-	^callSiteReturnAddress + 4 + callDistance signedIntFromLong
+	^callSiteReturnAddress + 4 "this is the pc's +8 offset, - the 4 byte correction for the previous instruction address" + callDistance signedIntFromLong
 ]
 
 { #category : #accessing }
@@ -608,6 +611,12 @@ CogARMCompiler >> computeMaximumSize [
 													ifTrue: [4]
 													ifFalse: [self literalLoadInstructionBytes + 4]].
 		[MoveRAw]				-> [^(self isAddressRelativeToVarBase: (operands at: 1))
+													ifTrue: [4]
+													ifFalse: [self literalLoadInstructionBytes + 4]].
+		[MoveAbR]				-> [^(self isAddressRelativeToVarBase: (operands at: 0))
+													ifTrue: [4]
+													ifFalse: [self literalLoadInstructionBytes + 4]].
+		[MoveRAb]				-> [^(self isAddressRelativeToVarBase: (operands at: 1))
 													ifTrue: [4]
 													ifFalse: [self literalLoadInstructionBytes + 4]].
 		[MoveRMwr]			-> [^self is12BitValue: (operands at: 1)
@@ -1197,6 +1206,23 @@ You don't want to mess with this too much."
 ]
 
 { #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeMoveAbR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| srcAddr destReg instrOffset|
+	srcAddr := operands at: 0.
+	destReg := self concreteRegister: (operands at: 1).
+	(self isAddressRelativeToVarBase: srcAddr) ifTrue:
+		[self machineCodeAt: 0 put: (self ldrb: destReg rn: ConcreteVarBaseReg plus: 1 imm: srcAddr - cogit varBaseAddress).
+		 ^machineCodeSize := 4].
+	"load the address into ConcreteIPReg"
+	instrOffset := self moveCw: srcAddr intoR: ConcreteIPReg.
+	"We *could* overwrite the last instruction above with a LDR a, b, last-byte-of-srcAddr BUT that would break if we change to loading literals instead of forming long constants"
+	self machineCodeAt: instrOffset put: (self ldrb: destReg rn: ConcreteIPReg plus: 1 imm: 0).
+	^machineCodeSize := instrOffset + 4
+]
+
+{ #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveAwR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1338,6 +1364,25 @@ CogARMCompiler >> concretizeMoveMwrR [
 			self machineCodeAt: instrOffset put: (self ldr: destReg rn: srcReg rm: ConcreteIPReg).
 			^machineCodeSize := instrOffset + 4].
 	^0 "to keep Slang happy"
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeMoveRAb [
+	"Will get inlined into concretizeAt: switch."
+	"LEA ConcreteIPReg
+	strb srcReg, [ConcreteIPReg]"
+	<inline: true>
+	| srcReg destAddr instrOffset|
+	srcReg := self concreteRegister: (operands at: 0).
+	destAddr := operands at: 1.
+	(self isAddressRelativeToVarBase: destAddr) ifTrue:
+		[self machineCodeAt: 0 put: (self strb: srcReg rn: ConcreteVarBaseReg plus: 1 imm: destAddr - cogit varBaseAddress).
+		 ^machineCodeSize := 4].
+	"load the address into ConcreteIPReg"
+	instrOffset := self moveCw: destAddr intoR: ConcreteIPReg.
+	"We *could* overwrite the last instruction above with a LDR a, b, last-byte-of-srcAddr BUT that would break if we change to loading literals instead of forming long constants"
+	self machineCodeAt: instrOffset put: (self strb: srcReg rn: ConcreteIPReg plus: 1 imm: 0).
+	^machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1915,6 +1960,8 @@ CogARMCompiler >> dispatchConcretize [
 		[MoveRR]			-> [^self concretizeMoveRR].
 		[MoveAwR]			-> [^self concretizeMoveAwR].
 		[MoveRAw]			-> [^self concretizeMoveRAw].
+		[MoveAbR] 			 -> [^self concretizeMoveAbR].
+ 		[MoveRAb]			-> [^self concretizeMoveRAb].
 		[MoveMbrR]			-> [^self concretizeMoveMbrR].
 		[MoveRMbr]			-> [^self concretizeMoveRMbr].
 		[MoveM16rR]		-> [^self concretizeMoveM16rR].
@@ -2363,10 +2410,17 @@ CogARMCompiler >> inlineCacheTagAt: callSiteReturnAddress [
 ]
 
 { #category : #'inline cacheing' }
+CogARMCompiler >> instructionAddressBefore: followingAddress [
+	"Answer the instruction address immediately preceding followingAddress."
+	<inline: true>
+	^followingAddress -4
+]
+
+{ #category : #'inline cacheing' }
 CogARMCompiler >> instructionBeforeAddress: followingAddress [
 	"Answer the instruction immediately preceding followingAddress."
 	<inline: true>
-	^objectMemory longAt: followingAddress -4
+	^objectMemory longAt: (self instructionAddressBefore: followingAddress)
 ]
 
 { #category : #testing }
@@ -2633,8 +2687,8 @@ CogARMCompiler >> loadCwInto: destReg [
 
 { #category : #accessing }
 CogARMCompiler >> loadLiteralByteSize [
-	"Answer the byte size of a MoveCwR opcode's corresponding machine code"
-	^16
+	"Answer the byte size of a MoveCwR opcode's corresponding machine code. On ARM this is a single instruction pc-relative register load - unless we have made a mistake and not turned on the out of line literals manager"
+	^4
 ]
 
 { #category : #accessing }
@@ -2968,38 +3022,35 @@ CogARMCompiler >> relocateCallBeforeReturnPC: retpc by: delta [
 		 self assert: ((self instructionIsB: instr) or: [self instructionIsBL: instr]).
 		 distanceDiv4 := instr bitAnd: 16rFFFFFF.
 		 distanceDiv4 := distanceDiv4 + (delta // 4).
-		 objectMemory longAt: retpc - 4 put: ((instr bitAnd: 16rFF000000) bitOr: (distanceDiv4 bitAnd: 16rFFFFFF))]
+		 objectMemory longAt: (self instructionAddressBefore: retpc ) put: ((instr bitAnd: 16rFF000000) bitOr: (distanceDiv4 bitAnd: 16rFFFFFF))]
+]
+
+{ #category : #'inline cacheing' }
+CogARMCompiler >> rewriteCPICJumpAt: callSiteReturnAddress target: callTargetAddress [
+	"Rewrite a jump instruction to call a different target.  This variant is used to reset the 
+	jumps in the prototype CPIC to suit each use,.   
+	Answer the extent of the code change which is used to compute the range of the icache to flush."
+	<var: #callSiteReturnAddress type: #usqInt>
+	<var: #callTargetAddress type: #usqInt>
+	^self rewriteTransferAt: callSiteReturnAddress target: callTargetAddress
 ]
 
 { #category : #'inline cacheing' }
 CogARMCompiler >> rewriteCallAt: callSiteReturnAddress target: callTargetAddress [
 	"Rewrite a call instruction to call a different target.  This variant is used to link PICs
-	 in ceSendMiss et al, and to rewrite cached primitive calls.   Answer the extent of
-	 the code change which is used to compute the range of the icache to flush."
+	 in ceSendMiss et al,.   
+	Answer the extent of the code change which is used to compute the range of the icache to flush."
 	<var: #callSiteReturnAddress type: #usqInt>
 	<var: #callTargetAddress type: #usqInt>
-	| callDistance call |
-	"self cCode: ''
-		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
-	false
-		ifTrue: [self assert: callTargetAddress >= cogit minCallAddress]
-		ifFalse: [callTargetAddress >= cogit minCallAddress ifFalse:
-					[self error: 'linking callsite to invalid address']].
-	callDistance := (callTargetAddress - (callSiteReturnAddress + 8 "pc offset"- 4 "return offset")) signedIntToLong.
-	self assert: (self isInImmediateJumpRange: callDistance). "we don't support long call updates, yet"
-	call := self bl: callDistance.
-	objectMemory longAt:  callSiteReturnAddress - 4 put: call.
-
-	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
-	"self cCode: ''
-		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
-	^4
+	^self rewriteTransferAt: callSiteReturnAddress target: callTargetAddress
 ]
 
 { #category : #'inline cacheing' }
 CogARMCompiler >> rewriteCallFullAt: callSiteReturnAddress target: callTargetAddress [
 	"Rewrite a callFull instruction to jump to a different target.  This variant
-	 is used to rewrite cached primitive calls.   Answer the extent of the
+	 is used to rewrite cached primitive calls where we load the target address into ip
+	and use the 'blx ip' instruction for the actual call.
+	Answer the extent of the
 	 code change which is used to compute the range of the icache to flush."
 	<inline: true>
 	^self
@@ -3028,13 +3079,53 @@ CogARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag targ
 { #category : #'inline cacheing' }
 CogARMCompiler >> rewriteJumpFullAt: callSiteReturnAddress target: callTargetAddress [
 	"Rewrite a full jump instruction to jump to a different target.  This variant
-	 is used to rewrite cached primitive calls.   Answer the extent of the
+	 is used to rewrite cached primitive calls where we load the target address into ip
+	and use the 'bx ip' instruction for the actual jump.
+	Answer the extent of the
 	 code change which is used to compute the range of the icache to flush."
 	<inline: true>
 	^self
 		rewriteFullTransferAt: callSiteReturnAddress
 		target: callTargetAddress
 		expectedInstruction: 16rE12FFF1C
+]
+
+{ #category : #'inline cacheing' }
+CogARMCompiler >> rewriteJumpLongAt: callSiteReturnAddress target: callTargetAddress [
+	"Rewrite a jump instruction to call a different target.  This variant is used to reset the 
+	jumps in the prototype CPIC to suit each use,.   
+	Answer the extent of the code change which is used to compute the range of the icache to flush."
+	<var: #callSiteReturnAddress type: #usqInt>
+	<var: #callTargetAddress type: #usqInt>
+	^self rewriteTransferAt: callSiteReturnAddress target: callTargetAddress
+]
+
+{ #category : #'inline cacheing' }
+CogARMCompiler >> rewriteTransferAt: callSiteReturnAddress target: callTargetAddress [
+	"Rewrite a call/jump instruction to call a different target.  This variant is used to link PICs
+	 in ceSendMiss et al, and to rewrite call/jumps in CPICs.
+	Answer the extent of
+	 the code change which is used to compute the range of the icache to flush."
+	<var: #callSiteReturnAddress type: #usqInt>
+	<var: #callTargetAddress type: #usqInt>
+	| callDistance instr |
+	"for debug - [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
+	false
+		ifTrue: [self assert: callTargetAddress >= cogit minCallAddress]
+		ifFalse: [callTargetAddress >= cogit minCallAddress ifFalse:
+					[self error: 'linking callsite to invalid address']].
+
+	callDistance := (callTargetAddress - (callSiteReturnAddress + 8 "pc offset"- 4 "return offset")) signedIntToLong.
+	self assert: (self isInImmediateJumpRange: callDistance). "we don't support long call updates, yet"
+
+	instr := self instructionBeforeAddress: callSiteReturnAddress.
+	self assert: ((self instructionIsB: instr) or: [self instructionIsBL: instr]).
+	
+	objectMemory longAt:  (self instructionAddressBefore: callSiteReturnAddress) put: ((instr bitAnd: 16rFF000000) bitOr: (callDistance // 4 bitAnd: 16rFFFFFF)).
+
+	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
+
+	^4
 ]
 
 { #category : #testing }
