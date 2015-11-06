@@ -99,29 +99,9 @@ OutOfLineLiteralsManager >> assertValidAnnotation: annotation for: instruction [
 ]
 
 { #category : #'closed PIC parsing' }
-OutOfLineLiteralsManager >> cPICCase: caseIndex jumpTargetBefore: pc [
-	<inline: true>
-	"With Spur the class tag is always 32-bits and the literal is bytesPerOop.
-	 With V3 the class and literal are both bytesPerOop."
-	^cogit backEnd jumpLongTargetBeforeFollowingAddress: pc - (caseIndex <= 1
-																		ifTrue: [objectMemory bytesPerOop]
-																		ifFalse: [objectRepresentation inlineCacheTagsMayBeObjects
-																					ifTrue: [objectMemory bytesPerOop * 2]
-																					ifFalse: [objectMemory bytesPerOop + 4]])
-]
-
-{ #category : #'closed PIC parsing' }
 OutOfLineLiteralsManager >> cPICCase: caseIndex relocateJumpLongBefore: pc by: delta [
 	<inline: true>
-	"With Spur the class tag is always 32-bits and the literal is bytesPerOop.
-	 With V3 the class and literal are both bytesPerOop."
-	cogit backEnd
-		relocateJumpLongBeforeFollowingAddress: pc - (caseIndex <= 1
-															ifTrue: [objectMemory bytesPerOop]
-															ifFalse: [objectRepresentation inlineCacheTagsMayBeObjects
-																		ifTrue: [objectMemory bytesPerOop * 2]
-																		ifFalse: [objectMemory bytesPerOop + 4]])
-		by: delta
+	cogit backEnd relocateJumpLongBeforeFollowingAddress: pc by: delta
 ]
 
 { #category : #'compile abstract instructions' }
@@ -146,9 +126,15 @@ OutOfLineLiteralsManager >> checkQuickConstant: literal forInstruction: anInstru
 OutOfLineLiteralsManager >> classRefInClosedPICAt: address [
 	<inline: true>
 	"If inline cache tags are not objects they will be 32-bit values."
+	"Current ARM out-of-line literal CPICs use
+	ldr ip, [pc relative address1]
+	cmp r0, ip
+	ldr r6, [pc relative address2
+	beq code
+	hence the large backwards stepping here - address is pointing at the beq"
 	^objectRepresentation inlineCacheTagsMayBeObjects
-		ifFalse: [objectMemory long32At: address - 4]
-		ifTrue: [objectMemory longAt: address - objectMemory bytesPerOop]
+		ifFalse: [cogit backEnd literalBeforeFollowingAddress:  address - 8 "better to use 2 * instructionSize if we could, step back to the cmp so the literal is found properly" ]
+		ifTrue: [self break. "not sure about this ? "objectMemory longAt: address - objectMemory bytesPerOop]
 ]
 
 { #category : #initialization }
@@ -181,6 +167,12 @@ OutOfLineLiteralsManager >> dumpLiterals: generateBranchAround [
 
 	firstOpcodeIndex := cogit getOpcodeIndex.
 	lastDumpedLiteralIndex := nextLiteralIndex
+]
+
+{ #category : #'closed PIC parsing' }
+OutOfLineLiteralsManager >> endSizeOffset [
+	"return the offset need from the cPICEndSize in order to point to just after the last instruction - here that means bytesPerOop * list size"
+	^nextLiteralIndex * objectMemory bytesPerOop
 ]
 
 { #category : #'garbage collection' }
@@ -248,8 +240,11 @@ OutOfLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 
 { #category : #'garbage collection' }
 OutOfLineLiteralsManager >> objRefInClosedPICAt: address [
+	"'mcpc' refers to the jump/branch instruction at the end of
+	each cpic case. The objRef is the literal referenced by the
+	 ldr	r6, [pc, #88]	; 16r5EAF00D type instruction preceeding this"
 	<inline: true>
-	^objectMemory longAt: address
+	^cogit backEnd literalBeforeFollowingAddress: address 
 ]
 
 { #category : #initialization }
@@ -278,9 +273,15 @@ OutOfLineLiteralsManager >> storeClassRef: classObj inClosedPICAt: address [
 	<var: #address type: #usqInt>
 	<inline: true>
 	"If inline cache tags are not objects they will be 32-bit values."
+	"Current ARM out-of-line literal CPICs use
+	ldr ip, [pc relative address1]
+	cmp r0, ip
+	ldr r6, [pc relative address2
+	beq code
+	hence the large backwards stepping here"
 	objectRepresentation inlineCacheTagsMayBeObjects
-		ifTrue: [objectMemory long32At: address - 4 put: classObj]
-		ifFalse: [objectMemory longAt: address - objectMemory bytesPerOop]
+		ifTrue: [self break. objectMemory long32At: address - 4 put: classObj]
+		ifFalse: [cogit backEnd storeLiteral: classObj beforeFollowingAddress:  address - 8 "better to use 2 * instructionSize if we could, step back to the cmp so the literal is found properly"]
 ]
 
 { #category : #'garbage collection' }
@@ -295,9 +296,12 @@ OutOfLineLiteralsManager >> storeLiteral: literal atAnnotatedAddress: address us
 
 { #category : #'garbage collection' }
 OutOfLineLiteralsManager >> storeObjRef: literal inClosedPICAt: address [
+	"'mcpc' refers to the jump/branch instruction at the end of
+	each cpic case. The objRef is the literal referenced by the
+	 ldr	r6, [pc, #88]	; 16r5EAF00D type instruction preceeding this"
 	<var: #address type: #usqInt>
 	<inline: true>
-	objectMemory longAt: address put: literal
+	cogit backEnd storeLiteral: literal beforeFollowingAddress: address
 ]
 
 { #category : #'compile abstract instructions' }
