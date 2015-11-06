@@ -1224,6 +1224,13 @@ CogAbstractInstruction >> resolveJumpTarget [
 		 self jmpTarget: fixup targetInstruction]
 ]
 
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> rewriteCPICCaseAt: followingAddress tag: newTag objRef: newObjRef target: newTarget [
+	"rewrite the three values involved in a CPIC case. Used by the create & extend cpcic methods"
+	self subclassResponsibility
+	
+]
+
 { #category : #'full transfer run-time support' }
 CogAbstractInstruction >> rewriteCallFullAt: callSiteReturnAddress target: callTargetAddress [
 	"Rewrite a CallFull instruction to call a different target.  This variant is used to rewrite cached primitive calls.
