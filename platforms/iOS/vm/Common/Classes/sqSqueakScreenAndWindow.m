@@ -120,10 +120,15 @@ void MyProviderReleaseData (
     
 	[[self getMainView] preDrawThelayers];
     
-
-    dispatch_async(dispatch_get_main_queue(), ^{
-		[[self getMainView] drawThelayers];
-    });
+    //SQK-24
+    //javier_diaz_r@mac.com iOS VM problems with dragging a morph and PasteUpMorph>>flashRects:color:
+    if ([NSThread isMainThread]) {
+        [[self getMainView] drawThelayers];
+    } else {
+        dispatch_async(dispatch_get_main_queue(), ^{   //note try sync not async, I wonder if that would be an issue?
+            [[self getMainView] drawThelayers];
+        });
+    }
 }
 
 - (void) ioForceDisplayUpdate {
