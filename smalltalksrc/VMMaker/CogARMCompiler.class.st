@@ -393,6 +393,11 @@ CogARMCompiler >> bx: targetReg [
 
 ]
 
+{ #category : #testing }
+CogARMCompiler >> byteReadsZeroExtend [
+	^true
+]
+
 { #category : #abi }
 CogARMCompiler >> cResultRegister [
 	"Answer the abstract register for the C result register.
