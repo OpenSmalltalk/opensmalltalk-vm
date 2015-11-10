@@ -1,0 +1,6 @@
+This is a CocoaTemplate XCode project that exists to help get the build options
+of the main VM correct for the three configurations, Debug, Assert & Release.
+
+DOIT runs xcodebuild for each configuration and dumps the command lione for
+compiling main.m into LOGD, LOGA & LOGR.  One can then compare to check what
+options are produced, and what options differ.

@@ -399,9 +399,9 @@
 		94B9533310E6BD7100DC476A /* MacMenuOS9ToOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MacMenuOS9ToOSX.h; sourceTree = "<group>"; };
 		94B9533410E6BD7100DC476A /* MacMenuOS9ToOSX.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MacMenuOS9ToOSX.m; sourceTree = "<group>"; };
 		94BB096B1BB47DDB0016BFDF /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
-		94BB09711BB47F9B0016BFDF /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
-		94BB09731BB47FB20016BFDF /* libstdc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libstdc++.tbd"; path = "usr/lib/libstdc++.tbd"; sourceTree = SDKROOT; };
-		94BB09751BB47FCD0016BFDF /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
+		94BB09711BB47F9B0016BFDF /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = file; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		94BB09731BB47FB20016BFDF /* libstdc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = file; name = "libstdc++.tbd"; path = "usr/lib/libstdc++.tbd"; sourceTree = SDKROOT; };
+		94BB09751BB47FCD0016BFDF /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = file; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
 		94BCABBF10AB72A600F87527 /* sqSqueakOSXFileDirectoryInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqSqueakOSXFileDirectoryInterface.h; path = vm/OSX/sqSqueakOSXFileDirectoryInterface.h; sourceTree = "<group>"; };
 		94BCABC010AB72A600F87527 /* sqSqueakOSXFileDirectoryInterface.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = sqSqueakOSXFileDirectoryInterface.m; path = vm/OSX/sqSqueakOSXFileDirectoryInterface.m; sourceTree = "<group>"; };
 		94BCAD1B10AB942300F87527 /* sqSqueakOSXApplication+attributes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "sqSqueakOSXApplication+attributes.h"; path = "vm/OSX/sqSqueakOSXApplication+attributes.h"; sourceTree = "<group>"; };
@@ -580,7 +580,7 @@
 		94F8798F0E6C0C7E00662DEA /* sqSqueakIPhoneInfoPlistInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSqueakIPhoneInfoPlistInterface.h; sourceTree = "<group>"; };
 		94F879900E6C0C7E00662DEA /* sqSqueakIPhoneInfoPlistInterface.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = sqSqueakIPhoneInfoPlistInterface.m; sourceTree = "<group>"; };
 		94FA4CDD1BB4D8A800C1BE8F /* sqMacOpenGL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacOpenGL.h; sourceTree = "<group>"; };
-		94FA4CE41BB4DE1400C1BE8F /* Images-2.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = "Images-2.xcassets"; path = "SqueakCogSpur32x86/Images-2.xcassets"; sourceTree = SOURCE_ROOT; };
+		94FA4CE41BB4DE1400C1BE8F /* Images-2.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "Images-2.xcassets"; path = "SqueakCogSpur32x86/Images-2.xcassets"; sourceTree = SOURCE_ROOT; };
 		94FE5EC11B7A6232000D6014 /* sqSqueakOSXCGView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqSqueakOSXCGView.h; path = vm/OSX/sqSqueakOSXCGView.h; sourceTree = "<group>"; };
 		94FE5EC21B7A6232000D6014 /* sqSqueakOSXCGView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = sqSqueakOSXCGView.m; path = vm/OSX/sqSqueakOSXCGView.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -1818,6 +1818,73 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		73AB729D1BEBDF590080A392 /* Assert */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
+				CLANG_ANALYZER_SECURITY_INSECUREAPI_STRCPY = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = "compiler-default";
+				GCC_DEBUGGING_SYMBOLS = full;
+				GCC_ENABLE_SSE3_EXTENSIONS = YES;
+				GCC_ENABLE_SSE41_EXTENSIONS = YES;
+				GCC_ENABLE_SSE42_EXTENSIONS = YES;
+				GCC_ENABLE_SUPPLEMENTAL_SSE3_INSTRUCTIONS = YES;
+				GCC_MODEL_TUNING = "";
+				GCC_OPTIMIZATION_LEVEL = 1;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"COGMTVM=0",
+					"DEBUGVM=0",
+					"USE_GLOBAL_STRUCT=0",
+					SQUEAK_BUILTIN_PLUGIN,
+				);
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /usr/include/uuid;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = "";
+				SEPARATE_STRIP = YES;
+				STRIP_INSTALLED_PRODUCT = NO;
+			};
+			name = Assert;
+		};
+		73AB729E1BEBDF590080A392 /* Assert */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_OBJC_ARC = NO;
+				CLANG_USE_OPTIMIZATION_PROFILE = NO;
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+				);
+				GCC_C_LANGUAGE_STANDARD = "compiler-default";
+				GCC_OPTIMIZATION_LEVEL = 1;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = ../../platforms/iOS/vm/SqueakPureObjc_Prefix.pch;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					BUILD_FOR_OSX,
+					USE_INLINE_MEMORY_ACCESSORS,
+					HAVE_NANOSLEEP,
+					SQUEAK_BUILTIN_PLUGIN,
+					"DEBUGVM=0",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
+				INFOPLIST_FILE = SqueakCogSpur32x86.plist;
+				LD_GENERATE_MAP_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				OTHER_CFLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.osx3286.cog;
+				PRODUCT_NAME = Squeak;
+			};
+			name = Assert;
+		};
 		947E5F3610A9FD0400D3B69E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1825,35 +1892,62 @@
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_STRCPY = YES;
 				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = "compiler-default";
-				GCC_PREPROCESSOR_DEFINITIONS = "-DSQUEAK_BUILTIN_PLUGIN";
+				GCC_DEBUGGING_SYMBOLS = full;
+				GCC_ENABLE_SSE3_EXTENSIONS = YES;
+				GCC_ENABLE_SSE41_EXTENSIONS = YES;
+				GCC_ENABLE_SSE42_EXTENSIONS = YES;
+				GCC_ENABLE_SUPPLEMENTAL_SSE3_INSTRUCTIONS = YES;
+				GCC_MODEL_TUNING = "";
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"COGMTVM=0",
+					"DEBUGVM=1",
+					"USE_GLOBAL_STRUCT=0",
+					SQUEAK_BUILTIN_PLUGIN,
+				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = /usr/include/uuid;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				ONLY_ACTIVE_ARCH = NO;
+				SDKROOT = "";
 				SEPARATE_STRIP = YES;
+				STRIP_INSTALLED_PRODUCT = NO;
 			};
 			name = Debug;
 		};
-		9480CD150E5C7D9300C32178 /* Distribution */ = {
+		9480CD150E5C7D9300C32178 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
 				CLANG_ANALYZER_SECURITY_INSECUREAPI_STRCPY = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
 				GCC_C_LANGUAGE_STANDARD = "compiler-default";
-				GCC_PREPROCESSOR_DEFINITIONS = SQUEAK_BUILTIN_PLUGIN;
+				GCC_ENABLE_SSE3_EXTENSIONS = YES;
+				GCC_ENABLE_SSE41_EXTENSIONS = YES;
+				GCC_ENABLE_SSE42_EXTENSIONS = YES;
+				GCC_ENABLE_SUPPLEMENTAL_SSE3_INSTRUCTIONS = YES;
+				GCC_MODEL_TUNING = "";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUGVM=0",
+					"NDEBUG=1",
+					"USE_GLOBAL_STRUCT=0",
+					SQUEAK_BUILTIN_PLUGIN,
+				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = /usr/include/uuid;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				SDKROOT = "";
 				SEPARATE_STRIP = YES;
+				STRIP_INSTALLED_PRODUCT = NO;
 			};
-			name = Distribution;
+			name = Release;
 		};
 		948774A610C64DD800E4AEC5 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -1877,6 +1971,7 @@
 					HAVE_NANOSLEEP,
 					SQUEAK_BUILTIN_PLUGIN,
 					"DEBUGVM=1",
+					"USE_GLOBAL_STRUCT=0",
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				INFOPLIST_FILE = SqueakCogSpur32x86.plist;
@@ -1885,11 +1980,10 @@
 				OTHER_CFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.osx3286.cog;
 				PRODUCT_NAME = Squeak;
-				PROVISIONING_PROFILE = "";
 			};
 			name = Debug;
 		};
-		948774A710C64DD800E4AEC5 /* Distribution */ = {
+		948774A710C64DD800E4AEC5 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -1902,7 +1996,7 @@
 					"$(PROJECT_DIR)",
 				);
 				GCC_C_LANGUAGE_STANDARD = "compiler-default";
-				GCC_OPTIMIZATION_LEVEL = fast;
+				GCC_OPTIMIZATION_LEVEL = s;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = ../../platforms/iOS/vm/SqueakPureObjc_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -1918,9 +2012,8 @@
 				OTHER_CFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.osx3286.cog;
 				PRODUCT_NAME = Squeak;
-				PROVISIONING_PROFILE = "a9c24a26-f48b-45e4-ab61-12d8c233f0fa";
 			};
-			name = Distribution;
+			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
@@ -1929,7 +2022,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				948774A610C64DD800E4AEC5 /* Debug */,
-				948774A710C64DD800E4AEC5 /* Distribution */,
+				73AB729E1BEBDF590080A392 /* Assert */,
+				948774A710C64DD800E4AEC5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -1938,7 +2032,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				947E5F3610A9FD0400D3B69E /* Debug */,
-				9480CD150E5C7D9300C32178 /* Distribution */,
+				73AB729D1BEBDF590080A392 /* Assert */,
+				9480CD150E5C7D9300C32178 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

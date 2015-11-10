@@ -1,13 +1,12 @@
 #!/bin/bash
 # Build a "complete" Mac VM consisting of CoreVM/CoreMTVM + Plugins.
-# By default build the Deployment configuration into $DEST$VMAPP (CocoaSqueak.app)
+# By default build the Release configuration into $DEST$VMAPP (CocoaSqueak.app)
 IFS='	
 '
-BUILD_CONFIGURATION=Deployment
+BUILD_CONFIGURATION=Release
 NSD_BUILD_CONFIGURATION=Deployment
 XCD_BUILD_CONFIGURATION=Release
 APP=Squeak.app
-# build/SqueakCogSpur32x86.build/Debug/SqueakCogSpur32x86.build/Objects-normal
 #OBJDIR=Squeak.build/Objects-normal/i386
 OBJDIR=SqueakCogSpur32x86.build/Objects-normal/i386
 VMAPP=".app"
@@ -31,7 +30,7 @@ while getopts 'admskh?' opt $@; do
 	m)		VMAPP="MT.app";
 			VMXCP=SqueakCogSpur32x86MT;
 			SFP=SqueakMTFFIPrims;;
-	s)		BUILD_CONFIGURATION=DeploymentSymbols
+	s)		BUILD_CONFIGURATION=Release
 			DEST=CocoaFast;;
 	k)		KEEP=1;;
 	h|\?|*)	echo $USAGE
@@ -39,7 +38,7 @@ while getopts 'admskh?' opt $@; do
 			echo '  -a: compile Assert configuration in Assert.app for assert checks'
 			echo '  -d: compile Development configuration in Debug.app for debugging'
 			echo '  -m: compile the multi-threaded version of the target, e.g. FastMT.app instead of Fast.app'
-			echo '  -s: compile DeploymentSymbols configuration in Fast.app for partial debugging'
+			echo '  -s: compile Release configuration in Fast.app for partial debugging'
 			echo "  -k: keep (do not delete) the existing $APP prior to the build"
 			echo '	-h: display this help'
 			exit 0;;
@@ -74,6 +73,7 @@ echo
 echo FloatMathPlugin xcodebuild -project FloatMathPlugin/FloatMathPlugin.xcodeproj -configuration Release
 xcodebuild -project FloatMathPlugin/FloatMathPlugin.xcodeproj -configuration Release
 rm -rf "$DEST/Contents/Resources/FloatMathPlugin.bundle"
+echo cp -R FloatMathPlugin/build/Release/FloatMathPlugin.bundle "$DEST/Contents/Resources"
 cp -R FloatMathPlugin/build/Release/FloatMathPlugin.bundle "$DEST/Contents/Resources"
 
 # Build the FloatArray plugin

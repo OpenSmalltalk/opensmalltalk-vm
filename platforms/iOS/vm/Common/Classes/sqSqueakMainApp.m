@@ -101,9 +101,9 @@ error(char *msg)
 	else
 		printf("\nCan't dump Smalltalk stack. Not in VM thread\n");
 	printf("\nMost recent primitives\n");
-#if COGVM
+# if COGVM
     dumpPrimTraceLog();
-#endif
+# endif
 	abort();
 }
 #pragma auto_inline on
@@ -119,28 +119,28 @@ error(char *msg)
 static void
 reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 {
-#if !defined(NOEXECINFO)
+# if !defined(NOEXECINFO)
 	void *addrs[BACKTRACE_DEPTH];
 	int depth;
-#endif
+# endif
 	/* flag prevents recursive error when trying to print a broken stack */
 	static sqInt printingStack = false;
     
 	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
-#if COGVM
+# if COGVM
     printf("%s\n\n", sourceVersionString('\n'));
-#endif
+# endif
     
-#if !defined(NOEXECINFO)
+# if !defined(NOEXECINFO)
 	printf("C stack backtrace:\n");
 	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
 	depth = backtrace(addrs, BACKTRACE_DEPTH);
 	backtrace_symbols_fd(addrs, depth, fileno(stdout));
-#endif
+# endif
     
 	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		if (!printingStack) {
-#if COGVM
+# if COGVM
 			/* If we're in generated machine code then the only way the stack
 			 * dump machinery has of giving us an accurate report is if we set
 			 * stackPointer & framePointer to the native stack & frame pointers.
@@ -163,7 +163,7 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 			char *savedSP, *savedFP;
             
 			ifValidWriteBackStackPointersSaveTo(fp,sp,&savedFP,&savedSP);
-#endif
+# endif
             
 			printingStack = true;
 			if (printAll) {
@@ -175,18 +175,18 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 				printCallStack();
 			}
 			printingStack = false;
-#if COGVM
+# if COGVM
 			/* Now restore framePointer and stackPointer via same function */
 			ifValidWriteBackStackPointersSaveTo(savedFP,savedSP,0,0);
-#endif
+# endif
 		}
 	}
 	else
 		printf("\nCan't dump Smalltalk stack(s). Not in VM thread\n");
-#if STACKVM
+# if STACKVM
 	printf("\nMost recent primitives\n");
 	dumpPrimTraceLog();
-#endif
+# endif
 	printf("\n\t(%s)\n", msg);
 	fflush(stdout);
 }
@@ -241,30 +241,30 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 	reportStackState("Segmentation fault", ctimebuf, 0, uap);
 	abort();
 }
-#else
-
-void sigsegv(int sig, siginfo_t *info, void *uap)
+#else /* COGVM || STACKVM */
+void
+sigsegv(int sig, siginfo_t *info, void *uap)
 {
     
     /* error("Segmentation fault"); */
     static int printingStack= 0;
     
     printf("\nSegmentation fault\n\ns");
-    if (!printingStack)
-    {
+    if (!printingStack) {
         printingStack= 1;
         printAllStacks();
     }
     abort();
 }
-#endif
+#endif /* COGVM || STACKVM */
 
 /*
  * End of signal handlers
  *
  */
 
-void attachToSignals() {
+void
+attachToSignals() {
 #if COGVM
 	struct sigaction sigusr1_handler_action, sigsegv_handler_action;
         
@@ -280,19 +280,22 @@ void attachToSignals() {
 #endif
 }
 
-sqInt ioExit(void) {
+sqInt
+ioExit(void) {
 	//API Documented
  	[gDelegateApp.squeakApplication ioExit];
  	return 0;
 }
 
-sqInt ioExitWithErrorCode(int ec) {
+sqInt
+ioExitWithErrorCode(int ec) {
 	//API Documented
  	[gDelegateApp.squeakApplication ioExitWithErrorCode: ec];
  	return 0;
 }
 
-sqInt ioDisablePowerManager(sqInt disableIfNonZero) {
+sqInt
+ioDisablePowerManager(sqInt disableIfNonZero) {
 	//API Documented
 	return 0;
 }	
