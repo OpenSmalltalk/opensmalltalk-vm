@@ -1,0 +1,16 @@
+armulmem.o: armulmem.c GdbARMPlugin.h armopts.h armos.h armdefs.h \
+ config.h ../common/tconfig.h ../../include/ansidecl.h
+
+GdbARMPlugin.h:
+
+armopts.h:
+
+armos.h:
+
+armdefs.h:
+
+config.h:
+
+../common/tconfig.h:
+
+../../include/ansidecl.h:

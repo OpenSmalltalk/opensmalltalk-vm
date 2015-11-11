@@ -1,0 +1,12 @@
+armsupp.o: armsupp.c armdefs.h config.h ../common/tconfig.h armemu.h \
+ ../../include/ansidecl.h
+
+armdefs.h:
+
+config.h:
+
+../common/tconfig.h:
+
+armemu.h:
+
+../../include/ansidecl.h:

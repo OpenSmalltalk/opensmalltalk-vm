@@ -1,0 +1,115 @@
+wrapper.o: wrapper.c ../../include/ansidecl.h config.h \
+ ../common/tconfig.h ../../bfd/bfd.h ../../include/symcat.h \
+ ../../include/gdb/callback.h ../../include/gdb/remote-sim.h sim-main.h \
+ ../common/sim-basics.h ../common/cconfig.h ../common/tconfig.h \
+ ../common/sim-config.h ../common/sim-inline.h ../common/sim-types.h \
+ ../common/sim-bits.h ../common/sim-bits.c ../common/sim-basics.h \
+ ../common/sim-assert.h ../common/sim-io.h ../../include/libiberty.h \
+ ../../include/ansidecl.h ../common/sim-n-bits.h ../common/sim-endian.h \
+ ../common/sim-endian.c ../common/sim-n-endian.h ../common/sim-signal.h \
+ ../../include/gdb/signals.h ../../include/gdb/signals.def \
+ ../common/sim-arange.h ../common/sim-arange.c ../common/sim-utils.h \
+ ../common/sim-base.h ../common/sim-module.h ../common/sim-trace.h \
+ ../common/sim-core.h ../common/sim-events.h ../common/sim-profile.h \
+ ../common/sim-engine.h ../common/sim-watch.h ../common/sim-memopt.h \
+ ../common/sim-cpu.h armdefs.h ../common/sim-options.h \
+ ../../include/getopt.h armemu.h dbg_rdi.h ../../include/gdb/sim-arm.h \
+ iwmmxt.h ../../include/dis-asm.h
+
+../../include/ansidecl.h:
+
+config.h:
+
+../common/tconfig.h:
+
+../../bfd/bfd.h:
+
+../../include/symcat.h:
+
+../../include/gdb/callback.h:
+
+../../include/gdb/remote-sim.h:
+
+sim-main.h:
+
+../common/sim-basics.h:
+
+../common/cconfig.h:
+
+../common/tconfig.h:
+
+../common/sim-config.h:
+
+../common/sim-inline.h:
+
+../common/sim-types.h:
+
+../common/sim-bits.h:
+
+../common/sim-bits.c:
+
+../common/sim-basics.h:
+
+../common/sim-assert.h:
+
+../common/sim-io.h:
+
+../../include/libiberty.h:
+
+../../include/ansidecl.h:
+
+../common/sim-n-bits.h:
+
+../common/sim-endian.h:
+
+../common/sim-endian.c:
+
+../common/sim-n-endian.h:
+
+../common/sim-signal.h:
+
+../../include/gdb/signals.h:
+
+../../include/gdb/signals.def:
+
+../common/sim-arange.h:
+
+../common/sim-arange.c:
+
+../common/sim-utils.h:
+
+../common/sim-base.h:
+
+../common/sim-module.h:
+
+../common/sim-trace.h:
+
+../common/sim-core.h:
+
+../common/sim-events.h:
+
+../common/sim-profile.h:
+
+../common/sim-engine.h:
+
+../common/sim-watch.h:
+
+../common/sim-memopt.h:
+
+../common/sim-cpu.h:
+
+armdefs.h:
+
+../common/sim-options.h:
+
+../../include/getopt.h:
+
+armemu.h:
+
+dbg_rdi.h:
+
+../../include/gdb/sim-arm.h:
+
+iwmmxt.h:
+
+../../include/dis-asm.h:

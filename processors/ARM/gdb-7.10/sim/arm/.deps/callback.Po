@@ -1,0 +1,26 @@
+callback.o: ../common/callback.c ../common/cconfig.h ../common/tconfig.h \
+ config.h ../common/tconfig.h ../../include/ansidecl.h \
+ ../../include/gdb/callback.h ../../bfd/bfd.h ../../include/symcat.h \
+ targ-vals.h ../../include/libiberty.h ../../include/ansidecl.h
+
+../common/cconfig.h:
+
+../common/tconfig.h:
+
+config.h:
+
+../common/tconfig.h:
+
+../../include/ansidecl.h:
+
+../../include/gdb/callback.h:
+
+../../bfd/bfd.h:
+
+../../include/symcat.h:
+
+targ-vals.h:
+
+../../include/libiberty.h:
+
+../../include/ansidecl.h:

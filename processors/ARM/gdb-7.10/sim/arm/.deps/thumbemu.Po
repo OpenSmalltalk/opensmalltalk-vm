@@ -1,0 +1,12 @@
+thumbemu.o: thumbemu.c armdefs.h config.h ../common/tconfig.h armemu.h \
+ armos.h
+
+armdefs.h:
+
+config.h:
+
+../common/tconfig.h:
+
+armemu.h:
+
+armos.h:

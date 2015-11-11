@@ -1,0 +1,14 @@
+armvirt.o: armvirt.c armopts.h armos.h armdefs.h config.h \
+ ../common/tconfig.h ../../include/ansidecl.h
+
+armopts.h:
+
+armos.h:
+
+armdefs.h:
+
+config.h:
+
+../common/tconfig.h:
+
+../../include/ansidecl.h:

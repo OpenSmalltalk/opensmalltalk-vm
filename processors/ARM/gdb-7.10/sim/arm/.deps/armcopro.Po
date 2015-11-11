@@ -1,0 +1,16 @@
+armcopro.o: armcopro.c armdefs.h config.h ../common/tconfig.h armos.h \
+ armemu.h ../../include/ansidecl.h iwmmxt.h
+
+armdefs.h:
+
+config.h:
+
+../common/tconfig.h:
+
+armos.h:
+
+armemu.h:
+
+../../include/ansidecl.h:
+
+iwmmxt.h:

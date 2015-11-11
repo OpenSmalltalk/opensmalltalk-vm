@@ -1,0 +1,17 @@
+targ-map.o: targ-map.c config.h ../common/tconfig.h \
+ ../../include/ansidecl.h ../../include/gdb/callback.h ../../bfd/bfd.h \
+ ../../include/symcat.h targ-vals.h
+
+config.h:
+
+../common/tconfig.h:
+
+../../include/ansidecl.h:
+
+../../include/gdb/callback.h:
+
+../../bfd/bfd.h:
+
+../../include/symcat.h:
+
+targ-vals.h:
