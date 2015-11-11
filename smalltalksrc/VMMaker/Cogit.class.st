@@ -927,7 +927,8 @@ Cogit class >> initializeMiscConstants [
 	ProcessorClass := (initializationOptions at: #ISA ifAbsentPut: [#IA32]) caseOf: {
 							[#X64] 		->	[BochsX64Alien].
 							[#IA32] 	->	[BochsIA32Alien].
-							[#ARMv5]	->	[GdbARMAlien]. }.
+							[#ARMv5]	->	[GdbARMAlien].
+							[#MIPSEL]	->	[MIPSELSimulator] }.
 	CogCompilerClass := self activeCompilerClass.
 	(CogCompilerClass withAllSuperclasses copyUpTo: CogAbstractInstruction) do:
 		[:compilerClass| compilerClass initialize].
@@ -4491,8 +4492,12 @@ Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: r
 		saveRegs: saveRegs.
 	backEnd genLoadStackPointers.
 	(pushLinkReg and: [backEnd hasLinkRegister])
-		ifTrue: [self PopR: PCReg] "since we know there is no SP messing to do, might as well pop the stacked return address straight into PC"
-		ifFalse:[ self RetN: 0]
+		ifTrue: [
+			backEnd hasPCRegister
+				ifTrue: [self PopR: PCReg]
+				ifFalse: [self PopR: LinkReg. 
+						self RetN: 0]]
+		ifFalse: [self RetN: 0]
 ]
 
 { #category : #initialization }

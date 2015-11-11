@@ -80,6 +80,11 @@ CogX64Compiler class >> ABI [
 	^ABI
 ]
 
+{ #category : #translation }
+CogX64Compiler class >> ISA [
+	^#X64
+]
+
 { #category : #accessing }
 CogX64Compiler class >> VarBaseReg [
 	"Answer the number of the reg we use to hold the base address of CoInterpreter variables"
