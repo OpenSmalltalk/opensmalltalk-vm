@@ -90,6 +90,12 @@ CogOutOfLineLiteralsARMCompiler >> literalOpcodeIndex [
 	^(operands at: 2) asInteger
 ]
 
+{ #category : #accessing }
+CogOutOfLineLiteralsARMCompiler >> loadLiteralByteSize [
+	"Answer the byte size of a MoveCwR opcode's corresponding machine code. On ARM this is a single instruction pc-relative register load - unless we have made a mistake and not turned on the out of line literals manager"
+	^4
+]
+
 { #category : #'generate machine code' }
 CogOutOfLineLiteralsARMCompiler >> mapEntryAddress [
 	"Typically map entries apply to the end of an instruction, for two reasons:
