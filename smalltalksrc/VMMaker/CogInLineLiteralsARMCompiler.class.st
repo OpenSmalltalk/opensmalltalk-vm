@@ -87,6 +87,12 @@ CogInLineLiteralsARMCompiler >> literalLoadInstructionBytes [
 	^16
 ]
 
+{ #category : #accessing }
+CogInLineLiteralsARMCompiler >> loadLiteralByteSize [
+	"Answer the byte size of a MoveCwR opcode's corresponding machine code. On ARM this is a single instruction pc-relative register load - unless we have made a mistake and not turned on the out of line literals manager"
+	^16
+]
+
 { #category : #'generate machine code - support' }
 CogInLineLiteralsARMCompiler >> moveCw: constant intoR: destReg [
 	"Emit a load of aWord into destReg.  Because most ARM instruction enable using a (8-12bit) offset relative to a
