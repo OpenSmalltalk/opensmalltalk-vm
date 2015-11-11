@@ -94,9 +94,8 @@ cp -R CroquetPlugin/build/Release/CroquetPlugin.bundle "$DEST/Contents/Resources
 echo
 echo Mpeg3Plugin xcodebuild -project Mpeg3Plugin/Mpeg3Plugin.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
 xcodebuild -project Mpeg3Plugin/Mpeg3Plugin.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
-cp -R Mpeg3Plugin/build/Release/Mpeg3Plugin.bundle mpeg3.app/Contents/Resources
+cp -R Mpeg3Plugin/build/$NSD_BUILD_CONFIGURATION/Mpeg3Plugin.bundle "$DEST/Contents/Resources"
 
-# Build the FFI plugin (New as of 27 March 2008)
 echo
 echo SqueakFFIPlugin xcodebuild -project $SFP/SqueakFFI.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
 xcodebuild -project $SFP/SqueakFFI.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
@@ -154,3 +153,4 @@ cp -R UnixOSProcessPlugin/build/$XCD_BUILD_CONFIGURATION/UnixOSProcessPlugin.bun
 
 # Clean out any .svn directories (result of copying) in the VM
 find "$DEST" -name .svn -exec rm -rf {} \;
+

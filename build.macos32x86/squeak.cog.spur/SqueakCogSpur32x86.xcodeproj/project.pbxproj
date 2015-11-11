@@ -41,13 +41,6 @@
 		9463C1D61AEE168F009C5CE5 /* pcre.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E65A2E0DDD053900358328 /* pcre.c */; };
 		9463C1D71AEE1693009C5CE5 /* study.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E65A340DDD053900358328 /* study.c */; };
 		948773FC10C64DD800E4AEC5 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 947E64DC10AA18FE00D3B69E /* MainMenu.xib */; };
-		948773FF10C64DD800E4AEC5 /* SqueakChanges.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414421F10BC89440088F8AC /* SqueakChanges.icns */; };
-		9487740010C64DD800E4AEC5 /* SqueakGeneric.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414422010BC89440088F8AC /* SqueakGeneric.icns */; };
-		9487740110C64DD800E4AEC5 /* SqueakImage.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414422110BC89440088F8AC /* SqueakImage.icns */; };
-		9487740210C64DD800E4AEC5 /* SqueakPlugin.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414422210BC89440088F8AC /* SqueakPlugin.icns */; };
-		9487740310C64DD800E4AEC5 /* SqueakProject.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414422310BC89440088F8AC /* SqueakProject.icns */; };
-		9487740410C64DD800E4AEC5 /* SqueakScript.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414422410BC89440088F8AC /* SqueakScript.icns */; };
-		9487740510C64DD800E4AEC5 /* SqueakSources.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414422510BC89440088F8AC /* SqueakSources.icns */; };
 		9487740610C64DD800E4AEC5 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 94D16CAF10BCF96B00A69A89 /* Credits.rtf */; };
 		9487740810C64DD800E4AEC5 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; };
 		9487740910C64DD800E4AEC5 /* sqNamedPrims.c in Sources */ = {isa = PBXBuildFile; fileRef = 9424FF5E0DDCB1C7009912BF /* sqNamedPrims.c */; };
@@ -399,9 +392,9 @@
 		94B9533310E6BD7100DC476A /* MacMenuOS9ToOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MacMenuOS9ToOSX.h; sourceTree = "<group>"; };
 		94B9533410E6BD7100DC476A /* MacMenuOS9ToOSX.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MacMenuOS9ToOSX.m; sourceTree = "<group>"; };
 		94BB096B1BB47DDB0016BFDF /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
-		94BB09711BB47F9B0016BFDF /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = file; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
-		94BB09731BB47FB20016BFDF /* libstdc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = file; name = "libstdc++.tbd"; path = "usr/lib/libstdc++.tbd"; sourceTree = SDKROOT; };
-		94BB09751BB47FCD0016BFDF /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = file; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
+		94BB09711BB47F9B0016BFDF /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		94BB09731BB47FB20016BFDF /* libstdc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libstdc++.tbd"; path = "usr/lib/libstdc++.tbd"; sourceTree = SDKROOT; };
+		94BB09751BB47FCD0016BFDF /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
 		94BCABBF10AB72A600F87527 /* sqSqueakOSXFileDirectoryInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqSqueakOSXFileDirectoryInterface.h; path = vm/OSX/sqSqueakOSXFileDirectoryInterface.h; sourceTree = "<group>"; };
 		94BCABC010AB72A600F87527 /* sqSqueakOSXFileDirectoryInterface.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = sqSqueakOSXFileDirectoryInterface.m; path = vm/OSX/sqSqueakOSXFileDirectoryInterface.m; sourceTree = "<group>"; };
 		94BCAD1B10AB942300F87527 /* sqSqueakOSXApplication+attributes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "sqSqueakOSXApplication+attributes.h"; path = "vm/OSX/sqSqueakOSXApplication+attributes.h"; sourceTree = "<group>"; };
@@ -1576,13 +1569,6 @@
 				948773FC10C64DD800E4AEC5 /* MainMenu.xib in Resources */,
 				9422C3B51AFFFAC500448DC0 /* Localizable.strings in Resources */,
 				94FA4CE51BB4DE1400C1BE8F /* Images-2.xcassets in Resources */,
-				948773FF10C64DD800E4AEC5 /* SqueakChanges.icns in Resources */,
-				9487740010C64DD800E4AEC5 /* SqueakGeneric.icns in Resources */,
-				9487740110C64DD800E4AEC5 /* SqueakImage.icns in Resources */,
-				9487740210C64DD800E4AEC5 /* SqueakPlugin.icns in Resources */,
-				9487740310C64DD800E4AEC5 /* SqueakProject.icns in Resources */,
-				9487740410C64DD800E4AEC5 /* SqueakScript.icns in Resources */,
-				9487740510C64DD800E4AEC5 /* SqueakSources.icns in Resources */,
 				9487740610C64DD800E4AEC5 /* Credits.rtf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1840,6 +1826,10 @@
 					"DEBUGVM=0",
 					"USE_GLOBAL_STRUCT=0",
 					SQUEAK_BUILTIN_PLUGIN,
+					"DEBUG=1",
+					"NO_ISNAN=1",
+					USE_INLINE_MEMORY_ACCESSORS,
+					HAVE_NANOSLEEP,
 				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
@@ -1869,11 +1859,8 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = ../../platforms/iOS/vm/SqueakPureObjc_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
 					BUILD_FOR_OSX,
-					USE_INLINE_MEMORY_ACCESSORS,
-					HAVE_NANOSLEEP,
-					SQUEAK_BUILTIN_PLUGIN,
-					"DEBUGVM=0",
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				INFOPLIST_FILE = SqueakCogSpur32x86.plist;
@@ -1907,6 +1894,9 @@
 					"DEBUGVM=1",
 					"USE_GLOBAL_STRUCT=0",
 					SQUEAK_BUILTIN_PLUGIN,
+					"NO_ISNAN=1",
+					USE_INLINE_MEMORY_ACCESSORS,
+					HAVE_NANOSLEEP,
 				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
@@ -1938,6 +1928,9 @@
 					"NDEBUG=1",
 					"USE_GLOBAL_STRUCT=0",
 					SQUEAK_BUILTIN_PLUGIN,
+					"NO_ISNAN=1",
+					USE_INLINE_MEMORY_ACCESSORS,
+					HAVE_NANOSLEEP,
 				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
@@ -1966,12 +1959,8 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = ../../platforms/iOS/vm/SqueakPureObjc_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
 					BUILD_FOR_OSX,
-					USE_INLINE_MEMORY_ACCESSORS,
-					HAVE_NANOSLEEP,
-					SQUEAK_BUILTIN_PLUGIN,
-					"DEBUGVM=1",
-					"USE_GLOBAL_STRUCT=0",
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				INFOPLIST_FILE = SqueakCogSpur32x86.plist;
@@ -2000,10 +1989,8 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = ../../platforms/iOS/vm/SqueakPureObjc_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
 					BUILD_FOR_OSX,
-					HAVE_NANOSLEEP,
-					SQUEAK_BUILTIN_PLUGIN,
-					USE_INLINE_MEMORY_ACCESSORS,
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
 				INFOPLIST_FILE = SqueakCogSpur32x86.plist;

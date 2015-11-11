@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		949199FD098186FB000FC37A /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66DF6C8201D7DF7E00A80119 /* Carbon.framework */; };
-		94C941F71BBB2384005D3CFF /* dct.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BC910814EC700B8FC7A /* dct.c */; settings = {ASSET_TAGS = (); }; };
+		94C941F71BBB2384005D3CFF /* dct.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BC910814EC700B8FC7A /* dct.c */; };
 		A2181C0F10814EC700B8FC7A /* header.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BCA10814EC700B8FC7A /* header.c */; };
 		A2181C1010814EC700B8FC7A /* layer1.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BCC10814EC700B8FC7A /* layer1.c */; };
 		A2181C1110814EC700B8FC7A /* layer2.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BCD10814EC700B8FC7A /* layer2.c */; };
@@ -338,6 +338,7 @@
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				GCC_PREPROCESSOR_DEFINITIONS = TARGET_API_MAC_OSX;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
@@ -351,6 +352,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				GCC_PREPROCESSOR_DEFINITIONS = TARGET_API_MAC_OSX;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				SDKROOT = macosx;
@@ -362,6 +364,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				GCC_PREPROCESSOR_DEFINITIONS = TARGET_API_MAC_OSX;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				SDKROOT = macosx;
@@ -432,7 +435,7 @@
 				946BCE030959347500803517 /* Default */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Default;
+			defaultConfigurationName = Deployment;
 		};
 		949199E409818612000FC37A /* Build configuration list for PBXNativeTarget "Mpeg3Plugin" */ = {
 			isa = XCConfigurationList;
@@ -442,7 +445,7 @@
 				949199E709818612000FC37A /* Default */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Default;
+			defaultConfigurationName = Deployment;
 		};
 /* End XCConfigurationList section */
 	};

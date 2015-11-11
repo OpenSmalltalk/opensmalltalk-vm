@@ -180,6 +180,7 @@
 		949382771B001B9F00C802B2 /* Crashlytics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 949382761B001B9F00C802B2 /* Crashlytics.framework */; };
 		949382791B001C7A00C802B2 /* sqSqueakOSXInfoPlistInterface.m in Sources */ = {isa = PBXBuildFile; fileRef = 94BCAE6810ACA10100F87527 /* sqSqueakOSXInfoPlistInterface.m */; };
 		9493827A1B001C7E00C802B2 /* sqSqueakInfoPlistInterface.m in Sources */ = {isa = PBXBuildFile; fileRef = 9412CAE50E6C05EC00DB8625 /* sqSqueakInfoPlistInterface.m */; };
+		94A6BD651BF2A9FE00389822 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 947E61C410AA03DC00D3B69E /* AppKit.framework */; };
 		94B9533510E6BD7100DC476A /* MacMenuOS9ToOSX.m in Sources */ = {isa = PBXBuildFile; fileRef = 94B9533410E6BD7100DC476A /* MacMenuOS9ToOSX.m */; };
 		94C315341AD4949B0096E59D /* AsynchFilePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94C315311AD4949B0096E59D /* AsynchFilePlugin.c */; };
 		94C317511AD495CD0096E59D /* JoystickTabletPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94C317491AD495CD0096E59D /* JoystickTabletPlugin.c */; };
@@ -590,6 +591,7 @@
 				9487749F10C64DD800E4AEC5 /* AudioToolbox.framework in Frameworks */,
 				948774A010C64DD800E4AEC5 /* CoreAudio.framework in Frameworks */,
 				948774A110C64DD800E4AEC5 /* SystemConfiguration.framework in Frameworks */,
+				94A6BD651BF2A9FE00389822 /* AppKit.framework in Frameworks */,
 				948774A210C64DD800E4AEC5 /* ApplicationServices.framework in Frameworks */,
 				948774A310C64DD800E4AEC5 /* QuartzCore.framework in Frameworks */,
 			);
