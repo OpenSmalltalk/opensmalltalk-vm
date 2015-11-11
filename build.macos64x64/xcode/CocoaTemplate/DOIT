@@ -1,0 +1,7 @@
+rm -rf build/CocoaTemplate.build/*/CocoaTemplate.build/Objects-normal/i386/*
+xcodebuild -project CocoaTemplate.xcodeproj -configuration Assert 2>&1 | grep 'main.o$' | sed 's/ -/\
+/g' | sed 's/\/Assert/\/CONF/' >LOGA
+xcodebuild -project CocoaTemplate.xcodeproj -configuration Debug 2>&1 | grep 'main.o$' | sed 's/ -/\
+/g' | sed 's/\/Debug/\/CONF/' >LOGD
+xcodebuild -project CocoaTemplate.xcodeproj -configuration Release 2>&1 | grep 'main.o$' | sed 's/ -/\
+/g' | sed 's/\/Release/\/CONF/' >LOGR
