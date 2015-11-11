@@ -426,7 +426,8 @@ CogARMCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 	call := self instructionBeforeAddress: callSiteReturnAddress.
 	self assert: ((self instructionIsB: call) or: [self instructionIsBL: call]).
 	callDistance := self extractOffsetFromBL: call.
-	^callSiteReturnAddress + 4 "this is the pc's +8 offset, - the 4 byte correction for the previous instruction address" + callDistance signedIntFromLong
+	"this is the pc's +8 offset, - the 4 byte correction for the previous instruction address"
+	^callSiteReturnAddress + 4  + callDistance signedIntFromLong
 ]
 
 { #category : #accessing }
@@ -2688,12 +2689,6 @@ CogARMCompiler >> loadCwInto: destReg [
 		 		[self deny: (self isAnInstruction: (cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'))]].
 	"If this fails, use the conventional literal load sequence."
 	^self moveCw: operand intoR: destReg
-]
-
-{ #category : #accessing }
-CogARMCompiler >> loadLiteralByteSize [
-	"Answer the byte size of a MoveCwR opcode's corresponding machine code. On ARM this is a single instruction pc-relative register load - unless we have made a mistake and not turned on the out of line literals manager"
-	^4
 ]
 
 { #category : #accessing }
