@@ -2,7 +2,7 @@
 trap 'exit 2' HUP INT PIPE TERM
 for d in newspeak.cog.spur squeak.cog.spur; do
 	if test -d "$d"; then
-		(cd $d;./makealldirty "$@")
+		(cd ./$d;./makealldirty "$@")
 	else
 		echo no $d directory found
 	fi

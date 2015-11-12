@@ -1,6 +1,7 @@
 Building the GdbARMPlugin
 ------------------------------
 
+Ignore this section if not using the standard Cog source tree:
 Build the normal VM on your Platform. Consult Cog/{cygwinbuild|unixbuild|macbuild}/HowToBuild 
 for additional information.
 When generating sources, update to the latest 
@@ -13,6 +14,18 @@ You can also change VMMaker>plugins:do: removing
 the return in the false block, in order to skip 
 when a plugin is not found, instead of aborting 
 the generation process.
+:Ignopre preceding section if not using the standard Cog source tree.
+
+Building on Linux
+------------------------------
+(so far tried on CentOS 6.5 32-bit, Ubuntu 12.04 LTS 32bit)
+
+cd to the gdbarm32 buld directory under the relevant linux platform build
+directory, e.g. build.linux32x86/gdbarm32.
+
+run conf.COG
+
+run makeem
 
 Building on Windows
 ------------------------------
@@ -52,10 +65,6 @@ Then copy the plugin files to your svn-checkout,
 for example changing <plugin>/Makefile and running it.
 Change <cog>/cygwinbuild/plugins.ext to include GdbARMPlugin.
 Change to gcc 3, then build the VM (again).
-
-Building on Linux
-------------------------------
-(so far tried on Ubuntu 12.04 LTS 32bit)
 
 Download the gdb sources (http://ftp.gnu.org/gnu/gdb) and 
 unpack them. Change Makefile and Makefile.unix, setting 

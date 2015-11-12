@@ -13,7 +13,7 @@
 		732788241AB7C73500BE5008 /* environ.c in Sources */ = {isa = PBXBuildFile; fileRef = 732787F11AB7A12A00BE5008 /* environ.c */; };
 		737482B30EE7339F004E10F8 /* libopcodes.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 737482B20EE7339F004E10F8 /* libopcodes.a */; };
 		737482B50EE733BD004E10F8 /* libsim.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 737482B40EE733BD004E10F8 /* libsim.a */; };
-		737482B70EE7343B004E10F8 /* sqGdbARMPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 737482B60EE7343B004E10F8 /* sqGdbARMPlugin.c */; settings = {COMPILER_FLAGS = "-I../../../processors/ARM/mac/gdb-7.6/include -I../../../processors/ARM/mac/gdb-7.6/sim/arm -I../../../processors/ARM/mac/gdb-7.6/bfd"; }; };
+		737482B70EE7343B004E10F8 /* sqGdbARMPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 737482B60EE7343B004E10F8 /* sqGdbARMPlugin.c */; settings = {COMPILER_FLAGS = "-I../../../processors/ARM/mac/gdb-7.10/include -I../../../processors/ARM/mac/gdb-7.10/sim/arm -I../../../processors/ARM/mac/gdb-7.10/bfd"; }; };
 		8D01CCCE0486CAD60068D4B7 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 08EA7FFBFE8413EDC02AAC07 /* Carbon.framework */; };
 /* End PBXBuildFile section */
 
@@ -22,11 +22,11 @@
 		73020E8C0EE714E60021D217 /* GdbARMPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = GdbARMPlugin.c; path = ../../../src/plugins/GdbARMPlugin/GdbARMPlugin.c; sourceTree = SOURCE_ROOT; };
 		73020E8E0EE7158C0021D217 /* GdbARMPlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = GdbARMPlugin.h; path = ../../../platforms/Cross/plugins/GdbARMPlugin/GdbARMPlugin.h; sourceTree = SOURCE_ROOT; };
 		732787F11AB7A12A00BE5008 /* environ.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = environ.c; path = "../../../platforms/Mac OS/plugins/GdbARMPlugin/environ.c"; sourceTree = SOURCE_ROOT; };
-		732787F51AB7A40100BE5008 /* libiberty.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libiberty.a; path = "../../../processors/ARM/mac/binutils-2.25/libiberty/libiberty.a"; sourceTree = SOURCE_ROOT; };
-		737482B20EE7339F004E10F8 /* libopcodes.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopcodes.a; path = "../../../processors/ARM/mac/gdb-7.6/opcodes/libopcodes.a"; sourceTree = SOURCE_ROOT; };
-		737482B40EE733BD004E10F8 /* libsim.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libsim.a; path = "../../../processors/ARM/mac/gdb-7.6/sim/arm/libsim.a"; sourceTree = SOURCE_ROOT; };
+		732787F51AB7A40100BE5008 /* libiberty.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libiberty.a; path = "../../gdbarm32/libiberty/libiberty.a"; sourceTree = SOURCE_ROOT; };
+		737482B20EE7339F004E10F8 /* libopcodes.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopcodes.a; path = "../../gdbarm32/opcodes/libopcodes.a"; sourceTree = SOURCE_ROOT; };
+		737482B40EE733BD004E10F8 /* libsim.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libsim.a; path = "../../gdbarm32/sim/arm/libsim.a"; sourceTree = SOURCE_ROOT; };
 		737482B60EE7343B004E10F8 /* sqGdbARMPlugin.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 30; name = sqGdbARMPlugin.c; path = ../../../platforms/Cross/plugins/GdbARMPlugin/sqGdbARMPlugin.c; sourceTree = SOURCE_ROOT; };
-		73ADAA901AB79ED50085DAA8 /* libbfd.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbfd.a; path = "../../../processors/ARM/mac/binutils-2.25/bfd/libbfd.a"; sourceTree = SOURCE_ROOT; };
+		73ADAA901AB79ED50085DAA8 /* libbfd.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbfd.a; path = "../../gdbarm32/bfd/libbfd.a"; sourceTree = SOURCE_ROOT; };
 		8D01CCD10486CAD60068D4B7 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8D01CCD20486CAD60068D4B7 /* GdbARMPlugin.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GdbARMPlugin.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA3A20F50AA63CBF0050B983 /* interp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spursrc/vm/interp.h; sourceTree = SOURCE_ROOT; };

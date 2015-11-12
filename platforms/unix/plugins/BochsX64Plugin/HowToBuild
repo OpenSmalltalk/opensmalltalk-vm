@@ -1,0 +1,13 @@
+Building the BochsX64Plugin
+------------------------------
+
+Building on Linux and Mac OS X
+------------------------------
+(so far tried on CentOS 6.5 32-bit, Ubuntu 12.04 LTS 32bit, Mac OS X 10.9)
+
+cd to the bochsx86 buld directory under the relevant linux or macos platform
+build directory, e.g. build.linux32x86/bochsx64, or build.macos32x86/bochsx64.
+
+run conf.COG
+
+run ../../processors/IA32/bochs/makeem

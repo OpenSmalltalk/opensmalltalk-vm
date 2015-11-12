@@ -3,7 +3,7 @@ trap 'exit 2' HUP INT PIPE TERM
 for td in *.v3 *.spur; do
 	for d in $td/build*; do
 		if test -d "$d"; then
-			(cd $d;../../../platforms/unix/config/mkmf)
+			(cd ./$d;../../../platforms/unix/config/mkmf)
 		else
 			echo no $d directory found
 		fi

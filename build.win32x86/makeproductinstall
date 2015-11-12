@@ -2,7 +2,7 @@
 trap 'exit 2' HUP INT PIPE TERM
 for d in newspeak.cog.spur/installer; do
 	if test -d "$d"; then
-		(cd $d;make)
+		(cd ./$d;make)
 	else
 		echo no $d directory found
 	fi

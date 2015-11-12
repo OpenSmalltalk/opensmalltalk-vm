@@ -138,9 +138,9 @@ echo "not building BochsX64Plugin; support libraries unavailable"
 fi
 
 # Build the GdbARMPlugin
-# N.B. To build the plugin you also have to build the gdb ARM sim libraries in
-# ../../processors/ARM/mac.
-if test -f ../../processors/ARM/mac/gdb-7.6/opcodes/libopcodes.a; then
+# N.B. To build the plugin you also have to build the gdb ARM sim
+# libraries in ../gdbarm32. cd ../gdbarm32. Run conf.COG & makeem.
+if test -f ../gdbarm32/opcodes/libopcodes.a; then
 echo GdbARMPlugin xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project GdbARMPlugin/GdbARMPlugin.xcodeproj
 xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project GdbARMPlugin/GdbARMPlugin.xcodeproj
 rm -rf "$DEST/Contents/Resources/GdbARMPlugin.bundle"
