@@ -28191,6 +28191,52 @@ if test "${plibs}"; then
   done
   echo ${llibs} > ${plugin}.lib
 fi
+plugin="BochsIA32Plugin"
+plibs=""
+rm -f BochsIA32Plugin.sub BochsIA32Plugin.lib
+# To build the BochsIA32Plugin one must build the Bochs support libraries
+if test -f ../../bochsx86/cpu/libcpu.a \
+	-a  -f ../../bochsx86/disasm/libdisasm.a \
+	-a  -f ../../bochsx86/fpu/libfpu.a; then
+	echo "bochs support libraries have been built; building BochsIA32Plugin"
+else
+	echo "../../bochsx86 libraries have not been built; not building BochsIA32Plugin"
+
+
+  echo "$as_me:$LINENO: result: ******** disabling ${plugin}" >&5
+echo "${ECHO_T}******** disabling ${plugin}" >&6
+  disabled_plugins="${disabled_plugins} ${plugin}"
+fi
+if test "${plibs}"; then
+  llibs="${LIBS}"
+  for l in ${plibs}; do
+  llibs="${llibs} -l${l}"
+  done
+  echo ${llibs} > ${plugin}.lib
+fi
+plugin="BochsX64Plugin"
+plibs=""
+rm -f BochsX64Plugin.sub BochsX64Plugin.lib
+# To build the BochsX64Plugin one must build the Bochs support libraries
+if test -f ../../bochsx64/cpu/libcpu.a \
+	-a  -f ../../bochsx64/disasm/libdisasm.a \
+	-a  -f ../../bochsx64/fpu/libfpu.a; then
+	echo "bochs support libraries have been built; building BochsX64Plugin"
+else
+	echo "../../bochsx64 libraries have not been built; not building BochsX64Plugin"
+
+
+  echo "$as_me:$LINENO: result: ******** disabling ${plugin}" >&5
+echo "${ECHO_T}******** disabling ${plugin}" >&6
+  disabled_plugins="${disabled_plugins} ${plugin}"
+fi
+if test "${plibs}"; then
+  llibs="${LIBS}"
+  for l in ${plibs}; do
+  llibs="${llibs} -l${l}"
+  done
+  echo ${llibs} > ${plugin}.lib
+fi
 plugin="FloatMathPlugin"
 plibs=""
 rm -f FloatMathPlugin.sub FloatMathPlugin.lib
@@ -28220,10 +28266,10 @@ plugin="GdbARMPlugin"
 plibs=""
 rm -f GdbARMPlugin.sub GdbARMPlugin.lib
 # To build the GdbARMPlugin one must build libsim.a from gdb
-if test -f ../../../processors/ARM/gdb-7.6/sim/arm/libsim.a; then
+if test -f ../../gdbarm32/sim/arm/libsim.a; then
 	echo "libsim.a has been built; building GdbARMPlugin"
 else
-	echo "/processors/ARM/gdb-7.6/sim/arm/libsim.a has not been built; not building GdbARMPlugin"
+	echo "../../gdbarm32/sim/arm/libsim.a has not been built; not building GdbARMPlugin"
 
 
   echo "$as_me:$LINENO: result: ******** disabling ${plugin}" >&5

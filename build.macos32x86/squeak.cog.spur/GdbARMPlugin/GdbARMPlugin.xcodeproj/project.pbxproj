@@ -227,11 +227,11 @@
 					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4)",
 					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5)",
 				);
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../../../processors/ARM/mac/gdb-7.6/opcodes\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "\"$(SRCROOT)/../../../processors/ARM/mac/gdb-7.6/sim/arm\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = "\"$(SRCROOT)/../../../processors/ARM/mac/binutils-2.25/bfd\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = "\"$(SRCROOT)/../../../processors/ARM/mac/binutils-2.25/libiberty\"";
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = "\"$(SRCROOT)/../../../processors/ARM/mac/binutils-2.25/bfd\"";
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = ../../gdbarm32/opcodes;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = ../../gdbarm32/sim/arm;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = ../../gdbarm32/bfd;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = ../../gdbarm32/libiberty;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = ../../gdbarm32/bfd;
 				PRODUCT_NAME = GdbARMPlugin;
 				WRAPPER_EXTENSION = bundle;
 			};
