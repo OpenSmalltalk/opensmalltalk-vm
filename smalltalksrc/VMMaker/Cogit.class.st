@@ -4560,10 +4560,9 @@ Cogit >> configureCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag:
 	addDelta is the address change from the prototype to the new CPCI location, needed
 	because the loading of the CPIC lable at the end may use a literal instead of a pc relative"
 	<var: #cPIC type: #'CogMethod *'>
-	| operand targetEntry caseEndAddress|
 	<var: #case0CogMethod type: #'CogMethod *'>
+	| operand targetEntry caseEndAddress|
 	<var: #targetEntry type: #'void *'>
-	<var: #jumpNext type: #'AbstractInstruction *'>
 	self assert: case1Method notNil.
 
 	"adjust the jump at missOffset, the ceAbortXArgs"
@@ -4606,7 +4605,6 @@ Cogit >> configureMNUCPIC: cPIC methodOperand: methodOperand numArgs: numArgs de
 	because the loading of the CPIC label at the end may use a literal instead of a pc relative"
 	<var: #cPIC type: #'CogMethod *'>
 	| operand |
-	<var: #jumpNext type: #'AbstractInstruction *'>
 
 	"adjust the jump at missOffset, the ceAbortXArgs"
 	backEnd rewriteJumpLongAt: cPIC asInteger + missOffset target: (self picAbortTrampolineFor: numArgs).
@@ -6644,7 +6642,7 @@ Cogit >> getCFramePointer [
 	"and in the simulator we use..."
 	^(backEnd wantsNearAddressFor: #CFramePointer)
 		ifTrue: [CFramePointer]
-		ifFalse: [objectMemory longAt: coInterpreter inMemoryCFramePointerAddress]
+		ifFalse: [(objectMemory longAt: coInterpreter inMemoryCFramePointerAddress) asVoidPointer]
 ]
 
 { #category : #accessing }
@@ -6654,7 +6652,7 @@ Cogit >> getCStackPointer [
 	"and in the simulator we use..."
 	^(backEnd wantsNearAddressFor: #CStackPointer)
 		ifTrue: [CStackPointer]
-		ifFalse: [objectMemory longAt: coInterpreter inMemoryCStackPointerAddress]
+		ifFalse: [(objectMemory longAt: coInterpreter inMemoryCStackPointerAddress) asVoidPointer]
 ]
 
 { #category : #'method map' }
@@ -9578,9 +9576,9 @@ Cogit >> setCFramePointer: aFramePointer [
 	"and in the simulator we use..."
 	^(backEnd wantsNearAddressFor: #CFramePointer)
 		ifTrue: [CFramePointer := aFramePointer]
-		ifFalse: [objectMemory
+		ifFalse: [(objectMemory
 					longAt: coInterpreter inMemoryCFramePointerAddress
-					put: aFramePointer]
+					put: aFramePointer) asVoidPointer]
 ]
 
 { #category : #accessing }
@@ -9590,9 +9588,9 @@ Cogit >> setCStackPointer: aStackPointer [
 	"and in the simulator we use..."
 	^(backEnd wantsNearAddressFor: #CStackPointer)
 		ifTrue: [CStackPointer := aStackPointer]
-		ifFalse: [objectMemory
+		ifFalse: [(objectMemory
 					longAt: coInterpreter inMemoryCStackPointerAddress
-					put: aStackPointer]
+					put: aStackPointer) asVoidPointer]
 ]
 
 { #category : #'simulation only' }
