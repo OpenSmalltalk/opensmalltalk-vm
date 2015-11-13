@@ -61,6 +61,14 @@ AbstractInstructionTests >> abstractInstruction: theAbstractInstruction follows:
 			> (opcodes identityIndexOf: anAbstractInstruction ifAbsent: [1])]
 ]
 
+{ #category : #'cogit compatibility' }
+AbstractInstructionTests >> addressIsInCurrentCompilation: address [
+	"Provide a range of addresses that are assumed to be in the current compilation.  Within this range operands
+	 can be interpreted as pc-relative addresses, and hence allow testing of pc-relative addresses,"
+	^self currentCompilationBase <= address
+	  and: [address - self currentCompilationBase < 1024]
+]
+
 { #category : #'generating machine code' }
 AbstractInstructionTests >> addressIsInFixups: abstractInstruction [ 
 	^false
@@ -99,6 +107,13 @@ AbstractInstructionTests >> coInterpreter [
 AbstractInstructionTests >> concreteCompilerClass [
 	"Answer the concreate subclass of CogAbstractInstruction the concrete test class is testing."
 	self subclassResponsibility
+]
+
+{ #category : #'cogit compatibility' }
+AbstractInstructionTests >> currentCompilationBase [
+	"Provide a range of addresses that are assumed to be in the current compilation.  Within this range operands
+	 can be interpreted as pc-relative addresses, and hence allow testing of pc-relative addresses,"
+	^16r8000
 ]
 
 { #category : #disassembly }
@@ -185,20 +200,29 @@ AbstractInstructionTests >> generateInstructions [
 	instructions := ByteArray new: address.
 	address := 0.
 	opcodes do:
-		[:abstractInstruction|
+		[:abstractInstruction| | machineCodeBytes |
 		self assert: abstractInstruction address = address.
-		0 to: abstractInstruction machineCodeSize - 1 do:
+		machineCodeBytes := self memoryAsBytes: abstractInstruction machineCode object.
+		1 to: abstractInstruction machineCodeSize do:
 			[:j|
-			instructions at: address + 1 put: (abstractInstruction machineCode at: j).
+			instructions at: address + 1 put: (machineCodeBytes at: j).
 			address := address + 1]].
 	^instructions
 ]
 
 { #category : #private }
-AbstractInstructionTests >> memoryAsBytes: aByteArray [
-	"Simply answer the ByteArray.  Subclasses that represent instruction
-	 data using Array shou;ld override to convert appropriately."
-	^aByteArray
+AbstractInstructionTests >> memoryAsBytes: instructionMachineCode [
+	"Answer an AbstractInstruction's machine code as a ByteArray.  Subclasses that represent instruction
+	 data using Array should override to convert appropriately."
+	instructionMachineCode isCObjectAccessor ifTrue:
+		[^self memoryAsBytes: instructionMachineCode object].
+	self assert: instructionMachineCode class isBits.
+	^instructionMachineCode
+]
+
+{ #category : #'cogit compatibility' }
+AbstractInstructionTests >> methodLabel [
+	^nil
 ]
 
 { #category : #accessing }
@@ -226,15 +250,13 @@ AbstractInstructionTests >> resetGen [
 AbstractInstructionTests >> runAddCqR: assertPrintBar [
 	"self defaultTester runAddCqR: true"
 	"self defaultTester runAddCqR: false"
-	| memory |
-	memory := ByteArray new: 20.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:reg :rgetter :rsetter|
 		self pairs: (-2 to: 2)  do:
-			[:a :b| | inst len bogus |
+			[:a :b| | inst len bogus memory |
 			inst := self gen: AddCqR operand: a operand: reg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self processor
 				reset;
 				perform: rsetter with: (processor convertIntegerToInternal: b).
@@ -268,15 +290,13 @@ AbstractInstructionTests >> runAddCqR: assertPrintBar [
 { #category : #running }
 AbstractInstructionTests >> runAddCwR: assertPrintBar [
 	"self defaultTester runAddCwR: false"
-	| memory |
-	memory := ByteArray new: self concreteCompilerClass new machineCodeBytes.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:reg :rgetter :rsetter|
 		self pairs: (-2 to: 2)  do:
-			[:a :b| | inst len bogus |
+			[:a :b| | inst len bogus memory |
 			inst := self gen: AddCwR operand: a operand: reg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self processor
 				reset;
 				perform: rsetter with: (self processor convertIntegerToInternal: b).
@@ -312,15 +332,13 @@ AbstractInstructionTests >> runAddCwR: assertPrintBar [
 AbstractInstructionTests >> runAddRR: assertPrintBar [
 	"self defaultTester runAddRR: false"
 	"self defaultTester runAddRR: true"
-	| memory |
-	memory := ByteArray new: 16.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:sreg :srgetter :srsetter|
 		self concreteCompilerClass dataRegistersWithAccessorsDo:
-			[:dreg :drgetter :drsetter| | inst len |
+			[:dreg :drgetter :drsetter| | inst len memory |
 			inst := self gen: AddRR operand: sreg operand: dreg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self pairs: (-2 to: 2)  do:
 				[:a :b| | bogus |
 				self processor
@@ -364,15 +382,13 @@ AbstractInstructionTests >> runAddRR: assertPrintBar [
 AbstractInstructionTests >> runArithmeticShiftRightRR: assertPrintBar [
 	"self defaultTester runArithmeticShiftRightRR: false"
 	"self defaultTester runArithmeticShiftRightRR: true"
-	| memory |
-	memory := ByteArray new: 16.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:sreg :srgetter :srsetter|
 		self concreteCompilerClass dataRegistersWithAccessorsDo:
-			[:dreg :drgetter :drsetter| | inst len |
+			[:dreg :drgetter :drsetter| | inst len memory |
 			inst := self gen: ArithmeticShiftRightRR operand: sreg operand: dreg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self pairs: (-5 to: 19 by: 6)  do:
 				[:a :b| | bogus |
 				(a >= 0 and: [sreg ~= dreg or: [b >= 0]]) ifTrue:
@@ -661,15 +677,13 @@ AbstractInstructionTests >> runCmpRdRd: assertPrintBar [
 { #category : #running }
 AbstractInstructionTests >> runSubCqR: assertPrintBar [
 	"self defaultTester runSubCqR: false"
-	| memory |
-	memory := ByteArray new: 16.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:reg :rgetter :rsetter|
 		self pairs: (-2 to: 2)  do:
-			[:a :b| | inst len bogus |
+			[:a :b| | inst len bogus memory |
 			inst := self gen: SubCqR operand: a operand: reg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self processor
 				reset;
 				perform: rsetter with: (processor convertIntegerToInternal: b).
@@ -703,15 +717,13 @@ AbstractInstructionTests >> runSubCqR: assertPrintBar [
 { #category : #running }
 AbstractInstructionTests >> runSubCwR: assertPrintBar [
 	"self defaultTester runSubCwR: false"
-	| memory |
-	memory := ByteArray new: self concreteCompilerClass new machineCodeBytes.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:reg :rgetter :rsetter|
 		self pairs: (-2 to: 2)  do:
-			[:a :b| | inst len bogus |
+			[:a :b| | inst len bogus memory |
 			inst := self gen: SubCwR operand: a operand: reg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self processor
 				reset;
 				perform: rsetter with: (self processor convertIntegerToInternal: b).
@@ -746,15 +758,13 @@ AbstractInstructionTests >> runSubCwR: assertPrintBar [
 { #category : #running }
 AbstractInstructionTests >> runSubRR: assertPrintBar [
 	"self defaultTester runSubRR: false"
-	| memory |
-	memory := ByteArray new: self concreteCompilerClass new machineCodeBytes.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:sreg :srgetter :srsetter|
 		self concreteCompilerClass dataRegistersWithAccessorsDo:
-			[:dreg :drgetter :drsetter| | inst len |
+			[:dreg :drgetter :drsetter| | inst len memory |
 			inst := self gen: SubRR operand: sreg operand: dreg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self pairs: (-2 to: 2)  do:
 				[:a :b| | bogus |
 				self processor
@@ -819,15 +829,13 @@ AbstractInstructionTests >> testBinaryConditionalJumpsViaSubCqR [
 { #category : #running }
 AbstractInstructionTests >> testNegateR [
 	"self defaultTester testNegateR"
-	| memory |
-	memory := ByteArray new: self concreteCompilerClass new machineCodeBytes.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:reg :rgetter :rsetter|
 		-2 to: 2 do:
-			[:a| | inst len |
+			[:a| | inst len memory |
 			inst := self gen: NegateR operand: reg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self processor
 				reset;
 				perform: rsetter with: (processor convertIntegerToInternal: a).
@@ -890,4 +898,10 @@ AbstractInstructionTests >> testRunSubCwR [
 AbstractInstructionTests >> testRunSubRR [
 	"self defaultTester testRunSubRR"
 	self runSubRR: true
+]
+
+{ #category : #'cogit compatibility' }
+AbstractInstructionTests >> varBaseAddress [
+	"Answer a value that should be sufficiently high that var base relative addressing is never generated."
+	^1 << 60
 ]
