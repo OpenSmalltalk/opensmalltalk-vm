@@ -761,7 +761,7 @@ VMMaker >> buildCodeGeneratorForCogit [
 VMMaker >> buildCodeGeneratorForCogit: cogitClass includeAPIMethods: getAPIMethods initializeClasses: initializeClasses [
 	"Answer the code generator for translating the cogit."
 
-	| cg cogitClasses apicg |
+	| cg cogitClasses |
 	cg := self createCogitCodeGenerator.
 
 	cg vmClass: cogitClass.
@@ -778,11 +778,10 @@ VMMaker >> buildCodeGeneratorForCogit: cogitClass includeAPIMethods: getAPIMetho
 	cg addStructClasses: (cg structClassesForTranslationClasses: cogitClasses).
 
 	getAPIMethods ifTrue:
-		[apicg := self
-					buildCodeGeneratorForInterpreter: self interpreterClass
-					includeAPIMethods: false
-					initializeClasses: false.
-		 cg apiMethods: apicg selectAPIMethods].
+		[cg includeAPIFrom: (self
+								buildCodeGeneratorForInterpreter: self interpreterClass
+								includeAPIMethods: false
+								initializeClasses: false)].
 
 	cg removeConstant: #VMBIGENDIAN. "this should be defined in platforms/??/vm/sqConfig.h"
 
@@ -803,7 +802,7 @@ VMMaker >> buildCodeGeneratorForInterpreter [
 VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods: getAPIMethods initializeClasses: initializeClasses [
 	"Answer the code generator for translating the interpreter."
 
-	| cg interpreterClasses apicg |
+	| cg interpreterClasses |
 	initializeClasses ifTrue:
 		[interpreterClass initializeWithOptions: optionsDictionary.
 		 interpreterClass hasCogit ifTrue:
@@ -840,11 +839,10 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 	getAPIMethods ifTrue:
 		[interpreterClass cogitClass ifNotNil:
 			[:cogitClass|
-			 apicg := self
-						buildCodeGeneratorForCogit: cogitClass
-						includeAPIMethods: false
-						initializeClasses: false.
-			 cg apiMethods: apicg selectAPIMethods]].
+			 cg includeAPIFrom: (self
+									buildCodeGeneratorForCogit: cogitClass
+									includeAPIMethods: false
+									initializeClasses: false)]].
 
 	cg removeConstant: #VMBIGENDIAN. "this should be defined in platforms/??/vm/sqConfig.h"
 
