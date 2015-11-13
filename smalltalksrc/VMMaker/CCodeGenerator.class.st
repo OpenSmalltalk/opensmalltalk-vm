@@ -18,6 +18,7 @@ Class {
 		'methods',
 		'macros',
 		'apiMethods',
+		'apiVariables',
 		'kernelReturnTypes',
 		'currentMethod',
 		'headerFiles',
@@ -525,11 +526,6 @@ CCodeGenerator >> anyMethodNamed: selector [
 				[apiMethods
 					at: selector
 					ifAbsent: []]]
-]
-
-{ #category : #accessing }
-CCodeGenerator >> apiMethods: aDictionary [
-	apiMethods := aDictionary
 ]
 
 { #category : #utilities }
@@ -3050,6 +3046,12 @@ CCodeGenerator >> implicitReturnTypeFor: aSelector [
 			#sqInt]
 ]
 
+{ #category : #accessing }
+CCodeGenerator >> includeAPIFrom: aCCodeGenerator [
+	apiMethods := aCCodeGenerator selectAPIMethods.
+	apiVariables := aCCodeGenerator selectAPIVariables
+]
+
 { #category : #'type inference' }
 CCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 	"Infer the return tupe and the types of untyped variables.
@@ -4405,6 +4407,11 @@ CCodeGenerator >> selectAPIMethods [
 	^methods select: [:m| m isAPIMethod]
 ]
 
+{ #category : #accessing }
+CCodeGenerator >> selectAPIVariables [
+	^variableDeclarations reject: [:decl| decl includesSubString: 'static ']
+]
+
 { #category : #'C code generator' }
 CCodeGenerator >> selectorReturnsPointerToStruct: selector [ "<Symbol>"
 	| tMethod |
@@ -4738,7 +4745,12 @@ CCodeGenerator >> typeOfVariable: varName [ "<String>"
 				fromDeclaration: (dict at: varName)]].
 	^self
 		extractTypeFor: varName
-		fromDeclaration: (variableDeclarations at: varName ifAbsent: [^nil])
+		fromDeclaration: (variableDeclarations
+							at: varName
+							ifAbsent:
+								[apiVariables
+									ifNotNil: [apiVariables at: varName ifAbsent: [^nil]]
+									ifNil: [^nil]])
 ]
 
 { #category : #utilities }
