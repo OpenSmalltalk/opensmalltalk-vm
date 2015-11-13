@@ -9,12 +9,6 @@ CogX64CompilerTests >> Label [
 	^self gen: Label operand: opcodes size
 ]
 
-{ #category : #accessing }
-CogX64CompilerTests >> addressIsInCurrentCompilation: address [ 
-	^self currentCompilationBase <= address
-	  and: [address - self currentCompilationBase < 1024]
-]
-
 { #category : #running }
 CogX64CompilerTests >> assertCheckLongArithOpCodeSize: bytes [
 	self assert: bytes > 5
@@ -28,11 +22,6 @@ CogX64CompilerTests >> assertCheckQuickArithOpCodeSize: bytes [
 { #category : #accessing }
 CogX64CompilerTests >> concreteCompilerClass [
 	^CogX64CompilerForTests
-]
-
-{ #category : #accessing }
-CogX64CompilerTests >> currentCompilationBase [
-	^16r8000
 ]
 
 { #category : #accessing }
@@ -812,10 +801,4 @@ CogX64CompilerTests >> testXCHGMwrR [
 						herIntended := 'xchgl ', drname, ', 0x', (offset hex allButFirst: 3), '(', srname, ')'.
 						self assert: (plainJane match: herIntended).
 						self assert: memory size = sz]]]]
-]
-
-{ #category : #accessing }
-CogX64CompilerTests >> varBaseAddress [
-	"Answer a value that should be sufficiently high that var base relative addressing is never generated."
-	^1 << 60
 ]
