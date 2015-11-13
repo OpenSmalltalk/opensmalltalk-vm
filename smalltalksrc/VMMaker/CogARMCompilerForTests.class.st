@@ -1,6 +1,6 @@
 Class {
 	#name : #CogARMCompilerForTests,
-	#superclass : #CogARMCompiler,
+	#superclass : #CogInLineLiteralsARMCompiler,
 	#category : #'VMMaker-Tests'
 }
 

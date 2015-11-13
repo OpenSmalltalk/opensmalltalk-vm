@@ -29,58 +29,27 @@ CogARMCompilerTests >> disassembleInstructionAt: index In: inst into: binaryBloc
 		into: binaryBlock
 ]
 
-{ #category : #'generating machine code' }
-CogARMCompilerTests >> generateInstructions [
-	"See Cogit>>computeMaximumSizes, generateInstructionsAt: & outputInstructionsAt:.
-	 This is a pure Smalltalk (non-Slang) version of that trio of methods.
-	 The wrinkle here is that in teh simulator a CogARMInstruction's machien code is a simple Array of integers, not a ByteArray of four byte quads."
-	| address pcDependentInstructions instructions |
-	address := 0.
-	pcDependentInstructions := OrderedCollection new.
-	opcodes do:
-		[:abstractInstruction|
-		abstractInstruction
-			address: address;
-			maxSize: abstractInstruction computeMaximumSize.
-		address := address + abstractInstruction maxSize].
-	address := 0.
-	opcodes do:
-		[:abstractInstruction|
-		abstractInstruction isPCDependent
-			ifTrue:
-				[abstractInstruction sizePCDependentInstructionAt: address.
-				 pcDependentInstructions addLast: abstractInstruction.
-				 address := address + abstractInstruction machineCodeSize]
-			ifFalse:
-				[address := abstractInstruction concretizeAt: address]].
-	pcDependentInstructions do:
-		[:abstractInstruction|
-		abstractInstruction concretizeAt: abstractInstruction address].
-	instructions := Array new: address / 4.
-	address := 0.
-	opcodes do:
-		[:abstractInstruction|
-		self assert: abstractInstruction address / 4 = address.
-		0 to: abstractInstruction machineCodeSize - 1 by: 4 do:
-			[:j|
-			instructions at: address + 1 put: (abstractInstruction machineCode at: j / 4).
-			address := address + 1]].
-	^instructions
-]
-
 { #category : #private }
-CogARMCompilerTests >> memoryAsBytes: aByteArrayOrArray [
+CogARMCompilerTests >> memoryAsBytes: instructionMachineCode [
 	"Manage the fact that in the simulator inst machineCode object is an Array and the disassembler requires a ByteArray or some such."
 	| bytes |
-	aByteArrayOrArray isArray ifFalse:
-		[^aByteArrayOrArray].
-	bytes := ByteArray new: aByteArrayOrArray size * 4.
-	1 to: aByteArrayOrArray size do:
+	instructionMachineCode isCObjectAccessor ifTrue:
+		[^self memoryAsBytes: instructionMachineCode object].
+	instructionMachineCode isArray ifFalse:
+		[self assert: instructionMachineCode class isBits.
+		 ^instructionMachineCode].
+	bytes := ByteArray new: instructionMachineCode size * 4.
+	1 to: instructionMachineCode size do:
 		[:i|
-		(aByteArrayOrArray at: i) ifNotNil:
+		(instructionMachineCode at: i) ifNotNil:
 			[:word|
 			bytes unsignedLongAt: i - 1* 4 + 1 put: word]].
 	^bytes
+]
+
+{ #category : #'cogit compatibility' }
+CogARMCompilerTests >> objectMemory [
+	^self
 ]
 
 { #category : #accessing }
@@ -198,18 +167,16 @@ CogARMCompilerTests >> testGenerateMul [
 CogARMCompilerTests >> testMoveCwR [
 	"self new testMoveCwR"
 	
-	| memory |
-	memory := ByteArray new: 16.
 	#(16rFF00FF00 16r00000012 16r12345678) do:
-		[:n| | inst len |
+		[:n|
 		self concreteCompilerClass dataRegistersWithAccessorsDo: 
-			[ :r :rgetter :rset |
+			[ :r :rgetter :rset | | inst len memory |
 			inst := self gen: MoveCwR operand: n operand: r.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self processor
 				reset.
-			[[processor pc < len] whileTrue:
+			[[processor pc < inst machineCodeSize] whileTrue:
 				[self processor singleStepIn: memory]]
 				on: Error
 				do: [:ex| ].
@@ -234,7 +201,7 @@ CogARMCompilerTests >> testPerformAdd [
  			self gen: MoveCwR operand: n operand: r.
 			self gen: AddCqR operand: 42 operand: r.
 			memory := self generateInstructions.
-			self disassembleOpcodesIn: memory to: Transcript	.
+			"self disassembleOpcodesIn: memory to: Transcript."
 			self processor
 				reset.
 			[[processor pc < memory size] whileTrue:
@@ -324,4 +291,9 @@ CogARMCompilerTests >> testRetN [
 				plainJane := self strip: str.
 				self assert: (plainJane match: 'mov	pc, lr').		
 		self assert: len = 8]]
+]
+
+{ #category : #'cogit compatibility' }
+CogARMCompilerTests >> wordSize [
+	^4
 ]
