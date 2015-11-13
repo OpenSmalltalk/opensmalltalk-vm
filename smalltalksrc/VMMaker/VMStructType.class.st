@@ -43,8 +43,10 @@ VMStructType class >> checkGenerateSurrogate: surrogateClass bytesPerWord: bytes
 	 CogMethod checkGenerateSurrogate: CogMethodSurrogate32 bytesPerWord: 4.
 	 CogBlockMethod checkGenerateSurrogate: CogBlockMethodSurrogate64 bytesPerWord: 8.
 	 CogMethod checkGenerateSurrogate: CogMethodSurrogate64 bytesPerWord: 8"
-	| accessors |
-	accessors := self fieldAccessorSourceFor: surrogateClass bytesPerWord: bytesPerWord.
+	| accessors oldBytesPerWord |
+	oldBytesPerWord := BytesPerWord.
+	accessors := [self fieldAccessorSourceFor: surrogateClass bytesPerWord: (BytesPerWord := bytesPerWord)]
+					ensure: [BytesPerWord := oldBytesPerWord].
 	accessors keysAndValuesDo:
 		[:mr :source|
 		source ~= mr sourceString ifTrue:
