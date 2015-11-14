@@ -165,9 +165,6 @@
 		9493827A1B001C7E00C802B2 /* sqSqueakInfoPlistInterface.m in Sources */ = {isa = PBXBuildFile; fileRef = 9412CAE50E6C05EC00DB8625 /* sqSqueakInfoPlistInterface.m */; };
 		94B9533510E6BD7100DC476A /* MacMenuOS9ToOSX.m in Sources */ = {isa = PBXBuildFile; fileRef = 94B9533410E6BD7100DC476A /* MacMenuOS9ToOSX.m */; };
 		94BB096E1BB47DDB0016BFDF /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB096B1BB47DDB0016BFDF /* Security.framework */; };
-		94BB09721BB47F9B0016BFDF /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB09711BB47F9B0016BFDF /* libz.tbd */; };
-		94BB09741BB47FB20016BFDF /* libstdc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB09731BB47FB20016BFDF /* libstdc++.tbd */; };
-		94BB09761BB47FCD0016BFDF /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 94BB09751BB47FCD0016BFDF /* libc++.tbd */; };
 		94BB09781BB480AC0016BFDF /* HostWindowPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658FA0DDD03FE00358328 /* HostWindowPlugin.c */; };
 		94C315341AD4949B0096E59D /* AsynchFilePlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94C315311AD4949B0096E59D /* AsynchFilePlugin.c */; };
 		94C317511AD495CD0096E59D /* JoystickTabletPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94C317491AD495CD0096E59D /* JoystickTabletPlugin.c */; };
@@ -392,9 +389,6 @@
 		94B9533310E6BD7100DC476A /* MacMenuOS9ToOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MacMenuOS9ToOSX.h; sourceTree = "<group>"; };
 		94B9533410E6BD7100DC476A /* MacMenuOS9ToOSX.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MacMenuOS9ToOSX.m; sourceTree = "<group>"; };
 		94BB096B1BB47DDB0016BFDF /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
-		94BB09711BB47F9B0016BFDF /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
-		94BB09731BB47FB20016BFDF /* libstdc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libstdc++.tbd"; path = "usr/lib/libstdc++.tbd"; sourceTree = SDKROOT; };
-		94BB09751BB47FCD0016BFDF /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
 		94BCABBF10AB72A600F87527 /* sqSqueakOSXFileDirectoryInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqSqueakOSXFileDirectoryInterface.h; path = vm/OSX/sqSqueakOSXFileDirectoryInterface.h; sourceTree = "<group>"; };
 		94BCABC010AB72A600F87527 /* sqSqueakOSXFileDirectoryInterface.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = sqSqueakOSXFileDirectoryInterface.m; path = vm/OSX/sqSqueakOSXFileDirectoryInterface.m; sourceTree = "<group>"; };
 		94BCAD1B10AB942300F87527 /* sqSqueakOSXApplication+attributes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "sqSqueakOSXApplication+attributes.h"; path = "vm/OSX/sqSqueakOSXApplication+attributes.h"; sourceTree = "<group>"; };
@@ -584,9 +578,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				94FA4CE31BB4DD9000C1BE8F /* OpenGL.framework in Frameworks */,
-				94BB09761BB47FCD0016BFDF /* libc++.tbd in Frameworks */,
-				94BB09741BB47FB20016BFDF /* libstdc++.tbd in Frameworks */,
-				94BB09721BB47F9B0016BFDF /* libz.tbd in Frameworks */,
 				9487749D10C64DD800E4AEC5 /* Cocoa.framework in Frameworks */,
 				9487749E10C64DD800E4AEC5 /* Foundation.framework in Frameworks */,
 				9487749F10C64DD800E4AEC5 /* AudioToolbox.framework in Frameworks */,
@@ -692,9 +683,6 @@
 		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				94BB09751BB47FCD0016BFDF /* libc++.tbd */,
-				94BB09731BB47FB20016BFDF /* libstdc++.tbd */,
-				94BB09711BB47F9B0016BFDF /* libz.tbd */,
 				94BB096B1BB47DDB0016BFDF /* Security.framework */,
 				947E61C410AA03DC00D3B69E /* AppKit.framework */,
 				947E61C210AA03C300D3B69E /* Cocoa.framework */,
@@ -1239,19 +1227,12 @@
 		94E658DC0DDD03FE00358328 /* src */ = {
 			isa = PBXGroup;
 			children = (
-				94E658DD0DDD03FE00358328 /* plugins */,
+				94E658E20DDD03FE00358328 /* plugins */,
 				94E658DE0DDD03FE00358328 /* plugins.int */,
 				94E658DF0DDD03FE00358328 /* vm */,
 			);
 			name = src;
 			path = ../../spurstack64src;
-			sourceTree = "<group>";
-		};
-		94E658DD0DDD03FE00358328 /* plugins */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = plugins;
 			sourceTree = "<group>";
 		};
 		94E658DF0DDD03FE00358328 /* vm */ = {
@@ -1266,13 +1247,12 @@
 				94F478C51BB527440069E57B /* gcc3x-cointerp.c */,
 				94F478C61BB527440069E57B /* cointerp.h */,
 				94F478C71BB527440069E57B /* interp.h */,
-				94E658E20DDD03FE00358328 /* intplugins */,
 				94E659200DDD03FE00358328 /* sqNamedPrims.h */,
 			);
 			path = vm;
 			sourceTree = "<group>";
 		};
-		94E658E20DDD03FE00358328 /* intplugins */ = {
+		94E658E20DDD03FE00358328 /* plugins */ = {
 			isa = PBXGroup;
 			children = (
 				94E658E40DDD03FE00358328 /* ADPCMCodecPlugin.c */,
@@ -1314,8 +1294,8 @@
 				949382491B00103A00C802B2 /* VMProfileMacSupportPlugin.c */,
 				94E6591F0DDD03FE00358328 /* ZipPlugin.c */,
 			);
-			name = intplugins;
-			path = ../../src/plugins;
+			name = plugins;
+			path = ../src/plugins;
 			sourceTree = "<group>";
 		};
 		94E659420DDD04FA00358328 /* AsynchFilePlugin */ = {
