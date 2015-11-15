@@ -121,6 +121,20 @@ CogMIPSELCompiler >> callInstructionByteSize [
 	^16
 ]
 
+{ #category : #'inline cacheing' }
+CogMIPSELCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
+	"csra - 16:	lui t9, high
+	 csra - 12:	ori t9, low
+	 csra - 8:	jalr t9
+	 csra - 4:	nop (delay slot)"
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 16) == LUI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 12) == ORI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 8) == SPECIAL.
+	self assert: (self functionAtAddress: callSiteReturnAddress - 8) == JALR.
+	self assert: (objectMemory longAt: callSiteReturnAddress - 4) == self nop. "Delay slot"
+	^self literalAtAddress: callSiteReturnAddress - 12
+]
+
 { #category : #accessing }
 CogMIPSELCompiler >> callerSavedRegisterMask [
 	"See MIPSConstants initializeRegisters."
@@ -315,7 +329,7 @@ CogMIPSELCompiler >> concretizeAddCwR [
 	val := operands at: 0.
 	reg := self concreteRegister: (operands at: 1).
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: val)).
-	self machineCodeAt: 4 put: (self oriR: AT R: ZR C: (self low16BitsOf: val)).
+	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: val)).
 	self machineCodeAt: 8 put: (self adduR: reg R: reg R: AT).
 	^machineCodeSize := 12
 ]
@@ -348,7 +362,7 @@ CogMIPSELCompiler >> concretizeAndCqRR [
 	srcReg := self concreteRegister: (operands at: 1).
 	dstReg := self concreteRegister: (operands at: 2).
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: value)).
-	self machineCodeAt: 4 put: (self oriR: AT R: ZR C: (self low16BitsOf: value)).
+	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: value)).
 	self machineCodeAt: 8 put: (self andR: dstReg R: srcReg R: AT).
 	^machineCodeSize := 12
 ]
@@ -359,7 +373,7 @@ CogMIPSELCompiler >> concretizeAndCwR [
 	value := operands at: 0.
 	reg := self concreteRegister: (operands at: 1).
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: value)).
-	self machineCodeAt: 4 put: (self oriR: AT R: ZR C: (self low16BitsOf: value)).
+	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: value)).
 	self machineCodeAt: 8 put: (self andR: reg R: reg R: AT).
 	self flag: #inefficient. "Cog RTL assumes we can do any kind of conditional branch after a Cmp."
 	self machineCodeAt: 12 put: (self andR: Cmp R: reg R: AT).
@@ -407,7 +421,7 @@ CogMIPSELCompiler >> concretizeCallFull [
 	<var: #jumpTarget type: #'AbstractInstruction *'>
 	jumpTarget := self longJumpTargetAddress.
 	self machineCodeAt: 0 put: (self luiR: TargetReg C: (self high16BitsOf: jumpTarget)).
-	self machineCodeAt: 4 put: (self oriR: TargetReg R: ZR C: (self low16BitsOf: jumpTarget)).	
+	self machineCodeAt: 4 put: (self oriR: TargetReg R: TargetReg C: (self low16BitsOf: jumpTarget)).	
 	self machineCodeAt: 8 put: (self jalR: TargetReg).
 	self machineCodeAt: 12 put: self nop. "Delay slot"
 	^machineCodeSize := 16
@@ -426,7 +440,7 @@ CogMIPSELCompiler >> concretizeCmpCwR [
 	self flag: #todo. "value - reg or reg - value?"
 	self flag: #inefficient. "Cog RTL assumes we can do any kind of conditional branch after a Cmp."
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: value)).
-	self machineCodeAt: 4 put: (self oriR: AT R: ZR C: (self low16BitsOf: value)).
+	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: value)).
 	self machineCodeAt: 8 put: (self subuR: Cmp R: reg R: AT).
 	self machineCodeAt: 12 put: (self sltR: CmpSLT R: reg R: AT).
 	self machineCodeAt: 16 put: (self sltR: CmpSGT R: AT R: reg).
@@ -466,7 +480,7 @@ CogMIPSELCompiler >> concretizeJumpFull [
 	<var: #jumpTarget type: #'AbstractInstruction *'>
 	jumpTarget := self longJumpTargetAddress.
 	self machineCodeAt: 0 put: (self luiR: TargetReg C: (self high16BitsOf: jumpTarget)).
-	self machineCodeAt: 4 put: (self oriR: TargetReg R: ZR C: (self low16BitsOf: jumpTarget)).	
+	self machineCodeAt: 4 put: (self oriR: TargetReg R: TargetReg C: (self low16BitsOf: jumpTarget)).	
 	self machineCodeAt: 8 put: (self jR: TargetReg).
 	self machineCodeAt: 12 put: self nop. "Delay slot"
 	^machineCodeSize := 16
@@ -654,7 +668,7 @@ CogMIPSELCompiler >> concretizeMoveAwR [
 		 ^machineCodeSize := 4].
 
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: srcAddr)).
-	self machineCodeAt: 4 put: (self oriR: AT R: ZR C: (self low16BitsOf: srcAddr)).
+	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: srcAddr)).
 	self machineCodeAt: 8 put: (self lwR: destReg base: AT offset: 0).
 	^machineCodeSize := 12
 ]
@@ -680,7 +694,7 @@ CogMIPSELCompiler >> concretizeMoveCwR [
 	word := operands at: 0.
 	reg := self concreteRegister: (operands at: 1).	
 	self machineCodeAt: 0 put: (self luiR: reg C: (self high16BitsOf: word)).
-	self machineCodeAt: 4 put: (self oriR: reg R: ZR C: (self low16BitsOf: word)).
+	self machineCodeAt: 4 put: (self oriR: reg R: reg C: (self low16BitsOf: word)).
 	^machineCodeSize := 8
 ]
 
@@ -714,8 +728,16 @@ CogMIPSELCompiler >> concretizeMoveMwrR [
 	offset := operands at: 0.
 	baseReg := self concreteRegister: (operands at: 1).
 	destReg := self concreteRegister: (operands at: 2).
-	self machineCodeAt: 0 put: (self lwR: destReg base: baseReg offset: offset).
-	^machineCodeSize := 4
+	(self isShortOffset: offset) ifTrue:
+		[self machineCodeAt: 0 put: (self lwR: destReg base: baseReg offset: offset).
+		^machineCodeSize := 4].
+	
+	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: offset)).
+	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: offset)).
+	self machineCodeAt: 8 put: (self adduR: AT R: baseReg R: ZR).
+	self machineCodeAt: 0 put: (self lwR: destReg base: AT offset: 0).
+	^machineCodeSize := 4.
+
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -729,7 +751,7 @@ CogMIPSELCompiler >> concretizeMoveRAw [
 		 ^machineCodeSize := 4].
 
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: destAddr)).
-	self machineCodeAt: 4 put: (self oriR: AT R: ZR C: (self low16BitsOf: destAddr)).
+	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: destAddr)).
 	self machineCodeAt: 8 put: (self swR: srcReg base: AT offset: 0).
 	^machineCodeSize := 12
 ]
@@ -795,7 +817,7 @@ CogMIPSELCompiler >> concretizeOrCwR [
 	value := operands at: 0.
 	reg := self concreteRegister: (operands at: 1).
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: value)).
-	self machineCodeAt: 4 put: (self oriR: AT R: ZR C: (self low16BitsOf: value)).
+	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: value)).
 	self machineCodeAt: 8 put: (self orR: reg R: reg R: AT).
 	^machineCodeSize := 12
 ]
@@ -856,7 +878,7 @@ CogMIPSELCompiler >> concretizeSubCwR [
 	value := operands at: 0.
 	reg := self concreteRegister: (operands at: 1).
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: value)).
-	self machineCodeAt: 4 put: (self oriR: AT R: ZR C: (self low16BitsOf: value)).
+	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: value)).
 	self machineCodeAt: 8 put: (self subuR: reg R: reg R: AT).
 	^machineCodeSize := 12
 ]
@@ -881,8 +903,19 @@ CogMIPSELCompiler >> concretizeTstCwR [
 	val := operands at: 0.
 	reg := self concreteRegister: (operands at: 1).
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: val)).
-	self machineCodeAt: 4 put: (self oriR: AT R: ZR C: (self low16BitsOf: val)).
+	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: val)).
 	self machineCodeAt: 8 put: (self andR: Cmp R: reg R: AT).
+	^machineCodeSize := 12
+]
+
+{ #category : #'generate machine code - concretize' }
+CogMIPSELCompiler >> concretizeXorCwR [
+	| val reg |
+	val := operands at: 0.
+	reg := self concreteRegister: (operands at: 1).
+	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: val)).
+	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: val)).
+	self machineCodeAt: 8 put: (self xorR: reg R: reg R: AT).
 	^machineCodeSize := 12
 ]
 
@@ -1199,6 +1232,11 @@ CogMIPSELCompiler >> isPCDependent [
 	^self isJump or: [opcode = AlignmentNops]
 ]
 
+{ #category : #accessing }
+CogMIPSELCompiler >> isShortOffset: offset [
+	^offset between: -16r8000 and: 16r7FFF
+]
+
 { #category : #encoding }
 CogMIPSELCompiler >> itype: opcode rs: rs rt: rt eitherImmediate: signedImmediate [	
 	| unsignedImmediate |
@@ -1276,6 +1314,21 @@ CogMIPSELCompiler >> jumpLongConditionalByteSize [
 ]
 
 { #category : #'inline cacheing' }
+CogMIPSELCompiler >> jumpLongConditionalTargetBeforeFollowingAddress: mcpc [
+	Transcript nextPutAll: mcpc hex; cr.
+	"mcpc - 16:	beq/ne Cmp, ZR, +12
+	 mcpc - 12:	nop (delay slot)
+	 mcpc - 8:	j psuedo-address
+	 mcpc - 4:	nop (delay slot)"		
+	self assert: (((self opcodeAtAddress: mcpc - 16) == BEQ) 
+				or: [(self opcodeAtAddress: mcpc - 16) == BNE]).
+	self assert: (objectMemory longAt: mcpc - 12) == self nop. "Delay slot"
+	self assert: (self opcodeAtAddress: mcpc - 8) == J.
+	self assert: (objectMemory longAt: mcpc - 4) == self nop. "Delay slot"
+	^self targetFromJTypeAtAddress: mcpc - 8
+]
+
+{ #category : #'inline cacheing' }
 CogMIPSELCompiler >> jumpLongTargetBeforeFollowingAddress: mcpc [ 
 	"Answer the target address for the long jump immediately preceding mcpc"
 	self assert: (objectMemory longAt: mcpc - 4) == self nop. "Delay slot"
@@ -1327,16 +1380,32 @@ CogMIPSELCompiler >> literalAtAddress: mcpc [
 ]
 
 { #category : #'inline cacheing' }
+CogMIPSELCompiler >> literalAtAddress: mcpc put: newLiteral [
+	| instruction |
+	self assert: (self opcodeAtAddress: mcpc) = ORI.
+	self assert: (self opcodeAtAddress: mcpc - 4) = LUI.
+	
+	instruction := (objectMemory longAt: mcpc) bitAnd: 16rFFFF000.
+	instruction := instruction bitOr: (self low16BitsOf: newLiteral).
+	objectMemory longAt: mcpc put: instruction.
+
+	instruction := (objectMemory longAt: mcpc - 4) bitAnd: 16rFFFF000.
+	instruction := instruction bitOr: (self high16BitsOf: newLiteral).
+	objectMemory longAt: mcpc put: instruction.
+	
+	^newLiteral
+]
+
+{ #category : #'inline cacheing' }
 CogMIPSELCompiler >> literalBeforeFollowingAddress: followingAddress [
 	"Answer the literal embedded in the instruction immediately preceding followingAddress.
 	 This is used in the MoveCwR, PushCwR and CmpCwR cases."
 	
 	"lui/ori, lui/ori/sw/addi, lui/ori/subu/slt/slt/sltu/sltu"
 	
-	| lastInstruction lastOpcode lastFunction oriAddress |
-	lastInstruction := objectMemory longAt: followingAddress - 4.
-	lastOpcode := lastInstruction >> 26.
-	lastFunction := lastInstruction bitAnd: 63.
+	| lastOpcode lastFunction oriAddress |
+	lastOpcode := self opcodeAtAddress: followingAddress - 4.
+	lastFunction := self functionAtAddress: followingAddress - 4.
 	oriAddress := 0.
 	lastOpcode = ORI ifTrue: [oriAddress := followingAddress - 4].
 	lastOpcode = ADDIU ifTrue: [oriAddress := followingAddress - 16].
@@ -1389,14 +1458,22 @@ CogMIPSELCompiler >> machineCodeAt: anOffset put: aWord [
 ]
 
 { #category : #'generate machine code' }
+CogMIPSELCompiler >> machineCodeBytes [
+	^self machineCodeWords * 4
+]
+
+{ #category : #'generate machine code' }
 CogMIPSELCompiler >> machineCodeWords [
 	"Answer the maximum number of words of machine code generated for any abstract instruction.
 	 e.g. CmpCwR =>
-			mov R3, #<addressByte1>, 12
-			orr R3, R3, #<addressByte2>, 8
-			orr R3, R3, #<addressByte3>, 4
-			orr R3, R3, #<addressByte4>, 0
-			cmp R?, R3"
+			lui at, <high>
+			ori at, <low>
+			subu Cmp, reg, at
+			slt CmpSLT, reg, at
+			slt CmpSGT, reg, at
+			slt CmpULT, reg, at
+			slt CmpUGT, reg, at"
+	self flag: #inefficient.
 	^7
 ]
 
@@ -1480,6 +1557,14 @@ CogMIPSELCompiler >> outputMachineCodeAt: targetAddress [
 	0 to: machineCodeSize - 1 by: 4 do:
 		[:j|
 		objectMemory longAt: targetAddress + j put: (machineCode at: j // 4)]
+]
+
+{ #category : #'generate machine code' }
+CogMIPSELCompiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
+	self flag: #bogus. "Methods should be initialized with the stop instruction, not nop."
+
+	startAddr to: endAddr - 1 by: 4 do: 
+		[:addr | objectMemory longAt: addr put: self stop].
 ]
 
 { #category : #accessing }
@@ -1602,6 +1687,21 @@ CogMIPSELCompiler >> stop [
 	^self break: 0
 ]
 
+{ #category : #'inline cacheing' }
+CogMIPSELCompiler >> storeLiteral: literal beforeFollowingAddress: followingAddress [
+	"Rewrite the long constant loaded by a MoveCwR or PushCwR before the given address"
+	| lastOpcode oriAddress |
+	
+	self flag: #bogus. "The caller ought to know what it is patching, and this should be split into separate methods with stricter checking."
+	
+	lastOpcode := self opcodeAtAddress: followingAddress - 4.
+	oriAddress := 0.
+	lastOpcode = ORI ifTrue: [oriAddress := followingAddress - 4].
+	lastOpcode = ADDIU ifTrue: [oriAddress := followingAddress - 16].
+	self assert: oriAddress ~= 0.
+	^self literalAtAddress: oriAddress put: literal
+]
+
 { #category : #'encoding - arithmetic' }
 CogMIPSELCompiler >> subuR: destReg R: leftReg R: rightReg [
 	^self rtype: SPECIAL rs: leftReg rt: rightReg rd: destReg sa: 0 funct: SUBU
@@ -1610,6 +1710,14 @@ CogMIPSELCompiler >> subuR: destReg R: leftReg R: rightReg [
 { #category : #'encoding - memory' }
 CogMIPSELCompiler >> swR: srcReg base: baseReg offset: offset [
 	^self itype: SW rs: baseReg rt: srcReg signedImmediate: offset
+]
+
+{ #category : #'inline cacheing' }
+CogMIPSELCompiler >> targetFromJTypeAtAddress: mcpc [
+	| targetLow |
+	targetLow := (objectMemory longAt: mcpc) bitAnd: 16r3FFFFFF.
+	"mcpc + 4: relative to delay slot not j"
+	^((mcpc + 4) bitAnd: 16rF0000000) + (targetLow << 2) 
 ]
 
 { #category : #'encoding - arithmetic' }
