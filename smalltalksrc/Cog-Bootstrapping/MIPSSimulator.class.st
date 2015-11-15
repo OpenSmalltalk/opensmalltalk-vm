@@ -9,7 +9,13 @@ Class {
 		'registers',
 		'pc',
 		'instructionCount',
-		'inDelaySlot'
+		'inDelaySlot',
+		'readableBase',
+		'writableBase',
+		'exectuableBase',
+		'readableLimit',
+		'writableLimit',
+		'exectuableLimit'
 	],
 	#classVars : [
 		'EndSimulationPC'
@@ -163,6 +169,18 @@ MIPSSimulator >> call: entryPC with: arg0 with: arg1 with: arg2 with: arg3. [
 ]
 
 { #category : #'processor api' }
+MIPSSimulator >> convertIntegerToInternal: anInteger [
+	"Default conversion for 32-bit processors.  64-bit processors override."
+	^anInteger signedIntToLong
+]
+
+{ #category : #'as yet unclassified' }
+MIPSSimulator >> currentInstruction [
+	^[(MIPSDisassembler new disassemble: memory from: pc to: pc + 4)]
+		ifError: ['Cannot disassemble'].
+]
+
+{ #category : #'processor api' }
 MIPSSimulator >> disassembleFrom: startAddress to: endAddress in: memory for: aSymbolManager "<Cogit>" labels: labelDictionary on: aStream [
 	MIPSDisassembler new 
 		disassemble: memory
@@ -191,7 +209,8 @@ MIPSSimulator >> endianness [
 MIPSSimulator >> execute [
 	| instruction |
 	[pc ~= EndSimulationPC] whileTrue: 
-		[instruction := MIPSInstruction new value: (self unsignedWord: pc).
+		[Transcript nextPutAll: '* '; nextPutAll: self currentInstruction; flush.
+		 instruction := MIPSInstruction new value: (self fetchInstruction: pc).
 		 instruction decodeFor: self.
 		 pc := pc + OneInstruction].
 ]
@@ -201,7 +220,7 @@ MIPSSimulator >> executeDelaySlot [
 	| instruction |
 	self assert: inDelaySlot not.
 	inDelaySlot := true.
-	instruction := MIPSInstruction new value: (self unsignedWord: pc).
+	instruction := MIPSInstruction new value: (self fetchInstruction: pc).
 	instruction decodeFor: self.
 	inDelaySlot := false.
 ]
@@ -215,21 +234,24 @@ MIPSSimulator >> fp [
 	^self signedRegister: FP
 ]
 
+{ #category : #'as yet unclassified' }
+MIPSSimulator >> initialize [
+	registers := Array new: 32 withAll: 16rABABAB.
+	pc := 0.
+	inDelaySlot := false.
+	instructionCount := 0.
+]
+
 { #category : #'processor api' }
 MIPSSimulator >> initializeStackFor: aCogit [
 	self flag: #OABI.
 	aCogit setStackAlignment: 8 expectedSPOffset: 0 expectedFPOffset: 0.
-	self initializeWithMemory: ByteArray new.
 	
 ]
 
 { #category : #'as yet unclassified' }
 MIPSSimulator >> initializeWithMemory: aByteArray [
 	memory := aByteArray.
-	registers := Array new: 32 withAll: 0.
-	pc := 0.
-	inDelaySlot := false.
-	instructionCount := 0.
 ]
 
 { #category : #'instructions - control' }
@@ -343,6 +365,11 @@ MIPSSimulator >> orImmediate: instruction [
 	self unsignedRegister: instruction rt put: result.
 ]
 
+{ #category : #'processor api' }
+MIPSSimulator >> pc: newPC [
+	pc := newPC.
+]
+
 { #category : #'as yet unclassified' }
 MIPSSimulator >> printOn: stream [
 	stream nextPutAll: self class name; nextPut: $:; cr.
@@ -358,6 +385,20 @@ MIPSSimulator >> printOn: stream [
 		(self signedRegister: reg) printOn: stream.
 		stream cr].
 	
+	stream nextPutAll: self currentInstruction.
+]
+
+{ #category : #'processor api' }
+MIPSSimulator >> runInMemory: aMemory minimumAddress: minimumAddress readOnlyBelow: minimumWritableAddress [
+	"Note that minimumWritableAddress is both the minimum writeable address AND the maximum executable address"
+	memory := aMemory.
+	readableBase := minimumAddress.
+	writableBase := minimumWritableAddress.
+	exectuableBase := minimumAddress.
+	readableLimit := aMemory size.
+	writableLimit := aMemory size.
+	exectuableLimit := minimumWritableAddress.
+	self execute.
 ]
 
 { #category : #'processor api' }
@@ -480,7 +521,7 @@ MIPSSimulator >> signed32ToUnsigned32: signedValue [
 ]
 
 { #category : #registers }
-MIPSSimulator >> signedRegister: registerNumber [ 
+MIPSSimulator >> signedRegister: registerNumber [
 	registerNumber == ZR ifTrue: [^0] ifFalse: [^registers at: registerNumber + 1].
 ]
 
@@ -488,6 +529,17 @@ MIPSSimulator >> signedRegister: registerNumber [
 MIPSSimulator >> signedRegister: registerNumber put: signedValue [
 	self assert: (signedValue between: -16r80000000 and: 16r7FFFFFFF).
 	registerNumber == ZR ifFalse: [registers at: registerNumber + 1 put: signedValue].
+]
+
+{ #category : #'processor api' }
+MIPSSimulator >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
+	self signedRegister: RA put: nextpc.
+	pc := address.
+]
+
+{ #category : #'processor api' }
+MIPSSimulator >> smashRegistersWithValuesFrom: base by: step [
+	"Ignore this - we do a stronger check later."
 ]
 
 { #category : #'processor api' }
