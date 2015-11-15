@@ -775,9 +775,12 @@ void sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
       /* --- UDP/RAW --- */
       if (SOCKET(s) >= 0)
 	{
+	  int result;
 	  memcpy((void *)&SOCKETPEER(s), (void *)&saddr, sizeof(saddr));
 	  SOCKETPEERSIZE(s)= sizeof(struct sockaddr_in);
-	  SOCKETSTATE(s)= Connected;
+	  result= connect(SOCKET(s), (struct sockaddr *)&saddr, sizeof(saddr));
+	  if (result == 0)
+	    SOCKETSTATE(s)= Connected;
 	}
     }
   else
@@ -2105,9 +2108,12 @@ void sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
     {
       if (SOCKET(s) >= 0)
 	{
+	  int result;
 	  memcpy((void *)&SOCKETPEER(s), socketAddress(addr), addressSize(addr));
 	  SOCKETPEERSIZE(s)= addressSize(addr);
-	  SOCKETSTATE(s)= Connected;
+	  result= connect(SOCKET(s), socketAddress(addr), addressSize(addr));
+	  if (result == 0)
+	    SOCKETSTATE(s)= Connected;
 	}
     }
   else					/* --- TCP --- */
