@@ -1370,11 +1370,13 @@ static int vm_parseArgument(int argc, char **argv)
     if (!strcmp(argv[0], arg))							\
       return parseModuleArgument(argc, argv, &type##Module, #type, name);
 
-  moduleArg("-nodisplay",	display, "null");
-  moduleArg("-display",		display, "X11");
-  moduleArg("-headless",	display, "X11");
-  moduleArg("-quartz",		display, "Quartz");
-  moduleArg("-nosound",		sound,   "null");
+  moduleArg("-nodisplay",		display, "null");
+  moduleArg("-display",			display, "X11");
+  moduleArg("-headless",		display, "X11");
+  moduleArg("-fullscreen",		display, "X11");
+  moduleArg("-fullscreenDirect",	display, "X11");
+  moduleArg("-quartz",			display, "Quartz");
+  moduleArg("-nosound",			sound,   "null");
 
 # undef moduleArg
 
