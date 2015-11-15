@@ -135,6 +135,7 @@ MIPSDisassembler >> disassemble: memory from: startPC to: limitPC [
 
 { #category : #'as yet unclassified' }
 MIPSDisassembler >> disassemble: memory from: startPC to: limitPC for: aSymbolManager "<Cogit>" labels: labelDictionary on: aStream [
+	aStream print: labelDictionary;cr.
 	pc := startPC.
 	[pc < limitPC] whileTrue:
 		[ | word instruction |
