@@ -2223,6 +2223,13 @@ CogX64Compiler >> genSubstituteReturnAddress: retpc [
 ]
 
 { #category : #testing }
+CogX64Compiler >> hasConditionRegister [
+	"Answer if the receiver supports, e.g., JumpOverflow after a regular AddRR"
+	<inline: true>
+	^true
+]
+
+{ #category : #testing }
 CogX64Compiler >> hasDoublePrecisionFloatingPointSupport [
 	^true
 ]

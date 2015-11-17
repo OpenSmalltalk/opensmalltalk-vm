@@ -2719,6 +2719,13 @@ CogIA32Compiler >> generateLowLevelUnlock: vmOwnerLockAddress [
 ]
 
 { #category : #testing }
+CogIA32Compiler >> hasConditionRegister [
+	"Answer if the receiver supports, e.g., JumpOverflow after a regular AddRR"
+	<inline: true>
+	^true
+]
+
+{ #category : #testing }
 CogIA32Compiler >> hasDoublePrecisionFloatingPointSupport [
 	"We can generate dpfp support if the processor has SSE2 instructions."
 	<inline: true>
