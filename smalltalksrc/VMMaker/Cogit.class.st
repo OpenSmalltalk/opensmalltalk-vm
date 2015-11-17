@@ -646,6 +646,26 @@ Cogit class >> genAndDis: methodOrDoitString options: optionsDictionaryOrArray [
 	^tuple
 ]
 
+{ #category : #'in-image compilation' }
+Cogit class >> genAndDisPICoptions: optionsDictionaryOrArray [
+	"StackToRegisterMappingCogit genAndDisPICoptions: #(ISA ARMv5 CogCompilerClass CogInLineLiteralsARMCompiler)"
+	| coInterpreter cogit |
+	self initializeWithOptions: (self asOptionsDictionary: optionsDictionaryOrArray).
+	CoInterpreter initializeWithOptions: initializationOptions.
+	CoInterpreter objectMemoryClass initializeWithOptions: initializationOptions.
+	coInterpreter := CurrentImageCoInterpreterFacade forCogit: (cogit := self new).
+	[cogit
+		setInterpreter: coInterpreter;
+		singleStep: true;
+		initializeCodeZoneFrom: 1024 upTo: coInterpreter memory size / 2. "leave space for rump C stack"
+	 cogit methodZone freeStart: (cogit methodZone freeStart roundUpTo: 1024)]
+		on: Notification
+		do: [:ex|
+			(ex messageText beginsWith: 'cannot find receiver for') ifTrue:
+				[ex resume: coInterpreter]].
+	cogit disassembleFrom: cogit cPICPrototype + (cogit sizeof: CogMethod) to: cogit cPICPrototype + cogit closedPICSize
+]
+
 { #category : #translation }
 Cogit class >> generateCodeStringForCogitDotC [
 	"Generate a skeletal cogit.c that includes the relevant
@@ -3055,6 +3075,13 @@ Cogit >> cPICHasFreedTargets: cPIC [
 	^false
 ]
 
+{ #category : #accessing }
+Cogit >> cPICPrototype [
+	"For Cogit clas>>#genAndDisPICoptions:"
+	<doNotGenerate>
+	^cPICPrototype
+]
+
 { #category : #'in-line cacheing' }
 Cogit >> cPICPrototypeCaseOffset [
 	"Whimsey; we want 16rCA5E10 + cPICPrototypeCaseOffset to be somewhere in the middle of the zone."
@@ -3581,6 +3608,13 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 				  firstVisit: targetMethod asUnsignedInteger > pc asUnsignedInteger) ifTrue:
 				[^true]]].
 	^false
+]
+
+{ #category : #accessing }
+Cogit >> closedPICSize [
+	"For Cogit clas>>#genAndDisPICoptions:"
+	<doNotGenerate>
+	^closedPICSize
 ]
 
 { #category : #accessing }
