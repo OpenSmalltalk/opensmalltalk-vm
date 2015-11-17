@@ -164,6 +164,12 @@ TParseNode >> hasExplicitReturn [
 ]
 
 { #category : #testing }
+TParseNode >> hasSideEffect [
+	"Answer if the parse tree rooted at this node has a side-effect or not.  By default assume it has.  Nodes that don't override."
+	^true
+]
+
+{ #category : #testing }
 TParseNode >> isAssertion [
 	^false
 ]
@@ -240,7 +246,9 @@ TParseNode >> isReturningIf [
 
 { #category : #comparing }
 TParseNode >> isSameAs: aTParseNode [
-	^self subclassResponsibility
+	"Answer if the ParseTree rooted at this node is the same as aTParseNode.
+	 By default answer false and have subclasses override as appropriate."
+	^false
 ]
 
 { #category : #testing }

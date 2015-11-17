@@ -139,6 +139,13 @@ TAssignmentNode >> isAssignment [
 ]
 
 { #category : #testing }
+TAssignmentNode >> isSameAs: aTParseNode [
+	^aTParseNode isAssignment
+	 and: [(variable isSameAs: aTParseNode variable)
+	 and: [expression isSameAs: aTParseNode expression]]
+]
+
+{ #category : #testing }
 TAssignmentNode >> isVariableUpdatingAssignment [
 	"Return true if this assignment statement is of one of the forms:
 		var = var + ...

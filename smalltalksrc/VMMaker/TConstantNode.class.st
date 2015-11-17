@@ -25,6 +25,12 @@ TConstantNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 ]
 
 { #category : #testing }
+TConstantNode >> hasSideEffect [
+	"Answer if the parse tree rooted at this node has a side-effect or not."
+	^false
+]
+
+{ #category : #testing }
 TConstantNode >> isConstant [
 
 	^true
