@@ -32,6 +32,12 @@ TVariableNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 						ifFalse: [ aCodeGen returnPrefixFromVariable: name ])
 ]
 
+{ #category : #'as yet unclassified' }
+TVariableNode >> hasSideEffect [
+	"Answer if the parse tree rooted at this node has a side-effect or not."
+	^false
+]
+
 { #category : #testing }
 TVariableNode >> isLeaf [
 
