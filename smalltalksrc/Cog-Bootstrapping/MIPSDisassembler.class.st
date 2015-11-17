@@ -135,7 +135,6 @@ MIPSDisassembler >> disassemble: memory from: startPC to: limitPC [
 
 { #category : #'as yet unclassified' }
 MIPSDisassembler >> disassemble: memory from: startPC to: limitPC for: aSymbolManager "<Cogit>" labels: labelDictionary on: aStream [
-	aStream print: labelDictionary;cr.
 	pc := startPC.
 	[pc < limitPC] whileTrue:
 		[ | word instruction |
@@ -146,6 +145,12 @@ MIPSDisassembler >> disassemble: memory from: startPC to: limitPC for: aSymbolMa
 		aStream space; space.
 		instruction := MIPSInstruction new value: word.
 		aStream nextPutAll: (instruction decodeFor: self).
+
+		aSymbolManager ifNotNil: [
+			(aSymbolManager labelForPC: pc) ifNotNil:
+				[:label | aStream nextPutAll: ' ;'; nextPutAll: label]].
+		"aStream print: (aSymbolManager lookupAddress: pc)."
+
 		aStream cr.
 		pc := pc + OneInstruction].
 ]
@@ -232,6 +237,16 @@ MIPSDisassembler >> orImmediate: instruction [
 	(MIPSConstants nameForRegister: instruction rt), ', ',
 	(MIPSConstants nameForRegister: instruction rs), ', ',
 	(instruction unsignedImmediate printString)
+]
+
+{ #category : #'instructions - memory' }
+MIPSDisassembler >> prefetch: instruction [
+	| hintName |
+	instruction rt = HintLoad ifTrue: [hintName :=  'load'].
+	instruction rt = HintStore ifTrue: [hintName :=  'store'].
+	^'pref ', hintName, ', ',
+	(instruction signedImmediate printString), '(',
+	(MIPSConstants nameForRegister: instruction rs), ')'
 ]
 
 { #category : #'instructions - arithmetic' }

@@ -23,6 +23,8 @@ Class {
 		'BREAK',
 		'FP',
 		'GP',
+		'HintLoad',
+		'HintStore',
 		'J',
 		'JAL',
 		'JALR',
@@ -38,6 +40,7 @@ Class {
 		'OR',
 		'ORI',
 		'OneInstruction',
+		'PREF',
 		'R0',
 		'R1',
 		'R10',
@@ -123,6 +126,9 @@ MIPSConstants class >> initialize [
 	OneInstruction := 4.
 	TwoInstructions := 8.
 	
+	HintLoad := 0.
+	HintStore := 1.
+		
 	self initializeRegisters.
 	self initializeOpcodes.
 	self initializeSpecialFunctions.
@@ -154,6 +160,7 @@ MIPSConstants class >> initializeOpcodes [
 	SB := 40.
 	SH := 41.
 	SW := 43.
+	PREF := 51.
 ]
 
 { #category : #'as yet unclassified' }
