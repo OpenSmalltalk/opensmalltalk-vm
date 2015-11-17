@@ -2082,7 +2082,7 @@ StackToRegisterMappingCogit >> genPrimitiveAdd [
 	self MoveR: Arg0Reg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ClassReg.
-	self AddR: ReceiverResultReg R: ClassReg.
+	self AddCheckOverflowR: ReceiverResultReg R: ClassReg.
 	jumpOvfl := self JumpOverflow: 0.
 	self MoveR: ClassReg R: ReceiverResultReg.
 	self RetN: 0.
@@ -2442,7 +2442,7 @@ StackToRegisterMappingCogit >> genPrimitiveMultiply [
 	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg..
 	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: Arg1Reg.
-	self MulR: Arg1Reg R: ClassReg.
+	self MulCheckOverflowR: Arg1Reg R: ClassReg.
 	jumpOvfl := self JumpOverflow: 0.
 	objectRepresentation genSetSmallIntegerTagsIn: ClassReg.
 	self MoveR: ClassReg R: ReceiverResultReg.
@@ -2591,7 +2591,7 @@ StackToRegisterMappingCogit >> genPrimitiveSubtract [
 	<var: #jumpOvfl type: #'AbstractInstruction *'>
 	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	self MoveR: ReceiverResultReg R: TempReg.
-	self SubR: Arg0Reg R: TempReg.
+	self SubCheckOverflowR: Arg0Reg R: TempReg.
 	jumpOvfl := self JumpOverflow: 0.
 	objectRepresentation genAddSmallIntegerTagsTo: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
@@ -2998,13 +2998,13 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 	primDescriptor opcode caseOf: {
 		[AddRR] -> [argIsInt
 						ifTrue:
-							[instToAnnotate := self AddCq: argInt - ConstZero R: ReceiverResultReg.
+							[instToAnnotate := self AddCheckOverflowCq: argInt - ConstZero R: ReceiverResultReg.
 							 jumpContinue := self JumpNoOverflow: 0.
 							 "overflow; must undo the damage before continuing"
 							 self SubCq: argInt - ConstZero R: ReceiverResultReg]
 						ifFalse:
 							[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ReceiverResultReg.
-							 self AddR: Arg0Reg R: ReceiverResultReg.
+							 self AddCheckOverflowR: Arg0Reg R: ReceiverResultReg.
 							jumpContinue := self JumpNoOverflow: 0.
 							"overflow; must undo the damage before continuing"
 							 rcvrIsInt
@@ -3014,13 +3014,13 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 									 objectRepresentation genSetSmallIntegerTagsIn: ReceiverResultReg]]].
 		[SubRR] -> [argIsInt
 						ifTrue:
-							[instToAnnotate := self SubCq: argInt - ConstZero R: ReceiverResultReg.
+							[instToAnnotate := self SubCheckOverflowCq: argInt - ConstZero R: ReceiverResultReg.
 							 jumpContinue := self JumpNoOverflow: 0.
 							 "overflow; must undo the damage before continuing"
 							 self AddCq: argInt - ConstZero R: ReceiverResultReg]
 						ifFalse:
 							[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: Arg0Reg.
-							 self SubR: Arg0Reg R: ReceiverResultReg.
+							 self SubCheckOverflowR: Arg0Reg R: ReceiverResultReg.
 							 jumpContinue := self JumpNoOverflow: 0.
 							 "overflow; must undo the damage before continuing"
 							 self AddR: Arg0Reg R: ReceiverResultReg.

@@ -2363,6 +2363,13 @@ CogARMCompiler >> generalPurposeRegisterMap [
 ]
 
 { #category : #testing }
+CogARMCompiler >> hasConditionRegister [
+	"Answer if the receiver supports, e.g., JumpOverflow after a regular AddRR"
+	<inline: true>
+	^true
+]
+
+{ #category : #testing }
 CogARMCompiler >> hasDoublePrecisionFloatingPointSupport [
 	"might be true, but is for the forseeable future disabled"
 	<inline: true>
