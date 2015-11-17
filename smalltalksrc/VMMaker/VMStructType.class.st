@@ -130,9 +130,12 @@ VMStructType class >> fieldAccessorsForBytesPerWord: bytesPerWord [
 				ifFalse:
 					[typeTuple
 						caseOf: {
-								['unsigned char']	->	[8].
-								['unsigned short']	->	[16].
-								['unsigned int']		->	[32] }
+								[#char]				->	[8].
+								[#'unsigned char']	->	[8].
+								[#short]			->	[16].
+								[#'unsigned short']	->	[16].
+								[#int]				->	[32].
+								[#'unsigned int']	->	[32] }
 						otherwise: [bytesPerWord * 8]].
 			typeTuple isArray
 				ifTrue:
