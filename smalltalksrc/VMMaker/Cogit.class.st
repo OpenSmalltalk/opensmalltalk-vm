@@ -3003,12 +3003,15 @@ Cogit >> cPIC: cPIC HasTarget: targetMethod [
 	target := targetMethod asUnsignedInteger + cmNoCheckEntryOffset.
 	pc := cPIC asInteger + firstCPICCaseOffset.
 	"Since this is a fast test doing simple compares we don't need to care that some
-	cases have nonsense addresses in there. Just zip on through"
-	1 to: maxCPICCases do:
+	cases have nonsense addresses in there. Just zip on through."
+	"First jump is unconditional; subsequent ones are conditional"
+	target = (backEnd jumpLongTargetBeforeFollowingAddress: pc) ifTrue:
+		[^true].
+	2 to: maxCPICCases do:
 		[:i|
-		target = (backEnd jumpLongTargetBeforeFollowingAddress: pc) ifTrue:
-			[^true].
-		pc := pc + cPICCaseSize].
+		pc := pc + cPICCaseSize.
+		target = (backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc) ifTrue:
+			[^true]].
 	^false
 ]
 
@@ -3040,7 +3043,9 @@ Cogit >> cPICHasFreedTargets: cPIC [
 	1 to: cPIC cPICNumCases do:
 		[:i|
 		pc := self addressOfEndOfCase: i inCPIC: cPIC.
-		entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
+		entryPoint := i = 1
+						ifTrue: [backEnd jumpLongTargetBeforeFollowingAddress: pc]
+						ifFalse: [backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc].
 		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
 		(cPIC containsAddress: entryPoint) ifFalse:
 			[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
@@ -3548,7 +3553,7 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 	(objectMemory isImmediate: cPIC selector) ifFalse:
 		[(objectMemory isMarked: cPIC selector) ifFalse:
 			[^true]].
-	"First jump is unconditional; subsequent ones are conditional"
+	"First jump is unconditional; subsequent ones are conditional."
 	offsetToLiteral := backEnd jumpLongByteSize.
 	1 to: cPIC cPICNumCases do:
 		[:i| 
@@ -3563,7 +3568,9 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 		 and: [(objectMemory isMarked: object) not]) ifTrue:
 			[^true].
 		offsetToLiteral := backEnd jumpLongConditionalByteSize.
-		entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
+		entryPoint := i = 1
+						ifTrue: [backEnd jumpLongTargetBeforeFollowingAddress: pc]
+						ifFalse: [backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc].
 		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
 		self assert: (entryPoint > methodZoneBase and: [entryPoint < methodZone freeStart]).
 		(cPIC containsAddress: entryPoint) ifFalse:
@@ -3572,8 +3579,7 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 						or: [targetMethod cmType = CMFree]).
 			 (self markAndTraceOrFreeCogMethod: targetMethod
 				  firstVisit: targetMethod asUnsignedInteger > pc asUnsignedInteger) ifTrue:
-				[^true]].
-		].
+				[^true]]].
 	^false
 ]
 
@@ -4283,29 +4289,72 @@ Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrCo
 
 { #category : #'in-line cacheing' }
 Cogit >> compileClosedPICPrototype [
-	"Compile the abstract instructions for a full closed PIC used to initialize closedPICSize.
-	 The loads into SendNumArgsReg are those for optional method objects which may be
-	 used in MNU cases."
+	"Compile the abstract instructions for a full closed PIC, used to generate the chunk of code
+	 which is copied to form each closed PIC.  A Closed Polymorphic Inline Cache is a small jump
+	 table used to optimize sends with a limited degree of polymorphism (currently up to 6 cases).
+	 We call it closed because it deals only with a finite number of cases, as opposed to an Open PIC.
+	 When a monomorphic linked send (a send with a single case, linking direct to the checked entry
+	 point of a CogMethod) fails a class check, the Cogit attempts to create a two-entry PIC that will
+	 handle jumping to the original target for the original class and the relevant target for the new
+	 class.  This jump table will be extended on subsequent failures up to a limit (6).
+
+	 We avoid extending CPICs to Open PICs by linking the send site to an Open PIC if one already
+	 exists with the send's selector, a good policy since measurements show that sends of mega-
+	 morphic selectors usually become megamorphic at all send sites.  Hence the Open PIC list.
+
+	 A CPIC also optimizes MNUs and interpret-only methods.  Each case can load SendNumArgs with
+	 the oop of a method, or will load SendNumArgs with 0 if not.  MNUs are optimized by jumping to
+	 the mnuAbort in the CPIC, which calls code that creates the Message, thereby avoiding looking up
+	 the original message which will not be found, and either looks up doesNotUnderstand: or directly
+	 activates the method loaded into SendNumArgs, hence avoiding looking up doesNotUnderstand:.
+	 Interpret-only methods are handled by jumping to the picInterpretAbort, which enters the
+	 interpreter activating the method loaded in SendNumArgs.
+
+	 CPICs look like the following, where rClass is set at the original send site for the 1st case, and #Foo
+	 is some constant, either an oop, a class tag or an instruction address.
+
+		rTemp := (rRecever bitAnd: TagMask) = 0 ifTrue: [rReceiver class] ifFalse: [rRecever bitAnd: TagMask].
+		rTemp = rClass ifFalse:
+			[self goto: #Label].
+		rSendNumArgs := #MethodForCase1Or0.
+		self goto: #TargetForCase1.
+	 #Label
+		rTemp = #ClassTagForCase6 ifTrue:
+			[rSendNumArgs := #MethodForCase6Or0.
+			 self goto: #TargetForCase6].
+		...cases 5, 4 & 3
+		rTemp = #ClassTagForCase2 ifTrue:
+			[rSendNumArgs := #MethodForCase2Or0.
+			 self goto: #TargetForCase2].
+		self goto: #CPICMissTrampoline
+		literals (if out-of-line literals)
+
+	 where we short-cut as many cases as needed by making the self goto: #Label skip as many cases
+	 as needed."
 	<inline: true>
 	| numArgs jumpNext |
 	<var: #jumpNext type: #'AbstractInstruction *'>
-	numArgs := 0.
-	self compilePICAbort: numArgs.
-	jumpNext := self compileCPICEntry. "at the end of the entry code we need to jump to the first case code, which is actually the last chunk - for each entension we must update this jump to move back one case"
+	self compilePICAbort: (numArgs := 0). "Will get rewritten to appropriate arity when configuring."
+	jumpNext := self compileCPICEntry.
+	"At the end of the entry code we need to jump to the first case code, which is actually the last chunk.
+	 On each entension we must update this jump to move back one case."
+	"16r5EAF00D is the method oop, or 0, for the 1st case."
 	self MoveUniqueCw: 16r5EAF00D R: SendNumArgsReg.
 	self JumpLong: self cPICPrototypeCaseOffset + 16rCA5E10.
 	endCPICCase0 := self Label.
 	1 to: maxCPICCases - 1 do:
 		[:h|
-		h = (maxCPICCases - 1)
-				ifTrue: [jumpNext jmpTarget: self Label]. "this is where we jump to for the first case"
+		h = (maxCPICCases - 1) ifTrue:
+			[jumpNext jmpTarget: self Label]. "this is where we jump to for the first case"
+		"16rBABE1F15+h is the class tag for the Nth case"
 		self CmpCw: 16rBABE1F15+h R: TempReg.
+		"16rBADA550+h is the method oop, or 0, for the Nth case."
 		self MoveUniqueCw: 16rBADA550 + h R: SendNumArgsReg.
 		self JumpLongZero: self cPICPrototypeCaseOffset + 16rCA5E10 + (h * 16).
-		h =  1 ifTrue:
+		h = 1 ifTrue:
 			[endCPICCase1 := self Label]].
 	self MoveCw: methodLabel address R: ClassReg.
-	self JumpLong: (self cPICMissTrampolineFor: numArgs).
+	self JumpLong: (self cPICMissTrampolineFor: numArgs).	"Will get rewritten to appropriate arity when configuring."
 	cPICEndOfCodeLabel := self Label.
 	literalsManager dumpLiterals: false.
 	^0
@@ -8446,20 +8495,7 @@ Cogit >> noContextSwitchBlockEntryOffset [
 { #category : #compaction }
 Cogit >> noTargetsFreeInClosedPIC: cPIC [
 	"Answer if all targets in the PIC are in-use methods."
-	<var: #cPIC type: #'CogMethod *'>
-	| pc entryPoint targetMethod |
-	<var: #targetMethod type: #'CogMethod *'>
-
-	1 to: cPIC cPICNumCases do:
-		[:i|
-		pc := self addressOfEndOfCase: i inCPIC: cPIC.
-		entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
-		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
-		(cPIC containsAddress: entryPoint) ifFalse:
-			[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-			 targetMethod cmType ~= CMMethod ifTrue:
-				[^false]]].
-	^true
+	^(self cPICHasFreedTargets: cPIC) not
 ]
 
 { #category : #'translation support' }
@@ -9180,7 +9216,9 @@ Cogit >> relocateCallsInClosedPIC: cPIC [
 	1 to: cPIC cPICNumCases do:
 		[:i|
 		pc := self addressOfEndOfCase: i inCPIC: cPIC.
-		entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
+		entryPoint := i = 1
+						ifTrue: [backEnd jumpLongTargetBeforeFollowingAddress: pc]
+						ifFalse: [backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc].
 		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
 		(cPIC containsAddress: entryPoint) ifFalse:
 			[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.

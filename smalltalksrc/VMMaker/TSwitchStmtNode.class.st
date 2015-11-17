@@ -76,6 +76,8 @@ TSwitchStmtNode >> cases: anObject [
 
 { #category : #'instance initialization' }
 TSwitchStmtNode >> createCasesFromBraceNode: aTBraceNode [
+	"Answer a sequence of tuples of { labels. case } for a TBraceNode, making
+	 sure to collect equivalent cases together under a signle sequence of labels."
 	| casesToStrings stringsToLabels newCases |
 	casesToStrings := Dictionary new.
 	stringsToLabels := Dictionary new.

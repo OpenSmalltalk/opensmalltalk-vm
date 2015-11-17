@@ -1918,13 +1918,14 @@ CCodeGenerator >> generateIfFalseIfTrue: msgNode on: aStream indent: level [
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
-			[aStream nextPutAll: 'if ('.
-			msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
-			aStream nextPutAll: ') {'; cr.
-			msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
-			aStream tab: level; nextPut: $}; crtab: level; nextPutAll: 'else {'; cr.
-			msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
-			aStream tab: level; nextPut: $}]
+			[(self tryToCollapseBothArmsOfConditional: msgNode on: aStream indent: level) ifFalse:
+				[aStream nextPutAll: 'if ('.
+				 msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
+				 aStream nextPutAll: ') {'; cr.
+				 msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
+				 aStream tab: level; nextPut: $}; crtab: level; nextPutAll: 'else {'; cr.
+				 msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
+				 aStream tab: level; nextPut: $}]]
 		ifNotNil:
 			[:const |
 			 (const ifTrue: [msgNode args last] ifFalse: [msgNode args first])
@@ -1937,13 +1938,14 @@ CCodeGenerator >> generateIfFalseIfTrueAsArgument: msgNode on: aStream indent: l
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
-			[aStream nextPut: $(.
-			msgNode receiver emitCCodeAsArgumentOn: aStream level: level generator: self.
-			aStream crtab: level + 1; nextPut: $?; space.
-			msgNode args last emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
-			aStream crtab: level + 1; nextPut: $:; space.
-			msgNode args first emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
-			aStream nextPut: $)]
+			[(self tryToCollapseBothArmsOfConditionalExpression: msgNode on: aStream indent: level) ifFalse:
+				[aStream nextPut: $(.
+				 msgNode receiver emitCCodeAsArgumentOn: aStream level: level generator: self.
+				 aStream crtab: level + 1; nextPut: $?; space.
+				 msgNode args last emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
+				 aStream crtab: level + 1; nextPut: $:; space.
+				 msgNode args first emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
+				 aStream nextPut: $)]]
 		ifNotNil:
 			[:const|
 			(const
@@ -2125,13 +2127,14 @@ CCodeGenerator >> generateIfTrueIfFalse: msgNode on: aStream indent: level [
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
-			[aStream nextPutAll: 'if ('.
-			msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
-			aStream nextPutAll: ') {'; cr.
-			msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
-			aStream tab: level; nextPut: $}; crtab: level; nextPutAll: 'else {'; cr.
-			msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
-			aStream tab: level; nextPut: $}]
+			[(self tryToCollapseBothArmsOfConditional: msgNode on: aStream indent: level) ifFalse:
+				[aStream nextPutAll: 'if ('.
+				 msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
+				 aStream nextPutAll: ') {'; cr.
+				 msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
+				 aStream tab: level; nextPut: $}; crtab: level; nextPutAll: 'else {'; cr.
+				 msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
+				 aStream tab: level; nextPut: $}]]
 		ifNotNil:
 			[:const |
 			(const ifTrue: [msgNode args first] ifFalse: [msgNode args last])
@@ -2144,13 +2147,14 @@ CCodeGenerator >> generateIfTrueIfFalseAsArgument: msgNode on: aStream indent: l
 
 	(self nilOrBooleanConstantReceiverOf: msgNode receiver)
 		ifNil:
-			[aStream nextPut: $(.
-			msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
-			aStream crtab: level + 1; nextPut: $?; space.
-			msgNode args first emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
-			aStream crtab: level + 1; nextPut: $:; space.
-			msgNode args last emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
-			aStream nextPut: $)]
+			[(self tryToCollapseBothArmsOfConditionalExpression: msgNode on: aStream indent: level) ifFalse:
+				[aStream nextPut: $(.
+				 msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
+				 aStream crtab: level + 1; nextPut: $?; space.
+				 msgNode args first emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
+				 aStream crtab: level + 1; nextPut: $:; space.
+				 msgNode args last emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
+				 aStream nextPut: $)]]
 		ifNotNil:
 			[:const|
 			(const ifTrue: [msgNode args first] ifFalse: [msgNode args last])
@@ -4672,6 +4676,34 @@ CCodeGenerator >> testInliningFor: selector as: inlineFlagOrSymbol [
 CCodeGenerator >> translationMethodClass [
 	"return the class used to produce C translation methods from MethodNodes"
 	^TMethod
+]
+
+{ #category : #'C translation support' }
+CCodeGenerator >> tryToCollapseBothArmsOfConditional: msgNode on: aStream indent: level [
+	"Attempt to generate the code for an ifTrue:ifFalse: if both arms are found to be the same, in which case
+	 answer true.  Otherwise output nothing and answer false."
+	(msgNode args first isSameAs: msgNode args second) ifFalse:
+		[^false].
+	msgNode receiver hasSideEffect ifTrue:
+		[msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
+		 aStream nextPut: $; ; crtab: level].
+	msgNode args first emitCCodeOn: aStream level: level generator: self.
+	^true
+]
+
+{ #category : #'C translation support' }
+CCodeGenerator >> tryToCollapseBothArmsOfConditionalExpression: msgNode on: aStream indent: level [
+	"Attempt to generate the code for an ifTrue:ifFalse: if both arms are found to be the same, in which case
+	 answer true.  Otherwise output nothing and answer false."
+	(msgNode args first isSameAs: msgNode args second) ifFalse:
+		[^false].
+	aStream nextPut: $(.
+	msgNode receiver hasSideEffect ifTrue:
+		[msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
+		 aStream nextPut: $, ; crtab: level]..
+	msgNode args first emitCCodeAsArgumentOn: aStream level: level generator: self.
+	aStream nextPut: $).
+	^true
 ]
 
 { #category : #'type inference' }
