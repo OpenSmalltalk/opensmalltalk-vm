@@ -41,7 +41,8 @@ MIPSInstruction >> decodeFor: visitor [
 	opcode = SB ifTrue: [^visitor storeByte: self].
 	opcode = SH ifTrue: [^visitor storeHalfword: self].
 	opcode = SW ifTrue: [^visitor storeWord: self].
-	
+	opcode = PREF ifTrue: [^visitor prefetch: self].
+
 	self error: 'Unknown instruction'.
 ]
 

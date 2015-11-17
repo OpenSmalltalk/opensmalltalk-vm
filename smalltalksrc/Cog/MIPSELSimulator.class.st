@@ -7,7 +7,32 @@ Class {
 	#category : #'Cog-Processors'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #memory }
+MIPSELSimulator >> executeFault: address [
+	| jumpInstruction type |
+	self assert: inDelaySlot not.
+	jumpInstruction := MIPSInstruction new value: (self fetchInstruction: jumpingPC).
+	jumpInstruction opcode = J ifTrue: [type := #jump].
+	jumpInstruction opcode = JAL ifTrue: [type := #call].
+	jumpInstruction opcode = SPECIAL ifTrue: 
+		[jumpInstruction function = JR ifTrue:
+			[jumpInstruction rs = RA
+				ifTrue: [type := #return]
+				ifFalse: [type := #jump]].
+		jumpInstruction function = JALR ifTrue:
+			[type := #call]].
+	self assert: type ~~ nil.
+
+	^(ProcessorSimulationTrap
+			pc: nil
+			nextpc: nil
+			address: address
+			type: type
+			accessor: nil)
+		signal
+]
+
+{ #category : #memory }
 MIPSELSimulator >> fetchInstruction: address [
 	address < exectuableBase ifTrue: [self executeFault: address].
 	address > exectuableLimit ifTrue: [self executeFault: address].
@@ -15,19 +40,23 @@ MIPSELSimulator >> fetchInstruction: address [
 	^memory unsignedLongAt: address + 1 bigEndian: false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #memory }
 MIPSELSimulator >> readFault: address [
+	| destReg |
+	self assert: inDelaySlot not. "Or we have to store nextPC somewhere."
+	destReg := (MIPSInstruction new value: (self fetchInstruction: pc)) rt.
+	
 	^(ProcessorSimulationTrap
 			pc: pc
 			nextpc: pc + 4
 			address: address
 			type: #read
-			accessor: nil)
+			accessor: (self setterForRegister: destReg))
 		signal
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #memory }
 MIPSELSimulator >> signedByte: address [
 	address < readableBase ifTrue: [self readFault: address].
 	address > readableLimit ifTrue: [self readFault: address].
@@ -41,7 +70,7 @@ MIPSELSimulator >> signedByte: address put: value [
 	^memory signedByteAt: address + 1 put: value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #memory }
 MIPSELSimulator >> signedHalfword: address [
 	(address bitAnd: 1) = 0 ifFalse: [self error: 'Unaligned read'].
 	address < readableBase ifTrue: [self readFault: address].
@@ -57,7 +86,7 @@ MIPSELSimulator >> signedHalfword: address put: value [
 	^memory signedShortAt: address + 1 put: value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #memory }
 MIPSELSimulator >> signedWord: address [
 	(address bitAnd: 3) = 0 ifFalse: [self error: 'Unaligned read'].
 	address < readableBase ifTrue: [self readFault: address].
@@ -70,10 +99,10 @@ MIPSELSimulator >> signedWord: address put: value [
 	(address bitAnd: 3) = 0 ifFalse: [self error: 'Unaligned read'].
 	address < writableBase ifTrue: [self writeFault: address].
 	address > writableLimit ifTrue: [self writeFault: address].
-	^memory signedLongAt: address + 1 put: value
+	^memory longAt: address + 1 put: value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #memory }
 MIPSELSimulator >> unsignedByte: address [
 	address < readableBase ifTrue: [self readFault: address].
 	address > readableLimit ifTrue: [self readFault: address].
@@ -87,7 +116,7 @@ MIPSELSimulator >> unsignedByte: address put: value [
 	^memory at: address + 1 put: value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #memory }
 MIPSELSimulator >> unsignedHalfword: address [
 	address < readableBase ifTrue: [self readFault: address].
 	address > readableLimit ifTrue: [self readFault: address].
@@ -103,10 +132,26 @@ MIPSELSimulator >> unsignedHalfword: address put: value [
 	^memory unsignedShortAt: address + 1 put: value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #memory }
 MIPSELSimulator >> unsignedWord: address [
 	address < readableBase ifTrue: [self readFault: address].
 	address > readableLimit ifTrue: [self readFault: address].
 	(address bitAnd: 3) = 0 ifFalse: [self error: 'Unaligned read'].
 	^memory unsignedLongAt: address + 1 bigEndian: false
+]
+
+{ #category : #memory }
+MIPSELSimulator >> writeFault: address [
+	| srcReg |
+	self assert: inDelaySlot not. "Or we have to store nextPC somewhere."
+	srcReg := (MIPSInstruction new value: (self fetchInstruction: pc)) rt.
+	
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 4
+			address: address
+			type: #write
+			accessor: (self getterForRegister: srcReg))
+		signal
+
 ]
