@@ -757,6 +757,13 @@ CogAbstractInstruction >> getJmpTarget [
 ]
 
 { #category : #testing }
+CogAbstractInstruction >> hasConditionRegister [
+	"Answer if the receiver supports, e.g., JumpOverflow after a regular AddRR"
+	<inline: true>
+	^self subclassResponsibility
+]
+
+{ #category : #testing }
 CogAbstractInstruction >> hasDoublePrecisionFloatingPointSupport [
 	<inline: true>
 	^self subclassResponsibility
