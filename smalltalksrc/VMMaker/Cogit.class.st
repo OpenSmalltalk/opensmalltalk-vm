@@ -4447,7 +4447,7 @@ Cogit >> compileClosedPICPrototype [
 		h = (maxCPICCases - 1) ifTrue:
 			[jumpNext jmpTarget: self Label]. "this is where we jump to for the first case"
 		"16rBABE1F15+h is the class tag for the Nth case"
-		self CmpCw: 16rBABE1F15+h R: TempReg.
+		self CmpC32: 16rBABE1F15+h R: TempReg.
 		"16rBADA550+h is the method oop, or 0, for the Nth case."
 		self MoveUniqueCw: 16rBADA550 + h R: SendNumArgsReg.
 		self JumpLongZero: self cPICPrototypeCaseOffset + 16rCA5E10 + (h * 16).
@@ -5037,7 +5037,7 @@ Cogit >> estimateOfAbstractOpcodesPerBytecodes [
 	^ 10
 ]
 
-{ #category : #'garbage collection' }
+{ #category : #'in-line cacheing' }
 Cogit >> expectedClosedPICPrototype: cPIC [
 	"Answer 0 if the ClosedPIC is as expected from compileClosedPICPrototype,
 	 otherwise answer an error code identifying the first discrepancy found."
@@ -5058,15 +5058,23 @@ Cogit >> expectedClosedPICPrototype: cPIC [
 		[:i |
 		pc := pc + cPICCaseSize.
 		offsetToLiteral := backEnd jumpLongConditionalByteSize.
-				
+
 		object := literalsManager classRefInClosedPICAt: pc - offsetToLiteral.
-		self assert: (object = (16rBABE1F15 + i)).
+		self assert: object = (16rBABE1F15 + i).
+		literalsManager storeClassRef: (object bitXor: 16r5A5A5A5A) inClosedPICAt: pc - offsetToLiteral.
+		object := literalsManager classRefInClosedPICAt: pc - offsetToLiteral.
+		self assert: object = ((16rBABE1F15 + i bitXor: 16r5A5A5A5A)).
+		literalsManager storeClassRef: (object bitXor: 16r5A5A5A5A) inClosedPICAt: pc - offsetToLiteral.
 
 		object := literalsManager objRefInClosedPICAt: pc - offsetToLiteral.
-		self assert: (object = (16rBADA550 + i)).
+		self assert: object = (16rBADA550 + i).
+		literalsManager storeObjRef: (object bitXor: 16rA5A5A5A5) inClosedPICAt: pc - offsetToLiteral.
+		object := literalsManager objRefInClosedPICAt: pc - offsetToLiteral.
+		self assert: object = ((16rBADA550 + i) bitXor: 16rA5A5A5A5).
+		literalsManager storeObjRef: (object bitXor: 16rA5A5A5A5) inClosedPICAt: pc - offsetToLiteral.
 
 		entryPoint := backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc.
-		self assert: (entryPoint = (self cPICPrototypeCaseOffset + 16rCA5E10 + (i * 16)))].
+		self assert: entryPoint = (self cPICPrototypeCaseOffset + 16rCA5E10 + (i * 16))].
 
 	entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc + cPICEndSize - literalsManager endSizeOffset.
 	self assert: (entryPoint = (self cPICMissTrampolineFor: 0)).
