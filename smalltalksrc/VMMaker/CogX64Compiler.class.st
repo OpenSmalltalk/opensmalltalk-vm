@@ -284,7 +284,8 @@ CogX64Compiler >> computeMaximumSize [
 		[TstCqR]		-> [^self computeSizeOfArithCqR].
 		[AddCwR]		-> [^self computeSizeOfArithCwR].
 		[AndCwR]		-> [^self computeSizeOfArithCwR].
-		[CmpCwR]		-> [^self computeSizeOfArithCwR].
+		[CmpCwR]		-> [^(self concreteRegister: (operands at: 1)) = RAX ifTrue: [6] ifFalse: [7]].
+		[CmpC32R]		-> [^self computeSizeOfArithCwR].
 		[OrCwR]		-> [^self computeSizeOfArithCwR].
 		[SubCwR]		-> [^self computeSizeOfArithCwR].
 		[XorCwR]		-> [^self computeSizeOfArithCwR].
@@ -620,6 +621,33 @@ CogX64Compiler >> concretizeCallFull [
 		at: 10 put: 16rFF;
 		at: 11 put: (self mod: ModReg RM: RAX RO: 2).
 	^machineCodeSize := 12
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeCmpC32R [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| value reg |
+	value := operands at: 0.
+	reg := self concreteRegister: (operands at: 1).
+	reg = RAX ifTrue:
+		[machineCode
+			at: 0 put: 16r48;
+			at: 1 put: 16r3D;
+			at: 2 put: (value bitAnd: 16rFF);
+			at: 3 put: (value >> 8 bitAnd: 16rFF);
+			at: 4 put: (value >> 16 bitAnd: 16rFF);
+			at: 5 put: (value >> 24 bitAnd: 16rFF).
+		 ^machineCodeSize := 6].
+	machineCode
+		at: 0 put: 16r49;
+		at: 1 put: 16r81;
+		at: 2 put: (self mod: ModReg RM: reg RO: 7);
+		at: 3 put: (value bitAnd: 16rFF);
+		at: 4 put: (value >> 8 bitAnd: 16rFF);
+		at: 5 put: (value >> 16 bitAnd: 16rFF);
+		at: 6 put: (value >> 24 bitAnd: 16rFF).
+	 ^machineCodeSize := 7
 ]
 
 { #category : #'generate machine code' }
@@ -1819,6 +1847,7 @@ CogX64Compiler >> dispatchConcretize [
 		[TstCqR]					-> [^self concretizeTstCqR].
 		[CmpCqR]					-> [^self concretizeArithCqRWithRO: 7 raxOpcode: 16r3D].
 		[CmpCwR]					-> [^self concretizeArithCwR: 16r39].
+		[CmpC32R]					-> [^self concretizeCmpC32R].
 		[CmpRR]					-> [^self concretizeCmpRR].
 		[CmpRdRd]					-> [^self concretizeCmpRdRd].
 		[DivRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5E].
