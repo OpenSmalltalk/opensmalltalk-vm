@@ -5,8 +5,6 @@ Class {
 	#name : #CogRTLOpcodes,
 	#superclass : #SharedPool,
 	#classVars : [
-		'AddCheckOverflowCqR',
-		'AddCheckOverflowRR',
 		'AddCqR',
 		'AddCwR',
 		'AddRR',
@@ -144,8 +142,6 @@ Class {
 		'SendNumArgsReg',
 		'SqrtRd',
 		'Stop',
-		'SubCheckOverflowCqR',
-		'SubCheckOverflowRR',
 		'SubCqR',
 		'SubCwR',
 		'SubRR',
@@ -332,8 +328,6 @@ CogRTLOpcodes class >> initialize [
 						CmpRR AddRR SubRR AndRR OrRR XorRR
 						CmpCqR AddCqR SubCqR AndCqR OrCqR TstCqR XorCqR
 						CmpCwR CmpC32R AddCwR SubCwR AndCwR OrCwR XorCwR
-
-						AddCheckOverflowCqR AddCheckOverflowRR SubCheckOverflowCqR SubCheckOverflowRR MulCheckOverflowRR
 
 						AndCqRR
 

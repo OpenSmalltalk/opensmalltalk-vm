@@ -98,7 +98,6 @@ CogX64Compiler class >> initialize [
 
 	"CogX64Compiler initialize"
 
-	| specificOpcodes refs |
 	self ~~ CogX64Compiler ifTrue: [^self].
 
 	ABI ifNil:
@@ -154,19 +153,9 @@ CogX64Compiler class >> initialize [
 	SIB8 := 3.
 
 	"Specific instructions"
-	LastRTLCode ifNil:
-		[CogRTLOpcodes initialize].
-	specificOpcodes := #(CDQ IDIVR IMULRR CPUID LFENCE MFENCE SFENCE LOCK CMPXCHGAwR CMPXCHGMwrR XCHGAwR XCHGMwrR XCHGRR).
-	refs := (thisContext method literals select: [:l| l isVariableBinding and: [classPool includesKey: l key]]) collect:
-				[:ea| ea key].
-	(classPool keys reject: [:k| (specificOpcodes includes: k) or: [refs includes: k]]) do:
-		[:k|
-		Undeclared declare: k from: classPool].
-	specificOpcodes withIndexDo:
-		[:classVarName :value|
-		self classPool
-			declare: classVarName from: Undeclared;
-			at: classVarName put: value + LastRTLCode - 1]
+	self
+		initializeSpecificOpcodes: #(CDQ IDIVR IMULRR CPUID LFENCE MFENCE SFENCE LOCK CMPXCHGAwR CMPXCHGMwrR XCHGAwR XCHGMwrR XCHGRR)
+		in: thisContext method
 ]
 
 { #category : #translation }

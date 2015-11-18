@@ -126,14 +126,13 @@ CogARMCompiler class >> identifyingPredefinedMacros [
 
 { #category : #'class initialization' }
 CogARMCompiler class >> initialize [
-	
+
 	"Initialize various ARM instruction-related constants."
 	"CogARMCompiler initialize"
-	
-	| specificOpcodes refs |
+
 	super initialize.
 	self ~~ CogARMCompiler ifTrue: [^self].
-	
+
 	"ARM general registers"
 	R0 := 0.
 	R1 := 1.
@@ -160,8 +159,7 @@ CogARMCompiler class >> initialize [
 	D5 := 5.
 	D6 := 6.
 	D7 := 7.
-	
-	
+
 	CArg0Reg := 0.
 	CArg1Reg := 1.
 	CArg2Reg := 2.
@@ -170,7 +168,7 @@ CogARMCompiler class >> initialize [
 	ConcreteVarBaseReg := 10.
 	ConcreteIPReg := 12. "IP, The Intra-Procedure-call scratch register."
 	ConcretePCReg := 15.
-	
+
 	"Condition Codes. Note that cc=16rF is NOT ALLOWED as a condition; it specifies an extension instruction. See e.g.ARM_ARM v5 DDI01001.pdf A3.2.1"
 	EQ := 0.
 	NE := 1.
@@ -207,19 +205,9 @@ CogARMCompiler class >> initialize [
 	OverflowFlag := 1 << 28.
 
 	"Specific instructions"
-	LastRTLCode isNil ifTrue:
-		[CogRTLOpcodes initialize].
-	specificOpcodes := #(SMULL MSR MRS LDMFD STMFD CMPSMULL).
-	refs := (thisContext method literals select: [:l| l isVariableBinding and: [classPool includesKey: l key]]) collect:
-				[:ea| ea key].
-	(classPool keys reject: [:k| (specificOpcodes includes: k) or: [refs includes: k]]) do:
-		[:k|
-		Undeclared declare: k from: classPool].
-	specificOpcodes withIndexDo:
-		[:classVarName :value|
-		self classPool
-			declare: classVarName from: Undeclared;
-			at: classVarName put: value + LastRTLCode - 1]
+	self
+		initializeSpecificOpcodes: #(SMULL MSR MRS LDMFD STMFD CMPSMULL)
+		in: thisContext method
 ]
 
 { #category : #testing }
