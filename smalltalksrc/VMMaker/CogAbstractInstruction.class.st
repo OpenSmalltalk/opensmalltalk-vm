@@ -108,6 +108,31 @@ CogAbstractInstruction class >> initialize [
 	NumOperands := 3
 ]
 
+{ #category : #'class initialization' }
+CogAbstractInstruction class >> initializeSpecificOpcodes: opcodeSymbolSequence in: initializeMethod [
+	"Declare as class variables, the opcodes in opcodeSymbolSequence.
+	 Assign values to them from LastRTLOpcode on.  Undeclare any obsolete
+	 class vars.  The assumption is that initializeMethod defines all class vars
+	 in the class. This method should be used by subclasses wiching to declare
+	 their own specific opcodes."
+	| classVariablesDefinedInMethod |
+	self assert: self ~~ CogAbstractInstruction.
+	LastRTLCode ifNil:
+		[CogRTLOpcodes initialize].
+	classVariablesDefinedInMethod := (initializeMethod literals select: [:l| l isVariableBinding and: [classPool includesKey: l key]]) collect:
+											[:ea| ea key].
+	"Undeclare any class var not defined in opcodeSymbolSequence or by the method."
+	(classPool keys reject: [:k| (opcodeSymbolSequence includes: k) or: [classVariablesDefinedInMethod includes: k]]) do:
+		[:k|
+		Undeclared declare: k from: classPool].
+	"Declare opcodeSymbolSequence's elements from LastRTLCode on up."
+	opcodeSymbolSequence withIndexDo:
+		[:classVarName :value|
+		self classPool
+			declare: classVarName from: Undeclared;
+			at: classVarName put: value + LastRTLCode - 1]
+]
+
 { #category : #translation }
 CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an AbstractInstruction struct."
@@ -1077,6 +1102,18 @@ CogAbstractInstruction >> nameForRegister: reg [ "<Integer>"
 	"subclasses with special purpose registers may need to override."
 	<doNotGenerate>
 	^CogRTLOpcodes nameForRegister: reg
+]
+
+{ #category : #'abstract instructions' }
+CogAbstractInstruction >> noteFollowingConditionalBranch: branch [
+	"Support for processors without condition codes, such as the MIPS.
+	 Answer the branch opcode.  If there are no condition codes, modify
+	 the receiver and the branch to implement a suitable conditional
+	 branch that doesn't depend on condition codes being set by the
+	 receiver.  By default a noop. Overridden in subclasses as required."
+	<var: #branch type: #'AbstractInstruction *'>
+	<inline: true>
+	^branch
 ]
 
 { #category : #initialization }
