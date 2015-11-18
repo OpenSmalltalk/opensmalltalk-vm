@@ -2,15 +2,25 @@ Class {
 	#name : #CogMIPSELCompiler,
 	#superclass : #CogAbstractInstruction,
 	#classVars : [
+		'AddCheckOverflowCqR',
+		'AddCheckOverflowRR',
+		'BrEqRR',
+		'BrGtzRR',
+		'BrLezRR',
+		'BrNeRR',
 		'Cmp',
 		'CmpSGT',
 		'CmpSLT',
 		'CmpUGT',
 		'CmpULT',
 		'ConcreteVarBaseReg',
+		'MulCheckOverflowRR',
+		'MulRR',
 		'Overflow',
 		'OverflowTemp1',
 		'OverflowTemp2',
+		'SubCheckOverflowCqR',
+		'SubCheckOverflowRR',
 		'TargetReg'
 	],
 	#pools : [
@@ -19,12 +29,12 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'class initialization' }
 CogMIPSELCompiler class >> ISA [
 	^#MIPSEL
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'class initialization' }
 CogMIPSELCompiler class >> initialize [
 	"CogMIPSELCompiler initialize"
 
@@ -44,7 +54,17 @@ CogMIPSELCompiler class >> initialize [
 
 	"OABI position independent code expects T9 to have its entry point on entry?"
 	self flag: #OABI.
-	TargetReg := T9. 
+	TargetReg := T9.
+
+	"Specific instructions"
+	self
+		initializeSpecificOpcodes: #(MulRR
+									AddCheckOverflowCqR AddCheckOverflowRR MulCheckOverflowRR SubCheckOverflowCqR SubCheckOverflowRR
+									"Ryan, here are proposed opcodes for conditional branches."
+									BrEqRR BrNeRR BrLezRR BrGtzRR)
+		in: thisContext method
+		
+	
 ]
 
 { #category : #'encoding - arithmetic' }
@@ -1705,6 +1725,44 @@ CogMIPSELCompiler >> nopsFrom: startAddr to: endAddr [
 	startAddr to: endAddr do: [:p| objectMemory byteAt: p put: 0].
 ]
 
+{ #category : #'abstract instructions' }
+CogMIPSELCompiler >> noteFollowingConditionalBranch: branch [
+	"Support for processors without condition codes, such as the MIPS.
+	 Answer the branch opcode.  Modify the receiver and the branch to
+	 implement a suitable conditional branch that doesn't depend on
+	 condition codes being set by the receiver."
+	<var: #branch type: #'AbstractInstruction *'>
+	branch opcode caseOf: {
+		[JumpOverflow]		-> [opcode := opcode caseOf: {
+										[AddCqR]	-> [AddCheckOverflowCqR].
+										[AddRR]		-> [AddCheckOverflowRR].
+										[MulRR]		-> [MulCheckOverflowRR].
+										[SubCqR]	-> [SubCheckOverflowCqR].
+										[SubRR]		-> [SubCheckOverflowRR].
+										}].
+		[JumpNoOverflow]	-> [opcode := opcode caseOf: {
+										[AddCqR]	-> [AddCheckOverflowCqR].
+										[AddRR]		-> [AddCheckOverflowRR].
+										[MulRR]		-> [MulCheckOverflowRR].
+										[SubCqR]	-> [SubCheckOverflowCqR].
+										[SubRR]		-> [SubCheckOverflowRR].
+										}].
+		"Ryan, I'm imagining that all the other cases go in here, such as collapsing CmpRR; JumpZero to Label; BrEqRR.
+		 This is obviously not nearly complete."
+		[JumpZero]			-> [opcode caseOf: {
+									[CmpRR]	-> [branch setOpcode: BrEqRR andOperandsFrom: self.
+													opcode := Label].
+								}].
+		[JumpNonZero]		-> [opcode caseOf: {
+									[CmpRR]	-> [branch setOpcode: BrNeRR andOperandsFrom: self.
+													opcode := Label].
+								}].
+		}
+		"No otherwise for now to catch all cases"
+		"otherwise: []".
+	^branch
+]
+
 { #category : #abi }
 CogMIPSELCompiler >> numIntRegArgs [
 	self flag: #OABI.
@@ -1997,6 +2055,16 @@ CogMIPSELCompiler >> saveAndRestoreLinkRegAround: aBlock [
 { #category : #'encoding - memory' }
 CogMIPSELCompiler >> sbR: srcReg base: baseReg offset: offset [
 	^self itype: SB rs: baseReg rt: srcReg signedImmediate: offset
+]
+
+{ #category : #accessing }
+CogMIPSELCompiler >> setOpcode: anOpcode andOperandsFrom: cmpInstruction [
+	<var: #cmpInstruction type: #'AbstractInstruction *'>
+	<inline: true>
+	opcode := anOpcode.
+	operands
+		at: 0 put: (cmpInstruction opcodes at: 0);
+		at: 1 put: (cmpInstruction opcodes at: 1)
 ]
 
 { #category : #'encoding - memory' }
