@@ -259,7 +259,8 @@ TSendNode >> isReturningIf [
 { #category : #comparing }
 TSendNode >> isSameAs: aTParseNode [
 	(aTParseNode isSend
-	 and: [selector == aTParseNode selector]) ifFalse:
+	 and: [selector == aTParseNode selector
+	 and: [receiver isSameAs: aTParseNode receiver]]) ifFalse:
 		[^false].
 	arguments with: aTParseNode args do:
 		[:a :b|
