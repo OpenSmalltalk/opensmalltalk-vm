@@ -2248,7 +2248,7 @@ SimpleStackBasedCogit >> genPrimitiveAdd [
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ClassReg.
 	self MoveR: ReceiverResultReg R: TempReg.
-	self AddCheckOverflowR: ClassReg R: TempReg.
+	self AddR: ClassReg R: TempReg.
 	jumpOvfl := self JumpOverflow: 0.
 	self MoveR: TempReg R: ReceiverResultReg.
 	self RetN: (self primRetNOffsetFor: 1).
@@ -2766,7 +2766,7 @@ SimpleStackBasedCogit >> genPrimitiveMultiply [
 	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
 	self MoveR: ReceiverResultReg R: TempReg.
 	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: TempReg.
-	self MulCheckOverflowR: TempReg R: ClassReg.
+	self MulR: TempReg R: ClassReg.
 	jumpOvfl := self JumpOverflow: 0.
 	objectRepresentation genSetSmallIntegerTagsIn: ClassReg.
 	self MoveR: ClassReg R: ReceiverResultReg.
@@ -2922,7 +2922,7 @@ SimpleStackBasedCogit >> genPrimitiveSubtract [
 	self MoveR: TempReg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	self MoveR: ReceiverResultReg R: TempReg.
-	self SubCheckOverflowR: ClassReg R: TempReg.
+	self SubR: ClassReg R: TempReg.
 	jumpOvfl := self JumpOverflow: 0.
 	objectRepresentation genAddSmallIntegerTagsTo: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
