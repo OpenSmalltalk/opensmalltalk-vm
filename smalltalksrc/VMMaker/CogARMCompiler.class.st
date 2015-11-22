@@ -2449,9 +2449,22 @@ CogARMCompiler >> instructionIsBX: instr [
 ]
 
 { #category : #testing }
+CogARMCompiler >> instructionIsCMP: instr [
+	"is this an CMP instruction?"
+	^(instr >> 21 bitAnd: 16r7F) = CmpOpcode
+]
+
+{ #category : #testing }
+CogARMCompiler >> instructionIsLDR: instr [
+	"is this any kind of LDR instruction? c.f. memMxr:reg:base:u:b:l:imm:"
+	^instr >> 28 ~= 16rF "the NEVER condition is used to encode non-load instructions"
+	  and: [(instr >> 20 bitAnd: 16rC5) = 16r41] "ldr r1, [r2, #+/-imm] or ldr r1, [r2, r3]"
+]
+
+{ #category : #testing }
 CogARMCompiler >> instructionIsOR: instr [
 	"is this an ORR instruction?"
-	^(instr >> 21 bitAnd: 16rF) = 16rC
+	^(instr >> 21 bitAnd: 16r7F) = (16r10 bitOr: OrOpcode)
 ]
 
 { #category : #testing }
@@ -2645,12 +2658,6 @@ CogARMCompiler >> leafCallStackPointerDelta [
 	 to capture the c stack pointer to use in trampolines back into the C run-time."
 	"This might actually be false, since directly after a call, lr, fp and variable registers need be pushed onto the stack. It depends on the implementation of call."
 	^0
-]
-
-{ #category : #'inline cacheing' }
-CogARMCompiler >> literalBeforeFollowingAddress: followingAddress [
-	"Answer the constant loaded by the instruction sequence just before this address:"
-	^self subclassResponsibility
 ]
 
 { #category : #accessing }

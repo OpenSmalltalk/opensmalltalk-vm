@@ -5,7 +5,9 @@ Class {
 	#name : #InLineLiteralsManager,
 	#superclass : #VMClass,
 	#instVars : [
-		'cogit'
+		'cogit',
+		'objectMemory',
+		'objectRepresentation'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -26,14 +28,6 @@ InLineLiteralsManager >> assertValidAnnotation: annotation for: instruction [
 	<inline: true>
 ]
 
-{ #category : #'closed PIC parsing' }
-InLineLiteralsManager >> cPICCase: caseIndex relocateJumpLongBefore: pc by: delta [
-	<inline: true>
-	cogit backEnd
-		relocateJumpLongBeforeFollowingAddress: pc
-		by: delta
-]
-
 { #category : #'compile abstract instructions' }
 InLineLiteralsManager >> checkLiteral: literal forInstruction: anInstruction [
 	<var: #anInstruction type: #'AbstractInstruction *'>
@@ -50,16 +44,12 @@ InLineLiteralsManager >> checkQuickConstant: literal forInstruction: anInstructi
 	^anInstruction
 ]
 
-{ #category : #'garbage collection' }
-InLineLiteralsManager >> classRefInClosedPICAt: mcpc [
-	<inline: true>
-	^cogit backEnd literalBeforeFollowingAddress: mcpc - cogit backEnd loadLiteralByteSize
-]
-
 { #category : #initialization }
 InLineLiteralsManager >> cogit: aCogit [
 	<doNotGenerate>
-	cogit := aCogit
+	cogit := aCogit.
+	objectMemory := aCogit objectMemory.
+	objectRepresentation := aCogit objectRepresentation.
 ]
 
 { #category : #'compile abstract instructions' }
@@ -101,18 +91,6 @@ InLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 	^false
 ]
 
-{ #category : #'garbage collection' }
-InLineLiteralsManager >> objRefInClosedPICAt: mcpc [
-	"'mcpc' refers to the jump/branch instruction at the end of
-	each cpic case. The method objRef is the method object referenced by the
-	movI $0x0bada553, %ebx 
-	or
-	ldr    r6, [pc, #64]    ; 0x000017d4 16rBADA553
-	type instruction preceeding this"
-	<inline: true>
-	^cogit backEnd literalBeforeFollowingAddress: mcpc
-]
-
 { #category : #'compile abstract instructions' }
 InLineLiteralsManager >> resetForBlockCompile [
 	<inline: true>
@@ -129,13 +107,6 @@ InLineLiteralsManager >> saveForBlockCompile [
 ]
 
 { #category : #'garbage collection' }
-InLineLiteralsManager >> storeClassRef: classObj inClosedPICAt: address [
-	<var: #address type: #usqInt>
-	<inline: true>
-	cogit backEnd storeLiteral: classObj beforeFollowingAddress: address - cogit backEnd loadLiteralByteSize
-]
-
-{ #category : #'garbage collection' }
 InLineLiteralsManager >> storeLiteral: literal atAnnotatedAddress: address using: instruction [
 	"Normally literals are embedded in instructions and the annotation is at the start of
 	 the following instruction, to cope with literals embedded in variable-length instructions,
@@ -144,18 +115,6 @@ InLineLiteralsManager >> storeLiteral: literal atAnnotatedAddress: address using
 	<var: 'instruction' type: #'AbstractInstruction *'>
 	<inline: true>
 	^instruction storeLiteral: literal beforeFollowingAddress: address
-]
-
-{ #category : #'garbage collection' }
-InLineLiteralsManager >> storeObjRef: literal inClosedPICAt: address [
-	"'mcpc' refers to the jump/branch instruction at the end of
-	each cpic case. The objRef is the literal referenced by the
-	movI $0x0bada553, %ebx or
-	ldr    r6, [pc, #64]    ; 0x000017d4 16rBADA553
-	type instruction preceeding this"
-	<var: #address type: #usqInt>
-	<inline: true>
-	cogit backEnd storeLiteral: literal beforeFollowingAddress: address
 ]
 
 { #category : #'compile abstract instructions' }

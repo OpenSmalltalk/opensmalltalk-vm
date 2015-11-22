@@ -15,6 +15,11 @@ CogInLineLiteralsARMCompiler >> callFullTargetFromReturnAddress: callSiteReturnA
 	^self extract32BitOperandFrom4Instructionspreceding: callSiteReturnAddress - 4
 ]
 
+{ #category : #accessing }
+CogInLineLiteralsARMCompiler >> cmpC32RTempByteSize [
+	^20
+]
+
 { #category : #initialization }
 CogInLineLiteralsARMCompiler >> cogit: aCogit [
 	<doNotGenerate>
@@ -69,6 +74,15 @@ CogInLineLiteralsARMCompiler >> insert32BitOperand: operand into4InstructionsPre
 CogInLineLiteralsARMCompiler >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction."
 	^self isJump or: [opcode = AlignmentNops]
+]
+
+{ #category : #'inline cacheing' }
+CogInLineLiteralsARMCompiler >> literal32BeforeFollowingAddress: followingAddress [
+	"Answer the 32-bit constant loaded by a MOV/ORR/ORR/ORR
+	 or MOV/ORR/ORR/ORR/PUSH, or MOV/ORR/ORR/ORR/CMP sequence, just before this address:"
+	^(self instructionIsOR: (self instructionBeforeAddress: followingAddress))
+		ifTrue: [self extract32BitOperandFrom4InstructionsPreceding: followingAddress]
+		ifFalse: [self extract32BitOperandFrom4InstructionsPreceding: followingAddress - 4]
 ]
 
 { #category : #'inline cacheing' }
