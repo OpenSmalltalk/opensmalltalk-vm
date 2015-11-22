@@ -1833,6 +1833,12 @@ CogARMCompiler >> cond: conditionCode type: type op: flagsOrOpcode set: doUpdate
 	^(self cond: conditionCode type: type op: flagsOrOpcode set: doUpdateStatusRegister rn: sourceRegister rd: targetRegister) bitOr: (so bitAnd: 16rFFF)
 ]
 
+{ #category : #testing }
+CogARMCompiler >> conditionIsNotNever: instr [
+	"test for the NV condition code; this isn't allowed as an actual condition and is used to encdoe many of the newer instructions"
+	^instr >> 28 < 16rF 
+]
+
 { #category : #accessing }
 CogARMCompiler >> conditionOrNil [
 "has to be named oddly like this to satisfay i-var code gen translating rules"
@@ -2427,51 +2433,49 @@ CogARMCompiler >> instructionBeforeAddress: followingAddress [
 { #category : #testing }
 CogARMCompiler >> instructionIsB: instr [
 "is this a B <offset> instruction?"
-	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rF<<24)) = (16rA<<24)]
+	^(self conditionIsNotNever: instr) and: [(instr bitAnd: (16rF<<24)) = (16rA<<24)]
 ]
 
 { #category : #testing }
 CogARMCompiler >> instructionIsBL: instr [
 "is this a BL <offset> instruction?"
-	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: (16rF<<24)) = (16rB<<24)]
+	^(self conditionIsNotNever: instr)  and: [(instr bitAnd: (16rF<<24)) = (16rB<<24)]
 ]
 
 { #category : #testing }
 CogARMCompiler >> instructionIsBLX: instr [
 "is this a BLX <targetReg> instruction?"
-	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: 16r0FFFFFF0) = 16r12FFF30]
+	^(self conditionIsNotNever: instr)  and: [(instr bitAnd: 16r0FFFFFF0) = 16r12FFF30]
 ]
 
 { #category : #testing }
 CogARMCompiler >> instructionIsBX: instr [
 "is this a BX <targetReg> instruction?"
-	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension" and: [(instr bitAnd: 16r0FFFFFF0) = 16r12FFF10]
+	^(self conditionIsNotNever: instr) and: [(instr bitAnd: 16r0FFFFFF0) = 16r12FFF10]
 ]
 
 { #category : #testing }
 CogARMCompiler >> instructionIsCMP: instr [
-	"is this an CMP instruction?"
-	^(instr >> 21 bitAnd: 16r7F) = CmpOpcode
+	"is this a CMP instruction?"
+	^(self conditionIsNotNever: instr) and: [(instr >> 21 bitAnd: 16r7F) = CmpOpcode]
 ]
 
 { #category : #testing }
 CogARMCompiler >> instructionIsLDR: instr [
 	"is this any kind of LDR instruction? c.f. memMxr:reg:base:u:b:l:imm:"
-	^instr >> 28 ~= 16rF "the NEVER condition is used to encode non-load instructions"
-	  and: [(instr >> 20 bitAnd: 16rC5) = 16r41] "ldr r1, [r2, #+/-imm] or ldr r1, [r2, r3]"
+	^(self conditionIsNotNever: instr) and: [(instr >> 20 bitAnd: 16rC5) = 16r41] "ldr r1, [r2, #+/-imm] or ldr r1, [r2, r3]"
 ]
 
 { #category : #testing }
 CogARMCompiler >> instructionIsOR: instr [
 	"is this an ORR instruction?"
-	^(instr >> 21 bitAnd: 16r7F) = (16r10 bitOr: OrOpcode)
+	^(self conditionIsNotNever: instr)  and:[(instr >> 21 bitAnd: 16r7F) = (16r10 bitOr: OrOpcode)]
 ]
 
 { #category : #testing }
 CogARMCompiler >> instructionIsPush: instr [
 	"is this a push -str r??, [sp, #-4] -  instruction?"
-	^instr >> 28 < 16rF "test for allowed condcode - 0xF is extension"
-	  and: [(instr bitAnd: 16rFFF0FFF) = 16r52D0004]
+	^(self conditionIsNotNever: instr) and: [(instr bitAnd: 16rFFF0FFF) = 16r52D0004]
 ]
 
 { #category : #disassembly }
