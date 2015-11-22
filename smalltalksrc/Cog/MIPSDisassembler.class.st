@@ -155,6 +155,15 @@ MIPSDisassembler >> disassemble: memory from: startPC to: limitPC for: aSymbolMa
 		pc := pc + OneInstruction].
 ]
 
+{ #category : #'instructions - arithmetic' }
+MIPSDisassembler >> divideSigned: instruction [
+	self assert: instruction rd = 0.
+	self assert: instruction sa = 0.
+	^'div ', 
+	(MIPSConstants nameForRegister: instruction rs), ', ',
+	(MIPSConstants nameForRegister: instruction rt)
+]
+
 { #category : #'instructions - control' }
 MIPSDisassembler >> jump: instruction [
 	| target |
@@ -229,6 +238,31 @@ MIPSDisassembler >> loadWord: instruction [
 	(MIPSConstants nameForRegister: instruction rt), ', ',
 	(instruction signedImmediate printString), '(',
 	(MIPSConstants nameForRegister: instruction rs), ')'
+]
+
+{ #category : #'instructions - arithmetic' }
+MIPSDisassembler >> moveFromHigh: instruction [
+	self assert: instruction rs = 0.
+	self assert: instruction rt = 0.
+	self assert: instruction sa = 0.
+	^'mfhi ', (MIPSConstants nameForRegister: instruction rd)
+]
+
+{ #category : #'instructions - arithmetic' }
+MIPSDisassembler >> moveFromLow: instruction [
+	self assert: instruction rs = 0.
+	self assert: instruction rt = 0.
+	self assert: instruction sa = 0.
+	^'mflo ', (MIPSConstants nameForRegister: instruction rd)
+]
+
+{ #category : #'instructions - arithmetic' }
+MIPSDisassembler >> multiplySigned: instruction [
+	self assert: instruction rd = 0.
+	self assert: instruction sa = 0.
+	^'mult ', 
+	(MIPSConstants nameForRegister: instruction rs), ', ',
+	(MIPSConstants nameForRegister: instruction rt)
 ]
 
 { #category : #'instructions - arithmetic' }

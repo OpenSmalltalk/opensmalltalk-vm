@@ -69,6 +69,10 @@ MIPSInstruction >> decodeSpecialFor: visitor [
 	function = JR ifTrue: [^visitor jumpRegister: self].
 	function = JALR ifTrue: [^visitor jumpAndLinkRegister: self].
 	function = BREAK ifTrue: [^visitor break: self].
+	function = MFHI ifTrue: [^visitor moveFromHigh: self].
+	function = MFLO ifTrue: [^visitor moveFromLow: self].
+	function = MULT ifTrue: [^visitor multiplySigned: self].
+	function = DIV ifTrue: [^visitor divideSigned: self].
 	function = ADDU ifTrue: [^visitor addUnsigned: self].
 	function = SUBU ifTrue: [^visitor subtractUnsigned: self].
 	function = AND ifTrue: [^visitor bitwiseAnd: self].

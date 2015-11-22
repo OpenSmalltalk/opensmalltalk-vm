@@ -16,7 +16,9 @@ Class {
 		'readableLimit',
 		'writableLimit',
 		'exectuableLimit',
-		'jumpingPC'
+		'jumpingPC',
+		'hi',
+		'lo'
 	],
 	#classVars : [
 		'EndSimulationPC'
@@ -26,6 +28,11 @@ Class {
 	],
 	#category : #'Cog-Processors'
 }
+
+{ #category : #'as yet unclassified' }
+MIPSSimulator class >> defaultIntegerBaseInDebugger [
+	^16
+]
 
 { #category : #'as yet unclassified' }
 MIPSSimulator class >> initialize [
@@ -183,7 +190,7 @@ MIPSSimulator >> convertIntegerToInternal: anInteger [
 { #category : #'as yet unclassified' }
 MIPSSimulator >> currentInstruction [
 	^[(MIPSDisassembler new disassemble: memory from: pc to: pc + 4)]
-		ifError: ['Cannot disassemble'].
+		ifError: ['Cannot disassemble', String cr].
 ]
 
 { #category : #'processor api' }
@@ -195,6 +202,17 @@ MIPSSimulator >> disassembleFrom: startAddress to: endAddress in: memory for: aS
 		for: aSymbolManager
 		labels: labelDictionary
 		on: aStream.
+]
+
+{ #category : #'instructions - arithmetic' }
+MIPSSimulator >> divideSigned: instruction [
+	"Strangely, the MIPS reference manual does not indicate which division is used, but testing some hardware show it is truncated division (rather than floored division or Euclidean division)."	
+	| rsValue rtValue |
+	rsValue := self signedRegister: instruction rs.
+	rtValue := self signedRegister: instruction rt.
+	lo := rsValue quo: rtValue.
+	hi := rsValue rem: rtValue.
+
 ]
 
 { #category : #'as yet unclassified' }
@@ -215,11 +233,12 @@ MIPSSimulator >> endianness [
 MIPSSimulator >> execute [
 	| instruction |
 	[pc ~= EndSimulationPC] whileTrue: 
-		[Transcript nextPutAll: 'X '; nextPutAll: self currentInstruction; flush.
+		[Transcript print: instructionCount; nextPutAll: ' X '; nextPutAll: self currentInstruction; flush.
 		 10 milliSeconds asDelay wait.
 		 instruction := MIPSInstruction new value: (self fetchInstruction: pc).
 		 instruction decodeFor: self.
-		 pc := pc + OneInstruction].
+		 pc := pc + OneInstruction.
+		 instructionCount := instructionCount + 1].
 ]
 
 { #category : #'as yet unclassified' }
@@ -227,7 +246,8 @@ MIPSSimulator >> executeDelaySlot [
 	| instruction |
 	self assert: inDelaySlot not.
 	inDelaySlot := true.
-	Transcript nextPutAll: 'D '; nextPutAll: self currentInstruction; flush.
+	instructionCount := instructionCount + 1.
+	Transcript print: instructionCount; nextPutAll: ' D '; nextPutAll: self currentInstruction; flush.
 	instruction := MIPSInstruction new value: (self fetchInstruction: pc).
 	instruction decodeFor: self.
 	inDelaySlot := false.
@@ -239,12 +259,12 @@ MIPSSimulator >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<In
 
 { #category : #registers }
 MIPSSimulator >> fp [
-	^self signedRegister: FP
+	^self unsignedRegister: FP
 ]
 
 { #category : #registers }
 MIPSSimulator >> fp: anInteger [
-	^self signedRegister: FP put: anInteger
+	^self unsignedRegister: FP put: anInteger
 ]
 
 { #category : #'as yet unclassified' }
@@ -259,6 +279,8 @@ MIPSSimulator >> getterForRegister: registerNumber [
 MIPSSimulator >> initialize [
 	registers := Array new: 32 withAll: 16rABABAB.
 	pc := 0.
+	hi := 0.
+	lo := 0.
 	inDelaySlot := false.
 	instructionCount := 0.
 ]
@@ -388,6 +410,27 @@ MIPSSimulator >> memory [
 ]
 
 { #category : #'instructions - arithmetic' }
+MIPSSimulator >> moveFromHigh: instruction [
+	self signedRegister: instruction rd put: hi.
+]
+
+{ #category : #'instructions - arithmetic' }
+MIPSSimulator >> moveFromLow: instruction [
+	self signedRegister: instruction rd put: lo.
+]
+
+{ #category : #'instructions - arithmetic' }
+MIPSSimulator >> multiplySigned: instruction [
+	| rsValue rtValue result |
+	rsValue := self signedRegister: instruction rs.
+	rtValue := self signedRegister: instruction rt.
+	result := rsValue * rtValue.
+	result := self signed64ToUnsigned64: result.
+	hi := self unsigned32ToSigned32: result >> 32.
+	lo := self unsigned32ToSigned32: (result bitAnd: 16rFFFFFFFF).
+]
+
+{ #category : #'instructions - arithmetic' }
 MIPSSimulator >> orImmediate: instruction [
 	| rsValue immediate result |
 	rsValue := self unsignedRegister: instruction rs.
@@ -397,8 +440,21 @@ MIPSSimulator >> orImmediate: instruction [
 ]
 
 { #category : #'processor api' }
+MIPSSimulator >> pc [
+	^pc
+]
+
+{ #category : #'processor api' }
 MIPSSimulator >> pc: newPC [
 	pc := newPC.
+]
+
+{ #category : #'processor api' }
+MIPSSimulator >> popWordIn: aMemory [ 
+	| sp word |
+	word := aMemory unsignedLongAt: (sp := self sp) + 1 bigEndian: false.
+	self sp: sp + 4.
+	^word
 ]
 
 { #category : #'processor api' }
@@ -431,16 +487,20 @@ MIPSSimulator >> prefetch: instruction [
 MIPSSimulator >> printOn: stream [
 	stream nextPutAll: self class name; nextPut: $:; cr.
 	0 to: 31 do:
-		[:reg | | hex |
+		[:reg |
 		stream space.
 		stream nextPutAll: (MIPSConstants nameForRegister: reg).
 		stream space.
-		hex := (self unsignedRegister: reg) printStringBase: 16.
-		8 - hex size timesRepeat: [stream nextPut: $0].
-		stream nextPutAll: hex.
+		(self unsignedRegister: reg) printOn: stream base: 16 nDigits: 8.
 		stream space.
 		(self signedRegister: reg) printOn: stream.
 		stream cr].
+
+	stream nextPutAll: ' pc '.
+	pc printOn: stream base: 16 nDigits: 8.
+	stream space.
+	pc printOn: stream.
+	stream cr.
 	
 	stream nextPutAll: self currentInstruction.
 ]
@@ -452,7 +512,19 @@ MIPSSimulator >> pushWord: aValue in: aMemory [
 
 { #category : #registers }
 MIPSSimulator >> ra [
-	^self signedRegister: RA
+	^self unsignedRegister: RA
+]
+
+{ #category : #registers }
+MIPSSimulator >> ra: anInteger [
+	^self unsignedRegister: RA put: anInteger
+]
+
+{ #category : #'processor api' }
+MIPSSimulator >> retpcIn: aMemory [
+	"The return address is on the stack, having been pushed by either
+	 simulateCallOf:nextpc:memory: or simulateJumpCallOf:memory:"
+	^aMemory unsignedLongAt: self fp + 5 bigEndian: false
 ]
 
 { #category : #'processor api' }
@@ -462,10 +534,30 @@ MIPSSimulator >> runInMemory: aMemory minimumAddress: minimumAddress readOnlyBel
 	readableBase := minimumAddress.
 	writableBase := minimumWritableAddress.
 	exectuableBase := minimumAddress.
-	readableLimit := aMemory size.
-	writableLimit := aMemory size.
+	readableLimit := aMemory byteSize.
+	writableLimit := aMemory byteSize.
 	exectuableLimit := minimumWritableAddress.
 	self execute.
+]
+
+{ #category : #registers }
+MIPSSimulator >> s3 [
+	^self unsignedRegister: S3
+]
+
+{ #category : #registers }
+MIPSSimulator >> s4: anInteger [
+	^self unsignedRegister: S4 put: anInteger
+]
+
+{ #category : #registers }
+MIPSSimulator >> s5 [
+	^self unsignedRegister: S5
+]
+
+{ #category : #registers }
+MIPSSimulator >> s5: anInteger [
+	^self unsignedRegister: S5 put: anInteger
 ]
 
 { #category : #'processor api' }
@@ -595,6 +687,13 @@ MIPSSimulator >> signed32ToUnsigned32: signedValue [
 	^signedValue
 ]
 
+{ #category : #converting }
+MIPSSimulator >> signed64ToUnsigned64: signedValue [
+	self assert: (signedValue between: -16r8000000000000000 and: 16r7FFFFFFFFFFFFFFF).
+	signedValue < 0 ifTrue: [^signedValue + 16r10000000000000000].
+	^signedValue
+]
+
 { #category : #registers }
 MIPSSimulator >> signedRegister: registerNumber [
 	registerNumber == ZR ifTrue: [^0] ifFalse: [^registers at: registerNumber + 1].
@@ -626,18 +725,54 @@ MIPSSimulator >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
 ]
 
 { #category : #'processor api' }
+MIPSSimulator >> simulateReturnIn: aMemory [
+	"PostBuildStackDelta ~= 0 ifTrue:
+		[self sp: self sp + PostBuildStackDelta]."
+	self fp: (self popWordIn: aMemory).
+	"According to tpr, most C compilers implement return by simply
+	 popping into the pc, rather than popping through the link register."
+	self pc: (self popWordIn: aMemory)
+]
+
+{ #category : #'processor api' }
+MIPSSimulator >> smashCallerSavedRegistersWithValuesFrom: base by: step [
+	"i.e., smashVolatileRegisters"
+	self flag: #OABI.
+	self unsignedRegister: AT put: 0 * step + base.
+	self unsignedRegister: V0 put: 0 * step + base.
+	self unsignedRegister: V1 put: 0 * step + base.
+	self unsignedRegister: A0 put: 0 * step + base.
+	self unsignedRegister: A1 put: 0 * step + base.
+	self unsignedRegister: A2 put: 0 * step + base.
+	self unsignedRegister: A3 put: 0 * step + base.
+	self unsignedRegister: T0 put: 0 * step + base.
+	self unsignedRegister: T1 put: 0 * step + base.
+	self unsignedRegister: T2 put: 0 * step + base.
+	self unsignedRegister: T3 put: 0 * step + base.
+	self unsignedRegister: T4 put: 0 * step + base.
+	self unsignedRegister: T5 put: 0 * step + base.
+	self unsignedRegister: T6 put: 0 * step + base.
+	self unsignedRegister: T7 put: 0 * step + base.
+	self unsignedRegister: T8 put: 0 * step + base.
+	self unsignedRegister: T9 put: 0 * step + base.
+	self unsignedRegister: GP put: 0 * step + base.
+	self unsignedRegister: RA put: 0 * step + base.
+]
+
+{ #category : #'processor api' }
 MIPSSimulator >> smashRegistersWithValuesFrom: base by: step [
-	"Ignore this - we do a stronger check later."
+	2 to: 31 do: [:index | self unsignedRegister: index put: index - 1 * step + base].
+
 ]
 
 { #category : #registers }
 MIPSSimulator >> sp [
-	^self signedRegister: SP
+	^self unsignedRegister: SP
 ]
 
 { #category : #registers }
 MIPSSimulator >> sp: anInteger [
-	^self signedRegister: SP put: anInteger
+	^self unsignedRegister: SP put: anInteger
 ]
 
 { #category : #'instructions - memory' }
