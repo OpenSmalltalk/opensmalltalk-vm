@@ -106,14 +106,14 @@ MIPSELSimulator >> signedWord: address put: value [
 MIPSELSimulator >> unsignedByte: address [
 	address < readableBase ifTrue: [self readFault: address].
 	address > readableLimit ifTrue: [self readFault: address].
-	^memory at: address + 1
+	^memory byteAt: address + 1
 ]
 
 { #category : #memory }
 MIPSELSimulator >> unsignedByte: address put: value [
 	address < writableBase ifTrue: [self writeFault: address].
 	address > writableLimit ifTrue: [self writeFault: address].
-	^memory at: address + 1 put: value
+	^memory byteAt: address + 1 put: value
 ]
 
 { #category : #memory }
@@ -121,7 +121,7 @@ MIPSELSimulator >> unsignedHalfword: address [
 	address < readableBase ifTrue: [self readFault: address].
 	address > readableLimit ifTrue: [self readFault: address].
 	(address bitAnd: 1) = 0 ifFalse: [self error: 'Unaligned read'].
-	^memory unsignedShortAt: address + 1 bigEndian: false
+	^memory unsignedShortAt: address + 1
 ]
 
 { #category : #memory }
