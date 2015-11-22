@@ -965,13 +965,6 @@ CogObjectRepresentationForSqueakV3 >> numSmallIntegerTagBits [
 ]
 
 { #category : #'garbage collection' }
-CogObjectRepresentationForSqueakV3 >> remapCacheTag: cacheTag [
-	^(self couldBeObject: cacheTag)
-		ifTrue: [objectMemory remap: cacheTag]
-		ifFalse: [cacheTag]
-]
-
-{ #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> remapObject: oop [
 	^objectMemory remap: oop
 ]

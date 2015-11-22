@@ -179,6 +179,13 @@ CogMIPSELCompiler >> callerSavedRegisterMask [
 ]
 
 { #category : #accessing }
+CogMIPSELCompiler >> cmpC32RTempByteSize [
+	self flag: #todo. "value - reg or reg - value?"
+	self flag: #inefficient. "Cog RTL assumes we can do any kind of conditional branch after a Cmp."
+	^28
+]
+
+{ #category : #accessing }
 CogMIPSELCompiler >> codeGranularity [
 	"Answer the size in bytes of a unit of machine code."
 	<inline: true>
@@ -1751,11 +1758,25 @@ CogMIPSELCompiler >> noteFollowingConditionalBranch: branch [
 		 This is obviously not nearly complete."
 		[JumpZero]			-> [opcode caseOf: {
 									[CmpRR]	-> [branch setOpcode: BrEqRR andOperandsFrom: self.
+													branch operands at: 3 put: (operands at: 1).
 													opcode := Label].
 								}].
 		[JumpNonZero]		-> [opcode caseOf: {
 									[CmpRR]	-> [branch setOpcode: BrNeRR andOperandsFrom: self.
+													branch operands at: 3 put: (operands at: 1).
 													opcode := Label].
+								}].
+		[JumpLongZero]		-> [opcode caseOf: {
+									[CmpRR]	-> [branch setOpcode: BrNeRR andOperandsFrom: self.
+													"skip the following long branch"
+													branch operands at: 3 put: self jumpLongByteSize.
+													opcode := JumpLong].
+								}].
+		[JumpLongNonZero]	-> [opcode caseOf: {
+									[CmpRR]	-> [branch setOpcode: BrEqRR andOperandsFrom: self.
+													"skip the following long branch"
+													branch operands at: 3 put: self jumpLongByteSize.
+													opcode := JumpLong].
 								}].
 		}
 		"No otherwise for now to catch all cases"

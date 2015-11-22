@@ -204,6 +204,11 @@ CogX64Compiler >> callerSavedRegisterMask [
 ]
 
 { #category : #accessing }
+CogX64Compiler >> cmpC32RTempByteSize [
+	^6
+]
+
+{ #category : #accessing }
 CogX64Compiler >> codeGranularity [
 	^1
 ]

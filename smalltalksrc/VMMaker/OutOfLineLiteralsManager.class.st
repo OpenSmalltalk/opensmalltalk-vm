@@ -98,12 +98,6 @@ OutOfLineLiteralsManager >> assertValidAnnotation: annotation for: instruction [
 	self assert: (annotation ~= cogit getIsObjectReference or: [instruction opcode = Literal])
 ]
 
-{ #category : #'closed PIC parsing' }
-OutOfLineLiteralsManager >> cPICCase: caseIndex relocateJumpLongBefore: pc by: delta [
-	<inline: true>
-	cogit backEnd relocateJumpLongBeforeFollowingAddress: pc by: delta
-]
-
 { #category : #'compile abstract instructions' }
 OutOfLineLiteralsManager >> checkLiteral: literal forInstruction: anInstruction [
 	<var: #anInstruction type: #'AbstractInstruction *'>
@@ -120,21 +114,6 @@ OutOfLineLiteralsManager >> checkQuickConstant: literal forInstruction: anInstru
 	anInstruction usesOutOfLineLiteral ifTrue:
 		[anInstruction dependent: (self locateLiteral: (self cCode: [literal] inSmalltalk: [literal bitAnd: 16rFFFFFFFF]))].
 	^anInstruction
-]
-
-{ #category : #'garbage collection' }
-OutOfLineLiteralsManager >> classRefInClosedPICAt: address [
-	<inline: true>
-	"If inline cache tags are not objects they will be 32-bit values."
-	"Current ARM out-of-line literal CPICs use
-	ldr ip, [pc relative address1]
-	cmp r0, ip
-	ldr r6, [pc relative address2
-	beq code
-	hence the large backwards stepping here - address is pointing at the beq"
-	^objectRepresentation inlineCacheTagsMayBeObjects
-		ifFalse: [cogit backEnd literalBeforeFollowingAddress:  address - 8 "better to use 2 * instructionSize if we could, step back to the cmp so the literal is found properly" ]
-		ifTrue: [self break. "not sure about this ? "objectMemory longAt: address - objectMemory bytesPerOop]
 ]
 
 { #category : #initialization }
@@ -238,15 +217,6 @@ OutOfLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 	  and: [currentOpcodeIndex - firstOpcodeIndex >= cogit backEnd outOfLineLiteralOpcodeLimit]
 ]
 
-{ #category : #'garbage collection' }
-OutOfLineLiteralsManager >> objRefInClosedPICAt: address [
-	"'mcpc' refers to the jump/branch instruction at the end of
-	each cpic case. The objRef is the literal referenced by the
-	 ldr	r6, [pc, #88]	; 16r5EAF00D type instruction preceeding this"
-	<inline: true>
-	^cogit backEnd literalBeforeFollowingAddress: address 
-]
-
 { #category : #initialization }
 OutOfLineLiteralsManager >> resetForBlockCompile [
 	firstOpcodeIndex := savedFirstOpcodeIndex.
@@ -269,22 +239,6 @@ OutOfLineLiteralsManager >> saveForBlockCompile [
 ]
 
 { #category : #'garbage collection' }
-OutOfLineLiteralsManager >> storeClassRef: classObj inClosedPICAt: address [
-	<var: #address type: #usqInt>
-	<inline: true>
-	"If inline cache tags are not objects they will be 32-bit values."
-	"Current ARM out-of-line literal CPICs use
-	ldr ip, [pc relative address1]
-	cmp r0, ip
-	ldr r6, [pc relative address2
-	beq code
-	hence the large backwards stepping here"
-	objectRepresentation inlineCacheTagsMayBeObjects
-		ifTrue: [self break. objectMemory long32At: address - 4 put: classObj]
-		ifFalse: [cogit backEnd storeLiteral: classObj beforeFollowingAddress:  address - 8 "better to use 2 * instructionSize if we could, step back to the cmp so the literal is found properly"]
-]
-
-{ #category : #'garbage collection' }
 OutOfLineLiteralsManager >> storeLiteral: literal atAnnotatedAddress: address using: instruction [
 	"With out-of-line literals, the IsObjectReference annotation refers to
 	 the start of the literal and hence access the memory directly."
@@ -292,16 +246,6 @@ OutOfLineLiteralsManager >> storeLiteral: literal atAnnotatedAddress: address us
 	<var: 'instruction' type: #'AbstractInstruction *'>
 	<inline: true>
 	objectMemory longAt: address put: literal
-]
-
-{ #category : #'garbage collection' }
-OutOfLineLiteralsManager >> storeObjRef: literal inClosedPICAt: address [
-	"'mcpc' refers to the jump/branch instruction at the end of
-	each cpic case. The objRef is the literal referenced by the
-	 ldr	r6, [pc, #88]	; 16r5EAF00D type instruction preceeding this"
-	<var: #address type: #usqInt>
-	<inline: true>
-	cogit backEnd storeLiteral: literal beforeFollowingAddress: address
 ]
 
 { #category : #'compile abstract instructions' }
