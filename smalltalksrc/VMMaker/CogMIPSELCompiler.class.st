@@ -4,9 +4,11 @@ Class {
 	#classVars : [
 		'AddCheckOverflowCqR',
 		'AddCheckOverflowRR',
+		'BrEqCqR',
 		'BrEqRR',
 		'BrGtzRR',
 		'BrLezRR',
+		'BrNeCqR',
 		'BrNeRR',
 		'Cmp',
 		'CmpSGT',
@@ -61,10 +63,8 @@ CogMIPSELCompiler class >> initialize [
 		initializeSpecificOpcodes: #(MulRR
 									AddCheckOverflowCqR AddCheckOverflowRR MulCheckOverflowRR SubCheckOverflowCqR SubCheckOverflowRR
 									"Ryan, here are proposed opcodes for conditional branches."
-									BrEqRR BrNeRR BrLezRR BrGtzRR)
+									BrEqRR BrNeRR BrLezRR BrGtzRR BrEqCqR BrNeCqR)
 		in: thisContext method
-		
-	
 ]
 
 { #category : #'encoding - arithmetic' }
@@ -1758,24 +1758,31 @@ CogMIPSELCompiler >> noteFollowingConditionalBranch: branch [
 		 This is obviously not nearly complete."
 		[JumpZero]			-> [opcode caseOf: {
 									[CmpRR]	-> [branch setOpcode: BrEqRR andOperandsFrom: self.
-													branch operands at: 3 put: (operands at: 1).
+													branch operands at: 2 put: (operands at: 1).
 													opcode := Label].
 								}].
 		[JumpNonZero]		-> [opcode caseOf: {
 									[CmpRR]	-> [branch setOpcode: BrNeRR andOperandsFrom: self.
-													branch operands at: 3 put: (operands at: 1).
+													branch operands at: 2 put: (operands at: 1).
+													opcode := Label].
+									[CmpCqR]	-> [branch setOpcode: BrNeCqR andOperandsFrom: self.
+													branch operands at: 2 put: (operands at: 1).
 													opcode := Label].
 								}].
 		[JumpLongZero]		-> [opcode caseOf: {
 									[CmpRR]	-> [branch setOpcode: BrNeRR andOperandsFrom: self.
 													"skip the following long branch"
-													branch operands at: 3 put: self jumpLongByteSize.
+													branch operands at: 2 put: self jumpLongByteSize.
+													opcode := JumpLong].
+									[CmpCqR]	-> [branch setOpcode: BrNeCqR andOperandsFrom: self.
+													"skip the following long branch"
+													branch operands at: 2 put: self jumpLongByteSize.
 													opcode := JumpLong].
 								}].
 		[JumpLongNonZero]	-> [opcode caseOf: {
 									[CmpRR]	-> [branch setOpcode: BrEqRR andOperandsFrom: self.
 													"skip the following long branch"
-													branch operands at: 3 put: self jumpLongByteSize.
+													branch operands at: 2 put: self jumpLongByteSize.
 													opcode := JumpLong].
 								}].
 		}
@@ -2084,8 +2091,8 @@ CogMIPSELCompiler >> setOpcode: anOpcode andOperandsFrom: cmpInstruction [
 	<inline: true>
 	opcode := anOpcode.
 	operands
-		at: 0 put: (cmpInstruction opcodes at: 0);
-		at: 1 put: (cmpInstruction opcodes at: 1)
+		at: 0 put: (cmpInstruction operands at: 0);
+		at: 1 put: (cmpInstruction operands at: 1)
 ]
 
 { #category : #'encoding - memory' }
