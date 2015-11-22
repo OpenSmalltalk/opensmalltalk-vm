@@ -480,6 +480,11 @@ CogAbstractInstruction >> cloneLiteralFrom: existingLiteral [
 ]
 
 { #category : #accessing }
+CogAbstractInstruction >> cmpC32RTempByteSize [
+	self subclassResponsibility
+]
+
+{ #category : #accessing }
 CogAbstractInstruction >> codeGranularity [
 	"Answer the size in bytes of a unit of machine code."
 	<inline: true>
@@ -994,6 +999,21 @@ CogAbstractInstruction >> labelOffset [
 	^operands at: 1
 ]
 
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> literal32BeforeFollowingAddress: followingAddress [
+	"Answer the constant loaded by the instruction sequence just before this address:"
+	<inline: true>
+	^objectMemory wordSize = 8
+		ifTrue: [self subclassResponsibility]
+		ifFalse: [self literalBeforeFollowingAddress: followingAddress]
+]
+
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> literalBeforeFollowingAddress: followingAddress [
+	"Answer the constant loaded by the instruction sequence just before this address:"
+	^self subclassResponsibility
+]
+
 { #category : #accessing }
 CogAbstractInstruction >> loadLiteralByteSize [
 	"Answer the byte size of a MoveCwR opcode's corresponding machine code"
@@ -1279,7 +1299,7 @@ CogAbstractInstruction >> resolveJumpTarget [
 
 { #category : #'inline cacheing' }
 CogAbstractInstruction >> rewriteCPICCaseAt: followingAddress tag: newTag objRef: newObjRef target: newTarget [
-	"rewrite the three values involved in a CPIC case. Used by the create & extend cpcic methods"
+	"Rewrite the three values involved in a CPIC case. Used by the initialize & extend CPICs."
 	self subclassResponsibility
 	
 ]

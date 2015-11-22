@@ -3111,7 +3111,7 @@ Cogit >> cPICHasForwardedClass: cPIC [
 				- backEnd jumpLongConditionalByteSize.
 	2 to: cPIC cPICNumCases do: 
 			[:i |  | classIndex |
-			classIndex := literalsManager classRefInClosedPICAt: pc.
+			classIndex := literalsManager backEnd literal32BeforeFollowingAddress: pc.
 			(objectMemory isForwardedClassIndex: classIndex)
 				ifTrue: [^ true].
 			"since we started at the top, we can just add the case size each time to move on to the next case"
@@ -3612,7 +3612,7 @@ Cogit >> checkValidObjectReferencesInClosedPIC: cPIC [
 	pc := cPIC asInteger + firstCPICCaseOffset.
 	
 	"first we check the obj ref at the beginning of the CPIC"
-	(self checkMaybeObjRefInClosedPIC: (literalsManager objRefInClosedPICAt: pc - backEnd jumpLongByteSize)) ifFalse:
+	(self checkMaybeObjRefInClosedPIC: (backEnd literalBeforeFollowingAddress: pc - backEnd jumpLongByteSize)) ifFalse:
 		[self print: 'object leak in CPIC '; printHex: cPIC asInteger;
 			print: ' @ '; printHex: pc - backEnd jumpLongByteSize; cr.
 		 ok := false].
@@ -3624,11 +3624,11 @@ Cogit >> checkValidObjectReferencesInClosedPIC: cPIC [
 	2 to: cPIC cPICNumCases do:
 		[:i|
 		objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
-			[(self checkMaybeObjRefInClosedPIC: (literalsManager classRefInClosedPICAt: pc - backEnd jumpLongConditionalByteSize)) ifFalse:
+			[(self checkMaybeObjRefInClosedPIC: (literalsManager backEnd literal32BeforeFollowingAddress: pc - backEnd jumpLongConditionalByteSize)) ifFalse:
 				[self print: 'object leak in CPIC '; printHex: cPIC asInteger;
 					print: ' @ '; printHex: pc - backEnd jumpLongConditionalByteSize - backEnd loadLiteralByteSize; cr.
 				 ok := false]].
-		(self checkMaybeObjRefInClosedPIC: (literalsManager objRefInClosedPICAt: pc - backEnd jumpLongConditionalByteSize)) ifFalse:
+		(self checkMaybeObjRefInClosedPIC: (backEnd literalBeforeFollowingAddress: pc - backEnd jumpLongConditionalByteSize - backEnd cmpC32RTempByteSize)) ifFalse:
 			[self print: 'object leak in CPIC '; printHex: cPIC asInteger;
 				print: ' @ '; printHex: pc - backEnd jumpLongConditionalByteSize; cr.
 			 ok := false].
@@ -3641,38 +3641,38 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 	"Answer if the ClosedPIC refers to any unmarked objects or freed/freeable target methods,
 	 applying markAndTraceOrFreeCogMethod:firstVisit: to those targets to determine if freed/freeable."
 	<var: #cPIC type: #'CogMethod *'>
-	| pc offsetToLiteral object entryPoint targetMethod |
-	<var: #targetMethod type: #'CogMethod *'>
-	(objectMemory isImmediate: cPIC selector) ifFalse:
-		[(objectMemory isMarked: cPIC selector) ifFalse:
-			[^true]].
+	| pc object |
+	((objectMemory isImmediate: cPIC selector)
+	or: [objectMemory isMarked: cPIC selector]) ifFalse:
+		[^true].
+
 	"First jump is unconditional; subsequent ones are conditional."
-	offsetToLiteral := backEnd jumpLongByteSize.
-	1 to: cPIC cPICNumCases do:
+	"Check the potential method oop for the first case only.
+	 Inline cache tags for the 1st case are at the send site."
+	pc := self addressOfEndOfCase: 1 inCPIC: cPIC.
+	(objectRepresentation couldBeObject: (object := backEnd literalBeforeFollowingAddress: pc - backEnd jumpLongByteSize)) ifTrue:
+		[(objectMemory isMarked: object) ifFalse:
+			[^true]].
+
+	"Check the first target"
+	(self markAndTraceOrFreePICTarget: (backEnd jumpLongTargetBeforeFollowingAddress: pc) in: cPIC) ifTrue:
+		[^true].
+
+	2 to: cPIC cPICNumCases do:
 		[:i| 
 		pc := self addressOfEndOfCase: i inCPIC: cPIC.
-		(objectRepresentation inlineCacheTagsMayBeObjects and: [i>1] ) "inline cache tags for the 0th case are at the send site" ifTrue:
-			[object := literalsManager classRefInClosedPICAt: pc - offsetToLiteral.
-			 ((objectRepresentation couldBeObject: object)
-			  and: [(objectMemory isMarked: object) not]) ifTrue:
+		(objectRepresentation inlineCacheTagsMayBeObjects
+		and: [objectRepresentation couldBeObject: (object := literalsManager backEnd literal32BeforeFollowingAddress: pc - backEnd jumpLongConditionalByteSize)]) ifTrue:
+			[(objectMemory isMarked: object) ifFalse:
 				[^true]].
-		object := literalsManager objRefInClosedPICAt: pc - offsetToLiteral.
-		((objectRepresentation couldBeObject: object)
-		 and: [(objectMemory isMarked: object) not]) ifTrue:
-			[^true].
-		offsetToLiteral := backEnd jumpLongConditionalByteSize.
-		entryPoint := i = 1
-						ifTrue: [backEnd jumpLongTargetBeforeFollowingAddress: pc]
-						ifFalse: [backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc].
-		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
-		self assert: (entryPoint > methodZoneBase and: [entryPoint < methodZone freeStart]).
-		(cPIC containsAddress: entryPoint) ifFalse:
-			[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-			 self assert: (targetMethod cmType = CMMethod
-						or: [targetMethod cmType = CMFree]).
-			 (self markAndTraceOrFreeCogMethod: targetMethod
-				  firstVisit: targetMethod asUnsignedInteger > pc asUnsignedInteger) ifTrue:
-				[^true]]].
+		"Check the potential method oop for subsequent cases."
+		(objectRepresentation couldBeObject: (object := backEnd literalBeforeFollowingAddress: pc - backEnd jumpLongConditionalByteSize - backEnd cmpC32RTempByteSize)) ifTrue:
+			[(objectMemory isMarked: object) ifFalse:
+				[^true]].
+		"Check subsequent targets"
+		(self markAndTraceOrFreePICTarget: (backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc) in: cPIC) ifTrue:
+			[^true]].
+
 	^false
 ]
 
@@ -4446,10 +4446,10 @@ Cogit >> compileClosedPICPrototype [
 		[:h|
 		h = (maxCPICCases - 1) ifTrue:
 			[jumpNext jmpTarget: self Label]. "this is where we jump to for the first case"
-		"16rBABE1F15+h is the class tag for the Nth case"
-		self CmpC32: 16rBABE1F15+h R: TempReg.
 		"16rBADA550+h is the method oop, or 0, for the Nth case."
 		self MoveUniqueCw: 16rBADA550 + h R: SendNumArgsReg.
+		"16rBABE1F15+h is the class tag for the Nth case"
+		self CmpC32: 16rBABE1F15+h R: TempReg.
 		self JumpLongZero: self cPICPrototypeCaseOffset + 16rCA5E10 + (h * 16).
 		h = 1 ifTrue:
 			[endCPICCase1 := self Label]].
@@ -5043,41 +5043,40 @@ Cogit >> expectedClosedPICPrototype: cPIC [
 	 otherwise answer an error code identifying the first discrepancy found."
 	"self disassembleFrom: methodZoneBase + (self sizeof: CogMethod) to: methodZoneBase + closedPICSize"
 	<var: #cPIC type: #'CogMethod *'>
-	| pc offsetToLiteral object entryPoint |
-	pc := cPIC asInteger + firstCPICCaseOffset.
+	| pc object entryPoint |
+	pc := cPIC asUnsignedInteger + firstCPICCaseOffset.
 	"First jump is unconditional; subsequent ones are conditional"
-	offsetToLiteral := backEnd jumpLongByteSize.
-	
-	object := literalsManager objRefInClosedPICAt: pc - offsetToLiteral.
-	self assert: (object = 16r5EAF00D).
+	object := backEnd literalBeforeFollowingAddress: pc - backEnd jumpLongByteSize.
+	self assert: object = 16r5EAF00D.
 
 	entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
-	self assert: (entryPoint = (self cPICPrototypeCaseOffset + 16rCA5E10)).
+	self assert: entryPoint = (self cPICPrototypeCaseOffset + 16rCA5E10).
 
 	1 to: maxCPICCases - 1 do:
-		[:i |
+		[:i | | methodObjPC classTagPC |
 		pc := pc + cPICCaseSize.
-		offsetToLiteral := backEnd jumpLongConditionalByteSize.
 
-		object := literalsManager classRefInClosedPICAt: pc - offsetToLiteral.
-		self assert: object = (16rBABE1F15 + i).
-		literalsManager storeClassRef: (object bitXor: 16r5A5A5A5A) inClosedPICAt: pc - offsetToLiteral.
-		object := literalsManager classRefInClosedPICAt: pc - offsetToLiteral.
-		self assert: object = ((16rBABE1F15 + i bitXor: 16r5A5A5A5A)).
-		literalsManager storeClassRef: (object bitXor: 16r5A5A5A5A) inClosedPICAt: pc - offsetToLiteral.
-
-		object := literalsManager objRefInClosedPICAt: pc - offsetToLiteral.
+		methodObjPC := pc - backEnd jumpLongConditionalByteSize - backEnd cmpC32RTempByteSize.
+		object := backEnd literalBeforeFollowingAddress: methodObjPC.
 		self assert: object = (16rBADA550 + i).
-		literalsManager storeObjRef: (object bitXor: 16rA5A5A5A5) inClosedPICAt: pc - offsetToLiteral.
-		object := literalsManager objRefInClosedPICAt: pc - offsetToLiteral.
-		self assert: object = ((16rBADA550 + i) bitXor: 16rA5A5A5A5).
-		literalsManager storeObjRef: (object bitXor: 16rA5A5A5A5) inClosedPICAt: pc - offsetToLiteral.
+		backEnd storeLiteral: (object bitXor: 16rA5A5A5A5) beforeFollowingAddress: methodObjPC.
+		object := backEnd literalBeforeFollowingAddress: methodObjPC.
+		self assert: object = (16rBADA550 + i bitXor: 16rA5A5A5A5).
+		backEnd storeLiteral: (object bitXor: 16rA5A5A5A5) beforeFollowingAddress: methodObjPC.
+
+		classTagPC := pc - backEnd jumpLongConditionalByteSize.
+		object := backEnd literal32BeforeFollowingAddress: classTagPC.
+		self assert: object = (16rBABE1F15 + i).
+		backEnd storeLiteral: (object bitXor: 16r5A5A5A5A) beforeFollowingAddress: classTagPC.
+		object := backEnd literal32BeforeFollowingAddress: classTagPC.
+		self assert: object = (16rBABE1F15 + i bitXor: 16r5A5A5A5A).
+		backEnd storeLiteral: (object bitXor: 16r5A5A5A5A) beforeFollowingAddress: classTagPC.
 
 		entryPoint := backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc.
 		self assert: entryPoint = (self cPICPrototypeCaseOffset + 16rCA5E10 + (i * 16))].
 
 	entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc + cPICEndSize - literalsManager endSizeOffset.
-	self assert: (entryPoint = (self cPICMissTrampolineFor: 0)).
+	self assert: entryPoint = (self cPICMissTrampolineFor: 0).
 	
 	^0
 ]
@@ -5400,13 +5399,13 @@ Cogit >> followMaybeObjRefInClosedPICAt: mcpc [
 	'mcpc' refers to the jump/branch instruction at the end of
 	each cpic case"
 	| object subject |
-	object := literalsManager objRefInClosedPICAt: mcpc.
+	object := backEnd literalBeforeFollowingAddress: mcpc.
 	(objectRepresentation couldBeObject: object) ifFalse:
 		[^false].
 	(objectMemory isForwarded: object) ifFalse:
 		[^objectMemory isYoungObject: object].
 	subject := objectMemory followForwarded: object.
-	literalsManager storeObjRef: subject inClosedPICAt: mcpc.
+	backEnd storeLiteral: subject beforeFollowingAddress: mcpc.
 	codeModified := true.
 	^objectMemory isYoungObject: subject
 ]
@@ -5419,16 +5418,16 @@ Cogit >> followMethodReferencesInClosedPIC: cPIC [
 	| pc refersToYoung |
 	pc := self addressOfEndOfCase: 1 inCPIC: cPIC.
 
-	"first we check the method obj ref at the beginning of the CPIC"
+	"first we check the potential method oop load at the beginning of the CPIC"
 	refersToYoung := self followMaybeObjRefInClosedPICAt: pc - backEnd jumpLongByteSize.
 
 	"We find the end address of the cPICNumCases'th case and can then just step forward by the case size thereafter"
 	pc := self addressOfEndOfCase:  cPIC cPICNumCases inCPIC: cPIC.
 	
-	"For each case we check any object reference at the end address - sizeof(conditional instruction) and then increment the end address by case size"
+	"Next we check the potential potential method oop load for each case."
 	2 to: cPIC cPICNumCases do:
 		[:i|
-		(self followMaybeObjRefInClosedPICAt: pc - backEnd jumpLongConditionalByteSize) ifTrue:
+		(self followMaybeObjRefInClosedPICAt: pc - backEnd jumpLongConditionalByteSize - backEnd cmpC32RTempByteSize) ifTrue:
 			[refersToYoung := true].
 		pc := pc + cPICCaseSize].
 	^refersToYoung
@@ -7694,19 +7693,19 @@ Cogit >> mapObjectReferencesInClosedPIC: cPIC [
 	| pc refersToYoung |
 	pc := self addressOfEndOfCase:1 inCPIC:cPIC.
 
-	"first we check the obj ref at the beginning of the CPIC"
-	refersToYoung := self updateMaybeObjRefInClosedPICAt: pc - backEnd jumpLongByteSize.
+	"first we check the potential method oop load at the beginning of the CPIC"
+	refersToYoung := self remapMaybeObjRefInClosedPICAt: pc - backEnd jumpLongByteSize.
 
 	"We find the end address of the cPICNumCases'th case and can then just step forward by the case size thereafter"
 	pc := self addressOfEndOfCase: cPIC cPICNumCases inCPIC: cPIC.
 	
-	"For each case we check any object reference at the end address - sizeof(conditional instruction) and then increment the end address by case size"
+	"Next we check the potential class ref in the compare instruction, and the potential method oop load for each case."
 	2 to: cPIC cPICNumCases do:
 		[:i|
 		objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
-			[(self updateMaybeClassRefInClosedPICAt: pc - backEnd jumpLongConditionalByteSize) ifTrue:
+			[(self remapMaybeObjRefInClosedPICAt: pc - backEnd jumpLongConditionalByteSize) ifTrue:
 				[refersToYoung := true]].
-		(self updateMaybeObjRefInClosedPICAt: pc - backEnd jumpLongConditionalByteSize) ifTrue:
+		(self remapMaybeObjRefInClosedPICAt: pc - backEnd jumpLongConditionalByteSize - backEnd cmpC32RTempByteSize) ifTrue:
 			[refersToYoung := true].
 		pc := pc + cPICCaseSize].
 	^refersToYoung
@@ -8081,6 +8080,22 @@ Cogit >> markAndTraceOrFreeMachineCodeForFullGC [
 		[self assert: self allMachineCodeObjectReferencesValid].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
 		[processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]
+]
+
+{ #category : #'garbage collection' }
+Cogit >> markAndTraceOrFreePICTarget: entryPoint in: cPIC [
+	"If entryPoint is that of some method, then mark and trace objects in it and free if it is appropriate.
+	 Answer if the method has been freed."
+	<var: #cPIC type: #'CogMethod *'>
+	| targetMethod |
+	<var: #targetMethod type: #'CogMethod *'>
+	self assert: (entryPoint > methodZoneBase and: [entryPoint < methodZone freeStart]).
+	(cPIC containsAddress: entryPoint) ifTrue:
+		[^false].
+	targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
+	self assert: (targetMethod cmType = CMMethod or: [targetMethod cmType = CMFree]).
+	^self markAndTraceOrFreeCogMethod: targetMethod
+		  firstVisit: targetMethod asUnsignedInteger > cPIC asUnsignedInteger
 ]
 
 { #category : #'garbage collection' }
@@ -9475,6 +9490,24 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 	^0 "keep scanning"
 ]
 
+{ #category : #'garbage collection' }
+Cogit >> remapMaybeObjRefInClosedPICAt: mcpc [
+	"Remap a potential object reference from a closed PIC.
+	 This may be an object reference, an inline cache tag or null.
+	 Answer if the updated literal is young.
+	 mcpc is the address of the next instruction following either
+	 the load of the method literal or the compare of the class tag."
+	| object subject |
+	object := backEnd literalBeforeFollowingAddress: mcpc.
+	(objectRepresentation couldBeObject: object) ifFalse:
+		[^false].
+	subject := objectRepresentation remapOop: object.
+	object ~= subject ifTrue:
+		[backEnd storeLiteral: subject beforeFollowingAddress: mcpc.
+		 codeModified := true].
+	^objectMemory isYoungObject: subject
+]
+
 { #category : #'translation support' }
 Cogit >> reportError: anInteger [
 	<cmacro: '(n) warning("compilation error")'>
@@ -10187,6 +10220,16 @@ Cogit >> startMcpcAndCogMethodForMcpc: mcpc in: cogMethod do: aBinaryBlock [
 								to: #'CogBlockMethod *'])
 ]
 
+{ #category : #'in-line cacheing' }
+Cogit >> storeClassRef: classObj inClosedPICAt: address [
+	<var: #address type: #usqInt>
+	<inline: true>
+	"If inline cache tags are not objects they will be 32-bit values."
+	objectRepresentation inlineCacheTagsMayBeObjects
+		ifTrue: [backEnd storeLiteral: classObj beforeFollowingAddress: address]
+		ifFalse: [backEnd storeLiteral32: classObj beforeFollowingAddress: address]
+]
+
 { #category : #'method map' }
 Cogit >> subMethodsAsRangesFor: surrogateOrAddress [
 	<doNotGenerate>
@@ -10751,40 +10794,6 @@ Cogit >> unlockVMOwner [
 	<api>
 	<cmacro: '() ceUnlockVMOwner()'>
 	^self simulateLeafCallOf: ceUnlockVMOwner
-]
-
-{ #category : #'garbage collection' }
-Cogit >> updateMaybeClassRefInClosedPICAt: mcpc [
-	"Update a potential object reference from a closed PIC.
-	 This may be an object reference, an inline cache tag or null.
-	 Answer if the updated literal is young."
-	| object subject |
-	object := literalsManager classRefInClosedPICAt: mcpc.
-	(objectRepresentation couldBeObject: object) ifFalse:
-		[^false].
-	subject := objectRepresentation remapOop: object.
-	object ~= subject ifTrue:
-		[literalsManager storeClassRef: subject inClosedPICAt: mcpc.
-		 codeModified := true].
-	^objectMemory isYoungObject: subject
-]
-
-{ #category : #'garbage collection' }
-Cogit >> updateMaybeObjRefInClosedPICAt: mcpc [
-	"Update a potential object reference from a closed PIC.
-	 This may be an object reference, an inline cache tag or null.
-	 Answer if the updated literal is young.
-	'mcpc' refers to the jump/branch instruction at the end of
-	each cpic case"
-	| object subject |
-	object := literalsManager objRefInClosedPICAt: mcpc.
-	(objectRepresentation couldBeObject: object) ifFalse:
-		[^false].
-	subject := objectRepresentation remapOop: object.
-	object ~= subject ifTrue:
-		[literalsManager storeObjRef: subject inClosedPICAt: mcpc.
-		 codeModified := true].
-	^objectMemory isYoungObject: subject
 ]
 
 { #category : #accessing }
