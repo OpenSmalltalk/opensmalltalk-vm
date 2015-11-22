@@ -21,6 +21,7 @@ Class {
 		'BLTZ',
 		'BNE',
 		'BREAK',
+		'DIV',
 		'FP',
 		'GP',
 		'HintLoad',
@@ -37,6 +38,9 @@ Class {
 		'LHU',
 		'LUI',
 		'LW',
+		'MFHI',
+		'MFLO',
+		'MULT',
 		'OR',
 		'ORI',
 		'OneInstruction',
@@ -219,6 +223,10 @@ MIPSConstants class >> initializeSpecialFunctions [
 	JR := 8.
 	JALR := 9.
 	BREAK := 13.
+	MFHI := 16.
+	MFLO := 18.
+	MULT := 24.
+	DIV := 26.
 	ADDU := 33.
 	SUBU := 35.
 	AND := 36.
