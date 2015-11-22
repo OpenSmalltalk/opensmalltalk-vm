@@ -9,6 +9,11 @@ CogOutOfLineLiteralsARMCompiler class >> literalsManagerClass [
 	^OutOfLineLiteralsManager
 ]
 
+{ #category : #accessing }
+CogOutOfLineLiteralsARMCompiler >> cmpC32RTempByteSize [
+	^8
+]
+
 { #category : #'generate machine code' }
 CogOutOfLineLiteralsARMCompiler >> concretizeLiteral [
 	"Generate an out-of-line literal.  Copy the value and any annotation from the stand-in in the literals manager."
@@ -70,7 +75,10 @@ CogOutOfLineLiteralsARMCompiler >> isSharable [
 { #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMCompiler >> literalBeforeFollowingAddress: followingAddress [
 	"Return the literal referenced by the instruction immediately preceding followingAddress."
-	^objectMemory longAt: (self pcRelativeAddressAt: (self instructionAddressBefore: followingAddress))
+	^objectMemory longAt: (self pcRelativeAddressAt:
+		((self instructionIsLDR: (self instructionBeforeAddress: followingAddress))
+			ifTrue: [self instructionAddressBefore: followingAddress]
+			ifFalse: [self instructionAddressBefore: followingAddress - 4]))
 ]
 
 { #category : #accessing }
@@ -285,7 +293,12 @@ CogOutOfLineLiteralsARMCompiler >> sizePCDependentInstructionAt: eventualAbsolut
 { #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMCompiler >> storeLiteral: literal beforeFollowingAddress: followingAddress [
 	"Rewrite the literal in the instruction immediately preceding followingAddress."
-	objectMemory longAt: (self pcRelativeAddressAt: (self instructionAddressBefore: followingAddress )) put: literal
+	objectMemory
+		longAt: (self pcRelativeAddressAt:
+					((self instructionIsLDR: (self instructionBeforeAddress: followingAddress))
+						ifTrue: [self instructionAddressBefore: followingAddress]
+						ifFalse: [self instructionAddressBefore: followingAddress - 4]))
+		put: literal
 ]
 
 { #category : #'generate machine code' }
