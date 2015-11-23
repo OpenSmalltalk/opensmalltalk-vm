@@ -3034,36 +3034,18 @@ CogIA32Compiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
 ]
 
 { #category : #'inline cacheing' }
-CogIA32Compiler >> rewriteCPICCaseAt: followingAddress tag: newTag objRef: newObjRef target: newTarget [
-	"Rewrite the three values involved in a CPIC case. Used by the initialize & extend CPICs."
-
-	"IA32 CPIC cases are
-	 cmpl $0x newTag, %eax
-	 movl $0x newObjRef, %ebx
-	 jz .+0x newTarget (0x00010924)"
-
-	"rewite the tag via the first ldr"	
-	self storeLiteral: newTag beforeFollowingAddress: (followingAddress -11).
-
-	"write the obj ref/operand via the second ldr"
-	self storeLiteral: newObjRef beforeFollowingAddress: (followingAddress - 6).
-	
-	"write the jump address for the new target address"
-	self rewriteJumpLongAt: followingAddress target: newTarget
-]
-
-{ #category : #'inline cacheing' }
-CogIA32Compiler >> rewriteCPICJumpAt: callSiteReturnAddress target: callTargetAddress [
+CogIA32Compiler >> rewriteCPICJumpAt: addressFollowingJump target: jumpTargetAddress [
 	"Rewrite the short jump instruction to jump to a new cpic case target. "
-	<var: #callSiteReturnAddress type: #usqInt>
-	<var: #callTargetAddress type: #usqInt>
+	<var: #addressFollowingJump type: #usqInt>
+	<var: #jumpTargetAddress type: #usqInt>
 	| callDistance |
-	callDistance := (callTargetAddress - callSiteReturnAddress) signedIntToLong.
-	self assert: (callDistance < 256).
+	callDistance := jumpTargetAddress - addressFollowingJump.
+	self assert: callDistance abs < 128.
 	objectMemory
-		byteAt: callSiteReturnAddress - 1 put:  (callDistance  bitAnd: 16rFF).
+		byteAt: addressFollowingJump - 1
+		put:  (callDistance bitAnd: 16rFF).
 	"self cCode: ''
-		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
+		inSmalltalk: [cogit disassembleFrom: addressFollowingJump - 10 to: addressFollowingJump - 1]."
 	^2
 ]
 
