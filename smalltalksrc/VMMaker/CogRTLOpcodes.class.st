@@ -404,6 +404,7 @@ CogRTLOpcodes class >> printFormatForOpcodeName: opcodeName [
 	| format operands size |
 	format := OrderedCollection new.
 	size := (operands := opcodeName) size.
+	(operands startsWith: 'Br') ifTrue: [^' rr'].
 	[#('XwrR' 'X16rR' 'XbrR' 'RR' 'RdR' 'RRd' 'RdRd') do:
 		[:regRegFmt|
 		(operands endsWith: regRegFmt) ifTrue:

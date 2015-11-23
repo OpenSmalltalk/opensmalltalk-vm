@@ -1426,24 +1426,6 @@ Cogit class >> typeForSelf [
 ]
 
 { #category : #'abstract instructions' }
-Cogit >> AddCheckOverflowCq: quickConstant R: reg [
-	<inline: true>
-	<returnTypeC: #'AbstractInstruction *'>
-	backEnd hasConditionRegister ifTrue:
-		[^self AddCq: quickConstant R: reg].
-	^self gen: AddCheckOverflowCqR quickConstant: quickConstant operand: reg
-]
-
-{ #category : #'abstract instructions' }
-Cogit >> AddCheckOverflowR: reg1 R: reg2 [
-	<inline: true>
-	<returnTypeC: #'AbstractInstruction *'>
-	backEnd hasConditionRegister ifTrue:
-		[^self AddR: reg1 R: reg2].
-	^self gen: AddCheckOverflowRR operand: reg1 operand: reg2
-]
-
-{ #category : #'abstract instructions' }
 Cogit >> AddCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2198,18 +2180,6 @@ Cogit >> MoveXwr: indexReg R: baseReg R: destReg [
 ]
 
 { #category : #'abstract instructions' }
-Cogit >> MulCheckOverflowR: reg1 R: reg2 [
-	"Multiplication is a little weird on some processors.  Defer to the backEnd
-	 to allow it to generate any special code it may need to."
-	<returnTypeC: #'AbstractInstruction *'>
-	<inline: false>
-	backEnd hasConditionRegister ifTrue:
-		[^self MulR: reg1 R: reg2].
-	backEnd genCheckOverflowMulR: reg1 R: reg2.
-	^self abstractInstructionAt: opcodeIndex - 1
-]
-
-{ #category : #'abstract instructions' }
 Cogit >> MulR: reg1 R: reg2 [
 	"Multiplication is a little weird on some processors.  Defer to the backEnd
 	 to allow it to generate any special code it may need to."
@@ -2315,24 +2285,6 @@ Cogit >> Stop [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: Stop
-]
-
-{ #category : #'abstract instructions' }
-Cogit >> SubCheckOverflowCq: quickConstant R: reg [
-	<inline: true>
-	<returnTypeC: #'AbstractInstruction *'>
-	backEnd hasConditionRegister ifTrue:
-		[^self SubCq: quickConstant R: reg].
-	^self gen: SubCheckOverflowCqR quickConstant: quickConstant operand: reg
-]
-
-{ #category : #'abstract instructions' }
-Cogit >> SubCheckOverflowR: reg1 R: reg2 [
-	<inline: true>
-	<returnTypeC: #'AbstractInstruction *'>
-	backEnd hasConditionRegister ifTrue:
-		[^self SubR: reg1 R: reg2].
-	^self gen: SubCheckOverflowRR operand: reg1 operand: reg2
 ]
 
 { #category : #'abstract instructions' }
