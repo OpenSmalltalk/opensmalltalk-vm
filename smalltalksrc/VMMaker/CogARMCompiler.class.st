@@ -1660,8 +1660,7 @@ CogARMCompiler >> concretizePushCw [
 	<inline: true>
 	| word instrOffset |
 	word := operands at: 0.	
-	((self isAnInstruction: (cogit cCoerceSimple: word to: #'AbstractInstruction *'))
-	 or: [cogit addressIsInCurrentCompilation: word])
+	(self inCurrentCompilation: word)
 		ifTrue:
 			[instrOffset := self loadCwInto: ConcreteIPReg]
 		ifFalse:
@@ -3032,13 +3031,14 @@ CogARMCompiler >> relocateCallBeforeReturnPC: retpc by: delta [
 ]
 
 { #category : #'inline cacheing' }
-CogARMCompiler >> rewriteCPICJumpAt: callSiteReturnAddress target: callTargetAddress [
+CogARMCompiler >> rewriteCPICJumpAt: addressFollowingJump target: jumpTargetAddress [
 	"Rewrite a jump instruction to call a different target.  This variant is used to reset the 
 	jumps in the prototype CPIC to suit each use,.   
 	Answer the extent of the code change which is used to compute the range of the icache to flush."
-	<var: #callSiteReturnAddress type: #usqInt>
-	<var: #callTargetAddress type: #usqInt>
-	^self rewriteTransferAt: callSiteReturnAddress target: callTargetAddress
+	<var: #addressFollowingJump type: #usqInt>
+	<var: #jumpTargetAddress type: #usqInt>
+	<inline: true>
+	^self rewriteTransferAt: addressFollowingJump target: jumpTargetAddress
 ]
 
 { #category : #'inline cacheing' }
