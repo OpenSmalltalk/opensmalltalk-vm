@@ -177,25 +177,6 @@ CogOutOfLineLiteralsARMCompiler >> relocateMethodReferenceBeforeAddress: pc by: 
 ]
 
 { #category : #'inline cacheing' }
-CogOutOfLineLiteralsARMCompiler >> rewriteCPICCaseAt: followingAddress tag: newTag objRef: newObjRef target: newTarget [
-	"rewrite the three values involved in a CPIC case. Used by the create & extend cpcic methods"
-
-	"ARM CPIC cases are
-	ldr TempReg, [pc relative -> tag]
-	cmp TempReg0, TempReg 
-	ldr SendNumArgs, [pc relative -> obj ref]
-	beq target"
-	"rewite the tag via the first ldr"	
-	objectMemory longAt: (self pcRelativeAddressAt: followingAddress - 16) put: newTag.
-
-	"write the obj ref/operand via the second ldr"
-	objectMemory longAt: (self pcRelativeAddressAt: followingAddress - 8) put: newObjRef.
-	
-	"write the jump address for the new target address"
-	self rewriteJumpLongAt: followingAddress target: newTarget
-]
-
-{ #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMCompiler >> rewriteFullTransferAt: callSiteReturnAddress target: callTargetAddress expectedInstruction: expectedInstruction [
 	"Rewrite a CallFull or JumpFull instruction to transfer to a different target.
 	 This variant is used to rewrite cached primitive calls where we load the target address into ip
@@ -339,8 +320,7 @@ CogOutOfLineLiteralsARMCompiler >> usesOutOfLineLiteral [
 						-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		"Data Movement"						
 		[MoveCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
-		[MoveCwR]		-> [^((self isAnInstruction: (cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *')) "i.e. a label, which by definition will be in the current compilation."
-							  or: [cogit addressIsInCurrentCompilation: (operands at: 0)]) not].
+		[MoveCwR]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
 		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		[MoveRAw]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
 		[MoveAbR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
@@ -352,8 +332,7 @@ CogOutOfLineLiteralsARMCompiler >> usesOutOfLineLiteral [
 		[MoveM16rR]	-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[MoveM64rRd]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:u :i| false] ifFalse: [true]].
 		[MoveMwrR]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:u :i| false] ifFalse: [true]].
-		[PushCw]		-> [^((self isAnInstruction: (cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *')) "i.e. a label, which by definiion will be in the current compilation."
-							  or: [cogit addressIsInCurrentCompilation: (operands at: 0)]) not].
+		[PushCw]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
 		[PushCq]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[PrefetchAw] 	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		}

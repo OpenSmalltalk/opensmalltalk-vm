@@ -3942,13 +3942,13 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 	"Caller patches to open pic if caseNMethod is young."
 	self assert: (caseNMethod notNil and: [(objectMemory isYoung: caseNMethod) not]).
 	(isMNUCase not and: [coInterpreter methodHasCogMethod: caseNMethod])
-		ifTrue: "this isn't an mNU and we have an already cogged method to jump to"
+		ifTrue: "this isn't an MNU and we have an already cogged method to jump to"
 			[operand := 0.
 			 target := (coInterpreter cogMethodOf: caseNMethod) asInteger + cmNoCheckEntryOffset]
 		ifFalse: 
 			[operand := caseNMethod.
 			 isMNUCase
-				ifTrue: "this is an mNU so tag the CPIC header and setup a jump to the mNUAbort"
+				ifTrue: "this is an MNU so tag the CPIC header and setup a jump to the MNUAbort"
 					[cPIC cpicHasMNUCase: true.
 					 target := cPIC asInteger + (self sizeof: CogMethod)]
 				ifFalse: "setup a jump to the interpretAborth so we can cog the target method"
@@ -3957,7 +3957,7 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 	"find the end address of the new case"
 	address := self addressOfEndOfCase: cPIC cPICNumCases +1 inCPIC: cPIC.
 	
-	backEnd rewriteCPICCaseAt: address tag: caseNTag objRef: operand target: target.
+	self rewriteCPICCaseAt: address tag: caseNTag objRef: operand target: target.
 
 	"finally, rewrite the jump 3 instr  before firstCPICCaseOffset to jump to the beginning of this new case"
 	self rewriteCPIC: cPIC caseJumpTo: address - cPICCaseSize. 
@@ -4706,8 +4706,9 @@ Cogit >> configureCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag:
 		- a Cog method; jump to its unchecked entry-point
 		- a CompiledMethod; jump to the ceInterpretFromPIC trampoline
 		- nil; call ceMNUFromPIC
-	addDelta is the address change from the prototype to the new CPCI location, needed
-	because the loading of the CPIC lable at the end may use a literal instead of a pc relative"
+	addDelta is the address change from the prototype to the new CPIC location, needed
+	because the loading of the CPIC label at the end may use a literal instead of a pc relative load."
+	"self disassembleFrom: cPIC asInteger + (self sizeof: CogMethod) to: cPIC asInteger + closedPICSize"
 	<var: #cPIC type: #'CogMethod *'>
 	<var: #case0CogMethod type: #'CogMethod *'>
 	| operand targetEntry caseEndAddress|
@@ -4734,10 +4735,14 @@ Cogit >> configureCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag:
 
 	caseEndAddress := self addressOfEndOfCase: 2 inCPIC: cPIC.
 
-	"update the cpic case - deferred to backend because messy"
-	backEnd rewriteCPICCaseAt: caseEndAddress tag: case1Tag objRef: operand target: (isMNUCase ifTrue: [cPIC asInteger + (self sizeof: CogMethod)] ifFalse: [targetEntry]) asInteger.
+	"update the cpic case"
+	self
+		rewriteCPICCaseAt: caseEndAddress
+		tag: case1Tag
+		objRef: operand
+		target: (isMNUCase ifTrue: [cPIC asInteger + (self sizeof: CogMethod)] ifFalse: [targetEntry]) asInteger.
 
-	"update the loading of the PCIC label address"
+	"update the loading of the CPIC address"
 	backEnd relocateMethodReferenceBeforeAddress: cPIC asInteger + cPICEndOfCodeOffset - backEnd jumpLongByteSize by: addrDelta.
 
 	"write the final desperate jump to cePICMissXArgs"
@@ -4748,10 +4753,10 @@ Cogit >> configureCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag:
 
 { #category : #'in-line cacheing' }
 Cogit >> configureMNUCPIC: cPIC methodOperand: methodOperand numArgs: numArgs delta: addrDelta [
-	"Configure a copy of the prototype CPIC for a one-case MNU PIC that calls ceMNUFromPIC for case0Tag
-	 The tag for case0 is at the send site and so doesn't need to be generated.
-	addDelta is the address change from the prototype to the new CPCI location, needed
-	because the loading of the CPIC label at the end may use a literal instead of a pc relative"
+	"Configure a copy of the prototype CPIC for a one-case MNU CPIC that calls ceMNUFromPIC for
+	 case0Tag The tag for case0 is at the send site and so doesn't need to be generated.
+	 addDelta is the address change from the prototype to the new CPIC location, needed
+	 because the loading of the CPIC label at the end may be a literal instead of a pc-relative load."
 	<var: #cPIC type: #'CogMethod *'>
 	| operand |
 
@@ -4770,15 +4775,13 @@ Cogit >> configureMNUCPIC: cPIC methodOperand: methodOperand numArgs: numArgs de
 	"rewrite the final desperate jump to cePICMissXArgs"
 	backEnd rewriteJumpLongAt: cPIC asInteger + cPICEndOfCodeOffset target: (self cPICMissTrampolineFor: numArgs).	
 
-	"update the loading of the PCIC label address"
+	"update the loading of the CPIC label address"
 	backEnd relocateMethodReferenceBeforeAddress: cPIC asInteger + cPICEndOfCodeOffset - backEnd jumpLongByteSize by: addrDelta.
 
-	"finally, rewrite the jump 3 instr  before firstCPICCaseOffset to jump to the end of case 2, missing the actual case"
+	"finally, rewrite the jump 3 instr before firstCPICCaseOffset to jump to the end of case 2, missing the actual case"
 	self rewriteCPIC: cPIC caseJumpTo: (self addressOfEndOfCase: 2 inCPIC: cPIC). 
 
-
 	^0
-
 ]
 
 { #category : #printing }
@@ -5039,46 +5042,70 @@ Cogit >> estimateOfAbstractOpcodesPerBytecodes [
 
 { #category : #'in-line cacheing' }
 Cogit >> expectedClosedPICPrototype: cPIC [
-	"Answer 0 if the ClosedPIC is as expected from compileClosedPICPrototype,
-	 otherwise answer an error code identifying the first discrepancy found."
+	"Use asserts to check if the ClosedPICPrototype is as expected from compileClosedPICPrototype,
+	 and can be updated as required via rewriteCPICCaseAt:tag:objRef:target:.  If all asserts pass, answer
+	 0, otherwise answer a bit mask identifying all the errors."
 	"self disassembleFrom: methodZoneBase + (self sizeof: CogMethod) to: methodZoneBase + closedPICSize"
 	<var: #cPIC type: #'CogMethod *'>
-	| pc object entryPoint |
+	| pc errors object classTag entryPoint |
+	errors := 0.
 	pc := cPIC asUnsignedInteger + firstCPICCaseOffset.
 	"First jump is unconditional; subsequent ones are conditional"
 	object := backEnd literalBeforeFollowingAddress: pc - backEnd jumpLongByteSize.
-	self assert: object = 16r5EAF00D.
+	(self asserta: object = 16r5EAF00D) ifFalse:
+		[errors := 1].
 
 	entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
-	self assert: entryPoint = (self cPICPrototypeCaseOffset + 16rCA5E10).
+	(self asserta: entryPoint = (self cPICPrototypeCaseOffset + 16rCA5E10)) ifFalse:
+		[errors := errors + 2].
 
 	1 to: maxCPICCases - 1 do:
 		[:i | | methodObjPC classTagPC |
 		pc := pc + cPICCaseSize.
 
+		"verify information in case is as expected."
 		methodObjPC := pc - backEnd jumpLongConditionalByteSize - backEnd cmpC32RTempByteSize.
 		object := backEnd literalBeforeFollowingAddress: methodObjPC.
-		self assert: object = (16rBADA550 + i).
-		backEnd storeLiteral: (object bitXor: 16rA5A5A5A5) beforeFollowingAddress: methodObjPC.
-		object := backEnd literalBeforeFollowingAddress: methodObjPC.
-		self assert: object = (16rBADA550 + i bitXor: 16rA5A5A5A5).
-		backEnd storeLiteral: (object bitXor: 16rA5A5A5A5) beforeFollowingAddress: methodObjPC.
+		(self asserta: object = (16rBADA550 + i)) ifFalse:
+			[errors := errors bitOr: 4].
 
 		classTagPC := pc - backEnd jumpLongConditionalByteSize.
-		object := backEnd literal32BeforeFollowingAddress: classTagPC.
-		self assert: object = (16rBABE1F15 + i).
-		backEnd storeLiteral32: (object bitXor: 16r5A5A5A5A) beforeFollowingAddress: classTagPC.
-		object := backEnd literal32BeforeFollowingAddress: classTagPC.
-		self assert: object = (16rBABE1F15 + i bitXor: 16r5A5A5A5A).
-		backEnd storeLiteral32: (object bitXor: 16r5A5A5A5A) beforeFollowingAddress: classTagPC.
+		classTag := backEnd literal32BeforeFollowingAddress: classTagPC.
+		(self asserta: classTag = (16rBABE1F15 + i)) ifFalse:
+			[errors := errors bitOr: 8].
 
 		entryPoint := backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc.
-		self assert: entryPoint = (self cPICPrototypeCaseOffset + 16rCA5E10 + (i * 16))].
+		(self asserta: entryPoint = (self cPICPrototypeCaseOffset + 16rCA5E10 + (i * 16))) ifFalse:
+			[errors := errors bitOr: 16].
+
+		"change case via rewriteCPICCaseAt:tag:objRef:target:"
+		self rewriteCPICCaseAt: pc
+			tag: (classTag bitXor: 16r5A5A5A5A)
+			objRef: (object bitXor: 16rA5A5A5A5)
+			target: (entryPoint bitXor: 16r55AA50). "don't xor least 4 bits to leave instruction alignment undisturbed"
+
+		"verify information in case is as expected post update."
+		object := backEnd literalBeforeFollowingAddress: methodObjPC.
+		(self asserta: object = (16rBADA550 + i bitXor: 16rA5A5A5A5)) ifFalse:
+			[errors := errors bitOr: 32].
+		classTag := backEnd literal32BeforeFollowingAddress: classTagPC.
+		(self asserta: classTag = (16rBABE1F15 + i bitXor: 16r5A5A5A5A)) ifFalse:
+			[errors := errors bitOr: 64].
+		entryPoint := backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc.
+		(self asserta: entryPoint = ((self cPICPrototypeCaseOffset + 16rCA5E10 + (i * 16)) bitXor: 16r55AA50)) ifFalse:
+			[errors := errors bitOr: 128].
+
+		"finally restore case to the original state"
+		self rewriteCPICCaseAt: pc
+			tag: (classTag bitXor: 16r5A5A5A5A)
+			objRef: (object bitXor: 16rA5A5A5A5)
+			target: (entryPoint bitXor: 16r55AA50)].
 
 	entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc + cPICEndSize - literalsManager endSizeOffset.
-	self assert: entryPoint = (self cPICMissTrampolineFor: 0).
+	(self asserta: entryPoint = (self cPICMissTrampolineFor: 0)) ifFalse:
+		[errors := errors + 256].
 	
-	^0
+	^errors
 ]
 
 { #category : #'bytecode generators' }
@@ -9566,6 +9593,24 @@ Cogit >> rewriteCPIC: cPIC caseJumpTo: target [
 	"adding a new CPIC case, or making an MNU CPIC, requires altering the jump that takes us to the first case to be used"
 	<inline: true>
 	backEnd rewriteCPICJumpAt: cPIC asInteger + firstCPICCaseOffset - backEnd jumpLongByteSize - backEnd loadPICLiteralByteSize target: target
+]
+
+{ #category : #'in-line cacheing' }
+Cogit >> rewriteCPICCaseAt: followingAddress tag: newTag objRef: newObjRef target: newTarget [
+	"Rewrite the three values involved in a CPIC case.  Used by the initialize & extend CPICs.
+	 c.f. expectedClosedPICPrototype:"
+
+	"write the obj ref/operand via the second ldr"
+	| classTagPC methodObjPC |
+	methodObjPC := followingAddress - backEnd jumpLongConditionalByteSize - backEnd cmpC32RTempByteSize.
+	backEnd storeLiteral: newObjRef beforeFollowingAddress: methodObjPC.
+
+	classTagPC := followingAddress - backEnd jumpLongConditionalByteSize.
+	"rewite the tag via the first ldr"	
+	backEnd storeLiteral32: newTag beforeFollowingAddress: classTagPC.
+
+	"write the jump address for the new target address"
+	backEnd rewriteJumpLongAt: followingAddress target: newTarget
 ]
 
 { #category : #'compile abstract instructions' }
