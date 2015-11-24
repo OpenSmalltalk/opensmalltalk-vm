@@ -1847,6 +1847,7 @@
 				LD_GENERATE_MAP_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				OTHER_CFLAGS = "";
+				"OTHER_CFLAGS[arch=*]" = "-fwrapv";
 				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.osx3286.cog;
 				PRODUCT_NAME = Squeak;
 			};
@@ -1947,6 +1948,7 @@
 				LD_GENERATE_MAP_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				OTHER_CFLAGS = "";
+				"OTHER_CFLAGS[arch=*]" = "-fwrapv";
 				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.osx3286.cog;
 				PRODUCT_NAME = Squeak;
 			};
@@ -1977,6 +1979,7 @@
 				LD_GENERATE_MAP_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				OTHER_CFLAGS = "";
+				"OTHER_CFLAGS[arch=*]" = "-fwrapv";
 				PRODUCT_BUNDLE_IDENTIFIER = org.squeak.osx3286.cog;
 				PRODUCT_NAME = Squeak;
 			};
