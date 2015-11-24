@@ -71,7 +71,7 @@ Building out of the box
 (and probably 10.5.x) using the old Carbon libraries.  I plan to build on
 Mavericks using John McIntosh's Cocoa platform support files soon.
 
-1. Install the tools (xcode etc);  the CoreVM.xcodeproj is set-up to build
+1. Install the tools (Xcode etc);  the CoreVM.xcodeproj is set-up to build
    using gcc 4.2 but you can optionally install the Intel C++ compiler 11.1
    and change the compilerSpec in CoreVM.xcodeproj/project.pbxproj to get
    better performance.
@@ -93,7 +93,7 @@ Each build directory contains three files
 	plugins.int
 	plugins.ext
 On other platforms editing these and making is all one needs to do to change the
-set of plugins.  Alas on xcode one also has to edit the relevant xcode projects
+set of plugins.  Alas on Xcode one also has to edit the relevant Xcode projects
 to add and remove source files.  If you're brave enough to contemplate this
 you're brave enough to figure out how to do this yourself.
 
@@ -110,6 +110,31 @@ Then build libraries macbochs/{cpu/libcpu.a,disasm/libdisasm.a,fpu/libfpu.a}
   $ ../bochs/makeem
 
 
+Using gcc with Xcode 6.x, Mac OS X > 10.6
+-----------------------------------------
+We're in the process of transitioning from a Carbon/Mac OS X 10.6/Xcode
+3.1.x build system to a Cocoa/Mac OS X 10.9 or above/Xcode 6.x/7.x build
+system.  We're still building a VM that should run on 10.6.  By default
+Xcode uses the clang compiler.
+You may want to use a different compiler.  For example, to install gcc 5.2
+see http://hamelot.co.uk/programming/add-gcc-compiler-to-xcode-6/
+(Thanks Hammad!).
+Essentially
+- install brew
+	ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+- get all available versions of gcc
+	brew tap homebrew/versions
+- build gcc 5.2 (Eliot: my first attempt failed with some library
+		incompatibility during the bootstrap, I then installed 4.8 successfully
+		and retried installing 5.2 and miraculously this time it worked)
+	brew install gcc5
+- get the GCC 5.2 plugin for Xcode:
+	git clone https://github.com/hmazhar/xcode-gcc.git
+- install the Xcode plugin for the gcc 5.2 compiler
+	open /Applications/Xcode.app/Contents/PlugIns/Xcode3Core.ideplugin/Contents/SharedSupport/Developer/Library/Xcode/Plug-ins/
+	open xcode-gcc
+ and use the finder to copy the plugin into the Xcode app bundle.
+
 Optimization level and gcc version
 ----------------------------------
 There are issues with gcc version > 4.2.1.  Any of the following flags may break the build at -O2:
@@ -117,8 +142,8 @@ There are issues with gcc version > 4.2.1.  Any of the following flags may break
 -fpartial-inlining
 -fcaller-saves
 
-They're turned off in the xcode files provided.
+They're turned off in the Xcode files provided.
 
 
 Eliot Miranda
-June 2014
+November 2015
