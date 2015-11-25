@@ -1,6 +1,7 @@
 # Copied, perhaps edited, from ../../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
-#B3DAcceleratorPlugin \
+B3DAcceleratorPlugin \
+Squeak3D \
 #BochsIA32Plugin \
 #GdbARMPlugin \
 SqueakFFIPrims \
