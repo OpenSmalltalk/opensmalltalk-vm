@@ -23,7 +23,7 @@ that is created.
     cd SqueakX.Y.Z-N
 
 If you prefer to live dangerously, the current developers' sources can be
-checked out from the Sqeuak VM repository:
+checked out from the Squeak VM repository:
 
     svn co http://squeakvm.org/svn/squeak/trunk/platforms
 
