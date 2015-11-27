@@ -7,6 +7,11 @@ Class {
 	#category : #'Cog-Processors'
 }
 
+{ #category : #accessing }
+MIPSELSimulator >> endianness [
+	^#little
+]
+
 { #category : #memory }
 MIPSELSimulator >> executeFault: address [
 	| jumpInstruction type |
