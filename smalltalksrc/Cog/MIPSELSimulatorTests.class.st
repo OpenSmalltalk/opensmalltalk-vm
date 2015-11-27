@@ -553,7 +553,11 @@ MIPSELSimulatorTests >> testDiv [
 			result := simulator call: 0 with: 7 with: -3 with: 0 with: 0.
 			self assert: result equals: -2.
 			result := simulator call: 0 with: -7 with: -3 with: 0 with: 0.
-			self assert: result equals: 2].	
+			self assert: result equals: 2.
+			result := simulator call: 0 with: 42 with: 0 with: 0 with: 0.
+			self assert: result equals: 0.
+			result := simulator call: 0 with: -16r80000000 with: -1 with: 0 with: 0.
+			self assert: result equals: -16r80000000].	
 	self 
 		testGenerateInto: 
 			[:stream :compiler | 
@@ -583,7 +587,11 @@ MIPSELSimulatorTests >> testDiv [
 			result := simulator call: 0 with: 7 with: -3 with: 0 with: 0.
 			self assert: result equals: 1.
 			result := simulator call: 0 with: -7 with: -3 with: 0 with: 0.
-			self assert: result equals: -1].
+			self assert: result equals: -1.
+			result := simulator call: 0 with: 42 with: 0 with: 0 with: 0.
+			self assert: result equals: 42.
+			result := simulator call: 0 with: -16r80000000 with: -1 with: 0 with: 0.
+			self assert: result equals: 0].
 ]
 
 { #category : #execution }
