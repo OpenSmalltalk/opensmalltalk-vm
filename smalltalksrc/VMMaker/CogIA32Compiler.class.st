@@ -3076,6 +3076,11 @@ CogIA32Compiler >> rewriteCallAt: callSiteReturnAddress target: callTargetAddres
 ]
 
 { #category : #'inline cacheing' }
+CogIA32Compiler >> rewriteConditionalJumpLongAt: callSiteReturnAddress target: callTargetAddress [
+	^self rewriteJumpLongAt: callSiteReturnAddress target: callTargetAddress
+]
+
+{ #category : #'inline cacheing' }
 CogIA32Compiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag target: callTargetAddress [
 	"Rewrite an inline cache to call a different target for a new tag.  This variant is used
 	 to link unlinked sends in ceSend:to:numArgs: et al.  Answer the extent of the code
