@@ -1453,12 +1453,12 @@ StackToRegisterMappingCogit >> genBinaryInlineComparison: opTrue opFalse: opFals
 					 self ensureFixupAt: postBranchPC - initialPC ]
 				ifFalse:
 					[self ssPushConstant: objectMemory trueObject]. "dummy value"
-			self gen: (branchDescriptor isBranchTrue ifTrue: [opTrue] ifFalse: [opFalse])
+			self genConditionalBranch: (branchDescriptor isBranchTrue ifTrue: [opTrue] ifFalse: [opFalse])
 				operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger. 
 			deadCode ifFalse: [ self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC) ] ]
 		ifFalse: "This is the path where the inlined comparison is *not* followed immediately by a branch"
 			[| condJump jump |
-			condJump := self gen: opTrue operand: 0.
+			condJump := self genConditionalBranch: opTrue operand: 0.
 			self genMoveFalseR: destReg.
 	 		jump := self Jump: 0.
 			condJump jmpTarget: (self genMoveTrueR: destReg).
@@ -2883,7 +2883,7 @@ StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode [
 	<var: #jumpTrue type: #'AbstractInstruction *'>
 	jumpFail := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	self CmpR: Arg0Reg R: ReceiverResultReg. "N.B. FLAGS := RRReg - Arg0Reg"
-	jumpTrue := self gen: jumpOpcode.
+	jumpTrue := self genConditionalBranch: jumpOpcode operand: 0.
 	self genMoveFalseR: ReceiverResultReg.
 	self RetN: 0.
 	jumpTrue jmpTarget: (self genMoveTrueR: ReceiverResultReg).
@@ -3111,7 +3111,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 		ifFalse: [self CmpR: Arg0Reg R: ReceiverResultReg].
 	"Cmp is weird/backwards so invert the comparison.  Further since there is a following conditional
 	 jump bytecode define non-merge fixups and leave the cond bytecode to set the mergeness."
-	self gen: (branchDescriptor isBranchTrue
+	self genConditionalBranch: (branchDescriptor isBranchTrue
 				ifTrue: [primDescriptor opcode]
 				ifFalse: [self inverseBranchFor: primDescriptor opcode])
 		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
@@ -3598,7 +3598,7 @@ StackToRegisterMappingCogit >> genVanillaSpecialSelectorEqualsEquals [
 		ifFalse:
 			[self ssPushConstant: objectMemory trueObject]. "dummy value"
 		
-	self gen: (branchDescriptor isBranchTrue ifTrue: [JumpZero] ifFalse: [JumpNonZero])
+	self genConditionalBranch: (branchDescriptor isBranchTrue ifTrue: [JumpZero] ifFalse: [JumpNonZero])
 		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
 
 	"If the branch is dead, then we can just fall through postBranchPC (only a nop in-between), else 
