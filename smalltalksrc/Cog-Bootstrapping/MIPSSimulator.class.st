@@ -72,6 +72,11 @@ MIPSSimulator >> andImmediate: instruction [
 	self unsignedRegister: instruction rt put: result.
 ]
 
+{ #category : #'processor api' }
+MIPSSimulator >> bitsInWord [
+	^32
+]
+
 { #category : #'instructions - arithmetic' }
 MIPSSimulator >> bitwiseAnd: instruction [
 	| rsValue rtValue result |
@@ -187,6 +192,12 @@ MIPSSimulator >> convertIntegerToInternal: anInteger [
 	^anInteger signedIntToLong
 ]
 
+{ #category : #'processor api' }
+MIPSSimulator >> convertInternalToInteger: unsigned [
+	"Default conversion for 32-bit processors.  64-bit processors override."
+	^unsigned signedIntFromLong
+]
+
 { #category : #'as yet unclassified' }
 MIPSSimulator >> currentInstruction [
 	^[(MIPSDisassembler new disassemble: memory from: pc to: pc + 4)]
@@ -204,12 +215,33 @@ MIPSSimulator >> disassembleFrom: startAddress to: endAddress in: memory for: aS
 		on: aStream.
 ]
 
+{ #category : #'processor api' }
+MIPSSimulator >> disassembleFrom: startAddress to: endAddress in: memory on: aStream [
+	MIPSDisassembler new 
+		disassemble: memory
+		from: startAddress
+		to: endAddress
+		for: nil
+		labels: nil
+		on: aStream.
+]
+
 { #category : #'instructions - arithmetic' }
 MIPSSimulator >> divideSigned: instruction [
-	"Strangely, the MIPS reference manual does not indicate which division is used, but testing some hardware show it is truncated division (rather than floored division or Euclidean division)."	
+	"Strangely, the MIPS reference manual does not indicate which division is used, but testing on some hardware shows it is truncated division (rather than floored division or Euclidean division)."	
 	| rsValue rtValue |
 	rsValue := self signedRegister: instruction rs.
 	rtValue := self signedRegister: instruction rt.
+	rtValue = 0 ifTrue: 
+		["No exception is signalled"
+		 lo := rtValue. 
+		 hi := rsValue.
+		 ^self].
+	(rtValue = -1 and: [rsValue = -16r80000000]) ifTrue:
+		["Only overflow case"
+		 lo := rsValue. 
+		 hi := 0.
+		 ^self].
 	lo := rsValue quo: rtValue.
 	hi := rsValue rem: rtValue.
 
@@ -225,20 +257,8 @@ MIPSSimulator >> doBranch: taken offset: offset [
 ]
 
 { #category : #'as yet unclassified' }
-MIPSSimulator >> endianness [
-	^#little
-]
-
-{ #category : #'as yet unclassified' }
 MIPSSimulator >> execute [
-	| instruction |
-	[pc ~= EndSimulationPC] whileTrue: 
-		[Transcript print: instructionCount; nextPutAll: ' X '; nextPutAll: self currentInstruction; flush.
-		 10 milliSeconds asDelay wait.
-		 instruction := MIPSInstruction new value: (self fetchInstruction: pc).
-		 instruction decodeFor: self.
-		 pc := pc + OneInstruction.
-		 instructionCount := instructionCount + 1].
+	[pc ~= EndSimulationPC] whileTrue: [self step].
 ]
 
 { #category : #'as yet unclassified' }
@@ -247,7 +267,7 @@ MIPSSimulator >> executeDelaySlot [
 	self assert: inDelaySlot not.
 	inDelaySlot := true.
 	instructionCount := instructionCount + 1.
-	Transcript print: instructionCount; nextPutAll: ' D '; nextPutAll: self currentInstruction; flush.
+	"Transcript print: instructionCount; nextPutAll: ' D '; nextPutAll: self currentInstruction; flush."
 	instruction := MIPSInstruction new value: (self fetchInstruction: pc).
 	instruction decodeFor: self.
 	inDelaySlot := false.
@@ -267,7 +287,7 @@ MIPSSimulator >> fp: anInteger [
 	^self unsignedRegister: FP put: anInteger
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #registers }
 MIPSSimulator >> getterForRegister: registerNumber [
 	^#(zr at v0 v1 a0 a1 a2 a3
 		t0 t1 t2 t3 t4 t5 t6 t7
@@ -277,7 +297,7 @@ MIPSSimulator >> getterForRegister: registerNumber [
 
 { #category : #'as yet unclassified' }
 MIPSSimulator >> initialize [
-	registers := Array new: 32 withAll: 16rABABAB.
+	registers := Array new: 32 withAll: 0.
 	pc := 0.
 	hi := 0.
 	lo := 0.
@@ -336,7 +356,7 @@ MIPSSimulator >> jumpAndLinkRegister: instruction [
 	pc := pc + OneInstruction.
 	self executeDelaySlot.
 	pc := nextPC.
-	pc := pc - 4. "Account for general increment"
+	pc := pc - OneInstruction. "Account for general increment"
 ]
 
 { #category : #'instructions - control' }
@@ -348,7 +368,7 @@ MIPSSimulator >> jumpRegister: instruction [
 	pc := pc + OneInstruction.
 	self executeDelaySlot.
 	pc := nextPC.
-	pc := pc - 4. "Account for general increment"
+	pc := pc - OneInstruction. "Account for general increment"
 ]
 
 { #category : #'instructions - memory' }
@@ -486,6 +506,12 @@ MIPSSimulator >> prefetch: instruction [
 { #category : #'as yet unclassified' }
 MIPSSimulator >> printOn: stream [
 	stream nextPutAll: self class name; nextPut: $:; cr.
+	self printRegistersOn: stream.
+	stream nextPutAll: self currentInstruction.
+]
+
+{ #category : #registers }
+MIPSSimulator >> printRegistersOn: stream [
 	0 to: 31 do:
 		[:reg |
 		stream space.
@@ -496,13 +522,23 @@ MIPSSimulator >> printOn: stream [
 		(self signedRegister: reg) printOn: stream.
 		stream cr].
 
+	stream nextPutAll: ' hi '.
+	hi printOn: stream base: 16 nDigits: 8.
+	stream space.
+	hi printOn: stream.
+	stream cr.
+	
+	stream nextPutAll: ' lo '.
+	lo printOn: stream base: 16 nDigits: 8.
+	stream space.
+	lo printOn: stream.
+	stream cr.
+	
 	stream nextPutAll: ' pc '.
 	pc printOn: stream base: 16 nDigits: 8.
 	stream space.
 	pc printOn: stream.
 	stream cr.
-	
-	stream nextPutAll: self currentInstruction.
 ]
 
 { #category : #'processor api' }
@@ -518,6 +554,11 @@ MIPSSimulator >> ra [
 { #category : #registers }
 MIPSSimulator >> ra: anInteger [
 	^self unsignedRegister: RA put: anInteger
+]
+
+{ #category : #'processor api' }
+MIPSSimulator >> reset [
+	^self initialize
 ]
 
 { #category : #'processor api' }
@@ -541,8 +582,48 @@ MIPSSimulator >> runInMemory: aMemory minimumAddress: minimumAddress readOnlyBel
 ]
 
 { #category : #registers }
+MIPSSimulator >> s0 [
+	^self unsignedRegister: S0
+]
+
+{ #category : #registers }
+MIPSSimulator >> s0: anInteger [
+	^self unsignedRegister: S0 put: anInteger
+]
+
+{ #category : #registers }
+MIPSSimulator >> s1 [
+	^self unsignedRegister: S1
+]
+
+{ #category : #registers }
+MIPSSimulator >> s1: anInteger [
+	^self unsignedRegister: S1 put: anInteger
+]
+
+{ #category : #registers }
+MIPSSimulator >> s2 [
+	^self unsignedRegister: S2
+]
+
+{ #category : #registers }
+MIPSSimulator >> s2: anInteger [
+	^self unsignedRegister: S2 put: anInteger
+]
+
+{ #category : #registers }
 MIPSSimulator >> s3 [
 	^self unsignedRegister: S3
+]
+
+{ #category : #registers }
+MIPSSimulator >> s3: anInteger [
+	^self unsignedRegister: S3 put: anInteger
+]
+
+{ #category : #registers }
+MIPSSimulator >> s4 [
+	^self unsignedRegister: S4
 ]
 
 { #category : #registers }
@@ -560,10 +641,20 @@ MIPSSimulator >> s5: anInteger [
 	^self unsignedRegister: S5 put: anInteger
 ]
 
+{ #category : #registers }
+MIPSSimulator >> s6 [
+	^self unsignedRegister: S6
+]
+
+{ #category : #registers }
+MIPSSimulator >> s6: anInteger [
+	^self unsignedRegister: S6 put: anInteger
+]
+
 { #category : #'processor api' }
 MIPSSimulator >> setFramePointer: fp stackPointer: sp [
-	self signedRegister: SP put: sp.
-	self signedRegister: FP put: fp.
+	self unsignedRegister: SP put: sp.
+	self unsignedRegister: FP put: fp.
 ]
 
 { #category : #'instructions - arithmetic' }
@@ -603,7 +694,7 @@ MIPSSimulator >> setOnLessThanUnsigned: instruction [
 	self signedRegister: instruction rd put: result.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #registers }
 MIPSSimulator >> setterForRegister: registerNumber [
 	^#(zr: at: v0: v1: a0: a1: a2: a3:
 		t0: t1: t2: t3: t4: t5: t6: t7:
@@ -719,8 +810,25 @@ MIPSSimulator >> simulateCallOf: address nextpc: nextpc memory: aMemory [
 ]
 
 { #category : #'processor api' }
+MIPSSimulator >> simulateJumpCallOf: address memory: aMemory [
+	"Simulate a frame-building jump of address.  Build a frame since
+	a) this is used for calls into the run-time which are unlikely to be leaf-calls"
+	"This method builds a stack frame as expected by the simulator, not as defined by ARM aapcs-abi.
+	In ARM aapcs, every method can define for itself, wether it wants to push lr (nextpc), and wether it 
+	uses a frame pointer. The standard never mentions a fp. It merely defines r4-r11 to be callee-saved."
+
+	self assert: self sp \\ 8 = 0. "This check ensures, that we conform with ARM abi. Before doing anything to the stack, we ensure 2-word alignment."
+	self pushWord: self ra in: aMemory.
+	self pushWord: self fp in: aMemory.
+	self fp: self sp.
+	"PostBuildStackDelta ~= 0 ifTrue:
+		[self sp: self sp - PostBuildStackDelta]." "In order to satisfy the CStackAlignment check by cogit, which is only valid on IA32 platforms."
+	self pc: address
+]
+
+{ #category : #'processor api' }
 MIPSSimulator >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
-	self signedRegister: RA put: nextpc.
+	self unsignedRegister: RA put: nextpc.
 	pc := address.
 ]
 
@@ -732,6 +840,12 @@ MIPSSimulator >> simulateReturnIn: aMemory [
 	"According to tpr, most C compilers implement return by simply
 	 popping into the pc, rather than popping through the link register."
 	self pc: (self popWordIn: aMemory)
+]
+
+{ #category : #'as yet unclassified' }
+MIPSSimulator >> singleStepIn: aByteArray [
+	self initializeWithMemory: aByteArray.
+	self step.
 ]
 
 { #category : #'processor api' }
@@ -773,6 +887,17 @@ MIPSSimulator >> sp [
 { #category : #registers }
 MIPSSimulator >> sp: anInteger [
 	^self unsignedRegister: SP put: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+MIPSSimulator >> step [
+	"If the next instruction is a branch, its delay slot will also be executed."	
+	| instruction |
+	"Transcript print: instructionCount; nextPutAll: ' X '; nextPutAll: self currentInstruction; flush"
+	instruction := MIPSInstruction new value: (self fetchInstruction: pc).
+	instruction decodeFor: self.
+	pc := pc + OneInstruction.
+	instructionCount := instructionCount + 1.
 ]
 
 { #category : #'instructions - memory' }
