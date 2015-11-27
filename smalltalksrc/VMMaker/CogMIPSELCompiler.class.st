@@ -214,6 +214,12 @@ CogMIPSELCompiler >> canDivQuoRem [
 	^true
 ]
 
+{ #category : #testing }
+CogMIPSELCompiler >> canMulRR [
+	<inline: true>
+	^true
+]
+
 { #category : #accessing }
 CogMIPSELCompiler >> cmpC32RTempByteSize [
 	^8
@@ -337,6 +343,7 @@ CogMIPSELCompiler >> computeMaximumSize [
 		[AddCheckOverflowRR]		-> [^20].
 		[SubCheckOverflowCqR]	-> [^28].
 		[SubCheckOverflowRR]		-> [^20].
+		[MulCheckOverflowRR]		-> [^20].
 		"Data Movement"						
 		[MoveCqR]				-> [^8 "or 4"].
 		[MoveCwR]				-> [^8].
@@ -621,7 +628,7 @@ CogMIPSELCompiler >> concretizeBrSignedGreaterRR [
 	leftReg := self concreteRegister: (operands at: 1).
 	rightReg := self concreteRegister: (operands at: 2).
 	self machineCodeAt: 0 put: (self sltR: BranchTemp R: rightReg R: leftReg).
-	self machineCodeAt: 4 put: (self beqR: BranchTemp R: ZR offset: offset).
+	self machineCodeAt: 4 put: (self bneR: BranchTemp R: ZR offset: offset).
 	self machineCodeAt: 8 put: (self nop). "Delay slot"
 	^machineCodeSize := 12
 ]
@@ -633,7 +640,7 @@ CogMIPSELCompiler >> concretizeBrSignedLessEqualRR [
 	leftReg := self concreteRegister: (operands at: 1).
 	rightReg := self concreteRegister: (operands at: 2).
 	self machineCodeAt: 0 put: (self sltR: BranchTemp R: rightReg R: leftReg).
-	self machineCodeAt: 4 put: (self bneR: BranchTemp R: ZR offset: offset).
+	self machineCodeAt: 4 put: (self beqR: BranchTemp R: ZR offset: offset).
 	self machineCodeAt: 8 put: (self nop). "Delay slot"
 	^machineCodeSize := 12
 ]
@@ -669,7 +676,7 @@ CogMIPSELCompiler >> concretizeBrUnsignedGreaterRR [
 	leftReg := self concreteRegister: (operands at: 1).
 	rightReg := self concreteRegister: (operands at: 2).
 	self machineCodeAt: 0 put: (self sltuR: BranchTemp R: rightReg R: leftReg).
-	self machineCodeAt: 4 put: (self beqR: BranchTemp R: ZR offset: offset).
+	self machineCodeAt: 4 put: (self bneR: BranchTemp R: ZR offset: offset).
 	self machineCodeAt: 8 put: (self nop). "Delay slot"
 	^machineCodeSize := 12
 ]
@@ -681,7 +688,7 @@ CogMIPSELCompiler >> concretizeBrUnsignedLessEqualRR [
 	leftReg := self concreteRegister: (operands at: 1).
 	rightReg := self concreteRegister: (operands at: 2).
 	self machineCodeAt: 0 put: (self sltuR: BranchTemp R: rightReg R: leftReg).
-	self machineCodeAt: 4 put: (self bneR: BranchTemp R: ZR offset: offset).
+	self machineCodeAt: 4 put: (self beqR: BranchTemp R: ZR offset: offset).
 	self machineCodeAt: 8 put: (self nop). "Delay slot"
 	^machineCodeSize := 12
 ]
@@ -1020,7 +1027,7 @@ CogMIPSELCompiler >> concretizeMoveM16rR [
 	offset := operands at: 0.
 	srcReg := self concreteRegister: (operands at: 1).
 	destReg := self concreteRegister: (operands at: 2).
-	self machineCodeAt: 0 put: (self lhR: destReg base: srcReg offset: offset).
+	self machineCodeAt: 0 put: (self lhuR: destReg base: srcReg offset: offset).
 	^machineCodeSize := 4
 ]
 
@@ -1151,6 +1158,30 @@ CogMIPSELCompiler >> concretizeMoveXwrRR [
 	self machineCodeAt: 4 put: (self adduR: AT R: baseReg R: AT).
 	self machineCodeAt: 8 put: (self lwR: destReg base: AT offset: 0).
 	^machineCodeSize := 12
+]
+
+{ #category : #'generate machine code - concretize' }
+CogMIPSELCompiler >> concretizeMulCheckOverflowRR [
+	| leftReg rightReg |
+	leftReg := self concreteRegister: (operands at: 0).
+	rightReg := self concreteRegister: (operands at: 1). "Also destReg."
+
+	"Overflow occured if the sign bit of the low part is different from the high part."
+	self machineCodeAt: 0 put: (self multR: leftReg R: rightReg).
+	self machineCodeAt: 4 put: (self mfloR: rightReg).
+	self machineCodeAt: 8 put: (self sraR: OverflowTemp1 R: rightReg C: 31).
+	self machineCodeAt: 12 put: (self mfhiR: OverflowTemp2).
+	"Overflow contains 0 on overflow, non-zero otherwise."
+	self machineCodeAt: 16 put: (self subuR: Overflow R: OverflowTemp1 R: OverflowTemp2).
+	^machineCodeSize := 20
+]
+
+{ #category : #'generate machine code - concretize' }
+CogMIPSELCompiler >> concretizeNegateR [
+	| reg |
+	reg := self concreteRegister: (operands at: 0).
+	self machineCodeAt: 0 put: (self subuR: reg R: ZR R: reg).
+	^machineCodeSize := 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1309,9 +1340,9 @@ CogMIPSELCompiler >> concretizeSubCwR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeSubRR [
 	| leftReg rightReg |
-	leftReg := self concreteRegister: (operands at: 0).
-	rightReg := self concreteRegister: (operands at: 1).
-	self machineCodeAt: 0 put: (self subuR: rightReg R: leftReg R: rightReg).
+	rightReg := self concreteRegister: (operands at: 0).
+	leftReg := self concreteRegister: (operands at: 1).
+	self machineCodeAt: 0 put: (self subuR: leftReg R: leftReg R: rightReg).
 	^machineCodeSize := 4
 ]
 
@@ -1482,6 +1513,7 @@ CogMIPSELCompiler >> dispatchConcretize [
 		[AddCheckOverflowRR] -> [^self concretizeAddCheckOverflowRR].
 		[SubCheckOverflowCqR] -> [^self concretizeSubCheckOverflowCqR].
 		[SubCheckOverflowRR] -> [^self concretizeSubCheckOverflowRR].
+		[MulCheckOverflowRR] -> [^self concretizeMulCheckOverflowRR].
 		"Conversion"
 		[ConvertRRd]		-> [^self concretizeUnimplemented]}
 ]
@@ -1504,6 +1536,22 @@ CogMIPSELCompiler >> fullCallsAreRelative [
 CogMIPSELCompiler >> functionAtAddress: mcpc [
 	^(objectMemory longAt: mcpc) bitAnd: 63
 
+]
+
+{ #category : #abi }
+CogMIPSELCompiler >> genAlignCStackSavingRegisters: saveRegs numArgs: numArgs wordAlignment: alignment [ 
+	| wordsPushedModAlignment delta |
+	self numIntRegArgs >= (saveRegs
+								ifTrue: [self numberOfSaveableRegisters + numArgs]
+								ifFalse: [numArgs])  ifTrue:
+		[^0].
+	wordsPushedModAlignment := ((saveRegs ifTrue: [self numberOfSaveableRegisters] ifFalse: [0])
+									+ numArgs)
+									\\ alignment.
+	wordsPushedModAlignment ~= 0 ifTrue:
+		[delta := alignment - wordsPushedModAlignment.
+		 cogit SubCq: delta * 4 R: SPReg].
+	^0
 ]
 
 { #category : #'abstract instructions' }
@@ -1570,6 +1618,12 @@ CogMIPSELCompiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1
 	regOrConst3 >= 0
 		ifTrue: [cogit MoveCq: regOrConst3 R: A3]
 		ifFalse: [cogit MoveR: regOrConst3 R: A3]
+]
+
+{ #category : #'abstract instructions' }
+CogMIPSELCompiler >> genMulR: regSource R: regDest [
+	cogit gen: MulRR operand: regSource operand: regDest.
+	^0
 ]
 
 { #category : #'smalltalk calling convention' }
@@ -1657,10 +1711,24 @@ CogMIPSELCompiler >> genSaveStackPointers [
 	^0
 ]
 
+{ #category : #'abstract instructions' }
+CogMIPSELCompiler >> genSubstituteReturnAddress: retpc [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit MoveCw: retpc R: RA
+]
+
 { #category : #testing }
 CogMIPSELCompiler >> hasConditionRegister [
 	"Answer if the receiver supports, e.g., JumpOverflow after a regular AddRR"
 	<inline: true>
+	^false
+]
+
+{ #category : #testing }
+CogMIPSELCompiler >> hasDoublePrecisionFloatingPointSupport [
+	<inline: true>
+	self flag: #todo.
 	^false
 ]
 
@@ -1733,7 +1801,19 @@ CogMIPSELCompiler >> isBigEndian [
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
+CogMIPSELCompiler >> isCallPrecedingReturnPC: mcpc [
+	cogit disassembleFrom: mcpc - 8 to: mcpc.
+
+	(self opcodeAtAddress: mcpc - 8) = JAL ifTrue: [^true].
+	
+	((self opcodeAtAddress: mcpc - 8) = SPECIAL
+		and: [(self opcodeAtAddress: mcpc - 8) = JALR]) ifTrue: [^true].
+	
+	^false
+]
+
+{ #category : #testing }
 CogMIPSELCompiler >> isJump [
 	^super isJump or: [opcode between: BrEqualRR and: BrLongNotEqualRR]
 ]
@@ -2101,21 +2181,27 @@ CogMIPSELCompiler >> noteFollowingConditionalBranch: branch [
 		[JumpGreaterOrEqual]	-> [BrSignedGreaterEqualRR].
 		[JumpLongZero] 		-> [BrLongEqualRR].
 		[JumpLongNonZero]	-> [BrLongNotEqualRR].
+		
+		[JumpNegative]			-> [BrSignedLessRR].
 	} otherwise: [self unreachable].
 	
 	opcode caseOf: {
 		[BrEqualRR]	->	["I.e., two jumps after a compare."
 						newBranchLeft := operands at: 1.
-						newBranchRight := operands at: 2].	
-		[CmpRR] 	-> 	[newBranchLeft := operands at: 0.
-						 newBranchRight := operands at: 1.
+						newBranchRight := operands at: 2].
+		[BrUnsignedLessRR]	->	["I.e., two jumps after a compare."
+						newBranchLeft := operands at: 1.
+						newBranchRight := operands at: 2].
+
+		[CmpRR] 	-> 	[newBranchLeft := operands at: 1.
+						 newBranchRight := operands at: 0.
 						 opcode := Label].
-		[CmpCqR]	-> 	[newBranchLeft := AT.
-						 newBranchRight := operands at: 1.
+		[CmpCqR]	-> 	[newBranchLeft := operands at: 1.
+						 newBranchRight := AT.
 						 opcode := MoveCqR.
 						 operands at: 1 put: AT].
-		[CmpCwR]	-> 	[newBranchLeft := AT.
-						 newBranchRight := operands at: 1.
+		[CmpCwR]	-> 	[newBranchLeft := operands at: 1.
+						 newBranchRight := AT.
 						 opcode := MoveCwR.
 						 operands at: 1 put: AT].
 		[TstCqR]	->	[newBranchLeft := Cmp.
@@ -2131,6 +2217,8 @@ CogMIPSELCompiler >> noteFollowingConditionalBranch: branch [
 		[SubCwR]	->	[newBranchLeft := operands at: 1.
 						 newBranchRight := ZR].
 		[SubCqR]	->	[newBranchLeft := operands at: 1.
+						 newBranchRight := ZR].
+		[ArithmeticShiftRightCqR]	->	[newBranchLeft := operands at: 1.
 						 newBranchRight := ZR].
 	} otherwise: [self unreachable].
 
@@ -2219,8 +2307,22 @@ CogMIPSELCompiler >> rewriteCPICJumpAt: addressFollowingJump target: jumpTargetA
 	<var: #addressFollowingJump type: #usqInt>
 	<var: #jumpTargetAddress type: #usqInt>
 	
-	cogit disassembleFrom: addressFollowingJump - 16 to: addressFollowingJump + 16.
-	self halt.
+	"self CmpR: ClassReg R: TempReg.
+	^self JumpNonZero: 0"
+	
+	"bne s5, s3, +156 ; =BE7C
+	 nop (delay slot)
+	 .... <-- addressFollowingJump"
+	
+	self assert: (self opcodeAtAddress: addressFollowingJump - 8) = BNE.
+	self assert: (objectMemory longAt: addressFollowingJump - 4) = self nop.
+	cogit disassembleFrom: addressFollowingJump - 8 to: addressFollowingJump.
+	
+	self rewriteITypeBranchAtAddress: addressFollowingJump - 8 target: jumpTargetAddress.
+	
+	self assert: (self opcodeAtAddress: addressFollowingJump - 8) = BNE.
+	self assert: (objectMemory longAt: addressFollowingJump - 4) = self nop.
+	cogit disassembleFrom: addressFollowingJump - 8 to: addressFollowingJump.
 ]
 
 { #category : #'inline cacheing' }
@@ -2255,6 +2357,26 @@ CogMIPSELCompiler >> rewriteCallAt: callSiteReturnAddress target: callTargetAddr
 	cogit disassembleFrom: callSiteReturnAddress - 16 to: callSiteReturnAddress.
 
 	^20
+]
+
+{ #category : #'inline cacheing' }
+CogMIPSELCompiler >> rewriteConditionalJumpLongAt: callSiteReturnAddress target: callTargetAddress [
+	"Rewrite a jump instruction to call a different target.  This variant is used to reset the 
+	jumps in the prototype CPIC to suit each use,.   
+	Answer the extent of the code change which is used to compute the range of the icache to flush."
+	<var: #callSiteReturnAddress type: #usqInt>
+	<var: #callTargetAddress type: #usqInt>
+	
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 8) = J.
+	self assert: (objectMemory longAt: callSiteReturnAddress - 4) = self nop.
+	cogit disassembleFrom: callSiteReturnAddress - 8 to: callSiteReturnAddress.
+
+	self rewriteJTypeAtAddress: callSiteReturnAddress - 8 target: callTargetAddress.
+
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 8) = J.
+	self assert: (objectMemory longAt: callSiteReturnAddress - 4) = self nop.
+	cogit disassembleFrom: callSiteReturnAddress - 8 to: callSiteReturnAddress.
+
 ]
 
 { #category : #'inline cacheing' }
@@ -2338,25 +2460,13 @@ CogMIPSELCompiler >> rewriteJumpLongAt: callSiteReturnAddress target: callTarget
 	<var: #callSiteReturnAddress type: #usqInt>
 	<var: #callTargetAddress type: #usqInt>
 	
-	self assert: (self opcodeAtAddress: callSiteReturnAddress - 8) = J.
-	self assert: (objectMemory longAt: callSiteReturnAddress - 4) = self nop.
-	cogit disassembleFrom: callSiteReturnAddress - 8 to: callSiteReturnAddress.
-
-	self rewriteJTypeAtAddress: callSiteReturnAddress - 8 target: callTargetAddress.
-
-	self assert: (self opcodeAtAddress: callSiteReturnAddress - 8) = J.
-	self assert: (objectMemory longAt: callSiteReturnAddress - 4) = self nop.
-	cogit disassembleFrom: callSiteReturnAddress - 8 to: callSiteReturnAddress.
-
-	^8
-	
 	"lui t9, stub/targetHigh
 	 ori t9, t9, stub/targetLow
 	 jr t9
 	 nop (delay slot)
 	 ...  <-- callSiteReturnAddress"
 
-	"self assert: (self opcodeAtAddress: callSiteReturnAddress - 16) = LUI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 16) = LUI.
 	self assert: (self opcodeAtAddress: callSiteReturnAddress - 12) = ORI.
 	self assert: (self opcodeAtAddress: callSiteReturnAddress - 8) = SPECIAL.
 	self assert: (self functionAtAddress: callSiteReturnAddress - 8) = JR.
@@ -2374,7 +2484,7 @@ CogMIPSELCompiler >> rewriteJumpLongAt: callSiteReturnAddress target: callTarget
 
 	cogit disassembleFrom: callSiteReturnAddress - 16 to: callSiteReturnAddress.
 
-	^20"
+	^20
 ]
 
 { #category : #'abstract instructions' }
@@ -2422,7 +2532,9 @@ CogMIPSELCompiler >> sbR: srcReg base: baseReg offset: offset [
 { #category : #testing }
 CogMIPSELCompiler >> setsConditionCodesFor: aConditionalJumpOpcode [
 	<inline: false>
-	opcode = XorRR ifTrue: [^true]. "Not really, but we can merge this in noteFollowingConditionalBranch:."
+	"Not really, but we can merge this in noteFollowingConditionalBranch:."
+	opcode = XorRR ifTrue: [^true]. 
+	opcode = ArithmeticShiftRightCqR ifTrue: [^true].
 	self unreachable.
 	^false
 ]

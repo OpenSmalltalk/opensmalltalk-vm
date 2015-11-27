@@ -1704,8 +1704,7 @@ Cogit >> JumpAbove: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpAbove operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpAbove operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1713,8 +1712,7 @@ Cogit >> JumpAboveOrEqual: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpAboveOrEqual operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpAboveOrEqual operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1722,8 +1720,7 @@ Cogit >> JumpBelow: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpBelow operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpBelow operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1731,8 +1728,7 @@ Cogit >> JumpBelowOrEqual: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpBelowOrEqual operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpBelowOrEqual operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1740,8 +1736,7 @@ Cogit >> JumpCarry: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpCarry operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpCarry operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1829,8 +1824,7 @@ Cogit >> JumpGreater: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpGreater operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpGreater operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1838,8 +1832,7 @@ Cogit >> JumpGreaterOrEqual: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpGreaterOrEqual operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpGreaterOrEqual operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1847,8 +1840,7 @@ Cogit >> JumpLess: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpLess operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpLess operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1856,8 +1848,7 @@ Cogit >> JumpLessOrEqual: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpLessOrEqual operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpLessOrEqual operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1871,16 +1862,14 @@ Cogit >> JumpLong: jumpTarget [
 Cogit >> JumpLongNonZero: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpLongNonZero operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpLongNonZero operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> JumpLongZero: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpLongZero operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpLongZero operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1888,8 +1877,7 @@ Cogit >> JumpNegative: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpNegative operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpNegative operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1897,8 +1885,7 @@ Cogit >> JumpNoCarry: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpNoCarry operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpNoCarry operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1906,8 +1893,7 @@ Cogit >> JumpNoOverflow: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpNoOverflow operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpNoOverflow operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1915,8 +1901,7 @@ Cogit >> JumpNonNegative: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpNonNegative operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpNonNegative operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1924,8 +1909,7 @@ Cogit >> JumpNonZero: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpNonZero operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpNonZero operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1933,8 +1917,7 @@ Cogit >> JumpOverflow: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpOverflow operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpOverflow operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -1949,8 +1932,7 @@ Cogit >> JumpZero: jumpTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
-	^self previousInstruction noteFollowingConditionalBranch:
-		(self gen: JumpZero operand: jumpTarget asInteger)
+	^self genConditionalBranch: JumpZero operand: jumpTarget asInteger
 ]
 
 { #category : #'abstract instructions' }
@@ -4713,7 +4695,7 @@ Cogit >> configureMNUCPIC: cPIC methodOperand: methodOperand numArgs: numArgs de
 	| operand |
 
 	"adjust the jump at missOffset, the ceAbortXArgs"
-	backEnd rewriteJumpLongAt: cPIC asInteger + missOffset target: (self picAbortTrampolineFor: numArgs).
+	backEnd rewriteCallAt: cPIC asInteger + missOffset target: (self picAbortTrampolineFor: numArgs).
 	
 	"We do not scavenge PICs, hence we cannot cache the MNU method if it is in new space."
 	operand := (methodOperand isNil or: [objectMemory isYoungObject: methodOperand])
@@ -5652,6 +5634,11 @@ Cogit >> genCheckForInterruptsTrampoline [
 		pushLinkReg: false
 		resultReg: nil
 		appendOpcodes: true
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> genConditionalBranch: opcode operand: operandOne [
+	^self previousInstruction noteFollowingConditionalBranch: (self gen: opcode operand: operandOne)
 ]
 
 { #category : #initialization }
@@ -9562,7 +9549,7 @@ Cogit >> rewriteCPICCaseAt: followingAddress tag: newTag objRef: newObjRef targe
 	backEnd storeLiteral32: newTag beforeFollowingAddress: classTagPC.
 
 	"write the jump address for the new target address"
-	backEnd rewriteJumpLongAt: followingAddress target: newTarget
+	backEnd rewriteConditionalJumpLongAt: followingAddress target: newTarget
 ]
 
 { #category : #'compile abstract instructions' }
