@@ -1644,32 +1644,6 @@ Cogit >> DivRd: dpreg1 Rd: dpreg2 [
 ]
 
 { #category : #'abstract instructions' }
-Cogit >> DumpJumpLong: jumpTarget [
-	"Convenience conflation of JumpLong: & dumpLiterals for PIC generation.
-	 Literals must be dumped early and often to keep each PIC case the same size."
-	<inline: true>
-	<returnTypeC: #'AbstractInstruction *'>
-	| inst |
-	<var: 'inst' type: #'AbstractInstruction *'>
-	inst := self gen: JumpLong operand: jumpTarget asInteger.
-	literalsManager dumpLiterals: false.
-	^inst
-]
-
-{ #category : #'abstract instructions' }
-Cogit >> DumpJumpLongZero: jumpTarget [
-	"Convenience conflation of JumpLongZero: & dumpLiterals for PIC generation.
-	 Literals must be dumped early and often to keep each PIC case the same size."
-	<inline: true>
-	<returnTypeC: #'AbstractInstruction *'>
-	| inst |
-	<var: 'inst' type: #'AbstractInstruction *'>
-	inst := self gen: JumpLongZero operand: jumpTarget asInteger.
-	literalsManager dumpLiterals: false.
-	^inst
-]
-
-{ #category : #'abstract instructions' }
 Cogit >> Fill16: value [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
