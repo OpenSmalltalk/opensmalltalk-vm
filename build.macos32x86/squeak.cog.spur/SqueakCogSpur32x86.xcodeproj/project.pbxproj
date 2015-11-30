@@ -8,6 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		731F205E1C0CDE2300A27A22 /* version.c in Sources */ = {isa = PBXBuildFile; fileRef = 731F205D1C0CDE2300A27A22 /* version.c */; };
+		735F2EC71C0CE9FE0080B9A5 /* SqueakChanges.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414421F10BC89440088F8AC /* SqueakChanges.icns */; };
+		735F2EC81C0CEA010080B9A5 /* SqueakGeneric.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414422010BC89440088F8AC /* SqueakGeneric.icns */; };
+		735F2EC91C0CEA020080B9A5 /* SqueakImage.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414422110BC89440088F8AC /* SqueakImage.icns */; };
+		735F2ECA1C0CEA030080B9A5 /* SqueakPlugin.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414422210BC89440088F8AC /* SqueakPlugin.icns */; };
+		735F2ECB1C0CEA040080B9A5 /* SqueakProject.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414422310BC89440088F8AC /* SqueakProject.icns */; };
+		735F2ECC1C0CEA050080B9A5 /* SqueakScript.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414422410BC89440088F8AC /* SqueakScript.icns */; };
+		735F2ECD1C0CEA050080B9A5 /* SqueakSources.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414422510BC89440088F8AC /* SqueakSources.icns */; };
+		735F2ED01C0CEAAC0080B9A5 /* GreenCogSqueak.icns in Resources */ = {isa = PBXBuildFile; fileRef = 735F2ECF1C0CEAAC0080B9A5 /* GreenCogSqueak.icns */; };
 		9402DD6010CE0C16005C2102 /* SqViewBitmapConversion.m in Sources */ = {isa = PBXBuildFile; fileRef = 9402DD5F10CE0C16005C2102 /* SqViewBitmapConversion.m */; };
 		9402DD7010CE0E91005C2102 /* SqViewClut.m in Sources */ = {isa = PBXBuildFile; fileRef = 9402DD6F10CE0E91005C2102 /* SqViewClut.m */; };
 		9422C3B51AFFFAC500448DC0 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9422C3B31AFFFAC500448DC0 /* Localizable.strings */; };
@@ -212,6 +220,7 @@
 		1D3623EB0D0F72F000981E51 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = vm/Common/main.m; sourceTree = "<group>"; };
 		731F205D1C0CDE2300A27A22 /* version.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = version.c; path = vm/Common/version.c; sourceTree = "<group>"; };
+		735F2ECF1C0CEAAC0080B9A5 /* GreenCogSqueak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = GreenCogSqueak.icns; path = OSX/GreenCogSqueak.icns; sourceTree = "<group>"; };
 		9400325B0DEF3936002FA1C4 /* sqDummyaio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqDummyaio.h; sourceTree = "<group>"; };
 		9400325C0DEF3936002FA1C4 /* sqDummyaio.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqDummyaio.c; sourceTree = "<group>"; };
 		9402DD5E10CE0C16005C2102 /* SqViewBitmapConversion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SqViewBitmapConversion.h; path = vm/OSX/SqViewBitmapConversion.h; sourceTree = "<group>"; };
@@ -665,6 +674,7 @@
 		29B97317FDCFA39411CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				735F2ECF1C0CEAAC0080B9A5 /* GreenCogSqueak.icns */,
 				94FA4CE41BB4DE1400C1BE8F /* Images-2.xcassets */,
 				9422C3B31AFFFAC500448DC0 /* Localizable.strings */,
 				947E64DC10AA18FE00D3B69E /* MainMenu.xib */,
@@ -1553,6 +1563,14 @@
 				9422C3B51AFFFAC500448DC0 /* Localizable.strings in Resources */,
 				94FA4CE51BB4DE1400C1BE8F /* Images-2.xcassets in Resources */,
 				9487740610C64DD800E4AEC5 /* Credits.rtf in Resources */,
+				735F2EC71C0CE9FE0080B9A5 /* SqueakChanges.icns in Resources */,
+				735F2EC81C0CEA010080B9A5 /* SqueakGeneric.icns in Resources */,
+				735F2EC91C0CEA020080B9A5 /* SqueakImage.icns in Resources */,
+				735F2ECA1C0CEA030080B9A5 /* SqueakPlugin.icns in Resources */,
+				735F2ECB1C0CEA040080B9A5 /* SqueakProject.icns in Resources */,
+				735F2ECC1C0CEA050080B9A5 /* SqueakScript.icns in Resources */,
+				735F2ECD1C0CEA050080B9A5 /* SqueakSources.icns in Resources */,
+				735F2ED01C0CEAAC0080B9A5 /* GreenCogSqueak.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

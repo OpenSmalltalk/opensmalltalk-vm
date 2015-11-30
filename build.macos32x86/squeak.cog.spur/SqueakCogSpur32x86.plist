@@ -366,7 +366,9 @@
 	<key>CFBundleExecutable</key>
 	<string>Squeak</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak Cog Spur http://www.mirandabanda.org</string>
+	<string>Squeak Cog 5.0.0 http://www.mirandabanda.org</string><!--version-->
+	<key>CFBundleIconFile</key>
+	<string>GreenCogSqueak.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -376,7 +378,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>5.0.0</string>
+	<string>5.0.0</string><!--version-->
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
