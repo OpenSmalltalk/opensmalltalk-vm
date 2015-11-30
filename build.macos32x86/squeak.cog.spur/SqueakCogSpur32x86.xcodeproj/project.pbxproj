@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		731F205E1C0CDE2300A27A22 /* version.c in Sources */ = {isa = PBXBuildFile; fileRef = 731F205D1C0CDE2300A27A22 /* version.c */; };
 		9402DD6010CE0C16005C2102 /* SqViewBitmapConversion.m in Sources */ = {isa = PBXBuildFile; fileRef = 9402DD5F10CE0C16005C2102 /* SqViewBitmapConversion.m */; };
 		9402DD7010CE0E91005C2102 /* SqViewClut.m in Sources */ = {isa = PBXBuildFile; fileRef = 9402DD6F10CE0E91005C2102 /* SqViewClut.m */; };
 		9422C3B51AFFFAC500448DC0 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9422C3B31AFFFAC500448DC0 /* Localizable.strings */; };
@@ -210,6 +211,7 @@
 		1D3623250D0F684500981E51 /* SqueakNoOGLIPhoneAppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SqueakNoOGLIPhoneAppDelegate.m; sourceTree = "<group>"; };
 		1D3623EB0D0F72F000981E51 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = vm/Common/main.m; sourceTree = "<group>"; };
+		731F205D1C0CDE2300A27A22 /* version.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = version.c; path = vm/Common/version.c; sourceTree = "<group>"; };
 		9400325B0DEF3936002FA1C4 /* sqDummyaio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqDummyaio.h; sourceTree = "<group>"; };
 		9400325C0DEF3936002FA1C4 /* sqDummyaio.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqDummyaio.c; sourceTree = "<group>"; };
 		9402DD5E10CE0C16005C2102 /* SqViewBitmapConversion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SqViewBitmapConversion.h; path = vm/OSX/SqViewBitmapConversion.h; sourceTree = "<group>"; };
@@ -773,6 +775,7 @@
 		9452D5EF0E044AC2000AD792 /* Common */ = {
 			isa = PBXGroup;
 			children = (
+				731F205D1C0CDE2300A27A22 /* version.c */,
 				29B97316FDCFA39411CA2CEA /* main.m */,
 				9478E0220EC8D957007096A7 /* plugins */,
 				9452D5F00E044AD1000AD792 /* Classes */,
@@ -1759,6 +1762,7 @@
 				9463C1D71AEE1693009C5CE5 /* study.c in Sources */,
 				94584FDB10F02378001401E7 /* sqMacExtendedClipboard.m in Sources */,
 				943B9CA11235C5120056205E /* sqMacHostWindow.m in Sources */,
+				731F205E1C0CDE2300A27A22 /* version.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

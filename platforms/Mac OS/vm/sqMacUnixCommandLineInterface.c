@@ -355,7 +355,11 @@ static void printUsage(void)
 
 static void printUsageNotes(void)
 {
-  printf("  If `-memory' is not specified then the heap will grow dynamically.\n");
+#if SPURVM
+	printf("  If `-memory' or '-maxoldspace' are not specified then the heap will grow dynamically.\n");
+#else
+	printf("  If `-memory' is not specified then the heap will grow dynamically.\n");
+#endif
   printf("  <argument>s are ignored, but are processed by the " IMAGE_DIALECT_NAME " image.\n");
   printf("  The first <argument> normally names a " IMAGE_DIALECT_NAME " `script' to execute.\n");
   printf("  Precede <arguments> by `--' to use default image.\n");

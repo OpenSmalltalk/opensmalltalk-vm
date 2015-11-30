@@ -62,9 +62,9 @@ echo $VMXCP xcodebuild -project $VMXCP.xcodeproj -configuration $BUILD_CONFIGURA
 export TZ="`date +%Z`"
 xcodebuild -project $VMXCP.xcodeproj -configuration $BUILD_CONFIGURATION
 if [ -d "$DEST" ]; then
-	mv build/$BUILD_CONFIGURATION/$APP/* "$DEST"
+	cp -Rp build/$BUILD_CONFIGURATION/$APP/* "$DEST"
 else
-	mv build/$BUILD_CONFIGURATION/$APP "$DEST"
+	cp -Rp build/$BUILD_CONFIGURATION/$APP "$DEST"
 fi
 ../../scripts/versionInfoPlist ../../platforms CoreVM.plist "$DEST/Contents/Info.plist"
 

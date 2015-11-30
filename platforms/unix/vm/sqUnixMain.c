@@ -1585,7 +1585,11 @@ static void vm_printUsage(void)
 
 static void vm_printUsageNotes(void)
 {
-  printf("  If `-memory' is not specified then the heap will grow dynamically.\n");
+#if SPURVM
+	printf("  If `-memory' or '-maxoldspace' are not specified then the heap will grow dynamically.\n");
+#else
+	printf("  If `-memory' is not specified then the heap will grow dynamically.\n");
+#endif
   printf("  <argument>s are ignored, but are processed by the " IMAGE_DIALECT_NAME " image.\n");
   printf("  The first <argument> normally names a " IMAGE_DIALECT_NAME " `script' to execute.\n");
   printf("  Precede <arguments> by `--' to use default image.\n");
@@ -2111,7 +2115,7 @@ sqInt ioGatherEntropy(char *buffer, sqInt bufSize)
  * b) answer the amount of stack room to ensure in a Cog stack page, including
  *    the size of the redzone, if any.
  */
-# if defined(i386) || defined(__i386) || defined(__i386__)
+
 /*
  * Cog has already captured CStackPointer  before calling this routine.  Record
  * the original value, capture the pointers again and determine if CFramePointer
@@ -2131,22 +2135,7 @@ isCFramePointerInUse()
 	assert(CStackPointer < currentCSP);
 	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
 }
-# endif /* defined(i386) || defined(__i386) || defined(__i386__) */
-# if defined(__arm__) || defined(__arm32__) || defined(ARM32)
-/* Currently pretty sure fp is used but prepared to be shown wrong */
- int
-isCFramePointerInUse()
-{
-	extern unsigned long CStackPointer, CFramePointer;
-	extern void (*ceCaptureCStackPointers)(void);
-	unsigned long currentCSP = CStackPointer;
 
-	currentCSP = CStackPointer;
-	ceCaptureCStackPointers();
-	assert(CStackPointer < currentCSP);
-	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
-}
-#endif /* defined(__arm__) || defined(__arm32__) || defined(ARM32) */
 /* Answer an approximation of the size of the redzone (if any).  Do so by
  * sending a signal to the process and computing the difference between the
  * stack pointer in the signal handler and that in the caller. Assumes stacks
@@ -2159,7 +2148,7 @@ isCFramePointerInUse()
 static char * volatile p = 0;
 
 static void
-sighandler(int sig) { p = (char *)&sig; }
+sighandler(int sig, siginfo_t *info, void *uap) { p = (char *)&sig; }
 
 static int
 getRedzoneSize()

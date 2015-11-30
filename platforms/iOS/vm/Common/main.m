@@ -46,7 +46,7 @@ int main(int argc, char **argv, char **envp)
 	extern char **envVec;
 	
 	argCnt = argc;
-	argVec= argv;
+	argVec = argv;
 	envVec = envp;
 	
     return NSApplicationMain(argc,  (const char **) argv);
