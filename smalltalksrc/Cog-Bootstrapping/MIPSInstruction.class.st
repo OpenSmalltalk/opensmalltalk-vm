@@ -111,7 +111,7 @@ MIPSInstruction >> rt [
 
 { #category : #fields }
 MIPSInstruction >> sa [
-	^(value >> 6) bitAnd: 15
+	^(value >> 6) bitAnd: 31
 ]
 
 { #category : #fields }
