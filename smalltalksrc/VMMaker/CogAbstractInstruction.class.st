@@ -1307,6 +1307,13 @@ CogAbstractInstruction >> rewriteCallFullAt: callSiteReturnAddress target: callT
 ]
 
 { #category : #'inline cacheing' }
+CogAbstractInstruction >> rewriteConditionalJumpLongAt: callSiteReturnAddress target: callTargetAddress [
+	"Rewrite a conditional jump long to jump to target.  This version defaults to using
+	 rewriteJumpLongAt:, which works for many ISAs.  Subclasses override if necessary."
+	^self rewriteJumpLongAt: callSiteReturnAddress target: callTargetAddress
+]
+
+{ #category : #'inline cacheing' }
 CogAbstractInstruction >> rewriteInlineCacheTag: cacheTag at: callSiteReturnAddress [
 	"Rewrite an inline cache with a new tag.  This variant is used
 	 by the garbage collector."
