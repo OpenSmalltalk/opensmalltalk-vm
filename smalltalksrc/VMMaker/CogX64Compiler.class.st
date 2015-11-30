@@ -242,6 +242,12 @@ CogX64Compiler >> callerSavedRegisterMask [
 		and: (self abstractRegisterForConcreteRegister: R11)
 ]
 
+{ #category : #testing }
+CogX64Compiler >> canDivQuoRem [
+	<inline: true>
+	^true
+]
+
 { #category : #accessing }
 CogX64Compiler >> cmpC32RTempByteSize [
 	^6
@@ -1816,6 +1822,20 @@ CogX64Compiler >> concretizeXCHGRR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeXorRR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| regLHS regRHS |
+	regLHS := self concreteRegister: (operands at: 0).
+	regRHS := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: (self rexR: regRHS x: 0 b: regLHS);
+		at: 1 put: 16r33;
+		at: 2 put: (self mod: ModReg RM: regLHS RO: regRHS).
+	^machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> dispatchConcretize [
 	"Attempt to generate concrete machine code for the instruction at address.
 	 This is the inner dispatch of concretizeAt: actualAddress which exists only
@@ -2628,6 +2648,29 @@ CogX64Compiler >> saveAndRestoreLinkRegAround: aBlock [
 	 to save and restore it around aBlock, which is assumed to generate code."
 	<inline: true>
 	^aBlock value
+]
+
+{ #category : #testing }
+CogX64Compiler >> setsConditionCodesFor: aConditionalJumpOpcode [
+	<inline: false> "to save Slang from having to be a real compiler (it can't inline switches that return)"
+	"Answer if the receiver's opcode sets the condition codes correctly for the given conditional jump opcode."
+	^opcode caseOf:
+		{	[ArithmeticShiftRightCqR]	->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
+			[ArithmeticShiftRightRR]	->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
+			[LogicalShiftLeftCqR]		->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
+			[LogicalShiftLeftRR]		->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
+			[XorRR]					->	[true]
+		}
+		otherwise: [self halt: 'unhandled opcode in setsConditionCodesFor:'. false]
+]
+
+{ #category : #testing }
+CogX64Compiler >> shiftSetsConditionCodesFor: aConditionalJumpOpcode [
+	"OF flag only guaranteed to be set for 1-bit shifts.  See [1] p 490.
+	 Only SF, ZF & PF set according to result.  Since the question is currently
+	 asked only for Zero and Negative use the following simplification."
+	<inline: true>
+	^(aConditionalJumpOpcode between: JumpZero and: JumpNonNegative)
 ]
 
 { #category : #disassembly }
