@@ -3066,11 +3066,6 @@ CogARMCompiler >> rewriteCallFullAt: callSiteReturnAddress target: callTargetAdd
 ]
 
 { #category : #'inline cacheing' }
-CogARMCompiler >> rewriteConditionalJumpLongAt: callSiteReturnAddress target: callTargetAddress [
-	^self rewriteJumpLongAt: callSiteReturnAddress target: callTargetAddress
-]
-
-{ #category : #'inline cacheing' }
 CogARMCompiler >> rewriteFullTransferAt: callSiteReturnAddress target: callTargetAddress expectedInstruction: expectedInstruction [
 	"Rewrite a CallFull or JumpFull instruction to transfer to a different target.
 	 This variant is used to rewrite cached primitive calls.   Answer the extent
