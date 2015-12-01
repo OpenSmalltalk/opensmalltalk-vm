@@ -2059,6 +2059,14 @@ Cogit >> MoveR: reg1 R: reg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> MoveR: srcReg Rd: destDPReg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	self assert: objectMemory wordSize = 8.
+	^self gen: MoveRRd operand: srcReg operand: destDPReg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> MoveR: srcReg Xbr: indexReg R: baseReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2077,6 +2085,14 @@ Cogit >> MoveRd: sourceDPReg M64: offset r: baseReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: MoveRdM64r operand: sourceDPReg quickConstant: offset operand: baseReg
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> MoveRd: srcDPReg R: destReg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	self assert: objectMemory wordSize = 8.
+	^self gen: MoveRdR operand: srcDPReg operand: destReg
 ]
 
 { #category : #'abstract instructions' }
@@ -9595,8 +9611,7 @@ Cogit >> scanMethod [
 	inBlock := false.
 	self cppIf: #NewspeakVM ifTrue:
 		[numIRCs := 0].
-	(primitiveIndex > 0
-	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
+	self checkForQuickPrimitiveAdjustingIntialPCIfErrorCodeUsed ifTrue:
 		[^0].
 	pc := latestContinuation := initialPC.
 	numBlocks := framelessStackDelta := nExts := extA := extB := 0.

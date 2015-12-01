@@ -103,12 +103,14 @@ Class {
 		'MoveRMbr',
 		'MoveRMwr',
 		'MoveRR',
+		'MoveRRd',
 		'MoveRX16rR',
 		'MoveRX32rR',
 		'MoveRXbrR',
 		'MoveRXowr',
 		'MoveRXwrR',
 		'MoveRdM64r',
+		'MoveRdR',
 		'MoveRdRd',
 		'MoveX16rRR',
 		'MoveX32rRR',
@@ -193,10 +195,14 @@ CogRTLOpcodes class >> initialize [
 
 	The assumption is that comparison and arithmetic instructions set condition codes and that move instructions
 	leave the condition codes unaffected.  In particular LoadEffectiveAddressMwrR does not set condition codes
-	although it can be used to do arithmetic.
+	although it can be used to do arithmetic.  On processors such as MIPS this distinction is invalid; there are no
+	condition codes.  So the backend is allowed to collapse operation, branch pairs to internal instruciton definitions
+	(see sender and implementors of noteFollowingConditionalBranch:). 
 
 	Not all of the definitions in opcodeDefinitions below are implemented.  In particular we do not implement the
 	XowrR scaled index addressing mode since it requires 4 operands.
+
+	Not all instructions make sense on all architectures.  MoveRRd and MoveRdR aqre meaningful only on 64-bit machines.
 
 	Note that there are no generic division instructions defined, but a processor may define some.
 
@@ -314,7 +320,7 @@ CogRTLOpcodes class >> initialize [
 						MoveM32rR MoveRM32r MoveX32rRR MoveRX32rR
 						MoveMbrR MoveRMbr MoveXbrRR MoveRXbrR
 						MoveCqR MoveCwR MoveC32R MoveC64R
-						MoveRdRd MoveM64rRd MoveRdM64r
+						MoveRRd MoveRdR MoveRdRd MoveM64rRd MoveRdM64r
 						PopR PushR PushCq PushCw
 						PrefetchAw
 
@@ -380,6 +386,7 @@ CogRTLOpcodes class >> nameForRegister: reg [ "<Integer>"
 		DPFPReg0 DPFPReg1 DPFPReg2 DPFPReg3 DPFPReg4 DPFPReg5 DPFPReg6 DPFPReg7
 		LinkReg RISCTempReg VarBaseReg PCReg)
 			detect: [:sym| (classPool at: sym) = reg]
+			ifNone: ['REG', reg printString, '?']
 ]
 
 { #category : #accessing }
