@@ -67,8 +67,8 @@ CogX64CompilerForTests class >> registersWithNamesDo: aBinaryBlock [
 
 { #category : #'test support' }
 CogX64CompilerForTests class >> xmmRegistersWithNamesDo: aBinaryBlock [
-	{XMM0L. XMM1L. XMM2L. XMM3L. XMM4L. XMM5L. XMM6L. XMM7L}
-		with: #('%xmm0' '%xmm1' '%xmm2' '%xmm3' '%xmm4' '%xmm5' '%xmm6' '%xmm7')
+	(XMM0L to: XMM15L by: XMM1L - XMM0L)
+		with: ((0 to: 15) collect: [:i| '%xmm', i printString])
 		do: aBinaryBlock
 ]
 

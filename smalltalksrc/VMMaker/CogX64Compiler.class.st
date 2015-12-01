@@ -56,6 +56,18 @@ Class {
 		'XCHGRR',
 		'XMM0H',
 		'XMM0L',
+		'XMM10H',
+		'XMM10L',
+		'XMM11H',
+		'XMM11L',
+		'XMM12H',
+		'XMM12L',
+		'XMM13H',
+		'XMM13L',
+		'XMM14H',
+		'XMM14L',
+		'XMM15H',
+		'XMM15L',
 		'XMM1H',
 		'XMM1L',
 		'XMM2H',
@@ -69,7 +81,11 @@ Class {
 		'XMM6H',
 		'XMM6L',
 		'XMM7H',
-		'XMM7L'
+		'XMM7L',
+		'XMM8H',
+		'XMM8L',
+		'XMM9H',
+		'XMM9L'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -128,6 +144,14 @@ CogX64Compiler class >> initialize [
 	XMM5L := 10.
 	XMM6L := 12.
 	XMM7L := 14.
+	XMM8L := 16.
+	XMM9L := 18.
+	XMM10L := 20.
+	XMM11L := 22.
+	XMM12L := 24.
+	XMM13L := 26.
+	XMM14L := 28.
+	XMM15L := 30.
 
 	XMM0H := 1.
 	XMM1H := 3.
@@ -137,6 +161,14 @@ CogX64Compiler class >> initialize [
 	XMM5H := 11.
 	XMM6H := 13.
 	XMM7H := 15.
+	XMM8H := 17.
+	XMM9H := 19.
+	XMM10H := 21.
+	XMM11H := 23.
+	XMM12H := 25.
+	XMM13H := 27.
+	XMM14H := 29.
+	XMM15H := 31.
 
 	"Mod R/M Mod fields.  See [1] Sec 2.4, 2.5 & 2.6 & Table 2-2"
 	ModRegInd := 0.
@@ -378,6 +410,8 @@ CogX64Compiler >> computeMaximumSize [
 		[MoveC32R]	-> [^7]. "N.B. Always inlined."
 		[MoveRR]		-> [^3].
 		[MoveRdRd]		-> [^4].
+		[MoveRRd]		-> [^5].
+		[MoveRdR]		-> [^5].
 		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0))
 								ifTrue: [7]
 								ifFalse: [(self concreteRegister: (operands at: 1)) = RAX ifTrue: [10] ifFalse: [14]]].
@@ -400,12 +434,12 @@ CogX64Compiler >> computeMaximumSize [
 								+ (((self concreteRegister: (operands at: 2)) bitAnd: 7) = RSP
 									ifTrue: [1]
 									ifFalse: [0])].
-		"[MoveRdM64r]	-> [^((self isQuick: (operands at: 1))
+		[MoveRdM64r]	-> [^((self isQuick: (operands at: 1))
 											ifTrue: [5]
 											ifFalse: [8])
-										+ ((self concreteRegister: (operands at: 2)) = ESP
+										+ ((((self concreteRegister: (operands at: 2)) bitAnd: 7) between: RSP and: RBP)
 											ifTrue: [1]
-											ifFalse: [0])]."
+											ifFalse: [0])].
 		[MoveMbrR]		-> [self assert: (self is32BitSignedImmediate: (operands at: 0)).
 							^((self isQuick: (operands at: 0))
 									ifTrue: [((operands at: 0) = 0
@@ -435,12 +469,14 @@ CogX64Compiler >> computeMaximumSize [
 								+ (((self concreteRegister: (operands at: 1)) bitAnd: 7) = RSP
 									ifTrue: [1]
 									ifFalse: [0])].
-		"[MoveM64rRd]	-> [^((self isQuick: (operands at: 0))
-											ifTrue: [5]
+		[MoveM64rRd]	-> [^((self isQuick: (operands at: 0))
+											ifTrue: [((operands at: 0) = 0 and: [((operands at: 1) bitAnd: 6) ~= RSP])
+														ifTrue: [4]
+														ifFalse: [5]]
 											ifFalse: [8])
-										+ ((self concreteRegister: (operands at: 1)) = ESP
+										+ ((((self concreteRegister: (operands at: 1)) bitAnd: 7) between: RSP and: RBP)
 											ifTrue: [1]
-											ifFalse: [0])]."
+											ifFalse: [0])].
 		[MoveMwrR]		-> [self assert: (self is32BitSignedImmediate: (operands at: 0)).
 								^((self isQuick: (operands at: 0))
 									ifTrue: [((operands at: 0) = 0
@@ -492,7 +528,7 @@ CogX64Compiler >> computeMaximumSize [
 								ifFalse: [self pushCwByteSize]].
 		[PrefetchAw]	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [7] ifFalse: [0]].
 		"Conversion"
-		"[ConvertRRd]	-> [^4]" }.
+		[ConvertRRd]	-> [^5] }.
 	^0 "to keep C compiler quiet"
 ]
 
@@ -561,7 +597,7 @@ CogX64Compiler >> concreteDPFPRegister: registerIndex [
 			[DPFPReg6]	-> [XMM6L / 2].
 			[DPFPReg7]	-> [XMM7L / 2] }
 		otherwise:
-			[self assert: (registerIndex between: XMM0L and: XMM7L).
+			[self assert: (registerIndex between: XMM0L and: XMM15L).
 			 self assert: (registerIndex bitAnd: 1) = 0.
 			 registerIndex / 2]
 ]
@@ -770,6 +806,22 @@ CogX64Compiler >> concretizeConditionalJumpLong: conditionCode [
 		at: 4 put: (offset >> 16 bitAnd: 16rFF);
 		at: 5 put: (offset >> 24 bitAnd: 16rFF).
 	^machineCodeSize := 6
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeConvertRRd [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| srcReg destReg |
+	srcReg := self concreteRegister: (operands at:0).
+	destReg := self concreteDPFPRegister: (operands at: 1).
+	machineCode
+		at: 0 put: 16rF2;
+		at: 1 put: (self rexR: destReg x: 0 b: srcReg);
+		at: 2 put: 16r0F;
+		at: 3 put: 16r2A;
+		at: 4 put: (self mod: ModReg RM: srcReg RO: destReg).
+	 ^machineCodeSize := 5
 ]
 
 { #category : #'generate machine code' }
@@ -1130,6 +1182,53 @@ CogX64Compiler >> concretizeMoveM16rR [
 		at: 7 put: (offset >> 16 bitAnd: 16rFF);
 		at: 8 put: (offset >> 24 bitAnd: 16rFF).
 	^machineCodeSize := 9
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveM64rRd [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| offset srcReg destReg skip |
+	offset := operands at: 0.
+	srcReg := self concreteRegister: (operands at: 1).
+	destReg := self concreteDPFPRegister: (operands at: 2).
+	machineCode at: 0 put: 16rF3.
+	(srcReg <= 7 and: [destReg <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: destReg x: 0 b: srcReg)].
+	machineCode
+		at: skip + 1 put: 16r0f;
+		at: skip + 2 put: 16r7e.
+	offset = 0 ifTrue:
+		[(srcReg bitAnd: 6) ~= RSP ifTrue:
+			[machineCode at: skip + 3 put: (self mod: ModRegInd RM: srcReg RO: destReg).
+			 ^machineCodeSize := skip + 4].
+		 (srcReg bitAnd: 7) = RSP ifTrue: "RBP & R13 fall through"
+			[machineCode
+				at: skip + 3 put: (self mod: ModRegInd RM: srcReg RO: destReg);
+				at: skip + 4 put: (self s: SIB1 i: 4 b: srcReg).
+			 ^machineCodeSize := skip + 5]].
+	(self isQuick: offset) ifTrue:
+		[(srcReg bitAnd: 7) ~= RSP ifTrue:
+			[machineCode
+				at: skip + 3 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+				at: skip + 4 put: (offset bitAnd: 16rFF).
+			 ^machineCodeSize := skip + 5].
+		 machineCode
+			at: skip + 3 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+			at: skip + 4 put: (self s: SIB1 i: 4 b: srcReg);
+			at: skip + 5 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := skip + 6].
+	machineCode at: skip + 3 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg).
+	(srcReg bitAnd: 6) = RSP ifTrue:
+		[machineCode at: skip + 4 put: (self s: SIB1 i: 4 b: srcReg).
+		 skip := skip + 1].
+	machineCode
+		at: skip + 4 put: (offset bitAnd: 16rFF);
+		at: skip + 5 put: (offset >> 8 bitAnd: 16rFF);
+		at: skip + 6 put: (offset >> 16 bitAnd: 16rFF);
+		at: skip + 7 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := skip + 8
 ]
 
 { #category : #'generate machine code' }
