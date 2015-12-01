@@ -1054,8 +1054,7 @@ SistaStackToRegisterMappingCogit >> scanMethod [
 	numCounters := 0.
 	self cppIf: #NewspeakVM ifTrue:
 		[numIRCs := 0].
-	(primitiveIndex > 0
-	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
+	self checkForQuickPrimitiveAdjustingIntialPCIfErrorCodeUsed ifTrue:
 		[^0].
 	pc := latestContinuation := initialPC.
 	numBlocks := framelessStackDelta := nExts := extA := extB := 0.

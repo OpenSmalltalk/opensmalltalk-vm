@@ -48,7 +48,7 @@ CogIA32CompilerForTests class >> fp64registers [
 
 { #category : #'test support' }
 CogIA32CompilerForTests class >> registers [
-	^{ EAX. ECX. EDX. EBX. ESP. EBP. ESI. EDI } "a.k.a. (0 to: 7)"
+	^(0 to: 7) "a.k.a. { EAX. ECX. EDX. EBX. ESP. EBP. ESI. EDI }"
 ]
 
 { #category : #'test support' }

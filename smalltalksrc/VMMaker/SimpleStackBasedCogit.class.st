@@ -802,6 +802,24 @@ SimpleStackBasedCogit >> ceShortCutTraceStore: aProcessorSimulationTrap [
 ]
 
 { #category : #'compile abstract instructions' }
+SimpleStackBasedCogit >> checkForQuickPrimitiveAdjustingIntialPCIfErrorCodeUsed [
+	"Answer if methodObj contains a quick primitive.  In addition, if it has a primitive
+	 that uses an error code, update the initialPC to skip this code.  The code to
+	 process the error code is generated in compileFrameBuild.  For fixups to work
+	 correctly, the initialPC must be updated before scanning for backward branches."
+
+	| methodHeader |
+	primitiveIndex = 0 ifTrue:
+		[^false].
+	methodHeader := objectMemory methodHeaderOf: methodObj.
+	(self methodUsesPrimitiveErrorCode: methodHeader) ifTrue:
+		[initialPC := initialPC
+				+ (coInterpreter sizeOfCallPrimitiveBytecode: methodHeader)
+				+ (coInterpreter sizeOfLongStoreTempBytecode: methodHeader)].
+	^coInterpreter isQuickPrimitiveIndex: primitiveIndex
+]
+
+{ #category : #'compile abstract instructions' }
 SimpleStackBasedCogit >> compileBlockBodies [
 	<inline: false>
 	| result compiledBlocksCount blockStart savedNeedsFrame savedNumArgs |
@@ -982,15 +1000,8 @@ SimpleStackBasedCogit >> compileFrameBuild [
 	methodOrBlockNumArgs + 1 to: (coInterpreter temporaryCountOfMethodHeader: methodHeader) do:
 		[:i|
 		self PushR: SendNumArgsReg].
-	(primitiveIndex > 0
-	 and: [(coInterpreter longStoreBytecodeForHeader: methodHeader)
-			= (objectMemory
-				fetchByte: initialPC + (coInterpreter sizeOfCallPrimitiveBytecode: methodHeader)
-				ofObject: methodObj)]) ifTrue:
-		[self compileGetErrorCode.
-		 initialPC := initialPC
-				   + (coInterpreter sizeOfCallPrimitiveBytecode: methodHeader)
-				   + (coInterpreter sizeOfLongStoreTempBytecode: methodHeader)].
+	(self methodUsesPrimitiveErrorCode: methodHeader) ifTrue:
+		[self compileGetErrorCode].
 	self MoveAw: coInterpreter stackLimitAddress R: TempReg.
 	self CmpR: TempReg R: SPReg. "N.B. FLAGS := SPReg - TempReg"
 	"If we can't context switch for this method, use a slightly
@@ -3792,6 +3803,16 @@ SimpleStackBasedCogit >> maybeCompileAllocFillerCheck [
 { #category : #trampolines }
 SimpleStackBasedCogit >> methodAbortTrampolineFor: numArgs [
 	^ceMethodAbortTrampoline
+]
+
+{ #category : #'compile abstract instructions' }
+SimpleStackBasedCogit >> methodUsesPrimitiveErrorCode: methodHeader [
+	"Answer if methodObj contains a primitive and uses the primitive error code."
+	^(coInterpreter primitiveIndexOfMethod: methodObj header: methodHeader) > 0
+	  and: [(coInterpreter longStoreBytecodeForHeader: methodHeader)
+			= (objectMemory
+				fetchByte: initialPC + (coInterpreter sizeOfCallPrimitiveBytecode: methodHeader)
+				ofObject: methodObj)]
 ]
 
 { #category : #testing }
