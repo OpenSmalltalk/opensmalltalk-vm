@@ -169,11 +169,13 @@ CogProcessorAlien >> disassembleNextInstructionIn: memory [
 { #category : #disassembly }
 CogProcessorAlien >> disassembleNextInstructionIn: memory for: aSymbolManager [ "<Cogit|nil>"
 	| string |
-	string := self pc < memory size 
-				ifTrue: [(self primitiveDisassembleAt: self pc inMemory: memory) last.]
-				ifFalse: [string := aSymbolManager ifNotNil:
+	self pc >= memory size ifTrue:
+		[string := aSymbolManager ifNotNil:
 									[aSymbolManager lookupAddress: self pc].
 						 ^self pc hex, ' : ', (string ifNil: ['Invalid address'])].
+	string := self primitiveDisassembleAt: self pc inMemory: memory.
+	string isString ifFalse:
+		[^'ERROR: ', (string printString contractTo: 40)].
 	^aSymbolManager
 		ifNil: [string]
 		ifNotNil: [self decorateDisassembly: string for: aSymbolManager fromAddress: self pc]
