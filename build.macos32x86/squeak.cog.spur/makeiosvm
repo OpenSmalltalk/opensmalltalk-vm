@@ -73,41 +73,41 @@ echo
 echo FloatMathPlugin xcodebuild -project FloatMathPlugin/FloatMathPlugin.xcodeproj -configuration Release
 xcodebuild -project FloatMathPlugin/FloatMathPlugin.xcodeproj -configuration Release
 rm -rf "$DEST/Contents/Resources/FloatMathPlugin.bundle"
-echo cp -R FloatMathPlugin/build/Release/FloatMathPlugin.bundle "$DEST/Contents/Resources"
-cp -R FloatMathPlugin/build/Release/FloatMathPlugin.bundle "$DEST/Contents/Resources"
+echo cp -Rp FloatMathPlugin/build/Release/FloatMathPlugin.bundle "$DEST/Contents/Resources"
+cp -Rp FloatMathPlugin/build/Release/FloatMathPlugin.bundle "$DEST/Contents/Resources"
 
 # Build the FloatArray plugin
 echo
 echo FloatArrayPlugin xcodebuild -project FloatArrayPlugin/FloatArrayPlugin.xcodeproj -configuration Release
 xcodebuild -project FloatArrayPlugin/FloatArrayPlugin.xcodeproj -configuration Release
 rm -rf "$DEST/Contents/Resources/FloatArrayPlugin.bundle"
-cp -R FloatArrayPlugin/build/Release/FloatArrayPlugin.bundle "$DEST/Contents/Resources"
+cp -Rp FloatArrayPlugin/build/Release/FloatArrayPlugin.bundle "$DEST/Contents/Resources"
 
 # Build the Croquet plugin
 echo
 echo CroquetPlugin xcodebuild -project CroquetPlugin/CroquetPlugin.xcodeproj -configuration Release
 xcodebuild -project CroquetPlugin/CroquetPlugin.xcodeproj -configuration Release
 rm -rf "$DEST/Contents/Resources/CroquetPlugin.bundle"
-cp -R CroquetPlugin/build/Release/CroquetPlugin.bundle "$DEST/Contents/Resources"
+cp -Rp CroquetPlugin/build/Release/CroquetPlugin.bundle "$DEST/Contents/Resources"
 
 #Build the mpeg3 plugin
 echo
 echo Mpeg3Plugin xcodebuild -project Mpeg3Plugin/Mpeg3Plugin.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
 xcodebuild -project Mpeg3Plugin/Mpeg3Plugin.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
-cp -R Mpeg3Plugin/build/$NSD_BUILD_CONFIGURATION/Mpeg3Plugin.bundle "$DEST/Contents/Resources"
+cp -Rp Mpeg3Plugin/build/$NSD_BUILD_CONFIGURATION/Mpeg3Plugin.bundle "$DEST/Contents/Resources"
 
 echo
 echo SqueakFFIPlugin xcodebuild -project $SFP/SqueakFFI.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
 xcodebuild -project $SFP/SqueakFFI.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
 rm -rf "$DEST/Contents/Resources/SqueakFFIPrims.bundle"
-cp -R $SFP/build/$NSD_BUILD_CONFIGURATION/SqueakFFIPrims.bundle "$DEST/Contents/Resources"
+cp -Rp $SFP/build/$NSD_BUILD_CONFIGURATION/SqueakFFIPrims.bundle "$DEST/Contents/Resources"
 
 # Build the SSL plugin (New as of 25 March 2013)
 echo
 echo SqueakSSL xcodebuild -project SqueakSSL/SqueakSSL.xcodeproj -configuration $XCD_BUILD_CONFIGURATION
 xcodebuild -project SqueakSSL/SqueakSSL.xcodeproj -configuration $XCD_BUILD_CONFIGURATION
 rm -rf "$DEST/Contents/Resources/SqueakSSL.bundle"
-cp -R SqueakSSL/build/$XCD_BUILD_CONFIGURATION/SqueakSSL.bundle "$DEST/Contents/Resources"
+cp -Rp SqueakSSL/build/$XCD_BUILD_CONFIGURATION/SqueakSSL.bundle "$DEST/Contents/Resources"
 
 # Build the BochsIA32Plugin
 # N.B. To build the plugin you also have to build the Bochs libraries in
@@ -116,7 +116,7 @@ if test -f ../bochsx86/cpu/libcpu.a; then
 echo BochsIA32Plugin xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project BochsIA32Plugin/BochsIA32Plugin.xcodeproj
 xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project BochsIA32Plugin/BochsIA32Plugin.xcodeproj
 rm -rf "$DEST/Contents/Resources/BochsIA32Plugin.bundle"
-cp -R BochsIA32Plugin/build/$XCD_BUILD_CONFIGURATION/BochsIA32Plugin.bundle "$DEST/Contents/Resources"
+cp -Rp BochsIA32Plugin/build/$XCD_BUILD_CONFIGURATION/BochsIA32Plugin.bundle "$DEST/Contents/Resources"
 else
 echo "not building BochsIA32Plugin; support libraries unavailable"
 fi
@@ -128,7 +128,7 @@ if test -f ../bochsx64/cpu/libcpu.a; then
 echo BochsX64Plugin xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project BochsX64Plugin/BochsX64Plugin.xcodeproj
 xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project BochsX64Plugin/BochsX64Plugin.xcodeproj
 rm -rf "$DEST/Contents/Resources/BochsX64Plugin.bundle"
-cp -R BochsX64Plugin/build/$XCD_BUILD_CONFIGURATION/BochsX64Plugin.bundle "$DEST/Contents/Resources"
+cp -Rp BochsX64Plugin/build/$XCD_BUILD_CONFIGURATION/BochsX64Plugin.bundle "$DEST/Contents/Resources"
 else
 echo "not building BochsX64Plugin; support libraries unavailable"
 fi
@@ -140,7 +140,7 @@ if test -f ../gdbarm32/opcodes/libopcodes.a; then
 echo GdbARMPlugin xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project GdbARMPlugin/GdbARMPlugin.xcodeproj
 xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project GdbARMPlugin/GdbARMPlugin.xcodeproj
 rm -rf "$DEST/Contents/Resources/GdbARMPlugin.bundle"
-cp -R GdbARMPlugin/build/$XCD_BUILD_CONFIGURATION/GdbARMPlugin.bundle "$DEST/Contents/Resources"
+cp -Rp GdbARMPlugin/build/$XCD_BUILD_CONFIGURATION/GdbARMPlugin.bundle "$DEST/Contents/Resources"
 else
 echo "not building GdbARMPlugin; support libraries unavailable"
 fi
@@ -149,7 +149,7 @@ fi
 echo UnixOSProcessPlugin xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project UnixOSProcessPlugin/UnixOSProcessPlugin.xcodeproj
 xcodebuild -configuration $XCD_BUILD_CONFIGURATION -project UnixOSProcessPlugin/UnixOSProcessPlugin.xcodeproj
 rm -rf "$DEST/Contents/Resources/UnixOSProcessPlugin.bundle"
-cp -R UnixOSProcessPlugin/build/$XCD_BUILD_CONFIGURATION/UnixOSProcessPlugin.bundle "$DEST/Contents/Resources"
+cp -Rp UnixOSProcessPlugin/build/$XCD_BUILD_CONFIGURATION/UnixOSProcessPlugin.bundle "$DEST/Contents/Resources"
 
 # Clean out any .svn directories (result of copying) in the VM
 find "$DEST" -name .svn -exec rm -rf {} \;

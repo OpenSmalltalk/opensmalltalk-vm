@@ -201,7 +201,7 @@ void long_idiv(Bit128s *quotient,Bit64s *remainder,Bit128s *dividend,Bit64s divi
   if (s1 ^ s2) {
     long_neg(quotient);
   }
-  if (s2) {
+  if (s1) {
     *remainder = -*remainder;
   }
 }
@@ -319,7 +319,7 @@ void BX_CPP_AttrRegparmN(1) BX_CPU_C::IDIV_RAXEqR(bxInstruction_c *i)
   quotient_64l = quotient_128.lo;
 
   if ((!(quotient_128.lo & BX_CONST64(0x8000000000000000)) && quotient_128.hi != (Bit64s) 0) ||
-        (quotient_128.lo & BX_CONST64(0x8000000000000000)) && quotient_128.hi != (Bit64s) BX_CONST64(0xffffffffffffffff))
+        ((quotient_128.lo & BX_CONST64(0x8000000000000000)) && quotient_128.hi != (Bit64s) BX_CONST64(0xffffffffffffffff)))
   {
     exception(BX_DE_EXCEPTION, 0, 0);
   }
