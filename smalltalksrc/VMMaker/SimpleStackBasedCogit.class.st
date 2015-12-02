@@ -802,24 +802,6 @@ SimpleStackBasedCogit >> ceShortCutTraceStore: aProcessorSimulationTrap [
 ]
 
 { #category : #'compile abstract instructions' }
-SimpleStackBasedCogit >> checkForQuickPrimitiveAdjustingIntialPCIfErrorCodeUsed [
-	"Answer if methodObj contains a quick primitive.  In addition, if it has a primitive
-	 that uses an error code, update the initialPC to skip this code.  The code to
-	 process the error code is generated in compileFrameBuild.  For fixups to work
-	 correctly, the initialPC must be updated before scanning for backward branches."
-
-	| methodHeader |
-	primitiveIndex = 0 ifTrue:
-		[^false].
-	methodHeader := objectMemory methodHeaderOf: methodObj.
-	(self methodUsesPrimitiveErrorCode: methodHeader) ifTrue:
-		[initialPC := initialPC
-				+ (coInterpreter sizeOfCallPrimitiveBytecode: methodHeader)
-				+ (coInterpreter sizeOfLongStoreTempBytecode: methodHeader)].
-	^coInterpreter isQuickPrimitiveIndex: primitiveIndex
-]
-
-{ #category : #'compile abstract instructions' }
 SimpleStackBasedCogit >> compileBlockBodies [
 	<inline: false>
 	| result compiledBlocksCount blockStart savedNeedsFrame savedNumArgs |
@@ -984,11 +966,10 @@ SimpleStackBasedCogit >> compileFrameBuild [
 	If there is a primitive and an error code the Nth temp is the error code.
 	Ensure SendNumArgsReg is set early on (incidentally to nilObj) because
 	it is the flag determining whether context switch is allowed on stack-overflow."
-	| methodHeader jumpSkip |
+	| jumpSkip |
 	<inline: false>
 	<var: #jumpSkip type: #'AbstractInstruction *'>
 	needsFrame ifFalse: [^0].
-	methodHeader := objectMemory methodHeaderOf: methodObj.
 	backEnd hasLinkRegister ifTrue: [self PushR: LinkReg].
 	self PushR: FPReg.
 	self MoveR: SPReg R: FPReg.
@@ -1000,7 +981,7 @@ SimpleStackBasedCogit >> compileFrameBuild [
 	methodOrBlockNumArgs + 1 to: (coInterpreter temporaryCountOfMethodHeader: methodHeader) do:
 		[:i|
 		self PushR: SendNumArgsReg].
-	(self methodUsesPrimitiveErrorCode: methodHeader) ifTrue:
+	self methodUsesPrimitiveErrorCode ifTrue:
 		[self compileGetErrorCode].
 	self MoveAw: coInterpreter stackLimitAddress R: TempReg.
 	self CmpR: TempReg R: SPReg. "N.B. FLAGS := SPReg - TempReg"
@@ -3806,7 +3787,7 @@ SimpleStackBasedCogit >> methodAbortTrampolineFor: numArgs [
 ]
 
 { #category : #'compile abstract instructions' }
-SimpleStackBasedCogit >> methodUsesPrimitiveErrorCode: methodHeader [
+SimpleStackBasedCogit >> methodUsesPrimitiveErrorCode [
 	"Answer if methodObj contains a primitive and uses the primitive error code."
 	^(coInterpreter primitiveIndexOfMethod: methodObj header: methodHeader) > 0
 	  and: [(coInterpreter longStoreBytecodeForHeader: methodHeader)
