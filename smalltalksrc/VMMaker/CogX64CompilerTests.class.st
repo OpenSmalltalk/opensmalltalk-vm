@@ -323,8 +323,41 @@ CogX64CompilerTests >> testMoveM64rRd [
 											ifTrue: ['']
 											ifFalse: ['0x', ((offset printStringBase: 16 length: 16 padded: true) asLowercase)]),
 										'(', srname, '), ', drname.
+						"N.B. bochs 2.3.7 gets many cases wrong, e.g.
+							movq %ds:(%rax), %xmm8 : F3 44 0F 7E 00
+						 is disassembled as
+							rep movq %ds:(%rax), %xmm8 : F3 44 0F 7E 00"
+						(plainJane beginsWith: 'rep ') ifTrue:
+							[plainJane := plainJane allButFirst: 4].
 						self assert: herIntended equals: plainJane.
 						self assert: len = sz]]]]
+
+"| them it |
+them := OrderedCollection new.
+[(it := CogX64CompilerTests new) testMoveM64rRd]
+	on: AssertionFailure, TestResult failure
+	do: [:ex| | inst |
+		ex class == AssertionFailure
+			ifTrue:
+				[inst := ex signalerContext receiver.
+				it processor
+					disassembleInstructionAt: 0
+					In: inst machineCode object
+					into: [:str :sz| them addLast: (it strip: str)]]
+			ifFalse:
+				[ResumableTestFailure adoptInstance: ex].
+		ex resume].
+them size"
+"| them it |
+them := OrderedCollection new.
+[(it := CogX64CompilerTests new) testMoveM64rRd]
+	on: TestResult failure
+	do: [:ex| | ctxt |
+		ctxt := ex signalerContext findContextSuchThat: [:c| c selector == #assert:equals:]..
+		them addLast: {ctxt tempAt: 1. ctxt tempAt: 2}.
+		ResumableTestFailure adoptInstance: ex.
+		ex resume].
+them size"
 ]
 
 { #category : #tests }
