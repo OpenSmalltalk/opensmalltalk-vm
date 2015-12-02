@@ -2769,7 +2769,8 @@ CogVMSimulator >> primitiveDirectoryEntry [
 		[self pop: 3 thenPush: objectMemory nilObject.
 		 ^self].
 	arrayNilOrSymbol isArray ifFalse:
-		[self halt.
+		[arrayNilOrSymbol ~~ #primFailed ifTrue:
+			[self halt].
 		 ^self primitiveFail].
 
 	result := PharoVM 
