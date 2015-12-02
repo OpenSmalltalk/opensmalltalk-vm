@@ -842,6 +842,14 @@ CurrentImageCoInterpreterFacade >> primitiveIndexOf: anOop [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> primitiveIndexOfMethod: anOop header: header [
+	| method |
+	method := self objectForOop: anOop.
+	self assert: (self objectForOop: header) = method header.
+	^method primitive
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> primitivePropertyFlags: primIndex [
 	^coInterpreter primitivePropertyFlags: primIndex
 ]
