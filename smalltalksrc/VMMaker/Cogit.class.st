@@ -2775,11 +2775,11 @@ Cogit >> blockAlignment [
 ]
 
 { #category : #'method map' }
-Cogit >> blockCreationBytecodeSizeForHeader: methodHeader [
+Cogit >> blockCreationBytecodeSizeForHeader: aMethodHeader [
 	<inline: true>
 	^self cppIf: MULTIPLEBYTECODESETS
 		ifTrue:
-			[(coInterpreter headerIndicatesAlternateBytecodeSet: methodHeader)
+			[(coInterpreter headerIndicatesAlternateBytecodeSet: aMethodHeader)
 				ifTrue: [AltBlockCreationBytecodeSize]
 				ifFalse: [BlockCreationBytecodeSize]]
 		ifFalse: [BlockCreationBytecodeSize]
@@ -2956,12 +2956,12 @@ Cogit >> bytecodeSetOffsetFor: aMethodObj [
 ]
 
 { #category : #initialization }
-Cogit >> bytecodeSetOffsetForHeader: methodHeader [
+Cogit >> bytecodeSetOffsetForHeader: aMethodHeader [
 	<inline: true>
 	^self
 		cppIf: MULTIPLEBYTECODESETS
 		ifTrue:
-			[(coInterpreter headerIndicatesAlternateBytecodeSet: methodHeader)
+			[(coInterpreter headerIndicatesAlternateBytecodeSet: aMethodHeader)
 				ifTrue: [256]
 				ifFalse: [0]]
 		ifFalse: [0]
