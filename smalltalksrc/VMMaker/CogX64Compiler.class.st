@@ -470,23 +470,27 @@ CogX64Compiler >> computeMaximumSize [
 									ifTrue: [1]
 									ifFalse: [0])].
 		[MoveM64rRd]	-> [^((self isQuick: (operands at: 0))
-											ifTrue: [((operands at: 0) = 0 and: [((operands at: 1) bitAnd: 6) ~= RSP])
-														ifTrue: [4]
-														ifFalse: [5]]
-											ifFalse: [8])
-										+ ((((self concreteRegister: (operands at: 1)) bitAnd: 7) between: RSP and: RBP)
-											ifTrue: [1]
-											ifFalse: [0])].
-		[MoveMwrR]		-> [self assert: (self is32BitSignedImmediate: (operands at: 0)).
-								^((self isQuick: (operands at: 0))
-									ifTrue: [((operands at: 0) = 0
-											and: [((self concreteRegister: (operands at: 1)) bitAnd: 7) ~= RBP])
-												ifTrue: [3]
-												ifFalse: [4]]
-									ifFalse: [7])
-								+ (((self concreteRegister: (operands at: 1)) bitAnd: 7) = RSP
-									ifTrue: [1]
-									ifFalse: [0])].
+								ifTrue: [((operands at: 0) = 0
+										and: [((self concreteRegister: (operands at: 1)) bitAnd: 6) ~= RSP])
+											ifTrue: [4]
+											ifFalse: [5]]
+								ifFalse: [8])
+							+ ((((self concreteRegister: (operands at: 1)) bitAnd: 7) = RSP and: [(operands at: 0) ~= 0])
+								ifTrue: [1]
+								ifFalse: [0])
+							+ ((((self concreteRegister: (operands at: 1)) > 7) or: [(self concreteDPFPRegister: (operands at: 2)) > 7])
+								ifTrue: [1]
+								ifFalse: [0])].
+		[MoveMwrR]	-> [self assert: (self is32BitSignedImmediate: (operands at: 0)).
+							^((self isQuick: (operands at: 0))
+								ifTrue: [((operands at: 0) = 0
+										and: [((self concreteRegister: (operands at: 1)) bitAnd: 7) ~= RBP])
+											ifTrue: [3]
+											ifFalse: [4]]
+								ifFalse: [7])
+							+ (((self concreteRegister: (operands at: 1)) bitAnd: 7) = RSP
+								ifTrue: [1]
+								ifFalse: [0])].
 		[MoveXbrRR]	-> [self assert: (self concreteRegister: (operands at: 0)) ~= RSP.
 							^((self concreteRegister: (operands at: 1)) bitAnd: 7) = RBP
 											ifTrue: [5]
@@ -1220,7 +1224,7 @@ CogX64Compiler >> concretizeMoveM64rRd [
 			at: skip + 5 put: (offset bitAnd: 16rFF).
 		 ^machineCodeSize := skip + 6].
 	machineCode at: skip + 3 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg).
-	(srcReg bitAnd: 6) = RSP ifTrue:
+	(srcReg bitAnd: 7) = RSP ifTrue:
 		[machineCode at: skip + 4 put: (self s: SIB1 i: 4 b: srcReg).
 		 skip := skip + 1].
 	machineCode
