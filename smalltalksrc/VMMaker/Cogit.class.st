@@ -132,6 +132,7 @@ Class {
 		'traceStores',
 		'breakMethod',
 		'methodObj',
+		'methodHeader',
 		'initialPC',
 		'endPC',
 		'methodOrBlockNumArgs',
@@ -2423,7 +2424,7 @@ Cogit >> addToMap: annotation instruction: instruction byte: byte at: address fo
 				 instruction printStateOn: s.
 				 s space.
 				 bytecode := objectMemory fetchByte: instruction bcpc ofObject: methodObj.
-				 bytecode := bytecode + (self bytecodeSetOffsetForHeader: (objectMemory methodHeaderOf: methodObj)).
+				 bytecode := bytecode + (self bytecodeSetOffsetForHeader: (methodHeader)).
 				 (self generatorAt: bytecode) printStateOn: s.
 				 s cr; flush]]]
 ]
@@ -3737,6 +3738,7 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 			[bytecodeSetOffset := 0].
 	objectRepresentation ensureNoForwardedLiteralsIn: aMethodObj.
 	methodObj := aMethodObj.
+	methodHeader := objectMemory methodHeaderOf: aMethodObj.
 	cogMethod := self compileCogMethod: aSelectorOop.
 	(cogMethod asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
 		[cogMethod asInteger = InsufficientCodeSpace ifTrue:
@@ -4467,9 +4469,14 @@ Cogit >> compileFrameBuild [
 { #category : #'compile abstract instructions' }
 Cogit >> compileMethodBody [
 	"Compile the top-level method body."
+	| deltaForPrimErrorCode |
 	<inline: true>
 	endPC < initialPC ifTrue: [^0]. "quick primitives"
-	^self compileAbstractInstructionsFrom: initialPC through: endPC
+	deltaForPrimErrorCode := self methodUsesPrimitiveErrorCode
+									ifTrue: [(coInterpreter sizeOfCallPrimitiveBytecode: methodHeader)
+										  + (coInterpreter sizeOfLongStoreTempBytecode: methodHeader)]
+									ifFalse: [0].
+	^self compileAbstractInstructionsFrom: initialPC + deltaForPrimErrorCode through: endPC
 ]
 
 { #category : #'in-line cacheing' }
@@ -7278,11 +7285,11 @@ Cogit >> labelForSimulationAccessor: blockOrMessageSendOrSelector [
 { #category : #'method map' }
 Cogit >> lastBytecodePCForBlockAt: startbcpc in: aMethodObj [
 	"Answer the 0-relative pc of the last bytecode in the block starting at the 0-relative startbcpc in aMethodObj."
-	| methodHeader bcpc bsOffset byte descriptor |
+	| aMethodHeader bcpc bsOffset byte descriptor |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
-	methodHeader := objectMemory methodHeaderOf: aMethodObj.
-	bcpc := startbcpc - (self blockCreationBytecodeSizeForHeader: methodHeader).
-	bsOffset := self bytecodeSetOffsetForHeader: methodHeader.
+	aMethodHeader := objectMemory methodHeaderOf: aMethodObj.
+	bcpc := startbcpc - (self blockCreationBytecodeSizeForHeader: aMethodHeader).
+	bsOffset := self bytecodeSetOffsetForHeader: aMethodHeader.
 	byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
 	descriptor := self generatorAt: byte.
 	^(self nextBytecodePCFor: descriptor at: bcpc exts: -1 in: aMethodObj) - 1
@@ -9611,7 +9618,8 @@ Cogit >> scanMethod [
 	inBlock := false.
 	self cppIf: #NewspeakVM ifTrue:
 		[numIRCs := 0].
-	self checkForQuickPrimitiveAdjustingIntialPCIfErrorCodeUsed ifTrue:
+	(primitiveIndex > 0
+	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
 		[^0].
 	pc := latestContinuation := initialPC.
 	numBlocks := framelessStackDelta := nExts := extA := extB := 0.
@@ -10340,7 +10348,7 @@ Cogit >> testMcToBcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cogMet
 { #category : #'tests-method map' }
 Cogit >> testPCMappingForCompiledMethod: aCompiledMethod cogMethod: cm [
 	<doNotGenerate>
-	methodObj := nil.
+	methodObj := methodHeader := nil.
 	self
 		testMcToBcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cm;
 		testBcToMcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cm
