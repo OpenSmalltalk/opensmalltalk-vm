@@ -107,13 +107,12 @@ BochsIA32Alien >> abstractInstructionCompilerClass [
 
 { #category : #accessing }
 BochsIA32Alien >> al [
-	^self eax bitAnd: 16rFF
+	^self unsignedByteAt: 469
 ]
 
 { #category : #accessing }
-BochsIA32Alien >> al: aByte [
-	self eax: ((self eax bitAnd: -16rFF) + aByte).
-	^aByte
+BochsIA32Alien >> al: anUnsignedInteger [
+	^self unsignedByteAt: 469 put: anUnsignedInteger
 ]
 
 { #category : #'Cog API' }
@@ -123,13 +122,22 @@ BochsIA32Alien >> bitsInWord [
 
 { #category : #accessing }
 BochsIA32Alien >> bl [
-	^self ebx bitAnd: 16rFF
+	^self unsignedByteAt: 481
 ]
 
 { #category : #accessing }
-BochsIA32Alien >> bl: aByte [
-	self ebx: ((self ebx bitAnd: -16rFF) + aByte).
-	^aByte
+BochsIA32Alien >> bl: anUnsignedInteger [
+	^self unsignedByteAt: 481 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsIA32Alien >> bpl [
+	^self unsignedByteAt: 489
+]
+
+{ #category : #accessing }
+BochsIA32Alien >> bpl: anUnsignedInteger [
+	^self unsignedByteAt: 489 put: anUnsignedInteger
 ]
 
 { #category : #'accessing-abstract' }
@@ -151,13 +159,12 @@ BochsIA32Alien >> callOpcode [
 
 { #category : #accessing }
 BochsIA32Alien >> cl [
-	^self ecx bitAnd: 16rFF
+	^self unsignedByteAt: 473
 ]
 
 { #category : #accessing }
-BochsIA32Alien >> cl: aByte [
-	self ecx: ((self ecx bitAnd: -16rFF) + aByte).
-	^aByte
+BochsIA32Alien >> cl: anUnsignedInteger [
+	^self unsignedByteAt: 473 put: anUnsignedInteger
 ]
 
 { #category : #accessing }
@@ -249,14 +256,23 @@ BochsIA32Alien >> decorateDisassembly: anInstructionString for: aSymbolManager [
 ]
 
 { #category : #accessing }
-BochsIA32Alien >> dl [
-	^self edx bitAnd: 16rFF
+BochsIA32Alien >> dil [
+	^self unsignedByteAt: 497
 ]
 
 { #category : #accessing }
-BochsIA32Alien >> dl: aByte [
-	self edx: ((self edx bitAnd: -16rFF) + aByte).
-	^aByte
+BochsIA32Alien >> dil: anUnsignedInteger [
+	^self unsignedByteAt: 497 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsIA32Alien >> dl [
+	^self unsignedByteAt: 477
+]
+
+{ #category : #accessing }
+BochsIA32Alien >> dl: anUnsignedInteger [
+	^self unsignedByteAt: 477 put: anUnsignedInteger
 ]
 
 { #category : #accessing }
@@ -738,7 +754,7 @@ BochsIA32Alien >> pc: anAddress [
 	self eip: anAddress
 ]
 
-{ #category : #'accessing-abstract' }
+{ #category : #execution }
 BochsIA32Alien >> popWordIn: aMemory [ 
 	| sp word |
 	word := aMemory unsignedLongAt: (sp := self esp) + 1 bigEndian: false.
@@ -1023,6 +1039,16 @@ BochsIA32Alien >> setRegisterState: aRegisterStateArray [
 	self xmm7low: (aRegisterStateArray at: 18)
 ]
 
+{ #category : #accessing }
+BochsIA32Alien >> sil [
+	^self unsignedByteAt: 493
+]
+
+{ #category : #accessing }
+BochsIA32Alien >> sil: anUnsignedInteger [
+	^self unsignedByteAt: 493 put: anUnsignedInteger
+]
+
 { #category : #execution }
 BochsIA32Alien >> simulateCallOf: address nextpc: nextpc memory: aMemory [
 	"Simulate a frame-building call of address.  Build a frame since
@@ -1090,6 +1116,16 @@ BochsIA32Alien >> sp [
 BochsIA32Alien >> sp: anAddress [
 	"Set whatever the processor considers its stack pointer to anAddress."
 	self esp: anAddress
+]
+
+{ #category : #accessing }
+BochsIA32Alien >> spl [
+	^self unsignedByteAt: 485
+]
+
+{ #category : #accessing }
+BochsIA32Alien >> spl: anUnsignedInteger [
+	^self unsignedByteAt: 485 put: anUnsignedInteger
 ]
 
 { #category : #accessing }
