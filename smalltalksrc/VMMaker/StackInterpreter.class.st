@@ -14482,7 +14482,7 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 									ifTrue: [realPluginClass]
 									ifFalse: [plugin class])
 								 withAllSuperclasses detect: [:class| class shouldBeTranslated].
-				 cg := realPlugin buildCodeGeneratorUpTo: realPlugin]
+				 cg := realPlugin buildCodeGenerator]
 			ifFalse:
 				[cg := self codeGeneratorToComputeAccessorDepth.
 				 primitiveTable withIndexDo:
