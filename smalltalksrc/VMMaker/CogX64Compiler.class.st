@@ -280,6 +280,12 @@ CogX64Compiler >> canDivQuoRem [
 	^true
 ]
 
+{ #category : #testing }
+CogX64Compiler >> canMulRR [
+	<inline: true>
+	^true
+]
+
 { #category : #accessing }
 CogX64Compiler >> cmpC32RTempByteSize [
 	^6
@@ -385,9 +391,9 @@ CogX64Compiler >> computeMaximumSize [
 								+ (((self concreteRegister: (operands at: 1)) bitAnd: 7) = RSP
 									ifTrue: [1]
 									ifFalse: [0])].
-		[LogicalShiftLeftCqR]		-> [^self computeShiftCqRegSize].
-		[LogicalShiftRightCqR]		-> [^self computeShiftCqRegSize].
-		[ArithmeticShiftRightCqR]	-> [^self computeShiftCqRegSize].
+		[LogicalShiftLeftCqR]		-> [^(operands at: 0) = 1 ifTrue: [3] ifFalse: [4]].
+		[LogicalShiftRightCqR]		-> [^(operands at: 0) = 1 ifTrue: [3] ifFalse: [4]].
+		[ArithmeticShiftRightCqR]	-> [^(operands at: 0) = 1 ifTrue: [3] ifFalse: [4]].
 		[LogicalShiftLeftRR]			-> [^self computeShiftRRSize].
 		[LogicalShiftRightRR]		-> [^self computeShiftRRSize].
 		[ArithmeticShiftRightRR]		-> [^self computeShiftRRSize].
@@ -534,21 +540,6 @@ CogX64Compiler >> computeMaximumSize [
 		"Conversion"
 		[ConvertRRd]	-> [^5] }.
 	^0 "to keep C compiler quiet"
-]
-
-{ #category : #'generate machine code' }
-CogX64Compiler >> computeShiftCqRegSize [
-	"Immediate shifts are limited to a maximum of 31."
-	<inline: true>
-	| distance |
-	distance := operands at: 0.
-	distance = 1 ifTrue:
-		[^3].
-	distance <= 31 ifTrue:
-		[^4].
-	distance = 32 ifTrue:
-		[^7].
-	^8
 ]
 
 { #category : #'generate machine code' }
@@ -1670,6 +1661,21 @@ CogX64Compiler >> concretizeMoveXwrRR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeMulRR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| reg1 reg2 |
+	reg1 := self concreteRegister: (operands at: 0).
+	reg2 := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: (self rexR: reg2 x: 0 b: reg1);
+		at: 1 put: 16r0F;
+		at: 2 put: 16rAF;
+		at: 3 put: (self mod: ModReg RM: reg1 RO: reg2).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeNegateR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1775,8 +1781,7 @@ CogX64Compiler >> concretizeShiftCqRegOpcode: regOpcode [
 	distance := operands at: 0.
 	self assert: (distance between: 1 and: 63).
 	reg := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: (self rexR: 0 x: 0 b: reg).
+	machineCode at: 0 put: (self rexR: 0 x: 0 b: reg).
 	distance = 1 ifTrue:
 		[machineCode
 			at: 1 put: 16rD1;
@@ -1785,19 +1790,8 @@ CogX64Compiler >> concretizeShiftCqRegOpcode: regOpcode [
 	machineCode
 		at: 1 put: 16rC1;
 		at: 2 put: (self mod: ModReg RM: reg RO: regOpcode);
-		at: 3 put: (distance min: 31).
-	distance <= 31 ifTrue:
-		[^machineCodeSize := 4].
-	distance = 32 ifTrue:
-		[machineCode
-			at: 4 put: 16rD1;
-			at: 5 put: (self mod: ModReg RM: reg RO: regOpcode).
-		 ^machineCodeSize := 7].
-	machineCode
-		at: 4 put: 16rC1;
-		at: 5 put: (self mod: ModReg RM: reg RO: regOpcode);
-		at: 6 put: distance - 31.
-	^machineCodeSize := 8
+		at: 3 put: distance.
+	^machineCodeSize := 4
 ]
 
 { #category : #'generate machine code' }
@@ -2655,6 +2649,32 @@ CogX64Compiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
 CogX64Compiler >> pushCwByteSize [
 	<inline: true>
 	self subclassResponsibility
+]
+
+{ #category : #'inline cacheing' }
+CogX64Compiler >> relocateCallBeforeReturnPC: retpc by: delta [
+	| distance |
+	delta ~= 0 ifTrue:
+		[distance :=    ((objectMemory byteAt: retpc - 1) << 24)
+					+  ((objectMemory byteAt: retpc - 2) << 16)
+					+  ((objectMemory byteAt: retpc - 3) << 8)
+					+   (objectMemory byteAt: retpc - 4).
+		 distance := distance + delta.
+		 objectMemory
+			byteAt: retpc - 1 put: (distance >> 24 bitAnd: 16rFF);
+			byteAt: retpc - 2 put: (distance >> 16 bitAnd: 16rFF);
+			byteAt: retpc - 3 put: (distance >>   8 bitAnd: 16rFF);
+			byteAt: retpc - 4 put: (distance            bitAnd: 16rFF)]
+]
+
+{ #category : #'inline cacheing' }
+CogX64Compiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
+	"We generate the method address using pc-relative addressing.
+	 Simply check that rip-relative addressing is being used. c.f.
+	 concretizeMoveCwR"
+	<inline: true>
+	self assert: ((objectMemory byteAt: pc - 6) = 16r8D
+				and: [((objectMemory byteAt: pc - 5) bitOr: (self mod: 0 RM: 0 RO: 7)) = (self mod: ModRegInd RM: 5 RO: 7)])
 ]
 
 { #category : #'inline cacheing' }
