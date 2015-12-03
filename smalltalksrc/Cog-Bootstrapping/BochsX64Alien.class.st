@@ -49,9 +49,39 @@ BochsX64Alien >> abstractInstructionCompilerClass [
 	^CogX64Compiler
 ]
 
+{ #category : #accessing }
+BochsX64Alien >> al [
+	^self unsignedByteAt: 469
+]
+
+{ #category : #accessing }
+BochsX64Alien >> al: anUnsignedInteger [
+	^self unsignedByteAt: 469 put: anUnsignedInteger
+]
+
 { #category : #'Cog API' }
 BochsX64Alien >> bitsInWord [
 	^64
+]
+
+{ #category : #accessing }
+BochsX64Alien >> bl [
+	^self unsignedByteAt: 493
+]
+
+{ #category : #accessing }
+BochsX64Alien >> bl: anUnsignedInteger [
+	^self unsignedByteAt: 493 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> bpl [
+	^self unsignedByteAt: 509
+]
+
+{ #category : #accessing }
+BochsX64Alien >> bpl: anUnsignedInteger [
+	^self unsignedByteAt: 509 put: anUnsignedInteger
 ]
 
 { #category : #'accessing-abstract' }
@@ -64,6 +94,16 @@ BochsX64Alien >> callOpcode [
 	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
 		table A2, pA8"
 	^16rE8
+]
+
+{ #category : #accessing }
+BochsX64Alien >> cl [
+	^self unsignedByteAt: 477
+]
+
+{ #category : #accessing }
+BochsX64Alien >> cl: anUnsignedInteger [
+	^self unsignedByteAt: 477 put: anUnsignedInteger
 ]
 
 { #category : #'tests support' }
@@ -187,6 +227,26 @@ BochsX64Alien >> decorateDisassembly: anInstructionString for: aSymbolManager [ 
 	^extra
 		ifNil: [string]
 		ifNotNil: [i1 := string lastIndexOf: $:. string copyReplaceFrom: i1 - 1 to: i1 - 2 with: extra]
+]
+
+{ #category : #accessing }
+BochsX64Alien >> dil [
+	^self unsignedByteAt: 525
+]
+
+{ #category : #accessing }
+BochsX64Alien >> dil: anUnsignedInteger [
+	^self unsignedByteAt: 525 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> dl [
+	^self unsignedByteAt: 485
+]
+
+{ #category : #accessing }
+BochsX64Alien >> dl: anUnsignedInteger [
+	^self unsignedByteAt: 485 put: anUnsignedInteger
 ]
 
 { #category : #'accessing-abstract' }
@@ -359,21 +419,24 @@ BochsX64Alien >> handleMovEvGvFailureAt: pc "<Integer>" in: memoryArray "<Bitmap
 { #category : #'error handling' }
 BochsX64Alien >> handleMovGbEbFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
 	"Convert an execution primitive failure for a byte register load into a ProcessorSimulationTrap signal."
-	| modrmByte |
-	self shouldBeImplemented.
-	^(((modrmByte := memoryArray byteAt: pc + 2) bitAnd: 16rC0) = 16r80) "ModRegRegDisp32"
-		ifTrue:
-			[(ProcessorSimulationTrap
-					pc: pc
-					nextpc: pc + 6
-					address: ((self perform: (#(eax ecx edx ebx esp ebp esi edi) at: (modrmByte bitAnd: 7) + 1))
-							+ (memoryArray unsignedLongAt: pc + 3 bigEndian: false)
-								bitAnd: 16rFFFFFFFF)
-					type: #read
-					accessor: (#(al: cl: dl: bl: ah: ch: dh: bh:) at: ((modrmByte >> 3 bitAnd: 7) + 1)))
-				signal]
-		ifFalse:
-			[self reportPrimitiveFailure]
+	| modrmByte offset size |
+	modrmByte := memoryArray byteAt: pc + 3.
+	(modrmByte bitAnd: 16rC0) caseOf: {
+		[16r80 "ModRegRegDisp32"] -> [offset := memoryArray unsignedLongAt: pc + 4 bigEndian: false.
+										 size := 7].
+		[16r40 "ModRegRegDisp8"] -> [offset := memoryArray byteAt: pc + 4.
+										offset > 127 ifTrue: [offset := offset - 256].
+										 size := 4] }
+		otherwise: [self reportPrimitiveFailure].
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + size
+			address: (((self perform: (self registerStateGetters at: (modrmByte bitAnd: 7) + ((rexByteOrNil bitAnd: 1) bitShift: 3) + 1))
+					+ offset)
+						bitAnd: 16rFFFFFFFFFFFFFFFF)
+			type: #read
+			accessor: (#(al: cl: dl: bl: spl: bpl: sil: dil: r8l: r9l: r10l: r11l: r12l: r13l: r14l: r15l:) at: ((modrmByte >> 3 bitAnd: 7) + ((rexByteOrNil bitAnd: 4) bitShift: 1) + 1)))
+		signal
 ]
 
 { #category : #'error handling' }
@@ -481,7 +544,12 @@ BochsX64Alien >> initializeStackFor: aCogit [
 	 ...	The end of the input argument area shall be aligned on a 16 (32, if __m256 is
 		passed on stack) byte boundary. In other words, the value (%rsp + 8) is always
 		a multiple of 16 (32) when control is transferred to the function entry point."
-	aCogit setStackAlignment: 16 expectedSPOffset: 0 expectedFPOffset: 0
+	| stackAlignment |
+	stackAlignment := 16.
+	aCogit setStackAlignment: stackAlignment expectedSPOffset: 0 expectedFPOffset: 16.
+	PostBuildStackDelta := stackAlignment > 16
+								ifTrue: [stackAlignment - 16]
+								ifFalse: [0]
 ]
 
 { #category : #'accessing-abstract' }
@@ -568,10 +636,10 @@ BochsX64Alien >> pc: anAddress [
 	self rip: anAddress
 ]
 
-{ #category : #'accessing-abstract' }
+{ #category : #execution }
 BochsX64Alien >> popWordIn: aMemory [ 
 	| sp word |
-	word := aMemory unsignedLongAt: (sp := self rsp) + 1 bigEndian: false.
+	word := aMemory long64At: (sp := self rsp) + 1.
 	self rsp: sp + 8.
 	^word
 ]
@@ -757,6 +825,16 @@ BochsX64Alien >> r10: anUnsignedInteger [
 ]
 
 { #category : #accessing }
+BochsX64Alien >> r10l [
+	^self unsignedByteAt: 549
+]
+
+{ #category : #accessing }
+BochsX64Alien >> r10l: anUnsignedInteger [
+	^self unsignedByteAt: 549 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
 BochsX64Alien >> r11 [
 	^self unsignedLongLongAt: 557
 ]
@@ -764,6 +842,16 @@ BochsX64Alien >> r11 [
 { #category : #accessing }
 BochsX64Alien >> r11: anUnsignedInteger [
 	^self unsignedLongLongAt: 557 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> r11l [
+	^self unsignedByteAt: 557
+]
+
+{ #category : #accessing }
+BochsX64Alien >> r11l: anUnsignedInteger [
+	^self unsignedByteAt: 557 put: anUnsignedInteger
 ]
 
 { #category : #accessing }
@@ -777,6 +865,16 @@ BochsX64Alien >> r12: anUnsignedInteger [
 ]
 
 { #category : #accessing }
+BochsX64Alien >> r12l [
+	^self unsignedByteAt: 565
+]
+
+{ #category : #accessing }
+BochsX64Alien >> r12l: anUnsignedInteger [
+	^self unsignedByteAt: 565 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
 BochsX64Alien >> r13 [
 	^self unsignedLongLongAt: 573
 ]
@@ -784,6 +882,16 @@ BochsX64Alien >> r13 [
 { #category : #accessing }
 BochsX64Alien >> r13: anUnsignedInteger [
 	^self unsignedLongLongAt: 573 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> r13l [
+	^self unsignedByteAt: 573
+]
+
+{ #category : #accessing }
+BochsX64Alien >> r13l: anUnsignedInteger [
+	^self unsignedByteAt: 573 put: anUnsignedInteger
 ]
 
 { #category : #accessing }
@@ -797,6 +905,16 @@ BochsX64Alien >> r14: anUnsignedInteger [
 ]
 
 { #category : #accessing }
+BochsX64Alien >> r14l [
+	^self unsignedByteAt: 581
+]
+
+{ #category : #accessing }
+BochsX64Alien >> r14l: anUnsignedInteger [
+	^self unsignedByteAt: 581 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
 BochsX64Alien >> r15 [
 	^self unsignedLongLongAt: 589
 ]
@@ -804,6 +922,16 @@ BochsX64Alien >> r15 [
 { #category : #accessing }
 BochsX64Alien >> r15: anUnsignedInteger [
 	^self unsignedLongLongAt: 589 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> r15l [
+	^self unsignedByteAt: 589
+]
+
+{ #category : #accessing }
+BochsX64Alien >> r15l: anUnsignedInteger [
+	^self unsignedByteAt: 589 put: anUnsignedInteger
 ]
 
 { #category : #accessing }
@@ -817,6 +945,16 @@ BochsX64Alien >> r8: anUnsignedInteger [
 ]
 
 { #category : #accessing }
+BochsX64Alien >> r8l [
+	^self unsignedByteAt: 533
+]
+
+{ #category : #accessing }
+BochsX64Alien >> r8l: anUnsignedInteger [
+	^self unsignedByteAt: 533 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
 BochsX64Alien >> r9 [
 	^self unsignedLongLongAt: 541
 ]
@@ -824,6 +962,16 @@ BochsX64Alien >> r9 [
 { #category : #accessing }
 BochsX64Alien >> r9: anUnsignedInteger [
 	^self unsignedLongLongAt: 541 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> r9l [
+	^self unsignedByteAt: 541
+]
+
+{ #category : #accessing }
+BochsX64Alien >> r9l: anUnsignedInteger [
+	^self unsignedByteAt: 541 put: anUnsignedInteger
 ]
 
 { #category : #accessing }
@@ -932,7 +1080,7 @@ BochsX64Alien >> retOpcode [
 
 { #category : #'accessing-abstract' }
 BochsX64Alien >> retpcIn: aMemory [
-	^aMemory unsignedLongAt: self rbp + 9 bigEndian: false
+	^aMemory long64At: self rbp + 9
 ]
 
 { #category : #opcodes }
@@ -1007,6 +1155,16 @@ BochsX64Alien >> setFramePointer: framePointer stackPointer: stackPointer [
 	self rsp: stackPointer
 ]
 
+{ #category : #accessing }
+BochsX64Alien >> sil [
+	^self unsignedByteAt: 517
+]
+
+{ #category : #accessing }
+BochsX64Alien >> sil: anUnsignedInteger [
+	^self unsignedByteAt: 517 put: anUnsignedInteger
+]
+
 { #category : #execution }
 BochsX64Alien >> simulateCallOf: address nextpc: nextpc memory: aMemory [
 	"Simulate a frame-building call of address.  Build a frame since
@@ -1021,6 +1179,8 @@ BochsX64Alien >> simulateCallOf: address nextpc: nextpc memory: aMemory [
 	self pushWord: nextpc in: aMemory.
 	self pushWord: self rbp in: aMemory.
 	self rbp: self rsp.
+	PostBuildStackDelta ~= 0 ifTrue:
+		[self rsp: self rsp - PostBuildStackDelta].
 	self rip: address
 ]
 
@@ -1060,6 +1220,16 @@ BochsX64Alien >> sp [
 BochsX64Alien >> sp: anAddress [
 	"Set whatever the processor considers its stack pointer to anAddress."
 	self rsp: anAddress
+]
+
+{ #category : #accessing }
+BochsX64Alien >> spl [
+	^self unsignedByteAt: 501
+]
+
+{ #category : #accessing }
+BochsX64Alien >> spl: anUnsignedInteger [
+	^self unsignedByteAt: 501 put: anUnsignedInteger
 ]
 
 { #category : #accessing }
