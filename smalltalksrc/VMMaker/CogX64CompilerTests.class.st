@@ -784,15 +784,15 @@ CogX64CompilerTests >> testMul [
 						disassembleFrom: 0 to: instructions size in: memory on: Transcript;
 						printIntegerRegistersOn: Transcript."
 					map
-						at: #eax put: (self processor eax: 16rA5A5A5A5);
-						at: #ebx put: (self processor ebx: 16rB5B5B5B5);
-						at: #ecx put: (self processor ecx: 16rC5C5C5C5);
-						at: #edx put: (self processor edx: 16rD5D5D5D5);
-						at: #esi put: (self processor esi: 16r51515151);
-						at: #edi put: (self processor edi: 16rD1D1D1D1);
+						at: #rax put: (self processor rax: 16rA5A5A5A5);
+						at: #rbx put: (self processor rbx: 16rB5B5B5B5);
+						at: #rcx put: (self processor rcx: 16rC5C5C5C5);
+						at: #rdx put: (self processor rdx: 16rD5D5D5D5);
+						at: #rsi put: (self processor rsi: 16r51515151);
+						at: #rdi put: (self processor rdi: 16rD1D1D1D1);
 								at: srget put: (self processor perform: srset with: (self processor convertIntegerToInternal: b));
 								at: drget put: (self processor perform: drset with: (self processor convertIntegerToInternal: a)).
-					self processor esp: memory size; eip: 0.
+					self processor rsp: memory size; rip: 0.
 					self shouldnt:
 						[[self processor pc < instructions size] whileTrue:
 							[self processor singleStepIn: memory]]
