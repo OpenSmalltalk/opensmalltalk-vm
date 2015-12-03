@@ -26,7 +26,7 @@ InterpreterPlugin class >> allCallsOn [
 
 { #category : #translation }
 InterpreterPlugin class >> allCodeOlderThan: modificationTime [
-	^((self pluginClassesUpTo: self) allSatisfy:
+	^((self pluginClassesUpToRoot) allSatisfy:
 			[:aPluginClass| aPluginClass timeStamp < modificationTime])
 	  and: [self translatedPrimitives allSatisfy:
 			[:pair| | c m stamp |
@@ -59,17 +59,24 @@ InterpreterPlugin class >> browseTranslatedPrimitives [
 ]
 
 { #category : #translation }
-InterpreterPlugin class >> buildCodeGeneratorUpTo: aPluginClass [
+InterpreterPlugin class >> buildCodeGenerator [
 	"Build a CCodeGenerator for the plugin"
 	| cg pluginClasses |
 	cg := self codeGeneratorClass new initialize.
 	cg pluginClass: self.
-	(pluginClasses := self pluginClassesUpTo: aPluginClass) do:
+	(pluginClasses := self pluginClassesUpToRoot) do:
 		[:aClass| cg addClass: aClass].
 	(cg structClassesForTranslationClasses: pluginClasses) do:
 		[:structClasss| cg addStructClass: structClasss].
 	cg addMethodsForTranslatedPrimitives: self translatedPrimitives.
 	^cg
+]
+
+{ #category : #translation }
+InterpreterPlugin class >> buildCodeGeneratorUpTo: aPluginClass [
+	"Build a CCodeGenerator for the plugin - Deprecated and here only in case old plugin code tries to use it"
+	self deprecated.
+	^self buildCodeGenerator
 ]
 
 { #category : #private }
@@ -164,6 +171,13 @@ InterpreterPlugin class >> moduleExtension [
 ]
 
 { #category : #translation }
+InterpreterPlugin class >> moduleFileName [
+	"Answer the receiver's module name that is used for the plugin's C code."
+
+	^ self moduleName, self moduleExtension
+]
+
+{ #category : #translation }
 InterpreterPlugin class >> moduleName [
 	"Answer the receiver's module name that is used for the plugin's C code."
 
@@ -184,8 +198,8 @@ InterpreterPlugin class >> newFor: anUnsimulatedInterpreterPluginClass [
 ]
 
 { #category : #translation }
-InterpreterPlugin class >> pluginClassesUpTo: aPluginClass [
-	"Answer the classes to include for translation of aPluginClass, superclasses first, aPluginClass last."
+InterpreterPlugin class >> pluginClassesUpToRoot [
+	"Answer the classes to include for translation of aPluginClass, superclasses first, and the root (VMClass in general, possibly Object)  last."
 	| theClass classes |
 
 	classes := OrderedCollection new.
@@ -281,7 +295,7 @@ InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFla
 			[^nil]].
 
 	self initialize.
-	cg := self buildCodeGeneratorUpTo: self.
+	cg := self buildCodeGenerator.
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
 	self pruneUnusedInterpreterPluginMethodsIn: cg.
 	cg storeCodeOnFile:  (directory fullNameFor: fname) doInlining: inlineFlag.
