@@ -714,6 +714,18 @@ CogObjectRepresentationFor64BitSpur >> genJumpNotSmallIntegerInScratchReg: aRegi
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genJumpNotSmallIntegersIn: aRegister andScratchReg: scratchReg [
+	"Generate a compare and branch to test if aRegister and scratchReg contains other than SmallIntegers,
+	 i.e. don't branch if both aRegister and scratchReg contain SmallIntegers.
+	 Answer the jump.  Destroy scratchReg if required."
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit
+		XorR: aRegister R: scratchReg;
+		AndCq: self tagMask R: scratchReg;
+		JumpNonZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genJumpSmallFloat: aRegister [
 	"Generate a compare and branch to test if aRegister contains a SmallFloat.
 	 Answer the jump, or UnimplementedOperation if this cannot be done with
@@ -890,6 +902,12 @@ CogObjectRepresentationFor64BitSpur >> selectorIndexDereferenceRoutine [
 	 Answer the routine that will map from indices to selector objects if so, otherwise nil."
 	<inline: true>
 	^ceDereferenceSelectorIndex
+]
+
+{ #category : #accessing }
+CogObjectRepresentationFor64BitSpur >> tagMask [
+	<inline: true>
+	^7
 ]
 
 { #category : #'debug support' }
