@@ -1,6 +1,10 @@
+#LIBDEPS=../../bochs/cpu/libcpu.a
+#BOCHS=../../bochs
+#BOCHSEXP=../../bochs/exploration
 #BOCHS=../../../processors/IA32/bochs
-BOCHS=../../processors/IA32/bochs
-BOCHSEX64=$(BOCHS)/explorationx64
+#BOCHSEX64=$(BOCHS)/explorationx64
+BOCHS=../../../processors/IA32/bochs
+BOCHSEX64=.
 LIBDEPS=../../cpu/libcpu.a
 CFLAGS=-m32 -I.. -I$(BOCHS) -I$(BOCHS)/cpu -I$(BOCHS)/instrument/stubs -L../cpu -lcpu
 FULLLIBS=-L../fpu -lfpu -L../disasm -ldisasm

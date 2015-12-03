@@ -1,10 +1,15 @@
-LIBDEPS=../../bochs/cpu/libcpu.a
-CFLAGS=-m32 -I.. -I../../bochs -I../../bochs/cpu -I../../bochs/instrument/stubs -L../cpu -lcpu
-FULLLIBS=-L../fpu -lfpu -L../disasm -ldisasm
+#LIBDEPS=../../bochs/cpu/libcpu.a
+#BOCHS=../../bochs
+#BOCHSEXP=../../bochs/exploration
+LIBDEPS=../cpu/libcpu.a
+BOCHS=../../../processors/IA32/bochs
+BOCHSEXP=.
+CFLAGS=-m32 -I.. -I$(BOCHS) -I$(BOCHS)/cpu -I$(BOCHS)/instrument/stubs -L../cpu -lcpu
 
 .PHONY:	$(LIBDEPS)
 
-all: bxcpu.txt BochsIA32Alien-regs.st BochsIA32Alien-cr.st BochsIA32Alien-xmm.st
+#all: bxcpu.txt BochsIA32Alien-regs.st BochsIA32Alien-cr.st BochsIA32Alien-xmm.st
+all: BochsIA32Alien-regs.st BochsIA32Alien-cr.st BochsIA32Alien-xmm.st
 
 bxcpu.txt: printbxcpu
 	./printbxcpu >bxcpu.txt
@@ -23,14 +28,14 @@ clean:
 	rm -f printcpu printcpucr printcpuxmm
 	rm -f printcpu.exe printcpucr.exe printcpuxmm.exe
 
-printbxcpu: ../../bochs/exploration/printbxcpu.cpp $(LIBDEPS)
+printbxcpu: $(BOCHSEXP)/printbxcpu.cpp $(LIBDEPS)
 	g++ -o $@ $< $(CFLAGS)
 
-printcpu: ../../bochs/exploration/printcpu.c $(LIBDEPS)
+printcpu: $(BOCHSEXP)/printcpu.c $(LIBDEPS)
 	g++ -o $@ $< $(CFLAGS)
 
-printcpucr: ../../bochs/exploration/printcpucr.c $(LIBDEPS)
+printcpucr: $(BOCHSEXP)/printcpucr.c $(LIBDEPS)
 	g++ -o $@ $< $(CFLAGS)
 
-printcpuxmm: ../../bochs/exploration/printcpuxmm.c $(LIBDEPS)
+printcpuxmm: $(BOCHSEXP)/printcpuxmm.c $(LIBDEPS)
 	g++ -o $@ $< $(CFLAGS)

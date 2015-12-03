@@ -28,12 +28,18 @@ int
 main()
 {
 #define stoffsetof(type,field) (offsetof(type,field)+1)
-#define print(r,n) \
+#define print(r,n,b) \
 printf("!BochsX64Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	"%s\r\t^self unsignedLongLongAt: %ld! !\r", m,d,y,h,i, lower(#r), \
 	stoffsetof(BX_CPU_C,gen_reg[n].dword.erx));\
 printf("!BochsX64Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	"%s: anUnsignedInteger\r\t^self unsignedLongLongAt: %ld put: anUnsignedInteger! !\r", m,d,y,h,i, lower(#r), \
+	stoffsetof(BX_CPU_C,gen_reg[n].dword.erx));\
+printf("!BochsX64Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
+	"%s\r\t^self unsignedByteAt: %ld! !\r", m,d,y,h,i, lower(#b), \
+	stoffsetof(BX_CPU_C,gen_reg[n].dword.erx));\
+printf("!BochsX64Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
+	"%s: anUnsignedInteger\r\t^self unsignedByteAt: %ld put: anUnsignedInteger! !\r", m,d,y,h,i, lower(#b), \
 	stoffsetof(BX_CPU_C,gen_reg[n].dword.erx))
 
 	time_t nowsecs = time(0);
@@ -52,23 +58,23 @@ printf("!BochsX64Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"
 			"rflags\r\t^self unsignedLongLongAt: %ld! !\r", m,d,y,h,i,
 			stoffsetof(BX_CPU_C,eflags));
 
-	print(RAX,BX_64BIT_REG_RAX);
-	print(RBX,BX_64BIT_REG_RBX);
-	print(RCX,BX_64BIT_REG_RCX);
-	print(RDX,BX_64BIT_REG_RDX);
-	print(RSP,BX_64BIT_REG_RSP);
-	print(RBP,BX_64BIT_REG_RBP);
-	print(RSI,BX_64BIT_REG_RSI);
-	print(RDI,BX_64BIT_REG_RDI);
-	print(R8,BX_64BIT_REG_R8);
-	print(R9,BX_64BIT_REG_R9);
-	print(R10,BX_64BIT_REG_R10);
-	print(R11,BX_64BIT_REG_R11);
-	print(R12,BX_64BIT_REG_R12);
-	print(R13,BX_64BIT_REG_R13);
-	print(R14,BX_64BIT_REG_R14);
-	print(R15,BX_64BIT_REG_R15);
-	print(RIP,BX_64BIT_REG_RIP);
+	print(RAX,BX_64BIT_REG_RAX,al);
+	print(RBX,BX_64BIT_REG_RBX,bl);
+	print(RCX,BX_64BIT_REG_RCX,cl);
+	print(RDX,BX_64BIT_REG_RDX,dl);
+	print(RSP,BX_64BIT_REG_RSP,spl);
+	print(RBP,BX_64BIT_REG_RBP,bpl);
+	print(RSI,BX_64BIT_REG_RSI,sil);
+	print(RDI,BX_64BIT_REG_RDI,dil);
+	print(R8,BX_64BIT_REG_R8,r8l);
+	print(R9,BX_64BIT_REG_R9,r9l);
+	print(R10,BX_64BIT_REG_R10,r10l);
+	print(R11,BX_64BIT_REG_R11,r11l);
+	print(R12,BX_64BIT_REG_R12,r12l);
+	print(R13,BX_64BIT_REG_R13,r13l);
+	print(R14,BX_64BIT_REG_R14,r14l);
+	print(R15,BX_64BIT_REG_R15,r15l);
+	print(RIP,BX_64BIT_REG_RIP,ipl); /* the ipl: method should be discarded */
 
 	return 0;
 }
