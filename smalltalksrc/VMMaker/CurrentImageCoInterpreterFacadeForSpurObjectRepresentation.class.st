@@ -143,6 +143,11 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> isImmediateClass: 
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> numSlotsFullShift [
+	^objectMemory numSlotsFullShift
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> numSlotsMask [
 	^objectMemory numSlotsMask
 ]
@@ -150,6 +155,16 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> numSlotsMask [
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> numTagBits [
 	^objectMemory numTagBits
+]
+
+{ #category : #'object map' }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> oopForObject: o [
+	^(o isInteger and: [o between: objectMemory minSmallInteger and: objectMemory maxSmallInteger])
+		ifTrue: [o << 1 + 1]
+		ifFalse:
+			[o isCharacter
+				ifTrue: [o asInteger << 2 + 2]
+				ifFalse: [objectMap at: o ifAbsentPut: [objectMap size * 8 + (1024 * 1024)]]]
 ]
 
 { #category : #accessing }
