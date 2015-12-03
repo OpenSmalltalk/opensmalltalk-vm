@@ -631,7 +631,7 @@ CogX64Compiler >> concretizeAndRR [
 		at: 0 put: (self rexR: regRHS x: 0 b: regLHS);
 		at: 1 put: 16r23;
 		at: 2 put: (self mod: ModReg RM: regLHS RO: regRHS).
-	^machineCodeSize := 2
+	^machineCodeSize := 3
 ]
 
 { #category : #'generate machine code' }
