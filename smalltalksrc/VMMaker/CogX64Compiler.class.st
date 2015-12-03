@@ -373,7 +373,9 @@ CogX64Compiler >> computeMaximumSize [
 		[AddCwR]		-> [^self computeSizeOfArithCwR].
 		[AndCwR]		-> [^self computeSizeOfArithCwR].
 		[CmpCwR]		-> [^self computeSizeOfArithCwR].
-		[CmpC32R]		-> [^self computeSizeOfArithCwR].
+		[CmpC32R]		-> [^(self concreteRegister: (operands at: 1)) = RAX
+								ifTrue: [6]
+								ifFalse: [7]].
 		[OrCwR]		-> [^self computeSizeOfArithCwR].
 		[SubCwR]		-> [^self computeSizeOfArithCwR].
 		[XorCwR]		-> [^self computeSizeOfArithCwR].
@@ -2499,6 +2501,12 @@ CogX64Compiler >> isBigEndian [
 	^false
 ]
 
+{ #category : #testing }
+CogX64Compiler >> isCallPrecedingReturnPC: mcpc [
+	"Assuming mcpc is a send return pc answer if the instruction before it is a call (not a CallFull)."
+	^(objectMemory byteAt: mcpc - 5) = 16rE8
+]
+
 { #category : #disassembly }
 CogX64Compiler >> isJumpAt: pc [
 	| op |
@@ -2581,6 +2589,15 @@ CogX64Compiler >> leafCallStackPointerDelta [
 	 immediately prior to  call from within a leaf routine, which in turn is used
 	 to capture the c stack pointer to use in trampolines back into the C run-time."
 	^8
+]
+
+{ #category : #accessing }
+CogX64Compiler >> loadPICLiteralByteSize [
+	"Answer the byte size of a MoveCwR opcode's corresponding machine code
+	 when the argument is a PIC.  This is for the self-reference at the end of a
+	 closed PIC: leaq 0xffffffffffffff2b(%rip), %rcx : 48 8D 0D 2B FF FF FF"
+	<inline: true>
+	^7
 ]
 
 { #category : #accessing }
@@ -2689,6 +2706,22 @@ CogX64Compiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
 	<inline: true>
 	self assert: ((objectMemory byteAt: pc - 6) = 16r8D
 				and: [((objectMemory byteAt: pc - 5) bitOr: (self mod: 0 RM: 0 RO: 7)) = (self mod: ModRegInd RM: 5 RO: 7)])
+]
+
+{ #category : #'inline cacheing' }
+CogX64Compiler >> rewriteCPICJumpAt: addressFollowingJump target: jumpTargetAddress [
+	"Rewrite the short jump instruction to jump to a new cpic case target. "
+	<var: #addressFollowingJump type: #usqInt>
+	<var: #jumpTargetAddress type: #usqInt>
+	| callDistance |
+	callDistance := jumpTargetAddress - addressFollowingJump.
+	self assert: callDistance abs < 128.
+	objectMemory
+		byteAt: addressFollowingJump - 1
+		put:  (callDistance bitAnd: 16rFF).
+	"self cCode: ''
+		inSmalltalk: [cogit disassembleFrom: addressFollowingJump - 10 to: addressFollowingJump - 1]."
+	^2
 ]
 
 { #category : #'inline cacheing' }

@@ -6,7 +6,7 @@ Class {
 	#superclass : #Cogit,
 	#instVars : [
 		'primSetFunctionLabel',
-		'primInvokeLabel',
+		'primInvokeInstruction',
 		'externalPrimCallOffsets',
 		'externalPrimJumpOffsets',
 		'externalSetPrimOffsets'
@@ -53,7 +53,7 @@ SimpleStackBasedCogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #externalSetPrimOffsets
 			declareC: 'sqInt externalSetPrimOffsets[MaxNumArgs + 1]';
 		var: #primSetFunctionLabel type: #'AbstractInstruction *';
-		var: #primInvokeLabel type: #'AbstractInstruction *'
+		var: #primInvokeInstruction type: #'AbstractInstruction *'
 ]
 
 { #category : #'class initialization' }
@@ -1108,13 +1108,11 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 				((flags anyMask: PrimCallCollectsProfileSamples)
 					ifTrue: [cePrimReturnEnterCogCodeProfiling]
 					ifFalse: [cePrimReturnEnterCogCode]).
-			 self JumpFullRT: primitiveRoutine asInteger.
-			 primInvokeLabel := self Label.
+			 primInvokeInstruction := self JumpFullRT: primitiveRoutine asInteger.
 			 jmp := jmpSamplePrim := continuePostSamplePrim := nil]
 		ifFalse:
 			["Call the C primitive routine."
-			self CallFullRT: primitiveRoutine asInteger.
-			primInvokeLabel := self Label.
+			primInvokeInstruction := self CallFullRT: primitiveRoutine asInteger.
 			(flags anyMask: PrimCallCollectsProfileSamples) ifTrue:
 				[self assert: (flags anyMask: PrimCallNeedsNewMethod).
 				"Test nextProfileTick for being non-zero and call checkProfileTick if so"
@@ -3856,10 +3854,10 @@ SimpleStackBasedCogit >> recordCallOffsetIn: cogMethod [
 	(externalSetPrimOffsets at: cogMethod cmNumArgs) isNil
 		ifTrue: [externalSetPrimOffsets at: cogMethod cmNumArgs put: offset]
 		ifFalse: [self assert: (externalSetPrimOffsets at: cogMethod cmNumArgs) = offset].
-	offsetTable := (backEnd isCallPrecedingReturnPC: primInvokeLabel address asUnsignedInteger)
-						ifTrue: [externalPrimCallOffsets]
-						ifFalse: [externalPrimJumpOffsets].
-	offset := primInvokeLabel address - cogMethod asInteger.
+	offsetTable := primInvokeInstruction isJump
+						ifTrue: [externalPrimJumpOffsets]
+						ifFalse: [externalPrimCallOffsets].
+	offset := primInvokeInstruction address + primInvokeInstruction machineCodeSize - cogMethod asInteger.
 	(offsetTable at: cogMethod cmNumArgs) isNil
 		ifTrue: [offsetTable at: cogMethod cmNumArgs put: offset]
 		ifFalse: [self assert: (offsetTable at: cogMethod cmNumArgs) = offset]
