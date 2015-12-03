@@ -79,6 +79,17 @@ AbstractInstructionTests >> addressIsInInstructions: anAbstractOpcode [
 	^opcodes notNil and: [(opcodes identityIndexOf: anAbstractOpcode ifAbsent: []) notNil]
 ]
 
+{ #category : #accessing }
+AbstractInstructionTests >> assert: expected equals: actual [
+	"Override to use a case-insensitive comparison for strings."
+	^self
+		assert: (expected isString
+				ifTrue: [expected sameAs: actual]
+				ifFalse: [expected = actual])
+		description: [ self comparingStringBetween: expected and: actual ]
+
+]
+
 { #category : #running }
 AbstractInstructionTests >> assertCheckQuickArithOpCodeSize: bytes [
 	self subclassResponsibility
@@ -241,7 +252,7 @@ AbstractInstructionTests >> pairs: aRange do: aBinaryBlock [
 	aRange do: [:a| aRange do: [:b| aBinaryBlock value: a value: b]]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 AbstractInstructionTests >> previousInstruction [
 	<returnTypeC: #'AbstractInstruction *'>
 	^opcodes last

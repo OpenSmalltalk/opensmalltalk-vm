@@ -49,6 +49,26 @@ CogX64CompilerTests >> strip: aFancyDisassembledInstruction [
 ]
 
 { #category : #tests }
+CogX64CompilerTests >> testAddCqR [
+	"self new testAddCqR"
+	self concreteCompilerClass registersWithNamesDo:
+		[:reg :regname|
+		#(16r1 16r3 16r7 16r555555 16rAAAAAA) do:
+			[:const| | inst len|
+			inst := self gen: AddCqR operand: const operand: reg.
+			len := inst concretizeAt: 0.
+			self processor
+				disassembleInstructionAt: 0
+				In: inst machineCode object
+				into: [:str :sz| | plainJane herIntended |
+					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
+					plainJane := self strip: str.
+					herIntended := 'addq $0x', (const printStringBase: 16 length: 16 padded: true), ', ', regname.
+					self assert: (plainJane match: herIntended).
+					self assert: len = sz]]]
+]
+
+{ #category : #tests }
 CogX64CompilerTests >> testAndCqR [
 	"self new testAndCqR"
 	self concreteCompilerClass registersWithNamesDo:
@@ -61,7 +81,7 @@ CogX64CompilerTests >> testAndCqR [
 				disassembleInstructionAt: 0
 				In: inst machineCode object
 				into: [:str :sz| | plainJane herIntended |
-					"Convert e.g. '00000000: movl %rax, 0x2(%rax) : 48 89 40 02' to  'movl %rax, 0x2(%rax)'"
+					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 					plainJane := self strip: str.
 					herIntended := 'andq $0x', (const printStringBase: 16 length: 16 padded: true), ', ', regname.
 					self assert: (plainJane match: herIntended).
@@ -135,6 +155,26 @@ CogX64CompilerTests >> testCMPXCHGMwrR [
 											'cmpxchgl ', drname, ', 0x', (offset hex allButFirst: 3), '(', srname, ')'.
 							self assert: (plainJane match: herIntended).
 							self assert: memory size = sz]]]]]
+]
+
+{ #category : #tests }
+CogX64CompilerTests >> testCmpCqR [
+	"self new testCmpCqR"
+	self concreteCompilerClass registersWithNamesDo:
+		[:reg :regname|
+		#(16r1 16r3 16r7 16r555555 16rAAAAAA) do:
+			[:const| | inst len|
+			inst := self gen: CmpCqR operand: const operand: reg.
+			len := inst concretizeAt: 0.
+			self processor
+				disassembleInstructionAt: 0
+				In: inst machineCode object
+				into: [:str :sz| | plainJane herIntended |
+					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
+					plainJane := self strip: str.
+					herIntended := 'cmpq $0x', (const printStringBase: 16 length: 16 padded: true), ', ', regname.
+					self assert: (plainJane match: herIntended).
+					self assert: len = sz]]]
 ]
 
 { #category : #tests }
@@ -761,6 +801,71 @@ CogX64CompilerTests >> testMul [
 					map keysAndValuesDo:
 						[:accessor :value|
 						self assert: value = (self processor perform: accessor)]]]]
+]
+
+{ #category : #tests }
+CogX64CompilerTests >> testOrCqR [
+	"self new testOrCqR"
+	self concreteCompilerClass registersWithNamesDo:
+		[:reg :regname|
+		#(16r1 16r3 16r7 16r555555 16rAAAAAA) do:
+			[:const| | inst len|
+			inst := self gen: OrCqR operand: const operand: reg.
+			len := inst concretizeAt: 0.
+			self processor
+				disassembleInstructionAt: 0
+				In: inst machineCode object
+				into: [:str :sz| | plainJane herIntended |
+					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
+					plainJane := self strip: str.
+					herIntended := 'orq $0x', (const printStringBase: 16 length: 16 padded: true), ', ', regname.
+					self assert: (plainJane match: herIntended).
+					self assert: len = sz]]]
+]
+
+{ #category : #tests }
+CogX64CompilerTests >> testShiftCqR [
+	"CogX64CompilerTests new testShiftCqR"
+	{LogicalShiftRightCqR. LogicalShiftLeftCqR. ArithmeticShiftRightCqR}
+		with: #('shrq' 'shlq' 'sarq')
+		do: [:op :opname|
+			self concreteCompilerClass registersWithNamesDo:
+				[:reg :regname|
+				1 to: 63 do:
+					[:shift| | inst len |
+					inst := self gen: op operand: shift operand: reg.
+					len := inst concretizeAt: 0.
+					self processor
+						disassembleInstructionAt: 0
+						In: inst machineCode object
+						into: [:str :sz| | plainJane herIntended |
+							"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
+							plainJane := self strip: str.
+							herIntended := opname ,' $', (shift > 1
+														ifTrue: ['0x', (shift printStringBase: 16 length: 2 padded: true)]
+														ifFalse: [shift asInteger]), ', ', regname.
+							self assert: herIntended equals: plainJane.
+							self assert: len = sz]]]]
+]
+
+{ #category : #tests }
+CogX64CompilerTests >> testSubCqR [
+	"self new testSubCqR"
+	self concreteCompilerClass registersWithNamesDo:
+		[:reg :regname|
+		#(16r1 16r3 16r7 16r555555 16rAAAAAA) do:
+			[:const| | inst len|
+			inst := self gen: SubCqR operand: const operand: reg.
+			len := inst concretizeAt: 0.
+			self processor
+				disassembleInstructionAt: 0
+				In: inst machineCode object
+				into: [:str :sz| | plainJane herIntended |
+					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
+					plainJane := self strip: str.
+					herIntended := 'subq $0x', (const printStringBase: 16 length: 16 padded: true), ', ', regname.
+					self assert: (plainJane match: herIntended).
+					self assert: len = sz]]]
 ]
 
 { #category : #tests }

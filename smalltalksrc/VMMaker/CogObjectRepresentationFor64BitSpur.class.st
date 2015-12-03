@@ -127,7 +127,7 @@ CogObjectRepresentationFor64BitSpur >> genGetHashFieldNonImmOf: instReg asSmallI
 	cogit
 		MoveMw: 0 r: instReg R: destReg;
 		"Shift and mask the field leaving room for the SmallInteger tag."
-		LogicalShiftRightCq: objectMemory identityHashFullWordShift - objectMemory numTagBits R: destReg;
+		LogicalShiftRightCq: objectMemory identityHashFullWordShift - self numTagBits R: destReg;
 		AndCq: objectMemory identityHashHalfWordMask << objectMemory numTagBits R: destReg;
 		AddCq: objectMemory smallIntegerTag R: destReg.
 	^0
@@ -763,6 +763,12 @@ CogObjectRepresentationFor64BitSpur >> genLoadHeader: header intoNewInstance: rc
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genRemoveSmallIntegerTagsInScratchReg: scratchReg [
 	cogit SubCq: 1 R: scratchReg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genShiftAwaySmallIntegerTagsInScratchReg: scratchReg [
+	cogit ArithmeticShiftRightCq: self numTagBits R: scratchReg.
 	^0
 ]
 
