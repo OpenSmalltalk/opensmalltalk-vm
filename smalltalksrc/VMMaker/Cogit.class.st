@@ -9873,10 +9873,12 @@ Cogit >> setSelectorOf: cogMethod to: aSelectorOop [
 
 { #category : #initialization }
 Cogit >> setStackAlignment: stackAlignment expectedSPOffset: spOffset expectedFPOffset: fpOffset [
-	"the processor wants certain stack alignment settings"
+	"Spcific platform ABIs mandate specific stack frame alignments.  We capture
+	 these constraints in the variables here and test they are adhered to via
+	 assertCStackWellAligned whenever transitioning to code that will run in C."
 	self assert: stackAlignment isPowerOfTwo.
-	expectedSPAlignment := spOffset. 
-	expectedFPAlignment := fpOffset. 
+	expectedSPAlignment := spOffset \\ stackAlignment.
+	expectedFPAlignment := fpOffset \\ stackAlignment.
 	cStackAlignment := stackAlignment
 
 ]
