@@ -64,7 +64,7 @@ CogX64CompilerTests >> testAddCqR [
 					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 					plainJane := self strip: str.
 					herIntended := 'addq $0x', (const printStringBase: 16 length: 16 padded: true), ', ', regname.
-					self assert: (plainJane match: herIntended).
+					self assert: herIntended equals: plainJane.
 					self assert: len = sz]]]
 ]
 
@@ -84,7 +84,27 @@ CogX64CompilerTests >> testAndCqR [
 					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 					plainJane := self strip: str.
 					herIntended := 'andq $0x', (const printStringBase: 16 length: 16 padded: true), ', ', regname.
-					self assert: (plainJane match: herIntended).
+					self assert: herIntended equals: plainJane.
+					self assert: len = sz]]]
+]
+
+{ #category : #tests }
+CogX64CompilerTests >> testAndRR [
+	"CogX64CompilerTests new testAndRR"
+	self concreteCompilerClass registersWithNamesDo:
+		[:sreg :sregname|
+		self concreteCompilerClass registersWithNamesDo:
+			[:dreg :dregname| | inst len |
+			inst := self gen: AndRR operand: sreg operand: dreg.
+			len := inst concretizeAt: 0.
+			self processor
+				disassembleInstructionAt: 0
+				In: inst machineCode object
+				into: [:str :sz| | plainJane herIntended |
+					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
+					plainJane := self strip: str.
+					herIntended := 'andq ', sregname, ', ', dregname.
+					self assert: herIntended equals: plainJane.
 					self assert: len = sz]]]
 ]
 
@@ -124,7 +144,7 @@ CogX64CompilerTests >> testCMPXCHGAwR [
 					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 					plainJane := self strip: str.
 					herIntended := 'cmpxchgl ', regname, ', 0x', (addr hex allButFirst: 3).
-					self assert: (plainJane match: herIntended).
+					self assert: herIntended equals: plainJane.
 					self assert: len = sz]]]
 ]
 
@@ -153,7 +173,7 @@ CogX64CompilerTests >> testCMPXCHGMwrR [
 							plainJane := self strip: str.
 							herIntended := (prefixLock ifTrue: ['lock '] ifFalse: ['']),
 											'cmpxchgl ', drname, ', 0x', (offset hex allButFirst: 3), '(', srname, ')'.
-							self assert: (plainJane match: herIntended).
+							self assert: herIntended equals: plainJane.
 							self assert: memory size = sz]]]]]
 ]
 
@@ -173,7 +193,7 @@ CogX64CompilerTests >> testCmpCqR [
 					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 					plainJane := self strip: str.
 					herIntended := 'cmpq $0x', (const printStringBase: 16 length: 16 padded: true), ', ', regname.
-					self assert: (plainJane match: herIntended).
+					self assert: herIntended equals: plainJane.
 					self assert: len = sz]]]
 ]
 
@@ -261,7 +281,7 @@ CogX64CompilerTests >> testMoveAbR [
 					into: [:str :sz| | plainJane herIntended |
 						plainJane := self strip: str.
 						herIntended := 'xchgq %rax, %', reg64name.
-						self assert: (plainJane match: herIntended).
+						self assert: herIntended equals: plainJane.
 						totalsz := sz]].
 			self processor
 				disassembleInstructionAt: totalsz
@@ -269,7 +289,7 @@ CogX64CompilerTests >> testMoveAbR [
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
 					herIntended := 'movb 0x', (addr printStringBase: 16 length: 16 padded: true), ', %al'.
-					self assert: (plainJane match: herIntended).
+					self assert: herIntended equals: plainJane.
 					totalsz := totalsz + sz].
 			regname ~= '%al' ifTrue:
 				[self processor
@@ -278,7 +298,7 @@ CogX64CompilerTests >> testMoveAbR [
 					into: [:str :sz| | plainJane herIntended |
 						plainJane := self strip: str.
 						herIntended := 'xchgq %rax, %', reg64name.
-						self assert: (plainJane match: herIntended).
+						self assert: herIntended equals: plainJane.
 						totalsz := totalsz + sz]].
 			self assert: len = totalsz]]
 ]
@@ -300,7 +320,7 @@ CogX64CompilerTests >> testMoveAwR [
 					into: [:str :sz| | plainJane herIntended |
 						plainJane := self strip: str.
 						herIntended := 'xchgq %rax, ', regname.
-						self assert: (plainJane match: herIntended).
+						self assert: herIntended equals: plainJane.
 						totalsz := sz]].
 			self processor
 				disassembleInstructionAt: totalsz
@@ -308,7 +328,7 @@ CogX64CompilerTests >> testMoveAwR [
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
 					herIntended := 'movq 0x', (addr printStringBase: 16 length: 16 padded: true), ', %rax'.
-					self assert: (plainJane match: herIntended).
+					self assert: herIntended equals: plainJane.
 					totalsz := totalsz + sz].
 			regname ~= '%rax' ifTrue:
 				[self processor
@@ -317,7 +337,7 @@ CogX64CompilerTests >> testMoveAwR [
 					into: [:str :sz| | plainJane herIntended |
 						plainJane := self strip: str.
 						herIntended := 'xchgq %rax, ', regname.
-						self assert: (plainJane match: herIntended).
+						self assert: herIntended equals: plainJane.
 						totalsz := totalsz + sz]].
 			self assert: len = totalsz]]
 ]
@@ -338,7 +358,7 @@ CogX64CompilerTests >> testMoveC32R [
 					plainJane := self strip: str.
 					po := offset bitAnd: 1 << self processor bitsInWord - 1.
 					herIntended := 'movq $0x', (po printStringBase: 16 length: 16 padded: true), ', ', rname.
-					self assert: (plainJane match: herIntended).
+					self assert: herIntended equals: plainJane.
 					self assert: len = sz]]]
 ]
 
@@ -419,7 +439,7 @@ CogX64CompilerTests >> testMoveMbrR [
 						po := offset bitAnd: 1 << self processor bitsInWord - 1.
 						plainJane := self strip: str.
 						herIntended := 'movb ', (offset = 0 ifTrue: [''] ifFalse: ['0x', (po printStringBase: 16 length: 16 padded: true)]), '(', srname, '), ', drname.
-						self assert: (plainJane match: herIntended).
+						self assert: herIntended equals: plainJane.
 						self assert: len = sz]]]]
 ]
 
@@ -441,7 +461,7 @@ CogX64CompilerTests >> testMoveMwrR [
 						plainJane := self strip: str.
 						po := offset bitAnd: 1 << self processor bitsInWord - 1.
 						herIntended := 'movq ', (offset = 0 ifTrue: [''] ifFalse: ['0x', (po printStringBase: 16 length: 16 padded: true)]), '(', srname, '), ', drname.
-						self assert: (plainJane match: herIntended).
+						self assert: herIntended equals: plainJane.
 						self assert: len = sz]]]]
 
 	"| failures |
@@ -484,7 +504,7 @@ CogX64CompilerTests >> testMoveRAb [
 					into: [:str :sz| | plainJane herIntended |
 						plainJane := self strip: str.
 						herIntended := 'xchgq %rax, %', reg64name.
-						self assert: (plainJane match: herIntended).
+						self assert: herIntended equals: plainJane.
 						totalsz := sz]].
 			self processor
 				disassembleInstructionAt: totalsz
@@ -492,7 +512,7 @@ CogX64CompilerTests >> testMoveRAb [
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
 					herIntended := 'movb %al, 0x', (addr printStringBase: 16 length: 16 padded: true).
-					self assert: (plainJane match: herIntended).
+					self assert: herIntended equals: plainJane.
 					totalsz := totalsz + sz].
 			regname ~= '%al' ifTrue:
 				[self processor
@@ -501,7 +521,7 @@ CogX64CompilerTests >> testMoveRAb [
 					into: [:str :sz| | plainJane herIntended |
 						plainJane := self strip: str.
 						herIntended := 'xchgq %rax, %', reg64name.
-						self assert: (plainJane match: herIntended).
+						self assert: herIntended equals: plainJane.
 						totalsz := totalsz + sz]].
 			self assert: len = totalsz]]
 ]
@@ -523,7 +543,7 @@ CogX64CompilerTests >> testMoveRAw [
 					into: [:str :sz| | plainJane herIntended |
 						plainJane := self strip: str.
 						herIntended := 'xchgq %rax, ', regname.
-						self assert: (plainJane match: herIntended).
+						self assert: herIntended equals: plainJane.
 						totalsz := sz]].
 			self processor
 				disassembleInstructionAt: totalsz
@@ -531,7 +551,7 @@ CogX64CompilerTests >> testMoveRAw [
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
 					herIntended := 'movq %rax, 0x', (addr printStringBase: 16 length: 16 padded: true).
-					self assert: (plainJane match: herIntended).
+					self assert: herIntended equals: plainJane.
 					totalsz := totalsz + sz].
 			regname ~= '%rax' ifTrue:
 				[self processor
@@ -540,7 +560,7 @@ CogX64CompilerTests >> testMoveRAw [
 					into: [:str :sz| | plainJane herIntended |
 						plainJane := self strip: str.
 						herIntended := 'xchgq %rax, ', regname.
-						self assert: (plainJane match: herIntended).
+						self assert: herIntended equals: plainJane.
 						totalsz := totalsz + sz]].
 			self assert: len = totalsz]]
 ]
@@ -592,7 +612,7 @@ CogX64CompilerTests >> testMoveRMbr [
 						plainJane := self strip: str.
 						po := offset bitAnd: 1 << self processor bitsInWord - 1.
 						herIntended := 'movb ', srname, (offset = 0 ifTrue: [', '] ifFalse: [', 0x', (po printStringBase: 16 length: 16 padded: true)]), '(', drname, ')'.
-						self assert: (plainJane match: herIntended).
+						self assert: herIntended equals: plainJane.
 						self assert: len = sz]]]]
 ]
 
@@ -615,7 +635,7 @@ CogX64CompilerTests >> testMoveRMwr [
 						plainJane := self strip: str.
 						po := offset bitAnd: 1 << self processor bitsInWord - 1.
 						herIntended := 'movq ', srname, ', ', (offset = 0 ifTrue: [''] ifFalse: ['0x', (po printStringBase: 16 length: 16 padded: true)]), '(',drname,')'.
-						self assert: (plainJane match: herIntended).
+						self assert: herIntended equals: plainJane.
 						self assert: len = sz]]]]
 
 	"| failures |
@@ -661,7 +681,7 @@ CogX64CompilerTests >> testMoveRXwrR [
 									"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 									plainJane := self strip: str.
 									herIntended := 'movq ', srname, ', (', brname, ',', irname, ',8)'.
-									self assert: (plainJane match: herIntended).
+									self assert: herIntended equals: plainJane.
 									self assert: len = sz]]]]]]
 ]
 
@@ -682,7 +702,7 @@ CogX64CompilerTests >> testMoveRdM64r [
 					into: [:str :sz| | plainJane herIntended |
 						plainJane := self strip: str.
 						herIntended := 'movsd ', srname, ', 0x', (offset hex allButFirst: 3), '(', drname, ')'.
-						self assert: (plainJane match: herIntended).
+						self assert: herIntended equals: plainJane.
 						self assert: len = sz]]]]
 ]
 
@@ -707,7 +727,7 @@ CogX64CompilerTests >> testMoveX32rRR [
 									"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 									plainJane := self strip: str.
 									herIntended := 'movl (', brname, ',', irname, ',4), ',drname.
-									self assert: (plainJane match: herIntended).
+									self assert: herIntended equals: plainJane.
 									self assert: len - 3 = sz]]]]]]
 ]
 
@@ -733,7 +753,7 @@ CogX64CompilerTests >> testMoveXbrRR [
 								"Convert e.g. '00000000: movzbq %ds:(%rax,%rax,1), %rax : 48 0F B6 04 00 ' to  'movzbq (%rax,%rax,1), %rax'"
 								plainJane := self strip: str.
 								herIntended := 'movb (', brname, ',', irname, ',1), ',drname.
-								self assert: (plainJane match: herIntended).
+								self assert: herIntended equals: plainJane.
 								self assert: len = sz]]]]]]
 ]
 
@@ -758,7 +778,7 @@ CogX64CompilerTests >> testMoveXwrRR [
 									"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 									plainJane := self strip: str.
 									herIntended := 'movq (', brname, ',', irname, ',8), ',drname.
-									self assert: (plainJane match: herIntended).
+									self assert: herIntended equals: plainJane.
 									self assert: len = sz]]]]]]
 ]
 
@@ -819,7 +839,7 @@ CogX64CompilerTests >> testOrCqR [
 					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 					plainJane := self strip: str.
 					herIntended := 'orq $0x', (const printStringBase: 16 length: 16 padded: true), ', ', regname.
-					self assert: (plainJane match: herIntended).
+					self assert: herIntended equals: plainJane.
 					self assert: len = sz]]]
 ]
 
@@ -864,7 +884,7 @@ CogX64CompilerTests >> testSubCqR [
 					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 					plainJane := self strip: str.
 					herIntended := 'subq $0x', (const printStringBase: 16 length: 16 padded: true), ', ', regname.
-					self assert: (plainJane match: herIntended).
+					self assert: herIntended equals: plainJane.
 					self assert: len = sz]]]
 ]
 
@@ -895,7 +915,7 @@ CogX64CompilerTests >> testTstCqR [
 					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 					plainJane := self strip: str.
 					herIntended := op, ' $0x', constString, ', ', regname.
-					self assert: (plainJane match: herIntended).
+					self assert: herIntended equals: plainJane.
 					self assert: len = sz]]]
 ]
 
@@ -917,7 +937,7 @@ CogX64CompilerTests >> testXCHGAwR [
 					"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 					plainJane := self strip: str.
 					herIntended := 'xchgl ', regname, ', 0x', (addr hex allButFirst: 3).
-					self assert: (plainJane match: herIntended).
+					self assert: herIntended equals: plainJane.
 					self assert: len = sz]]]
 ]
 
@@ -941,6 +961,6 @@ CogX64CompilerTests >> testXCHGMwrR [
 					into: [:str :sz| | plainJane herIntended |
 						plainJane := self strip: str.
 						herIntended := 'xchgl ', drname, ', 0x', (offset hex allButFirst: 3), '(', srname, ')'.
-						self assert: (plainJane match: herIntended).
+						self assert: herIntended equals: plainJane.
 						self assert: memory size = sz]]]]
 ]
