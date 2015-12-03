@@ -467,9 +467,9 @@ BochsX64Alien >> handleRetFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|Byt
 	^(ProcessorSimulationTrap
 			pc: pc
 			nextpc: pc + 1
-			address: (memoryArray unsignedLongAt: self esp + 1)
+			address: (memoryArray unsignedLong64At: self rsp + 1)
 			type: #return
-			accessor: #eip:)
+			accessor: #rip:)
 		signal
 ]
 
@@ -566,6 +566,14 @@ BochsX64Alien >> pc [
 BochsX64Alien >> pc: anAddress [
 	"Set whatever the processor considers its program counter to anAddress."
 	self rip: anAddress
+]
+
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> popWordIn: aMemory [ 
+	| sp word |
+	word := aMemory unsignedLongAt: (sp := self rsp) + 1 bigEndian: false.
+	self rsp: sp + 8.
+	^word
 ]
 
 { #category : #execution }
@@ -922,6 +930,11 @@ BochsX64Alien >> retOpcode [
 	^16rC3
 ]
 
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> retpcIn: aMemory [
+	^aMemory unsignedLongAt: self rbp + 9 bigEndian: false
+]
+
 { #category : #opcodes }
 BochsX64Alien >> rexPrefix [
 	^16r48
@@ -1015,6 +1028,22 @@ BochsX64Alien >> simulateCallOf: address nextpc: nextpc memory: aMemory [
 BochsX64Alien >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
 	self pushWord: nextpc in: aMemory.
 	self rip: address
+]
+
+{ #category : #execution }
+BochsX64Alien >> simulateReturnIn: aMemory [
+	PostBuildStackDelta ~= 0 ifTrue:
+		[self rsp: self rsp + PostBuildStackDelta].
+	self rbp: (self popWordIn: aMemory).
+	self rip: (self popWordIn: aMemory)
+]
+
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> smashCallerSavedRegistersWithValuesFrom: base by: step [
+	#(rax: rcx: rdx: rsi: rdi: r8: r9: r10: r11:)
+	   withIndexDo:
+		[:accessor :index|
+		self perform: accessor with: index - 1 * step + base]
 ]
 
 { #category : #'accessing-abstract' }
