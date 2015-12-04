@@ -35,8 +35,7 @@ CogOutOfLineLiteralsX64Compiler >> concreteRegister: registerIndex [
 			[Arg0Reg]				-> [RDI]. "So as to agree with C ABI arg 0"
 			[Arg1Reg]				-> [RSI]. "So as to agree with C ABI arg 1"
 			[VarBaseReg]			-> [RBX]. "Must be callee saved"
-			"No need for a RISCTempReg because out-of-line literal loads imply
-			 no need for a special MoveCwR, given movabsq only targets RAX"
+			"No need for a RISCTempReg because out-of-line literal loads imply no need for a special MoveCwR"
 			"[RISCTempReg]		-> [R8]."
 			[Scratch0Reg]			-> [R9].
 			[Scratch1Reg]			-> [R10].
