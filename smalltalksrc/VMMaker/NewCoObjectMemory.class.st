@@ -10,6 +10,12 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #simulation }
+NewCoObjectMemory class >> defaultISA [
+	"Answer the default instruction set architecture to use for simulation."
+	^#IA32
+]
+
 { #category : #'accessing class hierarchy' }
 NewCoObjectMemory class >> objectRepresentationClass [
 	^CogObjectRepresentationForSqueakV3

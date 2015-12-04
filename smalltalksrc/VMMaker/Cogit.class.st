@@ -945,7 +945,7 @@ Cogit class >> initializeMiscConstants [
 			[EagerInstructionDecoration ifNil:
 				[EagerInstructionDecoration := false]]. "speeds up single stepping but could lose fidelity"
 
-	ProcessorClass := (initializationOptions at: #ISA ifAbsentPut: [#IA32]) caseOf: {
+	ProcessorClass := (initializationOptions at: #ISA ifAbsentPut: [self objectMemoryClass defaultISA]) caseOf: {
 							[#X64] 		->	[BochsX64Alien].
 							[#IA32] 	->	[BochsIA32Alien].
 							[#ARMv5]	->	[GdbARMAlien].
