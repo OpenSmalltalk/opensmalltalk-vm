@@ -36,6 +36,12 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #simulation }
+Spur64BitCoMemoryManager class >> defaultISA [
+	"Answer the default instruction set architecture to use for simulation."
+	^#X64
+]
+
 { #category : #translation }
 Spur64BitCoMemoryManager class >> exportAPISelectors: options [
 	^(Set withAll: (self exportAPISelectorsFor: self))
@@ -48,7 +54,7 @@ Spur64BitCoMemoryManager class >> objectRepresentationClass [
 	^CogObjectRepresentationFor64BitSpur
 ]
 
-{ #category : #'simulation only' }
+{ #category : #simulation }
 Spur64BitCoMemoryManager class >> simulatorClass [
 	^Spur64BitMMLECoSimulator
 ]
