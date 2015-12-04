@@ -91,6 +91,12 @@ CogObjectRepresentationFor64BitSpur >> fetchImmediateTagOtherThanTag1: tag1 tag2
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genAddSmallIntegerTagsTo: aRegister [
+	cogit AddCq: 1 R: aRegister.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genConvertCharacterToSmallIntegerInReg: reg [
 	"Convert the SmallInteger in reg to a Character, assuming
 	 the SmallInteger's value is a valid character."

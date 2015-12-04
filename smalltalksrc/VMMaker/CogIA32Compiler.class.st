@@ -551,19 +551,6 @@ CogIA32Compiler >> concretizeAddCwR [
 ]
 
 { #category : #'generate machine code' }
-CogIA32Compiler >> concretizeAddRR [
-	"Will get inlined into concretizeAt: switch."
-	<inline: true>
-	| regLHS regRHS |
-	regLHS := self concreteRegister: (operands at: 0).
-	regRHS := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: 16r03;
-		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
-	^machineCodeSize := 2
-]
-
-{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeAlignmentNops [
 	<inline: true>
 	self flag: 'if performance is an issue generate longer nops'.
@@ -626,19 +613,6 @@ CogIA32Compiler >> concretizeAndCwR [
 		at: 4 put: (value >> 16 bitAnd: 16rFF);
 		at: 5 put: (value >> 24 bitAnd: 16rFF).
 	 ^machineCodeSize := 6
-]
-
-{ #category : #'generate machine code' }
-CogIA32Compiler >> concretizeAndRR [
-	"Will get inlined into concretizeAt: switch."
-	<inline: true>
-	| regLHS regRHS |
-	regLHS := self concreteRegister: (operands at: 0).
-	regRHS := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: 16r23;
-		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
-	^machineCodeSize := 2
 ]
 
 { #category : #'generate machine code' }
@@ -845,20 +819,6 @@ CogIA32Compiler >> concretizeCmpCwR [
 		at: 4 put: (value >> 16 bitAnd: 16rFF);
 		at: 5 put: (value >> 24 bitAnd: 16rFF).
 	 ^machineCodeSize := 6
-]
-
-{ #category : #'generate machine code' }
-CogIA32Compiler >> concretizeCmpRR [
-	"Will get inlined into concretizeAt: switch."
-	<inline: true>
-	| regLHS regRHS |
-	"CmpRR RHS LHS computes LHS - RHS, i.e. apparently reversed.  You have to think subtract."
-	regRHS := self concreteRegister: (operands at: 0).
-	regLHS := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: 16r39;
-		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
-	^machineCodeSize := 2
 ]
 
 { #category : #'generate machine code' }
@@ -1603,19 +1563,6 @@ CogIA32Compiler >> concretizeMoveRMwr [
 ]
 
 { #category : #'generate machine code' }
-CogIA32Compiler >> concretizeMoveRR [
-	"Will get inlined into concretizeAt: switch."
-	<inline: true>
-	| srcReg destReg |
-	srcReg := self concreteRegister: (operands at: 0).
-	destReg := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: 16r89;
-		at: 1 put: (self mod: ModReg RM: destReg RO: srcReg).
-	^machineCodeSize := 2
-]
-
-{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeMoveRXbrR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1802,6 +1749,17 @@ CogIA32Compiler >> concretizeNop [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeOpRR: opcode [
+	| regLHS regRHS |
+	regLHS := self concreteRegister: (operands at: 0).
+	regRHS := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: opcode;
+		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
+	^machineCodeSize := 2
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeOrCqR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1855,19 +1813,6 @@ CogIA32Compiler >> concretizeOrCwR [
 		at: 4 put: (value >> 16 bitAnd: 16rFF);
 		at: 5 put: (value >> 24 bitAnd: 16rFF).
 	 ^machineCodeSize := 6
-]
-
-{ #category : #'generate machine code' }
-CogIA32Compiler >> concretizeOrRR [
-	"Will get inlined into concretizeAt: switch."
-	<inline: true>
-	| regLHS regRHS |
-	regLHS := self concreteRegister: (operands at: 0).
-	regRHS := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: 16r0B;
-		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
-	^machineCodeSize := 2
 ]
 
 { #category : #'generate machine code' }
@@ -1950,6 +1895,17 @@ CogIA32Compiler >> concretizeRetN [
 		at: 1 put: (offset bitAnd: 16rFF);
 		at: 2 put: (offset >> 8).
 	^machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeReverseOpRR: opcode [
+	| regLHS regRHS |
+	regRHS := self concreteRegister: (operands at: 0).
+	regLHS := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: opcode;
+		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
+	^machineCodeSize := 2
 ]
 
 { #category : #'generate machine code' }
@@ -2042,19 +1998,6 @@ CogIA32Compiler >> concretizeSubCwR [
 		at: 4 put: (value >> 16 bitAnd: 16rFF);
 		at: 5 put: (value >> 24 bitAnd: 16rFF).
 	 ^machineCodeSize := 6
-]
-
-{ #category : #'generate machine code' }
-CogIA32Compiler >> concretizeSubRR [
-	"Will get inlined into concretizeAt: switch."
-	<inline: true>
-	| regLHS regRHS |
-	regLHS := self concreteRegister: (operands at: 0).
-	regRHS := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: 16r2B;
-		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
-	^machineCodeSize := 2
 ]
 
 { #category : #'generate machine code' }
@@ -2189,19 +2132,6 @@ CogIA32Compiler >> concretizeXorCwR [
 ]
 
 { #category : #'generate machine code' }
-CogIA32Compiler >> concretizeXorRR [
-	"Will get inlined into concretizeAt: switch."
-	<inline: true>
-	| regLHS regRHS |
-	regLHS := self concreteRegister: (operands at: 0).
-	regRHS := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: 16r33;
-		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
-	^machineCodeSize := 2
-]
-
-{ #category : #'generate machine code' }
 CogIA32Compiler >> dispatchConcretize [
 	"Attempt to generate concrete machine code for the instruction at address.
 	 This is the inner dispatch of concretizeAt: actualAddress which exists only
@@ -2269,28 +2199,28 @@ CogIA32Compiler >> dispatchConcretize [
 		"Arithmetic"
 		[AddCqR]					-> [^self concretizeAddCqR].
 		[AddCwR]					-> [^self concretizeAddCwR].
-		[AddRR]						-> [^self concretizeAddRR].
+		[AddRR]						-> [^self concretizeOpRR: 16r03].
 		[AddRdRd]					-> [^self concretizeSEE2OpRdRd: 16r58].
 		[AndCqR]					-> [^self concretizeAndCqR].
 		[AndCwR]					-> [^self concretizeAndCwR].
-		[AndRR]						-> [^self concretizeAndRR].
+		[AndRR]						-> [^self concretizeOpRR: 16r23].
 		[TstCqR]					-> [^self concretizeTstCqR].
 		[CmpCqR]					-> [^self concretizeCmpCqR].
 		[CmpCwR]					-> [^self concretizeCmpCwR].
-		[CmpRR]					-> [^self concretizeCmpRR].
+		[CmpRR]					-> [^self concretizeReverseOpRR: 16r39].
 		[CmpRdRd]					-> [^self concretizeCmpRdRd].
 		[DivRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5E].
 		[MulRdRd]					-> [^self concretizeSEE2OpRdRd: 16r59].
 		[OrCqR]						-> [^self concretizeOrCqR].
 		[OrCwR]					-> [^self concretizeOrCwR].
-		[OrRR]						-> [^self concretizeOrRR].
+		[OrRR]						-> [^self concretizeOpRR: 16r0B].
 		[SubCqR]					-> [^self concretizeSubCqR].
 		[SubCwR]					-> [^self concretizeSubCwR].
-		[SubRR]						-> [^self concretizeSubRR].
+		[SubRR]						-> [^self concretizeOpRR: 16r2B].
 		[SubRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5C].
 		[SqrtRd]						-> [^self concretizeSqrtRd].
 		[XorCwR]						-> [^self concretizeXorCwR].
-		[XorRR]							-> [^self concretizeXorRR].
+		[XorRR]							-> [^self concretizeOpRR: 16r33].
 		[NegateR]						-> [^self concretizeNegateR].
 		[LoadEffectiveAddressMwrR]	-> [^self concretizeLoadEffectiveAddressMwrR].
 		[ArithmeticShiftRightCqR]		-> [^self concretizeArithmeticShiftRightCqR].
@@ -2301,7 +2231,7 @@ CogIA32Compiler >> dispatchConcretize [
 		"Data Movement"
 		[MoveCqR]			-> [^self concretizeMoveCqR].
 		[MoveCwR]			-> [^self concretizeMoveCwR].
-		[MoveRR]			-> [^self concretizeMoveRR].
+		[MoveRR]			-> [^self concretizeReverseOpRR: 16r89].
 		[MoveAwR]			-> [^self concretizeMoveAwR].
 		[MoveRAw]			-> [^self concretizeMoveRAw].
 		[MoveAbR]			-> [^self concretizeMoveAbR].
