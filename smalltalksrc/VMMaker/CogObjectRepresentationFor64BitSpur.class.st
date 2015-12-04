@@ -111,6 +111,14 @@ CogObjectRepresentationFor64BitSpur >> genConvertIntegerToSmallIntegerInReg: reg
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genConvertSmallIntegerToCharacterInReg: reg [
+	"Convert the SmallInteger in reg to a Character, assuming
+	 the SmallInteger's value is a valid character."
+	self assert: (objectMemory characterTag = 2 and: [objectMemory smallIntegerTag = 1]).
+	cogit AddCq: 1 R: reg
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genConvertSmallIntegerToIntegerInReg: reg [
 	cogit ArithmeticShiftRightCq: self numTagBits R: reg.
 	^0
@@ -311,10 +319,7 @@ CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveAt: retNoffset [
 
 	jumpImmediate := self genJumpImmediate: ReceiverResultReg.
 	cogit MoveR: Arg0Reg R: Arg1Reg.
-	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg.
-	jumpBadIndex asInteger = UnimplementedOperation ifTrue:
-		[cogit MoveR: Arg0Reg R: TempReg.
-		 jumpBadIndex := self genJumpNotSmallIntegerInScratchReg: TempReg].
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratch: TempReg.
 	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
 	cogit SubCq: 1 R: Arg1Reg. "1-rel => 0-rel"
 
@@ -584,10 +589,7 @@ CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	self genGetHashFieldNonImmOf: ReceiverResultReg into: headerReg.
 	jumpUnhashed := cogit JumpZero: 0.
 	"get index and fail if not a +ve integer"
-	jumpNElementsNonInt := self genJumpNotSmallInteger: Arg0Reg.
-	jumpNElementsNonInt asInteger = UnimplementedOperation ifTrue:
-		[cogit MoveR: Arg0Reg R: TempReg.
-		 jumpNElementsNonInt := self genJumpNotSmallIntegerInScratchReg: TempReg].
+	jumpNElementsNonInt := self genJumpNotSmallInteger: Arg0Reg scratch: TempReg.
 	"get class's format inst var for inst spec (format field)"
 	self genLoadSlot: InstanceSpecificationIndex sourceReg: ReceiverResultReg destReg: instSpecReg.
 	cogit LogicalShiftRightCq: objectMemory fixedFieldsFieldWidth + self numSmallIntegerTagBits R: instSpecReg.

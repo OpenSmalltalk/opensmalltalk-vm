@@ -287,6 +287,21 @@ CogObjectRepresentation >> genJumpNotSmallInteger: aRegister [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genJumpNotSmallInteger: aRegister scratch: scratchReg [
+	"Generate a test for aRegister containing a SmallInteger and a jump if not, answering the jump.
+	 If necessary use scratch reg (since testing for SmallInteger may be destructive)."
+	<returnTypeC: #'AbstractInstruction *'>
+	| jumpNotInt |
+	<inline: true>
+	<var: 'jumpNotInt' type: #'AbstractInstruction *'>
+	jumpNotInt := self genJumpNotSmallInteger: aRegister.
+	jumpNotInt asInteger = UnimplementedOperation ifTrue:
+		[cogit MoveR: aRegister R: scratchReg.
+		 jumpNotInt := self genJumpNotSmallIntegerInScratchReg: TempReg].
+	^jumpNotInt
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genJumpNotSmallInteger: aRegister scratchReg: scratch [
 	"Generate a compare and branch to test if aRegister contains other than a SmallInteger.
 	 Answer the jump.  Use scratch if required.  Subclasses will override if scratch is needed."
@@ -311,6 +326,21 @@ CogObjectRepresentation >> genJumpSmallInteger: aRegister [
 	<returnTypeC: #'AbstractInstruction *'>
 	<inline: true>
 	^cogit cCoerceSimple: UnimplementedOperation to: #'AbstractInstruction *'
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genJumpSmallInteger: aRegister scratch: scratchReg [
+	"Generate a test for aRegister containing a SmallInteger and a jump if so, answering the jump.
+	 If necessary use scratch reg (since testing for SmallInteger may be destructive)."
+	<returnTypeC: #'AbstractInstruction *'>
+	| jumpInt |
+	<inline: true>
+	<var: 'jumpInt' type: #'AbstractInstruction *'>
+	jumpInt := self genJumpSmallInteger: aRegister.
+	jumpInt asInteger = UnimplementedOperation ifTrue:
+		[cogit MoveR: aRegister R: scratchReg.
+		 jumpInt := self genJumpSmallIntegerInScratchReg: TempReg].
+	^jumpInt
 ]
 
 { #category : #'compile abstract instructions' }
