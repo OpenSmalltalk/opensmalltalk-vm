@@ -600,40 +600,12 @@ CogX64Compiler >> concreteDPFPRegister: registerIndex [
 ]
 
 { #category : #'generate machine code' }
-CogX64Compiler >> concretizeAddRR [
-	"Will get inlined into concretizeAt: switch."
-	<inline: true>
-	| regLHS regRHS |
-	regLHS := self concreteRegister: (operands at: 0).
-	regRHS := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: (self rexR: regRHS x: 0 b: regLHS);
-		at: 1 put: 16r03;
-		at: 2 put: (self mod: ModReg RM: regLHS RO: regRHS).
-	^machineCodeSize := 3
-]
-
-{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeAlignmentNops [
 	<inline: true>
 	self flag: 'if performance is an issue generate longer nops'.
 	0 to: machineCodeSize - 1 do:
 		[:i|
 		machineCode at: i put: 16r90]
-]
-
-{ #category : #'generate machine code' }
-CogX64Compiler >> concretizeAndRR [
-	"Will get inlined into concretizeAt: switch."
-	<inline: true>
-	| regLHS regRHS |
-	regLHS := self concreteRegister: (operands at: 0).
-	regRHS := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: (self rexR: regRHS x: 0 b: regLHS);
-		at: 1 put: 16r23;
-		at: 2 put: (self mod: ModReg RM: regLHS RO: regRHS).
-	^machineCodeSize := 3
 ]
 
 { #category : #'generate machine code' }
@@ -745,21 +717,6 @@ CogX64Compiler >> concretizeCmpC32R [
 		at: 5 put: (value >> 16 bitAnd: 16rFF);
 		at: 6 put: (value >> 24 bitAnd: 16rFF).
 	 ^machineCodeSize := 7
-]
-
-{ #category : #'generate machine code' }
-CogX64Compiler >> concretizeCmpRR [
-	"Will get inlined into concretizeAt: switch."
-	<inline: true>
-	| regLHS regRHS |
-	"CmpRR RHS LHS computes LHS - RHS, i.e. apparently reversed.  You have to think subtract."
-	regRHS := self concreteRegister: (operands at: 0).
-	regLHS := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: (self rexR: regRHS x: 0 b: regLHS);
-		at: 1 put: 16r39;
-		at: 2 put: (self mod: ModReg RM: regLHS RO: regRHS).
-	^machineCodeSize := 3
 ]
 
 { #category : #'generate machine code' }
@@ -1535,20 +1492,6 @@ CogX64Compiler >> concretizeMoveRMwr [
 ]
 
 { #category : #'generate machine code' }
-CogX64Compiler >> concretizeMoveRR [
-	"Will get inlined into concretizeAt: switch."
-	<inline: true>
-	| srcReg destReg |
-	srcReg := self concreteRegister: (operands at: 0).
-	destReg := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: (self rexR: srcReg x: 0 b: destReg);
-		at: 1 put: 16r89;
-		at: 2 put: (self mod: ModReg RM: destReg RO: srcReg).
-	^machineCodeSize := 3
-]
-
-{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveRXbrR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1712,6 +1655,18 @@ CogX64Compiler >> concretizeNop [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeOpRR: opcode [
+	| regLHS regRHS |
+	regLHS := self concreteRegister: (operands at: 0).
+	regRHS := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: (self rexR: regRHS x: 0 b: regLHS);
+		at: 1 put: opcode;
+		at: 2 put: (self mod: ModReg RM: regLHS RO: regRHS).
+	^machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizePopR [
 	<inline: true>
 	| reg |
@@ -1771,6 +1726,19 @@ CogX64Compiler >> concretizeRetN [
 		at: 0 put: 16rC2;
 		at: 1 put: (offset bitAnd: 16rFF);
 		at: 2 put: (offset >> 8).
+	^machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeReverseOpRR: opcode [
+	| regLHS regRHS |
+	"CmpRR/MoveRR RHS LHS computes LHS - RHS, i.e. apparently reversed.  You have to think subtract."
+	regRHS := self concreteRegister: (operands at: 0).
+	regLHS := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: (self rexR: regRHS x: 0 b: regLHS);
+		at: 1 put: opcode;
+		at: 2 put: (self mod: ModReg RM: regLHS RO: regRHS).
 	^machineCodeSize := 3
 ]
 
@@ -1868,20 +1836,6 @@ CogX64Compiler >> concretizeSqrtRd [
 ]
 
 { #category : #'generate machine code' }
-CogX64Compiler >> concretizeSubRR [
-	"Will get inlined into concretizeAt: switch."
-	<inline: true>
-	| regLHS regRHS |
-	regLHS := self concreteRegister: (operands at: 0).
-	regRHS := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: (self rexR: regRHS x: 0 b: regLHS);
-		at: 1 put: 16r2b;
-		at: 2 put: (self mod: ModReg RM: regLHS RO: regRHS).
-	^machineCodeSize := 3
-]
-
-{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeTstCqR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1931,20 +1885,6 @@ CogX64Compiler >> concretizeXCHGRR [
 		at: 0 put: (self rexR: r1 x: 0 b: r2);
 		at: 1 put: 87;
 		at: 2 put: (self mod: r2 RM: 0 RO: r1).
-	^machineCodeSize := 3
-]
-
-{ #category : #'generate machine code' }
-CogX64Compiler >> concretizeXorRR [
-	"Will get inlined into concretizeAt: switch."
-	<inline: true>
-	| regLHS regRHS |
-	regLHS := self concreteRegister: (operands at: 0).
-	regRHS := self concreteRegister: (operands at: 1).
-	machineCode
-		at: 0 put: (self rexR: regRHS x: 0 b: regLHS);
-		at: 1 put: 16r33;
-		at: 2 put: (self mod: ModReg RM: regLHS RO: regRHS).
 	^machineCodeSize := 3
 ]
 
@@ -2016,29 +1956,29 @@ CogX64Compiler >> dispatchConcretize [
 		"Arithmetic"
 		[AddCqR]					-> [^self concretizeArithCqRWithRO: 0 raxOpcode: 15r05].
 		[AddCwR]					-> [^self concretizeArithCwR: 16r03].
-		[AddRR]						-> [^self concretizeAddRR].
+		[AddRR]						-> [^self concretizeOpRR: 16r03].
 		[AddRdRd]					-> [^self concretizeSEE2OpRdRd: 16r58].
 		[AndCqR]					-> [^self concretizeArithCqRWithRO: 4 raxOpcode: 16r25].
 		[AndCwR]					-> [^self concretizeArithCwR: 16r23].
-		[AndRR]						-> [^self concretizeAndRR].
+		[AndRR]						-> [^self concretizeOpRR: 16r23].
 		[TstCqR]					-> [^self concretizeTstCqR].
 		[CmpCqR]					-> [^self concretizeArithCqRWithRO: 7 raxOpcode: 16r3D].
 		[CmpCwR]					-> [^self concretizeArithCwR: 16r39].
 		[CmpC32R]					-> [^self concretizeCmpC32R].
-		[CmpRR]					-> [^self concretizeCmpRR].
+		[CmpRR]					-> [^self concretizeReverseOpRR: 16r39].
 		[CmpRdRd]					-> [^self concretizeCmpRdRd].
 		[DivRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5E].
 		[MulRdRd]					-> [^self concretizeSEE2OpRdRd: 16r59].
 		[OrCqR]						-> [^self concretizeArithCqRWithRO: 1 raxOpcode: 16r0D].
 		[OrCwR]					-> [^self concretizeArithCwR: 16r0B].
-		[OrRR]						-> [^self concretizeOrRR].
+		[OrRR]						-> [^self concretizeOpRR: 16r0B].
 		[SubCqR]					-> [^self concretizeArithCqRWithRO: 5 raxOpcode: 16r2D].
 		[SubCwR]					-> [^self concretizeArithCwR: 16r2B].
-		[SubRR]						-> [^self concretizeSubRR].
+		[SubRR]						-> [^self concretizeOpRR: 16r2B].
 		[SubRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5C].
 		[SqrtRd]					-> [^self concretizeSqrtRd].
 		[XorCwR]					-> [^self concretizeArithCwR: 16r33].
-		[XorRR]						-> [^self concretizeXorRR].
+		[XorRR]						-> [^self concretizeOpRR: 16r33].
 		[NegateR]					-> [^self concretizeNegateR].
 		[LoadEffectiveAddressMwrR]	-> [^self concretizeLoadEffectiveAddressMwrR].
 		[ArithmeticShiftRightCqR]		-> [^self concretizeShiftCqRegOpcode: 7].
@@ -2050,7 +1990,7 @@ CogX64Compiler >> dispatchConcretize [
 		[MoveCqR]			-> [^self concretizeMoveCqR].
 		[MoveCwR]			-> [^self concretizeMoveCwR].
 		[MoveC32R]		-> [^self concretizeMoveC32R].
-		[MoveRR]			-> [^self concretizeMoveRR].
+		[MoveRR]			-> [^self concretizeReverseOpRR: 16r89].
 		[MoveAwR]			-> [^self concretizeMoveAwR].
 		[MoveRAw]			-> [^self concretizeMoveRAw].
 		[MoveAbR]			-> [^self concretizeMoveAbR].
