@@ -1749,12 +1749,12 @@ CogIA32Compiler >> concretizeNop [
 ]
 
 { #category : #'generate machine code' }
-CogIA32Compiler >> concretizeOpRR: opcode [
+CogIA32Compiler >> concretizeOpRR: x86opcode [
 	| regLHS regRHS |
 	regLHS := self concreteRegister: (operands at: 0).
 	regRHS := self concreteRegister: (operands at: 1).
 	machineCode
-		at: 0 put: opcode;
+		at: 0 put: x86opcode;
 		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
 	^machineCodeSize := 2
 ]
@@ -1898,12 +1898,12 @@ CogIA32Compiler >> concretizeRetN [
 ]
 
 { #category : #'generate machine code' }
-CogIA32Compiler >> concretizeReverseOpRR: opcode [
+CogIA32Compiler >> concretizeReverseOpRR: x86opcode [
 	| regLHS regRHS |
 	regRHS := self concreteRegister: (operands at: 0).
 	regLHS := self concreteRegister: (operands at: 1).
 	machineCode
-		at: 0 put: opcode;
+		at: 0 put: x86opcode;
 		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
 	^machineCodeSize := 2
 ]
