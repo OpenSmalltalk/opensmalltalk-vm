@@ -654,6 +654,18 @@ CogObjectRepresentationForSqueakV3 >> genJumpImmediateInScratchReg: aRegister [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpIsSmallIntegerValue: aRegister scratch: scratchReg [
+	"Generate a test for aRegister containing an integer value in the SmallInteger range, and a jump if so, answering the jump.
+	 c.f. ObjectMemory>>isIntegerValue:"
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit
+		MoveR: aRegister R: scratchReg;
+		ArithmeticShiftRightCq: 1 R: scratchReg;
+		XorR: aRegister R: scratchReg;
+		JumpLess: 0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genJumpNotImmediate: aRegister [
 	<inline: true>
 	^self genJumpNotSmallInteger: aRegister

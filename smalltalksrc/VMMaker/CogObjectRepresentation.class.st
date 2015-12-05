@@ -269,6 +269,13 @@ CogObjectRepresentation >> genJumpImmediate: aRegister [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genJumpIsSmallIntegerValue: aRegister scratch: scratchReg [
+	"Generate a test for aRegister containing an integer value in the SmallInteger range, and a jump if so, answering the jump."
+	<returnTypeC: #'AbstractInstruction *'>
+	self subclassResponsibility
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genJumpNotImmediate: aRegister [
 	"Generate a compare and branch to test if aRegister contains a non-immediate.
 	 Answer the jump."

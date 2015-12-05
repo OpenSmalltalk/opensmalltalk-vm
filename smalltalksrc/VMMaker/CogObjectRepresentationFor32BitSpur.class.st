@@ -1328,6 +1328,18 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset 
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genJumpIsSmallIntegerValue: aRegister scratch: scratchReg [
+	"Generate a test for aRegister containing an integer value in the SmallInteger range, and a jump if so, answering the jump.
+	 c.f. Spur32BitMemoryManager>>isIntegerValue:"
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit
+		MoveR: aRegister R: scratchReg;
+		ArithmeticShiftRightCq: 1 R: scratchReg;
+		XorR: aRegister R: scratchReg;
+		JumpLess: 0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genJumpNotSmallInteger: aRegister [
 	<returnTypeC: #'AbstractInstruction *'>
 	cogit TstCq: 1 R: aRegister.
