@@ -2514,8 +2514,9 @@ SimpleStackBasedCogit >> genPrimitiveClosureValue [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveDiv [
-	| jumpNotSI jumpZero jumpExact jumpSameSign convert |
+	| jumpNotSI jumpIsSI jumpZero jumpExact jumpSameSign convert |
 	<var: #convert type: #'AbstractInstruction *'>
+	<var: #jumpIsSI type: #'AbstractInstruction *'>
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
 	<var: #jumpExact type: #'AbstractInstruction *'>
@@ -2547,9 +2548,9 @@ SimpleStackBasedCogit >> genPrimitiveDiv [
 	self MoveR: TempReg R: ReceiverResultReg.
 	self RetN: (self primRetNOffsetFor: 1).
 	"test for overflow; the only case is SmallInteger minVal // -1"
-	jumpExact jmpTarget:
-		(self CmpCq: (1 << (objectRepresentation numSmallIntegerBits - 1)) R: TempReg).
-	self JumpLess: convert.
+	jumpExact jmpTarget: self Label.
+	jumpIsSI := objectRepresentation genJumpIsSmallIntegerValue: TempReg scratch: Arg1Reg.
+	jumpIsSI jmpTarget: convert.
 	jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label).
 	^0
 ]
