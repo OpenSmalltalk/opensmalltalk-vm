@@ -269,6 +269,7 @@ Spur32BitCoMemoryManager >> scavengeThresholdAddress [
 Spur32BitCoMemoryManager >> smallIntegerTag [
 	"Beware, SmallInteger tags are 1 or 3.  But SmallInteger's identityHash is 1."
 	<api>
+	<cmacro: '() 1'>
 	^1
 ]
 

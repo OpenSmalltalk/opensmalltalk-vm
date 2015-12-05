@@ -2060,6 +2060,13 @@ StackInterpreter >> alternateHeaderHasPrimitiveFlag: methodHeader [
 ]
 
 { #category : #'compiled methods' }
+StackInterpreter >> alternateHeaderNumLiteralsMask [
+	<api>
+	<cmacro: '() AlternateHeaderNumLiteralsMask'>
+	^AlternateHeaderNumLiteralsMask
+]
+
+{ #category : #'compiled methods' }
 StackInterpreter >> argumentCountOf: methodPointer [
 	<api>
 	^self argumentCountOfMethodHeader: (objectMemory methodHeaderOf: methodPointer)

@@ -2743,6 +2743,7 @@ SpurMemoryManager >> characterTable [
 { #category : #'object access' }
 SpurMemoryManager >> characterTag [
 	<api>
+	<cmacro: '() 2'>
 	^2
 ]
 

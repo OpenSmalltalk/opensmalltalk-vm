@@ -268,6 +268,7 @@ Spur64BitCoMemoryManager >> scavengeThresholdAddress [
 { #category : #'cog jit support' }
 Spur64BitCoMemoryManager >> smallIntegerTag [
 	<api>
+	<cmacro: '() 1'>
 	^1
 ]
 

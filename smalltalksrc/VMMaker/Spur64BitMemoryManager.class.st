@@ -1119,6 +1119,8 @@ Spur64BitMemoryManager >> smallFloatSignBit [
 
 { #category : #'cog jit support' }
 Spur64BitMemoryManager >> smallFloatTag [
+	<api>
+	<cmacro: '() 3'>
 	^3
 ]
 
