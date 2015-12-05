@@ -1021,7 +1021,7 @@ CCodeGenerator >> emitBuiltinConstructFor: msgNode on: aStream level: level [
 { #category : #'C code generator' }
 CCodeGenerator >> emitCAPIExportHeaderOn: aStream [ 
 	"Store prototype declarations for all non-inlined methods on the given stream."
-	| api methodList |
+	| api methodList usedConstants |
 	api := (vmClass translationClass exportAPISelectors: self options).
 	methodList := api
 					select:
@@ -1043,7 +1043,8 @@ CCodeGenerator >> emitCAPIExportHeaderOn: aStream [
 			[logger ensureCr; show: m selector, ' excluded from export API because it is static'; cr]].
 	self emitCFunctionPrototypes: methodList on: aStream.
 	self emitGlobalCVariablesOn: aStream.
-	self emitCMacros: methodList on: aStream
+	usedConstants := self emitCMacros: methodList on: aStream.
+	self emitCConstants: usedConstants on: aStream
 ]
 
 { #category : #'C code generator' }
@@ -1089,9 +1090,35 @@ CCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: asse
 ]
 
 { #category : #'C code generator' }
+CCodeGenerator >> emitCConstants: constList on: aStream [
+	"Store the global variable declarations on the given stream."
+	constList isEmpty ifTrue: [^self].
+	aStream cr; nextPutAll: '/*** Constants ***/'; cr.
+	(self sortStrings: constList) do:
+		[:varName| | node default value |
+		node := constants at: varName.
+		node name isEmpty ifFalse:
+			["If the definition includes a C comment, take it as is, otherwise convert the value from Smalltalk to C.
+			  Allow the class to provide an alternative definition, either of just the value or the whole shebang."
+			default := (node value isString and: [node value includesSubString: '/*'])
+							ifTrue: [node value]
+							ifFalse: [self cLiteralFor: node value name: varName].
+			value := vmClass
+						ifNotNil:
+							[(vmClass specialValueForConstant: node name default: default)
+								ifNotNil: [:specialDef| specialDef]
+								ifNil: [default]]
+						ifNil: [default].
+			value first ~= $# ifTrue:
+				[aStream nextPutAll: '#define '; nextPutAll: node name; space].
+			aStream nextPutAll: value; cr]].
+	aStream cr
+]
+
+{ #category : #'C code generator' }
 CCodeGenerator >> emitCConstantsOn: aStream [ 
 	"Store the global variable declarations on the given stream."
-	| unused constList |
+	| unused |
 	unused := constants keys asSet.
 	"Don't generate any defines for the externally defined constants,
 	 STACKVM, COGVM, COGMTVM et al, unless they're actually used."
@@ -1114,27 +1141,7 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 			[unused remove: const ifAbsent: []]].
 	"and VMBasicConstants mostBasicConstantNames *must* be taken from interp.h"
 	unused addAll: VMBasicConstants mostBasicConstantNames.
-	constList := constants keys reject: [:any| unused includes: any].
-	aStream cr; nextPutAll: '/*** Constants ***/'; cr.
-	(self sortStrings: constList) do:
-		[:varName| | node default value |
-		node := constants at: varName.
-		node name isEmpty ifFalse:
-			["If the definition includes a C comment, take it as is, otherwise convert the value from Smalltalk to C.
-			  Allow the class to provide an alternative definition, either of just the value or the whole shebang."
-			default := (node value isString and: [node value includesSubString: '/*'])
-							ifTrue: [node value]
-							ifFalse: [self cLiteralFor: node value name: varName].
-			value := vmClass
-						ifNotNil:
-							[(vmClass specialValueForConstant: node name default: default)
-								ifNotNil: [:specialDef| specialDef]
-								ifNil: [default]]
-						ifNil: [default].
-			value first ~= $# ifTrue:
-				[aStream nextPutAll: '#define '; nextPutAll: node name; space].
-			aStream nextPutAll: value; cr]].
-	aStream cr
+	self emitCConstants: (constants keys reject: [:any| unused includes: any]) on: aStream
 ]
 
 { #category : #'C code generator' }
@@ -1218,18 +1225,24 @@ CCodeGenerator >> emitCHeaderOn: aStream [
 
 { #category : #'C code generator' }
 CCodeGenerator >> emitCMacros: methodList on: aStream [ 
-	"Store the global variable declarations on the given stream."
-	macros isEmpty ifTrue: [^self].
+	"Store the global variable declarations on the given stream.  Answer any constants used in the macros."
+	| usedConstants |
+	macros isEmpty ifTrue: [^#()].
 	aStream cr; nextPutAll: '/*** Macros ***/'; cr.
-
+	usedConstants := Set new.
 	(methodList reject: [:m| m isRealMethod]) do:
 		[:m |
 		m definedAsMacro ifTrue:
 			[aStream
 				nextPutAll: '#define ';
 				nextPutAll:(self cFunctionNameFor: m selector);
-				nextPutAll: (macros at: m selector); cr]].
-	aStream cr
+				nextPutAll: (macros at: m selector); cr.
+			 m compiledMethod literalsDo:
+				[:lit|
+				(lit isVariableBinding and: [(macros at: m selector) includesSubString: lit key]) ifTrue:
+					[usedConstants add: lit key]]]].
+	aStream cr.
+	^usedConstants
 ]
 
 { #category : #'C code generator' }
