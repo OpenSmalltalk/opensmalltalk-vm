@@ -331,6 +331,13 @@ BochsX64Alien >> handleGroup5FailureAt: pc "<Integer>" in: memoryArray "<Bitmap|
 									nextpc: pc + 2
 									address: (self perform: getter)
 									type: #call)
+								signal].
+			[4 "Jump Ev"]	->	[getter := self registerStateGetters at: (modrmByte bitAnd: 7) + 1.
+							^(ProcessorSimulationTrap
+									pc: pc
+									nextpc: pc + 2
+									address: (self perform: getter)
+									type: #jump)
 								signal] }
 ]
 
@@ -1191,6 +1198,19 @@ BochsX64Alien >> simulateCallOf: address nextpc: nextpc memory: aMemory [
 		passed on stack) byte boundary. In other words, the value (%rsp + 8) is always
 		a multiple of 16 (32) when control is transferred to the function entry point."
 	self pushWord: nextpc in: aMemory.
+	self pushWord: self rbp in: aMemory.
+	self rbp: self rsp.
+	PostBuildStackDelta ~= 0 ifTrue:
+		[self rsp: self rsp - PostBuildStackDelta].
+	self rip: address
+]
+
+{ #category : #execution }
+BochsX64Alien >> simulateJumpCallOf: address memory: aMemory [
+	"Simulate a frame-building jump call of address (i.e. do not push the return pc
+	 as this has already been done).  Build a frame since
+	a) this is used for calls into the run-time which are unlikely to be leaf-calls, and
+	b) stack alignment needs to be realistic for assert checking for platforms such as Mac OS X"
 	self pushWord: self rbp in: aMemory.
 	self rbp: self rsp.
 	PostBuildStackDelta ~= 0 ifTrue:
