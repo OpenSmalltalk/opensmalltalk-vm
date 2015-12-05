@@ -1278,6 +1278,13 @@ CogAbstractInstruction >> relocateJumpLongBeforeFollowingAddress: pc by: delta [
 ]
 
 { #category : #'inline cacheing' }
+CogAbstractInstruction >> relocateJumpLongConditionalBeforeFollowingAddress: pc by: delta [
+	"Relocate a long conditional jump before pc.  Default to relocating a non-conditional jump.
+	 Processors that have different formats for conditional and unconditional jumps override."
+	self relocateJumpLongBeforeFollowingAddress: pc by: delta
+]
+
+{ #category : #'inline cacheing' }
 CogAbstractInstruction >> relocateMethodReferenceBeforeAddress: pc by: delta [
 	"On some processors the method reference is a load constant and
 	 hence needs changing when methods are moved.  On others the
