@@ -9316,9 +9316,14 @@ Cogit >> relocateCallsInClosedPIC: cPIC [
 		(cPIC containsAddress: entryPoint) ifFalse:
 			[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 			 self assert: targetMethod cmType = CMMethod.
-			 backEnd
-				relocateJumpLongBeforeFollowingAddress: pc
-				by: (delta - targetMethod objectHeader) negated]].
+			 i = 1 ifTrue:
+				[backEnd
+					relocateJumpLongBeforeFollowingAddress: pc
+					by: (delta - targetMethod objectHeader) negated]
+				ifFalse:
+				[backEnd
+					relocateJumpLongConditionalBeforeFollowingAddress: pc
+					by: (delta - targetMethod objectHeader) negated]]].
 	self assert: cPIC cPICNumCases > 0.
 
 	"Finally relocate the load of the PIC and the jump to the overflow routine ceCPICMiss:receiver:"
