@@ -2902,6 +2902,12 @@ CogVMSimulator >> primitiveObject: actualReceiver perform: selector withArgument
 ]
 
 { #category : #'object access primitives' }
+CogVMSimulator >> primitiveObjectAt [
+	(self stackValue: 1) = 16r1148000 ifTrue: [self halt].
+	^super primitiveObjectAt
+]
+
+{ #category : #'object access primitives' }
 CogVMSimulator >> primitiveObjectAtPut [
 	| newValue |
 	newValue := self stackValue: 0.
@@ -3846,9 +3852,9 @@ CogVMSimulator >> veryDeepCopyWith: deepCopier [
 		at: mappedPluginEntries ifAbsentPut: [mappedPluginEntries];
 		at: uniqueIndices ifAbsentPut: [uniqueIndices].
 	mappedPluginEntries do:
-		[:tuple|
-		[:sim :sel :block :argCount|
-		deepCopier references at: block ifAbsentPut: [block]] valueWithArguments: tuple].
+		[:tuple| | block |
+		block := tuple third.
+		deepCopier references at: block ifAbsentPut: [block]].
 	uniqueIndices keysDo:
 		[:block|
 		deepCopier references at: block ifAbsentPut: [block]].

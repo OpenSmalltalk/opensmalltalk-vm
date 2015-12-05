@@ -254,6 +254,12 @@ CogObjectRepresentation >> genInnerPrimitiveNewWithArg: retNoffset [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentation >> genInnerPrimitiveObjectAt: retNOffset [
+	"subclasses override if they can"
+	^cogit unimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentation >> genInnerPrimitiveStringAtPut: retNoffset [
 	"subclasses override if they can"
 	^cogit unimplementedPrimitive

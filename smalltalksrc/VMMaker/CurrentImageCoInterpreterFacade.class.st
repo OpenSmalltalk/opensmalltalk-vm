@@ -111,6 +111,11 @@ CurrentImageCoInterpreterFacade >> addressForLabel: l [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> alternateHeaderNumLiteralsMask [
+	^coInterpreter alternateHeaderNumLiteralsMask
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> argumentCountAddress [
 	^self addressForLabel: #argumentCount
 ]
