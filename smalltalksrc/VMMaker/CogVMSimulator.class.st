@@ -3913,6 +3913,12 @@ CogVMSimulator >> warpBits [
 	^ myBitBlt warpBits
 ]
 
+{ #category : #'debug printing' }
+CogVMSimulator >> whereIs: anOop [
+	(self isOnRumpCStack: anOop) ifTrue: [^'is on rump C stack'].
+	^super whereIs: anOop
+]
+
 { #category : #'primitive support' }
 CogVMSimulator >> windowIsClosing [
 	self threadManager ifNotNil:
