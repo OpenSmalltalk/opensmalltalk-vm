@@ -1699,7 +1699,7 @@ StackToRegisterMappingCogit >> genDoubleArithmetic: arithmeticOperator preOpChec
 	self ConvertR: ClassReg Rd: DPFPReg1.
 	self Jump: doOp.
 	jumpFailAlloc jmpTarget: self Label.
-	self compileFallbackToInterpreterPrimitive.
+	self compileFallbackToInterpreterPrimitive: 0.
 	jumpFailClass jmpTarget: self Label.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt jmpTarget: jumpFailClass getJmpTarget].
@@ -2094,12 +2094,13 @@ StackToRegisterMappingCogit >> genPrimitiveAdd [
 StackToRegisterMappingCogit >> genPrimitiveAsCharacter [
 	| na r |
 	na := coInterpreter argumentCountOf: methodObj.
-	na <= 1 ifTrue:
-		[(r := objectRepresentation
-				genInnerPrimitiveAsCharacter: 0
-				inReg: (na = 0 ifTrue: [ReceiverResultReg] ifFalse: [Arg0Reg])) < 0 ifTrue:
-			[^r]].
-	^self compileFallbackToInterpreterPrimitive
+	r := na <= 1
+			ifTrue:
+				[objectRepresentation
+						genInnerPrimitiveAsCharacter: 0
+						inReg: (na = 0 ifTrue: [ReceiverResultReg] ifFalse: [Arg0Reg])]
+			ifFalse: [0].
+	^self compileFallbackToInterpreterPrimitive: r
 ]
 
 { #category : #'primitive generators' }
@@ -2117,25 +2118,20 @@ StackToRegisterMappingCogit >> genPrimitiveAsFloat [
 	self MoveR: SendNumArgsReg R: ReceiverResultReg.
 	self RetN: 0.
 	jumpFailAlloc jmpTarget: self Label.
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive: 0
 ]
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveAt [
-	| r |
 	self assert: self numRegArgs >= 1.
-	(r := objectRepresentation genInnerPrimitiveAt: 0) < 0 ifTrue:
-		[^r].
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveAt: 0)
 ]
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveAtPut [
-	| r |
-	((r := objectRepresentation genInnerPrimitiveAtPut: 0) < 0
-	 and: [r ~= UnimplementedPrimitive]) ifTrue:
-		[^r].
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveAtPut: 0)
 ]
 
 { #category : #'primitive generators' }
@@ -2249,12 +2245,8 @@ StackToRegisterMappingCogit >> genPrimitiveBitXor [
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveCharacterValue [
-	| r |
-	(r := objectRepresentation genInnerPrimitiveCharacterValue: 0) < 0 ifTrue:
-		[^r].
-	^r = UnfailingPrimitive
-		ifTrue: [0]
-		ifFalse: [self compileFallbackToInterpreterPrimitive]
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveCharacterValue: 0)
 ]
 
 { #category : #'primitive generators' }
@@ -2264,7 +2256,7 @@ StackToRegisterMappingCogit >> genPrimitiveClass [
 	methodOrBlockNumArgs > 0
 		ifTrue:
 			[methodOrBlockNumArgs > 1 ifTrue:
-				[^self compileFallbackToInterpreterPrimitive].
+				[^self compileFallbackToInterpreterPrimitive: 0].
 			 reg := Arg0Reg]
 		ifFalse:
 			[reg := ReceiverResultReg].
@@ -2379,7 +2371,7 @@ StackToRegisterMappingCogit >> genPrimitiveFloatSquareRoot [
 	self MoveR: SendNumArgsReg R: ReceiverResultReg.
 	self RetN: 0.
 	jumpFailAlloc jmpTarget: self Label.
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive: 0
 ]
 
 { #category : #'primitive generators' }
@@ -2394,10 +2386,8 @@ StackToRegisterMappingCogit >> genPrimitiveIdentical [
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveIdentityHash [
-	| r |
-	(r := objectRepresentation genInnerPrimitiveIdentityHash: 0) < 0 ifTrue:
-		[^r].
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveIdentityHash: 0)
 ]
 
 { #category : #'primitive generators' }
@@ -2457,33 +2447,23 @@ StackToRegisterMappingCogit >> genPrimitiveNew [
 	| r numArgs |
 	NewspeakVM
 		ifTrue:
-			[numArgs := coInterpreter argumentCountOf: methodObj.
+			[r := 0.
+			 numArgs := coInterpreter argumentCountOf: methodObj.
 			 numArgs = 1 ifTrue:
-				[((r := objectRepresentation genInnerPrimitiveMirrorNew: 0) < 0
-				  and: [r ~= UnimplementedPrimitive]) ifTrue:
-					[^r]].
+				[r := objectRepresentation genInnerPrimitiveMirrorNew: 0].
 			 numArgs = 0 ifTrue:
-				[((r := objectRepresentation genInnerPrimitiveNew: 0) < 0
-				  and: [r ~= UnimplementedPrimitive]) ifTrue:
-					[^r]]]
+				[r := objectRepresentation genInnerPrimitiveNew: 0]]
 		ifFalse:
-			[((r := objectRepresentation genInnerPrimitiveNew: 0) < 0
-			  and: [r ~= UnimplementedPrimitive]) ifTrue:
-				[^r]].
+			[r := objectRepresentation genInnerPrimitiveNew: 0].
 	"Call the interpreter primitive either when the machine-code primitive
 	 fails, or if the machine-code primitive is unimplemented."
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive: r
 ]
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveNewMethod [
-	| r |
-	((r := objectRepresentation genInnerPrimitiveNewMethod: 0) < 0
-	 and: [r ~= UnimplementedPrimitive]) ifTrue:
-		[^r].
-	"Call the interpreter primitive either when the machine-code primitive
-	 fails, or if the machine-code primitive is unimplemented."
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveNewMethod: 0)
 ]
 
 { #category : #'primitive generators' }
@@ -2491,22 +2471,17 @@ StackToRegisterMappingCogit >> genPrimitiveNewWithArg [
 	| r numArgs |
 	NewspeakVM
 		ifTrue:
-			[numArgs := coInterpreter argumentCountOf: methodObj.
+			[r := 0.
+			 numArgs := coInterpreter argumentCountOf: methodObj.
 			 numArgs = 2 ifTrue:
-				[((r := objectRepresentation genInnerPrimitiveMirrorNewWithArg: 0) < 0
-				  and: [r ~= UnimplementedPrimitive]) ifTrue:
-					[^r]].
+				[r := objectRepresentation genInnerPrimitiveMirrorNewWithArg: 0].
 			 numArgs = 1 ifTrue:
-				[((r := objectRepresentation genInnerPrimitiveNewWithArg: 0) < 0
-				  and: [r ~= UnimplementedPrimitive]) ifTrue:
-					[^r]]]
+				[r := objectRepresentation genInnerPrimitiveNewWithArg: 0]]
 		ifFalse:
-			[((r := objectRepresentation genInnerPrimitiveNewWithArg: 0) < 0
-			  and: [r ~= UnimplementedPrimitive]) ifTrue:
-				[^r]].
+			[r := objectRepresentation genInnerPrimitiveNewWithArg: 0].
 	"Call the interpreter primitive either when the machine-code primitive
 	 fails, or if the machine-code primitive is unimplemented."
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive: r
 ]
 
 { #category : #'primitive generators' }
@@ -2517,6 +2492,12 @@ StackToRegisterMappingCogit >> genPrimitiveNotIdentical [
 	^objectRepresentation
 		genInnerPrimitiveIdentical: 0
 		orNotIf: true
+]
+
+{ #category : #'primitive generators' }
+StackToRegisterMappingCogit >> genPrimitiveObjectAt [
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveObjectAt: 0)
 ]
 
 { #category : #'primitive generators' }
@@ -2561,28 +2542,21 @@ StackToRegisterMappingCogit >> genPrimitiveQuo [
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveSize [
-	| r |
-	(r := objectRepresentation genInnerPrimitiveSize: 0) < 0 ifTrue:
-		[^r].
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveSize: 0)
 ]
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveStringAt [
-	| r |
 	self assert: self numRegArgs >= 1.
-	(r := objectRepresentation genInnerPrimitiveStringAt: 0) < 0 ifTrue:
-		[^r].
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveStringAt: 0)
 ]
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveStringAtPut [
-	| r |
-	((r := objectRepresentation genInnerPrimitiveStringAtPut: 0) < 0
-	 and: [r ~= UnimplementedPrimitive]) ifTrue:
-		[^r].
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveStringAtPut: 0)
 ]
 
 { #category : #'primitive generators' }
