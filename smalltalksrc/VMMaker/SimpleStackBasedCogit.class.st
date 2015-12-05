@@ -431,7 +431,7 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForNewsqueak [
 		(67 genFastPrimFail) "was primitiveAtEnd"
 
 		"StorageManagement Primitives (68-79)"
-		"(68 primitiveObjectAt)"
+		(68 genPrimitiveObjectAt			1)	"Good for debugger/InstructionStream performance"
 		"(69 primitiveObjectAtPut)"
 		(70 genPrimitiveNew)				"For VMMirror support 1 argument instantiateFixedClass: as well as baiscNew"
 		(71 genPrimitiveNewWithArg)		"For VMMirror support 2 argument instantiateVariableClass:withSize: as well as baiscNew:"
@@ -620,7 +620,7 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 		(67 genFastPrimFail) "was primitiveAtEnd"
 
 		"StorageManagement Primitives (68-79)"
-		"(68 primitiveObjectAt)"
+		(68 genPrimitiveObjectAt			1)	"Good for debugger/InstructionStream performance"
 		"(69 primitiveObjectAtPut)"
 		(70 genPrimitiveNew			0)
 		(71 genPrimitiveNewWithArg	1)
@@ -943,6 +943,21 @@ SimpleStackBasedCogit >> compileBlockFramelessEntry: blockStart [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> compileFallbackToInterpreterPrimitive [
 	<inline: false>
+	^self compileInterpreterPrimitive: (coInterpreter
+											functionPointerForCompiledMethod: methodObj
+											primitiveIndex: primitiveIndex)
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> compileFallbackToInterpreterPrimitive: code [
+	<inline: false>
+	(code < 0 and: [code ~= UnimplementedPrimitive]) ifTrue: "Generator failed, so no point continuing..."
+		[^code].
+	code = UnfailingPrimitive ifTrue:
+		[^0].
+	(code = CompletePrimitive
+	 and: [(self methodUsesPrimitiveErrorCode) not]) ifTrue:
+		[^0].
 	^self compileInterpreterPrimitive: (coInterpreter
 											functionPointerForCompiledMethod: methodObj
 											primitiveIndex: primitiveIndex)
@@ -1443,7 +1458,7 @@ SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: pre
 	self ConvertR: ClassReg Rd: DPFPReg1.
 	self Jump: doOp.
 	jumpFailAlloc jmpTarget: self Label.
-	self compileFallbackToInterpreterPrimitive.
+	self compileFallbackToInterpreterPrimitive: 0.
 	fail := self Label.
 	jumpFailClass jmpTarget: fail.
 	preOpCheckOrNil ifNotNil:
@@ -2250,14 +2265,15 @@ SimpleStackBasedCogit >> genPrimitiveAdd [
 SimpleStackBasedCogit >> genPrimitiveAsCharacter [
 	| na r |
 	na := coInterpreter argumentCountOf: methodObj.
-	na <= 1 ifTrue:
-		[na = 1 ifTrue:
-			[self genLoadArgAtDepth: 0 into: Arg0Reg].
-		 (r := objectRepresentation
-				genInnerPrimitiveAsCharacter: (self primRetNOffsetFor: na)
-				inReg: (na = 0 ifTrue: [ReceiverResultReg] ifFalse: [Arg0Reg])) < 0 ifTrue:
-			[^r]].
-	^self compileFallbackToInterpreterPrimitive
+	na <= 1
+		ifTrue:
+			[na = 1 ifTrue:
+				[self genLoadArgAtDepth: 0 into: Arg0Reg].
+			 r := objectRepresentation
+					genInnerPrimitiveAsCharacter: (self primRetNOffsetFor: na)
+					inReg: (na = 0 ifTrue: [ReceiverResultReg] ifFalse: [Arg0Reg])]
+		ifFalse: [r := 0].
+	^self compileFallbackToInterpreterPrimitive: r
 ]
 
 { #category : #'primitive generators' }
@@ -2278,16 +2294,14 @@ SimpleStackBasedCogit >> genPrimitiveAsFloat [
 	self MoveR: SendNumArgsReg R: ReceiverResultReg.
 	self RetN: (self primRetNOffsetFor: 0).
 	jumpFailAlloc jmpTarget: self Label.
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive: 0
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveAt [
-	| r |
 	self genLoadArgAtDepth: 0 into: Arg0Reg.
-	(r := objectRepresentation genInnerPrimitiveAt: (self primRetNOffsetFor: 1)) < 0 ifTrue:
-		[^r].
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveAt: (self primRetNOffsetFor: 1))
 ]
 
 { #category : #'primitive generators' }
@@ -2296,13 +2310,11 @@ SimpleStackBasedCogit >> genPrimitiveAtPut [
 	savedIndex := opcodeIndex.
 	self genLoadArgAtDepth: 1 into: Arg0Reg.
 	self genLoadArgAtDepth: 0 into: Arg1Reg.
-	((r := objectRepresentation genInnerPrimitiveAtPut: (self primRetNOffsetFor: 2)) < 0
-	 and: [r ~= UnimplementedPrimitive]) ifTrue:
-		[^r].
+	r := objectRepresentation genInnerPrimitiveAtPut: (self primRetNOffsetFor: 2).
 	"If primitive is unimplemented, discard arg load."
 	r = UnimplementedPrimitive ifTrue:
 		[opcodeIndex := savedIndex].
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive: r
 ]
 
 { #category : #'primitive generators' }
@@ -2423,24 +2435,16 @@ SimpleStackBasedCogit >> genPrimitiveBitXor [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveCharacterValue [
-	| r |
-	(r := objectRepresentation genInnerPrimitiveCharacterValue: (self primRetNOffsetFor: 0)) < 0 ifTrue:
-		[^r].
-	^r = UnfailingPrimitive
-		ifTrue: [0]
-		ifFalse: [self compileFallbackToInterpreterPrimitive]
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveCharacterValue: (self primRetNOffsetFor: 0))
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveClass [
-	NewspeakVM
-		ifTrue:
-			[methodOrBlockNumArgs > 0 ifTrue:
-				[methodOrBlockNumArgs > 1 ifTrue:
-					[^self compileFallbackToInterpreterPrimitive].
-			 self genLoadArgAtDepth: 0 into: ReceiverResultReg]]
-		ifFalse:
-			[self assert: methodOrBlockNumArgs = 0].
+	methodOrBlockNumArgs > 0 ifTrue:
+		[methodOrBlockNumArgs > 1 ifTrue:
+			[^self compileFallbackToInterpreterPrimitive: 0].
+		 self genLoadArgAtDepth: 0 into: ReceiverResultReg].
 	(objectRepresentation
 			genGetClassObjectOf: ReceiverResultReg
 			into: ReceiverResultReg
@@ -2654,7 +2658,7 @@ SimpleStackBasedCogit >> genPrimitiveFloatSquareRoot [
 	self MoveR: SendNumArgsReg R: ReceiverResultReg.
 	self RetN: (self primRetNOffsetFor: 0).
 	jumpFailAlloc jmpTarget: self Label.
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive: 0
 ]
 
 { #category : #'primitive generators' }
@@ -2690,10 +2694,8 @@ SimpleStackBasedCogit >> genPrimitiveIdentical [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveIdentityHash [
-	| r |
-	(r := objectRepresentation genInnerPrimitiveIdentityHash: (self primRetNOffsetFor: 0)) < 0 ifTrue:
-		[^r].
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveIdentityHash: (self primRetNOffsetFor: 0))
 ]
 
 { #category : #'primitive generators' }
@@ -2768,29 +2770,20 @@ SimpleStackBasedCogit >> genPrimitiveMultiply [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNew [
-	| r |
-	((r := objectRepresentation genInnerPrimitiveNew: (self primRetNOffsetFor: 0)) < 0
-	 and: [r ~= UnimplementedPrimitive]) ifTrue:
-		[^r].
-	"Call the interpreter primitive either when the machine-code primitive
-	 fails, or if the machine-code primitive is unimplemented."
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveNew: (self primRetNOffsetFor: 0))
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveNewMethod [
-	| savedIndex r |
+	| r savedIndex |
 	savedIndex := opcodeIndex.
 	self genLoadArgAtDepth: 0 into: Arg0Reg.
-	((r := objectRepresentation genInnerPrimitiveNewMethod: (self primRetNOffsetFor: 2)) < 0
-	 and: [r ~= UnimplementedPrimitive]) ifTrue:
-		[^r].
+	r := objectRepresentation genInnerPrimitiveNewMethod: (self primRetNOffsetFor: 2).
 	"If primitive is unimplemented, discard arg load."
 	r = UnimplementedPrimitive ifTrue:
 		[opcodeIndex := savedIndex].
-	"Call the interpreter primitive either when the machine-code primitive
-	 fails, or if the machine-code primitive is unimplemented."
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive: r
 ]
 
 { #category : #'primitive generators' }
@@ -2798,15 +2791,13 @@ SimpleStackBasedCogit >> genPrimitiveNewWithArg [
 	| savedIndex r |
 	savedIndex := opcodeIndex.
 	self genLoadArgAtDepth: 0 into: Arg0Reg.
-	((r := objectRepresentation genInnerPrimitiveNewWithArg: (self primRetNOffsetFor: 1)) < 0
-	 and: [r ~= UnimplementedPrimitive]) ifTrue:
-		[^r].
+	r := objectRepresentation genInnerPrimitiveNewWithArg: (self primRetNOffsetFor: 1).
 	"If primitive is unimplemented, discard arg load."
 	r = UnimplementedPrimitive ifTrue:
 		[opcodeIndex := savedIndex].
 	"Call the interpreter primitive either when the machine-code primitive
 	 fails, or if the machine-code primitive is unimplemented."
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive: r
 ]
 
 { #category : #'primitive generators' }
@@ -2826,6 +2817,18 @@ SimpleStackBasedCogit >> genPrimitiveNotIdentical [
 	^objectRepresentation
 		genInnerPrimitiveIdentical: (self primRetNOffsetFor: 1)
 		orNotIf: true
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveObjectAt [
+	| savedIndex r |
+	savedIndex := opcodeIndex.
+	self genLoadArgAtDepth: 0 into: Arg0Reg.
+	r := objectRepresentation genInnerPrimitiveObjectAt: (self primRetNOffsetFor: 1).
+	"If primitive is unimplemented, discard arg load."
+	r = UnimplementedPrimitive ifTrue:
+		[opcodeIndex := savedIndex].
+	^self compileFallbackToInterpreterPrimitive: r
 ]
 
 { #category : #'primitive generators' }
@@ -2870,19 +2873,15 @@ SimpleStackBasedCogit >> genPrimitiveQuo [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveSize [
-	| r |
-	(r := objectRepresentation genInnerPrimitiveSize: (self primRetNOffsetFor: 0)) < 0 ifTrue:
-		[^r].
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveSize: (self primRetNOffsetFor: 0))
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveStringAt [
-	| r |
 	self genLoadArgAtDepth: 0 into: Arg0Reg.
-	(r := objectRepresentation genInnerPrimitiveStringAt: (self primRetNOffsetFor: 1)) < 0 ifTrue:
-		[^r].
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive:
+		(objectRepresentation genInnerPrimitiveStringAt: (self primRetNOffsetFor: 1))
 ]
 
 { #category : #'primitive generators' }
@@ -2891,13 +2890,11 @@ SimpleStackBasedCogit >> genPrimitiveStringAtPut [
 	savedIndex := opcodeIndex.
 	self genLoadArgAtDepth: 1 into: Arg0Reg.
 	self genLoadArgAtDepth: 0 into: Arg1Reg.
-	((r := objectRepresentation genInnerPrimitiveStringAtPut: (self primRetNOffsetFor: 2)) < 0
-	 and: [r ~= UnimplementedPrimitive]) ifTrue:
-		[^r].
+	r := objectRepresentation genInnerPrimitiveStringAtPut: (self primRetNOffsetFor: 2).
 	"If primitive is unimplemented, discard arg load."
 	r = UnimplementedPrimitive ifTrue:
 		[opcodeIndex := savedIndex].
-	^self compileFallbackToInterpreterPrimitive
+	^self compileFallbackToInterpreterPrimitive: r
 ]
 
 { #category : #'primitive generators' }

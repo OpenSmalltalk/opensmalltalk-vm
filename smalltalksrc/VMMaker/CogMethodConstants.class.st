@@ -9,6 +9,7 @@ Class {
 		'CMMethod',
 		'CMOpenPIC',
 		'CheckAllocationFillerAfterPrimCall',
+		'CompletePrimitive',
 		'EncounteredUnknownBytecode',
 		'InsufficientCodeSpace',
 		'MaxLiteralCountForCompile',

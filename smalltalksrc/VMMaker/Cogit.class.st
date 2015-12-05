@@ -931,7 +931,8 @@ Cogit class >> initializeErrorCodes [
 	BadRegisterSet := 1.
 	UnimplementedOperation := 2.
 	"Internal successes answered by CogObjectRepresentation to JIT, etc"
-	UnfailingPrimitive := 3
+	UnfailingPrimitive := 3. "Answered by a primitive generator for a primitive that will never fail"
+	CompletePrimitive := 4 "Answered by a primitive generator that does not bneed to fall back on the interpreter primitive except for an error code."
 ]
 
 { #category : #'class initialization' }
@@ -3549,7 +3550,7 @@ Cogit >> checkValidObjectReferencesInClosedPIC: cPIC [
 	2 to: cPIC cPICNumCases do:
 		[:i|
 		objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
-			[(self checkMaybeObjRefInClosedPIC: (literalsManager backEnd literal32BeforeFollowingAddress: pc - backEnd jumpLongConditionalByteSize)) ifFalse:
+			[(self checkMaybeObjRefInClosedPIC: (backEnd literal32BeforeFollowingAddress: pc - backEnd jumpLongConditionalByteSize)) ifFalse:
 				[self print: 'object leak in CPIC '; printHex: cPIC asInteger;
 					print: ' @ '; printHex: pc - backEnd jumpLongConditionalByteSize - backEnd loadLiteralByteSize; cr.
 				 ok := false]].
