@@ -1828,6 +1828,12 @@ CogMIPSELCompiler >> inlineCacheTagAt: callSiteReturnAddress [
 	^self literalAtAddress: callSiteReturnAddress - 20
 ]
 
+{ #category : #disassembly }
+CogMIPSELCompiler >> instructionSizeAt: pc [
+	"Answer the instruction size at pc."
+	^4
+]
+
 { #category : #testing }
 CogMIPSELCompiler >> isAddressRelativeToVarBase: varAddress [
 	<inline: true>
@@ -1852,7 +1858,7 @@ CogMIPSELCompiler >> isCallPrecedingReturnPC: mcpc [
 	(self opcodeAtAddress: mcpc - 8) = JAL ifTrue: [^true].
 	
 	((self opcodeAtAddress: mcpc - 8) = SPECIAL
-		and: [(self opcodeAtAddress: mcpc - 8) = JALR]) ifTrue: [^true].
+		and: [(self functionAtAddress: mcpc - 8) = JALR]) ifTrue: [^true].
 	
 	^false
 ]
@@ -1860,6 +1866,29 @@ CogMIPSELCompiler >> isCallPrecedingReturnPC: mcpc [
 { #category : #testing }
 CogMIPSELCompiler >> isJump [
 	^super isJump or: [opcode between: BrEqualRR and: BrLongNotEqualRR]
+]
+
+{ #category : #testing }
+CogMIPSELCompiler >> isJumpAt: pc [
+	cogit disassembleFrom: pc to: pc + 4.
+
+	(self opcodeAtAddress: pc) = J ifTrue: [^true].
+	
+	(self opcodeAtAddress: pc) = SPECIAL ifTrue: [
+		(self functionAtAddress: pc) = JR ifTrue: [^true].
+	].
+
+	(self opcodeAtAddress: pc) = BEQ ifTrue: [^true].
+	(self opcodeAtAddress: pc) = BNE ifTrue: [^true].
+	(self opcodeAtAddress: pc) = BLEZ ifTrue: [^true].
+	(self opcodeAtAddress: pc) = BGTZ ifTrue: [^true].
+
+	(self opcodeAtAddress: pc) = REGIMM ifTrue: [
+		(self rtAtAddress: pc) = BLTZ ifTrue: [^true].
+		(self rtAtAddress: pc) = BGEZ ifTrue: [^true].
+	].	
+	
+	^false
 ]
 
 { #category : #testing }
@@ -1976,6 +2005,24 @@ CogMIPSELCompiler >> jumpLongTargetBeforeFollowingAddress: mcpc [
 { #category : #accessing }
 CogMIPSELCompiler >> jumpShortByteSize [
 	^8
+]
+
+{ #category : #disassembly }
+CogMIPSELCompiler >> jumpTargetPCAt: pc [
+	<returnTypeC: #usqInt>
+	"cogit disassembleFrom: pc to: pc + 4."
+	
+	(self opcodeAtAddress: pc) = J ifTrue: [^self targetFromJTypeAtAddress: pc].
+
+	(self opcodeAtAddress: pc) = BEQ ifTrue: [^self targetFromITypeAtAddress: pc].
+	(self opcodeAtAddress: pc) = BNE ifTrue: [^self targetFromITypeAtAddress: pc].
+	(self opcodeAtAddress: pc) = BLEZ ifTrue: [^self targetFromITypeAtAddress: pc].
+	(self opcodeAtAddress: pc) = BGTZ ifTrue: [^self targetFromITypeAtAddress: pc].
+	(self opcodeAtAddress: pc) = REGIMM ifTrue:
+		[(self rtAtAddress: pc) = BLTZ ifTrue: [^self targetFromITypeAtAddress: pc].
+		 (self rtAtAddress: pc) = BGEZ ifTrue: [^self targetFromITypeAtAddress: pc]].
+	
+	self unreachable.
 ]
 
 { #category : #'encoding - memory' }
@@ -2348,10 +2395,98 @@ CogMIPSELCompiler >> pushLinkRegisterByteSize [
 ]
 
 { #category : #'inline cacheing' }
+CogMIPSELCompiler >> relocateCallBeforeReturnPC: retpc by: delta [
+	| target |
+	self assert: delta \\ 4 = 0.
+	delta = 0 ifTrue: [^self].
+	
+	self assert: (self opcodeAtAddress: retpc - 16) = LUI.
+	self assert: (self opcodeAtAddress: retpc - 12) = ORI.
+	self assert: (self opcodeAtAddress: retpc - 8) = SPECIAL.
+	self assert: (self functionAtAddress: retpc - 8) = JALR.
+	self assert: (objectMemory longAt: retpc - 4) = self nop.
+	"cogit disassembleFrom: retpc - 16 to: retpc."
+
+	target := self literalAtAddress: retpc - 12.
+	target := target + delta.
+	self literalAtAddress: retpc - 12 put: target.
+
+	self assert: (self opcodeAtAddress: retpc - 16) = LUI.
+	self assert: (self opcodeAtAddress: retpc - 12) = ORI.
+	self assert: (self opcodeAtAddress: retpc - 8) = SPECIAL.
+	self assert: (self functionAtAddress: retpc - 8) = JALR.
+	self assert: (objectMemory longAt: retpc - 4) = self nop.
+	"cogit disassembleFrom: retpc - 16 to: retpc."
+]
+
+{ #category : #'inline cacheing' }
+CogMIPSELCompiler >> relocateJumpLongBeforeFollowingAddress: pc by: delta [	
+	"lui t9, stub/targetHigh
+	 ori t9, t9, stub/targetLow
+	 jr t9
+	 nop (delay slot)
+	 ...  <-- pc"
+
+	| target |
+	self assert: delta \\ 4 = 0.
+	delta = 0 ifTrue: [^self].
+	
+	self assert: (self opcodeAtAddress: pc - 16) = LUI.
+	self assert: (self opcodeAtAddress: pc - 12) = ORI.
+	self assert: (self opcodeAtAddress: pc - 8) = SPECIAL.
+	self assert: (self functionAtAddress: pc - 8) = JR.
+	self assert: (objectMemory longAt: pc - 4) = self nop.
+	"cogit disassembleFrom: pc - 16 to: pc."
+
+	target := self literalAtAddress: pc - 12.
+	target := target + delta.
+	self literalAtAddress: pc - 12 put: pc.
+
+	self assert: (self opcodeAtAddress: pc - 16) = LUI.
+	self assert: (self opcodeAtAddress: pc - 12) = ORI.
+	self assert: (self opcodeAtAddress: pc - 8) = SPECIAL.
+	self assert: (self functionAtAddress: pc - 8) = JR.
+	self assert: (objectMemory longAt: pc - 4) = self nop.
+	"cogit disassembleFrom: pc - 16 to: pc."
+]
+
+{ #category : #'inline cacheing' }
+CogMIPSELCompiler >> relocateJumpLongConditionalBeforeFollowingAddress: pc by: delta [	
+	"lui t9, stub/targetHigh
+	 ori t9, t9, stub/targetLow
+	 jalr t9
+	 nop (delay slot)
+	 ...  <-- callSiteReturnAddress"
+
+	self assert: (self opcodeAtAddress: pc - 16) = BNE.
+	self assert: (objectMemory longAt: pc - 12) = self nop.
+	self assert: (self opcodeAtAddress: pc - 8) = J.
+	self assert: (objectMemory longAt: pc - 4) = self nop.
+	"cogit disassembleFrom: pc - 16 to: pc."
+	
+	self rewriteJTypeAtAddress: pc - 8 delta: delta.
+
+	self assert: (self opcodeAtAddress: pc - 16) = BNE.
+	self assert: (objectMemory longAt: pc - 12) = self nop.
+	self assert: (self opcodeAtAddress: pc - 8) = J.
+	self assert: (objectMemory longAt: pc - 4) = self nop.
+	"cogit disassembleFrom: pc - 16 to: pc."
+]
+
+{ #category : #'inline cacheing' }
 CogMIPSELCompiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
 	| oldValue newValue |
-	"cogit disassembleFrom: pc - 8 to: pc."
+	"cogit disassembleFrom: pc - 16 to: pc + 16 a StackToRegisterMappingCogit."
+	
+	((self opcodeAtAddress: pc - 8) = ADDIU and: [(self opcodeAtAddress: pc - 4) = SW]) ifTrue:
+		["PushCwR"
+		oldValue := self literalAtAddress: pc - 12.
+		newValue := oldValue + delta.
+		self literalAtAddress: pc - 12 put: newValue.	
+		self assert: (self literalAtAddress: pc - 12) = newValue.
+		^self].
 
+	"MoveCwR"
 	oldValue := self literalAtAddress: pc - 4.
 	newValue := oldValue + delta.
 	self literalAtAddress: pc - 4 put: newValue.
@@ -2498,12 +2633,21 @@ CogMIPSELCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag t
 	self assert: (objectMemory longAt: callSiteReturnAddress - 4) = self nop.
 	"cogit disassembleFrom: callSiteReturnAddress - 24 to: callSiteReturnAddress."
 
-	^28
+	^24
+]
+
+{ #category : #'inline cacheing' }
+CogMIPSELCompiler >> rewriteJTypeAtAddress: mcpc delta: delta [
+	| target |
+	target := self targetFromJTypeAtAddress: mcpc.
+	target := target + delta.
+	self rewriteJTypeAtAddress: mcpc target: target.
 ]
 
 { #category : #'inline cacheing' }
 CogMIPSELCompiler >> rewriteJTypeAtAddress: mcpc target: newTarget [
 	| regionMask |
+	self assert: (self opcodeAtAddress: mcpc) = J.
 	regionMask := 16rF0000000.
 	"mcpc + 4: relative to delay slot not j"
 	self assert: (mcpc + 4 bitAnd: regionMask) = (newTarget bitAnd: regionMask).
@@ -2706,6 +2850,15 @@ CogMIPSELCompiler >> subuR: destReg R: leftReg R: rightReg [
 { #category : #'encoding - memory' }
 CogMIPSELCompiler >> swR: srcReg base: baseReg offset: offset [
 	^self itype: SW rs: baseReg rt: srcReg signedImmediate: offset
+]
+
+{ #category : #'inline cacheing' }
+CogMIPSELCompiler >> targetFromITypeAtAddress: mcpc [
+	| offset |
+	offset := (objectMemory longAt: mcpc) bitAnd: 16rFFFF.
+	offset >= 16r8000 ifTrue: [offset := offset - 16r10000].
+	offset := offset << 2.
+	^mcpc + offset + OneInstruction. "Offset is relative to the delay slot"
 ]
 
 { #category : #'inline cacheing' }
