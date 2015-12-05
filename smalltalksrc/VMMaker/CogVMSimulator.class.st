@@ -720,8 +720,9 @@ CogVMSimulator >> dispatchOn: anInteger in: selectorArray [
 	The given integer must be between 0 and selectorArray size-1, inclusive.
 	For speed, no range test is done, since it is done by the at: operation.
 	Note that, unlike many other arrays used in the Interpreter, this method expect NO CArrayAccessor wrapping - it would duplicate the +1. Maybe this would be better updated to make it all uniform"
-	cogit breakBlock ifNotNil:
-		[:bb| (bb value: cogit) ifTrue: [self halt: 'breakpoint reached']].
+	cogit breakPC ifNil:
+		[cogit breakBlock ifNotNil:
+			[:bb| (bb value: cogit) ifTrue: [self halt: 'breakpoint reached']]].
 	self perform: (selectorArray at: (anInteger + 1)).
 ]
 
@@ -3790,7 +3791,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print trampoline table' target: cogit action: #printTrampolineTable;
 		add: 'print prim trace log' action: #dumpPrimTraceLog;
 		add: 'report recent instructions' target: cogit action: #reportLastNInstructions;
-		add: 'set break pc (', (cogit breakPC isInteger ifTrue: [cogit breakPC hex] ifFalse: [cogit breakPC printString]), ')...' action: [(self promptHex: 'break pc') ifNotNil: [:bpc| cogit breakPC: bpc]];
+		add: 'set break pc (', (cogit breakPC isInteger ifTrue: [cogit breakPC hex] ifFalse: [cogit breakPC printString]), ')...-ve to disable' action: [(self promptHex: 'break pc') ifNotNil: [:bpc| cogit breakPC: (bpc >= 0 ifTrue: [bpc])]];
 		add: (cogit singleStep
 				ifTrue: ['no single step']
 				ifFalse: ['single step'])
