@@ -792,10 +792,10 @@ CogObjectRepresentationForSpur >> genInnerPrimitiveObjectAt: retNOffset [
 	<var: #jumpBadIndex type: #'AbstractInstruction *'>
 	<var: #jumpNotCogMethod type: #'AbstractInstruction *'>
 	<var: #jumpNotHeaderIndex type: #'AbstractInstruction *'>
-	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg.
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratch: TempReg.
 	"get header into Arg1Reg..."
 	cogit MoveMw: objectMemory baseHeaderSize r: ReceiverResultReg R: (headerReg := Arg1Reg).
-	jumpNotCogMethod := self genJumpSmallInteger: headerReg.
+	jumpNotCogMethod := self genJumpSmallInteger: headerReg scratch: TempReg.
 	cogit MoveMw: (cogit offset: CogMethod of: #methodHeader) r: headerReg R: headerReg.
 	jumpNotCogMethod jmpTarget: (cogit
 		CmpCq: (objectMemory integerObjectOf: 1) R: Arg0Reg).
