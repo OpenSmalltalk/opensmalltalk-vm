@@ -2894,12 +2894,6 @@ CogIA32Compiler >> mod: mod RM: regMode RO: regOpcode [
 	^mod << 6 + (regOpcode << 3) + regMode
 ]
 
-{ #category : #'generate machine code' }
-CogIA32Compiler >> nopsFrom: startAddr to: endAddr [
-	startAddr to: endAddr do:
-		[:p| objectMemory byteAt: p put: 16r90]
-]
-
 { #category : #'feature detection' }
 CogIA32Compiler >> numCheckFeaturesOpcodes [
 	"Answer the number of opcodes required to compile the CPUID call to extract the extended features information."
@@ -2938,8 +2932,8 @@ CogIA32Compiler >> numberOfSaveableRegisters [
 ]
 
 { #category : #'generate machine code' }
-CogIA32Compiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
-	self nopsFrom: startAddr to: endAddr
+CogIA32Compiler >> padIfPossibleWithStopsFrom: startAddr to: endAddr [
+	self stopsFrom: startAddr to: endAddr
 ]
 
 { #category : #'inline cacheing' }
@@ -3183,6 +3177,19 @@ CogIA32Compiler >> stackPageInterruptHeadroomBytes [
 	 an IA32 CPU will push is SS, ESP, EFLAGS, CS, EIP and an error code.  It may then
 	 call an interrupt procedure.  Leave some room above the minimum state."
 	^256
+]
+
+{ #category : #encoding }
+CogIA32Compiler >> stop [
+	"int3"
+	<inline: true>
+	^16rCC
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> stopsFrom: startAddr to: endAddr [
+	startAddr to: endAddr do:
+		[:addr | objectMemory byteAt: addr put: self stop]
 ]
 
 { #category : #'inline cacheing' }

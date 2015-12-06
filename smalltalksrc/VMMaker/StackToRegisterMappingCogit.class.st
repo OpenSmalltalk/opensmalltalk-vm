@@ -1609,7 +1609,7 @@ StackToRegisterMappingCogit >> genCallPICEnilopmartNumArgs: numArgs [
 	self assert: methodZoneBase + size = endAddress.
 	enilopmart := methodZoneBase.
 	methodZoneBase := self alignUptoRoutineBoundary: endAddress.
-	backEnd nopsFrom: endAddress to: methodZoneBase - 1.
+	backEnd stopsFrom: endAddress to: methodZoneBase - 1.
 	self recordGeneratedRunTime: (self trampolineName: 'ceCallPIC' numRegArgs: numArgs) address: enilopmart.
 	^self cCoerceSimple: enilopmart to: #'void (*)(void)'
 ]
