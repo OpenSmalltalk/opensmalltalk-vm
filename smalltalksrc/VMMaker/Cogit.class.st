@@ -3702,7 +3702,17 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	<returnTypeC: #'CogMethod *'>
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	"In Newspeak we support annonymous accessors and hence tolerate the same
+	self cCode: [] inSmalltalk: "for debugging, allow excluding mehtods based on selector or methodClass"
+		[self class initializationOptions
+			at: #DoNotJIT
+			ifPresent:
+				[:excluded| | methodClass selector |
+				methodClass := coInterpreter nameOfClass: (coInterpreter methodClassOf: aMethodObj).
+				selector := coInterpreter stringOf: aSelectorOop.
+				(excluded anySatisfy: [:exclude| selector = exclude or: [methodClass = exclude]]) ifTrue:
+					[coInterpreter transcript nextPutAll: 'EXCLUDING '; nextPutAll: methodClass; nextPutAll: '>>#'; nextPutAll: selector; cr; flush.
+					 ^nil]]].
+	"In Newspeak we support anonymous accessors and hence tolerate the same
 	 method being cogged multiple times.  But only if the method class association is nil."
 	NewspeakVM
 		ifTrue:
