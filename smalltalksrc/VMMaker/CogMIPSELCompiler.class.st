@@ -2224,13 +2224,6 @@ CogMIPSELCompiler >> nop [
 	^0 "SLL ZR, ZR, 0"
 ]
 
-{ #category : #'generate machine code' }
-CogMIPSELCompiler >> nopsFrom: startAddr to: endAddr [
-	self assert: endAddr - startAddr + 1 \\ 4 = 0.
-	self assert: (self nop = 0).
-	startAddr to: endAddr do: [:p| objectMemory byteAt: p put: 0].
-]
-
 { #category : #'abstract instructions' }
 CogMIPSELCompiler >> noteFollowingConditionalBranch: branch [
 	"Support for processors without condition codes, such as the MIPS.
@@ -2375,9 +2368,7 @@ CogMIPSELCompiler >> outputMachineCodeAt: targetAddress [
 ]
 
 { #category : #'generate machine code' }
-CogMIPSELCompiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
-	self flag: #bogus. "Methods should be initialized with the stop instruction, not nop."
-
+CogMIPSELCompiler >> padIfPossibleWithStopsFrom: startAddr to: endAddr [
 	startAddr to: endAddr - 1 by: 4 do: 
 		[:addr | objectMemory longAt: addr put: self stop].
 ]
@@ -2824,6 +2815,13 @@ CogMIPSELCompiler >> srlvR: destReg R: leftReg R: rightReg [
 { #category : #'encoding - control' }
 CogMIPSELCompiler >> stop [
 	^self break: 0
+]
+
+{ #category : #'generate machine code' }
+CogMIPSELCompiler >> stopsFrom: startAddr to: endAddr [
+	self assert: endAddr - startAddr + 1 \\ 4 = 0.
+	startAddr to: endAddr by: 4 do: 
+		[:addr | objectMemory longAt: addr put: self stop].
 ]
 
 { #category : #'inline cacheing' }

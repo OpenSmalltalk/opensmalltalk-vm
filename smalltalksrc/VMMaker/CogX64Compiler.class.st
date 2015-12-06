@@ -2620,12 +2620,6 @@ CogX64Compiler >> nameForRegister: reg [ "<Integer>"
 	^super nameForRegister: reg
 ]
 
-{ #category : #'generate machine code' }
-CogX64Compiler >> nopsFrom: startAddr to: endAddr [
-	startAddr to: endAddr do:
-		[:p| objectMemory byteAt: p put: 16r90]
-]
-
 { #category : #accessing }
 CogX64Compiler >> numIntRegArgs [
 	^6
@@ -2640,8 +2634,8 @@ CogX64Compiler >> numberOfSaveableRegisters [
 ]
 
 { #category : #'generate machine code' }
-CogX64Compiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
-	self nopsFrom: startAddr to: endAddr
+CogX64Compiler >> padIfPossibleWithStopsFrom: startAddr to: endAddr [
+	self stopsFrom: startAddr to: endAddr
 ]
 
 { #category : #accessing }
@@ -2829,6 +2823,12 @@ CogX64Compiler >> sizeHasModrm: op at: pc [
 			[2]	->	[6] }].
 	self halt: 'fall through in sizeHasModrm:at:'.
 	^0
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> stopsFrom: startAddr to: endAddr [
+	startAddr to: endAddr do:
+		[:addr | objectMemory byteAt: addr put: self stop]
 ]
 
 { #category : #'inline cacheing' }
