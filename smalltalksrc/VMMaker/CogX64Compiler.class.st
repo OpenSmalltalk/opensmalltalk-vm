@@ -247,6 +247,12 @@ CogX64Compiler >> cResultRegister [
 	^self abstractRegisterForConcreteRegister: RAX
 ]
 
+{ #category : #'full transfer run-time support' }
+CogX64Compiler >> callFullTargetFromReturnAddress: callSiteReturnAddress [
+	"Answer the address the full call immediately preceding callSiteReturnAddress will jump to."
+	^self sixtyFourBitLiteralBefore: callSiteReturnAddress - 2
+]
+
 { #category : #accessing }
 CogX64Compiler >> callInstructionByteSize [
 	^5
@@ -2712,6 +2718,29 @@ CogX64Compiler >> rewriteCallAt: callSiteReturnAddress target: callTargetAddress
 	^5
 ]
 
+{ #category : #'full transfer run-time support' }
+CogX64Compiler >> rewriteCallFullAt: callSiteReturnAddress target: callTargetAddress [
+	"Rewrite a CallFull instruction to call a different target.  This variant is used to rewrite cached primitive calls.
+	 Answer the extent of the code change which is used to compute the range of the icache to flush.
+	 On x64 this is a rewrite of
+		movq #64bits, %rax : 48 A1 b0 b1 b2 b3 b4 b5 b6 b7
+		jmp %rax : FF E0 "
+	self assert: (objectMemory byteAt: callSiteReturnAddress - 12) = 16r48.
+	objectMemory
+		byteAt: callSiteReturnAddress -   3 put: (callTargetAddress >> 56 bitAnd: 16rFF);
+		byteAt: callSiteReturnAddress -   4 put: (callTargetAddress >> 48 bitAnd: 16rFF);
+		byteAt: callSiteReturnAddress -   5 put: (callTargetAddress >> 40 bitAnd: 16rFF);
+		byteAt: callSiteReturnAddress -   6 put: (callTargetAddress >> 32 bitAnd: 16rFF);
+		byteAt: callSiteReturnAddress -   7 put: (callTargetAddress >> 24 bitAnd: 16rFF);
+		byteAt: callSiteReturnAddress -   8 put: (callTargetAddress >> 16 bitAnd: 16rFF);
+		byteAt: callSiteReturnAddress -   9 put: (callTargetAddress >>   8 bitAnd: 16rFF);
+		byteAt: callSiteReturnAddress - 10 put: (callTargetAddress            bitAnd: 16rFF).
+	self assert: (self callFullTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong64 = callTargetAddress.
+	"self cCode: ''
+		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
+	^12
+]
+
 { #category : #'inline cacheing' }
 CogX64Compiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag target: callTargetAddress [
 	"Rewrite an inline cache to call a different target for a new tag.  This variant is used
@@ -2742,6 +2771,16 @@ CogX64Compiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag targ
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 12 to: callSiteReturnAddress - 1]."
 	^12
+]
+
+{ #category : #'full transfer run-time support' }
+CogX64Compiler >> rewriteJumpFullAt: callSiteReturnAddress target: callTargetAddress [
+	"Rewrite a JumpFull instruction to jump to a different target.  This variant is used to rewrite cached primitive calls.
+	 Answer the extent of the code change which is used to compute the range of the icache to flush.
+	 On x64 this is a rewrite of
+		movq #64bits, %rax : 48 A1 b0 b1 b2 b3 b4 b5 b6 b7
+		jmp %rax : FF E0 "
+	^self rewriteCallFullAt: callSiteReturnAddress target: callTargetAddress
 ]
 
 { #category : #'inline cacheing' }
@@ -2803,6 +2842,20 @@ CogX64Compiler >> shiftSetsConditionCodesFor: aConditionalJumpOpcode [
 	 asked only for Zero and Negative use the following simplification."
 	<inline: true>
 	^(aConditionalJumpOpcode between: JumpZero and: JumpNonNegative)
+]
+
+{ #category : #'inline cacheing' }
+CogX64Compiler >> sixtyFourBitLiteralBefore: followingAddress [
+	<inline: true>
+	^self cCode: [objectMemory unalignedLongAt: followingAddress - 9]
+		inSmalltalk: [   ((objectMemory byteAt: followingAddress - 1) << 56)
+					+ ((objectMemory byteAt: followingAddress - 2) << 48)
+					+ ((objectMemory byteAt: followingAddress - 3) << 40)
+					+ ((objectMemory byteAt: followingAddress - 4) << 32)
+					+ ((objectMemory byteAt: followingAddress - 5) << 24)
+					+ ((objectMemory byteAt: followingAddress - 6) << 16)
+					+ ((objectMemory byteAt: followingAddress - 7) << 8)
+					+  (objectMemory byteAt: followingAddress - 8)]
 ]
 
 { #category : #disassembly }

@@ -4840,13 +4840,22 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 		[:range|
 		(cogMethod cmType = CMMethod) ifTrue:
 			[mapEntries keysAndValuesDo:
-				[:mcpc :label| | bcpc |
+				[:mcpc :label| | bcpc selectorOrNone |
 				((range includes: mcpc)
 				 and: [(AnnotationsWithBytecodePCs includes: label)
 				 and: [range cogMethod stackCheckOffset > 0]]) ifTrue:
 					[bcpc := self bytecodePCFor: mcpc startBcpc: range startpc in: range cogMethod.
 					 bcpc ~= 0 ifTrue:
-						[mapEntries at: mcpc put: label, ' bc ', bcpc printString, '/', (bcpc + 1) printString]]]].
+						[label = #IsSendCall
+							ifTrue:
+								[selectorOrNone := (self selectorForSendAt: mcpc annotation: IsSendCall in: cogMethod methodObject).
+								 (selectorOrNone isInteger and: [objectMemory addressCouldBeOop: selectorOrNone]) ifTrue:
+									[selectorOrNone := objectMemory stringOf: selectorOrNone].
+								selectorOrNone := ' ', selectorOrNone]
+							ifFalse: [selectorOrNone := ''].
+						 mapEntries
+							at: mcpc
+							put: label, selectorOrNone, ' bc ', bcpc printString, '/', (bcpc + 1) printString]]]].
 		(cogMethod blockEntryOffset ~= 0
 		 and: [range first = (cogMethod blockEntryOffset + cogMethod asInteger)])
 			ifTrue:
