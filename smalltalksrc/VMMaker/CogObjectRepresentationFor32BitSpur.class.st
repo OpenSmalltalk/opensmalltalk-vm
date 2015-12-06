@@ -59,6 +59,12 @@ CogObjectRepresentationFor32BitSpur >> genAddSmallIntegerTagsTo: aRegister [
 	^0
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genClearAndSetSmallIntegerTagsIn: scratchReg [
+	"Set the SmallInteger tag bits when the tag bits may be filled with garbage."
+	^self genSetSmallIntegerTagsIn: scratchReg
+]
+
 { #category : #'in-line cacheing' }
 CogObjectRepresentationFor32BitSpur >> genCmpClassIndex: classIndex R: reg [
 	"It is safe to use a short comparison for the known classes; these will not
