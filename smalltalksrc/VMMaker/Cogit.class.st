@@ -4138,9 +4138,10 @@ Cogit >> compactCogCompiledCode [
 	methodZone compactCompiledCode.
 	self assert: self allMethodsHaveCorrectHeader.
 	self assert: methodZone kosherYoungReferrers.
+	backEnd stopsFrom: methodZone freeStart to: methodZone youngReferrers - 1.
 	processor
 		flushICacheFrom: methodZoneBase asUnsignedInteger
-		to: methodZone freeStart asUnsignedInteger
+		to: methodZone youngReferrers asUnsignedInteger
 ]
 
 { #category : #'simulation only' }
@@ -5671,7 +5672,7 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 and: regArg3 forCall: forCall ca
 	self assert: methodZoneBase + size = endAddress.
 	enilopmart := methodZoneBase.
 	methodZoneBase := self alignUptoRoutineBoundary: endAddress.
-	backEnd nopsFrom: endAddress to: methodZoneBase - 1.
+	backEnd stopsFrom: endAddress to: methodZoneBase - 1.
 	self recordGeneratedRunTime: trampolineName address: enilopmart.
 	^self cCoerceSimple: enilopmart to: #'void (*)(void)'
 ]
@@ -6363,7 +6364,7 @@ Cogit >> generateCogMethod: selector [
 	self assert: startAddress + cmNoCheckEntryOffset = noCheckEntry address.
 	result := self outputInstructionsAt: startAddress + headerSize.
 	self assert: startAddress + headerSize + codeSize = result.
-	backEnd padIfPossibleWithNopsFrom: result to: startAddress + totalSize - mapSize.
+	backEnd padIfPossibleWithStopsFrom: result to: startAddress + totalSize - mapSize.
 	self generateMapAt: startAddress + totalSize - 1 start: startAddress + cmNoCheckEntryOffset.
 	self fillInBlockHeadersAt: startAddress.
 	method := self fillInMethodHeader: (self cCoerceSimple: startAddress to: #'CogMethod *')
@@ -7052,12 +7053,13 @@ Cogit >> initializeBackend [
 { #category : #initialization }
 Cogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	<api>
+	self initializeBackend.
+	backEnd stopsFrom: startAddress to: endAddress - 1.
 	self cCode: [self sqMakeMemoryExecutableFrom: startAddress To: endAddress]
 		inSmalltalk: [self initializeProcessor].
 	codeBase := methodZoneBase := startAddress.
 	minValidCallAddress := (codeBase min: coInterpreter interpretAddress)
 								min: coInterpreter primitiveFailAddress.
-	self initializeBackend.
 	methodZone manageFrom: methodZoneBase to: endAddress.
 	self maybeGenerateCheckFeatures.
 	self maybeGenerateICacheFlush.
@@ -8726,7 +8728,7 @@ Cogit >> outputInstructionsForGeneratedRuntimeAt: startAddress [
 	endAddress := self outputInstructionsAt: startAddress.
 	self assert: startAddress + size = endAddress.
 	methodZoneBase := self alignUptoRoutineBoundary: endAddress.
-	backEnd nopsFrom: endAddress to: methodZoneBase - 1.
+	backEnd stopsFrom: endAddress to: methodZoneBase - 1.
 	self cCode: '' inSmalltalk: [methodZone freeStart: methodZoneBase].
 	^startAddress
 ]

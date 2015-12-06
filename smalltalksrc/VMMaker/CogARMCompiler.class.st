@@ -1737,9 +1737,8 @@ CogARMCompiler >> concretizeSqrtRd [
 
 { #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeStop [
-"generate a BKPT instruction. We could, given a good enough creative impulse and an over-active sense of humour, add some numerically encoded witticism to this instruction in bits 8-19 & 0-3. It has no effect on the execution but can be a way to specify which breakpoint has been hit etc."
 	<inline: true>
-	self machineCodeAt: 0 put: (AL <<28 bitOr: (16r42 <<20 bitOr:(7<<4))).
+	self machineCodeAt: 0 put: self stop.
 	^machineCodeSize := 4
 ]
 
@@ -2934,18 +2933,6 @@ CogARMCompiler >> nameForRegister: reg [ "<Integer>"
 		ifNone: [super nameForRegister: reg]
 ]
 
-{ #category : #'generate machine code - support' }
-CogARMCompiler >> nopsFrom: startAddr to: endAddr [
-"fill with MOV R0, R0 no-op instructions"
-	self assert: endAddr - startAddr + 1 \\ 4 = 0.
-	startAddr to: endAddr by: 4 do:
-		[:p| objectMemory 
-			byteAt: p put: 16r0;
-			byteAt: p+1 put: 16r0;
-			byteAt: p+2 put: 16rA0;
-			byteAt: p+3 put: 16rE1]
-]
-
 { #category : #'inline cacheing' }
 CogARMCompiler >> numICacheFlushOpcodes [
 	"ARM needs to do icache flushing when code is written"
@@ -2984,12 +2971,12 @@ CogARMCompiler >> outputMachineCodeAt: targetAddress [
 ]
 
 { #category : #'generate machine code' }
-CogARMCompiler >> padIfPossibleWithNopsFrom: startAddr to: endAddr [
+CogARMCompiler >> padIfPossibleWithStopsFrom: startAddr to: endAddr [
 	| nullBytes |
 	nullBytes := (endAddr - startAddr + 1) \\ 4.
-	self nopsFrom: startAddr to: endAddr - nullBytes.
+	self stopsFrom: startAddr to: endAddr - nullBytes.
 	endAddr - nullBytes + 1 to: endAddr 
-		do: [ :p | objectMemory byteAt: p put: 16r0]
+		do: [ :p | objectMemory byteAt: p put: 16rFF]
 ]
 
 { #category : #encoding }
@@ -3243,6 +3230,20 @@ CogARMCompiler >> stackPageInterruptHeadroomBytes [
 	 JIT the stack has to have room for interrupt handlers which will run on the stack.
 	According to ARM architecture v5 reference manual chapter A2.6, the basic interrupt procedure does not push anything onto the stack. It uses SPSR_err and R14_err to preserve state. Afterwards, it calls an interrupt procedure. So leave some room."
 	^128 "32 words"
+]
+
+{ #category : #encoding }
+CogARMCompiler >> stop [
+"generate a BKPT instruction. We could, given a good enough creative impulse and an over-active sense of humour, add some numerically encoded witticism to this instruction in bits 8-19 & 0-3. It has no effect on the execution but can be a way to specify which breakpoint has been hit etc."
+	<inline: true>
+	^AL << 28 bitOr: (16r42 << 20 bitOr: (7 << 4))
+]
+
+{ #category : #'generate machine code - support' }
+CogARMCompiler >> stopsFrom: startAddr to: endAddr [
+	self assert: endAddr - startAddr + 1 \\ 4 = 0.
+	startAddr to: endAddr by: 4 do: 
+		[:addr | objectMemory longAt: addr put: self stop].
 ]
 
 { #category : #'inline cacheing' }
