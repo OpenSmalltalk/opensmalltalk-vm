@@ -2825,6 +2825,13 @@ CogX64Compiler >> sizeHasModrm: op at: pc [
 	^0
 ]
 
+{ #category : #encoding }
+CogX64Compiler >> stop [
+	"int3"
+	<inline: true>
+	^16rCC
+]
+
 { #category : #'generate machine code' }
 CogX64Compiler >> stopsFrom: startAddr to: endAddr [
 	startAddr to: endAddr do:
