@@ -168,6 +168,12 @@ CogObjectRepresentationForSqueakV3 >> genAllocFloatValue: dpreg into: resultReg 
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genClearAndSetSmallIntegerTagsIn: scratchReg [
+	"Set the SmallInteger tag bits when the tag bits may be filled with garbage."
+	^self genSetSmallIntegerTagsIn: scratchReg
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genConvertIntegerToSmallIntegerInReg: reg [
 	cogit LogicalShiftLeftCq: 1 R: reg.
 	cogit AddCq: 1 R: reg.

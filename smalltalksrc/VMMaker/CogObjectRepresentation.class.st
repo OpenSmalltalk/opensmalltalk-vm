@@ -97,6 +97,12 @@ CogObjectRepresentation >> freeCounters: theCounters [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genClearAndSetSmallIntegerTagsIn: scratchReg [
+	"Set the SmallInteger tag bits when the tag bits may be filled with garbage."
+	self subclassResponsibility
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genCmpClassFloatCompactIndexR: reg [
 	^cogit CmpCq: ClassFloatCompactIndex R: reg
 ]
@@ -379,6 +385,11 @@ CogObjectRepresentation >> genNewArrayOfSize: size initialized: initialized [
 	 The Array should be initialized with nils iff initialized is true.
 	 The size arg is passed in SendNumArgsReg, the result
 	 must come back in ReceiverResultReg."
+	self subclassResponsibility
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genSetSmallIntegerTagsIn: scratchReg [
 	self subclassResponsibility
 ]
 

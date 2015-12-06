@@ -701,7 +701,7 @@ CogX64CompilerTests >> testMoveRdM64r [
 					In: inst machineCode object
 					into: [:str :sz| | plainJane herIntended |
 						plainJane := self strip: str.
-						herIntended := 'movsd ', srname, ', 0x', (offset hex allButFirst: 3), '(', drname, ')'.
+						herIntended := 'movq ', srname, ', 0x', (offset hex allButFirst: 3), '(', drname, ')'.
 						self assert: herIntended equals: plainJane.
 						self assert: len = sz]]]]
 ]
