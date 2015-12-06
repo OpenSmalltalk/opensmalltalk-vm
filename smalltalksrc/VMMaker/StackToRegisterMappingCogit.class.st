@@ -2224,7 +2224,7 @@ nonInt:
 	jumpInRange := self JumpLessOrEqual: 0.
 	self MoveCq: objectRepresentation numSmallIntegerBits R: ClassReg.
 	jumpInRange jmpTarget: (self ArithmeticShiftRightR: ClassReg R: ReceiverResultReg).
-	objectRepresentation genSetSmallIntegerTagsIn: ReceiverResultReg.
+	objectRepresentation genClearAndSetSmallIntegerTagsIn: ReceiverResultReg.
 	self RetN: 0.
 	jumpNotSI jmpTarget: (jumpTooBig jmpTarget: (jumpOvfl jmpTarget: self Label)).
 	^0
