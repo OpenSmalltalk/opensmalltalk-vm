@@ -2903,7 +2903,12 @@ CogVMSimulator >> primitiveObject: actualReceiver perform: selector withArgument
 
 { #category : #'object access primitives' }
 CogVMSimulator >> primitiveObjectAt [
-	(self stackValue: 1) = 16r1148000 ifTrue: [self halt].
+	"self transcript
+		nextPutAll: (self nameOfClass: (self methodClassOf: (self stackValue: 1)));
+		nextPutAll: '>>#';
+		nextPutAll: (self stringOf: (self maybeSelectorOfMethod: (self stackValue: 1)));
+		nextPutAll: ' objectAt: '; print: (objectMemory integerValueOf: self stackTop); cr; flush.
+	self halt."
 	^super primitiveObjectAt
 ]
 
