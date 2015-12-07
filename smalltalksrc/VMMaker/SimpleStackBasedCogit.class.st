@@ -1452,6 +1452,7 @@ SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: pre
 	self MoveR: SendNumArgsReg R: ReceiverResultReg.
 	self RetN: (self primRetNOffsetFor: 1).
 	jumpImmediate jmpTarget: self Label.
+	objectRepresentation maybeGenConvertIfSmallFloatIn: Arg0Reg scratchReg: TempReg into: DPFPReg1 andJumpTo: doOp.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := objectRepresentation genJumpNotSmallInteger: ClassReg scratchReg: TempReg].
 	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
@@ -1498,6 +1499,7 @@ SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator invert: invert
 	jumpCond jmpTarget: (self genMoveTrueR: ReceiverResultReg).
 	self RetN: (self primRetNOffsetFor: 1).
 	jumpImmediate jmpTarget: self Label.
+	objectRepresentation maybeGenConvertIfSmallFloatIn: ClassReg scratchReg: TempReg into: DPFPReg1 andJumpTo: compare.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := objectRepresentation genJumpNotSmallInteger: ClassReg scratchReg: TempReg].
 	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
