@@ -126,8 +126,11 @@ CogInLineLiteralsX64Compiler >> concretizeMoveCwR [
 		at:  6 put: (value >> 32 bitAnd: 16rFF);
 		at:  7 put: (value >> 40 bitAnd: 16rFF);
 		at:  8 put: (value >> 48 bitAnd: 16rFF);
-		at:  9 put: (value >> 56 bitAnd: 16rFF);
-		at: 10 put: 16r90. "Add a nop to disambiguate between MoveCwR/PushCwR and ArithCwR, which ends with a (self mod: ModReg RM: 0 RO: 0)"
+		at:  9 put: (value >> 56 bitAnd: 16rFF).
+	opcode = MoveCqR ifTrue:
+		[^machineCodeSize := 10].
+	"Add a nop to disambiguate between MoveCwR/PushCwR and ArithCwR, which ends with a (self mod: ModReg RM: 0 RO: 0)"
+	machineCode at: 10 put: 16r90.
 	self assert: (self mod: ModReg RM: 0 RO: 0) > 16r90.
 	^machineCodeSize := 11
 ]

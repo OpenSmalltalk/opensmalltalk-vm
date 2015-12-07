@@ -515,6 +515,14 @@ CogObjectRepresentation >> maybeCompileRetry: retryInst onPrimitiveFail: primInd
 	 By default do nothing."
 ]
 
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> maybeGenConvertIfSmallFloatIn: oopReg into: dpReg andJumpTo: targetInst [
+	"If the receiver supports immediate floats then generate a test for a smallFloat in  oopReg,
+	 converting it to the float value in dpReg and jumping to targetInst.  Otherwise do nothing."
+	<var: 'targetInst' type: #'AbstractInstruction *'>
+	^0
+]
+
 { #category : #initialization }
 CogObjectRepresentation >> maybeGenerateSelectorIndexDereferenceRoutine [
 	"If required, generate the routine that converts selector indices into selector objects.
