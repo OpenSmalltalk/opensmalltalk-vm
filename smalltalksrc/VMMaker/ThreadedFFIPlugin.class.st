@@ -274,9 +274,8 @@ ThreadedFFIPlugin >> ffiAddressOf: rcvr startingAt: byteOffset size: byteSize [
 	rcvrClass = interpreterProxy classExternalAddress ifTrue:[
 		(rcvrSize = 4) ifFalse:[^interpreterProxy primitiveFail].
 		addr := interpreterProxy fetchPointer: 0 ofObject: rcvr.
-		self flag: 'This needs more thought.  Instead of always allowing this couldn''t we allow it only if the address is associated with a pinned object?'.
-		"don't you dare to read from object memory!"
-		(addr = 0 "or: [interpreterProxy isInMemory: addr]")
+		"don't you dare to read from object memory (unless is pinned)!"
+		(addr = 0 or: [(interpreterProxy isInMemory: addr) or: [(interpreterProxy isPinned: rcvr) not]])
 			ifTrue:[^interpreterProxy primitiveFail].
 	] ifFalse:[
 		(byteOffset+byteSize-1 <= rcvrSize)
