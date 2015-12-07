@@ -1381,18 +1381,6 @@ CogObjectRepresentationFor32BitSpur >> genJumpSmallIntegerInScratchReg: aRegiste
 	^cogit JumpNonZero: 0
 ]
 
-{ #category : #initialization }
-CogObjectRepresentationFor32BitSpur >> genLoadHeader: header intoNewInstance: rcvrReg using: scratchReg [
-	"Generate the instructions to move the constant header into a new instance pointed to by rcvrReg."
-	<inline: true>
-	self flag: #endianness.
-	cogit
-		MoveCq: (self low32BitsOf: header) R: scratchReg;
-		MoveR: scratchReg Mw: 0 r: rcvrReg;
-		MoveCq: header >> 32 R: scratchReg;
-		MoveR: scratchReg Mw: 4 r: rcvrReg
-]
-
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genRemoveSmallIntegerTagsInScratchReg: scratchReg [
 	cogit SubCq: 1 R: scratchReg.
@@ -1403,6 +1391,18 @@ CogObjectRepresentationFor32BitSpur >> genRemoveSmallIntegerTagsInScratchReg: sc
 CogObjectRepresentationFor32BitSpur >> genShiftAwaySmallIntegerTagsInScratchReg: scratchReg [
 	cogit ArithmeticShiftRightCq: 1 R: scratchReg.
 	^0
+]
+
+{ #category : #initialization }
+CogObjectRepresentationFor32BitSpur >> genStoreHeader: header intoNewInstance: rcvrReg using: scratchReg [
+	"Generate the instructions to move the constant header into a new instance pointed to by rcvrReg."
+	<inline: true>
+	self flag: #endianness.
+	cogit
+		MoveCq: (self low32BitsOf: header) R: scratchReg;
+		MoveR: scratchReg Mw: 0 r: rcvrReg;
+		MoveCq: header >> 32 R: scratchReg;
+		MoveR: scratchReg Mw: 4 r: rcvrReg
 ]
 
 { #category : #'in-line cacheing' }
