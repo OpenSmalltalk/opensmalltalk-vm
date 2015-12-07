@@ -189,7 +189,7 @@ CogObjectRepresentationForSpur >> genAllocFloatValue: dpreg into: resultReg scra
 	cogit CmpCq: objectMemory getScavengeThreshold R: scratch1.
 	jumpFail := cogit JumpAboveOrEqual: 0.
 	cogit MoveR: scratch1 Aw: objectMemory freeStartAddress.
-	self genLoadHeader: newFloatHeader intoNewInstance: resultReg using: scratch1.
+	self genStoreHeader: newFloatHeader intoNewInstance: resultReg using: scratch1.
 	cogit MoveRd: dpreg M64: objectMemory baseHeaderSize r: resultReg.
 	^jumpFail
 ]
@@ -420,7 +420,7 @@ CogObjectRepresentationForSpur >> genGetActiveContextLarge: isLarge inBlock: isI
 					classIndex: ClassMethodContextCompactIndex.
 	self flag: #endianness.
 	cogit MoveAw: objectMemory freeStartAddress R: ReceiverResultReg.
-	self genLoadHeader: header intoNewInstance: ReceiverResultReg using: TempReg.
+	self genStoreHeader: header intoNewInstance: ReceiverResultReg using: TempReg.
 	cogit
 		MoveR: ReceiverResultReg R: TempReg;
 		AddCq: (objectMemory smallObjectBytesForSlots: slotSize) R: TempReg;
@@ -982,13 +982,6 @@ CogObjectRepresentationForSpur >> genJumpNotImmediateInScratchReg: aRegister [
 	^cogit JumpZero: 0
 ]
 
-{ #category : #initialization }
-CogObjectRepresentationForSpur >> genLoadHeader: header intoNewInstance: rcvrReg using: scratchReg [
-	"Generate the instructions to move the constant header into a new instance pointed to by rcvrReg."
-	<inline: true>
-	self subclassResponsibility
-]
-
 { #category : #'bytecode generator support' }
 CogObjectRepresentationForSpur >> genNewArrayOfSize: size initialized: initialized [
 	"Generate a call to code that allocates a new Array of size.
@@ -1003,7 +996,7 @@ CogObjectRepresentationForSpur >> genNewArrayOfSize: size initialized: initializ
 					format: objectMemory arrayFormat
 					classIndex: ClassArrayCompactIndex.
 	cogit MoveAw: objectMemory freeStartAddress R: ReceiverResultReg.
-	self genLoadHeader: header intoNewInstance: ReceiverResultReg using: TempReg.
+	self genStoreHeader: header intoNewInstance: ReceiverResultReg using: TempReg.
 	(initialized and: [size > 0]) ifTrue:
 		[cogit genMoveConstant: objectMemory nilObject R: TempReg.
 		 0 to: size - 1 do:
@@ -1039,7 +1032,7 @@ CogObjectRepresentationForSpur >> genNoPopCreateClosureAt: bcpc numArgs: numArgs
 					format: objectMemory indexablePointersFormat
 					classIndex: ClassBlockClosureCompactIndex.
 	cogit MoveAw: objectMemory freeStartAddress R: ReceiverResultReg.
-	self genLoadHeader: header intoNewInstance: ReceiverResultReg using: TempReg.
+	self genStoreHeader: header intoNewInstance: ReceiverResultReg using: TempReg.
 	cogit
 		LoadEffectiveAddressMw: byteSize r: ReceiverResultReg R: TempReg;
 		MoveR: TempReg Aw: objectMemory freeStartAddress;
@@ -1152,6 +1145,13 @@ CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: va
 	(jmpAlreadyRemembered jmpTarget:
 		cogit Label))).
 	^0
+]
+
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> genStoreHeader: header intoNewInstance: rcvrReg using: scratchReg [
+	"Generate the instructions to move the constant header into a new instance pointed to by rcvrReg."
+	<inline: true>
+	self subclassResponsibility
 ]
 
 { #category : #'compile abstract instructions' }
