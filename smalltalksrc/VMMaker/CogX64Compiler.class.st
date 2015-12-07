@@ -407,6 +407,7 @@ CogX64Compiler >> computeMaximumSize [
 		[LogicalShiftLeftCqR]		-> [^(operands at: 0) = 1 ifTrue: [3] ifFalse: [4]].
 		[LogicalShiftRightCqR]		-> [^(operands at: 0) = 1 ifTrue: [3] ifFalse: [4]].
 		[ArithmeticShiftRightCqR]	-> [^(operands at: 0) = 1 ifTrue: [3] ifFalse: [4]].
+		[RotateRightCqR]			-> [^(operands at: 0) = 1 ifTrue: [3] ifFalse: [4]].
 		[LogicalShiftLeftRR]			-> [^self computeShiftRRSize].
 		[LogicalShiftRightRR]		-> [^self computeShiftRRSize].
 		[ArithmeticShiftRightRR]		-> [^self computeShiftRRSize].
@@ -1504,6 +1505,20 @@ CogX64Compiler >> concretizeMoveRMwr [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveRRd [	<inline: true>
+	| srcReg destReg |
+	srcReg := self concreteRegister: (operands at: 0).
+	destReg := self concreteDPFPRegister: (operands at: 1).
+	machineCode
+		at: 0 put: 16r66;
+		at: 1 put: (self rexR: destReg x: 0 b: srcReg);
+		at: 2 put: 16r0f;
+		at: 3 put: 16r6e;
+		at: 4 put: (self mod: ModReg RM: srcReg RO: destReg).
+	^machineCodeSize := 5
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveRXbrR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -2039,6 +2054,7 @@ CogX64Compiler >> dispatchConcretize [
 		[XorRR]						-> [^self concretizeOpRR: 16r33].
 		[NegateR]					-> [^self concretizeNegateR].
 		[LoadEffectiveAddressMwrR]	-> [^self concretizeLoadEffectiveAddressMwrR].
+		[RotateRightCqR]				-> [^self concretizeShiftCqRegOpcode: 1].
 		[ArithmeticShiftRightCqR]		-> [^self concretizeShiftCqRegOpcode: 7].
 		[LogicalShiftRightCqR]			-> [^self concretizeShiftCqRegOpcode: 5].
 		[LogicalShiftLeftCqR]			-> [^self concretizeShiftCqRegOpcode: 4].
@@ -2065,6 +2081,8 @@ CogX64Compiler >> dispatchConcretize [
 		[MoveX32rRR]		-> [^self concretizeMoveX32rRR].
 		[MoveRMwr]		-> [^self concretizeMoveRMwr].
 		[MoveRdM64r]		-> [^self concretizeMoveRdM64r].
+		[MoveRdR]			-> [^self concretizeMoveRdR].
+		[MoveRRd]			-> [^self concretizeMoveRRd].
 		[PopR]				-> [^self concretizePopR].
 		[PushR]				-> [^self concretizePushR].
 		[PushCq]			-> [^self concretizePushCq].
@@ -2544,7 +2562,7 @@ CogX64Compiler >> isJumpAt: pc [
 { #category : #testing }
 CogX64Compiler >> isQuick: operand [
 	<var: #operand type: #'unsigned long'>
-	^operand signedIntFromLong between: -128 and: 127
+	^operand signedIntFromLong64 between: -128 and: 127
 ]
 
 { #category : #testing }

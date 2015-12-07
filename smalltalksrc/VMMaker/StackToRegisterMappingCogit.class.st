@@ -1694,7 +1694,7 @@ StackToRegisterMappingCogit >> genDoubleArithmetic: arithmeticOperator preOpChec
 	backEnd genPushRegisterArgsForNumArgs: methodOrBlockNumArgs scratchReg: SendNumArgsReg.
 	jumpFailClass2 := self Jump: 0.
 	jumpImmediate jmpTarget: self Label.
-	objectRepresentation maybeGenConvertIfSmallFloatIn: Arg0Reg into: DPFPReg1 andJumpTo: doOp.
+	objectRepresentation maybeGenConvertIfSmallFloatIn: Arg0Reg scratchReg: TempReg into: DPFPReg1 andJumpTo: doOp.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratch: TempReg.
 		 jumpNonInt jmpTarget: jumpFailClass getJmpTarget].
@@ -1734,6 +1734,7 @@ StackToRegisterMappingCogit >> genDoubleComparison: jumpOpcodeGenerator invert: 
 	jumpCond jmpTarget: (self genMoveTrueR: ReceiverResultReg).
 	self RetN: 0.
 	jumpImmediate jmpTarget: self Label.
+	objectRepresentation maybeGenConvertIfSmallFloatIn: Arg0Reg scratchReg: TempReg into: DPFPReg1 andJumpTo: compare.
 	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg].
 	objectRepresentation genConvertSmallIntegerToIntegerInReg: Arg0Reg.

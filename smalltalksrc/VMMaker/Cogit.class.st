@@ -2248,6 +2248,13 @@ Cogit >> RetN: offset [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> RotateRightCq: quickConstant R: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: RotateRightCqR operand: quickConstant operand: reg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> SqrtRd: dpreg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>

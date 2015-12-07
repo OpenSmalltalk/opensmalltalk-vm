@@ -47,6 +47,16 @@ CurrentImageCoInterpreterFacadeFor64BitSpurObjectRepresentation >> oopForObject:
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeFor64BitSpurObjectRepresentation >> smallFloatExponentOffset [
+	^objectMemory smallFloatExponentOffset
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeFor64BitSpurObjectRepresentation >> smallFloatMantissaBits [
+	^objectMemory smallFloatMantissaBits
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeFor64BitSpurObjectRepresentation >> smallFloatTag [
 	^objectMemory smallFloatTag
 ]
