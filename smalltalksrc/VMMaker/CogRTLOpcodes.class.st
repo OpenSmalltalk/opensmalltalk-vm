@@ -132,6 +132,7 @@ Class {
 		'RISCTempReg',
 		'ReceiverResultReg',
 		'RetN',
+		'RotateRightCqR',
 		'SPReg',
 		'Scratch0Reg',
 		'Scratch1Reg',
@@ -161,9 +162,10 @@ Class {
 { #category : #'class initialization' }
 CogRTLOpcodes class >> initialize [
 	"Abstract opcodes are a compound of a one word operation specifier and zero or more operand type specifiers.
-	 e.g. MoveRR is the Move opcode with two register operand specifiers and defines a move register to
-	 register instruction from operand 0 to operand 1.  The word and register size is assumed to be either 32-bits on
-	 a 32-bit architecture or 64-bits on a 64-bit architecture.  The abstract machine is mostly a 2 address machine
+	 The assembler is in Cogit protocol abstract instructions and uses `at&t' syntax, assigning to the register on the
+	 right. e.g. MoveRR is the Move opcode with two register operand specifiers and defines a move register to
+	 register instruction from operand 0 to operand 1.  The word and register size is assumed to be either 32-bits
+	 on a 32-bit architecture or 64-bits on a 64-bit architecture.  The abstract machine is mostly a 2 address machine
 	 with the odd three address instruction added to better exploit RISCs.
 			(self initialize)
 	The operand specifiers are
@@ -330,12 +332,13 @@ CogRTLOpcodes class >> initialize [
 						ArithmeticShiftRightCqR ArithmeticShiftRightRR
 						LogicalShiftRightCqR LogicalShiftRightRR
 						LogicalShiftLeftCqR LogicalShiftLeftRR
+						RotateRightCqR
 
 						CmpRR AddRR SubRR AndRR OrRR XorRR
 						CmpCqR AddCqR SubCqR AndCqR OrCqR TstCqR XorCqR
 						CmpCwR CmpC32R AddCwR SubCwR AndCwR OrCwR XorCwR
 
-						AndCqRR
+						AndCqRR "Three address ops for RISCs; feel free to add and extend"
 
 						CmpRdRd AddRdRd SubRdRd MulRdRd DivRdRd SqrtRd
 
