@@ -284,3 +284,9 @@ CogProcessorAlien >> smashRegistersWithValuesFrom: base by: step [
 		[:accessor :index|
 		self perform: accessor with: index - 1 * step + base]
 ]
+
+{ #category : #'accessing-abstract' }
+CogProcessorAlien >> zeroFloatingPointRegisters [
+	self floatingPointRegisterStateSetters do:
+		[:setter| self perform: setter with: 0]
+]
