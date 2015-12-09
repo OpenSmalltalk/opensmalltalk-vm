@@ -3393,8 +3393,9 @@ Cogit >> checkIfValidOopRef: annotation pc: mcpc cogMethod: cogMethod [
 				[(objectRepresentation validInlineCacheTag: selectorOrCacheTag) ifFalse:
 					[coInterpreter print: 'cache tag leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 					^1]]
-			ifFalse: "unlinked send or super send; cacheTag is a selector"
-				[(objectRepresentation checkValidOopReference: selectorOrCacheTag) ifFalse:
+			ifFalse: "unlinked send or super send; cacheTag is a selector unless 64-bit, in which case it is an index."
+				[(objectMemory wordSize = 8
+				  or: [objectRepresentation checkValidOopReference: selectorOrCacheTag]) ifFalse:
 					[coInterpreter print: 'selector leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 					^1]]].
 	^0 "keep scanning"
@@ -5837,7 +5838,7 @@ Cogit >> genLoadCStackPointersForPrimCall [
 ]
 
 { #category : #'in-line cacheing' }
-Cogit >> genLoadInlineCache: selectorIndex [
+Cogit >> genLoadInlineCacheWithSelector: selectorIndex [
 	"The in-line cache for a send is implemented as a constant load into ClassReg.
 	 We always use a 32-bit load, even in 64-bits.
 

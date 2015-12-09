@@ -2568,9 +2568,9 @@ SimpleStackBasedCogit >> genPrimitiveDivide [
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	<var: #jumpInexact type: #'AbstractInstruction *'>
 	<var: #jumpOverflow type: #'AbstractInstruction *'>
-	self genLoadArgAtDepth: 0 into: TempReg.
-	self MoveR: TempReg R: ClassReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	self genLoadArgAtDepth: 0 into: Arg0Reg.
+	self MoveR: Arg0Reg R: ClassReg.
+	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
 	 overflow case doesn't actually overflow the machine instruction."
 	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
@@ -2582,11 +2582,10 @@ SimpleStackBasedCogit >> genPrimitiveDivide [
 	self CmpCq: 0 R: ClassReg.
 	jumpInexact := self JumpNonZero: 0.
 	"test for overflow; the only case is SmallInteger minVal / -1"
-	self CmpCq: (1 << (objectRepresentation numSmallIntegerBits - 1)) R: TempReg.
-	jumpOverflow := self JumpGreaterOrEqual: 0.
+	jumpOverflow := objectRepresentation genJumpNotSmallIntegerValue: TempReg scratch: Arg1Reg.
 	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
-	self RetN: (self primRetNOffsetFor: 1).
+	self RetN: 0.
 	jumpOverflow jmpTarget: (jumpInexact jmpTarget: (jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label))).
 	^0
 ]
@@ -2847,13 +2846,15 @@ SimpleStackBasedCogit >> genPrimitivePerform [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveQuo [
-	| jumpNotSI jumpZero jumpOverflow |
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	| convert jumpNotSI jumpZero jumpIsSI jumpExact |
+	<var: #convert type: #'AbstractInstruction *'>
+	<var: #jumpIsSI type: #'AbstractInstruction *'>
 	<var: #jumpZero type: #'AbstractInstruction *'>
-	<var: #jumpOverflow type: #'AbstractInstruction *'>
-	self genLoadArgAtDepth: 0 into: TempReg.
-	self MoveR: TempReg R: ClassReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #jumpExact type: #'AbstractInstruction *'>
+	self genLoadArgAtDepth: 0 into: Arg0Reg.
+	self MoveR: Arg0Reg R: ClassReg.
+	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
 	 overflow case doesn't actually overflow the machine instruction."
 	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
@@ -2863,13 +2864,17 @@ SimpleStackBasedCogit >> genPrimitiveQuo [
 	self MoveR: ReceiverResultReg R: TempReg.
 	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: TempReg.
 	self DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
-	"test for overflow; the only case is SmallInteger minVal quo: -1"
-	self CmpCq: (1 << (objectRepresentation numSmallIntegerBits - 1)) R: TempReg.
-	jumpOverflow := self JumpGreaterOrEqual: 0.
+	"If remainder is zero we must check for overflow."
+	self CmpCq: 0 R: ClassReg.
+	jumpExact := self JumpZero: 0.
+	convert := self Label.
 	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
-	self RetN: (self primRetNOffsetFor: 1).
-	jumpOverflow jmpTarget: (jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label)).
+	self RetN: 0.
+	jumpExact jmpTarget: self Label.
+	jumpIsSI := objectRepresentation genJumpIsSmallIntegerValue: TempReg scratch: Arg1Reg.
+	jumpIsSI jmpTarget: convert.
+	jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label).
 	^0
 ]
 
@@ -3300,7 +3305,7 @@ SimpleStackBasedCogit >> genSend: selectorIndex numArgs: numArgs sendTable: send
 	(BytecodeSetHasDirectedSuperSend
 	 and: [annotation = IsDirectedSuperSend]) ifTrue:
 		[self genMoveConstant: tempOop R: TempReg].
-	self genLoadInlineCache: selectorIndex.
+	self genLoadInlineCacheWithSelector: selectorIndex.
 	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation.
 	self PushR: ReceiverResultReg.
 	^0

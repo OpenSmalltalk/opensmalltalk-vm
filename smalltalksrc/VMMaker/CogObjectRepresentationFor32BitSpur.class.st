@@ -1357,6 +1357,18 @@ CogObjectRepresentationFor32BitSpur >> genJumpNotSmallIntegerInScratchReg: aRegi
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genJumpNotSmallIntegerValue: aRegister scratch: scratchReg [
+	"Generate a test for aRegister containing an integer value outside the SmallInteger range, and a jump if so, answering the jump.
+	 c.f. Spur32BitMemoryManager>>isIntegerValue:"
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit
+		MoveR: aRegister R: scratchReg;
+		ArithmeticShiftRightCq: 1 R: scratchReg;
+		XorR: aRegister R: scratchReg;
+		JumpGreaterOrEqual: 0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genJumpNotSmallIntegersIn: aRegister andScratchReg: scratchReg [
 	"Generate a compare and branch to test if aRegister and scratchReg contains other than SmallIntegers,
 	 i.e. don't branch if both aRegister and scratchReg contain SmallIntegers.
