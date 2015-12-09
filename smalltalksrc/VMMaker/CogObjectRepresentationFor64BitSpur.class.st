@@ -104,9 +104,9 @@ CogObjectRepresentationFor64BitSpur >> genAllocFloatValue: dpreg into: resultReg
 	<var: #jumpFail type: #'AbstractInstruction *'>
 	<var: #jumpNotSF type: #'AbstractInstruction *'>
 	<var: #jumpMerge type: #'AbstractInstruction *'>
-	cogit MoveRd: dpreg R: scratch2.
-	jumpNotSF := self genJumpNotSmallFloatValueBits: scratch2 scratch: scratch1.
-	self genConvertBitsToSmallFloatIn: scratch2 scratch: scratch1.
+	cogit MoveRd: dpreg R: resultReg.
+	jumpNotSF := self genJumpNotSmallFloatValueBits: resultReg scratch: scratch1.
+	self genConvertBitsToSmallFloatIn: resultReg scratch: scratch1.
 	jumpMerge := cogit Jump: 0.
 	jumpNotSF jmpTarget: cogit Label.
 	jumpFail := super genAllocFloatValue: dpreg into: resultReg scratchReg: scratch1 scratchReg: scratch2.
@@ -125,7 +125,8 @@ CogObjectRepresentationFor64BitSpur >> genClearAndSetSmallIntegerTagsIn: scratch
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genConvertBitsToSmallFloatIn: reg scratch: scratch [
-	"Convert the in-SmallFloat64-range floating point value in integer register into a tagged SmallFloat64 oop."
+	"Convert the in-SmallFloat64-range floating point value in integer register into a tagged SmallFloat64 oop.
+	 c.f. Spur64BitMemoryManager>>smallFloatObjectOf:"
 	| jumpZero |
 	<var: #jumpZero type: #'AbstractInstruction *'>
 	cogit
