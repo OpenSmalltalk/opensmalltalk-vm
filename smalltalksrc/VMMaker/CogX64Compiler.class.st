@@ -408,6 +408,7 @@ CogX64Compiler >> computeMaximumSize [
 		[LogicalShiftRightCqR]		-> [^(operands at: 0) = 1 ifTrue: [3] ifFalse: [4]].
 		[ArithmeticShiftRightCqR]	-> [^(operands at: 0) = 1 ifTrue: [3] ifFalse: [4]].
 		[RotateRightCqR]			-> [^(operands at: 0) = 1 ifTrue: [3] ifFalse: [4]].
+		[RotateLeftCqR]			-> [^(operands at: 0) = 1 ifTrue: [3] ifFalse: [4]].
 		[LogicalShiftLeftRR]			-> [^self computeShiftRRSize].
 		[LogicalShiftRightRR]		-> [^self computeShiftRRSize].
 		[ArithmeticShiftRightRR]		-> [^self computeShiftRRSize].
@@ -1505,7 +1506,8 @@ CogX64Compiler >> concretizeMoveRMwr [
 ]
 
 { #category : #'generate machine code' }
-CogX64Compiler >> concretizeMoveRRd [	<inline: true>
+CogX64Compiler >> concretizeMoveRRd [
+	<inline: true>
 	| srcReg destReg |
 	srcReg := self concreteRegister: (operands at: 0).
 	destReg := self concreteDPFPRegister: (operands at: 1).
@@ -1612,6 +1614,21 @@ CogX64Compiler >> concretizeMoveRdM64r [
 		at: skip + 6 put: (offset >> 16 bitAnd: 16rFF);
 		at: skip + 7 put: (offset >> 24 bitAnd: 16rFF).
 	^machineCodeSize := skip + 8
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveRdR [
+	<inline: true>
+	| srcReg destReg |
+	srcReg := self concreteDPFPRegister: (operands at: 0).
+	destReg := self concreteRegister: (operands at: 1).
+	machineCode
+		at: 0 put: 16r66;
+		at: 1 put: (self rexR: srcReg x: 0 b: destReg);
+		at: 2 put: 16r0f;
+		at: 3 put: 16r7e;
+		at: 4 put: (self mod: ModReg RM: destReg RO: srcReg).
+	^machineCodeSize := 5
 ]
 
 { #category : #'generate machine code' }
@@ -1923,23 +1940,25 @@ CogX64Compiler >> concretizeTstCqR [
 			at: 2 put: (self mod: ModReg RM: reg RO: 0);
 			at: 3 put: (value bitAnd: 16rFF).
 		 ^machineCodeSize := 4].
-	self assert: value >> 32 = 0.
-	reg = RAX ifTrue:
-		[machineCode
-			at: 1 put: 16rA9;
-			at: 2 put: (value bitAnd: 16rFF);
-			at: 3 put: (value >> 8 bitAnd: 16rFF);
-			at: 4 put: (value >> 16 bitAnd: 16rFF);
-			at: 5 put: (value >> 24 bitAnd: 16rFF).
-		 ^machineCodeSize := 6].
-	machineCode
-		at: 1 put: 16rF7;
-		at: 2 put: (self mod: ModReg RM: reg RO: 0);
-		at: 3 put: (value bitAnd: 16rFF);
-		at: 4 put: (value >> 8 bitAnd: 16rFF);
-		at: 5 put: (value >> 16 bitAnd: 16rFF);
-		at: 6 put: (value >> 24 bitAnd: 16rFF).
-	 ^machineCodeSize := 7
+	
+	(self isSignExtendedFourByteValue: value) ifTrue:
+		[reg = RAX ifTrue:
+			[machineCode
+				at: 1 put: 16rA9;
+				at: 2 put: (value bitAnd: 16rFF);
+				at: 3 put: (value >> 8 bitAnd: 16rFF);
+				at: 4 put: (value >> 16 bitAnd: 16rFF);
+				at: 5 put: (value >> 24 bitAnd: 16rFF).
+			 ^machineCodeSize := 6].
+		machineCode
+			at: 1 put: 16rF7;
+			at: 2 put: (self mod: ModReg RM: reg RO: 0);
+			at: 3 put: (value bitAnd: 16rFF);
+			at: 4 put: (value >> 8 bitAnd: 16rFF);
+			at: 5 put: (value >> 16 bitAnd: 16rFF);
+			at: 6 put: (value >> 24 bitAnd: 16rFF).
+		 ^machineCodeSize := 7].
+	^self concretizeArithCwR: 16r85
 ]
 
 { #category : #'generate machine code' }
@@ -2054,6 +2073,7 @@ CogX64Compiler >> dispatchConcretize [
 		[XorRR]						-> [^self concretizeOpRR: 16r33].
 		[NegateR]					-> [^self concretizeNegateR].
 		[LoadEffectiveAddressMwrR]	-> [^self concretizeLoadEffectiveAddressMwrR].
+		[RotateLeftCqR]				-> [^self concretizeShiftCqRegOpcode: 0].
 		[RotateRightCqR]				-> [^self concretizeShiftCqRegOpcode: 1].
 		[ArithmeticShiftRightCqR]		-> [^self concretizeShiftCqRegOpcode: 7].
 		[LogicalShiftRightCqR]			-> [^self concretizeShiftCqRegOpcode: 5].
