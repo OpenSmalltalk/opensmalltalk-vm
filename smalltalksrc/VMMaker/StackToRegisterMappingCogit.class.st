@@ -1915,7 +1915,7 @@ StackToRegisterMappingCogit >> genMarshalledSend: selectorIndex numArgs: numArgs
 	(BytecodeSetHasDirectedSuperSend
 	 and: [annotation = IsDirectedSuperSend]) ifTrue:
 		[self genMoveConstant: tempOop R: TempReg].
-	self genLoadInlineCache: selectorIndex.
+	self genLoadInlineCacheWithSelector: selectorIndex.
 	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation.
 	optStatus isReceiverResultRegLive: false.
 	^self ssPushRegister: ReceiverResultReg
@@ -2350,8 +2350,7 @@ StackToRegisterMappingCogit >> genPrimitiveDivide [
 	self CmpCq: 0 R: ClassReg.
 	jumpInexact := self JumpNonZero: 0.
 	"test for overflow; the only case is SmallInteger minVal / -1"
-	self CmpCq: (1 << (objectRepresentation numSmallIntegerBits - 1)) R: TempReg.
-	jumpOverflow := self JumpGreaterOrEqual: 0.
+	jumpOverflow := objectRepresentation genJumpNotSmallIntegerValue: TempReg scratch: Arg1Reg.
 	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
 	self RetN: 0.
@@ -2517,10 +2516,12 @@ StackToRegisterMappingCogit >> genPrimitivePerform [
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveQuo [
-	| jumpNotSI jumpZero jumpOverflow |
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	| convert jumpNotSI jumpZero jumpIsSI jumpExact |
+	<var: #convert type: #'AbstractInstruction *'>
+	<var: #jumpIsSI type: #'AbstractInstruction *'>
 	<var: #jumpZero type: #'AbstractInstruction *'>
-	<var: #jumpOverflow type: #'AbstractInstruction *'>
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #jumpExact type: #'AbstractInstruction *'>
 	self MoveR: Arg0Reg R: ClassReg.
 	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
@@ -2532,13 +2533,17 @@ StackToRegisterMappingCogit >> genPrimitiveQuo [
 	self MoveR: ReceiverResultReg R: TempReg.
 	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: TempReg.
 	self DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
-	"test for overflow; the only case is SmallInteger minVal quo: -1"
-	self CmpCq: (1 << (objectRepresentation numSmallIntegerBits - 1)) R: TempReg.
-	jumpOverflow := self JumpGreaterOrEqual: 0.
+	"If remainder is zero we must check for overflow."
+	self CmpCq: 0 R: ClassReg.
+	jumpExact := self JumpZero: 0.
+	convert := self Label.
 	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
 	self MoveR: TempReg R: ReceiverResultReg.
 	self RetN: 0.
-	jumpOverflow jmpTarget: (jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label)).
+	jumpExact jmpTarget: self Label.
+	jumpIsSI := objectRepresentation genJumpIsSmallIntegerValue: TempReg scratch: Arg1Reg.
+	jumpIsSI jmpTarget: convert.
+	jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label).
 	^0
 ]
 

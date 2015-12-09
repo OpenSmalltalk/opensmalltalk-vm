@@ -329,6 +329,13 @@ CogObjectRepresentation >> genJumpNotSmallInteger: aRegister scratchReg: scratch
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genJumpNotSmallIntegerValue: aRegister scratch: scratchReg [
+	"Generate a test for aRegister containing an integer value outside the SmallInteger range, and a jump if so, answering the jump."
+	<returnTypeC: #'AbstractInstruction *'>
+	self subclassResponsibility
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genJumpNotSmallIntegersIn: aRegister andScratchReg: scratchReg [
 	"Generate a compare and branch to test if aRegister and scratchReg contains other than SmallIntegers,
 	 i.e. don't branch if both aRegister and scratchReg contain SmallIntegers.
