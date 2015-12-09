@@ -254,6 +254,14 @@ BochsX64Alien >> endianness [
 	^#little
 ]
 
+{ #category : #'accessing-abstract' }
+BochsX64Alien >> floatingPointRegisterStateSetters [
+	^#(	xmm0low: xmm1low: xmm2low: xmm3low:
+		xmm4low: xmm5low: xmm6low: xmm7low:
+		xmm9low: xmm9low: xmm10low: xmm11low:
+		xmm12low: xmm13low: xmm14low: xmm15low:)
+]
+
 { #category : #execution }
 BochsX64Alien >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<Integer>"
 	self primitiveFlushICacheFrom: startAddress To: endAddress
@@ -1066,10 +1074,12 @@ BochsX64Alien >> registerState [
 
 { #category : #'accessing-abstract' }
 BochsX64Alien >> registerStateGetters [
-	^#(rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r10 r11 r12 r13 r14 r15
+	^#(	rax rcx rdx rbx rsp rbp rsi rdi r8 r9 r10 r11 r12 r13 r14 r15
 		rip rflags
 		xmm0low xmm1low xmm2low xmm3low
-		xmm4low xmm5low xmm6low xmm7low )
+		xmm4low xmm5low xmm6low xmm7low
+		xmm9low xmm9low xmm10low xmm11low
+		xmm12low xmm13low xmm14low xmm15low)
 ]
 
 { #category : #'accessing-abstract' }
@@ -1079,10 +1089,12 @@ BochsX64Alien >> registerStatePCIndex [
 
 { #category : #'accessing-abstract' }
 BochsX64Alien >> registerStateSetters [
-	^#(rax: rcx: rdx: rbx: rsp: rbp: rsi: rdi: r8: r9: r10: r11: r12: r13: r14: r15:
+	^#(	rax: rcx: rdx: rbx: rsp: rbp: rsi: rdi: r8: r9: r10: r11: r12: r13: r14: r15:
 		rip: rflags:
 		xmm0low: xmm1low: xmm2low: xmm3low:
-		xmm4low: xmm5low: xmm6low: xmm7low: )
+		xmm4low: xmm5low: xmm6low: xmm7low:
+		xmm9low: xmm9low: xmm10low: xmm11low:
+		xmm12low: xmm13low: xmm14low: xmm15low:)
 ]
 
 { #category : #primitives }
@@ -1297,6 +1309,126 @@ BochsX64Alien >> xmm0low: anUnsignedInteger [
 ]
 
 { #category : #accessing }
+BochsX64Alien >> xmm10high [
+	^self unsignedLongLongAt: 1581
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm10high: anUnsignedInteger [
+	^self unsignedLongLongAt: 1581 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm10low [
+	^self unsignedLongLongAt: 1573
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm10low: anUnsignedInteger [
+	^self unsignedLongLongAt: 1573 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm11high [
+	^self unsignedLongLongAt: 1597
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm11high: anUnsignedInteger [
+	^self unsignedLongLongAt: 1597 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm11low [
+	^self unsignedLongLongAt: 1589
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm11low: anUnsignedInteger [
+	^self unsignedLongLongAt: 1589 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm12high [
+	^self unsignedLongLongAt: 1613
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm12high: anUnsignedInteger [
+	^self unsignedLongLongAt: 1613 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm12low [
+	^self unsignedLongLongAt: 1605
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm12low: anUnsignedInteger [
+	^self unsignedLongLongAt: 1605 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm13high [
+	^self unsignedLongLongAt: 1629
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm13high: anUnsignedInteger [
+	^self unsignedLongLongAt: 1629 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm13low [
+	^self unsignedLongLongAt: 1621
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm13low: anUnsignedInteger [
+	^self unsignedLongLongAt: 1621 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm14high [
+	^self unsignedLongLongAt: 1645
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm14high: anUnsignedInteger [
+	^self unsignedLongLongAt: 1645 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm14low [
+	^self unsignedLongLongAt: 1637
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm14low: anUnsignedInteger [
+	^self unsignedLongLongAt: 1637 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm15high [
+	^self unsignedLongLongAt: 1661
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm15high: anUnsignedInteger [
+	^self unsignedLongLongAt: 1661 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm15low [
+	^self unsignedLongLongAt: 1653
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm15low: anUnsignedInteger [
+	^self unsignedLongLongAt: 1653 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
 BochsX64Alien >> xmm1high [
 	^self unsignedLongLongAt: 1437
 ]
@@ -1434,4 +1566,44 @@ BochsX64Alien >> xmm7low [
 { #category : #accessing }
 BochsX64Alien >> xmm7low: anUnsignedInteger [
 	^self unsignedLongLongAt: 1525 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm8high [
+	^self unsignedLongLongAt: 1549
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm8high: anUnsignedInteger [
+	^self unsignedLongLongAt: 1549 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm8low [
+	^self unsignedLongLongAt: 1541
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm8low: anUnsignedInteger [
+	^self unsignedLongLongAt: 1541 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm9high [
+	^self unsignedLongLongAt: 1565
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm9high: anUnsignedInteger [
+	^self unsignedLongLongAt: 1565 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm9low [
+	^self unsignedLongLongAt: 1557
+]
+
+{ #category : #accessing }
+BochsX64Alien >> xmm9low: anUnsignedInteger [
+	^self unsignedLongLongAt: 1557 put: anUnsignedInteger
 ]
