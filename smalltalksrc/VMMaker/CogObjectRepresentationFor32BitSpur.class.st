@@ -1339,7 +1339,7 @@ CogObjectRepresentationFor32BitSpur >> genJumpIsSmallIntegerValue: aRegister scr
 		MoveR: aRegister R: scratchReg;
 		ArithmeticShiftRightCq: 1 R: scratchReg;
 		XorR: aRegister R: scratchReg;
-		JumpLess: 0
+		JumpGreaterOrEqual: 0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -1365,7 +1365,7 @@ CogObjectRepresentationFor32BitSpur >> genJumpNotSmallIntegerValue: aRegister sc
 		MoveR: aRegister R: scratchReg;
 		ArithmeticShiftRightCq: 1 R: scratchReg;
 		XorR: aRegister R: scratchReg;
-		JumpGreaterOrEqual: 0
+		JumpLess: 0
 ]
 
 { #category : #'compile abstract instructions' }

@@ -96,12 +96,48 @@ CogObjectRepresentationFor64BitSpur >> genAddSmallIntegerTagsTo: aRegister [
 	^0
 ]
 
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genAllocFloatValue: dpreg into: resultReg scratchReg: scratch1 scratchReg: scratch2 [
+	"Override to answer a SmallFloat64 if possible."
+	<returnTypeC: #'AbstractInstruction *'>
+	| jumpFail jumpNotSF jumpMerge |
+	<var: #jumpFail type: #'AbstractInstruction *'>
+	<var: #jumpNotSF type: #'AbstractInstruction *'>
+	<var: #jumpMerge type: #'AbstractInstruction *'>
+	cogit MoveRd: dpreg R: scratch2.
+	jumpNotSF := self genJumpNotSmallFloatValueBits: scratch2 scratch: scratch1.
+	self genConvertBitsToSmallFloatIn: scratch2 scratch: scratch1.
+	jumpMerge := cogit Jump: 0.
+	jumpNotSF jmpTarget: cogit Label.
+	jumpFail := super genAllocFloatValue: dpreg into: resultReg scratchReg: scratch1 scratchReg: scratch2.
+	jumpMerge jmpTarget: cogit Label.
+	^jumpFail
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genClearAndSetSmallIntegerTagsIn: scratchReg [
 	"Set the SmallInteger tag bits when the tag bits may be filled with garbage."
 	cogit
 		AndCq: -1 - self tagMask R: scratchReg;
 		OrCq: 1 R: scratchReg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genConvertBitsToSmallFloatIn: reg scratch: scratch [
+	"Convert the in-SmallFloat64-range floating point value in integer register into a tagged SmallFloat64 oop."
+	| jumpZero |
+	<var: #jumpZero type: #'AbstractInstruction *'>
+	cogit
+		RotateLeftCq: 1 R: reg;
+		CmpCq: 1 R: reg.
+	jumpZero :=
+	cogit JumpBelowOrEqual: 0.
+	cogit
+		SubCq: objectMemory smallFloatExponentOffset << (objectMemory smallFloatMantissaBits + 1) R: reg.
+	jumpZero jmpTarget:
+	(cogit LogicalShiftLeftCq: self numTagBits R: reg).
+	cogit AddCq: objectMemory smallFloatTag R: reg.
 	^0
 ]
 
@@ -703,7 +739,7 @@ CogObjectRepresentationFor64BitSpur >> genJumpIsSmallIntegerValue: aRegister scr
 		AddCq: 1 R: scratchReg;
 		AndCq: 1 << (self numTagBits + 1) - 1 R: scratchReg; "sign and top numTags bits must be the same"
 		CmpCq: 1 R: scratchReg;
-		JumpGreaterOrEqual: 0
+		JumpLessOrEqual: 0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -718,6 +754,39 @@ CogObjectRepresentationFor64BitSpur >> genJumpNotSmallFloat: reg scratchReg: scr
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genJumpNotSmallFloatInScratchReg: aRegister [
 	^self genJumpNotSmallFloat: aRegister scratchReg: TempReg
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genJumpNotSmallFloatValueBits: reg scratch: exponent [
+	"Generate a test to check that the integer register contains a floating point value within the SmallFloat64 range,
+	 and answer the jump.  c.f. Spur64BitMemoryManager>>isSmallFloatValue:"
+	| jumpFail jumpTest jumpMinExponent jumpMaxExponent jumpZeroMantissa |
+	<var: #jumpFail type: #'AbstractInstruction *'>
+	<var: #jumpTest type: #'AbstractInstruction *'>
+	<var: #jumpMinExponent type: #'AbstractInstruction *'>
+	<var: #jumpMaxExponent type: #'AbstractInstruction *'>
+	<var: #jumpZeroMantissa type: #'AbstractInstruction *'>
+	cogit MoveR: reg R: exponent;
+		LogicalShiftRightCq: objectMemory smallFloatMantissaBits R: exponent;
+		AndCq: 16r7FF R: exponent;  "ieee double precision mantissa is 11 bits"
+		CmpCq: objectMemory smallFloatExponentOffset R: exponent.
+	jumpMinExponent := cogit JumpLessOrEqual: 0.
+	cogit CmpCq: 255 + objectMemory smallFloatExponentOffset R: exponent. "SmallFloat exponent is 8 bits"
+	jumpMaxExponent := cogit JumpLessOrEqual: 0.
+	jumpFail :=
+	cogit Jump: 0.
+	jumpMinExponent jmpTarget:
+	(cogit TstCq: 1 << objectMemory smallFloatMantissaBits - 1 R: reg). "test mantissa bits"
+	jumpZeroMantissa := cogit JumpZero: 0.
+	cogit CmpCq: objectMemory smallFloatExponentOffset R: exponent.
+	jumpTest :=
+	cogit Jump: 0.
+	jumpZeroMantissa jmpTarget:
+	(cogit CmpCq: 0 R: exponent).
+	jumpTest jmpTarget:
+	(cogit JumpNonZero: jumpFail).
+	jumpMaxExponent jmpTarget: cogit Label.
+	^jumpFail
 ]
 
 { #category : #'compile abstract instructions' }
@@ -745,7 +814,7 @@ CogObjectRepresentationFor64BitSpur >> genJumpNotSmallIntegerValue: aRegister sc
 		AddCq: 1 R: scratchReg;
 		AndCq: 1 << (self numTagBits + 1) - 1 R: scratchReg; "sign and top numTags bits must be the same"
 		CmpCq: 1 R: scratchReg;
-		JumpLess: 0
+		JumpGreater: 0
 ]
 
 { #category : #'compile abstract instructions' }
