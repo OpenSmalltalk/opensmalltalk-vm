@@ -2511,7 +2511,8 @@ CogX64Compiler >> instructionSizeAt: pc [
 			[16r8B]	->	[self sizeHasModrm: op at: pc].
 			[16r90]	->	[1]. "nop"
 			[16rE9] ->	[5]. "long unconditional jump"
-			[16rEB] ->	[2] "short unconditional jump" }
+			[16rEB] ->	[2]. "short unconditional jump"
+			[16rCC]	->	[1]. "int3" }
 ]
 
 { #category : #testing }

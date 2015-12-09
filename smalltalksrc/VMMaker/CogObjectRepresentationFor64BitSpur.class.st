@@ -581,7 +581,7 @@ CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 
 	"header will contain classIndex/class's hash & format & numSlots/fixed size"
 	headerReg := SendNumArgsReg.
-	"Assume there's an available scratch register on 64-bit machines"
+	"Assume there's an available scratch register on 64-bit machines.  This holds the saved numFixedFileds and then the value to fill with"
 	fillReg := Scratch0Reg.
 	self assert: (cogit backEnd concreteRegister: fillReg) > 0.
 	"inst spec will hold class's instance specification and then byte size"
@@ -604,9 +604,9 @@ CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	cogit MoveR: instSpecReg R: TempReg.
 	cogit LogicalShiftLeftCq: objectMemory formatShift R: TempReg.
 	cogit AddR: TempReg R: headerReg.
-	"get integer value of num fields in TempReg now"
-	cogit MoveR: Arg0Reg R: TempReg.
-	self genConvertSmallIntegerToIntegerInReg: TempReg.
+	"get integer value of num fields in fillReg now"
+	cogit MoveR: Arg0Reg R: fillReg.
+	self genConvertSmallIntegerToIntegerInReg: fillReg.
 	"dispatch on format, failing if not variable or if compiled method"
 	cogit CmpCq: objectMemory arrayFormat R: instSpecReg.
 	jumpArrayFormat := cogit JumpZero: 0.
@@ -618,7 +618,7 @@ CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	cogit CmpCq: (objectMemory integerObjectOf: maxSlots) R: Arg0Reg.
 	jumpLongTooBig := cogit JumpAbove: 0.
 	"save num elements/slot size to instSpecReg"
-	cogit MoveR: TempReg R: instSpecReg.
+	cogit MoveR: fillReg R: instSpecReg.
 	cogit MoveCq: 0 R: fillReg.
 	jumpLongPrepDone := cogit Jump: 0. "go allocate"
 
@@ -626,7 +626,7 @@ CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	(cogit CmpCq: (objectMemory integerObjectOf: maxSlots * objectMemory wordSize) R: Arg0Reg).
 	jumpByteTooBig := cogit JumpAbove: 0.
 	"save num elements to instSpecReg"
-	cogit MoveR: TempReg R: instSpecReg.
+	cogit MoveR: fillReg R: instSpecReg.
 	"compute odd bits and add into headerReg; oddBits := 4 - nElements bitAnd: 3"
 	cogit MoveCq: objectMemory wordSize R: TempReg.
 	cogit SubR: instSpecReg R: TempReg.
@@ -643,7 +643,7 @@ CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 		(cogit CmpCq: (objectMemory integerObjectOf: maxSlots) R: Arg0Reg).
 	jumpArrayTooBig := cogit JumpAbove: 0.
 	"save num elements/slot size to instSpecReg"
-	cogit MoveR: TempReg R: instSpecReg.
+	cogit MoveR: fillReg R: instSpecReg.
 	cogit MoveCq: objectMemory nilObject R: fillReg.
 	"fall through to allocate"
 
@@ -659,11 +659,8 @@ CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	jumpHasSlots := cogit JumpNonZero: 0.
 	cogit MoveCq: objectMemory baseHeaderSize * 2 R: byteSizeReg.
 	skip := cogit Jump: 0.
-	"round up to allocationUnit"
 	jumpHasSlots jmpTarget:
-	(cogit MoveR: byteSizeReg R: TempReg).
-	cogit AddR: TempReg R: byteSizeReg.
-	cogit AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: byteSizeReg.
+	(cogit AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: byteSizeReg).
 	cogit LogicalShiftLeftCq: objectMemory shiftForWord R: byteSizeReg.
 	skip jmpTarget:
 	"check if allocation fits"
@@ -735,6 +732,20 @@ CogObjectRepresentationFor64BitSpur >> genJumpNotSmallInteger: reg scratchReg: s
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genJumpNotSmallIntegerInScratchReg: aRegister [
 	^self genJumpNotSmallInteger: aRegister scratchReg: TempReg
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genJumpNotSmallIntegerValue: aRegister scratch: scratchReg [
+	"Generate a test for aRegister containing an integer value outside the SmallInteger range, and a jump if so, answering the jump.
+	 c.f. Spur64BitMemoryManager>>isIntegerValue:"
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit
+		MoveR: aRegister R: scratchReg;
+		ArithmeticShiftRightCq: 64 - self numTagBits R: scratchReg;
+		AddCq: 1 R: scratchReg;
+		AndCq: 1 << (self numTagBits + 1) - 1 R: scratchReg; "sign and top numTags bits must be the same"
+		CmpCq: 1 R: scratchReg;
+		JumpLess: 0
 ]
 
 { #category : #'compile abstract instructions' }

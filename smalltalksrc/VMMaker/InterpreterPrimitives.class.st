@@ -2341,8 +2341,7 @@ InterpreterPrimitives >> primitiveIsPinned [
 	 or: [objectMemory isForwarded: obj]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadReceiver].
 	self pop: argumentCount + 1
-		thenPushBool: (objectMemory hasSpurMemoryManagerAPI
-						and: [objectMemory booleanObjectOf: (objectMemory isPinned: obj)])
+		thenPushBool: (objectMemory booleanObjectOf: (objectMemory isPinned: obj))
 ]
 
 { #category : #'memory space primitives' }
@@ -3024,7 +3023,7 @@ InterpreterPrimitives >> primitivePin [
 				[objectMemory setIsPinnedOf: obj to: false]]
 		ifFalse:
 			[wasPinned := objectMemory falseObject.
-			 (boolean = objectMemory trueObject
+			 (boolean ~= wasPinned
 			  and: [(objectMemory pinObject: obj) = 0]) ifTrue:
 				[^self primitiveFailFor: PrimErrNoMemory]].
 	
