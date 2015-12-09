@@ -9321,28 +9321,32 @@ Cogit >> relativeLabelForPC: pc [
 { #category : #compaction }
 Cogit >> relocateCallsAndSelfReferencesInMethod: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
-	| delta |
-	delta := cogMethod objectHeader.
+	| refDelta callDelta |
+	refDelta := cogMethod objectHeader.
+	callDelta := backEnd zoneCallsAreRelative ifTrue: [refDelta] ifFalse: [0].
+	
 	self assert: (cogMethod cmType = CMMethod or: [cogMethod cmType = CMOpenPIC]).
 	self assert: (backEnd callTargetFromReturnAddress: cogMethod asInteger + missOffset)
 				= (cogMethod cmType = CMMethod
 					ifTrue: [self methodAbortTrampolineFor: cogMethod cmNumArgs]
 					ifFalse: [self picAbortTrampolineFor: cogMethod cmNumArgs]).
-	backEnd relocateCallBeforeReturnPC: cogMethod asInteger + missOffset by: delta negated.
+	backEnd relocateCallBeforeReturnPC: cogMethod asInteger + missOffset by: callDelta negated.
 	self mapFor: cogMethod
 		performUntil: #relocateIfCallOrMethodReference:mcpc:delta:
-		arg: delta
+		arg: refDelta
 ]
 
 { #category : #compaction }
 Cogit >> relocateCallsInClosedPIC: cPIC [
 	<var: #cPIC type: #'CogMethod *'>
-	| delta pc entryPoint targetMethod |
+	| refDelta callDelta pc entryPoint targetMethod |
 	<var: #targetMethod type: #'CogMethod *'>
-	delta := cPIC objectHeader.
+	refDelta := cPIC objectHeader.
+	callDelta := backEnd zoneCallsAreRelative ifTrue: [refDelta] ifFalse: [0].
+	
 	self assert: (backEnd callTargetFromReturnAddress: cPIC asInteger + missOffset)
 					= (self picAbortTrampolineFor: cPIC cmNumArgs).
-	backEnd relocateCallBeforeReturnPC: cPIC asInteger + missOffset by: delta negated.
+	backEnd relocateCallBeforeReturnPC: cPIC asInteger + missOffset by: callDelta negated.
 
 	pc := cPIC asInteger + firstCPICCaseOffset.
 	1 to: cPIC cPICNumCases do:
@@ -9358,25 +9362,27 @@ Cogit >> relocateCallsInClosedPIC: cPIC [
 			 i = 1 ifTrue:
 				[backEnd
 					relocateJumpLongBeforeFollowingAddress: pc
-					by: (delta - targetMethod objectHeader) negated]
+					by: (callDelta - targetMethod objectHeader) negated]
 				ifFalse:
 				[backEnd
 					relocateJumpLongConditionalBeforeFollowingAddress: pc
-					by: (delta - targetMethod objectHeader) negated]]].
+					by: (callDelta - targetMethod objectHeader) negated]]].
 	self assert: cPIC cPICNumCases > 0.
 
 	"Finally relocate the load of the PIC and the jump to the overflow routine ceCPICMiss:receiver:"
-	backEnd relocateMethodReferenceBeforeAddress: (self addressOfEndOfCase: 2 inCPIC: cPIC)+ backEnd loadPICLiteralByteSize by: delta.
-	backEnd relocateJumpLongBeforeFollowingAddress: cPIC asInteger + cPICEndOfCodeOffset by: delta negated
+	backEnd relocateMethodReferenceBeforeAddress: (self addressOfEndOfCase: 2 inCPIC: cPIC)+ backEnd loadPICLiteralByteSize by: refDelta.
+	backEnd relocateJumpLongBeforeFollowingAddress: cPIC asInteger + cPICEndOfCodeOffset by: callDelta negated
 ]
 
 { #category : #compaction }
-Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
+Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: refDelta [
 	<var: #mcpc type: #'char *'>
-	| entryPoint targetMethod unlinkedRoutine |
+	| callDelta entryPoint targetMethod unlinkedRoutine |
 	<var: #targetMethod type: #'CogMethod *'>
 	<var: #nsSendCache type: #'NSSendCache *'>
 
+	callDelta := backEnd zoneCallsAreRelative ifTrue: [refDelta] ifFalse: [0].
+	
 	self cppIf: NewspeakVM ifTrue:
 		[| nsSendCache |
 		 annotation = IsNSSendCall ifTrue:
@@ -9388,7 +9394,7 @@ Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
 
 			"Fix call to trampoline. This method is moving [delta] bytes, and calls are
 			 relative, so adjust the call by -[delta] bytes"
-			backEnd relocateCallBeforeReturnPC: mcpc asInteger by: delta negated.
+			backEnd relocateCallBeforeReturnPC: mcpc asInteger by: callDelta negated.
 
 			nsSendCache target ~= 0 ifTrue: "Send is linked"
 				[entryPoint := nsSendCache target.
@@ -9404,7 +9410,7 @@ Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 		entryPoint <= methodZoneBase ifTrue: "send is not linked; just relocate"
-			[backEnd relocateCallBeforeReturnPC: mcpc asInteger by: delta negated.
+			[backEnd relocateCallBeforeReturnPC: mcpc asInteger by: callDelta negated.
 			 ^0].
 		"It's a linked send; find which kind."
 		self
@@ -9415,13 +9421,13 @@ Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
 				 targetMethod cmType ~= CMFree ifTrue: "send target not freed; just relocate."
 					[backEnd
 						relocateCallBeforeReturnPC: mcpc asInteger
-						by: (delta - targetMethod objectHeader) negated.
+						by: (callDelta - targetMethod objectHeader) negated.
 					 SistaVM ifTrue: "See comment in planCompaction"
 						[methodZone restorePICUsageCount: targetMethod].
 					 ^0].
 				 "Target was freed; map back to an unlinked send; but include this method's reocation"
 				 unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
-				 unlinkedRoutine := unlinkedRoutine - delta.
+				 unlinkedRoutine := unlinkedRoutine - callDelta.
 				 backEnd
 					rewriteInlineCacheAt: mcpc asInteger
 					tag: targetMethod selector
@@ -9429,11 +9435,11 @@ Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
 				 ^0]].
 
 	annotation = IsRelativeCall ifTrue:
-		[backEnd relocateCallBeforeReturnPC: mcpc asInteger by: delta negated.
+		[backEnd relocateCallBeforeReturnPC: mcpc asInteger by: callDelta negated.
 		 ^0].
 
 	annotation = IsAbsPCReference ifTrue:
-		[backEnd relocateMethodReferenceBeforeAddress: mcpc asInteger by: delta].
+		[backEnd relocateMethodReferenceBeforeAddress: mcpc asInteger by: refDelta].
 
 	^0 "keep scanning"
 ]

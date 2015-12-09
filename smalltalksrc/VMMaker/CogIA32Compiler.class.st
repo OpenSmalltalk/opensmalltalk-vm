@@ -3227,3 +3227,11 @@ CogIA32Compiler >> unalignedLongAt: byteAddress put: aWord [
 CogIA32Compiler >> unsignedShortAt: byteAddress [
 	^(objectMemory byteAt: byteAddress) + ((objectMemory byteAt: byteAddress + 1) bitShift: 8)
 ]
+
+{ #category : #'inline cacheing' }
+CogIA32Compiler >> zoneCallsAreRelative [
+	"Answer if Call and JumpLong are relative and hence need to take the caller's
+	 relocation delta into account during code compaction, rather than just the
+	 callee's delta."
+	^true
+]
