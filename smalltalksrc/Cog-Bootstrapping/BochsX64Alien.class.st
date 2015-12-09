@@ -790,25 +790,28 @@ BochsX64Alien >> printIntegerRegistersOn: aStream [
 
 { #category : #printing }
 BochsX64Alien >> printRegisterState: registerStateVector on: aStream [
+	"Print the registers, somewhat nicely formatted"
+	| lastIndex |
+	"First find out what floating point registers are used, and only print the ones up through the last non-zero one."
+	lastIndex := (registerStateVector size to: 19 by: -1) detect: [:i| (registerStateVector at: i) ~= 0] ifNone: [0].
+	lastIndex := lastIndex > 0
+					ifTrue: [lastIndex - 18 + 1 // 2 * 3 + 23]
+					ifFalse: [23].
 	self printFields:
-			((registerStateVector size < 26
-			  or: [(19 to: 26) allSatisfy: [:i| (registerStateVector at: i) isZero]])
-				ifTrue:
-					[#(	rax rbx rcx rdx cr
-						rsp rbp rsi rdi cr
-						r8 r9 r10 r11 cr
-						r12 r13 r14 r15 cr
-						rip rflags cr)]
-				ifFalse:
-					[#(	rax rbx rcx rdx cr
-						rsp rbp rsi rdi cr
-						r8 r9 r10 r11 cr
-						r12 r13 r14 r15 cr
-						rip rflags cr
-						xmm0low xmm1low cr
-						xmm2low xmm3low cr
-						xmm4low xmm5low cr
-						xmm6low xmm7low cr )])
+			(#(	rax rbx rcx rdx cr
+				rsp rbp rsi rdi cr
+				r8 r9 r10 r11 cr
+				r12 r13 r14 r15 cr
+				rip rflags cr
+				xmm0low xmm1low cr
+				xmm2low xmm3low cr
+				xmm4low xmm5low cr
+				xmm6low xmm7low cr
+				xmm8low xmm9low cr
+				xmm10low xmm11low cr
+				xmm12low xmm13low cr
+				xmm14low xmm15low cr )
+					copyFrom: 1 to: lastIndex)
 		inRegisterState: registerStateVector
 		on: aStream
 ]
@@ -1069,7 +1072,9 @@ BochsX64Alien >> registerState [
 		self r8. self r9. self r10. self r11. self r12. self r13. self r14. self r15.
 		self rip. self rflags.
 		self xmm0low. self xmm1low. self xmm2low. self xmm3low.
-		self xmm4low. self xmm5low. self xmm6low. self xmm7low }
+		self xmm4low. self xmm5low. self xmm6low. self xmm7low.
+		self xmm8low. self xmm9low. self xmm10low. self xmm11low.
+		self xmm12low. self xmm13low. self xmm14low. self xmm5low }
 ]
 
 { #category : #'accessing-abstract' }
