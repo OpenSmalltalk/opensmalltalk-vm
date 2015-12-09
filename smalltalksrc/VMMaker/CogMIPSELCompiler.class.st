@@ -2418,7 +2418,7 @@ CogMIPSELCompiler >> relocateJumpLongBeforeFollowingAddress: pc by: delta [
 	 nop (delay slot)
 	 ...  <-- pc"
 
-	| target |
+	| oldTarget newTarget |
 	self assert: delta \\ 4 = 0.
 	delta = 0 ifTrue: [^self].
 	
@@ -2429,9 +2429,9 @@ CogMIPSELCompiler >> relocateJumpLongBeforeFollowingAddress: pc by: delta [
 	self assert: (objectMemory longAt: pc - 4) = self nop.
 	"cogit disassembleFrom: pc - 16 to: pc."
 
-	target := self literalAtAddress: pc - 12.
-	target := target + delta.
-	self literalAtAddress: pc - 12 put: pc.
+	oldTarget := self literalAtAddress: pc - 12.
+	newTarget := oldTarget + delta.
+	self literalAtAddress: pc - 12 put: newTarget.
 
 	self assert: (self opcodeAtAddress: pc - 16) = LUI.
 	self assert: (self opcodeAtAddress: pc - 12) = ORI.
@@ -2629,10 +2629,10 @@ CogMIPSELCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag t
 
 { #category : #'inline cacheing' }
 CogMIPSELCompiler >> rewriteJTypeAtAddress: mcpc delta: delta [
-	| target |
-	target := self targetFromJTypeAtAddress: mcpc.
-	target := target + delta.
-	self rewriteJTypeAtAddress: mcpc target: target.
+	| oldTarget newTarget |
+	oldTarget := self targetFromJTypeAtAddress: mcpc.
+	newTarget := oldTarget + delta.
+	self rewriteJTypeAtAddress: mcpc target: newTarget.
 ]
 
 { #category : #'inline cacheing' }
@@ -2875,4 +2875,12 @@ CogMIPSELCompiler >> xorR: destReg R: leftReg R: rightReg [
 { #category : #'encoding - arithmetic' }
 CogMIPSELCompiler >> xoriR: destReg R: srcReg C: imm [
 	^self itype: XORI rs: srcReg rt: destReg eitherImmediate: imm
+]
+
+{ #category : #'inline cacheing' }
+CogMIPSELCompiler >> zoneCallsAreRelative [
+	"Answer if Call and JumpLong are relative and hence need to take the caller's
+	 relocation delta into account during code compaction, rather than just the
+	 callee's delta."
+	^false
 ]

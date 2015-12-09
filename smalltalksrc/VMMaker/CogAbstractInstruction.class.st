@@ -1463,3 +1463,11 @@ CogAbstractInstruction >> wantsNearAddressFor: anObject [
 	 and to allow x64 to address CStackPointer and CFramePointer relative to VarBaseReg."
 	^false
 ]
+
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> zoneCallsAreRelative [
+	"Answer if Call and JumpLong are relative and hence need to take the caller's
+	 relocation delta into account during code compaction, rather than just the
+	 callee's delta."
+	self subclassResponsibility
+]
