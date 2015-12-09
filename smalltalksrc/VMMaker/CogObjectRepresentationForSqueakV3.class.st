@@ -668,7 +668,7 @@ CogObjectRepresentationForSqueakV3 >> genJumpIsSmallIntegerValue: aRegister scra
 		MoveR: aRegister R: scratchReg;
 		ArithmeticShiftRightCq: 1 R: scratchReg;
 		XorR: aRegister R: scratchReg;
-		JumpLess: 0
+		JumpGreaterOrEqual: 0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -700,7 +700,7 @@ CogObjectRepresentationForSqueakV3 >> genJumpNotSmallIntegerValue: aRegister scr
 		MoveR: aRegister R: scratchReg;
 		ArithmeticShiftRightCq: 1 R: scratchReg;
 		XorR: aRegister R: scratchReg;
-		JumpGreaterOrEqual: 0
+		JumpLess: 0
 ]
 
 { #category : #'compile abstract instructions' }

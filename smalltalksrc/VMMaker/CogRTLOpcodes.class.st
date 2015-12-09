@@ -132,6 +132,7 @@ Class {
 		'RISCTempReg',
 		'ReceiverResultReg',
 		'RetN',
+		'RotateLeftCqR',
 		'RotateRightCqR',
 		'SPReg',
 		'Scratch0Reg',
@@ -332,7 +333,7 @@ CogRTLOpcodes class >> initialize [
 						ArithmeticShiftRightCqR ArithmeticShiftRightRR
 						LogicalShiftRightCqR LogicalShiftRightRR
 						LogicalShiftLeftCqR LogicalShiftLeftRR
-						RotateRightCqR
+						RotateLeftCqR RotateRightCqR
 
 						CmpRR AddRR SubRR AndRR OrRR XorRR
 						CmpCqR AddCqR SubCqR AndCqR OrCqR TstCqR XorCqR
