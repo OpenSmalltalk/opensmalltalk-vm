@@ -247,7 +247,8 @@ Class {
 		'cPICPrototype',
 		'cPICEndOfCodeOffset',
 		'cPICEndOfCodeLabel',
-		'maxCPICCases'
+		'maxCPICCases',
+		'debugOpcodeIndices'
 	],
 	#classVars : [
 		'AltBlockCreationBytecodeSize',
@@ -2248,6 +2249,13 @@ Cogit >> RetN: offset [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> RotateLeftCq: quickConstant R: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: RotateLeftCqR operand: quickConstant operand: reg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> RotateRightCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2333,6 +2341,7 @@ Cogit >> abstractInstruction: theAbstractInstruction follows: anAbstractInstruct
 { #category : #'compile abstract instructions' }
 Cogit >> abstractInstructionAt: index [
 	<cmacro: '(index) (&abstractOpcodes[index])'>
+	(debugOpcodeIndices includes: index) ifTrue: [self halt].
 	^abstractOpcodes at: index
 ]
 
@@ -9878,8 +9887,10 @@ Cogit >> setInterpreter: aCoInterpreter [
 	trampolineAddresses := CArrayAccessor on: (Array new: NumTrampolines * 2).
 	trampolineTableIndex := 0.
 
+	extA := extB := 0.
+
 	compilationTrace ifNil: [compilationTrace := self class initializationOptions at: #compilationTrace ifAbsent: [0]].
-	extA := extB := 0
+	debugOpcodeIndices := self class initializationOptions at: #debugOpcodeIndices ifAbsent: [Set new].
 ]
 
 { #category : #'jit - api' }
