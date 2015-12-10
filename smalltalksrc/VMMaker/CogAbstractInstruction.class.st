@@ -347,7 +347,7 @@ CogAbstractInstruction >> abstractRegisterForConcreteRegister: reg [
 CogAbstractInstruction >> addDependent: anInstruction [
 	<var: #anInstruction type: #'AbstractInstruction *'>
 	<returnTypeC: #'AbstractInstruction *'>
-	dependent notNil ifTrue:
+	dependent ifNotNil:
 		[anInstruction dependent: dependent].
 	^dependent := anInstruction
 ]
@@ -1233,7 +1233,7 @@ CogAbstractInstruction >> printStateOn: aStream [
 				do: [:ex| ].
 	orneryOperands withIndexDo:
 		[:operand :index|
-		operand notNil ifTrue:
+		operand ifNotNil:
 			[aStream space.
 			 index >= (orneryOperands identityIndexOf: nil ifAbsent: [orneryOperands size + 1]) ifTrue:
 				[aStream print: index - 1; nextPut: $:].
@@ -1409,7 +1409,7 @@ CogAbstractInstruction >> symbolicOn: aStream [
 							ifFalse: [operands].
 	orneryOperands withIndexDo:
 		[:operand :index|
-		operand notNil ifTrue:
+		operand ifNotNil:
 			[aStream space.
 			 index >= (orneryOperands identityIndexOf: nil ifAbsent: [orneryOperands size + 1]) ifTrue:
 				[aStream print: index - 1; nextPut: $:].
