@@ -2202,7 +2202,7 @@ CogVMSimulator >> mapFunctionToAddress: aSymbolOrIndexOrBlock [
 	symbolOrBlock := aSymbolOrIndexOrBlock isInteger
 						ifTrue: [(self pluginEntryFor: aSymbolOrIndexOrBlock) at: 3]
 						ifFalse: [aSymbolOrIndexOrBlock].
-	uniqueIndices isNil ifTrue:
+	uniqueIndices ifNil:
 		[uniqueIndices := Dictionary new.
 		 uniqueIndex := 65535].
 	sobui := uniqueIndices at: symbolOrBlock ifAbsentPut: [uniqueIndex := uniqueIndex + 1].

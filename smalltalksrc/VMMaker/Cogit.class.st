@@ -3307,7 +3307,7 @@ Cogit >> ceSICMiss: receiver [
 		 ^coInterpreter ceSendFromInLineCacheMiss: targetMethod].
 	"See if an Open PIC is already available."
 	pic := methodZone openPICWithSelector: targetMethod selector.
-	pic isNil ifTrue:
+	pic ifNil:
 		["otherwise attempt to create a closed PIC for the two cases."
 		 pic := self cogPICSelector: targetMethod selector
 					numArgs: targetMethod cmNumArgs
@@ -3822,7 +3822,7 @@ Cogit >> cogCodeConstituents [
 			[count := count + 1].
 		cogMethod := methodZone methodAfter: cogMethod].
 	constituents := coInterpreter instantiateClass: coInterpreter classArray indexableSize: count * 2.
-	constituents isNil ifTrue:
+	constituents ifNil:
 		[^constituents].
 	coInterpreter pushRemappableOop: constituents.
 	((label := objectMemory stringForCString: 'CogCode') isNil
@@ -3850,7 +3850,7 @@ Cogit >> cogCodeConstituents [
 				withValue: (cogMethod cmType = CMMethod
 								ifTrue: [cogMethod methodObject]
 								ifFalse: [cogMethod selector]).
-			 (value := self positiveMachineIntegerFor: cogMethod asUnsignedInteger) isNil ifTrue:
+			 (value := self positiveMachineIntegerFor: cogMethod asUnsignedInteger) ifNil:
 				[coInterpreter popRemappableOop.
 				 ^nil].
 			 coInterpreter
@@ -4688,7 +4688,7 @@ Cogit >> configureCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag:
 			[operand := (case1Method isNil or: [objectMemory isYoungObject: case1Method])
 							ifTrue: [0]
 							ifFalse: [case1Method].
-			 targetEntry := case1Method isNil ifTrue: [cPIC asInteger + (self sizeof: CogMethod)] ifFalse: [cPIC asInteger + self picInterpretAbortOffset]].
+			 targetEntry := case1Method ifNil: [cPIC asInteger + (self sizeof: CogMethod)] ifNotNil: [cPIC asInteger + self picInterpretAbortOffset]].
 
 	"set the jump to the case0 method"
 	backEnd rewriteJumpLongAt: cPIC asInteger + firstCPICCaseOffset target: case0CogMethod asInteger + cmNoCheckEntryOffset.
@@ -7042,7 +7042,7 @@ Cogit >> initialMethodUsageCount [
 	(primitiveIndex = 1
 	 or: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
 		[^1].
-	self primitiveGeneratorOrNil isNil ifTrue:
+	self primitiveGeneratorOrNil ifNil:
 		[^2].
 	^3
 ]
@@ -8784,7 +8784,7 @@ Cogit >> patchToOpenPICFor: selector numArgs: numArgs receiver: receiver [
 	outerReturn := coInterpreter stackTop.
 	"See if an Open PIC is already available."
 	oPIC := methodZone openPICWithSelector: selector.
-	oPIC isNil ifTrue:
+	oPIC ifNil:
 		["otherwise attempt to create an Open PIC."
 		oPIC := self cogOpenPICSelector: selector numArgs: numArgs.
 		(oPIC asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
@@ -10481,7 +10481,7 @@ Cogit >> unlinkAllSends [
 	"Unlink all sends in cog methods."
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	methodZoneBase isNil ifTrue: [^self].
+	methodZoneBase ifNil: [^self].
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	[cogMethod < methodZone limitZony] whileTrue:
 		[cogMethod cmType = CMMethod
@@ -10715,7 +10715,7 @@ Cogit >> unlinkSendsOf: selector isMNUSelector: isMNUSelector [
 	 30% of entire execution time in Compiler recompileAll."
 	| cogMethod mustScanAndUnlink |
 	<var: #cogMethod type: #'CogMethod *'>
-	methodZoneBase isNil ifTrue: [^self].
+	methodZoneBase ifNil: [^self].
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	mustScanAndUnlink := false.
 	isMNUSelector
@@ -10768,7 +10768,7 @@ Cogit >> unlinkSendsTo: targetMethodObject andFreeIf: freeIfTrue [
 	and: [coInterpreter methodHasCogMethod: targetMethodObject]) ifFalse:
 		[^self].
 	targetMethod := coInterpreter cogMethodOf: targetMethodObject.
-	methodZoneBase isNil ifTrue: [^self].
+	methodZoneBase ifNil: [^self].
 	codeModified := freedPIC := false.
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	[cogMethod < methodZone limitZony] whileTrue:
@@ -10797,7 +10797,7 @@ Cogit >> unlinkSendsToFree [
 	"Unlink all sends in cog methods to free methods and/or pics."
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	methodZoneBase isNil ifTrue: [^self].
+	methodZoneBase ifNil: [^self].
 	codeModified := false.
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	[cogMethod < methodZone limitZony] whileTrue:
