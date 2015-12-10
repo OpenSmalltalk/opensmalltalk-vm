@@ -119,6 +119,7 @@ Class {
 		'MoveXwrRR',
 		'MulRdRd',
 		'NegateR',
+		'NoReg',
 		'Nop',
 		'OrCqR',
 		'OrCwR',
@@ -226,7 +227,15 @@ CogRTLOpcodes class >> initialize [
 	| opcodeNames refs |
 	"A small fixed set of abstract registers are defined and used in code generation
 	 for Smalltalk code, and executes on stack pages in the stack zone.
-	 These are mapped to processor-specific registers by concreteRegister:"
+	 Currently, these are mapped to and from processor-specific registers by
+	 concreteRegister: & abstractRegisterForConcreteRegister:"
+
+	"NoReg encodes no register.  We hope soon to discard the need to map between
+	 abstract and concrete registers, but for that we can't use nil to mean no register
+	 because 0 is a valid register number and in C nil maps to 0."
+	NoReg := nil.
+
+	"The core set of abstract registers that define the Cogits model of Smalltalk code."
 	FPReg := -1.	"A frame pointer is used for Smalltalk frames."
 	SPReg := -2.
 	ReceiverResultReg := -3.		"The receiver at point of send, and return value of a send"
