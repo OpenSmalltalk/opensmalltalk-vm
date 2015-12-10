@@ -54,6 +54,14 @@ printf("!BochsX64Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"
 	print(XMM5Low,5,0);
 	print(XMM6Low,6,0);
 	print(XMM7Low,7,0);
+	print(XMM8Low,8,0);
+	print(XMM9Low,9,0);
+	print(XMM10Low,10,0);
+	print(XMM11Low,11,0);
+	print(XMM12Low,12,0);
+	print(XMM13Low,13,0);
+	print(XMM14Low,14,0);
+	print(XMM15Low,15,0);
 
 	print(XMM0High,0,1);
 	print(XMM1High,1,1);
@@ -63,6 +71,14 @@ printf("!BochsX64Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"
 	print(XMM5High,5,1);
 	print(XMM6High,6,1);
 	print(XMM7High,7,1);
+	print(XMM8High,8,1);
+	print(XMM9High,9,1);
+	print(XMM10High,10,1);
+	print(XMM11High,11,1);
+	print(XMM12High,12,1);
+	print(XMM13High,13,1);
+	print(XMM14High,14,1);
+	print(XMM15High,15,1);
 
 	return 0;
 }
