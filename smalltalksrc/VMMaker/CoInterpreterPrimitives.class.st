@@ -142,7 +142,7 @@ CoInterpreterPrimitives >> primitiveCollectCogCodeConstituents [
 	 or a selector (presumably a Symbol) for a PIC."
 	| constituents |
 	constituents := cogit cogCodeConstituents.
-	constituents isNil ifTrue:
+	constituents ifNil:
 		[^self primitiveFailFor: PrimErrNoMemory].
 	self pop: 1 thenPush: constituents
 ]

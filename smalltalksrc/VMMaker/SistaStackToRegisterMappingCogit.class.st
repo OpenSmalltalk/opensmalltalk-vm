@@ -841,7 +841,7 @@ SistaStackToRegisterMappingCogit >> picDataFor: descriptor Annotation: annotatio
 	| entryPoint tuple counter |
 	<var: #counter type: #'unsigned long'>
 
-	descriptor isNil ifTrue:
+	descriptor ifNil:
 		[^0].
 	descriptor isBranch ifTrue:
 		["it's a branch; conditional?"
