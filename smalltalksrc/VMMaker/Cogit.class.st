@@ -4315,9 +4315,9 @@ Cogit >> compileCPICEntry [
 ]
 
 { #category : #initialization }
-Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 resultReg: resultRegOrNil saveRegs: saveRegs [
-	"Generate a call to aRoutine with up to 4 arguments.  If resultRegOrNil is
-	 non-zero assign the C result to resultRegOrNil.  If saveRegs, save all registers.
+Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 resultReg: resultRegOrNone saveRegs: saveRegs [
+	"Generate a call to aRoutine with up to 4 arguments.  If resultRegOrNone is not
+	 NoReg assign the C result to resultRegOrNone.  If saveRegs, save all registers.
 	 Hack: a negative arg value indicates an abstract register, a non-negative value
 	 indicates a constant."
 	<var: #aRoutine type: #'void *'>
@@ -4332,14 +4332,14 @@ Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrCo
 	backEnd genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3.
 	self CallFullRT: (self cCode: [aRoutine asUnsignedInteger]
 					   inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
-	resultRegOrNil ifNotNil:
-		[backEnd genWriteCResultIntoReg: resultRegOrNil].
+	resultRegOrNone ~= NoReg ifTrue:
+		[backEnd genWriteCResultIntoReg: resultRegOrNone].
 	 saveRegs ifTrue:
 		[numArgs > 0 ifTrue:
 			[backEnd genRemoveNArgsFromStack: numArgs].
-		resultRegOrNil
-			ifNotNil: [backEnd genRestoreRegsExcept: resultRegOrNil]
-			ifNil: [backEnd genRestoreRegs]]
+		resultRegOrNone ~= NoReg
+			ifTrue: [backEnd genRestoreRegsExcept: resultRegOrNone]
+			ifFalse: [backEnd genRestoreRegs]]
 ]
 
 { #category : #'in-line cacheing' }
@@ -4582,10 +4582,10 @@ Cogit >> compileSendTrace [
 ]
 
 { #category : #initialization }
-Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 saveRegs: saveRegs pushLinkReg: pushLinkReg resultReg: resultRegOrNil [
+Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 saveRegs: saveRegs pushLinkReg: pushLinkReg resultReg: resultRegOrNone [
 	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutine
-	 as requested by callJumpBar.  If generating a call and resultRegOrNil is non-zero pass the C result
-	 back in resultRegOrNil.
+	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C
+	 result back in resultRegOrNone.
 	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
 	<var: #aRoutine type: #'void *'>
 	<inline: false>
@@ -4597,12 +4597,12 @@ Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: r
 		arg: regOrConst1
 		arg: regOrConst2
 		arg: regOrConst3
-		resultReg: resultRegOrNil
+		resultReg: resultRegOrNone
 		saveRegs: saveRegs.
 	backEnd genLoadStackPointers.
 	(pushLinkReg and: [backEnd hasLinkRegister])
-		ifTrue: [
-			backEnd hasPCRegister
+		ifTrue:
+			[backEnd hasPCRegister
 				ifTrue: [self PopR: PCReg]
 				ifFalse: [self PopR: LinkReg. 
 						self RetN: 0]]
@@ -5677,7 +5677,7 @@ Cogit >> genConditionalBranch: opcode operand: operandOne [
 ]
 
 { #category : #initialization }
-Cogit >> genEnilopmartFor: regArg1 and: regArg2 and: regArg3 forCall: forCall called: trampolineName [
+Cogit >> genEnilopmartFor: regArg1 and: regArg2OrNone and: regArg3OrNone forCall: forCall called: trampolineName [
 	"An enilopmart (the reverse of a trampoline) is a piece of code that makes
 	 the system-call-like transition from the C runtime into generated machine
 	 code.  The desired arguments and entry-point are pushed on a stackPage's
@@ -5698,8 +5698,8 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 and: regArg3 forCall: forCall ca
 	self zeroOpcodeIndex.
 	backEnd maybeEstablishVarBase. "Must happen first; value may be used in genLoadStackPointers"
 	backEnd genLoadStackPointers.
-	regArg3 ifNotNil: [self PopR: regArg3].
-	regArg2 ifNotNil: [self PopR: regArg2].
+	regArg3OrNone ~= NoReg ifTrue: [self PopR: regArg3OrNone].
+	regArg2OrNone ~= NoReg ifTrue: [self PopR: regArg2OrNone].
 	self PopR: regArg1.
 	self genEnilopmartReturn: forCall.
 	self computeMaximumSizes.
@@ -5716,13 +5716,13 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2 and: regArg3 forCall: forCall ca
 { #category : #initialization }
 Cogit >> genEnilopmartFor: regArg1 and: regArg2 forCall: forCall called: trampolineName [
 	<inline: true>
-	^self genEnilopmartFor: regArg1 and: regArg2 and: nil forCall: forCall called: trampolineName
+	^self genEnilopmartFor: regArg1 and: regArg2 and: NoReg forCall: forCall called: trampolineName
 ]
 
 { #category : #initialization }
 Cogit >> genEnilopmartFor: regArg1 forCall: forCall called: trampolineName [
 	<inline: true>
-	^self genEnilopmartFor: regArg1 and: nil and: nil forCall: forCall called: trampolineName
+	^self genEnilopmartFor: regArg1 and: NoReg and: NoReg forCall: forCall called: trampolineName
 ]
 
 { #category : #initialization }
@@ -5817,7 +5817,7 @@ Cogit >> genInnerPICAbortTrampoline: name [
 		arg: nil
 		saveRegs: false
 		pushLinkReg: false
-		resultReg: nil.
+		resultReg: NoReg.
 	jumpMNUCase jmpTarget: self Label.
 	^self genTrampolineFor: #ceMNUFromPICMNUMethod:receiver:
 		called: name
@@ -5828,7 +5828,7 @@ Cogit >> genInnerPICAbortTrampoline: name [
 		arg: nil
 		saveRegs: false
 		pushLinkReg: false
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: true
 ]
 
@@ -5910,7 +5910,7 @@ Cogit >> genMethodAbortTrampoline [
 		arg: nil
 		saveRegs: false
 		pushLinkReg: false "The LinkReg has already been set above."
-		resultReg: nil.
+		resultReg: NoReg.
 	jumpSICMiss jmpTarget: self Label.
 	^self genTrampolineFor: #ceSICMiss:
 		called: 'ceMethodAbort'
@@ -5921,7 +5921,7 @@ Cogit >> genMethodAbortTrampoline [
 		arg: nil
 		saveRegs: false
 		pushLinkReg: true "Push the LinkReg for the ceMethodAbort call."
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: true
 ]
 
@@ -6278,10 +6278,10 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 result: res
 ]
 
 { #category : #initialization }
-Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 saveRegs: saveRegs pushLinkReg: pushLinkReg resultReg: resultRegOrNil appendOpcodes: appendBoolean [
+Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 saveRegs: saveRegs pushLinkReg: pushLinkReg resultReg: resultRegOrNone appendOpcodes: appendBoolean [
 	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutineOrNil
-	 as requested by callJumpBar.  If generating a call and resultRegOrNil is non-zero pass the C result
-	 back in resultRegOrNil.
+	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C result
+	 back in resultRegOrNone.
 	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
 	<var: #aRoutine type: #'void *'>
 	<var: #trampolineName type: #'char *'>
@@ -6298,7 +6298,7 @@ Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs arg:
 		arg: regOrConst3
 		saveRegs: saveRegs
 		pushLinkReg: pushLinkReg
-		resultReg: resultRegOrNil.
+		resultReg: resultRegOrNone.
 	self outputInstructionsForGeneratedRuntimeAt: startAddress.
 	self recordGeneratedRunTime: trampolineName address: startAddress.
 	self recordRunTimeObjectReferences.

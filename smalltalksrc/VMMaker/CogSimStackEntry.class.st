@@ -230,8 +230,8 @@ CogSimStackEntry >> registerMask [
 ]
 
 { #category : #accessing }
-CogSimStackEntry >> registerOrNil [
-	^type = SSRegister ifTrue: [register]
+CogSimStackEntry >> registerOrNone [
+	^type = SSRegister ifTrue: [register] ifFalse: [NoReg]
 ]
 
 { #category : #accessing }
