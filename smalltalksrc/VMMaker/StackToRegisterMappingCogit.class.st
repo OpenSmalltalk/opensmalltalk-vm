@@ -2071,7 +2071,7 @@ StackToRegisterMappingCogit >> genPICMissTrampolineFor: numArgs [
 		arg: nil
 		saveRegs: false
 		pushLinkReg: true
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: true.
 	^startAddress
 ]
