@@ -595,7 +595,7 @@ CogAbstractInstruction >> genAlignCStackSavingRegisters: saveRegs numArgs: numAr
 									\\ alignment.
 	wordsPushedModAlignment ~= 0 ifTrue:
 		[delta := alignment - wordsPushedModAlignment.
-		 cogit SubCq: delta * 4 R: SPReg].
+		 cogit SubCq: delta * objectMemory wordSize R: SPReg].
 	^0
 ]
 
