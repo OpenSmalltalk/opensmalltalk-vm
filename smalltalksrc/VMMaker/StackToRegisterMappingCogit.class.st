@@ -805,6 +805,7 @@ StackToRegisterMappingCogit >> allocateEqualsEqualsRegistersArgNeedsReg: argNeed
 	<inline: true>
 	| argReg rcvrReg |
 	self assert: (argNeedsReg or: [rcvrNeedsReg]).
+	argReg := rcvrReg := NoReg.
 	argNeedsReg
 		ifTrue: 
 			[rcvrNeedsReg
@@ -824,8 +825,8 @@ StackToRegisterMappingCogit >> allocateEqualsEqualsRegistersArgNeedsReg: argNeed
 			 rcvrReg := self allocateRegForStackEntryAt: 1.
 			 (self ssValue: 1) popToReg: rcvrReg].
 		
-	self assert: (argNeedsReg not or: [argReg notNil]).
-	self assert: (rcvrNeedsReg not or: [rcvrReg notNil]).
+	self deny: (argNeedsReg and: [argReg = NoReg]).
+	self deny: (rcvrNeedsReg and: [rcvrReg = NoReg]).
 
 	binaryBlock value: rcvrReg value: argReg
 ]
@@ -861,6 +862,7 @@ StackToRegisterMappingCogit >> allocateRegForStackTopThreeEntriesInto: trinaryBl
 	| topRegistersMask rTop rNext rThird |
 	
 	topRegistersMask := 0.
+	rTop := rNext := rThird := NoReg.
 	
 	(self ssTop type = SSRegister and: [ thirdIsReceiver not or: [ self ssTop register ~= ReceiverResultReg ] ]) ifTrue: 
 		[ topRegistersMask := self registerMaskFor: (rTop := self ssTop register)].
@@ -869,7 +871,7 @@ StackToRegisterMappingCogit >> allocateRegForStackTopThreeEntriesInto: trinaryBl
 	((self ssValue: 2) type = SSRegister and: [thirdIsReceiver not or: [ (self ssValue: 2) register = ReceiverResultReg ] ]) ifTrue: 
 		[ topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: (rThird := (self ssValue: 2) register))].
 	
-	rThird ifNil: 
+	rThird = NoReg ifTrue:
 		[ thirdIsReceiver 
 			ifTrue:
 				[ rThird := ReceiverResultReg.  "Free ReceiverResultReg if it was not free"
@@ -878,15 +880,16 @@ StackToRegisterMappingCogit >> allocateRegForStackTopThreeEntriesInto: trinaryBl
 			ifFalse: [ rThird := self allocateRegNotConflictingWith: topRegistersMask ].
 		topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: rThird) ].
 	
-	rTop ifNil: [ 
-		rTop := self allocateRegNotConflictingWith: topRegistersMask.
-		topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: rTop) ].
+	rTop = NoReg ifTrue:
+		[ rTop := self allocateRegNotConflictingWith: topRegistersMask.
+		  topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: rTop) ].
 	
-	rNext ifNil: [ rNext := self allocateRegNotConflictingWith: topRegistersMask ].
-	
+	rNext = NoReg ifTrue:
+		[ rNext := self allocateRegNotConflictingWith: topRegistersMask ].
+
+	self deny: (rTop = NoReg or: [rNext = NoReg or: [rThird = NoReg]]).
+
 	^ trinaryBlock value: rTop value: rNext value: rThird
-	
-	
 ]
 
 { #category : #'simulation stack' }
@@ -897,30 +900,33 @@ StackToRegisterMappingCogit >> allocateRegForStackTopTwoEntriesInto: binaryBlock
 	| topRegistersMask rTop rNext |
 	
 	topRegistersMask := 0.
+	rTop := rNext := NoReg.
 	
 	self ssTop type = SSRegister ifTrue: 
 		[ rTop := self ssTop register].
 	(self ssValue: 1) type = SSRegister ifTrue: 
 		[ topRegistersMask := self registerMaskFor: (rNext := (self ssValue: 1) register)].
 	
-	rTop ifNil: [ rTop := self allocateRegNotConflictingWith: topRegistersMask ].
+	rTop = NoReg ifTrue:
+		[ rTop := self allocateRegNotConflictingWith: topRegistersMask ].
 	
-	rNext ifNil: [ rNext := self allocateRegNotConflictingWith: (self registerMaskFor: rTop) ].
-	
+	rNext = NoReg ifTrue:
+		[ rNext := self allocateRegNotConflictingWith: (self registerMaskFor: rTop) ].
+
+	self deny: (rTop = NoReg or: [rNext = NoReg]).
+
 	^ binaryBlock value: rTop value: rNext
-	
-	
 ]
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> allocateRegNotConflictingWith: regMask [
 	| reg |
 	"if there's a free register, use it"
-	reg := backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: regMask).
-	reg ifNil: "No free register, choose one that does not conflict with regMask"
+	reg := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: regMask).
+	reg = NoReg ifTrue: "No free register, choose one that does not conflict with regMask"
 		[reg := self freeAnyRegNotConflictingWith: regMask].
 	reg = ReceiverResultReg ifTrue: "If we've allocated RcvrResultReg, it's not live anymore"
-		[ optStatus isReceiverResultRegLive: false ].
+		[optStatus isReceiverResultRegLive: false].
 	^ reg
 ]
 
@@ -947,10 +953,10 @@ StackToRegisterMappingCogit >> anyReferencesToRegister: reg inTopNItems: n [
 ]
 
 { #category : #'simulation stack' }
-StackToRegisterMappingCogit >> availableRegOrNilNotConflictingWith: regMask [
+StackToRegisterMappingCogit >> availableRegOrNoneNotConflictingWith: regMask [
 	<inline: true>
-	"If there's a free register, answer it, otherwise answer nil."
-	^backEnd availableRegisterOrNilFor: (self liveRegisters bitOr: regMask)
+	"If there's a free register, answer it, otherwise answer NoReg."
+	^backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: regMask)
 ]
 
 { #category : #'simulation only' }
@@ -1360,15 +1366,16 @@ StackToRegisterMappingCogit >> freeAnyRegNotConflictingWith: regMask [
 	<var: #desc type: #'CogSimStackEntry *'>
 	| reg index |
 	self assert: needsFrame.
+	reg := NoReg.
 	index := simSpillBase max: 0.
-	[reg isNil and: [index < simStackPtr] ] whileTrue: 
+	[reg = NoReg and: [index < simStackPtr]] whileTrue: 
 		[ | desc |
 		 desc := self simStackAt: index.
 		 desc type = SSRegister ifTrue:
-			[ (regMask anyMask: (self registerMaskFor: desc register)) ifFalse: 
-				[ reg := desc register ] ].
+			[(regMask anyMask: (self registerMaskFor: desc register)) ifFalse: 
+				[reg := desc register]].
 		 index := index + 1].
-	self assert: reg notNil.
+	self deny: reg = NoReg.
 	self ssAllocateRequiredReg: reg.
 	^reg
 ]
@@ -1760,19 +1767,21 @@ StackToRegisterMappingCogit >> genEqualsEqualsComparisonArgIsConstant: argIsCons
 ]
 
 { #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genEqualsEqualsNoBranchArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg [
+StackToRegisterMappingCogit >> genEqualsEqualsNoBranchArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrRegOrNone [
 	"Generates the machine code for #== in the case where the instruction is not followed by a branch"
 	| label jumpEqual jumpNotEqual resultReg |
 	<var: #label type: #'AbstractInstruction *'>
 	<var: #jumpEqual type: #'AbstractInstruction *'>
 	<var: #jumpNotEqual type: #'AbstractInstruction *'>
 	label := self Label.
-	self genEqualsEqualsComparisonArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg.
+	self genEqualsEqualsComparisonArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrRegOrNone.
 	self ssPop: 2.
-	resultReg := rcvrReg ifNil: [argReg ].
+	resultReg := rcvrRegOrNone = NoReg ifTrue: [argReg] ifFalse: [rcvrRegOrNone].
 	jumpEqual := self JumpZero: 0.
-	 argIsConstant ifFalse: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ].
-	 rcvrIsConstant ifFalse: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg jumpBackTo: label ].
+	 argIsConstant ifFalse:
+		[objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label].
+	 rcvrIsConstant ifFalse:
+		[objectRepresentation genEnsureOopInRegNotForwarded: rcvrRegOrNone scratchReg: TempReg jumpBackTo: label].
 	 self genMoveFalseR: resultReg.
 	 jumpNotEqual := self Jump: 0.
 	 jumpEqual jmpTarget: (self genMoveTrueR: resultReg).
@@ -1924,7 +1933,6 @@ StackToRegisterMappingCogit >> genMarshalledSend: selectorIndex numArgs: numArgs
 
 { #category : #initialization }
 StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
-	
 	"Generate the abort for a method.  This abort performs either a call of ceSICMiss:
 	 to handle a single-in-line cache miss or a call of ceStackOverflow: to handle a
 	 stack overflow.  It distinguishes the two by testing ResultReceiverReg.  If the
@@ -1954,7 +1962,7 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 		arg: nil
 		saveRegs: false
 		pushLinkReg: false "The LinkReg has already been set above."
-		resultReg: nil.
+		resultReg: NoReg.
 	jumpSICMiss jmpTarget: self Label.
 	backEnd genPushRegisterArgsForAbortMissNumArgs: numArgs.
 	^self genTrampolineFor: #ceSICMiss:
@@ -1966,7 +1974,7 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 		arg: nil
 		saveRegs: false
 		pushLinkReg: false "The LinkReg will have been pushed in genPushRegisterArgsForAbortMissNumArgs: above."
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: true
 ]
 
@@ -2763,8 +2771,8 @@ StackToRegisterMappingCogit >> genPushRemoteTempLongBytecode [
 	| tempVectReg remoteTempReg |
 	tempVectReg := self allocateRegNotConflictingWith: 0.
 	self MoveMw: (self frameOffsetOfTemporary: byte2) r: FPReg R: tempVectReg.
-	remoteTempReg := self availableRegOrNilNotConflictingWith: (self registerMaskFor: tempVectReg). 
-	remoteTempReg ifNil: [ remoteTempReg := tempVectReg ].
+	remoteTempReg := self availableRegOrNoneNotConflictingWith: (self registerMaskFor: tempVectReg). 
+	remoteTempReg = NoReg ifTrue: [remoteTempReg := tempVectReg].
 	objectRepresentation
 		genLoadSlot: byte1
 		sourceReg: tempVectReg
@@ -2854,7 +2862,7 @@ StackToRegisterMappingCogit >> genSendTrampolineFor: aRoutine numArgs: numArgs c
 		arg: regOrConst3
 		saveRegs: false
 		pushLinkReg: true
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: true.
 	^startAddress
 ]
@@ -3027,9 +3035,9 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSpecialSelectorClass [
 	| topReg |
-	topReg := self ssTop registerOrNil.
+	topReg := self ssTop registerOrNone.
 	self ssPop: 1.
-	(topReg isNil or: [topReg = ClassReg])
+	(topReg = NoReg or: [topReg = ClassReg])
 		ifTrue: [self ssAllocateRequiredReg: (topReg := SendNumArgsReg) and: ClassReg]
 		ifFalse: [self ssAllocateRequiredReg: ClassReg].
 	self ssPush: 1.
