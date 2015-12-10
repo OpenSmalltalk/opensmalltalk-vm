@@ -2093,7 +2093,7 @@ SimpleStackBasedCogit >> genMustBeBooleanTrampolineFor: boolean called: trampoli
 		arg: nil
 		saveRegs: false
 		pushLinkReg: true
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: true
 ]
 

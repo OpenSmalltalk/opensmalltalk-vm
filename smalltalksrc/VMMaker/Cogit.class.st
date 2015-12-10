@@ -5667,7 +5667,7 @@ Cogit >> genCheckForInterruptsTrampoline [
 		arg: nil
 		saveRegs: false
 		pushLinkReg: false
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: true
 ]
 
@@ -5983,7 +5983,7 @@ Cogit >> genNSSendTrampolineFor: aRoutine numArgs: numArgs enclosingObjectCheck:
 		arg: nil
 		saveRegs: false
 		pushLinkReg: true
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: true
 ]
 
@@ -6008,7 +6008,7 @@ Cogit >> genNonLocalReturnTrampoline [
 		arg: nil
 		saveRegs: false
 		pushLinkReg: false
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: true
 ]
 
@@ -6041,7 +6041,7 @@ Cogit >> genReturnTrampolineFor: aRoutine  called: aString arg: regOrConst0 [
 		arg: nil
 		saveRegs: false
 		pushLinkReg: false "Since the routine is reached by a return instruction it should /not/ push the link register."
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: false
 ]
 
@@ -6061,7 +6061,7 @@ Cogit >> genSafeTrampolineFor: aRoutine called: aString [
 		arg: nil
 		saveRegs: true
 		pushLinkReg: true
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: false
 ]
 
@@ -6081,7 +6081,7 @@ Cogit >> genSafeTrampolineFor: aRoutine called: aString arg: regOrConst0 [
 		arg: nil
 		saveRegs: true
 		pushLinkReg: true
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: false
 ]
 
@@ -6101,7 +6101,7 @@ Cogit >> genSafeTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: re
 		arg: nil
 		saveRegs: true
 		pushLinkReg: true
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: false
 ]
 
@@ -6133,7 +6133,7 @@ Cogit >> genTrampolineFor: aRoutine called: aString [
 		arg: nil
 		saveRegs: false
 		pushLinkReg: true
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: false
 ]
 
@@ -6153,7 +6153,7 @@ Cogit >> genTrampolineFor: aRoutine  called: aString arg: regOrConst0 [
 		arg: nil
 		saveRegs: false
 		pushLinkReg: true
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: false
 ]
 
@@ -6173,7 +6173,7 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrC
 		arg: nil
 		saveRegs: false
 		pushLinkReg: true
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: false
 ]
 
@@ -6193,7 +6193,7 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrC
 		arg: nil
 		saveRegs: false
 		pushLinkReg: true
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: false
 ]
 
@@ -6213,7 +6213,7 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrC
 		arg: regOrConst3
 		saveRegs: false
 		pushLinkReg: true
-		resultReg: nil
+		resultReg: NoReg
 		appendOpcodes: false
 ]
 
