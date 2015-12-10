@@ -168,6 +168,17 @@ BitBltSimulator >> primitive: primitiveName parameters: parameterTypesArray rece
 		['primitivePixelValueAt'] -> [^self] }
 ]
 
+{ #category : #primitives }
+BitBltSimulator >> primitiveCopyBits [
+	"Override to provide a convenience to investigate primitive failures.
+	 Comment out the first statement to be able to loop, examining e.g. why a BitBlt fails to load."
+	true ifTrue:
+		[^super primitiveCopyBits].
+	[super primitiveCopyBits.
+	 interpreterProxy failed] whileTrue:
+		[self halt. interpreterProxy coInterpreter initPrimCall]
+]
+
 { #category : #simulation }
 BitBltSimulator >> primitivePixelValueAt [
 	self primitivePixelValueAtX: (interpreterProxy stackValue: 1) y: (interpreterProxy stackValue: 0)
