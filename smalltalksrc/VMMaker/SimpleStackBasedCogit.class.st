@@ -1290,7 +1290,7 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 		arg: nil
 		arg: nil
 		arg: nil
-		resultReg: nil
+		resultReg: NoReg
 		saveRegs: false
 	"Note that this call does not return."
 ]
@@ -2208,7 +2208,7 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 		arg: nil
 		arg: nil
 		arg: nil
-		resultReg: nil
+		resultReg: NoReg
 		saveRegs: false.
 
 	"On Spur ceActivateFailingPrimitiveMethod: may retry the primitive and return if successful.

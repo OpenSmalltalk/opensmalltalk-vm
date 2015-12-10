@@ -552,15 +552,9 @@ CogObjectRepresentationForSpur >> genGetActiveContextNumArgs: numArgs large: isL
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genGetBits: mask ofFormatByteOf: sourceReg into: destReg baseHeaderIntoScratch: scratchReg [
-	scratchReg
-		ifNil:
-			[self flag: #endianness.
-			 cogit MoveMb: 3 r: sourceReg R: destReg]
-		ifNotNil:
-			[cogit MoveMw: 0 r: sourceReg R: destReg.
-			 cogit MoveR: destReg R: scratchReg. "destReg := (at least) least significant half of self baseHeader: receiver"
-			 cogit LogicalShiftRightCq: objectMemory formatShift R: destReg].
+CogObjectRepresentationForSpur >> genGetBits: mask ofFormatByteOf: sourceReg into: destReg [
+	self flag: #endianness.
+	cogit MoveMb: 3 r: sourceReg R: destReg.
 	cogit AndCq: mask R: destReg.	"formatReg := self formatOfHeader: destReg"
 	^0
 ]
@@ -651,21 +645,21 @@ CogObjectRepresentationForSpur >> genGetDoubleValueOf: srcReg into: destFPReg [
 CogObjectRepresentationForSpur >> genGetFormatOf: srcReg into: destReg [
 	"Get the format field of the object in srcReg into destReg.
 	 srcReg may equal destReg."
-	^self genGetBits: objectMemory formatMask ofFormatByteOf: srcReg into: destReg baseHeaderIntoScratch: nil
+	^self genGetBits: objectMemory formatMask ofFormatByteOf: srcReg into: destReg
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genGetFormatOf: sourceReg into: destReg leastSignificantHalfOfBaseHeaderIntoScratch: scratchRegOrNil [
-	"Get the format of the object in sourceReg into destReg.  If scratchRegOrNil
-	 is not nil, load at least the least significant 32-bits (64-bits in 64-bits) of the
-	 header word, which contains the format, into scratchRegOrNil."
-	scratchRegOrNil
-		ifNil:
+CogObjectRepresentationForSpur >> genGetFormatOf: sourceReg into: destReg leastSignificantHalfOfBaseHeaderIntoScratch: scratchRegOrNone [
+	"Get the format of the object in sourceReg into destReg.  If scratchRegOrNone
+	 is not NoReg, load at least the least significant 32-bits (64-bits in 64-bits) of the
+	 header word, which contains the format, into scratchRegOrNone."
+	scratchRegOrNone = NoReg
+		ifTrue:
 			[self flag: #endianness.
 			 cogit MoveMb: 3 r: sourceReg R: destReg]
-		ifNotNil:
+		ifFalse:
 			[cogit MoveMw: 0 r: sourceReg R: destReg.
-			 cogit MoveR: destReg R: scratchRegOrNil. "destReg := (at least) least significant half of self baseHeader: receiver"
+			 cogit MoveR: destReg R: scratchRegOrNone. "destReg := (at least) least significant half of self baseHeader: receiver"
 			 cogit LogicalShiftRightCq: objectMemory formatShift R: destReg].
 	cogit AndCq: objectMemory formatMask R: destReg.	"formatReg := self formatOfHeader: destReg"
 	^0
@@ -869,7 +863,7 @@ CogObjectRepresentationForSpur >> genInnerPrimitiveStringAt: retNoffset [
 
 	self genGetFormatOf: ReceiverResultReg
 		into: (formatReg := SendNumArgsReg)
-		leastSignificantHalfOfBaseHeaderIntoScratch: nil.
+		leastSignificantHalfOfBaseHeaderIntoScratch: NoReg.
 
 	self genGetNumSlotsOf: ReceiverResultReg into: ClassReg.
 

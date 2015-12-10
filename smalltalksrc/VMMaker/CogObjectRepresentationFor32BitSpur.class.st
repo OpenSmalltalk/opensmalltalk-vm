@@ -223,7 +223,7 @@ CogObjectRepresentationFor32BitSpur >> genGetNumBytesOf: srcReg into: destReg [
 	jmp := cogit JumpLess: 0.
 	self genGetOverflowSlotsOf: srcReg into: destReg.
 	jmp jmpTarget: (cogit LogicalShiftLeftCq: objectMemory shiftForWord R: destReg). 
-	self genGetBits: 3 ofFormatByteOf: srcReg into: TempReg baseHeaderIntoScratch: nil.
+	self genGetBits: 3 ofFormatByteOf: srcReg into: TempReg.
 	"Now: fmt bitAnd: 3 in TempReg"
 	cogit SubR: TempReg R: destReg.
 	^0
@@ -510,7 +510,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	"formatReg := self formatOf: ReceiverResultReg"
 	self genGetFormatOf: ReceiverResultReg
 		into: (formatReg := SendNumArgsReg)
-		leastSignificantHalfOfBaseHeaderIntoScratch: nil.
+		leastSignificantHalfOfBaseHeaderIntoScratch: NoReg.
 
 	self genGetNumSlotsOf: ReceiverResultReg into: ClassReg.
 
@@ -704,7 +704,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNew: retNoffset [
 	"Is the class arg pointers with at least 3 fields?"
 	self genGetFormatOf: Arg0Reg
 		into: TempReg
-		leastSignificantHalfOfBaseHeaderIntoScratch: nil.
+		leastSignificantHalfOfBaseHeaderIntoScratch: NoReg.
 	cogit CmpCq: objectMemory nonIndexablePointerFormat R: TempReg.
 	jumpNotFixedPointers := cogit JumpNonZero: 0.
 	
@@ -835,7 +835,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNewWithArg: retNof
 
 	self genGetFormatOf: Arg0Reg
 		into: TempReg
-		leastSignificantHalfOfBaseHeaderIntoScratch: nil.
+		leastSignificantHalfOfBaseHeaderIntoScratch: NoReg.
 	cogit CmpCq: objectMemory nonIndexablePointerFormat R: TempReg.
 	jumpNotFixedPointers := cogit JumpNonZero: 0.
 	
@@ -1252,7 +1252,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset 
 	"formatReg := self formatOf: ReceiverResultReg"
 	self genGetFormatOf: ReceiverResultReg
 		into: (formatReg := SendNumArgsReg)
-		leastSignificantHalfOfBaseHeaderIntoScratch: nil.
+		leastSignificantHalfOfBaseHeaderIntoScratch: NoReg.
 
 	self genGetNumSlotsOf: ReceiverResultReg into: ClassReg.
 
