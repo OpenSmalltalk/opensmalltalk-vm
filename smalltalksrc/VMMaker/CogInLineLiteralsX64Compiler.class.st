@@ -178,6 +178,14 @@ CogInLineLiteralsX64Compiler >> concretizePushCw [
 	^machineCodeSize := 12
 ]
 
+{ #category : #accessing }
+CogInLineLiteralsX64Compiler >> getDefaultCogCodeSize [
+	"Answer the default number of bytes to allocate for native code at startup.
+	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
+	<inline: true>
+	^1024 * 1400
+]
+
 { #category : #'inline cacheing' }
 CogInLineLiteralsX64Compiler >> inlineCacheTagAt: callSiteReturnAddress [
 	"Answer the inline cache tag for the return address of a send."
