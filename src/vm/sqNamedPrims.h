@@ -1,4 +1,4 @@
-/* Smalltalk from Squeak4.5 with VMMaker 4.14.2 translated as C source on 14 September 2015 9:53:34 pm */
+/* Smalltalk from Squeak4.5 with VMMaker 4.14.3 translated as C source on 10 December 2015 9:47:20 pm */
 /* This is an automatically generated table of all builtin modules in the VM */
 
 extern sqExport vm_exports[];
@@ -9,6 +9,7 @@ extern sqExport BMPReadWriterPlugin_exports[];
 extern sqExport B2DPlugin_exports[];
 extern sqExport BitBltPlugin_exports[];
 extern sqExport CroquetPlugin_exports[];
+extern sqExport DESPlugin_exports[];
 extern sqExport DSAPrims_exports[];
 extern sqExport ZipPlugin_exports[];
 extern sqExport DropPlugin_exports[];
@@ -23,9 +24,11 @@ extern sqExport JoystickTabletPlugin_exports[];
 extern sqExport Klatt_exports[];
 extern sqExport LargeIntegers_exports[];
 extern sqExport LocalePlugin_exports[];
+extern sqExport MD5Plugin_exports[];
 extern sqExport Matrix2x3Plugin_exports[];
 extern sqExport MiscPrimitivePlugin_exports[];
 extern sqExport RePlugin_exports[];
+extern sqExport SHA256Plugin_exports[];
 extern sqExport SecurityPlugin_exports[];
 extern sqExport SerialPlugin_exports[];
 extern sqExport SocketPlugin_exports[];
@@ -44,6 +47,7 @@ sqExport *pluginExports[] = {
 	B2DPlugin_exports,
 	BitBltPlugin_exports,
 	CroquetPlugin_exports,
+	DESPlugin_exports,
 	DSAPrims_exports,
 	ZipPlugin_exports,
 	DropPlugin_exports,
@@ -58,9 +62,11 @@ sqExport *pluginExports[] = {
 	Klatt_exports,
 	LargeIntegers_exports,
 	LocalePlugin_exports,
+	MD5Plugin_exports,
 	Matrix2x3Plugin_exports,
 	MiscPrimitivePlugin_exports,
 	RePlugin_exports,
+	SHA256Plugin_exports,
 	SecurityPlugin_exports,
 	SerialPlugin_exports,
 	SocketPlugin_exports,
