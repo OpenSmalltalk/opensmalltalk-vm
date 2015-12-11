@@ -480,7 +480,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 { #category : #'primitive generators' }
 CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	"Implement the guts of primitiveAtPut"
-	| formatReg jumpImmediate jumpBadIndex
+	| formatReg jumpImmediate jumpBadIndex jumpImmutable
 	  jumpNotIndexablePointers jumpNotIndexableBits
 	  jumpIsContext jumpIsCompiledMethod jumpIsBytes jumpHasFixedFields
 	  jumpArrayOutOfBounds jumpFixedFieldsOutOfBounds
@@ -508,9 +508,16 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	cogit SubCq: 1 R: Arg0Reg. "1-rel => 0-rel"
 
 	"formatReg := self formatOf: ReceiverResultReg"
-	self genGetFormatOf: ReceiverResultReg
-		into: (formatReg := SendNumArgsReg)
-		leastSignificantHalfOfBaseHeaderIntoScratch: NoReg.
+	self cppIf: IMMUTABILITY
+		ifTrue:
+		[ self genGetFormatOf: ReceiverResultReg
+			into: (formatReg := SendNumArgsReg)
+			leastSignificantHalfOfBaseHeaderIntoScratch: TempReg.
+		jumpImmutable := self genJumpBaseHeaderImmutable: TempReg ]
+		ifFalse: 
+		[ self genGetFormatOf: ReceiverResultReg
+			into: (formatReg := SendNumArgsReg)
+			leastSignificantHalfOfBaseHeaderIntoScratch: NoReg ].
 
 	self genGetNumSlotsOf: ReceiverResultReg into: ClassReg.
 
@@ -634,6 +641,8 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	(jumpNotIndexablePointers jmpTarget:
 	(jumpNonSmallIntegerValue jmpTarget:
 	(jumpFixedFieldsOutOfBounds jmpTarget: cogit Label))))))))))).
+	
+	self cppIf: IMMUTABILITY ifTrue: [ jumpImmutable jmpTarget: cogit Label ].
 
 	cogit AddCq: 1 R: Arg0Reg. "0-rel => 1-rel"
 	self genConvertIntegerToSmallIntegerInReg: Arg0Reg.
@@ -1231,7 +1240,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset [
 	"Implement the guts of primitiveStringAtPut"
 	| formatReg jumpBadIndex jumpBadArg jumpWordsDone jumpBytesOutOfRange
-	  jumpIsBytes jumpNotString jumpIsCompiledMethod
+	  jumpIsBytes jumpNotString jumpIsCompiledMethod jumpImmutable
 	  jumpBytesOutOfBounds jumpWordsOutOfBounds jumpShortsUnsupported |
 	<inline: true>
 	"c.f. StackInterpreter>>stSizeOf: SpurMemoryManager>>lengthOf:format: fixedFieldsOf:format:length:"
@@ -1250,9 +1259,16 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset 
 	cogit SubCq: 1 R: Arg0Reg. "1-rel => 0-rel"
 
 	"formatReg := self formatOf: ReceiverResultReg"
-	self genGetFormatOf: ReceiverResultReg
-		into: (formatReg := SendNumArgsReg)
-		leastSignificantHalfOfBaseHeaderIntoScratch: NoReg.
+	self cppIf: IMMUTABILITY
+		ifTrue:
+		[ self genGetFormatOf: ReceiverResultReg
+			into: (formatReg := SendNumArgsReg)
+			leastSignificantHalfOfBaseHeaderIntoScratch: TempReg.
+		jumpImmutable := self genJumpBaseHeaderImmutable: TempReg ]
+		ifFalse: 
+		[ self genGetFormatOf: ReceiverResultReg
+			into: (formatReg := SendNumArgsReg)
+			leastSignificantHalfOfBaseHeaderIntoScratch: NoReg ].
 
 	self genGetNumSlotsOf: ReceiverResultReg into: ClassReg.
 
@@ -1321,6 +1337,8 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset 
 	(jumpBytesOutOfBounds jmpTarget:
 	(jumpShortsUnsupported jmpTarget:
 	(jumpWordsOutOfBounds jmpTarget: cogit Label)))))).
+
+	self cppIf: IMMUTABILITY ifTrue: [ jumpImmutable jmpTarget: cogit Label ].
 
 	cogit AddCq: 1 R: Arg0Reg. "0-rel => 1-rel"
 	self genConvertIntegerToSmallIntegerInReg: Arg0Reg.
