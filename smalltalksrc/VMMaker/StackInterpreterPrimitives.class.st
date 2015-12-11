@@ -818,7 +818,6 @@ StackInterpreterPrimitives >> primitiveInstVarAt [
 	 or: [argumentCount > 1 "e.g. object:instVarAt:"
 		and: [objectMemory isOopForwarded: rcvr]]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadArgument].
-	(objectMemory isImmediate: rcvr) ifTrue: [^self primitiveFailFor: PrimErrInappropriate].
 	index := objectMemory integerValueOf: index.
 	hdr := objectMemory baseHeader: rcvr.
 	fmt := objectMemory formatOfHeader: hdr.
@@ -843,9 +842,6 @@ StackInterpreterPrimitives >> primitiveInstVarAtPut [
 	 or: [argumentCount > 2 "e.g. object:instVarAt:put:"
 		and: [objectMemory isOopForwarded: rcvr]]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadArgument].
-	self cppIf: IMMUTABILITY
-		ifTrue: [ (objectMemory isOopImmutable: rcvr) ifTrue: [^self primitiveFailFor: PrimErrInappropriate] ]
-		ifFalse: [ (objectMemory isImmediate: rcvr) ifTrue: [^self primitiveFailFor: PrimErrInappropriate] ].
 	index := objectMemory integerValueOf: index.
 	hdr := objectMemory baseHeader: rcvr.
 	fmt := objectMemory formatOfHeader: hdr.
@@ -1179,16 +1175,13 @@ StackInterpreterPrimitives >> primitiveSlotAtPut [
 	 named and indexed inst vars.  In objects with both named and indexed inst vars, the named
 	 inst vars precede the indexed ones.  In non-object indexed objects (objects that contain
 	 bits, not object references) this primitive assigns a raw integral value at each slot."
-	| newValue index rcvr fmt numSlots value badRcvr |
+	| newValue index rcvr fmt numSlots value |
 	newValue := self stackTop.
 	index := self stackValue: 1.
 	rcvr := self stackValue: 2.
 	(objectMemory isIntegerObject: index) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
-	self cppIf: IMMUTABILITY 
-		ifTrue: [ badRcvr := objectMemory isOopImmutable: rcvr ]
-		ifFalse: [ badRcvr := objectMemory isImmediate: rcvr ].
-	badRcvr ifTrue:
+	(objectMemory isImmediate: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrBadReceiver].
 	fmt := objectMemory formatOf: rcvr.
 	index := (objectMemory integerValueOf: index) - 1.
