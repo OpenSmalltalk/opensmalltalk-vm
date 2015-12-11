@@ -230,7 +230,10 @@ CogAbstractInstruction class >> structTypeName [
 { #category : #translation }
 CogAbstractInstruction class >> translateableSubclasses [
 	"CogAbstractInstruction translateableSubclasses"
-	^self subclasses select: [:compilerClass| compilerClass identifyingPredefinedMacros notNil]
+	^self subclasses select:
+		[:compilerClass|
+		 compilerClass wordSize = Cogit objectMemoryClass wordSize
+		 and: [compilerClass identifyingPredefinedMacros notNil]]
 ]
 
 { #category : #translation }
@@ -279,6 +282,12 @@ CogAbstractInstruction class >> usedUnimplementedOpcodes [
 					addAll: (SystemNavigation new allCallsOn: methodRef method selector localToPackage: #VMMaker);
 					yourself].
 		SystemNavigation new allCallsOn: specificUnimplementedOpcodeBindings localToPackage: #VMMaker }
+]
+
+{ #category : #translation }
+CogAbstractInstruction class >> wordSize [
+	"Answer either 4 or 8 depending on the processor's basic architacture."
+	self subclassResponsibility
 ]
 
 { #category : #comparing }

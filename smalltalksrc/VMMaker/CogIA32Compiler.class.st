@@ -150,6 +150,12 @@ CogIA32Compiler class >> specificOpcodes [
 	^(self class >> #initialize) literals detect: [:l| l isArray and: [l includes: #LOCK]]
 ]
 
+{ #category : #translation }
+CogIA32Compiler class >> wordSize [
+	"This is a 32-bit ISA"
+	^4
+]
+
 { #category : #testing }
 CogIA32Compiler >> byteReadsZeroExtend [
 	"Answer if a byte read, via MoveAbR, MoveMbrR, or MoveXbrRR zero-extends
