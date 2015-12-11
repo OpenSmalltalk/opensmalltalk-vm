@@ -169,9 +169,12 @@ BochsX64Alien >> cr4: anUnsignedInteger [
 ]
 
 { #category : #disassembly }
-BochsX64Alien >> decorateDisassembly: anInstructionString for: aSymbolManager [ "<Cogit>"
+BochsX64Alien >> decorateDisassembly: anInstructionString for: aSymbolManager "<Cogit>" fromAddress: address [
 	| string i1 i2 v extra |
 	string := anInstructionString.
+	aSymbolManager relativeBaseForDisassemblyInto:
+		[:baseAddress :baseName|
+		string := baseName, '+', (address - baseAddress printStringBase: 16 length: 4 padded: true), (string copyFrom: (string indexOf: $:) + 1 to: string size)].
 	((i1 := string indexOfSubCollection: '%ds:(') > 0
 	or: [(i1 := string indexOfSubCollection: '%ss:(') > 0]) ifTrue:
 		[string := string copyReplaceFrom: i1 to: i1 + 3 with: ''].
@@ -184,7 +187,7 @@ BochsX64Alien >> decorateDisassembly: anInstructionString for: aSymbolManager [ 
 				[:varName| extra := ' = ', varName]].
 		 v = '(%rip)' ifTrue:
 			[v := string size - (string indexOf: $: startingAt: i2 + 5) - 1 / 3. "Count number of instruction bytes to find size of instruction"
-			 v := v + (Integer readFrom: (ReadStream on: string from: 1 to: 8) base: 16). "Add address of instruction"
+			 v := v + address. "Add address of instruction"
 			 v := v + (Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16) signedIntFromLong64. "Add offset to yield pc-relative address"
 		 	 (aSymbolManager lookupAddress: v) ifNotNil:
 				[:methodName| extra := ' = ', methodName]].
