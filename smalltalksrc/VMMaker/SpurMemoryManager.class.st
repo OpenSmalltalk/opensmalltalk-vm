@@ -3456,6 +3456,7 @@ SpurMemoryManager >> clone: objOop [
 							classIndex: (self classIndexOf: objOop)].
 	newObj ifNil:
 		[^0].
+	self cppIf: IMMUTABILITY ifTrue: [ self setIsImmutableOf: newObj to: false ].
 	(self isPointersFormat: fmt)
 		ifTrue:
 			[| hasYoung |
@@ -3650,7 +3651,7 @@ SpurMemoryManager >> containsOnlyValidBecomeObjects: array [
 	"Answer 0 if the array contains only unpinned non-immediates.
 	 Otherwise answer an informative error code.
 	 Can't become: immediates!  Shouldn't become pinned objects."
-	| fieldOffset effectsFlags oop |
+	| fieldOffset effectsFlags oop errCode |
 	fieldOffset := self lastPointerOfArray: array.
 	effectsFlags := 0.
 	"same size as array2"
@@ -3659,8 +3660,7 @@ SpurMemoryManager >> containsOnlyValidBecomeObjects: array [
 		 (self isOopForwarded: oop) ifTrue:
 			[oop := self followForwarded: oop.
 			 self longAt: array + fieldOffset put: oop].
-		 (self isImmediate: oop) ifTrue: [^PrimErrInappropriate].
-		 (self isPinned: oop) ifTrue: [^PrimErrObjectIsPinned].
+		 (errCode := self isOopValidBecome: oop) = 0 ifFalse: [^ errCode].
 		 effectsFlags := effectsFlags bitOr: (self becomeEffectFlagsFor: oop).
 		 fieldOffset := fieldOffset - self bytesPerOop].
 	"only set flags after checking all args."
@@ -4893,6 +4893,7 @@ SpurMemoryManager >> formatShift [
 { #category : #'become implementation' }
 SpurMemoryManager >> forward: obj1 to: obj2 [
 	self set: obj1 classIndexTo: self isForwardedObjectClassIndexPun formatTo: self forwardedFormat.
+	self cppIf: IMMUTABILITY ifTrue: [ self setIsImmutableOf: obj1 to: false ].
 	self storePointer: 0 ofForwarder: obj1 withValue: obj2.
 	"For safety make sure the forwarder has a slot count that includes its contents."
 	(self rawNumSlotsOf: obj1) = 0 ifTrue:
@@ -5468,6 +5469,12 @@ SpurMemoryManager >> imageSizeToWrite [
 	"when asked, newSpace should be empty."
 	self assert: self newSpaceIsEmpty.
 	^segmentManager totalBytesInNonEmptySegments
+]
+
+{ #category : #'header format' }
+SpurMemoryManager >> immutableBitMask [
+	"mask the immutable bit in the base header word"
+	^ 1 << self immutableBitShift
 ]
 
 { #category : #'header format' }
@@ -6540,6 +6547,18 @@ SpurMemoryManager >> isOopMutable: oop [
 	<api>
 	^(self isNonImmediate: oop)
 	  and: [(self isImmutable: oop) not]
+]
+
+{ #category : #'become implementation' }
+SpurMemoryManager >> isOopValidBecome: oop [
+	"Answers 0 if the oop can be become.
+	Answers an error code in the other case"
+	(self isImmediate: oop) ifTrue: [^PrimErrInappropriate].
+	(self isPinned: oop) ifTrue: [^PrimErrObjectIsPinned].
+	self 
+		cppIf: IMMUTABILITY
+		ifTrue: [ (self isImmutable: oop) ifTrue: [^PrimErrInappropriate] ].
+	^ 0
 ]
 
 { #category : #'header access' }
@@ -10926,6 +10945,19 @@ SpurMemoryManager >> storePointer: fieldIndex ofObject: objOop withValue: valueP
 	^self
 		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 		put: valuePointer
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> storePointerImmutabilityCheck: fieldIndex ofObject: objOop withValue: valuePointer [
+	"Note must check here for stores of young objects into old ones."
+	<inline: true> "normal send in cannotAssign"
+
+	self cppIf: IMMUTABILITY ifTrue: 
+		[ self assert: (self isImmediate: objOop) not.
+		(self isImmutable: objOop) ifTrue: 
+			[ coInterpreter cannotAssign: valuePointer to: objOop withIndex: fieldIndex ] ].
+	
+	^ self storePointer: fieldIndex ofObject: objOop withValue: valuePointer
 ]
 
 { #category : #'heap management' }
