@@ -121,7 +121,7 @@ CogARMCompiler class >> filteredInstVarNames [
 
 { #category : #translation }
 CogARMCompiler class >> identifyingPredefinedMacros [
-	^#('__ARM_ARCH__' '__arm__' '__arm32__' 'ARM32')
+	^#('__ARM_ARCH__' '__arm__' '__arm32__' 'ARM32' '_M_ARM')
 ]
 
 { #category : #'class initialization' }
@@ -237,6 +237,12 @@ CogARMCompiler class >> specificOpcodes [
 	"Answer the processor-specific opcodes for this class.
 	 They're all in an Array literal in the initialize method."
 	^(self class >> #initialize) literals detect: [:l| l isArray and: [l includes: #LDMFD]]
+]
+
+{ #category : #translation }
+CogARMCompiler class >> wordSize [
+	"This is a 32-bit ISA"
+	^4
 ]
 
 { #category : #private }
