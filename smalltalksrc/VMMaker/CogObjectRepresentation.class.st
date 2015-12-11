@@ -400,17 +400,6 @@ CogObjectRepresentation >> genSetSmallIntegerTagsIn: scratchReg [
 	self subclassResponsibility
 ]
 
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentation >> genStoreSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg inFrame: inFrame [
-	^ self 
-		genStoreSourceReg: sourceReg 
-		slotIndex: index 
-		destReg: destReg 
-		scratchReg: scratchReg 
-		inFrame: inFrame 
-		needsStoreCheck: true
-]
-
 { #category : #initialization }
 CogObjectRepresentation >> generateObjectRepresentationTrampolines [
 	"Do the store check.  Answer the argument for the benefit of the code generator;

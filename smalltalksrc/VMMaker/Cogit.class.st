@@ -132,6 +132,7 @@ Class {
 		'traceStores',
 		'breakMethod',
 		'methodObj',
+		'enumeratingCogMethod',
 		'methodHeader',
 		'initialPC',
 		'endPC',
@@ -248,7 +249,8 @@ Class {
 		'cPICEndOfCodeOffset',
 		'cPICEndOfCodeLabel',
 		'maxCPICCases',
-		'debugOpcodeIndices'
+		'debugOpcodeIndices',
+		'disassemblingMethod'
 	],
 	#classVars : [
 		'AltBlockCreationBytecodeSize',
@@ -1243,7 +1245,7 @@ Cogit class >> structureOfACogMethod [
 Cogit class >> table: primArray from: specArray [ 
 	"Fill in the specified entries in the primitive table."
 	specArray do:
-		[:spec |
+		[:spec | | descriptor |
 		(primArray at: spec first put: CogPrimitiveDescriptor new)
 			primitiveGenerator: spec second;
 			primNumArgs: (spec at: 3 ifAbsent: -1);
@@ -3323,12 +3325,14 @@ Cogit >> ceSICMiss: receiver [
 			^coInterpreter ceSendFromInLineCacheMiss: targetMethod].
 		 processor flushICacheFrom: pic asUnsignedInteger to: pic asUnsignedInteger + closedPICSize].
 	"Relink the send site to the pic.  If to an open PIC then reset the cache tag to the selector,
-	 for the benefit of the cacheTag assert check in checkIfValidObjectRef:pc:cogMethod:."
+	 for the benefit of the cacheTag assert check in checkIfValidOopRef:pc:cogMethod: et al."
 	extent := pic cmType = CMOpenPIC
 				ifTrue:
 					[backEnd
 						rewriteInlineCacheAt: outerReturn
-						tag: targetMethod selector
+						tag: (self inlineCacheValueForSelector: targetMethod selector
+								  in: coInterpreter mframeHomeMethodExport
+								  at: outerReturn)
 						target: pic asInteger + cmEntryOffset]
 				ifFalse:
 					[backEnd
@@ -4819,6 +4823,11 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 								ifFalse: [surrogateOrAddress].
 	cogMethod cmType = CMBlock ifTrue:
 		[^self disassembleMethod: cogMethod cmHomeMethod on: aStream].
+	(disassemblingMethod isNil
+	 and: [self class initializationOptions at: #relativeAddressDisassembly ifAbsent: [false]]) ifTrue:
+		[^[disassemblingMethod := cogMethod.
+		    self disassembleMethod: surrogateOrAddress on: aStream] ensure:
+			[disassemblingMethod := nil]].
 	self printMethodHeader: cogMethod on: aStream.
 
 	(mapEntries := Dictionary new)
@@ -4827,17 +4836,18 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 	cogMethod cmType = CMMethod ifTrue:
 		[mapEntries at: cogMethod asInteger + cmNoCheckEntryOffset put: 'noCheckEntry'].
 
-	cogMethod cmType = CMClosedPIC ifTrue:
-		[mapEntries at: cogMethod asInteger + firstCPICCaseOffset put: 'ClosedPICCase0'.
-		 1 to: maxCPICCases - 1 do:
-			[:i|
-			mapEntries
-				at: cogMethod asInteger + firstCPICCaseOffset + (i * cPICCaseSize)
-				put: 'ClosedPICCase', i printString]].
-
-	self mapFor: cogMethod
-		performUntil: #collectMapEntry:address:into:
-		arg: mapEntries.
+	cogMethod cmType = CMClosedPIC
+		ifTrue:
+			[mapEntries at: cogMethod asInteger + firstCPICCaseOffset put: 'ClosedPICCase0'.
+			 1 to: maxCPICCases - 1 do:
+				[:i|
+				mapEntries
+					at: cogMethod asInteger + firstCPICCaseOffset + (i * cPICCaseSize)
+					put: 'ClosedPICCase', i printString]]
+		ifFalse:
+			[self mapFor: cogMethod
+				performUntil: #collectMapEntry:address:into:
+				arg: mapEntries].
 
 	NewspeakVM ifTrue:
 		[objectRepresentation canPinObjects ifFalse:
@@ -7028,6 +7038,35 @@ Cogit >> incrementUsageOfTargetIfLinkedSend: annotation mcpc: mcpc ignored: supe
 	^0 "keep scanning"
 ]
 
+{ #category : #'in-line cacheing' }
+Cogit >> indexForSelector: selector in: cogMethod at: mcpc [
+	"Answer the value to put in an inline-cache that is being loaded with the selector.
+	 Usually this is simply the selector, but in 64-bits the cache is only 32-bits wide
+	 and so the cache is loaded with the index of the selector."
+	<var: #cogMethod type: #'CogMethod *'>
+	<inline: false>
+	| methodOop |
+	self assert: (mcpc asUnsignedInteger > cogMethod asUnsignedInteger
+				and: [mcpc < (cogMethod asUnsignedInteger + cogMethod blockSize)]).
+	"First search the special selectors; there are only 32 of them so this shouldn't take too long.
+	 We could short-circuit this by keeping a hint bit in the target method, or by maintaining the
+	 maximum range of selector oops in specialSelectors since they're likely to cluster."
+	0 to: NumSpecialSelectors - 1 do:
+		[:i|
+		selector = (coInterpreter specialSelector: i) ifTrue:
+			[^-1 - i]].
+	methodOop := cogMethod methodObject.
+	"Then search the method's literal frame... open code fetchPointer:ofObject: for speed..."
+	LiteralStart to: (objectMemory literalCountOfMethodHeader: cogMethod methodHeader) do:
+		[:i|
+		(objectMemory longAt: i * objectMemory bytesPerOop + objectMemory baseHeaderSize + methodOop) = selector ifTrue:
+			[self assert: selector = (coInterpreter literal: i - 1 ofMethod: methodOop).
+			 ^i - 1]].
+
+	self error: 'could not find selector in method when unlinking send site'.
+	^0
+]
+
 { #category : #'generate machine code' }
 Cogit >> initialClosedPICUsageCount [
 	"Answer a usage count that reflects likely long-term usage."
@@ -7165,6 +7204,17 @@ Cogit >> initializeProcessorStack: rumpCStackAddress [
 Cogit >> initialized [
 	<doNotGenerate>
 	^openPICSize isInteger
+]
+
+{ #category : #'in-line cacheing' }
+Cogit >> inlineCacheValueForSelector: selector in: aCogMethod at: mcpc [
+	"Answer the value to put in an inline-cache that is being loaded with the selector.
+	 Usually this is simply the selector, but in 64-bits the cache is only 32-bits wide
+	 and so the cache is loaded with the index of the selector."
+	<inline: true>
+	^objectMemory wordSize < 8
+		ifTrue: [selector]
+		ifFalse: [self indexForSelector: selector in: aCogMethod at: mcpc]
 ]
 
 { #category : #'tests-method map' }
@@ -7489,7 +7539,7 @@ Cogit >> lookupAddress: address [
 { #category : #disassembly }
 Cogit >> lookupCHexString: aCHexString [ 
 	<doNotGenerate>
-	| pastLastZero shortened |
+	| pastLastZero shortened address |
 	(aCHexString beginsWith: '0x') ifFalse:
 		[^aCHexString].
 	pastLastZero := aCHexString findFirst: [:c| c ~= $0 and: [c ~= $x]].
@@ -7499,6 +7549,11 @@ Cogit >> lookupCHexString: aCHexString [
 						[(aCHexString size >= 16 and: [pastLastZero >= 4])
 							ifTrue: [aCHexString copyReplaceFrom: 3 to: pastLastZero - 1 with: '']
 							ifFalse: [aCHexString]].
+	address := Number readFrom: (ReadStream on: shortened from: 3 to: shortened size) base: 16.
+	(disassemblingMethod notNil
+	 and: [address > disassemblingMethod
+	 and: [address < (disassemblingMethod asInteger + disassemblingMethod blockSize)]]) ifTrue:
+		[shortened := '.+', (address - disassemblingMethod asInteger printStringBase: 16 length: 4 padded: true)].
 	^(self lookupAddress: (Number
 								readFrom: (ReadStream on: shortened from: 3 to: shortened size)
 								base: 16))
@@ -7665,6 +7720,8 @@ Cogit >> mapFor: cogMethod performUntil: functionSymbol arg: arg [
 	| mcpc map mapByte annotation result |
 	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
 	map := self mapStartFor: cogMethod.
+	objectMemory wordSize = 8 ifTrue:
+		[enumeratingCogMethod := cogMethod].
 	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
 		[mapByte >= FirstAnnotation
 			ifTrue:
@@ -8792,9 +8849,13 @@ Cogit >> patchToOpenPICFor: selector numArgs: numArgs receiver: receiver [
 			oPIC asInteger = InsufficientCodeSpace ifTrue:
 				[coInterpreter callForCogCompiledCodeCompaction].
 			^false]].
+	"Relink the send site to the pic.  Reset the cache tag to the selector, for the
+	 benefit of the cacheTag assert check in checkIfValidOopRef:pc:cogMethod: et al."
 	extent := backEnd
 				rewriteInlineCacheAt: outerReturn
-				tag: selector
+				tag: (self inlineCacheValueForSelector: selector
+						  in: coInterpreter mframeHomeMethodExport
+						  at: outerReturn)
 				target: oPIC asInteger + cmEntryOffset.
 	processor
 		flushICacheFrom: outerReturn asUnsignedInteger - extent to: outerReturn asUnsignedInteger;
@@ -8912,6 +8973,10 @@ Cogit >> printInstructions: aBoolean [
 Cogit >> printMapEntry: annotation mcpc: mcpc args: tupleOfStreamCodeRangesAndMethod [
 	"Print the Map entry's mcpc, its annotation and the corresponding bytecode pc, if any."
 	<doNotGenerate>
+	| printHex |
+	printHex := disassemblingMethod
+					ifNil: [[:pc| pc hex]]
+					ifNotNil: [[:pc| '.+', (pc - disassemblingMethod asInteger printStringBase: 16 length: 4 padded: true)]].
 	[:aStream :codeRanges :cogMethod|
 	self startMcpcAndCogMethodForMcpc: mcpc in: cogMethod do:
 		[:startmcpc :subMethod| | name codeRange |
@@ -8921,11 +8986,11 @@ Cogit >> printMapEntry: annotation mcpc: mcpc args: tupleOfStreamCodeRangesAndMe
 			[aStream nextPutAll: 'startpc: '; print: codeRange startpc; cr].
 		aStream
 			next: 2 put: Character space;
-			nextPutAll: mcpc hex;  space;
+			nextPutAll: (printHex value: mcpc);  space;
 			nextPutAll: (name := self class annotationConstantNames at: annotation + 1);
 			next: 20 - name size put: Character space;
 			nextPut: $(;
-			nextPutAll: (self findMapLocationForMcpc: mcpc inMethod: cogMethod) hex.
+			nextPutAll: (printHex value: (self findMapLocationForMcpc: mcpc inMethod: cogMethod)).
 		(self isPCMappedAnnotation: annotation) ifTrue:
 			[aStream
 				nextPutAll: ', bc: ';
@@ -9206,7 +9271,9 @@ Cogit >> recordProcessing [
 	self recordRegisters.
 	inst := self recordLastInstruction.
 	printRegisters ifTrue:
-		[processor printRegistersOn: coInterpreter transcript].
+		[processor printRegistersOn: coInterpreter transcript.
+		 printInstructions ifFalse:
+			[coInterpreter transcript cr].].
 	printInstructions ifTrue:
 		[printRegisters ifTrue:
 			[coInterpreter transcript cr].
@@ -9305,6 +9372,13 @@ Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6
 	"Answer a bit mask identifying the symbolic registers.
 	 Registers are negative numbers."
 	^(((((((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)) bitOr: 1 << (1 - reg5)) bitOr: 1 << (1 - reg6)) bitOr: 1 << (1 - reg7)) bitOr: 1 << (1 - reg8)) bitOr: 1 << (1 - reg9)
+]
+
+{ #category : #disassembly }
+Cogit >> relativeBaseForDisassemblyInto: aBlock [
+	<doNotGenerate>
+	disassemblingMethod ifNotNil:
+		[aBlock value: disassemblingMethod asInteger value: '.']
 ]
 
 { #category : #disassembly }
@@ -9430,7 +9504,7 @@ Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: refDelta 
 				 unlinkedRoutine := unlinkedRoutine - callDelta.
 				 backEnd
 					rewriteInlineCacheAt: mcpc asInteger
-					tag: targetMethod selector
+					tag: (self inlineCacheValueForSelector: targetMethod selector in: enumeratingCogMethod at: mcpc)
 					target: unlinkedRoutine.
 				 ^0]].
 
@@ -10671,7 +10745,7 @@ Cogit >> unlinkSendAt: mcpc targetMethod: targetMethod sendTable: sendTable [
 	unlinkedRoutine := sendTable at: (targetMethod cmNumArgs min: NumSendTrampolines - 1).
 	backEnd
 		rewriteInlineCacheAt: mcpc asInteger
-		tag: targetMethod selector
+		tag: (self inlineCacheValueForSelector: targetMethod selector in: enumeratingCogMethod at: mcpc)
 		target: unlinkedRoutine.
 	codeModified := true
 ]
