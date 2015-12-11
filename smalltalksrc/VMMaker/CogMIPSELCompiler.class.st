@@ -97,6 +97,12 @@ CogMIPSELCompiler class >> initialize [
 	
 ]
 
+{ #category : #translation }
+CogMIPSELCompiler class >> wordSize [
+	"This is a 32-bit ISA"
+	^4
+]
+
 { #category : #'encoding - arithmetic' }
 CogMIPSELCompiler >> addiuR: destReg R: srcReg C: imm [
 	^self itype: ADDIU rs: srcReg rt: destReg signedImmediate: imm

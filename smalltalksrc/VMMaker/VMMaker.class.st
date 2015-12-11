@@ -334,6 +334,7 @@ VMMaker class >> generateAllSpurConfigurations [
 	self generateNewspeakSpurCogVM;
 		generateNewspeakSpurStackVM;
 		generateSqueakSpurCogVM;
+		generateSqueakSpurCog64VM;
 		generateSqueakSpurCogSistaVM;
 		generateSqueakSpurStackVM;
 		generateSqueakSpurStack64VM
@@ -346,6 +347,7 @@ VMMaker class >> generateAllSpurConfigurationsUnderVersionControl [
 		generateSqueakSpurStack64VM;
 		generateNewspeakSpurCogVM;
 		generateSqueakSpurCogVM;
+		generateSqueakSpurCog64VM;
 		generateSqueakSpurCogSistaVM
 ]
 
@@ -484,6 +486,18 @@ VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass optio
 					UnicodePlugin UnixAioPlugin UUIDPlugin UnixOSProcessPlugin
 					Win32OSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin WeDoPlugin
 					XDisplayControlPlugin)
+]
+
+{ #category : #configurations }
+VMMaker class >> generateSqueakSpurCog64VM [
+	"No primitives since we can use those for the Cog VM"
+	^VMMaker
+		generate: CoInterpreter
+		and: StackToRegisterMappingCogit
+		with: #(ObjectMemory Spur64BitCoMemoryManager)
+		to: (FileDirectory default pathFromURI: self sourceTree, '/spur64src')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		including:#()
 ]
 
 { #category : #configurations }
