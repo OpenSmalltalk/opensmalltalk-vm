@@ -2245,7 +2245,7 @@ CogVMSimulator >> maybeCheckStackDepth: delta sp: sp pc: mcpc [
 					ifTrue: [self startPCOfMethod: cogHomeMethod methodObject]
 					ifFalse: [self startPCOfClosure: (self pushedReceiverOrClosureOfFrame: framePointer)].
 	bcpc := cogit bytecodePCFor: mcpc startBcpc: startbcpc in: cogBlockMethod.
-	"self assert: bcpc ~= 0."
+	self assert: bcpc ~= 0.
 	cogBlockMethod ~= cogHomeMethod ifTrue:
 		[| lastbcpc |
 		 lastbcpc := cogit lastBytecodePCForBlockAt: startbcpc in: cogHomeMethod methodObject.
@@ -2258,7 +2258,7 @@ CogVMSimulator >> maybeCheckStackDepth: delta sp: sp pc: mcpc [
 	 and: [asp - delta = csp
 	 and: [cogit isAbsentReceiverSendAt: mcpc in: cogHomeMethod]]) ifTrue:
 		[csp := debugStackPointers at: bcpc put: csp + 1].
-	"self assert: asp - delta + 1 = csp"
+	self assert: asp - delta + 1 = csp
 ]
 
 { #category : #accessing }

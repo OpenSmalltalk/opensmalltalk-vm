@@ -132,11 +132,6 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> identityHashFullWo
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> immutableBitMask [
-	^objectMemory immutableBitMask
-]
-
-{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> isForwardedObjectClassIndexPun [
 	^objectMemory isForwardedObjectClassIndexPun
 ]

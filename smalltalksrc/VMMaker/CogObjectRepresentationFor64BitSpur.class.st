@@ -652,10 +652,19 @@ CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	cogit CmpCq: objectMemory firstLongFormat R: instSpecReg.
 	jumpFailCuzFixed := cogit JumpNonZero: 0.
 
-	cogit CmpCq: (objectMemory integerObjectOf: maxSlots) R: Arg0Reg.
+	cogit CmpCq: (objectMemory integerObjectOf: maxSlots * 2) R: Arg0Reg.
 	jumpLongTooBig := cogit JumpAbove: 0.
 	"save num elements/slot size to instSpecReg"
 	cogit MoveR: fillReg R: instSpecReg.
+	"compute odd bits and add into headerReg; oddBits := 2 - nElements bitAnd: 1"
+	cogit MoveCq: objectMemory wordSize / 4 R: TempReg.
+	cogit SubR: instSpecReg R: TempReg.
+	cogit AndCq: objectMemory wordSize / 4 - 1 R: TempReg.
+	cogit LogicalShiftLeftCq: objectMemory formatShift R: TempReg.
+	cogit AddR: TempReg R: headerReg.
+	"round up num elements to numSlots in instSpecReg"
+	cogit AddCq: objectMemory wordSize / 4 - 1 R: instSpecReg.
+	cogit LogicalShiftRightCq: objectMemory shiftForWord - 2 R: instSpecReg.
 	cogit MoveCq: 0 R: fillReg.
 	jumpLongPrepDone := cogit Jump: 0. "go allocate"
 
