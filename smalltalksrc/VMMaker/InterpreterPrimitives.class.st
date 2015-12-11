@@ -109,6 +109,8 @@ InterpreterPrimitives >> cStringOrNullFor: oop [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> canBeImmutable: oop [
+	"Currently cant compile to C"
+	<option: #IMMUTABILITY>
 	| scheduler processLists list first last link |
 	
 	self assert: (objectMemory isNonImmediate: oop).
