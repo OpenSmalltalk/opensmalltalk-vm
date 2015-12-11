@@ -764,13 +764,7 @@ CogObjectRepresentationForSqueakV3 >> genSpecialSelectorEqualsEqualsGuts [
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genStoreImmediateInSourceReg: sourceReg slotIndex: index destReg: destReg [
-	cogit MoveR: sourceReg Mw: index * objectMemory wordSize + objectMemory baseHeaderSize r: destReg.
-	^0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg inFrame: inFrame [
+CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg inFrame: inFrame needsStoreCheck: needsStoreCheck [
 	| jmpImmediate jmpDestYoung jmpSourceOld jmpAlreadyRoot mask rootBitByteOffset |
 	<var: #jmpImmediate type: #'AbstractInstruction *'>
 	<var: #jmpDestYoung type: #'AbstractInstruction *'>
@@ -778,6 +772,8 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	<var: #jmpAlreadyRoot type: #'AbstractInstruction *'>
 	"do the store"
 	cogit MoveR: sourceReg Mw: index * objectMemory wordSize + objectMemory baseHeaderSize r: destReg.
+	"if no need for the store check then returns"
+	needsStoreCheck ifFalse: [ ^ 0 ].
 	"now the check.  Is value stored an integer?  If so we're done"
 	cogit MoveR: sourceReg R: scratchReg.
 	cogit AndCq: 1 R: scratchReg.
@@ -805,20 +801,14 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	jmpAlreadyRoot := cogit JumpNonZero: 0.
 	"Root bit is not set.  Call store check to insert dest into root table."
 	self assert: destReg == ReceiverResultReg.
-	inFrame
-		ifTrue:
+	cogit 
+		evaluateTrampolineCallBlock: 
 			[cogit
 				CallRT: ceStoreCheckTrampoline
 				registersToBeSavedMask: (((cogit registerMaskFor: sourceReg)
 												bitOr: cogit callerSavedRegMask)
 												bitClear: (cogit registerMaskFor: ReceiverResultReg))]
-		ifFalse:
-			[cogit backEnd saveAndRestoreLinkRegAround:
-				[cogit
-					CallRT: ceStoreCheckTrampoline
-					registersToBeSavedMask: (((cogit registerMaskFor: sourceReg)
-													bitOr: cogit callerSavedRegMask)
-													bitClear: (cogit registerMaskFor: ReceiverResultReg))]].
+		protectLinkRegIfNot: inFrame.
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
 	(jmpSourceOld jmpTarget:
