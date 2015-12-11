@@ -112,6 +112,11 @@ CogX64Compiler class >> defaultCompilerClass [
 	^CogInLineLiteralsX64Compiler
 ]
 
+{ #category : #translation }
+CogX64Compiler class >> identifyingPredefinedMacros [
+	^#('x86_64' '__amd64' '__x86_64' '__amd64__' '__x86_64__' '_M_AMD64' '_M_X64')
+]
+
 { #category : #'class initialization' }
 CogX64Compiler class >> initialize [
 	"Initialize various x64 instruction-related constants.
@@ -199,6 +204,12 @@ CogX64Compiler class >> initialize [
 CogX64Compiler class >> machineCodeDeclaration [
 	"Answer the declaration for the machineCode array."
 	^{#'unsigned char'. '[', self basicNew machineCodeBytes printString, ']'}
+]
+
+{ #category : #translation }
+CogX64Compiler class >> wordSize [
+	"This is a 64-bit ISA"
+	^8
 ]
 
 { #category : #private }
@@ -1833,7 +1844,7 @@ CogX64Compiler >> concretizeReverseOpRR: x64opcode [
 ]
 
 { #category : #'generate machine code' }
-CogX64Compiler >> concretizeSEE2OpRdRd: opCode [
+CogX64Compiler >> concretizeSEE2OpRdRd: x64opcode [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| regLHS regRHS |
@@ -1842,7 +1853,7 @@ CogX64Compiler >> concretizeSEE2OpRdRd: opCode [
 	machineCode
 		at: 0 put: 16rF2;
 		at: 1 put: 16r0F;
-		at: 2 put: opCode;
+		at: 2 put: x64opcode;
 		at: 3 put: (self mod: ModReg RM: regRHS RO: regLHS).
 	^machineCodeSize := 4
 ]
