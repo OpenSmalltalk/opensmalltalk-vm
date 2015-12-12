@@ -775,7 +775,7 @@
 				948214FE080E3ABE0061C2AB /* interp.h */,
 			);
 			name = vm;
-			path = ../../spursrc/vm;
+			path = ../../spur64src/vm;
 			sourceTree = "<group>";
 		};
 		F5F8AE0802EB4E090100013C /* Mac OS */ = {
@@ -1600,7 +1600,7 @@
 		73BCFAF20EFB043300B7BA8D /* Assert */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
@@ -1638,7 +1638,7 @@
 		73BCFAF30EFB043300B7BA8D /* Assert */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"COGMTVM=1",
 					"DEBUGVM=0",
@@ -1659,7 +1659,7 @@
 		941A3C0809AA144000C9D25A /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
 				GCC_DYNAMIC_NO_PIC = YES;
@@ -1708,7 +1708,7 @@
 		941A3C0909AA144000C9D25A /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				COPY_PHASE_STRIP = YES;
 				GCC_AUTO_VECTORIZATION = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
@@ -1753,7 +1753,7 @@
 		941A3C0A09AA144000C9D25A /* DeploymentSymbols */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
@@ -1792,7 +1792,7 @@
 		94D95B1E0923E6810034C6F0 /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"COGMTVM=1",
 					"DEBUGVM=1",
@@ -1814,7 +1814,7 @@
 		94D95B1F0923E6810034C6F0 /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
 					"COGMTVM=1",
@@ -1837,7 +1837,7 @@
 		94D95B200923E6810034C6F0 /* DeploymentSymbols */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
 					"COGMTVM=1",

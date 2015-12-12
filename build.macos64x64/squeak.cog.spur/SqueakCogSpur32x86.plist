@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>LSMinimumSystemVersion</key>
-	<string>10.5.0</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleDocumentTypes</key>
@@ -368,49 +366,47 @@
 	<key>CFBundleExecutable</key>
 	<string>Squeak</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak Cog Spur 5.0.0 http://www.mirandabanda.org</string><!--version-->
-	<key>CFBundleShortVersionString</key>
-	<string>Squeak Cog Spur 5.0.0</string><!--version-->
-	<key>CFBundleVersion</key>
-	<string>5.0.0</string><!--version-->
+	<string>Squeak Cog 5.0.0 http://www.mirandabanda.org</string><!--version-->
 	<key>CFBundleIconFile</key>
 	<string>GreenCogSqueak.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.squeak.Cog</string>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>Squeak</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>5.0.0</string><!--version-->
 	<key>CFBundleSignature</key>
 	<string>????</string>
-	<key>CGDisableCoalescedUpdates</key>
-	<true/>
+	<key>CFBundleVersion</key>
+	<string>7</string>
+	<key>Fabric</key>
+	<dict>
+		<key>APIKey</key>
+		<string>add501476623fc20212a60334cd537d16dfd566f</string>
+		<key>Kits</key>
+		<array>
+			<dict>
+				<key>KitInfo</key>
+				<dict/>
+				<key>KitName</key>
+				<string>Crashlytics</string>
+			</dict>
+		</array>
+	</dict>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.developer-tools</string>
 	<key>LSBackgroundOnly</key>
 	<false/>
-	<key>NSServices</key>
-	<array>
-		<dict>
-			<key>NSMenuItem</key>
-			<dict>
-				<key>default</key>
-				<string>Squeak DoIt</string>
-			</dict>
-			<key>NSMessage</key>
-			<string>doitandreturn</string>
-			<key>NSPortName</key>
-			<string>Squeak</string>
-			<key>NSReturnTypes</key>
-			<array>
-				<string>NSStringPboardType</string>
-			</array>
-			<key>NSSendTypes</key>
-			<array>
-				<string>NSStringPboardType</string>
-			</array>
-		</dict>
-	</array>
+	<key>LSMinimumSystemVersion</key>
+	<string>${MACOSX_DEPLOYMENT_TARGET}</string>
+	<key>NSMainNibFile</key>
+	<string>MainMenu</string>
+	<key>NSPrincipalClass</key>
+	<string>SqueakOSXApplication</string>
 	<key>SqueakBrowserMouseCmdButton1</key>
 	<integer>3</integer>
 	<key>SqueakBrowserMouseCmdButton2</key>
@@ -475,6 +471,12 @@
 	<integer>2</integer>
 	<key>SqueakPluginsBuiltInOrLocalOnly</key>
 	<false/>
+	<key>SqueakResourceDirectory</key>
+	<string></string>
+	<key>SqueakTrustedDirectory</key>
+	<string>/foobar/tooBar/forSqueak/bogus/</string>
+	<key>SqueakUIFadeForFullScreenInSeconds</key>
+	<real>0.5</real>
 	<key>SqueakUIFlushPrimaryDeferNMilliseconds</key>
 	<integer>20</integer>
 	<key>SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds</key>
@@ -485,11 +487,123 @@
 	<true/>
 	<key>SqueakUnTrustedDirectory</key>
 	<string>~/Library/Preferences/Squeak/Internet/Untrusted/</string>
+	<key>SqueakUseFileMappedMMAP</key>
+	<false/>
 	<key>SqueakWindowAttribute</key>
-	<data>ggAAHw==</data>
+	<data>
+	ggAAHw==
+	</data>
 	<key>SqueakWindowHasTitle</key>
 	<true/>
 	<key>SqueakWindowType</key>
 	<integer>6</integer>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Squeak Image File</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.image</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STim</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>image</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/squeak-image</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.utf8-plain-text</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Squeak Sources File</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.sources</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STso</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>sources</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/squeak-sources</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.utf8-plain-text</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Squeak Changes File</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.changes</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STch</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>changes</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/squeak-changes</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Squeak Script File</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.script</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>SOBJ</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>sobj</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/squeak-script</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Squeak Project File</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.project</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STpr</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>pr</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/x-squeak-project</string>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>

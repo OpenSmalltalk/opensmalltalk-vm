@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		730BD72A10AA26FB0023C110 /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spursrc/vm/interp.h; sourceTree = SOURCE_ROOT; };
+		730BD72A10AA26FB0023C110 /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spur64src/vm/interp.h; sourceTree = SOURCE_ROOT; };
 		458E6DD111C6D5850024C822 /* sqManualSurface.c in Sources */ = {isa = PBXBuildFile; fileRef = 458E6DD011C6D5850024C822 /* sqManualSurface.c */; };
 		730BD72610AA25350023C110 /* SqueakFFIPrims.c in Sources */ = {isa = PBXBuildFile; fileRef = 730BD72510AA25350023C110 /* SqueakFFIPrims.c */; };
 		730BD72810AA26D00023C110 /* sqFFIPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 730BD72710AA26D00023C110 /* sqFFIPlugin.c */; };
@@ -187,7 +187,7 @@
 		1DEB911C08733D790010E9CD /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = i386;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_OPTIMIZATION_LEVEL = 2;
 				GCC_PREPROCESSOR_DEFINITIONS = (
