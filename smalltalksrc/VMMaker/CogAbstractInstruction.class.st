@@ -830,14 +830,6 @@ CogAbstractInstruction >> hasVarBaseRegister [
 	^false
 ]
 
-{ #category : #'inline cacheing' }
-CogAbstractInstruction >> implicitReceiveCacheAt: callSiteReturnAddress [
-	"Answer the implicit receiver cache for the return address
-	 of a call to the ceImplicitReceiverTrampoline."
-	<option: #NewspeakVM>
-	^self subclassResponsibility
-]
-
 { #category : #'generate machine code' }
 CogAbstractInstruction >> inCurrentCompilation: operand [
 	"Answer if operand is in the current compilation; and henced could be a candidate for pc-relative addressing."
@@ -1132,6 +1124,14 @@ CogAbstractInstruction >> noteFollowingConditionalBranch: branch [
 	<var: #branch type: #'AbstractInstruction *'>
 	<inline: true>
 	^branch
+]
+
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> nsSendCacheAt: callSiteReturnAddress [
+	"Answer the NSSendCache for the return address of a Newspeak
+	 self, super, outer, or implicit receiver send."
+	<option: #NewspeakVM>
+	^self subclassResponsibility
 ]
 
 { #category : #initialization }
