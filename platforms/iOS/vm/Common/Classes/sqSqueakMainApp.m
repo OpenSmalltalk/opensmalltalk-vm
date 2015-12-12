@@ -157,19 +157,24 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		if (!printingStack) {
 # if COGVM
-		/* If we're in generated machine code then the only way the stack
-		 * dump machinery has of giving us an accurate report is if we set
-		 * stackPointer & framePointer to the native stack & frame pointers.
+		/* If in generated machine code then the stack dump machinery can
+		 * only give an accurate report if stackPointer & framePointer are
+		 * set to the native stack & frame pointers.
 		 */
-		extern void ifValidWriteBackStackPointersSaveTo(void*,void*,char**,char**);
-# if __APPLE__ && __MACH__ && __i386__
+			extern void ifValidWriteBackStackPointersSaveTo(void*,void*,char**,char**);
+# if __APPLE__ && __MACH__
+#	if __i386__
 	/* see sys/ucontext.h; two different namings */
-#	if __GNUC__ && !__INTEL_COMPILER /* icc pretends to be gcc */
+#	  if __GNUC__ && !__INTEL_COMPILER /* icc pretends to be gcc */
 			void *fp = (void *)(uap ? uap->uc_mcontext->__ss.__ebp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext->__ss.__esp: 0);
-#	else
+#	  else
 			void *fp = (void *)(uap ? uap->uc_mcontext->ss.ebp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext->ss.esp: 0);
+#	  endif
+#	elif __x86_64__
+			void *fp = (void *)(uap ? uap->uc_mcontext->__ss.__rbp: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext->__ss.__rsp: 0);
 #	endif
 # elif __linux__ && __i386__
 			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_EBP]: 0);

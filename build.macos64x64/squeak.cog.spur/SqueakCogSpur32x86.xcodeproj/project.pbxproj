@@ -165,7 +165,7 @@
 		949382451B000FBD00C802B2 /* AioPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 949382441B000FBD00C802B2 /* AioPlugin.c */; };
 		9493824B1B00103A00C802B2 /* IA32ABI.c in Sources */ = {isa = PBXBuildFile; fileRef = 949382471B00103A00C802B2 /* IA32ABI.c */; };
 		9493824D1B00103A00C802B2 /* VMProfileMacSupportPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 949382491B00103A00C802B2 /* VMProfileMacSupportPlugin.c */; };
-		949382661B00121000C802B2 /* ia32abicc.c in Sources */ = {isa = PBXBuildFile; fileRef = 949382601B00121000C802B2 /* ia32abicc.c */; };
+		949382661B00121000C802B2 /* x64ia32abicc.c in Sources */ = {isa = PBXBuildFile; fileRef = 949382601B00121000C802B2 /* x64ia32abicc.c */; };
 		949382711B00176A00C802B2 /* sqUnixHeartbeat.c in Sources */ = {isa = PBXBuildFile; fileRef = 9493826E1B00176A00C802B2 /* sqUnixHeartbeat.c */; };
 		949382721B00176A00C802B2 /* sqUnixThreads.c in Sources */ = {isa = PBXBuildFile; fileRef = 9493826F1B00176A00C802B2 /* sqUnixThreads.c */; };
 		949382731B00176A00C802B2 /* sqUnixVMProfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 949382701B00176A00C802B2 /* sqUnixVMProfile.c */; };
@@ -191,7 +191,7 @@
 		94D921581AC6321E00A5970F /* ZipPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6591F0DDD03FE00358328 /* ZipPlugin.c */; };
 		94D9215B1AC6337D00A5970F /* sqManualSurface.c in Sources */ = {isa = PBXBuildFile; fileRef = 94BD816F11C8A58D00556751 /* sqManualSurface.c */; };
 		94F478C91BB527440069E57B /* gcc3x-cointerp.c in Sources */ = {isa = PBXBuildFile; fileRef = 94F478C51BB527440069E57B /* gcc3x-cointerp.c */; };
-		94F478D01BB52D8D0069E57B /* cogitIA32.c in Sources */ = {isa = PBXBuildFile; fileRef = 94F478CA1BB52D3A0069E57B /* cogitIA32.c */; };
+		94F478D01BB52D8D0069E57B /* cogitX64.c in Sources */ = {isa = PBXBuildFile; fileRef = 94F478CA1BB52D3A0069E57B /* cogitX64.c */; };
 		94FA4CD51BB4D43900C1BE8F /* b3dAlloc.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E659980DDD053900358328 /* b3dAlloc.c */; };
 		94FA4CD61BB4D43900C1BE8F /* b3dDraw.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6599A0DDD053900358328 /* b3dDraw.c */; };
 		94FA4CD71BB4D43900C1BE8F /* b3dMain.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E6599C0DDD053900358328 /* b3dMain.c */; };
@@ -368,7 +368,7 @@
 		949382491B00103A00C802B2 /* VMProfileMacSupportPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = VMProfileMacSupportPlugin.c; path = VMProfileMacSupportPlugin/VMProfileMacSupportPlugin.c; sourceTree = "<group>"; };
 		9493824E1B0010E000C802B2 /* InternetConfigPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = InternetConfigPlugin.h; path = InternetConfigPlugin/InternetConfigPlugin.h; sourceTree = "<group>"; };
 		9493825F1B00121000C802B2 /* dabusiness.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dabusiness.h; sourceTree = "<group>"; };
-		949382601B00121000C802B2 /* ia32abicc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ia32abicc.c; sourceTree = "<group>"; };
+		949382601B00121000C802B2 /* x64ia32abicc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = x64ia32abicc.c; sourceTree = "<group>"; };
 		949382681B00131B00C802B2 /* ia32abi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ia32abi.h; sourceTree = "<group>"; };
 		9493826A1B00137200C802B2 /* B3DAcceleratorPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = B3DAcceleratorPlugin.h; sourceTree = "<group>"; };
 		9493826B1B00137200C802B2 /* sqOpenGLRenderer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqOpenGLRenderer.c; sourceTree = "<group>"; };
@@ -572,7 +572,7 @@
 		94F478C51BB527440069E57B /* gcc3x-cointerp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "gcc3x-cointerp.c"; path = "../../spur64src/vm/gcc3x-cointerp.c"; sourceTree = "<group>"; };
 		94F478C61BB527440069E57B /* cointerp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cointerp.h; path = ../../spur64src/vm/cointerp.h; sourceTree = "<group>"; };
 		94F478C71BB527440069E57B /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../spur64src/vm/interp.h; sourceTree = "<group>"; };
-		94F478CA1BB52D3A0069E57B /* cogitIA32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cogitIA32.c; path = ../../spur64src/vm/cogitIA32.c; sourceTree = "<group>"; };
+		94F478CA1BB52D3A0069E57B /* cogitX64.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cogitX64.c; path = ../../spur64src/vm/cogitX64.c; sourceTree = "<group>"; };
 		94F478CC1BB52D3A0069E57B /* exampleSqNamedPrims.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = exampleSqNamedPrims.h; path = ../../spur64src/vm/exampleSqNamedPrims.h; sourceTree = "<group>"; };
 		94F478CD1BB52D3A0069E57B /* vmCallback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = vmCallback.h; path = ../../spur64src/vm/vmCallback.h; sourceTree = "<group>"; };
 		94F8798F0E6C0C7E00662DEA /* sqSqueakIPhoneInfoPlistInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSqueakIPhoneInfoPlistInterface.h; sourceTree = "<group>"; };
@@ -1024,7 +1024,7 @@
 			children = (
 				949382681B00131B00C802B2 /* ia32abi.h */,
 				9493825F1B00121000C802B2 /* dabusiness.h */,
-				949382601B00121000C802B2 /* ia32abicc.c */,
+				949382601B00121000C802B2 /* x64ia32abicc.c */,
 			);
 			path = IA32ABI;
 			sourceTree = "<group>";
@@ -1251,7 +1251,7 @@
 		94E658DF0DDD03FE00358328 /* vm */ = {
 			isa = PBXGroup;
 			children = (
-				94F478CA1BB52D3A0069E57B /* cogitIA32.c */,
+				94F478CA1BB52D3A0069E57B /* cogitX64.c */,
 				94F478CC1BB52D3A0069E57B /* exampleSqNamedPrims.h */,
 				94F478CD1BB52D3A0069E57B /* vmCallback.h */,
 				94F478C21BB527440069E57B /* cogit.c */,
@@ -1660,7 +1660,7 @@
 				94502E951BB609AC00EA8942 /* sqUnixSpurMemory.c in Sources */,
 				9487744310C64DD800E4AEC5 /* jdmarker.c in Sources */,
 				949382751B0017CC00C802B2 /* aio.c in Sources */,
-				949382661B00121000C802B2 /* ia32abicc.c in Sources */,
+				949382661B00121000C802B2 /* x64ia32abicc.c in Sources */,
 				9487744410C64DD800E4AEC5 /* jdmaster.c in Sources */,
 				9487744510C64DD800E4AEC5 /* jdmerge.c in Sources */,
 				9487744610C64DD800E4AEC5 /* jdphuff.c in Sources */,
@@ -1732,7 +1732,7 @@
 				9487748110C64DD800E4AEC5 /* squeakProxy.m in Sources */,
 				9487748210C64DD800E4AEC5 /* dummyFFI.c in Sources */,
 				9487748310C64DD800E4AEC5 /* sqMacV2Browser.m in Sources */,
-				94F478D01BB52D8D0069E57B /* cogitIA32.c in Sources */,
+				94F478D01BB52D8D0069E57B /* cogitX64.c in Sources */,
 				9487748410C64DD800E4AEC5 /* SqueakOSXAppDelegate.m in Sources */,
 				94C317621AD49A320096E59D /* SerialPlugin.c in Sources */,
 				9487748510C64DD800E4AEC5 /* sqMacSecurity.c in Sources */,

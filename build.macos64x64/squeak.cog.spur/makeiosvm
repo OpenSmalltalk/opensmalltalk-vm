@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build a "complete" Mac VM consisting of CoreVM/CoreMTVM + Plugins.
+# Build a "complete" Mac VM consisting of SqueakCogSpur32x86 + Plugins.
 # By default build the Release configuration into $DEST$VMAPP (CocoaSqueak.app)
 IFS='	
 '
@@ -7,8 +7,8 @@ BUILD_CONFIGURATION=Release
 NSD_BUILD_CONFIGURATION=Deployment
 XCD_BUILD_CONFIGURATION=Release
 APP=Squeak.app
-#OBJDIR=Squeak.build/Objects-normal/i386
-OBJDIR=SqueakCogSpur32x86.build/Objects-normal/i386
+#OBJDIR=Squeak.build/Objects-normal/x86_64
+OBJDIR=SqueakCogSpur32x86.build/Objects-normal/x86_64
 VMAPP=".app"
 DEST="CocoaSqueak"
 VMXCP=SqueakCogSpur32x86
