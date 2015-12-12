@@ -234,9 +234,7 @@ CogIA32Compiler >> computeMaximumSize [
 		"Noops & Pseudo Ops"
 		[Label]					-> [^0].
 		[AlignmentNops]		-> [^(operands at: 0) - 1].
-		[Fill16]					-> [^2].
 		[Fill32]					-> [^4].
-		[FillFromWord]			-> [^4].
 		[Nop]					-> [^1].
 		"Specific Control/Data Movement"
 		[CDQ]					-> [^1].
@@ -910,42 +908,16 @@ CogIA32Compiler >> concretizeFENCE: regOpcode [
 ]
 
 { #category : #'generate machine code' }
-CogIA32Compiler >> concretizeFill16 [
-	<inline: true>
-	| word |
-	<var: #word type: 'unsigned short'>
-	self assert: maxSize == 2.
-	word := operands at: 0.
-	machineCode at: 0 put: (word bitAnd: 16rFF).
-	machineCode at: 1 put: word >> 8.
-	^machineCodeSize := 2
-]
-
-{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeFill32 [
 	<inline: true>
 	| word |
 	<var: #word type: #'unsigned long'>
 	word := operands at: 0.
 	machineCode at: 0 put: (word bitAnd: 16rFF).
-	machineCode at: 1 put: word >> 8.
-	machineCode at: 2 put: word >> 16.
-	machineCode at: 3 put: word >> 24.
+	machineCode at: 1 put: (word >> 8 bitAnd: 16rFF).
+	machineCode at: 2 put: (word >> 16 bitAnd: 16rFF).
+	machineCode at: 3 put: (word >> 24 bitAnd: 16rFF).
 	^machineCodeSize := 4
-]
-
-{ #category : #'generate machine code' }
-CogIA32Compiler >> concretizeFillFromWord [
-	<inline: true>
-	| word |
-	<var: #word type: #'unsigned long'>
-	self assert: maxSize == 4.
-	word := (operands at: 0) + (operands at: 1).
-	0 to: 3 do:
-		[:i|
-		machineCode at: i put: (word bitAnd: 16rFF).
-		word := word >> 8].
-	^machineCodeSize := maxSize
 ]
 
 { #category : #'generate machine code' }
@@ -2149,9 +2121,7 @@ CogIA32Compiler >> dispatchConcretize [
 		"Noops & Pseudo Ops"
 		[Label]				-> [^self concretizeLabel].
 		[AlignmentNops]	-> [^self concretizeAlignmentNops].
-		[Fill16]				-> [^self concretizeFill16].
 		[Fill32]				-> [^self concretizeFill32].
-		[FillFromWord]		-> [^self concretizeFillFromWord].
 		[Nop]				-> [^self concretizeNop].
 		"Specific Control/Data Movement"
 		[CDQ]					-> [^self concretizeCDQ].

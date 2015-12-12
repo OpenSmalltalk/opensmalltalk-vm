@@ -1647,25 +1647,10 @@ Cogit >> DivRd: dpreg1 Rd: dpreg2 [
 ]
 
 { #category : #'abstract instructions' }
-Cogit >> Fill16: value [
-	<inline: true>
-	<returnTypeC: #'AbstractInstruction *'>
-	self assert: (value between: 0 and: 16rFFFF).
-	^self gen: Fill16 operand: value
-]
-
-{ #category : #'abstract instructions' }
 Cogit >> Fill32: value [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: Fill32 operand: value
-]
-
-{ #category : #'abstract instructions' }
-Cogit >> FillFrom: address Word: value [
-	<inline: true>
-	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: FillFromWord operand: address operand: value
 ]
 
 { #category : #'abstract instructions' }

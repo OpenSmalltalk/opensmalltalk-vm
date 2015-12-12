@@ -3226,9 +3226,11 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#addressOf:				#generateAddressOf:on:indent:
 	#addressOf:put:			#generateAddressOf:on:indent:
 	#asAddress:put:			#generateAsAddress:on:indent:
+	#signedIntFromLong64		#generateSignedIntFromLong:on:indent:
 	#signedIntFromLong		#generateSignedIntFromLong:on:indent:
-	#signedIntToLong			#generateSignedIntToLong:on:indent:
 	#signedIntFromShort		#generateSignedIntFromShort:on:indent:
+	#signedIntToLong64		#generateSignedIntToLong:on:indent:
+	#signedIntToLong			#generateSignedIntToLong:on:indent:
 	#signedIntToShort			#generateSignedIntToShort:on:indent:
 	#preIncrement				#generatePreIncrement:on:indent:
 	#preDecrement			#generatePreDecrement:on:indent:
