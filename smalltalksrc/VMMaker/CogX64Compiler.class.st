@@ -333,22 +333,20 @@ CogX64Compiler >> computeMaximumSize [
 		"Noops & Pseudo Ops"
 		[Label]					-> [^0].
 		[AlignmentNops]		-> [^(operands at: 0) - 1].
-		[Fill16]					-> [^2].
 		[Fill32]					-> [^4].
-		[FillFromWord]			-> [^4].
 		[Nop]					-> [^1].
 		"Specific Control/Data Movement"
 		[CDQ]					-> [^2].
 		[IDIVR]					-> [^3].
 		[IMULRR]				-> [^4].
-		[CPUID]					-> [^2].
+		"[CPUID]					-> [^2].
 		[CMPXCHGAwR]			-> [^8].
 		[CMPXCHGMwrR]		-> [^9].
 		[LFENCE]				-> [^3].
 		[MFENCE]				-> [^3].
 		[SFENCE]				-> [^3].
 		[LOCK]					-> [^1].
-		"[XCHGAwR]				-> [^6].
+		[XCHGAwR]				-> [^6].
 		[XCHGMwrR]			-> [^7]."
 		[XCHGRR]				-> [^((self concreteRegister: (operands at: 0)) = RAX
 									   or: [(self concreteRegister: (operands at: 1)) = RAX])
@@ -829,9 +827,9 @@ CogX64Compiler >> concretizeFill32 [
 	<var: #word type: #'unsigned long'>
 	word := operands at: 0.
 	machineCode at: 0 put: (word bitAnd: 16rFF).
-	machineCode at: 1 put: word >> 8.
-	machineCode at: 2 put: word >> 16.
-	machineCode at: 3 put: word >> 24.
+	machineCode at: 1 put: (word >> 8 bitAnd: 16rFF).
+	machineCode at: 2 put: (word >> 16 bitAnd: 16rFF).
+	machineCode at: 3 put: (word >> 24 bitAnd: 16rFF).
 	^machineCodeSize := 4
 ]
 
@@ -1806,6 +1804,26 @@ CogX64Compiler >> concretizePrefetchAw [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizePushCq [
+	<inline: true>
+	| value |
+	value := operands at: 0.
+	(self isQuick: value) ifTrue:
+		[machineCode
+			at: 0 put: 16r6A;
+			at: 1 put: (value bitAnd: 16rFF).
+		^machineCodeSize := 2].
+	self assert: (self isSignExtendedFourByteValue: value).
+	machineCode
+		at: 0 put: 16r68;
+		at: 1 put: (value bitAnd: 16rFF);
+		at: 2 put: (value >> 8 bitAnd: 16rFF);
+		at: 3 put: (value >> 16 bitAnd: 16rFF);
+		at: 4 put: (value >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 5
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizePushR [
 	<inline: true>
 	| reg |
@@ -1942,6 +1960,13 @@ CogX64Compiler >> concretizeSqrtRd [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeStop [
+	<inline: true>
+	machineCode at: 0 put: 16rCC.
+	^machineCodeSize := 1
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeTstCqR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -2007,23 +2032,21 @@ CogX64Compiler >> dispatchConcretize [
 		"Noops & Pseudo Ops"
 		[Label]				-> [^self concretizeLabel].
 		[AlignmentNops]	-> [^self concretizeAlignmentNops].
-		[Fill16]				-> [^self concretizeFill16].
 		[Fill32]				-> [^self concretizeFill32].
-		[FillFromWord]		-> [^self concretizeFillFromWord].
 		[Nop]				-> [^self concretizeNop].
 		"Specific Control/Data Movement"
 		[CDQ]					-> [^self concretizeCDQ].
 		[IDIVR]					-> [^self concretizeIDIVR].
 		[IMULRR]				-> [^self concretizeMulRR].
-		[CPUID]					-> [^self concretizeCPUID].
-		[CMPXCHGAwR]			-> [^self concretizeCMPXCHGAwR].
-		[CMPXCHGMwrR]		-> [^self concretizeCMPXCHGMwrR].
-		[LFENCE]				-> [^self concretizeFENCE: 5].
-		[MFENCE]				-> [^self concretizeFENCE: 6].
-		[SFENCE]				-> [^self concretizeFENCE: 7].
-		[LOCK]					-> [^self concretizeLOCK].
-		[XCHGAwR]				-> [^self concretizeXCHGAwR].
-		[XCHGMwrR]			-> [^self concretizeXCHGMwrR].
+		"[CPUID]					-> [^self concretizeCPUID]."
+		"[CMPXCHGAwR]			-> [^self concretizeCMPXCHGAwR]."
+		"[CMPXCHGMwrR]		-> [^self concretizeCMPXCHGMwrR]."
+		"[LFENCE]				-> [^self concretizeFENCE: 5]."
+		"[MFENCE]				-> [^self concretizeFENCE: 6].
+		[SFENCE]				-> [^self concretizeFENCE: 7]."
+		"[LOCK]					-> [^self concretizeLOCK]."
+		"[XCHGAwR]				-> [^self concretizeXCHGAwR]."
+		"[XCHGMwrR]			-> [^self concretizeXCHGMwrR]."
 		[XCHGRR]				-> [^self concretizeXCHGRR].
 		"Control"
 		[Call]					-> [^self concretizeCall].
