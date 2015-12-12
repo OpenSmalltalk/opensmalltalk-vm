@@ -296,7 +296,8 @@ CogInLineLiteralsX64Compiler >> sizePCDependentInstructionAt: eventualAbsoluteAd
 			[machineCodeSize := (self isQuick: maximumSpan)
 									ifTrue: [2]
 									ifFalse: [opcode = Jump
-												ifTrue: [5]]]
+												ifTrue: [5]
+												ifFalse: [6]]]
 		ifFalse:
 			[machineCodeSize := opcode caseOf:
 									{	[JumpLong]				->	[5].
