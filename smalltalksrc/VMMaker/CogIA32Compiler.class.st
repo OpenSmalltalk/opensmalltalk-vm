@@ -2658,16 +2658,6 @@ CogIA32Compiler >> hasThreeAddressArithmetic [
 ]
 
 { #category : #'inline cacheing' }
-CogIA32Compiler >> implicitReceiveCacheAt: callSiteReturnAddress [
-	"Answer the implicit receiver cache for the return address
-	 of a call to the ceImplicitReceiverTrampoline."
-	<option: #NewspeakVM>
-	<var: #callSiteReturnAddress type: #'char *'>
-	<inline: false>
-	^self literalBeforeFollowingAddress: callSiteReturnAddress asUnsignedInteger - 5 "sizeofcall"
-]
-
-{ #category : #'inline cacheing' }
 CogIA32Compiler >> inlineCacheTagAt: callSiteReturnAddress [
 	"Answer the inline cache tag for the return address of a send."
 	^self literalBeforeFollowingAddress: callSiteReturnAddress - 5
@@ -2870,6 +2860,16 @@ CogIA32Compiler >> mod: mod RM: regMode RO: regOpcode [
 				Valid digit values range from 0 to 7.
 		/r		Indicates that the ModRM byte specifies both a register operand and a reg/mem (register or memory) operand."
 	^mod << 6 + (regOpcode << 3) + regMode
+]
+
+{ #category : #'inline cacheing' }
+CogIA32Compiler >> nsSendCacheAt: callSiteReturnAddress [
+	"Answer the NSSendCache for the return address of a Newspeak
+	 self, super, outer, or implicit receiver send."
+	<option: #NewspeakVM>
+	<var: #callSiteReturnAddress type: #'char *'>
+	<inline: false>
+	^self literalBeforeFollowingAddress: callSiteReturnAddress asUnsignedInteger - 5 "sizeofcall"
 ]
 
 { #category : #'feature detection' }
