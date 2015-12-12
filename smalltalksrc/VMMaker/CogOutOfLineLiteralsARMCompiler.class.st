@@ -42,14 +42,6 @@ CogOutOfLineLiteralsARMCompiler >> getDefaultCogCodeSize [
 ]
 
 { #category : #'inline cacheing' }
-CogOutOfLineLiteralsARMCompiler >> implicitReceiveCacheAt: callSiteReturnAddress [
-	"Answer the implicit receiver cache for the return address
-	 of a call to one of the ceImplicitReceiver... trampolines."
-	<inline: true>
-	^objectMemory longAt: (self pcRelativeAddressAt: (callSiteReturnAddress - 8) asUnsignedInteger)
-]
-
-{ #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMCompiler >> inlineCacheTagAt: callSiteReturnAddress [
 	<inline: true>
 	^objectMemory longAt: (self pcRelativeAddressAt: (callSiteReturnAddress - 8) asUnsignedInteger)
@@ -133,6 +125,14 @@ CogOutOfLineLiteralsARMCompiler >> moveCw: constant intoR: destReg [
 				plus: (dependent address >= (address + 8) ifTrue: [1] ifFalse: [0])
 				imm: (dependent address - (address + 8)) abs).
 	^machineCodeSize := 4
+]
+
+{ #category : #'inline cacheing' }
+CogOutOfLineLiteralsARMCompiler >> nsSendCacheAt: callSiteReturnAddress [
+	"Answer the NSSendCache for the return address of a Newspeak
+	 self, super, outer, or implicit receiver send."
+	<inline: true>
+	^objectMemory longAt: (self pcRelativeAddressAt: (callSiteReturnAddress - 8) asUnsignedInteger)
 ]
 
 { #category : #'compile abstract instructions' }
