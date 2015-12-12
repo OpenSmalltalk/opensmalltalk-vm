@@ -291,19 +291,19 @@ CogInLineLiteralsX64Compiler >> sizePCDependentInstructionAt: eventualAbsoluteAd
 		ifFalse:
 			[maximumSpan := target - (eventualAbsoluteAddress + 2)].
 	address := eventualAbsoluteAddress.
-	^machineCodeSize := opcode >= FirstShortJump
-							ifTrue:
-								[(self isQuick: maximumSpan)
+	opcode >= FirstShortJump
+		ifTrue:
+			[machineCodeSize := (self isQuick: maximumSpan)
 									ifTrue: [2]
 									ifFalse: [opcode = Jump
-												ifTrue: [5]
-												ifFalse: [6]]]
-							ifFalse:
-								[opcode caseOf:
+												ifTrue: [5]]]
+		ifFalse:
+			[machineCodeSize := opcode caseOf:
 									{	[JumpLong]				->	[5].
 										[JumpFull]				->	[12].
 										[JumpLongZero]		->	[6].
-										[JumpLongNonZero]	->	[6] }]
+										[JumpLongNonZero]	->	[6] }].
+	^machineCodeSize "Slang can't inline the switch into the ifTrue:ifFalse: correctly"
 ]
 
 { #category : #'inline cacheing' }

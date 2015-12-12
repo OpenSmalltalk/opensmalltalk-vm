@@ -852,6 +852,7 @@ Spur64BitMemoryManager >> numSmallIntegerTagBits [
 { #category : #'object access' }
 Spur64BitMemoryManager >> numTagBits [
 	<api>
+	<cmacro: '() 3'>
 	"4th bit reserved for object alignment, which could imply e.g. what space the object is in."
 	^3
 ]
@@ -1161,6 +1162,7 @@ Spur64BitMemoryManager >> smallObjectBytesForSlots: numSlots [
 { #category : #'word size' }
 Spur64BitMemoryManager >> tagMask [
 	<api>
+	<cmacro: '() 7'>
 	^7
 ]
 
