@@ -714,6 +714,7 @@ Spur32BitMemoryManager >> numSmallIntegerTagBits [
 { #category : #'object access' }
 Spur32BitMemoryManager >> numTagBits [
 	<api>
+	<cmacro: '() 2'>
 	^2
 ]
 
@@ -909,6 +910,7 @@ Spur32BitMemoryManager >> smallObjectBytesForSlots: numSlots [
 { #category : #'word size' }
 Spur32BitMemoryManager >> tagMask [
 	<api>
+	<cmacro: '() 3'>
 	^3
 ]
 
