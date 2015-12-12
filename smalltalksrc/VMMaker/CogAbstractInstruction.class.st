@@ -529,20 +529,8 @@ CogAbstractInstruction >> concretizeAt: actualAddress [
 ]
 
 { #category : #'generate machine code' }
-CogAbstractInstruction >> concretizeFill16 [
-	"fill with (operand 0 bitAnd: 16rFFFF) according to the processor's endianness"
-	self subclassResponsibility
-]
-
-{ #category : #'generate machine code' }
 CogAbstractInstruction >> concretizeFill32 [
 	"fill with operand 0 according to the processor's endianness"
-	self subclassResponsibility
-]
-
-{ #category : #'generate machine code' }
-CogAbstractInstruction >> concretizeFillFromWord [
-	"fill with operand 0 + operand 1 according to the processor's endianness"
 	self subclassResponsibility
 ]
 
@@ -1455,15 +1443,11 @@ CogAbstractInstruction >> unalignedLongAt: byteAddress put: aWord [
 
 { #category : #'generate machine code' }
 CogAbstractInstruction >> updateLabel: labelInstruction [
-	"Update an instruction that depends on a label outside of
-	 generated code (e.g. a method or block header)."
+	"Update an instruction that depends on a label outside
+	 of generated code (e.g. a method or block header)."
 	<var: #labelInstruction type: #'AbstractInstruction *'>
-	| offsetAddress |
-	offsetAddress := labelInstruction address + labelInstruction labelOffset.
-	opcode caseOf: {
-		[MoveCwR]		-> [operands at: 0 put: offsetAddress].
-		[PushCw]		-> [operands at: 0 put: offsetAddress].
-		[FillFromWord]	-> [operands at: 0 put: offsetAddress]}
+	self assert: (opcode = MoveCwR or: [opcode = PushCw]).
+	operands at: 0 put: labelInstruction address + labelInstruction labelOffset
 ]
 
 { #category : #simulation }

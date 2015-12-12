@@ -475,9 +475,7 @@ CogARMCompiler >> computeMaximumSize [
 		[Label]					-> [^0].
 		[Literal]					-> [^4].
 		[AlignmentNops]		-> [^(operands at: 0) - 4].
-		[Fill16]					-> [^4].
 		[Fill32]					-> [^4].
-		[FillFromWord]			-> [^4].
 		[Nop]					-> [^4].
 		"Control"
 		[Call]					-> [^4].
@@ -1021,26 +1019,10 @@ CogARMCompiler >> concretizeFPConditionalJump: conditionCode [
 ]
 
 { #category : #'generate machine code' }
-CogARMCompiler >> concretizeFill16 [
-	"fill with (operand 0 bitAnd: 16rFFFF) according to the processor's endianness"
-	self halt: 'unused opcode?'
-]
-
-{ #category : #'generate machine code' }
 CogARMCompiler >> concretizeFill32 [
 	"fill with operand 0 according to the processor's endianness"
-	| word |
-	<var: #word type: #'unsigned long'>
-	word := operands at: 0.
-	self machineCodeAt: 0 put: word.
+	self machineCodeAt: 0 put: (operands at: 0).
 	^machineCodeSize := 4
-]
-
-{ #category : #'generate machine code - concretize' }
-CogARMCompiler >> concretizeFillFromWord [
-	self assert: false.
-	self notYetImplemented
-
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1880,9 +1862,7 @@ CogARMCompiler >> dispatchConcretize [
 		[Label]					-> [^self concretizeLabel].
 		[Literal]					-> [^self concretizeLiteral].
 		[AlignmentNops]		-> [^self concretizeAlignmentNops].
-		[Fill16]					-> [^self concretizeFill16].
 		[Fill32]					-> [^self concretizeFill32].
-		[FillFromWord]			-> [^self concretizeFillFromWord].
 		[Nop]					-> [^self concretizeNop].
 		"Control"
 		[Call]						-> [^self concretizeCall]. "call code within code space"
