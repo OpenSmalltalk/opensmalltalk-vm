@@ -270,9 +270,7 @@ CogMIPSELCompiler >> computeMaximumSize [
 		[Label]					-> [^0].
 		[Literal]					-> [^4].
 		[AlignmentNops]		-> [^(operands at: 0) - 4].
-		[Fill16]					-> [^4].
 		[Fill32]					-> [^4].
-		[FillFromWord]			-> [^4].
 		[Nop]					-> [^4].
 		"Control"
 		[Call]					-> [^self literalLoadInstructionBytes + 8].
@@ -790,14 +788,11 @@ CogMIPSELCompiler >> concretizeDivRR [
 
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeFill32 [
-	"fill with operand 0 according to the processor's endianness"
-	| word |
-	<var: #word type: #'unsigned long'>
-	
-	self flag: #bogus. "Gaps in the instruction stream should be filled with the stop instruction."
-	
-	word := operands at: 0.
-	self machineCodeAt: 0 put: word.
+	"fill with operand 0 according to the processor's endianness.
+	 You might think this is bogus and we should fill with stop instrurctions instead,
+	 but this is used to leave room for a CMBlock header before the code for a block;
+	 the gaps get filled in by fillInBlockHeadersAt: after code has been generated."
+	self machineCodeAt: 0 put: (operands at: 0).
 	^machineCodeSize := 4
 ]
 
@@ -1460,9 +1455,7 @@ CogMIPSELCompiler >> dispatchConcretize [
 		"Noops & Pseudo Ops"
 		[Label]					-> [^self concretizeLabel].
 		[AlignmentNops]		-> [^self concretizeAlignmentNops].
-		[Fill16]					-> [^self concretizeFill16].
 		[Fill32]					-> [^self concretizeFill32].
-		[FillFromWord]			-> [^self concretizeFillFromWord].
 		[Nop]					-> [^self concretizeNop].
 		"Control"
 		[Call]						-> [^self concretizeCall]. "call code within code space"

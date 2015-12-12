@@ -37,11 +37,7 @@ Class {
 		'DPFPReg7',
 		'DivRdRd',
 		'FPReg',
-		'Fill16',
 		'Fill32',
-		'Fill8',
-		'FillBytesFrom',
-		'FillFromWord',
 		'FirstJump',
 		'FirstShortJump',
 		'Jump',
@@ -275,11 +271,7 @@ CogRTLOpcodes class >> initialize [
 						Label
 						Literal			"a word-sized literal"
 						AlignmentNops
-						FillBytesFrom	"output operand 0's worth of bytes from the address in operand 1"
-						Fill8				"output a byte's worth of bytes with operand 0"
-						Fill16			"output two byte's worth of bytes with operand 0"
 						Fill32			"output four byte's worth of bytes with operand 0"
-						FillFromWord	"output BytesPerWord's worth of bytes with operand 0 + operand 1"
 						Nop
 
 						"Control"
