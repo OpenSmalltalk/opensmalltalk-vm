@@ -3038,7 +3038,7 @@ Cogit >> cPICHasForwardedClass: cPIC [
 				- backEnd jumpLongConditionalByteSize.
 	2 to: cPIC cPICNumCases do: 
 			[:i |  | classIndex |
-			classIndex := literalsManager backEnd literal32BeforeFollowingAddress: pc.
+			classIndex := backEnd literal32BeforeFollowingAddress: pc.
 			(objectMemory isForwardedClassIndex: classIndex)
 				ifTrue: [^ true].
 			"since we started at the top, we can just add the case size each time to move on to the next case"
@@ -8680,7 +8680,7 @@ Cogit >> nsSendCacheFromReturnAddress: mcpc [
 	| entryPoint cacheAddress |
 	entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
 	self assert: entryPoint < methodZoneBase.
-	cacheAddress := (backEnd implicitReceiveCacheAt: mcpc) asUnsignedInteger.
+	cacheAddress := (backEnd nsSendCacheAt: mcpc) asUnsignedInteger.
 	self assert: (objectMemory isInOldSpace: cacheAddress).
 	^self cCoerceSimple: cacheAddress to: #'NSSendCache *'
 
@@ -9412,8 +9412,19 @@ Cogit >> relocateCallsInClosedPIC: cPIC [
 		entryPoint := i = 1
 						ifTrue: [backEnd jumpLongTargetBeforeFollowingAddress: pc]
 						ifFalse: [backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc].
-		"Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC"
-		(cPIC containsAddress: entryPoint) ifFalse:
+		(cPIC containsAddress: entryPoint) 
+			ifTrue: 
+			["Interpret/MNU"
+			backEnd zoneCallsAreRelative ifFalse: [
+				i = 1 ifTrue:
+					[backEnd
+						relocateJumpLongBeforeFollowingAddress: pc
+						by: refDelta]
+					ifFalse:
+					[backEnd
+						relocateJumpLongConditionalBeforeFollowingAddress: pc
+						by: refDelta]]]
+			ifFalse:
 			[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 			 self assert: targetMethod cmType = CMMethod.
 			 i = 1 ifTrue:

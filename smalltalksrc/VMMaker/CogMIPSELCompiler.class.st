@@ -2074,20 +2074,25 @@ CogMIPSELCompiler >> literalAtAddress: mcpc put: newLiteral [
 { #category : #'inline cacheing' }
 CogMIPSELCompiler >> literalBeforeFollowingAddress: followingAddress [
 	"Answer the literal embedded in the instruction immediately preceding followingAddress.
-	 This is used in the MoveCwR, PushCwR and CmpCwR cases."
+	 This is used in the MoveCwR, PushCw and CmpCwR cases."
 	
-	"lui/ori, lui/ori/sw/addi, lui/ori/subu/slt/slt/sltu/sltu"
+	"Cmp/MoveCwR
+	 pc-8	lui rx, uper
+	 pc-4	ori rx, rx, lower"
+	(self opcodeAtAddress: followingAddress - 4) = ORI ifTrue:
+		[^self literalAtAddress: followingAddress - 4].
 	
-	| lastOpcode lastFunction oriAddress |
-	lastOpcode := self opcodeAtAddress: followingAddress - 4.
-	lastFunction := self functionAtAddress: followingAddress - 4.
-	oriAddress := 0.
-	lastOpcode = ORI ifTrue: [oriAddress := followingAddress - 4].
-	lastOpcode = ADDIU ifTrue: [oriAddress := followingAddress - 16].
-	(lastOpcode = SPECIAL and: [lastFunction = SUBU]) ifTrue: [oriAddress := followingAddress - 8].
-	self assert: oriAddress ~= 0.
-	^self literalAtAddress: oriAddress
-
+	"PushCw
+	 pc-16	lui at, upper
+	 pc-12	ori at, at, lower
+	 pc-8	addiu sp, sp, -4
+	 pc-4	sw at, 0(sp)"
+	((self opcodeAtAddress: followingAddress - 4) = SW and:
+		[(self opcodeAtAddress: followingAddress - 8) = ADDIU]) ifTrue:
+			[^self literalAtAddress: followingAddress - 12].
+	
+	self unreachable.
+	^0
 ]
 
 { #category : #testing }
@@ -2309,6 +2314,29 @@ CogMIPSELCompiler >> noteFollowingOverflowBranch: branch [
 	} otherwise: [self unreachable].
 	branch rewriteOpcode: newBranchOpcode with: Overflow with: ZR.
 	^branch
+]
+
+{ #category : #'inline cacheing' }
+CogMIPSELCompiler >> nsSendCacheAt: callSiteReturnAddress [
+	"Answer the NSSendCache for the return address of a Newspeak
+	 self, super, outer, or implicit receiver send."
+	<option: #NewspeakVM>
+	
+	"ra - 24 lui s4, cacheHigh
+	 ra - 20 ori s4, s4, cacheLow
+	 ra - 16 lui t9, stubHigh
+	 ra - 12 ori t9, t9, stubLow
+	 ra - 8 jalr t9
+	 ra - 4 nop (delay slot)"
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 24) = LUI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 20) = ORI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 16) = LUI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 12) = ORI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 8) = SPECIAL.
+	self assert: (self functionAtAddress: callSiteReturnAddress - 8) = JALR.
+	self assert: (objectMemory longAt: callSiteReturnAddress - 4) = self nop.
+	"cogit disassembleFrom: callSiteReturnAddress - 16 to: callSiteReturnAddress."
+	^self literalAtAddress: callSiteReturnAddress - 20
 ]
 
 { #category : #abi }
