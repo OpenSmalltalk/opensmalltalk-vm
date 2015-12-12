@@ -5700,7 +5700,7 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2OrNone and: regArg3OrNone forCall
 		stackPointer ->	reg3val"
 
 	<var: #trampolineName type: #'char *'>
-	<returnTypeC: #'void (*genEnilopmartForandandforCallcalled(sqInt regArg1, sqInt regArg2, sqInt regArg3, sqInt forCall, char *trampolineName))(void)'>
+	<returnTypeC: #'void (*genEnilopmartForandandforCallcalled(sqInt regArg1, sqInt regArg2OrNone, sqInt regArg3OrNone, sqInt forCall, char *trampolineName))(void)'>
 
 	| size endAddress enilopmart |
 	self zeroOpcodeIndex.
