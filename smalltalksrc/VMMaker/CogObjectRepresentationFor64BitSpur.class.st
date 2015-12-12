@@ -118,7 +118,7 @@ CogObjectRepresentationFor64BitSpur >> genAllocFloatValue: dpreg into: resultReg
 CogObjectRepresentationFor64BitSpur >> genClearAndSetSmallIntegerTagsIn: scratchReg [
 	"Set the SmallInteger tag bits when the tag bits may be filled with garbage."
 	cogit
-		AndCq: -1 - self tagMask R: scratchReg;
+		AndCq: -1 - objectMemory tagMask R: scratchReg;
 		OrCq: 1 R: scratchReg.
 	^0
 ]
@@ -137,7 +137,7 @@ CogObjectRepresentationFor64BitSpur >> genConvertBitsToSmallFloatIn: reg scratch
 	cogit
 		SubCq: objectMemory smallFloatExponentOffset << (objectMemory smallFloatMantissaBits + 1) R: reg.
 	jumpZero jmpTarget:
-	(cogit LogicalShiftLeftCq: self numTagBits R: reg).
+	(cogit LogicalShiftLeftCq: objectMemory numTagBits R: reg).
 	cogit AddCq: objectMemory smallFloatTag R: reg.
 	^0
 ]
@@ -151,7 +151,7 @@ CogObjectRepresentationFor64BitSpur >> genConvertCharacterToSmallIntegerInReg: r
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genConvertIntegerToSmallIntegerInReg: reg [
-	cogit LogicalShiftLeftCq: self numTagBits R: reg.
+	cogit LogicalShiftLeftCq: objectMemory numTagBits R: reg.
 	cogit AddCq: 1 R: reg.
 	^0
 ]
@@ -166,7 +166,7 @@ CogObjectRepresentationFor64BitSpur >> genConvertSmallIntegerToCharacterInReg: r
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genConvertSmallIntegerToIntegerInReg: reg [
-	cogit ArithmeticShiftRightCq: self numTagBits R: reg.
+	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: reg.
 	^0
 ]
 
@@ -187,7 +187,7 @@ CogObjectRepresentationFor64BitSpur >> genGetHashFieldNonImmOf: instReg asSmallI
 	cogit
 		MoveMw: 0 r: instReg R: destReg;
 		"Shift and mask the field leaving room for the SmallInteger tag."
-		LogicalShiftRightCq: objectMemory identityHashFullWordShift - self numTagBits R: destReg;
+		LogicalShiftRightCq: objectMemory identityHashFullWordShift - objectMemory numTagBits R: destReg;
 		AndCq: objectMemory identityHashHalfWordMask << objectMemory numTagBits R: destReg;
 		AddCq: objectMemory smallIntegerTag R: destReg.
 	^0
@@ -745,9 +745,9 @@ CogObjectRepresentationFor64BitSpur >> genJumpIsSmallIntegerValue: aRegister scr
 	<returnTypeC: #'AbstractInstruction *'>
 	^cogit
 		MoveR: aRegister R: scratchReg;
-		ArithmeticShiftRightCq: 64 - self numTagBits R: scratchReg;
+		ArithmeticShiftRightCq: 64 - objectMemory numTagBits R: scratchReg;
 		AddCq: 1 R: scratchReg;
-		AndCq: 1 << (self numTagBits + 1) - 1 R: scratchReg; "sign and top numTags bits must be the same"
+		AndCq: 1 << (objectMemory numTagBits + 1) - 1 R: scratchReg; "sign and top numTags bits must be the same"
 		CmpCq: 1 R: scratchReg;
 		JumpLessOrEqual: 0
 ]
@@ -820,9 +820,9 @@ CogObjectRepresentationFor64BitSpur >> genJumpNotSmallIntegerValue: aRegister sc
 	<returnTypeC: #'AbstractInstruction *'>
 	^cogit
 		MoveR: aRegister R: scratchReg;
-		ArithmeticShiftRightCq: 64 - self numTagBits R: scratchReg;
+		ArithmeticShiftRightCq: 64 - objectMemory numTagBits R: scratchReg;
 		AddCq: 1 R: scratchReg;
-		AndCq: 1 << (self numTagBits + 1) - 1 R: scratchReg; "sign and top numTags bits must be the same"
+		AndCq: 1 << (objectMemory numTagBits + 1) - 1 R: scratchReg; "sign and top numTags bits must be the same"
 		CmpCq: 1 R: scratchReg;
 		JumpGreater: 0
 ]
@@ -835,7 +835,7 @@ CogObjectRepresentationFor64BitSpur >> genJumpNotSmallIntegersIn: aRegister andS
 	<returnTypeC: #'AbstractInstruction *'>
 	^cogit
 		XorR: aRegister R: scratchReg;
-		AndCq: self tagMask R: scratchReg;
+		AndCq: objectMemory tagMask R: scratchReg;
 		JumpNonZero: 0
 ]
 
@@ -885,7 +885,7 @@ CogObjectRepresentationFor64BitSpur >> genRemoveSmallIntegerTagsInScratchReg: sc
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genShiftAwaySmallIntegerTagsInScratchReg: scratchReg [
-	cogit ArithmeticShiftRightCq: self numTagBits R: scratchReg.
+	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: scratchReg.
 	^0
 ]
 
@@ -947,7 +947,7 @@ CogObjectRepresentationFor64BitSpur >> maybeGenConvertIfSmallFloatIn: oopReg scr
 	jumpNotSF := self genJumpNotSmallFloat: oopReg scratchReg: scratch.
 	cogit
 		MoveR: oopReg R: scratch;
-		LogicalShiftRightCq: self numTagBits R: scratch;
+		LogicalShiftRightCq: objectMemory numTagBits R: scratch;
 		CmpCq: 1 R: scratch.
 	jumpSFZero := cogit JumpAbove: 0.
 	cogit AddCq: objectMemory smallFloatExponentOffset << (objectMemory smallFloatMantissaBits + 1) R: scratch.
@@ -1027,24 +1027,12 @@ CogObjectRepresentationFor64BitSpur >> numSmallIntegerTagBits [
 	^3
 ]
 
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationFor64BitSpur >> numTagBits [
-	<inline: true>
-	^3
-]
-
 { #category : #'calling convention' }
 CogObjectRepresentationFor64BitSpur >> selectorIndexDereferenceRoutine [
 	"If the object representation is 64-bits, selectors must be accessed via indices in the inline caches.
 	 Answer the routine that will map from indices to selector objects if so, otherwise nil."
 	<inline: true>
 	^ceDereferenceSelectorIndex
-]
-
-{ #category : #accessing }
-CogObjectRepresentationFor64BitSpur >> tagMask [
-	<inline: true>
-	^7
 ]
 
 { #category : #'debug support' }

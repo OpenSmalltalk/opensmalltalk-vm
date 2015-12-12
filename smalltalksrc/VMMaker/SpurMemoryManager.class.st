@@ -8499,7 +8499,6 @@ SpurMemoryManager >> numSurvivorSpaces [
 
 { #category : #'object access' }
 SpurMemoryManager >> numTagBits [
-	<api>
 	^self subclassResponsibility
 ]
 
@@ -11167,7 +11166,6 @@ SpurMemoryManager >> swizzleObjStackAt: objStackRootIndex [
 
 { #category : #'word size' }
 SpurMemoryManager >> tagMask [
-	<api>
 	^self subclassResponsibility
 ]
 
