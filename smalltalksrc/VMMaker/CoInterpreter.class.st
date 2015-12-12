@@ -5338,7 +5338,6 @@ CoInterpreter >> mframeHomeMethod: theFP [
 { #category : #'frame access' }
 CoInterpreter >> mframeHomeMethodExport [
 	<api>
-	<option: #NewspeakVM>
 	<returnTypeC: #'CogMethod *'>
 	^self mframeHomeMethod: framePointer
 ]
