@@ -6811,7 +6811,7 @@ Cogit >> getCStackPointer [
 
 { #category : #'method map' }
 Cogit >> getIsObjectReference [
-	<cmacro: '() IsObjectReference'>
+	<cmacro>
 	^IsObjectReference
 ]
 

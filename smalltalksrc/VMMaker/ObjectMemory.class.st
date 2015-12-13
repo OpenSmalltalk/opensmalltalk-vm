@@ -1659,7 +1659,7 @@ ObjectMemory >> compactClassAt: ccIndex [
 { #category : #'cog jit support' }
 ObjectMemory >> compactClassFieldLSB [
 	<api>
-	<cmacro: '() 12'>
+	<cmacro>
 	^12
 ]
 
@@ -1953,12 +1953,14 @@ ObjectMemory >> firstAccessibleObject [
 { #category : #'header formats' }
 ObjectMemory >> firstByteFormat [
 	<api>
+	<cmacro>
 	^8
 ]
 
 { #category : #'header formats' }
 ObjectMemory >> firstCompiledMethodFormat [
 	<api>
+	<cmacro>
 	^12
 ]
 
@@ -1996,6 +1998,7 @@ ObjectMemory >> firstIndexableField: oop [
 { #category : #'header formats' }
 ObjectMemory >> firstLongFormat [
 	<api>
+	<cmacro>
 	^6
 ]
 
@@ -2671,6 +2674,7 @@ ObjectMemory >> incrementalGC [
 { #category : #'header formats' }
 ObjectMemory >> indexablePointersFormat [
 	<api>
+	<cmacro>
 	^3
 ]
 
@@ -4963,7 +4967,7 @@ ObjectMemory >> shiftForWord [
 	 a 64-bit image, this method could be removed and the relevant one substituted.  We can't
 	 mark this method as <doNotGenerate> as we need an actual method to guide code gen."
 	<api>
-	<cmacro: '() 2'>
+	<cmacro>
 	^2
 ]
 
@@ -5890,6 +5894,7 @@ ObjectMemory >> vmEndianness [
 { #category : #'header formats' }
 ObjectMemory >> weakArrayFormat [
 	<api>
+	<cmacro>
 	^4
 ]
 

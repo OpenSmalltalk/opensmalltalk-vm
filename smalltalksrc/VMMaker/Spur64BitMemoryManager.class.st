@@ -852,7 +852,7 @@ Spur64BitMemoryManager >> numSmallIntegerTagBits [
 { #category : #'object access' }
 Spur64BitMemoryManager >> numTagBits [
 	<api>
-	<cmacro: '() 3'>
+	<cmacro>
 	"4th bit reserved for object alignment, which could imply e.g. what space the object is in."
 	^3
 ]
@@ -1055,7 +1055,7 @@ Spur64BitMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
 { #category : #'word size' }
 Spur64BitMemoryManager >> shiftForWord [
 	<api>
-	<cmacro: '() 3'>
+	<cmacro>
 	^3
 ]
 
@@ -1081,13 +1081,16 @@ Spur64BitMemoryManager >> smallFloatBitsOf: oop [
 Spur64BitMemoryManager >> smallFloatExponentOffset [
 	"896 is 1023 - 127, where 1023 is the mid-point of the 11-bit double precision exponent range,
 	 and 127 is the mid-point of the 8-bit SmallDouble exponent range."
+	<api>
+	<cmacro>
 	^896
 ]
 
 { #category : #'interpreter access' }
 Spur64BitMemoryManager >> smallFloatMantissaBits [
+	"SmallFLoat64's have the same mantissa as IEEE double-precision floating point"
 	<api>
-	<cmacro: '() 52'>
+	<cmacro>
 	^52
 ]
 
@@ -1125,7 +1128,7 @@ Spur64BitMemoryManager >> smallFloatSignBit [
 { #category : #'cog jit support' }
 Spur64BitMemoryManager >> smallFloatTag [
 	<api>
-	<cmacro: '() 3'>
+	<cmacro>
 	^3
 ]
 
@@ -1152,6 +1155,7 @@ Spur64BitMemoryManager >> smallFloatValueOf: oop [
 { #category : #allocation }
 Spur64BitMemoryManager >> smallObjectBytesForSlots: numSlots [
 	"Answer the total number of bytes in an object without an overflow header, including header bytes."
+	<api>
 	<returnTypeC: #usqInt>
 	^self baseHeaderSize "single header"
 	+ (numSlots < 1
@@ -1162,7 +1166,7 @@ Spur64BitMemoryManager >> smallObjectBytesForSlots: numSlots [
 { #category : #'word size' }
 Spur64BitMemoryManager >> tagMask [
 	<api>
-	<cmacro: '() 7'>
+	<cmacro>
 	^7
 ]
 
@@ -1175,7 +1179,7 @@ Spur64BitMemoryManager >> wordIndexableFormat [
 Spur64BitMemoryManager >> wordSize [
 	"Answer the manager's word size, which is the size of an oop, and which
 	 is assumed to be equivalent to the underlying machine's word size."
-	<cmacro: '() 8'>
+	<cmacro>
 	^8
 ]
 

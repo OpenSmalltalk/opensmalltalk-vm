@@ -674,7 +674,7 @@ NewObjectMemory >> clone: obj [
 { #category : #'cog jit support' }
 NewObjectMemory >> compactClassFieldWidth [
 	<api>
-	<cmacro: '() 5'>
+	<cmacro>
 	^5
 ]
 
@@ -1659,14 +1659,14 @@ NewObjectMemory >> initializeObjectMemory: bytesToShift [
 { #category : #'cog jit support' }
 NewObjectMemory >> instFormatFieldLSB [
 	<api>
-	<cmacro: '() 8'>
+	<cmacro>
 	^8
 ]
 
 { #category : #'cog jit support' }
 NewObjectMemory >> instFormatFieldWidth [
 	<api>
-	<cmacro: '() 4'>
+	<cmacro>
 	^4
 ]
 
