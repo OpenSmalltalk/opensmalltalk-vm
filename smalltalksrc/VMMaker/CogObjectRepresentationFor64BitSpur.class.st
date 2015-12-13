@@ -362,7 +362,7 @@ CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveAt: retNoffset [
 
 	jumpImmediate := self genJumpImmediate: ReceiverResultReg.
 	cogit MoveR: Arg0Reg R: Arg1Reg.
-	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratch: TempReg.
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
 	cogit SubCq: 1 R: Arg1Reg. "1-rel => 0-rel"
 
@@ -632,7 +632,7 @@ CogObjectRepresentationFor64BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	self genGetHashFieldNonImmOf: ReceiverResultReg into: headerReg.
 	jumpUnhashed := cogit JumpZero: 0.
 	"get index and fail if not a +ve integer"
-	jumpNElementsNonInt := self genJumpNotSmallInteger: Arg0Reg scratch: TempReg.
+	jumpNElementsNonInt := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"get class's format inst var for inst spec (format field)"
 	self genLoadSlot: InstanceSpecificationIndex sourceReg: ReceiverResultReg destReg: instSpecReg.
 	cogit LogicalShiftRightCq: objectMemory fixedFieldsFieldWidth + self numSmallIntegerTagBits R: instSpecReg.

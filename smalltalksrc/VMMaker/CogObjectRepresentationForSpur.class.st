@@ -701,7 +701,7 @@ CogObjectRepresentationForSpur >> genInnerPrimitiveAsCharacter: retNOffset inReg
 	<var: 'jumpNotInt' type: #'AbstractInstruction *'>
 	<var: 'jumpOutOfRange' type: #'AbstractInstruction *'>
 	reg ~= ReceiverResultReg ifTrue:
-		[jumpNotInt := self genJumpNotSmallInteger: reg scratch: TempReg].
+		[jumpNotInt := self genJumpNotSmallInteger: reg scratchReg: TempReg].
 	cogit MoveR: reg R: TempReg.
 	self genConvertSmallIntegerToIntegerInReg: TempReg.
 	cogit CmpCq: 1 << 30 - 1 R: TempReg.
@@ -786,10 +786,10 @@ CogObjectRepresentationForSpur >> genInnerPrimitiveObjectAt: retNOffset [
 	<var: #jumpBadIndex type: #'AbstractInstruction *'>
 	<var: #jumpNotCogMethod type: #'AbstractInstruction *'>
 	<var: #jumpNotHeaderIndex type: #'AbstractInstruction *'>
-	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratch: TempReg.
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"get header into Arg1Reg..."
 	cogit MoveMw: objectMemory baseHeaderSize r: ReceiverResultReg R: (headerReg := Arg1Reg).
-	jumpNotCogMethod := self genJumpSmallInteger: headerReg scratch: TempReg.
+	jumpNotCogMethod := self genJumpSmallInteger: headerReg scratchReg: TempReg.
 	cogit MoveMw: (cogit offset: CogMethod of: #methodHeader) r: headerReg R: headerReg.
 	jumpNotCogMethod jmpTarget: (cogit
 		CmpCq: (objectMemory integerObjectOf: 1) R: Arg0Reg).
@@ -857,7 +857,7 @@ CogObjectRepresentationForSpur >> genInnerPrimitiveStringAt: retNoffset [
 	<var: #jumpWordsOutOfBounds type: #'AbstractInstruction *'>
 
 	cogit MoveR: Arg0Reg R: Arg1Reg.
-	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratch: TempReg.
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
 	cogit SubCq: 1 R: Arg1Reg. "1-rel => 0-rel"
 
