@@ -6099,7 +6099,7 @@ CoInterpreter >> printMethodCacheFor: thing [
 			[self cCode: [] inSmalltalk: [self transcript ensureCr].
 			 self printNum: i; cr; tab.
 			 (objectMemory isBytesNonImm: s)
-				ifTrue: [self cCode: 'printf("%lx %.*s\n", s, numBytesOf(s), (char *)firstIndexableField(s))'
+				ifTrue: [self cCode: 'printf("%lx %.*s\n", s, (int)(numBytesOf(s)), (char *)firstIndexableField(s))'
 						inSmalltalk: [self printHex: s; space; print: (self stringOf: s); cr]]
 				ifFalse: [self shortPrintOop: s].
 			 self tab.
@@ -6222,7 +6222,7 @@ CoInterpreter >> quickPrimitiveConstantFor: aQuickPrimitiveIndex [
 { #category : #'cog jit support' }
 CoInterpreter >> quickPrimitiveGeneratorFor: aQuickPrimitiveIndex [
 	<api>
-	<returnTypeC: 'int (*quickPrimitiveGeneratorFor(sqInt aQuickPrimitiveIndex))(void)'>
+	<returnTypeC: 'sqInt (*quickPrimitiveGeneratorFor(sqInt aQuickPrimitiveIndex))(void)'>
 	^aQuickPrimitiveIndex
 		caseOf: {
 			[256] -> [#genQuickReturnSelf].
