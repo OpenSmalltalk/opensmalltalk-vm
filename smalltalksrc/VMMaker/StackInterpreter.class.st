@@ -2062,7 +2062,7 @@ StackInterpreter >> alternateHeaderHasPrimitiveFlag: methodHeader [
 { #category : #'compiled methods' }
 StackInterpreter >> alternateHeaderNumLiteralsMask [
 	<api>
-	<cmacro: '() AlternateHeaderNumLiteralsMask'>
+	<cmacro>
 	^AlternateHeaderNumLiteralsMask
 ]
 

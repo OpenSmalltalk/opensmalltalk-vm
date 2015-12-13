@@ -1385,6 +1385,7 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 	"Const op var version of binary inline primitives."
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#binaryInlinePrimitive:"
+	<option: #SistaVM>
 	| ra val untaggedVal adjust |
 	ra := self allocateRegForStackEntryAt: 0.
 	self ssTop popToReg: ra.
@@ -1478,6 +1479,7 @@ StackToRegisterMappingCogit >> genBinaryVarOpConstInlinePrimitive: prim [
 	"Var op const version of inline binary inline primitives."
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#binaryInlinePrimitive:"
+	<option: #SistaVM>
 	| rr val untaggedVal |
 	val := self ssTop constant.
 	self ssPop: 1.
@@ -1533,6 +1535,7 @@ StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 	"Var op var version of binary inline primitives."
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#binaryInlinePrimitive:"
+	<option: #SistaVM>
 	| ra rr adjust |
 	self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext | ra := rTop. rr := rNext ].
 	self ssTop popToReg: ra.
@@ -1632,21 +1635,23 @@ StackToRegisterMappingCogit >> genCallPrimitiveBytecode [
 			ifFalse: [EncounteredUnknownBytecode]].
 	prim := byte2 - 128 << 8 + byte1.
 
-	prim < 1000 ifTrue:
-		[^self genNullaryInlinePrimitive: prim].
+	self cppIf: SistaVM
+		ifTrue:
+			[prim < 1000 ifTrue:
+				[^self genNullaryInlinePrimitive: prim].
 
-	prim < 2000 ifTrue:
-		[^self genUnaryInlinePrimitive: prim - 1000].
-		
-	prim < 3000 ifTrue:
-		[self ssTop type = SSConstant ifTrue:
-			[^self genBinaryVarOpConstInlinePrimitive: prim - 2000].
-		 (self ssValue: 1) type = SSConstant ifTrue:
-			[^self genBinaryConstOpVarInlinePrimitive: prim - 2000].
-		 ^self genBinaryVarOpVarInlinePrimitive: prim - 2000].
+			prim < 2000 ifTrue:
+				[^self genUnaryInlinePrimitive: prim - 1000].
+				
+			prim < 3000 ifTrue:
+				[self ssTop type = SSConstant ifTrue:
+					[^self genBinaryVarOpConstInlinePrimitive: prim - 2000].
+				 (self ssValue: 1) type = SSConstant ifTrue:
+					[^self genBinaryConstOpVarInlinePrimitive: prim - 2000].
+				 ^self genBinaryVarOpVarInlinePrimitive: prim - 2000].
 
-	prim < 4000 ifTrue:
-		[^self genTrinaryInlinePrimitive: prim - 3000].
+			prim < 4000 ifTrue:
+				[^self genTrinaryInlinePrimitive: prim - 3000]].
 
 	^EncounteredUnknownBytecode
 ]
@@ -2014,6 +2019,7 @@ StackToRegisterMappingCogit >> genNullaryInlinePrimitive: prim [
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#nullaryInlinePrimitive:"
 
+	<option: #SistaVM>
 	^EncounteredUnknownBytecode
 ]
 
@@ -3440,7 +3446,7 @@ StackToRegisterMappingCogit >> genTrinaryInlinePrimitive: prim [
 	"Unary inline primitives."
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#trinaryInlinePrimitive:"
-
+	<option: #SistaVM>
 	| ra1 ra2 rr adjust needsStoreCheck |
 	"The store check requires rr to be ReceiverResultReg"
 	needsStoreCheck := (objectRepresentation isUnannotatableConstant: self ssTop) not.
@@ -3481,6 +3487,7 @@ StackToRegisterMappingCogit >> genUnaryInlinePrimitive: prim [
 	"Unary inline primitives."
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	 See EncoderForSistaV1's class comment and StackInterpreter>>#unaryInlinePrimitive:"
+	<option: #SistaVM>
 	| rcvrReg resultReg |
 	rcvrReg := self allocateRegForStackEntryAt: 0.
 	resultReg := self allocateRegNotConflictingWith: (self registerMaskFor: rcvrReg).

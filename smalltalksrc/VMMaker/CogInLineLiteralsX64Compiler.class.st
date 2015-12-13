@@ -201,10 +201,7 @@ CogInLineLiteralsX64Compiler >> isPCDependent [
 { #category : #'inline cacheing' }
 CogInLineLiteralsX64Compiler >> literal32BeforeFollowingAddress: followingAddress [
 	"Answer the 32-bit literal embedded in the instruction immediately preceding followingAddress."
-	^  ((objectMemory byteAt: followingAddress - 1) << 24)
-	+  ((objectMemory byteAt: followingAddress - 2) << 16)
-	+  ((objectMemory byteAt: followingAddress - 3) << 8)
-	+   (objectMemory byteAt: followingAddress - 4)
+	^self unalignedLong32At: followingAddress - 4
 ]
 
 { #category : #'inline cacheing' }
@@ -221,16 +218,7 @@ CogInLineLiteralsX64Compiler >> literalBeforeFollowingAddress: followingAddress 
 											ifTrue: [9]		"MoveCwR"
 											ifFalse: [10]]	"PushCwR"
 									ifFalse: [11]).			"ArithCwR"
-	^self cCode: [objectMemory unalignedLongAt: base]
-		inSmalltalk:
-			[   (objectMemory byteAt: base)
-			+ ((objectMemory byteAt: base + 1) << 8)
-			+ ((objectMemory byteAt: base + 2) << 16)
-			+ ((objectMemory byteAt: base + 3) << 24)
-			+ ((objectMemory byteAt: base + 4) << 32)
-			+ ((objectMemory byteAt: base + 5) << 40)
-			+ ((objectMemory byteAt: base + 6) << 48)
-			+ ((objectMemory byteAt: base + 7) << 52)]
+	^objectMemory unalignedLongAt: base
 ]
 
 { #category : #accessing }
@@ -321,15 +309,5 @@ CogInLineLiteralsX64Compiler >> storeLiteral: literal beforeFollowingAddress: fo
 											ifTrue: [9]		"MoveCwR"
 											ifFalse: [10]]	"PushCwR"
 									ifFalse: [11]).			"ArithCwR"
-	self cCode: [objectMemory unalignedLongAt: base put: literal]
-		inSmalltalk:
-			[objectMemory
-				byteAt: base put: (literal bitAnd: 16rFF);
-				byteAt: base + 1 put: ((literal >> 8) bitAnd: 16rFF);
-				byteAt: base + 2 put: ((literal >> 16) bitAnd: 16rFF);
-				byteAt: base + 3 put: ((literal >> 24) bitAnd: 16rFF);
-				byteAt: base + 4 put: ((literal >> 32) bitAnd: 16rFF);
-				byteAt: base + 5 put: ((literal >> 40) bitAnd: 16rFF);
-				byteAt: base + 6 put: ((literal >> 48) bitAnd: 16rFF);
-				byteAt: base + 7 put: ((literal >> 52) bitAnd: 16rFF)]
+	objectMemory unalignedLongAt: base put: literal
 ]
