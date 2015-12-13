@@ -2218,6 +2218,7 @@ CogMIPSELCompiler >> noteFollowingConditionalBranch: branch [
 	 Answer the branch opcode.  Modify the receiver and the branch to
 	 implement a suitable conditional branch that doesn't depend on
 	 condition codes being set by the receiver."
+	<returnTypeC: #'AbstractInstruction *'>
 	<var: #branch type: #'AbstractInstruction *'>
 	| newBranchLeft newBranchOpcode newBranchRight |
 	
