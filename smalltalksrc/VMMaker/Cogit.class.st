@@ -4658,8 +4658,7 @@ Cogit >> configureCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag:
 	"self disassembleFrom: cPIC asInteger + (self sizeof: CogMethod) to: cPIC asInteger + closedPICSize"
 	<var: #cPIC type: #'CogMethod *'>
 	<var: #case0CogMethod type: #'CogMethod *'>
-	| operand targetEntry caseEndAddress|
-	<var: #targetEntry type: #'void *'>
+	| operand targetEntry caseEndAddress |
 	self assert: case1Method notNil.
 
 	"adjust the call at missOffset, the ceAbortXArgs"
@@ -4670,7 +4669,7 @@ Cogit >> configureCPIC: cPIC Case0: case0CogMethod Case1Method: case1Method tag:
 	 and: [coInterpreter methodHasCogMethod: case1Method])
 		ifTrue:
 			[operand := 0.
-			 targetEntry := ((coInterpreter cogMethodOf: case1Method) asInteger + cmNoCheckEntryOffset) asVoidPointer]
+			 targetEntry := (coInterpreter cogMethodOf: case1Method) asInteger + cmNoCheckEntryOffset]
 		ifFalse: "We do not scavenge PICs, hence we cannot cache the MNU method if it is in new space."
 			[operand := (case1Method isNil or: [objectMemory isYoungObject: case1Method])
 							ifTrue: [0]
