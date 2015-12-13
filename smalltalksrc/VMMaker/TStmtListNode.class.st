@@ -118,22 +118,21 @@ TStmtListNode >> bindVariablesIn: aDictionary [
 
 { #category : #'C code generation' }
 TStmtListNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen [
-
-	| statementWasComment |
-	statements size = 1 ifTrue:
+	| size |
+	(size := statements size) = 1 ifTrue:
 		[^statements first emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen].
-	statementWasComment := false.
 	aStream nextPut: $(. "N.B.  Comma binds weakest of all C operators."
-	statements
-		do:
-			[:s |
-			s emitCCommentOn: aStream level: level.
-			s emitCCodeAsArgumentOn: aStream level: level + 1 generator: aCodeGen.
-			statementWasComment := s isComment]
-		separatedBy:
+	statements withIndexDo:
+		[:s :idx| | p1 p2 |
+		p1 := aStream position.
+		s emitCCommentOn: aStream level: level.
+		(s isLeaf and: [s isLabel not and: [idx < statements size]]) ifFalse:
+			[s emitCCodeAsArgumentOn: aStream level: level + 1 generator: aCodeGen].
+		p2 := aStream position.
+		(idx < size and: [p2 > p1]) ifTrue:
 			[((self endsWithCloseBracket: aStream)
-			  or: [statementWasComment]) ifFalse: [aStream nextPut: $,].
-			aStream crtab: level].
+			  or: [s isComment]) ifFalse: [aStream nextPut: $,].
+			 aStream crtab: level]].
 	aStream nextPut: $)
 ]
 

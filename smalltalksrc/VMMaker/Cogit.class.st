@@ -1472,7 +1472,7 @@ Cogit >> AndCq: quickConstant R: reg [
 
 { #category : #'abstract instructions' }
 Cogit >> AndCq: quickConstant R: srcReg R: destReg [
-	<inline: true>
+	<inline: false>
 	<returnTypeC: #'AbstractInstruction *'>
 	| first |
 	<var: 'first' type: #'AbstractInstruction *'>
