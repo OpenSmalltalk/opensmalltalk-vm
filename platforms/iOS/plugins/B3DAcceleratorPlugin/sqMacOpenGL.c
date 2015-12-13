@@ -23,11 +23,11 @@
 #include <Carbon/Carbon.h>
 #include <unistd.h>
 #include <AGL/agl.h>
-#ifdef MAC_OS_X_VERSION_10_7
-#include <OpenGL/gl.h>
-#define useTempMem (1L << 2) //This declaration is taken from old sdk definition.
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
+# include <OpenGL/gl.h>
+# define useTempMem (1L << 2) //This declaration is taken from old sdk definition.
 #else 
-#include <AGL/gl.h>
+# include <AGL/gl.h>
 #endif
 #include <OpenGL/OpenGL.h>
 /* Do not include the entire sq.h file but just those parts needed. */

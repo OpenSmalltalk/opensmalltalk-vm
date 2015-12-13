@@ -219,8 +219,12 @@
 		1D3623250D0F684500981E51 /* SqueakNoOGLIPhoneAppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SqueakNoOGLIPhoneAppDelegate.m; sourceTree = "<group>"; };
 		1D3623EB0D0F72F000981E51 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		29B97316FDCFA39411CA2CEA /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = vm/Common/main.m; sourceTree = "<group>"; };
+		730E26C11C1DF59700A174A5 /* B3DAcceleratorPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = B3DAcceleratorPlugin.c; path = B3DAcceleratorPlugin/B3DAcceleratorPlugin.c; sourceTree = "<group>"; };
 		731F205D1C0CDE2300A27A22 /* version.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = version.c; path = vm/Common/version.c; sourceTree = "<group>"; };
 		735F2ECF1C0CEAAC0080B9A5 /* GreenCogSqueak.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = GreenCogSqueak.icns; path = OSX/GreenCogSqueak.icns; sourceTree = "<group>"; };
+		73BBB6981C1DFA2F00C3CD64 /* sqMacOpenGL.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqMacOpenGL.c; path = B3DAcceleratorPlugin/sqMacOpenGL.c; sourceTree = "<group>"; };
+		73BBB6991C1DFA2F00C3CD64 /* sqMacOpenGLInfo.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sqMacOpenGLInfo.c; path = B3DAcceleratorPlugin/sqMacOpenGLInfo.c; sourceTree = "<group>"; };
+		73BBB69A1C1DFA2F00C3CD64 /* sqMacUIConstants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMacUIConstants.h; path = B3DAcceleratorPlugin/sqMacUIConstants.h; sourceTree = "<group>"; };
 		9400325B0DEF3936002FA1C4 /* sqDummyaio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqDummyaio.h; sourceTree = "<group>"; };
 		9400325C0DEF3936002FA1C4 /* sqDummyaio.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqDummyaio.c; sourceTree = "<group>"; };
 		9402DD5E10CE0C16005C2102 /* SqViewBitmapConversion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SqViewBitmapConversion.h; path = vm/OSX/SqViewBitmapConversion.h; sourceTree = "<group>"; };
@@ -711,6 +715,16 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		73BBB6961C1DF9FD00C3CD64 /* B3DAcceleratorPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				73BBB6981C1DFA2F00C3CD64 /* sqMacOpenGL.c */,
+				73BBB6991C1DFA2F00C3CD64 /* sqMacOpenGLInfo.c */,
+				73BBB69A1C1DFA2F00C3CD64 /* sqMacUIConstants.h */,
+			);
+			name = B3DAcceleratorPlugin;
+			sourceTree = "<group>";
+		};
 		9424FF570DDCB17F009912BF /* platforms */ = {
 			isa = PBXGroup;
 			children = (
@@ -884,6 +898,7 @@
 		9478E0220EC8D957007096A7 /* plugins */ = {
 			isa = PBXGroup;
 			children = (
+				73BBB6961C1DF9FD00C3CD64 /* B3DAcceleratorPlugin */,
 				9478E0230EC8D957007096A7 /* SoundPlugin */,
 				9478E0240EC8D957007096A7 /* SqueakFFIPrims */,
 				9478E0270EC8D957007096A7 /* SqueakObjectiveC */,
@@ -1272,6 +1287,7 @@
 				949382441B000FBD00C802B2 /* AioPlugin.c */,
 				94C315311AD4949B0096E59D /* AsynchFilePlugin.c */,
 				94E658E60DDD03FE00358328 /* B2DPlugin.c */,
+				730E26C11C1DF59700A174A5 /* B3DAcceleratorPlugin.c */,
 				94E658EA0DDD03FE00358328 /* BitBltPlugin.c */,
 				94E658EC0DDD03FE00358328 /* BMPReadWriterPlugin.c */,
 				94584F6110F020BD001401E7 /* ClipboardExtendedPlugin.c */,
