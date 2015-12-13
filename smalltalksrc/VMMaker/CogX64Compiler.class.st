@@ -2270,6 +2270,15 @@ CogX64Compiler >> genJumpFPNotEqual: jumpTarget [
 ]
 
 { #category : #'smalltalk calling convention' }
+CogX64Compiler >> genLoadCStackPointer [
+	"Load the stack pointer register with that of the C stack, effecting
+	 a switch to the C stack.  Used when machine code calls into the
+	 CoInterpreter run-time (e.g. to invoke interpreter primitives)."
+	cogit MoveAw: cogit cStackPointerAddress R: SPReg.
+	^0
+]
+
+{ #category : #'smalltalk calling convention' }
 CogX64Compiler >> genLoadCStackPointers [
 	"Load the frame and stack pointer registers with those of the C stack,
 	 effecting a switch to the C stack.  Used when machine code calls into
@@ -2466,23 +2475,22 @@ CogX64Compiler >> genRestoreRegs [
 ]
 
 { #category : #abi }
+CogX64Compiler >> genRestoreRegsExcept: abstractReg [
+	| realReg |
+	realReg := self concreteRegister: abstractReg.
+	self assert: (R15 > RAX and: [R15 - RAX + 1 = 16]).
+	RAX to: R15 do:
+		[:reg|
+		realReg = reg ifTrue: [cogit AddCq: 4 R: RSP] ifFalse: [cogit PopR: reg]].
+	^0
+]
+
+{ #category : #abi }
 CogX64Compiler >> genSaveRegisters [
 	"Save the general purpose registers for a trampoline call."
-	cogit
-		PushR: R15;
-		PushR: R14;
-		PushR: R13;
-		PushR: R12;
-		PushR: R11;
-		PushR: R10;
-		PushR: R9;
-		PushR: R8;
-		PushR: RDI;
-		PushR: RSI;
-		PushR: RDX;
-		PushR: RCX;
-		PushR: RBX;
-		PushR: RAX.
+
+	self assert: (R15 > RAX and: [R15 - RAX + 1 = 16]).
+	R15 to: RAX by: -1 do: [:reg| cogit PushR: reg].
 	^0
 ]
 
@@ -2908,6 +2916,13 @@ CogX64Compiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag targ
 	^12
 ]
 
+{ #category : #'inline cacheing' }
+CogX64Compiler >> rewriteInlineCacheTag: cacheTag at: callSiteReturnAddress [
+	"Rewrite an inline cache with a new tag.  This variant is used
+	 by the garbage collector."
+	self unalignedLong32At: callSiteReturnAddress - 9 put: cacheTag
+]
+
 { #category : #'full transfer run-time support' }
 CogX64Compiler >> rewriteJumpFullAt: callSiteReturnAddress target: callTargetAddress [
 	"Rewrite a JumpFull instruction to jump to a different target.  This variant is used to rewrite cached primitive calls.
@@ -3005,6 +3020,20 @@ CogX64Compiler >> sizeHasModrm: op at: pc [
 	^0
 ]
 
+{ #category : #disassembly }
+CogX64Compiler >> sizeImmediateGroup1: op at: pc [
+	"see [1] p A-7, p A-13"
+	| modrm mod ro rm |
+	modrm := objectMemory byteAt: pc + 1.
+	mod := modrm >> 6.
+	ro := modrm >> 3 bitAnd: 7.
+	rm := modrm bitAnd: 7.
+	^ro caseOf:
+	   {	[7 "cmp"]	->	[op = 16r81
+							ifTrue: [6]
+							ifFalse: [3]] }
+]
+
 { #category : #encoding }
 CogX64Compiler >> stop [
 	"int3"
@@ -3049,6 +3078,17 @@ CogX64Compiler >> unalignedLong32At: byteAddress [
 	+ ((objectMemory byteAt: byteAddress + 2) << 16)
 	+ ((objectMemory byteAt: byteAddress + 1) << 8)
 	+  (objectMemory byteAt: byteAddress)
+]
+
+{ #category : #'memory access' }
+CogX64Compiler >> unalignedLong32At: byteAddress put: aWord [
+	<cmacro: '(inst,byteAddress,aWord) long32Atput(byteAddress,aWord)'>
+	objectMemory
+		byteAt: byteAddress + 0 put:  (aWord bitAnd: 16rFF);
+		byteAt: byteAddress + 1 put: ((aWord >> 8) bitAnd: 16rFF);
+		byteAt: byteAddress + 2 put: ((aWord >> 16) bitAnd: 16rFF);
+		byteAt: byteAddress + 3 put: ((aWord >> 24) bitAnd: 16rFF).
+	^aWord
 ]
 
 { #category : #'memory access' }
