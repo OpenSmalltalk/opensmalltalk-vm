@@ -406,9 +406,11 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 		(inlineList includes: selector) ifTrue:
 			[inlineList := inlineList copyWithout: selector]].
 	(method pragmaAt: #cmacro) ifNotNil:
-		[:pragma| | literal |
-		literal := method literalAt: 1. "Method should be just foo ^const"
-		self assert: (method numArgs = 0 and: [method numLiterals = 3]).
+		[:pragma| | literal | "Method should be just foo ^const"
+		self assert: (method numArgs = 0 and: [method numLiterals = 3 or: [method isQuick]]).
+		literal := method isQuick
+					ifTrue: [method decompile block statements last expr key]
+					ifFalse: [method literalAt: 1].
 		self addMacro: '() ', (self cLiteralFor: literal value name: method selector) for: selector.
 		(inlineList includes: selector) ifTrue:
 			[inlineList := inlineList copyWithout: selector]].
