@@ -2869,15 +2869,7 @@ CogX64Compiler >> rewriteCallFullAt: callSiteReturnAddress target: callTargetAdd
 		movq #64bits, %rax : 48 A1 b0 b1 b2 b3 b4 b5 b6 b7
 		jmp %rax : FF E0 "
 	self assert: (objectMemory byteAt: callSiteReturnAddress - 12) = 16r48.
-	objectMemory
-		byteAt: callSiteReturnAddress -   3 put: (callTargetAddress >> 56 bitAnd: 16rFF);
-		byteAt: callSiteReturnAddress -   4 put: (callTargetAddress >> 48 bitAnd: 16rFF);
-		byteAt: callSiteReturnAddress -   5 put: (callTargetAddress >> 40 bitAnd: 16rFF);
-		byteAt: callSiteReturnAddress -   6 put: (callTargetAddress >> 32 bitAnd: 16rFF);
-		byteAt: callSiteReturnAddress -   7 put: (callTargetAddress >> 24 bitAnd: 16rFF);
-		byteAt: callSiteReturnAddress -   8 put: (callTargetAddress >> 16 bitAnd: 16rFF);
-		byteAt: callSiteReturnAddress -   9 put: (callTargetAddress >>   8 bitAnd: 16rFF);
-		byteAt: callSiteReturnAddress - 10 put: (callTargetAddress            bitAnd: 16rFF).
+	objectMemory unalignedLongAt: callSiteReturnAddress - 10 put: callTargetAddress.
 	self assert: (self callFullTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong64 = callTargetAddress.
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
@@ -2990,15 +2982,7 @@ CogX64Compiler >> shiftSetsConditionCodesFor: aConditionalJumpOpcode [
 { #category : #'inline cacheing' }
 CogX64Compiler >> sixtyFourBitLiteralBefore: followingAddress [
 	<inline: true>
-	^self cCode: [objectMemory unalignedLongAt: followingAddress - 9]
-		inSmalltalk: [   ((objectMemory byteAt: followingAddress - 1) << 56)
-					+ ((objectMemory byteAt: followingAddress - 2) << 48)
-					+ ((objectMemory byteAt: followingAddress - 3) << 40)
-					+ ((objectMemory byteAt: followingAddress - 4) << 32)
-					+ ((objectMemory byteAt: followingAddress - 5) << 24)
-					+ ((objectMemory byteAt: followingAddress - 6) << 16)
-					+ ((objectMemory byteAt: followingAddress - 7) << 8)
-					+  (objectMemory byteAt: followingAddress - 8)]
+	^objectMemory unalignedLongAt: followingAddress - 8
 ]
 
 { #category : #disassembly }
@@ -3047,11 +3031,7 @@ CogX64Compiler >> storeLiteral32: literal beforeFollowingAddress: followingAddre
 { #category : #'inline cacheing' }
 CogX64Compiler >> thirtyTwoBitLiteralBefore: followingAddress [
 	<inline: true>
-	^self cCode: [objectMemory unalignedLong32At: followingAddress - 5]
-		inSmalltalk: [   ((objectMemory byteAt: followingAddress - 1) << 24)
-					+ ((objectMemory byteAt: followingAddress - 2) << 16)
-					+ ((objectMemory byteAt: followingAddress - 3) << 8)
-					+  (objectMemory byteAt: followingAddress - 4)]
+	^self unalignedLong32At: followingAddress - 4
 ]
 
 { #category : #disassembly }
@@ -3060,6 +3040,27 @@ CogX64Compiler >> twoByteInstructionSizeAt: pc [
 	op := objectMemory byteAt: pc + 1. 
 	^(op bitAnd: 16rF0) caseOf:
 		{	[16r80]	->	[6 "long conditional jumps"] }
+]
+
+{ #category : #'memory access' }
+CogX64Compiler >> unalignedLong32At: byteAddress [
+	<cmacro: '(inst,byteAddress) long32At(byteAddress)'>
+	^ ((objectMemory byteAt: byteAddress + 3) << 24)
+	+ ((objectMemory byteAt: byteAddress + 2) << 16)
+	+ ((objectMemory byteAt: byteAddress + 1) << 8)
+	+  (objectMemory byteAt: byteAddress)
+]
+
+{ #category : #'memory access' }
+CogX64Compiler >> unalignedLongAt: byteAddress [
+	<cmacro: '(byteAddress) longAt(byteAddress)'>
+	^objectMemory unalignedLongAt: byteAddress
+]
+
+{ #category : #'memory access' }
+CogX64Compiler >> unalignedLongAt: byteAddress put: aWord [
+	<cmacro: '(byteAddress,aWord) longAtput(byteAddress,aWord)'>
+	^objectMemory unalignedLongAt: byteAddress put: aWord
 ]
 
 { #category : #simulation }

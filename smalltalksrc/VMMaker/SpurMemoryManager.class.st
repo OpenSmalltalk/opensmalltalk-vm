@@ -1759,6 +1759,14 @@ SpurMemoryManager >> allocateLargestFreeChunk [
 	^freeChunk
 ]
 
+{ #category : #testing }
+SpurMemoryManager >> allocateMemoryOfSize: limit [
+	<doNotGenerate>
+	memory := (self endianness == #little
+					ifTrue: [LittleEndianBitmap]
+					ifFalse: [Bitmap]) new: limit // 4
+]
+
 { #category : #'spur bootstrap' }
 SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceBytes stackSize: stackBytes codeSize: codeBytes [
 	"Intialize the receiver for bootsraping an image.
@@ -2743,7 +2751,7 @@ SpurMemoryManager >> characterTable [
 { #category : #'object access' }
 SpurMemoryManager >> characterTag [
 	<api>
-	<cmacro: '() 2'>
+	<cmacro>
 	^2
 ]
 
@@ -3260,6 +3268,7 @@ SpurMemoryManager >> classIndexFieldWidth [
 { #category : #'header format' }
 SpurMemoryManager >> classIndexMask [
 	<api>
+	<cmacro>
 	"22-bit class mask => ~ 4M classes"
 	^16r3fffff
 ]
@@ -3365,6 +3374,7 @@ SpurMemoryManager >> classTableIndex: n [
 { #category : #'class table' }
 SpurMemoryManager >> classTableMajorIndexShift [
 	<api>
+	<cmacro>
 	"1024 entries per page (2^10); 22 bit classIndex implies 2^12 pages"
 	^10
 ]
@@ -4481,6 +4491,7 @@ SpurMemoryManager >> firstAccessibleObject [
 { #category : #'header formats' }
 SpurMemoryManager >> firstByteFormat [
 	<api>
+	<cmacro>
 	^16
 ]
 
@@ -4497,6 +4508,7 @@ SpurMemoryManager >> firstClassIndexPun [
 { #category : #'header formats' }
 SpurMemoryManager >> firstCompiledMethodFormat [
 	<api>
+	<cmacro>
 	^24
 ]
 
@@ -4545,6 +4557,7 @@ SpurMemoryManager >> firstIndexableField: objOop [
 { #category : #'header formats' }
 SpurMemoryManager >> firstLongFormat [
 	<api>
+	<cmacro>
 	^10
 ]
 
@@ -4572,6 +4585,7 @@ SpurMemoryManager >> firstSegmentSize: firstSegmentSize [
 { #category : #'header formats' }
 SpurMemoryManager >> firstShortFormat [
 	<api>
+	<cmacro>
 	^12
 ]
 
@@ -4607,6 +4621,7 @@ SpurMemoryManager >> fixFollowedField: fieldIndex ofObject: anObject withInitial
 { #category : #'object format' }
 SpurMemoryManager >> fixedFieldsFieldWidth [
 	<api>
+	<cmacro>
 	^16
 ]
 
@@ -4823,6 +4838,7 @@ SpurMemoryManager >> formatFieldWidthShift [
 { #category : #'header format' }
 SpurMemoryManager >> formatMask [
 	<api>
+	<cmacro>
 	"0 = 0 sized objects (UndefinedObject True False et al)
 	 1 = non-indexable objects with inst vars (Point et al)
 	 2 = indexable objects with no inst vars (Array et al)
@@ -4887,6 +4903,7 @@ SpurMemoryManager >> formatOfHeader: header [
 { #category : #'header format' }
 SpurMemoryManager >> formatShift [
 	<api>
+	<cmacro>
 	^24
 ]
 
@@ -5420,12 +5437,15 @@ SpurMemoryManager >> identityHashFieldWidth [
 
 { #category : #'header access' }
 SpurMemoryManager >> identityHashFullWordShift [
+	<api>
+	<cmacro>
 	^32
 ]
 
 { #category : #'header format' }
 SpurMemoryManager >> identityHashHalfWordMask [
 	<api>
+	<cmacro>
 	^16r3fffff
 ]
 
@@ -5619,6 +5639,7 @@ SpurMemoryManager >> incrementalGC [
 { #category : #'header formats' }
 SpurMemoryManager >> indexablePointersFormat [
 	<api>
+	<cmacro>
 	^3
 ]
 
@@ -6308,6 +6329,7 @@ SpurMemoryManager >> isForwardedObjectClassIndexPun [
 	 its instances tag pattern), and because it is a power of two, which
 	 allows us to generate a slightly slimmer test for isForwarded:."
 	<api>
+	<cmacro>
 	^8
 ]
 
@@ -8365,18 +8387,22 @@ SpurMemoryManager >> numSlotsForShortening: objOop toIndexableSize: indexableSiz
 
 { #category : #'header format' }
 SpurMemoryManager >> numSlotsFullShift [
+	<api>
+	<cmacro>
 	^56
 ]
 
 { #category : #'header format' }
 SpurMemoryManager >> numSlotsHalfShift [
 	<api>
+	<cmacro>
 	^24
 ]
 
 { #category : #'header format' }
 SpurMemoryManager >> numSlotsMask [
 	<api>
+	<cmacro>
 	"8-bit slot count
 		max 64-bit small obj size 254 * 8 =  2032 bytes
 		max 32-bit small obj size 254 * 4 =   1016 bytes"
@@ -9657,6 +9683,7 @@ SpurMemoryManager >> remapObj: objOop [
 { #category : #'header format' }
 SpurMemoryManager >> rememberedBitShift [
 	<api>
+	<cmacro>
 	"bit 0 of 3-bit field above format (little endian)"
 	^29
 ]
@@ -11614,6 +11641,7 @@ SpurMemoryManager >> weakArrayClassIndexPun [
 { #category : #'header formats' }
 SpurMemoryManager >> weakArrayFormat [
 	<api>
+	<cmacro>
 	^4
 ]
 

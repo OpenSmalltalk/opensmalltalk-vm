@@ -3190,13 +3190,13 @@ CogIA32Compiler >> twoByteInstructionSizeAt: pc [
 
 { #category : #'memory access' }
 CogIA32Compiler >> unalignedLongAt: byteAddress [
-	<cmacro: '(inst,byteAddress) longAt(byteAddress)'>
+	<cmacro: '(byteAddress) longAt(byteAddress)'>
 	^objectMemory unalignedLongAt: byteAddress
 ]
 
 { #category : #'memory access' }
 CogIA32Compiler >> unalignedLongAt: byteAddress put: aWord [
-	<cmacro: '(inst,byteAddress,aWord) longAtput(byteAddress,aWord)'>
+	<cmacro: '(byteAddress,aWord) longAtput(byteAddress,aWord)'>
 	^objectMemory unalignedLongAt: byteAddress put: aWord
 ]
 
