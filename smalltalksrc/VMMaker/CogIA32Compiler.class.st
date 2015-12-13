@@ -2523,25 +2523,19 @@ CogIA32Compiler >> genRestoreRegs [
 CogIA32Compiler >> genRestoreRegsExcept: abstractReg [
 	| realReg |
 	realReg := self concreteRegister: abstractReg.
-	realReg = EAX ifTrue: [cogit AddCq: 4 R: ESP] ifFalse: [cogit PopR: EAX].
-	realReg = EBX ifTrue: [cogit AddCq: 4 R: ESP] ifFalse: [cogit PopR: EBX].
-	realReg = ECX ifTrue: [cogit AddCq: 4 R: ESP] ifFalse: [cogit PopR: ECX].
-	realReg = EDX ifTrue: [cogit AddCq: 4 R: ESP] ifFalse: [cogit PopR: EDX].
-	realReg = ESI   ifTrue: [cogit AddCq: 4 R: ESP] ifFalse: [cogit PopR: ESI].
-	realReg = EDI   ifTrue: [cogit AddCq: 4 R: ESP] ifFalse: [cogit PopR: EDI].
+	self assert: (EDI > EAX and: [EDI - EAX + 1 = 6]).
+	EAX to: EDI do:
+		[:reg|
+		realReg = reg ifTrue: [cogit AddCq: 4 R: ESP] ifFalse: [cogit PopR: reg]].
 	^0
 ]
 
 { #category : #abi }
 CogIA32Compiler >> genSaveRegisters [
 	"Save the general purpose registers for a trampoline call."
-	cogit
-		PushR: EDI;
-		PushR: ESI;
-		PushR: EDX;
-		PushR: ECX;
-		PushR: EBX;
-		PushR: EAX.
+
+	self assert: (EDI > EAX and: [EDI - EAX + 1 = 6]).
+	EDI to: EAX by: -1 do: [:reg| cogit PushR: reg].
 	^0
 ]
 

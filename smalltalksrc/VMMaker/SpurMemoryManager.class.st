@@ -10324,6 +10324,8 @@ SpurMemoryManager >> signedMachineIntegerValueOf: oop [
 
 { #category : #'header formats' }
 SpurMemoryManager >> sixtyFourBitIndexableFormat [
+	<api>
+	<cmacro>
 	^9
 ]
 
