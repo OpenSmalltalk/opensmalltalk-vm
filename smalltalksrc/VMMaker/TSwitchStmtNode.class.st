@@ -203,7 +203,9 @@ TSwitchStmtNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 		crtab: level + 1.
 	otherwiseOrNil
 		ifNotNil:
-			[otherwiseOrNil emitCCodeOn: aStream level: level + 1 generator: aCodeGen]
+			[otherwiseOrNil emitCCodeOn: aStream level: level + 1 generator: aCodeGen.
+			(self stream: aStream endsWithAnyOf: '};') ifFalse:
+				[aStream nextPut: $;]]
 		ifNil: [aStream nextPutAll: 'error("Case not found and no otherwise clause");'].
 	aStream
 		crtab: level;
