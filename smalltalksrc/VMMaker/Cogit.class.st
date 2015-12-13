@@ -10914,7 +10914,7 @@ Cogit >> warnMultiple: cogMethod selectors: aSelectorOop [
 	self cCode:
 			[self fp: #stderr
 				r: 'Warning, attempt to use method with selector %.*s and selector %.*s\n'
-				i: (objectMemory numBytesOf: cogMethod selector)
+				i: (self cCoerceSimple: (objectMemory numBytesOf: cogMethod selector) to: #int)
 				n: (self cCoerceSimple: (objectMemory firstIndexableField: cogMethod selector) to: #'char *')
 				t: (objectMemory numBytesOf: aSelectorOop)
 				f: (self cCoerceSimple: (objectMemory firstIndexableField: aSelectorOop) to: #'char *')]
