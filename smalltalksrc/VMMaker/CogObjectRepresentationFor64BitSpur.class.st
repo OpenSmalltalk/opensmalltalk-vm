@@ -803,9 +803,11 @@ CogObjectRepresentationFor64BitSpur >> genJumpNotSmallFloatValueBits: reg scratc
 CogObjectRepresentationFor64BitSpur >> genJumpNotSmallInteger: reg scratchReg: scratch [
 	"Generate a compare and branch to test if aRegister contains other than a SmallInteger.
 	 Answer the jump.  Override since scratch is needed."
-	cogit AndCq: objectMemory tagMask R: reg R: scratch.
-	cogit CmpCq: objectMemory smallIntegerTag R: scratch.
-	^cogit JumpNonZero: 0
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit
+		AndCq: objectMemory tagMask R: reg R: scratch;
+		CmpCq: objectMemory smallIntegerTag R: scratch;
+		JumpNonZero: 0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -867,9 +869,11 @@ CogObjectRepresentationFor64BitSpur >> genJumpSmallFloatInScratchReg: aRegister 
 CogObjectRepresentationFor64BitSpur >> genJumpSmallInteger: reg scratchReg: scratch [
 	"Generate a compare and branch to test if aRegister contains a SmallInteger.
 	 Answer the jump.  Override since scratch is needed."
-	cogit AndCq: objectMemory tagMask R: reg R: scratch.
-	cogit CmpCq: objectMemory smallIntegerTag R: scratch.
-	^cogit JumpZero: 0
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit
+		AndCq: objectMemory tagMask R: reg R: scratch;
+		CmpCq: objectMemory smallIntegerTag R: scratch;
+		JumpZero: 0
 ]
 
 { #category : #'compile abstract instructions' }
