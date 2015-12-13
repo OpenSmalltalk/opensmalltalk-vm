@@ -714,7 +714,7 @@ Spur32BitMemoryManager >> numSmallIntegerTagBits [
 { #category : #'object access' }
 Spur32BitMemoryManager >> numTagBits [
 	<api>
-	<cmacro: '() 2'>
+	<cmacro>
 	^2
 ]
 
@@ -892,7 +892,7 @@ Spur32BitMemoryManager >> setIsRememberedOf: objOop to: aBoolean [
 { #category : #'word size' }
 Spur32BitMemoryManager >> shiftForWord [
 	<api>
-	<cmacro: '() 2'>
+	<cmacro>
 	^2
 ]
 
@@ -910,7 +910,7 @@ Spur32BitMemoryManager >> smallObjectBytesForSlots: numSlots [
 { #category : #'word size' }
 Spur32BitMemoryManager >> tagMask [
 	<api>
-	<cmacro: '() 3'>
+	<cmacro>
 	^3
 ]
 
@@ -924,7 +924,7 @@ Spur32BitMemoryManager >> wordSize [
 	"Answer the manager's word size, which is the size of an oop, and which
 	 is assumed to be equivalent to the underlying machine's word size."
 	<api>
-	<cmacro: '() 4'>
+	<cmacro>
 	^4
 ]
 

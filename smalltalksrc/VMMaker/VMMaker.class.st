@@ -360,6 +360,7 @@ VMMaker class >> generateAllSqueakConfigurationsUnderVersionControl [
 		generateSqueakSpurStackVM;
 		generateSqueakSpurStack64VM;
 		generateSqueakSpurCogVM;
+		generateSqueakSpurCog64VM;
 		generateSqueakSpurCogSistaVM
 ]
 
