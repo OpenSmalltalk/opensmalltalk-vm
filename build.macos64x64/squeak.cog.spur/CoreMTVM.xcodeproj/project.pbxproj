@@ -1652,7 +1652,7 @@
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
 				);
-				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 			};
 			name = Assert;
 		};
@@ -1807,7 +1807,7 @@
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
 				);
-				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 			};
 			name = Development;
 		};
@@ -1830,7 +1830,7 @@
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
 				);
-				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 			};
 			name = Deployment;
 		};
@@ -1851,7 +1851,7 @@
 					/Developer/Headers/FlatCarbon,
 					$SRCROOT,
 				);
-				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 			};
 			name = DeploymentSymbols;
 		};

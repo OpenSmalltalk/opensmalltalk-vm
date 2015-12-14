@@ -70,23 +70,23 @@ fi
 
 # Build the Float plugin
 echo
-echo FloatMathPlugin xcodebuild -project FloatMathPlugin/FloatMathPlugin.xcodeproj -configuration Release
-xcodebuild -project FloatMathPlugin/FloatMathPlugin.xcodeproj -configuration Release
+echo FloatMathPlugin xcodebuild -project FloatMathPlugin/FloatMathPlugin.xcodeproj -configuration $XCD_BUILD_CONFIGURATION
+xcodebuild -project FloatMathPlugin/FloatMathPlugin.xcodeproj -configuration $XCD_BUILD_CONFIGURATION
 rm -rf "$DEST/Contents/Resources/FloatMathPlugin.bundle"
 echo cp -Rp FloatMathPlugin/build/Release/FloatMathPlugin.bundle "$DEST/Contents/Resources"
 cp -Rp FloatMathPlugin/build/Release/FloatMathPlugin.bundle "$DEST/Contents/Resources"
 
 # Build the FloatArray plugin
 echo
-echo FloatArrayPlugin xcodebuild -project FloatArrayPlugin/FloatArrayPlugin.xcodeproj -configuration Release
-xcodebuild -project FloatArrayPlugin/FloatArrayPlugin.xcodeproj -configuration Release
+echo FloatArrayPlugin xcodebuild -project FloatArrayPlugin/FloatArrayPlugin.xcodeproj -configuration $XCD_BUILD_CONFIGURATION
+xcodebuild -project FloatArrayPlugin/FloatArrayPlugin.xcodeproj -configuration $XCD_BUILD_CONFIGURATION
 rm -rf "$DEST/Contents/Resources/FloatArrayPlugin.bundle"
 cp -Rp FloatArrayPlugin/build/Release/FloatArrayPlugin.bundle "$DEST/Contents/Resources"
 
 # Build the Croquet plugin
 echo
-echo CroquetPlugin xcodebuild -project CroquetPlugin/CroquetPlugin.xcodeproj -configuration Release
-xcodebuild -project CroquetPlugin/CroquetPlugin.xcodeproj -configuration Release
+echo CroquetPlugin xcodebuild -project CroquetPlugin/CroquetPlugin.xcodeproj -configuration $XCD_BUILD_CONFIGURATION
+xcodebuild -project CroquetPlugin/CroquetPlugin.xcodeproj -configuration $XCD_BUILD_CONFIGURATION
 rm -rf "$DEST/Contents/Resources/CroquetPlugin.bundle"
 cp -Rp CroquetPlugin/build/Release/CroquetPlugin.bundle "$DEST/Contents/Resources"
 
