@@ -6429,7 +6429,7 @@ StackInterpreter >> followForwardingPointersInScheduler [
 	self assert: (objectMemory isForwarded: schedAssoc) not.
 
 	"Make sure the active process has been followed."
-	self followForwardedObjectFields: schedAssoc toDepth: 1.
+	objectMemory followForwardedObjectFields: schedAssoc toDepth: 1.
 
 	sched := objectMemory fetchPointer: ValueIndex ofObject: schedAssoc.
 

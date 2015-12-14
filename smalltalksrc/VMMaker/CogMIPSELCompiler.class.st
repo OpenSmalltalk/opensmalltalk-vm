@@ -2579,9 +2579,9 @@ CogMIPSELCompiler >> rewriteConditionalJumpLongAt: callSiteReturnAddress target:
 
 { #category : #'inline cacheing' }
 CogMIPSELCompiler >> rewriteITypeBranchAtAddress: mcpc target: newTarget [
-	| newDisplacement oldInstruction newInstruction |	
-	newDisplacement := newTarget - (mcpc - 4). "Displacement relative to delay slot"
-	newDisplacement := newDisplacement >> 2.
+	| newDisplacement oldInstruction newInstruction |
+	newDisplacement := newTarget - (mcpc + 4). "Displacement is relative to delay slot."
+	newDisplacement := newDisplacement >> 2. "Displacement is in words."
 	
 	self assert: (newDisplacement between: -16r8000 and: 16r7FFF).
 	newDisplacement < 0
@@ -2637,6 +2637,46 @@ CogMIPSELCompiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag t
 	"cogit disassembleFrom: callSiteReturnAddress - 24 to: callSiteReturnAddress."
 
 	^24
+]
+
+{ #category : #'inline cacheing' }
+CogMIPSELCompiler >> rewriteInlineCacheTag: cacheTag at: callSiteReturnAddress [
+	"Rewrite an inline cache with a new tag.  This variant is used
+	 by the garbage collector."
+	
+	"MoveCwR ClassReg selectorIndex/expectedClass
+	 Call: unlinked send stub/expectedTarget
+	 Push ReceiverResult <-- callSiteReturnAddress"
+	
+	"lui s3, selector/tagHigh
+	 ori s3, s3, selector/tagLow
+	 lui t9, stub/targetHigh
+	 ori t9, t9, stub/targetLow
+	 jalr t9
+	 nop (delay slot)
+	 ...  <-- callSiteReturnAddress"
+	
+	<var: #callSiteReturnAddress type: #usqInt>
+	<var: #callTargetAddress type: #usqInt>
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 24) = LUI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 20) = ORI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 16) = LUI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 12) = ORI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 8) = SPECIAL.
+	self assert: (self functionAtAddress: callSiteReturnAddress - 8) = JALR.
+	self assert: (objectMemory longAt: callSiteReturnAddress - 4) = self nop.
+	"cogit disassembleFrom: callSiteReturnAddress - 24 to: callSiteReturnAddress."
+
+	self literalAtAddress: callSiteReturnAddress - 20 put: cacheTag.
+
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 24) = LUI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 20) = ORI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 16) = LUI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 12) = ORI.
+	self assert: (self opcodeAtAddress: callSiteReturnAddress - 8) = SPECIAL.
+	self assert: (self functionAtAddress: callSiteReturnAddress - 8) = JALR.
+	self assert: (objectMemory longAt: callSiteReturnAddress - 4) = self nop.
+	"cogit disassembleFrom: callSiteReturnAddress - 24 to: callSiteReturnAddress."
 ]
 
 { #category : #'inline cacheing' }
@@ -2839,17 +2879,25 @@ CogMIPSELCompiler >> stopsFrom: startAddr to: endAddr [
 { #category : #'inline cacheing' }
 CogMIPSELCompiler >> storeLiteral: literal beforeFollowingAddress: followingAddress [
 	"Rewrite the long constant loaded by a MoveCwR or PushCwR before the given address"
-	| lastOpcode lastFunction oriAddress |
 	self flag: #bogus. "The caller ought to know what it is patching, and this should be split into separate methods with stricter checking."
 	
-	lastOpcode := self opcodeAtAddress: followingAddress - 4.
-	lastFunction := self functionAtAddress: followingAddress - 4.
-	oriAddress := 0.
-	lastOpcode = ORI ifTrue: [oriAddress := followingAddress - 4].
-	lastOpcode = ADDIU ifTrue: [oriAddress := followingAddress - 16].
-	lastOpcode = SPECIAL ifTrue: [lastFunction = SUBU ifTrue: [oriAddress := followingAddress - 8]].
-	self assert: oriAddress ~= 0.
-	^self literalAtAddress: oriAddress put: literal
+	"Cmp/MoveCwR
+	 pc-8	lui rx, uper
+	 pc-4	ori rx, rx, lower"
+	(self opcodeAtAddress: followingAddress - 4) = ORI ifTrue:
+		[^self literalAtAddress: followingAddress - 4 put: literal].
+
+	"PushCw
+	 pc-16	lui at, upper
+	 pc-12	ori at, at, lower
+	 pc-8	addiu sp, sp, -4
+	 pc-4	sw at, 0(sp)"
+	((self opcodeAtAddress: followingAddress - 4) = SW and:
+		[(self opcodeAtAddress: followingAddress - 8) = ADDIU]) ifTrue:
+			[^self literalAtAddress: followingAddress - 12 put: literal].
+	
+	self unreachable.
+	^0
 ]
 
 { #category : #'encoding - arithmetic' }
