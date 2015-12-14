@@ -210,7 +210,7 @@
 				);
 				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
 				PRODUCT_NAME = UnixOSProcessPlugin;
-				USER_HEADER_SEARCH_PATHS = "/Developer/Headers/FlatCarbon \"$(SRCROOT)/../../../../../platforms/Mac OS/vm\" \"$(SRCROOT)/../../../vm\" \"$(SRCROOT)/../../vm\" \"$(SRCROOT)/../../../../Cross/vm\" \"$(SRCROOT)/../../../../Cross/plugins/FilePlugin\" \"$(SRCROOT)/../../../../Cross/plugins/SocketPlugin\" $(inherited)";
+				USER_HEADER_SEARCH_PATHS = "/Developer/Headers/FlatCocoa \"$(SRCROOT)/../../../../../platforms/Mac OS/vm\" \"$(SRCROOT)/../../../vm\" \"$(SRCROOT)/../../vm\" \"$(SRCROOT)/../../../../Cross/vm\" \"$(SRCROOT)/../../../../Cross/plugins/FilePlugin\" \"$(SRCROOT)/../../../../Cross/plugins/SocketPlugin\" $(inherited)";
 				WRAPPER_EXTENSION = bundle;
 				ZERO_LINK = YES;
 			};
@@ -238,7 +238,7 @@
 				);
 				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
 				PRODUCT_NAME = UnixOSProcessPlugin;
-				USER_HEADER_SEARCH_PATHS = "/Developer/Headers/FlatCarbon \"$(SRCROOT)/../../../../../platforms/Mac OS/vm\" \"$(SRCROOT)/../../../vm\" \"$(SRCROOT)/../../vm\" \"$(SRCROOT)/../../../../Cross/vm\" \"$(SRCROOT)/../../../../Cross/plugins/FilePlugin\" \"$(SRCROOT)/../../../../Cross/plugins/SocketPlugin\" $(inherited)";
+				USER_HEADER_SEARCH_PATHS = "/Developer/Headers/FlatCocoa \"$(SRCROOT)/../../../../../platforms/Mac OS/vm\" \"$(SRCROOT)/../../../vm\" \"$(SRCROOT)/../../vm\" \"$(SRCROOT)/../../../../Cross/vm\" \"$(SRCROOT)/../../../../Cross/plugins/FilePlugin\" \"$(SRCROOT)/../../../../Cross/plugins/SocketPlugin\" $(inherited)";
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
@@ -248,7 +248,6 @@
 			buildSettings = {
 				GCC_DEBUGGING_SYMBOLS = full;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_VERSION = 4.2;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
@@ -260,7 +259,6 @@
 		4FADC23908B4156C00ABE55E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				GCC_VERSION = 4.2;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PREBINDING = NO;

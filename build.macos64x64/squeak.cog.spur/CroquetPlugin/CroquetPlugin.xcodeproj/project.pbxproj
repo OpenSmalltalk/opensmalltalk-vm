@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		8D01CCCE0486CAD60068D4B7 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 08EA7FFBFE8413EDC02AAC07 /* Carbon.framework */; };
+		8D01CCCE0486CAD60068D4B7 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 08EA7FFBFE8413EDC02AAC07 /* Cocoa.framework */; };
 		A295BF4D11922528003C5973 /* CroquetPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = A295BF4C11922528003C5973 /* CroquetPlugin.c */; };
 		A295BF5711922556003C5973 /* TriBoxStub.c in Sources */ = {isa = PBXBuildFile; fileRef = A295BF5411922556003C5973 /* TriBoxStub.c */; };
 		A295BF7311922634003C5973 /* sqMacCroquet.c in Sources */ = {isa = PBXBuildFile; fileRef = A295BF7111922634003C5973 /* sqMacCroquet.c */; };
@@ -25,15 +25,15 @@
 /* End PBXBuildRule section */
 
 /* Begin PBXFileReference section */
-		08EA7FFBFE8413EDC02AAC07 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
+		08EA7FFBFE8413EDC02AAC07 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		8D01CCD10486CAD60068D4B7 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8D01CCD20486CAD60068D4B7 /* CroquetPlugin.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CroquetPlugin.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		A271C7DD0CEB874D0014AC5E /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spur64src/vm/interp.h; sourceTree = SOURCE_ROOT; };
 		A271C7DE0CEB878E0014AC5E /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
 		A271C7DF0CEB878E0014AC5E /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
-		A271C7E00CEB87BE0014AC5E /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = "../../../platforms/Mac OS/vm/config.h"; sourceTree = SOURCE_ROOT; };
-		A271C7E10CEB87BE0014AC5E /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqConfig.h; path = "../../../platforms/Mac OS/vm/sqConfig.h"; sourceTree = SOURCE_ROOT; };
-		A271C7E20CEB87BE0014AC5E /* sqPlatformSpecific.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqPlatformSpecific.h; path = "../../../platforms/Mac OS/vm/sqPlatformSpecific.h"; sourceTree = SOURCE_ROOT; };
+		A271C7E00CEB87BE0014AC5E /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = "../../../platforms/iOS/vm/OSX/config.h"; sourceTree = SOURCE_ROOT; };
+		A271C7E10CEB87BE0014AC5E /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqConfig.h; path = "../../../platforms/iOS/vm/OSX/sqConfig.h"; sourceTree = SOURCE_ROOT; };
+		A271C7E20CEB87BE0014AC5E /* sqPlatformSpecific.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqPlatformSpecific.h; path = "../../../platforms/iOS/vm/iPhone/sqPlatformSpecific.h"; sourceTree = SOURCE_ROOT; };
 		A295BF4C11922528003C5973 /* CroquetPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = CroquetPlugin.c; path = ../../../src/plugins/CroquetPlugin/CroquetPlugin.c; sourceTree = SOURCE_ROOT; };
 		A295BF4F11922556003C5973 /* CroquetPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CroquetPlugin.h; sourceTree = "<group>"; };
 		A295BF5311922556003C5973 /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = md5.h; sourceTree = "<group>"; };
@@ -47,7 +47,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8D01CCCE0486CAD60068D4B7 /* Carbon.framework in Frameworks */,
+				8D01CCCE0486CAD60068D4B7 /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -68,7 +68,7 @@
 		089C1671FE841209C02AAC07 /* External Frameworks and Libraries */ = {
 			isa = PBXGroup;
 			children = (
-				08EA7FFBFE8413EDC02AAC07 /* Carbon.framework */,
+				08EA7FFBFE8413EDC02AAC07 /* Cocoa.framework */,
 			);
 			name = "External Frameworks and Libraries";
 			sourceTree = "<group>";
@@ -123,7 +123,7 @@
 				A295BF7211922634003C5973 /* sqMacCroquet.h */,
 			);
 			name = CroquetPlugin;
-			path = "../../../platforms/Mac OS/plugins/CroquetPlugin";
+			path = "../../../platforms/iOS/plugins/CroquetPlugin";
 			sourceTree = SOURCE_ROOT;
 		};
 /* End PBXGroup section */
@@ -139,8 +139,6 @@
 			);
 			buildRules = (
 				A271C8F10CEB89280014AC5E /* PBXBuildRule */,
-			);
-			dependencies = (
 			);
 			name = CroquetPlugin;
 			productInstallPath = "$(HOME)/Library/Bundles";
@@ -197,8 +195,6 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = CroquetPlugin_Prefix.pch;
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				PRODUCT_NAME = CroquetPlugin;
@@ -214,8 +210,6 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_MODEL_TUNING = G4;
 				GCC_OPTIMIZATION_LEVEL = s;
-				GCC_PRECOMPILE_PREFIX_HEADER = NO;
-				GCC_PREFIX_HEADER = CroquetPlugin_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					_XOPEN_SOURCE,
 					HAVE_SYS_TIME_H,
@@ -263,14 +257,12 @@
 				GCC_OPTIMIZATION_LEVEL = s;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					HAVE_SYS_TIME_H,
-					TARGET_API_MAC_CARBON,
 					NO_ISNAN,
 				);
 				GCC_USE_GCC3_PFE_SUPPORT = NO;
-				GCC_VERSION = 4.2;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCarbon;
+				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCocoa;
 				ICC_FP_MODEL = source;
 				ICC_FP_SPECULATION = off;
 				ICC_OPTLEVEL = speedHLO;

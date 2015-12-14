@@ -210,7 +210,7 @@
 				);
 				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
 				PRODUCT_NAME = UnixOSProcessPlugin;
-				USER_HEADER_SEARCH_PATHS = "/Developer/Headers/FlatCarbon \"$(SRCROOT)/../../../../../platforms/Mac OS/vm\" \"$(SRCROOT)/../../../vm\" \"$(SRCROOT)/../../vm\" \"$(SRCROOT)/../../../../Cross/vm\" \"$(SRCROOT)/../../../../Cross/plugins/FilePlugin\" \"$(SRCROOT)/../../../../Cross/plugins/SocketPlugin\" $(inherited)";
+				USER_HEADER_SEARCH_PATHS = "/Developer/Headers/FlatCocoa \"$(SRCROOT)/../../../../../platforms/Mac OS/vm\" \"$(SRCROOT)/../../../vm\" \"$(SRCROOT)/../../vm\" \"$(SRCROOT)/../../../../Cross/vm\" \"$(SRCROOT)/../../../../Cross/plugins/FilePlugin\" \"$(SRCROOT)/../../../../Cross/plugins/SocketPlugin\" $(inherited)";
 				WRAPPER_EXTENSION = bundle;
 				ZERO_LINK = YES;
 			};
@@ -238,7 +238,7 @@
 				);
 				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
 				PRODUCT_NAME = UnixOSProcessPlugin;
-				USER_HEADER_SEARCH_PATHS = "/Developer/Headers/FlatCarbon \"$(SRCROOT)/../../../../../platforms/Mac OS/vm\" \"$(SRCROOT)/../../../vm\" \"$(SRCROOT)/../../vm\" \"$(SRCROOT)/../../../../Cross/vm\" \"$(SRCROOT)/../../../../Cross/plugins/FilePlugin\" \"$(SRCROOT)/../../../../Cross/plugins/SocketPlugin\" $(inherited)";
+				USER_HEADER_SEARCH_PATHS = "/Developer/Headers/FlatCocoa \"$(SRCROOT)/../../../../../platforms/Mac OS/vm\" \"$(SRCROOT)/../../../vm\" \"$(SRCROOT)/../../vm\" \"$(SRCROOT)/../../../../Cross/vm\" \"$(SRCROOT)/../../../../Cross/plugins/FilePlugin\" \"$(SRCROOT)/../../../../Cross/plugins/SocketPlugin\" $(inherited)";
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;

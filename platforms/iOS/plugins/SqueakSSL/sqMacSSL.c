@@ -13,7 +13,6 @@ typedef struct sqSSL {
 	char *certName;
 	char *peerName;
 
-	
 	SSLContextRef ctx;
 	CFArrayRef certs;
 
@@ -21,7 +20,7 @@ typedef struct sqSSL {
 	char *dataBuf;
 	int dataLen;
 	int dataMax;
-	
+
 	/* external data buffer */
 	char *outBuf;
 	int outLen;
@@ -66,7 +65,7 @@ OSStatus SqueakSSLWrite(SSLConnectionRef connection, const void *data,
 						size_t *dataLength) {
 	sqSSL *ssl = (sqSSL*) connection;
 	size_t sz = ssl->outMax - ssl->outLen;
-	
+
 	if(ssl->loglevel) 
 		printf("SqueakSSLWrite: Writing %d bytes, having %d free\n", 
 			   (int)*dataLength, (int)sz);
@@ -108,7 +107,7 @@ int sqSetupSSL(sqSSL *ssl, int isServer) {
 		if(ssl->loglevel) printf("SSLSetConnection failed: code = %d\n", (int)status);
 		return 0;
 	}
-	
+
 	/* Set up the read/write functions */
 	status = SSLSetIOFuncs(ssl->ctx,SqueakSSLRead, SqueakSSLWrite);
 	if(status) {
@@ -224,7 +223,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		ssl->dataBuf = realloc(ssl->dataBuf, ssl->dataMax);
 		if(!ssl->dataBuf) return SQSSL_OUT_OF_MEMORY;
 	}
-	if(ssl->loglevel) printf("sqConnectSSL: input token %d bytes\n", srcLen);
+	if(ssl->loglevel) printf("sqConnectSSL: input token %ld bytes\n", srcLen);
 	memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
 	ssl->dataLen += srcLen;
 
@@ -289,17 +288,17 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt 
 	ssl->outBuf = dstBuf;
 	ssl->outLen = 0;
 	ssl->outMax = dstLen;
-	
+
 	if(ssl->dataLen + srcLen > ssl->dataMax) {
 		/* resize the data buffer */
 		ssl->dataMax += (srcLen < 4096) ? (4096) : (srcLen+1024);
 		ssl->dataBuf = realloc(ssl->dataBuf, ssl->dataMax);
 		if(!ssl->dataBuf) return SQSSL_OUT_OF_MEMORY;
 	}
-	if(ssl->loglevel) printf("sqConnectSSL: input token %d bytes\n", srcLen);
+	if(ssl->loglevel) printf("sqConnectSSL: input token %ld bytes\n", srcLen);
 	memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
 	ssl->dataLen += srcLen;
-	
+
 	/* Establish initial connection */
 	if(ssl->state == SQSSL_UNUSED) {
 		ssl->state = SQSSL_ACCEPTING;
@@ -342,8 +341,8 @@ sqInt sqEncryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 	ssl->outBuf = dstBuf;
 	ssl->outLen = 0;
 	ssl->outMax = dstLen;
-	
-	if(ssl->loglevel) printf("sqEncryptSSL: Encrypting %d bytes\n", srcLen);
+
+	if(ssl->loglevel) printf("sqEncryptSSL: Encrypting %ld bytes\n", srcLen);
 
 	status = SSLWrite(ssl->ctx, srcBuf, srcLen, &nbytes);
 	if(nbytes != srcLen) return SQSSL_GENERIC_ERROR;
@@ -374,10 +373,10 @@ sqInt sqDecryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		ssl->dataBuf = realloc(ssl->dataBuf, ssl->dataMax);
 		if(!ssl->dataBuf) return SQSSL_OUT_OF_MEMORY;
 	}
-	if(ssl->loglevel) printf("sqDecryptSSL: Input data %d bytes\n", srcLen);
+	if(ssl->loglevel) printf("sqDecryptSSL: Input data %ld bytes\n", srcLen);
 	memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
 	ssl->dataLen += srcLen;
-	
+
 	if(ssl->loglevel) printf("sqDecryptSSL: Decrypting %d bytes\n", ssl->dataLen);
 
 	status = SSLRead(ssl->ctx, dstBuf, dstLen, &nbytes);
@@ -442,7 +441,7 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char *propName, sqInt pro
 		propID - the property id to retrieve
 	Returns: The integer value of the property.
 */
-int sqGetIntPropertySSL(sqInt handle, int propID) {
+sqInt sqGetIntPropertySSL(sqInt handle, sqInt propID) {
 	sqSSL *ssl = sslFromHandle(handle);
 
 	if(ssl == NULL) return 0;
@@ -452,7 +451,7 @@ int sqGetIntPropertySSL(sqInt handle, int propID) {
 		case SQSSL_PROP_VERSION: return 1;
 		case SQSSL_PROP_LOGLEVEL: return ssl->loglevel;
 		default:
-			if(ssl->loglevel) printf("sqGetIntPropertySSL: Unknown property ID %d\n", propID);
+			if(ssl->loglevel) printf("sqGetIntPropertySSL: Unknown property ID %ld\n", propID);
 			return 0;
 	}
 	return 0;
@@ -472,7 +471,7 @@ sqInt sqSetIntPropertySSL(sqInt handle, sqInt propID, sqInt propValue) {
 	switch(propID) {
 		case SQSSL_PROP_LOGLEVEL: ssl->loglevel = propValue; break;
 		default:
-			if(ssl->loglevel) printf("sqSetIntPropertySSL: Unknown property ID %d\n", propID);
+			if(ssl->loglevel) printf("sqSetIntPropertySSL: Unknown property ID %ld\n", propID);
 			return 0;
 	}
 	return 1;

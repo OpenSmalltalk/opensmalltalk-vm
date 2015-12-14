@@ -93,7 +93,7 @@ sqInt  integerValueOf(sqInt oop);
 sqInt  positive32BitIntegerFor(sqInt integerValue);
 usqInt  positive32BitValueOf(sqInt oop);
 sqInt  signed32BitIntegerFor(sqInt integerValue);
-sqInt  signed32BitValueOf(sqInt oop);
+int    signed32BitValueOf(sqInt oop);
 sqInt  positive64BitIntegerFor(sqLong integerValue);
 usqLong positive64BitValueOf(sqInt oop);
 sqInt  signed64BitIntegerFor(sqLong integerValue);

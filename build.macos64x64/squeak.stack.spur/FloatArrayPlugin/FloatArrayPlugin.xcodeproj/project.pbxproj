@@ -236,7 +236,7 @@
 				GCC_VERSION = 4.2;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCarbon;
+				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCocoa;
 				OTHER_CFLAGS = "$(OTHER_CFLAGS)";
 				PREBINDING = NO;
 				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;

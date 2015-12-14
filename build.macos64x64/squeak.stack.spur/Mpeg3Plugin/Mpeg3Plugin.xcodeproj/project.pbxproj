@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		949199FD098186FB000FC37A /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66DF6C8201D7DF7E00A80119 /* Carbon.framework */; };
+		949199FD098186FB000FC37A /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66DF6C8201D7DF7E00A80119 /* Cocoa.framework */; };
 		A2181C0E10814EC700B8FC7A /* dct.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BC910814EC700B8FC7A /* dct.c */; };
 		A2181C0F10814EC700B8FC7A /* header.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BCA10814EC700B8FC7A /* header.c */; };
 		A2181C1010814EC700B8FC7A /* layer1.c in Sources */ = {isa = PBXBuildFile; fileRef = A2181BCC10814EC700B8FC7A /* layer1.c */; };
@@ -41,7 +41,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		66DF6C8201D7DF7E00A80119 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
+		66DF6C8201D7DF7E00A80119 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		949199E209818612000FC37A /* Mpeg3Plugin.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Mpeg3Plugin.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2181BBF10814E0B00B8FC7A /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
 		A2181BC010814E0B00B8FC7A /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
@@ -110,7 +110,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				949199FD098186FB000FC37A /* Carbon.framework in Frameworks */,
+				949199FD098186FB000FC37A /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -122,7 +122,7 @@
 			children = (
 				66DF6BFF01D7DCEA00A80119 /* Sources */,
 				66DF6C3901D7DCEA00A80119 /* resources */,
-				66DF6C8201D7DF7E00A80119 /* Carbon.framework */,
+				66DF6C8201D7DF7E00A80119 /* Cocoa.framework */,
 				66DF6C4501D7DEEE00A80119 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -361,18 +361,12 @@
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_MODEL_TUNING = "";
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PRECOMPILE_PREFIX_HEADER = NO;
-				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
-				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCarbon;
+				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCocoa;
 				INFOPLIST_FILE = "Mpeg3Plugin-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				OTHER_CFLAGS = (
 					"-fPIC",
 					"-DNOPTHREADS",
-				);
-				OTHER_LDFLAGS = (
-					"-framework",
-					Carbon,
 				);
 				PKGINFO_FILE_CONTENTS = BNDLFAST;
 				PREBINDING = NO;
@@ -391,17 +385,11 @@
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
-				GCC_PRECOMPILE_PREFIX_HEADER = NO;
-				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
 				GCC_UNROLL_LOOPS = YES;
-				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCarbon;
+				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCocoa;
 				INFOPLIST_FILE = "Mpeg3Plugin-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				OTHER_CFLAGS = "-DNOPTHREADS";
-				OTHER_LDFLAGS = (
-					"-framework",
-					Carbon,
-				);
 				PREBINDING = NO;
 				PRODUCT_NAME = Mpeg3Plugin;
 				USER_HEADER_SEARCH_PATHS = "../../../platforms/Cross/plugins/Mpeg3Plugin/libmpeg/**";
@@ -413,14 +401,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_PRECOMPILE_PREFIX_HEADER = NO;
-				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
 				INFOPLIST_FILE = "Mpeg3Plugin-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
-				OTHER_LDFLAGS = (
-					"-framework",
-					Carbon,
-				);
 				PREBINDING = NO;
 				PRODUCT_NAME = Mpeg3Plugin;
 				WRAPPER_EXTENSION = bundle;

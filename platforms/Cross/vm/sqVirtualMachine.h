@@ -191,7 +191,7 @@ typedef struct VirtualMachine {
 
 	sqInt (*classLargeNegativeInteger)(void);
 	sqInt (*signed32BitIntegerFor)(sqInt integerValue);
-	sqInt (*signed32BitValueOf)(sqInt oop);
+	int   (*signed32BitValueOf)(sqInt oop);
 	sqInt (*includesBehaviorThatOf)(sqInt aClass, sqInt aSuperClass);
 	sqInt (*primitiveMethod)(void);
 
