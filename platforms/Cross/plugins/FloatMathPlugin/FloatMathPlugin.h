@@ -3,7 +3,7 @@
 
 /* #define NO_ISNAN -- do NOT define this by default but in command line*/
 
-#ifndef NO_ISNAN
+#if !defined(NO_ISNAN) && !defined(isnan)
 /* by default we use fdlibm's isnan() */
 extern int isnan(double);
 #endif
