@@ -38,14 +38,14 @@
 #elif SENDTRACE /* send tracing.  */
 # define sendBreakpointreceiver(sel, len, rcvr) do { \
 	if (sendTrace) \
-		printf("%.*s\n", len, (char *)(sel)); \
+		printf("%.*s\n", (int)(len), (char *)(sel)); \
 } while (0)
 # define mnuBreakpointreceiver(sel, len, rcvr) 0
 
 #elif 0 /* send trace/byte count.  */
 # define sendBreakpointreceiver(sel, len, rcvr) do { \
 	if (sendTrace) \
-		printf("%u %.*s\n", GIV(byteCount), len, (char *)(sel)); \
+		printf("%u %.*s\n", GIV(byteCount), (int)(len), (char *)(sel)); \
 } while (0)
 # define mnuBreakpointreceiver(sel, len, rcvr) 0
 
@@ -57,7 +57,7 @@
 		if (0) sendTrace = 1; \
 	} \
 	if (sendTrace) \
-		printf("%.*s\n", len, (char *)(sel)); \
+		printf("%.*s\n", (int)(len), (char *)(sel)); \
 } while (0)
 # define mnuBreakpointreceiver(sel, len, rcvr) do { \
 	if ((len) == -breakSelectorLength \
