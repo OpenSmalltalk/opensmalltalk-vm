@@ -1270,6 +1270,7 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 SimpleStackBasedCogit >> compileOpenPICMethodCacheProbeFor: selector withShift: shift baseRegOrNone: baseRegOrNone [
 	"Compile one method cache probe in an OpenPIC's lookup of selector.  Answer the jump taken if the selector probe fails."
 	<returnTypeC: #'AbstractInstruction *'>
+	<inline: false>
 	| jumpSelectorMiss |
 	<var: 'jumpSelectorMiss' type: #'AbstractInstruction *'>
 	self MoveR: SendNumArgsReg R: ClassReg.
