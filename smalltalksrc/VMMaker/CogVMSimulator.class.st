@@ -1408,10 +1408,8 @@ CogVMSimulator >> initialize [
 	cogThreadManager ifNotNil:
 		[super initialize].
 
-	"Note: we must initialize ConstMinusOne & HasBeenReturnedFromMCPC differently
-	 for simulation, due to the fact that the simulator works only with +ve 32-bit values"
-	ConstMinusOne := objectMemory integerObjectOf: -1.
-	HasBeenReturnedFromMCPC := objectMemory integerObjectOf: -1.
+	self assert: ConstMinusOne = (objectMemory integerObjectOf: -1).
+
 	cogMethodZone := cogit methodZone. "Because Slang can't remove intermediate implicit receivers (cogit methodZone foo doesn't reduce to foo())"
 	enableCog := true.
 

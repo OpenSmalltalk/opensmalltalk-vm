@@ -189,7 +189,7 @@ CogInLineLiteralsX64Compiler >> getDefaultCogCodeSize [
 { #category : #'inline cacheing' }
 CogInLineLiteralsX64Compiler >> inlineCacheTagAt: callSiteReturnAddress [
 	"Answer the inline cache tag for the return address of a send."
-	^self thirtyTwoBitLiteralBefore: callSiteReturnAddress - 5
+	^self literal32BeforeFollowingAddress: callSiteReturnAddress - 5
 ]
 
 { #category : #testing }

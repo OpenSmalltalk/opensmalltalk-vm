@@ -44,6 +44,7 @@ Class {
 		'CSWait',
 		'CSYield',
 		'HasBeenReturnedFromMCPC',
+		'HasBeenReturnedFromMCPCOop',
 		'MFMethodFlagFrameIsMarkedFlag',
 		'MinBackwardJumpCountForCompile',
 		'PrimTraceLogSize',
@@ -151,7 +152,8 @@ CoInterpreter class >> hasCogit [
 CoInterpreter class >> initializeContextIndices [
 	super initializeContextIndices.
 
-	HasBeenReturnedFromMCPC := self objectMemoryClass basicNew integerObjectOf: -1
+	HasBeenReturnedFromMCPC := -1.
+	HasBeenReturnedFromMCPCOop := self objectMemoryClass basicNew integerObjectOf: HasBeenReturnedFromMCPC
 ]
 
 { #category : #initialization }
@@ -1167,9 +1169,8 @@ CoInterpreter >> ceBaseFrameReturn: returnValue [
 	"self assert: (self frameCallerContext: stackPage baseFP) = (stackPages longAt: stackPage baseAddress)."
 	self assert: ((objectMemory addressCouldBeObj: (stackPages longAt: stackPage baseAddress - objectMemory wordSize))
 				and: [objectMemory isContext: (stackPages longAt: stackPage baseAddress - objectMemory wordSize)]).
-	self assert: ((objectMemory addressCouldBeObj: (stackPages longAt: stackPage baseAddress))
-				and: [objectMemory isContext: (stackPages longAt: stackPage baseAddress)]).
 	contextToReturnTo := stackPages longAt: stackPage baseAddress.
+	self assert: (objectMemory addressCouldBeObj: contextToReturnTo).
 
 	"The stack page is effectively free now, so free it.  We must free it to be
 	 correct in determining if contextToReturnTo is still married, and in case
@@ -2868,7 +2869,7 @@ CoInterpreter >> encodedNativePCOf: mcpc cogMethod: cogMethod [
 	| homeMethod blockOffset |
 	<var: #homeMethod type: #'CogMethod *'>
 	mcpc = cogit ceCannotResumePC ifTrue:
-		[^HasBeenReturnedFromMCPC].
+		[^HasBeenReturnedFromMCPCOop].
 	cogMethod cmType = CMMethod ifTrue:
 		[^objectMemory integerObjectOf: cogMethod asInteger - mcpc].
 	homeMethod := cogMethod cmHomeMethod.
@@ -4623,7 +4624,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	self assert: (self isSingleContext: aContext).
 	self assert: (objectMemory goodContextSize: aContext).
 	theIP := objectMemory fetchPointer: InstructionPointerIndex ofObject: aContext.
-	self assert: HasBeenReturnedFromMCPC signedIntFromLong < 0.
+	self assert: HasBeenReturnedFromMCPC < 0.
 	theIP := (objectMemory isIntegerObject: theIP)
 				ifTrue: [objectMemory integerValueOf: theIP]
 				ifFalse: [HasBeenReturnedFromMCPC].
@@ -4639,7 +4640,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 		put: aContext.
 	rcvr := objectMemory followField: ReceiverIndex ofObject: aContext.
 	"If the frame is a closure activation then the closure should be on the stack in
-	 the pushed receiver position (closures receiver the value[:value:] messages).
+	 the pushed receiver position (closures receive the value[:value:] messages).
 	 Otherwise it should be the receiver proper."
 	maybeClosure := objectMemory fetchPointer: ClosureIndex ofObject: aContext.
 	maybeClosure ~= objectMemory nilObject
@@ -4655,9 +4656,8 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 			 header := objectMemory methodHeaderOf: theMethod.
 			 numArgs := self argumentCountOfMethodHeader: header.
 			 "If this is a synthetic context its IP could be pointing at the CallPrimitive opcode.  If so, skip it."
-			 (theIP signedIntFromLong > 0
-			  and: [(self methodHeaderHasPrimitive: header)
-			  and: [theIP = (1 + (objectMemory lastPointerOfMethodHeader: header))]]) ifTrue:
+			 ((self methodHeaderHasPrimitive: header)
+			  and: [theIP = (1 + (objectMemory lastPointerOfMethodHeader: header))]) ifTrue:
 				[theIP := theIP + (self sizeOfCallPrimitiveBytecode: header)].
 			 stackPages
 				longAt: (pointer := pointer - objectMemory wordSize)
@@ -4685,7 +4685,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	 it is a machine code pc and so we produce a machine code frame.  If +ve an interpreter frame.
 	 N.B. Do *not* change this to try and map from a bytecode pc to a machine code frame under
 	 any circumstances.  See ensureContextIsExecutionSafeAfterAssignToStackPointer:"
-	theIP signedIntFromLong < 0
+	theIP < 0
 		ifTrue:
 			[| cogMethod |
 			 "Since we would have to generate a machine-code method to be able to map
@@ -4696,7 +4696,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 				ifTrue:
 					["If the pc is the special HasBeenReturnedFromMCPC pc set the pc
 					  appropriately so that the frame stays in the cannotReturn: state."
-					 theIP = HasBeenReturnedFromMCPC signedIntFromLong
+					 theIP = HasBeenReturnedFromMCPC
 						ifTrue:
 							[theMethod := (cogit findMethodForStartBcpc: (self startPCOfClosure: maybeClosure)
 												inHomeMethod: (self cCoerceSimple: theMethod
@@ -4715,7 +4715,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 					[self assert: (theIP signedBitShift: -16) >= -1.
 					 "If the pc is the special HasBeenReturnedFromMCPC pc set the pc
 					  appropriately so that the frame stays in the cannotReturn: state."
-					 theIP := theIP = HasBeenReturnedFromMCPC signedIntFromLong
+					 theIP := theIP = HasBeenReturnedFromMCPC
 								ifTrue: [cogit ceCannotResumePC]
 								ifFalse: [theMethod asInteger - theIP].
 					 stackPages
@@ -5539,7 +5539,7 @@ CoInterpreter >> mustMapMachineCodePC: theIP context: aOnceMarriedContext [
 	| maybeClosure methodObj cogMethod startBcpc bcpc |
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
-	theIP = HasBeenReturnedFromMCPC signedIntFromLong ifTrue:
+	theIP = HasBeenReturnedFromMCPC ifTrue:
 		[^objectMemory nilObject].
 	maybeClosure := objectMemory fetchPointer: ClosureIndex ofObject: aOnceMarriedContext.
 	methodObj := objectMemory fetchPointer: MethodIndex ofObject: aOnceMarriedContext.
@@ -6984,8 +6984,9 @@ CoInterpreter >> tearDownAndRebuildFrameForCannotReturnBaseFrameReturnFrom: cont
 	self assert: (stackPage ~= 0 and: [stackPage isFree]).
 	self isWidowedContext: contextToReturnFrom.
 	self assert: (self isMarriedOrWidowedContext: contextToReturnFrom) not.
-	objectMemory storePointer: SenderIndex ofObject: contextToReturnFrom withValue: contextToReturnTo.
-	objectMemory storePointer: InstructionPointerIndex ofObject: contextToReturnFrom withValue: HasBeenReturnedFromMCPC.
+	objectMemory
+		storePointer: SenderIndex ofObject: contextToReturnFrom withValue: contextToReturnTo;
+		storePointer: InstructionPointerIndex ofObject: contextToReturnFrom withValue: HasBeenReturnedFromMCPCOop.
 	"void the instructionPointer to stop it being incorrectly updated in a code
 	 compaction in makeBaseFrameFor:."
 	instructionPointer := 0.
@@ -7000,7 +7001,6 @@ CoInterpreter >> tearDownAndRebuildFrameForCannotReturnBaseFrameReturnFrom: cont
 	self stackTopPut: returnValue.
 	"Assign it to instructionPointer as externalCannotReturn:from: pushes it."
 	instructionPointer := cogit ceCannotResumePC
-
 ]
 
 { #category : #'internal interpreter access' }

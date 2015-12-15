@@ -781,9 +781,7 @@ StackInterpreterSimulator >> initialize [
 		[objectMemory := self class objectMemoryClass simulatorClass new].
 	objectMemory coInterpreter: self.
 
-	"Note: we must initialize ConstMinusOne differently for simulation,
-		due to the fact that the simulator works only with +ve 32-bit values"
-	ConstMinusOne := objectMemory integerObjectOf: -1.
+	self assert: ConstMinusOne = (objectMemory integerObjectOf: -1).
 
 	methodCache := Array new: MethodCacheSize.
 	nsMethodCache := Array new: NSMethodCacheSize.

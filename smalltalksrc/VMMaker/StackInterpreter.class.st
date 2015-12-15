@@ -2034,6 +2034,16 @@ StackInterpreter >> allAccessibleObjectsOkay [
 	^ok
 ]
 
+{ #category : #'stack pages' }
+StackInterpreter >> allOnesAsCharStar [
+	<inline: true>
+	^(self
+		cCoerceSimple: (objectMemory wordSize = 8
+								ifTrue: [-1 signedIntToLong64]
+								ifFalse: [-1 signedIntToLong])
+		to: #'char *')
+]
+
 { #category : #'image save/restore' }
 StackInterpreter >> allocateMemory: heapSize minimum: minimumMemory imageFile: fileStream headerSize: headerSize [
 	"Translate to C function call with (case sensitive) camelCase. The purpose of this
@@ -2163,10 +2173,10 @@ StackInterpreter >> assertValidStackLimits: ln [
 	"Order in the stackLimit checks is important because stackLimit is smashed by
 	 interrupts. So always check for unsmashed value first to avoid race condition."
 	self assert: (stackLimit = stackPage realStackLimit
-				or: [stackLimit = (self cCoerceSimple: -1 signedIntToLong to: #'char *')])
+				or: [stackLimit = self allOnesAsCharStar])
 		l: ln.
 	self assert: (stackPage stackLimit = stackPage realStackLimit
-				or: [stackPage stackLimit = (self cCoerceSimple: -1 signedIntToLong to: #'char *')])
+				or: [stackPage stackLimit = self allOnesAsCharStar])
 		l: ln
 ]
 
@@ -6581,8 +6591,8 @@ StackInterpreter >> forceInterruptCheck [
 		[^nil].
 	thePage := stackPage.
 	(thePage notNil and: [thePage ~= 0]) ifTrue:
-		[thePage stackLimit: (self cCoerceSimple: -1 signedIntToLong to: #'char *')].
-	stackLimit := self cCoerceSimple: -1 signedIntToLong to: #'char *'.
+		[thePage stackLimit: self allOnesAsCharStar].
+	stackLimit := self allOnesAsCharStar.
 	self sqLowLevelMFence.
 	"There is a race condition if we test the function and then dereference
 	 it a second time to call it.  This is called from interrupt code but at the
@@ -9099,7 +9109,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	theIP := objectMemory integerValueOf: theIP.
 	rcvr := objectMemory followField: ReceiverIndex ofObject: aContext.
 	"If the frame is a closure activation then the closure should be on the stack in
-	 the pushed receiver position (closures receiver the value[:value:] messages).
+	 the pushed receiver position (closures receive the value[:value:] messages).
 	 Otherwise it should be the receiver proper."
 	maybeClosure := objectMemory fetchPointer: ClosureIndex ofObject: aContext.
 	maybeClosure ~= objectMemory nilObject
@@ -9113,9 +9123,8 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 			 header := objectMemory methodHeaderOf: theMethod.
 			 numArgs := self argumentCountOfMethodHeader: header.
 			 "If this is a synthetic context its IP could be pointing at the CallPrimitive opcode.  If so, skip it."
-			 (theIP signedIntFromLong > 0
-			  and: [(self methodHeaderHasPrimitive: header)
-			  and: [theIP = (1 + (objectMemory lastPointerOfMethodHeader: header))]]) ifTrue:
+			 ((self methodHeaderHasPrimitive: header)
+			  and: [theIP = (1 + (objectMemory lastPointerOfMethodHeader: header))]) ifTrue:
 				[theIP := theIP + (self sizeOfCallPrimitiveBytecode: header)].
 			 stackPages longAt: pointer put: rcvr].
 	"Put the arguments on the stack"
@@ -13166,7 +13175,7 @@ StackInterpreter >> setStackPageAndLimit: thePage [
 	<var: #thePage type: #'StackPage *'>
 	self assert: thePage ~= 0.
 	stackPage := thePage.
-	stackLimit ~= (self cCoerceSimple: -1 signedIntToLong to: #'char *') ifTrue:
+	stackLimit ~= self allOnesAsCharStar ifTrue:
 		[stackLimit := stackPage stackLimit].
 	stackPages markStackPageMostRecentlyUsed: thePage
 ]
