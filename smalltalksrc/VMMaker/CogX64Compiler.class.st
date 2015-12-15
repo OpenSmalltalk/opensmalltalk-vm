@@ -278,7 +278,7 @@ CogX64Compiler >> callInstructionByteSize [
 CogX64Compiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 	"Answer the address the call immediately preceding callSiteReturnAddress will jump to."
 	| callDistance |
-	callDistance := self thirtyTwoBitLiteralBefore: callSiteReturnAddress.
+	callDistance := self literal32BeforeFollowingAddress: callSiteReturnAddress.
 	^callSiteReturnAddress + callDistance signedIntFromLong
 ]
 
@@ -2863,7 +2863,7 @@ CogX64Compiler >> rewriteCallAt: callSiteReturnAddress target: callTargetAddress
 		byteAt: callSiteReturnAddress - 2 put: (callDistance >> 16 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 3 put: (callDistance >>   8 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 4 put: (callDistance            bitAnd: 16rFF).
-	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
+	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) = callTargetAddress.
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
 	^5
@@ -3055,12 +3055,6 @@ CogX64Compiler >> storeLiteral32: literal beforeFollowingAddress: followingAddre
 		byteAt: followingAddress - 2 put: (literal >> 16 bitAnd: 16rFF);
 		byteAt: followingAddress - 3 put: (literal >>   8 bitAnd: 16rFF);
 		byteAt: followingAddress - 4 put: (literal            bitAnd: 16rFF)
-]
-
-{ #category : #'inline cacheing' }
-CogX64Compiler >> thirtyTwoBitLiteralBefore: followingAddress [
-	<inline: true>
-	^self unalignedLong32At: followingAddress - 4
 ]
 
 { #category : #disassembly }

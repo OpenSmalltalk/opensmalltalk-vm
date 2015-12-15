@@ -2509,13 +2509,10 @@ CogIA32Compiler >> genRemoveNArgsFromStack: n [
 
 { #category : #abi }
 CogIA32Compiler >> genRestoreRegs [
-	cogit
-		PopR: EAX;
-		PopR: EBX;
-		PopR: ECX;
-		PopR: EDX;
-		PopR: ESI;
-		PopR: EDI.
+	EAX to: EDI do:
+		[:reg|
+		 (reg between: ESP and: EBP) ifFalse:
+			[cogit PopR: reg]].
 	^0
 ]
 
@@ -2534,8 +2531,11 @@ CogIA32Compiler >> genRestoreRegsExcept: abstractReg [
 CogIA32Compiler >> genSaveRegisters [
 	"Save the general purpose registers for a trampoline call."
 
-	self assert: (EDI > EAX and: [EDI - EAX + 1 = 6]).
-	EDI to: EAX by: -1 do: [:reg| cogit PushR: reg].
+	self assert: (EDI > EAX and: [EDI - EAX + 1 = 8]).
+	EDI to: EAX by: -1 do:
+		[:reg|
+		 (reg between: ESP and: EBP) ifFalse:
+			[cogit PushR: reg]].
 	^0
 ]
 
@@ -2966,7 +2966,7 @@ CogIA32Compiler >> rewriteCallAt: callSiteReturnAddress target: callTargetAddres
 		byteAt: callSiteReturnAddress - 2 put: (callDistance >> 16 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 3 put: (callDistance >>   8 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 4 put: (callDistance            bitAnd: 16rFF).
-	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) signedIntToLong = callTargetAddress.
+	self assert: (self callTargetFromReturnAddress: callSiteReturnAddress) = callTargetAddress.
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
 	^5
