@@ -5733,7 +5733,7 @@ SpurMemoryManager >> initialize [
 
 	"N.B. We *don't* initialize extraRoots because we don't simulate it."
 
-	maxOldSpaceSize := self class initializationOptions at: #maxOldSpaceSize ifAbsent: [0]
+	maxOldSpaceSize := self class initializationOptions ifNotNil: [:initOpts| initOpts at: #maxOldSpaceSize ifAbsent: [0]]
 ]
 
 { #category : #snapshot }

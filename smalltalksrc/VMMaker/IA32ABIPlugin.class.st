@@ -873,7 +873,9 @@ IA32ABIPlugin >> primSizeField [
 	<export: true>
 
 	rcvr := interpreterProxy stackValue: 0.
-	value := (self longAt: rcvr + interpreterProxy baseHeaderSize) signedIntFromLong.
+	value := self cppIf: interpreterProxy bytesPerOop = 8
+				ifTrue: [(self longAt: rcvr + interpreterProxy baseHeaderSize) signedIntFromLong64]
+				ifFalse: [(self longAt: rcvr + interpreterProxy baseHeaderSize) signedIntFromLong].
 	valueOop := self signedMachineIntegerFor: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
@@ -891,7 +893,9 @@ IA32ABIPlugin >> primSizeFieldPut [
 	value := interpreterProxy signedMachineIntegerValueOf: valueOop.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	self longAt: rcvr + interpreterProxy baseHeaderSize put: value signedIntToLong.
+	(self cppIf: interpreterProxy bytesPerOop = 8
+		ifTrue: [self longAt: rcvr + interpreterProxy baseHeaderSize put: value signedIntToLong64]
+		ifFalse: [self longAt: rcvr + interpreterProxy baseHeaderSize put: value signedIntToLong]).
 	^interpreterProxy methodReturnValue: valueOop
 ]
 
