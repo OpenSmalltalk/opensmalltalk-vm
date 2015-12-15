@@ -8541,9 +8541,8 @@ Cogit >> methodLabel [
 	^methodLabel
 ]
 
-{ #category : #'simulation only' }
+{ #category : #accessing }
 Cogit >> methodZone [
-	<doNotGenerate>
 	^methodZone
 ]
 
