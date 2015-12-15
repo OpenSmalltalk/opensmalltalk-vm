@@ -2651,6 +2651,15 @@ CogX64Compiler >> isSignExtendedFourByteValue: unsigned64BitValue [
 			inSmalltalk: [(unsigned64BitValue >> 32) signedIntFromLong]) + 1 bitXor: 1) = (unsigned64BitValue >> 31 bitAnd: 1)
 ]
 
+{ #category : #testing }
+CogX64Compiler >> isWithinMwOffsetRange: address [
+	"Answer if an address can be accessed using the offset in a MoveMw:r:R: or similar instruction.
+	 We assume this is true for 32-bit processors and expect 64-bit processors to answer false
+	 for values in the interpreter or the object memory."
+
+	^address asUnsignedInteger < cogit methodZone zoneEnd
+]
+
 { #category : #accessing }
 CogX64Compiler >> jmpTarget: anAbstractInstruction [
 	"Set the target of a jump instruction.  These all have the target in the first operand.
