@@ -29,12 +29,12 @@ if [ -n "$H" -o -z "$D$A$F$DT$AT$FT" ]; then
 	exit 1
 fi
 trap 'exit 2' HUP INT PIPE TERM
-test -n "$D" && (makeiosvm $C -d 2>&1 | tee $D;grep "BUILD .*ED" $D)
-test -n "$A" && (makeiosvm $C -a 2>&1 | tee $A;grep "BUILD .*ED" $A)
-test -n "$F" && (makeiosvm $C -s 2>&1 | tee $F;grep "BUILD .*ED" $F)
-test -n "$DT" && (makeiosvm $C -md 2>&1 | tee $DT;grep "BUILD .*ED" $DT)
-test -n "$AT" && (makeiosvm $C -ma 2>&1 | tee $AT;grep "BUILD .*ED" $AT)
-test -n "$FT" && (makeiosvm $C -ms 2>&1 | tee $FT;grep "BUILD .*ED" $FT)
+test -n "$D" && (./makeiosvm $C -d 2>&1 | tee $D;grep "BUILD .*ED" $D)
+test -n "$A" && (./makeiosvm $C -a 2>&1 | tee $A;grep "BUILD .*ED" $A)
+test -n "$F" && (./makeiosvm $C -s 2>&1 | tee $F;grep "BUILD .*ED" $F)
+test -n "$DT" && (./makeiosvm $C -md 2>&1 | tee $DT;grep "BUILD .*ED" $DT)
+test -n "$AT" && (./makeiosvm $C -ma 2>&1 | tee $AT;grep "BUILD .*ED" $AT)
+test -n "$FT" && (./makeiosvm $C -ms 2>&1 | tee $FT;grep "BUILD .*ED" $FT)
 
 test -n "$D" && (echo $D;grep "BUILD .*ED" $D)
 test -n "$A" && (echo $A;grep "BUILD .*ED" $A)
