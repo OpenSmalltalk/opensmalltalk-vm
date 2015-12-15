@@ -1053,6 +1053,16 @@ CurrentImageCoInterpreterFacade >> trueObject [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> unalignedLongAt: anInteger [
+	^objectMemory unalignedLongAt: anInteger
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> unalignedLongAt: anInteger put: value [
+	^objectMemory unalignedLongAt: anInteger put: value
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> varBaseAddress [
 	"This value is chosen for ARM, which has the ability to do 12-bit relative addresses from the var base register."
 	^(variables at: 'stackLimit') - (1 << 11)
