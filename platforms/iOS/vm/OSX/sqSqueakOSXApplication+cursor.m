@@ -98,8 +98,7 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 	
 	
 	NSPoint hotSpot= { -offsetX, -offsetY };
-	self.squeakCursor = nil;
-	squeakCursor = [[NSCursor alloc] initWithImage: image hotSpot: hotSpot];
+	self.squeakCursor = AUTORELEASEOBJ([[NSCursor alloc] initWithImage: image hotSpot: hotSpot]);
 
 /*	if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode())
 		browserSetCursor(&macCursor);
@@ -108,10 +107,13 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 	
 	
 	if (!gSqueakHeadless || browserActiveAndDrawingContextOkAndInFullScreenMode()) {
-		self.squeakHasCursor = YES;
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self.squeakCursor set];
-        });
+            if ([NSThread isMainThread]) {
+                [self.squeakCursor set];
+            } else {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [self.squeakCursor set];
+                });
+            }
 	}
 	}
 }
@@ -147,13 +149,15 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 	NSImage  *image= AUTORELEASEOBJ([[NSImage alloc] init]);
 	[image addRepresentation: bitmap];
 	NSPoint hotSpot= { -offsetX, -offsetY };
-	self.squeakHasCursor = YES;
-	self.squeakCursor = nil;
-	squeakCursor= [[NSCursor alloc] initWithImage: image hotSpot: hotSpot];
-        dispatch_async(dispatch_get_main_queue(), ^{
+	self.squeakCursor = AUTORELEASEOBJ([[NSCursor alloc] initWithImage: image hotSpot: hotSpot]);
+    if ([NSThread isMainThread]) {
             [self.squeakCursor set];
-        });
-	}
+    } else {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self.squeakCursor set];
+            });
+    }
+    }
 	return 1;
 }
 @end

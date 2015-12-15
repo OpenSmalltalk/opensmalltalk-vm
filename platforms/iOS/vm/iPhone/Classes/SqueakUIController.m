@@ -46,7 +46,49 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 static	sqWindowEvent evt;
 
 @implementation SqueakUIController
-// Subclasses override this method to define how the view they control will respond to device rotation 
+
+- (void)viewDidLoad {
+    // jdr - extra bluetooth keyboard support
+    for (SInt32 k=97; k<=123; k++) {
+        char ch[] = {k, 0};
+        if (k==123) {
+            ch[0] = 46; // for cmd-.
+        }
+        
+        NSString *key = [NSString stringWithCString:(const char *)&ch encoding:NSASCIIStringEncoding];
+        UIKeyCommand *command = [UIKeyCommand keyCommandWithInput:key
+                                                    modifierFlags:UIKeyModifierCommand
+                                                           action:@selector(handleShortcutCmd:)];
+        [self addKeyCommand: command];
+        
+        if (k < 123) {
+            UIKeyCommand *command2 = [UIKeyCommand keyCommandWithInput:key
+                                                    modifierFlags:UIKeyModifierCommand+UIKeyModifierShift
+                                                           action:@selector(handleShortcutShiftCmd:)];
+            [self addKeyCommand: command2];
+
+            UIKeyCommand *command3 = [UIKeyCommand keyCommandWithInput:key
+                                                    modifierFlags:UIKeyModifierControl
+                                                           action:@selector(handleShortcutCtrl:)];
+            [self addKeyCommand: command3];
+        }
+    }
+    
+    NSArray *arrows = @[UIKeyInputUpArrow, UIKeyInputDownArrow, UIKeyInputLeftArrow, UIKeyInputRightArrow];
+    
+    for (NSString *k in arrows) {
+        UIKeyCommand *command = [UIKeyCommand keyCommandWithInput:k
+                                                    modifierFlags:0
+                                                           action:@selector(handleArrows:)];
+        [self addKeyCommand: command];
+        UIKeyCommand *command2 = [UIKeyCommand keyCommandWithInput:k
+                                                    modifierFlags:UIKeyModifierCommand
+                                                           action:@selector(handleCmdArrows:)];
+        [self addKeyCommand: command2];
+    }
+}
+
+// Subclasses override this method to define how the view they control will respond to device rotation
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
 	//Called by Main Thread, beware of calling Squeak routines in Squeak Thread
 	

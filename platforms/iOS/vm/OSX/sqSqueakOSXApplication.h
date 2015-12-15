@@ -42,10 +42,8 @@
 
 @interface sqSqueakOSXApplication : sqSqueakMainApplication {
 	NSCursor         *squeakCursor;
-	BOOL			squeakHasCursor;
 }
 @property (nonatomic,strong) NSCursor	*squeakCursor;
-@property (nonatomic,assign) BOOL		squeakHasCursor;
 
 - (NSInteger) parseArgument: (NSString *) argData peek: (char *) peek;
 - (void) parseArgs: (NSArray *) args;

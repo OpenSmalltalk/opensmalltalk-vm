@@ -45,6 +45,7 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 
 extern struct	VirtualMachine* interpreterProxy;
 extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
+SInt32 undoCounter=1, oldValue=0;  // jdr undo support
 
 @implementation SqueakUIView : UIView ;
 @synthesize squeakTheDisplayBits;
@@ -53,6 +54,13 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 	self = [super initWithFrame: aFrame];
 	self.autoresizingMask = UIViewAutoresizingFlexibleRightMargin|UIViewAutoresizingFlexibleBottomMargin|UIViewAutoresizingFlexibleHeight|UIViewAutoresizingFlexibleWidth;
 	colorspace = CGColorSpaceCreateDeviceRGB();
+    
+    // jdr - hack cmd-z undo support
+    self.arrowsNames = @[UIKeyInputLeftArrow, UIKeyInputRightArrow, UIKeyInputUpArrow, UIKeyInputDownArrow];
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self setUndoFlag: undoCounter];
+    });
 	return self;
 }
 
@@ -96,6 +104,124 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 - (BOOL)canBecomeFirstResponder {
 	return YES;
 }
+
+// jdr - extra bluetooth keyboard support
+
+- (void)sendCharCode: (sqInt) charCode pressCode: (sqInt) pressCode mod: (sqInt) mod uni: (sqInt) u  {
+    sqKeyboardEvent evt;
+    evt.type = EventTypeKeyboard;
+    evt.timeStamp = (int) ioMSecs();
+    evt.pressCode = pressCode;
+    evt.modifiers = mod;
+    evt.charCode = charCode;
+    evt.utf32Code = u;
+    evt.reserved1 = 0;
+    evt.windowIndex = 1;
+    [self pushEventToQueue: (sqInputEvent *)&evt];
+}
+
+- (void)sendTriplet:(sqInt)u mod: (sqInt)mod{
+    sqInt cc = [self figureOutKeyCode: u];
+    [self sendCharCode: cc pressCode: EventKeyDown mod: mod  uni: 0];
+    [self sendCharCode: u pressCode: EventKeyChar mod: mod uni: u];
+    [self sendCharCode: cc pressCode: EventKeyUp mod: mod uni: 0];
+}
+
+- (void)sendCmdTriplet:(sqInt)u {
+    [self sendTriplet: u mod: CommandKeyBit];
+}
+
+- (void)sendShiftCmdTriplet:(sqInt)u {
+    [self sendTriplet: u mod: CommandKeyBit | ShiftKeyBit];
+}
+
+- (void)sendCtrlTriplet:(sqInt)u {
+    [self sendTriplet: u mod: CtrlKeyBit];
+}
+
+- (void)handleShortcutCmd:(UIKeyCommand *)keyCommand {
+    NSString *input = [keyCommand input];
+    sqInt u = (sqInt)[input characterAtIndex:0];
+    [self sendCmdTriplet: u];
+}
+
+- (void)handleShortcutShiftCmd:(UIKeyCommand *)keyCommand {
+    NSString *input = [keyCommand input];
+    sqInt u = (sqInt)[input characterAtIndex:0]-32; // upper case
+    [self sendShiftCmdTriplet: u];
+}
+
+- (void)handleShortcutCtrl:(UIKeyCommand *)keyCommand {
+    NSString *input = [keyCommand input];
+    sqInt u = (sqInt)[input characterAtIndex:0]-96; // convert to ctrl character
+    [self sendCtrlTriplet: u];
+}
+
+- (void)handleArrows:(UIKeyCommand *)keyCommand {
+    sqInt u = (sqInt)[self.arrowsNames indexOfObject: [keyCommand input]];
+    [self sendTriplet: u+28 mod:0]; // fs gs rs us
+}
+
+- (void)handleCmdArrows:(UIKeyCommand *)keyCommand {
+    sqInt u = (sqInt)[self.arrowsNames indexOfObject: [keyCommand input]];
+    [self sendTriplet: u+28 mod:CommandKeyBit];
+}
+
+- (void)cut:(id)sender {
+    [self sendCmdTriplet: 'x'];
+}
+
+- (void)copy:(id)sender {
+    [self sendCmdTriplet: 'c'];
+}
+
+- (void)paste:(id)sender {
+    [self sendCmdTriplet: 'v'];
+}
+
+- (void)selectAll:(id)sender {
+    [self sendCmdTriplet: 'a'];
+}
+
+- (void)toggleItalics:(id)sender {
+    [self sendCmdTriplet: 'i']; // inspect
+}
+
+- (void)toggleBoldface:(id)sender {
+    [self sendCmdTriplet: 'b']; // browse
+}
+
+- (void)toggleUnderline:(id)sender {
+    [self sendCmdTriplet: 'u']; // align
+}
+
+// hack to use cmd-z
+- (void)setUndoFlag:(int)newValue {
+//    printf("%i %i\n", oldValue, newValue);
+    if (newValue == oldValue) { // undo
+        [self sendCmdTriplet: 'z'];
+        undoCounter++;
+        oldValue=undoCounter-1;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self setUndoFlag: undoCounter];
+        });
+
+    }
+    else {
+        [[self.undoManager prepareWithInvocationTarget:self] setUndoFlag: oldValue];
+    }
+}
+
+// extra - shake generate a Cmd-.
+- (void)motionEnded:(UIEventSubtype)motion withEvent:(UIEvent *)event {
+    if (motion == UIEventSubtypeMotionShake)
+    {
+        // User was shaking the device.
+        [self sendCharCode: 46 pressCode: EventKeyChar mod: CommandKeyBit uni: 0];
+    }
+}
+
+// =====================================
 
 - (BOOL)hasText {
 	return YES;
