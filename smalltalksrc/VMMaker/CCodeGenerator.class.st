@@ -2735,14 +2735,21 @@ CCodeGenerator >> generateSignedBitShift: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateSignedIntFromLong64: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPutAll: '((sqLong) '.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPut: $)
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateSignedIntFromLong: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	aStream nextPutAll: '((sqInt) '.
+	aStream nextPutAll: '((int) '.
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream nextPut: $)
-
-
 ]
 
 { #category : #'C translation' }
@@ -2752,8 +2759,15 @@ CCodeGenerator >> generateSignedIntFromShort: msgNode on: aStream indent: level 
 	aStream nextPutAll: '((short)'.
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream nextPut: $)
+]
 
+{ #category : #'C translation' }
+CCodeGenerator >> generateSignedIntToLong64: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
 
+	aStream nextPutAll: '((usqInt) '.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPut: $)
 ]
 
 { #category : #'C translation' }
@@ -2761,10 +2775,10 @@ CCodeGenerator >> generateSignedIntToLong: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '((usqInt) '.
+	vmClass objectMemoryClass wordSize = 8 ifTrue:
+		[aStream nextPutAll: '(int)'].
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream nextPut: $)
-
-
 ]
 
 { #category : #'C translation' }
@@ -2774,8 +2788,6 @@ CCodeGenerator >> generateSignedIntToShort: msgNode on: aStream indent: level [
 	aStream nextPutAll: '((usqInt) (short)'.
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream nextPut: $)
-
-
 ]
 
 { #category : #'C translation' }
@@ -3238,10 +3250,10 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#addressOf:				#generateAddressOf:on:indent:
 	#addressOf:put:			#generateAddressOf:on:indent:
 	#asAddress:put:			#generateAsAddress:on:indent:
-	#signedIntFromLong64		#generateSignedIntFromLong:on:indent:
+	#signedIntFromLong64		#generateSignedIntFromLong64:on:indent:
 	#signedIntFromLong		#generateSignedIntFromLong:on:indent:
 	#signedIntFromShort		#generateSignedIntFromShort:on:indent:
-	#signedIntToLong64		#generateSignedIntToLong:on:indent:
+	#signedIntToLong64		#generateSignedIntToLong64:on:indent:
 	#signedIntToLong			#generateSignedIntToLong:on:indent:
 	#signedIntToShort			#generateSignedIntToShort:on:indent:
 	#preIncrement				#generatePreIncrement:on:indent:
