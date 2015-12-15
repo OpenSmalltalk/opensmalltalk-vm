@@ -66,6 +66,7 @@ if [ -d "$DEST" ]; then
 else
 	cp -Rp build/$BUILD_CONFIGURATION/$APP "$DEST"
 fi
+echo ../../scripts/versionInfoPlist ../../platforms SqueakCogSpur32x86.plist "$DEST/Contents/Info.plist"
 ../../scripts/versionInfoPlist ../../platforms SqueakCogSpur32x86.plist "$DEST/Contents/Info.plist"
 
 # Build the Float plugin

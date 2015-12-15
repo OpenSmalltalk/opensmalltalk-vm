@@ -18,7 +18,7 @@ and their ilk, and between Newspeak VMs that run Newspeak.
 
 Another distinction is between Stack, Cog and Sista VMs.  Stack VMs are those
 with context-to-stack mapping that optimise message sending by keeping method
-activations on a stack instead of in contexts.  These are pure interpreters but
+actications on a stack instead of in contexts.  These are pure interpreters but
 significantly faster than the standard context-based Interpreter VM.  Cog VMs
 add a JIT to the mix, compiling methods used more than once to maxchine code on
 the fly.  Sista VMs, as yet unrealised and in development, add support for
@@ -66,33 +66,34 @@ processor sources and the relevant build directories
 
 Building out of the box
 -----------------------
-0. As of this writing (June 2014) this Mac build system builds only on 10.6.x
-(and probably 10.5.x) using the old Carbon libraries.  I plan to build on
-Mavericks/Yosemite using John McIntosh's Cocoa platform support files soon.
+0. As of this writing (December 2015) only the squeak.cog.spur builds build
+on 10.9 and later, using John McIntosh's Cocoa platform support files.  The
+rest of the builds don't work yet.  We are transitioning as fast as possible
+to Cocoa.  Volunteers welcome.
 
-1. Install the tools (xcode etc);  the CoreVM.xcodeproj is set-up to build
-   using gcc 4.2 but you can optionally install the Intel C++ compiler 11.1
-   and change the compilerSpec in CoreVM.xcodeproj/project.pbxproj to get
-   better performance.
+1. Install the tools (Xcode etc);  the SqueakCogSpur32x86.xcodeproj is set-up to
+build using clang 6.x or clang 7.x.
 
-2. Either disable the building of the Bochs plugin (see each makevm file,
+2. Either disable the building of the Bochs plugins (see each makeiosvm file,
 disabling the lines beginning "# Build the BochsIA32Plugin") or build the
 Bochs support libraries (see Building the Bochs Support Libraries below).
 
 3. cd to the VM configuration of your choice and execute
-	./mvm -A
-This will build Fast.app, Debug.app and Assert.app applivations containing the
-three basic VM configurations.  If the configuration includes the multi-threaded
-VM you can use mvm -AS to make the single-threaded VMs, mvm -AT to make the
-multi-threadeds in FastMT.app et al, and mvm -A to make them all.  mvm -d will
-make the Debug.app VM, etc.  mvm -? provides the gory details.
+	./miosvm -A
+This will build CocoaFast.app, CocoaDebug.app and CocoaAssert.app applications
+containing the three basic VM configurations.  If the configuration includes
+the multi-threaded VM you can use miosvm -AS to make the single-threaded VMs,
+miosvm -AT to make the multi-threadeds in FastMT.app et al, and miosvm -A to make
+them all.  miosvm -d will make the CocoaDebug.app VM, etc.  miosvm -? provides the
+gory details.
+
 
 
 Each build directory contains three files
 	plugins.int
 	plugins.ext
 On other platforms editing these and making is all one needs to do to change the
-set of plugins.  Alas on xcode one also has to edit the relevant xcode projects
+set of plugins.  Alas on Xcode one also has to edit the relevant Xcode projects
 to add and remove source files.  If you're brave enough to contemplate this
 you're brave enough to figure out how to do this yourself.
 
@@ -100,24 +101,16 @@ you're brave enough to figure out how to do this yourself.
 Building the Bochs Support Libraries
 ------------------------------------
 If you want to get the Cog VM simulator working you'll need to build the
-BochsIA32Plugin and to build that you'll need to first build bochs.  First
-check-out the processor simulator source tree containing Bochs:
+BochsIA32Plugin and/or the BochsX64Plugin to build that you'll need to first
+build bochs.  First check-out the processor simulator source tree containing
+Bochs:
      svn co http://www.squeakvm.org/svn/squeak/branches/Cog/processors
-Then build libraries macbochs/{cpu/libcpu.a,disasm/libdisasm.a,fpu/libfpu.a}
-  $ cd ../processors/IA32/macbochs
+Then build the libraries.  cd to e.g. build.macos32x86/bochsx86, run
+
+  $ cd build.macos32x86/bochsx86
   $ ./conf.COG
-  $ ../bochs/makeem
-
-
-Optimization level and gcc version
-----------------------------------
-There are issues with gcc version > 4.2.1.  Any of the following flags may break the build at -O2:
--ftree-pre
--fpartial-inlining
--fcaller-saves
-
-They're turned off in the xcode files provided.
+  $ ../../processors/IA32/bochs/makeem
 
 
 Eliot Miranda
-December 2014
+December 2015
