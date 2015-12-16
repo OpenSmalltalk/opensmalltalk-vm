@@ -345,6 +345,18 @@ SpurBootstrap >> addNewMethods [
 								[methodClasses add: (oldInterpreter methodClassAssociationOf: methodOrNil)]]]]]
 ]
 
+{ #category : #'bootstrap methods' }
+SpurBootstrap >> allInstancesOf: classOop [
+	| instances |
+	instances := OrderedCollection new.
+	oldHeap allObjectsDo:
+		[:o|
+		((oldHeap isPointersNonImm: o)
+		 and: [(oldHeap fetchClassOf: o) = classOop]) ifTrue:
+			[instances addLast: o]].
+	^instances
+]
+
 { #category : #'method prototypes' }
 SpurBootstrap >> allMethodPrototypes [
 	"Answer all prototype selectors, including those marked <remove>"
@@ -1855,6 +1867,13 @@ SpurBootstrap >> selectorForPrototypeMethod: protoMethod [
 	^protoSelector asSymbol
 ]
 
+{ #category : #'bootstrap image' }
+SpurBootstrap >> silenceImage [
+	"Turn off change notifications via SystemChangeNotifier"
+	(self allInstancesOf: (self findClassNamed: (self findSymbol: #SystemChangeNotifier))) do:
+		[:obj | oldHeap storePointer: 1 ofObject: obj withValue: (oldHeap integerObjectOf: 1)]
+]
+
 { #category : #'bootstrap methods' }
 SpurBootstrap >> stringFor: aString [
 	| string |
@@ -1872,6 +1891,7 @@ SpurBootstrap >> symbolClass [
 
 { #category : #'bootstrap image' }
 SpurBootstrap >> transform [
+      self silenceImage.
 	self findRequiredGlobals.
 	self installModifiedMethods.
 	self recreateSpecialObjectsArray.
