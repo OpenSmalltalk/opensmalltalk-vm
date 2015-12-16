@@ -684,6 +684,14 @@ CogAbstractInstruction >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrC
 	^self subclassResponsibility
 ]
 
+{ #category : #'abstract instructions' }
+CogAbstractInstruction >> genMulR: regSource R: regDest [
+	"Generate whatever code necessary to do a bytesPerOop x bytesPerOop multiplication,
+	 answering the first instruction uin the sequence."
+	<returnTypeC: #'AbstractInstruction *'>
+	self subclassResponsibility
+]
+
 { #category : #'smalltalk calling convention' }
 CogAbstractInstruction >> genPushRegisterArgsForAbortMissNumArgs: numArgs [
 	"Ensure that the register args are pushed before the outer and

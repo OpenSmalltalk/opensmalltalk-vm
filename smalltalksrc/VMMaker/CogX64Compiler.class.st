@@ -2360,7 +2360,7 @@ CogX64Compiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 ar
 
 { #category : #'abstract instructions' }
 CogX64Compiler >> genMulR: regSource R: regDest [
-	cogit gen: IMULRR operand: regSource operand: regDest
+	^cogit gen: IMULRR operand: regSource operand: regDest
 ]
 
 { #category : #'smalltalk calling convention' }
@@ -2659,7 +2659,7 @@ CogX64Compiler >> isWithinMwOffsetRange: anAddress [
 	 addresses within the method zone, rather than checking for a 32-bit offset, si as to keep the
 	 simulator and real VM in sync."
 
-	^anAddress asUnsignedInteger < cogit methodZone zoneEnd
+	^cogit addressIsInCodeZone: anAddress
 ]
 
 { #category : #accessing }

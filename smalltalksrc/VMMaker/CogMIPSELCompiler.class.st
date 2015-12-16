@@ -1648,8 +1648,7 @@ CogMIPSELCompiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1
 
 { #category : #'abstract instructions' }
 CogMIPSELCompiler >> genMulR: regSource R: regDest [
-	cogit gen: MulRR operand: regSource operand: regDest.
-	^0
+	^cogit gen: MulRR operand: regSource operand: regDest
 ]
 
 { #category : #'smalltalk calling convention' }

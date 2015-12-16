@@ -26,6 +26,8 @@ Class {
 		'useSymbolicConstants',
 		'generateDeadCode',
 		'requiredSelectors',
+		'previousCommentMarksInlining',
+		'previousCommenter',
 		'logger',
 		'suppressAsmLabels',
 		'asmLabelCounts',
@@ -917,6 +919,7 @@ CCodeGenerator >> currentMethod [
 
 { #category : #accessing }
 CCodeGenerator >> currentMethod: aTMethod [
+	previousCommenter := nil.
 	currentMethod := aTMethod
 ]
 
@@ -3140,7 +3143,7 @@ CCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 		 m inferTypesForImplicitlyTypedVariablesIn: self]
 ]
 
-{ #category : #public }
+{ #category : #'initialize-release' }
 CCodeGenerator >> initialize [
 	translationDict := Dictionary new.
 	inlineList := Array new.
@@ -3160,6 +3163,8 @@ CCodeGenerator >> initialize [
 	pools := IdentitySet new.
 	selectorTranslations := IdentityDictionary new.
 	suppressAsmLabels := false.
+	previousCommentMarksInlining := false.
+	previousCommenter := nil.
 	breakSrcInlineSelectors := IdentitySet new.
 	breakDestInlineSelectors := IdentitySet new
 ]
@@ -4054,6 +4059,32 @@ CCodeGenerator >> prepareMethods [
 					cr]].
 		m bindClassVariablesIn: constants.
 		m prepareMethodIn: self]
+]
+
+{ #category : #accessing }
+CCodeGenerator >> previousCommentMarksInlining [
+	^previousCommentMarksInlining
+]
+
+{ #category : #accessing }
+CCodeGenerator >> previousCommentMarksInlining: aBoolean [
+	| previousValue |
+	previousValue := previousCommentMarksInlining.
+	previousCommentMarksInlining := aBoolean.
+	^previousValue
+]
+
+{ #category : #accessing }
+CCodeGenerator >> previousCommenter [
+	^previousCommenter
+]
+
+{ #category : #accessing }
+CCodeGenerator >> previousCommenter: aTParseNodeOrNil [
+	| previousValue |
+	previousValue := previousCommenter.
+	previousCommenter := aTParseNodeOrNil.
+	^previousValue
 ]
 
 { #category : #'error notification' }
