@@ -4312,6 +4312,7 @@ SpurMemoryManager >> failed [
 
 { #category : #accessing }
 SpurMemoryManager >> falseObject [
+	<api>
 	^falseObj
 ]
 
@@ -4399,6 +4400,7 @@ SpurMemoryManager >> fetchPointer: fieldIndex ofMaybeForwardedObject: objOop [
 
 { #category : #'object access' }
 SpurMemoryManager >> fetchPointer: fieldIndex ofObject: objOop [
+	<api>
 	^self longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 ]
 
@@ -8158,6 +8160,7 @@ SpurMemoryManager >> nilFieldsOf: obj [
 
 { #category : #accessing }
 SpurMemoryManager >> nilObject [
+	<api>
 	^nilObj
 ]
 
@@ -11323,6 +11326,7 @@ SpurMemoryManager >> transcript [
 
 { #category : #accessing }
 SpurMemoryManager >> trueObject [
+	<api>
 	^trueObj
 ]
 

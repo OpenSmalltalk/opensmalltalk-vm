@@ -26,13 +26,19 @@ TLabeledCommentNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 
 	self printOptionalLabelOn: aStream.
 	comment ifNotNil:
-		[aStream nextPutAll: '/* '.
-		 aStream nextPutAll: comment.
-		 aStream nextPutAll: ' */'].
+		[(aCodeGen previousCommentMarksInlining: (label isNil and: [asmLabel isNil and: [comment beginsWith: 'begin ']])) ifTrue:
+			[^true].
+		 aStream nextPutAll: '/* '; nextPutAll: comment; nextPutAll: ' */'.
+		 aCodeGen previousCommenter: self].
 	(asmLabel notNil "only output labels in the interpret function."
 	 and: [aCodeGen currentMethod selector == #interpret]) ifTrue:
 		[aStream crtab: level.
 		 aCodeGen outputAsmLabel: asmLabel on: aStream]
+]
+
+{ #category : #'C code generation' }
+TLabeledCommentNode >> emitCCommentOn: aStream level: level generator: aCodeGen [
+	"Override to avoid outputting comments since this is done explicitly in statement lists."
 ]
 
 { #category : #testing }

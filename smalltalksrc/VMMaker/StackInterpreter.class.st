@@ -10349,6 +10349,7 @@ StackInterpreter >> positive32BitIntegerFor: integerValue [
 
 { #category : #'primitive support' }
 StackInterpreter >> positive64BitIntegerFor: integerValue [
+	<api>
 	<var: 'integerValue' type: #sqLong>
 	"Answer a Large Positive Integer object for the given integer value.  N.B. will *not* cause a GC."
 	| newLargeInteger highWord sz |
