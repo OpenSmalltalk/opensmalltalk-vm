@@ -143,26 +143,22 @@ VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 #define EXPORT(returnType) returnType
 
 /* Do not include the entire sq.h file but just those parts needed. */
-/*  The virtual machine proxy definition */
-#include "sqVirtualMachine.h"
-/* Configuration options */
-#include "sqConfig.h"
-/* Platform specific definitions */
-#include "sqPlatformSpecific.h"
+#include "sqConfig.h"			/* Configuration options */
+#include "sqVirtualMachine.h"	/*  The virtual machine proxy definition */
+#include "sqPlatformSpecific.h"	/* Platform specific definitions */
 
 #define true 1
 #define false 0
 #define null 0  /* using ''null'' because nil is predefined in Think C */
 #ifdef SQUEAK_BUILTIN_PLUGIN
-#undef EXPORT
-// was #undef EXPORT(returnType) but screws NorCroft cc
-#define EXPORT(returnType) static returnType
+# undef EXPORT
+# define EXPORT(returnType) static returnType
 #endif'; cr; cr.
 	self addHeaderFile: '"sqMemoryAccess.h"'.
 	"Additional header files; include squeak VM ones last"
 	self emitHeaderFiles: (headerFiles reject: [:hdr| hdr includes: $<]) on: aStream.
 	self maybePutPreambleFor: pluginClass on: aStream.
-	aStream cr.
+	aStream cr
 ]
 
 { #category : #'C code generator' }
