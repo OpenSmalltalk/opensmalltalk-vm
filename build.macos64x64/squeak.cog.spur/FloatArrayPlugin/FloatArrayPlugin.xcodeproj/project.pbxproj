@@ -211,10 +211,6 @@
 				ICC_PREDEFINE_GCC = gcc;
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
-				OTHER_CFLAGS = (
-					"-mno-fused-madd",
-					"$(OTHER_CFLAGS)",
-				);
 				PRODUCT_NAME = FloatArrayPlugin;
 				WRAPPER_EXTENSION = bundle;
 			};
