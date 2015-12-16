@@ -1,0 +1,308 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 42;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		73020E8D0EE714E60021D217 /* GdbARMPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 73020E8C0EE714E60021D217 /* GdbARMPlugin.c */; settings = {COMPILER_FLAGS = "-I../../../platforms/Cross/vm -I../../../platforms/Cross/plugins/GdbARMPlugin -I\"../../../platforms/Mac OS/vm\" -I../../../spur64src/vm"; }; };
+		732787F61AB7A40100BE5008 /* libiberty.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 732787F51AB7A40100BE5008 /* libiberty.a */; };
+		732788161AB7BDAC00BE5008 /* libbfd.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 73ADAA901AB79ED50085DAA8 /* libbfd.a */; };
+		732788241AB7C73500BE5008 /* environ.c in Sources */ = {isa = PBXBuildFile; fileRef = 732787F11AB7A12A00BE5008 /* environ.c */; };
+		737482B30EE7339F004E10F8 /* libopcodes.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 737482B20EE7339F004E10F8 /* libopcodes.a */; };
+		737482B50EE733BD004E10F8 /* libsim.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 737482B40EE733BD004E10F8 /* libsim.a */; };
+		737482B70EE7343B004E10F8 /* sqGdbARMPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 737482B60EE7343B004E10F8 /* sqGdbARMPlugin.c */; settings = {COMPILER_FLAGS = "-I../../../processors/ARM/gdb-7.10/include -I../../../processors/ARM/gdb-7.10/sim/arm -I../../../processors/ARM/gdb-7.10/bfd -I../../gdbarm32/bfd"; }; };
+		73A487F71BF43A8500A1166F /* libz.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 73A487F61BF43A8500A1166F /* libz.1.dylib */; };
+		8D01CCCE0486CAD60068D4B7 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 08EA7FFBFE8413EDC02AAC07 /* Carbon.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		08EA7FFBFE8413EDC02AAC07 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
+		73020E8C0EE714E60021D217 /* GdbARMPlugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = GdbARMPlugin.c; path = ../../../src/plugins/GdbARMPlugin/GdbARMPlugin.c; sourceTree = SOURCE_ROOT; };
+		73020E8E0EE7158C0021D217 /* GdbARMPlugin.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = GdbARMPlugin.h; path = ../../../platforms/Cross/plugins/GdbARMPlugin/GdbARMPlugin.h; sourceTree = SOURCE_ROOT; };
+		732787F11AB7A12A00BE5008 /* environ.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = environ.c; path = "../../../platforms/Mac OS/plugins/GdbARMPlugin/environ.c"; sourceTree = SOURCE_ROOT; };
+		732787F51AB7A40100BE5008 /* libiberty.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libiberty.a; path = ../../gdbarm32/libiberty/libiberty.a; sourceTree = SOURCE_ROOT; };
+		737482B20EE7339F004E10F8 /* libopcodes.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopcodes.a; path = ../../gdbarm32/opcodes/libopcodes.a; sourceTree = SOURCE_ROOT; };
+		737482B40EE733BD004E10F8 /* libsim.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libsim.a; path = ../../gdbarm32/sim/arm/libsim.a; sourceTree = SOURCE_ROOT; };
+		737482B60EE7343B004E10F8 /* sqGdbARMPlugin.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 30; name = sqGdbARMPlugin.c; path = ../../../platforms/Cross/plugins/GdbARMPlugin/sqGdbARMPlugin.c; sourceTree = SOURCE_ROOT; };
+		73A487F61BF43A8500A1166F /* libz.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.1.dylib; path = /usr/lib/libz.1.dylib; sourceTree = "<absolute>"; };
+		73ADAA901AB79ED50085DAA8 /* libbfd.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbfd.a; path = ../../gdbarm32/bfd/libbfd.a; sourceTree = SOURCE_ROOT; };
+		8D01CCD10486CAD60068D4B7 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8D01CCD20486CAD60068D4B7 /* GdbARMPlugin.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GdbARMPlugin.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		DA3A20F50AA63CBF0050B983 /* interp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../spur64src/vm/interp.h; sourceTree = SOURCE_ROOT; };
+		DA3A20F60AA63CDC0050B983 /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../../platforms/Cross/vm/sqMemoryAccess.h; sourceTree = SOURCE_ROOT; };
+		DA3A20F70AA63CDC0050B983 /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../../platforms/Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
+		DA3A20F80AA63D000050B983 /* config.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = config.h; path = "../../../platforms/Mac OS/vm/config.h"; sourceTree = SOURCE_ROOT; };
+		DA3A20F90AA63D000050B983 /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqConfig.h; path = "../../../platforms/Mac OS/vm/sqConfig.h"; sourceTree = SOURCE_ROOT; };
+		DA3A20FA0AA63D000050B983 /* sqPlatformSpecific.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqPlatformSpecific.h; path = "../../../platforms/Mac OS/vm/sqPlatformSpecific.h"; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		8D01CCCD0486CAD60068D4B7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8D01CCCE0486CAD60068D4B7 /* Carbon.framework in Frameworks */,
+				737482B30EE7339F004E10F8 /* libopcodes.a in Frameworks */,
+				737482B50EE733BD004E10F8 /* libsim.a in Frameworks */,
+				732787F61AB7A40100BE5008 /* libiberty.a in Frameworks */,
+				732788161AB7BDAC00BE5008 /* libbfd.a in Frameworks */,
+				73A487F71BF43A8500A1166F /* libz.1.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		089C166AFE841209C02AAC07 /* GdbARMPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				737482B20EE7339F004E10F8 /* libopcodes.a */,
+				73ADAA901AB79ED50085DAA8 /* libbfd.a */,
+				737482B40EE733BD004E10F8 /* libsim.a */,
+				08FB77ADFE841716C02AAC07 /* Source */,
+				089C167CFE841241C02AAC07 /* Resources */,
+				089C1671FE841209C02AAC07 /* External Frameworks and Libraries */,
+				19C28FB4FE9D528D11CA2CBB /* Products */,
+			);
+			name = GdbARMPlugin;
+			sourceTree = "<group>";
+		};
+		089C1671FE841209C02AAC07 /* External Frameworks and Libraries */ = {
+			isa = PBXGroup;
+			children = (
+				08EA7FFBFE8413EDC02AAC07 /* Carbon.framework */,
+				73A487F61BF43A8500A1166F /* libz.1.dylib */,
+			);
+			name = "External Frameworks and Libraries";
+			sourceTree = "<group>";
+		};
+		089C167CFE841241C02AAC07 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				8D01CCD10486CAD60068D4B7 /* Info.plist */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		08FB77ADFE841716C02AAC07 /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				737482B60EE7343B004E10F8 /* sqGdbARMPlugin.c */,
+				732787F51AB7A40100BE5008 /* libiberty.a */,
+				732787F11AB7A12A00BE5008 /* environ.c */,
+				73020E8E0EE7158C0021D217 /* GdbARMPlugin.h */,
+				73020E8C0EE714E60021D217 /* GdbARMPlugin.c */,
+				DA3A20F80AA63D000050B983 /* config.h */,
+				DA3A20F90AA63D000050B983 /* sqConfig.h */,
+				DA3A20FA0AA63D000050B983 /* sqPlatformSpecific.h */,
+				DA3A20F60AA63CDC0050B983 /* sqMemoryAccess.h */,
+				DA3A20F70AA63CDC0050B983 /* sqVirtualMachine.h */,
+				DA3A20F50AA63CBF0050B983 /* interp.h */,
+			);
+			name = Source;
+			sourceTree = "<group>";
+		};
+		19C28FB4FE9D528D11CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				8D01CCD20486CAD60068D4B7 /* GdbARMPlugin.bundle */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8D01CCC60486CAD60068D4B7 /* GdbARMPlugin */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4FADC23308B4156C00ABE55E /* Build configuration list for PBXNativeTarget "GdbARMPlugin" */;
+			buildPhases = (
+				8D01CCC90486CAD60068D4B7 /* Resources */,
+				8D01CCCB0486CAD60068D4B7 /* Sources */,
+				8D01CCCD0486CAD60068D4B7 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GdbARMPlugin;
+			productInstallPath = "$(HOME)/Library/Bundles";
+			productName = GdbARMPlugin;
+			productReference = 8D01CCD20486CAD60068D4B7 /* GdbARMPlugin.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		089C1669FE841209C02AAC07 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 4FADC23708B4156C00ABE55E /* Build configuration list for PBXProject "GdbARMPlugin" */;
+			compatibilityVersion = "Xcode 2.4";
+			developmentRegion = English;
+			hasScannedForEncodings = 1;
+			knownRegions = (
+				English,
+				Japanese,
+				French,
+				German,
+			);
+			mainGroup = 089C166AFE841209C02AAC07 /* GdbARMPlugin */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8D01CCC60486CAD60068D4B7 /* GdbARMPlugin */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		8D01CCC90486CAD60068D4B7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		8D01CCCB0486CAD60068D4B7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				73020E8D0EE714E60021D217 /* GdbARMPlugin.c in Sources */,
+				737482B70EE7343B004E10F8 /* sqGdbARMPlugin.c in Sources */,
+				732788241AB7C73500BE5008 /* environ.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		4FADC23408B4156C00ABE55E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = NO;
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(HOME)/Library/Bundles";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5)",
+				);
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = ../../gdbarm32/opcodes;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = ../../gdbarm32/sim/arm;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = ../../gdbarm32/bfd;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = ../../gdbarm32/libiberty;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = ../../gdbarm32/bfd;
+				PRODUCT_NAME = GdbARMPlugin;
+				WRAPPER_EXTENSION = bundle;
+				ZERO_LINK = YES;
+			};
+			name = Debug;
+		};
+		4FADC23508B4156C00ABE55E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_PRECOMPILE_PREFIX_HEADER = NO;
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(HOME)/Library/Bundles";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4)",
+					"$(LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5)",
+				);
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = ../../gdbarm32/opcodes;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = ../../gdbarm32/sim/arm;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_3 = ../../gdbarm32/bfd;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_4 = ../../gdbarm32/libiberty;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_5 = ../../gdbarm32/bfd;
+				PRODUCT_NAME = GdbARMPlugin;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		4FADC23808B4156C00ABE55E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)";
+				CONFIGURATION_TEMP_DIR = "$(PROJECT_TEMP_DIR)/$(CONFIGURATION)";
+				COPY_PHASE_STRIP = NO;
+				GCC_MODEL_TUNING = "";
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCocoa;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				PREBINDING = NO;
+				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
+				SDKROOT = "";
+				STRIP_INSTALLED_PRODUCT = NO;
+				USER_HEADER_SEARCH_PATHS = "";
+				USE_HEADERMAP = NO;
+			};
+			name = Debug;
+		};
+		4FADC23908B4156C00ABE55E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CONFIGURATION_BUILD_DIR = "$(BUILD_DIR)/$(CONFIGURATION)";
+				CONFIGURATION_TEMP_DIR = "$(PROJECT_TEMP_DIR)/$(CONFIGURATION)";
+				COPY_PHASE_STRIP = NO;
+				GCC_MODEL_TUNING = "";
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCocoa;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				PREBINDING = NO;
+				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
+				SDKROOT = "";
+				USER_HEADER_SEARCH_PATHS = "";
+				USE_HEADERMAP = NO;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4FADC23308B4156C00ABE55E /* Build configuration list for PBXNativeTarget "GdbARMPlugin" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4FADC23408B4156C00ABE55E /* Debug */,
+				4FADC23508B4156C00ABE55E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4FADC23708B4156C00ABE55E /* Build configuration list for PBXProject "GdbARMPlugin" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4FADC23808B4156C00ABE55E /* Debug */,
+				4FADC23908B4156C00ABE55E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 089C1669FE841209C02AAC07 /* Project object */;
+}
