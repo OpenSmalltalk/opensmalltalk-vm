@@ -45,6 +45,11 @@ CogMIPSELCompiler class >> ISA [
 	^#MIPSEL
 ]
 
+{ #category : #translation }
+CogMIPSELCompiler class >> identifyingPredefinedMacros [
+	^#('__MIPSEL__')
+]
+
 { #category : #'class initialization' }
 CogMIPSELCompiler class >> initialize [
 	"CogRTLOpcodes initialize. CogMIPSELCompiler initialize"
@@ -95,6 +100,12 @@ CogMIPSELCompiler class >> initialize [
 			in: thisContext method
 		
 	
+]
+
+{ #category : #translation }
+CogMIPSELCompiler class >> machineCodeDeclaration [
+	"Answer the declaration for the machineCode array."
+	^{#'unsigned long'. '[', self basicNew machineCodeWords printString, ']'}
 ]
 
 { #category : #translation }
@@ -163,12 +174,6 @@ CogMIPSELCompiler >> bneR: leftReg R: rightReg offset: offset [
 	self assert: (offset bitAnd: 3) = 0.
 	self assert: (offset between: -16r20000 and: 16r1FFFF).
 	^self itype: BNE rs: leftReg rt: rightReg signedImmediate: offset >> 2
-]
-
-{ #category : #'encoding - control' }
-CogMIPSELCompiler >> break: code [
-	self assert: (code between: 0 and: 16rFFFFF).
-	^(code << 6) bitOr: BREAK
 ]
 
 { #category : #'generate machine code' }
@@ -585,34 +590,34 @@ CogMIPSELCompiler >> concretizeBrEqualRR [
 
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeBrLongEqualRR [
-	| jumpTarget leftReg rightReg |
-	<var: #jumpTarget type: #'AbstractInstruction *'>
-	jumpTarget := self longJumpTargetAddress.
+	| jumpTargetInstruction jumpTargetAddr leftReg rightReg |
+	<var: #jumpTargetInstruction type: #'AbstractInstruction *'>
+	jumpTargetInstruction := self longJumpTargetAddress.
 	self flag: #todo. "Check not crossing 256MB block."
-	jumpTarget := jumpTarget bitAnd: 16rFFFFFFF.
+	jumpTargetAddr := jumpTargetInstruction asUnsignedInteger bitAnd: 16rFFFFFFF.
 	leftReg := self concreteRegister: (operands at: 1).
 	rightReg := self concreteRegister: (operands at: 2).
 
 	self machineCodeAt: 0 put: (self bneR: leftReg R: rightReg offset: 12).
 	self machineCodeAt: 4 put: (self nop). "Delay slot"
-	self machineCodeAt: 8 put: (self jA: jumpTarget).
+	self machineCodeAt: 8 put: (self jA: jumpTargetAddr).
 	self machineCodeAt: 12 put: self nop. "Delay slot"
 	^machineCodeSize := 16
 ]
 
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeBrLongNotEqualRR [
-	| jumpTarget leftReg rightReg |
-	<var: #jumpTarget type: #'AbstractInstruction *'>
-	jumpTarget := self longJumpTargetAddress.
+	| jumpTargetInstruction jumpTargetAddr leftReg rightReg |
+	<var: #jumpTargetInstruction type: #'AbstractInstruction *'>
+	jumpTargetInstruction := self longJumpTargetAddress.
 	self flag: #todo. "Check not crossing 256MB block."
-	jumpTarget := jumpTarget bitAnd: 16rFFFFFFF.
+	jumpTargetAddr := jumpTargetInstruction asUnsignedInteger bitAnd: 16rFFFFFFF.
 	leftReg := self concreteRegister: (operands at: 1).
 	rightReg := self concreteRegister: (operands at: 2).
 
 	self machineCodeAt: 0 put: (self beqR: leftReg R: rightReg offset: 12).
 	self machineCodeAt: 4 put: (self nop). "Delay slot"
-	self machineCodeAt: 8 put: (self jA: jumpTarget).
+	self machineCodeAt: 8 put: (self jA: jumpTargetAddr).
 	self machineCodeAt: 12 put: self nop. "Delay slot"
 	^machineCodeSize := 16
 ]
@@ -750,11 +755,12 @@ CogMIPSELCompiler >> concretizeCall [
 
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeCallFull [
-	| jumpTarget |
-	<var: #jumpTarget type: #'AbstractInstruction *'>
-	jumpTarget := self longJumpTargetAddress.
-	self machineCodeAt: 0 put: (self luiR: TargetReg C: (self high16BitsOf: jumpTarget)).
-	self machineCodeAt: 4 put: (self oriR: TargetReg R: TargetReg C: (self low16BitsOf: jumpTarget)).	
+	| jumpTargetInstruction jumpTargetAddr |
+	<var: #jumpTargetInstruction type: #'AbstractInstruction *'>
+	jumpTargetInstruction := self longJumpTargetAddress.
+	jumpTargetAddr := jumpTargetInstruction asUnsignedInteger.
+	self machineCodeAt: 0 put: (self luiR: TargetReg C: (self high16BitsOf: jumpTargetAddr)).
+	self machineCodeAt: 4 put: (self oriR: TargetReg R: TargetReg C: (self low16BitsOf: jumpTargetAddr)).
 	self machineCodeAt: 8 put: (self jalR: TargetReg).
 	self machineCodeAt: 12 put: self nop. "Delay slot"
 	^machineCodeSize := 16
@@ -808,11 +814,12 @@ CogMIPSELCompiler >> concretizeJump [
 
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeJumpFull [
-	| jumpTarget |
-	<var: #jumpTarget type: #'AbstractInstruction *'>
-	jumpTarget := self longJumpTargetAddress.
-	self machineCodeAt: 0 put: (self luiR: TargetReg C: (self high16BitsOf: jumpTarget)).
-	self machineCodeAt: 4 put: (self oriR: TargetReg R: TargetReg C: (self low16BitsOf: jumpTarget)).	
+	| jumpTargetInstruction jumpTargetAddr |
+	<var: #jumpTargetInstruction type: #'AbstractInstruction *'>
+	jumpTargetInstruction := self longJumpTargetAddress.
+	jumpTargetAddr := jumpTargetInstruction asUnsignedInteger.
+	self machineCodeAt: 0 put: (self luiR: TargetReg C: (self high16BitsOf: jumpTargetAddr)).
+	self machineCodeAt: 4 put: (self oriR: TargetReg R: TargetReg C: (self low16BitsOf: jumpTargetAddr)).
 	self machineCodeAt: 8 put: (self jR: TargetReg).
 	self machineCodeAt: 12 put: self nop. "Delay slot"
 	^machineCodeSize := 16
@@ -1255,10 +1262,10 @@ CogMIPSELCompiler >> concretizePopR [
 
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizePrefetchAw [
-	| address |
-	address := operands at: 0.
-	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: address)).
-	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: address)).
+	| addressOperand |
+	addressOperand := operands at: 0.
+	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: addressOperand)).
+	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: addressOperand)).
 	self machineCodeAt: 8 put: (self prefR: AT offset: 0 hint: HintLoad).
 	^machineCodeSize := 12
 ]
@@ -1407,6 +1414,12 @@ CogMIPSELCompiler >> concretizeTstCwR [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogMIPSELCompiler >> concretizeUnimplemented [
+	self error: 'Unimplemented RTL instruction'.
+	^0
+]
+
+{ #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeXorCwR [
 	| destReg leftReg rightImm |
 	rightImm := operands at: 0.
@@ -1446,7 +1459,7 @@ CogMIPSELCompiler >> dispatchConcretize [
 		[BrSignedGreaterEqualRR]		-> [^self concretizeBrSignedGreaterEqualRR].	
 		[BrLongEqualRR]				-> [^self concretizeBrLongEqualRR].
 		[BrLongNotEqualRR]				-> [^self concretizeBrLongNotEqualRR].
-		[MulRR]				-> [^self concretizeMulRR].
+		[MulRR]				-> [^self concretizeUnimplemented].
 		[DivRR]				-> [^self concretizeDivRR].
 		[MoveLowR]		-> [^self concretizeMoveLowR].
 		[MoveHighR]		-> [^self concretizeMoveHighR].
@@ -1500,7 +1513,7 @@ CogMIPSELCompiler >> dispatchConcretize [
 		[OrCqR]						-> [^self concretizeOrCqR].
 		[SubCqR]					-> [^self concretizeSubCqR].
 		[TstCqR]					-> [^self concretizeTstCqR].
-		[XorCqR]					-> [^self concretizeXorCqR].
+		[XorCqR]					-> [^self concretizeUnimplemented].
 		[AddCwR]					-> [^self concretizeAddCwR].
 		[AndCwR]					-> [^self concretizeAndCwR].
 		[CmpCwR]					-> [^self concretizeCmpCwR].
@@ -1536,16 +1549,16 @@ CogMIPSELCompiler >> dispatchConcretize [
 		[MoveAbR]			-> [^self concretizeMoveAbR].
 		[MoveRAb]			-> [^self concretizeMoveRAb].
 		[MoveMbrR]			-> [^self concretizeMoveMbrR].
-		[MoveRMbr]			-> [^self concretizeRMbr].
+		[MoveRMbr]			-> [^self concretizeUnimplemented].
 		[MoveM16rR]		-> [^self concretizeMoveM16rR].
-		[MoveM64rRd]		-> [^self concretizeM64rRd].
+		[MoveM64rRd]		-> [^self concretizeUnimplemented].
 		[MoveMwrR]		-> [^self concretizeMoveMwrR].
 		[MoveXbrRR]		-> [^self concretizeMoveXbrRR].
 		[MoveRXbrR]		-> [^self concretizeMoveRXbrR].
 		[MoveXwrRR]		-> [^self concretizeMoveXwrRR].
 		[MoveRXwrR]		-> [^self concretizeMoveRXwrR].
 		[MoveRMwr]		-> [^self concretizeMoveRMwr].
-		[MoveRdM64r]		-> [^self concretizeRdM64r].
+		[MoveRdM64r]		-> [^self concretizeUnimplemented].
 		[PopR]				-> [^self concretizePopR].
 		[PushR]				-> [^self concretizePushR].
 		[PushCq]			-> [^self concretizePushCq].
@@ -1564,6 +1577,13 @@ CogMIPSELCompiler >> dispatchConcretize [
 CogMIPSELCompiler >> divR: dividendReg R: divisorReg [
 	self flag: #todo. "Ascertain what ISA revision adds this instruction"
 	^self rtype: SPECIAL rs: dividendReg rt: divisorReg rd: 0 sa: 0 funct: DIV
+]
+
+{ #category : #'inline cacheing' }
+CogMIPSELCompiler >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<Integer>"
+	<cmacro: '(me,startAddress,endAddress) __clear_cache((char*) startAddress, (char*) (endAddress ))'>
+	"On ARM we almost certainly need to flush and wash hands. On linux we use __clear_cache (see http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code for a decent example) and remember that the end address is *exclusive* so we can just use the end address passed in since it is always the byte after the actual last one needing flushing"
+	self halt: #ceFlushICache
 ]
 
 { #category : #abi }
@@ -1592,6 +1612,15 @@ CogMIPSELCompiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abs
 CogMIPSELCompiler >> genGetLeafCallStackPointerFunction [
 	cogit MoveR: SP R: V0.
 	cogit RetN: 0
+]
+
+{ #category : #'smalltalk calling convention' }
+CogMIPSELCompiler >> genLoadCStackPointer [
+	"Load the stack pointer register with that of the C stack, effecting
+	 a switch to the C stack.  Used when machine code calls into the
+	 CoInterpreter run-time (e.g. to invoke interpreter primitives)."
+	cogit MoveAw: cogit cStackPointerAddress R: SPReg.
+	^0
 ]
 
 { #category : #'smalltalk calling convention' }
@@ -1719,6 +1748,12 @@ CogMIPSELCompiler >> genRestoreRegs [
 ]
 
 { #category : #abi }
+CogMIPSELCompiler >> genRestoreRegsExcept: abstractReg [
+	"Restore the general purpose registers except for abstractReg for a trampoline call."
+	self flag: #bogus.
+]
+
+{ #category : #abi }
 CogMIPSELCompiler >> genSaveRegisters [
 	"This method is poorly named. Is this for a Smalltalk -> C call or C -> Smalltalk call?
 	 If the former we don't need to do anything because all of the abstract registers are
@@ -1741,6 +1776,14 @@ CogMIPSELCompiler >> genSubstituteReturnAddress: retpc [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^cogit MoveCw: retpc R: RA
+]
+
+{ #category : #accessing }
+CogMIPSELCompiler >> getDefaultCogCodeSize [
+	"Return the default number of bytes to allocate for native code at startup.
+	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
+	<inline: true>
+	^1024 * 1536
 ]
 
 { #category : #testing }
@@ -1767,6 +1810,14 @@ CogMIPSELCompiler >> hasThreeAddressArithmetic [
 	"Answer if the receiver supports three-address arithmetic instructions"
 	<inline: true>
 	^true
+]
+
+{ #category : #testing }
+CogMIPSELCompiler >> hasVarBaseRegister [
+	"Answer if the processor has a dedicated callee-saved register to point to
+	 the base of commonly-accessed variables."
+	<inline: true>
+	^true "S6"
 ]
 
 { #category : #encoding }
@@ -1852,23 +1903,21 @@ CogMIPSELCompiler >> isJump [
 
 { #category : #testing }
 CogMIPSELCompiler >> isJumpAt: pc [
-	cogit disassembleFrom: pc to: pc + 4.
+	"cogit disassembleFrom: pc to: pc + 4."
 
 	(self opcodeAtAddress: pc) = J ifTrue: [^true].
 	
-	(self opcodeAtAddress: pc) = SPECIAL ifTrue: [
-		(self functionAtAddress: pc) = JR ifTrue: [^true].
-	].
+	(self opcodeAtAddress: pc) = SPECIAL ifTrue: 
+		[(self functionAtAddress: pc) = JR ifTrue: [^true]].
 
 	(self opcodeAtAddress: pc) = BEQ ifTrue: [^true].
 	(self opcodeAtAddress: pc) = BNE ifTrue: [^true].
 	(self opcodeAtAddress: pc) = BLEZ ifTrue: [^true].
 	(self opcodeAtAddress: pc) = BGTZ ifTrue: [^true].
 
-	(self opcodeAtAddress: pc) = REGIMM ifTrue: [
-		(self rtAtAddress: pc) = BLTZ ifTrue: [^true].
-		(self rtAtAddress: pc) = BGEZ ifTrue: [^true].
-	].	
+	(self opcodeAtAddress: pc) = REGIMM ifTrue: 
+		[(self rtAtAddress: pc) = BLTZ ifTrue: [^true].
+		 (self rtAtAddress: pc) = BGEZ ifTrue: [^true]].	
 	
 	^false
 ]
@@ -1885,22 +1934,22 @@ CogMIPSELCompiler >> isShortOffset: offset [
 ]
 
 { #category : #encoding }
-CogMIPSELCompiler >> itype: opcode rs: rs rt: rt eitherImmediate: signedImmediate [	
+CogMIPSELCompiler >> itype: op rs: rs rt: rt eitherImmediate: signedImmediate [	
 	| unsignedImmediate |
-	self assert: (opcode between: 0 and: 63).
+	self assert: (op between: 0 and: 63).
 	self assert: (rs between: 0 and: 31).
 	self assert: (rt between: 0 and: 31).
 	signedImmediate < 0
 		ifTrue: [unsignedImmediate := signedImmediate + 16r10000]
 		ifFalse: [unsignedImmediate := signedImmediate].
 	self assert: (unsignedImmediate between: 0 and: 16rFFFF).
-	^(((opcode << 26) bitOr: (rs << 21)) bitOr: (rt << 16)) bitOr: unsignedImmediate
+	^(((op << 26) bitOr: (rs << 21)) bitOr: (rt << 16)) bitOr: unsignedImmediate
 ]
 
 { #category : #encoding }
-CogMIPSELCompiler >> itype: opcode rs: rs rt: rt signedImmediate: signedImmediate [	
+CogMIPSELCompiler >> itype: op rs: rs rt: rt signedImmediate: signedImmediate [	
 	| unsignedImmediate |
-	self assert: (opcode between: 0 and: 63).
+	self assert: (op between: 0 and: 63).
 	self assert: (rs between: 0 and: 31).
 	self assert: (rt between: 0 and: 31).
 	self assert: (signedImmediate between: -16r8000 and: 16r7FFF).
@@ -1908,16 +1957,16 @@ CogMIPSELCompiler >> itype: opcode rs: rs rt: rt signedImmediate: signedImmediat
 		ifTrue: [unsignedImmediate := signedImmediate + 16r10000]
 		ifFalse: [unsignedImmediate := signedImmediate].
 	self assert: (unsignedImmediate between: 0 and: 16rFFFF).
-	^(((opcode << 26) bitOr: (rs << 21)) bitOr: (rt << 16)) bitOr: unsignedImmediate
+	^(((op << 26) bitOr: (rs << 21)) bitOr: (rt << 16)) bitOr: unsignedImmediate
 ]
 
 { #category : #encoding }
-CogMIPSELCompiler >> itype: opcode rs: rs rt: rt unsignedImmediate: immediate [	
-	self assert: (opcode between: 0 and: 63).
+CogMIPSELCompiler >> itype: op rs: rs rt: rt unsignedImmediate: immediate [	
+	self assert: (op between: 0 and: 63).
 	self assert: (rs between: 0 and: 31).
 	self assert: (rt between: 0 and: 31).
 	self assert: (immediate between: 0 and: 16rFFFF).
-	^(((opcode << 26) bitOr: (rs << 21)) bitOr: (rt << 16)) bitOr: immediate
+	^(((op << 26) bitOr: (rs << 21)) bitOr: (rt << 16)) bitOr: immediate
 ]
 
 { #category : #'encoding - control' }
@@ -1943,10 +1992,10 @@ CogMIPSELCompiler >> jalR: targetReg [
 ]
 
 { #category : #encoding }
-CogMIPSELCompiler >> jtype: opcode target: target [
-	self assert: (opcode between: 0 and: 63).
-	self assert: (opcode between: 0 and: 16r7FFFFFF).
-	^(opcode << 26) bitOr: target
+CogMIPSELCompiler >> jtype: op target: target [
+	self assert: (op between: 0 and: 63).
+	self assert: (target between: 0 and: 16r7FFFFFF).
+	^(op << 26) bitOr: target
 ]
 
 { #category : #accessing }
@@ -2193,6 +2242,12 @@ CogMIPSELCompiler >> minAbstractGeneralPurposeReg [
 	^TempReg
 ]
 
+{ #category : #'encoding - control' }
+CogMIPSELCompiler >> mipsbreak: code [
+	self assert: (code between: 0 and: 16rFFFFF).
+	^(code << 6) bitOr: BREAK
+]
+
 { #category : #'encoding - arithmetic' }
 CogMIPSELCompiler >> multR: leftReg R: rightReg [
 	self flag: #todo. "Ascertain what ISA revision adds this instruction"
@@ -2239,7 +2294,7 @@ CogMIPSELCompiler >> noteFollowingConditionalBranch: branch [
 		[JumpLongNonZero]	-> [BrLongNotEqualRR].
 		
 		[JumpNegative]			-> [BrSignedLessRR].
-	} otherwise: [self unreachable].
+	} otherwise: [self unreachable. 0].
 	
 	opcode caseOf: {
 		[BrEqualRR]	->	["I.e., two jumps after a compare."
@@ -2296,7 +2351,7 @@ CogMIPSELCompiler >> noteFollowingOverflowBranch: branch [
 		 newBranchOpcode := branch opcode caseOf: {
 			[JumpOverflow]		-> [BrNotEqualRR].
 			[JumpNoOverflow]	-> [BrEqualRR].
-		 } otherwise: [self unreachable].
+		 } otherwise: [self unreachable. 0].
 		 branch rewriteOpcode: newBranchOpcode with: OverflowTemp1 with: OverflowTemp2.
 		 ^branch].
 
@@ -2306,12 +2361,12 @@ CogMIPSELCompiler >> noteFollowingOverflowBranch: branch [
 		[AddRR]		-> [AddCheckOverflowRR].
 		[SubCqR]	-> [SubCheckOverflowCqR].
 		[SubRR]		-> [SubCheckOverflowRR].
-	} otherwise: [self unreachable].
+	} otherwise: [self unreachable. 0].
 
 	newBranchOpcode := branch opcode caseOf: {
 		[JumpOverflow]		-> [BrSignedLessRR].
 		[JumpNoOverflow]	-> [BrSignedGreaterEqualRR].
-	} otherwise: [self unreachable].
+	} otherwise: [self unreachable. 0].
 	branch rewriteOpcode: newBranchOpcode with: Overflow with: ZR.
 	^branch
 ]
@@ -2656,7 +2711,6 @@ CogMIPSELCompiler >> rewriteInlineCacheTag: cacheTag at: callSiteReturnAddress [
 	 ...  <-- callSiteReturnAddress"
 	
 	<var: #callSiteReturnAddress type: #usqInt>
-	<var: #callTargetAddress type: #usqInt>
 	self assert: (self opcodeAtAddress: callSiteReturnAddress - 24) = LUI.
 	self assert: (self opcodeAtAddress: callSiteReturnAddress - 20) = ORI.
 	self assert: (self opcodeAtAddress: callSiteReturnAddress - 16) = LUI.
@@ -2732,10 +2786,6 @@ CogMIPSELCompiler >> rewriteJumpLongAt: callSiteReturnAddress target: callTarget
 { #category : #'abstract instructions' }
 CogMIPSELCompiler >> rewriteOpcode: anOpcode with: left with: right [
 	<inline: true>
-	self assert: anOpcode isInteger.
-	self assert: left isInteger.
-	self assert: right isInteger.
-	
 	opcode := anOpcode.
 	operands
 		"0 is target"
@@ -2743,15 +2793,21 @@ CogMIPSELCompiler >> rewriteOpcode: anOpcode with: left with: right [
 		at: 2 put: right
 ]
 
+{ #category : #'inline cacheing' }
+CogMIPSELCompiler >> rtAtAddress: mcpc [
+	^(objectMemory longAt: mcpc) >> 16 bitAnd: 31
+
+]
+
 { #category : #encoding }
-CogMIPSELCompiler >> rtype: opcode rs: rs rt: rt rd: rd sa: sa funct: funct [
-	self assert: (opcode between: 0 and: 63).
+CogMIPSELCompiler >> rtype: op rs: rs rt: rt rd: rd sa: sa funct: funct [
+	self assert: (op between: 0 and: 63).
 	self assert: (rs between: 0 and: 31).
 	self assert: (rt between: 0 and: 31).
 	self assert: (rd between: 0 and: 31).
 	self assert: (sa between: 0 and: 31).
 	self assert: (funct between: 0 and: 63).
-	^(((((opcode << 26) bitOr: (rs << 21)) bitOr: (rt << 16)) bitOr: (rd << 11)) bitOr: (sa << 6)) bitOr: funct
+	^(((((op << 26) bitOr: (rs << 21)) bitOr: (rt << 16)) bitOr: (rd << 11)) bitOr: (sa << 6)) bitOr: funct
 ]
 
 { #category : #abi }
@@ -2865,7 +2921,7 @@ CogMIPSELCompiler >> srlvR: destReg R: leftReg R: rightReg [
 
 { #category : #'encoding - control' }
 CogMIPSELCompiler >> stop [
-	^self break: 0
+	^self mipsbreak: 0
 ]
 
 { #category : #'generate machine code' }
