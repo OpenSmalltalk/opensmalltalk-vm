@@ -1497,9 +1497,9 @@ CCodeGenerator >> generateAddressOf: msgNode on: aStream indent: level [
 CCodeGenerator >> generateAnd: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
+	self emitCExpression: msgNode receiver on: aStream indent: level.
 	aStream nextPutAll: ' && '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitCExpression: msgNode args first on: aStream indent: level
 ]
 
 { #category : #'C translation' }
@@ -1633,9 +1633,9 @@ CCodeGenerator >> generateBetweenAnd: msgNode on: aStream indent: level [
 CCodeGenerator >> generateBitAnd: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
+	self emitCExpression: msgNode receiver on: aStream indent: level.
 	aStream nextPutAll: ' & '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitCExpression: msgNode args first on: aStream indent: level
 ]
 
 { #category : #'C translation' }
@@ -1669,9 +1669,9 @@ CCodeGenerator >> generateBitInvert: msgNode on: aStream indent: level [
 CCodeGenerator >> generateBitOr: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
+	self emitCExpression: msgNode receiver on: aStream indent: level.
 	aStream nextPutAll: ' | '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitCExpression: msgNode args first on: aStream indent: level
 ]
 
 { #category : #'C translation' }
@@ -1681,39 +1681,35 @@ CCodeGenerator >> generateBitShift: msgNode on: aStream indent: level [
 	| arg rcvr |
 	arg := msgNode args first.
 	rcvr := msgNode receiver.
-	arg isConstant ifTrue: [
-		"bit shift amount is a constant"
-		aStream nextPutAll: '((usqInt) '.
-		self emitCExpression: rcvr on: aStream.
-		arg value < 0 ifTrue: [
-			aStream nextPutAll: ' >> ', arg value negated printString.
-		] ifFalse: [
-			aStream nextPutAll: ' << ', arg value printString.
-		].
-		aStream nextPutAll: ')'.
-	] ifFalse: [
-		"bit shift amount is an expression"
-		aStream nextPutAll: '(('.
-		self emitCExpression: arg on: aStream.
-		aStream nextPutAll: ' < 0) ? ((usqInt) '.
-		self emitCExpression: rcvr on: aStream.
-		aStream nextPutAll: ' >> -'.
-		self emitCExpression: arg on: aStream.
-		aStream nextPutAll: ') : ((usqInt) '.
-		self emitCExpression: rcvr on: aStream.
-		aStream nextPutAll: ' << '.
-		self emitCExpression: arg on: aStream.
-		aStream nextPutAll: '))'.
-	].
+	arg isConstant
+		ifTrue: "bit shift amount is a constant"
+			[aStream nextPutAll: '((usqInt) '.
+			self emitCExpression: rcvr on: aStream.
+			arg value < 0
+				ifTrue: [aStream nextPutAll: ' >> ', arg value negated printString]
+				ifFalse: [aStream nextPutAll: ' << ', arg value printString].
+			aStream nextPutAll: ')']
+		ifFalse: "bit shift amount is an expression"
+			[aStream nextPutAll: '(('.
+			self emitCExpression: arg on: aStream indent: level.
+			aStream nextPutAll: ' < 0) ? ((usqInt) '.
+			self emitCExpression: rcvr on: aStream indent: level.
+			aStream nextPutAll: ' >> -'.
+			self emitCExpression: arg on: aStream indent: level.
+			aStream nextPutAll: ') : ((usqInt) '.
+			self emitCExpression: rcvr on: aStream indent: level.
+			aStream nextPutAll: ' << '.
+			self emitCExpression: arg on: aStream indent: level.
+			aStream nextPutAll: '))']
 ]
 
 { #category : #'C translation' }
 CCodeGenerator >> generateBitXor: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
+	self emitCExpression: msgNode receiver on: aStream indent: level.
 	aStream nextPutAll: ' ^ '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitCExpression: msgNode args first on: aStream indent: level
 ]
 
 { #category : #'C translation' }
@@ -1845,9 +1841,9 @@ CCodeGenerator >> generateDoWhileTrue: msgNode on: aStream indent: level [
 CCodeGenerator >> generateEqual: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
+	self emitCExpression: msgNode receiver on: aStream indent: level.
 	aStream nextPutAll: ' == '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitCExpression: msgNode args first on: aStream indent: level
 ]
 
 { #category : #'C translation' }
@@ -1871,18 +1867,18 @@ CCodeGenerator >> generateFlag: msgNode on: aStream indent: level [
 CCodeGenerator >> generateGreaterThan: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
+	self emitCExpression: msgNode receiver on: aStream indent: level.
 	aStream nextPutAll: ' > '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitCExpression: msgNode args first on: aStream indent: level
 ]
 
 { #category : #'C translation' }
 CCodeGenerator >> generateGreaterThanOrEqual: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
+	self emitCExpression: msgNode receiver on: aStream indent: level.
 	aStream nextPutAll: ' >= '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitCExpression: msgNode args first on: aStream indent: level
 ]
 
 { #category : #'C translation' }
@@ -2396,18 +2392,18 @@ CCodeGenerator >> generateIsNil: msgNode on: aStream indent: level [
 CCodeGenerator >> generateLessThan: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
+	self emitCExpression: msgNode receiver on: aStream indent: level.
 	aStream nextPutAll: ' < '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitCExpression: msgNode args first on: aStream indent: level
 ]
 
 { #category : #'C translation' }
 CCodeGenerator >> generateLessThanOrEqual: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
+	self emitCExpression: msgNode receiver on: aStream indent: level.
 	aStream nextPutAll: ' <= '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitCExpression: msgNode args first on: aStream indent: level
 ]
 
 { #category : #'C translation' }
@@ -2492,9 +2488,9 @@ CCodeGenerator >> generateNot: msgNode on: aStream indent: level [
 CCodeGenerator >> generateNotEqual: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self emitCExpression: msgNode receiver on: aStream.
+	self emitCExpression: msgNode receiver on: aStream indent: level.
 	aStream nextPutAll: ' != '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitCExpression: msgNode args first on: aStream indent: level
 ]
 
 { #category : #'C translation' }
@@ -2695,15 +2691,15 @@ CCodeGenerator >> generateShiftRight: msgNode on: aStream indent: level [
 			["If not unsigned cast it to unsigned."
 			 type first ~= $u ifTrue:
 				[aStream nextPutAll: '((unsigned '; nextPutAll: type; nextPut: $)].
-			 self emitCExpression: msgNode receiver on: aStream.
+			 self emitCExpression: msgNode receiver on: aStream indent: level.
 			 type first ~= $u ifTrue:
 				[aStream nextPut: $)]]
 		ifFalse:
 			[aStream nextPutAll: '((usqInt) '.
-			 self emitCExpression: msgNode receiver on: aStream.
+			 self emitCExpression: msgNode receiver on: aStream indent: level.
 			 aStream nextPut: $)].
 	aStream nextPutAll: ' >> '.
-	self emitCExpression: msgNode args first on: aStream
+	self emitCExpression: msgNode args first on: aStream indent: level
 ]
 
 { #category : #'C translation' }
@@ -3559,14 +3555,16 @@ CCodeGenerator >> isObjectAccessor: selector given: interpreterClass [
 ]
 
 { #category : #'type inference' }
+CCodeGenerator >> isPointerCType: aType [
+	^aType last == $*
+]
+
+{ #category : #'type inference' }
 CCodeGenerator >> isSimpleType: aType [
 	"For the purposes of the read-before-written initializer, answer if
 	 aType is simple, e.g. not a structure, and array or an opaque type."
-	^aType last = $*
-	  or: [#(	sqInt usqInt sqLong usqLong
-			int #'unsigned int' double float
-			short #'unsigned short'
-			char #'unsigned char' #'signed char') includes: aType]
+	^(self isPointerCType: aType)
+	  or: [self isIntegralCType: aType]
 ]
 
 { #category : #'spur primitive compilation' }
@@ -3678,7 +3676,7 @@ CCodeGenerator >> maybePutPreambleFor: aClass on: aStream [
 ]
 
 { #category : #'type inference' }
-CCodeGenerator >> mergeTypeOf: var in: aDictionary with: newType [
+CCodeGenerator >> mergeTypeOf: var in: aDictionary with: newType method: tMethod [
 	"var is a variable that has been assigned an expression of type  newType.
 	 Either assign its type, if it is as yet untyped, or merge newType with its existing type.
 	 N.B. We refuse to promote a variable that already has integral type to a floating point
@@ -3688,10 +3686,18 @@ CCodeGenerator >> mergeTypeOf: var in: aDictionary with: newType [
 						extractTypeFor: var
 						fromDeclaration: (aDictionary at: var ifAbsentPut: [newType, ' ', var]).
 	existingType ~= newType ifTrue:
-		[((self isIntegralCType: existingType)
-		  and: [self isFloatingPointCType: newType]) ifFalse:
-			[mergedType := self promoteArithmeticTypes: existingType and: newType.
-			 aDictionary at: var put: mergedType, ' ', var]]
+		[((self isPointerCType: existingType)
+		  or: [self isPointerCType: newType])
+			ifTrue:
+				[existingType = #'void *' ifTrue: [^newType].
+				 newType = #'void *' ifTrue: [^existingType].
+				 self logger show: 'conflicting types ', existingType, ' ', newType, ' for ', var, ' in ', tMethod selector.
+				 ^existingType]
+			ifFalse:
+				[((self isIntegralCType: existingType)
+				  and: [self isFloatingPointCType: newType]) ifFalse:
+					[mergedType := self promoteArithmeticTypes: existingType and: newType.
+					 aDictionary at: var put: mergedType, ' ', var]]]
 ]
 
 { #category : #utilities }
