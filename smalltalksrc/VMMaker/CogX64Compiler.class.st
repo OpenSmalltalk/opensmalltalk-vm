@@ -700,13 +700,13 @@ CogX64Compiler >> concretizeCall [
 CogX64Compiler >> concretizeCallFull [
 	"Since CallFull (and JumpFull) is used to invoke code in dynamically-loaded plugins it shouldn't
 	 assume that code will be loaded within 2Gb of the code zone.  Hence generate a full 64-bit call,
-	 movabsq 0x123456789abcdef0, %rax; callq *%rax."
+	 movabsq $0x123456789abcdef0, %rax; callq *%rax."
 	<inline: true>
 	| operand |
 	operand := operands at: 0.
 	machineCode
 		at: 0 put: 16r48;
-		at: 1 put: 16rA1;
+		at: 1 put: 16rB8;
 		at: 2 put: (operand bitAnd: 16rFF);
 		at: 3 put: (operand >> 8 bitAnd: 16rFF);
 		at: 4 put: (operand >> 16 bitAnd: 16rFF);
@@ -889,7 +889,7 @@ CogX64Compiler >> concretizeJumpFull [
 	operand := operands at: 0.
 	machineCode
 		at: 0 put: 16r48;
-		at: 1 put: 16rA1;
+		at: 1 put: 16rB8;
 		at: 2 put: (operand bitAnd: 16rFF);
 		at: 3 put: (operand >> 8 bitAnd: 16rFF);
 		at: 4 put: (operand >> 16 bitAnd: 16rFF);

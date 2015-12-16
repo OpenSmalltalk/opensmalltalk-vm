@@ -121,7 +121,7 @@ CogInLineLiteralsX64Compiler >> concretizeMoveCwR [
 			at: 6 put: (offset >> 24 bitAnd: 16rFF).
 		^machineCodeSize := 7].
 	machineCode
-		at:  0 put: (self rexR: reg x: 0 b: reg);
+		at:  0 put: (self rexR: 0 x: 0 b: reg);
 		at:  1 put: 16rB8 + (reg bitAnd: 7);
 		at:  2 put: (value bitAnd: 16rFF);
 		at:  3 put: (value >> 8 bitAnd: 16rFF);
