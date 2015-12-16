@@ -3156,7 +3156,7 @@ SpurMemoryManager >> classAlien [
 
 { #category : #'plugin support' }
 SpurMemoryManager >> classArray [
-	"a.k.a. self fetchPointer: ClassArrayCompactIndex ofObject: classTableFirstPage"
+	<api>
 	^self splObj: ClassArray
 ]
 
