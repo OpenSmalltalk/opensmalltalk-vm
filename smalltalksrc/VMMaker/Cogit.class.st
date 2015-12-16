@@ -2143,10 +2143,8 @@ Cogit >> MoveXwr: indexReg R: baseReg R: destReg [
 Cogit >> MulR: reg1 R: reg2 [
 	"Multiplication is a little weird on some processors.  Defer to the backEnd
 	 to allow it to generate any special code it may need to."
-	<returnTypeC: #'AbstractInstruction *'>
-	<inline: false>
-	backEnd genMulR: reg1 R: reg2.
-	^self abstractInstructionAt: opcodeIndex - 1
+	<inline: true>
+	^backEnd genMulR: reg1 R: reg2
 ]
 
 { #category : #'abstract instructions' }
@@ -2433,10 +2431,9 @@ Cogit >> addToMap: annotation instruction: instruction byte: byte at: address fo
 
 { #category : #testing }
 Cogit >> addressIsInCodeZone: address [
-	"N.B. We /don't/ write this as address between: codeBase and: methodZone limitZony in case we're
-	 testing an address in a method whose code has yet to be allocated and is hence >= methodZone limitZony"
+	<inline: true>
 	^address asUnsignedInteger >= codeBase
-	  and: [address < methodZone youngReferrers]
+	  and: [address < methodZone zoneEnd]
 ]
 
 { #category : #testing }
@@ -5775,13 +5772,11 @@ Cogit >> genGetLeafCallStackPointer [
 	| startAddress |
 	<inline: false>
 	self allocateOpcodes: 32 bytecodes: 0.
-	initialPC := 0.
-	endPC := numAbstractOpcodes - 1.
 	startAddress := methodZoneBase.
 	backEnd genGetLeafCallStackPointerFunction.
 	self outputInstructionsForGeneratedRuntimeAt: startAddress.
 	self recordGeneratedRunTime: 'ceGetSP' address: startAddress.
-	^startAddress
+	ceGetSP := self cCoerceSimple: startAddress to: #'unsigned long (*)(void)'
 ]
 
 { #category : #initialization }
@@ -6309,8 +6304,6 @@ Cogit >> generateCaptureCStackPointers: captureFramePointer [
 	| startAddress |
 	<inline: false>
 	self allocateOpcodes: 32 bytecodes: 0.
-	initialPC := 0.
-	endPC := numAbstractOpcodes - 1.
 	startAddress := methodZoneBase.
 	captureFramePointer ifTrue:
 		[self MoveR: FPReg Aw: self cFramePointerAddress].
@@ -6731,8 +6724,6 @@ Cogit >> generateTrampolines [
 	methodZoneStart := methodZoneBase.
 	methodLabel address: methodZoneStart.
 	self allocateOpcodes: 80 bytecodes: 0.
-	initialPC := 0.
-	endPC := numAbstractOpcodes - 1.
 	hasYoungReferent := false.
 	objectRepresentation maybeGenerateSelectorIndexDereferenceRoutine.
 	self generateSendTrampolines.
@@ -6752,13 +6743,11 @@ Cogit >> generateTrampolines [
 { #category : #initialization }
 Cogit >> generateVMOwnerLockFunctions [
 	| startAddress |
-	<inline: false>
+	<inline: true>
 	self cppIf: COGMTVM
 		ifTrue:
 			[self allocateOpcodes: backEnd numLowLevelLockOpcodes bytecodes: 0.
 			self zeroOpcodeIndex.
-			initialPC := 0.
-			endPC := numAbstractOpcodes - 1.
 			startAddress := methodZoneBase.
 			backEnd generateLowLevelTryLock: coInterpreter vmOwnerLockAddress.
 			self outputInstructionsForGeneratedRuntimeAt: startAddress.
@@ -6983,7 +6972,7 @@ Cogit >> handleSimulationTrap: aProcessorSimulationTrap [
 Cogit >> handleWriteSimulationTrap: aProcessorSimulationTrap [ 
 	<doNotGenerate>
 	| variableValue |
-	(aProcessorSimulationTrap address between: codeBase and: methodZone zoneEnd) ifTrue:
+	(self addressIsInCodeZone: aProcessorSimulationTrap address) ifTrue:
 		[self error: 'attempt to write to code space'].
 	variableValue := processor perform: aProcessorSimulationTrap registerAccessor.
 	(simulatedVariableSetters at: aProcessorSimulationTrap address) value: variableValue.
@@ -7121,11 +7110,12 @@ Cogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	self maybeGenerateCheckFeatures.
 	self maybeGenerateICacheFlush.
 	self generateVMOwnerLockFunctions.
-	ceGetSP := self cCoerceSimple: self genGetLeafCallStackPointer to: #'unsigned long (*)(void)'.
+	self genGetLeafCallStackPointer.
 	self generateStackPointerCapture.
 	self generateTrampolines.
 	self computeEntryOffsets.
 	self generateClosedPICPrototype.
+	"repeat so that now the methodZone ignores the generated run-time"
 	methodZone manageFrom: methodZoneBase to: endAddress.
 	"N.B. this is assumed to be the last thing done in initialization; see Cogit>>initialized"
 	self generateOpenPICPrototype
@@ -8400,33 +8390,27 @@ Cogit >> maybeFreeCountersOf: aCogMethod [
 { #category : #initialization }
 Cogit >> maybeGenerateCheckFeatures [
 	| startAddress |
-	<inline: false>
-	backEnd numCheckFeaturesOpcodes = 0 ifTrue:
-		[^nil].
-	self allocateOpcodes: backEnd numCheckFeaturesOpcodes bytecodes: 0.
-	initialPC := 0.
-	endPC := numAbstractOpcodes - 1.
-	startAddress := methodZoneBase.
-	backEnd generateCheckFeatures.
-	self outputInstructionsForGeneratedRuntimeAt: startAddress.
-	self recordGeneratedRunTime: 'ceCheckFeaturesFunction' address: startAddress.
-	ceCheckFeaturesFunction := self cCoerceSimple: startAddress to: #'unsigned long (*)(void)'
+	<inline: true>
+	backEnd numCheckFeaturesOpcodes > 0 ifTrue:
+		[self allocateOpcodes: backEnd numCheckFeaturesOpcodes bytecodes: 0.
+		 startAddress := methodZoneBase.
+		 backEnd generateCheckFeatures.
+		 self outputInstructionsForGeneratedRuntimeAt: startAddress.
+		 self recordGeneratedRunTime: 'ceCheckFeaturesFunction' address: startAddress.
+		 ceCheckFeaturesFunction := self cCoerceSimple: startAddress to: #'unsigned long (*)(void)']
 ]
 
 { #category : #initialization }
 Cogit >> maybeGenerateICacheFlush [
 	| startAddress |
-	<inline: false>
-	backEnd numICacheFlushOpcodes = 0 ifTrue:
-		[^nil].
-	self allocateOpcodes: backEnd numICacheFlushOpcodes bytecodes: 0.
-	initialPC := 0.
-	endPC := numAbstractOpcodes - 1.
-	startAddress := methodZoneBase.
-	backEnd generateICacheFlush.
-	self outputInstructionsForGeneratedRuntimeAt: startAddress.
-	self recordGeneratedRunTime: 'ceFlushICache' address: startAddress.
-	ceFlushICache := self cCoerceSimple: startAddress to: #'void (*)(unsigned long,unsigned long)'
+	<inline: true>
+	backEnd numICacheFlushOpcodes > 0 ifTrue:
+		[self allocateOpcodes: backEnd numICacheFlushOpcodes bytecodes: 0.
+		 startAddress := methodZoneBase.
+		 backEnd generateICacheFlush.
+		 self outputInstructionsForGeneratedRuntimeAt: startAddress.
+		 self recordGeneratedRunTime: 'ceFlushICache' address: startAddress.
+		 ceFlushICache := self cCoerceSimple: startAddress to: #'void (*)(unsigned long,unsigned long)']
 ]
 
 { #category : #'garbage collection' }

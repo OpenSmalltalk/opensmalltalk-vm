@@ -2416,7 +2416,7 @@ CogIA32Compiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 a
 
 { #category : #'abstract instructions' }
 CogIA32Compiler >> genMulR: regSource R: regDest [
-	cogit gen: IMULRR operand: regSource operand: regDest
+	^cogit gen: IMULRR operand: regSource operand: regDest
 ]
 
 { #category : #'smalltalk calling convention' }
