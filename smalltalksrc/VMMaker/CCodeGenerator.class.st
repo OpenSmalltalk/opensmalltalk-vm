@@ -1225,8 +1225,6 @@ CCodeGenerator >> emitCHeaderOn: aStream [
 	self emitGlobalStructFlagOn: aStream.
 
 	self addHeaderFileFirst: '"sq.h"'.
-	vmClass isInterpreterClass ifTrue:
-		[self addHeaderFile: '"sqMemoryAccess.h"'].
 	"Additional header files; include C library ones first."
 	self emitHeaderFiles: (headerFiles select: [:hdr| hdr includes: $<]) on: aStream.
 	"Additional header files; include squeak VM ones last"
