@@ -38,7 +38,7 @@ static int            theErrorAcorn;
 static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 
 	   void			(*prevInterruptCheckChain)() = 0;
-       int            resetCPU(void *cpu);
+       long           resetCPU(void *cpu);
 
 	void *
 	newCPU()
@@ -50,7 +50,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		return &bx_cpu;
 	}
 
-	int
+	long
 	resetCPU(void *cpu)
 	{
 		BX_CPU_C *anx86 = (BX_CPU_C *)cpu;
@@ -91,7 +91,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		return 0;
 	}
 
-	int
+	long
 	singleStepCPUInSizeMinAddressReadWrite(void *cpu,
 									void *memory, ulong byteSize,
 									ulong minAddr, ulong minWriteMaxExecAddr)
@@ -124,7 +124,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		return blidx == 0 ? 0 : SomethingLoggedError;
 	}
 
-	int
+	long
 	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory, ulong byteSize,
 									ulong minAddr, ulong minWriteMaxExecAddr)
 	{
@@ -173,7 +173,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 #endif
 	}
 
-	int
+	long
 	disassembleForAtInSize(void *cpu, ulong laddr,
 							void *memory, ulong byteSize)
 	{
@@ -224,7 +224,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		bx_cpu.async_event = 1;
 	}
 
-	int
+	long
 	errorAcorn(void) { return theErrorAcorn; }
 
 	char *

@@ -51,7 +51,7 @@ newCPU()
 	return lastCPU;
 }
 
-int
+long
 resetCPU(void* cpu)
 {
 	unsigned int i, j;
@@ -74,7 +74,7 @@ resetCPU(void* cpu)
 	return 0;
 }
 
-int
+long
 runOnCPU(void *cpu, void *memory, 
 		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr, ARMword (*run)(ARMul_State*))
 {
@@ -104,14 +104,14 @@ runOnCPU(void *cpu, void *memory,
 	return gdblog_index == 0 ? 0 : SomethingLoggedError;
 }
 
-int
+long
 singleStepCPUInSizeMinAddressReadWrite(void *cpu, void *memory, 
 		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr)
 {
 	return runOnCPU(cpu, memory, byteSize, minAddr, minWriteMaxExecAddr, ARMul_DoInstr);
 }
 
-int
+long
 runCPUInSizeMinAddressReadWrite(void *cpu, void *memory, 
 		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr)
 {
@@ -129,7 +129,7 @@ flushICacheFromTo(void *cpu, ulong saddr, ulong eaddr)
 #endif
 }
 
-int
+long
 gdb_log_printf(void* stream, const char * format, ...)
 {
 	va_list arg;
@@ -145,7 +145,7 @@ gdb_log_printf(void* stream, const char * format, ...)
 	return 0;
 }
 
-int
+long
 disassembleForAtInSize(void *cpu, ulong laddr,
 			void *memory, ulong byteSize)
 {
@@ -185,7 +185,7 @@ forceStopRunning()
 	lastCPU->Emulate = STOP;
 }
 
-int
+long
 errorAcorn(void) { return 0; }
 
 char *
