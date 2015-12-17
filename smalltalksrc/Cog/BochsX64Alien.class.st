@@ -22,11 +22,13 @@ BochsX64Alien class >> initialize [
 	it := self basicNew.
 	OpcodeExceptionMap := Array new: 256 withAll: #handleExecutionPrimitiveFailureAt:in:rex:.
 	OpcodeExceptionMap
-		at: 1 + it callOpcode			put: #handleCallFailureAt:in:rex:;
-		at: 1 + it jmpOpcode			put: #handleJmpFailureAt:in:rex:;
-		at: 1 + it retOpcode			put: #handleRetFailureAt:in:rex:;
+		at: 1 + it callOpcode		put: #handleCallFailureAt:in:rex:;
+		at: 1 + it jmpOpcode		put: #handleJmpFailureAt:in:rex:;
+		at: 1 + it retOpcode		put: #handleRetFailureAt:in:rex:;
 		at: 1 + it movALObOpcode	put: #handleMovALObFailureAt:in:rex:;
+		at: 1 + it movAXOvOpcode	put: #handleMovAXOvFailureAt:in:rex:;
 		at: 1 + it movObALOpcode	put: #handleMovObALFailureAt:in:rex:;
+		at: 1 + it movOvAXOpcode	put: #handleMovOvAXFailureAt:in:rex:;
 		at: 1 + it movGvEvOpcode	put: #handleMovGvEvFailureAt:in:rex:;
 		at: 1 + it movEvGvOpcode	put: #handleMovEvGvFailureAt:in:rex:;
 		at: 1 + it movGbEbOpcode	put: #handleMovGbEbFailureAt:in:rex:;
@@ -368,9 +370,31 @@ BochsX64Alien >> handleJmpFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|Byt
 
 { #category : #'error handling' }
 BochsX64Alien >> handleMovALObFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
+	"Convert an execution primitive failure for a read into al into a ProcessorSimulationTrap signal."
+	rexByteOrNil ifNotNil:
+		[self assert: rexByteOrNil = 16r48.
+		 ^(ProcessorSimulationTrap
+				pc: pc
+				nextpc: pc + 10
+				address: (memoryArray unsignedLong64At: pc + 3)
+				type: #read
+				accessor: #al:)
+			signal].
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 5
+			address: (memoryArray unsignedLongAt: pc + 2)
+			type: #read
+			accessor: #al:)
+		signal
+]
+
+{ #category : #'error handling' }
+BochsX64Alien >> handleMovAXOvFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
 	"Convert an execution primitive failure for a read into rax/eax into a ProcessorSimulationTrap signal."
 	rexByteOrNil ifNotNil:
-		[^(ProcessorSimulationTrap
+		[self assert: rexByteOrNil = 16r48.
+		 ^(ProcessorSimulationTrap
 				pc: pc
 				nextpc: pc + 10
 				address: (memoryArray unsignedLong64At: pc + 3)
@@ -544,14 +568,27 @@ BochsX64Alien >> handleMovGvEvFailureAt: pc "<Integer>" in: memoryArray "<Bitmap
 
 { #category : #'error handling' }
 BochsX64Alien >> handleMovObALFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
-	"Convert an execution primitive failure for a write of eax into a ProcessorSimulationTrap signal."
-	self shouldBeImplemented.
+	"Convert an execution primitive failure for a write of al into a ProcessorSimulationTrap signal."
+	self assert: rexByteOrNil = 16r48.
 	^(ProcessorSimulationTrap
 			pc: pc
-			nextpc: pc + 5
-			address: (memoryArray unsignedLongAt: pc + 2 bigEndian: false)
+			nextpc: pc + 10
+			address: (memoryArray unsignedLong64At: pc + 3)
 			type: #write
-			accessor: #eax)
+			accessor: #al)
+		signal
+]
+
+{ #category : #'error handling' }
+BochsX64Alien >> handleMovOvAXFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [ "<Integer|nil>"
+	"Convert an execution primitive failure for a write of rax into a ProcessorSimulationTrap signal."
+	self assert: rexByteOrNil = 16r48.
+	^(ProcessorSimulationTrap
+			pc: pc
+			nextpc: pc + 10
+			address: (memoryArray unsignedLong64At: pc + 3)
+			type: #write
+			accessor: #rax)
 		signal
 ]
 
@@ -607,6 +644,13 @@ BochsX64Alien >> lockPrefix [
 BochsX64Alien >> movALObOpcode [
 	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
 		table A2, pA7"
+	^16rA0
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> movAXOvOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A2, pA7"
 	^16rA1
 ]
 
@@ -647,6 +691,13 @@ BochsX64Alien >> movGvEvOpcode [
 
 { #category : #opcodes }
 BochsX64Alien >> movObALOpcode [
+	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
+		table A2, pA7"
+	^16rA2
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> movOvAXOpcode [
 	"[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2B: Instruction Set Reference, N-Z.
 		table A2, pA7"
 	^16rA3
