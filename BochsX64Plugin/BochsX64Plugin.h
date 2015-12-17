@@ -21,19 +21,19 @@ extern void *newCPU();
 /*
  * reset the cpu to register contents 0, protected 64-bit mode.
  */
-extern int   resetCPU(void *cpu);
+extern long   resetCPU(void *cpu);
 /*
  * Single-step *cpu (a bx_cpu_c instance) using memory as its memory.
  * Answer 0 on success, or an integer error code if something went awry.
  */
-extern int  singleStepCPUInSizeMinAddrReadWrite(void *cpu, void *memory,
+extern long  singleStepCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 					ulong byteSize, ulong minReadAddr, ulong minWriteAddr);
 /*
  * Run *cpu (a bx_cpu_c instance) using memory as its memory.
  * Answer an integer error code when the processor hits some exception.
  * Answer 0 when it is interrupted.
  */
-extern int	runCPUInSizeMinAddrReadWrite(void *cpu, void *memory,
+extern long	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 					ulong byteSize, ulong minReadAddr, ulong minWriteAddr);
 /*
  * Flush any icache entries from start to end
@@ -51,12 +51,12 @@ extern void (*prevInterruptCheckChain)();
  * Disassemble the instruction at address in memory, writing the output to the
  * log.
  */
-extern int disassembleForAtInSize(void *cpu, ulong laddr,
+extern long disassembleForAtInSize(void *cpu, ulong laddr,
 									void *memory, ulong byteSize);
 /*
  * The saved error if the previous singleStepIn failed.
  */
-extern int   errorAcorn();
+extern long   errorAcorn();
 /*
  * The current log (if singleStep failed with SomethingLoggedError).
  */

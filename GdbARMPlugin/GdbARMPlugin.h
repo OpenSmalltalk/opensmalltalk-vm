@@ -22,52 +22,52 @@ typedef unsigned long ulong;
 #endif
 
 extern ulong	minReadAddress, minWriteAddress;
-extern int gdb_log_printf(void* stream, const char * format, ...);
+extern long gdb_log_printf(void* stream, const char * format, ...);
 
 
 /*
- * Answer a pointer to a new ARMulator CPU (an instance of typedef ARMul_State)
+ * Answer a polonger to a new ARMulator CPU (an instance of typedef ARMul_State)
  */
 extern void *newCPU();
 /*
  * reset the cpu to register contents 0, protected 32-bit mode.
  */
-extern int   resetCPU(void *cpu);
+extern long   resetCPU(void *cpu);
 /*
  * Single-step *cpu (an ARMul_state instance) using memory as its memory.
- * Answer 0 on success, or an integer error code if something went awry.
+ * Answer 0 on success, or an longeger error code if something went awry.
  */
-extern int  singleStepCPUInSizeMinAddrReadWrite(void *cpu, void *memory,
+extern long  singleStepCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 					ulong byteSize, ulong minReadAddr, ulong minWriteAddr);
 /*
  * Run *cpu (an ARMul_state instance) using memory as its memory.
- * Answer an integer error code when the processor hits some exception.
- * Answer 0 when it is interrupted.
+ * Answer an longeger error code when the processor hits some exception.
+ * Answer 0 when it is longerrupted.
  */
-extern int	runCPUInSizeMinAddrReadWrite(void *cpu, void *memory,
+extern long	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 					ulong byteSize, ulong minReadAddr, ulong minWriteAddr);
 /*
  * Flush any icache entries from start to end
  */
 extern void	flushICacheFromTo(void *cpu, ulong strt, ulong nd);
 /*
- * force runCPUInSize to exit asap.  Used by interrupts.
+ * force runCPUInSize to exit asap.  Used by longerrupts.
  */
 extern void	forceStopRunning();
 /*
- * The previous entry in the interruptCheckChain so forceStopRunning can chain.
+ * The previous entry in the longerruptCheckChain so forceStopRunning can chain.
  */
 extern void (*prevInterruptCheckChain)();
 /*
  * Disassemble the instruction at address in memory, writing the output to the
  * log.
  */
-extern int disassembleForAtInSize(void *cpu, ulong laddr,
+extern long disassembleForAtInSize(void *cpu, ulong laddr,
 									void *memory, ulong byteSize);
 /*
  * The saved error if the previous singleStepIn failed.
  */
-extern int   errorAcorn();
+extern long   errorAcorn();
 /*
  * The current log (if singleStep failed with SomethingLoggedError).
  */
