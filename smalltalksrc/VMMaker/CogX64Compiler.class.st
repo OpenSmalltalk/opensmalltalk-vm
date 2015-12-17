@@ -667,7 +667,7 @@ CogX64Compiler >> concretizeArithCqRWithRO: regOpcode raxOpcode: raxOpcode [
 			at: 5 put: (value >> 16 bitAnd: 16rFF);
 			at: 6 put: (value >> 24 bitAnd: 16rFF).
 		 ^machineCodeSize := 7].
-	^self concretizeArithCwR: (raxOpcode = 16r3D ifTrue: [16r39] ifFalse: [raxOpcode - 2])
+	^self concretizeArithCwR: (raxOpcode = 16r3D "Cmp" ifTrue: [16r39] ifFalse: [raxOpcode - 2])
 ]
 
 { #category : #'generate machine code' }
@@ -2604,11 +2604,11 @@ CogX64Compiler >> is32BitSignedImmediate: a64BitUnsignedOperand [
 CogX64Compiler >> isAddressRelativeToVarBase: varAddress [
 	<inline: true>
 	<var: #varAddress type: #usqInt>
-	"Support for addressing variables off the dedicated VarBaseReg.  Allow for 16k of variables.
+	"Support for addressing variables off the dedicated VarBaseReg.  Allow for 1Mb of variables.
 	 The x64 supports 32-bit offsets, but we choose not to address everything from VarBaseReg."
 	^varAddress notNil
 	  and: [varAddress >= cogit varBaseAddress
-	  and: [varAddress - cogit varBaseAddress < (1 << 14)]]
+	  and: [varAddress - cogit varBaseAddress < (1 << 20)]]
 ]
 
 { #category : #testing }
