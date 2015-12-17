@@ -32,6 +32,7 @@
 #include <stdio.h> /* for fprintf */
 #include <sys/types.h>
 #include <sys/time.h>
+#include "sqaio.h"
 
 #define SecondsFrom1901To1970      2177452800ULL
 #define MicrosecondsFrom1901To1970 2177452800000000ULL
@@ -246,10 +247,10 @@ ioOldMSecs(void)
 }
 #endif /* !macintoshSqueak */
 
-usqLong
+unsigned volatile long long
 ioUTCMicroseconds() { return get64(utcMicrosecondClock); }
 
-usqLong
+unsigned volatile long long
 ioLocalMicroseconds() { return get64(localMicrosecondClock); }
 
 usqInt
@@ -258,10 +259,10 @@ ioLocalSecondsOffset() { return (usqInt)(vmGMTOffset / MicrosecondsPerSecond); }
 /* This is an expensive interface for use by Smalltalk or vm profiling code that
  * wants the time now rather than as of the last heartbeat.
  */
-usqLong
+unsigned volatile long long
 ioUTCMicrosecondsNow() { return currentUTCMicroseconds(); }
 
-usqLong
+unsigned volatile long long
 ioLocalMicrosecondsNow() { return currentUTCMicroseconds() + vmGMTOffset; };
 
 sqInt

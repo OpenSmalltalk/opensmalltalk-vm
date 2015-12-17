@@ -109,13 +109,13 @@ currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DW
 		  + (currentTick - *baseTickp) * MicrosecondsPerMillisecond;
 }
 
-usqLong
+unsigned volatile long long
 ioUTCMicroseconds() { return currentUTCMicroseconds(&utcTickBaseMicroseconds, &lastTick, &baseTick); }
 
 /* This is an expensive interface for use by profiling code that wants the time
  * now rather than as of the last heartbeat.
  */
-usqLong
+unsigned volatile long long
 ioUTCMicrosecondsNow() { return currentUTCMicroseconds(&utcTickBaseMicroseconds, &lastTick, &baseTick); }
 
 static DWORD dwTimerPeriod;

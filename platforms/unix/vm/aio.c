@@ -204,7 +204,7 @@ do if ((bool) && !(++tickCount % TICKS_PER_CHAR)) {		\
 	if (!*ticker++) ticker= ticks;			\
 } while (0)
 
-int aioPoll(int microSeconds)
+long aioPoll(long microSeconds)
 {
   int	 fd;
   fd_set rd, wr, ex;
@@ -273,7 +273,7 @@ int aioPoll(int microSeconds)
 /* sleep for microSeconds or until i/o becomes possible, avoiding
    sleeping in select() if timeout too small */
 
-int aioSleepForUsecs(int microSeconds)
+long aioSleepForUsecs(long microSeconds)
 {
 #if defined(HAVE_NANOSLEEP)
   if (microSeconds < (1000000/60))	/* < 1 timeslice? */

@@ -230,10 +230,10 @@ ioInitTime(void)
 	utcStartMicroseconds = utcMicrosecondClock;
 }
 
-usqLong
+unsigned volatile long long
 ioUTCMicroseconds() { return get64(utcMicrosecondClock); }
 
-usqLong
+unsigned volatile long long
 ioLocalMicroseconds() { return get64(localMicrosecondClock); }
 
 usqInt
@@ -242,7 +242,7 @@ ioLocalSecondsOffset() { return (usqInt)(vmGMTOffset / MicrosecondsPerSecond); }
 /* This is an expensive interface for use by Smalltalk or vm profiling code that
  * wants the time now rather than as of the last heartbeat.
  */
-usqLong
+unsigned volatile long long
 ioUTCMicrosecondsNow()
 {
 	return currentUTCMicroseconds(&vmThreadUtcTickBaseMicroseconds,
@@ -250,7 +250,7 @@ ioUTCMicrosecondsNow()
 								  &vmThreadBaseTick);
 }
 
-usqLong
+unsigned volatile long long
 ioLocalMicrosecondsNow() { return ioUTCMicrosecondsNow() + vmGMTOffset; };
 
 sqInt

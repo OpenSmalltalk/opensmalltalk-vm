@@ -61,7 +61,8 @@ static struct timeval	 startUpTime;
 /*
  * Compute the time via the old method for sanity checking purposes.
  */
-int ioOldMSecs() {
+sqInt ioOldMSecs()
+{
 	struct timeval now;
 	gettimeofday(&now, 0);
 	if ((now.tv_usec-= startUpTime.tv_usec) < 0) {

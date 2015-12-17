@@ -55,7 +55,7 @@ void aioInit(void) {
 
 }
 
-int aioSleepForUsecs(int microSeconds)
+sqInt aioSleepForUsecs(sqInt microSeconds)
 {
 #if defined(HAVE_NANOSLEEP)
     if (microSeconds < (1000000/60))	/* < 1 timeslice? */
@@ -72,7 +72,7 @@ int aioSleepForUsecs(int microSeconds)
 
 /* sleep for microSeconds*/
 
-int aioSleep(int microSeconds)
+sqInt aioSleep(sqInt microSeconds)
 {
 #if defined(HAVE_NANOSLEEP)
 	if (microSeconds < (1000000/60))	/* < 1 timeslice? */

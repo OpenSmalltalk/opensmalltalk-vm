@@ -146,6 +146,7 @@ extern void sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz);
 sqInt ioMSecs(void);
 /* deprecated out of existence sqInt ioLowResMSecs(void); */
 sqInt ioMicroMSecs(void);
+sqInt ioOldMSecs(void);
 
 /* duplicate the generated definition in the interpreter.  If they differ the
  * compiler will complain and catch it for us.  We use 0x1FFFFFFF instead of
@@ -156,10 +157,10 @@ sqInt ioMicroMSecs(void);
 #define MillisecondClockMask 0x1FFFFFFF
 
 #if STACKVM
-usqLong ioUTCMicrosecondsNow();
-usqLong ioUTCMicroseconds();
-usqLong ioLocalMicrosecondsNow();
-usqLong ioLocalMicroseconds();
+unsigned volatile long long  ioUTCMicrosecondsNow();
+unsigned volatile long long  ioUTCMicroseconds();
+unsigned volatile long long  ioLocalMicrosecondsNow();
+unsigned volatile long long  ioLocalMicroseconds();
 usqInt	ioLocalSecondsOffset();
 void	ioUpdateVMTimezone();
 void	ioSynchronousCheckForEvents();
@@ -215,6 +216,7 @@ sqInt fullDisplayUpdate(void);
 sqInt interpret(void);
 sqInt primitiveFail(void);
 sqInt signalSemaphoreWithIndex(sqInt semaIndex);
+sqInt doSignalExternalSemaphores(sqInt);
 sqInt success(sqInt);
 
 /* Display, mouse, keyboard, time. */
@@ -222,6 +224,7 @@ sqInt success(sqInt);
 sqInt ioBeep(void);
 sqInt ioExit(void);
 sqInt ioExitWithErrorCode(int);
+sqInt crashInThisOrAnotherThread(sqInt flags);
 sqInt ioForceDisplayUpdate(void);
 sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth,
 		  double hScale, double vScale, sqInt landscapeFlag);
@@ -237,6 +240,14 @@ sqInt ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
 		    sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB);
 sqInt ioHasDisplayDepth(sqInt depth);
 sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag);
+char* ioGetLogDirectory(void);
+sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz);
+char* ioGetWindowLabel(void);
+sqInt ioSetWindowLabelOfSize(void *lblIndex, sqInt sz);
+sqInt ioGetWindowWidth(void);
+sqInt ioGetWindowHeight(void);
+sqInt ioSetWindowWidthHeight(sqInt w, sqInt h);
+sqInt ioIsWindowObscured(void);
 
 #if STACKVM || NewspeakVM
 /* thread subsystem support for e.g. sqExternalSemaphores.c */
@@ -529,8 +540,6 @@ sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length);
 sqInt imageNameSize(void);
 sqInt vmPathSize(void);
 sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length);
-char* ioGetLogDirectory(void);
-char* ioGetWindowLabel(void);
 
 /* Image security traps. */
 sqInt ioCanRenameImage(void);

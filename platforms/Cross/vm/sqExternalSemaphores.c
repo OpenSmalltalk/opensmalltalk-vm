@@ -182,7 +182,7 @@ signalSemaphoreWithIndex(sqInt index)
  * moment externalSemaphoreTableSize is not used.
  */
 sqInt
-doSignalExternalSemaphores(int externalSemaphoreTableSize)
+doSignalExternalSemaphores(sqInt externalSemaphoreTableSize)
 {
 	int i, switched;
 

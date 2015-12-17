@@ -43,7 +43,8 @@
 TARGET		= vm-display-fbdev$a
 OBJS		= sqUnixFBDev$o
 
-XCFLAGS		= $(X_CFLAGS) -Wall -Werror -Wno-unknown-pragmas
+#XCFLAGS		= $(X_CFLAGS) -Wall -Werror -Wno-unknown-pragmas
+XCFLAGS		= $(X_CFLAGS) -Wall -Wno-unknown-pragmas
 
 XINCLUDES	= [includes] $(X_INCLUDES) \
 		  -I$(topdir)/platforms/Cross/plugins/FilePlugin \

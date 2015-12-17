@@ -86,13 +86,15 @@ extern void aioDisable(int fd);
  * handled fd(s) will terminate the sleep, with the appropriate
  * handler(s) being called before returning.
  */
-extern int aioPoll(int microSeconds);
+extern long aioPoll(long microSeconds);
 
 /* As above, but avoid sleeping in select() if microSeconds is small
  * (less than a timeslice).  Handlers are called, if neccessary, at
  * the start and end of the sleep.
  */
-extern int aioSleepForUsecs(int microSeconds);
+extern long aioSleepForUsecs(long microSeconds);
 
+extern unsigned volatile long long ioUTCMicroseconds(void);
+extern unsigned volatile long long ioUTCMicrosecondsNow(void);
 
 #endif /* __sqaio_h */
