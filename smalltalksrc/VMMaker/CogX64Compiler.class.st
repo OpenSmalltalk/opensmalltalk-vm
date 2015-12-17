@@ -2456,21 +2456,10 @@ CogX64Compiler >> genRemoveNArgsFromStack: n [
 CogX64Compiler >> genRestoreRegs [
 	"Restore the general purpose registers for a trampoline call.
 	 c.f. genSaveRegisters"
-	cogit
-		PopR: RAX;
-		PopR: RBX;
-		PopR: RCX;
-		PopR: RDX;
-		PopR: RSI;
-		PopR: RDI;
-		PopR: R8;
-		PopR: R9;
-		PopR: R10;
-		PopR: R11;
-		PopR: R12;
-		PopR: R13;
-		PopR: R14;
-		PopR: R15.
+	RAX to: R15 do:
+		[:reg|
+		 (reg between: RSP and: RBP) ifFalse:
+			[cogit PopR: reg]].
 	^0
 ]
 
@@ -2481,16 +2470,22 @@ CogX64Compiler >> genRestoreRegsExcept: abstractReg [
 	self assert: (R15 > RAX and: [R15 - RAX + 1 = 16]).
 	RAX to: R15 do:
 		[:reg|
-		realReg = reg ifTrue: [cogit AddCq: 4 R: RSP] ifFalse: [cogit PopR: reg]].
+		(reg between: RSP and: RBP) ifFalse:
+			[realReg = reg
+				ifTrue: [cogit AddCq: 8 R: RSP]
+				ifFalse: [cogit PopR: reg]]].
 	^0
 ]
 
 { #category : #abi }
-CogX64Compiler >> genSaveRegisters [
+CogX64Compiler >> genSaveRegsForCCall [
 	"Save the general purpose registers for a trampoline call."
 
 	self assert: (R15 > RAX and: [R15 - RAX + 1 = 16]).
-	R15 to: RAX by: -1 do: [:reg| cogit PushR: reg].
+	R15 to: RAX by: -1 do:
+		[:reg|
+		 (reg between: RSP and: RBP) ifFalse:
+			[cogit PushR: reg]].
 	^0
 ]
 
