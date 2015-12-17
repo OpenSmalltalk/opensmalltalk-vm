@@ -2523,13 +2523,16 @@ CogIA32Compiler >> genRestoreRegsExcept: abstractReg [
 	self assert: (EDI > EAX and: [EDI - EAX + 1 = 6]).
 	EAX to: EDI do:
 		[:reg|
-		realReg = reg ifTrue: [cogit AddCq: 4 R: ESP] ifFalse: [cogit PopR: reg]].
+		(reg between: ESP and: EBP) ifFalse:
+			[realReg = reg
+				ifTrue: [cogit AddCq: 4 R: ESP]
+				ifFalse: [cogit PopR: reg]]].
 	^0
 ]
 
 { #category : #abi }
-CogIA32Compiler >> genSaveRegisters [
-	"Save the general purpose registers for a trampoline call."
+CogIA32Compiler >> genSaveRegsForCCall [
+	"Save the general purpose registers for a call into the C run-time from a trampoline."
 
 	self assert: (EDI > EAX and: [EDI - EAX + 1 = 8]).
 	EDI to: EAX by: -1 do:
