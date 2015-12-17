@@ -26,7 +26,8 @@ CogObjectRepresentationFor64BitSpur >> allImmediate: immediateMask branchIf: reg
 		tag2 := objectMemory classTagForClass: (objectMemory fetchPointer: 1 ofObject: arrayObj).
 		incorrectTag :=  self fetchImmediateTagOtherThanTag1: tag1 tag2: tag2.
 		cogit CmpCq: incorrectTag R: TempReg.
-		cogit JumpZero: targetFixUp ].
+		cogit JumpZero: targetFixUp].
+	^0
 ]
 
 { #category : #'sista support' }
