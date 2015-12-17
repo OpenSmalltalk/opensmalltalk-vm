@@ -732,12 +732,6 @@ CogAbstractInstruction >> genPushRegisterArgsForNumArgs: numArgs scratchReg: scr
 	self subclassResponsibility
 ]
 
-{ #category : #abi }
-CogAbstractInstruction >> genSaveRegisters [
-	"Save the general purpose registers for a trampoline call."
-	self subclassResponsibility
-]
-
 { #category : #'smalltalk calling convention' }
 CogAbstractInstruction >> genSaveStackPointers [
 	"Save the frame and stack pointer registers to the framePointer
