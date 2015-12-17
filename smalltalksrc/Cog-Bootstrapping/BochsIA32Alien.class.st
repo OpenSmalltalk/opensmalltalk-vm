@@ -224,11 +224,6 @@ BochsIA32Alien >> decorateDisassembly: anInstructionString for: aSymbolManager "
 	aSymbolManager relativeBaseForDisassemblyInto:
 		[:baseAddress :baseName|
 		string := baseName, '+', (address - baseAddress printStringBase: 16 length: 4 padded: true), (string copyFrom: (string indexOf: $:) + 1 to: string size)].
-	aSymbolManager relativeBaseForDisassemblyInto:
-		[:baseAddress :baseName| | stream delta |
-		stream := ReadStream on: string from: 1 to: string size.
-		delta := (Integer readFrom: stream base: 16) - baseAddress.
-		string := baseName, '+', (delta printStringBase: 16 length: 4 padded: true), (string copyFrom: stream position to: stream size)].
 	(i1 := string indexOfSubCollection: '%ds:0x') > 0 ifTrue:
 		[i2 := i1 + 6.
 		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
