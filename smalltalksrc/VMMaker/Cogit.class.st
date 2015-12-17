@@ -4312,7 +4312,7 @@ Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrCo
 			numArgs: numArgs
 			wordAlignment: cStackAlignment / objectMemory wordSize].
 	saveRegs ifTrue:
-		[backEnd genSaveRegisters].
+		[backEnd genSaveRegsForCCall].
 	backEnd genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3.
 	self CallFullRT: (self cCode: [aRoutine asUnsignedInteger]
 					   inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
