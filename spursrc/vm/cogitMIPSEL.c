@@ -28,10 +28,10 @@ typedef struct _AbstractInstruction {
 	unsigned long		operands [3];
 	unsigned long	address;
 	struct _AbstractInstruction *dependent;
-	unsigned char		machineCode [10];
+	unsigned long		machineCode [7];
  } AbstractInstruction;
 
-#define CogIA32Compiler AbstractInstruction
+#define CogMIPSELCompiler AbstractInstruction
 #define CogAbstractInstruction AbstractInstruction
 
 
@@ -109,6 +109,14 @@ typedef struct {
 
 
 /*** Constants ***/
+#define A0 4
+#define A1 5
+#define A2 6
+#define A3 7
+#define ADDIU 9
+#define ADDU 33
+#define AddCheckOverflowCqR 120
+#define AddCheckOverflowRR 121
 #define AddCqR 95
 #define AddCwR 103
 #define AddRdRd 110
@@ -117,6 +125,8 @@ typedef struct {
 #define AltBlockCreationBytecodeSize 3
 #define AltFirstSpecialSelector 80
 #define AltNumSpecialSelectors 32
+#define AND 36
+#define ANDI 12
 #define AndCqR 97
 #define AndCqRR 108
 #define AndCwR 105
@@ -126,12 +136,32 @@ typedef struct {
 #define Arg1Reg -8
 #define ArithmeticShiftRightCqR 80
 #define ArithmeticShiftRightRR 81
+#define AT 1
 #define BadRegisterSet 1
+#define BEQ 4
+#define BGEZ 1
+#define BGTZ 7
+#define BLEZ 6
+#define BLTZ 0
 #define BlockCreationBytecodeSize 4
+#define BNE 5
+#define BREAK 13
+#define BranchTemp 11
+#define BrEqualRR 125
+#define BrLongEqualRR 135
+#define BrLongNotEqualRR 136
+#define BrNotEqualRR 126
+#define BrSignedGreaterEqualRR 134
+#define BrSignedGreaterRR 133
+#define BrSignedLessEqualRR 132
+#define BrSignedLessRR 131
+#define BrUnsignedGreaterEqualRR 130
+#define BrUnsignedGreaterRR 129
+#define BrUnsignedLessEqualRR 128
+#define BrUnsignedLessRR 127
 #define BytecodeSetHasDirectedSuperSend 0
 #define Call 6
 #define CallFull 7
-#define CDQ 116
 #define ClassArrayCompactIndex 51
 #define ClassBlockClosureCompactIndex 37
 #define ClassFloatCompactIndex 34
@@ -148,38 +178,26 @@ typedef struct {
 #define CMMaxUsageCount 7
 #define CMMethod 2
 #define CMOpenPIC 5
-#define CMPXCHGAwR 124
-#define CMPXCHGMwrR 125
+#define Cmp 8
 #define CmpC32R 102
 #define CmpCqR 94
 #define CmpCwR 101
 #define CmpRdRd 109
 #define CmpRR 88
 #define CompletePrimitive 4
+#define ConcreteVarBaseReg 22
 #define ConstZero 1
 #define ConvertRRd 115
-#define CPUID 119
 #define Debug DEBUGVM
+#define DIV 26
 #define DisplacementMask 0x1F
 #define DisplacementX2N 0
 #define DivRdRd 113
+#define DivRR 117
 #define DPFPReg0 -21
 #define DPFPReg1 -22
 #define DPFPReg2 -23
-#define DPFPReg3 -24
-#define DPFPReg4 -25
-#define DPFPReg5 -26
-#define DPFPReg6 -27
-#define DPFPReg7 -28
-#define EAX 0
-#define EBP 5
-#define EBX 3
-#define ECX 1
-#define EDI 7
-#define EDX 2
 #define EncounteredUnknownBytecode -6
-#define ESI 6
-#define ESP 4
 #define Fill32 4
 #define FirstAnnotation 64
 #define FirstJump 11
@@ -190,14 +208,15 @@ typedef struct {
 #define FoxMFReceiver -12
 #define FoxSavedFP 0
 #define FoxThisContext -8
+#define FP 30
 #define FPReg -1
 #define GCModeBecome 8
 #define GCModeFull 1
 #define GCModeNewSpace 2
 #define HasBytecodePC 4
 #define HeaderIndex 0
-#define IDIVR 117
-#define IMULRR 118
+#define HintLoad 0
+#define HintStore 1
 #define InstanceSpecificationIndex 2
 #define InstructionPointerIndex 1
 #define InsufficientCodeSpace -2
@@ -212,6 +231,10 @@ typedef struct {
 #define IsRelativeCall 5
 #define IsSendCall 7
 #define IsSuperSend 8
+#define J 2
+#define JAL 3
+#define JALR 9
+#define JR 8
 #define Jump 15
 #define JumpAbove 30
 #define JumpAboveOrEqual 29
@@ -245,16 +268,20 @@ typedef struct {
 #define Label 1
 #define LargeContextSlots 62
 #define LastJump 39
-#define LFENCE 120
+#define LB 32
+#define LBU 36
+#define LH 33
+#define LHU 37
 #define LinkReg -17
 #define Literal 2
 #define LiteralStart 1
-#define LOCK 123
 #define LoadEffectiveAddressMwrR 77
 #define LogicalShiftLeftCqR 84
 #define LogicalShiftLeftRR 85
 #define LogicalShiftRightCqR 82
 #define LogicalShiftRightRR 83
+#define LUI 15
+#define LW 35
 #define MapEnd 0
 #define MaxCompiledPrimitiveIndex 222
 #define MaxMethodSize 65535
@@ -269,18 +296,17 @@ typedef struct {
 #define MethodCacheSelector 1
 #define MethodIndex 3
 #define MethodTooBig -4
-#define MFENCE 121
+#define MFHI 16
+#define MFLO 18
 #define MFMethodFlagHasContextFlag 1
 #define MFMethodFlagIsBlockFlag 2
-#define ModReg 3
-#define ModRegInd 0
-#define ModRegRegDisp32 2
-#define ModRegRegDisp8 1
 #define MoveAbR 43
 #define MoveAwR 41
 #define MoveC32R 65
 #define MoveCqR 63
 #define MoveCwR 64
+#define MoveHighR 119
+#define MoveLowR 118
 #define MoveM16rR 51
 #define MoveM64rRd 70
 #define MoveMbrR 59
@@ -296,8 +322,11 @@ typedef struct {
 #define MoveRXwrR 48
 #define MoveXbrRR 61
 #define MoveXwrRR 47
+#define MULT 24
 #define MULTIPLEBYTECODESETS 0
+#define MulCheckOverflowRR 122
 #define MulRdRd 112
+#define MulRR 116
 #define NegateR 79
 #define NewspeakVM 0
 #define Nop 5
@@ -308,11 +337,18 @@ typedef struct {
 #define NumSendTrampolines 4
 #define NumSpecialSelectors 32
 #define NumTrampolines 54
+#define OneInstruction 4
+#define OR 37
+#define ORI 13
 #define OrCqR 98
 #define OrCwR 106
 #define OrRR 92
+#define Overflow 8
+#define OverflowTemp1 9
+#define OverflowTemp2 10
 #define PCReg -19
 #define PopR 72
+#define PREF 51
 #define PrefetchAw 76
 #define PrimCallCollectsProfileSamples 8
 #define PrimCallDoNotJIT 32
@@ -323,53 +359,75 @@ typedef struct {
 #define PushCq 74
 #define PushCw 75
 #define PushR 73
+#define R0 0
+#define R31 31
+#define RA 31
+#define REGIMM 1
 #define ReceiverIndex 5
 #define ReceiverResultReg -3
 #define RetN 8
 #define RISCTempReg -18
+#define S0 16
+#define S1 17
+#define S2 18
+#define S3 19
+#define S4 20
+#define S5 21
+#define S6 22
+#define S7 23
+#define SB 40
 #define Scratch0Reg -9
 #define SelectorCannotInterpret 34
 #define SelectorDoesNotUnderstand 20
 #define SenderIndex 0
 #define SendNumArgsReg -6
-#define SFENCE 122
+#define SH 41
 #define ShouldNotJIT -8
-#define SIB1 0
-#define SIB4 2
 #define SistaVM 0
+#define SLL 0
+#define SLLV 4
+#define SLT 42
+#define SLTI 10
+#define SLTIU 11
+#define SLTU 43
 #define SmallContextSlots 22
+#define SP 29
+#define SPECIAL 0
 #define SPReg -2
 #define SqrtRd 114
+#define SRA 3
+#define SRAV 7
+#define SRL 2
+#define SRLV 6
 #define SSBaseOffset 1
 #define SSConstant 2
 #define SSRegister 3
 #define SSSpill 4
 #define StackPointerIndex 2
 #define Stop 10
+#define SUBU 35
+#define SubCheckOverflowCqR 123
+#define SubCheckOverflowRR 124
 #define SubCqR 96
 #define SubCwR 104
 #define SubRdRd 111
 #define SubRR 90
+#define SW 43
+#define TargetReg 25
 #define TempReg -4
 #define TstCqR 99
 #define UnfailingPrimitive 3
 #define UnimplementedPrimitive -7
+#define V0 2
 #define ValueIndex 1
 #define VarBaseReg -20
-#define XCHGAwR 126
-#define XCHGMwrR 127
-#define XCHGRR 128
-#define XMM0L 0
-#define XMM1L 2
-#define XMM2L 4
-#define XMM3L 6
-#define XMM4L 8
-#define XMM5L 10
-#define XMM6L 12
-#define XMM7L 14
+#define XOR 38
+#define XORI 14
+#define XorCqR 100
 #define XorCwR 107
 #define XorRR 93
 #define YoungSelectorInPIC -5
+#define ZR 0
 
 
 /*** Function Prototypes ***/
@@ -392,8 +450,8 @@ typedef struct {
 static sqInt NoDbgRegParms abstractRegisterForConcreteRegister(AbstractInstruction * self_in_abstractRegisterForConcreteRegister, sqInt reg);
 static AbstractInstruction * NoDbgRegParms addDependent(AbstractInstruction * self_in_addDependent, AbstractInstruction *anInstruction);
 static sqInt NoDbgRegParms availableRegisterOrNoneFor(AbstractInstruction * self_in_availableRegisterOrNoneFor, sqInt liveRegsMask);
+static sqInt NoDbgRegParms byteReadsZeroExtend(AbstractInstruction * self_in_byteReadsZeroExtend);
 static AbstractInstruction * NoDbgRegParms cloneLiteralFrom(AbstractInstruction * self_in_cloneLiteralFrom, AbstractInstruction *existingLiteral);
-static sqInt NoDbgRegParms concretizeAt(AbstractInstruction * self_in_concretizeAt, sqInt actualAddress);
 static sqInt NoDbgRegParms genAlignCStackSavingRegistersnumArgswordAlignment(AbstractInstruction * self_in_genAlignCStackSavingRegistersnumArgswordAlignment, sqInt saveRegs, sqInt numArgs, sqInt alignment);
 static AbstractInstruction * NoDbgRegParms generateICacheFlush(AbstractInstruction * self_in_generateICacheFlush);
 static AbstractInstruction * NoDbgRegParms genWriteCResultIntoReg(AbstractInstruction * self_in_genWriteCResultIntoReg, sqInt abstractRegister);
@@ -401,17 +459,15 @@ static AbstractInstruction * NoDbgRegParms getJmpTarget(AbstractInstruction * se
 static AbstractInstruction * NoDbgRegParms initializeSharableLiteral(AbstractInstruction * self_in_initializeSharableLiteral, sqInt literal);
 static AbstractInstruction * NoDbgRegParms initializeUniqueLiteral(AbstractInstruction * self_in_initializeUniqueLiteral, sqInt literal);
 static sqInt NoDbgRegParms isAFixup(AbstractInstruction * self_in_isAFixup, void *fixupOrAddress);
-static sqInt NoDbgRegParms isJump(AbstractInstruction * self_in_isJump);
 static sqInt NoDbgRegParms isLongJump(AbstractInstruction * self_in_isLongJump);
 static sqInt NoDbgRegParms isWithinMwOffsetRange(AbstractInstruction * self_in_isWithinMwOffsetRange, sqInt anAddress);
+static AbstractInstruction * NoDbgRegParms jmpTarget(AbstractInstruction * self_in_jmpTarget, AbstractInstruction *anAbstractInstruction);
 static usqInt NoDbgRegParms labelOffset(AbstractInstruction * self_in_labelOffset);
 static sqInt NoDbgRegParms literal32BeforeFollowingAddress(AbstractInstruction * self_in_literal32BeforeFollowingAddress, sqInt followingAddress);
+static sqInt NoDbgRegParms numCheckFeaturesOpcodes(AbstractInstruction * self_in_numCheckFeaturesOpcodes);
 static sqInt NoDbgRegParms numICacheFlushOpcodes(AbstractInstruction * self_in_numICacheFlushOpcodes);
-static AbstractInstruction * NoDbgRegParms relocateJumpLongBeforeFollowingAddressby(AbstractInstruction * self_in_relocateJumpLongBeforeFollowingAddressby, sqInt pc, sqInt delta);
-static AbstractInstruction * NoDbgRegParms relocateJumpLongConditionalBeforeFollowingAddressby(AbstractInstruction * self_in_relocateJumpLongConditionalBeforeFollowingAddressby, sqInt pc, sqInt delta);
 static AbstractInstruction * NoDbgRegParms resolveJumpTarget(AbstractInstruction * self_in_resolveJumpTarget);
 static sqInt NoDbgRegParms rewriteCallFullAttarget(AbstractInstruction * self_in_rewriteCallFullAttarget, sqInt callSiteReturnAddress, sqInt callTargetAddress);
-static sqInt NoDbgRegParms rewriteConditionalJumpLongAttarget(AbstractInstruction * self_in_rewriteConditionalJumpLongAttarget, sqInt callSiteReturnAddress, sqInt callTargetAddress);
 static sqInt NoDbgRegParms rewriteJumpFullAttarget(AbstractInstruction * self_in_rewriteJumpFullAttarget, sqInt callSiteReturnAddress, sqInt callTargetAddress);
 static sqInt NoDbgRegParms setLabelOffset(AbstractInstruction * self_in_setLabelOffset, sqInt aValue);
 static AbstractInstruction * NoDbgRegParms updateLabel(AbstractInstruction * self_in_updateLabel, AbstractInstruction *labelInstruction);
@@ -419,91 +475,11 @@ static sqInt NoDbgRegParms wantsNearAddressFor(AbstractInstruction * self_in_wan
 static CogMethod * NoDbgRegParms cmHomeMethod(CogBlockMethod * self_in_cmHomeMethod);
 static sqInt NoDbgRegParms isBranch(BytecodeDescriptor * self_in_isBranch);
 static sqInt NoDbgRegParms isUnconditionalBranch(BytecodeDescriptor * self_in_isUnconditionalBranch);
-static sqInt NoDbgRegParms byteReadsZeroExtend(AbstractInstruction * self_in_byteReadsZeroExtend);
-static sqInt NoDbgRegParms callerSavedRegisterMask(AbstractInstruction * self_in_callerSavedRegisterMask);
-static sqInt NoDbgRegParms callFullTargetFromReturnAddress(AbstractInstruction * self_in_callFullTargetFromReturnAddress, sqInt callSiteReturnAddress);
-static sqInt NoDbgRegParms callInstructionByteSize(AbstractInstruction * self_in_callInstructionByteSize);
-static sqInt NoDbgRegParms callTargetFromReturnAddress(AbstractInstruction * self_in_callTargetFromReturnAddress, sqInt callSiteReturnAddress);
-static sqInt NoDbgRegParms cmpC32RTempByteSize(AbstractInstruction * self_in_cmpC32RTempByteSize);
-static sqInt NoDbgRegParms computeMaximumSize(AbstractInstruction * self_in_computeMaximumSize);
-static usqInt NoDbgRegParms computeShiftRRSize(AbstractInstruction * self_in_computeShiftRRSize);
-static sqInt NoDbgRegParms concreteDPFPRegister(AbstractInstruction * self_in_concreteDPFPRegister, sqInt registerIndex);
-static sqInt NoDbgRegParms concreteRegister(AbstractInstruction * self_in_concreteRegister, sqInt registerIndex);
-static usqInt NoDbgRegParms concretizeFill32(AbstractInstruction * self_in_concretizeFill32);
-static usqInt NoDbgRegParms concretizeOpRR(AbstractInstruction * self_in_concretizeOpRR, sqInt x86opcode);
-static usqInt NoDbgRegParms concretizeReverseOpRR(AbstractInstruction * self_in_concretizeReverseOpRR, sqInt x86opcode);
-static sqInt NoDbgRegParms cResultRegister(AbstractInstruction * self_in_cResultRegister);
-static void NoDbgRegParms dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize);
-static sqInt NoDbgRegParms fullCallsAreRelative(AbstractInstruction * self_in_fullCallsAreRelative);
-static AbstractInstruction * NoDbgRegParms genDivRRQuoRem(AbstractInstruction * self_in_genDivRRQuoRem, sqInt abstractRegDivisor, sqInt abstractRegDividend, sqInt abstractRegQuotient, sqInt abstractRegRemainder);
-static AbstractInstruction * NoDbgRegParms generateCheckFeatures(AbstractInstruction * self_in_generateCheckFeatures);
-static AbstractInstruction * NoDbgRegParms generateLowLevelTryLock(AbstractInstruction * self_in_generateLowLevelTryLock, sqInt vmOwnerLockAddress);
-static AbstractInstruction * NoDbgRegParms generateLowLevelUnlock(AbstractInstruction * self_in_generateLowLevelUnlock, sqInt vmOwnerLockAddress);
-static AbstractInstruction * NoDbgRegParms genGetLeafCallStackPointerFunction(AbstractInstruction * self_in_genGetLeafCallStackPointerFunction);
-static sqInt NoDbgRegParms genLoadCStackPointer(AbstractInstruction * self_in_genLoadCStackPointer);
-static sqInt NoDbgRegParms genLoadCStackPointers(AbstractInstruction * self_in_genLoadCStackPointers);
-static sqInt NoDbgRegParms genLoadStackPointers(AbstractInstruction * self_in_genLoadStackPointers);
-static AbstractInstruction * NoDbgRegParms genMulRR(AbstractInstruction * self_in_genMulRR, sqInt regSource, sqInt regDest);
-static AbstractInstruction * NoDbgRegParms genPushRegisterArgsForAbortMissNumArgs(AbstractInstruction * self_in_genPushRegisterArgsForAbortMissNumArgs, sqInt numArgs);
-static AbstractInstruction * NoDbgRegParms genPushRegisterArgsForNumArgsscratchReg(AbstractInstruction * self_in_genPushRegisterArgsForNumArgsscratchReg, sqInt numArgs, sqInt scratchReg);
-static sqInt NoDbgRegParms genRemoveNArgsFromStack(AbstractInstruction * self_in_genRemoveNArgsFromStack, sqInt n);
-static sqInt NoDbgRegParms genRestoreRegs(AbstractInstruction * self_in_genRestoreRegs);
-static sqInt NoDbgRegParms genRestoreRegsExcept(AbstractInstruction * self_in_genRestoreRegsExcept, sqInt abstractReg);
-static sqInt NoDbgRegParms genSaveRegisters(AbstractInstruction * self_in_genSaveRegisters);
-static sqInt NoDbgRegParms genSaveStackPointers(AbstractInstruction * self_in_genSaveStackPointers);
-static AbstractInstruction * NoDbgRegParms genSubstituteReturnAddress(AbstractInstruction * self_in_genSubstituteReturnAddress, sqInt retpc);
-static sqInt NoDbgRegParms hasLinkRegister(AbstractInstruction * self_in_hasLinkRegister);
-static sqInt NoDbgRegParms hasSSE2Instructions(AbstractInstruction * self_in_hasSSE2Instructions);
-static sqInt NoDbgRegParms hasSSEInstructions(AbstractInstruction * self_in_hasSSEInstructions);
-static sqInt NoDbgRegParms inlineCacheTagAt(AbstractInstruction * self_in_inlineCacheTagAt, sqInt callSiteReturnAddress);
-static sqInt NoDbgRegParms instructionSizeAt(AbstractInstruction * self_in_instructionSizeAt, sqInt pc);
-static sqInt NoDbgRegParms isCallPrecedingReturnPC(AbstractInstruction * self_in_isCallPrecedingReturnPC, sqInt mcpc);
-static sqInt NoDbgRegParms isJumpAt(AbstractInstruction * self_in_isJumpAt, sqInt pc);
-static sqInt NoDbgRegParms isPCDependent(AbstractInstruction * self_in_isPCDependent);
-static sqInt NoDbgRegParms isQuick(AbstractInstruction * self_in_isQuick, unsigned long operand);
-static AbstractInstruction * NoDbgRegParms jmpTarget(AbstractInstruction * self_in_jmpTarget, AbstractInstruction *anAbstractInstruction);
-static sqInt NoDbgRegParms jumpLongByteSize(AbstractInstruction * self_in_jumpLongByteSize);
-static sqInt NoDbgRegParms jumpLongConditionalByteSize(AbstractInstruction * self_in_jumpLongConditionalByteSize);
-static sqInt NoDbgRegParms jumpLongTargetBeforeFollowingAddress(AbstractInstruction * self_in_jumpLongTargetBeforeFollowingAddress, sqInt mcpc);
-static sqInt NoDbgRegParms jumpShortByteSize(AbstractInstruction * self_in_jumpShortByteSize);
-static usqInt NoDbgRegParms jumpTargetPCAt(AbstractInstruction * self_in_jumpTargetPCAt, sqInt pc);
-static sqInt NoDbgRegParms leafCallStackPointerDelta(AbstractInstruction * self_in_leafCallStackPointerDelta);
-static sqInt NoDbgRegParms literalBeforeFollowingAddress(AbstractInstruction * self_in_literalBeforeFollowingAddress, sqInt followingAddress);
-static sqInt NoDbgRegParms literalBeforeInlineCacheTagAt(AbstractInstruction * self_in_literalBeforeInlineCacheTagAt, sqInt callSiteReturnAddress);
-static sqInt NoDbgRegParms loadLiteralByteSize(AbstractInstruction * self_in_loadLiteralByteSize);
-static sqInt NoDbgRegParms loadPICLiteralByteSize(AbstractInstruction * self_in_loadPICLiteralByteSize);
-static sqInt NoDbgRegParms machineCodeBytes(AbstractInstruction * self_in_machineCodeBytes);
-static AbstractInstruction * NoDbgRegParms maybeEstablishVarBase(AbstractInstruction * self_in_maybeEstablishVarBase);
-static sqInt NoDbgRegParms modRMRO(AbstractInstruction * self_in_modRMRO, sqInt mod, sqInt regMode, sqInt regOpcode);
-static sqInt NoDbgRegParms numCheckFeaturesOpcodes(AbstractInstruction * self_in_numCheckFeaturesOpcodes);
-static sqInt NoDbgRegParms numIntRegArgs(AbstractInstruction * self_in_numIntRegArgs);
-static sqInt NoDbgRegParms numLowLevelLockOpcodes(AbstractInstruction * self_in_numLowLevelLockOpcodes);
-static AbstractInstruction * NoDbgRegParms padIfPossibleWithStopsFromto(AbstractInstruction * self_in_padIfPossibleWithStopsFromto, sqInt startAddr, sqInt endAddr);
-static AbstractInstruction * NoDbgRegParms relocateCallBeforeReturnPCby(AbstractInstruction * self_in_relocateCallBeforeReturnPCby, sqInt retpc, sqInt delta);
-static AbstractInstruction * NoDbgRegParms relocateMethodReferenceBeforeAddressby(AbstractInstruction * self_in_relocateMethodReferenceBeforeAddressby, sqInt pc, sqInt delta);
-static sqInt NoDbgRegParms rewriteCallAttarget(AbstractInstruction * self_in_rewriteCallAttarget, usqInt callSiteReturnAddress, usqInt callTargetAddress);
-static sqInt NoDbgRegParms rewriteCPICJumpAttarget(AbstractInstruction * self_in_rewriteCPICJumpAttarget, usqInt addressFollowingJump, usqInt jumpTargetAddress);
-static sqInt NoDbgRegParms rewriteInlineCacheAttagtarget(AbstractInstruction * self_in_rewriteInlineCacheAttagtarget, usqInt callSiteReturnAddress, sqInt cacheTag, usqInt callTargetAddress);
-static AbstractInstruction * NoDbgRegParms rewriteInlineCacheTagat(AbstractInstruction * self_in_rewriteInlineCacheTagat, sqInt cacheTag, sqInt callSiteReturnAddress);
-static sqInt NoDbgRegParms rewriteJumpLongAttarget(AbstractInstruction * self_in_rewriteJumpLongAttarget, sqInt callSiteReturnAddress, sqInt callTargetAddress);
-static sqInt NoDbgRegParms setsConditionCodesFor(AbstractInstruction * self_in_setsConditionCodesFor, sqInt aConditionalJumpOpcode);
-static sqInt NoDbgRegParms sizeHasModrmat(AbstractInstruction * self_in_sizeHasModrmat, sqInt op, sqInt pc);
-static sqInt NoDbgRegParms sizeImmediateGroup1at(AbstractInstruction * self_in_sizeImmediateGroup1at, sqInt op, sqInt pc);
-static usqInt NoDbgRegParms sizePCDependentInstructionAt(AbstractInstruction * self_in_sizePCDependentInstructionAt, sqInt eventualAbsoluteAddress);
-static sqInt NoDbgRegParms stackBytesForNumArgs(AbstractInstruction * self_in_stackBytesForNumArgs, sqInt numArgs);
-static sqInt NoDbgRegParms stackPageInterruptHeadroomBytes(AbstractInstruction * self_in_stackPageInterruptHeadroomBytes);
-static AbstractInstruction * NoDbgRegParms stopsFromto(AbstractInstruction * self_in_stopsFromto, sqInt startAddr, sqInt endAddr);
-static AbstractInstruction * NoDbgRegParms storeLiteralbeforeFollowingAddress(AbstractInstruction * self_in_storeLiteralbeforeFollowingAddress, sqInt literal, sqInt followingAddress);
-static sqInt NoDbgRegParms sib(AbstractInstruction * self_in_sib, sqInt scale, sqInt indexReg, sqInt baseReg);
-static sqInt NoDbgRegParms twoByteInstructionSizeAt(AbstractInstruction * self_in_twoByteInstructionSizeAt, sqInt pc);
-static sqInt NoDbgRegParms unsignedShortAt(AbstractInstruction * self_in_unsignedShortAt, sqInt byteAddress);
-static sqInt NoDbgRegParms zoneCallsAreRelative(AbstractInstruction * self_in_zoneCallsAreRelative);
 static AbstractInstruction * NoDbgRegParms gAddCqR(sqInt quickConstant, sqInt reg);
 static AbstractInstruction * NoDbgRegParms gAndCqR(sqInt quickConstant, sqInt reg);
 static AbstractInstruction * NoDbgRegParms gAndCqRR(sqInt quickConstant, sqInt srcReg, sqInt destReg);
 static AbstractInstruction * NoDbgRegParms gArithmeticShiftRightRR(sqInt reg1, sqInt reg2);
 extern sqInt abortOffset(void);
-static sqInt NoDbgRegParms abstractInstructionfollows(AbstractInstruction *theAbstractInstruction, AbstractInstruction *anAbstractInstruction);
 static void addCleanBlockStarts(void);
 extern void addCogMethodsToHeapMap(void);
 static sqInt NoDbgRegParms addressIsInFixups(AbstractInstruction *address);
@@ -694,7 +670,6 @@ extern sqInt recordPrimTraceFunc(void);
 static void recordRunTimeObjectReferences(void);
 static sqInt NoDbgRegParms registerMaskFor(sqInt reg);
 static sqInt NoDbgRegParms registerMaskForand(sqInt reg1, sqInt reg2);
-static sqInt NoDbgRegParms registerMaskForandand(sqInt reg1, sqInt reg2, sqInt reg3);
 static void NoDbgRegParms relocateCallsAndSelfReferencesInMethod(CogMethod *cogMethod);
 static void NoDbgRegParms relocateCallsInClosedPIC(CogMethod *cPIC);
 static sqInt NoDbgRegParms relocateIfCallOrMethodReferencemcpcdelta(sqInt annotation, char *mcpc, sqInt refDelta);
@@ -754,6 +729,229 @@ static sqInt relocateMethodsPreCompaction(void);
 static sqInt NoDbgRegParms removeFromOpenPICList(CogMethod *anOpenPIC);
 static void voidYoungReferrersPostTenureAll(void);
 extern char * whereIsMaybeCodeThing(sqInt anOop);
+static sqInt NoDbgRegParms addiuRRC(AbstractInstruction * self_in_addiuRRC, sqInt destReg, sqInt srcReg, sqInt imm);
+static sqInt NoDbgRegParms adduRRR(AbstractInstruction * self_in_adduRRR, sqInt destReg, sqInt leftReg, sqInt rightReg);
+static sqInt NoDbgRegParms andiRRC(AbstractInstruction * self_in_andiRRC, sqInt destReg, sqInt srcReg, sqInt imm);
+static sqInt NoDbgRegParms andRRR(AbstractInstruction * self_in_andRRR, sqInt destReg, sqInt leftReg, sqInt rightReg);
+static sqInt NoDbgRegParms beqRRoffset(AbstractInstruction * self_in_beqRRoffset, sqInt leftReg, sqInt rightReg, sqInt offset);
+static sqInt NoDbgRegParms bgezRoffset(AbstractInstruction * self_in_bgezRoffset, sqInt cmpReg, sqInt offset);
+static sqInt NoDbgRegParms bgtzRoffset(AbstractInstruction * self_in_bgtzRoffset, sqInt cmpReg, sqInt offset);
+static sqInt NoDbgRegParms blezRoffset(AbstractInstruction * self_in_blezRoffset, sqInt cmpReg, sqInt offset);
+static sqInt NoDbgRegParms bltzRoffset(AbstractInstruction * self_in_bltzRoffset, sqInt cmpReg, sqInt offset);
+static sqInt NoDbgRegParms bneRRoffset(AbstractInstruction * self_in_bneRRoffset, sqInt leftReg, sqInt rightReg, sqInt offset);
+static sqInt NoDbgRegParms callerSavedRegisterMask(AbstractInstruction * self_in_callerSavedRegisterMask);
+static sqInt NoDbgRegParms callInstructionByteSize(AbstractInstruction * self_in_callInstructionByteSize);
+static sqInt NoDbgRegParms callTargetFromReturnAddress(AbstractInstruction * self_in_callTargetFromReturnAddress, sqInt callSiteReturnAddress);
+static sqInt NoDbgRegParms cmpC32RTempByteSize(AbstractInstruction * self_in_cmpC32RTempByteSize);
+static sqInt NoDbgRegParms computeMaximumSize(AbstractInstruction * self_in_computeMaximumSize);
+static sqInt NoDbgRegParms concreteRegister(AbstractInstruction * self_in_concreteRegister, sqInt registerIndex);
+static usqInt NoDbgRegParms concretizeAddCheckOverflowCqR(AbstractInstruction * self_in_concretizeAddCheckOverflowCqR);
+static usqInt NoDbgRegParms concretizeAddCheckOverflowRR(AbstractInstruction * self_in_concretizeAddCheckOverflowRR);
+static usqInt NoDbgRegParms concretizeAddCqR(AbstractInstruction * self_in_concretizeAddCqR);
+static usqInt NoDbgRegParms concretizeAddCwR(AbstractInstruction * self_in_concretizeAddCwR);
+static usqInt NoDbgRegParms concretizeAddRR(AbstractInstruction * self_in_concretizeAddRR);
+static AbstractInstruction * NoDbgRegParms concretizeAlignmentNops(AbstractInstruction * self_in_concretizeAlignmentNops);
+static usqInt NoDbgRegParms concretizeAndCqR(AbstractInstruction * self_in_concretizeAndCqR);
+static usqInt NoDbgRegParms concretizeAndCqRR(AbstractInstruction * self_in_concretizeAndCqRR);
+static usqInt NoDbgRegParms concretizeAndCwR(AbstractInstruction * self_in_concretizeAndCwR);
+static usqInt NoDbgRegParms concretizeAndRR(AbstractInstruction * self_in_concretizeAndRR);
+static usqInt NoDbgRegParms concretizeArithmeticShiftRightCqR(AbstractInstruction * self_in_concretizeArithmeticShiftRightCqR);
+static usqInt NoDbgRegParms concretizeArithmeticShiftRightRR(AbstractInstruction * self_in_concretizeArithmeticShiftRightRR);
+static sqInt NoDbgRegParms concretizeAt(AbstractInstruction * self_in_concretizeAt, sqInt actualAddress);
+static usqInt NoDbgRegParms concretizeBrEqualRR(AbstractInstruction * self_in_concretizeBrEqualRR);
+static usqInt NoDbgRegParms concretizeBrLongEqualRR(AbstractInstruction * self_in_concretizeBrLongEqualRR);
+static usqInt NoDbgRegParms concretizeBrLongNotEqualRR(AbstractInstruction * self_in_concretizeBrLongNotEqualRR);
+static usqInt NoDbgRegParms concretizeBrNotEqualRR(AbstractInstruction * self_in_concretizeBrNotEqualRR);
+static usqInt NoDbgRegParms concretizeBrSignedGreaterEqualRR(AbstractInstruction * self_in_concretizeBrSignedGreaterEqualRR);
+static usqInt NoDbgRegParms concretizeBrSignedGreaterRR(AbstractInstruction * self_in_concretizeBrSignedGreaterRR);
+static usqInt NoDbgRegParms concretizeBrSignedLessEqualRR(AbstractInstruction * self_in_concretizeBrSignedLessEqualRR);
+static usqInt NoDbgRegParms concretizeBrSignedLessRR(AbstractInstruction * self_in_concretizeBrSignedLessRR);
+static usqInt NoDbgRegParms concretizeBrUnsignedGreaterEqualRR(AbstractInstruction * self_in_concretizeBrUnsignedGreaterEqualRR);
+static usqInt NoDbgRegParms concretizeBrUnsignedGreaterRR(AbstractInstruction * self_in_concretizeBrUnsignedGreaterRR);
+static usqInt NoDbgRegParms concretizeBrUnsignedLessEqualRR(AbstractInstruction * self_in_concretizeBrUnsignedLessEqualRR);
+static usqInt NoDbgRegParms concretizeBrUnsignedLessRR(AbstractInstruction * self_in_concretizeBrUnsignedLessRR);
+static usqInt NoDbgRegParms concretizeCall(AbstractInstruction * self_in_concretizeCall);
+static usqInt NoDbgRegParms concretizeCallFull(AbstractInstruction * self_in_concretizeCallFull);
+static sqInt NoDbgRegParms concretizeCmpCqR(AbstractInstruction * self_in_concretizeCmpCqR);
+static sqInt NoDbgRegParms concretizeCmpCwR(AbstractInstruction * self_in_concretizeCmpCwR);
+static sqInt NoDbgRegParms concretizeCmpRR(AbstractInstruction * self_in_concretizeCmpRR);
+static usqInt NoDbgRegParms concretizeDivRR(AbstractInstruction * self_in_concretizeDivRR);
+static usqInt NoDbgRegParms concretizeFill32(AbstractInstruction * self_in_concretizeFill32);
+static usqInt NoDbgRegParms concretizeJump(AbstractInstruction * self_in_concretizeJump);
+static usqInt NoDbgRegParms concretizeJumpFull(AbstractInstruction * self_in_concretizeJumpFull);
+static usqInt NoDbgRegParms concretizeJumpLong(AbstractInstruction * self_in_concretizeJumpLong);
+static sqInt NoDbgRegParms concretizeJumpLongNonZero(AbstractInstruction * self_in_concretizeJumpLongNonZero);
+static sqInt NoDbgRegParms concretizeJumpLongZero(AbstractInstruction * self_in_concretizeJumpLongZero);
+static sqInt NoDbgRegParms concretizeJumpNonZero(AbstractInstruction * self_in_concretizeJumpNonZero);
+static sqInt NoDbgRegParms concretizeJumpNoOverflow(AbstractInstruction * self_in_concretizeJumpNoOverflow);
+static sqInt NoDbgRegParms concretizeJumpOverflow(AbstractInstruction * self_in_concretizeJumpOverflow);
+static usqInt NoDbgRegParms concretizeJumpR(AbstractInstruction * self_in_concretizeJumpR);
+static sqInt NoDbgRegParms concretizeJumpSignedGreaterEqual(AbstractInstruction * self_in_concretizeJumpSignedGreaterEqual);
+static sqInt NoDbgRegParms concretizeJumpSignedGreaterThan(AbstractInstruction * self_in_concretizeJumpSignedGreaterThan);
+static sqInt NoDbgRegParms concretizeJumpSignedLessEqual(AbstractInstruction * self_in_concretizeJumpSignedLessEqual);
+static sqInt NoDbgRegParms concretizeJumpSignedLessThan(AbstractInstruction * self_in_concretizeJumpSignedLessThan);
+static sqInt NoDbgRegParms concretizeJumpUnsignedGreaterEqual(AbstractInstruction * self_in_concretizeJumpUnsignedGreaterEqual);
+static sqInt NoDbgRegParms concretizeJumpUnsignedGreaterThan(AbstractInstruction * self_in_concretizeJumpUnsignedGreaterThan);
+static sqInt NoDbgRegParms concretizeJumpUnsignedLessEqual(AbstractInstruction * self_in_concretizeJumpUnsignedLessEqual);
+static sqInt NoDbgRegParms concretizeJumpUnsignedLessThan(AbstractInstruction * self_in_concretizeJumpUnsignedLessThan);
+static sqInt NoDbgRegParms concretizeJumpZero(AbstractInstruction * self_in_concretizeJumpZero);
+static usqInt NoDbgRegParms concretizeLoadEffectiveAddressMwrR(AbstractInstruction * self_in_concretizeLoadEffectiveAddressMwrR);
+static usqInt NoDbgRegParms concretizeLogicalShiftLeftCqR(AbstractInstruction * self_in_concretizeLogicalShiftLeftCqR);
+static usqInt NoDbgRegParms concretizeLogicalShiftLeftRR(AbstractInstruction * self_in_concretizeLogicalShiftLeftRR);
+static usqInt NoDbgRegParms concretizeLogicalShiftRightCqR(AbstractInstruction * self_in_concretizeLogicalShiftRightCqR);
+static usqInt NoDbgRegParms concretizeLogicalShiftRightRR(AbstractInstruction * self_in_concretizeLogicalShiftRightRR);
+static usqInt NoDbgRegParms concretizeMoveAbR(AbstractInstruction * self_in_concretizeMoveAbR);
+static usqInt NoDbgRegParms concretizeMoveAwR(AbstractInstruction * self_in_concretizeMoveAwR);
+static usqInt NoDbgRegParms concretizeMoveCqR(AbstractInstruction * self_in_concretizeMoveCqR);
+static usqInt NoDbgRegParms concretizeMoveCwR(AbstractInstruction * self_in_concretizeMoveCwR);
+static usqInt NoDbgRegParms concretizeMoveHighR(AbstractInstruction * self_in_concretizeMoveHighR);
+static usqInt NoDbgRegParms concretizeMoveLowR(AbstractInstruction * self_in_concretizeMoveLowR);
+static usqInt NoDbgRegParms concretizeMoveM16rR(AbstractInstruction * self_in_concretizeMoveM16rR);
+static usqInt NoDbgRegParms concretizeMoveMbrR(AbstractInstruction * self_in_concretizeMoveMbrR);
+static usqInt NoDbgRegParms concretizeMoveMwrR(AbstractInstruction * self_in_concretizeMoveMwrR);
+static usqInt NoDbgRegParms concretizeMoveRAb(AbstractInstruction * self_in_concretizeMoveRAb);
+static usqInt NoDbgRegParms concretizeMoveRAw(AbstractInstruction * self_in_concretizeMoveRAw);
+static usqInt NoDbgRegParms concretizeMoveRMwr(AbstractInstruction * self_in_concretizeMoveRMwr);
+static usqInt NoDbgRegParms concretizeMoveRR(AbstractInstruction * self_in_concretizeMoveRR);
+static usqInt NoDbgRegParms concretizeMoveRXbrR(AbstractInstruction * self_in_concretizeMoveRXbrR);
+static usqInt NoDbgRegParms concretizeMoveRXwrR(AbstractInstruction * self_in_concretizeMoveRXwrR);
+static usqInt NoDbgRegParms concretizeMoveXbrRR(AbstractInstruction * self_in_concretizeMoveXbrRR);
+static usqInt NoDbgRegParms concretizeMoveXwrRR(AbstractInstruction * self_in_concretizeMoveXwrRR);
+static usqInt NoDbgRegParms concretizeMulCheckOverflowRR(AbstractInstruction * self_in_concretizeMulCheckOverflowRR);
+static usqInt NoDbgRegParms concretizeNegateR(AbstractInstruction * self_in_concretizeNegateR);
+static usqInt NoDbgRegParms concretizeNop(AbstractInstruction * self_in_concretizeNop);
+static sqInt NoDbgRegParms concretizeOrCqR(AbstractInstruction * self_in_concretizeOrCqR);
+static usqInt NoDbgRegParms concretizeOrCwR(AbstractInstruction * self_in_concretizeOrCwR);
+static usqInt NoDbgRegParms concretizeOrRR(AbstractInstruction * self_in_concretizeOrRR);
+static usqInt NoDbgRegParms concretizePopR(AbstractInstruction * self_in_concretizePopR);
+static usqInt NoDbgRegParms concretizePrefetchAw(AbstractInstruction * self_in_concretizePrefetchAw);
+static usqInt NoDbgRegParms concretizePushCq(AbstractInstruction * self_in_concretizePushCq);
+static usqInt NoDbgRegParms concretizePushCw(AbstractInstruction * self_in_concretizePushCw);
+static usqInt NoDbgRegParms concretizePushR(AbstractInstruction * self_in_concretizePushR);
+static usqInt NoDbgRegParms concretizeRetN(AbstractInstruction * self_in_concretizeRetN);
+static usqInt NoDbgRegParms concretizeStop(AbstractInstruction * self_in_concretizeStop);
+static usqInt NoDbgRegParms concretizeSubCheckOverflowCqR(AbstractInstruction * self_in_concretizeSubCheckOverflowCqR);
+static usqInt NoDbgRegParms concretizeSubCheckOverflowRR(AbstractInstruction * self_in_concretizeSubCheckOverflowRR);
+static usqInt NoDbgRegParms concretizeSubCqR(AbstractInstruction * self_in_concretizeSubCqR);
+static usqInt NoDbgRegParms concretizeSubCwR(AbstractInstruction * self_in_concretizeSubCwR);
+static usqInt NoDbgRegParms concretizeSubRR(AbstractInstruction * self_in_concretizeSubRR);
+static usqInt NoDbgRegParms concretizeTstCqR(AbstractInstruction * self_in_concretizeTstCqR);
+static usqInt NoDbgRegParms concretizeTstCwR(AbstractInstruction * self_in_concretizeTstCwR);
+static sqInt NoDbgRegParms concretizeUnimplemented(AbstractInstruction * self_in_concretizeUnimplemented);
+static usqInt NoDbgRegParms concretizeXorCwR(AbstractInstruction * self_in_concretizeXorCwR);
+static usqInt NoDbgRegParms concretizeXorRR(AbstractInstruction * self_in_concretizeXorRR);
+static sqInt NoDbgRegParms cResultRegister(AbstractInstruction * self_in_cResultRegister);
+static void NoDbgRegParms dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize);
+static sqInt NoDbgRegParms divRR(AbstractInstruction * self_in_divRR, sqInt dividendReg, sqInt divisorReg);
+static sqInt NoDbgRegParms fullCallsAreRelative(AbstractInstruction * self_in_fullCallsAreRelative);
+static sqInt NoDbgRegParms functionAtAddress(AbstractInstruction * self_in_functionAtAddress, sqInt mcpc);
+static sqInt NoDbgRegParms genDivRRQuoRem(AbstractInstruction * self_in_genDivRRQuoRem, sqInt abstractRegDivisor, sqInt abstractRegDividend, sqInt abstractRegQuotient, sqInt abstractRegRemainder);
+static AbstractInstruction * NoDbgRegParms genGetLeafCallStackPointerFunction(AbstractInstruction * self_in_genGetLeafCallStackPointerFunction);
+static sqInt NoDbgRegParms genLoadCStackPointer(AbstractInstruction * self_in_genLoadCStackPointer);
+static sqInt NoDbgRegParms genLoadCStackPointers(AbstractInstruction * self_in_genLoadCStackPointers);
+static sqInt NoDbgRegParms genLoadStackPointers(AbstractInstruction * self_in_genLoadStackPointers);
+static AbstractInstruction * NoDbgRegParms genMulRR(AbstractInstruction * self_in_genMulRR, sqInt regSource, sqInt regDest);
+static AbstractInstruction * NoDbgRegParms genPushRegisterArgsForAbortMissNumArgs(AbstractInstruction * self_in_genPushRegisterArgsForAbortMissNumArgs, sqInt numArgs);
+static AbstractInstruction * NoDbgRegParms genPushRegisterArgsForNumArgsscratchReg(AbstractInstruction * self_in_genPushRegisterArgsForNumArgsscratchReg, sqInt numArgs, sqInt ignored);
+static sqInt NoDbgRegParms genRemoveNArgsFromStack(AbstractInstruction * self_in_genRemoveNArgsFromStack, sqInt n);
+static AbstractInstruction * NoDbgRegParms genRestoreRegs(AbstractInstruction * self_in_genRestoreRegs);
+static AbstractInstruction * NoDbgRegParms genRestoreRegsExcept(AbstractInstruction * self_in_genRestoreRegsExcept, sqInt abstractReg);
+static AbstractInstruction * NoDbgRegParms genSaveRegisters(AbstractInstruction * self_in_genSaveRegisters);
+static sqInt NoDbgRegParms genSaveStackPointers(AbstractInstruction * self_in_genSaveStackPointers);
+static AbstractInstruction * NoDbgRegParms genSubstituteReturnAddress(AbstractInstruction * self_in_genSubstituteReturnAddress, sqInt retpc);
+static sqInt NoDbgRegParms hasLinkRegister(AbstractInstruction * self_in_hasLinkRegister);
+static sqInt NoDbgRegParms high16BitsOf(AbstractInstruction * self_in_high16BitsOf, sqInt word);
+static sqInt NoDbgRegParms inlineCacheTagAt(AbstractInstruction * self_in_inlineCacheTagAt, usqInt callSiteReturnAddress);
+static sqInt NoDbgRegParms instructionSizeAt(AbstractInstruction * self_in_instructionSizeAt, sqInt pc);
+static sqInt NoDbgRegParms isAddressRelativeToVarBase(AbstractInstruction * self_in_isAddressRelativeToVarBase, usqInt varAddress);
+static sqInt NoDbgRegParms isCallPrecedingReturnPC(AbstractInstruction * self_in_isCallPrecedingReturnPC, sqInt mcpc);
+static sqInt NoDbgRegParms isJump(AbstractInstruction * self_in_isJump);
+static sqInt NoDbgRegParms isJumpAt(AbstractInstruction * self_in_isJumpAt, sqInt pc);
+static sqInt NoDbgRegParms isPCDependent(AbstractInstruction * self_in_isPCDependent);
+static sqInt NoDbgRegParms isShortOffset(AbstractInstruction * self_in_isShortOffset, sqInt offset);
+static sqInt NoDbgRegParms itypersrteitherImmediate(AbstractInstruction * self_in_itypersrteitherImmediate, sqInt op, sqInt rs, sqInt rt, sqInt signedImmediate);
+static sqInt NoDbgRegParms itypersrtsignedImmediate(AbstractInstruction * self_in_itypersrtsignedImmediate, sqInt op, sqInt rs, sqInt rt, sqInt signedImmediate);
+static sqInt NoDbgRegParms itypersrtunsignedImmediate(AbstractInstruction * self_in_itypersrtunsignedImmediate, sqInt op, sqInt rs, sqInt rt, sqInt immediate);
+static sqInt NoDbgRegParms jA(AbstractInstruction * self_in_jA, sqInt target);
+static sqInt NoDbgRegParms jalA(AbstractInstruction * self_in_jalA, sqInt target);
+static sqInt NoDbgRegParms jalR(AbstractInstruction * self_in_jalR, sqInt targetReg);
+static sqInt NoDbgRegParms jR(AbstractInstruction * self_in_jR, sqInt targetReg);
+static sqInt NoDbgRegParms jtypetarget(AbstractInstruction * self_in_jtypetarget, sqInt op, sqInt target);
+static sqInt NoDbgRegParms jumpLongByteSize(AbstractInstruction * self_in_jumpLongByteSize);
+static sqInt NoDbgRegParms jumpLongConditionalByteSize(AbstractInstruction * self_in_jumpLongConditionalByteSize);
+static sqInt NoDbgRegParms jumpLongConditionalTargetBeforeFollowingAddress(AbstractInstruction * self_in_jumpLongConditionalTargetBeforeFollowingAddress, sqInt mcpc);
+static sqInt NoDbgRegParms jumpLongTargetBeforeFollowingAddress(AbstractInstruction * self_in_jumpLongTargetBeforeFollowingAddress, sqInt mcpc);
+static sqInt NoDbgRegParms jumpShortByteSize(AbstractInstruction * self_in_jumpShortByteSize);
+static usqInt NoDbgRegParms jumpTargetPCAt(AbstractInstruction * self_in_jumpTargetPCAt, sqInt pc);
+static sqInt NoDbgRegParms lbRbaseoffset(AbstractInstruction * self_in_lbRbaseoffset, sqInt destReg, sqInt baseReg, sqInt offset);
+static sqInt NoDbgRegParms lbuRbaseoffset(AbstractInstruction * self_in_lbuRbaseoffset, sqInt destReg, sqInt baseReg, sqInt offset);
+static sqInt NoDbgRegParms leafCallStackPointerDelta(AbstractInstruction * self_in_leafCallStackPointerDelta);
+static sqInt NoDbgRegParms lhRbaseoffset(AbstractInstruction * self_in_lhRbaseoffset, sqInt destReg, sqInt baseReg, sqInt offset);
+static sqInt NoDbgRegParms lhuRbaseoffset(AbstractInstruction * self_in_lhuRbaseoffset, sqInt destReg, sqInt baseReg, sqInt offset);
+static sqInt NoDbgRegParms literalAtAddress(AbstractInstruction * self_in_literalAtAddress, sqInt mcpc);
+static sqInt NoDbgRegParms literalAtAddressput(AbstractInstruction * self_in_literalAtAddressput, sqInt mcpc, sqInt newLiteral);
+static sqInt NoDbgRegParms literalBeforeFollowingAddress(AbstractInstruction * self_in_literalBeforeFollowingAddress, sqInt followingAddress);
+static sqInt NoDbgRegParms loadLiteralByteSize(AbstractInstruction * self_in_loadLiteralByteSize);
+static sqInt NoDbgRegParms loadPICLiteralByteSize(AbstractInstruction * self_in_loadPICLiteralByteSize);
+static sqInt NoDbgRegParms low16BitsOf(AbstractInstruction * self_in_low16BitsOf, sqInt word);
+static sqInt NoDbgRegParms luiRC(AbstractInstruction * self_in_luiRC, sqInt destReg, sqInt imm);
+static sqInt NoDbgRegParms lwRbaseoffset(AbstractInstruction * self_in_lwRbaseoffset, sqInt destReg, sqInt baseReg, sqInt offset);
+static sqInt NoDbgRegParms machineCodeBytes(AbstractInstruction * self_in_machineCodeBytes);
+static sqInt NoDbgRegParms machineCodeWords(AbstractInstruction * self_in_machineCodeWords);
+static AbstractInstruction * NoDbgRegParms maybeEstablishVarBase(AbstractInstruction * self_in_maybeEstablishVarBase);
+static sqInt NoDbgRegParms mfhiR(AbstractInstruction * self_in_mfhiR, sqInt destReg);
+static sqInt NoDbgRegParms mfloR(AbstractInstruction * self_in_mfloR, sqInt destReg);
+static sqInt NoDbgRegParms mipsbreak(AbstractInstruction * self_in_mipsbreak, sqInt code);
+static sqInt NoDbgRegParms multRR(AbstractInstruction * self_in_multRR, sqInt leftReg, sqInt rightReg);
+static sqInt NoDbgRegParms nop(AbstractInstruction * self_in_nop);
+static AbstractInstruction * NoDbgRegParms noteFollowingConditionalBranch(AbstractInstruction * self_in_noteFollowingConditionalBranch, AbstractInstruction *branch);
+static AbstractInstruction * NoDbgRegParms noteFollowingOverflowBranch(AbstractInstruction * self_in_noteFollowingOverflowBranch, AbstractInstruction *branch);
+static sqInt NoDbgRegParms numIntRegArgs(AbstractInstruction * self_in_numIntRegArgs);
+static sqInt NoDbgRegParms opcodeAtAddress(AbstractInstruction * self_in_opcodeAtAddress, sqInt mcpc);
+static sqInt NoDbgRegParms oriRRC(AbstractInstruction * self_in_oriRRC, sqInt destReg, sqInt srcReg, sqInt imm);
+static sqInt NoDbgRegParms orRRR(AbstractInstruction * self_in_orRRR, sqInt destReg, sqInt leftReg, sqInt rightReg);
+static AbstractInstruction * NoDbgRegParms padIfPossibleWithStopsFromto(AbstractInstruction * self_in_padIfPossibleWithStopsFromto, sqInt startAddr, sqInt endAddr);
+static sqInt NoDbgRegParms prefRoffsethint(AbstractInstruction * self_in_prefRoffsethint, sqInt baseReg, sqInt offset, sqInt hint);
+static sqInt NoDbgRegParms pushLinkRegisterByteSize(AbstractInstruction * self_in_pushLinkRegisterByteSize);
+static AbstractInstruction * NoDbgRegParms relocateCallBeforeReturnPCby(AbstractInstruction * self_in_relocateCallBeforeReturnPCby, sqInt retpc, sqInt delta);
+static AbstractInstruction * NoDbgRegParms relocateJumpLongBeforeFollowingAddressby(AbstractInstruction * self_in_relocateJumpLongBeforeFollowingAddressby, sqInt pc, sqInt delta);
+static AbstractInstruction * NoDbgRegParms relocateJumpLongConditionalBeforeFollowingAddressby(AbstractInstruction * self_in_relocateJumpLongConditionalBeforeFollowingAddressby, sqInt pc, sqInt delta);
+static AbstractInstruction * NoDbgRegParms relocateMethodReferenceBeforeAddressby(AbstractInstruction * self_in_relocateMethodReferenceBeforeAddressby, sqInt pc, sqInt delta);
+static sqInt NoDbgRegParms rewriteCallAttarget(AbstractInstruction * self_in_rewriteCallAttarget, usqInt callSiteReturnAddress, usqInt callTargetAddress);
+static AbstractInstruction * NoDbgRegParms rewriteConditionalJumpLongAttarget(AbstractInstruction * self_in_rewriteConditionalJumpLongAttarget, usqInt callSiteReturnAddress, usqInt callTargetAddress);
+static AbstractInstruction * NoDbgRegParms rewriteCPICJumpAttarget(AbstractInstruction * self_in_rewriteCPICJumpAttarget, usqInt addressFollowingJump, usqInt jumpTargetAddress);
+static sqInt NoDbgRegParms rewriteInlineCacheAttagtarget(AbstractInstruction * self_in_rewriteInlineCacheAttagtarget, usqInt callSiteReturnAddress, sqInt cacheTag, usqInt callTargetAddress);
+static AbstractInstruction * NoDbgRegParms rewriteInlineCacheTagat(AbstractInstruction * self_in_rewriteInlineCacheTagat, sqInt cacheTag, usqInt callSiteReturnAddress);
+static AbstractInstruction * NoDbgRegParms rewriteITypeBranchAtAddresstarget(AbstractInstruction * self_in_rewriteITypeBranchAtAddresstarget, sqInt mcpc, sqInt newTarget);
+static AbstractInstruction * NoDbgRegParms rewriteJTypeAtAddressdelta(AbstractInstruction * self_in_rewriteJTypeAtAddressdelta, sqInt mcpc, sqInt delta);
+static AbstractInstruction * NoDbgRegParms rewriteJTypeAtAddresstarget(AbstractInstruction * self_in_rewriteJTypeAtAddresstarget, sqInt mcpc, sqInt newTarget);
+static sqInt NoDbgRegParms rewriteJumpLongAttarget(AbstractInstruction * self_in_rewriteJumpLongAttarget, usqInt callSiteReturnAddress, usqInt callTargetAddress);
+static sqInt NoDbgRegParms rtAtAddress(AbstractInstruction * self_in_rtAtAddress, sqInt mcpc);
+static sqInt NoDbgRegParms rtypersrtrdsafunct(AbstractInstruction * self_in_rtypersrtrdsafunct, sqInt op, sqInt rs, sqInt rt, sqInt rd, sqInt sa, sqInt funct);
+static sqInt NoDbgRegParms sbRbaseoffset(AbstractInstruction * self_in_sbRbaseoffset, sqInt srcReg, sqInt baseReg, sqInt offset);
+static sqInt NoDbgRegParms setsConditionCodesFor(AbstractInstruction * self_in_setsConditionCodesFor, sqInt aConditionalJumpOpcode);
+static sqInt NoDbgRegParms shRbaseoffset(AbstractInstruction * self_in_shRbaseoffset, sqInt srcReg, sqInt baseReg, sqInt offset);
+static usqInt NoDbgRegParms sizePCDependentInstructionAt(AbstractInstruction * self_in_sizePCDependentInstructionAt, sqInt eventualAbsoluteAddress);
+static sqInt NoDbgRegParms sllRRC(AbstractInstruction * self_in_sllRRC, sqInt destReg, sqInt sourceReg, sqInt shiftAmount);
+static sqInt NoDbgRegParms sllvRRR(AbstractInstruction * self_in_sllvRRR, sqInt destReg, sqInt leftReg, sqInt rightReg);
+static sqInt NoDbgRegParms sltiRRC(AbstractInstruction * self_in_sltiRRC, sqInt destReg, sqInt leftReg, sqInt imm);
+static sqInt NoDbgRegParms sltiuRRC(AbstractInstruction * self_in_sltiuRRC, sqInt destReg, sqInt leftReg, sqInt imm);
+static sqInt NoDbgRegParms sltRRR(AbstractInstruction * self_in_sltRRR, sqInt destReg, sqInt leftReg, sqInt rightReg);
+static sqInt NoDbgRegParms sltuRRR(AbstractInstruction * self_in_sltuRRR, sqInt destReg, sqInt leftReg, sqInt rightReg);
+static sqInt NoDbgRegParms sraRRC(AbstractInstruction * self_in_sraRRC, sqInt destReg, sqInt sourceReg, sqInt shiftAmount);
+static sqInt NoDbgRegParms sravRRR(AbstractInstruction * self_in_sravRRR, sqInt destReg, sqInt leftReg, sqInt rightReg);
+static sqInt NoDbgRegParms srlRRC(AbstractInstruction * self_in_srlRRC, sqInt destReg, sqInt sourceReg, sqInt shiftAmount);
+static sqInt NoDbgRegParms srlvRRR(AbstractInstruction * self_in_srlvRRR, sqInt destReg, sqInt leftReg, sqInt rightReg);
+static sqInt NoDbgRegParms stop(AbstractInstruction * self_in_stop);
+static AbstractInstruction * NoDbgRegParms stopsFromto(AbstractInstruction * self_in_stopsFromto, sqInt startAddr, sqInt endAddr);
+static sqInt NoDbgRegParms storeLiteralbeforeFollowingAddress(AbstractInstruction * self_in_storeLiteralbeforeFollowingAddress, sqInt literal, sqInt followingAddress);
+static sqInt NoDbgRegParms subuRRR(AbstractInstruction * self_in_subuRRR, sqInt destReg, sqInt leftReg, sqInt rightReg);
+static sqInt NoDbgRegParms swRbaseoffset(AbstractInstruction * self_in_swRbaseoffset, sqInt srcReg, sqInt baseReg, sqInt offset);
+static sqInt NoDbgRegParms targetFromITypeAtAddress(AbstractInstruction * self_in_targetFromITypeAtAddress, sqInt mcpc);
+static sqInt NoDbgRegParms targetFromJTypeAtAddress(AbstractInstruction * self_in_targetFromJTypeAtAddress, sqInt mcpc);
+static sqInt NoDbgRegParms xoriRRC(AbstractInstruction * self_in_xoriRRC, sqInt destReg, sqInt srcReg, sqInt imm);
+static sqInt NoDbgRegParms xorRRR(AbstractInstruction * self_in_xorRRR, sqInt destReg, sqInt leftReg, sqInt rightReg);
+static sqInt NoDbgRegParms zoneCallsAreRelative(AbstractInstruction * self_in_zoneCallsAreRelative);
 static sqInt NoDbgRegParms checkValidObjectReference(sqInt anOop);
 static AbstractInstruction * NoDbgRegParms genCmpClassFloatCompactIndexR(sqInt reg);
 static AbstractInstruction * NoDbgRegParms genCmpClassMethodContextCompactIndexR(sqInt reg);
@@ -815,7 +1013,7 @@ static sqInt NoDbgRegParms genGetBitsofFormatByteOfinto(sqInt mask, sqInt source
 static sqInt NoDbgRegParms genGetClassIndexOfNonImminto(sqInt sourceReg, sqInt destReg);
 static sqInt NoDbgRegParms genGetClassObjectOfClassIndexintoscratchReg(sqInt instReg, sqInt destReg, sqInt scratchReg);
 static sqInt NoDbgRegParms genGetClassObjectOfintoscratchReginstRegIsReceiver(sqInt instReg, sqInt destReg, sqInt scratchReg, sqInt instRegIsReceiver);
-static AbstractInstruction * NoDbgRegParms genGetClassTagOfintoscratchReg(sqInt instReg, sqInt destReg, sqInt scratchReg);
+static sqInt NoDbgRegParms genGetClassTagOfintoscratchReg(sqInt instReg, sqInt destReg, sqInt scratchReg);
 static sqInt NoDbgRegParms genGetCompactClassIndexNonImmOfinto(sqInt instReg, sqInt destReg);
 static sqInt NoDbgRegParms genGetDoubleValueOfinto(sqInt srcReg, sqInt destFPReg);
 static sqInt NoDbgRegParms genGetFormatOfinto(sqInt srcReg, sqInt destReg);
@@ -882,8 +1080,8 @@ static sqInt genLongStoreAndPopTemporaryVariableBytecode(void);
 static sqInt genLongUnconditionalBackwardJump(void);
 static sqInt genLongUnconditionalForwardJump(void);
 static sqInt NoDbgRegParms genLookupForPerformNumArgs(sqInt numArgs);
-static AbstractInstruction * NoDbgRegParms genMoveFalseR(sqInt reg);
-static AbstractInstruction * NoDbgRegParms genMoveTrueR(sqInt reg);
+static AbstractInstruction * NoDbgRegParms genMoveConstantR(sqInt constant, sqInt reg);
+static sqInt NoDbgRegParms genMoveTrueR(sqInt reg);
 static sqInt NoDbgRegParms genMustBeBooleanTrampolineForcalled(sqInt boolean, char *trampolineName);
 static sqInt genPrimitiveEqual(void);
 static sqInt genPrimitiveFloatAdd(void);
@@ -1503,10 +1701,6 @@ static usqInt youngReferrers;
 /*** Macros ***/
 #define cPICNumCases stackCheckOffset
 #define cPICNumCasesHack hack hack hack i.e. the getter macro does all the work
-#define flushICacheFromto(me,startAddress,endAddress) 0
-#define numberOfSaveableRegisters(self) 6
-#define unalignedLongAt(byteAddress) longAt(byteAddress)
-#define unalignedLongAtput(byteAddress,aWord) longAtput(byteAddress,aWord)
 #define abstractInstructionAt(index) (&abstractOpcodes[index])
 #define allocateBlockStarts(numBlocks) do { \
 		blockStarts = (numBlocks) ? alloca(sizeof(BlockStart) * (numBlocks)) : 0; \
@@ -1558,6 +1752,8 @@ static usqInt youngReferrers;
 #define methodBytesFreedSinceLastCompaction() methodBytesFreedSinceLastCompaction
 #define roundUpLength(numBytes) ((numBytes) + 7 & -8)
 #define youngReferrers() youngReferrers
+#define flushICacheFromto(me,startAddress,endAddress) __clear_cache((char*) startAddress, (char*) (endAddress ))
+#define numberOfSaveableRegisters(self) 0
 #define maybeConstant(sse) ((sse)->constant)
 #define fixupAt(index) (&fixups[index])
 #define simStackAt(index) (simStack + (index))
@@ -1647,6 +1843,19 @@ availableRegisterOrNoneFor(AbstractInstruction * self_in_availableRegisterOrNone
 }
 
 
+/*	Answer if a byte read, via MoveAbR, MoveMbrR, or MoveXbrRR zero-extends
+	into the full register, or merely affects the least significant 8 bits of
+	the the register. By default the code generator assumes that byte reads
+	to not zero extend. Note that byte reads /must not/ sign extend. */
+
+	/* CogAbstractInstruction>>#byteReadsZeroExtend */
+static sqInt NoDbgRegParms
+byteReadsZeroExtend(AbstractInstruction * self_in_byteReadsZeroExtend)
+{
+	return 0;
+}
+
+
 /*	For out-of-line literal support, clone a literal from a literal. */
 
 	/* CogAbstractInstruction>>#cloneLiteralFrom: */
@@ -1662,21 +1871,6 @@ cloneLiteralFrom(AbstractInstruction * self_in_cloneLiteralFrom, AbstractInstruc
 	((self_in_cloneLiteralFrom->operands))[1] = (((existingLiteral->operands))[1]);
 	((self_in_cloneLiteralFrom->operands))[2] = (((existingLiteral->operands))[2]);
 	return self_in_cloneLiteralFrom;
-}
-
-
-/*	Generate concrete machine code for the instruction at actualAddress,
-	setting machineCodeSize, and answer the following address. */
-
-	/* CogAbstractInstruction>>#concretizeAt: */
-static sqInt NoDbgRegParms
-concretizeAt(AbstractInstruction * self_in_concretizeAt, sqInt actualAddress)
-{
-	(self_in_concretizeAt->address) = actualAddress;
-	dispatchConcretize(self_in_concretizeAt);
-	assert((((self_in_concretizeAt->maxSize)) == null)
-	 || (((self_in_concretizeAt->maxSize)) >= ((self_in_concretizeAt->machineCodeSize))));
-	return actualAddress + ((self_in_concretizeAt->machineCodeSize));
 }
 
 	/* CogAbstractInstruction>>#genAlignCStackSavingRegisters:numArgs:wordAlignment: */
@@ -1784,13 +1978,6 @@ isAFixup(AbstractInstruction * self_in_isAFixup, void *fixupOrAddress)
 	return addressIsInFixups(fixupOrAddress);
 }
 
-	/* CogAbstractInstruction>>#isJump */
-static sqInt NoDbgRegParms
-isJump(AbstractInstruction * self_in_isJump)
-{
-	return ((((self_in_isJump->opcode)) >= FirstJump) && (((self_in_isJump->opcode)) <= LastJump));
-}
-
 	/* CogAbstractInstruction>>#isLongJump */
 static sqInt NoDbgRegParms
 isLongJump(AbstractInstruction * self_in_isLongJump)
@@ -1810,6 +1997,18 @@ static sqInt NoDbgRegParms
 isWithinMwOffsetRange(AbstractInstruction * self_in_isWithinMwOffsetRange, sqInt anAddress)
 {
 	return 1;
+}
+
+
+/*	Set the target of a jump instruction. These all have the target in the
+	first operand. */
+
+	/* CogAbstractInstruction>>#jmpTarget: */
+static AbstractInstruction * NoDbgRegParms
+jmpTarget(AbstractInstruction * self_in_jmpTarget, AbstractInstruction *anAbstractInstruction)
+{
+	((self_in_jmpTarget->operands))[0] = (((usqInt)anAbstractInstruction));
+	return anAbstractInstruction;
 }
 
 
@@ -1838,6 +2037,17 @@ literal32BeforeFollowingAddress(AbstractInstruction * self_in_literal32BeforeFol
 }
 
 
+/*	If the priocessor has a feature check facility answer the number
+	of opcodes required to compile an accessor for the feature. */
+
+	/* CogAbstractInstruction>>#numCheckFeaturesOpcodes */
+static sqInt NoDbgRegParms
+numCheckFeaturesOpcodes(AbstractInstruction * self_in_numCheckFeaturesOpcodes)
+{
+	return 0;
+}
+
+
 /*	If the processor has the ablity to generate code to flush the icache
 	answer the number of opcodes required to compile an accessor for the
 	feature. 
@@ -1848,34 +2058,6 @@ static sqInt NoDbgRegParms
 numICacheFlushOpcodes(AbstractInstruction * self_in_numICacheFlushOpcodes)
 {
 	return 0;
-}
-
-
-/*	We assume here that calls and jumps look the same as regards their
-	displacement. This works on at least x86, ARM and x86_64. Processors on
-	which that isn't the
-	case can override as necessary. */
-
-	/* CogAbstractInstruction>>#relocateJumpLongBeforeFollowingAddress:by: */
-static AbstractInstruction * NoDbgRegParms
-relocateJumpLongBeforeFollowingAddressby(AbstractInstruction * self_in_relocateJumpLongBeforeFollowingAddressby, sqInt pc, sqInt delta)
-{
-	relocateCallBeforeReturnPCby(self_in_relocateJumpLongBeforeFollowingAddressby, pc, delta);
-	return self_in_relocateJumpLongBeforeFollowingAddressby;
-}
-
-
-/*	Relocate a long conditional jump before pc. Default to relocating a
-	non-conditional jump.
-	Processors that have different formats for conditional and unconditional
-	jumps override. */
-
-	/* CogAbstractInstruction>>#relocateJumpLongConditionalBeforeFollowingAddress:by: */
-static AbstractInstruction * NoDbgRegParms
-relocateJumpLongConditionalBeforeFollowingAddressby(AbstractInstruction * self_in_relocateJumpLongConditionalBeforeFollowingAddressby, sqInt pc, sqInt delta)
-{
-	relocateJumpLongBeforeFollowingAddressby(self_in_relocateJumpLongConditionalBeforeFollowingAddressby, pc, delta);
-	return self_in_relocateJumpLongConditionalBeforeFollowingAddressby;
 }
 
 	/* CogAbstractInstruction>>#resolveJumpTarget */
@@ -1906,19 +2088,6 @@ static sqInt NoDbgRegParms
 rewriteCallFullAttarget(AbstractInstruction * self_in_rewriteCallFullAttarget, sqInt callSiteReturnAddress, sqInt callTargetAddress)
 {
 	return rewriteCallAttarget(self_in_rewriteCallFullAttarget, callSiteReturnAddress, callTargetAddress);
-}
-
-
-/*	Rewrite a conditional jump long to jump to target. This version defaults
-	to using
-	rewriteJumpLongAt:, which works for many ISAs. Subclasses override if
-	necessary.  */
-
-	/* CogAbstractInstruction>>#rewriteConditionalJumpLongAt:target: */
-static sqInt NoDbgRegParms
-rewriteConditionalJumpLongAttarget(AbstractInstruction * self_in_rewriteConditionalJumpLongAttarget, sqInt callSiteReturnAddress, sqInt callTargetAddress)
-{
-	return rewriteJumpLongAttarget(self_in_rewriteConditionalJumpLongAttarget, callSiteReturnAddress, callTargetAddress);
 }
 
 
@@ -2001,4175 +2170,6 @@ isUnconditionalBranch(BytecodeDescriptor * self_in_isUnconditionalBranch)
  || ((self_in_isUnconditionalBranch->isBranchFalse))));
 }
 
-
-/*	Answer if a byte read, via MoveAbR, MoveMbrR, or MoveXbrRR zero-extends
-	into the full register, or merely affects the least significant 8 bits of
-	the the register. By default the code generator assumes that byte reads
-	to not zero extend. Note that byte reads /must not/ sign extend.
-	On x86 we always use movzbl */
-
-	/* CogIA32Compiler>>#byteReadsZeroExtend */
-static sqInt NoDbgRegParms
-byteReadsZeroExtend(AbstractInstruction * self_in_byteReadsZeroExtend)
-{
-	return 1;
-}
-
-	/* CogIA32Compiler>>#callerSavedRegisterMask */
-static sqInt NoDbgRegParms
-callerSavedRegisterMask(AbstractInstruction * self_in_callerSavedRegisterMask)
-{
-	return registerMaskForandand(abstractRegisterForConcreteRegister(self_in_callerSavedRegisterMask, EAX), abstractRegisterForConcreteRegister(self_in_callerSavedRegisterMask, ECX), abstractRegisterForConcreteRegister(self_in_callerSavedRegisterMask, EDX));
-}
-
-
-/*	Answer the address the call immediately preceding callSiteReturnAddress
-	will jump to.
- */
-
-	/* CogIA32Compiler>>#callFullTargetFromReturnAddress: */
-static sqInt NoDbgRegParms
-callFullTargetFromReturnAddress(AbstractInstruction * self_in_callFullTargetFromReturnAddress, sqInt callSiteReturnAddress)
-{
-	return callTargetFromReturnAddress(self_in_callFullTargetFromReturnAddress, callSiteReturnAddress);
-}
-
-	/* CogIA32Compiler>>#callInstructionByteSize */
-static sqInt NoDbgRegParms
-callInstructionByteSize(AbstractInstruction * self_in_callInstructionByteSize)
-{
-	return 5;
-}
-
-
-/*	Answer the address the call immediately preceding callSiteReturnAddress
-	will jump to.
- */
-
-	/* CogIA32Compiler>>#callTargetFromReturnAddress: */
-static sqInt NoDbgRegParms
-callTargetFromReturnAddress(AbstractInstruction * self_in_callTargetFromReturnAddress, sqInt callSiteReturnAddress)
-{
-    sqInt callDistance;
-
-	callDistance = literalBeforeFollowingAddress(self_in_callTargetFromReturnAddress, callSiteReturnAddress);
-	return callSiteReturnAddress + (((int) callDistance));
-}
-
-	/* CogIA32Compiler>>#cmpC32RTempByteSize */
-static sqInt NoDbgRegParms
-cmpC32RTempByteSize(AbstractInstruction * self_in_cmpC32RTempByteSize)
-{
-	return 5;
-}
-
-
-/*	Compute the maximum size for each opcode. This allows jump offsets to
-	be determined, provided that all backward branches are long branches. */
-/*	N.B. The ^N forms are to get around the bytecode compiler's long branch
-	limits which are exceeded when each case jumps around the otherwise. */
-
-	/* CogIA32Compiler>>#computeMaximumSize */
-static sqInt NoDbgRegParms
-computeMaximumSize(AbstractInstruction * self_in_computeMaximumSize)
-{
-	
-	switch ((self_in_computeMaximumSize->opcode)) {
-	case Label:
-		return 0;
-
-	case AlignmentNops:
-		return (((self_in_computeMaximumSize->operands))[0]) - 1;
-
-	case Fill32:
-	case AddRdRd:
-	case CmpRdRd:
-	case SubRdRd:
-	case MulRdRd:
-	case DivRdRd:
-	case SqrtRd:
-	case MoveRdRd:
-	case ConvertRRd:
-		return 4;
-
-	case Nop:
-	case CDQ:
-	case LOCK:
-	case Stop:
-	case PopR:
-	case PushR:
-		return 1;
-
-	case IDIVR:
-	case CPUID:
-	case JumpR:
-	case AddRR:
-	case AndRR:
-	case CmpRR:
-	case OrRR:
-	case XorRR:
-	case SubRR:
-	case NegateR:
-	case MoveRR:
-		return 2;
-
-	case IMULRR:
-	case LFENCE:
-	case MFENCE:
-	case SFENCE:
-		return 3;
-
-	case CMPXCHGAwR:
-	case MoveAbR:
-		return 7;
-
-	case CMPXCHGMwrR:
-	case MoveMbrR:
-	case MoveM16rR:
-		return ((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) == ESP
-			? (isQuick(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])
-					? 5
-					: 8)
-			: (isQuick(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])
-					? 4
-					: 7));
-
-	case XCHGAwR:
-		return 6;
-
-	case XCHGMwrR:
-		return ((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) == ESP
-			? (isQuick(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])
-					? 4
-					: 7)
-			: (isQuick(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])
-					? 3
-					: 6));
-
-	case XCHGRR:
-		return (((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])) == EAX)
-		 || ((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) == EAX)
-			? 1
-			: 2);
-
-	case CallFull:
-	case Call:
-	case MoveCwR:
-	case PushCw:
-		return 5;
-
-	case JumpFull:
-	case JumpLong:
-	case Jump:
-		resolveJumpTarget(self_in_computeMaximumSize);
-		return 5;
-
-	case JumpZero:
-	case JumpNonZero:
-	case JumpNegative:
-	case JumpNonNegative:
-	case JumpOverflow:
-	case JumpNoOverflow:
-	case JumpCarry:
-	case JumpNoCarry:
-	case JumpLess:
-	case JumpGreaterOrEqual:
-	case JumpGreater:
-	case JumpLessOrEqual:
-	case JumpBelow:
-	case JumpAboveOrEqual:
-	case JumpAbove:
-	case JumpBelowOrEqual:
-	case JumpLongZero:
-	case JumpLongNonZero:
-	case JumpFPEqual:
-	case JumpFPNotEqual:
-	case JumpFPLess:
-	case JumpFPGreaterOrEqual:
-	case JumpFPGreater:
-	case JumpFPLessOrEqual:
-	case JumpFPOrdered:
-	case JumpFPUnordered:
-		resolveJumpTarget(self_in_computeMaximumSize);
-		return 6;
-
-	case RetN:
-		return ((((self_in_computeMaximumSize->operands))[0]) == 0
-			? 1
-			: 3);
-
-	case AddCqR:
-	case AndCqR:
-	case CmpCqR:
-	case OrCqR:
-	case SubCqR:
-		return (isQuick(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])
-			? 3
-			: ((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) == EAX
-					? 5
-					: 6));
-
-	case TstCqR:
-		return ((isQuick(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0]))
-		 && ((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) < 4)
-			? 3
-			: ((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) == EAX
-					? 5
-					: 6));
-
-	case AddCwR:
-	case AndCwR:
-	case CmpCwR:
-	case OrCwR:
-	case SubCwR:
-	case XorCwR:
-	case MoveAwR:
-		return ((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) == EAX
-			? 5
-			: 6);
-
-	case LoadEffectiveAddressMwrR:
-		return ((isQuick(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])
-	? 3
-	: 6)) + (((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) == ESP
-	? 1
-	: 0));
-
-	case LogicalShiftLeftCqR:
-	case LogicalShiftRightCqR:
-	case ArithmeticShiftRightCqR:
-		return ((((self_in_computeMaximumSize->operands))[0]) == 1
-			? 2
-			: 3);
-
-	case LogicalShiftLeftRR:
-	case LogicalShiftRightRR:
-	case ArithmeticShiftRightRR:
-		return computeShiftRRSize(self_in_computeMaximumSize);
-
-	case MoveCqR:
-		return ((((self_in_computeMaximumSize->operands))[0]) == 0
-			? 2
-			: 5);
-
-	case MoveRAw:
-	case MoveRAb:
-		return ((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])) == EAX
-			? 5
-			: 6);
-
-	case MoveRMwr:
-		return ((isQuick(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])
-	? (((((self_in_computeMaximumSize->operands))[1]) == 0)
-		 && ((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[2])) != EBP)
-			? 2
-			: 3)
-	: 6)) + (((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[2])) == ESP
-	? 1
-	: 0));
-
-	case MoveRdM64r:
-		return ((isQuick(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])
-	? 5
-	: 8)) + (((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[2])) == ESP
-	? 1
-	: 0));
-
-	case MoveRMbr:
-		return ((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[2])) == ESP
-			? 7
-			: (isQuick(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])
-					? 3
-					: 6));
-
-	case MoveM64rRd:
-		return ((isQuick(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])
-	? 5
-	: 8)) + (((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) == ESP
-	? 1
-	: 0));
-
-	case MoveMwrR:
-		return ((isQuick(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])
-	? (((((self_in_computeMaximumSize->operands))[0]) == 0)
-		 && ((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) != EBP)
-			? 2
-			: 3)
-	: 6)) + (((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) == ESP
-	? 1
-	: 0));
-
-	case MoveXbrRR:
-		assert((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])) != ESP);
-		return ((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) == EBP
-			? 5
-			: 4);
-
-	case MoveRXbrR:
-		assert((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) != ESP);
-		return (((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[2])) == EBP
-	? 4
-	: 3)) + (((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])) >= 4
-	? 2
-	: 0));
-
-	case MoveXwrRR:
-		assert((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])) != ESP);
-		return ((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) == EBP
-			? 4
-			: 3);
-
-	case MoveRXwrR:
-		assert((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])) != ESP);
-		return ((concreteRegister(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[2])) == EBP
-			? 4
-			: 3);
-
-	case PushCq:
-		return (isQuick(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])
-			? 2
-			: 5);
-
-	case PrefetchAw:
-		return (hasSSEInstructions(self_in_computeMaximumSize)
-			? 7
-			: 0);
-
-	default:
-		error("Case not found and no otherwise clause");
-	}
-	return 0;
-}
-
-
-/*	On the x86 the only instructions that shift by the value of a
-	register require the shift count to be in %ecx. So we may
-	have to use swap instructions to get the count into ecx. */
-
-	/* CogIA32Compiler>>#computeShiftRRSize */
-static usqInt NoDbgRegParms
-computeShiftRRSize(AbstractInstruction * self_in_computeShiftRRSize)
-{
-    sqInt shiftCountReg;
-
-	shiftCountReg = concreteRegister(self_in_computeShiftRRSize, ((self_in_computeShiftRRSize->operands))[0]);
-	if (shiftCountReg == ECX) {
-		return ((self_in_computeShiftRRSize->maxSize) = 2);
-	}
-	return ((self_in_computeShiftRRSize->maxSize) = (shiftCountReg == EAX
-		? (1 + 2) + 1
-		: (2 + 2) + 2));
-}
-
-
-/*	Map a possibly abstract double-precision floating-point register into a
-	concrete one.
-	Abstract registers (defined in CogAbstractOpcodes) are all negative. If
-	registerIndex is negative assume it is an abstract register.
-	
-	[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2A:
-	Instruction Set Reference, A-M */
-
-	/* CogIA32Compiler>>#concreteDPFPRegister: */
-static sqInt NoDbgRegParms
-concreteDPFPRegister(AbstractInstruction * self_in_concreteDPFPRegister, sqInt registerIndex)
-{
-	
-	switch (registerIndex) {
-	case DPFPReg0:
-		return XMM0L / 2;
-
-	case DPFPReg1:
-		return XMM1L / 2;
-
-	case DPFPReg2:
-		return XMM2L / 2;
-
-	case DPFPReg3:
-		return XMM3L / 2;
-
-	case DPFPReg4:
-		return XMM4L / 2;
-
-	case DPFPReg5:
-		return XMM5L / 2;
-
-	case DPFPReg6:
-		return XMM6L / 2;
-
-	case DPFPReg7:
-		return XMM7L / 2;
-
-	default:
-		assert(((registerIndex >= XMM0L) && (registerIndex <= XMM7L)));
-		assert((registerIndex & 1) == 0);
-		return registerIndex / 2;
-
-	}
-}
-
-
-/*	Map a possibly abstract register into a concrete one. Abstract registers
-	(defined in CogAbstractOpcodes) are all negative. If registerIndex is
-	negative assume it is an abstract register.
-	
-	[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2A:
-	Instruction Set Reference, A-M
-	
-	
-	N.B. EAX ECX & EDX are caller-save (scratch) registers. Hence we use ECX
-	for class and EDX for
-	receiver/result since these are written in all normal sends. EBX ESI & EDI
-	are callee-save. */
-
-	/* CogIA32Compiler>>#concreteRegister: */
-static sqInt NoDbgRegParms
-concreteRegister(AbstractInstruction * self_in_concreteRegister, sqInt registerIndex)
-{
-	
-	switch (registerIndex) {
-	case TempReg:
-		return EAX;
-
-	case ClassReg:
-		return ECX;
-
-	case ReceiverResultReg:
-		return EDX;
-
-	case SendNumArgsReg:
-		return EBX;
-
-	case SPReg:
-		return ESP;
-
-	case FPReg:
-		return EBP;
-
-	case Arg0Reg:
-		return ESI;
-
-	case Arg1Reg:
-		return EDI;
-
-	default:
-		assert(((registerIndex >= EAX) && (registerIndex <= EDI)));
-		return registerIndex;
-
-	}
-}
-
-	/* CogIA32Compiler>>#concretizeFill32 */
-static usqInt NoDbgRegParms
-concretizeFill32(AbstractInstruction * self_in_concretizeFill32)
-{
-    unsigned long word;
-
-	word = ((self_in_concretizeFill32->operands))[0];
-	((self_in_concretizeFill32->machineCode))[0] = (word & 0xFF);
-	((self_in_concretizeFill32->machineCode))[1] = ((((usqInt) word) >> 8) & 0xFF);
-	((self_in_concretizeFill32->machineCode))[2] = ((((usqInt) word) >> 16) & 0xFF);
-	((self_in_concretizeFill32->machineCode))[3] = ((((usqInt) word) >> 24) & 0xFF);
-	return ((self_in_concretizeFill32->machineCodeSize) = 4);
-}
-
-	/* CogIA32Compiler>>#concretizeOpRR: */
-static usqInt NoDbgRegParms
-concretizeOpRR(AbstractInstruction * self_in_concretizeOpRR, sqInt x86opcode)
-{
-    sqInt regLHS;
-    sqInt regRHS;
-
-	regLHS = concreteRegister(self_in_concretizeOpRR, ((self_in_concretizeOpRR->operands))[0]);
-	regRHS = concreteRegister(self_in_concretizeOpRR, ((self_in_concretizeOpRR->operands))[1]);
-	((self_in_concretizeOpRR->machineCode))[0] = x86opcode;
-	((self_in_concretizeOpRR->machineCode))[1] = (modRMRO(self_in_concretizeOpRR, ModReg, regLHS, regRHS));
-	return ((self_in_concretizeOpRR->machineCodeSize) = 2);
-}
-
-	/* CogIA32Compiler>>#concretizeReverseOpRR: */
-static usqInt NoDbgRegParms
-concretizeReverseOpRR(AbstractInstruction * self_in_concretizeReverseOpRR, sqInt x86opcode)
-{
-    sqInt regLHS;
-    sqInt regRHS;
-
-	regRHS = concreteRegister(self_in_concretizeReverseOpRR, ((self_in_concretizeReverseOpRR->operands))[0]);
-	regLHS = concreteRegister(self_in_concretizeReverseOpRR, ((self_in_concretizeReverseOpRR->operands))[1]);
-	((self_in_concretizeReverseOpRR->machineCode))[0] = x86opcode;
-	((self_in_concretizeReverseOpRR->machineCode))[1] = (modRMRO(self_in_concretizeReverseOpRR, ModReg, regLHS, regRHS));
-	return ((self_in_concretizeReverseOpRR->machineCodeSize) = 2);
-}
-
-
-/*	Answer the abstract register for the C result register.
-	Only partially implemented. Works on x86 since TempReg = EAX = C result
-	reg.  */
-
-	/* CogIA32Compiler>>#cResultRegister */
-static sqInt NoDbgRegParms
-cResultRegister(AbstractInstruction * self_in_cResultRegister)
-{
-	return abstractRegisterForConcreteRegister(self_in_cResultRegister, EAX);
-}
-
-
-/*	Attempt to generate concrete machine code for the instruction at address.
-	This is the inner dispatch of concretizeAt: actualAddress which exists
-	only to get around the branch size limits in the SqueakV3 (blue book
-	derived) bytecode set. */
-
-	/* CogIA32Compiler>>#dispatchConcretize */
-static void NoDbgRegParms
-dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
-{
-    unsigned long addressOperand;
-    unsigned long addressOperand1;
-    unsigned long addressOperand2;
-    unsigned long addressOperand3;
-    unsigned long addressOperand4;
-    unsigned long addressOperand5;
-    unsigned long addressOperand6;
-    sqInt base;
-    sqInt base1;
-    sqInt base2;
-    sqInt base3;
-    AbstractInstruction *dependentChain;
-    sqInt dest;
-    sqInt dest1;
-    sqInt destReg;
-    sqInt destReg1;
-    sqInt destReg10;
-    sqInt destReg11;
-    sqInt destReg12;
-    sqInt destReg2;
-    sqInt destReg3;
-    sqInt destReg4;
-    sqInt destReg5;
-    sqInt destReg6;
-    sqInt destReg7;
-    sqInt destReg8;
-    sqInt destReg9;
-    sqInt distance;
-    sqInt distance1;
-    sqInt i;
-    sqInt index;
-    sqInt index1;
-    sqInt index2;
-    sqInt index3;
-    AbstractInstruction *jumpTarget;
-    AbstractInstruction *jumpTarget1;
-    AbstractInstruction *jumpTarget10;
-    AbstractInstruction *jumpTarget11;
-    AbstractInstruction *jumpTarget110;
-    AbstractInstruction *jumpTarget111;
-    AbstractInstruction *jumpTarget1110;
-    AbstractInstruction *jumpTarget1111;
-    AbstractInstruction *jumpTarget1112;
-    AbstractInstruction *jumpTarget1113;
-    AbstractInstruction *jumpTarget1114;
-    AbstractInstruction *jumpTarget1115;
-    AbstractInstruction *jumpTarget1116;
-    AbstractInstruction *jumpTarget112;
-    AbstractInstruction *jumpTarget113;
-    AbstractInstruction *jumpTarget114;
-    AbstractInstruction *jumpTarget115;
-    AbstractInstruction *jumpTarget116;
-    AbstractInstruction *jumpTarget117;
-    AbstractInstruction *jumpTarget118;
-    AbstractInstruction *jumpTarget119;
-    AbstractInstruction *jumpTarget12;
-    AbstractInstruction *jumpTarget120;
-    AbstractInstruction *jumpTarget121;
-    AbstractInstruction *jumpTarget122;
-    AbstractInstruction *jumpTarget123;
-    AbstractInstruction *jumpTarget124;
-    AbstractInstruction *jumpTarget125;
-    AbstractInstruction *jumpTarget13;
-    AbstractInstruction *jumpTarget14;
-    AbstractInstruction *jumpTarget15;
-    AbstractInstruction *jumpTarget16;
-    AbstractInstruction *jumpTarget17;
-    AbstractInstruction *jumpTarget18;
-    AbstractInstruction *jumpTarget19;
-    AbstractInstruction *jumpTarget2;
-    AbstractInstruction *jumpTarget20;
-    AbstractInstruction *jumpTarget21;
-    AbstractInstruction *jumpTarget210;
-    AbstractInstruction *jumpTarget211;
-    AbstractInstruction *jumpTarget212;
-    AbstractInstruction *jumpTarget213;
-    AbstractInstruction *jumpTarget214;
-    AbstractInstruction *jumpTarget215;
-    AbstractInstruction *jumpTarget216;
-    AbstractInstruction *jumpTarget22;
-    AbstractInstruction *jumpTarget23;
-    AbstractInstruction *jumpTarget24;
-    AbstractInstruction *jumpTarget25;
-    AbstractInstruction *jumpTarget26;
-    AbstractInstruction *jumpTarget27;
-    AbstractInstruction *jumpTarget28;
-    AbstractInstruction *jumpTarget29;
-    AbstractInstruction *jumpTarget3;
-    AbstractInstruction *jumpTarget30;
-    AbstractInstruction *jumpTarget31;
-    AbstractInstruction *jumpTarget32;
-    AbstractInstruction *jumpTarget33;
-    AbstractInstruction *jumpTarget34;
-    AbstractInstruction *jumpTarget35;
-    AbstractInstruction *jumpTarget4;
-    AbstractInstruction *jumpTarget5;
-    AbstractInstruction *jumpTarget6;
-    AbstractInstruction *jumpTarget7;
-    AbstractInstruction *jumpTarget8;
-    AbstractInstruction *jumpTarget9;
-    unsigned long mask;
-    unsigned long mask1;
-    unsigned long mask2;
-    sqInt mcIdx;
-    unsigned long offset;
-    unsigned long offset1;
-    unsigned long offset10;
-    unsigned long offset11;
-    sqInt offset110;
-    sqInt offset111;
-    sqInt offset112;
-    sqInt offset113;
-    sqInt offset114;
-    sqInt offset115;
-    sqInt offset116;
-    sqInt offset117;
-    sqInt offset118;
-    sqInt offset119;
-    sqInt offset12;
-    sqInt offset120;
-    sqInt offset121;
-    sqInt offset122;
-    sqInt offset13;
-    sqInt offset14;
-    sqInt offset15;
-    sqInt offset16;
-    sqInt offset17;
-    sqInt offset18;
-    sqInt offset19;
-    sqInt offset2;
-    sqInt offset20;
-    sqInt offset21;
-    sqInt offset22;
-    sqInt offset23;
-    sqInt offset24;
-    sqInt offset25;
-    sqInt offset26;
-    sqInt offset27;
-    sqInt offset28;
-    sqInt offset29;
-    unsigned long offset3;
-    sqInt offset30;
-    sqInt offset31;
-    sqInt offset32;
-    unsigned long offset4;
-    unsigned long offset5;
-    unsigned long offset6;
-    unsigned long offset7;
-    unsigned long offset8;
-    unsigned long offset9;
-    sqInt reg;
-    sqInt reg1;
-    sqInt reg10;
-    sqInt reg11;
-    sqInt reg12;
-    sqInt reg13;
-    sqInt reg14;
-    sqInt reg15;
-    sqInt reg16;
-    sqInt reg17;
-    sqInt reg18;
-    sqInt reg19;
-    sqInt reg2;
-    sqInt reg20;
-    sqInt reg21;
-    sqInt reg22;
-    sqInt reg23;
-    sqInt reg24;
-    sqInt reg25;
-    sqInt reg26;
-    sqInt reg27;
-    sqInt reg28;
-    sqInt reg3;
-    sqInt reg4;
-    sqInt reg5;
-    sqInt reg6;
-    sqInt reg7;
-    sqInt reg8;
-    sqInt reg9;
-    sqInt regDivisor;
-    sqInt regLHS;
-    sqInt regLHS1;
-    sqInt regLHS2;
-    sqInt regLHS3;
-    sqInt regLHS4;
-    sqInt regRHS;
-    sqInt regRHS1;
-    sqInt regRHS2;
-    sqInt regRHS3;
-    sqInt regRHS4;
-    sqInt regToShift;
-    sqInt regToShift1;
-    sqInt shiftCount;
-    sqInt shiftCountReg;
-    sqInt shiftCountReg1;
-    sqInt src;
-    sqInt src1;
-    sqInt srcReg;
-    sqInt srcReg1;
-    sqInt srcReg10;
-    sqInt srcReg2;
-    sqInt srcReg3;
-    sqInt srcReg4;
-    sqInt srcReg5;
-    sqInt srcReg6;
-    sqInt srcReg7;
-    sqInt srcReg8;
-    sqInt srcReg9;
-    sqInt swapreg;
-    unsigned long value;
-    unsigned long value1;
-    unsigned long value10;
-    unsigned long value11;
-    unsigned long value12;
-    unsigned long value2;
-    unsigned long value3;
-    unsigned long value4;
-    unsigned long value5;
-    unsigned long value6;
-    unsigned long value7;
-    unsigned long value8;
-    unsigned long value9;
-    unsigned long word;
-
-	
-	switch ((self_in_dispatchConcretize->opcode)) {
-	case Label:
-		/* begin concretizeLabel */
-		dependentChain = (self_in_dispatchConcretize->dependent);
-		while (!(dependentChain == null)) {
-			updateLabel(dependentChain, self_in_dispatchConcretize);
-			dependentChain = (dependentChain->dependent);
-		}
-		((self_in_dispatchConcretize->machineCodeSize) = 0);
-		return;
-
-	case AlignmentNops:
-		/* begin concretizeAlignmentNops */
-		flag("if performance is an issue generate longer nops");
-		for (i = 0; i < ((self_in_dispatchConcretize->machineCodeSize)); i += 1) {
-			((self_in_dispatchConcretize->machineCode))[i] = 144;
-		}
-		return;
-
-	case Fill32:
-		/* begin concretizeFill32 */
-		word = ((self_in_dispatchConcretize->operands))[0];
-		((self_in_dispatchConcretize->machineCode))[0] = (word & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[1] = ((((usqInt) word) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) word) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) word) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 4);
-		return;
-
-	case Nop:
-		/* begin concretizeNop */
-		((self_in_dispatchConcretize->machineCode))[0] = 144;
-		((self_in_dispatchConcretize->machineCodeSize) = 1);
-		return;
-
-	case CDQ:
-		/* begin concretizeCDQ */
-		((self_in_dispatchConcretize->machineCode))[0] = 153;
-		((self_in_dispatchConcretize->machineCodeSize) = 1);
-		return;
-
-	case IDIVR:
-		/* begin concretizeIDIVR */
-		regDivisor = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		((self_in_dispatchConcretize->machineCode))[0] = 247;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, regDivisor, 7));
-		((self_in_dispatchConcretize->machineCodeSize) = 2);
-		return;
-
-	case IMULRR:
-		/* begin concretizeMulRR */
-		reg1 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		reg2 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = 175;
-		((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModReg, reg1, reg2));
-		((self_in_dispatchConcretize->machineCodeSize) = 3);
-		return;
-
-	case CPUID:
-		/* begin concretizeCPUID */
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = 162;
-		((self_in_dispatchConcretize->machineCodeSize) = 2);
-		return;
-
-	case CMPXCHGAwR:
-		/* begin concretizeCMPXCHGAwR */
-		addressOperand = ((self_in_dispatchConcretize->operands))[0];
-		reg = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = 177;
-		((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, 5, reg));
-		((self_in_dispatchConcretize->machineCode))[3] = (addressOperand & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) addressOperand) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) addressOperand) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) addressOperand) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 7);
-		return;
-
-	case CMPXCHGMwrR:
-		/* begin concretizeCMPXCHGMwrR */
-		offset = ((self_in_dispatchConcretize->operands))[0];
-		srcReg = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		destReg = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[2]);
-		if (srcReg != ESP) {
-			if (isQuick(self_in_dispatchConcretize, offset)) {
-				((self_in_dispatchConcretize->machineCode))[0] = 15;
-				((self_in_dispatchConcretize->machineCode))[1] = 177;
-				((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, srcReg, destReg));
-				((self_in_dispatchConcretize->machineCode))[3] = (offset & 0xFF);
-				((self_in_dispatchConcretize->machineCodeSize) = 4);
-				return;
-			}
-			((self_in_dispatchConcretize->machineCode))[0] = 15;
-			((self_in_dispatchConcretize->machineCode))[1] = 177;
-			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, srcReg, destReg));
-			((self_in_dispatchConcretize->machineCode))[3] = (offset & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 7);
-			return;
-		}
-		if (isQuick(self_in_dispatchConcretize, offset)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 15;
-			((self_in_dispatchConcretize->machineCode))[1] = 177;
-			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, srcReg, destReg));
-			((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg));
-			((self_in_dispatchConcretize->machineCode))[4] = (offset & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = 177;
-		((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, srcReg, destReg));
-		((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg));
-		((self_in_dispatchConcretize->machineCode))[4] = (offset & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[7] = ((((usqInt) offset) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 8);
-		return;
-
-	case LFENCE:
-		/* begin concretizeFENCE: */
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = 174;
-		((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModReg, 0, 5));
-		((self_in_dispatchConcretize->machineCodeSize) = 3);
-		return;
-
-	case MFENCE:
-		/* begin concretizeFENCE: */
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = 174;
-		((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModReg, 0, 6));
-		((self_in_dispatchConcretize->machineCodeSize) = 3);
-		return;
-
-	case SFENCE:
-		/* begin concretizeFENCE: */
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = 174;
-		((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModReg, 0, 7));
-		((self_in_dispatchConcretize->machineCodeSize) = 3);
-		return;
-
-	case LOCK:
-		/* begin concretizeLOCK */
-		((self_in_dispatchConcretize->machineCode))[0] = 240;
-		((self_in_dispatchConcretize->machineCodeSize) = 1);
-		return;
-
-	case XCHGAwR:
-		/* begin concretizeXCHGAwR */
-		addressOperand1 = ((self_in_dispatchConcretize->operands))[0];
-		reg3 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		((self_in_dispatchConcretize->machineCode))[0] = 135;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegInd, 5, reg3));
-		((self_in_dispatchConcretize->machineCode))[2] = (addressOperand1 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) addressOperand1) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) addressOperand1) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) addressOperand1) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case XCHGMwrR:
-		/* begin concretizeXCHGMwrR */
-		offset1 = ((self_in_dispatchConcretize->operands))[0];
-		srcReg1 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		destReg1 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[2]);
-		if (srcReg1 != ESP) {
-			if (isQuick(self_in_dispatchConcretize, offset1)) {
-				((self_in_dispatchConcretize->machineCode))[0] = 135;
-				((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, srcReg1, destReg1));
-				((self_in_dispatchConcretize->machineCode))[2] = (offset1 & 0xFF);
-				((self_in_dispatchConcretize->machineCodeSize) = 3);
-				return;
-			}
-			((self_in_dispatchConcretize->machineCode))[0] = 135;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, srcReg1, destReg1));
-			((self_in_dispatchConcretize->machineCode))[2] = (offset1 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset1) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset1) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset1) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 6);
-			return;
-		}
-		if (isQuick(self_in_dispatchConcretize, offset1)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 135;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, srcReg1, destReg1));
-			((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg1));
-			((self_in_dispatchConcretize->machineCode))[3] = (offset1 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 4);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 135;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, srcReg1, destReg1));
-		((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg1));
-		((self_in_dispatchConcretize->machineCode))[3] = (offset1 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset1) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset1) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset1) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 7);
-		return;
-
-	case XCHGRR:
-		/* begin concretizeXCHGRR */
-		reg11 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		reg21 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (reg21 == EAX) {
-			reg21 = reg11;
-			reg11 = EAX;
-		}
-		if (reg11 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = (144 + reg21);
-			((self_in_dispatchConcretize->machineCodeSize) = 1);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 135;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg11, reg21));
-		((self_in_dispatchConcretize->machineCodeSize) = 2);
-		return;
-
-	case Call:
-	case CallFull:
-		/* begin concretizeCall */
-		assert((((self_in_dispatchConcretize->operands))[0]) != 0);
-		offset2 = (((int) (((self_in_dispatchConcretize->operands))[0]))) - (((int) (((self_in_dispatchConcretize->address)) + 5)));
-		((self_in_dispatchConcretize->machineCode))[0] = 232;
-		((self_in_dispatchConcretize->machineCode))[1] = (offset2 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) offset2) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset2) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset2) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 5);
-		return;
-
-	case JumpR:
-		/* begin concretizeJumpR */
-		reg4 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		((self_in_dispatchConcretize->machineCode))[0] = 0xFF;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg4, 4));
-		((self_in_dispatchConcretize->machineCodeSize) = 2);
-		return;
-
-	case JumpFull:
-	case JumpLong:
-		/* begin concretizeJumpLong */
-		jumpTarget = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		if ((addressIsInInstructions(jumpTarget))
-		 || (jumpTarget == (methodLabel()))) {
-			jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
-		}
-		assert(jumpTarget != 0);
-		offset12 = (((int) jumpTarget)) - (((int) (((self_in_dispatchConcretize->address)) + 5)));
-		((self_in_dispatchConcretize->machineCode))[0] = 233;
-		((self_in_dispatchConcretize->machineCode))[1] = (offset12 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) offset12) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset12) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset12) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 5);
-		return;
-
-	case JumpLongZero:
-	case JumpZero:
-	case JumpFPEqual:
-		/* begin concretizeConditionalJump: */
-		jumpTarget12 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget12);
-		if ((addressIsInInstructions(jumpTarget12))
-		 || (jumpTarget12 == (methodLabel()))) {
-			jumpTarget12 = ((AbstractInstruction *) ((jumpTarget12->address)));
-		}
-		assert(jumpTarget12 != 0);
-		jumpTarget3 = jumpTarget12;
-		offset14 = (((int) jumpTarget3)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset14)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 4);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset14 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget11 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget11);
-		if ((addressIsInInstructions(jumpTarget11))
-		 || (jumpTarget11 == (methodLabel()))) {
-			jumpTarget11 = ((AbstractInstruction *) ((jumpTarget11->address)));
-		}
-		assert(jumpTarget11 != 0);
-		jumpTarget2 = jumpTarget11;
-		offset15 = (((int) jumpTarget2)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 4);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset15 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset15) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset15) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset15) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case JumpLongNonZero:
-	case JumpNonZero:
-	case JumpFPNotEqual:
-		/* begin concretizeConditionalJump: */
-		jumpTarget13 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget13);
-		if ((addressIsInInstructions(jumpTarget13))
-		 || (jumpTarget13 == (methodLabel()))) {
-			jumpTarget13 = ((AbstractInstruction *) ((jumpTarget13->address)));
-		}
-		assert(jumpTarget13 != 0);
-		jumpTarget4 = jumpTarget13;
-		offset16 = (((int) jumpTarget4)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset16)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 5);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset16 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget111 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget111);
-		if ((addressIsInInstructions(jumpTarget111))
-		 || (jumpTarget111 == (methodLabel()))) {
-			jumpTarget111 = ((AbstractInstruction *) ((jumpTarget111->address)));
-		}
-		assert(jumpTarget111 != 0);
-		jumpTarget21 = jumpTarget111;
-		offset17 = (((int) jumpTarget21)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 5);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset17 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset17) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset17) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset17) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case Jump:
-		/* begin concretizeJump */
-		jumpTarget1 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1);
-		if ((addressIsInInstructions(jumpTarget1))
-		 || (jumpTarget1 == (methodLabel()))) {
-			jumpTarget1 = ((AbstractInstruction *) ((jumpTarget1->address)));
-		}
-		assert(jumpTarget1 != 0);
-		offset13 = (((int) jumpTarget1)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset13)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 235;
-			((self_in_dispatchConcretize->machineCode))[1] = (offset13 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		offset13 = (((int) jumpTarget1)) - (((int) (((self_in_dispatchConcretize->address)) + 5)));
-		((self_in_dispatchConcretize->machineCode))[0] = 233;
-		((self_in_dispatchConcretize->machineCode))[1] = (offset13 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) offset13) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset13) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset13) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 5);
-		return;
-
-	case JumpNegative:
-		/* begin concretizeConditionalJump: */
-		jumpTarget14 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget14);
-		if ((addressIsInInstructions(jumpTarget14))
-		 || (jumpTarget14 == (methodLabel()))) {
-			jumpTarget14 = ((AbstractInstruction *) ((jumpTarget14->address)));
-		}
-		assert(jumpTarget14 != 0);
-		jumpTarget5 = jumpTarget14;
-		offset18 = (((int) jumpTarget5)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset18)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 8);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset18 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget112 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget112);
-		if ((addressIsInInstructions(jumpTarget112))
-		 || (jumpTarget112 == (methodLabel()))) {
-			jumpTarget112 = ((AbstractInstruction *) ((jumpTarget112->address)));
-		}
-		assert(jumpTarget112 != 0);
-		jumpTarget22 = jumpTarget112;
-		offset19 = (((int) jumpTarget22)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 8);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset19 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset19) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset19) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset19) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case JumpNonNegative:
-		/* begin concretizeConditionalJump: */
-		jumpTarget15 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget15);
-		if ((addressIsInInstructions(jumpTarget15))
-		 || (jumpTarget15 == (methodLabel()))) {
-			jumpTarget15 = ((AbstractInstruction *) ((jumpTarget15->address)));
-		}
-		assert(jumpTarget15 != 0);
-		jumpTarget6 = jumpTarget15;
-		offset20 = (((int) jumpTarget6)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset20)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 9);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset20 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget113 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget113);
-		if ((addressIsInInstructions(jumpTarget113))
-		 || (jumpTarget113 == (methodLabel()))) {
-			jumpTarget113 = ((AbstractInstruction *) ((jumpTarget113->address)));
-		}
-		assert(jumpTarget113 != 0);
-		jumpTarget23 = jumpTarget113;
-		offset110 = (((int) jumpTarget23)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 9);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset110 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset110) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset110) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset110) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case JumpOverflow:
-		/* begin concretizeConditionalJump: */
-		jumpTarget16 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget16);
-		if ((addressIsInInstructions(jumpTarget16))
-		 || (jumpTarget16 == (methodLabel()))) {
-			jumpTarget16 = ((AbstractInstruction *) ((jumpTarget16->address)));
-		}
-		assert(jumpTarget16 != 0);
-		jumpTarget7 = jumpTarget16;
-		offset21 = (((int) jumpTarget7)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset21)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset21 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget114 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget114);
-		if ((addressIsInInstructions(jumpTarget114))
-		 || (jumpTarget114 == (methodLabel()))) {
-			jumpTarget114 = ((AbstractInstruction *) ((jumpTarget114->address)));
-		}
-		assert(jumpTarget114 != 0);
-		jumpTarget24 = jumpTarget114;
-		offset111 = (((int) jumpTarget24)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset111 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset111) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset111) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset111) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case JumpNoOverflow:
-		/* begin concretizeConditionalJump: */
-		jumpTarget17 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget17);
-		if ((addressIsInInstructions(jumpTarget17))
-		 || (jumpTarget17 == (methodLabel()))) {
-			jumpTarget17 = ((AbstractInstruction *) ((jumpTarget17->address)));
-		}
-		assert(jumpTarget17 != 0);
-		jumpTarget8 = jumpTarget17;
-		offset22 = (((int) jumpTarget8)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset22)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 1);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset22 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget115 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget115);
-		if ((addressIsInInstructions(jumpTarget115))
-		 || (jumpTarget115 == (methodLabel()))) {
-			jumpTarget115 = ((AbstractInstruction *) ((jumpTarget115->address)));
-		}
-		assert(jumpTarget115 != 0);
-		jumpTarget25 = jumpTarget115;
-		offset112 = (((int) jumpTarget25)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 1);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset112 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset112) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset112) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset112) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case JumpCarry:
-	case JumpBelow:
-	case JumpFPLess:
-		/* begin concretizeConditionalJump: */
-		jumpTarget18 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget18);
-		if ((addressIsInInstructions(jumpTarget18))
-		 || (jumpTarget18 == (methodLabel()))) {
-			jumpTarget18 = ((AbstractInstruction *) ((jumpTarget18->address)));
-		}
-		assert(jumpTarget18 != 0);
-		jumpTarget9 = jumpTarget18;
-		offset23 = (((int) jumpTarget9)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset23)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 2);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset23 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget116 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget116);
-		if ((addressIsInInstructions(jumpTarget116))
-		 || (jumpTarget116 == (methodLabel()))) {
-			jumpTarget116 = ((AbstractInstruction *) ((jumpTarget116->address)));
-		}
-		assert(jumpTarget116 != 0);
-		jumpTarget26 = jumpTarget116;
-		offset113 = (((int) jumpTarget26)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 2);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset113 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset113) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset113) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset113) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case JumpNoCarry:
-	case JumpAboveOrEqual:
-	case JumpFPGreaterOrEqual:
-		/* begin concretizeConditionalJump: */
-		jumpTarget19 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget19);
-		if ((addressIsInInstructions(jumpTarget19))
-		 || (jumpTarget19 == (methodLabel()))) {
-			jumpTarget19 = ((AbstractInstruction *) ((jumpTarget19->address)));
-		}
-		assert(jumpTarget19 != 0);
-		jumpTarget10 = jumpTarget19;
-		offset24 = (((int) jumpTarget10)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset24)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 3);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset24 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget117 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget117);
-		if ((addressIsInInstructions(jumpTarget117))
-		 || (jumpTarget117 == (methodLabel()))) {
-			jumpTarget117 = ((AbstractInstruction *) ((jumpTarget117->address)));
-		}
-		assert(jumpTarget117 != 0);
-		jumpTarget27 = jumpTarget117;
-		offset114 = (((int) jumpTarget27)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 3);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset114 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset114) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset114) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset114) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case JumpLess:
-		/* begin concretizeConditionalJump: */
-		jumpTarget110 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget110);
-		if ((addressIsInInstructions(jumpTarget110))
-		 || (jumpTarget110 == (methodLabel()))) {
-			jumpTarget110 = ((AbstractInstruction *) ((jumpTarget110->address)));
-		}
-		assert(jumpTarget110 != 0);
-		jumpTarget20 = jumpTarget110;
-		offset25 = (((int) jumpTarget20)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset25)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 12);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset25 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget118 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget118);
-		if ((addressIsInInstructions(jumpTarget118))
-		 || (jumpTarget118 == (methodLabel()))) {
-			jumpTarget118 = ((AbstractInstruction *) ((jumpTarget118->address)));
-		}
-		assert(jumpTarget118 != 0);
-		jumpTarget28 = jumpTarget118;
-		offset115 = (((int) jumpTarget28)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 12);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset115 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset115) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset115) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset115) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case JumpGreaterOrEqual:
-		/* begin concretizeConditionalJump: */
-		jumpTarget119 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget119);
-		if ((addressIsInInstructions(jumpTarget119))
-		 || (jumpTarget119 == (methodLabel()))) {
-			jumpTarget119 = ((AbstractInstruction *) ((jumpTarget119->address)));
-		}
-		assert(jumpTarget119 != 0);
-		jumpTarget29 = jumpTarget119;
-		offset26 = (((int) jumpTarget29)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset26)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 13);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset26 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget1110 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1110);
-		if ((addressIsInInstructions(jumpTarget1110))
-		 || (jumpTarget1110 == (methodLabel()))) {
-			jumpTarget1110 = ((AbstractInstruction *) ((jumpTarget1110->address)));
-		}
-		assert(jumpTarget1110 != 0);
-		jumpTarget210 = jumpTarget1110;
-		offset116 = (((int) jumpTarget210)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 13);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset116 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset116) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset116) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset116) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case JumpGreater:
-		/* begin concretizeConditionalJump: */
-		jumpTarget120 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget120);
-		if ((addressIsInInstructions(jumpTarget120))
-		 || (jumpTarget120 == (methodLabel()))) {
-			jumpTarget120 = ((AbstractInstruction *) ((jumpTarget120->address)));
-		}
-		assert(jumpTarget120 != 0);
-		jumpTarget30 = jumpTarget120;
-		offset27 = (((int) jumpTarget30)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset27)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 15);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset27 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget1111 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1111);
-		if ((addressIsInInstructions(jumpTarget1111))
-		 || (jumpTarget1111 == (methodLabel()))) {
-			jumpTarget1111 = ((AbstractInstruction *) ((jumpTarget1111->address)));
-		}
-		assert(jumpTarget1111 != 0);
-		jumpTarget211 = jumpTarget1111;
-		offset117 = (((int) jumpTarget211)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 15);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset117 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset117) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset117) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset117) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case JumpLessOrEqual:
-		/* begin concretizeConditionalJump: */
-		jumpTarget121 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget121);
-		if ((addressIsInInstructions(jumpTarget121))
-		 || (jumpTarget121 == (methodLabel()))) {
-			jumpTarget121 = ((AbstractInstruction *) ((jumpTarget121->address)));
-		}
-		assert(jumpTarget121 != 0);
-		jumpTarget31 = jumpTarget121;
-		offset28 = (((int) jumpTarget31)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset28)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 14);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset28 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget1112 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1112);
-		if ((addressIsInInstructions(jumpTarget1112))
-		 || (jumpTarget1112 == (methodLabel()))) {
-			jumpTarget1112 = ((AbstractInstruction *) ((jumpTarget1112->address)));
-		}
-		assert(jumpTarget1112 != 0);
-		jumpTarget212 = jumpTarget1112;
-		offset118 = (((int) jumpTarget212)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 14);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset118 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset118) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset118) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset118) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case JumpAbove:
-	case JumpFPGreater:
-		/* begin concretizeConditionalJump: */
-		jumpTarget122 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget122);
-		if ((addressIsInInstructions(jumpTarget122))
-		 || (jumpTarget122 == (methodLabel()))) {
-			jumpTarget122 = ((AbstractInstruction *) ((jumpTarget122->address)));
-		}
-		assert(jumpTarget122 != 0);
-		jumpTarget32 = jumpTarget122;
-		offset29 = (((int) jumpTarget32)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset29)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 7);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset29 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget1113 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1113);
-		if ((addressIsInInstructions(jumpTarget1113))
-		 || (jumpTarget1113 == (methodLabel()))) {
-			jumpTarget1113 = ((AbstractInstruction *) ((jumpTarget1113->address)));
-		}
-		assert(jumpTarget1113 != 0);
-		jumpTarget213 = jumpTarget1113;
-		offset119 = (((int) jumpTarget213)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 7);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset119 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset119) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset119) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset119) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case JumpBelowOrEqual:
-	case JumpFPLessOrEqual:
-		/* begin concretizeConditionalJump: */
-		jumpTarget123 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget123);
-		if ((addressIsInInstructions(jumpTarget123))
-		 || (jumpTarget123 == (methodLabel()))) {
-			jumpTarget123 = ((AbstractInstruction *) ((jumpTarget123->address)));
-		}
-		assert(jumpTarget123 != 0);
-		jumpTarget33 = jumpTarget123;
-		offset30 = (((int) jumpTarget33)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset30)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 6);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset30 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget1114 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1114);
-		if ((addressIsInInstructions(jumpTarget1114))
-		 || (jumpTarget1114 == (methodLabel()))) {
-			jumpTarget1114 = ((AbstractInstruction *) ((jumpTarget1114->address)));
-		}
-		assert(jumpTarget1114 != 0);
-		jumpTarget214 = jumpTarget1114;
-		offset120 = (((int) jumpTarget214)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 6);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset120 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset120) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset120) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset120) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case JumpFPOrdered:
-		/* begin concretizeConditionalJump: */
-		jumpTarget124 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget124);
-		if ((addressIsInInstructions(jumpTarget124))
-		 || (jumpTarget124 == (methodLabel()))) {
-			jumpTarget124 = ((AbstractInstruction *) ((jumpTarget124->address)));
-		}
-		assert(jumpTarget124 != 0);
-		jumpTarget34 = jumpTarget124;
-		offset31 = (((int) jumpTarget34)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset31)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 11);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset31 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget1115 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1115);
-		if ((addressIsInInstructions(jumpTarget1115))
-		 || (jumpTarget1115 == (methodLabel()))) {
-			jumpTarget1115 = ((AbstractInstruction *) ((jumpTarget1115->address)));
-		}
-		assert(jumpTarget1115 != 0);
-		jumpTarget215 = jumpTarget1115;
-		offset121 = (((int) jumpTarget215)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 11);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset121 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset121) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset121) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset121) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case JumpFPUnordered:
-		/* begin concretizeConditionalJump: */
-		jumpTarget125 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget125);
-		if ((addressIsInInstructions(jumpTarget125))
-		 || (jumpTarget125 == (methodLabel()))) {
-			jumpTarget125 = ((AbstractInstruction *) ((jumpTarget125->address)));
-		}
-		assert(jumpTarget125 != 0);
-		jumpTarget35 = jumpTarget125;
-		offset32 = (((int) jumpTarget35)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
-		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
-			? isQuick(self_in_dispatchConcretize, offset32)
-			: ((self_in_dispatchConcretize->machineCodeSize)) == 2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = (112 + 10);
-			((self_in_dispatchConcretize->machineCode))[1] = (offset32 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		/* begin concretizeConditionalJumpLong: */
-		jumpTarget1116 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1116);
-		if ((addressIsInInstructions(jumpTarget1116))
-		 || (jumpTarget1116 == (methodLabel()))) {
-			jumpTarget1116 = ((AbstractInstruction *) ((jumpTarget1116->address)));
-		}
-		assert(jumpTarget1116 != 0);
-		jumpTarget216 = jumpTarget1116;
-		offset122 = (((int) jumpTarget216)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = (128 + 10);
-		((self_in_dispatchConcretize->machineCode))[2] = (offset122 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset122) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset122) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset122) >> 24) & 0xFF);
-		((usqInt) (((self_in_dispatchConcretize->machineCodeSize) = 6)));
-		return;
-
-	case RetN:
-		/* begin concretizeRetN */
-		offset3 = ((self_in_dispatchConcretize->operands))[0];
-		if (offset3 == 0) {
-			((self_in_dispatchConcretize->machineCode))[0] = 195;
-			((self_in_dispatchConcretize->machineCodeSize) = 1);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 194;
-		((self_in_dispatchConcretize->machineCode))[1] = (offset3 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[2] = (((usqInt) offset3) >> 8);
-		((self_in_dispatchConcretize->machineCodeSize) = 3);
-		return;
-
-	case Stop:
-		/* begin concretizeStop */
-		((self_in_dispatchConcretize->machineCode))[0] = 204;
-		((self_in_dispatchConcretize->machineCodeSize) = 1);
-		return;
-
-	case AddCqR:
-		/* begin concretizeAddCqR */
-		value = ((self_in_dispatchConcretize->operands))[0];
-		reg5 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (isQuick(self_in_dispatchConcretize, value)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 131;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg5, 0));
-			((self_in_dispatchConcretize->machineCode))[2] = (value & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 3);
-			return;
-		}
-		if (reg5 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 5;
-			((self_in_dispatchConcretize->machineCode))[1] = (value & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) value) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 129;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg5, 0));
-		((self_in_dispatchConcretize->machineCode))[2] = (value & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) value) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case AddCwR:
-		/* begin concretizeAddCwR */
-		value1 = ((self_in_dispatchConcretize->operands))[0];
-		reg6 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (reg6 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 5;
-			((self_in_dispatchConcretize->machineCode))[1] = (value1 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) value1) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value1) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value1) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 129;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg6, 0));
-		((self_in_dispatchConcretize->machineCode))[2] = (value1 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value1) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value1) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) value1) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case AddRR:
-		concretizeOpRR(self_in_dispatchConcretize, 3);
-		return;
-
-	case AddRdRd:
-		/* begin concretizeSEE2OpRdRd: */
-		regRHS = concreteDPFPRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		regLHS = concreteDPFPRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		((self_in_dispatchConcretize->machineCode))[0] = 242;
-		((self_in_dispatchConcretize->machineCode))[1] = 15;
-		((self_in_dispatchConcretize->machineCode))[2] = 88;
-		((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModReg, regRHS, regLHS));
-		((self_in_dispatchConcretize->machineCodeSize) = 4);
-		return;
-
-	case AndCqR:
-		/* begin concretizeAndCqR */
-		mask = ((self_in_dispatchConcretize->operands))[0];
-		reg7 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (isQuick(self_in_dispatchConcretize, mask)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 131;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg7, 4));
-			((self_in_dispatchConcretize->machineCode))[2] = (mask & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 3);
-			return;
-		}
-		if (reg7 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 37;
-			((self_in_dispatchConcretize->machineCode))[1] = (mask & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) mask) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) mask) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) mask) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 129;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg7, 4));
-		((self_in_dispatchConcretize->machineCode))[2] = (mask & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) mask) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) mask) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) mask) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case AndCwR:
-		/* begin concretizeAndCwR */
-		value2 = ((self_in_dispatchConcretize->operands))[0];
-		reg8 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (reg8 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 37;
-			((self_in_dispatchConcretize->machineCode))[1] = (value2 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) value2) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value2) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value2) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 131;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg8, 4));
-		((self_in_dispatchConcretize->machineCode))[2] = (value2 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value2) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value2) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) value2) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case AndRR:
-		concretizeOpRR(self_in_dispatchConcretize, 35);
-		return;
-
-	case TstCqR:
-		/* begin concretizeTstCqR */
-		mask1 = ((self_in_dispatchConcretize->operands))[0];
-		reg9 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if ((isQuick(self_in_dispatchConcretize, mask1))
-		 && (reg9 < 4)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 246;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg9, 0));
-			((self_in_dispatchConcretize->machineCode))[2] = (mask1 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 3);
-			return;
-		}
-		if (reg9 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 169;
-			((self_in_dispatchConcretize->machineCode))[1] = (mask1 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) mask1) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) mask1) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) mask1) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 247;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg9, 0));
-		((self_in_dispatchConcretize->machineCode))[2] = (mask1 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) mask1) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) mask1) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) mask1) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case CmpCqR:
-		/* begin concretizeCmpCqR */
-		value3 = ((self_in_dispatchConcretize->operands))[0];
-		reg10 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (isQuick(self_in_dispatchConcretize, value3)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 131;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg10, 7));
-			((self_in_dispatchConcretize->machineCode))[2] = (value3 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 3);
-			return;
-		}
-		if (reg10 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 61;
-			((self_in_dispatchConcretize->machineCode))[1] = (value3 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) value3) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value3) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value3) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 129;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg10, 7));
-		((self_in_dispatchConcretize->machineCode))[2] = (value3 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value3) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value3) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) value3) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case CmpCwR:
-		/* begin concretizeCmpCwR */
-		value4 = ((self_in_dispatchConcretize->operands))[0];
-		reg12 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (reg12 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 61;
-			((self_in_dispatchConcretize->machineCode))[1] = (value4 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) value4) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value4) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value4) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 129;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg12, 7));
-		((self_in_dispatchConcretize->machineCode))[2] = (value4 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value4) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value4) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) value4) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case CmpRR:
-		concretizeReverseOpRR(self_in_dispatchConcretize, 57);
-		return;
-
-	case CmpRdRd:
-		/* begin concretizeCmpRdRd */
-		regRHS1 = concreteDPFPRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		regLHS1 = concreteDPFPRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		((self_in_dispatchConcretize->machineCode))[0] = 102;
-		((self_in_dispatchConcretize->machineCode))[1] = 15;
-		((self_in_dispatchConcretize->machineCode))[2] = 46;
-		((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModReg, regRHS1, regLHS1));
-		((self_in_dispatchConcretize->machineCodeSize) = 4);
-		return;
-
-	case DivRdRd:
-		/* begin concretizeSEE2OpRdRd: */
-		regRHS2 = concreteDPFPRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		regLHS2 = concreteDPFPRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		((self_in_dispatchConcretize->machineCode))[0] = 242;
-		((self_in_dispatchConcretize->machineCode))[1] = 15;
-		((self_in_dispatchConcretize->machineCode))[2] = 94;
-		((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModReg, regRHS2, regLHS2));
-		((self_in_dispatchConcretize->machineCodeSize) = 4);
-		return;
-
-	case MulRdRd:
-		/* begin concretizeSEE2OpRdRd: */
-		regRHS3 = concreteDPFPRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		regLHS3 = concreteDPFPRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		((self_in_dispatchConcretize->machineCode))[0] = 242;
-		((self_in_dispatchConcretize->machineCode))[1] = 15;
-		((self_in_dispatchConcretize->machineCode))[2] = 89;
-		((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModReg, regRHS3, regLHS3));
-		((self_in_dispatchConcretize->machineCodeSize) = 4);
-		return;
-
-	case OrCqR:
-		/* begin concretizeOrCqR */
-		mask2 = ((self_in_dispatchConcretize->operands))[0];
-		reg13 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (isQuick(self_in_dispatchConcretize, mask2)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 131;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg13, 1));
-			((self_in_dispatchConcretize->machineCode))[2] = (mask2 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 3);
-			return;
-		}
-		if (reg13 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 13;
-			((self_in_dispatchConcretize->machineCode))[1] = (mask2 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) mask2) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) mask2) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) mask2) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 129;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg13, 1));
-		((self_in_dispatchConcretize->machineCode))[2] = (mask2 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) mask2) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) mask2) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) mask2) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case OrCwR:
-		/* begin concretizeOrCwR */
-		value5 = ((self_in_dispatchConcretize->operands))[0];
-		reg14 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (reg14 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 13;
-			((self_in_dispatchConcretize->machineCode))[1] = (value5 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) value5) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value5) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value5) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 131;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg14, 1));
-		((self_in_dispatchConcretize->machineCode))[2] = (value5 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value5) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value5) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) value5) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case OrRR:
-		concretizeOpRR(self_in_dispatchConcretize, 11);
-		return;
-
-	case SubCqR:
-		/* begin concretizeSubCqR */
-		value6 = ((self_in_dispatchConcretize->operands))[0];
-		reg15 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (isQuick(self_in_dispatchConcretize, value6)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 131;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg15, 5));
-			((self_in_dispatchConcretize->machineCode))[2] = (value6 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 3);
-			return;
-		}
-		if (reg15 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 45;
-			((self_in_dispatchConcretize->machineCode))[1] = (value6 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) value6) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value6) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value6) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 129;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg15, 5));
-		((self_in_dispatchConcretize->machineCode))[2] = (value6 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value6) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value6) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) value6) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case SubCwR:
-		/* begin concretizeSubCwR */
-		value7 = ((self_in_dispatchConcretize->operands))[0];
-		reg16 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (reg16 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 45;
-			((self_in_dispatchConcretize->machineCode))[1] = (value7 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) value7) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value7) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value7) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 129;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg16, 5));
-		((self_in_dispatchConcretize->machineCode))[2] = (value7 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value7) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value7) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) value7) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case SubRR:
-		concretizeOpRR(self_in_dispatchConcretize, 43);
-		return;
-
-	case SubRdRd:
-		/* begin concretizeSEE2OpRdRd: */
-		regRHS4 = concreteDPFPRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		regLHS4 = concreteDPFPRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		((self_in_dispatchConcretize->machineCode))[0] = 242;
-		((self_in_dispatchConcretize->machineCode))[1] = 15;
-		((self_in_dispatchConcretize->machineCode))[2] = 92;
-		((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModReg, regRHS4, regLHS4));
-		((self_in_dispatchConcretize->machineCodeSize) = 4);
-		return;
-
-	case SqrtRd:
-		/* begin concretizeSqrtRd */
-		reg17 = concreteDPFPRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		((self_in_dispatchConcretize->machineCode))[0] = 242;
-		((self_in_dispatchConcretize->machineCode))[1] = 15;
-		((self_in_dispatchConcretize->machineCode))[2] = 81;
-		((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModReg, reg17, reg17));
-		((self_in_dispatchConcretize->machineCodeSize) = 4);
-		return;
-
-	case XorCwR:
-		/* begin concretizeXorCwR */
-		value8 = ((self_in_dispatchConcretize->operands))[0];
-		reg18 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (reg18 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 53;
-			((self_in_dispatchConcretize->machineCode))[1] = (value8 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) value8) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value8) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value8) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 129;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg18, 6));
-		((self_in_dispatchConcretize->machineCode))[2] = (value8 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value8) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value8) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) value8) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case XorRR:
-		concretizeOpRR(self_in_dispatchConcretize, 51);
-		return;
-
-	case NegateR:
-		/* begin concretizeNegateR */
-		reg19 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		((self_in_dispatchConcretize->machineCode))[0] = 247;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg19, 3));
-		((self_in_dispatchConcretize->machineCodeSize) = 2);
-		return;
-
-	case LoadEffectiveAddressMwrR:
-		/* begin concretizeLoadEffectiveAddressMwrR */
-		offset4 = ((self_in_dispatchConcretize->operands))[0];
-		srcReg2 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		destReg2 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[2]);
-		if (srcReg2 != ESP) {
-			if (isQuick(self_in_dispatchConcretize, offset4)) {
-				((self_in_dispatchConcretize->machineCode))[0] = 141;
-				((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, srcReg2, destReg2));
-				((self_in_dispatchConcretize->machineCode))[2] = (offset4 & 0xFF);
-				((self_in_dispatchConcretize->machineCodeSize) = 3);
-				return;
-			}
-			((self_in_dispatchConcretize->machineCode))[0] = 141;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, srcReg2, destReg2));
-			((self_in_dispatchConcretize->machineCode))[2] = (offset4 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset4) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset4) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset4) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 6);
-			return;
-		}
-		if (isQuick(self_in_dispatchConcretize, offset4)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 141;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, srcReg2, destReg2));
-			((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg2));
-			((self_in_dispatchConcretize->machineCode))[3] = (offset4 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 4);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 141;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, srcReg2, destReg2));
-		((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg2));
-		((self_in_dispatchConcretize->machineCode))[3] = (offset4 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset4) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset4) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset4) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 7);
-		return;
-
-	case ArithmeticShiftRightCqR:
-		/* begin concretizeArithmeticShiftRightCqR */
-		shiftCount = (((((self_in_dispatchConcretize->operands))[0]) < 0x1F) ? (((self_in_dispatchConcretize->operands))[0]) : 0x1F);
-		reg20 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (shiftCount == 1) {
-			((self_in_dispatchConcretize->machineCode))[0] = 209;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg20, 7));
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 193;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg20, 7));
-		((self_in_dispatchConcretize->machineCode))[2] = shiftCount;
-		((self_in_dispatchConcretize->machineCodeSize) = 3);
-		return;
-
-	case LogicalShiftRightCqR:
-		/* begin concretizeLogicalShiftRightCqR */
-		distance = (((((self_in_dispatchConcretize->operands))[0]) < 0x1F) ? (((self_in_dispatchConcretize->operands))[0]) : 0x1F);
-		reg22 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (distance == 1) {
-			((self_in_dispatchConcretize->machineCode))[0] = 209;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg22, 5));
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 193;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg22, 5));
-		((self_in_dispatchConcretize->machineCode))[2] = distance;
-		((self_in_dispatchConcretize->machineCodeSize) = 3);
-		return;
-
-	case LogicalShiftLeftCqR:
-		/* begin concretizeLogicalShiftLeftCqR */
-		distance1 = (((((self_in_dispatchConcretize->operands))[0]) < 0x1F) ? (((self_in_dispatchConcretize->operands))[0]) : 0x1F);
-		reg23 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (distance1 == 1) {
-			((self_in_dispatchConcretize->machineCode))[0] = 209;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg23, 4));
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 193;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg23, 4));
-		((self_in_dispatchConcretize->machineCode))[2] = distance1;
-		((self_in_dispatchConcretize->machineCodeSize) = 3);
-		return;
-
-	case ArithmeticShiftRightRR:
-		/* begin concretizeArithmeticShiftRightRR */
-		shiftCountReg = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		destReg3 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (shiftCountReg == ECX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 211;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, destReg3, 7));
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		regToShift = (destReg3 == shiftCountReg
-			? ECX
-			: (destReg3 == ECX
-					? shiftCountReg
-					: destReg3));
-		if (shiftCountReg == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = (144 + ECX);
-			((self_in_dispatchConcretize->machineCode))[1] = 211;
-			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModReg, regToShift, 7));
-			((self_in_dispatchConcretize->machineCode))[3] = (144 + ECX);
-			((self_in_dispatchConcretize->machineCodeSize) = 4);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 135;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, ECX, shiftCountReg));
-		((self_in_dispatchConcretize->machineCode))[2] = 211;
-		((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModReg, regToShift, 7));
-		((self_in_dispatchConcretize->machineCode))[4] = 135;
-		((self_in_dispatchConcretize->machineCode))[5] = (modRMRO(self_in_dispatchConcretize, ModReg, ECX, shiftCountReg));
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case LogicalShiftLeftRR:
-		/* begin concretizeLogicalShiftLeftRR */
-		shiftCountReg1 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		destReg4 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (shiftCountReg1 == ECX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 211;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, destReg4, 4));
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		regToShift1 = (destReg4 == shiftCountReg1
-			? ECX
-			: (destReg4 == ECX
-					? shiftCountReg1
-					: destReg4));
-		if (shiftCountReg1 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = (144 + ECX);
-			((self_in_dispatchConcretize->machineCode))[1] = 211;
-			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModReg, regToShift1, 4));
-			((self_in_dispatchConcretize->machineCode))[3] = (144 + ECX);
-			((self_in_dispatchConcretize->machineCodeSize) = 4);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 135;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, ECX, shiftCountReg1));
-		((self_in_dispatchConcretize->machineCode))[2] = 211;
-		((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModReg, regToShift1, 4));
-		((self_in_dispatchConcretize->machineCode))[4] = 135;
-		((self_in_dispatchConcretize->machineCode))[5] = (modRMRO(self_in_dispatchConcretize, ModReg, ECX, shiftCountReg1));
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case MoveCqR:
-		/* begin concretizeMoveCqR */
-		if ((((self_in_dispatchConcretize->operands))[0]) != 0) {
-			/* begin concretizeMoveCwR */
-			value12 = ((self_in_dispatchConcretize->operands))[0];
-			((self_in_dispatchConcretize->machineCode))[0] = (184 + (concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1])));
-			((self_in_dispatchConcretize->machineCode))[1] = (value12 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) value12) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value12) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value12) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		reg24 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		((self_in_dispatchConcretize->machineCode))[0] = 49;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModReg, reg24, reg24));
-		((self_in_dispatchConcretize->machineCodeSize) = 2);
-		return;
-
-	case MoveCwR:
-		/* begin concretizeMoveCwR */
-		value9 = ((self_in_dispatchConcretize->operands))[0];
-		((self_in_dispatchConcretize->machineCode))[0] = (184 + (concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1])));
-		((self_in_dispatchConcretize->machineCode))[1] = (value9 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) value9) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value9) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value9) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 5);
-		return;
-
-	case MoveRR:
-		concretizeReverseOpRR(self_in_dispatchConcretize, 137);
-		return;
-
-	case MoveAwR:
-		/* begin concretizeMoveAwR */
-		addressOperand3 = ((self_in_dispatchConcretize->operands))[0];
-		if ((addressIsInInstructions(((AbstractInstruction *) addressOperand3)))
-		 || ((((AbstractInstruction *) addressOperand3)) == (methodLabel()))) {
-			addressOperand3 = ((((AbstractInstruction *) addressOperand3))->address);
-		}
-		reg25 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		if (reg25 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 161;
-			((self_in_dispatchConcretize->machineCode))[1] = (addressOperand3 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) addressOperand3) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) addressOperand3) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) addressOperand3) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 139;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegInd, 5, reg25));
-		((self_in_dispatchConcretize->machineCode))[2] = (addressOperand3 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) addressOperand3) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) addressOperand3) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) addressOperand3) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case MoveRAw:
-		/* begin concretizeMoveRAw */
-		reg26 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		addressOperand4 = ((self_in_dispatchConcretize->operands))[1];
-		if ((addressIsInInstructions(((AbstractInstruction *) addressOperand4)))
-		 || ((((AbstractInstruction *) addressOperand4)) == (methodLabel()))) {
-			addressOperand4 = ((((AbstractInstruction *) addressOperand4))->address);
-		}
-		if (reg26 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 163;
-			((self_in_dispatchConcretize->machineCode))[1] = (addressOperand4 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) addressOperand4) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) addressOperand4) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) addressOperand4) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 137;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegInd, 5, reg26));
-		((self_in_dispatchConcretize->machineCode))[2] = (addressOperand4 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) addressOperand4) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) addressOperand4) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) addressOperand4) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case MoveAbR:
-		/* begin concretizeMoveAbR */
-		addressOperand5 = ((self_in_dispatchConcretize->operands))[0];
-		if ((addressIsInInstructions(((AbstractInstruction *) addressOperand5)))
-		 || ((((AbstractInstruction *) addressOperand5)) == (methodLabel()))) {
-			addressOperand5 = ((((AbstractInstruction *) addressOperand5))->address);
-		}
-		reg27 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = 182;
-		((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, 5, reg27));
-		((self_in_dispatchConcretize->machineCode))[3] = (addressOperand5 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) addressOperand5) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) addressOperand5) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) addressOperand5) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 7);
-		return;
-
-	case MoveRAb:
-		/* begin concretizeMoveRAb */
-		reg28 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		addressOperand6 = ((self_in_dispatchConcretize->operands))[1];
-		if ((addressIsInInstructions(((AbstractInstruction *) addressOperand6)))
-		 || ((((AbstractInstruction *) addressOperand6)) == (methodLabel()))) {
-			addressOperand6 = ((((AbstractInstruction *) addressOperand6))->address);
-		}
-		if (reg28 == EAX) {
-			((self_in_dispatchConcretize->machineCode))[0] = 162;
-			((self_in_dispatchConcretize->machineCode))[1] = (addressOperand6 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) addressOperand6) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) addressOperand6) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) addressOperand6) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 136;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegInd, 5, reg28));
-		((self_in_dispatchConcretize->machineCode))[2] = (addressOperand6 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) addressOperand6) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) addressOperand6) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) addressOperand6) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 6);
-		return;
-
-	case MoveMbrR:
-		/* begin concretizeMoveMbrR */
-		offset5 = ((self_in_dispatchConcretize->operands))[0];
-		srcReg3 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		destReg5 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[2]);
-		if (srcReg3 != ESP) {
-			if (isQuick(self_in_dispatchConcretize, offset5)) {
-				((self_in_dispatchConcretize->machineCode))[0] = 15;
-				((self_in_dispatchConcretize->machineCode))[1] = 182;
-				((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, srcReg3, destReg5));
-				((self_in_dispatchConcretize->machineCode))[3] = (offset5 & 0xFF);
-				((self_in_dispatchConcretize->machineCodeSize) = 4);
-				return;
-			}
-			((self_in_dispatchConcretize->machineCode))[0] = 15;
-			((self_in_dispatchConcretize->machineCode))[1] = 182;
-			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, srcReg3, destReg5));
-			((self_in_dispatchConcretize->machineCode))[3] = (offset5 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset5) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset5) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset5) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 7);
-			return;
-		}
-		if (isQuick(self_in_dispatchConcretize, offset5)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 15;
-			((self_in_dispatchConcretize->machineCode))[1] = 182;
-			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, srcReg3, destReg5));
-			((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg3));
-			((self_in_dispatchConcretize->machineCode))[4] = (offset5 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = 182;
-		((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, srcReg3, destReg5));
-		((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg3));
-		((self_in_dispatchConcretize->machineCode))[4] = (offset5 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset5) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset5) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[7] = ((((usqInt) offset5) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 8);
-		return;
-
-	case MoveRMbr:
-		/* begin concretizeMoveRMbr */
-		offset6 = ((self_in_dispatchConcretize->operands))[1];
-		srcReg4 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		destReg6 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[2]);
-		if (srcReg4 >= 4) {
-			error("invalid register");
-		}
-		if (destReg6 != ESP) {
-			if (isQuick(self_in_dispatchConcretize, offset6)) {
-				((self_in_dispatchConcretize->machineCode))[0] = 136;
-				((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, destReg6, srcReg4));
-				((self_in_dispatchConcretize->machineCode))[2] = (offset6 & 0xFF);
-				((self_in_dispatchConcretize->machineCodeSize) = 3);
-				return;
-			}
-			((self_in_dispatchConcretize->machineCode))[0] = 136;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, destReg6, srcReg4));
-			((self_in_dispatchConcretize->machineCode))[2] = (offset6 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset6) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset6) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset6) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 6);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 136;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, destReg6, srcReg4));
-		((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB1, 4, destReg6));
-		((self_in_dispatchConcretize->machineCode))[3] = (offset6 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset6) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset6) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset6) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 7);
-		return;
-
-	case MoveM16rR:
-		/* begin concretizeMoveM16rR */
-		offset7 = ((self_in_dispatchConcretize->operands))[0];
-		srcReg5 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		destReg7 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[2]);
-		if (srcReg5 != ESP) {
-			if (isQuick(self_in_dispatchConcretize, offset7)) {
-				((self_in_dispatchConcretize->machineCode))[0] = 15;
-				((self_in_dispatchConcretize->machineCode))[1] = 183;
-				((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, srcReg5, destReg7));
-				((self_in_dispatchConcretize->machineCode))[3] = (offset7 & 0xFF);
-				((self_in_dispatchConcretize->machineCodeSize) = 4);
-				return;
-			}
-			((self_in_dispatchConcretize->machineCode))[0] = 15;
-			((self_in_dispatchConcretize->machineCode))[1] = 183;
-			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, srcReg5, destReg7));
-			((self_in_dispatchConcretize->machineCode))[3] = (offset7 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset7) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset7) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset7) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 7);
-			return;
-		}
-		if (isQuick(self_in_dispatchConcretize, offset7)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 15;
-			((self_in_dispatchConcretize->machineCode))[1] = 183;
-			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, srcReg5, destReg7));
-			((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg5));
-			((self_in_dispatchConcretize->machineCode))[4] = (offset7 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 5);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = 183;
-		((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, srcReg5, destReg7));
-		((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg5));
-		((self_in_dispatchConcretize->machineCode))[4] = (offset7 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset7) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset7) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[7] = ((((usqInt) offset7) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 8);
-		return;
-
-	case MoveM64rRd:
-		/* begin concretizeMoveM64rRd */
-		offset8 = ((self_in_dispatchConcretize->operands))[0];
-		srcReg6 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		destReg8 = concreteDPFPRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[2]);
-		if (srcReg6 != ESP) {
-			if (isQuick(self_in_dispatchConcretize, offset8)) {
-				((self_in_dispatchConcretize->machineCode))[0] = 242;
-				((self_in_dispatchConcretize->machineCode))[1] = 15;
-				((self_in_dispatchConcretize->machineCode))[2] = 16;
-				((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, srcReg6, destReg8));
-				((self_in_dispatchConcretize->machineCode))[4] = (offset8 & 0xFF);
-				((self_in_dispatchConcretize->machineCodeSize) = 5);
-				return;
-			}
-			((self_in_dispatchConcretize->machineCode))[0] = 242;
-			((self_in_dispatchConcretize->machineCode))[1] = 15;
-			((self_in_dispatchConcretize->machineCode))[2] = 16;
-			((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, srcReg6, destReg8));
-			((self_in_dispatchConcretize->machineCode))[4] = (offset8 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset8) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset8) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[7] = ((((usqInt) offset8) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 8);
-			return;
-		}
-		if (isQuick(self_in_dispatchConcretize, offset8)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 242;
-			((self_in_dispatchConcretize->machineCode))[1] = 15;
-			((self_in_dispatchConcretize->machineCode))[2] = 16;
-			((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, srcReg6, destReg8));
-			((self_in_dispatchConcretize->machineCode))[4] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg6));
-			((self_in_dispatchConcretize->machineCode))[5] = (offset8 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 6);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 242;
-		((self_in_dispatchConcretize->machineCode))[1] = 15;
-		((self_in_dispatchConcretize->machineCode))[2] = 16;
-		((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, srcReg6, destReg8));
-		((self_in_dispatchConcretize->machineCode))[4] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg6));
-		((self_in_dispatchConcretize->machineCode))[5] = (offset8 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset8) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[7] = ((((usqInt) offset8) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[8] = ((((usqInt) offset8) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 9);
-		return;
-
-	case MoveMwrR:
-		/* begin concretizeMoveMwrR */
-		offset9 = ((self_in_dispatchConcretize->operands))[0];
-		srcReg7 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		destReg9 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[2]);
-		if (srcReg7 != ESP) {
-			if ((offset9 == 0)
-			 && (srcReg7 != EBP)) {
-				((self_in_dispatchConcretize->machineCode))[0] = 139;
-				((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegInd, srcReg7, destReg9));
-				((self_in_dispatchConcretize->machineCodeSize) = 2);
-				return;
-			}
-			if (isQuick(self_in_dispatchConcretize, offset9)) {
-				((self_in_dispatchConcretize->machineCode))[0] = 139;
-				((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, srcReg7, destReg9));
-				((self_in_dispatchConcretize->machineCode))[2] = (offset9 & 0xFF);
-				((self_in_dispatchConcretize->machineCodeSize) = 3);
-				return;
-			}
-			((self_in_dispatchConcretize->machineCode))[0] = 139;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, srcReg7, destReg9));
-			((self_in_dispatchConcretize->machineCode))[2] = (offset9 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset9) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset9) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset9) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 6);
-			return;
-		}
-		if (offset9 == 0) {
-			((self_in_dispatchConcretize->machineCode))[0] = 139;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegInd, srcReg7, destReg9));
-			((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg7));
-			((self_in_dispatchConcretize->machineCodeSize) = 3);
-			return;
-		}
-		if (isQuick(self_in_dispatchConcretize, offset9)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 139;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, srcReg7, destReg9));
-			((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg7));
-			((self_in_dispatchConcretize->machineCode))[3] = (offset9 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 4);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 139;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, srcReg7, destReg9));
-		((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg7));
-		((self_in_dispatchConcretize->machineCode))[3] = (offset9 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset9) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset9) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset9) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 7);
-		return;
-
-	case MoveXbrRR:
-		/* begin concretizeMoveXbrRR */
-		index = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		base = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		dest = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[2]);
-		if (base != EBP) {
-			((self_in_dispatchConcretize->machineCode))[0] = 15;
-			((self_in_dispatchConcretize->machineCode))[1] = 182;
-			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, 4, dest));
-			((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, index, base));
-			((self_in_dispatchConcretize->machineCodeSize) = 4);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 15;
-		((self_in_dispatchConcretize->machineCode))[1] = 182;
-		((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, 4, dest));
-		((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, index, base));
-		((self_in_dispatchConcretize->machineCode))[4] = 0;
-		((self_in_dispatchConcretize->machineCodeSize) = 5);
-		return;
-
-	case MoveRXbrR:
-		/* begin concretizeMoveRXbrR */
-		src = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		index1 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		base1 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[2]);
-		mcIdx = 0;
-		swapreg = NoReg;
-		if (src >= 4) {
-
-			/* x86 allows movb %rl, mem only with %al, %bl, %cl, %dl, so swap with the first one that isn't used. */
-			swapreg = src;
-			if (index1 == EAX) {
-				index1 = swapreg;
-			}
-			if (base1 == EAX) {
-				base1 = swapreg;
-			}
-			src = EAX;
-			mcIdx = 1;
-			((self_in_dispatchConcretize->machineCode))[0] = (144 + swapreg);
-		}
-		if (base1 != EBP) {
-			((self_in_dispatchConcretize->machineCode))[mcIdx] = 136;
-			((self_in_dispatchConcretize->machineCode))[mcIdx + 1] = (modRMRO(self_in_dispatchConcretize, ModRegInd, 4, src));
-			((self_in_dispatchConcretize->machineCode))[mcIdx + 2] = (sib(self_in_dispatchConcretize, SIB1, index1, base1));
-			if (swapreg != NoReg) {
-				((self_in_dispatchConcretize->machineCode))[mcIdx + 3] = (144 + swapreg);
-			}
-			((self_in_dispatchConcretize->machineCodeSize) = 3 + (2 * mcIdx));
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[mcIdx] = 136;
-		((self_in_dispatchConcretize->machineCode))[mcIdx + 1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, 4, src));
-		((self_in_dispatchConcretize->machineCode))[mcIdx + 2] = (sib(self_in_dispatchConcretize, SIB1, index1, base1));
-		((self_in_dispatchConcretize->machineCode))[mcIdx + 3] = 0;
-		if (swapreg != NoReg) {
-			((self_in_dispatchConcretize->machineCode))[mcIdx + 4] = (144 + swapreg);
-		}
-		((self_in_dispatchConcretize->machineCodeSize) = 4 + (2 * mcIdx));
-		return;
-
-	case MoveXwrRR:
-		/* begin concretizeMoveXwrRR */
-		index2 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		base2 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		dest1 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[2]);
-		if (base2 != EBP) {
-			((self_in_dispatchConcretize->machineCode))[0] = 139;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegInd, 4, dest1));
-			((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB4, index2, base2));
-			((self_in_dispatchConcretize->machineCodeSize) = 3);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 139;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, 4, dest1));
-		((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB4, index2, base2));
-		((self_in_dispatchConcretize->machineCode))[3] = 0;
-		((self_in_dispatchConcretize->machineCodeSize) = 4);
-		return;
-
-	case MoveRXwrR:
-		/* begin concretizeMoveRXwrR */
-		src1 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		index3 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		base3 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[2]);
-		if (base3 != EBP) {
-			((self_in_dispatchConcretize->machineCode))[0] = 137;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegInd, 4, src1));
-			((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB4, index3, base3));
-			((self_in_dispatchConcretize->machineCodeSize) = 3);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 137;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, 4, src1));
-		((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB4, index3, base3));
-		((self_in_dispatchConcretize->machineCode))[3] = 0;
-		((self_in_dispatchConcretize->machineCodeSize) = 4);
-		return;
-
-	case MoveRMwr:
-		/* begin concretizeMoveRMwr */
-		srcReg8 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		offset10 = ((self_in_dispatchConcretize->operands))[1];
-		destReg10 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[2]);
-		if (destReg10 != ESP) {
-			if ((offset10 == 0)
-			 && (destReg10 != EBP)) {
-				((self_in_dispatchConcretize->machineCode))[0] = 137;
-				((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegInd, destReg10, srcReg8));
-				((self_in_dispatchConcretize->machineCodeSize) = 2);
-				return;
-			}
-			if (isQuick(self_in_dispatchConcretize, offset10)) {
-				((self_in_dispatchConcretize->machineCode))[0] = 137;
-				((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, destReg10, srcReg8));
-				((self_in_dispatchConcretize->machineCode))[2] = (offset10 & 0xFF);
-				((self_in_dispatchConcretize->machineCodeSize) = 3);
-				return;
-			}
-			((self_in_dispatchConcretize->machineCode))[0] = 137;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, destReg10, srcReg8));
-			((self_in_dispatchConcretize->machineCode))[2] = (offset10 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) offset10) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset10) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset10) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 6);
-			return;
-		}
-		if (offset10 == 0) {
-			((self_in_dispatchConcretize->machineCode))[0] = 137;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegInd, destReg10, srcReg8));
-			((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB1, 4, destReg10));
-			((self_in_dispatchConcretize->machineCodeSize) = 3);
-			return;
-		}
-		if (isQuick(self_in_dispatchConcretize, offset10)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 137;
-			((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, destReg10, srcReg8));
-			((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB1, 4, destReg10));
-			((self_in_dispatchConcretize->machineCode))[3] = (offset10 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 4);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 137;
-		((self_in_dispatchConcretize->machineCode))[1] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, destReg10, srcReg8));
-		((self_in_dispatchConcretize->machineCode))[2] = (sib(self_in_dispatchConcretize, SIB1, 4, destReg10));
-		((self_in_dispatchConcretize->machineCode))[3] = (offset10 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) offset10) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset10) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset10) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 7);
-		return;
-
-	case MoveRdM64r:
-		/* begin concretizeMoveRdM64r */
-		srcReg9 = concreteDPFPRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		offset11 = ((self_in_dispatchConcretize->operands))[1];
-		destReg11 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[2]);
-		if (destReg11 != ESP) {
-			if (isQuick(self_in_dispatchConcretize, offset11)) {
-				((self_in_dispatchConcretize->machineCode))[0] = 242;
-				((self_in_dispatchConcretize->machineCode))[1] = 15;
-				((self_in_dispatchConcretize->machineCode))[2] = 17;
-				((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, destReg11, srcReg9));
-				((self_in_dispatchConcretize->machineCode))[4] = (offset11 & 0xFF);
-				((self_in_dispatchConcretize->machineCodeSize) = 5);
-				return;
-			}
-			((self_in_dispatchConcretize->machineCode))[0] = 242;
-			((self_in_dispatchConcretize->machineCode))[1] = 15;
-			((self_in_dispatchConcretize->machineCode))[2] = 17;
-			((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, destReg11, srcReg9));
-			((self_in_dispatchConcretize->machineCode))[4] = (offset11 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) offset11) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset11) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[7] = ((((usqInt) offset11) >> 24) & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 8);
-			return;
-		}
-		if (isQuick(self_in_dispatchConcretize, offset11)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 242;
-			((self_in_dispatchConcretize->machineCode))[1] = 15;
-			((self_in_dispatchConcretize->machineCode))[2] = 17;
-			((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp8, destReg11, srcReg9));
-			((self_in_dispatchConcretize->machineCode))[4] = (sib(self_in_dispatchConcretize, SIB1, 4, destReg11));
-			((self_in_dispatchConcretize->machineCode))[5] = (offset11 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 6);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 242;
-		((self_in_dispatchConcretize->machineCode))[1] = 15;
-		((self_in_dispatchConcretize->machineCode))[2] = 17;
-		((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModRegRegDisp32, destReg11, srcReg9));
-		((self_in_dispatchConcretize->machineCode))[4] = (sib(self_in_dispatchConcretize, SIB1, 4, destReg11));
-		((self_in_dispatchConcretize->machineCode))[5] = (offset11 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) offset11) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[7] = ((((usqInt) offset11) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[8] = ((((usqInt) offset11) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 9);
-		return;
-
-	case PopR:
-		/* begin concretizePopR */
-		((self_in_dispatchConcretize->machineCode))[0] = (88 + (concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0])));
-		((self_in_dispatchConcretize->machineCodeSize) = 1);
-		return;
-
-	case PushR:
-		/* begin concretizePushR */
-		((self_in_dispatchConcretize->machineCode))[0] = (80 + (concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0])));
-		((self_in_dispatchConcretize->machineCodeSize) = 1);
-		return;
-
-	case PushCq:
-		/* begin concretizePushCq */
-		value10 = ((self_in_dispatchConcretize->operands))[0];
-		if (isQuick(self_in_dispatchConcretize, value10)) {
-			((self_in_dispatchConcretize->machineCode))[0] = 106;
-			((self_in_dispatchConcretize->machineCode))[1] = (value10 & 0xFF);
-			((self_in_dispatchConcretize->machineCodeSize) = 2);
-			return;
-		}
-		((self_in_dispatchConcretize->machineCode))[0] = 104;
-		((self_in_dispatchConcretize->machineCode))[1] = (value10 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) value10) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value10) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value10) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 5);
-		return;
-
-	case PushCw:
-		/* begin concretizePushCw */
-		value11 = ((self_in_dispatchConcretize->operands))[0];
-		((self_in_dispatchConcretize->machineCode))[0] = 104;
-		((self_in_dispatchConcretize->machineCode))[1] = (value11 & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[2] = ((((usqInt) value11) >> 8) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[3] = ((((usqInt) value11) >> 16) & 0xFF);
-		((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) value11) >> 24) & 0xFF);
-		((self_in_dispatchConcretize->machineCodeSize) = 5);
-		return;
-
-	case PrefetchAw:
-		/* begin concretizePrefetchAw */
-		(self_in_dispatchConcretize->machineCodeSize) = (self_in_dispatchConcretize->maxSize);
-		if (((self_in_dispatchConcretize->maxSize)) > 0) {
-			addressOperand2 = ((self_in_dispatchConcretize->operands))[0];
-			((self_in_dispatchConcretize->machineCode))[0] = 15;
-			((self_in_dispatchConcretize->machineCode))[1] = 24;
-			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, 0, 5, 1));
-			((self_in_dispatchConcretize->machineCode))[3] = (addressOperand2 & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[4] = ((((usqInt) addressOperand2) >> 8) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[5] = ((((usqInt) addressOperand2) >> 16) & 0xFF);
-			((self_in_dispatchConcretize->machineCode))[6] = ((((usqInt) addressOperand2) >> 24) & 0xFF);
-		}
-		(self_in_dispatchConcretize->maxSize);
-		return;
-
-	case ConvertRRd:
-		/* begin concretizeConvertRRd */
-		srcReg10 = concreteRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[0]);
-		destReg12 = concreteDPFPRegister(self_in_dispatchConcretize, ((self_in_dispatchConcretize->operands))[1]);
-		((self_in_dispatchConcretize->machineCode))[0] = 242;
-		((self_in_dispatchConcretize->machineCode))[1] = 15;
-		((self_in_dispatchConcretize->machineCode))[2] = 42;
-		((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModReg, srcReg10, destReg12));
-		((self_in_dispatchConcretize->machineCodeSize) = 4);
-		return;
-
-	default:
-		error("Case not found and no otherwise clause");
-	}
-	return;
-}
-
-
-/*	Answer if CallFull and/or JumpFull are relative and hence need relocating
-	on method
-	compation. If so, they are annotated with IsRelativeCall in methods and
-	relocated in
-	relocateIfCallOrMethodReference:mcpc:delta: */
-
-	/* CogIA32Compiler>>#fullCallsAreRelative */
-static sqInt NoDbgRegParms
-fullCallsAreRelative(AbstractInstruction * self_in_fullCallsAreRelative)
-{
-	return 1;
-}
-
-	/* CogIA32Compiler>>#genDivR:R:Quo:Rem: */
-static AbstractInstruction * NoDbgRegParms
-genDivRRQuoRem(AbstractInstruction * self_in_genDivRRQuoRem, sqInt abstractRegDivisor, sqInt abstractRegDividend, sqInt abstractRegQuotient, sqInt abstractRegRemainder)
-{
-    sqInt rDividend;
-    sqInt rDivisor;
-    sqInt reg;
-    sqInt rQuotient;
-    sqInt rRemainder;
-    sqInt rUnused;
-    sqInt saveRestoreEAX;
-    sqInt saveRestoreEDX;
-    sqInt saveRestoreExchanged;
-
-	assert(abstractRegDividend != abstractRegDivisor);
-	assert(abstractRegQuotient != abstractRegRemainder);
-	rDividend = concreteRegister(self_in_genDivRRQuoRem, abstractRegDividend);
-	rDivisor = concreteRegister(self_in_genDivRRQuoRem, abstractRegDivisor);
-	rQuotient = concreteRegister(self_in_genDivRRQuoRem, abstractRegQuotient);
-
-	/* IDIV r does a signed divide of EDX:EAX by r, EAX := Quotient, EDX := Remainder.
-	   Since we must sign extend the dividend into EDX we must substitute another register if EDX is an input */
-	rRemainder = concreteRegister(self_in_genDivRRQuoRem, abstractRegRemainder);
-	if ((rDividend == EDX)
-	 || (rDivisor == EDX)) {
-
-		/* Slang, sigh... */
-		rUnused = EAX;
-		while (rUnused <= EDI) {
-			if ((rUnused != ESP)
-			 && ((rUnused != EBP)
-			 && ((rUnused != EDX)
-			 && ((rUnused != rDividend)
-			 && ((rUnused != rDivisor)
-			 && ((rUnused != rQuotient)
-			 && (rUnused != rRemainder))))))) {
-				/* begin PushR: */
-				genoperand(PushR, rUnused);
-				/* begin MoveR:R: */
-				genoperandoperand(MoveRR, EDX, rUnused);
-				if (rDividend == EDX) {
-					genDivRRQuoRem(self_in_genDivRRQuoRem, rDivisor, rUnused, rQuotient, rRemainder);
-				}
-				else {
-					genDivRRQuoRem(self_in_genDivRRQuoRem, rUnused, rDividend, rQuotient, rRemainder);
-				}
-				/* begin PopR: */
-				genoperand(PopR, rUnused);
-				return self_in_genDivRRQuoRem;
-			}
-			rUnused += 1;
-		}
-		error("couldn't find unused register in genDivR:R:Quo:Rem:");
-	}
-	if ((saveRestoreEAX = (rQuotient != EAX)
-	 && (rRemainder != EAX))) {
-		/* begin PushR: */
-		genoperand(PushR, EAX);
-	}
-	if ((saveRestoreEDX = (rQuotient != EDX)
-	 && (rRemainder != EDX))) {
-		/* begin PushR: */
-		genoperand(PushR, EDX);
-	}
-	saveRestoreExchanged = -1;
-	if (rDividend != EAX) {
-		if (rDivisor == EAX) {
-			if (((rDividend != rQuotient)
-			 && (rDividend != rRemainder))
-			 && ((rDividend != EDX)
-			 || (!saveRestoreEDX))) {
-				/* begin PushR: */
-				reg = (saveRestoreExchanged = rDividend);
-				genoperand(PushR, reg);
-			}
-			genoperandoperand(XCHGRR, rDivisor, rDividend);
-		}
-		else {
-			/* begin MoveR:R: */
-			genoperandoperand(MoveRR, rDividend, EAX);
-		}
-	}
-	gen(CDQ);
-	genoperand(IDIVR, (rDivisor == EAX
-		? rDividend
-		: rDivisor));
-	if ((rQuotient == EDX)
-	 && (rRemainder == EAX)) {
-		genoperandoperand(XCHGRR, rQuotient, rRemainder);
-	}
-	else {
-		if (rQuotient == EDX) {
-			if (rRemainder != EDX) {
-				/* begin MoveR:R: */
-				genoperandoperand(MoveRR, EDX, rRemainder);
-			}
-			if (rQuotient != EAX) {
-				/* begin MoveR:R: */
-				genoperandoperand(MoveRR, EAX, rQuotient);
-			}
-		}
-		else {
-			if (rQuotient != EAX) {
-				/* begin MoveR:R: */
-				genoperandoperand(MoveRR, EAX, rQuotient);
-			}
-			if (rRemainder != EDX) {
-				/* begin MoveR:R: */
-				genoperandoperand(MoveRR, EDX, rRemainder);
-			}
-		}
-	}
-	if (saveRestoreExchanged >= 0) {
-		/* begin PopR: */
-		genoperand(PopR, saveRestoreExchanged);
-	}
-	if (saveRestoreEDX) {
-		/* begin PopR: */
-		genoperand(PopR, EDX);
-	}
-	if (saveRestoreEAX) {
-		/* begin PopR: */
-		genoperand(PopR, EAX);
-	}
-	return self_in_genDivRRQuoRem;
-}
-
-	/* CogIA32Compiler>>#generateCheckFeatures */
-static AbstractInstruction * NoDbgRegParms
-generateCheckFeatures(AbstractInstruction * self_in_generateCheckFeatures)
-{
-    AbstractInstruction *anInstruction;
-
-	/* begin PushR: */
-	genoperand(PushR, EDX);
-	/* begin PushR: */
-	genoperand(PushR, ECX);
-	/* begin PushR: */
-	genoperand(PushR, EBX);
-	/* begin MoveCq:R: */
-	anInstruction = genoperandoperand(MoveCqR, 1, EAX);
-	gen(CPUID);
-	/* begin MoveR:R: */
-	genoperandoperand(MoveRR, EDX, EAX);
-	/* begin PopR: */
-	genoperand(PopR, EBX);
-	/* begin PopR: */
-	genoperand(PopR, ECX);
-	/* begin PopR: */
-	genoperand(PopR, EDX);
-	/* begin RetN: */
-	genoperand(RetN, 0);
-	return self_in_generateCheckFeatures;
-}
-
-
-/*	Generate a function that attempts to lock the vmOwnerLock and answers
-	true if it succeeded. */
-
-	/* CogIA32Compiler>>#generateLowLevelTryLock: */
-static AbstractInstruction * NoDbgRegParms
-generateLowLevelTryLock(AbstractInstruction * self_in_generateLowLevelTryLock, sqInt vmOwnerLockAddress)
-{
-    AbstractInstruction *anInstruction;
-    AbstractInstruction *anInstruction1;
-    AbstractInstruction *anInstruction2;
-
-	if (vmOwnerLockAddress == 0) {
-		/* begin MoveCq:R: */
-		anInstruction = genoperandoperand(MoveCqR, 1, EAX);
-		/* begin RetN: */
-		genoperand(RetN, 0);
-		return self_in_generateLowLevelTryLock;
-	}
-	/* begin MoveCq:R: */
-	anInstruction1 = genoperandoperand(MoveCqR, 1, EAX);
-	gen(MFENCE);
-	genoperandoperand(XCHGAwR, vmOwnerLockAddress, EAX);
-	gen(SFENCE);
-	/* begin SubCq:R: */
-	anInstruction2 = genoperandoperand(SubCqR, 1, EAX);
-	/* begin RetN: */
-	genoperand(RetN, 0);
-	return self_in_generateLowLevelTryLock;
-}
-
-	/* CogIA32Compiler>>#generateLowLevelUnlock: */
-static AbstractInstruction * NoDbgRegParms
-generateLowLevelUnlock(AbstractInstruction * self_in_generateLowLevelUnlock, sqInt vmOwnerLockAddress)
-{
-    AbstractInstruction *anInstruction;
-    AbstractInstruction *anInstruction1;
-
-	if (vmOwnerLockAddress != 0) {
-		/* begin MoveCq:R: */
-		anInstruction = genoperandoperand(MoveCqR, 0, EAX);
-		/* begin MoveR:Aw: */
-		anInstruction1 = genoperandoperand(MoveRAw, EAX, vmOwnerLockAddress);
-		gen(SFENCE);
-	}
-	/* begin RetN: */
-	genoperand(RetN, 0);
-	return self_in_generateLowLevelUnlock;
-}
-
-	/* CogIA32Compiler>>#genGetLeafCallStackPointerFunction */
-static AbstractInstruction * NoDbgRegParms
-genGetLeafCallStackPointerFunction(AbstractInstruction * self_in_genGetLeafCallStackPointerFunction)
-{
-	/* begin MoveR:R: */
-	genoperandoperand(MoveRR, ESP, EAX);
-	/* begin RetN: */
-	genoperand(RetN, 0);
-	return self_in_genGetLeafCallStackPointerFunction;
-}
-
-
-/*	Load the stack pointer register with that of the C stack, effecting
-	a switch to the C stack. Used when machine code calls into the
-	CoInterpreter run-time (e.g. to invoke interpreter primitives). */
-
-	/* CogIA32Compiler>>#genLoadCStackPointer */
-static sqInt NoDbgRegParms
-genLoadCStackPointer(AbstractInstruction * self_in_genLoadCStackPointer)
-{
-    sqInt address;
-    AbstractInstruction *anInstruction;
-
-	/* begin MoveAw:R: */
-	address = cStackPointerAddress();
-	/* begin gen:literal:operand: */
-	anInstruction = genoperandoperand(MoveAwR, address, SPReg);
-	return 0;
-}
-
-
-/*	Load the frame and stack pointer registers with those of the C stack,
-	effecting a switch to the C stack. Used when machine code calls into
-	the CoInterpreter run-time (e.g. to invoke interpreter primitives). */
-
-	/* CogIA32Compiler>>#genLoadCStackPointers */
-static sqInt NoDbgRegParms
-genLoadCStackPointers(AbstractInstruction * self_in_genLoadCStackPointers)
-{
-    sqInt address;
-    sqInt address1;
-    AbstractInstruction *anInstruction;
-    AbstractInstruction *anInstruction1;
-
-	/* begin MoveAw:R: */
-	address = cStackPointerAddress();
-	/* begin gen:literal:operand: */
-	anInstruction = genoperandoperand(MoveAwR, address, SPReg);
-	/* begin MoveAw:R: */
-	address1 = cFramePointerAddress();
-	/* begin gen:literal:operand: */
-	anInstruction1 = genoperandoperand(MoveAwR, address1, FPReg);
-	return 0;
-}
-
-
-/*	Switch back to the Smalltalk stack. Assign SPReg first
-	because typically it is used immediately afterwards. */
-
-	/* CogIA32Compiler>>#genLoadStackPointers */
-static sqInt NoDbgRegParms
-genLoadStackPointers(AbstractInstruction * self_in_genLoadStackPointers)
-{
-    sqInt address;
-    sqInt address1;
-    AbstractInstruction *anInstruction;
-    AbstractInstruction *anInstruction1;
-
-	/* begin MoveAw:R: */
-	address = stackPointerAddress();
-	/* begin gen:literal:operand: */
-	anInstruction = genoperandoperand(MoveAwR, address, SPReg);
-	/* begin MoveAw:R: */
-	address1 = framePointerAddress();
-	/* begin gen:literal:operand: */
-	anInstruction1 = genoperandoperand(MoveAwR, address1, FPReg);
-	return 0;
-}
-
-	/* CogIA32Compiler>>#genMulR:R: */
-static AbstractInstruction * NoDbgRegParms
-genMulRR(AbstractInstruction * self_in_genMulRR, sqInt regSource, sqInt regDest)
-{
-	return genoperandoperand(IMULRR, regSource, regDest);
-}
-
-
-/*	Ensure that the register args are pushed before the outer and
-	inner retpcs at an entry miss for arity <= self numRegArgs. The
-	outer retpc is that of a call at a send site. The inner is the call
-	from a method or PIC abort/miss to the trampoline. */
-/*	This won't be as clumsy on a RISC. But putting the receiver and
-	args above the return address means the CoInterpreter has a
-	single machine-code frame format which saves us a lot of work. */
-/*	Iff there are register args convert
-	base	->	outerRetpc		(send site retpc)
-	sp		->	innerRetpc		(PIC abort/miss retpc)
-	to
-	base	->	receiver
-	(arg0)
-	(arg1)
-	outerRetpc
-	sp		->	innerRetpc		(PIC abort/miss retpc) */
-
-	/* CogIA32Compiler>>#genPushRegisterArgsForAbortMissNumArgs: */
-static AbstractInstruction * NoDbgRegParms
-genPushRegisterArgsForAbortMissNumArgs(AbstractInstruction * self_in_genPushRegisterArgsForAbortMissNumArgs, sqInt numArgs)
-{
-    AbstractInstruction *anInstruction;
-    AbstractInstruction *anInstruction1;
-    AbstractInstruction *anInstruction10;
-    AbstractInstruction *anInstruction11;
-    AbstractInstruction *anInstruction2;
-    AbstractInstruction *anInstruction3;
-    AbstractInstruction *anInstruction4;
-    AbstractInstruction *anInstruction5;
-    AbstractInstruction *anInstruction6;
-    AbstractInstruction *anInstruction7;
-    AbstractInstruction *anInstruction8;
-    AbstractInstruction *anInstruction9;
-
-	if (numArgs <= 2) {
-		assert((numRegArgs()) <= 2);
-		if (numArgs == 0) {
-			/* begin MoveMw:r:R: */
-			anInstruction = genoperandoperandoperand(MoveMwrR, 0, SPReg, TempReg);
-			/* begin PushR: */
-			genoperand(PushR, TempReg);
-			/* begin MoveMw:r:R: */
-			anInstruction1 = genoperandoperandoperand(MoveMwrR, BytesPerWord * 2, SPReg, TempReg);
-			/* begin MoveR:Mw:r: */
-			anInstruction2 = genoperandoperandoperand(MoveRMwr, TempReg, BytesPerWord, SPReg);
-			/* begin MoveR:Mw:r: */
-			anInstruction3 = genoperandoperandoperand(MoveRMwr, ReceiverResultReg, 2 * BytesPerWord, SPReg);
-			return self_in_genPushRegisterArgsForAbortMissNumArgs;
-		}
-		if (numArgs == 1) {
-			/* begin MoveMw:r:R: */
-			anInstruction4 = genoperandoperandoperand(MoveMwrR, BytesPerWord, SPReg, TempReg);
-			/* begin PushR: */
-			genoperand(PushR, TempReg);
-			/* begin MoveMw:r:R: */
-			anInstruction5 = genoperandoperandoperand(MoveMwrR, BytesPerWord, SPReg, TempReg);
-			/* begin PushR: */
-			genoperand(PushR, TempReg);
-			/* begin MoveR:Mw:r: */
-			anInstruction6 = genoperandoperandoperand(MoveRMwr, ReceiverResultReg, 3 * BytesPerWord, SPReg);
-			/* begin MoveR:Mw:r: */
-			anInstruction7 = genoperandoperandoperand(MoveRMwr, Arg0Reg, 2 * BytesPerWord, SPReg);
-			return self_in_genPushRegisterArgsForAbortMissNumArgs;
-		}
-		if (numArgs == 2) {
-			/* begin PushR: */
-			genoperand(PushR, Arg1Reg);
-			/* begin MoveMw:r:R: */
-			anInstruction8 = genoperandoperandoperand(MoveMwrR, BytesPerWord * 2, SPReg, TempReg);
-			/* begin PushR: */
-			genoperand(PushR, TempReg);
-			/* begin MoveMw:r:R: */
-			anInstruction9 = genoperandoperandoperand(MoveMwrR, BytesPerWord * 2, SPReg, TempReg);
-			/* begin PushR: */
-			genoperand(PushR, TempReg);
-			/* begin MoveR:Mw:r: */
-			anInstruction10 = genoperandoperandoperand(MoveRMwr, ReceiverResultReg, 4 * BytesPerWord, SPReg);
-			/* begin MoveR:Mw:r: */
-			anInstruction11 = genoperandoperandoperand(MoveRMwr, Arg0Reg, 3 * BytesPerWord, SPReg);
-			return self_in_genPushRegisterArgsForAbortMissNumArgs;
-		}
-	}
-	return self_in_genPushRegisterArgsForAbortMissNumArgs;
-}
-
-
-/*	Ensure that the register args are pushed before the retpc for arity <=
-	self numRegArgs. This
-	isn't as clumsy on a RISC. But putting the receiver and args above the
-	return address
-	means the CoInterpreter has a single machine-code frame format which saves
-	us a lot of work.
-	N.B. Take great care to /not/ smash TempReg, which is used in directed
-	send marshalling.
-	We could use XCHG to swap the ReceiverResultReg and top-of-stack return
-	address, pushing the
-	the ret pc (now in ReceiverResultReg) later, but XCHG is very slow. We can
-	use SendNumArgsReg
-	because it is only live in sends of arity >= (NumSendTrampolines - 1). */
-
-	/* CogIA32Compiler>>#genPushRegisterArgsForNumArgs:scratchReg: */
-static AbstractInstruction * NoDbgRegParms
-genPushRegisterArgsForNumArgsscratchReg(AbstractInstruction * self_in_genPushRegisterArgsForNumArgsscratchReg, sqInt numArgs, sqInt scratchReg)
-{
-    AbstractInstruction *anInstruction;
-    AbstractInstruction *anInstruction1;
-    AbstractInstruction *anInstruction2;
-    AbstractInstruction *anInstruction3;
-
-	assert((numRegArgs()) < (NumSendTrampolines - 1));
-	if (numArgs <= 2) {
-		assert((numRegArgs()) <= 2);
-		
-		/* a.k.a.
-		   cogit gen: XCHGMwrR operand: 0 operand: SPReg operand: ReceiverResultReg.
-		   but XCHG is slow. */
-		/* begin MoveMw:r:R: */
-		anInstruction2 = genoperandoperandoperand(MoveMwrR, 0, SPReg, scratchReg);
-		/* begin MoveR:Mw:r: */
-		anInstruction3 = genoperandoperandoperand(MoveRMwr, ReceiverResultReg, 0, SPReg);
-		if (numArgs > 0) {
-			/* begin PushR: */
-			genoperand(PushR, Arg0Reg);
-			if (numArgs > 1) {
-				/* begin PushR: */
-				genoperand(PushR, Arg1Reg);
-			}
-		}
-		/* begin PushR: */
-		genoperand(PushR, scratchReg);
-
-	}
-	return self_in_genPushRegisterArgsForNumArgsscratchReg;
-}
-
-	/* CogIA32Compiler>>#genRemoveNArgsFromStack: */
-static sqInt NoDbgRegParms
-genRemoveNArgsFromStack(AbstractInstruction * self_in_genRemoveNArgsFromStack, sqInt n)
-{
-    AbstractInstruction *anInstruction;
-
-	/* begin AddCq:R: */
-	anInstruction = genoperandoperand(AddCqR, n * 4, ESP);
-	return 0;
-}
-
-	/* CogIA32Compiler>>#genRestoreRegs */
-static sqInt NoDbgRegParms
-genRestoreRegs(AbstractInstruction * self_in_genRestoreRegs)
-{
-    sqInt reg;
-
-	for (reg = EAX; reg <= EDI; reg += 1) {
-		if (!(((reg >= ESP) && (reg <= EBP)))) {
-			/* begin PopR: */
-			genoperand(PopR, reg);
-		}
-	}
-	return 0;
-}
-
-	/* CogIA32Compiler>>#genRestoreRegsExcept: */
-static sqInt NoDbgRegParms
-genRestoreRegsExcept(AbstractInstruction * self_in_genRestoreRegsExcept, sqInt abstractReg)
-{
-    AbstractInstruction *anInstruction;
-    sqInt realReg;
-    sqInt reg;
-
-	realReg = concreteRegister(self_in_genRestoreRegsExcept, abstractReg);
-	assert(((EDI - EAX) + 1) == 6);
-	for (reg = EAX; reg <= EDI; reg += 1) {
-		if (realReg == reg) {
-			/* begin AddCq:R: */
-			anInstruction = genoperandoperand(AddCqR, 4, ESP);
-		}
-		else {
-			/* begin PopR: */
-			genoperand(PopR, reg);
-		}
-	}
-	return 0;
-}
-
-
-/*	Save the general purpose registers for a trampoline call. */
-
-	/* CogIA32Compiler>>#genSaveRegisters */
-static sqInt NoDbgRegParms
-genSaveRegisters(AbstractInstruction * self_in_genSaveRegisters)
-{
-    sqInt reg;
-
-	assert(((EDI - EAX) + 1) == 8);
-	for (reg = EDI; reg >= EAX; reg += -1) {
-		if (!(((reg >= ESP) && (reg <= EBP)))) {
-			/* begin PushR: */
-			genoperand(PushR, reg);
-		}
-	}
-	return 0;
-}
-
-
-/*	Save the frame and stack pointer registers to the framePointer
-	and stackPointer variables. Used to save the machine code frame
-	for use by the run-time when calling into the CoInterpreter run-time. */
-
-	/* CogIA32Compiler>>#genSaveStackPointers */
-static sqInt NoDbgRegParms
-genSaveStackPointers(AbstractInstruction * self_in_genSaveStackPointers)
-{
-    sqInt address;
-    sqInt address1;
-    AbstractInstruction *anInstruction;
-    AbstractInstruction *anInstruction1;
-
-	/* begin MoveR:Aw: */
-	address = framePointerAddress();
-	/* begin gen:operand:literal: */
-	anInstruction = genoperandoperand(MoveRAw, FPReg, address);
-	/* begin MoveR:Aw: */
-	address1 = stackPointerAddress();
-	/* begin gen:operand:literal: */
-	anInstruction1 = genoperandoperand(MoveRAw, SPReg, address1);
-	return 0;
-}
-
-	/* CogIA32Compiler>>#genSubstituteReturnAddress: */
-static AbstractInstruction * NoDbgRegParms
-genSubstituteReturnAddress(AbstractInstruction * self_in_genSubstituteReturnAddress, sqInt retpc)
-{
-    AbstractInstruction *anInstruction;
-
-	/* begin PushCw: */
-	anInstruction = genoperand(PushCw, retpc);
-	return anInstruction;
-}
-
-	/* CogIA32Compiler>>#hasLinkRegister */
-static sqInt NoDbgRegParms
-hasLinkRegister(AbstractInstruction * self_in_hasLinkRegister)
-{
-	return 0;
-}
-
-
-/*	Answer if we support SSE2 */
-
-	/* CogIA32Compiler>>#hasSSE2Instructions */
-static sqInt NoDbgRegParms
-hasSSE2Instructions(AbstractInstruction * self_in_hasSSE2Instructions)
-{
-	return ((ceCheckFeatures()) & (1 << 26)) != 0;
-}
-
-
-/*	Answer if we support SSE */
-
-	/* CogIA32Compiler>>#hasSSEInstructions */
-static sqInt NoDbgRegParms
-hasSSEInstructions(AbstractInstruction * self_in_hasSSEInstructions)
-{
-	return ((ceCheckFeatures()) & (1 << 25)) != 0;
-}
-
-
-/*	Answer the inline cache tag for the return address of a send. */
-
-	/* CogIA32Compiler>>#inlineCacheTagAt: */
-static sqInt NoDbgRegParms
-inlineCacheTagAt(AbstractInstruction * self_in_inlineCacheTagAt, sqInt callSiteReturnAddress)
-{
-	return literalBeforeFollowingAddress(self_in_inlineCacheTagAt, callSiteReturnAddress - 5);
-}
-
-
-/*	Answer the instruction size at pc. This is very far from a full decode.
-	It only has to cope with the instructions generated in a block dispatch. */
-
-	/* CogIA32Compiler>>#instructionSizeAt: */
-static sqInt NoDbgRegParms
-instructionSizeAt(AbstractInstruction * self_in_instructionSizeAt, sqInt pc)
-{
-    sqInt op;
-
-	op = byteAt(pc);
-	
-	switch (op) {
-	case 15:
-		return twoByteInstructionSizeAt(self_in_instructionSizeAt, pc);
-
-	case 61:
-	case 233:
-		return 5;
-
-	case 112:
-	case 113:
-	case 114:
-	case 115:
-	case 116:
-	case 117:
-	case 118:
-	case 119:
-	case 120:
-	case 121:
-	case 122:
-	case 123:
-	case 0x7C:
-	case 125:
-	case 0x7E:
-	case 0x7F:
-	case 137:
-	case 235:
-		return 2;
-
-	case 131:
-		return sizeImmediateGroup1at(self_in_instructionSizeAt, op, pc);
-
-	case 139:
-		return sizeHasModrmat(self_in_instructionSizeAt, op, pc);
-
-	case 144:
-	case 204:
-		return 1;
-
-	default:
-		error("Case not found and no otherwise clause");
-		return -1;
-	}
-}
-
-
-/*	Assuming mcpc is a send return pc answer if the instruction before it is a
-	call (not a CallFull).
- */
-
-	/* CogIA32Compiler>>#isCallPrecedingReturnPC: */
-static sqInt NoDbgRegParms
-isCallPrecedingReturnPC(AbstractInstruction * self_in_isCallPrecedingReturnPC, sqInt mcpc)
-{
-	return (byteAt(mcpc - 5)) == 232;
-}
-
-	/* CogIA32Compiler>>#isJumpAt: */
-static sqInt NoDbgRegParms
-isJumpAt(AbstractInstruction * self_in_isJumpAt, sqInt pc)
-{
-    sqInt op;
-
-	op = byteAt(pc);
-	return (((op >= 112) && (op <= 0x7F)))
-	 || ((op == 233)
-	 || ((op == 235)
-	 || ((op == 15)
-	 && ((((byteAt(pc + 1)) >= 128) && ((byteAt(pc + 1)) <= 143))))));
-}
-
-
-/*	Answer if the receiver is a pc-dependent instruction. */
-
-	/* CogIA32Compiler>>#isPCDependent */
-static sqInt NoDbgRegParms
-isPCDependent(AbstractInstruction * self_in_isPCDependent)
-{
-	return (isJump(self_in_isPCDependent))
-	 || (((self_in_isPCDependent->opcode)) == AlignmentNops);
-}
-
-	/* CogIA32Compiler>>#isQuick: */
-static sqInt NoDbgRegParms
-isQuick(AbstractInstruction * self_in_isQuick, unsigned long operand)
-{
-	return (((((int) operand)) >= -128) && ((((int) operand)) <= 0x7F));
-}
-
-
-/*	Set the target of a jump instruction. These all have the target in the
-	first operand. */
-/*	Set the target of a jump instruction. These all have the target in the
-	first operand.
-	Override to cope with JumpFPNotEqual where because of IEEE NaN conformance
-	and the behaviour of COMISD/UCOMISD we generate two jumps to the same
-	target.  */
-
-	/* CogIA32Compiler>>#jmpTarget: */
-static AbstractInstruction * NoDbgRegParms
-jmpTarget(AbstractInstruction * self_in_jmpTarget, AbstractInstruction *anAbstractInstruction)
-{
-    AbstractInstruction *aDependent;
-
-	aDependent = (self_in_jmpTarget->dependent);
-	while (aDependent != null) {
-		jmpTarget(aDependent, anAbstractInstruction);
-		aDependent = (aDependent->dependent);
-	}
-	((self_in_jmpTarget->operands))[0] = (((usqInt)anAbstractInstruction));
-	return anAbstractInstruction;
-}
-
-
-/*	Branch/Call ranges. Jump[Cond] can be generated as short as possible.
-	Call/Jump[Cond]Long must be generated
-	in the same number of bytes irrespective of displacement since their
-	targets may be updated, but they need only
-	span 16Mb, the maximum size of the code zone. This allows e.g. ARM to use
-	single-word call and jump instructions
-	for most calls and jumps. CallFull/JumpFull must also be generated in the
-	same number of bytes irrespective of
-	displacement for the same reason, but they must be able to span the full
-	(32-bit or 64-bit) address space because
-	they are used to call code in the C runtime, which may be distant from the
-	code zone
- */
-
-	/* CogIA32Compiler>>#jumpLongByteSize */
-static sqInt NoDbgRegParms
-jumpLongByteSize(AbstractInstruction * self_in_jumpLongByteSize)
-{
-	return 5;
-}
-
-	/* CogIA32Compiler>>#jumpLongConditionalByteSize */
-static sqInt NoDbgRegParms
-jumpLongConditionalByteSize(AbstractInstruction * self_in_jumpLongConditionalByteSize)
-{
-	return 6;
-}
-
-
-/*	Answer the target address for the long jump immediately preceding mcpc */
-
-	/* CogIA32Compiler>>#jumpLongTargetBeforeFollowingAddress: */
-static sqInt NoDbgRegParms
-jumpLongTargetBeforeFollowingAddress(AbstractInstruction * self_in_jumpLongTargetBeforeFollowingAddress, sqInt mcpc)
-{
-	return callTargetFromReturnAddress(self_in_jumpLongTargetBeforeFollowingAddress, mcpc);
-}
-
-	/* CogIA32Compiler>>#jumpShortByteSize */
-static sqInt NoDbgRegParms
-jumpShortByteSize(AbstractInstruction * self_in_jumpShortByteSize)
-{
-	return 2;
-}
-
-	/* CogIA32Compiler>>#jumpTargetPCAt: */
-static usqInt NoDbgRegParms
-jumpTargetPCAt(AbstractInstruction * self_in_jumpTargetPCAt, sqInt pc)
-{
-    sqInt byte;
-    sqInt offset;
-    sqInt size;
-
-	size = instructionSizeAt(self_in_jumpTargetPCAt, pc);
-	if (size == 2) {
-		byte = byteAt(pc + 1);
-		offset = ((byte & 128) == 0
-			? byte
-			: byte - 256);
-	}
-	else {
-		byte = byteAt((pc + size) - 1);
-		offset = ((byte & 128) == 0
-			? byte
-			: byte - 256);
-		offset = (offset << 8) + (byteAt((pc + size) - 2));
-		offset = (offset << 8) + (byteAt((pc + size) - 3));
-		offset = (offset << 8) + (byteAt((pc + size) - 4));
-	}
-	return (pc + size) + offset;
-}
-
-
-/*	Answer the delta from the stack pointer after a call to the stack pointer
-	immediately prior to the call. This is used to compute the stack pointer
-	immediately prior to call from within a leaf routine, which in turn is
-	used to capture the c stack pointer to use in trampolines back into the C
-	run-time.  */
-
-	/* CogIA32Compiler>>#leafCallStackPointerDelta */
-static sqInt NoDbgRegParms
-leafCallStackPointerDelta(AbstractInstruction * self_in_leafCallStackPointerDelta)
-{
-	return 4;
-}
-
-
-/*	Answer the literal embedded in the instruction immediately preceding
-	followingAddress. 
- */
-
-	/* CogIA32Compiler>>#literalBeforeFollowingAddress: */
-static sqInt NoDbgRegParms
-literalBeforeFollowingAddress(AbstractInstruction * self_in_literalBeforeFollowingAddress, sqInt followingAddress)
-{
-	return ((((byteAt(followingAddress - 1)) << 24) + ((byteAt(followingAddress - 2)) << 16)) + ((byteAt(followingAddress - 3)) << 8)) + (byteAt(followingAddress - 4));
-}
-
-
-/*	Answer a literal loaded before the inline cache tag load for the return
-	address of a send.
- */
-
-	/* CogIA32Compiler>>#literalBeforeInlineCacheTagAt: */
-static sqInt NoDbgRegParms
-literalBeforeInlineCacheTagAt(AbstractInstruction * self_in_literalBeforeInlineCacheTagAt, sqInt callSiteReturnAddress)
-{
-	return literalBeforeFollowingAddress(self_in_literalBeforeInlineCacheTagAt, callSiteReturnAddress - 10);
-}
-
-
-/*	Answer the byte size of a MoveCwR opcode's corresponding machine code */
-
-	/* CogIA32Compiler>>#loadLiteralByteSize */
-static sqInt NoDbgRegParms
-loadLiteralByteSize(AbstractInstruction * self_in_loadLiteralByteSize)
-{
-	return 5;
-}
-
-
-/*	Answer the byte size of a MoveCwR opcode's corresponding machine code
-	when the argument is a PIC. This is for the self-reference at the end of a
-	closed PIC. */
-
-	/* CogIA32Compiler>>#loadPICLiteralByteSize */
-static sqInt NoDbgRegParms
-loadPICLiteralByteSize(AbstractInstruction * self_in_loadPICLiteralByteSize)
-{
-	return loadLiteralByteSize(self_in_loadPICLiteralByteSize);
-}
-
-
-/*	Answer the maximum number of bytes of machine code generated for any
-	abstract instruction.
-	e.g. lock movsd 0x400(%esp),%xmm4 => f0 f2 0f 10 a4 24 00 04 00 00 */
-
-	/* CogIA32Compiler>>#machineCodeBytes */
-static sqInt NoDbgRegParms
-machineCodeBytes(AbstractInstruction * self_in_machineCodeBytes)
-{
-	return 10;
-}
-
-
-/*	The receiver does not have a VarBaseReg; do nothing. */
-
-	/* CogIA32Compiler>>#maybeEstablishVarBase */
-static AbstractInstruction * NoDbgRegParms
-maybeEstablishVarBase(AbstractInstruction * self_in_maybeEstablishVarBase)
-{
-	return self_in_maybeEstablishVarBase;
-}
-
-
-/*	See ModR/M byte & opcode syntax
-	In addition to the notation shown above in 'Mnemonic Syntax' on page 43,
-	the following notation indicates the size and type of operands in the
-	syntax of an instruction opcode:
-	/digit	Indicates that the ModRM byte specifies only one register or memory
-	(r/m) operand.
-	The digit is specified by the ModRM reg field and is used as an
-	instruction-opcode extension.
-	Valid digit values range from 0 to 7.
-	/r		Indicates that the ModRM byte specifies both a register operand and a
-	reg/mem (register or memory) operand. */
-
-	/* CogIA32Compiler>>#mod:RM:RO: */
-static sqInt NoDbgRegParms
-modRMRO(AbstractInstruction * self_in_modRMRO, sqInt mod, sqInt regMode, sqInt regOpcode)
-{
-	return ((mod << 6) + (regOpcode << 3)) + regMode;
-}
-
-
-/*	Answer the number of opcodes required to compile the CPUID call to extract
-	the extended features information.
- */
-
-	/* CogIA32Compiler>>#numCheckFeaturesOpcodes */
-static sqInt NoDbgRegParms
-numCheckFeaturesOpcodes(AbstractInstruction * self_in_numCheckFeaturesOpcodes)
-{
-	return 11;
-}
-
-	/* CogIA32Compiler>>#numIntRegArgs */
-static sqInt NoDbgRegParms
-numIntRegArgs(AbstractInstruction * self_in_numIntRegArgs)
-{
-	return 0;
-}
-
-
-/*	push $ebx
-	movl #0, %eax
-	movl 1, $ebx
-	mfence
-	lock cmpxchg %eax, &vmOwnerLock; # N.B. 2 instructions
-	pop $ebx
-	jnz locked
-	sfence
-	movl 1, $eax
-	ret
-	locked:								; N.B. Requires an instruction
-	movl 0, $eax
-	ret */
-
-	/* CogIA32Compiler>>#numLowLevelLockOpcodes */
-static sqInt NoDbgRegParms
-numLowLevelLockOpcodes(AbstractInstruction * self_in_numLowLevelLockOpcodes)
-{
-	return 14;
-}
-
-	/* CogIA32Compiler>>#padIfPossibleWithStopsFrom:to: */
-static AbstractInstruction * NoDbgRegParms
-padIfPossibleWithStopsFromto(AbstractInstruction * self_in_padIfPossibleWithStopsFromto, sqInt startAddr, sqInt endAddr)
-{
-	stopsFromto(self_in_padIfPossibleWithStopsFromto, startAddr, endAddr);
-	return self_in_padIfPossibleWithStopsFromto;
-}
-
-	/* CogIA32Compiler>>#relocateCallBeforeReturnPC:by: */
-static AbstractInstruction * NoDbgRegParms
-relocateCallBeforeReturnPCby(AbstractInstruction * self_in_relocateCallBeforeReturnPCby, sqInt retpc, sqInt delta)
-{
-    sqInt distance;
-
-	if (delta != 0) {
-		distance = ((((byteAt(retpc - 1)) << 24) + ((byteAt(retpc - 2)) << 16)) + ((byteAt(retpc - 3)) << 8)) + (byteAt(retpc - 4));
-		distance += delta;
-		byteAtput(retpc - 1, (((usqInt) distance) >> 24) & 0xFF);
-		byteAtput(retpc - 2, (((usqInt) distance) >> 16) & 0xFF);
-		byteAtput(retpc - 3, (((usqInt) distance) >> 8) & 0xFF);
-		byteAtput(retpc - 4, distance & 0xFF);
-	}
-	return self_in_relocateCallBeforeReturnPCby;
-}
-
-	/* CogIA32Compiler>>#relocateMethodReferenceBeforeAddress:by: */
-static AbstractInstruction * NoDbgRegParms
-relocateMethodReferenceBeforeAddressby(AbstractInstruction * self_in_relocateMethodReferenceBeforeAddressby, sqInt pc, sqInt delta)
-{
-	relocateCallBeforeReturnPCby(self_in_relocateMethodReferenceBeforeAddressby, pc, delta);
-	return self_in_relocateMethodReferenceBeforeAddressby;
-}
-
-
-/*	Rewrite a call instruction to call a different target. This variant is
-	used to link PICs
-	in ceSendMiss et al, and to rewrite cached primitive calls. Answer the
-	extent of
-	the code change which is used to compute the range of the icache to flush. */
-/*	self cCode: ''
-	inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to:
-	callSiteReturnAddress - 1]. */
-
-	/* CogIA32Compiler>>#rewriteCallAt:target: */
-static sqInt NoDbgRegParms
-rewriteCallAttarget(AbstractInstruction * self_in_rewriteCallAttarget, usqInt callSiteReturnAddress, usqInt callTargetAddress)
-{
-    usqInt callDistance;
-
-	if (!(callTargetAddress >= (minCallAddress()))) {
-		error("linking callsite to invalid address");
-	}
-
-	callDistance = ((usqInt) (callTargetAddress - callSiteReturnAddress));
-	byteAtput(callSiteReturnAddress - 1, (((usqInt) callDistance) >> 24) & 0xFF);
-	byteAtput(callSiteReturnAddress - 2, (((usqInt) callDistance) >> 16) & 0xFF);
-	byteAtput(callSiteReturnAddress - 3, (((usqInt) callDistance) >> 8) & 0xFF);
-	byteAtput(callSiteReturnAddress - 4, callDistance & 0xFF);
-	assert((callTargetFromReturnAddress(self_in_rewriteCallAttarget, callSiteReturnAddress)) == callTargetAddress);
-	return 5;
-}
-
-
-/*	Rewrite the short jump instruction to jump to a new cpic case target. */
-
-	/* CogIA32Compiler>>#rewriteCPICJumpAt:target: */
-static sqInt NoDbgRegParms
-rewriteCPICJumpAttarget(AbstractInstruction * self_in_rewriteCPICJumpAttarget, usqInt addressFollowingJump, usqInt jumpTargetAddress)
-{
-    usqInt callDistance;
-
-	callDistance = jumpTargetAddress - addressFollowingJump;
-	assert((abs(callDistance)) < 128);
-	byteAtput(addressFollowingJump - 1, callDistance & 0xFF);
-	return 2;
-}
-
-
-/*	Rewrite an inline cache to call a different target for a new tag. This
-	variant is used
-	to link unlinked sends in ceSend:to:numArgs: et al. Answer the extent of
-	the code
-	change which is used to compute the range of the icache to flush. */
-/*	self cCode: ''
-	inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to:
-	callSiteReturnAddress - 1]. */
-
-	/* CogIA32Compiler>>#rewriteInlineCacheAt:tag:target: */
-static sqInt NoDbgRegParms
-rewriteInlineCacheAttagtarget(AbstractInstruction * self_in_rewriteInlineCacheAttagtarget, usqInt callSiteReturnAddress, sqInt cacheTag, usqInt callTargetAddress)
-{
-    usqInt callDistance;
-
-	if (!(callTargetAddress >= (minCallAddress()))) {
-		error("linking callsite to invalid address");
-	}
-
-	callDistance = ((usqInt) (callTargetAddress - callSiteReturnAddress));
-	byteAtput(callSiteReturnAddress - 1, (((usqInt) callDistance) >> 24) & 0xFF);
-	byteAtput(callSiteReturnAddress - 2, (((usqInt) callDistance) >> 16) & 0xFF);
-	byteAtput(callSiteReturnAddress - 3, (((usqInt) callDistance) >> 8) & 0xFF);
-	byteAtput(callSiteReturnAddress - 4, callDistance & 0xFF);
-	byteAtput(callSiteReturnAddress - 6, (((usqInt) cacheTag) >> 24) & 0xFF);
-	byteAtput(callSiteReturnAddress - 7, (((usqInt) cacheTag) >> 16) & 0xFF);
-	byteAtput(callSiteReturnAddress - 8, (((usqInt) cacheTag) >> 8) & 0xFF);
-	byteAtput(callSiteReturnAddress - 9, cacheTag & 0xFF);
-	assert((callTargetFromReturnAddress(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress)) == callTargetAddress);
-	return 10;
-}
-
-
-/*	Rewrite an inline cache with a new tag. This variant is used
-	by the garbage collector. */
-
-	/* CogIA32Compiler>>#rewriteInlineCacheTag:at: */
-static AbstractInstruction * NoDbgRegParms
-rewriteInlineCacheTagat(AbstractInstruction * self_in_rewriteInlineCacheTagat, sqInt cacheTag, sqInt callSiteReturnAddress)
-{
-	byteAtput(callSiteReturnAddress - 6, (((usqInt) cacheTag) >> 24) & 0xFF);
-	byteAtput(callSiteReturnAddress - 7, (((usqInt) cacheTag) >> 16) & 0xFF);
-	byteAtput(callSiteReturnAddress - 8, (((usqInt) cacheTag) >> 8) & 0xFF);
-	byteAtput(callSiteReturnAddress - 9, cacheTag & 0xFF);
-	return self_in_rewriteInlineCacheTagat;
-}
-
-
-/*	Rewrite a long jump instruction to jump to a different target. This
-	variant is used to rewrite cached primitive calls. Answer the extent of
-	the code change which is used to compute the range of the icache to flush. */
-
-	/* CogIA32Compiler>>#rewriteJumpLongAt:target: */
-static sqInt NoDbgRegParms
-rewriteJumpLongAttarget(AbstractInstruction * self_in_rewriteJumpLongAttarget, sqInt callSiteReturnAddress, sqInt callTargetAddress)
-{
-	return rewriteCallAttarget(self_in_rewriteJumpLongAttarget, callSiteReturnAddress, callTargetAddress);
-}
-
-
-/*	to save Slang from having to be a real compiler (it can't inline switches
-	that return)
- */
-/*	Answer if the receiver's opcode sets the condition codes correctly for the
-	given conditional jump opcode.
- */
-
-	/* CogIA32Compiler>>#setsConditionCodesFor: */
-static sqInt NoDbgRegParms
-setsConditionCodesFor(AbstractInstruction * self_in_setsConditionCodesFor, sqInt aConditionalJumpOpcode)
-{
-	
-	switch ((self_in_setsConditionCodesFor->opcode)) {
-	case ArithmeticShiftRightCqR:
-	case ArithmeticShiftRightRR:
-	case LogicalShiftLeftCqR:
-	case LogicalShiftLeftRR:
-		return ((aConditionalJumpOpcode >= JumpZero) && (aConditionalJumpOpcode <= JumpNonNegative));
-
-	case XorRR:
-		return 1;
-
-	default:
-		haltmsg("unhandled opcode in setsConditionCodesFor:");
-		return 0;
-
-	}
-}
-
-	/* CogIA32Compiler>>#sizeHasModrm:at: */
-static sqInt NoDbgRegParms
-sizeHasModrmat(AbstractInstruction * self_in_sizeHasModrmat, sqInt op, sqInt pc)
-{
-    sqInt mod;
-    sqInt modrm;
-    sqInt rm;
-    sqInt ro;
-
-	modrm = byteAt(pc + 1);
-	mod = ((usqInt) modrm) >> 6;
-	ro = (((usqInt) modrm) >> 3) & 7;
-	rm = modrm & 7;
-	if (mod == 3) {
-		return 2;
-	}
-	if (rm != 4) {
-
-		/* no SIB byte */
-		
-		switch (mod) {
-		case 0:
-			return (rm == 5
-				? 6
-				: 3);
-
-		case 1:
-			return 3;
-
-		case 2:
-			return 6;
-
-		default:
-			error("Case not found and no otherwise clause");
-			return -1;
-		}
-	}
-	haltmsg("fall through in sizeHasModrm:at:");
-	return 0;
-}
-
-
-/*	see [1] p A-7, p A-13 */
-
-	/* CogIA32Compiler>>#sizeImmediateGroup1:at: */
-static sqInt NoDbgRegParms
-sizeImmediateGroup1at(AbstractInstruction * self_in_sizeImmediateGroup1at, sqInt op, sqInt pc)
-{
-    sqInt mod;
-    sqInt modrm;
-    sqInt rm;
-    sqInt ro;
-
-	modrm = byteAt(pc + 1);
-	mod = ((usqInt) modrm) >> 6;
-	ro = (((usqInt) modrm) >> 3) & 7;
-	rm = modrm & 7;
-	
-	switch (ro) {
-	case 7:
-		return (op == 129
-			? 6
-			: 3);
-
-	default:
-		error("Case not found and no otherwise clause");
-		return -1;
-	}
-}
-
-
-/*	Size a jump and set its address. The target may be another instruction
-	or an absolute address. On entry the address inst var holds our virtual
-	address. On exit address is set to eventualAbsoluteAddress, which is
-	where this instruction will be output. The span of a jump to a following
-	instruction is therefore between that instruction's address and this
-	instruction's address ((which are both still their virtual addresses), but
-	the span of a jump to a preceding instruction or to an absolute address is
-	between that instruction's address (which by now is its eventual absolute
-	address) or absolute address and eventualAbsoluteAddress. */
-
-	/* CogIA32Compiler>>#sizePCDependentInstructionAt: */
-static usqInt NoDbgRegParms
-sizePCDependentInstructionAt(AbstractInstruction * self_in_sizePCDependentInstructionAt, sqInt eventualAbsoluteAddress)
-{
-    AbstractInstruction *abstractInstruction;
-    unsigned long alignment;
-    unsigned long maximumSpan;
-    unsigned long target;
-
-	if (((self_in_sizePCDependentInstructionAt->opcode)) == AlignmentNops) {
-		(self_in_sizePCDependentInstructionAt->address) = eventualAbsoluteAddress;
-		alignment = ((self_in_sizePCDependentInstructionAt->operands))[0];
-		return ((self_in_sizePCDependentInstructionAt->machineCodeSize) = ((eventualAbsoluteAddress + (alignment - 1)) & (-alignment)) - eventualAbsoluteAddress);
-	}
-	assert(isJump(self_in_sizePCDependentInstructionAt));
-	target = ((self_in_sizePCDependentInstructionAt->operands))[0];
-	abstractInstruction = ((AbstractInstruction *) target);
-	if ((addressIsInInstructions(abstractInstruction))
-	 || (abstractInstruction == (methodLabel()))) {
-		maximumSpan = ((abstractInstruction->address)) - (((abstractInstructionfollows(self_in_sizePCDependentInstructionAt, abstractInstruction)
-	? eventualAbsoluteAddress
-	: (self_in_sizePCDependentInstructionAt->address))) + 2);
-	}
-	else {
-		maximumSpan = target - (eventualAbsoluteAddress + 2);
-	}
-	(self_in_sizePCDependentInstructionAt->address) = eventualAbsoluteAddress;
-	return ((self_in_sizePCDependentInstructionAt->machineCodeSize) = (((self_in_sizePCDependentInstructionAt->opcode)) >= FirstShortJump
-		? (isQuick(self_in_sizePCDependentInstructionAt, maximumSpan)
-				? 2
-				: (((self_in_sizePCDependentInstructionAt->opcode)) == Jump
-						? 5
-						: 6))
-		: ((((self_in_sizePCDependentInstructionAt->opcode)) == JumpLong)
-			 || (((self_in_sizePCDependentInstructionAt->opcode)) == JumpFull)
-				? 5
-				: 6)));
-}
-
-	/* CogIA32Compiler>>#stackBytesForNumArgs: */
-static sqInt NoDbgRegParms
-stackBytesForNumArgs(AbstractInstruction * self_in_stackBytesForNumArgs, sqInt numArgs)
-{
-	return numArgs * 4;
-}
-
-
-/*	Return a minimum amount of headroom for each stack page (in bytes). In a
-	JIT the stack has to have room for interrupt handlers which will run on
-	the stack.
-	See [1] pp 6-13 to 6-14. On an interrupt or exception the maximum state
-	that an IA32 CPU will push is SS, ESP, EFLAGS, CS, EIP and an error code.
-	It may then
-	call an interrupt procedure. Leave some room above the minimum state. */
-
-	/* CogIA32Compiler>>#stackPageInterruptHeadroomBytes */
-static sqInt NoDbgRegParms
-stackPageInterruptHeadroomBytes(AbstractInstruction * self_in_stackPageInterruptHeadroomBytes)
-{
-	return 256;
-}
-
-	/* CogIA32Compiler>>#stopsFrom:to: */
-static AbstractInstruction * NoDbgRegParms
-stopsFromto(AbstractInstruction * self_in_stopsFromto, sqInt startAddr, sqInt endAddr)
-{
-    sqInt addr;
-
-	for (addr = startAddr; addr <= endAddr; addr += 1) {
-		byteAtput(addr, 204);
-	}
-	return self_in_stopsFromto;
-}
-
-
-/*	Rewrite the literal in the instruction immediately preceding
-	followingAddress. 
- */
-
-	/* CogIA32Compiler>>#storeLiteral:beforeFollowingAddress: */
-static AbstractInstruction * NoDbgRegParms
-storeLiteralbeforeFollowingAddress(AbstractInstruction * self_in_storeLiteralbeforeFollowingAddress, sqInt literal, sqInt followingAddress)
-{
-	byteAtput(followingAddress - 1, (((usqInt) literal) >> 24) & 0xFF);
-	byteAtput(followingAddress - 2, (((usqInt) literal) >> 16) & 0xFF);
-	byteAtput(followingAddress - 3, (((usqInt) literal) >> 8) & 0xFF);
-	byteAtput(followingAddress - 4, literal & 0xFF);
-	return self_in_storeLiteralbeforeFollowingAddress;
-}
-
-	/* CogIA32Compiler>>#s:i:b: */
-static sqInt NoDbgRegParms
-sib(AbstractInstruction * self_in_sib, sqInt scale, sqInt indexReg, sqInt baseReg)
-{
-	return ((scale << 6) + (indexReg << 3)) + baseReg;
-}
-
-	/* CogIA32Compiler>>#twoByteInstructionSizeAt: */
-static sqInt NoDbgRegParms
-twoByteInstructionSizeAt(AbstractInstruction * self_in_twoByteInstructionSizeAt, sqInt pc)
-{
-    sqInt op;
-
-	op = byteAt(pc + 1);
-	
-	switch (op & 240) {
-	case 128:
-		
-		/* long conditional jumps */
-		return 6;
-
-	default:
-		error("Case not found and no otherwise clause");
-		return -1;
-	}
-}
-
-	/* CogIA32Compiler>>#unsignedShortAt: */
-static sqInt NoDbgRegParms
-unsignedShortAt(AbstractInstruction * self_in_unsignedShortAt, sqInt byteAddress)
-{
-	return (byteAt(byteAddress)) + (((usqInt) (byteAt(byteAddress + 1)) << 8));
-}
-
-
-/*	Answer if Call and JumpLong are relative and hence need to take the
-	caller's relocation delta into account during code compaction, rather than
-	just the
-	callee's delta. */
-
-	/* CogIA32Compiler>>#zoneCallsAreRelative */
-static sqInt NoDbgRegParms
-zoneCallsAreRelative(AbstractInstruction * self_in_zoneCallsAreRelative)
-{
-	return 1;
-}
-
 	/* Cogit>>#AddCq:R: */
 static AbstractInstruction * NoDbgRegParms
 gAddCqR(sqInt quickConstant, sqInt reg)
@@ -6201,6 +2201,10 @@ gAndCqRR(sqInt quickConstant, sqInt srcReg, sqInt destReg)
     AbstractInstruction *anInstruction2;
     AbstractInstruction *first;
 
+	/* begin gen:quickConstant:operand:operand: */
+	anInstruction = genoperandoperandoperand(AndCqRR, quickConstant, srcReg, destReg);
+	return anInstruction;
+
 	if (srcReg == destReg) {
 		/* begin gen:quickConstant:operand: */
 		anInstruction1 = genoperandoperand(AndCqR, quickConstant, destReg);
@@ -6224,13 +2228,6 @@ sqInt
 abortOffset(void)
 {
 	return missOffset;
-}
-
-	/* Cogit>>#abstractInstruction:follows: */
-static sqInt NoDbgRegParms
-abstractInstructionfollows(AbstractInstruction *theAbstractInstruction, AbstractInstruction *anAbstractInstruction)
-{
-	return theAbstractInstruction > anAbstractInstruction;
 }
 
 	/* Cogit>>#addCleanBlockStarts */
@@ -6546,7 +2543,7 @@ bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogMethod)
 		/* defensive; we exit on bcpc */
 		if (mapByte >= FirstAnnotation) {
 			annotation = ((usqInt) mapByte) >> AnnotationShift;
-			mcpc1 += (mapByte & DisplacementMask);
+			mcpc1 += (mapByte & DisplacementMask) * 4;
 			if ((annotation >= IsSendCall)
 			 || ((annotation == HasBytecodePC)
 			 || (0))) {
@@ -6598,7 +2595,7 @@ bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogMethod)
 			assert(((((usqInt) mapByte) >> AnnotationShift) == IsDisplacementX2N)
 			 || ((((usqInt) mapByte) >> AnnotationShift) == IsAnnotationExtension));
 			if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-				mcpc1 += ((mapByte - DisplacementX2N) << AnnotationShift);
+				mcpc1 += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 			}
 		}
 		map -= 1;
@@ -6617,7 +2614,7 @@ CallRTregistersToBeSavedMask(sqInt callTarget, sqInt registersToBeSaved)
     sqInt regLimiT;
 
 	callerSavedRegsToBeSaved = callerSavedRegMask & registersToBeSaved;
-	for (reg = ReceiverResultReg, regLimiT = Arg1Reg; reg >= regLimiT; reg += -1) {
+	for (reg = TempReg, regLimiT = TempReg; reg >= regLimiT; reg += -1) {
 		if ((reg != TempReg)
 		 && (callerSavedRegsToBeSaved & (registerMaskFor(reg)))) {
 			/* begin PushR: */
@@ -6628,7 +2625,7 @@ CallRTregistersToBeSavedMask(sqInt callTarget, sqInt registersToBeSaved)
 	abstractInstruction = genoperand(Call, callTarget);
 	(abstractInstruction->annotation = IsRelativeCall);
 	lastInst = abstractInstruction;
-	for (reg = Arg1Reg, regLimiT = ReceiverResultReg; reg <= regLimiT; reg += 1) {
+	for (reg = TempReg, regLimiT = TempReg; reg <= regLimiT; reg += 1) {
 		if ((reg != TempReg)
 		 && (callerSavedRegsToBeSaved & (registerMaskFor(reg)))) {
 			/* begin PopR: */
@@ -7287,7 +3284,7 @@ closedPICRefersToUnmarkedObject(CogMethod *cPIC)
 				return 1;
 			}
 		}
-		if (markAndTraceOrFreePICTargetin(jumpLongTargetBeforeFollowingAddress(backEnd, pc), cPIC)) {
+		if (markAndTraceOrFreePICTargetin(jumpLongConditionalTargetBeforeFollowingAddress(backEnd, pc), cPIC)) {
 			return 1;
 		}
 	}
@@ -7790,7 +3787,14 @@ compileAbort(void)
 	/* begin MoveCq:R: */
 	anInstruction = genoperandoperand(MoveCqR, 0, ReceiverResultReg);
 	stackOverflowCall = anInstruction;
-	return (sendMiss = gCall(methodAbortTrampolineFor(methodOrBlockNumArgs)));
+	
+	/* If there is a link register it must be saved (pushed onto the stack) before it
+	   is smashed by the abort call, and hence needs to be manually handled here */
+	/* begin PushR: */
+	sendMiss = genoperand(PushR, LinkReg);
+	/* begin Call: */
+	callTarget = methodAbortTrampolineFor(methodOrBlockNumArgs);
+	return genoperand(Call, callTarget);
 
 }
 
@@ -7939,56 +3943,61 @@ compileCallFornumArgsargargargargresultRegsaveRegs(void *aRoutine, sqInt numArgs
 		genSaveRegisters(backEnd);
 	}
 	/* begin genMarshallNArgs:arg:arg:arg:arg: */
+	flag("OABI");
 	if (numArgs == 0) {
 		((AbstractInstruction *) backEnd);
 		goto l1;
 	}
-	if (numArgs > 1) {
-		if (numArgs > 2) {
-			if (numArgs > 3) {
-				if (regOrConst3 < 0) {
-					/* begin PushR: */
-					genoperand(PushR, regOrConst3);
-				}
-				else {
-					/* begin PushCq: */
-					anInstruction = genoperand(PushCq, regOrConst3);
-				}
-			}
-			if (regOrConst2 < 0) {
-				/* begin PushR: */
-				genoperand(PushR, regOrConst2);
-			}
-			else {
-				/* begin PushCq: */
-				anInstruction1 = genoperand(PushCq, regOrConst2);
-			}
-		}
-		if (regOrConst1 < 0) {
-			/* begin PushR: */
-			genoperand(PushR, regOrConst1);
-		}
-		else {
-			/* begin PushCq: */
-			anInstruction2 = genoperand(PushCq, regOrConst1);
-		}
-	}
-	if (regOrConst0 < 0) {
-		/* begin PushR: */
-		genoperand(PushR, regOrConst0);
+	if (regOrConst0 >= 0) {
+		/* begin MoveCq:R: */
+		anInstruction = genoperandoperand(MoveCqR, regOrConst0, A0);
 	}
 	else {
-		/* begin PushCq: */
-		anInstruction3 = genoperand(PushCq, regOrConst0);
+		/* begin MoveR:R: */
+		genoperandoperand(MoveRR, regOrConst0, A0);
+	}
+	if (numArgs == 1) {
+		((AbstractInstruction *) backEnd);
+		goto l1;
+	}
+	if (regOrConst1 >= 0) {
+		/* begin MoveCq:R: */
+		anInstruction1 = genoperandoperand(MoveCqR, regOrConst1, A1);
+	}
+	else {
+		/* begin MoveR:R: */
+		genoperandoperand(MoveRR, regOrConst1, A1);
+	}
+	if (numArgs == 2) {
+		((AbstractInstruction *) backEnd);
+		goto l1;
+	}
+	if (regOrConst2 >= 0) {
+		/* begin MoveCq:R: */
+		anInstruction2 = genoperandoperand(MoveCqR, regOrConst2, A2);
+	}
+	else {
+		/* begin MoveR:R: */
+		genoperandoperand(MoveRR, regOrConst2, A2);
+	}
+	if (numArgs == 3) {
+		((AbstractInstruction *) backEnd);
+		goto l1;
+	}
+	if (regOrConst3 >= 0) {
+		/* begin MoveCq:R: */
+		anInstruction3 = genoperandoperand(MoveCqR, regOrConst3, A3);
+	}
+	else {
+		/* begin MoveR:R: */
+		genoperandoperand(MoveRR, regOrConst3, A3);
 	}
 	((AbstractInstruction *) backEnd);
 l1:	/* end genMarshallNArgs:arg:arg:arg:arg: */;
 	/* begin CallFullRT: */
 	callTarget = ((usqInt)aRoutine);
-	/* begin annotateCall: */
-	anInstruction4 = genoperand(CallFull, callTarget);
-	abstractInstruction = anInstruction4;
-	(abstractInstruction->annotation = IsRelativeCall);
+	/* begin CallFull: */
+	anInstruction11 = genoperand(CallFull, callTarget);
 
 	if (resultRegOrNone != NoReg) {
 		genWriteCResultIntoReg(backEnd, resultRegOrNone);
@@ -8034,6 +4043,7 @@ static void
 compileEntry(void)
 {
     AbstractInstruction *abstractInstruction;
+    AbstractInstruction * inst;
 
 	entry = genGetInlineCacheClassTagFromintoforEntry(ReceiverResultReg, TempReg, 1);
 	/* begin CmpR:R: */
@@ -8043,10 +4053,14 @@ compileEntry(void)
 	/* begin Label */
 	noCheckEntry = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 	if (compileSendTrace()) {
+		/* begin saveAndRestoreLinkRegAround: */
+		inst = genoperand(PushR, LinkReg);
 		/* begin CallRT: */
 		abstractInstruction = genoperand(Call, ceTraceLinkedSendTrampoline);
 		(abstractInstruction->annotation = IsRelativeCall);
 
+		/* begin PopR: */
+		genoperand(PopR, LinkReg);
 	}
 }
 
@@ -8097,9 +4111,14 @@ compilePICAbort(sqInt numArgs)
 	/* begin MoveCq:R: */
 	anInstruction = genoperandoperand(MoveCqR, 0, ClassReg);
 	picMNUAbort = anInstruction;
+	
+	/* If there is a link register it must be saved (pushed onto the stack) before it
+	   is smashed by the abort call, and hence needs to be manually handled here */
+	/* begin PushR: */
+	picInterpretAbort = genoperand(PushR, LinkReg);
 	/* begin Call: */
-	callTarget1 = picAbortTrampolineFor(numArgs);
-	picInterpretAbort = genoperand(Call, callTarget1);
+	callTarget = picAbortTrampolineFor(numArgs);
+	genoperand(Call, callTarget);
 
 	return 0;
 }
@@ -8153,9 +4172,18 @@ compileTrampolineFornumArgsargargargargsaveRegspushLinkRegresultReg(void *aRouti
 	genSmalltalkToCStackSwitch(pushLinkReg);
 	compileCallFornumArgsargargargargresultRegsaveRegs(aRoutine, numArgs, regOrConst0, regOrConst1, regOrConst2, regOrConst3, resultRegOrNone, saveRegs);
 	genLoadStackPointers(backEnd);
-	/* begin RetN: */
-	genoperand(RetN, 0);
+	if (pushLinkReg
+	 && (hasLinkRegister(backEnd))) {
+		/* begin PopR: */
+		genoperand(PopR, LinkReg);
+		/* begin RetN: */
+		genoperand(RetN, 0);
 
+	}
+	else {
+		/* begin RetN: */
+		genoperand(RetN, 0);
+	}
 }
 
 
@@ -8252,7 +4280,6 @@ configureCPICCase0Case1MethodtagisMNUCasenumArgsdelta(CogMethod *cPIC, CogMethod
 {
     sqInt caseEndAddress;
     sqInt operand;
-    sqInt pc;
     sqInt targetEntry;
 
 	assert(case1Method != null);
@@ -8281,10 +4308,7 @@ configureCPICCase0Case1MethodtagisMNUCasenumArgsdelta(CogMethod *cPIC, CogMethod
 	rewriteCPICCaseAttagobjReftarget(caseEndAddress, case1Tag, operand, ((sqInt)((isMNUCase
 	? (((sqInt)cPIC)) + (sizeof(CogMethod))
 	: targetEntry))));
-	/* begin relocateMethodReferenceBeforeAddress:by: */
-	pc = ((((sqInt)cPIC)) + cPICEndOfCodeOffset) - (jumpLongByteSize(backEnd));
-	relocateCallBeforeReturnPCby(((AbstractInstruction *) backEnd), pc, addrDelta);
-	((AbstractInstruction *) backEnd);
+	relocateMethodReferenceBeforeAddressby(backEnd, ((((sqInt)cPIC)) + cPICEndOfCodeOffset) - (jumpLongByteSize(backEnd)), addrDelta);
 	rewriteJumpLongAttarget(backEnd, (((sqInt)cPIC)) + cPICEndOfCodeOffset, cPICMissTrampolineFor(numArgs));
 	return 0;
 }
@@ -8304,7 +4328,6 @@ static sqInt NoDbgRegParms
 configureMNUCPICmethodOperandnumArgsdelta(CogMethod *cPIC, sqInt methodOperand, sqInt numArgs, sqInt addrDelta)
 {
     sqInt operand;
-    sqInt pc;
     sqInt target;
 
 	rewriteCallAttarget(backEnd, (((sqInt)cPIC)) + missOffset, picAbortTrampolineFor(numArgs));
@@ -8317,10 +4340,7 @@ configureMNUCPICmethodOperandnumArgsdelta(CogMethod *cPIC, sqInt methodOperand, 
 	rewriteJumpLongAttarget(backEnd, (((sqInt)cPIC)) + firstCPICCaseOffset, (((sqInt)cPIC)) + (sizeof(CogMethod)));
 	storeLiteralbeforeFollowingAddress(backEnd, operand, ((((sqInt)cPIC)) + firstCPICCaseOffset) - (jumpLongByteSize(backEnd)));
 	rewriteJumpLongAttarget(backEnd, (((sqInt)cPIC)) + cPICEndOfCodeOffset, cPICMissTrampolineFor(numArgs));
-	/* begin relocateMethodReferenceBeforeAddress:by: */
-	pc = ((((sqInt)cPIC)) + cPICEndOfCodeOffset) - (jumpLongByteSize(backEnd));
-	relocateCallBeforeReturnPCby(((AbstractInstruction *) backEnd), pc, addrDelta);
-	((AbstractInstruction *) backEnd);
+	relocateMethodReferenceBeforeAddressby(backEnd, ((((sqInt)cPIC)) + cPICEndOfCodeOffset) - (jumpLongByteSize(backEnd)), addrDelta);
 	/* begin rewriteCPIC:caseJumpTo: */
 	target = addressOfEndOfCaseinCPIC(2, cPIC);
 	rewriteCPICJumpAttarget(backEnd, (((((sqInt)cPIC)) + firstCPICCaseOffset) - (jumpLongByteSize(backEnd))) - (loadLiteralByteSize(backEnd)), target);
@@ -8367,8 +4387,11 @@ cPICHasFreedTargets(CogMethod *cPIC)
 
 	for (i = 1; i <= ((cPIC->cPICNumCases)); i += 1) {
 		pc = addressOfEndOfCaseinCPIC(i, cPIC);
-		entryPoint = jumpLongTargetBeforeFollowingAddress(backEnd, pc);
 
+		/* Find target from jump.  Ignore jumps to the interpret and MNU calls within this PIC */
+		entryPoint = (i == 1
+			? jumpLongTargetBeforeFollowingAddress(backEnd, pc)
+			: jumpLongConditionalTargetBeforeFollowingAddress(backEnd, pc));
 		if (!(((((usqInt)cPIC)) <= (((usqInt)entryPoint)))
 			 && (((((usqInt)cPIC)) + ((cPIC->blockSize))) >= (((usqInt)entryPoint))))) {
 			targetMethod = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
@@ -8416,7 +4439,7 @@ cPICHasTarget(CogMethod *cPIC, CogMethod *targetMethod)
 	}
 	for (i = 2; i <= maxCPICCases; i += 1) {
 		pc += cPICCaseSize;
-		if (target == (jumpLongTargetBeforeFollowingAddress(backEnd, pc))) {
+		if (target == (jumpLongConditionalTargetBeforeFollowingAddress(backEnd, pc))) {
 			return 1;
 		}
 	}
@@ -8444,7 +4467,7 @@ gDivRRQuoRem(sqInt rDivisor, sqInt rDividend, sqInt rQuotient, sqInt rRemainder)
 sqInt
 defaultCogCodeSize(void)
 {
-	return 1024 * 1024;
+	return 1024 * 1536;
 }
 
 	/* Cogit>>#endPCOf: */
@@ -8557,7 +4580,7 @@ expectedClosedPICPrototype(CogMethod *cPIC)
 		if (!(asserta(classTag == (3133021973UL + i)))) {
 			errors = errors | 8;
 		}
-		entryPoint = jumpLongTargetBeforeFollowingAddress(backEnd, pc);
+		entryPoint = jumpLongConditionalTargetBeforeFollowingAddress(backEnd, pc);
 		if (!(asserta(entryPoint == (((cPICPrototypeCaseOffset()) + 13262352) + (i * 16))))) {
 			errors = errors | 16;
 		}
@@ -8570,7 +4593,7 @@ expectedClosedPICPrototype(CogMethod *cPIC)
 		if (!(asserta(classTag == ((3133021973UL + i) ^ 1515870810)))) {
 			errors = errors | 64;
 		}
-		entryPoint = jumpLongTargetBeforeFollowingAddress(backEnd, pc);
+		entryPoint = jumpLongConditionalTargetBeforeFollowingAddress(backEnd, pc);
 		if (!(asserta(entryPoint == ((((cPICPrototypeCaseOffset()) + 13262352) + (i * 16)) ^ 5614160)))) {
 			errors = errors | 128;
 		}
@@ -8697,7 +4720,7 @@ findMapLocationForMcpcinMethod(sqInt targetMcpc, CogMethod *cogMethod)
 	while (((mapByte = byteAt(map))) != MapEnd) {
 		annotation = ((usqInt) mapByte) >> AnnotationShift;
 		if (annotation != IsAnnotationExtension) {
-			mcpc += 1 * ((annotation == IsDisplacementX2N
+			mcpc += 4 * ((annotation == IsDisplacementX2N
 	? (mapByte - DisplacementX2N) << AnnotationShift
 	: mapByte & DisplacementMask));
 		}
@@ -8777,7 +4800,7 @@ followForwardedLiteralsIn(CogMethod *cogMethod)
 		if (mapByte >= FirstAnnotation) {
 
 			/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-			mcpc += (mapByte & DisplacementMask);
+			mcpc += (mapByte & DisplacementMask) * 4;
 			if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 			 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 				annotation += mapByte & DisplacementMask;
@@ -8790,7 +4813,7 @@ followForwardedLiteralsIn(CogMethod *cogMethod)
 		}
 		else {
 			if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-				mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+				mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 			}
 		}
 		map -= 1;
@@ -8955,12 +4978,10 @@ genCheckForInterruptsTrampoline(void)
     AbstractInstruction *anInstruction1;
 
 	zeroOpcodeIndex();
-	/* begin PopR: */
-	genoperand(PopR, TempReg);
 	/* begin MoveR:Aw: */
-	address1 = instructionPointerAddress();
+	address = instructionPointerAddress();
 	/* begin gen:operand:literal: */
-	anInstruction1 = genoperandoperand(MoveRAw, TempReg, address1);
+	anInstruction = genoperandoperand(MoveRAw, LinkReg, address);
 
 	return genTrampolineForcallednumArgsargargargargsaveRegspushLinkRegresultRegappendOpcodes(ceCheckForInterrupts, "ceCheckForInterruptsTrampoline", 0, null, null, null, null, 0, 0, NoReg, 1);
 }
@@ -8969,13 +4990,7 @@ genCheckForInterruptsTrampoline(void)
 static AbstractInstruction * NoDbgRegParms
 genConditionalBranchoperand(sqInt opcode, sqInt operandOne)
 {
-    AbstractInstruction *branch;
-    AbstractInstruction * self_in_noteFollowingConditionalBranch;
-
-	/* begin noteFollowingConditionalBranch: */
-	self_in_noteFollowingConditionalBranch = previousInstruction();
-	branch = genoperand(opcode, operandOne);
-	return branch;
+	return noteFollowingConditionalBranch(previousInstruction(), genoperand(opcode, operandOne));
 }
 
 
@@ -9048,8 +5063,21 @@ static void (*genEnilopmartForandandforCallcalled(sqInt regArg1, sqInt regArg2Or
 static void NoDbgRegParms
 genEnilopmartReturn(sqInt forCall)
 {
-	/* begin RetN: */
-	genoperand(RetN, 0);
+	if (forCall) {
+		/* begin PopR: */
+		genoperand(PopR, RISCTempReg);
+		/* begin PopR: */
+		genoperand(PopR, LinkReg);
+		/* begin JumpR: */
+		genoperand(JumpR, RISCTempReg);
+	}
+	else {
+		/* begin PopR: */
+		genoperand(PopR, RISCTempReg);
+		/* begin JumpR: */
+		genoperand(JumpR, RISCTempReg);
+
+	}
 
 }
 
@@ -9100,16 +5128,10 @@ generateCaptureCStackPointers(sqInt captureFramePointer)
 		/* begin gen:operand:literal: */
 		anInstruction1 = genoperandoperand(MoveRAw, FPReg, address);
 	}
-	/* begin MoveR:R: */
-	genoperandoperand(MoveRR, SPReg, TempReg);
-	/* begin AddCq:R: */
-	quickConstant = leafCallStackPointerDelta(backEnd);
-	/* begin gen:quickConstant:operand: */
-	anInstruction = genoperandoperand(AddCqR, quickConstant, TempReg);
 	/* begin MoveR:Aw: */
-	address2 = cStackPointerAddress();
+	address1 = cStackPointerAddress();
 	/* begin gen:operand:literal: */
-	anInstruction3 = genoperandoperand(MoveRAw, TempReg, address2);
+	anInstruction2 = genoperandoperand(MoveRAw, SPReg, address1);
 
 	/* begin RetN: */
 	genoperand(RetN, 0);
@@ -9356,14 +5378,14 @@ generateMapAtstart(sqInt addressOrNull, sqInt startAddress)
 		if (!(annotation == null)) {
 			/* begin assertValidAnnotation:for: */
 			mcpc = ((instruction->address)) + ((instruction->machineCodeSize));
-			while (((delta = (mcpc - location) / 1)) > DisplacementMask) {
+			while (((delta = (mcpc - location) / 4)) > DisplacementMask) {
 				maxDelta = (((((delta < MaxX2NDisplacement) ? delta : MaxX2NDisplacement)) | DisplacementMask) - DisplacementMask);
 				assert((((usqInt) maxDelta) >> AnnotationShift) <= DisplacementMask);
 				if (!(addressOrNull == null)) {
 					/* begin addToMap:instruction:byte:at:for: */
 					byteAtput(addressOrNull - length, (((usqInt) maxDelta) >> AnnotationShift) + DisplacementX2N);
 				}
-				location += maxDelta;
+				location += maxDelta * 4;
 				length += 1;
 			}
 			if (!(addressOrNull == null)) {
@@ -9371,7 +5393,7 @@ generateMapAtstart(sqInt addressOrNull, sqInt startAddress)
 				/* begin addToMap:instruction:byte:at:for: */
 				byteAtput(addressOrNull - length, mapEntry);
 			}
-			location += delta;
+			location += delta * 4;
 			length += 1;
 			if (annotation > IsSendCall) {
 
@@ -9673,12 +5695,10 @@ genNonLocalReturnTrampoline(void)
     AbstractInstruction *anInstruction1;
 
 	zeroOpcodeIndex();
-	/* begin PopR: */
-	genoperand(PopR, TempReg);
 	/* begin MoveR:Aw: */
-	address1 = instructionPointerAddress();
+	address = instructionPointerAddress();
 	/* begin gen:operand:literal: */
-	anInstruction1 = genoperandoperand(MoveRAw, TempReg, address1);
+	anInstruction = genoperandoperand(MoveRAw, LinkReg, address);
 
 	return genTrampolineForcallednumArgsargargargargsaveRegspushLinkRegresultRegappendOpcodes(ceNonLocalReturn, "ceNonLocalReturnTrampoline", 1, ReceiverResultReg, null, null, null, 0, 0, NoReg, 1);
 }
@@ -9739,6 +5759,10 @@ genSafeTrampolineForcalledargarg(void *aRoutine, char *aString, sqInt regOrConst
 static sqInt NoDbgRegParms
 genSmalltalkToCStackSwitch(sqInt pushLinkReg)
 {
+	if (pushLinkReg) {
+		/* begin PushR: */
+		genoperand(PushR, LinkReg);
+	}
 	genSaveStackPointers(backEnd);
 	if (cFramePointerInUse) {
 		genLoadCStackPointers(backEnd);
@@ -9998,6 +6022,8 @@ initializeBackend(void)
 	((methodLabel->operands))[0] = 0;
 	((methodLabel->operands))[1] = 0;
 	callerSavedRegMask = callerSavedRegisterMask(backEnd);
+	assert(((registerMaskFor(VarBaseReg)) & callerSavedRegMask) == 0);
+
 	/* begin allocateLiterals: */
 	}
 
@@ -10026,22 +6052,6 @@ initializeCodeZoneFromupTo(sqInt startAddress, sqInt endAddress)
 	minValidCallAddress = (((((codeBase < (interpretAddress())) ? codeBase : (interpretAddress()))) < (primitiveFailAddress())) ? (((codeBase < (interpretAddress())) ? codeBase : (interpretAddress()))) : (primitiveFailAddress()));
 	manageFromto(methodZoneBase, endAddress);
 	/* begin maybeGenerateCheckFeatures */
-	/* begin allocateOpcodes:bytecodes: */
-	numberOfAbstractOpcodes1 = numCheckFeaturesOpcodes(backEnd);
-	numAbstractOpcodes = numberOfAbstractOpcodes1;
-	opcodeSize1 = (sizeof(CogAbstractInstruction)) * numAbstractOpcodes;
-	fixupSize1 = (sizeof(CogBytecodeFixup)) * numAbstractOpcodes;
-	abstractOpcodes = alloca(opcodeSize1 + fixupSize1);
-	bzero(abstractOpcodes, opcodeSize1 + fixupSize1);
-	fixups = ((void *)((((usqInt)abstractOpcodes)) + opcodeSize1));
-	zeroOpcodeIndex();
-	labelCounter = 0;
-	startAddress2 = methodZoneBase;
-	generateCheckFeatures(backEnd);
-	outputInstructionsForGeneratedRuntimeAt(startAddress2);
-	recordGeneratedRunTimeaddress("ceCheckFeaturesFunction", startAddress2);
-	ceCheckFeaturesFunction = ((unsigned long (*)(void)) startAddress2);
-
 	/* begin maybeGenerateICacheFlush */
 	/* begin generateVMOwnerLockFunctions */
 	
@@ -10245,14 +6255,8 @@ isSendReturnPC(sqInt retpc)
 static AbstractInstruction * NoDbgRegParms
 gJumpFPEqual(void *jumpTarget)
 {
-    AbstractInstruction *jumpToTarget;
-    AbstractInstruction *jumpUnordered;
-
 	/* begin genJumpFPEqual: */
-	jumpUnordered = gen(JumpFPUnordered);
-	jumpToTarget = genoperand(JumpFPEqual, ((sqInt)jumpTarget));
-	jmpTarget(jumpUnordered, gLabel());
-	return jumpToTarget;
+	return genoperand(JumpFPEqual, ((sqInt)jumpTarget));
 }
 
 
@@ -10287,14 +6291,8 @@ gJumpFPGreater(void *jumpTarget)
 static AbstractInstruction * NoDbgRegParms
 gJumpFPNotEqual(void *jumpTarget)
 {
-    AbstractInstruction *jumpToTarget;
-    AbstractInstruction *jumpUnordered;
-
 	/* begin genJumpFPNotEqual: */
-	jumpToTarget = genoperand(JumpFPNotEqual, ((sqInt)jumpTarget));
-	jumpUnordered = genoperand(JumpFPUnordered, ((sqInt)jumpTarget));
-	addDependent(jumpToTarget, jumpUnordered);
-	return jumpToTarget;
+	return genoperand(JumpFPNotEqual, ((sqInt)jumpTarget));
 }
 
 	/* Cogit>>#Label */
@@ -10443,7 +6441,7 @@ mapForperformUntilarg(CogMethod *cogMethod, sqInt (*functionSymbol)(sqInt annota
 		if (mapByte >= FirstAnnotation) {
 
 			/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-			mcpc += (mapByte & DisplacementMask);
+			mcpc += (mapByte & DisplacementMask) * 4;
 			if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 			 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 				annotation += mapByte & DisplacementMask;
@@ -10456,7 +6454,7 @@ mapForperformUntilarg(CogMethod *cogMethod, sqInt (*functionSymbol)(sqInt annota
 		}
 		else {
 			if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-				mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+				mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 			}
 		}
 		map -= 1;
@@ -10596,7 +6594,7 @@ mapObjectReferencesInMachineCodeForBecome(void)
 					if (mapByte >= FirstAnnotation) {
 
 						/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-						mcpc += (mapByte & DisplacementMask);
+						mcpc += (mapByte & DisplacementMask) * 4;
 						if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 						 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 							annotation += mapByte & DisplacementMask;
@@ -10609,7 +6607,7 @@ mapObjectReferencesInMachineCodeForBecome(void)
 					}
 					else {
 						if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-							mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+							mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 						}
 					}
 					map -= 1;
@@ -10676,7 +6674,7 @@ mapObjectReferencesInMachineCodeForFullGC(void)
 					if (mapByte >= FirstAnnotation) {
 
 						/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-						mcpc += (mapByte & DisplacementMask);
+						mcpc += (mapByte & DisplacementMask) * 4;
 						if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 						 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 							annotation += mapByte & DisplacementMask;
@@ -10689,7 +6687,7 @@ mapObjectReferencesInMachineCodeForFullGC(void)
 					}
 					else {
 						if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-							mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+							mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 						}
 					}
 					map -= 1;
@@ -10765,7 +6763,7 @@ mapObjectReferencesInMachineCodeForYoungGC(void)
 					if (mapByte >= FirstAnnotation) {
 
 						/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-						mcpc += (mapByte & DisplacementMask);
+						mcpc += (mapByte & DisplacementMask) * 4;
 						if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 						 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 							annotation += mapByte & DisplacementMask;
@@ -10778,7 +6776,7 @@ mapObjectReferencesInMachineCodeForYoungGC(void)
 					}
 					else {
 						if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-							mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+							mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 						}
 					}
 					map -= 1;
@@ -10885,7 +6883,7 @@ markAndTraceMachineCodeOfMarkedMethods(void)
 				if (mapByte >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc += (mapByte & DisplacementMask);
+					mcpc += (mapByte & DisplacementMask) * 4;
 					if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation += mapByte & DisplacementMask;
@@ -10898,7 +6896,7 @@ markAndTraceMachineCodeOfMarkedMethods(void)
 				}
 				else {
 					if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-						mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+						mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 					}
 				}
 				map -= 1;
@@ -10931,7 +6929,7 @@ markAndTraceMachineCodeOfMarkedMethods(void)
 				if (mapByte1 >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc1 += (mapByte1 & DisplacementMask);
+					mcpc1 += (mapByte1 & DisplacementMask) * 4;
 					if ((((annotation1 = ((usqInt) mapByte1) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte1 = byteAt(map1 - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation1 += mapByte1 & DisplacementMask;
@@ -10944,7 +6942,7 @@ markAndTraceMachineCodeOfMarkedMethods(void)
 				}
 				else {
 					if (mapByte1 < (IsAnnotationExtension << AnnotationShift)) {
-						mcpc1 += ((mapByte1 - DisplacementX2N) << AnnotationShift);
+						mcpc1 += ((mapByte1 - DisplacementX2N) << AnnotationShift) * 4;
 					}
 				}
 				map1 -= 1;
@@ -11037,7 +7035,7 @@ markAndTraceOrFreeCogMethodfirstVisit(CogMethod *cogMethod, sqInt firstVisit)
 				if (mapByte >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc += (mapByte & DisplacementMask);
+					mcpc += (mapByte & DisplacementMask) * 4;
 					if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation += mapByte & DisplacementMask;
@@ -11050,7 +7048,7 @@ markAndTraceOrFreeCogMethodfirstVisit(CogMethod *cogMethod, sqInt firstVisit)
 				}
 				else {
 					if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-						mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+						mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 					}
 				}
 				map -= 1;
@@ -11266,7 +7264,7 @@ markMethodAndReferents(CogBlockMethod *aCogMethod)
 		if (mapByte >= FirstAnnotation) {
 
 			/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-			mcpc += (mapByte & DisplacementMask);
+			mcpc += (mapByte & DisplacementMask) * 4;
 			if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 			 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 				annotation += mapByte & DisplacementMask;
@@ -11279,7 +7277,7 @@ markMethodAndReferents(CogBlockMethod *aCogMethod)
 		}
 		else {
 			if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-				mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+				mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 			}
 		}
 		map -= 1;
@@ -11448,7 +7446,7 @@ mcPCForBackwardBranchstartBcpcin(sqInt bcpc, sqInt startbcpc, CogBlockMethod *co
 		/* defensive; we exit on bcpc */
 		if (mapByte >= FirstAnnotation) {
 			annotation = ((usqInt) mapByte) >> AnnotationShift;
-			mcpc += (mapByte & DisplacementMask);
+			mcpc += (mapByte & DisplacementMask) * 4;
 			if ((annotation >= IsSendCall)
 			 || ((annotation == HasBytecodePC)
 			 || (0))) {
@@ -11503,7 +7501,7 @@ mcPCForBackwardBranchstartBcpcin(sqInt bcpc, sqInt startbcpc, CogBlockMethod *co
 			assert(((((usqInt) mapByte) >> AnnotationShift) == IsDisplacementX2N)
 			 || ((((usqInt) mapByte) >> AnnotationShift) == IsAnnotationExtension));
 			if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-				mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+				mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 			}
 		}
 		map -= 1;
@@ -11647,8 +7645,8 @@ outputInstructionsAt(sqInt startAddress)
 		abstractInstruction = abstractInstructionAt(i);
 		assert(((abstractInstruction->address)) == absoluteAddress);
 		/* begin outputMachineCodeAt: */
-		for (j = 0; j < ((abstractInstruction->machineCodeSize)); j += 1) {
-			byteAtput(absoluteAddress + j, ((abstractInstruction->machineCode))[j]);
+		for (j = 0; j < ((abstractInstruction->machineCodeSize)); j += 4) {
+			longAtput(absoluteAddress + j, ((abstractInstruction->machineCode))[j / 4]);
 		}
 		absoluteAddress += (abstractInstruction->machineCodeSize);
 	}
@@ -11758,7 +7756,7 @@ picAbortDiscriminatorValue(void)
 static sqInt
 picInterpretAbortOffset(void)
 {
-	return (interpretOffset()) - (callInstructionByteSize(backEnd));
+	return (interpretOffset()) - ((pushLinkRegisterByteSize(backEnd)) + (callInstructionByteSize(backEnd)));
 }
 
 	/* Cogit>>#previousInstruction */
@@ -12065,7 +8063,7 @@ processorHasDivQuoRem(sqInt ignoredPrimIndex)
 static sqInt NoDbgRegParms
 processorHasDoublePrecisionFloatingPointSupport(sqInt ignoredPrimIndex)
 {
-	return hasSSE2Instructions(backEnd);
+	return 0;
 }
 
 	/* Cogit>>#processorHasMultiplyAndMClassIsSmallInteger: */
@@ -12151,17 +8149,6 @@ registerMaskForand(sqInt reg1, sqInt reg2)
 	return (1 << (1 - reg1)) | (1 << (1 - reg2));
 }
 
-
-/*	Answer a bit mask identifying the symbolic registers.
-	Registers are negative numbers. */
-
-	/* Cogit>>#registerMaskFor:and:and: */
-static sqInt NoDbgRegParms
-registerMaskForandand(sqInt reg1, sqInt reg2, sqInt reg3)
-{
-	return ((1 << (1 - reg1)) | (1 << (1 - reg2))) | (1 << (1 - reg3));
-}
-
 	/* Cogit>>#relocateCallsAndSelfReferencesInMethod: */
 static void NoDbgRegParms
 relocateCallsAndSelfReferencesInMethod(CogMethod *cogMethod)
@@ -12175,7 +8162,7 @@ relocateCallsAndSelfReferencesInMethod(CogMethod *cogMethod)
     sqInt result;
 
 	refDelta = (cogMethod->objectHeader);
-	callDelta = refDelta;
+	callDelta = 0;
 	assert((((cogMethod->cmType)) == CMMethod)
 	 || (((cogMethod->cmType)) == CMOpenPIC));
 	assert((callTargetFromReturnAddress(backEnd, (((sqInt)cogMethod)) + missOffset)) == ((((cogMethod->cmType)) == CMMethod
@@ -12189,7 +8176,7 @@ relocateCallsAndSelfReferencesInMethod(CogMethod *cogMethod)
 		if (mapByte >= FirstAnnotation) {
 
 			/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-			mcpc += (mapByte & DisplacementMask);
+			mcpc += (mapByte & DisplacementMask) * 4;
 			if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 			 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 				annotation += mapByte & DisplacementMask;
@@ -12202,7 +8189,7 @@ relocateCallsAndSelfReferencesInMethod(CogMethod *cogMethod)
 		}
 		else {
 			if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-				mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+				mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 			}
 		}
 		map -= 1;
@@ -12218,24 +8205,31 @@ relocateCallsInClosedPIC(CogMethod *cPIC)
     sqInt entryPoint;
     sqInt i;
     sqInt pc;
-    sqInt pc1;
     sqLong refDelta;
     CogMethod *targetMethod;
 
 	refDelta = (cPIC->objectHeader);
-	callDelta = refDelta;
+	callDelta = 0;
 	assert((callTargetFromReturnAddress(backEnd, (((sqInt)cPIC)) + missOffset)) == (picAbortTrampolineFor((cPIC->cmNumArgs))));
 	relocateCallBeforeReturnPCby(backEnd, (((sqInt)cPIC)) + missOffset, -callDelta);
 	pc = (((sqInt)cPIC)) + firstCPICCaseOffset;
 	for (i = 1; i <= ((cPIC->cPICNumCases)); i += 1) {
 		pc = addressOfEndOfCaseinCPIC(i, cPIC);
-		entryPoint = jumpLongTargetBeforeFollowingAddress(backEnd, pc);
-
+		entryPoint = (i == 1
+			? jumpLongTargetBeforeFollowingAddress(backEnd, pc)
+			: jumpLongConditionalTargetBeforeFollowingAddress(backEnd, pc));
 		if (((((usqInt)cPIC)) <= (((usqInt)entryPoint)))
 		 && (((((usqInt)cPIC)) + ((cPIC->blockSize))) >= (((usqInt)entryPoint)))) {
 
 			/* Interpret/MNU */
-					}
+			if (i == 1) {
+				relocateJumpLongBeforeFollowingAddressby(backEnd, pc, refDelta);
+			}
+			else {
+				relocateJumpLongConditionalBeforeFollowingAddressby(backEnd, pc, refDelta);
+			}
+
+		}
 		else {
 			targetMethod = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
 			assert(((targetMethod->cmType)) == CMMethod);
@@ -12248,10 +8242,7 @@ relocateCallsInClosedPIC(CogMethod *cPIC)
 		}
 	}
 	assert(((cPIC->cPICNumCases)) > 0);
-	/* begin relocateMethodReferenceBeforeAddress:by: */
-	pc1 = (addressOfEndOfCaseinCPIC(2, cPIC)) + (loadLiteralByteSize(backEnd));
-	relocateCallBeforeReturnPCby(((AbstractInstruction *) backEnd), pc1, refDelta);
-	((AbstractInstruction *) backEnd);
+	relocateMethodReferenceBeforeAddressby(backEnd, (addressOfEndOfCaseinCPIC(2, cPIC)) + (loadLiteralByteSize(backEnd)), refDelta);
 	relocateJumpLongBeforeFollowingAddressby(backEnd, (((sqInt)cPIC)) + cPICEndOfCodeOffset, -callDelta);
 }
 
@@ -12268,7 +8259,7 @@ relocateIfCallOrMethodReferencemcpcdelta(sqInt annotation, char *mcpc, sqInt ref
     CogMethod *targetMethod;
     sqInt unlinkedRoutine;
 
-	callDelta = refDelta;
+	callDelta = 0;
 	if (annotation >= IsSendCall) {
 		entryPoint = callTargetFromReturnAddress(backEnd, ((sqInt)mcpc));
 		if (entryPoint <= methodZoneBase) {
@@ -12308,9 +8299,7 @@ relocateIfCallOrMethodReferencemcpcdelta(sqInt annotation, char *mcpc, sqInt ref
 		return 0;
 	}
 	if (annotation == IsAbsPCReference) {
-		/* begin relocateMethodReferenceBeforeAddress:by: */
-		relocateCallBeforeReturnPCby(((AbstractInstruction *) backEnd), ((sqInt)mcpc), refDelta);
-		((AbstractInstruction *) backEnd);
+		relocateMethodReferenceBeforeAddressby(backEnd, ((sqInt)mcpc), refDelta);
 	}
 	return 0;
 }
@@ -12550,7 +8539,7 @@ spanForCleanBlockStartingAt(sqInt startPC)
 sqInt
 traceLinkedSendOffset(void)
 {
-	return (cmNoCheckEntryOffset + (callInstructionByteSize(backEnd))) + (0);
+	return (cmNoCheckEntryOffset + (callInstructionByteSize(backEnd))) + (pushLinkRegisterByteSize(backEnd));
 }
 
 	/* Cogit>>#trampolineName:numArgs: */
@@ -12622,7 +8611,7 @@ unlinkAllSends(void)
 				if (mapByte >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc += (mapByte & DisplacementMask);
+					mcpc += (mapByte & DisplacementMask) * 4;
 					if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation += mapByte & DisplacementMask;
@@ -12635,7 +8624,7 @@ unlinkAllSends(void)
 				}
 				else {
 					if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-						mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+						mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 					}
 				}
 				map -= 1;
@@ -12891,7 +8880,7 @@ unlinkSendsLinkedForInvalidClasses(void)
 				if (mapByte >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc += (mapByte & DisplacementMask);
+					mcpc += (mapByte & DisplacementMask) * 4;
 					if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation += mapByte & DisplacementMask;
@@ -12904,7 +8893,7 @@ unlinkSendsLinkedForInvalidClasses(void)
 				}
 				else {
 					if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-						mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+						mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 					}
 				}
 				map -= 1;
@@ -13002,7 +8991,7 @@ unlinkSendsOfisMNUSelector(sqInt selector, sqInt isMNUSelector)
 				if (mapByte >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc += (mapByte & DisplacementMask);
+					mcpc += (mapByte & DisplacementMask) * 4;
 					if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation += mapByte & DisplacementMask;
@@ -13015,7 +9004,7 @@ unlinkSendsOfisMNUSelector(sqInt selector, sqInt isMNUSelector)
 				}
 				else {
 					if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-						mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+						mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 					}
 				}
 				map -= 1;
@@ -13059,7 +9048,7 @@ unlinkSendsToFree(void)
 				if (mapByte >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc += (mapByte & DisplacementMask);
+					mcpc += (mapByte & DisplacementMask) * 4;
 					if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation += mapByte & DisplacementMask;
@@ -13072,7 +9061,7 @@ unlinkSendsToFree(void)
 				}
 				else {
 					if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-						mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+						mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 					}
 				}
 				map -= 1;
@@ -13130,7 +9119,7 @@ unlinkSendsToandFreeIf(sqInt targetMethodObject, sqInt freeIfTrue)
 				if (mapByte >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc += (mapByte & DisplacementMask);
+					mcpc += (mapByte & DisplacementMask) * 4;
 					if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation += mapByte & DisplacementMask;
@@ -13143,7 +9132,7 @@ unlinkSendsToandFreeIf(sqInt targetMethodObject, sqInt freeIfTrue)
 				}
 				else {
 					if (mapByte < (IsAnnotationExtension << AnnotationShift)) {
-						mcpc += ((mapByte - DisplacementX2N) << AnnotationShift);
+						mcpc += ((mapByte - DisplacementX2N) << AnnotationShift) * 4;
 					}
 				}
 				map -= 1;
@@ -13863,6 +9852,4587 @@ whereIsMaybeCodeThing(sqInt anOop)
 	return null;
 }
 
+	/* CogMIPSELCompiler>>#addiuR:R:C: */
+static sqInt NoDbgRegParms
+addiuRRC(AbstractInstruction * self_in_addiuRRC, sqInt destReg, sqInt srcReg, sqInt imm)
+{
+	return itypersrtsignedImmediate(self_in_addiuRRC, ADDIU, srcReg, destReg, imm);
+}
+
+	/* CogMIPSELCompiler>>#adduR:R:R: */
+static sqInt NoDbgRegParms
+adduRRR(AbstractInstruction * self_in_adduRRR, sqInt destReg, sqInt leftReg, sqInt rightReg)
+{
+	return rtypersrtrdsafunct(self_in_adduRRR, SPECIAL, leftReg, rightReg, destReg, 0, ADDU);
+}
+
+	/* CogMIPSELCompiler>>#andiR:R:C: */
+static sqInt NoDbgRegParms
+andiRRC(AbstractInstruction * self_in_andiRRC, sqInt destReg, sqInt srcReg, sqInt imm)
+{
+	return itypersrteitherImmediate(self_in_andiRRC, ANDI, srcReg, destReg, imm);
+}
+
+	/* CogMIPSELCompiler>>#andR:R:R: */
+static sqInt NoDbgRegParms
+andRRR(AbstractInstruction * self_in_andRRR, sqInt destReg, sqInt leftReg, sqInt rightReg)
+{
+	return rtypersrtrdsafunct(self_in_andRRR, SPECIAL, leftReg, rightReg, destReg, 0, AND);
+}
+
+	/* CogMIPSELCompiler>>#beqR:R:offset: */
+static sqInt NoDbgRegParms
+beqRRoffset(AbstractInstruction * self_in_beqRRoffset, sqInt leftReg, sqInt rightReg, sqInt offset)
+{
+	assert((offset & 3) == 0);
+	assert(((offset >= -131072) && (offset <= 0x1FFFF)));
+	return itypersrtsignedImmediate(self_in_beqRRoffset, BEQ, leftReg, rightReg, ((usqInt) offset) >> 2);
+}
+
+	/* CogMIPSELCompiler>>#bgezR:offset: */
+static sqInt NoDbgRegParms
+bgezRoffset(AbstractInstruction * self_in_bgezRoffset, sqInt cmpReg, sqInt offset)
+{
+	assert((offset & 3) == 0);
+	assert(((offset >= -131072) && (offset <= 0x1FFFF)));
+	return itypersrtsignedImmediate(self_in_bgezRoffset, REGIMM, cmpReg, BGEZ, ((usqInt) offset) >> 2);
+}
+
+	/* CogMIPSELCompiler>>#bgtzR:offset: */
+static sqInt NoDbgRegParms
+bgtzRoffset(AbstractInstruction * self_in_bgtzRoffset, sqInt cmpReg, sqInt offset)
+{
+	assert((offset & 3) == 0);
+	assert(((offset >= -131072) && (offset <= 0x1FFFF)));
+	return itypersrtsignedImmediate(self_in_bgtzRoffset, BGTZ, cmpReg, 0, ((usqInt) offset) >> 2);
+}
+
+	/* CogMIPSELCompiler>>#blezR:offset: */
+static sqInt NoDbgRegParms
+blezRoffset(AbstractInstruction * self_in_blezRoffset, sqInt cmpReg, sqInt offset)
+{
+	assert((offset & 3) == 0);
+	assert(((offset >= -131072) && (offset <= 0x1FFFF)));
+	return itypersrtsignedImmediate(self_in_blezRoffset, BLEZ, cmpReg, 0, ((usqInt) offset) >> 2);
+}
+
+	/* CogMIPSELCompiler>>#bltzR:offset: */
+static sqInt NoDbgRegParms
+bltzRoffset(AbstractInstruction * self_in_bltzRoffset, sqInt cmpReg, sqInt offset)
+{
+	assert((offset & 3) == 0);
+	assert(((offset >= -131072) && (offset <= 0x1FFFF)));
+	return itypersrtsignedImmediate(self_in_bltzRoffset, REGIMM, cmpReg, BLTZ, ((usqInt) offset) >> 2);
+}
+
+	/* CogMIPSELCompiler>>#bneR:R:offset: */
+static sqInt NoDbgRegParms
+bneRRoffset(AbstractInstruction * self_in_bneRRoffset, sqInt leftReg, sqInt rightReg, sqInt offset)
+{
+	assert((offset & 3) == 0);
+	assert(((offset >= -131072) && (offset <= 0x1FFFF)));
+	return itypersrtsignedImmediate(self_in_bneRRoffset, BNE, leftReg, rightReg, ((usqInt) offset) >> 2);
+}
+
+
+/*	See MIPSConstants initializeRegisters. */
+
+	/* CogMIPSELCompiler>>#callerSavedRegisterMask */
+static sqInt NoDbgRegParms
+callerSavedRegisterMask(AbstractInstruction * self_in_callerSavedRegisterMask)
+{
+    sqInt mask;
+
+	flag("OABI");
+	mask = 0;
+	mask = mask | (1 << S0);
+	mask = mask | (1 << S1);
+	mask = mask | (1 << S2);
+	mask = mask | (1 << S3);
+	mask = mask | (1 << S4);
+	mask = mask | (1 << S5);
+	mask = mask | (1 << S6);
+	mask = mask | (1 << S7);
+	return mask;
+}
+
+	/* CogMIPSELCompiler>>#callInstructionByteSize */
+static sqInt NoDbgRegParms
+callInstructionByteSize(AbstractInstruction * self_in_callInstructionByteSize)
+{
+	flag("todo");
+	return 16;
+}
+
+
+/*	csra - 16:	lui t9, high
+	csra - 12:	ori t9, low
+	csra - 8:	jalr t9
+	csra - 4:	nop (delay slot) */
+
+	/* CogMIPSELCompiler>>#callTargetFromReturnAddress: */
+static sqInt NoDbgRegParms
+callTargetFromReturnAddress(AbstractInstruction * self_in_callTargetFromReturnAddress, sqInt callSiteReturnAddress)
+{
+	assert((opcodeAtAddress(self_in_callTargetFromReturnAddress, callSiteReturnAddress - 16)) == LUI);
+	assert((opcodeAtAddress(self_in_callTargetFromReturnAddress, callSiteReturnAddress - 12)) == ORI);
+	assert((opcodeAtAddress(self_in_callTargetFromReturnAddress, callSiteReturnAddress - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_callTargetFromReturnAddress, callSiteReturnAddress - 8)) == JALR);
+	assert((longAt(callSiteReturnAddress - 4)) == (nop(self_in_callTargetFromReturnAddress)));
+	return literalAtAddress(self_in_callTargetFromReturnAddress, callSiteReturnAddress - 12);
+}
+
+	/* CogMIPSELCompiler>>#cmpC32RTempByteSize */
+static sqInt NoDbgRegParms
+cmpC32RTempByteSize(AbstractInstruction * self_in_cmpC32RTempByteSize)
+{
+	return 8;
+}
+
+
+/*	Each MIPS instruction has 4 bytes. Many abstract opcodes need more than
+	one instruction. Instructions that refer to constants and/or literals
+	depend on literals
+	being stored in-line or out-of-line.
+	
+	N.B. The ^N forms are to get around the bytecode compiler's long branch
+	limits which are exceeded when each case jumps around the otherwise. */
+
+	/* CogMIPSELCompiler>>#computeMaximumSize */
+static sqInt NoDbgRegParms
+computeMaximumSize(AbstractInstruction * self_in_computeMaximumSize)
+{
+	
+	switch ((self_in_computeMaximumSize->opcode)) {
+	case BrEqualRR:
+	case BrNotEqualRR:
+	case JumpR:
+	case Jump:
+	case JumpZero:
+	case JumpNonZero:
+	case JumpNegative:
+	case JumpNonNegative:
+	case JumpOverflow:
+	case JumpNoOverflow:
+	case JumpCarry:
+	case JumpNoCarry:
+	case JumpLess:
+	case JumpGreaterOrEqual:
+	case JumpGreater:
+	case JumpLessOrEqual:
+	case JumpBelow:
+	case JumpAboveOrEqual:
+	case JumpAbove:
+	case JumpBelowOrEqual:
+	case JumpFPEqual:
+	case JumpFPNotEqual:
+	case JumpFPLess:
+	case JumpFPGreaterOrEqual:
+	case JumpFPGreater:
+	case JumpFPLessOrEqual:
+	case JumpFPOrdered:
+	case JumpFPUnordered:
+	case RetN:
+	case MoveCqR:
+	case MoveCwR:
+	case MoveXbrRR:
+	case MoveRXbrR:
+	case PopR:
+	case PushR:
+	case ConvertRRd:
+		return 8;
+
+	case BrUnsignedLessRR:
+	case BrUnsignedLessEqualRR:
+	case BrUnsignedGreaterRR:
+	case BrUnsignedGreaterEqualRR:
+	case BrSignedLessRR:
+	case BrSignedLessEqualRR:
+	case BrSignedGreaterRR:
+	case BrSignedGreaterEqualRR:
+	case AddCqR:
+	case AndCqRR:
+	case OrCqR:
+	case SubCqR:
+	case TstCqR:
+	case XorCqR:
+	case AddCwR:
+	case AndCwR:
+	case OrCwR:
+	case SubCwR:
+	case XorCwR:
+	case LoadEffectiveAddressMwrR:
+	case MoveXwrRR:
+	case MoveRXwrR:
+	case PrefetchAw:
+		return 12;
+
+	case BrLongEqualRR:
+	case BrLongNotEqualRR:
+	case AndCqR:
+	case MoveRMwr:
+	case MoveMbrR:
+	case MoveRMbr:
+	case MoveMwrR:
+	case PushCw:
+	case PushCq:
+		return 16;
+
+	case MulRR:
+	case DivRR:
+	case MoveLowR:
+	case MoveHighR:
+	case Literal:
+	case Fill32:
+	case Nop:
+	case Stop:
+	case AddRR:
+	case AndRR:
+	case OrRR:
+	case XorRR:
+	case SubRR:
+	case NegateR:
+	case LogicalShiftLeftCqR:
+	case LogicalShiftRightCqR:
+	case ArithmeticShiftRightCqR:
+	case LogicalShiftLeftRR:
+	case LogicalShiftRightRR:
+	case ArithmeticShiftRightRR:
+	case AddRdRd:
+	case CmpRdRd:
+	case SubRdRd:
+	case MulRdRd:
+	case DivRdRd:
+	case SqrtRd:
+	case MoveRR:
+	case MoveRdRd:
+	case MoveM16rR:
+		return 4;
+
+	case Label:
+		return 0;
+
+	case AlignmentNops:
+		return (((self_in_computeMaximumSize->operands))[0]) - 4;
+
+	case Call:
+	case CallFull:
+	case JumpFull:
+	case JumpLong:
+	case JumpLongZero:
+	case JumpLongNonZero:
+		return 8 + 8;
+
+	case CmpCqR:
+	case CmpCwR:
+	case AddCheckOverflowCqR:
+	case SubCheckOverflowCqR:
+		return 28;
+
+	case CmpRR:
+	case AddCheckOverflowRR:
+	case SubCheckOverflowRR:
+	case MulCheckOverflowRR:
+		return 20;
+
+	case MoveAwR:
+	case MoveAbR:
+		return (isAddressRelativeToVarBase(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[0])
+			? 4
+			: 8 + 4);
+
+	case MoveRAw:
+	case MoveRAb:
+		return (isAddressRelativeToVarBase(self_in_computeMaximumSize, ((self_in_computeMaximumSize->operands))[1])
+			? 4
+			: 8 + 4);
+
+	case MoveRdM64r:
+	case MoveM64rRd:
+		return 8 + 4;
+
+	default:
+		error("Case not found and no otherwise clause");
+	}
+	return 0;
+}
+
+
+/*	Map a possibly abstract register into a concrete one. Abstract registers
+	(defined in CogAbstractOpcodes) are all negative. If registerIndex is
+	negative assume it is an abstract register. */
+/*	See MIPSConstants>>initializeRegisters for a description of the C ABI. */
+/*	Note we can fit all of the abstract registers in C preserved registers,
+	and not need to save or restore them at runtime calls. */
+
+	/* CogMIPSELCompiler>>#concreteRegister: */
+static sqInt NoDbgRegParms
+concreteRegister(AbstractInstruction * self_in_concreteRegister, sqInt registerIndex)
+{
+	
+	switch (registerIndex) {
+	case ReceiverResultReg:
+		return S0;
+
+	case Arg0Reg:
+		return S1;
+
+	case Arg1Reg:
+		return S2;
+
+	case ClassReg:
+		return S3;
+
+	case SendNumArgsReg:
+		return S4;
+
+	case TempReg:
+		return S5;
+
+	case VarBaseReg:
+		return S6;
+
+	case SPReg:
+		return SP;
+
+	case FPReg:
+		return FP;
+
+	case RISCTempReg:
+		return AT;
+
+	case LinkReg:
+		return RA;
+
+	default:
+		assert(((registerIndex >= R0) && (registerIndex <= R31)));
+		return registerIndex;
+
+	}
+}
+
+	/* CogMIPSELCompiler>>#concretizeAddCheckOverflowCqR */
+static usqInt NoDbgRegParms
+concretizeAddCheckOverflowCqR(AbstractInstruction * self_in_concretizeAddCheckOverflowCqR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    sqInt aWord4;
+    sqInt aWord5;
+    sqInt aWord6;
+    sqInt destReg;
+    sqInt leftReg;
+    unsigned long rightImm;
+
+	rightImm = ((self_in_concretizeAddCheckOverflowCqR->operands))[0];
+	destReg = (leftReg = concreteRegister(self_in_concretizeAddCheckOverflowCqR, ((self_in_concretizeAddCheckOverflowCqR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = luiRC(self_in_concretizeAddCheckOverflowCqR, AT, high16BitsOf(self_in_concretizeAddCheckOverflowCqR, rightImm));
+	((self_in_concretizeAddCheckOverflowCqR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = oriRRC(self_in_concretizeAddCheckOverflowCqR, AT, AT, low16BitsOf(self_in_concretizeAddCheckOverflowCqR, rightImm));
+	((self_in_concretizeAddCheckOverflowCqR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = adduRRR(self_in_concretizeAddCheckOverflowCqR, OverflowTemp1, leftReg, ZR);
+	((self_in_concretizeAddCheckOverflowCqR->machineCode))[8 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = adduRRR(self_in_concretizeAddCheckOverflowCqR, destReg, leftReg, AT);
+	((self_in_concretizeAddCheckOverflowCqR->machineCode))[12 / 4] = aWord3;
+	/* begin machineCodeAt:put: */
+	aWord4 = xorRRR(self_in_concretizeAddCheckOverflowCqR, OverflowTemp2, destReg, AT);
+	((self_in_concretizeAddCheckOverflowCqR->machineCode))[16 / 4] = aWord4;
+	/* begin machineCodeAt:put: */
+	aWord5 = xorRRR(self_in_concretizeAddCheckOverflowCqR, OverflowTemp1, destReg, OverflowTemp1);
+	((self_in_concretizeAddCheckOverflowCqR->machineCode))[20 / 4] = aWord5;
+	/* begin machineCodeAt:put: */
+	aWord6 = andRRR(self_in_concretizeAddCheckOverflowCqR, Overflow, OverflowTemp1, OverflowTemp2);
+	((self_in_concretizeAddCheckOverflowCqR->machineCode))[24 / 4] = aWord6;
+	return ((self_in_concretizeAddCheckOverflowCqR->machineCodeSize) = 28);
+}
+
+	/* CogMIPSELCompiler>>#concretizeAddCheckOverflowRR */
+static usqInt NoDbgRegParms
+concretizeAddCheckOverflowRR(AbstractInstruction * self_in_concretizeAddCheckOverflowRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    sqInt aWord4;
+    sqInt destReg;
+    sqInt leftReg;
+    sqInt rightReg;
+
+	rightReg = concreteRegister(self_in_concretizeAddCheckOverflowRR, ((self_in_concretizeAddCheckOverflowRR->operands))[0]);
+
+	/* Save original LHS */
+	destReg = (leftReg = concreteRegister(self_in_concretizeAddCheckOverflowRR, ((self_in_concretizeAddCheckOverflowRR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = adduRRR(self_in_concretizeAddCheckOverflowRR, OverflowTemp1, leftReg, ZR);
+	((self_in_concretizeAddCheckOverflowRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = adduRRR(self_in_concretizeAddCheckOverflowRR, destReg, leftReg, rightReg);
+	((self_in_concretizeAddCheckOverflowRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = xorRRR(self_in_concretizeAddCheckOverflowRR, OverflowTemp2, destReg, rightReg);
+	((self_in_concretizeAddCheckOverflowRR->machineCode))[8 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = xorRRR(self_in_concretizeAddCheckOverflowRR, OverflowTemp1, destReg, OverflowTemp1);
+	((self_in_concretizeAddCheckOverflowRR->machineCode))[12 / 4] = aWord3;
+	/* begin machineCodeAt:put: */
+	aWord4 = andRRR(self_in_concretizeAddCheckOverflowRR, Overflow, OverflowTemp1, OverflowTemp2);
+	((self_in_concretizeAddCheckOverflowRR->machineCode))[16 / 4] = aWord4;
+	return ((self_in_concretizeAddCheckOverflowRR->machineCodeSize) = 20);
+}
+
+	/* CogMIPSELCompiler>>#concretizeAddCqR */
+static usqInt NoDbgRegParms
+concretizeAddCqR(AbstractInstruction * self_in_concretizeAddCqR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt leftReg;
+    unsigned long rightImm;
+
+	rightImm = ((self_in_concretizeAddCqR->operands))[0];
+	destReg = (leftReg = concreteRegister(self_in_concretizeAddCqR, ((self_in_concretizeAddCqR->operands))[1]));
+	if (!(((rightImm >= -32768) && (rightImm <= 0x7FFF)))) {
+		return concretizeAddCwR(self_in_concretizeAddCqR);
+	}
+	/* begin machineCodeAt:put: */
+	aWord = addiuRRC(self_in_concretizeAddCqR, destReg, leftReg, rightImm);
+	((self_in_concretizeAddCqR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeAddCqR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeAddCwR */
+static usqInt NoDbgRegParms
+concretizeAddCwR(AbstractInstruction * self_in_concretizeAddCwR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt destReg;
+    sqInt leftReg;
+    unsigned long rightImm;
+
+	rightImm = ((self_in_concretizeAddCwR->operands))[0];
+	destReg = (leftReg = concreteRegister(self_in_concretizeAddCwR, ((self_in_concretizeAddCwR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = luiRC(self_in_concretizeAddCwR, AT, high16BitsOf(self_in_concretizeAddCwR, rightImm));
+	((self_in_concretizeAddCwR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = oriRRC(self_in_concretizeAddCwR, AT, AT, low16BitsOf(self_in_concretizeAddCwR, rightImm));
+	((self_in_concretizeAddCwR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = adduRRR(self_in_concretizeAddCwR, destReg, leftReg, AT);
+	((self_in_concretizeAddCwR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeAddCwR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeAddRR */
+static usqInt NoDbgRegParms
+concretizeAddRR(AbstractInstruction * self_in_concretizeAddRR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt leftReg;
+    sqInt rightReg;
+
+	rightReg = concreteRegister(self_in_concretizeAddRR, ((self_in_concretizeAddRR->operands))[0]);
+	destReg = (leftReg = concreteRegister(self_in_concretizeAddRR, ((self_in_concretizeAddRR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = adduRRR(self_in_concretizeAddRR, destReg, leftReg, rightReg);
+	((self_in_concretizeAddRR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeAddRR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeAlignmentNops */
+static AbstractInstruction * NoDbgRegParms
+concretizeAlignmentNops(AbstractInstruction * self_in_concretizeAlignmentNops)
+{
+    sqInt aWord;
+    sqInt p;
+
+	assert((((self_in_concretizeAlignmentNops->machineCodeSize)) % 4) == 0);
+	for (p = 0; p < ((self_in_concretizeAlignmentNops->machineCodeSize)); p += 4) {
+		/* begin machineCodeAt:put: */
+		aWord = nop(self_in_concretizeAlignmentNops);
+		((self_in_concretizeAlignmentNops->machineCode))[p / 4] = aWord;
+	}
+	return self_in_concretizeAlignmentNops;
+}
+
+	/* CogMIPSELCompiler>>#concretizeAndCqR */
+static usqInt NoDbgRegParms
+concretizeAndCqR(AbstractInstruction * self_in_concretizeAndCqR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt leftReg;
+    unsigned long rightImm;
+
+	rightImm = ((self_in_concretizeAndCqR->operands))[0];
+	destReg = (leftReg = concreteRegister(self_in_concretizeAndCqR, ((self_in_concretizeAndCqR->operands))[1]));
+	if (!(((rightImm >= -32768) && (rightImm <= 0x7FFF)))) {
+		return concretizeAndCwR(self_in_concretizeAndCqR);
+	}
+	/* begin machineCodeAt:put: */
+	aWord = andiRRC(self_in_concretizeAndCqR, destReg, leftReg, rightImm);
+	((self_in_concretizeAndCqR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeAndCqR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeAndCqRR */
+static usqInt NoDbgRegParms
+concretizeAndCqRR(AbstractInstruction * self_in_concretizeAndCqRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt dstReg;
+    sqInt srcReg;
+    unsigned long value;
+
+	value = ((self_in_concretizeAndCqRR->operands))[0];
+	srcReg = concreteRegister(self_in_concretizeAndCqRR, ((self_in_concretizeAndCqRR->operands))[1]);
+	dstReg = concreteRegister(self_in_concretizeAndCqRR, ((self_in_concretizeAndCqRR->operands))[2]);
+	/* begin machineCodeAt:put: */
+	aWord = luiRC(self_in_concretizeAndCqRR, AT, high16BitsOf(self_in_concretizeAndCqRR, value));
+	((self_in_concretizeAndCqRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = oriRRC(self_in_concretizeAndCqRR, AT, AT, low16BitsOf(self_in_concretizeAndCqRR, value));
+	((self_in_concretizeAndCqRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = andRRR(self_in_concretizeAndCqRR, dstReg, srcReg, AT);
+	((self_in_concretizeAndCqRR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeAndCqRR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeAndCwR */
+static usqInt NoDbgRegParms
+concretizeAndCwR(AbstractInstruction * self_in_concretizeAndCwR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt destReg;
+    sqInt leftReg;
+    unsigned long rightImm;
+
+	rightImm = ((self_in_concretizeAndCwR->operands))[0];
+	destReg = (leftReg = concreteRegister(self_in_concretizeAndCwR, ((self_in_concretizeAndCwR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = luiRC(self_in_concretizeAndCwR, AT, high16BitsOf(self_in_concretizeAndCwR, rightImm));
+	((self_in_concretizeAndCwR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = oriRRC(self_in_concretizeAndCwR, AT, AT, low16BitsOf(self_in_concretizeAndCwR, rightImm));
+	((self_in_concretizeAndCwR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = andRRR(self_in_concretizeAndCwR, destReg, leftReg, AT);
+	((self_in_concretizeAndCwR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeAndCwR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeAndRR */
+static usqInt NoDbgRegParms
+concretizeAndRR(AbstractInstruction * self_in_concretizeAndRR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt leftReg;
+    sqInt rightReg;
+
+	rightReg = concreteRegister(self_in_concretizeAndRR, ((self_in_concretizeAndRR->operands))[0]);
+	destReg = (leftReg = concreteRegister(self_in_concretizeAndRR, ((self_in_concretizeAndRR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = andRRR(self_in_concretizeAndRR, destReg, leftReg, rightReg);
+	((self_in_concretizeAndRR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeAndRR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeArithmeticShiftRightCqR */
+static usqInt NoDbgRegParms
+concretizeArithmeticShiftRightCqR(AbstractInstruction * self_in_concretizeArithmeticShiftRightCqR)
+{
+    sqInt aWord;
+    sqInt distance;
+    sqInt reg;
+
+	distance = (((((self_in_concretizeArithmeticShiftRightCqR->operands))[0]) < 0x1F) ? (((self_in_concretizeArithmeticShiftRightCqR->operands))[0]) : 0x1F);
+	reg = concreteRegister(self_in_concretizeArithmeticShiftRightCqR, ((self_in_concretizeArithmeticShiftRightCqR->operands))[1]);
+	/* begin machineCodeAt:put: */
+	aWord = sraRRC(self_in_concretizeArithmeticShiftRightCqR, reg, reg, distance);
+	((self_in_concretizeArithmeticShiftRightCqR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeArithmeticShiftRightCqR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeArithmeticShiftRightRR */
+static usqInt NoDbgRegParms
+concretizeArithmeticShiftRightRR(AbstractInstruction * self_in_concretizeArithmeticShiftRightRR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt distReg;
+
+	distReg = concreteRegister(self_in_concretizeArithmeticShiftRightRR, ((self_in_concretizeArithmeticShiftRightRR->operands))[0]);
+	destReg = concreteRegister(self_in_concretizeArithmeticShiftRightRR, ((self_in_concretizeArithmeticShiftRightRR->operands))[1]);
+	/* begin machineCodeAt:put: */
+	aWord = sravRRR(self_in_concretizeArithmeticShiftRightRR, destReg, destReg, distReg);
+	((self_in_concretizeArithmeticShiftRightRR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeArithmeticShiftRightRR->machineCodeSize) = 4);
+}
+
+
+/*	Generate concrete machine code for the instruction at actualAddress,
+	setting machineCodeSize, and answer the following address. */
+/*	Generate concrete machine code for the instruction at actualAddress,
+	setting machineCodeSize, and answer the following address. */
+
+	/* CogMIPSELCompiler>>#concretizeAt: */
+static sqInt NoDbgRegParms
+concretizeAt(AbstractInstruction * self_in_concretizeAt, sqInt actualAddress)
+{
+	assert((actualAddress % 4) == 0);
+	(self_in_concretizeAt->address) = actualAddress;
+	dispatchConcretize(self_in_concretizeAt);
+	assert((((self_in_concretizeAt->maxSize)) == null)
+	 || (((self_in_concretizeAt->maxSize)) >= ((self_in_concretizeAt->machineCodeSize))));
+	return actualAddress + ((self_in_concretizeAt->machineCodeSize));
+}
+
+	/* CogMIPSELCompiler>>#concretizeBrEqualRR */
+static usqInt NoDbgRegParms
+concretizeBrEqualRR(AbstractInstruction * self_in_concretizeBrEqualRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    AbstractInstruction *jumpTarget;
+    AbstractInstruction *jumpTarget1;
+    sqInt leftReg;
+    sqInt offset;
+    sqInt rightReg;
+
+	/* begin computeJumpTargetOffsetPlus: */
+	jumpTarget1 = ((AbstractInstruction *) (((self_in_concretizeBrEqualRR->operands))[0]));
+	assertSaneJumpTarget(jumpTarget1);
+	if ((addressIsInInstructions(jumpTarget1))
+	 || (jumpTarget1 == (methodLabel()))) {
+		jumpTarget1 = ((AbstractInstruction *) ((jumpTarget1->address)));
+	}
+	assert(jumpTarget1 != 0);
+	jumpTarget = jumpTarget1;
+	offset = (((int) jumpTarget)) - (((int) (((self_in_concretizeBrEqualRR->address)) + 4)));
+	leftReg = concreteRegister(self_in_concretizeBrEqualRR, ((self_in_concretizeBrEqualRR->operands))[1]);
+	rightReg = concreteRegister(self_in_concretizeBrEqualRR, ((self_in_concretizeBrEqualRR->operands))[2]);
+	/* begin machineCodeAt:put: */
+	aWord = beqRRoffset(self_in_concretizeBrEqualRR, leftReg, rightReg, offset);
+	((self_in_concretizeBrEqualRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = nop(self_in_concretizeBrEqualRR);
+	((self_in_concretizeBrEqualRR->machineCode))[4 / 4] = aWord1;
+	return ((self_in_concretizeBrEqualRR->machineCodeSize) = 8);
+}
+
+	/* CogMIPSELCompiler>>#concretizeBrLongEqualRR */
+static usqInt NoDbgRegParms
+concretizeBrLongEqualRR(AbstractInstruction * self_in_concretizeBrLongEqualRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    AbstractInstruction *jumpTarget;
+    usqInt jumpTargetAddr;
+    AbstractInstruction *jumpTargetInstruction;
+    sqInt leftReg;
+    sqInt rightReg;
+
+	/* begin longJumpTargetAddress */
+	jumpTarget = ((AbstractInstruction *) (((self_in_concretizeBrLongEqualRR->operands))[0]));
+	if ((addressIsInInstructions(jumpTarget))
+	 || (jumpTarget == (methodLabel()))) {
+		jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+	}
+	assert(jumpTarget != 0);
+	jumpTargetInstruction = jumpTarget;
+	flag("todo");
+	jumpTargetAddr = (((usqInt)jumpTargetInstruction)) & 0xFFFFFFF;
+	leftReg = concreteRegister(self_in_concretizeBrLongEqualRR, ((self_in_concretizeBrLongEqualRR->operands))[1]);
+	rightReg = concreteRegister(self_in_concretizeBrLongEqualRR, ((self_in_concretizeBrLongEqualRR->operands))[2]);
+	/* begin machineCodeAt:put: */
+	aWord = bneRRoffset(self_in_concretizeBrLongEqualRR, leftReg, rightReg, 12);
+	((self_in_concretizeBrLongEqualRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = nop(self_in_concretizeBrLongEqualRR);
+	((self_in_concretizeBrLongEqualRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = jA(self_in_concretizeBrLongEqualRR, jumpTargetAddr);
+	((self_in_concretizeBrLongEqualRR->machineCode))[8 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = nop(self_in_concretizeBrLongEqualRR);
+	((self_in_concretizeBrLongEqualRR->machineCode))[12 / 4] = aWord3;
+	return ((self_in_concretizeBrLongEqualRR->machineCodeSize) = 16);
+}
+
+	/* CogMIPSELCompiler>>#concretizeBrLongNotEqualRR */
+static usqInt NoDbgRegParms
+concretizeBrLongNotEqualRR(AbstractInstruction * self_in_concretizeBrLongNotEqualRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    AbstractInstruction *jumpTarget;
+    usqInt jumpTargetAddr;
+    AbstractInstruction *jumpTargetInstruction;
+    sqInt leftReg;
+    sqInt rightReg;
+
+	/* begin longJumpTargetAddress */
+	jumpTarget = ((AbstractInstruction *) (((self_in_concretizeBrLongNotEqualRR->operands))[0]));
+	if ((addressIsInInstructions(jumpTarget))
+	 || (jumpTarget == (methodLabel()))) {
+		jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+	}
+	assert(jumpTarget != 0);
+	jumpTargetInstruction = jumpTarget;
+	flag("todo");
+	jumpTargetAddr = (((usqInt)jumpTargetInstruction)) & 0xFFFFFFF;
+	leftReg = concreteRegister(self_in_concretizeBrLongNotEqualRR, ((self_in_concretizeBrLongNotEqualRR->operands))[1]);
+	rightReg = concreteRegister(self_in_concretizeBrLongNotEqualRR, ((self_in_concretizeBrLongNotEqualRR->operands))[2]);
+	/* begin machineCodeAt:put: */
+	aWord = beqRRoffset(self_in_concretizeBrLongNotEqualRR, leftReg, rightReg, 12);
+	((self_in_concretizeBrLongNotEqualRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = nop(self_in_concretizeBrLongNotEqualRR);
+	((self_in_concretizeBrLongNotEqualRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = jA(self_in_concretizeBrLongNotEqualRR, jumpTargetAddr);
+	((self_in_concretizeBrLongNotEqualRR->machineCode))[8 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = nop(self_in_concretizeBrLongNotEqualRR);
+	((self_in_concretizeBrLongNotEqualRR->machineCode))[12 / 4] = aWord3;
+	return ((self_in_concretizeBrLongNotEqualRR->machineCodeSize) = 16);
+}
+
+	/* CogMIPSELCompiler>>#concretizeBrNotEqualRR */
+static usqInt NoDbgRegParms
+concretizeBrNotEqualRR(AbstractInstruction * self_in_concretizeBrNotEqualRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    AbstractInstruction *jumpTarget;
+    AbstractInstruction *jumpTarget1;
+    sqInt leftReg;
+    sqInt offset;
+    sqInt rightReg;
+
+	/* begin computeJumpTargetOffsetPlus: */
+	jumpTarget1 = ((AbstractInstruction *) (((self_in_concretizeBrNotEqualRR->operands))[0]));
+	assertSaneJumpTarget(jumpTarget1);
+	if ((addressIsInInstructions(jumpTarget1))
+	 || (jumpTarget1 == (methodLabel()))) {
+		jumpTarget1 = ((AbstractInstruction *) ((jumpTarget1->address)));
+	}
+	assert(jumpTarget1 != 0);
+	jumpTarget = jumpTarget1;
+	offset = (((int) jumpTarget)) - (((int) (((self_in_concretizeBrNotEqualRR->address)) + 4)));
+	leftReg = concreteRegister(self_in_concretizeBrNotEqualRR, ((self_in_concretizeBrNotEqualRR->operands))[1]);
+	rightReg = concreteRegister(self_in_concretizeBrNotEqualRR, ((self_in_concretizeBrNotEqualRR->operands))[2]);
+	/* begin machineCodeAt:put: */
+	aWord = bneRRoffset(self_in_concretizeBrNotEqualRR, leftReg, rightReg, offset);
+	((self_in_concretizeBrNotEqualRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = nop(self_in_concretizeBrNotEqualRR);
+	((self_in_concretizeBrNotEqualRR->machineCode))[4 / 4] = aWord1;
+	return ((self_in_concretizeBrNotEqualRR->machineCodeSize) = 8);
+}
+
+	/* CogMIPSELCompiler>>#concretizeBrSignedGreaterEqualRR */
+static usqInt NoDbgRegParms
+concretizeBrSignedGreaterEqualRR(AbstractInstruction * self_in_concretizeBrSignedGreaterEqualRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    AbstractInstruction *jumpTarget;
+    AbstractInstruction *jumpTarget1;
+    sqInt leftReg;
+    sqInt offset;
+    sqInt rightReg;
+
+	/* begin computeJumpTargetOffsetPlus: */
+	jumpTarget1 = ((AbstractInstruction *) (((self_in_concretizeBrSignedGreaterEqualRR->operands))[0]));
+	assertSaneJumpTarget(jumpTarget1);
+	if ((addressIsInInstructions(jumpTarget1))
+	 || (jumpTarget1 == (methodLabel()))) {
+		jumpTarget1 = ((AbstractInstruction *) ((jumpTarget1->address)));
+	}
+	assert(jumpTarget1 != 0);
+	jumpTarget = jumpTarget1;
+	offset = (((int) jumpTarget)) - (((int) (((self_in_concretizeBrSignedGreaterEqualRR->address)) + 8)));
+	leftReg = concreteRegister(self_in_concretizeBrSignedGreaterEqualRR, ((self_in_concretizeBrSignedGreaterEqualRR->operands))[1]);
+	rightReg = concreteRegister(self_in_concretizeBrSignedGreaterEqualRR, ((self_in_concretizeBrSignedGreaterEqualRR->operands))[2]);
+	assert(leftReg != BranchTemp);
+	assert(rightReg != BranchTemp);
+	/* begin machineCodeAt:put: */
+	aWord = sltRRR(self_in_concretizeBrSignedGreaterEqualRR, BranchTemp, leftReg, rightReg);
+	((self_in_concretizeBrSignedGreaterEqualRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = beqRRoffset(self_in_concretizeBrSignedGreaterEqualRR, BranchTemp, ZR, offset);
+	((self_in_concretizeBrSignedGreaterEqualRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = nop(self_in_concretizeBrSignedGreaterEqualRR);
+	((self_in_concretizeBrSignedGreaterEqualRR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeBrSignedGreaterEqualRR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeBrSignedGreaterRR */
+static usqInt NoDbgRegParms
+concretizeBrSignedGreaterRR(AbstractInstruction * self_in_concretizeBrSignedGreaterRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    AbstractInstruction *jumpTarget;
+    AbstractInstruction *jumpTarget1;
+    sqInt leftReg;
+    sqInt offset;
+    sqInt rightReg;
+
+	/* begin computeJumpTargetOffsetPlus: */
+	jumpTarget1 = ((AbstractInstruction *) (((self_in_concretizeBrSignedGreaterRR->operands))[0]));
+	assertSaneJumpTarget(jumpTarget1);
+	if ((addressIsInInstructions(jumpTarget1))
+	 || (jumpTarget1 == (methodLabel()))) {
+		jumpTarget1 = ((AbstractInstruction *) ((jumpTarget1->address)));
+	}
+	assert(jumpTarget1 != 0);
+	jumpTarget = jumpTarget1;
+	offset = (((int) jumpTarget)) - (((int) (((self_in_concretizeBrSignedGreaterRR->address)) + 8)));
+	leftReg = concreteRegister(self_in_concretizeBrSignedGreaterRR, ((self_in_concretizeBrSignedGreaterRR->operands))[1]);
+	rightReg = concreteRegister(self_in_concretizeBrSignedGreaterRR, ((self_in_concretizeBrSignedGreaterRR->operands))[2]);
+	assert(leftReg != BranchTemp);
+	assert(rightReg != BranchTemp);
+	/* begin machineCodeAt:put: */
+	aWord = sltRRR(self_in_concretizeBrSignedGreaterRR, BranchTemp, rightReg, leftReg);
+	((self_in_concretizeBrSignedGreaterRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = bneRRoffset(self_in_concretizeBrSignedGreaterRR, BranchTemp, ZR, offset);
+	((self_in_concretizeBrSignedGreaterRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = nop(self_in_concretizeBrSignedGreaterRR);
+	((self_in_concretizeBrSignedGreaterRR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeBrSignedGreaterRR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeBrSignedLessEqualRR */
+static usqInt NoDbgRegParms
+concretizeBrSignedLessEqualRR(AbstractInstruction * self_in_concretizeBrSignedLessEqualRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    AbstractInstruction *jumpTarget;
+    AbstractInstruction *jumpTarget1;
+    sqInt leftReg;
+    sqInt offset;
+    sqInt rightReg;
+
+	/* begin computeJumpTargetOffsetPlus: */
+	jumpTarget1 = ((AbstractInstruction *) (((self_in_concretizeBrSignedLessEqualRR->operands))[0]));
+	assertSaneJumpTarget(jumpTarget1);
+	if ((addressIsInInstructions(jumpTarget1))
+	 || (jumpTarget1 == (methodLabel()))) {
+		jumpTarget1 = ((AbstractInstruction *) ((jumpTarget1->address)));
+	}
+	assert(jumpTarget1 != 0);
+	jumpTarget = jumpTarget1;
+	offset = (((int) jumpTarget)) - (((int) (((self_in_concretizeBrSignedLessEqualRR->address)) + 8)));
+	leftReg = concreteRegister(self_in_concretizeBrSignedLessEqualRR, ((self_in_concretizeBrSignedLessEqualRR->operands))[1]);
+	rightReg = concreteRegister(self_in_concretizeBrSignedLessEqualRR, ((self_in_concretizeBrSignedLessEqualRR->operands))[2]);
+	assert(leftReg != BranchTemp);
+	assert(rightReg != BranchTemp);
+	/* begin machineCodeAt:put: */
+	aWord = sltRRR(self_in_concretizeBrSignedLessEqualRR, BranchTemp, rightReg, leftReg);
+	((self_in_concretizeBrSignedLessEqualRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = beqRRoffset(self_in_concretizeBrSignedLessEqualRR, BranchTemp, ZR, offset);
+	((self_in_concretizeBrSignedLessEqualRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = nop(self_in_concretizeBrSignedLessEqualRR);
+	((self_in_concretizeBrSignedLessEqualRR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeBrSignedLessEqualRR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeBrSignedLessRR */
+static usqInt NoDbgRegParms
+concretizeBrSignedLessRR(AbstractInstruction * self_in_concretizeBrSignedLessRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    AbstractInstruction *jumpTarget;
+    AbstractInstruction *jumpTarget1;
+    sqInt leftReg;
+    sqInt offset;
+    sqInt rightReg;
+
+	/* begin computeJumpTargetOffsetPlus: */
+	jumpTarget1 = ((AbstractInstruction *) (((self_in_concretizeBrSignedLessRR->operands))[0]));
+	assertSaneJumpTarget(jumpTarget1);
+	if ((addressIsInInstructions(jumpTarget1))
+	 || (jumpTarget1 == (methodLabel()))) {
+		jumpTarget1 = ((AbstractInstruction *) ((jumpTarget1->address)));
+	}
+	assert(jumpTarget1 != 0);
+	jumpTarget = jumpTarget1;
+	offset = (((int) jumpTarget)) - (((int) (((self_in_concretizeBrSignedLessRR->address)) + 8)));
+	leftReg = concreteRegister(self_in_concretizeBrSignedLessRR, ((self_in_concretizeBrSignedLessRR->operands))[1]);
+	rightReg = concreteRegister(self_in_concretizeBrSignedLessRR, ((self_in_concretizeBrSignedLessRR->operands))[2]);
+	assert(leftReg != BranchTemp);
+	assert(rightReg != BranchTemp);
+	/* begin machineCodeAt:put: */
+	aWord = sltRRR(self_in_concretizeBrSignedLessRR, BranchTemp, leftReg, rightReg);
+	((self_in_concretizeBrSignedLessRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = bneRRoffset(self_in_concretizeBrSignedLessRR, BranchTemp, ZR, offset);
+	((self_in_concretizeBrSignedLessRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = nop(self_in_concretizeBrSignedLessRR);
+	((self_in_concretizeBrSignedLessRR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeBrSignedLessRR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeBrUnsignedGreaterEqualRR */
+static usqInt NoDbgRegParms
+concretizeBrUnsignedGreaterEqualRR(AbstractInstruction * self_in_concretizeBrUnsignedGreaterEqualRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    AbstractInstruction *jumpTarget;
+    AbstractInstruction *jumpTarget1;
+    sqInt leftReg;
+    sqInt offset;
+    sqInt rightReg;
+
+	/* begin computeJumpTargetOffsetPlus: */
+	jumpTarget1 = ((AbstractInstruction *) (((self_in_concretizeBrUnsignedGreaterEqualRR->operands))[0]));
+	assertSaneJumpTarget(jumpTarget1);
+	if ((addressIsInInstructions(jumpTarget1))
+	 || (jumpTarget1 == (methodLabel()))) {
+		jumpTarget1 = ((AbstractInstruction *) ((jumpTarget1->address)));
+	}
+	assert(jumpTarget1 != 0);
+	jumpTarget = jumpTarget1;
+	offset = (((int) jumpTarget)) - (((int) (((self_in_concretizeBrUnsignedGreaterEqualRR->address)) + 8)));
+	leftReg = concreteRegister(self_in_concretizeBrUnsignedGreaterEqualRR, ((self_in_concretizeBrUnsignedGreaterEqualRR->operands))[1]);
+	rightReg = concreteRegister(self_in_concretizeBrUnsignedGreaterEqualRR, ((self_in_concretizeBrUnsignedGreaterEqualRR->operands))[2]);
+	assert(leftReg != BranchTemp);
+	assert(rightReg != BranchTemp);
+	/* begin machineCodeAt:put: */
+	aWord = sltuRRR(self_in_concretizeBrUnsignedGreaterEqualRR, BranchTemp, leftReg, rightReg);
+	((self_in_concretizeBrUnsignedGreaterEqualRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = beqRRoffset(self_in_concretizeBrUnsignedGreaterEqualRR, BranchTemp, ZR, offset);
+	((self_in_concretizeBrUnsignedGreaterEqualRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = nop(self_in_concretizeBrUnsignedGreaterEqualRR);
+	((self_in_concretizeBrUnsignedGreaterEqualRR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeBrUnsignedGreaterEqualRR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeBrUnsignedGreaterRR */
+static usqInt NoDbgRegParms
+concretizeBrUnsignedGreaterRR(AbstractInstruction * self_in_concretizeBrUnsignedGreaterRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    AbstractInstruction *jumpTarget;
+    AbstractInstruction *jumpTarget1;
+    sqInt leftReg;
+    sqInt offset;
+    sqInt rightReg;
+
+	/* begin computeJumpTargetOffsetPlus: */
+	jumpTarget1 = ((AbstractInstruction *) (((self_in_concretizeBrUnsignedGreaterRR->operands))[0]));
+	assertSaneJumpTarget(jumpTarget1);
+	if ((addressIsInInstructions(jumpTarget1))
+	 || (jumpTarget1 == (methodLabel()))) {
+		jumpTarget1 = ((AbstractInstruction *) ((jumpTarget1->address)));
+	}
+	assert(jumpTarget1 != 0);
+	jumpTarget = jumpTarget1;
+	offset = (((int) jumpTarget)) - (((int) (((self_in_concretizeBrUnsignedGreaterRR->address)) + 8)));
+	leftReg = concreteRegister(self_in_concretizeBrUnsignedGreaterRR, ((self_in_concretizeBrUnsignedGreaterRR->operands))[1]);
+	rightReg = concreteRegister(self_in_concretizeBrUnsignedGreaterRR, ((self_in_concretizeBrUnsignedGreaterRR->operands))[2]);
+	assert(leftReg != BranchTemp);
+	assert(rightReg != BranchTemp);
+	/* begin machineCodeAt:put: */
+	aWord = sltuRRR(self_in_concretizeBrUnsignedGreaterRR, BranchTemp, rightReg, leftReg);
+	((self_in_concretizeBrUnsignedGreaterRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = bneRRoffset(self_in_concretizeBrUnsignedGreaterRR, BranchTemp, ZR, offset);
+	((self_in_concretizeBrUnsignedGreaterRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = nop(self_in_concretizeBrUnsignedGreaterRR);
+	((self_in_concretizeBrUnsignedGreaterRR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeBrUnsignedGreaterRR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeBrUnsignedLessEqualRR */
+static usqInt NoDbgRegParms
+concretizeBrUnsignedLessEqualRR(AbstractInstruction * self_in_concretizeBrUnsignedLessEqualRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    AbstractInstruction *jumpTarget;
+    AbstractInstruction *jumpTarget1;
+    sqInt leftReg;
+    sqInt offset;
+    sqInt rightReg;
+
+	/* begin computeJumpTargetOffsetPlus: */
+	jumpTarget1 = ((AbstractInstruction *) (((self_in_concretizeBrUnsignedLessEqualRR->operands))[0]));
+	assertSaneJumpTarget(jumpTarget1);
+	if ((addressIsInInstructions(jumpTarget1))
+	 || (jumpTarget1 == (methodLabel()))) {
+		jumpTarget1 = ((AbstractInstruction *) ((jumpTarget1->address)));
+	}
+	assert(jumpTarget1 != 0);
+	jumpTarget = jumpTarget1;
+	offset = (((int) jumpTarget)) - (((int) (((self_in_concretizeBrUnsignedLessEqualRR->address)) + 8)));
+	leftReg = concreteRegister(self_in_concretizeBrUnsignedLessEqualRR, ((self_in_concretizeBrUnsignedLessEqualRR->operands))[1]);
+	rightReg = concreteRegister(self_in_concretizeBrUnsignedLessEqualRR, ((self_in_concretizeBrUnsignedLessEqualRR->operands))[2]);
+	assert(leftReg != BranchTemp);
+	assert(rightReg != BranchTemp);
+	/* begin machineCodeAt:put: */
+	aWord = sltuRRR(self_in_concretizeBrUnsignedLessEqualRR, BranchTemp, rightReg, leftReg);
+	((self_in_concretizeBrUnsignedLessEqualRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = beqRRoffset(self_in_concretizeBrUnsignedLessEqualRR, BranchTemp, ZR, offset);
+	((self_in_concretizeBrUnsignedLessEqualRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = nop(self_in_concretizeBrUnsignedLessEqualRR);
+	((self_in_concretizeBrUnsignedLessEqualRR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeBrUnsignedLessEqualRR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeBrUnsignedLessRR */
+static usqInt NoDbgRegParms
+concretizeBrUnsignedLessRR(AbstractInstruction * self_in_concretizeBrUnsignedLessRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    AbstractInstruction *jumpTarget;
+    AbstractInstruction *jumpTarget1;
+    sqInt leftReg;
+    sqInt offset;
+    sqInt rightReg;
+
+	/* begin computeJumpTargetOffsetPlus: */
+	jumpTarget1 = ((AbstractInstruction *) (((self_in_concretizeBrUnsignedLessRR->operands))[0]));
+	assertSaneJumpTarget(jumpTarget1);
+	if ((addressIsInInstructions(jumpTarget1))
+	 || (jumpTarget1 == (methodLabel()))) {
+		jumpTarget1 = ((AbstractInstruction *) ((jumpTarget1->address)));
+	}
+	assert(jumpTarget1 != 0);
+	jumpTarget = jumpTarget1;
+	offset = (((int) jumpTarget)) - (((int) (((self_in_concretizeBrUnsignedLessRR->address)) + 8)));
+	leftReg = concreteRegister(self_in_concretizeBrUnsignedLessRR, ((self_in_concretizeBrUnsignedLessRR->operands))[1]);
+	rightReg = concreteRegister(self_in_concretizeBrUnsignedLessRR, ((self_in_concretizeBrUnsignedLessRR->operands))[2]);
+	assert(leftReg != BranchTemp);
+	assert(rightReg != BranchTemp);
+	/* begin machineCodeAt:put: */
+	aWord = sltuRRR(self_in_concretizeBrUnsignedLessRR, BranchTemp, leftReg, rightReg);
+	((self_in_concretizeBrUnsignedLessRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = bneRRoffset(self_in_concretizeBrUnsignedLessRR, BranchTemp, ZR, offset);
+	((self_in_concretizeBrUnsignedLessRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = nop(self_in_concretizeBrUnsignedLessRR);
+	((self_in_concretizeBrUnsignedLessRR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeBrUnsignedLessRR->machineCodeSize) = 12);
+}
+
+
+/*	Call is used only for calls within code-space, See CallFull for general
+	anywhere in address space calling
+ */
+/*	Relative branches in MIPS have a displacement of +/- 131kB (signed 18
+	bits), which is too small to cover
+	the method zone. */
+
+	/* CogMIPSELCompiler>>#concretizeCall */
+static usqInt NoDbgRegParms
+concretizeCall(AbstractInstruction * self_in_concretizeCall)
+{
+	return concretizeCallFull(self_in_concretizeCall);
+}
+
+	/* CogMIPSELCompiler>>#concretizeCallFull */
+static usqInt NoDbgRegParms
+concretizeCallFull(AbstractInstruction * self_in_concretizeCallFull)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    AbstractInstruction *jumpTarget;
+    usqInt jumpTargetAddr;
+    AbstractInstruction *jumpTargetInstruction;
+
+	/* begin longJumpTargetAddress */
+	jumpTarget = ((AbstractInstruction *) (((self_in_concretizeCallFull->operands))[0]));
+	if ((addressIsInInstructions(jumpTarget))
+	 || (jumpTarget == (methodLabel()))) {
+		jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+	}
+	assert(jumpTarget != 0);
+	jumpTargetInstruction = jumpTarget;
+	jumpTargetAddr = ((usqInt)jumpTargetInstruction);
+	/* begin machineCodeAt:put: */
+	aWord = luiRC(self_in_concretizeCallFull, TargetReg, high16BitsOf(self_in_concretizeCallFull, jumpTargetAddr));
+	((self_in_concretizeCallFull->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = oriRRC(self_in_concretizeCallFull, TargetReg, TargetReg, low16BitsOf(self_in_concretizeCallFull, jumpTargetAddr));
+	((self_in_concretizeCallFull->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = jalR(self_in_concretizeCallFull, TargetReg);
+	((self_in_concretizeCallFull->machineCode))[8 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = nop(self_in_concretizeCallFull);
+	((self_in_concretizeCallFull->machineCode))[12 / 4] = aWord3;
+	return ((self_in_concretizeCallFull->machineCodeSize) = 16);
+}
+
+	/* CogMIPSELCompiler>>#concretizeCmpCqR */
+static sqInt NoDbgRegParms
+concretizeCmpCqR(AbstractInstruction * self_in_concretizeCmpCqR)
+{
+	return concretizeCmpCwR(self_in_concretizeCmpCqR);
+}
+
+	/* CogMIPSELCompiler>>#concretizeCmpCwR */
+static sqInt NoDbgRegParms
+concretizeCmpCwR(AbstractInstruction * self_in_concretizeCmpCwR)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeCmpRR */
+static sqInt NoDbgRegParms
+concretizeCmpRR(AbstractInstruction * self_in_concretizeCmpRR)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeDivRR */
+static usqInt NoDbgRegParms
+concretizeDivRR(AbstractInstruction * self_in_concretizeDivRR)
+{
+    sqInt aWord;
+    sqInt dividendReg;
+    sqInt divisorReg;
+
+	dividendReg = concreteRegister(self_in_concretizeDivRR, ((self_in_concretizeDivRR->operands))[0]);
+	divisorReg = concreteRegister(self_in_concretizeDivRR, ((self_in_concretizeDivRR->operands))[1]);
+	/* begin machineCodeAt:put: */
+	aWord = divRR(self_in_concretizeDivRR, dividendReg, divisorReg);
+	((self_in_concretizeDivRR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeDivRR->machineCodeSize) = 4);
+}
+
+
+/*	fill with operand 0 according to the processor's endianness.
+	You might think this is bogus and we should fill with stop instrurctions
+	instead, but this is used to leave room for a CMBlock header before the
+	code for a block;
+	the gaps get filled in by fillInBlockHeadersAt: after code has been
+	generated.  */
+
+	/* CogMIPSELCompiler>>#concretizeFill32 */
+static usqInt NoDbgRegParms
+concretizeFill32(AbstractInstruction * self_in_concretizeFill32)
+{
+    sqInt aWord;
+
+	/* begin machineCodeAt:put: */
+	aWord = ((self_in_concretizeFill32->operands))[0];
+	((self_in_concretizeFill32->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeFill32->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeJump */
+static usqInt NoDbgRegParms
+concretizeJump(AbstractInstruction * self_in_concretizeJump)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    AbstractInstruction *jumpTarget;
+    AbstractInstruction *jumpTarget1;
+    sqInt offset;
+
+	/* begin computeJumpTargetOffsetPlus: */
+	jumpTarget1 = ((AbstractInstruction *) (((self_in_concretizeJump->operands))[0]));
+	assertSaneJumpTarget(jumpTarget1);
+	if ((addressIsInInstructions(jumpTarget1))
+	 || (jumpTarget1 == (methodLabel()))) {
+		jumpTarget1 = ((AbstractInstruction *) ((jumpTarget1->address)));
+	}
+	assert(jumpTarget1 != 0);
+	jumpTarget = jumpTarget1;
+	offset = (((int) jumpTarget)) - (((int) (((self_in_concretizeJump->address)) + 4)));
+	flag("BranchRange");
+	/* begin machineCodeAt:put: */
+	aWord = beqRRoffset(self_in_concretizeJump, ZR, ZR, offset);
+	((self_in_concretizeJump->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = nop(self_in_concretizeJump);
+	((self_in_concretizeJump->machineCode))[4 / 4] = aWord1;
+	return ((self_in_concretizeJump->machineCodeSize) = 8);
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpFull */
+static usqInt NoDbgRegParms
+concretizeJumpFull(AbstractInstruction * self_in_concretizeJumpFull)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    AbstractInstruction *jumpTarget;
+    usqInt jumpTargetAddr;
+    AbstractInstruction *jumpTargetInstruction;
+
+	/* begin longJumpTargetAddress */
+	jumpTarget = ((AbstractInstruction *) (((self_in_concretizeJumpFull->operands))[0]));
+	if ((addressIsInInstructions(jumpTarget))
+	 || (jumpTarget == (methodLabel()))) {
+		jumpTarget = ((AbstractInstruction *) ((jumpTarget->address)));
+	}
+	assert(jumpTarget != 0);
+	jumpTargetInstruction = jumpTarget;
+	jumpTargetAddr = ((usqInt)jumpTargetInstruction);
+	/* begin machineCodeAt:put: */
+	aWord = luiRC(self_in_concretizeJumpFull, TargetReg, high16BitsOf(self_in_concretizeJumpFull, jumpTargetAddr));
+	((self_in_concretizeJumpFull->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = oriRRC(self_in_concretizeJumpFull, TargetReg, TargetReg, low16BitsOf(self_in_concretizeJumpFull, jumpTargetAddr));
+	((self_in_concretizeJumpFull->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = jR(self_in_concretizeJumpFull, TargetReg);
+	((self_in_concretizeJumpFull->machineCode))[8 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = nop(self_in_concretizeJumpFull);
+	((self_in_concretizeJumpFull->machineCode))[12 / 4] = aWord3;
+	return ((self_in_concretizeJumpFull->machineCodeSize) = 16);
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpLong */
+static usqInt NoDbgRegParms
+concretizeJumpLong(AbstractInstruction * self_in_concretizeJumpLong)
+{
+	return concretizeJumpFull(self_in_concretizeJumpLong);
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpLongNonZero */
+static sqInt NoDbgRegParms
+concretizeJumpLongNonZero(AbstractInstruction * self_in_concretizeJumpLongNonZero)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpLongZero */
+static sqInt NoDbgRegParms
+concretizeJumpLongZero(AbstractInstruction * self_in_concretizeJumpLongZero)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpNonZero */
+static sqInt NoDbgRegParms
+concretizeJumpNonZero(AbstractInstruction * self_in_concretizeJumpNonZero)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpNoOverflow */
+static sqInt NoDbgRegParms
+concretizeJumpNoOverflow(AbstractInstruction * self_in_concretizeJumpNoOverflow)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpOverflow */
+static sqInt NoDbgRegParms
+concretizeJumpOverflow(AbstractInstruction * self_in_concretizeJumpOverflow)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpR */
+static usqInt NoDbgRegParms
+concretizeJumpR(AbstractInstruction * self_in_concretizeJumpR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt reg;
+
+	flag("OABI");
+	reg = concreteRegister(self_in_concretizeJumpR, ((self_in_concretizeJumpR->operands))[0]);
+	/* begin machineCodeAt:put: */
+	aWord = jR(self_in_concretizeJumpR, reg);
+	((self_in_concretizeJumpR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = nop(self_in_concretizeJumpR);
+	((self_in_concretizeJumpR->machineCode))[4 / 4] = aWord1;
+	return ((self_in_concretizeJumpR->machineCodeSize) = 8);
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpSignedGreaterEqual */
+static sqInt NoDbgRegParms
+concretizeJumpSignedGreaterEqual(AbstractInstruction * self_in_concretizeJumpSignedGreaterEqual)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpSignedGreaterThan */
+static sqInt NoDbgRegParms
+concretizeJumpSignedGreaterThan(AbstractInstruction * self_in_concretizeJumpSignedGreaterThan)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpSignedLessEqual */
+static sqInt NoDbgRegParms
+concretizeJumpSignedLessEqual(AbstractInstruction * self_in_concretizeJumpSignedLessEqual)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpSignedLessThan */
+static sqInt NoDbgRegParms
+concretizeJumpSignedLessThan(AbstractInstruction * self_in_concretizeJumpSignedLessThan)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpUnsignedGreaterEqual */
+static sqInt NoDbgRegParms
+concretizeJumpUnsignedGreaterEqual(AbstractInstruction * self_in_concretizeJumpUnsignedGreaterEqual)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpUnsignedGreaterThan */
+static sqInt NoDbgRegParms
+concretizeJumpUnsignedGreaterThan(AbstractInstruction * self_in_concretizeJumpUnsignedGreaterThan)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpUnsignedLessEqual */
+static sqInt NoDbgRegParms
+concretizeJumpUnsignedLessEqual(AbstractInstruction * self_in_concretizeJumpUnsignedLessEqual)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpUnsignedLessThan */
+static sqInt NoDbgRegParms
+concretizeJumpUnsignedLessThan(AbstractInstruction * self_in_concretizeJumpUnsignedLessThan)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeJumpZero */
+static sqInt NoDbgRegParms
+concretizeJumpZero(AbstractInstruction * self_in_concretizeJumpZero)
+{
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeLoadEffectiveAddressMwrR */
+static usqInt NoDbgRegParms
+concretizeLoadEffectiveAddressMwrR(AbstractInstruction * self_in_concretizeLoadEffectiveAddressMwrR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    sqInt baseReg;
+    sqInt destReg;
+    sqInt offset;
+
+	offset = ((self_in_concretizeLoadEffectiveAddressMwrR->operands))[0];
+	baseReg = concreteRegister(self_in_concretizeLoadEffectiveAddressMwrR, ((self_in_concretizeLoadEffectiveAddressMwrR->operands))[1]);
+	destReg = concreteRegister(self_in_concretizeLoadEffectiveAddressMwrR, ((self_in_concretizeLoadEffectiveAddressMwrR->operands))[2]);
+	if (isShortOffset(self_in_concretizeLoadEffectiveAddressMwrR, offset)) {
+		/* begin machineCodeAt:put: */
+		aWord = addiuRRC(self_in_concretizeLoadEffectiveAddressMwrR, destReg, baseReg, offset);
+		((self_in_concretizeLoadEffectiveAddressMwrR->machineCode))[0 / 4] = aWord;
+		return ((self_in_concretizeLoadEffectiveAddressMwrR->machineCodeSize) = 4);
+	}
+	/* begin machineCodeAt:put: */
+	aWord1 = luiRC(self_in_concretizeLoadEffectiveAddressMwrR, AT, high16BitsOf(self_in_concretizeLoadEffectiveAddressMwrR, offset));
+	((self_in_concretizeLoadEffectiveAddressMwrR->machineCode))[0 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = oriRRC(self_in_concretizeLoadEffectiveAddressMwrR, AT, AT, low16BitsOf(self_in_concretizeLoadEffectiveAddressMwrR, offset));
+	((self_in_concretizeLoadEffectiveAddressMwrR->machineCode))[4 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = adduRRR(self_in_concretizeLoadEffectiveAddressMwrR, destReg, baseReg, AT);
+	((self_in_concretizeLoadEffectiveAddressMwrR->machineCode))[8 / 4] = aWord3;
+	return ((self_in_concretizeLoadEffectiveAddressMwrR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeLogicalShiftLeftCqR */
+static usqInt NoDbgRegParms
+concretizeLogicalShiftLeftCqR(AbstractInstruction * self_in_concretizeLogicalShiftLeftCqR)
+{
+    sqInt aWord;
+    sqInt distance;
+    sqInt reg;
+
+	distance = (((((self_in_concretizeLogicalShiftLeftCqR->operands))[0]) < 0x1F) ? (((self_in_concretizeLogicalShiftLeftCqR->operands))[0]) : 0x1F);
+	reg = concreteRegister(self_in_concretizeLogicalShiftLeftCqR, ((self_in_concretizeLogicalShiftLeftCqR->operands))[1]);
+	/* begin machineCodeAt:put: */
+	aWord = sllRRC(self_in_concretizeLogicalShiftLeftCqR, reg, reg, distance);
+	((self_in_concretizeLogicalShiftLeftCqR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeLogicalShiftLeftCqR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeLogicalShiftLeftRR */
+static usqInt NoDbgRegParms
+concretizeLogicalShiftLeftRR(AbstractInstruction * self_in_concretizeLogicalShiftLeftRR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt distReg;
+
+	distReg = concreteRegister(self_in_concretizeLogicalShiftLeftRR, ((self_in_concretizeLogicalShiftLeftRR->operands))[0]);
+	destReg = concreteRegister(self_in_concretizeLogicalShiftLeftRR, ((self_in_concretizeLogicalShiftLeftRR->operands))[1]);
+	/* begin machineCodeAt:put: */
+	aWord = sllvRRR(self_in_concretizeLogicalShiftLeftRR, destReg, destReg, distReg);
+	((self_in_concretizeLogicalShiftLeftRR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeLogicalShiftLeftRR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeLogicalShiftRightCqR */
+static usqInt NoDbgRegParms
+concretizeLogicalShiftRightCqR(AbstractInstruction * self_in_concretizeLogicalShiftRightCqR)
+{
+    sqInt aWord;
+    sqInt distance;
+    sqInt reg;
+
+	distance = (((((self_in_concretizeLogicalShiftRightCqR->operands))[0]) < 0x1F) ? (((self_in_concretizeLogicalShiftRightCqR->operands))[0]) : 0x1F);
+	reg = concreteRegister(self_in_concretizeLogicalShiftRightCqR, ((self_in_concretizeLogicalShiftRightCqR->operands))[1]);
+	/* begin machineCodeAt:put: */
+	aWord = srlRRC(self_in_concretizeLogicalShiftRightCqR, reg, reg, distance);
+	((self_in_concretizeLogicalShiftRightCqR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeLogicalShiftRightCqR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeLogicalShiftRightRR */
+static usqInt NoDbgRegParms
+concretizeLogicalShiftRightRR(AbstractInstruction * self_in_concretizeLogicalShiftRightRR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt distReg;
+
+	distReg = concreteRegister(self_in_concretizeLogicalShiftRightRR, ((self_in_concretizeLogicalShiftRightRR->operands))[0]);
+	destReg = concreteRegister(self_in_concretizeLogicalShiftRightRR, ((self_in_concretizeLogicalShiftRightRR->operands))[1]);
+	/* begin machineCodeAt:put: */
+	aWord = srlvRRR(self_in_concretizeLogicalShiftRightRR, destReg, destReg, distReg);
+	((self_in_concretizeLogicalShiftRightRR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeLogicalShiftRightRR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveAbR */
+static usqInt NoDbgRegParms
+concretizeMoveAbR(AbstractInstruction * self_in_concretizeMoveAbR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    sqInt destReg;
+    unsigned long srcAddr;
+
+	srcAddr = ((self_in_concretizeMoveAbR->operands))[0];
+	destReg = concreteRegister(self_in_concretizeMoveAbR, ((self_in_concretizeMoveAbR->operands))[1]);
+	if ((srcAddr != null)
+	 && ((((varBaseAddress()) - (1 << 15)) < srcAddr)
+	 && (srcAddr < ((varBaseAddress()) + (1 << 15))))) {
+		/* begin machineCodeAt:put: */
+		aWord = lwRbaseoffset(self_in_concretizeMoveAbR, destReg, ConcreteVarBaseReg, srcAddr - (varBaseAddress()));
+		((self_in_concretizeMoveAbR->machineCode))[0 / 4] = aWord;
+		return ((self_in_concretizeMoveAbR->machineCodeSize) = 4);
+	}
+	/* begin machineCodeAt:put: */
+	aWord1 = luiRC(self_in_concretizeMoveAbR, AT, high16BitsOf(self_in_concretizeMoveAbR, srcAddr));
+	((self_in_concretizeMoveAbR->machineCode))[0 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = oriRRC(self_in_concretizeMoveAbR, AT, AT, low16BitsOf(self_in_concretizeMoveAbR, srcAddr));
+	((self_in_concretizeMoveAbR->machineCode))[4 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = lbuRbaseoffset(self_in_concretizeMoveAbR, destReg, AT, 0);
+	((self_in_concretizeMoveAbR->machineCode))[8 / 4] = aWord3;
+	return ((self_in_concretizeMoveAbR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveAwR */
+static usqInt NoDbgRegParms
+concretizeMoveAwR(AbstractInstruction * self_in_concretizeMoveAwR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    sqInt destReg;
+    unsigned long srcAddr;
+
+	srcAddr = ((self_in_concretizeMoveAwR->operands))[0];
+	destReg = concreteRegister(self_in_concretizeMoveAwR, ((self_in_concretizeMoveAwR->operands))[1]);
+	if ((srcAddr != null)
+	 && ((((varBaseAddress()) - (1 << 15)) < srcAddr)
+	 && (srcAddr < ((varBaseAddress()) + (1 << 15))))) {
+		/* begin machineCodeAt:put: */
+		aWord = lwRbaseoffset(self_in_concretizeMoveAwR, destReg, ConcreteVarBaseReg, srcAddr - (varBaseAddress()));
+		((self_in_concretizeMoveAwR->machineCode))[0 / 4] = aWord;
+		return ((self_in_concretizeMoveAwR->machineCodeSize) = 4);
+	}
+	/* begin machineCodeAt:put: */
+	aWord1 = luiRC(self_in_concretizeMoveAwR, AT, high16BitsOf(self_in_concretizeMoveAwR, srcAddr));
+	((self_in_concretizeMoveAwR->machineCode))[0 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = oriRRC(self_in_concretizeMoveAwR, AT, AT, low16BitsOf(self_in_concretizeMoveAwR, srcAddr));
+	((self_in_concretizeMoveAwR->machineCode))[4 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = lwRbaseoffset(self_in_concretizeMoveAwR, destReg, AT, 0);
+	((self_in_concretizeMoveAwR->machineCode))[8 / 4] = aWord3;
+	return ((self_in_concretizeMoveAwR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveCqR */
+static usqInt NoDbgRegParms
+concretizeMoveCqR(AbstractInstruction * self_in_concretizeMoveCqR)
+{
+    sqInt aWord;
+    sqInt reg;
+    sqInt word;
+
+	word = ((self_in_concretizeMoveCqR->operands))[0];
+	reg = concreteRegister(self_in_concretizeMoveCqR, ((self_in_concretizeMoveCqR->operands))[1]);
+	if (!(((word >= -32768) && (word <= 0x7FFF)))) {
+		return concretizeMoveCwR(self_in_concretizeMoveCqR);
+	}
+	/* begin machineCodeAt:put: */
+	aWord = addiuRRC(self_in_concretizeMoveCqR, reg, ZR, word);
+	((self_in_concretizeMoveCqR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeMoveCqR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveCwR */
+static usqInt NoDbgRegParms
+concretizeMoveCwR(AbstractInstruction * self_in_concretizeMoveCwR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt reg;
+    sqInt word;
+
+	word = ((self_in_concretizeMoveCwR->operands))[0];
+	reg = concreteRegister(self_in_concretizeMoveCwR, ((self_in_concretizeMoveCwR->operands))[1]);
+	/* begin machineCodeAt:put: */
+	aWord = luiRC(self_in_concretizeMoveCwR, reg, high16BitsOf(self_in_concretizeMoveCwR, word));
+	((self_in_concretizeMoveCwR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = oriRRC(self_in_concretizeMoveCwR, reg, reg, low16BitsOf(self_in_concretizeMoveCwR, word));
+	((self_in_concretizeMoveCwR->machineCode))[4 / 4] = aWord1;
+	return ((self_in_concretizeMoveCwR->machineCodeSize) = 8);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveHighR */
+static usqInt NoDbgRegParms
+concretizeMoveHighR(AbstractInstruction * self_in_concretizeMoveHighR)
+{
+    sqInt aWord;
+    sqInt destReg;
+
+	destReg = concreteRegister(self_in_concretizeMoveHighR, ((self_in_concretizeMoveHighR->operands))[0]);
+	/* begin machineCodeAt:put: */
+	aWord = mfhiR(self_in_concretizeMoveHighR, destReg);
+	((self_in_concretizeMoveHighR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeMoveHighR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveLowR */
+static usqInt NoDbgRegParms
+concretizeMoveLowR(AbstractInstruction * self_in_concretizeMoveLowR)
+{
+    sqInt aWord;
+    sqInt destReg;
+
+	destReg = concreteRegister(self_in_concretizeMoveLowR, ((self_in_concretizeMoveLowR->operands))[0]);
+	/* begin machineCodeAt:put: */
+	aWord = mfloR(self_in_concretizeMoveLowR, destReg);
+	((self_in_concretizeMoveLowR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeMoveLowR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveM16rR */
+static usqInt NoDbgRegParms
+concretizeMoveM16rR(AbstractInstruction * self_in_concretizeMoveM16rR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt offset;
+    sqInt srcReg;
+
+	offset = ((self_in_concretizeMoveM16rR->operands))[0];
+	srcReg = concreteRegister(self_in_concretizeMoveM16rR, ((self_in_concretizeMoveM16rR->operands))[1]);
+	destReg = concreteRegister(self_in_concretizeMoveM16rR, ((self_in_concretizeMoveM16rR->operands))[2]);
+	/* begin machineCodeAt:put: */
+	aWord = lhuRbaseoffset(self_in_concretizeMoveM16rR, destReg, srcReg, offset);
+	((self_in_concretizeMoveM16rR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeMoveM16rR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveMbrR */
+static usqInt NoDbgRegParms
+concretizeMoveMbrR(AbstractInstruction * self_in_concretizeMoveMbrR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt offset;
+    sqInt srcReg;
+
+	offset = ((self_in_concretizeMoveMbrR->operands))[0];
+	srcReg = concreteRegister(self_in_concretizeMoveMbrR, ((self_in_concretizeMoveMbrR->operands))[1]);
+	destReg = concreteRegister(self_in_concretizeMoveMbrR, ((self_in_concretizeMoveMbrR->operands))[2]);
+	/* begin machineCodeAt:put: */
+	aWord = lbuRbaseoffset(self_in_concretizeMoveMbrR, destReg, srcReg, offset);
+	((self_in_concretizeMoveMbrR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeMoveMbrR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveMwrR */
+static usqInt NoDbgRegParms
+concretizeMoveMwrR(AbstractInstruction * self_in_concretizeMoveMwrR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    sqInt aWord4;
+    sqInt baseReg;
+    sqInt destReg;
+    sqInt offset;
+
+	offset = ((self_in_concretizeMoveMwrR->operands))[0];
+	baseReg = concreteRegister(self_in_concretizeMoveMwrR, ((self_in_concretizeMoveMwrR->operands))[1]);
+	destReg = concreteRegister(self_in_concretizeMoveMwrR, ((self_in_concretizeMoveMwrR->operands))[2]);
+	if (isShortOffset(self_in_concretizeMoveMwrR, offset)) {
+		/* begin machineCodeAt:put: */
+		aWord = lwRbaseoffset(self_in_concretizeMoveMwrR, destReg, baseReg, offset);
+		((self_in_concretizeMoveMwrR->machineCode))[0 / 4] = aWord;
+		return ((self_in_concretizeMoveMwrR->machineCodeSize) = 4);
+	}
+	/* begin machineCodeAt:put: */
+	aWord1 = luiRC(self_in_concretizeMoveMwrR, AT, high16BitsOf(self_in_concretizeMoveMwrR, offset));
+	((self_in_concretizeMoveMwrR->machineCode))[0 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = oriRRC(self_in_concretizeMoveMwrR, AT, AT, low16BitsOf(self_in_concretizeMoveMwrR, offset));
+	((self_in_concretizeMoveMwrR->machineCode))[4 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = adduRRR(self_in_concretizeMoveMwrR, AT, baseReg, AT);
+	((self_in_concretizeMoveMwrR->machineCode))[8 / 4] = aWord3;
+	/* begin machineCodeAt:put: */
+	aWord4 = lwRbaseoffset(self_in_concretizeMoveMwrR, destReg, AT, 0);
+	((self_in_concretizeMoveMwrR->machineCode))[12 / 4] = aWord4;
+	return ((self_in_concretizeMoveMwrR->machineCodeSize) = 16);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveRAb */
+static usqInt NoDbgRegParms
+concretizeMoveRAb(AbstractInstruction * self_in_concretizeMoveRAb)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    unsigned long destAddr;
+    sqInt srcReg;
+
+	srcReg = concreteRegister(self_in_concretizeMoveRAb, ((self_in_concretizeMoveRAb->operands))[0]);
+	destAddr = ((self_in_concretizeMoveRAb->operands))[1];
+	if ((destAddr != null)
+	 && ((((varBaseAddress()) - (1 << 15)) < destAddr)
+	 && (destAddr < ((varBaseAddress()) + (1 << 15))))) {
+		/* begin machineCodeAt:put: */
+		aWord = swRbaseoffset(self_in_concretizeMoveRAb, srcReg, ConcreteVarBaseReg, destAddr - (varBaseAddress()));
+		((self_in_concretizeMoveRAb->machineCode))[0 / 4] = aWord;
+		return ((self_in_concretizeMoveRAb->machineCodeSize) = 4);
+	}
+	/* begin machineCodeAt:put: */
+	aWord1 = luiRC(self_in_concretizeMoveRAb, AT, high16BitsOf(self_in_concretizeMoveRAb, destAddr));
+	((self_in_concretizeMoveRAb->machineCode))[0 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = oriRRC(self_in_concretizeMoveRAb, AT, AT, low16BitsOf(self_in_concretizeMoveRAb, destAddr));
+	((self_in_concretizeMoveRAb->machineCode))[4 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = sbRbaseoffset(self_in_concretizeMoveRAb, srcReg, AT, 0);
+	((self_in_concretizeMoveRAb->machineCode))[8 / 4] = aWord3;
+	return ((self_in_concretizeMoveRAb->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveRAw */
+static usqInt NoDbgRegParms
+concretizeMoveRAw(AbstractInstruction * self_in_concretizeMoveRAw)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    unsigned long destAddr;
+    sqInt srcReg;
+
+	srcReg = concreteRegister(self_in_concretizeMoveRAw, ((self_in_concretizeMoveRAw->operands))[0]);
+	destAddr = ((self_in_concretizeMoveRAw->operands))[1];
+	if ((destAddr != null)
+	 && ((((varBaseAddress()) - (1 << 15)) < destAddr)
+	 && (destAddr < ((varBaseAddress()) + (1 << 15))))) {
+		/* begin machineCodeAt:put: */
+		aWord = swRbaseoffset(self_in_concretizeMoveRAw, srcReg, ConcreteVarBaseReg, destAddr - (varBaseAddress()));
+		((self_in_concretizeMoveRAw->machineCode))[0 / 4] = aWord;
+		return ((self_in_concretizeMoveRAw->machineCodeSize) = 4);
+	}
+	/* begin machineCodeAt:put: */
+	aWord1 = luiRC(self_in_concretizeMoveRAw, AT, high16BitsOf(self_in_concretizeMoveRAw, destAddr));
+	((self_in_concretizeMoveRAw->machineCode))[0 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = oriRRC(self_in_concretizeMoveRAw, AT, AT, low16BitsOf(self_in_concretizeMoveRAw, destAddr));
+	((self_in_concretizeMoveRAw->machineCode))[4 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = swRbaseoffset(self_in_concretizeMoveRAw, srcReg, AT, 0);
+	((self_in_concretizeMoveRAw->machineCode))[8 / 4] = aWord3;
+	return ((self_in_concretizeMoveRAw->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveRMwr */
+static usqInt NoDbgRegParms
+concretizeMoveRMwr(AbstractInstruction * self_in_concretizeMoveRMwr)
+{
+    sqInt aWord;
+    sqInt baseReg;
+    sqInt offset;
+    sqInt srcReg;
+
+	srcReg = concreteRegister(self_in_concretizeMoveRMwr, ((self_in_concretizeMoveRMwr->operands))[0]);
+	offset = ((self_in_concretizeMoveRMwr->operands))[1];
+	baseReg = concreteRegister(self_in_concretizeMoveRMwr, ((self_in_concretizeMoveRMwr->operands))[2]);
+	/* begin machineCodeAt:put: */
+	aWord = swRbaseoffset(self_in_concretizeMoveRMwr, srcReg, baseReg, offset);
+	((self_in_concretizeMoveRMwr->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeMoveRMwr->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveRR */
+static usqInt NoDbgRegParms
+concretizeMoveRR(AbstractInstruction * self_in_concretizeMoveRR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt srcReg;
+
+	srcReg = concreteRegister(self_in_concretizeMoveRR, ((self_in_concretizeMoveRR->operands))[0]);
+	destReg = concreteRegister(self_in_concretizeMoveRR, ((self_in_concretizeMoveRR->operands))[1]);
+	/* begin machineCodeAt:put: */
+	aWord = adduRRR(self_in_concretizeMoveRR, destReg, srcReg, ZR);
+	((self_in_concretizeMoveRR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeMoveRR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveRXbrR */
+static usqInt NoDbgRegParms
+concretizeMoveRXbrR(AbstractInstruction * self_in_concretizeMoveRXbrR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt baseReg;
+    sqInt indexReg;
+    sqInt srcReg;
+
+	srcReg = concreteRegister(self_in_concretizeMoveRXbrR, ((self_in_concretizeMoveRXbrR->operands))[0]);
+	indexReg = concreteRegister(self_in_concretizeMoveRXbrR, ((self_in_concretizeMoveRXbrR->operands))[1]);
+	baseReg = concreteRegister(self_in_concretizeMoveRXbrR, ((self_in_concretizeMoveRXbrR->operands))[2]);
+	/* begin machineCodeAt:put: */
+	aWord = adduRRR(self_in_concretizeMoveRXbrR, AT, baseReg, indexReg);
+	((self_in_concretizeMoveRXbrR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = sbRbaseoffset(self_in_concretizeMoveRXbrR, srcReg, AT, 0);
+	((self_in_concretizeMoveRXbrR->machineCode))[4 / 4] = aWord1;
+	return ((self_in_concretizeMoveRXbrR->machineCodeSize) = 8);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveRXwrR */
+static usqInt NoDbgRegParms
+concretizeMoveRXwrR(AbstractInstruction * self_in_concretizeMoveRXwrR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt baseReg;
+    sqInt indexReg;
+    sqInt srcReg;
+
+	srcReg = concreteRegister(self_in_concretizeMoveRXwrR, ((self_in_concretizeMoveRXwrR->operands))[0]);
+	indexReg = concreteRegister(self_in_concretizeMoveRXwrR, ((self_in_concretizeMoveRXwrR->operands))[1]);
+	baseReg = concreteRegister(self_in_concretizeMoveRXwrR, ((self_in_concretizeMoveRXwrR->operands))[2]);
+	/* begin machineCodeAt:put: */
+	aWord = sllRRC(self_in_concretizeMoveRXwrR, AT, indexReg, 2);
+	((self_in_concretizeMoveRXwrR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = adduRRR(self_in_concretizeMoveRXwrR, AT, baseReg, AT);
+	((self_in_concretizeMoveRXwrR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = swRbaseoffset(self_in_concretizeMoveRXwrR, srcReg, AT, 0);
+	((self_in_concretizeMoveRXwrR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeMoveRXwrR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveXbrRR */
+static usqInt NoDbgRegParms
+concretizeMoveXbrRR(AbstractInstruction * self_in_concretizeMoveXbrRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt baseReg;
+    sqInt destReg;
+    sqInt indexReg;
+
+
+	/* index is number of *bytes* */
+	indexReg = concreteRegister(self_in_concretizeMoveXbrRR, ((self_in_concretizeMoveXbrRR->operands))[0]);
+	baseReg = concreteRegister(self_in_concretizeMoveXbrRR, ((self_in_concretizeMoveXbrRR->operands))[1]);
+	destReg = concreteRegister(self_in_concretizeMoveXbrRR, ((self_in_concretizeMoveXbrRR->operands))[2]);
+	/* begin machineCodeAt:put: */
+	aWord = adduRRR(self_in_concretizeMoveXbrRR, AT, baseReg, indexReg);
+	((self_in_concretizeMoveXbrRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = lbuRbaseoffset(self_in_concretizeMoveXbrRR, destReg, AT, 0);
+	((self_in_concretizeMoveXbrRR->machineCode))[4 / 4] = aWord1;
+	return ((self_in_concretizeMoveXbrRR->machineCodeSize) = 8);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMoveXwrRR */
+static usqInt NoDbgRegParms
+concretizeMoveXwrRR(AbstractInstruction * self_in_concretizeMoveXwrRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt baseReg;
+    sqInt destReg;
+    sqInt indexReg;
+
+	indexReg = concreteRegister(self_in_concretizeMoveXwrRR, ((self_in_concretizeMoveXwrRR->operands))[0]);
+	baseReg = concreteRegister(self_in_concretizeMoveXwrRR, ((self_in_concretizeMoveXwrRR->operands))[1]);
+	destReg = concreteRegister(self_in_concretizeMoveXwrRR, ((self_in_concretizeMoveXwrRR->operands))[2]);
+	/* begin machineCodeAt:put: */
+	aWord = sllRRC(self_in_concretizeMoveXwrRR, AT, indexReg, 2);
+	((self_in_concretizeMoveXwrRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = adduRRR(self_in_concretizeMoveXwrRR, AT, baseReg, AT);
+	((self_in_concretizeMoveXwrRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = lwRbaseoffset(self_in_concretizeMoveXwrRR, destReg, AT, 0);
+	((self_in_concretizeMoveXwrRR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeMoveXwrRR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeMulCheckOverflowRR */
+static usqInt NoDbgRegParms
+concretizeMulCheckOverflowRR(AbstractInstruction * self_in_concretizeMulCheckOverflowRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    sqInt destReg;
+    sqInt leftReg;
+    sqInt rightReg;
+
+	rightReg = concreteRegister(self_in_concretizeMulCheckOverflowRR, ((self_in_concretizeMulCheckOverflowRR->operands))[0]);
+
+	/* Overflow occured if the sign bit of the low part is different from the high part. */
+	destReg = (leftReg = concreteRegister(self_in_concretizeMulCheckOverflowRR, ((self_in_concretizeMulCheckOverflowRR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = multRR(self_in_concretizeMulCheckOverflowRR, leftReg, rightReg);
+	((self_in_concretizeMulCheckOverflowRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = mfloR(self_in_concretizeMulCheckOverflowRR, destReg);
+	((self_in_concretizeMulCheckOverflowRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = sraRRC(self_in_concretizeMulCheckOverflowRR, OverflowTemp1, destReg, 0x1F);
+	((self_in_concretizeMulCheckOverflowRR->machineCode))[8 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = mfhiR(self_in_concretizeMulCheckOverflowRR, OverflowTemp2);
+	((self_in_concretizeMulCheckOverflowRR->machineCode))[12 / 4] = aWord3;
+	return ((self_in_concretizeMulCheckOverflowRR->machineCodeSize) = 16);
+}
+
+	/* CogMIPSELCompiler>>#concretizeNegateR */
+static usqInt NoDbgRegParms
+concretizeNegateR(AbstractInstruction * self_in_concretizeNegateR)
+{
+    sqInt aWord;
+    sqInt reg;
+
+	reg = concreteRegister(self_in_concretizeNegateR, ((self_in_concretizeNegateR->operands))[0]);
+	/* begin machineCodeAt:put: */
+	aWord = subuRRR(self_in_concretizeNegateR, reg, ZR, reg);
+	((self_in_concretizeNegateR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeNegateR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeNop */
+static usqInt NoDbgRegParms
+concretizeNop(AbstractInstruction * self_in_concretizeNop)
+{
+    sqInt aWord;
+
+	/* begin machineCodeAt:put: */
+	aWord = nop(self_in_concretizeNop);
+	((self_in_concretizeNop->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeNop->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeOrCqR */
+static sqInt NoDbgRegParms
+concretizeOrCqR(AbstractInstruction * self_in_concretizeOrCqR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt leftReg;
+    unsigned long rightImm;
+
+	rightImm = ((self_in_concretizeOrCqR->operands))[0];
+	destReg = (leftReg = concreteRegister(self_in_concretizeOrCqR, ((self_in_concretizeOrCqR->operands))[1]));
+	if (!(((rightImm >= 0) && (rightImm <= 0xFFFF)))) {
+		return concretizeOrCwR(self_in_concretizeOrCqR);
+	}
+	/* begin machineCodeAt:put: */
+	aWord = oriRRC(self_in_concretizeOrCqR, destReg, leftReg, rightImm);
+	((self_in_concretizeOrCqR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeOrCqR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeOrCwR */
+static usqInt NoDbgRegParms
+concretizeOrCwR(AbstractInstruction * self_in_concretizeOrCwR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt destReg;
+    sqInt leftReg;
+    unsigned long rightImm;
+
+	rightImm = ((self_in_concretizeOrCwR->operands))[0];
+	destReg = (leftReg = concreteRegister(self_in_concretizeOrCwR, ((self_in_concretizeOrCwR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = luiRC(self_in_concretizeOrCwR, AT, high16BitsOf(self_in_concretizeOrCwR, rightImm));
+	((self_in_concretizeOrCwR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = oriRRC(self_in_concretizeOrCwR, AT, AT, low16BitsOf(self_in_concretizeOrCwR, rightImm));
+	((self_in_concretizeOrCwR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = orRRR(self_in_concretizeOrCwR, destReg, leftReg, AT);
+	((self_in_concretizeOrCwR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeOrCwR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeOrRR */
+static usqInt NoDbgRegParms
+concretizeOrRR(AbstractInstruction * self_in_concretizeOrRR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt leftReg;
+    sqInt rightReg;
+
+	rightReg = concreteRegister(self_in_concretizeOrRR, ((self_in_concretizeOrRR->operands))[0]);
+	destReg = (leftReg = concreteRegister(self_in_concretizeOrRR, ((self_in_concretizeOrRR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = orRRR(self_in_concretizeOrRR, destReg, leftReg, rightReg);
+	((self_in_concretizeOrRR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeOrRR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizePopR */
+static usqInt NoDbgRegParms
+concretizePopR(AbstractInstruction * self_in_concretizePopR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt destReg;
+
+	destReg = concreteRegister(self_in_concretizePopR, ((self_in_concretizePopR->operands))[0]);
+	/* begin machineCodeAt:put: */
+	aWord = lwRbaseoffset(self_in_concretizePopR, destReg, SP, 0);
+	((self_in_concretizePopR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = addiuRRC(self_in_concretizePopR, SP, SP, 4);
+	((self_in_concretizePopR->machineCode))[4 / 4] = aWord1;
+	return ((self_in_concretizePopR->machineCodeSize) = 8);
+}
+
+	/* CogMIPSELCompiler>>#concretizePrefetchAw */
+static usqInt NoDbgRegParms
+concretizePrefetchAw(AbstractInstruction * self_in_concretizePrefetchAw)
+{
+    unsigned long addressOperand;
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+
+	addressOperand = ((self_in_concretizePrefetchAw->operands))[0];
+	/* begin machineCodeAt:put: */
+	aWord = luiRC(self_in_concretizePrefetchAw, AT, high16BitsOf(self_in_concretizePrefetchAw, addressOperand));
+	((self_in_concretizePrefetchAw->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = oriRRC(self_in_concretizePrefetchAw, AT, AT, low16BitsOf(self_in_concretizePrefetchAw, addressOperand));
+	((self_in_concretizePrefetchAw->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = prefRoffsethint(self_in_concretizePrefetchAw, AT, 0, HintLoad);
+	((self_in_concretizePrefetchAw->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizePrefetchAw->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizePushCq */
+static usqInt NoDbgRegParms
+concretizePushCq(AbstractInstruction * self_in_concretizePushCq)
+{
+	return concretizePushCw(self_in_concretizePushCq);
+}
+
+	/* CogMIPSELCompiler>>#concretizePushCw */
+static usqInt NoDbgRegParms
+concretizePushCw(AbstractInstruction * self_in_concretizePushCw)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    unsigned long value;
+
+	value = ((self_in_concretizePushCw->operands))[0];
+	/* begin machineCodeAt:put: */
+	aWord = luiRC(self_in_concretizePushCw, AT, high16BitsOf(self_in_concretizePushCw, value));
+	((self_in_concretizePushCw->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = oriRRC(self_in_concretizePushCw, AT, AT, low16BitsOf(self_in_concretizePushCw, value));
+	((self_in_concretizePushCw->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = addiuRRC(self_in_concretizePushCw, SP, SP, -4);
+	((self_in_concretizePushCw->machineCode))[8 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = swRbaseoffset(self_in_concretizePushCw, AT, SP, 0);
+	((self_in_concretizePushCw->machineCode))[12 / 4] = aWord3;
+	return ((self_in_concretizePushCw->machineCodeSize) = 16);
+}
+
+	/* CogMIPSELCompiler>>#concretizePushR */
+static usqInt NoDbgRegParms
+concretizePushR(AbstractInstruction * self_in_concretizePushR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt srcReg;
+
+	srcReg = concreteRegister(self_in_concretizePushR, ((self_in_concretizePushR->operands))[0]);
+	/* begin machineCodeAt:put: */
+	aWord = addiuRRC(self_in_concretizePushR, SP, SP, -4);
+	((self_in_concretizePushR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = swRbaseoffset(self_in_concretizePushR, srcReg, SP, 0);
+	((self_in_concretizePushR->machineCode))[4 / 4] = aWord1;
+	return ((self_in_concretizePushR->machineCodeSize) = 8);
+}
+
+	/* CogMIPSELCompiler>>#concretizeRetN */
+static usqInt NoDbgRegParms
+concretizeRetN(AbstractInstruction * self_in_concretizeRetN)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt offset;
+
+	offset = ((self_in_concretizeRetN->operands))[0];
+	/* begin machineCodeAt:put: */
+	aWord2 = jR(self_in_concretizeRetN, RA);
+	((self_in_concretizeRetN->machineCode))[0 / 4] = aWord2;
+	if (offset == 0) {
+		/* begin machineCodeAt:put: */
+		aWord = nop(self_in_concretizeRetN);
+		((self_in_concretizeRetN->machineCode))[4 / 4] = aWord;
+	}
+	else {
+		/* begin machineCodeAt:put: */
+		aWord1 = addiuRRC(self_in_concretizeRetN, SP, SP, offset);
+		((self_in_concretizeRetN->machineCode))[4 / 4] = aWord1;
+	}
+	return ((self_in_concretizeRetN->machineCodeSize) = 8);
+}
+
+	/* CogMIPSELCompiler>>#concretizeStop */
+static usqInt NoDbgRegParms
+concretizeStop(AbstractInstruction * self_in_concretizeStop)
+{
+    sqInt aWord;
+
+	/* begin machineCodeAt:put: */
+	aWord = stop(self_in_concretizeStop);
+	((self_in_concretizeStop->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeStop->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeSubCheckOverflowCqR */
+static usqInt NoDbgRegParms
+concretizeSubCheckOverflowCqR(AbstractInstruction * self_in_concretizeSubCheckOverflowCqR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    sqInt aWord4;
+    sqInt aWord5;
+    sqInt aWord6;
+    sqInt destReg;
+    sqInt leftReg;
+    unsigned long rightImm;
+
+	rightImm = ((self_in_concretizeSubCheckOverflowCqR->operands))[0];
+	destReg = (leftReg = concreteRegister(self_in_concretizeSubCheckOverflowCqR, ((self_in_concretizeSubCheckOverflowCqR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = luiRC(self_in_concretizeSubCheckOverflowCqR, AT, high16BitsOf(self_in_concretizeSubCheckOverflowCqR, rightImm));
+	((self_in_concretizeSubCheckOverflowCqR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = oriRRC(self_in_concretizeSubCheckOverflowCqR, AT, AT, low16BitsOf(self_in_concretizeSubCheckOverflowCqR, rightImm));
+	((self_in_concretizeSubCheckOverflowCqR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = adduRRR(self_in_concretizeSubCheckOverflowCqR, OverflowTemp1, leftReg, ZR);
+	((self_in_concretizeSubCheckOverflowCqR->machineCode))[8 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = subuRRR(self_in_concretizeSubCheckOverflowCqR, destReg, leftReg, AT);
+	((self_in_concretizeSubCheckOverflowCqR->machineCode))[12 / 4] = aWord3;
+	/* begin machineCodeAt:put: */
+	aWord4 = xorRRR(self_in_concretizeSubCheckOverflowCqR, OverflowTemp2, destReg, AT);
+	((self_in_concretizeSubCheckOverflowCqR->machineCode))[16 / 4] = aWord4;
+	/* begin machineCodeAt:put: */
+	aWord5 = xorRRR(self_in_concretizeSubCheckOverflowCqR, OverflowTemp1, destReg, OverflowTemp1);
+	((self_in_concretizeSubCheckOverflowCqR->machineCode))[20 / 4] = aWord5;
+	/* begin machineCodeAt:put: */
+	aWord6 = andRRR(self_in_concretizeSubCheckOverflowCqR, Overflow, OverflowTemp1, OverflowTemp2);
+	((self_in_concretizeSubCheckOverflowCqR->machineCode))[24 / 4] = aWord6;
+	return ((self_in_concretizeSubCheckOverflowCqR->machineCodeSize) = 28);
+}
+
+	/* CogMIPSELCompiler>>#concretizeSubCheckOverflowRR */
+static usqInt NoDbgRegParms
+concretizeSubCheckOverflowRR(AbstractInstruction * self_in_concretizeSubCheckOverflowRR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt aWord3;
+    sqInt aWord4;
+    sqInt destReg;
+    sqInt leftReg;
+    sqInt rightReg;
+
+	rightReg = concreteRegister(self_in_concretizeSubCheckOverflowRR, ((self_in_concretizeSubCheckOverflowRR->operands))[0]);
+
+	/* Save original LHS */
+	destReg = (leftReg = concreteRegister(self_in_concretizeSubCheckOverflowRR, ((self_in_concretizeSubCheckOverflowRR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = adduRRR(self_in_concretizeSubCheckOverflowRR, OverflowTemp1, leftReg, ZR);
+	((self_in_concretizeSubCheckOverflowRR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = subuRRR(self_in_concretizeSubCheckOverflowRR, destReg, leftReg, rightReg);
+	((self_in_concretizeSubCheckOverflowRR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = xorRRR(self_in_concretizeSubCheckOverflowRR, OverflowTemp2, destReg, rightReg);
+	((self_in_concretizeSubCheckOverflowRR->machineCode))[8 / 4] = aWord2;
+	/* begin machineCodeAt:put: */
+	aWord3 = xorRRR(self_in_concretizeSubCheckOverflowRR, OverflowTemp1, destReg, OverflowTemp1);
+	((self_in_concretizeSubCheckOverflowRR->machineCode))[12 / 4] = aWord3;
+	/* begin machineCodeAt:put: */
+	aWord4 = andRRR(self_in_concretizeSubCheckOverflowRR, Overflow, OverflowTemp1, OverflowTemp2);
+	((self_in_concretizeSubCheckOverflowRR->machineCode))[16 / 4] = aWord4;
+	return ((self_in_concretizeSubCheckOverflowRR->machineCodeSize) = 20);
+}
+
+	/* CogMIPSELCompiler>>#concretizeSubCqR */
+static usqInt NoDbgRegParms
+concretizeSubCqR(AbstractInstruction * self_in_concretizeSubCqR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt leftReg;
+    unsigned long rightImm;
+
+	rightImm = ((self_in_concretizeSubCqR->operands))[0];
+	destReg = (leftReg = concreteRegister(self_in_concretizeSubCqR, ((self_in_concretizeSubCqR->operands))[1]));
+	if (!((((-rightImm) >= -32768) && ((-rightImm) <= 0x7FFF)))) {
+		return concretizeSubCwR(self_in_concretizeSubCqR);
+	}
+	/* begin machineCodeAt:put: */
+	aWord = addiuRRC(self_in_concretizeSubCqR, destReg, leftReg, -rightImm);
+	((self_in_concretizeSubCqR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeSubCqR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeSubCwR */
+static usqInt NoDbgRegParms
+concretizeSubCwR(AbstractInstruction * self_in_concretizeSubCwR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt destReg;
+    sqInt leftReg;
+    unsigned long rightImm;
+
+	rightImm = ((self_in_concretizeSubCwR->operands))[0];
+	destReg = (leftReg = concreteRegister(self_in_concretizeSubCwR, ((self_in_concretizeSubCwR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = luiRC(self_in_concretizeSubCwR, AT, high16BitsOf(self_in_concretizeSubCwR, rightImm));
+	((self_in_concretizeSubCwR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = oriRRC(self_in_concretizeSubCwR, AT, AT, low16BitsOf(self_in_concretizeSubCwR, rightImm));
+	((self_in_concretizeSubCwR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = subuRRR(self_in_concretizeSubCwR, destReg, leftReg, AT);
+	((self_in_concretizeSubCwR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeSubCwR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeSubRR */
+static usqInt NoDbgRegParms
+concretizeSubRR(AbstractInstruction * self_in_concretizeSubRR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt leftReg;
+    sqInt rightReg;
+
+	rightReg = concreteRegister(self_in_concretizeSubRR, ((self_in_concretizeSubRR->operands))[0]);
+	destReg = (leftReg = concreteRegister(self_in_concretizeSubRR, ((self_in_concretizeSubRR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = subuRRR(self_in_concretizeSubRR, destReg, leftReg, rightReg);
+	((self_in_concretizeSubRR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeSubRR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeTstCqR */
+static usqInt NoDbgRegParms
+concretizeTstCqR(AbstractInstruction * self_in_concretizeTstCqR)
+{
+    sqInt aWord;
+    sqInt leftReg;
+    unsigned long rightImm;
+
+	rightImm = ((self_in_concretizeTstCqR->operands))[0];
+	leftReg = concreteRegister(self_in_concretizeTstCqR, ((self_in_concretizeTstCqR->operands))[1]);
+	if (!(((rightImm >= -32768) && (rightImm <= 0x7FFF)))) {
+		return concretizeTstCwR(self_in_concretizeTstCqR);
+	}
+	/* begin machineCodeAt:put: */
+	aWord = andiRRC(self_in_concretizeTstCqR, Cmp, leftReg, rightImm);
+	((self_in_concretizeTstCqR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeTstCqR->machineCodeSize) = 4);
+}
+
+	/* CogMIPSELCompiler>>#concretizeTstCwR */
+static usqInt NoDbgRegParms
+concretizeTstCwR(AbstractInstruction * self_in_concretizeTstCwR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt leftReg;
+    unsigned long rightImm;
+
+	rightImm = ((self_in_concretizeTstCwR->operands))[0];
+	leftReg = concreteRegister(self_in_concretizeTstCwR, ((self_in_concretizeTstCwR->operands))[1]);
+	/* begin machineCodeAt:put: */
+	aWord = luiRC(self_in_concretizeTstCwR, AT, high16BitsOf(self_in_concretizeTstCwR, rightImm));
+	((self_in_concretizeTstCwR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = oriRRC(self_in_concretizeTstCwR, AT, AT, low16BitsOf(self_in_concretizeTstCwR, rightImm));
+	((self_in_concretizeTstCwR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = andRRR(self_in_concretizeTstCwR, Cmp, leftReg, AT);
+	((self_in_concretizeTstCwR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeTstCwR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeUnimplemented */
+static sqInt NoDbgRegParms
+concretizeUnimplemented(AbstractInstruction * self_in_concretizeUnimplemented)
+{
+	error("Unimplemented RTL instruction");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#concretizeXorCwR */
+static usqInt NoDbgRegParms
+concretizeXorCwR(AbstractInstruction * self_in_concretizeXorCwR)
+{
+    sqInt aWord;
+    sqInt aWord1;
+    sqInt aWord2;
+    sqInt destReg;
+    sqInt leftReg;
+    unsigned long rightImm;
+
+	rightImm = ((self_in_concretizeXorCwR->operands))[0];
+	destReg = (leftReg = concreteRegister(self_in_concretizeXorCwR, ((self_in_concretizeXorCwR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = luiRC(self_in_concretizeXorCwR, AT, high16BitsOf(self_in_concretizeXorCwR, rightImm));
+	((self_in_concretizeXorCwR->machineCode))[0 / 4] = aWord;
+	/* begin machineCodeAt:put: */
+	aWord1 = oriRRC(self_in_concretizeXorCwR, AT, AT, low16BitsOf(self_in_concretizeXorCwR, rightImm));
+	((self_in_concretizeXorCwR->machineCode))[4 / 4] = aWord1;
+	/* begin machineCodeAt:put: */
+	aWord2 = xorRRR(self_in_concretizeXorCwR, destReg, leftReg, AT);
+	((self_in_concretizeXorCwR->machineCode))[8 / 4] = aWord2;
+	return ((self_in_concretizeXorCwR->machineCodeSize) = 12);
+}
+
+	/* CogMIPSELCompiler>>#concretizeXorRR */
+static usqInt NoDbgRegParms
+concretizeXorRR(AbstractInstruction * self_in_concretizeXorRR)
+{
+    sqInt aWord;
+    sqInt destReg;
+    sqInt leftReg;
+    sqInt rightReg;
+
+	rightReg = concreteRegister(self_in_concretizeXorRR, ((self_in_concretizeXorRR->operands))[0]);
+	destReg = (leftReg = concreteRegister(self_in_concretizeXorRR, ((self_in_concretizeXorRR->operands))[1]));
+	/* begin machineCodeAt:put: */
+	aWord = xorRRR(self_in_concretizeXorRR, destReg, leftReg, rightReg);
+	((self_in_concretizeXorRR->machineCode))[0 / 4] = aWord;
+	return ((self_in_concretizeXorRR->machineCodeSize) = 4);
+}
+
+
+/*	Answer the abstract register for the C result register. */
+
+	/* CogMIPSELCompiler>>#cResultRegister */
+static sqInt NoDbgRegParms
+cResultRegister(AbstractInstruction * self_in_cResultRegister)
+{
+	return V0;
+}
+
+
+/*	Attempt to generate concrete machine code for the instruction at address.
+	This is the inner dispatch of concretizeAt: actualAddress which exists
+	only to get around the branch size limits in the SqueakV3 (blue book
+	derived) bytecode set. */
+
+	/* CogMIPSELCompiler>>#dispatchConcretize */
+static void NoDbgRegParms
+dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
+{
+    AbstractInstruction *dependentChain;
+
+	
+	switch ((self_in_dispatchConcretize->opcode)) {
+	case BrEqualRR:
+		concretizeBrEqualRR(self_in_dispatchConcretize);
+		return;
+
+	case BrNotEqualRR:
+		concretizeBrNotEqualRR(self_in_dispatchConcretize);
+		return;
+
+	case BrUnsignedLessRR:
+		concretizeBrUnsignedLessRR(self_in_dispatchConcretize);
+		return;
+
+	case BrUnsignedLessEqualRR:
+		concretizeBrUnsignedLessEqualRR(self_in_dispatchConcretize);
+		return;
+
+	case BrUnsignedGreaterRR:
+		concretizeBrUnsignedGreaterRR(self_in_dispatchConcretize);
+		return;
+
+	case BrUnsignedGreaterEqualRR:
+		concretizeBrUnsignedGreaterEqualRR(self_in_dispatchConcretize);
+		return;
+
+	case BrSignedLessRR:
+		concretizeBrSignedLessRR(self_in_dispatchConcretize);
+		return;
+
+	case BrSignedLessEqualRR:
+		concretizeBrSignedLessEqualRR(self_in_dispatchConcretize);
+		return;
+
+	case BrSignedGreaterRR:
+		concretizeBrSignedGreaterRR(self_in_dispatchConcretize);
+		return;
+
+	case BrSignedGreaterEqualRR:
+		concretizeBrSignedGreaterEqualRR(self_in_dispatchConcretize);
+		return;
+
+	case BrLongEqualRR:
+		concretizeBrLongEqualRR(self_in_dispatchConcretize);
+		return;
+
+	case BrLongNotEqualRR:
+		concretizeBrLongNotEqualRR(self_in_dispatchConcretize);
+		return;
+
+	case MulRR:
+	case JumpNegative:
+	case JumpNonNegative:
+	case JumpCarry:
+	case JumpNoCarry:
+	case JumpFPEqual:
+	case JumpFPNotEqual:
+	case JumpFPLess:
+	case JumpFPGreaterOrEqual:
+	case JumpFPGreater:
+	case JumpFPLessOrEqual:
+	case JumpFPOrdered:
+	case JumpFPUnordered:
+	case XorCqR:
+	case AddRdRd:
+	case CmpRdRd:
+	case DivRdRd:
+	case MulRdRd:
+	case SubRdRd:
+	case SqrtRd:
+	case MoveRMbr:
+	case MoveM64rRd:
+	case MoveRdM64r:
+	case ConvertRRd:
+		concretizeUnimplemented(self_in_dispatchConcretize);
+		return;
+
+	case DivRR:
+		concretizeDivRR(self_in_dispatchConcretize);
+		return;
+
+	case MoveLowR:
+		concretizeMoveLowR(self_in_dispatchConcretize);
+		return;
+
+	case MoveHighR:
+		concretizeMoveHighR(self_in_dispatchConcretize);
+		return;
+
+	case Label:
+		/* begin concretizeLabel */
+		dependentChain = (self_in_dispatchConcretize->dependent);
+		while (!(dependentChain == null)) {
+			updateLabel(dependentChain, self_in_dispatchConcretize);
+			dependentChain = (dependentChain->dependent);
+		}
+		((self_in_dispatchConcretize->machineCodeSize) = 0);
+		return;
+
+	case AlignmentNops:
+		concretizeAlignmentNops(self_in_dispatchConcretize);
+		return;
+
+	case Fill32:
+		concretizeFill32(self_in_dispatchConcretize);
+		return;
+
+	case Nop:
+		concretizeNop(self_in_dispatchConcretize);
+		return;
+
+	case Call:
+		concretizeCall(self_in_dispatchConcretize);
+		return;
+
+	case CallFull:
+		concretizeCallFull(self_in_dispatchConcretize);
+		return;
+
+	case JumpR:
+		concretizeJumpR(self_in_dispatchConcretize);
+		return;
+
+	case JumpFull:
+		concretizeJumpFull(self_in_dispatchConcretize);
+		return;
+
+	case JumpLong:
+		concretizeJumpLong(self_in_dispatchConcretize);
+		return;
+
+	case JumpLongZero:
+		concretizeJumpLongZero(self_in_dispatchConcretize);
+		return;
+
+	case JumpLongNonZero:
+		concretizeJumpLongNonZero(self_in_dispatchConcretize);
+		return;
+
+	case Jump:
+		concretizeJump(self_in_dispatchConcretize);
+		return;
+
+	case JumpZero:
+		concretizeJumpZero(self_in_dispatchConcretize);
+		return;
+
+	case JumpNonZero:
+		concretizeJumpNonZero(self_in_dispatchConcretize);
+		return;
+
+	case JumpOverflow:
+		concretizeJumpOverflow(self_in_dispatchConcretize);
+		return;
+
+	case JumpNoOverflow:
+		concretizeJumpNoOverflow(self_in_dispatchConcretize);
+		return;
+
+	case JumpLess:
+		concretizeJumpSignedLessThan(self_in_dispatchConcretize);
+		return;
+
+	case JumpGreaterOrEqual:
+		concretizeJumpSignedGreaterEqual(self_in_dispatchConcretize);
+		return;
+
+	case JumpGreater:
+		concretizeJumpSignedGreaterThan(self_in_dispatchConcretize);
+		return;
+
+	case JumpLessOrEqual:
+		concretizeJumpSignedLessEqual(self_in_dispatchConcretize);
+		return;
+
+	case JumpBelow:
+		concretizeJumpUnsignedLessThan(self_in_dispatchConcretize);
+		return;
+
+	case JumpAboveOrEqual:
+		concretizeJumpUnsignedGreaterEqual(self_in_dispatchConcretize);
+		return;
+
+	case JumpAbove:
+		concretizeJumpUnsignedGreaterThan(self_in_dispatchConcretize);
+		return;
+
+	case JumpBelowOrEqual:
+		concretizeJumpUnsignedLessEqual(self_in_dispatchConcretize);
+		return;
+
+	case RetN:
+		concretizeRetN(self_in_dispatchConcretize);
+		return;
+
+	case Stop:
+		concretizeStop(self_in_dispatchConcretize);
+		return;
+
+	case AddCqR:
+		concretizeAddCqR(self_in_dispatchConcretize);
+		return;
+
+	case AndCqR:
+		concretizeAndCqR(self_in_dispatchConcretize);
+		return;
+
+	case AndCqRR:
+		concretizeAndCqRR(self_in_dispatchConcretize);
+		return;
+
+	case CmpCqR:
+		concretizeCmpCqR(self_in_dispatchConcretize);
+		return;
+
+	case OrCqR:
+		concretizeOrCqR(self_in_dispatchConcretize);
+		return;
+
+	case SubCqR:
+		concretizeSubCqR(self_in_dispatchConcretize);
+		return;
+
+	case TstCqR:
+		concretizeTstCqR(self_in_dispatchConcretize);
+		return;
+
+	case AddCwR:
+		concretizeAddCwR(self_in_dispatchConcretize);
+		return;
+
+	case AndCwR:
+		concretizeAndCwR(self_in_dispatchConcretize);
+		return;
+
+	case CmpCwR:
+		concretizeCmpCwR(self_in_dispatchConcretize);
+		return;
+
+	case OrCwR:
+		concretizeOrCwR(self_in_dispatchConcretize);
+		return;
+
+	case SubCwR:
+		concretizeSubCwR(self_in_dispatchConcretize);
+		return;
+
+	case XorCwR:
+		concretizeXorCwR(self_in_dispatchConcretize);
+		return;
+
+	case AddRR:
+		concretizeAddRR(self_in_dispatchConcretize);
+		return;
+
+	case AndRR:
+		concretizeAndRR(self_in_dispatchConcretize);
+		return;
+
+	case CmpRR:
+		concretizeCmpRR(self_in_dispatchConcretize);
+		return;
+
+	case OrRR:
+		concretizeOrRR(self_in_dispatchConcretize);
+		return;
+
+	case SubRR:
+		concretizeSubRR(self_in_dispatchConcretize);
+		return;
+
+	case XorRR:
+		concretizeXorRR(self_in_dispatchConcretize);
+		return;
+
+	case NegateR:
+		concretizeNegateR(self_in_dispatchConcretize);
+		return;
+
+	case LoadEffectiveAddressMwrR:
+		concretizeLoadEffectiveAddressMwrR(self_in_dispatchConcretize);
+		return;
+
+	case ArithmeticShiftRightCqR:
+		concretizeArithmeticShiftRightCqR(self_in_dispatchConcretize);
+		return;
+
+	case LogicalShiftRightCqR:
+		concretizeLogicalShiftRightCqR(self_in_dispatchConcretize);
+		return;
+
+	case LogicalShiftLeftCqR:
+		concretizeLogicalShiftLeftCqR(self_in_dispatchConcretize);
+		return;
+
+	case ArithmeticShiftRightRR:
+		concretizeArithmeticShiftRightRR(self_in_dispatchConcretize);
+		return;
+
+	case LogicalShiftLeftRR:
+		concretizeLogicalShiftLeftRR(self_in_dispatchConcretize);
+		return;
+
+	case LogicalShiftRightRR:
+		concretizeLogicalShiftRightRR(self_in_dispatchConcretize);
+		return;
+
+	case MoveCqR:
+		concretizeMoveCqR(self_in_dispatchConcretize);
+		return;
+
+	case MoveCwR:
+		concretizeMoveCwR(self_in_dispatchConcretize);
+		return;
+
+	case MoveRR:
+		concretizeMoveRR(self_in_dispatchConcretize);
+		return;
+
+	case MoveAwR:
+		concretizeMoveAwR(self_in_dispatchConcretize);
+		return;
+
+	case MoveRAw:
+		concretizeMoveRAw(self_in_dispatchConcretize);
+		return;
+
+	case MoveAbR:
+		concretizeMoveAbR(self_in_dispatchConcretize);
+		return;
+
+	case MoveRAb:
+		concretizeMoveRAb(self_in_dispatchConcretize);
+		return;
+
+	case MoveMbrR:
+		concretizeMoveMbrR(self_in_dispatchConcretize);
+		return;
+
+	case MoveM16rR:
+		concretizeMoveM16rR(self_in_dispatchConcretize);
+		return;
+
+	case MoveMwrR:
+		concretizeMoveMwrR(self_in_dispatchConcretize);
+		return;
+
+	case MoveXbrRR:
+		concretizeMoveXbrRR(self_in_dispatchConcretize);
+		return;
+
+	case MoveRXbrR:
+		concretizeMoveRXbrR(self_in_dispatchConcretize);
+		return;
+
+	case MoveXwrRR:
+		concretizeMoveXwrRR(self_in_dispatchConcretize);
+		return;
+
+	case MoveRXwrR:
+		concretizeMoveRXwrR(self_in_dispatchConcretize);
+		return;
+
+	case MoveRMwr:
+		concretizeMoveRMwr(self_in_dispatchConcretize);
+		return;
+
+	case PopR:
+		concretizePopR(self_in_dispatchConcretize);
+		return;
+
+	case PushR:
+		concretizePushR(self_in_dispatchConcretize);
+		return;
+
+	case PushCq:
+		concretizePushCq(self_in_dispatchConcretize);
+		return;
+
+	case PushCw:
+		concretizePushCw(self_in_dispatchConcretize);
+		return;
+
+	case PrefetchAw:
+		concretizePrefetchAw(self_in_dispatchConcretize);
+		return;
+
+	case AddCheckOverflowCqR:
+		concretizeAddCheckOverflowCqR(self_in_dispatchConcretize);
+		return;
+
+	case AddCheckOverflowRR:
+		concretizeAddCheckOverflowRR(self_in_dispatchConcretize);
+		return;
+
+	case SubCheckOverflowCqR:
+		concretizeSubCheckOverflowCqR(self_in_dispatchConcretize);
+		return;
+
+	case SubCheckOverflowRR:
+		concretizeSubCheckOverflowRR(self_in_dispatchConcretize);
+		return;
+
+	case MulCheckOverflowRR:
+		concretizeMulCheckOverflowRR(self_in_dispatchConcretize);
+		return;
+
+	default:
+		error("Case not found and no otherwise clause");
+	}
+	return;
+}
+
+	/* CogMIPSELCompiler>>#divR:R: */
+static sqInt NoDbgRegParms
+divRR(AbstractInstruction * self_in_divRR, sqInt dividendReg, sqInt divisorReg)
+{
+	flag("todo");
+	return rtypersrtrdsafunct(self_in_divRR, SPECIAL, dividendReg, divisorReg, 0, 0, DIV);
+}
+
+
+/*	Answer if CallFull and/or JumpFull are relative and hence need relocating
+	on method
+	compation. If so, they are annotated with IsRelativeCall in methods and
+	relocated in
+	relocateIfCallOrMethodReference:mcpc:delta: */
+
+	/* CogMIPSELCompiler>>#fullCallsAreRelative */
+static sqInt NoDbgRegParms
+fullCallsAreRelative(AbstractInstruction * self_in_fullCallsAreRelative)
+{
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#functionAtAddress: */
+static sqInt NoDbgRegParms
+functionAtAddress(AbstractInstruction * self_in_functionAtAddress, sqInt mcpc)
+{
+	return (longAt(mcpc)) & 0x3F;
+}
+
+	/* CogMIPSELCompiler>>#genDivR:R:Quo:Rem: */
+static sqInt NoDbgRegParms
+genDivRRQuoRem(AbstractInstruction * self_in_genDivRRQuoRem, sqInt abstractRegDivisor, sqInt abstractRegDividend, sqInt abstractRegQuotient, sqInt abstractRegRemainder)
+{
+	genoperandoperand(DivRR, abstractRegDividend, abstractRegDivisor);
+	genoperand(MoveLowR, abstractRegQuotient);
+	genoperand(MoveHighR, abstractRegRemainder);
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#genGetLeafCallStackPointerFunction */
+static AbstractInstruction * NoDbgRegParms
+genGetLeafCallStackPointerFunction(AbstractInstruction * self_in_genGetLeafCallStackPointerFunction)
+{
+	/* begin MoveR:R: */
+	genoperandoperand(MoveRR, SP, V0);
+	/* begin RetN: */
+	genoperand(RetN, 0);
+	return self_in_genGetLeafCallStackPointerFunction;
+}
+
+
+/*	Load the stack pointer register with that of the C stack, effecting
+	a switch to the C stack. Used when machine code calls into the
+	CoInterpreter run-time (e.g. to invoke interpreter primitives). */
+
+	/* CogMIPSELCompiler>>#genLoadCStackPointer */
+static sqInt NoDbgRegParms
+genLoadCStackPointer(AbstractInstruction * self_in_genLoadCStackPointer)
+{
+    sqInt address;
+    AbstractInstruction *anInstruction;
+
+	/* begin MoveAw:R: */
+	address = cStackPointerAddress();
+	/* begin gen:literal:operand: */
+	anInstruction = genoperandoperand(MoveAwR, address, SPReg);
+	return 0;
+}
+
+
+/*	Load the frame and stack pointer registers with those of the C stack,
+	effecting a switch to the C stack. Used when machine code calls into
+	the CoInterpreter run-time (e.g. to invoke interpreter primitives). */
+
+	/* CogMIPSELCompiler>>#genLoadCStackPointers */
+static sqInt NoDbgRegParms
+genLoadCStackPointers(AbstractInstruction * self_in_genLoadCStackPointers)
+{
+    sqInt address;
+    sqInt address1;
+    AbstractInstruction *anInstruction;
+    AbstractInstruction *anInstruction1;
+
+	/* begin MoveAw:R: */
+	address = cStackPointerAddress();
+	/* begin gen:literal:operand: */
+	anInstruction = genoperandoperand(MoveAwR, address, SPReg);
+	/* begin MoveAw:R: */
+	address1 = cFramePointerAddress();
+	/* begin gen:literal:operand: */
+	anInstruction1 = genoperandoperand(MoveAwR, address1, FPReg);
+	return 0;
+}
+
+
+/*	Switch back to the Smalltalk stack. Assign SPReg first
+	because typically it is used immediately afterwards. */
+
+	/* CogMIPSELCompiler>>#genLoadStackPointers */
+static sqInt NoDbgRegParms
+genLoadStackPointers(AbstractInstruction * self_in_genLoadStackPointers)
+{
+    sqInt address;
+    sqInt address1;
+    AbstractInstruction *anInstruction;
+    AbstractInstruction *anInstruction1;
+
+	/* begin MoveAw:R: */
+	address = stackPointerAddress();
+	/* begin gen:literal:operand: */
+	anInstruction = genoperandoperand(MoveAwR, address, SPReg);
+	/* begin MoveAw:R: */
+	address1 = framePointerAddress();
+	/* begin gen:literal:operand: */
+	anInstruction1 = genoperandoperand(MoveAwR, address1, FPReg);
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#genMulR:R: */
+static AbstractInstruction * NoDbgRegParms
+genMulRR(AbstractInstruction * self_in_genMulRR, sqInt regSource, sqInt regDest)
+{
+	return genoperandoperand(MulRR, regSource, regDest);
+}
+
+
+/*	Ensure that the register args are pushed before the outer and
+	inner retpcs at an entry miss for arity <= self numRegArgs. The
+	outer retpc is that of a call at a send site. The inner is the call
+	from a method or PIC abort/miss to the trampoline. */
+/*	Putting the receiver and args above the return address means the
+	CoInterpreter has a single machine-code frame format which saves
+	us a lot of work. */
+/*	Iff there are register args convert
+	sp		->	outerRetpc			(send site retpc)
+	linkReg = innerRetpc			(PIC abort/miss retpc)
+	to
+	base	->	receiver
+	(arg0)
+	(arg1)
+	sp		->	outerRetpc			(send site retpc)
+	sp		->	linkReg/innerRetpc	(PIC abort/miss retpc) */
+
+	/* CogMIPSELCompiler>>#genPushRegisterArgsForAbortMissNumArgs: */
+static AbstractInstruction * NoDbgRegParms
+genPushRegisterArgsForAbortMissNumArgs(AbstractInstruction * self_in_genPushRegisterArgsForAbortMissNumArgs, sqInt numArgs)
+{
+    AbstractInstruction *anInstruction;
+    AbstractInstruction *anInstruction1;
+
+	flag("inefficient");
+	if (numArgs <= 2) {
+		assert((numRegArgs()) <= 2);
+		/* begin MoveMw:r:R: */
+		anInstruction = genoperandoperandoperand(MoveMwrR, 0, SPReg, TempReg);
+		/* begin MoveR:Mw:r: */
+		anInstruction1 = genoperandoperandoperand(MoveRMwr, ReceiverResultReg, 0, SPReg);
+		if (numArgs > 0) {
+			/* begin PushR: */
+			genoperand(PushR, Arg0Reg);
+			if (numArgs > 1) {
+				/* begin PushR: */
+				genoperand(PushR, Arg1Reg);
+			}
+		}
+		/* begin PushR: */
+		genoperand(PushR, TempReg);
+	}
+	/* begin PushR: */
+	genoperand(PushR, LinkReg);
+	return self_in_genPushRegisterArgsForAbortMissNumArgs;
+}
+
+
+/*	Ensure that the register args are pushed before the retpc for arity <=
+	self numRegArgs.
+ */
+/*	This is easy on a RISC like ARM because the return address is in the link
+	register. Putting
+	the receiver and args above the return address means the CoInterpreter has
+	a single
+	machine-code frame format which saves us a lot of work
+	NOTA BENE: we do NOT push the return address here, which means it must be
+	dealt with later. */
+
+	/* CogMIPSELCompiler>>#genPushRegisterArgsForNumArgs:scratchReg: */
+static AbstractInstruction * NoDbgRegParms
+genPushRegisterArgsForNumArgsscratchReg(AbstractInstruction * self_in_genPushRegisterArgsForNumArgsscratchReg, sqInt numArgs, sqInt ignored)
+{
+	flag("inefficient");
+	if (numArgs <= 2) {
+		assert((numRegArgs()) <= 2);
+		/* begin PushR: */
+		genoperand(PushR, ReceiverResultReg);
+		if (numArgs > 0) {
+			/* begin PushR: */
+			genoperand(PushR, Arg0Reg);
+			if (numArgs > 1) {
+				/* begin PushR: */
+				genoperand(PushR, Arg1Reg);
+			}
+		}
+	}
+	return self_in_genPushRegisterArgsForNumArgsscratchReg;
+}
+
+
+/*	This is a no-op on MIPS since the ABI passes up to 4 args in registers and
+	trampolines currently observe that limit.
+ */
+
+	/* CogMIPSELCompiler>>#genRemoveNArgsFromStack: */
+static sqInt NoDbgRegParms
+genRemoveNArgsFromStack(AbstractInstruction * self_in_genRemoveNArgsFromStack, sqInt n)
+{
+	assert(n <= 4);
+	return 0;
+}
+
+
+/*	This method is poorly named. Is this for a Smalltalk -> C call or C ->
+	Smalltalk call?
+	If the former we don't need to do anything because all of the abstract
+	registers are
+	allocated to C preserved registers. */
+
+	/* CogMIPSELCompiler>>#genRestoreRegs */
+static AbstractInstruction * NoDbgRegParms
+genRestoreRegs(AbstractInstruction * self_in_genRestoreRegs)
+{
+	flag("bogus");
+	return self_in_genRestoreRegs;
+}
+
+
+/*	Restore the general purpose registers except for abstractReg for a
+	trampoline call.
+ */
+
+	/* CogMIPSELCompiler>>#genRestoreRegsExcept: */
+static AbstractInstruction * NoDbgRegParms
+genRestoreRegsExcept(AbstractInstruction * self_in_genRestoreRegsExcept, sqInt abstractReg)
+{
+	flag("bogus");
+	return self_in_genRestoreRegsExcept;
+}
+
+
+/*	This method is poorly named. Is this for a Smalltalk -> C call or C ->
+	Smalltalk call?
+	If the former we don't need to do anything because all of the abstract
+	registers are
+	allocated to C preserved registers. */
+
+	/* CogMIPSELCompiler>>#genSaveRegisters */
+static AbstractInstruction * NoDbgRegParms
+genSaveRegisters(AbstractInstruction * self_in_genSaveRegisters)
+{
+	flag("bogus");
+	return self_in_genSaveRegisters;
+}
+
+
+/*	Save the frame and stack pointer registers to the framePointer
+	and stackPointer variables. Used to save the machine code frame
+	for use by the run-time when calling into the CoInterpreter run-time. */
+
+	/* CogMIPSELCompiler>>#genSaveStackPointers */
+static sqInt NoDbgRegParms
+genSaveStackPointers(AbstractInstruction * self_in_genSaveStackPointers)
+{
+    sqInt address;
+    sqInt address1;
+    AbstractInstruction *anInstruction;
+    AbstractInstruction *anInstruction1;
+
+	/* begin MoveR:Aw: */
+	address = framePointerAddress();
+	/* begin gen:operand:literal: */
+	anInstruction = genoperandoperand(MoveRAw, FPReg, address);
+	/* begin MoveR:Aw: */
+	address1 = stackPointerAddress();
+	/* begin gen:operand:literal: */
+	anInstruction1 = genoperandoperand(MoveRAw, SPReg, address1);
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#genSubstituteReturnAddress: */
+static AbstractInstruction * NoDbgRegParms
+genSubstituteReturnAddress(AbstractInstruction * self_in_genSubstituteReturnAddress, sqInt retpc)
+{
+    AbstractInstruction *anInstruction;
+
+	/* begin MoveCw:R: */
+	anInstruction = genoperandoperand(MoveCwR, retpc, RA);
+	return anInstruction;
+}
+
+	/* CogMIPSELCompiler>>#hasLinkRegister */
+static sqInt NoDbgRegParms
+hasLinkRegister(AbstractInstruction * self_in_hasLinkRegister)
+{
+	return 1;
+}
+
+	/* CogMIPSELCompiler>>#high16BitsOf: */
+static sqInt NoDbgRegParms
+high16BitsOf(AbstractInstruction * self_in_high16BitsOf, sqInt word)
+{
+	return ((usqInt) word) >> 16;
+}
+
+
+/*	Answer the inline cache tag for the return address of a send. */
+/*	MoveCwR ClassReg selectorIndex/expectedClass
+	Call: unlinked send stub/expectedTarget
+	Push ReceiverResult <-- callSiteReturnAddress */
+/*	lui s3, selector/tagHigh
+	ori s3, s3, selector/tagLow
+	lui t9, stub/targetHigh
+	ori t9, t9, stub/targetLow
+	jalr t9
+	nop (delay slot)
+	... <-- callSiteReturnAddress */
+
+	/* CogMIPSELCompiler>>#inlineCacheTagAt: */
+static sqInt NoDbgRegParms
+inlineCacheTagAt(AbstractInstruction * self_in_inlineCacheTagAt, usqInt callSiteReturnAddress)
+{
+	assert((opcodeAtAddress(self_in_inlineCacheTagAt, callSiteReturnAddress - 24)) == LUI);
+	assert((opcodeAtAddress(self_in_inlineCacheTagAt, callSiteReturnAddress - 20)) == ORI);
+	assert((opcodeAtAddress(self_in_inlineCacheTagAt, callSiteReturnAddress - 16)) == LUI);
+	assert((opcodeAtAddress(self_in_inlineCacheTagAt, callSiteReturnAddress - 12)) == ORI);
+	assert((opcodeAtAddress(self_in_inlineCacheTagAt, callSiteReturnAddress - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_inlineCacheTagAt, callSiteReturnAddress - 8)) == JALR);
+	assert((longAt(callSiteReturnAddress - 4)) == (nop(self_in_inlineCacheTagAt)));
+	return literalAtAddress(self_in_inlineCacheTagAt, callSiteReturnAddress - 20);
+}
+
+
+/*	Answer the instruction size at pc. */
+
+	/* CogMIPSELCompiler>>#instructionSizeAt: */
+static sqInt NoDbgRegParms
+instructionSizeAt(AbstractInstruction * self_in_instructionSizeAt, sqInt pc)
+{
+	return 4;
+}
+
+
+/*	Support for addressing variables off the dedicated VarBaseReg */
+
+	/* CogMIPSELCompiler>>#isAddressRelativeToVarBase: */
+static sqInt NoDbgRegParms
+isAddressRelativeToVarBase(AbstractInstruction * self_in_isAddressRelativeToVarBase, usqInt varAddress)
+{
+	return (varAddress != null)
+	 && ((((varBaseAddress()) - (1 << 15)) < varAddress)
+	 && (varAddress < ((varBaseAddress()) + (1 << 15))));
+}
+
+
+/*	Assuming mcpc is a send return pc answer if the instruction before it is a
+	call (not a CallFull).
+ */
+/*	cogit disassembleFrom: mcpc - 8 to: mcpc. */
+
+	/* CogMIPSELCompiler>>#isCallPrecedingReturnPC: */
+static sqInt NoDbgRegParms
+isCallPrecedingReturnPC(AbstractInstruction * self_in_isCallPrecedingReturnPC, sqInt mcpc)
+{
+	if ((opcodeAtAddress(self_in_isCallPrecedingReturnPC, mcpc - 8)) == JAL) {
+		return 1;
+	}
+	if (((opcodeAtAddress(self_in_isCallPrecedingReturnPC, mcpc - 8)) == SPECIAL)
+	 && ((functionAtAddress(self_in_isCallPrecedingReturnPC, mcpc - 8)) == JALR)) {
+		return 1;
+	}
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#isJump */
+static sqInt NoDbgRegParms
+isJump(AbstractInstruction * self_in_isJump)
+{
+	return (((((self_in_isJump->opcode)) >= FirstJump) && (((self_in_isJump->opcode)) <= LastJump)))
+	 || (((((self_in_isJump->opcode)) >= BrEqualRR) && (((self_in_isJump->opcode)) <= BrLongNotEqualRR)));
+}
+
+
+/*	cogit disassembleFrom: pc to: pc + 4. */
+
+	/* CogMIPSELCompiler>>#isJumpAt: */
+static sqInt NoDbgRegParms
+isJumpAt(AbstractInstruction * self_in_isJumpAt, sqInt pc)
+{
+	if ((opcodeAtAddress(self_in_isJumpAt, pc)) == J) {
+		return 1;
+	}
+	if ((opcodeAtAddress(self_in_isJumpAt, pc)) == SPECIAL) {
+		if ((functionAtAddress(self_in_isJumpAt, pc)) == JR) {
+			return 1;
+		}
+	}
+	if ((opcodeAtAddress(self_in_isJumpAt, pc)) == BEQ) {
+		return 1;
+	}
+	if ((opcodeAtAddress(self_in_isJumpAt, pc)) == BNE) {
+		return 1;
+	}
+	if ((opcodeAtAddress(self_in_isJumpAt, pc)) == BLEZ) {
+		return 1;
+	}
+	if ((opcodeAtAddress(self_in_isJumpAt, pc)) == BGTZ) {
+		return 1;
+	}
+	if ((opcodeAtAddress(self_in_isJumpAt, pc)) == REGIMM) {
+		if ((rtAtAddress(self_in_isJumpAt, pc)) == BLTZ) {
+			return 1;
+		}
+		if ((rtAtAddress(self_in_isJumpAt, pc)) == BGEZ) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+
+/*	Answer if the receiver is a pc-dependent instruction. */
+
+	/* CogMIPSELCompiler>>#isPCDependent */
+static sqInt NoDbgRegParms
+isPCDependent(AbstractInstruction * self_in_isPCDependent)
+{
+	return (isJump(self_in_isPCDependent))
+	 || (((self_in_isPCDependent->opcode)) == AlignmentNops);
+}
+
+	/* CogMIPSELCompiler>>#isShortOffset: */
+static sqInt NoDbgRegParms
+isShortOffset(AbstractInstruction * self_in_isShortOffset, sqInt offset)
+{
+	return ((offset >= -32768) && (offset <= 0x7FFF));
+}
+
+	/* CogMIPSELCompiler>>#itype:rs:rt:eitherImmediate: */
+static sqInt NoDbgRegParms
+itypersrteitherImmediate(AbstractInstruction * self_in_itypersrteitherImmediate, sqInt op, sqInt rs, sqInt rt, sqInt signedImmediate)
+{
+    sqInt unsignedImmediate;
+
+	assert(((op >= 0) && (op <= 0x3F)));
+	assert(((rs >= 0) && (rs <= 0x1F)));
+	assert(((rt >= 0) && (rt <= 0x1F)));
+	if (signedImmediate < 0) {
+		unsignedImmediate = signedImmediate + 65536;
+	}
+	else {
+		unsignedImmediate = signedImmediate;
+	}
+	assert(((unsignedImmediate >= 0) && (unsignedImmediate <= 0xFFFF)));
+	return (((op << 26) | (rs << 21)) | (rt << 16)) | unsignedImmediate;
+}
+
+	/* CogMIPSELCompiler>>#itype:rs:rt:signedImmediate: */
+static sqInt NoDbgRegParms
+itypersrtsignedImmediate(AbstractInstruction * self_in_itypersrtsignedImmediate, sqInt op, sqInt rs, sqInt rt, sqInt signedImmediate)
+{
+    sqInt unsignedImmediate;
+
+	assert(((op >= 0) && (op <= 0x3F)));
+	assert(((rs >= 0) && (rs <= 0x1F)));
+	assert(((rt >= 0) && (rt <= 0x1F)));
+	assert(((signedImmediate >= -32768) && (signedImmediate <= 0x7FFF)));
+	if (signedImmediate < 0) {
+		unsignedImmediate = signedImmediate + 65536;
+	}
+	else {
+		unsignedImmediate = signedImmediate;
+	}
+	assert(((unsignedImmediate >= 0) && (unsignedImmediate <= 0xFFFF)));
+	return (((op << 26) | (rs << 21)) | (rt << 16)) | unsignedImmediate;
+}
+
+	/* CogMIPSELCompiler>>#itype:rs:rt:unsignedImmediate: */
+static sqInt NoDbgRegParms
+itypersrtunsignedImmediate(AbstractInstruction * self_in_itypersrtunsignedImmediate, sqInt op, sqInt rs, sqInt rt, sqInt immediate)
+{
+	assert(((op >= 0) && (op <= 0x3F)));
+	assert(((rs >= 0) && (rs <= 0x1F)));
+	assert(((rt >= 0) && (rt <= 0x1F)));
+	assert(((immediate >= 0) && (immediate <= 0xFFFF)));
+	return (((op << 26) | (rs << 21)) | (rt << 16)) | immediate;
+}
+
+	/* CogMIPSELCompiler>>#jA: */
+static sqInt NoDbgRegParms
+jA(AbstractInstruction * self_in_jA, sqInt target)
+{
+	assert((target & 3) == 0);
+	return jtypetarget(self_in_jA, J, ((usqInt) (target & 0xFFFFFFF)) >> 2);
+}
+
+	/* CogMIPSELCompiler>>#jalA: */
+static sqInt NoDbgRegParms
+jalA(AbstractInstruction * self_in_jalA, sqInt target)
+{
+	assert((target & 3) == 0);
+	return jtypetarget(self_in_jalA, JAL, ((usqInt) (target & 0xFFFFFFF)) >> 2);
+}
+
+	/* CogMIPSELCompiler>>#jalR: */
+static sqInt NoDbgRegParms
+jalR(AbstractInstruction * self_in_jalR, sqInt targetReg)
+{
+	return rtypersrtrdsafunct(self_in_jalR, SPECIAL, targetReg, 0, RA, 0, JALR);
+}
+
+	/* CogMIPSELCompiler>>#jR: */
+static sqInt NoDbgRegParms
+jR(AbstractInstruction * self_in_jR, sqInt targetReg)
+{
+	return rtypersrtrdsafunct(self_in_jR, SPECIAL, targetReg, 0, 0, 0, JR);
+}
+
+	/* CogMIPSELCompiler>>#jtype:target: */
+static sqInt NoDbgRegParms
+jtypetarget(AbstractInstruction * self_in_jtypetarget, sqInt op, sqInt target)
+{
+	assert(((op >= 0) && (op <= 0x3F)));
+	assert(((target >= 0) && (target <= 0x7FFFFFF)));
+	return (op << 26) | target;
+}
+
+	/* CogMIPSELCompiler>>#jumpLongByteSize */
+static sqInt NoDbgRegParms
+jumpLongByteSize(AbstractInstruction * self_in_jumpLongByteSize)
+{
+	flag("bogus");
+	return 16;
+}
+
+	/* CogMIPSELCompiler>>#jumpLongConditionalByteSize */
+static sqInt NoDbgRegParms
+jumpLongConditionalByteSize(AbstractInstruction * self_in_jumpLongConditionalByteSize)
+{
+	return 16;
+}
+
+
+/*	mcpc - 16:	beq/ne Cmp, ZR, +12
+	mcpc - 12:	nop (delay slot)
+	mcpc - 8:	j psuedo-address
+	mcpc - 4:	nop (delay slot) */
+
+	/* CogMIPSELCompiler>>#jumpLongConditionalTargetBeforeFollowingAddress: */
+static sqInt NoDbgRegParms
+jumpLongConditionalTargetBeforeFollowingAddress(AbstractInstruction * self_in_jumpLongConditionalTargetBeforeFollowingAddress, sqInt mcpc)
+{
+	assert(((opcodeAtAddress(self_in_jumpLongConditionalTargetBeforeFollowingAddress, mcpc - 16)) == BEQ)
+	 || ((opcodeAtAddress(self_in_jumpLongConditionalTargetBeforeFollowingAddress, mcpc - 16)) == BNE));
+	assert((longAt(mcpc - 12)) == (nop(self_in_jumpLongConditionalTargetBeforeFollowingAddress)));
+	assert((opcodeAtAddress(self_in_jumpLongConditionalTargetBeforeFollowingAddress, mcpc - 8)) == J);
+	assert((longAt(mcpc - 4)) == (nop(self_in_jumpLongConditionalTargetBeforeFollowingAddress)));
+	return targetFromJTypeAtAddress(self_in_jumpLongConditionalTargetBeforeFollowingAddress, mcpc - 8);
+}
+
+
+/*	Answer the target address for the long jump immediately preceding mcpc */
+
+	/* CogMIPSELCompiler>>#jumpLongTargetBeforeFollowingAddress: */
+static sqInt NoDbgRegParms
+jumpLongTargetBeforeFollowingAddress(AbstractInstruction * self_in_jumpLongTargetBeforeFollowingAddress, sqInt mcpc)
+{
+	assert((longAt(mcpc - 4)) == (nop(self_in_jumpLongTargetBeforeFollowingAddress)));
+	assert((opcodeAtAddress(self_in_jumpLongTargetBeforeFollowingAddress, mcpc - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_jumpLongTargetBeforeFollowingAddress, mcpc - 8)) == JR);
+	return literalAtAddress(self_in_jumpLongTargetBeforeFollowingAddress, mcpc - 12);
+}
+
+	/* CogMIPSELCompiler>>#jumpShortByteSize */
+static sqInt NoDbgRegParms
+jumpShortByteSize(AbstractInstruction * self_in_jumpShortByteSize)
+{
+	return 8;
+}
+
+
+/*	cogit disassembleFrom: pc to: pc + 4. */
+
+	/* CogMIPSELCompiler>>#jumpTargetPCAt: */
+static usqInt NoDbgRegParms
+jumpTargetPCAt(AbstractInstruction * self_in_jumpTargetPCAt, sqInt pc)
+{
+	if ((opcodeAtAddress(self_in_jumpTargetPCAt, pc)) == J) {
+		return targetFromJTypeAtAddress(self_in_jumpTargetPCAt, pc);
+	}
+	if ((opcodeAtAddress(self_in_jumpTargetPCAt, pc)) == BEQ) {
+		return targetFromITypeAtAddress(self_in_jumpTargetPCAt, pc);
+	}
+	if ((opcodeAtAddress(self_in_jumpTargetPCAt, pc)) == BNE) {
+		return targetFromITypeAtAddress(self_in_jumpTargetPCAt, pc);
+	}
+	if ((opcodeAtAddress(self_in_jumpTargetPCAt, pc)) == BLEZ) {
+		return targetFromITypeAtAddress(self_in_jumpTargetPCAt, pc);
+	}
+	if ((opcodeAtAddress(self_in_jumpTargetPCAt, pc)) == BGTZ) {
+		return targetFromITypeAtAddress(self_in_jumpTargetPCAt, pc);
+	}
+	if ((opcodeAtAddress(self_in_jumpTargetPCAt, pc)) == REGIMM) {
+		if ((rtAtAddress(self_in_jumpTargetPCAt, pc)) == BLTZ) {
+			return targetFromITypeAtAddress(self_in_jumpTargetPCAt, pc);
+		}
+		if ((rtAtAddress(self_in_jumpTargetPCAt, pc)) == BGEZ) {
+			return targetFromITypeAtAddress(self_in_jumpTargetPCAt, pc);
+		}
+	}
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return self_in_jumpTargetPCAt;
+}
+
+	/* CogMIPSELCompiler>>#lbR:base:offset: */
+static sqInt NoDbgRegParms
+lbRbaseoffset(AbstractInstruction * self_in_lbRbaseoffset, sqInt destReg, sqInt baseReg, sqInt offset)
+{
+	return itypersrtsignedImmediate(self_in_lbRbaseoffset, LB, baseReg, destReg, offset);
+}
+
+	/* CogMIPSELCompiler>>#lbuR:base:offset: */
+static sqInt NoDbgRegParms
+lbuRbaseoffset(AbstractInstruction * self_in_lbuRbaseoffset, sqInt destReg, sqInt baseReg, sqInt offset)
+{
+	return itypersrtsignedImmediate(self_in_lbuRbaseoffset, LBU, baseReg, destReg, offset);
+}
+
+
+/*	Answer the delta from the stack pointer after a call to the stack pointer
+	immediately prior to the call. This is used to compute the stack pointer
+	immediately prior to call from within a leaf routine, which in turn is
+	used to capture the c stack pointer to use in trampolines back into the C
+	run-time.  */
+/*	This might actually be false, since directly after a call, lr, fp and
+	variable registers need be pushed onto the stack. It depends on the
+	implementation of call.
+ */
+
+	/* CogMIPSELCompiler>>#leafCallStackPointerDelta */
+static sqInt NoDbgRegParms
+leafCallStackPointerDelta(AbstractInstruction * self_in_leafCallStackPointerDelta)
+{
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#lhR:base:offset: */
+static sqInt NoDbgRegParms
+lhRbaseoffset(AbstractInstruction * self_in_lhRbaseoffset, sqInt destReg, sqInt baseReg, sqInt offset)
+{
+	return itypersrtsignedImmediate(self_in_lhRbaseoffset, LH, baseReg, destReg, offset);
+}
+
+	/* CogMIPSELCompiler>>#lhuR:base:offset: */
+static sqInt NoDbgRegParms
+lhuRbaseoffset(AbstractInstruction * self_in_lhuRbaseoffset, sqInt destReg, sqInt baseReg, sqInt offset)
+{
+	return itypersrtsignedImmediate(self_in_lhuRbaseoffset, LHU, baseReg, destReg, offset);
+}
+
+	/* CogMIPSELCompiler>>#literalAtAddress: */
+static sqInt NoDbgRegParms
+literalAtAddress(AbstractInstruction * self_in_literalAtAddress, sqInt mcpc)
+{
+    sqInt high;
+    sqInt low;
+
+	assert((opcodeAtAddress(self_in_literalAtAddress, mcpc)) == ORI);
+	assert((opcodeAtAddress(self_in_literalAtAddress, mcpc - 4)) == LUI);
+	low = (longAt(mcpc)) & 0xFFFF;
+	high = (longAt(mcpc - 4)) & 0xFFFF;
+	return (high << 16) | low;
+}
+
+	/* CogMIPSELCompiler>>#literalAtAddress:put: */
+static sqInt NoDbgRegParms
+literalAtAddressput(AbstractInstruction * self_in_literalAtAddressput, sqInt mcpc, sqInt newLiteral)
+{
+    sqInt newLower;
+    sqInt newUpper;
+    sqInt oldLower;
+    sqInt oldUpper;
+
+	assert((opcodeAtAddress(self_in_literalAtAddressput, mcpc - 4)) == LUI);
+	assert((opcodeAtAddress(self_in_literalAtAddressput, mcpc)) == ORI);
+	oldUpper = longAt(mcpc - 4);
+	newUpper = (oldUpper & 0xFFFF0000UL) | (high16BitsOf(self_in_literalAtAddressput, newLiteral));
+	longAtput(mcpc - 4, newUpper);
+	oldLower = longAt(mcpc);
+	newLower = (oldLower & 0xFFFF0000UL) | (low16BitsOf(self_in_literalAtAddressput, newLiteral));
+	longAtput(mcpc, newLower);
+	assert((opcodeAtAddress(self_in_literalAtAddressput, mcpc - 4)) == LUI);
+	assert((opcodeAtAddress(self_in_literalAtAddressput, mcpc)) == ORI);
+	assert((literalAtAddress(self_in_literalAtAddressput, mcpc)) == newLiteral);
+	return newLiteral;
+}
+
+
+/*	Answer the literal embedded in the instruction immediately preceding
+	followingAddress. This is used in the MoveCwR, PushCw and CmpCwR cases. */
+/*	Cmp/MoveCwR
+	pc-8	lui rx, uper
+	pc-4	ori rx, rx, lower */
+
+	/* CogMIPSELCompiler>>#literalBeforeFollowingAddress: */
+static sqInt NoDbgRegParms
+literalBeforeFollowingAddress(AbstractInstruction * self_in_literalBeforeFollowingAddress, sqInt followingAddress)
+{
+	if ((opcodeAtAddress(self_in_literalBeforeFollowingAddress, followingAddress - 4)) == ORI) {
+		return literalAtAddress(self_in_literalBeforeFollowingAddress, followingAddress - 4);
+	}
+	if (((opcodeAtAddress(self_in_literalBeforeFollowingAddress, followingAddress - 4)) == SW)
+	 && ((opcodeAtAddress(self_in_literalBeforeFollowingAddress, followingAddress - 8)) == ADDIU)) {
+		return literalAtAddress(self_in_literalBeforeFollowingAddress, followingAddress - 12);
+	}
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#loadLiteralByteSize */
+static sqInt NoDbgRegParms
+loadLiteralByteSize(AbstractInstruction * self_in_loadLiteralByteSize)
+{
+	return 8;
+}
+
+
+/*	Answer the byte size of a MoveCwR opcode's corresponding machine code
+	when the argument is a PIC. This is for the self-reference at the end of a
+	closed PIC. */
+
+	/* CogMIPSELCompiler>>#loadPICLiteralByteSize */
+static sqInt NoDbgRegParms
+loadPICLiteralByteSize(AbstractInstruction * self_in_loadPICLiteralByteSize)
+{
+	return loadLiteralByteSize(self_in_loadPICLiteralByteSize);
+}
+
+	/* CogMIPSELCompiler>>#low16BitsOf: */
+static sqInt NoDbgRegParms
+low16BitsOf(AbstractInstruction * self_in_low16BitsOf, sqInt word)
+{
+	return word & 0xFFFF;
+}
+
+	/* CogMIPSELCompiler>>#luiR:C: */
+static sqInt NoDbgRegParms
+luiRC(AbstractInstruction * self_in_luiRC, sqInt destReg, sqInt imm)
+{
+	return itypersrteitherImmediate(self_in_luiRC, LUI, 0, destReg, imm);
+}
+
+	/* CogMIPSELCompiler>>#lwR:base:offset: */
+static sqInt NoDbgRegParms
+lwRbaseoffset(AbstractInstruction * self_in_lwRbaseoffset, sqInt destReg, sqInt baseReg, sqInt offset)
+{
+	return itypersrtsignedImmediate(self_in_lwRbaseoffset, LW, baseReg, destReg, offset);
+}
+
+	/* CogMIPSELCompiler>>#machineCodeBytes */
+static sqInt NoDbgRegParms
+machineCodeBytes(AbstractInstruction * self_in_machineCodeBytes)
+{
+	return (machineCodeWords(self_in_machineCodeBytes)) * 4;
+}
+
+
+/*	Answer the maximum number of words of machine code generated for any
+	abstract instruction.
+	e.g. AddCheckOverflowCqR */
+
+	/* CogMIPSELCompiler>>#machineCodeWords */
+static sqInt NoDbgRegParms
+machineCodeWords(AbstractInstruction * self_in_machineCodeWords)
+{
+	return 7;
+}
+
+
+/*	The receiver has a VarBaseReg; generate the code to set it to its value. */
+
+	/* CogMIPSELCompiler>>#maybeEstablishVarBase */
+static AbstractInstruction * NoDbgRegParms
+maybeEstablishVarBase(AbstractInstruction * self_in_maybeEstablishVarBase)
+{
+    AbstractInstruction *anInstruction;
+    sqInt quickConstant;
+
+	/* begin MoveCq:R: */
+	quickConstant = varBaseAddress();
+	/* begin gen:quickConstant:operand: */
+	anInstruction = genoperandoperand(MoveCqR, quickConstant, VarBaseReg);
+	return self_in_maybeEstablishVarBase;
+}
+
+	/* CogMIPSELCompiler>>#mfhiR: */
+static sqInt NoDbgRegParms
+mfhiR(AbstractInstruction * self_in_mfhiR, sqInt destReg)
+{
+	flag("todo");
+	return rtypersrtrdsafunct(self_in_mfhiR, SPECIAL, 0, 0, destReg, 0, MFHI);
+}
+
+	/* CogMIPSELCompiler>>#mfloR: */
+static sqInt NoDbgRegParms
+mfloR(AbstractInstruction * self_in_mfloR, sqInt destReg)
+{
+	flag("todo");
+	return rtypersrtrdsafunct(self_in_mfloR, SPECIAL, 0, 0, destReg, 0, MFLO);
+}
+
+	/* CogMIPSELCompiler>>#mipsbreak: */
+static sqInt NoDbgRegParms
+mipsbreak(AbstractInstruction * self_in_mipsbreak, sqInt code)
+{
+	assert(((code >= 0) && (code <= 0xFFFFF)));
+	return (code << 6) | BREAK;
+}
+
+	/* CogMIPSELCompiler>>#multR:R: */
+static sqInt NoDbgRegParms
+multRR(AbstractInstruction * self_in_multRR, sqInt leftReg, sqInt rightReg)
+{
+	flag("todo");
+	return rtypersrtrdsafunct(self_in_multRR, SPECIAL, leftReg, rightReg, 0, 0, MULT);
+}
+
+	/* CogMIPSELCompiler>>#nop */
+static sqInt NoDbgRegParms
+nop(AbstractInstruction * self_in_nop)
+{
+	return 0;
+}
+
+
+/*	Support for processors without condition codes, such as the MIPS.
+	Answer the branch opcode. Modify the receiver and the branch to
+	implement a suitable conditional branch that doesn't depend on
+	condition codes being set by the receiver. */
+
+	/* CogMIPSELCompiler>>#noteFollowingConditionalBranch: */
+static AbstractInstruction * NoDbgRegParms
+noteFollowingConditionalBranch(AbstractInstruction * self_in_noteFollowingConditionalBranch, AbstractInstruction *branch)
+{
+    unsigned long newBranchLeft;
+    sqInt newBranchOpcode;
+    unsigned long newBranchRight;
+
+	if ((((branch->opcode)) == JumpOverflow)
+	 || (((branch->opcode)) == JumpNoOverflow)) {
+		return noteFollowingOverflowBranch(self_in_noteFollowingConditionalBranch, branch);
+	}
+	
+	switch ((branch->opcode)) {
+	case JumpZero:
+		newBranchOpcode = BrEqualRR;
+
+		break;
+	case JumpNonZero:
+		newBranchOpcode = BrNotEqualRR;
+
+		break;
+	case JumpBelow:
+		newBranchOpcode = BrUnsignedLessRR;
+
+		break;
+	case JumpBelowOrEqual:
+		newBranchOpcode = BrUnsignedLessEqualRR;
+
+		break;
+	case JumpAbove:
+		newBranchOpcode = BrUnsignedGreaterRR;
+
+		break;
+	case JumpAboveOrEqual:
+		newBranchOpcode = BrUnsignedGreaterEqualRR;
+
+		break;
+	case JumpLess:
+	case JumpNegative:
+		newBranchOpcode = BrSignedLessRR;
+
+		break;
+	case JumpLessOrEqual:
+		newBranchOpcode = BrSignedLessEqualRR;
+
+		break;
+	case JumpGreater:
+		newBranchOpcode = BrSignedGreaterRR;
+
+		break;
+	case JumpGreaterOrEqual:
+		newBranchOpcode = BrSignedGreaterEqualRR;
+
+		break;
+	case JumpLongZero:
+		newBranchOpcode = BrLongEqualRR;
+
+		break;
+	case JumpLongNonZero:
+		newBranchOpcode = BrLongNotEqualRR;
+
+		break;
+	default:
+		/* begin unreachable */
+		error("UNREACHABLE");
+		newBranchOpcode = 0;
+
+	}
+	
+	switch ((self_in_noteFollowingConditionalBranch->opcode)) {
+	case BrEqualRR:
+	case BrUnsignedLessRR:
+		
+		/* I.e., two jumps after a compare. */
+		newBranchLeft = ((self_in_noteFollowingConditionalBranch->operands))[1];
+		newBranchRight = ((self_in_noteFollowingConditionalBranch->operands))[2];
+		break;
+	case CmpRR:
+		newBranchLeft = ((self_in_noteFollowingConditionalBranch->operands))[1];
+		newBranchRight = ((self_in_noteFollowingConditionalBranch->operands))[0];
+		(self_in_noteFollowingConditionalBranch->opcode) = Label;
+		break;
+	case CmpCqR:
+		newBranchLeft = ((self_in_noteFollowingConditionalBranch->operands))[1];
+		newBranchRight = AT;
+		(self_in_noteFollowingConditionalBranch->opcode) = MoveCqR;
+		((self_in_noteFollowingConditionalBranch->operands))[1] = AT;
+		break;
+	case CmpCwR:
+		newBranchLeft = ((self_in_noteFollowingConditionalBranch->operands))[1];
+		newBranchRight = AT;
+		(self_in_noteFollowingConditionalBranch->opcode) = MoveCwR;
+		((self_in_noteFollowingConditionalBranch->operands))[1] = AT;
+		break;
+	case TstCqR:
+		newBranchLeft = Cmp;
+		newBranchRight = ZR;
+		break;
+	case AndCqR:
+	case OrRR:
+	case XorRR:
+	case SubCwR:
+	case SubCqR:
+	case ArithmeticShiftRightCqR:
+		newBranchLeft = ((self_in_noteFollowingConditionalBranch->operands))[1];
+		newBranchRight = ZR;
+		break;
+	case AndCqRR:
+		newBranchLeft = ((self_in_noteFollowingConditionalBranch->operands))[2];
+		newBranchRight = ZR;
+		break;
+	default:
+		/* begin unreachable */
+		error("UNREACHABLE");
+
+	}
+	/* begin rewriteOpcode:with:with: */
+	(branch->opcode) = newBranchOpcode;
+	((branch->operands))[1] = newBranchLeft;
+	((branch->operands))[2] = newBranchRight;
+	return branch;
+}
+
+
+/*	Support for processors without condition codes, such as the MIPS.
+	Answer the branch opcode. Modify the receiver and the branch to
+	implement a suitable conditional branch that doesn't depend on
+	condition codes being set by the receiver. */
+
+	/* CogMIPSELCompiler>>#noteFollowingOverflowBranch: */
+static AbstractInstruction * NoDbgRegParms
+noteFollowingOverflowBranch(AbstractInstruction * self_in_noteFollowingOverflowBranch, AbstractInstruction *branch)
+{
+    sqInt newBranchOpcode;
+
+	if (((self_in_noteFollowingOverflowBranch->opcode)) == MulRR) {
+		(self_in_noteFollowingOverflowBranch->opcode) = MulCheckOverflowRR;
+		
+		switch ((branch->opcode)) {
+		case JumpOverflow:
+			newBranchOpcode = BrNotEqualRR;
+
+			break;
+		case JumpNoOverflow:
+			newBranchOpcode = BrEqualRR;
+
+			break;
+		default:
+			/* begin unreachable */
+			error("UNREACHABLE");
+			newBranchOpcode = 0;
+
+		}
+		/* begin rewriteOpcode:with:with: */
+		(branch->opcode) = newBranchOpcode;
+		((branch->operands))[1] = OverflowTemp1;
+		((branch->operands))[2] = OverflowTemp2;
+		return branch;
+	}
+	
+	switch ((self_in_noteFollowingOverflowBranch->opcode)) {
+	case AddCqR:
+		(self_in_noteFollowingOverflowBranch->opcode) = AddCheckOverflowCqR;
+
+		break;
+	case AddRR:
+		(self_in_noteFollowingOverflowBranch->opcode) = AddCheckOverflowRR;
+
+		break;
+	case SubCqR:
+		(self_in_noteFollowingOverflowBranch->opcode) = SubCheckOverflowCqR;
+
+		break;
+	case SubRR:
+		(self_in_noteFollowingOverflowBranch->opcode) = SubCheckOverflowRR;
+
+		break;
+	default:
+		/* begin unreachable */
+		error("UNREACHABLE");
+		(self_in_noteFollowingOverflowBranch->opcode) = 0;
+
+	}
+	
+	switch ((branch->opcode)) {
+	case JumpOverflow:
+		newBranchOpcode = BrSignedLessRR;
+
+		break;
+	case JumpNoOverflow:
+		newBranchOpcode = BrSignedGreaterEqualRR;
+
+		break;
+	default:
+		/* begin unreachable */
+		error("UNREACHABLE");
+		newBranchOpcode = 0;
+
+	}
+	/* begin rewriteOpcode:with:with: */
+	(branch->opcode) = newBranchOpcode;
+	((branch->operands))[1] = Overflow;
+	((branch->operands))[2] = ZR;
+	return branch;
+}
+
+	/* CogMIPSELCompiler>>#numIntRegArgs */
+static sqInt NoDbgRegParms
+numIntRegArgs(AbstractInstruction * self_in_numIntRegArgs)
+{
+	flag("OABI");
+	return 4;
+}
+
+	/* CogMIPSELCompiler>>#opcodeAtAddress: */
+static sqInt NoDbgRegParms
+opcodeAtAddress(AbstractInstruction * self_in_opcodeAtAddress, sqInt mcpc)
+{
+	return ((usqInt) (longAt(mcpc))) >> 26;
+}
+
+	/* CogMIPSELCompiler>>#oriR:R:C: */
+static sqInt NoDbgRegParms
+oriRRC(AbstractInstruction * self_in_oriRRC, sqInt destReg, sqInt srcReg, sqInt imm)
+{
+	return itypersrteitherImmediate(self_in_oriRRC, ORI, srcReg, destReg, imm);
+}
+
+	/* CogMIPSELCompiler>>#orR:R:R: */
+static sqInt NoDbgRegParms
+orRRR(AbstractInstruction * self_in_orRRR, sqInt destReg, sqInt leftReg, sqInt rightReg)
+{
+	return rtypersrtrdsafunct(self_in_orRRR, SPECIAL, leftReg, rightReg, destReg, 0, OR);
+}
+
+	/* CogMIPSELCompiler>>#padIfPossibleWithStopsFrom:to: */
+static AbstractInstruction * NoDbgRegParms
+padIfPossibleWithStopsFromto(AbstractInstruction * self_in_padIfPossibleWithStopsFromto, sqInt startAddr, sqInt endAddr)
+{
+    sqInt addr;
+
+	for (addr = startAddr; addr < endAddr; addr += 4) {
+		longAtput(addr, stop(self_in_padIfPossibleWithStopsFromto));
+	}
+	return self_in_padIfPossibleWithStopsFromto;
+}
+
+	/* CogMIPSELCompiler>>#prefR:offset:hint: */
+static sqInt NoDbgRegParms
+prefRoffsethint(AbstractInstruction * self_in_prefRoffsethint, sqInt baseReg, sqInt offset, sqInt hint)
+{
+	flag("todo");
+	assert((hint == HintLoad)
+	 || (hint == HintStore));
+	return itypersrtsignedImmediate(self_in_prefRoffsethint, PREF, baseReg, hint, offset);
+}
+
+	/* CogMIPSELCompiler>>#pushLinkRegisterByteSize */
+static sqInt NoDbgRegParms
+pushLinkRegisterByteSize(AbstractInstruction * self_in_pushLinkRegisterByteSize)
+{
+	return 8;
+}
+
+	/* CogMIPSELCompiler>>#relocateCallBeforeReturnPC:by: */
+static AbstractInstruction * NoDbgRegParms
+relocateCallBeforeReturnPCby(AbstractInstruction * self_in_relocateCallBeforeReturnPCby, sqInt retpc, sqInt delta)
+{
+    sqInt target;
+
+	assert((delta % 4) == 0);
+	if (delta == 0) {
+		return self_in_relocateCallBeforeReturnPCby;
+	}
+	assert((opcodeAtAddress(self_in_relocateCallBeforeReturnPCby, retpc - 16)) == LUI);
+	assert((opcodeAtAddress(self_in_relocateCallBeforeReturnPCby, retpc - 12)) == ORI);
+	assert((opcodeAtAddress(self_in_relocateCallBeforeReturnPCby, retpc - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_relocateCallBeforeReturnPCby, retpc - 8)) == JALR);
+	assert((longAt(retpc - 4)) == (nop(self_in_relocateCallBeforeReturnPCby)));
+	target = literalAtAddress(self_in_relocateCallBeforeReturnPCby, retpc - 12);
+	target += delta;
+	literalAtAddressput(self_in_relocateCallBeforeReturnPCby, retpc - 12, target);
+	assert((opcodeAtAddress(self_in_relocateCallBeforeReturnPCby, retpc - 16)) == LUI);
+	assert((opcodeAtAddress(self_in_relocateCallBeforeReturnPCby, retpc - 12)) == ORI);
+	assert((opcodeAtAddress(self_in_relocateCallBeforeReturnPCby, retpc - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_relocateCallBeforeReturnPCby, retpc - 8)) == JALR);
+	assert((longAt(retpc - 4)) == (nop(self_in_relocateCallBeforeReturnPCby)));
+	return self_in_relocateCallBeforeReturnPCby;
+}
+
+
+/*	lui t9, stub/targetHigh
+	ori t9, t9, stub/targetLow
+	jr t9
+	nop (delay slot)
+	... <-- pc */
+
+	/* CogMIPSELCompiler>>#relocateJumpLongBeforeFollowingAddress:by: */
+static AbstractInstruction * NoDbgRegParms
+relocateJumpLongBeforeFollowingAddressby(AbstractInstruction * self_in_relocateJumpLongBeforeFollowingAddressby, sqInt pc, sqInt delta)
+{
+    sqInt newTarget;
+    sqInt oldTarget;
+
+	assert((delta % 4) == 0);
+	if (delta == 0) {
+		return self_in_relocateJumpLongBeforeFollowingAddressby;
+	}
+	assert((opcodeAtAddress(self_in_relocateJumpLongBeforeFollowingAddressby, pc - 16)) == LUI);
+	assert((opcodeAtAddress(self_in_relocateJumpLongBeforeFollowingAddressby, pc - 12)) == ORI);
+	assert((opcodeAtAddress(self_in_relocateJumpLongBeforeFollowingAddressby, pc - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_relocateJumpLongBeforeFollowingAddressby, pc - 8)) == JR);
+	assert((longAt(pc - 4)) == (nop(self_in_relocateJumpLongBeforeFollowingAddressby)));
+	oldTarget = literalAtAddress(self_in_relocateJumpLongBeforeFollowingAddressby, pc - 12);
+	newTarget = oldTarget + delta;
+	literalAtAddressput(self_in_relocateJumpLongBeforeFollowingAddressby, pc - 12, newTarget);
+	assert((opcodeAtAddress(self_in_relocateJumpLongBeforeFollowingAddressby, pc - 16)) == LUI);
+	assert((opcodeAtAddress(self_in_relocateJumpLongBeforeFollowingAddressby, pc - 12)) == ORI);
+	assert((opcodeAtAddress(self_in_relocateJumpLongBeforeFollowingAddressby, pc - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_relocateJumpLongBeforeFollowingAddressby, pc - 8)) == JR);
+	assert((longAt(pc - 4)) == (nop(self_in_relocateJumpLongBeforeFollowingAddressby)));
+	return self_in_relocateJumpLongBeforeFollowingAddressby;
+}
+
+
+/*	lui t9, stub/targetHigh
+	ori t9, t9, stub/targetLow
+	jalr t9
+	nop (delay slot)
+	... <-- callSiteReturnAddress */
+
+	/* CogMIPSELCompiler>>#relocateJumpLongConditionalBeforeFollowingAddress:by: */
+static AbstractInstruction * NoDbgRegParms
+relocateJumpLongConditionalBeforeFollowingAddressby(AbstractInstruction * self_in_relocateJumpLongConditionalBeforeFollowingAddressby, sqInt pc, sqInt delta)
+{
+	assert((opcodeAtAddress(self_in_relocateJumpLongConditionalBeforeFollowingAddressby, pc - 16)) == BNE);
+	assert((longAt(pc - 12)) == (nop(self_in_relocateJumpLongConditionalBeforeFollowingAddressby)));
+	assert((opcodeAtAddress(self_in_relocateJumpLongConditionalBeforeFollowingAddressby, pc - 8)) == J);
+	assert((longAt(pc - 4)) == (nop(self_in_relocateJumpLongConditionalBeforeFollowingAddressby)));
+	rewriteJTypeAtAddressdelta(self_in_relocateJumpLongConditionalBeforeFollowingAddressby, pc - 8, delta);
+	assert((opcodeAtAddress(self_in_relocateJumpLongConditionalBeforeFollowingAddressby, pc - 16)) == BNE);
+	assert((longAt(pc - 12)) == (nop(self_in_relocateJumpLongConditionalBeforeFollowingAddressby)));
+	assert((opcodeAtAddress(self_in_relocateJumpLongConditionalBeforeFollowingAddressby, pc - 8)) == J);
+	assert((longAt(pc - 4)) == (nop(self_in_relocateJumpLongConditionalBeforeFollowingAddressby)));
+	return self_in_relocateJumpLongConditionalBeforeFollowingAddressby;
+}
+
+
+/*	cogit disassembleFrom: pc - 16 to: pc + 16 a StackToRegisterMappingCogit. */
+
+	/* CogMIPSELCompiler>>#relocateMethodReferenceBeforeAddress:by: */
+static AbstractInstruction * NoDbgRegParms
+relocateMethodReferenceBeforeAddressby(AbstractInstruction * self_in_relocateMethodReferenceBeforeAddressby, sqInt pc, sqInt delta)
+{
+    sqInt newValue;
+    sqInt oldValue;
+
+	if (((opcodeAtAddress(self_in_relocateMethodReferenceBeforeAddressby, pc - 8)) == ADDIU)
+	 && ((opcodeAtAddress(self_in_relocateMethodReferenceBeforeAddressby, pc - 4)) == SW)) {
+
+		/* PushCwR */
+		oldValue = literalAtAddress(self_in_relocateMethodReferenceBeforeAddressby, pc - 12);
+		newValue = oldValue + delta;
+		literalAtAddressput(self_in_relocateMethodReferenceBeforeAddressby, pc - 12, newValue);
+		assert((literalAtAddress(self_in_relocateMethodReferenceBeforeAddressby, pc - 12)) == newValue);
+		return self_in_relocateMethodReferenceBeforeAddressby;
+	}
+	oldValue = literalAtAddress(self_in_relocateMethodReferenceBeforeAddressby, pc - 4);
+	newValue = oldValue + delta;
+	literalAtAddressput(self_in_relocateMethodReferenceBeforeAddressby, pc - 4, newValue);
+	assert((literalAtAddress(self_in_relocateMethodReferenceBeforeAddressby, pc - 4)) == newValue);
+	return self_in_relocateMethodReferenceBeforeAddressby;
+}
+
+
+/*	Rewrite a call instruction to call a different target. This variant is
+	used to link PICs
+	in ceSendMiss et al,. 
+	Answer the extent of the code change which is used to compute the range of
+	the icache to flush. */
+/*	lui t9, stub/targetHigh
+	ori t9, t9, stub/targetLow
+	jalr t9
+	nop (delay slot)
+	... <-- callSiteReturnAddress */
+
+	/* CogMIPSELCompiler>>#rewriteCallAt:target: */
+static sqInt NoDbgRegParms
+rewriteCallAttarget(AbstractInstruction * self_in_rewriteCallAttarget, usqInt callSiteReturnAddress, usqInt callTargetAddress)
+{
+	assert((opcodeAtAddress(self_in_rewriteCallAttarget, callSiteReturnAddress - 16)) == LUI);
+	assert((opcodeAtAddress(self_in_rewriteCallAttarget, callSiteReturnAddress - 12)) == ORI);
+	assert((opcodeAtAddress(self_in_rewriteCallAttarget, callSiteReturnAddress - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_rewriteCallAttarget, callSiteReturnAddress - 8)) == JALR);
+	assert((longAt(callSiteReturnAddress - 4)) == (nop(self_in_rewriteCallAttarget)));
+	literalAtAddressput(self_in_rewriteCallAttarget, callSiteReturnAddress - 12, callTargetAddress);
+	assert((opcodeAtAddress(self_in_rewriteCallAttarget, callSiteReturnAddress - 16)) == LUI);
+	assert((opcodeAtAddress(self_in_rewriteCallAttarget, callSiteReturnAddress - 12)) == ORI);
+	assert((opcodeAtAddress(self_in_rewriteCallAttarget, callSiteReturnAddress - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_rewriteCallAttarget, callSiteReturnAddress - 8)) == JALR);
+	assert((longAt(callSiteReturnAddress - 4)) == (nop(self_in_rewriteCallAttarget)));
+	return 20;
+}
+
+
+/*	Rewrite a jump instruction to call a different target. This variant is
+	used to reset the 
+	jumps in the prototype CPIC to suit each use,. 
+	Answer the extent of the code change which is used to compute the range of
+	the icache to flush. */
+
+	/* CogMIPSELCompiler>>#rewriteConditionalJumpLongAt:target: */
+static AbstractInstruction * NoDbgRegParms
+rewriteConditionalJumpLongAttarget(AbstractInstruction * self_in_rewriteConditionalJumpLongAttarget, usqInt callSiteReturnAddress, usqInt callTargetAddress)
+{
+	assert((opcodeAtAddress(self_in_rewriteConditionalJumpLongAttarget, callSiteReturnAddress - 8)) == J);
+	assert((longAt(callSiteReturnAddress - 4)) == (nop(self_in_rewriteConditionalJumpLongAttarget)));
+	rewriteJTypeAtAddresstarget(self_in_rewriteConditionalJumpLongAttarget, callSiteReturnAddress - 8, callTargetAddress);
+	assert((opcodeAtAddress(self_in_rewriteConditionalJumpLongAttarget, callSiteReturnAddress - 8)) == J);
+	assert((longAt(callSiteReturnAddress - 4)) == (nop(self_in_rewriteConditionalJumpLongAttarget)));
+	return self_in_rewriteConditionalJumpLongAttarget;
+}
+
+
+/*	Rewrite a jump instruction to call a different target. This variant is
+	used to reset the 
+	jumps in the prototype CPIC to suit each use,. 
+	Answer the extent of the code change which is used to compute the range of
+	the icache to flush. */
+/*	self CmpR: ClassReg R: TempReg.
+	^self JumpNonZero: 0 */
+/*	bne s5, s3, +156 ; =BE7C
+	nop (delay slot)
+	.... <-- addressFollowingJump */
+
+	/* CogMIPSELCompiler>>#rewriteCPICJumpAt:target: */
+static AbstractInstruction * NoDbgRegParms
+rewriteCPICJumpAttarget(AbstractInstruction * self_in_rewriteCPICJumpAttarget, usqInt addressFollowingJump, usqInt jumpTargetAddress)
+{
+	assert((opcodeAtAddress(self_in_rewriteCPICJumpAttarget, addressFollowingJump - 8)) == BNE);
+	assert((longAt(addressFollowingJump - 4)) == (nop(self_in_rewriteCPICJumpAttarget)));
+	rewriteITypeBranchAtAddresstarget(self_in_rewriteCPICJumpAttarget, addressFollowingJump - 8, jumpTargetAddress);
+	assert((opcodeAtAddress(self_in_rewriteCPICJumpAttarget, addressFollowingJump - 8)) == BNE);
+	assert((longAt(addressFollowingJump - 4)) == (nop(self_in_rewriteCPICJumpAttarget)));
+	return self_in_rewriteCPICJumpAttarget;
+}
+
+
+/*	Rewrite an inline cache to call a different target for a new tag. This
+	variant is used
+	to link unlinked sends in ceSend:to:numArgs: et al. Answer the extent of
+	the code
+	change which is used to compute the range of the icache to flush. */
+/*	MoveCwR ClassReg selectorIndex/expectedClass
+	Call: unlinked send stub/expectedTarget
+	Push ReceiverResult <-- callSiteReturnAddress */
+/*	lui s3, selector/tagHigh
+	ori s3, s3, selector/tagLow
+	lui t9, stub/targetHigh
+	ori t9, t9, stub/targetLow
+	jalr t9
+	nop (delay slot)
+	... <-- callSiteReturnAddress */
+
+	/* CogMIPSELCompiler>>#rewriteInlineCacheAt:tag:target: */
+static sqInt NoDbgRegParms
+rewriteInlineCacheAttagtarget(AbstractInstruction * self_in_rewriteInlineCacheAttagtarget, usqInt callSiteReturnAddress, sqInt cacheTag, usqInt callTargetAddress)
+{
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress - 24)) == LUI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress - 20)) == ORI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress - 16)) == LUI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress - 12)) == ORI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress - 8)) == JALR);
+	assert((longAt(callSiteReturnAddress - 4)) == (nop(self_in_rewriteInlineCacheAttagtarget)));
+	literalAtAddressput(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress - 20, cacheTag);
+	literalAtAddressput(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress - 12, callTargetAddress);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress - 24)) == LUI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress - 20)) == ORI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress - 16)) == LUI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress - 12)) == ORI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_rewriteInlineCacheAttagtarget, callSiteReturnAddress - 8)) == JALR);
+	assert((longAt(callSiteReturnAddress - 4)) == (nop(self_in_rewriteInlineCacheAttagtarget)));
+	return 24;
+}
+
+
+/*	Rewrite an inline cache with a new tag. This variant is used
+	by the garbage collector. */
+/*	MoveCwR ClassReg selectorIndex/expectedClass
+	Call: unlinked send stub/expectedTarget
+	Push ReceiverResult <-- callSiteReturnAddress */
+/*	lui s3, selector/tagHigh
+	ori s3, s3, selector/tagLow
+	lui t9, stub/targetHigh
+	ori t9, t9, stub/targetLow
+	jalr t9
+	nop (delay slot)
+	... <-- callSiteReturnAddress */
+
+	/* CogMIPSELCompiler>>#rewriteInlineCacheTag:at: */
+static AbstractInstruction * NoDbgRegParms
+rewriteInlineCacheTagat(AbstractInstruction * self_in_rewriteInlineCacheTagat, sqInt cacheTag, usqInt callSiteReturnAddress)
+{
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheTagat, callSiteReturnAddress - 24)) == LUI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheTagat, callSiteReturnAddress - 20)) == ORI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheTagat, callSiteReturnAddress - 16)) == LUI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheTagat, callSiteReturnAddress - 12)) == ORI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheTagat, callSiteReturnAddress - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_rewriteInlineCacheTagat, callSiteReturnAddress - 8)) == JALR);
+	assert((longAt(callSiteReturnAddress - 4)) == (nop(self_in_rewriteInlineCacheTagat)));
+	literalAtAddressput(self_in_rewriteInlineCacheTagat, callSiteReturnAddress - 20, cacheTag);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheTagat, callSiteReturnAddress - 24)) == LUI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheTagat, callSiteReturnAddress - 20)) == ORI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheTagat, callSiteReturnAddress - 16)) == LUI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheTagat, callSiteReturnAddress - 12)) == ORI);
+	assert((opcodeAtAddress(self_in_rewriteInlineCacheTagat, callSiteReturnAddress - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_rewriteInlineCacheTagat, callSiteReturnAddress - 8)) == JALR);
+	assert((longAt(callSiteReturnAddress - 4)) == (nop(self_in_rewriteInlineCacheTagat)));
+	return self_in_rewriteInlineCacheTagat;
+}
+
+	/* CogMIPSELCompiler>>#rewriteITypeBranchAtAddress:target: */
+static AbstractInstruction * NoDbgRegParms
+rewriteITypeBranchAtAddresstarget(AbstractInstruction * self_in_rewriteITypeBranchAtAddresstarget, sqInt mcpc, sqInt newTarget)
+{
+    sqInt newDisplacement;
+    sqInt newInstruction;
+    sqInt oldInstruction;
+
+
+	/* Displacement is relative to delay slot. */
+	newDisplacement = newTarget - (mcpc + 4);
+
+	/* Displacement is in words. */
+	newDisplacement = ((usqInt) newDisplacement) >> 2;
+	assert(((newDisplacement >= -32768) && (newDisplacement <= 0x7FFF)));
+	if (newDisplacement < 0) {
+		newDisplacement += 65536;
+	}
+	else {
+		newDisplacement = newDisplacement;
+	}
+	assert(((newDisplacement >= 0) && (newDisplacement <= 0xFFFF)));
+	oldInstruction = longAt(mcpc);
+	newInstruction = (oldInstruction & 0xFFFF0000UL) | newDisplacement;
+	longAtput(mcpc, newInstruction);
+	return self_in_rewriteITypeBranchAtAddresstarget;
+}
+
+	/* CogMIPSELCompiler>>#rewriteJTypeAtAddress:delta: */
+static AbstractInstruction * NoDbgRegParms
+rewriteJTypeAtAddressdelta(AbstractInstruction * self_in_rewriteJTypeAtAddressdelta, sqInt mcpc, sqInt delta)
+{
+    sqInt newTarget;
+    sqInt oldTarget;
+
+	oldTarget = targetFromJTypeAtAddress(self_in_rewriteJTypeAtAddressdelta, mcpc);
+	newTarget = oldTarget + delta;
+	rewriteJTypeAtAddresstarget(self_in_rewriteJTypeAtAddressdelta, mcpc, newTarget);
+	return self_in_rewriteJTypeAtAddressdelta;
+}
+
+	/* CogMIPSELCompiler>>#rewriteJTypeAtAddress:target: */
+static AbstractInstruction * NoDbgRegParms
+rewriteJTypeAtAddresstarget(AbstractInstruction * self_in_rewriteJTypeAtAddresstarget, sqInt mcpc, sqInt newTarget)
+{
+    sqInt regionMask;
+
+	assert((opcodeAtAddress(self_in_rewriteJTypeAtAddresstarget, mcpc)) == J);
+
+	/* mcpc + 4: relative to delay slot not j */
+	regionMask = 4026531840UL;
+	assert(((mcpc + 4) & regionMask) == (newTarget & regionMask));
+	longAtput(mcpc, jA(self_in_rewriteJTypeAtAddresstarget, newTarget));
+	return self_in_rewriteJTypeAtAddresstarget;
+}
+
+
+/*	Rewrite a jump instruction to call a different target. This variant is
+	used to reset the 
+	jumps in the prototype CPIC to suit each use,. 
+	Answer the extent of the code change which is used to compute the range of
+	the icache to flush. */
+/*	lui t9, stub/targetHigh
+	ori t9, t9, stub/targetLow
+	jr t9
+	nop (delay slot)
+	... <-- callSiteReturnAddress */
+
+	/* CogMIPSELCompiler>>#rewriteJumpLongAt:target: */
+static sqInt NoDbgRegParms
+rewriteJumpLongAttarget(AbstractInstruction * self_in_rewriteJumpLongAttarget, usqInt callSiteReturnAddress, usqInt callTargetAddress)
+{
+	assert((opcodeAtAddress(self_in_rewriteJumpLongAttarget, callSiteReturnAddress - 16)) == LUI);
+	assert((opcodeAtAddress(self_in_rewriteJumpLongAttarget, callSiteReturnAddress - 12)) == ORI);
+	assert((opcodeAtAddress(self_in_rewriteJumpLongAttarget, callSiteReturnAddress - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_rewriteJumpLongAttarget, callSiteReturnAddress - 8)) == JR);
+	assert((longAt(callSiteReturnAddress - 4)) == (nop(self_in_rewriteJumpLongAttarget)));
+	literalAtAddressput(self_in_rewriteJumpLongAttarget, callSiteReturnAddress - 12, callTargetAddress);
+	assert((opcodeAtAddress(self_in_rewriteJumpLongAttarget, callSiteReturnAddress - 16)) == LUI);
+	assert((opcodeAtAddress(self_in_rewriteJumpLongAttarget, callSiteReturnAddress - 12)) == ORI);
+	assert((opcodeAtAddress(self_in_rewriteJumpLongAttarget, callSiteReturnAddress - 8)) == SPECIAL);
+	assert((functionAtAddress(self_in_rewriteJumpLongAttarget, callSiteReturnAddress - 8)) == JR);
+	assert((longAt(callSiteReturnAddress - 4)) == (nop(self_in_rewriteJumpLongAttarget)));
+	return 20;
+}
+
+	/* CogMIPSELCompiler>>#rtAtAddress: */
+static sqInt NoDbgRegParms
+rtAtAddress(AbstractInstruction * self_in_rtAtAddress, sqInt mcpc)
+{
+	return (((usqInt) (longAt(mcpc))) >> 16) & 0x1F;
+}
+
+	/* CogMIPSELCompiler>>#rtype:rs:rt:rd:sa:funct: */
+static sqInt NoDbgRegParms
+rtypersrtrdsafunct(AbstractInstruction * self_in_rtypersrtrdsafunct, sqInt op, sqInt rs, sqInt rt, sqInt rd, sqInt sa, sqInt funct)
+{
+	assert(((op >= 0) && (op <= 0x3F)));
+	assert(((rs >= 0) && (rs <= 0x1F)));
+	assert(((rt >= 0) && (rt <= 0x1F)));
+	assert(((rd >= 0) && (rd <= 0x1F)));
+	assert(((sa >= 0) && (sa <= 0x1F)));
+	assert(((funct >= 0) && (funct <= 0x3F)));
+	return (((((op << 26) | (rs << 21)) | (rt << 16)) | (rd << 11)) | (sa << 6)) | funct;
+}
+
+	/* CogMIPSELCompiler>>#sbR:base:offset: */
+static sqInt NoDbgRegParms
+sbRbaseoffset(AbstractInstruction * self_in_sbRbaseoffset, sqInt srcReg, sqInt baseReg, sqInt offset)
+{
+	return itypersrtsignedImmediate(self_in_sbRbaseoffset, SB, baseReg, srcReg, offset);
+}
+
+
+/*	Not really, but we can merge this in noteFollowingConditionalBranch:. */
+
+	/* CogMIPSELCompiler>>#setsConditionCodesFor: */
+static sqInt NoDbgRegParms
+setsConditionCodesFor(AbstractInstruction * self_in_setsConditionCodesFor, sqInt aConditionalJumpOpcode)
+{
+	if (((self_in_setsConditionCodesFor->opcode)) == XorRR) {
+		return 1;
+	}
+	if (((self_in_setsConditionCodesFor->opcode)) == ArithmeticShiftRightCqR) {
+		return 1;
+	}
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#shR:base:offset: */
+static sqInt NoDbgRegParms
+shRbaseoffset(AbstractInstruction * self_in_shRbaseoffset, sqInt srcReg, sqInt baseReg, sqInt offset)
+{
+	return itypersrtsignedImmediate(self_in_shRbaseoffset, SH, baseReg, srcReg, offset);
+}
+
+
+/*	Size a jump and set its address. The target may be another instruction
+	or an absolute address. On entry the address inst var holds our virtual
+	address. On exit address is set to eventualAbsoluteAddress, which is
+	where this instruction will be output. The span of a jump to a following
+	instruction is therefore between that instruction's address and this
+	instruction's address ((which are both still their virtual addresses), but
+	the span of a jump to a preceding instruction or to an absolute address is
+	between that instruction's address (which by now is its eventual absolute
+	address) or absolute address and eventualAbsoluteAddress.
+	
+	ARM is simple; the 26-bit call/jump range means no short jumps. This
+	routine only has to determine the targets of jumps, not determine sizes. */
+
+	/* CogMIPSELCompiler>>#sizePCDependentInstructionAt: */
+static usqInt NoDbgRegParms
+sizePCDependentInstructionAt(AbstractInstruction * self_in_sizePCDependentInstructionAt, sqInt eventualAbsoluteAddress)
+{
+    unsigned long alignment;
+
+	if (((self_in_sizePCDependentInstructionAt->opcode)) == AlignmentNops) {
+		(self_in_sizePCDependentInstructionAt->address) = eventualAbsoluteAddress;
+		alignment = ((self_in_sizePCDependentInstructionAt->operands))[0];
+		return ((self_in_sizePCDependentInstructionAt->machineCodeSize) = ((eventualAbsoluteAddress + (alignment - 1)) & (-alignment)) - eventualAbsoluteAddress);
+	}
+	assert((isJump(self_in_sizePCDependentInstructionAt))
+	 || ((((self_in_sizePCDependentInstructionAt->opcode)) == Call)
+	 || (((self_in_sizePCDependentInstructionAt->opcode)) == CallFull)));
+	if (isJump(self_in_sizePCDependentInstructionAt)) {
+		resolveJumpTarget(self_in_sizePCDependentInstructionAt);
+	}
+	(self_in_sizePCDependentInstructionAt->address) = eventualAbsoluteAddress;
+	return ((self_in_sizePCDependentInstructionAt->machineCodeSize) = (self_in_sizePCDependentInstructionAt->maxSize));
+}
+
+	/* CogMIPSELCompiler>>#sllR:R:C: */
+static sqInt NoDbgRegParms
+sllRRC(AbstractInstruction * self_in_sllRRC, sqInt destReg, sqInt sourceReg, sqInt shiftAmount)
+{
+	return rtypersrtrdsafunct(self_in_sllRRC, SPECIAL, 0, sourceReg, destReg, shiftAmount, SLL);
+}
+
+	/* CogMIPSELCompiler>>#sllvR:R:R: */
+static sqInt NoDbgRegParms
+sllvRRR(AbstractInstruction * self_in_sllvRRR, sqInt destReg, sqInt leftReg, sqInt rightReg)
+{
+	return rtypersrtrdsafunct(self_in_sllvRRR, SPECIAL, rightReg, leftReg, destReg, 0, SLLV);
+}
+
+	/* CogMIPSELCompiler>>#sltiR:R:C: */
+static sqInt NoDbgRegParms
+sltiRRC(AbstractInstruction * self_in_sltiRRC, sqInt destReg, sqInt leftReg, sqInt imm)
+{
+	return itypersrtsignedImmediate(self_in_sltiRRC, SLTI, leftReg, destReg, imm);
+}
+
+	/* CogMIPSELCompiler>>#sltiuR:R:C: */
+static sqInt NoDbgRegParms
+sltiuRRC(AbstractInstruction * self_in_sltiuRRC, sqInt destReg, sqInt leftReg, sqInt imm)
+{
+	return itypersrtsignedImmediate(self_in_sltiuRRC, SLTIU, leftReg, destReg, imm);
+}
+
+	/* CogMIPSELCompiler>>#sltR:R:R: */
+static sqInt NoDbgRegParms
+sltRRR(AbstractInstruction * self_in_sltRRR, sqInt destReg, sqInt leftReg, sqInt rightReg)
+{
+	return rtypersrtrdsafunct(self_in_sltRRR, SPECIAL, leftReg, rightReg, destReg, 0, SLT);
+}
+
+	/* CogMIPSELCompiler>>#sltuR:R:R: */
+static sqInt NoDbgRegParms
+sltuRRR(AbstractInstruction * self_in_sltuRRR, sqInt destReg, sqInt leftReg, sqInt rightReg)
+{
+	return rtypersrtrdsafunct(self_in_sltuRRR, SPECIAL, leftReg, rightReg, destReg, 0, SLTU);
+}
+
+	/* CogMIPSELCompiler>>#sraR:R:C: */
+static sqInt NoDbgRegParms
+sraRRC(AbstractInstruction * self_in_sraRRC, sqInt destReg, sqInt sourceReg, sqInt shiftAmount)
+{
+	return rtypersrtrdsafunct(self_in_sraRRC, SPECIAL, 0, sourceReg, destReg, shiftAmount, SRA);
+}
+
+	/* CogMIPSELCompiler>>#sravR:R:R: */
+static sqInt NoDbgRegParms
+sravRRR(AbstractInstruction * self_in_sravRRR, sqInt destReg, sqInt leftReg, sqInt rightReg)
+{
+	return rtypersrtrdsafunct(self_in_sravRRR, SPECIAL, rightReg, leftReg, destReg, 0, SRAV);
+}
+
+	/* CogMIPSELCompiler>>#srlR:R:C: */
+static sqInt NoDbgRegParms
+srlRRC(AbstractInstruction * self_in_srlRRC, sqInt destReg, sqInt sourceReg, sqInt shiftAmount)
+{
+	return rtypersrtrdsafunct(self_in_srlRRC, SPECIAL, 0, sourceReg, destReg, shiftAmount, SRL);
+}
+
+	/* CogMIPSELCompiler>>#srlvR:R:R: */
+static sqInt NoDbgRegParms
+srlvRRR(AbstractInstruction * self_in_srlvRRR, sqInt destReg, sqInt leftReg, sqInt rightReg)
+{
+	return rtypersrtrdsafunct(self_in_srlvRRR, SPECIAL, rightReg, leftReg, destReg, 0, SRLV);
+}
+
+	/* CogMIPSELCompiler>>#stop */
+static sqInt NoDbgRegParms
+stop(AbstractInstruction * self_in_stop)
+{
+	return mipsbreak(self_in_stop, 0);
+}
+
+	/* CogMIPSELCompiler>>#stopsFrom:to: */
+static AbstractInstruction * NoDbgRegParms
+stopsFromto(AbstractInstruction * self_in_stopsFromto, sqInt startAddr, sqInt endAddr)
+{
+    sqInt addr;
+
+	assert((((endAddr - startAddr) + 1) % 4) == 0);
+	for (addr = startAddr; addr <= endAddr; addr += 4) {
+		longAtput(addr, stop(self_in_stopsFromto));
+	}
+	return self_in_stopsFromto;
+}
+
+
+/*	Rewrite the long constant loaded by a MoveCwR or PushCwR before the given
+	address 
+ */
+
+	/* CogMIPSELCompiler>>#storeLiteral:beforeFollowingAddress: */
+static sqInt NoDbgRegParms
+storeLiteralbeforeFollowingAddress(AbstractInstruction * self_in_storeLiteralbeforeFollowingAddress, sqInt literal, sqInt followingAddress)
+{
+	flag("bogus");
+	if ((opcodeAtAddress(self_in_storeLiteralbeforeFollowingAddress, followingAddress - 4)) == ORI) {
+		return literalAtAddressput(self_in_storeLiteralbeforeFollowingAddress, followingAddress - 4, literal);
+	}
+	if (((opcodeAtAddress(self_in_storeLiteralbeforeFollowingAddress, followingAddress - 4)) == SW)
+	 && ((opcodeAtAddress(self_in_storeLiteralbeforeFollowingAddress, followingAddress - 8)) == ADDIU)) {
+		return literalAtAddressput(self_in_storeLiteralbeforeFollowingAddress, followingAddress - 12, literal);
+	}
+	/* begin unreachable */
+	error("UNREACHABLE");
+	return 0;
+}
+
+	/* CogMIPSELCompiler>>#subuR:R:R: */
+static sqInt NoDbgRegParms
+subuRRR(AbstractInstruction * self_in_subuRRR, sqInt destReg, sqInt leftReg, sqInt rightReg)
+{
+	return rtypersrtrdsafunct(self_in_subuRRR, SPECIAL, leftReg, rightReg, destReg, 0, SUBU);
+}
+
+	/* CogMIPSELCompiler>>#swR:base:offset: */
+static sqInt NoDbgRegParms
+swRbaseoffset(AbstractInstruction * self_in_swRbaseoffset, sqInt srcReg, sqInt baseReg, sqInt offset)
+{
+	return itypersrtsignedImmediate(self_in_swRbaseoffset, SW, baseReg, srcReg, offset);
+}
+
+	/* CogMIPSELCompiler>>#targetFromITypeAtAddress: */
+static sqInt NoDbgRegParms
+targetFromITypeAtAddress(AbstractInstruction * self_in_targetFromITypeAtAddress, sqInt mcpc)
+{
+    sqInt offset;
+
+	offset = (longAt(mcpc)) & 0xFFFF;
+	if (offset >= 32768) {
+		offset -= 65536;
+	}
+	offset = offset << 2;
+	return (mcpc + offset) + OneInstruction;
+}
+
+	/* CogMIPSELCompiler>>#targetFromJTypeAtAddress: */
+static sqInt NoDbgRegParms
+targetFromJTypeAtAddress(AbstractInstruction * self_in_targetFromJTypeAtAddress, sqInt mcpc)
+{
+    sqInt targetLow;
+
+
+	/* mcpc + 4: relative to delay slot not j */
+	targetLow = (longAt(mcpc)) & 0x3FFFFFF;
+	return ((mcpc + 4) & 4026531840UL) + (targetLow << 2);
+}
+
+	/* CogMIPSELCompiler>>#xoriR:R:C: */
+static sqInt NoDbgRegParms
+xoriRRC(AbstractInstruction * self_in_xoriRRC, sqInt destReg, sqInt srcReg, sqInt imm)
+{
+	return itypersrteitherImmediate(self_in_xoriRRC, XORI, srcReg, destReg, imm);
+}
+
+	/* CogMIPSELCompiler>>#xorR:R:R: */
+static sqInt NoDbgRegParms
+xorRRR(AbstractInstruction * self_in_xorRRR, sqInt destReg, sqInt leftReg, sqInt rightReg)
+{
+	return rtypersrtrdsafunct(self_in_xorRRR, SPECIAL, leftReg, rightReg, destReg, 0, XOR);
+}
+
+
+/*	Answer if Call and JumpLong are relative and hence need to take the
+	caller's relocation delta into account during code compaction, rather than
+	just the
+	callee's delta. */
+
+	/* CogMIPSELCompiler>>#zoneCallsAreRelative */
+static sqInt NoDbgRegParms
+zoneCallsAreRelative(AbstractInstruction * self_in_zoneCallsAreRelative)
+{
+	return 0;
+}
+
 	/* CogObjectRepresentation>>#checkValidObjectReference: */
 static sqInt NoDbgRegParms
 checkValidObjectReference(sqInt anOop)
@@ -14234,7 +14804,7 @@ genInnerPrimitiveAtPut(sqInt retNoffset)
     AbstractInstruction * jumpIsCompiledMethod;
     AbstractInstruction *jumpIsContext;
     AbstractInstruction *jumpNegative;
-    AbstractInstruction * jumpNonSmallIntegerValue;
+    sqInt jumpNonSmallIntegerValue;
     AbstractInstruction *jumpNotIndexableBits;
     AbstractInstruction *jumpNotIndexablePointers;
     AbstractInstruction * jumpNotPointers;
@@ -14498,8 +15068,12 @@ genInnerPrimitiveAt(sqInt retNoffset)
 	jumpBytesOutOfBounds = genConditionalBranchoperand(JumpBelowOrEqual, ((sqInt)0));
 	/* begin AddCq:R: */
 	anInstruction6 = genoperandoperand(AddCqR, BaseHeaderSize, Arg1Reg);
+	
+	/* formatReg already contains a value <= 16r1f, so no need to zero it */
 	/* begin MoveXbr:R:R: */
-	genoperandoperandoperand(MoveXbrRR, Arg1Reg, ReceiverResultReg, ReceiverResultReg);
+	genoperandoperandoperand(MoveXbrRR, Arg1Reg, ReceiverResultReg, formatReg);
+	/* begin MoveR:R: */
+	genoperandoperand(MoveRR, formatReg, ReceiverResultReg);
 
 	/* begin Label */
 	convertToIntAndReturn = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
@@ -15688,6 +16262,7 @@ genGetActiveContextLargeinBlock(sqInt isLarge, sqInt isInBlock)
     AbstractInstruction *continuation;
     AbstractInstruction *exit;
     usqLong header;
+    AbstractInstruction * inst;
     AbstractInstruction *jumpNeedScavenge;
     AbstractInstruction *jumpSingle;
     AbstractInstruction *loopHead;
@@ -15700,6 +16275,7 @@ genGetActiveContextLargeinBlock(sqInt isLarge, sqInt isInBlock)
     sqInt quickConstant5;
     sqInt quickConstant6;
     sqInt quickConstant7;
+    AbstractInstruction * self_in_saveAndRestoreLinkRegAround;
     sqInt slotSize;
 
 
@@ -15793,7 +16369,7 @@ genGetActiveContextLargeinBlock(sqInt isLarge, sqInt isInBlock)
 	quickConstant2 = log2BytesPerWord();
 	genoperandoperand(LogicalShiftRightCqR, quickConstant2, TempReg);
 	/* begin SubCq:R: */
-	quickConstant7 = 4;
+	quickConstant7 = 3;
 	/* begin gen:quickConstant:operand: */
 	anInstruction25 = genoperandoperand(SubCqR, quickConstant7, TempReg);
 	/* begin AddR:R: */
@@ -15869,8 +16445,8 @@ genGetActiveContextLargeinBlock(sqInt isLarge, sqInt isInBlock)
 	loopHead = anInstruction36;
 	/* begin CmpR:R: */
 	genoperandoperand(CmpRR, SPReg, ClassReg);
-	/* begin JumpBelowOrEqual: */
-	exit = genConditionalBranchoperand(JumpBelowOrEqual, ((sqInt)0));
+	/* begin JumpBelow: */
+	exit = genConditionalBranchoperand(JumpBelow, ((sqInt)0));
 
 	/* begin MoveR:Xwr:R: */
 	genoperandoperandoperand(MoveRXwrR, TempReg, SendNumArgsReg, ReceiverResultReg);
@@ -15882,10 +16458,16 @@ genGetActiveContextLargeinBlock(sqInt isLarge, sqInt isInBlock)
 	/* begin RetN: */
 	genoperand(RetN, 0);
 	jmpTarget(jumpNeedScavenge, gLabel());
+	/* begin saveAndRestoreLinkRegAround: */
+	self_in_saveAndRestoreLinkRegAround = ((AbstractInstruction *) (backEnd()));
+	/* begin PushR: */
+	inst = genoperand(PushR, LinkReg);
 	/* begin CallRT: */
 	abstractInstruction = genoperand(Call, ceScheduleScavengeTrampoline);
 	(abstractInstruction->annotation = IsRelativeCall);
 
+	/* begin PopR: */
+	genoperand(PopR, LinkReg);
 	/* begin Jump: */
 	genoperand(Jump, ((sqInt)continuation));
 	return 0;
@@ -16065,7 +16647,7 @@ genGetClassObjectOfintoscratchReginstRegIsReceiver(sqInt instReg, sqInt destReg,
 }
 
 	/* CogObjectRepresentationForSpur>>#genGetClassTagOf:into:scratchReg: */
-static AbstractInstruction * NoDbgRegParms
+static sqInt NoDbgRegParms
 genGetClassTagOfintoscratchReg(sqInt instReg, sqInt destReg, sqInt scratchReg)
 {
 	return genGetInlineCacheClassTagFromintoforEntry(instReg, destReg, 1);
@@ -16176,6 +16758,9 @@ genGetRawSlotSizeOfNonImminto(sqInt sourceReg, sqInt destReg)
     AbstractInstruction *anInstruction;
     AbstractInstruction *anInstruction1;
 
+	/* begin MoveCq:R: */
+	anInstruction = genoperandoperand(MoveCqR, 0, destReg);
+
 	/* begin MoveMb:r:R: */
 	anInstruction1 = genoperandoperandoperand(MoveMbrR, 7, sourceReg, destReg);
 	return 0;
@@ -16244,7 +16829,7 @@ genInnerPrimitiveIdenticalorNotIf(sqInt retNoffset, sqInt orNot)
 		/* begin JumpNonZero: */
 		jumpCmp = genConditionalBranchoperand(JumpNonZero, ((sqInt)0));
 	}
-	/* begin genMoveTrueR: */
+	/* begin genMoveConstant:R: */
 	constant = trueObject();
 	if (shouldAnnotateObjectReference(constant)) {
 		annotateobjRef(gMoveCwR(constant, ReceiverResultReg), constant);
@@ -16255,7 +16840,7 @@ genInnerPrimitiveIdenticalorNotIf(sqInt retNoffset, sqInt orNot)
 	}
 	/* begin RetN: */
 	genoperand(RetN, retNoffset);
-	jmpTarget(jumpCmp, genMoveFalseR(ReceiverResultReg));
+	jmpTarget(jumpCmp, genMoveConstantR(falseObject(), ReceiverResultReg));
 	/* begin RetN: */
 	genoperand(RetN, retNoffset);
 	return 0;
@@ -16519,6 +17104,9 @@ genInnerPrimitiveStringAt(sqInt retNoffset)
 	anInstruction5 = genoperandoperand(AddCqR, BaseHeaderSize, Arg1Reg);
 	/* begin MoveXbr:R:R: */
 	genoperandoperandoperand(MoveXbrRR, Arg1Reg, ReceiverResultReg, ReceiverResultReg);
+	/* begin AndCq:R: */
+	anInstruction = genoperandoperand(AndCqR, 0xFF, ReceiverResultReg);
+
 	/* begin Label */
 	done = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 	genConvertIntegerToCharacterInReg(ReceiverResultReg);
@@ -16810,6 +17398,7 @@ genStoreCheckReceiverRegvalueRegscratchReginFrame(sqInt destReg, sqInt valueReg,
     AbstractInstruction *anInstruction1;
     AbstractInstruction *anInstruction2;
     AbstractInstruction *anInstruction3;
+    AbstractInstruction * inst;
     AbstractInstruction *jmpAlreadyRemembered;
     AbstractInstruction *jmpDestYoung;
     AbstractInstruction *jmpImmediate;
@@ -16817,6 +17406,7 @@ genStoreCheckReceiverRegvalueRegscratchReginFrame(sqInt destReg, sqInt valueReg,
     sqInt mask;
     sqInt quickConstant;
     sqInt rememberedBitByteOffset;
+    AbstractInstruction * self_in_saveAndRestoreLinkRegAround;
     sqInt wordConstant;
 
 
@@ -16854,8 +17444,14 @@ genStoreCheckReceiverRegvalueRegscratchReginFrame(sqInt destReg, sqInt valueReg,
 		CallRTregistersToBeSavedMask(ceStoreCheckTrampoline, ((((registerMaskFor(valueReg)) | (callerSavedRegMask())) | (registerMaskFor(ReceiverResultReg))) - (registerMaskFor(ReceiverResultReg))));
 	}
 	else {
+		/* begin saveAndRestoreLinkRegAround: */
+		self_in_saveAndRestoreLinkRegAround = ((AbstractInstruction *) (backEnd()));
+		/* begin PushR: */
+		inst = genoperand(PushR, LinkReg);
 		CallRTregistersToBeSavedMask(ceStoreCheckTrampoline, ((((registerMaskFor(valueReg)) | (callerSavedRegMask())) | (registerMaskFor(ReceiverResultReg))) - (registerMaskFor(ReceiverResultReg))));
 
+		/* begin PopR: */
+		genoperand(PopR, LinkReg);
 	}
 	jmpTarget(jmpImmediate, jmpTarget(jmpDestYoung, jmpTarget(jmpSourceOld, jmpTarget(jmpAlreadyRemembered, gLabel()))));
 	return 0;
@@ -17593,17 +18189,13 @@ compileInterpreterPrimitive(void (*primitiveRoutine)(void))
 		retpc = (flags & PrimCallCollectsProfileSamples
 			? cePrimReturnEnterCogCodeProfiling
 			: cePrimReturnEnterCogCode);
-		/* begin PushCw: */
-		anInstruction13 = genoperand(PushCw, retpc);
+		/* begin MoveCw:R: */
+		anInstruction13 = genoperandoperand(MoveCwR, retpc, RA);
 		/* begin JumpFullRT: */
-		/* begin annotateCall: */
-		jumpTarget = ((sqInt)primitiveRoutine);
-		/* begin gen:literal: */
-		literal = ((sqInt)jumpTarget);
-		anInstruction11 = genoperand(JumpFull, ((sqInt)jumpTarget));
-		abstractInstruction = anInstruction11;
-		(abstractInstruction->annotation = IsRelativeCall);
-		primInvokeInstruction = abstractInstruction;
+		/* begin JumpFull: */
+		literal1 = ((sqInt)(((sqInt)primitiveRoutine)));
+		anInstruction12 = genoperand(JumpFull, ((sqInt)(((sqInt)primitiveRoutine))));
+		primInvokeInstruction = anInstruction12;
 
 		jmp = (jmpSamplePrim = (continuePostSamplePrim = null));
 	}
@@ -17611,11 +18203,9 @@ compileInterpreterPrimitive(void (*primitiveRoutine)(void))
 
 		/* Call the C primitive routine. */
 		/* begin CallFullRT: */
-		/* begin annotateCall: */
-		anInstruction17 = genoperand(CallFull, ((sqInt)primitiveRoutine));
-		abstractInstruction1 = anInstruction17;
-		(abstractInstruction1->annotation = IsRelativeCall);
-		primInvokeInstruction = abstractInstruction1;
+		/* begin CallFull: */
+		anInstruction18 = genoperand(CallFull, ((sqInt)primitiveRoutine));
+		primInvokeInstruction = anInstruction18;
 
 		if (flags & PrimCallCollectsProfileSamples) {
 			assert(flags & PrimCallNeedsNewMethod);
@@ -17639,7 +18229,7 @@ compileInterpreterPrimitive(void (*primitiveRoutine)(void))
 		maybeCompileAllocFillerCheck();
 		/* begin MoveAw:R: */
 		address8 = instructionPointerAddress();
-		reg = ClassReg;
+		reg = LinkReg;
 		/* begin gen:literal:operand: */
 		anInstruction19 = genoperandoperand(MoveAwR, address8, reg);
 		genLoadStackPointers(backEnd);
@@ -17647,16 +18237,13 @@ compileInterpreterPrimitive(void (*primitiveRoutine)(void))
 		address9 = primFailCodeAddress();
 		/* begin gen:literal:operand: */
 		anInstruction20 = genoperandoperand(MoveAwR, address9, TempReg);
-		/* begin PushR: */
-		genoperand(PushR, ClassReg);
-
 		flag("ask concrete code gen if move sets condition codes?");
 		/* begin CmpCq:R: */
 		anInstruction2 = genoperandoperand(CmpCqR, 0, TempReg);
 		/* begin JumpNonZero: */
 		jmp = genConditionalBranchoperand(JumpNonZero, ((sqInt)0));
 		/* begin MoveMw:r:R: */
-		offset1 = BytesPerWord;
+		offset1 = 0;
 		/* begin gen:quickConstant:operand:operand: */
 		anInstruction21 = genoperandoperandoperand(MoveMwrR, offset1, SPReg, ReceiverResultReg);
 		/* begin RetN: */
@@ -17672,10 +18259,8 @@ compileInterpreterPrimitive(void (*primitiveRoutine)(void))
 			assert(flags & PrimCallNeedsNewMethod);
 			/* begin CallFullRT: */
 			callTarget = ((unsigned long)ceCheckProfileTick);
-			/* begin annotateCall: */
-			anInstruction22 = genoperand(CallFull, callTarget);
-			abstractInstruction2 = anInstruction22;
-			(abstractInstruction2->annotation = IsRelativeCall);
+			/* begin CallFull: */
+			anInstruction110 = genoperand(CallFull, callTarget);
 
 			/* begin Jump: */
 			genoperand(Jump, ((sqInt)continuePostSamplePrim));
@@ -17689,10 +18274,8 @@ compileInterpreterPrimitive(void (*primitiveRoutine)(void))
 		anInstruction24 = genoperandoperand(MoveRAw, TempReg, address10);
 		/* begin CallFullRT: */
 		callTarget1 = ((unsigned long)ceCheckProfileTick);
-		/* begin annotateCall: */
-		anInstruction25 = genoperand(CallFull, callTarget1);
-		abstractInstruction3 = anInstruction25;
-		(abstractInstruction3->annotation = IsRelativeCall);
+		/* begin CallFull: */
+		anInstruction111 = genoperand(CallFull, callTarget1);
 
 		/* begin Jump: */
 		genoperand(Jump, ((sqInt)continuePostSampleNonPrim));
@@ -17702,7 +18285,7 @@ compileInterpreterPrimitive(void (*primitiveRoutine)(void))
 		/* Jump to restore of receiver reg and proceed to frame build for failure. */
 		jmpTarget(jmp, gLabel());
 		/* begin MoveMw:r:R: */
-		offset2 = BytesPerWord * (methodOrBlockNumArgs + (1));
+		offset2 = BytesPerWord * (methodOrBlockNumArgs + (0));
 		/* begin gen:quickConstant:operand:operand: */
 		anInstruction26 = genoperandoperandoperand(MoveMwrR, offset2, SPReg, ReceiverResultReg);
 	}
@@ -17967,7 +18550,10 @@ genBlockReturn(void)
 		genoperandoperand(MoveRR, FPReg, SPReg);
 		/* begin PopR: */
 		genoperand(PopR, FPReg);
-			}
+		/* begin PopR: */
+		genoperand(PopR, LinkReg);
+
+	}
 	/* begin RetN: */
 	genoperand(RetN, (methodOrBlockNumArgs + 1) * BytesPerWord);
 	return 0;
@@ -18034,6 +18620,9 @@ genFastPrimTraceUsingand(sqInt r1, sqInt r2)
     AbstractInstruction *anInstruction5;
     sqInt offset;
     sqInt wordConstant;
+
+	/* begin MoveCq:R: */
+	anInstruction1 = genoperandoperand(MoveCqR, 0, r2);
 
 	/* begin MoveAb:R: */
 	address = primTraceLogIndexAddress();
@@ -18179,15 +18768,12 @@ genLookupForPerformNumArgs(sqInt numArgs)
 	return 0;
 }
 
-	/* SimpleStackBasedCogit>>#genMoveFalseR: */
+	/* SimpleStackBasedCogit>>#genMoveConstant:R: */
 static AbstractInstruction * NoDbgRegParms
-genMoveFalseR(sqInt reg)
+genMoveConstantR(sqInt constant, sqInt reg)
 {
     AbstractInstruction *anInstruction;
-    sqInt constant;
 
-	/* begin genMoveConstant:R: */
-	constant = falseObject();
 	return (shouldAnnotateObjectReference(constant)
 		? annotateobjRef(gMoveCwR(constant, reg), constant)
 		: (/* begin MoveCq:R: */
@@ -18196,7 +18782,7 @@ genMoveFalseR(sqInt reg)
 }
 
 	/* SimpleStackBasedCogit>>#genMoveTrueR: */
-static AbstractInstruction * NoDbgRegParms
+static sqInt NoDbgRegParms
 genMoveTrueR(sqInt reg)
 {
     AbstractInstruction *anInstruction;
@@ -18375,6 +18961,7 @@ genPrimReturnEnterCogCodeEnilopmart(sqInt profiling)
     AbstractInstruction *anInstruction9;
     sqInt callTarget;
     AbstractInstruction *continuePostSample;
+    AbstractInstruction * inst;
     AbstractInstruction *jmpFail;
     AbstractInstruction *jmpSample;
     sqInt reg;
@@ -18411,17 +18998,16 @@ genPrimReturnEnterCogCodeEnilopmart(sqInt profiling)
 	anInstruction13 = genoperandoperand(CmpCqR, 0, TempReg);
 	/* begin JumpNonZero: */
 	jmpFail = genConditionalBranchoperand(JumpNonZero, ((sqInt)0));
-	/* begin MoveAw:R: */
-	address5 = instructionPointerAddress();
-	/* begin gen:literal:operand: */
-	anInstruction7 = genoperandoperand(MoveAwR, address5, ClassReg);
 	genLoadStackPointers(backEnd);
 	/* begin MoveMw:r:R: */
-	anInstruction8 = genoperandoperandoperand(MoveMwrR, 0, SPReg, ReceiverResultReg);
-	/* begin MoveR:Mw:r: */
-	anInstruction9 = genoperandoperandoperand(MoveRMwr, ClassReg, 0, SPReg);
+	anInstruction5 = genoperandoperandoperand(MoveMwrR, 0, SPReg, ReceiverResultReg);
+	/* begin MoveAw:R: */
+	address4 = instructionPointerAddress();
+	/* begin gen:literal:operand: */
+	anInstruction6 = genoperandoperand(MoveAwR, address4, LinkReg);
 	/* begin RetN: */
-	genoperand(RetN, 0);
+	genoperand(RetN, BytesPerWord);
+
 
 	jmpTarget(jmpFail, gMoveAwR(newMethodAddress(), SendNumArgsReg));
 	/* begin MoveAw:R: */
@@ -18431,14 +19017,12 @@ genPrimReturnEnterCogCodeEnilopmart(sqInt profiling)
 	compileCallFornumArgsargargargargresultRegsaveRegs(ceActivateFailingPrimitiveMethod, 1, SendNumArgsReg, null, null, null, NoReg, 0);
 	/* begin MoveAw:R: */
 	address8 = instructionPointerAddress();
-	reg = ClassReg;
+	reg = LinkReg;
 	/* begin gen:literal:operand: */
 	anInstruction15 = genoperandoperand(MoveAwR, address8, reg);
 	genLoadStackPointers(backEnd);
 	/* begin MoveMw:r:R: */
-	anInstruction11 = genoperandoperandoperand(MoveMwrR, BytesPerWord, SPReg, ReceiverResultReg);
-	/* begin PushR: */
-	genoperand(PushR, ClassReg);
+	anInstruction10 = genoperandoperandoperand(MoveMwrR, 0, SPReg, ReceiverResultReg);
 
 	/* begin RetN: */
 	genoperand(RetN, BytesPerWord);
@@ -18447,14 +19031,16 @@ genPrimReturnEnterCogCodeEnilopmart(sqInt profiling)
 		/* Call ceCheckProfileTick: to record sample and then continue.  newMethod
 		   should be up-to-date.  Need to save and restore the link reg around this call. */
 		jmpTarget(jmpSample, gLabel());
+		/* begin saveAndRestoreLinkRegAround: */
+		inst = genoperand(PushR, LinkReg);
 		/* begin CallFullRT: */
 		callTarget = (unsigned long)ceCheckProfileTick;
-		/* begin annotateCall: */
-		anInstruction16 = genoperand(CallFull, callTarget);
-		abstractInstruction = anInstruction16;
-		(abstractInstruction->annotation = IsRelativeCall);
+		/* begin CallFull: */
+		anInstruction17 = genoperand(CallFull, callTarget);
 
 
+		/* begin PopR: */
+		genoperand(PopR, LinkReg);
 		/* begin Jump: */
 		genoperand(Jump, ((sqInt)continuePostSample));
 	}
@@ -19019,18 +19605,14 @@ adjustArgumentsForPerform(sqInt numArgs)
 	}
 	if ((2 + 1) == numArgs) {
 		/* begin PopR: */
-		genoperand(PopR, TempReg);
-		/* begin PopR: */
 		genoperand(PopR, Arg1Reg);
 
-		/* begin MoveMw:r:R: */
-		anInstruction = genoperandoperandoperand(MoveMwrR, 0, SPReg, Arg0Reg);
-		/* begin MoveR:Mw:r: */
-		anInstruction1 = genoperandoperandoperand(MoveRMwr, TempReg, 0, SPReg);
+		/* begin PopR: */
+		genoperand(PopR, Arg0Reg);
 
 		return;
 	}
-	for (index = (numArgs - 1); index >= 0; index += -1) {
+	for (index = (numArgs - 2); index >= 0; index += -1) {
 		/* begin MoveMw:r:R: */
 		anInstruction2 = genoperandoperandoperand(MoveMwrR, index * BytesPerWord, SPReg, TempReg);
 		/* begin MoveR:Mw:r: */
@@ -19345,6 +19927,9 @@ compileBlockFrameBuild(BlockStart *blockStart)
 	abstractInstruction = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 	(abstractInstruction->annotation = HasBytecodePC);
 	/* begin PushR: */
+	genoperand(PushR, LinkReg);
+
+	/* begin PushR: */
 	genoperand(PushR, FPReg);
 	/* begin MoveR:R: */
 	genoperandoperand(MoveRR, SPReg, FPReg);
@@ -19578,6 +20163,9 @@ compileFrameBuild(void)
 	if (!needsFrame) {
 		return 0;
 	}
+	/* begin PushR: */
+	genoperand(PushR, LinkReg);
+
 	/* begin PushR: */
 	genoperand(PushR, FPReg);
 	/* begin MoveR:R: */
@@ -19854,7 +20442,7 @@ static void (*genCallPICEnilopmartNumArgs(sqInt numArgs))(void)
 	/* begin PopR: */
 	genoperand(PopR, TempReg);
 	/* begin PopR: */
-	reg = SendNumArgsReg;
+	reg = LinkReg;
 	genoperand(PopR, reg);
 	if (numArgs > 0) {
 		if (numArgs > 1) {
@@ -19867,9 +20455,6 @@ static void (*genCallPICEnilopmartNumArgs(sqInt numArgs))(void)
 	}
 	/* begin PopR: */
 	genoperand(PopR, ReceiverResultReg);
-	/* begin PushR: */
-	genoperand(PushR, SendNumArgsReg);
-
 	/* begin JumpR: */
 	genoperand(JumpR, TempReg);
 	computeMaximumSizes();
@@ -20138,16 +20723,16 @@ genExternalizePointersForPrimitiveCall(void)
 	address4 = framePointerAddress();
 	/* begin gen:operand:literal: */
 	anInstruction4 = genoperandoperand(MoveRAw, FPReg, address4);
-	/* begin PopR: */
-	genoperand(PopR, TempReg);
+	
+	/* Set coInterpreter stackPointer to the topmost argument, skipping the return address. */
 	/* begin MoveR:Aw: */
-	address2 = instructionPointerAddress();
+	address = stackPointerAddress();
 	/* begin gen:operand:literal: */
-	anInstruction2 = genoperandoperand(MoveRAw, TempReg, address2);
+	anInstruction = genoperandoperand(MoveRAw, SPReg, address);
 	/* begin MoveR:Aw: */
-	address3 = stackPointerAddress();
+	address1 = instructionPointerAddress();
 	/* begin gen:operand:literal: */
-	anInstruction3 = genoperandoperand(MoveRAw, SPReg, address3);
+	anInstruction1 = genoperandoperand(MoveRAw, LinkReg, address1);
 
 	return 0;
 }
@@ -20466,6 +21051,9 @@ genMethodAbortTrampolineFor(sqInt numArgs)
 	anInstruction = genoperandoperand(CmpCqR, 0, ReceiverResultReg);
 	/* begin JumpNonZero: */
 	jumpSICMiss = genConditionalBranchoperand(JumpNonZero, ((sqInt)0));
+	/* begin MoveR:Mw:r: */
+	anInstruction1 = genoperandoperandoperand(MoveRMwr, LinkReg, 0, SPReg);
+
 	compileTrampolineFornumArgsargargargargsaveRegspushLinkRegresultReg(ceStackOverflow, 1, SendNumArgsReg, null, null, null, 0, 0, NoReg);
 	jmpTarget(jumpSICMiss, gLabel());
 	genPushRegisterArgsForAbortMissNumArgs(backEnd, numArgs);
@@ -21060,6 +21648,7 @@ genPrimitiveMultiply(void)
 	jumpNotSI = genJumpNotSmallInteger(Arg0Reg);
 	genShiftAwaySmallIntegerTagsInScratchReg(ClassReg);
 	genRemoveSmallIntegerTagsInScratchReg(Arg1Reg);
+	/* begin MulR:R: */
 	genMulRR(backEnd, Arg1Reg, ClassReg);
 	/* begin JumpOverflow: */
 	jumpOvfl = genConditionalBranchoperand(JumpOverflow, ((sqInt)0));
@@ -21137,7 +21726,7 @@ genPrimitivePerform(void)
 
 	if (methodOrBlockNumArgs > 2) {
 		/* begin MoveMw:r:R: */
-		offset = (methodOrBlockNumArgs) * BytesPerWord;
+		offset = (methodOrBlockNumArgs - 1) * BytesPerWord;
 		/* begin gen:quickConstant:operand:operand: */
 		anInstruction = genoperandoperandoperand(MoveMwrR, offset, SPReg, Arg0Reg);
 	}
@@ -21595,9 +22184,8 @@ genSmallIntegerComparisonorDoubleComparisoninvert(sqInt jumpOpcode, AbstractInst
     AbstractInstruction *jumpNonInt;
     AbstractInstruction *jumpTrue;
 
-	if (!(hasSSE2Instructions(backEnd))) {
-		return genSmallIntegerComparison(jumpOpcode);
-	}
+	return genSmallIntegerComparison(jumpOpcode);
+
 	/* begin genJumpNotSmallInteger:scratchReg: */
 	jumpDouble = genJumpNotSmallInteger(Arg0Reg);
 	/* begin CmpR:R: */
@@ -22462,6 +23050,7 @@ genStorePopReceiverVariable(sqInt popBoolean, sqInt slotIndex)
 {
     AbstractInstruction *abstractInstruction;
     AbstractInstruction *abstractInstruction1;
+    AbstractInstruction * inst;
     sqInt topReg;
     sqInt topReg1;
 
@@ -22496,10 +23085,15 @@ genStorePopReceiverVariable(sqInt popBoolean, sqInt slotIndex)
 					? (ensureReceiverResultRegContainsSelf(),
 						ssStorePoptoReg(popBoolean, TempReg),
 						(traceStores > 0
-								? (/* begin CallRT: */
-									(abstractInstruction1 = genoperand(Call, ceTraceStoreTrampoline)),
-									(abstractInstruction1->annotation = IsRelativeCall),
-									abstractInstruction1)
+								? (/* begin saveAndRestoreLinkRegAround: */
+									(inst = genoperand(PushR, LinkReg)),
+									(/* begin CallRT: */
+										(abstractInstruction1 = genoperand(Call, ceTraceStoreTrampoline)),
+										(abstractInstruction1->annotation = IsRelativeCall),
+										abstractInstruction1),
+									/* begin PopR: */
+									genoperand(PopR, LinkReg),
+									inst)
 								: 0),
 						genStoreImmediateInSourceRegslotIndexdestReg(TempReg, slotIndex, ReceiverResultReg))
 					: ((topReg1 = allocateRegForStackEntryAtnotConflictingWith(0, registerMaskFor(ReceiverResultReg))),
@@ -22508,10 +23102,15 @@ genStorePopReceiverVariable(sqInt popBoolean, sqInt slotIndex)
 						(traceStores > 0
 								? (/* begin MoveR:R: */
 									genoperandoperand(MoveRR, topReg1, TempReg),
-									(/* begin CallRT: */
-										(abstractInstruction1 = genoperand(Call, ceTraceStoreTrampoline)),
-										(abstractInstruction1->annotation = IsRelativeCall),
-										abstractInstruction1))
+									(/* begin saveAndRestoreLinkRegAround: */
+										(inst = genoperand(PushR, LinkReg)),
+										(/* begin CallRT: */
+											(abstractInstruction1 = genoperand(Call, ceTraceStoreTrampoline)),
+											(abstractInstruction1->annotation = IsRelativeCall),
+											abstractInstruction1),
+										/* begin PopR: */
+										genoperand(PopR, LinkReg),
+										inst))
 								: 0),
 						genStoreSourceRegslotIndexdestRegscratchReginFrame(topReg1, slotIndex, ReceiverResultReg, TempReg, needsFrame)))));
 }
@@ -22641,6 +23240,9 @@ genUpArrowReturn(void)
 		genoperandoperand(MoveRR, FPReg, SPReg);
 		/* begin PopR: */
 		genoperand(PopR, FPReg);
+		/* begin PopR: */
+		genoperand(PopR, LinkReg);
+
 		/* begin RetN: */
 		genoperand(RetN, (methodOrBlockNumArgs + 1) * BytesPerWord);
 	}
@@ -22744,7 +23346,7 @@ initSimStackForFramelessBlock(sqInt startpc)
 		(desc->spilled = 1);
 		(desc->annotateUse = 0);
 		(desc->registerr = SPReg);
-		(desc->offset = (methodOrBlockNumArgs - i) * BytesPerWord);
+		(desc->offset = ((methodOrBlockNumArgs - 1) - i) * BytesPerWord);
 		(desc->bcptr = startpc);
 	}
 	simSpillBase = (simStackPtr = methodOrBlockNumTemps - 1);
@@ -22788,7 +23390,7 @@ initSimStackForFramelessMethod(sqInt startpc)
 			(desc->registerr = SPReg);
 			(desc->spilled = 1);
 			(desc->annotateUse = 0);
-			(desc->offset = (methodOrBlockNumArgs - i) * BytesPerWord);
+			(desc->offset = ((methodOrBlockNumArgs - 1) - i) * BytesPerWord);
 			(desc->bcptr = startpc);
 		}
 	}
