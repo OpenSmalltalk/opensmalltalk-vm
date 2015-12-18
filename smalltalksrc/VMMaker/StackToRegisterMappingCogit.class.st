@@ -3677,7 +3677,7 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 					  numArgs: numArgs
 					  called: (self trampolineName: 'ceSend' numArgs: numArgs)
 					  arg: ClassReg
-					  arg: 0
+					  arg: (self trampolineArgConstant: false)
 					  arg: ReceiverResultReg
 					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 
@@ -3704,7 +3704,7 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 					  numArgs: numArgs
 					  called: (self trampolineName: 'ceSuperSend' numArgs: numArgs)
 					  arg: ClassReg
-					  arg: 1
+					  arg: (self trampolineArgConstant: true)
 					  arg: ReceiverResultReg
 					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 	firstSend := ordinarySendTrampolines at: 0.

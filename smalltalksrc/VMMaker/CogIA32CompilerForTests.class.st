@@ -65,11 +65,6 @@ CogIA32CompilerForTests class >> xmmRegistersWithNamesDo: aBinaryBlock [
 		do: aBinaryBlock
 ]
 
-{ #category : #encoding }
-CogIA32CompilerForTests >> concreteRegister: value [
-	^value
-]
-
 { #category : #'generate machine code' }
 CogIA32CompilerForTests >> concretizeAt: actualAddress [
 	"Override to check maxSize and machineCodeSize"

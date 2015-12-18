@@ -2176,6 +2176,16 @@ StackInterpreterSimulator >> printNum: anInteger [
 ]
 
 { #category : #'debug printing' }
+StackInterpreterSimulator >> printSends [
+	^printSends
+]
+
+{ #category : #'debug printing' }
+StackInterpreterSimulator >> printSends: aBoolean [
+	printSends := aBoolean
+]
+
+{ #category : #'debug printing' }
 StackInterpreterSimulator >> printStringForCurrentBytecode [
 	^String streamContents: [:str| self printCurrentBytecodeOn: str]
 ]
