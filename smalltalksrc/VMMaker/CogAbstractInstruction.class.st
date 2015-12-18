@@ -109,6 +109,12 @@ CogAbstractInstruction class >> initialize [
 ]
 
 { #category : #'class initialization' }
+CogAbstractInstruction class >> initializeAbstractRegisters [
+	"Assign the abstract registers with the identities/indices of the relevant concrete registers."
+	self subclassResponsibility
+]
+
+{ #category : #'class initialization' }
 CogAbstractInstruction class >> initializeSpecificOpcodes: opcodeSymbolSequence in: initializeMethod [
 	"Declare as class variables, the opcodes in opcodeSymbolSequence.
 	 Assign values to them from LastRTLOpcode on.  Undeclare any obsolete
@@ -328,28 +334,9 @@ CogAbstractInstruction >> >= anAbstractInstruction [
 
 { #category : #private }
 CogAbstractInstruction >> abstractRegisterForConcreteRegister: reg [
-	(self concreteRegister: TempReg) = reg ifTrue: [^TempReg].
-	(self concreteRegister: ReceiverResultReg) = reg ifTrue: [^ReceiverResultReg].
-	(self concreteRegister: ClassReg) = reg ifTrue: [^ClassReg].
-	(self concreteRegister: SendNumArgsReg) = reg ifTrue: [^SendNumArgsReg].
-	(self concreteRegister: Arg0Reg) = reg ifTrue: [^Arg0Reg].
-	(self concreteRegister: Arg1Reg) = reg ifTrue: [^Arg1Reg].
-	(self concreteRegister: FPReg) = reg ifTrue: [^FPReg].
-	(self concreteRegister: SPReg) = reg ifTrue: [^SPReg].
-	self error: 'could not find abstract register'.
-	^0
-
-	"While the below works fine in Smalltalk it of course doesn't work in C ;)"
-	
-	"^reg caseOf: {
-		[self concreteRegister: TempReg] -> [TempReg].
-		[self concreteRegister: ReceiverResultReg] -> [ReceiverResultReg].
-		[self concreteRegister: ClassReg] -> [ClassReg].
-		[self concreteRegister: SendNumArgsReg] -> [SendNumArgsReg].
-		[self concreteRegister: Arg0Reg] -> [Arg0Reg].
-		[self concreteRegister: Arg1Reg] -> [Arg1Reg].
-		[self concreteRegister: FPReg] -> [FPReg].
-		[self concreteRegister: SPReg] -> [SPReg] }"
+	<inline: true>
+	self cCode: [] inSmalltalk: [self assert: reg isInteger].
+	^reg
 ]
 
 { #category : #accessing }
@@ -517,6 +504,20 @@ CogAbstractInstruction >> computeJumpTargetOffsetPlus: anPCOffset [
 	^jumpTarget signedIntFromLong - (address + anPCOffset) signedIntFromLong.
 ]
 
+{ #category : #encoding }
+CogAbstractInstruction >> concreteDPFPRegister: reg [
+	<inline: true>
+	self cCode: [] inSmalltalk: [self assert: reg isInteger].
+	^reg
+]
+
+{ #category : #private }
+CogAbstractInstruction >> concreteRegister: reg [
+	<inline: true>
+	self cCode: [] inSmalltalk: [self assert: reg isInteger].
+	^reg
+]
+
 { #category : #'generate machine code' }
 CogAbstractInstruction >> concretizeAt: actualAddress [
 	"Generate concrete machine code for the instruction at actualAddress,
@@ -669,17 +670,17 @@ CogAbstractInstruction >> genLoadStackPointers [
 
 { #category : #abi }
 CogAbstractInstruction >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 [
-	"Generate the code to pass up to four arguments in a C run-time call.  Hack: each argument is either a
-	 negative number, that of an abstract register, or a non-negative number, that of a constant parameter.
+	"Generate the code to pass up to four arguments in a C run-time call.  Hack: each argument is
+	 either a negative number, which encodes a constant, or a non-negative number, that of a register.
 
 	 Run-time calls have no more than four arguments, so chosen so that on ARM, where in its C ABI the
 	 first four integer arguments are passed in registers, all arguments can be passed in registers.  We
-	 defer to the back end to generate this code not so much that teh back end knows whether it uses
+	 defer to the back end to generate this code not so much that the back end knows whether it uses
 	 the stack or registers to pass arguments (it does, but...). In fact we defer for an extremely evil reason.
 	 Doing so allows the x64 (where up to 6 args are passed) to assign the register arguments in an order
-	 that allows some of the argument registers to be used for specificabstract  registers, specifically
-	 ReceiverResultReg and ClassReg.  This is evil, evil, evil, but also its really nice to keep using the old
-	 register assignments the principal author has grown accustomed to."
+	 that allows some of the argument registers to be used for specific abstract  registers, specifically
+	 ReceiverResultReg and ClassReg.  This is evil, evil, evil, but also it's really nice to keep using the old
+	 register assignments the original author has grown accustomed to."
 	<inline: true>
 	^self subclassResponsibility
 ]

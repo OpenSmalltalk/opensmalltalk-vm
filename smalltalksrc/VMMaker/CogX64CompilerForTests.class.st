@@ -72,11 +72,6 @@ CogX64CompilerForTests class >> xmmRegistersWithNamesDo: aBinaryBlock [
 		do: aBinaryBlock
 ]
 
-{ #category : #encoding }
-CogX64CompilerForTests >> concreteRegister: value [
-	^value
-]
-
 { #category : #'generate machine code' }
 CogX64CompilerForTests >> concretizeAt: actualAddress [
 	"Override to check maxSize and machineCodeSize"

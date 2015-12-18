@@ -953,8 +953,8 @@ Cogit class >> initializeMiscConstants [
 							[#ARMv5]	->	[GdbARMAlien].
 							[#MIPSEL]	->	[MIPSELSimulator] }.
 	CogCompilerClass := self activeCompilerClass.
-	(CogCompilerClass withAllSuperclasses copyUpTo: CogAbstractInstruction) do:
-		[:compilerClass| compilerClass initialize].
+	(CogCompilerClass withAllSuperclasses copyUpTo: CogAbstractInstruction) reverseDo:
+		[:compilerClass| compilerClass initialize; initializeAbstractRegisters].
 	"Our criterion for which methods to JIT is literal count.  The default value is 60 literals or less."
 	MaxLiteralCountForCompile := initializationOptions at: #MaxLiteralCountForCompile ifAbsent: [60].
 	"we special-case 0, 1 & 2 argument sends, N is numArgs >= 3"
@@ -6664,7 +6664,7 @@ Cogit >> generateSendTrampolines [
 			put: (self genTrampolineFor: #ceSend:super:to:numArgs:
 					  called: (self trampolineName: 'ceSend' numArgs: numArgs)
 					  arg: ClassReg
-					  arg: 0
+					  arg: (self trampolineArgConstant: false)
 					  arg: ReceiverResultReg
 					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 
@@ -6690,7 +6690,7 @@ Cogit >> generateSendTrampolines [
 			put: (self genTrampolineFor: #ceSend:super:to:numArgs:
 					  called: (self trampolineName: 'ceSuperSend' numArgs: numArgs)
 					  arg: ClassReg
-					  arg: 1
+					  arg: (self trampolineArgConstant: true)
 					  arg: ReceiverResultReg
 					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 	firstSend := ordinarySendTrampolines at: 0.
@@ -7313,6 +7313,13 @@ Cogit >> isSendReturnPC: retpc [
 	target := backEnd callTargetFromReturnAddress: retpc.
 	^(target between: firstSend and: lastSend)
 	   or: [target between: methodZoneBase and: methodZone freeStart]
+]
+
+{ #category : #initialization }
+Cogit >> isTrampolineArgConstant: n [
+	"Test for true and false and 0 to N encoded via trampolineArgConstant:"
+	<inline: true>
+	^n < NoReg
 ]
 
 { #category : #disassembly }
@@ -8673,7 +8680,9 @@ Cogit >> numArgsOrSendNumArgsReg: numArgs [
 	 cases for 0 through NumSendTrampolines - 2, and a general case for more, passing
 	 the arg count in SendNumArgsReg.  This computes the relevant argument."
 	<inline: true>
-	^numArgs <= (NumSendTrampolines - 2) ifTrue: [numArgs] ifFalse: [SendNumArgsReg]
+	^numArgs <= (NumSendTrampolines - 2)
+		ifTrue: [self trampolineArgConstant: numArgs]
+		ifFalse: [SendNumArgsReg]
 ]
 
 { #category : #accessing }
@@ -9267,65 +9276,47 @@ Cogit >> recordSendTrace [
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg [
-	"Answer a bit mask identifying the symbolic register.
-	 Registers are negative numbers."
-	^1 << (1 - reg)
+	^1 << reg
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 [
-	"Answer a bit mask identifying the symbolic registers.
-	 Registers are negative numbers."
-	^1 << (1 - reg1) bitOr: 1 << (1 - reg2)
+	^1 << reg1 bitOr: 1 << reg2
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 [
-	"Answer a bit mask identifying the symbolic registers.
-	 Registers are negative numbers."
-	^(1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)
+	^(1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 [
-	"Answer a bit mask identifying the symbolic registers.
-	 Registers are negative numbers."
-	^((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)
+	^((1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3) bitOr: 1 << reg4
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 [
-	"Answer a bit mask identifying the symbolic registers.
-	 Registers are negative numbers."
-	^(((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)) bitOr: 1 << (1 - reg5)
+	^(((1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3) bitOr: 1 << reg4) bitOr: 1 << reg5
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 [
-	"Answer a bit mask identifying the symbolic registers.
-	 Registers are negative numbers."
-	^((((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)) bitOr: 1 << (1 - reg5)) bitOr: 1 << (1 - reg6)
+	^((((1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3) bitOr: 1 << reg4) bitOr: 1 << reg5) bitOr: 1 << reg6
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 [
-	"Answer a bit mask identifying the symbolic registers.
-	 Registers are negative numbers."
-	^(((((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)) bitOr: 1 << (1 - reg5)) bitOr: 1 << (1 - reg6)) bitOr: 1 << (1 - reg7)
+	^(((((1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3) bitOr: 1 << reg4) bitOr: 1 << reg5) bitOr: 1 << reg6) bitOr: 1 << reg7
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 [
-	"Answer a bit mask identifying the symbolic registers.
-	 Registers are negative numbers."
-	^((((((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)) bitOr: 1 << (1 - reg5)) bitOr: 1 << (1 - reg6)) bitOr: 1 << (1 - reg7)) bitOr: 1 << (1 - reg8)
+	^((((((1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3) bitOr: 1 << reg4) bitOr: 1 << reg5) bitOr: 1 << reg6) bitOr: 1 << reg7) bitOr: 1 << reg8
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 and: reg9 [
-	"Answer a bit mask identifying the symbolic registers.
-	 Registers are negative numbers."
-	^(((((((1 << (1 - reg1) bitOr: 1 << (1 - reg2)) bitOr: 1 << (1 - reg3)) bitOr: 1 << (1 - reg4)) bitOr: 1 << (1 - reg5)) bitOr: 1 << (1 - reg6)) bitOr: 1 << (1 - reg7)) bitOr: 1 << (1 - reg8)) bitOr: 1 << (1 - reg9)
+	^(((((((1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3) bitOr: 1 << reg4) bitOr: 1 << reg5) bitOr: 1 << reg6) bitOr: 1 << reg7) bitOr: 1 << reg8) bitOr: 1 << reg9
 ]
 
 { #category : #disassembly }
@@ -10463,6 +10454,24 @@ Cogit >> traceStores: aBooleanOrInteger [
 	traceStores := aBooleanOrInteger isInteger
 							ifTrue: [aBooleanOrInteger]
 							ifFalse: [aBooleanOrInteger ifTrue: [1] ifFalse: [0]]
+]
+
+{ #category : #initialization }
+Cogit >> trampolineArgConstant: booleanOrInteger [
+	"Encode true and false and 0 to N such that they can't be confused for register numbers (including NoReg)
+	 and can be tested for by isTrampolineArgConstant: and decoded by trampolineArgValue:"
+	<inline: true>
+	self cCode: []
+		inSmalltalk: [booleanOrInteger isInteger ifFalse: [^self trampolineArgConstant: (booleanOrInteger ifTrue: [1] ifFalse: [0])]].
+	self assert: booleanOrInteger >= 0.
+	^-2 - booleanOrInteger "0...N => -2...-(N+2)"
+]
+
+{ #category : #initialization }
+Cogit >> trampolineArgValue: n [
+	"Decode true and false and 0 to N to their C equivalents from the encoding by trampolineArgConstant:"
+	<inline: true>
+	^-2 - n
 ]
 
 { #category : #initialization }
