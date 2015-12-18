@@ -210,6 +210,44 @@ CogARMCompiler class >> initialize [
 		in: thisContext method
 ]
 
+{ #category : #'class initialization' }
+CogARMCompiler class >> initializeAbstractRegisters [
+	"Assign the abstract registers with the identities/indices of the relevant concrete registers."
+
+	"N.B. According to BSABI, R0-R3 are caller-save, R4-R12 are callee save.
+	 Note that R9 might be a special register for the implementation. In some slides
+	 it is refered to as sb. R10 can contain the stack limit (sl), R11 the fp. R12 is an
+	 intra-procedure scratch instruction pointer for link purposes. It can also be used.
+	 R10 is used as temporary inside a single abstract opcode implementation"
+	"R0-R3 are used when calling back to the interpreter. Using them would require
+	 saving and restoring their values, so they are omitted so far. R12 is the only
+	 scratch register at the moment.."
+
+	TempReg			:= R0.
+	ClassReg			:= R8.
+	ReceiverResultReg	:= R7.
+	SendNumArgsReg	:= R6.
+	SPReg				:= SP. "R13"
+	FPReg				:= R11.
+	Arg0Reg			:= R4.
+	Arg1Reg			:= R5.
+	VarBaseReg		:= ConcreteVarBaseReg. "Must be callee saved"
+	RISCTempReg		:= ConcreteIPReg. "a.k.a. IP"
+	Scratch0Reg		:= R12.
+	LinkReg				:= LR. "R14"
+	PCReg				:= PC. "R15"	
+
+	DPFPReg0			:= D0.
+	DPFPReg1			:= D1.
+	DPFPReg2			:= D2.
+	DPFPReg3			:= D3.
+	DPFPReg4			:= D4.
+	DPFPReg5			:= D5.
+	DPFPReg6			:= D6.
+	DPFPReg7			:= D7
+
+]
+
 { #category : #testing }
 CogARMCompiler class >> isAbstract [
 	^self == CogARMCompiler
@@ -243,42 +281,6 @@ CogARMCompiler class >> specificOpcodes [
 CogARMCompiler class >> wordSize [
 	"This is a 32-bit ISA"
 	^4
-]
-
-{ #category : #private }
-CogARMCompiler >> abstractRegisterForConcreteRegister: reg [
-	(self concreteRegister: TempReg) = reg ifTrue: [^TempReg].
-	(self concreteRegister: ReceiverResultReg) = reg ifTrue: [^ReceiverResultReg].
-	(self concreteRegister: ClassReg) = reg ifTrue: [^ClassReg].
-	(self concreteRegister: SendNumArgsReg) = reg ifTrue: [^SendNumArgsReg].
-	(self concreteRegister: Arg0Reg) = reg ifTrue: [^Arg0Reg].
-	(self concreteRegister: Arg1Reg) = reg ifTrue: [^Arg1Reg].
-	(self concreteRegister: FPReg) = reg ifTrue: [^FPReg].
-	(self concreteRegister: SPReg) = reg ifTrue: [^SPReg].
-	(self concreteRegister: LinkReg) = reg ifTrue: [^LinkReg].
-	(self concreteRegister: RISCTempReg) = reg ifTrue: [^RISCTempReg].
-	(self concreteRegister: PCReg) = reg ifTrue: [^PCReg].
-	(self concreteRegister: VarBaseReg) = reg ifTrue: [^VarBaseReg].
-	(self concreteRegister: Scratch0Reg) = reg ifTrue: [^Scratch0Reg].
-	self error: 'could not find abstract register'.
-	^0
-
-	"({	TempReg. ReceiverResultReg. ClassReg. SendNumArgsReg. Arg0Reg. Arg1Reg.
-		FPReg. SPReg.
-		LinkReg. RISCTempReg. PCReg. VarBaseReg.
-		Scratch0Reg } collect: [:i| self basicNew concreteRegister: i]) sort"
-
-	"While the below works fine in Smalltalk it of course doesn't work in C ;)"
-	
-	"^reg caseOf: {
-		[self concreteRegister: TempReg] -> [TempReg].
-		[self concreteRegister: ReceiverResultReg] -> [ReceiverResultReg].
-		[self concreteRegister: ClassReg] -> [ClassReg].
-		[self concreteRegister: SendNumArgsReg] -> [SendNumArgsReg].
-		[self concreteRegister: Arg0Reg] -> [Arg0Reg].
-		[self concreteRegister: Arg1Reg] -> [Arg1Reg].
-		[self concreteRegister: FPReg] -> [FPReg].
-		[self concreteRegister: SPReg] -> [SPReg] }"
 ]
 
 { #category : #'ARM convenience instructions' }
@@ -681,61 +683,6 @@ CogARMCompiler >> concreteCallerSavedRegisterMask [
 	 The caller-saved registers are those that are not callee-saved and not reserved for hardware/abi uses,
 	 i..e r0-r3, r9 & r12."
 	^2r1001000001111
-]
-
-{ #category : #encoding }
-CogARMCompiler >> concreteDPFPRegister: registerIndex [
-	 "Map a possibly abstract double-precision floating-point register into a concrete one.
-	  Abstract registers (defined in CogAbstractOpcodes) are all negative.  If registerIndex
-	  is negative assume it is an abstract register."
-
-	^registerIndex
-		caseOf: {
-			[DPFPReg0]	-> [D0].
-			[DPFPReg1]	-> [D1].
-			[DPFPReg2]	-> [D2].
-			[DPFPReg3]	-> [D3].
-			[DPFPReg4]	-> [D4].
-			[DPFPReg5]	-> [D5].
-			[DPFPReg6]	-> [D6].
-			[DPFPReg7]	-> [D7] }
-		otherwise:
-			[self assert: (registerIndex between: D0 and: D7).
-			 registerIndex]
-]
-
-{ #category : #encoding }
-CogARMCompiler >> concreteRegister: registerIndex [
-	 "Map a possibly abstract register into a concrete one.  Abstract registers
-	  (defined in CogAbstractOpcodes) are all negative.  If registerIndex is
-	  negative assume it is an abstract register."
-	
-	"N.B. According to BSABI, R0-R3 are caller-save, R4-R12 are callee save.
-	 Note that R9 might be a special register for the implementation. In some slides
-	 it is refered to as sb. R10 can contain the stack limit (sl), R11 the fp. R12 is an
-	 intra-procedure scratch instruction pointer for link purposes. It can also be used.
-	 R10 is used as temporary inside a single abstract opcode implementation"
-	"R0-R3 are used when calling back to the interpreter. Using them would require
-	 saving and restoring their values, so they are omitted so far. R12 is the only
-	 scratch register at the moment.."
-	^registerIndex
-		caseOf: {
-			[TempReg]				-> [R0].
-			[ClassReg]				-> [R8].
-			[ReceiverResultReg]	-> [R7].
-			[SendNumArgsReg]		-> [R6].
-			[SPReg]					-> [SP]. "R13"
-			[FPReg]					-> [R11].
-			[Arg0Reg]				-> [R4].
-			[Arg1Reg]				-> [R5].
-			[VarBaseReg]			-> [ConcreteVarBaseReg]. "Must be callee saved"
-			[RISCTempReg]			-> [ConcreteIPReg]. "a.k.a. IP"
-			[Scratch0Reg]			-> [R12].
-			[LinkReg]				-> [LR]. "R14"
-			[PCReg]					-> [PC] "R15" }
-		otherwise:
-			[self assert: (registerIndex between: R0 and: PC).
-			 registerIndex]
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -2177,33 +2124,33 @@ CogARMCompiler >> genLoadStackPointers [
 
 { #category : #abi }
 CogARMCompiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 [
-	"Generate the code to pass up to four arguments in a C run-time call.  Hack: each argument is either a
-	 negative number, that of an abstract register, or a non-negative number, that of a constant parameter.
+	"Generate the code to pass up to four arguments in a C run-time call.  Hack: each argument is
+	 either a negative number, which encodes a constant, or a non-negative number, that of a register.
 
 	 Run-time calls have no more than four arguments, so chosen so that on ARM, where in its C ABI the
 	 first four integer arguments are passed in registers, all arguments can be passed in registers.  We
-	 defer to the back end to generate this code not so much that teh back end knows whether it uses
+	 defer to the back end to generate this code not so much that the back end knows whether it uses
 	 the stack or registers to pass arguments (it does, but...). In fact we defer for an extremely evil reason.
 	 Doing so allows the x64 (where up to 6 args are passed) to assign the register arguments in an order
-	 that allows some of the argument registers to be used for specificabstract  registers, specifically
-	 ReceiverResultReg and ClassReg.  This is evil, evil, evil, but also its really nice to keep using the old
-	 register assignments the principal author has grown accustomed to."
+	 that allows some of the argument registers to be used for specific abstract  registers, specifically
+	 ReceiverResultReg and ClassReg.  This is evil, evil, evil, but also it's really nice to keep using the old
+	 register assignments the original author has grown accustomed to."
 	<inline: true>
 	numArgs = 0 ifTrue: [^self].
-	regOrConst0 >= 0
-		ifTrue: [cogit MoveCq: regOrConst0 R: CArg0Reg]
+	(cogit isTrampolineArgConstant: regOrConst0)
+		ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst0) R: CArg0Reg]
 		ifFalse: [cogit MoveR: regOrConst0 R: CArg0Reg].
 	numArgs = 1 ifTrue: [^self].
-	regOrConst1 >= 0
-		ifTrue: [cogit MoveCq: regOrConst1 R: CArg1Reg]
+	(cogit isTrampolineArgConstant: regOrConst1)
+		ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst1) R: CArg1Reg]
 		ifFalse: [cogit MoveR: regOrConst1 R: CArg1Reg].
 	numArgs = 2 ifTrue: [^self].
-	regOrConst2 >= 0
-		ifTrue: [cogit MoveCq: regOrConst2 R: CArg2Reg]
+	(cogit isTrampolineArgConstant: regOrConst2)
+		ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst2) R: CArg2Reg]
 		ifFalse: [cogit MoveR: regOrConst2 R: CArg2Reg].
 	numArgs = 3 ifTrue: [^self].
-	regOrConst3 >= 0
-		ifTrue: [cogit MoveCq: regOrConst3 R: CArg3Reg]
+	(cogit isTrampolineArgConstant: regOrConst3)
+		ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst3) R: CArg3Reg]
 		ifFalse: [cogit MoveR: regOrConst3 R: CArg3Reg]
 ]
 

@@ -221,51 +221,49 @@ CogRTLOpcodes class >> initialize [
 	16-bit (and on 64-bits, 32-bit) reads.  These /are/ expected to always zero-extend."
 
 	| opcodeNames refs |
-	"A small fixed set of abstract registers are defined and used in code generation
-	 for Smalltalk code, and executes on stack pages in the stack zone.
-	 Currently, these are mapped to and from processor-specific registers by
-	 concreteRegister: & abstractRegisterForConcreteRegister:"
+	"A small fixed set of abstract register names are defined and used in code
+	 generation for Smalltalk code, which executes on stack pages in the stack zone."
 
-	"NoReg encodes no register.  We hope soon to discard the need to map between
-	 abstract and concrete registers, but for that we can't use nil to mean no register
-	 because 0 is a valid register number and in C nil maps to 0."
-	NoReg := nil.
+	"NoReg encodes no register."
+	NoReg := -1.
 
-	"The core set of abstract registers that define the Cogits model of Smalltalk code."
-	FPReg := -1.	"A frame pointer is used for Smalltalk frames."
-	SPReg := -2.
-	ReceiverResultReg := -3.		"The receiver at point of send, and return value of a send"
-	TempReg := -4.
-	ClassReg := -5.					"The inline send cache class tag is in this register, loaded at the send site"
-	SendNumArgsReg := -6.		"Sends > 2 args set the arg count in this reg"
-	Arg0Reg := -7.					"In the StackToRegisterMappingCogit 1 & 2 arg sends marshall into these registers."
-	Arg1Reg := -8.
+	"The core set of abstract registers that define the Cogits model of Smalltalk code.
+	 These are given concrete values by the currently in-use back end; see implementors
+	 of initializeAbstractRegisters."
+	FPReg				:= #undefined.	"A frame pointer is used for Smalltalk frames."
+	SPReg				:= #undefined.
+	ReceiverResultReg	:= #undefined.	"The receiver at point of send, and return value of a send"
+	TempReg			:= #undefined.
+	ClassReg			:= #undefined.	"The inline send cache class tag is in this register, loaded at the send site"
+	SendNumArgsReg	:= #undefined.	"Sends > 2 args set the arg count in this reg"
+	Arg0Reg			:= #undefined.	"In the StackToRegisterMappingCogit 1 & 2 arg sends marshall into these registers."
+	Arg1Reg			:= #undefined.
 
-	"A small fixed set of abstract scratch registers for register-rich machines (ARM can use 1, x64 can use 6)."
-	Scratch0Reg := -9.
-	Scratch1Reg := -10.
-	Scratch2Reg := -11.
-	Scratch3Reg := -12.
-	Scratch4Reg := -13.
-	Scratch5Reg := -14.
-	Scratch6Reg := -15.
-	Scratch7Reg := -16.
+	"A small fixed set of abstract scratch registers for register-rich machines (ARM can use 1, x64 can use 6 or 7)."
+	Scratch0Reg := #undefined.
+	Scratch1Reg := #undefined.
+	Scratch2Reg := #undefined.
+	Scratch3Reg := #undefined.
+	Scratch4Reg := #undefined.
+	Scratch5Reg := #undefined.
+	Scratch6Reg := #undefined.
+	Scratch7Reg := #undefined.
 
 	"RISC-specific registers"
-	LinkReg := -17.
-	RISCTempReg := -18.	"Used to synthesize CISC instructions from multiple RISC instructions."
-	PCReg := -19.
-	VarBaseReg := -20.		"If useful, points to base of interpreter variables."
+	LinkReg			:= #undefined.
+	RISCTempReg	:= #undefined.		"Used to synthesize CISC instructions from multiple RISC instructions."
+	PCReg			:= #undefined.		"If the processor has an assignable pc, e.g. ARM"
+	VarBaseReg	:= #undefined.		"If useful, points to base of interpreter variables."
 
 	"Floating-point registers"
-	DPFPReg0 := -21.
-	DPFPReg1 := -22.
-	DPFPReg2 := -23.
-	DPFPReg3 := -24.
-	DPFPReg4 := -25.
-	DPFPReg5 := -26.
-	DPFPReg6 := -27.
-	DPFPReg7 := -28.
+	DPFPReg0 := #undefined.
+	DPFPReg1 := #undefined.
+	DPFPReg2 := #undefined.
+	DPFPReg3 := #undefined.
+	DPFPReg4 := #undefined.
+	DPFPReg5 := #undefined.
+	DPFPReg6 := #undefined.
+	DPFPReg7 := #undefined.
 
 	opcodeNames := #("Noops & Pseudo Ops"
 						Label
