@@ -5132,7 +5132,7 @@ static void sendFullScreenHint(int enable)
   xev.xclient.data.l[0] = enable; /* 1 enable, 0 disable fullscreen */
   xev.xclient.data.l[1] = fullscreen;
   xev.xclient.data.l[2] = 0;
-  XSendEvent(stDisplay, DefaultRootWindow(stDisplay), False, SubstructureNotifyMask, &xev);
+  XSendEvent(stDisplay, DefaultRootWindow(stDisplay), False, SubstructureRedirectMask | SubstructureNotifyMask, &xev);
 }
 
 
