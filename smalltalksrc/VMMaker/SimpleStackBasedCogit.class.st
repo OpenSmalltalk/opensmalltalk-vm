@@ -351,7 +351,9 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForNewsqueak [
 	"Initialize the table of primitive generators.  This does not include normal primitives implemented in the coInterpreter.
 	 N.B. primitives that don't have an explicit arg count (the integer following the generator) may be variadic."
 	"SimpleStackBasedCogit initializePrimitiveTableForSqueakV3"
-	MaxCompiledPrimitiveIndex := 222.
+	MaxCompiledPrimitiveIndex := self objectRepresentationClass wordSize = 8
+										ifTrue: [555]
+										ifFalse: [222].
 	primitiveTable := CArrayAccessor on: (Array new: MaxCompiledPrimitiveIndex + 1).
 	self table: primitiveTable from: 
 	#(	"Integer Primitives (0-19)"
@@ -513,25 +515,26 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForNewsqueak [
 		(221 genPrimitiveClosureValue	0) "valueNoContextSwitch"
 		(222 genPrimitiveClosureValue	1) "valueNoContextSwitch:"
 
-		"(541 primitiveSmallFloatAdd				1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(542 primitiveSmallFloatSubtract			1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(543 primitiveSmallFloatLessThan			1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(544 primitiveSmallFloatGreaterThan		1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(545 primitiveSmallFloatLessOrEqual		1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(546 primitiveSmallFloatGreaterOrEqual	1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(547 primitiveSmallFloatEqual				1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(548 primitiveSmallFloatNotEqual			1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(549 primitiveSmallFloatMultiply			1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(550 primitiveSmallFloatDivide				1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(551 primitiveSmallFloatTruncated			0	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(552 primitiveSmallFloatFractionalPart		0	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(553 primitiveSmallFloatExponent			0	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(554 primitiveSmallFloatTimesTwoPower	1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(555 primitiveSmallFloatSquareRoot		0	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(556 primitiveSmallFloatSine				0	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(557 primitiveSmallFloatArctan				0	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(558 primitiveSmallFloatLogN				0	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(559 primitiveSmallFloatExp				0	processorHasDoublePrecisionFloatingPointSupport:)"
+		"SmallFloat primitives (540-559)"
+		(541 genPrimitiveSmallFloatAdd				1	processorHasDoublePrecisionFloatingPointSupport:)
+		(542 genPrimitiveSmallFloatSubtract			1	processorHasDoublePrecisionFloatingPointSupport:)
+		(543 genPrimitiveSmallFloatLessThan			1	processorHasDoublePrecisionFloatingPointSupport:)
+		(544 genPrimitiveSmallFloatGreaterThan		1	processorHasDoublePrecisionFloatingPointSupport:)
+		(545 genPrimitiveSmallFloatLessOrEqual		1	processorHasDoublePrecisionFloatingPointSupport:)
+		(546 genPrimitiveSmallFloatGreaterOrEqual		1	processorHasDoublePrecisionFloatingPointSupport:)
+		(547 genPrimitiveSmallFloatEqual				1	processorHasDoublePrecisionFloatingPointSupport:)
+		(548 genPrimitiveSmallFloatNotEqual			1	processorHasDoublePrecisionFloatingPointSupport:)
+		(549 genPrimitiveSmallFloatMultiply				1	processorHasDoublePrecisionFloatingPointSupport:)
+		(550 genPrimitiveSmallFloatDivide				1	processorHasDoublePrecisionFloatingPointSupport:)
+		"(551 genPrimitiveSmallFloatTruncated			0	processorHasDoublePrecisionFloatingPointSupport:)"
+		"(552 genPrimitiveSmallFloatFractionalPart		0	processorHasDoublePrecisionFloatingPointSupport:)"
+		"(553 genPrimitiveSmallFloatExponent			0	processorHasDoublePrecisionFloatingPointSupport:)"
+		"(554 genPrimitiveSmallFloatTimesTwoPower	1	processorHasDoublePrecisionFloatingPointSupport:)"
+		(555 genPrimitiveSmallFloatSquareRoot			0	processorHasDoublePrecisionFloatingPointSupport:)
+		"(556 genPrimitiveSmallFloatSine				0	processorHasDoublePrecisionFloatingPointSupport:)"
+		"(557 genPrimitiveSmallFloatArctan				0	processorHasDoublePrecisionFloatingPointSupport:)"
+		"(558 genPrimitiveSmallFloatLogN				0	processorHasDoublePrecisionFloatingPointSupport:)"
+		"(559 genPrimitiveSmallFloatExp				0	processorHasDoublePrecisionFloatingPointSupport:)"
 	)
 ]
 
@@ -540,7 +543,9 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 	"Initialize the table of primitive generators.  This does not include normal primitives implemented in the coInterpreter.
 	 N.B. primitives that don't have an explicit arg count (the integer following the generator) may be variadic."
 	"SimpleStackBasedCogit initializePrimitiveTableForSqueak"
-	MaxCompiledPrimitiveIndex := 222.
+	MaxCompiledPrimitiveIndex := self objectRepresentationClass wordSize = 8
+										ifTrue: [555]
+										ifFalse: [222].
 	primitiveTable := CArrayAccessor on: (Array new: MaxCompiledPrimitiveIndex + 1).
 	self table: primitiveTable from: 
 	#(	"Integer Primitives (0-19)"
@@ -585,8 +590,8 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 		"(37 primitiveBitShiftLargeIntegers)"
 
 		"Float Primitives (38-59)"
-		"(38 primitiveFloatAt)"
-		"(39 primitiveFloatAtPut)"
+		"(38 genPrimitiveFloatAt)"
+		"(39 genPrimitiveFloatAtPut)"
 		(40 genPrimitiveAsFloat					0	processorHasDoublePrecisionFloatingPointSupport:)
 		(41 genPrimitiveFloatAdd				1	processorHasDoublePrecisionFloatingPointSupport:)
 		(42 genPrimitiveFloatSubtract			1	processorHasDoublePrecisionFloatingPointSupport:)
@@ -598,15 +603,15 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 		(48 genPrimitiveFloatNotEqual			1	processorHasDoublePrecisionFloatingPointSupport:)
 		(49 genPrimitiveFloatMultiply			1	processorHasDoublePrecisionFloatingPointSupport:)
 		(50 genPrimitiveFloatDivide				1	processorHasDoublePrecisionFloatingPointSupport:)
-		"(51 primitiveTruncated)"
-		"(52 primitiveFractionalPart)"
-		"(53 primitiveExponent)"
-		"(54 primitiveTimesTwoPower)"
+		"(51 genPrimitiveTruncated)"
+		"(52 genPrimitiveFractionalPart)"
+		"(53 genPrimitiveExponent)"
+		"(54 genPrimitiveTimesTwoPower)"
 		(55 genPrimitiveFloatSquareRoot		0	processorHasDoublePrecisionFloatingPointSupport:)
-		"(56 primitiveSine)"
-		"(57 primitiveArctan)"
-		"(58 primitiveLogN)"
-		"(59 primitiveExp)"
+		"(56 genPrimitiveSine)"
+		"(57 genPrimitiveArctan)"
+		"(58 genPrimitiveLogN)"
+		"(59 genPrimitiveExp)"
 
 		"Subscript and Stream Primitives (60-67)"
 		(60 genPrimitiveAt				1)
@@ -702,25 +707,26 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 		(221 genPrimitiveClosureValue	0) "valueNoContextSwitch"
 		(222 genPrimitiveClosureValue	1) "valueNoContextSwitch:"
 
-		"(541 primitiveSmallFloatAdd				1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(542 primitiveSmallFloatSubtract			1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(543 primitiveSmallFloatLessThan			1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(544 primitiveSmallFloatGreaterThan		1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(545 primitiveSmallFloatLessOrEqual		1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(546 primitiveSmallFloatGreaterOrEqual	1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(547 primitiveSmallFloatEqual				1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(548 primitiveSmallFloatNotEqual			1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(549 primitiveSmallFloatMultiply			1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(550 primitiveSmallFloatDivide				1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(551 primitiveSmallFloatTruncated			0	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(552 primitiveSmallFloatFractionalPart		0	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(553 primitiveSmallFloatExponent			0	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(554 primitiveSmallFloatTimesTwoPower	1	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(555 primitiveSmallFloatSquareRoot		0	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(556 primitiveSmallFloatSine				0	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(557 primitiveSmallFloatArctan				0	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(558 primitiveSmallFloatLogN				0	processorHasDoublePrecisionFloatingPointSupport:)"
-		"(559 primitiveSmallFloatExp				0	processorHasDoublePrecisionFloatingPointSupport:)"
+		"SmallFloat primitives (540-559)"
+		(541 genPrimitiveSmallFloatAdd				1	processorHasDoublePrecisionFloatingPointSupport:)
+		(542 genPrimitiveSmallFloatSubtract			1	processorHasDoublePrecisionFloatingPointSupport:)
+		(543 genPrimitiveSmallFloatLessThan			1	processorHasDoublePrecisionFloatingPointSupport:)
+		(544 genPrimitiveSmallFloatGreaterThan		1	processorHasDoublePrecisionFloatingPointSupport:)
+		(545 genPrimitiveSmallFloatLessOrEqual		1	processorHasDoublePrecisionFloatingPointSupport:)
+		(546 genPrimitiveSmallFloatGreaterOrEqual		1	processorHasDoublePrecisionFloatingPointSupport:)
+		(547 genPrimitiveSmallFloatEqual				1	processorHasDoublePrecisionFloatingPointSupport:)
+		(548 genPrimitiveSmallFloatNotEqual			1	processorHasDoublePrecisionFloatingPointSupport:)
+		(549 genPrimitiveSmallFloatMultiply				1	processorHasDoublePrecisionFloatingPointSupport:)
+		(550 genPrimitiveSmallFloatDivide				1	processorHasDoublePrecisionFloatingPointSupport:)
+		"(551 genPrimitiveSmallFloatTruncated			0	processorHasDoublePrecisionFloatingPointSupport:)"
+		"(552 genPrimitiveSmallFloatFractionalPart		0	processorHasDoublePrecisionFloatingPointSupport:)"
+		"(553 genPrimitiveSmallFloatExponent			0	processorHasDoublePrecisionFloatingPointSupport:)"
+		"(554 genPrimitiveSmallFloatTimesTwoPower	1	processorHasDoublePrecisionFloatingPointSupport:)"
+		(555 genPrimitiveSmallFloatSquareRoot			0	processorHasDoublePrecisionFloatingPointSupport:)
+		"(556 genPrimitiveSmallFloatSine				0	processorHasDoublePrecisionFloatingPointSupport:)"
+		"(557 genPrimitiveSmallFloatArctan				0	processorHasDoublePrecisionFloatingPointSupport:)"
+		"(558 genPrimitiveSmallFloatLogN				0	processorHasDoublePrecisionFloatingPointSupport:)"
+		"(559 genPrimitiveSmallFloatExp				0	processorHasDoublePrecisionFloatingPointSupport:)"
 	)
 ]
 
@@ -2893,6 +2899,87 @@ SimpleStackBasedCogit >> genPrimitiveSize [
 ]
 
 { #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveSmallFloatAdd [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatArithmetic: AddRdRd preOpCheck: nil
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveSmallFloatDivide [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatArithmetic: DivRdRd preOpCheck: #genDoubleFailIfZeroArgRcvr:arg:
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveSmallFloatEqual [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatComparison: #JumpFPEqual: invert: false
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveSmallFloatGreaterOrEqual [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatComparison: #JumpFPGreaterOrEqual: invert: false
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveSmallFloatGreaterThan [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatComparison: #JumpFPGreater: invert: false
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveSmallFloatLessOrEqual [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatComparison: #JumpFPGreaterOrEqual: invert: true
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveSmallFloatLessThan [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatComparison: #JumpFPGreater: invert: true
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveSmallFloatMultiply [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatArithmetic: MulRdRd preOpCheck: nil
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveSmallFloatNotEqual [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatComparison: #JumpFPNotEqual: invert: false
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveSmallFloatSquareRoot [
+	<option: #Spur64BitMemoryManager>
+	"Stack looks like
+		receiver (also in ResultReceiverReg)
+		return address"
+	| jumpFailAlloc |
+	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
+	objectRepresentation genGetSmallFloatValueOf: ReceiverResultReg into: DPFPReg0.
+	self SqrtRd: DPFPReg0.
+	jumpFailAlloc := objectRepresentation
+					genAllocFloatValue: DPFPReg0
+					into: SendNumArgsReg
+					scratchReg: ClassReg
+					scratchReg: TempReg.
+	self MoveR: SendNumArgsReg R: ReceiverResultReg.
+	self RetN: (self primRetNOffsetFor: 0).
+	jumpFailAlloc jmpTarget: self Label.
+	^self compileFallbackToInterpreterPrimitive: 0
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genPrimitiveSmallFloatSubtract [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatArithmetic: SubRdRd preOpCheck: nil
+]
+
+{ #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveStringAt [
 	self genLoadArgAtDepth: 0 into: Arg0Reg.
 	^self compileFallbackToInterpreterPrimitive:
@@ -3424,6 +3511,99 @@ SimpleStackBasedCogit >> genShortUnconditionalJump [
 					Distance: methodObj.
 	target := distance + 1 + bytecodePC.
 	^self genJumpTo: target
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genSmallFloatArithmetic: arithmeticOperator preOpCheck: preOpCheckOrNil [
+	"Stack looks like
+		receiver (also in ResultReceiverReg)
+		arg
+		return address"
+	<var: #preOpCheckOrNil declareC: 'AbstractInstruction *(*preOpCheckOrNil)(int rcvrReg, int argReg)'>
+	| jumpFailClass jumpFailAlloc jumpFailCheck jumpImmediate jumpNonInt doOp fail |
+	<var: #jumpFailClass type: #'AbstractInstruction *'>
+	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
+	<var: #jumpNonInt type: #'AbstractInstruction *'>
+	<var: #jumpImmediate type: #'AbstractInstruction *'>
+	<var: #jumpFailCheck type: #'AbstractInstruction *'>
+	<var: #doOp type: #'AbstractInstruction *'>
+	<var: #fail type: #'AbstractInstruction *'>
+	self genLoadArgAtDepth: 0 into: ClassReg.
+	objectRepresentation genGetSmallFloatValueOf: ReceiverResultReg scratch: SendNumArgsReg into: DPFPReg0.
+	jumpImmediate := objectRepresentation genJumpImmediate: ClassReg.
+	objectRepresentation genGetCompactClassIndexNonImmOf: ClassReg into: SendNumArgsReg.
+	objectRepresentation genCmpClassFloatCompactIndexR: SendNumArgsReg.
+	jumpFailClass := self JumpNonZero: 0.
+	objectRepresentation genGetDoubleValueOf: ClassReg into: DPFPReg1.
+	doOp := self Label.
+	preOpCheckOrNil ifNotNil:
+		[jumpFailCheck := self perform: preOpCheckOrNil with: DPFPReg0 with: DPFPReg1].
+	self gen: arithmeticOperator operand: DPFPReg1 operand: DPFPReg0.
+	jumpFailAlloc := objectRepresentation
+					genAllocFloatValue: DPFPReg0
+					into: SendNumArgsReg
+					scratchReg: ClassReg
+					scratchReg: TempReg.
+	self MoveR: SendNumArgsReg R: ReceiverResultReg.
+	self RetN: (self primRetNOffsetFor: 1).
+	jumpImmediate jmpTarget: self Label.
+	objectRepresentation maybeGenConvertIfSmallFloatIn: Arg0Reg scratchReg: TempReg into: DPFPReg1 andJumpTo: doOp.
+	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
+		[jumpNonInt := objectRepresentation genJumpNotSmallInteger: ClassReg scratchReg: TempReg].
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
+	self ConvertR: ClassReg Rd: DPFPReg1.
+	self Jump: doOp.
+	jumpFailAlloc jmpTarget: self Label.
+	self compileFallbackToInterpreterPrimitive: 0.
+	fail := self Label.
+	jumpFailClass jmpTarget: fail.
+	preOpCheckOrNil ifNotNil:
+		[jumpFailCheck jmpTarget: fail].
+	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
+		[jumpNonInt jmpTarget: fail].
+	^0
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> genSmallFloatComparison: jumpOpcodeGenerator invert: invertComparison [
+	"Stack looks like
+		receiver (also in ResultReceiverReg)
+		arg
+		return address"
+	<var: #jumpOpcodeGenerator declareC: 'AbstractInstruction *(*jumpOpcodeGenerator)(void *)'>
+	| jumpFail jumpImmediate jumpNonInt jumpCond compare |
+	<var: #jumpImmediate type: #'AbstractInstruction *'>
+	<var: #jumpNonInt type: #'AbstractInstruction *'>
+	<var: #jumpCond type: #'AbstractInstruction *'>
+	<var: #compare type: #'AbstractInstruction *'>
+	<var: #jumpFail type: #'AbstractInstruction *'>
+
+	self genLoadArgAtDepth: 0 into: ClassReg.
+	objectRepresentation genGetSmallFloatValueOf: ReceiverResultReg scratch: SendNumArgsReg into: DPFPReg0.
+	jumpImmediate := objectRepresentation genJumpImmediate: ClassReg.
+	objectRepresentation genGetCompactClassIndexNonImmOf: ClassReg into: SendNumArgsReg.
+	objectRepresentation genCmpClassFloatCompactIndexR: SendNumArgsReg.
+	jumpFail := self JumpNonZero: 0.
+	objectRepresentation genGetDoubleValueOf: ClassReg into: DPFPReg1.
+	invertComparison "May need to invert for NaNs"
+		ifTrue: [compare := self CmpRd: DPFPReg0 Rd: DPFPReg1]
+		ifFalse: [compare := self CmpRd: DPFPReg1 Rd: DPFPReg0].
+	jumpCond := self perform: jumpOpcodeGenerator with: 0. "FP jumps are a little weird"
+	self genMoveFalseR: ReceiverResultReg.
+	self RetN: (self primRetNOffsetFor: 1).
+	jumpCond jmpTarget: (self genMoveTrueR: ReceiverResultReg).
+	self RetN: (self primRetNOffsetFor: 1).
+	jumpImmediate jmpTarget: self Label.
+	objectRepresentation maybeGenConvertIfSmallFloatIn: ClassReg scratchReg: TempReg into: DPFPReg1 andJumpTo: compare.
+	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
+		[jumpNonInt := objectRepresentation genJumpNotSmallInteger: ClassReg scratchReg: TempReg].
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
+	self ConvertR: ClassReg Rd: DPFPReg1.
+	self Jump: compare.
+	jumpFail jmpTarget: self Label.
+	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
+		[jumpNonInt jmpTarget: jumpFail getJmpTarget].
+	^0
 ]
 
 { #category : #'primitive generators' }

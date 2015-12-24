@@ -7,6 +7,11 @@ Integer >> >>> shiftAmount [  "right shift, but causes CCodeGenerator to generat
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
+Integer >> addBreakpoint: address [
+	^{self. address}
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
 Integer >> asLong [
 	^self
 ]
@@ -85,6 +90,26 @@ Integer >> hex8 [
 		ifTrue: [hex copyReplaceFrom: 4 to: 3
 						 with: ('00000000' copyFrom: 1 to: 11-hex size)]
 		ifFalse: [hex]
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> isActiveBreakpoint [
+	^true
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> isBreakpointFor: address [
+	^self = address
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> menuPrompt [
+	^' (', self hex, ')'
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> removeBreakpoint: address [
+	^nil
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
@@ -168,4 +193,9 @@ Integer >> signedIntToShort [
 	"Produces a 16-bit value in twos-comp form. Truncates if out-of-range as per a C cast"
 
 	^self bitAnd: 16rFFFF
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> singleStepRequiredToTriggerIn: aCogit [
+	^self between: aCogit cogCodeBase and: aCogit methodZone limitZony
 ]

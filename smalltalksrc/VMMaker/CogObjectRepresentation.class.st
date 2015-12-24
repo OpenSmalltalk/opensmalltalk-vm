@@ -44,6 +44,11 @@ CogObjectRepresentation class >> typeForSelf [
 	^#implicit
 ]
 
+{ #category : #accessing }
+CogObjectRepresentation class >> wordSize [
+	^4
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentation >> allYoungObjectsAgeInFullGC [
 	^self subclassResponsibility

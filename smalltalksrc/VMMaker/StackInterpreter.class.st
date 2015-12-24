@@ -973,7 +973,7 @@ StackInterpreter class >> initializePrimitiveTable [
 	MaxPrimitiveIndex := 575.	
 	MaxQuickPrimitiveIndex := 519.
 	PrimitiveTable := Array new: MaxPrimitiveIndex + 1.
-	self table: PrimitiveTable from: 
+	self primitivesClass table: PrimitiveTable from: 
 	#(	"Integer Primitives (0-19)"
 		(0 0 "a.k.a. primitiveFail but faster because primitiveFail won't even be called")
 		(1 primitiveAdd)
@@ -1694,13 +1694,8 @@ StackInterpreter class >> table: anArray from: specArray [
 	anArray doWithIndex:
 		[:entry :index|
 		entry isSymbol ifTrue:
-			[(self whichClassIncludesSelector: entry) ifNotNil:
-				[:c| | m |
-				m := c >> entry.
-				(m pragmaAt: #option:) ifNotNil:
-					[:pragma|
-					(initializationOptions at: (pragma arguments first) ifAbsent: [true]) ifFalse:
-						[anArray at: index put: 0]]]]]
+			[(self shouldIncludeMethodForSelector: entry) ifFalse:
+				[anArray at: index put: 0]]]
 ]
 
 { #category : #translation }

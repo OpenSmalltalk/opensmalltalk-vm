@@ -1243,11 +1243,12 @@ Cogit class >> structureOfACogMethod [
 Cogit class >> table: primArray from: specArray [ 
 	"Fill in the specified entries in the primitive table."
 	specArray do:
-		[:spec | | descriptor |
-		(primArray at: spec first put: CogPrimitiveDescriptor new)
-			primitiveGenerator: spec second;
-			primNumArgs: (spec at: 3 ifAbsent: -1);
-			enabled: (spec at: 4 ifAbsent: nil)].
+		[:spec | 
+		 (self shouldIncludeMethodForSelector: spec second) ifTrue:
+			[(primArray at: spec first put: CogPrimitiveDescriptor new)
+				primitiveGenerator: spec second;
+				primNumArgs: (spec at: 3 ifAbsent: -1);
+				enabled: (spec at: 4 ifAbsent: nil)]].
 	primArray object withIndexDo:
 		[:generator :i|
 		generator ifNil:
@@ -2878,6 +2879,14 @@ Cogit >> blockStartPcsIn: aMethod [
 ]
 
 { #category : #'simulation only' }
+Cogit >> breakAt: address [
+	((breakPC isBreakpointFor: address)
+	 and: [breakBlock shouldStopIfAtPC: address]) ifTrue:
+		[coInterpreter changed: #byteCountText.
+		 self halt: 'machine code breakpoint at ', address]
+]
+
+{ #category : #'simulation only' }
 Cogit >> breakBlock [
 	<doNotGenerate>
 	^breakBlock
@@ -2886,7 +2895,8 @@ Cogit >> breakBlock [
 { #category : #'simulation only' }
 Cogit >> breakBlock: aBlock [
 	<doNotGenerate>
-	breakBlock := aBlock
+	breakBlock := aBlock.
+	singleStep := singleStep or: [breakPC singleStepRequiredToTriggerIn: self]
 ]
 
 { #category : #'simulation only' }
@@ -2909,19 +2919,10 @@ Cogit >> breakPC [
 ]
 
 { #category : #'simulation only' }
-Cogit >> breakPC: anAddress [
+Cogit >> breakPC: anAddressArrayOrNil [
 	<doNotGenerate>
-	breakPC := anAddress.
-	(breakPC isInteger
-	 and: [anAddress between: codeBase and: coInterpreter heapBase]) ifTrue:
-		[singleStep := true].
-	"If there's a breakPC then it is anded with breakBlock's result, so the breakBlock must default to true.
-	 If there's no breakPC the break block is used on its own and so must befault to false."
-	(breakBlock isNil
-	 or: [breakBlock method = thisContext method]) ifTrue:
-		[breakBlock := breakPC isInteger
-						ifTrue: [[:cogit| processor pc = breakPC]]
-						ifFalse: [[:cogit| false]]]
+	breakPC := anAddressArrayOrNil.
+	singleStep := singleStep or: [anAddressArrayOrNil singleStepRequiredToTriggerIn: self]
 ]
 
 { #category : #'simulation only' }
@@ -5156,6 +5157,7 @@ Cogit >> fillInCPICHeader: pic numArgs: numArgs numCases: numCases hasMNUCase: h
 	self assert: (backEnd callTargetFromReturnAddress: pic asInteger + missOffset) = (self picAbortTrampolineFor: numArgs).
 	self assert: closedPICSize = (methodZone roundUpLength: closedPICSize).
 	processor flushICacheFrom: pic asUnsignedInteger to: pic asUnsignedInteger + closedPICSize.
+	self maybeEnableSingleStep.
 	^pic
 ]
 
@@ -5206,6 +5208,7 @@ Cogit >> fillInMethodHeader: method size: size selector: selector [
 				= (self methodAbortTrampolineFor: method cmNumArgs).
 	self assert: size = (methodZone roundUpLength: size).
 	processor flushICacheFrom: method asUnsignedInteger to: method asUnsignedInteger + size.
+	self maybeEnableSingleStep.
 	^method
 ]
 
@@ -5234,6 +5237,7 @@ Cogit >> fillInOPICHeader: pic numArgs: numArgs selector: selector [
 	self assert: (backEnd callTargetFromReturnAddress: pic asInteger + missOffset) = (self picAbortTrampolineFor: numArgs).
 	self assert: openPICSize = (methodZone roundUpLength: openPICSize).
 	processor flushICacheFrom: pic asUnsignedInteger to: pic asUnsignedInteger + openPICSize.
+	self maybeEnableSingleStep.
 	^pic
 ]
 
@@ -6459,8 +6463,7 @@ Cogit >> generateInstructionsAt: eventualAbsoluteAddress [
 	pcDependentIndex := 0.
 	0 to: opcodeIndex - 1 do:
 		[:i|
-		breakPC = absoluteAddress ifTrue:
-			[self halt: 'breakPC reached in generateInstructionsAt:'].
+		self maybeBreakAt: absoluteAddress.
 		abstractInstruction := self abstractInstructionAt: i.
 		abstractInstruction isPCDependent
 			ifTrue:
@@ -6475,14 +6478,8 @@ Cogit >> generateInstructionsAt: eventualAbsoluteAddress [
 		[:j|
 		fixup := self fixupAt: j.
 		abstractInstruction := self abstractInstructionAt: fixup instructionIndex.
-		breakPC = absoluteAddress ifTrue:
-			[self halt: 'breakPC reached in generateInstructionsAt:'].
+		self maybeBreakAt: abstractInstruction address.
 		abstractInstruction concretizeAt: abstractInstruction address].
-	self cCode: ''
-		inSmalltalk:
-			[breakPC ifNotNil:
-				[breakPC <= absoluteAddress ifTrue:
-					[self singleStep: true]]].
 	^absoluteAddress - eventualAbsoluteAddress
 ]
 
@@ -8349,6 +8346,14 @@ Cogit >> maybeAllocAndInitIRCs [
 			[^true]
 ]
 
+{ #category : #'simulation only' }
+Cogit >> maybeBreakAt: address [
+	((breakPC isBreakpointFor: address)
+	 and: [breakBlock shouldStopIfAtPC: address]) ifTrue:
+		[coInterpreter changed: #byteCountText.
+		 self halt: 'machine code breakpoint at ', address hex, ' in ', thisContext sender selector]
+]
+
 { #category : #'compile abstract instructions' }
 Cogit >> maybeDumpLiterals: descriptor [
 	<inline: true>
@@ -8358,6 +8363,13 @@ Cogit >> maybeDumpLiterals: descriptor [
 	  or: [descriptor isReturn]]) ifTrue:
 		[literalsManager dumpLiterals: (descriptor isUnconditionalBranch
 										or: [descriptor isReturn]) not]
+]
+
+{ #category : #'simulation only' }
+Cogit >> maybeEnableSingleStep [
+	<inline: true>
+	self cCode: '' inSmalltalk:
+		[singleStep ifFalse: [singleStep := breakPC singleStepRequiredToTriggerIn: self]]
 ]
 
 { #category : #debugging }
@@ -9153,6 +9165,32 @@ Cogit >> processorHasMultiplyAndMClassIsSmallInteger: ignoredPrimIndex [
 	   and: [self mclassIsSmallInteger: ignoredPrimIndex]
 ]
 
+{ #category : #'simulation only' }
+Cogit >> promptForBreakPC [
+	<doNotGenerate>
+	| s first pc |
+	s := UIManager default request: 'Break pc (hex)'.
+	s := s withBlanksTrimmed.
+	s isEmpty ifTrue: [^self].
+	('+-' includes: s first) ifTrue: [first := s first. s := s allButFirst].
+	(s isEmpty and: [first = $-]) ifTrue:
+		[^self breakPC: nil].
+	pc := (s includes: $r)
+			ifTrue:
+				[Number readFrom: s readStream]
+			ifFalse:
+				[(#('0x' '-0x') detect: [:prefix| s beginsWith: prefix] ifNone: []) ifNotNil:
+					[:prefix|
+					s := s allButFirst: prefix size.
+					prefix first = $- ifTrue: [s := '-', s]].
+				Integer readFrom: s readStream base: 16].
+	first = $+ ifTrue:
+		[^self breakPC: (breakPC addBreakpoint: pc)].
+	first = $- ifTrue:
+		[^self breakPC: (breakPC removeBreakpoint: pc)].
+	self breakPC: pc
+]
+
 { #category : #debugging }
 Cogit >> recordBlockTrace [
 	<api>
@@ -9849,18 +9887,20 @@ Cogit >> setClickStepBreakBlock [
 	"Set the break block to present a confirmer, breaking if true, and restoring the previous break block.
 	 If an open debugger on the receiver can be found, proceed it."
 	<doNotGenerate>
-	| previousBreakBlock previousBreakPC |
-	previousBreakBlock := breakBlock.
-	previousBreakPC := breakPC.
-	breakBlock := [:ign|
-					(processor pc ~= previousBreakPC
-					 and: [UIManager confirm: 'step?'])
-						ifTrue: [false]
-						ifFalse: [breakBlock := previousBreakBlock.
-								breakPC := previousBreakPC.
-								true]].
-	singleStep := true.
-	breakPC := nil.
+	| previousBreakBlock previousBreakPC previousSingleStep |
+	(breakBlock isNil or: [breakBlock method ~~ thisContext method]) ifTrue:
+		[previousBreakBlock := breakBlock.
+		 previousBreakPC := breakPC.
+		 previousSingleStep := singleStep.
+		 breakBlock := [:ign|
+						(processor pc ~= previousBreakPC
+						 and: [UIManager confirm: 'step?'])
+							ifTrue: [false]
+							ifFalse: [breakBlock := previousBreakBlock.
+									breakPC := previousBreakPC.
+									singleStep := previousSingleStep.
+									true]].
+		 singleStep := breakPC := true].
 	(World submorphs
 		detect:
 			[:m|
@@ -9903,7 +9943,6 @@ Cogit >> setInterpreter: aCoInterpreter [
 					ifFalse: [0].
 	debugPrimCallStackOffset := 0.
 	singleStep := printRegisters := printInstructions := clickConfirm := false.
-	breakBlock ifNil: [self breakPC: breakPC].
 	backEnd := CogCompilerClass for: self.
 	methodLabel := CogCompilerClass for: self.
 	(literalsManager := backEnd class literalsManagerClass new) cogit: self.
@@ -10018,32 +10057,17 @@ Cogit >> simulateCogCodeAt: address [ "<Integer>"
 	| stackZoneBase |
 	stackZoneBase := coInterpreter stackZoneBase.
 	processor pc: address.
-	[[[singleStep ifTrue:
-		[[processor sp < stackZoneBase ifTrue: [self halt].
-		  self recordProcessing.
-		  (breakPC isInteger
-			ifTrue:
-				[processor pc = breakPC
-				 and: [breakBlock value: self]]
-			ifFalse:
-				[breakBlock value: self]) ifTrue:
-			["printRegisters := printInstructions := true"
-			 "self reportLastNInstructions"
-			 "coInterpreter printExternalHeadFrame"
-			 "coInterpreter printFrameAndCallers: coInterpreter framePointer SP: coInterpreter stackPointer"
-			 "coInterpreter shortPrintFrameAndCallers: coInterpreter framePointer"
-			 "coInterpreter printFrame: processor fp WithSP: processor sp"
-			 "coInterpreter printFrameAndCallers: processor fp SP: processor sp"
-			 "coInterpreter shortPrintFrameAndCallers: processor fp"
-			"self disassembleMethodFor: processor pc"
-			 coInterpreter changed: #byteCountText.
-			 self halt: 'machine code breakpoint at ', processor pc hex]] value]. "So that the Debugger's Over steps over all this"
-	   singleStep
-		ifTrue: [processor
+	[[[singleStep
+		ifTrue:
+			[[processor sp < stackZoneBase ifTrue: [self halt].
+			  self recordProcessing.
+			  self maybeBreakAt: processor pc] value. "So that the Debugger's Over steps over all this"
+			  processor
 					singleStepIn: coInterpreter memory
 					minimumAddress: guardPageSize
 					readOnlyBelow: methodZone zoneEnd]
-		ifFalse: [processor
+		ifFalse:
+			[processor
 					runInMemory: coInterpreter memory
 					minimumAddress: guardPageSize
 					readOnlyBelow: methodZone zoneEnd].
