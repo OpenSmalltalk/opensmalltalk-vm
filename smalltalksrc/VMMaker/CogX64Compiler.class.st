@@ -2480,6 +2480,7 @@ CogX64Compiler >> hasConditionRegister [
 
 { #category : #testing }
 CogX64Compiler >> hasDoublePrecisionFloatingPointSupport [
+	<inline: true>
 	^true
 ]
 

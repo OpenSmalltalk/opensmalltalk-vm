@@ -3800,7 +3800,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print trampoline table' target: cogit action: #printTrampolineTable;
 		add: 'print prim trace log' action: #dumpPrimTraceLog;
 		add: 'report recent instructions' target: cogit action: #reportLastNInstructions;
-		add: 'set break pc (', (cogit breakPC isInteger ifTrue: [cogit breakPC hex] ifFalse: [cogit breakPC printString]), ')...-ve to disable' action: [(self promptHex: 'break pc') ifNotNil: [:bpc| cogit breakPC: (bpc >= 0 ifTrue: [bpc])]];
+		add: 'set break pc', cogit breakPC menuPrompt, '...-ve to disable or remove' action: [cogit promptForBreakPC];
 		add: (cogit singleStep
 				ifTrue: ['no single step']
 				ifFalse: ['single step'])
