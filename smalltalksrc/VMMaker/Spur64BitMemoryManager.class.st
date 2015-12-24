@@ -1079,6 +1079,14 @@ Spur64BitMemoryManager >> smallFloatBitsOf: oop [
 ]
 
 { #category : #'interpreter access' }
+Spur64BitMemoryManager >> smallFloatExponentBits [
+	"SmallFloat64's have the same mantissa as IEEE single-precision floating point"
+	<api>
+	<cmacro>
+	^8
+]
+
+{ #category : #'interpreter access' }
 Spur64BitMemoryManager >> smallFloatExponentOffset [
 	"896 is 1023 - 127, where 1023 is the mid-point of the 11-bit double precision exponent range,
 	 and 127 is the mid-point of the 8-bit SmallDouble exponent range."
@@ -1089,7 +1097,7 @@ Spur64BitMemoryManager >> smallFloatExponentOffset [
 
 { #category : #'interpreter access' }
 Spur64BitMemoryManager >> smallFloatMantissaBits [
-	"SmallFLoat64's have the same mantissa as IEEE double-precision floating point"
+	"SmallFloat64's have the same mantissa as IEEE double-precision floating point"
 	<api>
 	<cmacro>
 	^52

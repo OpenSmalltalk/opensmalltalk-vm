@@ -13,6 +13,11 @@ CogObjectRepresentationFor64BitSpur class >> defaultObjectMemoryClass [
 	^Smalltalk classNamed: #Spur64BitCoMemoryManager
 ]
 
+{ #category : #accessing }
+CogObjectRepresentationFor64BitSpur class >> wordSize [
+	^8
+]
+
 { #category : #'sista support' }
 CogObjectRepresentationFor64BitSpur >> allImmediate: immediateMask branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
 	| incorrectTag tag1 tag2 |
@@ -68,6 +73,7 @@ CogObjectRepresentationFor64BitSpur >> branch2CasesIf: reg notInstanceOfBehavior
 
 { #category : #'sista support' }
 CogObjectRepresentationFor64BitSpur >> branchIf: reg hasNotImmediateTag: classIndex target: targetFixUp [
+	<var: #targetFixUp type: #'AbstractInstruction *'>
 	| jmpImmediate|
 	<inline: true>
 	cogit MoveR: reg R: TempReg.
@@ -336,6 +342,23 @@ CogObjectRepresentationFor64BitSpur >> genGetSizeOf: sourceReg into: destReg for
 	(jumpBytesDone jmpTarget:
 		cogit Label)))).
 	aBinaryBlock value: jumpNotIndexable value: jumpIsContext
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genGetSmallFloatValueOf: oopReg scratch: scratch into: dpReg [
+	"Convert the SmallFloat oop in ooppReg into the corresponding float value in dpReg.
+	 c.f. Spur64BitMemoryManager>>smallFloatBitsOf:"
+	| jumpSFZero |
+	<var: 'jumpSFZero' type: #'AbstractInstruction *'>
+	cogit
+		MoveR: oopReg R: scratch;
+		LogicalShiftRightCq: objectMemory numTagBits R: scratch;
+		CmpCq: 1 R: scratch.
+	jumpSFZero := cogit JumpLessOrEqual: 0.
+	cogit AddCq: objectMemory smallFloatExponentOffset << (objectMemory smallFloatMantissaBits + 1) R: scratch.
+	jumpSFZero jmpTarget: (cogit RotateRightCq: 1 R: scratch).
+	cogit MoveR: scratch Rd: dpReg.
+	^0
 ]
 
 { #category : #'primitive generators' }
@@ -777,10 +800,16 @@ CogObjectRepresentationFor64BitSpur >> genJumpNotSmallFloatValueBits: reg scratc
 	<var: #jumpMinExponent type: #'AbstractInstruction *'>
 	<var: #jumpMaxExponent type: #'AbstractInstruction *'>
 	<var: #jumpZeroMantissa type: #'AbstractInstruction *'>
-	cogit MoveR: reg R: exponent;
-		LogicalShiftRightCq: objectMemory smallFloatMantissaBits R: exponent;
-		AndCq: 16r7FF R: exponent;  "ieee double precision mantissa is 11 bits"
-		CmpCq: objectMemory smallFloatExponentOffset R: exponent.
+	self flag: 'if we combine the exponent range test with the conversion to tagged representation we test for a zero exponent only once. further, if we extract tags once into a scratch on the input side we test for immediates, SmallInteger and SmallFloat using the same intermediate result.  so to do is to move fp arithmetic into the object representations'.
+	cogit MoveR: reg R: exponent.
+	true
+		ifTrue: [cogit
+				LogicalShiftLeftCq: 1 R: exponent; "drop sign"
+				LogicalShiftRightCq: objectMemory smallFloatMantissaBits + 1 R: exponent] "shift exponent down"
+		ifFalse: [cogit
+				LogicalShiftRightCq: objectMemory smallFloatMantissaBits R: exponent;
+				AndCq: 16r7FF R: exponent].  "ieee double precision mantissa is 11 bits"
+	cogit CmpCq: objectMemory smallFloatExponentOffset R: exponent.
 	jumpMinExponent := cogit JumpLessOrEqual: 0.
 	cogit CmpCq: 255 + objectMemory smallFloatExponentOffset R: exponent. "SmallFloat exponent is 8 bits"
 	jumpMaxExponent := cogit JumpLessOrEqual: 0.
@@ -804,7 +833,6 @@ CogObjectRepresentationFor64BitSpur >> genJumpNotSmallFloatValueBits: reg scratc
 CogObjectRepresentationFor64BitSpur >> genJumpNotSmallInteger: reg scratchReg: scratch [
 	"Generate a compare and branch to test if aRegister contains other than a SmallInteger.
 	 Answer the jump.  Override since scratch is needed."
-	<returnTypeC: #'AbstractInstruction *'>
 	^cogit
 		AndCq: objectMemory tagMask R: reg R: scratch;
 		CmpCq: objectMemory smallIntegerTag R: scratch;
@@ -943,23 +971,14 @@ CogObjectRepresentationFor64BitSpur >> markAndTraceCacheTagLiteral: literal in: 
 
 { #category : #'primitive generators' }
 CogObjectRepresentationFor64BitSpur >> maybeGenConvertIfSmallFloatIn: oopReg scratchReg: scratch into: dpReg andJumpTo: targetInst [
-	"Generate a test for a smallFloat in  oopReg, converting it to the float value in dpReg and jumping to targetInst.
-	 c.f. Spur64BitMemoryManager>>smallFloatBitsOf:"
+	"Generate a test for a smallFloat in oopReg, converting it to the float value in dpReg
+	 and jumping to targetInst. If oopReg does not contain a SmallFloat, fall through."
 	<var: 'targetInst' type: #'AbstractInstruction *'>
-	| jumpNotSF jumpSFZero |
+	| jumpNotSF |
 	<var: 'jumpNotSF' type: #'AbstractInstruction *'>
-	<var: 'jumpSFZero' type: #'AbstractInstruction *'>
 	jumpNotSF := self genJumpNotSmallFloat: oopReg scratchReg: scratch.
-	cogit
-		MoveR: oopReg R: scratch;
-		LogicalShiftRightCq: objectMemory numTagBits R: scratch;
-		CmpCq: 1 R: scratch.
-	jumpSFZero := cogit JumpAbove: 0.
-	cogit AddCq: objectMemory smallFloatExponentOffset << (objectMemory smallFloatMantissaBits + 1) R: scratch.
-	jumpSFZero jmpTarget: (cogit RotateRightCq: 1 R: scratch).
-	cogit
-		MoveR: scratch Rd: dpReg;
-		Jump: targetInst.
+	self genGetSmallFloatValueOf: oopReg scratch: scratch into: dpReg.
+	cogit Jump: targetInst.
 	jumpNotSF jmpTarget: cogit Label.
 	^0
 ]
