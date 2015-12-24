@@ -17,3 +17,18 @@ Boolean class >> ccg: cg prolog: aBlock expr: aString index: anInteger [
 
 	^cg ccgLoad: aBlock expr: aString asBooleanValueFrom: anInteger
 ]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Boolean >> isBreakpointFor: address [
+	^self
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Boolean >> menuPrompt [
+	^' (CLICK STEPPING!!)'
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Boolean >> shouldStopIfAtPC: address [
+	^self
+]
