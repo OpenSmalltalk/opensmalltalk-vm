@@ -254,9 +254,9 @@ CogARMCompiler class >> isAbstract [
 ]
 
 { #category : #testing }
-CogARMCompiler class >> isConcreteRISCTempRegister: concreteRegister [
-	"For tests to filter-out bogus values left in the ConcreteRISCTempRegister, if any."
-	^concreteRegister = ConcreteIPReg
+CogARMCompiler class >> isRISCTempRegister: reg [
+	"For tests to filter-out bogus values left in the RISCTempRegister, if any."
+	^reg = ConcreteIPReg
 ]
 
 { #category : #translation }
@@ -396,8 +396,8 @@ CogARMCompiler >> byteReadsZeroExtend [
 
 { #category : #abi }
 CogARMCompiler >> cResultRegister [
-	"Answer the abstract register for the C result register.
-	 Only partially implemented.  Works on x86 since TempReg = EAX = C result reg."
+	"Answer the register through which C funcitons return integral results."
+	<inline: true>
 	^R0
 ]
 
@@ -434,12 +434,12 @@ CogARMCompiler >> callerSavedRegisterMask [
 	 The caller-saved registers are those that are not callee-saved and not reserved for hardware/abi uses,
 	 i..e r0-r3, r9 & r12.  We can't name all the C argument registers.  So..."
 	^cogit
-		registerMaskFor: (self abstractRegisterForConcreteRegister: 0)
-		"and: (self abstractRegisterForConcreteRegister: 1)"
-		"and: (self abstractRegisterForConcreteRegister: 2)"
-		"and: (self abstractRegisterForConcreteRegister: 3)"
-		"and: (self abstractRegisterForConcreteRegister: 9)"
-		and: (self abstractRegisterForConcreteRegister: 12)
+		registerMaskFor: 0
+		"and: 1"
+		"and: 2"
+		"and: 3"
+		"and: 9"
+		and: 12
 ]
 
 { #category : #testing }
@@ -691,8 +691,8 @@ CogARMCompiler >> concretizeAddRdRd [
 	<inline: true>
 	"Add FP regRHS to FP regLHS and stick result in FP regLHS"
 	| regLHS regRHS |
-	regRHS := self concreteDPFPRegister: (operands at: 0).
-	regLHS := self concreteDPFPRegister: (operands at: 1).
+	regRHS := operands at: 0.
+	regLHS := operands at: 1.
 	machineCode at: 0 put:(self faddd: regLHS with: regRHS).
 	^machineCodeSize := 4
 	
@@ -714,8 +714,8 @@ CogARMCompiler >> concretizeAndCqRR [
 	<inline: true>
 	| val srcReg dstReg |
 	val := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	dstReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	dstReg := operands at: 2.
 	self rotateable8bitBitwiseImmediate: val
 		ifTrue:
 			[:rot :immediate :invert|
@@ -745,7 +745,7 @@ CogARMCompiler >> concretizeArithmeticShiftRightCqR [
 	<inline: true>
 	| distance reg |
 	distance := (operands at: 0) min: 31.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	"cond 000 1101 0 0000 dest dist -100 srcR"
 	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 1 rn: 0 rd: reg 
 									shifterOperand: (distance << 7 bitOr: (64 "flag for arithmetic" bitOr: reg))).
@@ -759,8 +759,8 @@ CogARMCompiler >> concretizeArithmeticShiftRightRR [
 	Handle for now with a MOVS reg, reg, ASR distReg"
 	<inline: true>
 	| destReg distReg |
-	distReg := self concreteRegister: (operands at: 0).
-	destReg := self concreteRegister: (operands at: 1).
+	distReg := operands at: 0.
+	destReg := operands at: 1.
 	"cond 000 1101 0 0000 destR distR 0101 srcR"
 	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 1 rn: 0 rd: destReg 
 									shifterOperand: (distReg << 8 bitOr: (80 bitOr: destReg))).
@@ -780,8 +780,8 @@ CogARMCompiler >> concretizeAt: actualAddress [
 CogARMCompiler >> concretizeCMPSMULL [
 	"Generate a CMP a, b, ASR #31 instruction, specifically for comparing the resutls of SMULLs in genMulR:R:"
 	| hiReg loReg |
-	hiReg := self concreteRegister: (operands at: 0).
-	loReg := self concreteRegister: (operands at: 1).
+	hiReg := operands at: 0.
+	loReg := operands at: 1.
 	self machineCodeAt: 0
 		put: (self type: 0 op: CmpOpcode set: 1 rn: hiReg rd: 0)
 			+ (31<<7) "the shift amount"
@@ -828,8 +828,8 @@ CogARMCompiler >> concretizeCmpRdRd [
 	<inline: true>
 	"Compare FP regB with FP regA and leave the FP status reg ready to be transferred back to ARM with next instruction"
 	| regB regA |
-	regA := self concreteDPFPRegister: (operands at:0).
-	regB := self concreteDPFPRegister: (operands at: 1).
+	regA := operands at:0.
+	regB := operands at: 1.
 	machineCode at: 0 put:(self fcmpFrom: regB to: regA).
 	^machineCodeSize := 4
 		
@@ -872,8 +872,8 @@ CogARMCompiler >> concretizeConvertRRd [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| srcReg destReg |
-	srcReg := self concreteRegister: (operands at:0).
-	destReg := self concreteDPFPRegister: (operands at: 1).
+	srcReg := operands at:0.
+	destReg := operands at: 1.
 	machineCode at: 0 put:(self fmsrFrom: srcReg to: 9).
 	machineCode at: 1 put: (self fsitodFrom: 9 to: destReg). "probably not quite right"
 	^machineCodeSize := 8
@@ -888,7 +888,7 @@ CogARMCompiler >> concretizeDataOperationCqR: armOpcode [
 	<inline: true>
 	|val rd rn |
 	val := operands at: 0.
-	rn := self concreteRegister: (operands at: 1).
+	rn := operands at: 1.
 	rd := opcode = CmpOpcode ifTrue: [0] ifFalse:[rn]. "Extra note - if ever a version of this code wants to NOT set the Set flag - Cmp must always have it set or it will pretend to be a SMALALBT and Very Bad Things might happen"
 
 	self  rotateable8bitImmediate: val 
@@ -917,7 +917,7 @@ CogARMCompiler >> concretizeDataOperationCwR: armOpcode [
 	<inline: true>
 	| constant rn rd instrOffset|
 	constant := operands at: 0.
-	rn := (self concreteRegister: (operands at: 1)).
+	rn := operands at: 1.
 	rd := armOpcode = CmpOpcode ifTrue: [0] ifFalse:[rn].
 	instrOffset := self moveCw: constant intoR: ConcreteIPReg.
 	self machineCodeAt: instrOffset 
@@ -931,8 +931,8 @@ CogARMCompiler >> concretizeDataOperationRR: armOpcode [
 	"Load the word into the RISCTempReg, then op R, RISCTempReg"
 	<inline: true>
 	| rn rd srcReg |
-	srcReg := self concreteRegister: (operands at: 0).
-	rn := (self concreteRegister: (operands at: 1)).
+	srcReg := operands at: 0.
+	rn := operands at: 1.
 	rd := armOpcode = CmpOpcode ifTrue: [0] ifFalse: [rn].
 	self machineCodeAt: 0 
 		put: (self type: 0 op: armOpcode set: 1 rn: rn rd: rd shifterOperand: srcReg).
@@ -945,8 +945,8 @@ CogARMCompiler >> concretizeDivRdRd [
 	<inline: true>
 	"FP divide regLHS by regRHS and stick result in regLHS"
 	| regLHS regRHS |
-	regRHS := self concreteDPFPRegister: (operands at: 0).
-	regLHS := self concreteDPFPRegister: (operands at: 1).
+	regRHS := operands at: 0.
+	regLHS := operands at: 1.
 	machineCode at: 0 put:(self fdivd: regLHS by: regRHS).
 	^machineCodeSize := 4
 	
@@ -979,7 +979,7 @@ CogARMCompiler >> concretizeInvertibleDataOperationCqR: armOpcode [
 	<inline: true>
 	| val rn |
 	val := operands at: 0.
-	rn := self concreteRegister: (operands at: 1).
+	rn := operands at: 1.
 	self deny: opcode = CmpOpcode.
 
 	self rotateable8bitBitwiseImmediate: val 
@@ -1030,7 +1030,7 @@ CogARMCompiler >> concretizeJumpR [
 		Otherwise instructions must have a machineCodeSize which must be kept to."
 	<inline: true>
 	| reg |
-	reg := self concreteRegister: (operands at: 0).
+	reg := operands at: 0.
 	"bx reg"
 	self machineCodeAt: 0 put: (self bx: reg).
 	^machineCodeSize := 4
@@ -1043,8 +1043,8 @@ CogARMCompiler >> concretizeLoadEffectiveAddressMwrR [
 	<inline: true>
 	| srcReg offset destReg instrOffset |
 	offset := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
 	self rotateable8bitImmediate: offset
 		ifTrue:
 			[ :rot :immediate | 
@@ -1068,7 +1068,7 @@ CogARMCompiler >> concretizeLogicalShiftLeftCqR [
 	<inline: true>
 	| distance reg |
 	distance := (operands at: 0) min: 31.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	"cond 000 1101 0 0000 dest dista 000 srcR"
 	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 1 rn: 0 rd: reg shifterOperand: (distance << 7 bitOr: reg)).
 	^machineCodeSize := 4
@@ -1081,8 +1081,8 @@ CogARMCompiler >> concretizeLogicalShiftLeftRR [
 	Handle for now with a MOVS reg, reg, LSL distReg" 
 	<inline: true>
 	| destReg distReg |
-	distReg := self concreteRegister: (operands at: 0).
-	destReg := self concreteRegister: (operands at: 1).
+	distReg := operands at: 0.
+	destReg := operands at: 1.
 	"cond 000 1101 0 0000 dest dist 0001 srcR"
 	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 1 rn: 0 rd: destReg 
 									shifterOperand: (distReg << 8 bitOr: (16 bitOr: destReg))).
@@ -1097,7 +1097,7 @@ CogARMCompiler >> concretizeLogicalShiftRightCqR [
 	<inline: true>
 	| distance reg |
 	distance := (operands at: 0) min: 31.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	"cond 000 1101 0 0000 dest dist -010 srcR"
 	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 1 rn: 0 rd: reg 
 									shifterOperand: (distance << 7 bitOr: (32 bitOr: reg))).
@@ -1111,8 +1111,8 @@ CogARMCompiler >> concretizeLogicalShiftRightRR [
 	Handle for now with a MOVS reg, reg, LSR distReg"
 	<inline: true>
 	| destReg distReg |
-	distReg := self concreteRegister: (operands at: 0).
-	destReg := self concreteRegister: (operands at: 1).
+	distReg := operands at: 0.
+	destReg := operands at: 1.
 	"cond 000 1101 0 0000 dest dist 0011 srcR"
 	self machineCodeAt: 0 put: (self type: 0 op: MoveOpcode set: 1 rn: 0 rd: destReg 
 									shifterOperand: (distReg << 8 bitOr: (48 bitOr: destReg))).
@@ -1129,7 +1129,7 @@ C -> 2
 V -> 1.
 You don't want to mess with this too much."
 	|  flags |
-	flags := self concreteRegister: (operands at: 0).
+	flags := operands at: 0.
 	self machineCodeAt: 0 put: (self msr: flags).
 	^machineCodeSize := 4
 ]
@@ -1140,7 +1140,7 @@ CogARMCompiler >> concretizeMoveAbR [
 	<inline: true>
 	| srcAddr destReg instrOffset|
 	srcAddr := operands at: 0.
-	destReg := self concreteRegister: (operands at: 1).
+	destReg := operands at: 1.
 	(self isAddressRelativeToVarBase: srcAddr) ifTrue:
 		[self machineCodeAt: 0 put: (self ldrb: destReg rn: ConcreteVarBaseReg plus: 1 imm: srcAddr - cogit varBaseAddress).
 		 ^machineCodeSize := 4].
@@ -1157,7 +1157,7 @@ CogARMCompiler >> concretizeMoveAwR [
 	<inline: true>
 	| srcAddr destReg instrOffset|
 	srcAddr := operands at: 0.
-	destReg := self concreteRegister: (operands at: 1).
+	destReg := operands at: 1.
 	(self isAddressRelativeToVarBase: srcAddr) ifTrue:
 		[self machineCodeAt: 0 put: (self ldr: destReg rn: ConcreteVarBaseReg plusImm: srcAddr - cogit varBaseAddress).
 		 ^machineCodeSize := 4].
@@ -1176,7 +1176,7 @@ CogARMCompiler >> concretizeMoveCqR [
 	<inline: true>
 	|word reg|
 	word := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	self 
 		rotateable8bitImmediate: word 
 		ifTrue: [:rot :immediate |
@@ -1198,7 +1198,7 @@ CogARMCompiler >> concretizeMoveCqR [
 CogARMCompiler >> concretizeMoveCwR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	^machineCodeSize := self loadCwInto: (self concreteRegister: (operands at: 1))
+	^machineCodeSize := self loadCwInto: (operands at: 1)
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1212,8 +1212,8 @@ CogARMCompiler >> concretizeMoveM16rR [
 	<inline: true>
 	| srcReg offset destReg instrOffset|
 	offset := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
 	self is8BitValue: offset
 		ifTrue:
 			[ :u :immediate | 
@@ -1236,8 +1236,8 @@ CogARMCompiler >> concretizeMoveM64rRd [
 	| srcReg offset destReg u|
 	offset := operands at: 0.
 	u := offset >0 ifTrue:[1] ifFalse:[0].
-	srcReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteDPFPRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
 	machineCode at: 0 put: (self fldd: destReg rn: srcReg plus: u imm: offset>>2).
 	^machineCodeSize := 4
 
@@ -1251,8 +1251,8 @@ CogARMCompiler >> concretizeMoveMbrR [
 	<inline: true>
 	| srcReg offset destReg instrOffset|
 	offset := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
 	self is12BitValue: offset
 		ifTrue:
 			[ :u :immediate | 
@@ -1279,8 +1279,8 @@ CogARMCompiler >> concretizeMoveMwrR [
 	<inline: true>
 	| srcReg offset destReg instrOffset|
 	offset := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
 	self is12BitValue: offset
 		ifTrue:
 			[ :u :immediate | 
@@ -1302,7 +1302,7 @@ CogARMCompiler >> concretizeMoveRAb [
 	strb srcReg, [ConcreteIPReg]"
 	<inline: true>
 	| srcReg destAddr instrOffset|
-	srcReg := self concreteRegister: (operands at: 0).
+	srcReg := operands at: 0.
 	destAddr := operands at: 1.
 	(self isAddressRelativeToVarBase: destAddr) ifTrue:
 		[self machineCodeAt: 0 put: (self strb: srcReg rn: ConcreteVarBaseReg plus: 1 imm: destAddr - cogit varBaseAddress).
@@ -1321,7 +1321,7 @@ CogARMCompiler >> concretizeMoveRAw [
 	str srcReg, [ConcreteIPReg]"
 	<inline: true>
 	| srcReg destAddr instrOffset|
-	srcReg := self concreteRegister: (operands at: 0).
+	srcReg := operands at: 0.
 	destAddr := operands at: 1.
 	(self isAddressRelativeToVarBase: destAddr) ifTrue:
 		[self machineCodeAt: 0 put: (self str: srcReg rn: ConcreteVarBaseReg plusImm: destAddr - cogit varBaseAddress).
@@ -1339,9 +1339,9 @@ CogARMCompiler >> concretizeMoveRMbr [
 	<var: #offset type: #sqInt>
 	<inline: true>
 	| srcReg offset baseReg instrOffset|
-	srcReg := self concreteRegister: (operands at: 0).
+	srcReg := operands at: 0.
 	offset := operands at: 1.
-	baseReg := self concreteRegister: (operands at: 2).
+	baseReg := operands at: 2.
 	self is12BitValue: offset
 		ifTrue:
 			[ :u :immediate | 
@@ -1367,9 +1367,9 @@ CogARMCompiler >> concretizeMoveRMwr [
 	<var: #offset type: #sqInt>
 	<inline: true>
 	| srcReg offset baseReg instrOffset|
-	srcReg := self concreteRegister: (operands at: 0).
+	srcReg := operands at: 0.
 	offset := operands at: 1.
-	baseReg := self concreteRegister: (operands at: 2).
+	baseReg := operands at: 2.
 	self is12BitValue: offset
 		ifTrue:
 			[ :u :immediate | 
@@ -1389,8 +1389,8 @@ CogARMCompiler >> concretizeMoveRR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| srcReg destReg |
-	srcReg := self concreteRegister: (operands at: 0).
-	destReg := self concreteRegister: (operands at: 1).
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
 	"cond 000 1101 0 0000 dest 0000 0000 srcR"
 	self machineCodeAt: 0 put: (self mov: destReg rn: srcReg).
 	^machineCodeSize := 4
@@ -1402,9 +1402,9 @@ CogARMCompiler >> concretizeMoveRXbrR [
 	"Write the word in R(src) into memory at address (base+1*index)"
 	<inline: true>
 	| index base src |
-	src := self concreteRegister: (operands at: 0).
-	index := self concreteRegister: (operands at: 1).
-	base := self concreteRegister: (operands at: 2).
+	src := operands at: 0.
+	index := operands at: 1.
+	base := operands at: 2.
 	"str	b	src, [base, +index, LSL #0]"
 	"cond 011 1100 0 base srcR 00000 00 0 index"
 	self machineCodeAt: 0 put: (self strb: src rn: base rm: index).
@@ -1417,9 +1417,9 @@ CogARMCompiler >> concretizeMoveRXwrR [
 	"Write the word in R(src) into memory at address (base+4*index)"
 	<inline: true>
 	| index base src |
-	src := self concreteRegister: (operands at: 0).
-	index := self concreteRegister: (operands at: 1). "index is number of *words* = 4* bytes"
-	base := self concreteRegister: (operands at: 2).
+	src := operands at: 0.
+	index := operands at: 1. "index is number of *words* = 4* bytes"
+	base := operands at: 2.
 	"str		src, [base, +index, LSL #2]"
 	"cond 011 1100 0 base srcR 00010 00 0 inde"
 	self machineCodeAt: 0 put: (self memMxr: AL reg: src base: base p: 1 u: 1 b: 0 w: 0 l: 0 rmLsl2: index).
@@ -1434,8 +1434,8 @@ CogARMCompiler >> concretizeMoveRdM64r [
 	| dstReg offset fpReg u|
 	offset := operands at: 1.
 	u := offset >0 ifTrue:[1] ifFalse:[0].
-	dstReg := self concreteRegister: (operands at: 2).
-	fpReg := self concreteDPFPRegister: (operands at: 0).
+	dstReg := operands at: 2.
+	fpReg := operands at: 0.
 	machineCode at: 0 put: (self fstd: fpReg rn: dstReg plus: u imm: offset>>2).
 	^machineCodeSize := 4
 
@@ -1447,9 +1447,9 @@ CogARMCompiler >> concretizeMoveXbrRR [
 	
 	<inline: true>
 	| index base dest |
-	index := self concreteRegister: (operands at: 0). "index is number of *bytes*"
-	base := self concreteRegister: (operands at: 1).
-	dest := self concreteRegister: (operands at: 2).
+	index := operands at: 0. "index is number of *bytes*"
+	base := operands at: 1.
+	dest := operands at: 2.
 	"LDRB	dest, [base, +index, LSL #0]"
 	"cond 011 1100 1 base dest 00000 00 0 inde"
 	self machineCodeAt: 0 put: (self ldrb: dest rn: base rm: index).
@@ -1462,9 +1462,9 @@ CogARMCompiler >> concretizeMoveXwrRR [
 	
 	<inline: true>
 	| index base dest |
-	index := self concreteRegister: (operands at: 0).
-	base := self concreteRegister: (operands at: 1).
-	dest := self concreteRegister: (operands at: 2).
+	index := operands at: 0.
+	base := operands at: 1.
+	dest := operands at: 2.
 	"LDR	dest, [base, +index, LSL #2]"
 	"cond 011 1100 1 base dest 00010 00 0 inde bulit by lowest level generator so we can do the lsl #2 on the index register"
 	self machineCodeAt: 0 put: (self memMxr: AL reg: dest base: base p: 1 u: 1 b: 0 w: 0 l: 1 rmLsl2: index).
@@ -1477,8 +1477,8 @@ CogARMCompiler >> concretizeMulRdRd [
 	<inline: true>
 	"FP multiply regLHS by regRHS and stick result in regLHS"
 	| regLHS regRHS |
-	regRHS := self concreteDPFPRegister: (operands at: 0).
-	regLHS := self concreteDPFPRegister: (operands at: 1).
+	regRHS := operands at: 0.
+	regLHS := operands at: 1.
 	machineCode at: 0 put:(self fmuld: regLHS with: regRHS).
 	^machineCodeSize := 4
 	
@@ -1489,7 +1489,7 @@ CogARMCompiler >> concretizeNegateR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| reg |
-	reg := self concreteRegister: (operands at: 0).
+	reg := operands at: 0.
 	"RSB destReg, srcReg, #0"
 	self machineCodeAt: 0 put: (self type: 1 op: RsbOpcode set: 0 rn: reg rd: reg).
 	^machineCodeSize := 4
@@ -1502,7 +1502,7 @@ CogARMCompiler >> concretizeNegateableDataOperationCqR: armOpcode [
 	<inline: true>
 	| val rd rn |
 	val := operands at: 0.
-	rn := self concreteRegister: (operands at: 1).
+	rn := operands at: 1.
 	"Extra note - if ever a version of this code wants to NOT set the Set flag
 	 - Cmp must always have it set or it will pretend to be a SMALALBT and Very Bad Things might happen."
 	rd := opcode = CmpOpcode ifTrue: [0] ifFalse: [rn].
@@ -1547,7 +1547,7 @@ CogARMCompiler >> concretizePopR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| destReg |
-	destReg := self concreteRegister: (operands at: 0).
+	destReg := operands at: 0.
 	"LDR destReg, [SP], #4"
 	self machineCodeAt: 0 put: (self popR: destReg).
 	^machineCodeSize := 4
@@ -1619,7 +1619,7 @@ CogARMCompiler >> concretizePushR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| srcReg |
-	srcReg := self concreteRegister: (operands at: 0).
+	srcReg := operands at: 0.
 	"cond | 010 | 1001 | 0 | -Rn- | -Rd- | 0000 0000 0100" "STR srcReg, [sp, #-4]"
 	self machineCodeAt: 0 put: (self pushR: srcReg).
 	^machineCodeSize := 4
@@ -1646,10 +1646,10 @@ CogARMCompiler >> concretizeRetN [
 CogARMCompiler >> concretizeSMULL [
 	| srcA srcB hiResultReg loResultReg |
 	"Generate an SMULL loResultReg, hiResultReg, srcA, srcB instruction"
-	srcA := self concreteRegister: (operands at: 0).
+	srcA := operands at: 0.
 	"NOTE: srcB contains the other mutiplicand at this point. It is OK to use it as the destination for the low part of the result and in fact this saves us moving it later"
-	loResultReg := srcB := self concreteRegister: (operands at: 1).
-	hiResultReg := self concreteRegister: RISCTempReg.
+	loResultReg := srcB := operands at: 1.
+	hiResultReg := RISCTempReg.
 	self machineCodeAt: 0
 		put: (self type: 0 op: 6 set: 0 rn: hiResultReg rd: loResultReg)
 			+ (srcA << 8)
@@ -1664,7 +1664,7 @@ CogARMCompiler >> concretizeSqrtRd [
 	<inline: true>
 	"Square root of FP regLHS into regLHS"
 	| regLHS  |
-	regLHS := self concreteDPFPRegister: (operands at: 1).
+	regLHS := operands at: 1.
 	machineCode at: 0 put:(self fsqrtd: regLHS).
 	^machineCodeSize := 4
 	
@@ -1687,14 +1687,14 @@ CogARMCompiler >> concretizeSubCqR [
 	word := operands at: 0.
 	self rotateable8bitImmediate: word
 		ifTrue: [ :rot :immediate | | reg |
-			reg := self concreteRegister: (operands at: 1).
+			reg := operands at: 1.
 			self machineCodeAt: 0 put: (self subs: reg rn: reg imm: immediate ror: rot).
 			^machineCodeSize := 4]
 		ifFalse: [
 			"before building a full load of a big constant, see if we can do an add of the constant negated"
 			self rotateable8bitImmediate: word negated
 				ifTrue: [ :rot :immediate | | reg |
-					reg := self concreteRegister: (operands at: 1).
+					reg := operands at: 1.
 					self machineCodeAt: 0 put: (self adds: reg rn: reg imm: immediate ror: rot).
 					^machineCodeSize := 4]
 				ifFalse: [^self concretizeDataOperationCwR: SubOpcode]].
@@ -1707,8 +1707,8 @@ CogARMCompiler >> concretizeSubRdRd [
 	<inline: true>
 	| regLHS regRHS |
 	"Subtract FP regRHS from FP regLHS and leave the result in FP regLHS"
-	regRHS := self concreteDPFPRegister: (operands at: 0).
-	regLHS := self concreteDPFPRegister: (operands at: 1).
+	regRHS := operands at: 0.
+	regLHS := operands at: 1.
 	machineCode at: 0 put:(self fsubd: regLHS with: regRHS).
 	^machineCodeSize := 4
 	
@@ -1720,7 +1720,7 @@ CogARMCompiler >> concretizeTstCqR [
 	<inline: true>
 	self rotateable8bitImmediate: (operands at: 0)
 		ifTrue: [ :rot :immediate | | reg |
-			reg := self concreteRegister: (operands at: 1).
+			reg := operands at: 1.
 			self machineCodeAt: 0 put: (self tst: reg rn: reg imm: immediate ror: rot).
 			^machineCodeSize := 4]
 		ifFalse: [^self concretizeDataOperationCwR: TstOpcode].
@@ -2057,8 +2057,8 @@ CogARMCompiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstra
 	<var: #divRemFunctionAddr type: #usqInt>
 	self assert: abstractRegDividend ~= abstractRegDivisor.
 	self assert: abstractRegQuotient ~= abstractRegRemainder.
-	rDividend := self concreteRegister: abstractRegDividend.
-	rDivisor := self concreteRegister: abstractRegDivisor.
+	rDividend := abstractRegDividend.
+	rDivisor := abstractRegDivisor.
 	rDividend = CArg0Reg ifFalse:[
 		"we need to move the value in rDividend to CArg0Reg. Best to double check if rDivisor is already using it first"
 		rDivisor = CArg0Reg ifTrue:[ "oh dear; we also need to move rDivisor's value out of the way first.. I'll move it to CArg1Reg and if some nitwit has managed to put rDividend there they deserve the crash"
@@ -2075,8 +2075,8 @@ CogARMCompiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstra
 		[cogit CallFullRT: (self cCode: [divRemFunctionAddr asUnsignedInteger]
 					   inSmalltalk: [cogit simulatedTrampolineFor: divRemFunctionAddr])].
 	"Now we need to move the r0/1 results back to rQuotient & rRemainder"
-	rQuotient := self concreteRegister: abstractRegQuotient.
-	rRemainder := self concreteRegister: abstractRegRemainder.
+	rQuotient := abstractRegQuotient.
+	rRemainder := abstractRegRemainder.
 	rQuotient = CArg0Reg ifFalse:["oh good grief, not again"
 		cogit MoveR: CArg0Reg R: rQuotient.
 		rQuotient = CArg1Reg ifTrue:[self error: 'register choices in genDivR:R:Quo:Rem: made life impossible'] ].

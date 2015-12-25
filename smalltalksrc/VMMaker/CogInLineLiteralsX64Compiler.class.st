@@ -1,16 +1,8 @@
 Class {
 	#name : #CogInLineLiteralsX64Compiler,
 	#superclass : #CogX64Compiler,
-	#classVars : [
-		'ConcreteRISCTempReg'
-	],
 	#category : #'VMMaker-JIT'
 }
-
-{ #category : #'class initialization' }
-CogInLineLiteralsX64Compiler class >> initialize [
-	ConcreteRISCTempReg := self basicNew concreteRegister: RISCTempReg
-]
 
 { #category : #'class initialization' }
 CogInLineLiteralsX64Compiler class >> initializeAbstractRegisters [
@@ -50,9 +42,9 @@ CogInLineLiteralsX64Compiler class >> initializeAbstractRegisters [
 ]
 
 { #category : #testing }
-CogInLineLiteralsX64Compiler class >> isConcreteRISCTempRegister: concreteRegister [
-	"For tests to filter-out bogus values left in the ConcreteRISCTempRegister, if any."
-	^concreteRegister = ConcreteRISCTempReg
+CogInLineLiteralsX64Compiler class >> isRISCTempRegister: reg [
+	"For tests to filter-out bogus values left in the RISCTempRegister, if any."
+	^reg = RISCTempReg
 ]
 
 { #category : #'generate machine code' }
@@ -62,9 +54,7 @@ CogInLineLiteralsX64Compiler >> computeSizeOfArithCqR [
 	(self isQuick: (operands at: 0)) ifTrue:
 		[^4].
 	(self isSignExtendedFourByteValue: (operands at: 0)) ifTrue:
-		[^(self concreteRegister: (operands at: 1)) = RAX
-			ifTrue: [6]
-			ifFalse: [7]].
+		[^(operands at: 1) = RAX ifTrue: [6] ifFalse: [7]].
 	^10 "movabsq" + 3 "r op r"
 ]
 
@@ -78,11 +68,11 @@ CogInLineLiteralsX64Compiler >> computeSizeOfArithCwR [
 CogInLineLiteralsX64Compiler >> concretizeArithCwR: x64opcode [
 	| value reg reverse |
 	value := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	reverse := x64opcode = 16r85 or: [x64opcode = 16r39]. "Tst & Cmp; backwards"
 	machineCode
-		at:  0 put: (self rexR: ConcreteRISCTempReg x: 0 b: ConcreteRISCTempReg);
-		at:  1 put: 16rB8 + (ConcreteRISCTempReg bitAnd: 7);
+		at:  0 put: (self rexR: RISCTempReg x: 0 b: RISCTempReg);
+		at:  1 put: 16rB8 + (RISCTempReg bitAnd: 7);
 		at:  2 put: (value bitAnd: 16rFF);
 		at:  3 put: (value >> 8 bitAnd: 16rFF);
 		at:  4 put: (value >> 16 bitAnd: 16rFF);
@@ -92,12 +82,12 @@ CogInLineLiteralsX64Compiler >> concretizeArithCwR: x64opcode [
 		at:  8 put: (value >> 48 bitAnd: 16rFF);
 		at:  9 put: (value >> 56 bitAnd: 16rFF);
 		at: 10 put: (reverse
-					ifTrue: [self rexR: ConcreteRISCTempReg x: 0 b: reg]
-					ifFalse: [self rexR: reg x: 0 b: ConcreteRISCTempReg]);
+					ifTrue: [self rexR: RISCTempReg x: 0 b: reg]
+					ifFalse: [self rexR: reg x: 0 b: RISCTempReg]);
 		at: 11 put: x64opcode;
 		at: 12 put: (reverse
-					ifTrue: [self mod: ModReg RM: reg RO: ConcreteRISCTempReg]
-					ifFalse: [self mod: ModReg RM: ConcreteRISCTempReg RO: reg]).
+					ifTrue: [self mod: ModReg RM: reg RO: RISCTempReg]
+					ifFalse: [self mod: ModReg RM: RISCTempReg RO: reg]).
 	^machineCodeSize := 13
 ]
 
@@ -107,7 +97,7 @@ CogInLineLiteralsX64Compiler >> concretizeMoveCwR [
 	<inline: true>
 	| value reg offset |
 	value := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	(self isAnInstruction: (cogit cCoerceSimple: value to: #'AbstractInstruction *')) ifTrue:
 		[value := (cogit cCoerceSimple: value to: #'AbstractInstruction *') address].
 	(cogit addressIsInCurrentCompilation: value) ifTrue:
@@ -151,19 +141,19 @@ CogInLineLiteralsX64Compiler >> concretizePushCw [
 	(cogit addressIsInCurrentCompilation: value) ifTrue:
 		[offset := value - (address + 7).
 		 machineCode
-			at: 0 put: (self rexR: ConcreteRISCTempReg x: 0 b: 0);
+			at: 0 put: (self rexR: RISCTempReg x: 0 b: 0);
 			at: 1 put: 16r8D; "LoadEffectiveAddress"
-			at: 2 put: (self mod: ModRegInd RM: 5 RO: ConcreteRISCTempReg);
+			at: 2 put: (self mod: ModRegInd RM: 5 RO: RISCTempReg);
 			at: 3 put: (offset bitAnd: 16rFF);
 			at: 4 put: (offset >> 8 bitAnd: 16rFF);
 			at: 5 put: (offset >> 16 bitAnd: 16rFF);
 			at: 6 put: (offset >> 24 bitAnd: 16rFF);
 			at: 7 put: 16r41;
-			at: 8 put: 16r48 + ConcreteRISCTempReg.
+			at: 8 put: 16r48 + RISCTempReg.
 		^machineCodeSize := 9].
 	machineCode
-		at:  0 put: (self rexR: ConcreteRISCTempReg x: 0 b: ConcreteRISCTempReg);
-		at:  1 put: 16rB8 + (ConcreteRISCTempReg bitAnd: 7);
+		at:  0 put: (self rexR: RISCTempReg x: 0 b: RISCTempReg);
+		at:  1 put: 16rB8 + (RISCTempReg bitAnd: 7);
 		at:  2 put: (value bitAnd: 16rFF);
 		at:  3 put: (value >> 8 bitAnd: 16rFF);
 		at:  4 put: (value >> 16 bitAnd: 16rFF);
@@ -173,8 +163,8 @@ CogInLineLiteralsX64Compiler >> concretizePushCw [
 		at:  8 put: (value >> 48 bitAnd: 16rFF);
 		at:  9 put: (value >> 56 bitAnd: 16rFF);
 		at: 10 put: 16r41;
-		at: 11 put: 16r48 + ConcreteRISCTempReg. "The 48 will disambiguate between MoveCwR, PushCwR and ArithCwR, which ends with a (self mod: ModReg RM: 0 RO: 0)"
-		self assert: ConcreteRISCTempReg >= 8.
+		at: 11 put: 16r48 + RISCTempReg. "The 48 will disambiguate between MoveCwR, PushCwR and ArithCwR, which ends with a (self mod: ModReg RM: 0 RO: 0)"
+		self assert: RISCTempReg >= 8.
 	self assert: (self mod: ModReg RM: 0 RO: 0) > 16r57.
 	^machineCodeSize := 12
 ]
