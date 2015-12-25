@@ -200,7 +200,8 @@ CogMIPSELCompiler >> bneR: leftReg R: rightReg offset: offset [
 
 { #category : #'generate machine code' }
 CogMIPSELCompiler >> cResultRegister [
-	"Answer the abstract register for the C result register."
+	"Answer the register through which C funcitons return integral results."
+	<inline: true>
 	^V0
 ]
 
@@ -227,18 +228,16 @@ CogMIPSELCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 { #category : #accessing }
 CogMIPSELCompiler >> callerSavedRegisterMask [
 	"See MIPSConstants initializeRegisters."
-	| mask |
 	self flag: #OABI.
-	mask := 0.
-	mask := mask bitOr: 1 << S0.
-	mask := mask bitOr: 1 << S1.
-	mask := mask bitOr: 1 << S2.
-	mask := mask bitOr: 1 << S3.
-	mask := mask bitOr: 1 << S4.
-	mask := mask bitOr: 1 << S5.
-	mask := mask bitOr: 1 << S6.
-	mask := mask bitOr: 1 << S7.
-	^mask
+	^cogit
+		registerMaskFor: S0
+		and: S1
+		and: S2
+		and: S3
+		and: S4
+		and: S5
+		and: S6
+		and: S7
 ]
 
 { #category : #testing }
@@ -419,7 +418,7 @@ CogMIPSELCompiler >> computeMaximumSize [
 CogMIPSELCompiler >> concretizeAddCheckOverflowCqR [
 	| destReg leftReg rightImm |
 	rightImm := operands at: 0.
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	destReg := leftReg := operands at: 1.
 
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: rightImm)).
 	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: rightImm)).
@@ -442,8 +441,8 @@ CogMIPSELCompiler >> concretizeAddCheckOverflowCqR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeAddCheckOverflowRR [
 	| destReg leftReg rightReg |
-	rightReg := self concreteRegister: (operands at: 0).
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	rightReg := operands at: 0.
+	destReg := leftReg := operands at: 1.
 
 	"Save original LHS"
 	self machineCodeAt: 0 put: (self adduR: OverflowTemp1 R: leftReg R: ZR). 
@@ -464,7 +463,7 @@ CogMIPSELCompiler >> concretizeAddCheckOverflowRR [
 CogMIPSELCompiler >> concretizeAddCqR [
 	| destReg leftReg rightImm |
 	rightImm := operands at: 0.
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	destReg := leftReg := operands at: 1.
 	
 	(rightImm between: -16r8000 and: 16r7FFF) ifFalse: [^self concretizeAddCwR].
 	
@@ -476,7 +475,7 @@ CogMIPSELCompiler >> concretizeAddCqR [
 CogMIPSELCompiler >> concretizeAddCwR [
 	| destReg leftReg rightImm |
 	rightImm := operands at: 0.
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	destReg := leftReg := operands at: 1.
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: rightImm)).
 	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: rightImm)).
 	self machineCodeAt: 8 put: (self adduR: destReg R: leftReg R: AT).
@@ -486,8 +485,8 @@ CogMIPSELCompiler >> concretizeAddCwR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeAddRR [
 	| destReg leftReg rightReg |
-	rightReg := self concreteRegister: (operands at: 0).
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	rightReg := operands at: 0.
+	destReg := leftReg := operands at: 1.
 	self machineCodeAt: 0 put: (self adduR: destReg R: leftReg R: rightReg).
 	^machineCodeSize := 4
 ]
@@ -503,7 +502,7 @@ CogMIPSELCompiler >> concretizeAlignmentNops [
 CogMIPSELCompiler >> concretizeAndCqR [
 	| destReg leftReg rightImm |
 	rightImm := operands at: 0.
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	destReg := leftReg := operands at: 1.
 	
 	(rightImm between: -16r8000 and: 16r7FFF) ifFalse: [^self concretizeAndCwR].
 	
@@ -515,8 +514,8 @@ CogMIPSELCompiler >> concretizeAndCqR [
 CogMIPSELCompiler >> concretizeAndCqRR [
 	| value srcReg dstReg |
 	value := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	dstReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	dstReg := operands at: 2.
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: value)).
 	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: value)).
 	self machineCodeAt: 8 put: (self andR: dstReg R: srcReg R: AT).
@@ -527,7 +526,7 @@ CogMIPSELCompiler >> concretizeAndCqRR [
 CogMIPSELCompiler >> concretizeAndCwR [
 	| destReg leftReg rightImm |
 	rightImm := operands at: 0.
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	destReg := leftReg := operands at: 1.
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: rightImm)).
 	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: rightImm)).
 	self machineCodeAt: 8 put: (self andR: destReg R: leftReg R: AT).
@@ -537,8 +536,8 @@ CogMIPSELCompiler >> concretizeAndCwR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeAndRR [
 	| destReg leftReg rightReg |
-	rightReg := self concreteRegister: (operands at: 0).
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	rightReg := operands at: 0.
+	destReg := leftReg := operands at: 1.
 	self machineCodeAt: 0 put: (self andR: destReg R: leftReg R: rightReg).
 	^machineCodeSize := 4
 ]
@@ -547,7 +546,7 @@ CogMIPSELCompiler >> concretizeAndRR [
 CogMIPSELCompiler >> concretizeArithmeticShiftRightCqR [
 	| distance reg |
 	distance := (operands at: 0) min: 31.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	self machineCodeAt: 0 put: (self sraR: reg R: reg C: distance).
 	^machineCodeSize := 4
 ]
@@ -555,8 +554,8 @@ CogMIPSELCompiler >> concretizeArithmeticShiftRightCqR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeArithmeticShiftRightRR [
 	| destReg distReg |
-	distReg := self concreteRegister: (operands at: 0).
-	destReg := self concreteRegister: (operands at: 1).
+	distReg := operands at: 0.
+	destReg := operands at: 1.
 	self machineCodeAt: 0 put: (self sravR: destReg R: destReg R: distReg).
 	^machineCodeSize := 4
 ]
@@ -574,8 +573,8 @@ CogMIPSELCompiler >> concretizeAt: actualAddress [
 CogMIPSELCompiler >> concretizeBrEqualRR [
 	| offset leftReg rightReg |
 	offset := self computeJumpTargetOffsetPlus: 4.
-	leftReg := self concreteRegister: (operands at: 1).
-	rightReg := self concreteRegister: (operands at: 2).
+	leftReg := operands at: 1.
+	rightReg := operands at: 2.
 	self machineCodeAt: 0 put: (self beqR: leftReg R: rightReg offset: offset).
 	self machineCodeAt: 4 put: (self nop). "Delay slot"
 	^machineCodeSize := 8
@@ -588,8 +587,8 @@ CogMIPSELCompiler >> concretizeBrLongEqualRR [
 	jumpTargetInstruction := self longJumpTargetAddress.
 	self flag: #todo. "Check not crossing 256MB block."
 	jumpTargetAddr := jumpTargetInstruction asUnsignedInteger bitAnd: 16rFFFFFFF.
-	leftReg := self concreteRegister: (operands at: 1).
-	rightReg := self concreteRegister: (operands at: 2).
+	leftReg := operands at: 1.
+	rightReg := operands at: 2.
 
 	self machineCodeAt: 0 put: (self bneR: leftReg R: rightReg offset: 12).
 	self machineCodeAt: 4 put: (self nop). "Delay slot"
@@ -605,8 +604,8 @@ CogMIPSELCompiler >> concretizeBrLongNotEqualRR [
 	jumpTargetInstruction := self longJumpTargetAddress.
 	self flag: #todo. "Check not crossing 256MB block."
 	jumpTargetAddr := jumpTargetInstruction asUnsignedInteger bitAnd: 16rFFFFFFF.
-	leftReg := self concreteRegister: (operands at: 1).
-	rightReg := self concreteRegister: (operands at: 2).
+	leftReg := operands at: 1.
+	rightReg := operands at: 2.
 
 	self machineCodeAt: 0 put: (self beqR: leftReg R: rightReg offset: 12).
 	self machineCodeAt: 4 put: (self nop). "Delay slot"
@@ -619,8 +618,8 @@ CogMIPSELCompiler >> concretizeBrLongNotEqualRR [
 CogMIPSELCompiler >> concretizeBrNotEqualRR [
 	| offset leftReg rightReg |
 	offset := self computeJumpTargetOffsetPlus: 4.
-	leftReg := self concreteRegister: (operands at: 1).
-	rightReg := self concreteRegister: (operands at: 2).
+	leftReg := operands at: 1.
+	rightReg := operands at: 2.
 	self machineCodeAt: 0 put: (self bneR: leftReg R: rightReg offset: offset).
 	self machineCodeAt: 4 put: (self nop). "Delay slot"
 	^machineCodeSize := 8
@@ -630,8 +629,8 @@ CogMIPSELCompiler >> concretizeBrNotEqualRR [
 CogMIPSELCompiler >> concretizeBrSignedGreaterEqualRR [
 	| offset leftReg rightReg |
 	offset := self computeJumpTargetOffsetPlus: 8. "Relative to delay slot"
-	leftReg := self concreteRegister: (operands at: 1).
-	rightReg := self concreteRegister: (operands at: 2).
+	leftReg := operands at: 1.
+	rightReg := operands at: 2.
 	self assert: leftReg ~= BranchTemp.
 	self assert: rightReg ~= BranchTemp.
 	self machineCodeAt: 0 put: (self sltR: BranchTemp R: leftReg R: rightReg).
@@ -644,8 +643,8 @@ CogMIPSELCompiler >> concretizeBrSignedGreaterEqualRR [
 CogMIPSELCompiler >> concretizeBrSignedGreaterRR [
 	| offset leftReg rightReg |
 	offset := self computeJumpTargetOffsetPlus: 8. "Relative to delay slot"
-	leftReg := self concreteRegister: (operands at: 1).
-	rightReg := self concreteRegister: (operands at: 2).
+	leftReg := operands at: 1.
+	rightReg := operands at: 2.
 	self assert: leftReg ~= BranchTemp.
 	self assert: rightReg ~= BranchTemp.
 	self machineCodeAt: 0 put: (self sltR: BranchTemp R: rightReg R: leftReg).
@@ -658,8 +657,8 @@ CogMIPSELCompiler >> concretizeBrSignedGreaterRR [
 CogMIPSELCompiler >> concretizeBrSignedLessEqualRR [
 	| offset leftReg rightReg |
 	offset := self computeJumpTargetOffsetPlus: 8. "Relative to delay slot"
-	leftReg := self concreteRegister: (operands at: 1).
-	rightReg := self concreteRegister: (operands at: 2).
+	leftReg := operands at: 1.
+	rightReg := operands at: 2.
 	self assert: leftReg ~= BranchTemp.
 	self assert: rightReg ~= BranchTemp.
 	self machineCodeAt: 0 put: (self sltR: BranchTemp R: rightReg R: leftReg).
@@ -672,8 +671,8 @@ CogMIPSELCompiler >> concretizeBrSignedLessEqualRR [
 CogMIPSELCompiler >> concretizeBrSignedLessRR [
 	| offset leftReg rightReg |
 	offset := self computeJumpTargetOffsetPlus: 8. "Relative to delay slot"
-	leftReg := self concreteRegister: (operands at: 1).
-	rightReg := self concreteRegister: (operands at: 2).
+	leftReg := operands at: 1.
+	rightReg := operands at: 2.
 	self assert: leftReg ~= BranchTemp.
 	self assert: rightReg ~= BranchTemp.
 	self machineCodeAt: 0 put: (self sltR: BranchTemp R: leftReg R: rightReg).
@@ -686,8 +685,8 @@ CogMIPSELCompiler >> concretizeBrSignedLessRR [
 CogMIPSELCompiler >> concretizeBrUnsignedGreaterEqualRR [
 	| offset leftReg rightReg |
 	offset := self computeJumpTargetOffsetPlus: 8. "Relative to delay slot"
-	leftReg := self concreteRegister: (operands at: 1).
-	rightReg := self concreteRegister: (operands at: 2).
+	leftReg := operands at: 1.
+	rightReg := operands at: 2.
 	self assert: leftReg ~= BranchTemp.
 	self assert: rightReg ~= BranchTemp.
 	self machineCodeAt: 0 put: (self sltuR: BranchTemp R: leftReg R: rightReg).
@@ -700,8 +699,8 @@ CogMIPSELCompiler >> concretizeBrUnsignedGreaterEqualRR [
 CogMIPSELCompiler >> concretizeBrUnsignedGreaterRR [
 	| offset leftReg rightReg |
 	offset := self computeJumpTargetOffsetPlus: 8. "Relative to delay slot"
-	leftReg := self concreteRegister: (operands at: 1).
-	rightReg := self concreteRegister: (operands at: 2).
+	leftReg := operands at: 1.
+	rightReg := operands at: 2.
 	self assert: leftReg ~= BranchTemp.
 	self assert: rightReg ~= BranchTemp.
 	self machineCodeAt: 0 put: (self sltuR: BranchTemp R: rightReg R: leftReg).
@@ -714,8 +713,8 @@ CogMIPSELCompiler >> concretizeBrUnsignedGreaterRR [
 CogMIPSELCompiler >> concretizeBrUnsignedLessEqualRR [
 	| offset leftReg rightReg |
 	offset := self computeJumpTargetOffsetPlus: 8. "Relative to delay slot"
-	leftReg := self concreteRegister: (operands at: 1).
-	rightReg := self concreteRegister: (operands at: 2).
+	leftReg := operands at: 1.
+	rightReg := operands at: 2.
 	self assert: leftReg ~= BranchTemp.
 	self assert: rightReg ~= BranchTemp.
 	self machineCodeAt: 0 put: (self sltuR: BranchTemp R: rightReg R: leftReg).
@@ -728,8 +727,8 @@ CogMIPSELCompiler >> concretizeBrUnsignedLessEqualRR [
 CogMIPSELCompiler >> concretizeBrUnsignedLessRR [
 	| offset leftReg rightReg |
 	offset := self computeJumpTargetOffsetPlus: 8. "Relative to delay slot"
-	leftReg := self concreteRegister: (operands at: 1).
-	rightReg := self concreteRegister: (operands at: 2).
+	leftReg := operands at: 1.
+	rightReg := operands at: 2.
 	self assert: leftReg ~= BranchTemp.
 	self assert: rightReg ~= BranchTemp.
 	self machineCodeAt: 0 put: (self sltuR: BranchTemp R: leftReg R: rightReg).
@@ -779,8 +778,8 @@ CogMIPSELCompiler >> concretizeCmpRR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeDivRR [
 	| dividendReg divisorReg |
-	dividendReg := self concreteRegister: (operands at: 0).
-	divisorReg := self concreteRegister: (operands at: 1).
+	dividendReg := operands at: 0.
+	divisorReg := operands at: 1.
 	self machineCodeAt: 0 put: (self divR: dividendReg R: divisorReg).
 	^machineCodeSize := 4
 ]
@@ -857,7 +856,7 @@ CogMIPSELCompiler >> concretizeJumpOverflow [
 CogMIPSELCompiler >> concretizeJumpR [
 	| reg |
 	self flag: #OABI. "Does this ever target C code? If so we should move the target into TargetReg first."
-	reg := self concreteRegister: (operands at: 0).
+	reg := operands at: 0.
 	self machineCodeAt: 0 put: (self jR: reg).
 	self machineCodeAt: 4 put: self nop. "Delay slot"
 	^machineCodeSize := 8
@@ -922,8 +921,8 @@ CogMIPSELCompiler >> concretizeLoadEffectiveAddressMwrR [
 	<var: #offset type: #sqInt>
 	| baseReg offset destReg |
 	offset := operands at: 0.
-	baseReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	baseReg := operands at: 1.
+	destReg := operands at: 2.
 	(self isShortOffset: offset) ifTrue:
 		[self machineCodeAt: 0 put: (self addiuR: destReg R: baseReg C: offset).
 		^machineCodeSize := 4].
@@ -939,7 +938,7 @@ CogMIPSELCompiler >> concretizeLoadEffectiveAddressMwrR [
 CogMIPSELCompiler >> concretizeLogicalShiftLeftCqR [
 	| distance reg |
 	distance := (operands at: 0) min: 31.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	self machineCodeAt: 0 put: (self sllR: reg R: reg C: distance).
 	^machineCodeSize := 4
 ]
@@ -947,8 +946,8 @@ CogMIPSELCompiler >> concretizeLogicalShiftLeftCqR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeLogicalShiftLeftRR [
 	| destReg distReg |
-	distReg := self concreteRegister: (operands at: 0).
-	destReg := self concreteRegister: (operands at: 1).
+	distReg := operands at: 0.
+	destReg := operands at: 1.
 	self machineCodeAt: 0 put: (self sllvR: destReg R: destReg R: distReg).
 	^machineCodeSize := 4
 ]
@@ -957,7 +956,7 @@ CogMIPSELCompiler >> concretizeLogicalShiftLeftRR [
 CogMIPSELCompiler >> concretizeLogicalShiftRightCqR [
 	| distance reg |
 	distance := (operands at: 0) min: 31.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	self machineCodeAt: 0 put: (self srlR: reg R: reg C: distance).
 	^machineCodeSize := 4
 ]
@@ -965,8 +964,8 @@ CogMIPSELCompiler >> concretizeLogicalShiftRightCqR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeLogicalShiftRightRR [
 	| destReg distReg |
-	distReg := self concreteRegister: (operands at: 0).
-	destReg := self concreteRegister: (operands at: 1).
+	distReg := operands at: 0.
+	destReg := operands at: 1.
 	self machineCodeAt: 0 put: (self srlvR: destReg R: destReg R: distReg).
 	^machineCodeSize := 4
 ]
@@ -975,7 +974,7 @@ CogMIPSELCompiler >> concretizeLogicalShiftRightRR [
 CogMIPSELCompiler >> concretizeMoveAbR [
 	| srcAddr destReg |
 	srcAddr := operands at: 0.
-	destReg := self concreteRegister: (operands at: 1).
+	destReg := operands at: 1.
 
 	(self isAddressRelativeToVarBase: srcAddr) ifTrue:
 		[self machineCodeAt: 0 put: (self lwR: destReg base: ConcreteVarBaseReg offset: srcAddr - cogit varBaseAddress).
@@ -991,7 +990,7 @@ CogMIPSELCompiler >> concretizeMoveAbR [
 CogMIPSELCompiler >> concretizeMoveAwR [
 	| srcAddr destReg |
 	srcAddr := operands at: 0.
-	destReg := self concreteRegister: (operands at: 1).
+	destReg := operands at: 1.
 
 	(self isAddressRelativeToVarBase: srcAddr) ifTrue:
 		[self machineCodeAt: 0 put: (self lwR: destReg base: ConcreteVarBaseReg offset: srcAddr - cogit varBaseAddress).
@@ -1008,7 +1007,7 @@ CogMIPSELCompiler >> concretizeMoveCqR [
 	<var: #word type: #sqInt>
 	| word reg |
 	word := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	
 	(word between: -16r8000 and: 16r7FFF) ifFalse: [^self concretizeMoveCwR].
 	"Could also load up to 16rFFFF with ori or 16rXXXX0000 with lui"
@@ -1022,7 +1021,7 @@ CogMIPSELCompiler >> concretizeMoveCwR [
 	<var: #word type: #sqInt>
 	| word reg |
 	word := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).	
+	reg := operands at: 1.
 	self machineCodeAt: 0 put: (self luiR: reg C: (self high16BitsOf: word)).
 	self machineCodeAt: 4 put: (self oriR: reg R: reg C: (self low16BitsOf: word)).
 	^machineCodeSize := 8
@@ -1031,7 +1030,7 @@ CogMIPSELCompiler >> concretizeMoveCwR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeMoveHighR [
 	| destReg |
-	destReg := self concreteRegister: (operands at: 0).
+	destReg := operands at: 0.
 	self machineCodeAt: 0 put: (self mfhiR: destReg).
 	^machineCodeSize := 4
 ]
@@ -1039,7 +1038,7 @@ CogMIPSELCompiler >> concretizeMoveHighR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeMoveLowR [
 	| destReg |
-	destReg := self concreteRegister: (operands at: 0).
+	destReg := operands at: 0.
 	self machineCodeAt: 0 put: (self mfloR: destReg).
 	^machineCodeSize := 4
 ]
@@ -1049,8 +1048,8 @@ CogMIPSELCompiler >> concretizeMoveM16rR [
 	<var: #offset type: #sqInt>
 	| srcReg offset destReg |
 	offset := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
 	self machineCodeAt: 0 put: (self lhuR: destReg base: srcReg offset: offset).
 	^machineCodeSize := 4
 ]
@@ -1060,8 +1059,8 @@ CogMIPSELCompiler >> concretizeMoveMbrR [
 	<var: #offset type: #sqInt>
 	| srcReg offset destReg |
 	offset := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
 	self machineCodeAt: 0 put: (self lbuR: destReg base: srcReg offset: offset).
 	^machineCodeSize := 4
 	
@@ -1072,8 +1071,8 @@ CogMIPSELCompiler >> concretizeMoveMwrR [
 	<var: #offset type: #sqInt>
 	| baseReg offset destReg |
 	offset := operands at: 0.
-	baseReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	baseReg := operands at: 1.
+	destReg := operands at: 2.
 	(self isShortOffset: offset) ifTrue:
 		[self machineCodeAt: 0 put: (self lwR: destReg base: baseReg offset: offset).
 		^machineCodeSize := 4].
@@ -1089,7 +1088,7 @@ CogMIPSELCompiler >> concretizeMoveMwrR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeMoveRAb [
 	| srcReg destAddr |
-	srcReg := self concreteRegister: (operands at: 0).
+	srcReg := operands at: 0.
 	destAddr := operands at: 1.
 
 	(self isAddressRelativeToVarBase: destAddr) ifTrue:
@@ -1105,7 +1104,7 @@ CogMIPSELCompiler >> concretizeMoveRAb [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeMoveRAw [
 	| srcReg destAddr |
-	srcReg := self concreteRegister: (operands at: 0).
+	srcReg := operands at: 0.
 	destAddr := operands at: 1.
 
 	(self isAddressRelativeToVarBase: destAddr) ifTrue:
@@ -1122,9 +1121,9 @@ CogMIPSELCompiler >> concretizeMoveRAw [
 CogMIPSELCompiler >> concretizeMoveRMwr [
 	<var: #offset type: #sqInt>
 	| srcReg offset baseReg |
-	srcReg := self concreteRegister: (operands at: 0).
+	srcReg := operands at: 0.
 	offset := operands at: 1.
-	baseReg := self concreteRegister: (operands at: 2).
+	baseReg := operands at: 2.
 	self machineCodeAt: 0 put: (self swR: srcReg base: baseReg offset: offset).
 	^machineCodeSize := 4
 ]
@@ -1132,8 +1131,8 @@ CogMIPSELCompiler >> concretizeMoveRMwr [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeMoveRR [
 	| srcReg destReg |
-	srcReg := self concreteRegister: (operands at: 0).
-	destReg := self concreteRegister: (operands at: 1).
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
 	self machineCodeAt: 0 put: (self adduR: destReg R: srcReg R: ZR).
 	^machineCodeSize := 4
 ]
@@ -1141,9 +1140,9 @@ CogMIPSELCompiler >> concretizeMoveRR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeMoveRXbrR [
 	| srcReg indexReg baseReg |
-	srcReg := self concreteRegister: (operands at: 0).
-	indexReg := self concreteRegister: (operands at: 1).
-	baseReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 0.
+	indexReg := operands at: 1.
+	baseReg := operands at: 2.
 	self machineCodeAt: 0 put: (self adduR: AT R: baseReg R: indexReg).
 	self machineCodeAt: 4 put: (self sbR: srcReg base: AT offset: 0).
 	^machineCodeSize := 8
@@ -1152,9 +1151,9 @@ CogMIPSELCompiler >> concretizeMoveRXbrR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeMoveRXwrR [
 	| srcReg indexReg baseReg |
-	srcReg := self concreteRegister: (operands at: 0).
-	indexReg := self concreteRegister: (operands at: 1).
-	baseReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 0.
+	indexReg := operands at: 1.
+	baseReg := operands at: 2.
 	self machineCodeAt: 0 put: (self sllR: AT R: indexReg C: 2). "index is number of words"
 	self machineCodeAt: 4 put: (self adduR: AT R: baseReg R: AT).
 	self machineCodeAt: 8 put: (self swR: srcReg base: AT offset: 0).
@@ -1164,9 +1163,9 @@ CogMIPSELCompiler >> concretizeMoveRXwrR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeMoveXbrRR [
 	| indexReg baseReg destReg |
-	indexReg := self concreteRegister: (operands at: 0). "index is number of *bytes*"
-	baseReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	indexReg := operands at: 0. "index is number of *bytes*"
+	baseReg := operands at: 1.
+	destReg := operands at: 2.
 	self machineCodeAt: 0 put: (self adduR: AT R: baseReg R: indexReg).
 	self machineCodeAt: 4 put: (self lbuR: destReg base: AT offset: 0).
 	^machineCodeSize := 8
@@ -1175,9 +1174,9 @@ CogMIPSELCompiler >> concretizeMoveXbrRR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeMoveXwrRR [
 	| indexReg baseReg destReg |
-	indexReg := self concreteRegister: (operands at: 0).
-	baseReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	indexReg := operands at: 0.
+	baseReg := operands at: 1.
+	destReg := operands at: 2.
 	self machineCodeAt: 0 put: (self sllR: AT R: indexReg C: 2). "index is in words"
 	self machineCodeAt: 4 put: (self adduR: AT R: baseReg R: AT).
 	self machineCodeAt: 8 put: (self lwR: destReg base: AT offset: 0).
@@ -1187,8 +1186,8 @@ CogMIPSELCompiler >> concretizeMoveXwrRR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeMulCheckOverflowRR [
 	| destReg leftReg rightReg |
-	rightReg := self concreteRegister: (operands at: 0).
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	rightReg := operands at: 0.
+	destReg := leftReg := operands at: 1.
 
 	"Overflow occured if the sign bit of the low part is different from the high part."
 	self machineCodeAt: 0 put: (self multR: leftReg R: rightReg).
@@ -1201,7 +1200,7 @@ CogMIPSELCompiler >> concretizeMulCheckOverflowRR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeNegateR [
 	| reg |
-	reg := self concreteRegister: (operands at: 0).
+	reg := operands at: 0.
 	self machineCodeAt: 0 put: (self subuR: reg R: ZR R: reg).
 	^machineCodeSize := 4
 ]
@@ -1216,7 +1215,7 @@ CogMIPSELCompiler >> concretizeNop [
 CogMIPSELCompiler >> concretizeOrCqR [
 	| destReg leftReg rightImm |
 	rightImm := operands at: 0.
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	destReg := leftReg := operands at: 1.
 
 	(rightImm between: 0 and: 16rFFFF) ifFalse: [^self concretizeOrCwR].
 	
@@ -1228,7 +1227,7 @@ CogMIPSELCompiler >> concretizeOrCqR [
 CogMIPSELCompiler >> concretizeOrCwR [
 	| destReg leftReg rightImm |
 	rightImm := operands at: 0.
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	destReg := leftReg := operands at: 1.
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: rightImm)).
 	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: rightImm)).
 	self machineCodeAt: 8 put: (self orR: destReg R: leftReg R: AT).
@@ -1238,8 +1237,8 @@ CogMIPSELCompiler >> concretizeOrCwR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeOrRR [
 	| destReg leftReg rightReg |
-	rightReg := self concreteRegister: (operands at: 0).
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	rightReg := operands at: 0.
+	destReg := leftReg := operands at: 1.
 	self machineCodeAt: 0 put: (self orR: destReg R: leftReg R: rightReg).
 	^machineCodeSize := 4
 ]
@@ -1247,7 +1246,7 @@ CogMIPSELCompiler >> concretizeOrRR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizePopR [
 	| destReg |
-	destReg := self concreteRegister: (operands at: 0).
+	destReg := operands at: 0.
 	self machineCodeAt: 0 put: (self lwR: destReg base: SP offset: 0).
 	self machineCodeAt: 4 put: (self addiuR: SP R: SP C: 4).
 	^machineCodeSize := 8
@@ -1282,7 +1281,7 @@ CogMIPSELCompiler >> concretizePushCw [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizePushR [
 	| srcReg |
-	srcReg := self concreteRegister: (operands at: 0).
+	srcReg := operands at: 0.
 	self machineCodeAt: 0 put: (self addiuR: SP R: SP C: -4).
 	self machineCodeAt: 4 put: (self swR: srcReg base: SP offset: 0).
 	^machineCodeSize := 8
@@ -1310,7 +1309,7 @@ CogMIPSELCompiler >> concretizeStop [
 CogMIPSELCompiler >> concretizeSubCheckOverflowCqR [
 	| destReg leftReg rightImm |
 	rightImm := operands at: 0.
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	destReg := leftReg := operands at: 1.
 
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: rightImm)).
 	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: rightImm)).
@@ -1333,8 +1332,8 @@ CogMIPSELCompiler >> concretizeSubCheckOverflowCqR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeSubCheckOverflowRR [
 	| destReg leftReg rightReg |
-	rightReg := self concreteRegister: (operands at: 0).
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	rightReg := operands at: 0.
+	destReg := leftReg := operands at: 1.
 
 	"Save original LHS"
 	self machineCodeAt: 0 put: (self adduR: OverflowTemp1 R: leftReg R: ZR). 
@@ -1355,7 +1354,7 @@ CogMIPSELCompiler >> concretizeSubCheckOverflowRR [
 CogMIPSELCompiler >> concretizeSubCqR [
 	| destReg leftReg rightImm |
 	rightImm := operands at: 0.
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	destReg := leftReg := operands at: 1.
 	
 	(rightImm negated between: -16r8000 and: 16r7FFF) ifFalse: [^self concretizeSubCwR].
 	
@@ -1367,7 +1366,7 @@ CogMIPSELCompiler >> concretizeSubCqR [
 CogMIPSELCompiler >> concretizeSubCwR [
 	| destReg leftReg rightImm |
 	rightImm := operands at: 0.
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	destReg := leftReg := operands at: 1.
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: rightImm)).
 	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: rightImm)).
 	self machineCodeAt: 8 put: (self subuR: destReg R: leftReg R: AT).
@@ -1377,8 +1376,8 @@ CogMIPSELCompiler >> concretizeSubCwR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeSubRR [
 	| destReg leftReg rightReg |
-	rightReg := self concreteRegister: (operands at: 0).
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	rightReg := operands at: 0.
+	destReg := leftReg := operands at: 1.
 	self machineCodeAt: 0 put: (self subuR: destReg R: leftReg R: rightReg).
 	^machineCodeSize := 4
 ]
@@ -1387,7 +1386,7 @@ CogMIPSELCompiler >> concretizeSubRR [
 CogMIPSELCompiler >> concretizeTstCqR [
 	| leftReg rightImm |
 	rightImm := operands at: 0.
-	leftReg := self concreteRegister: (operands at: 1).
+	leftReg := operands at: 1.
 	
 	(rightImm between: -16r8000 and: 16r7FFF) ifFalse: [^self concretizeTstCwR].
 	
@@ -1399,7 +1398,7 @@ CogMIPSELCompiler >> concretizeTstCqR [
 CogMIPSELCompiler >> concretizeTstCwR [
 	| leftReg rightImm |
 	rightImm := operands at: 0.
-	leftReg := self concreteRegister: (operands at: 1).
+	leftReg := operands at: 1.
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: rightImm)).
 	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: rightImm)).
 	self machineCodeAt: 8 put: (self andR: Cmp R: leftReg R: AT).
@@ -1416,7 +1415,7 @@ CogMIPSELCompiler >> concretizeUnimplemented [
 CogMIPSELCompiler >> concretizeXorCwR [
 	| destReg leftReg rightImm |
 	rightImm := operands at: 0.
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	destReg := leftReg := operands at: 1.
 	self machineCodeAt: 0 put: (self luiR: AT C: (self high16BitsOf: rightImm)).
 	self machineCodeAt: 4 put: (self oriR: AT R: AT C: (self low16BitsOf: rightImm)).
 	self machineCodeAt: 8 put: (self xorR: destReg R: leftReg R: AT).
@@ -1426,8 +1425,8 @@ CogMIPSELCompiler >> concretizeXorCwR [
 { #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeXorRR [
 	| destReg leftReg rightReg |
-	rightReg := self concreteRegister: (operands at: 0).
-	destReg := leftReg := self concreteRegister: (operands at: 1).
+	rightReg := operands at: 0.
+	destReg := leftReg := operands at: 1.
 	self machineCodeAt: 0 put: (self xorR: destReg R: leftReg R: rightReg).
 	^machineCodeSize := 4
 ]

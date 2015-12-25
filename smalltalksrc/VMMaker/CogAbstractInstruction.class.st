@@ -171,8 +171,8 @@ CogAbstractInstruction class >> isAccessor: aSelector [
 ]
 
 { #category : #testing }
-CogAbstractInstruction class >> isConcreteRISCTempRegister: concreteRegister [
-	"For tests to filter-out bogus values left in the ConcreteRISCTempRegister, if any."
+CogAbstractInstruction class >> isRISCTempRegister: reg [
+	"For tests to filter-out bogus values left in the RISCTempRegister, if any."
 	^self subclassResponsibility
 ]
 
@@ -332,13 +332,6 @@ CogAbstractInstruction >> >= anAbstractInstruction [
 	^(opcodesArray identityIndexOf: self) >= (opcodesArray identityIndexOf: anAbstractInstruction)
 ]
 
-{ #category : #private }
-CogAbstractInstruction >> abstractRegisterForConcreteRegister: reg [
-	<inline: true>
-	self cCode: [] inSmalltalk: [self assert: reg isInteger].
-	^reg
-]
-
 { #category : #accessing }
 CogAbstractInstruction >> addDependent: anInstruction [
 	<var: #anInstruction type: #'AbstractInstruction *'>
@@ -434,9 +427,8 @@ CogAbstractInstruction >> byteReadsZeroExtend [
 
 { #category : #accessing }
 CogAbstractInstruction >> cResultRegister [
-	"Answer the abstract register for the C result register.
-	 Only partially implemented (there is as yet no CResultReg abstract reg).
-	 Works on x86 since TempReg = EAX = C result reg."
+	"Answer the register through which C funcitons return integral results."
+	<inline: true>
 	self subclassResponsibility
 ]
 
@@ -502,20 +494,6 @@ CogAbstractInstruction >> computeJumpTargetOffsetPlus: anPCOffset [
 	<var: #jumpTarget type: #'AbstractInstruction *'>
 	jumpTarget := self jumpTargetAddress.
 	^jumpTarget signedIntFromLong - (address + anPCOffset) signedIntFromLong.
-]
-
-{ #category : #encoding }
-CogAbstractInstruction >> concreteDPFPRegister: reg [
-	<inline: true>
-	self cCode: [] inSmalltalk: [self assert: reg isInteger].
-	^reg
-]
-
-{ #category : #private }
-CogAbstractInstruction >> concreteRegister: reg [
-	<inline: true>
-	self cCode: [] inSmalltalk: [self assert: reg isInteger].
-	^reg
 ]
 
 { #category : #'generate machine code' }
