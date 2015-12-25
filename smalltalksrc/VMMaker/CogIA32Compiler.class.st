@@ -42,21 +42,13 @@ Class {
 		'XCHGAwR',
 		'XCHGMwrR',
 		'XCHGRR',
-		'XMM0H',
 		'XMM0L',
-		'XMM1H',
 		'XMM1L',
-		'XMM2H',
 		'XMM2L',
-		'XMM3H',
 		'XMM3L',
-		'XMM4H',
 		'XMM4L',
-		'XMM5H',
 		'XMM5L',
-		'XMM6H',
 		'XMM6L',
-		'XMM7H',
 		'XMM7L'
 	],
 	#category : #'VMMaker-JIT'
@@ -94,22 +86,13 @@ CogIA32Compiler class >> initialize [
 	EDI := 7.
 
 	XMM0L := 0.
-	XMM1L := 2.
-	XMM2L := 4.
-	XMM3L := 6.
-	XMM4L := 8.
-	XMM5L := 10.
-	XMM6L := 12.
-	XMM7L := 14.
-
-	XMM0H := 1.
-	XMM1H := 3.
-	XMM2H := 5.
-	XMM3H := 7.
-	XMM4H := 9.
-	XMM5H := 11.
-	XMM6H := 13.
-	XMM7H := 15.
+	XMM1L := 1.
+	XMM2L := 2.
+	XMM3L := 3.
+	XMM4L := 4.
+	XMM5L := 5.
+	XMM6L := 6.
+	XMM7L := 7.
 
 	"Mod R/M Mod fields.  See [1] Sec 2.4, 2.5 & 2.6 & Table 2-2"
 	ModRegInd := 0.
@@ -158,8 +141,8 @@ CogIA32Compiler class >> initializeAbstractRegisters [
 ]
 
 { #category : #testing }
-CogIA32Compiler class >> isConcreteRISCTempRegister: concreteRegister [
-	"For tests to filter-out bogus values left in the ConcreteRISCTempRegister, if any."
+CogIA32Compiler class >> isRISCTempRegister: reg [
+	"For tests to filter-out bogus values left in the RISCTempRegister, if any."
 	^false
 ]
 
@@ -194,9 +177,9 @@ CogIA32Compiler >> byteReadsZeroExtend [
 
 { #category : #accessing }
 CogIA32Compiler >> cResultRegister [
-	"Answer the abstract register for the C result register.
-	 Only partially implemented.  Works on x86 since TempReg = EAX = C result reg."
-	^self abstractRegisterForConcreteRegister: EAX
+	"Answer the register through which C funcitons return integral results."
+	<inline: true>
+	^EAX
 ]
 
 { #category : #'inline cacheing' }
@@ -220,10 +203,7 @@ CogIA32Compiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 
 { #category : #accessing }
 CogIA32Compiler >> callerSavedRegisterMask [
-	^cogit
-		registerMaskFor: (self abstractRegisterForConcreteRegister: EAX)
-		and: (self abstractRegisterForConcreteRegister: ECX)
-		and: (self abstractRegisterForConcreteRegister: EDX)
+	^cogit registerMaskFor: EAX and: ECX and: EDX
 ]
 
 { #category : #testing }
@@ -268,7 +248,7 @@ CogIA32Compiler >> computeMaximumSize [
 		[IMULRR]				-> [^3].
 		[CPUID]					-> [^2].
 		[CMPXCHGAwR]			-> [^7].
-		[CMPXCHGMwrR]		-> [^(self concreteRegister: (operands at: 1)) = ESP
+		[CMPXCHGMwrR]		-> [^(operands at: 1) = ESP
 										ifTrue: [(self isQuick: (operands at: 0)) ifTrue: [5] ifFalse: [8]]
 										ifFalse: [(self isQuick: (operands at: 0)) ifTrue: [4] ifFalse: [7]]].
 		[LFENCE]				-> [^3].
@@ -276,11 +256,11 @@ CogIA32Compiler >> computeMaximumSize [
 		[SFENCE]				-> [^3].
 		[LOCK]					-> [^1].
 		[XCHGAwR]				-> [^6].
-		[XCHGMwrR]			-> [^(self concreteRegister: (operands at: 1)) = ESP
+		[XCHGMwrR]			-> [^(operands at: 1) = ESP
 										ifTrue: [(self isQuick: (operands at: 0)) ifTrue: [4] ifFalse: [7]]
 										ifFalse: [(self isQuick: (operands at: 0)) ifTrue: [3] ifFalse: [6]]].
-		[XCHGRR]				-> [^((self concreteRegister: (operands at: 0)) = EAX
-									   or: [(self concreteRegister: (operands at: 1)) = EAX])
+		[XCHGRR]				-> [^((operands at: 0) = EAX
+									   or: [(operands at: 1) = EAX])
 										ifTrue: [1]
 										ifFalse: [2]].
 		"Control"
@@ -322,40 +302,40 @@ CogIA32Compiler >> computeMaximumSize [
 		"Arithmetic"
 		[AddCqR]		-> [^(self isQuick: (operands at: 0))
 											ifTrue: [3]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
+											ifFalse: [(operands at: 1) = EAX
 														ifTrue: [5]
 														ifFalse: [6]]].
 		[AndCqR]		-> [^(self isQuick: (operands at: 0))
 											ifTrue: [3]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
+											ifFalse: [(operands at: 1) = EAX
 														ifTrue: [5]
 														ifFalse: [6]]].
 		[CmpCqR]		-> [^(self isQuick: (operands at: 0))
 											ifTrue: [3]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
+											ifFalse: [(operands at: 1) = EAX
 														ifTrue: [5]
 														ifFalse: [6]]].
 		[OrCqR]			-> [^(self isQuick: (operands at: 0))
 											ifTrue: [3]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
+											ifFalse: [(operands at: 1) = EAX
 														ifTrue: [5]
 														ifFalse: [6]]].
 		[SubCqR]		-> [^(self isQuick: (operands at: 0))
 											ifTrue: [3]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
+											ifFalse: [(operands at: 1) = EAX
 														ifTrue: [5]
 														ifFalse: [6]]].
-		[TstCqR]		-> [^((self isQuick: (operands at: 0)) and: [(self concreteRegister: (operands at: 1)) < 4])
+		[TstCqR]		-> [^((self isQuick: (operands at: 0)) and: [(operands at: 1) < 4])
 											ifTrue: [3]
-											ifFalse: [(self concreteRegister: (operands at: 1)) = EAX
+											ifFalse: [(operands at: 1) = EAX
 														ifTrue: [5]
 														ifFalse: [6]]].
-		[AddCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[AndCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[CmpCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[OrCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[SubCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[XorCwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
+		[AddCwR]		-> [^(operands at: 1) = EAX ifTrue: [5] ifFalse: [6]].
+		[AndCwR]		-> [^(operands at: 1) = EAX ifTrue: [5] ifFalse: [6]].
+		[CmpCwR]		-> [^(operands at: 1) = EAX ifTrue: [5] ifFalse: [6]].
+		[OrCwR]		-> [^(operands at: 1) = EAX ifTrue: [5] ifFalse: [6]].
+		[SubCwR]		-> [^(operands at: 1) = EAX ifTrue: [5] ifFalse: [6]].
+		[XorCwR]		-> [^(operands at: 1) = EAX ifTrue: [5] ifFalse: [6]].
 		[AddRR]			-> [^2].
 		[AndRR]			-> [^2].
 		[CmpRR]		-> [^2].
@@ -367,7 +347,7 @@ CogIA32Compiler >> computeMaximumSize [
 						-> [^((self isQuick: (operands at: 0))
 											ifTrue: [3]
 											ifFalse: [6])
-										+ ((self concreteRegister: (operands at: 1)) = ESP
+										+ ((operands at: 1) = ESP
 											ifTrue: [1]
 											ifFalse: [0])].
 		[LogicalShiftLeftCqR]		-> [^(operands at: 0) = 1 ifTrue: [2] ifFalse: [3]].
@@ -387,66 +367,66 @@ CogIA32Compiler >> computeMaximumSize [
 		[MoveCwR]		-> [^5].
 		[MoveRR]		-> [^2].
 		[MoveRdRd]		-> [^4].
-		[MoveAwR]		-> [^(self concreteRegister: (operands at: 1)) = EAX ifTrue: [5] ifFalse: [6]].
-		[MoveRAw]		-> [^(self concreteRegister: (operands at: 0)) = EAX ifTrue: [5] ifFalse: [6]].
+		[MoveAwR]		-> [^(operands at: 1) = EAX ifTrue: [5] ifFalse: [6]].
+		[MoveRAw]		-> [^(operands at: 0) = EAX ifTrue: [5] ifFalse: [6]].
 		[MoveAbR]		-> [^7].
-		[MoveRAb]		-> [^(self concreteRegister: (operands at: 0)) = EAX ifTrue: [5] ifFalse: [6]].
+		[MoveRAb]		-> [^(operands at: 0) = EAX ifTrue: [5] ifFalse: [6]].
 		[MoveRMwr]	-> [^((self isQuick: (operands at: 1))
 									ifTrue: [((operands at: 1) = 0
-											and: [(self concreteRegister: (operands at: 2)) ~= EBP])
+											and: [(operands at: 2) ~= EBP])
 												ifTrue: [2]
 												ifFalse: [3]]
 									ifFalse: [6])
-								+ ((self concreteRegister: (operands at: 2)) = ESP
+								+ ((operands at: 2) = ESP
 									ifTrue: [1]
 									ifFalse: [0])].
 		[MoveRdM64r]	-> [^((self isQuick: (operands at: 1))
 											ifTrue: [5]
 											ifFalse: [8])
-										+ ((self concreteRegister: (operands at: 2)) = ESP
+										+ ((operands at: 2) = ESP
 											ifTrue: [1]
 											ifFalse: [0])].
-		[MoveMbrR]		-> [^(self concreteRegister: (operands at: 1)) = ESP
+		[MoveMbrR]		-> [^(operands at: 1) = ESP
 								ifTrue: [(self isQuick: (operands at: 0)) ifTrue: [5] ifFalse: [8]]
 								ifFalse: [(self isQuick: (operands at: 0)) ifTrue: [4] ifFalse: [7]]].
-		[MoveRMbr]		-> [^(self concreteRegister: (operands at: 2)) = ESP
+		[MoveRMbr]		-> [^(operands at: 2) = ESP
 								ifTrue: [7]
 								ifFalse: [(self isQuick: (operands at: 1)) ifTrue: [3] ifFalse: [6]]].
-		[MoveM16rR]	-> [^(self concreteRegister: (operands at: 1)) = ESP
+		[MoveM16rR]	-> [^(operands at: 1) = ESP
 								ifTrue: [(self isQuick: (operands at: 0)) ifTrue: [5] ifFalse: [8]]
 								ifFalse: [(self isQuick: (operands at: 0)) ifTrue: [4] ifFalse: [7]]].
 		[MoveM64rRd]	-> [^((self isQuick: (operands at: 0))
 											ifTrue: [5]
 											ifFalse: [8])
-										+ ((self concreteRegister: (operands at: 1)) = ESP
+										+ ((operands at: 1) = ESP
 											ifTrue: [1]
 											ifFalse: [0])].
 		[MoveMwrR]		-> [^((self isQuick: (operands at: 0))
 									ifTrue: [((operands at: 0) = 0
-											and: [(self concreteRegister: (operands at: 1)) ~= EBP])
+											and: [(operands at: 1) ~= EBP])
 												ifTrue: [2]
 												ifFalse: [3]]
 									ifFalse: [6])
-								+ ((self concreteRegister: (operands at: 1)) = ESP
+								+ ((operands at: 1) = ESP
 									ifTrue: [1]
 									ifFalse: [0])].
-		[MoveXbrRR]	-> [self assert: (self concreteRegister: (operands at: 0)) ~= ESP.
-							^(self concreteRegister: (operands at: 1)) = EBP
+		[MoveXbrRR]	-> [self assert: (operands at: 0) ~= ESP.
+							^(operands at: 1) = EBP
 											ifTrue: [5]
 											ifFalse: [4]].
-		[MoveRXbrR]	->	[self assert: (self concreteRegister: (operands at: 1)) ~= ESP.
-							^((self concreteRegister: (operands at: 2)) = EBP
+		[MoveRXbrR]	->	[self assert: (operands at: 1) ~= ESP.
+							^((operands at: 2) = EBP
 											ifTrue: [4]
 											ifFalse: [3])
-										+ ((self concreteRegister: (operands at: 0)) >= 4
+										+ ((operands at: 0) >= 4
 											ifTrue: [2]
 											ifFalse: [0])].
-		[MoveXwrRR]	-> [self assert: (self concreteRegister: (operands at: 0)) ~= ESP.
-							^(self concreteRegister: (operands at: 1)) = EBP
+		[MoveXwrRR]	-> [self assert: (operands at: 0) ~= ESP.
+							^(operands at: 1) = EBP
 											ifTrue: [4]
 											ifFalse: [3]].
-		[MoveRXwrR]	-> [self assert: (self concreteRegister: (operands at: 1)) ~= ESP.
-							^(self concreteRegister: (operands at: 2)) = EBP
+		[MoveRXwrR]	-> [self assert: (operands at: 1) ~= ESP.
+							^(operands at: 2) = EBP
 											ifTrue: [4]
 											ifFalse: [3]].
 		[PopR]			-> [^1].
@@ -465,7 +445,7 @@ CogIA32Compiler >> computeShiftRRSize [
 	 register require the shift count to be  in %ecx.  So we may
 	 have to use swap instructions to get the count into ecx."
 	| shiftCountReg |
-	shiftCountReg := self concreteRegister: (operands at: 0).
+	shiftCountReg := operands at: 0.
 	shiftCountReg = ECX ifTrue:
 		[^maxSize := 2].
 	^maxSize := shiftCountReg = EAX
@@ -479,7 +459,7 @@ CogIA32Compiler >> concretizeAddCqR [
 	<inline: true>
 	| value reg |
 	value := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	(self isQuick: value) ifTrue:
 		[machineCode
 			at: 0 put: 16r83;
@@ -510,7 +490,7 @@ CogIA32Compiler >> concretizeAddCwR [
 	<inline: true>
 	| value reg |
 	value := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	reg = EAX ifTrue:
 		[machineCode
 			at: 0 put: 16r05;
@@ -544,7 +524,7 @@ CogIA32Compiler >> concretizeAndCqR [
 	<inline: true>
 	| mask reg |
 	mask := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	(self isQuick: mask) ifTrue:
 		[machineCode
 			at: 0 put: 16r83;
@@ -575,7 +555,7 @@ CogIA32Compiler >> concretizeAndCwR [
 	<inline: true>
 	| value reg |
 	value := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	reg = EAX ifTrue:
 		[machineCode
 			at: 0 put: 16r25;
@@ -599,7 +579,7 @@ CogIA32Compiler >> concretizeArithmeticShiftRightCqR [
 	<inline: true>
 	| shiftCount reg |
 	shiftCount := (operands at: 0) min: 31.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	shiftCount = 1 ifTrue:
 		[machineCode
 			at: 0 put: 16rD1;
@@ -620,8 +600,8 @@ CogIA32Compiler >> concretizeArithmeticShiftRightRR [
 	 have to use swap instructions to get the count into %ecx."
 	<inline: true>
 	| shiftCountReg destReg regToShift |
-	shiftCountReg := self concreteRegister: (operands at: 0).
-	destReg := self concreteRegister: (operands at: 1).
+	shiftCountReg := operands at: 0.
+	destReg := operands at: 1.
 	shiftCountReg = ECX ifTrue:
 		[machineCode
 			at: 0 put: 16rD3;
@@ -662,7 +642,7 @@ CogIA32Compiler >> concretizeCMPXCHGAwR [
 	<inline: true>
 	| addressOperand reg |
 	addressOperand := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	machineCode
 		at: 0 put: 16r0F;
 		at: 1 put: 16rB1;
@@ -679,8 +659,8 @@ CogIA32Compiler >> concretizeCMPXCHGMwrR [
 	<inline: true>
 	| srcReg offset destReg |
 	offset := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
 	srcReg ~= ESP ifTrue:
 		[(self isQuick: offset) ifTrue:
 			[machineCode
@@ -750,7 +730,7 @@ CogIA32Compiler >> concretizeCmpCqR [
 	<inline: true>
 	| value reg |
 	value := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	(self isQuick: value) ifTrue:
 		[machineCode
 			at: 0 put: 16r83;
@@ -781,7 +761,7 @@ CogIA32Compiler >> concretizeCmpCwR [
 	<inline: true>
 	| value reg |
 	value := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	reg = EAX ifTrue:
 		[machineCode
 			at: 0 put: 16r3D;
@@ -807,8 +787,8 @@ CogIA32Compiler >> concretizeCmpRdRd [
 	<inline: true>
 	| regLHS regRHS |
 	"CmpRR RHS LHS computes LHS - RHS, i.e. apparently reversed.  You have to think subtract."
-	regRHS := self concreteDPFPRegister: (operands at: 0).
-	regLHS := self concreteDPFPRegister: (operands at: 1).
+	regRHS := operands at: 0.
+	regLHS := operands at: 1.
 	machineCode
 		at: 0 put: 16r66;
 		at: 1 put: 16r0F;
@@ -862,8 +842,8 @@ CogIA32Compiler >> concretizeConvertRRd [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| srcReg destReg |
-	srcReg := self concreteRegister: (operands at:0).
-	destReg := self concreteDPFPRegister: (operands at: 1).
+	srcReg := operands at:0.
+	destReg := operands at: 1.
 	machineCode
 		at: 0 put: 16rF2;
 		at: 1 put: 16r0F;
@@ -900,7 +880,7 @@ CogIA32Compiler >> concretizeIDIVR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| regDivisor |
-	regDivisor := self concreteRegister: (operands at: 0).
+	regDivisor := operands at: 0.
 	machineCode
 		at: 0 put: 16rF7;
 		at: 1 put: (self mod: ModReg RM: regDivisor RO: 7).
@@ -968,7 +948,7 @@ CogIA32Compiler >> concretizeJumpLong [
 CogIA32Compiler >> concretizeJumpR [
 	<inline: true>
 	| reg |
-	reg := self concreteRegister: (operands at: 0).
+	reg := operands at: 0.
 	machineCode
 		at: 0 put: 16rFF;
 		at: 1 put: (self mod: ModReg RM: reg RO: 4).
@@ -988,8 +968,8 @@ CogIA32Compiler >> concretizeLoadEffectiveAddressMwrR [
 	<inline: true>
 	| srcReg offset destReg |
 	offset := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
 	srcReg ~= ESP ifTrue:
 		[(self isQuick: offset) ifTrue:
 			[machineCode
@@ -1030,7 +1010,7 @@ CogIA32Compiler >> concretizeLogicalShiftLeftCqR [
 	<inline: true>
 	| distance reg |
 	distance := (operands at: 0) min: 31.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	distance = 1 ifTrue:
 		[machineCode
 			at: 0 put: 16rD1;
@@ -1050,8 +1030,8 @@ CogIA32Compiler >> concretizeLogicalShiftLeftRR [
 	 register require the shift count to be  in %ecx.  So we may
 	 have to use swap instructions to get the count into %ecx."
 	| shiftCountReg destReg regToShift |
-	shiftCountReg := self concreteRegister: (operands at: 0).
-	destReg := self concreteRegister: (operands at: 1).
+	shiftCountReg := operands at: 0.
+	destReg := operands at: 1.
 	shiftCountReg = ECX ifTrue:
 		[machineCode
 			at: 0 put: 16rD3;
@@ -1085,7 +1065,7 @@ CogIA32Compiler >> concretizeLogicalShiftRightCqR [
 	<inline: true>
 	| distance reg |
 	distance := (operands at: 0) min: 31.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	distance = 1 ifTrue:
 		[machineCode
 			at: 0 put: 16rD1;
@@ -1107,7 +1087,7 @@ CogIA32Compiler >> concretizeMoveAbR [
 	addressOperand := operands at: 0.
 	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
 		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	machineCode
 		at: 0 put: 16r0F;
 		at: 1 put: 16rB6;
@@ -1127,7 +1107,7 @@ CogIA32Compiler >> concretizeMoveAwR [
 	addressOperand := operands at: 0.
 	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
 		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	reg = EAX ifTrue:
 		[machineCode
 			at: 0 put: 16rA1;
@@ -1155,7 +1135,7 @@ CogIA32Compiler >> concretizeMoveCqR [
 	| reg |
 	(operands at: 0) ~= 0 ifTrue:
 		[^self concretizeMoveCwR].
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	machineCode
 		at: 0 put: 16r31;
 		at: 1 put: (self mod: ModReg RM: reg RO: reg).
@@ -1169,7 +1149,7 @@ CogIA32Compiler >> concretizeMoveCwR [
 	| value |
 	value := operands at: 0.
 	machineCode
-		at: 0 put: 16rB8 + (self concreteRegister: (operands at: 1));
+		at: 0 put: 16rB8 + (operands at: 1);
 		at: 1 put: (value bitAnd: 16rFF);
 		at: 2 put: (value >> 8 bitAnd: 16rFF);
 		at: 3 put: (value >> 16 bitAnd: 16rFF);
@@ -1183,8 +1163,8 @@ CogIA32Compiler >> concretizeMoveM16rR [
 	<inline: true>
 	| srcReg offset destReg |
 	offset := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
 	srcReg ~= ESP ifTrue:
 		[(self isQuick: offset) ifTrue:
 			[machineCode
@@ -1229,8 +1209,8 @@ CogIA32Compiler >> concretizeMoveM64rRd [
 	<inline: true>
 	| srcReg offset destReg |
 	offset := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteDPFPRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
 	srcReg ~= ESP ifTrue:
 		[(self isQuick: offset) ifTrue:
 			[machineCode
@@ -1280,8 +1260,8 @@ CogIA32Compiler >> concretizeMoveMbrR [
 	<inline: true>
 	| srcReg offset destReg |
 	offset := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
 	srcReg ~= ESP ifTrue:
 		[(self isQuick: offset) ifTrue:
 			[machineCode
@@ -1326,8 +1306,8 @@ CogIA32Compiler >> concretizeMoveMwrR [
 	<inline: true>
 	| srcReg offset destReg |
 	offset := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
 	srcReg ~= ESP ifTrue:
 		[(offset = 0 and: [srcReg ~= EBP]) ifTrue:
 			[machineCode
@@ -1378,7 +1358,7 @@ CogIA32Compiler >> concretizeMoveRAb [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| addressOperand reg |
-	reg := self concreteRegister: (operands at: 0).
+	reg := operands at: 0.
 	addressOperand := operands at: 1.
 	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
 		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
@@ -1405,7 +1385,7 @@ CogIA32Compiler >> concretizeMoveRAw [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| addressOperand reg |
-	reg := self concreteRegister: (operands at: 0).
+	reg := operands at: 0.
 	addressOperand := operands at: 1.
 	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
 		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
@@ -1433,8 +1413,8 @@ CogIA32Compiler >> concretizeMoveRMbr [
 	<inline: true>
 	| srcReg offset destReg |
 	offset := operands at: 1.
-	srcReg := self concreteRegister: (operands at: 0).
-	destReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 0.
+	destReg := operands at: 2.
 	srcReg >= 4 ifTrue: [self error: 'invalid register'].
 	destReg ~= ESP ifTrue:
 		[(self isQuick: offset) ifTrue:
@@ -1467,9 +1447,9 @@ CogIA32Compiler >> concretizeMoveRMwr [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| srcReg offset destReg |
-	srcReg := self concreteRegister: (operands at: 0).
+	srcReg := operands at: 0.
 	offset := operands at: 1.
-	destReg := self concreteRegister: (operands at: 2).
+	destReg := operands at: 2.
 	destReg ~= ESP ifTrue:
 		[(offset = 0 and: [destReg ~= EBP]) ifTrue:
 			[machineCode
@@ -1520,9 +1500,9 @@ CogIA32Compiler >> concretizeMoveRXbrR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| src index base swapreg mcIdx |
-	src := self concreteRegister: (operands at: 0).
-	index := self concreteRegister: (operands at: 1).
-	base := self concreteRegister: (operands at: 2).
+	src := operands at: 0.
+	index := operands at: 1.
+	base := operands at: 2.
 	mcIdx := 0.
 	swapreg := NoReg.
 	src >= 4 ifTrue: "x86 allows movb %rl, mem only with %al, %bl, %cl, %dl, so swap with the first one that isn't used."
@@ -1555,9 +1535,9 @@ CogIA32Compiler >> concretizeMoveRXwrR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| index base src |
-	src := self concreteRegister: (operands at: 0).
-	index := self concreteRegister: (operands at: 1).
-	base := self concreteRegister: (operands at: 2).
+	src := operands at: 0.
+	index := operands at: 1.
+	base := operands at: 2.
 	base ~= EBP ifTrue:
 		[machineCode
 			at: 0 put: 16r89;
@@ -1577,9 +1557,9 @@ CogIA32Compiler >> concretizeMoveRdM64r [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| srcReg offset destReg |
-	srcReg := self concreteDPFPRegister: (operands at: 0).
+	srcReg := operands at: 0.
 	offset := operands at: 1.
-	destReg := self concreteRegister: (operands at: 2).
+	destReg := operands at: 2.
 	destReg ~= ESP ifTrue:
 		[(self isQuick: offset) ifTrue:
 			[machineCode
@@ -1628,9 +1608,9 @@ CogIA32Compiler >> concretizeMoveXbrRR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| index base dest |
-	index := self concreteRegister: (operands at: 0).
-	base := self concreteRegister: (operands at: 1).
-	dest := self concreteRegister: (operands at: 2).
+	index := operands at: 0.
+	base := operands at: 1.
+	dest := operands at: 2.
 	base ~= EBP ifTrue:
 		[machineCode
 			at: 0 put: 16r0F;
@@ -1652,9 +1632,9 @@ CogIA32Compiler >> concretizeMoveXwrRR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| index base dest |
-	index := self concreteRegister: (operands at: 0).
-	base := self concreteRegister: (operands at: 1).
-	dest := self concreteRegister: (operands at: 2).
+	index := operands at: 0.
+	base := operands at: 1.
+	dest := operands at: 2.
 	base ~= EBP ifTrue:
 		[machineCode
 			at: 0 put: 16r8B;
@@ -1674,8 +1654,8 @@ CogIA32Compiler >> concretizeMulRR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| reg1 reg2 |
-	reg1 := self concreteRegister: (operands at: 0).
-	reg2 := self concreteRegister: (operands at: 1).
+	reg1 := operands at: 0.
+	reg2 := operands at: 1.
 	machineCode
 		at: 0 put: 16r0F;
 		at: 1 put: 16rAF;
@@ -1688,7 +1668,7 @@ CogIA32Compiler >> concretizeNegateR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| reg |
-	reg := self concreteRegister: (operands at: 0).
+	reg := operands at: 0.
 	machineCode
 		at: 0 put: 16rF7;
 		at: 1 put: (self mod: ModReg RM: reg RO: 3).
@@ -1705,8 +1685,8 @@ CogIA32Compiler >> concretizeNop [
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeOpRR: x86opcode [
 	| regLHS regRHS |
-	regLHS := self concreteRegister: (operands at: 0).
-	regRHS := self concreteRegister: (operands at: 1).
+	regLHS := operands at: 0.
+	regRHS := operands at: 1.
 	machineCode
 		at: 0 put: x86opcode;
 		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
@@ -1719,7 +1699,7 @@ CogIA32Compiler >> concretizeOrCqR [
 	<inline: true>
 	| mask reg |
 	mask := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	(self isQuick: mask) ifTrue:
 		[machineCode
 			at: 0 put: 16r83;
@@ -1750,7 +1730,7 @@ CogIA32Compiler >> concretizeOrCwR [
 	<inline: true>
 	| value reg |
 	value := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	reg = EAX ifTrue:
 		[machineCode
 			at: 0 put: 16r0D;
@@ -1772,7 +1752,7 @@ CogIA32Compiler >> concretizeOrCwR [
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizePopR [
 	<inline: true>
-	machineCode at: 0 put: 16r58 + (self concreteRegister: (operands at: 0)).
+	machineCode at: 0 put: 16r58 + (operands at: 0).
 	^machineCodeSize := 1
 ]
 
@@ -1831,7 +1811,7 @@ CogIA32Compiler >> concretizePushCw [
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizePushR [
 	<inline: true>
-	machineCode at: 0 put: 16r50 + (self concreteRegister: (operands at: 0)).
+	machineCode at: 0 put: 16r50 + (operands at: 0).
 	^machineCodeSize := 1
 ]
 
@@ -1854,8 +1834,8 @@ CogIA32Compiler >> concretizeRetN [
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeReverseOpRR: x86opcode [
 	| regLHS regRHS |
-	regRHS := self concreteRegister: (operands at: 0).
-	regLHS := self concreteRegister: (operands at: 1).
+	regRHS := operands at: 0.
+	regLHS := operands at: 1.
 	machineCode
 		at: 0 put: x86opcode;
 		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
@@ -1867,8 +1847,8 @@ CogIA32Compiler >> concretizeSEE2OpRdRd: opCode [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| regLHS regRHS |
-	regRHS := self concreteDPFPRegister: (operands at: 0).
-	regLHS := self concreteDPFPRegister: (operands at: 1).
+	regRHS := operands at: 0.
+	regLHS := operands at: 1.
 	machineCode
 		at: 0 put: 16rF2;
 		at: 1 put: 16r0F;
@@ -1882,7 +1862,7 @@ CogIA32Compiler >> concretizeSqrtRd [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| reg |
-	reg := self concreteDPFPRegister: (operands at: 0).
+	reg := operands at: 0.
 	machineCode
 		at: 0 put: 16rF2;
 		at: 1 put: 16r0F;
@@ -1904,7 +1884,7 @@ CogIA32Compiler >> concretizeSubCqR [
 	<inline: true>
 	| value reg |
 	value := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	(self isQuick: value) ifTrue:
 		[machineCode
 			at: 0 put: 16r83;
@@ -1935,7 +1915,7 @@ CogIA32Compiler >> concretizeSubCwR [
 	<inline: true>
 	| value reg |
 	value := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	reg = EAX ifTrue:
 		[machineCode
 			at: 0 put: 16r2D;
@@ -1960,7 +1940,7 @@ CogIA32Compiler >> concretizeTstCqR [
 	<inline: true>
 	| mask reg |
 	mask := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	((self isQuick: mask) and: [reg < 4]) ifTrue:
 		[machineCode
 			at: 0 put: 16rF6;
@@ -1990,7 +1970,7 @@ CogIA32Compiler >> concretizeXCHGAwR [
 	<inline: true>
 	| addressOperand reg |
 	addressOperand := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	machineCode
 		at: 0 put: 16r87;
 		at: 1 put: (self mod: ModRegInd RM: 5 RO: reg);
@@ -2006,8 +1986,8 @@ CogIA32Compiler >> concretizeXCHGMwrR [
 	<inline: true>
 	| srcReg offset destReg |
 	offset := operands at: 0.
-	srcReg := self concreteRegister: (operands at: 1).
-	destReg := self concreteRegister: (operands at: 2).
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
 	srcReg ~= ESP ifTrue:
 		[(self isQuick: offset) ifTrue:
 			[machineCode
@@ -2046,8 +2026,8 @@ CogIA32Compiler >> concretizeXCHGMwrR [
 CogIA32Compiler >> concretizeXCHGRR [
 	<inline: true>
 	| reg1 reg2 |
-	reg1 := self concreteRegister: (operands at: 0).
-	reg2 := self concreteRegister: (operands at: 1).
+	reg1 := operands at: 0.
+	reg2 := operands at: 1.
 	reg2 = EAX ifTrue:
 		[reg2 := reg1.
 		 reg1 := EAX].
@@ -2066,7 +2046,7 @@ CogIA32Compiler >> concretizeXorCwR [
 	<inline: true>
 	| value reg |
 	value := operands at: 0.
-	reg := self concreteRegister: (operands at: 1).
+	reg := operands at: 1.
 	reg = EAX ifTrue:
 		[machineCode
 			at: 0 put: 16r35;
@@ -2232,10 +2212,10 @@ CogIA32Compiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstr
 	| rDividend rDivisor rQuotient rRemainder saveRestoreEAX saveRestoreEDX saveRestoreExchanged |
 	self assert: abstractRegDividend ~= abstractRegDivisor.
 	self assert: abstractRegQuotient ~= abstractRegRemainder.
-	rDividend := self concreteRegister: abstractRegDividend.
-	rDivisor := self concreteRegister: abstractRegDivisor.
-	rQuotient := self concreteRegister: abstractRegQuotient.
-	rRemainder := self concreteRegister: abstractRegRemainder.
+	rDividend := abstractRegDividend.
+	rDivisor := abstractRegDivisor.
+	rQuotient := abstractRegQuotient.
+	rRemainder := abstractRegRemainder.
 	"IDIV r does a signed divide of EDX:EAX by r, EAX := Quotient, EDX := Remainder.
 	 Since we must sign extend the dividend into EDX we must substitute another register if EDX is an input"
 	(rDividend = EDX or: [rDivisor = EDX]) ifTrue:
@@ -2492,14 +2472,12 @@ CogIA32Compiler >> genRestoreRegs [
 ]
 
 { #category : #abi }
-CogIA32Compiler >> genRestoreRegsExcept: abstractReg [
-	| realReg |
-	realReg := self concreteRegister: abstractReg.
+CogIA32Compiler >> genRestoreRegsExcept: preservedReg [
 	self assert: (EDI > EAX and: [EDI - EAX + 1 = 6]).
 	EAX to: EDI do:
 		[:reg|
 		(reg between: ESP and: EBP) ifFalse:
-			[realReg = reg
+			[preservedReg = reg
 				ifTrue: [cogit AddCq: 4 R: ESP]
 				ifFalse: [cogit PopR: reg]]].
 	^0

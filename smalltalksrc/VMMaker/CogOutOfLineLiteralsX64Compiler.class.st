@@ -44,8 +44,8 @@ CogOutOfLineLiteralsX64Compiler class >> initializeAbstractRegisters [
 ]
 
 { #category : #testing }
-CogOutOfLineLiteralsX64Compiler class >> isConcreteRISCTempRegister: concreteRegister [
-	"For tests to filter-out bogus values left in the ConcreteRISCTempRegister, if any."
+CogOutOfLineLiteralsX64Compiler class >> isRISCTempRegister: reg [
+	"For tests to filter-out bogus values left in the RISCTempRegister, if any."
 	^false
 ]
 

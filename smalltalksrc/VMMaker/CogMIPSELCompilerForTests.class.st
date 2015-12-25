@@ -19,10 +19,10 @@ CogMIPSELCompilerForTests class >> dataRegistersWithAccessorsDo: aTrinaryBlock [
 ]
 
 { #category : #'as yet unclassified' }
-CogMIPSELCompilerForTests class >> isConcreteRISCTempRegister: concreteRegister [
-	"For tests to filter-out bogus values left in the ConcreteRISCTempRegister, if any."
-	^concreteRegister = AT
-		or: [concreteRegister = Cmp
-		or: [concreteRegister = Overflow
-		or: [concreteRegister = BranchTemp]]]
+CogMIPSELCompilerForTests class >> isRISCTempRegister: reg [
+	"For tests to filter-out bogus values left in the RISCTempRegister, if any."
+	^reg = AT
+		or: [reg = Cmp
+		or: [reg = Overflow
+		or: [reg = BranchTemp]]]
 ]
