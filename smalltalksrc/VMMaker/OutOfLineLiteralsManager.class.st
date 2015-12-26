@@ -21,6 +21,7 @@ Class {
 		'savedLastDumpedLiteralIndex'
 	],
 	#pools : [
+		'CogAbstractRegisters',
 		'CogCompilationConstants',
 		'CogRTLOpcodes'
 	],

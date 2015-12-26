@@ -12,6 +12,7 @@ Class {
 		'ceStoreCheckTrampoline'
 	],
 	#pools : [
+		'CogAbstractRegisters',
 		'CogCompilationConstants',
 		'CogMethodConstants',
 		'CogRTLOpcodes',
