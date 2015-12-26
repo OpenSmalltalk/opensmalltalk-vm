@@ -297,6 +297,7 @@ Class {
 		'ProcessorClass'
 	],
 	#pools : [
+		'CogAbstractRegisters',
 		'CogCompilationConstants',
 		'CogMethodConstants',
 		'CogRTLOpcodes',
@@ -450,10 +451,11 @@ Cogit class >> cog: aCompiledMethod selector: aSelector [
 { #category : #'in-image compilation' }
 Cogit class >> cog: aCompiledMethod selector: aSelector options: optionsDictionaryOrArray [
 	"StackToRegisterMappingCogit cog: (Integer >> #benchFib) selector: #benchFib options: #(COGMTVM false)"
-	| coInterpreter cogit |
-	self initializeWithOptions: (self asOptionsDictionary: optionsDictionaryOrArray).
-	CoInterpreter initializeWithOptions: initializationOptions.
-	CoInterpreter objectMemoryClass initializeWithOptions: initializationOptions.
+	| initOptions coInterpreter cogit |
+	initOptions := self asOptionsDictionary: optionsDictionaryOrArray.
+	CoInterpreter initializeWithOptions: initOptions.
+	CoInterpreter objectMemoryClass initializeWithOptions: initOptions.
+	self initializeWithOptions: initOptions.
 	coInterpreter := CurrentImageCoInterpreterFacade forCogit: (cogit := self new).
 	[cogit
 		setInterpreter: coInterpreter;

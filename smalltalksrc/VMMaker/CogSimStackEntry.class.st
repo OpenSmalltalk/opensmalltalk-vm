@@ -13,6 +13,7 @@ Class {
 		'bcptr'
 	],
 	#pools : [
+		'CogAbstractRegisters',
 		'CogCompilationConstants',
 		'CogRTLOpcodes'
 	],

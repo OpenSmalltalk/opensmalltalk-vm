@@ -1,5 +1,5 @@
 "
-I am a pool for the Register-Transfer-Language to which Cog compiles.  I define unique integer values for all RTL opcodes and abstract registers.  See CogAbstractInstruction for instances of instructions with the opcodes that I define.
+I am a pool for the Register-Transfer-Language to which Cog compiles.  I define unique integer values for all RTL opcodes.  See CogAbstractInstruction for instances of instructions with the opcodes that I define.
 "
 Class {
 	#name : #CogRTLOpcodes,
@@ -14,29 +14,17 @@ Class {
 		'AndCqRR',
 		'AndCwR',
 		'AndRR',
-		'Arg0Reg',
-		'Arg1Reg',
 		'ArithmeticShiftRightCqR',
 		'ArithmeticShiftRightRR',
 		'Call',
 		'CallFull',
-		'ClassReg',
 		'CmpC32R',
 		'CmpCqR',
 		'CmpCwR',
 		'CmpRR',
 		'CmpRdRd',
 		'ConvertRRd',
-		'DPFPReg0',
-		'DPFPReg1',
-		'DPFPReg2',
-		'DPFPReg3',
-		'DPFPReg4',
-		'DPFPReg5',
-		'DPFPReg6',
-		'DPFPReg7',
 		'DivRdRd',
-		'FPReg',
 		'Fill32',
 		'FirstJump',
 		'FirstShortJump',
@@ -73,7 +61,6 @@ Class {
 		'Label',
 		'LastJump',
 		'LastRTLCode',
-		'LinkReg',
 		'Literal',
 		'LoadEffectiveAddressMwrR',
 		'LoadEffectiveAddressXowrR',
@@ -115,41 +102,25 @@ Class {
 		'MoveXwrRR',
 		'MulRdRd',
 		'NegateR',
-		'NoReg',
 		'Nop',
 		'OrCqR',
 		'OrCwR',
 		'OrRR',
-		'PCReg',
 		'PopR',
 		'PrefetchAw',
 		'PushCq',
 		'PushCw',
 		'PushR',
-		'RISCTempReg',
-		'ReceiverResultReg',
 		'RetN',
 		'RotateLeftCqR',
 		'RotateRightCqR',
-		'SPReg',
-		'Scratch0Reg',
-		'Scratch1Reg',
-		'Scratch2Reg',
-		'Scratch3Reg',
-		'Scratch4Reg',
-		'Scratch5Reg',
-		'Scratch6Reg',
-		'Scratch7Reg',
-		'SendNumArgsReg',
 		'SqrtRd',
 		'Stop',
 		'SubCqR',
 		'SubCwR',
 		'SubRR',
 		'SubRdRd',
-		'TempReg',
 		'TstCqR',
-		'VarBaseReg',
 		'XorCqR',
 		'XorCwR',
 		'XorRR'
@@ -182,11 +153,11 @@ CogRTLOpcodes class >> initialize [
 		M16r	- memory 16-bit halfword whose address is at a constant offset from an address in a register
 		M32r	- memory 32-bit halfword whose address is at a constant offset from an address in a register
 		M64r	- memory 64-bit doubleword whose address is at a constant offset from an address in a register
-		XbrR	- memory word whose address is r * byte size away from an address in a register
-		X16rR	- memory word whose address is r * (2 bytes size) away from an address in a register
-		X32rR	- memory word whose address is r * (4 bytes size) away from an address in a register
-		XwrR	- memory word whose address is r * word size away from an address in a register
-		XowrR	- memory word whose address is (r * word size) + o away from an address in a register (scaled indexed)
+		Xbr		- memory word whose address is r * byte size away from an address in a register
+		X16r	- memory word whose address is r * (2 bytes size) away from an address in a register
+		X32r	- memory word whose address is r * (4 bytes size) away from an address in a register
+		Xwr		- memory word whose address is r * word size away from an address in a register
+		Xowr	- memory word whose address is o + (r * word size) away from an address in a register (scaled indexed)
 
 	An alternative would be to decouple opcodes from operands, e.g.
 		Move := 1. Add := 2. Sub := 3...
@@ -221,50 +192,6 @@ CogRTLOpcodes class >> initialize [
 	16-bit (and on 64-bits, 32-bit) reads.  These /are/ expected to always zero-extend."
 
 	| opcodeNames refs |
-	"A small fixed set of abstract register names are defined and used in code
-	 generation for Smalltalk code, which executes on stack pages in the stack zone."
-
-	"NoReg encodes no register."
-	NoReg := -1.
-
-	"The core set of abstract registers that define the Cogits model of Smalltalk code.
-	 These are given concrete values by the currently in-use back end; see implementors
-	 of initializeAbstractRegisters."
-	FPReg				:= #undefined.	"A frame pointer is used for Smalltalk frames."
-	SPReg				:= #undefined.
-	ReceiverResultReg	:= #undefined.	"The receiver at point of send, and return value of a send"
-	TempReg			:= #undefined.
-	ClassReg			:= #undefined.	"The inline send cache class tag is in this register, loaded at the send site"
-	SendNumArgsReg	:= #undefined.	"Sends > 2 args set the arg count in this reg"
-	Arg0Reg			:= #undefined.	"In the StackToRegisterMappingCogit 1 & 2 arg sends marshall into these registers."
-	Arg1Reg			:= #undefined.
-
-	"A small fixed set of abstract scratch registers for register-rich machines (ARM can use 1, x64 can use 6 or 7)."
-	Scratch0Reg := #undefined.
-	Scratch1Reg := #undefined.
-	Scratch2Reg := #undefined.
-	Scratch3Reg := #undefined.
-	Scratch4Reg := #undefined.
-	Scratch5Reg := #undefined.
-	Scratch6Reg := #undefined.
-	Scratch7Reg := #undefined.
-
-	"RISC-specific registers"
-	LinkReg			:= #undefined.
-	RISCTempReg	:= #undefined.		"Used to synthesize CISC instructions from multiple RISC instructions."
-	PCReg			:= #undefined.		"If the processor has an assignable pc, e.g. ARM"
-	VarBaseReg	:= #undefined.		"If useful, points to base of interpreter variables."
-
-	"Floating-point registers"
-	DPFPReg0 := #undefined.
-	DPFPReg1 := #undefined.
-	DPFPReg2 := #undefined.
-	DPFPReg3 := #undefined.
-	DPFPReg4 := #undefined.
-	DPFPReg5 := #undefined.
-	DPFPReg6 := #undefined.
-	DPFPReg7 := #undefined.
-
 	opcodeNames := #("Noops & Pseudo Ops"
 						Label
 						Literal			"a word-sized literal"
@@ -374,23 +301,14 @@ CogRTLOpcodes class >> initialize [
 
 { #category : #'debug printing' }
 CogRTLOpcodes class >> nameForOpcode: opcode [ "<Integer>"
-	^opcode < LastRTLCode ifTrue:
-		[(classPool keyAtValue: opcode ifAbsent: []) ifNotNil:
-			[:opcodeName|
-			((opcodeName beginsWith: 'First')
-			 or: [opcodeName beginsWith: 'Last'])
-				ifTrue: [#(JumpFull JumpLong JumpBelowOrEqual Jump) detect: [:k| (classPool at: k) = opcode]]
-				ifFalse: [opcodeName]]]
-]
-
-{ #category : #'debug printing' }
-CogRTLOpcodes class >> nameForRegister: reg [ "<Integer>"
-	^#(Arg0Reg Arg1Reg ClassReg FPReg ReceiverResultReg SPReg SendNumArgsReg TempReg
-		DPFPReg0 DPFPReg1 DPFPReg2 DPFPReg3 DPFPReg4 DPFPReg5 DPFPReg6 DPFPReg7
-		LinkReg RISCTempReg VarBaseReg PCReg
-		Scratch0Reg Scratch1Reg Scratch2Reg Scratch3Reg Scratch4Reg Scratch5Reg)
-			detect: [:sym| (classPool at: sym) = reg]
-			ifNone: ['REG', reg printString, '?']
+	opcode < LastRTLCode ifTrue:
+		[classPool associations do:
+			[:assoc| | opcodeName |
+			 assoc value = opcode ifTrue:
+				[(((opcodeName := assoc key) beginsWith: 'First')
+				   or: [(opcodeName beginsWith: 'Last')]) ifFalse:
+					[^opcodeName]]]].
+	^nil
 ]
 
 { #category : #accessing }
@@ -411,34 +329,33 @@ CogRTLOpcodes class >> opcodes [
 
 { #category : #'debug printing' }
 CogRTLOpcodes class >> printFormatForOpcodeName: opcodeName [
-	"Answer a sequence of $r or nil for the operands in the opcode, used for printing."
-	| format operands size |
-	format := OrderedCollection new.
-	size := (operands := opcodeName) size.
-	(operands startsWith: 'Br') ifTrue: [^' rr'].
-	[#('XwrR' 'X16rR' 'XbrR' 'RR' 'RdR' 'RRd' 'RdRd') do:
-		[:regRegFmt|
-		(operands endsWith: regRegFmt) ifTrue:
-			[format addLast: $r; addLast: $r.
-			 operands := operands allButLast: regRegFmt size]].
-	  #('Mwr' 'M16r' 'Mbr' 'M64r') do:
-		[:constRegFmt|
-		(operands endsWith: constRegFmt) ifTrue:
-			[format addLast: $r; addLast: nil.
-			 operands := operands allButLast: constRegFmt size]].
-	  #('Cq' 'Cw' 'C32' 'C64' 'Aw' 'Ab') do:
-		[:constFmt|
-		(operands endsWith: constFmt) ifTrue:
-			[format addLast: nil.
-			 operands := operands allButLast: constFmt size]].
-	 #('R' 'Rd') do:
-		[:regFmt|
-		(operands endsWith: regFmt) ifTrue:
-			[format addLast: $r.
-			 operands := operands allButLast: regFmt size]].
-	 operands size < size]
-		whileTrue: [size := operands size].
-	^format reverse
+	"Answer a sequence of $r, $f or nil for the operands in the opcode, used for printing, where
+	 r => integer register, f => floating point register, and nil => numeric or address operand."
+	| printFormat operands |
+	printFormat := OrderedCollection new.
+	operands := opcodeName.
+	[(#(	('Ab' nil) ('Aw' nil)
+		('Cw' nil) ('Cq' nil) ('C32' nil)
+		(Fill32 nil)
+		(Label nil) (Literal nil)
+		('Mb' nil) ('Mw' nil) ('M16' nil) ('M32' nil) ('M64' nil)
+		('Nops' nil)
+		('R' $r) ('Rd' $f)
+		('Xbr' $r) ('Xwr' $r) ('X16r' $r) ('X32r' $r) ('X64r' $r) ('X' $r) ('ow' nil)
+		('Greater' exit) ('Xor' exit) ('r' $r))
+				detect: [:pair| operands endsWith: pair first]
+				ifNone: [])
+			ifNil: [false]
+			ifNotNil:
+				[:match|
+				match last ~~ #exit
+				and: [operands := operands allButLast: match first size.
+					 printFormat addFirst: match last.
+					 true]]]
+		whileTrue.
+	(printFormat isEmpty and: [(operands beginsWith: 'Jump') or: [operands beginsWith: 'Call']]) ifTrue:
+		[printFormat addFirst: nil].
+	^printFormat
 	
-	"classPool keys collect: [:k| { k. (self printFormatForOpcodeName: k) asArray}]"
+	"classPool keys sort collect: [:k| { k. (self printFormatForOpcodeName: k) asArray}]"
 ]
