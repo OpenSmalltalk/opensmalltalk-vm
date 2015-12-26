@@ -63,6 +63,7 @@ Class {
 		'NumOperands'
 	],
 	#pools : [
+		'CogAbstractRegisters',
 		'CogCompilationConstants',
 		'CogRTLOpcodes'
 	],
@@ -110,8 +111,10 @@ CogAbstractInstruction class >> initialize [
 
 { #category : #'class initialization' }
 CogAbstractInstruction class >> initializeAbstractRegisters [
-	"Assign the abstract registers with the identities/indices of the relevant concrete registers."
-	self subclassResponsibility
+	"Assign the abstract registers with the identities/indices of the relevant concrete registers.
+	 First set all abstract registers to #undefined via CogAbstractRegisters initialize, and then,
+	 each subclasses assigns the subset they choose with values of specific concrete registers."
+	CogAbstractRegisters initialize
 ]
 
 { #category : #'class initialization' }
@@ -211,6 +214,14 @@ CogAbstractInstruction class >> nameForOpcode: opcode [ "<Integer>"
 			[:opcodeName| opcodeName]
 		ifNil:
 			[self localNameForOpcode: opcode]
+]
+
+{ #category : #'debug printing' }
+CogAbstractInstruction class >> printFormatForOpcodeName: opcodeName [
+	"Answer a sequence of $r, $f or nil for the operands in the opcode, used for printing, where
+	 r => integer register, f => floating point register, and nil => numeric or address operand.
+	 Subclasses can override to provide a format string for their own private opcodes."
+	^#()
 ]
 
 { #category : #translation }
@@ -1098,10 +1109,17 @@ CogAbstractInstruction >> minAbstractGeneralPurposeReg [
 ]
 
 { #category : #printing }
+CogAbstractInstruction >> nameForFPRegister: reg [ "<Integer>"
+	"subclasses with special purpose registers may need to override."
+	<doNotGenerate>
+	^CogAbstractRegisters nameForFPRegister: reg
+]
+
+{ #category : #printing }
 CogAbstractInstruction >> nameForRegister: reg [ "<Integer>"
 	"subclasses with special purpose registers may need to override."
 	<doNotGenerate>
-	^CogRTLOpcodes nameForRegister: reg
+	^CogAbstractRegisters nameForRegister: reg
 ]
 
 { #category : #'abstract instructions' }
@@ -1216,17 +1234,19 @@ CogAbstractInstruction >> printStateOn: aStream [
 	orneryOperands := operands isCObjectAccessor
 							ifTrue: [operands object]
 							ifFalse: [operands].
-	format := [CogRTLOpcodes printFormatForOpcodeName: opcodeName]
-				on: Error
-				do: [:ex| ].
+	format := ((CogRTLOpcodes classPool includesKey: opcodeName)
+				ifTrue: [CogRTLOpcodes]
+				ifFalse: [self class]) printFormatForOpcodeName: opcodeName.
 	orneryOperands withIndexDo:
 		[:operand :index|
 		operand ifNotNil:
 			[aStream space.
 			 index >= (orneryOperands identityIndexOf: nil ifAbsent: [orneryOperands size + 1]) ifTrue:
 				[aStream print: index - 1; nextPut: $:].
-			 (format notNil and: [(format at: index ifAbsent: nil) = $r])
-				ifTrue: [aStream nextPutAll: (self nameForRegister: operand)]
+			 (format notNil and: ['rf' includes: (format at: index ifAbsent: $-)])
+				ifTrue: [aStream nextPutAll: ((format at: index) = $r
+												ifTrue: [self nameForRegister: operand]
+												ifFalse: [self nameForFPRegister: operand])]
 				ifFalse:
 					[aStream print: operand.
 					 (operand isInteger and: [operand > 16 and: [opcode ~= Label]]) ifTrue:

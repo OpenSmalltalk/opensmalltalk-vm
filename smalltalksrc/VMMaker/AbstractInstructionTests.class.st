@@ -6,6 +6,7 @@ Class {
 		'opcodes'
 	],
 	#pools : [
+		'CogAbstractRegisters',
 		'CogRTLOpcodes'
 	],
 	#category : #'VMMaker-Tests'
