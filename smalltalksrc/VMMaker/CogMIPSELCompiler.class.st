@@ -111,6 +111,8 @@ CogMIPSELCompiler class >> initializeAbstractRegisters [
 	"Note we can fit all of the abstract registers in C preserved registers, and
 	 not need to save or restore them at runtime calls."
 	
+	super initializeAbstractRegisters.
+
 	ReceiverResultReg		:= S0.
 	Arg0Reg				:= S1.
 	Arg1Reg				:= S2.
@@ -128,6 +130,14 @@ CogMIPSELCompiler class >> initializeAbstractRegisters [
 CogMIPSELCompiler class >> machineCodeDeclaration [
 	"Answer the declaration for the machineCode array."
 	^{#'unsigned long'. '[', self basicNew machineCodeWords printString, ']'}
+]
+
+{ #category : #'debug printing' }
+CogMIPSELCompiler class >> printFormatForOpcodeName: opcodeName [
+	"Answer a sequence of $r, $f or nil for the operands in the opcode, used for printing, where
+	 r => integer register, f => floating point register, and nil => numeric or address operand.
+	 Subclasses can override to provide a format string for their own private opcodes."
+	^(opcodeName startsWith: 'Br') ifTrue: [' rr'] ifFalse: [#()]
 ]
 
 { #category : #translation }

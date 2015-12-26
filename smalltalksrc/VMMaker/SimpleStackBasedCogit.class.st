@@ -947,14 +947,6 @@ SimpleStackBasedCogit >> compileBlockFramelessEntry: blockStart [
 ]
 
 { #category : #'primitive generators' }
-SimpleStackBasedCogit >> compileFallbackToInterpreterPrimitive [
-	<inline: false>
-	^self compileInterpreterPrimitive: (coInterpreter
-											functionPointerForCompiledMethod: methodObj
-											primitiveIndex: primitiveIndex)
-]
-
-{ #category : #'primitive generators' }
 SimpleStackBasedCogit >> compileFallbackToInterpreterPrimitive: code [
 	<inline: false>
 	(code < 0 and: [code ~= UnimplementedPrimitive]) ifTrue: "Generator failed, so no point continuing..."

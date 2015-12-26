@@ -223,6 +223,8 @@ CogARMCompiler class >> initializeAbstractRegisters [
 	 saving and restoring their values, so they are omitted so far. R12 is the only
 	 scratch register at the moment.."
 
+	super initializeAbstractRegisters.
+
 	TempReg			:= R0.
 	ClassReg			:= R8.
 	ReceiverResultReg	:= R7.
@@ -2850,6 +2852,14 @@ CogARMCompiler >> mvn: destReg imm: immediate8bitValue ror: rot [
 	"Remember the ROR is doubled by the cpu so use 30>>1 etc.
 	MVN destReg, #immediate8BitValue ROR rot"
 	^self type: 1 op: MoveNotOpcode set: 0 rn: 0 rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate8bitValue)
+]
+
+{ #category : #printing }
+CogARMCompiler >> nameForFPRegister: reg [ "<Integer>"
+	<doNotGenerate>
+	(reg between: 0 and: 7) ifTrue:
+		[^#(D0 D1 D2 D3 D4 D5 D6 D7) at: reg + 1].
+	^super nameForFPRegister: reg
 ]
 
 { #category : #printing }
