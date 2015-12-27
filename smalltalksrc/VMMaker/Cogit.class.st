@@ -6465,7 +6465,7 @@ Cogit >> generateInstructionsAt: eventualAbsoluteAddress [
 	pcDependentIndex := 0.
 	0 to: opcodeIndex - 1 do:
 		[:i|
-		self maybeBreakAt: absoluteAddress.
+		self cCode: [] inSmalltalk: [self maybeBreakAt: absoluteAddress].
 		abstractInstruction := self abstractInstructionAt: i.
 		abstractInstruction isPCDependent
 			ifTrue:
@@ -6480,7 +6480,7 @@ Cogit >> generateInstructionsAt: eventualAbsoluteAddress [
 		[:j|
 		fixup := self fixupAt: j.
 		abstractInstruction := self abstractInstructionAt: fixup instructionIndex.
-		self maybeBreakAt: abstractInstruction address.
+		self cCode: [] inSmalltalk: [self maybeBreakAt: abstractInstruction address].
 		abstractInstruction concretizeAt: abstractInstruction address].
 	^absoluteAddress - eventualAbsoluteAddress
 ]
@@ -8350,6 +8350,7 @@ Cogit >> maybeAllocAndInitIRCs [
 
 { #category : #'simulation only' }
 Cogit >> maybeBreakAt: address [
+	<doNotGenerate>
 	((breakPC isBreakpointFor: address)
 	 and: [breakBlock shouldStopIfAtPC: address]) ifTrue:
 		[coInterpreter changed: #byteCountText.
