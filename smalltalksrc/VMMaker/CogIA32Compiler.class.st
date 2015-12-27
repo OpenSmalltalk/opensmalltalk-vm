@@ -448,11 +448,12 @@ CogIA32Compiler >> computeShiftRRSize [
 	 have to use swap instructions to get the count into ecx."
 	| shiftCountReg |
 	shiftCountReg := operands at: 0.
-	shiftCountReg = ECX ifTrue:
-		[^maxSize := 2].
-	^maxSize := shiftCountReg = EAX
-					ifTrue: [1 "XCHG EAX,r2" + 2 "Sxx" + 1 "XCHG EAX,r2"]
-					ifFalse: [2 "XCHG r1,r2" + 2 "Sxx" + 2 "XCHG r1,r2"]
+	^shiftCountReg = ECX
+		ifTrue: [2]
+		ifFalse:
+			[shiftCountReg = EAX
+				ifTrue: [1 "XCHG EAX,r2" + 2 "Sxx" + 1 "XCHG EAX,r2"]
+				ifFalse: [2 "XCHG r1,r2" + 2 "Sxx" + 2 "XCHG r1,r2"]]
 ]
 
 { #category : #'generate machine code' }
