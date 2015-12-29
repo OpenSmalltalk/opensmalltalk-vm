@@ -5503,6 +5503,12 @@ ObjectMemory >> storePointer: fieldIndex ofObject: oop withValue: valuePointer [
 ]
 
 { #category : #'object access' }
+ObjectMemory >> storePointerImmutabilityCheck: index ofObject: rcvr withValue: top [
+	<inline: true>
+	^ self storePointer: index ofObject: rcvr withValue: top
+]
+
+{ #category : #'object access' }
 ObjectMemory >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
 	"Like storePointer:ofObject:withValue:, but the caller guarantees that the
 	 object being stored into is a young object or is already marked as a root."
