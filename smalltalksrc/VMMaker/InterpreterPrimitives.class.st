@@ -107,6 +107,59 @@ InterpreterPrimitives >> cStringOrNullFor: oop [
 	^cString
 ]
 
+{ #category : #'object access primitives' }
+InterpreterPrimitives >> canBeImmutable: oop [
+	<option: #IMMUTABILITY>
+	| scheduler processLists |
+	
+	self assert: (objectMemory isNonImmediate: oop).
+	
+	"For now we fail the primitive for contexts to we ensure there are no immutable contexts.
+	Later we can consider having immutable contexts and send cannotReturn callback
+	when returning to an immutable context. That would mean that setting a context 
+	to immutable would require a divorce and returns to immutable context are 
+	necessarily across stack pages"
+	(objectMemory isContext: oop) ifTrue: [ ^ false ].
+	
+	"I don't get it for semaphores so they can't be immutable"
+	(objectMemory isSemaphoreObj: oop) ifTrue: [^ false].
+	
+	"simple version of process management: we forbid Process and LinkedList instances to be immutable 
+	as well as the Processor and the array of activeProcess"
+	scheduler := self fetchPointer: ValueIndex ofObject: (self splObj: SchedulerAssociation).
+	processLists := objectMemory fetchPointer: ProcessListsIndex ofObject: scheduler.
+	oop = scheduler ifTrue: [ ^ false ].
+	oop = processLists ifTrue: [ ^ false ].
+	"Is it a linkedList ?"
+	(objectMemory classIndexOf: (processLists at: 1)) = (objectMemory classIndexOf: oop) ifTrue: [ ^ false ].
+	"is it a Process ?"
+	(objectMemory classIndexOf: (objectMemory fetchPointer: ActiveProcessIndex ofObject: scheduler)) =  (objectMemory classIndexOf: oop) ifTrue: [ ^ false ].
+	
+	"The rest of the code is relative to process management: the Processor (the active 
+	process scheduler) can't be immutable, as well as all the objects relative to Process management "
+	"scheduler := self fetchPointer: ValueIndex ofObject: (self splObj: SchedulerAssociation).
+	processLists := objectMemory fetchPointer: ProcessListsIndex ofObject: scheduler.
+	((objectMemory formatOf: oop) = objectMemory nonIndexablePointerFormat)
+		ifFalse: 
+			[ (objectMemory isArrayNonImm: oop) ifFalse: [ ^ true ].
+			  ^ (oop = processLists) not ].
+	(objectMemory numSlotsOf: oop) >= 2 ifFalse: [ ^ true ].
+	""is the oop the scheduler itself ?""
+	oop = scheduler ifTrue: [ ^ false ].
+	1 to: (objectMemory numSlotsOf: processLists) do: [ :i |
+		""is the oop one of the linked lists ?""
+		(list := processLists at: i) = oop ifTrue: [^ false].
+		""is the oop one of the runnable process ?""
+		first := objectMemory fetchPointer: FirstLinkIndex ofObject: list.
+		first = objectMemory nilObject ifFalse: 
+			[ last := objectMemory fetchPointer: LastLinkIndex ofObject: list.
+			  link := first.
+			  [ link = last ] whileFalse: 
+				[ link = oop ifTrue: [ ^ false ]. 
+				  link := objectMemory fetchPointer: NextLinkIndex ofObject: link. ] ] ]."
+	^ true
+]
+
 { #category : #'primitive support' }
 InterpreterPrimitives >> failed [
 	<api>
@@ -1679,6 +1732,8 @@ InterpreterPrimitives >> primitiveFloatAtPut [
 	index := self stackValue: 1.
 	(objectMemory isImmediateFloat: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrBadReceiver].
+	self cppIf: IMMUTABILITY
+		ifTrue: [ (objectMemory isImmutable: rcvr) ifTrue: [^self primitiveFailFor: PrimErrBadReceiver] ].
 	index = ConstOne ifTrue:
 		[objectMemory storeLong32: (VMBIGENDIAN ifTrue: [0] ifFalse: [1])
 			ofObject: rcvr
@@ -1870,6 +1925,17 @@ InterpreterPrimitives >> primitiveGetAttribute [
 				Into: s + objectMemory baseHeaderSize
 				Length: sz.
 			self pop: 2 thenPush: s]
+]
+
+{ #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveGetImmutability [
+	<option: #IMMUTABILITY>
+	| rcvr bool |
+	rcvr := self stackValue: 0.
+	bool := (objectMemory isOopImmutable: rcvr)
+		ifTrue: [ TrueObject ]
+		ifFalse: [ FalseObject ].
+	self pop: argumentCount thenPush: (self splObj: bool)
 ]
 
 { #category : #'I/O primitives' }
@@ -2256,6 +2322,8 @@ InterpreterPrimitives >> primitiveIntegerAtPut [
 	rcvr := self stackValue: 2.
 	(objectMemory isWords: rcvr) ifFalse:
 		[^self primitiveFailFor: PrimErrInappropriate].
+	self cppIf: IMMUTABILITY "isWords: ensure non immediate"
+		ifTrue: [ (objectMemory isImmutable: rcvr) ifTrue: [ ^self primitiveFailFor: PrimErrInappropriate ] ].
 	sz := objectMemory lengthOf: rcvr.  "number of fields"
 	(index >= 1 and: [index <= sz]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
@@ -2922,6 +2990,8 @@ InterpreterPrimitives >> primitiveObjectAtPut [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	thisReceiver := self stackValue: 2.
+	self cppIf: IMMUTABILITY
+		ifTrue: [ (objectMemory isImmutable: thisReceiver) ifTrue: [ ^self primitiveFailFor: PrimErrInappropriate ] ].
 	(index > 0 and: [index <= ((objectMemory literalCountOf: thisReceiver) + LiteralStart)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	objectMemory storePointer: index - 1 ofObject: thisReceiver withValue: newValue.
@@ -3408,6 +3478,24 @@ InterpreterPrimitives >> primitiveSetIdentityHash [
 		 self pop: argumentCount + 1 thenPushInteger: oldHash]
 ]
 
+{ #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveSetImmutability [
+	<option: #IMMUTABILITY>
+	| rcvr boolean wasImmutable |
+	rcvr := self stackValue: 1.
+	(objectMemory isImmediate: rcvr) ifTrue: [ ^ self primitiveFailFor: PrimErrInappropriate ].
+	boolean := self booleanValueOf: self stackTop.
+	self successful ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	boolean ifTrue: 
+		[ (self canBeImmutable: rcvr) ifFalse: [ ^ self primitiveFailFor: PrimErrInappropriate ] ]. 
+	wasImmutable := (objectMemory isOopImmutable: rcvr)
+		ifTrue: [ TrueObject ]
+		ifFalse: [ FalseObject ].
+	objectMemory setIsImmutableOf: rcvr to: boolean.
+	self pop: argumentCount thenPush: (self splObj: wasImmutable)
+]
+
 { #category : #'I/O primitives' }
 InterpreterPrimitives >> primitiveSetInterruptKey [
 	"Set the user interrupt keycode. The keycode is an integer whose encoding is described in the comment for primitiveKbdNext."
@@ -3512,6 +3600,8 @@ InterpreterPrimitives >> primitiveShortAtPut [
 	rcvr := self stackValue: 2.
 	(objectMemory isWordsOrBytes: rcvr) ifFalse:
 		[^self primitiveFailFor: PrimErrInappropriate].
+	self cppIf: IMMUTABILITY "isWordsOrBytes ensure non immediate"
+		ifTrue: [ (objectMemory isImmutable: rcvr) ifTrue: [ ^self primitiveFailFor: PrimErrInappropriate ] ].
 	index := objectMemory integerValueOf: index.
 	(index >= 1 and: [index <= (objectMemory num16BitUnitsOf: rcvr)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].

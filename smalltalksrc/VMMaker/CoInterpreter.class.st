@@ -1232,6 +1232,22 @@ CoInterpreter >> ceBaseFrameReturn: returnValue [
 ]
 
 { #category : #trampolines }
+CoInterpreter >> ceCannotAssignTo: immutableObject withIndex: index valueToAssign: valueToAssign [
+	"index is unboxed."
+	<api>
+	<option: #IMMUTABILITY>
+	instructionPointer := self popStack.
+	self push: immutableObject.
+	self push: valueToAssign.
+	self push: (objectMemory integerObjectOf: index).
+	self push: instructionPointer.
+	^ self
+		ceSendAbort: (objectMemory splObj: SelectorAttemptToAssign)
+		to: immutableObject
+		numArgs: 2
+]
+
+{ #category : #trampolines }
 CoInterpreter >> ceCannotResume [
 	<api>
 	"A context that has been returned from, or otherwise has an invalid pc has been reentered.
@@ -3161,20 +3177,22 @@ CoInterpreter >> executeNewMethod [
 ]
 
 { #category : #'stack bytecodes' }
-CoInterpreter >> extendedStoreBytecode [
+CoInterpreter >> extendedStoreBytecodePop: popBoolean [
 	"Override to use itemporary:in:put:"
-	| descriptor variableType variableIndex |
+	| descriptor variableType variableIndex value |
 	<inline: true>
 	descriptor := self fetchByte.
 	self fetchNextBytecode.
 	variableType := descriptor >> 6 bitAnd: 3.
 	variableIndex := descriptor bitAnd: 63.
+	value := self internalStackTop.
+	popBoolean ifTrue: [ self internalPop: 1 ].
 	variableType = 0 ifTrue:
-		[^objectMemory storePointer: variableIndex ofObject: self receiver withValue: self internalStackTop].
+		[^objectMemory storePointerImmutabilityCheck: variableIndex ofObject: self receiver withValue: value].
 	variableType = 1 ifTrue:
-		[^self itemporary: variableIndex in: localFP put: self internalStackTop].
+		[^self itemporary: variableIndex in: localFP put: value].
 	variableType = 3 ifTrue:
-		[^self storeLiteralVariable: variableIndex withValue: self internalStackTop].
+		[^self storeLiteralVariable: variableIndex withValue: value].
 	self error: 'illegal store'
 ]
 
