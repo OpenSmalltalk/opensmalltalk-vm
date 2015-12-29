@@ -1155,7 +1155,9 @@ StackInterpreter class >> initializePrimitiveTable [
 		(150 159 primitiveFail)
 		(160 primitiveAdoptInstance)
 		(161 primitiveSetOrHasIdentityHash)
-		(162 164 primitiveFail)			"reserved for immutablity primitives"
+		(162 primitiveFail)			"reserved for immutablity primitives"
+		(163 primitiveGetImmutability)
+		(164 primitiveSetImmutability)	
 		(165 primitiveIntegerAt)		"hacked in here for now"
 		(166 primitiveIntegerAtPut)
 		(167 primitiveYield)
@@ -2617,11 +2619,14 @@ StackInterpreter >> bytecodePrimAtPut [
 	 Override to insert in the atCache here.  This is necessary since once there
 	 is a compiled at:[put:] primitive method (which doesn't use the at: cache) the
 	 only way something can get installed in the atCache is here."
-	| index rcvr atIx value |
+	| index rcvr atIx value correctRcvr |
 	value := self internalStackTop.
 	index := self internalStackValue: 1.
 	rcvr := self internalStackValue: 2.
-	((objectMemory isNonImmediate: rcvr)
+	self cppIf: IMMUTABILITY 
+		ifTrue: [ correctRcvr := objectMemory isOopMutable: rcvr ]
+		ifFalse: [ correctRcvr := objectMemory isNonImmediate: rcvr ].
+	(correctRcvr
 	 and: [objectMemory isIntegerObject: index]) ifTrue:
 		[atIx := (rcvr bitAnd: AtCacheMask) + AtPutBase.  "Index into atPutCache"
 		 (atCache at: atIx+AtCacheOop) ~= rcvr ifTrue:
@@ -3500,6 +3505,18 @@ StackInterpreter >> canContextSwitchIfActivating: theMethod header: methodHeader
 			  or: [primitiveIndex = 167]]] "primitiveYield"
 ]
 
+{ #category : #'stack bytecodes' }
+StackInterpreter >> cannotAssign: resultObj to: targetObj withIndex: index [
+	<option: #IMMUTABILITY>
+	<inline: true> "because of use of normalSend..."
+	self internalPush: targetObj.
+	self internalPush: resultObj.
+	self internalPush: (self integerObjectOf: index + 1).
+	messageSelector := self splObj: SelectorAttemptToAssign.
+	argumentCount := 2.
+	^ self normalSend
+]
+
 { #category : #'debug support' }
 StackInterpreter >> capturePendingFinalizationSignals [
 	statPendingFinalizationSignals := pendingFinalizationSignals.
@@ -4223,13 +4240,16 @@ StackInterpreter >> commonAtPut: stringy [
 	 Using the at cache here would require that callers set messageSelector
 	 and lkupClass and that is onerous and error-prone, and in any case,
 	 inlining produces much better performance than using the at cache here."
-	| value index rcvr |
+	| value index rcvr badRcvr |
 	<inline: true> "to get it inlined in primitiveAtPut and primitiveStringAtPut"
 	self initPrimCall.
 	rcvr := self stackValue: 2.
 	index := self stackValue: 1.
 	value := self stackTop.
-	(objectMemory isImmediate: rcvr) ifTrue:
+	self cppIf: IMMUTABILITY 
+		ifTrue: [ badRcvr := objectMemory isOopImmutable: rcvr ]
+		ifFalse: [ badRcvr := objectMemory isImmediate: rcvr ].
+	badRcvr ifTrue:
 		[^self primitiveFailFor: PrimErrInappropriate].
 	"No need to test for large positive integers here.  No object has 1g elements"
 	((objectMemory isNonIntegerObject: index)
@@ -5436,15 +5456,25 @@ StackInterpreter >> extSendSuperBytecode [
 { #category : #'stack bytecodes' }
 StackInterpreter >> extStoreAndPopLiteralVariableBytecode [
 	"236		11101100	i i i i i i i i	Pop and Store Literal Variable #iiiiiiii (+ Extend A * 256)"
-	self extStoreLiteralVariableBytecode.
-	self internalPop: 1
+	| variableIndex value |
+	variableIndex := self fetchByte + (extA << 8).
+	self fetchNextBytecode.
+	value := self internalStackTop.
+	self internalPop: 1.
+	extA := 0.
+	self storeLiteralVariable: variableIndex withValue: value
 ]
 
 { #category : #'stack bytecodes' }
 StackInterpreter >> extStoreAndPopReceiverVariableBytecode [
 	"235		11101011	i i i i i i i i	Pop and Store Receiver Variable #iiiiiii (+ Extend A * 256)"
-	self extStoreReceiverVariableBytecode.
-	self internalPop: 1
+	| variableIndex value |
+	variableIndex := self fetchByte + (extA << 8).
+	self fetchNextBytecode.
+	extA := 0.
+	value := self internalStackTop.
+	self internalPop: 1.
+	self storeMaybeContextReceiverVariable: variableIndex withValue: value
 ]
 
 { #category : #'stack bytecodes' }
@@ -5519,27 +5549,35 @@ StackInterpreter >> extendedPushBytecode [
 
 { #category : #'stack bytecodes' }
 StackInterpreter >> extendedStoreAndPopBytecode [
-
-	self extendedStoreBytecode.
-	self internalPop: 1.
+	<inline: true>
+	self extendedStoreBytecodePop: true
 
 ]
 
 { #category : #'stack bytecodes' }
 StackInterpreter >> extendedStoreBytecode [
-	| descriptor variableType variableIndex |
+	<inline: true>
+	self extendedStoreBytecodePop: false
+]
+
+{ #category : #'stack bytecodes' }
+StackInterpreter >> extendedStoreBytecodePop: popBoolean [
+	| descriptor variableType variableIndex value |
 	<inline: true>
 	descriptor := self fetchByte.
 	self fetchNextBytecode.
 	variableType := descriptor >> 6 bitAnd: 3.
 	variableIndex := descriptor bitAnd: 63.
+	value := self internalStackTop.
+	popBoolean ifTrue: [ self internalPop: 1 ].
 	variableType = 0 ifTrue:
-		[^objectMemory storePointer: variableIndex ofObject: self receiver withValue: self internalStackTop].
+		[^objectMemory storePointerImmutabilityCheck: variableIndex ofObject: self receiver withValue: value].
 	variableType = 1 ifTrue:
-		[^self temporary: variableIndex in: localFP put: self internalStackTop].
+		[^self temporary: variableIndex in: localFP put: value].
 	variableType = 3 ifTrue:
-		[^self storeLiteralVariable: variableIndex withValue: self internalStackTop].
+		[^self storeLiteralVariable: variableIndex withValue: value].
 	self error: 'illegal store'
+
 ]
 
 { #category : #'frame access' }
@@ -14046,9 +14084,9 @@ StackInterpreter >> storeAndPopReceiverVariableBytecode [
 	| rcvr top |
 	rcvr := self receiver.
 	top := self internalStackTop.
-	objectMemory storePointer: (currentBytecode bitAnd: 7) ofObject: rcvr withValue: top.
+	self internalPop: 1.
 	self fetchNextBytecode.
-	self internalPop: 1
+	objectMemory storePointerImmutabilityCheck: (currentBytecode bitAnd: 7) ofObject: rcvr withValue: top.
 ]
 
 { #category : #'stack bytecodes' }
@@ -14092,7 +14130,7 @@ StackInterpreter >> storeLiteralVariable: literalIndex withValue: anObject [
 
 	(objectMemory isForwarded: litVar) ifTrue:
 		[litVar := objectMemory followForwarded: litVar].
-	^objectMemory storePointer: ValueIndex ofObject: litVar withValue: anObject
+	^objectMemory storePointerImmutabilityCheck: ValueIndex ofObject: litVar withValue: anObject
 ]
 
 { #category : #'stack bytecodes' }
@@ -14108,7 +14146,7 @@ StackInterpreter >> storeMaybeContextReceiverVariable: fieldIndex withValue: anO
 		ifTrue:
 			[self instVar: fieldIndex ofContext: rcvr put: anObject]
 		ifFalse:
-			[objectMemory storePointer: fieldIndex ofObject: rcvr withValue: anObject]
+			[objectMemory storePointerImmutabilityCheck: fieldIndex ofObject: rcvr withValue: anObject]
 
 ]
 
