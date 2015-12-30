@@ -904,11 +904,6 @@ CogAbstractInstruction >> isJump [
 ]
 
 { #category : #testing }
-CogAbstractInstruction >> isLongJump [
-	^opcode between: FirstJump and: FirstShortJump - 1
-]
-
-{ #category : #testing }
 CogAbstractInstruction >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction, such as a relative jump."
 	^self subclassResponsibility
