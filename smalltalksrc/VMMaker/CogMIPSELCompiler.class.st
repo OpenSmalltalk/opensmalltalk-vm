@@ -46,6 +46,12 @@ CogMIPSELCompiler class >> ISA [
 ]
 
 { #category : #translation }
+CogMIPSELCompiler class >> declareCVarsIn: aCCodeGenerator [
+	super declareCVarsIn: aCCodeGenerator.
+	aCCodeGenerator addHeaderFile: '<asm/cachectl.h>'. "For cacheflush"
+]
+
+{ #category : #translation }
 CogMIPSELCompiler class >> identifyingPredefinedMacros [
 	^#('__MIPSEL__')
 ]
@@ -110,7 +116,6 @@ CogMIPSELCompiler class >> initializeAbstractRegisters [
 
 	"Note we can fit all of the abstract registers in C preserved registers, and
 	 not need to save or restore them at runtime calls."
-	
 	super initializeAbstractRegisters.
 
 	ReceiverResultReg		:= S0.
@@ -123,7 +128,37 @@ CogMIPSELCompiler class >> initializeAbstractRegisters [
 	SPReg					:= SP.
 	FPReg					:= FP.
 	RISCTempReg			:= AT.
-	LinkReg					:= RA
+	LinkReg					:= RA.
+
+	self flag: #todo.
+	Scratch0Reg			:= NoReg.
+	Scratch1Reg			:= NoReg.
+	Scratch2Reg			:= NoReg.
+	Scratch3Reg			:= NoReg.
+	Scratch4Reg			:= NoReg.
+	Scratch5Reg			:= NoReg.
+	Scratch6Reg			:= NoReg.
+	Scratch7Reg			:= NoReg.
+
+	self flag: #todo.
+	DPFPReg0				:= NoReg.
+	DPFPReg1				:= NoReg.
+	DPFPReg2				:= NoReg.
+	DPFPReg3				:= NoReg.
+	DPFPReg4				:= NoReg.
+	DPFPReg5				:= NoReg.
+	DPFPReg6				:= NoReg.
+	DPFPReg7				:= NoReg.
+	DPFPReg8				:= NoReg.
+	DPFPReg9				:= NoReg.
+	DPFPReg10				:= NoReg.
+	DPFPReg11				:= NoReg.
+	DPFPReg12				:= NoReg.
+	DPFPReg13				:= NoReg.
+	DPFPReg14				:= NoReg.
+	DPFPReg15				:= NoReg.
+					
+
 ]
 
 { #category : #translation }
@@ -170,42 +205,42 @@ CogMIPSELCompiler >> andiR: destReg R: srcReg C: imm [
 CogMIPSELCompiler >> beqR: leftReg R: rightReg offset: offset [
 	self assert: (offset bitAnd: 3) = 0.
 	self assert: (offset between: -16r20000 and: 16r1FFFF).
-	^self itype: BEQ rs: leftReg rt: rightReg signedImmediate: offset >> 2
+	^self itype: BEQ rs: leftReg rt: rightReg signedImmediate: offset >>> 2
 ]
 
 { #category : #'encoding - control' }
 CogMIPSELCompiler >> bgezR: cmpReg offset: offset [
 	self assert: (offset bitAnd: 3) = 0.
 	self assert: (offset between: -16r20000 and: 16r1FFFF).
-	^self itype: REGIMM rs: cmpReg rt: BGEZ signedImmediate: offset >> 2
+	^self itype: REGIMM rs: cmpReg rt: BGEZ signedImmediate: offset >>> 2
 ]
 
 { #category : #'encoding - control' }
 CogMIPSELCompiler >> bgtzR: cmpReg offset: offset [
 	self assert: (offset bitAnd: 3) = 0.
 	self assert: (offset between: -16r20000 and: 16r1FFFF).
-	^self itype: BGTZ rs: cmpReg rt: 0 signedImmediate: offset >> 2
+	^self itype: BGTZ rs: cmpReg rt: 0 signedImmediate: offset >>> 2
 ]
 
 { #category : #'encoding - control' }
 CogMIPSELCompiler >> blezR: cmpReg offset: offset [
 	self assert: (offset bitAnd: 3) = 0.
 	self assert: (offset between: -16r20000 and: 16r1FFFF).
-	^self itype: BLEZ rs: cmpReg rt: 0 signedImmediate: offset >> 2
+	^self itype: BLEZ rs: cmpReg rt: 0 signedImmediate: offset >>> 2
 ]
 
 { #category : #'encoding - control' }
 CogMIPSELCompiler >> bltzR: cmpReg offset: offset [
 	self assert: (offset bitAnd: 3) = 0.
 	self assert: (offset between: -16r20000 and: 16r1FFFF).
-	^self itype: REGIMM rs: cmpReg rt: BLTZ signedImmediate: offset >> 2
+	^self itype: REGIMM rs: cmpReg rt: BLTZ signedImmediate: offset >>> 2
 ]
 
 { #category : #'encoding - control' }
 CogMIPSELCompiler >> bneR: leftReg R: rightReg offset: offset [
 	self assert: (offset bitAnd: 3) = 0.
 	self assert: (offset between: -16r20000 and: 16r1FFFF).
-	^self itype: BNE rs: leftReg rt: rightReg signedImmediate: offset >> 2
+	^self itype: BNE rs: leftReg rt: rightReg signedImmediate: offset >>> 2
 ]
 
 { #category : #'generate machine code' }
@@ -237,17 +272,20 @@ CogMIPSELCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 
 { #category : #accessing }
 CogMIPSELCompiler >> callerSavedRegisterMask [
+	"Volatile"
 	"See MIPSConstants initializeRegisters."
 	self flag: #OABI.
 	^cogit
-		registerMaskFor: S0
-		and: S1
-		and: S2
-		and: S3
-		and: S4
-		and: S5
-		and: S6
-		and: S7
+		registerMaskFor: T0
+		and: T1
+		and: T2
+		and: T3
+		and: T4
+		and: T5
+		and: T6
+		and: T7
+		and: T8
+		and: T9
 ]
 
 { #category : #testing }
@@ -1583,8 +1621,8 @@ CogMIPSELCompiler >> divR: dividendReg R: divisorReg [
 
 { #category : #'inline cacheing' }
 CogMIPSELCompiler >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<Integer>"
-	<cmacro: '(me,startAddress,endAddress) __clear_cache((char*) startAddress, (char*) (endAddress ))'>
-	"On ARM we almost certainly need to flush and wash hands. On linux we use __clear_cache (see http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code for a decent example) and remember that the end address is *exclusive* so we can just use the end address passed in since it is always the byte after the actual last one needing flushing"
+	<cmacro: '(me,startAddress,endAddress) cacheflush((char*) startAddress, endAddress - startAddress, ICACHE)'>
+	"See http://www.linux-mips.org/wiki/Cacheflush_Syscall"
 	self halt: #ceFlushICache
 ]
 
@@ -1824,6 +1862,7 @@ CogMIPSELCompiler >> hasVarBaseRegister [
 
 { #category : #encoding }
 CogMIPSELCompiler >> high16BitsOf: word [
+	<var: #word type: #usqInt>
 	^word >> 16
 ]
 
@@ -1936,30 +1975,28 @@ CogMIPSELCompiler >> isShortOffset: offset [
 ]
 
 { #category : #encoding }
-CogMIPSELCompiler >> itype: op rs: rs rt: rt eitherImmediate: signedImmediate [	
-	| unsignedImmediate |
+CogMIPSELCompiler >> itype: op rs: rs rt: rt eitherImmediate: immediate [	
 	self assert: (op between: 0 and: 63).
 	self assert: (rs between: 0 and: 31).
 	self assert: (rt between: 0 and: 31).
-	signedImmediate < 0
+	"signedImmediate < 0
 		ifTrue: [unsignedImmediate := signedImmediate + 16r10000]
 		ifFalse: [unsignedImmediate := signedImmediate].
-	self assert: (unsignedImmediate between: 0 and: 16rFFFF).
-	^(((op << 26) bitOr: (rs << 21)) bitOr: (rt << 16)) bitOr: unsignedImmediate
+	self assert: (unsignedImmediate between: 0 and: 16rFFFF)."
+	^(((op << 26) bitOr: (rs << 21)) bitOr: (rt << 16)) bitOr: (immediate bitAnd: 16rFFFF)
 ]
 
 { #category : #encoding }
-CogMIPSELCompiler >> itype: op rs: rs rt: rt signedImmediate: signedImmediate [	
-	| unsignedImmediate |
+CogMIPSELCompiler >> itype: op rs: rs rt: rt signedImmediate: immediate [	
 	self assert: (op between: 0 and: 63).
 	self assert: (rs between: 0 and: 31).
 	self assert: (rt between: 0 and: 31).
-	self assert: (signedImmediate between: -16r8000 and: 16r7FFF).
-	signedImmediate < 0
+	self assert: (immediate between: -16r8000 and: 16r7FFF).
+	"signedImmediate < 0
 		ifTrue: [unsignedImmediate := signedImmediate + 16r10000]
 		ifFalse: [unsignedImmediate := signedImmediate].
-	self assert: (unsignedImmediate between: 0 and: 16rFFFF).
-	^(((op << 26) bitOr: (rs << 21)) bitOr: (rt << 16)) bitOr: unsignedImmediate
+	self assert: (unsignedImmediate between: 0 and: 16rFFFF)."
+	^(((op << 26) bitOr: (rs << 21)) bitOr: (rt << 16)) bitOr: (immediate bitAnd: 16rFFFF)
 ]
 
 { #category : #encoding }
@@ -2090,6 +2127,8 @@ CogMIPSELCompiler >> lhuR: destReg base: baseReg offset: offset [
 
 { #category : #'inline cacheing' }
 CogMIPSELCompiler >> literalAtAddress: mcpc [
+	<var: #high type: #usqInt>
+	<var: #low type: #usqInt>
 	| high low |
 	self assert: (self opcodeAtAddress: mcpc) = ORI.
 	self assert: (self opcodeAtAddress: mcpc - 4) = LUI.
@@ -2101,6 +2140,10 @@ CogMIPSELCompiler >> literalAtAddress: mcpc [
 
 { #category : #'inline cacheing' }
 CogMIPSELCompiler >> literalAtAddress: mcpc put: newLiteral [
+	<var: #oldUpper type: #usqInt>
+	<var: #newUpper type: #usqInt>
+	<var: #oldLower type: #usqInt>
+	<var: #newLower type: #usqInt>
 	| oldUpper newUpper oldLower newLower |
 	self assert: (self opcodeAtAddress: mcpc - 4) = LUI.
 	self assert: (self opcodeAtAddress: mcpc) = ORI.
@@ -2169,6 +2212,7 @@ CogMIPSELCompiler >> loadPICLiteralByteSize [
 
 { #category : #encoding }
 CogMIPSELCompiler >> low16BitsOf: word [
+	<var: #word type: #usqInt>
 	^word bitAnd: 16rFFFF
 ]
 
@@ -2637,13 +2681,8 @@ CogMIPSELCompiler >> rewriteConditionalJumpLongAt: callSiteReturnAddress target:
 CogMIPSELCompiler >> rewriteITypeBranchAtAddress: mcpc target: newTarget [
 	| newDisplacement oldInstruction newInstruction |
 	newDisplacement := newTarget - (mcpc + 4). "Displacement is relative to delay slot."
-	newDisplacement := newDisplacement >> 2. "Displacement is in words."
-	
-	self assert: (newDisplacement between: -16r8000 and: 16r7FFF).
-	newDisplacement < 0
-		ifTrue: [newDisplacement := newDisplacement + 16r10000]
-		ifFalse: [newDisplacement := newDisplacement].
-	self assert: (newDisplacement between: 0 and: 16rFFFF).
+	newDisplacement := newDisplacement >>> 2. "Displacement is in words."
+	newDisplacement := (newDisplacement bitAnd: 16rFFFF).
 
 	oldInstruction := objectMemory longAt: mcpc.
 	newInstruction := (oldInstruction bitAnd: 16rFFFF0000) bitOr: newDisplacement.
@@ -2969,15 +3008,20 @@ CogMIPSELCompiler >> swR: srcReg base: baseReg offset: offset [
 
 { #category : #'inline cacheing' }
 CogMIPSELCompiler >> targetFromITypeAtAddress: mcpc [
+	<var: #offset type: #usqInt>
+	<var: #mcpc type: #usqInt>
+	<returnTypeC: #usqInt>
 	| offset |
 	offset := (objectMemory longAt: mcpc) bitAnd: 16rFFFF.
-	offset >= 16r8000 ifTrue: [offset := offset - 16r10000].
+	self cCode: '' inSmalltalk: [offset >= 16r8000 ifTrue: [offset := offset - 16r10000]].
 	offset := offset << 2.
 	^mcpc + offset + OneInstruction. "Offset is relative to the delay slot"
 ]
 
 { #category : #'inline cacheing' }
 CogMIPSELCompiler >> targetFromJTypeAtAddress: mcpc [
+	<var: #mcpc type: #usqInt>
+	<returnTypeC: #usqInt>
 	| targetLow |
 	targetLow := (objectMemory longAt: mcpc) bitAnd: 16r3FFFFFF.
 	"mcpc + 4: relative to delay slot not j"
