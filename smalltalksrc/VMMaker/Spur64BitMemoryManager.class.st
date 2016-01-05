@@ -4,6 +4,14 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #'class initialization' }
+Spur64BitMemoryManager class >> initializeWithOptions: optionsDictionary [
+	"SpurMemoryManager initializeWithOptions: Dictionary new"
+
+	optionsDictionary at: #Spur64BitMemoryManager put: true.
+	super initializeWithOptions: optionsDictionary
+]
+
 { #category : #'simulation only' }
 Spur64BitMemoryManager class >> isImmediate: anObject [
 	self flag: 'The float range is close but probably wrong. Revisit when immediate floats are implemented'.

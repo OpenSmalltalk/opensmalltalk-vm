@@ -2595,7 +2595,7 @@ StackToRegisterMappingCogit >> genPrimitiveSmallFloatSquareRoot [
 	<option: #Spur64BitMemoryManager>
 	| jumpFailAlloc |
 	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
-	objectRepresentation genGetSmallFloatValueOf: ReceiverResultReg into: DPFPReg0.
+	objectRepresentation genGetSmallFloatValueOf: ReceiverResultReg scratch: SendNumArgsReg into: DPFPReg0.
 	self SqrtRd: DPFPReg0.
 	jumpFailAlloc := objectRepresentation
 						genAllocFloatValue: DPFPReg0
