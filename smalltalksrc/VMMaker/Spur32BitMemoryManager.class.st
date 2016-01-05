@@ -4,6 +4,14 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #'class initialization' }
+Spur32BitMemoryManager class >> initializeWithOptions: optionsDictionary [
+	"SpurMemoryManager initializeWithOptions: Dictionary new"
+
+	optionsDictionary at: #Spur32BitMemoryManager put: true.
+	super initializeWithOptions: optionsDictionary
+]
+
 { #category : #'simulation only' }
 Spur32BitMemoryManager class >> isImmediate: anObject [
 	^anObject class == SmallInteger
