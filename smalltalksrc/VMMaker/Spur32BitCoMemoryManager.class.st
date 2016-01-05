@@ -49,14 +49,6 @@ Spur32BitCoMemoryManager class >> exportAPISelectors: options [
 		yourself
 ]
 
-{ #category : #'class initialization' }
-Spur32BitCoMemoryManager class >> initializeWithOptions: optionsDictionary [
-	"SpurMemoryManager initializeWithOptions: Dictionary new"
-
-	optionsDictionary at: #Spur32BitMemoryManager put: true.
-	super initializeWithOptions: optionsDictionary
-]
-
 { #category : #'accessing class hierarchy' }
 Spur32BitCoMemoryManager class >> objectRepresentationClass [
 	^CogObjectRepresentationFor32BitSpur
