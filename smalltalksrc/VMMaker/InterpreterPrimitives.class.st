@@ -1733,7 +1733,7 @@ InterpreterPrimitives >> primitiveFloatAtPut [
 	(objectMemory isImmediateFloat: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrBadReceiver].
 	self cppIf: IMMUTABILITY
-		ifTrue: [ (objectMemory isImmutable: rcvr) ifTrue: [^self primitiveFailFor: PrimErrBadReceiver] ].
+		ifTrue: [ (objectMemory isImmutable: rcvr) ifTrue: [^self primitiveFailFor: PrimErrNoModification] ].
 	index = ConstOne ifTrue:
 		[objectMemory storeLong32: (VMBIGENDIAN ifTrue: [0] ifFalse: [1])
 			ofObject: rcvr
@@ -2323,7 +2323,7 @@ InterpreterPrimitives >> primitiveIntegerAtPut [
 	(objectMemory isWords: rcvr) ifFalse:
 		[^self primitiveFailFor: PrimErrInappropriate].
 	self cppIf: IMMUTABILITY "isWords: ensure non immediate"
-		ifTrue: [ (objectMemory isImmutable: rcvr) ifTrue: [ ^self primitiveFailFor: PrimErrInappropriate ] ].
+		ifTrue: [ (objectMemory isImmutable: rcvr) ifTrue: [ ^self primitiveFailFor: PrimErrNoModification ] ].
 	sz := objectMemory lengthOf: rcvr.  "number of fields"
 	(index >= 1 and: [index <= sz]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
@@ -2991,7 +2991,7 @@ InterpreterPrimitives >> primitiveObjectAtPut [
 	index := objectMemory integerValueOf: index.
 	thisReceiver := self stackValue: 2.
 	self cppIf: IMMUTABILITY
-		ifTrue: [ (objectMemory isImmutable: thisReceiver) ifTrue: [ ^self primitiveFailFor: PrimErrInappropriate ] ].
+		ifTrue: [ (objectMemory isImmutable: thisReceiver) ifTrue: [ ^self primitiveFailFor: PrimErrNoModification ] ].
 	(index > 0 and: [index <= ((objectMemory literalCountOf: thisReceiver) + LiteralStart)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	objectMemory storePointer: index - 1 ofObject: thisReceiver withValue: newValue.
@@ -3601,7 +3601,7 @@ InterpreterPrimitives >> primitiveShortAtPut [
 	(objectMemory isWordsOrBytes: rcvr) ifFalse:
 		[^self primitiveFailFor: PrimErrInappropriate].
 	self cppIf: IMMUTABILITY "isWordsOrBytes ensure non immediate"
-		ifTrue: [ (objectMemory isImmutable: rcvr) ifTrue: [ ^self primitiveFailFor: PrimErrInappropriate ] ].
+		ifTrue: [ (objectMemory isImmutable: rcvr) ifTrue: [ ^self primitiveFailFor: PrimErrNoModification ] ].
 	index := objectMemory integerValueOf: index.
 	(index >= 1 and: [index <= (objectMemory num16BitUnitsOf: rcvr)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
