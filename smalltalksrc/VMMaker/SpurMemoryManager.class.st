@@ -6581,7 +6581,7 @@ SpurMemoryManager >> isOopValidBecome: oop [
 	(self isPinned: oop) ifTrue: [^PrimErrObjectIsPinned].
 	self 
 		cppIf: IMMUTABILITY
-		ifTrue: [ (self isImmutable: oop) ifTrue: [^PrimErrInappropriate] ].
+		ifTrue: [ (self isImmutable: oop) ifTrue: [^PrimErrNoModification] ].
 	^ 0
 ]
 
