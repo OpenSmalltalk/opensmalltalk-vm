@@ -467,188 +467,6 @@ CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg form
 	aBinaryBlock value: jumpNotIndexable value: jumpIsContext
 ]
 
-{ #category : #'primitive generators' }
-CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
-	| jumpSI jumpNotSI jumpNotIndexable jumpIsContext jumpBounds jumpFmtGt4 jumpFmtEq2 jumpFmtLt8 jumpFmtGt11 jumpLarge |
-	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
-	<var: #jumpSI type: #'AbstractInstruction *'>
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
-	<var: #jumpIsContext type: #'AbstractInstruction *'>
-	<var: #jumpBounds type: #'AbstractInstruction *'>
-	<var: #jumpFmtGt4 type: #'AbstractInstruction *'>
-	<var: #jumpFmtEq2 type: #'AbstractInstruction *'>
-	<var: #jumpFmtLt8 type: #'AbstractInstruction *'>
-	<var: #jumpFmtGt11 type: #'AbstractInstruction *'>
-	<var: #jumpLarge type: #'AbstractInstruction *'>
-	jumpSI := self genJumpSmallInteger: ReceiverResultReg.
-	cogit MoveR: Arg0Reg R: Arg1Reg.
-	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg.
-	self
-		genGetSizeOf: ReceiverResultReg
-		into: ClassReg
-		formatReg: SendNumArgsReg
-		scratchReg: TempReg
-		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
-	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
-	cogit SubCq: 1 R: Arg1Reg.
-	cogit CmpR: ClassReg R: Arg1Reg.
-	jumpBounds := cogit JumpAboveOrEqual: 0.
-	"This is tedious.  Because of register pressure on x86 (and the baroque
-	 complexity of the size computation) we have to recompute the format
-	 because it may have been smashed computing the fixed fields.  But at
-	 least we have the fixed fields, if any, in formatReg and recomputing
-	 these is more expensive than recomputing format.  In any case this
-	 should still be faster than the interpreter and we hope this object
-	 representation's days are numbered."
-	cogit
-		MoveMw: 0 r: ReceiverResultReg R: ClassReg;	"self baseHeader: receiver"
-		LogicalShiftRightCq: objectMemory instFormatFieldLSB R: ClassReg;
-		AndCq: self instFormatFieldMask R: ClassReg;	"self formatOfHeader: ClassReg"
-		CmpCq: 4 R: ClassReg.
-	jumpFmtGt4 := cogit JumpGreater: 0.
-	cogit CmpCq: 2 R: ClassReg.	"Common case, e.g. Array, has format = 2"
-	jumpFmtEq2 := cogit JumpZero: 0.
-	cogit AddR: SendNumArgsReg R: Arg1Reg. "Add fixed fields to index"
-	jumpFmtEq2 jmpTarget: cogit Label.
-	cogit "Too lazy [knackered, more like. ed.] to define index with displacement addressing right now"
-		AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: Arg1Reg;
-		MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
-		RetN: retNoffset.
-	jumpFmtGt4 jmpTarget: cogit Label.
-	"Byte objects have formats 8 through 15, Compiled methods being 12 through 15;
-	 fail for CompiledMethod allowing the CoInterpeter to impose stricter bounds checks."
-	cogit CmpCq: 8 R: ClassReg.
-	jumpFmtLt8 := cogit JumpLess: 0.
-	cogit CmpCq: 11 R: ClassReg.
-	jumpFmtGt11 := cogit JumpGreater: 0.
-	cogit
-		AddCq: objectMemory baseHeaderSize R: Arg1Reg;
-		MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
-	self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
-	cogit RetN: retNoffset.
-	jumpFmtLt8 jmpTarget: cogit Label.
-	self assert: objectMemory wordSize = 4. "documenting my laziness"
-	cogit "Too lazy [knackered, more like. ed.] to define index with displacement addressing right now"
-		AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: Arg1Reg;
-		MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
-		CmpCq: 16r3FFFFFFF R: ReceiverResultReg.
-	jumpLarge := cogit JumpAbove: 0.
-	self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
-	cogit RetN: retNoffset.
-	jumpLarge jmpTarget: (cogit CallRT: cePositive32BitIntegerTrampoline).
-	cogit
-		MoveR: TempReg R: ReceiverResultReg;
-		RetN: retNoffset.
-	jumpSI jmpTarget:
-	(jumpNotSI jmpTarget:
-	(jumpNotIndexable jmpTarget:
-	(jumpIsContext jmpTarget:
-	(jumpBounds jmpTarget:
-	(jumpFmtGt11 jmpTarget:
-		cogit Label))))).
-	^0
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveIdentical: retNoffset orNotIf: orNot [
-	| jumpCmp |
-	<var: #jumpCmp type: #'AbstractInstruction *'>
-	cogit CmpR: Arg0Reg R: ReceiverResultReg.
-	jumpCmp := orNot
-					ifTrue: [cogit JumpZero: 0]
-					ifFalse: [cogit JumpNonZero: 0].
-	cogit genMoveTrueR: ReceiverResultReg.
-	cogit RetN: retNoffset.
-	jumpCmp jmpTarget: (cogit genMoveFalseR: ReceiverResultReg).
-	cogit RetN: retNoffset.
-	^0
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveIdentityHash: retNOffset [
-	| jumpSI |
-	<var: #jumpSI type: #'AbstractInstruction *'>
-	jumpSI := self genJumpSmallInteger: ReceiverResultReg.
-	self genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: TempReg.
-	cogit MoveR: TempReg R: ReceiverResultReg.
-	cogit RetN: retNOffset.
-	jumpSI jmpTarget: cogit Label.
-	^0
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveSize: retNoffset [
-	| jumpSI jumpNotIndexable jumpIsContext |
-	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
-	<var: #jumpSI type: #'AbstractInstruction *'>
-	<var: #jumpIsContext type: #'AbstractInstruction *'>
-	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
-	jumpSI := self genJumpSmallInteger: ReceiverResultReg.
-	self
-		genGetSizeOf: ReceiverResultReg
-		into: ClassReg
-		formatReg: SendNumArgsReg
-		scratchReg: TempReg
-		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
-	self genConvertIntegerToSmallIntegerInReg: ClassReg.
-	cogit MoveR: ClassReg R: ReceiverResultReg.
-	cogit RetN: retNoffset.
-	jumpSI jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).
-	^0
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveStringAt: retNOffset [
-	| jumpNotSI jumpNotByteIndexable jumpBounds jumpShortHeader jumpSkip |
-	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	<var: #jumpNotByteIndexable type: #'AbstractInstruction *'>
-	<var: #jumpBounds type: #'AbstractInstruction *'>
-	<var: #jumpShortHeader type: #'AbstractInstruction *'>
-	<var: #jumpSkip type: #'AbstractInstruction *'>
-	cogit MoveR: Arg0Reg R: Arg1Reg.
-	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg.
-	cogit
-		MoveMw: 0 r: ReceiverResultReg R: TempReg;	"self baseHeader: receiver"
-		MoveR: TempReg R: ClassReg;					"copy header word; we'll need it later"
-		LogicalShiftRightCq: objectMemory instFormatFieldLSB R: TempReg;
-		AndCq: self instFormatFieldMask R: TempReg;	"self formatOfHeader: destReg"
-		MoveR: TempReg R: SendNumArgsReg;
-		AndCq: 3 R: SendNumArgsReg;					"get odd bytes from format (if it turns out to be bytes)"
-		SubR: SendNumArgsReg R: TempReg;
-		CmpCq: 8 R: TempReg.							"check format is 8"
-	jumpNotByteIndexable := cogit JumpNonZero: 0.
-	cogit
-		MoveR: ClassReg R: TempReg;
-		AndCq: TypeMask R: TempReg;
-		CmpCq: HeaderTypeSizeAndClass R: TempReg.	"(hdr bitAnd: TypeMask) = HeaderTypeSizeAndClass"
-	jumpShortHeader := cogit JumpNonZero: 0.
-	self assert: Size4Bit = 0.
-	cogit
-		MoveMw: 0 - (2 * objectMemory wordSize) r: ReceiverResultReg R: ClassReg; "(self sizeHeader: oop) bitAnd: LongSizeMask"
-		AndCq: LongSizeMask signedIntFromLong R: ClassReg.
-	jumpSkip :=  cogit Jump: 0.
-	jumpShortHeader jmpTarget: (cogit AndCq: SizeMask R: ClassReg).	"hdr bitAnd: SizeMask"
-	jumpSkip jmpTarget: (cogit SubCq: objectMemory baseHeaderSize R: ClassReg). "sz - BaseHeaderSize"
-	cogit SubR: SendNumArgsReg R: ClassReg. "sz - (fmt bitAnd: 3)"
-	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
-	cogit SubCq: 1 R: Arg1Reg.
-	cogit CmpR: ClassReg R: Arg1Reg.
-	jumpBounds := cogit JumpAboveOrEqual: 0.
-	cogit AddCq: objectMemory baseHeaderSize R: Arg1Reg.
-	cogit genMoveConstant: objectMemory characterTable R: Arg0Reg.
-	cogit MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
-		AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: ReceiverResultReg.
-	cogit MoveXwr: ReceiverResultReg R: Arg0Reg R: ReceiverResultReg.
-	cogit RetN: retNOffset.
-	jumpNotSI jmpTarget:
-	(jumpNotByteIndexable jmpTarget:
-	(jumpBounds jmpTarget:
-		cogit Label)).
-	^0
-]
-
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genJumpImmediate: aRegister [
 	^self genJumpSmallInteger: aRegister
@@ -737,6 +555,190 @@ CogObjectRepresentationForSqueakV3 >> genNewArrayOfSize: size initialized: initi
 	cogit
 		MoveCq: size R: SendNumArgsReg;
 		CallRT: ceCreateNewArrayTrampoline
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSqueakV3 >> genPrimitiveAt [
+	| jumpSI jumpNotSI jumpNotIndexable jumpIsContext jumpBounds jumpFmtGt4 jumpFmtEq2 jumpFmtLt8 jumpFmtGt11 jumpLarge |
+	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
+	<var: #jumpSI type: #'AbstractInstruction *'>
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
+	<var: #jumpIsContext type: #'AbstractInstruction *'>
+	<var: #jumpBounds type: #'AbstractInstruction *'>
+	<var: #jumpFmtGt4 type: #'AbstractInstruction *'>
+	<var: #jumpFmtEq2 type: #'AbstractInstruction *'>
+	<var: #jumpFmtLt8 type: #'AbstractInstruction *'>
+	<var: #jumpFmtGt11 type: #'AbstractInstruction *'>
+	<var: #jumpLarge type: #'AbstractInstruction *'>
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	jumpSI := self genJumpSmallInteger: ReceiverResultReg.
+	cogit MoveR: Arg0Reg R: Arg1Reg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg.
+	self
+		genGetSizeOf: ReceiverResultReg
+		into: ClassReg
+		formatReg: SendNumArgsReg
+		scratchReg: TempReg
+		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
+	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
+	cogit SubCq: 1 R: Arg1Reg.
+	cogit CmpR: ClassReg R: Arg1Reg.
+	jumpBounds := cogit JumpAboveOrEqual: 0.
+	"This is tedious.  Because of register pressure on x86 (and the baroque
+	 complexity of the size computation) we have to recompute the format
+	 because it may have been smashed computing the fixed fields.  But at
+	 least we have the fixed fields, if any, in formatReg and recomputing
+	 these is more expensive than recomputing format.  In any case this
+	 should still be faster than the interpreter and we hope this object
+	 representation's days are numbered."
+	cogit
+		MoveMw: 0 r: ReceiverResultReg R: ClassReg;	"self baseHeader: receiver"
+		LogicalShiftRightCq: objectMemory instFormatFieldLSB R: ClassReg;
+		AndCq: self instFormatFieldMask R: ClassReg;	"self formatOfHeader: ClassReg"
+		CmpCq: 4 R: ClassReg.
+	jumpFmtGt4 := cogit JumpGreater: 0.
+	cogit CmpCq: 2 R: ClassReg.	"Common case, e.g. Array, has format = 2"
+	jumpFmtEq2 := cogit JumpZero: 0.
+	cogit AddR: SendNumArgsReg R: Arg1Reg. "Add fixed fields to index"
+	jumpFmtEq2 jmpTarget: cogit Label.
+	cogit "Too lazy [knackered, more like. ed.] to define index with displacement addressing right now"
+		AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: Arg1Reg;
+		MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
+		genPrimReturn.
+	jumpFmtGt4 jmpTarget: cogit Label.
+	"Byte objects have formats 8 through 15, Compiled methods being 12 through 15;
+	 fail for CompiledMethod allowing the CoInterpeter to impose stricter bounds checks."
+	cogit CmpCq: 8 R: ClassReg.
+	jumpFmtLt8 := cogit JumpLess: 0.
+	cogit CmpCq: 11 R: ClassReg.
+	jumpFmtGt11 := cogit JumpGreater: 0.
+	cogit
+		AddCq: objectMemory baseHeaderSize R: Arg1Reg;
+		MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
+	self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpFmtLt8 jmpTarget: cogit Label.
+	self assert: objectMemory wordSize = 4. "documenting my laziness"
+	cogit "Too lazy [knackered, more like. ed.] to define index with displacement addressing right now"
+		AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: Arg1Reg;
+		MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
+		CmpCq: 16r3FFFFFFF R: ReceiverResultReg.
+	jumpLarge := cogit JumpAbove: 0.
+	self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpLarge jmpTarget: (cogit CallRT: cePositive32BitIntegerTrampoline).
+	cogit
+		MoveR: TempReg R: ReceiverResultReg;
+		genPrimReturn.
+	jumpSI jmpTarget:
+	(jumpNotSI jmpTarget:
+	(jumpNotIndexable jmpTarget:
+	(jumpIsContext jmpTarget:
+	(jumpBounds jmpTarget:
+	(jumpFmtGt11 jmpTarget:
+		cogit Label))))).
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSqueakV3 >> genPrimitiveIdenticalOrNotIf: orNot [
+	| jumpCmp |
+	<var: #jumpCmp type: #'AbstractInstruction *'>
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	jumpCmp := orNot
+					ifTrue: [cogit JumpZero: 0]
+					ifFalse: [cogit JumpNonZero: 0].
+	cogit genMoveTrueR: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpCmp jmpTarget: (cogit genMoveFalseR: ReceiverResultReg).
+	cogit genPrimReturn.
+	^UnfailingPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSqueakV3 >> genPrimitiveIdentityHash [
+	| jumpSI |
+	<var: #jumpSI type: #'AbstractInstruction *'>
+	jumpSI := self genJumpSmallInteger: ReceiverResultReg.
+	self genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: TempReg.
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpSI jmpTarget: cogit Label.
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSqueakV3 >> genPrimitiveSize [
+	| jumpSI jumpNotIndexable jumpIsContext |
+	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
+	<var: #jumpSI type: #'AbstractInstruction *'>
+	<var: #jumpIsContext type: #'AbstractInstruction *'>
+	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
+	jumpSI := self genJumpSmallInteger: ReceiverResultReg.
+	self
+		genGetSizeOf: ReceiverResultReg
+		into: ClassReg
+		formatReg: SendNumArgsReg
+		scratchReg: TempReg
+		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
+	self genConvertIntegerToSmallIntegerInReg: ClassReg.
+	cogit MoveR: ClassReg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpSI jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSqueakV3 >> genPrimitiveStringAt [
+	| jumpNotSI jumpNotByteIndexable jumpBounds jumpShortHeader jumpSkip |
+	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #jumpNotByteIndexable type: #'AbstractInstruction *'>
+	<var: #jumpBounds type: #'AbstractInstruction *'>
+	<var: #jumpShortHeader type: #'AbstractInstruction *'>
+	<var: #jumpSkip type: #'AbstractInstruction *'>
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	cogit MoveR: Arg0Reg R: Arg1Reg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg.
+	cogit
+		MoveMw: 0 r: ReceiverResultReg R: TempReg;	"self baseHeader: receiver"
+		MoveR: TempReg R: ClassReg;					"copy header word; we'll need it later"
+		LogicalShiftRightCq: objectMemory instFormatFieldLSB R: TempReg;
+		AndCq: self instFormatFieldMask R: TempReg;	"self formatOfHeader: destReg"
+		MoveR: TempReg R: SendNumArgsReg;
+		AndCq: 3 R: SendNumArgsReg;					"get odd bytes from format (if it turns out to be bytes)"
+		SubR: SendNumArgsReg R: TempReg;
+		CmpCq: 8 R: TempReg.							"check format is 8"
+	jumpNotByteIndexable := cogit JumpNonZero: 0.
+	cogit
+		MoveR: ClassReg R: TempReg;
+		AndCq: TypeMask R: TempReg;
+		CmpCq: HeaderTypeSizeAndClass R: TempReg.	"(hdr bitAnd: TypeMask) = HeaderTypeSizeAndClass"
+	jumpShortHeader := cogit JumpNonZero: 0.
+	self assert: Size4Bit = 0.
+	cogit
+		MoveMw: 0 - (2 * objectMemory wordSize) r: ReceiverResultReg R: ClassReg; "(self sizeHeader: oop) bitAnd: LongSizeMask"
+		AndCq: LongSizeMask signedIntFromLong R: ClassReg.
+	jumpSkip :=  cogit Jump: 0.
+	jumpShortHeader jmpTarget: (cogit AndCq: SizeMask R: ClassReg).	"hdr bitAnd: SizeMask"
+	jumpSkip jmpTarget: (cogit SubCq: objectMemory baseHeaderSize R: ClassReg). "sz - BaseHeaderSize"
+	cogit SubR: SendNumArgsReg R: ClassReg. "sz - (fmt bitAnd: 3)"
+	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
+	cogit SubCq: 1 R: Arg1Reg.
+	cogit CmpR: ClassReg R: Arg1Reg.
+	jumpBounds := cogit JumpAboveOrEqual: 0.
+	cogit AddCq: objectMemory baseHeaderSize R: Arg1Reg.
+	cogit genMoveConstant: objectMemory characterTable R: Arg0Reg.
+	cogit MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
+		AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: ReceiverResultReg.
+	cogit MoveXwr: ReceiverResultReg R: Arg0Reg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpNotSI jmpTarget:
+	(jumpNotByteIndexable jmpTarget:
+	(jumpBounds jmpTarget:
+		cogit Label)).
+	^0
 ]
 
 { #category : #'compile abstract instructions' }
