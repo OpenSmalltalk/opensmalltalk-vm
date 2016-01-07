@@ -132,10 +132,10 @@ StackToRegisterMappingCogit class >> callingConvention [
 	"The Smalltalk-to-Smalltalk calling convention aims to trade simplicity of compilation against
 	 effectiveness of optimization.  Most Smalltalk methods, and certainly most performance-
 	 critical primitives have two or less arguments.  So arranging that the receiver and up to two
-	 args args are in registers arranges that performance-critical primitives can access their
-	 arguments in registers.  So if the argument count is <= numRegArgs nothing is passed on
-	 the stack and everything is passed in ReceiverResultReg, Arg0Reg et al.  Above numRegArgs
-	 everything is passed on the stack.
+	 args are in registers means that performance-critical primitives can access their arguments
+	 in registers.  So if the argument count is <= numRegArgs nothing is passed on the stack and
+	 everything is passed in ReceiverResultReg, Arg0Reg et al.  Above numRegArgs everything is
+	 passed on the stack.
 
 	 To save the CoInterpreter from change we shuffle the retpc and push the register args in
 	 the prolog so that the frame format is unchanged by register args.  Also, the trampolines for
@@ -152,33 +152,34 @@ StackToRegisterMappingCogit class >> callingConvention [
 
 	 Hence the calling convention is
 
-		- if the number of arguments is less than or equal to numRegArgs then the receiver and arguments
-		  are passed in registers.  numRegArgs is currently 1, but will become 2 once the code generator
-		  generates machine code primitives which take 2 arguments (i.e. once the object representation
-		  makes it feasible to implement at:put: in machine code numRegArgs will be raised to 2).  The receiver
-		  is passed in ReceiverResultReg, the first argument in Arg0Reg (esi on x86) and the second argument
-		  (if numRegArgs = 2) in Arg1Reg (edi on x86).
+		- if the number of arguments is less than or equal to numRegArgs then the receiver and
+		  arguments are passed in registers.  numRegArgs is 1 for V3, and 2 for Spur.  The receiver
+		  is passed in ReceiverResultReg, the first argument in Arg0Reg (esi on x86) and the second
+		  argument (if numRegArgs = 2) in Arg1Reg (edi on x86).
 
-		- if the number of arguments is greater than numRegArgs then the calling convention is as for
-		  SimpleStackBasedCogIt; ReceiverResultReg contains the receiver, and the receiver and arguments
-		  are all on the stack, receiver furthest from top-of-stack.  If the argument count is > 2 then argument
-		  count is passed in SendNumArgsReg (for the benefit of the run-time linking routines; it is ignored in
-		  linked sends).
+		- if the number of arguments is greater than numRegArgs then the calling convention is as
+		  for SimpleStackBasedCogIt; ReceiverResultReg contains the receiver, and the receiver and
+		  arguments are all on the stack, receiver furthest from top-of-stack.  If the argument count
+		  is > 2 then argument count is passed in SendNumArgsReg (for the benefit of the run-time
+		  linking routines; it is ignored in linked sends).
 
-		On return the result is in ReceiverResultReg.  The callee removes arguments from the stack.
+		On return the result is in ReceiverResultReg.  The callee removes arguments from the stack
+		(Pascal convention).
 
-		Note that if a machine code method contains a call to an interpreter primitive it will push any register
-		arguments on the stack before calling the primitive so that to the primitive the stack looks the same
-		as it does in the interpreter.
+		Note that if a machine code method contains a call to an interpreter primitive it will push any
+		register arguments (and if on a RISC, the return pc from the LinReg) on the stack before calling
+		the primitive so that to the primitive the stack looks the same as it does in the interpreter.
 
-		Within all machine code primitives except primitiveClosureValue all arguments are taken form registers
-	 	since no machine code primitiver has more than numRegArgs arguments.  primitiveClosureValue pushes
-		its register arguments immedately only for laziness to be able to reuse SimpleStackBasedCogit's code.
+		Within all machine code primitives except genPrimitiveClosureValue and genPrimitivePerform all
+		arguments are taken from registers since no machine code primitive has more than numRegArgs
+		arguments.  genPrimitiveClosureValue pushes its register arguments immedately only for laziness
+		to be able to reuse SimpleStackBasedCogit's code.  genPrimitivePerform adjusts its arguments
+		as required by special-purpose code.
 
-		Within machine code methods with interpreter primtiives the register arguments are pushed before calling
-		the interpreter primitive.  In normal methods and if not already done so in [primitive code, the register
-		arguments are pushed during frame build.  If a method is compiled frameless it will access its arguments
-		 in registers."
+		Within machine code methods with interpreter primitives the register arguments are pushed
+		before calling the interpreter primitive.  In normal methods and if not already done so in primitive
+		code, the register arguments are pushed during frame build.  If a method is compiled frameless
+		it will access its arguments in registers."
 ]
 
 { #category : #translation }
@@ -1321,16 +1322,6 @@ StackToRegisterMappingCogit >> evaluate: descriptor at: pc [
 	self perform: descriptor generator
 ]
 
-{ #category : #'trampoline support' }
-StackToRegisterMappingCogit >> evaluateTrampolineCallBlock: block protectLinkRegIfNot: inFrame [
-	<inline: true>
-	inFrame 
-		ifFalse: 
-			[ backEnd saveAndRestoreLinkRegAround: [ block value ] ]
-		ifTrue:
-			[ block value ].
-]
-
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> extractMaybeBranchDescriptorInto: fourArgBlock [
 	"Looks one instruction ahead of the current bytecodePC and answers its bytecode descriptor and its pc.
@@ -1675,100 +1666,6 @@ StackToRegisterMappingCogit >> genCompConstant: constant R: register [
 	
 ]
 
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: preOpCheckOrNil [
-	"Receiver and arg in registers.
-	 Stack looks like
-		return address"
-	<var: #preOpCheckOrNil declareC: 'AbstractInstruction *(*preOpCheckOrNil)(int rcvrReg, int argReg)'>
-	| jumpFailClass jumpFailClass2 jumpFailAlloc jumpFailCheck jumpImmediate jumpNonInt doOp |
-	<var: #jumpFailClass type: #'AbstractInstruction *'>
-	<var: #jumpFailClass2 type: #'AbstractInstruction *'>
-	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
-	<var: #jumpImmediate type: #'AbstractInstruction *'>
-	<var: #jumpNonInt type: #'AbstractInstruction *'>
-	<var: #jumpFailCheck type: #'AbstractInstruction *'>
-	<var: #doOp type: #'AbstractInstruction *'>
-	objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
-	self MoveR: Arg0Reg R: ClassReg.
-	jumpImmediate := objectRepresentation genJumpImmediate: Arg0Reg.
-	objectRepresentation genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
-	objectRepresentation genCmpClassFloatCompactIndexR: SendNumArgsReg.
-	jumpFailClass := self JumpNonZero: 0.
-	objectRepresentation genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
-	doOp := self Label.
-	preOpCheckOrNil ifNotNil:
-		[jumpFailCheck := self perform: preOpCheckOrNil with: DPFPReg0 with: DPFPReg1].
-	self gen: arithmeticOperator operand: DPFPReg1 operand: DPFPReg0.
-	jumpFailAlloc := objectRepresentation
-						genAllocFloatValue: DPFPReg0
-						into: SendNumArgsReg
-						scratchReg: ClassReg
-						scratchReg: TempReg.
-	self MoveR: SendNumArgsReg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpImmediate jmpTarget: self Label.
-	objectRepresentation maybeGenConvertIfSmallFloatIn: Arg0Reg scratchReg: TempReg into: DPFPReg1 andJumpTo: doOp.
-	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
-		[jumpNonInt := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg].
-	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
-	self ConvertR: ClassReg Rd: DPFPReg1.
-	self Jump: doOp.
-	"We need to push the register args on two paths; this one and the interpreter primitive path.
-	But the interpreter primitive path won't unless regArgsHaveBeenPushed is false."
-	self assert: methodOrBlockNumArgs <= self numRegArgs.
-	jumpFailClass jmpTarget: self Label.
-	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
-		[jumpNonInt jmpTarget: jumpFailClass getJmpTarget].
-	preOpCheckOrNil ifNotNil:
-		[jumpFailCheck jmpTarget: jumpFailClass getJmpTarget].
-	backEnd genPushRegisterArgsForNumArgs: methodOrBlockNumArgs scratchReg: SendNumArgsReg.
-	jumpFailClass2 := self Jump: 0.
-	jumpFailAlloc jmpTarget: self Label.
-	self compileFallbackToInterpreterPrimitive: 0.
-	jumpFailClass2 jmpTarget: self Label.
-	^0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genDoubleComparison: jumpOpcodeGenerator invert: invertComparison [
-	"Receiver and arg in registers.
-	 Stack looks like
-		return address"
-	<var: #jumpOpcodeGenerator declareC: 'AbstractInstruction *(*jumpOpcodeGenerator)(void *)'>
-	| jumpFail jumpImmediate jumpNonInt jumpCond compare |
-	<var: #jumpImmediate type: #'AbstractInstruction *'>
-	<var: #jumpNonInt type: #'AbstractInstruction *'>
-	<var: #jumpCond type: #'AbstractInstruction *'>
-	<var: #compare type: #'AbstractInstruction *'>
-	<var: #jumpFail type: #'AbstractInstruction *'>
-	objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
-	jumpImmediate := objectRepresentation genJumpImmediate: Arg0Reg.
-	objectRepresentation genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
-	objectRepresentation genCmpClassFloatCompactIndexR: SendNumArgsReg.
-	jumpFail := self JumpNonZero: 0.
-	objectRepresentation genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
-	invertComparison "May need to invert for NaNs"
-		ifTrue: [compare := self CmpRd: DPFPReg0 Rd: DPFPReg1]
-		ifFalse: [compare := self CmpRd: DPFPReg1 Rd: DPFPReg0].
-	jumpCond := self perform: jumpOpcodeGenerator with: 0. "FP jumps are a little weird"
-	self genMoveFalseR: ReceiverResultReg.
-	self RetN: 0.
-	jumpCond jmpTarget: (self genMoveTrueR: ReceiverResultReg).
-	self RetN: 0.
-	jumpImmediate jmpTarget: self Label.
-	objectRepresentation maybeGenConvertIfSmallFloatIn: Arg0Reg scratchReg: TempReg into: DPFPReg1 andJumpTo: compare.
-	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
-		[jumpNonInt := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg].
-	objectRepresentation genConvertSmallIntegerToIntegerInReg: Arg0Reg.
-	self ConvertR: Arg0Reg Rd: DPFPReg1.
-	self Jump: compare.
-	jumpFail jmpTarget: self Label.
-	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
-		[jumpNonInt jmpTarget: jumpFail getJmpTarget].
-	^0
-]
-
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genEqualsEqualsComparisonArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg [
 	"Generates the Cmp instruction for #==. The instruction is different if one of the operands is a constant.
@@ -1920,7 +1817,10 @@ StackToRegisterMappingCogit >> genJumpTo: targetBytecodePC [
 
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genLoadArgAtDepth: n into: reg [
-	self shouldNotImplement
+	"All machine code primitives apart from perform: have only
+	 register arguments, hence no arg load code is necessary."
+	<inline: true>
+	self assert: n < objectRepresentation numRegArgs
 ]
 
 { #category : #'bytecode generator support' }
@@ -2102,204 +2002,15 @@ StackToRegisterMappingCogit >> genPopStackBytecode [
 ]
 
 { #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveAdd [
-	| jumpNotSI jumpOvfl |
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	<var: #jumpOvfl type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: ClassReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ClassReg.
-	self AddR: ReceiverResultReg R: ClassReg.
-	jumpOvfl := self JumpOverflow: 0.
-	self MoveR: ClassReg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpOvfl jmpTarget: (jumpNotSI jmpTarget: self Label).
-	^0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveAsCharacter [
-	| na r |
-	na := coInterpreter argumentCountOf: methodObj.
-	r := na <= 1
-			ifTrue:
-				[objectRepresentation
-						genInnerPrimitiveAsCharacter: 0
-						inReg: (na = 0 ifTrue: [ReceiverResultReg] ifFalse: [Arg0Reg])]
-			ifFalse: [0].
-	^self compileFallbackToInterpreterPrimitive: r
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveAsFloat [
-	| jumpFailAlloc |
-	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
-	self MoveR: ReceiverResultReg R: TempReg.
-	objectRepresentation genConvertSmallIntegerToIntegerInReg: TempReg.
-	self ConvertR: TempReg Rd: DPFPReg0.
-	jumpFailAlloc := objectRepresentation
-						genAllocFloatValue: DPFPReg0
-						into: SendNumArgsReg
-						scratchReg: ClassReg
-						scratchReg: TempReg.
-	self MoveR: SendNumArgsReg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpFailAlloc jmpTarget: self Label.
-	^self compileFallbackToInterpreterPrimitive: 0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveAt [
-	self assert: self numRegArgs >= 1.
-	^self compileFallbackToInterpreterPrimitive:
-		(objectRepresentation genInnerPrimitiveAt: 0)
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveAtPut [
-	^self compileFallbackToInterpreterPrimitive:
-		(objectRepresentation genInnerPrimitiveAtPut: 0)
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveBitAnd [
-	| jumpNotSI |
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	"Whether the SmallInteger tags are zero or non-zero, oring them together will preserve them."
-	self AndR: Arg0Reg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpNotSI jmpTarget: self Label.
-	^0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveBitOr [
-	| jumpNotSI |
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	"Whether the SmallInteger tags are zero or non-zero, oring them together will preserve them."
-	self OrR: Arg0Reg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpNotSI jmpTarget: self Label.
-	^0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveBitShift [
-	"Receiver and arg in registers.
-	 Stack looks like
-		return address
-
-	rTemp := rArg0
-	rClass := tTemp
-	rTemp := rTemp & 1
-	jz nonInt
-	rClass >>= 1
-	cmp 0,rClass
-	jge neg
-	cmp 31,rClass // numSmallIntegerBits, jge for sign
-	jge tooBig
-	rTemp := rReceiver
-	rTemp <<= rClass
-	rTemp >>= rClass (arithmetic)
-	cmp rTemp,rReceiver
-	jnz ovfl
-	rReceiver := rReceiver - 1
-	rReceiver := rReceiver <<= rClass
-	rReceiver := rReceiver + 1
-	ret
-neg:
-	rClass := 0 - rClass
-	cmp 31,rClass
-	jge inRange
-	rClass := 31
-inRange
-	rReceiver := rReceiver >>= rClass.
-	rReceiver := rReceiver | 1.
-	ret
-ovfl
-tooBig
-nonInt:
-	fail"
-	| jumpNotSI jumpOvfl jumpNegative jumpTooBig jumpInRange |
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	<var: #jumpOvfl type: #'AbstractInstruction *'>
-	<var: #jumpNegative type: #'AbstractInstruction *'>
-	<var: #jumpTooBig type: #'AbstractInstruction *'>
-	<var: #jumpInRange type: #'AbstractInstruction *'>
-	self assert: self numRegArgs >= 1.
-	self MoveR: Arg0Reg R: ClassReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
-	(self lastOpcode setsConditionCodesFor: JumpNegative) ifFalse:
-		[self CmpCq: 0 R: ClassReg]. "N.B. FLAGS := ClassReg - 0"
-	jumpNegative := self JumpNegative: 0.
-	self CmpCq: objectRepresentation numSmallIntegerBits R: ClassReg. "N.B. FLAGS := ClassReg - 31"
-	jumpTooBig := self JumpGreaterOrEqual: 0.
-	self MoveR: ReceiverResultReg R: TempReg.
-	self LogicalShiftLeftR: ClassReg R: TempReg.
-	self ArithmeticShiftRightR: ClassReg R: TempReg.
-	self CmpR: TempReg R: ReceiverResultReg. "N.B. FLAGS := RRReg - TempReg"
-	jumpOvfl := self JumpNonZero: 0.
-	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ReceiverResultReg.
-	self LogicalShiftLeftR: ClassReg R: ReceiverResultReg.
-	objectRepresentation genAddSmallIntegerTagsTo: ReceiverResultReg.
-	self RetN: 0.
-	jumpNegative jmpTarget: (self NegateR: ClassReg).
-	self CmpCq: objectRepresentation numSmallIntegerBits R: ClassReg. "N.B. FLAGS := ClassReg - 31"
-	jumpInRange := self JumpLessOrEqual: 0.
-	self MoveCq: objectRepresentation numSmallIntegerBits R: ClassReg.
-	jumpInRange jmpTarget: (self ArithmeticShiftRightR: ClassReg R: ReceiverResultReg).
-	objectRepresentation genClearAndSetSmallIntegerTagsIn: ReceiverResultReg.
-	self RetN: 0.
-	jumpNotSI jmpTarget: (jumpTooBig jmpTarget: (jumpOvfl jmpTarget: self Label)).
-	^0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveBitXor [
-	| jumpNotSI |
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	"Clear one or the other tag so that xoring will preserve them."
-	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: Arg0Reg.
-	self XorR: Arg0Reg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpNotSI jmpTarget: self Label.
-	^0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveCharacterValue [
-	^self compileFallbackToInterpreterPrimitive:
-		(objectRepresentation genInnerPrimitiveCharacterValue: 0)
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveClass [
-	"Primitive class must be variadic for objectClass:"
-	| reg |
-	methodOrBlockNumArgs > 0
-		ifTrue:
-			[methodOrBlockNumArgs > 1 ifTrue:
-				[^self compileFallbackToInterpreterPrimitive: 0].
-			 reg := Arg0Reg]
-		ifFalse:
-			[reg := ReceiverResultReg].
-	(objectRepresentation
-			genGetClassObjectOf: reg
-			into: ReceiverResultReg
-			scratchReg: TempReg
-			instRegIsReceiver: methodOrBlockNumArgs = 0) = BadRegisterSet ifTrue:
-		[objectRepresentation
-			genGetClassObjectOf: reg
-			into: ClassReg
-			scratchReg: TempReg
-			instRegIsReceiver: methodOrBlockNumArgs = 0.
-		 self MoveR: ClassReg R: ReceiverResultReg].
-	self RetN: 0.
-	^0
+StackToRegisterMappingCogit >> genPrimReturn [
+	"Generate a return that cuts back the stack to remove the receiver
+	 and arguments after an invocation of a primitive with nargs arguments.
+	 Since all primitives that succeed in the normal way (i.e. don't execute a
+	 method as do genPrimitiveClosureValue and genPrimitivePerform) take only
+	 register arguments, there is nothing to do."
+	<inline: true>
+	self assert: methodOrBlockNumArgs <= self numRegArgs.
+	^self RetN: 0
 ]
 
 { #category : #'primitive generators' }
@@ -2314,315 +2025,17 @@ StackToRegisterMappingCogit >> genPrimitiveClosureValue [
 ]
 
 { #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveDiv [
-	| jumpNotSI jumpIsSI jumpZero jumpExact jumpSameSign convert |
-	<var: #convert type: #'AbstractInstruction *'>
-	<var: #jumpIsSI type: #'AbstractInstruction *'>
-	<var: #jumpZero type: #'AbstractInstruction *'>
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	<var: #jumpExact type: #'AbstractInstruction *'>
-	<var: #jumpSameSign type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: ClassReg.
-	self MoveR: Arg0Reg R: Arg1Reg.
-	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	"We must shift away the tags, not just subtract them, so that the
-	 overflow case doesn't actually overflow the machine instruction."
-	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
-	(self lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
-		[self CmpCq: 0 R: ClassReg].
-	jumpZero := self JumpZero: 0.
-	self MoveR: ReceiverResultReg R: TempReg.
-	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: TempReg.
-	self DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
-	"If remainder is zero we must check for overflow."
-	self CmpCq: 0 R: ClassReg.
-	jumpExact := self JumpZero: 0.
-	"If arg and remainder signs are different we must round down."
-	self XorR: ClassReg R: Arg1Reg.
-	(self lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
-		[self CmpCq: 0 R: Arg1Reg].
-	jumpSameSign := self JumpGreaterOrEqual: 0.
-	self SubCq: 1 R: TempReg.
-	jumpSameSign jmpTarget: (convert := self Label).
-	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
-	self MoveR: TempReg R: ReceiverResultReg.
-	self RetN: 0.
-	"test for overflow; the only case is SmallInteger minVal // -1"
-	jumpExact jmpTarget: self Label.
-	jumpIsSI := objectRepresentation genJumpIsSmallIntegerValue: TempReg scratch: Arg1Reg.
-	jumpIsSI jmpTarget: convert.
-	jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label).
-	^0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveDivide [
-	| jumpNotSI jumpZero jumpInexact jumpOverflow |
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	<var: #jumpZero type: #'AbstractInstruction *'>
-	<var: #jumpInexact type: #'AbstractInstruction *'>
-	<var: #jumpOverflow type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: ClassReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	"We must shift away the tags, not just subtract them, so that the
-	 overflow case doesn't actually overflow the machine instruction."
-	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
-	jumpZero := self JumpZero: 0.
-	self MoveR: ReceiverResultReg R: TempReg.
-	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: TempReg.
-	self DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
-	"If remainder is non-zero fail."
-	self CmpCq: 0 R: ClassReg.
-	jumpInexact := self JumpNonZero: 0.
-	"test for overflow; the only case is SmallInteger minVal / -1"
-	jumpOverflow := objectRepresentation genJumpNotSmallIntegerValue: TempReg scratch: Arg1Reg.
-	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
-	self MoveR: TempReg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpOverflow jmpTarget: (jumpInexact jmpTarget: (jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label))).
-	^0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveFloatSquareRoot [
-	| jumpFailAlloc |
-	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
-	objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
-	self SqrtRd: DPFPReg0.
-	jumpFailAlloc := objectRepresentation
-						genAllocFloatValue: DPFPReg0
-						into: SendNumArgsReg
-						scratchReg: ClassReg
-						scratchReg: TempReg.
-	self MoveR: SendNumArgsReg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpFailAlloc jmpTarget: self Label.
-	^self compileFallbackToInterpreterPrimitive: 0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveIdentical [
-	"Receiver and arg in registers.
-	 Stack looks like
-		return address"
-	^objectRepresentation
-		genInnerPrimitiveIdentical: 0
-		orNotIf: false
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveIdentityHash [
-	^self compileFallbackToInterpreterPrimitive:
-		(objectRepresentation genInnerPrimitiveIdentityHash: 0)
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveMod [
-	| jumpNotSI jumpZero jumpExact jumpSameSign |
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	<var: #jumpZero type: #'AbstractInstruction *'>
-	<var: #jumpExact type: #'AbstractInstruction *'>
-	<var: #jumpSameSign type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: ClassReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ClassReg.
-	jumpZero := self JumpZero: 0.
-	self MoveR: ClassReg R: Arg1Reg.
-	self MoveR: ReceiverResultReg R: TempReg.
-	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: TempReg.
-	self DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
-	"If remainder is zero we're done."
-	self CmpCq: 0 R: ClassReg.
-	jumpExact := self JumpZero: 0.
-	"If arg and remainder signs are different we must reflect around zero."
-	self XorR: ClassReg R: Arg1Reg.
-	(self lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
-		[self CmpCq: 0 R: Arg1Reg].
-	jumpSameSign := self JumpGreaterOrEqual: 0.
-	self XorR: ClassReg R: Arg1Reg.
-	self AddR: Arg1Reg R: ClassReg.
-	jumpSameSign jmpTarget: (jumpExact jmpTarget: self Label).
-	objectRepresentation genSetSmallIntegerTagsIn: ClassReg.
-	self MoveR: ClassReg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label).
-	^0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveMultiply [
-	| jumpNotSI jumpOvfl |
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	<var: #jumpOvfl type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: ClassReg.
-	self MoveR: ReceiverResultReg R: Arg1Reg.
-	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg..
-	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
-	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: Arg1Reg.
-	self MulR: Arg1Reg R: ClassReg.
-	jumpOvfl := self JumpOverflow: 0.
-	objectRepresentation genSetSmallIntegerTagsIn: ClassReg.
-	self MoveR: ClassReg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpOvfl jmpTarget: (jumpNotSI jmpTarget: self Label).
-	^0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveNew [
-	| r numArgs |
-	NewspeakVM
-		ifTrue:
-			[r := 0.
-			 numArgs := coInterpreter argumentCountOf: methodObj.
-			 numArgs = 1 ifTrue:
-				[r := objectRepresentation genInnerPrimitiveMirrorNew: 0].
-			 numArgs = 0 ifTrue:
-				[r := objectRepresentation genInnerPrimitiveNew: 0]]
-		ifFalse:
-			[r := objectRepresentation genInnerPrimitiveNew: 0].
-	"Call the interpreter primitive either when the machine-code primitive
-	 fails, or if the machine-code primitive is unimplemented."
-	^self compileFallbackToInterpreterPrimitive: r
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveNewMethod [
-	^self compileFallbackToInterpreterPrimitive:
-		(objectRepresentation genInnerPrimitiveNewMethod: 0)
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveNewWithArg [
-	| r numArgs |
-	NewspeakVM
-		ifTrue:
-			[r := 0.
-			 numArgs := coInterpreter argumentCountOf: methodObj.
-			 numArgs = 2 ifTrue:
-				[r := objectRepresentation genInnerPrimitiveMirrorNewWithArg: 0].
-			 numArgs = 1 ifTrue:
-				[r := objectRepresentation genInnerPrimitiveNewWithArg: 0]]
-		ifFalse:
-			[r := objectRepresentation genInnerPrimitiveNewWithArg: 0].
-	"Call the interpreter primitive either when the machine-code primitive
-	 fails, or if the machine-code primitive is unimplemented."
-	^self compileFallbackToInterpreterPrimitive: r
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveNotIdentical [
-	"Receiver and arg in registers.
-	 Stack looks like
-		return address"
-	^objectRepresentation
-		genInnerPrimitiveIdentical: 0
-		orNotIf: true
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveObjectAt [
-	^self compileFallbackToInterpreterPrimitive:
-		(objectRepresentation genInnerPrimitiveObjectAt: 0)
-]
-
-{ #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitivePerform [
 	"Generate an in-line perform primitive.  The lookup code requires the selector to be in Arg0Reg.
 	 adjustArgumentsForPerform: adjusts the arguments once genLookupForPerformNumArgs:
 	 has generated the code for the lookup."
 	methodOrBlockNumArgs > self numRegArgs ifTrue:
-		[self MoveMw: (backEnd hasLinkRegister ifTrue: [methodOrBlockNumArgs - 1] ifFalse: [methodOrBlockNumArgs]) * objectMemory wordSize r: SPReg R: Arg0Reg].
-	self genLookupForPerformNumArgs: methodOrBlockNumArgs.
-	^self compileInterpreterPrimitive: (coInterpreter
-										functionPointerForCompiledMethod: methodObj
-										primitiveIndex: primitiveIndex)
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveQuo [
-	| convert jumpNotSI jumpZero jumpIsSI jumpExact |
-	<var: #convert type: #'AbstractInstruction *'>
-	<var: #jumpIsSI type: #'AbstractInstruction *'>
-	<var: #jumpZero type: #'AbstractInstruction *'>
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	<var: #jumpExact type: #'AbstractInstruction *'>
-	self MoveR: Arg0Reg R: ClassReg.
-	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	"We must shift away the tags, not just subtract them, so that the
-	 overflow case doesn't actually overflow the machine instruction."
-	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
-	(self lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
-		[self CmpCq: 0 R: ClassReg].
-	jumpZero := self JumpZero: 0.
-	self MoveR: ReceiverResultReg R: TempReg.
-	objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: TempReg.
-	self DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
-	"If remainder is zero we must check for overflow."
-	self CmpCq: 0 R: ClassReg.
-	jumpExact := self JumpZero: 0.
-	convert := self Label.
-	objectRepresentation genConvertIntegerToSmallIntegerInReg: TempReg.
-	self MoveR: TempReg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpExact jmpTarget: self Label.
-	jumpIsSI := objectRepresentation genJumpIsSmallIntegerValue: TempReg scratch: Arg1Reg.
-	jumpIsSI jmpTarget: convert.
-	jumpZero jmpTarget: (jumpNotSI jmpTarget: self Label).
-	^0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveSize [
-	^self compileFallbackToInterpreterPrimitive:
-		(objectRepresentation genInnerPrimitiveSize: 0)
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveSmallFloatSquareRoot [
-	<option: #Spur64BitMemoryManager>
-	| jumpFailAlloc |
-	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
-	objectRepresentation genGetSmallFloatValueOf: ReceiverResultReg scratch: SendNumArgsReg into: DPFPReg0.
-	self SqrtRd: DPFPReg0.
-	jumpFailAlloc := objectRepresentation
-						genAllocFloatValue: DPFPReg0
-						into: SendNumArgsReg
-						scratchReg: ClassReg
-						scratchReg: TempReg.
-	self MoveR: SendNumArgsReg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpFailAlloc jmpTarget: self Label.
-	^self compileFallbackToInterpreterPrimitive: 0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveStringAt [
-	self assert: self numRegArgs >= 1.
-	^self compileFallbackToInterpreterPrimitive:
-		(objectRepresentation genInnerPrimitiveStringAt: 0)
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveStringAtPut [
-	^self compileFallbackToInterpreterPrimitive:
-		(objectRepresentation genInnerPrimitiveStringAtPut: 0)
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genPrimitiveSubtract [
-	| jumpNotSI jumpOvfl |
-	<var: #jumpNotSI type: #'AbstractInstruction *'>
-	<var: #jumpOvfl type: #'AbstractInstruction *'>
-	jumpNotSI := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	self MoveR: ReceiverResultReg R: TempReg.
-	self SubR: Arg0Reg R: TempReg.
-	jumpOvfl := self JumpOverflow: 0.
-	objectRepresentation genAddSmallIntegerTagsTo: TempReg.
-	self MoveR: TempReg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpOvfl jmpTarget: (jumpNotSI jmpTarget: self Label).
-	^0
+		[self MoveMw: (backEnd hasLinkRegister
+					ifTrue: [methodOrBlockNumArgs - 1]
+					ifFalse: [methodOrBlockNumArgs]) * objectMemory wordSize
+			r: SPReg
+			R: Arg0Reg].
+	^self genLookupForPerformNumArgs: methodOrBlockNumArgs
 ]
 
 { #category : #'bytecode generators' }
@@ -2899,164 +2312,6 @@ StackToRegisterMappingCogit >> genSendTrampolineFor: aRoutine numArgs: numArgs c
 		resultReg: NoReg
 		appendOpcodes: true.
 	^startAddress
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genSmallFloatArithmetic: arithmeticOperator preOpCheck: preOpCheckOrNil [
-	"Receiver and arg in registers.
-	 Stack looks like
-		return address"
-	<var: #preOpCheckOrNil declareC: 'AbstractInstruction *(*preOpCheckOrNil)(int rcvrReg, int argReg)'>
-	| jumpFailClass jumpFailClass2 jumpFailAlloc jumpFailCheck jumpImmediate jumpNonInt doOp |
-	<var: #jumpFailClass type: #'AbstractInstruction *'>
-	<var: #jumpFailClass2 type: #'AbstractInstruction *'>
-	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
-	<var: #jumpImmediate type: #'AbstractInstruction *'>
-	<var: #jumpNonInt type: #'AbstractInstruction *'>
-	<var: #jumpFailCheck type: #'AbstractInstruction *'>
-	<var: #doOp type: #'AbstractInstruction *'>
-	objectRepresentation genGetSmallFloatValueOf: ReceiverResultReg scratch: SendNumArgsReg into: DPFPReg0.
-	self MoveR: Arg0Reg R: ClassReg.
-	jumpImmediate := objectRepresentation genJumpImmediate: Arg0Reg.
-	objectRepresentation genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
-	objectRepresentation genCmpClassFloatCompactIndexR: SendNumArgsReg.
-	jumpFailClass := self JumpNonZero: 0.
-	objectRepresentation genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
-	doOp := self Label.
-	preOpCheckOrNil ifNotNil:
-		[jumpFailCheck := self perform: preOpCheckOrNil with: DPFPReg0 with: DPFPReg1].
-	self gen: arithmeticOperator operand: DPFPReg1 operand: DPFPReg0.
-	jumpFailAlloc := objectRepresentation
-						genAllocFloatValue: DPFPReg0
-						into: SendNumArgsReg
-						scratchReg: ClassReg
-						scratchReg: TempReg.
-	self MoveR: SendNumArgsReg R: ReceiverResultReg.
-	self RetN: 0.
-	jumpImmediate jmpTarget: self Label.
-	objectRepresentation maybeGenConvertIfSmallFloatIn: Arg0Reg scratchReg: TempReg into: DPFPReg1 andJumpTo: doOp.
-	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
-		[jumpNonInt := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg].
-	objectRepresentation genConvertSmallIntegerToIntegerInReg: ClassReg.
-	self ConvertR: ClassReg Rd: DPFPReg1.
-	self Jump: doOp.
-	"We need to push the register args on two paths; this one and the interpreter primitive path.
-	But the interpreter primitive path won't unless regArgsHaveBeenPushed is false."
-	self assert: methodOrBlockNumArgs <= self numRegArgs.
-	jumpFailClass jmpTarget: self Label.
-	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
-		[jumpNonInt jmpTarget: jumpFailClass getJmpTarget].
-	preOpCheckOrNil ifNotNil:
-		[jumpFailCheck jmpTarget: jumpFailClass getJmpTarget].
-	backEnd genPushRegisterArgsForNumArgs: methodOrBlockNumArgs scratchReg: SendNumArgsReg.
-	jumpFailClass2 := self Jump: 0.
-	jumpFailAlloc jmpTarget: self Label.
-	self compileFallbackToInterpreterPrimitive: 0.
-	jumpFailClass2 jmpTarget: self Label.
-	^0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genSmallFloatComparison: jumpOpcodeGenerator invert: invertComparison [
-	"Receiver and arg in registers.
-	 Stack looks like
-		return address"
-	<var: #jumpOpcodeGenerator declareC: 'AbstractInstruction *(*jumpOpcodeGenerator)(void *)'>
-	| jumpFail jumpImmediate jumpNonInt jumpCond compare |
-	<var: #jumpImmediate type: #'AbstractInstruction *'>
-	<var: #jumpNonInt type: #'AbstractInstruction *'>
-	<var: #jumpCond type: #'AbstractInstruction *'>
-	<var: #compare type: #'AbstractInstruction *'>
-	<var: #jumpFail type: #'AbstractInstruction *'>
-	objectRepresentation genGetSmallFloatValueOf: ReceiverResultReg scratch: SendNumArgsReg into: DPFPReg0.
-	jumpImmediate := objectRepresentation genJumpImmediate: Arg0Reg.
-	objectRepresentation genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
-	objectRepresentation genCmpClassFloatCompactIndexR: SendNumArgsReg.
-	jumpFail := self JumpNonZero: 0.
-	objectRepresentation genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
-	invertComparison "May need to invert for NaNs"
-		ifTrue: [compare := self CmpRd: DPFPReg0 Rd: DPFPReg1]
-		ifFalse: [compare := self CmpRd: DPFPReg1 Rd: DPFPReg0].
-	jumpCond := self perform: jumpOpcodeGenerator with: 0. "FP jumps are a little weird"
-	self genMoveFalseR: ReceiverResultReg.
-	self RetN: 0.
-	jumpCond jmpTarget: (self genMoveTrueR: ReceiverResultReg).
-	self RetN: 0.
-	jumpImmediate jmpTarget: self Label.
-	objectRepresentation maybeGenConvertIfSmallFloatIn: Arg0Reg scratchReg: TempReg into: DPFPReg1 andJumpTo: compare.
-	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
-		[jumpNonInt := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg].
-	objectRepresentation genConvertSmallIntegerToIntegerInReg: Arg0Reg.
-	self ConvertR: Arg0Reg Rd: DPFPReg1.
-	self Jump: compare.
-	jumpFail jmpTarget: self Label.
-	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
-		[jumpNonInt jmpTarget: jumpFail getJmpTarget].
-	^0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode [
-	| jumpFail jumpTrue |
-	<var: #jumpFail type: #'AbstractInstruction *'>
-	<var: #jumpTrue type: #'AbstractInstruction *'>
-	jumpFail := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	self CmpR: Arg0Reg R: ReceiverResultReg. "N.B. FLAGS := RRReg - Arg0Reg"
-	jumpTrue := self genConditionalBranch: jumpOpcode operand: 0.
-	self genMoveFalseR: ReceiverResultReg.
-	self RetN: 0.
-	jumpTrue jmpTarget: (self genMoveTrueR: ReceiverResultReg).
-	self RetN: 0.
-	jumpFail jmpTarget: self Label.
-	^0
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode orDoubleComparison: jumpFPOpcodeGenerator invert: invertComparison [
-	"Stack looks like
-		return address"
-	| jumpDouble jumpNonInt jumpFail jumpTrue jumpCond |
-	<var: #jumpFPOpcodeGenerator declareC: 'AbstractInstruction *(*jumpFPOpcodeGenerator)(void *)'>
-	<var: #jumpDouble type: #'AbstractInstruction *'>
-	<var: #jumpNonInt type: #'AbstractInstruction *'>
-	<var: #jumpCond type: #'AbstractInstruction *'>
-	<var: #jumpTrue type: #'AbstractInstruction *'>
-	<var: #jumpFail type: #'AbstractInstruction *'>
-	backEnd hasDoublePrecisionFloatingPointSupport ifFalse:
-		[^self genSmallIntegerComparison: jumpOpcode].
-	jumpDouble := objectRepresentation genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	self CmpR: Arg0Reg R: ReceiverResultReg. "N.B. FLAGS := RRReg - Arg0Reg"
-	jumpTrue := self gen: jumpOpcode.
-	self genMoveFalseR: ReceiverResultReg.
-	self RetN: 0.
-	jumpTrue jmpTarget: (self genMoveTrueR: ReceiverResultReg).
-	self RetN: 0.
-	
-	"Argument may be a Float : let us check or fail"
-	jumpDouble jmpTarget: self Label.
-	objectRepresentation smallIntegerIsOnlyImmediateType ifFalse:
-		[jumpNonInt := objectRepresentation genJumpImmediate: Arg0Reg].
-	objectRepresentation genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
-	objectRepresentation genCmpClassFloatCompactIndexR: SendNumArgsReg.
-	jumpFail := self JumpNonZero: 0.
-
-	"It was a Float, so convert the receiver to double and perform the operation"
-	objectRepresentation genConvertSmallIntegerToIntegerInReg: ReceiverResultReg.
-	self ConvertR: ReceiverResultReg Rd: DPFPReg0.
-	objectRepresentation genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
-	invertComparison "May need to invert for NaNs"
-		ifTrue: [self CmpRd: DPFPReg0 Rd: DPFPReg1]
-		ifFalse: [self CmpRd: DPFPReg1 Rd: DPFPReg0].
-	jumpCond := self perform: jumpFPOpcodeGenerator with: 0. "FP jumps are a little weird"
-	self genMoveFalseR: ReceiverResultReg.
-	self RetN: 0.
-	jumpCond jmpTarget: (self genMoveTrueR: ReceiverResultReg).
-	self RetN: 0.
-
-	objectRepresentation smallIntegerIsOnlyImmediateType
-		ifTrue: [jumpFail jmpTarget: self Label]
-		ifFalse: [jumpNonInt jmpTarget: (jumpFail jmpTarget: self Label)].
-	^0
 ]
 
 { #category : #'bytecode generators' }
@@ -3988,12 +3243,6 @@ StackToRegisterMappingCogit >> isPushNil: descriptor pc: pc nExts: nExts method:
 		with: aMethodObj
 ]
 
-{ #category : #testing }
-StackToRegisterMappingCogit >> isValidFramelessRegister: reg [
-	"Answer if the receiver is valid in a frameless method."
-	^reg = ReceiverResultReg or: [reg = Arg0Reg]
-]
-
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> liveRegisters [
 	| regsSet |
@@ -4227,11 +3476,6 @@ StackToRegisterMappingCogit >> prevInstIsPCAnnotated [
 		whileTrue:
 			[prevIndex := prevIndex - 1].
 	^false
-]
-
-{ #category : #'primitive generators' }
-StackToRegisterMappingCogit >> primRetNOffsetFor: nargs [
-	self shouldNotImplement
 ]
 
 { #category : #'simulation only' }
