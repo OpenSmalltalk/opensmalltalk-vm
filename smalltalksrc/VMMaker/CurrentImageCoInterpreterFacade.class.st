@@ -194,6 +194,11 @@ CurrentImageCoInterpreterFacade >> canContextSwitchIfActivating: method header: 
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> characterObjectOf: anInteger [
+	^objectMemory characterObjectOf: anInteger
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> characterTable [
 	^self subclassResponsibility
 ]

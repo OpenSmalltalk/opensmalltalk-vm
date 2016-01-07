@@ -126,6 +126,93 @@ CogObjectRepresentation >> genCreateClosureAt: bcpc numArgs: numArgs numCopied: 
 	self subclassResponsibility
 ]
 
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genDoubleArithmetic: arithmeticOperator preOpCheck: preOpCheckOrNil [
+	<option: #DPFPReg0>
+	<var: #preOpCheckOrNil declareC: 'AbstractInstruction *(*preOpCheckOrNil)(int rcvrReg, int argReg)'>
+	| jumpFailClass jumpFailAlloc jumpFailCheck jumpImmediate jumpNonInt doOp |
+	<var: #jumpFailClass type: #'AbstractInstruction *'>
+	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
+	<var: #jumpImmediate type: #'AbstractInstruction *'>
+	<var: #jumpNonInt type: #'AbstractInstruction *'>
+	<var: #jumpFailCheck type: #'AbstractInstruction *'>
+	<var: #doOp type: #'AbstractInstruction *'>
+	cogit processorHasDoublePrecisionFloatingPointSupport ifFalse:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	self genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
+	cogit MoveR: Arg0Reg R: ClassReg.
+	jumpImmediate := self genJumpImmediate: Arg0Reg.
+	self genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
+	self genCmpClassFloatCompactIndexR: SendNumArgsReg.
+	jumpFailClass := cogit JumpNonZero: 0.
+	self genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
+	doOp := cogit Label.
+	preOpCheckOrNil ifNotNil:
+		[jumpFailCheck := cogit perform: preOpCheckOrNil with: DPFPReg0 with: DPFPReg1].
+	cogit gen: arithmeticOperator operand: DPFPReg1 operand: DPFPReg0.
+	jumpFailAlloc := self
+						genAllocFloatValue: DPFPReg0
+						into: SendNumArgsReg
+						scratchReg: ClassReg
+						scratchReg: TempReg.
+	cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpImmediate jmpTarget: cogit Label.
+	self maybeGenConvertIfSmallFloatIn: Arg0Reg scratchReg: TempReg into: DPFPReg1 andJumpTo: doOp.
+	self smallIntegerIsOnlyImmediateType ifFalse:
+		[jumpNonInt := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg].
+	self genConvertSmallIntegerToIntegerInReg: ClassReg.
+	cogit ConvertR: ClassReg Rd: DPFPReg1.
+	cogit Jump: doOp.
+	jumpFailAlloc jmpTarget:  (jumpFailClass jmpTarget: cogit Label).
+	self smallIntegerIsOnlyImmediateType ifFalse:
+		[jumpNonInt jmpTarget: jumpFailClass getJmpTarget].
+	preOpCheckOrNil ifNotNil:
+		[jumpFailCheck jmpTarget: jumpFailClass getJmpTarget].
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genDoubleComparison: jumpOpcodeGenerator invert: invertComparison [
+	<option: #DPFPReg0>
+	<var: #jumpOpcodeGenerator declareC: 'AbstractInstruction *(*jumpOpcodeGenerator)(void *)'>
+	| jumpFail jumpImmediate jumpNonInt jumpCond compare |
+	<var: #jumpImmediate type: #'AbstractInstruction *'>
+	<var: #jumpNonInt type: #'AbstractInstruction *'>
+	<var: #jumpCond type: #'AbstractInstruction *'>
+	<var: #compare type: #'AbstractInstruction *'>
+	<var: #jumpFail type: #'AbstractInstruction *'>
+	cogit processorHasDoublePrecisionFloatingPointSupport ifFalse:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	self genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
+	jumpImmediate := self genJumpImmediate: Arg0Reg.
+	self genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
+	self genCmpClassFloatCompactIndexR: SendNumArgsReg.
+	jumpFail := cogit JumpNonZero: 0.
+	self genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
+	invertComparison "May need to invert for NaNs"
+		ifTrue: [compare := cogit CmpRd: DPFPReg0 Rd: DPFPReg1]
+		ifFalse: [compare := cogit CmpRd: DPFPReg1 Rd: DPFPReg0].
+	jumpCond := cogit perform: jumpOpcodeGenerator with: 0. "FP jumps are a little weird"
+	cogit genMoveFalseR: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpCond jmpTarget: (cogit genMoveTrueR: ReceiverResultReg).
+	cogit genPrimReturn.
+	jumpImmediate jmpTarget: cogit Label.
+	self maybeGenConvertIfSmallFloatIn: Arg0Reg scratchReg: TempReg into: DPFPReg1 andJumpTo: compare.
+	self smallIntegerIsOnlyImmediateType ifFalse:
+		[jumpNonInt := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg].
+	self genConvertSmallIntegerToIntegerInReg: Arg0Reg.
+	cogit ConvertR: Arg0Reg Rd: DPFPReg1.
+	cogit Jump: compare.
+	jumpFail jmpTarget: cogit Label.
+	self smallIntegerIsOnlyImmediateType ifFalse:
+		[jumpNonInt jmpTarget: jumpFail getJmpTarget].
+	^CompletePrimitive
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genEnsureObjInRegNotForwarded: reg scratchReg: scratch [
 	"Make sure that the object in reg is not forwarded.  By default there is
@@ -179,6 +266,12 @@ CogObjectRepresentation >> genEnsureOopInRegNotForwarded: reg scratchReg: scratc
 		r: objReg
 ]
 
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genFastPrimFail [
+	<doNotGenerate>
+	^cogit genFastPrimFail
+]
+
 { #category : #'bytecode generator support' }
 CogObjectRepresentation >> genGetActiveContextNumArgs: numArgs large: isLargeContext inBlock: isInBlock [
 	"Get the active context into ReceiverResultReg, creating it if necessary."
@@ -207,74 +300,6 @@ CogObjectRepresentation >> genGetNumSlotsOf: srcReg into: destReg [
 	"Get the size in word-sized slots of the object in srcReg into destReg.
 	 srcReg may equal destReg."
 	self subclassResponsibility
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentation >> genInnerPrimitiveAsCharacter: retNOffset inReg: reg [
-	"subclasses override if they can"
-	^cogit unimplementedPrimitive
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentation >> genInnerPrimitiveAt: retNoffset [
-	"Implement the guts of primitiveAt"
-	^self subclassResponsibility
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentation >> genInnerPrimitiveAtPut: retNoffset [
-	"subclasses override if they can"
-	^cogit unimplementedPrimitive
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentation >> genInnerPrimitiveCharacterValue: retNOffset [
-	"subclasses override if they can"
-	^cogit unimplementedPrimitive
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentation >> genInnerPrimitiveMirrorNew: retNoffset [
-	<option: #NewspeakVM>
-	"subclasses override if they can"
-	^cogit unimplementedPrimitive
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentation >> genInnerPrimitiveMirrorNewWithArg: retNoffset [
-	<option: #NewspeakVM>
-	"subclasses override if they can"
-	^cogit unimplementedPrimitive
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentation >> genInnerPrimitiveNew: retNoffset [
-	"subclasses override if they can"
-	^cogit unimplementedPrimitive
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentation >> genInnerPrimitiveNewMethod: retNoffset [
-	"subclasses override if they can"
-	^cogit unimplementedPrimitive
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentation >> genInnerPrimitiveNewWithArg: retNoffset [
-	"subclasses override if they can"
-	^cogit unimplementedPrimitive
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentation >> genInnerPrimitiveObjectAt: retNOffset [
-	"subclasses override if they can"
-	^cogit unimplementedPrimitive
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentation >> genInnerPrimitiveStringAtPut: retNoffset [
-	"subclasses override if they can"
-	^cogit unimplementedPrimitive
 ]
 
 { #category : #'compile abstract instructions' }
@@ -377,9 +402,743 @@ CogObjectRepresentation >> genNewArrayOfSize: size initialized: initialized [
 	self subclassResponsibility
 ]
 
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveAdd [
+	| jumpNotSI jumpOvfl |
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #jumpOvfl type: #'AbstractInstruction *'>
+	cogit mclassIsSmallInteger ifFalse:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	cogit MoveR: Arg0Reg R: ClassReg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	self genRemoveSmallIntegerTagsInScratchReg: ClassReg.
+	cogit AddR: ReceiverResultReg R: ClassReg.
+	jumpOvfl := cogit JumpOverflow: 0.
+	cogit MoveR: ClassReg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpOvfl jmpTarget: (jumpNotSI jmpTarget: cogit Label).
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveAsCharacter [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveAsFloat [
+	<option: #DPFPReg0>
+	| jumpFailAlloc |
+	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
+	cogit processorHasDoublePrecisionFloatingPointSupport ifFalse:
+		[^UnimplementedPrimitive].
+	cogit MoveR: ReceiverResultReg R: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: TempReg.
+	cogit ConvertR: TempReg Rd: DPFPReg0.
+	jumpFailAlloc := self
+						genAllocFloatValue: DPFPReg0
+						into: SendNumArgsReg
+						scratchReg: ClassReg
+						scratchReg: TempReg.
+	cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpFailAlloc jmpTarget: cogit Label.
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveAt [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveAtPut [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveBitAnd [
+	| jumpNotSI |
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	cogit mclassIsSmallInteger ifFalse:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	"Whether the SmallInteger tags are zero or non-zero, anding them together will preserve them."
+	cogit AndR: Arg0Reg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpNotSI jmpTarget: cogit Label.
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveBitOr [
+	| jumpNotSI |
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	cogit mclassIsSmallInteger ifFalse:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	"Whether the SmallInteger tags are zero or non-zero, oring them together will preserve them."
+	cogit OrR: Arg0Reg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpNotSI jmpTarget: cogit Label.
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveBitShift [
+	"rTemp := rArg0
+	rClass := tTemp
+	rTemp := rTemp & 1
+	jz nonInt
+	rClass >>= 1
+	cmp 0,rClass
+	jge neg
+	cmp 31,rClass // numSmallIntegerBits, jge for sign
+	jge tooBig
+	rTemp := rReceiver
+	rTemp <<= rClass
+	rTemp >>= rClass (arithmetic)
+	cmp rTemp,rReceiver
+	jnz ovfl
+	rReceiver := rReceiver - 1
+	rReceiver := rReceiver <<= rClass
+	rReceiver := rReceiver + 1
+	ret
+neg:
+	rClass := 0 - rClass
+	cmp 31,rClass // numSmallIntegerBits
+	jge inRange
+	rClass := 31
+inRange
+	rReceiver := rReceiver >>= rClass.
+	rReceiver := rReceiver | smallIntegerTags.
+	ret
+ovfl
+tooBig
+nonInt:
+	fail"
+	| jumpNotSI jumpOvfl jumpNegative jumpTooBig jumpInRange |
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #jumpOvfl type: #'AbstractInstruction *'>
+	<var: #jumpNegative type: #'AbstractInstruction *'>
+	<var: #jumpTooBig type: #'AbstractInstruction *'>
+	<var: #jumpInRange type: #'AbstractInstruction *'>
+	cogit mclassIsSmallInteger ifFalse:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	cogit MoveR: Arg0Reg R: ClassReg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: ClassReg.
+	(cogit lastOpcode setsConditionCodesFor: JumpNegative) ifFalse:
+		[cogit CmpCq: 0 R: ClassReg]. "N.B. FLAGS := ClassReg - 0"
+	jumpNegative := cogit JumpNegative: 0.
+	cogit CmpCq: self numSmallIntegerBits R: ClassReg. "N.B. FLAGS := ClassReg - numSmallIntegerBits"
+	jumpTooBig := cogit JumpGreaterOrEqual: 0.
+	cogit MoveR: ReceiverResultReg R: TempReg.
+	cogit LogicalShiftLeftR: ClassReg R: TempReg.
+	cogit ArithmeticShiftRightR: ClassReg R: TempReg.
+	cogit CmpR: TempReg R: ReceiverResultReg. "N.B. FLAGS := RRReg - TempReg"
+	jumpOvfl := cogit JumpNonZero: 0.
+	self genRemoveSmallIntegerTagsInScratchReg: ReceiverResultReg.
+	cogit LogicalShiftLeftR: ClassReg R: ReceiverResultReg.
+	self genAddSmallIntegerTagsTo: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpNegative jmpTarget: (cogit NegateR: ClassReg).
+	cogit CmpCq: self numSmallIntegerBits R: ClassReg. "N.B. FLAGS := ClassReg - numSmallIntegerBits"
+	jumpInRange := cogit JumpLessOrEqual: 0.
+	cogit MoveCq: self numSmallIntegerBits R: ClassReg.
+	jumpInRange jmpTarget: (cogit ArithmeticShiftRightR: ClassReg R: ReceiverResultReg).
+	self genClearAndSetSmallIntegerTagsIn: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpNotSI jmpTarget: (jumpTooBig jmpTarget: (jumpOvfl jmpTarget: cogit Label)).
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveBitXor [
+	| jumpNotSI |
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	cogit mclassIsSmallInteger ifFalse:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	"Clear one or the other tag so that xoring will preserve them."
+	self genRemoveSmallIntegerTagsInScratchReg: Arg0Reg.
+	cogit XorR: Arg0Reg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpNotSI jmpTarget: cogit Label.
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveCharacterValue [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveClass [
+	| reg |
+	reg := ReceiverResultReg.
+	cogit methodNumArgs > 0 ifTrue:
+		[cogit methodNumArgs > 1 ifTrue:
+			[^UnimplementedPrimitive].
+		 cogit genLoadArgAtDepth: 0 into: (reg := Arg0Reg)].
+	(self
+			genGetClassObjectOf: reg
+			into: ReceiverResultReg
+			scratchReg: TempReg
+			instRegIsReceiver: reg = ReceiverResultReg) = BadRegisterSet ifTrue:
+		[self
+			genGetClassObjectOf: reg
+			into: ClassReg
+			scratchReg: TempReg
+			instRegIsReceiver: reg = ReceiverResultReg.
+		 cogit MoveR: ClassReg R: ReceiverResultReg].
+	cogit genPrimReturn.
+	^UnfailingPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveClosureValue [
+	"Defer to the cogit for this one.  This is for two reasons:
+	 a)	Cogit's version speeds up cull: et al by not calling the interpreter primitive if numArgs is wrong.
+		Our convention for compiling the interpreter primitive call doesn't agree with this usage.
+	b)	Cogit refuses to compile primitiveClosureValueNoContextSwitch until the blockNoContextSwitchOffset
+		is known, and that isn't information the CogObjectRepresentation is privvy to."
+	<doNotGenerate>
+	^cogit genPrimitiveClosureValue
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveDiv [
+	| jumpNotSI jumpIsSI jumpZero jumpExact jumpSameSign convert |
+	<var: #convert type: #'AbstractInstruction *'>
+	<var: #jumpIsSI type: #'AbstractInstruction *'>
+	<var: #jumpZero type: #'AbstractInstruction *'>
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #jumpExact type: #'AbstractInstruction *'>
+	<var: #jumpSameSign type: #'AbstractInstruction *'>
+	cogit processorHasDivQuoRemAndMClassIsSmallInteger ifFalse:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	cogit MoveR: Arg0Reg R: ClassReg.
+	cogit MoveR: Arg0Reg R: Arg1Reg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	"We must shift away the tags, not just subtract them, so that the
+	 overflow case doesn't actually overflow the machine instruction."
+	self genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
+	(cogit lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
+		[cogit CmpCq: 0 R: ClassReg].
+	jumpZero := cogit JumpZero: 0.
+	cogit MoveR: ReceiverResultReg R: TempReg.
+	self genShiftAwaySmallIntegerTagsInScratchReg: TempReg.
+	cogit DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
+	"If remainder is zero we must check for overflow."
+	cogit CmpCq: 0 R: ClassReg.
+	jumpExact := cogit JumpZero: 0.
+	"If arg and remainder signs are different we must round down."
+	cogit XorR: ClassReg R: Arg1Reg.
+	(cogit lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
+		[cogit CmpCq: 0 R: Arg1Reg].
+	jumpSameSign := cogit JumpGreaterOrEqual: 0.
+	cogit SubCq: 1 R: TempReg.
+	jumpSameSign jmpTarget: (convert := cogit Label).
+	self genConvertIntegerToSmallIntegerInReg: TempReg.
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	"test for overflow; the only case is SmallInteger minVal // -1"
+	jumpExact jmpTarget: cogit Label.
+	jumpIsSI := self genJumpIsSmallIntegerValue: TempReg scratch: Arg1Reg.
+	jumpIsSI jmpTarget: convert.
+	jumpZero jmpTarget: (jumpNotSI jmpTarget: cogit Label).
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveDivide [
+	| jumpNotSI jumpZero jumpInexact jumpOverflow |
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #jumpZero type: #'AbstractInstruction *'>
+	<var: #jumpInexact type: #'AbstractInstruction *'>
+	<var: #jumpOverflow type: #'AbstractInstruction *'>
+	cogit processorHasDivQuoRemAndMClassIsSmallInteger ifFalse:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	cogit MoveR: Arg0Reg R: ClassReg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	"We must shift away the tags, not just subtract them, so that the
+	 overflow case doesn't actually overflow the machine instruction."
+	self genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
+	jumpZero := cogit JumpZero: 0.
+	cogit MoveR: ReceiverResultReg R: TempReg.
+	self genShiftAwaySmallIntegerTagsInScratchReg: TempReg.
+	cogit DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
+	"If remainder is non-zero fail."
+	cogit CmpCq: 0 R: ClassReg.
+	jumpInexact := cogit JumpNonZero: 0.
+	"test for overflow; the only case is SmallInteger minVal / -1"
+	jumpOverflow := self genJumpNotSmallIntegerValue: TempReg scratch: Arg1Reg.
+	self genConvertIntegerToSmallIntegerInReg: TempReg.
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpOverflow jmpTarget: (jumpInexact jmpTarget: (jumpZero jmpTarget: (jumpNotSI jmpTarget: cogit Label))).
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveEqual [
+	^self 
+		genSmallIntegerComparison: JumpZero
+		orDoubleComparison: #JumpFPEqual:
+		invert: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveFloatAdd [
+	<option: #DPFPReg0>
+	^self genDoubleArithmetic: AddRdRd preOpCheck: nil
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveFloatDivide [
+	<option: #DPFPReg0>
+	^self 
+		genDoubleArithmetic: DivRdRd
+		preOpCheck: #genDoubleFailIfZeroArgRcvr:arg:
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveFloatEqual [
+	<option: #DPFPReg0>
+	^self genDoubleComparison: #JumpFPEqual: invert: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveFloatGreaterOrEqual [
+	<option: #DPFPReg0>
+	^self genDoubleComparison: #JumpFPGreaterOrEqual: invert: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveFloatGreaterThan [
+	<option: #DPFPReg0>
+	^self genDoubleComparison: #JumpFPGreater: invert: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveFloatLessOrEqual [
+	<option: #DPFPReg0>
+	^self genDoubleComparison: #JumpFPGreaterOrEqual: invert: true
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveFloatLessThan [
+	<option: #DPFPReg0>
+	^self genDoubleComparison: #JumpFPGreater: invert: true
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveFloatMultiply [
+	<option: #DPFPReg0>
+	^self genDoubleArithmetic: MulRdRd preOpCheck: nil
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveFloatNotEqual [
+	<option: #DPFPReg0>
+	^self genDoubleComparison: #JumpFPNotEqual: invert: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveFloatSquareRoot [
+	<option: #DPFPReg0>
+	| jumpFailAlloc |
+	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
+	cogit processorHasDoublePrecisionFloatingPointSupport ifFalse:
+		[^UnimplementedPrimitive].
+	self genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
+	cogit SqrtRd: DPFPReg0.
+	jumpFailAlloc := self
+						genAllocFloatValue: DPFPReg0
+						into: SendNumArgsReg
+						scratchReg: ClassReg
+						scratchReg: TempReg.
+	cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpFailAlloc jmpTarget: cogit Label.
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveFloatSubtract [
+	<option: #DPFPReg0>
+	^self genDoubleArithmetic: SubRdRd preOpCheck: nil
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveGreaterOrEqual [
+	^self 
+		genSmallIntegerComparison: JumpGreaterOrEqual
+		orDoubleComparison: #JumpFPGreaterOrEqual:
+		invert: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveGreaterThan [
+	^self
+		genSmallIntegerComparison: JumpGreater
+		orDoubleComparison: #JumpFPGreater:
+		invert: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveIdentical [
+	^self genPrimitiveIdenticalOrNotIf: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLessOrEqual [
+	^self
+		genSmallIntegerComparison: JumpLessOrEqual
+		orDoubleComparison: #JumpFPGreaterOrEqual:
+		invert: true
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLessThan [
+	^self
+		genSmallIntegerComparison: JumpLess
+		orDoubleComparison: #JumpFPGreater:
+		invert: true
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveMod [
+	| jumpNotSI jumpZero jumpExact jumpSameSign |
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #jumpZero type: #'AbstractInstruction *'>
+	<var: #jumpExact type: #'AbstractInstruction *'>
+	<var: #jumpSameSign type: #'AbstractInstruction *'>
+	cogit processorHasDivQuoRemAndMClassIsSmallInteger ifFalse:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	cogit MoveR: Arg0Reg R: ClassReg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	self genRemoveSmallIntegerTagsInScratchReg: ClassReg.
+	jumpZero := cogit JumpZero: 0.
+	cogit MoveR: ClassReg R: Arg1Reg.
+	cogit MoveR: ReceiverResultReg R: TempReg.
+	self genRemoveSmallIntegerTagsInScratchReg: TempReg.
+	cogit DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
+	"If remainder is zero we're done."
+	cogit CmpCq: 0 R: ClassReg.
+	jumpExact := cogit JumpZero: 0.
+	"If arg and remainder signs are different we must reflect around zero."
+	cogit XorR: ClassReg R: Arg1Reg.
+	(cogit lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
+		[cogit CmpCq: 0 R: Arg1Reg].
+	jumpSameSign := cogit JumpGreaterOrEqual: 0.
+	cogit XorR: ClassReg R: Arg1Reg.
+	cogit AddR: Arg1Reg R: ClassReg.
+	jumpSameSign jmpTarget: (jumpExact jmpTarget: cogit Label).
+	self genSetSmallIntegerTagsIn: ClassReg.
+	cogit MoveR: ClassReg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpZero jmpTarget: (jumpNotSI jmpTarget: cogit Label).
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveMultiply [
+	| jumpNotSI jumpOvfl |
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #jumpOvfl type: #'AbstractInstruction *'>
+	(cogit processorHasMultiplyAndMClassIsSmallInteger) ifFalse:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	cogit MoveR: Arg0Reg R: ClassReg.
+	cogit MoveR: ReceiverResultReg R: Arg1Reg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	self genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
+	self genRemoveSmallIntegerTagsInScratchReg: Arg1Reg.
+	cogit MulR: Arg1Reg R: ClassReg.
+	jumpOvfl := cogit JumpOverflow: 0.
+	self genSetSmallIntegerTagsIn: ClassReg.
+	cogit MoveR: ClassReg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpOvfl jmpTarget: (jumpNotSI jmpTarget: cogit Label).
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveNew [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveNewMethod [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveNewWithArg [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveNotEqual [
+	^self
+		genSmallIntegerComparison: JumpNonZero
+		orDoubleComparison: #JumpFPNotEqual:
+		invert: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveNotIdentical [
+	^self genPrimitiveIdenticalOrNotIf: true
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveObjectAt [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitivePerform [
+	"Defer to the cogit for this one.  All the code is method-cache related."
+	<doNotGenerate>
+	^cogit genPrimitivePerform
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveQuo [
+	| convert jumpNotSI jumpZero jumpIsSI jumpExact |
+	<var: #convert type: #'AbstractInstruction *'>
+	<var: #jumpIsSI type: #'AbstractInstruction *'>
+	<var: #jumpZero type: #'AbstractInstruction *'>
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #jumpExact type: #'AbstractInstruction *'>
+	cogit processorHasDivQuoRemAndMClassIsSmallInteger ifFalse:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	cogit MoveR: Arg0Reg R: ClassReg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	"We must shift away the tags, not just subtract them, so that the
+	 overflow case doesn't actually overflow the machine instruction."
+	self genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
+	(cogit lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
+		[cogit CmpCq: 0 R: ClassReg].
+	jumpZero := cogit JumpZero: 0.
+	cogit MoveR: ReceiverResultReg R: TempReg.
+	self genShiftAwaySmallIntegerTagsInScratchReg: TempReg.
+	cogit DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
+	"If remainder is zero we must check for overflow."
+	cogit CmpCq: 0 R: ClassReg.
+	jumpExact := cogit JumpZero: 0.
+	convert := cogit Label.
+	self genConvertIntegerToSmallIntegerInReg: TempReg.
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpExact jmpTarget: cogit Label.
+	jumpIsSI := self genJumpIsSmallIntegerValue: TempReg scratch: Arg1Reg.
+	jumpIsSI jmpTarget: convert.
+	jumpZero jmpTarget: (jumpNotSI jmpTarget: cogit Label).
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveSmallFloatAdd [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatArithmetic: AddRdRd preOpCheck: nil
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveSmallFloatDivide [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatArithmetic: DivRdRd preOpCheck: #genDoubleFailIfZeroArgRcvr:arg:
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveSmallFloatEqual [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatComparison: #JumpFPEqual: invert: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveSmallFloatGreaterOrEqual [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatComparison: #JumpFPGreaterOrEqual: invert: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveSmallFloatGreaterThan [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatComparison: #JumpFPGreater: invert: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveSmallFloatLessOrEqual [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatComparison: #JumpFPGreaterOrEqual: invert: true
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveSmallFloatLessThan [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatComparison: #JumpFPGreater: invert: true
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveSmallFloatMultiply [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatArithmetic: MulRdRd preOpCheck: nil
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveSmallFloatNotEqual [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatComparison: #JumpFPNotEqual: invert: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveSmallFloatSquareRoot [
+	<option: #Spur64BitMemoryManager>
+	| jumpFailAlloc |
+	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
+	self genGetSmallFloatValueOf: ReceiverResultReg scratch: SendNumArgsReg into: DPFPReg0.
+	cogit SqrtRd: DPFPReg0.
+	jumpFailAlloc := self
+						genAllocFloatValue: DPFPReg0
+						into: SendNumArgsReg
+						scratchReg: ClassReg
+						scratchReg: TempReg.
+	cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpFailAlloc jmpTarget: cogit Label.
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveSmallFloatSubtract [
+	<option: #Spur64BitMemoryManager>
+	^self genSmallFloatArithmetic: SubRdRd preOpCheck: nil
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStringAtPut [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveSubtract [
+	| jumpNotSI jumpOvfl |
+	<var: #jumpNotSI type: #'AbstractInstruction *'>
+	<var: #jumpOvfl type: #'AbstractInstruction *'>
+	cogit mclassIsSmallInteger ifFalse:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	cogit MoveR: ReceiverResultReg R: TempReg.
+	cogit SubR: Arg0Reg R: TempReg.
+	jumpOvfl := cogit JumpOverflow: 0.
+	self genAddSmallIntegerTagsTo: TempReg.
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpOvfl jmpTarget: (jumpNotSI jmpTarget: cogit Label).
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genQuickReturnConst [
+	<doNotGenerate>
+	^cogit genQuickReturnConst
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genQuickReturnInstVar [
+	<doNotGenerate>
+	^cogit genQuickReturnInstVar
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genQuickReturnSelf [
+	<doNotGenerate>
+	^cogit genQuickReturnSelf
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genSetSmallIntegerTagsIn: scratchReg [
 	self subclassResponsibility
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genSmallIntegerComparison: jumpOpcode [
+	| jumpFail jumpTrue |
+	<var: #jumpFail type: #'AbstractInstruction *'>
+	<var: #jumpTrue type: #'AbstractInstruction *'>
+	cogit mclassIsSmallInteger ifFalse:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	jumpFail := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	cogit CmpR: Arg0Reg R: ReceiverResultReg. "N.B. FLAGS := RRReg - Arg0Reg"
+	jumpTrue := cogit genConditionalBranch: jumpOpcode operand: 0.
+	cogit genMoveFalseR: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpTrue jmpTarget: (cogit genMoveTrueR: ReceiverResultReg).
+	cogit genPrimReturn.
+	jumpFail jmpTarget: cogit Label.
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genSmallIntegerComparison: jumpOpcode orDoubleComparison: jumpFPOpcodeGenerator invert: invertComparison [
+	"Stack looks like
+		return address"
+	| jumpNonInt jumpFail jumpCond r |
+	<var: #jumpFPOpcodeGenerator declareC: 'AbstractInstruction *(*jumpFPOpcodeGenerator)(void *)'>
+	<var: #jumpNonInt type: #'AbstractInstruction *'>
+	<var: #jumpCond type: #'AbstractInstruction *'>
+	<var: #jumpFail type: #'AbstractInstruction *'>
+	r := self genSmallIntegerComparison: jumpOpcode.
+	r < 0 ifTrue:
+		[^r].
+	self cppIf: #DPFPReg0 defined ifTrue:
+	"Fall through on non-SmallInteger argument.  Argument may be a Float : let us check or fail"
+	[self smallIntegerIsOnlyImmediateType ifFalse:
+		[jumpNonInt := self genJumpImmediate: Arg0Reg].
+	self genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
+	self genCmpClassFloatCompactIndexR: SendNumArgsReg.
+	jumpFail := cogit JumpNonZero: 0.
+
+	"It was a Float, so convert the receiver to double and perform the operation"
+	self genConvertSmallIntegerToIntegerInReg: ReceiverResultReg.
+	cogit ConvertR: ReceiverResultReg Rd: DPFPReg0.
+	self genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
+	invertComparison "May need to invert for NaNs"
+		ifTrue: [cogit CmpRd: DPFPReg0 Rd: DPFPReg1]
+		ifFalse: [cogit CmpRd: DPFPReg1 Rd: DPFPReg0].
+	jumpCond := cogit perform: jumpFPOpcodeGenerator with: 0. "FP jumps are a little weird"
+	cogit genMoveFalseR: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpCond jmpTarget: (cogit genMoveTrueR: ReceiverResultReg).
+	cogit genPrimReturn.
+
+	self smallIntegerIsOnlyImmediateType
+		ifTrue: [jumpFail jmpTarget: cogit Label]
+		ifFalse: [jumpNonInt jmpTarget: (jumpFail jmpTarget: cogit Label)]].
+	^CompletePrimitive
 ]
 
 { #category : #'compile abstract instructions' }
