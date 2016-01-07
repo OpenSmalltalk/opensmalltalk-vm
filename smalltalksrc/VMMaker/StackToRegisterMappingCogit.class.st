@@ -271,14 +271,11 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(1 112 127 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 128 143 genSendLiteralSelector1ArgBytecode isMapped)
 		(1 144 159 genSendLiteralSelector2ArgsBytecode isMapped)
-		(1 160 175	genSendAbsentImplicit0ArgsBytecode isMapped hasIRC)),
-		
-		"N.B. not frameless if immutability"
-		((initializationOptions at: #IMMUTABILITY ifAbsent: [false])
-			ifTrue: [#((1 176 183 genStoreAndPopReceiverVariableBytecode isMapped isInstVarRef -1))]
-			ifFalse: [#((1 176 183 genStoreAndPopReceiverVariableBytecode isInstVarRef needsFrameNever: -1)) ]),
+		(1 160 175	genSendAbsentImplicit0ArgsBytecode isMapped hasIRC)
 			
-		#((1 184 191 genStoreAndPopTemporaryVariableBytecode)
+		(1 176 183 genStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability needsFrameIfImmutability: -1)
+			
+		(1 184 191 genStoreAndPopTemporaryVariableBytecode)
 
 		(1 192 199 genShortUnconditionalJump	branch v3:ShortForward:Branch:Distance:)
 		(1 200 207 genShortJumpIfTrue			branch isBranchTrue isMapped "because of mustBeBoolean"
@@ -304,10 +301,10 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(2 229 229 genExtPushIntegerBytecode				needsFrameNever: 1)
 		(2 230 230 genLongPushTemporaryVariableBytecode)
 		(2 231 231 genPushNewArrayBytecode)
-		(2 232 232 genExtStoreReceiverVariableBytecode isInstVarRef)
+		(2 232 232 genExtStoreReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
 		(2 233 233 genExtStoreLiteralVariableBytecode)
 		(2 234 234 genLongStoreTemporaryVariableBytecode)
-		(2 235 235 genExtStoreAndPopReceiverVariableBytecode isInstVarRef)
+		(2 235 235 genExtStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
 		(2 236 236 genExtStoreAndPopLiteralVariableBytecode)
 		(2 237 237 genLongStoreAndPopTemporaryVariableBytecode)
 
@@ -405,14 +402,10 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(1 184 191 genShortJumpIfTrue			branch isBranchTrue isMapped "because of mustBeBoolean"
 													v3:ShortForward:Branch:Distance:)
 		(1 192 199 genShortJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean"
-													v3:ShortForward:Branch:Distance:)),
-
-		"stores"
-		((initializationOptions at: #IMMUTABILITY ifAbsent: [false])
-			ifTrue: [#((1 200 207 genStoreAndPopReceiverVariableBytecode isInstVarRef isMapped -1))]
-			ifFalse: [#((1 200 207 genStoreAndPopReceiverVariableBytecode isInstVarRef needsFrameNever: -1)) ]),
-			
-		#((1 208 215 genStoreAndPopTemporaryVariableBytecode)
+													v3:ShortForward:Branch:Distance:)
+		(1 200 207 genStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability needsFrameIfImmutability: -1)
+		
+		(1 208 215 genStoreAndPopTemporaryVariableBytecode)
 
 		(1 216 216 genPopStackBytecode needsFrameNever: -1)
 
@@ -448,10 +441,10 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(2 239 239 genExtJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
 
 		"stores"
-		(2 240 240 genExtStoreAndPopReceiverVariableBytecode isInstVarRef)
+		(2 240 240 genExtStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
 		(2 241 241 genExtStoreAndPopLiteralVariableBytecode)
 		(2 242 242 genLongStoreAndPopTemporaryVariableBytecode)
-		(2 243 243 genExtStoreReceiverVariableBytecode isInstVarRef)
+		(2 243 243 genExtStoreReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
 		(2 244 244 genExtStoreLiteralVariableBytecode)
 		(2 245 245 genLongStoreTemporaryVariableBytecode)
 
@@ -489,14 +482,9 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 		(1    0   15 genPushReceiverVariableBytecode isInstVarRef needsFrameNever: 1)
 		(1  16   31 genPushTemporaryVariableBytecode needsFrameIfMod16GENumArgs: 1)
 		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
-		(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1)) ,
-		
-		"N.B. not frameless if immutability"
-		((initializationOptions at: #IMMUTABILITY ifAbsent: [false])
-			ifTrue: [#((1  96 103 genStoreAndPopReceiverVariableBytecode isInstVarRef isMapped -1))]
-			ifFalse: [#((1  96 103 genStoreAndPopReceiverVariableBytecode isInstVarRef needsFrameNever: -1)) ]),
-			
-		#((1 104 111 genStoreAndPopTemporaryVariableBytecode)
+		(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1)
+		(1  96 103 genStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability needsFrameIfImmutability: -1)
+		(1 104 111 genStoreAndPopTemporaryVariableBytecode)
 		(1 112 112 genPushReceiverBytecode needsFrameNever: 1)
 		(1 113 113 genPushConstantTrueBytecode needsFrameNever: 1)
 		(1 114 114 genPushConstantFalseBytecode needsFrameNever: 1)
@@ -513,8 +501,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 		(1 126 127 unknownBytecode)
 
 		(2 128 128 extendedPushBytecode isInstVarRef) "well, maybe inst var ref"
-		(2 129 129 extendedStoreBytecode isInstVarRef) "well, maybe inst var ref"
-		(2 130 130 extendedStoreAndPopBytecode isInstVarRef) "well, maybe inst var ref"
+		(2 129 129 extendedStoreBytecode isInstVarRef isMappedIfImmutability) "well, maybe inst var ref"
+		(2 130 130 extendedStoreAndPopBytecode isInstVarRef isMappedIfImmutability) "well, maybe inst var ref"
 		(2 131 131 genExtendedSendBytecode isMapped)
 		(3 132 132 doubleExtendedDoAnythingBytecode isMapped) "well, maybe inst var ref"
 		(2 133 133 genExtendedSuperBytecode isInstVarRef isMapped)
