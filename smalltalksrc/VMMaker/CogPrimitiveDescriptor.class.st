@@ -17,29 +17,14 @@ CogPrimitiveDescriptor class >> instVarNamesAndTypesForTranslationDo: aBinaryBlo
 		[:ivn|
 		aBinaryBlock
 			value: ivn
-			value: (ivn caseOf: {
-							['primitiveGenerator']	->	[#('sqInt (*' ')(void)')].
-							['enabled']				->	[#('sqInt (*' ')(sqInt)')] }
-						otherwise: [#sqInt])]
+			value: (ivn = 'primitiveGenerator'
+					ifTrue: [#('sqInt (*' ')(void)')]
+					ifFalse: [#sqInt])]
 ]
 
 { #category : #translation }
 CogPrimitiveDescriptor class >> structTypeName [
 	^self name allButFirst: 3 "Drop initial Cog"
-]
-
-{ #category : #accessing }
-CogPrimitiveDescriptor >> enabled [
-	"Answer the value of enabled"
-
-	^enabled
-]
-
-{ #category : #accessing }
-CogPrimitiveDescriptor >> enabled: anObject [
-	"Set the value of enabled"
-
-	^enabled := anObject
 ]
 
 { #category : #accessing }

@@ -330,8 +330,71 @@ CogObjectRepresentationFor32BitSpur >> genGetSizeOf: sourceReg into: destReg for
 	aBinaryBlock value: jumpNotIndexable value: jumpIsContext
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genJumpIsSmallIntegerValue: aRegister scratch: scratchReg [
+	"Generate a test for aRegister containing an integer value in the SmallInteger range, and a jump if so, answering the jump.
+	 c.f. Spur32BitMemoryManager>>isIntegerValue:"
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit
+		MoveR: aRegister R: scratchReg;
+		ArithmeticShiftRightCq: 1 R: scratchReg;
+		XorR: aRegister R: scratchReg;
+		JumpGreaterOrEqual: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genJumpNotSmallInteger: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit TstCq: 1 R: aRegister.
+	^cogit JumpZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genJumpNotSmallIntegerInScratchReg: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit AndCq: 1 R: aRegister.
+	^cogit JumpZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genJumpNotSmallIntegerValue: aRegister scratch: scratchReg [
+	"Generate a test for aRegister containing an integer value outside the SmallInteger range, and a jump if so, answering the jump.
+	 c.f. Spur32BitMemoryManager>>isIntegerValue:"
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit
+		MoveR: aRegister R: scratchReg;
+		ArithmeticShiftRightCq: 1 R: scratchReg;
+		XorR: aRegister R: scratchReg;
+		JumpLess: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genJumpNotSmallIntegersIn: aRegister andScratchReg: scratchReg [
+	"Generate a compare and branch to test if aRegister and scratchReg contains other than SmallIntegers,
+	 i.e. don't branch if both aRegister and scratchReg contain SmallIntegers.
+	 Answer the jump.  Destroy scratchReg if required."
+	<returnTypeC: #'AbstractInstruction *'>
+	<inline: true>
+	cogit AndR: aRegister R: scratchReg.
+	^self genJumpNotSmallIntegerInScratchReg: scratchReg
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genJumpSmallInteger: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit TstCq: 1 R: aRegister.
+	^cogit JumpNonZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationFor32BitSpur >> genJumpSmallIntegerInScratchReg: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit AndCq: 1 R: aRegister.
+	^cogit JumpNonZero: 0
+]
+
 { #category : #'primitive generators' }
-CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
+CogObjectRepresentationFor32BitSpur >> genPrimitiveAt [
 	"Implement the guts of primitiveAt"
 	| formatReg convertToIntAndReturn
 	  jumpNotIndexable jumpImmediate jumpBadIndex
@@ -354,6 +417,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	<var: #jumpWordsOutOfBounds type: #'AbstractInstruction *'>
 	<var: #jumpFixedFieldsOutOfBounds type: #'AbstractInstruction *'>
 
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
 	jumpImmediate := self genJumpImmediate: ReceiverResultReg.
 	cogit MoveR: Arg0Reg R: Arg1Reg.
 	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
@@ -413,7 +477,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 				MoveR: formatReg R: ReceiverResultReg].
 	convertToIntAndReturn := cogit Label.
 	self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 
 	jumpIsShorts jmpTarget:
 		(cogit LogicalShiftLeftCq: objectMemory shiftForWord - 1 R: ClassReg).
@@ -454,14 +518,14 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 	cogit AddR: formatReg R: Arg1Reg.
 	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg1Reg.
 	cogit MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 
 	jumpIsArray jmpTarget:
 		(cogit CmpR: Arg1Reg R: ClassReg).
 	jumpArrayOutOfBounds := cogit JumpBelowOrEqual: 0.	
 	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg1Reg.
 	cogit MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 
 	jumpFixedFieldsOutOfBounds jmpTarget:
 	(jumpArrayOutOfBounds jmpTarget:
@@ -478,7 +542,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAt: retNoffset [
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
+CogObjectRepresentationFor32BitSpur >> genPrimitiveAtPut [
 	"Implement the guts of primitiveAtPut"
 	| formatReg jumpImmediate jumpBadIndex jumpImmutable
 	  jumpNotIndexablePointers jumpNotIndexableBits
@@ -502,6 +566,8 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	<var: #jumpWordsOutOfBounds type: #'AbstractInstruction *'>
 	<var: #jumpNotIndexablePointers type: #'AbstractInstruction *'>
 
+	cogit genLoadArgAtDepth: 1 into: Arg0Reg.
+	cogit genLoadArgAtDepth: 0 into: Arg1Reg.
 	jumpImmediate := self genJumpImmediate: ReceiverResultReg.
 	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	self genConvertSmallIntegerToIntegerInReg: Arg0Reg.
@@ -552,7 +618,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg0Reg.
 	cogit MoveR: Arg1Reg Xwr: Arg0Reg R: ReceiverResultReg.
 	cogit MoveR: Arg1Reg R: ReceiverResultReg.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 
 	jumpHasFixedFields jmpTarget: cogit Label.
 	self genGetClassIndexOfNonImm: ReceiverResultReg into: formatReg.
@@ -572,7 +638,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	cogit AddR: formatReg R: Arg0Reg.
 	cogit MoveR: Arg1Reg Xwr: Arg0Reg R: ReceiverResultReg.
 	cogit MoveR: Arg1Reg R: ReceiverResultReg.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 
 	jumpNotPointers jmpTarget:
 		(cogit CmpCq: objectMemory firstCompiledMethodFormat R: formatReg).
@@ -596,7 +662,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg0Reg.
 	cogit MoveR: TempReg Xwr: Arg0Reg R: ReceiverResultReg.
 	cogit MoveR: Arg1Reg R: ReceiverResultReg.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 
 	jumpIsBytes jmpTarget:
 		(cogit CmpCq: (objectMemory integerObjectOf: 255) R: Arg1Reg).
@@ -611,7 +677,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 	cogit AddCq: objectMemory baseHeaderSize R: Arg0Reg.
 	cogit MoveR: TempReg Xbr: Arg0Reg R: ReceiverResultReg.
 	cogit MoveR: Arg1Reg R: ReceiverResultReg.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 
 	"there are no shorts as yet.  so this is dead code:
 	jumpIsShorts jmpTarget:
@@ -653,7 +719,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveAtPut: retNoffset [
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveIdentityHash: retNoffset [
+CogObjectRepresentationFor32BitSpur >> genPrimitiveIdentityHash [
 	| jumpImm jumpSI jumpNotSet ret |
 	<var: #jumpSI type: #'AbstractInstruction *'>
 	<var: #jumpImm type: #'AbstractInstruction *'>
@@ -663,7 +729,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveIdentityHash: retNoffset
 	cogit CmpCq: ConstZero R: TempReg.
 	jumpNotSet := cogit JumpZero: 0.
 	cogit MoveR: TempReg R: ReceiverResultReg.
-	ret := cogit RetN: retNoffset.
+	ret := cogit genPrimReturn.
 	jumpImm jmpTarget: cogit Label.
 	jumpSI := self genJumpSmallInteger: ReceiverResultReg.
 	jumpSI jmpTarget: ret.
@@ -674,7 +740,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveIdentityHash: retNoffset
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNew: retNoffset [
+CogObjectRepresentationFor32BitSpur >> genPrimitiveMirrorNew [
 	"Implement 1-arg (instantiateFixedClass:) primitiveNew for convenient cases:
 	- the class argument has a hash
 	- the class argument is fixed size (excluding ephemerons to save instructions & miniscule time)
@@ -697,6 +763,9 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNew: retNoffset [
 	<var: 'jumpBadFormat' type: #'AbstractInstruction *'>
 	<var: 'jumpNotFixedPointers' type: #'AbstractInstruction *'>
 	<var: 'jumpVariableOrEphemeron' type: #'AbstractInstruction *'>
+
+	self assert: cogit methodNumArgs = 1.
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
 
 	"half header will contain 1st half of header (classIndex/class's hash & format),
 	 then 2nd half of header (numSlots/fixed size) and finally fill value (nilObject)."
@@ -780,7 +849,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNew: retNoffset [
 	cogit AddCq: 8 R: Arg1Reg.
 	cogit CmpR: Arg1Reg R: byteSizeReg.
 	cogit JumpAbove: fillLoop.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 
 	jumpNotFixedPointers jmpTarget:
 	(jumpBadFormat jmpTarget:
@@ -795,7 +864,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNew: retNoffset [
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNewWithArg: retNoffset [
+CogObjectRepresentationFor32BitSpur >> genPrimitiveMirrorNewWithArg [
 	"Implement instantiateVariableClass:withSize: for convenient cases:
 	- the class argument has a hash
 	- the class argument is variable and not compiled method
@@ -827,6 +896,10 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNewWithArg: retNof
 	<var: 'jumpLongPrepDone' type: #'AbstractInstruction *'>
 	<var: 'jumpNElementsNonInt' type: #'AbstractInstruction *'>
 	<var: 'jumpNotFixedPointers' type: #'AbstractInstruction *'>
+
+	self assert: cogit methodNumArgs = 2.
+	cogit genLoadArgAtDepth: 1 into: Arg0Reg. "class arg"
+	cogit genLoadArgAtDepth: 0 into: Arg1Reg. "num indexable slots arg"
 
 	"half header will contain 1st half of header (classIndex/class's hash & format),
 	 then 2nd half of header (numSlots) and finally fill value (nilObject)."
@@ -962,7 +1035,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNewWithArg: retNof
 	cogit AddCq: 8 R: Arg1Reg.
 	cogit CmpR: Arg1Reg R: byteSizeReg.
 	cogit JumpAbove: fillLoop.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 
 	"pop discarded fill value & fall through to failure"
 	jumpNoSpace jmpTarget: (cogit PopR: TempReg).
@@ -988,7 +1061,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveMirrorNewWithArg: retNof
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNew: retNoffset [
+CogObjectRepresentationFor32BitSpur >> genPrimitiveNew [
 	"Implement primitiveNew for convenient cases:
 	- the receiver has a hash
 	- the receiver is fixed size (excluding ephemerons to save instructions & miniscule time)
@@ -1005,6 +1078,12 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNew: retNoffset [
 	<var: 'jumpNoSpace' type: #'AbstractInstruction *'>
 	<var: 'jumpUnhashed' type: #'AbstractInstruction *'>
 	<var: 'jumpVariableOrEphemeron' type: #'AbstractInstruction *'>
+
+	NewspeakVM ifTrue:
+		[cogit methodNumArgs = 1 ifTrue:
+			[^self genPrimitiveMirrorNew]].
+	cogit methodNumArgs ~= 0 ifTrue:
+		[^UnimplementedPrimitive].
 
 	"half header will contain 1st half of header (classIndex/class's hash & format),
 	 then 2nd half of header (numSlots/fixed size) and finally fill value (nilObject)."
@@ -1071,7 +1150,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNew: retNoffset [
 	cogit AddCq: 8 R: Arg1Reg.
 	cogit CmpR: Arg1Reg R: byteSizeReg.
 	cogit JumpAbove: fillLoop.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 
 	jumpUnhashed jmpTarget:
 	(jumpVariableOrEphemeron jmpTarget:
@@ -1082,7 +1161,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNew: retNoffset [
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
+CogObjectRepresentationFor32BitSpur >> genPrimitiveNewWithArg [
 	"Implement primitiveNewWithArg for convenient cases:
 	- the receiver has a hash
 	- the receiver is variable and not compiled method
@@ -1109,6 +1188,13 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	<var: 'jumpBytePrepDone' type: #'AbstractInstruction *'>
 	<var: 'jumpLongPrepDone' type: #'AbstractInstruction *'>
 	<var: 'jumpNElementsNonInt' type: #'AbstractInstruction *'>
+
+	NewspeakVM ifTrue:
+		[cogit methodNumArgs = 2 ifTrue:
+			[^self genPrimitiveMirrorNewWithArg]].
+	cogit methodNumArgs ~= 1 ifTrue:
+		[^UnimplementedPrimitive].
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
 
 	"half header will contain 1st half of header (classIndex/class's hash & format),
 	 then 2nd half of header (numSlots) and finally fill value (nilObject)."
@@ -1221,7 +1307,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 	cogit AddCq: 8 R: Arg1Reg.
 	cogit CmpR: Arg1Reg R: byteSizeReg.
 	cogit JumpAbove: fillLoop.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 
 	"pop discarded fill value & fall through to failure"
 	jumpNoSpace jmpTarget: (cogit PopR: TempReg).
@@ -1237,7 +1323,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveNewWithArg: retNoffset [
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset [
+CogObjectRepresentationFor32BitSpur >> genPrimitiveStringAtPut [
 	"Implement the guts of primitiveStringAtPut"
 	| formatReg jumpBadIndex jumpBadArg jumpWordsDone jumpBytesOutOfRange
 	  jumpIsBytes jumpNotString jumpIsCompiledMethod jumpImmutable
@@ -1251,6 +1337,9 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset 
 	<var: #jumpBytesOutOfBounds type: #'AbstractInstruction *'>
 	<var: #jumpShortsUnsupported type: #'AbstractInstruction *'>
 	<var: #jumpWordsOutOfBounds type: #'AbstractInstruction *'>
+
+	cogit genLoadArgAtDepth: 1 into: Arg0Reg.
+	cogit genLoadArgAtDepth: 0 into: Arg1Reg.
 
 	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg.
 	cogit MoveR: Arg1Reg R: TempReg.
@@ -1327,8 +1416,7 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset 
 	cogit MoveR: TempReg Xbr: Arg0Reg R: ReceiverResultReg.
 	cogit MoveR: Arg1Reg R: ReceiverResultReg.
 
-	jumpWordsDone jmpTarget:
-		(cogit RetN: retNoffset).
+	jumpWordsDone jmpTarget: cogit genPrimReturn.
 
 	jumpBadArg jmpTarget:
 	(jumpNotString jmpTarget:
@@ -1338,7 +1426,8 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset 
 	(jumpShortsUnsupported jmpTarget:
 	(jumpWordsOutOfBounds jmpTarget: cogit Label)))))).
 
-	self cppIf: IMMUTABILITY ifTrue: [ jumpImmutable jmpTarget: cogit Label ].
+	self cppIf: IMMUTABILITY
+		ifTrue: [jumpImmutable jmpTarget: cogit Label].
 
 	cogit AddCq: 1 R: Arg0Reg. "0-rel => 1-rel"
 	self genConvertIntegerToSmallIntegerInReg: Arg0Reg.
@@ -1346,69 +1435,6 @@ CogObjectRepresentationFor32BitSpur >> genInnerPrimitiveStringAtPut: retNoffset 
 	jumpBadIndex jmpTarget: cogit Label.
 
 	^0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationFor32BitSpur >> genJumpIsSmallIntegerValue: aRegister scratch: scratchReg [
-	"Generate a test for aRegister containing an integer value in the SmallInteger range, and a jump if so, answering the jump.
-	 c.f. Spur32BitMemoryManager>>isIntegerValue:"
-	<returnTypeC: #'AbstractInstruction *'>
-	^cogit
-		MoveR: aRegister R: scratchReg;
-		ArithmeticShiftRightCq: 1 R: scratchReg;
-		XorR: aRegister R: scratchReg;
-		JumpGreaterOrEqual: 0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationFor32BitSpur >> genJumpNotSmallInteger: aRegister [
-	<returnTypeC: #'AbstractInstruction *'>
-	cogit TstCq: 1 R: aRegister.
-	^cogit JumpZero: 0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationFor32BitSpur >> genJumpNotSmallIntegerInScratchReg: aRegister [
-	<returnTypeC: #'AbstractInstruction *'>
-	cogit AndCq: 1 R: aRegister.
-	^cogit JumpZero: 0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationFor32BitSpur >> genJumpNotSmallIntegerValue: aRegister scratch: scratchReg [
-	"Generate a test for aRegister containing an integer value outside the SmallInteger range, and a jump if so, answering the jump.
-	 c.f. Spur32BitMemoryManager>>isIntegerValue:"
-	<returnTypeC: #'AbstractInstruction *'>
-	^cogit
-		MoveR: aRegister R: scratchReg;
-		ArithmeticShiftRightCq: 1 R: scratchReg;
-		XorR: aRegister R: scratchReg;
-		JumpLess: 0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationFor32BitSpur >> genJumpNotSmallIntegersIn: aRegister andScratchReg: scratchReg [
-	"Generate a compare and branch to test if aRegister and scratchReg contains other than SmallIntegers,
-	 i.e. don't branch if both aRegister and scratchReg contain SmallIntegers.
-	 Answer the jump.  Destroy scratchReg if required."
-	<returnTypeC: #'AbstractInstruction *'>
-	<inline: true>
-	cogit AndR: aRegister R: scratchReg.
-	^self genJumpNotSmallIntegerInScratchReg: scratchReg
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationFor32BitSpur >> genJumpSmallInteger: aRegister [
-	<returnTypeC: #'AbstractInstruction *'>
-	cogit TstCq: 1 R: aRegister.
-	^cogit JumpNonZero: 0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationFor32BitSpur >> genJumpSmallIntegerInScratchReg: aRegister [
-	<returnTypeC: #'AbstractInstruction *'>
-	cogit AndCq: 1 R: aRegister.
-	^cogit JumpNonZero: 0
 ]
 
 { #category : #'compile abstract instructions' }
