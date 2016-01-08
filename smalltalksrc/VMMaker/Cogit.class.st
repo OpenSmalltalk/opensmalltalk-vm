@@ -1254,9 +1254,6 @@ Cogit class >> tableFunctions [
 		addAll: (primitiveTable object
 					select: [:ea| ea notNil and: [ea primitiveGenerator notNil]]
 					thenCollect: [:ea| ea primitiveGenerator]);
-		addAll: (primitiveTable object
-					select: [:ea| ea notNil and: [ea enabled notNil]]
-					thenCollect: [:ea| ea enabled]);
 		asSortedCollection: [:a :b| a caseInsensitiveLessOrEqual: b]
 ]
 

@@ -1118,15 +1118,18 @@ CCodeGenerator >> emitCConstants: constList on: aStream [
 			default := (node value isString and: [node value includesSubString: '/*'])
 							ifTrue: [node value]
 							ifFalse: [self cLiteralFor: node value name: varName].
-			value := vmClass
-						ifNotNil:
-							[(vmClass specialValueForConstant: node name default: default)
-								ifNotNil: [:specialDef| specialDef]
-								ifNil: [default]]
-						ifNil: [default].
-			value first ~= $# ifTrue:
-				[aStream nextPutAll: '#define '; nextPutAll: node name; space].
-			aStream nextPutAll: value; cr]].
+			default = #undefined
+				ifTrue: [aStream nextPutAll: '#undef '; nextPutAll: node name; cr]
+				ifFalse:
+					[value := vmClass
+								ifNotNil:
+									[(vmClass specialValueForConstant: node name default: default)
+										ifNotNil: [:specialDef| specialDef]
+										ifNil: [default]]
+								ifNil: [default].
+					value first ~= $# ifTrue:
+						[aStream nextPutAll: '#define '; nextPutAll: node name; space].
+					aStream nextPutAll: value; cr]]].
 	aStream cr
 ]
 
