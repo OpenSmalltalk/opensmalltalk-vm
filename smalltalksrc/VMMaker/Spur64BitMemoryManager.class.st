@@ -441,11 +441,6 @@ Spur64BitMemoryManager >> hasSixtyFourBitImmediates [
 	^true
 ]
 
-{ #category : #'header access' }
-Spur64BitMemoryManager >> identityHashFullWordMask [
-	^16r3fffff00000000
-]
-
 { #category : #'free space' }
 Spur64BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	<var: #numBytes type: #usqLong>
