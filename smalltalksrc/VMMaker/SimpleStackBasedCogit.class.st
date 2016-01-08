@@ -47,7 +47,7 @@ SimpleStackBasedCogit class >> callingConvention [
 { #category : #translation }
 SimpleStackBasedCogit class >> declareCVarsIn: aCCodeGenerator [
 
-	aCCodeGenerator vmClass primitiveGeneratorTable ifNotNil:
+	aCCodeGenerator vmClass primitiveTable ifNotNil:
 		[:bytecodeGenTable|
 		aCCodeGenerator
 			var: #primitiveGeneratorTable
