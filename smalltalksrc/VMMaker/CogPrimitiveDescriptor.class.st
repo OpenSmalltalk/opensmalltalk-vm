@@ -3,8 +3,7 @@ Class {
 	#superclass : #VMStructType,
 	#instVars : [
 		'primitiveGenerator',
-		'primNumArgs',
-		'enabled'
+		'primNumArgs'
 	],
 	#category : #'VMMaker-JIT'
 }
