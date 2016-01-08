@@ -3450,6 +3450,33 @@ SpurMemoryManager >> clearLeakMapAndMapAccessibleObjects [
 		[:oop| heapMap heapMapAtWord: (self pointerForOop: oop) Put: 1]
 ]
 
+{ #category : #'become implementation' }
+SpurMemoryManager >> cleverSwapHeaders: obj1 and: obj2 copyHashFlag: copyHashFlag [
+	"swap headers, but swapping headers swaps remembered bits and hashes;
+	 remembered bits must be unswapped and hashes may be unswapped if
+	 copyHash is false."
+	"This variant doesn't tickle a compiler bug in gcc and clang.  See naiveSwapHeaders:and:copyHashFlag:"
+	<inline: true>
+	| header1 header2 remembered1 remembered2 |
+	header1 := self long64At: obj1.
+	header2 := self long64At: obj2.
+	remembered1 := header1 bitAnd: 1 << self rememberedBitShift.
+	remembered2 := header2 bitAnd: 1 << self rememberedBitShift.
+	remembered1 ~= remembered2 ifTrue:
+		[header1 := header1 - remembered1 + remembered2.
+		 header2 := header2 - remembered2 + remembered1].
+	"swapping headers swaps hash; if not copyHashFlag then unswap hash"
+	copyHashFlag ifFalse:
+		[| hash1 hash2 |
+		 hash1 := header1 bitAnd: self identityHashFullWordMask.
+		 hash2 := header2 bitAnd: self identityHashFullWordMask.
+		 hash1 ~= hash2 ifTrue:
+			[header1 := header1 - hash1 + hash2.
+			 header2 := header2 - hash2 + hash1]].
+	self long64At: obj1 put: header2.
+	self long64At: obj2 put: header1
+]
+
 { #category : #allocation }
 SpurMemoryManager >> clone: objOop [
 	| numSlots fmt newObj |
@@ -5438,6 +5465,11 @@ SpurMemoryManager >> identityHashFieldWidth [
 ]
 
 { #category : #'header access' }
+SpurMemoryManager >> identityHashFullWordMask [
+	^16r3fffff00000000
+]
+
+{ #category : #'header access' }
 SpurMemoryManager >> identityHashFullWordShift [
 	<api>
 	<cmacro>
@@ -5567,49 +5599,38 @@ SpurMemoryManager >> inOrderPrintFreeTree: freeChunk printList: printNextList [
 
 { #category : #'become implementation' }
 SpurMemoryManager >> inPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
+	<inline: #never> "in an effort to fix a compiler bug with two-way become post r3427"
 	"Do become in place by swapping object contents."
-	| headerTemp temp1 temp2 o1HasYoung o2HasYoung fmt |
+	| o1HasYoung o2HasYoung fmt |
 	self assert: (self numSlotsOf: obj1) = (self numSlotsOf: obj2).
 	self assert: ((self rawHashBitsOf: obj1) = 0
 				 or: [(self classOrNilAtIndex: (self rawHashBitsOf: obj1)) ~= obj1]).
 	self assert: ((self rawHashBitsOf: obj2) = 0
 				 or: [(self classOrNilAtIndex: (self rawHashBitsOf: obj2)) ~= obj2]).
-	"swap headers, but swapping headers swaps remembered bits;
-	 these need to be unswapped."
-	temp1 := self isRemembered: obj1.
-	temp2 := self isRemembered: obj2.
-	headerTemp := self long64At: obj1.
-	self long64At: obj1 put: (self long64At: obj2).
-	self long64At: obj2 put: headerTemp.
-	self setIsRememberedOf: obj1 to: temp1.
-	self setIsRememberedOf: obj2 to: temp2.
-	"swapping headers swaps hash; if !copyHashFlag undo hash copy"
-	copyHashFlag ifFalse:
-		[temp1 := self rawHashBitsOf: obj1.
-		 self setHashBitsOf: obj1 to: (self rawHashBitsOf: obj2).
-		 self setHashBitsOf: obj2 to: temp1].
+	"swap headers, but swapping headers swaps remembered bits and hashes;
+	 remembered bits must be unswapped and hashes may be unswapped if
+	 copyHash is false."
+	false
+		ifTrue: [self naiveSwapHeaders: obj1 and: obj2 copyHashFlag: copyHashFlag]
+		ifFalse: [self cleverSwapHeaders: obj1 and: obj2 copyHashFlag: copyHashFlag].
 	o1HasYoung := o2HasYoung := false.
 	0 to: (self numSlotsOf: obj1) - 1 do:
-		[:i|
+		[:i| | temp1 temp2 |
 		temp1 := self fetchPointer: i ofObject: obj1.
 		temp2 := self fetchPointer: i ofObject: obj2.
-		self storePointerUnchecked: i
-			ofObject: obj1
-			withValue: temp2.
-		self storePointerUnchecked: i
-			ofObject: obj2
-			withValue: temp1.
+		self storePointerUnchecked: i ofObject: obj1 withValue: temp2.
+		self storePointerUnchecked: i ofObject: obj2 withValue: temp1.
 		(self isYoung: temp2) ifTrue:
 			[o1HasYoung := true].
 		(self isYoung: temp1) ifTrue:
 			[o2HasYoung := true]].
-	(self isOldObject: obj1) ifTrue:
+	(o1HasYoung and: [self isOldObject: obj1]) ifTrue:
 		[fmt := self formatOf: obj1.
-		 (o1HasYoung and: [(self isPureBitsFormat: fmt) not]) ifTrue:
+		 (self isPureBitsFormat: fmt) ifFalse:
 			[self possibleRootStoreInto: obj1]].
-	(self isOldObject: obj2) ifTrue:
+	(o2HasYoung and: [self isOldObject: obj2]) ifTrue:
 		[fmt := self formatOf: obj2.
-		 (o2HasYoung and: [(self isPureBitsFormat: fmt) not]) ifTrue:
+		 (self isPureBitsFormat: fmt) ifFalse:
 			[self possibleRootStoreInto: obj2]]
 ]
 
@@ -8038,6 +8059,28 @@ SpurMemoryManager >> moveClassesForwardsIn: arrayOfObjects [
 					[there := here]]]
 ]
 
+{ #category : #'become implementation' }
+SpurMemoryManager >> naiveSwapHeaders: obj1 and: obj2 copyHashFlag: copyHashFlag [
+	"swap headers, but swapping headers swaps remembered bits and hashes;
+	 remembered bits must be unswapped and hashes may be unswapped if
+	 copyHash is false."
+	"This variant tickles a compiler bug in gcc and clang. See cleverSwapHeaders:and:copyHashFlag:"
+	<inline: true>
+	| headerTemp remembered1 remembered2 hashTemp |
+	remembered1 := self isRemembered: obj1.
+	remembered2 := self isRemembered: obj2.
+	headerTemp := self long64At: obj1.
+	self long64At: obj1 put: (self long64At: obj2).
+	self long64At: obj2 put: headerTemp.
+	self setIsRememberedOf: obj1 to: remembered1.
+	self setIsRememberedOf: obj2 to: remembered2.
+	"swapping headers swaps hash; if !copyHashFlag undo hash copy"
+	copyHashFlag ifFalse:
+		[hashTemp := self rawHashBitsOf: obj1.
+		 self setHashBitsOf: obj1 to: (self rawHashBitsOf: obj2).
+		 self setHashBitsOf: obj2 to: hashTemp]
+]
+
 { #category : #accessing }
 SpurMemoryManager >> needGCFlag [
 	^needGCFlag
@@ -8827,6 +8870,7 @@ SpurMemoryManager >> oldSpaceStart [
 
 { #category : #'become implementation' }
 SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag [
+	<inline: #never> "in an effort to fix a compiler bug with two-way become post r3427"
 	"Allocate two new objects, n1 & n2.  Copy the contents appropriately. Convert
 	 obj1 and obj2 into forwarding objects pointing to n2 and n1 respectively"
 	| clone1 clone2 |
@@ -8838,11 +8882,11 @@ SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag
 				ifFalse: [self clone: obj2].
 	copyHashFlag
 		ifTrue:
-			[self setHashBitsOf: clone1 to: (self rawHashBitsOf: obj2).
-			 self setHashBitsOf: clone2 to: (self rawHashBitsOf: obj1)]
-		ifFalse:
 			[self setHashBitsOf: clone1 to: (self rawHashBitsOf: obj1).
-			 self setHashBitsOf: clone2 to: (self rawHashBitsOf: obj2)].
+			 self setHashBitsOf: clone2 to: (self rawHashBitsOf: obj2)]
+		ifFalse:
+			[self setHashBitsOf: clone1 to: (self rawHashBitsOf: obj2).
+			 self setHashBitsOf: clone2 to: (self rawHashBitsOf: obj1)].
 	self
 		forward: obj1 to: clone2;
 		forward: obj2 to: clone1.
