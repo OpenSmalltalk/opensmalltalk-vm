@@ -2790,11 +2790,6 @@ CogIA32Compiler >> machineCodeBytes [
 	^10
 ]
 
-{ #category : #'abstract instructions' }
-CogIA32Compiler >> maybeEstablishVarBase [
-	"The receiver does not have a VarBaseReg; do nothing."
-]
-
 { #category : #accessing }
 CogIA32Compiler >> minAbstractGeneralPurposeReg [
 	"Answer the smallest index of an abstract general-purpose register used by this compiler.

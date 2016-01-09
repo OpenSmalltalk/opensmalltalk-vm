@@ -2675,7 +2675,22 @@ CogARMCompiler >> machineCodeWords [
 { #category : #'abstract instructions' }
 CogARMCompiler >> maybeEstablishVarBase [
 	"The receiver has a VarBaseReg; generate the code to set it to its value."
+	<inline: true>
 	cogit MoveCq: cogit varBaseAddress R: VarBaseReg
+]
+
+{ #category : #'abstract instructions' }
+CogARMCompiler >> maybeRestoreVarBase [
+	"The receiver has a VarBaseReg; generate the code to pop its value."
+	<inline: true>
+	cogit PopR: VarBaseReg
+]
+
+{ #category : #'abstract instructions' }
+CogARMCompiler >> maybeSaveVarBase [
+	"The receiver has a VarBaseReg; generate the code to push its value."
+	<inline: true>
+	cogit PushR: VarBaseReg
 ]
 
 { #category : #encoding }
