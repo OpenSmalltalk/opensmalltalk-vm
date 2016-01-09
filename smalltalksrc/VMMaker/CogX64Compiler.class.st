@@ -2695,7 +2695,22 @@ CogX64Compiler >> machineCodeBytes [
 { #category : #'abstract instructions' }
 CogX64Compiler >> maybeEstablishVarBase [
 	"The receiver has a VarBaseReg; generate the code to set it to its value."
+	<inline: true>
 	cogit MoveCq: cogit varBaseAddress R: VarBaseReg
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> maybeRestoreVarBase [
+	"The receiver has a VarBaseReg; generate the code to pop its value."
+	<inline: true>
+	cogit PopR: VarBaseReg
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> maybeSaveVarBase [
+	"The receiver has a VarBaseReg; generate the code to push its value."
+	<inline: true>
+	cogit PushR: VarBaseReg
 ]
 
 { #category : #accessing }

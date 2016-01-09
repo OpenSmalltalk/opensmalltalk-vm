@@ -2259,12 +2259,6 @@ CogMIPSELCompiler >> maxAbstractGeneralPurposeReg [
 	^TempReg
 ]
 
-{ #category : #'abstract instructions' }
-CogMIPSELCompiler >> maybeEstablishVarBase [
-	"The receiver has a VarBaseReg; generate the code to set it to its value."
-	cogit MoveCq: cogit varBaseAddress R: VarBaseReg
-]
-
 { #category : #'encoding - arithmetic' }
 CogMIPSELCompiler >> mfhiR: destReg [
 	self flag: #todo. "Ascertain what ISA revision adds this instruction"
