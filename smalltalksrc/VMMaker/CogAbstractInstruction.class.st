@@ -1091,8 +1091,23 @@ CogAbstractInstruction >> maxSize: size [ "<signed byte>"
 
 { #category : #'abstract instructions' }
 CogAbstractInstruction >> maybeEstablishVarBase [
-	"If the receiver has a VarBaseReg, generate the code to set it to its value."
-	self subclassResponsibility
+	"If the receiver has a VarBaseReg, generate the code to set it to its value.
+	 By default do nothing."
+	<inline: true>
+]
+
+{ #category : #'abstract instructions' }
+CogAbstractInstruction >> maybeRestoreVarBase [
+	"If the receiver has a VarBaseReg, generate the code to pop its value.
+	 By default do nothing."
+	<inline: true>
+]
+
+{ #category : #'abstract instructions' }
+CogAbstractInstruction >> maybeSaveVarBase [
+	"If the receiver has a VarBaseReg, generate the code to push its value.
+	 By default do nothing."
+	<inline: true>
 ]
 
 { #category : #accessing }
