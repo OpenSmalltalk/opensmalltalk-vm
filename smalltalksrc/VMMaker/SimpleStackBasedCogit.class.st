@@ -744,8 +744,9 @@ SimpleStackBasedCogit class >> table: primArray from: specArray [
 	"Fill in the specified entries in the primitive table."
 	specArray do:
 		[:spec | 
-		 (spec second == #genFastPrimFail
-		  or: [self objectRepresentationClass shouldIncludeMethodForSelector: spec second]) ifTrue:
+		 (spec first <= primArray size
+		  and: [spec second == #genFastPrimFail
+			  or: [self objectRepresentationClass shouldIncludeMethodForSelector: spec second]]) ifTrue:
 			[(primArray at: spec first put: CogPrimitiveDescriptor new)
 				primitiveGenerator: spec second;
 				primNumArgs: (spec at: 3 ifAbsent: -1)]].
