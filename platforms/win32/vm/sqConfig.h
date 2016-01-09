@@ -43,3 +43,7 @@
 # define PlatformNoDbgRegParms __attribute__ ((regparm (0)))
 # define NeverInline __attribute__ ((noinline))
 #endif
+
+#if defined( __clang__)
+# define NeverInline __attribute__ ((noinline))
+#endif

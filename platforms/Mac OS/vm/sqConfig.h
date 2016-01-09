@@ -31,3 +31,7 @@
 # endif
 # define NeverInline __attribute__ ((noinline))
 #endif
+
+#if defined( __clang__)
+# define NeverInline __attribute__ ((noinline))
+#endif
