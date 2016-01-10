@@ -63,7 +63,6 @@ CogObjectRepresentation >> allocateCounters: nCounters [
 { #category : #testing }
 CogObjectRepresentation >> canPinObjects [
 	"Answer if the memory manager supports pinned objects."
-	<inline: true>
 	^false
 ]
 
@@ -1289,7 +1288,6 @@ CogObjectRepresentation >> maybeGenerateSelectorIndexDereferenceRoutine [
 	 If the selector index is negative, convert it into a positive index into the
 	 special selectors array and index that.  Otherwise, index the current method.
 	 This is only required on 64-bit platforms."
-	<inline: true>
 ]
 
 { #category : #'sista support' }
@@ -1341,7 +1339,6 @@ CogObjectRepresentation >> resetCountersIn: cogMethod [
 CogObjectRepresentation >> selectorIndexDereferenceRoutine [
 	"If the object representation is 64-bits, selectors must be accessed via indices in the inline caches.
 	 Answer the routine that will map from indices to selector objects if so, otherwise nil."
-	<inline: true>
 	^nil
 ]
 

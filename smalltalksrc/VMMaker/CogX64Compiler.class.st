@@ -278,13 +278,11 @@ CogX64Compiler >> callerSavedRegisterMask [
 
 { #category : #testing }
 CogX64Compiler >> canDivQuoRem [
-	<inline: true>
 	^true
 ]
 
 { #category : #testing }
 CogX64Compiler >> canMulRR [
-	<inline: true>
 	^true
 ]
 
@@ -2473,13 +2471,11 @@ CogX64Compiler >> generalPurposeRegisterMap [
 { #category : #testing }
 CogX64Compiler >> hasConditionRegister [
 	"Answer if the receiver supports, e.g., JumpOverflow after a regular AddRR"
-	<inline: true>
 	^true
 ]
 
 { #category : #testing }
 CogX64Compiler >> hasDoublePrecisionFloatingPointSupport [
-	<inline: true>
 	^true
 ]
 
@@ -2491,8 +2487,14 @@ CogX64Compiler >> hasLinkRegister [
 { #category : #testing }
 CogX64Compiler >> hasThreeAddressArithmetic [
 	"Answer if the receiver supports three-address arithmetic instructions"
-	<inline: true>
 	^false
+]
+
+{ #category : #testing }
+CogX64Compiler >> hasVarBaseRegister [
+	"Answer if the processor has a dedicated callee-saved register to point to
+	 the base of commonly-accessed variables."
+	^true "RBX"
 ]
 
 { #category : #disassembly }
@@ -2552,7 +2554,6 @@ CogX64Compiler >> isAddressRelativeToVarBase: varAddress [
 
 { #category : #testing }
 CogX64Compiler >> isBigEndian [
-	<inline: true>
 	^false
 ]
 
@@ -2683,27 +2684,6 @@ CogX64Compiler >> machineCodeBytes [
 	"Answer the maximum number of bytes of machine code generated for any abstract instruction.
 	 e.g. xchg %rdx, %rax; movq $0x12345678ABCDEF0, %(rax); xchg %rdx, %rax => 48 92 48 A3 F0 DE BC 9A 78 56 34 12 48 92"
 	^14
-]
-
-{ #category : #'abstract instructions' }
-CogX64Compiler >> maybeEstablishVarBase [
-	"The receiver has a VarBaseReg; generate the code to set it to its value."
-	<inline: true>
-	cogit MoveCq: cogit varBaseAddress R: VarBaseReg
-]
-
-{ #category : #'abstract instructions' }
-CogX64Compiler >> maybeRestoreVarBase [
-	"The receiver has a VarBaseReg; generate the code to pop its value."
-	<inline: true>
-	cogit PopR: VarBaseReg
-]
-
-{ #category : #'abstract instructions' }
-CogX64Compiler >> maybeSaveVarBase [
-	"The receiver has a VarBaseReg; generate the code to push its value."
-	<inline: true>
-	cogit PushR: VarBaseReg
 ]
 
 { #category : #accessing }

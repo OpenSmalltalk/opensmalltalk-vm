@@ -75,13 +75,11 @@ InLineLiteralsManager >> fetchLiteralAtAnnotatedAddress: address using: instruct
 
 { #category : #'garbage collection' }
 InLineLiteralsManager >> literalBytesFollowingBranchInClosedPIC [
-	<inline: true>
 	^0
 ]
 
 { #category : #'garbage collection' }
 InLineLiteralsManager >> literalBytesFollowingJumpInClosedPIC [
-	<inline: true>
 	^0
 ]
 
@@ -93,17 +91,14 @@ InLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 
 { #category : #'compile abstract instructions' }
 InLineLiteralsManager >> resetForBlockCompile [
-	<inline: true>
 ]
 
 { #category : #initialization }
 InLineLiteralsManager >> resetLiterals [
-	<inline: true>
 ]
 
 { #category : #'compile abstract instructions' }
 InLineLiteralsManager >> saveForBlockCompile [
-	<inline: true>
 ]
 
 { #category : #'garbage collection' }

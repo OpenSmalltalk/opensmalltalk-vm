@@ -288,13 +288,11 @@ CogMIPSELCompiler >> callerSavedRegisterMask [
 
 { #category : #testing }
 CogMIPSELCompiler >> canDivQuoRem [
-	<inline: true>
 	^true
 ]
 
 { #category : #testing }
 CogMIPSELCompiler >> canMulRR [
-	<inline: true>
 	^true
 ]
 
@@ -1821,7 +1819,6 @@ CogMIPSELCompiler >> getDefaultCogCodeSize [
 { #category : #testing }
 CogMIPSELCompiler >> hasConditionRegister [
 	"Answer if the receiver supports, e.g., JumpOverflow after a regular AddRR"
-	<inline: true>
 	^false
 ]
 
@@ -1840,7 +1837,6 @@ CogMIPSELCompiler >> hasLinkRegister [
 { #category : #testing }
 CogMIPSELCompiler >> hasThreeAddressArithmetic [
 	"Answer if the receiver supports three-address arithmetic instructions"
-	<inline: true>
 	^true
 ]
 
@@ -1848,7 +1844,6 @@ CogMIPSELCompiler >> hasThreeAddressArithmetic [
 CogMIPSELCompiler >> hasVarBaseRegister [
 	"Answer if the processor has a dedicated callee-saved register to point to
 	 the base of commonly-accessed variables."
-	<inline: true>
 	^true "S6"
 ]
 
@@ -1912,7 +1907,6 @@ CogMIPSELCompiler >> isAddressRelativeToVarBase: varAddress [
 
 { #category : #testing }
 CogMIPSELCompiler >> isBigEndian [
-	<inline: true>
 	^false
 ]
 

@@ -5636,7 +5636,8 @@ Cogit >> genEnilopmartFor: regArg1 and: regArg2OrNone and: regArg3OrNone forCall
 
 	| size endAddress enilopmart |
 	self zeroOpcodeIndex.
-	backEnd maybeEstablishVarBase. "Must happen first; value may be used in genLoadStackPointers"
+	backEnd hasVarBaseRegister ifTrue:
+		[self MoveCq: self varBaseAddress R: VarBaseReg]. "Must happen first; value may be used in genLoadStackPointers"
 	backEnd genLoadStackPointers.
 	regArg3OrNone ~= NoReg ifTrue: [self PopR: regArg3OrNone].
 	regArg2OrNone ~= NoReg ifTrue: [self PopR: regArg2OrNone].
@@ -6267,19 +6268,25 @@ Cogit >> generateCaptureCStackPointers: captureFramePointer [
 	<inline: false>
 	self allocateOpcodes: 32 bytecodes: 0.
 	startAddress := methodZoneBase.
-	backEnd
-		maybeSaveVarBase;
-		maybeEstablishVarBase. "Must happen first; value may be used in accessing any of the following addresses"
+	 "Must happen first; value may be used in accessing any of the following addresses"
+	backEnd hasVarBaseRegister ifTrue:
+		[self
+			PushR: VarBaseReg;
+			MoveCq: self varBaseAddress R: VarBaseReg].
 	captureFramePointer ifTrue:
 		[self MoveR: FPReg Aw: self cFramePointerAddress].
-	"Capture the stack pointer prior to the call."
-	backEnd leafCallStackPointerDelta = 0
-		ifTrue: [self MoveR: SPReg Aw: self cStackPointerAddress]
-		ifFalse: [self MoveR: SPReg R: TempReg.
-				self AddCq: backEnd leafCallStackPointerDelta R: TempReg.
-				self MoveR: TempReg Aw: self cStackPointerAddress].
-	backEnd
-		maybeRestoreVarBase.
+	"Capture the stack pointer prior to the call.  If we've pushed VarBaseReg take that into account."
+	(backEnd leafCallStackPointerDelta ~= 0
+	 or: [backEnd hasVarBaseRegister])
+		ifTrue:
+			[self MoveR: SPReg R: TempReg.
+			 self AddCq: (backEnd hasVarBaseRegister
+							ifTrue: [backEnd leafCallStackPointerDelta + objectMemory wordSize]
+							ifFalse: [backEnd leafCallStackPointerDelta]) R: TempReg.
+			 self MoveR: TempReg Aw: self cStackPointerAddress]
+		ifFalse: [self MoveR: SPReg Aw: self cStackPointerAddress].
+	backEnd hasVarBaseRegister ifTrue:
+		[self PopR: VarBaseReg].
 	self RetN: 0.
 	self outputInstructionsForGeneratedRuntimeAt: startAddress.
 	processor flushICacheFrom: startAddress asUnsignedInteger to: methodZoneBase asUnsignedInteger.
@@ -6773,7 +6780,6 @@ Cogit >> getLiteral: litIndex [
 { #category : #accessing }
 Cogit >> getOpcodeIndex [
 	"Access for the literal manager."
-	<inline: true>
 	^opcodeIndex
 ]
 
@@ -8288,7 +8294,6 @@ Cogit >> maxCogMethodAddress [
 { #category : #'compile abstract instructions' }
 Cogit >> maybeAllocAndInitCounters [
 	"No-op in the non-Sista Cogits..."
-	<inline: true>
 	^true
 ]
 
@@ -8348,7 +8353,6 @@ Cogit >> maybeFreeCogMethodDoesntLookKosher: cogMethod [
 { #category : #'compile abstract instructions' }
 Cogit >> maybeFreeCounters [
 	"No-op in the non-Sista Cogits..."
-	<inline: true>
 ]
 
 { #category : #compaction }
@@ -8818,7 +8822,6 @@ Cogit >> patchToOpenPICFor: selector numArgs: numArgs receiver: receiver [
 Cogit >> picAbortDiscriminatorValue [
 	"This value is used to decide between MNU processing
 	 or interpretation in the closed PIC aborts."
-	<inline: true>
 	^0
 ]
 
@@ -10841,7 +10844,7 @@ Cogit >> unlockVMOwner [
 
 { #category : #accessing }
 Cogit >> varBaseAddress [
-	"We expect simulatedAddresses to have around 40 entries.  48 is hopefully a good maximum."
+	"This is for disassembly decoration by the processor aliens.  they don't know aboud objectMemory hence forward..."
 	<doNotGenerate>
 	^coInterpreter varBaseAddress
 ]

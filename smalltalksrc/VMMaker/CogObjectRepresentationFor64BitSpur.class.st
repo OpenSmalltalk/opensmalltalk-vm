@@ -1029,7 +1029,6 @@ CogObjectRepresentationFor64BitSpur >> genStoreHeader: header intoNewInstance: r
 
 { #category : #'in-line cacheing' }
 CogObjectRepresentationFor64BitSpur >> illegalClassTag [
-	<inline: true>
 	^0
 ]
 
@@ -1151,7 +1150,6 @@ CogObjectRepresentationFor64BitSpur >> numSmallIntegerTagBits [
 CogObjectRepresentationFor64BitSpur >> selectorIndexDereferenceRoutine [
 	"If the object representation is 64-bits, selectors must be accessed via indices in the inline caches.
 	 Answer the routine that will map from indices to selector objects if so, otherwise nil."
-	<inline: true>
 	^ceDereferenceSelectorIndex
 ]
 

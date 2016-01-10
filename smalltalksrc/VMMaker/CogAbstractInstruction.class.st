@@ -803,7 +803,6 @@ CogAbstractInstruction >> hasPCRegister [
 	 On such processors we can execute jumping to pop top of stack by popping into
 	 the pc register.  Note that this is not a generic RISC feature.  The PowerPC does not
 	 allow one to pop into the pc for example.  So by default, answer false."
-	<inline: true>
 	^false
 ]
 
@@ -818,7 +817,6 @@ CogAbstractInstruction >> hasThreeAddressArithmetic [
 CogAbstractInstruction >> hasVarBaseRegister [
 	"Answer if the processor has a dedicated callee-saved register to point to
 	 the base of commonly-accessed variables. By default this is false."
-	<inline: true>
 	^false
 ]
 
@@ -1087,27 +1085,6 @@ CogAbstractInstruction >> maxSize [
 CogAbstractInstruction >> maxSize: size [ "<signed byte>"
 	"N.B. This is a byte size."
 	maxSize := size
-]
-
-{ #category : #'abstract instructions' }
-CogAbstractInstruction >> maybeEstablishVarBase [
-	"If the receiver has a VarBaseReg, generate the code to set it to its value.
-	 By default do nothing."
-	<inline: true>
-]
-
-{ #category : #'abstract instructions' }
-CogAbstractInstruction >> maybeRestoreVarBase [
-	"If the receiver has a VarBaseReg, generate the code to pop its value.
-	 By default do nothing."
-	<inline: true>
-]
-
-{ #category : #'abstract instructions' }
-CogAbstractInstruction >> maybeSaveVarBase [
-	"If the receiver has a VarBaseReg, generate the code to push its value.
-	 By default do nothing."
-	<inline: true>
 ]
 
 { #category : #accessing }
