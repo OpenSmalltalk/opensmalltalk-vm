@@ -615,7 +615,7 @@ Cogit class >> defaultObjectMemoryClass [
 { #category : #translation }
 Cogit class >> doInlining [
 	"inline only those methods that are marked with <inline: true>"
-	^#asSpecified
+	^#asSpecifiedOrQuick
 ]
 
 { #category : #translation }
