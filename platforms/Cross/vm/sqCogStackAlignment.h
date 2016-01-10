@@ -37,8 +37,22 @@
  * __m256 is passed on stack) byte boundary. In other words, the value
  * (%rsp + 8) is always a multiple of 16 (32) when control is transferred to
  * the function entry point.
+ * However,
+ * https://developer.apple.com/library/mac/documentation/DeveloperTools/
+ * Conceptual/LowLevelABI/140-x86-64_Function_Calling_Conventions/x86_64.html
+ * claims
+ * "The OS X x86-64 function calling conventions are the same as the function
+ * calling conventions described in System V Application Binary Interface AMD64
+ * Architecture Processor Supplement, found at
+ * http://people.freebsd.org/~obrien/amd64-elf-abi.pdf. See that document for
+ * details."
+ * and that document states:
+ * "The end of the input argument area shall be aligned on a 16 byte boundary.
+ * In other words, the value (%rsp ? 8) is always a multiple of 16 when control
+ * is transferred to the function entry point. The stack pointer, %rsp, always
+ * points to the end of the latest allocated stack frame."
  */
-# if __APPLE__ && __MACH__ /* i.e. the __m256 regime */
+# if __APPLE__ && __MACH__ && 0/* i.e. the __m256 regime */
 #	define STACK_ALIGN_BYTES 32
 #	define STACK_FP_ALIGNMENT 16 /* aligned sp - retpc - saved fp */
 # else
