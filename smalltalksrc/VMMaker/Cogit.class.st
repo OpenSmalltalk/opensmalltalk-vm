@@ -206,13 +206,14 @@ Class {
 		'ceFetchContextInstVarTrampoline',
 		'ceStoreContextInstVarTrampoline',
 		'ceEnclosingObjectTrampoline',
-		'ceCaptureCStackPointers',
 		'ceFlushICache',
 		'ceCheckFeaturesFunction',
 		'ceTraceLinkedSendTrampoline',
 		'ceTraceBlockActivationTrampoline',
 		'ceTraceStoreTrampoline',
+		'ceGetFP',
 		'ceGetSP',
+		'ceCaptureCStackPointers',
 		'ordinarySendTrampolines',
 		'superSendTrampolines',
 		'directedSuperSendTrampolines',
@@ -519,6 +520,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		addHeaderFile:'#endif';
 		addHeaderFile:'"cogit.h"'.
 	aCCodeGenerator
+		var: #ceGetFP
+			declareC: 'unsigned long (*ceGetFP)(void)';
 		var: #ceGetSP
 			declareC: 'unsigned long (*ceGetSP)(void)';
 		var: #ceCaptureCStackPointers
@@ -1027,16 +1030,16 @@ Cogit class >> mustBeGlobal: var [
 	 support code.  include cePositive32BitIntegerTrampoline as a hack to prevent it being inlined (it is
 	 only used outside of Cogit by the object representation).  Include CFramePointer CStackPointer as
 	 a hack to get them declared at all."
-	^#('ceBaseFrameReturnTrampoline' 'ceCaptureCStackPointers' 'ceCheckForInterruptTrampoline'
-		'ceEnterCogCodePopReceiverReg' 'realCEEnterCogCodePopReceiverReg'
-		'ceCallCogCodePopReceiverReg' 'realCECallCogCodePopReceiverReg'
-		'ceCallCogCodePopReceiverAndClassRegs' 'realCECallCogCodePopReceiverAndClassRegs'
+	^#(	'ceBaseFrameReturnTrampoline' #ceCaptureCStackPointers 'ceCheckForInterruptTrampoline'
+		ceEnterCogCodePopReceiverReg realCEEnterCogCodePopReceiverReg
+		ceCallCogCodePopReceiverReg realCECallCogCodePopReceiverReg
+		ceCallCogCodePopReceiverAndClassRegs realCECallCogCodePopReceiverAndClassRegs
 		'ceReturnToInterpreterTrampoline' 'ceCannotResumeTrampoline'
-		'ceTryLockVMOwner' 'ceUnlockVMOwner'
+		ceTryLockVMOwner ceUnlockVMOwner
 		'cmEntryOffset' 'cmNoCheckEntryOffset' 'cmDynSuperEntryOffset' 'cmSelfSendEntryOffset' 'missOffset'
-		'blockNoContextSwitchOffset' 'breakPC'
-		'CFramePointer' 'CStackPointer' 'cFramePointerInUse' 'ceGetSP'
-		'traceFlags' 'traceStores' 'debugPrimCallStackOffset')
+		'blockNoContextSwitchOffset' breakPC
+		CFramePointer CStackPointer 'cFramePointerInUse' ceGetFP ceGetSP
+		traceFlags 'traceStores' debugPrimCallStackOffset)
 			includes: var
 ]
 
@@ -5719,9 +5722,19 @@ Cogit >> genGetLeafCallStackPointer [
 	 after a leaf call, used for checking stack pointer alignment."
 	| startAddress |
 	<inline: false>
-	self allocateOpcodes: 32 bytecodes: 0.
+	self allocateOpcodes: 4 bytecodes: 0.
 	startAddress := methodZoneBase.
-	backEnd genGetLeafCallStackPointerFunction.
+	self
+		MoveR: FPReg R: backEnd cResultRegister;
+		RetN: 0.
+	self outputInstructionsForGeneratedRuntimeAt: startAddress.
+	self recordGeneratedRunTime: 'ceGetFP' address: startAddress.
+	ceGetFP := self cCoerceSimple: startAddress to: #'unsigned long (*)(void)'.
+	startAddress := methodZoneBase.
+	self MoveR: SPReg R: backEnd cResultRegister.
+	backEnd leafCallStackPointerDelta ~= 0 ifTrue:
+		[self AddCq: backEnd leafCallStackPointerDelta R: backEnd cResultRegister].
+	self RetN: 0.
 	self outputInstructionsForGeneratedRuntimeAt: startAddress.
 	self recordGeneratedRunTime: 'ceGetSP' address: startAddress.
 	ceGetSP := self cCoerceSimple: startAddress to: #'unsigned long (*)(void)'
