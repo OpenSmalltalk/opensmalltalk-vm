@@ -1646,12 +1646,6 @@ CogMIPSELCompiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abs
 	^0
 ]
 
-{ #category : #assertions }
-CogMIPSELCompiler >> genGetLeafCallStackPointerFunction [
-	cogit MoveR: SP R: V0.
-	cogit RetN: 0
-]
-
 { #category : #'smalltalk calling convention' }
 CogMIPSELCompiler >> genLoadCStackPointer [
 	"Load the stack pointer register with that of the C stack, effecting
