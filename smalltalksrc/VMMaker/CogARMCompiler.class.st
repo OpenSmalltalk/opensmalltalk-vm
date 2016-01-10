@@ -2089,13 +2089,6 @@ CogARMCompiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstra
 
 ]
 
-{ #category : #assertions }
-CogARMCompiler >> genGetLeafCallStackPointerFunction [
-"create a tiny leaf function that just returns the SP in r0 "
-	cogit MoveR: SP R: R0.
-	cogit RetN: 0
-]
-
 { #category : #'smalltalk calling convention' }
 CogARMCompiler >> genLoadCStackPointer [
 	"Load the stack pointer register with that of the C stack, effecting

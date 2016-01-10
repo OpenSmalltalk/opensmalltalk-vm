@@ -2186,13 +2186,6 @@ CogX64Compiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstra
 		[cogit PopR: RAX]
 ]
 
-{ #category : #assertions }
-CogX64Compiler >> genGetLeafCallStackPointerFunction [
-	cogit
-		MoveR: RSP R: RAX;
-		RetN: 0
-]
-
 { #category : #'abstract instructions' }
 CogX64Compiler >> genJumpFPEqual: jumpTarget [
 	<inline: true>
