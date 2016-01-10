@@ -2277,12 +2277,6 @@ CogIA32Compiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstr
 		[cogit PopR: EAX]
 ]
 
-{ #category : #assertions }
-CogIA32Compiler >> genGetLeafCallStackPointerFunction [
-	cogit MoveR: ESP R: EAX.
-	cogit RetN: 0
-]
-
 { #category : #'abstract instructions' }
 CogIA32Compiler >> genJumpFPEqual: jumpTarget [
 	<inline: true>
