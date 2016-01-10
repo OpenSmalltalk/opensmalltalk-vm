@@ -1463,7 +1463,6 @@ CogObjectRepresentationFor32BitSpur >> genStoreHeader: header intoNewInstance: r
 
 { #category : #'in-line cacheing' }
 CogObjectRepresentationFor32BitSpur >> illegalClassTag [
-	<inline: true>
 	^2
 ]
 

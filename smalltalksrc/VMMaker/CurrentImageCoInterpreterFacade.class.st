@@ -514,17 +514,6 @@ CurrentImageCoInterpreterFacade >> isIntegerValue: anInteger [
 	^objectMemory isIntegerValue: anInteger
 ]
 
-{ #category : #labels }
-CurrentImageCoInterpreterFacade >> isLabelRelativeToCogitVarBaseReg: l [
-	coInterpreter class
-		instVarIndexFor: l
-		ifAbsent:
-			[objectMemory class
-				instVarIndexFor: l
-				ifAbsent: [^false]].
-	^true
-]
-
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> isNonImmediate: anOop [
 	^objectMemory isNonImmediate: anOop
