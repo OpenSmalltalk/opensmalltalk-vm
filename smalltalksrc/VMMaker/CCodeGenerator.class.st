@@ -783,13 +783,14 @@ CCodeGenerator >> codeString [
 { #category : #inlining }
 CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
 	"Make a list of methods that should be inlined.  If inlineFlagOrSymbol == #asSpecified
-	 only inline methods marked with <inline: true>."
+	 only inline methods marked with <inline: true>.  If inlineFlagOrSymbol == #asSpecifiedOrQuick
+	 only inline methods marked with <inline: true> or methods that are quick (^constant, ^inst var)."
 	"Details: The method must not include any inline C, since the
 	 translator cannot currently map variable names in inlined C code.
 	 Methods to be inlined must be small or called from only one place."
 
 	| selectorsOfMethodsNotToInline callsOf |
-	self assert: (#(true false asSpecified) includes: inlineFlagOrSymbol).
+	self assert: (#(true false asSpecified asSpecifiedOrQuick) includes: inlineFlagOrSymbol).
 	selectorsOfMethodsNotToInline := Set new: methods size.
 	selectorsOfMethodsNotToInline addAll: macros keys.
 	apiMethods ifNotNil:
@@ -831,7 +832,7 @@ CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
 							ifPresent:
 								[:senderCount| callsOf at: node selector put: senderCount + 1]].
 					 nodeCount := nodeCount + 1].
-				inlineIt := m extractInlineDirective].  "may be true, false, or #dontCare"
+				inlineIt := m extractInlineDirective].  "may be true, false, #always, #never or #dontCare"
 		(hasUnrenamableCCode or: [inlineIt == false])
 			ifTrue: "don't inline if method has C code or contains negative inline directive"
 				[inlineIt == true ifTrue:
@@ -843,13 +844,18 @@ CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
 						cr; flush].
 				selectorsOfMethodsNotToInline add: m selector]
 			ifFalse:
-				[(inlineFlagOrSymbol == #asSpecified
-					ifTrue: [inlineIt == true]
-					ifFalse: [nodeCount < 40 or: [inlineIt == true]]) ifTrue:
-				"inline if method has no C code and is either small or contains inline directive"
-					[inlineList add: m selector]]].
+				[(inlineFlagOrSymbol caseOf: {
+						[#asSpecified]			-> [inlineIt == true].
+						[#asSpecifiedOrQuick]	-> [inlineIt == true or: [m compiledMethod isQuick]].
+						[true]					-> [nodeCount < 40 or: [inlineIt == true]].
+						[false]					-> [false]})
+					ifTrue: "inline if method has no C code and is either small or contains inline directive"
+						[inlineList add: m selector]
+					ifFalse:
+						[(#(asSpecified asSpecifiedOrQuick) includes: inlineFlagOrSymbol) ifTrue:
+							[selectorsOfMethodsNotToInline add: m selector]]]].
 
-	inlineFlagOrSymbol ~~ #asSpecified ifTrue:
+	(#(asSpecified asSpecifiedOrQuick) includes: inlineFlagOrSymbol) ifFalse:
 		[callsOf associationsDo:
 			[:assoc|
 			(assoc value = 1
