@@ -446,14 +446,12 @@ CogARMCompiler >> callerSavedRegisterMask [
 
 { #category : #testing }
 CogARMCompiler >> canDivQuoRem [
-	<inline: true>
 	^true
 ]
 
 { #category : #testing }
 CogARMCompiler >> canMulRR [
 "we can do a MulRR be we can't simulate it correctly for some reason. More bug-fixing in the simulator one day"
-	<inline: true>
 	^true
 ]
 
@@ -2281,14 +2279,12 @@ CogARMCompiler >> generalPurposeRegisterMap [
 { #category : #testing }
 CogARMCompiler >> hasConditionRegister [
 	"Answer if the receiver supports, e.g., JumpOverflow after a regular AddRR"
-	<inline: true>
 	^true
 ]
 
 { #category : #testing }
 CogARMCompiler >> hasDoublePrecisionFloatingPointSupport [
 	"might be true, but is for the forseeable future disabled"
-	<inline: true>
 	^true
 ]
 
@@ -2312,7 +2308,6 @@ CogARMCompiler >> hasPCRegister [
 { #category : #testing }
 CogARMCompiler >> hasThreeAddressArithmetic [
 	"Answer if the receiver supports three-address arithmetic instructions (currently only AndCqRR)"
-	<inline: true>
 	^true
 ]
 
@@ -2320,7 +2315,6 @@ CogARMCompiler >> hasThreeAddressArithmetic [
 CogARMCompiler >> hasVarBaseRegister [
 	"Answer if the processor has a dedicated callee-saved register to point to
 	 the base of commonly-accessed variables. On ARM we use R10 for this."
-	<inline: true>
 	^true "r10/sl"
 ]
 
@@ -2460,7 +2454,6 @@ CogARMCompiler >> isAddressRelativeToVarBase: varAddress [
 
 { #category : #testing }
 CogARMCompiler >> isBigEndian [
-	<inline: true>
 	^false
 ]
 
@@ -2663,27 +2656,6 @@ CogARMCompiler >> machineCodeWords [
 			orr R3, R3, #<addressByte4>, 0
 			cmp R?, R3"
 	^5
-]
-
-{ #category : #'abstract instructions' }
-CogARMCompiler >> maybeEstablishVarBase [
-	"The receiver has a VarBaseReg; generate the code to set it to its value."
-	<inline: true>
-	cogit MoveCq: cogit varBaseAddress R: VarBaseReg
-]
-
-{ #category : #'abstract instructions' }
-CogARMCompiler >> maybeRestoreVarBase [
-	"The receiver has a VarBaseReg; generate the code to pop its value."
-	<inline: true>
-	cogit PopR: VarBaseReg
-]
-
-{ #category : #'abstract instructions' }
-CogARMCompiler >> maybeSaveVarBase [
-	"The receiver has a VarBaseReg; generate the code to push its value."
-	<inline: true>
-	cogit PushR: VarBaseReg
 ]
 
 { #category : #encoding }

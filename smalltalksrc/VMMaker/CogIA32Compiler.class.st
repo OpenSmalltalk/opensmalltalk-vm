@@ -210,13 +210,11 @@ CogIA32Compiler >> callerSavedRegisterMask [
 
 { #category : #testing }
 CogIA32Compiler >> canDivQuoRem [
-	<inline: true>
 	^true
 ]
 
 { #category : #testing }
 CogIA32Compiler >> canMulRR [
-	<inline: true>
 	^true
 ]
 
@@ -228,7 +226,6 @@ CogIA32Compiler >> cmpC32RTempByteSize [
 { #category : #accessing }
 CogIA32Compiler >> codeGranularity [
 	"Answer the size in bytes of a unit of machine code."
-	<inline: true>
 	^1
 ]
 
@@ -2569,7 +2566,6 @@ CogIA32Compiler >> generateLowLevelUnlock: vmOwnerLockAddress [
 { #category : #testing }
 CogIA32Compiler >> hasConditionRegister [
 	"Answer if the receiver supports, e.g., JumpOverflow after a regular AddRR"
-	<inline: true>
 	^true
 ]
 
@@ -2600,7 +2596,6 @@ CogIA32Compiler >> hasSSEInstructions [
 { #category : #testing }
 CogIA32Compiler >> hasThreeAddressArithmetic [
 	"Answer if the receiver supports three-address arithmetic instructions"
-	<inline: true>
 	^false
 ]
 
@@ -2646,7 +2641,6 @@ CogIA32Compiler >> instructionSizeAt: pc [
 
 { #category : #testing }
 CogIA32Compiler >> isBigEndian [
-	<inline: true>
 	^false
 ]
 

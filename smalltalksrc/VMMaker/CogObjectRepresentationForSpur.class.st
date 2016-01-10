@@ -99,7 +99,6 @@ CogObjectRepresentationForSpur >> cacheTagIsMarked: cacheTag [
 { #category : #testing }
 CogObjectRepresentationForSpur >> canPinObjects [
 	"Answer if the memory manager supports pinned objects."
-	<inline: true>
 	^true
 ]
 
@@ -1292,7 +1291,6 @@ CogObjectRepresentationForSpur >> inlineCacheTagIsYoung: cacheTag [
 
 { #category : #'in-line cacheing' }
 CogObjectRepresentationForSpur >> inlineCacheTagsMayBeObjects [
-	<inline: true>
 	^false
 ]
 
@@ -1510,7 +1508,6 @@ CogObjectRepresentationForSpur >> numRegArgs [
 	 at:receiver: do not have to be implemented in SimpleStackBasedCogit."
 	<api>
 	<option: #StackToRegisterMappingCogit>
-	<inline: true>
 	^2
 ]
 

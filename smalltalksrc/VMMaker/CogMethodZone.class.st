@@ -930,7 +930,6 @@ CogMethodZone >> youngReferrers [
 
 { #category : #accessing }
 CogMethodZone >> zoneEnd [
-	<inline: true>
 	^limitAddress
 ]
 
@@ -942,6 +941,5 @@ CogMethodZone >> zoneEnd: zoneEnd [
 
 { #category : #accessing }
 CogMethodZone >> zoneFree [
-	<inline: true>
 	^mzFreeStart
 ]
