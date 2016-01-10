@@ -26,30 +26,52 @@
 # define STACK_FP_ALIGN_BYTES 8
 #endif
 
+#if defined(x86_64) || defined(__amd64) || defined(__x86_64) || defined(__amd64__) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
+/* From the System V ABI:
+ * 3.2.2 The Stack Frame
+ * ...	The end of the input argument area shall be aligned on a 16 (32, if
+ * __m256 is passed on stack) byte boundary. In other words, the value
+ * (%rsp + 8) is always a multiple of 16 (32) when control is transferred to
+ * the function entry point.
+ */
+# if __APPLE__ && __MACH__
+#	define STACK_ALIGN_BYTES 32
+#	define LEAF_CALL_STACK_ALIGN_BYTES 24
+#	define STACK_FP_ALIGN_BYTES 32
+# else
+#	define STACK_ALIGN_BYTES 16
+#	define LEAF_CALL_STACK_ALIGN_BYTES 8
+#	define STACK_FP_ALIGN_BYTES 16
+# endif
+#endif
+
 #if defined(STACK_ALIGN_BYTES)
 # if defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__)
-#  if __GNUC__
+#  if __GNUC__ || __clang__
 #   define getfp() ({ register unsigned long fp;					\
 					  asm volatile ("movl %%ebp,%0" : "=r"(fp) : );	\
 					  fp; })
-#  else
-extern unsigned long getfp();
 #  endif
 # elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
 	/* http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0041c/Cegbidie.html
 	 * ARM DUI 0041C Page 9-7
 	 */
 #  if __GNUC__
-/* # define getsp() ({ void *sp; asm volatile ("mov %0, %%sp" : "=r"(sp) : ); sp;}) */
-
 #   define getfp() ({ unsigned long fp;					\
 					  asm volatile ("mov %0, %%fp" : "=r"(fp) : );	\
 					  fp; })
-#  else
-extern unsigned long getfp();
 #  endif
-# else
+# elif __x86_64__
+#  if __GNUC__ || __clang__
+#   define getfp() ({ register unsigned long fp;					\
+					  asm volatile ("movq %%rbp,%0" : "=r"(fp) : );	\
+					  fp; })
+#  endif
+# else /* !(__i386__ || __arm__ || __x86_64__) */
 #  error define code for your processor here
+# endif
+# if !defined(getfp)
+extern unsigned long getfp();
 # endif
 extern unsigned long (*ceGetSP)(); /* provided by Cogit */
 # define STACK_ALIGN_MASK (STACK_ALIGN_BYTES-1)
@@ -62,10 +84,10 @@ extern unsigned long (*ceGetSP)(); /* provided by Cogit */
 	assert((ceGetSP() & STACK_ALIGN_MASK) == LEAF_CALL_STACK_ALIGN_BYTES);	\
 } while (0)
 # else
-	/* on RISCs, LinkReg implies stack ptr unchanged when doing cGetSP */
-	/* the sp & fp are assigned to local vars so we can print them in GDB */
-	/* The alignment for the stack is specified in the ABI doc but the  */
-	/* FP alignment is by guess and experiment */
+	/* on RISCs, LinkReg implies stack ptr unchanged when doing cGetSP
+	 * the sp & fp are assigned to local vars so we can print them in GDB
+	 * The alignment for the stack is specified in the ABI doc but the
+	 * FP alignment is by guess and experiment */
 #	define assertCStackWellAligned() do {									\
 	extern sqInt cFramePointerInUse;										\
 	unsigned long theFP;                                                    \
@@ -76,7 +98,7 @@ extern unsigned long (*ceGetSP)(); /* provided by Cogit */
 		assert((theFP & STACK_ALIGN_MASK) == 4);		\
 	assert((theSP & STACK_ALIGN_MASK) == 0);			\
 } while (0)
-# endif
+# endif /* defined(LEAF_CALL_STACK_ALIGN_BYTES) */
 #else /* defined(STACK_ALIGN_BYTES) */
 # define STACK_ALIGN_BYTES 4
 # define assertCStackWellAligned() 0
