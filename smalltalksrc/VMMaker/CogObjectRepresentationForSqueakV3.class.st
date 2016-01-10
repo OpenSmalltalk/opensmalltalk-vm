@@ -859,7 +859,6 @@ CogObjectRepresentationForSqueakV3 >> hasValidHeaderPostGC: cogMethod [
 
 { #category : #'in-line cacheing' }
 CogObjectRepresentationForSqueakV3 >> illegalClassTag [
-	<inline: true>
 	^0
 ]
 
@@ -894,7 +893,6 @@ CogObjectRepresentationForSqueakV3 >> inlineCacheTagIsYoung: cacheTag [
 
 { #category : #'in-line cacheing' }
 CogObjectRepresentationForSqueakV3 >> inlineCacheTagsMayBeObjects [
-	<inline: true>
 	^true
 ]
 
@@ -983,7 +981,6 @@ CogObjectRepresentationForSqueakV3 >> numRegArgs [
 	 at:receiver: do not have to be implemented in SimpleStackBasedCogit."
 	<api>
 	<option: #StackToRegisterMappingCogit>
-	<inline: true>
 	^1
 ]
 
