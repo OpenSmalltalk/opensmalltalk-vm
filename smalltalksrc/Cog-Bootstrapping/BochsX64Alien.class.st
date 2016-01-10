@@ -614,7 +614,7 @@ BochsX64Alien >> initializeStackFor: aCogit [
 		passed on stack) byte boundary. In other words, the value (%rsp + 8) is always
 		a multiple of 16 (32) when control is transferred to the function entry point."
 	| stackAlignment |
-	stackAlignment := 16.
+	stackAlignment := 32.
 	aCogit setStackAlignment: stackAlignment expectedSPOffset: 0 expectedFPOffset: 16.
 	PostBuildStackDelta := stackAlignment > 16
 								ifTrue: [stackAlignment - 16]
