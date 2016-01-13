@@ -2259,15 +2259,6 @@ CogMIPSELCompiler >> mfloR: destReg [
 	^self rtype: SPECIAL rs: 0 rt: 0 rd: destReg sa: 0 funct: MFLO
 ]
 
-{ #category : #accessing }
-CogMIPSELCompiler >> minAbstractGeneralPurposeReg [
-	"Answer the smallest index of an abstract general-purpose register used by this compiler.
-	 N.B.  Abstract registers are negative numbers."
-	<inline: true>
-	self flag: #bogus. "The caller should ask for a register mask, not a range."
-	^TempReg
-]
-
 { #category : #'encoding - control' }
 CogMIPSELCompiler >> mipsbreak: code [
 	self assert: (code between: 0 and: 16rFFFFF).
