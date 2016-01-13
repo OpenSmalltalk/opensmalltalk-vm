@@ -474,13 +474,24 @@ CogX64Compiler >> computeMaximumSize [
 								+ (((operands at: 2) bitAnd: 7) = RSP
 									ifTrue: [1]
 									ifFalse: [0])].
-		[MoveM16rR]	-> [^((self isQuick: (operands at: 0))
+		[MoveM16rR]	-> [self assert: (self is32BitSignedImmediate: (operands at: 0)).
+							^((self isQuick: (operands at: 0))
 									ifTrue: [((operands at: 0) = 0
 											and: [((operands at: 1) bitAnd: 7) ~= RBP])
 												ifTrue: [4]
 												ifFalse: [5]]
 									ifFalse: [8])
 								+ (((operands at: 1) bitAnd: 7) = RSP
+									ifTrue: [1]
+									ifFalse: [0])].
+		[MoveRM16r]	-> [self assert: (self is32BitSignedImmediate: (operands at: 1)).
+							^((self isQuick: (operands at: 1))
+									ifTrue: [4]
+									ifFalse: [7])
+								+ (((operands at: 2) bitAnd: 7) = RSP
+									ifTrue: [1]
+									ifFalse: [0])
+								+ (((operands at: 0) > 7 or: [(operands at: 2) > 7])
 									ifTrue: [1]
 									ifFalse: [0])].
 		[MoveM64rRd]	-> [^((self isQuick: (operands at: 0))
@@ -510,14 +521,14 @@ CogX64Compiler >> computeMaximumSize [
 											ifTrue: [5]
 											ifFalse: [4]].
 		[MoveRXbrR]	->	[self assert: (operands at: 1) ~= RSP.
-							^(((operands at: 0) < 8
-							   and: [(operands at: 1) < 8
-							   and: [(operands at: 2) < 8]])
-								ifTrue: [3]
-								ifFalse: [4])
+							^(((operands at: 0) > 3
+							   or: [(operands at: 1) > 7
+							   or: [(operands at: 2) > 7]])
+								ifTrue: [4]
+								ifFalse: [3])
 							+ (((operands at: 2) bitAnd: 7) = RBP
-											ifTrue: [1]
-											ifFalse: [0])].
+								ifTrue: [1]
+								ifFalse: [0])].
 		[MoveXwrRR]	-> [self assert: (operands at: 0) ~= RSP.
 							^((operands at: 1) = RBP
 							   or: [(operands at: 1) = R13])
@@ -533,6 +544,16 @@ CogX64Compiler >> computeMaximumSize [
 							   or: [(operands at: 1) = R13])
 										ifTrue: [7]
 										ifFalse: [6])
+							 + (((operands at: 0) > 7
+							     or: [(operands at: 1) > 7
+							     or: [(operands at: 2) > 7]])
+										ifTrue: [1]
+										ifFalse: [0])].
+		[MoveRX32rR]	-> [self assert: (operands at: 1) ~= RSP.
+							^(((operands at: 2) = RBP
+							   or: [(operands at: 2) = R13])
+										ifTrue: [4]
+										ifFalse: [3])
 							 + (((operands at: 0) > 7
 							     or: [(operands at: 1) > 7
 							     or: [(operands at: 2) > 7]])
@@ -1370,28 +1391,77 @@ CogX64Compiler >> concretizeMoveRAw [
 ]
 
 { #category : #'generate machine code' }
-CogX64Compiler >> concretizeMoveRMbr [
+CogX64Compiler >> concretizeMoveRM16r [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| srcReg offset destReg |
+	| srcReg offset destReg skip |
 	srcReg := operands at: 0.
 	offset := operands at: 1.
 	destReg := operands at: 2.
-	machineCode
-		at: 0 put: (self rexR: srcReg x: 0 b: destReg);
-		at: 1 put: 16r88.
-	(destReg ~= RSP and: [destReg ~= R12]) ifTrue:
-		[(offset = 0 and: [destReg ~= RBP and: [destReg ~= R13]]) ifTrue:
+	machineCode at: 0 put: 16r66.
+	(srcReg > 7 or: [destReg > 7])
+		ifTrue:
+			[machineCode at: 1 put: (self rexw: false r: srcReg x: 0 b: destReg).
+			 skip := 1]
+		ifFalse:
+			[skip := 0].
+	(destReg bitAnd: 7) ~= RSP ifTrue:
+		[(self isQuick: offset) ifTrue:
 			[machineCode
-				at: 2 put: (self mod: ModRegInd RM: destReg RO: srcReg).
+				at: skip + 1 put: 16r89;
+				at: skip + 2 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+				at: skip + 3 put: (offset bitAnd: 16rFF).
+			 ^machineCodeSize := skip + 4].
+		machineCode
+			at: skip + 1 put: 16r89;
+			at: skip + 2 put: (self mod: ModRegRegDisp32 RM: destReg RO: srcReg);
+			at: skip + 3 put: (offset bitAnd: 16rFF);
+			at: skip + 4 put: (offset >> 8 bitAnd: 16rFF);
+			at: skip + 5 put: (offset >> 16 bitAnd: 16rFF);
+			at: skip + 6 put: (offset >> 24 bitAnd: 16rFF).
+		^machineCodeSize := skip + 7].
+	"RSP:"
+	(self isQuick: offset) ifTrue:
+		[machineCode
+			at: skip + 1 put: 16r89;
+			at: skip + 2 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+			at: skip + 3 put: (self s: SIB1 i: 4 b: destReg);
+			at: skip + 4 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := skip + 5].
+	machineCode
+		at: skip + 1 put: 16r89;
+		at: skip + 2 put: (self mod: ModRegRegDisp32 RM: destReg RO: srcReg);
+		at: skip + 3 put: (self s: SIB1 i: 4 b: destReg);
+		at: skip + 4 put: (offset bitAnd: 16rFF);
+		at: skip + 5 put: (offset >> 8 bitAnd: 16rFF);
+		at: skip + 6 put: (offset >> 16 bitAnd: 16rFF);
+		at: skip + 7 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := skip + 8
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveRMbr [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| srcReg offset baseReg |
+	srcReg := operands at: 0.
+	offset := operands at: 1.
+	baseReg := operands at: 2.
+	machineCode
+		at: 0 put: (self rexR: srcReg x: 0 b: baseReg);
+		at: 1 put: 16r88.
+	(baseReg ~= RSP and: [baseReg ~= R12]) ifTrue:
+		[(offset = 0 and: [baseReg ~= RBP and: [baseReg ~= R13]]) ifTrue:
+			[machineCode
+				at: 2 put: (self mod: ModRegInd RM: baseReg RO: srcReg).
 			 ^machineCodeSize := 3].
 		 (self isQuick: offset) ifTrue:
 			[machineCode
-				at: 2 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+				at: 2 put: (self mod: ModRegRegDisp8 RM: baseReg RO: srcReg);
 				at: 3 put: (offset bitAnd: 16rFF).
 			 ^machineCodeSize := 4].
 		machineCode
-			at: 2 put: (self mod: ModRegRegDisp32 RM: destReg RO: srcReg);
+			at: 2 put: (self mod: ModRegRegDisp32 RM: baseReg RO: srcReg);
 			at: 3 put: (offset bitAnd: 16rFF);
 			at: 4 put: (offset >> 8 bitAnd: 16rFF);
 			at: 5 put: (offset >> 16 bitAnd: 16rFF);
@@ -1400,18 +1470,18 @@ CogX64Compiler >> concretizeMoveRMbr [
 	"RSP:"
 	offset = 0 ifTrue:
 		[machineCode
-			at: 2 put: (self mod: ModRegInd RM: destReg RO: srcReg);
-			at: 3 put: (self s: SIB1 i: 4 b: destReg).
+			at: 2 put: (self mod: ModRegInd RM: baseReg RO: srcReg);
+			at: 3 put: (self s: SIB1 i: 4 b: baseReg).
 		 ^machineCodeSize := 4].
 	(self isQuick: offset) ifTrue:
 		[machineCode
-			at: 2 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
-			at: 3 put: (self s: SIB1 i: 4 b: destReg);
+			at: 2 put: (self mod: ModRegRegDisp8 RM: baseReg RO: srcReg);
+			at: 3 put: (self s: SIB1 i: 4 b: baseReg);
 			at: 4 put: (offset bitAnd: 16rFF).
 		 ^machineCodeSize := 5].
 	machineCode
-		at: 2 put: (self mod: ModRegRegDisp32 RM: destReg RO: srcReg);
-		at: 3 put: (self s: SIB1 i: 4 b: destReg);
+		at: 2 put: (self mod: ModRegRegDisp32 RM: baseReg RO: srcReg);
+		at: 3 put: (self s: SIB1 i: 4 b: baseReg);
 		at: 4 put: (offset bitAnd: 16rFF);
 		at: 5 put: (offset >> 8 bitAnd: 16rFF);
 		at: 6 put: (offset >> 16 bitAnd: 16rFF);
@@ -1485,26 +1555,51 @@ CogX64Compiler >> concretizeMoveRRd [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveRX32rR [
+	| index base src offset |
+	src := operands at: 0.
+	index := operands at: 1.
+	base := operands at: 2.
+	(index > 7 or: [base > 7 or: [src > 7]])
+		ifTrue:
+			[machineCode at: 0 put: (self rexw: false r: src x: index b: base).
+			 offset := 1]
+		ifFalse:
+			[offset := 0].
+	(base bitAnd: 7) ~= RBP ifTrue:
+		[machineCode
+			at: offset + 0 put: 16r89;
+			at: offset + 1 put: (self mod: ModRegInd RM: 4 RO: src);
+			at: offset + 2 put: (self s: SIB4 i: index b: base).
+		 ^machineCodeSize := offset + 3].
+	machineCode
+		at: offset + 0 put: 16r89;
+		at: offset + 1 put: (self mod: ModRegRegDisp8 RM: 4 RO: src);
+		at: offset + 2 put: (self s: SIB4 i: index b: base);
+		at: offset + 3 put: 0.
+	 ^machineCodeSize := offset + 4
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveRXbrR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| index base dest offset |
-	index := operands at: 0.
-	base := operands at: 1.
-	dest := operands at: 2.
+	| src index base offset |
+	src := operands at: 0.
+	index := operands at: 1.
+	base := operands at: 2.
 	offset := 0.
-	(dest >= 8 or: [base >= 8 or: [index >= 8]]) ifTrue:
-		[machineCode at: 0 put: (self rexR: dest x: index b: base).
+	(src > 3 or: [base > 7 or: [index > 7]]) ifTrue:
+		[machineCode at: 0 put: (self rexR: src x: index b: base).
 		 offset := 1].
-	machineCode
-		at: 0 + offset put: 16r88.
-	(base ~= RBP and: [base ~= R13]) ifTrue:
+	machineCode at: 0 + offset put: 16r88.
+	(base bitAnd: 7) ~= RBP "RBP,R13" ifTrue:
 		[machineCode
-			at: 1 + offset put: (self mod: ModRegInd RM: 4 RO: dest);
+			at: 1 + offset put: (self mod: ModRegInd RM: 4 RO: src);
 			at: 2 + offset put: (self s: SIB1 i: index b: base).
 		 ^machineCodeSize := 3 + offset].
 	machineCode
-		at: 1 + offset put: (self mod: ModRegRegDisp8 RM: 4 RO: dest);
+		at: 1 + offset put: (self mod: ModRegRegDisp8 RM: 4 RO: src);
 		at: 2 + offset put: (self s: SIB1 i: index b: base);
 		at: 3 + offset put: 0.
 	 ^machineCodeSize := 4 + offset
@@ -2081,6 +2176,7 @@ CogX64Compiler >> dispatchConcretize [
 		[MoveMbrR]			-> [^self concretizeMoveMbrR].
 		[MoveRMbr]			-> [^self concretizeMoveRMbr].
 		[MoveM16rR]		-> [^self concretizeMoveM16rR].
+		[MoveRM16r]		-> [^self concretizeMoveRM16r].
 		[MoveM64rRd]		-> [^self concretizeMoveM64rRd].
 		[MoveMwrR]		-> [^self concretizeMoveMwrR].
 		[MoveXbrRR]		-> [^self concretizeMoveXbrRR].
@@ -2088,6 +2184,7 @@ CogX64Compiler >> dispatchConcretize [
 		[MoveXwrRR]		-> [^self concretizeMoveXwrRR].
 		[MoveRXwrR]		-> [^self concretizeMoveRXwrR].
 		[MoveX32rRR]		-> [^self concretizeMoveX32rRR].
+		[MoveRX32rR]		-> [^self concretizeMoveRX32rR].
 		[MoveRMwr]		-> [^self concretizeMoveRMwr].
 		[MoveRdM64r]		-> [^self concretizeMoveRdM64r].
 		[MoveRdR]			-> [^self concretizeMoveRdR].
@@ -2686,14 +2783,6 @@ CogX64Compiler >> machineCodeBytes [
 	^14
 ]
 
-{ #category : #accessing }
-CogX64Compiler >> minAbstractGeneralPurposeReg [
-	"Answer the smallest index of an abstract general-purpose register used by this compiler.
-	 N.B.  Abstract registers are negative numbers."
-	<inline: true>
-	^Scratch5Reg
-]
-
 { #category : #encoding }
 CogX64Compiler >> mod: mod RM: regMode RO: regOpcode [
 	"See ModR/M byte & opcode syntax
@@ -2902,13 +2991,12 @@ CogX64Compiler >> rexR: reg "<0-15>" x: sibReg "<0-15>"  b: fieldReg [ "<0-15>"
 
 { #category : #encoding }
 CogX64Compiler >> rexw: width64 "<Boolean>" r: reg "<0-15>" x: sibReg "<0-15>"  b: fieldReg [ "<0-15>"
-	"Given width64, the R register, sib register, and modrm/sib/reg field, answer either nil,
-	 if a REX prefix  byte is not needed, or the correctly encoded REX prefix byte.
+	"Given width64, the R register, sib register, and modrm/sib/reg field register,
+	 answer the correctly encoded REX prefix byte.
 	 See AMD64 Architecture Programmer's Manual Volume 3: General-Purpose and System Instructions, Table 1-11"
 	| regBits |
-	regBits := ((reg bitAnd: 8) >> 1) + ((sibReg bitAnd: 8) >> 2) + ((fieldReg bitAnd: 8) >> 3).
-	^(width64 or: [regBits ~= 0]) ifTrue:
-		[(width64 ifTrue: [16r48] ifFalse: [16r40]) + regBits]
+	regBits := ((reg bitAnd: 8) >> 1) + ((sibReg bitAnd: 8) >> 2) + (fieldReg >> 3).
+	^(width64 ifTrue: [16r48] ifFalse: [16r40]) + regBits
 ]
 
 { #category : #encoding }

@@ -1087,14 +1087,6 @@ CogAbstractInstruction >> maxSize: size [ "<signed byte>"
 	maxSize := size
 ]
 
-{ #category : #accessing }
-CogAbstractInstruction >> minAbstractGeneralPurposeReg [
-	"Answer the smallest index of an abstract general-purpose register used by this compiler.
-	 N.B.  Abstract registers are negative numbers."
-	<inline: true>
-	^self subclassResponsibility
-]
-
 { #category : #printing }
 CogAbstractInstruction >> nameForFPRegister: reg [ "<Integer>"
 	"subclasses with special purpose registers may need to override."
