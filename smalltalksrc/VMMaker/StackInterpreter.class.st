@@ -13595,7 +13595,8 @@ StackInterpreter >> signed64BitIntegerFor: integerValue [
 				storeByte: 0 ofObject: newLargeInteger withValue: (magnitude ">> 0" bitAnd: 16rFF)]
 		ifFalse:
 			[sz > 4 ifTrue:
-				[objectMemory storeLong32: 1 ofObject: newLargeInteger withValue: magnitude >> 32].
+				[objectMemory storeLong32: 1 ofObject: newLargeInteger withValue: magnitude >> 32.
+				 magnitude := magnitude bitAnd: 16rFFFFFFFF].
 			objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: magnitude].
 	^newLargeInteger
 ]

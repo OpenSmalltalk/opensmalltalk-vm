@@ -2778,14 +2778,6 @@ l -> load (1) or store (0)"
 		bitOr: (immediate12bitValue bitAnd: 16rFFF)))))))
 ]
 
-{ #category : #accessing }
-CogARMCompiler >> minAbstractGeneralPurposeReg [
-	"Answer the smallest index of an abstract general-purpose register used by this compiler.
-	 N.B.  Abstract registers are negative numbers."
-	<inline: true>
-	^Scratch0Reg
-]
-
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> mov: destReg imm: immediate8bitValue ror: rot [
 	"Remember the ROR is doubled by the cpu so use 30>>1 etc.
@@ -3201,6 +3193,12 @@ CogARMCompiler >> strb: srcReg rn: baseReg rm: offsetReg [
 "	STRB srcReg, [baseReg, + offsetReg] 
 	The contents of offsetReg are assumed to be correctly signed"
 	^self memMxr: AL reg: srcReg  base: baseReg p: 1 u: 1 b: 1 w: 0 l: 0 rm: offsetReg
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> strh: srcReg rn: baseReg rm: offsetReg [
+"	STRH srcReg, [baseReg, +offsetReg]"
+	^self memM16xr: AL reg: srcReg base: baseReg p: 1 u: 1 w: 0 l: 0 rm: offsetReg
 ]
 
 { #category : #'ARM convenience instructions' }

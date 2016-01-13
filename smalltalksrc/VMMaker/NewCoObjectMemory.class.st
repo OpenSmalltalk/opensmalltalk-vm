@@ -120,6 +120,11 @@ NewCoObjectMemory >> freeObject: obj header: objHeader [
 	super freeObject: obj header: objHeader
 ]
 
+{ #category : #accessing }
+NewCoObjectMemory >> freeStart: aValue [
+	^freeStart := aValue
+]
+
 { #category : #'trampoline support' }
 NewCoObjectMemory >> freeStartAddress [
 	<api>
