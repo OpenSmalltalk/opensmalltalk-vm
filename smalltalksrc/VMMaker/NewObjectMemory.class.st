@@ -1187,11 +1187,6 @@ NewObjectMemory >> freeStart [
 	^freeStart
 ]
 
-{ #category : #accessing }
-NewObjectMemory >> freeStart: aValue [
-	^freeStart := aValue
-]
-
 { #category : #'garbage collection' }
 NewObjectMemory >> fullCompaction [
 	"Move all accessible objects down to leave one big free chunk at the end of memory.

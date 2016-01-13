@@ -1539,23 +1539,24 @@ Cogit >> CallRT: callTarget [
 { #category : #'compile abstract instructions' }
 Cogit >> CallRT: callTarget registersToBeSavedMask: registersToBeSaved [
 	<returnTypeC: #'AbstractInstruction *'>
-	| callerSavedRegsToBeSaved lastInst |
+	| callerSavedRegsToBeSaved lastInst reg registersToBePushed |
 	<var: 'lastInst' type: #'AbstractInstruction *'>
 	callerSavedRegsToBeSaved := callerSavedRegMask bitAnd: registersToBeSaved.
 
-	backEnd maxAbstractGeneralPurposeReg to: backEnd minAbstractGeneralPurposeReg by: -1 do:
-		[:reg|
-		(reg ~= TempReg
-		 and: [callerSavedRegsToBeSaved anyMask: (self registerMaskFor: reg)]) ifTrue:
-			[self PushR: reg]].
+	registersToBePushed := callerSavedRegsToBeSaved.
+	reg := 0.
+	[registersToBePushed ~= 0] whileTrue:
+		[(registersToBePushed anyMask: 1) ifTrue:
+			[self PushR: reg].
+		 reg := reg + 1.
+		 registersToBePushed := registersToBePushed >>> 1].
 	
 	lastInst := self CallRT: callTarget.
 
-	backEnd minAbstractGeneralPurposeReg to: backEnd maxAbstractGeneralPurposeReg do:
-		[:reg|
-		(reg ~= TempReg
-		 and: [callerSavedRegsToBeSaved anyMask: (self registerMaskFor: reg)]) ifTrue:
-			[lastInst := self PopR: reg]].
+	[reg >= 0] whileTrue:
+		[(callerSavedRegsToBeSaved anyMask: 1 << reg) ifTrue:
+			[lastInst := self PopR: reg].
+		 reg := reg - 1].
 
 	^lastInst
 ]
@@ -2007,6 +2008,13 @@ Cogit >> MoveR: reg Aw: address [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> MoveR: srcReg M16: offset r: baseReg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MoveRM16r operand: srcReg quickConstant: offset operand: baseReg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> MoveR: sourceReg Mb: offset r: baseReg [ 
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2033,6 +2041,13 @@ Cogit >> MoveR: srcReg Rd: destDPReg [
 	<returnTypeC: #'AbstractInstruction *'>
 	self assert: objectMemory wordSize = 8.
 	^self gen: MoveRRd operand: srcReg operand: destDPReg
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> MoveR: sourceReg X32r: indexReg R: baseReg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MoveRX32rR operand: sourceReg operand: indexReg operand: baseReg
 ]
 
 { #category : #'abstract instructions' }
@@ -3684,7 +3699,7 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	<returnTypeC: #'CogMethod *'>
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	self cCode: [] inSmalltalk: "for debugging, allow excluding mehtods based on selector or methodClass"
+	self cCode: [] inSmalltalk: "for debugging, allow excluding methods based on selector or methodClass"
 		[self class initializationOptions
 			at: #DoNotJIT
 			ifPresent:
@@ -9561,7 +9576,8 @@ Cogit >> reportLastNInstructions [
 						ifTrue: [inst]
 						ifFalse: [processor
 									decorateDisassembly: inst
-									for: self]); cr].
+									for: self
+									fromAddress: (Integer readFrom: inst readStream base: 16)]); cr].
 	lastNInstructions withIndexDo:
 		[:thing :idx| | next pc label |
 		skipNext
