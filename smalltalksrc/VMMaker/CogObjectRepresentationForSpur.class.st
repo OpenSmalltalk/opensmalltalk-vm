@@ -709,9 +709,9 @@ CogObjectRepresentationForSpur >> genImmutableCheck: regHoldingObjectMutated slo
 	<inline: true>
 	<option: #IMMUTABILITY>
 	"Trampoline convention: 
-	- objectMutated passed in RcvrResultReg
+	- objectMutated passed in ReceiverResultReg
 	- index (unboxed) passed in TempReg
-	- valueToStore passed in Arg1Reg.
+	- valueToStore passed in ClassReg.
 	Simulated stack is flushed until simulatedStackPointer - 1, which implies full flush 
 	if popBoolean is true, else top value may not be flushed.
 	We spill the top value (the value to store) for the trampoline if needed."
@@ -1139,16 +1139,13 @@ CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
 	 remembered set and setting its isRemembered bit."
 	self 
 		cppIf: IMMUTABILITY
-		ifTrue: 
-			[ "Arg1Reg is used as resultReg because cogit needs to restore the valueToStore
-			in the reg expected. The reg for the valueToStore is dynamically allocated, but 
-			in most case, in the non-sista VM, it ends up being Arg1Reg."
-			  ceCannotAssignToWithIndexTrampoline := cogit
-									genTrampolineFor: #ceCannotAssignTo:withIndex:valueToAssign:
-									called: 'ceCannotAssignToWithIndexTrampoline'
-									arg: ReceiverResultReg 
-									arg: TempReg
-									arg: ClassReg ].
+		ifTrue: "c.f. genImmutableCheck:slotIndex:sourceReg:scratchReg:popBoolean:needRestoreRcvr:"
+			[ceCannotAssignToWithIndexTrampoline := cogit
+															genTrampolineFor: #ceCannotAssignTo:withIndex:valueToAssign:
+															called: 'ceCannotAssignToWithIndexTrampoline'
+															arg: ReceiverResultReg 
+															arg: TempReg
+															arg: ClassReg].
 	ceStoreCheckTrampoline := cogit
 									genTrampolineFor: #remember:
 									called: 'ceStoreCheckTrampoline'
