@@ -2891,6 +2891,7 @@ Cogit >> breakBlock [
 Cogit >> breakBlock: aBlock [
 	<doNotGenerate>
 	breakBlock := aBlock.
+	breakPC ifNil: [breakPC := true].
 	singleStep := singleStep or: [breakPC singleStepRequiredToTriggerIn: self]
 ]
 
@@ -4746,6 +4747,7 @@ Cogit >> disassembleFrom: startAddress to: endAddress [
 { #category : #disassembly }
 Cogit >> disassembleFrom: startAddress to: endAddress labels: labelDictionary on: aStream [
 	<doNotGenerate>
+	aStream ensureCr.
 	processor disassembleFrom: startAddress to: endAddress in: coInterpreter memory for: self labels: labelDictionary on: aStream.
 	aStream flush
 ]
@@ -6447,7 +6449,7 @@ Cogit >> generateInstructionsAt: eventualAbsoluteAddress [
 	pcDependentIndex := 0.
 	0 to: opcodeIndex - 1 do:
 		[:i|
-		self cCode: [] inSmalltalk: [self maybeBreakAt: absoluteAddress].
+		self cCode: [] inSmalltalk: [self maybeBreakGeneratingAt: absoluteAddress].
 		abstractInstruction := self abstractInstructionAt: i.
 		abstractInstruction isPCDependent
 			ifTrue:
@@ -6462,7 +6464,7 @@ Cogit >> generateInstructionsAt: eventualAbsoluteAddress [
 		[:j|
 		fixup := self fixupAt: j.
 		abstractInstruction := self abstractInstructionAt: fixup instructionIndex.
-		self cCode: [] inSmalltalk: [self maybeBreakAt: abstractInstruction address].
+		self cCode: [] inSmalltalk: [self maybeBreakGeneratingAt: abstractInstruction address].
 		abstractInstruction concretizeAt: abstractInstruction address].
 	^absoluteAddress - eventualAbsoluteAddress
 ]
@@ -6862,7 +6864,7 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 	result := ["self halt: evaluable selector."
 		   	   ((printRegisters or: [printInstructions]) and: [clickConfirm]) ifTrue:
 			 	[(self confirm: 'skip run-time call?') ifFalse:
-					[self halt]].
+					[clickConfirm := false. self halt]].
 			   evaluable valueWithArguments: (processor
 												postCallArgumentsNumArgs: evaluable numArgs
 												in: coInterpreter memory)]
@@ -8337,6 +8339,17 @@ Cogit >> maybeBreakAt: address [
 		 self halt: 'machine code breakpoint at ', address hex, ' in ', thisContext sender selector]
 ]
 
+{ #category : #'simulation only' }
+Cogit >> maybeBreakGeneratingAt: address [
+	"Variation on maybeBreakAt: that inly forks for integer breakPCs,
+	 so we can have break blocks that stop at any pc, except when generating."
+	<doNotGenerate>
+	(breakPC = address
+	 and: [breakBlock shouldStopIfAtPC: address]) ifTrue:
+		[coInterpreter changed: #byteCountText.
+		 self halt: 'machine code generation at ', address hex, ' in ', thisContext sender selector]
+]
+
 { #category : #'compile abstract instructions' }
 Cogit >> maybeDumpLiterals: descriptor [
 	<inline: true>
@@ -9617,7 +9630,7 @@ Cogit >> reportLastNInstructions [
 Cogit >> rewriteCPIC: cPIC caseJumpTo: target [ 
 	"adding a new CPIC case, or making an MNU CPIC, requires altering the jump that takes us to the first case to be used"
 	<inline: true>
-	backEnd rewriteCPICJumpAt: cPIC asInteger + firstCPICCaseOffset - backEnd jumpLongByteSize - backEnd loadPICLiteralByteSize target: target
+	backEnd rewriteCPICJumpAt: cPIC asInteger + firstCPICCaseOffset - backEnd jumpLongByteSize - backEnd loadLiteralByteSize target: target
 ]
 
 { #category : #'in-line cacheing' }
@@ -9858,11 +9871,12 @@ Cogit >> setClickStepBreakBlock [
 	"Set the break block to present a confirmer, breaking if true, and restoring the previous break block.
 	 If an open debugger on the receiver can be found, proceed it."
 	<doNotGenerate>
-	| previousBreakBlock previousBreakPC previousSingleStep |
+	| previousBreakBlock previousBreakPC previousSingleStep previousClickConfirm |
 	(breakBlock isNil or: [breakBlock method ~~ thisContext method]) ifTrue:
 		[previousBreakBlock := breakBlock.
 		 previousBreakPC := breakPC.
 		 previousSingleStep := singleStep.
+		 previousClickConfirm := clickConfirm.
 		 breakBlock := [:ign|
 						(processor pc ~= previousBreakPC
 						 and: [UIManager confirm: 'step?'])
@@ -9870,8 +9884,9 @@ Cogit >> setClickStepBreakBlock [
 							ifFalse: [breakBlock := previousBreakBlock.
 									breakPC := previousBreakPC.
 									singleStep := previousSingleStep.
+									clickConfirm := previousClickConfirm.
 									true]].
-		 singleStep := breakPC := true].
+		 singleStep := breakPC := clickConfirm := true].
 	(World submorphs
 		detect:
 			[:m|
@@ -10043,7 +10058,7 @@ Cogit >> simulateCogCodeAt: address [ "<Integer>"
 					readOnlyBelow: methodZone zoneEnd].
 	   ((printRegisters or: [printInstructions]) and: [clickConfirm]) ifTrue:
 	 	[(self confirm: 'continue?') ifFalse:
-			[self halt]].
+			[clickConfirm := false. self halt]].
 	   true] whileTrue]
 		on: ProcessorSimulationTrap
 		do: [:ex| self handleSimulationTrap: ex].
