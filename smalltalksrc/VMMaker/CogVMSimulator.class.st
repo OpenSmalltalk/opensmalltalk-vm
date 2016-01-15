@@ -2440,6 +2440,10 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	f := FileStream readOnlyFileNamed: fileName.
 	f ifNil: [^self error: 'no image found'].
 
+	"Set the image name and the first argument; there are
+	 no arguments during simulation unless set explicitly."
+	systemAttributes at: 1 put: fileName; at: 2 put: nil.
+
 	["begin ensure block..."
 	imageName := f fullName.
 	f binary.
