@@ -22,6 +22,8 @@ BochsX64Alien class >> initialize [
 	it := self basicNew.
 	OpcodeExceptionMap := Array new: 256 withAll: #handleExecutionPrimitiveFailureAt:in:rex:.
 	OpcodeExceptionMap
+		at: 1 + it twoByteEscape				put: #handleTwoByteEscapeFailureAt:in:rex:;
+		at: 1 + it operandSizeOverridePrefix	put: #handleOperandSizeOverridePrefixFailureAt:in:rex:;
 		at: 1 + it callOpcode		put: #handleCallFailureAt:in:rex:;
 		at: 1 + it jmpOpcode		put: #handleJmpFailureAt:in:rex:;
 		at: 1 + it retOpcode		put: #handleRetFailureAt:in:rex:;
@@ -33,6 +35,7 @@ BochsX64Alien class >> initialize [
 		at: 1 + it movEvGvOpcode	put: #handleMovEvGvFailureAt:in:rex:;
 		at: 1 + it movGbEbOpcode	put: #handleMovGbEbFailureAt:in:rex:;
 		at: 1 + it movEbGbOpcode	put: #handleMovEbGbFailureAt:in:rex:;
+		at: 1 + 16rFE				put: #handleGroup4FailureAt:in:rex:; "Table A6 One-Byte and Two-Byte Opcode ModRM Extensions"
 		at: 1 + 16rFF				put: #handleGroup5FailureAt:in:rex:. "Table A6 One-Byte and Two-Byte Opcode ModRM Extensions"
 	ExtendedOpcodeExceptionMap := Array new: 256 withAll: #handleExecutionPrimitiveFailureAt:in:rex:.
 	ExtendedOpcodeExceptionMap
@@ -309,24 +312,17 @@ BochsX64Alien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArr
 	 memory read into register instructions into ProcessorSimulationTrap signals."
 	"self printIntegerRegistersOn: Transcript"
 	"self printRegistersOn: Transcript"
-	| pc opcode rexByte offset |
+	| pc opcode rexByteOrNil offset |
 	((pc := self rip) between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
 		[opcode := memoryArray byteAt: pc + (offset := 1).
 		 (opcode bitAnd: 16rF8) = self rexPrefix ifTrue: "skip rex prefix if present"
-			[rexByte := opcode.
+			[rexByteOrNil := opcode.
 			 opcode := memoryArray byteAt: pc + (offset := 2)].
-		 opcode ~= 16r0f ifTrue:
-			[^self
-				perform: (OpcodeExceptionMap at: opcode + 1)
-				with: pc
-				with: memoryArray
-				with: rexByte].
-		 opcode := memoryArray byteAt: pc + offset + 1.
 		 ^self
-				perform: (ExtendedOpcodeExceptionMap at: opcode + 1)
-				with: pc
-				with: memoryArray
-				with: rexByte].
+			perform: (OpcodeExceptionMap at: opcode + 1)
+			with: pc
+			with: memoryArray
+			with: rexByteOrNil].
 	^self reportPrimitiveFailure
 ]
 
@@ -609,6 +605,22 @@ BochsX64Alien >> handleRetFailureAt: pc "<Integer>" in: memoryArray "<Bitmap|Byt
 		signal
 ]
 
+{ #category : #'error handling' }
+BochsX64Alien >> handleTwoByteEscapeFailureAt: pc in: memoryArray "<Bitmap|ByteArray>" rex: rexByteOrNil [
+	"Handle an execution primitive failure for the 0f prefix.  Convert failures into ProcessorSimulationTrap signals."
+	"self printIntegerRegistersOn: Transcript"
+	"self printRegistersOn: Transcript"
+	| opcode offset |
+	"assume 0fh opcode or 0fh rex opcode"
+	offset := rexByteOrNil ifNil: [1] ifNotNil: [2].
+	opcode := memoryArray byteAt: pc + offset + 1.
+	 ^self
+			perform: (ExtendedOpcodeExceptionMap at: opcode + 1)
+			with: pc
+			with: memoryArray
+			with: rexByteOrNil
+]
+
 { #category : #'processor setup' }
 BochsX64Alien >> initializeStackFor: aCogit [
 	"Different cpus need different stack alignment etc, so handle the details here."
@@ -710,6 +722,11 @@ BochsX64Alien >> movOvAXOpcode [
 { #category : #opcodes }
 BochsX64Alien >> nopOpcode [
 	^16r90
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> operandSizeOverridePrefix [
+	^16r66
 ]
 
 { #category : #'accessing-abstract' }
@@ -1349,6 +1366,11 @@ BochsX64Alien >> stopReason [
 { #category : #accessing }
 BochsX64Alien >> stopReason: anUnsignedInteger [
 	^self unsignedByteAt: 1973 put: anUnsignedInteger
+]
+
+{ #category : #opcodes }
+BochsX64Alien >> twoByteEscape [
+	^16r0f
 ]
 
 { #category : #accessing }
