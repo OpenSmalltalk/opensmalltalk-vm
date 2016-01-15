@@ -4240,22 +4240,22 @@ StackInterpreter >> commonAtPut: stringy [
 	 Using the at cache here would require that callers set messageSelector
 	 and lkupClass and that is onerous and error-prone, and in any case,
 	 inlining produces much better performance than using the at cache here."
-	| value index rcvr badRcvr |
+	| value index rcvr |
 	<inline: true> "to get it inlined in primitiveAtPut and primitiveStringAtPut"
 	self initPrimCall.
 	rcvr := self stackValue: 2.
 	index := self stackValue: 1.
 	value := self stackTop.
-	self cppIf: IMMUTABILITY 
-		ifTrue: [ badRcvr := objectMemory isOopImmutable: rcvr ]
-		ifFalse: [ badRcvr := objectMemory isImmediate: rcvr ].
-	badRcvr ifTrue:
+	(objectMemory isImmediate: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrInappropriate].
 	"No need to test for large positive integers here.  No object has 1g elements"
 	((objectMemory isNonIntegerObject: index)
 	 or: [argumentCount > 2 "e.g. object:basicAt:put:"
 		 and: [objectMemory isForwarded: rcvr]]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadArgument].
+	self cppIf: IMMUTABILITY ifTrue:
+		[(objectMemory isImmutable: rcvr) ifTrue:
+			[^self primitiveFailFor: PrimErrNoModification]].
 	index := objectMemory integerValueOf: index.
 	stringy
 		ifTrue: [self stObject: rcvr at: index put: (self asciiOfCharacter: value)]
@@ -14236,7 +14236,11 @@ StackInterpreter >> subscript: array with: index format: fmt [
 	fmt >= objectMemory firstByteFormat ifTrue:
 		[^objectMemory integerObjectOf:
 			(objectMemory fetchByte: index - 1 ofObject: array)].
-	"long-word type objects"
+	(objectMemory hasSpurMemoryManagerAPI
+	 and: [fmt >= objectMemory firstShortFormat]) ifTrue:
+		[^objectMemory integerObjectOf:
+			(objectMemory fetchShort16: index - 1 ofObject: array)].
+	"double-word type objects; for now assume no 64-bit indexable objects"
 	^self positive32BitIntegerFor:
 			(objectMemory fetchLong32: index - 1 ofObject: array)
 ]
@@ -14244,34 +14248,36 @@ StackInterpreter >> subscript: array with: index format: fmt [
 { #category : #'indexing primitive support' }
 StackInterpreter >> subscript: array with: index storing: oopToStore format: fmt [ 
 	"Note: This method assumes that the index is within bounds!"
-	| valueToStore |
+	| signedValueToStore unsignedValueToStore |
 	<inline: true>
-	fmt <= objectMemory lastPointerFormat
-		ifTrue:
-			[objectMemory
-				storePointer: index - 1
-				ofObject: array
-				withValue: oopToStore]
-		ifFalse:
-			[fmt >= objectMemory firstByteFormat
-				ifTrue:
-					[(objectMemory isIntegerObject: oopToStore) ifFalse:
-						[primFailCode := PrimErrBadIndex].
-					 valueToStore := objectMemory integerValueOf: oopToStore.
-					 (valueToStore >= 0 and: [valueToStore <= 255]) ifFalse:
-						[primFailCode := PrimErrBadArgument].
-					self successful ifTrue:
-						[objectMemory
-							storeByte: index - 1
-							ofObject: array
-							withValue: valueToStore]]
-				ifFalse: "long-word type objects"
-					[valueToStore := self positive32BitValueOf: oopToStore.
-					self successful ifTrue:
-						[objectMemory
-							storeLong32: index - 1
-							ofObject: array
-							withValue: valueToStore]]]
+	fmt <= objectMemory lastPointerFormat ifTrue:
+		[objectMemory storePointer: index - 1 ofObject: array withValue: oopToStore.
+		 ^self].
+	fmt >= objectMemory firstByteFormat ifTrue:
+		[(objectMemory isIntegerObject: oopToStore) ifFalse:
+			[primFailCode := PrimErrBadArgument.
+			 ^self].
+		 signedValueToStore := objectMemory integerValueOf: oopToStore.
+		 (signedValueToStore >= 0 and: [signedValueToStore <= 255]) ifFalse:
+			[primFailCode := PrimErrBadArgument.
+			 ^self].
+		 objectMemory storeByte: index - 1 ofObject: array withValue: signedValueToStore.
+		 ^self].
+	(objectMemory hasSpurMemoryManagerAPI
+	 and: [fmt >= objectMemory firstShortFormat]) ifTrue:
+		[(objectMemory isIntegerObject: oopToStore) ifFalse:
+			[primFailCode := PrimErrBadArgument.
+			 ^self].
+		 signedValueToStore := objectMemory integerValueOf: oopToStore.
+		 (signedValueToStore >= 0 and: [signedValueToStore <= 65535]) ifFalse:
+			[primFailCode := PrimErrBadArgument.
+			 ^self].
+		 objectMemory storeShort16: index - 1 ofObject: array withValue: signedValueToStore.
+		 ^self].
+	"double-word type objects; for now assume no 64-bit indexable objects"
+	unsignedValueToStore := self positive32BitValueOf: oopToStore.
+	self successful ifTrue:
+		[objectMemory storeLong32: index - 1 ofObject: array withValue: unsignedValueToStore]
 ]
 
 { #category : #'message sending' }

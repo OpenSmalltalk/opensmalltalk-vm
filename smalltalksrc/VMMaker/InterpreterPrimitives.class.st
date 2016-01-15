@@ -408,29 +408,31 @@ InterpreterPrimitives >> positive32BitValueOf: oop [
 			[self primitiveFail. value := 0].
 		 ^value].
 
-	(objectMemory isNonIntegerImmediate: oop) ifTrue:
-		[self primitiveFail.
-		 ^0].
-
-	ok := objectMemory
-			isClassOfNonImm: oop
-			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
-			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
-	ok ifFalse:
-		[self primitiveFail.
-		 ^0].
-	sz := objectMemory numBytesOfBytes: oop.
-	sz > 4 ifTrue:
-		[self primitiveFail.
-		 ^0].
-	^self cppIf: VMBIGENDIAN
+	(objectMemory hasSixtyFourBitImmediates
+	 or: [objectMemory isNonIntegerImmediate: oop])
 		ifTrue:
-			[   (objectMemory fetchByte: 0 ofObject: oop)
-			+ ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
-			+ ((objectMemory fetchByte: 2 ofObject: oop) << 16)
-			+ ((objectMemory fetchByte: 3 ofObject: oop) << 24)]
+			[self primitiveFail.
+			 ^0]
 		ifFalse:
-			[objectMemory fetchLong32: 0 ofObject: oop]
+			[ok := objectMemory
+					isClassOfNonImm: oop
+					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
+					compactClassIndex: ClassLargePositiveIntegerCompactIndex.
+			ok ifFalse:
+				[self primitiveFail.
+				 ^0].
+			sz := objectMemory numBytesOfBytes: oop.
+			sz > 4 ifTrue:
+				[self primitiveFail.
+				 ^0].
+			^self cppIf: VMBIGENDIAN
+				ifTrue:
+					[   (objectMemory fetchByte: 0 ofObject: oop)
+					+ ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
+					+ ((objectMemory fetchByte: 2 ofObject: oop) << 16)
+					+ ((objectMemory fetchByte: 3 ofObject: oop) << 24)]
+				ifFalse:
+					[objectMemory fetchLong32: 0 ofObject: oop]]
 ]
 
 { #category : #'primitive support' }
