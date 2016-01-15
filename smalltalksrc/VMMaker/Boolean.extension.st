@@ -32,3 +32,8 @@ Boolean >> menuPrompt [
 Boolean >> shouldStopIfAtPC: address [
 	^self
 ]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Boolean >> singleStepRequiredToTriggerIn: aCogit [
+	^self
+]
