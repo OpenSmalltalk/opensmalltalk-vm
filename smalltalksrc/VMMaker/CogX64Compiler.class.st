@@ -288,7 +288,7 @@ CogX64Compiler >> canMulRR [
 
 { #category : #accessing }
 CogX64Compiler >> cmpC32RTempByteSize [
-	^6
+	^5
 ]
 
 { #category : #accessing }
@@ -371,8 +371,10 @@ CogX64Compiler >> computeMaximumSize [
 		[AddCwR]		-> [^self computeSizeOfArithCwR].
 		[AndCwR]		-> [^self computeSizeOfArithCwR].
 		[CmpCwR]		-> [^self computeSizeOfArithCwR].
-		[CmpC32R]		-> [^(operands at: 1) = RAX
-								ifTrue: [6]
+		[CmpC32R]		-> [^(operands at: 1) <= 7
+								ifTrue: [(operands at: 1) = RAX
+											ifTrue: [5]
+											ifFalse: [6]]
 								ifFalse: [7]].
 		[OrCwR]		-> [^self computeSizeOfArithCwR].
 		[SubCwR]		-> [^self computeSizeOfArithCwR].
@@ -694,28 +696,32 @@ CogX64Compiler >> concretizeCallFull [
 { #category : #'generate machine code' }
 CogX64Compiler >> concretizeCmpC32R [
 	"Will get inlined into concretizeAt: switch."
+	"N.B. This use of 32-bit comparss allows us to squeak by and use a short jump
+	 in PIC case dispatch, where a jump to the abort is 126 bytes (!!)."
 	<inline: true>
-	| value reg |
+	| value reg skip |
 	value := operands at: 0.
 	reg := operands at: 1.
-	reg = RAX ifTrue:
-		[machineCode
-			at: 0 put: 16r48;
-			at: 1 put: 16r3D;
-			at: 2 put: (value bitAnd: 16rFF);
-			at: 3 put: (value >> 8 bitAnd: 16rFF);
-			at: 4 put: (value >> 16 bitAnd: 16rFF);
-			at: 5 put: (value >> 24 bitAnd: 16rFF).
-		 ^machineCodeSize := 6].
-	machineCode
-		at: 0 put: 16r49;
-		at: 1 put: 16r81;
-		at: 2 put: (self mod: ModReg RM: reg RO: 7);
-		at: 3 put: (value bitAnd: 16rFF);
-		at: 4 put: (value >> 8 bitAnd: 16rFF);
-		at: 5 put: (value >> 16 bitAnd: 16rFF);
-		at: 6 put: (value >> 24 bitAnd: 16rFF).
-	 ^machineCodeSize := 7
+	reg = RAX
+		ifTrue:
+			[machineCode at: 0 put: 16r3D.
+			 skip := 0]
+		ifFalse:
+			[reg > 7
+				ifTrue:
+					[machineCode at: 0 put: 16r41.
+					 skip := 2]
+				ifFalse:
+					[skip := 1].
+			 machineCode
+				at: skip - 1 put: 16r81;
+				at: skip put:  (self mod: ModReg RM: reg RO: 7)].
+	machineCode		
+		at: skip + 1 put: (value bitAnd: 16rFF);
+		at: skip + 2 put: (value >> 8 bitAnd: 16rFF);
+		at: skip + 3 put: (value >> 16 bitAnd: 16rFF);
+		at: skip + 4 put: (value >> 24 bitAnd: 16rFF).
+	 ^machineCodeSize := 5 + skip
 ]
 
 { #category : #'generate machine code' }
