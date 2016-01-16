@@ -492,7 +492,6 @@ CogObjectRepresentationFor32BitSpur >> genPrimitiveAt [
 	jumpWordsOutOfBounds := cogit JumpBelowOrEqual: 0.
 	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg1Reg.
 	cogit MoveXwr: Arg1Reg R: ReceiverResultReg R: TempReg.
-	cogit SubCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg1Reg.
 	jumpWordTooBig := self jumpNotSmallIntegerUnsignedValueInRegister: TempReg.
 	cogit MoveR: TempReg R: ReceiverResultReg.
 	cogit Jump: convertToIntAndReturn.
@@ -525,16 +524,18 @@ CogObjectRepresentationFor32BitSpur >> genPrimitiveAt [
 	cogit MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
 	cogit genPrimReturn.
 
+	jumpWordTooBig jmpTarget:
+	(cogit SubCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg1Reg).
+
 	jumpFixedFieldsOutOfBounds jmpTarget:
 	(jumpArrayOutOfBounds jmpTarget:
 	(jumpBytesOutOfBounds jmpTarget:
 	(jumpShortsOutOfBounds jmpTarget:
 	(jumpWordsOutOfBounds jmpTarget:
-	(jumpWordTooBig jmpTarget:
 	(jumpNotIndexable jmpTarget:
 	(jumpIsContext jmpTarget:
 	(jumpBadIndex jmpTarget:
-	(jumpImmediate jmpTarget: cogit Label))))))))).
+	(jumpImmediate jmpTarget: cogit Label)))))))).
 
 	^0
 ]
@@ -652,6 +653,7 @@ CogObjectRepresentationFor32BitSpur >> genPrimitiveAtPut [
 	"For now ignore 64-bit indexability."
 	jumpNotIndexableBits := cogit JumpBelow: 0.
 
+	"fall through to double words"
 	cogit CmpR: Arg0Reg R: ClassReg.
 	jumpWordsOutOfBounds := cogit JumpBelowOrEqual: 0.
 	cogit MoveR: Arg1Reg R: TempReg.
@@ -1481,7 +1483,7 @@ CogObjectRepresentationFor32BitSpur >> genPrimitiveStringAtPut [
 	cogit CmpR: Arg0Reg R: ClassReg.
 	jumpWordsOutOfBounds := cogit JumpBelowOrEqual: 0.
 	cogit MoveR: Arg1Reg R: TempReg.
-	self genConvertSmallIntegerToIntegerInReg: TempReg.
+	self genConvertCharacterToCodeInReg: TempReg.
 	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg0Reg.
 	cogit MoveR: TempReg Xwr: Arg0Reg R: ReceiverResultReg.
 	cogit MoveR: Arg1Reg R: ReceiverResultReg.
@@ -1496,7 +1498,7 @@ CogObjectRepresentationFor32BitSpur >> genPrimitiveStringAtPut [
 	cogit CmpR: Arg0Reg R: ClassReg.
 	jumpShortsOutOfBounds := cogit JumpBelowOrEqual: 0.
 	cogit MoveR: Arg1Reg R: TempReg.
-	self genConvertSmallIntegerToIntegerInReg: TempReg.
+	self genConvertCharacterToCodeInReg: TempReg.
 	cogit AddR: Arg0Reg R: ReceiverResultReg.
 	cogit MoveR: TempReg M16: objectMemory baseHeaderSize r: ReceiverResultReg.
 	cogit MoveR: Arg1Reg R: ReceiverResultReg.
