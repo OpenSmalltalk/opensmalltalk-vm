@@ -1536,14 +1536,14 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveNewWithArg [
 { #category : #'primitive generators' }
 CogObjectRepresentationFor64BitSpur >> genPrimitiveStringAt [
 	| formatReg jumpNotIndexable jumpBadIndex done
-	  jumpIsBytes jumpIsShorts jumpIsWords jumpWordTooBig
+	  jumpIsBytes jumpIsShorts jumpWordTooBig jumpWordsDone
 	  jumpBytesOutOfBounds jumpShortsOutOfBounds jumpWordsOutOfBounds |
 	"c.f. StackInterpreter>>stSizeOf: SpurMemoryManager>>lengthOf:format: fixedFieldsOf:format:length:"
 	<var: #done type: #'AbstractInstruction *'>
 	<var: #jumpIsBytes type: #'AbstractInstruction *'>
 	<var: #jumpIsShorts type: #'AbstractInstruction *'>
-	<var: #jumpIsWords type: #'AbstractInstruction *'>
 	<var: #jumpBadIndex type: #'AbstractInstruction *'>
+	<var: #jumpWordsDone type: #'AbstractInstruction *'>
 	<var: #jumpWordTooBig type: #'AbstractInstruction *'>
 	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
 	<var: #jumpBytesOutOfBounds type: #'AbstractInstruction *'>
@@ -1582,70 +1582,65 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveStringAt [
 					cogit CmpCq: objectMemory firstShortFormat R: formatReg.
 	jumpIsShorts := cogit JumpGreaterOrEqual: 0.
 					cogit CmpCq: objectMemory firstLongFormat R: formatReg.
-	jumpIsWords := cogit JumpGreaterOrEqual: 0.
-	jumpNotIndexable := cogit Jump: 0.
+	jumpNotIndexable := cogit JumpLess: 0.
 
-	jumpIsBytes jmpTarget:
-		(cogit LogicalShiftLeftCq: objectMemory shiftForWord R: ClassReg).
-		cogit AndCq: objectMemory wordSize - 1 R: formatReg.
-		cogit SubR: formatReg R: ClassReg;
-		CmpR: Arg1Reg R: ClassReg.
-	jumpBytesOutOfBounds := cogit JumpBelowOrEqual: 0.
-	cogit AddCq: objectMemory baseHeaderSize R: Arg1Reg.
-	cogit MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
-	cogit backEnd byteReadsZeroExtend ifFalse:
-			[cogit AndCq: 255 R: ReceiverResultReg].
-	done := cogit Label.
-	self genConvertIntegerToCharacterInReg: ReceiverResultReg.
-	cogit genPrimReturn.
-
-	jumpIsShorts jmpTarget:
-		(cogit LogicalShiftLeftCq: objectMemory shiftForWord - 1 R: ClassReg).
-		cogit AndCq: objectMemory wordSize / 2 - 1 R: formatReg.
-		cogit SubR: formatReg R: ClassReg;
-		CmpR: Arg1Reg R: ClassReg.
-	jumpShortsOutOfBounds := cogit JumpBelowOrEqual: 0.
-	cogit AddR: Arg1Reg R: ReceiverResultReg.
-	cogit MoveM16: objectMemory baseHeaderSize r: ReceiverResultReg R: ReceiverResultReg.
-	cogit Jump: done.
-
-	jumpIsWords jmpTarget:
-		(cogit LogicalShiftLeftCq: objectMemory shiftForWord - 2 R: ClassReg).
-		cogit AndCq: objectMemory wordSize / 4 - 1 R: formatReg.
-		cogit SubR: formatReg R: ClassReg;
-		CmpR: Arg1Reg R: ClassReg.
+	"fall through to double words"
+	cogit LogicalShiftLeftCq: objectMemory shiftForWord - 2 R: ClassReg.
+	cogit AndCq: objectMemory wordSize / 4 - 1 R: formatReg.
+	cogit SubR: formatReg R: ClassReg.
+	cogit CmpR: Arg1Reg R: ClassReg.
 	jumpWordsOutOfBounds := cogit JumpBelowOrEqual: 0.
 	cogit AddCq: objectMemory baseHeaderSize >> (objectMemory shiftForWord - 1) R: Arg1Reg.
 	cogit MoveX32r: Arg1Reg R: ReceiverResultReg R: TempReg.
 	jumpWordTooBig := self jumpNotCharacterUnsignedValueInRegister: TempReg.
 	cogit MoveR: TempReg R: ReceiverResultReg.
+	jumpWordsDone := cogit Jump: 0.
+
+	jumpIsBytes jmpTarget:
+		(cogit LogicalShiftLeftCq: objectMemory shiftForWord R: ClassReg).
+	cogit AndCq: objectMemory wordSize - 1 R: formatReg.
+	cogit SubR: formatReg R: ClassReg.
+	cogit CmpR: Arg1Reg R: ClassReg.
+	jumpBytesOutOfBounds := cogit JumpBelowOrEqual: 0.
+	cogit AddCq: objectMemory baseHeaderSize R: Arg1Reg.
+	cogit MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
+	cogit backEnd byteReadsZeroExtend ifFalse:
+			[cogit AndCq: 255 R: ReceiverResultReg].
+	jumpWordsDone jmpTarget: (done := cogit Label).
+	self genConvertIntegerToCharacterInReg: ReceiverResultReg.
+	cogit genPrimReturn.
+
+	jumpIsShorts jmpTarget:
+		(cogit LogicalShiftLeftCq: objectMemory shiftForWord - 1 R: ClassReg).
+	cogit AndCq: objectMemory wordSize / 2 - 1 R: formatReg.
+	cogit SubR: formatReg R: ClassReg.
+	cogit CmpR: Arg1Reg R: ClassReg.
+	jumpShortsOutOfBounds := cogit JumpBelowOrEqual: 0.
+	cogit AddR: Arg1Reg R: ReceiverResultReg.
+	cogit MoveM16: objectMemory baseHeaderSize r: ReceiverResultReg R: ReceiverResultReg.
 	cogit Jump: done.
 
 	jumpWordTooBig jmpTarget:
-	(cogit SubCq: objectMemory baseHeaderSize >> (objectMemory shiftForWord - 1) R: Arg1Reg).
-
-	jumpBytesOutOfBounds jmpTarget:
+	(jumpBytesOutOfBounds jmpTarget:
 	(jumpShortsOutOfBounds jmpTarget:
 	(jumpWordsOutOfBounds jmpTarget:
 	(jumpNotIndexable jmpTarget: 
-	(jumpBadIndex jmpTarget: cogit Label)))).
+	(jumpBadIndex jmpTarget: cogit Label))))).
 
 	^CompletePrimitive
 ]
 
 { #category : #'primitive generators' }
 CogObjectRepresentationFor64BitSpur >> genPrimitiveStringAtPut [
-	| formatReg jumpBadIndex jumpBadArg jumpShortsDone jumpWordsDone
+	| formatReg jumpBadIndex jumpBadArg jumpImmutable
+	  jumpIsBytes jumpIsShorts jumpNotString jumpIsCompiledMethod
 	  jumpBytesOutOfRange jumpShortsOutOfRange jumpWordsOutOfRange
-	  jumpIsBytes jumpIsShorts jumpNotString jumpIsCompiledMethod jumpImmutable
 	  jumpBytesOutOfBounds jumpWordsOutOfBounds jumpShortsOutOfBounds |
 	"c.f. StackInterpreter>>stSizeOf: SpurMemoryManager>>lengthOf:format: fixedFieldsOf:format:length:"
 	<var: #jumpBadArg type: #'AbstractInstruction *'>
 	<var: #jumpIsBytes type: #'AbstractInstruction *'>
 	<var: #jumpIsShorts type: #'AbstractInstruction *'>
 	<var: #jumpBadIndex type: #'AbstractInstruction *'>
-	<var: #jumpShortsDone type: #'AbstractInstruction *'>
-	<var: #jumpWordsDone type: #'AbstractInstruction *'>
 	<var: #jumpBytesOutOfRange type: #'AbstractInstruction *'>
 	<var: #jumpShortsOutOfRange type: #'AbstractInstruction *'>
 	<var: #jumpWordsOutOfRange type: #'AbstractInstruction *'>
@@ -1683,16 +1678,17 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveStringAtPut [
 		16 - 23 byte indexable
 		24 - 31 compiled method"
 	cogit CmpCq: objectMemory firstLongFormat R: formatReg.
-	jumpNotString := cogit JumpBelowOrEqual: 0.
+	jumpNotString := cogit JumpBelow: 0.
 					cogit CmpCq: objectMemory firstCompiledMethodFormat R: formatReg.
 	jumpIsCompiledMethod := cogit JumpAboveOrEqual: 0.
 					cogit CmpCq: objectMemory firstByteFormat R: formatReg.
-	jumpIsBytes := cogit JumpGreaterOrEqual: 0.
+	jumpIsBytes := cogit JumpAboveOrEqual: 0.
 					cogit CmpCq: objectMemory firstShortFormat R: formatReg.
-	jumpIsShorts := cogit JumpGreaterOrEqual: 0.
+	jumpIsShorts := cogit JumpAboveOrEqual: 0.
 
+	"fall through to double words"
 	cogit CmpCq: (objectMemory characterObjectOf: 1 << self numCharacterBits - 1) R: Arg1Reg.
-	jumpWordsOutOfRange := cogit JumpAbove: Arg1Reg.
+	jumpWordsOutOfRange := cogit JumpAbove: 0.
 	cogit LogicalShiftLeftCq: objectMemory shiftForWord - 2 R: ClassReg.
 	cogit AndCq: objectMemory wordSize / 4 - 1 R: formatReg.
 	cogit SubR: formatReg R: ClassReg.
@@ -1703,7 +1699,7 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveStringAtPut [
 	cogit AddCq: objectMemory baseHeaderSize >> (objectMemory shiftForWord - 1) R: Arg0Reg.
 	cogit MoveR: TempReg X32r: Arg0Reg R: ReceiverResultReg.
 	cogit MoveR: Arg1Reg R: ReceiverResultReg.
-	jumpWordsDone := cogit Jump: 0.
+	cogit genPrimReturn.
 
 	jumpIsShorts jmpTarget:
 		(cogit CmpCq: (objectMemory characterObjectOf: 65535) R: Arg1Reg).
@@ -1718,7 +1714,7 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveStringAtPut [
 	cogit AddR: Arg0Reg R: ReceiverResultReg.
 	cogit MoveR: TempReg M16: objectMemory baseHeaderSize r: ReceiverResultReg.
 	cogit MoveR: Arg1Reg R: ReceiverResultReg.
-	jumpShortsDone := cogit Jump: 0.
+	cogit genPrimReturn.
 
 	jumpIsBytes jmpTarget:
 		(cogit CmpCq: (objectMemory characterObjectOf: 255) R: Arg1Reg).
@@ -1733,9 +1729,7 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveStringAtPut [
 	cogit AddCq: objectMemory baseHeaderSize R: Arg0Reg.
 	cogit MoveR: TempReg Xbr: Arg0Reg R: ReceiverResultReg.
 	cogit MoveR: Arg1Reg R: ReceiverResultReg.
-
-	jumpWordsDone jmpTarget:
-	(jumpShortsDone jmpTarget: cogit genPrimReturn).
+	cogit genPrimReturn.
 
 	jumpNotString jmpTarget:
 	(jumpBytesOutOfRange jmpTarget:
