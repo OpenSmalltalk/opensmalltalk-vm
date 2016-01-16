@@ -3874,11 +3874,10 @@ SpurMemoryManager >> defaultEdenBytes [
 	"| f | f := 0. self allNewSpaceObjectsDo: [:o| (self isFloatObject: o) ifTrue: [f := f + 1]]. f"
 	"| l | l := 0. self allNewSpaceObjectsDo: [:o|
 		(((self classIndexOf: o)
-				between: ClassLargeNegativeIntegerCompactIndex
-				and: ClassLargePositiveIntegerCompactIndex)
-		and: [(self numBytesOfBytes: o) < 8
-			or: [(self numBytesOfBytes: o) = 8 and: [(self fetchByte: 7 ofObject: o) < 32]]])
-		ifTrue: [l := l + 1]]"
+			between: ClassLargeNegativeIntegerCompactIndex
+			and: ClassLargePositiveIntegerCompactIndex)
+		 and: [(self numBytesOfBytes: o) <= 8
+		 and: [self isIntegerValue: (coInterpreter signed64BitValueOf: o)]]) ifTrue: [l := l + 1]]. l"
 ]
 
 { #category : #'weakness and ephemerality' }
