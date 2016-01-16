@@ -437,9 +437,10 @@ CogMIPSELCompiler >> computeMaximumSize [
 													ifFalse: [self literalLoadInstructionBytes + 4]].
 		[MoveRMwr]			-> [^16].
 		[MoveRdM64r]			-> [^self literalLoadInstructionBytes + 4]. 
-		[MoveMbrR]				-> [^16].
-		[MoveRMbr]				-> [^16].
+		[MoveMbrR]				-> [^4].
+		[MoveRMbr]				-> [^4].
 		[MoveM16rR]			-> [^4].
+		[MoveRM16r]			-> [^4].
 		[MoveM64rRd]			-> [^self literalLoadInstructionBytes + 4].
 		[MoveMwrR]			-> [^16].
 		[MoveXbrRR]			-> [^8].
@@ -1162,6 +1163,28 @@ CogMIPSELCompiler >> concretizeMoveRAw [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogMIPSELCompiler >> concretizeMoveRM16r [
+	<var: #offset type: #sqInt>
+	| srcReg offset destReg |
+	srcReg := operands at: 0.
+	offset := operands at: 1.
+	destReg := operands at: 2.
+	self machineCodeAt: 0 put: (self shR: srcReg base: destReg offset: offset).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogMIPSELCompiler >> concretizeMoveRMbr [
+	<var: #offset type: #sqInt>
+	| srcReg offset destReg |
+	srcReg := operands at: 0.
+	offset := operands at: 1.
+	destReg := operands at: 2.
+	self machineCodeAt: 0 put: (self sbR: srcReg base: destReg offset: offset).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
 CogMIPSELCompiler >> concretizeMoveRMwr [
 	<var: #offset type: #sqInt>
 	| srcReg offset baseReg |
@@ -1587,6 +1610,7 @@ CogMIPSELCompiler >> dispatchConcretize [
 		[MoveMbrR]			-> [^self concretizeMoveMbrR].
 		[MoveRMbr]			-> [^self concretizeUnimplemented].
 		[MoveM16rR]		-> [^self concretizeMoveM16rR].
+		[MoveRM16r]		-> [^self concretizeMoveRM16r].
 		[MoveM64rRd]		-> [^self concretizeUnimplemented].
 		[MoveMwrR]		-> [^self concretizeMoveMwrR].
 		[MoveXbrRR]		-> [^self concretizeMoveXbrRR].
