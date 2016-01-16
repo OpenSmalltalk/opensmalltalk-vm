@@ -6437,7 +6437,7 @@ StackInterpreter >> followForwardedFrameContents: theFP stackPointer: theSP [
 	"If we're in a block then also follow fields in the stacked closure as it may be activated again."
 	(self frameIsBlockActivation: theFP) ifTrue:
 		[self assert: oop = (stackPages longAt: theFP + (self frameStackedReceiverOffset: theFP)).
-		 self followForwardedObjectFields: oop toDepth: 0].
+		 objectMemory followForwardedObjectFields: oop toDepth: 0].
 	self assert: (objectMemory isForwarded: (self frameMethodObject: theFP)) not.
 	(self frameHasContext: theFP) ifTrue:
 		[self assert: (objectMemory isForwarded: (self frameContext: theFP)) not]
