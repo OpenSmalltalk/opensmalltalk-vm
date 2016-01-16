@@ -1168,13 +1168,14 @@ LargeIntegersPlugin >> normalizePositive: aLargePositiveInteger [
 	sLen := interpreterProxy maxSmallInteger > 16r3FFFFFFF "SmallInteger maxVal digitLength."
 				ifTrue: [8]
 				ifFalse: [4].
-	(len <= sLen
-	 and: [(pointer at: sLen - 1) <= (self cDigitOfCSI: interpreterProxy maxSmallInteger at: sLen)]) ifTrue: 
-		["If so, return its SmallInt value"
-		 val := pointer at: (len := len - 1).
-		 len - 1 to: 0 by: -1 do:
-			[:i | val := val * 256 + (pointer at: i)].
-		^val asOop: SmallInteger].
+	len <= sLen ifTrue: 
+		[(len < sLen
+		  or: [(pointer at: sLen - 1) <= (self cDigitOfCSI: interpreterProxy maxSmallInteger at: sLen)]) ifTrue: 
+			["If so, return its SmallInt value"
+			 val := pointer at: (len := len - 1).
+			 len - 1 to: 0 by: -1 do:
+				[:i | val := val * 256 + (pointer at: i)].
+			^val asOop: SmallInteger]].
 	"Return self, or a shortened copy"
 	len < oldLen ifTrue: "^ self growto: len"
 		[^self bytes: aLargePositiveInteger growTo: len].
