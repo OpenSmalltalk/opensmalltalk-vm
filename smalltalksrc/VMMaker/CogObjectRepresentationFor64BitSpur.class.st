@@ -843,7 +843,7 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveAtPut [
 	(jumpFixedFieldsOutOfBounds jmpTarget: cogit Label)))))))))))).
 	
 	self cppIf: IMMUTABILITY
-		ifTrue: [jumpImmutable jmpTarget: jumpIsContext jumpTarget].
+		ifTrue: [jumpImmutable jmpTarget: jumpIsContext getJmpTarget].
 
 	cogit AddCq: 1 R: Arg0Reg. "0-rel => 1-rel"
 	self genConvertIntegerToSmallIntegerInReg: Arg0Reg.
@@ -1637,7 +1637,7 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveStringAtPut [
 	(jumpWordsOutOfBounds jmpTarget: cogit Label))))))).
 
 	self cppIf: IMMUTABILITY
-		ifTrue: [jumpImmutable jmpTarget: jumpNotString jumpTarget].
+		ifTrue: [jumpImmutable jmpTarget: jumpNotString getJmpTarget].
 
 	cogit AddCq: 1 R: Arg0Reg. "0-rel => 1-rel"
 	self genConvertIntegerToSmallIntegerInReg: Arg0Reg.
@@ -1663,77 +1663,92 @@ CogObjectRepresentationFor64BitSpur >> genShiftAwaySmallIntegerTagsInScratchReg:
 { #category : #'primitive generators' }
 CogObjectRepresentationFor64BitSpur >> genSmallFloatArithmetic: arithmeticOperator preOpCheck: preOpCheckOrNil [
 	<var: #preOpCheckOrNil declareC: 'AbstractInstruction *(*preOpCheckOrNil)(int rcvrReg, int argReg)'>
-	| jumpFailClass jumpFailAlloc jumpFailCheck jumpImmediate jumpNonInt doOp |
-	<var: #jumpFailClass type: #'AbstractInstruction *'>
-	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
-	<var: #jumpNonInt type: #'AbstractInstruction *'>
+	| jumpFailAlloc jumpFailCheck jumpImmediate jumpNotSmallFloat jumpNotSmallInteger jumpNotBoxedFloat doOp |
+	<var: #jumpNotSmallInteger type: #'AbstractInstruction *'>
+	<var: #jumpNotBoxedFloat type: #'AbstractInstruction *'>
+	<var: #jumpNotSmallFloat type: #'AbstractInstruction *'>
 	<var: #jumpImmediate type: #'AbstractInstruction *'>
 	<var: #jumpFailCheck type: #'AbstractInstruction *'>
+	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
 	<var: #doOp type: #'AbstractInstruction *'>
 	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
-	self genGetSmallFloatValueOf: ReceiverResultReg scratch: SendNumArgsReg into: DPFPReg0.
-	cogit MoveR: Arg0Reg R: ClassReg.
-	jumpImmediate := self genJumpImmediate: Arg0Reg.
-	self genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
-	self genCmpClassFloatCompactIndexR: SendNumArgsReg.
-	jumpFailClass := cogit JumpNonZero: 0.
-	self genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
+	self genGetSmallFloatValueOf: ReceiverResultReg scratch: TempReg into: DPFPReg0.
+	cogit
+		MoveR: Arg0Reg R: ClassReg;
+		AndCq: objectMemory tagMask R: ClassReg;
+		CmpCq: objectMemory smallFloatTag R: ClassReg.
+	jumpNotSmallFloat := cogit JumpNonZero: 0.
+	self genGetSmallFloatValueOf: Arg0Reg scratch: TempReg into: DPFPReg1.
 	doOp := cogit Label.
 	preOpCheckOrNil ifNotNil:
 		[jumpFailCheck := cogit perform: preOpCheckOrNil with: DPFPReg0 with: DPFPReg1].
 	cogit gen: arithmeticOperator operand: DPFPReg1 operand: DPFPReg0.
-	jumpFailAlloc := self
-						genAllocFloatValue: DPFPReg0
-						into: SendNumArgsReg
-						scratchReg: ClassReg
-						scratchReg: TempReg.
+	jumpFailAlloc := self genAllocFloatValue: DPFPReg0 into: SendNumArgsReg scratchReg: ClassReg scratchReg: TempReg.
 	cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
 	cogit genPrimReturn.
-	jumpImmediate jmpTarget: cogit Label.
-	self maybeGenConvertIfSmallFloatIn: Arg0Reg scratchReg: TempReg into: DPFPReg1 andJumpTo: doOp.
-	jumpNonInt := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	self genConvertSmallIntegerToIntegerInReg: ClassReg.
-	cogit ConvertR: ClassReg Rd: DPFPReg1.
+	jumpNotSmallFloat jmpTarget:
+	(cogit CmpCq: objectMemory smallIntegerTag R: ClassReg).
+	jumpNotSmallInteger := cogit JumpNonZero: 0.
+	cogit MoveR: Arg0Reg R: Arg1Reg.
+	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
+	cogit ConvertR: Arg1Reg Rd: DPFPReg1.
 	cogit Jump: doOp.
-	jumpFailClass jmpTarget: cogit Label.
-	jumpNonInt jmpTarget: jumpFailClass getJmpTarget.
+	jumpNotSmallInteger jmpTarget: (cogit CmpCq: 0 R: ClassReg).
+	jumpImmediate := cogit JumpNonZero: 0.
+	self genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
+	self genCmpClassFloatCompactIndexR: SendNumArgsReg.
+	jumpNotBoxedFloat := cogit JumpNonZero: 0.
+	self genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
+	cogit Jump: doOp.
+	jumpImmediate jmpTarget:
+	(jumpNotBoxedFloat jmpTarget:
+	(jumpNotSmallInteger jmpTarget:
+	(jumpFailAlloc jmpTarget: cogit Label))).
 	preOpCheckOrNil ifNotNil:
-		[jumpFailCheck jmpTarget: jumpFailClass getJmpTarget].
-	jumpFailAlloc jmpTarget: cogit Label.
+		[jumpFailCheck jmpTarget: jumpFailAlloc getJmpTarget].
 	^0
 ]
 
 { #category : #'primitive generators' }
 CogObjectRepresentationFor64BitSpur >> genSmallFloatComparison: jumpOpcodeGenerator invert: invertComparison [
 	<var: #jumpOpcodeGenerator declareC: 'AbstractInstruction *(*jumpOpcodeGenerator)(void *)'>
-	| jumpFail jumpImmediate jumpNonInt jumpCond compare |
+	| jumpImmediate jumpNotSmallFloat jumpNotSmallInteger jumpNotBoxedFloat jumpCond compare |
+	<var: #jumpNotSmallInteger type: #'AbstractInstruction *'>
+	<var: #jumpNotBoxedFloat type: #'AbstractInstruction *'>
+	<var: #jumpNotSmallFloat type: #'AbstractInstruction *'>
 	<var: #jumpImmediate type: #'AbstractInstruction *'>
-	<var: #jumpNonInt type: #'AbstractInstruction *'>
 	<var: #jumpCond type: #'AbstractInstruction *'>
-	<var: #compare type: #'AbstractInstruction *'>
-	<var: #jumpFail type: #'AbstractInstruction *'>
 	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
-	self genGetSmallFloatValueOf: ReceiverResultReg scratch: SendNumArgsReg into: DPFPReg0.
-	jumpImmediate := self genJumpImmediate: Arg0Reg.
-	self genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
-	self genCmpClassFloatCompactIndexR: SendNumArgsReg.
-	jumpFail := cogit JumpNonZero: 0.
-	self genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
-	invertComparison "May need to invert for NaNs"
-		ifTrue: [compare := cogit CmpRd: DPFPReg0 Rd: DPFPReg1]
-		ifFalse: [compare := cogit CmpRd: DPFPReg1 Rd: DPFPReg0].
+	self genGetSmallFloatValueOf: ReceiverResultReg scratch: TempReg into: DPFPReg0.
+	cogit
+		MoveR: Arg0Reg R: ClassReg;
+		AndCq: objectMemory tagMask R: ClassReg;
+		CmpCq: objectMemory smallFloatTag R: ClassReg.
+	jumpNotSmallFloat := cogit JumpNonZero: 0.
+	self genGetSmallFloatValueOf: Arg0Reg scratch: TempReg into: DPFPReg1.
+	compare := invertComparison "May need to invert for NaNs"
+					ifTrue: [cogit CmpRd: DPFPReg0 Rd: DPFPReg1]
+					ifFalse: [cogit CmpRd: DPFPReg1 Rd: DPFPReg0].
 	jumpCond := cogit perform: jumpOpcodeGenerator with: 0. "FP jumps are a little weird"
 	cogit genMoveFalseR: ReceiverResultReg.
 	cogit genPrimReturn.
 	jumpCond jmpTarget: (cogit genMoveTrueR: ReceiverResultReg).
 	cogit genPrimReturn.
-	jumpImmediate jmpTarget: cogit Label.
-	self maybeGenConvertIfSmallFloatIn: Arg0Reg scratchReg: TempReg into: DPFPReg1 andJumpTo: compare.
-	jumpNonInt := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	jumpNotSmallFloat jmpTarget:
+	(cogit CmpCq: objectMemory smallIntegerTag R: ClassReg).
+	jumpNotSmallInteger := cogit JumpNonZero: 0.
 	self genConvertSmallIntegerToIntegerInReg: Arg0Reg.
 	cogit ConvertR: Arg0Reg Rd: DPFPReg1.
 	cogit Jump: compare.
-	jumpNonInt jmpTarget:  (jumpFail jmpTarget: cogit Label).
+	jumpNotSmallInteger jmpTarget: (cogit CmpCq: 0 R: ClassReg).
+	jumpImmediate := cogit JumpNonZero: 0.
+	self genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.
+	self genCmpClassFloatCompactIndexR: SendNumArgsReg.
+	jumpNotBoxedFloat := cogit JumpNonZero: 0.
+	self genGetDoubleValueOf: Arg0Reg into: DPFPReg1.
+	cogit Jump: compare.
+	jumpImmediate jmpTarget:
+	(jumpNotBoxedFloat jmpTarget: cogit Label).
 	^CompletePrimitive
 ]
 
