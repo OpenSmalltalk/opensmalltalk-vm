@@ -72,7 +72,8 @@ $(blddir)/sqNamedPrims.h:	$(vmmcfg)/plugins.int
 sqNamedPrims$o : $(blddir)/sqNamedPrims.h
 
 # cogit.c merely includes specific a specific cogitPROCESSOR.c
-cogit$o : $(srcdir)/vm/cogitARMv5.c $(srcdir)/vm/cogitIA32.c
+# e.g. cogitARMv5.c cogitIA32.c cogitMIPSEL.c cogitX64.c
+cogit$o : $(srcdir)/vm/cogit.c
 
 # sqUnixHeartbeat.c includes sqSCCSVersion.h
 sqUnixHeartbeat$o : $(topdir)/platforms/Cross/vm/sqSCCSVersion.h
