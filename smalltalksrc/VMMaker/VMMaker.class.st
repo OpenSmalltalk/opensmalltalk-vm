@@ -416,8 +416,8 @@ VMMaker class >> generateNewspeakSpurCog64VM [
 				MULTIPLEBYTECODESETS true
 				NewspeakVM true
 				EnforceAccessControl true)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/nsspur64src') fullName
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms') fullName
+		to: (FileDirectory default directoryNamed: self sourceTree, '/nsspur64src') fullName
+		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
 		including:#()
 
 ]
