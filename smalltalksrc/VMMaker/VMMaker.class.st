@@ -298,6 +298,7 @@ VMMaker class >> generate: interpreterClass with: optionsPairsArray to: srcDirNa
 { #category : #configurations }
 VMMaker class >> generateAllCogConfigurationsUnderVersionControl [
 	self generateNewspeakSpurCogVM;
+		generateNewspeakSpurCog64VM;
 		generateSqueakCogVM;
 		generateSqueakCogMTVM;
 		generateSqueakSpurCogVM;
@@ -315,7 +316,8 @@ VMMaker class >> generateAllConfigurationsUnderVersionControl [
 VMMaker class >> generateAllNewspeakConfigurationsUnderVersionControl [
 	self generateNewspeakSpurStackVM;
 		generateNewspeakSpurStack64VM;
-		generateNewspeakSpurCogVM
+		generateNewspeakSpurCogVM;
+		generateNewspeakSpurCog64VM
 ]
 
 { #category : #configurations }
@@ -333,6 +335,7 @@ VMMaker class >> generateAllSistaConfigurationsUnderVersionControl [
 { #category : #configurations }
 VMMaker class >> generateAllSpurConfigurations [
 	self generateNewspeakSpurCogVM;
+		generateNewspeakSpurCog64VM;
 		generateNewspeakSpurStackVM;
 		generateSqueakSpurCogVM;
 		generateSqueakSpurCog64VM;
@@ -344,6 +347,7 @@ VMMaker class >> generateAllSpurConfigurations [
 { #category : #configurations }
 VMMaker class >> generateAllSpurConfigurationsUnderVersionControl [
 	self generateNewspeakSpurStackVM;
+		generateNewspeakSpurCog64VM;
 		generateSqueakSpurStackVM;
 		generateSqueakSpurStack64VM;
 		generateNewspeakSpurCogVM;
@@ -367,6 +371,7 @@ VMMaker class >> generateAllSqueakConfigurationsUnderVersionControl [
 { #category : #configurations }
 VMMaker class >> generateAllStackConfigurationsUnderVersionControl [
 	self generateNewspeakSpurStackVM;
+		generateNewspeakSpurStack64VM;
 		generateSqueakStackVM;
 		generateSqueakSpurStackVM;
 		generateSqueakSpurStack64VM
@@ -402,8 +407,26 @@ VMMaker class >> generateEitherSqueakCogVM [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateNewspeakSpurCog64VM [
+	"No primitives since we can use those for the Spur Cog Newspeak VM"
+	^VMMaker
+		generate: CoInterpreter
+		and: StackToRegisterMappingCogit
+		with: #(	ObjectMemory Spur64BitCoMemoryManager
+				MULTIPLEBYTECODESETS true
+				NewspeakVM true
+				EnforceAccessControl true)
+		to: (FileDirectory default pathFromURI: self sourceTree, '/nsspur64src') fullName
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms') fullName
+		including:#()
+
+]
+
+{ #category : #configurations }
 VMMaker class >> generateNewspeakSpurCogVM [
-	"No primitives since we can use those for the Cog Newspeak VM"
+	"This tree also includes the Newspeak plugins.  But once the Alien plugins are harmonised
+	 (which can be done now immutability support is being added to Spur) all VMs can share a
+	 single set of plugin sources."
 	^VMMaker
 		generate: CoInterpreter
 		and: StackToRegisterMappingCogit
@@ -425,7 +448,7 @@ VMMaker class >> generateNewspeakSpurCogVM [
 
 { #category : #configurations }
 VMMaker class >> generateNewspeakSpurStack64VM [
-	"No primitives since we can use those from the Cog VM"
+	"No primitives since we can use those from the Spur Cog Newspeak VM"
 	^VMMaker
 		generate: StackInterpreter
 		with: #( ObjectMemory Spur64BitMemoryManager
@@ -440,7 +463,7 @@ VMMaker class >> generateNewspeakSpurStack64VM [
 
 { #category : #configurations }
 VMMaker class >> generateNewspeakSpurStackVM [
-	"No primitives since we can use those from the Cog Newspeak VM"
+	"No primitives since we can use those from the Spur Cog Newspeak VM"
 	^VMMaker
 		generate: StackInterpreter
 		with: #(	ObjectMemory Spur32BitMemoryManager
