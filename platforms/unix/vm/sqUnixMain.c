@@ -828,6 +828,9 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 # elif __linux__ && __i386__
 			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_EBP]: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_ESP]: 0);
+#	elif __linux__ && __x86_64__
+			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_RBP]: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_RSP]: 0);
 # elif __FreeBSD__ && __i386__
 			void *fp = (void *)(uap ? uap->uc_mcontext.mc_ebp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.mc_esp: 0);
@@ -837,9 +840,6 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 # elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
 			void *fp = (void *)(uap ? uap->uc_mcontext.arm_fp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.arm_sp: 0);
-# elif __x86_64__
-#	error Currently this VM must be build as a 32-bit binary.
-#	error See section 3e in unixbuild/HowToBuild.
 # else
 #	error need to implement extracting pc from a ucontext_t on this system
 # endif
