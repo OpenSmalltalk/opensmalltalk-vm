@@ -2823,6 +2823,16 @@ CogX64Compiler >> nameForRegister: reg [ "<Integer>"
 	^super nameForRegister: reg
 ]
 
+{ #category : #'inline cacheing' }
+CogX64Compiler >> nsSendCacheAt: callSiteReturnAddress [
+	"Answer the NSSendCache for the return address of a Newspeak
+	 self, super, outer, or implicit receiver send."
+	<option: #NewspeakVM>
+	<var: #callSiteReturnAddress type: #'char *'>
+	<inline: false>
+	^self literalBeforeFollowingAddress: callSiteReturnAddress asUnsignedInteger - 5 "sizeofcall"
+]
+
 { #category : #accessing }
 CogX64Compiler >> numIntRegArgs [
 	^6
