@@ -131,7 +131,7 @@ InterpreterPrimitives >> canBeImmutable: oop [
 	oop = scheduler ifTrue: [ ^ false ].
 	oop = processLists ifTrue: [ ^ false ].
 	"Is it a linkedList ?"
-	(objectMemory classIndexOf: (processLists at: 1)) = (objectMemory classIndexOf: oop) ifTrue: [ ^ false ].
+	(objectMemory classIndexOf: (objectMemory fetchPointer: 1 ofObject: processLists)) = (objectMemory classIndexOf: oop) ifTrue: [ ^ false ].
 	"is it a Process ?"
 	(objectMemory classIndexOf: (objectMemory fetchPointer: ActiveProcessIndex ofObject: scheduler)) =  (objectMemory classIndexOf: oop) ifTrue: [ ^ false ].
 	
