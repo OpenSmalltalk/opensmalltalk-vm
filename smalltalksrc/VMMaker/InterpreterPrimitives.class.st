@@ -1937,7 +1937,7 @@ InterpreterPrimitives >> primitiveGetImmutability [
 	bool := (objectMemory isOopImmutable: rcvr)
 		ifTrue: [ TrueObject ]
 		ifFalse: [ FalseObject ].
-	self pop: argumentCount thenPush: (self splObj: bool)
+	self pop: argumentCount + 1 thenPush: (self splObj: bool)
 ]
 
 { #category : #'I/O primitives' }
@@ -3495,7 +3495,7 @@ InterpreterPrimitives >> primitiveSetImmutability [
 		ifTrue: [ TrueObject ]
 		ifFalse: [ FalseObject ].
 	objectMemory setIsImmutableOf: rcvr to: boolean.
-	self pop: argumentCount thenPush: (self splObj: wasImmutable)
+	self pop: argumentCount + 1 thenPush: (self splObj: wasImmutable)
 ]
 
 { #category : #'I/O primitives' }

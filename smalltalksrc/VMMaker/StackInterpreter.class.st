@@ -4969,18 +4969,18 @@ StackInterpreter >> doubleExtendedDoAnythingBytecode [
 		[messageSelector := self literal: byte3.
 		 argumentCount := byte2 bitAnd: 31.
 		 ^self superclassSend].
-	self fetchNextBytecode.
-	opType = 2 ifTrue: [^self pushMaybeContextReceiverVariable: byte3].
-	opType = 3 ifTrue: [^self pushLiteralConstant: byte3].
-	opType = 4 ifTrue: [^self pushLiteralVariable: byte3].
+	opType = 2 ifTrue: [self fetchNextBytecode. ^self pushMaybeContextReceiverVariable: byte3].
+	opType = 3 ifTrue: [self fetchNextBytecode. ^self pushLiteralConstant: byte3].
+	opType = 4 ifTrue: [self fetchNextBytecode. ^self pushLiteralVariable: byte3].
 	top := self internalStackTop.
 	opType = 7 ifTrue:
 		[self storeLiteralVariable: byte3 withValue: top.
-		 ^self].
+		 ^self fetchNextBytecode].
 	"opType = 5 is store; opType = 6 is storePop"
 	opType = 6 ifTrue:
 		[self internalPop: 1].
-	self storeMaybeContextReceiverVariable: byte3 withValue: top
+	self storeMaybeContextReceiverVariable: byte3 withValue: top.
+	self fetchNextBytecode
 ]
 
 { #category : #initialization }
@@ -5458,11 +5458,11 @@ StackInterpreter >> extStoreAndPopLiteralVariableBytecode [
 	"236		11101100	i i i i i i i i	Pop and Store Literal Variable #iiiiiiii (+ Extend A * 256)"
 	| variableIndex value |
 	variableIndex := self fetchByte + (extA << 8).
-	self fetchNextBytecode.
 	value := self internalStackTop.
 	self internalPop: 1.
 	extA := 0.
-	self storeLiteralVariable: variableIndex withValue: value
+	self storeLiteralVariable: variableIndex withValue: value.
+	self fetchNextBytecode.
 ]
 
 { #category : #'stack bytecodes' }
@@ -5470,11 +5470,11 @@ StackInterpreter >> extStoreAndPopReceiverVariableBytecode [
 	"235		11101011	i i i i i i i i	Pop and Store Receiver Variable #iiiiiii (+ Extend A * 256)"
 	| variableIndex value |
 	variableIndex := self fetchByte + (extA << 8).
-	self fetchNextBytecode.
 	extA := 0.
 	value := self internalStackTop.
 	self internalPop: 1.
-	self storeMaybeContextReceiverVariable: variableIndex withValue: value
+	self storeMaybeContextReceiverVariable: variableIndex withValue: value.
+	self fetchNextBytecode.
 ]
 
 { #category : #'stack bytecodes' }
@@ -5482,9 +5482,9 @@ StackInterpreter >> extStoreLiteralVariableBytecode [
 	"233		11101001	i i i i i i i i	Store Literal Variable #iiiiiiii (+ Extend A * 256)"
 	| variableIndex |
 	variableIndex := self fetchByte + (extA << 8).
-	self fetchNextBytecode.
 	extA := 0.
-	self storeLiteralVariable: variableIndex withValue: self internalStackTop
+	self storeLiteralVariable: variableIndex withValue: self internalStackTop.
+	self fetchNextBytecode.
 ]
 
 { #category : #'stack bytecodes' }
@@ -5492,9 +5492,9 @@ StackInterpreter >> extStoreReceiverVariableBytecode [
 	"232		11101000	i i i i i i i i	Store Receiver Variable #iiiiiii (+ Extend A * 256)"
 	| variableIndex |
 	variableIndex := self fetchByte + (extA << 8).
-	self fetchNextBytecode.
 	extA := 0.
-	self storeMaybeContextReceiverVariable: variableIndex withValue: self internalStackTop
+	self storeMaybeContextReceiverVariable: variableIndex withValue: self internalStackTop.
+	self fetchNextBytecode.
 ]
 
 { #category : #'sista bytecodes' }
@@ -5566,17 +5566,19 @@ StackInterpreter >> extendedStoreBytecodePop: popBoolean [
 	| descriptor variableType variableIndex value |
 	<inline: true>
 	descriptor := self fetchByte.
-	self fetchNextBytecode.
 	variableType := descriptor >> 6 bitAnd: 3.
 	variableIndex := descriptor bitAnd: 63.
 	value := self internalStackTop.
 	popBoolean ifTrue: [ self internalPop: 1 ].
 	variableType = 0 ifTrue:
-		[^objectMemory storePointerImmutabilityCheck: variableIndex ofObject: self receiver withValue: value].
+		[objectMemory storePointerImmutabilityCheck: variableIndex ofObject: self receiver withValue: value.
+		^ self fetchNextBytecode].
 	variableType = 1 ifTrue:
-		[^self temporary: variableIndex in: localFP put: value].
+		[ self fetchNextBytecode.
+		^self temporary: variableIndex in: localFP put: value].
 	variableType = 3 ifTrue:
-		[^self storeLiteralVariable: variableIndex withValue: value].
+		[self storeLiteralVariable: variableIndex withValue: value.
+		^ self fetchNextBytecode].
 	self error: 'illegal store'
 
 ]
@@ -14090,11 +14092,11 @@ StackInterpreter >> storeAndPopReceiverVariableBytecode [
 	top := self internalStackTop.
 	instVarIndex := currentBytecode bitAnd: 7.
 	self internalPop: 1.
-	self fetchNextBytecode.
 	objectMemory
 		storePointerImmutabilityCheck: instVarIndex
 		ofObject: rcvr
-		withValue: top
+		withValue: top.
+	self fetchNextBytecode.
 ]
 
 { #category : #'stack bytecodes' }
