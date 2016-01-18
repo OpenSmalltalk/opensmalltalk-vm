@@ -735,7 +735,7 @@ CogObjectRepresentationForSpur >> genImmutableCheck: regHoldingObjectMutated slo
 	(popBoolean or: [ cogit ssTop spilled ]) ifFalse:
 		[cogit popR: ClassReg].
 	"restore ReceiverResultReg state if needed"
-	needRestoreRcvr ifTrue: [ self putSelfInReceiverResultReg ].
+	needRestoreRcvr ifTrue: [ cogit putSelfInReceiverResultReg ].
 	fail := cogit Jump: 0.
 	
 	"We reach this code is the object mutated is mutable"
