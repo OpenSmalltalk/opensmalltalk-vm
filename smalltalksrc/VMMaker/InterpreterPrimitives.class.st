@@ -1937,7 +1937,7 @@ InterpreterPrimitives >> primitiveGetImmutability [
 	bool := (objectMemory isOopImmutable: rcvr)
 		ifTrue: [ TrueObject ]
 		ifFalse: [ FalseObject ].
-	self pop: argumentCount + 1 thenPush: (self splObj: bool)
+	self pop: argumentCount + 1 thenPush: (objectMemory splObj: bool)
 ]
 
 { #category : #'I/O primitives' }
@@ -3495,7 +3495,7 @@ InterpreterPrimitives >> primitiveSetImmutability [
 		ifTrue: [ TrueObject ]
 		ifFalse: [ FalseObject ].
 	objectMemory setIsImmutableOf: rcvr to: boolean.
-	self pop: argumentCount + 1 thenPush: (self splObj: wasImmutable)
+	self pop: argumentCount + 1 thenPush: (objectMemory splObj: wasImmutable)
 ]
 
 { #category : #'I/O primitives' }
@@ -4283,7 +4283,7 @@ InterpreterPrimitives >> primitiveStringReplace [
 	(objectMemory isImmediate: repl) ifTrue: "can happen in LgInt copy"
 		[^self primitiveFail].
 	self cppIf: IMMUTABILITY ifTrue:
-			[(self isImmutable: array) ifTrue:
+			[(objectMemory isImmutable: array) ifTrue:
 				[^self primitiveFailFor: PrimErrNoModification]].
 
 	hdr := objectMemory baseHeader: array.
