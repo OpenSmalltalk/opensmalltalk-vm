@@ -712,29 +712,19 @@ CogObjectRepresentationForSpur >> genImmutableCheck: regHoldingObjectMutated slo
 	- objectMutated passed in ReceiverResultReg
 	- index (unboxed) passed in TempReg
 	- valueToStore passed in ClassReg.
-	Simulated stack is flushed until simulatedStackPointer - 1, which implies full flush 
-	if popBoolean is true, else top value may not be flushed.
-	We spill the top value (the value to store) for the trampoline if needed."
+	Simulated stack is flushed, but if needRestoreRcvr is true 
+	the receiver has to be live after this operation."
 	self assert: regHoldingObjectMutated == ReceiverResultReg. 
 	self assert: scratchReg == TempReg.
 	self assert: regHoldingValueToStore == ClassReg.
-	mutableJump := self genJumpMutable: ClassReg scratchReg: TempReg.
+	mutableJump := self genJumpMutable: ReceiverResultReg scratchReg: TempReg.
 	
 	"We reach this code if the object mutated is immutable."
-	"simulatedStack state altered for the trampoline, spill top value if needed"
-	(popBoolean or: [ cogit ssTop spilled ]) ifFalse:
-		[ self assert: (cogit ssTop type = SSRegister and: [cogit ssTop register = ClassReg]).
-		  cogit PushR: ClassReg ].
-	"pass the unboxed index using TempReg"
 	cogit MoveCq: index R: TempReg.
 	"trampoline call and mcpc to bcpc annotation."
 	cogit CallRT: ceCannotAssignToWithIndexTrampoline.
 	cogit annotateBytecode: cogit Label.
-	"Top of stack is consumed by the trampoline. In case of store with non spilled value, 
-	restore ClassReg to match simulated stack state"
-	(popBoolean or: [ cogit ssTop spilled ]) ifFalse:
-		[cogit popR: ClassReg].
-	"restore ReceiverResultReg state if needed"
+	"restore ReceiverResultReg state if needed, the rest of the state is spilled"
 	needRestoreRcvr ifTrue: [ cogit putSelfInReceiverResultReg ].
 	fail := cogit Jump: 0.
 	

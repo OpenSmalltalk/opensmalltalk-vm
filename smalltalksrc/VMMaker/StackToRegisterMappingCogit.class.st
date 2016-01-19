@@ -2644,6 +2644,11 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 			[ self ssAllocateRequiredReg: ClassReg.
 			  topReg := ClassReg.
 			  self ssStoreAndReplacePop: popBoolean toReg: ClassReg.
+			  "stack is flushed except maybe ssTop if popBoolean is false.
+			  ssTop is a SSregister in this case due to #ssStoreAndReplacePop:
+			  to avoid a second indirect read / annotation in case of SSConstant
+			  or SSBaseRegister"
+			  self ssFlushTo: simStackPtr.
 			  immutabilityFailure := objectRepresentation 
 				genImmutableCheck: ReceiverResultReg 
 				slotIndex: ValueIndex 
@@ -2693,7 +2698,13 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextReceiverVaria
 		destReg: TempReg.
 	self 
 		cppIf: IMMUTABILITY
-		ifTrue: [ self ssStoreAndReplacePop: popBoolean toReg: ClassReg. ]
+		ifTrue: 
+			[ self ssStoreAndReplacePop: popBoolean toReg: ClassReg.
+			  "stack is flushed except maybe ssTop if popBoolean is false.
+			  ssTop is a SSregister in this case due to #ssStoreAndReplacePop:
+			  to avoid a second indirect read / annotation in case of SSConstant
+			  or SSBaseRegister"
+			  self ssFlushTo: simStackPtr. ]
 		ifFalse: [ self ssStorePop: popBoolean toReg: ClassReg ].
 	jmpSingle := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	self MoveCq: slotIndex R: SendNumArgsReg.
@@ -2739,7 +2750,12 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 		ifTrue: 
 			[ self ssAllocateRequiredReg: ClassReg.
 			  topReg := ClassReg.
-			  self ssStoreAndReplacePop: popBoolean toReg: topReg.
+			  self ssStoreAndReplacePop: popBoolean toReg: ClassReg.
+			  "stack is flushed except maybe ssTop if popBoolean is false.
+			  ssTop is a SSregister in this case due to #ssStoreAndReplacePop:
+			  to avoid a second indirect read / annotation in case of SSConstant
+			  or SSBaseRegister"
+			  self ssFlushTo: simStackPtr.
 			  immutabilityFailure := objectRepresentation 
 				genImmutableCheck: ReceiverResultReg 
 				slotIndex: slotIndex 
@@ -3951,8 +3967,8 @@ StackToRegisterMappingCogit >> ssPushRegister: reg [
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssStoreAndReplacePop: popBoolean toReg: reg [
 	"In addition to ssStorePop:toReg:, if this is a store and not
-	a popInto and the top of the simulated stack is not spilled,
-	I change the simulated stack to use the register for the value"
+	a popInto I change the simulated stack to use the register 
+	for the top value"
 	| topSpilled |
 	topSpilled := self ssTop spilled.
 	self ssStorePop: (popBoolean or: [topSpilled]) toReg: reg.
