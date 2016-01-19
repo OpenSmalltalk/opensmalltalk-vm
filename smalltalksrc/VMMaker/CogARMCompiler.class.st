@@ -629,6 +629,9 @@ CogARMCompiler >> computeMaximumSize [
 		[MoveRMbr]				-> [^self is12BitValue: (operands at: 1)
 										ifTrue: [:u :i| 4]
 										ifFalse: [self literalLoadInstructionBytes + 4]].
+		[MoveRM16r]				-> [^self is12BitValue: (operands at: 1)
+										ifTrue: [:u :i| 4]
+										ifFalse: [self literalLoadInstructionBytes + 4]].
 		[MoveM16rR]			-> [^self rotateable8bitImmediate: (operands at: 0)
 											ifTrue: [:r :i| 4]
 											ifFalse: [self literalLoadInstructionBytes + 4]].
@@ -1334,6 +1337,34 @@ CogARMCompiler >> concretizeMoveRAw [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizeMoveRM16r [
+	"Will get inlined into concretizeAt: switch."
+	<var: #offset type: #sqInt>
+	<inline: true>
+	| srcReg offset baseReg instrOffset|
+	srcReg := operands at: 0.
+	offset := operands at: 1.
+	baseReg := operands at: 2.
+	self is12BitValue: offset
+		ifTrue:
+			[ :u :immediate | 
+			self machineCodeAt: 0 "strh 	srcReg, [baseReg, #immediate]"
+				put: (self strh: srcReg rn: baseReg plus: u imm: immediate).
+			^machineCodeSize := 4]
+		ifFalse:
+			[(self isAddressRelativeToVarBase: offset)
+				ifTrue:
+					[self machineCodeAt: 0 put: (self adds: ConcreteIPReg rn: ConcreteVarBaseReg imm: offset - cogit varBaseAddress ror: 0).
+					 instrOffset := 4]
+				ifFalse:
+					[instrOffset := self moveCw: offset intoR: ConcreteIPReg].
+			"strb 	srcReg, [baseReg, ConcreteIPReg]"
+			self machineCodeAt: instrOffset put: (self strh: srcReg rn: baseReg rm: ConcreteIPReg).
+			^machineCodeSize := instrOffset + 4 ].
+	^0 "to keep Slang happy"
+]
+
+{ #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizeMoveRMbr [
 	"Will get inlined into concretizeAt: switch."
 	<var: #offset type: #sqInt>
@@ -1895,6 +1926,7 @@ CogARMCompiler >> dispatchConcretize [
  		[MoveRAb]			-> [^self concretizeMoveRAb].
 		[MoveMbrR]			-> [^self concretizeMoveMbrR].
 		[MoveRMbr]			-> [^self concretizeMoveRMbr].
+		[MoveRM16r]		-> [^self concretizeMoveRMbr].
 		[MoveM16rR]		-> [^self concretizeMoveM16rR].
 		[MoveM64rRd]		-> [^self concretizeMoveM64rRd].
 		[MoveMwrR]		-> [^self concretizeMoveMwrR].
@@ -3131,6 +3163,7 @@ CogARMCompiler >> shiftSetsConditionCodesFor: aConditionalJumpOpcode [
 		^aConditionalJumpOpcode caseOf:
 		{	[JumpNegative]	->	[true].
 			[JumpZero]	->	[true].
+			[JumpLess]	->	[true].
 		}
 		otherwise: [self halt: 'unhandled opcode in setsConditionCodesFor:'. false]
 ]
@@ -3193,6 +3226,12 @@ CogARMCompiler >> strb: srcReg rn: baseReg rm: offsetReg [
 "	STRB srcReg, [baseReg, + offsetReg] 
 	The contents of offsetReg are assumed to be correctly signed"
 	^self memMxr: AL reg: srcReg  base: baseReg p: 1 u: 1 b: 1 w: 0 l: 0 rm: offsetReg
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMCompiler >> strh: destReg rn: baseReg plus: u imm: immediate8bitValue [
+"	STRH destReg, [baseReg, 'u' immediate8bitValue] u=0 -> subtract imm; =1 -> add imm "
+	^self memM16xr: AL reg: destReg  base: baseReg p: 1 u: u  w: 0 l: 0 offset: immediate8bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
