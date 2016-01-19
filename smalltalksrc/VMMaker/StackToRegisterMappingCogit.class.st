@@ -1231,11 +1231,13 @@ StackToRegisterMappingCogit >> doubleExtendedDoAnythingBytecode [
 					 self ssTop annotateUse: true.
 					 ^0].
 			[4]	->	[self genPushLiteralVariable: byte2.].
-			[7]	->	[self genStorePop: false LiteralVariable: byte2] }
+			[7]	->	[self genStorePop: false LiteralVariable: byte2.
+					self cppIf: IMMUTABILITY ifTrue: [ "instruction is mapped" ^0 ] ] }
 		otherwise: "5 & 6"
 			[(coInterpreter isWriteMediatedContextInstVarIndex: byte2)
 				ifTrue: [self genStorePop: opType = 6 MaybeContextReceiverVariable: byte2]
-				ifFalse: [self genStorePop: opType = 6 ReceiverVariable: byte2]].
+				ifFalse: [self genStorePop: opType = 6 ReceiverVariable: byte2].
+			self cppIf: IMMUTABILITY ifTrue: [ "instruction is mapped" ^0 ]].
 	"We need a map entry for this bytecode for correct parsing (if the method builds a frame).
 	 We could of course special case the scanning but that's silly (or is it?)."
 	self assert: needsFrame.
