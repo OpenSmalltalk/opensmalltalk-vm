@@ -557,10 +557,10 @@ InterpreterProxy >> isInterpreterProxy [
 	^true
 ]
 
-{ #category : #testing }
-InterpreterProxy >> isOopImmutable: anOop [
-	<api>
-	^self notYetImplementedError
+{ #category : #'object access' }
+InterpreterProxy >> isOopImmutable: oop [
+	<option: #IMMUTABILITY>
+	^StackInterpreter objectMemoryClass isOopImmutable: oop
 ]
 
 { #category : #testing }
