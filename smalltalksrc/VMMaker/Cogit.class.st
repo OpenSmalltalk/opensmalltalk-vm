@@ -4483,7 +4483,11 @@ Cogit >> compileMethodBody [
 	<inline: true>
 	endPC < initialPC ifTrue: [^0]. "quick primitives"
 	deltaForPrimErrorCode := self methodUsesPrimitiveErrorCode
-									ifTrue: [(coInterpreter sizeOfCallPrimitiveBytecode: methodHeader)
+									ifTrue: 
+										[ self cppIf: IMMUTABILITY ifTrue: 
+											[ self Nop. "to avoid conflict with interrrupt check mapping".
+											self annotateBytecode: self Label ].
+										(coInterpreter sizeOfCallPrimitiveBytecode: methodHeader)
 										  + (coInterpreter sizeOfLongStoreTempBytecode: methodHeader)]
 									ifFalse: [0].
 	^self compileAbstractInstructionsFrom: initialPC + deltaForPrimErrorCode through: endPC
