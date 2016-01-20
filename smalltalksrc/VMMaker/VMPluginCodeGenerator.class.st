@@ -183,8 +183,13 @@ VMPluginCodeGenerator >> emitExportsOn: aStream [
 ]
 
 { #category : #'C translation' }
-VMPluginCodeGenerator >> emitIfdefForPluginFunctionOption: anArray on: aStream [ 
-	aStream nextPutAll: '#if '; nextPutAll: (self perform: anArray first withArguments: anArray allButFirst)
+VMPluginCodeGenerator >> emitIfdefForPluginFunctionOption: anArrayOrSymbol on: aStream [
+	"See e.g. senders of atLeastVMProxyMajor:minor: or <option: #IMMUTABLITY>
+	 in InterpreterProxy"
+	aStream nextPutAll: '#if '; nextPutAll: (anArrayOrSymbol isSymbol
+											ifTrue: [anArrayOrSymbol]
+											ifFalse: [self perform: anArrayOrSymbol first
+														withArguments: anArrayOrSymbol allButFirst])
 ]
 
 { #category : #'C translation' }
@@ -199,7 +204,10 @@ VMPluginCodeGenerator >> generateInterpreterProxyFunctionDeference: aNode on: aS
 		self withOptionalVerbiageFor: s
 			on: aStream
 			do: [aStream crtab: anInteger; nextPutAll: cs; nextPutAll: ' = interpreterProxy->'; nextPutAll: cs; nextPut: $;]
-			ifOptionalDo: [aStream crtab: anInteger; nextPutAll: cs; nextPutAll: ' = 0;']].
+			ifOptionalDo: [aStream
+							cr; nextPutAll: '# if !defined('; nextPutAll: cs; nextPut: $);
+							crtab: anInteger; nextPutAll: cs; nextPutAll: ' = 0;';
+							cr; nextPutAll: '# endif']].
 	aStream cr; nextPutAll: '#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */'.
 ]
 
