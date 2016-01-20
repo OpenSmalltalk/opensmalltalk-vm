@@ -189,7 +189,7 @@ TMethod >> argAssignmentsFor: meth send: aSendNode in: aCodeGen [
 	stmtList := OrderedCollection new: argList size.
 	substitutionDict := Dictionary new: argList size.
 	meth args with: argList do:
-		[ :argName :exprNode |
+		[:argName :exprNode |
 		(self isNode: exprNode substitutableFor: argName inMethod: meth in: aCodeGen)
 			ifTrue:
 				[substitutionDict
@@ -199,7 +199,8 @@ TMethod >> argAssignmentsFor: meth send: aSendNode in: aCodeGen [
 							typeCompatibleWith: argName
 							inliningInto: meth
 							in: self).
-				 locals remove: argName]
+				 locals remove: argName.
+				declarations removeKey: argName ifAbsent: nil]
 			ifFalse:
 				[stmtList addLast:
 					(TAssignmentNode new
@@ -1103,7 +1104,7 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 		 and: [node args first value = 0
 		 and: [(type := self typeFor: var in: aCodeGen) notNil
 		 and: [type first == $u]]]]]]]) ifTrue:
-			[declarations at: var put: (aCodeGen signedTypeForIntegralType: type), ' ', var.
+			[self declarationAt: var put: (aCodeGen signedTypeForIntegralType: type), ' ', var.
 			 effectiveNodes at: var put: { declarations at: var. node }].
 		"if an assignment to an untyped local of a known type, set the local's type to that type.
 		 Only observe known sends (methods in the current set) and typed local variables."
@@ -1393,7 +1394,7 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 				[(self typeFor: actual in: aCodeGen) ifNotNil:
 					[:type|
 					type ~= #sqInt ifTrue:
-						[meth declarationAt: formal put: type, ' ', formal]]]].
+						[meth declarationAt: formal put: (type last = $* ifTrue: [type, formal] ifFalse: [type, ' ', formal])]]]].
 
 	meth renameVarsForInliningInto: self except: #() in: aCodeGen.
 	meth renameLabelsForInliningInto: self.
@@ -1789,8 +1790,8 @@ TMethod >> newCascadeTempFor: aTParseNode [
 	varName := self extraVariableName: 'cascade'.
 	varNode := TVariableNode new setName: varName.
 	aTParseNode isLeaf ifFalse:
-		[declarations
-			at: varName
+		[self
+			declarationAt: varName
 			put: [:tm :cg| | type |
 				type := tm determineTypeFor: aTParseNode in: cg.
 				(VMStructType structTargetKindForType: type) == #struct ifTrue:
@@ -2244,18 +2245,16 @@ TMethod >> renameLabelsForInliningInto: destMethod [
 TMethod >> renameLabelsUsing: aDictionary [
 	"Rename all labels according to the old->new mappings of the given dictionary."
 
-	labels := labels collect: [ :label |
-		(aDictionary includesKey: label) ifTrue: [ aDictionary at: label ] ifFalse: [ label ].
-	].
+	aDictionary isEmpty ifTrue:
+		[^self].
+	labels := labels collect: [ :label | aDictionary at: label ifAbsent: [label]].
 
-	parseTree nodesDo: [ :node |
-		(node isGoTo and: [aDictionary includesKey: node label]) ifTrue: [
-			node setLabel: (aDictionary at: node label).
-		].
-		(node isLabel and: [aDictionary includesKey: node label]) ifTrue: [
-			node setLabel: (aDictionary at: node label).
-		].
-	].
+	parseTree nodesDo:
+		[ :node |
+		(node isGoTo and: [aDictionary includesKey: node label]) ifTrue:
+			[node setLabel: (aDictionary at: node label)].
+		(node isLabel and: [aDictionary includesKey: node label]) ifTrue:
+			[node setLabel: (aDictionary at: node label)]]
 ]
 
 { #category : #'inlining support' }
@@ -2263,6 +2262,8 @@ TMethod >> renameVariablesUsing: aDictionary [
 	"Rename all variables according to old->new mappings of the given dictionary."
 
 	| newDecls newProperties |
+	aDictionary isEmpty ifTrue: [^self].
+
 	"map args and locals"
 	args := args collect: [ :arg | aDictionary at: arg ifAbsent: [ arg ]].
 	locals := locals collect: [ :v | aDictionary at: v ifAbsent: [ v ]].
