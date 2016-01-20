@@ -1926,7 +1926,7 @@ CogARMCompiler >> dispatchConcretize [
  		[MoveRAb]			-> [^self concretizeMoveRAb].
 		[MoveMbrR]			-> [^self concretizeMoveMbrR].
 		[MoveRMbr]			-> [^self concretizeMoveRMbr].
-		[MoveRM16r]		-> [^self concretizeMoveRMbr].
+		[MoveRM16r]		-> [^self concretizeMoveRM16r].
 		[MoveM16rR]		-> [^self concretizeMoveM16rR].
 		[MoveM64rRd]		-> [^self concretizeMoveM64rRd].
 		[MoveMwrR]		-> [^self concretizeMoveMwrR].
