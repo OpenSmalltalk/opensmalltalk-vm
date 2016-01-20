@@ -194,7 +194,11 @@ VMClass class >> initializeMiscConstants [
 	 Subclass implementations need to include a super initializeMiscConstants"
 
 	| omc |
+	"VMBIGENDIAN & IMMUTABILITY are intended to be defined on the C compiler command line/in an include file, etc.
+	 Don't inline them."
 	VMBIGENDIAN class. "Mention this for the benefit of CCodeGenerator>>emitCConstantsOn:"
+	IMMUTABILITY class.
+
 	self isInterpreterClass ifTrue:
 		[STACKVM := COGVM := COGMTVM := false].
 
@@ -218,8 +222,6 @@ VMClass class >> initializeMiscConstants [
 	NewspeakVM := initializationOptions at: #NewspeakVM ifAbsentPut: [false].
 	SistaVM := initializationOptions at: #SistaVM ifAbsentPut: [false].
 	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsentPut: [false].
-	"N.B.  Not yet implemented."
-	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsentPut: [false].
 
 	"These for scripts etc... Usually they should get set by an Interpreter class's initializeMiscConstantsWith:"
 	(initializationOptions includesKey: #STACKVM) ifTrue:
