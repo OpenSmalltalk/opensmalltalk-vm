@@ -577,19 +577,6 @@ VMMaker class >> generateSqueakSpurStackVM [
 ]
 
 { #category : #configurations }
-VMMaker class >> generateSqueakSpurStackVMWithImmutability [
-	"No primitives since we can use those from the Cog VM"
-	^VMMaker
-		generate: StackInterpreter
-		with: #(ObjectMemory Spur32BitMemoryManager
-				FailImbalancedPrimitives false
-				IMMUTABILITY true)
-		to: (FileDirectory default directoryNamed: self sourceTree, '/spurstacksrc') fullName
-		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
-		including: #()
-]
-
-{ #category : #configurations }
 VMMaker class >> generateSqueakStackVM [
 	"No primitives since we can use those from the Cog VM"
 	^VMMaker
@@ -836,7 +823,10 @@ VMMaker >> buildCodeGeneratorForCogit: cogitClass includeAPIMethods: getAPIMetho
 								includeAPIMethods: false
 								initializeClasses: false)].
 
-	cg removeConstant: #VMBIGENDIAN. "this should be defined in platforms/??/vm/sqConfig.h"
+	cg
+		removeConstant: #VMBIGENDIAN; "this should be defined in platforms/??/vm/sqConfig.h"
+		const: #IMMUTABILITY "this can be defined on the C compiler command line."
+			declareC: ('#if !defined(IMMUTABILITY)\/* Allow IMMUTABILITY to be overridden on the compiler command line */\# define IMMUTABILITY ', (cg cLiteralFor: false),'\#endif') withCRs.
 
 	^cg
 ]
@@ -897,7 +887,9 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 									includeAPIMethods: false
 									initializeClasses: false)]].
 
-	cg removeConstant: #VMBIGENDIAN. "this should be defined in platforms/??/vm/sqConfig.h"
+	cg removeConstant: #VMBIGENDIAN; "this should be defined in platforms/??/vm/sqConfig.h"
+		const: #IMMUTABILITY "this can be defined on the C compiler command line."
+			declareC: ('#if !defined(IMMUTABILITY)\/* Allow IMMUTABILITY to be overridden on the compiler command line */\# define IMMUTABILITY ', (cg cLiteralFor: false),'\#endif') withCRs.
 
 	^cg
 ]
