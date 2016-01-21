@@ -218,16 +218,11 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		as: #'StackPage *'
 		in: aCCodeGenerator.
 	aCCodeGenerator removeVariable: 'stackPages'.  "this is an implicit receiver in the translated code."
-	NewspeakVM
-		ifTrue:
-			[aCCodeGenerator
-				const: #EnforceAccessControl
-				declareC: ('#if !defined(EnforceAccessControl) /* Allow EnforceAccessControl to be overridden on the compiler command line */\# define EnforceAccessControl ', (aCCodeGenerator cLiteralFor: EnforceAccessControl),'\#endif') withCRs]
-		ifFalse:
-			[aCCodeGenerator
-				removeVariable: 'localAbsentReceiver';
-				removeVariable: 'localAbsentReceiverOrZero';
-				removeVariable: 'nsMethodCache'].
+	NewspeakVM ifFalse:
+		[aCCodeGenerator
+			removeVariable: 'localAbsentReceiver';
+			removeVariable: 'localAbsentReceiverOrZero';
+			removeVariable: 'nsMethodCache'].
 	"This defines bytecodeSetSelector as 0 if MULTIPLEBYTECODESETS
 	 is not defined, for the benefit of the interpreter on slow machines."
 	aCCodeGenerator addConstantForBinding: (self bindingOf: #MULTIPLEBYTECODESETS).
@@ -954,8 +949,7 @@ StackInterpreter class >> initializeMiscConstants [
 
 	MaxJumpBuf := 32. "max. callback depth"
 	FailImbalancedPrimitives := initializationOptions at: #FailImbalancedPrimitives ifAbsentPut: [true].
-
-	EnforceAccessControl := initializationOptions at: #EnforceAccessControl ifAbsentPut: [false]
+	EnforceAccessControl := initializationOptions at: #EnforceAccessControl ifAbsent: [true]
 ]
 
 { #category : #initialization }
@@ -4253,9 +4247,8 @@ StackInterpreter >> commonAtPut: stringy [
 	 or: [argumentCount > 2 "e.g. object:basicAt:put:"
 		 and: [objectMemory isForwarded: rcvr]]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadArgument].
-	self cppIf: IMMUTABILITY ifTrue:
-		[(objectMemory isImmutable: rcvr) ifTrue:
-			[^self primitiveFailFor: PrimErrNoModification]].
+	(objectMemory isObjImmutable: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrNoModification].
 	index := objectMemory integerValueOf: index.
 	stringy
 		ifTrue: [self stObject: rcvr at: index put: (self asciiOfCharacter: value)]
@@ -5693,6 +5686,7 @@ StackInterpreter >> externalInstVar: index ofContext: maybeMarriedContext put: a
 	self assert: (objectMemory isContext: maybeMarriedContext).
 	self externalWriteBackHeadFramePointers.
 	"Assign the field of a married context."
+	self deny: (objectMemory isObjImmutable: maybeMarriedContext).
 	(self isStillMarriedContext: maybeMarriedContext) ifFalse:
 		[objectMemory storePointer: index ofObject: maybeMarriedContext withValue: anOop.
 		 index = StackPointerIndex ifTrue:
@@ -7667,6 +7661,7 @@ StackInterpreter >> instVar: index ofContext: aMarriedContext put: anOop [
 	 efficiently assign the stack pointer because it involves moving frames around."
 	<inline: true>
 	self assert: (self isMarriedOrWidowedContext: aMarriedContext).
+	self deny: (objectMemory isObjImmutable: aMarriedContext).
 	self writeBackHeadFramePointers.
 	(self isStillMarriedContext: aMarriedContext) ifFalse:
 		[objectMemory storePointer: index ofObject: aMarriedContext withValue: anOop.

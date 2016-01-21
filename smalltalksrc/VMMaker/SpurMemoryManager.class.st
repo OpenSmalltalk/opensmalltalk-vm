@@ -6578,6 +6578,14 @@ SpurMemoryManager >> isNormalObject: objOop [
 	^(self classIndexOf: objOop) > self lastClassIndexPun
 ]
 
+{ #category : #'header access' }
+SpurMemoryManager >> isObjImmutable: anOop [
+	<inline: true>
+	^self cppIf: IMMUTABILITY
+		ifTrue: [self isImmutable: anOop]
+		ifFalse: [false]
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isOldObject: objOop [
 	<api>
@@ -6621,10 +6629,8 @@ SpurMemoryManager >> isOopValidBecome: oop [
 	Answers an error code in the other case"
 	(self isImmediate: oop) ifTrue: [^PrimErrInappropriate].
 	(self isPinned: oop) ifTrue: [^PrimErrObjectIsPinned].
-	self 
-		cppIf: IMMUTABILITY
-		ifTrue: [ (self isImmutable: oop) ifTrue: [^PrimErrNoModification] ].
-	^ 0
+	(self isObjImmutable: oop) ifTrue: [^PrimErrNoModification].
+	^0
 ]
 
 { #category : #'header access' }
@@ -11046,14 +11052,14 @@ SpurMemoryManager >> storePointer: fieldIndex ofObject: objOop withValue: valueP
 { #category : #'object access' }
 SpurMemoryManager >> storePointerImmutabilityCheck: fieldIndex ofObject: objOop withValue: valuePointer [
 	"Note must check here for stores of young objects into old ones."
-	<inline: true> "normal send in cannotAssign"
+	<inline: true> "Must be inlined for the normal send in cannotAssign:to:withIndex:"
 
 	self cppIf: IMMUTABILITY ifTrue: 
-		[ self assert: (self isImmediate: objOop) not.
-		(self isImmutable: objOop) ifTrue: 
-			[ ^ coInterpreter cannotAssign: valuePointer to: objOop withIndex: fieldIndex ] ].
+		[self deny: (self isImmediate: objOop).
+		 (self isImmutable: objOop) ifTrue: 
+			[^coInterpreter cannotAssign: valuePointer to: objOop withIndex: fieldIndex]].
 	
-	^ self storePointer: fieldIndex ofObject: objOop withValue: valuePointer
+	^self storePointer: fieldIndex ofObject: objOop withValue: valuePointer
 ]
 
 { #category : #'heap management' }

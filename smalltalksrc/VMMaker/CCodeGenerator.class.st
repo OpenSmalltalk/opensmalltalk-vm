@@ -1116,7 +1116,7 @@ CCodeGenerator >> emitCConstants: constList on: aStream [
 	constList isEmpty ifTrue: [^self].
 	aStream cr; nextPutAll: '/*** Constants ***/'; cr.
 	(self sortStrings: constList) do:
-		[:varName| | node default value |
+		[:varName| | node default value conditional |
 		node := constants at: varName.
 		node name isEmpty ifFalse:
 			["If the definition includes a C comment, take it as is, otherwise convert the value from Smalltalk to C.
@@ -1127,7 +1127,10 @@ CCodeGenerator >> emitCConstants: constList on: aStream [
 			default = #undefined
 				ifTrue: [aStream nextPutAll: '#undef '; nextPutAll: node name; cr]
 				ifFalse:
-					[value := vmClass
+					[conditional := VMBasicConstants namesDefinedAtCompileTime includes: node name.
+					 conditional ifTrue:
+						[aStream nextPutAll: '#if !defined('; nextPutAll: node name; nextPutAll: ') /* Allow this to be overridden on the compiler command line */'; cr].
+					 value := vmClass
 								ifNotNil:
 									[(vmClass specialValueForConstant: node name default: default)
 										ifNotNil: [:specialDef| specialDef]
@@ -1135,7 +1138,9 @@ CCodeGenerator >> emitCConstants: constList on: aStream [
 								ifNil: [default].
 					value first ~= $# ifTrue:
 						[aStream nextPutAll: '#define '; nextPutAll: node name; space].
-					aStream nextPutAll: value; cr]]].
+					aStream nextPutAll: value; cr.
+					conditional ifTrue:
+						[aStream nextPutAll: '#endif'; cr]]]].
 	aStream cr
 ]
 
@@ -3475,7 +3480,10 @@ CCodeGenerator >> isConstantNode: aNode valueInto: aBlock [
 	"Answer if aNode evaluates to a constant, and if so, evaluate aBlock with the value of that constant."
 
 	aNode isConstant ifTrue:
-		[aBlock value: aNode value.
+		[(aNode isDefine
+		 and: [VMBasicConstants namesDefinedAtCompileTime includes: aNode name]) ifTrue:
+			[^false].
+		 aBlock value: aNode value.
 		 ^true].
 	(aNode isVariable
 	 and: [aNode name = #nil]) ifTrue:
@@ -4993,8 +5001,7 @@ CCodeGenerator >> vmClass: aClass [
 	 It may be an interpreter or a cogit"
 	vmClass := aClass.
 	vmClass ifNotNil:
-		[generateDeadCode := vmClass shouldGenerateDeadCode.
-		 vmClass copyOptionsBackTo: optionsDictionary]
+		[generateDeadCode := vmClass shouldGenerateDeadCode]
 ]
 
 { #category : #public }

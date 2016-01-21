@@ -1734,8 +1734,8 @@ InterpreterPrimitives >> primitiveFloatAtPut [
 	index := self stackValue: 1.
 	(objectMemory isImmediateFloat: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrBadReceiver].
-	self cppIf: IMMUTABILITY
-		ifTrue: [ (objectMemory isImmutable: rcvr) ifTrue: [^self primitiveFailFor: PrimErrNoModification] ].
+	(objectMemory isObjImmutable: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrNoModification].
 	index = ConstOne ifTrue:
 		[objectMemory storeLong32: (VMBIGENDIAN ifTrue: [0] ifFalse: [1])
 			ofObject: rcvr
@@ -2324,8 +2324,8 @@ InterpreterPrimitives >> primitiveIntegerAtPut [
 	rcvr := self stackValue: 2.
 	(objectMemory isWords: rcvr) ifFalse:
 		[^self primitiveFailFor: PrimErrInappropriate].
-	self cppIf: IMMUTABILITY "isWords: ensure non immediate"
-		ifTrue: [ (objectMemory isImmutable: rcvr) ifTrue: [ ^self primitiveFailFor: PrimErrNoModification ] ].
+	(objectMemory isObjImmutable: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrNoModification].
 	sz := objectMemory lengthOf: rcvr.  "number of fields"
 	(index >= 1 and: [index <= sz]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
@@ -2992,8 +2992,8 @@ InterpreterPrimitives >> primitiveObjectAtPut [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	thisReceiver := self stackValue: 2.
-	self cppIf: IMMUTABILITY
-		ifTrue: [ (objectMemory isImmutable: thisReceiver) ifTrue: [ ^self primitiveFailFor: PrimErrNoModification ] ].
+	(objectMemory isObjImmutable: thisReceiver) ifTrue:
+		[^self primitiveFailFor: PrimErrNoModification].
 	(index > 0 and: [index <= ((objectMemory literalCountOf: thisReceiver) + LiteralStart)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	objectMemory storePointer: index - 1 ofObject: thisReceiver withValue: newValue.
@@ -3485,17 +3485,17 @@ InterpreterPrimitives >> primitiveSetImmutability [
 	<option: #IMMUTABILITY>
 	| rcvr boolean wasImmutable |
 	rcvr := self stackValue: 1.
-	(objectMemory isImmediate: rcvr) ifTrue: [ ^ self primitiveFailFor: PrimErrInappropriate ].
+	(objectMemory isImmediate: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrBadReceiver].
 	boolean := self booleanValueOf: self stackTop.
 	self successful ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	boolean ifTrue: 
-		[ (self canBeImmutable: rcvr) ifFalse: [ ^ self primitiveFailFor: PrimErrInappropriate ] ]. 
-	wasImmutable := (objectMemory isOopImmutable: rcvr)
-		ifTrue: [ TrueObject ]
-		ifFalse: [ FalseObject ].
+		[(self canBeImmutable: rcvr) ifFalse:
+			[^self primitiveFailFor: PrimErrInappropriate]]. 
+	wasImmutable := objectMemory booleanObjectOf: (objectMemory isOopImmutable: rcvr).
 	objectMemory setIsImmutableOf: rcvr to: boolean.
-	self pop: argumentCount + 1 thenPush: (objectMemory splObj: wasImmutable)
+	self pop: argumentCount + 1 thenPush: wasImmutable
 ]
 
 { #category : #'I/O primitives' }
@@ -3602,8 +3602,8 @@ InterpreterPrimitives >> primitiveShortAtPut [
 	rcvr := self stackValue: 2.
 	(objectMemory isWordsOrBytes: rcvr) ifFalse:
 		[^self primitiveFailFor: PrimErrInappropriate].
-	self cppIf: IMMUTABILITY "isWordsOrBytes ensure non immediate"
-		ifTrue: [ (objectMemory isImmutable: rcvr) ifTrue: [ ^self primitiveFailFor: PrimErrNoModification ] ].
+	(objectMemory isObjImmutable: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrNoModification].
 	index := objectMemory integerValueOf: index.
 	(index >= 1 and: [index <= (objectMemory num16BitUnitsOf: rcvr)]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
@@ -4282,9 +4282,8 @@ InterpreterPrimitives >> primitiveStringReplace [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	(objectMemory isImmediate: repl) ifTrue: "can happen in LgInt copy"
 		[^self primitiveFailFor: PrimErrBadArgument].
-	self cppIf: IMMUTABILITY ifTrue:
-			[(objectMemory isImmutable: array) ifTrue:
-				[^self primitiveFailFor: PrimErrNoModification]].
+	(objectMemory isObjImmutable: array) ifTrue:
+		[^self primitiveFailFor: PrimErrNoModification].
 
 	hdr := objectMemory baseHeader: array.
 	arrayFmt := objectMemory formatOfHeader: hdr.

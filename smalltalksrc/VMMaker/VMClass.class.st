@@ -46,21 +46,6 @@ VMClass class >> cogitClass [
 									ifAbsent: [#SimpleStackBasedCogit])]
 ]
 
-{ #category : #initialization }
-VMClass class >> copyOptionsBackTo: optionsDictionary [
-	"Ugh.  Copy back those options that the CCodeGenerator will do
-	 dead-code elimination for that are not yet set in optionsDictionary.
-	 This lets the CCodeGenerator see defaults for the options below."
-
-	optionsDictionary ifNil: [^self].
-	initializationOptions ifNil: [^self].
-	#(MULTIPLEBYTECODESETS IMMUTABILITY) do:
-		[:option|
-		((initializationOptions includesKey: option)
-		 and: [(optionsDictionary includesKey: option) not]) ifTrue:
-			[optionsDictionary at: option put: (initializationOptions at: option)]]
-]
-
 { #category : #'accessing class hierarchy' }
 VMClass class >> coreInterpreterClass [
 	"While the interpreterClass/vmClass for translation may be
@@ -189,18 +174,12 @@ VMClass class >> initialize [
 
 { #category : #initialization }
 VMClass class >> initializeMiscConstants [
-	"Falsify the `what type of VM is this?' flags that are defined in the various interp.h files,
-	 or in the case of VMBIGENDIAN the various sqConfig.h files.
+	"Falsify the `what type of VM is this?' flags that are defined in the various interp.h files.
 	 Subclass implementations need to include a super initializeMiscConstants"
 
 	| omc |
-	"VMBIGENDIAN & IMMUTABILITY are intended to be defined on the C compiler command line/in an include file, etc.
-	 Don't inline them."
 	VMBIGENDIAN class. "Mention this for the benefit of CCodeGenerator>>emitCConstantsOn:"
-	IMMUTABILITY class.
-
-	self isInterpreterClass ifTrue:
-		[STACKVM := COGVM := COGMTVM := false].
+	SPURVM := STACKVM := COGVM := COGMTVM := false.
 
 	initializationOptions ifNil: [self initializationOptions: Dictionary new].
 	omc := initializationOptions at: #ObjectMemory ifAbsent: nil.
@@ -221,15 +200,16 @@ VMClass class >> initializeMiscConstants [
 	PharoVM := initializationOptions at: #PharoVM ifAbsentPut: [false].
 	NewspeakVM := initializationOptions at: #NewspeakVM ifAbsentPut: [false].
 	SistaVM := initializationOptions at: #SistaVM ifAbsentPut: [false].
-	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsentPut: [false].
+	"But not these; they're compile-time"
+	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsent: [false].
+	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsent: [false].
 
-	"These for scripts etc... Usually they should get set by an Interpreter class's initializeMiscConstantsWith:"
-	(initializationOptions includesKey: #STACKVM) ifTrue:
-		[STACKVM := initializationOptions at: #STACKVM].
-	(initializationOptions includesKey: #COGVM) ifTrue:
-		[COGVM := initializationOptions at: #COGVM].
-	(initializationOptions includesKey: #COGMTVM) ifTrue:
-		[COGMTVM := initializationOptions at: #COGMTVM]
+	"These must be set only if specified, not defaulted, because they are set on the command line or in include files."
+	initializationOptions
+		at: #VMBIGENDIAN	ifPresent: [:value| VMBIGENDIAN := value];
+		at: #STACKVM		ifPresent: [:value| STACKVM := value];
+		at: #COGVM		ifPresent: [:value| COGVM := initializationOptions at: #COGVM];
+		at: #COGMTVM		ifPresent: [:value| COGMTVM := initializationOptions at: #COGMTVM]
 ]
 
 { #category : #initialization }

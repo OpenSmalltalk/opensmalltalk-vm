@@ -103,7 +103,6 @@ Class {
 		'ceCall2ArgsPIC',
 		'debugStackPointers',
 		'debugFixupBreaks',
-		'debugBytecodePointers',
 		'realCECallCogCodePopReceiverArg0Regs',
 		'realCECallCogCodePopReceiverArg1Arg0Regs',
 		'deadCode'
@@ -303,10 +302,10 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(2 230 230 genLongPushTemporaryVariableBytecode)
 		(2 231 231 genPushNewArrayBytecode)
 		(2 232 232 genExtStoreReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
-		(2 233 233 genExtStoreLiteralVariableBytecode)
+		(2 233 233 genExtStoreLiteralVariableBytecode isMappedIfImmutability)
 		(2 234 234 genLongStoreTemporaryVariableBytecode)
 		(2 235 235 genExtStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
-		(2 236 236 genExtStoreAndPopLiteralVariableBytecode)
+		(2 236 236 genExtStoreAndPopLiteralVariableBytecode isMappedIfImmutability)
 		(2 237 237 genLongStoreAndPopTemporaryVariableBytecode)
 
 		(2 238 238 genExtSendBytecode isMapped)
@@ -443,10 +442,10 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 
 		"stores"
 		(2 240 240 genExtStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
-		(2 241 241 genExtStoreAndPopLiteralVariableBytecode)
+		(2 241 241 genExtStoreAndPopLiteralVariableBytecode isMappedIfImmutability)
 		(2 242 242 genLongStoreAndPopTemporaryVariableBytecode)
 		(2 243 243 genExtStoreReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
-		(2 244 244 genExtStoreLiteralVariableBytecode)
+		(2 244 244 genExtStoreLiteralVariableBytecode isMappedIfImmutability)
 		(2 245 245 genLongStoreTemporaryVariableBytecode)
 
 		(2 246 247	unknownBytecode)
@@ -3689,7 +3688,6 @@ StackToRegisterMappingCogit >> setInterpreter: aCoInterpreter [
 	optStatus := CogSSOptStatus new.
 
 	debugFixupBreaks := self class initializationOptions at: #debugFixupBreaks ifAbsent: [Set new].
-	debugBytecodePointers := self class initializationOptions at: #debugBytecodePointers ifAbsent: [Set new].
 
 	numPushNilsFunction := self class numPushNilsFunction.
 	pushNilSizeFunction := self class pushNilSizeFunction

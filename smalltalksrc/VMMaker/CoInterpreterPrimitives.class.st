@@ -401,8 +401,8 @@ CoInterpreterPrimitives >> primitiveObjectAtPut [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	thisReceiver := self stackValue: 2.
-	self cppIf: IMMUTABILITY
-		ifTrue: [ (objectMemory isImmutable: thisReceiver) ifTrue: [ ^self primitiveFailFor: PrimErrNoModification ] ].
+	(objectMemory isObjImmutable: thisReceiver) ifTrue:
+		[^self primitiveFailFor: PrimErrNoModification].
 	rawHeader := self rawHeaderOf: thisReceiver.
 	realHeader := (self isCogMethodReference: rawHeader)
 					ifTrue: [(self cCoerceSimple: rawHeader to: #'CogMethod *') methodHeader]

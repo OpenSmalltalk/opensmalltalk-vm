@@ -249,6 +249,7 @@ Class {
 		'cPICEndOfCodeOffset',
 		'cPICEndOfCodeLabel',
 		'maxCPICCases',
+		'debugBytecodePointers',
 		'debugOpcodeIndices',
 		'disassemblingMethod'
 	],
@@ -4192,8 +4193,10 @@ Cogit >> compileAbstractInstructionsFrom: start through: end [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #fixup type: #'BytecodeFixup *'>
 	bytecodePC := start.
-	nExts := 0.
-	[byte0 := (objectMemory fetchByte: bytecodePC ofObject: methodObj)  + bytecodeSetOffset.
+	nExts := result := 0.
+	[self cCode: '' inSmalltalk:
+		[(debugBytecodePointers includes: bytecodePC) ifTrue: [self halt]].
+	 byte0 := (objectMemory fetchByte: bytecodePC ofObject: methodObj)  + bytecodeSetOffset.
 	 descriptor := self generatorAt: byte0.
 	 self loadSubsequentBytesForDescriptor: descriptor at: bytecodePC.
 	 nextOpcodeIndex := opcodeIndex.
@@ -9955,6 +9958,7 @@ Cogit >> setInterpreter: aCoInterpreter [
 
 	compilationTrace ifNil: [compilationTrace := self class initializationOptions at: #compilationTrace ifAbsent: [0]].
 	debugOpcodeIndices := self class initializationOptions at: #debugOpcodeIndices ifAbsent: [Set new].
+	debugBytecodePointers := self class initializationOptions at: #debugBytecodePointers ifAbsent: [Set new]
 ]
 
 { #category : #'jit - api' }
