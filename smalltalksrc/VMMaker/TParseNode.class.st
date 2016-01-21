@@ -202,6 +202,12 @@ TParseNode >> isConstant [
 ]
 
 { #category : #testing }
+TParseNode >> isDefine [
+
+	^false
+]
+
+{ #category : #testing }
 TParseNode >> isGoTo [
 
 	^false

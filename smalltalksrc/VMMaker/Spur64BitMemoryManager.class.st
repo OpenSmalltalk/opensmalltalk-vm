@@ -217,8 +217,8 @@ Spur64BitMemoryManager >> changeClassOf: rcvr to: argClass [
 	 that an instance of the argument should have."
 	<inline: false>
 	| classFormat fixedFields instFormat normalizedInstFormat newFormat classIndex |
-	self cppIf: IMMUTABILITY ifTrue:
-			[(self isImmutable: rcvr) ifTrue: [ ^PrimErrNoModification]].
+	(self isObjImmutable: rcvr) ifTrue:
+		[^PrimErrNoModification].
 	classFormat := self formatOfClass: argClass.
 	fixedFields := self fixedFieldsOfClassFormat: classFormat.
 	classFormat := self instSpecOfClassFormat: classFormat.

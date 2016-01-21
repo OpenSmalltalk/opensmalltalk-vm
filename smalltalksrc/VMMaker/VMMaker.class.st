@@ -414,8 +414,7 @@ VMMaker class >> generateNewspeakSpurCog64VM [
 		and: StackToRegisterMappingCogit
 		with: #(	ObjectMemory Spur64BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
-				NewspeakVM true
-				EnforceAccessControl true)
+				NewspeakVM true)
 		to: (FileDirectory default directoryNamed: self sourceTree, '/nsspur64src') fullName
 		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
 		including:#()
@@ -432,8 +431,7 @@ VMMaker class >> generateNewspeakSpurCogVM [
 		and: StackToRegisterMappingCogit
 		with: #(	ObjectMemory Spur32BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
-				NewspeakVM true
-				EnforceAccessControl true)
+				NewspeakVM true)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/nsspursrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#(	AsynchFilePlugin BMPReadWriterPlugin BalloonEnginePlugin BitBltSimulation
@@ -454,8 +452,7 @@ VMMaker class >> generateNewspeakSpurStack64VM [
 		with: #( ObjectMemory Spur64BitMemoryManager
 				MULTIPLEBYTECODESETS true
 				NewspeakVM true
-				FailImbalancedPrimitives false
-				EnforceAccessControl true)
+				FailImbalancedPrimitives false)
 		to: (FileDirectory default directoryNamed: self sourceTree, '/nsspurstack64src') fullName
 		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
 		including: #()
@@ -469,8 +466,7 @@ VMMaker class >> generateNewspeakSpurStackVM [
 		with: #(	ObjectMemory Spur32BitMemoryManager
 				MULTIPLEBYTECODESETS true
 				NewspeakVM true
-				FailImbalancedPrimitives false
-				EnforceAccessControl true)
+				FailImbalancedPrimitives false)
 		to: (FileDirectory default directoryNamed: self sourceTree, '/nsspurstacksrc') fullName
 		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
 		including: #()
@@ -823,11 +819,6 @@ VMMaker >> buildCodeGeneratorForCogit: cogitClass includeAPIMethods: getAPIMetho
 								includeAPIMethods: false
 								initializeClasses: false)].
 
-	cg
-		removeConstant: #VMBIGENDIAN; "this should be defined in platforms/??/vm/sqConfig.h"
-		const: #IMMUTABILITY "this can be defined on the C compiler command line."
-			declareC: ('#if !defined(IMMUTABILITY)\/* Allow IMMUTABILITY to be overridden on the compiler command line */\# define IMMUTABILITY ', (cg cLiteralFor: false),'\#endif') withCRs.
-
 	^cg
 ]
 
@@ -886,10 +877,6 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 									buildCodeGeneratorForCogit: cogitClass
 									includeAPIMethods: false
 									initializeClasses: false)]].
-
-	cg removeConstant: #VMBIGENDIAN; "this should be defined in platforms/??/vm/sqConfig.h"
-		const: #IMMUTABILITY "this can be defined on the C compiler command line."
-			declareC: ('#if !defined(IMMUTABILITY)\/* Allow IMMUTABILITY to be overridden on the compiler command line */\# define IMMUTABILITY ', (cg cLiteralFor: false),'\#endif') withCRs.
 
 	^cg
 ]

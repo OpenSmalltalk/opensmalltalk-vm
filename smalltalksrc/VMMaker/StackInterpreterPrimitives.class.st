@@ -843,10 +843,10 @@ StackInterpreterPrimitives >> primitiveInstVarAtPut [
 	 or: [argumentCount > 2 "e.g. object:instVarAt:put:"
 		and: [objectMemory isOopForwarded: rcvr]]) ifTrue:
 		[^self primitiveFailFor: PrimErrBadArgument].
-	(objectMemory isImmediate: rcvr) ifTrue: [ ^ self primitiveFailFor: PrimErrInappropriate].
-	self 
-		cppIf: IMMUTABILITY 
-		ifTrue: [ (objectMemory isImmutable: rcvr) ifTrue: [ ^ self primitiveFailFor: PrimErrNoModification] ].
+	(objectMemory isImmediate: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrBadReceiver].
+	(objectMemory isObjImmutable: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrNoModification].
 	index := objectMemory integerValueOf: index.
 	hdr := objectMemory baseHeader: rcvr.
 	fmt := objectMemory formatOfHeader: hdr.
