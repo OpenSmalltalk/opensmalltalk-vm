@@ -1218,8 +1218,7 @@ StackToRegisterMappingCogit >> doubleExtendedDoAnythingBytecode [
 	opType = 1 ifTrue:
 		[^self genSendSuper: byte2 numArgs: (byte1 bitAnd: 31)].
 	"We need a map entry for this bytecode for correct parsing.
-	 The sends will get an IsSend entry anyway.  The other cases need a
-	 fake one.  We could of course special case the scanning but that's silly."
+	 The sends will get an IsSend entry anyway.  The other cases need a fake one."
 	opType caseOf: {
 			[2]	->	[(coInterpreter isReadMediatedContextInstVarIndex: byte2)
 						ifTrue: [self genPushMaybeContextReceiverVariable: byte2]
@@ -1231,14 +1230,13 @@ StackToRegisterMappingCogit >> doubleExtendedDoAnythingBytecode [
 					 ^0].
 			[4]	->	[self genPushLiteralVariable: byte2.].
 			[7]	->	[self genStorePop: false LiteralVariable: byte2.
-					self cppIf: IMMUTABILITY ifTrue: [ "instruction is mapped" ^0 ] ] }
+					self cppIf: IMMUTABILITY ifTrue: [ "genStorePop:LiteralVariable: annotates; don't annotate twice" ^0 ] ] }
 		otherwise: "5 & 6"
 			[(coInterpreter isWriteMediatedContextInstVarIndex: byte2)
 				ifTrue: [self genStorePop: opType = 6 MaybeContextReceiverVariable: byte2]
 				ifFalse: [self genStorePop: opType = 6 ReceiverVariable: byte2].
-			self cppIf: IMMUTABILITY ifTrue: [ "instruction is mapped" ^0 ]].
-	"We need a map entry for this bytecode for correct parsing (if the method builds a frame).
-	 We could of course special case the scanning but that's silly (or is it?)."
+			self cppIf: IMMUTABILITY ifTrue: [ "genStorePop:LiteralVariable: annotates; don't annotate twice" ^0 ]].
+	"We need a map entry for this bytecode for correct parsing (if the method builds a frame)."
 	self assert: needsFrame.
 	"genPushMaybeContextInstVar, pushListVar, store & storePop all generate code"
 	self assert: self prevInstIsPCAnnotated not.
@@ -2650,13 +2648,12 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 			  to avoid a second indirect read / annotation in case of SSConstant
 			  or SSBaseRegister"
 			  self ssFlushTo: simStackPtr.
-			  immutabilityFailure := objectRepresentation 
-				genImmutableCheck: ReceiverResultReg 
-				slotIndex: ValueIndex 
-				sourceReg: ClassReg 
-				scratchReg: TempReg 
-				popBoolean: popBoolean
-				needRestoreRcvr: false ]
+			  immutabilityFailure := objectRepresentation
+										genImmutableCheck: ReceiverResultReg
+										slotIndex: ValueIndex
+										sourceReg: ClassReg
+										scratchReg: TempReg
+										needRestoreRcvr: false ]
 		ifFalse: 
 			[ topReg := self allocateRegForStackEntryAt: 0 notConflictingWith: (self registerMaskFor: ReceiverResultReg).
 			  self ssStorePop: popBoolean toReg: topReg ].
@@ -2718,13 +2715,12 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextReceiverVaria
 	self 
 		cppIf: IMMUTABILITY
 		ifTrue: 
-			[ immutabilityFailure := objectRepresentation 
-				genImmutableCheck: ReceiverResultReg 
-				slotIndex: ValueIndex 
-				sourceReg: ClassReg 
-				scratchReg: TempReg 
-				popBoolean: popBoolean
-				needRestoreRcvr: true ].
+			[ immutabilityFailure := objectRepresentation
+										genImmutableCheck: ReceiverResultReg
+										slotIndex: ValueIndex
+										sourceReg: ClassReg
+										scratchReg: TempReg
+										needRestoreRcvr: true ].
 	objectRepresentation
 		genStoreSourceReg: ClassReg
 		slotIndex: slotIndex
@@ -2757,13 +2753,12 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 			  to avoid a second indirect read / annotation in case of SSConstant
 			  or SSBaseRegister"
 			  self ssFlushTo: simStackPtr.
-			  immutabilityFailure := objectRepresentation 
-				genImmutableCheck: ReceiverResultReg 
-				slotIndex: slotIndex 
-				sourceReg: ClassReg 
-				scratchReg: TempReg
-				popBoolean: popBoolean
-				needRestoreRcvr: true ]
+			  immutabilityFailure := objectRepresentation
+										genImmutableCheck: ReceiverResultReg
+										slotIndex: slotIndex
+										sourceReg: ClassReg
+										scratchReg: TempReg
+										needRestoreRcvr: true ]
 		ifFalse: 
 			[ topReg := self allocateRegForStackEntryAt: 0 notConflictingWith: (self registerMaskFor: ReceiverResultReg). 
 			  self ssStorePop: popBoolean toReg: topReg ].
@@ -3283,7 +3278,7 @@ StackToRegisterMappingCogit >> liveRegisters [
 StackToRegisterMappingCogit >> marshallAbsentReceiverSendArguments: numArgs [
 	self assert: needsFrame.
 	self ssAllocateCallReg: ReceiverResultReg.
-	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
+	self putSelfInReceiverResultReg.
 
 	"Spill everything on the simulated stack that needs spilling (that below arguments).
 	 Marshall arguments to stack and/or registers depending on arg count.
