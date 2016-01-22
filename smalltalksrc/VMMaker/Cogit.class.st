@@ -2738,6 +2738,9 @@ Cogit >> bcpcsAndDescriptorsFor: aMethod bsOffset: bsOffset do: quaternaryBlock 
 		[^self].
 	latestContinuation := pc := coInterpreter startPCOfMethod: aMethod.
 	quaternaryBlock value: pc value: nil value: nil value: 0. "stackCheck/entry pc"
+	primIdx > 0 ifTrue:
+		[pc := pc + (self deltaToSkipPrimAndErrorStoreIn: aMethod
+							header: (coInterpreter methodHeaderOf: aMethod))].
 	nExts := 0.
 	endpc := objectMemory numBytesOf: aMethod.
 	[pc <= endpc] whileTrue:
@@ -4482,18 +4485,14 @@ Cogit >> compileFrameBuild [
 { #category : #'compile abstract instructions' }
 Cogit >> compileMethodBody [
 	"Compile the top-level method body."
-	| deltaForPrimErrorCode |
 	<inline: true>
 	endPC < initialPC ifTrue: [^0]. "quick primitives"
-	deltaForPrimErrorCode := self methodUsesPrimitiveErrorCode
-									ifTrue: 
-										[ self cppIf: IMMUTABILITY ifTrue: 
-											[ self Nop. "to avoid conflict with interrrupt check mapping".
-											self annotateBytecode: self Label ].
-										(coInterpreter sizeOfCallPrimitiveBytecode: methodHeader)
-										  + (coInterpreter sizeOfLongStoreTempBytecode: methodHeader)]
-									ifFalse: [0].
-	^self compileAbstractInstructionsFrom: initialPC + deltaForPrimErrorCode through: endPC
+	"When compiling, skip any initial CallPrimitive and optional StorePrimErrCode bytecodes.
+	 These are dealt with in compileFrameBuild."
+	^self compileAbstractInstructionsFrom: initialPC
+										+ (self deltaToSkipPrimAndErrorStoreIn: methodObj
+												header: methodHeader)
+		through: endPC
 ]
 
 { #category : #'in-line cacheing' }
@@ -4710,6 +4709,16 @@ Cogit >> defaultCogCodeSize [
 	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
 	<api>
 	^backEnd getDefaultCogCodeSize
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> deltaToSkipPrimAndErrorStoreIn: aMethodObj header: aMethodHeader [
+	"Answer the number of bytecodes to skip to get to the first bytecode
+	 past the primitive call and any store of the error code."
+	^(self methodUsesPrimitiveErrorCode: aMethodObj header: aMethodHeader)
+		ifTrue: [(coInterpreter sizeOfCallPrimitiveBytecode: aMethodHeader)
+			  + (coInterpreter sizeOfLongStoreTempBytecode: aMethodHeader)]
+		ifFalse: [0]
 ]
 
 { #category : #disassembly }
@@ -7544,7 +7553,20 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 	  latestContinuation byte descriptor bsOffset nExts |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #homeMethod type: #'CogMethod *'>
+
 	self assert: cogMethod stackCheckOffset > 0.
+	mcpc := cogMethod asUnsignedInteger + cogMethod stackCheckOffset.
+	"The stack check maps to the start of the first bytecode,
+	 the first bytecode being effectively after frame build."
+	result := self perform: functionSymbol
+					with: nil
+					with: false
+					with: (self cCoerceSimple: mcpc to: #'char *')
+					with: startbcpc
+					with: arg.
+	result ~= 0 ifTrue:
+		[^result].
+	bcpc := startbcpc.
 	"In both CMMethod and CMBlock cases find the start of the map and
 	 skip forward to the bytecode pc map entry for the stack check."
 	cogMethod cmType = CMMethod
@@ -7560,9 +7582,14 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 			 latestContinuation := startbcpc.
 			 aMethodObj := homeMethod methodObject.
 			 endbcpc := (objectMemory numBytesOf: aMethodObj) - 1.
-			 bsOffset := self bytecodeSetOffsetForHeader: homeMethod methodHeader]
+			 bsOffset := self bytecodeSetOffsetForHeader: homeMethod methodHeader.
+			"If the method has a primitive, skip it and the error code store, if any;
+			 Logically. these come before the stack check and so must be ignored."
+			 bcpc := bcpc + (self deltaToSkipPrimAndErrorStoreIn: aMethodObj
+									header: homeMethod methodHeader)]
 		ifFalse:
 			[isInBlock := true.
+			 self assert: bcpc = cogMethod startpc.
 			 homeMethod := cogMethod cmHomeMethod.
 			 map := self findMapLocationForMcpc: cogMethod asUnsignedInteger + (self sizeof: CogBlockMethod)
 						inMethod: homeMethod.
@@ -7577,20 +7604,9 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 			 bsOffset := self bytecodeSetOffsetForHeader: homeMethod methodHeader.
 			 byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
 			 descriptor := self generatorAt: byte.
-			 endbcpc := self nextBytecodePCFor: descriptor at: bcpc exts: -1 in: aMethodObj].
-	bcpc := startbcpc.
-	mcpc := cogMethod asUnsignedInteger + cogMethod stackCheckOffset.
+			 endbcpc := self nextBytecodePCFor: descriptor at: bcpc exts: -1 in: aMethodObj.
+			 bcpc := startbcpc].
 	nExts := 0.
-	"The stack check maps to the start of the first bytecode,
-	 the first bytecode being effectively after frame build."
-	result := self perform: functionSymbol
-					with: nil
-					with: false
-					with: (self cCoerceSimple: mcpc to: #'char *')
-					with: startbcpc
-					with: arg.
-	result ~= 0 ifTrue:
-		[^result].
 	"Now skip up through the bytecode pc map entry for the stack check." 
 	[(objectMemory byteAt: map) >> AnnotationShift ~= HasBytecodePC] whileTrue:
 		[map := map - 1].
@@ -10348,8 +10364,8 @@ Cogit >> targetMethodAndSendTableFor: entryPoint annotation: annotation into: bi
 		value: sendTable
 ]
 
-{ #category : #'tests-method map' }
-Cogit >> testBcToMcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cogMethod [
+{ #category : #testing }
+Cogit >> testBcToMcPcMappingForCogMethod: cogMethod [
 	<doNotGenerate>
 	"self disassembleMethod: cogMethod"
 	"self printPCMapPairsFor: cogMethod on: Transcript"
@@ -10370,12 +10386,15 @@ Cogit >> testBcToMcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cogMet
 								inHomeMethod: cogMethod.
 		self assert: cogBlockMethod address = (blockSubMethod first - (self sizeof: CogBlockMethod))].
 	self bcpcsAndDescriptorsFor: aMethodObj bsOffset: bsOffset do:
-		[:bcpc :byte :desc :nExts| | currentSubMethod subCogMethod absMcpc mappedBcpc |
+		[:bcpc :byte :desc :nExts| | startBcpc currentSubMethod subCogMethod absMcpc mappedBcpc |
 		currentSubMethod := self innermostSubMethodFor: bcpc in: subMethods startingAt: 1.
 		subCogMethod := currentSubMethod cogMethod.
 		(subCogMethod stackCheckOffset > 0
 		 and: [desc isNil or: [desc isMapped]]) ifTrue:
-			["The first bytecode and backward branch bytecodes are mapped to their pc.
+			[startBcpc := subCogMethod = cogMethod
+							ifTrue: [coInterpreter startPCOfMethod: aMethodObj]
+							ifFalse: [currentSubMethod startpc].
+			 "The first bytecode and backward branch bytecodes are mapped to their pc.
 			  Other bytecodes map to their following pc."
 			 absMcpc := (desc notNil
 						   and: [desc isBranch
@@ -10384,16 +10403,16 @@ Cogit >> testBcToMcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cogMet
 								[mappedBcpc := bcpc.
 								 self
 									mcPCForBackwardBranch: mappedBcpc
-									startBcpc: currentSubMethod startpc
+									startBcpc: startBcpc
 									in: subCogMethod]
 							ifFalse: "All others use the generic mapper"
 								[mappedBcpc := desc ifNil: [bcpc] ifNotNil: [bcpc + desc numBytes].
 								 self
 									mcPCFor: mappedBcpc
-									startBcpc: currentSubMethod startpc
+									startBcpc: startBcpc
 									in: subCogMethod].
 			 self assert: absMcpc >= (subCogMethod asInteger + subCogMethod stackCheckOffset).
-			 self assert: (self bytecodePCFor: absMcpc startBcpc: currentSubMethod startpc in: subCogMethod) = mappedBcpc]]
+			 self assert: (self bytecodePCFor: absMcpc startBcpc: startBcpc in: subCogMethod) = mappedBcpc]]
 ]
 
 { #category : #'tests-method map' }
@@ -10452,7 +10471,7 @@ Cogit >> testPCMappingForCompiledMethod: aCompiledMethod cogMethod: cm [
 	methodObj := methodHeader := nil.
 	self
 		testMcToBcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cm;
-		testBcToMcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cm
+		testBcToMcPcMappingForCogMethod: cm
 ]
 
 { #category : #debugging }

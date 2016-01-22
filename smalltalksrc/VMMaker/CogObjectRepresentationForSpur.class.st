@@ -702,7 +702,7 @@ CogObjectRepresentationForSpur >> genGetRawSlotSizeOfNonImm: sourceReg into: des
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genImmutableCheck: regHoldingObjectMutated slotIndex: index sourceReg: regHoldingValueToStore scratchReg: scratchReg popBoolean: popBoolean needRestoreRcvr: needRestoreRcvr [
+CogObjectRepresentationForSpur >> genImmutableCheck: regHoldingObjectMutated slotIndex: index sourceReg: regHoldingValueToStore scratchReg: scratchReg needRestoreRcvr: needRestoreRcvr [
 	| mutableJump fail |
 	<var: #mutableJump type: #'AbstractInstruction *'>
 	<var: #fail type: #'AbstractInstruction *'>
