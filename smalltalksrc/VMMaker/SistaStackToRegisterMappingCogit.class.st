@@ -442,10 +442,10 @@ SistaStackToRegisterMappingCogit >> genMustBeBooleanTrampolineFor: boolean calle
 	backEnd genLoadStackPointers.
 	backEnd hasLinkRegister ifTrue:
 		[self PopR: LinkReg].
-	"To keep ResultReceiverReg live if optStatus thiught it was, simply reload it
+	"To keep ResultReceiverReg live if optStatus thought it was, simply reload it
 	 from the frame pointer.  This avoids having to reload it in the common case
 	 (counter does not trip) if it was live."
-	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
+	self putSelfInReceiverResultReg.
 	self RetN: 0.
 	"If the objectRepresentation does want true & false to be mobile then we need to record these addresses."
 	self assert: (objectRepresentation shouldAnnotateObjectReference: boolean) not.
