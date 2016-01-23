@@ -346,6 +346,12 @@ StackInterpreterSimulator >> close [  "close any files that ST may have opened"
 		[:filePlugin| filePlugin close]
 ]
 
+{ #category : #'simulation only' }
+StackInterpreterSimulator >> cogit [
+	"We don't have a cogit; try and get by on our own devices."
+	^self
+]
+
 { #category : #initialization }
 StackInterpreterSimulator >> convertToArray [
 	"I dont believe it -- this *just works*"
@@ -516,6 +522,41 @@ StackInterpreterSimulator >> dumpMethodHeader: hdr [
 { #category : #'debug printing' }
 StackInterpreterSimulator >> elementsPerPrintOopLine [
 	^4
+]
+
+{ #category : #'compiled methods' }
+StackInterpreterSimulator >> endPCOf: aMethod [
+	"Determine the endPC of a method in the heap using interpretation that looks for returns."
+	
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	| pc end farthestContinuation prim encoderClass inst is |
+	(prim := self primitiveIndexOf: aMethod) > 0 ifTrue:
+		[(self isQuickPrimitiveIndex: prim) ifTrue:
+			[^(self startPCOfMethod: aMethod) - 1]].
+	encoderClass := self encoderClassForHeader: (objectMemory methodHeaderOf: aMethod).
+	is := (InstructionStream
+			on: (VMCompiledMethodProxy new
+					for: aMethod
+					coInterpreter: self
+					objectMemory: objectMemory)).
+	pc := farthestContinuation := self startPCOfMethod: aMethod.
+	end := objectMemory numBytesOf: aMethod.
+	is pc: pc + 1.
+	[pc <= end] whileTrue:
+		[inst := encoderClass interpretNextInstructionFor: MessageCatcher new in: is.
+		 inst selector
+			caseOf: {
+				 [#pushClosureCopyNumCopiedValues:numArgs:blockSize:]	
+											->	[is pc: is pc + inst arguments last.
+												 farthestContinuation := farthestContinuation max: pc].
+				 [#jump:]					->	[farthestContinuation := farthestContinuation max: pc + inst arguments first].
+				 [#jump:if:]					->	[farthestContinuation := farthestContinuation max: pc + inst arguments first].
+				 [#methodReturnConstant:]	->	[pc >= farthestContinuation ifTrue: [end := pc]].
+				 [#methodReturnReceiver]	->	[pc >= farthestContinuation ifTrue: [end := pc]].
+				 [#methodReturnTop]		->	[pc >= farthestContinuation ifTrue: [end := pc]] }
+			otherwise: [].
+		 pc := is pc - 1].
+	^end
 ]
 
 { #category : #testing }
