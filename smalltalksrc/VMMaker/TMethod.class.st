@@ -98,9 +98,10 @@ TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 			types notEmpty ifTrue:
 				[typeSet add: types anyOne].
 			^false].
+		"Abort only for untyped methods that will be typed, but don't be phased by recursion."
 		 ^(aCodeGen returnTypeForSend: expr in: self)
 			ifNotNil: [:type| typeSet add: type. false]
-			ifNil: [(aCodeGen methodNamed: expr selector) notNil]]. "Abort only for untyped methods that will be typed"
+			ifNil: [(aCodeGen methodNamed: expr selector) notNil and: [expr selector ~~ selector]]].
 	expr isVariable ifTrue:
 		[(aCodeGen typeOfVariable: expr name)
 			ifNotNil: [:type| typeSet add: type]
