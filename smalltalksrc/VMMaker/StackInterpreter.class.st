@@ -6038,6 +6038,7 @@ StackInterpreter >> findMethodWithPrimitive: primitive FromContext: senderContex
 	 findMethodWithPrimitive:FromFP:SP:ThroughContext: instead of iterative.
 	 We're doing the simplest thing that could possibly work.  Niceties can wait."
 	<inline: false>
+	<returnTypeC: #sqInt> "Being mutually-recursive with findMethodWithPrimitive:FromFP:UpToContext: gives the author's type inference algorithm headaches.  Wimp out by declaring the return type."
 	| theContext theMethod |
 	self assert: (senderContext = objectMemory nilObject or: [objectMemory isContext: senderContext]).
 	self assert: (homeContext = objectMemory nilObject or: [objectMemory isContext: homeContext]).
