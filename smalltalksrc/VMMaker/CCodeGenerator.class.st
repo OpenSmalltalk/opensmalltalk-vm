@@ -4455,10 +4455,10 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod [
 	"Answer the return type for a send.  Absent sends default to #sqInt.
 	 The bitwise operators answer unsigned versions of their argument types, at least in gcc
 	 although this author can't find that in the C99 spec.  If you can find this, please let me know."
-	| sel |
-	(self anyMethodNamed: (sel := sendNode selector)) ifNotNil:
-		[:m|
-		m returnType ifNotNil: [:type| ^self baseTypeForType: type]].
+	| sel methodOrNil |
+	methodOrNil := self anyMethodNamed: (sel := sendNode selector).
+	(methodOrNil notNil and: [methodOrNil returnType notNil]) ifTrue:
+		[^self baseTypeForType: methodOrNil returnType].
 	^kernelReturnTypes
 		at: sel
 		ifAbsent:
@@ -4493,7 +4493,9 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod [
 				[#ifFalse:ifTrue:]		->	[self typeForConditional: sendNode in: aTMethod].
 				[#ifTrue:]				->	[self typeForConditional: sendNode in: aTMethod].
 				[#ifFalse:]				->	[self typeForConditional: sendNode in: aTMethod] }
-				otherwise: [#sqInt]]
+				otherwise: "If there /is/ a method for sel but its retrn type is as yet unknown we /mustn't/ default it.
+							We can only default unbound selectors."
+					[methodOrNil ifNotNil: [nil] ifNil: [#sqInt]]]
 ]
 
 { #category : #'type inference' }
