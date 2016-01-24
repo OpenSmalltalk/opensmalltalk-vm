@@ -1,6 +1,6 @@
 #!/bin/bash
 # assert Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=assert/nscogspurlinuxht
+INSTALLDIR=assert/nsnaccogspurlinuxht
 OPT="-g3 -O1 -fwrapv -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then

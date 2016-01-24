@@ -2,8 +2,15 @@
 # Run the VM, setting SQUEAK_PLUGINS if unset to the VM's containing directory
 # if unset, and ensuring LD_LIBRARY_PATH includes the VM's containing directory.
 BIN=`/usr/bin/dirname $0`/../@expanded_relative_imgdir@
+GDB=
 if [ "${SQUEAK_PLUGINS-unset}" = unset ]; then
 	export SQUEAK_PLUGINS="$BIN"
+fi
+if [ "$1" = '-gdb' ]; then
+	GDB=gdb
+	shift
+	echo;echo run $@; echo
+	set --
 fi
 # At least on linux LD_LIBRARY_PATH's components must be absolute path names
 case "$BIN" in
@@ -45,4 +52,4 @@ esac
 # prepending is less flexible but safer because it ensures we find the plugins
 # in the same directory as the VM.  We must include at least /lib and /usr/lib
 # if libraries there-in are to be found.  These directories are not implicit.
-LD_LIBRARY_PATH="$PLUGINS:$SVMLLP:${LD_LIBRARY_PATH}" exec "$BIN/squeak" "$@"
+LD_LIBRARY_PATH="$PLUGINS:$SVMLLP:${LD_LIBRARY_PATH}" exec $GDB "$BIN/squeak" "$@"
