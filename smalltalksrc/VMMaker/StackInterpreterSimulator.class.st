@@ -844,7 +844,7 @@ StackInterpreterSimulator >> initialize [
 	desiredNumStackPages := desiredEdenBytes := 0.
 	"This is initialized on loading the image, but convenient for testing stack page values..."
 	numStackPages := self defaultNumStackPages. 
-	startMicroseconds := Time totalSeconds * 1000000.
+	startMicroseconds := self ioUTCStartMicroseconds.
 
 	"initialize InterpreterSimulator variables used for debugging"
 	byteCount := sendCount := lookupCount := 0.
@@ -1173,6 +1173,16 @@ StackInterpreterSimulator >> ioUTCMicroseconds [
 	^byteCount + startMicroseconds
 	
 "At 20k bytecodes per second, this gives us aobut 200 ticks per second, or about 1/5 of what you'd expect for the real time clock.  This should still service events at one or two per second"
+]
+
+{ #category : #'I/O primitives support' }
+StackInterpreterSimulator >> ioUTCStartMicroseconds [
+	"Answer the value of the microsecond clock at startup."
+
+	^startMicroseconds ifNil:
+		[self class initializationOptions
+			at: #startMicroseconds
+			ifAbsent: [[Time utcMicrosecondClock] on: Error do: [Time totalSeconds * 1000000]]]
 ]
 
 { #category : #'primitive support' }

@@ -1471,10 +1471,11 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		9	incremental GCs (SqueakV3) or scavenges (Spur) since startup (read-only)
 		10	total milliseconds in incremental GCs (SqueakV3) or scavenges (Spur) since startup (read-only)
 		11	tenures of surving objects since startup (read-only)
-		12-20 specific to ikp's JITTER VM
+		12-20 were specific to ikp's JITTER VM, now 12-19 are open for use
+		20	utc microseconds at VM start-up (actually at time initialization, which precedes image load).
 		21	root table size (read-only)
 		22	root table overflows since startup (read-only)
-		23	bytes of extra memory to reserve for VM buffers, plugins, etc.
+		23	bytes of extra memory to reserve for VM buffers, plugins, etc (stored in image file header).
 		24	memory threshold above which shrinking object memory (rw)
 		25	memory headroom when growing object memory (rw)
 		26	interruptChecksEveryNms - force an ioProcessEvents every N milliseconds (rw)
@@ -1498,7 +1499,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		44	size of eden, in bytes
 		45	desired size of eden, in bytes (stored in image file header)
 		46	machine code zone size, in bytes (Cog only; otherwise nil)
-		47	desired machine code zone size (Cog only; otherwise nil)
+		47	desired machine code zone size (stored in image file header; Cog only; otherwise nil)
 		48	various header flags.  See getCogVMFlags.
 		49	max size the image promises to grow the external semaphore table to (0 sets to default, which is 256 as of writing)
 		50-51 nil; reserved for VM parameters that persist in the image (such as eden above)
@@ -1550,8 +1551,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 															ifFalse: [objectMemory statIncrGCUsecs]) + 500 // 1000).
 		objectMemory storePointerUnchecked: 10	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statTenures).
 		"JITTER VM info"
-		11 to: 19 do:
+		11 to: 18 do:
 			[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: ConstZero].
+		objectMemory storePointer: 19	ofObject: result withValue: (objectMemory positive64BitIntegerFor: self ioUTCStartMicroseconds).
 		objectMemory storePointerUnchecked: 20	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory rootTableCount).
 		objectMemory storePointerUnchecked: 21	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statRootTableOverflows).
 		objectMemory storePointerUnchecked: 22	ofObject: result withValue: (objectMemory integerObjectOf: extraVMMemory).
@@ -1638,7 +1640,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 																		ifTrue: [objectMemory statScavengeGCUsecs]
 																		ifFalse: [objectMemory statIncrGCUsecs]) + 500 // 1000].
 		arg = 11	ifTrue: [result := objectMemory integerObjectOf: objectMemory statTenures].
-		(arg between: 12 and: 20) ifTrue: [result := ConstZero]. "JITTER VM info"
+		(arg between: 12 and: 19) ifTrue: [result := ConstZero]. "Was JITTER VM info"
+		arg = 20	ifTrue: [result := objectMemory positive64BitIntegerFor: self ioUTCStartMicroseconds].
 		arg = 21	ifTrue: [result := objectMemory integerObjectOf: objectMemory rootTableCount].
 		arg = 22	ifTrue: [result := objectMemory integerObjectOf: objectMemory statRootTableOverflows].
 		arg = 23	ifTrue: [result := objectMemory integerObjectOf: extraVMMemory].
