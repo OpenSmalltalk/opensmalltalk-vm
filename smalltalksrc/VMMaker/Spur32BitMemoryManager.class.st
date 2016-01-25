@@ -106,7 +106,7 @@ Spur32BitMemoryManager >> allocateSlotsForPinningInOldSpace: numSlots bytes: tot
 		[chunk := self allocateOldSpaceChunkOfBytes: totalBytes.
 		 chunk ifNotNil:
 			[(segmentManager segmentContainingObj: chunk) containsPinned: true]].
-	self checkFreeSpace.
+	self checkFreeSpace: GCModeNewSpace.
 	chunk ifNil:
 		[^nil].
 	numSlots >= self numSlotsMask ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
@@ -131,7 +131,7 @@ Spur32BitMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes fo
 	<inline: false>
 	| chunk |
 	chunk := self allocateOldSpaceChunkOfBytes: totalBytes.
-	self checkFreeSpace.
+	self checkFreeSpace: GCModeNewSpace.
 	chunk ifNil:
 		[^nil].
 	numSlots >= self numSlotsMask ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
@@ -736,6 +736,7 @@ Spur32BitMemoryManager >> objectAfter: objOop limit: limit [
 	2. objects with an overflow size have a preceeing word with a saturated numSlots.  If the word
 	   following an object doesn't have a saturated numSlots field it must be a single-header object.
 	   If the word following does have a saturated numSlots it must be the overflow size word."
+	<inline: true>
 	| followingWordAddress followingWord |
 	followingWordAddress := self addressAfter: objOop.
 	(self oop: followingWordAddress isGreaterThanOrEqualTo: limit) ifTrue:

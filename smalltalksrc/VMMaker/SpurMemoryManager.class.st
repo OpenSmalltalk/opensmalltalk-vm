@@ -1442,7 +1442,7 @@ SpurMemoryManager >> allInstancesOf: aClass [
 			self storePointerUnchecked: i ofObject: smallObj withValue: (self fetchPointer: i ofFreeChunk: freeChunk)].
 		 self freeChunkWithBytes: (self bytesInObject: freeChunk) at: (self startOfObject: freeChunk).
 		 self beRootIfOld: smallObj.
-		 self checkFreeSpace.
+		 self checkFreeSpace: GCModeFull.
 		 ^smallObj].
 	bytes := self largeObjectBytesForSlots: count.
 	start := self startOfObject: freeChunk.
@@ -1451,7 +1451,7 @@ SpurMemoryManager >> allInstancesOf: aClass [
 	self rawOverflowSlotsOf: freeChunk put: count.
 	self set: freeChunk classIndexTo: ClassArrayCompactIndex formatTo: self arrayFormat.
 	self possibleRootStoreInto: freeChunk.
-	self checkFreeSpace.
+	self checkFreeSpace: GCModeFull.
 	self runLeakCheckerFor: GCModeFull.
 	^freeChunk
 	
@@ -1536,7 +1536,7 @@ SpurMemoryManager >> allObjects [
 	(count > (ptr - start / self bytesPerOop) "not enough room"
 	 or: [limit ~= ptr and: [limit - ptr <= self allocationUnit]]) ifTrue: "can't split a single word"
 		[self freeChunkWithBytes: (self bytesInObject: freeChunk) at: (self startOfObject: freeChunk).
-		 self checkFreeSpace.
+		 self checkFreeSpace: GCModeFull.
 		 ^self integerObjectOf: count].
 	bytes := self largeObjectBytesForSlots: count.
 	start := self startOfObject: freeChunk.
@@ -1545,7 +1545,7 @@ SpurMemoryManager >> allObjects [
 	self rawOverflowSlotsOf: freeChunk put: count.
 	self set: freeChunk classIndexTo: ClassArrayCompactIndex formatTo: self arrayFormat.
 	self possibleRootStoreInto: freeChunk.
-	self checkFreeSpace.
+	self checkFreeSpace: GCModeFull.
 	self runLeakCheckerFor: GCModeFull.
 	^freeChunk
 	
@@ -2819,97 +2819,211 @@ SpurMemoryManager >> checkForCompactableObjects [
 
 { #category : #'debug support' }
 SpurMemoryManager >> checkFreeSpace [
+	"Bootstrap only"
+	<doNotGenerate>
+	self checkFreeSpace: GCModeFull
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> checkFreeSpace: gcModes [
 	self assert: self bitsSetInFreeSpaceMaskForAllFreeLists.
-	self assert: totalFreeOldSpace = self totalFreeListBytes
+	self assert: totalFreeOldSpace = self totalFreeListBytes.
+	(gcModes > 0
+	 and: [checkForLeaks allMask: (GCModeFreeSpace bitOr: gcModes)]) ifTrue:
+		[self runLeakCheckerForFreeSpace: GCModeFreeSpace]
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> checkHeapFreeSpaceIntegrity [
+	"Perform an integrity/leak check using the heapMap.  Assume clearLeakMapAndMapAccessibleFreeSpace
+	 has set a bit at each free chunk's header.  Scan all objects in the heap checking that no pointer points
+	 to a free chunk and that all free chunks that refer to others refer to marked chunks.  Answer if all checks pass."
+	| ok |
+	<inline: false>
+	ok := true.
+
+	0 to: self numFreeLists - 1 do:
+		[:i|
+		(freeLists at: i) ~= 0 ifTrue:
+			[(heapMap heapMapAtWord: (self pointerForOop: (freeLists at: i))) = 0 ifTrue:
+				[coInterpreter print: 'leak in free list '; printNum: i; print: ' to non-free '; printHex: (freeLists at: i); cr.
+				 self eek.
+				 ok := false]]].
+
+	"Excuse the duplication but performance is at a premium and we avoid
+	 some tests by splitting the newSpace and oldSpace enumerations."
+	self allNewSpaceEntitiesDo:
+		[:obj| | fieldOop |
+		 (self isFreeObject: obj)
+			ifTrue:
+				[coInterpreter print: 'young object '; printHex: obj; print: ' is free'; cr.
+				 self eek.
+				 ok := false]
+			ifFalse:
+				[0 to: (self numPointerSlotsOf: obj) - 1 do:
+					[:fi|
+					 fieldOop := self fetchPointer: fi ofObject: obj.
+					 (self isNonImmediate: fieldOop) ifTrue:
+						[(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) ~= 0 ifTrue:
+							[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; print: ' is free'; cr.
+							 self eek.
+							 ok := false]]]]].
+	self allOldSpaceEntitiesDo:
+		[:obj| | fieldOop |
+		(self isFreeObject: obj)
+			ifTrue:
+				[(heapMap heapMapAtWord: (self pointerForOop: obj)) = 0 ifTrue:
+					[coInterpreter print: 'leak in free chunk '; printHex: obj; print: ' is unmapped?! '; cr.
+					 self eek.
+					 ok := false].
+				 fieldOop := self fetchPointer: self freeChunkNextIndex ofFreeChunk: obj.
+				 (fieldOop ~= 0
+				 and: [(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0]) ifTrue:
+					[coInterpreter print: 'leak in free chunk '; printHex: obj; print: ' @ 0 = '; printHex: fieldOop; print: ' is unmapped'; cr.
+					 self eek.
+					 ok := false].
+				(self isLargeFreeObject: obj) ifTrue:
+					[self freeChunkParentIndex to: self freeChunkLargerIndex do:
+						[:fi|
+						 fieldOop := self fetchPointer: fi ofFreeChunk: obj.
+						 (fieldOop ~= 0
+						 and: [(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0]) ifTrue:
+							[coInterpreter print: 'leak in free chunk '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; print: ' is unmapped'; cr.
+							 self eek.
+							 ok := false].]]]
+			ifFalse:
+				[0 to: (self numPointerSlotsOf: obj) - 1 do:
+					[:fi|
+					 fieldOop := self fetchPointer: fi ofObject: obj.
+					 (self isNonImmediate: fieldOop) ifTrue:
+						[(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) ~= 0 ifTrue:
+							[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; print: ' is free'; cr.
+							 self eek.
+							 ok := false]]]]].
+	^ok
 ]
 
 { #category : #'debug support' }
 SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
 	"Perform an integrity/leak check using the heapMap.  Assume clearLeakMapAndMapAccessibleObjects
-	 has set a bit at each object's header.  Scan all objects in the heap checking that every pointer points
-	 to a header.  Scan the rememberedSet, remapBuffer and extraRootTable checking that every entry is
-	 a pointer to a header. Check that the number of roots is correct and that all rememberedSet entries
-	 have their isRemembered: flag set.  Answer if all checks pass."
+	 has set a bit at each (non-free) object's header.  Scan all objects in the heap checking that every
+	 pointer points to a header.  Scan the rememberedSet, remapBuffer and extraRootTable checking
+	 that every entry is a pointer to a header. Check that the number of roots is correct and that all
+	 rememberedSet entries have their isRemembered: flag set.  Answer if all checks pass."
 	| ok numRememberedObjectsInHeap |
 	<inline: false>
 	ok := true.
 	numRememberedObjectsInHeap := 0.
+	0 to: self numFreeLists - 1 do:
+		[:i|
+		(freeLists at: i) ~= 0 ifTrue:
+			[(heapMap heapMapAtWord: (self pointerForOop: (freeLists at: i))) ~= 0 ifTrue:
+				[coInterpreter print: 'leak in free list '; printNum: i; print: ' to non-free '; printHex: (freeLists at: i); cr.
+				 self eek.
+				 ok := false]]].
+
 	"Excuse the duplication but performance is at a premium and we avoid
 	 some tests by splitting the newSpace and oldSpace enumerations."
 	self allNewSpaceEntitiesDo:
 		[:obj| | fieldOop classIndex classOop |
-		((self isFreeObject: obj)
-		 or: [(self isMarked: obj) not and: [excludeUnmarkedNewSpaceObjs]]) ifFalse:
-			[(self isRemembered: obj) ifTrue:
-				[coInterpreter print: 'young object '; printHex: obj; print: ' is remembered'; cr.
+		(self isFreeObject: obj)
+			ifTrue:
+				[coInterpreter print: 'young object '; printHex: obj; print: ' is free'; cr.
 				 self eek.
-				 ok := false]].
-			 (self isForwarded: obj)
-				ifTrue:
-					[fieldOop := self fetchPointer: 0 ofMaybeForwardedObject: obj.
-					 (heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
-						[coInterpreter print: 'object leak in forwarder '; printHex: obj; print: ' to unmapped '; printHex: fieldOop; cr.
+				 ok := false]
+			ifFalse:
+				[((self isMarked: obj) not and: [excludeUnmarkedNewSpaceObjs]) ifFalse:
+					[(self isRemembered: obj) ifTrue:
+						[coInterpreter print: 'young object '; printHex: obj; print: ' is remembered'; cr.
 						 self eek.
-						 ok := false]]
-				ifFalse:
-					[classOop := self classOrNilAtIndex: (classIndex := self classIndexOf: obj).
-					 (classIndicesShouldBeValid
-					  and: [classOop = nilObj
-					  and: [(self isHiddenObj: obj) not]]) ifTrue:
-						[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; print: (classOop ifNil: ['nil'] ifNotNil: ['nilObj']); cr.
-						 self eek.
-						 ok := false].
-					 0 to: (self numPointerSlotsOf: obj) - 1 do:
-						[:fi|
-						 fieldOop := self fetchPointer: fi ofObject: obj.
-						 (self isNonImmediate: fieldOop) ifTrue:
-							[(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
-								[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
+						 ok := false]].
+					 (self isForwarded: obj)
+						ifTrue:
+							[fieldOop := self fetchPointer: 0 ofMaybeForwardedObject: obj.
+							 (heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
+								[coInterpreter print: 'object leak in forwarder '; printHex: obj; print: ' to unmapped '; printHex: fieldOop; cr.
 								 self eek.
-								 ok := false]]]]].
-	self allOldSpaceEntitiesDo:
-		[:obj| | containsYoung fieldOop classIndex classOop |
-		(self isFreeObject: obj) ifFalse:
-			[containsYoung := false.
-			 (self isRemembered: obj) ifTrue:
-				[numRememberedObjectsInHeap := numRememberedObjectsInHeap + 1.
-				 (scavenger isInRememberedSet: obj) ifFalse:
-					[coInterpreter print: 'remembered object '; printHex: obj; print: ' is not in remembered table'; cr.
-					 self eek.
-					 ok := false]].
-			 (self isForwarded: obj)
-				ifTrue:
-					[fieldOop := self fetchPointer: 0 ofMaybeForwardedObject: obj.
-					 (heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
-						[coInterpreter print: 'object leak in forwarder '; printHex: obj; print: ' to unmapped '; printHex: fieldOop; cr.
-						 self eek.
-						 ok := false].
-					 (self isReallyYoung: fieldOop) ifTrue:
-						[containsYoung := true]]
-				ifFalse:
-					[classOop := self classOrNilAtIndex: (classIndex := self classIndexOf: obj).
-					 (classIndicesShouldBeValid
-					  and: [classOop = nilObj
-					  and: [classIndex > self lastClassIndexPun]]) ifTrue:
-						[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; print: (classOop ifNil: ['nil'] ifNotNil: ['nilObj']); cr.
-						 self eek.
-						 ok := false].
-					 0 to: (self numPointerSlotsOf: obj) - 1 do:
-						[:fi|
-						 fieldOop := self fetchPointer: fi ofObject: obj.
-						 (self isNonImmediate: fieldOop) ifTrue:
-							[(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
-								[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
+								 ok := false]]
+						ifFalse:
+							[classOop := self classOrNilAtIndex: (classIndex := self classIndexOf: obj).
+							 (classIndicesShouldBeValid
+							  and: [classOop = nilObj
+							  and: [(self isHiddenObj: obj) not]]) ifTrue:
+								[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; print: (classOop ifNil: ['nil'] ifNotNil: ['nilObj']); cr.
 								 self eek.
 								 ok := false].
-							 "don't be misled by CogMethods; they appear to be young, but they're not"
-							 (self isReallyYoung: fieldOop) ifTrue:
-								[containsYoung := true]]]].
-			 containsYoung ifTrue:
-				[(self isRemembered: obj) ifFalse:
-					[coInterpreter print: 'unremembered object '; printHex: obj; print: ' contains young oop(s)'; cr.
+							 0 to: (self numPointerSlotsOf: obj) - 1 do:
+								[:fi|
+								 fieldOop := self fetchPointer: fi ofObject: obj.
+								 (self isNonImmediate: fieldOop) ifTrue:
+									[(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
+										[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
+										 self eek.
+										 ok := false]]]]]].
+	self allOldSpaceEntitiesDo:
+		[:obj| | containsYoung fieldOop classIndex classOop |
+		(self isFreeObject: obj)
+			ifTrue:
+				[(heapMap heapMapAtWord: (self pointerForOop: obj)) ~= 0 ifTrue:
+					[coInterpreter print: 'leak in free chunk '; printHex: obj; print: ' is mapped?! '; cr.
 					 self eek.
-					 ok := false]]]].
+					 ok := false].
+				 fieldOop := self fetchPointer: self freeChunkNextIndex ofFreeChunk: obj.
+				 (fieldOop ~= 0
+				 and: [(heapMap heapMapAtWord: (self pointerForOop: obj)) ~= 0]) ifTrue:
+					[coInterpreter print: 'leak in free chunk '; printHex: obj; print: ' @ 0 = '; printHex: fieldOop; print: ' is mapped'; cr.
+					 self eek.
+					 ok := false].
+				(self isLargeFreeObject: obj) ifTrue:
+					[self freeChunkParentIndex to: self freeChunkLargerIndex do:
+						[:fi|
+						 fieldOop := self fetchPointer: fi ofFreeChunk: obj.
+						 (fieldOop ~= 0
+						 and: [(heapMap heapMapAtWord: (self pointerForOop: obj)) ~= 0]) ifTrue:
+							[coInterpreter print: 'leak in free chunk '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; print: ' is mapped'; cr.
+							 self eek.
+							 ok := false].]]]
+			ifFalse:
+				[containsYoung := false.
+				 (self isRemembered: obj) ifTrue:
+					[numRememberedObjectsInHeap := numRememberedObjectsInHeap + 1.
+					 (scavenger isInRememberedSet: obj) ifFalse:
+						[coInterpreter print: 'remembered object '; printHex: obj; print: ' is not in remembered table'; cr.
+						 self eek.
+						 ok := false]].
+				 (self isForwarded: obj)
+					ifTrue:
+						[fieldOop := self fetchPointer: 0 ofMaybeForwardedObject: obj.
+						 (heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
+							[coInterpreter print: 'object leak in forwarder '; printHex: obj; print: ' to unmapped '; printHex: fieldOop; cr.
+							 self eek.
+							 ok := false].
+						 (self isReallyYoung: fieldOop) ifTrue:
+							[containsYoung := true]]
+					ifFalse:
+						[classOop := self classOrNilAtIndex: (classIndex := self classIndexOf: obj).
+						 (classIndicesShouldBeValid
+						  and: [classOop = nilObj
+						  and: [classIndex > self lastClassIndexPun]]) ifTrue:
+							[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; print: (classOop ifNil: ['nil'] ifNotNil: ['nilObj']); cr.
+							 self eek.
+							 ok := false].
+						 0 to: (self numPointerSlotsOf: obj) - 1 do:
+							[:fi|
+							 fieldOop := self fetchPointer: fi ofObject: obj.
+							 (self isNonImmediate: fieldOop) ifTrue:
+								[(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
+									[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
+									 self eek.
+									 ok := false].
+								 "don't be misled by CogMethods; they appear to be young, but they're not"
+								 (self isReallyYoung: fieldOop) ifTrue:
+									[containsYoung := true]]]].
+				 containsYoung ifTrue:
+					[(self isRemembered: obj) ifFalse:
+						[coInterpreter print: 'unremembered object '; printHex: obj; print: ' contains young oop(s)'; cr.
+						 self eek.
+						 ok := false]]]].
 	numRememberedObjectsInHeap ~= scavenger rememberedSetSize ifTrue:
 		[coInterpreter
 			print: 'root count mismatch. #heap roots ';
@@ -3445,6 +3559,17 @@ SpurMemoryManager >> classUnsafeAlien [
 ]
 
 { #category : #'debug support' }
+SpurMemoryManager >> clearLeakMapAndMapAccessibleFreeSpace [
+	"Perform an integrity/leak check using the heapMap.  Set a bit at each free chunk's header."
+	<inline: false>
+	heapMap clearHeapMap.
+	self allOldSpaceEntitiesFrom: self firstObject
+		do: [:objOop|
+			(self isFreeObject: objOop) ifTrue:
+				[heapMap heapMapAtWord: (self pointerForOop: objOop) Put: 1]]
+]
+
+{ #category : #'debug support' }
 SpurMemoryManager >> clearLeakMapAndMapAccessibleObjects [
 	"Perform an integrity/leak check using the heapMap.  Set a bit at each object's header."
 	<inline: false>
@@ -3682,7 +3807,7 @@ SpurMemoryManager >> compiledMethodFormatForNumBytes: numBytes [
 { #category : #'free space' }
 SpurMemoryManager >> computeFreeSpacePostSwizzle [
 	totalFreeOldSpace := self totalFreeListBytes.
-	self checkFreeSpace
+	self checkFreeSpace: 0
 ]
 
 { #category : #'become implementation' }
@@ -5156,7 +5281,7 @@ SpurMemoryManager >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact
 
 	| prevPrevFree prevFree |
 	<inline: #never> "for profiling"
-	self checkFreeSpace.
+	self checkFreeSpace: GCModeFull.
 	scavenger forgetUnmarkedRememberedObjects.
 	self doScavenge: MarkOnTenure.
 	segmentManager prepareForGlobalSweep."for notePinned:"
@@ -5230,7 +5355,7 @@ SpurMemoryManager >> garbageCollectForSnapshot [
 	self fullGC.
 	numCompactionPasses := CompactionPassesForGC.
 	segmentManager prepareForSnapshot.
-	self checkFreeSpace
+	self checkFreeSpace: GCModeFull
 ]
 
 { #category : #accessing }
@@ -5333,7 +5458,7 @@ SpurMemoryManager >> growOldSpaceByAtLeast: minAmmount [
 		 self addFreeChunkWithBytes: segInfo segSize - self bridgeSize at: segInfo segStart.
 		 self assert: (self addressAfter: (self objectStartingAt: segInfo segStart))
 					= (segInfo segLimit - self bridgeSize).
-		 self checkFreeSpace.
+		 self checkFreeSpace: GCModeFreeSpace.
 		 segmentManager checkSegments.
 		 segInfo segSize]
 ]
@@ -5900,7 +6025,7 @@ SpurMemoryManager >> initializeOldSpaceFirstFree: startOfFreeOldSpace [
 			 self assert: (self addressAfter: freeChunk) = limit]].
 	endOfMemory := endOfMemory - self bridgeSize.
 	freeOldSpaceStart := endOfMemory.
-	self checkFreeSpace
+	self checkFreeSpace: GCModeFreeSpace
 ]
 
 { #category : #'spur bootstrap' }
@@ -8813,14 +8938,14 @@ SpurMemoryManager >> objectsReachableFromRoots: arrayOfRoots [
 	(count > (ptr - start / self bytesPerOop) "not enough room"
 	 or: [limit ~= ptr and: [limit - ptr <= self allocationUnit]]) ifTrue: "can't split a single word"
 		[self freeChunkWithBytes: (self bytesInObject: freeChunk) at: (self startOfObject: freeChunk).
-		 self checkFreeSpace.
+		 self checkFreeSpace: GCModeImageSegment.
 		 ^self integerObjectOf: count].
 	"There's room; set the format, & classIndex and shorten."
 	self setFormatOf: freeChunk to: self arrayFormat.
 	self setClassIndexOf: freeChunk to: ClassArrayCompactIndex.
 	self shorten: freeChunk toIndexableSize: count.
 	self possibleRootStoreInto: freeChunk.
-	self checkFreeSpace.
+	self checkFreeSpace: GCModeImageSegment.
 	self runLeakCheckerFor: GCModeImageSegment.
 	^freeChunk
 ]
@@ -9707,7 +9832,7 @@ SpurMemoryManager >> rebuildFreeListsForPigCompact [
 		 bytes := (self bytesInObject: freeObj).
 		 start := self startOfObject: freeObj.
 		 self addFreeChunkWithBytes: bytes at: start].
-	self checkFreeSpace
+	self checkFreeSpace: GCModeFull
 ]
 
 { #category : #'free space' }
@@ -9978,6 +10103,15 @@ SpurMemoryManager >> runLeakCheckerFor: gcModes excludeUnmarkedNewSpaceObjs: exc
 ]
 
 { #category : #'debug support' }
+SpurMemoryManager >> runLeakCheckerForFreeSpace: gcModes [
+	<inline: false>
+	(gcModes anyMask: GCModeFreeSpace) ifTrue:
+		[coInterpreter reverseDisplayFrom: 16 to: 19.
+		 self clearLeakMapAndMapAccessibleFreeSpace.
+		 self assert: self checkHeapFreeSpaceIntegrity]
+]
+
+{ #category : #'debug support' }
 SpurMemoryManager >> runLeakCheckerForFullGC [
 	<doNotGenerate>
 	"Support for the Spur bootstrap"
@@ -10030,7 +10164,7 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 			printNum: coInterpreter interpreterAllocationReserveBytes; space;
 			printNum: coInterpreter interpreterAllocationReserveBytes - (scavenger eden limit - freeStart); cr].
 	self checkMemoryMap.
-	self checkFreeSpace.
+	self checkFreeSpace: GCModeNewSpace.
 	self runLeakCheckerFor: GCModeNewSpace.
 
 	coInterpreter
@@ -10053,7 +10187,7 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 	coInterpreter postGCAction: GCModeNewSpace.
 
 	self runLeakCheckerFor: GCModeNewSpace.
-	self checkFreeSpace
+	self checkFreeSpace: GCModeNewSpace
 ]
 
 { #category : #'gc - scavenging' }

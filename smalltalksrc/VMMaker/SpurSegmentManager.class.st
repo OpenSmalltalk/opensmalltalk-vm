@@ -468,7 +468,7 @@ SpurSegmentManager >> postSnapshot [
 				addFreeChunkWithBytes: seg segLimit - address - manager bridgeSize
 				at: address]].
 	self checkSegments.
-	manager checkFreeSpace
+	manager checkFreeSpace: GCModeFull
 ]
 
 { #category : #pinning }
@@ -486,7 +486,7 @@ SpurSegmentManager >> prepareForGlobalSweep [
 { #category : #snapshot }
 SpurSegmentManager >> prepareForSnapshot [
 	"shorten all segments by any trailing free space."
-	<inline: false>
+	<inline: #never>
 	<var: #seg type: #'SpurSegmentInfo *'>
 	self checkSegments.
 	0 to: numSegments - 1 do:

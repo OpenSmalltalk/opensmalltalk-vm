@@ -115,6 +115,7 @@ CoInterpreter class >> declareCVarsIn: aCCodeGenerator [
 			declareC: 'sqInt maxLiteralCountForCompile = MaxLiteralCountForCompile /* ', MaxLiteralCountForCompile printString, ' */';
 		var: #minBackwardJumpCountForCompile
 			declareC: 'sqInt minBackwardJumpCountForCompile = MinBackwardJumpCountForCompile /* ', MinBackwardJumpCountForCompile printString, ' */'.
+	aCCodeGenerator removeVariable: 'atCache'.
 	aCCodeGenerator
 		var: #reenterInterpreter
 		declareC: 'jmp_buf reenterInterpreter; /* private export */'.
@@ -146,6 +147,12 @@ CoInterpreter class >> exportAPISelectors: options [
 { #category : #'accessing class hierarchy' }
 CoInterpreter class >> hasCogit [
 	^true
+]
+
+{ #category : #initialization }
+CoInterpreter class >> initializeCaches [
+	"Eliminate the AtCache"
+	AtCacheTotalSize := AtCacheSize := AtCacheMask := AtCacheFixedFields := AtCacheFmt := AtCacheOop := #undefined
 ]
 
 { #category : #initialization }
@@ -210,21 +217,21 @@ CoInterpreter class >> initializeFrameIndices [
 	fxIFReceiver := -5.
 	fxMFReceiver := -3.
 
-	"For debugging nil out values that differ in the StackInterpreter."
-	FrameSlots := #undeclared.
+	"For debugging undefine values that differ in the StackInterpreter."
+	FrameSlots := #undefined.
 	IFrameSlots := fxCallerSavedIP - fxIFReceiver + 1.
 	MFrameSlots := fxCallerSavedIP - fxMFReceiver + 1.
 
 	FoxCallerSavedIP := fxCallerSavedIP * BytesPerWord.
 	"In Cog a base frame's caller context is stored on the first word of the stack page."
-	FoxCallerContext := #undeclared.
+	FoxCallerContext := #undefined.
 	FoxSavedFP := fxSavedFP * BytesPerWord.
 	FoxMethod := fxMethod * BytesPerWord.
 	FoxThisContext := fxThisContext * BytesPerWord.
-	FoxFrameFlags := #undeclared.
+	FoxFrameFlags := #undefined.
 	FoxIFrameFlags := fxIFrameFlags * BytesPerWord.
 	FoxIFSavedIP := fxIFSavedIP * BytesPerWord.
-	FoxReceiver := #undeclared.
+	FoxReceiver := #undefined.
 	FoxIFReceiver := fxIFReceiver * BytesPerWord.
 	FoxMFReceiver := fxMFReceiver * BytesPerWord.
 
@@ -956,6 +963,22 @@ CoInterpreter >> bytecodePCFor: theIP cogMethod: cogMethod startBcpc: startBcpc 
 				[^startBcpc]].
 	self assert: (mcpc between: cogMethod asInteger and: cogMethod asInteger + cogMethod blockSize).
 	^cogit bytecodePCFor: mcpc startBcpc: startBcpc in: cogMethodForIP
+]
+
+{ #category : #'common selector sends' }
+CoInterpreter >> bytecodePrimAt [
+	"Override to eliminate the atCache, something of little benefit to the JIT."
+	messageSelector := self specialSelector: 16.
+	argumentCount := 1.
+	self normalSend
+]
+
+{ #category : #'common selector sends' }
+CoInterpreter >> bytecodePrimAtPut [
+	"Override to eliminate the atCache, something of little benefit to the JIT."
+	messageSelector := self specialSelector: 17.
+	argumentCount := 2.
+	self normalSend
 ]
 
 { #category : #'cog jit support' }
@@ -2607,6 +2630,18 @@ CoInterpreter >> commonSendOrdinary [
 	self fetchNextBytecode
 ]
 
+{ #category : #'indexing primitive support' }
+CoInterpreter >> commonVariable: rcvr at: index cacheIndex: atIx [
+	"There is no atCache in the CoInterpreter."
+	self shouldNotImplement
+]
+
+{ #category : #'indexing primitive support' }
+CoInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
+	"There is no atCache in the CoInterpreter."
+	self shouldNotImplement
+]
+
 { #category : #'debug support' }
 CoInterpreter >> compilationBreak: selectorOop point: selectorLength isMNUCase: isMNUCase [
 	<api>
@@ -3324,6 +3359,12 @@ CoInterpreter >> findNewMethodInClassTag: classTagArg [
 				ifTrue: [self lookupOrdinarySend]
 				ifFalse: [self lookupMethodInClass: lkupClass].
 			 self addNewMethodToCache: lkupClass]
+]
+
+{ #category : #'method lookup cache' }
+CoInterpreter >> flushAtCache [
+	"There is no atCache in the CoInterpreter."
+	<inline: true>
 ]
 
 { #category : #'object memory support' }
