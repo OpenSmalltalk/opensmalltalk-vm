@@ -938,20 +938,14 @@ CogObjectRepresentationForSpur >> genPrimitiveIdentityHash [
 
 { #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> genPrimitiveObjectAt [
-	| headerReg
-	  jumpBadIndex jumpNotCogMethod jumpBounds jumpNotHeaderIndex |
+	| headerReg jumpBadIndex jumpBounds jumpNotHeaderIndex |
 	<var: #jumpBounds type: #'AbstractInstruction *'>
 	<var: #jumpBadIndex type: #'AbstractInstruction *'>
-	<var: #jumpNotCogMethod type: #'AbstractInstruction *'>
 	<var: #jumpNotHeaderIndex type: #'AbstractInstruction *'>
 	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
 	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	"get header into Arg1Reg..."
-	cogit MoveMw: objectMemory baseHeaderSize r: ReceiverResultReg R: (headerReg := Arg1Reg).
-	jumpNotCogMethod := self genJumpSmallInteger: headerReg scratchReg: TempReg.
-	cogit MoveMw: (cogit offset: CogMethod of: #methodHeader) r: headerReg R: headerReg.
-	jumpNotCogMethod jmpTarget: (cogit
-		CmpCq: (objectMemory integerObjectOf: 1) R: Arg0Reg).
+	self genGetMethodHeaderOf: ReceiverResultReg into: (headerReg := Arg1Reg) scratch: TempReg.
+	cogit CmpCq: (objectMemory integerObjectOf: 1) R: Arg0Reg.
 	jumpNotHeaderIndex := cogit JumpNonZero: 0.
 	cogit
 		MoveR: headerReg R: ReceiverResultReg;
@@ -1156,6 +1150,14 @@ CogObjectRepresentationForSpur >> getActiveContextAllocatesInMachineCode [
 	"Make sure SendNumArgsReg and ClassReg are available in addition to
 	 ReceiverResultReg and TempReg in genGetActiveContextNumArgs:large:inBlock:."
 	^true
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> getLiteralCountOf: methodReg plusOne: plusOne inBytes: inBytes into: litCountReg scratch: scratchReg [
+	"Get the literal count of a CompiledMethod into headerReg, plus one if requested.
+	  If inBytes is true, scale the count by the word size.  Deal with the possibility of
+	 the method being cogged."
+	self subclassResponsibility
 ]
 
 { #category : #testing }

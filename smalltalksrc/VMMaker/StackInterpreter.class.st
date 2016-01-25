@@ -106,7 +106,6 @@ Class {
 		'AlternateHeaderHasPrimFlag',
 		'AlternateHeaderIsOptimizedFlag',
 		'AlternateHeaderNumLiteralsMask',
-		'AtCacheEntries',
 		'AtCacheFixedFields',
 		'AtCacheFmt',
 		'AtCacheMask',
@@ -237,9 +236,10 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #nsMethodCache
 		declareC: 'long nsMethodCache[NSMethodCacheSize + 1 /* ', (NSMethodCacheSize + 1) printString, ' */]'.
-	aCCodeGenerator
-		var: #atCache
-		declareC: 'sqInt atCache[AtCacheTotalSize + 1 /* ', (AtCacheTotalSize + 1) printString, ' */]'.
+	AtCacheTotalSize isInteger ifTrue:
+		[aCCodeGenerator
+			var: #atCache
+			declareC: 'sqInt atCache[AtCacheTotalSize + 1 /* ', (AtCacheTotalSize + 1) printString, ' */]'].
 	aCCodeGenerator
 		var: #primitiveTable
 		declareC: 'void (*primitiveTable[MaxPrimitiveIndex + 2 /* ', (MaxPrimitiveIndex + 2) printString, ' */])(void) = ', vmClass primitiveTableString.
@@ -715,7 +715,7 @@ StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosuresSistaV1H
 { #category : #initialization }
 StackInterpreter class >> initializeCaches [
 
-	| atCacheEntrySize |
+	| atCacheEntries atCacheEntrySize |
 	NewspeakVM
 		ifTrue: [MethodCacheEntries := 512]
 		ifFalse: [MethodCacheEntries := 1024].
@@ -740,15 +740,15 @@ StackInterpreter class >> initializeCaches [
 	NSMethodCacheMask := NSMethodCacheEntries - 1 * NSMethodCacheEntrySize.
 	NSMethodCacheSize := NSMethodCacheEntries * NSMethodCacheEntrySize.
 
-	AtCacheEntries := 8.  "Must be a power of two"
 	AtCacheOop := 1.
 	AtCacheSize := 2.
 	AtCacheFmt := 3.
 	AtCacheFixedFields := 4.
+	atCacheEntries := 8.
 	atCacheEntrySize := 4.  "Must be power of two for masking scheme."
-	AtCacheMask := (AtCacheEntries-1) * atCacheEntrySize.
-	AtPutBase := AtCacheEntries * atCacheEntrySize.
-	AtCacheTotalSize := AtCacheEntries * atCacheEntrySize * 2.
+	AtCacheMask := (atCacheEntries-1) * atCacheEntrySize.
+	AtPutBase := atCacheEntries * atCacheEntrySize.
+	AtCacheTotalSize := atCacheEntries * atCacheEntrySize * 2.
 
 	"LookupRuleOuter is [0, 255], with the value being the lexical depth. Note that an
 	 outer send to lexical depth 0 is equivalent to a self send. Implicit receiver and
@@ -881,14 +881,14 @@ StackInterpreter class >> initializeFrameIndices [
 	FoxThisContext := fxThisContext * BytesPerWord.
 	FoxReceiver := fxReceiver * BytesPerWord.
 
-	"Mark the CoInterpreter-specific offsets as #undeclared to
+	"Mark the CoInterpreter-specific offsets as #undefined to
 	 avoid including them accidentally in StackInterpreter code."
-	IFrameSlots := #undeclared.
-	MFrameSlots := #undeclared.
-	FoxIFrameFlags := #undeclared.
-	FoxIFSavedIP := #undeclared.
-	FoxIFReceiver := #undeclared.
-	FoxMFReceiver := #undeclared
+	IFrameSlots := #undefined.
+	MFrameSlots := #undefined.
+	FoxIFrameFlags := #undefined.
+	FoxIFSavedIP := #undefined.
+	FoxIFReceiver := #undefined.
+	FoxMFReceiver := #undefined
 ]
 
 { #category : #initialization }
@@ -935,6 +935,7 @@ StackInterpreter class >> initializeMiscConstants [
 	GCModeIncremental := 4.		"incremental global gc (Dijkstra tri-colour marking); as yet unimplemented"
 	GCModeBecome := 8.			"v3 post-become sweeping"
 	GCModeImageSegment := 16.	"just a flag for leak checking image segments"
+	GCModeFreeSpace := 32.		"just a flag for leak checking free space; Spur only"
 
 	StackPageTraceInvalid := -1.
 	StackPageUnreached := 0.
@@ -7704,6 +7705,10 @@ StackInterpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 	self assert: (objectMemory isContext: rcvr) not.
 	hdr := objectMemory baseHeader: rcvr.
 	fmt := objectMemory formatOfHeader: hdr.
+	"For now the AtCache code doesn't support 16-bit indexability."
+	(objectMemory hasSpurMemoryManagerAPI
+	and: [fmt between: objectMemory firstShortFormat and: objectMemory firstByteFormat - 1]) ifTrue:
+		[^self primitiveFailed].
 	stringy
 		ifTrue:
 			[totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
@@ -14865,6 +14870,7 @@ StackInterpreter >> writeBackHeadFramePointers [
 StackInterpreter >> writeImageFileIO [
 	"Write the image header and heap contents to imageFile for snapshot. c.f. writeImageFileIOSimulation.
 	 The game below is to maintain 64-bit alignment for all putLong:toFile: occurrences."
+	<inline: #never>
 	| imageName headerStart headerSize f imageBytes bytesWritten sCWIfn okToWrite |
 	<var: #f type: #sqImageFile>
 	<var: #headerStart type: #squeakFileOffsetType>
