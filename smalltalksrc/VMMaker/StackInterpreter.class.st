@@ -7708,7 +7708,7 @@ StackInterpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 	"For now the AtCache code doesn't support 16-bit indexability."
 	(objectMemory hasSpurMemoryManagerAPI
 	and: [fmt between: objectMemory firstShortFormat and: objectMemory firstByteFormat - 1]) ifTrue:
-		[^self primitiveFailed].
+		[^self primitiveFail].
 	stringy
 		ifTrue:
 			[totalLength := objectMemory lengthOf: rcvr baseHeader: hdr format: fmt.
