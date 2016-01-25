@@ -250,6 +250,9 @@ ioUTCMicrosecondsNow()
 								  &vmThreadBaseTick);
 }
 
+unsigned long long
+ioUTCStartMicroseconds() { return utcStartMicroseconds; }
+
 unsigned volatile long long
 ioLocalMicrosecondsNow() { return ioUTCMicrosecondsNow() + vmGMTOffset; };
 

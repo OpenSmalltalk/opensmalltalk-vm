@@ -183,6 +183,8 @@ extern sqInt interpret(void);  //This is a VM Callback
 		return;
 	}
 	
+	[self setupTimers];
+
 	if (![self readImageIntoMemory]) {
 		return;
 	}
@@ -193,7 +195,6 @@ extern sqInt interpret(void);  //This is a VM Callback
 
     
     [self setupMenus];
-	[self setupTimers];
 	[self setupAIO];
 	[self setupBrowserLogic];
 	[self setupSoundLogic];

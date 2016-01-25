@@ -541,6 +541,8 @@ main(int argc, char **argv, char **envp)
 		getcwd(vmLogDirA,PATH_MAX);
 #endif
 
+    SetUpTimers();
+
 	/* read the image file and allocate memory for Squeak heap */
 	f = sqImageFileOpen(getImageName(), "rb");
     if (gSqueakHeadless && f == NULL) 
@@ -570,8 +572,6 @@ main(int argc, char **argv, char **envp)
 	if (!gSqueakHeadless || (gSqueakHeadless && gSqueakBrowserSubProcess)) {
 		SetUpPixmap();
 	}
-
-    SetUpTimers();
 
     aioInit();
 	ioInitThreads();

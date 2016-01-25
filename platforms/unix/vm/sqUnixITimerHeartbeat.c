@@ -253,6 +253,9 @@ ioLocalSecondsOffset() { return (usqInt)(vmGMTOffset / MicrosecondsPerSecond); }
 unsigned volatile long long
 ioUTCMicrosecondsNow() { return currentUTCMicroseconds(); }
 
+unsigned long long
+ioUTCStartMicroseconds() { return utcStartMicroseconds; }
+
 unsigned volatile long long
 ioLocalMicrosecondsNow() { return currentUTCMicroseconds() + vmGMTOffset; };
 
