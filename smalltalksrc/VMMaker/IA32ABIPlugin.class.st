@@ -1,5 +1,5 @@
 "
-This plugin implements the Alien foreign-function interface, a small elaboration on the Strongtalk FFI.  This version of the plugin differs from the NewsqueakIA32ABIPlugin in not supporting immutability.
+This plugin implements the Alien foreign-function interface, a small elaboration on the Strongtalk FFI.
 
 Call-outs are performed by a small number of primitives, one each for the four different kinds of return linkage on x86.  The primitives are var-args.  Each primitive has a signature something like:
 primFFICall: functionAddress <Alien> result: result <Alien> with: firstArg <Alien> ... with: lastArg <Alien>
@@ -108,6 +108,8 @@ IA32ABIPlugin >> primAddressFieldPut [
 	value := interpreterProxy positiveMachineIntegerValueOf: valueOop.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	self longAt: rcvr + interpreterProxy baseHeaderSize + interpreterProxy bytesPerOop put: value.
 	^interpreterProxy methodReturnValue: valueOop
 ]
@@ -183,6 +185,9 @@ IA32ABIPlugin >> primAlienReplace [
 							 src := (self startOfByteData: repl) + replStart - 1].
 					(replStart >= 1 and: [stop - start + replStart <= totalLength]) ifFalse:
 						[^interpreterProxy primitiveFailFor: PrimErrBadIndex]]].
+
+	(interpreterProxy isOopImmutable: array) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 
 	count := stop - start + 1.
 	self cCode: 'memmove((void *)dest,(void *)src,count)'
@@ -387,12 +392,20 @@ IA32ABIPlugin >> primDoubleAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
 	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
 	self cCode:'((int*)addr)[1] = ((int*)(&floatValue))[1]'.
 	interpreterProxy methodReturnValue: valueOop
+]
+
+{ #category : #'primitives-Windows-VM-specific' }
+IA32ABIPlugin >> primDrainOSEventQueue [
+	<export: true>
+	self ioDrainEventQueue
 ]
 
 { #category : #'primitives-accessing' }
@@ -438,6 +451,8 @@ IA32ABIPlugin >> primFloatAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
@@ -663,6 +678,8 @@ IA32ABIPlugin >> primSignedByteAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 1 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
@@ -708,6 +725,8 @@ IA32ABIPlugin >> primSignedLongAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
@@ -763,6 +782,8 @@ IA32ABIPlugin >> primSignedLongLongAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
@@ -812,6 +833,8 @@ IA32ABIPlugin >> primSignedShortAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 2 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
@@ -857,6 +880,8 @@ IA32ABIPlugin >> primSignedWordAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: interpreterProxy bytesPerOop inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
@@ -918,7 +943,7 @@ IA32ABIPlugin >> primStrlenFromStartIndex [
 	(self index: byteOffset length: 1 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	limit := self sizeField: rcvr.
-	ptr := self cCoerce: ((self startOfData: rcvr withSize: limit) + byteOffset) to: 'char *'.
+	ptr := self cCoerce: ((self startOfData: rcvr withSize: limit) + byteOffset) to: #'char *'.
 	limit = 0
 		ifTrue: [index := self strlen: ptr]
 		ifFalse:
@@ -1003,6 +1028,8 @@ IA32ABIPlugin >> primUnsignedByteAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 1 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
@@ -1048,6 +1075,8 @@ IA32ABIPlugin >> primUnsignedLongAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
@@ -1104,6 +1133,8 @@ IA32ABIPlugin >> primUnsignedLongLongAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
@@ -1152,6 +1183,8 @@ IA32ABIPlugin >> primUnsignedShortAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: 2 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
@@ -1197,6 +1230,8 @@ IA32ABIPlugin >> primUnsignedWordAtPut [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	(self index: byteOffset length: interpreterProxy bytesPerOop inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy isOopImmutable: rcvr) ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
