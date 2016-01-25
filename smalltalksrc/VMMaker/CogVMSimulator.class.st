@@ -1434,7 +1434,7 @@ CogVMSimulator >> initialize [
 	desiredNumStackPages := desiredEdenBytes := desiredCogCodeSize := 0.
 	"This is initialized on loading the image, but convenient for testing stack page values..."
 	numStackPages := self defaultNumStackPages. 
-	startMicroseconds := Time totalSeconds * 1000000.
+	startMicroseconds := self ioUTCStartMicroseconds.
 	maxLiteralCountForCompile := MaxLiteralCountForCompile.
 	minBackwardJumpCountForCompile := MinBackwardJumpCountForCompile.
 	flagInterpretedMethods := false.
@@ -1865,6 +1865,16 @@ CogVMSimulator >> ioUTCMicroseconds [
 	 At 20k bytecodes per second, this gives us about 200 ticks per second, or about 1/5
 	 of what you'd expect for the real time clock.  This should still service events at one or
 	 two per second"
+]
+
+{ #category : #'I/O primitives support' }
+CogVMSimulator >> ioUTCStartMicroseconds [
+	"Answer the value of the microsecond clock at startup."
+
+	^startMicroseconds ifNil:
+		[self class initializationOptions
+			at: #startMicroseconds
+			ifAbsent: [[Time utcMicrosecondClock] on: Error do: [Time totalSeconds * 1000000]]]
 ]
 
 { #category : #'multi-threading simulation switch' }
