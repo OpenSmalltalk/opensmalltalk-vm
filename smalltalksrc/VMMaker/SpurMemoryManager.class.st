@@ -595,9 +595,7 @@ Class {
 		'statSGCDeltaUsecs',
 		'statScavengeGCUsecs',
 		'statScavenges',
-		'statShrinkMemory',
-		'statSpecialMarkCount',
-		'statSurvivorCount'
+		'statShrinkMemory'
 	],
 	#classVars : [
 		'BitsPerByte',
@@ -5894,8 +5892,8 @@ SpurMemoryManager >> initialize [
 	statScavenges := statIncrGCs := statFullGCs := 0.
 	statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := statGCEndUsecs := 0.
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
-	statGrowMemory := statShrinkMemory := statRootTableCount := statSurvivorCount := 0.
-	statRootTableOverflows := statMarkCount := statSpecialMarkCount := statCompactPassCount := statCoalesces := 0.
+	statGrowMemory := statShrinkMemory := statRootTableCount := 0.
+	statRootTableOverflows := statMarkCount := statCompactPassCount := statCoalesces := 0.
 
 	"We can initialize things that are allocated but are lazily initialized."
 	unscannedEphemerons := SpurContiguousObjStack new.
@@ -10949,12 +10947,13 @@ SpurMemoryManager >> statShrinkMemory [
 
 { #category : #accessing }
 SpurMemoryManager >> statSpecialMarkCount [
-	^statSpecialMarkCount
+	^0
 ]
 
 { #category : #accessing }
 SpurMemoryManager >> statSurvivorCount [
-	^statSurvivorCount
+	<doNotGenerate>
+	^scavenger statSurvivorCount
 ]
 
 { #category : #accessing }

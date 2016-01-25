@@ -117,6 +117,7 @@ Class {
 		'tenuringClassIndex',
 		'tenuringProportion',
 		'numRememberedEphemerons',
+		'statSurvivorCount',
 		'statTenures'
 	],
 	#pools : [
@@ -303,6 +304,7 @@ SpurGenerationScavenger >> copyToFutureSpace: survivor bytes: bytesInObject [
 	 Answer the new oop of the object (it may have an overflow size field)."
 	<inline: true>
 	| startOfSurvivor newStart |
+	statSurvivorCount := statSurvivorCount + 1. "we hope writes are cheap..."
 	self assert: futureSurvivorStart + bytesInObject <= futureSpace limit.
 	startOfSurvivor := manager startOfObject: survivor.
 	newStart := futureSurvivorStart.
@@ -619,7 +621,7 @@ SpurGenerationScavenger >> initialize [
 	eden := SpurNewSpaceSpace new.
 	rememberedSetSize := 0.
 	tenureThreshold := 0.
-	statTenures := 0
+	statSurvivorCount := statTenures := 0
 ]
 
 { #category : #initialization }
@@ -966,6 +968,7 @@ SpurGenerationScavenger >> scavenge: tenuringCriterion [
 	 tenuring can be based on e.g. a particular class.  The argument selects the tenuring criterion.
 
 	 Answer the limit of pastSpace, to allow the memory manager to bounds check survivors."
+	statSurvivorCount := 0.
 	tenureCriterion := tenuringCriterion.
 	self strategizeToLimitRememberedTable.
 	self scavengeLoop.
@@ -1293,6 +1296,11 @@ SpurGenerationScavenger >> shouldBeTenured: survivor [
 			[TenureToShrinkRT]	->
 				[(manager rtRefCountOf: survivor) >= refCountToShrinkRT]  }
 		otherwise: [false]
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> statSurvivorCount [
+	^statSurvivorCount
 ]
 
 { #category : #accessing }
