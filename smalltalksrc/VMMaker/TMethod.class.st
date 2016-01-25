@@ -717,7 +717,9 @@ TMethod >> exitVar: exitVar label: exitLabel [
 	"Now flatten any new statement lists..."
 	parseTree nodesDo:
 		[:node| | list |
-		(node isStmtList and: [node statements last isStmtList]) ifTrue:
+		(node isStmtList
+		 and: [node statements notEmpty
+		 and: [node statements last isStmtList]]) ifTrue:
 			[list := node statements last statements.
 			 node statements removeLast; addAllLast: list]].
 	^labelUsed
