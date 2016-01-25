@@ -1506,6 +1506,17 @@ CCodeGenerator >> generateAddressOf: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateAllMask: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPutAll: '(('.
+	self generateBitAnd: msgNode on: aStream indent: level.
+	aStream nextPutAll: ') == '.
+	self emitCExpression: msgNode args first on: aStream indent: level.
+	aStream nextPut: $)
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateAnd: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
@@ -3283,6 +3294,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#asSymbol					#generateAsSymbol:on:indent:
 	#flag:						#generateFlag:on:indent:
 	#anyMask:					#generateBitAnd:on:indent:
+	#allMask:					#generateAllMask:on:indent:
 	#noMask:					#generateNoMask:on:indent:
 	#raisedTo:					#generateRaisedTo:on:indent:
 	#touch:						#generateTouch:on:indent:

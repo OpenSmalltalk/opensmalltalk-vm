@@ -43,6 +43,7 @@ Class {
 		'DoAssertionChecks',
 		'DoExpensiveAssertionChecks',
 		'GCModeBecome',
+		'GCModeFreeSpace',
 		'GCModeFull',
 		'GCModeImageSegment',
 		'GCModeIncremental',
