@@ -1,5 +1,5 @@
 "
-This plugin implements the Alien foreign-function interface, a small elaboration on the Strongtalk FFI.
+This plugin implements the Alien foreign-function interface, a small elaboration on the Strongtalk FFI.  This version of the plugin differs from the NewsqueakIA32ABIPlugin in not supporting immutability.
 
 Call-outs are performed by a small number of primitives, one each for the four different kinds of return linkage on x86.  The primitives are var-args.  Each primitive has a signature something like:
 primFFICall: functionAddress <Alien> result: result <Alien> with: firstArg <Alien> ... with: lastArg <Alien>
@@ -404,6 +404,7 @@ IA32ABIPlugin >> primDoubleAtPut [
 
 { #category : #'primitives-Windows-VM-specific' }
 IA32ABIPlugin >> primDrainOSEventQueue [
+	<option: #NewspeakVM>
 	<export: true>
 	self ioDrainEventQueue
 ]
