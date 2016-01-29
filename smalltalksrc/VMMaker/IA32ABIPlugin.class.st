@@ -404,9 +404,9 @@ IA32ABIPlugin >> primDoubleAtPut [
 
 { #category : #'primitives-Windows-VM-specific' }
 IA32ABIPlugin >> primDrainOSEventQueue [
-	<option: #NewspeakVM>
 	<export: true>
-	self ioDrainEventQueue
+	self cppIf: #NewspeakVM
+		ifTrue: [self ioDrainEventQueue]
 ]
 
 { #category : #'primitives-accessing' }
