@@ -309,7 +309,8 @@ VMMaker class >> generateAllCogConfigurationsUnderVersionControl [
 { #category : #configurations }
 VMMaker class >> generateAllConfigurationsUnderVersionControl [
 	self generateAllNewspeakConfigurationsUnderVersionControl;
-		generateAllSqueakConfigurationsUnderVersionControl
+		generateAllSqueakConfigurationsUnderVersionControl;
+		generateVMPlugins
 ]
 
 { #category : #configurations }
@@ -464,6 +465,18 @@ VMMaker class >> generateNewspeakSpurStackVM [
 		including: #()
 ]
 
+{ #category : #utilities }
+VMMaker class >> generatePluginsTo: srcDirName options: optionsPairsArray platformDir: platDirName including: inclusions [
+	"Generate the plugins to the given target directory. Include only plugins in pluginList."
+	(self
+		makerFor: StackInterpreter
+		and: nil
+		with: optionsPairsArray
+		to: srcDirName
+		platformDir: platDirName
+		including: inclusions) generatePlugins
+]
+
 { #category : #configurations }
 VMMaker class >> generateSqueakCogMTVM [
 	^self generateSqueakCogVMWithInterpreterClass: CoInterpreterMT
@@ -484,21 +497,7 @@ VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass optio
 		with: optionsArray
 		to: (FileDirectory default pathFromURI: self sourceTree, '/src')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
-		including:#(	ADPCMCodecPlugin AsynchFilePlugin
-					BalloonEnginePlugin B3DAcceleratorPlugin B3DEnginePlugin BMPReadWriterPlugin BitBltSimulation
-					BochsIA32Plugin BochsX64Plugin
-					CameraPlugin CroquetPlugin DSAPlugin DeflatePlugin DropPlugin
-					"FT2Plugin" FFTPlugin FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin
-					GeniePlugin GdbARMPlugin HostWindowPlugin IA32ABIPlugin ImmX11Plugin InternetConfigPlugin
-					JPEGReadWriter2Plugin JPEGReaderPlugin JoystickTabletPlugin KlattSynthesizerPlugin
-					LargeIntegersPlugin LocalePlugin MIDIPlugin MacMenubarPlugin Matrix2x3Plugin
-					MiscPrimitivePlugin Mpeg3Plugin QuicktimePlugin RePlugin
-					ScratchPlugin SecurityPlugin SerialPlugin SocketPlugin
-					SoundCodecPlugin SoundGenerationPlugin SoundPlugin SqueakSSLPlugin StarSqueakPlugin
-					ThreadedFFIPlugin ThreadedARMFFIPlugin ThreadedIA32FFIPlugin
-					UnicodePlugin UnixAioPlugin UUIDPlugin UnixOSProcessPlugin
-					Win32OSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin WeDoPlugin
-					XDisplayControlPlugin)
+		including:#()
 ]
 
 { #category : #configurations }
@@ -573,6 +572,29 @@ VMMaker class >> generateSqueakStackVM [
 		to: (FileDirectory default directoryNamed: self sourceTree, '/stacksrc') fullName
 		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
 		including: #()
+]
+
+{ #category : #configurations }
+VMMaker class >> generateVMPlugins [
+	^VMMaker
+		generatePluginsTo: (FileDirectory default pathFromURI: self sourceTree, '/src')
+		options: #()
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		including:#(	ADPCMCodecPlugin AsynchFilePlugin
+					BalloonEnginePlugin B3DAcceleratorPlugin B3DEnginePlugin BMPReadWriterPlugin BitBltSimulation
+					BochsIA32Plugin BochsX64Plugin
+					CameraPlugin CroquetPlugin DSAPlugin DeflatePlugin DropPlugin
+					"FT2Plugin" FFTPlugin FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin
+					GeniePlugin GdbARMPlugin HostWindowPlugin IA32ABIPlugin ImmX11Plugin InternetConfigPlugin
+					JPEGReadWriter2Plugin JPEGReaderPlugin JoystickTabletPlugin KlattSynthesizerPlugin
+					LargeIntegersPlugin LocalePlugin MIDIPlugin MacMenubarPlugin Matrix2x3Plugin
+					MiscPrimitivePlugin Mpeg3Plugin QuicktimePlugin RePlugin
+					ScratchPlugin SecurityPlugin SerialPlugin SocketPlugin
+					SoundCodecPlugin SoundGenerationPlugin SoundPlugin SqueakSSLPlugin StarSqueakPlugin
+					ThreadedFFIPlugin ThreadedARMFFIPlugin ThreadedIA32FFIPlugin
+					UnicodePlugin UnixAioPlugin UUIDPlugin UnixOSProcessPlugin
+					Win32OSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin WeDoPlugin
+					XDisplayControlPlugin)
 ]
 
 { #category : #'version testing' }
@@ -1341,6 +1363,20 @@ VMMaker >> generateMainVM [
 		generateInternalPlugins;
 		generateExportsFile;
 		logDateAndTime
+]
+
+{ #category : #'generate sources' }
+VMMaker >> generatePlugins [
+	"Generate the ``external'' plugins.
+	 If this comes from a generator, log it for convenience."
+	abortBlock := [^self].
+	self configurationGeneratorNameOrNil ifNotNil:
+		[:generator|
+		 logger cr; nextPutAll: (generator selector copyReplaceAll: 'generate' with: '').
+		 interpreterClassName ifNotNil:
+			[logger space; nextPutAll: (CCodeGenerator shortMonticelloDescriptionForClass: (Smalltalk classNamed: interpreterClassName))].
+		 logger cr; flush].
+	self generateExternalPlugins
 ]
 
 { #category : #'processing external files' }
