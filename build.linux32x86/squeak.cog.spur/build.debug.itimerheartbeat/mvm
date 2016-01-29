@@ -17,7 +17,7 @@ test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -
 test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
 test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
 		--with-vmversion=5.0 \
-		--with-src=spursrc --with-plugins=src/plugins \
+		--with-src=spursrc \
 	CC="gcc -m32" \
 	CXX="g++ -m32" \
 	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1" \

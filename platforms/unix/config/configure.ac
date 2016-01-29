@@ -60,9 +60,9 @@ AC_ARG_WITH(src,
 vmmdir="${topdir}/${vmmsrc}"
 
 AC_ARG_WITH(plugins,
-[  --with-plugins=dir	generated plugins directory [default=${vmmdir}/plugins]],
+[  --with-plugins=dir	generated plugins directory [default=${topdir}/src/plugins]],
 [ vmpsrc="${topdir}/${with_plugins}"],
-[ vmpsrc="${vmmdir}/plugins"])
+[ vmpsrc="${topdir}/src/plugins"])
 
 vmpdir="${vmpsrc}"
 

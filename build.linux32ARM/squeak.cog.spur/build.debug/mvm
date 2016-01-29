@@ -17,7 +17,7 @@ test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -
 test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
 test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
 		--without-vm-display-fbdev --with-vmversion=5.0 \
-		--with-src=spursrc --with-plugins=src/plugins \
+		--with-src=spursrc \
 		--without-vm-display-fbdev --without-npsqueak --enable-fast-bitblt \
 	CC="gcc -march=armv6 -mfpu=vfp -mfloat-abi=hard" \
 	CXX=g++ \

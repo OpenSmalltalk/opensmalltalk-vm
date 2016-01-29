@@ -20,7 +20,7 @@ esac
 test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -p ../../plugins.int .)
 test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
 test -f config.h || ../../../platforms/unix/config/configure \
-	--with-src=stacksrc --with-plugins=src/plugins --disable-cogit \
+	--with-src=stacksrc --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
 	CC="gcc -m32" \
 	CXX="g++ -m32" \

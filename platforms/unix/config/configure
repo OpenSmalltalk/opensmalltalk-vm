@@ -1041,7 +1041,7 @@ Optional Packages:
   --with-vmversion=M.N	vm version number default = 4.0
   --with-sqversion=M.N	squeak version number default = 4.5
   --with-src=dir	generated src directory default=src
-  --with-plugins=dir	generated plugins directory default=${vmmdir}/plugins
+  --with-plugins=dir	generated plugins directory default=${topdir}/src/plugins
   --with-vmmcfg=dir	vm configuration directory containing plugins.int and plugins.ext default=.
   --with-gnu-awk          assume that awk is GNU gawk default=no
   --with-gnu-as           assume that as is the GNU assembler default=no
@@ -1566,7 +1566,7 @@ if test "${with_plugins+set}" = set; then
   withval="$with_plugins"
    vmpsrc="${topdir}/${with_plugins}"
 else
-   vmpsrc="${vmmdir}/plugins"
+   vmpsrc="${topdir}/src/plugins"
 fi;
 
 vmpdir="${vmpsrc}"

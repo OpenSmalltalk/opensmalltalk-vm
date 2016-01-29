@@ -24,7 +24,7 @@ test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -
 test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
 test -f config.h || ../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
-		--with-src=nsspursrc --with-plugins=nsspursrc/plugins \
+		--with-src=nsspursrc \
 		--without-vm-display-fbdev --without-npsqueak \
 	CC="gcc -m32" \
 	CXX="g++ -m32" \
