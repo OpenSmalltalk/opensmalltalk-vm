@@ -1866,78 +1866,78 @@ CPlatformConfigForSqueak >> customizeVMPlugins [
 	self subclassResponsibility
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirARMv6 [
 	^'cmake.build.arm.v6'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirAndroid [
 	^'Do Not Build. See Class Comment'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirBSD32x86 [
 	^'cmake.build.bsd32x86'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirBuild [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #build
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirBuildAssert [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildAssert
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirBuildAssertITimerHeartbeat [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildAssertITimerHeartbeat
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirBuildDebug [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #debug
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirBuildDebugITimerHeartbeat [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #debugITimerHeartbeat
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirBuildDebugMultiThreaded [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #debugMultiThreaded
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirBuildITimerHeartbeat [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildITimerHeartbeat
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirBuildLanguageVMMM [
 	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
 	self subclassResponsibility
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirBuildMultiThreaded [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildMultiThreaded
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirBuildMultiThreadedAssert [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildMultiThreadedAssert
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirBuildMultiThreadedDebug [
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #buildMultiThreadedDebug
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirBuildPlatform [
 	"the directory for the platform. example: build.linux32x86"
 	self subclassResponsibility
@@ -1950,17 +1950,17 @@ CPlatformConfigForSqueak >> dirFrom: aStringOrDir [
 		ifFalse: [ aStringOrDir ]
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirIA32Bochs [
 	^'cmake.build.ia32bochs'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirIOS [
 	^'cmake.build.ios'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirInstall [
 	"the directory of the finished product.. the place where 'make install' puts stuff.
 	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
@@ -1969,57 +1969,57 @@ CPlatformConfigForSqueak >> dirInstall [
 
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirLinux32Armv6 [
 	^'cmake.build.linux32armv6'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirLinux32x86 [
 	^'cmake.build.linux32x86'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirLinux64x64 [
 	^'cmake.build.linux64x64'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirLinux64x86w32BitCompatibility [
 	^'cmake.build.linux64x86w32BitCompatibility'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirMacOS [
 	^'cmake.build.macos'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirMacOSPowerPC [
 	^'cmake.build.macospowerpc'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirMacOSX32x86 [
 	^'cmake.build.macosx32x86'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirOutput [
 	^'cmake.products'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirSource [
 	^'src'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirSunOS32x86 [
 	^'cmake.build.sunos32x86'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirWin32x86 [
 	^'cmake.build.win32x86'
 ]
@@ -2158,7 +2158,7 @@ CPlatformConfigForSqueak >> externalLibsNoBuildType [
 
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> externalModulesDir [
 	"answer the location in VM bundle, where plugins and rest of dynamic libs will be copied,
 	"
@@ -2912,32 +2912,32 @@ CPlatformConfigForSqueak >> macOSPlatformName [
 	^'Mac OS'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> newspeakCogSpur [
 	^'newspeak.cog.spur'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> newspeakCogV3 [
 	^'newspeak.cog.v3'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> newspeakSistaSpur [
 	^'newspeak.sista.Spur'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> newspeakSistaV3 [
 	^'newspeak.sista.v3'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> newspeakStackSpur [
 	^'newspeak.stack.spur'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> newspeakStackV3 [
 	^'newspeak.stack.v3'
 ]
@@ -2947,7 +2947,7 @@ CPlatformConfigForSqueak >> nilPlatformName [
 	^nil
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> oscogvm [
 	^'oscogvm'
 ]
@@ -2961,7 +2961,7 @@ CPlatformConfigForSqueak >> outputDir [
 
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> outputDirName [
 	^ 'products'
 ]
@@ -3467,32 +3467,32 @@ CPlatformConfigForSqueak >> setResourceProperties: maker [
 	self subclassResponsibility
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> squeakCogSpur [
 	^'squeak.cog.spur'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> squeakCogV3 [
 	^'squeak.cog.v3'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> squeakSistaSpur [
 	^'squeak.sista.Spur'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> squeakSistaV3 [
 	^'squeak.sista.v3'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> squeakStackSpur [
 	^'squeak.stack.spur'
 ]
 
-{ #category : #'cmake directory ' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> squeakStackV3 [
 	^'squeak.stack.v3'
 ]
