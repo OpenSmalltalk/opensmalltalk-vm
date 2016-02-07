@@ -12,7 +12,7 @@ Class {
 
 { #category : #accessing }
 CMakeVMMakerSqueakExampleWorkflowHelp class >> bookName [
-	^'Example Workflow'
+	^'Example Workflow: End User'
 ]
 
 { #category : #pages }
@@ -39,10 +39,12 @@ Running the above cascade provides no feedback to the user. If all went well, th
 
 { #category : #pages }
 CMakeVMMakerSqueakExampleWorkflowHelp class >> examiningOutput [
+	"This method was automatically generated. Edit it using:"
+	"a HelpBrowser edit: #examiningOutput"
 	^HelpTopic
 		title: 'Examining Output'
-		contents:
-'TODO: tty fix apperent but in build directory as it is outputing to /cmake.build.linux64x86w32BitCompatibility/squeak.cog.v3/build/ 
+		contents: 
+'TODO: tty fix apperent but in build directory as it is outputing to DO THIS NEXT /cmake.build.linux64x86w32BitCompatibility/squeak.cog.v3/build/ 
 and not cmake.build.linux32_64x86
 
 Examining the output requires two queries (both intuitive, via the intention revealing names of the Builder and Configuration)
@@ -89,10 +91,7 @@ Klatt                 StarSqueakPlugin       vm-sound-null
 
 (NOTE TODO tty: build a query to have a configuration return its build directory path.)
 
-'
-
-
-
+!' readStream nextChunkText
 ]
 
 { #category : #pages }
@@ -153,6 +152,12 @@ CMakeVMMakerSqueakExampleWorkflowHelp class >> pages [
 ]
 
 { #category : #pages }
+CMakeVMMakerSqueakExampleWorkflowHelp class >> priority [
+
+	^ 3
+]
+
+{ #category : #pages }
 CMakeVMMakerSqueakExampleWorkflowHelp class >> queryBuilder [
 	^HelpTopic
 		title: 'Query the Builder'
@@ -207,7 +212,7 @@ As stated before, I can view what Configurations are available for a platform by
 SqueakLinux64x86w32CompatBuilder 
 	availableBuildConfigurations.
 
-As of this writing the Linux64x86w32BitSqueakCogV3Config is available and I decide on it.
+As of this writing the Linux64x86w32BitSqueakCogV3Config is available and I decide to use it.
 
 Note that the class name of the Configuration is intention-revealing. It is a Configuration for the Linux 64 platform with 32 Bit compatibility libs that encapsulates the CMake required to build the Squeak Cog V3 virtual machine. From this convention, The organization of configurations is straight-forward:
 

@@ -15,20 +15,21 @@ CMakeVMMakerSqueakBuildersHelp class >> buildTypes [
 		title:'Build types'
 		contents:
 'N.B. This query is dependent on the developer taking the time to maintain his Configuration correctly. If they do not, then invalid information will be conveyed.
-For example, at the time of this writing, tty has completely dropped the ball on this. (:
 
-Configurations are built over time. There is a possibility that a particulare build type is not available for a given Configuration.
+Configurations are built over time. There is a possibility that a particulare build type is not available for a given Configuration simply because a developer has not gotten around to the task.
 
 For example, at the time of this writing, Linux64x86w32BitSqueakCogV3Config only has buildType #build available.
 
-Since builds are sometimes not available and/or under development  a developer may wish to restrict what build types are avaiable for a configurations Builder by modifying the configuration''s "availableBuilds" method.
+Since builds are sometimes not available and/or under development  a developer *should* restrict what build types are avaiable for a configurations Builder by modifying the configuration''s "availableBuilds" method.
 
 The purpose of this method is to present the end user with the avaiable buildTypes for a configuration category. when they invoke a Builder like so:
 
 	SqueakLinux64x86w32CompatBuilder availableBuildTypesFor: #Linux64x86w32BitSqueakCogV3Config
 
-The default is all buildTypes: 
+The default is all buildTypes:  
 	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildConfigurations
+(NOTE: Why? Shouldn''t default be no build types? tty.)
+
 
 You can display no buildTypes with:
 	^SqueakCMakeVMMakerAbstractBuilder  default  noBuildConfigurations.
@@ -44,23 +45,23 @@ or you can customize it like so:
 { #category : #pages }
 CMakeVMMakerSqueakBuildersHelp class >> builders [
 	^HelpTopic
-		title: 'Builders'
+		title: 'Overview'
 		contents:
-'
-CMakeVMakerSqueak Builders provide a facade to CMakeVMmakerSqueak Configurations.
+'A CMakeVMakerSqueak Builder is both a ''query'' tool and a ''build'' tool.
 
-A Builder is both a ''query'' tool and a ''build'' tool.
+Builders provide a facade to CMakeVMmakerSqueak Configurations.
 
 With a  Builder, you can 
 	query its configurationsCategory''s Configurations
-	invoke a Configuration to generate CMake files or 
-	invoke a Configuration to generateSources which
+	invoke a Configuration to generate CMake files or... 
+	invoke a Configuration to generateSources which...
 			invokes VMMaker.oscog to generate source
 
 Builders are concrete instances of the Abstract Base Class:SqueakCMakeVMMakerAbstractBuilder
 View SqueakCMakeVMMakerAbstractBuilder''s class comments for an overview of this tool.
 
 SqueakCMakeVMMakerAbstractBuilder  browseHierarchy.
+
 
 Information on creating your own is available via HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
 
@@ -72,12 +73,21 @@ CMakeVMMakerSqueakBuildersHelp class >> generatingCMakeBuilds [
 	^HelpTopic
 		title: 'Generating CMake Builds'
 		contents:
-'
-SqueakLinux64x86w32CompatBuilder configurationsCategory
-SqueakLinux64x86w32CompatBuilder buildDirectory
-SqueakLinux64x86w32CompatBuilder availableBuilds
-SqueakLinux64x86w32CompatBuilder availableBuildTypesFor:(SqueakLinux64x86w32CompatBuilder availableBuilds at:1)
-SqueakLinux64x86w32CompatBuilder sourceDirectoryFor:(SqueakLinux64x86w32CompatBuilder availableBuilds at:1)
+'CMake Builds require CMake files.
+
+We generate those files using a Builder.
+
+In the following message sends we are asking Builder to instruct a Configuration to...
+configure itself for a specific build type
+debug trace messages in its output.
+output itself as CMake.
+
+SqueakLinux64x86w32CompatBuilder
+	configureA: #Linux64x86w32BitSqueakCogV3Config forBuildType:#build; 
+	enableMessageTracking: true;
+	generateByTemplate.
+
+
 
 '
 ]
@@ -87,9 +97,38 @@ CMakeVMMakerSqueakBuildersHelp class >> key [
 	^'CMakeVMMakerSqueakBuildersHelp'
 ]
 
+{ #category : #pages }
+CMakeVMMakerSqueakBuildersHelp class >> overview [
+	^HelpTopic
+		title: 'Overview'
+		contents:
+'A CMakeVMakerSqueak Builder is both a ''query'' tool and a ''build'' tool.
+
+Builders provide a facade to CMakeVMmakerSqueak Configurations.
+
+With a  Builder, you can 
+	query its configurationsCategory''s Configurations
+	invoke a Configuration to generate CMake files or... 
+	invoke a Configuration to generateSources which...
+	invokes VMMaker.oscog to generate source
+
+Builders are concrete instances of the Abstract Base Class:SqueakCMakeVMMakerAbstractBuilder
+Browse its class comment an heirarchy to get a feel for it.
+
+HelpBrowser openOn: SqueakCMakeVMMakerAbstractBuilder
+SqueakCMakeVMMakerAbstractBuilder  browseHierarchy.
+
+Information on creating your own is available via HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
+TODO: Fix above sentence to point to something useful.
+
+'
+]
+
 { #category : #accessing }
 CMakeVMMakerSqueakBuildersHelp class >> pages [
-	^#(builders queryingBuilders buildTypes  generatingCMakeBuilds scratch)
+	^#(overview queryingBuilders buildTypes  generatingCMakeBuilds)
+	
+"#(overview queryingBuilders buildTypes  generatingCMakeBuilds scratch)"
 ]
 
 { #category : #pages }
@@ -97,16 +136,22 @@ CMakeVMMakerSqueakBuildersHelp class >> queryingBuilders [
 	^HelpTopic
 		title: 'Querying Builders'
 		contents:
-'
-You query Builders for Configuration information for a specifi platform.
+'You can query Builders for Configuration information for a specific platform.
 
-SqueakLinux64x86w32CompatBuilder configurationsCategory
-SqueakLinux64x86w32CompatBuilder buildDirectory
-SqueakLinux64x86w32CompatBuilder availableBuilds
-SqueakLinux64x86w32CompatBuilder availableBuildTypesFor:(SqueakLinux64x86w32CompatBuilder availableBuilds at:1)
-SqueakLinux64x86w32CompatBuilder sourceDirectoryFor:(SqueakLinux64x86w32CompatBuilder availableBuilds at:1)
+SqueakCMakeVMMakerAbstractBuilder availableBuildConfigurationsFor: ''CMakeVMMakerSqueak-Linux32x86''.
+SqueakCMakeVMMakerAbstractBuilder availableBuildConfigurationsFor: ''CMakeVMMakerSqueak-MacOSX32x86''.
+SqueakCMakeVMMakerAbstractBuilder allBuildTypes
 
-'
+SqueakLinux64x86w32CompatBuilder configurationsCategory.
+SqueakLinux64x86w32CompatBuilder buildDirectory.
+SqueakLinux64x86w32CompatBuilder availableBuildConfigurations a SortedCollection(#Linux64x86w32BitSqueakCogV3Config).
+SqueakLinux64x86w32CompatBuilder availableBuildTypesFor:(SqueakLinux64x86w32CompatBuilder availableBuildConfigurations at:1).
+SqueakLinux64x86w32CompatBuilder sourceDirectoryFor:(SqueakLinux64x86w32CompatBuilder availableBuildConfigurations at:1).
+
+
+The hope is that an app like Seaside would autogenerate build configurations while intelligently selecting/de-selecting based on the systems built-in configuration. 
+
+ToolSet browseMessageCategory: ''queries'' inClass: SqueakCMakeVMMakerAbstractBuilder'
 ]
 
 { #category : #pages }
