@@ -20,7 +20,8 @@ CMakeVMMakerSqueakStartHereHelp class >> nextSteps [
 	^HelpTopic
 		title: 'Next Steps'
 		contents:
-'The next Help Topic entitled "Example Workflow" will walk you through an example workflow as executed on a GNU Linux system with the standard development tools. Macintosh and Windows dev tools will differ (N.B. tty The primary difference is that they have not been written yet (:  ).
+'The  Help Topic entitled "Example Workflow: End User" will walk you through an example workflow as executed on a GNU Linux system with the standard development tools. Macintosh and Windows dev tools will differ (N.B. tty The primary difference is that they have not been written yet (:  ).
+
 
 The Help Topic entitled "Developer Guide" will explain the design of and how to add and modify the components of the CMakeVMMakerSqueak system.
 
@@ -38,14 +39,15 @@ CMakeVMMakerSqueakStartHereHelp class >> overview [
 1. Instruct  CMakeVMMakerSqueak to generate CMake build directories and CMake configuration files.
 
 2. Invoke the  ''cmake'' command at the top level of the generated cmake build tree
-
+ 
 3. CMake configures and outputs the build system files for that platform.
 
 4. The user invokes the native build system.
 
-5. A VM is produced under a ~/...../''cmake.platforms'' subdirectory.
+5. The native build system compiles a VM. 
 
-The ''Example Workflow'' page in this Help book provides an example of the above workflow with minimal explanation.
+The ''Example Workflow: End User'' page in this Help book provides an example of the above workflow with minimal explanation.
+
 
 In-depth explanations of the system(s), tools and how to use them, see the ''CMakeVMMaker Developer Guide'''
 ]
@@ -56,11 +58,20 @@ CMakeVMMakerSqueakStartHereHelp class >> pages [
 ]
 
 { #category : #pages }
+CMakeVMMakerSqueakStartHereHelp class >> priority [
+
+	^ 1
+]
+
+{ #category : #pages }
 CMakeVMMakerSqueakStartHereHelp class >> requirements [
+	"This method was automatically generated. Edit it using:"
+	"a HelpBrowser edit: #requirements"
 	^HelpTopic
 		title: 'Requirements'
-		contents:
-'CMakeVMakerSqueak (as of 2014.12.09) depends on the Pharo package CMakeVMMaker. A (possibly out-of-sync) Monticello version is available at:
+		contents: 
+'CMakeVMakerSqueak (as of 2014.12.09) depends on the Pharo package CMakeVMMaker. This dependency will be broken in a future release.	
+A (possibly out-of-sync) Monticello version is available at:
 
 MCHttpRepository
 	location: ''http://source.squeak.org/VMMaker''
@@ -73,13 +84,14 @@ MCHttpRepository
 	location: ''http://source.squeak.org/VMMaker''
 	user: ''''
 	password: ''''
+	
 
 CMake is available from http://www.cmake.org. The version of CMake used as of 2014.12.09 is 2.8.12  
 
 CMake provides a cmake_minimum_required(..) command, so newer versions should be ok.
 
-The next Help Topic entitled "Example Workflow" will walk you through an example workflow  is presented on a GNU Linux system with the standard development tools. Macintosh and Windows dev tools will differ.
 
 
-'
+
+!' readStream nextChunkText
 ]

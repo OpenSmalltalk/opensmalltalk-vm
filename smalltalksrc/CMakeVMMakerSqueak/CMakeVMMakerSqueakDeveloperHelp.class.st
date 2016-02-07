@@ -73,7 +73,10 @@ cmake --help-variable-list  etc.
 
 { #category : #pages }
 CMakeVMMakerSqueakDeveloperHelp class >> pages [
-	^#(CMakeVMMakerSqueakHistoryHelp CMakeVMMakerSqueakOverviewHelp  CMakeVMMakerSqueakConfigurationsHelp CMakeVMMakerSqueakTemplatesHelp CMakeVMMakerSqueakGeneratorsHelp CMakeVMMakerSqueakBuildersHelp CMakeVMMakerSqueakDesignPatternsHelp  configDotCmake looseEnds  plugins pthreads  templates tests  )
+	^#( CMakeVMMakerSqueakOverviewHelp  CMakeVMMakerSqueakBuildersHelp   CMakeVMMakerSqueakConfigurationsHelp   CMakeVMMakerSqueakGeneratorsHelp CMakeVMMakerSqueakTemplatesHelp CMakeVMMakerSqueakDesignPatternsHelp CMakeVMMakerSqueakHistoryHelp )
+	
+		
+	"#(CMakeVMMakerSqueakHistoryHelp CMakeVMMakerSqueakConfigurationsHelp CMakeVMMakerSqueakOverviewHelp   CMakeVMMakerSqueakGeneratorsHelp CMakeVMMakerSqueakTemplatesHelp  CMakeVMMakerSqueakBuildersHelp CMakeVMMakerSqueakDesignPatternsHelp  configDotCmake looseEnds  plugins pthreads  templates tests  )"
 ]
 
 { #category : #pages }
@@ -101,6 +104,12 @@ Transcript show: s.
 
 SqueakUnixConfig browse
 '
+]
+
+{ #category : #accessing }
+CMakeVMMakerSqueakDeveloperHelp class >> priority [
+
+	^ 2
 ]
 
 { #category : #pages }

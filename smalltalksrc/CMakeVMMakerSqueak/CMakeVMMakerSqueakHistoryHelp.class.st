@@ -92,3 +92,9 @@ Here I present an overview of the design of each historical system and end with 
 CMakeVMMakerSqueakHistoryHelp class >> pages [
 	^#( CMakeVMMakerSqueakHistoryIgorStasenkoHelp CMakeVMMakerSqueakHistoryIanPiumartaHelp cmakeVMMakerSqueak)
 ]
+
+{ #category : #pages }
+CMakeVMMakerSqueakHistoryHelp class >> priority [
+
+	^ 7
+]

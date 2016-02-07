@@ -44,6 +44,12 @@ redirectPatternHeirarchy
 redirectPatternSummary)
 ]
 
+{ #category : #accessing }
+CMakeVMMakerSqueakDesignPatternsHelp class >> priority [
+
+	^ 8
+]
+
 { #category : #pages }
 CMakeVMMakerSqueakDesignPatternsHelp class >> redirectPattern [
 	^HelpTopic
