@@ -102,56 +102,61 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> createTheConfiguration
 		contents:
 'Our new Concrete Configuration must be created as a subclass of our Platform''s Abstract Base Class.
 
-SInce I am creating a Squeak Cog V3 config for the Linux32x86 Platform I choose the name:
+SInce I am creating a Squeak Cog Spur config for the CMakeVMMakerSqueak-Linux64X86-32BitCompatibility Platform I choose the name:
 
-Linux32x86SqueakCogV3Config.
+Linux64x86w32BitSqueakCogSpurConfig.
 
 (For a discussion on naming conventions evaluate:
 HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
 )
 
-To create it, I subclass the Abstract Base Class for my Platform like so:
+To create it, I must subclass the Abstract Base Class for my Platform like so:
 
-Linux32x86Config subclass: #Linux32x86SqueakCogV3Config
+Linux64x86w32BitConfigUsrLib subclass: #Linux64x86w32BitSqueakCogSpurConfig
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: ''CMakeVMMakerSqueak-Linux32x86''
+	category: ''CMakeVMMakerSqueak-Linux64X86-32BitCompatibility''
 
 However, being lazy, I am going to copy an existing Configuration that is similar to what I want. 
 
 Today I choose Linux64x86w32BitSqueakCogV3Config from the  CMakeVMMakerSqueak-Linux64X86-32BitCompatibility Platform category
 
-I copy the class and then change its parent and class category to get:
+I copy the class and then change its name, parent and class category to get:
 
-Linux32x86Config subclass: #Linux32x86SqueakCogV3Config
+Linux64x86w32BitConfigUsrLib subclass: #Linux64x86w32BitSqueakCogSpurConfig
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: ''CMakeVMMakerSqueak-Linux32x86''
+	category: ''CMakeVMMakerSqueak-Linux64X86-32BitCompatibility''
 
-
-At this point I re-run all my Tests. For me, all tests pass.
 
 I then query by Builder to see if it sees the new Configuration in the platform:
 
-SqueakLinux32x86Builder configurationsCategory
--->  ''CMakeVMMakerSqueak-Linux32x86''
+SqueakLinux64x86w32CompatBuilder configurationsCategory
+-->  ''CMakeVMMakerSqueak-Linux64X86-32BitCompatibility''
 
-SqueakLinux32x86Builder  availableBuildConfigurations   
---> a SortedCollection(#Linux32x86SqueakCogV3Config)    "Here we see our new Configuration is visible to the Builder"
+SqueakLinux64x86w32CompatBuilder  availableBuildConfigurations  
+-->  a SortedCollection(#Linux64x86w32BitSqueakCogSpurConfig #Linux64x86w32BitSqueakCogV3Config)
+   "Here we see our new Configuration is visible to the Builder"
 
-SqueakLinux32x86Builder  unAvailableBuildConfigurations
---> a SortedCollection(#Linux32x86Config)  "The Abstract Base Class is not available to be built"
+SqueakLinux64x86w32CompatBuilder  unAvailableBuildConfigurations
+-->  a SortedCollection(#Linux64x86w32BitConfigUsrLib #Linux64x86w32BitConfigUsrLib32)  "Our Abstract Base Classes are not available to be built"
 
-SqueakLinux32x86Builder availableBuildTypesFor: #Linux32x86SqueakCogV3Config 
---> an OrderedCollection(#build)                    "The Configuration I copied has one Build Type coded/available."
+SqueakLinux64x86w32CompatBuilder availableBuildTypesFor: #Linux64x86w32BitSqueakCogSpurConfig
+--> an OrderedCollection(#build #buildAssert) "The Configuration I copied has two Build Types coded and available."
 
 
-SqueakLinux32x86Builder  sourceDirectoryFor:#Linux32x86SqueakCogV3Config
--->  "src"                                                        "Where the vm source code is located"
+SqueakLinux64x86w32CompatBuilder  sourceDirectoryFor:#Linux64x86w32BitSqueakCogSpurConfig
+-->  "src"                                                        "Where the vm source code is located (we will be changing this)"
 
 My new configuration is correctly named and in the correct place. 
+
+At this point I re-run all my Tests.
+TestRunner open
+ For me, all tests pass.
+
+In the next topic we cover how to hide our new Configuration from a builder. 
 
 '
 
@@ -195,45 +200,38 @@ excludeFromBuild
 	^false   "build this configuration"
 "	^true     do not build this configuration"   
 
-This functionality is included with an eye towards easing automated builds for all platforms and configurations.
+In our case, the Builder shows us that Linux32x86SqueakCogSpurConfig is capable of being built (I had copied an existing, working Configuration):
 
-In our case, the Builder shows us that Linux32x86SqueakCogV3Config is capable of being built (I had copied an existing, working Configuration):
+SqueakLinux64x86w32CompatBuilder availableBuildConfigurations
+--> a SortedCollection(#Linux64x86w32BitSqueakCogSpurConfig #Linux64x86w32BitSqueakCogV3Config)
 
-SqueakLinux32x86Builder availableBuildConfigurations
---> an OrderedCollection(#Linux32x86SqueakCogV3Config)
 
 To exclude it, override (or alter) the Configurations ''excludeFromBuild'' method
 
-Linux32x86SqueakCogV3Config >>excludeFromBuild
+Linux64x86w32BitSqueakCogSpurConfig >>excludeFromBuild
 	"over-ride to exclude yourself from a build"
 	^true
 
 And the Configuration is hidden from the Builder...
 
-SqueakLinux32x86Builder availableBuildConfigurations 
---> an OrderedCollection()
+SqueakLinux64x86w32CompatBuilder availableBuildConfigurations
+-->  a SortedCollection(#Linux64x86w32BitSqueakCogV3Config)
 
 
 However, since I am developing locally, I need it to be visible to the Builder , so I set it as so:
 
-Linux32x86SqueakCogV3Config >>excludeFromBuild
+Linux64x86w32BitSqueakCogSpurConfig >>excludeFromBuild
 	"over-ride to exclude yourself from a build"
 	^false
 
 And my Builder can see it again...
 
-SqueakLinux32x86Builder availableBuildConfigurations  
-an OrderedCollection(#Linux32x86SqueakCogV3Config)
+SqueakLinux64x86w32CompatBuilder availableBuildConfigurations  
+-->  a SortedCollection(#Linux64x86w32BitSqueakCogSpurConfig #Linux64x86w32BitSqueakCogV3Config)
 
 
 N.B. tty. My opinion is that this is a weak way of doing this, but I have not thought through how to do this elegantly. 
-
-
-
-
-
-
-'
+This functionality is included with an eye towards easing automated builds for all platforms and configurations.'
 ]
 
 { #category : #pages }
@@ -381,6 +379,7 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> identifyBuilder [
 Builders are located in the CMakeVMMakerSqueak-Builder class category.
 
 Builders are subclasses of SqueakCMakeVMMakerAbstractBuilder.
+SqueakCMakeVMMakerAbstractBuilder browseHierarchy
 
 Builders are named according to the Platform they manage.
 
@@ -390,29 +389,31 @@ HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
 
 Builders manage configurations for one Platform in one  class category.
 
-My platform is Linux 32x86.
 
-I suspect that the  SqueakLinux32x86Builder as the Builder that will manage my new configuration.
+My platform is Linux Linux64x86 with 32 bit compatability libs stored in /usr/lib (other linux use /usr/lib32 for this.)
+
+I suspect that the  SqueakLinux64x86w32CompatBuilder as the Builder that will manage my new configuration.
 
 I confirm this by sending it the ''configurationsCategory'' message as shown below:
 
-SqueakLinux32x86Builder configurationsCategory 
--->''CMakeVMMakerSqueak-Linux32x86''                    <---this is the correct class category for my Platform.
+SqueakLinux64x86w32CompatBuilder configurationsCategory 
+-->''CMakeVMMakerSqueak-Linux64X86-32BitCompatibility''                    <---this is the correct class category for my Platform.
 
 This is correct Builder for my new Configuration. 
 
 I can query  the Builder for some more information:
 
-SqueakLinux32x86Builder  availableBuildConfigurations
- a SortedCollection()    <--there are no concrete configurations in place as of this writing.
+SqueakLinux64x86w32CompatBuilder  availableBuildConfigurations
+  a SortedCollection(#Linux64x86w32BitSqueakCogV3Config)   <--A Cog V3 configuration exists. 
 
-SqueakLinux32x86Builder  unAvailableBuildConfigurations 
-a SortedCollection(#Linux32x86Config)   <--this is my Abstract Base Class. Abstract Base Classes cannot be built, hence they are unavailable.
+SqueakLinux64x86w32CompatBuilder  unAvailableBuildConfigurations 
+--> a SortedCollection(#Linux64x86w32BitConfigUsrLib #Linux64x86w32BitConfigUsrLib32)
+ <--these are platform specific Abstract Base Classes. Abstract Base Classes cannot be built, hence they are unavailable.
 
-SqueakLinux32x86Builder  buildDirectory 
--->''cmake.build.linux32x86''                     <--this matches my platform
+SqueakLinux64x86w32CompatBuilder  buildDirectory 
+-->''cmake.build.linux64x86w32BitCompatibility''                     <--this matches my platform
 
-We will be using the SqueakLinux32x86Builder in tandem with Tests during Configuration development.'
+We will be using the SqueakLinux64x86w32CompatBuilder in tandem with Tests during Configuration development.'
 
 
 ]
@@ -422,22 +423,17 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> identifyPlatform [
 	^HelpTopic
 		title:'Identify Platform'
 		contents:
-'My target platform is Linux 32 bit x86. 
+'My target platform is 64 bit Linux on X86 with 32 bit compatibility libraries stored in /usr/lib.
 
 I identify my Platform in the existing CMakeVMMakerSqueak-xyz class categories.  
 
-I choose the  CMakeVMMakerSqueak-Linux32x86 as the location for my new Configuration.
 
 If I wanted a configuration for MacOSX32x86, I would place my configuration in CMakeVMMakerSqueak-MacOSX32x86.
 If SunOSx3x86 then CMakeVMMakerSqueak-SunOS32x86.
-etc, etc.
+etc.
 
-
-(For a discussion on naming conventions evaluate:
+For a discussion on naming conventions evaluate:
 HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
-)
-
-
 '
 ]
 
@@ -448,17 +444,24 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> identifyPlatformAbstra
 		contents:
 'My new configuration must be a subclass of my Platform''s Abstract Base Class. 
 
-In class category CMakeVMMakerSqueak-Linux32x86 the Abstract Base Class is  Linux32x86Config 
+A Platform Abstract Base Class encapsulates common platform information. 
 
-Examples of Abstract Base Classes in other class categories  (category->Abstract Base Class) include:
+In CMakeVMMakerSqueak-Linux64X86-32BitCompatibility class category I see two Abstract Base Classes (typically there is only one). They are:
+
+Linux64x86w32BitConfigUsrLib 
+Linux64x86w32BitConfigUsrLib32
+
+The Suffixes ''UsrLib'' and ''UsrLib32'' refer to the location of the 32 bit compatablity libs. 
+On my system they are in /usr/lib,  so I choose  Linux64x86w32BitConfigUsrLib as my Abstract Base Class
+
+Examples of Abstract Base Classes in other class categories  include:
 
 CMakeVMMakerSqueak-BSD32x86                                -> SqueakBSD32x86Config
 CMakeVMMakerSqueak-IA32-Bochs                               -> SqueakIA32BochsConfig
 CMakeVMMakerSqueak-IOS                                           -> SqueakIOSConfig
 CMakeVMMakerSqueak-IOS                                           -> SqueakIOSConfig
 CMakeVMMakerSqueak-Linux32ARMv6                          -> Linux32ARMv6Config
-CMakeVMMakerSqueak-Linux64X86-32BitCompatibility -> Linux64x86w32BitConfig
-CMakeVMMakerSqueak-LinuxX86-64                             -> Linux64Config
+CMakeVMMakerSqueak-Linux64x64                              -> Linux64x64Config
 CMakeVMMakerSqueak-MacOSPowerPC                        -> SqueakMacOSXPowerPCConfig
 CMakeVMMakerSqueak-MacOSX32x86                          -> SqueakMacOSX32x86Config
 CMakeVMMakerSqueak-SunOS32x86                            -> SqueakSunOS32x86Config
@@ -466,19 +469,13 @@ CMakeVMMakerSqueak-Win32x86                                 -> SqueakWin32x86Con
 
 I can identify the Abstract Base Class in several ways
 
-1. It is the topmost class in the class category for that platform
+1. It is a  topmost class in the class heirarchy for that platform/class category
 2. It is named after its platform
 3. It answers #true to the message isAbstractBaseClass
-Linux32x86Config  isAbstractBaseClass 
+Linux64x86w32BitConfigUsrLib  isAbstractBaseClass 
 --> true
-4. Its class initialize method sets its isAbstractBaseClass class instance variable to #true
-5. It is the only Abstract Base Class in its immediate class heirarchy.
 
-My new configurations will be a subclass of the AbstractBaseClass for my platform. 
-
-In this workflow example the AbstractBaseClass for my Platform is Linux32x86Config
-
-'
+In this workflow example I ideduce that the  AbstractBaseClass for my Platform is Linux64x86w32BitConfigUsrLib'
 ]
 
 { #category : #accessing }
@@ -491,8 +488,7 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> overview [
 	^HelpTopic
 		title:'Overview'
 		contents:
-'This Help Topic presents the workflow the author used in creating the  Squeak, Cog, V3 CMake configuration for a pure 32 bit Slackware 14.1 system.
-
+'This Help Topic presents the workflow the author used in creating the  Squeak, Cog, Spur CMake configuration for a 64 bit Slackware 14.1 system.with 32 bit compatability libs in /usr/lib
 
 The steps involved should be the same for any platform.'
 ]
@@ -541,31 +537,34 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setAvailableBuildTypes
 	^HelpTopic
 		title:'Setting Available Build Types'
 		contents:
-'Configurations  inform Builders what BuildTypes they support. via the availableBuildTypes method*
+'Configurations  inform Builders what BuildTypes they support. via the availableBuildTypes method
 
 Here is my Builder asking my new Configuration what build types it supports (remember, this Configuration was copied, so it has been configured already)
 
-SqueakLinux32x86Builder availableBuildTypesFor: #Linux32x86SqueakCogV3Config 
--->an OrderedCollection(#build)
+SqueakLinux64x86w32CompatBuilder availableBuildTypesFor: #Linux64x86w32BitSqueakCogSpurConfig
+-->  an OrderedCollection(#build #buildAssert)
 
-In our Abstract Base Class (Which, you recall cannot be buil)for our Platform, we default to all build types.
 
-Linux32x86Config>>availableBuildTypes
-	 ^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes
+In our Abstract Base Class (Which, you recall cannot be buil)for our Platform, we default to no build types.
 
-Evaluating  the return gives us:
+Linux64x86w32BitConfigUsrLib>>availableBuildTypes
+ 	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
 
+
+To get an idea of what buildTypes are available system wide evaluate
 SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes 
 -->an OrderedCollection(#build #buildAssert #buildAssertITimerHeartbeat #buildDebug #buildDebugITimerHeartbeat #buildITimerHeartbeat #buildMultiThreaded #buildMultiThreadedAssert #buildMultiThreadedDebug #buildNone)
 
 
 To set the available build types for a Concrete Configurations we override the AbstactBaseClass''s method and SUBTRACT OUT what we do not want. Like so:
 
-Linux32x86SqueakCogV3Config >> availableBuildTypes 
+Since I am starting simple, I want my configuration to build a vanilla build. To do this I remove all but #build buildType like so
+
+Linux64x86w32BitSqueakCogSpurConfig >> availableBuildTypes 
 	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes copyWithoutAll: #( #buildAssert #buildAssertITimerHeartbeat #buildDebug #buildDebugITimerHeartbeat #buildITimerHeartbeat #buildMultiThreaded #buildMultiThreadedAssert #buildMultiThreadedDebug #buildNone)
 
 
-Here I show what happens when I subtract more from the available pool. Here I set my Configuration to only omit 2 build types:
+As I code more build types in my configuration, I subtract out 
 
 Linux32x86SqueakCogV3Config >> availableBuildTypes 
 	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes copyWithoutAll: #(  #buildMultiThreadedDebug #buildNone)

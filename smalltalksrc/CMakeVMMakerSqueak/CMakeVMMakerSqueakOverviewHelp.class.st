@@ -16,9 +16,11 @@ CMakeVMMakerSqueakOverviewHelp class >> key [
 
 { #category : #pages }
 CMakeVMMakerSqueakOverviewHelp class >> namingConventions [
+	"This method was automatically generated. Edit it using:"
+	"a HelpBrowser edit: #namingConventions"
 	^HelpTopic
-		title:'Naming Conventions'
-		contents:
+		title: 'Naming Conventions'
+		contents: 
 '[PLATFORM][Language][VM][Memory Manager][BuildType][foo]  IS the naming convention for CMakeVMMakerSqueak
 
 The convention is a bottom-up design starting with Eliot Miranda''s Cog layout at 
@@ -59,7 +61,7 @@ Example: SqueakBSD32x86Builder
 AbstractBaseClass Configurations have the form: [Optional Prefix][Platform]Config.
 Example: Linux32x86Config
 
-Concrete Configurations have the form: [Optional ]Prefix][PLATFORM].[Language].[VM].[Memory Manager][Suffix][Optional Foo]
+Concrete Configurations have the form: [Optional Prefix]][Platform] [Language] [VM] [MemoryManager] [Optional Suffix] Config
 Linux32x86SqueakCogV3Config
 
 When the Linux32x86SqueakCogV3Config is  configured for the buildType #build.debug it will map its output to cmake.build.linux32x86/squeak.cog.v3/build.debug/
@@ -72,7 +74,7 @@ As of 2014.12.09 the possible combinatons are:
 [Prefix][Platform][Newspeak | Squeak][Cog | Sista | Stack][V3 | Spur][Foo]Config.
 
 
-'
+!' readStream nextChunkText
 ]
 
 { #category : #pages }
@@ -109,7 +111,7 @@ The programmer directs the flow of the generator by coding a subclass of CPlatfo
 
 The configuration then invokes the CMakeGeneratorForSqueak passing itself as an argument. 
 
-The VMGeneratator extracts the information and utilizes VMPluginGenerator to generate plugin stuff, the CPlatformConf to generate other stuff and CMThirdPartyLibrary''s to generate other stuff. 
+The VMGeneratator extracts the information and utilizes VMPluginGenerator to generate plugin stuff, the CPlatformConf to generate other stuff and CMThirdPartyLibrary''s to generate other stuff. (TODO: tighten up this language)
 
 The end result is a CMake evironment that is set up to correctly build a VM
 
@@ -127,7 +129,8 @@ CMakeVMMakerSqueakOverviewHelp class >> prerequisites [
 	^HelpTopic
 		title:'Prerequisites'
 		contents:
-'The CMakeVMMakerSqueak depends on CMakeVMMaker (a pharo implementation)
+'As of 2016.02.06 CMakeVMMakerSqueak depends on CMakeVMMaker (a pharo implementation). This dependency will be broken in due course.
+TODO: Break this dependency TTY
 
 CMake from  http://www.cmake.org/ is required to process the output of this package.
 
