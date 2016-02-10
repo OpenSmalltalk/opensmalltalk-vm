@@ -884,7 +884,7 @@ int mpeg3audio_III_antialias(mpeg3audio_t *audio,
 	if(gr_info->block_type == 2) 
 	{
     	if(!gr_info->mixed_block_flag) 
-        	return;
+        	return 0;
     	sblim = 1; 
 	}
 	else 

@@ -154,7 +154,7 @@ int mpeg3video_getdcchrom(mpeg3_slice_buffer_t *slice_buffer)
 
 /* decode one intra coded MPEG-1 block */
 
-int mpeg3video_getintrablock(mpeg3_slice_t *slice, 
+void mpeg3video_getintrablock(mpeg3_slice_t *slice, 
 		mpeg3video_t *video,
 		int comp, 
 		int dc_dct_pred[])
@@ -179,7 +179,7 @@ int mpeg3video_getintrablock(mpeg3_slice_t *slice,
   		bp[0] <<= 4;
 #endif
 
-  	if(slice->fault) return 1;
+  	if(slice->fault) return;
 
 /* decode AC coefficients */
   	for(i = 1; ; i++)
@@ -265,7 +265,7 @@ int mpeg3video_getintrablock(mpeg3_slice_t *slice,
 /* not a sparse matrix ! */
        slice->sparse[comp] = 0;
 	}
-	return 0;
+	return;
 }
 
 
@@ -369,7 +369,7 @@ int mpeg3video_getinterblock(mpeg3_slice_t *slice,
 
 
 /* decode one intra coded MPEG-2 block */
-int mpeg3video_getmpg2intrablock(mpeg3_slice_t *slice, 
+void mpeg3video_getmpg2intrablock(mpeg3_slice_t *slice, 
 		mpeg3video_t *video, 
 		int comp, 
 		int dc_dct_pred[])
@@ -444,7 +444,7 @@ int mpeg3video_getmpg2intrablock(mpeg3_slice_t *slice,
 		{
 /*    		fprintf(stderr,"mpeg3video_getmpg2intrablock: invalid Huffman code\n"); */
     		slice->fault = 1;
-    		return 1;
+    		return;
     	}
 
     	mpeg3slice_flushbits(slice_buffer, tab->len);
@@ -492,13 +492,13 @@ int mpeg3video_getmpg2intrablock(mpeg3_slice_t *slice,
 /* not a sparse matrix ! */
     	 slice->sparse[comp] = 0;
 	}
-	return 1;
+	return;
 }
 
 
 /* decode one non-intra coded MPEG-2 block */
 
-int mpeg3video_getmpg2interblock(mpeg3_slice_t *slice, 
+void mpeg3video_getmpg2interblock(mpeg3_slice_t *slice, 
 		mpeg3video_t *video, 
 		int comp)
 {
@@ -563,7 +563,7 @@ int mpeg3video_getmpg2interblock(mpeg3_slice_t *slice,
 			{
 /*        		fprintf(stderr, "mpeg3video_getmpg2interblock: invalid signed_level (escape)\n"); */
         		slice->fault = 1;
-        		return 1;
+        		return;
     		}
     		if((sign = (val >= 2048)) != 0) val = 4096 - val;
     	}
@@ -591,7 +591,7 @@ int mpeg3video_getmpg2interblock(mpeg3_slice_t *slice,
 	{
       	slice->sparse[comp] = 0;
 	}
-	return 0;
+	return;
 }
 
 
