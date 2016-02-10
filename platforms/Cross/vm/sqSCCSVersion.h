@@ -102,23 +102,62 @@ sourceVersionString(char separator)
 #if VERSION_PROGRAM
 # include "sq.h"
 
+#if SistaVM
+# define NICKNAME "Sista"
+#elif COGVM
+# define NICKNAME "Cog"
+#elif STACKVM
+# define NICKNAME "Stack"
+#else
+# define NICKNAME "Context"
+#endif
+
+#if SPURVM
+# define OBJMEM "Spur"
+#else
+# define OBJMEM "V3"
+#endif
+
+int argc = 0;
+char **argv = 0;
+
+/* printit allows that with no arguments print all key/value pairs
+ * and with one argument print the value of a particular key.
+ */
 int
-main(int argc, char *argv[])
+printit(const char *what)
+{
+	if (argc == 1) {
+		printf("%s: ", what);
+		return 1;
+	}
+	return argc == 2 && !strcmp(argv[1], what);
+}
+
+int
+main(int _argc, char **_argv)
 {
 	char vm_version[] = VM_VERSION;
 
-	if (argc == 2 && !strcmp(argv[1], "VM_VERSION"))
+	argc = _argc;
+	argv = _argv;
+
+	if (printit("VM_NICKNAME"))
+		printf("%s\n", NICKNAME " " OBJMEM " VM");
+	if (printit("VM_MONIKER"))
+		printf("%s\n", NICKNAME OBJMEM "VM");
+	if (printit("VM_VERSION"))
 		printf("%s\n", vm_version);
-	else if (argc == 2 && !strcmp(argv[1], "VM_MAJOR"))
+	if (printit("VM_MAJOR"))
 		printf("%.*s\n", strchr(vm_version,'.') - vm_version, vm_version);
-	else if (argc == 2 && !strcmp(argv[1], "VM_MINOR"))
-		printf("%s\n", strchr(vm_version,'.') + 1, vm_version);
-	else if (argc == 2 && !strcmp(argv[1], "VM_RELEASE"))
+	if (printit("VM_MINOR"))
+		printf("%s\n", strchr(vm_version,'.') + 1);
+	if (printit("VM_RELEASE"))
 		printf("%s\n", revisionAsString());
-	else if (argc == 2 && !strcmp(argv[1], "VERSION_TAG"))
+	if (printit("VERSION_TAG"))
 		printf("%s-%s\n", vm_version, revisionAsString());
-	else
-		return 1;
+	if (printit("VERSION_NUMBER"))
+		printf("%s.%s\n", vm_version, revisionAsString());
 
 	return 0;
 }

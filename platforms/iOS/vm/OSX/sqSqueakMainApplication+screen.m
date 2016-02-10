@@ -28,13 +28,17 @@
 */
 //
 
+#ifdef BUILD_FOR_OSX
+#import "SqueakOSXAppDelegate.h"
+extern SqueakOSXAppDelegate *gDelegateApp;
+#else
 #import "SqueakNoOGLIPhoneAppDelegate.h"
+SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
+#endif
 #import "sqSqueakMainApplication+screen.h"
 #import "sqMacV2Browser.h"
 #import "sqMacV2Window.h"
 #import "HostWindowPlugin.h"
-
-extern SqueakNoOGLIPhoneAppDelegate *gSqueakApplication;
 
 extern BOOL gSqueakHeadless;
 
@@ -55,8 +59,13 @@ extern BOOL gSqueakHeadless;
 	if (getSTWindow() == NULL && !gSqueakExplicitWindowOpenNeeded) {
 		makeMainWindow();
 	}
-	@synchronized(gSqueakApplication.mainView) {
-		CGRect screenSize = [gSqueakApplication.mainView bounds];
+	@synchronized(gDelegateApp.mainView) {
+#ifdef BUILD_FOR_OSX
+		NSRect
+#else
+		CGRect
+#endif
+		screenSize = [gDelegateApp.mainView bounds];
 		w = (sqInt) screenSize.size.width;
 		h = (sqInt) screenSize.size.height;
 	}

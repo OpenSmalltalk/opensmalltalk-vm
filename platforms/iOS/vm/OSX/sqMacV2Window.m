@@ -36,7 +36,7 @@
 #import "sqMacV2Browser.h"
 
 extern BOOL gSqueakHeadless;
-extern SqueakOSXAppDelegate *gSqueakApplication;
+extern SqueakOSXAppDelegate *gDelegateApp;
 
 void * getSTWindow(void) {
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return NULL;	
@@ -53,7 +53,7 @@ void makeMainWindow(void) {
 	width  = (unsigned) getSavedWindowSize() >> 16;
 	height = getSavedWindowSize() & 0xFFFF;
 	windowBlock = AddWindowBlock();
-	windowBlock-> handle = gSqueakApplication.window;
+	windowBlock-> handle = gDelegateApp.window;
 	windowBlock->context = nil;
 	windowBlock->updateArea = CGRectZero;
 	width  = (usqInt) ioScreenSize() >> 16;

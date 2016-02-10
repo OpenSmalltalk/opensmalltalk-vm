@@ -1,0 +1,155 @@
+#############################################################################
+# Generic Makefile for plugins on Cocoa Mac OS X
+# Do make getversion to get makwe -n to work
+#
+
+# VM config flags.
+ifeq ("$(CONFIGURATION)","product")
+OFLAGS:= -g -Os
+DEBUGVM=-DDEBUGVM=0 -DNDEBUG=1
+BUILD:=build
+else ifeq ("$(CONFIGURATION)","assert")
+OFLAGS:= -g -O1 -fno-omit-frame-pointer
+DEBUGVM=-DDEBUGVM=0
+BUILD:=buildast
+else
+OFLAGS:= -g -O0 -fno-omit-frame-pointer
+DEBUGVM=-DDEBUGVM=1
+BUILD:=builddbg
+endif
+
+CFLAGS:= $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(XDEFS)
+# The following are the four key locations (set via invocation):
+# PLUGINSRCDIR: Where is the root of the src/plugins source tree?
+# VMSRCDIR: Where is the root of the src vm source tree?
+# PLATDIR: Where is the root of the platforms tree?
+# BASEDIR: Where is the root of the build tree?
+COMMONDIR:=$(BASEDIR)/../common
+
+#############################################################################
+# Standard directory locations:
+#   CROSSDIR: The location of the cross platform sources
+#   OSXPLGDIR: The location of the iOS sources
+#   MAKERDIR: The location of the VMMaker generated sources
+#   BUILDDIR: The location where the plugin is built
+#
+#PLUGINSRCDIR:=	../../src/plugins
+CROSSDIR:=	$(PLATDIR)/Cross/plugins/$(LIBNAME)
+OSXDIR:=	$(PLATDIR)/iOS/vm/OSX
+OSXPLGDIR:=	$(PLATDIR)/iOS/plugins/$(LIBNAME)
+UNIXDIR:=	$(PLATDIR)/unix/vm
+MAKERDIR:=	$(PLUGINSRCDIR)/$(LIBNAME)
+BUILDDIR:=	$(BASEDIR)/$(BUILD)/$(LIBNAME)
+
+# Support directory locations
+CROSSVMDIR:=$(PLATDIR)/Cross/vm
+OSXVMDIR:=$(PLATDIR)/iOS/vm/OSX
+MAKERVMDIR:=$(VMSRCDIR)
+
+SRCDIRS:= $(MAKERVMDIR) $(CROSSVMDIR) $(MAKERDIR) $(OSXPLGDIR) $(OSXVMDIR) $(CROSSDIR) $(SRCDIRS)
+INCLUDES:= $(addprefix -I,. $(SRCDIRS)) $(INCLUDES)
+
+#############################################################################
+# If no source files were given, use standard set
+#
+
+CROSSSRC:= $(wildcard $(CROSSDIR)/*.c) $(wildcard $(CROSSDIR)/*.cpp)
+OSXSRC:= $(wildcard $(OSXPLGDIR)/*.c) $(wildcard $(OSXPLGDIR)/*.m) $(wildcard $(OSXPLGDIR)/*.cpp)
+MAKERSRC:= $(wildcard $(MAKERDIR)/*.c)
+LIBSRC?= $(notdir $(MAKERSRC) $(OSXSRC) $(CROSSSRC))
+
+
+#############################################################################
+# bundle settings
+#
+# Note: By default DLLTOOL/DLLWRAP do the work for everything related to plugins
+# but if LINK_WITH_GCC we use gcc and if LINK_WITH_GPP we use g++.
+#
+DLLTOOL:=	dlltool
+DLLWRAP:=	dllwrap -mno-cygwin
+#OPTSTRIP:=	strip # for production
+OPTSTRIP:=	echo not doing strip
+
+#############################################################################
+# Plugin settings
+#
+OBJDIR:=    $(BASEDIR)/$(BUILD)/$(LIBNAME)
+VMDIR:=     $(BASEDIR)/$(BUILD)/vm
+PLUGINLIB:= $(VMDIR)/$(LIBNAME).lib
+PLUGINBUNDLE:= $(VMDIR)/$(LIBNAME).bundle
+PLUGINEXE:= $(PLUGINBUNDLE)/Contents/MacOS/$(LIBNAME)
+# https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Introduction/Introduction.html
+PLUGINPLIST:= $(PLUGINBUNDLE)/Contents/Info.plist
+PLUGINICONS:= $(PLUGINBUNDLE)/Contents/Resources/SqueakPlugin.icns
+LIBOBJ?=$(patsubst %.c,%.o,$(patsubst %.m,%.o,$(patsubst %.cpp,%.o,$(LIBSRC))))
+LIBOBJ:=$(addprefix $(OBJDIR)/,$(LIBOBJ))
+
+VPATH:= $(SRCDIRS)
+
+#############################################################################
+# Rules for automated builds
+
+include $(COMMONDIR)/Makefile.rules
+
+all:	$(PLUGINLIB) $(PLUGINBUNDLE)
+
+print-settings:
+	@echo ---------------- Makefile.plugin settings ------------------
+	@echo PWD=$(shell pwd)
+	@echo VPATH=$(VPATH)
+	@echo INCLUDES=$(INCLUDES)
+	@echo CFLAGS=$(CFLAGS)
+	@echo PLUGINSRCDIR=$(PLUGINSRCDIR)
+	@echo VMSRCDIR=$(VMSRCDIR)
+	@echo CROSSDIR=$(CROSSDIR)
+	@echo OSXPLGDIR=$(OSXPLGDIR)
+	@echo OSXDIR=$(OSXDIR)
+	@echo MAKERDIR=$(MAKERDIR)
+	@echo CROSSSRC=$(CROSSSRC)
+	@echo OSXSRC=$(OSXSRC)
+	@echo MAKERSRC=$(MAKERSRC)
+	@echo LIBSRC=$(LIBSRC)
+	@echo LIBOBJ=$(LIBOBJ)
+	@echo OBJDIR=$(OBJDIR)
+	@echo VMDIR=$(VMDIR)
+	@echo PLUGINLIB=$(PLUGINLIB)
+	@echo PLUGINEXE=$(PLUGINEXE)
+	@echo PLUGINBUNDLE=$(PLUGINBUNDLE)
+	@echo -----------------------------------------------------
+
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
+
+$(VMDIR):
+	mkdir -p $(VMDIR)
+
+$(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ)
+	-rm $(PLUGINLIB)
+	ar -rc $(PLUGINLIB) $(LIBOBJ)
+
+# Either link with normal compiler/linker or with cpp compiler/linker.  If
+# LINK_WITH_CPP is set, use e.g. clang++
+$(PLUGINBUNDLE): $(PLUGINEXE) $(PLUGINICONS) $(PLUGINPLIST)
+
+$(PLUGINEXE): $(VMDIR) $(OBJDIR) $(LIBOBJ)
+	mkdir -p $(PLUGINBUNDLE)/Contents/MacOS
+ifneq ($(LINK_WITH_CPP),)
+	$(LDCXX) \
+	$(BFLAGS) \
+	$(LIBOBJ) $(EXTRALIBS) \
+	-o $(PLUGINBUNDLE)/Contents/MacOS/$(LIBNAME)
+else
+	$(LD) \
+	$(BFLAGS) \
+	$(LIBOBJ) $(EXTRALIBS) \
+	-o $(PLUGINBUNDLE)/Contents/MacOS/$(LIBNAME)
+endif
+
+$(PLUGINICONS): $(OSXDIR)/SqueakPlugin.icns
+	mkdir -p $(PLUGINBUNDLE)/Contents/Resources
+	cp -p $< $@
+
+$(PLUGINPLIST): $(PLATDIR)/iOS/plugins/Info.plist getversion
+	mkdir -p $(PLUGINBUNDLE)/Contents
+	sed "s/\$$(VERSION)/`getversion VERSION_TAG`/" $< | \
+	sed "s/\$(LIBNAME)/$(LIBNAME)/" > $(PLUGINPLIST)

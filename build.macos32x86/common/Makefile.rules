@@ -1,0 +1,37 @@
+#############################################################################
+# Compilations rules for Mac OS X
+#
+# See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
+# for an explanation of the dependency management scheme.
+
+# /usr/bin/clang, a.k.a. /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
+CC := clang
+LD := clang
+LDCXX := clang++ # For linking c++ bundles
+
+include $(COMMONDIR)/Makefile.flags
+
+DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
+ALLFLAGS = $(DEPFLAGS) $(WARNINGS) $(CFLAGS)
+#POSTCOMPILE = mv -f deps/$(*F).Td deps/$(*F).d
+POSTCOMPILE = sed '/^$$/d' <deps/$(*F).Td | sed '/^.*:$$/d' > deps/$(*F).d; rm deps/$(*F).Td
+
+$(OBJDIR)/%.o: %.c
+$(OBJDIR)/%.o: %.c deps/%.d
+	$(CC) -x c $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+	$(POSTCOMPILE)
+
+$(OBJDIR)/%.o: %.m
+$(OBJDIR)/%.o: %.m deps/%.d
+	$(CC) -x objective-c $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+	$(POSTCOMPILE)
+
+$(OBJDIR)/%.o: %.cpp
+$(OBJDIR)/%.o: %.cpp deps/%.d
+	$(CC) -x c++ $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+	$(POSTCOMPILE)
+
+deps/%.d: ;
+.PRECIOUS: deps/%.d
+
+-include $(patsubst %,deps/%.d,$(basename $(VMSRC)))
