@@ -5,6 +5,11 @@
  *  Written by Eliot Miranda & Ryan Macnak, 07/15.
  */
 
+/* null if compiled on other than arm32, to get around gnu make bugs or
+ * misunderstandings on our part.
+ */
+#if defined(__ARM_ARCH__) || defined(__arm__) || defined(__arm32__) || defined(ARM32)
+
 #include <stdlib.h> /* for valloc */
 #include <sys/mman.h> /* for mprotect */
 
@@ -269,3 +274,4 @@ allocateExecutablePage(long *size)
 #endif
 	return mem;
 }
+#endif /* defined(__ARM_ARCH__) || defined(__arm__) || ... */
