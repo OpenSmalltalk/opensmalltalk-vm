@@ -210,7 +210,7 @@ endif
 # Internal plugin.  Build as lib then link in lib
 # Check for Makefile in iOS plugins directory otherwise use default Makefile
 # N.B.  PLATDIR *must* be a relative path for this to work
-$(OBJDIR)/%.lib:	FORCE
+$(OBJDIR)/%.lib:	getversion FORCE
 	@-mkdir -p $(BLDDIR)/$(*F)
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(shell test -f $(OSXPLUGINSDIR)/$(*F)/Makefile && echo $(OSXPLUGINSDIR)/$(*F)/Makefile || echo $(COMMONDIR)/Makefile.plugin) \
@@ -222,7 +222,7 @@ $(OBJDIR)/%.lib:	FORCE
 
 # External plugin.  Build as bundle and copy to vm dir ($(OBJDIR)).
 # Check for Makefile in iOS plugins directory otherwise use default Makefile
-$(OBJDIR)/%.bundle:	FORCE
+$(OBJDIR)/%.bundle:	getversion FORCE
 	@-mkdir -p $(BLDDIR)/$(*F)
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(shell test -f $(OSXPLUGINSDIR)/$(*F)/Makefile && echo $(OSXPLUGINSDIR)/$(*F)/Makefile || echo $(COMMONDIR)/Makefile.plugin) \

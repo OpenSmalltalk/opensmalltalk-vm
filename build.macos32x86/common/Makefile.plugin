@@ -46,17 +46,16 @@ CROSSVMDIR:=$(PLATDIR)/Cross/vm
 OSXVMDIR:=$(PLATDIR)/iOS/vm/OSX
 MAKERVMDIR:=$(VMSRCDIR)
 
-SRCDIRS:= $(MAKERVMDIR) $(CROSSVMDIR) $(MAKERDIR) $(OSXPLGDIR) $(OSXVMDIR) $(CROSSDIR) $(SRCDIRS)
-INCLUDES:= $(addprefix -I,. $(SRCDIRS)) $(INCLUDES)
+# INCDIRS are where include files are searched for. A superset of SRCDIRS.
+INCDIRS:= $(MAKERVMDIR) $(CROSSVMDIR) $(MAKERDIR) $(OSXPLGDIR) $(OSXVMDIR) $(CROSSDIR) $(INCDIRS)
+INCLUDES:= $(addprefix -I,. $(INCDIRS)) $(INCLUDES)
 
 #############################################################################
 # If no source files were given, use standard set
 #
 
-CROSSSRC:= $(wildcard $(CROSSDIR)/*.c) $(wildcard $(CROSSDIR)/*.cpp)
-OSXSRC:= $(wildcard $(OSXPLGDIR)/*.c) $(wildcard $(OSXPLGDIR)/*.m) $(wildcard $(OSXPLGDIR)/*.cpp)
-MAKERSRC:= $(wildcard $(MAKERDIR)/*.c)
-LIBSRC?= $(notdir $(MAKERSRC) $(OSXSRC) $(CROSSSRC))
+SRCDIRS:=$(SRCDIRS) $(MAKERDIR) $(CROSSDIR) $(OSXPLGDIR) 
+LIBSRC?= $(foreach d,$(SRCDIRS),$(wildcard $(d)/*.c) $(wildcard $(d)/*.cpp) $(wildcard $(d)/*.m))
 
 
 #############################################################################
@@ -81,7 +80,8 @@ PLUGINEXE:= $(PLUGINBUNDLE)/Contents/MacOS/$(LIBNAME)
 # https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Introduction/Introduction.html
 PLUGINPLIST:= $(PLUGINBUNDLE)/Contents/Info.plist
 PLUGINICONS:= $(PLUGINBUNDLE)/Contents/Resources/SqueakPlugin.icns
-LIBOBJ?=$(patsubst %.c,%.o,$(patsubst %.m,%.o,$(patsubst %.cpp,%.o,$(LIBSRC))))
+LIBOBJ?=$(notdir $(LIBSRC))
+LIBOBJ:=$(patsubst %.c,%.o,$(patsubst %.m,%.o,$(patsubst %.cpp,%.o,$(LIBOBJ))))
 LIBOBJ:=$(addprefix $(OBJDIR)/,$(LIBOBJ))
 
 VPATH:= $(SRCDIRS)
@@ -108,6 +108,7 @@ print-settings:
 	@echo CROSSSRC=$(CROSSSRC)
 	@echo OSXSRC=$(OSXSRC)
 	@echo MAKERSRC=$(MAKERSRC)
+	@echo SRCDIRS=$(SRCDIRS)
 	@echo LIBSRC=$(LIBSRC)
 	@echo LIBOBJ=$(LIBOBJ)
 	@echo OBJDIR=$(OBJDIR)
