@@ -5,6 +5,11 @@
  *  Written by Eliot Miranda 11/07.
  */
 
+/* null if compiled on other than x86, to get around gnu make bugs or
+ * misunderstandings on our part.
+ */
+#if i386|i486|i586|i686
+
 #if defined(_MSC_VER) || defined(__MINGW32__)
 # include "windows.h" /* for GetSystemInfo & VirtualAlloc */
 #elif __APPLE__ && __MACH__
@@ -299,3 +304,4 @@ allocateExecutablePage(long *size)
 #endif
 	return mem;
 }
+#endif /* i386|i486|i586|i686 */

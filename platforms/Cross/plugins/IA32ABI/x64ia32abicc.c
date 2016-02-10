@@ -11,6 +11,11 @@
  * here referred to as x64ABI
  */
 
+/* null if compiled on other than x64, to get around gnu make bugs or
+ * misunderstandings on our part.
+ */
+#if x86_64|x64|__x86_64|__x86_64__
+
 #if defined(_MSC_VER) || defined(__MINGW32__)
 # include "windows.h" /* for GetSystemInfo & VirtualAlloc */
 # error Windows doesn't use the SystemV ABI
@@ -302,3 +307,4 @@ allocateExecutablePage(long *size)
 #endif
 	return mem;
 }
+#endif /* x86_64|x64|__x86_64|__x86_64__ */

@@ -1,3 +1,6 @@
+/* null if compiled on other than x64, to get around gnu make bugs or
+ * misunderstandings on our part.
+ */
 #if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
 /*
  * Some of this code is
@@ -36,7 +39,7 @@
 /* 
  *  ppc32abicc.c
  *
- * Support for Call-outs and Call-backs from the Plugin.
+ * Support for Call-outs and Call-backs from the Alien Plugin.
  *
  */
 
@@ -321,4 +324,4 @@ allocateExecutablePage(long *size)
 #endif
 	return mem;
 }
-#endif
+#endif /* defined(__powerpc__) || defined(PPC) ... */

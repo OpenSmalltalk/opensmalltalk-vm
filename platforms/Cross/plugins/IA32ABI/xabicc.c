@@ -1,5 +1,5 @@
 /*
- *  xabicc.c - platform-agnostic root for ALien call-outs and callbacks.
+ *  xabicc.c - platform-agnostic root for Alien call-outs and callbacks.
  *
  * Support for Call-outs and Call-backs from the IA32ABI Plugin.
  * The plugin is misnamed.  It should be the AlienPlugin, but its history
