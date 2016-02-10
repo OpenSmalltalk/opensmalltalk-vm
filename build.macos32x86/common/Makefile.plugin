@@ -56,6 +56,9 @@ INCLUDES:= $(addprefix -I,. $(INCDIRS)) $(INCLUDES)
 
 SRCDIRS:=$(SRCDIRS) $(MAKERDIR) $(CROSSDIR) $(OSXPLGDIR) 
 LIBSRC?= $(foreach d,$(SRCDIRS),$(wildcard $(d)/*.c) $(wildcard $(d)/*.cpp) $(wildcard $(d)/*.m))
+ifneq ($(EXCLUDESRC),)
+LIBSRC:=$(filter-out $(EXCLUDESRC),$(LIBSRC))
+endif
 
 
 #############################################################################
