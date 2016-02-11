@@ -55,7 +55,7 @@ sqInt createWindowWidthheightoriginXyattrlength(sqInt w,sqInt h,sqInt x,sqInt y,
 	return -1;
 }
 
-int closeWindow(int windowIndex) {
+sqInt closeWindow(sqInt windowIndex) {
 	NSWindow	*windowHandle;
 	windowHandle = windowHandleFromIndex(windowIndex);
 	if(windowHandle == NULL) 

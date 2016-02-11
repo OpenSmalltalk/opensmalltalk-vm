@@ -1,0 +1,9 @@
+# Copied, perhaps edited, from ../src/examplePlugins.ext
+EXTERNAL_PLUGINS = \
+CroquetPlugin \
+FloatArrayPlugin \
+FloatMathPlugin \
+Mpeg3Plugin \
+SqueakSSL \
+UnixOSProcessPlugin \
+# SqueakFFIPrims

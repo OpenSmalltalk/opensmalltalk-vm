@@ -13,7 +13,6 @@ FFTPlugin \
 FilePlugin \
 HostWindowPlugin \
 IA32ABI \
-JoystickTabletPlugin \
 JPEGReaderPlugin \
 JPEGReadWriter2Plugin \
 Klatt \
@@ -32,3 +31,4 @@ StarSqueakPlugin \
 SurfacePlugin \
 UUIDPlugin \
 VMProfileMacSupportPlugin \
+# JoystickTabletPlugin

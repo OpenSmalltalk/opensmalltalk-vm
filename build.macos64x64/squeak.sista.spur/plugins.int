@@ -15,7 +15,6 @@ FilePlugin \
 HostWindowPlugin \
 IA32ABI \
 InternetConfigPlugin \
-JoystickTabletPlugin \
 JPEGReaderPlugin \
 JPEGReadWriter2Plugin \
 Klatt \
@@ -36,3 +35,4 @@ StarSqueakPlugin \
 SurfacePlugin \
 UUIDPlugin \
 VMProfileMacSupportPlugin \
+# JoystickTabletPlugin
