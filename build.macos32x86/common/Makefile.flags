@@ -1,14 +1,18 @@
 #############################################################################
-# Compilations flags for Mac OS X
+# Compilations flags & paths for Mac OS X
 #
 # These are derived from Xcode v 6.2 for Apple LLVM version 6.0 (clang-600.0.57)
 
-SDK:=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk
+XCODE:=/Applications/Xcode.app/Contents/Developer
+XCUB:=$(XCODE)/usr/bin
+SDK:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk
 TARGET_ARCH:=i386
+TARGET_VERSION_MIN:=10.6
 
 CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX \
 		-arch $(TARGET_ARCH) \
-		-mmacosx-version-min=10.6 -msse4.2 -fvisibility=hidden -fwrapv \
+		-mmacosx-version-min=$(TARGET_VERSION_MIN) -msse4.2 \
+			-fvisibility=hidden -fwrapv \
 			-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
 			-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
 		-isysroot $(SDK) \

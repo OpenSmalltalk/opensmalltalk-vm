@@ -48,8 +48,9 @@ VMPLIST:=$(APP)/Contents/Info.plist
 VMBUNDLES:=$(addprefix $(APP)/Contents/Resources/, $(addsuffix .bundle, $(EXTERNAL_PLUGINS)))
 OSXICONS:=$(OSXDIR)/$(VM).icns $(wildcard $(OSXDIR)/$(SYSTEM)*.icns)
 VMICONS:=$(addprefix $(APP)/Contents/Resources/,$(notdir $(OSXICONS)))
+VMMENUNIB:=$(APP)/Contents/Resources/English.lproj/MainMenu.nib
 
-$(APP):	$(VMEXE) $(VMBUNDLES) $(VMPLIST) $(VMICONS)
+$(APP):	$(VMEXE) $(VMBUNDLES) $(VMPLIST) $(VMMENUNIB) $(VMICONS)
 
 $(VMEXE): vm $(OBJDIR)/$(VM)
 	mkdir -p $(APP)/Contents/MacOS
@@ -65,6 +66,14 @@ $(VMPLIST): $(OSXDIR)/$(SYSTEM)-Info.plist getversion
 	sed "s/\$$(VERSION_NUMBER)/`getversion VERSION_NUMBER`/" | \
 	sed "s/\$$(VERSION_TAG)/`getversion VERSION_TAG`/" | \
 	sed "s/\$$(VM_NICKNAME)/`getversion VM_NICKNAME`/" > $@
+
+$(VMMENUNIB): $(PLATDIR)/iOS/vm/English.lproj/MainMenu.xib
+	mkdir -p $(dir $@)
+	$(XCUB)/ibtool --errors --warnings --notices --module $(VM) \
+	--minimum-deployment-target $(TARGET_VERSION_MIN) \
+	--auto-activate-custom-fonts --output-format human-readable-text \
+	--compile $(VMMENUNIB) \
+	$(PLATDIR)/iOS/vm/English.lproj/MainMenu.xib
 
 $(APP)/Contents/Resources/%.icns: $(OSXDIR)/%.icns
 	mkdir -p $(APP)/Contents/Resources
