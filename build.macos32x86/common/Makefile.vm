@@ -148,7 +148,7 @@ assert:
 debug:
 	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug $(@,debug=) default
 
-cleanallvm:	cleanvm cleanvmast cleanvmdbg
+cleanallvm:	cleanvm cleanvmast cleanvmdbg cleangv
 
 cleanvm:
 	rm -rf sqNamedPrims.h build deps
@@ -158,6 +158,9 @@ cleanvmast:
 
 cleanvmdbg:
 	rm -rf sqNamedPrims.h builddbg
+
+cleangv:
+	rm -rf getversion getversion.*
 
 print-source:
 	@echo ---------------- Makefile.vm sources ------------------

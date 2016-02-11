@@ -1,4 +1,0 @@
-#!/bin/bash
-
-rm -r ./build ./*/build ./plugin-projects/*/build ./Cocoa*.app
-xcodebuild -project SqueakCogSpur32x86.xcodeproj clean

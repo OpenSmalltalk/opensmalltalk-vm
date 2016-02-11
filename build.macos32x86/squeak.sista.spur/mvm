@@ -1,29 +1,4 @@
-#!/bin/sh
-D=
-A=
-F=
-H=
-C=
-while [ -n "$1" ]; do
-	case $1 in
-	-c)	C=-c;; #-c == Core VM only
-	-A)	D=LOGD;A=LOGA;F=LOGF;;
-	-d)	D=LOGD;;
-	-a)	A=LOGA;;
-	-f)	F=LOGF;;
-	-?|-h)	H=h
-	esac
-	shift
-done
-if [ -n "$H" -o -z "$D$A$F$DT$AT$FT" ]; then
-	echo usage: $0 -A \| -d -a -f
-	exit 1
-fi
-trap 'exit 2' HUP INT PIPE TERM
-test -n "$D" && (makevm $C -d 2>&1 | tee $D;grep "BUILD .*ED" $D)
-test -n "$A" && (makevm $C -a 2>&1 | tee $A;grep "BUILD .*ED" $A)
-test -n "$F" && (makevm $C -s 2>&1 | tee $F;grep "BUILD .*ED" $F)
-
-test -n "$D" && (echo $D;grep "BUILD .*ED" $D)
-test -n "$A" && (echo $A;grep "BUILD .*ED" $A)
-test -n "$F" && (echo $F;grep "BUILD .*ED" $F)
+#!/bin/bash
+make debug 2>&1 | tee LOGD
+make assert 2>&1 | tee LOGA
+make 2>&1 | tee LOGF

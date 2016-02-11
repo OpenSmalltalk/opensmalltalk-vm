@@ -1,8 +1,7 @@
-# Copied, perhaps edited, from ../../src/examplePlugins.int
+# Copied, perhaps edited, from ../src/examplePlugins.int
 INTERNAL_PLUGINS = \
 ADPCMCodecPlugin \
-AsynchFilePlugin \
-B3DAcceleratorPlugin \
+AioPlugin \
 B2DPlugin \
 BitBltPlugin \
 BMPReadWriterPlugin \
@@ -13,16 +12,12 @@ FFTPlugin \
 FilePlugin \
 HostWindowPlugin \
 IA32ABI \
-InternetConfigPlugin \
-JoystickTabletPlugin \
 JPEGReaderPlugin \
 JPEGReadWriter2Plugin \
 Klatt \
 LargeIntegers \
 LocalePlugin \
-MacMenubarPlugin \
 Matrix2x3Plugin \
-MIDIPlugin \
 MiscPrimitivePlugin \
 RePlugin \
 SecurityPlugin \
@@ -34,4 +29,6 @@ SoundPlugin \
 StarSqueakPlugin \
 SurfacePlugin \
 UUIDPlugin \
-VMProfileMacSupportPlugin
+VMProfileMacSupportPlugin \
+# AsynchFilePlugin \
+# JoystickTabletPlugin
