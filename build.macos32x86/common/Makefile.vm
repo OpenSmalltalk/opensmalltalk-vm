@@ -92,18 +92,18 @@ BUNDLES:= $(addprefix $(OBJDIR)/, $(addsuffix .bundle, $(EXTERNAL_PLUGINS)))
 
 
 # VM config flags.
-ifeq ("$(CONFIGURATION)","product")
-OFLAGS:= -g -Os
-DEBUGVM=-DDEBUGVM=0 -DNDEBUG=1 # Define NDEBUG for production to exclude asserts
-INTERPFLAGS:=-D'VM_LABEL(foo)=0'
+ifeq ("$(CONFIGURATION)","debug")
+OFLAGS:= -g -O0 -fno-omit-frame-pointer
+DEBUGVM=-DDEBUGVM=1
+INTERPFLAGS:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
 else ifeq ("$(CONFIGURATION)","assert")
 OFLAGS:= -g -O1 -fno-omit-frame-pointer
 DEBUGVM=-DDEBUGVM=0
 INTERPFLAGS:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
-else
-OFLAGS:= -g -O0 -fno-omit-frame-pointer
-DEBUGVM=-DDEBUGVM=1
-INTERPFLAGS:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
+else # default CONFIGURATION=product
+OFLAGS:= -g -Os
+DEBUGVM=-DDEBUGVM=0 -DNDEBUG=1 # Define NDEBUG for production to exclude asserts
+INTERPFLAGS:=-D'VM_LABEL(foo)=0'
 endif
 
 TZ:=$(shell date +%Z)
@@ -181,6 +181,7 @@ print-settings:
 	@echo OBJDIR=$(OBJDIR)
 	@echo LIBS=$(LIBS)
 	@echo BUNDLES=$(BUNDLES)
+	@echo MAKEFILE=$(MAKEFILE)
 	@echo -----------------------------------------------------
 
 print-objects:
@@ -208,33 +209,46 @@ endif
 #############################################################################
 # Building plugins
 #
-.PHONY: FORCE
+.PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.bundle %.lib %.bundle
+
+plugin-makefile = $(shell test -f $(OSXPLUGINSDIR)/$(1)/Makefile && echo $(OSXPLUGINSDIR)/$(1)/Makefile || echo $(COMMONDIR)/Makefile.plugin)
 
 # Internal plugin.  Build as lib then link in lib
 # Check for Makefile in iOS plugins directory otherwise use default Makefile
 # N.B.  PLATDIR *must* be a relative path for this to work
-$(OBJDIR)/%.lib:	getversion FORCE
+$(OBJDIR)/%.lib: getversion $(call plugin-makefile,$(*F))
 	@-mkdir -p $(BLDDIR)/$(*F)
+	test $@ -ot $(call plugin-makefile,$(*F)) && rm $(OBJDIR)/$(*F).lib || true
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
-		-f $(shell test -f $(OSXPLUGINSDIR)/$(*F)/Makefile && echo $(OSXPLUGINSDIR)/$(*F)/Makefile || echo $(COMMONDIR)/Makefile.plugin) \
+		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
 		PLATDIR=$(PLATDIR) BASEDIR=$(BASEDIR) \
 		PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
+		$(PLUGINHACK) \
 		$(OBJDIR)/$(*F).lib
+
+# It would be nice to have this abbreviation but it creates havoc eem 2/2016
+#%.lib: $(OBJDIR)/%.lib
+#	make $(MAKEFLAGS) $<
 
 # External plugin.  Build as bundle and copy to vm dir ($(OBJDIR)).
 # Check for Makefile in iOS plugins directory otherwise use default Makefile
-$(OBJDIR)/%.bundle:	getversion FORCE
+$(OBJDIR)/%.bundle:	getversion $(call plugin-makefile,$(*F))
 	@-mkdir -p $(BLDDIR)/$(*F)
+	test $@ -ot $(call plugin-makefile,$(*F)) && rm $(OBJDIR)/$(*F).lib || true
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
-		-f $(shell test -f $(OSXPLUGINSDIR)/$(*F)/Makefile && echo $(OSXPLUGINSDIR)/$(*F)/Makefile || echo $(COMMONDIR)/Makefile.plugin) \
+		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
 		PLATDIR=$(PLATDIR) BASEDIR=$(BASEDIR) \
 		PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
-		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) $(OBJDIR)/$(*F).bundle
+		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" \
+		$(PLUGINHACK) \
+		$(OBJDIR)/$(*F).bundle
 
-FORCE:
+# It would be nice to have this abbreviation but it creates havoc eem 2/2016
+#%.bundle: $(OBJDIR)/%.bundle
+#	make $(MAKEFLAGS) $<
 
 #############################################################################
 # Extra specific dependencies

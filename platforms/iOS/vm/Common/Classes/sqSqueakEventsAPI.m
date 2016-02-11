@@ -101,3 +101,11 @@ sqInt ioGetNextEvent( sqInputEvent *evt) {
 	} */
 	return 0;
 }
+
+#if NewspeakVM
+/* For now this is only here to make the linker happy;
+   the function really does something interesting only on Windows.
+ */
+void
+ioDrainEventQueue() {}
+#endif /* NewspeakVM */

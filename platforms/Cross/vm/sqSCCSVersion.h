@@ -144,6 +144,8 @@ main(int _argc, char **_argv)
 
 	if (printit("VM_NICKNAME"))
 		printf("%s\n", NICKNAME " " OBJMEM " VM");
+	if (printit("VIRTUAL_MACHINE_NICKNAME"))
+		printf("%s\n", NICKNAME " " OBJMEM " Virtual Machine");
 	if (printit("VM_MONIKER"))
 		printf("%s\n", NICKNAME OBJMEM "VM");
 	if (printit("VM_VERSION"))

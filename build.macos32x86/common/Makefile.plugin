@@ -110,6 +110,7 @@ all:	$(PLUGINLIB) $(PLUGINBUNDLE)
 print-settings:
 	@echo ---------------- Makefile.plugin settings ------------------
 	@echo PWD=$(shell pwd)
+	@echo MAKEFILE=$(MAKEFILE)
 	@echo VPATH=$(VPATH)
 	@echo INCLUDES=$(INCLUDES)
 	@echo CFLAGS=$(CFLAGS)

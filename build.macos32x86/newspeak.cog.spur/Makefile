@@ -4,9 +4,5 @@
 #
 
 VMSRCDIR:= ../../nsspursrc/vm
-VM:=Newspeak Virtual Machine
-SYSTEM:=Newspeak
 
-# Now include the Makefile proper, which is common to all Mac OS builds.
-#
-include ../common/Makefile.app
+include ../common/Makefile.app.newspeak

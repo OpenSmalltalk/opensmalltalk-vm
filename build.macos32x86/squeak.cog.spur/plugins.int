@@ -2,6 +2,7 @@
 INTERNAL_PLUGINS = \
 ADPCMCodecPlugin \
 AioPlugin \
+AsynchFilePlugin \
 B2DPlugin \
 BitBltPlugin \
 BMPReadWriterPlugin \
@@ -30,5 +31,4 @@ StarSqueakPlugin \
 SurfacePlugin \
 UUIDPlugin \
 VMProfileMacSupportPlugin \
-# AsynchFilePlugin \
 # JoystickTabletPlugin

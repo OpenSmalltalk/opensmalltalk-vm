@@ -10,6 +10,7 @@ FileCopyPlugin \
 FilePlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
+HostWindowPlugin \
 ZipPlugin \
 JPEGReadWriter2Plugin \
 JPEGReaderPlugin \
@@ -20,6 +21,7 @@ IA32ABI \
 RePlugin \
 SecurityPlugin \
 SocketPlugin \
+SoundPlugin \
 SurfacePlugin \
 UUIDPlugin \
 UnixOSProcessPlugin \

@@ -54,7 +54,7 @@ $(APP):	$(VMEXE) $(VMBUNDLES) $(VMPLIST) $(VMMENUNIB) $(VMICONS) $(APPPOST)
 
 $(VMEXE): vm $(OBJDIR)/$(VM)
 	mkdir -p $(APP)/Contents/MacOS
-	cp $(OBJDIR)/$(VM) $(APP)/Contents/MacOS
+	cp -p $(OBJDIR)/$(VM) $(APP)/Contents/MacOS
 
 $(APP)/Contents/Resources/%.bundle: $(BLDDIR)/vm/%.bundle
 	mkdir -p $(APP)/Contents/Resources
@@ -65,6 +65,7 @@ $(VMPLIST): $(OSXDIR)/$(SYSTEM)-Info.plist getversion
 	sed "s/\$$(VERSION)/`getversion VERSION_TAG`/" $< | \
 	sed "s/\$$(VERSION_NUMBER)/`getversion VERSION_NUMBER`/" | \
 	sed "s/\$$(VERSION_TAG)/`getversion VERSION_TAG`/" | \
+	sed "s/\$$(VIRTUAL_MACHINE_NICKNAME)/`getversion VIRTUAL_MACHINE_NICKNAME`/" | \
 	sed "s/\$$(VM_NICKNAME)/`getversion VM_NICKNAME`/" > $@
 
 $(VMMENUNIB): $(PLATDIR)/iOS/vm/English.lproj/MainMenu.xib
