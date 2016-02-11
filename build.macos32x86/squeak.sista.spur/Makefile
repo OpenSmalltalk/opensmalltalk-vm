@@ -3,7 +3,7 @@
 # Do make init to allow make -n to function.
 #
 
-VMSRCDIR:= ../../spursrc/vm
+VMSRCDIR:= ../../spursistasrc/vm
 
 APPPOST:=overwriteSqueakIcon
 

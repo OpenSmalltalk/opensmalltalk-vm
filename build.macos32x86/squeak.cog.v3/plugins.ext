@@ -1,6 +1,5 @@
 # Copied, perhaps edited, from ../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
-BochsIA32Plugin \
 CroquetPlugin \
 FloatArrayPlugin \
 FloatMathPlugin \

@@ -35,12 +35,12 @@ BASEDIR:=.
 endif
 COMMONDIR:=$(BASEDIR)/../common
 
-ifeq ("$(CONFIGURATION)","product")
-	BUILD:=build
-else ifeq ("$(CONFIGURATION)","assert")
+ifeq ("$(CONFIGURATION)","assert")
 	BUILD:=buildast
-else
+else ifeq ("$(CONFIGURATION)","debug")
 	BUILD:=builddbg
+else # default CONFIGURATION=product
+	BUILD:=build
 endif
 $(shell mkdir -p deps >/dev/null) # deps is the dependencies directory
 BLDDIR:= $(BASEDIR)/$(BUILD)
