@@ -50,7 +50,7 @@ OSXICONS:=$(OSXDIR)/$(VM).icns $(wildcard $(OSXDIR)/$(SYSTEM)*.icns)
 VMICONS:=$(addprefix $(APP)/Contents/Resources/,$(notdir $(OSXICONS)))
 VMMENUNIB:=$(APP)/Contents/Resources/English.lproj/MainMenu.nib
 
-$(APP):	$(VMEXE) $(VMBUNDLES) $(VMPLIST) $(VMMENUNIB) $(VMICONS) $(APPPOST)
+$(APP):	$(VMEXE) $(VMBUNDLES) $(VMPLIST) $(VMMENUNIB) $(VMICONS) $(APPPOST) signapp
 
 $(VMEXE): vm $(OBJDIR)/$(VM)
 	mkdir -p $(APP)/Contents/MacOS
@@ -79,6 +79,17 @@ $(VMMENUNIB): $(PLATDIR)/iOS/vm/English.lproj/MainMenu.xib
 $(APP)/Contents/Resources/%.icns: $(OSXDIR)/%.icns
 	mkdir -p $(APP)/Contents/Resources
 	cp -p $< $(APP)/Contents/Resources
+
+# To sign the app, set SIGNING_IDENTITY in the environment, e.g.
+# export SIGNING_IDENTITY="Developer ID Application: Eliot Miranda"
+#
+ifeq ("$(SIGNING_IDENTITY)",)
+signapp:
+	echo "No signing identity found (SIGNING_IDENTITY unset). Not signing app."
+else
+signapp:
+	codesign -f --deep -s "$(SIGNING_IDENTITY)" $(APP)
+endif
 
 print-app-settings:
 	@echo ---------------- Makefile.app settings ------------------
