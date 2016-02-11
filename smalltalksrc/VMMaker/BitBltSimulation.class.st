@@ -2133,9 +2133,7 @@ BitBltSimulation >> loadColorMap [
 					cmLookupTable := interpreterProxy firstIndexableField: oop].
 		cmFlags := cmFlags bitOr: ColorMapNewStyle.
 		self cCode: '' inSmalltalk:
-			[self assert: cmShiftTable unitSize = 4.
-			 self assert: cmMaskTable unitSize = 4.
-			 self assert: cmLookupTable unitSize = 4].
+			[].
 	].
 	(cmSize bitAnd: cmSize - 1) = 0 ifFalse:[^false].
 	cmMask := cmSize - 1.
