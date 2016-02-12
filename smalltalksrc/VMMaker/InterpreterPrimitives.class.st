@@ -1931,13 +1931,13 @@ InterpreterPrimitives >> primitiveGetAttribute [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveGetImmutability [
-	<option: #IMMUTABILITY>
-	| rcvr bool |
-	rcvr := self stackValue: 0.
-	bool := (objectMemory isOopImmutable: rcvr)
-		ifTrue: [ TrueObject ]
-		ifFalse: [ FalseObject ].
-	self pop: argumentCount + 1 thenPush: (objectMemory splObj: bool)
+	self cppIf: #IMMUTABILITY
+		ifTrue:
+			[| rcvr |
+			 rcvr := self stackValue: 0.
+			 self pop: argumentCount + 1 thenPushBool: (objectMemory isOopImmutable: rcvr)]
+		ifFalse:
+			[self primitiveFailFor: PrimErrUnsupported]
 ]
 
 { #category : #'I/O primitives' }
@@ -3482,20 +3482,26 @@ InterpreterPrimitives >> primitiveSetIdentityHash [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveSetImmutability [
-	<option: #IMMUTABILITY>
-	| rcvr boolean wasImmutable |
-	rcvr := self stackValue: 1.
-	(objectMemory isImmediate: rcvr) ifTrue:
-		[^self primitiveFailFor: PrimErrBadReceiver].
-	boolean := self booleanValueOf: self stackTop.
-	self successful ifFalse:
-		[^self primitiveFailFor: PrimErrBadArgument].
-	boolean ifTrue: 
-		[(self canBeImmutable: rcvr) ifFalse:
-			[^self primitiveFailFor: PrimErrInappropriate]]. 
-	wasImmutable := objectMemory booleanObjectOf: (objectMemory isOopImmutable: rcvr).
-	objectMemory setIsImmutableOf: rcvr to: boolean.
-	self pop: argumentCount + 1 thenPush: wasImmutable
+	self cppIf: #IMMUTABILITY
+		ifTrue:
+			[| rcvr wasImmutable |
+			 rcvr := self stackValue: 1.
+			 (objectMemory isImmediate: rcvr) ifTrue:
+				[^self primitiveFailFor: PrimErrBadReceiver].
+			 wasImmutable := objectMemory isObjImmutable: rcvr.
+			 self stackTop = objectMemory trueObject
+				ifTrue:
+					[(self canBeImmutable: rcvr) ifFalse:
+						[^self primitiveFailFor: PrimErrInappropriate].
+					  objectMemory setIsImmutableOf: rcvr to: true]
+				ifFalse: [
+			self stackTop = objectMemory falseObject
+				ifTrue: [objectMemory setIsImmutableOf: rcvr to: false]
+			 	ifFalse:
+					[^self primitiveFailFor: PrimErrBadArgument]].
+			 self pop: argumentCount + 1 thenPushBool: wasImmutable]
+		ifFalse:
+			[self primitiveFailFor: PrimErrUnsupported]
 ]
 
 { #category : #'I/O primitives' }
