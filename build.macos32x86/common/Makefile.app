@@ -63,7 +63,7 @@ endif
 
 
 $(APP):	$(VMEXE) $(VMBUNDLES) $(VMPLIST) $(VMMENUNIB) $(VMICONS) $(SOURCES) \
-		$(APPPOST) signapp
+		$(APPPOST) signapp touchapp
 
 $(VMEXE): $(OBJDIR)/$(VM)
 	mkdir -p $(APP)/Contents/MacOS
@@ -103,6 +103,9 @@ else
 signapp:
 	codesign -f --deep -s "$(SIGNING_IDENTITY)" $(APP)
 endif
+
+touchapp:
+	touch $(APP)
 
 # source installation
 %.sources: ../../sources/%.sources
