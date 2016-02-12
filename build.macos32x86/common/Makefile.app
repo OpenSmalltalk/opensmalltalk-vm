@@ -12,6 +12,10 @@
 #
 # The name of the VM to build.  Optional.  Defaults to Squeak
 #
+# SOURCEFILE the Smalltalk source file to link into this directory. Optional.
+#
+# APPSOURCE the Smalltalk source file to link into the app Resource. Optional.
+#
 # PLUGINSRCDIR defines the locaton of the plugin source, the subsets of which
 # selected by plugins.int and plugins.ext will be built. Optional. Defaults to
 # ../../src
@@ -49,10 +53,19 @@ VMBUNDLES:=$(addprefix $(APP)/Contents/Resources/, $(addsuffix .bundle, $(EXTERN
 OSXICONS:=$(OSXDIR)/$(VM).icns $(wildcard $(OSXDIR)/$(SYSTEM)*.icns)
 VMICONS:=$(addprefix $(APP)/Contents/Resources/,$(notdir $(OSXICONS)))
 VMMENUNIB:=$(APP)/Contents/Resources/English.lproj/MainMenu.nib
+SOURCES:=
+ifneq ("$(SOURCEFILE)",)
+SOURCES:=./$(SOURCEFILE)
+endif
+ifneq ("$(APPSOURCE)",)
+SOURCES:=$(SOURCES) $(APP)/Contents/Resources/$(APPSOURCE)
+endif
 
-$(APP):	$(VMEXE) $(VMBUNDLES) $(VMPLIST) $(VMMENUNIB) $(VMICONS) $(APPPOST) signapp
 
-$(VMEXE): vm $(OBJDIR)/$(VM)
+$(APP):	$(VMEXE) $(VMBUNDLES) $(VMPLIST) $(VMMENUNIB) $(VMICONS) $(SOURCES) \
+		$(APPPOST) signapp
+
+$(VMEXE): $(OBJDIR)/$(VM)
 	mkdir -p $(APP)/Contents/MacOS
 	cp -p $(OBJDIR)/$(VM) $(APP)/Contents/MacOS
 
@@ -90,6 +103,13 @@ else
 signapp:
 	codesign -f --deep -s "$(SIGNING_IDENTITY)" $(APP)
 endif
+
+# source installation
+%.sources: ../../sources/%.sources
+	ln $< $@
+
+$(APP)/Contents/Resources/%.sources: ../../sources/%.sources
+	ln $< $@
 
 print-app-settings:
 	@echo ---------------- Makefile.app settings ------------------

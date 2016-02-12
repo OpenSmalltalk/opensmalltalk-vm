@@ -30,10 +30,7 @@ CONFIGURATION?=product
 #############################################################################
 # Build directories
 #
-ifndef BASEDIR
-BASEDIR:=.
-endif
-COMMONDIR:=$(BASEDIR)/../common
+COMMONDIR:=../common
 
 ifeq ("$(CONFIGURATION)","assert")
 	BUILD:=buildast
@@ -43,7 +40,7 @@ else # default CONFIGURATION=product
 	BUILD:=build
 endif
 $(shell mkdir -p deps >/dev/null) # deps is the dependencies directory
-BLDDIR:= $(BASEDIR)/$(BUILD)
+BLDDIR:= $(BUILD)
 OBJDIR:= $(BLDDIR)/vm
 
 # N.B. PLATDIR *must* be a relative path, see -f../../$(shell test -f ...) below
@@ -132,7 +129,6 @@ include $(COMMONDIR)/Makefile.rules
 svnver:
 	@-echo $(SVNREV)
 
-getversion: $(OSXCOMMONDIR)/version.c $(CROSSDIR)/sqSCCSVersion.h
 getversion: $(OSXCOMMONDIR)/version.c deps/version.d $(CROSSDIR)/sqSCCSVersion.h
 	$(CC) -x c -DVERSION_PROGRAM=1 $(ALLFLAGS) $(INCLUDES) $< -o $@
 	$(POSTCOMPILE)
@@ -181,7 +177,7 @@ print-settings:
 	@echo OBJDIR=$(OBJDIR)
 	@echo LIBS=$(LIBS)
 	@echo BUNDLES=$(BUNDLES)
-	@echo MAKEFILE=$(MAKEFILE)
+	@echo deps=$(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC))))
 	@echo -----------------------------------------------------
 
 print-objects:
@@ -189,7 +185,7 @@ print-objects:
 	@echo VMOBJ=$(VMOBJ)
 	@echo -----------------------------------------------------
 
-vm:	$(OBJDIR)/$(VM)
+#vm:	$(OBJDIR)/$(VM)
 
 $(OBJDIR)/$(VM): $(OBJDIR) $(VMOBJ) $(LIBS)
 	$(CC) -arch $(TARGET_ARCH) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(OSXCOMMONDIR)/version.c
@@ -209,7 +205,7 @@ endif
 #############################################################################
 # Building plugins
 #
-.PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.bundle %.lib %.bundle
+.PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.bundle
 
 plugin-makefile = $(shell test -f $(OSXPLUGINSDIR)/$(1)/Makefile && echo $(OSXPLUGINSDIR)/$(1)/Makefile || echo $(COMMONDIR)/Makefile.plugin)
 
@@ -222,8 +218,7 @@ $(OBJDIR)/%.lib: getversion $(call plugin-makefile,$(*F))
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
-		PLATDIR=$(PLATDIR) BASEDIR=$(BASEDIR) \
-		PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
+		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
 		$(PLUGINHACK) \
 		$(OBJDIR)/$(*F).lib
@@ -240,8 +235,7 @@ $(OBJDIR)/%.bundle:	getversion $(call plugin-makefile,$(*F))
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
-		PLATDIR=$(PLATDIR) BASEDIR=$(BASEDIR) \
-		PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
+		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" \
 		$(PLUGINHACK) \
 		$(OBJDIR)/$(*F).bundle
@@ -249,6 +243,8 @@ $(OBJDIR)/%.bundle:	getversion $(call plugin-makefile,$(*F))
 # It would be nice to have this abbreviation but it creates havoc eem 2/2016
 #%.bundle: $(OBJDIR)/%.bundle
 #	make $(MAKEFLAGS) $<
+
+.PRECIOUS: $(OBJDIR)/%.lib $(OBJDIR)/%.bundle
 
 #############################################################################
 # Extra specific dependencies

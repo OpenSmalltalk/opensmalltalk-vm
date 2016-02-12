@@ -4,6 +4,7 @@
 #
 
 VMSRCDIR:= ../../stacksrc/vm
+SOURCEFILE:=SqueakV46.sources
 
 # Now include the Makefile proper, which is common to all Mac OS builds.
 #

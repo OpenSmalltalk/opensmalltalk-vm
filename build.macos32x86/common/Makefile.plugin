@@ -34,8 +34,7 @@ CFLAGS:= $(CFLAGS) $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(XDEFS)
 # PLUGINSRCDIR: Where is the root of the src/plugins source tree?
 # VMSRCDIR: Where is the root of the src vm source tree?
 # PLATDIR: Where is the root of the platforms tree?
-# BASEDIR: Where is the root of the build tree?
-COMMONDIR:=$(BASEDIR)/../common
+COMMONDIR:=../common
 
 #############################################################################
 # Standard directory locations:
@@ -50,7 +49,7 @@ OSXDIR:=	$(PLATDIR)/iOS/vm/OSX
 OSXPLGDIR:=	$(PLATDIR)/iOS/plugins/$(LIBNAME)
 UNIXDIR:=	$(PLATDIR)/unix/vm
 MAKERDIR:=	$(PLUGINSRCDIR)/$(LIBNAME)
-BUILDDIR:=	$(BASEDIR)/$(BUILD)/$(LIBNAME)
+BUILDDIR:=	$(BUILD)/$(LIBNAME)
 
 # Support directory locations
 CROSSVMDIR:=$(PLATDIR)/Cross/vm
@@ -86,8 +85,8 @@ OPTSTRIP:=	echo not doing strip
 #############################################################################
 # Plugin settings
 #
-OBJDIR:=    $(BASEDIR)/$(BUILD)/$(LIBNAME)
-VMDIR:=     $(BASEDIR)/$(BUILD)/vm
+OBJDIR:=    $(BUILD)/$(LIBNAME)
+VMDIR:=     $(BUILD)/vm
 PLUGINLIB:= $(VMDIR)/$(LIBNAME).lib
 PLUGINBUNDLE:= $(VMDIR)/$(LIBNAME).bundle
 PLUGINEXE:= $(PLUGINBUNDLE)/Contents/MacOS/$(LIBNAME)
@@ -132,6 +131,7 @@ print-settings:
 	@echo PLUGINLIB=$(PLUGINLIB)
 	@echo PLUGINEXE=$(PLUGINEXE)
 	@echo PLUGINBUNDLE=$(PLUGINBUNDLE)
+	@echo deps=$(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC))))
 	@echo -----------------------------------------------------
 
 $(OBJDIR):

@@ -4,6 +4,7 @@
 #
 
 VMSRCDIR:= ../../spursistasrc/vm
+SOURCEFILE:=SqueakV50.sources
 
 APPPOST:=overwriteSqueakIcon
 
