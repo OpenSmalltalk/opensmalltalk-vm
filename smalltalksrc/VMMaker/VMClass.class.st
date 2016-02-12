@@ -503,11 +503,12 @@ VMClass class >> shouldIncludeMethodForSelector: selector [
 			 (c >> selector pragmaAt: #option:)
 				ifNotNil:
 					[:pragma|
-					initializationOptions
-						at: pragma arguments first
-						ifAbsent: [(self bindingOf: pragma arguments first)
-									ifNil: [false]
-									ifNotNil: [:binding| binding value ~~ #undefined]]]
+					(VMBasicConstants namesDefinedAtCompileTime includes: pragma arguments first)
+					 or: [initializationOptions
+							at: pragma arguments first
+							ifAbsent: [(self bindingOf: pragma arguments first)
+										ifNil: [false]
+										ifNotNil: [:binding| binding value ~~ #undefined]]]]
 				ifNil: [true]]
 		ifNil:
 			[Transcript nextPutAll: 'Cannot find implementation of '; nextPutAll: selector; nextPutAll: ' in hierarchy of '; print: self; cr; flush.
@@ -930,7 +931,7 @@ VMClass >> oopForPointer: pointerOrSurrogate [
 	"This gets implemented by Macros in C, where its types will also be checked.
 	 oop is the width of a machine word, and pointer is a raw address."
 	<doNotGenerate>
-	^pointerOrSurrogate
+	^pointerOrSurrogate asInteger
 ]
 
 { #category : #'translation support' }
