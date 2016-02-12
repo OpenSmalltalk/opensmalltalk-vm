@@ -1,6 +1,3 @@
-"
-A TMethod is a translation method, representing a MethodNode that is to be translated to C source. It has a parseTree of translation nodes that mirrors the parse tree of the corresponding Smalltalk method.
-"
 Class {
 	#name : #TMethod,
 	#superclass : #Object,
@@ -388,6 +385,16 @@ TMethod >> comment: aComment [
 ]
 
 { #category : #accessing }
+TMethod >> compileTimeOptionPragmas [
+	"Answer the (possibly empty) sequence of option: or notOption: pragmas
+	 whose arguments are values to be defined at compile time."
+	^self compiledMethod pragmas select:
+		[:pragma|
+		 (#option: == pragma keyword or: [#notOption: == pragma keyword])
+		 and: [VMBasicConstants namesDefinedAtCompileTime includes: (pragma argumentAt: 1)]]
+]
+
+{ #category : #accessing }
 TMethod >> compiledMethod [
 	^definingClass >> selector
 ]
@@ -488,18 +495,21 @@ TMethod >> elideAnyFinalReturn [
 TMethod >> emitCCodeOn: aStream generator: aCodeGen [
 	"Emit C code for this method onto the given stream.
 	 All calls to inlined methods should already have been expanded."
+	| conditional |
 
 	aCodeGen currentMethod: self.
 	self emitCCommentOn: aStream.	"place method comment and method name before function."
 	aStream crtab; nextPutAll: '/* '; nextPutAll: self definingClass name; nextPutAll: '>>#'; nextPutAll: self smalltalkSelector; nextPutAll: ' */'.	
 	aStream cr. 
-	self emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: false.
+	conditional := self emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: false.
 	aStream cr; nextPut: ${.
 	self emitCLocalsOn: aStream generator: aCodeGen.
 	aCodeGen
 		pushScope: declarations
 		while: [parseTree emitCCodeOn: aStream level: 1 generator: aCodeGen].
-	aStream nextPut: $}; cr
+	aStream nextPut: $}; cr.
+	conditional ifTrue:
+		[self terminateConditionalDefineFor: self compileTimeOptionPragmas on: aStream]
 ]
 
 { #category : #'C code generation' }
@@ -528,15 +538,21 @@ TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen [
 	properties ifNotNil:
 		[(properties at: #api: ifAbsent: []) ifNotNil:
 			[:pragma|
-			aStream nextPutAll: (pragma argumentAt: 1).
+			aStream
+				nextPutAll: (pragma argumentAt: 1);
+				nextPut: $;;
+				cr.
 			^self]].
 	self emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: true
 ]
 
 { #category : #'C code generation' }
 TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPrototype [ "<Boolean>"
-	"Emit a C function header for this method onto the given stream."
-	| returnTypeIsFunctionPointer |
+	"Emit a C function header for this method onto the given stream.
+	 Answer if the method has any compileTimeOptionPragmas"
+	| compileTimeOptionPragmas returnTypeIsFunctionPointer |
+	(compileTimeOptionPragmas := self compileTimeOptionPragmas) notEmpty ifTrue:
+		[self outputConditionalDefineFor: compileTimeOptionPragmas on: aStream].
 	returnTypeIsFunctionPointer := returnType last = $)
 									and: [returnType includesSubString: (aCodeGen cFunctionNameFor: selector)].
 	export 
@@ -563,7 +579,11 @@ TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPr
 				[args
 					do: [:arg| aStream nextPutAll: (self declarationAt: arg)]
 					separatedBy: [aStream nextPutAll: ', ']].
-		aStream nextPut: $)]
+		aStream nextPut: $)].
+	isPrototype ifTrue:
+		[aStream nextPut: $;; cr.
+		 self terminateConditionalDefineFor: compileTimeOptionPragmas on: aStream].
+	^compileTimeOptionPragmas notEmpty
 ]
 
 { #category : #'C code generation' }
@@ -1843,6 +1863,18 @@ TMethod >> oopVariable: aString [
 	^TVariableNode new setName: aString
 ]
 
+{ #category : #'C code generation' }
+TMethod >> outputConditionalDefineFor: compileTimeOptionPragmas on: aStream [
+	aStream nextPutAll: '#if '.
+	compileTimeOptionPragmas
+		do: [:pragma|
+			pragma keyword = #notOption: ifTrue:
+				[aStream nextPut: $!].
+			aStream nextPutAll: (pragma argumentAt: 1)]
+		separatedBy: [aStream nextPutAll: ' && '].
+	 aStream cr
+]
+
 { #category : #accessing }
 TMethod >> parseTree [
 	"The parse tree of this method."
@@ -2562,6 +2594,19 @@ TMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
 				extraVariableNumber := extraVariableNumber ifNil: [scvn] ifNotNil: [:cvn| cvn + scvn]].
 			superTMethod elideAnyFinalReturn.
 			^superTMethod parseTree]
+]
+
+{ #category : #'C code generation' }
+TMethod >> terminateConditionalDefineFor: compileTimeOptionPragmas on: aStream [
+	compileTimeOptionPragmas ifEmpty: [^self].
+	aStream nextPutAll: '#endif /* '.
+	compileTimeOptionPragmas
+		do: [:pragma|
+			pragma keyword = #notOption: ifTrue:
+				[aStream nextPut: $!].
+			aStream nextPutAll: (pragma argumentAt: 1)]
+		separatedBy: [aStream nextPutAll: ' && '].
+	 aStream nextPutAll: ' */'; cr
 ]
 
 { #category : #inlining }
