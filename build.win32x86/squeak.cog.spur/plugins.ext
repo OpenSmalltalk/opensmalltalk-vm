@@ -3,6 +3,7 @@
 # See platforms/win32/plugins/SqueakSSL/Makefile
 EXTERNAL_PLUGINS = \
 BochsIA32Plugin \
+BochsX64Plugin \
 SqueakFFIPrims \
 Win32OSProcessPlugin
 

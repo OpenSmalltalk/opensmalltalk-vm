@@ -30,7 +30,6 @@ CONFIGURATION?=product
 #############################################################################
 # Build directories
 #
-COMMONDIR:=../common
 
 ifeq ("$(CONFIGURATION)","assert")
 	BUILD:=buildast
@@ -124,7 +123,7 @@ SVNREV:= $(shell sed -e "s/^static.*SvnRawRevisionString.*Rev: \([0-9][0-9]*\).*
 #############################################################################
 # Common build rules
 #
-include $(COMMONDIR)/Makefile.rules
+include ../common/Makefile.rules
 
 svnver:
 	@-echo $(SVNREV)
@@ -207,7 +206,7 @@ endif
 #
 .PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.bundle
 
-plugin-makefile = $(shell test -f $(OSXPLUGINSDIR)/$(1)/Makefile && echo $(OSXPLUGINSDIR)/$(1)/Makefile || echo $(COMMONDIR)/Makefile.plugin)
+plugin-makefile = $(shell test -f $(OSXPLUGINSDIR)/$(1)/Makefile && echo $(OSXPLUGINSDIR)/$(1)/Makefile || echo ../common/Makefile.plugin)
 
 # Internal plugin.  Build as lib then link in lib
 # Check for Makefile in iOS plugins directory otherwise use default Makefile
@@ -250,6 +249,6 @@ $(OBJDIR)/%.bundle:	getversion $(call plugin-makefile,$(*F))
 # Extra specific dependencies
 #
 sqNamedPrims.h: plugins.int
-	$(COMMONDIR)/mkNamedPrims.sh plugins.int > sqNamedPrims.h
+	../common/mkNamedPrims.sh plugins.int > sqNamedPrims.h
 
 $(OBJDIR)/sqNamedPrims.o:	sqNamedPrims.c sqNamedPrims.h

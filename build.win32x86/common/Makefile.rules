@@ -4,16 +4,18 @@
 # See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
 # for an explanation of the dependency management scheme.
 
-# /usr/bin/clang, a.k.a. /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
-CC := clang
-LD := clang
+# gcc 3.4.x
+# Note: I had to use 'gcc' instead of 'ld' to prevent unresolved symbols
+#       The switch '-mwindows' gives us a GUI app instead of a console app.
+#		Newer cygwins want --export-all-symbols in place of --export-dynamic.
+#
+CC := gcc
+CXX:= g++
+LD := gcc
 LDCXX := clang++ # For linking c++ bundles
 
-include ../common/Makefile.flags
-
 DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
-ALLFLAGS = $(DEPFLAGS) $(WARNINGS) $(CFLAGS)
-#POSTCOMPILE = mv -f deps/$(*F).Td deps/$(*F).d
+ALLFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
 POSTCOMPILE = sed '/^$$/d' <deps/$(*F).Td | sed '/^.*:$$/d' > deps/$(*F).d; rm deps/$(*F).Td; touch -r $< deps/$(*F).d
 
 $(OBJDIR)/%.o: %.c deps/%.d
@@ -25,11 +27,20 @@ $(OBJDIR)/%.o: %.m deps/%.d
 	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o: %.cpp deps/%.d
-	$(CC) -x c++ $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+	$(CXX) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 	$(POSTCOMPILE)
+
+%res: %.rc
+	$(RC) $(RCFLAGS) -i $< -o $@
+
 
 deps/%.d: ;
 
 .PRECIOUS: deps/%.d
 
 -include $(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC))))
+
+#.cpp.o:
+#		$(CXX) -c $(CXXFLAGS) $(CXXINCLUDES) $<
+#
+#CXX:=g++

@@ -34,7 +34,6 @@ CFLAGS:= $(CFLAGS) $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(XDEFS)
 # PLUGINSRCDIR: Where is the root of the src/plugins source tree?
 # VMSRCDIR: Where is the root of the src vm source tree?
 # PLATDIR: Where is the root of the platforms tree?
-COMMONDIR:=../common
 
 #############################################################################
 # Standard directory locations:
@@ -102,7 +101,7 @@ VPATH:= $(SRCDIRS)
 #############################################################################
 # Rules for automated builds
 
-include $(COMMONDIR)/Makefile.rules
+include ../common/Makefile.rules
 
 all:	$(PLUGINLIB) $(PLUGINBUNDLE)
 

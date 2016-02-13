@@ -290,7 +290,7 @@ int sqMIDIGetPortDirectionality(int portNum)
    address.  Copy at most length characters, and return the number of
    characters copied.  Fail if there is no port of the given number.
 */
-int sqMIDIGetPortName(int portNum, int namePtr, int length)
+int sqMIDIGetPortName(int portNum, char * namePtr, int length)
 {
   int count;
   snd_seq_client_info_t *cinfo;
@@ -303,12 +303,12 @@ int sqMIDIGetPortName(int portNum, int namePtr, int length)
   sprintf(portNumStr, "%d", portNums[portNum]);
   sprintf(name, "%s <port:%s>", snd_seq_client_info_get_name(cinfo) , portNumStr);
   count = strlen(name);
-      if (count > length) count= length;
+  if (count > length) count= length;
   memcpy((void *)namePtr, name, count);
   
   success(true);
-      return count;
-    }
+  return count;
+}
 
 /* Open the given port, if possible.  If non-zero, readSemaphoreIndex
    specifies the index in the external objects array of a semaphore to
@@ -487,7 +487,7 @@ int sqMIDIParameter(int whichParameter, int modify, int newValue)
    than five bytes, since there must be enough room for the timestamp
    plus at least one data byte.
 */
-int sqMIDIPortReadInto(int portNum, int count, int bufferPtr)
+int sqMIDIPortReadInto(int portNum, int count, char * bufferPtr)
 {
   DPRINTF(("sqMIDIPortRead\n"));
   success(false);
@@ -501,7 +501,7 @@ int sqMIDIPortReadInto(int portNum, int count, int bufferPtr)
    timestamped output queue, such as this one, always send the data
    immediately; see sqMIDIHasBuffer.
 */
-int sqMIDIPortWriteFromAt(int portNum, int count, int bufferPtr, int time)
+int sqMIDIPortWriteFromAt(int portNum, int count, char * bufferPtr, int time)
 {
   if (portTypes[portNum] == 0 || portTypes[portNum] == 1) {
       int i;

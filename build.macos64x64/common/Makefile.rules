@@ -1,5 +1,5 @@
 #############################################################################
-# Compilations rules for Mac OS X
+# Compilation rules for Mac OS X
 #
 # See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
 # for an explanation of the dependency management scheme.
@@ -9,7 +9,7 @@ CC := clang
 LD := clang
 LDCXX := clang++ # For linking c++ bundles
 
-include $(COMMONDIR)/Makefile.flags
+include ../common/Makefile.flags
 
 DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
 ALLFLAGS = $(DEPFLAGS) $(WARNINGS) $(CFLAGS)
