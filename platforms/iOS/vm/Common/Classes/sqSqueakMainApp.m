@@ -174,16 +174,16 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 #	elif __x86_64__
 			void *fp = (void *)(uap ? uap->uc_mcontext->__ss.__rbp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext->__ss.__rsp: 0);
-#	endif
-# elif __linux__ && __i386__
+#	elif __linux__ && __i386__
 			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_EBP]: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_ESP]: 0);
-# else
-#	error need to implement extracting pc from a ucontext_t on this system
-# endif
+#	else
+#	  error need to implement extracting pc from a ucontext_t on this system
+#	endif
 			char *savedSP, *savedFP;
 
 			ifValidWriteBackStackPointersSaveTo(fp,sp,&savedFP,&savedSP);
+# endif /* COGVM */
 
 			printingStack = true;
 			if (printAll) {
@@ -382,6 +382,10 @@ ioDisablePowerManager(sqInt disableIfNonZero) {
 	return 0;
 }	
 
+#if STACKVM
+sqInt reportStackHeadroom;
+#endif
+
 #if COGVM
 /*
  * Support code for Cog.
@@ -438,7 +442,6 @@ getRedzoneSize()
 	return (char *)min(&old,&handler_action) - sizeof(struct sigaction) - p;
 }
 
-sqInt reportStackHeadroom;
 static int stackPageHeadroom;
 
 /* Answer the redzone size plus space for any signal handlers to run in.

@@ -26,7 +26,6 @@ MIDIPlugin \
 MiscPrimitivePlugin \
 RePlugin \
 SecurityPlugin \
-SerialPlugin \
 SocketPlugin \
 SoundCodecPrims \
 SoundGenerationPlugin \
@@ -35,4 +34,5 @@ StarSqueakPlugin \
 SurfacePlugin \
 UUIDPlugin \
 VMProfileMacSupportPlugin \
-# JoystickTabletPlugin
+# JoystickTabletPlugin \
+# SerialPlugin

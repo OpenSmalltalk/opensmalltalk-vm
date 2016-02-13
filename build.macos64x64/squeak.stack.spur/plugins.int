@@ -22,7 +22,6 @@ Matrix2x3Plugin \
 MiscPrimitivePlugin \
 RePlugin \
 SecurityPlugin \
-SerialPlugin \
 SocketPlugin \
 SoundCodecPrims \
 SoundGenerationPlugin \
@@ -31,8 +30,9 @@ StarSqueakPlugin \
 SurfacePlugin \
 UUIDPlugin \
 VMProfileMacSupportPlugin \
-#B3DAcceleratorPlugin \
-#ClipboardExtendedPlugin \
-#MIDIPlugin \
-#InternetConfigPlugin \
-# JoystickTabletPlugin
+# B3DAcceleratorPlugin \
+# ClipboardExtendedPlugin \
+# InternetConfigPlugin \
+# JoystickTabletPlugin \
+# MIDIPlugin \
+# SerialPlugin

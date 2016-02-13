@@ -45,9 +45,10 @@
 //
 
 
- #include "sq.h" 
- #include "sqMacV2Memory.h"
- #include <sys/mman.h>
+#include "sq.h" 
+#if !SPURVM
+#include "sqMacV2Memory.h"
+#include <sys/mman.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -69,7 +70,7 @@ extern usqInt memory;
 usqInt	memory;
 #endif 
 
- usqInt	sqGetAvailableMemory() {
+usqInt	sqGetAvailableMemory() {
 #if COGVM
 	 return gMaxHeapSize - 25*1024*1024;
 #else
@@ -77,8 +78,7 @@ usqInt	memory;
 #endif
  }
  
-static size_t pageSize;
-static size_t pageMask;
+static size_t pageSize, pageMask;
 
 usqInt 
 sqAllocateMemoryMac(usqInt desiredHeapSize, sqInt minHeapSize, FILE * f,usqInt headersize) {
@@ -167,7 +167,6 @@ sqMemoryExtraBytesLeft(sqInt includingSwap) {
 	return gMaxHeapSize - gHeapSize;
 }
 
-#ifndef SPURVM
 void 
 sqMacMemoryFree() {
 	if (gSqueakUseFileMappedMMAP) {
@@ -175,7 +174,6 @@ sqMacMemoryFree() {
 		munmap(startOfmmapForANONMemory,freeSpaceRoundedUpToPageSize);
 	}
 }
-#endif
 
 #ifdef BUILD_FOR_OSX
 size_t 
@@ -210,7 +208,6 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 }
 #endif /* COGVM */
 
-#if SPURVM
 /* Allocate a region of memory of al least size bytes, at or above minAddress.
  *  If the attempt fails, answer null.  If the attempt succeeds, answer the
  * start of the region and assign its size through allocatedSizePointer.
@@ -282,5 +279,4 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
     }
     return (usqInt)alloc;
 }
-
 #endif /* SPURVM */

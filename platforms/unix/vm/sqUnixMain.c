@@ -846,7 +846,7 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 			char *savedSP, *savedFP;
 
 			ifValidWriteBackStackPointersSaveTo(fp,sp,&savedFP,&savedSP);
-#endif
+#endif /* COGVM */
 
 			printingStack = true;
 			if (printAll) {

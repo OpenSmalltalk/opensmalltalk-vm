@@ -30,5 +30,5 @@ StarSqueakPlugin \
 SurfacePlugin \
 UUIDPlugin \
 VMProfileMacSupportPlugin \
-# SerialPlugin \
-# JoystickTabletPlugin
+# JoystickTabletPlugin \
+# SerialPlugin

@@ -52,14 +52,14 @@ OSXCLASSESDIR:=$(PLATDIR)/iOS/vm/Common/Classes
 OSXPLUGINSDIR:=$(PLATDIR)/iOS/plugins
 UNIXVMDIR:=$(PLATDIR)/unix/vm
 
-MAKERSRC:=$(addprefix $(VMSRCDIR)/,gcc3x-cointerp.c cogit.c)
+MAKERSRC:=$(wildcard $(VMSRCDIR)/gcc3x-*interp.c $(VMSRCDIR)/cogit.c)
 CROSSSRC:= $(wildcard $(CROSSDIR)/*.c)
 XEX:=%/sqSqueakMainApplication+screen.m
 OSXSRC:=$(wildcard $(OSXDIR)/*.c) $(filter-out $(XEX),$(wildcard $(OSXDIR)/*.m)) \
 		$(wildcard $(OSXCOMMONDIR)/*.c) $(wildcard $(OSXCOMMONDIR)/*.m) \
 		$(wildcard $(OSXCLASSESDIR)/*.c) $(wildcard $(OSXCLASSESDIR)/*.m)
-UNIXSRC:=$(addprefix $(UNIXVMDIR)/,aio.c sqUnixHeartbeat.c sqUnixMemory.c \
-						sqUnixSpurMemory.c sqUnixThreads.c sqUnixVMProfile.c)
+UNIXSRC:=$(addprefix $(UNIXVMDIR)/,aio.c sqUnixHeartbeat.c sqUnixSpurMemory.c \
+                     sqUnixThreads.c sqUnixVMProfile.c)
 VMSRC:= $(MAKERSRC) $(CROSSSRC) $(OSXSRC) $(UNIXSRC)
 VMOBJ:=	$(notdir $(VMSRC))
 VMOBJ:=	$(VMOBJ:.c=.o)

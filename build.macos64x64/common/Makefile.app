@@ -54,10 +54,10 @@ OSXICONS:=$(OSXDIR)/$(VM).icns $(wildcard $(OSXDIR)/$(SYSTEM)*.icns)
 VMICONS:=$(addprefix $(APP)/Contents/Resources/,$(notdir $(OSXICONS)))
 VMMENUNIB:=$(APP)/Contents/Resources/English.lproj/MainMenu.nib
 SOURCES:=
-ifneq ("$(SOURCEFILE)",)
+ifneq ($(SOURCEFILE),)
 SOURCES:=./$(SOURCEFILE)
 endif
-ifneq ("$(APPSOURCE)",)
+ifneq ($(APPSOURCE),)
 SOURCES:=$(SOURCES) $(APP)/Contents/Resources/$(APPSOURCE)
 endif
 
@@ -96,7 +96,7 @@ $(APP)/Contents/Resources/%.icns: $(OSXDIR)/%.icns
 # To sign the app, set SIGNING_IDENTITY in the environment, e.g.
 # export SIGNING_IDENTITY="Developer ID Application: Eliot Miranda"
 #
-ifeq ("$(SIGNING_IDENTITY)",)
+ifeq ($(SIGNING_IDENTITY),)
 signapp:
 	echo "No signing identity found (SIGNING_IDENTITY unset). Not signing app."
 else
@@ -121,4 +121,7 @@ print-app-settings:
 	@echo VMBUNDLES=$(VMBUNDLES)
 	@echo VMPLIST=$(VMPLIST)
 	@echo VMICONS=$(VMICONS)
+	@echo SIGNING_IDENTITY=$(SIGNING_IDENTITY)
+	@echo SOURCEFILE=$(SOURCEFILE)
+	@echo APPSOURCE=$(APPSOURCE)
 	@echo -----------------------------------------------------
