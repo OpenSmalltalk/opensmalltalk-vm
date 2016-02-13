@@ -1107,7 +1107,7 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 		 self scanBlock: blockStart.
 		 initialOpcodeIndex := opcodeIndex.
 		 literalsManager saveForBlockCompile.
-		 self cppIf: #NewspeakVM ifTrue:
+		 NewspeakVM ifTrue:
 			[initialIndexOfIRC := indexOfIRC].
 		 [self compileBlockEntry: blockStart.
 		  initialStackPtr := simStackPtr.
@@ -1132,7 +1132,7 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 									[:i| abstractOpcodes at: i put: (CogCompilerClass for: self)]].
 				 opcodeIndex := initialOpcodeIndex.
 				 literalsManager resetForBlockCompile.
-				 self cppIf: #NewspeakVM ifTrue:
+				 NewspeakVM ifTrue:
 					[indexOfIRC := initialIndexOfIRC]].
 		compiledBlocksCount := compiledBlocksCount + 1].
 	needsFrame := savedNeedsFrame.
@@ -3621,7 +3621,7 @@ StackToRegisterMappingCogit >> scanMethod [
 	needsFrame := false.
 	inBlock := false.
 	prevBCDescriptor := nil.
-	self cppIf: #NewspeakVM ifTrue:
+	NewspeakVM ifTrue:
 		[numIRCs := 0].
 	(primitiveIndex > 0
 	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
@@ -3655,7 +3655,7 @@ StackToRegisterMappingCogit >> scanMethod [
 			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 latestContinuation := latestContinuation max: targetPC].
-		 self cppIf: #NewspeakVM ifTrue:
+		 NewspeakVM ifTrue:
 			[descriptor hasIRC ifTrue:
 				[numIRCs := numIRCs + 1]].
 		 pc := pc + descriptor numBytes.

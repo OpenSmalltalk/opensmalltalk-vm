@@ -1127,7 +1127,7 @@ CCodeGenerator >> emitCConstants: constList on: aStream [
 			default = #undefined
 				ifTrue: [aStream nextPutAll: '#undef '; nextPutAll: node name; cr]
 				ifFalse:
-					[conditional := VMBasicConstants namesDefinedAtCompileTime includes: node name.
+					[conditional := VMBasicConstants defineAtCompileTime: node name.
 					conditional ifTrue:
 						[aStream nextPutAll: '#if !defined('; nextPutAll: node name; nextPutAll: ') /* Allow this to be overridden on the compiler command line */'; cr].
 					value := vmClass
@@ -3492,7 +3492,7 @@ CCodeGenerator >> isConstantNode: aNode valueInto: aBlock [
 
 	aNode isConstant ifTrue:
 		[(aNode isDefine
-		 and: [VMBasicConstants namesDefinedAtCompileTime includes: aNode name]) ifTrue:
+		  and: [VMBasicConstants defineAtCompileTime: aNode name]) ifTrue:
 			[^false].
 		 aBlock value: aNode value.
 		 ^true].
@@ -3862,13 +3862,24 @@ CCodeGenerator >> nilOrBooleanConditionFor: nodeOrNil [
 	"If nodeOrNil is one of the conditional sends for which we do translation-time dead code elimination
 	 (i.e. cppIf:ifTrue: et al or ifTrue: et al) and the conditional does evaluate to a translation-time
 	 boolean constant, answer that constant, otherwise answer nil.  Used to prune dead code,
-	 either for code egenraton or dead variable elimination."
+	 either for code generaton or dead variable elimination."
+	generateDeadCode ifTrue: [^nil].
 	nodeOrNil ifNil:
 		[^nil].
 	nodeOrNil isSend ifFalse:
 		[^nil].
 	(#(cppIf:ifTrue: cppIf:ifTrue:ifFalse:) includes: nodeOrNil selector) ifTrue:
-		[^(optionsDictionary notNil
+		[(vmClass notNil
+		 and: [nodeOrNil args first isConstant
+		 and: [nodeOrNil args first value isSymbol
+		 and: [(VMBasicConstants defineAtCompileTime: nodeOrNil args first value) not
+		 and: [(vmClass bindingOf: nodeOrNil args first value) notNil]]]]) ifTrue:
+			[self logger
+					nextPutAll: 'Warning: cppIf: reference to ';
+					store: nodeOrNil args first value;
+					nextPutAll: ' when variable of same name exists.'; cr].
+
+		 ^(optionsDictionary notNil
 		   and: [nodeOrNil args first isConstant
 		   and: [#(true false) includes: (optionsDictionary at: nodeOrNil args first name ifAbsent: [nil])]]) ifTrue:
 			[optionsDictionary at: nodeOrNil args first name]].
@@ -4001,7 +4012,7 @@ CCodeGenerator >> optionIsTrue: pragma in: aClass [
 
 	"If the option is one to be defined at compile time we'll generate a
 	 conditional around its declaration and definition."
-	(VMBasicConstants namesDefinedAtCompileTime includes: key) ifTrue:
+	(VMBasicConstants defineAtCompileTime: key) ifTrue:
 		[^true].
 
 	"If the option is the name of a subclass of Cogit, include it if it inherits from the Cogit class."
