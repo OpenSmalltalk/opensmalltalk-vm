@@ -3355,7 +3355,7 @@ CoInterpreter >> findNewMethodInClassTag: classTagArg [
 					[^self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector]].
 			 "entry was not found in the cache; look it up the hard way "
 			 lkupClass := objectMemory classForClassTag: classTag.
-			 self cppIf: #NewspeakVM
+			 NewspeakVM
 				ifTrue: [self lookupOrdinarySend]
 				ifFalse: [self lookupMethodInClass: lkupClass].
 			 self addNewMethodToCache: lkupClass]
@@ -4592,13 +4592,13 @@ CoInterpreter >> lookupMNU: selector receiver: rcvr [
 	"self printFrame: stackPage headFP WithSP: stackPage headSP"
 	"self printStringOf: selector"
 	classTag := objectMemory fetchClassTagOf: rcvr.
-	self cppIf: #NewspeakVM
+	NewspeakVM
 	  	ifTrue:
-			[inCache := (self
-				inlineLookupInNSMethodCacheSel: selector
-				classTag: classTag
-				method: 0
-				lookupRule: LookupRuleMNU)]
+			[inCache := self
+							inlineLookupInNSMethodCacheSel: selector
+							classTag: classTag
+							method: 0
+							lookupRule: LookupRuleMNU]
 		ifFalse:
 			[inCache := self lookupInMethodCacheSel: selector classTag: classTag].
 	inCache ifFalse:

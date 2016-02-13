@@ -79,6 +79,12 @@ Class {
 }
 
 { #category : #'C translation' }
+VMBasicConstants class >> defineAtCompileTime: aSymbol [
+	self assert: aSymbol isSymbol.
+	^self namesDefinedAtCompileTime includes: aSymbol
+]
+
+{ #category : #'C translation' }
 VMBasicConstants class >> mostBasicConstantNames [
 	"c.f. mostBasicConstantSelectors"
 	^#(BaseHeaderSize BytesPerWord BytesPerOop ShiftForWord BytesPerWord)

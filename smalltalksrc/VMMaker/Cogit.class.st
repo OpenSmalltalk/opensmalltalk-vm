@@ -8341,7 +8341,7 @@ Cogit >> maybeAllocAndInitCounters [
 Cogit >> maybeAllocAndInitIRCs [
 	"If this is the Newspeak VM and the objectRepresentation supports pinning
 	 then allocate space for the implicit receiver caches on the heap."
-	self cppIf: #NewspeakVM
+	NewspeakVM
 		ifTrue:
 			[indexOfIRC := theIRCs := 0.
 			 (objectRepresentation canPinObjects and: [numIRCs > 0]) ifTrue:
@@ -8449,7 +8449,7 @@ Cogit >> maybeMarkCountersIn: cogMethod [
 { #category : #'newspeak support' }
 Cogit >> maybeMarkIRCsIn: cogMethod [
 	<inline: true>
-	self cppIf: #NewspeakVM ifTrue:
+	NewspeakVM ifTrue:
 		[objectRepresentation canPinObjects ifTrue:
 			[objectRepresentation markIfIRC: cogMethod nextMethodOrIRCs]]
 ]
@@ -9741,7 +9741,7 @@ Cogit >> scanMethod [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
 	inBlock := false.
-	self cppIf: #NewspeakVM ifTrue:
+	NewspeakVM ifTrue:
 		[numIRCs := 0].
 	(primitiveIndex > 0
 	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
@@ -9775,7 +9775,7 @@ Cogit >> scanMethod [
 			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 latestContinuation := latestContinuation max: targetPC].
-		 self cppIf: #NewspeakVM ifTrue:
+		 self cppIf: NewspeakVM ifTrue:
 			[descriptor hasIRC ifTrue:
 				[numIRCs := numIRCs + 1]].
 		 pc := pc + descriptor numBytes.

@@ -6118,7 +6118,7 @@ StackInterpreter >> findNewMethodInClassTag: classTagArg [
 			ok ifTrue:
 				[^nil]].
  		 lkupClass := objectMemory classForClassTag: classTag.
-		 self cppIf: #NewspeakVM
+		 NewspeakVM
 				ifTrue: [self lookupOrdinarySend]
 				ifFalse: [self lookupMethodInClass: lkupClass].
 		 self addNewMethodToCache: lkupClass]
@@ -8890,7 +8890,7 @@ StackInterpreter >> lookupMNUInClass: class [
 			[lkupClass := self superclassOf: currentClass.
 			 ^SelectorCannotInterpret].
 		found := self lookupMethodInDictionary: dictionary.
-		self cppIf: #NewspeakVM
+		NewspeakVM
 			ifTrue: [found ifTrue: [lkupClass := class. self addNewMethodToNSCache: LookupRuleMNU. ^0]]
 			ifFalse: [found ifTrue: [self addNewMethodToCache: class. ^0]].
 		currentClass := self superclassOf: currentClass].
@@ -9033,7 +9033,7 @@ StackInterpreter >> lookupOrdinaryNoMNUEtcInClass: class [
 			[lkupClass := self superclassOf: currentClass.
 			 ^SelectorCannotInterpret].
 		found := self lookupMethodInDictionary: dictionary.
-		self cppIf: #NewspeakVM
+		NewspeakVM
 			ifTrue:
 				[found ifTrue:
 					[(self isPublicMethod: newMethod) ifTrue:

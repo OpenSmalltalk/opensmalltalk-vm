@@ -119,7 +119,7 @@ SistaStackToRegisterMappingCogit >> compileBlockBodies [
 		 self scanBlock: blockStart.
 		 initialOpcodeIndex := opcodeIndex.
 		 initialCounterIndex := counterIndex.
-		 self cppIf: #NewspeakVM ifTrue:
+		 NewspeakVM ifTrue:
 			[initialIndexOfIRC := indexOfIRC].
 		 [self compileBlockEntry: blockStart.
 		  initialStackPtr := simStackPtr.
@@ -144,7 +144,7 @@ SistaStackToRegisterMappingCogit >> compileBlockBodies [
 									[:i| abstractOpcodes at: i put: (CogCompilerClass for: self)]].
 				 opcodeIndex := initialOpcodeIndex.
 				 counterIndex := initialCounterIndex.
-				 self cppIf: #NewspeakVM ifTrue:
+				 NewspeakVM ifTrue:
 					[indexOfIRC := initialIndexOfIRC]].
 		compiledBlocksCount := compiledBlocksCount + 1].
 	needsFrame := savedNeedsFrame.
@@ -1053,7 +1053,7 @@ SistaStackToRegisterMappingCogit >> scanMethod [
 	inBlock := false.
 	prevBCDescriptor := nil.
 	numCounters := 0.
-	self cppIf: #NewspeakVM ifTrue:
+	NewspeakVM ifTrue:
 		[numIRCs := 0].
 	(primitiveIndex > 0
 	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
@@ -1090,7 +1090,7 @@ SistaStackToRegisterMappingCogit >> scanMethod [
 			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 latestContinuation := latestContinuation max: targetPC].
-		 self cppIf: #NewspeakVM ifTrue:
+		 NewspeakVM ifTrue:
 			[descriptor hasIRC ifTrue:
 				[numIRCs := numIRCs + 1]].
 		 pc := pc + descriptor numBytes.

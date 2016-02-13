@@ -391,12 +391,14 @@ TMethod >> compileTimeOptionPragmas [
 	^self compiledMethod pragmas select:
 		[:pragma|
 		 (#option: == pragma keyword or: [#notOption: == pragma keyword])
-		 and: [VMBasicConstants namesDefinedAtCompileTime includes: (pragma argumentAt: 1)]]
+		 and: [VMBasicConstants defineAtCompileTime: (pragma argumentAt: 1)]]
 ]
 
 { #category : #accessing }
 TMethod >> compiledMethod [
-	^definingClass >> selector
+	^definingClass
+		compiledMethodAt: selector
+		ifAbsent: [definingClass compiledMethodAt: properties selector]
 ]
 
 { #category : #'inlining support' }
