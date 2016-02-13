@@ -503,7 +503,7 @@ VMClass class >> shouldIncludeMethodForSelector: selector [
 			 (c >> selector pragmaAt: #option:)
 				ifNotNil:
 					[:pragma|
-					(VMBasicConstants namesDefinedAtCompileTime includes: pragma arguments first)
+					(VMBasicConstants defineAtCompileTime: pragma arguments first)
 					 or: [initializationOptions
 							at: pragma arguments first
 							ifAbsent: [(self bindingOf: pragma arguments first)
