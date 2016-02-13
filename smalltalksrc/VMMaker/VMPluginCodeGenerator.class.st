@@ -197,18 +197,18 @@ VMPluginCodeGenerator >> generateInterpreterProxyFunctionDeference: aNode on: aS
 	| pluginsToClone |
 	(pluginsToClone := self pluginFunctionsToClone) isEmpty ifTrue:
 		[^self].
-	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'.
+	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'; cr.
 	pluginsToClone do:
 		[:s| | cs |
 		cs := self cFunctionNameFor: s.
 		self withOptionalVerbiageFor: s
 			on: aStream
-			do: [aStream crtab: anInteger; nextPutAll: cs; nextPutAll: ' = interpreterProxy->'; nextPutAll: cs; nextPut: $;]
+			do: [aStream tab: anInteger; nextPutAll: cs; nextPutAll: ' = interpreterProxy->'; nextPutAll: cs; nextPut: $;; cr]
 			ifOptionalDo: [aStream
-							cr; nextPutAll: '# if !defined('; nextPutAll: cs; nextPut: $);
+							nextPutAll: '# if !defined('; nextPutAll: cs; nextPut: $);
 							crtab: anInteger; nextPutAll: cs; nextPutAll: ' = 0;';
-							cr; nextPutAll: '# endif']].
-	aStream cr; nextPutAll: '#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */'.
+							cr; nextPutAll: '# endif'; cr]].
+	aStream nextPutAll: '#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */'.
 ]
 
 { #category : #'C translation' }
@@ -401,16 +401,14 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 				copyReplaceAll: functionName
 				with: '(*', functionName, ')'
 				tokenish: [:ch| ch = $_ or: [ch isAlphaNumeric]])].
-	aStream nextPutAll: '#else /* !defined(SQUEAK_BUILTIN_PLUGIN) */'.
+	aStream nextPutAll: '#else /* !defined(SQUEAK_BUILTIN_PLUGIN) */'; cr.
 	pluginFuncs do:
 		[:tMethod|
 		self withOptionalVerbiageFor: tMethod selector
 			on: aStream
-			do: [aStream cr.
-				tMethod static: false; export: false; emitCFunctionPrototype: aStream generator: self.
-				aStream nextPut: $;]
+			do: [tMethod static: false; export: false; emitCFunctionPrototype: aStream generator: self]
 			ifOptionalDo:
-				[aStream cr; nextPutAll: '# define '.
+				[aStream nextPutAll: '# define '.
 				 (TSendNode new
 					setSelector: tMethod selector
 						receiver: (TVariableNode new setName: 'interpreterProxy')
@@ -418,9 +416,8 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 					emitCCodeAsArgumentOn: aStream
 						level: 0
 							generator: self.
-				 aStream nextPutAll: ' 0']].
-	aStream cr; nextPutAll: 'extern'.
-	aStream cr; nextPutAll: '#endif'; cr
+				 aStream nextPutAll: ' 0'; cr]].
+	aStream nextPutAll: 'extern'; cr; nextPutAll: '#endif'; cr
 ]
 
 { #category : #'C code generator' }
@@ -555,10 +552,10 @@ VMPluginCodeGenerator >> withOptionalVerbiageFor: selector on: aStream do: mainB
 			[mainBlock value]
 		ifNotNil:
 			[:pragma|
-			 aStream cr.
 			 self emitIfdefForPluginFunctionOption: pragma arguments first on: aStream.
+			 aStream cr.
 			 mainBlock value.
-			 aStream cr; nextPutAll: '#else'.
+			 aStream nextPutAll: '#else'; cr.
 			 optionalBlock value.
-			 aStream cr; nextPutAll: '#endif']
+			 aStream nextPutAll: '#endif'; cr]
 ]

@@ -322,10 +322,10 @@ CCodeGenerator >> addConstantForBinding: variableBinding [
 	val := variableBinding value.
 	node := (useSymbolicConstants and: [self isCLiteral: val])
 				ifTrue:[TDefineNode new
-							setName: variableBinding key asString
+							setName: variableBinding key
 							value: variableBinding value]
 				ifFalse:[TConstantNode new setValue: variableBinding value].
-	constants at: variableBinding key asString put: node
+	constants at: variableBinding key put: node
 ]
 
 { #category : #public }
@@ -451,12 +451,9 @@ CCodeGenerator >> addPoolVarsFor: aClass [
 	(aClass sharedPools reject: [:pool| pools includes: pool]) do:
 		[:pool |
 		pools add: pool.
-		pool bindingsDo: [:assoc | | val node |
-			val := assoc value.
-			node := (useSymbolicConstants and:[self isCLiteral: val])
-						ifTrue:[TDefineNode new setName: assoc key asString value: assoc value]
-						ifFalse:[TConstantNode new setValue: assoc value].
-			constants at: assoc key asString put: node]].
+		pool bindingsDo:
+			[:binding |
+			self addConstantForBinding: binding]]
 ]
 
 { #category : #public }
@@ -713,7 +710,7 @@ CCodeGenerator >> checkClassForNameConflicts: aClass [
 	"check for constant name collisions in class pools"
 	aClass classPool associationsDo:
 		[:assoc |
-		(constants includesKey: assoc key asString) ifTrue:
+		(constants includesKey: assoc key) ifTrue:
 			[self error: 'Constant ', assoc key, ' was defined in a previously added class']].
 
 	"and in shared pools"
@@ -721,7 +718,7 @@ CCodeGenerator >> checkClassForNameConflicts: aClass [
 		[:pool |
 		pool bindingsDo:
 			[:assoc |
-			(constants includesKey: assoc key asString) ifTrue:
+			(constants includesKey: assoc key) ifTrue:
 				[self error: 'Constant ', assoc key, ' was defined in a previously added class']]].
 
 	"check for instance variable name collisions"
@@ -912,9 +909,9 @@ CCodeGenerator >> const: constName declareC: declarationString [
 	"Record the given C declaration for a constant."
 
 	constants
-		at: constName asString
+		at: constName
 		put: (TDefineNode new
-				setName: constName asString
+				setName: constName
 				value: declarationString)
 ]
 

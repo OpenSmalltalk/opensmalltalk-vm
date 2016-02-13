@@ -79,9 +79,9 @@ Class {
 }
 
 { #category : #'C translation' }
-VMBasicConstants class >> defineAtCompileTime: aSymbol [
-	self assert: aSymbol isSymbol.
-	^self namesDefinedAtCompileTime includes: aSymbol
+VMBasicConstants class >> defineAtCompileTime: anObject [
+	^anObject isSymbol
+	 and: [self namesDefinedAtCompileTime includes: anObject]
 ]
 
 { #category : #'C translation' }
