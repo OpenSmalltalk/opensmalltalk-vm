@@ -1351,7 +1351,7 @@ CCodeGenerator >> emitExportsNamed: exportsNamePrefix pluginName: pluginName on:
 					  and: [pluginName isEmpty
 					  and: [vmClass objectMemoryClass hasSpurMemoryManagerAPI not]].
 	aStream cr; cr; nextPutAll: 'void* '; nextPutAll: exportsNamePrefix; nextPutAll: '_exports[][3] = {'; cr.
-	((methods select: [:m| m export]) asSortedCollection: [:a :b| a selector < b selector]) do:
+	((methods select: [:m| m export]) asSortedCollection: [:a :b| a selector caseSensitiveLessOrEqual: b selector]) do:
 		[:method| | compileTimeOptionPragmas primName |
 		(compileTimeOptionPragmas := method compileTimeOptionPragmas) notEmpty ifTrue:
 			[method outputConditionalDefineFor: compileTimeOptionPragmas on: aStream].
