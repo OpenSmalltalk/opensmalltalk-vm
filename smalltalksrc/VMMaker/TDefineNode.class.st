@@ -36,7 +36,7 @@ TDefineNode >> isSameAs: aTParseNode [
 
 { #category : #accessing }
 TDefineNode >> name [
-	^name asString
+	^name
 ]
 
 { #category : #accessing }
