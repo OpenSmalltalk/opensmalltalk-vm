@@ -1,15 +1,15 @@
-DLLTOOLEXTRA := ../bochsx86/cpu/libcpu.a \
-				../bochsx86/fpu/libfpu.a \
-				../bochsx86/disasm/libdisasm.a
+DLLTOOLEXTRA := ../bochsx64/cpu/libcpu.a \
+				../bochsx64/fpu/libfpu.a \
+				../bochsx64/disasm/libdisasm.a
 DLLWRAPEXTRA := $(DLLTOOLEXTRA)
 
 LINK_WITH_GPP := yes
-EXTRALIBS:= -L../bochsx86/cpu -L../bochsx86/fpu -L../bochsx86/disasm \
+EXTRALIBS:= -L../bochsx64/cpu -L../bochsx64/fpu -L../bochsx64/disasm \
 			-lcpu -lfpu -ldisasm
 
 include ../common/Makefile.plugin
 
-INCLUDES+=-I../bochsx86 \
+INCLUDES+=-I../bochsx64 \
          -I../../processors/IA32/bochs \
 		 -I../../processors/IA32/bochs/instrument/stubs
 
