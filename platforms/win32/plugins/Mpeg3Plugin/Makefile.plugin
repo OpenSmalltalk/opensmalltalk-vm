@@ -1,0 +1,30 @@
+include ../common/Makefile.plugin
+
+# additional CFLAGS
+CFLAGS += -DNOPTHREADS
+
+# additional directories and files
+MP3DIR= $(CROSSDIR)/libmpeg
+MP3SRC=  $(notdir $(wildcard $(MP3DIR)/*.c))
+MP3SRC:= $(filter-out dump.c dump2.c mpeg3toc.c mpeg3cat.c testaudio.c udump.c test.c, $(MP3SRC))
+MP3OBJ:= $(MP3SRC:.c=.o)
+
+AUDDIR= $(MP3DIR)/audio
+AUDSRC=  $(notdir $(wildcard $(AUDDIR)/*.c))
+AUDOBJ:= $(AUDSRC:.c=.o)
+
+VIDDIR= $(MP3DIR)/video
+VIDSRC=  $(notdir $(wildcard $(VIDDIR)/*.c))
+VIDSRC:= $(filter-out worksheet.c, $(VIDSRC))
+VIDOBJ:= $(VIDSRC:.c=.o)
+
+# add the libmpeg files
+LIBSRC += $(MP3SRC) $(AUDSRC) $(VIDSRC)
+LIBOBJ += $(addprefix $(OBJDIR)/,$(MP3OBJ) $(AUDOBJ) $(VIDOBJ))
+
+# add the directories
+VPATH    += $(MP3DIR) $(VIDDIR) $(AUDDIR)
+INCLUDES += -I$(MP3DIR) -I$(VIDDIR) -I$(AUDDIR)
+
+$(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ)
+	$(AR) $(PLUGINLIB) $(LIBOBJ)

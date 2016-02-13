@@ -723,7 +723,7 @@ int sqMIDIGetPortDirectionality(int portNum) {
 /* Copy the name of the given MIDI port into the string at the given
    address. Copy at most length characters, and return the number of
    characters copied. Fail if there is no port of the given number.*/
-int sqMIDIGetPortName(int portNum, int namePtr, int length) {
+int sqMIDIGetPortName(int portNum, char * namePtr, int length) {
   TCHAR *portName;
 	int count, i;
   MIDIOUTCAPS outCaps;
@@ -744,7 +744,7 @@ int sqMIDIGetPortName(int portNum, int namePtr, int length) {
 	count = lstrlen(portName);
 	if (count > length) count = length;
   for(i=0;i<count;i++)
-    ((char*)namePtr)[i] = (char) portName[i];
+    namePtr[i] = (char) portName[i];
 	return count;
 }
 
@@ -933,7 +933,7 @@ int sqMIDIParameterGet(int whichParameter)
    available. Fail if the buffer is shorter than five bytes,
    since there must be enough room for the timestamp plus at
    least one data byte. */
-int sqMIDIPortReadInto(int portNum, int count, int bufferPtr) {
+int sqMIDIPortReadInto(int portNum, int count, char * bufferPtr) {
 	int bytesRead, stamped;
   DWORD index, i, data, len, stamp;
   unsigned char *dstPtr;
@@ -1011,7 +1011,7 @@ int sqMIDIPortReadInto(int portNum, int count, int bufferPtr) {
    zero, then send the data immediately. Implementations that do
    not support a timestamped output queue, such as this one, always
    send the data immediately; see sqMIDIHasBuffer. */
-int sqMIDIPortWriteFromAt(int portNum, int count, int bufferPtr, int time) {
+int sqMIDIPortWriteFromAt(int portNum, int count, char * bufferPtr, int time) {
   unsigned char *srcPtr = (char*) bufferPtr;
   unsigned char cmd;
   sqMidiPort *port;
