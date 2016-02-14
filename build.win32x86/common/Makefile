@@ -195,7 +195,7 @@ RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32 -DFILEVERSIONVALUES=4,0,$
 #############################################################################
 # Common build rules
 #
-default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE)
+default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE) nukelibs
 
 svnver:
 	echo $(RC) $(RCFLAGS)
@@ -240,6 +240,9 @@ cleandbg:
 
 cleanmtdbg:
 	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildmtdbg
+
+nukelibs:
+	rm $(LIBS)
 
 print-settings:
 	@echo ---------------- Makefile settings ------------------

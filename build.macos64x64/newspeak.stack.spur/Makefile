@@ -3,6 +3,6 @@
 # Do make init to allow make -n to function.
 #
 
-VMSRCDIR:= ../../nsspurstacksrc/vm
+VMSRCDIR:= ../../nsspurstack64src/vm
 
 include ../common/Makefile.app.newspeak

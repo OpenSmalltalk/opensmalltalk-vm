@@ -11,7 +11,7 @@ $(VM_DMG): $(VM_BUNDLE) $(INSTALLER_BACKGROUND).png LayoutDiskImage.applescript 
 	ditto $(VM_BUNDLE) '/Volumes/$(PRODUCT_NAME)/$(VM_LOCALIZED_NAME).app'
 	bless --folder '/Volumes/$(PRODUCT_NAME)' --openfolder '/Volumes/$(PRODUCT_NAME)'
 	cp '$(INSTALLER_ICON).icns' '/Volumes/$(PRODUCT_NAME)/.VolumeIcon.icns'
-	/Developer/Tools/SetFile -a C '/Volumes/$(PRODUCT_NAME)'
+	/Applications/Xcode.app/Contents/Developer/Tools/SetFile -a C '/Volumes/$(PRODUCT_NAME)'
 	osascript LayoutDiskImage.applescript
 	while test -e '/Volumes/$(PRODUCT_NAME)' ; do echo Waiting for Finder to eject '/Volumes/$(PRODUCT_NAME)'; sleep 2; done
 	hdiutil convert "$@.sparseimage" -format UDBZ -o $(VM_DMG)

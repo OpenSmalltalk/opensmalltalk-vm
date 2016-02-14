@@ -10,7 +10,7 @@
 
 set echo
 CFLAGS="-m32 $CFLAGS"
-CFLAGS="-Dlongjmp=_longjmp -Dsetjmp=_setjmp $CFLAGS"
+CFLAGS="-Dsetjmp=_setjmp $CFLAGS"
 CFLAGS="-pipe -O0 $CFLAGS"
 CFLAGS="-g3 $CFLAGS"
 CPPFLAGS=""

@@ -135,15 +135,15 @@ $(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 
 $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	$(DLLTOOL) \
-		--output-def $(LIBNAME).def \
-		--output-exp $(LIBNAME).exp \
-		--output-lib $(LIBNAME).lib \
+		--output-def $(OBJDIR)/$(LIBNAME).def \
+		--output-exp $(OBJDIR)/$(LIBNAME).exp \
+		--output-lib $(OBJDIR)/$(LIBNAME).lib \
 		$(DLLTOOLEXTRAS) \
 		$(LIBOBJ)
 ifneq ($(LINK_WITH_GCC),)
 	gcc -shared \
 		-mno-cygwin \
-		-def $(LIBNAME).def \
+		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
 		--entry _DllMain@12 \
 		$(GCCLINKEXTRAS) \
@@ -151,22 +151,22 @@ ifneq ($(LINK_WITH_GCC),)
 else ifneq ($(LINK_WITH_GPP),)
 	g++ -shared \
 		-mno-cygwin \
-		-def $(LIBNAME).def \
+		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
 		--entry _DllMain@12 \
 		$(GPPLINKEXTRAS) \
 		$(LIBOBJ) $(EXTRALIBS)
 else
 	$(DLLWRAP) -mwindows \
-		-def $(LIBNAME).def \
+		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
 		--entry _DllMain@12 \
 		$(DLLWRAPEXTRAS) \
-		$(LIBNAME).exp \
+		$(OBJDIR)/$(LIBNAME).exp \
 		$(LIBOBJ) $(EXTRALIBS)
 endif
 	$(OPTSTRIP) --strip-all $(VMDIR)/$(LIBNAME).dll
-	-$(RM) $(LIBNAME).lib
+	-$(RM) $(OBJDIR)/$(LIBNAME).lib
 
 #############################################################################
 # Rules for automated builds
