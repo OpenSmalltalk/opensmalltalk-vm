@@ -21,7 +21,7 @@ $(foreach var,$(BRANDING),$(eval $(call ESCAPE_VAR,$(var))))
 $(VM_LOCALIZED_NAME_ESC).app: ../CocoaFast.app
 	rm -rf $(VM_LOCALIZED_NAME_ESC).app
 	cp -R ../CocoaFast.app $(VM_LOCALIZED_NAME_ESC).app
-	test -f $(VM_LOCALIZED_NAME_ESC).app/Contents/Resources || ln $(SOURCEFILENAME1) $(VM_LOCALIZED_NAME_ESC).app/Contents/Resources
+	test -f $(VM_LOCALIZED_NAME_ESC).app/Contents/Resources/$(SOURCEFILENAME1) || ln $(SOURCEFILENAME1) $(VM_LOCALIZED_NAME_ESC).app/Contents/Resources
 
 # Cab contents:
 VM_BUNDLE := $(VM_LOCALIZED_NAME_ESC).app

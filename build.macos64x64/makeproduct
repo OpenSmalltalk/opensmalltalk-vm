@@ -10,5 +10,5 @@ for d in $PRODUCTDIRS; do
 done
 echo no news is good news...
 for d in $PRODUCTDIRS; do
-	test -d $d && grep 'BUILD FAILED' $d/LOG*
+	test -d $d && grep -w error: $d/LOG*
 done

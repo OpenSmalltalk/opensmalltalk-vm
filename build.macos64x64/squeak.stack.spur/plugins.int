@@ -22,7 +22,6 @@ LargeIntegers \
 LocalePlugin \
 MacMenubarPlugin \
 Matrix2x3Plugin \
-MIDIPlugin \
 MiscPrimitivePlugin \
 RePlugin \
 SecurityPlugin \
@@ -35,4 +34,5 @@ StarSqueakPlugin \
 SurfacePlugin \
 UUIDPlugin \
 VMProfileMacSupportPlugin \
-# JoystickTabletPlugin
+# JoystickTabletPlugin \
+# MIDIPlugin

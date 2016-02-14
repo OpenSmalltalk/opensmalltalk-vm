@@ -8,4 +8,4 @@ for d in newspeak.* squeak.*; do
 	fi
 done
 echo no news is good news...
-grep 'BUILD FAILED' newspeak.*/LOG* squeak.*/LOG*
+grep -w error: newspeak.*/LOG* squeak.*/LOG*
