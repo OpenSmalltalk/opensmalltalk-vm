@@ -138,7 +138,7 @@ test "x$prefix" = xNONE && prefix=$ac_default_prefix
 test "x$exec_prefix" = xNONE && exec_prefix='${prefix}'
 imgdir=`eval echo ${libdir}/squeak`
 expanded_relative_imgdir=`eval echo lib/squeak/${VM_VERSION}`
-plgdir='${imgdir}/`./getversion VERSION_TAG`'
+plgdir='${imgdir}/`${blddir}/getversion VERSION_TAG`'
 
 AC_SUBST(imgdir)
 AC_SUBST(expanded_relative_imgdir)
