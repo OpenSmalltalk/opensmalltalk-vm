@@ -1,16 +1,27 @@
-#!/bin/sh
-rm -rf build*/vm/Croquet*.exe build*/vm/Squeak*.exe
-make debug 2>&1 | tee LOGD
-make assert 2>&1 | tee LOGA
-make 2>&1 | tee LOGF
-make THREADING=multi CONFIGURATION=debug 2>&1 | tee LOGTD
-make THREADING=multi CONFIGURATION=assert 2>&1 | tee LOGTA
-make THREADING=multi 2>&1 | tee LOGTF
-ls -rlt build*/vm/Squeak*.exe
-if test -f ../../sources/SqueakV41.sources; then
-	for d in build buildast builddbg; do
-		if [ -d $d/vm -a !  -f $d/vm/SqueakV41.sources ]; then
-			ln ../../sources/SqueakV41.sources $d/vm
-		fi
+#!/bin/bash
+A=;D=;F=
+if [ $# = 0 ]; then
+	A=1;D=1;F=1
+else
+	while getopts 'Aadf?' opt "$@"; do
+		case $opt in
+		A)	A=1;D=1;F=1;;
+		a)	A=1;;
+		d)	D=1;;
+		f)	F=1;;
+		*)	echo usage $0 [-A] [-a\ [-d] [-f]; exit 0;;
+		esac
 	done
+fi
+if [ -n "$D" ]; then
+	rm -rf builddbg/vm/Squeak*.exe
+	make debug 2>&1 | tee LOGD
+fi
+if [ -n "$A" ]; then
+	rm -rf buildast/vm/Squeak*.exe
+	make assert 2>&1 | tee LOGA
+fi
+if [ -n "$F" ]; then
+	rm -rf build/vm/Squeak*.exe
+	make 2>&1 | tee LOGF
 fi

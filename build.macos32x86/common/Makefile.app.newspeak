@@ -8,6 +8,7 @@
 VM:=NewspeakVirtualMachine
 SYSTEM:=Newspeak
 APPSOURCE:=SqueakV50.sources
+SOURCEFILE:=SqueakV50.sources
 
 APPPOST:=renameExe renameIcon
 

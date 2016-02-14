@@ -11,7 +11,7 @@
 # CONFIGURATION configuration of VM to build from product, assert & debug
 # THREADING whether to build a multi-threaded FFI VM
 
-VM=Squeak
+VM?=Squeak
 VM_NAME?=$(VM)
 CONFIGURATION=product
 THREADING=single

@@ -32,8 +32,8 @@ WARNINGS:= -Wno-missing-field-initializers -Wno-missing-prototypes \
 	-Wno-trigraphs -Wdeprecated-declarations
 
 FRAMEWORKS:=-fobjc-link-runtime \
-			-framework AGL -framework OpenGL -framework Cocoa \
-			-framework Foundation -framework AudioToolbox \
-			-framework CoreAudio -framework SystemConfiguration \
+			-framework Foundation -framework OpenGL -framework Cocoa \
+			-framework AudioToolbox -framework CoreAudio -framework QuickTime \
+			-framework SystemConfiguration \
 			-framework ApplicationServices -framework Security \
 			-framework QuartzCore 
