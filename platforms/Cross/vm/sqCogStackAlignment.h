@@ -79,7 +79,7 @@
 #   define getfp() ({ unsigned long fp;								\
 					  asm volatile ("mov %0, %%fp" : "=r"(fp) : );	\
 					  fp; })
-#   define getsp() ({ unsigned long fp;								\
+#   define getsp() ({ unsigned long sp;								\
 					  asm volatile ("mov %0, %%sp" : "=r"(sp) : );	\
 					  sp; })
 #  endif

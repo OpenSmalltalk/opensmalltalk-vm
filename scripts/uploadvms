@@ -9,28 +9,30 @@ TAG=
 LCOG=
 LTCOG=
 LSPUR=
+LSPUR64=
 LTSPUR=
 LASPUR=
 MCOG=
 MTCOG=
 MSPUR=
+MSPUR64=
+MPSPUR=
+MPSPUR64=
 MTSPUR=
 WCOG=
 WTCOG=
 WSPUR=
 WTSPUR=
-LNSCOG=
 LNSSPUR=
-MNSCOG=
 MNSSPUR=
-WNSCOG=
 WNSSPUR=
+LNSSPUR64=
+MNSSPUR64=
 cd `dirname $0`/../products
 VERBOSE=
 JustUpload=
 
 
-# By default the Newspeak Cog VMs are not built; superceded by Spur.
 function all () {
 	CheckDMG=1
 	CheckMSI=1
@@ -43,12 +45,15 @@ function all () {
 	MSPUR=1
 	WCOG=1
 	WSPUR=1
-#	LNSCOG=1
+	MPSPUR=1
 	LNSSPUR=1
-#	MNSCOG=1
 	MNSSPUR=1
-#	WNSCOG=1
 	WNSSPUR=1
+	LSPUR64=1
+	MSPUR64=1
+	MPSPUR64=1
+	LNSSPUR64=1
+	MNSSPUR64=1
 }
 
 if [ $# = 0 ]; then
@@ -61,7 +66,8 @@ else
 		-archives)	JustUpload=JustUpload;;
 		-all)	all;;
 		-spur)	CheckDMG=1;CheckMSI=1;
-				LSPUR=1;LASPUR=1;MSPUR=1;WSPUR=1;LNSSPUR=1;MNSSPUR=1;WNSSPUR=1;;
+				LSPUR=1;LASPUR=1;MSPUR=1;WSPUR=1;LNSSPUR=1;MNSSPUR=1;WNSSPUR=1;
+				LSPUR64=1;MSPUR64=1;MPSPUR64=1;LNSSPUR64=1;MNSSPUR64=1;;
 		-c)		LCOG=1;LTCOG=1;MCOG=1;MTCOG=1;WCOG=1;WMTCOG=1;
 				LSPUR=1;LASPUR=1;MSPUR=1;WSPUR=1;;
 		-cl)	LCOG=1;LTCOG=1;LSPUR=1;LASPUR=1;;
@@ -70,24 +76,25 @@ else
 		-ctl)	LTCOG=1;;
 		-ctm)	MTCOG=1;;
 		-ctw)	WTCOG=1;;
-		-nl)	LNSCOG=1;LNSSPUR=1;;
-		-nm)	MNSCOG=1;MNSSPUR=1;
+		-nl)	LNSSPUR=1;;
+		-nm)	MNSSPUR=1;
 				CheckDMG=1;;
-		-nw)	WNSCOG=1;WNSSPUR=1;
+		-nw)	WNSSPUR=1;
 				CheckMSI=1;;
-		-n)		LNSCOG=1;LNSSPUR=1;MNSCOG=1;MNSSPUR=1;WNSCOG=1;WNSSPUR=1;
+		-n)		LNSSPUR=1;MNSSPUR=1;WNSSPUR=1;LNSSPUR64=1;MNSSPUR64=1;
 				CheckDMG=1;CheckMSI=1;;
-		-l)		LCOG=1;LTCOG=1;LSPUR=1;LASPUR=1;LNSCOG=1;LNSSPUR=1;;
-		-m)		MCOG=1;MTCOG=1;MSPUR=1;MNSCOG=1;MNSSPUR=1;
+		-p)		MPSPUR=1;MPSPUR64=1;;
+		-l)		LCOG=1;LTCOG=1;LSPUR=1;LASPUR=1;LNSSPUR=1;;
+		-m)		MCOG=1;MTCOG=1;MSPUR=1;MNSSPUR=1;MSPUR64=1;MPSPUR=1;MPSPUR64=1;
 				CheckDMG=1;;
-		-w)		WCOG=1;WTCOG=1;WSPUR=1;WNSCOG=1;WNSSPUR=1;
+		-w)		WCOG=1;WTCOG=1;WSPUR=1;WNSSPUR=1;
 				CheckMSI=1;CheckDMG=1;;
 		-v)		VERBOSE=1;;
 		-r)		shift;REV="$1";;
 		-t)		shift;TAG="$1";;
 		-T)		TEST=1;;
-		-?|-h)  echo usage: $0 [-all -l -m -w -c -n -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw -archives -r REV -t TAG -T]; exit 0;;
-		*)	echo usage: $0 [-all -l -m -w -c -n -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw -archives -r REV -t TAG -T]; exit 1;;
+		-?|-h)  echo usage: $0 [-all -l -m -w -c -n -p -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw -archives -r REV -t TAG -T]; exit 0;;
+		*)	echo usage: $0 [-all -l -m -w -c -n -p -cl -cm -cw -ctl -ctm -ctw -nl -nm -nw -archives -r REV -t TAG -T]; exit 1;;
 		esac
 		shift
 	done
@@ -120,34 +127,24 @@ test -n "$LTSPUR" && ARCHIVES="$ARCHIVES	cogspurmtlinuxht-$TAG.tgz"
 test -n "$MCOG" && ARCHIVES="$ARCHIVES	Cog.app-$TAG.tgz	CogSpur.app-$TAG.tgz"
 test -n "$MTCOG" && ARCHIVES="$ARCHIVES	CogMT.app-$TAG.tgz"
 test -n "$MSPUR" && ARCHIVES="$ARCHIVES	CogSpur.app-$TAG.tgz"
+test -n "$MSPUR64" && ARCHIVES="$ARCHIVES	CogSpur64.app-$TAG.tgz"
 test -n "$MTSPUR" && ARCHIVES="$ARCHIVES	CogMTSpur.app-$TAG.tgz"
+test -n "$MPSPUR" && ARCHIVES="$ARCHIVES	CogPharoSpur.app-$TAG.tgz"
+test -n "$MPSPUR64" && ARCHIVES="$ARCHIVES	CogPharoSpur64.app-$TAG.tgz"
 test -n "$WCOG" && ARCHIVES="$ARCHIVES	cogwin-$TAG.zip"
 test -n "$WTCOG" && ARCHIVES="$ARCHIVES	cogmtwin-$TAG.zip"
 test -n "$WSPUR" && ARCHIVES="$ARCHIVES	cogspurwin-$TAG.zip"
 test -n "$WTSPUR" && ARCHIVES="$ARCHIVES	cogspurmtwin-$TAG.zip"
 
-test -n "$LNSCOG" && ARCHIVES="$ARCHIVES	nsvmlinux-$TAG.tgz	nsvmlinuxht-$TAG.tgz"
 test -n "$LNSSPUR" && ARCHIVES="$ARCHIVES	nsvmspurlinux-$TAG.tgz	nsvmspurlinuxht-$TAG.tgz	nsvmspurlinuxhtARM-$TAG.tgz"
-test -n "$MNSCOG" && ARCHIVES="$ARCHIVES	Newspeak Virtual Machine-$TAG.dmg	Newspeak Virtual Machine.app-$TAG.tgz"
 test -n "$MNSSPUR" && ARCHIVES="$ARCHIVES	Newspeak Spur Virtual Machine-$TAG.dmg	Newspeak Spur Virtual Machine.app-$TAG.tgz"
-test -n "$WNSCOG" && ARCHIVES="$ARCHIVES	nsvmwin-$TAG.zip	nsvm-$TAG.msi"
 test -n "$WNSSPUR" && ARCHIVES="$ARCHIVES	nsvmspurwin-$TAG.zip	nsvm-spur-$TAG.msi"
+test -n "$MNSSPUR64" && ARCHIVES="$ARCHIVES	Newspeak Spur 64-bit Virtual Machine-$TAG.dmg	Newspeak Spur 64-bit Virtual Machine.app-$TAG.tgz"
 
 if [ -n "$VERBOSE" ]; then
 	for a in $ARCHIVES; do
 		echo upload $a
 	done
-fi
-if [ -n "$CheckDMG" -a -n "$MNSCOG" -a ! -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
-	NMID=../build.macos32x86/newspeak.cog.v3/installer
-	if [ -f "Newspeak Virtual Machine-$TAG.dmg" ]; then
-		true
-	elif [ -f "$NMID/Newspeak Virtual Machine-$TAG.dmg" ]; then
-		ln "$NMID/Newspeak Virtual Machine-$TAG.dmg" .
-	else
-		echo Newspeak Virtual Machine-$TAG.dmg is missing 1>&2
-		exit 1
-	fi
 fi
 if [ -n "$CheckDMG" -a -n "$MNSSPUR" -a ! -f "Newspeak Spur Virtual Machine-$TAG.dmg" ]; then
 	NMID=../build.macos32x86/newspeak.cog.spur/installer
@@ -160,14 +157,14 @@ if [ -n "$CheckDMG" -a -n "$MNSSPUR" -a ! -f "Newspeak Spur Virtual Machine-$TAG
 		exit 1
 	fi
 fi
-if [ -n "$CheckMSI" -a -n "$WNSCOG" -a ! -f nsvm-$TAG.msi ]; then
-	NMID=../build.win32x86/newspeak.cog.v3/installer
-	if [ -f nsvm-$TAG.msi ]; then
+if [ -n "$CheckDMG" -a -n "$MNSSPUR64" -a ! -f "Newspeak Spur 64-bit Virtual Machine-$TAG.dmg" ]; then
+	NMID=../build.macos64x64/newspeak.cog.spur/installer
+	if [ -f "Newspeak Spur 64-bit Virtual Machine-$TAG.dmg" ]; then
 		true
-	elif [ -f "$NWID/nsvm-$TAG.msi" ]; then
-		ln "$NWID/nsvm-$TAG.msi" .
+	elif [ -f "$NMID/Newspeak Spur 64-bit Virtual Machine-$TAG.dmg" ]; then
+		ln "$NMID/Newspeak Spur 64-bit Virtual Machine-$TAG.dmg" .
 	else
-		echo nsvm-$TAG.msi is missing 1>&2
+		echo Newspeak Spur 64-bit Virtual Machine-$TAG.dmg is missing 1>&2
 		exit 1
 	fi
 fi
@@ -192,7 +189,11 @@ N.B. For Squeak/Pharo/Croquet please use the archives whose names begin with
      non-blocking FFI calls.  The archives containing "Spur" or "spur" are
      VMs using the new Spur object representation and garbage collector and
      should be used with Spur-format Squeak/Pharo/Croquet or Newspeak images.
-     Squeak V5 and Newspeak have moved to Spur.
+     Squeak V5, Newspeak and the upcoming Pharo release have moved to Spur.
+
+     Archives whose names include "64" are 64-bit Spur VMs.  They should be
+     used with 64-bit Spur images.  Sample 64-bit images can be found at
+         http://www.mirandabanda.org/files/Cog/SpurImages
 
      Linux
      There are two variants of the Linux VMs; those ending in "ht" have a

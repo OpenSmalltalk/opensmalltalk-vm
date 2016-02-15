@@ -1,6 +1,6 @@
 #!/bin/sh
-# Create the Spur VM archives in products.  Output a check of version numbers
-# etc to products/MSVALOG
+# Create the 64-bit Spur VM archives in products.  Output a check of version
+# numbers etc to products/MSVALOG
 IFS="	
 "
 cd `dirname $0`/../products
@@ -36,7 +36,7 @@ PM=
 		-nl)	NL=1;;
 		-nm)	NM=1;;
 		-nw)	NW=1;;
-		-pm)	PM=1;;
+		-pw)	PW=1;;
 		-l)		CL=1;NL=1;;
 		-m)		CM=1;NM=1;PM=1;;
 		-w)		CW=1;NW=1;;
@@ -56,7 +56,7 @@ echo REV=$REV TAG=$TAG
 if [ -n "$CL" ]; then
 	for d in . assert debug; do
 		(cd $d
-		for archive in cogspurlinux cogspurlinuxht cogspurlinuxhtARM; do
+		for archive in cogspur64linux cogspur64linuxht cogspur64linuxhtARM; do
 			rm -rf $archive-$TAG.tgz
 			echo $archive '=>' $archive-$TAG.tgz
 			COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $archive
@@ -67,7 +67,7 @@ fi
 if [ -n "$NL" ]; then
 	for d in . assert debug; do
 		(cd $d
-		set -- nscogspurlinux nscogspurlinuxht nscogspurlinuxhtARM
+		set -- nscogspur64linux nscogspur64linuxht nscogspur64linuxhtARM
 		for archive in nsvmspurlinux nsvmspurlinuxht nsvmspurlinuxhtARM; do
 			rm -rf $archive-$TAG.tgz
 			echo $1 '=>' $archive-$TAG.tgz
@@ -79,17 +79,17 @@ if [ -n "$NL" ]; then
 fi
 if [ -n "$CM" ]; then
 	set -- CocoaFast.app CocoaAssert.app CocoaDebug.app
-	for app in CogSpur.app assert/CogSpur.app debug/CogSpur.app; do
+	for app in CogSpur64.app assert/CogSpur64.app debug/CogSpur64.app; do
 		test -d $app || mkdir $app
-		if [ -d ../build.macos32x86/$SQB/$1 ]; then
+		if [ -d ../build.macos64x64/$SQB/$1 ]; then
 			rm -rf $app/* $app-$TAG.tgz
-			echo build.macos32x86/$SQB/$1 '=>' $app '=>' $app-$TAG.tgz
-			(cd ../build.macos32x86/$SQB/$1 >/dev/null;tar cf - *) \
+			echo build.macos64x64/$SQB/$1 '=>' $app '=>' $app-$TAG.tgz
+			(cd ../build.macos64x64/$SQB/$1 >/dev/null;tar cf - *) \
 			| (cd $app;tar xf -)
 			tar czf $app-$TAG.tgz $app
 			EXES="$EXES	$app/Contents/MacOS/Squeak"
 		else
-			echo build.macos32x86/$SQB/$1 is missing
+			echo build.macos64x64/$SQB/$1 is missing
 		fi
 		shift
 	done
@@ -100,44 +100,44 @@ if [ -n "$NM" ]; then
 				assert/Newspeak\ Spur\ Virtual\ Machine.app\
 				debug/Newspeak\ Spur\ Virtual\ Machine.app; do
 		test -d $app || mkdir $app
-		if [ -d ../build.macos32x86/$NSB/$1 ]; then
+		if [ -d ../build.macos64x64/$NSB/$1 ]; then
 			rm -rf $app/* $app-$TAG.tgz
-			echo build.macos32x86/$NSB/$1 '=>' $app '=>' $app-$TAG.tgz
-			(cd ../build.macos32x86/$NSB/$1 >/dev/null;tar cf - *) \
+			echo build.macos64x64/$NSB/$1 '=>' $app '=>' $app-$TAG.tgz
+			(cd ../build.macos64x64/$NSB/$1 >/dev/null;tar cf - *) \
 			| (cd $app;tar xf -)
 			tar czf $app-$TAG.tgz $app
 			EXES="$EXES	$app/Contents/MacOS/Newspeak Virtual Machine"
 		else
-			echo build.macos32x86/$NSB/$1 is missing
+			echo build.macos64x64/$NSB/$1 is missing
 		fi
 		shift
 	done
 fi
 if [ -n "$PM" ]; then
 	set -- CocoaFast.app CocoaAssert.app CocoaDebug.app
-	for app in CogPharoSpur.app assert/CogPharoSpur.app debug/CogPharoSpur.app; do
+	for app in CogPharoSpur64.app assert/CogPharoSpur64.app debug/CogPharoSpur64.app; do
 		test -d $app || mkdir $app
-		if [ -d ../build.macos32x86/$PHB/$1 ]; then
+		if [ -d ../build.macos64x64/$PHB/$1 ]; then
 			rm -rf $app/* $app-$TAG.tgz
-			echo build.macos32x86/$PHB/$1 '=>' $app '=>' $app-$TAG.tgz
-			(cd ../build.macos32x86/$PHB/$1 >/dev/null;tar cf - *) \
+			echo build.macos64x64/$PHB/$1 '=>' $app '=>' $app-$TAG.tgz
+			(cd ../build.macos64x64/$PHB/$1 >/dev/null;tar cf - *) \
 			| (cd $app;tar xf -)
 			tar czf $app-$TAG.tgz $app
 			EXES="$EXES	$app/Contents/MacOS/Squeak"
 		else
-			echo build.macos32x86/$PHB/$1 is missing
+			echo build.macos64x64/$PHB/$1 is missing
 		fi
 		shift
 	done
 fi
 if [ -n "$CW" ]; then
 	set -- build/vm buildast/vm builddbg/vm
-	for dir in cogspurwin assert/cogspurwin debug/cogspurwin; do
+	for dir in cogspur64win assert/cogspur64win debug/cogspur64win; do
 		test -d $dir || mkdir $dir
-		if [ -d ../build.win32x86/$SQB/$1 ]; then
+		if [ -d ../build.win64x64/$SQB/$1 ]; then
 			rm -rf $dir/* $dir-$TAG.zip
-			echo build.win32x86/$SQB/$1 '=>' $dir '=>' $dir-$TAG.zip
-			(cd ../build.win32x86/$SQB/$1 >/dev/null; \
+			echo build.win64x64/$SQB/$1 '=>' $dir '=>' $dir-$TAG.zip
+			(cd ../build.win64x64/$SQB/$1 >/dev/null; \
 			 tar cf - Squeak.exe Squeak.map Squeak.exe.manifest \
 				SqueakConsole.exe SqueakConsole.map SqueakConsole.exe.manifest \
 				*.dll) \
@@ -145,7 +145,7 @@ if [ -n "$CW" ]; then
 			zip -qr $dir-$TAG.zip $dir
 			EXES="$EXES	$dir/Squeak.exe	$dir/SqueakConsole.exe"
 		else
-			echo build.win32x86/$SQB/$1 is missing
+			echo build.win64x64/$SQB/$1 is missing
 		fi
 		shift
 	done
@@ -154,16 +154,16 @@ if [ -n "$NW" ]; then
 	set -- build/vm buildast/vm builddbg/vm
 	for dir in nsvmspurwin assert/nsvmspurwin debug/nsvmspurwin; do
 		test -d $dir || mkdir $dir
-		if [ -d ../build.win32x86/$NSB/$1 ]; then
+		if [ -d ../build.win64x64/$NSB/$1 ]; then
 			rm -rf $dir/* $dir-$TAG.zip
-			echo build.win32x86/$NSB/$1 '=>' $dir '=>' $dir-$TAG.zip
-			(cd ../build.win32x86/$NSB/$1 >/dev/null; \
+			echo build.win64x64/$NSB/$1 '=>' $dir '=>' $dir-$TAG.zip
+			(cd ../build.win64x64/$NSB/$1 >/dev/null; \
 			 tar cf - nsvm*.exe nsvm*.map nsvm*.exe.manifest ) \
 			| (cd $dir;tar xf -)
 			zip -qr $dir-$TAG.zip $dir
 			EXES="$EXES	$dir/nsvm.exe	$dir/nsvmConsole.exe"
 		else
-			echo build.win32x86/$NSB/$1 is missing
+			echo build.win64x64/$NSB/$1 is missing
 		fi
 		shift
 	done
