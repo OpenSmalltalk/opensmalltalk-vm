@@ -256,6 +256,11 @@ THEEND
 	fi
   done
 fi
+if [ -z "$ARCHIVES" ]; then
+	echo 'No archives have been specified.  Use -all?' 1>&2
+	exit 1
+fi
+
 if [ "$T" = 1 ]; then
 SSH="echo ssh"
 SCP="echo scp"
@@ -272,6 +277,9 @@ echo scp -p $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
 $SCP -p $ARCHIVES "$@" $RemoteUser:$RemoteRoot/VM.r$REV
 echo ssh $RemoteUser chmod a-w $RemoteRoot/VM.r$REV/* \\\; ls -al $RemoteRoot/VM.r$REV
 $SSH $RemoteUser chmod a-w $RemoteRoot/VM.r$REV/* \; ls -al $RemoteRoot/VM.r$REV
+
+echo $SSH $RemoteUser rm $RemoteRoot/latest \; ln -s VM.r$REV $RemoteRoot/latest
+$SSH $RemoteUser rm $RemoteRoot/latest \; ln -s VM.r$REV $RemoteRoot/latest
 
 if [ "$T" != 1 ]; then
 test -x image/makegetvmscripts.sh && (image/makegetvmscripts.sh)

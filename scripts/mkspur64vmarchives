@@ -96,9 +96,9 @@ if [ -n "$CM" ]; then
 fi
 if [ -n "$NM" ]; then
 	set -- CocoaFast.app CocoaAssert.app CocoaDebug.app
-	for app in Newspeak\ Spur\ Virtual\ Machine.app \
-				assert/Newspeak\ Spur\ Virtual\ Machine.app\
-				debug/Newspeak\ Spur\ Virtual\ Machine.app; do
+	for app in Newspeak\ Spur\ 64-bit\ Virtual\ Machine.app \
+				assert/Newspeak\ Spur\ 64-bit\ Virtual\ Machine.app\
+				debug/Newspeak\ Spur\ 64-bit\ Virtual\ Machine.app; do
 		test -d $app || mkdir $app
 		if [ -d ../build.macos64x64/$NSB/$1 ]; then
 			rm -rf $app/* $app-$TAG.tgz
