@@ -106,6 +106,12 @@ BitBltSimulator >> dstLongAt: dstIndex put: value [
 	^self long32At: dstIndex put: value
 ]
 
+{ #category : #'memory access' }
+BitBltSimulator >> halftoneAt: idx [
+
+	^ (halftoneBase + (idx \\ halftoneHeight * 4)) long32At: 0
+]
+
 { #category : #simulation }
 BitBltSimulator >> initBBOpTable [
 	opTable := OpTable.

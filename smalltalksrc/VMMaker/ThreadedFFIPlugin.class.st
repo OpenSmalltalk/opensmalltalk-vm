@@ -189,12 +189,26 @@ ThreadedFFIPlugin class >> preambleCCode [
 
 /* The dispatchOn:in:with:with: generates an unwanted call on error.  Just squash it. */
 #define error(foo) 0
-
+#ifndef SQUEAK_BUILTIN_PLUGIN
 /* but print assert failures. */
 void
 warning(char *s) { /* Print an error message but don''t exit. */
 	printf("\n%s\n", s);
 }
+#endif
+
+/* sanitize */
+#ifdef SQUEAK_BUILTIN_PLUGIN
+# define EXTERN 
+#else
+# define EXTERN extern
+#endif
+int ffiLogCallOfLength(void *, int);               			/* sqFFIPlugin.c */
+int ffiLogFileNameOfLength(void *, int);             		/* sqFFIPlugin.c */
+EXTERN void initSurfacePluginFunctionPointers();				/* sqManualSurface.c */
+EXTERN int createManualSurface(int, int, int, int, int); 	/* sqManualSurface.c */
+EXTERN int destroyManualSurface(int);							/* sqManualSurface.c */
+EXTERN int setManualSurfacePointer(int, void*);				/* sqManualSurface.c */
 '
 ]
 
