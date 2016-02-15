@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Create the getGoodSpurNsvm.sh script.
 GetSpurScript=getGoodSpurNsvm.sh
 

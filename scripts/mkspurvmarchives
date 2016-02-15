@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Create the Spur VM archives in products.  Output a check of version numbers
 # etc to products/MSVALOG
 IFS="	

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Touch file(s) or all modified files in a directory back to the checkin date
 for f in "$@"
 do

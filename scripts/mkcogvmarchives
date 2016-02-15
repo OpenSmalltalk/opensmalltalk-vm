@@ -1,19 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 # Create the Cog VM archives in products.  Output a check of version numbers
 # etc to products/MCVALOG
 IFS="	
 "
 cd `dirname $0`/../products
-NSB=newspeak.cog.v3
 SQB=squeak.cog.v3
 REV=
 TAG=
 EXES=
 
-# By default the Newspeak Cog VMs are not built; superceded by Spur.
-NL=
-NM=
-NW=
 if [ $# = 0 ]; then
 CL=1
 CM=1
@@ -26,20 +21,12 @@ CM=
 CW=
 	while [ -n "$1" ]; do
 		case $1 in
-		-c)		CL=1;CM=1;CW=1;;
-		-cl)	CL=1;;
-		-cm)	CM=1;;
-		-cw)	CW=1;;
-		-n)		NL=1;NM=1;NW=1;;
-		-nl)	NL=1;;
-		-nm)	NM=1;;
-		-nw)	NW=1;;
-		-l)		CL=1;NL=1;;
-		-m)		CM=1;NM=1;;
-		-w)		CW=1;NW=1;;
-		-r)		shift;REV="$1";;
-		-t)		shift;TAG="$1";;
-		-?|-h)  echo usage: $0 [-c -n -l -m -w -c[lmw] -n[lmw] -r REV -t TAG]
+		-l)	CL=1;;
+		-m)	CM=1;;
+		-w)	CW=1;;
+		-r) shift;REV="$1";;
+		-t) shift;TAG="$1";;
+		-?|-h)  echo usage: $0 [-l -m -w -r REV -t TAG]
 				exit 0
 		esac
 		shift
@@ -61,21 +48,8 @@ if [ -n "$CL" ]; then
 		done)
 	done
 fi
-if [ -n "$NL" ]; then
-	for d in . assert debug; do
-		(cd $d
-		set -- nscoglinux nscoglinuxht
-		for archive in nsvmlinux nsvmlinuxht; do
-			rm -rf $archive-$TAG.tgz
-			echo $1 '=>' $archive-$TAG.tgz
-			COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $1
-			EXES="$EXES	$1/lib/nsvm/[0-9.-]*/nsvm"
-			shift
-		done)
-	done
-fi
 if [ -n "$CM" ]; then
-	set -- Fast.app FastMT.app
+	set -- CocoaFast.app CocoaFastMT.app
 	for app in Cog.app CogMT.app; do
 		test -d $app || mkdir $app
 		if [ -d ../build.macos32x86/$SQB/$1 ]; then
@@ -87,23 +61,6 @@ if [ -n "$CM" ]; then
 			EXES="$EXES	$app/Contents/MacOS/Squeak"
 		else
 			echo build.macos32x86/$SQB/$1 is missing
-		fi
-		shift
-	done
-fi
-if [ -n "$NM" ]; then
-	set -- Fast.app
-	for app in Newspeak\ Virtual\ Machine.app; do
-		test -d $app || mkdir $app
-		if [ -d ../build.macos32x86/$NSB/$1 ]; then
-			rm -rf $app/* $app-$TAG.tgz
-			echo build.macos32x86/$NSB/$1 '=>' $app '=>' $app-$TAG.tgz
-			(cd ../build.macos32x86/$NSB/$1 >/dev/null;tar cf - *) \
-			| (cd $app;tar xf -)
-			tar czf $app-$TAG.tgz $app
-			EXES="$EXES	$app/Contents/MacOS/Newspeak Virtual Machine"
-		else
-			echo build.macos32x86/$NSB/$1 is missing
 		fi
 		shift
 	done
@@ -124,24 +81,6 @@ if [ -n "$CW" ]; then
 			EXES="$EXES	$dir/Squeak.exe	$dir/SqueakConsole.exe"
 		else
 			echo build.win32x86/$SQB/$1 is missing
-		fi
-		shift
-	done
-fi
-if [ -n "$NW" ]; then
-	set -- build/vm
-	for dir in nsvmwin; do
-		test -d $dir || mkdir $dir
-		if [ -d ../build.win32x86/$NSB/$1 ]; then
-			rm -rf $dir/* $dir-$TAG.zip
-			echo build.win32x86/$NSB/$1 '=>' $dir '=>' $dir-$TAG.zip
-			(cd ../build.win32x86/$NSB/$1 >/dev/null; \
-			 tar cf - nsvm*.exe nsvm*.map nsvm*.exe.manifest ) \
-			| (cd $dir;tar xf -)
-			zip -qr $dir-$TAG.zip $dir
-			EXES="$EXES	$dir/nsvm.exe	$dir/nsvmConsole.exe"
-		else
-			echo build.win32x86/$NSB/$1 is missing
 		fi
 		shift
 	done

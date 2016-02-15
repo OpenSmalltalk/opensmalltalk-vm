@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Create the getGoodCogVM.sh & getGoodSpurVM.sh scripts.
 GetCogScript=getGoodCogVM.sh
 GetSpurScript=getGoodSpurVM.sh

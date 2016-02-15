@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Create the ARM Stack VM archives in products.  Output a check of version numbers
 # etc to products/MASVALOG
 IFS="	

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Create the Cog VM archives in products.  Check the log files in products for
 # agreement
 `dirname $0`/mkcogvmarchives $@
