@@ -350,6 +350,25 @@ VMPluginCodeGenerator >> pluginName: aString [
 ]
 
 { #category : #'C code generator' }
+VMPluginCodeGenerator >> preDeclareExternFunction: tMethod on: aStream [
+	self withOptionalVerbiageFor: tMethod selector
+		on: aStream
+		do: [aStream cr.
+			tMethod static: false; export: false; emitCFunctionPrototype: aStream generator: self.
+			aStream nextPut: $;]
+		ifOptionalDo:
+			[aStream cr; nextPutAll: '# define '.
+			 (TSendNode new
+				setSelector: tMethod selector
+					receiver: (TVariableNode new setName: 'interpreterProxy')
+						arguments: (tMethod args collect: [:a| TVariableNode new setName: a]))
+				emitCCodeAsArgumentOn: aStream
+					level: 0
+						generator: self.
+			 aStream nextPutAll: ' 0']	
+]
+
+{ #category : #'C code generator' }
 VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 	"Put the necessary #defines needed before interpreterProxy.  Basically
 	 internal plugins use the VM's interpreterProxy variable and external plugins
@@ -418,6 +437,35 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 							generator: self.
 				 aStream nextPutAll: ' 0'; cr]].
 	aStream nextPutAll: 'extern'; cr; nextPutAll: '#endif'; cr
+]
+
+{ #category : #'C code generator' }
+VMPluginCodeGenerator >> preDeclareStaticFunction: tMethod on: aStream [
+	| functionName |
+	functionName := self cFunctionNameFor: tMethod selector.
+	self withOptionalVerbiageFor: tMethod selector
+		on: aStream
+		do: 
+			[aStream cr; nextPutAll:
+				((String streamContents: 
+					[:s|
+						tMethod
+							static: true;
+							emitCFunctionPrototype: s generator: self])
+					copyReplaceAll: functionName
+					with: '(*', functionName, ')'
+					tokenish: [:ch| ch = $_ or: [ch isAlphaNumeric]]).
+			aStream nextPut: $;]
+		ifOptionalDo: [aStream cr; nextPutAll: '# define '.
+			 (TSendNode new
+				setSelector: tMethod selector
+					receiver: (TVariableNode new setName: 'interpreterProxy')
+						arguments: (tMethod args collect: [:a| TVariableNode new setName: a]))
+				emitCCodeAsArgumentOn: aStream
+					level: 0
+						generator: self.
+			 aStream nextPutAll: ' 0'].	
+
 ]
 
 { #category : #'C code generator' }
@@ -543,6 +591,15 @@ VMPluginCodeGenerator >> typeFor: aNode in: aTMethod [
 				ifTrue: [#'sqInt *']
 				ifFalse: [#sqInt]]].
 	^super typeFor: aNode in: aTMethod
+]
+
+{ #category : #'C translation' }
+VMPluginCodeGenerator >> withOptionalVerbiageFor: selector on: aStream do: mainBlock [
+	^ self 
+		withOptionalVerbiageFor: selector 
+		on: aStream 
+		do: mainBlock 
+		ifOptionalDo: nil		
 ]
 
 { #category : #'C translation' }

@@ -557,6 +557,12 @@ InterpreterProxy >> isInterpreterProxy [
 	^true
 ]
 
+{ #category : #testing }
+InterpreterProxy >> isNonImmediate: anObject [
+
+	^ (self isImmediate: anObject) not
+]
+
 { #category : #'object access' }
 InterpreterProxy >> isOopImmutable: oop [
 	<option: #IMMUTABILITY>
@@ -635,7 +641,7 @@ InterpreterProxy >> longAt: accessor put: value [
 
 { #category : #other }
 InterpreterProxy >> majorVersion [
-	self notYetImplemented
+	^ 1
 ]
 
 { #category : #'instance creation' }
@@ -671,7 +677,7 @@ InterpreterProxy >> methodReturnValue: oop [
 
 { #category : #other }
 InterpreterProxy >> minorVersion [
-	self notYetImplemented
+	^ 8
 ]
 
 { #category : #'special objects' }
