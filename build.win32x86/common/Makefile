@@ -53,7 +53,7 @@ WIN32UTILDIR:=$(PLATDIR)/win32/util
 
 CROSSSRC:= $(wildcard $(CROSSDIR)/*.c) $(wildcard $(CROSSDIR)/*.cpp)
 WIN32SRC:= $(wildcard $(WIN32DIR)/*.c) $(wildcard $(WIN32DIR)/*.cpp)
-ifeq ("$(THREADING)","multi")
+ifeq ($(THREADING),multi)
 MAKERSRC:= $(wildcard $(VMSRCDIR)/gcc3x-*interpmt.c $(VMSRCDIR)/cogit.c)
 else
 MAKERSRC:= $(wildcard $(VMSRCDIR)/gcc3x-*interp.c $(VMSRCDIR)/cogit.c)
@@ -80,7 +80,7 @@ VMOBJ:= $(addprefix $(OBJDIR)/,$(VMOBJ))
 #############################################################################
 # SqueakVM definitions
 #
-ifeq ("$(CONFIGURATION)","product")
+ifeq ($(CONFIGURATION),product)
 VMEXE:=  $(OBJDIR)/$(VM)Unstripped.exe
 CONSOLEVMEXE:=  $(OBJDIR)/$(VM)ConsoleUnstripped.exe
 STRIPEXE:=  $(OBJDIR)/$(VM).exe
@@ -115,11 +115,11 @@ DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
 CC:=gcc
 
 # VM config flags.
-ifeq ("$(CONFIGURATION)","product")
+ifeq ($(CONFIGURATION),product)
 OFLAGS:= -D_MT -O2 -march=pentium4 -momit-leaf-frame-pointer -funroll-loops
 NDEBUG:=-DNDEBUG -D'VM_LABEL(foo)=0' # Define NDEBUG for production to exclude asserts
 DEBUGVM=0
-else ifeq ("$(CONFIGURATION)","assert")
+else ifeq ($(CONFIGURATION),assert)
 OFLAGS:= -D_MT -O1 -march=pentium4 -fno-omit-frame-pointer
 DEBUGVM=0
 NDEBUG:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
@@ -129,7 +129,7 @@ DEBUGVM=1
 NDEBUG:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
 endif
 
-ifeq ("$(THREADING)","multi")
+ifeq ($(THREADING),multi)
 COGDEFS:=-DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
 else
 COGDEFS:=-DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)

@@ -24,9 +24,9 @@
 # debug. Optional. Defaults to product. The default is overridden in mvm script
 
 
-ifeq ("$(CONFIGURATION)","debug")
+ifeq ($(CONFIGURATION),debug)
 	APP:=CocoaDebug.app
-else ifeq ("$(CONFIGURATION)","assert")
+else ifeq ($(CONFIGURATION),assert)
 	APP:=CocoaAssert.app
 else # default CONFIGURATION=product => CocoaFast.app
 	APP:=CocoaFast.app

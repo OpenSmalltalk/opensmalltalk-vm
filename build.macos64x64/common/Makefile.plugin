@@ -15,11 +15,11 @@
 # SRCDIRS    supplies additional directories containing files to compile.
 
 # VM config flags.
-ifeq ("$(CONFIGURATION)","product")
+ifeq ($(CONFIGURATION),product)
 OFLAGS:= -g -Os
 DEBUGVM=-DDEBUGVM=0 -DNDEBUG=1
 BUILD:=build
-else ifeq ("$(CONFIGURATION)","assert")
+else ifeq ($(CONFIGURATION),assert)
 OFLAGS:= -g -O1 -fno-omit-frame-pointer
 DEBUGVM=-DDEBUGVM=0
 BUILD:=buildast

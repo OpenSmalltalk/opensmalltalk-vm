@@ -55,12 +55,12 @@ DEFS:=	$(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
 		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
 		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS)
 # define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
-ifeq ("$(CONFIGURATION)","product")
+ifeq ($(CONFIGURATION),product)
 OFLAGS:= -D_MT -O1 -march=pentium4 -momit-leaf-frame-pointer -funroll-loops \
 		-fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
 NDEBUG:=-DNDEBUG
 DEBUGVM=0
-else ifeq ("$(CONFIGURATION)","assert")
+else ifeq ($(CONFIGURATION),assert)
 OFLAGS:= -D_MT -O1 -march=pentium4 -fno-omit-frame-pointer \
 		-fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
 DEBUGVM=0

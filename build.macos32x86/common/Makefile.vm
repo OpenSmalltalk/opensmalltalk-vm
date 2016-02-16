@@ -31,9 +31,9 @@ CONFIGURATION?=product
 # Build directories
 #
 
-ifeq ("$(CONFIGURATION)","assert")
+ifeq ($(CONFIGURATION),assert)
 	BUILD:=buildast
-else ifeq ("$(CONFIGURATION)","debug")
+else ifeq ($(CONFIGURATION),debug)
 	BUILD:=builddbg
 else # default CONFIGURATION=product
 	BUILD:=build
@@ -88,11 +88,11 @@ BUNDLES:= $(addprefix $(OBJDIR)/, $(addsuffix .bundle, $(EXTERNAL_PLUGINS)))
 
 
 # VM config flags.
-ifeq ("$(CONFIGURATION)","debug")
+ifeq ($(CONFIGURATION),debug)
 OFLAGS:= -g -O0 -fno-omit-frame-pointer
 DEBUGVM=-DDEBUGVM=1
 INTERPFLAGS:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
-else ifeq ("$(CONFIGURATION)","assert")
+else ifeq ($(CONFIGURATION),assert)
 OFLAGS:= -g -O1 -fno-omit-frame-pointer
 DEBUGVM=-DDEBUGVM=0
 INTERPFLAGS:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'

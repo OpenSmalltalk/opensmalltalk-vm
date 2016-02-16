@@ -5,7 +5,9 @@
 
 XCODE:=/Applications/Xcode.app/Contents/Developer
 XCUB:=$(XCODE)/usr/bin
-SDK:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk
+SDKsDIR:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs
+SDKs:=MacOSX10.12.sdk MacOSX10.11.sdk MacOSX10.10.sdk MacOSX10.9.sdk
+SDK:=$(firstword $(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
 TARGET_ARCH:=i386
 TARGET_VERSION_MIN:=10.6
 
