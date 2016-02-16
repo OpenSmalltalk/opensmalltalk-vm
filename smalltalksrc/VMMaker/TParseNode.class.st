@@ -1,6 +1,3 @@
-"
-A TParseNode is node in the parse tree of a TMethod. Subclasses correspond to different types of nodes in a method parse tree. The tree of translation parse nodes mirrors the parse tree of a Smalltalk method, and is used for translating a Smalltalk method to C source.
-"
 Class {
 	#name : #TParseNode,
 	#superclass : #Object,
