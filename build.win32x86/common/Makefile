@@ -44,7 +44,6 @@ $(shell mkdir -p deps >/dev/null) # deps is the dependencies directory
 PLUGINSRCDIR:= ../../src
 OBJDIR:= $(BUILD)/vm
 
-# N.B. PLATDIR *must* be a relative path, see -f../../$(shell ./eitheror ... below
 PLATDIR:=../../platforms
 CROSSDIR:=$(PLATDIR)/Cross/vm
 WIN32DIR:=$(PLATDIR)/win32/vm
@@ -102,7 +101,7 @@ BTOBJ:= $(OBJDIR)/btext.o
 ETOBJ:= $(OBJDIR)/etext.o
 
 
-.PRECIOUS: eitheror.exe mkNamedPrims.exe
+.PRECIOUS: mkNamedPrims.exe
 
 #############################################################################
 # DirectX definitions
@@ -219,27 +218,27 @@ debug:
 	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug THREADING=single $(@,debug=) default
 
 # Do make init to allow make -n to function.
-init:	$(OBJDIR) eitheror.exe mkNamedPrims.exe
+init:	$(OBJDIR) mkNamedPrims.exe
 
 cleanall:	clean cleanmt cleanast cleanmtast cleandbg cleanmtdbg
 
 clean:
-	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe build
+	rm -rf sqNamedPrims.h mkNamedPrims.exe build
 
 cleanmt:
-	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildmt
+	rm -rf sqNamedPrims.h mkNamedPrims.exe buildmt
 
 cleanast:
-	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildast
+	rm -rf sqNamedPrims.h mkNamedPrims.exe buildast
 
 cleanmtast:
-	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildmtast
+	rm -rf sqNamedPrims.h mkNamedPrims.exe buildmtast
 
 cleandbg:
-	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe builddbg
+	rm -rf sqNamedPrims.h mkNamedPrims.exe builddbg
 
 cleanmtdbg:
-	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildmtdbg
+	rm -rf sqNamedPrims.h mkNamedPrims.exe buildmtdbg
 
 nukelibs:
 	rm $(LIBS)
@@ -262,9 +261,6 @@ print-objects:
 	@echo ---------------- Makefile objects ------------------
 	@echo VMOBJ=$(VMOBJ)
 	@echo -----------------------------------------------------
-
-eitheror.exe: $(WIN32UTILDIR)/eitheror.c
-	$(CC) -o $@ -O1 -mconsole -mno-cygwin $<
 
 mingw32ver.exe: $(WIN32UTILDIR)/mingw32ver.c
 	$(CC) -o $@ -O1 -mconsole -mno-cygwin $<
@@ -325,12 +321,12 @@ $(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
 .PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.dll
 
 # Check for Makefile in win32 plugins directory otherwise use default Makefile
-plugin-makefile = $(shell ./eitheror.exe \
+plugin-makefile = $(firstword $(realpath \
 					$(PLATDIR)/win32/plugins/$(*F)/Makefile.plugin \
-					../common/Makefile.plugin)
+					../common/Makefile.plugin))
 
 # Internal plugin.  Build as lib then link in lib
-$(OBJDIR)/%.lib: eitheror.exe $(call plugin-makefile,$(*F))
+$(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 	@-mkdir $(BUILD)/$(*F)
 	$(MAKE) $(MFLAGS) CONFIGURATION=$(CONFIGURATION) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
@@ -339,7 +335,7 @@ $(OBJDIR)/%.lib: eitheror.exe $(call plugin-makefile,$(*F))
 		$(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
-$(OBJDIR)/%.dll: eitheror.exe $(call plugin-makefile,$(*F))
+$(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 	@-mkdir $(BUILD)/$(*F)
 	$(MAKE) $(MFLAGS) CONFIGURATION=$(CONFIGURATION) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \

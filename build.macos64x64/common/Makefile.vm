@@ -42,7 +42,6 @@ $(shell mkdir -p deps >/dev/null) # deps is the dependencies directory
 BLDDIR:= $(BUILD)
 OBJDIR:= $(BLDDIR)/vm
 
-# N.B. PLATDIR *must* be a relative path, see -f../../$(shell test -f ...) below
 PLATDIR:=../../platforms
 CROSSDIR:=$(PLATDIR)/Cross/vm
 OSXDIR:=$(PLATDIR)/iOS/vm/OSX
@@ -206,7 +205,8 @@ endif
 #
 .PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.bundle
 
-plugin-makefile = $(shell test -f $(OSXPLUGINSDIR)/$(1)/Makefile && echo $(OSXPLUGINSDIR)/$(1)/Makefile || echo ../common/Makefile.plugin)
+#plugin-makefile = $(shell test -f $(OSXPLUGINSDIR)/$(1)/Makefile && echo $(OSXPLUGINSDIR)/$(1)/Makefile || echo ../common/Makefile.plugin)
+plugin-makefile = $(realpath $(OSXPLUGINSDIR)/$(1)/Makefile ../common/Makefile.plugin)
 
 # Internal plugin.  Build as lib then link in lib
 # Check for Makefile in iOS plugins directory otherwise use default Makefile
