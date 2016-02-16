@@ -4784,7 +4784,10 @@ SpurMemoryManager >> fixFollowedField: fieldIndex ofObject: anObject withInitial
 	<inline: #never>
 	| objOop |
 	self assert: (self isOopForwarded: initialValue).
-	objOop := self followForwarded: initialValue.
+	"inlined followForwarded: for speed (one less test)"
+	objOop := initialValue.
+	[objOop := self fetchPointer: 0 ofMaybeForwardedObject: objOop.
+	 self isOopForwarded: objOop] whileTrue.
 	self storePointer: fieldIndex ofObject: anObject withValue: objOop.
 	^objOop
 ]
@@ -4993,11 +4996,29 @@ SpurMemoryManager >> followObjField: fieldIndex ofObject: anObject [
 	^objOop
 ]
 
+{ #category : #forwarding }
+SpurMemoryManager >> followOopField: fieldIndex ofObject: anObject [
+	"Make sure the oop at fieldIndex in anObject is not forwarded (follow the
+	 forwarder there-in if so).  Answer the (possibly followed) oop at fieldIndex."
+	| oop |
+	oop := self fetchPointer: fieldIndex ofObject: anObject.
+	(self isOopForwarded: oop) ifTrue:
+		[oop := self fixFollowedField: fieldIndex ofObject: anObject withInitialValue: oop].
+	^oop
+]
+
 { #category : #'become implementation' }
 SpurMemoryManager >> followSpecialObjectsOop [
 	(self isForwarded: specialObjectsOop) ifTrue:
 		[specialObjectsOop := self followForwarded: specialObjectsOop].
 	self followForwardedObjectFields: specialObjectsOop toDepth: 0.
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> followedKeyOfEphemeron: objOop [
+	"Answer the object the ephemeron guards.  This is its first element."
+	self assert: ((self isNonImmediate: objOop) and: [self isEphemeron: objOop]).
+	^self followOopField: 0 ofObject: objOop
 ]
 
 { #category : #'header format' }
@@ -7620,8 +7641,9 @@ SpurMemoryManager >> markAllUnscannedEphemerons [
 	ptr := unscannedEphemerons top - self wordSize.
 	[ptr >= unscannedEphemerons start] whileTrue:
 		[| ephemeron key |
-		 key := self keyOfEphemeron: (ephemeron := self longAt: ptr).
-		 self markAndTrace: key;
+		 key := self followedKeyOfEphemeron: (ephemeron := self longAt: ptr).
+		 self
+			markAndTrace: key;
 			markAndTrace: ephemeron.
 		 unscannedEphemerons top: unscannedEphemerons top - self wordSize.
 		 ptr < unscannedEphemerons top ifTrue:
@@ -7784,11 +7806,12 @@ SpurMemoryManager >> markAndTraceWeaklingsFrom: startIndex [
 	 the size of the stack *before* the enumeration began."
 	^self objStack: weaklingStack from: startIndex do:
 		[:weakling|
+		 self deny: (self isForwarded: weakling).
 		 self markAndTraceClassOf: weakling.
 		"N.B. generateToByDoLimitExpression:negative:on: guards against (unsigned)0 - 1 going +ve"
 		 0 to: (self numStrongSlotsOfWeakling: weakling) - 1 do:
 			[:i| | field |
-			field := self fetchPointer: i ofObject: weakling.
+			field := self followObjField: i ofObject: weakling.
 			((self isImmediate: field) or: [self isMarked: field]) ifFalse:
 				[self markAndTrace: field]]]
 ]
@@ -7805,8 +7828,8 @@ SpurMemoryManager >> markInactiveEphemerons [
 	ptr := unscannedEphemerons start.
 	[ptr < unscannedEphemerons top] whileTrue:
 		[| ephemeron key |
-		key := self keyOfEphemeron: (ephemeron := self longAt: ptr).
-		((self isImmediate: key) or: [self isMarked: key])
+		 key := self followedKeyOfEphemeron: (ephemeron := self longAt: ptr).
+		 ((self isImmediate: key) or: [self isMarked: key])
 			ifTrue:
 				[foundInactive := true.
 				 "Now remove the inactive ephemeron from the set, and scan-mark it.

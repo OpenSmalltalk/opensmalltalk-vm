@@ -1,6 +1,3 @@
-"
-A TMethod is a translation method, representing a MethodNode that is to be translated to C source. It has a parseTree of translation nodes that mirrors the parse tree of the corresponding Smalltalk method.
-"
 Class {
 	#name : #TMethod,
 	#superclass : #Object,
