@@ -85,7 +85,15 @@ extern struct VirtualMachine* interpreterProxy;
 			return (char *) [[self.commandLineArguments objectAtIndex: -indexNumber] cStringUsingEncoding:[self currentVMEncoding]];
 		}
 #endif
-	} else {
+	}
+#if BUILD_FOR_OSX
+	else if (indexNumber >= 2 && indexNumber <= 1000) {
+        if (indexNumber < [self.commandLineArguments count]) {
+			return (char *) [[self.commandLineArguments objectAtIndex: indexNumber] cStringUsingEncoding:[self currentVMEncoding]];
+		}
+	}
+#endif
+	else {
 		switch (indexNumber) {
 			case 0: 
                 return [[[[NSBundle mainBundle] executablePath] precomposedStringWithCanonicalMapping] UTF8String];

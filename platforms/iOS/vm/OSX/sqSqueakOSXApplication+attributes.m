@@ -68,7 +68,11 @@ extern struct VirtualMachine* interpreterProxy;
 		if (myattr == gestaltPowerPC) 
 			return "powerpc";
 		if (myattr == gestaltIntel) 
+#if defined(x86_64) || defined(__amd64) || defined(__x86_64) || defined(__amd64__) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
+			return "x64";
+#else
 			return "intel";
+#endif
 
 		return "unknown";
 	}

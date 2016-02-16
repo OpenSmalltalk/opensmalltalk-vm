@@ -11,7 +11,7 @@ SDK:=$(firstword $(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
 TARGET_ARCH:=x86_64
 TARGET_VERSION_MIN:=10.6
 
-CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX \
+CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 \
 		-arch $(TARGET_ARCH) \
 		-mmacosx-version-min=$(TARGET_VERSION_MIN) -msse4.2 \
 			-fvisibility=hidden -fwrapv \
