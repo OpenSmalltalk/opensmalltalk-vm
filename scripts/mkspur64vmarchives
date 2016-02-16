@@ -68,7 +68,7 @@ if [ -n "$NL" ]; then
 	for d in . assert debug; do
 		(cd $d
 		set -- nscogspur64linux nscogspur64linuxht nscogspur64linuxhtARM
-		for archive in nsvmspurlinux nsvmspurlinuxht nsvmspurlinuxhtARM; do
+		for archive in nsvmspur64linux nsvmspur64linuxht nsvmspur64linuxhtARM; do
 			rm -rf $archive-$TAG.tgz
 			echo $1 '=>' $archive-$TAG.tgz
 			COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $1
@@ -152,7 +152,7 @@ if [ -n "$CW" ]; then
 fi
 if [ -n "$NW" ]; then
 	set -- build/vm buildast/vm builddbg/vm
-	for dir in nsvmspurwin assert/nsvmspurwin debug/nsvmspurwin; do
+	for dir in nsvmspur64win assert/nsvmspur64win debug/nsvmspur64win; do
 		test -d $dir || mkdir $dir
 		if [ -d ../build.win64x64/$NSB/$1 ]; then
 			rm -rf $dir/* $dir-$TAG.zip
