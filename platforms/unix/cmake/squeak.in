@@ -56,7 +56,7 @@ options () {
 	    -vm)            shift; case "$1" in sound*) useoss="false"; esac;;
             -image-info)    info="true";;
 	    --)		    break;;
-	    *)		    if test -f "$1.image" -o -f "$1"; then image="$1"; fi;;
+	    *)		    if test ! "$image" -a \( -f "$1.image" -o -f "$1" \); then image="$1"; fi;;
 	esac
 	shift
     done
