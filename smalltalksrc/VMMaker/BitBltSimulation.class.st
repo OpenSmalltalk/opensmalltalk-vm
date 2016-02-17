@@ -185,10 +185,8 @@ BitBltSimulation class >> copyBitsFrom: aBitBlt [
 	bb initialiseModule.
 	bb setInterpreter: proxy.
 	proxy success: (bb loadBitBltFrom: aBitBlt).
-	bb copyBits.
-	proxy failed ifFalse:[
-		proxy showDisplayBits: aBitBlt destForm Left: bb affectedLeft Top: bb affectedTop Right: bb affectedRight Bottom: bb affectedBottom].
-	^proxy stackValue: 0
+	bb primitiveCopyBits.
+	^ proxy stackValue: 0
 ]
 
 { #category : #translation }
