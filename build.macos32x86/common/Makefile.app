@@ -62,16 +62,30 @@ SOURCES:=$(SOURCES) $(APP)/Contents/Resources/$(APPSOURCE)
 endif
 
 
-$(APP):	$(VMEXE) $(VMBUNDLES) $(VMPLIST) $(VMMENUNIB) $(VMICONS) $(SOURCES) \
-		$(APPPOST) signapp touchapp
+$(APP):	cleanbundles $(VMEXE) $(VMBUNDLES) $(VMPLIST) $(VMMENUNIB) $(VMICONS) \
+ 		$(SOURCES) $(APPPOST) signapp touchapp
+
+# Bundles with missing prerequisites won't be built. But we need to force the
+# attempt to make them every time in case the prerequisites /have/ been built.
+# to do this we must both delete the bundles and touch any ignore files, upon
+# which the bundle build depends.
+cleanbundles:
+	-rm -rf $(APP)/Contents/Resources/*.bundle
+	-touch $(OBJDIR)/*.ignore
 
 $(VMEXE): $(OBJDIR)/$(VM)
 	mkdir -p $(APP)/Contents/MacOS
 	cp -p $(OBJDIR)/$(VM) $(APP)/Contents/MacOS
 
 $(APP)/Contents/Resources/%.bundle: $(BLDDIR)/vm/%.bundle
-	mkdir -p $(APP)/Contents/Resources
-	cp -pR $< $(APP)/Contents/Resources
+	@mkdir -p $(APP)/Contents/Resources
+	@if [ -f $(basename $<).ignore ]; then \
+		echo $(notdir $<) is being ignored; \
+		rm -rf $^; \
+	else \
+		echo cp -pR $< $(APP)/Contents/Resources; \
+		cp -pR $< $(APP)/Contents/Resources; \
+	fi
 
 $(VMPLIST): $(OSXDIR)/$(SYSTEM)-Info.plist getversion
 	mkdir -p $(APP)/Contents

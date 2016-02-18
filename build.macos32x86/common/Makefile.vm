@@ -132,8 +132,8 @@ getversion: $(OSXCOMMONDIR)/version.c deps/version.d $(CROSSDIR)/sqSCCSVersion.h
 	$(POSTCOMPILE)
 
 -include deps/version.d
-	
-product:;
+
+product:
 	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=product $(@,product=) default
 
 assert:
@@ -183,12 +183,12 @@ print-objects:
 	@echo VMOBJ=$(VMOBJ)
 	@echo -----------------------------------------------------
 
-#vm:	$(OBJDIR)/$(VM)
+ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 
 $(OBJDIR)/$(VM): $(OBJDIR) $(VMOBJ) $(LIBS)
 	$(CC) -arch $(TARGET_ARCH) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(OSXCOMMONDIR)/version.c
 	$(CC) -arch $(TARGET_ARCH) -isysroot $(SDK) $(LDFLAGS) $(FRAMEWORKS) \
-			-o $(OBJDIR)/$(VM) $(VMOBJ) $(LIBS)
+			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
 
 $(OBJDIR):
 	@-mkdir -p $(BLDDIR)
@@ -205,15 +205,15 @@ endif
 #
 .PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.bundle
 
-#plugin-makefile = $(shell test -f $(OSXPLUGINSDIR)/$(1)/Makefile && echo $(OSXPLUGINSDIR)/$(1)/Makefile || echo ../common/Makefile.plugin)
-plugin-makefile = $(realpath $(OSXPLUGINSDIR)/$(1)/Makefile ../common/Makefile.plugin)
+plugin-makefile = $(firstword $(realpath $(OSXPLUGINSDIR)/$(1)/Makefile ../common/Makefile.plugin))
 
 # Internal plugin.  Build as lib then link in lib
 # Check for Makefile in iOS plugins directory otherwise use default Makefile
 # N.B.  PLATDIR *must* be a relative path for this to work
-$(OBJDIR)/%.lib: getversion $(call plugin-makefile,$(*F))
+$(OBJDIR)/%.lib: getversion $(call plugin-makefile,$(*F)) $(wildcard $(*F).ignore)
 	@-mkdir -p $(BLDDIR)/$(*F)
-	test $@ -ot $(call plugin-makefile,$(*F)) && rm $(OBJDIR)/$(*F).lib || true
+	test $@ -ot $(call plugin-makefile,$(*F)) && rm $(BUILD)/vm/$(*F).lib || true
+	rm -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
@@ -228,9 +228,10 @@ $(OBJDIR)/%.lib: getversion $(call plugin-makefile,$(*F))
 
 # External plugin.  Build as bundle and copy to vm dir ($(OBJDIR)).
 # Check for Makefile in iOS plugins directory otherwise use default Makefile
-$(OBJDIR)/%.bundle:	getversion $(call plugin-makefile,$(*F))
+$(OBJDIR)/%.bundle:	getversion $(call plugin-makefile,$(*F)) $(wildcard $(*F).ignore)
 	@-mkdir -p $(BLDDIR)/$(*F)
-	test $@ -ot $(call plugin-makefile,$(*F)) && rm $(OBJDIR)/$(*F).lib || true
+	test $@ -ot $(call plugin-makefile,$(*F)) && rm -rf $(BUILD)/vm/$(*F).bundle || true
+	rm -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \

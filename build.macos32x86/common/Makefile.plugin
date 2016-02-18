@@ -13,6 +13,7 @@
 # LIBSRC     overrides the set of files to compile (if EXCLUDESRC inconvenient)
 # LINK_WITH_CPP set to non-empty to link external plugin bundle with c++ runtime
 # SRCDIRS    supplies additional directories containing files to compile.
+# PREREQUISITES supplies names of files that must exist to make lib or bundle
 
 # VM config flags.
 ifeq ($(CONFIGURATION),product)
@@ -139,6 +140,9 @@ $(OBJDIR):
 $(VMDIR):
 	mkdir -p $(VMDIR)
 
+# If any prerequisites are declared all must exist to continue
+ifeq ($(realpath $(PREREQUISITES)),$(abspath $(PREREQUISITES)))
+
 $(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	-rm $(PLUGINLIB)
 	ar -rc $(PLUGINLIB) $(LIBOBJ)
@@ -169,3 +173,21 @@ $(PLUGINPLIST): $(PLATDIR)/iOS/plugins/Info.plist getversion
 	mkdir -p $(PLUGINBUNDLE)/Contents
 	sed "s/\$$(VERSION)/`getversion VERSION_TAG`/" $< | \
 	sed "s/\$(LIBNAME)/$(LIBNAME)/" > $(PLUGINPLIST)
+
+else # ifeq ($(realpath $(PREREQUISITES)),$(PREREQUISITES))
+# If any prerequisites are missing simply create a .ignore file
+
+#$(info $$(PREREQUISITES): $(abspath $(PREREQUISITES)))
+#$(info $$(realpath $$(PREREQUISITES)): $(realpath $(PREREQUISITES)))
+
+$(PLUGINLIB): FORCE
+	$(warning $(PLUGINLIB) has missing prerequisites. Not building.)
+	echo >$(basename $(PLUGINLIB)).ignore
+
+$(PLUGINBUNDLE):	FORCE
+	$(warning $(PLUGINBUNDLE) has missing prerequisites. Not building.)
+	echo >$(basename $(PLUGINBUNDLE)).ignore
+
+FORCE:
+
+endif

@@ -1,13 +1,17 @@
 How To Build On Mac OS X
----------------------
+------------------------
+This file (build.macos64x64/HowToBuild) describes how to build VMs that run
+64-bit images.  build.macos32x86/HowToBuild describes how to build VMs that
+run 32-bit images.
 
 
 Contents:
 	- Overview
 	- Checking out sources to build out-of-the-box
 	- Building out of the box
-	- Building the Bochs Support Libraries
-	- Optimization level and gcc version (please read!)
+	- The Structure of the Makefiles
+	- Building the VM Simulator Support Libraries
+	- Using Different Compilers
 
 
 Overview
@@ -25,10 +29,12 @@ the fly.  Sista VMs, as yet unrealised and in development, add support for
 adaptive optimization that does speculative inlining at the bytecode-to-bytecode
 level.  These are targeted for release in 2015.
 
-Another distinction is between 32-bit and 64-bit Spur VMs.  While Spur
-has a common object header format common to 32 and 64 bit versions, the 32-bit
-version uses 32-bit pointers and immediates, whereas the 64-bit version uses
-64-bit pointers and immediates and will only run on 64-bit machines.
+Another distinction is between "v3" VMs and Spur VMs.  "v3" is the original
+object representation for Squeak as described in the back-to-the-future paper.
+Spur, as described on the www.mirandabanda.org blog, is a faster object
+representation which uses generation scavenging, lazy forwarding for fast
+become, and a single object header format common to 32 and 64 bit versions.
+Newspeak, Squeak 5 and the upcoming release of Pharo all use Spur.
 
 Another distinction is between normal single-threaded VMs that schedule "green"
 Smalltalk processes above a single-threaded VM, and "multi-threaded" VMs that
@@ -59,58 +65,120 @@ Check-out at least the relevant platform sources, vm and plugin sources,
 processor sources and the relevant build directories
      svn co http://www.squeakvm.org/svn/squeak/branches/Cog/platforms
      svn co http://www.squeakvm.org/svn/squeak/branches/Cog/processors
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/build.macos64x64
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/src etc
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/{spursrc,src} etc
 		(see section "VM source directories" in the root README)
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/sources
+		(this is needed only to install Smalltalk source files)
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/build.macos64x64
 
 
 Building out of the box
 -----------------------
-0. As of this writing (December 2015) only the squeak.cog.spur builds build
-on 10.9 and later, using John McIntosh's Cocoa platform support files.  The
-rest of the builds don't work yet.  We are transitioning as fast as possible
-to Cocoa.  Volunteers welcome.
+0. The build system is based on Gnu Make for makefiles, and Xcode.app for
+compilers and libraries.  You will need a Mac OS X machine running at least
+10.7.x (the author is currently using 10.9) and Xcode v6 or later.  The system
+builds only the new Cocoa based VMs that use the platforms/iOS tree.  The old
+Carbon-based VMs using platforms/Mac OS are unsupported.
 
-1. Install the tools (Xcode etc);  the SqueakCogSpur32x86.xcodeproj is set-up to
-build using clang 6.x or clang 7.x.
+1. Install the tools (Xcode etc).  If you want to sign the application make sure
+you have installed a suitable certificate via Keychain Access and that the
+signing identity is in the SIGNING_IDENTITY environment variable, e.g. in the
+author's .profile is the line
+export SIGNING_IDENTITY="Developer ID Application: Eliot Miranda"
 
-2. Either disable the building of the Bochs plugins (see each makeiosvm file,
-disabling the lines beginning "# Build the BochsIA32Plugin") or build the
-Bochs support libraries (see Building the Bochs Support Libraries below).
-
-3. cd to the VM configuration of your choice and execute
-	./miosvm -A
+2. cd to the VM configuration of your choice and run the mvm script, e.g.
+	cd buiild.macos64x64/squeak.cog.spur
+	./mvm -A
 This will build CocoaFast.app, CocoaDebug.app and CocoaAssert.app applications
 containing the three basic VM configurations.  If the configuration includes
-the multi-threaded VM you can use miosvm -AS to make the single-threaded VMs,
-miosvm -AT to make the multi-threadeds in FastMT.app et al, and miosvm -A to make
-them all.  miosvm -d will make the CocoaDebug.app VM, etc.  miosvm -? provides the
-gory details.
-
-
+the multi-threaded
+VM you can use mvm -AS to make the single-threaded VMs, mvm -AT to make the
+multi-threadeds in FastMT.app et al, and mvm -A to make them all.  mvm -d will
+make the Debug.app VM, etc.  mvm -? provides the gory details.
 
 Each build directory contains three files
 	plugins.int
 	plugins.ext
-On other platforms editing these and making is all one needs to do to change the
-set of plugins.  Alas on Xcode one also has to edit the relevant Xcode projects
-to add and remove source files.  If you're brave enough to contemplate this
-you're brave enough to figure out how to do this yourself.
+Editing these and making is all one needs to do to change the set of plugins.
+But see The Structure of the Makefiles below for "complicated" plugins.
 
 
-Building the Bochs Support Libraries
-------------------------------------
-If you want to get the Cog VM simulator working you'll need to build the
-BochsIA32Plugin and/or the BochsX64Plugin to build that you'll need to first
-build bochs.  First check-out the processor simulator source tree containing
-Bochs:
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/processors
-Then build the libraries.  cd to e.g. build.macos32x86/bochsx86, run
+The Structure of the Makefiles
+------------------------------
+Each VM build directory contains the mvm script, a root Makefile that selects
+the VM source to build, plugins.int to specify the internal plugins to build,
+and plugins.ext to specify the external plugins (if any) to build.  The root
+Makefile then includes a full Makefile from the common directory.  For example,
+squeak.cog.spur's Makefile (minus commentary) reads
+	----8<-----build.macos64x64/squeak.cog.spur/Makefile----8<---------------
+	VMSRCDIR:= ../../spursrc/vm
+	SOURCEFILE:=SqueakV50.sources
 
-  $ cd build.macos32x86/bochsx86
-  $ ./conf.COG
-  $ ../../processors/IA32/bochs/makeem
+	include ../common/Makefile.app.squeak.cog
+	----8<-----build.macos64x64/squeak.cog.spur/Makefile----8<---------------
+Some external plugins require spport libraries.  In particular, the processor
+simulators used by VMMaker.oscog to develop the VM JITs, depend on C or C++
+code that implements a processor simulator.  See below.  Plugins that require
+extra support or special compilation have makefiles under
+platforms/iOS/plugins/, for example plugins/iOS/plugins/RePlugin/Makefile.
+This Makefile sets some values and then includes common/Makefile.plugin to do
+the dirty work.  If you add an exotic plugin that requires such source please
+read the plugin makefile build.macos64x64/common/Makefile.plugin and the
+makefiles under plugins/iOS/plugins for examples of the facilities available.
+
+The files in build.macos64x64/common are
+	Makefile.app
+		The top-level makefile for CocoaFast.app et al.
+		It includes Makefile.vm to build the vm and plugins and then constructs
+		and optionally signs the .app bundle.  It may also install a Smalltalk
+		source file.
+	Makefile.app.newspeak
+		Modifies Makefile.app to rename the executable and install sources
+	Makefile.app.squeak.cog
+		Modifies Makefile.app to use the green VM icon that implies Cog
+	Makefile.flags
+		Defines the compilation flags and SDK to use in building the VM
+	Makefile.plugin
+		Makes either an internal FooPlugin.lib or an external FooPlugin.bundle.
+		If platforms/iOS/plugins/FooPlugin/Makefile exists Makefile.vm will
+		use it, and it should include Makefile.plugin to do the dirty work.
+	Makefile.rules
+		Defines the rules for compiling c, c++ and objective-c source files,
+		including maintaining dependency information.
+	Makefile.vm
+		Makes the VM executable in the chosen configuration from product,
+		assert or debug.  Decodes plugins.int and plugins.ext and invokes
+		make with the relevant makefile, either a special one such as
+		platforms/iOS/plugins/RePlugin/Makefile or Makefile.plugin, for each
+		internal or external plugin.
+	mkNamedPrims.sh
+		This script makes sqNamedPrims.h which defines the exports from the set
+		of internal plugins that the VM uses to access the primitives in
+		internal plugins.
+
+
+Building the VM Simulator Support Libraries
+-------------------------------------------
+As of this writing there are three processors with three sets of support
+libraries.  If you want to build these they are in
+	build.macos64x64/{bochsx86,bochsx64,gdbarm32}
+In each directory there is a conf.COG script.  Cd to the directory, run the
+script, and in the case of the bochs directories also run makeem.  e.g.
+	$ cd build.macos64x64/bochsx86
+	$ ./conf.COG
+	$ ../../processors/IA32/bochs/makeem
+Then cd to the VM build directoruy of your choice and build.
+
+
+Using Different Compilers
+-----------------------------------------
+The build system uses Xcode's default compiler, clang by default.
+You may want to use a different compiler.  Users claim this is possible.
+For example, to install gcc 5.2 see
+	http://hamelot.co.uk/programming/add-gcc-compiler-to-xcode-6/
+(Thanks Hammad!).  There are no guarantees that this will work, but that's the
+best pointer I've found.
 
 
 Eliot Miranda
-December 2015
+February 2016
