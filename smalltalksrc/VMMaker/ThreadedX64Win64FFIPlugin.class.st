@@ -10,11 +10,6 @@ Class {
 }
 
 { #category : #translation }
-ThreadedX64Win64FFIPlugin class >> calloutStateClass [
-	^ThreadedFFICalloutStateForX64SysV
-]
-
-{ #category : #translation }
 ThreadedX64Win64FFIPlugin class >> identifyingPredefinedMacros [
 	"Answer the predefined macros that identify the platforms a subclass handles, if any.
 	 If the subclass isn't yet ready for production (a work in progress) simply answer nil."
@@ -33,8 +28,8 @@ ThreadedX64Win64FFIPlugin class >> includingPredefinedMacros [
 { #category : #'class initialization' }
 ThreadedX64Win64FFIPlugin class >> initialize [
 	WordSize := 8.
-	NumIntRegArgs := 6.
-	NumFloatRegArgs := 8
+	NumIntRegArgs := 4.
+	NumFloatRegArgs := 4
 ]
 
 { #category : #translation }
