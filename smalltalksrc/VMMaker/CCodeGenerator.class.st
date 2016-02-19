@@ -1097,8 +1097,8 @@ CCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: asse
 	self localizeGlobalVariables.
 
 	self emitCHeaderOn: aStream.
-	self emitCTypesOn: aStream.
 	self emitCConstantsOn: aStream.
+	self emitCTypesOn: aStream. "Emitting types after constants allows use of constant names, e.g. in declaring arrays."
 	self emitCFunctionPrototypes: methodList on: aStream.
 	self emitCVariablesOn: aStream.
 	self emitCMacros: methodList on: aStream.
