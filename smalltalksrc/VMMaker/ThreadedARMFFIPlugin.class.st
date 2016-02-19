@@ -90,21 +90,21 @@ ThreadedARMFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: call
 			[atomicType = FFITypeSingleFloat
 				ifTrue:
 					[floatRet := self 
-						dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'float (*)(int, int, int, int)') 
+						dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'float (*)(long, long, long, long)') 
 						with: (calloutState integerRegisters at: 0)
 						with: (calloutState integerRegisters at: 1)
 						with: (calloutState integerRegisters at: 2)
 						with: (calloutState integerRegisters at: 3)]
 				ifFalse: "atomicType = FFITypeDoubleFloat"
 					[floatRet := self 
-						dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'double (*)(int, int, int, int)') 
+						dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'double (*)(long, long, long, long)') 
 						with: (calloutState integerRegisters at: 0)
 						with: (calloutState integerRegisters at: 1)
 						with: (calloutState integerRegisters at: 2)
 						with: (calloutState integerRegisters at: 3)]]
 		ifFalse:
 			[intRet := self 
-				dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'usqLong (*)(int, int, int, int)') 
+				dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'usqLong (*)(long, long, long, long)') 
 				with: (calloutState integerRegisters at: 0)
 				with: (calloutState integerRegisters at: 1)
 				with: (calloutState integerRegisters at: 2)
