@@ -62,7 +62,7 @@ ThreadedFFIPlugin class >> generateCodeStringForPrimitives [
 		 s nextPutAll: (CCodeGenerator monticelloDescriptionFor: self).
 		 s cr; nextPutAll: ' */'.
 		 s cr; cr; nextPut: $#.
-		 (self subclasses sort: [:a :b| a name < b name]) do:
+		 (self allSubclasses sort: [:a :b| a name < b name]) do:
 			[:class |
 			class identifyingPredefinedMacros ifNotNil:
 				[:predefinedMacros|

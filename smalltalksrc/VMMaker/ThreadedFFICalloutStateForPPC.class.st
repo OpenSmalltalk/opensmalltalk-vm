@@ -11,7 +11,7 @@ Class {
 
 { #category : #translation }
 ThreadedFFICalloutStateForPPC class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
-	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a ReentrantFFICalloutState struct."
+	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a ThreadedFFICalloutState struct."
 
 	superclass instVarNamesAndTypesForTranslationDo: aBinaryBlock.
 	self instVarNames do:
@@ -19,8 +19,8 @@ ThreadedFFICalloutStateForPPC class >> instVarNamesAndTypesForTranslationDo: aBi
 		aBinaryBlock
 			value: ivn
 			value: (ivn caseOf: {
-						['integerRegisters']	-> [{#sqInt. '[', ThreadedPPCBEFFIPlugin numRegArgs printString, ']'}].
-						['floatRegisters']		-> [{#double. '[', ThreadedPPCBEFFIPlugin numRegArgs printString, ']'}] }
+						['integerRegisters']	-> [{#sqInt. '[NumIntRegArgs]'}].
+						['floatRegisters']	-> [{#float. '[NumFloatRegArgs]'}] }
 					otherwise:
 						[#sqInt])]
 ]
