@@ -43,6 +43,15 @@ ThreadedFFIPlugin class >> declareCVarsIn: cg [
 ]
 
 { #category : #translation }
+ThreadedFFIPlugin class >> excludingPredefinedMacros [
+	"Answer the predefined macros that disqualify the platforms a subclass handles, if any.
+	 These are anded together and with includingPredefinedMacros, whereas
+	 identifyingPredefinedMacros are ored together.
+	 This can be used to differentiate e.g. x64 Sys V from x64 Win64."
+	^nil
+]
+
+{ #category : #translation }
 ThreadedFFIPlugin class >> generateCodeStringForPrimitives [
 	"Output a skeletal SqueakFFIPrims.c that includes the relevant FooFFIPlugin.c for
 	 each subclass based on the identifyingPredefinedMacros the subclass defines."
@@ -58,9 +67,23 @@ ThreadedFFIPlugin class >> generateCodeStringForPrimitives [
 			class identifyingPredefinedMacros ifNotNil:
 				[:predefinedMacros|
 				 s nextPutAll: 'if '.
+				class includingPredefinedMacros ifNotNil:
+					[:includingMacros|
+					 includingMacros do:
+						[:predefinedMacro| s nextPutAll: 'defined('; nextPutAll: predefinedMacro; nextPutAll: ') && '].
+					 s nextPut: $(].
+				class excludingPredefinedMacros ifNotNil:
+					[:excludingMacros|
+					 excludingMacros do:
+						[:predefinedMacro| s nextPutAll: '!defined('; nextPutAll: predefinedMacro; nextPutAll: ') && '].
+					 s nextPut: $(].
 				 predefinedMacros
 					do: [:predefinedMacro| s nextPutAll: 'defined('; nextPutAll: predefinedMacro; nextPut: $)]
 					separatedBy: [s nextPutAll: ' || '].
+				class excludingPredefinedMacros ifNotNil:
+					[s nextPut: $)].
+				class includingPredefinedMacros ifNotNil:
+					[s nextPut: $)].
 				 s cr; cr; nextPutAll: '#	include "'; nextPutAll: class moduleName; nextPutAll: '.c"'.
 				 s cr; cr; nextPutAll: '#el']].
 		 s nextPutAll: 'se'.
@@ -73,7 +96,17 @@ ThreadedFFIPlugin class >> generateCodeStringForPrimitives [
 { #category : #translation }
 ThreadedFFIPlugin class >> identifyingPredefinedMacros [
 	"Answer the predefined macros that identify the platforms a subclass handles, if any.
+	 These are ored together.
 	 If the subclass isn't yet ready for production (a work in progress) simply answer nil."
+	^nil
+]
+
+{ #category : #translation }
+ThreadedFFIPlugin class >> includingPredefinedMacros [
+	"Answer the predefined macros that qualify the platforms a subclass handles, if any.
+	 These are anded together and with excludingPredefinedMacros, whereas
+	 identifyingPredefinedMacros are ored together.
+	 This can be used to differentiate e.g. x64 Sys V from x64 Win64."
 	^nil
 ]
 
