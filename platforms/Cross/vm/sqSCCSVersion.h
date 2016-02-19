@@ -120,13 +120,19 @@ sourceVersionString(char separator)
 
 int argc = 0;
 char **argv = 0;
+int justPrintTags = 0;
 
 /* printit allows that with no arguments print all key/value pairs
- * and with one argument print the value of a particular key.
+ * and with one argument print the value of a particular key, or with
+ * the one argument TAGS to print all keys.
  */
 int
 printit(const char *what)
 {
+	if (justPrintTags) {
+		printf("%s ", what);
+		return 0;
+	}
 	if (argc == 1) {
 		printf("%s: ", what);
 		return 1;
@@ -141,6 +147,8 @@ main(int _argc, char **_argv)
 
 	argc = _argc;
 	argv = _argv;
+
+	justPrintTags = argc == 2 && !strcmp(argv[1], "TAGS");
 
 	if (printit("VM_NICKNAME"))
 		printf("%s\n", NICKNAME " " OBJMEM " VM");
@@ -160,6 +168,15 @@ main(int _argc, char **_argv)
 		printf("%s-%s\n", vm_version, revisionAsString());
 	if (printit("VERSION_NUMBER"))
 		printf("%s.%s\n", vm_version, revisionAsString());
+	if (printit("NICKNAME"))
+		printf("%s\n", NICKNAME);
+	if (printit("OBJMEM"))
+		printf("%s\n", OBJMEM);
+	if (printit("DEFAULT_IMAGE_NAME"))
+		printf("%s\n", DEFAULT_IMAGE_NAME);
+
+	if (justPrintTags)
+		printf("\n");
 
 	return 0;
 }

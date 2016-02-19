@@ -15,10 +15,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -27,7 +27,7 @@
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
+
  The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
  "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
  and its contributors", in the same place and form as other third-party acknowledgments. 
@@ -51,7 +51,7 @@ extern SqueakOSXAppDelegate *gDelegateApp;
  bits. (The Mac shift and caps lock keys are both mapped to the single
  Squeak shift bit).  This was true for squeak upto 3.0.7. Then in 3.0.8 we 
  decided to not map the cap lock key to shift
- 
+
  Mac bits: <control><option><caps lock><shift><command>
  ST bits:  <command><option><control><shift>
  */
@@ -108,7 +108,7 @@ static int buttonState=0;
 
 - (void) pumpRunLoopEventSendAndSignal:(BOOL)signal {
     NSEvent *event;
-    
+
     while ((event = [NSApp
                         nextEventMatchingMask:NSAnyEventMask
                         untilDate:nil 
@@ -133,16 +133,16 @@ static int buttonState=0;
 	 using the runloop, but if you just run the runloop on the main thread,
 	 events won't get processed. You have to explicitly run this in order
 	 to get them to be processed.
-	 
+
 	 Note that using the default runloop mode with this is generally a bad
 	 idea. By running in the default mode you allow *everything* else to
 	 run, which means that some other code might decide that *it* wants an
 	 inner event loop as well. If you then want to quit before that other
 	 code has finished, tough cookies. Much better to control things more
 	 tightly by using a different runloop mode.
-	 
+
 	 */
-	
+
 }
 
 - (void ) processAsOldEventOrComplexEvent: (id) event placeIn: (sqInputEvent *) evt {
@@ -166,17 +166,17 @@ static int buttonState=0;
 	NSInteger	i;
 	NSRange picker;
 	NSUInteger totaLength;
-	
+
 	evt.type = EventTypeKeyboard;
-	evt.timeStamp = (int) ioMSecs();
+	evt.timeStamp = ioMSecs();
 	picker.location = 0;
 	picker.length = 1;
 	totaLength = [unicodeString length];
 	for (i=0;i < totaLength;i++) {
-		
-		
+
+
 		unicode = [unicodeString characterAtIndex: i];
-		
+
 		if (mainView.lastSeenKeyBoardStrokeDetails) {
 			evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: mainView.lastSeenKeyBoardStrokeDetails.modifierFlags];
 			evt.charCode = mainView.lastSeenKeyBoardStrokeDetails.keyCode;
@@ -184,32 +184,32 @@ static int buttonState=0;
 			evt.modifiers = 0;
 			evt.charCode = 0;
 		}
-		
+
 		if ((evt.modifiers & CommandKeyBit) && (evt.modifiers & ShiftKeyBit)) {  /* command and shift */
             if ((unicode >= 97) && (unicode <= 122)) {
 				/* convert ascii code of command-shift-letter to upper case */
 				unicode = unicode - 32;
             }
 		}
-		
+
 		NSString *lookupString = AUTORELEASEOBJ([[NSString alloc] initWithCharacters: &unicode length: 1]);
 		[lookupString getBytes: &macRomanCharacter maxLength: 1 usedLength: NULL encoding: NSMacOSRomanStringEncoding
 					   options: 0 range: picker remainingRange: NULL];
-		
+
 		evt.pressCode = EventKeyDown;
 		unsigned short keyCodeRemembered = evt.charCode;
 		evt.utf32Code = 0;
 		evt.reserved1 = 0;
-		evt.windowIndex = (int)  mainView.windowLogic.windowIndex;
+		evt.windowIndex = mainView.windowLogic.windowIndex;
 		[self pushEventToQueue: (sqInputEvent *)&evt];
-		
+
 		evt.charCode =	macRomanCharacter;
 		evt.pressCode = EventKeyChar;
 		evt.modifiers = evt.modifiers;		
 		evt.utf32Code = unicode;
-		
+
 		[self pushEventToQueue: (sqInputEvent *) &evt];
-		
+
 		if (i > 1 || !mainView.lastSeenKeyBoardStrokeDetails) {
 			evt.pressCode = EventKeyUp;
 			evt.charCode = keyCodeRemembered;
@@ -217,22 +217,22 @@ static int buttonState=0;
 			[self pushEventToQueue: (sqInputEvent *) &evt];
 		}
 	}
-	
+
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 
 }
 
 - (void) recordKeyDownEvent:(NSEvent *)theEvent fromView: (sqSqueakOSXOpenGLView *) aView {
 	sqKeyboardEvent evt;
-	
+
 	evt.type = EventTypeKeyboard;
-	evt.timeStamp = (int) ioMSecs();
+	evt.timeStamp = ioMSecs();
 	evt.charCode =	[theEvent keyCode];
 	evt.pressCode = EventKeyDown;
 	evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: [theEvent modifierFlags]];
 	evt.utf32Code = 0;
 	evt.reserved1 = 0;
-	evt.windowIndex = (int)[[aView windowLogic] windowIndex];
+	evt.windowIndex = [[aView windowLogic] windowIndex];
 	[self pushEventToQueue: (sqInputEvent *) &evt];
 
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
@@ -240,15 +240,15 @@ static int buttonState=0;
 
 - (void) recordKeyUpEvent:(NSEvent *)theEvent fromView: (sqSqueakOSXOpenGLView *) aView {
 	sqKeyboardEvent evt;
-	
+
 	evt.type = EventTypeKeyboard;
-	evt.timeStamp = (int) ioMSecs();
+	evt.timeStamp = ioMSecs();
 	evt.charCode =	[theEvent keyCode];
 	evt.pressCode = EventKeyUp;
 	evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: [theEvent modifierFlags]];
 	evt.utf32Code = 0;
 	evt.reserved1 = 0;
-	evt.windowIndex = (int) aView.windowLogic.windowIndex;
+	evt.windowIndex = aView.windowLogic.windowIndex;
 	[self pushEventToQueue: (sqInputEvent *) &evt];
 
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
@@ -256,15 +256,15 @@ static int buttonState=0;
 
 - (void) recordMouseEvent:(NSEvent *)theEvent fromView: (sqSqueakOSXOpenGLView *) aView{
 	sqMouseEvent evt;
-	
+
 	evt.type = EventTypeMouse;
-	evt.timeStamp = (int) ioMSecs();
-	
+	evt.timeStamp = ioMSecs();
+
 	NSPoint local_point = [aView convertPoint: [theEvent locationInWindow] fromView:nil];
-	
-	evt.x = (int) lrintf(local_point.x); 
-	evt.y = (int) lrintf(local_point.y);
-	
+
+	evt.x = (sqInt) lrintf(local_point.x); 
+	evt.y = (sqInt) lrintf(local_point.y);
+
 	int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
 	evt.buttons = buttonAndModifiers & 0x07;
 	evt.modifiers = buttonAndModifiers >> 3;
@@ -273,32 +273,32 @@ static int buttonState=0;
 #else
 	evt.reserved1 = 0;
 #endif 
-	evt.windowIndex = (int) aView.windowLogic.windowIndex;
-	
+	evt.windowIndex = aView.windowLogic.windowIndex;
+
 	[self pushEventToQueue:(sqInputEvent *) &evt];
 //NSLog(@"mouse hit x %i y %i buttons %i mods %i",evt.x,evt.y,evt.buttons,evt.modifiers);
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
-						   
+
 - (void) recordWheelEvent:(NSEvent *) theEvent fromView: (sqSqueakOSXOpenGLView *) aView{
-		
+
 	[self recordMouseEvent: theEvent fromView: aView];
 	CGFloat x = [theEvent deltaX];
 	CGFloat y = [theEvent deltaY];
 
 	if (x != 0.0f) {
-		[self fakeMouseWheelKeyboardEventsKeyCode: (x < 0 ? 124 : 123) ascii: (x < 0 ? 29 : 28) windowIndex:  (int) aView.windowLogic.windowIndex];
+		[self fakeMouseWheelKeyboardEventsKeyCode: (x < 0 ? 124 : 123) ascii: (x < 0 ? 29 : 28) windowIndex:  aView.windowLogic.windowIndex];
 	}
 	if (y != 0.0f) {
-		[self fakeMouseWheelKeyboardEventsKeyCode: (y < 0 ? 125 : 126) ascii: (y < 0 ? 31 : 30) windowIndex: (int) aView.windowLogic.windowIndex];
+		[self fakeMouseWheelKeyboardEventsKeyCode: (y < 0 ? 125 : 126) ascii: (y < 0 ? 31 : 30) windowIndex: aView.windowLogic.windowIndex];
 	}
 }
-		  
-- (void) fakeMouseWheelKeyboardEventsKeyCode: (int) keyCode ascii: (int) ascii windowIndex: (int) windowIndex {
+
+- (void) fakeMouseWheelKeyboardEventsKeyCode: (int) keyCode ascii: (int) ascii windowIndex: (sqInt) windowIndex {
 	sqKeyboardEvent evt;
 
 	evt.type = EventTypeKeyboard;
-	evt.timeStamp = (int) ioMSecs();
+	evt.timeStamp = ioMSecs();
 	evt.pressCode = EventKeyDown;
 	evt.charCode = keyCode;
 	evt.utf32Code = 0;
@@ -311,12 +311,12 @@ static int buttonState=0;
 	evt.charCode = ascii;
 	evt.utf32Code = ascii;
 	[self pushEventToQueue:(sqInputEvent *) &evt];
-	
+
 	evt.pressCode = EventKeyUp;
 	evt.charCode =	keyCode;
 	evt.utf32Code = 0;
 	[self pushEventToQueue:(sqInputEvent *) &evt];
-	
+
 }
 
 - (int) translateCocoaModifiersToSqueakModifiers: (NSUInteger) modifiers {
@@ -337,23 +337,23 @@ static int buttonState=0;
 	if (modifiers & NSCommandKeyMask)
 		keyBoardModifiers |= cmdKey;
 	return keyBoardModifiers;
-		
+
 }
-		
+
 - (int) mapMouseAndModifierStateToSqueakBits: (NSEvent *) event {
 	/* On a two- or three-button mouse, the left button is normally considered primary and the 
 	 right button secondary, 
 	 but left-handed users can reverse these settings as a matter of preference. 
 	 The middle button on a three-button mouse is always the tertiary button. '
-	 
+
 	 But mapping assumes 1,2,3  red, yellow, blue
 	 */
-	
+
 	NSInteger stButtons,modifier,mappedButton;
 	NSInteger mouseButton=0;
-	
+
 	static NSInteger buttonStateBits[4] = {0,0,0,0};
-	
+
 	stButtons = buttonState;
 	NSUInteger keyBoardCarbonModifiers = [self translateCocoaModifiersToCarbonModifiers: [event modifierFlags]];
 	NSInteger whatHappened = [event type];
@@ -366,9 +366,9 @@ static int buttonState=0;
 			mouseButton = 2;
 		if (!mouseButton)
 			mouseButton = [event buttonNumber] + 1; //buttonNumber seems to count from 0.
-		
+
 		if (mouseButton > 0 && mouseButton < 4) {
-			
+
 			modifier = 0;
 			if (keyBoardCarbonModifiers & cmdKey  )
 				modifier = 1;
@@ -376,7 +376,7 @@ static int buttonState=0;
 				modifier = 2;
 			if (keyBoardCarbonModifiers & controlKey)
 				modifier = 3;
-			
+
 			if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode())
 				mappedButton = [(sqSqueakOSXInfoPlistInterface *) self.infoPlistInterfaceLogic getSqueakBrowserMouseMappingsAt: modifier by: mouseButton];
 			else
@@ -390,7 +390,7 @@ static int buttonState=0;
 			stButtons |= mappedButton == 3 ? (buttonStateBits[mappedButton] ? BlueButtonBit : 0)  : 0;
 		}
 	}
-	
+
 	// button state: low three bits are mouse buttons; next 8 bits are modifier bits
 	buttonState = (int) (modifierMap[((keyBoardCarbonModifiers & 0xFFFF) >> 8)] << 3) | (int) (stButtons & 0x7);
 	return buttonState;
@@ -398,27 +398,27 @@ static int buttonState=0;
 
 - (void) recordDragEvent:(int)dragType numberOfFiles:(int)numFiles where:(NSPoint)point windowIndex:(sqInt)windowIndex view:(NSView *)aView{
 	sqDragDropFilesEvent evt;
-	
+
     NSPoint local_point = [aView convertPoint:point fromView:nil];
-    
+
 	evt.type= EventTypeDragDropFiles;
-	evt.timeStamp= (int) ioMSecs();
+	evt.timeStamp= ioMSecs();
 	evt.dragType= dragType;
-	evt.x = (int) lrintf(local_point.x); 
-	evt.y = (int) lrintf(local_point.y);
+	evt.x = (sqInt) lrintf(local_point.x); 
+	evt.y = (sqInt) lrintf(local_point.y);
 	evt.modifiers= (buttonState >> 3);
 	evt.numFiles= numFiles;
-	evt.windowIndex = (int) windowIndex;
+	evt.windowIndex = windowIndex;
 	[self pushEventToQueue: (sqInputEvent *) &evt];
-	
+
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
 - (void) recordWindowEvent: (int) windowType window: (NSWIndow *) window {
 	sqWindowEvent evt;
-	
+
 	evt.type= EventTypeWindow;
-	evt.timeStamp= (int) ioMSecs();
+	evt.timeStamp= ioMSecs();
 	evt.action= windowType;
 	evt.value1 =  0;
 	evt.value2 =  0;
@@ -426,7 +426,7 @@ static int buttonState=0;
 	evt.value4 =  0;
 	evt.windowIndex = windowIndexFromHandle((wHandleType)window);
 	[self pushEventToQueue: (sqInputEvent *) &evt];
-	
+
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 

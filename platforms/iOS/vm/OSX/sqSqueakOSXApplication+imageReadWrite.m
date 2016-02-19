@@ -46,7 +46,7 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 @implementation sqSqueakOSXApplication (imageReadWrite) 
 - (void) attempToOpenImageFromOpenPanel {
 	NSOpenPanel *panel= [NSOpenPanel openPanel];
-	[panel setTitle: NSLocalizedString(@"SqueakSelectImagePanePrompt",nil)];
+	[panel setTitle: NSLocalizedString(@"SelectImagePanePrompt",nil)];
 	[panel setFloatingPanel: YES];
 	[panel setOneShot: YES];
 	[panel setReleasedWhenClosed: YES];

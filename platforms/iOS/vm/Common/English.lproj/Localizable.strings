@@ -1,9 +1,0 @@
-/* 
-   Localizable.strings
-   SqueakPureObjc
-
-   Created by John M McIntosh on 09-11-24.
-   Copyright 2009 Corporate Smalltalk Consulting Ltd. All rights reserved.
- */
-
-"SqueakSelectImagePanePrompt" = "Select a Squeak image file to open";

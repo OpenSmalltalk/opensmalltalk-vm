@@ -53,6 +53,7 @@ VMBUNDLES:=$(addprefix $(APP)/Contents/Resources/, $(addsuffix .bundle, $(EXTERN
 OSXICONS:=$(OSXDIR)/$(VM).icns $(wildcard $(OSXDIR)/$(SYSTEM)*.icns)
 VMICONS:=$(addprefix $(APP)/Contents/Resources/,$(notdir $(OSXICONS)))
 VMMENUNIB:=$(APP)/Contents/Resources/English.lproj/MainMenu.nib
+VMLOCALIZATION:=$(APP)/Contents/Resources/English.lproj/Localizable.strings
 SOURCES:=
 ifneq ($(SOURCEFILE),)
 SOURCES:=./$(SOURCEFILE)
@@ -62,7 +63,8 @@ SOURCES:=$(SOURCES) $(APP)/Contents/Resources/$(APPSOURCE)
 endif
 
 
-$(APP):	cleanbundles $(VMEXE) $(VMBUNDLES) $(VMPLIST) $(VMMENUNIB) $(VMICONS) \
+$(APP):	cleanbundles $(VMEXE) $(VMBUNDLES) \
+		$(VMPLIST) $(VMLOCALIZATION) $(VMMENUNIB) $(VMICONS) \
  		$(SOURCES) $(APPPOST) signapp touchapp
 
 # Bundles with missing prerequisites won't be built. But we need to force the
@@ -74,7 +76,7 @@ cleanbundles:
 	-touch $(OBJDIR)/*.ignore
 
 $(VMEXE): $(OBJDIR)/$(VM)
-	mkdir -p $(APP)/Contents/MacOS
+	@mkdir -p $(APP)/Contents/MacOS
 	cp -p $(OBJDIR)/$(VM) $(APP)/Contents/MacOS
 
 $(APP)/Contents/Resources/%.bundle: $(BLDDIR)/vm/%.bundle
@@ -88,15 +90,19 @@ $(APP)/Contents/Resources/%.bundle: $(BLDDIR)/vm/%.bundle
 	fi
 
 $(VMPLIST): $(OSXDIR)/$(SYSTEM)-Info.plist getversion
-	mkdir -p $(APP)/Contents
+	@mkdir -p $(APP)/Contents
 	sed "s/\$$(VERSION)/`getversion VERSION_TAG`/" $< | \
 	sed "s/\$$(VERSION_NUMBER)/`getversion VERSION_NUMBER`/" | \
 	sed "s/\$$(VERSION_TAG)/`getversion VERSION_TAG`/" | \
 	sed "s/\$$(VIRTUAL_MACHINE_NICKNAME)/`getversion VIRTUAL_MACHINE_NICKNAME`/" | \
 	sed "s/\$$(VM_NICKNAME)/`getversion VM_NICKNAME`/" > $@
 
+$(VMLOCALIZATION): $(OSXCOMMONDIR)/English.lproj/$(SYSTEM)-Localizable.strings
+	@mkdir -p $(dir $@)
+	cp -p $< $@
+
 $(VMMENUNIB): $(PLATDIR)/iOS/vm/English.lproj/MainMenu.xib
-	mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 	$(XCUB)/ibtool --errors --warnings --notices --module $(VM) \
 	--minimum-deployment-target $(TARGET_VERSION_MIN) \
 	--auto-activate-custom-fonts --output-format human-readable-text \
@@ -104,7 +110,7 @@ $(VMMENUNIB): $(PLATDIR)/iOS/vm/English.lproj/MainMenu.xib
 	$(PLATDIR)/iOS/vm/English.lproj/MainMenu.xib
 
 $(APP)/Contents/Resources/%.icns: $(OSXDIR)/%.icns
-	mkdir -p $(APP)/Contents/Resources
+	@mkdir -p $(APP)/Contents/Resources
 	cp -p $< $(APP)/Contents/Resources
 
 # To sign the app, set SIGNING_IDENTITY in the environment, e.g.
