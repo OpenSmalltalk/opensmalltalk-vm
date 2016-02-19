@@ -262,8 +262,8 @@ static int buttonState=0;
 
 	NSPoint local_point = [aView convertPoint: [theEvent locationInWindow] fromView:nil];
 
-	evt.x = (sqInt) lrintf(local_point.x); 
-	evt.y = (sqInt) lrintf(local_point.y);
+	evt.x = local_point.x; 
+	evt.y = local_point.y;
 
 	int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
 	evt.buttons = buttonAndModifiers & 0x07;
@@ -404,8 +404,8 @@ static int buttonState=0;
 	evt.type= EventTypeDragDropFiles;
 	evt.timeStamp= ioMSecs();
 	evt.dragType= dragType;
-	evt.x = (sqInt) lrintf(local_point.x); 
-	evt.y = (sqInt) lrintf(local_point.y);
+	evt.x = local_point.x; 
+	evt.y = local_point.y;
 	evt.modifiers= (buttonState >> 3);
 	evt.numFiles= numFiles;
 	evt.windowIndex = windowIndex;
