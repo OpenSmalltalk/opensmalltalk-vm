@@ -120,14 +120,6 @@ ThreadedPPCBEFFIPlugin >> ffiPushUnsignedInt: value in: calloutState [
 ]
 
 { #category : #marshalling }
-ThreadedPPCBEFFIPlugin >> ffiPushUnsignedLong: value in: calloutState [
-	<var: #calloutState type: #'CalloutState *'>
-	<inline: true>
-	self shouldBeImplemented.
-	^0
-]
-
-{ #category : #marshalling }
 ThreadedPPCBEFFIPlugin >> ffiPushUnsignedLongLong: value in: calloutState [
 	<var: #value type: #usqLong>
 	<var: #calloutState type: #'CalloutState *'>

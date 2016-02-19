@@ -1,0 +1,80 @@
+"
+A ThreadedFFICalloutStateForX64 is a holder for the callout state maintained while marshalling an FFI call on an X64 (x86-64) system.
+"
+Class {
+	#name : #ThreadedFFICalloutStateForX64,
+	#superclass : #ThreadedFFICalloutState,
+	#instVars : [
+		'registerIndex',
+		'integerRegisters',
+		'floatRegisters'
+	],
+	#category : #'VMMaker-Plugins'
+}
+
+{ #category : #translation }
+ThreadedFFICalloutStateForX64 class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
+	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a ThreadedFFICalloutState struct."
+
+	ThreadedFFICalloutState instVarNamesAndTypesForTranslationDo: aBinaryBlock.
+	self instVarNames do:
+		[:ivn|
+		aBinaryBlock
+			value: ivn
+			value: (ivn caseOf: {
+						['integerRegisters']	-> [{#sqInt. '[', self pluginClass numRegArgs printString, ']'}].
+						['floatRegisters']	-> [{#double. '[', self pluginClass numFloatRegArgs printString, ']'}] }
+					otherwise:
+						[#sqInt])]
+]
+
+{ #category : #translation }
+ThreadedFFICalloutStateForX64 class >> pluginClass [
+	^self subclassResponsibility
+]
+
+{ #category : #accessing }
+ThreadedFFICalloutStateForX64 >> floatRegisters [
+	"Answer the value of floatRegisters"
+
+	^ floatRegisters
+]
+
+{ #category : #accessing }
+ThreadedFFICalloutStateForX64 >> floatRegisters: anObject [
+
+	^floatRegisters := anObject
+]
+
+{ #category : #'initialize-release' }
+ThreadedFFICalloutStateForX64 >> initialize [
+	super initialize.
+	registerIndex := 0.
+	integerRegisters := CArrayAccessor on: (Array new: self class pluginClass numRegArgs).
+	floatRegisters := CArrayAccessor on: (Array new: self class pluginClass numFloatRegArgs)
+]
+
+{ #category : #accessing }
+ThreadedFFICalloutStateForX64 >> integerRegisters [
+	"Answer the value of integerRegisters"
+
+	^ integerRegisters
+]
+
+{ #category : #accessing }
+ThreadedFFICalloutStateForX64 >> integerRegisters: anObject [
+
+	^integerRegisters := anObject
+]
+
+{ #category : #accessing }
+ThreadedFFICalloutStateForX64 >> registerIndex [
+
+	^ registerIndex
+]
+
+{ #category : #accessing }
+ThreadedFFICalloutStateForX64 >> registerIndex: anObject [
+
+	^registerIndex := anObject
+]
