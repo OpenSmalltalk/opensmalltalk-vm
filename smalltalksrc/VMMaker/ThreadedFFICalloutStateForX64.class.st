@@ -62,7 +62,7 @@ ThreadedFFICalloutStateForX64 >> floatRegisters: anObject [
 { #category : #'initialize-release' }
 ThreadedFFICalloutStateForX64 >> initialize [
 	super initialize.
-	registerIndex := 0.
+	integerRegisterIndex := floatRegisterIndex := 0.
 	integerRegisters := CArrayAccessor on: (Array new: self class pluginClass numRegArgs).
 	floatRegisters := CArrayAccessor on: (Array new: self class pluginClass numFloatRegArgs)
 ]

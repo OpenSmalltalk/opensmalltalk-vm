@@ -704,20 +704,20 @@ ThreadedFFIPlugin >> ffiCheckReturn: retSpec With: retClass in: calloutState [
 	<var: #calloutState type: #'CalloutState *'>
 	"Make sure we can return an object of the given type"
 	<inline: true>
-	| ffiRetSpec |
-	retClass = interpreterProxy nilObject ifFalse:[
-		(interpreterProxy includesBehavior: retClass 
-						ThatOf: interpreterProxy classExternalStructure)
-			ifFalse:[^FFIErrorBadReturn]].
+	retClass = interpreterProxy nilObject ifFalse:
+		[(interpreterProxy
+				includesBehavior: retClass 
+				ThatOf: interpreterProxy classExternalStructure) ifFalse:
+			[^FFIErrorBadReturn]].
 
-	(interpreterProxy isWords: retSpec)
-		ifFalse:[^FFIErrorWrongType].
-	(interpreterProxy slotSizeOf: retSpec) = 0 ifTrue:[^FFIErrorWrongType].
-	ffiRetSpec := self cCoerce: (interpreterProxy firstIndexableField: retSpec) to: #int.
-	calloutState ffiRetHeader: (interpreterProxy longAt: ffiRetSpec).
-	(self isAtomicType: calloutState ffiRetHeader) ifFalse:[
-		(retClass = interpreterProxy nilObject)
-			ifTrue:[^FFIErrorBadReturn]].
+	((interpreterProxy isWords: retSpec)
+	 and: [(interpreterProxy slotSizeOf: retSpec) > 0]) ifFalse:
+		[^FFIErrorWrongType].
+
+	calloutState ffiRetHeader: (interpreterProxy fetchLong32: 0 ofObject: retSpec).
+	(self isAtomicType: calloutState ffiRetHeader) ifFalse:
+		[retClass = interpreterProxy nilObject ifTrue:
+			[^FFIErrorBadReturn]].
 	(calloutState ffiRetHeader bitAnd: (FFIFlagPointer bitOr: FFIFlagStructure)) = FFIFlagStructure ifTrue:
 		[calloutState structReturnSize: (calloutState ffiRetHeader bitAnd: FFIStructSizeMask)].
 	^0
@@ -1500,14 +1500,16 @@ ThreadedFFIPlugin >> primitiveFFIAllocate [
 	| byteSize addr oop ptr |
 	<export: true>
 	<inline: false>
-	<var: #ptr type:'int *'>
+	<var: #ptr type: #'long *'>
 	byteSize := interpreterProxy stackIntegerValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
+	interpreterProxy failed ifTrue:
+		[^nil].
 	addr := self ffiAlloc: byteSize.
-	addr = 0 ifTrue:[^interpreterProxy primitiveFail].
+	addr = 0 ifTrue:
+		[^interpreterProxy primitiveFail].
 	oop := interpreterProxy 
 			instantiateClass: interpreterProxy classExternalAddress 
-			indexableSize: 4.
+			indexableSize: (self sizeof: #long).
 	ptr := interpreterProxy firstIndexableField: oop.
 	ptr at: 0 put: addr.
 	^interpreterProxy pop: 2 thenPush: oop
@@ -1596,21 +1598,20 @@ ThreadedFFIPlugin >> primitiveFFIFree [
 	| addr oop ptr |
 	<export: true>
 	<inline: false>
-	<var: #ptr type:'int *'>
+	<var: #ptr type: #'long *'>
 	oop := interpreterProxy stackObjectValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
-	(interpreterProxy fetchClassOf: oop) = (interpreterProxy classExternalAddress)
-		ifFalse:[^interpreterProxy primitiveFail].
-	(interpreterProxy byteSizeOf: oop) = 4
-		ifFalse:[^interpreterProxy primitiveFail].
+	((interpreterProxy fetchClassOf: oop) = interpreterProxy classExternalAddress
+	 and: [(interpreterProxy byteSizeOf: oop) = (self sizeof: #long)]) ifFalse:
+		[^interpreterProxy primitiveFail].
 	ptr := interpreterProxy firstIndexableField: oop.
 	addr := ptr at: 0.
 	"Don't you dare to free Squeak's memory!"
-	(addr = 0 or:[interpreterProxy isInMemory: addr])
-		ifTrue:[^interpreterProxy primitiveFail].
+	(addr = 0
+	 or: [(addr asUnsignedLong bitAnd: (self sizeof: #long) - 1) ~= 0
+	 or: [interpreterProxy isInMemory: addr]]) ifTrue:
+		[^interpreterProxy primitiveFail].
 	self ffiFree: addr.
-	^ptr at: 0 put: 0. "cleanup"
-
+	^ptr at: 0 put: 0 "cleanup"
 ]
 
 { #category : #primitives }
@@ -1763,7 +1764,7 @@ ThreadedFFIPlugin >> primitiveLoadSymbolFromModule [
 	ptr := interpreterProxy firstIndexableField: oop.
 	ptr at: 0 put: address.
 	
-	interpreterProxy methodReturnValue: oop
+	^interpreterProxy methodReturnValue: oop
 ]
 
 { #category : #primitives }
@@ -1794,19 +1795,19 @@ ThreadedFFIPlugin >> primitiveSetManualSurfacePointer [
 	"Create a 'manual surface' data-structure.  See the ExternalForm class in the FFI package for example usage."
 	"arguments: name(type, stack offset)
 		surfaceID(Integer, 1)
-		ptr(uint32, 0)"
+		ptr(uint32/uint64, 0)"
 	| surfaceID ptr result |
 	<export: true>
-	<var: #ptr type: #'unsigned int'>
+	<var: #ptr type: #'unsigned long'>
 	
-	interpreterProxy methodArgumentCount == 2 ifFalse: [^interpreterProxy primitiveFail].
+	interpreterProxy methodArgumentCount = 2 ifFalse: [^interpreterProxy primitiveFail].
 	surfaceID := interpreterProxy stackIntegerValue: 1.
-	ptr := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	ptr := interpreterProxy positiveMachineIntegerValueOf: (interpreterProxy stackValue: 0).
 	interpreterProxy failed ifTrue: [^nil].
 
 	self touch: surfaceID; touch: ptr.
 	
-	result := self cCode: 'setManualSurfacePointer(surfaceID, (void*)ptr)'.
+	result := self setManualSurface: surfaceID Pointer: ptr asVoidPointer.
 	result = 0 ifTrue: [^interpreterProxy primitiveFail].
 	^interpreterProxy pop: 2
 	

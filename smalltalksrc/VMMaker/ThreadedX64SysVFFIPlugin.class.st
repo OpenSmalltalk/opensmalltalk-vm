@@ -10,6 +10,11 @@ Class {
 }
 
 { #category : #translation }
+ThreadedX64SysVFFIPlugin class >> ancilliaryClasses: options [
+	^{ self calloutStateClass. ThreadedFFIX64SixteenByteReturn }
+]
+
+{ #category : #translation }
 ThreadedX64SysVFFIPlugin class >> excludingPredefinedMacros [
 	"Answer the predefined macros that disqualify the platforms a subclass handles, if any.
 	 This can be used to differentiate e.g. x64 Sys V from x64 Win64."
@@ -119,7 +124,7 @@ ThreadedX64SysVFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: 
 		 'typedef void* VoidPointer' and VoidPointer must be returned as pointer *not* as struct."
 		 (calloutState ffiRetHeader anyMask: FFIFlagPointer)
 			ifTrue:
-				[oop := self ffiReturnPointer: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState]
+				[oop := self ffiReturnPointer: intRet a ofType: (self ffiReturnType: specOnStack) in: calloutState]
 			ifFalse:
 				[oop := self ffiReturnStruct: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
 		 ^oop].
@@ -128,7 +133,7 @@ ThreadedX64SysVFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: 
 		ifTrue:
 			[oop := interpreterProxy floatObjectOf: floatRet]
 		ifFalse:
-			[oop := self ffiCreateIntegralResultOop: intRet
+			[oop := self ffiCreateIntegralResultOop: intRet a
 						ofAtomicType: atomicType
 						in: calloutState].
 	^interpreterProxy methodReturnValue: oop
@@ -203,7 +208,7 @@ ThreadedX64SysVFFIPlugin >> ffiReturnStruct: sixteenByteRet ofType: ffiRetType i
 					indexableSize: calloutState structReturnSize].
 	self mem: (interpreterProxy firstIndexableField: oop)
 		cp: ((self returnStructInRegisters: calloutState structReturnSize)
-				ifTrue: [self addressOf: sixteenByteRet]
+				ifTrue: [(self addressOf: sixteenByteRet) asVoidPointer]
 				ifFalse: [calloutState limit])
 		 y: calloutState structReturnSize.
 	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
