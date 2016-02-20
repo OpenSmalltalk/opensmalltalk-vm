@@ -2,6 +2,7 @@
 # SqueakFFIPrims needs implementing
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
+SqueakFFI \
 SqueakSSL \
 LocalePlugin \
 UnicodePlugin \
