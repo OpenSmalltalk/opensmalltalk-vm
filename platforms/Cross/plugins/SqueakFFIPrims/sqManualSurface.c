@@ -38,7 +38,7 @@ void initSurfacePluginFunctionPointers()
 }
 
 /* This is the structure that represents a "manual surface".  These are 
-   created/destroyed by new primitives in this plugin.  During it's life-time,
+   created/destroyed by new primitives in this plugin.  During its life-time,
    it may be touched directly from Squeak code to set/clear "ptr", and also
    treated as a generic surface via BitBlt's use of the SurfacePlugin. */
 typedef struct {
