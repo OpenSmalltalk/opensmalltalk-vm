@@ -6,7 +6,7 @@ Note that unlike the System V x86-64 ABI, the Win64 ABI does /not/ decompose str
 Class {
 	#name : #ThreadedX64Win64FFIPlugin,
 	#superclass : #ThreadedX64FFIPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }
@@ -68,11 +68,11 @@ ThreadedX64Win64FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in:
 
 	calloutState floatRegisterIndex > 0 ifTrue:
 		[self 
-			load: ((calloutState floatRegisters at: 0) at: 0)
-			Flo: ((calloutState floatRegisters at: 1) at: 0)
-			at: ((calloutState floatRegisters at: 2) at: 0)
-			Re: ((calloutState floatRegisters at: 3) at: 0)
-			gs: ((calloutState floatRegisters at: 4) at: 0)].
+			load: (calloutState floatRegisters at: 0)
+			Flo: (calloutState floatRegisters at: 1)
+			at: (calloutState floatRegisters at: 2)
+			Re: (calloutState floatRegisters at: 3)
+			gs: (calloutState floatRegisters at: 4)].
 
 	atomicType := self atomicTypeOf: calloutState ffiRetHeader.
 	(atomicType >> 1) = (FFITypeSingleFloat > 1)
@@ -142,6 +142,29 @@ ThreadedX64Win64FFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSp
 	"For now just push the pointer; we should copy the struct to the outgoing stack frame!!"
 	self flag: 'quick hack'.
 	^self ffiPushPointer: pointer in: calloutState
+]
+
+{ #category : #'callout support' }
+ThreadedX64Win64FFIPlugin >> ffiReturnStruct: intRet ofType: ffiRetType in: calloutState [
+	<var: #intRet type: #usqLong>
+	<var: #calloutState type: #'CalloutState *'>
+	"Create a structure return value from an external function call.  The value has been stored in
+	 alloca'ed space pointed to by the calloutState or in the return value."
+	| retOop retClass oop |
+	<inline: true>
+	retClass := interpreterProxy fetchPointer: 1 ofObject: ffiRetType.
+	retOop := interpreterProxy instantiateClass: retClass indexableSize: 0.
+	self remapOop: retOop
+		in: [oop := interpreterProxy 
+					instantiateClass: interpreterProxy classByteArray 
+					indexableSize: calloutState structReturnSize].
+	self mem: (interpreterProxy firstIndexableField: oop)
+		cp: ((self returnStructInRegisters: calloutState structReturnSize)
+				ifTrue: [self addressOf: intRet]
+				ifFalse: [calloutState limit])
+		 y: calloutState structReturnSize.
+	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
+	^interpreterProxy methodReturnValue: retOop
 ]
 
 { #category : #marshalling }

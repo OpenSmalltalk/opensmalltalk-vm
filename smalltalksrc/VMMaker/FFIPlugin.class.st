@@ -20,7 +20,7 @@ Class {
 	#pools : [
 		'FFIConstants'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #accessing }
