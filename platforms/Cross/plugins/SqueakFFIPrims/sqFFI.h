@@ -147,9 +147,9 @@ int ffiLogCallOfLength(void *nameIndex, int nameLength);
    -1 otherwise.  The other return true for success, and false for failure.
 */   
 #include "../SurfacePlugin/SurfacePlugin.h"
-void initManualSurfaceFunctionPointers(fn_ioRegisterSurface reg, fn_ioUnregisterSurface unreg, fn_ioFindSurface find);
-int createManualSurface(int width, int height, int rowPitch, int depth, int isMSB);
-int destroyManualSurface(int surfaceID);
-int setManualSurfacePointer(int surfaceID, void* ptr);
+void initManualSurfaceFunctionPolongers(fn_ioRegisterSurface reg, fn_ioUnregisterSurface unreg, fn_ioFindSurface find);
+long createManualSurface(long width, long height, long rowPitch, long depth, long isMSB);
+long destroyManualSurface(long surfaceID);
+long setManualSurfacePointer(long surfaceID, void* ptr);
 
 #endif /* SQ_FFI_H */

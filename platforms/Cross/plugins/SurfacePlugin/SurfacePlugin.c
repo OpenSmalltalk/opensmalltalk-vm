@@ -32,13 +32,13 @@
 #endif
 
 typedef struct SqueakSurface {
-	int handle; /* client supplied handle */
+	long handle; /* client supplied handle */
 	sqSurfaceDispatch *dispatch;
 } SqueakSurface;
 
 static SqueakSurface *surfaceArray = NULL;
-static int numSurfaces = 0;
-static int maxSurfaces = 0;
+static long numSurfaces = 0;
+static long maxSurfaces = 0;
 
 #ifdef SQUEAK_BUILTIN_PLUGIN
 static const char *moduleName = "SurfacePlugin "__DATE__" (i)";
@@ -51,29 +51,29 @@ static VirtualMachine *interpreterProxy;
 
 #pragma export on
 /* module initialization/shutdown */
-EXPORT(int) setInterpreter(struct VirtualMachine *interpreterProxy);
+EXPORT(long) setInterpreter(struct VirtualMachine *interpreterProxy);
 EXPORT(const char*) getModuleName(void);
-EXPORT(int) initialiseModule(void);
-EXPORT(int) shutdownModule(void);
+EXPORT(long) initialiseModule(void);
+EXPORT(long) shutdownModule(void);
 
 /* critical FXBlt entry points */
-EXPORT(int) ioGetSurfaceFormat (int surfaceID, int* width, int* height, int* depth, int* isMSB);
-EXPORT(int) ioLockSurface (int surfaceID, int *pitch, int x, int y, int w, int h);
-EXPORT(int) ioUnlockSurface(int surfaceID, int x, int y, int w, int h);
+EXPORT(long) ioGetSurfaceFormat (long surfaceID, long* width, long* height, long* depth, long* isMSB);
+EXPORT(long) ioLockSurface (long surfaceID, long *pitch, long x, long y, long w, long h);
+EXPORT(long) ioUnlockSurface(long surfaceID, long x, long y, long w, long h);
 
 /* interpreter entry point */
-EXPORT(int) ioShowSurface(int surfaceID, int x, int y, int w, int h);
+EXPORT(long) ioShowSurface(long surfaceID, long x, long y, long w, long h);
 
 /* client entry points */
-EXPORT(int) ioRegisterSurface(int surfaceHandle, sqSurfaceDispatch *fn, int *surfaceID);
-EXPORT(int) ioUnregisterSurface(int surfaceID);
-EXPORT(int) ioFindSurface(int surfaceID, sqSurfaceDispatch *fn, int *surfaceHandle);
+EXPORT(long) ioRegisterSurface(long surfaceHandle, sqSurfaceDispatch *fn, long *surfaceID);
+EXPORT(long) ioUnregisterSurface(long surfaceID);
+EXPORT(long) ioFindSurface(long surfaceID, sqSurfaceDispatch *fn, long *surfaceHandle);
 #pragma export off
 
 /* ioGetSurfaceFormat:
 	Return information describing the given surface.
 	Return true if successful, false otherwise. */
-EXPORT(int) ioGetSurfaceFormat (int surfaceID, int* width, int* height, int* depth, int* isMSB)
+EXPORT(long) ioGetSurfaceFormat (long surfaceID, long* width, long* height, long* depth, long* isMSB)
 {
 	SqueakSurface *surface;
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
@@ -87,7 +87,7 @@ EXPORT(int) ioGetSurfaceFormat (int surfaceID, int* width, int* height, int* dep
 	Lock the bits of the surface. 
 	Return a pointer to the actual surface bits,
 	or NULL on failure. */
-EXPORT(int) ioLockSurface (int surfaceID, int *pitch, int x, int y, int w, int h)
+EXPORT(long) ioLockSurface (long surfaceID, long *pitch, long x, long y, long w, long h)
 {
 	SqueakSurface *surface;
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
@@ -100,7 +100,7 @@ EXPORT(int) ioLockSurface (int surfaceID, int *pitch, int x, int y, int w, int h
 /* ioUnlockSurface:
 	Unlock the bits of the surface. 
 	The return value is ignored. */
-EXPORT(int) ioUnlockSurface(int surfaceID, int x, int y, int w, int h)
+EXPORT(long) ioUnlockSurface(long surfaceID, long x, long y, long w, long h)
 {
 	SqueakSurface *surface;
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
@@ -112,7 +112,7 @@ EXPORT(int) ioUnlockSurface(int surfaceID, int x, int y, int w, int h)
 
 /* ioShowSurface:
 	Transfer the bits of a surface to the screen. */
-EXPORT(int) ioShowSurface(int surfaceID, int x, int y, int w, int h)
+EXPORT(long) ioShowSurface(long surfaceID, long x, long y, long w, long h)
 {
 	SqueakSurface *surface;
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
@@ -127,9 +127,9 @@ EXPORT(int) ioShowSurface(int surfaceID, int x, int y, int w, int h)
 	the set of surface functions. The new ID is returned
 	in surfaceID. Returns true if successful, false 
 	otherwise. */
-EXPORT(int) ioRegisterSurface(int surfaceHandle, sqSurfaceDispatch *fn, int *surfaceID)
+EXPORT(long) ioRegisterSurface(long surfaceHandle, sqSurfaceDispatch *fn, long *surfaceID)
 {
-	int index;
+	long index;
 
 	if(!fn) return 0;
 	if(fn->majorVersion != 1 && fn->minorVersion != 0) return 0;
@@ -157,7 +157,7 @@ EXPORT(int) ioRegisterSurface(int surfaceHandle, sqSurfaceDispatch *fn, int *sur
 /* ioUnregisterSurface:
 	Unregister the surface with the given handle.
 	Returns true if successful, false otherwise. */
-EXPORT(int) ioUnregisterSurface(int surfaceID)
+EXPORT(long) ioUnregisterSurface(long surfaceID)
 {
 	SqueakSurface *surface;
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) return 0;
@@ -174,7 +174,7 @@ EXPORT(int) ioUnregisterSurface(int surfaceID)
 	the given set of surface functions. The registered handle
 	is returned in surfaceHandle. Return true if successful
 	(e.g., the surface has been found), false otherwise. */
-EXPORT(int) ioFindSurface(int surfaceID, sqSurfaceDispatch *fn, int *surfaceHandle)
+EXPORT(long) ioFindSurface(long surfaceID, sqSurfaceDispatch *fn, long *surfaceHandle)
 {
 	SqueakSurface *surface;
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) return 0;
@@ -185,8 +185,8 @@ EXPORT(int) ioFindSurface(int surfaceID, sqSurfaceDispatch *fn, int *surfaceHand
 	return 1;
 }
 
-EXPORT(int) setInterpreter(struct VirtualMachine* anInterpreter) {
-    int ok;
+EXPORT(long) setInterpreter(struct VirtualMachine* anInterpreter) {
+    long ok;
 
 	interpreterProxy = anInterpreter;
 	ok = interpreterProxy->majorVersion() == VM_PROXY_MAJOR;
@@ -200,14 +200,14 @@ EXPORT(const char*) getModuleName(void) {
 	return moduleName;
 }
 
-EXPORT(int) initialiseModule() {
+EXPORT(long) initialiseModule() {
 	surfaceArray = NULL;
 	numSurfaces = 0;
 	maxSurfaces = 0;
 	return 1;
 }
 
-EXPORT(int) shutdownModule() {
+EXPORT(long) shutdownModule() {
 	/* This module can only be shut down if no surfaces are registered */
 	if(numSurfaces != 0) return 0;
 	free(surfaceArray);
@@ -230,4 +230,3 @@ void* SurfacePlugin_exports[][3] = {
   {NULL, NULL, NULL}
 };
 #endif /* ifdef SQ_BUILTIN_PLUGIN */
-
