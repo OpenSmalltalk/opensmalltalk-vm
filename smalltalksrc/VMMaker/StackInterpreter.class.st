@@ -6540,7 +6540,7 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 
 	(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 		[(objectMemory isForwarded: method) ifTrue:
-			[theIPPtr := instructionPointer - method asVoidPointer.
+			[theIPPtr := instructionPointer - method.
 			 method := objectMemory followForwarded: method.
 			 instructionPointer := method + theIPPtr].
 		(objectMemory isOopForwarded: newMethod) ifTrue:
