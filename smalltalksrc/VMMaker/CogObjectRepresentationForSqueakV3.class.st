@@ -995,8 +995,9 @@ CogObjectRepresentationForSqueakV3 >> numSmallIntegerTagBits [
 ]
 
 { #category : #'garbage collection' }
-CogObjectRepresentationForSqueakV3 >> remapObject: oop [
-	^objectMemory remap: oop
+CogObjectRepresentationForSqueakV3 >> remapObject: objOop [
+	self assert: (objectMemory addressCouldBeObj: objOop).
+	^objectMemory remap: objOop
 ]
 
 { #category : #'garbage collection' }

@@ -3388,7 +3388,7 @@ Cogit >> checkIfValidOopRef: annotation pc: mcpc cogMethod: cogMethod [
 					[coInterpreter print: 'cache tag leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 					^1]]
 			ifFalse: "unlinked send or super send; cacheTag is a selector unless 64-bit, in which case it is an index."
-				[(objectMemory wordSize = 8
+				[(self inlineCacheTagsAreIndexes
 				  or: [objectRepresentation checkValidOopReference: selectorOrCacheTag]) ifFalse:
 					[coInterpreter print: 'selector leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 					^1]]].
@@ -3551,7 +3551,8 @@ Cogit >> checkValidObjectReferencesInClosedPIC: cPIC [
 	"For each case we check any object reference at the end address - sizeof(conditional instruction) and then increment the end address by case size"
 	2 to: cPIC cPICNumCases do:
 		[:i|
-		objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
+		(self inlineCacheTagsAreIndexes not
+		 and: [objectRepresentation inlineCacheTagsMayBeObjects]) ifTrue:
 			[(self checkMaybeObjRefInClosedPIC: (backEnd literal32BeforeFollowingAddress: pc - backEnd jumpLongConditionalByteSize)) ifFalse:
 				[self print: 'object leak in CPIC '; printHex: cPIC asInteger;
 					print: ' @ '; printHex: pc - backEnd jumpLongConditionalByteSize - backEnd loadLiteralByteSize; cr.
@@ -3589,8 +3590,9 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 	2 to: cPIC cPICNumCases do:
 		[:i| 
 		pc := self addressOfEndOfCase: i inCPIC: cPIC.
-		(objectRepresentation inlineCacheTagsMayBeObjects
-		and: [objectRepresentation couldBeObject: (object := literalsManager backEnd literal32BeforeFollowingAddress: pc - backEnd jumpLongConditionalByteSize)]) ifTrue:
+		(self inlineCacheTagsAreIndexes not
+		 and: [objectRepresentation inlineCacheTagsMayBeObjects
+		 and: [objectRepresentation couldBeObject: (object := literalsManager backEnd literal32BeforeFollowingAddress: pc - backEnd jumpLongConditionalByteSize)]]) ifTrue:
 			[(objectMemory isMarked: object) ifFalse:
 				[^true]].
 		"Check the potential method oop for subsequent cases."
@@ -5851,7 +5853,7 @@ Cogit >> genLoadInlineCacheWithSelector: selectorIndex [
 					ifTrue: [selectorIndex negated between: 1 and: self numSpecialSelectors]
 					ifFalse: [selectorIndex between: 0 and: (objectMemory literalCountOf: methodObj) - 1]).
 
-	objectMemory wordSize = 8
+	self inlineCacheTagsAreIndexes
 		ifTrue:
 			[cacheValue := selectorIndex]
 		ifFalse:
@@ -7166,14 +7168,24 @@ Cogit >> initialized [
 ]
 
 { #category : #'in-line cacheing' }
+Cogit >> inlineCacheTagsAreIndexes [
+	"The Cogit always generates 32-bit inline caches.  This implies that in 64-bits there is no room
+	 in an unlinked inline cache for a selector oop.  Instead it contains a signed 32-bit index, positive
+	 for selectors in a method's literal frame and negative for selectors in the specialSelectorsOop.
+	 And it implies that linked inline cache entries contain class indices, not class oops."
+	<inline: true>
+	^objectMemory wordSize = 8
+]
+
+{ #category : #'in-line cacheing' }
 Cogit >> inlineCacheValueForSelector: selector in: aCogMethod at: mcpc [
 	"Answer the value to put in an inline-cache that is being loaded with the selector.
 	 Usually this is simply the selector, but in 64-bits the cache is only 32-bits wide
 	 and so the cache is loaded with the index of the selector."
 	<inline: true>
-	^objectMemory wordSize < 8
-		ifTrue: [selector]
-		ifFalse: [self indexForSelector: selector in: aCogMethod at: mcpc]
+	^self inlineCacheTagsAreIndexes
+		ifTrue: [self indexForSelector: selector in: aCogMethod at: mcpc]
+		ifFalse: [selector]
 ]
 
 { #category : #'tests-method map' }
@@ -7693,7 +7705,7 @@ Cogit >> mapFor: cogMethod performUntil: functionSymbol arg: arg [
 	| mcpc map mapByte annotation result |
 	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
 	map := self mapStartFor: cogMethod.
-	objectMemory wordSize = 8 ifTrue:
+	self inlineCacheTagsAreIndexes ifTrue:
 		[enumeratingCogMethod := cogMethod].
 	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
 		[mapByte >= FirstAnnotation
@@ -7734,7 +7746,8 @@ Cogit >> mapObjectReferencesInClosedPIC: cPIC [
 	"Next we check the potential class ref in the compare instruction, and the potential method oop load for each case."
 	2 to: cPIC cPICNumCases do:
 		[:i|
-		objectRepresentation inlineCacheTagsMayBeObjects ifTrue:
+		(self inlineCacheTagsAreIndexes not
+		 and: [objectRepresentation inlineCacheTagsMayBeObjects]) ifTrue:
 			[(self remapMaybeObjRefInClosedPICAt: pc - backEnd jumpLongConditionalByteSize) ifTrue:
 				[refersToYoung := true]].
 		(self remapMaybeObjRefInClosedPICAt: pc - backEnd jumpLongConditionalByteSize - backEnd cmpC32RTempByteSize) ifTrue:
@@ -8787,11 +8800,12 @@ Cogit >> offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into: tri
 	 or in-line cache tags (classes, class indices, immediate bit patterns, etc).
 	 Note that selectors can be immediate so there is no guarantee that they
 	 are markable/remappable objects."
-	tagCouldBeObj := objectRepresentation inlineCacheTagsMayBeObjects
-						or: [entryPoint < methodZoneBase
-						or: [(entryPoint bitAnd: entryPointMask) = uncheckedEntryAlignment
-						or: [(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-							and: [(self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *') cmType = CMOpenPIC]]]].
+	tagCouldBeObj := self inlineCacheTagsAreIndexes not
+						and: [objectRepresentation inlineCacheTagsMayBeObjects
+							or: [entryPoint < methodZoneBase
+							or: [(entryPoint bitAnd: entryPointMask) = uncheckedEntryAlignment
+							or: [(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
+								and: [(self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *') cmType = CMOpenPIC]]]]].
 	trinaryBlock
 		value: entryPoint
 		value: cacheTag
@@ -9799,7 +9813,7 @@ Cogit >> selectorForSendAt: mcpc annotation: annotation in: aCompiledMethod [
 						targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
 						targetMethod selector]
 					ifFalse:
-						[objectMemory wordSize = 8
+						[self inlineCacheTagsAreIndexes
 							ifTrue: [self selectorFromSelectorIndex: (backEnd inlineCacheTagAt: mcpc) signedIntFromLong
 										in: aCompiledMethod]
 							ifFalse: [backEnd inlineCacheTagAt: mcpc]].
