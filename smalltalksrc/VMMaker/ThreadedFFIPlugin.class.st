@@ -23,7 +23,7 @@ Class {
 	#pools : [
 		'FFIConstants'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }
@@ -197,15 +197,8 @@ ThreadedFFIPlugin class >> preambleCCode [
 # endif
 # if WIN32
 #	define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 1
-# else
-#	define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 0
 # endif
 #endif /* defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) */
-
-#if defined(__arm__)
-#	define WIN32_X86_STRUCT_RETURN 0
-#	define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 0
-#endif /* defined(__arm__) */
 
 #if !defined(ALLOCA_LIES_SO_USE_GETSP)
 # if defined(__MINGW32__) && (__GNUC__ >= 3)
@@ -219,6 +212,10 @@ ThreadedFFIPlugin class >> preambleCCode [
 #	define ALLOCA_LIES_SO_USE_GETSP 0
 # endif
 #endif /* !defined(ALLOCA_LIES_SO_USE_GETSP) */
+
+#if !defined(PLATFORM_API_USES_CALLEE_POPS_CONVENTION)
+# define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 0
+#endif
 
 /* The dispatchOn:in:with:with: generates an unwanted call on error.  Just squash it. */
 #define error(foo) 0
@@ -301,6 +298,32 @@ ThreadedFFIPlugin >> dispatchFunctionPointer: aFunctionPointer [
 	"In C aFunctionPointer is void (*aFunctionPointer)()"
 	<cmacro: '(aFunctionPointer) (aFunctionPointer)()'>
 	^self perform: aFunctionPointer
+]
+
+{ #category : #'callout support' }
+ThreadedFFIPlugin >> dispatchFunctionPointer: aFunctionPointer with: int1 with: int2 with: int3 with: int4 [
+	"In C aFunctionPointer is void (*aFunctionPointer)(int, int, int, int)"
+	<cmacro: '(aFunctionPointer, int1, int2, int3, int4) (aFunctionPointer)(int1, int2, int3, int4)'>
+	^self 
+		perform: aFunctionPointer
+		with: int1
+		with: int2
+		with: int3
+		with: int4
+]
+
+{ #category : #'callout support' }
+ThreadedFFIPlugin >> dispatchFunctionPointer: aFunctionPointer with: int1 with: int2 with: int3 with: int4 with: int5 with: int6 [
+	"In C aFunctionPointer is void (*aFunctionPointer)(int, int, int, int)"
+	<cmacro: '(aFunctionPointer,a1,a2, a3, a4,a5,a6) (aFunctionPointer)(a1,a2, a3, a4,a5,a6)'>
+	^self 
+		perform: aFunctionPointer
+		with: int1
+		with: int2
+		with: int3
+		with: int4
+		with: int5
+		with: int6
 ]
 
 { #category : #'symbol loading' }

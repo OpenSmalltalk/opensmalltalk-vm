@@ -6,7 +6,7 @@ Class {
 		'integerRegisters',
 		'floatRegisters'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }

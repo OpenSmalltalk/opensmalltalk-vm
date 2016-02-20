@@ -5,11 +5,12 @@ Class {
 	#name : #ThreadedFFICalloutStateForX64,
 	#superclass : #ThreadedFFICalloutState,
 	#instVars : [
-		'registerIndex',
+		'integerRegisterIndex',
+		'floatRegisterIndex',
 		'integerRegisters',
 		'floatRegisters'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }
@@ -34,6 +35,18 @@ ThreadedFFICalloutStateForX64 class >> pluginClass [
 ]
 
 { #category : #accessing }
+ThreadedFFICalloutStateForX64 >> floatRegisterIndex [
+
+	^ floatRegisterIndex
+]
+
+{ #category : #accessing }
+ThreadedFFICalloutStateForX64 >> floatRegisterIndex: anObject [
+
+	^floatRegisterIndex := anObject
+]
+
+{ #category : #accessing }
 ThreadedFFICalloutStateForX64 >> floatRegisters [
 	"Answer the value of floatRegisters"
 
@@ -55,6 +68,18 @@ ThreadedFFICalloutStateForX64 >> initialize [
 ]
 
 { #category : #accessing }
+ThreadedFFICalloutStateForX64 >> integerRegisterIndex [
+
+	^ integerRegisterIndex
+]
+
+{ #category : #accessing }
+ThreadedFFICalloutStateForX64 >> integerRegisterIndex: anObject [
+
+	^integerRegisterIndex := anObject
+]
+
+{ #category : #accessing }
 ThreadedFFICalloutStateForX64 >> integerRegisters [
 	"Answer the value of integerRegisters"
 
@@ -65,16 +90,4 @@ ThreadedFFICalloutStateForX64 >> integerRegisters [
 ThreadedFFICalloutStateForX64 >> integerRegisters: anObject [
 
 	^integerRegisters := anObject
-]
-
-{ #category : #accessing }
-ThreadedFFICalloutStateForX64 >> registerIndex [
-
-	^ registerIndex
-]
-
-{ #category : #accessing }
-ThreadedFFICalloutStateForX64 >> registerIndex: anObject [
-
-	^registerIndex := anObject
 ]
