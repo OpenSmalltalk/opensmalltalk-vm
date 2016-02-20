@@ -6532,7 +6532,7 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 	| theIPPtr |
 	<inline: false>
 	<var: #theFP type: #'char *'>
-	<var: #theIPPtr type: #'char *'>
+	<var: #theIPPtr type: #usqInt>
 	<var: #callerFP type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
 
@@ -6540,7 +6540,7 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 
 	(theBecomeEffectsFlags anyMask: BecameCompiledMethodFlag) ifTrue:
 		[(objectMemory isForwarded: method) ifTrue:
-			[theIPPtr := instructionPointer - method.
+			[theIPPtr := instructionPointer - method asVoidPointer.
 			 method := objectMemory followForwarded: method.
 			 instructionPointer := method + theIPPtr].
 		(objectMemory isOopForwarded: newMethod) ifTrue:
@@ -6548,15 +6548,15 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 
 	self assert: stackPage ~= 0.
 	0 to: numStackPages - 1 do:
-		[:i| | thePage theFP callerFP ptr oop |
+		[:i| | thePage theFP callerFP offset oop |
 		thePage := stackPages stackPageAt: i.
 		thePage isFree ifFalse:
 			[self assert: (self ifCurrentStackPageHasValidHeadPointers: thePage).
 			 theFP := thePage  headFP.
 			 "Skip the instruction pointer on top of stack of inactive pages."
-			 theIPPtr := thePage = stackPage ifTrue: [0] ifFalse: [thePage headSP].
+			 theIPPtr := thePage = stackPage ifTrue: [0] ifFalse: [thePage headSP asUnsignedInteger].
 			 [self assert: (thePage addressIsInPage: theFP).
-			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr]).
+			  self assert: (theIPPtr = 0 or: [thePage addressIsInPage: theIPPtr asVoidPointer]).
 			  oop := stackPages longAt: theFP + FoxReceiver.
 			  (objectMemory isOopForwarded: oop) ifTrue:
 				[stackPages
@@ -6580,14 +6580,14 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 				stackPages
 					longAt: theFP + FoxMethod
 					put: (oop := newOop)].
-			  ptr := (theFP + (self frameStackedReceiverOffset: theFP)) asInteger.
-			  oop := stackPages longAt: ptr.
+			  offset := self frameStackedReceiverOffset: theFP.
+			  oop := stackPages longAt: theFP + offset.
 			  (objectMemory isOopForwarded: oop) ifTrue:
 				[stackPages
-					longAt: ptr
+					longAt: theFP + offset
 					put: (objectMemory followForwarded: oop)].
 			  (callerFP := self frameCallerFP: theFP) ~= 0] whileTrue:
-				[theIPPtr := (theFP + FoxCallerSavedIP) asInteger.
+				[theIPPtr := (theFP + FoxCallerSavedIP) asUnsignedInteger.
 				 theFP := callerFP].
 			 "And finally follow the caller context."
 			 self assert: theFP = thePage baseFP.
