@@ -6,7 +6,7 @@ Note that the System V x86-64 ABI decomposes structs of 2 eightbytes or smaller 
 Class {
 	#name : #ThreadedX64SysVFFIPlugin,
 	#superclass : #ThreadedX64FFIPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }
@@ -54,7 +54,7 @@ ThreadedX64SysVFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: 
 	 the alloca of the outgoing stack frame in ffiCall:WithFlags:NumArgs:Args:AndTypes:"
 	| myThreadIndex atomicType floatRet intRet loadFloatRegs oop |
 	<var: #floatRet type: #double>
-	<var: #intRet type: #usqLong>
+	<var: #intRet type: 'SixteenByteReturn'>
 	<inline: true>
 	self cCode: '' inSmalltalk: [loadFloatRegs := #used. loadFloatRegs class].
 	self cppIf: COGMTVM ifTrue:
@@ -66,14 +66,14 @@ ThreadedX64SysVFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: 
 
 	calloutState floatRegisterIndex > 0 ifTrue:
 		[self 
-			load: ((calloutState floatRegisters at: 0) at: 0)
-			Flo: ((calloutState floatRegisters at: 1) at: 0)
-			a: ((calloutState floatRegisters at: 2) at: 0)
-			t: ((calloutState floatRegisters at: 3) at: 0)
-			R: ((calloutState floatRegisters at: 4) at: 0)
-			e: ((calloutState floatRegisters at: 5) at: 0)
-			g: ((calloutState floatRegisters at: 6) at: 0)
-			s: ((calloutState floatRegisters at: 7) at: 0)].
+			load: (calloutState floatRegisters at: 0)
+			Flo: (calloutState floatRegisters at: 1)
+			a: (calloutState floatRegisters at: 2)
+			t: (calloutState floatRegisters at: 3)
+			R: (calloutState floatRegisters at: 4)
+			e: (calloutState floatRegisters at: 5)
+			g: (calloutState floatRegisters at: 6)
+			s: (calloutState floatRegisters at: 7)].
 
 	atomicType := self atomicTypeOf: calloutState ffiRetHeader.
 	(atomicType >> 1) = (FFITypeSingleFloat > 1)
@@ -99,7 +99,7 @@ ThreadedX64SysVFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: 
 						with: (calloutState integerRegisters at: 5)]]
 		ifFalse:
 			[intRet := self 
-				dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'usqLong (*)(long, long, long, long, long, long)') 
+				dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'SixteenByteReturn (*)(long, long, long, long, long, long)') 
 				with: (calloutState integerRegisters at: 0)
 				with: (calloutState integerRegisters at: 1)
 				with: (calloutState integerRegisters at: 2)
@@ -185,6 +185,29 @@ ThreadedX64SysVFFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpe
 	self mem: calloutState currentArg cp: (self cCoerceSimple: pointer to: 'char *') y: structSize.
 	calloutState currentArg: calloutState currentArg + roundedSize].
 	^0
+]
+
+{ #category : #'callout support' }
+ThreadedX64SysVFFIPlugin >> ffiReturnStruct: sixteenByteRet ofType: ffiRetType in: calloutState [
+	<var: #sixteenByteRet type: 'SixteenByteReturn'>
+	<var: #calloutState type: #'CalloutState *'>
+	"Create a structure return value from an external function call.  The value has been stored in
+	 alloca'ed space pointed to by the calloutState or in the return value."
+	| retOop retClass oop |
+	<inline: true>
+	retClass := interpreterProxy fetchPointer: 1 ofObject: ffiRetType.
+	retOop := interpreterProxy instantiateClass: retClass indexableSize: 0.
+	self remapOop: retOop
+		in: [oop := interpreterProxy 
+					instantiateClass: interpreterProxy classByteArray 
+					indexableSize: calloutState structReturnSize].
+	self mem: (interpreterProxy firstIndexableField: oop)
+		cp: ((self returnStructInRegisters: calloutState structReturnSize)
+				ifTrue: [self addressOf: sixteenByteRet]
+				ifFalse: [calloutState limit])
+		 y: calloutState structReturnSize.
+	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
+	^interpreterProxy methodReturnValue: retOop
 ]
 
 { #category : #marshalling }

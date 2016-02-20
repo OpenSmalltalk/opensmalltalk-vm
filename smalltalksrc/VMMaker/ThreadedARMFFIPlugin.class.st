@@ -8,7 +8,7 @@ Class {
 		'NumFloatRegArgs',
 		'NumIntRegArgs'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }
@@ -40,18 +40,6 @@ ThreadedARMFFIPlugin class >> numFloatRegArgs [
 { #category : #accessing }
 ThreadedARMFFIPlugin class >> numIntRegArgs [
 	^NumIntRegArgs
-]
-
-{ #category : #'callout support' }
-ThreadedARMFFIPlugin >> dispatchFunctionPointer: aFunctionPointer with: int1 with: int2 with: int3 with: int4 [
-	"In C aFunctionPointer is void (*aFunctionPointer)(int, int, int, int)"
-	<cmacro: '(aFunctionPointer, int1, int2, int3, int4) (aFunctionPointer)(int1, int2, int3, int4)'>
-	^self 
-		perform: aFunctionPointer
-		with: int1
-		with: int2
-		with: int3
-		with: int4
 ]
 
 { #category : #'callout support' }
@@ -426,8 +414,8 @@ ThreadedARMFFIPlugin >> ffiPushUnsignedShort: value in: calloutState [
 ThreadedARMFFIPlugin >> ffiReturnStruct: longLongRet ofType: ffiRetType in: calloutState [
 	<var: #longLongRet type: #usqLong>
 	<var: #calloutState type: #'CalloutState *'>
-	"Create a structure return value from an external function call.  The value as been stored in
-	 alloca'ed space pointed to by the calloutState."
+	"Create a structure return value from an external function call.  The value has been stored in
+	 alloca'ed space pointed to by the calloutState or in the return value."
 	| retOop retClass oop |
 	<inline: true>
 	retClass := interpreterProxy fetchPointer: 1 ofObject: ffiRetType.
@@ -436,11 +424,11 @@ ThreadedARMFFIPlugin >> ffiReturnStruct: longLongRet ofType: ffiRetType in: call
 		in: [oop := interpreterProxy 
 					instantiateClass: interpreterProxy classByteArray 
 					indexableSize: calloutState structReturnSize].
-	(self returnStructInRegisters: calloutState structReturnSize)
-		ifTrue:
-			[self mem: (interpreterProxy firstIndexableField: oop) cp: (self addressOf: longLongRet) y: calloutState structReturnSize]
-		ifFalse:
-			[self mem: (interpreterProxy firstIndexableField: oop) cp: calloutState limit y: calloutState structReturnSize].
+	self mem: (interpreterProxy firstIndexableField: oop)
+		cp: ((self returnStructInRegisters: calloutState structReturnSize)
+				ifTrue: [self addressOf: longLongRet]
+				ifFalse: [calloutState limit])
+		 y: calloutState structReturnSize.
 	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
 	^interpreterProxy methodReturnValue: retOop
 ]

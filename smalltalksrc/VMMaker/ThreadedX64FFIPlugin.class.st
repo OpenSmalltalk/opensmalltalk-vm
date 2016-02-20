@@ -9,7 +9,7 @@ Class {
 		'NumIntRegArgs',
 		'WordSize'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }
