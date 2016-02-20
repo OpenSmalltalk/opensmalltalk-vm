@@ -4,6 +4,6 @@ CroquetPlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
 Mpeg3Plugin \
+SqueakFFIPrims \
 SqueakSSL \
-UnixOSProcessPlugin \
-# SqueakFFIPrims
+UnixOSProcessPlugin

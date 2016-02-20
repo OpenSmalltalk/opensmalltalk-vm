@@ -261,7 +261,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	
 	rect = [self bounds];
 	
-    glViewport(0, 0, (int) rect.size.width, (int) rect.size.height);
+    glViewport(0, 0, rect.size.width, rect.size.height);
 	glPixelStorei( GL_UNPACK_ROW_LENGTH, rect.size.width );
 	
 	glMatrixMode(GL_PROJECTION);
@@ -290,7 +290,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	
 	rect = [self bounds];
 	
-	glViewport(0, 0, (int) rect.size.width, (int) rect.size.height);
+	glViewport(0, 0, rect.size.width, rect.size.height);
 	glPixelStorei( GL_UNPACK_ROW_LENGTH, rect.size.width );
 	glMatrixMode(GL_PROJECTION);
     glLoadIdentity();

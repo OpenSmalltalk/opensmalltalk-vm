@@ -392,7 +392,7 @@ static int buttonState=0;
 	}
 
 	// button state: low three bits are mouse buttons; next 8 bits are modifier bits
-	buttonState = (int) (modifierMap[((keyBoardCarbonModifiers & 0xFFFF) >> 8)] << 3) | (int) (stButtons & 0x7);
+	buttonState = (modifierMap[((keyBoardCarbonModifiers & 0xFFFF) >> 8)] << 3) | (stButtons & 0x7);
 	return buttonState;
 }
 
