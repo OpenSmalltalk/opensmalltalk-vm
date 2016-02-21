@@ -14,6 +14,11 @@
 #ifndef SQ_FFI_H
 #define SQ_FFI_H
 
+/* What follows is the old FFI API when spread across several marshalling files.
+ * With the ThreadedFFIPlugin all marshalling is in a single generated plugin
+ * and so the following API is not wanted.
+ */
+#if !ThreadedFFIPlugin
 /* Calling conventions */
 #define FFICallTypeCDecl 0
 #define FFICallTypeApi 1
@@ -128,27 +133,32 @@ int ffiStoreStructure(int address, int structSize);
 
 /* return the float value from a previous call */
 double ffiReturnFloatValue(void);
+#endif /* !ThreadedFFIPlugin */
 
 /* Set the log file name for logging call-outs */
 int ffiLogFileNameOfLength(void *nameIndex, int nameLength);
 int ffiLogCallOfLength(void *nameIndex, int nameLength);
 
-/* The following are for creating, manipulating, and detroying "manual surfaces".
-   These are surfaces that are managed by Squeak code, which has manual control
-   over the memory location where the image data is stored (the pointer used may 
-   be obtained via FFI calls, or other means).
-   
-   Upon creation, no memory is allocated for the surface.  Squeak code is 
-   responsible for passing in a pointer to the memory to use.  It is OK to set 
-   the pointer to different values, or to NULL.  If the pointer is NULL, then
-   BitBlt calls to ioLockSurface() will fail.
-   
-   createManualFunction() returns a non-negative surface ID if successful, and
-   -1 otherwise.  The other return true for success, and false for failure.
-*/   
+/* The following are for creating, manipulating, and destroying
+ * "manual surfaces".  These are surfaces that are managed by Squeak code,
+ * which has manual control over the memory location where the image data is
+ * stored (the pointer used may be obtained via FFI calls, or other means).
+ *
+ * Upon creation, no memory is allocated for the surface.  Squeak code is 
+ * responsible for passing in a pointer to the memory to use.  It is OK to set 
+ * the pointer to different values, or to NULL.  If the pointer is NULL, then
+ * BitBlt calls to ioLockSurface() will fail.
+ *
+ * createManualFunction() returns a non-negative surface ID if successful, and
+ * -1 otherwise.  The other return true for success, and false for failure.
+ */   
 #include "../SurfacePlugin/SurfacePlugin.h"
-void initManualSurfaceFunctionPolongers(fn_ioRegisterSurface reg, fn_ioUnregisterSurface unreg, fn_ioFindSurface find);
-long createManualSurface(long width, long height, long rowPitch, long depth, long isMSB);
+
+void initSurfacePluginFunctionPointers();
+void initManualSurfaceFunctionPointers
+	(fn_ioRegisterSurface, fn_ioUnregisterSurface, fn_ioFindSurface);
+long createManualSurface
+	(long width, long height, long rowPitch, long depth, long isMSB);
 long destroyManualSurface(long surfaceID);
 long setManualSurfacePointer(long surfaceID, void* ptr);
 
