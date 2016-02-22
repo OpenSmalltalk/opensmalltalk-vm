@@ -330,25 +330,24 @@ ThreadedFFIPlugin >> externalFunctionHasStackSizeSlot [
 
 { #category : #'primitive support' }
 ThreadedFFIPlugin >> ffiAddressOf: rcvr startingAt: byteOffset size: byteSize [
-	"Answer a long of the address of the byteSize slot (byte, short, int, whatever) at byteOffset in rcvr.
-	 Nominally intended for use with ExternalAddress objects, this code will work (for obscure historical
-	 reasons) with plain Byte or Word Arrays as well. "
+"return an int of the address of the byteSize slot (byte, short, int, whatever) at byteOffset in rcvr. Nominally intended for use with ExternalAddress objects, this code will work (for obscure historical reasons) with plain Byte or Word Arrays as well. "
 	| rcvrClass rcvrSize addr |
+	self flag: 'This needs more thought.  It is 32-bit specific.  What about 64-bit platforms?'.
 	(interpreterProxy isBytes: rcvr) ifFalse:[^interpreterProxy primitiveFail].
-	byteOffset > 0 ifFalse:[^interpreterProxy primitiveFail].
+	(byteOffset > 0) ifFalse:[^interpreterProxy primitiveFail].
 	rcvrClass := interpreterProxy fetchClassOf: rcvr.
 	rcvrSize := interpreterProxy byteSizeOf: rcvr.
-	rcvrClass = interpreterProxy classExternalAddress
-		ifTrue:
-			[rcvrSize = BytesPerWord ifFalse:[^interpreterProxy primitiveFail].
-			addr := interpreterProxy fetchPointer: 0 ofObject: rcvr. "Hack!!"
-			"don't you dare to read from object memory (unless is pinned)!"
-			(addr = 0 "or: [(interpreterProxy isInMemory: addr) or: [(interpreterProxy isPinned: rcvr) not]]") ifTrue:
-				[^interpreterProxy primitiveFail]]
-		ifFalse:
-			[byteOffset+byteSize-1 <= rcvrSize ifFalse:
-				[^interpreterProxy primitiveFail].
-			addr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: #long].
+	rcvrClass = interpreterProxy classExternalAddress ifTrue:[
+		(rcvrSize = 4) ifFalse:[^interpreterProxy primitiveFail].
+		addr := interpreterProxy fetchPointer: 0 ofObject: rcvr.
+		"don't you dare to read from object memory (unless is pinned)!"
+		(addr = 0" or: [(interpreterProxy isInMemory: addr) or: [(interpreterProxy isPinned: rcvr) not]]")
+			ifTrue:[^interpreterProxy primitiveFail].
+	] ifFalse:[
+		(byteOffset+byteSize-1 <= rcvrSize)
+			ifFalse:[^interpreterProxy primitiveFail].
+		addr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'int'.
+	].
 	addr := addr + byteOffset - 1.
 	^addr
 ]
@@ -1457,8 +1456,7 @@ ThreadedFFIPlugin >> primitiveCreateManualSurface [
 	| width height rowPitch depth isMSB result |
 	<export: true>
 	
-	interpreterProxy methodArgumentCount = 5 ifFalse:
-		[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	interpreterProxy methodArgumentCount == 5 ifFalse: [^interpreterProxy primitiveFail].
 	width := interpreterProxy stackIntegerValue: 4.
 	height := interpreterProxy stackIntegerValue: 3.
 	rowPitch := interpreterProxy stackIntegerValue: 2.
@@ -1467,11 +1465,11 @@ ThreadedFFIPlugin >> primitiveCreateManualSurface [
 	isMSB := interpreterProxy booleanValueOf: isMSB. 
 	interpreterProxy failed ifTrue: [^nil].
 	
-	result := self cCode: 'createManualSurface(width, height, rowPitch, depth, isMSB)'
-				inSmalltalk: [self create: width Man: height ual: rowPitch Surf: depth ace: isMSB].
-	result < 0 ifTrue:
-		[^interpreterProxy primitiveFail].
-	result := interpreterProxy signedMachineIntegerFor: result.
+	self touch: width; touch: height; touch: rowPitch; touch: depth; touch: isMSB.
+	
+	result := self cCode: 'createManualSurface(width, height, rowPitch, depth, isMSB)'.
+	result < 0 ifTrue: [^interpreterProxy primitiveFail].
+	result := interpreterProxy signed32BitIntegerFor: result.
 	^interpreterProxy pop: 6 thenPush: result
 	
 ]
@@ -1625,11 +1623,8 @@ ThreadedFFIPlugin >> primitiveFFIGetLastError [
 
 { #category : #primitives }
 ThreadedFFIPlugin >> primitiveFFIIntegerAt [
-	"Answer a (signed or unsigned) n byte integer from the given byte offset
-	 in the receiver, using the platform's endianness."
-	| isSigned byteSize byteOffset rcvr addr value mask valueOop |
-	<var: 'value' type: #usqLong>
-	<var: 'mask' type: #usqLong>
+	"Return a (signed or unsigned) n byte integer from the given byte offset."
+	| isSigned byteSize byteOffset rcvr addr value mask |
 	<export: true>
 	<inline: false>
 	isSigned := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
@@ -1637,42 +1632,35 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAt [
 	byteOffset := interpreterProxy stackIntegerValue: 2.
 	rcvr := interpreterProxy stackObjectValue: 3.
 	interpreterProxy failed ifTrue:[^0].
-	(byteOffset > 0
-	 and: [(byteSize between: 1 and: 8)
-	 and: [(byteSize bitAnd: byteSize - 1) = 0 "a.k.a. isPowerOfTwo"]]) ifFalse:
-		[^interpreterProxy primitiveFail].
+	(byteOffset > 0 and:[byteSize = 1 or:[byteSize = 2 or:[byteSize = 4]]])
+		ifFalse:[^interpreterProxy primitiveFail].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: byteSize.
 	interpreterProxy failed ifTrue:[^0].
-	byteSize <= 2
-		ifTrue:
-			[byteSize = 1
-				ifTrue: [value := self cCoerceSimple: (interpreterProxy byteAt: addr) to: #'unsigned char']
-				ifFalse: [value := self cCoerceSimple: (interpreterProxy shortAt: addr) to: #'unsigned short']]
-		ifFalse:
-			[byteSize = 4
-				ifTrue: [value := self cCoerceSimple: (interpreterProxy long32At: addr) to: #'unsigned int']
-				ifFalse: [value := interpreterProxy long64At: addr]].
-	byteSize < BytesPerWord
-		ifTrue:
-			[isSigned ifTrue: "sign extend value"
-				[mask := 1 << (byteSize * 8 - 1).
-				value := (value bitAnd: mask-1) - (value bitAnd: mask)].
-			 "note: byte/short (&long if BytesPerWord=8) never exceed SmallInteger range"
-			 valueOop := interpreterProxy integerObjectOf: value]
-		ifFalse: "general 64 bit integer; note these never fail"
-			[valueOop := isSigned
-							ifTrue:[interpreterProxy signed64BitIntegerFor: value]
-							ifFalse:[interpreterProxy positive64BitIntegerFor: value]].
-	^interpreterProxy pop: 4 thenPush: valueOop
+	byteSize < 4 ifTrue:[
+		"short/byte"
+		byteSize = 1 
+			ifTrue:[value := interpreterProxy byteAt: addr]
+			ifFalse:[	value := self cCode: '*((unsigned short int *) addr)' 
+								inSmalltalk: [interpreterProxy shortAt: addr]].
+		isSigned ifTrue:["sign extend value"
+			mask := 1 << (byteSize * 8 - 1).
+			value := (value bitAnd: mask-1) - (value bitAnd: mask)].
+		"note: byte/short never exceed SmallInteger range"
+		value := interpreterProxy integerObjectOf: value.
+	] ifFalse:[
+		"general 32 bit integer"
+		value := interpreterProxy longAt: addr.
+		value := isSigned
+					ifTrue:[interpreterProxy signed32BitIntegerFor: value]
+					ifFalse:[interpreterProxy positive32BitIntegerFor: value].
+	].
+	^interpreterProxy pop: 4 thenPush: value
 ]
 
 { #category : #primitives }
 ThreadedFFIPlugin >> primitiveFFIIntegerAtPut [
-	"Store a (signed or unsigned) n byte integer at the given byte offset
-	 in the receiver, using the platform's endianness."
+	"Store a (signed or unsigned) n byte integer at the given byte offset."
 	| isSigned byteSize byteOffset rcvr addr value max valueOop |
-	<var: 'value' type: #sqLong>
-	<var: 'max' type: #sqLong>
 	<export: true>
 	<inline: false>
 	isSigned := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
@@ -1681,32 +1669,28 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAtPut [
 	byteOffset := interpreterProxy stackIntegerValue: 3.
 	rcvr := interpreterProxy stackObjectValue: 4.
 	interpreterProxy failed ifTrue:[^0].
-	(byteOffset > 0
-	 and: [(byteSize between: 1 and: 8)
-	 and: [(byteSize bitAnd: byteSize - 1) = 0 "a.k.a. isPowerOfTwo"]]) ifFalse:
-		[^interpreterProxy primitiveFail].
+	(byteOffset > 0 and:[byteSize = 1 or:[byteSize = 2 or:[byteSize = 4]]])
+		ifFalse:[^interpreterProxy primitiveFail].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: byteSize.
 	interpreterProxy failed ifTrue:[^0].
 	isSigned 
-		ifTrue:[value := interpreterProxy signedMachineIntegerValueOf: valueOop]
-		ifFalse:[value := interpreterProxy positiveMachineIntegerValueOf: valueOop].
+		ifTrue:[value := interpreterProxy signed32BitValueOf: valueOop]
+		ifFalse:[value := interpreterProxy positive32BitValueOf: valueOop].
 	interpreterProxy failed ifTrue:[^0].
-	byteSize < BytesPerWord ifTrue:
-		[isSigned
-			ifTrue:
-				[max := 1 << (8 * byteSize - 1).
-				(value >= (0 - max) and: [value < max]) ifFalse: [^interpreterProxy primitiveFail]]
-			ifFalse:
-				[value asUnsignedLongLong < (1 << (8*byteSize)) ifFalse: [^interpreterProxy primitiveFail]]].
-	byteSize <= 2
-		ifTrue:
-			[byteSize = 1
-				ifTrue: [interpreterProxy byteAt: addr put: value]
-				ifFalse: [interpreterProxy shortAt: addr put: value]]
-		ifFalse:
-			[byteSize = 4
-				ifTrue: [interpreterProxy long32At: addr put: value]
-				ifFalse: [interpreterProxy long64At: addr put: value]].
+	byteSize < 4 ifTrue:[
+		isSigned ifTrue:[
+			max := 1 << (8 * byteSize - 1).
+			value >= max ifTrue:[^interpreterProxy primitiveFail].
+			value < (0 - max) ifTrue:[^interpreterProxy primitiveFail].
+		] ifFalse:[
+			value >= (1 << (8*byteSize)) ifTrue:[^interpreterProxy primitiveFail].
+		].
+		"short/byte"
+		byteSize = 1 
+			ifTrue:[interpreterProxy byteAt: addr put: value]
+			ifFalse:[	self cCode: '*((short int *) addr) = value' 
+						inSmalltalk: [interpreterProxy shortAt: addr put: value]].
+	] ifFalse:[interpreterProxy longAt: addr put: value].
 	^interpreterProxy pop: 5 thenPush: valueOop
 ]
 
