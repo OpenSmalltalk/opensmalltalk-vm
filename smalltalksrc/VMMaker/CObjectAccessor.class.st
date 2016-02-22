@@ -64,6 +64,12 @@ CObjectAccessor >> asIntAccessor [
 ]
 
 { #category : #converting }
+CObjectAccessor >> asInteger [
+
+	^ self
+]
+
+{ #category : #converting }
 CObjectAccessor >> asOop: aClass [
 
 	(aClass ccgCanConvertFrom: object)
