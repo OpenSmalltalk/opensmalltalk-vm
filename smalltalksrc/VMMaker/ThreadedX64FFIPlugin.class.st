@@ -178,7 +178,7 @@ ThreadedX64FFIPlugin >> ffiPushSingleFloat: value in: calloutState [
 
 	calloutState floatRegisterIndex < NumFloatRegArgs
 		ifTrue:
-			[calloutState floatRegisters at: calloutState floatRegisterIndex put: value.
+			[(self cCoerce: calloutState floatRegisters + calloutState floatRegisterIndex to: #'float *') at: 0 put: value.
 			 calloutState floatRegisterIndex: calloutState floatRegisterIndex + 1]
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue:

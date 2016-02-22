@@ -330,24 +330,25 @@ ThreadedFFIPlugin >> externalFunctionHasStackSizeSlot [
 
 { #category : #'primitive support' }
 ThreadedFFIPlugin >> ffiAddressOf: rcvr startingAt: byteOffset size: byteSize [
-"return an int of the address of the byteSize slot (byte, short, int, whatever) at byteOffset in rcvr. Nominally intended for use with ExternalAddress objects, this code will work (for obscure historical reasons) with plain Byte or Word Arrays as well. "
+	"Answer a long of the address of the byteSize slot (byte, short, int, whatever) at byteOffset in rcvr.
+	 Nominally intended for use with ExternalAddress objects, this code will work (for obscure historical
+	 reasons) with plain Byte or Word Arrays as well. "
 	| rcvrClass rcvrSize addr |
-	self flag: 'This needs more thought.  It is 32-bit specific.  What about 64-bit platforms?'.
 	(interpreterProxy isBytes: rcvr) ifFalse:[^interpreterProxy primitiveFail].
-	(byteOffset > 0) ifFalse:[^interpreterProxy primitiveFail].
+	byteOffset > 0 ifFalse:[^interpreterProxy primitiveFail].
 	rcvrClass := interpreterProxy fetchClassOf: rcvr.
 	rcvrSize := interpreterProxy byteSizeOf: rcvr.
-	rcvrClass = interpreterProxy classExternalAddress ifTrue:[
-		(rcvrSize = 4) ifFalse:[^interpreterProxy primitiveFail].
-		addr := interpreterProxy fetchPointer: 0 ofObject: rcvr.
-		"don't you dare to read from object memory (unless is pinned)!"
-		(addr = 0" or: [(interpreterProxy isInMemory: addr) or: [(interpreterProxy isPinned: rcvr) not]]")
-			ifTrue:[^interpreterProxy primitiveFail].
-	] ifFalse:[
-		(byteOffset+byteSize-1 <= rcvrSize)
-			ifFalse:[^interpreterProxy primitiveFail].
-		addr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'int'.
-	].
+	rcvrClass = interpreterProxy classExternalAddress
+		ifTrue:
+			[rcvrSize = BytesPerWord ifFalse:[^interpreterProxy primitiveFail].
+			addr := interpreterProxy fetchPointer: 0 ofObject: rcvr. "Hack!!"
+			"don't you dare to read from object memory (unless is pinned)!"
+			(addr = 0 "or: [(interpreterProxy isInMemory: addr) or: [(interpreterProxy isPinned: rcvr) not]]") ifTrue:
+				[^interpreterProxy primitiveFail]]
+		ifFalse:
+			[byteOffset+byteSize-1 <= rcvrSize ifFalse:
+				[^interpreterProxy primitiveFail].
+			addr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: #long].
 	addr := addr + byteOffset - 1.
 	^addr
 ]
@@ -736,6 +737,8 @@ ThreadedFFIPlugin >> ffiCreateIntegralResultOop: retVal ofAtomicType: atomicType
 	<var: #retVal type: #usqLong>
 	"Callout support. Return the appropriate oop for the given atomic type"
 	| shift value mask byteSize |
+	<var: 'value' type: #usqLong>
+	<var: 'mask' type: #usqLong>
 	self assert: atomicType < FFITypeSingleFloat.
 
 	atomicType = FFITypeBool ifTrue:
@@ -749,19 +752,21 @@ ThreadedFFIPlugin >> ffiCreateIntegralResultOop: retVal ofAtomicType: atomicType
 			ifFalse:[interpreterProxy trueObject]].
 	atomicType <= FFITypeSignedInt ifTrue:
 		["these are all generall integer returns"
-		atomicType <= FFITypeSignedShort ifTrue:
+		atomicType <= (BytesPerWord = 8 ifTrue: [FFITypeSignedInt] ifFalse: [FFITypeSignedShort]) ifTrue:
 			["byte/short. first extract partial word, then sign extend"
-			shift := (atomicType >> 1) * 8. "# of significant bits"
-			value := retVal bitAnd: (1 << shift - 1). 
+			shift := (BytesPerWord = 8 and: [atomicType >= FFITypeUnsignedInt])
+						ifTrue: [32]
+						ifFalse: [(atomicType >> 1) * 8]. "# of significant bits"
+			value := retVal bitAnd: (1 asUnsignedLong << shift - 1). 
 			(atomicType anyMask: 1) ifTrue:
 				["make the guy signed"
-				mask := 1 << (shift-1).
+				mask := 1 asUnsignedLong << (shift-1).
 				value := (value bitAnd: mask-1) - (value bitAnd: mask)].
 			^interpreterProxy integerObjectOf: value].
-		"32bit integer return"
+		"Word sized integer return"
 		^(atomicType anyMask: 1)
-			ifTrue:[interpreterProxy signed32BitIntegerFor: retVal] "signed return"
-			ifFalse:[interpreterProxy positive32BitIntegerFor: retVal]]. "unsigned return"
+			ifTrue:[interpreterProxy signedMachineIntegerFor: retVal] "signed return"
+			ifFalse:[interpreterProxy positiveMachineIntegerFor: retVal]]. "unsigned return"
 
 	"longlong, char"
 	^(atomicType >> 1) = (FFITypeSignedLongLong >> 1) 
@@ -792,11 +797,9 @@ ThreadedFFIPlugin >> ffiFail: reason [
 { #category : #'callout support' }
 ThreadedFFIPlugin >> ffiFloatValueOf: oop [
 	"Support for generic callout. Return a float value that is coerced as C would do."
-	| oopClass |
-	<returnTypeC:'double'>
-	oopClass := interpreterProxy fetchClassOf: oop.
-	oopClass = interpreterProxy classFloat
-		ifTrue:[^interpreterProxy floatValueOf: oop].
+	<returnTypeC: #double>
+	(interpreterProxy isFloatObject: oop) ifTrue:
+		[^interpreterProxy floatValueOf: oop].
 	"otherwise try the integer coercions and return its float value"
 	^(self ffiIntegerValueOf: oop) asFloat
 ]
@@ -811,21 +814,35 @@ ThreadedFFIPlugin >> ffiFree: pointer [
 
 { #category : #'callout support' }
 ThreadedFFIPlugin >> ffiIntegerValueOf: oop [
-	"Support for generic callout. Return an integer value that is coerced as C would do."
-	| oopClass |
+	"Support for generic callout. Answer an integer value that is coerced as C would do."
 	<inline: true>
-	(interpreterProxy isIntegerObject: oop) ifTrue:
-		[^interpreterProxy integerValueOf: oop].
-	oop = interpreterProxy nilObject ifTrue: [^0]. "@@: should we really allow this????"
-	oop = interpreterProxy falseObject ifTrue: [^0].
-	oop = interpreterProxy trueObject ifTrue: [^1].
-	oopClass := interpreterProxy fetchClassOf: oop.
-	oopClass = interpreterProxy classFloat ifTrue:
-		[^(interpreterProxy floatValueOf: oop) asInteger].
-	oopClass = interpreterProxy classCharacter ifTrue:
-		[^interpreterProxy characterValueOf: oop].
-	oopClass = interpreterProxy classLargePositiveInteger ifTrue:
-		[^interpreterProxy positive32BitValueOf: oop].
+	"Cheat with a tag test"
+	(oop anyMask: BytesPerWord - 1)
+		ifTrue:
+			[(interpreterProxy isIntegerObject: oop) ifTrue:
+				[^interpreterProxy integerValueOf: oop].
+			self cppIf: SPURVM
+				ifTrue:
+					[(interpreterProxy isCharacterObject: oop) ifTrue: "Immediate in Spur"
+						[^interpreterProxy characterValueOf: oop].
+					 (interpreterProxy isFloatObject: oop) ifTrue: "Immediate in 64-bit Spur"
+						[^interpreterProxy floatValueOf: oop]]]
+		ifFalse:
+			[self cppIf: SPURVM
+				ifTrue: "No non-immediate characters in Spur"
+					[]
+				ifFalse:
+					[(interpreterProxy isCharacterObject: oop) ifTrue:
+						[^interpreterProxy characterValueOf: oop]].
+			 (interpreterProxy isFloatObject: oop) ifTrue:
+				[^interpreterProxy floatValueOf: oop].
+			 oop = interpreterProxy nilObject ifTrue: [^0]. "@@: should we really allow this????"
+			 oop = interpreterProxy falseObject ifTrue: [^0].
+			 oop = interpreterProxy trueObject ifTrue: [^1].
+			 (interpreterProxy fetchClassOf: oop) = interpreterProxy classLargePositiveInteger ifTrue:
+				[self cppIf: BytesPerWord = 8 "Use cppIf: to get the return type of the function right.  Should be sqInt on 32-bits."
+					ifTrue: [^interpreterProxy positive64BitValueOf: oop]
+					ifFalse: [^interpreterProxy positive32BitValueOf: oop]]].
 	^interpreterProxy signedMachineIntegerValueOf: oop "<- will fail if not integer"
 ]
 
@@ -833,7 +850,7 @@ ThreadedFFIPlugin >> ffiIntegerValueOf: oop [
 ThreadedFFIPlugin >> ffiLoadCalloutAddress: lit [
 	"Load the address of the foreign function from the given object"
 	| addressPtr address ptr |
-	<var: #ptr type: #'int *'>
+	<var: #ptr type: #'long *'>
 	"Lookup the address"
 	addressPtr := interpreterProxy fetchPointer: 0 ofObject: lit.
 	"Make sure it's an external handle"
@@ -974,8 +991,8 @@ ThreadedFFIPlugin >> ffiPushPointerContentsOf: oop in: calloutState [
 	| ptrClass ptrAddress |
 	<inline: false>
 	ptrClass := interpreterProxy fetchClassOf: oop.
-	ptrClass = interpreterProxy classExternalAddress ifTrue:[
-		ptrAddress := interpreterProxy fetchPointer: 0 ofObject: oop.
+	ptrClass = interpreterProxy classExternalAddress ifTrue:
+		[ptrAddress := (interpreterProxy fetchPointer: 0 ofObject: oop) asVoidPointer.
 		"Don't you dare to pass pointers into object memory"
 		(interpreterProxy isInMemory: ptrAddress) ifTrue:
 			[^FFIErrorInvalidPointer].
@@ -989,7 +1006,7 @@ ThreadedFFIPlugin >> ffiPushPointerContentsOf: oop in: calloutState [
 		   and: [interpreterProxy isYoung: oop]) ifTrue:
 			[^PrimErrObjectMayMove negated]].
 
-		ptrAddress := self cCoerce: (interpreterProxy firstIndexableField: oop) to: #int.
+		ptrAddress := interpreterProxy firstIndexableField: oop.
 		^self ffiPushPointer: ptrAddress in: calloutState].
 
 	(interpreterProxy includesBehavior: ptrClass ThatOf: interpreterProxy classAlien) ifTrue:
@@ -1102,12 +1119,12 @@ ThreadedFFIPlugin >> ffiPushStructureContentsOf: oop in: calloutState [
 	<inline: true>
 	ptrClass := interpreterProxy fetchClassOf: oop.
 	ptrClass = interpreterProxy classExternalAddress ifTrue: "ExternalAddress is bytes"
-		[ptrAddress :=interpreterProxy fetchPointer: 0 ofObject: oop.
+		[ptrAddress := (interpreterProxy fetchPointer: 0 ofObject: oop) asVoidPointer.
 		"There is no way we can make sure the structure is valid.
 		But we can at least check for attempts to pass pointers to ST memory."
 		(interpreterProxy isInMemory: ptrAddress) ifTrue:
 			[^FFIErrorInvalidPointer].
-		^self ffiPushStructure:  (self cCoerceSimple: ptrAddress to: #'void *')
+		^self ffiPushStructure: ptrAddress
 			ofSize: (calloutState ffiArgHeader bitAnd: FFIStructSizeMask)
 			typeSpec: calloutState ffiArgSpec
 			ofLength: calloutState ffiArgSpecSize
@@ -1116,15 +1133,15 @@ ThreadedFFIPlugin >> ffiPushStructureContentsOf: oop in: calloutState [
 		["The following is a somewhat pessimistic test but I like being sure..."
 		(interpreterProxy byteSizeOf: oop) = (calloutState ffiArgHeader bitAnd: FFIStructSizeMask)
 			ifFalse:[^FFIErrorStructSize].
-		ptrAddress := self cCoerceSimple: (interpreterProxy firstIndexableField: oop) to: #int.
-		(calloutState ffiArgHeader anyMask: FFIFlagPointer) ifFalse:[
+		ptrAddress := interpreterProxy firstIndexableField: oop.
+		(calloutState ffiArgHeader anyMask: FFIFlagPointer) ifFalse:
 			"Since this involves passing the address of the first indexable field we need to fail
 			  the call if it is threaded and the object is young, since it may move during the call."
-			self cppIf: COGMTVM ifTrue:
+			[self cppIf: COGMTVM ifTrue:
 			 [((calloutState callFlags anyMask: FFICallFlagThreaded)
 			 and: [interpreterProxy isYoung: oop]) ifTrue:
 				[^PrimErrObjectMayMove negated]].
-			^self ffiPushStructure: (self cCoerceSimple: ptrAddress to: #'void *') 
+			^self ffiPushStructure: ptrAddress
 				ofSize: (calloutState ffiArgHeader bitAnd: FFIStructSizeMask)
 				typeSpec: calloutState ffiArgSpec
 				ofLength: calloutState ffiArgSpecSize
@@ -1132,7 +1149,7 @@ ThreadedFFIPlugin >> ffiPushStructureContentsOf: oop in: calloutState [
 		"If FFIFlagPointer + FFIFlagStructure is set use ffiPushPointer on the contents"
 		(calloutState ffiArgHeader bitAnd: FFIStructSizeMask) = 4 ifFalse:
 			[^FFIErrorStructSize].
-		ptrAddress := interpreterProxy fetchPointer: 0 ofObject: oop.
+		ptrAddress := (interpreterProxy fetchPointer: 0 ofObject: oop) asVoidPointer.
 		(interpreterProxy isInMemory: ptrAddress) ifTrue:
 			[^FFIErrorInvalidPointer].
 		^self ffiPushPointer: ptrAddress in: calloutState].
@@ -1236,7 +1253,7 @@ ThreadedFFIPlugin >> ffiReturnPointer: retVal ofType: retType in: calloutState [
 		self remapOop: retType in:
 			[oop := interpreterProxy
 						instantiateClass: interpreterProxy classExternalAddress 
-						indexableSize: 4.
+						indexableSize: BytesPerWord.
 			ptr := interpreterProxy firstIndexableField: oop.
 			ptr at: 0 put: (self cCoerceSimple: retVal to: #sqInt).
 			self remapOop: oop in:
@@ -1253,7 +1270,7 @@ ThreadedFFIPlugin >> ffiReturnPointer: retVal ofType: retType in: calloutState [
 	self remapOop: retClass in:
 		[oop := interpreterProxy 
 					instantiateClass: classOop
-					indexableSize: 4].
+					indexableSize: BytesPerWord].
 	ptr := interpreterProxy firstIndexableField: oop.
 	ptr at: 0 put: (self cCoerceSimple: retVal to: #sqInt).
 	self remapOop: oop in:
@@ -1456,7 +1473,8 @@ ThreadedFFIPlugin >> primitiveCreateManualSurface [
 	| width height rowPitch depth isMSB result |
 	<export: true>
 	
-	interpreterProxy methodArgumentCount == 5 ifFalse: [^interpreterProxy primitiveFail].
+	interpreterProxy methodArgumentCount = 5 ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
 	width := interpreterProxy stackIntegerValue: 4.
 	height := interpreterProxy stackIntegerValue: 3.
 	rowPitch := interpreterProxy stackIntegerValue: 2.
@@ -1465,11 +1483,11 @@ ThreadedFFIPlugin >> primitiveCreateManualSurface [
 	isMSB := interpreterProxy booleanValueOf: isMSB. 
 	interpreterProxy failed ifTrue: [^nil].
 	
-	self touch: width; touch: height; touch: rowPitch; touch: depth; touch: isMSB.
-	
-	result := self cCode: 'createManualSurface(width, height, rowPitch, depth, isMSB)'.
-	result < 0 ifTrue: [^interpreterProxy primitiveFail].
-	result := interpreterProxy signed32BitIntegerFor: result.
+	result := self cCode: 'createManualSurface(width, height, rowPitch, depth, isMSB)'
+				inSmalltalk: [self create: width Man: height ual: rowPitch Surf: depth ace: isMSB].
+	result < 0 ifTrue:
+		[^interpreterProxy primitiveFail].
+	result := interpreterProxy signedMachineIntegerFor: result.
 	^interpreterProxy pop: 6 thenPush: result
 	
 ]
@@ -1623,8 +1641,11 @@ ThreadedFFIPlugin >> primitiveFFIGetLastError [
 
 { #category : #primitives }
 ThreadedFFIPlugin >> primitiveFFIIntegerAt [
-	"Return a (signed or unsigned) n byte integer from the given byte offset."
-	| isSigned byteSize byteOffset rcvr addr value mask |
+	"Answer a (signed or unsigned) n byte integer from the given byte offset
+	 in the receiver, using the platform's endianness."
+	| isSigned byteSize byteOffset rcvr addr value mask valueOop |
+	<var: 'value' type: #usqLong>
+	<var: 'mask' type: #usqLong>
 	<export: true>
 	<inline: false>
 	isSigned := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
@@ -1632,35 +1653,42 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAt [
 	byteOffset := interpreterProxy stackIntegerValue: 2.
 	rcvr := interpreterProxy stackObjectValue: 3.
 	interpreterProxy failed ifTrue:[^0].
-	(byteOffset > 0 and:[byteSize = 1 or:[byteSize = 2 or:[byteSize = 4]]])
-		ifFalse:[^interpreterProxy primitiveFail].
+	(byteOffset > 0
+	 and: [(byteSize between: 1 and: 8)
+	 and: [(byteSize bitAnd: byteSize - 1) = 0 "a.k.a. isPowerOfTwo"]]) ifFalse:
+		[^interpreterProxy primitiveFail].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: byteSize.
 	interpreterProxy failed ifTrue:[^0].
-	byteSize < 4 ifTrue:[
-		"short/byte"
-		byteSize = 1 
-			ifTrue:[value := interpreterProxy byteAt: addr]
-			ifFalse:[	value := self cCode: '*((unsigned short int *) addr)' 
-								inSmalltalk: [interpreterProxy shortAt: addr]].
-		isSigned ifTrue:["sign extend value"
-			mask := 1 << (byteSize * 8 - 1).
-			value := (value bitAnd: mask-1) - (value bitAnd: mask)].
-		"note: byte/short never exceed SmallInteger range"
-		value := interpreterProxy integerObjectOf: value.
-	] ifFalse:[
-		"general 32 bit integer"
-		value := interpreterProxy longAt: addr.
-		value := isSigned
-					ifTrue:[interpreterProxy signed32BitIntegerFor: value]
-					ifFalse:[interpreterProxy positive32BitIntegerFor: value].
-	].
-	^interpreterProxy pop: 4 thenPush: value
+	byteSize <= 2
+		ifTrue:
+			[byteSize = 1
+				ifTrue: [value := self cCoerceSimple: (interpreterProxy byteAt: addr) to: #'unsigned char']
+				ifFalse: [value := self cCoerceSimple: (interpreterProxy shortAt: addr) to: #'unsigned short']]
+		ifFalse:
+			[byteSize = 4
+				ifTrue: [value := self cCoerceSimple: (interpreterProxy long32At: addr) to: #'unsigned int']
+				ifFalse: [value := interpreterProxy long64At: addr]].
+	byteSize < BytesPerWord
+		ifTrue:
+			[isSigned ifTrue: "sign extend value"
+				[mask := 1 << (byteSize * 8 - 1).
+				value := (value bitAnd: mask-1) - (value bitAnd: mask)].
+			 "note: byte/short (&long if BytesPerWord=8) never exceed SmallInteger range"
+			 valueOop := interpreterProxy integerObjectOf: value]
+		ifFalse: "general 64 bit integer; note these never fail"
+			[valueOop := isSigned
+							ifTrue:[interpreterProxy signed64BitIntegerFor: value]
+							ifFalse:[interpreterProxy positive64BitIntegerFor: value]].
+	^interpreterProxy pop: 4 thenPush: valueOop
 ]
 
 { #category : #primitives }
 ThreadedFFIPlugin >> primitiveFFIIntegerAtPut [
-	"Store a (signed or unsigned) n byte integer at the given byte offset."
+	"Store a (signed or unsigned) n byte integer at the given byte offset
+	 in the receiver, using the platform's endianness."
 	| isSigned byteSize byteOffset rcvr addr value max valueOop |
+	<var: 'value' type: #sqLong>
+	<var: 'max' type: #sqLong>
 	<export: true>
 	<inline: false>
 	isSigned := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
@@ -1669,28 +1697,32 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAtPut [
 	byteOffset := interpreterProxy stackIntegerValue: 3.
 	rcvr := interpreterProxy stackObjectValue: 4.
 	interpreterProxy failed ifTrue:[^0].
-	(byteOffset > 0 and:[byteSize = 1 or:[byteSize = 2 or:[byteSize = 4]]])
-		ifFalse:[^interpreterProxy primitiveFail].
+	(byteOffset > 0
+	 and: [(byteSize between: 1 and: 8)
+	 and: [(byteSize bitAnd: byteSize - 1) = 0 "a.k.a. isPowerOfTwo"]]) ifFalse:
+		[^interpreterProxy primitiveFail].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: byteSize.
 	interpreterProxy failed ifTrue:[^0].
 	isSigned 
-		ifTrue:[value := interpreterProxy signed32BitValueOf: valueOop]
-		ifFalse:[value := interpreterProxy positive32BitValueOf: valueOop].
+		ifTrue:[value := interpreterProxy signedMachineIntegerValueOf: valueOop]
+		ifFalse:[value := interpreterProxy positiveMachineIntegerValueOf: valueOop].
 	interpreterProxy failed ifTrue:[^0].
-	byteSize < 4 ifTrue:[
-		isSigned ifTrue:[
-			max := 1 << (8 * byteSize - 1).
-			value >= max ifTrue:[^interpreterProxy primitiveFail].
-			value < (0 - max) ifTrue:[^interpreterProxy primitiveFail].
-		] ifFalse:[
-			value >= (1 << (8*byteSize)) ifTrue:[^interpreterProxy primitiveFail].
-		].
-		"short/byte"
-		byteSize = 1 
-			ifTrue:[interpreterProxy byteAt: addr put: value]
-			ifFalse:[	self cCode: '*((short int *) addr) = value' 
-						inSmalltalk: [interpreterProxy shortAt: addr put: value]].
-	] ifFalse:[interpreterProxy longAt: addr put: value].
+	byteSize < BytesPerWord ifTrue:
+		[isSigned
+			ifTrue:
+				[max := 1 << (8 * byteSize - 1).
+				(value >= (0 - max) and: [value < max]) ifFalse: [^interpreterProxy primitiveFail]]
+			ifFalse:
+				[value asUnsignedLongLong < (1 << (8*byteSize)) ifFalse: [^interpreterProxy primitiveFail]]].
+	byteSize <= 2
+		ifTrue:
+			[byteSize = 1
+				ifTrue: [interpreterProxy byteAt: addr put: value]
+				ifFalse: [interpreterProxy shortAt: addr put: value]]
+		ifFalse:
+			[byteSize = 4
+				ifTrue: [interpreterProxy long32At: addr put: value]
+				ifFalse: [interpreterProxy long64At: addr put: value]].
 	^interpreterProxy pop: 5 thenPush: valueOop
 ]
 
@@ -1735,7 +1767,7 @@ ThreadedFFIPlugin >> primitiveLoadSymbolFromModule [
 	| symbol module moduleHandle address oop ptr |
 
 	<var: #address type: #'void *'>
-	<var: #ptr type:'unsigned int *'>
+	<var: #ptr type: #'void **'>
 	
 	interpreterProxy methodArgumentCount = 2 ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].	
@@ -1747,16 +1779,16 @@ ThreadedFFIPlugin >> primitiveLoadSymbolFromModule [
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNotFound].
 	address := interpreterProxy
-		ioLoadSymbol: (self cCoerce: (interpreterProxy firstIndexableField: symbol) to: #sqInt)
-		OfLength: (interpreterProxy byteSizeOf: symbol)
-		FromModule: moduleHandle.
+					ioLoadSymbol: (self cCoerce: (interpreterProxy firstIndexableField: symbol) to: #sqInt)
+					OfLength: (interpreterProxy byteSizeOf: symbol)
+					FromModule: moduleHandle.
 	(interpreterProxy failed
 	 or: [address = 0]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNotFound].
 	
 	oop := interpreterProxy 
-		instantiateClass: interpreterProxy classExternalAddress 
-		indexableSize: 4.
+			instantiateClass: interpreterProxy classExternalAddress 
+			indexableSize: (self sizeof: #'void *').
 	ptr := interpreterProxy firstIndexableField: oop.
 	ptr at: 0 put: address.
 	
