@@ -6,10 +6,10 @@
 
 /* Plugins creating their own surfaces must register these using
    the following set of functions. The typedefs are for easier casts. */
-typedef long (*fn_getSurfaceFormat)(long surfaceHandle, long* width, long* height, long* depth, long* isMSB);
-typedef long (*fn_lockSurface)(long surfaceHandle, long *pitch, long x, long y, long w, long h);
-typedef long (*fn_unlockSurface)(long surfaceHandle, long x, long y, long w, long h);
-typedef long (*fn_showSurface)(long surfaceHandle, long x, long y, long w, long h);
+typedef long (*fn_getSurfaceFormat)(void * surfaceHandle, long* width, long* height, long* depth, long* isMSB);
+typedef long (*fn_lockSurface)(void * surfaceHandle, long *pitch, long x, long y, long w, long h);
+typedef long (*fn_unlockSurface)(void * surfaceHandle, long x, long y, long w, long h);
+typedef long (*fn_showSurface)(void * surfaceHandle, long x, long y, long w, long h);
 
 typedef struct sqSurfaceDispatch {
 	/* Version information. Must be provided by the client

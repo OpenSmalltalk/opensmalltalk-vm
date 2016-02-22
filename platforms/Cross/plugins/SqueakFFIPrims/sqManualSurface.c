@@ -53,22 +53,23 @@ typedef struct {
 
 /* Create the dispatch-table that SurfacePlugin will use to interact with
    instances of "struct ManualSurface" */
-static long manualSurfaceGetFormat(ManualSurface* surface, long* width, long* height, long* depth, long* isMSB);
-static void* manualSurfaceLock(ManualSurface* surface, long *pitch, long x, long y, long w, long h);
-static long manualSurfaceUnlock(ManualSurface* surface, long x, long y, long w, long h);
-static long manualSurfaceShow(ManualSurface* surface, long x, long y, long w, long h);
+static long manualSurfaceGetFormat(void *, long*, long*, long*, long*);
+static long manualSurfaceLock(void *, long *, long, long, long, long);
+static long manualSurfaceUnlock(void *, long, long, long, long);
+static long manualSurfaceShow(void *, long, long, long, long);
 static sqSurfaceDispatch manualSurfaceDispatch = {
   1,
   0,
-  (fn_getSurfaceFormat) manualSurfaceGetFormat,
-  (fn_lockSurface) manualSurfaceLock,
-  (fn_unlockSurface) manualSurfaceUnlock,
-  (fn_showSurface) manualSurfaceShow
+  manualSurfaceGetFormat,
+  manualSurfaceLock,
+  manualSurfaceUnlock,
+  manualSurfaceShow
 };
 
 /* sqSurfaceDispatch functions *****************************************************************************/
 
-long manualSurfaceGetFormat(ManualSurface* surface, long* width, long* height, long* depth, long* isMSB) {
+long manualSurfaceGetFormat(void *surfaceArg, long* width, long* height, long* depth, long* isMSB) {
+	ManualSurface* surface = surfaceArg;
 	*width = surface->width;
 	*height = surface->height;
 	*depth = surface->depth;
@@ -77,34 +78,36 @@ long manualSurfaceGetFormat(ManualSurface* surface, long* width, long* height, l
 	return 1;
 }
 
-void* manualSurfaceLock(ManualSurface* surface, long *pitch, long x, long y, long w, long h) {
+long manualSurfaceLock(void *surfaceArg, long *pitch, long x, long y, long w, long h) {
+	ManualSurface* surface = surfaceArg;
 	/* Ideally, would be atomic.  But it doens't matter for the forseeable future,
 	   since it is only called via BitBlt primitives. */
 	int wasLocked = surface->isLocked;
 	surface->isLocked = 1; 
 	
 	/* Can't lock if it was already locked. */
-	if (wasLocked) return NULL;
+	if (wasLocked) return 0;
 	
 	/* If there is no pointer, the lock-attempt fails. */
 	if (!surface->ptr) {
 		surface->isLocked = 0;
-		return NULL;
+		return 0;
 	}
 	
 	/* Success!  Return the pointer. */
 	*pitch = surface->rowPitch;
 	DPRINTF(("Locked Surface: %lx Input Rect: %ld %ld %ld %ld  Row Pitch: %ld\n", (long) surface, x, y, w, h, *pitch));
-	return surface->ptr;
+	return (long)(surface->ptr);
 }
 
-long manualSurfaceUnlock(ManualSurface* surface, long x, long y, long w, long h) {
+long manualSurfaceUnlock(void *surfaceArg, long x, long y, long w, long h) {
+	ManualSurface* surface = surfaceArg;
     surface->isLocked = 0;
 	DPRINTF(("Unlocked Surface: %lx Rect: %ld %ld %ld %ld\n", (long) surface, x, y, w, h));
 	return 1;	
 }
 
-long manualSurfaceShow(ManualSurface* surface, long x, long y, long w, long h) {
+long manualSurfaceShow(void *surfaceArg, long x, long y, long w, long h) {
 	/* Unsupported */
 	return 0;
 }
@@ -143,7 +146,7 @@ long createManualSurface(long width, long height, long rowPitch, long depth, lon
 
 long destroyManualSurface(long surfaceID) {
 	if (!unregisterSurface) return 0; /* failure... couldn't init function-pointer */
-	else return unregisterSurface(surfaceID);
+	return unregisterSurface(surfaceID);
 }
 
 long setManualSurfacePointer(long surfaceID, void* ptr) {
@@ -156,6 +159,6 @@ long setManualSurfacePointer(long surfaceID, void* ptr) {
 	surface = (ManualSurface*)surfaceHandle;	
 	if (surface->isLocked) return FALSE; /* can't set pointer while surface is locked */
 	surface->ptr = ptr;
-	DPRINTF(("Set Surface: %lx Polonger: %lx\n", surfaceID, (long)ptr));
+	DPRINTF(("Set Surface: %lx Pointer: %lx\n", surfaceID, (long)ptr));
 	return TRUE;
 }
