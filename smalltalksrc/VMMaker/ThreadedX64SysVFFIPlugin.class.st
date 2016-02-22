@@ -81,7 +81,7 @@ ThreadedX64SysVFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: 
 			s: (calloutState floatRegisters at: 7)].
 
 	atomicType := self atomicTypeOf: calloutState ffiRetHeader.
-	(atomicType >> 1) = (FFITypeSingleFloat >> 1)
+	(atomicType >> 1) = (FFITypeSingleFloat > 1)
 		ifTrue:
 			[atomicType = FFITypeSingleFloat
 				ifTrue:
@@ -129,7 +129,7 @@ ThreadedX64SysVFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: 
 				[oop := self ffiReturnStruct: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
 		 ^oop].
 	
-	(atomicType >> 1) = (FFITypeSingleFloat >> 1)
+	(atomicType >> 1) = (FFITypeSingleFloat > 1)
 		ifTrue:
 			[oop := interpreterProxy floatObjectOf: floatRet]
 		ifFalse:
