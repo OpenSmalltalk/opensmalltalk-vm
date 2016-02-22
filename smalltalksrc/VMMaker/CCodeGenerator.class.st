@@ -1593,6 +1593,15 @@ CCodeGenerator >> generateAsUnsignedLong: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateAsUnsignedLongLong: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPutAll:'((unsigned long long)'.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPut: $)
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateAsVoidPointer: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
@@ -2667,8 +2676,9 @@ CCodeGenerator >> generateSharedCodeDirective: msgNode on: aStream indent: level
 
 { #category : #'C translation' }
 CCodeGenerator >> generateShiftLeft: msgNode on: aStream indent: level [
-	"Generate a C bitShift.  If we can determine the result
-	 would overflow the word size, cast to a long integer."
+	"Generate a C bitShift.  If we can determine the result would overflow the word size,
+	 cast to a long long integer. If the receiver is an integer constant make sure its type
+	 is long, since the default type of numeric constants is int, which plays havoc in 64-bits."
 	| rcvr arg valueBeyondInt castToLong |
 	rcvr := msgNode receiver.
 	arg := msgNode args first.
@@ -2692,7 +2702,9 @@ CCodeGenerator >> generateShiftLeft: msgNode on: aStream indent: level [
 					 self emitCExpression: rcvr on: aStream.
 					 aStream nextPut: $)]]
 		ifFalse:
-			[self emitCExpression: rcvr on: aStream].
+			[self emitCExpression: rcvr on: aStream.
+			 (rcvr isConstant and: [rcvr name isEmpty]) ifTrue:
+				[aStream nextPut: $L]].
 	aStream nextPutAll: ' << '.
 	self emitCExpression: arg on: aStream
 ]
@@ -3283,6 +3295,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#asUnsignedInteger		#generateAsUnsignedInteger:on:indent:
 	#asLong					#generateAsLong:on:indent:
 	#asUnsignedLong			#generateAsUnsignedLong:on:indent:
+	#asUnsignedLongLong		#generateAsUnsignedLongLong:on:indent:
 	#asVoidPointer				#generateAsVoidPointer:on:indent:
 	#asSymbol					#generateAsSymbol:on:indent:
 	#flag:						#generateFlag:on:indent:
