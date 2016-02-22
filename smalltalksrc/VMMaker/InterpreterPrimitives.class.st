@@ -4543,13 +4543,14 @@ InterpreterPrimitives >> primitiveUtcWithOffset [
 	<var: #epochDelta declareC: 'static usqLong epochDelta= 2177452800000000ULL'>
 	<var: #utcMicroseconds type: #usqLong>
 	<var: #offset type: #sqLong>
+	self cCode: '' inSmalltalk: [epochDelta := 2177452800000000].
 	utcMicroseconds := self ioUTCMicroseconds.
 	offset := self ioLocalMicroseconds - utcMicroseconds.
 	offset := offset / 1000000.
 	objectMemory pushRemappableOop: (self positive64BitIntegerFor: utcMicroseconds - epochDelta).
 	resultArray := objectMemory instantiateClass: objectMemory classArray indexableSize: 2.
-	self storePointer: 0 ofObject: resultArray withValue: objectMemory popRemappableOop.
-	self storePointerUnchecked: 1 ofObject: resultArray withValue: (objectMemory integerObjectOf: offset).
+	objectMemory storePointer: 0 ofObject: resultArray withValue: objectMemory popRemappableOop.
+	objectMemory storePointerUnchecked: 1 ofObject: resultArray withValue: (objectMemory integerObjectOf: offset).
 	self pop: 1 thenPush: resultArray
 
 ]
