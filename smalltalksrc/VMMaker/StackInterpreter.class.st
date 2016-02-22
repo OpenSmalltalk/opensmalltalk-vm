@@ -782,7 +782,7 @@ StackInterpreter class >> initializeClassIndices [
 	MethodDictionaryIndex := 1.
 	InstanceSpecificationIndex := 2.
 	"Fields of a message dictionary"
-	MethodArrayIndex := 1.
+	MethodArrayIndex := 1. 
 	SelectorStart := 2.
 
 	"Newspeak extensions"
