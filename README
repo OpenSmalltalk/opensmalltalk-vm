@@ -45,7 +45,8 @@ object representation for Squeak as described in the back-to-the-future paper.
 Spur, as described on the www.mirandabanda.org blog, is a faster object
 representation which uses generation scavenging, lazy forwarding for fast
 become, a single object header format common to 32 and 64 bit versions, and a
-segmented heap that can grow and shrink, releasign memory back to the host OS.
+segmented heap that can grow and shrink, releasing memory back to the host OS.
+Newspeak, Squeak 5.0 and Pharo 5 use Spur.
 
 Another distinction is between normal single-threaded VMs that schedule "green"
 Smalltalk light-weight processes above a single-threaded VM, and multi-threaded
@@ -88,7 +89,9 @@ These contain many, but not all, of the plugins available for the VM.  Others
 can be found in Cog, or in various Monticello packages in various repositories.
 
 Each vm source directory contains several files, a subset of the following:
-	cogit.c				- the JIT; a Cogit cooperates with a CoInterpreter
+	cogit.c				- the JIT; a Cogit cooperates with a CoInterpreter.
+                          This simply includes a proessor-specific JIT file
+	cogitIA32.c et al   - relevant processor-specific JIT, selected by cogit.c
 	cogit.h				- the Cogit's API, as used by the CoInterpreter
 	cogmethod.h			- the structure of a CogMethod, the output of the Cogit
 	cointerp.c			- the CoInterpreter's source file
@@ -105,19 +108,14 @@ Each vm source directory contains several files, a subset of the following:
 
 Platform build directories
 --------------------------
-Build directories are in flux.  Currently there exist some old build directories
-such as unixbuild, cygwinbuild et al.  These are deprecated and will be removed
-before the end of 2014.  The current "official" buikd directories are of the
-form build.OS_WordSize_Processor, and include
+The current "official" build directories are of the form
+build.OS_WordSize_Processor, and include
 	build.linux32x86	- uses autoconf, gcc and make
 	build.macos32x86	- 32-bit Mac OS X using XCode and clang
 	build.macos64x64	- 64-bit Mac OS X using XCode and clang
 	build.win32x86		- uses cygwin, gcc and make
 More can be added as required.  In each there is a HowToBuild that describes
-the necessary steps to produce a VM.
-
-In addition, there is a set of build directories that use the CMake build
-configuration system.  These are not yet ready to describe as of this writing.
+the necessary steps to compile a VM.
 
 The scripts directory contains various scripts for validating and checking-in
 generated sources, packaging builds into installable artifacts (tar, msi, zip),
@@ -148,8 +146,6 @@ directories are external and shared with the Squeak trunk interpreter source:
 
 	platforms/Cross/plugins
 		- http://squeakvm.org/svn/squeak/trunk/platforms/Cross/plugins
-	platforms/iOS
-		- http://squeakvm.org/svn/squeak/trunk/platforms/iOS
 	platforms/win32/plugins
 		- http://squeakvm.org/svn/squeak/trunk/platforms/win32/plugins
 
