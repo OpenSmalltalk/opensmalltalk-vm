@@ -12,6 +12,11 @@ ThreadedIA32FFIPlugin class >> identifyingPredefinedMacros [
 	^#('_M_I386' '_X86_' 'i386' 'i486' 'i586' 'i686' '__i386__' '__386__' 'X86' 'I386')
 ]
 
+{ #category : #translation }
+ThreadedIA32FFIPlugin class >> moduleName [
+	^'IA32FFIPlugin'
+]
+
 { #category : #'callout support' }
 ThreadedIA32FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: calloutState [
 	<var: #procAddr type: #'void *'>
