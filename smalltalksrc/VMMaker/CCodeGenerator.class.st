@@ -1593,15 +1593,6 @@ CCodeGenerator >> generateAsUnsignedLong: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-CCodeGenerator >> generateAsUnsignedLongLong: msgNode on: aStream indent: level [
-	"Generate the C code for this message onto the given stream."
-
-	aStream nextPutAll:'((unsigned long long)'.
-	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPut: $)
-]
-
-{ #category : #'C translation' }
 CCodeGenerator >> generateAsVoidPointer: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
@@ -3292,7 +3283,6 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#asUnsignedInteger		#generateAsUnsignedInteger:on:indent:
 	#asLong					#generateAsLong:on:indent:
 	#asUnsignedLong			#generateAsUnsignedLong:on:indent:
-	#asUnsignedLongLong		#generateAsUnsignedLongLong:on:indent:
 	#asVoidPointer				#generateAsVoidPointer:on:indent:
 	#asSymbol					#generateAsSymbol:on:indent:
 	#flag:						#generateFlag:on:indent:
