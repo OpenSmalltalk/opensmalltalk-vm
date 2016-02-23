@@ -6666,6 +6666,21 @@ SpurMemoryManager >> isLargeFreeObject: objOop [
 	^(self bytesInObject: objOop) >= (self numFreeLists * self allocationUnit)
 ]
 
+{ #category : #'object testing' }
+SpurMemoryManager >> isLong64s: oop [
+	"Answer if the argument contains only indexable 64-bit double words (no oops). See comment in formatOf:"
+
+	^(self isNonImmediate: oop)
+	  and: [self isLong64sNonImm: oop]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isLong64sNonImm: objOop [
+	"Answer if the argument contains only indexable 64-bit double words (no oops). See comment in formatOf:"
+
+	^(self formatOf: objOop) = self sixtyFourBitIndexableFormat
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> isMarked: objOop [
 	<api>
@@ -6857,6 +6872,21 @@ SpurMemoryManager >> isSemaphoreObj: anObj [
 SpurMemoryManager >> isSemaphoreOop: anOop [
 	^(self isNonImmediate: anOop)
 	 and: [self isSemaphoreObj: anOop]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isShorts: oop [
+	"Answer if the argument contains only indexable 16-bit half words (no oops). See comment in formatOf:"
+
+	^(self isNonImmediate: oop)
+	  and: [self isShortsNonImm: oop]
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isShortsNonImm: objOop [
+	"Answer if the argument contains only indexable 16-bit half words (no oops). See comment in formatOf:"
+
+	^(self formatOf: objOop) between: self firstShortFormat and: self firstByteFormat - 1
 ]
 
 { #category : #'object testing' }
