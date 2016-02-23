@@ -684,7 +684,7 @@ Spur64BitMemoryManager >> isSmallFloatZero: aSmallFloat [
 Spur64BitMemoryManager >> isWordsNonImm: objOop [
 	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
 
-	^(self formatOf: objOop) between: self firstLongFormat and: self firstLongFormat + 1
+	^(self formatOf: objOop) between: self firstLongFormat and: self firstShortFormat - 1
 ]
 
 { #category : #allocation }
