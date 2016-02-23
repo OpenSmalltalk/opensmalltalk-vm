@@ -5,9 +5,9 @@ trap 'exit 2' HUP INT PIPE TERM
 REV=`grep 'SvnRawRevisionString.*Rev:' "\`dirname $0\`/../platforms/Cross/vm/sqSCCSVersion.h" \
 	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
 TAG=`date +%y.%U.`$REV
-set -- Newspeak\ Virtual\ Machine	Newspeak\ Spur\ Virtual\ Machine	\
-		Cog		Cog\ Spur
-for td in newspeak.cog.spur squeak.cog.v3 squeak.cog.spur; do
+set -- Newspeak\ Spur\ Virtual\ Machine	\
+		Pharo	Cog		Cog\ Spur
+for td in newspeak.cog.spur pharo.cog.spur squeak.cog.v3 squeak.cog.spur; do
 	d=$td/installer
 	PRODUCT=$1-$TAG.dmg
 	if test -d "$d"; then

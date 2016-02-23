@@ -33,9 +33,10 @@ WARNINGS:= -Wno-missing-field-initializers -Wno-missing-prototypes \
 	-Wno-sign-conversion -Wno-shorten-64-to-32 -Wpointer-sign -Wno-newline-eof \
 	-Wno-trigraphs -Wdeprecated-declarations
 
+# N.B. No QuickTime framework; that is 32-bit only.
 FRAMEWORKS:=-fobjc-link-runtime \
 			-framework Foundation -framework OpenGL -framework Cocoa \
-			-framework AudioToolbox -framework CoreAudio -framework QuickTime \
+			-framework AudioToolbox -framework CoreAudio \
 			-framework SystemConfiguration \
 			-framework ApplicationServices -framework Security \
 			-framework QuartzCore 

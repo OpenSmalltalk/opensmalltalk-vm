@@ -1,6 +1,6 @@
 #!/bin/bash
 trap 'exit 2' HUP INT PIPE TERM
-for d in newspeak.* squeak.*; do
+for d in newspeak.* pharo.* squeak.*; do
 	if test -d "$d"; then
 		(cd ./$d;./mvm -A)
 	else
@@ -8,4 +8,4 @@ for d in newspeak.* squeak.*; do
 	fi
 done
 echo no news is good news...
-grep -w error: newspeak.*/LOG* squeak.*/LOG*
+grep -w error: newspeak.*/LOG* pharo.* squeak.*/LOG*
