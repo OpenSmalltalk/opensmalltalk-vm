@@ -631,6 +631,13 @@ InterpreterProxy >> loadStackFrom: aContext [
 ]
 
 { #category : #private }
+InterpreterProxy >> long32At: arrayOffset [
+
+	^ arrayOffset long32At: 0
+
+]
+
+{ #category : #private }
 InterpreterProxy >> longAt: accessor [
 	^accessor longAt: 0
 ]
