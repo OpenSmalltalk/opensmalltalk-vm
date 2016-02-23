@@ -21,6 +21,7 @@ CogClass >> cCoerceSimple: value to: cTypeString [
 	 For simulation answer a suitable surrogate for the struct types"
 	^cTypeString caseOf:
 	   {	[#'unsigned long']							->	[value].
+		[#'unsigned int']							->	[value].
 		[#sqInt]										->	[value].
 		[#usqInt]									->	[value].
 		[#sqLong]									->	[value].
