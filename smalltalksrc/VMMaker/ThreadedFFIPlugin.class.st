@@ -134,6 +134,14 @@ ThreadedFFIPlugin class >> maxNumArgs [
 ]
 
 { #category : #translation }
+ThreadedFFIPlugin class >> moduleExportsName [
+	"To make the inclusion of the platform-specific plugin to work it can't use
+	 its moduleName in the exports but must use the proper moduleName."
+
+	^ThreadedFFIPlugin moduleName
+]
+
+{ #category : #translation }
 ThreadedFFIPlugin class >> moduleName [
 	"IMPORTANT: IF YOU CHANGE THE NAME OF THIS PLUGIN YOU MUST CHANGE
 		Interpreter>>primitiveCalloutToFFI *and* ThreadedFFIPlugin>>getModuleName
