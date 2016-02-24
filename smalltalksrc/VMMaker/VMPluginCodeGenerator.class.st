@@ -6,7 +6,6 @@ Class {
 	#superclass : #CCodeGenerator,
 	#instVars : [
 		'pluginClass',
-		'pluginName',
 		'pluginFunctionsUsed',
 		'inProgressSelectors',
 		'inliningDone'
@@ -176,7 +175,9 @@ VMPluginCodeGenerator >> emitCTypesOn: aStream [
 VMPluginCodeGenerator >> emitExportsOn: aStream [
 	"Store all the exported primitives in the form used by the internal named prim system."
 	aStream cr; cr; nextPutAll:'#ifdef SQUEAK_BUILTIN_PLUGIN'.
-	self emitExportsNamed: pluginName pluginName: pluginName on: aStream.
+	self emitExportsNamed: pluginClass moduleName
+		pluginName: pluginClass moduleExportsName
+		on: aStream.
 	aStream cr; nextPutAll: '#else /* ifdef SQ_BUILTIN_PLUGIN */'; cr; cr.
 	self emitAccessorDepthsOn: aStream.
 	aStream cr; nextPutAll: '#endif /* ifdef SQ_BUILTIN_PLUGIN */'; cr
@@ -321,12 +322,11 @@ VMPluginCodeGenerator >> pluginClass: aPluginClass [
 	 And for run-time use, answer the name string."
 	| packageId |
 	pluginClass := aPluginClass.
-	pluginName := pluginClass moduleName.
 	packageId := self shortMonticelloDescriptionForClass: pluginClass.
 	(packageId beginsWith: pluginClass name) ifTrue:
 		[packageId := packageId allButFirst: pluginClass name size].
-	(packageId beginsWith: pluginName) ifTrue:
-		[packageId := packageId allButFirst: pluginName size].
+	(packageId beginsWith: pluginClass moduleName) ifTrue:
+		[packageId := packageId allButFirst: pluginClass moduleName size].
 	^self declareModuleName: pluginClass moduleNameAndVersion, packageId
 ]
 
@@ -340,13 +340,6 @@ VMPluginCodeGenerator >> pluginFunctionsToClone [
 		reject: [:selector| self noteUsedPluginFunction: selector])
 			select: [:selector| InterpreterProxy includesSelector: selector])
 				asSortedCollection
-]
-
-{ #category : #public }
-VMPluginCodeGenerator >> pluginName: aString [
-"TPR - moved from CCodeGenerator"
-	"Set the plugin name when generating plugins."
-	pluginName := aString.
 ]
 
 { #category : #'C code generator' }

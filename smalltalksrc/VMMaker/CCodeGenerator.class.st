@@ -1350,13 +1350,14 @@ CCodeGenerator >> emitExportsNamed: exportsNamePrefix pluginName: pluginName on:
 	excludeDepth := exportsNamePrefix = 'vm'
 					  and: [pluginName isEmpty
 					  and: [vmClass objectMemoryClass hasSpurMemoryManagerAPI not]].
-	aStream cr; cr; nextPutAll: 'void* '; nextPutAll: exportsNamePrefix; nextPutAll: '_exports[][3] = {'; cr.
+	aStream cr; cr; nextPutAll: 'static char _m[] = "'; nextPutAll: pluginName; nextPutAll: '";'.
+	aStream cr; nextPutAll: 'void* '; nextPutAll: exportsNamePrefix; nextPutAll: '_exports[][3] = {'; cr.
 	((methods select: [:m| m export]) asSortedCollection: [:a :b| a selector caseSensitiveLessOrEqual: b selector]) do:
 		[:method| | compileTimeOptionPragmas primName |
 		(compileTimeOptionPragmas := method compileTimeOptionPragmas) notEmpty ifTrue:
 			[method outputConditionalDefineFor: compileTimeOptionPragmas on: aStream].
 		 primName := self cFunctionNameFor: method selector.
-		 aStream tab; nextPutAll: '{"'; nextPutAll: pluginName; nextPutAll: '", "'; nextPutAll: primName.
+		 aStream tab; nextPutAll: '{(void*)_m, "'; nextPutAll: primName.
 		 excludeDepth ifFalse:
 			[(self accessorDepthForSelector: primName asSymbol) ifNotNil:
 				[:depth| "store the accessor depth in a hidden byte immediately after the primName"
