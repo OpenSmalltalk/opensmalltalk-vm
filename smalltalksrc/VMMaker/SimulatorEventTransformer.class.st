@@ -122,7 +122,7 @@ SimulatorEventTransformer >> degenerateMouseEvent: aMorphicEvent for: aClient [
 	modifiers := aMorphicEvent buttons >> 3. "Sad, but modifiers come in on mouse move events..."
 
 	aMorphicEvent type == #mouseMove
-		ifTrue: "filter-out mouse moves unless buttons are pressed, so simulation doersn't get window leave events when we leave its window"
+		ifTrue: "filter-out mouse moves unless buttons are pressed, so simulation doesn't get window leave events when we leave its window"
 			[buttons = 0 ifTrue: [^nil]]
 		ifFalse:"If the buttons are going down, make sure to add a mouse move event to the current position before the buttons are pressed."
 			[((buttons bitAnd: 7) = 0 and: [(aMorphicEvent buttons bitAnd: 7) ~= 0]) ifTrue:
