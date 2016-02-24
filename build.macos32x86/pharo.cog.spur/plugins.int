@@ -26,6 +26,7 @@ SocketPlugin \
 SoundCodecPrims \
 SoundGenerationPlugin \
 SoundPlugin \
+SqueakFFIPrims \
 StarSqueakPlugin \
 SurfacePlugin \
 UUIDPlugin \

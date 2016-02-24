@@ -15,6 +15,8 @@
 # SRCDIRS    supplies additional directories containing files to compile.
 # PREREQUISITES supplies names of files that must exist to make lib or bundle
 
+$(info $$(LIBNAME): $(LIBNAME))
+
 # VM config flags.
 ifeq ($(CONFIGURATION),product)
 OFLAGS:= -g -Os
@@ -31,6 +33,7 @@ BUILD:=builddbg
 endif
 
 CFLAGS:= $(CFLAGS) $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(XDEFS)
+
 # The following are the four key locations (set via invocation):
 # PLUGINSRCDIR: Where is the root of the src/plugins source tree?
 # VMSRCDIR: Where is the root of the src vm source tree?

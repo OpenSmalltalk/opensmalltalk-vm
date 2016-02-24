@@ -36,7 +36,7 @@ PM=
 		-nl)	NL=1;;
 		-nm)	NM=1;;
 		-nw)	NW=1;;
-		-pw)	PW=1;;
+		-pm)	PM=1;;
 		-l)		CL=1;NL=1;;
 		-m)		CM=1;NM=1;PM=1;;
 		-w)		CW=1;NW=1;;
@@ -123,7 +123,7 @@ if [ -n "$PM" ]; then
 			(cd ../build.macos64x64/$PHB/$1 >/dev/null;tar cf - *) \
 			| (cd $app;tar xf -)
 			tar czf $app-$TAG.tgz $app
-			EXES="$EXES	$app/Contents/MacOS/Squeak"
+			EXES="$EXES	$app/Contents/MacOS/Pharo"
 		else
 			echo build.macos64x64/$PHB/$1 is missing
 		fi

@@ -215,7 +215,7 @@ $(OBJDIR)/%.lib: getversion $(call plugin-makefile,$(*F)) $(wildcard $(*F).ignor
 					$(wildcard $(PLATDIR)/Cross/plugins/$(*F)/*.*) \
 					$(wildcard $(OSXPLUGINSDIR)/$(*F)/*.*)
 	@-mkdir -p $(BLDDIR)/$(*F)
-	test $@ -ot $(call plugin-makefile,$(*F)) && rm $(BUILD)/vm/$(*F).lib || true
+	test $@ -ot $(call plugin-makefile,$(*F)) && rm -rf $(BUILD)/vm/$(*F).* || true
 	rm -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
@@ -224,6 +224,12 @@ $(OBJDIR)/%.lib: getversion $(call plugin-makefile,$(*F)) $(wildcard $(*F).ignor
 		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
 		$(PLUGINHACK) \
 		$(OBJDIR)/$(*F).lib
+
+prereqs/%.lib:
+	@-ls -rlt	$(call plugin-makefile,$(*F)) $(wildcard $(*F).ignore) \
+				$(wildcard $(PLUGINSRCDIR)/$(*F)/*.c) \
+				$(wildcard $(PLATDIR)/Cross/plugins/$(*F)/*.*) \
+				$(wildcard $(OSXPLUGINSDIR)/$(*F)/*.*)
 
 # It would be nice to have this abbreviation but it creates havoc eem 2/2016
 #%.lib: $(OBJDIR)/%.lib
@@ -236,7 +242,7 @@ $(OBJDIR)/%.bundle:	getversion $(call plugin-makefile,$(*F)) $(wildcard $(*F).ig
 					$(wildcard $(PLATDIR)/Cross/plugins/$(*F)/*.*) \
 					$(wildcard $(OSXPLUGINSDIR)/$(*F)/*.*)
 	@-mkdir -p $(BLDDIR)/$(*F)
-	test $@ -ot $(call plugin-makefile,$(*F)) && rm -rf $(BUILD)/vm/$(*F).bundle || true
+	test $@ -ot $(call plugin-makefile,$(*F)) && rm -rf $(BUILD)/vm/$(*F).* || true
 	rm -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
