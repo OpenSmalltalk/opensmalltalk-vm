@@ -514,7 +514,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 			 self MoveR: Arg0Reg R: TempReg].
 	jumpNotSmallInts := (argIsInt or: [rcvrIsInt])
 							ifTrue: [objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg]
-							ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: ReceiverResultReg andScratchReg: TempReg].
+							ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: ReceiverResultReg andScratch: TempReg scratch: ClassReg].
 
 	counterReg := self allocateRegNotConflictingWith: (self registerMaskFor: ReceiverResultReg and: Arg0Reg).
 	self 
