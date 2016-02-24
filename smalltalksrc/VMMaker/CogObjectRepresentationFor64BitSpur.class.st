@@ -591,14 +591,19 @@ CogObjectRepresentationFor64BitSpur >> genJumpNotSmallIntegerValue: aRegister sc
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationFor64BitSpur >> genJumpNotSmallIntegersIn: aRegister andScratchReg: scratchReg [
-	"Generate a compare and branch to test if aRegister and scratchReg contains other than SmallIntegers,
-	 i.e. don't branch if both aRegister and scratchReg contain SmallIntegers.
-	 Answer the jump.  Destroy scratchReg if required."
+CogObjectRepresentationFor64BitSpur >> genJumpNotSmallIntegersIn: aRegister andScratch: scratchA scratch: scratchB [
+	"Generate a compare and branch to test if aRegister and scratchA contains other than SmallIntegers,
+	 i.e. don't branch if both aRegister and scratchA contain SmallIntegers.
+	 Answer the jump.  Destroy scratchA and scratchB if required."
 	<returnTypeC: #'AbstractInstruction *'>
+	"Map SmallIntegers to 0 in scratchA & scratchB, add and jump non-zero."
 	^cogit
-		XorR: aRegister R: scratchReg;
-		AndCq: objectMemory tagMask R: scratchReg;
+		MoveR: aRegister R: scratchB;
+		SubCq: objectMemory smallIntegerTag R: scratchA;
+		SubCq: objectMemory smallIntegerTag R: scratchB;
+		AndCq: objectMemory tagMask R: scratchA;
+		AndCq: objectMemory tagMask R: scratchB;
+		AddR: scratchA R: scratchB;
 		JumpNonZero: 0
 ]
 
