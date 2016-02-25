@@ -98,7 +98,7 @@ SocketPlugin >> primitiveDisableSocketAccess [
 	"If the security plugin can be loaded, use it to turn off socket access
 	 If not, assume it's ok"
 	sDSAfn ~= 0 ifTrue:
-		[self cCode: '((int (*) (void)) sDSAfn)()']
+		[self cCode: '((sqInt (*) (void)) sDSAfn)()']
 ]
 
 { #category : #'security primitives' }
@@ -108,7 +108,7 @@ SocketPlugin >> primitiveHasSocketAccess [
 	"If the security plugin can be loaded, use it to check . 
 	 If not, assume it's ok"
 	hasAccess :=	sHSAfn = 0
-					or: [self cCode: ' ((int (*) (void)) sHSAfn)()' inSmalltalk:[true]].
+					or: [self cCode: ' ((sqInt (*) (void)) sHSAfn)()' inSmalltalk:[true]].
 	interpreterProxy pop: 1.
 	interpreterProxy pushBool: hasAccess
 ]
@@ -417,16 +417,13 @@ SocketPlugin >> primitiveSocket: socket connectTo: address port: port [
 	addr := self netAddressToInt: (self cCoerce: address to: 'unsigned char *').
 	"If the security plugin can be loaded, use it to check for permission.
 	If not, assume it's ok"
-	sCCTPfn ~= 0
-		ifTrue: [okToConnect := self cCode: ' ((int (*) (int, int)) sCCTPfn)(addr, port)'.
-			okToConnect
-				ifFalse: [^ interpreterProxy primitiveFail]].
+	sCCTPfn ~= 0 ifTrue:
+		[okToConnect := self cCode: ' ((sqInt (*) (sqInt, sqInt)) sCCTPfn)(addr, port)'.
+		 okToConnect ifFalse:
+			[^ interpreterProxy primitiveFail]].
 	s := self socketValueOf: socket.
-	interpreterProxy failed
-		ifFalse: [self
-				sqSocket: s
-				ConnectTo: addr
-				Port: port]
+	interpreterProxy failed ifFalse:
+		[self sqSocket: s ConnectTo: addr Port: port]
 ]
 
 { #category : #primitives }
@@ -468,11 +465,12 @@ SocketPlugin >> primitiveSocket: socket listenOnPort: port [
 	s := self socketValueOf: socket.
 	"If the security plugin can be loaded, use it to check for permission.
 	If  not, assume it's ok"
-	sCCLOPfn ~= 0
-		ifTrue: [okToListen := self cCode: ' ((int (*) (SocketPtr, int)) sCCLOPfn)(s, port)'.
-			okToListen
-				ifFalse: [^ interpreterProxy primitiveFail]].
-	interpreterProxy failed ifFalse:[self sqSocket: s ListenOnPort: port]
+	sCCLOPfn ~= 0 ifTrue:
+		[okToListen := self cCode: ' ((sqInt (*) (sqInt, sqInt)) sCCLOPfn)((sqInt)s, port)'.
+		 okToListen ifFalse:
+			[^ interpreterProxy primitiveFail]].
+	interpreterProxy failed ifFalse:
+		[self sqSocket: s ListenOnPort: port]
 ]
 
 { #category : #primitives }
@@ -486,14 +484,11 @@ SocketPlugin >> primitiveSocket: socket listenOnPort: port backlogSize: backlog 
 	s := self socketValueOf: socket.
 	"If the security plugin can be loaded, use it to check for permission.
 	If not, assume it's ok"
-	sCCLOPfn ~= 0
-		ifTrue: [okToListen := self cCode: ' ((int (*) (SocketPtr, int)) sCCLOPfn)(s, port)'.
-			okToListen
-				ifFalse: [^ interpreterProxy primitiveFail]].
-	self
-		sqSocket: s
-		ListenOnPort: port
-		BacklogSize: backlog
+	sCCLOPfn ~= 0 ifTrue:
+		[okToListen := self cCode: ' ((sqInt (*) (sqInt, sqInt)) sCCLOPfn)((sqInt)s, port)'.
+		 okToListen ifFalse:
+			[^interpreterProxy primitiveFail]].
+	self sqSocket: s ListenOnPort: port BacklogSize: backlog
 ]
 
 { #category : #primitives }
@@ -506,16 +501,12 @@ SocketPlugin >> primitiveSocket: socket listenOnPort: port backlogSize: backlog 
 	s := self socketValueOf: socket.
 	"If the security plugin can be loaded, use it to check for permission.
 	If  not, assume it's ok"
-	sCCLOPfn ~= 0
-		ifTrue: [okToListen := self cCode: ' ((int (*) (SocketPtr, int)) sCCLOPfn)(s, port)'.
-			okToListen
-				ifFalse: [^ interpreterProxy primitiveFail]].
+	sCCLOPfn ~= 0 ifTrue:
+		[okToListen := self cCode: ' ((sqInt (*) (sqInt, sqInt)) sCCLOPfn)((sqInt)s, port)'.
+		 okToListen ifFalse:
+			[^ interpreterProxy primitiveFail]].
 	addr := self netAddressToInt: (self cCoerce: ifAddr to: 'unsigned char *').
-	self
-		sqSocket: s
-		ListenOnPort: port
-		BacklogSize: backlog
-		Interface: addr
+	self sqSocket: s ListenOnPort: port BacklogSize: backlog Interface: addr
 ]
 
 { #category : #'ipv6 primitives' }
@@ -836,20 +827,21 @@ SocketPlugin >> primitiveSocketCreateNetwork: netType type: socketType receiveBu
 	self primitive: 'primitiveSocketCreate' parameters: #(#SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger ).
 	"If the security plugin can be loaded, use it to check for permission.
 	If  not, assume it's ok"
-	sCCSOTfn ~= 0
-		ifTrue: [okToCreate := self cCode: ' ((int (*) (int, int)) sCCSOTfn)(netType, socketType)'.
-			okToCreate
-				ifFalse: [^ interpreterProxy primitiveFail]].
+	sCCSOTfn ~= 0 ifTrue:
+		[okToCreate := self cCode: ' ((sqInt (*) (sqInt, sqInt)) sCCSOTfn)(netType, socketType)'.
+		 okToCreate ifFalse:
+			[^ interpreterProxy primitiveFail]].
 	socketOop := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: self socketRecordSize.
 	s := self socketValueOf: socketOop.
-	self
-		sqSocket: s
-		CreateNetType: netType
-		SocketType: socketType
-		RecvBytes: recvBufSize
-		SendBytes: sendBufSize
-		SemaID: semaIndex.
-	^ socketOop
+	interpreterProxy failed ifFalse:
+		[self
+			sqSocket: s
+			CreateNetType: netType
+			SocketType: socketType
+			RecvBytes: recvBufSize
+			SendBytes: sendBufSize
+			SemaID: semaIndex].
+	^socketOop
 ]
 
 { #category : #primitives }
@@ -859,22 +851,23 @@ SocketPlugin >> primitiveSocketCreateNetwork: netType type: socketType receiveBu
 	self primitive: 'primitiveSocketCreate3Semaphores' parameters: #(#SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger ).
 	"If the security plugin can be loaded, use it to check for permission.
 	If not, assume it's ok"
-	sCCSOTfn ~= 0
-		ifTrue: [okToCreate := self cCode: ' ((int (*) (int, int)) sCCSOTfn)(netType, socketType)'.
-			okToCreate
-				ifFalse: [^ interpreterProxy primitiveFail]].
+	sCCSOTfn ~= 0 ifTrue:
+		[okToCreate := self cCode: ' ((sqInt (*) (sqInt, sqInt)) sCCSOTfn)(netType, socketType)'.
+		 okToCreate ifFalse:
+			[^ interpreterProxy primitiveFail]].
 	socketOop := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: self socketRecordSize.
 	s := self socketValueOf: socketOop.
-	self
-		sqSocket: s
-		CreateNetType: netType
-		SocketType: socketType
-		RecvBytes: recvBufSize
-		SendBytes: sendBufSize
-		SemaID: semaIndex
-		ReadSemaID: aReadSema
-		WriteSemaID: aWriteSema.
-	^ socketOop
+	interpreterProxy failed ifFalse:
+		[self
+			sqSocket: s
+			CreateNetType: netType
+			SocketType: socketType
+			RecvBytes: recvBufSize
+			SendBytes: sendBufSize
+			SemaID: semaIndex
+			ReadSemaID: aReadSema
+			WriteSemaID: aWriteSema].
+	^socketOop
 ]
 
 { #category : #primitives }
@@ -884,21 +877,22 @@ SocketPlugin >> primitiveSocketCreateRaw: netType type: protoType receiveBufferS
 	self primitive: 'primitiveSocketCreateRAW' parameters: #(#SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger ).
 	"If the security plugin can be loaded, use it to check for permission.
 	If not, assume it's ok"
-	sCCSOTfn ~= 0
-		ifTrue: [okToCreate := self cCode: ' ((int (*) (int, int)) sCCSOTfn)(netType, protoType)'.
-			okToCreate
-				ifFalse: [^ interpreterProxy primitiveFail]].
+	sCCSOTfn ~= 0 ifTrue:
+		[okToCreate := self cCode: ' ((sqInt (*) (sqInt, sqInt)) sCCSOTfn)(netType, protoType)'.
+		 okToCreate ifFalse:
+			[^ interpreterProxy primitiveFail]].
 	socketOop := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: self socketRecordSize.
 	s := self socketValueOf: socketOop.
-	self
-		sqSocket: s
-		CreateRaw: netType
-		ProtoType: protoType
-		RecvBytes: recvBufSize
-		SendBytes: sendBufSize
-		SemaID: semaIndex
-		ReadSemaID: aReadSema
-		WriteSemaID: aWriteSema.
+	interpreterProxy failed ifFalse:
+		[self
+			sqSocket: s
+			CreateRaw: netType
+			ProtoType: protoType
+			RecvBytes: recvBufSize
+			SendBytes: sendBufSize
+			SemaID: semaIndex
+			ReadSemaID: aReadSema
+			WriteSemaID: aWriteSema].
 	^ socketOop
 ]
 
