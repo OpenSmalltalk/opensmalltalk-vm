@@ -397,7 +397,7 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 	"Even thoug we exclude initialize methods, we must consider their
 	 global variable usage, otherwise globals may be incorrectly localized."
 	selector == #initialize ifTrue:
-		[self checkForGlobalUsage: (tmethod allReferencedVariablesIn: self) in: tmethod.
+		[self checkForGlobalUsage: (tmethod allReferencedVariablesUsing: self) in: tmethod.
 		 ^nil].
 	self addMethod: tmethod.
 	"If the method has a macro then add the macro.  But keep the method
@@ -3876,6 +3876,10 @@ CCodeGenerator >> nilOrBooleanConditionFor: nodeOrNil [
 		[^nil].
 	nodeOrNil isSend ifFalse:
 		[^nil].
+	(#(ifTrue: ifFalse: ifTrue:ifFalse: ifFalse:ifTrue:) includes: nodeOrNil selector) ifTrue:
+		[^self nilOrBooleanConstantReceiverOf: nodeOrNil receiver].
+	(#(and: or:) includes: nodeOrNil selector) ifTrue:
+		[^self nilOrBooleanConstantReceiverOf: nodeOrNil].
 	(#(cppIf:ifTrue: cppIf:ifTrue:ifFalse:) includes: nodeOrNil selector) ifTrue:
 		[(vmClass notNil
 		 and: [nodeOrNil args first isConstant
@@ -3891,9 +3895,7 @@ CCodeGenerator >> nilOrBooleanConditionFor: nodeOrNil [
 		   and: [nodeOrNil args first isConstant
 		   and: [#(true false) includes: (optionsDictionary at: nodeOrNil args first name ifAbsent: [nil])]]) ifTrue:
 			[optionsDictionary at: nodeOrNil args first name]].
-
-	^(#(ifTrue: ifFalse: ifTrue:ifFalse: ifFalse:ifTrue:) includes: nodeOrNil selector) ifTrue:
-		[self nilOrBooleanConstantReceiverOf: nodeOrNil]
+	^nil
 ]
 
 { #category : #utilities }
@@ -3976,6 +3978,29 @@ CCodeGenerator >> node: exprNode typeCompatibleWith: argName inliningInto: targe
 						'" when inlining ', targetMethod selector, ' in ', aTMethod selector, '. Use a cast.';
 					cr; flush]. 
 			exprNode]
+]
+
+{ #category : #utilities }
+CCodeGenerator >> nodeIsDeadCode: aNode withParent: parentNode [
+	"Answer if aNode would not be generated due to dead code elimination."
+	^(self nilOrBooleanConditionFor: parentNode)
+		ifNil: [false]
+		ifNotNil:
+			[:cond| | filter |
+			filter := parentNode selector caseOf:
+							{   "First element is accessor for filtered (eliminated) node if expression is true.
+								Second element is accessor for filtered (eliminated) node if expression is false."
+								[#ifFalse:]				-> [#(first nil)].
+								[#ifFalse:ifTrue:] 		-> [#(first last)].
+								[#ifTrue:]				-> [#(nil first)].
+								[#ifTrue:ifFalse:]			-> [#(last first)].
+								[#and:]					-> [#(nil first)].
+								[#or:]					-> [#(last nil)].
+								[#cppIf:ifTrue:]			-> [#(nil #second)].
+								[#cppIf:ifTrue:ifFalse:]	-> [#(third #second)] }.
+			(cond ifTrue: [filter first] ifFalse: [filter last])
+				ifNil: [false]
+				ifNotNil: [:accessor| aNode == (parentNode args perform: accessor)]]
 ]
 
 { #category : #inlining }

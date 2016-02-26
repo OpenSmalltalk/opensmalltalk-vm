@@ -156,12 +156,12 @@ TMethod >> allLocals [
 ]
 
 { #category : #accessing }
-TMethod >> allReferencedVariablesIn: aCodeGen [
+TMethod >> allReferencedVariablesUsing: aCodeGen [
 	"Answer the set of all variables referenced in the receiver."
 	| refs |
 	refs := Set new.
 	"Find all the variable names referenced in this method.
-	 Don't descend into "
+	 Don't descend into conditionals that won't be generated."
 	parseTree
 		nodesWithParentsDo:
 			[:node :parent|
@@ -172,11 +172,9 @@ TMethod >> allReferencedVariablesIn: aCodeGen [
 				[aCodeGen addVariablesInVerbatimCIn: node to: refs]]
 		unless:
 			[:node :parent|
-			(aCodeGen nilOrBooleanConditionFor: parent)
-				ifNil: [false]
-				ifNotNil:
-					[:condition| "double negatives are confusing, aren't they ;-)"
-					node = parent args second == condition not]].
+			parent notNil
+			and: [parent isSend
+			and: [aCodeGen nodeIsDeadCode: node withParent: parent]]].
 	^refs
 ]
 
@@ -2264,11 +2262,17 @@ TMethod >> removeUnusedTempsIn: aCodeGen [
 	"After inlining some variable references are now obsolete, we could fix them there
 	 but the code seems a bit complicated, the other choice to to rebuild the locals
 	 before extruding. This is done here"
-	| refs |
-	refs := self allReferencedVariablesIn: aCodeGen.
+	| usedVariables |
+	usedVariables := self allReferencedVariablesUsing: aCodeGen.
 	"reset the locals to be only those still referred to"
-	locals := locals select: [:e| refs includes: e].
-	^refs
+	locals do:
+		[:local|
+		 ((usedVariables includes: local) not
+		  and: [((declarations at: local ifAbsent: ['']) includesSubString: 'static') not
+		  and: [((declarations at: local ifAbsent: ['']) includesSubString: 'extern') not]]) ifTrue:
+			[locals remove: local.
+			 declarations removeKey: local ifAbsent: []]].
+	^usedVariables
 ]
 
 { #category : #'inlining support' }
