@@ -207,7 +207,7 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		as: #usqInt
 		in: aCCodeGenerator.
 	"These are all pointers; char * because Slang has no support for C pointer arithmetic."
-	self declareC: #(localIP localSP localFP stackPointer framePointer stackLimit stackMemory breakSelector)
+	self declareC: #(localIP localSP localFP stackPointer framePointer stackLimit breakSelector)
 		as: #'char *'
 		in: aCCodeGenerator.
 	aCCodeGenerator

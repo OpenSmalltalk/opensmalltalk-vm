@@ -7996,7 +7996,7 @@ Cogit >> markAndTraceMachineCodeForNewSpaceGC [
 	| pointer cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	objectMemory leakCheckNewSpaceGC ifTrue:
-		[self assert: self allMachineCodeObjectReferencesValid].
+		[self asserta: self allMachineCodeObjectReferencesValid].
 	codeModified := false.
 	pointer := methodZone youngReferrers.
 	[pointer < methodZone zoneEnd] whileTrue:
@@ -8013,7 +8013,7 @@ Cogit >> markAndTraceMachineCodeForNewSpaceGC [
 				self markYoungObjectsIn: cogMethod]].
 		 pointer := pointer + objectMemory wordSize].
 	objectMemory leakCheckNewSpaceGC ifTrue:
-		[self assert: self allMachineCodeObjectReferencesValid].
+		[self asserta: self allMachineCodeObjectReferencesValid].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
 		[processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]
 ]
@@ -8026,7 +8026,7 @@ Cogit >> markAndTraceMachineCodeOfMarkedMethods [
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	objectMemory leakCheckFullGC ifTrue:
-		[self assert: self allMachineCodeObjectReferencesValid].
+		[self asserta: self allMachineCodeObjectReferencesValid].
 	codeModified := false.
 	self markAndTraceObjectReferencesInGeneratedRuntime.
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
@@ -8040,7 +8040,7 @@ Cogit >> markAndTraceMachineCodeOfMarkedMethods [
 			[self markAndTraceLiteralsIn: cogMethod].
 		 cogMethod := methodZone methodAfter: cogMethod].
 	objectMemory leakCheckFullGC ifTrue:
-		[self assert: self allMachineCodeObjectReferencesValid].
+		[self asserta: self allMachineCodeObjectReferencesValid].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
 		[processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]
 ]
@@ -8114,7 +8114,7 @@ Cogit >> markAndTraceOrFreeMachineCodeForFullGC [
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	objectMemory leakCheckFullGC ifTrue:
-		[self assert: self allMachineCodeObjectReferencesValid].
+		[self asserta: self allMachineCodeObjectReferencesValid].
 	codeModified := false.
 	self markAndTraceObjectReferencesInGeneratedRuntime.
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
@@ -8122,7 +8122,7 @@ Cogit >> markAndTraceOrFreeMachineCodeForFullGC [
 		[self markAndTraceOrFreeCogMethod: cogMethod firstVisit: true.
 		 cogMethod := methodZone methodAfter: cogMethod].
 	objectMemory leakCheckFullGC ifTrue:
-		[self assert: self allMachineCodeObjectReferencesValid].
+		[self asserta: self allMachineCodeObjectReferencesValid].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
 		[processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]
 ]
