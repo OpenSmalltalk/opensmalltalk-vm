@@ -32,7 +32,9 @@ Transcript clear.
 Transcript show: ((Linux64x86w32BitSqueakCogV3Config new) configureForBuildType: #build) contentForVmConfigCmake   
 
 
-The CMake encapsulation is eased by storing CMakeTemplates--small wrapper classes that encapsulate CMake constructs.
+The CMake encapsulation makes heavy us of CMakeTemplates--small wrapper classes that encapsulate CMake constructs; 
+It is the same idiom Seaside uses with its  Components
+
 CMakeTemplate browseHierarchy.
 
 Configurations Are organized by Platform in specific Class Categories. Example: CMakeVMMakerSqueak-MacOSPowerPC contains all the configurations for that platform.
@@ -49,7 +51,7 @@ Configurations can support the available build types: #build, #buildDebug, #buil
 Configurations can exclude themselves from being built.
 Configurations can exclude themselves from supporting particular build types.
 
-For each buildType, a Configuration encapsulates CMake configuration parameters for that buildType..
+For each buildType, a Configuration encapsulates the CMake configuration for that buildType..
 
 To use a Configuration, we tell it to configure itself for a particular build type and then generate its output.
 
@@ -59,5 +61,7 @@ To use a Configuration, we tell it to configure itself for a particular build ty
 
 { #category : #accessing }
 CMakeVMMakerSqueakConfigurationsHelp class >> pages [
-	^#(overview CMakeVMMakerSqueakStepByStepNewConfigurationHelp CMakeVMMakerSqueakStepByStepNewPlatformHelp)
+"	#(overview CMakeVMMakerSqueakStepByStepNewConfigurationHelp CMakeVMMakerSqueakStepByStepNewPlatformHelp)"
+	^#(overview CMakeVMMakerSqueakStepByStepNewConfigurationHelp)
+
 ]
