@@ -834,7 +834,7 @@ CPlatformConfigForSqueak >> cmakeAddDefinitions [
 		at: #build put: [self cmakeAddDefinitionsBuild];
 		at: #buildAssert  put: [self cmakeAddDefinitionsBuildAssert];
 		at: #buildAssertITimerHeartbeat  put: [self cmakeAddDefinitionsBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self cmakeAddDefinitionsPathBuildDebug];   
+            at:#buildDebug  put: [self cmakeAddDefinitionsBuildDebug];   
 		at: #buildDebugITimerHeartbeat  put: [self cmakeAddDefinitionsBuildDebugITimerHeartbeat ];
 		at: #buildITimerHeartbeat  put: [self cmakeAddDefinitionsBuildITimerHeartbeat];
 		at: #buildMultiThreaded  put: [self cmakeAddDefinitionsBuildMultiThreaded];
