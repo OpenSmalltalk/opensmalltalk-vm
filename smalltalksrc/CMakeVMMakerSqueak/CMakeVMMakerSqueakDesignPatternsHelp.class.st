@@ -77,8 +77,9 @@ CMakeVMMakerSqueakDesignPatternsHelp class >> redirectPatternHeirarchy [
 	^HelpTopic
 		title: 'Method Redirect Heirarchy'
 		contents:
-'To get a sense of the hierarchy and this pattern browse the Abstract Base Class
-Linux64x86w32BitConfig
+'To get a sense of the hierarchy and this pattern browse 
+
+ToolSet browseMessageCategory: ''cmake buildType redirects''  inClass:CPlatformConfigForSqueak
 
 Under the ''cmake buildType redirects'' protocol we see coreSourcesBuld and coreSourcesBuilMultiThreaded.
 
