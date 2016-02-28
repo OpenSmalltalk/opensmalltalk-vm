@@ -589,12 +589,6 @@ CogObjectRepresentation >> genPrimitiveBitXor [
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentation >> genPrimitiveCharacterValue [
-	"subclasses override if they can"
-	^UnimplementedPrimitive
-]
-
-{ #category : #'primitive generators' }
 CogObjectRepresentation >> genPrimitiveClass [
 	| reg |
 	reg := ReceiverResultReg.
@@ -813,6 +807,12 @@ CogObjectRepresentation >> genPrimitiveGreaterThan [
 { #category : #'primitive generators' }
 CogObjectRepresentation >> genPrimitiveIdentical [
 	^self genPrimitiveIdenticalOrNotIf: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveImmediateAsInteger [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
 ]
 
 { #category : #'primitive generators' }
