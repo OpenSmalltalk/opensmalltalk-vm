@@ -905,13 +905,6 @@ CogObjectRepresentationForSpur >> genPrimitiveAsCharacter [
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationForSpur >> genPrimitiveCharacterValue [
-	self genConvertCharacterToSmallIntegerInReg: ReceiverResultReg.
-	cogit genPrimReturn.
-	^UnfailingPrimitive
-]
-
-{ #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> genPrimitiveIdenticalOrNotIf: orNot [
 	| jumpImmediate jumpCmp |
 	<var: #jumpCmp type: #'AbstractInstruction *'>
@@ -933,6 +926,11 @@ CogObjectRepresentationForSpur >> genPrimitiveIdenticalOrNotIf: orNot [
 
 { #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> genPrimitiveIdentityHash [
+	self subclassResponsibility
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveImmediateAsInteger [
 	self subclassResponsibility
 ]
 

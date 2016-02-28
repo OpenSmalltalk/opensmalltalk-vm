@@ -745,6 +745,7 @@ CogObjectRepresentationFor32BitSpur >> genPrimitiveAtPut [
 
 { #category : #'primitive generators' }
 CogObjectRepresentationFor32BitSpur >> genPrimitiveIdentityHash [
+	"Arguably we should fail for immediates, but so far no one has complained, so..."
 	| jumpImm jumpSI jumpNotSet ret |
 	<var: #jumpSI type: #'AbstractInstruction *'>
 	<var: #jumpImm type: #'AbstractInstruction *'>
@@ -762,6 +763,14 @@ CogObjectRepresentationFor32BitSpur >> genPrimitiveIdentityHash [
 	cogit Jump: ret.
 	jumpNotSet jmpTarget: cogit Label.
 	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor32BitSpur >> genPrimitiveImmediateAsInteger [
+	":Assume the receiuver is never a SmallInteger.  One would use ^self for that."
+	self genConvertCharacterToSmallIntegerInReg: ReceiverResultReg.
+	cogit genPrimReturn.
+	^UnfailingPrimitive
 ]
 
 { #category : #'primitive generators' }

@@ -164,6 +164,21 @@ CogObjectRepresentationFor64BitSpur >> genConvertIntegerToSmallIntegerInReg: reg
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genConvertSmallFloatToSmallFloatHashAsIntegerInReg: reg scratch: scratch [
+	"Convert the SmallFloat in reg to its identityHash as a SmallInteger.
+	 Rotate the sign bit from bit 3 (zero-relative) the sign bit.  This implicitly sets
+	 SmallInteger tags (3 >> 1 = 1).   c.f. Spur64BitMemoryManager>>rotatedFloatBitsOf:"
+	self assert: objectMemory smallFloatTag >> 1 = objectMemory smallIntegerTag.
+	cogit
+		LogicalShiftRightCq: 1 R: reg;
+		AndCq: 1 << (objectMemory numTagBits - 1) R: reg R: scratch;
+		SubR: scratch R: reg;
+		LogicalShiftLeftCq: 63 - (objectMemory numTagBits - 1) R: scratch;
+		OrR: scratch R: reg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genConvertSmallIntegerToCharacterInReg: reg [
 	"Convert the SmallInteger in reg to a Character, assuming
 	 the SmallInteger's value is a valid character."
@@ -1006,27 +1021,46 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveAtPut [
 
 { #category : #'primitive generators' }
 CogObjectRepresentationFor64BitSpur >> genPrimitiveIdentityHash [
-	| jumpImm jumpSF jumpNotSet ret |
-	<var: #jumpSF type: #'AbstractInstruction *'>
+	"Arguably we should fail for immediates, but so far no one has complained, so..."
+	| jumpImm jumpNotSet jumpNotCharacter ret |
 	<var: #jumpImm type: #'AbstractInstruction *'>
 	<var: #jumpNotSet type: #'AbstractInstruction *'>
+	<var: #jumpNotCharacter type: #'AbstractInstruction *'>
 	jumpImm := self genJumpImmediate: ReceiverResultReg. "uses TstCqR"
 	self genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: TempReg.
 	cogit CmpCq: ConstZero R: TempReg.
 	jumpNotSet := cogit JumpZero: 0.
 	cogit MoveR: TempReg R: ReceiverResultReg.
 	ret := cogit genPrimReturn.
-	jumpImm jmpTarget: cogit Label.
-	jumpSF := cogit "Fail SmallFloat because their hash uses rotatedFloatBitsOf: the oop"
+	jumpImm jmpTarget: (cogit AndCq: objectMemory tagMask R: ReceiverResultReg R: TempReg).
+	cogit CmpCq: objectMemory characterTag R: TempReg.
+	jumpNotCharacter := cogit JumpNonZero: 0.
+	self genConvertCharacterToSmallIntegerInReg: ReceiverResultReg.
+	ret := cogit genPrimReturn.
+	jumpNotCharacter jmpTarget: (cogit CmpCq: objectMemory smallFloatTag R: TempReg).
+	cogit JumpNonZero: ret.
+	self genConvertSmallFloatToSmallFloatHashAsIntegerInReg: ReceiverResultReg scratch: TempReg.
+	cogit genPrimReturn.
+	jumpNotSet jmpTarget: cogit Label.
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveImmediateAsInteger [
+	| jumpNotCharacter ret |
+	<var: #jumpNotCharacter type: #'AbstractInstruction *'>
+	jumpNotCharacter := cogit
 		AndCq: objectMemory tagMask R: ReceiverResultReg R: TempReg;
-		CmpCq: objectMemory smallIntegerTag R: TempReg;
-		JumpZero: ret;
 		CmpCq: objectMemory characterTag R: TempReg;
 		JumpNonZero: 0.
 	self genConvertCharacterToSmallIntegerInReg: ReceiverResultReg.
-	cogit Jump: ret.
-	jumpNotSet jmpTarget: (jumpSF jmpTarget: cogit Label).
-	^0
+	ret := cogit genPrimReturn.
+	jumpNotCharacter jmpTarget:
+		(cogit CmpCq: objectMemory smallFloatTag R: TempReg).
+	cogit JumpNonZero: ret.
+	self genConvertSmallFloatToSmallFloatHashAsIntegerInReg: ReceiverResultReg scratch: TempReg.
+	cogit genPrimReturn.
+	^UnfailingPrimitive
 ]
 
 { #category : #'primitive generators' }
