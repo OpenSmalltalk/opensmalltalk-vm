@@ -101,27 +101,6 @@
 # define sd_listen_fds(u) 0
 #endif
 
-/* debugging stuff. can probably be deleted */
-
-#ifdef DEBUG
-# ifdef ACORN
-#   define FPRINTF(s) \
-    { \
-      extern os_error privateErr; \
-      extern void platReportError(os_error *e); \
-      privateErr.errnum = (bits)0; \
-      sprintf s; \
-      platReportError((os_error *)&privateErr); \
-    };
-# else /* !ACORN */
-    extern int aioLastTick, aioThisTick;
-#   define FPRINTF(X) { aioThisTick= ioLowResMSecs();  fprintf(stderr, "%8d %8d ", aioThisTick, aioThisTick - aioLastTick);  aioLastTick= aioThisTick;  fprintf X; }
-# endif
-#else /* !DEBUG */
-# define FPRINTF(X)
-#endif
-
-
 /*** Socket types ***/
 
 #define TCPSocketType			0 /* SOCK_STREAM on AF_INET or AF_INET6 */
@@ -638,7 +617,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
   if (-1 == newSocket)
     {
       /* socket() failed, or incorrect protocol type */
-      fprintf(stderr, "primSocketCreateRAW: socket() failed; protocol = %d, errno = %d\n", protocol, errno);
+      fprintf(stderr, "primSocketCreateRAW: socket() failed; protocol = %ld, errno = %d\n", protocol, errno);
       interpreterProxy->success(false);
       return;
     }
@@ -1367,7 +1346,7 @@ sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValue
 	  /* this is JUST PLAIN WRONG (I mean the design in the image rather
 	     than the implementation here, which is probably correct
 	     w.r.t. the broken design) */
-	  if (optionValueSize > (int)sizeof(buf) - 1)
+	  if (optionValueSize > sizeof(buf) - 1)
 	    goto barf;
 
 	  memset((void *)buf, 0, sizeof(buf));
@@ -1519,7 +1498,7 @@ sqInt sqResolverLocalAddress(void)
 /* experimental new code */
 {
     struct ifaddrs *ifaddr, *ifa;
-    int family, s;
+    int s;
     char host[NI_MAXHOST];
     sqInt localAddr = 0;
 
@@ -1689,7 +1668,7 @@ void sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *ho
 
   FPRINTF((stderr, "  -> GetAddressInfo %s %s\n", host, serv));
 
-  if (servSize && (family == SQ_SOCKET_FAMILY_LOCAL) && (servSize < (int)sizeof(((struct sockaddr_un *)0)->sun_path)) && !(flags & SQ_SOCKET_NUMERIC))
+  if (servSize && (family == SQ_SOCKET_FAMILY_LOCAL) && (servSize < sizeof(((struct sockaddr_un *)0)->sun_path)) && !(flags & SQ_SOCKET_NUMERIC))
     {
       struct stat st;
       if ((0 == stat(servName, &st)) && (st.st_mode & S_IFSOCK))
@@ -1775,7 +1754,7 @@ struct addressHeader
 #define addressHeader(A)	((struct addressHeader *)(A))
 #define socketAddress(A)	((struct sockaddr *)((char *)(A) + AddressHeaderSize))
 
-#define addressValid(A, S)	(thisNetSession && (thisNetSession == addressHeader(A)->sessionID) && (addressHeader(A)->size == (int)((S) - AddressHeaderSize)))
+#define addressValid(A, S)	(thisNetSession && (thisNetSession == addressHeader(A)->sessionID) && (addressHeader(A)->size == ((S) - AddressHeaderSize)))
 #define addressSize(A)		(addressHeader(A)->size)
 
 
@@ -1806,7 +1785,7 @@ sqInt sqResolverGetAddressInfoSize(void)
 
 void sqResolverGetAddressInfoResultSize(char *addr, sqInt addrSize)
 {
-  if ((!addrInfo) || (addrSize < (int)(AddressHeaderSize + addrInfo->ai_addrlen)))
+  if ((!addrInfo) || (addrSize < (AddressHeaderSize + addrInfo->ai_addrlen)))
     {
       interpreterProxy->success(false);
       return;
@@ -2176,7 +2155,7 @@ void sqSocketLocalAddressResultSize(SocketPtr s, char *addr, int addrSize)
   if (getsockname(SOCKET(s), &saddr.sa, &saddrSize))
     goto fail;
 
-  if (addrSize != (int)(AddressHeaderSize + saddrSize))
+  if (addrSize != (AddressHeaderSize + saddrSize))
     goto fail;
 
   addressHeader(addr)->sessionID= thisNetSession;
@@ -2222,7 +2201,7 @@ void sqSocketRemoteAddressResultSize(SocketPtr s, char *addr, int addrSize)
 {
   if (!socketValid(s)
    || !SOCKETPEERSIZE(s)
-   || (addrSize != (int)(AddressHeaderSize + SOCKETPEERSIZE(s)))) {
+   || (addrSize != (AddressHeaderSize + SOCKETPEERSIZE(s)))) {
     interpreterProxy->success(false);
     return;
   }

@@ -1,0 +1,24 @@
+#!/bin/bash
+# Concatenate all the history READMEs
+if [ -z "$1" -o -n "$2" ]; then
+	echo usage: $0 SvnRevision 1>&2
+	exit 1
+fi
+REV=$1
+cd `dirname $0`/../history
+echo compiling ChangeHistory
+THEM="`ls README.* | sort -n -t. -k2 -r`"
+>ChangeHistory
+for r in $THEM; do
+	m="`echo $r | sed 's/README.//'`"
+	if [ "$REV" -ge "$m" ]; then
+		test $REV -ne $m && echo "-------------------------------" >>ChangeHistory
+		ls -lT $r | awk '{ print $6, $7, $9; }' >>ChangeHistory
+		if grep -s "^------------" $r >/dev/null; then
+			awk '{if (line>0) print};/^--------/ {line=1}' $r >>ChangeHistory
+		else
+			cat $r >>ChangeHistory
+		fi
+		echo >>ChangeHistory
+	fi
+done

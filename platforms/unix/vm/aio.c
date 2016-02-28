@@ -98,16 +98,11 @@
 #undef	DEBUG
 
 #if defined(DEBUG)
-  int aioLastTick= 0;
-  int aioThisTick= 0;
-# define FPRINTF(X) { aioThisTick= ioMSecs();  fprintf(stderr, "%8d %8d ", aioThisTick, aioThisTick - aioLastTick);  aioLastTick= aioThisTick;  fprintf X; }
-#else
-# define FPRINTF(X)
+sqInt aioLastTick= 0;
+sqInt aioThisTick= 0;
 #endif
 
 #define _DO_FLAG_TYPE()	do { _DO(AIO_R, rd) _DO(AIO_W, wr) _DO(AIO_X, ex) } while (0)
-
-static int one= 1;
 
 static aioHandler  rdHandler[FD_SETSIZE];
 static aioHandler  wrHandler[FD_SETSIZE];

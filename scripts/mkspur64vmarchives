@@ -58,9 +58,11 @@ if [ -n "$CL" ]; then
 		(cd $d
 		for archive in cogspur64linux cogspur64linuxht cogspur64linuxhtARM; do
 			rm -rf $archive-$TAG.tgz
-			echo $archive '=>' $archive-$TAG.tgz
-			COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $archive
-			EXES="$EXES	$archive/lib/squeak/[0-9.-]*/squeak"
+			if [ -d $archive ]; then
+				echo $archive '=>' $archive-$TAG.tgz
+				COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $archive
+				EXES="$EXES	$archive/lib/squeak/[0-9.-]*/squeak"
+			fi
 		done)
 	done
 fi
@@ -70,9 +72,11 @@ if [ -n "$NL" ]; then
 		set -- nscogspur64linux nscogspur64linuxht nscogspur64linuxhtARM
 		for archive in nsvmspur64linux nsvmspur64linuxht nsvmspur64linuxhtARM; do
 			rm -rf $archive-$TAG.tgz
-			echo $1 '=>' $archive-$TAG.tgz
-			COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $1
-			EXES="$EXES	$1/lib/nsvm/[0-9.-]*/nsvm"
+			if [ -d $1 ]; then
+				echo $1 '=>' $archive-$TAG.tgz
+				COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $1
+				EXES="$EXES	$1/lib/nsvm/[0-9.-]*/nsvm"
+			fi
 			shift
 		done)
 	done

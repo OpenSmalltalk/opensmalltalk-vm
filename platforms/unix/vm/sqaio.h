@@ -97,4 +97,28 @@ extern long aioSleepForUsecs(long microSeconds);
 extern unsigned volatile long long ioUTCMicroseconds(void);
 extern unsigned volatile long long ioUTCMicrosecondsNow(void);
 
+/* debugging stuff. can probably be deleted */
+
+#ifdef DEBUG
+# ifdef ACORN
+#   define FPRINTF(s) \
+    do { \
+      extern os_error privateErr; \
+      extern void platReportError(os_error *e); \
+      privateErr.errnum = (bits)0; \
+      sprintf s; \
+      platReportError((os_error *)&privateErr); \
+    } while (0)
+# else /* !ACORN */
+    extern sqInt aioLastTick, aioThisTick;
+#   define FPRINTF(X) do { \
+	aioThisTick= ioMSecs(); \
+	fprintf(stderr, "%8d %8d ", aioThisTick, aioThisTick - aioLastTick); \
+	aioLastTick= aioThisTick; \
+	fprintf X; } while (0)
+# endif /* ACORN */
+#else /* !DEBUG */
+# define FPRINTF(X)
+#endif
+
 #endif /* __sqaio_h */
