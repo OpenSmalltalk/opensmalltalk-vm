@@ -452,12 +452,9 @@ Cogit class >> cog: aCompiledMethod selector: aSelector [
 { #category : #'in-image compilation' }
 Cogit class >> cog: aCompiledMethod selector: aSelector options: optionsDictionaryOrArray [
 	"StackToRegisterMappingCogit cog: (Integer >> #benchFib) selector: #benchFib options: #(COGMTVM false)"
-	| initOptions coInterpreter cogit |
-	initOptions := self asOptionsDictionary: optionsDictionaryOrArray.
-	CoInterpreter initializeWithOptions: initOptions.
-	CoInterpreter objectMemoryClass initializeWithOptions: initOptions.
-	self initializeWithOptions: initOptions.
-	coInterpreter := CurrentImageCoInterpreterFacade forCogit: (cogit := self new).
+	| cogit coInterpreter |
+	cogit := self instanceForTests: optionsDictionaryOrArray.
+	coInterpreter := CurrentImageCoInterpreterFacade forCogit: cogit.
 	[cogit
 		setInterpreter: coInterpreter;
 		singleStep: true;
@@ -654,11 +651,9 @@ Cogit class >> genAndDis: methodOrDoitString options: optionsDictionaryOrArray [
 { #category : #'in-image compilation' }
 Cogit class >> genAndDisPICoptions: optionsDictionaryOrArray [
 	"StackToRegisterMappingCogit genAndDisPICoptions: #(ISA ARMv5 CogCompilerClass CogInLineLiteralsARMCompiler)"
-	| coInterpreter cogit |
-	self initializeWithOptions: (self asOptionsDictionary: optionsDictionaryOrArray).
-	CoInterpreter initializeWithOptions: initializationOptions.
-	CoInterpreter objectMemoryClass initializeWithOptions: initializationOptions.
-	coInterpreter := CurrentImageCoInterpreterFacade forCogit: (cogit := self new).
+	| cogit coInterpreter |
+	cogit := self instanceForTests: optionsDictionaryOrArray.
+	coInterpreter := CurrentImageCoInterpreterFacade forCogit: cogit.
 	[cogit
 		setInterpreter: coInterpreter;
 		singleStep: true;
@@ -1008,6 +1003,17 @@ Cogit class >> initializeWithOptions: optionsDictionary [
 	self initializePrimitiveTable
 ]
 
+{ #category : #'in-image compilation' }
+Cogit class >> instanceForTests: optionsDictionaryOrArray [
+	"Initialize all the relevant classes from the options and answer a new instance of me."
+	| initOptions |
+	initOptions := self asOptionsDictionary: optionsDictionaryOrArray.
+	CoInterpreter initializeWithOptions: initOptions.
+	CoInterpreter objectMemoryClass initializeWithOptions: initOptions.
+	self initializeWithOptions: initOptions.
+	^self new
+]
+
 { #category : #translation }
 Cogit class >> isAcceptableAncilliaryClass: aClass [
 	^aClass ~~ CogSSBytecodeFixup
@@ -1296,8 +1302,7 @@ Cogit class >> testPCMappingSelect: aBlock [
 Cogit class >> testPCMappingSelect: aBlock options: optionsDictionaryOrArray [
 	"Test pc mapping both ways using a selection of the methods in the current image."
 	| cogit coInterpreter |
-	self initializeWithOptions: (self asOptionsDictionary: optionsDictionaryOrArray).
-	cogit := self new.
+	cogit := self instanceForTests: optionsDictionaryOrArray.
 	coInterpreter := CurrentImageCoInterpreterFacade forCogit: cogit.
 	[cogit
 			setInterpreter: coInterpreter;
@@ -1311,8 +1316,7 @@ Cogit class >> testPCMappingSelect: aBlock options: optionsDictionaryOrArray [
 		[:m| | cm |
 		(m isQuick not
 		 and: [aBlock value: m]) ifTrue:
-			[coInterpreter voidHeaderToMethodMap.
-			 Transcript nextPut: $.; flush.
+			[Transcript nextPut: $.; flush.
 			 [coInterpreter.
 			  cm := cogit
 						cog: (coInterpreter oopForObject: m)

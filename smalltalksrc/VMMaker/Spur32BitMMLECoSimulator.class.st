@@ -364,6 +364,16 @@ Spur32BitMMLECoSimulator >> setIsMarkedOf: objOop to: aBoolean [
 		[self halt]"
 ]
 
+{ #category : #'debug support' }
+Spur32BitMMLECoSimulator >> setUpForUseByFacade: aCurrentImageCoInterpreterFacade [
+	"Make sure that eden etc are initialized, so that methods can be printed.
+	 This is really to make addressCouldBeObj: et al work."
+	self edenBytes: 0.
+	self setHeapBase: self freeStart
+		memoryLimit: self endOfMemory
+		endOfMemory: self endOfMemory
+]
+
 { #category : #'memory access' }
 Spur32BitMMLECoSimulator >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."

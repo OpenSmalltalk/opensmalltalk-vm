@@ -55,6 +55,7 @@ Class {
 		'variables'
 	],
 	#pools : [
+		'CogMethodConstants',
 		'VMBasicConstants',
 		'VMObjectIndices',
 		'VMSqueakClassIndices'
@@ -243,6 +244,8 @@ CurrentImageCoInterpreterFacade >> cogit: aCogit [
 		[objectMemory cogit: aCogit].
 	(objectMemory respondsTo: #coInterpreter:) ifTrue:
 		[objectMemory coInterpreter: coInterpreter].
+	coInterpreter setUpForUseByFacade: self.
+	objectMemory setUpForUseByFacade: self.
 	#('stackLimit') do:
 		[:l| self addressForLabel: l].
 	self initializeObjectMap
@@ -403,12 +406,6 @@ CurrentImageCoInterpreterFacade >> inMemoryCStackPointerAddress [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> indexablePointersFormat [
 	^objectMemory indexablePointersFormat
-]
-
-{ #category : #accessing }
-CurrentImageCoInterpreterFacade >> initialPCForHeader: methodHeaderOop method: aMethodOop [
-	self assert: (self objectForOop: aMethodOop) == (headerToMethodMap at: methodHeaderOop).
-	^{ self objectForOop: aMethodOop. (self objectForOop: aMethodOop) initialPC }
 ]
 
 { #category : #'initialize-release' }
@@ -859,12 +856,46 @@ CurrentImageCoInterpreterFacade >> print: it [
 ]
 
 { #category : #printing }
+CurrentImageCoInterpreterFacade >> printCogMethod: cogMethod [
+	| address primitive |
+	address := cogMethod asInteger.
+	self printHex: address;
+		print: ' <-> ';
+		printHex: address + cogMethod blockSize.
+	cogMethod cmType = CMMethod ifTrue:
+		[self print: ': method: ';
+			printHex: cogMethod methodObject.
+		 primitive := self primitiveIndexOfMethod: cogMethod methodObject
+							header: cogMethod methodHeader.
+		 primitive ~= 0 ifTrue:
+			[self print: ' prim '; printNum: primitive]].
+	cogMethod cmType = CMBlock ifTrue:
+		[self print: ': block home: ';
+			printHex: (self cCoerceSimple: cogMethod to: #'CogBlockMethod *') cmHomeMethod asUnsignedInteger].
+	cogMethod cmType = CMClosedPIC ifTrue:
+		[self print: ': Closed PIC N: ';
+			printHex: cogMethod cPICNumCases].
+	cogMethod cmType = CMOpenPIC ifTrue:
+		[self print: ': Open PIC '].
+	self print: ' selector: '; printHex: cogMethod selector.
+	cogMethod selector = objectMemory nilObject
+		ifTrue: [self print: ' (nil)']
+		ifFalse: [self space; printStringOf: cogMethod selector].
+	self cr
+]
+
+{ #category : #printing }
 CurrentImageCoInterpreterFacade >> printHex: anInteger [
 	| it16 |
 	it16 := anInteger radix: 16.
 	coInterpreter transcript
 		next: 8 - it16 size put: Character space;
 		nextPutAll: (anInteger storeStringBase: 16)
+]
+
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> printStringOf: anOop [
+	Transcript nextPutAll: (self objectForOop: anOop)
 ]
 
 { #category : #accessing }
@@ -887,7 +918,7 @@ CurrentImageCoInterpreterFacade >> rawHeaderOf: aMethodOop [
 	| method headerOop |
 	method := self objectForOop: aMethodOop.
 	headerOop := objectMemory integerObjectOf: (self objectForOop: aMethodOop) header.
-	self assert: method = (headerToMethodMap at: headerOop ifAbsentPut: [method]).
+	self assert: method header = (headerToMethodMap at: headerOop ifAbsentPut: [method]) header.
 	^headerOop
 ]
 
@@ -927,6 +958,11 @@ CurrentImageCoInterpreterFacade >> sizeOfCallPrimitiveBytecode: methodHeaderOop 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> sizeOfLongStoreTempBytecode: methodHeaderOop [ 
 	^coInterpreter sizeOfLongStoreTempBytecode: methodHeaderOop
+]
+
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> space [
+	Transcript space
 ]
 
 { #category : #accessing }
@@ -1072,11 +1108,6 @@ CurrentImageCoInterpreterFacade >> variablesBase [
 		768k to 1023k		method cache
 		 1023k to 1024k	rump C stack"
 	^memory byteSize / 2
-]
-
-{ #category : #accessing }
-CurrentImageCoInterpreterFacade >> voidHeaderToMethodMap [
-	headerToMethodMap := Dictionary new
 ]
 
 { #category : #accessing }
