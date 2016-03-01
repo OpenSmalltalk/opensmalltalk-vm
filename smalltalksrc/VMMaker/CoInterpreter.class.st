@@ -6812,6 +6812,14 @@ CoInterpreter >> setMethod: aMethodObj [
 	super setMethod: aMethodObj
 ]
 
+{ #category : #'debug support' }
+CoInterpreter >> setUpForUseByFacade: aCurrentImageCoInterpreterFacade [
+	"Set up variables with default values so that other initializations work.
+	 numStackPages needs to be initialized so that interpreterAllocationReserveBytes
+	 can be computed."
+	numStackPages := 0
+]
+
 { #category : #'debug printing' }
 CoInterpreter >> shortPrintFrame: theFP [
 	<inline: false>
