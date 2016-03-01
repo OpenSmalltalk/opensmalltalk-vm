@@ -452,6 +452,11 @@ NewCoObjectMemorySimulator >> pushInteger: integerValue [
 	^coInterpreter pushInteger: integerValue
 ]
 
+{ #category : #'debug support' }
+NewCoObjectMemorySimulator >> setUpForUseByFacade: aCurrentImageCoInterpreterFacade [
+	"This is a noop"
+]
+
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
