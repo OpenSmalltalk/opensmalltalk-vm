@@ -416,18 +416,6 @@ Cogit class >> assumptions [
 	 64k of code per method more than enough"
 ]
 
-{ #category : #translation }
-Cogit class >> bytecodeTable [
-	| selectors |
-	selectors := Set new.
-	generatorTable object do:
-		[:bytecodeDescriptor|
-		selectors add: bytecodeDescriptor generator.
-		bytecodeDescriptor spanFunction ifNotNil:
-			[selectors add: bytecodeDescriptor spanFunction]].
-	^selectors
-]
-
 { #category : #'accessing class hierarchy' }
 Cogit class >> chooseCogitClass [
 	^Smalltalk at: ([:choices| choices at: (UIManager default chooseFrom: choices) ifAbsent: [^nil]]
@@ -707,7 +695,9 @@ Cogit class >> generatorTableFrom: anArray [
 						numBytes: tuple first;
 						generator: tuple fourth;
 						isReturn: (tuple includes: #return);
-						isMapped: ((tuple includes: #isMapped) or: [IMMUTABILITY and: [ tuple includes: #isMappedIfImmutability]]);
+						isMapped: ((tuple includes: #isMappedIfImmutability)
+										ifTrue: [self bindingOf: #IMMUTABILITY]
+										ifFalse: [tuple includes: #isMapped]);
 						isMappedInBlock: (tuple includes: #isMappedInBlock);
 						isBlockCreation: (tuple includes: #block);
 						spanFunction: (((tuple includes: #block) or: [(tuple includes: #branch)]) ifTrue:
@@ -9095,6 +9085,79 @@ Cogit >> printOnTrace [
 ]
 
 { #category : #'method map' }
+Cogit >> printPCMapPairsFor: cogMethod [
+	<api>
+	<var: 'cogMethod' type: #'CogMethod *'>
+	| mcpc map mapByte annotation value |
+	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
+	map := self mapStartFor: cogMethod.
+	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
+		[annotation := mapByte >> AnnotationShift.
+		 annotation = IsAnnotationExtension
+			ifTrue:
+				[value := (mapByte bitAnd: DisplacementMask) + IsSendCall]
+			ifFalse:
+				[value := annotation.
+				 mcpc := mcpc + (backEnd codeGranularity
+									* (annotation = IsDisplacementX2N
+										ifTrue: [mapByte - DisplacementX2N << AnnotationShift]
+										ifFalse: [mapByte bitAnd: DisplacementMask]))].
+		 coInterpreter
+			printHexnp: map;
+		 	print: ': '.
+		 self
+			cCode: [self print: '%02x' f: mapByte]
+			inSmalltalk:
+				[mapByte < 16 ifTrue:
+					[coInterpreter putchar: $0].
+				 coInterpreter printHexnp: mapByte].
+		 coInterpreter
+		 	printChar: $ ;
+			printNum: annotation;
+			print: ' ('.
+		 self cppIf: NewspeakVM
+			ifTrue:
+				[value
+					caseOf: {
+						[IsDisplacementX2N]		->	[coInterpreter print: 'IsDisplacementX2N'].
+						[IsAnnotationExtension]		->	[coInterpreter print: 'IsAnnotationExtension'].
+						[IsObjectReference]		->	[coInterpreter print: 'IsObjectReference'].
+						[IsAbsPCReference]		->	[coInterpreter print: 'IsAbsPCReference'].
+						[HasBytecodePC]			->	[coInterpreter print: 'HasBytecodePC'].
+						[IsRelativeCall]				->	[coInterpreter print: 'IsRelativeCall'].
+						[IsNSSendCall]				->	[coInterpreter print: 'IsNSSendCall'].
+						[IsSendCall]					->	[coInterpreter print: 'IsSendCall'].
+						[IsSuperSend]				->	[coInterpreter print: 'IsSuperSend'].
+						[IsDirectedSuperSend]		->	[coInterpreter print: 'IsDirectedSuperSend'].
+						[IsNSSelfSend]				->	[coInterpreter print: 'IsNSSelfSend'].
+						[IsNSDynamicSuperSend]	->	[coInterpreter print: 'IsNSDynamicSuperSend'].
+						[IsNSImplicitReceiverSend]	->	[coInterpreter print: 'IsNSImplicitReceiverSend'] }
+					otherwise: [coInterpreter print: '??? '; printHexnp: value]]
+			ifFalse:
+				[value
+					caseOf: {
+						[IsDisplacementX2N]		->	[coInterpreter print: 'IsDisplacementX2N'].
+						[IsAnnotationExtension]		->	[coInterpreter print: 'IsAnnotationExtension'].
+						[IsObjectReference]		->	[coInterpreter print: 'IsObjectReference'].
+						[IsAbsPCReference]		->	[coInterpreter print: 'IsAbsPCReference'].
+						[HasBytecodePC]			->	[coInterpreter print: 'HasBytecodePC'].
+						[IsRelativeCall]				->	[coInterpreter print: 'IsRelativeCall'].
+						[IsSendCall]					->	[coInterpreter print: 'IsSendCall'].
+						[IsSuperSend]				->	[coInterpreter print: 'IsSuperSend'].
+						[IsDirectedSuperSend]		->	[coInterpreter print: 'IsDirectedSuperSend'] }
+					otherwise: [coInterpreter print: '??? '; printHexnp: value]].
+		 coInterpreter
+			print: ') ';
+			printHexnp: (mapByte bitAnd: DisplacementMask);
+			printChar: $ ;
+			putchar: $@;
+		 printHex: mcpc;
+		 cr;
+		 flush.
+		 map := map - 1]
+]
+
+{ #category : #'method map' }
 Cogit >> printPCMapPairsFor: cogMethod on: aStream [
 	<doNotGenerate>
 	<inline: true>
@@ -9111,7 +9174,7 @@ Cogit >> printPCMapPairsFor: cogMethod on: aStream [
 		 aStream ensureCr.
 		 map printOn: aStream base: 16.
 		 aStream nextPutAll: ': '.
-		 mapByte printOn: aStream base: 16.
+		 mapByte printOn: aStream base: 16 length: 2 padded: true.
 		 aStream space.
 		 annotation printOn: aStream base: 16.
 		 aStream nextPutAll: ' ('; print: (AnnotationConstantNames at: annotation + 1); nextPutAll: ') '.

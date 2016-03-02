@@ -345,6 +345,11 @@ CurrentImageCoInterpreterFacade >> fixedFieldsFieldWidth [
 	^objectMemory fixedFieldsFieldWidth
 ]
 
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> flush [
+	coInterpreter transcript flush
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> formatOfClass: classOop [
 	^self subclassResponsibility
@@ -856,6 +861,11 @@ CurrentImageCoInterpreterFacade >> print: it [
 ]
 
 { #category : #printing }
+CurrentImageCoInterpreterFacade >> printChar: aCharacter [
+	coInterpreter transcript nextPut: aCharacter
+]
+
+{ #category : #printing }
 CurrentImageCoInterpreterFacade >> printCogMethod: cogMethod [
 	| address primitive |
 	address := cogMethod asInteger.
@@ -890,12 +900,27 @@ CurrentImageCoInterpreterFacade >> printHex: anInteger [
 	it16 := anInteger radix: 16.
 	coInterpreter transcript
 		next: 8 - it16 size put: Character space;
-		nextPutAll: (anInteger storeStringBase: 16)
+		nextPutAll: (anInteger printStringBase: 16)
+]
+
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> printHexnp: anInteger [
+	coInterpreter transcript nextPutAll: (anInteger printStringBase: 16)
+]
+
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> printNum: anInteger [
+	coInterpreter transcript print: anInteger
 ]
 
 { #category : #printing }
 CurrentImageCoInterpreterFacade >> printStringOf: anOop [
 	Transcript nextPutAll: (self objectForOop: anOop)
+]
+
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> putchar: aCharacter [
+	coInterpreter transcript nextPut: aCharacter
 ]
 
 { #category : #accessing }
@@ -962,7 +987,7 @@ CurrentImageCoInterpreterFacade >> sizeOfLongStoreTempBytecode: methodHeaderOop 
 
 { #category : #printing }
 CurrentImageCoInterpreterFacade >> space [
-	Transcript space
+	coInterpreter transcript space
 ]
 
 { #category : #accessing }

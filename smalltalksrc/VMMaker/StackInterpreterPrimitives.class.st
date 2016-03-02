@@ -1516,7 +1516,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		62	compiled code compactions since startup (read-only; Cog only; otherwise nil)
 		63	total milliseconds in compiled code compactions since startup (read-only; Cog only; otherwise nil)
 		64	the number of methods that currently have jitted machine-code
-		65	whether the VM supports MULTIPLE_BYTECODE_SETS or not.
+		65	whether the VM supports a certain feature, MULTIPLE_BYTECODE_SETS is bit 0, IMMTABILITY is bit 1
 		66	the byte size of a stack page
 		67	the max allowed size of old space (Spur only; nil otherwise; 0 implies no limit except that of the underlying platform)
 		68	the average number of live stack pages when scanned by GC (at scavenge/gc/become et al)
@@ -1599,7 +1599,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 61	ofObject: result withValue: self getCodeCompactionCount.
 		objectMemory storePointerUnchecked: 62	ofObject: result withValue: self getCodeCompactionMSecs.
 		objectMemory storePointerUnchecked: 63	ofObject: result withValue: self getCogMethodCount.
-		objectMemory storePointerUnchecked: 64	ofObject: result withValue: (objectMemory booleanObjectOf: MULTIPLEBYTECODESETS).
+		objectMemory storePointerUnchecked: 64	ofObject: result withValue: (objectMemory integerObjectOf: self getCogVMFeatureFlags).
 		objectMemory storePointerUnchecked: 65	ofObject: result withValue: (objectMemory integerObjectOf: self stackPageByteSize).
 		objectMemory hasSpurMemoryManagerAPI ifTrue:
 			[objectMemory
@@ -1690,7 +1690,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 62	ifTrue: [result := self getCodeCompactionCount].
 		arg = 63	ifTrue: [result := self getCodeCompactionMSecs].
 		arg = 64	ifTrue: [result := self getCogMethodCount].
-		arg = 65	ifTrue: [result := objectMemory booleanObjectOf: MULTIPLEBYTECODESETS].
+		arg = 65	ifTrue: [result := objectMemory integerObjectOf: self getCogVMFeatureFlags].
 		arg = 66	ifTrue: [result := objectMemory integerObjectOf: self stackPageByteSize].
 		(arg = 67
 		 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
