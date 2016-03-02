@@ -6296,6 +6296,7 @@ StackInterpreter >> floatArg: index [
 
 { #category : #'debug printing' }
 StackInterpreter >> flush [
+	<api>
 	<cmacro: '() fflush(stdout)'>
 ]
 
@@ -6885,6 +6886,15 @@ StackInterpreter >> getCogCodeSize [
 StackInterpreter >> getCogMethodCount [
 	"This is 0 in the StackVM"
 	^ConstZero
+]
+
+{ #category : #'internal interpreter access' }
+StackInterpreter >> getCogVMFeatureFlags [
+	"Answer an array of flags indicating various optional features of the Cog VM.
+	 Bit 0: supports two btecode sets (MULTIPLEBYTECODESETS)
+	 Bit 1: supports immtablity (IMMUTABILITY)"
+	^objectMemory integerObjectOf: (MULTIPLEBYTECODESETS ifTrue: [1] ifFalse: [0])
+									+ (IMMUTABILITY ifTrue: [2] ifFalse: [0])
 ]
 
 { #category : #'internal interpreter access' }
@@ -11272,6 +11282,7 @@ StackInterpreter >> printHexPtrnp: p [
 
 { #category : #'debug printing' }
 StackInterpreter >> printHexnp: n [
+	<api>
 	"Print n in hex,  in the form '0x1234', unpadded"
 	self print: '0x%lx' f: (self cCoerceSimple: n to: #'unsigned long')
 ]
