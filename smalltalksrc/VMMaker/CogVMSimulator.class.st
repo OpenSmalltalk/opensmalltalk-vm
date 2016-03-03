@@ -102,7 +102,7 @@ CogVMSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMe
 
 	ByteCountsPerMicrosecond := initializationOptions
 										at: #ByteCountsPerMicrosecond
-										ifAbsent: [10].
+										ifAbsent: [100].
 
 	(self cogitClass withAllSuperclasses copyUpTo: Cogit) reverseDo:
 		[:c| c initializeWithOptions: initializationOptions]

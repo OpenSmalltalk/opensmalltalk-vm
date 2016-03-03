@@ -434,7 +434,7 @@ SistaStackToRegisterMappingCogit >> genMustBeBooleanTrampolineFor: boolean calle
 		arg: nil
 		arg: nil
 		resultReg: TempReg "(*)"
-		saveRegs: false.
+		regsToSave: self emptyRegisterMask.
 	"(*) For the case where the ceCounterTripped: call returns (e.g. because there's no callback selector
 	 installed), the call to the ceSendMustBeBooleanAddTrue/FalseTrampoline is followed by a jump
 	 back to the start of the counter/condition test sequence.  For this case copy the C result to
@@ -457,7 +457,7 @@ SistaStackToRegisterMappingCogit >> genMustBeBooleanTrampolineFor: boolean calle
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: true
 		resultReg: NoReg
 		appendOpcodes: true
