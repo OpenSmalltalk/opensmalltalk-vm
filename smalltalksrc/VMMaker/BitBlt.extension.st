@@ -13,15 +13,14 @@ BitBlt >> copyBitsSimulated: alpha [
 { #category : #'*VMMaker-Interpreter' }
 BitBlt >> simulatePrimitive: aString args: args [ 
 	"simulate primitives in RSqueak"
-	aString = 'primitiveCopyBits'
-		ifTrue: [
-			args size = 1
-				ifTrue: [^ self copyBitsSimulated: (args at: 1)]
-				ifFalse: [^ self copyBitsSimulated]].
-	aString = 'primitiveWarpBits'
-		ifTrue: [^ self
-				warpBitsSimulated: (args at: 1)
-				sourceMap: (args at: 2)].
-	^ InterpreterProxy new primitiveFailFor: 255
+	| proxy bb |
+	proxy := InterpreterProxy new.
+	proxy synthesizeStackFor: self with: args.
+	bb := BitBltSimulation simulatorClass new.
+	bb setInterpreter: proxy.
+	bb initialiseModule.
+	"rendering state is loaded in the primitive implementations"
+	bb perform: aString asSymbol.
+	^ proxy stackValue: 0
 
 ]
