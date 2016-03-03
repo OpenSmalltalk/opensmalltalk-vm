@@ -128,7 +128,7 @@ CogObjectRepresentationForSqueakV3 >> genActiveContextTrampoline [
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: cogit emptyRegisterMask
 		pushLinkReg: true
 		resultReg: ReceiverResultReg
 		appendOpcodes: true
@@ -473,11 +473,6 @@ CogObjectRepresentationForSqueakV3 >> genJumpImmediate: aRegister [
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genJumpImmediateInScratchReg: aRegister [
-	^self genJumpSmallIntegerInScratchReg: aRegister
-]
-
-{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genJumpIsSmallIntegerValue: aRegister scratch: scratchReg [
 	"Generate a test for aRegister containing an integer value in the SmallInteger range, and a jump if so, answering the jump.
 	 c.f. ObjectMemory>>isIntegerValue:"
@@ -777,9 +772,7 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	"if no need for the store check then returns"
 	needsStoreCheck ifFalse: [ ^ 0 ].
 	"now the check.  Is value stored an integer?  If so we're done"
-	cogit MoveR: sourceReg R: scratchReg.
-	cogit AndCq: 1 R: scratchReg.
-	jmpImmediate := cogit JumpNonZero: 0.
+	jmpImmediate := self genJumpImmediate: sourceReg.
 	"Get the old/new boundary in scratchReg"
 	cogit MoveAw: objectMemory youngStartAddress R: scratchReg.
 	"Is target young?  If so we're done"
@@ -804,12 +797,7 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	"Root bit is not set.  Call store check to insert dest into root table."
 	self assert: destReg == ReceiverResultReg.
 	cogit 
-		evaluateTrampolineCallBlock: 
-			[cogit
-				CallRT: ceStoreCheckTrampoline
-				registersToBeSavedMask: (((cogit registerMaskFor: sourceReg)
-												bitOr: cogit callerSavedRegMask)
-												bitClear: (cogit registerMaskFor: ReceiverResultReg))]
+		evaluateTrampolineCallBlock: [cogit CallRT: ceStoreCheckTrampoline]
 		protectLinkRegIfNot: inFrame.
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
@@ -834,19 +822,23 @@ CogObjectRepresentationForSqueakV3 >> generateObjectRepresentationTrampolines [
 									genTrampolineFor: #ceStoreCheck:
 									called: 'ceStoreCheckTrampoline'
 									arg: ReceiverResultReg
+									regsToSave: (cogit callerSavedRegMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 									result: cogit returnRegForStoreCheck.
 	ceCreateNewArrayTrampoline := cogit genTrampolineFor: #ceNewArraySlotSize:
 											called: 'ceCreateNewArrayTrampoline'
 											arg: SendNumArgsReg
+											regsToSave: (cogit callerSavedRegMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 											result: ReceiverResultReg.
 	cePositive32BitIntegerTrampoline := cogit genTrampolineFor: #positive32BitIntegerFor:
 												called: 'cePositive32BitIntegerTrampoline'
 												arg: ReceiverResultReg
+												regsToSave: (cogit callerSavedRegMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 												result: TempReg.
 	ceActiveContextTrampoline := self genActiveContextTrampoline.
 	ceClosureCopyTrampoline := cogit genTrampolineFor: #ceClosureCopyDescriptor:
 										called: 'ceClosureCopyTrampoline'
 										arg: SendNumArgsReg
+										regsToSave: (cogit callerSavedRegMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 										result: ReceiverResultReg
 ]
 

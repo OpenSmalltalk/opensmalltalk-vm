@@ -2499,12 +2499,12 @@ CogX64Compiler >> genRemoveNArgsFromStack: n [
 ]
 
 { #category : #abi }
-CogX64Compiler >> genRestoreRegs [
-	"Restore the general purpose registers for a trampoline call.
-	 c.f. genSaveRegisters"
+CogX64Compiler >> genRestoreRegs: regMask [
+	"Restore the registers in regMask as saved by genSaveRegs:."
+	self deny: (regMask anyMask: (cogit registerMaskFor: RSP and: RBP)).
 	RAX to: R15 do:
 		[:reg|
-		 (reg between: RSP and: RBP) ifFalse:
+		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
 			[cogit PopR: reg]].
 	^0
 ]
@@ -2522,13 +2522,14 @@ CogX64Compiler >> genRestoreRegsExcept: preservedReg [
 ]
 
 { #category : #abi }
-CogX64Compiler >> genSaveRegsForCCall [
-	"Save the general purpose registers for a trampoline call."
+CogX64Compiler >> genSaveRegs: regMask [
+	"Save the registers in regMask for a call into the C run-time from a trampoline."
 
 	self assert: (R15 > RAX and: [R15 - RAX + 1 = 16]).
+	self deny: (regMask anyMask: (cogit registerMaskFor: RSP and: RBP)).
 	R15 to: RAX by: -1 do:
 		[:reg|
-		 (reg between: RSP and: RBP) ifFalse:
+		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
 			[cogit PushR: reg]].
 	^0
 ]

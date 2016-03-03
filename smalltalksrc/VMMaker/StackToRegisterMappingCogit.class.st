@@ -1884,7 +1884,7 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: false "The LinkReg has already been set above."
 		resultReg: NoReg.
 	jumpSICMiss jmpTarget: self Label.
@@ -1896,7 +1896,7 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: false "The LinkReg will have been pushed in genPushRegisterArgsForAbortMissNumArgs: above."
 		resultReg: NoReg
 		appendOpcodes: true
@@ -1994,7 +1994,7 @@ StackToRegisterMappingCogit >> genPICMissTrampolineFor: numArgs [
 		arg: ReceiverResultReg
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: true
 		resultReg: NoReg
 		appendOpcodes: true.
@@ -2316,7 +2316,7 @@ StackToRegisterMappingCogit >> genSendTrampolineFor: aRoutine numArgs: numArgs c
 		arg: regOrConst1
 		arg: regOrConst2
 		arg: regOrConst3
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: true
 		resultReg: NoReg
 		appendOpcodes: true.
@@ -3105,17 +3105,20 @@ StackToRegisterMappingCogit >> generateTracingTrampolines [
 	 and avoid noise instructions in the lastNInstructions log by short-cutting these
 	 trampolines, but we need them in the real vm."
 	ceTraceLinkedSendTrampoline :=
-		self genSafeTrampolineFor: #ceTraceLinkedSend:
+		self genTrampolineFor: #ceTraceLinkedSend:
 			called: 'ceTraceLinkedSendTrampoline'
-			arg: ReceiverResultReg.
+			arg: ReceiverResultReg
+			regsToSave: callerSavedRegMask..
 	ceTraceBlockActivationTrampoline :=
 		self genTrampolineFor: #ceTraceBlockActivation
-			called: 'ceTraceBlockActivationTrampoline'.
+			called: 'ceTraceBlockActivationTrampoline'
+			regsToSave: callerSavedRegMask..
 	ceTraceStoreTrampoline :=
-		self genSafeTrampolineFor: #ceTraceStoreOf:into:
+		self genTrampolineFor: #ceTraceStoreOf:into:
 			called: 'ceTraceStoreTrampoline'
 			arg: TempReg
-			arg: ReceiverResultReg.
+			arg: ReceiverResultReg
+			regsToSave: callerSavedRegMask..
 	self cCode: [] inSmalltalk:
 		[ceTraceLinkedSendTrampoline := self simulatedTrampolineFor: #ceShortCutTraceLinkedSend:.
 		 ceTraceBlockActivationTrampoline := self simulatedTrampolineFor: #ceShortCutTraceBlockActivation:.
